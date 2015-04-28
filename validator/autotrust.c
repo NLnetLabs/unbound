@@ -57,11 +57,11 @@
 #include "services/mesh.h"
 #include "services/cache/rrset.h"
 #include "validator/val_kcache.h"
-#include "ldns/sbuffer.h"
-#include "ldns/wire2str.h"
-#include "ldns/str2wire.h"
-#include "ldns/keyraw.h"
-#include "ldns/rrdef.h"
+#include "sldns/sbuffer.h"
+#include "sldns/wire2str.h"
+#include "sldns/str2wire.h"
+#include "sldns/keyraw.h"
+#include "sldns/rrdef.h"
 #include <stdarg.h>
 #include <ctype.h>
 
@@ -513,7 +513,7 @@ add_trustanchor_frm_str(struct val_anchors* anchors, char* str,
  * @param anchors: all points.
  * @param str: comments line
  * @param fname: filename
- * @param origin: \$ORIGIN.
+ * @param origin: the $ORIGIN.
  * @param origin_len: length of origin
  * @param prev: passed to ldns.
  * @param prev_len: length of prev
@@ -902,13 +902,13 @@ static int
 handle_origin(char* line, uint8_t** origin, size_t* origin_len)
 {
 	size_t len = 0;
-	while(isspace((int)*line))
+	while(isspace((unsigned char)*line))
 		line++;
 	if(strncmp(line, "$ORIGIN", 7) != 0)
 		return 0;
 	free(*origin);
 	line += 7;
-	while(isspace((int)*line))
+	while(isspace((unsigned char)*line))
 		line++;
 	*origin = sldns_str2wire_dname(line, &len);
 	*origin_len = len;
@@ -1184,7 +1184,7 @@ void autr_write_file(struct module_env* env, struct trust_anchor* tp)
 	verbose(VERB_ALGO, "autotrust: write to disk: %s", tempf);
 	out = fopen(tempf, "w");
 	if(!out) {
-		log_err("could not open autotrust file for writing, %s: %s",
+		fatal_exit("could not open autotrust file for writing, %s: %s",
 			tempf, strerror(errno));
 		return;
 	}
@@ -1192,11 +1192,11 @@ void autr_write_file(struct module_env* env, struct trust_anchor* tp)
 		/* failed to write contents (completely) */
 		fclose(out);
 		unlink(tempf);
-		log_err("could not completely write: %s", fname);
+		fatal_exit("could not completely write: %s", fname);
 		return;
 	}
 	if(fclose(out) != 0) {
-		log_err("could not complete write: %s: %s",
+		fatal_exit("could not complete write: %s: %s",
 			fname, strerror(errno));
 		unlink(tempf);
 		return;
@@ -1207,7 +1207,7 @@ void autr_write_file(struct module_env* env, struct trust_anchor* tp)
 	(void)unlink(fname); /* windows does not replace file with rename() */
 #endif
 	if(rename(tempf, fname) < 0) {
-		log_err("rename(%s to %s): %s", tempf, fname, strerror(errno));
+		fatal_exit("rename(%s to %s): %s", tempf, fname, strerror(errno));
 	}
 }
 

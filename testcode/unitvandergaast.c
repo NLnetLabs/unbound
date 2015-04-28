@@ -119,7 +119,7 @@ static int addrtree_inconsistent_subtree(struct addrtree* tree,
 static int addrtree_inconsistent(struct addrtree* tree)
 {
 	struct addredge* edge;
-	int i, r, md;
+	int i, r;
 	
 	if (!tree) return 0;
 	if (!tree->root) return 1;
@@ -150,13 +150,13 @@ static int randomkey(addrkey_t **k, int maxlen)
 static void elemfree(void *envptr, void *elemptr)
 {
 	struct reply_info *elem = (struct reply_info *)elemptr;
-	struct module_env *env = (struct module_env *)envptr;
+	(void)envptr;
 	free(elem);
 }
 
 static void consistency_test(void)
 {
-	int i, l, r;
+	int i, l;
 	unsigned int count;
 	addrkey_t *k;
 	struct addrtree* t;
@@ -211,9 +211,9 @@ static void consistency_test(void)
 
 static void issub_test(void)
 {
-	unit_show_func("edns-subnet/addrtree.h", "issub");
 	addrkey_t k1[] = {0x55, 0x55, 0x5A};
 	addrkey_t k2[] = {0x55, 0x5D, 0x5A};
+	unit_show_func("edns-subnet/addrtree.h", "issub");
 	unit_assert( !unittest_wrapper_addrtree_issub(k1, 24, k2, 24,  0) );
 	unit_assert(  unittest_wrapper_addrtree_issub(k1,  8, k2, 16,  0) );
 	unit_assert(  unittest_wrapper_addrtree_issub(k2, 12, k1, 13,  0) );
@@ -227,9 +227,9 @@ static void issub_test(void)
 
 static void getbit_test(void)
 {
-	unit_show_func("edns-subnet/addrtree.h", "getbit");
 	addrkey_t k1[] = {0x55, 0x55, 0x5A};
 	int i;
+	unit_show_func("edns-subnet/addrtree.h", "getbit");
 	for(i = 0; i<20; i++) {
 		unit_assert( unittest_wrapper_addrtree_getbit(k1, 20, i) == (i&1) );
 	}
@@ -237,11 +237,11 @@ static void getbit_test(void)
 
 static void bits_common_test(void)
 {
-	unit_show_func("edns-subnet/addrtree.h", "bits_common");
 	addrkey_t k1[] = {0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC, 0xDE, 0xF0};
 	addrkey_t k2[] = {0,0,0,0,0,0,0,0};
 	int i;
 	
+	unit_show_func("edns-subnet/addrtree.h", "bits_common");
 	for(i = 0; i<64; i++) {
 		unit_assert( unittest_wrapper_addrtree_bits_common(k1, 64, k1, 64, i) == 64 );
 	}
@@ -260,11 +260,11 @@ static void bits_common_test(void)
 
 static void cmpbit_test(void)
 {
-	unit_show_func("edns-subnet/addrtree.h", "cmpbit");
 	addrkey_t k1[] = {0xA5, 0x0F};
 	addrkey_t k2[] = {0x5A, 0xF0};
 	int i;
 	
+	unit_show_func("edns-subnet/addrtree.h", "cmpbit");
 	for(i = 0; i<16; i++) {
 		unit_assert( !unittest_wrapper_addrtree_cmpbit(k1,k1,i) );
 		unit_assert(  unittest_wrapper_addrtree_cmpbit(k1,k2,i) );

@@ -45,7 +45,7 @@
 
 #include "util/rbtree.h"
 #include "util/netevent.h"
-#include "ldns/sbuffer.h"
+#include "dnstap/dnstap_config.h"
 struct pending;
 struct pending_timeout;
 struct ub_randstate;
@@ -56,6 +56,8 @@ struct infra_cache;
 struct port_comm;
 struct port_if;
 struct sldns_buffer;
+struct serviced_query;
+struct dt_env;
 
 /**
  * Send queries to outside servers and wait for answers from servers.
@@ -130,6 +132,11 @@ struct outside_network {
 	/** hosts we send client prefix, not owned by outnet. */
 	struct ednssubnet_upstream* edns_subnet_upstreams;
 #endif
+#ifdef USE_DNSTAP
+	/** dnstap environment */
+	struct dt_env* dtenv;
+#endif
+
 	/**
 	 * Array of tcp pending used for outgoing TCP connections.
 	 * Each can be used to establish a TCP connection with a server.
@@ -216,6 +223,8 @@ struct pending {
 	void* cb_arg;
 	/** the outside network it is part of */
 	struct outside_network* outnet;
+	/** the corresponding serviced_query */
+	struct serviced_query* sq;
 
 	/*---- filled if udp pending is waiting -----*/
 	/** next in waiting list. */
@@ -313,6 +322,8 @@ struct serviced_query {
 	int dnssec;
 	/** We want signatures, or else the answer is likely useless */
 	int want_dnssec;
+	/** ignore capsforid */
+	int nocaps;
 	/** tcp upstream used, use tcp, or ssl_upstream for SSL */
 	int tcp_upstream, ssl_upstream;
 	/** where to send it */
@@ -370,7 +381,6 @@ struct serviced_query {
 #endif
 };
 
-
 /**
  * Create outside_network structure with N udp ports.
  * @param base: the communication base to use for event handling.
@@ -405,7 +415,7 @@ struct outside_network* outside_network_create(struct comm_base* base,
 	struct ub_randstate* rnd, int use_caps_for_id, int* availports, 
 	int numavailports, size_t unwanted_threshold,
 	void (*unwanted_action)(void*), void* unwanted_param, int do_udp,
-	void* sslctx, int delayclose
+	void* sslctx, int delayclose, struct dt_env *dtenv
 #ifdef CLIENT_SUBNET
 	, struct ednssubnet_upstream* edns_subnet_upstreams
 #endif
@@ -426,39 +436,32 @@ void outside_network_quit_prepare(struct outside_network* outnet);
 /**
  * Send UDP query, create pending answer.
  * Changes the ID for the query to be random and unique for that destination.
- * @param outnet: provides the event handling
+ * @param sq: serviced query.
  * @param packet: wireformat query to send to destination.
- * @param addr: address to send to.
- * @param addrlen: length of addr.
  * @param timeout: in milliseconds from now.
  * @param callback: function to call on error, timeout or reply.
  * @param callback_arg: user argument for callback function.
  * @return: NULL on error for malloc or socket. Else the pending query object.
  */
-struct pending* pending_udp_query(struct outside_network* outnet, 
-	struct sldns_buffer* packet, struct sockaddr_storage* addr, 
-	socklen_t addrlen, int timeout, comm_point_callback_t* callback, 
+struct pending* pending_udp_query(struct serviced_query* sq,
+	struct sldns_buffer* packet, int timeout, comm_point_callback_t* callback,
 	void* callback_arg);
 
 /**
  * Send TCP query. May wait for TCP buffer. Selects ID to be random, and 
  * checks id.
- * @param outnet: provides the event handling.
+ * @param sq: serviced query.
  * @param packet: wireformat query to send to destination. copied from.
- * @param addr: address to send to.
- * @param addrlen: length of addr.
  * @param timeout: in seconds from now.
  *    Timer starts running now. Timer may expire if all buffers are used,
  *    without any query been sent to the server yet.
  * @param callback: function to call on error, timeout or reply.
  * @param callback_arg: user argument for callback function.
- * @param ssl_upstream: if the tcp connection must use SSL.
  * @return: false on error for malloc or socket. Else the pending TCP object.
  */
-struct waiting_tcp* pending_tcp_query(struct outside_network* outnet, 
-	struct sldns_buffer* packet, struct sockaddr_storage* addr, 
-	socklen_t addrlen, int timeout, comm_point_callback_t* callback, 
-	void* callback_arg, int ssl_upstream);
+struct waiting_tcp* pending_tcp_query(struct serviced_query* sq,
+	struct sldns_buffer* packet, int timeout, comm_point_callback_t* callback,
+	void* callback_arg);
 
 /**
  * Delete pending answer.
@@ -482,6 +485,7 @@ void pending_delete(struct outside_network* outnet, struct pending* p);
  *	If the value includes BIT_DO, DO bit is set when in EDNS queries.
  * @param want_dnssec: signatures are needed, without EDNS the answer is
  * 	likely to be useless.
+ * @param nocaps: ignore use_caps_for_id and use unperturbed qname.
  * @param tcp_upstream: use TCP for upstream queries.
  * @param ssl_upstream: use SSL for upstream queries.
  * @param callback: callback function.
@@ -498,10 +502,11 @@ void pending_delete(struct outside_network* outnet, struct pending* p);
  */
 struct serviced_query* outnet_serviced_query(struct outside_network* outnet,
 	uint8_t* qname, size_t qnamelen, uint16_t qtype, uint16_t qclass,
-	uint16_t flags, int dnssec, int want_dnssec, int tcp_upstream,
-	int ssl_upstream, struct sockaddr_storage* addr, socklen_t addrlen,
-	uint8_t* zone, size_t zonelen, comm_point_callback_t* callback,
-	void* callback_arg, sldns_buffer* buff
+	uint16_t flags, int dnssec, int want_dnssec, int nocaps,
+	int tcp_upstream, int ssl_upstream, struct sockaddr_storage* addr,
+	socklen_t addrlen, uint8_t* zone, size_t zonelen,
+	comm_point_callback_t* callback, void* callback_arg,
+	struct sldns_buffer* buff
 #ifdef CLIENT_SUBNET
 	, struct edns_data* edns
 #endif

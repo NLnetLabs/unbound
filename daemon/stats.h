@@ -129,12 +129,23 @@ struct server_stats {
 	size_t unwanted_replies;
 	/** unwanted traffic received on client-facing ports */
 	size_t unwanted_queries;
+	/** usage of tcp accept list */
+	size_t tcp_accept_usage;
 
 	/** histogram data exported to array 
 	 * if the array is the same size, no data is lost, and
 	 * if all histograms are same size (is so by default) then
 	 * adding up works well. */
 	size_t hist[NUM_BUCKETS_HIST];
+	
+	/** number of message cache entries */
+	size_t msg_cache_count;
+	/** number of rrset cache entries */
+	size_t rrset_cache_count;
+	/** number of infra cache entries */
+	size_t infra_cache_count;
+	/** number of key cache entries */
+	size_t key_cache_count;
 };
 
 /** 

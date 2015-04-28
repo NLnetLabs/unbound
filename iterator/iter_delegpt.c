@@ -47,8 +47,8 @@
 #include "util/data/packed_rrset.h"
 #include "util/data/msgreply.h"
 #include "util/net_help.h"
-#include "ldns/rrdef.h"
-#include "ldns/sbuffer.h"
+#include "sldns/rrdef.h"
+#include "sldns/sbuffer.h"
 
 struct delegpt* 
 delegpt_create(struct regional* region)
@@ -147,7 +147,9 @@ delegpt_find_addr(struct delegpt* dp, struct sockaddr_storage* addr,
 {
 	struct delegpt_addr* p = dp->target_list;
 	while(p) {
-		if(sockaddr_cmp_addr(addr, addrlen, &p->addr, p->addrlen)==0) {
+		if(sockaddr_cmp_addr(addr, addrlen, &p->addr, p->addrlen)==0
+			&& ((struct sockaddr_in*)addr)->sin_port ==
+			   ((struct sockaddr_in*)&p->addr)->sin_port) {
 			return p;
 		}
 		p = p->next_target;

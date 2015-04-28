@@ -85,8 +85,12 @@ server:
 	# 0 is system default.  Use 4m to handle spikes on very busy servers.
 	# so-sndbuf: 0
 	
-	# on Linux(3.9+) use SO_REUSEPORT to distribute queries over threads.
+	# use SO_REUSEPORT to distribute queries over threads.
 	# so-reuseport: no
+	
+	# use IP_TRANSPARENT so the interface: addresses can be non-local
+	# and you can config non-existing IPs that are going to work later on
+	# ip-transparent: no
 
 	# EDNS reassembly buffer to advertise to UDP peers (the actual buffer
 	# is set with msg-buffer-size). 1480 can solve fragmentation (timeouts).
@@ -138,6 +142,9 @@ server:
 	# the time to live (TTL) value for cached roundtrip times, lameness and
 	# EDNS version information for hosts. In seconds.
 	# infra-host-ttl: 900
+	
+	# minimum wait time for responses, increase if uplink is long. In msec.
+	# infra-cache-min-rtt: 50
 
 	# the number of slabs to use for the Infrastructure cache.
 	# the number of slabs must be a power of 2.
@@ -281,6 +288,11 @@ server:
 	# implementation of draft-wijngaards-dnsext-resolver-side-mitigation.
 	# harden-referral-path: no
 
+	# Harden against algorithm downgrade when multiple algorithms are
+	# advertised in the DS record.  If no, allows the weakest algorithm
+	# to validate the zone.
+	# harden-algo-downgrade: yes
+
 	# Use 0x20-encoded random bits in the query to foil spoof attempts.
 	# This feature is an experimental implementation of draft dns-0x20.
 	# use-caps-for-id: no
@@ -331,7 +343,7 @@ server:
 	# minimal-responses: no
 
 	# module configuration of the server. A string with identifiers
-	# separated by spaces. "iterator" or "validator iterator"
+	# separated by spaces. Syntax: "[dns64] [validator] iterator"
 	# module-config: "validator iterator"
 
 	# File with trusted keys, kept uptodate using RFC5011 probes,
@@ -479,6 +491,13 @@ server:
 	# local-zone: "b.e.f.ip6.arpa." nodefault
 	# local-zone: "8.b.d.0.1.0.0.2.ip6.arpa." nodefault
 	# And for 64.100.in-addr.arpa. to 127.100.in-addr.arpa.
+	
+	# if unbound is running service for the local host then it is useful
+	# to perform lan-wide lookups to the upstream, and unblock the
+	# long list of local-zones above.  If this unbound is a dns server
+	# for a network of computers, disabled is better and stops information
+	# leakage of local lan information.
+	# unblock-lan-zones: no
 
 	# a number of locally served zones can be configured.
 	# 	local-zone: <zone> <type>
@@ -490,6 +509,8 @@ server:
 	# o redirect serves the zone data for any subdomain in the zone.
 	# o nodefault can be used to normally resolve AS112 zones.
 	# o typetransparent resolves normally for other types and other names
+	# o inform resolves normally, but logs client IP address
+	# o inform_deny drops queries and logs client IP address
 	#
 	# defaults are localhost address, reverse for 127.0.0.1 and ::1
 	# and nxdomain for AS112 zones. If you configure one of these zones
@@ -527,6 +548,30 @@ server:
 	# Default is no.  Can be turned on and off with unbound-control.
 	# ssl-upstream: no
 
+	# DNS64 prefix. Must be specified when DNS64 is use.
+	# Enable dns64 in module-config.  Used to synthesize IPv6 from IPv4.
+	# dns64-prefix: 64:ff9b::0/96
+
+	# ratelimit for uncached, new queries, this limits recursion effort.
+	# ratelimiting is experimental, and may help against randomqueryflood.
+	# if 0(default) it is disabled, otherwise state qps allowed per zone.
+	# ratelimit: 0
+
+	# ratelimits are tracked in a cache, size in bytes of cache (or k,m).
+	# ratelimit-size: 4m
+	# ratelimit cache slabs, reduces lock contention if equal to cpucount.
+	# ratelimit-slabs: 4
+	
+	# 0 blocks when ratelimited, otherwise let 1/xth traffic through
+	# ratelimit-factor: 10
+
+	# override the ratelimit for a specific domain name.
+	# give this setting multiple times to have multiple overrides.
+	# ratelimit-for-domain: example.com 100
+	# override the ratelimits for all domains below a domain name
+	# can give this multiple times, the name closest to the zone is used.
+	# ratelimit-below-domain: example 100
+
 # Python config section. To enable:
 # o use --with-pythonmodule to configure before compiling.
 # o list python in the module-config string (above) to enable.
@@ -540,6 +585,10 @@ remote-control:
 	# Enable remote control with unbound-control(8) here.
 	# set up the keys and certificates with unbound-control-setup.
 	# control-enable: no
+
+	# Set to no and use an absolute path as control-interface to use
+	# a unix local named pipe for unbound-control.
+	# control-use-cert: yes
 
 	# what interfaces are listened to for remote control.
 	# give 0.0.0.0 and ::0 to listen to all interfaces.

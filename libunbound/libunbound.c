@@ -61,7 +61,7 @@
 #include "services/localzone.h"
 #include "services/cache/infra.h"
 #include "services/cache/rrset.h"
-#include "ldns/sbuffer.h"
+#include "sldns/sbuffer.h"
 #ifdef HAVE_PTHREAD
 #include <signal.h>
 #endif
@@ -355,6 +355,26 @@ ub_ctx_add_ta_file(struct ub_ctx* ctx, const char* fname)
 		return UB_AFTERFINAL;
 	}
 	if(!cfg_strlist_insert(&ctx->env->cfg->trust_anchor_file_list, dup)) {
+		lock_basic_unlock(&ctx->cfglock);
+		free(dup);
+		return UB_NOMEM;
+	}
+	lock_basic_unlock(&ctx->cfglock);
+	return UB_NOERROR;
+}
+
+int ub_ctx_add_ta_autr(struct ub_ctx* ctx, const char* fname)
+{
+	char* dup = strdup(fname);
+	if(!dup) return UB_NOMEM;
+	lock_basic_lock(&ctx->cfglock);
+	if(ctx->finalized) {
+		lock_basic_unlock(&ctx->cfglock);
+		free(dup);
+		return UB_AFTERFINAL;
+	}
+	if(!cfg_strlist_insert(&ctx->env->cfg->auto_trust_anchor_file_list,
+		dup)) {
 		lock_basic_unlock(&ctx->cfglock);
 		free(dup);
 		return UB_NOMEM;
@@ -959,7 +979,7 @@ ub_ctx_resolvconf(struct ub_ctx* ctx, const char* fname)
 				parse++;
 			addr = parse;
 			/* skip [0-9a-fA-F.:]*, i.e. IP4 and IP6 address */
-			while(isxdigit(*parse) || *parse=='.' || *parse==':')
+			while(isxdigit((unsigned char)*parse) || *parse=='.' || *parse==':')
 				parse++;
 			/* terminate after the address, remove newline */
 			*parse = 0;
@@ -1031,7 +1051,9 @@ ub_ctx_hosts(struct ub_ctx* ctx, const char* fname)
 		/* format: <addr> spaces <name> spaces <name> ... */
 		addr = parse;
 		/* skip addr */
-		while(isxdigit(*parse) || *parse == '.' || *parse == ':')
+		while(isxdigit((unsigned char)*parse) || *parse == '.' || *parse == ':')
+			parse++;
+		if(*parse == '\r')
 			parse++;
 		if(*parse == '\n' || *parse == 0)
 			continue;
@@ -1046,7 +1068,8 @@ ub_ctx_hosts(struct ub_ctx* ctx, const char* fname)
 		*parse++ = 0; /* end delimiter for addr ... */
 		/* go to names and add them */
 		while(*parse) {
-			while(*parse == ' ' || *parse == '\t' || *parse=='\n')
+			while(*parse == ' ' || *parse == '\t' || *parse=='\n'
+				|| *parse=='\r')
 				parse++;
 			if(*parse == 0 || *parse == '#')
 				break;

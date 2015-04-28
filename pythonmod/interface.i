@@ -26,15 +26,18 @@
    #include "util/storage/lruhash.h"
    #include "services/cache/dns.h"
    #include "services/mesh.h"
-   #include "ldns/wire2str.h"
-   #include "ldns/str2wire.h"
-   #include "ldns/pkthdr.h"
+   #include "iterator/iter_delegpt.h"
+   #include "iterator/iter_hints.h"
+   #include "iterator/iter_utils.h"
+   #include "sldns/wire2str.h"
+   #include "sldns/str2wire.h"
+   #include "sldns/pkthdr.h"
 %}
 
 %include "stdint.i" // uint_16_t can be known type now
 
 %inline %{
-   //converts [len][data][len][data][0] string to a List of labels (PyStrings)
+   //converts [len][data][len][data][0] string to a List of labels (PyBytes)
    PyObject* GetNameAsLabelList(const char* name, int len) {
      PyObject* list;
      int cnt=0, i;
@@ -48,7 +51,7 @@
      list = PyList_New(cnt);
      i = 0; cnt = 0;
      while (i < len) {
-        PyList_SetItem(list, cnt, PyString_FromStringAndSize(name + i + 1, name[i]));
+        PyList_SetItem(list, cnt, PyBytes_FromStringAndSize(name + i + 1, name[i]));
         i += name[i] + 1;
         cnt++;
      }
@@ -76,8 +79,8 @@ struct query_info {
 %inline %{
    enum enum_rr_class  { 
       RR_CLASS_IN = 1,
-      RR_CLASS_CH	= 3,
-      RR_CLASS_HS	= 4,
+      RR_CLASS_CH = 3,
+      RR_CLASS_HS = 4,
       RR_CLASS_NONE = 254,
       RR_CLASS_ANY = 255,
    };
@@ -148,7 +151,7 @@ struct query_info {
    };
 
    PyObject* _get_qname(struct query_info* q) {
-      return PyString_FromStringAndSize((char*)q->qname, q->qname_len);
+      return PyBytes_FromStringAndSize((char*)q->qname, q->qname_len);
    } 
 
    PyObject* _get_qname_components(struct query_info* q) {
@@ -161,7 +164,7 @@ struct query_info {
        char buf[LDNS_MAX_DOMAINLEN+1];
        buf[0] = '\0';
        dname_str((uint8_t*)dname, buf);
-       return PyString_FromString(buf);
+       return PyBytes_FromString(buf);
    }
 %}
 
@@ -210,7 +213,7 @@ uint16_t ntohs(uint16_t netshort);
 
 %inline %{
    PyObject* _get_dname(struct packed_rrset_key* k) {
-      return PyString_FromStringAndSize((char*)k->dname, k->dname_len);
+      return PyBytes_FromStringAndSize((char*)k->dname, k->dname_len);
    } 
    PyObject* _get_dname_components(struct packed_rrset_key* k) {
       return GetNameAsLabelList((char*)k->dname, k->dname_len);
@@ -317,7 +320,7 @@ struct packed_rrset_data {
    PyObject* _get_data_rr_data(struct packed_rrset_data* d, int idx) {
      if ((d != NULL) && (idx >= 0) && 
              ((size_t)idx < (d->count+d->rrsig_count))) 
-        return PyString_FromStringAndSize((char*)d->rr_data[idx],
+        return PyBytes_FromStringAndSize((char*)d->rr_data[idx],
                 d->rr_len[idx]);
      return Py_None;
    }
@@ -437,7 +440,7 @@ struct comm_reply {
      reply_addr2str(reply, dest, 64);
      if (dest[0] == 0)
         return Py_None;
-     return PyString_FromString(dest);
+     return PyBytes_FromString(dest);
   }
 
   PyObject* _comm_reply_family_get(struct comm_reply* reply) {
@@ -445,9 +448,9 @@ struct comm_reply {
         int af = (int)((struct sockaddr_in*) &(reply->addr))->sin_family;
 
         switch(af) {
-           case AF_INET: return PyString_FromString("ip4");
-           case AF_INET6: return PyString_FromString("ip6"); 
-           case AF_UNIX: return PyString_FromString("unix");
+           case AF_INET: return PyBytes_FromString("ip4");
+           case AF_INET6: return PyBytes_FromString("ip6");
+           case AF_UNIX: return PyBytes_FromString("unix");
         }
 
         return Py_None;
@@ -672,6 +675,99 @@ struct config_file {
 };
 
 /* ************************************************************************************ * 
+   ASN: Adding structures related to forwards_lookup and dns_cache_find_delegation
+ * ************************************************************************************ */
+struct delegpt_ns {
+    struct delegpt_ns* next;
+    int resolved;
+    uint8_t got4;
+    uint8_t got6;
+    uint8_t lame;
+    uint8_t done_pside4;
+    uint8_t done_pside6;
+};
+
+struct delegpt_addr {
+    struct delegpt_addr* next_result;
+    struct delegpt_addr* next_usable;
+    struct delegpt_addr* next_target;
+    int attempts;
+    int sel_rtt;
+    int bogus;
+    int lame;
+};
+
+struct delegpt {
+    int namelabs;
+    struct delegpt_ns* nslist;
+    struct delegpt_addr* target_list;
+    struct delegpt_addr* usable_list;
+    struct delegpt_addr* result_list;
+    int bogus;
+    uint8_t has_parent_side_NS;
+    uint8_t dp_type_mlc;
+};
+
+
+%inline %{
+   PyObject* _get_dp_dname(struct delegpt* dp) {
+      return PyBytes_FromStringAndSize((char*)dp->name, dp->namelen);
+   } 
+   PyObject* _get_dp_dname_components(struct delegpt* dp) {
+      return GetNameAsLabelList((char*)dp->name, dp->namelen);
+   }
+   PyObject* _get_dpns_dname(struct delegpt_ns* dpns) {
+      return PyBytes_FromStringAndSize((char*)dpns->name, dpns->namelen);
+   }
+   PyObject* _get_dpns_dname_components(struct delegpt_ns* dpns) {
+      return GetNameAsLabelList((char*)dpns->name, dpns->namelen);
+   }
+
+  PyObject* _delegpt_addr_addr_get(struct delegpt_addr* target) {
+     char dest[64];
+     delegpt_addr_addr2str(target, dest, 64);
+     if (dest[0] == 0)
+        return Py_None;
+     return PyBytes_FromString(dest);
+  }
+
+%}
+
+%extend delegpt {
+   %pythoncode %{
+        __swig_getmethods__["dname"] = _unboundmodule._get_dp_dname
+        if _newclass:dname = _swig_property(_unboundmodule._get_dp_dname)
+
+        __swig_getmethods__["dname_list"] = _unboundmodule._get_dp_dname_components
+        if _newclass:dname_list = _swig_property(_unboundmodule._get_dp_dname_components)
+
+        def _get_dname_str(self): return dnameAsStr(self.dname)
+        __swig_getmethods__["dname_str"] = _get_dname_str
+        if _newclass:dname_str = _swig_property(_get_dname_str)
+   %}
+}
+%extend delegpt_ns {
+   %pythoncode %{
+        __swig_getmethods__["dname"] = _unboundmodule._get_dpns_dname
+        if _newclass:dname = _swig_property(_unboundmodule._get_dpns_dname)
+
+        __swig_getmethods__["dname_list"] = _unboundmodule._get_dpns_dname_components
+        if _newclass:dname_list = _swig_property(_unboundmodule._get_dpns_dname_components)
+
+        def _get_dname_str(self): return dnameAsStr(self.dname)
+        __swig_getmethods__["dname_str"] = _get_dname_str
+        if _newclass:dname_str = _swig_property(_get_dname_str)
+   %}
+}
+%extend delegpt_addr {
+   %pythoncode %{
+        def _addr_get(self): return _delegpt_addr_addr_get(self)
+        __swig_getmethods__["addr"] = _addr_get
+        if _newclass:addr = _swig_property(_addr_get)
+   %}
+}
+
+/* ************************************************************************************ * 
    Enums
  * ************************************************************************************ */
 %rename ("MODULE_STATE_INITIAL") "module_state_initial";
@@ -746,7 +842,7 @@ int checkList(PyObject *l)
        for (i=0; i < PyList_Size(l); i++) 
        {
            item = PyList_GetItem(l, i);
-           if (!PyString_Check(item))
+           if (!PyBytes_Check(item))
               return 0;
        }
        return 1;
@@ -768,12 +864,12 @@ int pushRRList(sldns_buffer* qb, PyObject *l, uint32_t default_ttl, int qsec,
 
         len = sldns_buffer_remaining(qb);
         if(qsec) {
-                if(sldns_str2wire_rr_question_buf(PyString_AsString(item),
+                if(sldns_str2wire_rr_question_buf(PyBytes_AsString(item),
                         sldns_buffer_current(qb), &len, NULL, NULL, 0, NULL, 0)
                         != 0)
                         return 0;
         } else {
-                if(sldns_str2wire_rr_buf(PyString_AsString(item),
+                if(sldns_str2wire_rr_buf(PyBytes_AsString(item),
                         sldns_buffer_current(qb), &len, NULL, default_ttl,
                         NULL, 0, NULL, 0) != 0)
                         return 0;
@@ -879,6 +975,65 @@ int set_return_msg(struct module_qstate* qstate,
             return status 
 
 %}
+/* ************************************************************************************ * 
+   ASN: Delegation pointer related functions
+ * ************************************************************************************ */
+
+/* Functions which we will need to lookup delegations */
+struct delegpt* dns_cache_find_delegation(struct module_env* env,
+        uint8_t* qname, size_t qnamelen, uint16_t qtype, uint16_t qclass,
+        struct regional* region, struct dns_msg** msg, uint32_t timenow);
+int iter_dp_is_useless(struct query_info* qinfo, uint16_t qflags,
+        struct delegpt* dp);
+struct iter_hints_stub* hints_lookup_stub(struct iter_hints* hints,
+        uint8_t* qname, uint16_t qclass, struct delegpt* dp);
+
+/* Custom function to perform logic similar to the one in daemon/cachedump.c */
+struct delegpt* find_delegation(struct module_qstate* qstate, char *nm, size_t nmlen);
+
+%{
+#define BIT_RD 0x100
+
+struct delegpt* find_delegation(struct module_qstate* qstate, char *nm, size_t nmlen)
+{
+    struct delegpt *dp;
+    struct dns_msg *msg = NULL;
+    struct regional* region = qstate->env->scratch;
+    char b[260];
+    struct query_info qinfo;
+    struct iter_hints_stub* stub;
+    uint32_t timenow = *qstate->env->now;
+
+    regional_free_all(region);
+    qinfo.qname = (uint8_t*)nm;
+    qinfo.qname_len = nmlen;
+    qinfo.qtype = LDNS_RR_TYPE_A;
+    qinfo.qclass = LDNS_RR_CLASS_IN;
+
+    while(1) {
+        dp = dns_cache_find_delegation(qstate->env, (uint8_t*)nm, nmlen, qinfo.qtype, qinfo.qclass, region, &msg, timenow);
+        if(!dp)
+            return NULL;
+        if(iter_dp_is_useless(&qinfo, BIT_RD, dp)) {
+            if (dname_is_root((uint8_t*)nm))
+                return NULL;
+            nm = (char*)dp->name;
+            nmlen = dp->namelen;
+            dname_remove_label((uint8_t**)&nm, &nmlen);
+            dname_str((uint8_t*)nm, b);
+            continue;
+        }
+        stub = hints_lookup_stub(qstate->env->hints, qinfo.qname, qinfo.qclass, dp);
+        if (stub) {
+            return stub->dp;
+        } else {
+            return dp;
+        }
+    }
+    return NULL;
+}
+%}
+
 /* ************************************************************************************ * 
    Functions
  * ************************************************************************************ */

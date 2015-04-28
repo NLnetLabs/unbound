@@ -8,14 +8,11 @@
 .\"
 .\"
 .SH "NAME"
-.LP
 .B unbound.conf
 \- Unbound configuration file.
 .SH "SYNOPSIS"
-.LP
 .B unbound.conf
 .SH "DESCRIPTION"
-.LP
 .B unbound.conf
 is used to configure
 \fIunbound\fR(8).
@@ -65,7 +62,6 @@ server:
 	access\-control: 2001:DB8::/64 allow
 .fi
 .SH "FILE FORMAT"
-.LP
 There must be whitespace between keywords. Attribute keywords end with a colon ':'. An attribute
 is followed by its containing attributes, or a value.
 .P
@@ -168,12 +164,14 @@ By default only ports above 1024 that have not been assigned by IANA are used.
 Give a port number or a range of the form "low\-high", without spaces.
 .TP
 .B outgoing\-num\-tcp: \fI<number>
-Number of outgoing TCP buffers to allocate per thread. Default is 10. If set
-to 0, or if do\-tcp is "no", no TCP queries to authoritative servers are done.
+Number of outgoing TCP buffers to allocate per thread. Default is 10. If
+set to 0, or if do\-tcp is "no", no TCP queries to authoritative servers
+are done.  For larger installations increasing this value is a good idea.
 .TP
 .B incoming\-num\-tcp: \fI<number>
-Number of incoming TCP buffers to allocate per thread. Default is 10. If set
-to 0, or if do\-tcp is "no", no TCP queries from clients are accepted.
+Number of incoming TCP buffers to allocate per thread. Default is
+10. If set to 0, or if do\-tcp is "no", no TCP queries from clients are
+accepted. For larger installations increasing this value is a good idea.
 .TP
 .B edns\-buffer\-size: \fI<number>
 Number of bytes size to advertise as the EDNS reassembly buffer size.
@@ -262,11 +260,22 @@ to so\-rcvbuf.
 .B so\-reuseport: \fI<yes or no>
 If yes, then open dedicated listening sockets for incoming queries for each
 thread and try to set the SO_REUSEPORT socket option on each socket.  May
-distribute incoming queries to threads more evenly.  Default is no.  Only
-supported on Linux >= 3.9.  You can enable it (on any platform and kernel),
+distribute incoming queries to threads more evenly.  Default is no.  On Linux
+it is supported in kernels >= 3.9.  On other systems, FreeBSD, OSX it may
+also work.  You can enable it (on any platform and kernel),
 it then attempts to open the port and passes the option if it was available
 at compile time, if that works it is used, if it fails, it continues
 silently (unless verbosity 3) without the option.
+.TP
+.B ip\-transparent: \fI<yes or no>
+If yes, then use IP_TRANSPARENT socket option on sockets where unbound
+is listening for incoming traffic.  Default no.  Allows you to bind to
+non\-local interfaces.  For example for non\-existant IP addresses that
+are going to exist later on, with host failover configuration.  This is
+a lot like interface\-automatic, but that one services all interfaces
+and with this option you can select which (future) interfaces unbound
+provides service on.  This option needs unbound to be started with root
+permissions on some systems.
 .TP
 .B rrset\-cache\-size: \fI<number>
 Number of bytes size of the RRset cache. Default is 4 megabytes.
@@ -303,6 +312,11 @@ by threads. Must be set to a power of 2.
 .TP
 .B infra\-cache\-numhosts: \fI<number>
 Number of hosts for which information is cached. Default is 10000.
+.TP
+.B infra\-cache\-min\-rtt: \fI<msec>
+Lower limit for dynamic retransmit timeout calculation in infrastructure
+cache. Default is 50 milliseconds. Increase this value if using forwarders
+needing more time to do recursive name resolution.
 .TP
 .B do\-ip4: \fI<yes or no>
 Enable or disable whether ip4 queries are answered or issued. Default is yes.
@@ -546,6 +560,13 @@ extra query load that is generated.  Experimental option.
 If you enable it consider adding more numbers after the target\-fetch\-policy
 to increase the max depth that is checked to.
 .TP
+.B harden\-algo\-downgrade: \fI<yes or no>
+Harden against algorithm downgrade when multiple algorithms are
+advertised in the DS record.  If no, allows the weakest algorithm to
+validate the zone.  Default is yes.  Zone signers must produce zones
+that allow this feature to work, but sometimes they do not, and turning
+this option off avoids that validation failure.
+.TP
 .B use\-caps\-for\-id: \fI<yes or no>
 Use 0x20\-encoded random bits in the query to foil spoof attempts.
 This perturbs the lowercase and uppercase of query names sent to 
@@ -780,13 +801,24 @@ Number of bytes size of the aggressive negative cache. Default is 1 megabyte.
 A plain number is in bytes, append 'k', 'm' or 'g' for kilobytes, megabytes
 or gigabytes (1024*1024 bytes in a megabyte).
 .TP
+.B unblock\-lan\-zones: \fI<yesno>
+Default is disabled.  If enabled, then for private address space,
+the reverse lookups are no longer filtered.  This allows unbound when
+running as dns service on a host where it provides service for that host,
+to put out all of the queries for the 'lan' upstream.  When enabled,
+only localhost, 127.0.0.1 reverse and ::1 reverse zones are configured
+with default local zones.  Disable the option when unbound is running
+as a (DHCP-) DNS network resolver for a group of machines, where such
+lookups should be filtered (RFC compliance), this also stops potential
+data leakage about the local network to the upstream DNS servers.
+.TP
 .B local\-zone: \fI<zone> <type>
 Configure a local zone. The type determines the answer to give if
 there is no match from local\-data. The types are deny, refuse, static,
-transparent, redirect, nodefault, typetransparent, and are explained
-below. After that the default settings are listed. Use local\-data: to
-enter data into the local zone. Answers for local zones are authoritative
-DNS answers. By default the zones are class IN.
+transparent, redirect, nodefault, typetransparent, inform, inform_deny,
+and are explained below. After that the default settings are listed. Use
+local\-data: to enter data into the local zone. Answers for local zones
+are authoritative DNS answers. By default the zones are class IN.
 .IP
 If you need more complicated authoritative data, with referrals, wildcards,
 CNAME/DNAME support, or DNSSEC authoritative service, setup a stub\-zone for
@@ -832,6 +864,17 @@ local\-zone: "example.com." redirect and
 local\-data: "example.com. A 127.0.0.1"
 queries for www.example.com and www.foo.example.com are redirected, so
 that users with web browsers cannot access sites with suffix example.com.
+.TP 10
+\h'5'\fIinform\fR 
+The query is answered normally.  The client IP address (@portnumber)
+is printed to the logfile.  The log message is: timestamp, unbound-pid,
+info: zonename inform IP@port queryname type class.  This option can be
+used for normal resolution, but machines looking up infected names are
+logged, eg. to run antivirus on them.
+.TP 10
+\h'5'\fIinform_deny\fR 
+The query is dropped, like 'deny', and logged, like 'inform'.  Ie. find
+infected machines without answering the queries.
 .TP 10
 \h'5'\fInodefault\fR 
 Used to turn off default contents for AS112 zones. The other types
@@ -956,6 +999,51 @@ are willing to expose to third parties for IPv6. Defaults to 64.
 .B max\-client\-subnet\-ipv4: \fI<number>
 Specifies the maximum prefix length of the client source address we
 are willing to expose to third parties for IPv4. Defaults to 24.
+.TP 5
+.B ratelimit: \fI<number or 0>
+Enable ratelimiting of queries sent to nameserver for performing recursion.
+If 0, the default, it is disabled.  This option is experimental at this time.
+The ratelimit is in queries per second that are allowed.  More queries are
+turned away with an error (servfail).  This stops recursive floods, eg. random
+query names, but not spoofed reflection floods.  Cached responses are not
+ratelimited by this setting.  The zone of the query is determined by examining
+the nameservers for it, the zone name is used to keep track of the rate.
+For example, 100 may be a suitable value to stop the server from being
+overloaded with random names, and keeps unbound from sending traffic to the
+nameservers for those zones.
+.TP 5
+.B ratelimit\-size: \fI<memory size>
+Give the size of the data structure in which the current ongoing rates are
+kept track in.  Default 4m.  In bytes or use m(mega), k(kilo), g(giga).
+The ratelimit structure is small, so this data structure likely does
+not need to be large.
+.TP 5
+.B ratelimit\-slabs: \fI<number>
+Give power of 2 number of slabs, this is used to reduce lock contention
+in the ratelimit tracking data structure.  Close to the number of cpus is
+a fairly good setting.
+.TP 5
+.B ratelimit\-factor: \fI<number>
+Set the amount of queries to rate limit when the limit is exceeded.
+If set to 0, all queries are dropped for domains where the limit is
+exceeded.  If set to another value, 1 in that number is allowed through
+to complete.  Default is 10, allowing 1/10 traffic to flow normally.
+This can make ordinary queries complete (if repeatedly queried for),
+and enter the cache, whilst also mitigiting the traffic flow by the
+factor given.
+.TP 5
+.B ratelimit\-for\-domain: \fI<domain> <number qps>
+Override the global ratelimit for an exact match domain name with the listed
+number.  You can give this for any number of names.  For example, for
+a top\-level\-domain you may want to have a higher limit than other names.
+.TP 5
+.B ratelimit\-below\-domain: \fI<domain> <number qps>
+Override the global ratelimit for a domain name that ends in this name.
+You can give this multiple times, it then describes different settings
+in different parts of the namespace.  The closest matching suffix is used
+to determine the qps limit.  The rate for the exact matching domain name
+is not changed, use ratelimit\-for\-domain to set that, you might want
+to use different settings for a top\-level\-domain and subdomains.
 .SS "Remote Control Options"
 In the
 .B remote\-control:
@@ -967,36 +1055,47 @@ to setup SSLv3 / TLSv1 security for the connection.  The
 section for options.  To setup the correct self\-signed certificates use the
 \fIunbound\-control\-setup\fR(8) utility.
 .TP 5
-.B control\-enable:     \fI<yes or no>
+.B control\-enable: \fI<yes or no>
 The option is used to enable remote control, default is "no".
 If turned off, the server does not listen for control commands.
 .TP 5
-.B control\-interface: <ip address>
-Give IPv4 or IPv6 addresses to listen on for control commands.
+.B control\-interface: \fI<ip address or path>
+Give IPv4 or IPv6 addresses or local socket path to listen on for
+control commands.
 By default localhost (127.0.0.1 and ::1) is listened to.
 Use 0.0.0.0 and ::0 to listen to all interfaces.
+If you change this and permissions have been dropped, you must restart
+the server for the change to take effect.
 .TP 5
-.B control\-port: <port number>
-The port number to listen on for control commands, default is 8953.
-If you change this port number, and permissions have been dropped,
-a reload is not sufficient to open the port again, you must then restart.
+.B control\-port: \fI<port number>
+The port number to listen on for IPv4 or IPv6 control interfaces,
+default is 8953.
+If you change this and permissions have been dropped, you must restart
+the server for the change to take effect.
 .TP 5
-.B server\-key\-file: "<private key file>"
+.B control\-use\-cert: \fI<yes or no>
+Whether to require certificate authentication of control connections.
+The default is "yes".
+This should not be changed unless there are other mechanisms in place
+to prevent untrusted users from accessing the remote control
+interface.
+.TP 5
+.B server\-key\-file: \fI<private key file>
 Path to the server private key, by default unbound_server.key.
 This file is generated by the \fIunbound\-control\-setup\fR utility.
 This file is used by the unbound server, but not by \fIunbound\-control\fR.
 .TP 5
-.B server\-cert\-file: "<certificate file.pem>"
+.B server\-cert\-file: \fI<certificate file.pem>
 Path to the server self signed certificate, by default unbound_server.pem.
 This file is generated by the \fIunbound\-control\-setup\fR utility.
 This file is used by the unbound server, and also by \fIunbound\-control\fR.
 .TP 5
-.B control\-key\-file: "<private key file>"
+.B control\-key\-file: \fI<private key file>
 Path to the control client private key, by default unbound_control.key.
 This file is generated by the \fIunbound\-control\-setup\fR utility.
 This file is used by \fIunbound\-control\fR.
 .TP 5
-.B control\-cert\-file: "<certificate file.pem>"
+.B control\-cert\-file: \fI<certificate file.pem>
 Path to the control client certificate, by default unbound_control.pem.
 This certificate has to be signed with the server certificate.
 This file is generated by the \fIunbound\-control\-setup\fR utility.
@@ -1091,6 +1190,19 @@ and the word "python" has to be put in the \fBmodule\-config:\fR option
 .TP
 .B python\-script: \fI<python file>\fR
 The script file to load. 
+.SS "DNS64 Module Options"
+.LP
+The dns64 module must be configured in the \fBmodule\-config:\fR "dns64
+validator iterator" directive and be compiled into the daemon to be
+enabled.  These settings go in the \fBserver:\fR section.
+.TP
+.B dns64\-prefix: \fI<IPv6 prefix>\fR
+This sets the DNS64 prefix to use to synthesize AAAA records with.
+It must be /96 or shorter.  The default prefix is 64:ff9b::/96.
+.TP
+.B dns64\-synthall: \fI<yes or no>\fR
+Debug option, default no.  If enabled, synthesize all AAAA records
+despite the presence of actual AAAA records.
 .SH "MEMORY CONTROL EXAMPLE"
 In the example config settings below memory usage is reduced. Some service
 levels are lower, notable very large data and a high TCP load are no longer

@@ -50,8 +50,8 @@
 #include "util/regional.h"
 #include "util/data/msgparse.h"
 #include "util/data/msgencode.h"
-#include "ldns/sbuffer.h"
-#include "ldns/wire2str.h"
+#include "sldns/sbuffer.h"
+#include "sldns/wire2str.h"
 
 /** MAX TTL default for messages and rrsets */
 time_t MAX_TTL = 3600 * 24 * 10; /* ten days */
@@ -78,7 +78,7 @@ parse_create_qinfo(sldns_buffer* pkt, struct msg_parse* msg,
 }
 
 /** constructor for replyinfo */
-static struct reply_info*
+struct reply_info*
 construct_reply_info_base(struct regional* region, uint16_t flags, size_t qd,
 	time_t ttl, time_t prettl, size_t an, size_t ns, size_t ar, 
 	size_t total, enum sec_status sec)
@@ -87,6 +87,7 @@ construct_reply_info_base(struct regional* region, uint16_t flags, size_t qd,
 	/* rrset_count-1 because the first ref is part of the struct. */
 	size_t s = sizeof(struct reply_info) - sizeof(struct rrset_ref) +
 		sizeof(struct ub_packed_rrset_key*) * total;
+	if(total >= RR_COUNT_MAX) return NULL; /* sanity check on numRRS*/
 	if(region)
 		rep = (struct reply_info*)regional_alloc(region, s);
 	else	rep = (struct reply_info*)malloc(s + 
@@ -277,7 +278,11 @@ parse_create_rrset(sldns_buffer* pkt, struct rrset_parse* pset,
 	struct packed_rrset_data** data, struct regional* region)
 {
 	/* allocate */
-	size_t s = sizeof(struct packed_rrset_data) + 
+	size_t s;
+	if(pset->rr_count > RR_COUNT_MAX || pset->rrsig_count > RR_COUNT_MAX ||
+		pset->size > RR_COUNT_MAX)
+		return 0; /* protect against integer overflow */
+	s = sizeof(struct packed_rrset_data) + 
 		(pset->rr_count + pset->rrsig_count) * 
 		(sizeof(size_t)+sizeof(uint8_t*)+sizeof(time_t)) + 
 		pset->size;
@@ -576,10 +581,12 @@ reply_info_delete(void* d, void* ATTR_UNUSED(arg))
 }
 
 hashvalue_t 
-query_info_hash(struct query_info *q)
+query_info_hash(struct query_info *q, uint16_t flags)
 {
 	hashvalue_t h = 0xab;
 	h = hashlittle(&q->qtype, sizeof(q->qtype), h);
+	if(q->qtype == LDNS_RR_TYPE_AAAA && (flags&BIT_CD))
+		h++;
 	h = hashlittle(&q->qclass, sizeof(q->qclass), h);
 	h = dname_query_hash(q->qname, h);
 	return h;
@@ -771,15 +778,14 @@ log_dns_msg(const char* str, struct query_info* qinfo, struct reply_info* rep)
 		region, 65535, 1)) {
 		log_info("%s: log_dns_msg: out of memory", str);
 	} else {
-		char* str = sldns_wire2str_pkt(sldns_buffer_begin(buf),
+		char* s = sldns_wire2str_pkt(sldns_buffer_begin(buf),
 			sldns_buffer_limit(buf));
-		if(!str) {
+		if(!s) {
 			log_info("%s: log_dns_msg: ldns tostr failed", str);
 		} else {
-			log_info("%s %s", 
-				str, (char*)sldns_buffer_begin(buf));
+			log_info("%s %s", str, s);
 		}
-		free(str);
+		free(s);
 	}
 	sldns_buffer_free(buf);
 	regional_destroy(region);

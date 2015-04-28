@@ -7,7 +7,6 @@
  * See LICENSE for the license.
  *
  */
-
 #include <ctype.h>
 #include <string.h>
 #include <strings.h>
@@ -227,6 +226,7 @@ interface-automatic{COLON}	{ YDVAR(1, VAR_INTERFACE_AUTOMATIC) }
 so-rcvbuf{COLON}		{ YDVAR(1, VAR_SO_RCVBUF) }
 so-sndbuf{COLON}		{ YDVAR(1, VAR_SO_SNDBUF) }
 so-reuseport{COLON}		{ YDVAR(1, VAR_SO_REUSEPORT) }
+ip-transparent{COLON}		{ YDVAR(1, VAR_IP_TRANSPARENT) }
 chroot{COLON}			{ YDVAR(1, VAR_CHROOT) }
 username{COLON}			{ YDVAR(1, VAR_USERNAME) }
 directory{COLON}		{ YDVAR(1, VAR_DIRECTORY) }
@@ -246,6 +246,7 @@ infra-lame-ttl{COLON}		{ YDVAR(1, VAR_INFRA_LAME_TTL) }
 infra-cache-slabs{COLON}	{ YDVAR(1, VAR_INFRA_CACHE_SLABS) }
 infra-cache-numhosts{COLON}	{ YDVAR(1, VAR_INFRA_CACHE_NUMHOSTS) }
 infra-cache-lame-size{COLON}	{ YDVAR(1, VAR_INFRA_CACHE_LAME_SIZE) }
+infra-cache-min-rtt{COLON}	{ YDVAR(1, VAR_INFRA_CACHE_MIN_RTT) }
 num-queries-per-thread{COLON}	{ YDVAR(1, VAR_NUM_QUERIES_PER_THREAD) }
 jostle-timeout{COLON}		{ YDVAR(1, VAR_JOSTLE_TIMEOUT) }
 delay-close{COLON}		{ YDVAR(1, VAR_DELAY_CLOSE) }
@@ -256,6 +257,7 @@ harden-glue{COLON}		{ YDVAR(1, VAR_HARDEN_GLUE) }
 harden-dnssec-stripped{COLON}	{ YDVAR(1, VAR_HARDEN_DNSSEC_STRIPPED) }
 harden-below-nxdomain{COLON}	{ YDVAR(1, VAR_HARDEN_BELOW_NXDOMAIN) }
 harden-referral-path{COLON}	{ YDVAR(1, VAR_HARDEN_REFERRAL_PATH) }
+harden-algo-downgrade{COLON}	{ YDVAR(1, VAR_HARDEN_ALGO_DOWNGRADE) }
 use-caps-for-id{COLON}		{ YDVAR(1, VAR_USE_CAPS_FOR_ID) }
 unwanted-reply-threshold{COLON}	{ YDVAR(1, VAR_UNWANTED_REPLY_THRESHOLD) }
 private-address{COLON}		{ YDVAR(1, VAR_PRIVATE_ADDRESS) }
@@ -312,6 +314,7 @@ log-queries{COLON}		{ YDVAR(1, VAR_LOG_QUERIES) }
 local-zone{COLON}		{ YDVAR(2, VAR_LOCAL_ZONE) }
 local-data{COLON}		{ YDVAR(1, VAR_LOCAL_DATA) }
 local-data-ptr{COLON}		{ YDVAR(1, VAR_LOCAL_DATA_PTR) }
+unblock-lan-zones{COLON}	{ YDVAR(1, VAR_UNBLOCK_LAN_ZONES) }
 statistics-interval{COLON}	{ YDVAR(1, VAR_STATISTICS_INTERVAL) }
 statistics-cumulative{COLON}	{ YDVAR(1, VAR_STATISTICS_CUMULATIVE) }
 extended-statistics{COLON}	{ YDVAR(1, VAR_EXTENDED_STATISTICS) }
@@ -319,6 +322,7 @@ remote-control{COLON}		{ YDVAR(0, VAR_REMOTE_CONTROL) }
 control-enable{COLON}		{ YDVAR(1, VAR_CONTROL_ENABLE) }
 control-interface{COLON}	{ YDVAR(1, VAR_CONTROL_INTERFACE) }
 control-port{COLON}		{ YDVAR(1, VAR_CONTROL_PORT) }
+control-use-cert{COLON}		{ YDVAR(1, VAR_CONTROL_USE_CERT) }
 server-key-file{COLON}		{ YDVAR(1, VAR_SERVER_KEY_FILE) }
 server-cert-file{COLON}		{ YDVAR(1, VAR_SERVER_CERT_FILE) }
 control-key-file{COLON}		{ YDVAR(1, VAR_CONTROL_KEY_FILE) }
@@ -329,6 +333,33 @@ domain-insecure{COLON}		{ YDVAR(1, VAR_DOMAIN_INSECURE) }
 minimal-responses{COLON}	{ YDVAR(1, VAR_MINIMAL_RESPONSES) }
 rrset-roundrobin{COLON}		{ YDVAR(1, VAR_RRSET_ROUNDROBIN) }
 max-udp-size{COLON}		{ YDVAR(1, VAR_MAX_UDP_SIZE) }
+dns64-prefix{COLON}		{ YDVAR(1, VAR_DNS64_PREFIX) }
+dns64-synthall{COLON}		{ YDVAR(1, VAR_DNS64_SYNTHALL) }
+dnstap{COLON}			{ YDVAR(0, VAR_DNSTAP) }
+dnstap-enable{COLON}		{ YDVAR(1, VAR_DNSTAP_ENABLE) }
+dnstap-socket-path{COLON}	{ YDVAR(1, VAR_DNSTAP_SOCKET_PATH) }
+dnstap-send-identity{COLON}	{ YDVAR(1, VAR_DNSTAP_SEND_IDENTITY) }
+dnstap-send-version{COLON}	{ YDVAR(1, VAR_DNSTAP_SEND_VERSION) }
+dnstap-identity{COLON}		{ YDVAR(1, VAR_DNSTAP_IDENTITY) }
+dnstap-version{COLON}		{ YDVAR(1, VAR_DNSTAP_VERSION) }
+dnstap-log-resolver-query-messages{COLON}	{
+		YDVAR(1, VAR_DNSTAP_LOG_RESOLVER_QUERY_MESSAGES) }
+dnstap-log-resolver-response-messages{COLON}	{
+		YDVAR(1, VAR_DNSTAP_LOG_RESOLVER_RESPONSE_MESSAGES) }
+dnstap-log-client-query-messages{COLON}		{
+		YDVAR(1, VAR_DNSTAP_LOG_CLIENT_QUERY_MESSAGES) }
+dnstap-log-client-response-messages{COLON}	{
+		YDVAR(1, VAR_DNSTAP_LOG_CLIENT_RESPONSE_MESSAGES) }
+dnstap-log-forwarder-query-messages{COLON}	{
+		YDVAR(1, VAR_DNSTAP_LOG_FORWARDER_QUERY_MESSAGES) }
+dnstap-log-forwarder-response-messages{COLON}	{
+		YDVAR(1, VAR_DNSTAP_LOG_FORWARDER_RESPONSE_MESSAGES) }
+ratelimit{COLON}		{ YDVAR(1, VAR_RATELIMIT) }
+ratelimit-slabs{COLON}		{ YDVAR(1, VAR_RATELIMIT_SLABS) }
+ratelimit-size{COLON}		{ YDVAR(1, VAR_RATELIMIT_SIZE) }
+ratelimit-for-domain{COLON}	{ YDVAR(2, VAR_RATELIMIT_FOR_DOMAIN) }
+ratelimit-below-domain{COLON}	{ YDVAR(2, VAR_RATELIMIT_BELOW_DOMAIN) }
+ratelimit-factor{COLON}		{ YDVAR(1, VAR_RATELIMIT_FACTOR) }
 <INITIAL,val>{NEWLINE}		{ LEXOUT(("NL\n")); cfg_parser->line++; }
 
 	/* Quoted strings. Strip leading and ending quotes */

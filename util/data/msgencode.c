@@ -45,12 +45,12 @@
 #include "util/data/msgparse.h"
 #include "util/data/dname.h"
 #include "util/log.h"
-#include "util/net_help.h"
 #include "util/regional.h"
 #if CLIENT_SUBNET
 #include "edns-subnet/edns-subnet.h"
 #endif
-#include "ldns/sbuffer.h"
+#include "util/net_help.h"
+#include "sldns/sbuffer.h"
 
 /** return code that means the function ran out of memory. negative so it does
  * not conflict with DNS rcodes. */

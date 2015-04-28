@@ -129,6 +129,7 @@ void listening_ports_free(struct listen_port* list);
  * @param tcp_accept_count: max number of simultaneous TCP connections 
  * 	from clients.
  * @param sslctx: nonNULL if ssl context.
+ * @param dtenv: nonNULL if dnstap enabled.
  * @param cb: callback function when a request arrives. It is passed
  *	  the packet and user argument. Return true to send a reply.
  * @param cb_arg: user data argument for callback function.
@@ -136,7 +137,8 @@ void listening_ports_free(struct listen_port* list);
  */
 struct listen_dnsport* listen_create(struct comm_base* base,
 	struct listen_port* ports, size_t bufsize, int tcp_accept_count,
-	void* sslctx, comm_point_callback_t* cb, void* cb_arg);
+	void* sslctx, struct dt_env *dtenv, comm_point_callback_t* cb,
+	void* cb_arg);
 
 /**
  * delete the listening structure
@@ -187,11 +189,12 @@ void listen_start_accept(struct listen_dnsport* listen);
  * 	set SO_REUSEADDR on it.
  * @param reuseport: if nonNULL and true, try to set SO_REUSEPORT on
  * 	listening UDP port.  Set to false on return if it failed to do so.
+ * @param transparent: set IP_TRANSPARENT socket option.
  * @return: the socket. -1 on error.
  */
 int create_udp_sock(int family, int socktype, struct sockaddr* addr, 
 	socklen_t addrlen, int v6only, int* inuse, int* noproto, int rcv,
-	int snd, int listen, int* reuseport);
+	int snd, int listen, int* reuseport, int transparent);
 
 /**
  * Create and bind TCP listening socket
@@ -200,9 +203,19 @@ int create_udp_sock(int family, int socktype, struct sockaddr* addr,
  * @param noproto: if error caused by lack of protocol support.
  * @param reuseport: if nonNULL and true, try to set SO_REUSEPORT on
  * 	listening UDP port.  Set to false on return if it failed to do so.
+ * @param transparent: set IP_TRANSPARENT socket option.
  * @return: the socket. -1 on error.
  */
 int create_tcp_accept_sock(struct addrinfo *addr, int v6only, int* noproto,
-	int* reuseport);
+	int* reuseport, int transparent);
+
+/**
+ * Create and bind local listening socket
+ * @param path: path to the socket.
+ * @param noproto: on error, this is set true if cause is that local sockets
+ *	are not supported.
+ * @return: the socket. -1 on error.
+ */
+int create_local_accept_sock(const char* path, int* noproto);
 
 #endif /* LISTEN_DNSPORT_H */

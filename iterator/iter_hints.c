@@ -46,9 +46,9 @@
 #include "util/config_file.h"
 #include "util/net_help.h"
 #include "util/data/dname.h"
-#include "ldns/rrdef.h"
-#include "ldns/str2wire.h"
-#include "ldns/wire2str.h"
+#include "sldns/rrdef.h"
+#include "sldns/str2wire.h"
+#include "sldns/wire2str.h"
 
 struct iter_hints* 
 hints_create(void)
@@ -144,6 +144,7 @@ compile_time_root_prime(int do_ip4, int do_ip6)
       }
       if(do_ip6) {
 	if(!ah(dp, "A.ROOT-SERVERS.NET.", "2001:503:ba3e::2:30")) goto failed;
+	if(!ah(dp, "B.ROOT-SERVERS.NET.", "2001:500:84::b")) goto failed;
 	if(!ah(dp, "C.ROOT-SERVERS.NET.", "2001:500:2::c")) goto failed;
 	if(!ah(dp, "D.ROOT-SERVERS.NET.", "2001:500:2d::d")) goto failed;
 	if(!ah(dp, "F.ROOT-SERVERS.NET.", "2001:500:2f::f")) goto failed;

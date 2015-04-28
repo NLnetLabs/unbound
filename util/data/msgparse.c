@@ -42,10 +42,10 @@
 #include "util/data/packed_rrset.h"
 #include "util/storage/lookup3.h"
 #include "util/regional.h"
-#include "ldns/rrdef.h"
-#include "ldns/sbuffer.h"
-#include "ldns/parseutil.h"
-#include "ldns/wire2str.h"
+#include "sldns/rrdef.h"
+#include "sldns/sbuffer.h"
+#include "sldns/parseutil.h"
+#include "sldns/wire2str.h"
 #if CLIENT_SUBNET
 #include "edns-subnet/edns-subnet.h"
 #endif
@@ -1049,10 +1049,11 @@ parse_extract_edns(struct msg_parse* msg, struct edns_data* edns)
 	
 	/* take the data ! */
 	edns->edns_present = 1;
-	edns->udp_size = ntohs(found->rrset_class);
 	edns->ext_rcode = found->rr_last->ttl_data[0];
 	edns->edns_version = found->rr_last->ttl_data[1];
 	edns->bits = sldns_read_uint16(&found->rr_last->ttl_data[2]);
+	edns->udp_size = ntohs(found->rrset_class);
+	/* ignore rdata and rrsigs */
 #ifdef CLIENT_SUBNET
 	/* silently continue without ednsdata on parse error */
 	(void) parse_ednsdata(found->rr_last->ttl_data + 4, edns);

@@ -47,7 +47,7 @@
 #include "testcode/fake_event.h"
 #include "daemon/remote.h"
 #include "util/config_file.h"
-#include "ldns/keyraw.h"
+#include "sldns/keyraw.h"
 #include <ctype.h>
 
 /** signal that this is a testbound compile */
@@ -98,7 +98,7 @@ add_opts(const char* args, int* pass_argc, char* pass_argv[])
 {
 	const char *p = args, *np;
 	size_t len;
-	while(p && isspace((int)*p)) 
+	while(p && isspace((unsigned char)*p)) 
 		p++;
 	while(p && *p) {
 		/* find location of next string and length of this one */
@@ -116,7 +116,7 @@ add_opts(const char* args, int* pass_argc, char* pass_argv[])
 		(*pass_argc)++;
 		/* go to next option */
 	        p = np;
-		while(p && isspace((int)*p)) 
+		while(p && isspace((unsigned char)*p)) 
 			p++;
 	}
 }
@@ -141,7 +141,7 @@ spool_auto_file(FILE* in, int* lineno, FILE* cfg, char* id)
 	char* parse;
 	FILE* spool;
 	/* find filename for new file */
-	while(isspace((int)*id))
+	while(isspace((unsigned char)*id))
 		id++;
 	if(strlen(id)==0) 
 		fatal_exit("AUTROTRUST_FILE must have id, line %d", *lineno);
@@ -159,7 +159,7 @@ spool_auto_file(FILE* in, int* lineno, FILE* cfg, char* id)
 	while(fgets(line, MAX_LINE_LEN-1, in)) {
 		parse = line;
 		(*lineno)++;
-		while(isspace((int)*parse))
+		while(isspace((unsigned char)*parse))
 			parse++;
 		if(strncmp(parse, "AUTOTRUST_END", 13) == 0) {
 			fclose(spool);
@@ -198,7 +198,7 @@ setup_config(FILE* in, int* lineno, int* pass_argc, char* pass_argv[])
 	while(fgets(line, MAX_LINE_LEN-1, in)) {
 		parse = line;
 		(*lineno)++;
-		while(isspace((int)*parse))
+		while(isspace((unsigned char)*parse))
 			parse++;
 		if(!*parse || parse[0] == ';')
 			continue;
@@ -338,8 +338,6 @@ main(int argc, char* argv[])
 		case 'h':
 		default:
 			testbound_usage();
-			for(c=1; c<pass_argc; c++)
-				free(pass_argv[c]);
 			return 1;
 		}
 	}
@@ -347,8 +345,6 @@ main(int argc, char* argv[])
 	argv += optind;
 	if(argc != 0) {
 		testbound_usage();
-		for(c=1; c<pass_argc; c++)
-			free(pass_argv[c]);
 		return 1;
 	}
 	log_info("Start of %s testbound program.", PACKAGE_STRING);

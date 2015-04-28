@@ -58,6 +58,12 @@ typedef uint64_t rrset_id_t;
  * from the SOA in the answer section from a direct SOA query or ANY query. */
 #define PACKED_RRSET_SOA_NEG 0x4
 
+/** number of rrs and rrsets for integer overflow protection.  More than
+ * this is not really possible (64K packet has much less RRs and RRsets) in
+ * a message.  And this is small enough that also multiplied there is no
+ * integer overflow. */
+#define RR_COUNT_MAX 0xffffff
+
 /**
  * The identifying information for an RRset.
  */
@@ -189,7 +195,7 @@ enum sec_status {
  *	o base struct
  *	o rr_len size_t array
  *	o rr_data uint8_t* array
- *	o rr_ttl uint32_t array (after size_t and ptrs because those may be
+ *	o rr_ttl time_t array (after size_t and ptrs because those may be
  *		64bit and this array before those would make them unaligned).
  *		Since the stuff before is 32/64bit, rr_ttl is 32 bit aligned.
  *	o rr_data rdata wireformats

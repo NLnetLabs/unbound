@@ -325,18 +325,13 @@ lruhash_insert(struct lruhash* table, hashvalue_t hash,
 		table->space_used += need_size;
 	} else {
 		/* if so: update data - needs a writelock */
-		/* A+=B-C; works because A will wrap around when B<C */
 		table->space_used += need_size -
 			(*table->sizefunc)(found->key, found->data);
-		if (found->key != entry->key) {
-			(*table->delkeyfunc)(entry->key, cb_arg);
-		}
+		(*table->delkeyfunc)(entry->key, cb_arg);
 		lru_touch(table, found);
 		lock_rw_wrlock(&found->lock);
-		if (found->data != data) {
-			(*table->deldatafunc)(found->data, cb_arg);
-			found->data = data;
-		}
+		(*table->deldatafunc)(found->data, cb_arg);
+		found->data = data;
 		lock_rw_unlock(&found->lock);
 	}
 	lock_quick_unlock(&bin->lock);

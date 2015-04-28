@@ -41,7 +41,6 @@
  */
 #include "config.h"
 #include <sys/time.h>
-#include "ldns/sbuffer.h"
 #include "services/outbound_list.h"
 #include "services/outside_network.h"
 

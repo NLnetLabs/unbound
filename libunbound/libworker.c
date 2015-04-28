@@ -48,12 +48,14 @@
 #include "libunbound/libworker.h"
 #include "libunbound/context.h"
 #include "libunbound/unbound.h"
+#include "libunbound/worker.h"
 #include "libunbound/unbound-event.h"
 #include "services/outside_network.h"
 #include "services/mesh.h"
 #include "services/localzone.h"
 #include "services/cache/rrset.h"
 #include "services/outbound_list.h"
+#include "util/fptr_wlist.h"
 #include "util/module.h"
 #include "util/regional.h"
 #include "util/random.h"
@@ -68,8 +70,8 @@
 #include "util/tube.h"
 #include "iterator/iter_fwd.h"
 #include "iterator/iter_hints.h"
-#include "ldns/sbuffer.h"
-#include "ldns/str2wire.h"
+#include "sldns/sbuffer.h"
+#include "sldns/str2wire.h"
 
 /** handle new query command for bg worker */
 static void handle_newq(struct libworker* w, uint8_t* buf, uint32_t len);
@@ -231,7 +233,7 @@ libworker_setup(struct ub_ctx* ctx, int is_bg, struct event_base* eb)
 		w->env->infra_cache, w->env->rnd, cfg->use_caps_bits_for_id,
 		ports, numports, cfg->unwanted_threshold,
 		&libworker_alloc_cleanup, w, cfg->do_udp, w->sslctx,
-		cfg->delay_close
+		cfg->delay_close, NULL
 #ifdef CLIENT_SUBNET
 		, NULL
 #endif
@@ -582,9 +584,6 @@ setup_qinfo_edns(struct libworker* w, struct ctx_query* q,
 	edns->ext_rcode = 0;
 	edns->edns_version = 0;
 	edns->bits = EDNS_DO;
-#ifdef CLIENT_SUBNET
-	edns->subnet_validdata = 0;
-#endif
 	if(sldns_buffer_capacity(w->back->udp_buff) < 65535)
 		edns->udp_size = (uint16_t)sldns_buffer_capacity(
 			w->back->udp_buff);
@@ -611,7 +610,7 @@ int libworker_fg(struct ub_ctx* ctx, struct ctx_query* q)
 	sldns_buffer_write_u16_at(w->back->udp_buff, 0, qid);
 	sldns_buffer_write_u16_at(w->back->udp_buff, 2, qflags);
 	if(local_zones_answer(ctx->local_zones, &qinfo, &edns, 
-		w->back->udp_buff, w->env->scratch)) {
+		w->back->udp_buff, w->env->scratch, NULL)) {
 		regional_free_all(w->env->scratch);
 		libworker_fillup_fg(q, LDNS_RCODE_NOERROR, 
 			w->back->udp_buff, sec_status_insecure, NULL);
@@ -681,7 +680,7 @@ int libworker_attach_mesh(struct ub_ctx* ctx, struct ctx_query* q,
 	sldns_buffer_write_u16_at(w->back->udp_buff, 0, qid);
 	sldns_buffer_write_u16_at(w->back->udp_buff, 2, qflags);
 	if(local_zones_answer(ctx->local_zones, &qinfo, &edns, 
-		w->back->udp_buff, w->env->scratch)) {
+		w->back->udp_buff, w->env->scratch, NULL)) {
 		regional_free_all(w->env->scratch);
 		free(qinfo.qname);
 		libworker_event_done_cb(q, LDNS_RCODE_NOERROR,
@@ -801,7 +800,7 @@ handle_newq(struct libworker* w, uint8_t* buf, uint32_t len)
 	sldns_buffer_write_u16_at(w->back->udp_buff, 0, qid);
 	sldns_buffer_write_u16_at(w->back->udp_buff, 2, qflags);
 	if(local_zones_answer(w->ctx->local_zones, &qinfo, &edns, 
-		w->back->udp_buff, w->env->scratch)) {
+		w->back->udp_buff, w->env->scratch, NULL)) {
 		regional_free_all(w->env->scratch);
 		q->msg_security = sec_status_insecure;
 		add_bg_result(w, q, w->back->udp_buff, UB_NOERROR, NULL);
@@ -826,8 +825,9 @@ void libworker_alloc_cleanup(void* arg)
 
 struct outbound_entry* libworker_send_query(uint8_t* qname, size_t qnamelen,
         uint16_t qtype, uint16_t qclass, uint16_t flags, int dnssec,
-	int want_dnssec, struct sockaddr_storage* addr, socklen_t addrlen,
-	uint8_t* zone, size_t zonelen, struct module_qstate* q)
+	int want_dnssec, int nocaps, struct sockaddr_storage* addr,
+	socklen_t addrlen, uint8_t* zone, size_t zonelen,
+	struct module_qstate* q)
 {
 	struct libworker* w = (struct libworker*)q->env->worker;
 	struct outbound_entry* e = (struct outbound_entry*)regional_alloc(
@@ -835,9 +835,8 @@ struct outbound_entry* libworker_send_query(uint8_t* qname, size_t qnamelen,
 	if(!e)
 		return NULL;
 	e->qstate = q;
-
 	e->qsent = outnet_serviced_query(w->back, qname,
-		qnamelen, qtype, qclass, flags, dnssec, want_dnssec,
+		qnamelen, qtype, qclass, flags, dnssec, want_dnssec, nocaps,
 		q->env->cfg->tcp_upstream, q->env->cfg->ssl_upstream, addr,
 		addrlen, zone, zonelen, libworker_handle_service_reply, e,
 		w->back->udp_buff
@@ -845,7 +844,6 @@ struct outbound_entry* libworker_send_query(uint8_t* qname, size_t qnamelen,
 		, &q->edns_server_out
 #endif
 		);
-
 	if(!e->qsent) {
 		return NULL;
 	}
@@ -964,8 +962,9 @@ struct outbound_entry* worker_send_query(uint8_t* ATTR_UNUSED(qname),
 	size_t ATTR_UNUSED(qnamelen), uint16_t ATTR_UNUSED(qtype), 
 	uint16_t ATTR_UNUSED(qclass), uint16_t ATTR_UNUSED(flags), 
 	int ATTR_UNUSED(dnssec), int ATTR_UNUSED(want_dnssec),
-	struct sockaddr_storage* ATTR_UNUSED(addr), 
-	socklen_t ATTR_UNUSED(addrlen), struct module_qstate* ATTR_UNUSED(q))
+	int ATTR_UNUSED(nocaps), struct sockaddr_storage* ATTR_UNUSED(addr), 
+	socklen_t ATTR_UNUSED(addrlen), uint8_t* ATTR_UNUSED(zone),
+	size_t ATTR_UNUSED(zonelen), struct module_qstate* ATTR_UNUSED(q))
 {
 	log_assert(0);
 	return 0;

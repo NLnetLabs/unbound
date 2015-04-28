@@ -59,6 +59,10 @@
 #include "util/locks.h"
 #include "util/net_help.h"
 
+#ifdef HAVE_SYS_UN_H
+#include <sys/un.h>
+#endif
+
 /** Give unbound-control usage, and exit (1). */
 static void
 usage()
@@ -105,6 +109,7 @@ usage()
 	printf("  get_option opt		get option value\n");
 	printf("  list_stubs			list stub-zones and root hints in use\n");
 	printf("  list_forwards			list forward-zones in use\n");
+	printf("  list_insecure			list domain-insecure zones\n");
 	printf("  list_local_zones		list local-zones in use\n");
 	printf("  list_local_data		list local-data RRs in use\n");
 	printf("  insecure_add zone 		add domain-insecure zone\n");
@@ -118,6 +123,8 @@ usage()
 	printf("  forward [off | addr ...]	without arg show forward setup\n");
 	printf("				or off to turn off root forwarding\n");
 	printf("				or give list of ip addresses\n");
+	printf("  ratelimit_list [+a]		list ratelimited domains\n");
+	printf("		+a		list all, also not ratelimited\n");
 	printf("Version %s\n", PACKAGE_VERSION);
 	printf("BSD licensed, see LICENSE in source package for details.\n");
 	printf("Report bugs to %s\n", PACKAGE_BUGREPORT);
@@ -136,30 +143,40 @@ static void ssl_err(const char* s)
 static SSL_CTX*
 setup_ctx(struct config_file* cfg)
 {
-	char* s_cert, *c_key, *c_cert;
+	char* s_cert=NULL, *c_key=NULL, *c_cert=NULL;
 	SSL_CTX* ctx;
 
-	s_cert = fname_after_chroot(cfg->server_cert_file, cfg, 1);
-	c_key = fname_after_chroot(cfg->control_key_file, cfg, 1);
-	c_cert = fname_after_chroot(cfg->control_cert_file, cfg, 1);
-	if(!s_cert || !c_key || !c_cert)
-		fatal_exit("out of memory");
+	if(cfg->remote_control_use_cert) {
+		s_cert = fname_after_chroot(cfg->server_cert_file, cfg, 1);
+		c_key = fname_after_chroot(cfg->control_key_file, cfg, 1);
+		c_cert = fname_after_chroot(cfg->control_cert_file, cfg, 1);
+		if(!s_cert || !c_key || !c_cert)
+			fatal_exit("out of memory");
+	}
         ctx = SSL_CTX_new(SSLv23_client_method());
 	if(!ctx)
 		ssl_err("could not allocate SSL_CTX pointer");
         if(!(SSL_CTX_set_options(ctx, SSL_OP_NO_SSLv2) & SSL_OP_NO_SSLv2))
 		ssl_err("could not set SSL_OP_NO_SSLv2");
-	if(!SSL_CTX_use_certificate_file(ctx,c_cert,SSL_FILETYPE_PEM) ||
-		!SSL_CTX_use_PrivateKey_file(ctx,c_key,SSL_FILETYPE_PEM)
-		|| !SSL_CTX_check_private_key(ctx))
-		ssl_err("Error setting up SSL_CTX client key and cert");
-	if (SSL_CTX_load_verify_locations(ctx, s_cert, NULL) != 1)
-		ssl_err("Error setting up SSL_CTX verify, server cert");
-	SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER, NULL);
+        if(cfg->remote_control_use_cert) {
+		if(!(SSL_CTX_set_options(ctx, SSL_OP_NO_SSLv3) & SSL_OP_NO_SSLv3))
+			ssl_err("could not set SSL_OP_NO_SSLv3");
+		if(!SSL_CTX_use_certificate_file(ctx,c_cert,SSL_FILETYPE_PEM) ||
+		    !SSL_CTX_use_PrivateKey_file(ctx,c_key,SSL_FILETYPE_PEM)
+		    || !SSL_CTX_check_private_key(ctx))
+			ssl_err("Error setting up SSL_CTX client key and cert");
+		if (SSL_CTX_load_verify_locations(ctx, s_cert, NULL) != 1)
+			ssl_err("Error setting up SSL_CTX verify, server cert");
+		SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER, NULL);
 
-	free(s_cert);
-	free(c_key);
-	free(c_cert);
+		free(s_cert);
+		free(c_key);
+		free(c_cert);
+	} else {
+		/* Use ciphers that don't require authentication  */
+		if(!SSL_CTX_set_cipher_list(ctx, "aNULL"))
+			ssl_err("Error setting NULL cipher!");
+	}
 	return ctx;
 }
 
@@ -169,6 +186,7 @@ contact_server(const char* svr, struct config_file* cfg, int statuscmd)
 {
 	struct sockaddr_storage addr;
 	socklen_t addrlen;
+	int addrfamily = 0;
 	int fd;
 	/* use svr or the first config entry */
 	if(!svr) {
@@ -187,12 +205,25 @@ contact_server(const char* svr, struct config_file* cfg, int statuscmd)
 	if(strchr(svr, '@')) {
 		if(!extstrtoaddr(svr, &addr, &addrlen))
 			fatal_exit("could not parse IP@port: %s", svr);
+#ifdef HAVE_SYS_UN_H
+	} else if(svr[0] == '/') {
+		struct sockaddr_un* usock = (struct sockaddr_un *) &addr;
+		usock->sun_family = AF_LOCAL;
+#ifdef HAVE_STRUCT_SOCKADDR_UN_SUN_LEN
+		usock->sun_len = (socklen_t)sizeof(usock);
+#endif
+		(void)strlcpy(usock->sun_path, svr, sizeof(usock->sun_path));
+		addrlen = (socklen_t)sizeof(struct sockaddr_un);
+		addrfamily = AF_LOCAL;
+#endif
 	} else {
 		if(!ipstrtoaddr(svr, cfg->control_port, &addr, &addrlen))
 			fatal_exit("could not parse IP: %s", svr);
 	}
-	fd = socket(addr_is_ip6(&addr, addrlen)?AF_INET6:AF_INET, 
-		SOCK_STREAM, 0);
+
+	if(addrfamily == 0)
+		addrfamily = addr_is_ip6(&addr, addrlen)?AF_INET6:AF_INET;
+	fd = socket(addrfamily, SOCK_STREAM, 0);
 	if(fd == -1) {
 #ifndef USE_WINSOCK
 		fatal_exit("socket: %s", strerror(errno));
@@ -221,7 +252,7 @@ contact_server(const char* svr, struct config_file* cfg, int statuscmd)
 
 /** setup SSL on the connection */
 static SSL*
-setup_ssl(SSL_CTX* ctx, int fd)
+setup_ssl(SSL_CTX* ctx, int fd, struct config_file* cfg)
 {
 	SSL* ssl;
 	X509* x;
@@ -247,10 +278,13 @@ setup_ssl(SSL_CTX* ctx, int fd)
 	/* check authenticity of server */
 	if(SSL_get_verify_result(ssl) != X509_V_OK)
 		ssl_err("SSL verification failed");
-	x = SSL_get_peer_certificate(ssl);
-	if(!x)
-		ssl_err("Server presented no peer certificate");
-	X509_free(x);
+	if(cfg->remote_control_use_cert) {
+		x = SSL_get_peer_certificate(ssl);
+		if(!x)
+			ssl_err("Server presented no peer certificate");
+		X509_free(x);
+	}
+
 	return ssl;
 }
 
@@ -328,11 +362,11 @@ go(const char* cfgfile, char* svr, int quiet, int argc, char* argv[])
 	if(!cfg->remote_control_enable)
 		log_warn("control-enable is 'no' in the config file.");
 	ctx = setup_ctx(cfg);
-	
+
 	/* contact server */
 	fd = contact_server(svr, cfg, argc>0&&strcmp(argv[0],"status")==0);
-	ssl = setup_ssl(ctx, fd);
-	
+	ssl = setup_ssl(ctx, fd, cfg);
+
 	/* send command */
 	ret = go_cmd(ssl, quiet, argc, argv);
 

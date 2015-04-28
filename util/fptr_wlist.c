@@ -46,13 +46,12 @@
 #include "config.h"
 #include "util/fptr_wlist.h"
 #include "util/mini_event.h"
-#include "daemon/worker.h"
-#include "daemon/remote.h"
 #include "services/outside_network.h"
 #include "services/mesh.h"
 #include "services/localzone.h"
 #include "services/cache/infra.h"
 #include "services/cache/rrset.h"
+#include "dns64/dns64.h"
 #include "iterator/iterator.h"
 #include "iterator/iter_fwd.h"
 #include "validator/validator.h"
@@ -69,6 +68,7 @@
 #include "util/locks.h"
 #include "libunbound/libworker.h"
 #include "libunbound/context.h"
+#include "libunbound/worker.h"
 #include "util/tube.h"
 #include "util/config_file.h"
 #ifdef UB_ON_WINDOWS
@@ -213,6 +213,7 @@ fptr_whitelist_hash_sizefunc(lruhash_sizefunc_t fptr)
 	else if(fptr == &ub_rrset_sizefunc) return 1;
 	else if(fptr == &infra_sizefunc) return 1;
 	else if(fptr == &key_entry_sizefunc) return 1;
+	else if(fptr == &rate_sizefunc) return 1;
 	else if(fptr == &test_slabhash_sizefunc) return 1;
 #ifdef CLIENT_SUBNET
 	else if(fptr == &msg_cache_sizefunc) return 1;
@@ -227,6 +228,7 @@ fptr_whitelist_hash_compfunc(lruhash_compfunc_t fptr)
 	else if(fptr == &ub_rrset_compare) return 1;
 	else if(fptr == &infra_compfunc) return 1;
 	else if(fptr == &key_entry_compfunc) return 1;
+	else if(fptr == &rate_compfunc) return 1;
 	else if(fptr == &test_slabhash_compfunc) return 1;
 	return 0;
 }
@@ -238,6 +240,7 @@ fptr_whitelist_hash_delkeyfunc(lruhash_delkeyfunc_t fptr)
 	else if(fptr == &ub_rrset_key_delete) return 1;
 	else if(fptr == &infra_delkeyfunc) return 1;
 	else if(fptr == &key_entry_delkeyfunc) return 1;
+	else if(fptr == &rate_delkeyfunc) return 1;
 	else if(fptr == &test_slabhash_delkey) return 1;
 	return 0;
 }
@@ -249,6 +252,7 @@ fptr_whitelist_hash_deldatafunc(lruhash_deldatafunc_t fptr)
 	else if(fptr == &rrset_data_delete) return 1;
 	else if(fptr == &infra_deldatafunc) return 1;
 	else if(fptr == &key_entry_deldatafunc) return 1;
+	else if(fptr == &rate_deldatafunc) return 1;
 	else if(fptr == &test_slabhash_deldata) return 1;
 #ifdef CLIENT_SUBNET
 	else if(fptr == &subnet_data_delete) return 1;
@@ -268,7 +272,7 @@ fptr_whitelist_hash_markdelfunc(lruhash_markdelfunc_t fptr)
 int 
 fptr_whitelist_modenv_send_query(struct outbound_entry* (*fptr)(
         uint8_t* qname, size_t qnamelen, uint16_t qtype, uint16_t qclass,
-        uint16_t flags, int dnssec, int want_dnssec, 
+        uint16_t flags, int dnssec, int want_dnssec, int nocaps,
 	struct sockaddr_storage* addr, socklen_t addrlen, 
 	uint8_t* zone, size_t zonelen,
 	struct module_qstate* q))
@@ -289,7 +293,7 @@ fptr_whitelist_modenv_detach_subs(void (*fptr)(
 int 
 fptr_whitelist_modenv_attach_sub(int (*fptr)(
         struct module_qstate* qstate, struct query_info* qinfo,
-        uint16_t qflags, int prime, struct module_qstate** newq))
+        uint16_t qflags, int prime, int valrec, struct module_qstate** newq))
 {
 	if(fptr == &mesh_attach_sub) return 1;
 	return 0;
@@ -305,7 +309,7 @@ fptr_whitelist_modenv_kill_sub(void (*fptr)(struct module_qstate* newq))
 int 
 fptr_whitelist_modenv_detect_cycle(int (*fptr)(        
 	struct module_qstate* qstate, struct query_info* qinfo,         
-	uint16_t flags, int prime))
+	uint16_t flags, int prime, int valrec))
 {
 	if(fptr == &mesh_detect_cycle) return 1;
 	return 0;
@@ -316,6 +320,7 @@ fptr_whitelist_mod_init(int (*fptr)(struct module_env* env, int id))
 {
 	if(fptr == &iter_init) return 1;
 	else if(fptr == &val_init) return 1;
+	else if(fptr == &dns64_init) return 1;
 #ifdef WITH_PYTHONMODULE
 	else if(fptr == &pythonmod_init) return 1;
 #endif
@@ -330,6 +335,7 @@ fptr_whitelist_mod_deinit(void (*fptr)(struct module_env* env, int id))
 {
 	if(fptr == &iter_deinit) return 1;
 	else if(fptr == &val_deinit) return 1;
+	else if(fptr == &dns64_deinit) return 1;
 #ifdef WITH_PYTHONMODULE
 	else if(fptr == &pythonmod_deinit) return 1;
 #endif
@@ -345,6 +351,7 @@ fptr_whitelist_mod_operate(void (*fptr)(struct module_qstate* qstate,
 {
 	if(fptr == &iter_operate) return 1;
 	else if(fptr == &val_operate) return 1;
+	else if(fptr == &dns64_operate) return 1;
 #ifdef WITH_PYTHONMODULE
 	else if(fptr == &pythonmod_operate) return 1;
 #endif
@@ -360,6 +367,7 @@ fptr_whitelist_mod_inform_super(void (*fptr)(
 {
 	if(fptr == &iter_inform_super) return 1;
 	else if(fptr == &val_inform_super) return 1;
+	else if(fptr == &dns64_inform_super) return 1;
 #ifdef WITH_PYTHONMODULE
 	else if(fptr == &pythonmod_inform_super) return 1;
 #endif
@@ -375,6 +383,7 @@ fptr_whitelist_mod_clear(void (*fptr)(struct module_qstate* qstate,
 {
 	if(fptr == &iter_clear) return 1;
 	else if(fptr == &val_clear) return 1;
+	else if(fptr == &dns64_clear) return 1;
 #ifdef WITH_PYTHONMODULE
 	else if(fptr == &pythonmod_clear) return 1;
 #endif
@@ -389,6 +398,7 @@ fptr_whitelist_mod_get_mem(size_t (*fptr)(struct module_env* env, int id))
 {
 	if(fptr == &iter_get_mem) return 1;
 	else if(fptr == &val_get_mem) return 1;
+	else if(fptr == &dns64_get_mem) return 1;
 #ifdef WITH_PYTHONMODULE
 	else if(fptr == &pythonmod_get_mem) return 1;
 #endif

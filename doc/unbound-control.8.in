@@ -8,7 +8,6 @@
 .\"
 .\"
 .SH "NAME"
-.LP
 .B unbound\-control,
 .B unbound\-control\-setup
 \- Unbound remote server control utility.
@@ -198,6 +197,9 @@ This includes the root hints in use.
 .B list_forwards
 List the forward zones in use.  These are printed zone by zone to the output.
 .TP
+.B list_insecure
+List the zones with domain\-insecure.
+.TP
 .B list_local_zones
 List the local zones in use.  These are printed one per line with zone type.
 .TP
@@ -253,6 +255,13 @@ port number can be set explicitly (default port is 53 (DNS)).
 By default the forwarder information from the config file for the root "." is
 used.  The config file is not changed, so after a reload these changes are
 gone.  Other forward zones from the config file are not affected by this command.
+.TP
+.B ratelimit_list \fR[\fI+a\fR]
+List the domains that are ratelimited.  Printed one per line with current
+estimated qps and qps limit from config.  With +a it prints all domains, not
+just the ratelimited domains, with their estimated qps.  The ratelimited
+domains return an error for uncached (new) queries, but cached queries work
+as normal.
 .SH "EXIT CODE"
 The unbound\-control program exits with status code 1 on error, 0 on success.
 .SH "SET UP"
@@ -323,6 +332,11 @@ less than this time.  Because of big outliers (usually queries to non
 responsive servers), the average can be bigger than the median.  This median
 has been calculated by interpolation from a histogram.
 .TP
+.I threadX.tcpusage
+The currently held tcp buffers for incoming connections.  A spot value on
+the time of the request.  This helps you spot if the incoming\-num\-tcp
+buffers are full.
+.TP
 .I total.num.queries
 summed over threads.
 .TP
@@ -355,6 +369,9 @@ summed over threads.
 .TP
 .I total.recursion.time.median
 averaged over threads.
+.TP
+.I total.tcpusage
+summed over threads.
 .TP
 .I time.now
 current time in seconds since 1970.
@@ -463,6 +480,21 @@ Replies that were unwanted or unsolicited.  Could have been random traffic,
 delayed duplicates, very late answers, or could be spoofing attempts.
 Some low level of late answers and delayed duplicates are to be expected
 with the UDP protocol.  Very high values could indicate a threat (spoofing).
+.TP
+.I msg.cache.count
+The number of items (DNS replies) in the message cache.
+.TP
+.I rrset.cache.count
+The number of RRsets in the rrset cache.  This includes rrsets used by
+the messages in the message cache, but also delegation information.
+.TP
+.I infra.cache.count
+The number of items in the infra cache.  These are IP addresses with their
+timing and protocol support information.
+.TP
+.I key.cache.count
+The number of items in the key cache.  These are DNSSEC keys, one item
+per delegation point, and their validation status.
 .SH "FILES"
 .TP
 .I @ub_conf_file@

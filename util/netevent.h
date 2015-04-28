@@ -164,6 +164,8 @@ struct comm_point {
 	/* -------- TCP Accept -------- */
 	/** the number of TCP handlers for this tcp-accept socket */
 	int max_tcp_count;
+	/** current number of tcp handler in-use for this accept socket */
+	int cur_tcp_count;
 	/** malloced array of tcp handlers for a tcp-accept, 
 	    of size max_tcp_count. */
 	struct comm_point** tcp_handlers;
@@ -187,6 +189,10 @@ struct comm_point {
 		/** ssl_read wants to write */
 		comm_ssl_shake_hs_write
 	} ssl_shake_state;
+
+	/* -------- dnstap ------- */
+	/** the dnstap environment */
+	struct dt_env* dtenv;
 
 	/** is this a UDP, TCP-accept or TCP socket. */
 	enum comm_point_type {

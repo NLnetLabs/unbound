@@ -163,7 +163,7 @@ update_cache(struct module_qstate *qstate, int id)
 	/** We already calculated hash upon lookup */
 	hashvalue_t h = qstate->minfo[id] ? 
 		((struct subnet_qstate*)qstate->minfo[id])->qinfo_hash : 
-		query_info_hash(&qstate->qinfo);
+		query_info_hash(&qstate->qinfo, qstate->query_flags);
 	/** Step 1, general qinfo lookup */
 	struct lruhash_entry *lru_entry = slabhash_lookup(subnet_msg_cache, h, &qstate->qinfo, 1);
 	int acquired_lock = (lru_entry != NULL);
@@ -207,11 +207,12 @@ update_cache(struct module_qstate *qstate, int id)
 		edns->subnet_source_mask, 
 		qstate->edns_server_in.subnet_scope_mask, rep, rep->ttl + *qstate->env->now,
 		*qstate->env->now);
-	if (acquired_lock)
+	if (acquired_lock) {
 		lock_rw_unlock(&lru_entry->lock);
-	slabhash_insert(subnet_msg_cache, h, lru_entry, lru_entry->data, NULL);
+	} else {
+		slabhash_insert(subnet_msg_cache, h, lru_entry, lru_entry->data, NULL);
+	}
 }
-
 
 /* return true iff reply is sent. */
 int
@@ -221,7 +222,7 @@ lookup_and_reply(struct module_qstate *qstate, int id)
 	struct module_env *env = qstate->env;
 	struct subnet_env *sne = (struct subnet_env*)env->modinfo[id];
 	struct subnet_qstate *iq = (struct subnet_qstate*)qstate->minfo[id];
-	hashvalue_t h = query_info_hash(&qstate->qinfo);
+	hashvalue_t h = query_info_hash(&qstate->qinfo, qstate->query_flags);
 	struct subnet_msg_cache_data *data;
 	struct edns_data *edns = &qstate->edns_client_in;
 	struct addrtree *tree;
