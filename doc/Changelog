@@ -1,3 +1,6 @@
+30 April 2015: Wouter
+	- Unit test for type ANY synthesis.
+
 22 April 2015: Wouter
 	- Removed contrib/unbound_unixsock.diff, because it has been
 	  integrated, use control-interface: /path in unbound.conf.
