@@ -36,7 +36,7 @@
 # settings:
 
 # directory for files
-DESTDIR=/usr/local/etc/unbound
+DESTDIR=@ub_conf_dir@
 
 # issuer and subject name for certificates
 SERVERNAME=unbound
