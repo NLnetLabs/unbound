@@ -404,6 +404,7 @@ struct serviced_query {
  * @param sslctx: context to create outgoing connections with (if enabled).
  * @param delayclose: if not 0, udp sockets are delayed before timeout closure.
  * 	msec to wait on timeouted udp sockets.
+ * @param dtenv: environment to send dnstap events with (if enabled).
  * \if CLIENT_SUBNET
  * @param edns_subnet_upstreams: Servers whitelisted for edns-subnet.
  * \endif
