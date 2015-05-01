@@ -120,6 +120,11 @@ caps_white_apply_cfg(rbtree_t* ntree, struct config_file* cfg)
 			return 0;
 		}
 		n = (struct name_tree_node*)calloc(1, sizeof(*n));
+		if(!n) {
+			log_err("out of memory");
+			free(nm);
+			return 0;
+		}
 		n->node.key = n;
 		n->name = nm;
 		n->len = len;
