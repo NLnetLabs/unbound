@@ -1,3 +1,7 @@
+1 May 2015: Wouter
+	- caps-whitelist in unbound.conf allows whitelist of loadbalancers
+	  that cannot work with caps-for-id or its fallback.
+
 30 April 2015: Wouter
 	- Unit test for type ANY synthesis.
 

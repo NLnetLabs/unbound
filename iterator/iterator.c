@@ -84,6 +84,16 @@ iter_init(struct module_env* env, int id)
 	return 1;
 }
 
+/** delete caps_whitelist element */
+static void
+caps_free(struct rbnode_t* n, void* ATTR_UNUSED(d))
+{
+	if(n) {
+		free(((struct name_tree_node*)n)->name);
+		free(n);
+	}
+}
+
 void 
 iter_deinit(struct module_env* env, int id)
 {
@@ -94,6 +104,10 @@ iter_deinit(struct module_env* env, int id)
 	free(iter_env->target_fetch_policy);
 	priv_delete(iter_env->priv);
 	donotq_delete(iter_env->donotq);
+	if(iter_env->caps_white) {
+		traverse_postorder(iter_env->caps_white, caps_free, NULL);
+		free(iter_env->caps_white);
+	}
 	free(iter_env);
 	env->modinfo[id] = NULL;
 }
@@ -457,6 +471,16 @@ handle_cname_response(struct module_qstate* qstate, struct iter_qstate* iq,
 		}
 	}
 	return 1;
+}
+
+/** see if target name is caps-for-id whitelisted */
+static int
+is_caps_whitelisted(struct iter_env* ie, struct iter_qstate* iq)
+{
+	if(!ie->caps_white) return 0; /* no whitelist, or no capsforid */
+	return name_tree_lookup(ie->caps_white, iq->qchase.qname,
+		iq->qchase.qname_len, dname_count_labels(iq->qchase.qname),
+		iq->qchase.qclass) != NULL;
 }
 
 /** create target count structure for this query */
@@ -1965,8 +1989,9 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 		iq->qchase.qname, iq->qchase.qname_len, 
 		iq->qchase.qtype, iq->qchase.qclass, 
 		iq->chase_flags | (iq->chase_to_rd?BIT_RD:0), EDNS_DO|BIT_CD, 
-		iq->dnssec_expected, iq->caps_fallback, &target->addr,
-		target->addrlen, iq->dp->name, iq->dp->namelen, qstate);
+		iq->dnssec_expected, iq->caps_fallback || is_caps_whitelisted(
+		ie, iq), &target->addr, target->addrlen, iq->dp->name,
+		iq->dp->namelen, qstate);
 	if(!outq) {
 		log_addr(VERB_DETAIL, "error sending query to auth server", 
 			&target->addr, target->addrlen);

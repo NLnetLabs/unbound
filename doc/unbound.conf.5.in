@@ -574,6 +574,12 @@ authority servers and checks if the reply still has the correct casing.
 Disabled by default. 
 This feature is an experimental implementation of draft dns\-0x20.
 .TP
+.B caps\-whitelist: \fI<domain>
+Whitelist the domain so that it does not receive caps\-for\-id perturbed
+queries.  For domains that do not support 0x20 and also fail with fallback
+because they keep sending different answers, like some load balancers.
+Can be given multiple times, for different domains.
+.TP
 .B private\-address: \fI<IP address or subnet>
 Give IPv4 of IPv6 addresses or classless subnets. These are addresses
 on your private network, and are not allowed to be returned for public

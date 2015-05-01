@@ -1510,7 +1510,8 @@ serviced_callbacks(struct serviced_query* sq, int error, struct comm_point* c,
 	log_assert(rem); /* should have been present */
 	sq->to_be_deleted = 1; 
 	verbose(VERB_ALGO, "svcd callbacks start");
-	if(sq->outnet->use_caps_for_id && error == NETEVENT_NOERROR && c) {
+	if(sq->outnet->use_caps_for_id && error == NETEVENT_NOERROR && c &&
+		!sq->nocaps) {
 		/* noerror and nxdomain must have a qname in reply */
 		if(sldns_buffer_read_u16_at(c->buffer, 4) == 0 &&
 			(LDNS_RCODE_WIRE(sldns_buffer_begin(c->buffer))

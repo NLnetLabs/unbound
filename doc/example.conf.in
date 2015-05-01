@@ -296,6 +296,10 @@ server:
 	# Use 0x20-encoded random bits in the query to foil spoof attempts.
 	# This feature is an experimental implementation of draft dns-0x20.
 	# use-caps-for-id: no
+	
+	# Domains (and domains in them) without support for dns-0x20 and
+	# the fallback fails because they keep sending different answers.
+	# caps-whitelist: "licdn.com"
 
 	# Enforce privacy of these addresses. Strips them away from answers. 
 	# It may cause DNSSEC validation to additionally mark it as bogus. 

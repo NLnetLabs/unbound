@@ -691,7 +691,7 @@ iter_utils.lo iter_utils.o: $(srcdir)/iterator/iter_utils.c config.h $(srcdir)/i
  $(srcdir)/util/fptr_wlist.h $(srcdir)/util/netevent.h $(srcdir)/util/tube.h $(srcdir)/services/mesh.h \
  $(srcdir)/services/modstack.h $(srcdir)/validator/val_anchor.h $(srcdir)/validator/val_kcache.h \
  $(srcdir)/validator/val_kentry.h $(srcdir)/validator/val_utils.h $(srcdir)/validator/val_sigcrypt.h \
- $(srcdir)/sldns/sbuffer.h
+ $(srcdir)/sldns/sbuffer.h $(srcdir)/sldns/str2wire.h
 listen_dnsport.lo listen_dnsport.o: $(srcdir)/services/listen_dnsport.c config.h \
  $(srcdir)/services/listen_dnsport.h $(srcdir)/util/netevent.h $(srcdir)/services/outside_network.h \
  $(srcdir)/util/rbtree.h  $(srcdir)/util/log.h $(srcdir)/util/config_file.h \

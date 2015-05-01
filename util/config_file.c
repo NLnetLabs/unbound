@@ -173,6 +173,7 @@ config_create(void)
 	cfg->harden_referral_path = 0;
 	cfg->harden_algo_downgrade = 1;
 	cfg->use_caps_bits_for_id = 0;
+	cfg->caps_whitelist = NULL;
 	cfg->private_address = NULL;
 	cfg->private_domain = NULL;
 	cfg->unwanted_threshold = 0;
@@ -416,6 +417,7 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	else S_YNO("harden-referral-path:", harden_referral_path)
 	else S_YNO("harden-algo-downgrade:", harden_algo_downgrade)
 	else S_YNO("use-caps-for-id", use_caps_bits_for_id)
+	else S_STRLIST("caps-whitelist:", caps_whitelist)
 	else S_SIZET_OR_ZERO("unwanted-reply-threshold:", unwanted_threshold)
 	else S_STRLIST("private-address:", private_address)
 	else S_STRLIST("private-domain:", private_domain)
@@ -685,6 +687,7 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_YNO(opt, "harden-referral-path", harden_referral_path)
 	else O_YNO(opt, "harden-algo-downgrade", harden_algo_downgrade)
 	else O_YNO(opt, "use-caps-for-id", use_caps_bits_for_id)
+	else O_LST(opt, "caps-whitelist", caps_whitelist)
 	else O_DEC(opt, "unwanted-reply-threshold", unwanted_threshold)
 	else O_YNO(opt, "do-not-query-localhost", donotquery_localhost)
 	else O_STR(opt, "module-config", module_conf)
@@ -918,6 +921,7 @@ config_delete(struct config_file* cfg)
 	free(cfg->version);
 	free(cfg->module_conf);
 	free(cfg->outgoing_avail_ports);
+	config_delstrlist(cfg->caps_whitelist);
 	config_delstrlist(cfg->private_address);
 	config_delstrlist(cfg->private_domain);
 	config_delstrlist(cfg->auto_trust_anchor_file_list);

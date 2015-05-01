@@ -179,6 +179,8 @@ struct config_file {
 	int harden_algo_downgrade;
 	/** use 0x20 bits in query as random ID bits */
 	int use_caps_bits_for_id;
+	/** 0x20 whitelist, domains that do not use capsforid */
+	struct config_strlist* caps_whitelist;
 	/** strip away these private addrs from answers, no DNS Rebinding */
 	struct config_strlist* private_address;
 	/** allow domain (and subdomains) to use private address space */
