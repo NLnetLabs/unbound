@@ -2774,10 +2774,18 @@ processFinished(struct module_qstate* qstate, struct iter_qstate* iq,
 		 * but only if we did recursion. The nonrecursion referral
 		 * from cache does not need to be stored in the msg cache. */
 		if(qstate->query_flags&BIT_RD) {
+#ifdef CLIENT_SUBNET
+			/* Do not cache, we asked for and got subnet option */
+			if(!qstate->edns_server_in.subnet_validdata || 
+				!qstate->edns_server_out.subnet_sent) {
+#endif
 			iter_dns_store(qstate->env, &qstate->qinfo, 
 				iq->response->rep, 0, qstate->prefetch_leeway,
 				iq->dp&&iq->dp->has_parent_side_NS,
 				qstate->region, qstate->query_flags);
+#ifdef CLIENT_SUBNET
+			}
+#endif
 		}
 	}
 	qstate->return_rcode = LDNS_RCODE_NOERROR;
