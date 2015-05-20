@@ -680,14 +680,19 @@ It is possible to use wildcards with this statement, the wildcard is
 expanded on start and on reload.
 .TP
 .B dlv\-anchor\-file: \fI<filename>
+This option was used during early days DNSSEC deployment when no parent-side
+DS record registrations were easily available.  Nowadays, it is best to have
+DS records registered with the parent zone (many top level zones are signed).
 File with trusted keys for DLV (DNSSEC Lookaside Validation). Both DS and
 DNSKEY entries can be used in the file, in the same format as for
 \fItrust\-anchor\-file:\fR statements. Only one DLV can be configured, more
 would be slow. The DLV configured is used as a root trusted DLV, this 
 means that it is a lookaside for the root. Default is "", or no dlv anchor file.
+DLV is going to be decommissioned.  Please do not use it any more.
 .TP
 .B dlv\-anchor: \fI<"Resource Record">
 Much like trust\-anchor, this is a DLV anchor with the DS or DNSKEY inline.
+DLV is going to be decommissioned.  Please do not use it any more.
 .TP
 .B domain\-insecure: \fI<domain name>
 Sets domain name to be insecure, DNSSEC chain of trust is ignored towards

@@ -1815,6 +1815,8 @@ processValidate(struct module_qstate* qstate, struct val_qstate* vq,
 
 /**
  * Init DLV check.
+ * DLV is going to be decommissioned, but the code is still here for some time.
+ *
  * Called when a query is determined by other trust anchors to be insecure
  * (or indeterminate).  Then we look if there is a key in the DLV.
  * Performs aggressive negative cache check to see if there is no key.

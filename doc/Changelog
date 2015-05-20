@@ -1,3 +1,7 @@
+20 May 2015: Wouter
+	- DLV is going to be decommissioned.  Advice to stop using it, and
+	  put text in the example configuration and man page to that effect.
+
 10 May 2015: Wouter
 	- Change syntax of particular validator error to be easier for
 	  machine parse, swap rrset and ip adres info so it looks like:
