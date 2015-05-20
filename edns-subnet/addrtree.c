@@ -168,6 +168,7 @@ lru_push(struct addrtree *tree, struct addrnode *node)
 static void
 lru_update(struct addrtree *tree, struct addrnode *node)
 {
+	if (tree->root == node) return;
 	lru_pop(tree, node);
 	lru_push(tree, node);
 }
@@ -348,6 +349,7 @@ addrtree_insert(struct addrtree *tree, const addrkey_t *addr,
 		if (depth == sourcemask) {
 			/* update this node's scope and data */
 			clean_node(tree, node);
+			node->ttl = ttl;
 			node->elem = elem;
 			node->scope = scope;
 			tree->size_bytes += tree->sizefunc(elem);
