@@ -1,5 +1,7 @@
 21 May 2015: Wouter
 	- iana portlist update.
+	- documentation proposes ratelimit of 1000 (closer to what upstream
+	  servers expect from us).
 
 20 May 2015: Wouter
 	- DLV is going to be decommissioned.  Advice to stop using it, and

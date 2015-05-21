@@ -1002,7 +1002,7 @@ turned away with an error (servfail).  This stops recursive floods, eg. random
 query names, but not spoofed reflection floods.  Cached responses are not
 ratelimited by this setting.  The zone of the query is determined by examining
 the nameservers for it, the zone name is used to keep track of the rate.
-For example, 100 may be a suitable value to stop the server from being
+For example, 1000 may be a suitable value to stop the server from being
 overloaded with random names, and keeps unbound from sending traffic to the
 nameservers for those zones.
 .TP 5

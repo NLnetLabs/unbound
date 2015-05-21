@@ -571,10 +571,10 @@ server:
 
 	# override the ratelimit for a specific domain name.
 	# give this setting multiple times to have multiple overrides.
-	# ratelimit-for-domain: example.com 100
+	# ratelimit-for-domain: example.com 1000
 	# override the ratelimits for all domains below a domain name
 	# can give this multiple times, the name closest to the zone is used.
-	# ratelimit-below-domain: example 100
+	# ratelimit-below-domain: example 1000
 
 # Python config section. To enable:
 # o use --with-pythonmodule to configure before compiling.
