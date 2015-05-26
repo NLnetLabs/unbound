@@ -1,3 +1,6 @@
+26 May 2015: Wouter
+	- Document that ratelimit works with unbound-control set_option.
+
 21 May 2015: Wouter
 	- iana portlist update.
 	- documentation proposes ratelimit of 1000 (closer to what upstream
