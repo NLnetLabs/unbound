@@ -302,6 +302,10 @@ Zero makes sure the data in the cache is as the domain owner intended,
 higher values, especially more than an hour or so, can lead to trouble as 
 the data in the cache does not match up with the actual data any more.
 .TP
+.B cache\-max\-negative\-ttl: \fI<seconds>
+Time to live maximum for negative responses, these have a SOA in the
+authority section that is limited in time.  Default is 3600.
+.TP
 .B infra\-host\-ttl: \fI<seconds>
 Time to live for entries in the host cache. The host cache contains 
 roundtrip timing, lameness and EDNS support information. Default is 900.

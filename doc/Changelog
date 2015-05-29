@@ -1,5 +1,7 @@
 29 May 2015: Wouter
 	- Fix that unparseable error responses are ratelimited.
+	- SOA negative TTL is capped at minimumttl in its rdata section.
+	- cache-max-negative-ttl config option, default 3600.
 
 26 May 2015: Wouter
 	- Document that ratelimit works with unbound-control set_option.

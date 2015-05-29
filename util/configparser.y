@@ -121,7 +121,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_HARDEN_ALGO_DOWNGRADE VAR_IP_TRANSPARENT
 %token VAR_RATELIMIT VAR_RATELIMIT_SLABS VAR_RATELIMIT_SIZE
 %token VAR_RATELIMIT_FOR_DOMAIN VAR_RATELIMIT_BELOW_DOMAIN VAR_RATELIMIT_FACTOR
-%token VAR_CAPS_WHITELIST
+%token VAR_CAPS_WHITELIST VAR_CACHE_MAX_NEGATIVE_TTL
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -185,7 +185,7 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_ip_transparent | server_ratelimit | server_ratelimit_slabs |
 	server_ratelimit_size | server_ratelimit_for_domain |
 	server_ratelimit_below_domain | server_ratelimit_factor |
-	server_caps_whitelist
+	server_caps_whitelist | server_cache_max_negative_ttl
 	;
 stubstart: VAR_STUB_ZONE
 	{
@@ -1023,6 +1023,15 @@ server_cache_max_ttl: VAR_CACHE_MAX_TTL STRING_ARG
 		if(atoi($2) == 0 && strcmp($2, "0") != 0)
 			yyerror("number expected");
 		else cfg_parser->cfg->max_ttl = atoi($2);
+		free($2);
+	}
+	;
+server_cache_max_negative_ttl: VAR_CACHE_MAX_NEGATIVE_TTL STRING_ARG
+	{
+		OUTYY(("P(server_cache_max_negative_ttl:%s)\n", $2));
+		if(atoi($2) == 0 && strcmp($2, "0") != 0)
+			yyerror("number expected");
+		else cfg_parser->cfg->max_negative_ttl = atoi($2);
 		free($2);
 	}
 	;

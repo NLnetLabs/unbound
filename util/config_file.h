@@ -191,6 +191,8 @@ struct config_file {
 	int max_ttl;
 	/** the number of seconds minimum TTL used for RRsets and messages */
 	int min_ttl;
+	/** the number of seconds maximal negative TTL for SOA in auth */
+	int max_negative_ttl;
 	/** if prefetching of messages should be performed. */
 	int prefetch;
 	/** if prefetching of DNSKEYs should be performed. */

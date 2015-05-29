@@ -132,6 +132,7 @@ config_create(void)
 	cfg->bogus_ttl = 60;
 	cfg->min_ttl = 0;
 	cfg->max_ttl = 3600 * 24;
+	cfg->max_negative_ttl = 3600;
 	cfg->prefetch = 0;
 	cfg->prefetch_key = 0;
 	cfg->infra_cache_slabs = 4;
@@ -389,6 +390,8 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	else S_YNO("prefetch-key:", prefetch_key)
 	else if(strcmp(opt, "cache-max-ttl:") == 0)
 	{ IS_NUMBER_OR_ZERO; cfg->max_ttl = atoi(val); MAX_TTL=(time_t)cfg->max_ttl;}
+	else if(strcmp(opt, "cache-max-negative-ttl:") == 0)
+	{ IS_NUMBER_OR_ZERO; cfg->max_negative_ttl = atoi(val); MAX_NEG_TTL=(time_t)cfg->max_negative_ttl;}
 	else if(strcmp(opt, "cache-min-ttl:") == 0)
 	{ IS_NUMBER_OR_ZERO; cfg->min_ttl = atoi(val); MIN_TTL=(time_t)cfg->min_ttl;}
 	else if(strcmp(opt, "infra-cache-min-rtt:") == 0) {
@@ -652,6 +655,7 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_YNO(opt, "prefetch-key", prefetch_key)
 	else O_YNO(opt, "prefetch", prefetch)
 	else O_DEC(opt, "cache-max-ttl", max_ttl)
+	else O_DEC(opt, "cache-max-negative-ttl", max_negative_ttl)
 	else O_DEC(opt, "cache-min-ttl", min_ttl)
 	else O_DEC(opt, "infra-host-ttl", host_ttl)
 	else O_DEC(opt, "infra-cache-slabs", infra_cache_slabs)
@@ -1233,6 +1237,7 @@ config_apply(struct config_file* config)
 {
 	MAX_TTL = (time_t)config->max_ttl;
 	MIN_TTL = (time_t)config->min_ttl;
+	MAX_NEG_TTL = (time_t)config->max_negative_ttl;
 	RTT_MIN_TIMEOUT = config->infra_cache_min_rtt;
 	EDNS_ADVERTISED_SIZE = (uint16_t)config->edns_buffer_size;
 	MINIMAL_RESPONSES = config->minimal_responses;
