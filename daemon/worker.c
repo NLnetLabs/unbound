@@ -296,7 +296,7 @@ worker_handle_service_reply(struct comm_point* c, void* arg, int error,
 /** ratelimit error replies
  * @param worker: the worker struct with ratelimit counter
  * @param err: error code that would be wanted.
- * @returned value of err if okay, or -1 if it should be discarded instead.
+ * @return value of err if okay, or -1 if it should be discarded instead.
  */
 static int
 worker_err_ratelimit(struct worker* worker, int err)
