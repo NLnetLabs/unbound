@@ -1,3 +1,6 @@
+29 May 2015: Wouter
+	- Fix that unparseable error responses are ratelimited.
+
 26 May 2015: Wouter
 	- Document that ratelimit works with unbound-control set_option.
 
