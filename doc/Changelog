@@ -1,3 +1,6 @@
+2 June 2015: Wouter
+	- Fix #674: Do not free pointers given by getenv.
+
 29 May 2015: Wouter
 	- Fix that unparseable error responses are ratelimited.
 	- SOA negative TTL is capped at minimumttl in its rdata section.
