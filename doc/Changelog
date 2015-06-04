@@ -1,3 +1,6 @@
+4 June 2015: Wouter
+	- RFC 7553 RR type URI support, is now enabled by default.
+
 2 June 2015: Wouter
 	- Fix #674: Do not free pointers given by getenv.
 
