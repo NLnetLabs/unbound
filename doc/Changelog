@@ -1,3 +1,7 @@
+22 June 2015: Wouter
+	- Fix #677 Fix CNAME corresponding to a DNAME was checked incorrectly
+	  and was therefore always synthesized (thanks to Valentin Dietrich).
+
 4 June 2015: Wouter
 	- RFC 7553 RR type URI support, is now enabled by default.
 
