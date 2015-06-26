@@ -1,6 +1,7 @@
 26 June 2015: Wouter
 	- Fix #677 Fix DNAME responses from cache that failed internal chain
 	  test.
+	- iana portlist update.
 
 22 June 2015: Wouter
 	- Fix #677 Fix CNAME corresponding to a DNAME was checked incorrectly
