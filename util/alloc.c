@@ -364,6 +364,9 @@ void *unbound_stat_malloc(size_t size)
 #ifdef calloc
 #undef calloc
 #endif
+#ifndef INT_MAX
+#define INT_MAX 0xffffffff
+#endif
 /** calloc with stats */
 void *unbound_stat_calloc(size_t nmemb, size_t size)
 {
