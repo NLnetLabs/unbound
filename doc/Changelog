@@ -1,5 +1,6 @@
 29 June 2015: Wouter
 	- iana portlist update.
+	- Fix alloc with log for allocation size checks.
 
 26 June 2015: Wouter
 	- Fix #677 Fix DNAME responses from cache that failed internal chain

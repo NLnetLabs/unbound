@@ -18150,6 +18150,8 @@ esac
 fi
 
 
+LIBOBJ_WITHOUT_CTIMEARC4="$LIBOBJS"
+
 ac_fn_c_check_func "$LINENO" "reallocarray" "ac_cv_func_reallocarray"
 if test "x$ac_cv_func_reallocarray" = xyes; then :
   $as_echo "#define HAVE_REALLOCARRAY 1" >>confdefs.h
@@ -18163,8 +18165,6 @@ esac
 
 fi
 
-
-LIBOBJ_WITHOUT_CTIMEARC4="$LIBOBJS"
 
 if test "$USE_NSS" = "no"; then
 	ac_fn_c_check_func "$LINENO" "arc4random" "ac_cv_func_arc4random"

@@ -998,9 +998,10 @@ AC_REPLACE_FUNCS(strlcat)
 AC_REPLACE_FUNCS(strlcpy)
 AC_REPLACE_FUNCS(memmove)
 AC_REPLACE_FUNCS(gmtime_r)
-AC_REPLACE_FUNCS(reallocarray)
+dnl without CTIME, ARC4-functions and without reallocarray.
 LIBOBJ_WITHOUT_CTIMEARC4="$LIBOBJS"
 AC_SUBST(LIBOBJ_WITHOUT_CTIMEARC4)
+AC_REPLACE_FUNCS(reallocarray)
 if test "$USE_NSS" = "no"; then
 	AC_REPLACE_FUNCS(arc4random)
 	AC_REPLACE_FUNCS(arc4random_uniform)
