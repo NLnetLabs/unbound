@@ -1,6 +1,8 @@
 9 July 2015: Wouter
 	- 1.5.4 release tag
 	- trunk has 1.5.5 in development.
+	- Fix #681: Setting forwarders with unbound-control forward
+	  implicitly turns on forward-first.
 
 29 June 2015: Wouter
 	- iana portlist update.

@@ -1683,6 +1683,7 @@ parse_delegpt(SSL* ssl, char* args, uint8_t* nm, int allow_names)
 			}
 		}
 	}
+	dp->has_parent_side_NS = 1;
 	return dp;
 }
 
