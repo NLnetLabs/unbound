@@ -1,3 +1,7 @@
+9 July 2015: Wouter
+	- 1.5.4 release tag
+	- trunk has 1.5.5 in development.
+
 29 June 2015: Wouter
 	- iana portlist update.
 	- Fix alloc with log for allocation size checks.
