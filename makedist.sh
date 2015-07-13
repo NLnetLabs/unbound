@@ -174,7 +174,6 @@ storehash () {
 }
 
 
-
 SNAPSHOT="no"
 RC="no"
 DOWIN="no"
