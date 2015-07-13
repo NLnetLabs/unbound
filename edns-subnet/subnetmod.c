@@ -229,7 +229,7 @@ lookup_and_reply(struct module_qstate *qstate, int id)
 	struct addrnode *node;
 	
 	if (iq) iq->qinfo_hash = h; /** Might be useful on cache miss */
-	e = slabhash_lookup(sne->subnet_msg_cache, h, &qstate->qinfo, 0);
+	e = slabhash_lookup(sne->subnet_msg_cache, h, &qstate->qinfo, 1);
 	if (!e) return 0; /** qinfo not in cache */
 	data = e->data;
 	tree = (edns->subnet_addr_fam == EDNSSUBNET_ADDRFAM_IP4)?
