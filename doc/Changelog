@@ -1,3 +1,7 @@
+18 July 2015: Willem
+	- Allow certificate chain files to allow for intermediate certificates.
+	  (thanks Daniel Kahn Gillmor)
+
 13 July 2015: Wouter
 	- makedist produces sha1 and sha256 files for created binaries too.
 

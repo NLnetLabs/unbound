@@ -243,9 +243,9 @@ daemon_remote_create(struct config_file* cfg)
 		goto setup_error;
 	}
 	verbose(VERB_ALGO, "setup SSL certificates");
-	if (!SSL_CTX_use_certificate_file(rc->ctx,s_cert,SSL_FILETYPE_PEM)) {
+	if (!SSL_CTX_use_certificate_chain_file(rc->ctx,s_cert)) {
 		log_err("Error for server-cert-file: %s", s_cert);
-		log_crypto_err("Error in SSL_CTX use_certificate_file");
+		log_crypto_err("Error in SSL_CTX use_certificate_chain_file");
 		goto setup_error;
 	}
 	if(!SSL_CTX_use_PrivateKey_file(rc->ctx,s_key,SSL_FILETYPE_PEM)) {

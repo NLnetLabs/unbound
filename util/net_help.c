@@ -629,9 +629,9 @@ void* listen_sslctx_create(char* key, char* pem, char* verifypem)
 		SSL_CTX_free(ctx);
 		return NULL;
 	}
-	if(!SSL_CTX_use_certificate_file(ctx, pem, SSL_FILETYPE_PEM)) {
+	if(!SSL_CTX_use_certificate_chain_file(ctx, pem)) {
 		log_err("error for cert file: %s", pem);
-		log_crypto_err("error in SSL_CTX use_certificate_file");
+		log_crypto_err("error in SSL_CTX use_certificate_chain_file");
 		SSL_CTX_free(ctx);
 		return NULL;
 	}
@@ -684,7 +684,7 @@ void* connect_sslctx_create(char* key, char* pem, char* verifypem)
 		return NULL;
 	}
 	if(key && key[0]) {
-		if(!SSL_CTX_use_certificate_file(ctx, pem, SSL_FILETYPE_PEM)) {
+		if(!SSL_CTX_use_certificate_chain_file(ctx, pem)) {
 			log_err("error in client certificate %s", pem);
 			log_crypto_err("error in certificate file");
 			SSL_CTX_free(ctx);
