@@ -242,6 +242,22 @@ setup_ctx(char* key, char* cert)
 		print_exit("cannot read key");
 	if(!SSL_CTX_check_private_key(ctx))
 		print_exit("private key is not correct");
+#ifdef SSL_CTX_SET_ECDH_AUTO
+	if (!SSL_CTX_set_ecdh_auto(ctx,1))
+		if(verb>=1) printf("failed to set_ecdh_auto, not enabling ECDHE\n");
+#elif defined(USE_ECDSA)
+	if(1) {
+		EC_KEY *ecdh = EC_KEY_new_by_curve_name (NID_X9_62_prime256v1);
+		if (!ecdh) {
+			if(verb>=1) printf("could not find p256, not enabling ECDHE\n");
+		} else {
+			if (1 != SSL_CTX_set_tmp_ecdh (ctx, ecdh)) {
+				if(verb>=1) printf("Error in SSL_CTX_set_tmp_ecdh, not enabling ECDHE\n");
+			}
+			EC_KEY_free(ecdh);
+		}
+	}
+#endif
 	if(!SSL_CTX_load_verify_locations(ctx, cert, NULL))
 		print_exit("cannot load cert verify locations");
 	return ctx;

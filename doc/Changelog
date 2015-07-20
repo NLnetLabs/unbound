@@ -1,3 +1,10 @@
+20 July 2015: Wouter
+	- Enable ECDHE for servers.  Where available, use
+	  SSL_CTX_set_ecdh_auto() for TLS-wrapped server configurations to
+	  enable ECDHE.  Otherwise, manually offer curve p256.
+	  Client connections should automatically use ECDHE when available.
+	  (thanks Daniel Kahn Gillmor)
+
 18 July 2015: Willem
 	- Allow certificate chain files to allow for intermediate certificates.
 	  (thanks Daniel Kahn Gillmor)
