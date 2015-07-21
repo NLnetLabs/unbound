@@ -258,7 +258,7 @@ daemon_remote_create(struct config_file* cfg)
 		log_crypto_err("Error in SSL_CTX check_private_key");
 		goto setup_error;
 	}
-#ifdef SSL_CTX_SET_ECDH_AUTO
+#ifdef HAVE_DECL_SSL_CTX_SET_ECDH_AUTO
 	if(!SSL_CTX_set_ecdh_auto(rc->ctx,1)) {
 		log_crypto_err("Error in SSL_CTX_ecdh_auto, not enabling ECDHE");
 	}

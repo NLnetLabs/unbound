@@ -1,3 +1,6 @@
+21 July 2015: Wouter
+	- Fix configure to detect SSL_CTX_set_ecdh_auto.
+
 20 July 2015: Wouter
 	- Enable ECDHE for servers.  Where available, use
 	  SSL_CTX_set_ecdh_auto() for TLS-wrapped server configurations to

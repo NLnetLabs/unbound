@@ -16773,7 +16773,7 @@ fi
 
 done
 
-for ac_func in OPENSSL_config EVP_sha1 EVP_sha256 EVP_sha512 FIPS_mode SSL_CTX_set_ecdh_auto
+for ac_func in OPENSSL_config EVP_sha1 EVP_sha256 EVP_sha512 FIPS_mode
 do :
   as_ac_var=`$as_echo "ac_cv_func_$ac_func" | $as_tr_sh`
 ac_fn_c_check_func "$LINENO" "$ac_func" "$as_ac_var"
@@ -16844,6 +16844,36 @@ fi
 
 cat >>confdefs.h <<_ACEOF
 #define HAVE_DECL_SK_SSL_COMP_POP_FREE $ac_have_decl
+_ACEOF
+ac_fn_c_check_decl "$LINENO" "SSL_CTX_set_ecdh_auto" "ac_cv_have_decl_SSL_CTX_set_ecdh_auto" "
+$ac_includes_default
+#ifdef HAVE_OPENSSL_ERR_H
+#include <openssl/err.h>
+#endif
+
+#ifdef HAVE_OPENSSL_RAND_H
+#include <openssl/rand.h>
+#endif
+
+#ifdef HAVE_OPENSSL_CONF_H
+#include <openssl/conf.h>
+#endif
+
+#ifdef HAVE_OPENSSL_ENGINE_H
+#include <openssl/engine.h>
+#endif
+#include <openssl/ssl.h>
+#include <openssl/evp.h>
+
+"
+if test "x$ac_cv_have_decl_SSL_CTX_set_ecdh_auto" = xyes; then :
+  ac_have_decl=1
+else
+  ac_have_decl=0
+fi
+
+cat >>confdefs.h <<_ACEOF
+#define HAVE_DECL_SSL_CTX_SET_ECDH_AUTO $ac_have_decl
 _ACEOF
 
 fi
