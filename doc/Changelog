@@ -1,5 +1,6 @@
 21 July 2015: Wouter
 	- Fix configure to detect SSL_CTX_set_ecdh_auto.
+	- iana portlist update.
 
 20 July 2015: Wouter
 	- Enable ECDHE for servers.  Where available, use
