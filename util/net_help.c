@@ -647,7 +647,7 @@ void* listen_sslctx_create(char* key, char* pem, char* verifypem)
 		SSL_CTX_free(ctx);
 		return NULL;
 	}
-#ifdef HAVE_DECL_SSL_CTX_SET_ECDH_AUTO
+#if HAVE_DECL_SSL_CTX_SET_ECDH_AUTO
 	if(!SSL_CTX_set_ecdh_auto(ctx,1)) {
 		log_crypto_err("Error in SSL_CTX_ecdh_auto, not enabling ECDHE");
 	}
