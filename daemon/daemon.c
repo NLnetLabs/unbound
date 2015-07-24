@@ -464,7 +464,7 @@ thread_start(void* arg)
 #endif
 #ifdef SO_REUSEPORT
 	if(worker->daemon->cfg->so_reuseport)
-		port_num = worker->thread_num;
+		port_num = worker->thread_num % worker->daemon->num_ports;
 	else
 		port_num = 0;
 #endif

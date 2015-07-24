@@ -1,3 +1,7 @@
+24 July 2015: Wouter
+	- Fix #690: Reload fails when so-reuseport is yes after changing
+	  num-threads.
+
 21 July 2015: Wouter
 	- Fix configure to detect SSL_CTX_set_ecdh_auto.
 	- iana portlist update.
