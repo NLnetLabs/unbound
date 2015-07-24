@@ -399,6 +399,12 @@ daemon_create_workers(struct daemon* daemon)
 	verbose(VERB_ALGO, "total of %d outgoing ports available", numport);
 	
 	daemon->num = (daemon->cfg->num_threads?daemon->cfg->num_threads:1);
+	if(daemon->reuseport && (int)daemon->num < (int)daemon->num_ports) {
+		log_warn("cannot reduce num-threads to %d because so-reuseport "
+			"so continuing with %d threads.", (int)daemon->num,
+			(int)daemon->num_ports);
+		daemon->num = daemon->num_ports;
+	}
 	daemon->workers = (struct worker**)calloc((size_t)daemon->num, 
 		sizeof(struct worker*));
 	if(daemon->cfg->dnstap) {
