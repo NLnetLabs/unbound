@@ -403,7 +403,7 @@ daemon_create_workers(struct daemon* daemon)
 		log_warn("cannot reduce num-threads to %d because so-reuseport "
 			"so continuing with %d threads.", (int)daemon->num,
 			(int)daemon->num_ports);
-		daemon->num = daemon->num_ports;
+		daemon->num = (int)daemon->num_ports;
 	}
 	daemon->workers = (struct worker**)calloc((size_t)daemon->num, 
 		sizeof(struct worker*));
