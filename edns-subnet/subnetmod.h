@@ -14,6 +14,7 @@
 #define SUBNETMOD_H
 #include "util/module.h"
 #include "services/outbound_list.h"
+#include "util/alloc.h"
 #include "util/net_help.h"
 #include "util/storage/slabhash.h"
 #include "edns-subnet/addrtree.h"
@@ -26,6 +27,8 @@ struct subnet_env {
 	 * key: struct query_info*
 	 * data: struct subnet_msg_cache_data* */
 	struct slabhash* subnet_msg_cache;
+	/** allocation service */
+	struct alloc_cache alloc;
 };
 
 struct subnet_msg_cache_data {

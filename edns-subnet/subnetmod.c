@@ -74,6 +74,7 @@ subnetmod_init(struct module_env *env, int id)
 		log_err("malloc failure");
 		return 0;
 	}
+	alloc_init(&sn_env->alloc, NULL, 0);
 	env->modinfo[id] = (void*)sn_env;
 	/* Copy msg_cache settings for now */
 	sn_env->subnet_msg_cache = slabhash_create(env->cfg->msg_cache_slabs,
@@ -82,6 +83,8 @@ subnetmod_init(struct module_env *env, int id)
 			query_entry_delete, subnet_data_delete, NULL);
 	if(!sn_env->subnet_msg_cache) {
 		log_err("subnet: could not create cache");
+		free(sn_env);
+		env->modinfo[id] = NULL;
 		return 0;
 	}
 	return 1;
@@ -95,6 +98,7 @@ subnetmod_deinit(struct module_env *env, int id)
 		return;
 	sn_env = (struct subnet_env*)env->modinfo[id];
 	slabhash_delete(sn_env->subnet_msg_cache);
+	alloc_clear(&sn_env->alloc);
 	free(sn_env);
 	env->modinfo[id] = NULL;
 }
@@ -113,8 +117,8 @@ cp_edns_bad_response(struct edns_data *target, struct edns_data *source)
 static void
 delfunc(void *envptr, void *elemptr) {
 	struct reply_info *elem = (struct reply_info *)elemptr;
-	struct module_env *env = (struct module_env *)envptr;
-	reply_info_parsedelete(elem, env->alloc);
+	struct subnet_env *env = (struct subnet_env *)envptr;
+	reply_info_parsedelete(elem, &env->alloc);
 }
 
 static size_t
@@ -131,7 +135,7 @@ sizefunc(void *elemptr) {
  * NULL on failure to create. */
 static struct addrtree* 
 get_tree(struct subnet_msg_cache_data *data, struct edns_data *edns, 
-	struct module_env *env)
+	struct subnet_env *env)
 {
 	struct addrtree *tree;
 	if (edns->subnet_addr_fam == EDNSSUBNET_ADDRFAM_IP4) {
@@ -155,8 +159,8 @@ update_cache(struct module_qstate *qstate, int id)
 	struct addrtree *tree;
 	struct reply_info *rep;
 	struct query_info qinf;
-	struct slabhash *subnet_msg_cache = 
-		((struct subnet_env*)qstate->env->modinfo[id])->subnet_msg_cache;
+	struct subnet_env *sne = qstate->env->modinfo[id];
+	struct slabhash *subnet_msg_cache = sne->subnet_msg_cache;
 	struct edns_data *edns = &qstate->edns_client_in;
 	size_t i;
 	
@@ -188,12 +192,12 @@ update_cache(struct module_qstate *qstate, int id)
 		}
 	}
 	/** Step 2, find the correct tree */
-	if (!(tree = get_tree(lru_entry->data, edns, qstate->env))) {
+	if (!(tree = get_tree(lru_entry->data, edns, sne))) {
 		if (acquired_lock) lock_rw_unlock(&lru_entry->lock);
 		log_err("Subnet cache insertion failed");
 		return;
 	}
-	rep = reply_info_copy(qstate->return_msg->rep, qstate->env->alloc, NULL);
+	rep = reply_info_copy(qstate->return_msg->rep, &sne->alloc, NULL);
 	
 	/* store RRsets */
 	for(i=0; i<rep->rrset_count; i++) {
@@ -227,6 +231,7 @@ lookup_and_reply(struct module_qstate *qstate, int id)
 	struct edns_data *edns = &qstate->edns_client_in;
 	struct addrtree *tree;
 	struct addrnode *node;
+	int scope;
 	
 	if (iq) iq->qinfo_hash = h; /** Might be useful on cache miss */
 	e = slabhash_lookup(sne->subnet_msg_cache, h, &qstate->qinfo, 1);
@@ -248,6 +253,7 @@ lookup_and_reply(struct module_qstate *qstate, int id)
 	qstate->return_msg = tomsg(env, &qstate->qinfo,
 		(struct reply_info *)node->elem, qstate->region, *env->now,
 		env->scratch);
+	scope = node->scope;
 	lock_rw_unlock(&e->lock);
 	
 	if (!qstate->return_msg) { /** TTL expired */
@@ -256,7 +262,7 @@ lookup_and_reply(struct module_qstate *qstate, int id)
 	
 	if (edns->subnet_downstream) { /* relay to interested client */
 		memcpy(&qstate->edns_client_out, edns, sizeof(struct edns_data));
-		qstate->edns_client_out.subnet_scope_mask = node->scope;
+		qstate->edns_client_out.subnet_scope_mask = scope;
 	}
 	return 1;
 }
