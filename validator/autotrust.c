@@ -1447,9 +1447,11 @@ set_tp_times(struct trust_anchor* tp, time_t rrsig_exp_interval,
 	if(rrsig_exp_interval/2 < x)
 		x = rrsig_exp_interval/2;
 	/* MAX(1hr, x) */
-	if(x < 3600)
-		tp->autr->query_interval = 3600;
-	else	tp->autr->query_interval = x;
+	if(!autr_permit_small_holddown) {
+		if(x < 3600)
+			tp->autr->query_interval = 3600;
+		else	tp->autr->query_interval = x;
+	}
 
 	/* x= MIN(1day, ttl/10, expire/10) */
 	x = 24 * 3600;
@@ -1458,9 +1460,11 @@ set_tp_times(struct trust_anchor* tp, time_t rrsig_exp_interval,
 	if(rrsig_exp_interval/10 < x)
 		x = rrsig_exp_interval/10;
 	/* MAX(1hr, x) */
-	if(x < 3600)
-		tp->autr->retry_time = 3600;
-	else	tp->autr->retry_time = x;
+	if(!autr_permit_small_holddown) {
+		if(x < 3600)
+			tp->autr->retry_time = 3600;
+		else	tp->autr->retry_time = x;
+	}
 
 	if(qi != tp->autr->query_interval || rt != tp->autr->retry_time) {
 		*changed = 1;
@@ -1959,8 +1963,10 @@ calc_next_probe(struct module_env* env, time_t wait)
 {
 	/* make it random, 90-100% */
 	time_t rnd, rest;
-	if(wait < 3600)
-		wait = 3600;
+	if(!autr_permit_small_holddown) {
+		if(wait < 3600)
+			wait = 3600;
+	}
 	rnd = wait/10;
 	rest = wait-rnd;
 	rnd = (time_t)ub_random_max(env->rnd, (long int)rnd);
@@ -2378,6 +2384,7 @@ autr_probe_timer(struct module_env* env)
 	struct trust_anchor* tp;
 	time_t next_probe = 3600;
 	int num = 0;
+	if(autr_permit_small_holddown) next_probe = 1;
 	verbose(VERB_ALGO, "autotrust probe timer callback");
 	/* while there are still anchors to probe */
 	while( (tp = todo_probe(env, &next_probe)) ) {
