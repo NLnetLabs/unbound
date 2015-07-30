@@ -1966,6 +1966,8 @@ calc_next_probe(struct module_env* env, time_t wait)
 	if(!autr_permit_small_holddown) {
 		if(wait < 3600)
 			wait = 3600;
+	} else {
+		if(wait == 0) wait = 1;
 	}
 	rnd = wait/10;
 	rest = wait-rnd;
