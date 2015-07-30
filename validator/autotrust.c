@@ -1451,7 +1451,7 @@ set_tp_times(struct trust_anchor* tp, time_t rrsig_exp_interval,
 		if(x < 3600)
 			tp->autr->query_interval = 3600;
 		else	tp->autr->query_interval = x;
-	}
+	}	else    tp->autr->query_interval = x;
 
 	/* x= MIN(1day, ttl/10, expire/10) */
 	x = 24 * 3600;
@@ -1464,7 +1464,7 @@ set_tp_times(struct trust_anchor* tp, time_t rrsig_exp_interval,
 		if(x < 3600)
 			tp->autr->retry_time = 3600;
 		else	tp->autr->retry_time = x;
-	}
+	}	else    tp->autr->retry_time = x;
 
 	if(qi != tp->autr->query_interval || rt != tp->autr->retry_time) {
 		*changed = 1;
