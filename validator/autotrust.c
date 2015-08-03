@@ -2357,6 +2357,8 @@ todo_probe(struct module_env* env, time_t* next)
 	if( (el=rbtree_first(&env->anchors->autr->probe)) == RBTREE_NULL) {
 		/* in case of revoked anchors */
 		lock_basic_unlock(&env->anchors->lock);
+		/* signal that there are no anchors to probe */
+		*next = 0;
 		return NULL;
 	}
 	tp = (struct trust_anchor*)el->key;
@@ -2395,7 +2397,7 @@ autr_probe_timer(struct module_env* env)
 		num++;
 	}
 	regional_free_all(env->scratch);
-	if(num == 0)
+	if(next_probe == 0)
 		return 0; /* no trust points to probe */
 	verbose(VERB_ALGO, "autotrust probe timer %d callbacks done", num);
 	return next_probe;
