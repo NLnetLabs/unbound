@@ -2,6 +2,7 @@
 	- Document in the manual more text about configuring locally served
 	  zones.
 	- Fix 5011 anchor update timer after reload.
+	- Fix mktime in unbound-anchor not using UTC.
 
 30 July 2015: Wouter
 	- please afl-gcc (llvm) for uninitialised variable warning.

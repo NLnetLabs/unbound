@@ -168,7 +168,7 @@ HOST_OBJ=unbound-host.lo
 HOST_OBJ_LINK=$(HOST_OBJ) $(SLDNS_OBJ) $(COMPAT_OBJ_WITHOUT_CTIMEARC4) @WIN_HOST_OBJ_LINK@
 UBANCHOR_SRC=smallapp/unbound-anchor.c
 UBANCHOR_OBJ=unbound-anchor.lo
-UBANCHOR_OBJ_LINK=$(UBANCHOR_OBJ) \
+UBANCHOR_OBJ_LINK=$(UBANCHOR_OBJ) parseutil.lo \
 $(COMPAT_OBJ_WITHOUT_CTIME) @WIN_UBANCHOR_OBJ_LINK@
 TESTBOUND_SRC=testcode/testbound.c testcode/testpkts.c \
 daemon/worker.c daemon/acl_list.c daemon/daemon.c daemon/stats.c \
