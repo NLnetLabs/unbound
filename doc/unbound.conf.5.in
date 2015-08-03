@@ -1128,6 +1128,12 @@ bit on replies for the private zone (authoritative servers do not set the
 AD bit).  This setup makes unbound capable of answering queries for the 
 private zone, and can even set the AD bit ('authentic'), but the AA 
 ('authoritative') bit is not set on these replies. 
+.P
+Consider adding \fBserver:\fR statements for \fBdomain\-insecure:\fR and
+for \fBlocal\-zone:\fI name nodefault\fR for the zone if it is a locally
+served zone.  The insecure clause stops DNSSEC from invalidating the
+zone.  The local zone nodefault (or \fItransparent\fR) clause makes the
+(reverse\-) zone bypass unbound's filtering of RFC1918 zones.
 .TP
 .B name: \fI<domain name>
 Name of the stub zone.
