@@ -899,7 +899,8 @@ infected machines without answering the queries.
 Used to turn off default contents for AS112 zones. The other types
 also turn off default contents for the zone. The 'nodefault' option 
 has no other effect than turning off default contents for the 
-given zone.
+given zone.  Use \fInodefault\fR if you use exactly that zone, if you want to
+use a subzone, use \fItransparent\fR.
 .P
 The default zones are localhost, reverse 127.0.0.1 and ::1, and the AS112
 zones. The AS112 zones are reverse DNS zones for private use and reserved
