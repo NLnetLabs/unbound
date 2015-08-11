@@ -566,7 +566,7 @@ if test $USE_NSS = "no"; then
 ACX_WITH_SSL
 ACX_LIB_SSL
 AC_MSG_CHECKING([for LibreSSL])
-if grep OPENSSL_VERSION_TEXT $ssldir/include/openssl/opensslv.h | grep "LibreSSL" >/dev/null; then
+if grep -e OPENSSL_VERSION_TEXT -e LIBRESSL_VERSION_TEXT $ssldir/include/openssl/opensslv.h | grep "LibreSSL" >/dev/null; then
 	AC_MSG_RESULT([yes])
 	AC_DEFINE([HAVE_LIBRESSL], [1], [Define if we have LibreSSL])
 	# libressl provides these compat functions, but they may also be

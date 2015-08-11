@@ -1,3 +1,6 @@
+11 August 2015: Wouter
+	- Fix #694: configure script does not detect LibreSSL 2.2.2
+
 4 August 2015: Wouter
 	- Document that local-zone nodefault matches exactly and transparent
 	  can be used to release a subzone.
