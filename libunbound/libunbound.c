@@ -65,6 +65,7 @@
 #ifdef HAVE_PTHREAD
 #include <signal.h>
 #endif
+#include <sys/wait.h>
 
 #if defined(UB_ON_WINDOWS) && defined (HAVE_WINDOWS_H)
 #include <windows.h>
@@ -218,6 +219,10 @@ static void ub_stop_bg(struct ub_ctx* ctx)
 			ub_thread_join(ctx->bg_tid);
 		} else {
 			lock_basic_unlock(&ctx->cfglock);
+			if(waitpid(ctx->bg_pid, NULL, 0) == -1) {
+				if(verbosity > 2)
+					log_err("waitpid: %s", strerror(errno));
+			}
 		}
 	}
 	else {
