@@ -1225,7 +1225,7 @@ verify_dnskey(struct module_env* env, struct val_env* ve,
 {
 	char* reason = NULL;
 	uint8_t sigalg[ALGO_NEEDS_MAX+1];
-	int downprot = 1;
+	int downprot = 0;
 	enum sec_status sec = val_verify_DNSKEY_with_TA(env, ve, rrset,
 		tp->ds_rrset, tp->dnskey_rrset, downprot?sigalg:NULL, &reason);
 	/* sigalg is ignored, it returns algorithms signalled to exist, but
