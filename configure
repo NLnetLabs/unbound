@@ -16684,7 +16684,7 @@ rm -f core conftest.err conftest.$ac_objext \
     conftest$ac_exeext conftest.$ac_ext
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for LibreSSL" >&5
 $as_echo_n "checking for LibreSSL... " >&6; }
-if grep -e OPENSSL_VERSION_TEXT -e LIBRESSL_VERSION_TEXT $ssldir/include/openssl/opensslv.h | grep "LibreSSL" >/dev/null; then
+if grep VERSION_TEXT $ssldir/include/openssl/opensslv.h | grep "LibreSSL" >/dev/null; then
 	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 $as_echo "yes" >&6; }
 
