@@ -2,6 +2,8 @@
 	- Fix deadlock for local data add and zone add when unbound-control
 	  list_local_data printout is interrupted.
 	- iana portlist update.
+	- Change default of harden-algo-downgrade to off.  This is lenient
+	  for algorithm rollover.
 
 13 August 2015: Wouter
 	- 5011 implementation does not insist on all algorithms, when
