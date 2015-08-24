@@ -2283,11 +2283,17 @@ do_list_local_data(SSL* ssl, struct worker* worker)
 				for(i=0; i<d->count + d->rrsig_count; i++) {
 					if(!packed_rr_to_string(p->rrset, i,
 						0, s, slen)) {
-						if(!ssl_printf(ssl, "BADRR\n"))
+						if(!ssl_printf(ssl, "BADRR\n")) {
+							lock_rw_unlock(&z->lock);
+							lock_rw_unlock(&zones->lock);
 							return;
+						}
 					}
-				        if(!ssl_printf(ssl, "%s\n", s))
+				        if(!ssl_printf(ssl, "%s\n", s)) {
+						lock_rw_unlock(&z->lock);
+						lock_rw_unlock(&zones->lock);
 						return;
+					}
 				}
 			}
 		}
