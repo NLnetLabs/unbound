@@ -1,6 +1,9 @@
 28 August 2015: Wouter
 	- Fix #697: Get PY_MAJOR_VERSION failure at configure for python
 	  2.4 to 2.6.
+	- Feature #699: --enable-pie option to that builds PIE binary.
+	- Feature #700: --enable-relro-now option that enables full read-only
+	  relocation.
 
 24 August 2015: Wouter
 	- Fix deadlock for local data add and zone add when unbound-control
