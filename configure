@@ -16101,7 +16101,7 @@ ac_compiler_gnu=$ac_cv_c_compiler_gnu
 		as_fn_error $? "Python version >= 2.4.0 is required" "$LINENO" 5
 	fi
 
-      PY_MAJOR_VERSION="`$PYTHON -c "import sys; print(sys.version_info.major)"`"
+      PY_MAJOR_VERSION="`$PYTHON -c \"import sys; print(sys.version_info[0])\"`"
 
       # Have Python
 
