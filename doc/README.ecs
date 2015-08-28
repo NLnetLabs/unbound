@@ -1,0 +1,77 @@
+EDNS Client Subnet (ECS) module Unbound
+
+This branch implements the draft
+https://datatracker.ietf.org/doc/draft-ietf-dnsop-edns-client-subnet/
+as a feature in unbound.
+
+* Build process
+
+The ECS branch builds as usual with the addition of the --enable-subnet
+configure switch. 
+
+./configure --enable-subnet
+
+* Configuration
+
+Unbound has the following additional configuration options in the server
+section:
+
+	send-client-subnet: <IP address>
+		Send  client source address to this authority. Append /num to
+		indicate a classless delegation netblock, for example like
+		10.2.3.4/24 or 2001::11/64. Can be given multiple times.
+		Authorities not listed  will not receive edns-subnet
+		information.
+
+	client-subnet-opcode: <number>
+		Specify positive integer smaller than 65536. Defaults to 8.
+
+	max-client-subnet-ipv6: <number>
+		Specifies the maximum prefix length of the client source
+		address we are willing to expose to third parties for IPv6.
+		Defaults to 64.
+
+	max-client-subnet-ipv4: <number>
+		Specifies the maximum prefix length of the client source
+		address we are willing to expose to third parties for IPv4.
+		Defaults to 24.
+
+Furthermore you should add 'subnetcache' as the first module:
+
+	module-config: "subnetcache validator iterator"
+
+* Behaviour
+
+If nothing specified, Unbound will not append the ECS option to
+outgoing queries. If the destination address is whitelisted with
+'send-client-subnet', Unbound will add the EDNS0 option to the query
+containing the relevant part of the client's address.
+
+When an answer contains the ECS option the response and the option are
+placed in a specialized cache. If the authority indicated no support,
+the response is stored in the regular cache.
+
+Additionally when a client includes the option in its queries, Unbound
+will forward the option to the authority regardless of the authorities
+presence in the whitelist. In this case the lookup in the regular cache
+is skipped.
+
+The maximum size of the ECS cache is controlled by 'msg-cache-size' in
+the configuration file. On top of that, for each query only 100
+different subnets are allowed to be stored for each address family.
+Exceeding that number, older entries will be purged from cache.
+
+* Caveats
+
+- Only the final answer and option are being cached. Intermediate ECS
+options do not influence the caching.
+- Even though the draft specifically addresses birthday attacks, a
+protocol flaw exists making the implementation very vulnerable for
+cache poisoning. You are strongly recommended to either use this in
+closed environments, only with DNSSEC signed domains, or pretend you
+did not read this.
+- If one of authorities for a zone does not implement ECS but others
+do, records are likely to end up in the regular cache. ECS
+functionality for that name then is effectively disabled for the
+duration of the TTL. 
+
