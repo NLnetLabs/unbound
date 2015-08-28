@@ -87,6 +87,7 @@ subnetmod_init(struct module_env *env, int id)
 		env->modinfo[id] = NULL;
 		return 0;
 	}
+	lock_rw_init(&sn_env->biglock);
 	return 1;
 }
 
@@ -97,6 +98,7 @@ subnetmod_deinit(struct module_env *env, int id)
 	if(!env || !env->modinfo[id])
 		return;
 	sn_env = (struct subnet_env*)env->modinfo[id];
+	lock_rw_destroy(&sn_env->biglock);
 	slabhash_delete(sn_env->subnet_msg_cache);
 	alloc_clear(&sn_env->alloc);
 	free(sn_env);
@@ -104,7 +106,7 @@ subnetmod_deinit(struct module_env *env, int id)
 }
 
 /** Tells client that upstream has no/improper support */
-void
+static void
 cp_edns_bad_response(struct edns_data *target, struct edns_data *source)
 {
 	target->subnet_scope_mask  = 0;
@@ -152,7 +154,7 @@ get_tree(struct subnet_msg_cache_data *data, struct edns_data *edns,
 	return tree;
 }
 
-void
+static void
 update_cache(struct module_qstate *qstate, int id)
 {
 	struct msgreply_entry *mrep_entry;
@@ -163,7 +165,7 @@ update_cache(struct module_qstate *qstate, int id)
 	struct slabhash *subnet_msg_cache = sne->subnet_msg_cache;
 	struct edns_data *edns = &qstate->edns_client_in;
 	size_t i;
-	
+
 	/** We already calculated hash upon lookup */
 	hashvalue_t h = qstate->minfo[id] ? 
 		((struct subnet_qstate*)qstate->minfo[id])->qinfo_hash : 
@@ -198,6 +200,11 @@ update_cache(struct module_qstate *qstate, int id)
 		return;
 	}
 	rep = reply_info_copy(qstate->return_msg->rep, &sne->alloc, NULL);
+	if (!rep) {
+		if (acquired_lock) lock_rw_unlock(&lru_entry->lock);
+		log_err("Subnet cache insertion failed");
+		return;
+	}
 	
 	/* store RRsets */
 	for(i=0; i<rep->rrset_count; i++) {
@@ -219,7 +226,7 @@ update_cache(struct module_qstate *qstate, int id)
 }
 
 /* return true iff reply is sent. */
-int
+static int
 lookup_and_reply(struct module_qstate *qstate, int id)
 {
 	struct lruhash_entry *e;
@@ -232,7 +239,7 @@ lookup_and_reply(struct module_qstate *qstate, int id)
 	struct addrtree *tree;
 	struct addrnode *node;
 	int scope;
-	
+
 	if (iq) iq->qinfo_hash = h; /** Might be useful on cache miss */
 	e = slabhash_lookup(sne->subnet_msg_cache, h, &qstate->qinfo, 1);
 	if (!e) return 0; /** qinfo not in cache */
@@ -285,6 +292,8 @@ common_prefix(uint8_t *a, uint8_t *b, uint8_t net)
 enum module_ext_state
 eval_response(struct module_qstate *qstate, int id)
 {
+	struct subnet_env *sne = qstate->env->modinfo[id];
+
 	struct edns_data *c_in  = &qstate->edns_client_in; /* rcvd from client */
 	struct edns_data *c_out = &qstate->edns_client_out;/* will send to client */
 	struct edns_data *s_in  = &qstate->edns_server_in; /* rcvd from auth */
@@ -308,7 +317,9 @@ eval_response(struct module_qstate *qstate, int id)
 		 * is still usefull to put it in the edns subnet cache for
 		 * when a client explicitly asks for subnet specific answer. */
 		verbose(VERB_QUERY, "subnet: Authority indicates no support");
+		lock_rw_wrlock(&sne->biglock);
 		update_cache(qstate, id);
+		lock_rw_unlock(&sne->biglock);
 		if (c_in->subnet_downstream)
 			cp_edns_bad_response(c_out, c_in);
 		return module_finished;
@@ -330,8 +341,10 @@ eval_response(struct module_qstate *qstate, int id)
 		s_out->subnet_sent = 0;
 		return module_wait_module;
 	}
-	
+
+	lock_rw_wrlock(&sne->biglock);
 	update_cache(qstate, id);
+	lock_rw_unlock(&sne->biglock);
 	
 	if (c_in->subnet_downstream) {
 		/** Client wants to see the answer, echo option back
@@ -346,6 +359,8 @@ void
 subnetmod_operate(struct module_qstate *qstate, enum module_ev event, 
 	int id, struct outbound_entry *ATTR_UNUSED(outbound))
 {
+	struct subnet_env *sne = qstate->env->modinfo[id];
+	
 	verbose(VERB_QUERY, "subnet[module %d] operate: extstate:%s "
 		"event:%s", id, strextstate(qstate->ext_state[id]), 
 		strmodulevent(event));
@@ -362,12 +377,15 @@ subnetmod_operate(struct module_qstate *qstate, enum module_ev event,
 			qstate->ext_state[id] = module_wait_module;
 			return;
 		}
-		
+
+		lock_rw_wrlock(&sne->biglock);
 		if (lookup_and_reply(qstate, id)) {
+			lock_rw_unlock(&sne->biglock);
 			verbose(VERB_QUERY, "subnet: answered from cache");
 			qstate->ext_state[id] = module_finished;
 			return;
 		}
+		lock_rw_unlock(&sne->biglock);
 		
 		/* copy information from client request to upstream query */
 		memcpy(&qstate->edns_server_out, &qstate->edns_client_in, sizeof(struct edns_data));

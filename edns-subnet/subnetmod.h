@@ -29,6 +29,7 @@ struct subnet_env {
 	struct slabhash* subnet_msg_cache;
 	/** allocation service */
 	struct alloc_cache alloc;
+	lock_rw_t biglock;
 };
 
 struct subnet_msg_cache_data {
