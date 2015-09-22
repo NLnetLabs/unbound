@@ -296,7 +296,7 @@ trust (very large) TTL values.
 .TP
 .B cache\-min\-ttl: \fI<seconds>
 Time to live minimum for RRsets and messages in the cache. Default is 0.
-If the the minimum kicks in, the data is cached for longer than the domain
+If the minimum kicks in, the data is cached for longer than the domain
 owner intended, and thus less queries are made to look up the data.
 Zero makes sure the data in the cache is as the domain owner intended,
 higher values, especially more than an hour or so, can lead to trouble as 
