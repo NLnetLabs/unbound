@@ -3,6 +3,7 @@
 	  globs (patch from Dag-Erling Smørgrav).
 	- iana portlist update.
 	- Fix #702: New IPs for for h.root-servers.net.
+	- Remove confusion comment from canonical_compare() function.
 
 31 August 2015: Wouter
 	- changed windows setup compression to be more transparent.
