@@ -373,6 +373,7 @@ a daemon. Default is yes.
 The netblock is given as an IP4 or IP6 address with /size appended for a 
 classless network block. The action can be \fIdeny\fR, \fIrefuse\fR, 
 \fIallow\fR, \fIallow_snoop\fR, \fIdeny_non_local\fR or \fIrefuse_non_local\fR.
+The most specific netblock match is used, if none match \fIdeny\fR is used.
 .IP
 The action \fIdeny\fR stops queries from hosts from that netblock.
 .IP
