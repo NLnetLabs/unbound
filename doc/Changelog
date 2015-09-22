@@ -5,6 +5,7 @@
 	- Fix #702: New IPs for for h.root-servers.net.
 	- Remove confusion comment from canonical_compare() function.
 	- Fix #705: ub_ctx_set_fwd() return value mishandled on windows.
+	- testbound selftest also works in non-debug mode.
 
 31 August 2015: Wouter
 	- changed windows setup compression to be more transparent.
