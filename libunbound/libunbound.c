@@ -955,7 +955,7 @@ ub_ctx_resolvconf(struct ub_ctx* ctx, const char* fname)
 			while (ptr) {
 				numserv++;
 				if((retval=ub_ctx_set_fwd(ctx, 
-					ptr->IpAddress.String)!=0)) {
+					ptr->IpAddress.String))!=0) {
 					free(info);
 					return retval;
 				}
