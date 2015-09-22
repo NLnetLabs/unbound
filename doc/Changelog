@@ -1,3 +1,7 @@
+22 September 2015: Wouter
+	- Fix config globbed include chroot treatment, this fixes reload of
+	  globs (patch from Dag-Erling Smørgrav).
+
 31 August 2015: Wouter
 	- changed windows setup compression to be more transparent.
 
