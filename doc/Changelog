@@ -1,3 +1,6 @@
+25 September 2015: Wouter
+	- Fix unbound-control flush that does not succeed in removing data.
+
 22 September 2015: Wouter
 	- Fix config globbed include chroot treatment, this fixes reload of
 	  globs (patch from Dag-Erling Smørgrav).

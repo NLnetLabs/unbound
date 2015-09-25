@@ -1259,8 +1259,6 @@ struct del_info {
 	size_t len;
 	/** labels */
 	int labs;
-	/** now */
-	time_t now;
 	/** time to invalidate to */
 	time_t expired;
 	/** number of rrsets removed */
@@ -1289,7 +1287,7 @@ infra_del_host(struct lruhash_entry* e, void* arg)
 		d->timeout_AAAA = 0;
 		d->timeout_other = 0;
 		rtt_init(&d->rtt);
-		if(d->ttl >= inf->now) {
+		if(d->ttl > inf->expired) {
 			d->ttl = inf->expired;
 			inf->num_keys++;
 		}
@@ -1318,7 +1316,6 @@ do_flush_infra(SSL* ssl, struct worker* worker, char* arg)
 	inf.name = 0;
 	inf.len = 0;
 	inf.labs = 0;
-	inf.now = *worker->env.now;
 	inf.expired = *worker->env.now;
 	inf.expired -= 3; /* handle 3 seconds skew between threads */
 	inf.num_rrsets = 0;
@@ -1349,7 +1346,7 @@ zone_del_rrset(struct lruhash_entry* e, void* arg)
 	if(dname_subdomain_c(k->rk.dname, inf->name)) {
 		struct packed_rrset_data* d = 
 			(struct packed_rrset_data*)e->data;
-		if(d->ttl >= inf->now) {
+		if(d->ttl > inf->expired) {
 			d->ttl = inf->expired;
 			inf->num_rrsets++;
 		}
@@ -1365,7 +1362,7 @@ zone_del_msg(struct lruhash_entry* e, void* arg)
 	struct msgreply_entry* k = (struct msgreply_entry*)e->key;
 	if(dname_subdomain_c(k->key.qname, inf->name)) {
 		struct reply_info* d = (struct reply_info*)e->data;
-		if(d->ttl >= inf->now) {
+		if(d->ttl > inf->expired) {
 			d->ttl = inf->expired;
 			inf->num_msgs++;
 		}
@@ -1381,7 +1378,7 @@ zone_del_kcache(struct lruhash_entry* e, void* arg)
 	struct key_entry_key* k = (struct key_entry_key*)e->key;
 	if(dname_subdomain_c(k->name, inf->name)) {
 		struct key_entry_data* d = (struct key_entry_data*)e->data;
-		if(d->ttl >= inf->now) {
+		if(d->ttl > inf->expired) {
 			d->ttl = inf->expired;
 			inf->num_keys++;
 		}
@@ -1404,7 +1401,6 @@ do_flush_zone(SSL* ssl, struct worker* worker, char* arg)
 	inf.name = nm;
 	inf.len = nmlen;
 	inf.labs = nmlabs;
-	inf.now = *worker->env.now;
 	inf.expired = *worker->env.now;
 	inf.expired -= 3; /* handle 3 seconds skew between threads */
 	inf.num_rrsets = 0;
@@ -1474,7 +1470,6 @@ do_flush_bogus(SSL* ssl, struct worker* worker)
 	struct del_info inf;
 	/* what we do is to set them all expired */
 	inf.worker = worker;
-	inf.now = *worker->env.now;
 	inf.expired = *worker->env.now;
 	inf.expired -= 3; /* handle 3 seconds skew between threads */
 	inf.num_rrsets = 0;
@@ -1550,7 +1545,6 @@ do_flush_negative(SSL* ssl, struct worker* worker)
 	struct del_info inf;
 	/* what we do is to set them all expired */
 	inf.worker = worker;
-	inf.now = *worker->env.now;
 	inf.expired = *worker->env.now;
 	inf.expired -= 3; /* handle 3 seconds skew between threads */
 	inf.num_rrsets = 0;
