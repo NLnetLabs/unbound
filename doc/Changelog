@@ -1,3 +1,7 @@
+28 September 2015: Wouter
+	- MAX_TARGET_COUNT increased to 64, to fix up sporadic resolution
+	  failures.
+
 25 September 2015: Wouter
 	- Fix unbound-control flush that does not succeed in removing data.
 
