@@ -2,6 +2,7 @@
 	- MAX_TARGET_COUNT increased to 64, to fix up sporadic resolution
 	  failures.
 	- tag for 1.5.5rc1 release.
+	- makedist.sh: pgp sig echo commands.
 
 25 September 2015: Wouter
 	- Fix unbound-control flush that does not succeed in removing data.

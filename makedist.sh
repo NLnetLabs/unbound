@@ -451,6 +451,10 @@ tar czf ../unbound-$version.tar.gz unbound-$version || error_cleanup "Failed to 
 cleanup
 
 storehash unbound-$version.tar.gz
+echo "create unbound-$version.tar.gz.asc with:"
+echo "  gpg --armor --detach-sign unbound-$version.tar.gz"
+echo "  gpg --armor --detach-sign unbound-$version.zip"
+echo "  gpg --armor --detach-sign unbound_setup_$version.exe"
 
 info "Unbound distribution created successfully."
 
