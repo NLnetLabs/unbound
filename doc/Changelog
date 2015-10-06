@@ -1,3 +1,7 @@
+6 October 2015: Wouter
+	- 1.5.5 release.
+	- trunk tracks the development of 1.5.6.
+
 28 September 2015: Wouter
 	- MAX_TARGET_COUNT increased to 64, to fix up sporadic resolution
 	  failures.
