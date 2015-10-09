@@ -4,6 +4,7 @@
 	  If you used to rely on the older default of port 443, you have
 	  to put a clause in unbound.conf for that.  The new value is likely
 	  going to be the standardised port number for this traffic.
+	- iana portlist update.
 
 6 October 2015: Wouter
 	- 1.5.5 release.
