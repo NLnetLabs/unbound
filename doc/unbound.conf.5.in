@@ -362,7 +362,7 @@ The public key certificate pem file for the ssl service.  Default is "",
 turned off.
 .TP
 .B ssl\-port: \fI<number>
-The port number on which to provide TCP SSL service, default 443, only
+The port number on which to provide TCP SSL service, default 853, only
 interfaces configured with that port number as @number get the SSL service.
 .TP
 .B do\-daemonize: \fI<yes or no>

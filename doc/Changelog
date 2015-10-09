@@ -1,3 +1,10 @@
+9 October 2015: Wouter
+	- Default for ssl-port is port 853, the temporary port assignment
+	  for secure domain name system traffic.
+	  If you used to rely on the older default of port 443, you have
+	  to put a clause in unbound.conf for that.  The new value is likely
+	  going to be the standardised port number for this traffic.
+
 6 October 2015: Wouter
 	- 1.5.5 release.
 	- trunk tracks the development of 1.5.6.
