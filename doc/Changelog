@@ -1,6 +1,7 @@
 14 October 2015: Wouter
 	- ANY responses include DNAME records if present, as per Evan Hunt's
 	  remark in dnsop.
+	- Fix manpage to suggest using SIGTERM to terminate the server.
 
 9 October 2015: Wouter
 	- Default for ssl-port is port 853, the temporary port assignment
