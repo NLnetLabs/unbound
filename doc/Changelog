@@ -1,6 +1,7 @@
 15 October 2015: Wouter
 	- Fix segfault in the dns64 module in the formaterror error path.
 	- Fix sldns_wire2str_rdata_scan for malformed RRs.
+	- tag for 1.5.6rc1 release.
 
 14 October 2015: Wouter
 	- ANY responses include DNAME records if present, as per Evan Hunt's
