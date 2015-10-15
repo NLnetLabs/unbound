@@ -1,3 +1,6 @@
+15 October 2015: Wouter
+	- Fix segfault in the dns64 module in the formaterror error path.
+
 14 October 2015: Wouter
 	- ANY responses include DNAME records if present, as per Evan Hunt's
 	  remark in dnsop.
