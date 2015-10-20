@@ -1,3 +1,7 @@
+20 October 2015: Wouter
+	- 1.5.6 release.
+	- trunk tracks development of 1.5.7.
+
 15 October 2015: Wouter
 	- Fix segfault in the dns64 module in the formaterror error path.
 	- Fix sldns_wire2str_rdata_scan for malformed RRs.
