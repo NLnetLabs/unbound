@@ -1828,6 +1828,8 @@ write_unsigned_root(const char* root_anchor_file)
 			root_anchor_file);
 		if(verb && errno != 0) printf("%s\n", strerror(errno));
 	}
+	fflush(out);
+	fsync(fileno(out));
 	fclose(out);
 }
 
@@ -1854,6 +1856,8 @@ write_root_anchor(const char* root_anchor_file, BIO* ds)
 			root_anchor_file);
 		if(verb && errno != 0) printf("%s\n", strerror(errno));
 	}
+	fflush(out);
+	fsync(fileno(out));
 	fclose(out);
 }
 

@@ -1,3 +1,6 @@
+22 October 2015: Wouter
+	- Fix #712: unbound-anchor appears to not fsync root.key.
+
 20 October 2015: Wouter
 	- 1.5.6 release.
 	- trunk tracks development of 1.5.7.

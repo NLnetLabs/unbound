@@ -1195,6 +1195,10 @@ void autr_write_file(struct module_env* env, struct trust_anchor* tp)
 		fatal_exit("could not completely write: %s", fname);
 		return;
 	}
+	if(fflush(out) != 0)
+		log_err("could not fflush(%s): %s", fname, strerror(errno));
+	if(fsync(fileno(out)) != 0)
+		log_err("could not fsync(%s): %s", fname, strerror(errno));
 	if(fclose(out) != 0) {
 		fatal_exit("could not complete write: %s: %s",
 			fname, strerror(errno));
