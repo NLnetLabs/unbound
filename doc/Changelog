@@ -1,3 +1,7 @@
+23 October 2015: Wouter
+	- Fix #714: Document config to block private-address for IPv4
+	  mapped IPv6 addresses.
+
 22 October 2015: Wouter
 	- Fix #712: unbound-anchor appears to not fsync root.key.
 

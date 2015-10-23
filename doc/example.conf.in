@@ -315,6 +315,7 @@ server:
 	# private-address: 169.254.0.0/16
 	# private-address: fd00::/8
 	# private-address: fe80::/10
+	# private-address: ::ffff:0:0/96
 
 	# Allow the domain (and its subdomains) to contain private addresses.
 	# local-data statements are allowed to contain private addresses too.
