@@ -1197,8 +1197,12 @@ void autr_write_file(struct module_env* env, struct trust_anchor* tp)
 	}
 	if(fflush(out) != 0)
 		log_err("could not fflush(%s): %s", fname, strerror(errno));
+#ifdef HAVE_FSYNC
 	if(fsync(fileno(out)) != 0)
 		log_err("could not fsync(%s): %s", fname, strerror(errno));
+#else
+	FlushFileBuffers((HANDLE)_fileno(out));
+#endif
 	if(fclose(out) != 0) {
 		fatal_exit("could not complete write: %s: %s",
 			fname, strerror(errno));

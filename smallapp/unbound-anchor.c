@@ -1833,7 +1833,11 @@ write_unsigned_root(const char* root_anchor_file)
 		if(verb && errno != 0) printf("%s\n", strerror(errno));
 	}
 	fflush(out);
+#ifdef HAVE_FSYNC
 	fsync(fileno(out));
+#else
+	FlushFileBuffers((HANDLE)_fileno(out));
+#endif
 	fclose(out);
 }
 
@@ -1861,7 +1865,11 @@ write_root_anchor(const char* root_anchor_file, BIO* ds)
 		if(verb && errno != 0) printf("%s\n", strerror(errno));
 	}
 	fflush(out);
+#ifdef HAVE_FSYNC
 	fsync(fileno(out));
+#else
+	FlushFileBuffers((HANDLE)_fileno(out));
+#endif
 	fclose(out);
 }
 
