@@ -1002,6 +1002,20 @@ AC_REPLACE_FUNCS(inet_aton)
 AC_REPLACE_FUNCS(inet_pton)
 AC_REPLACE_FUNCS(inet_ntop)
 AC_REPLACE_FUNCS(snprintf)
+# test if snprintf return the proper length
+if test "x$ac_cv_func_snprintf" = xyes; then
+    if test c${cross_compiling} = cno; then
+	AC_MSG_CHECKING([for correct snprintf return value])
+	AC_RUN_IFELSE([AC_LANG_SOURCE(AC_INCLUDES_DEFAULT
+[[
+int main(void) { return (snprintf(NULL, 0, "test") == 5); }
+]])], [AC_MSG_RESULT(yes)], [
+		AC_MSG_RESULT(no)
+		AC_DEFINE([SNPRINTF_RET_BROKEN], [], [define if (v)snprintf does not return length needed, (but length used)])
+		AC_LIBOBJ(snprintf)
+	  ])
+    fi
+fi
 AC_REPLACE_FUNCS(strlcat)
 AC_REPLACE_FUNCS(strlcpy)
 AC_REPLACE_FUNCS(memmove)
@@ -1241,7 +1255,13 @@ AHX_CONFIG_FORMAT_ATTRIBUTE
 AHX_CONFIG_UNUSED_ATTRIBUTE
 AHX_CONFIG_FSEEKO
 AHX_CONFIG_MAXHOSTNAMELEN
-AHX_CONFIG_SNPRINTF(unbound)
+#if !defined(HAVE_SNPRINTF) || defined(SNPRINTF_RET_BROKEN)
+#define snprintf snprintf_unbound
+#define vsnprintf vsnprintf_unbound
+#include <stdarg.h>
+int snprintf (char *str, size_t count, const char *fmt, ...);
+int vsnprintf (char *str, size_t count, const char *fmt, va_list arg);
+#endif /* HAVE_SNPRINTF or SNPRINTF_RET_BROKEN */
 AHX_CONFIG_INET_PTON(unbound)
 AHX_CONFIG_INET_NTOP(unbound)
 AHX_CONFIG_INET_ATON(unbound)

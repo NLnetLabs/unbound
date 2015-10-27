@@ -2,6 +2,7 @@
 	- isblank() compat implementation.
 	- detect libexpat without xml_StopParser function.
 	- portability fixes.
+	- portability, replace snprintf if return value broken.
 
 23 October 2015: Wouter
 	- Fix #714: Document config to block private-address for IPv4
