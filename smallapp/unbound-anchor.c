@@ -1520,7 +1520,7 @@ xml_entitydeclhandler(void *userData,
 	const XML_Char *ATTR_UNUSED(publicId),
 	const XML_Char *ATTR_UNUSED(notationName))
 {
-#ifdef HAVE_DECL_XML_STOPPARSER
+#if HAVE_DECL_XML_STOPPARSER
 	(void)XML_StopParser((XML_Parser)userData, XML_FALSE);
 #else
 	(void)userData;
