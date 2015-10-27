@@ -18252,7 +18252,7 @@ else
 /* end confdefs.h.  */
 $ac_includes_default
 
-int main(void) { return (snprintf(NULL, 0, "test") == 5); }
+int main(void) { return !(snprintf(NULL, 0, "test") == 4); }
 
 _ACEOF
 if ac_fn_c_try_run "$LINENO"; then :

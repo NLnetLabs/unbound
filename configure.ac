@@ -1008,7 +1008,7 @@ if test "x$ac_cv_func_snprintf" = xyes; then
 	AC_MSG_CHECKING([for correct snprintf return value])
 	AC_RUN_IFELSE([AC_LANG_SOURCE(AC_INCLUDES_DEFAULT
 [[
-int main(void) { return (snprintf(NULL, 0, "test") == 5); }
+int main(void) { return !(snprintf(NULL, 0, "test") == 4); }
 ]])], [AC_MSG_RESULT(yes)], [
 		AC_MSG_RESULT(no)
 		AC_DEFINE([SNPRINTF_RET_BROKEN], [], [define if (v)snprintf does not return length needed, (but length used)])
