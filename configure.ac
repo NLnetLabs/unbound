@@ -883,6 +883,9 @@ if test x_$found_libexpat != x_yes; then
 	AC_ERROR([Could not find libexpat, expat.h])
 fi
 AC_CHECK_HEADERS([expat.h],,, [AC_INCLUDES_DEFAULT])
+AC_CHECK_DECLS([XML_StopParser], [], [], [AC_INCLUDES_DEFAULT
+#include <expat.h>
+])
 
 # set static linking if requested
 AC_SUBST(staticexe)

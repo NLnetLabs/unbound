@@ -17645,6 +17645,20 @@ fi
 
 done
 
+ac_fn_c_check_decl "$LINENO" "XML_StopParser" "ac_cv_have_decl_XML_StopParser" "$ac_includes_default
+#include <expat.h>
+
+"
+if test "x$ac_cv_have_decl_XML_StopParser" = xyes; then :
+  ac_have_decl=1
+else
+  ac_have_decl=0
+fi
+
+cat >>confdefs.h <<_ACEOF
+#define HAVE_DECL_XML_STOPPARSER $ac_have_decl
+_ACEOF
+
 
 # set static linking if requested
 

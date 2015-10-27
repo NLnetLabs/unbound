@@ -94,6 +94,10 @@
    don't. */
 #undef HAVE_DECL_STRLCPY
 
+/* Define to 1 if you have the declaration of `XML_StopParser', and to 0 if
+   you don't. */
+#undef HAVE_DECL_XML_STOPPARSER
+
 /* Define to 1 if you have the <dlfcn.h> header file. */
 #undef HAVE_DLFCN_H
 
