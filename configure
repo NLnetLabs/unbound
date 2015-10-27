@@ -18279,6 +18279,20 @@ esac
 fi
 
 
+ac_fn_c_check_func "$LINENO" "isblank" "ac_cv_func_isblank"
+if test "x$ac_cv_func_isblank" = xyes; then :
+  $as_echo "#define HAVE_ISBLANK 1" >>confdefs.h
+
+else
+  case " $LIBOBJS " in
+  *" isblank.$ac_objext "* ) ;;
+  *) LIBOBJS="$LIBOBJS isblank.$ac_objext"
+ ;;
+esac
+
+fi
+
+
 LIBOBJ_WITHOUT_CTIMEARC4="$LIBOBJS"
 
 ac_fn_c_check_func "$LINENO" "reallocarray" "ac_cv_func_reallocarray"

@@ -132,7 +132,7 @@ compat/memcmp.c compat/memmove.c compat/snprintf.c compat/strlcat.c \
 compat/strlcpy.c compat/strptime.c compat/getentropy_linux.c \
 compat/getentropy_osx.c compat/getentropy_solaris.c compat/getentropy_win.c \
 compat/explicit_bzero.c compat/arc4random.c compat/arc4random_uniform.c \
-compat/arc4_lock.c compat/sha512.c compat/reallocarray.c
+compat/arc4_lock.c compat/sha512.c compat/reallocarray.c compat/isblank.c
 COMPAT_OBJ=$(LIBOBJS:.o=.lo)
 COMPAT_OBJ_WITHOUT_CTIME=$(LIBOBJ_WITHOUT_CTIME:.o=.lo)
 COMPAT_OBJ_WITHOUT_CTIMEARC4=$(LIBOBJ_WITHOUT_CTIMEARC4:.o=.lo)
@@ -1220,6 +1220,7 @@ gmtime_r.lo gmtime_r.o: $(srcdir)/compat/gmtime_r.c config.h
 inet_aton.lo inet_aton.o: $(srcdir)/compat/inet_aton.c config.h
 inet_ntop.lo inet_ntop.o: $(srcdir)/compat/inet_ntop.c config.h
 inet_pton.lo inet_pton.o: $(srcdir)/compat/inet_pton.c config.h
+isblank.lo isblank.o: $(srcdir)/compat/isblank.c config.h
 malloc.lo malloc.o: $(srcdir)/compat/malloc.c config.h
 memcmp.lo memcmp.o: $(srcdir)/compat/memcmp.c config.h
 memmove.lo memmove.o: $(srcdir)/compat/memmove.c config.h
