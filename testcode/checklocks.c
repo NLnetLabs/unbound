@@ -502,6 +502,8 @@ void
 checklock_rdlock(enum check_lock_type type, struct checked_lock* lock,
         const char* func, const char* file, int line)
 {
+	if(key_deleted)
+		return;
 
 	log_assert(type == check_lock_rwlock);
 	checklock_lockit(type, lock, func, file, line,
@@ -520,6 +522,8 @@ void
 checklock_wrlock(enum check_lock_type type, struct checked_lock* lock,
         const char* func, const char* file, int line)
 {
+	if(key_deleted)
+		return;
 	log_assert(type == check_lock_rwlock);
 	checklock_lockit(type, lock, func, file, line,
 		try_wr, timed_wr, &lock->u.rwlock, 0, 1);
@@ -555,6 +559,8 @@ void
 checklock_lock(enum check_lock_type type, struct checked_lock* lock,
         const char* func, const char* file, int line)
 {
+	if(key_deleted)
+		return;
 	log_assert(type != check_lock_rwlock);
 	switch(type) {
 		case check_lock_mutex:
@@ -577,8 +583,10 @@ void
 checklock_unlock(enum check_lock_type type, struct checked_lock* lock,
         const char* func, const char* file, int line)
 {
-	struct thr_check *thr = (struct thr_check*)pthread_getspecific(
-		thr_debug_key);
+	struct thr_check *thr;
+	if(key_deleted)
+		return;
+	thr = (struct thr_check*)pthread_getspecific(thr_debug_key);
 	checktype(type, lock, func, file, line);
 	if(!thr) lock_error(lock, func, file, line, "no thread info");
 

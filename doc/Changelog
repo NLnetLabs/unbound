@@ -1,3 +1,6 @@
+28 October 2015: Wouter
+	- Fix checklock testcode for linux threads on exit.
+
 27 October 2015: Wouter
 	- isblank() compat implementation.
 	- detect libexpat without xml_StopParser function.
