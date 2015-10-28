@@ -763,7 +763,8 @@ static void
 lock_debug_info(struct checked_lock* lock)
 {
 	if(!lock) return;
-	log_info("+++ Lock %x, %d %d create %s %s %d", (int)lock, 
+	log_info("+++ Lock %llx, %d %d create %s %s %d",
+		(unsigned long long)(size_t)lock, 
 		lock->create_thread, lock->create_instance, 
 		lock->create_func, lock->create_file, lock->create_line);
 	log_info("lock type: %s",
@@ -798,8 +799,9 @@ thread_debug_info(struct thr_check* thr)
 	struct checked_lock* l = NULL;
 	if(!thr) return;
 	log_info("pthread id is %x", (int)thr->id);
-	log_info("thread func is %x", (int)thr->func);
-	log_info("thread arg is %x (%d)", (int)thr->arg, 
+	log_info("thread func is %llx", (unsigned long long)(size_t)thr->func);
+	log_info("thread arg is %llx (%d)",
+		(unsigned long long)(size_t)thr->arg, 
 		(thr->arg?*(int*)thr->arg:0));
 	log_info("thread num is %d", thr->num);
 	log_info("locks created %d", thr->locks_created);
@@ -809,7 +811,8 @@ thread_debug_info(struct thr_check* thr)
 	w = thr->waiting;
 	f = thr->holding_first;
 	l = thr->holding_last;
-	log_info("thread waiting for a lock: %s %x", w?"yes":"no", (int)w);
+	log_info("thread waiting for a lock: %s %llx", w?"yes":"no",
+		(unsigned long long)(size_t)w);
 	lock_debug_info(w);
 	log_info("thread holding first: %s, last: %s", f?"yes":"no", 
 		l?"yes":"no");
