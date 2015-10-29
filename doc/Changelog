@@ -1,5 +1,6 @@
 29 October 2015: Wouter
 	- patch from Doug Hogan for SSL_OP_NO_SSLvx options.
+	- Fix #716: nodata proof with empty non-terminals and wildcards.
 
 28 October 2015: Wouter
 	- Fix checklock testcode for linux threads on exit.

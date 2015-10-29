@@ -340,6 +340,28 @@ int nsec_proves_nodata(struct ub_packed_rrset_key* nsec,
 				*wc = ce;
 				return 1;
 			}
+		} else {
+			/* See if the next owner name covers a wildcard
+			 * empty non-terminal. */
+			while (dname_strict_subdomain_c(nm, nsec->rk.dname)) {
+				/* wildcard does not apply if qname below
+				 * the name that exists under the '*' */
+				if (dname_subdomain_c(qinfo->qname, nm))
+					break;
+				/* but if it is a wildcard and qname is below
+				 * it, then the wildcard applies. The wildcard
+				 * is an empty nonterminal. nodata proven. */
+				if (dname_is_wild(nm)) {
+					size_t ce_len = ln;
+					uint8_t* ce = nm;
+					dname_remove_label(&ce, &ce_len);
+					if(dname_strict_subdomain_c(qinfo->qname, ce)) {
+						*wc = ce;
+						return 1;
+					}
+				}
+				dname_remove_label(&nm, &ln);
+			}
 		}
 
 		/* Otherwise, this NSEC does not prove ENT and is not a 
