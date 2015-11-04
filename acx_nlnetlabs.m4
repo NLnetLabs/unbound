@@ -2,7 +2,8 @@
 # Copyright 2009, Wouter Wijngaards, NLnet Labs.   
 # BSD licensed.
 #
-# Version 28
+# Version 29
+# 2015-11-05 ACX_SSL_CHECKS no longer adds -ldl needlessly.
 # 2015-08-28 ACX_CHECK_PIE and ACX_CHECK_RELRO_NOW added.
 # 2015-03-17 AHX_CONFIG_REALLOCARRAY added
 # 2013-09-19 FLTO help text improved.
@@ -715,12 +716,6 @@ AC_DEFUN([ACX_SSL_CHECKS], [
         fi
         AC_SUBST(HAVE_SSL)
         AC_SUBST(RUNTIME_PATH)
-	# openssl engine functionality needs dlopen().
-	BAKLIBS="$LIBS"
-	AC_SEARCH_LIBS([dlopen], [dl])
-	if test "$LIBS" != "$BAKLIBS"; then
-		LIBSSL_LIBS="$LIBSSL_LIBS -ldl"
-	fi
     fi
 AC_CHECK_HEADERS([openssl/ssl.h],,, [AC_INCLUDES_DEFAULT])
 AC_CHECK_HEADERS([openssl/err.h],,, [AC_INCLUDES_DEFAULT])

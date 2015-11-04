@@ -1,3 +1,6 @@
+5 November 2015: Wouter
+	- ACX_SSL_CHECKS no longer adds -ldl needlessly.
+
 3 November 2015: Wouter
 	- Fix #718: Fix unbound-control-setup with support for env
 	  without HEREDOC bash support.
