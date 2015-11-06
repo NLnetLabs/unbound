@@ -242,7 +242,7 @@ server:
 	# pidfile: "@UNBOUND_PIDFILE@"
 
 	# file to read root hints from.
-	# get one from ftp://FTP.INTERNIC.NET/domain/named.cache
+	# get one from https://www.internic.net/domain/named.cache
 	# root-hints: ""
 
 	# enable to not answer id.server and hostname.bind queries.

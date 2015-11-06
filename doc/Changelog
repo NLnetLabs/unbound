@@ -1,3 +1,6 @@
+6 November 2015: Wouter
+	- Change example.conf: ftp.internic.net to https://www.internic.net
+
 5 November 2015: Wouter
 	- ACX_SSL_CHECKS no longer adds -ldl needlessly.
 
