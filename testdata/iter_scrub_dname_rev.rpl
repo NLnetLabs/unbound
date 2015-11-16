@@ -135,7 +135,6 @@ SECTION QUESTION
 x.y.example.com. IN A
 ENTRY_END
 
-; answer to first query (simply puts DNAME in cache)
 STEP 90 CHECK_ANSWER
 ENTRY_BEGIN
 MATCH all
