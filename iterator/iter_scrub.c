@@ -421,7 +421,6 @@ scrub_normalize(sldns_buffer* pkt, struct msg_parse* msg,
 				size_t aliaslen = 0;
 				uint8_t* t = NULL;
 				size_t tlen = 0;
-				verbose(VERB_ALGO, "DEBUG: swap?");
 				if(synth_cname(sname, snamelen, nx, alias,
 					&aliaslen, pkt) &&
 					parse_get_cname_target(rrset, &t, &tlen) &&
@@ -430,7 +429,7 @@ scrub_normalize(sldns_buffer* pkt, struct msg_parse* msg,
 					 * current CNAME.  This CNAME is the
 					 * one that the DNAME creates, and this
 					 * CNAME is better capitalised */
-					verbose(VERB_ALGO, "DEBUG: swap!");
+					verbose(VERB_ALGO, "normalize: re-order of DNAME and its CNAME");
 					if(prev) prev->rrset_all_next = nx;
 					else msg->rrset_first = nx;
 					if(nx->rrset_all_next == NULL)
