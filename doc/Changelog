@@ -1,3 +1,6 @@
+16 November 2015: Wouter
+	- Fix for lenient accept of reverse order DNAME and CNAME.
+
 6 November 2015: Wouter
 	- Change example.conf: ftp.internic.net to https://www.internic.net
 
