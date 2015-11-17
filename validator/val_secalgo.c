@@ -1356,7 +1356,7 @@ _verify_nettle_dsa(sldns_buffer* buf, unsigned char* sigblock,
 
 	/* Digest content of "buf" and verify its DSA signature in "sigblock"*/
 	res = _digest_nettle(SHA1_DIGEST_SIZE, (unsigned char*)sldns_buffer_begin(buf),
-						(unsigned int)sldns_buffer_limit(buf), digest);
+						(unsigned int)sldns_buffer_limit(buf), (unsigned char*)digest);
 	res &= dsa_sha1_verify_digest(&pubkey, digest, &signature);
 
 	/* Clear and return */
@@ -1413,7 +1413,7 @@ _verify_nettle_rsa(sldns_buffer* buf, unsigned int digest_size, char* sigblock,
 		{
 			uint8_t digest[SHA1_DIGEST_SIZE];
 			res = _digest_nettle(SHA1_DIGEST_SIZE, (unsigned char*)sldns_buffer_begin(buf),
-						(unsigned int)sldns_buffer_limit(buf), digest);
+						(unsigned int)sldns_buffer_limit(buf), (unsigned char*)digest);
 			res &= rsa_sha1_verify_digest(&pubkey, digest, signature);
 			break;
 		}
@@ -1421,7 +1421,7 @@ _verify_nettle_rsa(sldns_buffer* buf, unsigned int digest_size, char* sigblock,
 		{
 			uint8_t digest[SHA256_DIGEST_SIZE];
 			res = _digest_nettle(SHA256_DIGEST_SIZE, (unsigned char*)sldns_buffer_begin(buf),
-						(unsigned int)sldns_buffer_limit(buf), digest);
+						(unsigned int)sldns_buffer_limit(buf), (unsigned char*)digest);
 			res &= rsa_sha256_verify_digest(&pubkey, digest, signature);
 			break;
 		}
@@ -1429,7 +1429,7 @@ _verify_nettle_rsa(sldns_buffer* buf, unsigned int digest_size, char* sigblock,
 		{
 			uint8_t digest[SHA512_DIGEST_SIZE];
 			res = _digest_nettle(SHA512_DIGEST_SIZE, (unsigned char*)sldns_buffer_begin(buf),
-						(unsigned int)sldns_buffer_limit(buf), digest);
+						(unsigned int)sldns_buffer_limit(buf), (unsigned char*)digest);
 			res &= rsa_sha512_verify_digest(&pubkey, digest, signature);
 			break;
 		}
@@ -1474,7 +1474,7 @@ _verify_nettle_ecdsa(sldns_buffer* buf, unsigned int digest_size, unsigned char*
 			nettle_mpz_set_str_256_u(signature.r, SHA256_DIGEST_SIZE, sigblock);
 			nettle_mpz_set_str_256_u(signature.s, SHA256_DIGEST_SIZE, sigblock+SHA256_DIGEST_SIZE);
 			res = _digest_nettle(SHA256_DIGEST_SIZE, (unsigned char*)sldns_buffer_begin(buf),
-						(unsigned int)sldns_buffer_limit(buf), digest);
+						(unsigned int)sldns_buffer_limit(buf), (unsigned char*)digest);
 			res &= nettle_ecc_point_set(&pubkey, x, y);
 			res &= nettle_ecdsa_verify (&pubkey, SHA256_DIGEST_SIZE, digest, &signature);
 			mpz_clear(x);
@@ -1491,7 +1491,7 @@ _verify_nettle_ecdsa(sldns_buffer* buf, unsigned int digest_size, unsigned char*
 			nettle_mpz_set_str_256_u(signature.r, SHA384_DIGEST_SIZE, sigblock);
 			nettle_mpz_set_str_256_u(signature.s, SHA384_DIGEST_SIZE, sigblock+SHA384_DIGEST_SIZE);
 			res = _digest_nettle(SHA384_DIGEST_SIZE, (unsigned char*)sldns_buffer_begin(buf),
-						(unsigned int)sldns_buffer_limit(buf), digest);
+						(unsigned int)sldns_buffer_limit(buf), (unsigned char*)digest);
 			res &= nettle_ecc_point_set(&pubkey, x, y);
 			res &= nettle_ecdsa_verify (&pubkey, SHA384_DIGEST_SIZE, digest, &signature);
 			mpz_clear(x);
