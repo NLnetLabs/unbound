@@ -45,7 +45,7 @@
 struct sldns_buffer;
 
 /** Return size of nsec3 hash algorithm, 0 if not supported */
-int nsec3_hash_algo_size_supported(int id);
+size_t nsec3_hash_algo_size_supported(int id);
 
 /**
  * Hash a single hash call of an NSEC3 hash algorithm.

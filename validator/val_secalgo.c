@@ -73,7 +73,7 @@
 #endif
 
 /* return size of digest if supported, or 0 otherwise */
-int
+size_t
 nsec3_hash_algo_size_supported(int id)
 {
 	switch(id) {
@@ -593,7 +593,7 @@ verify_canonrrset(sldns_buffer* buf, int algo, unsigned char* sigblock,
 #include "prerror.h"
 
 /* return size of digest if supported, or 0 otherwise */
-int
+size_t
 nsec3_hash_algo_size_supported(int id)
 {
 	switch(id) {
@@ -1135,7 +1135,7 @@ verify_canonrrset(sldns_buffer* buf, int algo, unsigned char* sigblock,
 #endif
 
 /* return size of digest if supported, or 0 otherwise */
-int
+size_t
 nsec3_hash_algo_size_supported(int id)
 {
 	switch(id) {
