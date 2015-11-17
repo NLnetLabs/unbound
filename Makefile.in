@@ -38,6 +38,7 @@ UNBOUND_VERSION_MINOR=@UNBOUND_VERSION_MINOR@
 UNBOUND_VERSION_MICRO=@UNBOUND_VERSION_MICRO@
 ALLTARGET=@ALLTARGET@
 INSTALLTARGET=@INSTALLTARGET@
+SSLLIB=@SSLLIB@
 
 # _unbound.la if pyunbound enabled.
 PYUNBOUND_TARGET=@PYUNBOUND_TARGET@
@@ -295,22 +296,22 @@ longtest:	tests
 lib:	libunbound.la unbound.h
 
 libunbound.la:	$(LIBUNBOUND_OBJ_LINK)
-	$(LINK_LIB) $(UBSYMS) -o $@ $(LIBUNBOUND_OBJ_LINK) -rpath $(libdir) -lssl $(LIBS)
+	$(LINK_LIB) $(UBSYMS) -o $@ $(LIBUNBOUND_OBJ_LINK) -rpath $(libdir) $(SSLLIB) $(LIBS)
 
 unbound$(EXEEXT):	$(DAEMON_OBJ_LINK) libunbound.la
-	$(LINK) -o $@ $(DAEMON_OBJ_LINK) $(EXTRALINK) -lssl $(LIBS)
+	$(LINK) -o $@ $(DAEMON_OBJ_LINK) $(EXTRALINK) $(SSLLIB) $(LIBS)
 
 unbound-checkconf$(EXEEXT):	$(CHECKCONF_OBJ_LINK) libunbound.la
-	$(LINK) -o $@ $(CHECKCONF_OBJ_LINK) $(EXTRALINK) -lssl $(LIBS)
+	$(LINK) -o $@ $(CHECKCONF_OBJ_LINK) $(EXTRALINK) $(SSLLIB) $(LIBS)
 
 unbound-control$(EXEEXT):	$(CONTROL_OBJ_LINK) libunbound.la
-	$(LINK) -o $@ $(CONTROL_OBJ_LINK) $(EXTRALINK) -lssl $(LIBS)
+	$(LINK) -o $@ $(CONTROL_OBJ_LINK) $(EXTRALINK) $(SSLLIB) $(LIBS)
 
 unbound-host$(EXEEXT):	$(HOST_OBJ_LINK) libunbound.la
 	$(LINK) -o $@ $(HOST_OBJ_LINK) -L. -L.libs -lunbound $(LIBS)
 
 unbound-anchor$(EXEEXT):	$(UBANCHOR_OBJ_LINK) libunbound.la
-	$(LINK) -o $@ $(UBANCHOR_OBJ_LINK) -L. -L.libs -lunbound -lexpat -lssl $(LIBS)
+	$(LINK) -o $@ $(UBANCHOR_OBJ_LINK) -L. -L.libs -lunbound -lexpat $(SSLLIB) $(LIBS)
 
 unbound-service-install$(EXEEXT):	$(SVCINST_OBJ_LINK)
 	$(LINK) -o $@ $(SVCINST_OBJ_LINK) $(LIBS)
@@ -322,37 +323,37 @@ anchor-update$(EXEEXT):  $(ANCHORUPD_OBJ_LINK) libunbound.la
 	$(LINK) -o $@ $(ANCHORUPD_OBJ_LINK) -L. -L.libs -lunbound $(LIBS)
 
 unittest$(EXEEXT):	$(UNITTEST_OBJ_LINK)
-	$(LINK) -o $@ $(UNITTEST_OBJ_LINK) -lssl $(LIBS)
+	$(LINK) -o $@ $(UNITTEST_OBJ_LINK) $(SSLLIB) $(LIBS)
 
 testbound$(EXEEXT):	$(TESTBOUND_OBJ_LINK)
-	$(LINK) -o $@ $(TESTBOUND_OBJ_LINK) -lssl $(LIBS)
+	$(LINK) -o $@ $(TESTBOUND_OBJ_LINK) $(SSLLIB) $(LIBS)
 
 lock-verify$(EXEEXT):	$(LOCKVERIFY_OBJ_LINK)
-	$(LINK) -o $@ $(LOCKVERIFY_OBJ_LINK) -lssl $(LIBS)
+	$(LINK) -o $@ $(LOCKVERIFY_OBJ_LINK) $(SSLLIB) $(LIBS)
 
 petal$(EXEEXT):	$(PETAL_OBJ_LINK)
-	$(LINK) -o $@ $(PETAL_OBJ_LINK) -lssl $(LIBS)
+	$(LINK) -o $@ $(PETAL_OBJ_LINK) $(SSLLIB) $(LIBS)
 
 pktview$(EXEEXT):	$(PKTVIEW_OBJ_LINK)
-	$(LINK) -o $@ $(PKTVIEW_OBJ_LINK) -lssl $(LIBS)
+	$(LINK) -o $@ $(PKTVIEW_OBJ_LINK) $(SSLLIB) $(LIBS)
 
 memstats$(EXEEXT):	$(MEMSTATS_OBJ_LINK)
-	$(LINK) -o $@ $(MEMSTATS_OBJ_LINK) -lssl $(LIBS)
+	$(LINK) -o $@ $(MEMSTATS_OBJ_LINK) $(SSLLIB) $(LIBS)
 
 asynclook$(EXEEXT):	$(ASYNCLOOK_OBJ_LINK) libunbound.la
 	$(LINK) -o $@ $(ASYNCLOOK_OBJ_LINK) $(LIBS) -L. -L.libs -lunbound
 
 streamtcp$(EXEEXT):	$(STREAMTCP_OBJ_LINK)
-	$(LINK) -o $@ $(STREAMTCP_OBJ_LINK) -lssl $(LIBS)
+	$(LINK) -o $@ $(STREAMTCP_OBJ_LINK) $(SSLLIB) $(LIBS)
 
 perf$(EXEEXT):	$(PERF_OBJ_LINK)
-	$(LINK) -o $@ $(PERF_OBJ_LINK) -lssl $(LIBS)
+	$(LINK) -o $@ $(PERF_OBJ_LINK) $(SSLLIB) $(LIBS)
 
 delayer$(EXEEXT):	$(DELAYER_OBJ_LINK)
-	$(LINK) -o $@ $(DELAYER_OBJ_LINK) -lssl $(LIBS)
+	$(LINK) -o $@ $(DELAYER_OBJ_LINK) $(SSLLIB) $(LIBS)
 
 signit$(EXEEXT):	testcode/signit.c
-	$(CC) $(CPPFLAGS) $(CFLAGS) -o $@ testcode/signit.c $(LDFLAGS) -lldns -lssl $(LIBS)
+	$(CC) $(CPPFLAGS) $(CFLAGS) -o $@ testcode/signit.c $(LDFLAGS) -lldns $(SSLLIB) $(LIBS)
 
 unbound.h:	$(srcdir)/libunbound/unbound.h
 	sed -e 's/@''UNBOUND_VERSION_MAJOR@/$(UNBOUND_VERSION_MAJOR)/' -e 's/@''UNBOUND_VERSION_MINOR@/$(UNBOUND_VERSION_MINOR)/' -e 's/@''UNBOUND_VERSION_MICRO@/$(UNBOUND_VERSION_MICRO)/' < $(srcdir)/libunbound/unbound.h > $@

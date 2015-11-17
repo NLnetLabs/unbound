@@ -242,6 +242,9 @@
 /* Define to 1 if you have the <netinet/in.h> header file. */
 #undef HAVE_NETINET_IN_H
 
+/* Use libnettle for crypto */
+#undef HAVE_NETTLE
+
 /* Use libnss for crypto */
 #undef HAVE_NSS
 

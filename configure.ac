@@ -563,13 +563,34 @@ AC_ARG_WITH([nss], AC_HELP_STRING([--with-nss=path],
 		CPPFLAGS="-I/usr/include/nspr4 $CPPFLAGS"
 	fi
         LIBS="$LIBS -lnss3 -lnspr4"
+	SSLLIB=""
+	]
+)
+
+# libnettle
+USE_NETTLE="no"
+AC_ARG_WITH([nettle], AC_HELP_STRING([--with-nettle=path],
+	[use libnettle as crypto library, installed at path.]),
+	[
+	USE_NETTLE="yes"
+	AC_DEFINE(HAVE_NETTLE, 1, [Use libnettle for crypto])
+	if test "$withval" != "" -a "$withval" != "yes"; then
+		CPPFLAGS="$CPPFLAGS -I$withval/include/nettle"
+		LDFLAGS="$LDFLAGS -L$withval/lib"
+		ACX_RUNTIME_PATH_ADD([$withval/lib])
+	else
+		CPPFLAGS="$CPPFLAGS -I/usr/include/nettle"
+	fi
+        LIBS="$LIBS -lhogweed -lnettle -lgmp"
+	SSLLIB=""
 	]
 )
 
 # openssl
-if test $USE_NSS = "no"; then
+if test $USE_NSS = "no" -a $USE_NETTLE = "no"; then
 ACX_WITH_SSL
 ACX_LIB_SSL
+SSLLIB="-lssl"
 AC_MSG_CHECKING([for LibreSSL])
 if grep VERSION_TEXT $ssldir/include/openssl/opensslv.h | grep "LibreSSL" >/dev/null; then
 	AC_MSG_RESULT([yes])
@@ -604,6 +625,7 @@ AC_INCLUDES_DEFAULT
 #include <openssl/evp.h>
 ])
 fi
+AC_SUBST(SSLLIB)
 
 
 AC_ARG_ENABLE(sha2, AC_HELP_STRING([--disable-sha2], [Disable SHA256 and SHA512 RRSIG support]))
@@ -715,7 +737,7 @@ AC_MSG_RESULT($ac_cv_c_gost_works)
 
 AC_ARG_ENABLE(gost, AC_HELP_STRING([--disable-gost], [Disable GOST support]))
 use_gost="no"
-if test $USE_NSS = "no"; then
+if test $USE_NSS = "no" -a $USE_NETTLE = "no"; then
 case "$enable_gost" in
 	no)
 	;;
@@ -729,7 +751,7 @@ case "$enable_gost" in
 	fi
 	;;
 esac
-fi dnl !USE_NSS
+fi dnl !USE_NSS && !USE_NETTLE
 
 AC_ARG_ENABLE(ecdsa, AC_HELP_STRING([--disable-ecdsa], [Disable ECDSA support]))
 use_ecdsa="no"
@@ -737,7 +759,7 @@ case "$enable_ecdsa" in
     no)
       ;;
     *)
-      if test $USE_NSS = "no"; then
+      if test $USE_NSS = "no" -a $USE_NETTLE = "no"; then
 	      AC_CHECK_FUNC(ECDSA_sign, [], [AC_MSG_ERROR([OpenSSL does not support ECDSA: please upgrade or rerun with --disable-ecdsa])])
 	      AC_CHECK_FUNC(SHA384_Init, [], [AC_MSG_ERROR([OpenSSL does not support SHA384: please upgrade or rerun with --disable-ecdsa])])
 	      AC_CHECK_DECLS([NID_X9_62_prime256v1, NID_secp384r1], [], [AC_MSG_ERROR([OpenSSL does not support the ECDSA curves: please upgrade or rerun with --disable-ecdsa])], [AC_INCLUDES_DEFAULT

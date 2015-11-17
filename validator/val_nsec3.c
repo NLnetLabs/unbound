@@ -48,6 +48,8 @@
 #ifdef HAVE_NSS
 /* nss3 */
 #include "sechash.h"
+#elif defined(HAVE_NETTLE)
+#include "sha1.h"
 #endif
 #include "validator/val_nsec3.h"
 #include "validator/validator.h"
@@ -546,43 +548,70 @@ nsec3_get_hashed(sldns_buffer* buf, uint8_t* nm, size_t nmlen, int algo,
 	sldns_buffer_write(buf, salt, saltlen);
 	sldns_buffer_flip(buf);
 	switch(algo) {
-#if defined(HAVE_EVP_SHA1) || defined(HAVE_NSS)
+#if defined(HAVE_EVP_SHA1)
 		case NSEC3_HASH_SHA1:
-#ifdef HAVE_SSL
 			hash_len = SHA_DIGEST_LENGTH;
-#else
-			hash_len = SHA1_LENGTH;
-#endif
 			if(hash_len > max)
 				return 0;
-#  ifdef HAVE_SSL
 			(void)SHA1((unsigned char*)sldns_buffer_begin(buf),
 				(unsigned long)sldns_buffer_limit(buf),
 				(unsigned char*)res);
-#  else
-			(void)HASH_HashBuf(HASH_AlgSHA1, (unsigned char*)res,
-				(unsigned char*)sldns_buffer_begin(buf),
-				(unsigned long)sldns_buffer_limit(buf));
-#  endif
 			for(i=0; i<iter; i++) {
 				sldns_buffer_clear(buf);
 				sldns_buffer_write(buf, res, hash_len);
 				sldns_buffer_write(buf, salt, saltlen);
 				sldns_buffer_flip(buf);
-#  ifdef HAVE_SSL
 				(void)SHA1(
 					(unsigned char*)sldns_buffer_begin(buf),
 					(unsigned long)sldns_buffer_limit(buf),
 					(unsigned char*)res);
-#  else
+			}
+			break;
+#elif defined(HAVE_NSS)
+		case NSEC3_HASH_SHA1:
+			hash_len = SHA1_LENGTH;
+			if(hash_len > max)
+				return 0;
+			(void)HASH_HashBuf(HASH_AlgSHA1, (unsigned char*)res,
+				(unsigned char*)sldns_buffer_begin(buf),
+				(unsigned long)sldns_buffer_limit(buf));
+			for(i=0; i<iter; i++) {
+				sldns_buffer_clear(buf);
+				sldns_buffer_write(buf, res, hash_len);
+				sldns_buffer_write(buf, salt, saltlen);
+				sldns_buffer_flip(buf);
 				(void)HASH_HashBuf(HASH_AlgSHA1,
 					(unsigned char*)res,
 					(unsigned char*)sldns_buffer_begin(buf),
 					(unsigned long)sldns_buffer_limit(buf));
-#  endif
 			}
 			break;
-#endif /* HAVE_EVP_SHA1 or NSS */
+#elif defined(HAVE_NETTLE)
+		case NSEC3_HASH_SHA1:
+			{
+			struct sha1_ctx ctx;
+			hash_len = SHA1_DIGEST_SIZE;
+			if(hash_len > max)
+				return 0;
+			sha1_init(&ctx);
+			sha1_update(&ctx,
+				(size_t)sldns_buffer_limit(buf),
+				(const uint8_t*)sldns_buffer_begin(buf));
+			sha1_digest(&ctx, SHA1_DIGEST_SIZE, (uint8_t *)res);
+			for(i=0; i<iter; i++) {
+				sldns_buffer_clear(buf);
+				sldns_buffer_write(buf, res, hash_len);
+				sldns_buffer_write(buf, salt, saltlen);
+				sldns_buffer_flip(buf);
+				sha1_init(&ctx);
+				sha1_update(&ctx,
+					(size_t)sldns_buffer_limit(buf),
+					(const uint8_t*)sldns_buffer_begin(buf));
+				sha1_digest(&ctx, SHA1_DIGEST_SIZE, (uint8_t *)res);
+			}
+			break;
+			}
+#endif /* HAVE_EVP_SHA1 or HAVE_NSS or HAVE_NETTLE*/
 		default:
 			log_err("nsec3 hash of unknown algo %d", algo);
 			return 0;
@@ -608,46 +637,77 @@ nsec3_calc_hash(struct regional* region, sldns_buffer* buf,
 	sldns_buffer_write(buf, salt, saltlen);
 	sldns_buffer_flip(buf);
 	switch(algo) {
-#if defined(HAVE_EVP_SHA1) || defined(HAVE_NSS)
-		case NSEC3_HASH_SHA1:
 #ifdef HAVE_SSL
+		case NSEC3_HASH_SHA1:
 			c->hash_len = SHA_DIGEST_LENGTH;
-#else
-			c->hash_len = SHA1_LENGTH;
-#endif
-			c->hash = (uint8_t*)regional_alloc(region, 
+			c->hash = (uint8_t*)regional_alloc(region,
 				c->hash_len);
 			if(!c->hash)
 				return 0;
-#  ifdef HAVE_SSL
 			(void)SHA1((unsigned char*)sldns_buffer_begin(buf),
 				(unsigned long)sldns_buffer_limit(buf),
 				(unsigned char*)c->hash);
-#  else
-			(void)HASH_HashBuf(HASH_AlgSHA1,
-				(unsigned char*)c->hash,
-				(unsigned char*)sldns_buffer_begin(buf),
-				(unsigned long)sldns_buffer_limit(buf));
-#  endif
 			for(i=0; i<iter; i++) {
 				sldns_buffer_clear(buf);
 				sldns_buffer_write(buf, c->hash, c->hash_len);
 				sldns_buffer_write(buf, salt, saltlen);
 				sldns_buffer_flip(buf);
-#  ifdef HAVE_SSL
 				(void)SHA1(
 					(unsigned char*)sldns_buffer_begin(buf),
 					(unsigned long)sldns_buffer_limit(buf),
 					(unsigned char*)c->hash);
-#  else
+			}
+			break;
+#elif defined(HAVE_NSS)
+		case NSEC3_HASH_SHA1:
+			c->hash_len = SHA1_LENGTH;
+			c->hash = (uint8_t*)regional_alloc(region,
+				c->hash_len);
+			if(!c->hash)
+				return 0;
+			(void)HASH_HashBuf(HASH_AlgSHA1,
+				(unsigned char*)c->hash,
+				(unsigned char*)sldns_buffer_begin(buf),
+				(unsigned long)sldns_buffer_limit(buf));
+			for(i=0; i<iter; i++) {
+				sldns_buffer_clear(buf);
+				sldns_buffer_write(buf, c->hash, c->hash_len);
+				sldns_buffer_write(buf, salt, saltlen);
+				sldns_buffer_flip(buf);
 				(void)HASH_HashBuf(HASH_AlgSHA1,
 					(unsigned char*)c->hash,
 					(unsigned char*)sldns_buffer_begin(buf),
 					(unsigned long)sldns_buffer_limit(buf));
-#  endif
 			}
 			break;
-#endif /* HAVE_EVP_SHA1 or NSS */
+#elif defined(HAVE_NETTLE)
+		case NSEC3_HASH_SHA1:
+			{
+			struct sha1_ctx ctx;
+			c->hash_len = SHA1_DIGEST_SIZE;
+			c->hash = (uint8_t*)regional_alloc(region,
+				c->hash_len);
+			if(!c->hash)
+				return 0;
+			sha1_init(&ctx);
+			sha1_update(&ctx,
+				(size_t)sldns_buffer_limit(buf),
+				(const uint8_t*)sldns_buffer_begin(buf));
+			sha1_digest(&ctx, SHA1_DIGEST_SIZE, (uint8_t *)c->hash);
+			for(i=0; i<iter; i++) {
+				sldns_buffer_clear(buf);
+				sldns_buffer_write(buf, c->hash, c->hash_len);
+				sldns_buffer_write(buf, salt, saltlen);
+				sldns_buffer_flip(buf);
+				sha1_init(&ctx);
+				sha1_update(&ctx,
+					(size_t)sldns_buffer_limit(buf),
+					(const uint8_t*)sldns_buffer_begin(buf));
+				sha1_digest(&ctx, SHA1_DIGEST_SIZE, (uint8_t *)c->hash);
+			}
+			break;
+			}
+#endif /* HAVE_SSL or HAVE_NSS or HAVE_NETTLE */
 		default:
 			log_err("nsec3 hash of unknown algo %d", algo);
 			return -1;

@@ -661,6 +661,7 @@ CHECKLOCK_OBJ
 staticexe
 UNBOUND_EVENT_UNINSTALL
 UNBOUND_EVENT_INSTALL
+SSLLIB
 HAVE_SSL
 CONFIG_DATE
 NETBSD_LINTFLAGS
@@ -823,6 +824,7 @@ with_solaris_threads
 with_pyunbound
 with_pythonmodule
 with_nss
+with_nettle
 with_ssl
 enable_sha2
 enable_gost
@@ -1534,6 +1536,7 @@ Optional Packages:
   --with-pythonmodule     build Python module, or --without-pythonmodule to
                           disable script engine. (default=no)
   --with-nss=path         use libnss instead of openssl, installed at path.
+  --with-nettle=path      use libnettle as crypto library, installed at path.
   --with-ssl=pathname     enable SSL (will check /usr/local/ssl /usr/lib/ssl
                           /usr/ssl /usr/pkg /usr/local /opt/local /usr/sfw
                           /usr)
@@ -16408,13 +16411,44 @@ $as_echo "#define HAVE_NSS 1" >>confdefs.h
 		CPPFLAGS="-I/usr/include/nspr4 $CPPFLAGS"
 	fi
         LIBS="$LIBS -lnss3 -lnspr4"
+	SSLLIB=""
+
+
+fi
+
+
+# libnettle
+USE_NETTLE="no"
+
+# Check whether --with-nettle was given.
+if test "${with_nettle+set}" = set; then :
+  withval=$with_nettle;
+	USE_NETTLE="yes"
+
+$as_echo "#define HAVE_NETTLE 1" >>confdefs.h
+
+	if test "$withval" != "" -a "$withval" != "yes"; then
+		CPPFLAGS="$CPPFLAGS -I$withval/include/nettle"
+		LDFLAGS="$LDFLAGS -L$withval/lib"
+
+	if test "x$enable_rpath" = xyes; then
+		if echo "$withval/lib" | grep "^/" >/dev/null; then
+			RUNTIME_PATH="$RUNTIME_PATH -R$withval/lib"
+		fi
+	fi
+
+	else
+		CPPFLAGS="$CPPFLAGS -I/usr/include/nettle"
+	fi
+        LIBS="$LIBS -lhogweed -lnettle -lgmp"
+	SSLLIB=""
 
 
 fi
 
 
 # openssl
-if test $USE_NSS = "no"; then
+if test $USE_NSS = "no" -a $USE_NETTLE = "no"; then
 
 
 # Check whether --with-ssl was given.
@@ -16720,6 +16754,7 @@ fi
 fi
 rm -f core conftest.err conftest.$ac_objext \
     conftest$ac_exeext conftest.$ac_ext
+SSLLIB="-lssl"
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for LibreSSL" >&5
 $as_echo_n "checking for LibreSSL... " >&6; }
 if grep VERSION_TEXT $ssldir/include/openssl/opensslv.h | grep "LibreSSL" >/dev/null; then
@@ -16917,6 +16952,7 @@ _ACEOF
 fi
 
 
+
 # Check whether --enable-sha2 was given.
 if test "${enable_sha2+set}" = set; then :
   enableval=$enable_sha2;
@@ -16940,7 +16976,7 @@ if test "${enable_gost+set}" = set; then :
 fi
 
 use_gost="no"
-if test $USE_NSS = "no"; then
+if test $USE_NSS = "no" -a $USE_NETTLE = "no"; then
 case "$enable_gost" in
 	no)
 	;;
@@ -17093,7 +17129,7 @@ case "$enable_ecdsa" in
     no)
       ;;
     *)
-      if test $USE_NSS = "no"; then
+      if test $USE_NSS = "no" -a $USE_NETTLE = "no"; then
 	      ac_fn_c_check_func "$LINENO" "ECDSA_sign" "ac_cv_func_ECDSA_sign"
 if test "x$ac_cv_func_ECDSA_sign" = xyes; then :
 
