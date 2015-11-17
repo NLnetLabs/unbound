@@ -180,6 +180,8 @@ static void usage()
 		SSLeay_version(SSLEAY_VERSION)
 #elif defined(HAVE_NSS)
 		NSS_GetVersion()
+#elif defined(HAVE_NETTLE)
+		"nettle"
 #endif
 		);
 	printf("linked modules:");
