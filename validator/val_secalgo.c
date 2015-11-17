@@ -1134,66 +1134,6 @@ verify_canonrrset(sldns_buffer* buf, int algo, unsigned char* sigblock,
 #include "ecc-curve.h"
 #endif
 
-/* return size of digest if supported, or 0 otherwise */
-size_t
-nsec3_hash_algo_size_supported(int id)
-{
-	switch(id) {
-	case NSEC3_HASH_SHA1:
-		return SHA1_DIGEST_SIZE;
-	default:
-		return 0;
-	}
-}
-
-/* perform nsec3 hash. return false on failure */
-int
-secalgo_nsec3_hash(int algo, unsigned char* buf, size_t len,
-        unsigned char* res)
-{
-	switch(algo) {
-	case NSEC3_HASH_SHA1:
-		{
-		struct sha1_ctx ctx;
-		sha1_init(&ctx);
-		sha1_update(&ctx, len, (uint8_t*)buf);
-		sha1_digest(&ctx, SHA1_DIGEST_SIZE, (uint8_t*)res);
-		}
-		return 1;
-	default:
-		return 0;
-	}
-}
-
-/**
- * Return size of DS digest according to its hash algorithm.
- * @param algo: DS digest algo.
- * @return size in bytes of digest, or 0 if not supported.
- */
-size_t
-ds_digest_size_supported(int algo)
-{
-	switch(algo) {
-		case LDNS_SHA1:
-			return SHA1_DIGEST_SIZE;
-#ifdef USE_SHA2
-		case LDNS_SHA256:
-			return SHA256_DIGEST_SIZE;
-#endif
-#ifdef USE_ECDSA
-		case LDNS_SHA384:
-			return SHA384_DIGEST_SIZE;
-#endif
-		/* GOST not supported */
-		case LDNS_HASH_GOST:
-		default:
-			break;
-	}
-	return 0;
-}
-
-
-
 static int
 _digest_nettle(int algo, uint8_t* buf, size_t len,
 	unsigned char* res)
@@ -1231,6 +1171,59 @@ _digest_nettle(int algo, uint8_t* buf, size_t len,
 			sha512_digest(&ctx, SHA512_DIGEST_SIZE, res);
 			return 1;
 		}
+		default:
+			break;
+	}
+	return 0;
+}
+
+/* return size of digest if supported, or 0 otherwise */
+size_t
+nsec3_hash_algo_size_supported(int id)
+{
+	switch(id) {
+	case NSEC3_HASH_SHA1:
+		return SHA1_DIGEST_SIZE;
+	default:
+		return 0;
+	}
+}
+
+/* perform nsec3 hash. return false on failure */
+int
+secalgo_nsec3_hash(int algo, unsigned char* buf, size_t len,
+        unsigned char* res)
+{
+	switch(algo) {
+	case NSEC3_HASH_SHA1:
+		return _digest_nettle(SHA1_DIGEST_SIZE, (uint8_t*)buf, len,
+			res);
+	default:
+		return 0;
+	}
+}
+
+/**
+ * Return size of DS digest according to its hash algorithm.
+ * @param algo: DS digest algo.
+ * @return size in bytes of digest, or 0 if not supported.
+ */
+size_t
+ds_digest_size_supported(int algo)
+{
+	switch(algo) {
+		case LDNS_SHA1:
+			return SHA1_DIGEST_SIZE;
+#ifdef USE_SHA2
+		case LDNS_SHA256:
+			return SHA256_DIGEST_SIZE;
+#endif
+#ifdef USE_ECDSA
+		case LDNS_SHA384:
+			return SHA384_DIGEST_SIZE;
+#endif
+		/* GOST not supported */
+		case LDNS_HASH_GOST:
 		default:
 			break;
 	}
