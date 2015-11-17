@@ -1303,6 +1303,7 @@ _verify_nettle_dsa(sldns_buffer* buf, unsigned char* sigblock,
 		nettle_mpz_set_str_256_u(signature.s, 20, sigblock+1+20);
 	} else {
 		/* DER encoded, decode the ASN1 notated R and S bignums */
+		/* SEQUENCE { r INTEGER, s INTEGER } */
 		struct asn1_der_iterator i, seq;
 		if(asn1_der_iterator_first(&i, sigblock_len,
 			(uint8_t*)sigblock) != ASN1_ITERATOR_CONSTRUCTED
