@@ -4,6 +4,7 @@
 	  --with-libunbound-only.
 	- refactor nsec3 hash implementation to be more library-portable.
 	- iana portlist update.
+	- Fixup DER encoded DSA signatures for libnettle.
 
 16 November 2015: Wouter
 	- Fix for lenient accept of reverse order DNAME and CNAME.

@@ -191,8 +191,7 @@ verifytest_rrset(struct module_env* env, struct val_env* ve,
 		printf("verify outcome is: %s %s\n", sec_status_to_string(sec),
 			reason?reason:"");
 	}
-	if(should_be_bogus(rrset, qinfo) ||
-		(reason && strncmp(reason, "(custom)", 8) == 0)) {
+	if(should_be_bogus(rrset, qinfo)) {
 		unit_assert(sec == sec_status_bogus);
 	} else {
 		unit_assert(sec == sec_status_secure);

@@ -1129,6 +1129,7 @@ verify_canonrrset(sldns_buffer* buf, int algo, unsigned char* sigblock,
 #include "macros.h"
 #include "rsa.h"
 #include "dsa.h"
+#include "asn1.h"
 #ifdef USE_ECDSA
 #include "ecdsa.h"
 #include "ecc-curve.h"
@@ -1292,15 +1293,40 @@ _verify_nettle_dsa(sldns_buffer* buf, unsigned char* sigblock,
 	struct dsa_signature signature;
 	unsigned int expected_len;
 
-	/* Validate T values constraints - RFC 2536 sec. 2 & sec. 3 */
-	key_t = key[0];
-	if (key_t != sigblock[0] || key_t > 8 ) {
-		return "invalid T value in DSA signature or pubkey";
+	/* Extract DSA signature from the record */
+	nettle_dsa_signature_init(&signature);
+	/* Signature length: 41 bytes - RFC 2536 sec. 3 */
+	if(sigblock_len == 41) {
+		if(key[0] != sigblock[0])
+			return "invalid T value in DSA signature or pubkey";
+		nettle_mpz_set_str_256_u(signature.r, 20, sigblock+1);
+		nettle_mpz_set_str_256_u(signature.s, 20, sigblock+1+20);
+	} else {
+		/* DER encoded, decode the ASN1 notated R and S bignums */
+		struct asn1_der_iterator i, seq;
+		if(asn1_der_iterator_first(&i, sigblock_len,
+			(uint8_t*)sigblock) != ASN1_ITERATOR_CONSTRUCTED
+			|| i.type != ASN1_SEQUENCE)
+			return "malformed DER encoded DSA signature";
+		/* decode this element of i using the seq iterator */
+		if(asn1_der_decode_constructed(&i, &seq) !=
+			ASN1_ITERATOR_PRIMITIVE || seq.type != ASN1_INTEGER)
+			return "malformed DER encoded DSA signature";
+		if(!asn1_der_get_bignum(&seq, signature.r, 20*8))
+			return "malformed DER encoded DSA signature";
+		if(asn1_der_iterator_next(&seq) != ASN1_ITERATOR_PRIMITIVE
+			|| seq.type != ASN1_INTEGER)
+			return "malformed DER encoded DSA signature";
+		if(!asn1_der_get_bignum(&seq, signature.s, 20*8))
+			return "malformed DER encoded DSA signature";
+		if(asn1_der_iterator_next(&i) != ASN1_ITERATOR_END)
+			return "malformed DER encoded DSA signature";
 	}
 
-	/* Signature length: 41 bytes - RFC 2536 sec. 3 */
-	if (sigblock_len != 41) {
-		return "invalid DSA signature length";
+	/* Validate T values constraints - RFC 2536 sec. 2 & sec. 3 */
+	key_t = key[0];
+	if (key_t > 8) {
+		return "invalid T value in DSA pubkey";
 	}
 
 	/* Pubkey minimum length: 21 bytes - RFC 2536 sec. 2 */
@@ -1327,11 +1353,6 @@ _verify_nettle_dsa(sldns_buffer* buf, unsigned char* sigblock,
 	nettle_mpz_set_str_256_u(pubkey.g, (64 + key_t*8), key+offset);
 	offset += (64 + key_t*8);
 	nettle_mpz_set_str_256_u(pubkey.y, (64 + key_t*8), key+offset);
-
-	/* Extract DSA signature from the record */
-	nettle_dsa_signature_init(&signature);
-	nettle_mpz_set_str_256_u(signature.r, 20, sigblock+1);
-	nettle_mpz_set_str_256_u(signature.s, 20, sigblock+1+20);
 
 	/* Digest content of "buf" and verify its DSA signature in "sigblock"*/
 	res = _digest_nettle(SHA1_DIGEST_SIZE, (unsigned char*)sldns_buffer_begin(buf),
@@ -1519,11 +1540,6 @@ verify_canonrrset(sldns_buffer* buf, int algo, unsigned char* sigblock,
 	switch(algo) {
 	case LDNS_DSA:
 	case LDNS_DSA_NSEC3:
-		/* Some of these signatures are non-standard */
-		if (key[0] > 8 || sigblock_len != 41) {
-			*reason = "(custom) unknown DSA signature";
-			return sec_status_unchecked;
-		}
 		*reason = _verify_nettle_dsa(buf, sigblock, sigblock_len, key, keylen);
 		if (*reason != NULL)
 			return sec_status_bogus;
