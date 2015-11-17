@@ -2,6 +2,7 @@
 	- Fix #594. libunbound: optionally use libnettle for crypto.
 	  Contributed by Luca Bruno.  Added --with-nettle for use with
 	  --with-libunbound-only.
+	- refactor nsec3 hash implementation to be more library-portable.
 
 16 November 2015: Wouter
 	- Fix for lenient accept of reverse order DNAME and CNAME.

@@ -44,6 +44,7 @@
 /* packed_rrset on top to define enum types (forced by c99 standard) */
 #include "util/data/packed_rrset.h"
 #include "validator/val_secalgo.h"
+#include "validator/val_nsec3.h"
 #include "util/log.h"
 #include "sldns/rrdef.h"
 #include "sldns/keyraw.h"
@@ -70,6 +71,32 @@
 #ifdef HAVE_OPENSSL_ENGINE_H
 #include <openssl/engine.h>
 #endif
+
+/* return size of digest if supported, or 0 otherwise */
+int
+nsec3_hash_algo_size_supported(int id)
+{
+	switch(id) {
+	case NSEC3_HASH_SHA1:
+		return SHA_DIGEST_LENGTH;
+	default:
+		return 0;
+	}
+}
+
+/* perform nsec3 hash. return false on failure */
+int
+secalgo_nsec3_hash(int algo, unsigned char* buf, size_t len,
+        unsigned char* res)
+{
+	switch(algo) {
+	case NSEC3_HASH_SHA1:
+		(void)SHA1(buf, len, res);
+		return 1;
+	default:
+		return 0;
+	}
+}
 
 /**
  * Return size of DS digest according to its hash algorithm.
@@ -564,6 +591,32 @@ verify_canonrrset(sldns_buffer* buf, int algo, unsigned char* sigblock,
 #include "cryptohi.h"
 /* nspr4 */
 #include "prerror.h"
+
+/* return size of digest if supported, or 0 otherwise */
+int
+nsec3_hash_algo_size_supported(int id)
+{
+	switch(id) {
+	case NSEC3_HASH_SHA1:
+		return SHA1_LENGTH;
+	default:
+		return 0;
+	}
+}
+
+/* perform nsec3 hash. return false on failure */
+int
+secalgo_nsec3_hash(int algo, unsigned char* buf, size_t len,
+        unsigned char* res)
+{
+	switch(algo) {
+	case NSEC3_HASH_SHA1:
+		(void)HASH_HashBuf(HASH_AlgSHA1, res, buf, (unsigned long)len);
+		return 1;
+	default:
+		return 0;
+	}
+}
 
 size_t
 ds_digest_size_supported(int algo)
@@ -1080,6 +1133,37 @@ verify_canonrrset(sldns_buffer* buf, int algo, unsigned char* sigblock,
 #include "ecdsa.h"
 #include "ecc-curve.h"
 #endif
+
+/* return size of digest if supported, or 0 otherwise */
+int
+nsec3_hash_algo_size_supported(int id)
+{
+	switch(id) {
+	case NSEC3_HASH_SHA1:
+		return SHA1_DIGEST_SIZE;
+	default:
+		return 0;
+	}
+}
+
+/* perform nsec3 hash. return false on failure */
+int
+secalgo_nsec3_hash(int algo, unsigned char* buf, size_t len,
+        unsigned char* res)
+{
+	switch(algo) {
+	case NSEC3_HASH_SHA1:
+		{
+		struct sha1_ctx ctx;
+		sha1_init(&ctx);
+		sha1_update(&ctx, len, (uint8_t*)buf);
+		sha1_digest(&ctx, SHA1_DIGEST_SIZE, (uint8_t*)res);
+		}
+		return 1;
+	default:
+		return 0;
+	}
+}
 
 /**
  * Return size of DS digest according to its hash algorithm.
