@@ -176,7 +176,7 @@ next_state(struct iter_qstate* iq, enum iter_state nextstate)
 /**
  * Transition an event to its final state. Final states always either return
  * a result up the module chain, or reactivate a dependent event. Which
- * final state to transtion to is set in the module state for the event when
+ * final state to transition to is set in the module state for the event when
  * it was created, and depends on the original purpose of the event.
  *
  * The response is stored in the qstate->buf buffer.
@@ -506,7 +506,7 @@ target_count_increase(struct iter_qstate* iq, int num)
 /**
  * Generate a subrequest.
  * Generate a local request event. Local events are tied to this module, and
- * have a correponding (first tier) event that is waiting for this event to
+ * have a corresponding (first tier) event that is waiting for this event to
  * resolve to continue.
  *
  * @param qname The query name for this request.

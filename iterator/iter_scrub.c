@@ -674,7 +674,7 @@ scrub_sanitize(sldns_buffer* pkt, struct msg_parse* msg,
 	 * children of the originating zone. The idea here is that, 
 	 * as far as we know, the server that we contacted is ONLY 
 	 * authoritative for the originating zone. It, of course, MAY 
-	 * be authoriative for any other zones, and of course, MAY 
+	 * be authoritative for any other zones, and of course, MAY 
 	 * NOT be authoritative for some subdomains of the originating 
 	 * zone. */
 	prev = NULL;

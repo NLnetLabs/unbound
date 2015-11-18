@@ -2170,7 +2170,7 @@ int autr_process_prime(struct module_env* env, struct val_env* ve,
 	if(!verify_dnskey(env, ve, tp, dnskey_rrset)) {
 		verbose(VERB_ALGO, "autotrust: dnskey did not verify.");
 		/* only increase failure count if this is not the first prime,
-		 * this means there was a previous succesful probe */
+		 * this means there was a previous successful probe */
 		if(tp->autr->last_success) {
 			tp->autr->query_failed += 1;
 			autr_write_file(env, tp);

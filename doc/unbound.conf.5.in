@@ -588,7 +588,7 @@ Can be given multiple times, for different domains.
 .B private\-address: \fI<IP address or subnet>
 Give IPv4 of IPv6 addresses or classless subnets. These are addresses
 on your private network, and are not allowed to be returned for
-public internet names.  Any occurence of such addresses are removed
+public internet names.  Any occurrence of such addresses are removed
 from DNS answers. Additionally, the DNSSEC validator may mark the
 answers bogus. This protects against so\-called DNS Rebinding, where
 a user browser is turned into a network proxy, allowing remote access
@@ -747,7 +747,7 @@ Instruct the validator to remove data from the additional section of secure
 messages that are not signed properly. Messages that are insecure, bogus,
 indeterminate or unchecked are not affected. Default is yes. Use this setting
 to protect the users that rely on this validator for authentication from 
-protentially bad data in the additional section.
+potentially bad data in the additional section.
 .TP
 .B val\-log\-level: \fI<number>
 Have the validator print validation failures to the log.  Regardless of
@@ -1034,7 +1034,7 @@ If set to 0, all queries are dropped for domains where the limit is
 exceeded.  If set to another value, 1 in that number is allowed through
 to complete.  Default is 10, allowing 1/10 traffic to flow normally.
 This can make ordinary queries complete (if repeatedly queried for),
-and enter the cache, whilst also mitigiting the traffic flow by the
+and enter the cache, whilst also mitigating the traffic flow by the
 factor given.
 .TP 5
 .B ratelimit\-for\-domain: \fI<domain> <number qps>

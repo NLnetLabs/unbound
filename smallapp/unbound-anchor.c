@@ -95,7 +95,7 @@
  * signed yet; avoids attacks on system clock).  The
  * last-successful-RFC5011-probe (if available) has to be more than 30 days
  * in the past (otherwise, RFC5011 should have worked).  This keeps
- * unneccesary https traffic down.  If the main certificate is expired, it
+ * unnecessary https traffic down.  If the main certificate is expired, it
  * fails.
  *
  * The dates on the keys in the xml are checked (uses the libexpat xml

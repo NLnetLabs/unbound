@@ -35,7 +35,7 @@
  */
 /**
  * \file
- * Exits with code 1 on a failure. 0 if all unit tests are successfull.
+ * Exits with code 1 on a failure. 0 if all unit tests are successful.
  */
 
 #include "config.h"

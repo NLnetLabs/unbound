@@ -283,7 +283,7 @@ struct config_file {
 	struct config_str2list* local_zones;
 	/** local zones nodefault list */
 	struct config_strlist* local_zones_nodefault;
-	/** local data RRs configged */
+	/** local data RRs configured */
 	struct config_strlist* local_data;
 	/** unblock lan zones (reverse lookups for 10/8 and so on) */
 	int unblock_lan_zones;

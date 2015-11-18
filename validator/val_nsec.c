@@ -1,5 +1,5 @@
 /*
- * validator/val_nsec.c - validator NSEC denial of existance functions.
+ * validator/val_nsec.c - validator NSEC denial of existence functions.
  *
  * Copyright (c) 2007, NLnet Labs. All rights reserved.
  *
@@ -38,7 +38,7 @@
  *
  * This file contains helper functions for the validator module.
  * The functions help with NSEC checking, the different NSEC proofs
- * for denial of existance, and proofs for presence of types.
+ * for denial of existence, and proofs for presence of types.
  */
 #include "config.h"
 #include "validator/val_nsec.h"
@@ -279,7 +279,7 @@ val_nsec_prove_nodata_dsreply(struct module_env* env, struct val_env* ve,
 		return sec_status_insecure;
 	}
 
-	/* NSEC proof did not conlusively point to DS or no DS */
+	/* NSEC proof did not conclusively point to DS or no DS */
 	return sec_status_unchecked;
 }
 

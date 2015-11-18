@@ -139,7 +139,7 @@ getentropy(void *buf, size_t len)
 	 * Try to use sysctl CTL_KERN, KERN_RANDOM, RANDOM_UUID.
 	 * sysctl is a failsafe API, so it guarantees a result.  This
 	 * should work inside a chroot, or when file descriptors are
-	 * exhuasted.
+	 * exhausted.
 	 *
 	 * However this can fail if the Linux kernel removes support
 	 * for sysctl.  Starting in 2007, there have been efforts to

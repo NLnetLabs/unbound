@@ -430,7 +430,7 @@ finish_acquire_lock(struct thr_check* thr, struct checked_lock* lock,
  * @param timedfunc: the pthread_mutex_timedlock or similar function.
  *	Uses absolute timeout value.
  * @param arg: what to pass to tryfunc and timedlock.
- * @param exclusive: if lock must be exlusive (only one allowed).
+ * @param exclusive: if lock must be exclusive (only one allowed).
  * @param getwr: if attempts to get writelock (or readlock) for rwlocks.
  */
 static void 
