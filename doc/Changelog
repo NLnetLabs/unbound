@@ -1,3 +1,6 @@
+18 November 2015: Wouter
+	- newer acx_nlnetlabs.m4.
+
 17 November 2015: Wouter
 	- Fix #594. libunbound: optionally use libnettle for crypto.
 	  Contributed by Luca Bruno.  Added --with-nettle for use with
