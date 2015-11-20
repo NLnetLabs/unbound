@@ -1,3 +1,6 @@
+20 November 2015: Wouter
+	- Added assert on rrset cache correctness.
+
 18 November 2015: Wouter
 	- newer acx_nlnetlabs.m4.
 	- spelling fixes from Igor Sobrado Delgado.
