@@ -868,7 +868,8 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 	if((ret=parse_edns_from_pkt(c->buffer, &edns)) != 0) {
 		verbose(VERB_ALGO, "worker parse edns: formerror.");
 		log_addr(VERB_CLIENT,"from",&repinfo->addr, repinfo->addrlen);
-		sldns_buffer_rewind(c->buffer);
+		sldns_buffer_flip(c->buffer); /* remove edns from reply */
+		sldns_buffer_write_at(c->buffer, 10, (uint8_t*)"\0\0", 2);
 		LDNS_QR_SET(sldns_buffer_begin(c->buffer));
 		LDNS_RCODE_SET(sldns_buffer_begin(c->buffer), ret);
 		server_stats_insrcode(&worker->stats, c->buffer);
