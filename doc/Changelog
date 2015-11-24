@@ -1,3 +1,6 @@
+24 November 2015: Wouter
+	- Fix #720: add windows scripts to zip bundle.
+
 20 November 2015: Wouter
 	- Added assert on rrset cache correctness.
 	- Fix that malformed EDNS query gets a response without malformed EDNS.
