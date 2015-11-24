@@ -1,5 +1,6 @@
 24 November 2015: Wouter
 	- Fix #720: add windows scripts to zip bundle.
+	- iana portlist update.
 
 20 November 2015: Wouter
 	- Added assert on rrset cache correctness.
