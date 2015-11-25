@@ -1,3 +1,6 @@
+25 November 2015: Wouter
+	- Fix for #720, fix unbound-control-setup windows batch file.
+
 24 November 2015: Wouter
 	- Fix #720: add windows scripts to zip bundle.
 	- iana portlist update.
