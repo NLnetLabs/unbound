@@ -334,11 +334,11 @@ service_init(int r, struct daemon** d, struct config_file** c)
 	/* apply settings and init */
 	verbosity = cfg->verbosity + service_cmdline_verbose;
 	if(cfg->directory && cfg->directory[0]) {
+		TCHAR dirbuf[2*MAX_PATH+4];
 		char* dir = cfg->directory;
 		if(strcmp(dir, "%EXECUTABLE%") == 0) {
 			/* get executable path, and if that contains
 			 * directories, snip off the filename part */
-			TCHAR dirbuf[2*MAX_PATH+4];
 			dirbuf[0] = 0;
 			if(!GetModuleFileName(NULL, path+1, MAX_PATH))
 				log_err("could not GetModuleFileName");
