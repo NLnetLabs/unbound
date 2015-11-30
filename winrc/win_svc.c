@@ -340,7 +340,7 @@ service_init(int r, struct daemon** d, struct config_file** c)
 			/* get executable path, and if that contains
 			 * directories, snip off the filename part */
 			dirbuf[0] = 0;
-			if(!GetModuleFileName(NULL, path+1, MAX_PATH))
+			if(!GetModuleFileName(NULL, dirbuf, MAX_PATH))
 				log_err("could not GetModuleFileName");
 			if(strrchr(dirbuf, '\\')) {
 				(strrchr(dirbuf, '\\'))[0] = 0;
