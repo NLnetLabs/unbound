@@ -334,14 +334,27 @@ service_init(int r, struct daemon** d, struct config_file** c)
 	/* apply settings and init */
 	verbosity = cfg->verbosity + service_cmdline_verbose;
 	if(cfg->directory && cfg->directory[0]) {
-		if(chdir(cfg->directory)) {
+		char* dir = cfg->directory;
+		if(strcmp(dir, "%EXECUTABLE%") == 0) {
+			/* get executable path, and if that contains
+			 * directories, snip off the filename part */
+			TCHAR dirbuf[2*MAX_PATH+4];
+			dirbuf[0] = 0;
+			if(!GetModuleFileName(NULL, path+1, MAX_PATH))
+				log_err("could not GetModuleFileName");
+			if(strrchr(dirbuf, '\\')) {
+				(strrchr(dirbuf, '\\'))[0] = 0;
+			} else log_err("GetModuleFileName had no path");
+			dir = dirbuf;
+		}
+		if(chdir(dir)) {
 			log_err("could not chdir to %s: %s", 
-				cfg->directory, strerror(errno));
+				dir, strerror(errno));
 			if(errno != ENOENT)
 				return 0;
 			log_warn("could not change directory - continuing");
 		} else
-			verbose(VERB_QUERY, "chdir to %s", cfg->directory);
+			verbose(VERB_QUERY, "chdir to %s", dir);
 	}
 	log_init(cfg->logfile, cfg->use_syslog, cfg->chrootdir);
 	if(!r) report_status(SERVICE_START_PENDING, NO_ERROR, 2400);

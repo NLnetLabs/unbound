@@ -1,3 +1,6 @@
+30 November 2015: Wouter
+	- Fix for #724: conf syntax to read files from run dir (on Windows).
+
 25 November 2015: Wouter
 	- Fix for #720, fix unbound-control-setup windows batch file.
 

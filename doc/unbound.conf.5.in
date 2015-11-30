@@ -444,6 +444,8 @@ requires privileges, then a reload will fail; a restart is needed.
 .TP
 .B directory: \fI<directory>
 Sets the working directory for the program. Default is "@UNBOUND_RUN_DIR@".
+On Windows the string "%EXECUTABLE%" tries to change to the directory
+that unbound.exe resides in.
 .TP
 .B logfile: \fI<filename>
 If "" is given, logging goes to stderr, or nowhere once daemonized.
