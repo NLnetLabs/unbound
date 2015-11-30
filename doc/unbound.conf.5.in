@@ -587,6 +587,12 @@ queries.  For domains that do not support 0x20 and also fail with fallback
 because they keep sending different answers, like some load balancers.
 Can be given multiple times, for different domains.
 .TP
+.B qname\-minimisation: \fI<yes or no>
+Send minimum amount of information to upstream servers to enhance privacy.
+Only sent minimum required labels of the QNAME and set QTYPE to NS when 
+possible. Best effort approach, full QNAME and original QTYPE will be sent when
+upstream replies with a RCODE other than NOERROR. Default is off.
+.TP
 .B private\-address: \fI<IP address or subnet>
 Give IPv4 of IPv6 addresses or classless subnets. These are addresses
 on your private network, and are not allowed to be returned for

@@ -1,3 +1,6 @@
+30 November 2015: Ralph
+	- Implemented qname minimisation
+
 30 November 2015: Wouter
 	- Fix for #724: conf syntax to read files from run dir (on Windows).
 

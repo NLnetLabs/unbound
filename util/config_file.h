@@ -364,6 +364,8 @@ struct config_file {
 	struct config_str2list* ratelimit_below_domain;
 	/** ratelimit factor, 0 blocks all, 10 allows 1/10 of traffic */
 	int ratelimit_factor;
+
+	int qname_minimisation;
 };
 
 /** from cfg username, after daemonise setup performed */
