@@ -64,6 +64,7 @@
 #include "util/random.h"
 #include "sldns/rrdef.h"
 #include "sldns/wire2str.h"
+#include "sldns/str2wire.h"
 #include "sldns/parseutil.h"
 #include "sldns/sbuffer.h"
 
