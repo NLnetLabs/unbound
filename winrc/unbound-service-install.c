@@ -49,7 +49,7 @@
 /** Install service main */
 int main(int argc, char** argv)
 {
-	FILE* out = stdout;
+	FILE* out = NULL; /* set stdout for debug output to stdout */
 	/* out = fopen("unbound-service-install.log", "w");*/
 	if(argc == 2 && strcmp(argv[1], "start")==0) {
 		wsvc_rc_start(out);

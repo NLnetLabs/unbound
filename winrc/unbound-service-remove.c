@@ -49,7 +49,7 @@
 /** Remove service main */
 int main(int argc, char** argv)
 {
-	FILE* out = stdout;
+	FILE* out = NULL; /* stdout for debug output */
 	/* out = fopen("unbound-service-remove.log", "w");*/
 	if(argc == 2 && strcmp(argv[1], "stop")==0) {
 		wsvc_rc_stop(out);
