@@ -346,6 +346,12 @@ service_init(int r, struct daemon** d, struct config_file** c)
 				(strrchr(dirbuf, '\\'))[0] = 0;
 			} else log_err("GetModuleFileName had no path");
 			dir = dirbuf;
+			if(dirbuf[0]) {
+				/* adjust cfg->directory for the 
+				 * fname_after_chroot calls later to work */
+				free(cfg->directory);
+				cfg->directory = memdup(dir, strlen(dir)+1);
+			}
 		}
 		if(chdir(dir)) {
 			log_err("could not chdir to %s: %s", 
