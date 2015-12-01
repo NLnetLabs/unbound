@@ -452,6 +452,9 @@ perform_setup(struct daemon* daemon, struct config_file* cfg, int debug_mode,
 		/* endpwent below, in case we need pwd for setusercontext */
 	}
 #endif
+#ifdef UB_ON_WINDOWS
+	w_config_adjust_directory(cfg);
+#endif
 
 	/* init syslog (as root) if needed, before daemonize, otherwise
 	 * a fork error could not be printed since daemonize closed stderr.*/
