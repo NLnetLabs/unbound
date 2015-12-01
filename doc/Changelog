@@ -1,3 +1,6 @@
+1 December 2015: Ralph
+	- Qname minimisation review fixes
+
 1 December 2015: Wouter
 	- Fixup 724 fix for fname_after_chroot() calls.
 	- Remove stdout printout for unbound-service-install.exe

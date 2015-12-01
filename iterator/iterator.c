@@ -117,8 +117,7 @@ iter_deinit(struct module_env* env, int id)
 	if(!env || !env->modinfo[id])
 		return;
 	iter_env = (struct iter_env*)env->modinfo[id];
-	if(env->cfg->qname_minimisation)
-		free(iter_env->ip6arpa_dname);
+	free(iter_env->ip6arpa_dname);
 	free(iter_env->target_fetch_policy);
 	priv_delete(iter_env->priv);
 	donotq_delete(iter_env->donotq);
@@ -2010,7 +2009,7 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 
 	if(iq->minimisation_state == INIT_MINIMISE_STATE) {
 		/* (Re)set qinfo_out to (new) delegation point, except
- 		 * when qinfo_out is already a subdomain op dp. This happens
+ 		 * when qinfo_out is already a subdomain of dp. This happens
 		 * when resolving ip6.arpa dnames. */
 		if(!(iq->qinfo_out.qname_len 
 			&& dname_subdomain_c(iq->qchase.qname, 
@@ -2061,7 +2060,9 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 				iq->qinfo_out.qtype, iq->qinfo_out.qclass, 
 				qstate->query_flags, qstate->region, 
 				qstate->env->scratch);
-			if(msg && msg->rep->an_numrrsets == 0)
+			if(msg && msg->rep->an_numrrsets == 0
+				&& FLAGS_GET_RCODE(msg->rep->flags) == 
+				LDNS_RCODE_NOERROR)
 				/* no need to send query if it is already 
 				 * cached as NOERROR/NODATA */
 				return 1;

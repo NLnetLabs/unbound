@@ -296,6 +296,11 @@ server:
 	# to validate the zone.
 	# harden-algo-downgrade: no
 
+	# Sent minimum amount of information to upstream servers to enhance 
+	# privacy. Only sent minimum required labels of the QNAME and set QTYPE
+	# to NS when possible.
+	# qname-minimisation: no
+
 	# Use 0x20-encoded random bits in the query to foil spoof attempts.
 	# This feature is an experimental implementation of draft dns-0x20.
 	# use-caps-for-id: no
