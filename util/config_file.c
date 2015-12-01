@@ -1558,6 +1558,28 @@ w_lookup_reg_str(const char* key, const char* name)
 	}
 	return result;
 }
+
+void w_config_adjust_directory(struct config_file* cfg)
+{
+	if(cfg->directory && cfg->directory[0]) {
+		TCHAR dirbuf[2*MAX_PATH+4];
+		if(strcmp(cfg->directory, "%EXECUTABLE%") == 0) {
+			/* get executable path, and if that contains
+			 * directories, snip off the filename part */
+			dirbuf[0] = 0;
+			if(!GetModuleFileName(NULL, dirbuf, MAX_PATH))
+				log_err("could not GetModuleFileName");
+			if(strrchr(dirbuf, '\\')) {
+				(strrchr(dirbuf, '\\'))[0] = 0;
+			} else log_err("GetModuleFileName had no path");
+			if(dirbuf[0]) {
+				/* adjust directory for later lookups to work*/
+				free(cfg->directory);
+				cfg->directory = memdup(dirbuf, strlen(dirbuf)+1);
+			}
+		}
+	}
+}
 #endif /* UB_ON_WINDOWS */
 
 void errinf(struct module_qstate* qstate, const char* str)

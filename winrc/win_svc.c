@@ -333,26 +333,9 @@ service_init(int r, struct daemon** d, struct config_file** c)
 	verbose(VERB_QUERY, "winservice - apply settings");
 	/* apply settings and init */
 	verbosity = cfg->verbosity + service_cmdline_verbose;
+	w_config_adjust_directory(cfg);
 	if(cfg->directory && cfg->directory[0]) {
-		TCHAR dirbuf[2*MAX_PATH+4];
 		char* dir = cfg->directory;
-		if(strcmp(dir, "%EXECUTABLE%") == 0) {
-			/* get executable path, and if that contains
-			 * directories, snip off the filename part */
-			dirbuf[0] = 0;
-			if(!GetModuleFileName(NULL, dirbuf, MAX_PATH))
-				log_err("could not GetModuleFileName");
-			if(strrchr(dirbuf, '\\')) {
-				(strrchr(dirbuf, '\\'))[0] = 0;
-			} else log_err("GetModuleFileName had no path");
-			dir = dirbuf;
-			if(dirbuf[0]) {
-				/* adjust cfg->directory for the 
-				 * fname_after_chroot calls later to work */
-				free(cfg->directory);
-				cfg->directory = memdup(dir, strlen(dir)+1);
-			}
-		}
 		if(chdir(dir)) {
 			log_err("could not chdir to %s: %s", 
 				dir, strerror(errno));
