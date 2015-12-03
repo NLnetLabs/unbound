@@ -2470,8 +2470,6 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 	/* LAME, THROWAWAY and "unknown" all end up here.
 	 * Recycle to the QUERYTARGETS state to hopefully try a 
 	 * different target. */
-	if (qstate->env->cfg->qname_minimisation)
-		iq->minimisation_state = SKIP_MINIMISE_STATE;
 	return next_state(iq, QUERYTARGETS_STATE);
 }
 
