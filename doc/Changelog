@@ -1,5 +1,6 @@
 3 December 2015: Wouter
 	- iana portlist update.
+	- 1.5.7rc1 prerelease tag.
 
 2 December 2015: Wouter
 	- Fixup 724: Fix PCA prompt for unbound-service-install.exe.
