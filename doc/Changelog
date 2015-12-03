@@ -1,3 +1,7 @@
+3 December 2015: Ralph
+	- (after rc1 tag)
+	- Committed fix to qname minimisation and unit test case for it.
+	
 3 December 2015: Wouter
 	- iana portlist update.
 	- 1.5.7rc1 prerelease tag.
