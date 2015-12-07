@@ -1092,6 +1092,7 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 			return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
 		}
 		iq->refetch_glue = 0;
+		iq->minimisation_state = DONOT_MINIMISE_STATE;
 		/* the request has been forwarded.
 		 * forwarded requests need to be immediately sent to the 
 		 * next state, QUERYTARGETS. */

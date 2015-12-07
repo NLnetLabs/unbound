@@ -1,4 +1,7 @@
-4 December 2015: Ralph
+7 December 2015: Ralph
+	- Do not minimise forwarded requests.
+
+4 December 2015: Wouter
 	- Removed unneeded whitespace from example.conf.
 
 3 December 2015: Ralph
