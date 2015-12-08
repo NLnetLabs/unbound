@@ -363,6 +363,9 @@ go(const char* cfgfile, char* svr, int quiet, int argc, char* argv[])
 		fatal_exit("could not read config file");
 	if(!cfg->remote_control_enable)
 		log_warn("control-enable is 'no' in the config file.");
+#ifdef UB_ON_WINDOWS
+	w_config_adjust_directory(cfg);
+#endif
 	ctx = setup_ctx(cfg);
 
 	/* contact server */
