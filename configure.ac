@@ -418,6 +418,36 @@ if test x_$withval != x_no; then
 		CC="$PTHREAD_CC"
 		ub_have_pthreads=yes
 		AC_CHECK_TYPES([pthread_spinlock_t, pthread_rwlock_t],,,[#include <pthread.h>])
+
+		if echo "$CFLAGS" | grep -e "-pthread" >/dev/null; then
+		AC_MSG_CHECKING([if -pthread unused during linking])
+		# catch clang warning 'argument unused during compilation'
+		AC_LANG_CONFTEST([AC_LANG_SOURCE(AC_INCLUDES_DEFAULT
+[[
+int main(void) {return 0;}
+]])])
+		pthread_unused="yes"
+		# first compile
+		echo "$CC $CFLAGS -c conftest.c -o conftest.o" >&AS_MESSAGE_LOG_FD
+		$CC $CFLAGS -c conftest.c -o conftest.o 2>&AS_MESSAGE_LOG_FD >&AS_MESSAGE_LOG_FD
+		if test $? = 0; then 
+			# then link
+			echo "$CC $CFLAGS -Werror $LDFLAGS $LIBS -o conftest contest.o" >&AS_MESSAGE_LOG_FD
+			$CC $CFLAGS -Werror $LDFLAGS $LIBS -o conftest conftest.o 2>&AS_MESSAGE_LOG_FD >&AS_MESSAGE_LOG_FD
+			if test $? -ne 0; then
+				AC_MSG_RESULT(yes)
+				CFLAGS=`echo "$CFLAGS" | sed -e 's/-pthread//'`
+				PTHREAD_CFLAGS_ONLY="-pthread"
+				AC_SUBST(PTHREAD_CFLAGS_ONLY)
+			else
+				AC_MSG_RESULT(no)
+			fi
+		else
+			AC_MSG_RESULT(no)
+		fi # endif cc successful
+		rm -f conftest conftest.c conftest.o
+		fi # endif -pthread in CFLAGS
+
 		])
 fi
 

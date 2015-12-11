@@ -243,7 +243,7 @@ ALL_OBJ=$(COMMON_OBJ) $(UNITTEST_OBJ) $(DAEMON_OBJ) \
 	$(COMPAT_OBJ) $(PYUNBOUND_OBJ) \
 	$(SVCINST_OBJ) $(SVCUNINST_OBJ) $(ANCHORUPD_OBJ) $(SLDNS_OBJ)
 
-COMPILE=$(LIBTOOL) --tag=CC --mode=compile $(CC) $(CPPFLAGS) $(CFLAGS)
+COMPILE=$(LIBTOOL) --tag=CC --mode=compile $(CC) $(CPPFLAGS) $(CFLAGS) @PTHREAD_CFLAGS_ONLY@
 LINK=$(LIBTOOL) --tag=CC --mode=link $(CC) $(staticexe) $(RUNTIME_PATH) $(CPPFLAGS) $(CFLAGS) $(LDFLAGS)
 LINK_LIB=$(LIBTOOL) --tag=CC --mode=link $(CC) $(RUNTIME_PATH) $(CPPFLAGS) $(CFLAGS) $(LDFLAGS) $(staticexe) -version-info @LIBUNBOUND_CURRENT@:@LIBUNBOUND_REVISION@:@LIBUNBOUND_AGE@ -no-undefined
 
@@ -353,7 +353,7 @@ delayer$(EXEEXT):	$(DELAYER_OBJ_LINK)
 	$(LINK) -o $@ $(DELAYER_OBJ_LINK) $(SSLLIB) $(LIBS)
 
 signit$(EXEEXT):	testcode/signit.c
-	$(CC) $(CPPFLAGS) $(CFLAGS) -o $@ testcode/signit.c $(LDFLAGS) -lldns $(SSLLIB) $(LIBS)
+	$(CC) $(CPPFLAGS) $(CFLAGS) @PTHREAD_CFLAGS_ONLY@ -o $@ testcode/signit.c $(LDFLAGS) -lldns $(SSLLIB) $(LIBS)
 
 unbound.h:	$(srcdir)/libunbound/unbound.h
 	sed -e 's/@''UNBOUND_VERSION_MAJOR@/$(UNBOUND_VERSION_MAJOR)/' -e 's/@''UNBOUND_VERSION_MINOR@/$(UNBOUND_VERSION_MINOR)/' -e 's/@''UNBOUND_VERSION_MICRO@/$(UNBOUND_VERSION_MICRO)/' < $(srcdir)/libunbound/unbound.h > $@
@@ -567,7 +567,7 @@ DEPEND_TARGET2=Makefile.in
 # then, remove srcdir from the (generated) parser and lexer.
 # and mention the .lo
 depend:
-	(cd $(srcdir) ; $(CC) $(DEPFLAG) $(CPPFLAGS) $(CFLAGS) $(ALL_SRC) $(COMPAT_SRC)) | \
+	(cd $(srcdir) ; $(CC) $(DEPFLAG) $(CPPFLAGS) $(CFLAGS) @PTHREAD_CFLAGS_ONLY@ $(ALL_SRC) $(COMPAT_SRC)) | \
 		sed -e 's!'$$HOME'[^ ]* !!g' -e 's!'$$HOME'[^ ]*$$!!g' \
 			-e 's!/usr[^ ]* !!g' -e 's!/usr[^ ]*$$!!g' \
 			-e 's!/opt[^ ]* !!g' -e 's!/opt[^ ]*$$!!g' | \

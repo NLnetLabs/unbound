@@ -684,6 +684,7 @@ PYTHON_LDFLAGS
 PYTHON_CPPFLAGS
 PYTHON
 PYTHON_VERSION
+PTHREAD_CFLAGS_ONLY
 PTHREAD_CFLAGS
 PTHREAD_LIBS
 PTHREAD_CC
@@ -15871,6 +15872,43 @@ _ACEOF
 
 
 fi
+
+
+		if echo "$CFLAGS" | grep -e "-pthread" >/dev/null; then
+		{ $as_echo "$as_me:${as_lineno-$LINENO}: checking if -pthread unused during linking" >&5
+$as_echo_n "checking if -pthread unused during linking... " >&6; }
+		# catch clang warning 'argument unused during compilation'
+		cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+$ac_includes_default
+
+int main(void) {return 0;}
+
+_ACEOF
+		pthread_unused="yes"
+		# first compile
+		echo "$CC $CFLAGS -c conftest.c -o conftest.o" >&5
+		$CC $CFLAGS -c conftest.c -o conftest.o 2>&5 >&5
+		if test $? = 0; then
+			# then link
+			echo "$CC $CFLAGS -Werror $LDFLAGS $LIBS -o conftest contest.o" >&5
+			$CC $CFLAGS -Werror $LDFLAGS $LIBS -o conftest conftest.o 2>&5 >&5
+			if test $? -ne 0; then
+				{ $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+				CFLAGS=`echo "$CFLAGS" | sed -e 's/-pthread//'`
+				PTHREAD_CFLAGS_ONLY="-pthread"
+
+			else
+				{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+			fi
+		else
+			{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+		fi # endif cc successful
+		rm -f conftest conftest.c conftest.o
+		fi # endif -pthread in CFLAGS
 
 
         :
