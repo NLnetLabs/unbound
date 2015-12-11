@@ -1,3 +1,6 @@
+11 December 2015: Wouter
+	- remove NULL-checks before free, patch from Michael McConville.
+
 10 December 2015: Wouter
 	- 1.5.7 release
 	- trunk has 1.5.8 in development.
