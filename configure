@@ -5859,7 +5859,7 @@ fi
         { $as_echo "$as_me:${as_lineno-$LINENO}: checking if $CC supports -flto" >&5
 $as_echo_n "checking if $CC supports -flto... " >&6; }
         BAKCFLAGS="$CFLAGS"
-        CFLAGS="$CFLAGS -flto"
+        CFLAGS="$CFLAGS -flto -Werror"
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 
@@ -5878,6 +5878,7 @@ if ac_fn_c_try_link "$LINENO"; then :
                 { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
 $as_echo "no" >&6; }
             else
+                CFLAGS="$CFLAGS -flto"
                 { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 $as_echo "yes" >&6; }
             fi

@@ -421,12 +421,13 @@ AC_DEFUN([ACX_CHECK_FLTO], [
     AS_IF([test "x$enable_flto" != "xno"], [
         AC_MSG_CHECKING([if $CC supports -flto])
         BAKCFLAGS="$CFLAGS"
-        CFLAGS="$CFLAGS -flto"
+        CFLAGS="$CFLAGS -flto -Werror"
         AC_LINK_IFELSE([AC_LANG_PROGRAM([], [])], [
             if $CC $CFLAGS -o conftest conftest.c 2>&1 | grep "warning: no debug symbols in executable" >/dev/null; then
                 CFLAGS="$BAKCFLAGS"
                 AC_MSG_RESULT(no)
             else
+                CFLAGS="$CFLAGS -flto"
                 AC_MSG_RESULT(yes)
             fi
             rm -f conftest conftest.c conftest.o
