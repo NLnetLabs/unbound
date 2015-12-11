@@ -293,7 +293,7 @@
 /* Define to 1 if you have the `recvmsg' function. */
 #undef HAVE_RECVMSG
 
-/* Define to 1 if you have the `sbrk' function. */
+/* define if you have the sbrk() call */
 #undef HAVE_SBRK
 
 /* Define to 1 if you have the `sendmsg' function. */
