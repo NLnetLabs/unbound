@@ -1,5 +1,7 @@
 11 December 2015: Wouter
 	- remove NULL-checks before free, patch from Michael McConville.
+	- updated ax_pthread.m4 to version 21 with clang support, this
+	  removes a warning from compilation.
 
 10 December 2015: Wouter
 	- 1.5.7 release
