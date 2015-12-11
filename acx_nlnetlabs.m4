@@ -2,7 +2,8 @@
 # Copyright 2009, Wouter Wijngaards, NLnet Labs.   
 # BSD licensed.
 #
-# Version 30
+# Version 31
+# 2015-12-11 FLTO check for new OSX, clang.
 # 2015-11-18 spelling check fix.
 # 2015-11-05 ACX_SSL_CHECKS no longer adds -ldl needlessly.
 # 2015-08-28 ACX_CHECK_PIE and ACX_CHECK_RELRO_NOW added.
@@ -423,7 +424,7 @@ AC_DEFUN([ACX_CHECK_FLTO], [
         BAKCFLAGS="$CFLAGS"
         CFLAGS="$CFLAGS -flto"
         AC_LINK_IFELSE([AC_LANG_PROGRAM([], [])], [
-            if $CC $CFLAGS -o conftest conftest.c 2>&1 | grep -e "warning: no debug symbols in executable" -e "warning: object" >/dev/null; then
+            if $CC $CFLAGS -o conftest conftest.c 2>&1 | $GREP -e "warning: no debug symbols in executable" -e "warning: object" >/dev/null; then
                 CFLAGS="$BAKCFLAGS"
                 AC_MSG_RESULT(no)
             else

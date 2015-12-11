@@ -5873,7 +5873,7 @@ main ()
 _ACEOF
 if ac_fn_c_try_link "$LINENO"; then :
 
-            if $CC $CFLAGS -o conftest conftest.c 2>&1 | grep -e "warning: no debug symbols in executable" -e "warning: object" >/dev/null; then
+            if $CC $CFLAGS -o conftest conftest.c 2>&1 | $GREP -e "warning: no debug symbols in executable" -e "warning: object" >/dev/null; then
                 CFLAGS="$BAKCFLAGS"
                 { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
 $as_echo "no" >&6; }
