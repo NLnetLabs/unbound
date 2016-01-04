@@ -484,6 +484,9 @@
 /* Put -D_BSD_SOURCE define in config.h */
 #undef OMITTED__D_BSD_SOURCE
 
+/* Put -D_DEFAULT_SOURCE define in config.h */
+#undef OMITTED__D_DEFAULT_SOURCE
+
 /* Put -D_GNU_SOURCE define in config.h */
 #undef OMITTED__D_GNU_SOURCE
 
@@ -736,6 +739,10 @@
 
 #if defined(OMITTED__D_BSD_SOURCE) && !defined(_BSD_SOURCE)
 #define _BSD_SOURCE 1
+#endif 
+
+#if defined(OMITTED__D_DEFAULT_SOURCE) && !defined(_DEFAULT_SOURCE)
+#define _DEFAULT_SOURCE 1
 #endif 
 
 #if defined(OMITTED__D__EXTENSIONS__) && !defined(__EXTENSIONS__)

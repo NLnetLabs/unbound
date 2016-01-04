@@ -5099,9 +5099,9 @@ done
 
 
 
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking whether we need $C99FLAG -D__EXTENSIONS__ -D_BSD_SOURCE -D_POSIX_C_SOURCE=200112 -D_XOPEN_SOURCE=600 -D_XOPEN_SOURCE_EXTENDED=1 -D_ALL_SOURCE as a flag for $CC" >&5
-$as_echo_n "checking whether we need $C99FLAG -D__EXTENSIONS__ -D_BSD_SOURCE -D_POSIX_C_SOURCE=200112 -D_XOPEN_SOURCE=600 -D_XOPEN_SOURCE_EXTENDED=1 -D_ALL_SOURCE as a flag for $CC... " >&6; }
-cache=`$as_echo "$C99FLAG -D__EXTENSIONS__ -D_BSD_SOURCE -D_POSIX_C_SOURCE=200112 -D_XOPEN_SOURCE=600 -D_XOPEN_SOURCE_EXTENDED=1 -D_ALL_SOURCE" | $as_tr_sh`
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking whether we need $C99FLAG -D__EXTENSIONS__ -D_BSD_SOURCE -D_DEFAULT_SOURCE -D_POSIX_C_SOURCE=200112 -D_XOPEN_SOURCE=600 -D_XOPEN_SOURCE_EXTENDED=1 -D_ALL_SOURCE as a flag for $CC" >&5
+$as_echo_n "checking whether we need $C99FLAG -D__EXTENSIONS__ -D_BSD_SOURCE -D_DEFAULT_SOURCE -D_POSIX_C_SOURCE=200112 -D_XOPEN_SOURCE=600 -D_XOPEN_SOURCE_EXTENDED=1 -D_ALL_SOURCE as a flag for $CC... " >&6; }
+cache=`$as_echo "$C99FLAG -D__EXTENSIONS__ -D_BSD_SOURCE -D_DEFAULT_SOURCE -D_POSIX_C_SOURCE=200112 -D_XOPEN_SOURCE=600 -D_XOPEN_SOURCE_EXTENDED=1 -D_ALL_SOURCE" | $as_tr_sh`
 if eval \${cv_prog_cc_flag_needed_$cache+:} false; then :
   $as_echo_n "(cached) " >&6
 else
@@ -5146,14 +5146,14 @@ if test -z "`$CC $CPPFLAGS $CFLAGS $ERRFLAG -c conftest.c 2>&1`"; then
 eval "cv_prog_cc_flag_needed_$cache=no"
 else
 
-if test -z "`$CC $CPPFLAGS $CFLAGS $C99FLAG -D__EXTENSIONS__ -D_BSD_SOURCE -D_POSIX_C_SOURCE=200112 -D_XOPEN_SOURCE=600 -D_XOPEN_SOURCE_EXTENDED=1 -D_ALL_SOURCE $ERRFLAG -c conftest.c 2>&1`"; then
+if test -z "`$CC $CPPFLAGS $CFLAGS $C99FLAG -D__EXTENSIONS__ -D_BSD_SOURCE -D_DEFAULT_SOURCE -D_POSIX_C_SOURCE=200112 -D_XOPEN_SOURCE=600 -D_XOPEN_SOURCE_EXTENDED=1 -D_ALL_SOURCE $ERRFLAG -c conftest.c 2>&1`"; then
 eval "cv_prog_cc_flag_needed_$cache=yes"
 else
 eval "cv_prog_cc_flag_needed_$cache=fail"
 #echo 'Test with flag fails too!'
 #cat conftest.c
-#echo "$CC $CPPFLAGS $CFLAGS $C99FLAG -D__EXTENSIONS__ -D_BSD_SOURCE -D_POSIX_C_SOURCE=200112 -D_XOPEN_SOURCE=600 -D_XOPEN_SOURCE_EXTENDED=1 -D_ALL_SOURCE $ERRFLAG -c conftest.c 2>&1"
-#echo `$CC $CPPFLAGS $CFLAGS $C99FLAG -D__EXTENSIONS__ -D_BSD_SOURCE -D_POSIX_C_SOURCE=200112 -D_XOPEN_SOURCE=600 -D_XOPEN_SOURCE_EXTENDED=1 -D_ALL_SOURCE $ERRFLAG -c conftest.c 2>&1`
+#echo "$CC $CPPFLAGS $CFLAGS $C99FLAG -D__EXTENSIONS__ -D_BSD_SOURCE -D_DEFAULT_SOURCE -D_POSIX_C_SOURCE=200112 -D_XOPEN_SOURCE=600 -D_XOPEN_SOURCE_EXTENDED=1 -D_ALL_SOURCE $ERRFLAG -c conftest.c 2>&1"
+#echo `$CC $CPPFLAGS $CFLAGS $C99FLAG -D__EXTENSIONS__ -D_BSD_SOURCE -D_DEFAULT_SOURCE -D_POSIX_C_SOURCE=200112 -D_XOPEN_SOURCE=600 -D_XOPEN_SOURCE_EXTENDED=1 -D_ALL_SOURCE $ERRFLAG -c conftest.c 2>&1`
 #exit 1
 fi
 
@@ -5166,15 +5166,15 @@ if eval "test \"`echo '$cv_prog_cc_flag_needed_'$cache`\" = yes"; then
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 $as_echo "yes" >&6; }
 :
-CFLAGS="$CFLAGS $C99FLAG -D__EXTENSIONS__ -D_BSD_SOURCE -D_POSIX_C_SOURCE=200112 -D_XOPEN_SOURCE=600 -D_XOPEN_SOURCE_EXTENDED=1 -D_ALL_SOURCE"
+CFLAGS="$CFLAGS $C99FLAG -D__EXTENSIONS__ -D_BSD_SOURCE -D_DEFAULT_SOURCE -D_POSIX_C_SOURCE=200112 -D_XOPEN_SOURCE=600 -D_XOPEN_SOURCE_EXTENDED=1 -D_ALL_SOURCE"
 else
 if eval "test \"`echo '$cv_prog_cc_flag_needed_'$cache`\" = no"; then
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
 $as_echo "no" >&6; }
 #echo 'Test with flag is no!'
 #cat conftest.c
-#echo "$CC $CPPFLAGS $CFLAGS $C99FLAG -D__EXTENSIONS__ -D_BSD_SOURCE -D_POSIX_C_SOURCE=200112 -D_XOPEN_SOURCE=600 -D_XOPEN_SOURCE_EXTENDED=1 -D_ALL_SOURCE $ERRFLAG -c conftest.c 2>&1"
-#echo `$CC $CPPFLAGS $CFLAGS $C99FLAG -D__EXTENSIONS__ -D_BSD_SOURCE -D_POSIX_C_SOURCE=200112 -D_XOPEN_SOURCE=600 -D_XOPEN_SOURCE_EXTENDED=1 -D_ALL_SOURCE $ERRFLAG -c conftest.c 2>&1`
+#echo "$CC $CPPFLAGS $CFLAGS $C99FLAG -D__EXTENSIONS__ -D_BSD_SOURCE -D_DEFAULT_SOURCE -D_POSIX_C_SOURCE=200112 -D_XOPEN_SOURCE=600 -D_XOPEN_SOURCE_EXTENDED=1 -D_ALL_SOURCE $ERRFLAG -c conftest.c 2>&1"
+#echo `$CC $CPPFLAGS $CFLAGS $C99FLAG -D__EXTENSIONS__ -D_BSD_SOURCE -D_DEFAULT_SOURCE -D_POSIX_C_SOURCE=200112 -D_XOPEN_SOURCE=600 -D_XOPEN_SOURCE_EXTENDED=1 -D_ALL_SOURCE $ERRFLAG -c conftest.c 2>&1`
 #exit 1
 :
 
@@ -5190,9 +5190,9 @@ fi
 
 
 
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking whether we need $C99FLAG -D__EXTENSIONS__ -D_BSD_SOURCE -D_POSIX_C_SOURCE=200112 -D_XOPEN_SOURCE=600 -D_ALL_SOURCE as a flag for $CC" >&5
-$as_echo_n "checking whether we need $C99FLAG -D__EXTENSIONS__ -D_BSD_SOURCE -D_POSIX_C_SOURCE=200112 -D_XOPEN_SOURCE=600 -D_ALL_SOURCE as a flag for $CC... " >&6; }
-cache=`$as_echo "$C99FLAG -D__EXTENSIONS__ -D_BSD_SOURCE -D_POSIX_C_SOURCE=200112 -D_XOPEN_SOURCE=600 -D_ALL_SOURCE" | $as_tr_sh`
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking whether we need $C99FLAG -D__EXTENSIONS__ -D_BSD_SOURCE -D_DEFAULT_SOURCE -D_POSIX_C_SOURCE=200112 -D_XOPEN_SOURCE=600 -D_ALL_SOURCE as a flag for $CC" >&5
+$as_echo_n "checking whether we need $C99FLAG -D__EXTENSIONS__ -D_BSD_SOURCE -D_DEFAULT_SOURCE -D_POSIX_C_SOURCE=200112 -D_XOPEN_SOURCE=600 -D_ALL_SOURCE as a flag for $CC... " >&6; }
+cache=`$as_echo "$C99FLAG -D__EXTENSIONS__ -D_BSD_SOURCE -D_DEFAULT_SOURCE -D_POSIX_C_SOURCE=200112 -D_XOPEN_SOURCE=600 -D_ALL_SOURCE" | $as_tr_sh`
 if eval \${cv_prog_cc_flag_needed_$cache+:} false; then :
   $as_echo_n "(cached) " >&6
 else
@@ -5237,14 +5237,14 @@ if test -z "`$CC $CPPFLAGS $CFLAGS $ERRFLAG -c conftest.c 2>&1`"; then
 eval "cv_prog_cc_flag_needed_$cache=no"
 else
 
-if test -z "`$CC $CPPFLAGS $CFLAGS $C99FLAG -D__EXTENSIONS__ -D_BSD_SOURCE -D_POSIX_C_SOURCE=200112 -D_XOPEN_SOURCE=600 -D_ALL_SOURCE $ERRFLAG -c conftest.c 2>&1`"; then
+if test -z "`$CC $CPPFLAGS $CFLAGS $C99FLAG -D__EXTENSIONS__ -D_BSD_SOURCE -D_DEFAULT_SOURCE -D_POSIX_C_SOURCE=200112 -D_XOPEN_SOURCE=600 -D_ALL_SOURCE $ERRFLAG -c conftest.c 2>&1`"; then
 eval "cv_prog_cc_flag_needed_$cache=yes"
 else
 eval "cv_prog_cc_flag_needed_$cache=fail"
 #echo 'Test with flag fails too!'
 #cat conftest.c
-#echo "$CC $CPPFLAGS $CFLAGS $C99FLAG -D__EXTENSIONS__ -D_BSD_SOURCE -D_POSIX_C_SOURCE=200112 -D_XOPEN_SOURCE=600 -D_ALL_SOURCE $ERRFLAG -c conftest.c 2>&1"
-#echo `$CC $CPPFLAGS $CFLAGS $C99FLAG -D__EXTENSIONS__ -D_BSD_SOURCE -D_POSIX_C_SOURCE=200112 -D_XOPEN_SOURCE=600 -D_ALL_SOURCE $ERRFLAG -c conftest.c 2>&1`
+#echo "$CC $CPPFLAGS $CFLAGS $C99FLAG -D__EXTENSIONS__ -D_BSD_SOURCE -D_DEFAULT_SOURCE -D_POSIX_C_SOURCE=200112 -D_XOPEN_SOURCE=600 -D_ALL_SOURCE $ERRFLAG -c conftest.c 2>&1"
+#echo `$CC $CPPFLAGS $CFLAGS $C99FLAG -D__EXTENSIONS__ -D_BSD_SOURCE -D_DEFAULT_SOURCE -D_POSIX_C_SOURCE=200112 -D_XOPEN_SOURCE=600 -D_ALL_SOURCE $ERRFLAG -c conftest.c 2>&1`
 #exit 1
 fi
 
@@ -5257,15 +5257,15 @@ if eval "test \"`echo '$cv_prog_cc_flag_needed_'$cache`\" = yes"; then
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 $as_echo "yes" >&6; }
 :
-CFLAGS="$CFLAGS $C99FLAG -D__EXTENSIONS__ -D_BSD_SOURCE -D_POSIX_C_SOURCE=200112 -D_XOPEN_SOURCE=600 -D_ALL_SOURCE"
+CFLAGS="$CFLAGS $C99FLAG -D__EXTENSIONS__ -D_BSD_SOURCE -D_DEFAULT_SOURCE -D_POSIX_C_SOURCE=200112 -D_XOPEN_SOURCE=600 -D_ALL_SOURCE"
 else
 if eval "test \"`echo '$cv_prog_cc_flag_needed_'$cache`\" = no"; then
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
 $as_echo "no" >&6; }
 #echo 'Test with flag is no!'
 #cat conftest.c
-#echo "$CC $CPPFLAGS $CFLAGS $C99FLAG -D__EXTENSIONS__ -D_BSD_SOURCE -D_POSIX_C_SOURCE=200112 -D_XOPEN_SOURCE=600 -D_ALL_SOURCE $ERRFLAG -c conftest.c 2>&1"
-#echo `$CC $CPPFLAGS $CFLAGS $C99FLAG -D__EXTENSIONS__ -D_BSD_SOURCE -D_POSIX_C_SOURCE=200112 -D_XOPEN_SOURCE=600 -D_ALL_SOURCE $ERRFLAG -c conftest.c 2>&1`
+#echo "$CC $CPPFLAGS $CFLAGS $C99FLAG -D__EXTENSIONS__ -D_BSD_SOURCE -D_DEFAULT_SOURCE -D_POSIX_C_SOURCE=200112 -D_XOPEN_SOURCE=600 -D_ALL_SOURCE $ERRFLAG -c conftest.c 2>&1"
+#echo `$CC $CPPFLAGS $CFLAGS $C99FLAG -D__EXTENSIONS__ -D_BSD_SOURCE -D_DEFAULT_SOURCE -D_POSIX_C_SOURCE=200112 -D_XOPEN_SOURCE=600 -D_ALL_SOURCE $ERRFLAG -c conftest.c 2>&1`
 #exit 1
 :
 
@@ -5345,9 +5345,9 @@ fi
 
 
 
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking whether we need -D_BSD_SOURCE as a flag for $CC" >&5
-$as_echo_n "checking whether we need -D_BSD_SOURCE as a flag for $CC... " >&6; }
-cache=_D_BSD_SOURCE
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking whether we need -D_BSD_SOURCE -D_DEFAULT_SOURCE as a flag for $CC" >&5
+$as_echo_n "checking whether we need -D_BSD_SOURCE -D_DEFAULT_SOURCE as a flag for $CC... " >&6; }
+cache=_D_BSD_SOURCE__D_DEFAULT_SOURCE
 if eval \${cv_prog_cc_flag_needed_$cache+:} false; then :
   $as_echo_n "(cached) " >&6
 else
@@ -5366,14 +5366,14 @@ if test -z "`$CC $CPPFLAGS $CFLAGS $ERRFLAG -c conftest.c 2>&1`"; then
 eval "cv_prog_cc_flag_needed_$cache=no"
 else
 
-if test -z "`$CC $CPPFLAGS $CFLAGS -D_BSD_SOURCE $ERRFLAG -c conftest.c 2>&1`"; then
+if test -z "`$CC $CPPFLAGS $CFLAGS -D_BSD_SOURCE -D_DEFAULT_SOURCE $ERRFLAG -c conftest.c 2>&1`"; then
 eval "cv_prog_cc_flag_needed_$cache=yes"
 else
 eval "cv_prog_cc_flag_needed_$cache=fail"
 #echo 'Test with flag fails too!'
 #cat conftest.c
-#echo "$CC $CPPFLAGS $CFLAGS -D_BSD_SOURCE $ERRFLAG -c conftest.c 2>&1"
-#echo `$CC $CPPFLAGS $CFLAGS -D_BSD_SOURCE $ERRFLAG -c conftest.c 2>&1`
+#echo "$CC $CPPFLAGS $CFLAGS -D_BSD_SOURCE -D_DEFAULT_SOURCE $ERRFLAG -c conftest.c 2>&1"
+#echo `$CC $CPPFLAGS $CFLAGS -D_BSD_SOURCE -D_DEFAULT_SOURCE $ERRFLAG -c conftest.c 2>&1`
 #exit 1
 fi
 
@@ -5386,15 +5386,15 @@ if eval "test \"`echo '$cv_prog_cc_flag_needed_'$cache`\" = yes"; then
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 $as_echo "yes" >&6; }
 :
-CFLAGS="$CFLAGS -D_BSD_SOURCE"
+CFLAGS="$CFLAGS -D_BSD_SOURCE -D_DEFAULT_SOURCE"
 else
 if eval "test \"`echo '$cv_prog_cc_flag_needed_'$cache`\" = no"; then
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
 $as_echo "no" >&6; }
 #echo 'Test with flag is no!'
 #cat conftest.c
-#echo "$CC $CPPFLAGS $CFLAGS -D_BSD_SOURCE $ERRFLAG -c conftest.c 2>&1"
-#echo `$CC $CPPFLAGS $CFLAGS -D_BSD_SOURCE $ERRFLAG -c conftest.c 2>&1`
+#echo "$CC $CPPFLAGS $CFLAGS -D_BSD_SOURCE -D_DEFAULT_SOURCE $ERRFLAG -c conftest.c 2>&1"
+#echo `$CC $CPPFLAGS $CFLAGS -D_BSD_SOURCE -D_DEFAULT_SOURCE $ERRFLAG -c conftest.c 2>&1`
 #exit 1
 :
 
@@ -19099,6 +19099,14 @@ $as_echo "#define OMITTED__D_GNU_SOURCE 1" >>confdefs.h
     CFLAGS="`echo $CFLAGS | sed -e 's/ -D_BSD_SOURCE//g'`"
 
 $as_echo "#define OMITTED__D_BSD_SOURCE 1" >>confdefs.h
+
+  fi
+
+
+  if echo $CFLAGS | grep " -D_DEFAULT_SOURCE" >/dev/null 2>&1; then
+    CFLAGS="`echo $CFLAGS | sed -e 's/ -D_DEFAULT_SOURCE//g'`"
+
+$as_echo "#define OMITTED__D_DEFAULT_SOURCE 1" >>confdefs.h
 
   fi
 
