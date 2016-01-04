@@ -1,6 +1,9 @@
 04 January 2016: Wouter
 	- Define DEFAULT_SOURCE together with BSD_SOURCE when that is defined,
 	  for Linux glibc 2.20.
+	- Fixup contrib/aaaa-filter-iterator.patch for moved contents in the
+	  source code, so it applies cleanly again.  Removed unused variable
+	  warnings.
 
 15 December 2015: Ralph
 	- Fix #729: omit use of escape sequences in echo since they are not 
