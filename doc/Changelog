@@ -1,6 +1,8 @@
 05 January 2016: Wouter
 	- #731: tcp-mss, outgoing-tcp-mss options for unbound.conf, patch
 	  from Daisuke Higashi.
+	- Support RFC7686: handle ".onion" Special-Use Domain. It is blocked
+	  by default, and can be unblocked with "nodefault" localzone config.
 
 04 January 2016: Wouter
 	- Define DEFAULT_SOURCE together with BSD_SOURCE when that is defined,

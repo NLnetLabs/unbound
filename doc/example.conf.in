@@ -483,6 +483,7 @@ server:
 	# local-zone: "localhost." nodefault
 	# local-zone: "127.in-addr.arpa." nodefault
 	# local-zone: "1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.ip6.arpa." nodefault
+	# local-zone: "onion." nodefault
 	# local-zone: "10.in-addr.arpa." nodefault
 	# local-zone: "16.172.in-addr.arpa." nodefault
 	# local-zone: "17.172.in-addr.arpa." nodefault
