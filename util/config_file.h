@@ -79,9 +79,9 @@ struct config_file {
 	/** tcp upstream queries (no UDP upstream queries) */
 	int tcp_upstream;
 	/** maximum segment size of tcp socket which queries are answered */
-	size_t tcp_mss;
+	int tcp_mss;
 	/** maximum segment size of tcp socket for outgoing queries */
-	size_t outgoing_tcp_mss;
+	int outgoing_tcp_mss;
 
 	/** private key file for dnstcp-ssl service (enabled if not NULL) */
 	char* ssl_service_key;
