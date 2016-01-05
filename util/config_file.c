@@ -98,6 +98,8 @@ config_create(void)
 	cfg->do_udp = 1;
 	cfg->do_tcp = 1;
 	cfg->tcp_upstream = 0;
+	cfg->tcp_mss = 0;
+	cfg->outgoing_tcp_mss = 0;
 	cfg->ssl_service_key = NULL;
 	cfg->ssl_service_pem = NULL;
 	cfg->ssl_port = 853;
@@ -368,6 +370,8 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	else S_YNO("do-udp:", do_udp)
 	else S_YNO("do-tcp:", do_tcp)
 	else S_YNO("tcp-upstream:", tcp_upstream)
+	else S_NUMBER_NONZERO("tcp-mss:", tcp_mss)
+	else S_NUMBER_NONZERO("outgoing-tcp-mss:", outgoing_tcp_mss)
 	else S_YNO("ssl-upstream:", ssl_upstream)
 	else S_STR("ssl-service-key:", ssl_service_key)
 	else S_STR("ssl-service-pem:", ssl_service_pem)
@@ -675,6 +679,8 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_YNO(opt, "do-udp", do_udp)
 	else O_YNO(opt, "do-tcp", do_tcp)
 	else O_YNO(opt, "tcp-upstream", tcp_upstream)
+	else O_DEC(opt, "tcp-mss", tcp_mss)
+	else O_DEC(opt, "outgoing-tcp-mss", outgoing_tcp_mss)
 	else O_YNO(opt, "ssl-upstream", ssl_upstream)
 	else O_STR(opt, "ssl-service-key", ssl_service_key)
 	else O_STR(opt, "ssl-service-pem", ssl_service_pem)

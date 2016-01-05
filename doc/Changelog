@@ -1,3 +1,7 @@
+05 January 2016: Wouter
+	- #731: tcp-mss, outgoing-tcp-mss options for unbound.conf, patch
+	  from Daisuke Higashi.
+
 04 January 2016: Wouter
 	- Define DEFAULT_SOURCE together with BSD_SOURCE when that is defined,
 	  for Linux glibc 2.20.

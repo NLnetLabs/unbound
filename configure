@@ -13846,7 +13846,7 @@ CC="$lt_save_CC"
 
 
 # Checks for header files.
-for ac_header in stdarg.h stdbool.h netinet/in.h sys/param.h sys/socket.h sys/un.h sys/uio.h sys/resource.h arpa/inet.h syslog.h netdb.h sys/wait.h pwd.h glob.h grp.h login_cap.h winsock2.h ws2tcpip.h endian.h
+for ac_header in stdarg.h stdbool.h netinet/in.h netinet/tcp.h sys/param.h sys/socket.h sys/un.h sys/uio.h sys/resource.h arpa/inet.h syslog.h netdb.h sys/wait.h pwd.h glob.h grp.h login_cap.h winsock2.h ws2tcpip.h endian.h
 do :
   as_ac_Header=`$as_echo "ac_cv_header_$ac_header" | $as_tr_sh`
 ac_fn_c_check_header_compile "$LINENO" "$ac_header" "$as_ac_Header" "$ac_includes_default
@@ -18081,6 +18081,10 @@ $ac_includes_default
 
 #ifdef HAVE_NETINET_IN_H
 #include <netinet/in.h>
+#endif
+
+#ifdef HAVE_NETINET_TCP_H
+#include <netinet/tcp.h>
 #endif
 
 #ifdef HAVE_ARPA_INET_H

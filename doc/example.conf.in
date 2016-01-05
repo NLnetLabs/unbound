@@ -173,6 +173,14 @@ server:
 	# useful for tunneling scenarios, default no.
 	# tcp-upstream: no
 
+	# Maximum segment size (MSS) of TCP socket on which the server
+	# responds to queries. Default is 0, system default MSS.
+	# tcp-mss: 0
+
+	# Maximum segment size (MSS) of TCP socket for outgoing queries.
+	# Default is 0, system default MSS.
+	# outgoing-tcp-mss: 0
+
 	# Detach from the terminal, run in background, "yes" or "no".
 	# do-daemonize: yes
 

@@ -242,6 +242,9 @@
 /* Define to 1 if you have the <netinet/in.h> header file. */
 #undef HAVE_NETINET_IN_H
 
+/* Define to 1 if you have the <netinet/tcp.h> header file. */
+#undef HAVE_NETINET_TCP_H
+
 /* Use libnettle for crypto */
 #undef HAVE_NETTLE
 
@@ -816,6 +819,10 @@
 
 #ifdef HAVE_NETINET_IN_H
 #include <netinet/in.h>
+#endif
+
+#ifdef HAVE_NETINET_TCP_H
+#include <netinet/tcp.h>
 #endif
 
 #ifdef HAVE_ARPA_INET_H

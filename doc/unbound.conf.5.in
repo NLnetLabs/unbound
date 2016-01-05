@@ -338,6 +338,22 @@ Enable or disable whether UDP queries are answered or issued. Default is yes.
 .B do\-tcp: \fI<yes or no>
 Enable or disable whether TCP queries are answered or issued. Default is yes.
 .TP
+.B tcp\-mss: \fI<number>
+Maximum segment size (MSS) of TCP socket on which the server responds
+to queries. Value lower than common MSS on Ethernet 
+(1220 for example) will address path MTU problem.
+Note that not all platform supports socket option to set MSS (TCP_MAXSEG).
+Default is system default MSS determined by interface MTU and
+negotiation between server and client.
+.TP
+.B outgoing\-tcp\-mss: \fI<number>
+Maximum segment size (MSS) of TCP socket for outgoing queries
+(from Unbound to other servers). Value lower than
+common MSS on Ethernet (1220 for example) will address path MTU problem.
+Note that not all platform supports socket option to set MSS (TCP_MAXSEG).
+Default is system default MSS determined by interface MTU and
+negotiation between Unbound and other servers.
+.TP
 .B tcp\-upstream: \fI<yes or no>
 Enable or disable whether the upstream queries use TCP only for transport.
 Default is no.  Useful in tunneling scenarios.
