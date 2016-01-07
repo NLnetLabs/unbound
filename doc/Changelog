@@ -1,5 +1,6 @@
 06 January 2016: Wouter
 	- Fix mingw crosscompile for recent mingw.
+	- Update aclocal, autoconf output with new versions (1.15, 2.4.6).
 
 05 January 2016: Wouter
 	- #731: tcp-mss, outgoing-tcp-mss options for unbound.conf, patch
