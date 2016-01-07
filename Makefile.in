@@ -216,14 +216,14 @@ WINAPPS=@WINAPPS@
 WIN_DAEMON_THE_SRC=winrc/win_svc.c winrc/w_inst.c
 SVCINST_SRC=winrc/unbound-service-install.c
 SVCINST_OBJ=unbound-service-install.lo
-SVCINST_OBJ_LINK=$(SVCINST_OBJ) w_inst.lo rsrc_svcinst.o $(COMPAT_OBJ_WITHOUT_CTIME)
+SVCINST_OBJ_LINK=$(SVCINST_OBJ) w_inst.lo rsrc_svcinst.o $(COMPAT_OBJ_WITHOUT_CTIMEARC4)
 SVCUNINST_SRC=winrc/unbound-service-remove.c
 SVCUNINST_OBJ=unbound-service-remove.lo
 SVCUNINST_OBJ_LINK=$(SVCUNINST_OBJ) w_inst.lo rsrc_svcuninst.o \
-$(COMPAT_OBJ_WITHOUT_CTIME)
+$(COMPAT_OBJ_WITHOUT_CTIMEARC4)
 ANCHORUPD_SRC=winrc/anchor-update.c
 ANCHORUPD_OBJ=anchor-update.lo
-ANCHORUPD_OBJ_LINK=$(ANCHORUPD_OBJ) rsrc_anchorupd.o $(COMPAT_OBJ_WITHOUT_CTIME)
+ANCHORUPD_OBJ_LINK=$(ANCHORUPD_OBJ) rsrc_anchorupd.o $(COMPAT_OBJ_WITHOUT_CTIMEARC4)
 RSRC_OBJ=rsrc_svcinst.o rsrc_svcuninst.o rsrc_anchorupd.o rsrc_unbound.o \
 	rsrc_unbound_host.o rsrc_unbound_anchor.o rsrc_unbound_control.o \
 	rsrc_unbound_checkconf.o

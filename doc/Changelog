@@ -1,3 +1,6 @@
+06 January 2016: Wouter
+	- Fix mingw crosscompile for recent mingw.
+
 05 January 2016: Wouter
 	- #731: tcp-mss, outgoing-tcp-mss options for unbound.conf, patch
 	  from Daisuke Higashi.
