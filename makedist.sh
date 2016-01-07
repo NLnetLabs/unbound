@@ -307,8 +307,8 @@ if [ "$DOWIN" = "yes" ]; then
     # procedure for making unbound installer on mingw. 
     info "Creating windows dist unbound $version"
     info "Calling configure"
-    echo "$configure"' --enable-debug --enable-static-exe '"$* $cross_flag"
-    $configure --enable-debug --enable-static-exe $* $cross_flag \
+    echo "$configure"' --enable-debug --enable-static-exe --disable-flto '"$* $cross_flag"
+    $configure --enable-debug --enable-static-exe --disable-flto $* $cross_flag \
 	|| error_cleanup "Could not configure"
     info "Calling make"
     make || error_cleanup "Could not make"
