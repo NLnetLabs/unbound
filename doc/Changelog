@@ -1,3 +1,6 @@
+11 January 2016: Wouter
+	- Fix test if -pthreads unused to use better grep for portability.
+
 06 January 2016: Wouter
 	- Fix mingw crosscompile for recent mingw.
 	- Update aclocal, autoconf output with new versions (1.15, 2.4.6).
