@@ -419,7 +419,7 @@ if test x_$withval != x_no; then
 		ub_have_pthreads=yes
 		AC_CHECK_TYPES([pthread_spinlock_t, pthread_rwlock_t],,,[#include <pthread.h>])
 
-		if echo "$CFLAGS" | grep -e "-pthread" >/dev/null; then
+		if echo "$CFLAGS" | $GREP -e "-pthread" >/dev/null; then
 		AC_MSG_CHECKING([if -pthread unused during linking])
 		# catch clang warning 'argument unused during compilation'
 		AC_LANG_CONFTEST([AC_LANG_SOURCE(AC_INCLUDES_DEFAULT

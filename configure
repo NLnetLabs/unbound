@@ -16362,7 +16362,7 @@ _ACEOF
 fi
 
 
-		if echo "$CFLAGS" | grep -e "-pthread" >/dev/null; then
+		if echo "$CFLAGS" | $GREP -e "-pthread" >/dev/null; then
 		{ $as_echo "$as_me:${as_lineno-$LINENO}: checking if -pthread unused during linking" >&5
 $as_echo_n "checking if -pthread unused during linking... " >&6; }
 		# catch clang warning 'argument unused during compilation'
