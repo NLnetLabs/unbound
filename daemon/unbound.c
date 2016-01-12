@@ -511,7 +511,7 @@ perform_setup(struct daemon* daemon, struct config_file* cfg, int debug_mode,
 		if(cfg->username && cfg->username[0] && cfg_uid != (uid_t)-1) {
 #  ifdef HAVE_CHOWN
 			if(chown(daemon->pidfile, cfg_uid, cfg_gid) == -1) {
-				log_err("cannot chown %u.%u %s: %s",
+				verbose(VERB_QUERY, "cannot chown %u.%u %s: %s",
 					(unsigned)cfg_uid, (unsigned)cfg_gid,
 					daemon->pidfile, strerror(errno));
 			}

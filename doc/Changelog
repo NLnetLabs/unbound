@@ -1,3 +1,7 @@
+12 January 2016: Wouter
+	- Fix #734: Do not log an error when the PID file cannot be chown'ed.
+	  Patch from Simon Deziel.
+
 11 January 2016: Wouter
 	- Fix test if -pthreads unused to use better grep for portability.
 
