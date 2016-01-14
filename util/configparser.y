@@ -998,7 +998,7 @@ server_module_conf: VAR_MODULE_CONF STRING_ARG
 server_val_override_date: VAR_VAL_OVERRIDE_DATE STRING_ARG
 	{
 		OUTYY(("P(server_val_override_date:%s)\n", $2));
-		if(strlen($2) == 0 || strcmp($2, "0") == 0) {
+		if(*$2 == '\0' || strcmp($2, "0") == 0) {
 			cfg_parser->cfg->val_date_override = 0;
 		} else if(strlen($2) == 14) {
 			cfg_parser->cfg->val_date_override = 
@@ -1016,7 +1016,7 @@ server_val_override_date: VAR_VAL_OVERRIDE_DATE STRING_ARG
 server_val_sig_skew_min: VAR_VAL_SIG_SKEW_MIN STRING_ARG
 	{
 		OUTYY(("P(server_val_sig_skew_min:%s)\n", $2));
-		if(strlen($2) == 0 || strcmp($2, "0") == 0) {
+		if(*$2 == '\0' || strcmp($2, "0") == 0) {
 			cfg_parser->cfg->val_sig_skew_min = 0;
 		} else {
 			cfg_parser->cfg->val_sig_skew_min = atoi($2);
@@ -1029,7 +1029,7 @@ server_val_sig_skew_min: VAR_VAL_SIG_SKEW_MIN STRING_ARG
 server_val_sig_skew_max: VAR_VAL_SIG_SKEW_MAX STRING_ARG
 	{
 		OUTYY(("P(server_val_sig_skew_max:%s)\n", $2));
-		if(strlen($2) == 0 || strcmp($2, "0") == 0) {
+		if(*$2 == '\0' || strcmp($2, "0") == 0) {
 			cfg_parser->cfg->val_sig_skew_max = 0;
 		} else {
 			cfg_parser->cfg->val_sig_skew_max = atoi($2);

@@ -63,7 +63,7 @@ static void config_start_include(const char* filename)
 		ub_c_error_msg("too many include files");
 		return;
 	}
-	if(strlen(filename) == 0) {
+	if(*filename == '\0') {
 		ub_c_error_msg("empty include file name");
 		return;
 	}
