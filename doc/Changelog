@@ -1,3 +1,7 @@
+19 January 2016: Wouter
+	- Squelch 'cannot assign requested address' log messages unless
+	  verbosity is high, it was spammed after network down.
+
 14 January 2016: Wouter
 	- Fix to simplify empty string checking from Michael McConville.
 	- iana portlist update.

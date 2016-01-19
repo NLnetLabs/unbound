@@ -356,7 +356,12 @@ udp_send_errno_needs_log(struct sockaddr* addr, socklen_t addrlen)
 #endif
 	/* permission denied is gotten for every send if the
 	 * network is disconnected (on some OS), squelch it */
-	if(errno == EPERM && verbosity < VERB_DETAIL)
+	if( ((errno == EPERM)
+#  ifdef EADDRNOTAVAIL
+		/* 'Cannot assign requested address' also when disconnected */
+		|| (errno == EADDRNOTAVAIL)
+#  endif
+		) && verbosity < VERB_DETAIL)
 		return 0;
 	/* squelch errors where people deploy AAAA ::ffff:bla for
 	 * authority servers, which we try for intranets. */
