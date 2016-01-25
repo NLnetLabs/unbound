@@ -54,6 +54,7 @@ LEX=@LEX@
 STRIP=@STRIP@
 CC=@CC@
 CPPFLAGS=-I. @CPPFLAGS@
+PYTHON_CPPFLAGS=-I. @PYTHON_CPPFLAGS@
 CFLAGS=@CFLAGS@
 LDFLAGS=@LDFLAGS@
 LIBS=@LIBS@
@@ -389,13 +390,13 @@ pythonmod.lo pythonmod.o: $(srcdir)/pythonmod/pythonmod.c config.h \
 
 pythonmod/interface.h:	$(srcdir)/pythonmod/interface.i config.h
 	@-if test ! -d pythonmod; then $(INSTALL) -d pythonmod; fi
-	$(SWIG) $(CPPFLAGS) -o $@ -python $(srcdir)/pythonmod/interface.i
+	$(SWIG) $(PYTHON_CPPFLAGS) -o $@ -python $(srcdir)/pythonmod/interface.i
 
 libunbound_wrap.lo libunbound_wrap.o: libunbound/python/libunbound_wrap.c \
 	unbound.h
 libunbound/python/libunbound_wrap.c:	$(srcdir)/libunbound/python/libunbound.i unbound.h
 	@-if test ! -d libunbound/python; then $(INSTALL) -d libunbound/python; fi
-	$(SWIG) -python -o $@ $(CPPFLAGS) -DPY_MAJOR_VERSION=$(PY_MAJOR_VERSION) $(srcdir)/libunbound/python/libunbound.i
+	$(SWIG) -python -o $@ $(PYTHON_CPPFLAGS) -DPY_MAJOR_VERSION=$(PY_MAJOR_VERSION) $(srcdir)/libunbound/python/libunbound.i
 
 # Pyunbound python unbound wrapper
 _unbound.la:	libunbound_wrap.lo libunbound.la

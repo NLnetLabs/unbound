@@ -1,3 +1,6 @@
+25 January 2016: Wouter
+	- Fix #738: Swig should not be invoked with CPPFLAGS.
+
 19 January 2016: Wouter
 	- Squelch 'cannot assign requested address' log messages unless
 	  verbosity is high, it was spammed after network down.
