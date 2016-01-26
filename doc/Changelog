@@ -2,6 +2,7 @@
 	- Fix #734: chown the pidfile if it resides inside the chroot.
 	- Use arc4random instead of random in tests (because it is
 	  available, possibly as compat, anyway).
+	- Fix cmsg alignment for argument to sendmsg on NetBSD.
 
 25 January 2016: Wouter
 	- Fix #738: Swig should not be invoked with CPPFLAGS.

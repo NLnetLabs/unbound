@@ -56,7 +56,9 @@
 /* -------- Start of local definitions -------- */
 /** if CMSG_ALIGN is not defined on this platform, a workaround */
 #ifndef CMSG_ALIGN
-#  ifdef _CMSG_DATA_ALIGN
+#  ifdef __CMSG_ALIGN
+#    define CMSG_ALIGN(n) __CMSG_ALIGN(n)
+#  elif defined(CMSG_DATA_ALIGN)
 #    define CMSG_ALIGN _CMSG_DATA_ALIGN
 #  else
 #    define CMSG_ALIGN(len) (((len)+sizeof(long)-1) & ~(sizeof(long)-1))
