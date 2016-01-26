@@ -3,6 +3,8 @@
 	- Use arc4random instead of random in tests (because it is
 	  available, possibly as compat, anyway).
 	- Fix cmsg alignment for argument to sendmsg on NetBSD.
+	- Fix that unbound complains about unimplemented IP_PKTINFO for
+	  sendmsg on NetBSD (for interface-automatic).
 
 25 January 2016: Wouter
 	- Fix #738: Swig should not be invoked with CPPFLAGS.
