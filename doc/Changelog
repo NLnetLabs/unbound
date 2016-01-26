@@ -1,5 +1,7 @@
 26 January 2016: Wouter
 	- Fix #734: chown the pidfile if it resides inside the chroot.
+	- Use arc4random instead of random in tests (because it is
+	  available, possibly as compat, anyway).
 
 25 January 2016: Wouter
 	- Fix #738: Swig should not be invoked with CPPFLAGS.
