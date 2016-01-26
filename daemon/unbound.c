@@ -481,6 +481,12 @@ perform_setup(struct daemon* daemon, struct config_file* cfg, int debug_mode,
 #endif
 
 #ifdef HAVE_KILL
+	/* true if pidfile is inside chrootdir, or nochroot */
+	const int pidinchroot = !(cfg->chrootdir && cfg->chrootdir[0]) ||
+				(cfg->chrootdir && cfg->chrootdir[0] &&
+				strncmp(daemon->pidfile, cfg->chrootdir,
+				strlen(cfg->chrootdir))==0)
+
 	/* check old pid file before forking */
 	if(cfg->pidfile && cfg->pidfile[0]) {
 		/* calculate position of pidfile */
@@ -490,12 +496,7 @@ perform_setup(struct daemon* daemon, struct config_file* cfg, int debug_mode,
 				cfg, 1);
 		if(!daemon->pidfile)
 			fatal_exit("pidfile alloc: out of memory");
-		checkoldpid(daemon->pidfile,
-			/* true if pidfile is inside chrootdir, or nochroot */
-			!(cfg->chrootdir && cfg->chrootdir[0]) ||
-			(cfg->chrootdir && cfg->chrootdir[0] &&
-			strncmp(daemon->pidfile, cfg->chrootdir,
-				strlen(cfg->chrootdir))==0));
+		checkoldpid(daemon->pidfile, pidinchroot);
 	}
 #endif
 
@@ -508,7 +509,8 @@ perform_setup(struct daemon* daemon, struct config_file* cfg, int debug_mode,
 #ifdef HAVE_KILL
 	if(cfg->pidfile && cfg->pidfile[0]) {
 		writepid(daemon->pidfile, getpid());
-		if(cfg->username && cfg->username[0] && cfg_uid != (uid_t)-1) {
+		if(cfg->username && cfg->username[0] && cfg_uid != (uid_t)-1 &&
+			pidinchroot) {
 #  ifdef HAVE_CHOWN
 			if(chown(daemon->pidfile, cfg_uid, cfg_gid) == -1) {
 				verbose(VERB_QUERY, "cannot chown %u.%u %s: %s",
