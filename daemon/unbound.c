@@ -485,7 +485,7 @@ perform_setup(struct daemon* daemon, struct config_file* cfg, int debug_mode,
 	const int pidinchroot = !(cfg->chrootdir && cfg->chrootdir[0]) ||
 				(cfg->chrootdir && cfg->chrootdir[0] &&
 				strncmp(daemon->pidfile, cfg->chrootdir,
-				strlen(cfg->chrootdir))==0)
+				strlen(cfg->chrootdir))==0);
 
 	/* check old pid file before forking */
 	if(cfg->pidfile && cfg->pidfile[0]) {
