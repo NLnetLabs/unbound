@@ -443,6 +443,9 @@ static void
 perform_setup(struct daemon* daemon, struct config_file* cfg, int debug_mode,
 	const char** cfgfile)
 {
+#ifdef HAVE_KILL
+	int pidinchroot;
+#endif
 #ifdef HAVE_GETPWNAM
 	struct passwd *pwd = NULL;
 
@@ -482,7 +485,7 @@ perform_setup(struct daemon* daemon, struct config_file* cfg, int debug_mode,
 
 #ifdef HAVE_KILL
 	/* true if pidfile is inside chrootdir, or nochroot */
-	const int pidinchroot = !(cfg->chrootdir && cfg->chrootdir[0]) ||
+	pidinchroot = !(cfg->chrootdir && cfg->chrootdir[0]) ||
 				(cfg->chrootdir && cfg->chrootdir[0] &&
 				strncmp(daemon->pidfile, cfg->chrootdir,
 				strlen(cfg->chrootdir))==0);
