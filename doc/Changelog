@@ -1,5 +1,6 @@
 27 January 2016: Wouter
 	- Made netbsd sendmsg test nonfatal, in case of false positives.
+	- Fix #741: log message for dnstap socket connection is more clear.
 
 26 January 2016: Wouter
 	- Fix #734: chown the pidfile if it resides inside the chroot.
