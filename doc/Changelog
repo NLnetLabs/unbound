@@ -1,3 +1,6 @@
+27 January 2016: Wouter
+	- Made netbsd sendmsg test nonfatal, in case of false positives.
+
 26 January 2016: Wouter
 	- Fix #734: chown the pidfile if it resides inside the chroot.
 	- Use arc4random instead of random in tests (because it is

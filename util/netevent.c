@@ -562,7 +562,7 @@ comm_point_send_udp_msg_if(struct comm_point *c, sldns_buffer* packet,
 #ifdef __NetBSD__
 		/* netbsd 7 has IP_PKTINFO for recv but not send */
 		if(errno == EINVAL && r->srctype == 4)
-			fatal_exit("sendmsg: No support for sendmsg(IP_PKTINFO). "
+			log_err("sendmsg: No support for sendmsg(IP_PKTINFO). "
 				"Please disable interface-automatic");
 #endif
 		return 0;
