@@ -740,7 +740,7 @@ main(int argc, char* argv[])
 #endif
 			break;
 		case 'v':
-			cmdline_verbose ++;
+			cmdline_verbose++;
 			verbosity++;
 			break;
 		case 'd':

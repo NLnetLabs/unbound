@@ -1,3 +1,6 @@
+29 January 2016: Wouter
+	- Neater cmdline_verbose increment patch from Edgar Pettijohn.
+
 27 January 2016: Wouter
 	- Made netbsd sendmsg test nonfatal, in case of false positives.
 	- Fix #741: log message for dnstap socket connection is more clear.
