@@ -1,5 +1,6 @@
 8 February 2016: Wouter
 	- Fix patch typo in prevuous commit for 734 from Adi Prasaja.
+	- RR Type CSYNC support RFC 7477, in debug printout and config input.
 
 29 January 2016: Wouter
 	- Neater cmdline_verbose increment patch from Edgar Pettijohn.
