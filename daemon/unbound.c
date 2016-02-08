@@ -487,7 +487,7 @@ perform_setup(struct daemon* daemon, struct config_file* cfg, int debug_mode,
 	/* true if pidfile is inside chrootdir, or nochroot */
 	pidinchroot = !(cfg->chrootdir && cfg->chrootdir[0]) ||
 				(cfg->chrootdir && cfg->chrootdir[0] &&
-				strncmp(daemon->pidfile, cfg->chrootdir,
+				strncmp(cfg->pidfile, cfg->chrootdir,
 				strlen(cfg->chrootdir))==0);
 
 	/* check old pid file before forking */
