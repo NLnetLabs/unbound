@@ -33,6 +33,12 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+/**
+ * \file
+ *
+ * This file provides a list of lan zones.
+ */
+
 #include "util/as112.h"
 
 static const char* as112_zone_array[] = {

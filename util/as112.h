@@ -33,6 +33,12 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+/**
+ * \file
+ *
+ * This file provides a list of lan zones
+ */
+
 #ifndef UTIL_AS112_H
 #define UTIL_AS112_H
 
