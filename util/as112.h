@@ -36,6 +36,16 @@
 #ifndef UTIL_AS112_H
 #define UTIL_AS112_H
 
+/** 
+ * Array of text-format domain names of the AS112 zones.
+ * The array ends with NULL.  "AS112" is a service on the internet that
+ * that this array is named after.  The names in this list (or some of them)
+ * are null-routed by this service to avoid load on central servers caused by
+ * mistaken lookups for local content on the global internet.
+ *
+ * This is the list of names that unbound should not normally be sending
+ * on towards the internet, because they are local-use.
+ */
 extern const char** as112_zones;
 
 #endif
