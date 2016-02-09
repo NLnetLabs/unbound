@@ -1,5 +1,7 @@
 9 February 2016: Wouter
 	- Test for type OPENPGPKEY.
+	- insecure-lan-zones: yesno config option, patch from Dag-Erling
+	  Smørgrav.
 
 8 February 2016: Wouter
 	- Fix patch typo in prevuous commit for 734 from Adi Prasaja.
