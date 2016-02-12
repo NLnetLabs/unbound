@@ -90,6 +90,8 @@
 
 /** Size of an UDP datagram */
 #define NORMAL_UDP_SIZE	512 /* bytes */
+/** ratelimit for error responses */
+#define ERROR_RATELIMIT 100 /* qps */
 
 /** 
  * seconds to add to prefetch leeway.  This is a TTL that expires old rrsets
@@ -295,6 +297,26 @@ worker_handle_service_reply(struct comm_point* c, void* arg, int error,
 	return 0;
 }
 
+/** ratelimit error replies
+ * @param worker: the worker struct with ratelimit counter
+ * @param err: error code that would be wanted.
+ * @return value of err if okay, or -1 if it should be discarded instead.
+ */
+static int
+worker_err_ratelimit(struct worker* worker, int err)
+{
+	if(worker->err_limit_time == *worker->env.now) {
+		/* see if limit is exceeded for this second */
+		if(worker->err_limit_count++ > ERROR_RATELIMIT)
+			return -1;
+	} else {
+		/* new second, new limits */
+		worker->err_limit_time = *worker->env.now;
+		worker->err_limit_count = 1;
+	}
+	return err;
+}
+
 /** check request sanity.
  * @param pkt: the wire packet to examine for sanity.
  * @param worker: parameters for checking.
@@ -319,32 +341,32 @@ worker_check_request(sldns_buffer* pkt, struct worker* worker)
 	if(LDNS_TC_WIRE(sldns_buffer_begin(pkt))) {
 		LDNS_TC_CLR(sldns_buffer_begin(pkt));
 		verbose(VERB_QUERY, "request bad, has TC bit on");
-		return LDNS_RCODE_FORMERR;
+		return worker_err_ratelimit(worker, LDNS_RCODE_FORMERR);
 	}
 	if(LDNS_OPCODE_WIRE(sldns_buffer_begin(pkt)) != LDNS_PACKET_QUERY) {
 		verbose(VERB_QUERY, "request unknown opcode %d", 
 			LDNS_OPCODE_WIRE(sldns_buffer_begin(pkt)));
-		return LDNS_RCODE_NOTIMPL;
+		return worker_err_ratelimit(worker, LDNS_RCODE_NOTIMPL);
 	}
 	if(LDNS_QDCOUNT(sldns_buffer_begin(pkt)) != 1) {
 		verbose(VERB_QUERY, "request wrong nr qd=%d", 
 			LDNS_QDCOUNT(sldns_buffer_begin(pkt)));
-		return LDNS_RCODE_FORMERR;
+		return worker_err_ratelimit(worker, LDNS_RCODE_FORMERR);
 	}
 	if(LDNS_ANCOUNT(sldns_buffer_begin(pkt)) != 0) {
 		verbose(VERB_QUERY, "request wrong nr an=%d", 
 			LDNS_ANCOUNT(sldns_buffer_begin(pkt)));
-		return LDNS_RCODE_FORMERR;
+		return worker_err_ratelimit(worker, LDNS_RCODE_FORMERR);
 	}
 	if(LDNS_NSCOUNT(sldns_buffer_begin(pkt)) != 0) {
 		verbose(VERB_QUERY, "request wrong nr ns=%d", 
 			LDNS_NSCOUNT(sldns_buffer_begin(pkt)));
-		return LDNS_RCODE_FORMERR;
+		return worker_err_ratelimit(worker, LDNS_RCODE_FORMERR);
 	}
 	if(LDNS_ARCOUNT(sldns_buffer_begin(pkt)) > 1) {
 		verbose(VERB_QUERY, "request wrong nr ar=%d", 
 			LDNS_ARCOUNT(sldns_buffer_begin(pkt)));
-		return LDNS_RCODE_FORMERR;
+		return worker_err_ratelimit(worker, LDNS_RCODE_FORMERR);
 	}
 	return 0;
 }
@@ -553,7 +575,7 @@ answer_from_cache(struct worker* worker, struct query_info* qinfo,
 	if(rep->an_numrrsets > 0 && (rep->rrsets[0]->rk.type == 
 		htons(LDNS_RR_TYPE_CNAME) || rep->rrsets[0]->rk.type == 
 		htons(LDNS_RR_TYPE_DNAME))) {
-		if(!reply_check_cname_chain(rep)) {
+		if(!reply_check_cname_chain(qinfo, rep)) {
 			/* cname chain invalid, redo iterator steps */
 			verbose(VERB_ALGO, "Cache reply: cname chain broken");
 		bail_out:
@@ -820,6 +842,10 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 	if(!query_info_parse(&qinfo, c->buffer)) {
 		verbose(VERB_ALGO, "worker parse request: formerror.");
 		log_addr(VERB_CLIENT,"from",&repinfo->addr, repinfo->addrlen);
+		if(worker_err_ratelimit(worker, LDNS_RCODE_FORMERR) == -1) {
+			comm_point_drop_reply(repinfo);
+			return 0;
+		}
 		sldns_buffer_rewind(c->buffer);
 		LDNS_QR_SET(sldns_buffer_begin(c->buffer));
 		LDNS_RCODE_SET(sldns_buffer_begin(c->buffer), 
@@ -847,11 +873,16 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 		goto send_reply;
 	}
 	if((ret=parse_edns_from_pkt(c->buffer, &edns)) != 0) {
+		struct edns_data reply_edns;
 		verbose(VERB_ALGO, "worker parse edns: formerror.");
 		log_addr(VERB_CLIENT,"from",&repinfo->addr, repinfo->addrlen);
-		sldns_buffer_rewind(c->buffer);
-		LDNS_QR_SET(sldns_buffer_begin(c->buffer));
+		memset(&reply_edns, 0, sizeof(reply_edns));
+		reply_edns.edns_present = 1;
+		reply_edns.udp_size = EDNS_ADVERTISED_SIZE;
 		LDNS_RCODE_SET(sldns_buffer_begin(c->buffer), ret);
+		error_encode(c->buffer, ret, &qinfo,
+			*(uint16_t*)(void *)sldns_buffer_begin(c->buffer),
+			sldns_buffer_read_u16_at(c->buffer, 2), &reply_edns);
 		server_stats_insrcode(&worker->stats, c->buffer);
 		goto send_reply;
 	}
@@ -1202,7 +1233,8 @@ worker_init(struct worker* worker, struct config_file *cfg,
 		cfg->do_tcp?cfg->outgoing_num_tcp:0, 
 		worker->daemon->env->infra_cache, worker->rndstate,
 		cfg->use_caps_bits_for_id, worker->ports, worker->numports,
-		cfg->unwanted_threshold, &worker_alloc_cleanup, worker,
+		cfg->unwanted_threshold, cfg->outgoing_tcp_mss,
+		&worker_alloc_cleanup, worker,
 		cfg->do_udp, worker->daemon->connect_sslctx, cfg->delay_close,
 		dtenv
 #ifdef CLIENT_SUBNET

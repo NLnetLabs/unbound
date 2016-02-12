@@ -519,8 +519,8 @@ validate_msg_signatures(struct module_qstate* qstate, struct module_env* env,
 				"has failed AUTHORITY rrset:", s->rk.dname,
 				ntohs(s->rk.type), ntohs(s->rk.rrset_class));
 			errinf(qstate, reason);
-			errinf_rrset(qstate, s);
 			errinf_origin(qstate, qstate->reply_origin);
+			errinf_rrset(qstate, s);
 			chase_reply->security = sec_status_bogus;
 			return 0;
 		}
@@ -749,7 +749,7 @@ validate_nodata_response(struct module_env* env, struct val_env* ve,
 	/* Since we are here, there must be nothing in the ANSWER section to
 	 * validate. */
 	/* (Note: CNAME/DNAME responses will not directly get here --
-	 * instead, they are chased down into indiviual CNAME validations,
+	 * instead, they are chased down into individual CNAME validations,
 	 * and at the end of the cname chain a POSITIVE, or CNAME_NOANSWER 
 	 * validation.) */
 	
@@ -1597,7 +1597,7 @@ processFindKey(struct module_qstate* qstate, struct val_qstate* vq, int id)
 		target_key_name) != 0) {
 		/* check if there is a cache entry : pick up an NSEC if
 		 * there is no DS, check if that NSEC has DS-bit unset, and
-		 * thus can disprove the secure delagation we seek.
+		 * thus can disprove the secure delegation we seek.
 		 * We can then use that NSEC even in the absence of a SOA
 		 * record that would be required by the iterator to supply
 		 * a completely protocol-correct response. 
@@ -1815,6 +1815,8 @@ processValidate(struct module_qstate* qstate, struct val_qstate* vq,
 
 /**
  * Init DLV check.
+ * DLV is going to be decommissioned, but the code is still here for some time.
+ *
  * Called when a query is determined by other trust anchors to be insecure
  * (or indeterminate).  Then we look if there is a key in the DLV.
  * Performs aggressive negative cache check to see if there is no key.
@@ -1827,7 +1829,7 @@ processValidate(struct module_qstate* qstate, struct val_qstate* vq,
  * @return  true if there is no DLV.
  * 	false: processing is finished for the validator operate().
  * 	This function may exit in three ways:
- *         o	no DLV (agressive cache), so insecure. (true)
+ *         o	no DLV (aggressive cache), so insecure. (true)
  *         o	error - stop processing (false)
  *         o	DLV lookup was started, stop processing (false)
  */
@@ -2775,7 +2777,7 @@ process_dnskey_response(struct module_qstate* qstate, struct val_qstate* vq,
 		vq->state = VAL_VALIDATE_STATE;
 		return;
 	}
-	downprot = 1;
+	downprot = qstate->env->cfg->harden_algo_downgrade;
 	vq->key_entry = val_verify_new_DNSKEYs(qstate->region, qstate->env,
 		ve, dnskey, vq->ds_rrset, downprot, &reason);
 

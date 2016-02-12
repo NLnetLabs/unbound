@@ -136,6 +136,43 @@ create_temp_dir () {
     cd $temp_dir
 }
 
+# pass filename as $1 arg.
+# creates file.sha1 and file.sha256
+storehash () {
+    case $OSTYPE in
+        linux*)
+                sha=`sha1sum $1 |  awk '{ print $1 }'`
+                sha256=`sha256sum $1 |  awk '{ print $1 }'`
+                ;;
+        freebsd*)
+                sha=`sha1 $1 |  awk '{ print $5 }'`
+                sha256=`sha256 $1 |  awk '{ print $5 }'`
+                ;;
+	*)
+		# in case $OSTYPE is gone.
+		case `uname` in
+		Linux*)
+		  sha=`sha1sum $1 |  awk '{ print $1 }'`
+		  sha256=`sha256sum $1 |  awk '{ print $1 }'`
+		  ;;
+		FreeBSD*)
+		  sha=`sha1 $1 |  awk '{ print $5 }'`
+		  sha256=`sha256 $1 |  awk '{ print $5 }'`
+		  ;;
+		*)
+		  sha=`sha1sum $1 |  awk '{ print $1 }'`
+		  sha256=`sha256sum $1 |  awk '{ print $1 }'`
+		  ;;
+		esac
+                ;;
+    esac
+    echo $sha > $1.sha1
+    echo $sha256 > $1.sha256
+    echo "hash of $1.{sha1,sha256}"
+    echo "sha1 $sha"
+    echo "sha256 $sha256"
+}
+
 
 SNAPSHOT="no"
 RC="no"
@@ -270,8 +307,8 @@ if [ "$DOWIN" = "yes" ]; then
     # procedure for making unbound installer on mingw. 
     info "Creating windows dist unbound $version"
     info "Calling configure"
-    echo "$configure"' --enable-debug --enable-static-exe '"$* $cross_flag"
-    $configure --enable-debug --enable-static-exe $* $cross_flag \
+    echo "$configure"' --enable-debug --enable-static-exe --disable-flto '"$* $cross_flag"
+    $configure --enable-debug --enable-static-exe --disable-flto $* $cross_flag \
 	|| error_cleanup "Could not configure"
     info "Calling make"
     make || error_cleanup "Could not make"
@@ -291,10 +328,10 @@ if [ "$DOWIN" = "yes" ]; then
     $strip unbound-service-install.exe
     $strip unbound-service-remove.exe
     cd tmp.$$
-    cp ../doc/example.conf example.conf
-    cp ../unbound.exe ../unbound-anchor.exe ../unbound-host.exe ../unbound-control.exe ../unbound-checkconf.exe ../unbound-service-install.exe ../unbound-service-remove.exe ../LICENSE ../winrc/unbound-control-setup.cmd ../winrc/unbound-website.url ../winrc/service.conf ../winrc/README.txt .
+    cp ../doc/example.conf ../doc/Changelog .
+    cp ../unbound.exe ../unbound-anchor.exe ../unbound-host.exe ../unbound-control.exe ../unbound-checkconf.exe ../unbound-service-install.exe ../unbound-service-remove.exe ../LICENSE ../winrc/unbound-control-setup.cmd ../winrc/unbound-website.url ../winrc/service.conf ../winrc/README.txt ../contrib/create_unbound_ad_servers.cmd ../contrib/warmup.cmd ../contrib/unbound_cache.cmd .
     # zipfile
-    zip ../$file LICENSE README.txt unbound.exe unbound-anchor.exe unbound-host.exe unbound-control.exe unbound-checkconf.exe unbound-service-install.exe unbound-service-remove.exe unbound-control-setup.cmd example.conf service.conf unbound-website.url
+    zip ../$file LICENSE README.txt unbound.exe unbound-anchor.exe unbound-host.exe unbound-control.exe unbound-checkconf.exe unbound-service-install.exe unbound-service-remove.exe unbound-control-setup.cmd example.conf service.conf unbound-website.url create_unbound_ad_servers.cmd warmup.cmd unbound_cache.cmd Changelog
     info "Testing $file"
     (cd .. ; zip -T $file )
     # installer
@@ -311,6 +348,8 @@ if [ "$DOWIN" = "yes" ]; then
 	    mv unbound-$version.zip $cwd/.
 	    cleanup
     fi
+    storehash unbound_setup_$version.exe
+    storehash unbound-$version.zip
     ls -lG unbound_setup_$version.exe
     ls -lG unbound-$version.zip
     info "Done"
@@ -411,36 +450,11 @@ tar czf ../unbound-$version.tar.gz unbound-$version || error_cleanup "Failed to 
 
 cleanup
 
-case $OSTYPE in
-        linux*)
-                sha=`sha1sum unbound-$version.tar.gz |  awk '{ print $1 }'`
-                sha256=`sha256sum unbound-$version.tar.gz |  awk '{ print $1 }'`
-                ;;
-        freebsd*)
-                sha=`sha1  unbound-$version.tar.gz |  awk '{ print $5 }'`
-                sha256=`sha256  unbound-$version.tar.gz |  awk '{ print $5 }'`
-                ;;
-	*)
-		# in case $OSTYPE is gone.
-		case `uname` in
-		Linux*)
-		  sha=`sha1sum unbound-$version.tar.gz |  awk '{ print $1 }'`
-		  sha256=`sha256sum unbound-$version.tar.gz |  awk '{ print $1 }'`
-		  ;;
-		FreeBSD*)
-		  sha=`sha1  unbound-$version.tar.gz |  awk '{ print $5 }'`
-		  sha256=`sha256  unbound-$version.tar.gz |  awk '{ print $5 }'`
-		  ;;
-		*)
-		  sha=`sha1sum unbound-$version.tar.gz |  awk '{ print $1 }'`
-		  sha256=`sha256sum unbound-$version.tar.gz |  awk '{ print $1 }'`
-		  ;;
-		esac
-                ;;
-esac
-echo $sha > unbound-$version.tar.gz.sha1
-echo $sha256 > unbound-$version.tar.gz.sha256
+storehash unbound-$version.tar.gz
+echo "create unbound-$version.tar.gz.asc with:"
+echo "  gpg --armor --detach-sign unbound-$version.tar.gz"
+echo "  gpg --armor --detach-sign unbound-$version.zip"
+echo "  gpg --armor --detach-sign unbound_setup_$version.exe"
 
 info "Unbound distribution created successfully."
-info "SHA1sum: $sha"
 

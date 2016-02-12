@@ -182,6 +182,8 @@ enum sldns_enum_rr_type
 	LDNS_RR_TYPE_NSEC3PARAM = 51, /* RFC 5155 */
 	LDNS_RR_TYPE_NSEC3PARAMS = 51,
 	LDNS_RR_TYPE_TLSA = 52, /* RFC 6698 */
+	LDNS_RR_TYPE_SMIMEA = 53, /* draft-ietf-dane-smime, TLSA-like but may
+				     be extended */
 
 	LDNS_RR_TYPE_HIP = 55, /* RFC 5205 */
 
@@ -193,6 +195,8 @@ enum sldns_enum_rr_type
         LDNS_RR_TYPE_TALINK = 58,
 	LDNS_RR_TYPE_CDS = 59, /** RFC 7344 */
 	LDNS_RR_TYPE_CDNSKEY = 60, /** RFC 7344 */
+	LDNS_RR_TYPE_OPENPGPKEY = 61, /* draft-ietf-dane-openpgpkey */
+	LDNS_RR_TYPE_CSYNC = 62, /* RFC 7477 */
 
 	LDNS_RR_TYPE_SPF = 99, /* RFC 4408 */
 
@@ -220,8 +224,7 @@ enum sldns_enum_rr_type
 	LDNS_RR_TYPE_MAILA = 254,
 	/**  any type (wildcard) */
 	LDNS_RR_TYPE_ANY = 255,
-	/** draft-faltstrom-uri-06 */
-	LDNS_RR_TYPE_URI = 256,
+	LDNS_RR_TYPE_URI = 256, /* RFC 7553 */
 	LDNS_RR_TYPE_CAA = 257, /* RFC 6844 */
 
 	/** DNSSEC Trust Authorities */
@@ -343,7 +346,7 @@ enum sldns_enum_rdf_type
 
         /** A <character-string> encoding of the value field as specified 
          * [RFC1035], Section 5.1., encoded as remaining rdata.
-         * For CAA.
+         * For CAA, URI.
          */
         LDNS_RDF_TYPE_LONG_STR,
 

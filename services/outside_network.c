@@ -227,6 +227,21 @@ outnet_tcp_take_into_use(struct waiting_tcp* w, uint8_t* pkt, size_t pkt_len)
 #endif
 		return 0;
 	}
+
+	if (w->outnet->tcp_mss > 0) {
+#if defined(IPPROTO_TCP) && defined(TCP_MAXSEG)
+		if(setsockopt(s, IPPROTO_TCP, TCP_MAXSEG,
+			(void*)&w->outnet->tcp_mss,
+			(socklen_t)sizeof(w->outnet->tcp_mss)) < 0) {
+			verbose(VERB_ALGO, "outgoing tcp:"
+				" setsockopt(.. SO_REUSEADDR ..) failed");
+		}
+#else
+		verbose(VERB_ALGO, "outgoing tcp:"
+			" setsockopt(TCP_MAXSEG) unsupported");
+#endif /* defined(IPPROTO_TCP) && defined(TCP_MAXSEG) */
+	}
+
 	if(!pick_outgoing_tcp(w, s))
 		return 0;
 
@@ -595,7 +610,7 @@ outside_network_create(struct comm_base *base, size_t bufsize,
 	size_t num_ports, char** ifs, int num_ifs, int do_ip4, 
 	int do_ip6, size_t num_tcp, struct infra_cache* infra,
 	struct ub_randstate* rnd, int use_caps_for_id, int* availports, 
-	int numavailports, size_t unwanted_threshold,
+	int numavailports, size_t unwanted_threshold, int tcp_mss,
 	void (*unwanted_action)(void*), void* unwanted_param, int do_udp,
 	void* sslctx, int delayclose, struct dt_env* dtenv
 #ifdef CLIENT_SUBNET
@@ -632,6 +647,7 @@ outside_network_create(struct comm_base *base, size_t bufsize,
 #ifdef CLIENT_SUBNET
 	outnet->edns_subnet_upstreams = edns_subnet_upstreams;
 #endif
+	outnet->tcp_mss = tcp_mss;
 #ifndef S_SPLINT_S
 	if(delayclose) {
 		outnet->delayclose = 1;
@@ -1531,7 +1547,8 @@ serviced_callbacks(struct serviced_query* sq, int error, struct comm_point* c,
 	log_assert(rem); /* should have been present */
 	sq->to_be_deleted = 1; 
 	verbose(VERB_ALGO, "svcd callbacks start");
-	if(sq->outnet->use_caps_for_id && error == NETEVENT_NOERROR && c) {
+	if(sq->outnet->use_caps_for_id && error == NETEVENT_NOERROR && c &&
+		!sq->nocaps) {
 		/* noerror and nxdomain must have a qname in reply */
 		if(sldns_buffer_read_u16_at(c->buffer, 4) == 0 &&
 			(LDNS_RCODE_WIRE(sldns_buffer_begin(c->buffer))

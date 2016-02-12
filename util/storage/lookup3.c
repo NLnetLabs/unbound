@@ -358,7 +358,7 @@ uint32_t hashlittle( const void *key, size_t length, uint32_t initval)
      * rest of the string.  Every machine with memory protection I've seen
      * does it on word boundaries, so is OK with this.  But VALGRIND will
      * still catch it and complain.  The masking trick does make the hash
-     * noticably faster for short strings (like English words).
+     * noticeably faster for short strings (like English words).
      */
 #ifndef VALGRIND
 
@@ -546,7 +546,7 @@ void hashlittle2(
      * rest of the string.  Every machine with memory protection I've seen
      * does it on word boundaries, so is OK with this.  But VALGRIND will
      * still catch it and complain.  The masking trick does make the hash
-     * noticably faster for short strings (like English words).
+     * noticeably faster for short strings (like English words).
      */
 #ifndef VALGRIND
 
@@ -727,7 +727,7 @@ uint32_t hashbig( const void *key, size_t length, uint32_t initval)
      * rest of the string.  Every machine with memory protection I've seen
      * does it on word boundaries, so is OK with this.  But VALGRIND will
      * still catch it and complain.  The masking trick does make the hash
-     * noticably faster for short strings (like English words).
+     * noticeably faster for short strings (like English words).
      */
 #ifndef VALGRIND
 
@@ -860,7 +860,7 @@ void driver2()
     {
       for (j=0; j<8; ++j)   /*------------------------ for each input bit, */
       {
-	for (m=1; m<8; ++m) /*------------ for serveral possible initvals, */
+	for (m=1; m<8; ++m) /*------------ for several possible initvals, */
 	{
 	  for (l=0; l<HASHSTATE; ++l)
 	    e[l]=f[l]=g[l]=h[l]=x[l]=y[l]=~((uint32_t)0);

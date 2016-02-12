@@ -70,6 +70,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_SERVER VAR_VERBOSITY VAR_NUM_THREADS VAR_PORT
 %token VAR_OUTGOING_RANGE VAR_INTERFACE
 %token VAR_DO_IP4 VAR_DO_IP6 VAR_DO_UDP VAR_DO_TCP 
+%token VAR_TCP_MSS VAR_OUTGOING_TCP_MSS
 %token VAR_CHROOT VAR_USERNAME VAR_DIRECTORY VAR_LOGFILE VAR_PIDFILE
 %token VAR_MSG_CACHE_SIZE VAR_MSG_CACHE_SLABS VAR_NUM_QUERIES_PER_THREAD
 %token VAR_RRSET_CACHE_SIZE VAR_RRSET_CACHE_SLABS VAR_OUTGOING_NUM_TCP
@@ -106,7 +107,8 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_IGNORE_CD_FLAG VAR_LOG_QUERIES VAR_TCP_UPSTREAM VAR_SSL_UPSTREAM
 %token VAR_SSL_SERVICE_KEY VAR_SSL_SERVICE_PEM VAR_SSL_PORT VAR_FORWARD_FIRST
 %token VAR_STUB_FIRST VAR_MINIMAL_RESPONSES VAR_RRSET_ROUNDROBIN
-%token VAR_MAX_UDP_SIZE VAR_DELAY_CLOSE VAR_UNBLOCK_LAN_ZONES
+%token VAR_MAX_UDP_SIZE VAR_DELAY_CLOSE
+%token VAR_UNBLOCK_LAN_ZONES VAR_INSECURE_LAN_ZONES
 %token VAR_INFRA_CACHE_MIN_RTT
 %token VAR_DNS64_PREFIX VAR_DNS64_SYNTHALL
 %token VAR_DNSTAP VAR_DNSTAP_ENABLE VAR_DNSTAP_SOCKET_PATH
@@ -123,6 +125,8 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_RATELIMIT_FOR_DOMAIN VAR_RATELIMIT_BELOW_DOMAIN VAR_RATELIMIT_FACTOR
 %token VAR_SEND_CLIENT_SUBNET VAR_CLIENT_SUBNET_OPCODE
 %token VAR_MAX_CLIENT_SUBNET_IPV4 VAR_MAX_CLIENT_SUBNET_IPV6
+%token VAR_CAPS_WHITELIST VAR_CACHE_MAX_NEGATIVE_TTL VAR_PERMIT_SMALL_HOLDDOWN
+%token VAR_QNAME_MINIMISATION
 
 
 %%
@@ -143,6 +147,7 @@ contents_server: contents_server content_server
 content_server: server_num_threads | server_verbosity | server_port |
 	server_outgoing_range | server_do_ip4 |
 	server_do_ip6 | server_do_udp | server_do_tcp | 
+	server_tcp_mss | server_outgoing_tcp_mss |
 	server_interface | server_chroot | server_username | 
 	server_directory | server_logfile | server_pidfile |
 	server_msg_cache_size | server_msg_cache_slabs |
@@ -181,7 +186,8 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_log_queries | server_tcp_upstream | server_ssl_upstream |
 	server_ssl_service_key | server_ssl_service_pem | server_ssl_port |
 	server_minimal_responses | server_rrset_roundrobin | server_max_udp_size |
-	server_so_reuseport | server_delay_close | server_unblock_lan_zones |
+	server_so_reuseport | server_delay_close |
+	server_unblock_lan_zones | server_insecure_lan_zones |
 	server_dns64_prefix | server_dns64_synthall |
 	server_infra_cache_min_rtt | server_harden_algo_downgrade |
 	server_ip_transparent | server_ratelimit | server_ratelimit_slabs |
@@ -189,6 +195,8 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_ratelimit_below_domain | server_ratelimit_factor |
 	server_send_client_subnet | server_client_subnet_opcode |
 	server_max_client_subnet_ipv4 | server_max_client_subnet_ipv6
+	server_caps_whitelist | server_cache_max_negative_ttl |
+	server_permit_small_holddown | server_qname_minimisation
 	;
 stubstart: VAR_STUB_ZONE
 	{
@@ -453,6 +461,24 @@ server_do_tcp: VAR_DO_TCP STRING_ARG
 		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
 			yyerror("expected yes or no.");
 		else cfg_parser->cfg->do_tcp = (strcmp($2, "yes")==0);
+		free($2);
+	}
+	;
+server_tcp_mss: VAR_TCP_MSS STRING_ARG
+	{
+		OUTYY(("P(server_tcp_mss:%s)\n", $2));
+                if(atoi($2) == 0 && strcmp($2, "0") != 0)
+                        yyerror("number expected");
+                else cfg_parser->cfg->tcp_mss = atoi($2);
+                free($2);
+	}
+	;
+server_outgoing_tcp_mss: VAR_OUTGOING_TCP_MSS STRING_ARG
+	{
+		OUTYY(("P(server_outgoing_tcp_mss:%s)\n", $2));
+		if(atoi($2) == 0 && strcmp($2, "0") != 0)
+			yyerror("number expected");
+		else cfg_parser->cfg->outgoing_tcp_mss = atoi($2);
 		free($2);
 	}
 	;
@@ -783,6 +809,16 @@ server_unblock_lan_zones: VAR_UNBLOCK_LAN_ZONES STRING_ARG
 		free($2);
 	}
 	;
+server_insecure_lan_zones: VAR_INSECURE_LAN_ZONES STRING_ARG
+	{
+		OUTYY(("P(server_insecure_lan_zones:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else cfg_parser->cfg->insecure_lan_zones = 
+			(strcmp($2, "yes")==0);
+		free($2);
+	}
+	;
 server_rrset_cache_size: VAR_RRSET_CACHE_SIZE STRING_ARG
 	{
 		OUTYY(("P(server_rrset_cache_size:%s)\n", $2));
@@ -947,6 +983,13 @@ server_use_caps_for_id: VAR_USE_CAPS_FOR_ID STRING_ARG
 		free($2);
 	}
 	;
+server_caps_whitelist: VAR_CAPS_WHITELIST STRING_ARG
+	{
+		OUTYY(("P(server_caps_whitelist:%s)\n", $2));
+		if(!cfg_strlist_insert(&cfg_parser->cfg->caps_whitelist, $2))
+			yyerror("out of memory");
+	}
+	;
 server_private_address: VAR_PRIVATE_ADDRESS STRING_ARG
 	{
 		OUTYY(("P(server_private_address:%s)\n", $2));
@@ -1032,7 +1075,7 @@ server_module_conf: VAR_MODULE_CONF STRING_ARG
 server_val_override_date: VAR_VAL_OVERRIDE_DATE STRING_ARG
 	{
 		OUTYY(("P(server_val_override_date:%s)\n", $2));
-		if(strlen($2) == 0 || strcmp($2, "0") == 0) {
+		if(*$2 == '\0' || strcmp($2, "0") == 0) {
 			cfg_parser->cfg->val_date_override = 0;
 		} else if(strlen($2) == 14) {
 			cfg_parser->cfg->val_date_override = 
@@ -1050,7 +1093,7 @@ server_val_override_date: VAR_VAL_OVERRIDE_DATE STRING_ARG
 server_val_sig_skew_min: VAR_VAL_SIG_SKEW_MIN STRING_ARG
 	{
 		OUTYY(("P(server_val_sig_skew_min:%s)\n", $2));
-		if(strlen($2) == 0 || strcmp($2, "0") == 0) {
+		if(*$2 == '\0' || strcmp($2, "0") == 0) {
 			cfg_parser->cfg->val_sig_skew_min = 0;
 		} else {
 			cfg_parser->cfg->val_sig_skew_min = atoi($2);
@@ -1063,7 +1106,7 @@ server_val_sig_skew_min: VAR_VAL_SIG_SKEW_MIN STRING_ARG
 server_val_sig_skew_max: VAR_VAL_SIG_SKEW_MAX STRING_ARG
 	{
 		OUTYY(("P(server_val_sig_skew_max:%s)\n", $2));
-		if(strlen($2) == 0 || strcmp($2, "0") == 0) {
+		if(*$2 == '\0' || strcmp($2, "0") == 0) {
 			cfg_parser->cfg->val_sig_skew_max = 0;
 		} else {
 			cfg_parser->cfg->val_sig_skew_max = atoi($2);
@@ -1079,6 +1122,15 @@ server_cache_max_ttl: VAR_CACHE_MAX_TTL STRING_ARG
 		if(atoi($2) == 0 && strcmp($2, "0") != 0)
 			yyerror("number expected");
 		else cfg_parser->cfg->max_ttl = atoi($2);
+		free($2);
+	}
+	;
+server_cache_max_negative_ttl: VAR_CACHE_MAX_NEGATIVE_TTL STRING_ARG
+	{
+		OUTYY(("P(server_cache_max_negative_ttl:%s)\n", $2));
+		if(atoi($2) == 0 && strcmp($2, "0") != 0)
+			yyerror("number expected");
+		else cfg_parser->cfg->max_negative_ttl = atoi($2);
 		free($2);
 	}
 	;
@@ -1172,6 +1224,15 @@ server_keep_missing: VAR_KEEP_MISSING STRING_ARG
 		free($2);
 	}
 	;
+server_permit_small_holddown: VAR_PERMIT_SMALL_HOLDDOWN STRING_ARG
+	{
+		OUTYY(("P(server_permit_small_holddown:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else cfg_parser->cfg->permit_small_holddown =
+			(strcmp($2, "yes")==0);
+		free($2);
+	}
 server_key_cache_size: VAR_KEY_CACHE_SIZE STRING_ARG
 	{
 		OUTYY(("P(server_key_cache_size:%s)\n", $2));
@@ -1352,6 +1413,16 @@ server_ratelimit_factor: VAR_RATELIMIT_FACTOR STRING_ARG
 		if(atoi($2) == 0 && strcmp($2, "0") != 0)
 			yyerror("number expected");
 		else cfg_parser->cfg->ratelimit_factor = atoi($2);
+		free($2);
+	}
+	;
+server_qname_minimisation: VAR_QNAME_MINIMISATION STRING_ARG
+	{
+		OUTYY(("P(server_qname_minimisation:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else cfg_parser->cfg->qname_minimisation = 
+			(strcmp($2, "yes")==0);
 		free($2);
 	}
 	;

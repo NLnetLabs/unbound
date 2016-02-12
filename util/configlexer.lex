@@ -63,7 +63,7 @@ static void config_start_include(const char* filename)
 		ub_c_error_msg("too many include files");
 		return;
 	}
-	if(strlen(filename) == 0) {
+	if(*filename == '\0') {
 		ub_c_error_msg("empty include file name");
 		return;
 	}
@@ -126,6 +126,10 @@ static void config_start_include_glob(const char* filename)
 #endif
 		;
 		memset(&g, 0, sizeof(g));
+		if(cfg_parser->chroot && strncmp(filename, cfg_parser->chroot,
+			strlen(cfg_parser->chroot)) == 0) {
+			filename += strlen(cfg_parser->chroot);
+		}
 		r = glob(filename, flags, NULL, &g);
 		if(r) {
 			/* some error */
@@ -201,6 +205,7 @@ SQANY     [^\'\n\r\\]|\\.
 	/* note that flex makes the longest match and '.' is any but not nl */
 	LEXOUT(("comment(%s) ", yytext)); /* ignore */ }
 server{COLON}			{ YDVAR(0, VAR_SERVER) }
+qname-minimisation{COLON}	{ YDVAR(1, VAR_QNAME_MINIMISATION) }
 num-threads{COLON}		{ YDVAR(1, VAR_NUM_THREADS) }
 verbosity{COLON}		{ YDVAR(1, VAR_VERBOSITY) }
 port{COLON}			{ YDVAR(1, VAR_PORT) }
@@ -214,6 +219,8 @@ do-ip6{COLON}			{ YDVAR(1, VAR_DO_IP6) }
 do-udp{COLON}			{ YDVAR(1, VAR_DO_UDP) }
 do-tcp{COLON}			{ YDVAR(1, VAR_DO_TCP) }
 tcp-upstream{COLON}		{ YDVAR(1, VAR_TCP_UPSTREAM) }
+tcp-mss{COLON}			{ YDVAR(1, VAR_TCP_MSS) }
+outgoing-tcp-mss{COLON}		{ YDVAR(1, VAR_OUTGOING_TCP_MSS) }
 ssl-upstream{COLON}		{ YDVAR(1, VAR_SSL_UPSTREAM) }
 ssl-service-key{COLON}		{ YDVAR(1, VAR_SSL_SERVICE_KEY) }
 ssl-service-pem{COLON}		{ YDVAR(1, VAR_SSL_SERVICE_PEM) }
@@ -240,6 +247,7 @@ msg-cache-slabs{COLON}		{ YDVAR(1, VAR_MSG_CACHE_SLABS) }
 rrset-cache-size{COLON}		{ YDVAR(1, VAR_RRSET_CACHE_SIZE) }
 rrset-cache-slabs{COLON}	{ YDVAR(1, VAR_RRSET_CACHE_SLABS) }
 cache-max-ttl{COLON}     	{ YDVAR(1, VAR_CACHE_MAX_TTL) }
+cache-max-negative-ttl{COLON}   { YDVAR(1, VAR_CACHE_MAX_NEGATIVE_TTL) }
 cache-min-ttl{COLON}     	{ YDVAR(1, VAR_CACHE_MIN_TTL) }
 infra-host-ttl{COLON}		{ YDVAR(1, VAR_INFRA_HOST_TTL) }
 infra-lame-ttl{COLON}		{ YDVAR(1, VAR_INFRA_LAME_TTL) }
@@ -259,6 +267,7 @@ harden-below-nxdomain{COLON}	{ YDVAR(1, VAR_HARDEN_BELOW_NXDOMAIN) }
 harden-referral-path{COLON}	{ YDVAR(1, VAR_HARDEN_REFERRAL_PATH) }
 harden-algo-downgrade{COLON}	{ YDVAR(1, VAR_HARDEN_ALGO_DOWNGRADE) }
 use-caps-for-id{COLON}		{ YDVAR(1, VAR_USE_CAPS_FOR_ID) }
+caps-whitelist{COLON}		{ YDVAR(1, VAR_CAPS_WHITELIST) }
 unwanted-reply-threshold{COLON}	{ YDVAR(1, VAR_UNWANTED_REPLY_THRESHOLD) }
 private-address{COLON}		{ YDVAR(1, VAR_PRIVATE_ADDRESS) }
 private-domain{COLON}		{ YDVAR(1, VAR_PRIVATE_DOMAIN) }
@@ -308,6 +317,7 @@ val-nsec3-keysize-iterations{COLON}	{
 add-holddown{COLON}		{ YDVAR(1, VAR_ADD_HOLDDOWN) }
 del-holddown{COLON}		{ YDVAR(1, VAR_DEL_HOLDDOWN) }
 keep-missing{COLON}		{ YDVAR(1, VAR_KEEP_MISSING) }
+permit-small-holddown{COLON}	{ YDVAR(1, VAR_PERMIT_SMALL_HOLDDOWN) }
 use-syslog{COLON}		{ YDVAR(1, VAR_USE_SYSLOG) }
 log-time-ascii{COLON}		{ YDVAR(1, VAR_LOG_TIME_ASCII) }
 log-queries{COLON}		{ YDVAR(1, VAR_LOG_QUERIES) }
@@ -315,6 +325,7 @@ local-zone{COLON}		{ YDVAR(2, VAR_LOCAL_ZONE) }
 local-data{COLON}		{ YDVAR(1, VAR_LOCAL_DATA) }
 local-data-ptr{COLON}		{ YDVAR(1, VAR_LOCAL_DATA_PTR) }
 unblock-lan-zones{COLON}	{ YDVAR(1, VAR_UNBLOCK_LAN_ZONES) }
+insecure-lan-zones{COLON}	{ YDVAR(1, VAR_INSECURE_LAN_ZONES) }
 statistics-interval{COLON}	{ YDVAR(1, VAR_STATISTICS_INTERVAL) }
 statistics-cumulative{COLON}	{ YDVAR(1, VAR_STATISTICS_CUMULATIVE) }
 extended-statistics{COLON}	{ YDVAR(1, VAR_EXTENDED_STATISTICS) }
