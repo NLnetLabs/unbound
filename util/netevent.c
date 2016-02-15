@@ -401,6 +401,31 @@ comm_point_send_udp_msg(struct comm_point *c, sldns_buffer* packet,
 		sldns_buffer_remaining(packet), 0,
 		addr, addrlen);
 	if(sent == -1) {
+		/* try again and block, waiting for IO to complete,
+		 * we want to send the answer, and we will wait for
+		 * the ethernet interface buffer to have space. */
+#ifndef USE_WINSOCK
+		if(errno == EAGAIN || 
+#  ifdef EWOULDBLOCK
+			errno == EWOULDBLOCK ||
+#  endif
+			errno == ENOBUFS) {
+#else
+		if(WSAGetLastError() == WSAEINPROGRESS ||
+			WSAGetLastError() == WSAENOBUFS ||
+			WSAGetLastError() == WSAEWOULDBLOCK) {
+#endif
+			int e;
+			fd_set_block(c->fd);
+			sent = sendto(c->fd, (void*)sldns_buffer_begin(packet), 
+				sldns_buffer_remaining(packet), 0,
+				addr, addrlen);
+			e = errno;
+			fd_set_nonblock(c->fd);
+			errno = e;
+		}
+	}
+	if(sent == -1) {
 		if(!udp_send_errno_needs_log(addr, addrlen))
 			return 0;
 #ifndef USE_WINSOCK
@@ -553,6 +578,29 @@ comm_point_send_udp_msg_if(struct comm_point *c, sldns_buffer* packet,
 	if(verbosity >= VERB_ALGO)
 		p_ancil("send_udp over interface", r);
 	sent = sendmsg(c->fd, &msg, 0);
+	if(sent == -1) {
+		/* try again and block, waiting for IO to complete,
+		 * we want to send the answer, and we will wait for
+		 * the ethernet interface buffer to have space. */
+#ifndef USE_WINSOCK
+		if(errno == EAGAIN || 
+#  ifdef EWOULDBLOCK
+			errno == EWOULDBLOCK ||
+#  endif
+			errno == ENOBUFS) {
+#else
+		if(WSAGetLastError() == WSAEINPROGRESS ||
+			WSAGetLastError() == WSAENOBUFS ||
+			WSAGetLastError() == WSAEWOULDBLOCK) {
+#endif
+			int e;
+			fd_set_block(c->fd);
+			sent = sendmsg(c->fd, &msg, 0);
+			e = errno;
+			fd_set_nonblock(c->fd);
+			errno = e;
+		}
+	}
 	if(sent == -1) {
 		if(!udp_send_errno_needs_log(addr, addrlen))
 			return 0;

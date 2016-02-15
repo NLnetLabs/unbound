@@ -1,5 +1,6 @@
 15 February 2016: Wouter
 	- ip-transparent option for FreeBSD with IP_BINDANY socket option.
+	- wait for sendto to drain socket buffers when they are full.
 
 9 February 2016: Wouter
 	- Test for type OPENPGPKEY.
