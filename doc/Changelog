@@ -1,3 +1,6 @@
+15 February 2016: Wouter
+	- ip-transparent option for FreeBSD with IP_BINDANY socket option.
+
 9 February 2016: Wouter
 	- Test for type OPENPGPKEY.
 	- insecure-lan-zones: yesno config option, patch from Dag-Erling

@@ -99,7 +99,7 @@ create_udp_sock(int family, int socktype, struct sockaddr* addr,
 	int rcv, int snd, int listen, int* reuseport, int transparent)
 {
 	int s;
-#if defined(SO_REUSEADDR) || defined(SO_REUSEPORT) || defined(IPV6_USE_MIN_MTU)  || defined(IP_TRANSPARENT)
+#if defined(SO_REUSEADDR) || defined(SO_REUSEPORT) || defined(IPV6_USE_MIN_MTU)  || defined(IP_TRANSPARENT) || defined(IP_BINDANY)
 	int on=1;
 #endif
 #ifdef IPV6_MTU
@@ -114,7 +114,7 @@ create_udp_sock(int family, int socktype, struct sockaddr* addr,
 #ifndef IPV6_V6ONLY
 	(void)v6only;
 #endif
-#ifndef IP_TRANSPARENT
+#if !defined(IP_TRANSPARENT) && !defined(IP_BINDANY)
 	(void)transparent;
 #endif
 	if((s = socket(family, socktype, 0)) == -1) {
@@ -187,7 +187,14 @@ create_udp_sock(int family, int socktype, struct sockaddr* addr,
 			log_warn("setsockopt(.. IP_TRANSPARENT ..) failed: %s",
 			strerror(errno));
 		}
-#endif /* IP_TRANSPARENT */
+#elif defined(IP_BINDANY)
+		if (transparent &&
+		    setsockopt(s, IPPROTO_IP, IP_BINDANY, (void*)&on,
+		    (socklen_t)sizeof(on)) < 0) {
+			log_warn("setsockopt(.. IP_BINDANY ..) failed: %s",
+			strerror(errno));
+		}
+#endif /* IP_TRANSPARENT || IP_BINDANY */
 	}
 	if(rcv) {
 #ifdef SO_RCVBUF

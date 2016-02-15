@@ -275,7 +275,7 @@ are going to exist later on, with host failover configuration.  This is
 a lot like interface\-automatic, but that one services all interfaces
 and with this option you can select which (future) interfaces unbound
 provides service on.  This option needs unbound to be started with root
-permissions on some systems.
+permissions on some systems.  The option uses IP_BINDANY on FreeBSD systems.
 .TP
 .B rrset\-cache\-size: \fI<number>
 Number of bytes size of the RRset cache. Default is 4 megabytes.
