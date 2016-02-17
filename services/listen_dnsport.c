@@ -189,8 +189,8 @@ create_udp_sock(int family, int socktype, struct sockaddr* addr,
 		}
 #elif defined(IP_BINDANY)
 		if (transparent &&
-		    setsockopt(s, IPPROTO_IP, IP_BINDANY, (void*)&on,
-		    (socklen_t)sizeof(on)) < 0) {
+		    setsockopt(s, (family==AF_INET6? IPPROTO_IPV6:IPPROTO_IP),
+		    IP_BINDANY, (void*)&on, (socklen_t)sizeof(on)) < 0) {
 			log_warn("setsockopt(.. IP_BINDANY ..) failed: %s",
 			strerror(errno));
 		}
