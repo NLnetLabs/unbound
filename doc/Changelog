@@ -1,3 +1,6 @@
+17 February 2016: Wouter
+	- Fix that "make install" fails due to "text file busy" error.
+
 16 February 2016: Wouter
 	- Set IPPROTO_IP6 for ipv6 sockets otherwise invalid argument error.
 
