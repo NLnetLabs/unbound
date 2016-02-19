@@ -418,6 +418,9 @@ int main(int argc, char* argv[])
 	struct ub_ctx* ctx = NULL;
 	int debuglevel = 0;
 	
+#  ifdef USE_GOST
+	(void)sldns_key_EVP_load_gost_id();
+#  endif
 	ctx = ub_ctx_create();
 	if(!ctx) {
 		fprintf(stderr, "error: out of memory\n");
