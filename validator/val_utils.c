@@ -693,7 +693,7 @@ val_dsset_isusable(struct ub_packed_rrset_key* ds_rrset)
 			ds_key_algo_is_supported(ds_rrset, i))
 			return 1;
 	}
-	if(verbose < VERB_ALGO)
+	if(verbosity < VERB_ALGO)
 		return 0;
 	if(rrset_get_count(ds_rrset) == 0)
 		verbose(VERB_ALGO, "DS is not usable");
