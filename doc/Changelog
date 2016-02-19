@@ -1,6 +1,6 @@
 19 February 2016: Wouter
 	- Print understandable debug log when unusable DS record is seen.
-	- load gost algorithm into unbound-host.
+	- load gost algorithm if digest is seen before key algorithm.
 
 17 February 2016: Wouter
 	- Fix that "make install" fails due to "text file busy" error.
