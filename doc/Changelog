@@ -1,3 +1,6 @@
+19 February 2016: Wouter
+	- Print understandable debug log when unusable DS record is seen.
+
 17 February 2016: Wouter
 	- Fix that "make install" fails due to "text file busy" error.
 
