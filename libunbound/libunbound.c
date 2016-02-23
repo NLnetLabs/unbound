@@ -931,15 +931,18 @@ int ub_ctx_set_stub(struct ub_ctx* ctx, const char* zone, const char* addr,
 	struct config_stub **prev, *elem;
 
 	/* check syntax for zone name */
-	uint8_t* nm;
-	int nmlabs;
-	size_t nmlen;
-	if(!parse_dname(zone, &nm, &nmlen, &nmlabs)) {
-		errno=EINVAL;
-		return UB_SYNTAX; /* should have zone name, or "." for root */
+	if(zone) {
+		uint8_t* nm;
+		int nmlabs;
+		size_t nmlen;
+		if(!parse_dname(zone, &nm, &nmlen, &nmlabs)) {
+			errno=EINVAL;
+			return UB_SYNTAX;
+		}
+		free(nm);
+	} else {
+		zone = ".";
 	}
-	free(nm);
-	nm = NULL;
 
 	/* check syntax for addr (if not NULL) */
 	if(addr) {
