@@ -873,6 +873,18 @@ config_read(struct config_file* cfg, const char* filename, const char* chroot)
 	return 1;
 }
 
+struct config_stub* cfg_stub_find(struct config_stub*** pp, const char* nm)
+{
+	struct config_stub* p = *(*pp);
+	while(p) {
+		if(strcmp(p->name, nm) == 0)
+			return p;
+		(*pp) = &p->next;
+		p = p->next;
+	}
+	return NULL;
+}
+
 void
 config_delstrlist(struct config_strlist* p)
 {
@@ -899,15 +911,22 @@ config_deldblstrlist(struct config_str2list* p)
 }
 
 void
+config_delstub(struct config_stub* p)
+{
+	if(!p) return;
+	free(p->name);
+	config_delstrlist(p->hosts);
+	config_delstrlist(p->addrs);
+	free(p);
+}
+
+void
 config_delstubs(struct config_stub* p)
 {
 	struct config_stub* np;
 	while(p) {
 		np = p->next;
-		free(p->name);
-		config_delstrlist(p->hosts);
-		config_delstrlist(p->addrs);
-		free(p);
+		config_delstub(p);
 		p = np;
 	}
 }

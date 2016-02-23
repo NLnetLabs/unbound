@@ -560,6 +560,17 @@ int cfg_strlist_insert(struct config_strlist** head, char* item);
 int cfg_str2list_insert(struct config_str2list** head, char* item, char* i2);
 
 /**
+ * Find stub in config list, also returns prevptr (for deletion).
+ * @param pp: call routine with pointer to a pointer to the start of the list,
+ * 	if the stub is found, on exit, the value contains a pointer to the
+ * 	next pointer that points to the found element (or to the list start
+ * 	pointer if it is the first element).
+ * @param nm: name of stub to find.
+ * @return: pointer to config_stub if found, or NULL if not found.
+ */
+struct config_stub* cfg_stub_find(struct config_stub*** pp, const char* nm);
+
+/**
  * Delete items in config string list.
  * @param list: list.
  */
@@ -570,6 +581,12 @@ void config_delstrlist(struct config_strlist* list);
  * @param list: list.
  */
 void config_deldblstrlist(struct config_str2list* list);
+
+/**
+ * Delete a stub item
+ * @param p: stub item
+ */
+void config_delstub(struct config_stub* p);
 
 /**
  * Delete items in config stub list.
