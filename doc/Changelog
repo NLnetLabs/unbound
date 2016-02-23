@@ -1,5 +1,6 @@
 23 February 2016: Wouter
 	- ub_ctx_set_stub() function for libunbound to config stub zones.
+	- sorted ubsyms.def file with exported libunbound functions.
 
 19 February 2016: Wouter
 	- Print understandable debug log when unusable DS record is seen.
