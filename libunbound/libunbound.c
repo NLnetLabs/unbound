@@ -927,15 +927,13 @@ ub_ctx_set_fwd(struct ub_ctx* ctx, const char* addr)
 int ub_ctx_set_stub(struct ub_ctx* ctx, const char* zone, const char* addr,
 	int isprime)
 {
-	struct sockaddr_storage storage;
-	socklen_t stlen;
-	uint8_t* nm;
-	int nmlabs;
-	size_t nmlen;
 	char* a;
 	struct config_stub **prev, *elem;
 
 	/* check syntax for zone name */
+	uint8_t* nm;
+	int nmlabs;
+	size_t nmlen;
 	if(!parse_dname(zone, &nm, &nmlen, &nmlabs)) {
 		errno=EINVAL;
 		return UB_SYNTAX; /* should have zone name, or "." for root */
@@ -944,9 +942,13 @@ int ub_ctx_set_stub(struct ub_ctx* ctx, const char* zone, const char* addr,
 	nm = NULL;
 
 	/* check syntax for addr (if not NULL) */
-	if(addr!=NULL && !extstrtoaddr(addr, &storage, &stlen)) {
-		errno=EINVAL;
-		return UB_SYNTAX;
+	if(addr) {
+		struct sockaddr_storage storage;
+		socklen_t stlen;
+		if(!extstrtoaddr(addr, &storage, &stlen)) {
+			errno=EINVAL;
+			return UB_SYNTAX;
+		}
 	}
 
 	lock_basic_lock(&ctx->cfglock);
