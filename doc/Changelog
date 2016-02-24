@@ -1,5 +1,6 @@
 24 February 2016: Wouter
 	- Fix OpenBSD asynclook lock free that gets used later (fix test code).
+	- Fix that NSEC3 negative cache is used when there is no salt.
 
 23 February 2016: Wouter
 	- ub_ctx_set_stub() function for libunbound to config stub zones.
