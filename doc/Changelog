@@ -1,3 +1,6 @@
+24 February 2016: Wouter
+	- Fix OpenBSD asynclook lock free that gets used later (fix test code).
+
 23 February 2016: Wouter
 	- ub_ctx_set_stub() function for libunbound to config stub zones.
 	- sorted ubsyms.def file with exported libunbound functions.
