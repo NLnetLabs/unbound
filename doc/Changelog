@@ -1,6 +1,7 @@
 02 March 2016: Wouter
 	- 1.5.8 release tag
 	- trunk contains 1.5.9 in development.
+	- iana portlist update.
 
 24 February 2016: Wouter
 	- Fix OpenBSD asynclook lock free that gets used later (fix test code).
