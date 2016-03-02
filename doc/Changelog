@@ -2,6 +2,8 @@
 	- 1.5.8 release tag
 	- trunk contains 1.5.9 in development.
 	- iana portlist update.
+	- Fix #745: unbound.py - idn2dname throws UnicodeError when idnname
+	  contains trailing dot.
 
 24 February 2016: Wouter
 	- Fix OpenBSD asynclook lock free that gets used later (fix test code).
