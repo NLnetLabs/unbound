@@ -42,6 +42,9 @@
 /* Whether the C compiler accepts the "unused" attribute */
 #undef HAVE_ATTR_UNUSED
 
+/* Whether the C compiler accepts the "weak" attribute */
+#undef HAVE_ATTR_WEAK
+
 /* Define to 1 if you have the `chown' function. */
 #undef HAVE_CHOWN
 

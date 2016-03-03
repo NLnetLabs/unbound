@@ -1,3 +1,6 @@
+03 March 2016: Wouter
+	- configure tests for the weak attribute support by the compiler.
+
 02 March 2016: Wouter
 	- 1.5.8 release tag
 	- trunk contains 1.5.9 in development.
