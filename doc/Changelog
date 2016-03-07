@@ -1,3 +1,6 @@
+07 March 2016: Wouter
+	- Fix #747: assert in outnet_serviced_query_stop.
+
 03 March 2016: Wouter
 	- configure tests for the weak attribute support by the compiler.
 

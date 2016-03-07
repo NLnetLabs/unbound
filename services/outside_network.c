@@ -1948,13 +1948,7 @@ void outnet_serviced_query_stop(struct serviced_query* sq, void* cb_arg)
 	callback_list_remove(sq, cb_arg);
 	/* if callbacks() routine scheduled deletion, let it do that */
 	if(!sq->cblist && !sq->to_be_deleted) {
-#ifdef UNBOUND_DEBUG
-		rbnode_t* rem =
-#else
-		(void)
-#endif
-		rbtree_delete(sq->outnet->serviced, sq);
-		log_assert(rem); /* should be present */
+		(void)rbtree_delete(sq->outnet->serviced, sq);
 		serviced_delete(sq); 
 	}
 }
