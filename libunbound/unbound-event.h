@@ -123,11 +123,14 @@ struct ub_event_base {
  * The Virtual Method Table for and ub_event "object"
  */
 struct ub_event_vmt {
-	/** Add event bits for this event to fire on */
+	/** Add event bits for this event to fire on.
+	 * The event will be deactivated before this function is called. */
 	void (*add_bits)(struct ub_event*, short);
-	/** Configure the event so it will not longer fire on given bits */
+	/** Configure the event so it will not longer fire on given bits 
+	 * The event will be deactivated before this function is called. */
 	void (*del_bits)(struct ub_event*, short);
-	/** Change or set the file descriptor on the event */
+	/** Change or set the file descriptor on the event 
+	 * The event will be deactivated before this function is called. */
 	void (*set_fd)(struct ub_event*, int);
 	/** Destructor for the ub_event object */
 	void (*free)(struct ub_event*);
