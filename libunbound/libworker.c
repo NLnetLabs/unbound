@@ -119,7 +119,7 @@ libworker_delete_event(struct libworker* w)
 
 /** setup fresh libworker struct */
 static struct libworker*
-libworker_setup(struct ub_ctx* ctx, int is_bg, struct event_base* eb)
+libworker_setup(struct ub_ctx* ctx, int is_bg, struct ub_event_base* eb)
 {
 	unsigned int seed;
 	struct libworker* w = (struct libworker*)calloc(1, sizeof(*w));
@@ -258,7 +258,7 @@ libworker_setup(struct ub_ctx* ctx, int is_bg, struct event_base* eb)
 }
 
 struct libworker* libworker_create_event(struct ub_ctx* ctx,
-	struct event_base* eb)
+	struct ub_event_base* eb)
 {
 	return libworker_setup(ctx, 0, eb);
 }
