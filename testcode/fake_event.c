@@ -1387,7 +1387,7 @@ void comm_base_set_slow_accept_handlers(struct comm_base* ATTR_UNUSED(b),
 	(void)start_acc;
 }
 
-struct event_base* comm_base_internal(struct comm_base* ATTR_UNUSED(b))
+struct ub_event_base* comm_base_internal(struct comm_base* ATTR_UNUSED(b))
 {
 	/* no pipe comm possible in testbound */
 	return NULL;

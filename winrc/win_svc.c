@@ -51,7 +51,7 @@
 #include "daemon/remote.h"
 #include "util/config_file.h"
 #include "util/netevent.h"
-#include "util/winsock_event.h"
+#include "util/ub_event.h"
 
 /** global service status */
 static SERVICE_STATUS	service_status;
@@ -60,7 +60,7 @@ static SERVICE_STATUS_HANDLE service_status_handle;
 /** global service stop event */
 static WSAEVENT service_stop_event = NULL;
 /** event struct for stop callbacks */
-static struct event service_stop_ev;
+static struct event* service_stop_ev = NULL;
 /** if stop even means shutdown or restart */
 static int service_stop_shutdown = 0;
 /** config file to open. global communication to service_main() */
@@ -600,9 +600,9 @@ void wsvc_setup_worker(struct worker* worker)
 	/* if not started with -w service, do nothing */
 	if(!service_stop_event)
 		return;
-	if(!winsock_register_wsaevent(comm_base_internal(worker->base),
-		&service_stop_ev, service_stop_event,
-		&worker_win_stop_cb, worker)) {
+	if(!(service_stop_ev = ub_winsock_register_wsaevent(
+		comm_base_internal(worker->base), service_stop_event,
+		&worker_win_stop_cb, worker))) {
 		fatal_exit("could not register wsaevent");
 		return;
 	}
