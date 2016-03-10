@@ -371,11 +371,11 @@ ub_get_event_sys(struct ub_event_base* ub_base, const char** n, const char** s,
 
 	*n = "pluggable-event";
 #ifdef USE_WINSOCK
-	(void)base;
+	(void)ub_base;
 	*s = "winsock";
 	*m = "WSAWaitForMultipleEvents";
 #elif defined(USE_MINI_EVENT)
-	(void)base;
+	(void)ub_base;
 	*s = "internal";
 	*m = "select";
 #else
