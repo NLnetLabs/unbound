@@ -94,7 +94,7 @@ const char* ub_event_get_version()
 }
 
 #if defined(HAVE_EV_LOOP) || defined(HAVE_EV_DEFAULT_LOOP)
-static const char* ev_backend2str(int b)
+static const char* ub_ev_backend2str(int b)
 {
 	switch(b) {
 	case EVBACKEND_SELECT:	return "select";
@@ -129,7 +129,7 @@ ub_get_event_sys(struct ub_event_base* base, const char** n, const char** s,
 	*n = "libev";
 	if (!b)
 		b = (struct event_base*)ev_default_loop(EVFLAG_AUTO);
-	*m = ev_backend2str(ev_backend((struct ev_loop*)b));
+	*m = ub_ev_backend2str(ev_backend((struct ev_loop*)b));
 #  elif defined(HAVE_EVENT_BASE_GET_METHOD)
 	*n = "libevent";
 	if (!b)

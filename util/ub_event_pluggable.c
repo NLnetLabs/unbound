@@ -364,6 +364,21 @@ ub_libevent_get_event_base(struct ub_event_base* base)
 	return NULL;
 }
 
+#if defined(HAVE_EV_LOOP) || defined(HAVE_EV_DEFAULT_LOOP)
+static const char* ub_ev_backend2str_pluggable(int b)
+{
+	switch(b) {
+	case EVBACKEND_SELECT:	return "select";
+	case EVBACKEND_POLL:	return "poll";
+	case EVBACKEND_EPOLL:	return "epoll";
+	case EVBACKEND_KQUEUE:	return "kqueue";
+	case EVBACKEND_DEVPOLL: return "devpoll";
+	case EVBACKEND_PORT:	return "evport";
+	}
+	return "unknown";
+}
+#endif
+
 void
 ub_get_event_sys(struct ub_event_base* ub_base, const char** n, const char** s,
 	const char** m)
@@ -391,7 +406,7 @@ ub_get_event_sys(struct ub_event_base* ub_base, const char** n, const char** s,
 	*m = event_base_get_method(b);
 #  elif defined(HAVE_EV_LOOP) || defined(HAVE_EV_DEFAULT_LOOP)
 	*n = "pluggable-libev";
-	*m = ev_backend2str(ev_backend((struct ev_loop*)b);
+	*m = ub_ev_backend2str_pluggable(ev_backend((struct ev_loop*)b));
 #  else
 	*m = "not obtainable";
 #  endif
