@@ -68,6 +68,20 @@
 #  endif
 #endif /* USE_MINI_EVENT */
 
+#if UB_EV_TIMEOUT != EV_TIMEOUT || UB_EV_READ != EV_READ || \
+    UB_EV_WRITE != EV_WRITE || UB_EV_SIGNAL != EV_SIGNAL || \
+    UB_EV_PERSIST != EV_PERSIST
+/* Only necessary for libev */
+#  define NATIVE_BITS(b) ( \
+	  ((b) & UB_EV_TIMEOUT) ? EV_TIMEOUT : 0 \
+	| ((b) & UB_EV_READ   ) ? EV_READ    : 0 \
+	| ((b) & UB_EV_WRITE  ) ? EV_WRITE   : 0 \
+	| ((b) & UB_EV_SIGNAL ) ? EV_SIGNAL  : 0 \
+	| ((b) & UB_EV_PERSIST) ? EV_PERSIST : 0)
+#else
+#  define NATIVE_BITS(b) (b)
+#endif
+
 struct my_event_base {
 	struct ub_event_base super;
 	struct event_base* base;
@@ -88,72 +102,72 @@ const char* ub_event_get_version()
 	return "pluggable-event"PACKAGE_VERSION;
 }
 
-void
+static void
 my_event_add_bits(struct ub_event* ev, short bits)
 {
-	AS_MY_EVENT(ev)->ev.ev_events |= bits;
+	AS_MY_EVENT(ev)->ev.ev_events |= NATIVE_BITS(bits);
 }
 
-void
+static void
 my_event_del_bits(struct ub_event* ev, short bits)
 {
-	AS_MY_EVENT(ev)->ev.ev_events &= ~bits;
+	AS_MY_EVENT(ev)->ev.ev_events &= ~NATIVE_BITS(bits);
 }
 
-void
+static void
 my_event_set_fd(struct ub_event* ev, int fd)
 {
 	AS_MY_EVENT(ev)->ev.ev_fd = fd;
 }
 
-void
+static void
 my_event_free(struct ub_event* ev)
 {
 	free(AS_MY_EVENT(ev));
 }
 
-int
+static int
 my_event_add(struct ub_event* ev, struct timeval* tv)
 {
 	return event_add(&AS_MY_EVENT(ev)->ev, tv);
 }
 
-int
+static int
 my_event_del(struct ub_event* ev)
 {
 	return event_del(&AS_MY_EVENT(ev)->ev);
 }
 
-int
+static int
 my_timer_add(struct ub_event* ev, struct ub_event_base* base,
 	void (*cb)(int, short, void*), void* arg, struct timeval* tv)
 {
-	event_set(&AS_MY_EVENT(ev)->ev, -1, UB_EV_TIMEOUT, cb, arg);
+	event_set(&AS_MY_EVENT(ev)->ev, -1, EV_TIMEOUT, cb, arg);
 	if (event_base_set(AS_MY_EVENT_BASE(base)->base, &AS_MY_EVENT(ev)->ev)
 		!= 0)
 		return -1;
 	return evtimer_add(&AS_MY_EVENT(ev)->ev, tv);
 }
 
-int
+static int
 my_timer_del(struct ub_event* ev)
 {
 	return evtimer_del(&AS_MY_EVENT(ev)->ev);
 }
 
-int
+static int
 my_signal_add(struct ub_event* ev, struct timeval* tv)
 {
 	return signal_add(&AS_MY_EVENT(ev)->ev, tv);
 }
 
-int
+static int
 my_signal_del(struct ub_event* ev)
 {
 	return signal_del(&AS_MY_EVENT(ev)->ev);
 }
 
-void
+static void
 my_winsock_unregister_wsaevent(struct ub_event* ev)
 {
 #if defined(USE_MINI_EVENT) && defined(USE_WINSOCK)
@@ -164,11 +178,11 @@ my_winsock_unregister_wsaevent(struct ub_event* ev)
 #endif
 }
 
-void
+static void
 my_winsock_tcp_wouldblock(struct ub_event* ev, int eventbits)
 {
 #if defined(USE_MINI_EVENT) && defined(USE_WINSOCK)
-	winsock_tcp_wouldblock(&AS_MY_EVENT(ev)->ev, eventbits);
+	winsock_tcp_wouldblock(&AS_MY_EVENT(ev)->ev, NATIVE_BITS(eventbits));
 #else
 	(void)ev;
 	(void)eventbits;
@@ -182,7 +196,7 @@ static struct ub_event_vmt default_event_vmt = {
 	my_winsock_unregister_wsaevent, my_winsock_tcp_wouldblock
 };
 
-void
+static void
 my_event_base_free(struct ub_event_base* base)
 {
 #ifdef USE_MINI_EVENT
@@ -196,19 +210,19 @@ my_event_base_free(struct ub_event_base* base)
 	free(AS_MY_EVENT_BASE(base));
 }
 
-int
+static int
 my_event_base_dispatch(struct ub_event_base* base)
 {
 	return event_base_dispatch(AS_MY_EVENT_BASE(base)->base);
 }
 
-int
+static int
 my_event_base_loopexit(struct ub_event_base* base, struct timeval* tv)
 {
 	return event_base_loopexit(AS_MY_EVENT_BASE(base)->base, tv);
 }
 
-struct ub_event*
+static struct ub_event*
 my_event_new(struct ub_event_base* base, int fd, short bits,
 	void (*cb)(int, short, void*), void* arg)
 {
@@ -218,7 +232,7 @@ my_event_new(struct ub_event_base* base, int fd, short bits,
 	if (!my_ev)
 		return NULL;
 
-	event_set(&my_ev->ev, fd, bits, cb, arg);
+	event_set(&my_ev->ev, fd, NATIVE_BITS(bits), cb, arg);
 	if (event_base_set(AS_MY_EVENT_BASE(base)->base, &my_ev->ev) != 0) {
 		free(my_ev);
 		return NULL;
@@ -228,7 +242,7 @@ my_event_new(struct ub_event_base* base, int fd, short bits,
 	return &my_ev->super;
 }
 
-struct ub_event*
+static struct ub_event*
 my_signal_new(struct ub_event_base* base, int fd,
 	void (*cb)(int, short, void*), void* arg)
 {
@@ -248,7 +262,7 @@ my_signal_new(struct ub_event_base* base, int fd,
 	return &my_ev->super;
 }
 
-struct ub_event*
+static struct ub_event*
 my_winsock_register_wsaevent(struct ub_event_base* base, void* wsaevent,
 	void (*cb)(int, short, void*), void* arg)
 {

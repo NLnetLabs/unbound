@@ -65,6 +65,19 @@
 #  endif
 #endif /* USE_MINI_EVENT */
 
+#if UB_EV_TIMEOUT != EV_TIMEOUT || UB_EV_READ != EV_READ || \
+    UB_EV_WRITE != EV_WRITE || UB_EV_SIGNAL != EV_SIGNAL || \
+    UB_EV_PERSIST != EV_PERSIST 
+/* Only necessary for libev */ 
+#  define NATIVE_BITS(b) ( \
+	  ((b) & UB_EV_TIMEOUT) ? EV_TIMEOUT : 0 \
+	| ((b) & UB_EV_READ   ) ? EV_READ    : 0 \
+	| ((b) & UB_EV_WRITE  ) ? EV_WRITE   : 0 \
+	| ((b) & UB_EV_SIGNAL ) ? EV_SIGNAL  : 0 \
+	| ((b) & UB_EV_PERSIST) ? EV_PERSIST : 0)
+#else 
+#  define NATIVE_BITS(b) (b)
+#endif
 
 #define AS_EVENT_BASE(x) \
 	(((union {struct ub_event_base* a; struct event_base* b;})x).b)
@@ -205,7 +218,7 @@ ub_event_new(struct ub_event_base* base, int fd, short bits,
 	if (!ev)
 		return NULL;
 
-	event_set(ev, fd, bits, cb, arg);
+	event_set(ev, fd, NATIVE_BITS(bits), cb, arg);
 	if (event_base_set(AS_EVENT_BASE(base), ev) != 0) {
 		free(ev);
 		return NULL;
@@ -257,13 +270,13 @@ ub_winsock_register_wsaevent(struct ub_event_base* base, void* wsaevent,
 void
 ub_event_add_bits(struct ub_event* ev, short bits)
 {
-	AS_EVENT(ev)->ev_events |= bits;
+	AS_EVENT(ev)->ev_events |= NATIVE_BITS(bits);
 }
 
 void
 ub_event_del_bits(struct ub_event* ev, short bits)
 {
-	AS_EVENT(ev)->ev_events &= ~bits;
+	AS_EVENT(ev)->ev_events &= ~NATIVE_BITS(bits);
 }
 
 void
@@ -295,7 +308,7 @@ int
 ub_timer_add(struct ub_event* ev, struct ub_event_base* base,
 	void (*cb)(int, short, void*), void* arg, struct timeval* tv)
 {
-	event_set(AS_EVENT(ev), -1, UB_EV_TIMEOUT, cb, arg);
+	event_set(AS_EVENT(ev), -1, EV_TIMEOUT, cb, arg);
 	if (event_base_set(AS_EVENT_BASE(base), AS_EVENT(ev)) != 0)
 		return -1;
 	return evtimer_add(AS_EVENT(ev), tv);
@@ -334,7 +347,7 @@ void
 ub_winsock_tcp_wouldblock(struct ub_event* ev, int eventbits)
 {
 #if defined(USE_MINI_EVENT) && defined(USE_WINSOCK)
-	winsock_tcp_wouldblock(AS_EVENT(ev), eventbits);
+	winsock_tcp_wouldblock(AS_EVENT(ev), NATIVE_BITS(eventbits));
 #else
 	(void)ev;
 	(void)eventbits;
