@@ -401,12 +401,12 @@ ub_get_event_sys(struct ub_event_base* ub_base, const char** n, const char** s,
 	 */
 	assert(b);
 	*s = event_get_version();
-#  ifdef HAVE_EVENT_BASE_GET_METHOD
-	*n = "pluggable-libevent";
-	*m = event_base_get_method(b);
-#  elif defined(HAVE_EV_LOOP) || defined(HAVE_EV_DEFAULT_LOOP)
+#  if defined(HAVE_EV_LOOP) || defined(HAVE_EV_DEFAULT_LOOP)
 	*n = "pluggable-libev";
 	*m = ub_ev_backend2str_pluggable(ev_backend((struct ev_loop*)b));
+#  elif defined(HAVE_EVENT_BASE_GET_METHOD)
+	*n = "pluggable-libevent";
+	*m = event_base_get_method(b);
 #  else
 	*m = "not obtainable";
 #  endif
