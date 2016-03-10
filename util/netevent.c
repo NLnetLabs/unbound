@@ -2162,7 +2162,7 @@ comm_timer_is_set(struct comm_timer* timer)
 }
 
 size_t 
-comm_timer_get_mem(struct comm_timer* timer)
+comm_timer_get_mem(struct comm_timer* ATTR_UNUSED(timer))
 {
 	return sizeof(struct internal_timer);
 }

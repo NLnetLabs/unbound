@@ -93,6 +93,21 @@ const char* ub_event_get_version()
 	return event_get_version();
 }
 
+#if defined(HAVE_EV_LOOP) || defined(HAVE_EV_DEFAULT_LOOP)
+static const char* ev_backend2str(int b)
+{
+	switch(b) {
+	case EVBACKEND_SELECT:	return "select";
+	case EVBACKEND_POLL:	return "poll";
+	case EVBACKEND_EPOLL:	return "epoll";
+	case EVBACKEND_KQUEUE:	return "kqueue";
+	case EVBACKEND_DEVPOLL: return "devpoll";
+	case EVBACKEND_PORT:	return "evport";
+	}
+	return "unknown";
+}
+#endif
+
 void
 ub_get_event_sys(struct ub_event_base* base, const char** n, const char** s,
 	const char** m)
@@ -110,16 +125,16 @@ ub_get_event_sys(struct ub_event_base* base, const char** n, const char** s,
 #else
 	struct event_base* b = AS_EVENT_BASE(base);
 	*s = event_get_version();
-#  ifdef HAVE_EVENT_BASE_GET_METHOD
-	*n = "libevent";
-	if (!b)
-		b = event_base_new();
-	*m = event_base_get_method(b);
-#  elif defined(HAVE_EV_LOOP) || defined(HAVE_EV_DEFAULT_LOOP)
+#  if defined(HAVE_EV_LOOP) || defined(HAVE_EV_DEFAULT_LOOP)
 	*n = "libev";
 	if (!b)
 		b = (struct event_base*)ev_default_loop(EVFLAG_AUTO);
 	*m = ev_backend2str(ev_backend((struct ev_loop*)b));
+#  elif defined(HAVE_EVENT_BASE_GET_METHOD)
+	*n = "libevent";
+	if (!b)
+		b = event_base_new();
+	*m = event_base_get_method(b);
 #  else
 	*n = "unknown";
 	*m = "not obtainable";

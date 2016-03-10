@@ -92,21 +92,6 @@
 void* unbound_start_brk = 0;
 #endif
 
-#if !defined(HAVE_EVENT_BASE_GET_METHOD) && (defined(HAVE_EV_LOOP) || defined(HAVE_EV_DEFAULT_LOOP))
-static const char* ev_backend2str(int b)
-{
-	switch(b) {
-	case EVBACKEND_SELECT:	return "select";
-	case EVBACKEND_POLL:	return "poll";
-	case EVBACKEND_EPOLL:	return "epoll";
-	case EVBACKEND_KQUEUE:	return "kqueue";
-	case EVBACKEND_DEVPOLL: return "devpoll";
-	case EVBACKEND_PORT:	return "evport";
-	}
-	return "unknown";
-}
-#endif
-
 /** print usage. */
 static void usage()
 {

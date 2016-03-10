@@ -1,3 +1,6 @@
+10 March 2016: Wouter
+	- Fixup backend2str for libev.
+
 09 March 2016: Willem
 	- User defined pluggable event API for libunbound
 	- Fixup of compile fix for pluggable event API from P.Y. Adi
