@@ -1,5 +1,7 @@
 09 March 2016: Willem
 	- User defined pluggable event API for libunbound
+	- Fixup of compile fix for pluggable event API from P.Y. Adi
+	  Prasaja.
 
 09 March 2016: Wouter
 	- Updated configure and ltmain.sh.
