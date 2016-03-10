@@ -4,7 +4,6 @@
 09 March 2016: Wouter
 	- Updated configure and ltmain.sh.
 	- Updated L root IPv6 address.
-	- Compile fix for pluggable event API from P.Y. Adi Prasaja.
 
 07 March 2016: Wouter
 	- Fix #747: assert in outnet_serviced_query_stop.
