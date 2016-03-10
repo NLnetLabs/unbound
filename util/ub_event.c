@@ -159,7 +159,7 @@ ub_libevent_event_base(struct event_base* libevent_base)
 }
 
 struct event_base *
-ub_libevent_get_event_base(struct ub_event_base* base)
+ub_libevent_get_event_base(struct ub_event_base* libevent_base)
 {
 #ifdef USE_MINI_EVENT
 	return NULL;

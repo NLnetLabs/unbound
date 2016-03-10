@@ -103,9 +103,12 @@ ub_get_event_sys(struct ub_event_base* base, const char** n, const char** s,
 	*s = "internal";
 	*m = "select";
 #else
+	struct event_base* b = AS_MY_EVENT_BASE(base);
 	*s = event_get_version();
 #  ifdef HAVE_EVENT_BASE_GET_METHOD
 	*n = "pluggable-libevent";
+	if(!b)
+		b = event_base_new();
 	*m = event_base_get_method(b);
 #  elif defined(HAVE_EV_LOOP) || defined(HAVE_EV_DEFAULT_LOOP)
 	*n = "pluggable-libev";
