@@ -89,37 +89,6 @@ const char* ub_event_get_version()
 }
 
 void
-ub_get_event_sys(struct ub_event_base* base, const char** n, const char** s,
-	const char** m)
-{
-	(void)base;
-	*n = "pluggable-event";
-
-#ifdef USE_WINSOCK
-	*s = "winsock";
-	*m = "WSAWaitForMultipleEvents";
-#elif defined(USE_MINI_EVENT)
-	(void)base;
-	*s = "internal";
-	*m = "select";
-#else
-	struct event_base* b = AS_MY_EVENT_BASE(base);
-	*s = event_get_version();
-#  ifdef HAVE_EVENT_BASE_GET_METHOD
-	*n = "pluggable-libevent";
-	if(!b)
-		b = event_base_new();
-	*m = event_base_get_method(b);
-#  elif defined(HAVE_EV_LOOP) || defined(HAVE_EV_DEFAULT_LOOP)
-	*n = "pluggable-libev";
-	*m = ev_backend2str(ev_backend((struct ev_loop*)b));
-#  else
-	*m = "not obtainable";
-#  endif
-#endif
-}
-
-void
 my_event_add_bits(struct ub_event* ev, short bits)
 {
 	AS_MY_EVENT(ev)->ev.ev_events |= bits;
@@ -333,9 +302,9 @@ ub_default_event_base(int sigs, time_t* time_secs, struct timeval* time_tv)
 #  if defined(HAVE_EV_LOOP) || defined(HAVE_EV_DEFAULT_LOOP)
 	/* libev */
 	if(sigs)
-		my_base->base = ev_default_loop(EVFLAG_AUTO);
+		my_base->base = (struct event_base*)ev_default_loop(EVFLAG_AUTO);
 	else
-		my_base->base = ev_loop_new(EVFLAG_AUTO);
+		my_base->base = (struct event_base*)ev_loop_new(EVFLAG_AUTO);
 #  else
 	(void)sigs;
 #    ifdef HAVE_EVENT_BASE_NEW
@@ -374,10 +343,44 @@ ub_libevent_event_base(struct event_base* base)
 struct event_base*
 ub_libevent_get_event_base(struct ub_event_base* base)
 {
-#ifdef USE_MINI_EVENT
+#ifndef USE_MINI_EVENT
+	if (base->vmt == &default_event_base_vmt)
+		return AS_MY_EVENT_BASE(base)->base;
+#endif
 	return NULL;
+}
+
+void
+ub_get_event_sys(struct ub_event_base* ub_base, const char** n, const char** s,
+	const char** m)
+{
+
+	*n = "pluggable-event";
+#ifdef USE_WINSOCK
+	(void)base;
+	*s = "winsock";
+	*m = "WSAWaitForMultipleEvents";
+#elif defined(USE_MINI_EVENT)
+	(void)base;
+	*s = "internal";
+	*m = "select";
 #else
-	return AS_MY_EVENT_BASE(base)->base;
+	struct event_base* b = ub_libevent_get_event_base(ub_base);
+	/* This function is only called from comm_base_create, so
+	 * ub_base is guaranteed to exist and to be the default
+	 * event base.
+	 */
+	assert(b);
+	*s = event_get_version();
+#  ifdef HAVE_EVENT_BASE_GET_METHOD
+	*n = "pluggable-libevent";
+	*m = event_base_get_method(b);
+#  elif defined(HAVE_EV_LOOP) || defined(HAVE_EV_DEFAULT_LOOP)
+	*n = "pluggable-libev";
+	*m = ev_backend2str(ev_backend((struct ev_loop*)b);
+#  else
+	*m = "not obtainable";
+#  endif
 #endif
 }
 

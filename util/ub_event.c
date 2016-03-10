@@ -44,6 +44,7 @@
 #include <sys/time.h>
 #include "util/ub_event.h"
 #include "util/log.h"
+#include "util/netevent.h"
 
 /* We define libevent structures here to hide the libevent stuff. */
 
@@ -152,6 +153,7 @@ struct ub_event_base *
 ub_libevent_event_base(struct event_base* libevent_base)
 {
 #ifdef USE_MINI_EVENT
+	(void)libevent_base;
 	return NULL;
 #else
 	return AS_UB_EVENT_BASE(libevent_base);
@@ -159,12 +161,13 @@ ub_libevent_event_base(struct event_base* libevent_base)
 }
 
 struct event_base *
-ub_libevent_get_event_base(struct ub_event_base* libevent_base)
+ub_libevent_get_event_base(struct ub_event_base* base)
 {
 #ifdef USE_MINI_EVENT
+	(void)base;
 	return NULL;
 #else
-	return AS_EVENT_BASE(libevent_base);
+	return AS_EVENT_BASE(base);
 #endif
 }
 
