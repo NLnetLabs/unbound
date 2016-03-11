@@ -45,6 +45,7 @@
 #include "util/ub_event.h"
 #include "util/log.h"
 #include "util/netevent.h"
+#include "util/tube.h"
 
 /* We define libevent structures here to hide the libevent stuff. */
 
@@ -75,8 +76,56 @@
 	| ((b) & UB_EV_WRITE  ) ? EV_WRITE   : 0 \
 	| ((b) & UB_EV_SIGNAL ) ? EV_SIGNAL  : 0 \
 	| ((b) & UB_EV_PERSIST) ? EV_PERSIST : 0)
+
+#  define UB_EV_BITS(b) ( \
+	  ((b) & EV_TIMEOUT) ? UB_EV_TIMEOUT : 0 \
+	| ((b) & EV_READ   ) ? UB_EV_READ    : 0 \
+	| ((b) & EV_WRITE  ) ? UB_EV_WRITE   : 0 \
+	| ((b) & EV_SIGNAL ) ? UB_EV_SIGNAL  : 0 \
+	| ((b) & EV_PERSIST) ? UB_EV_PERSIST : 0)
+
+#  define UB_EV_BITS_CB(C) void my_ ## C (int fd, short bits, void *arg) \
+	{ (C)(fd, UB_EV_BITS(bits), arg); }
+
+UB_EV_BITS_CB(comm_point_udp_callback);
+UB_EV_BITS_CB(comm_point_udp_ancil_callback)
+UB_EV_BITS_CB(comm_point_tcp_accept_callback)
+UB_EV_BITS_CB(comm_point_tcp_handle_callback)
+UB_EV_BITS_CB(comm_timer_callback)
+UB_EV_BITS_CB(comm_signal_callback)
+UB_EV_BITS_CB(comm_point_local_handle_callback)
+UB_EV_BITS_CB(comm_point_raw_handle_callback)
+UB_EV_BITS_CB(tube_handle_signal)
+UB_EV_BITS_CB(comm_base_handle_slow_accept)
+
+static void (*NATIVE_BITS_CB(void (*cb)(int, short, void*)))(int, short, void*)
+{
+	if(cb == comm_point_udp_callback)
+		return my_comm_point_udp_callback;
+	else if(cb == comm_point_udp_ancil_callback)
+		return my_comm_point_udp_ancil_callback;
+	else if(cb == comm_point_tcp_accept_callback)
+		return my_comm_point_tcp_accept_callback;
+	else if(cb == comm_point_tcp_handle_callback)
+		return my_comm_point_tcp_handle_callback;
+	else if(cb == comm_timer_callback)
+		return my_comm_timer_callback;
+	else if(cb == comm_signal_callback)
+		return my_comm_signal_callback;
+	else if(cb == comm_point_local_handle_callback)
+		return my_comm_point_local_handle_callback;
+	else if(cb == comm_point_raw_handle_callback)
+		return my_comm_point_raw_handle_callback;
+	else if(cb == tube_handle_signal)
+		return my_tube_handle_signal;
+	else if(cb == comm_base_handle_slow_accept)
+		return my_comm_base_handle_slow_accept;
+	else
+		return NULL;
+}
 #else 
 #  define NATIVE_BITS(b) (b)
+#  define NATIVE_BITS_CB(c) (c)
 #endif
 
 #define AS_EVENT_BASE(x) \
@@ -233,7 +282,7 @@ ub_event_new(struct ub_event_base* base, int fd, short bits,
 	if (!ev)
 		return NULL;
 
-	event_set(ev, fd, NATIVE_BITS(bits), cb, arg);
+	event_set(ev, fd, NATIVE_BITS(bits), NATIVE_BITS_CB(cb), arg);
 	if (event_base_set(AS_EVENT_BASE(base), ev) != 0) {
 		free(ev);
 		return NULL;
@@ -250,7 +299,7 @@ ub_signal_new(struct ub_event_base* base, int fd,
 	if (!ev)
 		return NULL;
 
-	signal_set(ev, fd, cb, arg);
+	signal_set(ev, fd, NATIVE_BITS_CB(cb), arg);
 	if (event_base_set(AS_EVENT_BASE(base), ev) != 0) {
 		free(ev);
 		return NULL;
@@ -323,7 +372,7 @@ int
 ub_timer_add(struct ub_event* ev, struct ub_event_base* base,
 	void (*cb)(int, short, void*), void* arg, struct timeval* tv)
 {
-	event_set(AS_EVENT(ev), -1, EV_TIMEOUT, cb, arg);
+	event_set(AS_EVENT(ev), -1, EV_TIMEOUT, NATIVE_BITS_CB(cb), arg);
 	if (event_base_set(AS_EVENT_BASE(base), AS_EVENT(ev)) != 0)
 		return -1;
 	return evtimer_add(AS_EVENT(ev), tv);

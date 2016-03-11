@@ -78,8 +78,56 @@
 	| ((b) & UB_EV_WRITE  ) ? EV_WRITE   : 0 \
 	| ((b) & UB_EV_SIGNAL ) ? EV_SIGNAL  : 0 \
 	| ((b) & UB_EV_PERSIST) ? EV_PERSIST : 0)
+
+#  define UB_EV_BITS(b) ( \
+	  ((b) & EV_TIMEOUT) ? UB_EV_TIMEOUT : 0 \
+	| ((b) & EV_READ   ) ? UB_EV_READ    : 0 \
+	| ((b) & EV_WRITE  ) ? UB_EV_WRITE   : 0 \
+	| ((b) & EV_SIGNAL ) ? UB_EV_SIGNAL  : 0 \
+	| ((b) & EV_PERSIST) ? UB_EV_PERSIST : 0)
+
+#  define UB_EV_BITS_CB(C) void my_ ## C (int fd, short bits, void *arg) \
+	{ (C)(fd, UB_EV_BITS(bits), arg); }
+
+UB_EV_BITS_CB(comm_point_udp_callback);
+UB_EV_BITS_CB(comm_point_udp_ancil_callback)
+UB_EV_BITS_CB(comm_point_tcp_accept_callback)
+UB_EV_BITS_CB(comm_point_tcp_handle_callback)
+UB_EV_BITS_CB(comm_timer_callback)
+UB_EV_BITS_CB(comm_signal_callback)
+UB_EV_BITS_CB(comm_point_local_handle_callback)
+UB_EV_BITS_CB(comm_point_raw_handle_callback)
+UB_EV_BITS_CB(tube_handle_signal)
+UB_EV_BITS_CB(comm_base_handle_slow_accept)
+
+static void (*NATIVE_BITS_CB(void (*cb)(int, short, void*)))(int, short, void*)
+{
+	if(cb == comm_point_udp_callback)
+		return my_comm_point_udp_callback;
+	else if(cb == comm_point_udp_ancil_callback)
+		return my_comm_point_udp_ancil_callback;
+	else if(cb == comm_point_tcp_accept_callback)
+		return my_comm_point_tcp_accept_callback;
+	else if(cb == comm_point_tcp_handle_callback)
+		return my_comm_point_tcp_handle_callback;
+	else if(cb == comm_timer_callback)
+		return my_comm_timer_callback;
+	else if(cb == comm_signal_callback)
+		return my_comm_signal_callback;
+	else if(cb == comm_point_local_handle_callback)
+		return my_comm_point_local_handle_callback;
+	else if(cb == comm_point_raw_handle_callback)
+		return my_comm_point_raw_handle_callback;
+	else if(cb == tube_handle_signal)
+		return my_tube_handle_signal;
+	else if(cb == comm_base_handle_slow_accept)
+		return my_comm_base_handle_slow_accept;
+	else
+		return NULL;
+}
 #else
 #  define NATIVE_BITS(b) (b)
+#  define NATIVE_BITS_CB(c) (c)
 #endif
 
 struct my_event_base {
@@ -142,7 +190,7 @@ static int
 my_timer_add(struct ub_event* ev, struct ub_event_base* base,
 	void (*cb)(int, short, void*), void* arg, struct timeval* tv)
 {
-	event_set(&AS_MY_EVENT(ev)->ev, -1, EV_TIMEOUT, cb, arg);
+	event_set(&AS_MY_EVENT(ev)->ev, -1, EV_TIMEOUT,NATIVE_BITS_CB(cb),arg);
 	if (event_base_set(AS_MY_EVENT_BASE(base)->base, &AS_MY_EVENT(ev)->ev)
 		!= 0)
 		return -1;
@@ -232,7 +280,7 @@ my_event_new(struct ub_event_base* base, int fd, short bits,
 	if (!my_ev)
 		return NULL;
 
-	event_set(&my_ev->ev, fd, NATIVE_BITS(bits), cb, arg);
+	event_set(&my_ev->ev, fd, NATIVE_BITS(bits), NATIVE_BITS_CB(cb), arg);
 	if (event_base_set(AS_MY_EVENT_BASE(base)->base, &my_ev->ev) != 0) {
 		free(my_ev);
 		return NULL;
@@ -252,7 +300,7 @@ my_signal_new(struct ub_event_base* base, int fd,
 	if (!my_ev)
 		return NULL;
 
-	signal_set(&my_ev->ev, fd, cb, arg);
+	signal_set(&my_ev->ev, fd, NATIVE_BITS_CB(cb), arg);
 	if (event_base_set(AS_MY_EVENT_BASE(base)->base, &my_ev->ev) != 0) {
 		free(my_ev);
 		return NULL;
