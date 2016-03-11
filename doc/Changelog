@@ -1,5 +1,6 @@
 11 March 2016: Wouter
 	- Remove warning about unused parameter in event_pluggable.c.
+	- Fix libev usage of dispatch return value.
 
 10 March 2016: Wouter
 	- Fixup backend2str for libev.

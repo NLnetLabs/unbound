@@ -236,7 +236,7 @@ comm_base_dispatch(struct comm_base* b)
 {
 	int retval;
 	retval = ub_event_base_dispatch(b->eb->base);
-	if(retval != 0) {
+	if(retval < 0) {
 		fatal_exit("event_dispatch returned error %d, "
 			"errno is %s", retval, strerror(errno));
 	}
