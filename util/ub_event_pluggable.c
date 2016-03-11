@@ -435,14 +435,14 @@ void
 ub_get_event_sys(struct ub_event_base* ub_base, const char** n, const char** s,
 	const char** m)
 {
-
-	*n = "pluggable-event";
 #ifdef USE_WINSOCK
 	(void)ub_base;
+	*n = "pluggable-event";
 	*s = "winsock";
 	*m = "WSAWaitForMultipleEvents";
 #elif defined(USE_MINI_EVENT)
 	(void)ub_base;
+	*n = "pluggable-event";
 	*s = "internal";
 	*m = "select";
 #else
@@ -452,6 +452,7 @@ ub_get_event_sys(struct ub_event_base* ub_base, const char** n, const char** s,
 	 * event base.
 	 */
 	assert(b);
+	*n = "pluggable-event";
 	*s = event_get_version();
 #  if defined(HAVE_EV_LOOP) || defined(HAVE_EV_DEFAULT_LOOP)
 	*n = "pluggable-libev";
