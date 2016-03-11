@@ -351,6 +351,7 @@ ub_libevent_event_base(struct event_base* base)
 		return NULL;
 	my_base->super.magic = UB_EVENT_MAGIC;
 	my_base->super.vmt = &default_event_base_vmt;
+	my_base->base = base;
 	return &my_base->super;
 #endif
 }
