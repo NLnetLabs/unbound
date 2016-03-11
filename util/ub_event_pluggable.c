@@ -341,6 +341,7 @@ struct ub_event_base*
 ub_libevent_event_base(struct event_base* base)
 {
 #ifdef USE_MINI_EVENT
+	(void)base;
 	return NULL;
 #else
 	struct my_event_base* my_base = (struct my_event_base*)calloc(1,
@@ -360,6 +361,8 @@ ub_libevent_get_event_base(struct ub_event_base* base)
 #ifndef USE_MINI_EVENT
 	if (base->vmt == &default_event_base_vmt)
 		return AS_MY_EVENT_BASE(base)->base;
+#else
+	(void)base;
 #endif
 	return NULL;
 }
