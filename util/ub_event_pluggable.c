@@ -73,18 +73,18 @@
     UB_EV_PERSIST != EV_PERSIST
 /* Only necessary for libev */
 #  define NATIVE_BITS(b) ( \
-	  ((b) & UB_EV_TIMEOUT) ? EV_TIMEOUT : 0 \
-	| ((b) & UB_EV_READ   ) ? EV_READ    : 0 \
-	| ((b) & UB_EV_WRITE  ) ? EV_WRITE   : 0 \
-	| ((b) & UB_EV_SIGNAL ) ? EV_SIGNAL  : 0 \
-	| ((b) & UB_EV_PERSIST) ? EV_PERSIST : 0)
+	  (((b) & UB_EV_TIMEOUT) ? EV_TIMEOUT : 0) \
+	| (((b) & UB_EV_READ   ) ? EV_READ    : 0) \
+	| (((b) & UB_EV_WRITE  ) ? EV_WRITE   : 0) \
+	| (((b) & UB_EV_SIGNAL ) ? EV_SIGNAL  : 0) \
+	| (((b) & UB_EV_PERSIST) ? EV_PERSIST : 0))
 
 #  define UB_EV_BITS(b) ( \
-	  ((b) & EV_TIMEOUT) ? UB_EV_TIMEOUT : 0 \
-	| ((b) & EV_READ   ) ? UB_EV_READ    : 0 \
-	| ((b) & EV_WRITE  ) ? UB_EV_WRITE   : 0 \
-	| ((b) & EV_SIGNAL ) ? UB_EV_SIGNAL  : 0 \
-	| ((b) & EV_PERSIST) ? UB_EV_PERSIST : 0)
+	  (((b) & EV_TIMEOUT) ? UB_EV_TIMEOUT : 0) \
+	| (((b) & EV_READ   ) ? UB_EV_READ    : 0) \
+	| (((b) & EV_WRITE  ) ? UB_EV_WRITE   : 0) \
+	| (((b) & EV_SIGNAL ) ? UB_EV_SIGNAL  : 0) \
+	| (((b) & EV_PERSIST) ? UB_EV_PERSIST : 0))
 
 #  define UB_EV_BITS_CB(C) void my_ ## C (int fd, short bits, void *arg) \
 	{ (C)(fd, UB_EV_BITS(bits), arg); }
