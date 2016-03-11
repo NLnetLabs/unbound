@@ -571,7 +571,7 @@ ub_event_free(struct ub_event* ev)
 	if (ev && ev->magic == UB_EVENT_MAGIC) {
 		fptr_ok(ev->vmt != &default_event_vmt ||
 			ev->vmt->free == my_event_free);
-		ev->vmt->free(ev);
+		(*ev->vmt->free)(ev);
 	}
 }
 

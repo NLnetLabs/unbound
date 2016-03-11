@@ -2,6 +2,7 @@
 	- Remove warning about unused parameter in event_pluggable.c.
 	- Fix libev usage of dispatch return value.
 	- No side effects in tolower() call, in case it is a macro.
+	- For test put free in pluggable api in parenthesis.
 
 10 March 2016: Wouter
 	- Fixup backend2str for libev.
