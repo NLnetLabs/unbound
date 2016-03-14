@@ -187,6 +187,7 @@ ub_get_event_sys(struct ub_event_base* base, const char** n, const char** s,
 #  else
 	*n = "unknown";
 	*m = "not obtainable";
+	(void)b;
 #  endif
 #  ifdef HAVE_EVENT_BASE_FREE
 	if (b && b != AS_EVENT_BASE(base))
@@ -258,6 +259,8 @@ ub_event_base_free(struct ub_event_base* base)
 	   assertion fails on signal handling ev that is not deleted
  	   in libevent 1.3c (event_base_once appears) this is fixed. */
 	event_base_free(AS_EVENT_BASE(base));
+#else
+	(void)base;
 #endif /* HAVE_EVENT_BASE_FREE and HAVE_EVENT_BASE_ONCE */
 }
 
