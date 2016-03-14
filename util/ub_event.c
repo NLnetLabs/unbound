@@ -128,6 +128,10 @@ static void (*NATIVE_BITS_CB(void (*cb)(int, short, void*)))(int, short, void*)
 #  define NATIVE_BITS_CB(c) (c)
 #endif
 
+#ifndef EVFLAG_AUTO
+#define EVFLAG_AUTO 0
+#endif
+
 #define AS_EVENT_BASE(x) \
 	(((union {struct ub_event_base* a; struct event_base* b;})x).b)
 #define AS_UB_EVENT_BASE(x) \
@@ -142,7 +146,7 @@ const char* ub_event_get_version()
 	return event_get_version();
 }
 
-#if defined(HAVE_EV_LOOP) || defined(HAVE_EV_DEFAULT_LOOP)
+#if (defined(HAVE_EV_LOOP) || defined(HAVE_EV_DEFAULT_LOOP)) && defined(EVBACKEND_SELECT)
 static const char* ub_ev_backend2str(int b)
 {
 	switch(b) {
@@ -178,7 +182,11 @@ ub_get_event_sys(struct ub_event_base* base, const char** n, const char** s,
 	*n = "libev";
 	if (!b)
 		b = (struct event_base*)ev_default_loop(EVFLAG_AUTO);
+#    ifdef EVBACKEND_SELECT
 	*m = ub_ev_backend2str(ev_backend((struct ev_loop*)b));
+#    else
+	*m = "not obtainable";
+#    endif
 #  elif defined(HAVE_EVENT_BASE_GET_METHOD)
 	*n = "libevent";
 	if (!b)
