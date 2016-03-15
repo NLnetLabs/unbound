@@ -142,6 +142,8 @@ struct config_file {
 	int so_reuseport;
 	/** IP_TRANSPARENT socket option requested on port 53 sockets */
 	int ip_transparent;
+	/** IP_FREEBIND socket option request on port 53 sockets */
+	int ip_freebind;
 
 	/** number of interfaces to open. If 0 default all interfaces. */
 	int num_ifs;

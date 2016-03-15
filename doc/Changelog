@@ -1,3 +1,7 @@
+15 March 2016: Wouter
+	- ip_freebind: yesno option in unbound.conf sets IP_FREEBIND for
+	  binding to an IP address while the interface or address is down.
+
 14 March 2016: Wouter
 	- Fix warnings in ifdef corner case, older or unknown libevent.
 	- Fix compile for ub_event code with older libev.

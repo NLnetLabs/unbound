@@ -163,6 +163,7 @@ config_create(void)
 	cfg->so_sndbuf = 0;
 	cfg->so_reuseport = 0;
 	cfg->ip_transparent = 0;
+	cfg->ip_freebind = 0;
 	cfg->num_ifs = 0;
 	cfg->ifs = NULL;
 	cfg->num_out_ifs = 0;
@@ -393,6 +394,7 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	else S_MEMSIZE("so-sndbuf:", so_sndbuf)
 	else S_YNO("so-reuseport:", so_reuseport)
 	else S_YNO("ip-transparent:", ip_transparent)
+	else S_YNO("ip-freebind:", ip_freebind)
 	else S_MEMSIZE("rrset-cache-size:", rrset_cache_size)
 	else S_POW2("rrset-cache-slabs:", rrset_cache_slabs)
 	else S_YNO("prefetch:", prefetch)
@@ -664,6 +666,7 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_MEM(opt, "so-sndbuf", so_sndbuf)
 	else O_YNO(opt, "so-reuseport", so_reuseport)
 	else O_YNO(opt, "ip-transparent", ip_transparent)
+	else O_YNO(opt, "ip-freebind", ip_freebind)
 	else O_MEM(opt, "rrset-cache-size", rrset_cache_size)
 	else O_DEC(opt, "rrset-cache-slabs", rrset_cache_slabs)
 	else O_YNO(opt, "prefetch-key", prefetch_key)

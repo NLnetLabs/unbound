@@ -234,6 +234,7 @@ so-rcvbuf{COLON}		{ YDVAR(1, VAR_SO_RCVBUF) }
 so-sndbuf{COLON}		{ YDVAR(1, VAR_SO_SNDBUF) }
 so-reuseport{COLON}		{ YDVAR(1, VAR_SO_REUSEPORT) }
 ip-transparent{COLON}		{ YDVAR(1, VAR_IP_TRANSPARENT) }
+ip-freebind{COLON}		{ YDVAR(1, VAR_IP_FREEBIND) }
 chroot{COLON}			{ YDVAR(1, VAR_CHROOT) }
 username{COLON}			{ YDVAR(1, VAR_USERNAME) }
 directory{COLON}		{ YDVAR(1, VAR_DIRECTORY) }
