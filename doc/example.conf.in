@@ -93,6 +93,11 @@ server:
 	# (uses IP_BINDANY on FreeBSD).
 	# ip-transparent: no
 
+	# use IP_FREEBIND so the interface: addresses can be non-local
+	# and you can bind to nonexisting IPs and interfaces that are down.
+	# Linux only.  On Linux you also have ip-transparent that is similar.
+	# ip-freebind: no
+
 	# EDNS reassembly buffer to advertise to UDP peers (the actual buffer
 	# is set with msg-buffer-size). 1480 can solve fragmentation (timeouts).
 	# edns-buffer-size: 4096

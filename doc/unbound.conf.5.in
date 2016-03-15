@@ -277,6 +277,13 @@ and with this option you can select which (future) interfaces unbound
 provides service on.  This option needs unbound to be started with root
 permissions on some systems.  The option uses IP_BINDANY on FreeBSD systems.
 .TP
+.B ip\-freebind: \fI<yes or no>
+If yes, then use IP_FREEBIND socket option on sockets where unbound
+is listening to incoming traffic.  Default no.  Allows you to bind to
+IP addresses that are nonlocal or do not exist, like when the network
+interface or IP adress is down.  Exists only on Linux, where the similar
+ip\-transparent option is also available.
+.TP
 .B rrset\-cache\-size: \fI<number>
 Number of bytes size of the RRset cache. Default is 4 megabytes.
 A plain number is in bytes, append 'k', 'm' or 'g' for kilobytes, megabytes
