@@ -624,11 +624,11 @@ create_tcp_accept_sock(struct addrinfo *addr, int v6only, int* noproto,
 	}
 #elif defined(IP_BINDANY)
 	if (transparent &&
-	    setsockopt(s, (family==AF_INET6? IPPROTO_IPV6:IPPROTO_IP),
-	    (family == AF_INET6? IPV6_BINDANY:IP_BINDANY),
+	    setsockopt(s, (addr->ai_family==AF_INET6? IPPROTO_IPV6:IPPROTO_IP),
+	    (addr->ai_family == AF_INET6? IPV6_BINDANY:IP_BINDANY),
 	    (void*)&on, (socklen_t)sizeof(on)) < 0) {
 		log_warn("setsockopt(.. IP%s_BINDANY ..) failed: %s",
-		(family==AF_INET6?"V6":""), strerror(errno));
+		(addr->ai_family==AF_INET6?"V6":""), strerror(errno));
 	}
 #endif /* IP_TRANSPARENT || IP_BINDANY */
 	if(bind(s, addr->ai_addr, addr->ai_addrlen) != 0) {
