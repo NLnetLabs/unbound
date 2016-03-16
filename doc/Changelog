@@ -1,3 +1,6 @@
+16 March 2016: Wouter
+	- Fix ip-transparent for ipv6 on FreeBSD.
+
 15 March 2016: Wouter
 	- ip_freebind: yesno option in unbound.conf sets IP_FREEBIND for
 	  binding to an IP address while the interface or address is down.

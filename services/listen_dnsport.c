@@ -202,9 +202,10 @@ create_udp_sock(int family, int socktype, struct sockaddr* addr,
 #elif defined(IP_BINDANY)
 		if (transparent &&
 		    setsockopt(s, (family==AF_INET6? IPPROTO_IPV6:IPPROTO_IP),
-		    IP_BINDANY, (void*)&on, (socklen_t)sizeof(on)) < 0) {
-			log_warn("setsockopt(.. IP_BINDANY ..) failed: %s",
-			strerror(errno));
+		    (family == AF_INET6? IPV6_BINDANY:IP_BINDANY),
+		    (void*)&on, (socklen_t)sizeof(on)) < 0) {
+			log_warn("setsockopt(.. IP%s_BINDANY ..) failed: %s",
+			(family==AF_INET6?"V6":""), strerror(errno));
 		}
 #endif /* IP_TRANSPARENT || IP_BINDANY */
 	}
