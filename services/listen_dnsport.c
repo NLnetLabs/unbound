@@ -506,10 +506,10 @@ create_tcp_accept_sock(struct addrinfo *addr, int v6only, int* noproto,
 	int* reuseport, int transparent, int mss, int freebind)
 {
 	int s;
-#if defined(SO_REUSEADDR) || defined(SO_REUSEPORT) || defined(IPV6_V6ONLY) || defined(IP_TRANSPARENT) || defined(IP_FREEBIND)
+#if defined(SO_REUSEADDR) || defined(SO_REUSEPORT) || defined(IPV6_V6ONLY) || defined(IP_TRANSPARENT) || defined(IP_BINDANY) || defined(IP_FREEBIND)
 	int on = 1;
 #endif
-#ifndef IP_TRANSPARENT
+#if !defined(IP_TRANSPARENT) && !defined(IP_BINDANY)
 	(void)transparent;
 #endif
 #if !defined(IP_FREEBIND)
@@ -622,7 +622,15 @@ create_tcp_accept_sock(struct addrinfo *addr, int v6only, int* noproto,
 		log_warn("setsockopt(.. IP_TRANSPARENT ..) failed: %s",
 			strerror(errno));
 	}
-#endif /* IP_TRANSPARENT */
+#elif defined(IP_BINDANY)
+	if (transparent &&
+	    setsockopt(s, (family==AF_INET6? IPPROTO_IPV6:IPPROTO_IP),
+	    (family == AF_INET6? IPV6_BINDANY:IP_BINDANY),
+	    (void*)&on, (socklen_t)sizeof(on)) < 0) {
+		log_warn("setsockopt(.. IP%s_BINDANY ..) failed: %s",
+		(family==AF_INET6?"V6":""), strerror(errno));
+	}
+#endif /* IP_TRANSPARENT || IP_BINDANY */
 	if(bind(s, addr->ai_addr, addr->ai_addrlen) != 0) {
 #ifndef USE_WINSOCK
 		/* detect freebsd jail with no ipv6 permission */

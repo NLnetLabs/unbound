@@ -1,5 +1,6 @@
 16 March 2016: Wouter
 	- Fix ip-transparent for ipv6 on FreeBSD.
+	- Fix ip-transparent for tcp on freebsd.
 
 15 March 2016: Wouter
 	- ip_freebind: yesno option in unbound.conf sets IP_FREEBIND for
