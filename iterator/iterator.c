@@ -2090,7 +2090,13 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 	outq = (*qstate->env->send_query)(
 		iq->qinfo_out.qname, iq->qinfo_out.qname_len, 
 		iq->qinfo_out.qtype, iq->qinfo_out.qclass, 
-		iq->chase_flags | (iq->chase_to_rd?BIT_RD:0), EDNS_DO|BIT_CD, 
+		iq->chase_flags | (iq->chase_to_rd?BIT_RD:0), 
+		/* unset CD if to forwarder(RD set) and not dnssec retry
+		 * (blacklist nonempty) and no trust-anchors are configured
+		 * above the qname or on the first attempt when dnssec is on */
+		EDNS_DO| ((iq->chase_to_rd||(iq->chase_flags&BIT_RD)!=0)&&
+		!qstate->blacklist&&(!iter_indicates_dnssec_fwd(qstate->env,
+		&iq->qinfo_out)||target->attempts==1)?0:BIT_CD), 
 		iq->dnssec_expected, iq->caps_fallback || is_caps_whitelisted(
 		ie, iq), &target->addr, target->addrlen, iq->dp->name,
 		iq->dp->namelen, qstate);
