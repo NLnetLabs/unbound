@@ -3,6 +3,7 @@
 	  If no trust anchors, it'll not set CD bit when forwarding to another
 	  server.  If a trust anchor, no CD bit on the first attempt to a
 	  forwarder, but CD bit thereafter on repeated attempts to get DNSSEC.
+	- iana portlist update.
 
 16 March 2016: Wouter
 	- Fix ip-transparent for ipv6 on FreeBSD, thanks to Nick Hibma.
