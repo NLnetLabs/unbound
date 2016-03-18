@@ -1,3 +1,8 @@
+18 March 2016: Ralph
+	- Validate QNAME minimised NXDOMAIN responses.
+	- If QNAME minimisation is enabled, do cache lookup for QTYPE NS in
+	  harden-below-nxdomain.
+
 17 March 2016: Ralph
 	- Limit number of QNAME minimisation iterations.
 

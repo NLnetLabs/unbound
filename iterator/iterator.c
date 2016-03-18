@@ -2265,6 +2265,26 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 			if(FLAGS_GET_RCODE(iq->response->rep->flags) != 
 				LDNS_RCODE_NOERROR)
 				iq->minimisation_state = DONOT_MINIMISE_STATE;
+			/* Make subrequest to validate intermediate NXDOMAIN if
+			 * harden-below-nxdomain is enabled. */
+			if(FLAGS_GET_RCODE(iq->response->rep->flags) ==
+				LDNS_RCODE_NXDOMAIN &&
+				qstate->env->cfg->harden_below_nxdomain) {
+				struct module_qstate* subq = NULL;
+				log_query_info(VERB_QUERY,
+					"schedule NXDOMAIN validation:",
+					&iq->response->qinfo);
+				if(!generate_sub_request(
+					iq->response->qinfo.qname,
+					iq->response->qinfo.qname_len,
+					iq->response->qinfo.qtype,
+					iq->response->qinfo.qclass,
+					qstate, id, iq, INIT_REQUEST_STATE,
+					FINISHED_STATE, &subq, 1)) {
+					verbose(VERB_ALGO,
+					"could not validate NXDOMAIN response");
+				}
+			}
 			return next_state(iq, QUERYTARGETS_STATE);
 		}
 		return final_state(iq);
