@@ -17107,8 +17107,8 @@ $as_echo "found in $ssldir" >&6; }
 
             fi
 
-            { $as_echo "$as_me:${as_lineno-$LINENO}: checking for HMAC_CTX_init in -lcrypto" >&5
-$as_echo_n "checking for HMAC_CTX_init in -lcrypto... " >&6; }
+            { $as_echo "$as_me:${as_lineno-$LINENO}: checking for HMAC_Update in -lcrypto" >&5
+$as_echo_n "checking for HMAC_Update in -lcrypto... " >&6; }
             LIBS="$LIBS -lcrypto"
             LIBSSL_LIBS="$LIBSSL_LIBS -lcrypto"
             cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -17118,8 +17118,8 @@ int
 main ()
 {
 
-                int HMAC_CTX_init(void);
-                (void)HMAC_CTX_init();
+                int HMAC_Update(void);
+                (void)HMAC_Update();
 
   ;
   return 0;
@@ -17130,7 +17130,7 @@ if ac_fn_c_try_link "$LINENO"; then :
                 { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 $as_echo "yes" >&6; }
 
-$as_echo "#define HAVE_HMAC_CTX_INIT 1" >>confdefs.h
+$as_echo "#define HAVE_HMAC_UPDATE 1" >>confdefs.h
 
 
 else
@@ -17151,8 +17151,8 @@ int
 main ()
 {
 
-                    int HMAC_CTX_init(void);
-                    (void)HMAC_CTX_init();
+                    int HMAC_Update(void);
+                    (void)HMAC_Update();
 
   ;
   return 0;
@@ -17161,7 +17161,7 @@ _ACEOF
 if ac_fn_c_try_link "$LINENO"; then :
 
 
-$as_echo "#define HAVE_HMAC_CTX_INIT 1" >>confdefs.h
+$as_echo "#define HAVE_HMAC_UPDATE 1" >>confdefs.h
 
                     { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 $as_echo "yes" >&6; }
@@ -17183,8 +17183,8 @@ int
 main ()
 {
 
-                        int HMAC_CTX_init(void);
-                        (void)HMAC_CTX_init();
+                        int HMAC_Update(void);
+                        (void)HMAC_Update();
 
   ;
   return 0;
@@ -17193,7 +17193,7 @@ _ACEOF
 if ac_fn_c_try_link "$LINENO"; then :
 
 
-$as_echo "#define HAVE_HMAC_CTX_INIT 1" >>confdefs.h
+$as_echo "#define HAVE_HMAC_UPDATE 1" >>confdefs.h
 
                         { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 $as_echo "yes" >&6; }

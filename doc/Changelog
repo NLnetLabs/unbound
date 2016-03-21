@@ -1,6 +1,8 @@
-21 March 2016: Ralph
+21 March 2016: Wouter
 	- Fix compile of getentropy_linux for SLES11 servicepack 4.
 	- Fix dnstap-log-resolver-response-messages, from Nikolay Edigaryev.
+	- Fix test for openssl to use HMAC_Update for 1.1.0.
+	- acx_nlnetlabs.m4 to v33, with HMAC_Update.
 
 18 March 2016: Ralph
 	- Validate QNAME minimised NXDOMAIN responses.
