@@ -656,7 +656,6 @@ daemon_delete(struct daemon* daemon)
 	CONF_modules_free();
 #  endif
 	CRYPTO_cleanup_all_ex_data(); /* safe, no more threads right now */
-	ERR_remove_state(0);
 	ERR_free_strings();
 	RAND_cleanup();
 #  if defined(HAVE_SSL) && defined(OPENSSL_THREADS) && !defined(THREADS_DISABLED)

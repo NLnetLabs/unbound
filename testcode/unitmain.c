@@ -602,7 +602,6 @@ main(int argc, char* argv[])
 	CONF_modules_free();
 #  endif
 	CRYPTO_cleanup_all_ex_data();
-	ERR_remove_state(0);
 	ERR_free_strings();
 	RAND_cleanup();
 #elif defined(HAVE_NSS)
