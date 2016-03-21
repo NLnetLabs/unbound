@@ -5,6 +5,7 @@
 	- acx_nlnetlabs.m4 to v33, with HMAC_Update.
 	- acx_nlnetlabs.m4 to v34, with -ldl -pthread test for libcrypto.
 	- ERR_remove_state deprecated since openssl 1.0.0.
+	- OPENSSL_config is deprecated, removing.
 
 18 March 2016: Ralph
 	- Validate QNAME minimised NXDOMAIN responses.

@@ -564,9 +564,6 @@ main(int argc, char* argv[])
 	printf("Start of %s unit test.\n", PACKAGE_STRING);
 #ifdef HAVE_SSL
 	ERR_load_crypto_strings();
-#  ifdef HAVE_OPENSSL_CONFIG
-	OPENSSL_config("unbound");
-#  endif
 #  ifdef USE_GOST
 	(void)sldns_key_EVP_load_gost_id();
 #  endif

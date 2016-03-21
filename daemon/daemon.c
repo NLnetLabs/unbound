@@ -206,9 +206,6 @@ daemon_init(void)
 #ifdef HAVE_SSL
 	ERR_load_crypto_strings();
 	ERR_load_SSL_strings();
-#  ifdef HAVE_OPENSSL_CONFIG
-	OPENSSL_config("unbound");
-#  endif
 #  ifdef USE_GOST
 	(void)sldns_key_EVP_load_gost_id();
 #  endif
