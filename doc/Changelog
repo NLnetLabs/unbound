@@ -3,6 +3,7 @@
 	- Fix dnstap-log-resolver-response-messages, from Nikolay Edigaryev.
 	- Fix test for openssl to use HMAC_Update for 1.1.0.
 	- acx_nlnetlabs.m4 to v33, with HMAC_Update.
+	- acx_nlnetlabs.m4 to v34, with -ldl -pthread test for libcrypto.
 
 18 March 2016: Ralph
 	- Validate QNAME minimised NXDOMAIN responses.

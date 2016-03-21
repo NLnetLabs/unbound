@@ -17202,7 +17202,43 @@ else
 
                         { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
 $as_echo "no" >&6; }
-                    as_fn_error $? "OpenSSL found in $ssldir, but version 0.9.7 or higher is required" "$LINENO" 5
+                        LIBS="$BAKLIBS"
+                        LIBSSL_LIBS="$BAKSSLLIBS"
+                        LIBS="$LIBS -ldl -pthread"
+                        LIBSSL_LIBS="$LIBSSL_LIBS -ldl -pthread"
+                        { $as_echo "$as_me:${as_lineno-$LINENO}: checking if -lcrypto needs -ldl -pthread" >&5
+$as_echo_n "checking if -lcrypto needs -ldl -pthread... " >&6; }
+                        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+int
+main ()
+{
+
+                            int HMAC_Update(void);
+                            (void)HMAC_Update();
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+
+
+$as_echo "#define HAVE_HMAC_UPDATE 1" >>confdefs.h
+
+                            { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+
+else
+
+                            { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+                            as_fn_error $? "OpenSSL found in $ssldir, but version 0.9.7 or higher is required" "$LINENO" 5
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
 
 fi
 rm -f core conftest.err conftest.$ac_objext \
