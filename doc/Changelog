@@ -1,3 +1,6 @@
+21 March 2016: Ralph
+	- Fix compile of getentropy_linux for SLES11 servicepack 4.
+
 18 March 2016: Ralph
 	- Validate QNAME minimised NXDOMAIN responses.
 	- If QNAME minimisation is enabled, do cache lookup for QTYPE NS in
