@@ -320,9 +320,9 @@ i	 * the '44' is the total remaining length.
 		return 0;
 	p = (uint8_t*)*sig;
 	p[0] = pre[0];
-	p[1] = raw_sig_len-2;
+	p[1] = (uint8_t)(raw_sig_len-2);
 	p[2] = pre[2];
-	p[3] = bnsize + r_high - r_rem;
+	p[3] = (uint8_t)(bnsize + r_high - r_rem);
 	p += 4;
 	if(r_high) {
 		*p = 0;
