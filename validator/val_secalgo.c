@@ -186,8 +186,10 @@ dnskey_algo_id_is_supported(int id)
 	case LDNS_RSAMD5:
 		/* RFC 6725 deprecates RSAMD5 */
 		return 0;
+#ifdef USE_DSA
 	case LDNS_DSA:
 	case LDNS_DSA_NSEC3:
+#endif
 	case LDNS_RSASHA1:
 	case LDNS_RSASHA1_NSEC3:
 #if defined(HAVE_EVP_SHA256) && defined(USE_SHA2)
@@ -227,6 +229,7 @@ log_crypto_error(const char* str, unsigned long e)
 	log_err("%s crypto %s", str, buf);
 }
 
+#ifdef USE_DSA
 /**
  * Setup DSA key digest in DER encoding ... 
  * @param sig: input is signature output alloced ptr (unless failure).
@@ -268,6 +271,7 @@ setup_dsa_sig(unsigned char** sig, unsigned int* len)
 	DSA_SIG_free(dsasig);
 	return 1;
 }
+#endif /* USE_DSA */
 
 #ifdef USE_ECDSA
 /**
@@ -281,32 +285,61 @@ setup_dsa_sig(unsigned char** sig, unsigned int* len)
 static int
 setup_ecdsa_sig(unsigned char** sig, unsigned int* len)
 {
-	ECDSA_SIG* ecdsa_sig;
-	int newlen;
+        /* convert from two BIGNUMs in the rdata buffer, to ASN notation.
+	 * ASN preable:  30440220 <R 32bytefor256> 0220 <S 32bytefor256>
+	 * the '20' is the length of that field (=bnsize).
+i	 * the '44' is the total remaining length.
+	 * if negative, start with leading zero.
+	 * if starts with 00s, remove them from the number.
+	 */
+        uint8_t pre[] = {0x30, 0x44, 0x02, 0x20};
+        int pre_len = 4;
+        uint8_t mid[] = {0x02, 0x20};
+        int mid_len = 2;
+        int raw_sig_len, r_high, s_high, r_rem=0, s_rem=0;
 	int bnsize = (int)((*len)/2);
+        unsigned char* d = *sig;
+	unsigned char* p;
 	/* if too short or not even length, fails */
 	if(*len < 16 || bnsize*2 != (int)*len)
 		return 0;
-	/* use the raw data to parse two evenly long BIGNUMs, "r | s". */
-	ecdsa_sig = ECDSA_SIG_new();
-	if(!ecdsa_sig) return 0;
-	ecdsa_sig->r = BN_bin2bn(*sig, bnsize, ecdsa_sig->r);
-	ecdsa_sig->s = BN_bin2bn(*sig+bnsize, bnsize, ecdsa_sig->s);
-	if(!ecdsa_sig->r || !ecdsa_sig->s) {
-		ECDSA_SIG_free(ecdsa_sig);
-		return 0;
-	}
 
-	/* spool it into ASN format */
-	*sig = NULL;
-	newlen = i2d_ECDSA_SIG(ecdsa_sig, sig);
-	if(newlen <= 0) {
-		ECDSA_SIG_free(ecdsa_sig);
-		free(*sig);
+        /* strip leading zeroes from r (but not last one) */
+        while(r_rem < bnsize-1 && d[r_rem] == 0)
+                r_rem++;
+        /* strip leading zeroes from s (but not last one) */
+        while(s_rem < bnsize-1 && d[bnsize+s_rem] == 0)
+                s_rem++;
+
+        r_high = ((d[0+r_rem]&0x80)?1:0);
+        s_high = ((d[bnsize+s_rem]&0x80)?1:0);
+        raw_sig_len = pre_len + r_high + bnsize - r_rem + mid_len +
+                s_high + bnsize - s_rem;
+	*sig = (unsigned char*)malloc(raw_sig_len);
+	if(!*sig)
 		return 0;
+	p = *sig;
+	p[0] = pre[0];
+	p[1] = raw_sig_len-2;
+	p[2] = pre[2];
+	p[3] = bnsize + r_high - r_rem;
+	p += 4;
+	if(r_high) {
+		*p = 0;
+		p += 1;
 	}
-	*len = (unsigned int)newlen;
-	ECDSA_SIG_free(ecdsa_sig);
+	memmove(p, d+r_rem, bnsize-r_rem);
+	p += bnsize-r_rem;
+	memmove(p, mid, mid_len-1);
+	p += mid_len-1;
+	*p = bnsize + s_high - s_rem;
+	p += 1;
+        if(s_high) {
+		*p = 0;
+		p += 1;
+	}
+	memmove(p, d+bnsize+s_rem, bnsize-s_rem);
+	*len = (unsigned int)raw_sig_len;
 	return 1;
 }
 #endif /* USE_ECDSA */
@@ -325,10 +358,13 @@ static int
 setup_key_digest(int algo, EVP_PKEY** evp_key, const EVP_MD** digest_type, 
 	unsigned char* key, size_t keylen)
 {
+#ifdef USE_DSA
 	DSA* dsa;
+#endif
 	RSA* rsa;
 
 	switch(algo) {
+#ifdef USE_DSA
 		case LDNS_DSA:
 		case LDNS_DSA_NSEC3:
 			*evp_key = EVP_PKEY_new();
@@ -350,6 +386,7 @@ setup_key_digest(int algo, EVP_PKEY** evp_key, const EVP_MD** digest_type,
 			*digest_type = EVP_dss1();
 
 			break;
+#endif /* USE_DSA */
 		case LDNS_RSASHA1:
 		case LDNS_RSASHA1_NSEC3:
 #if defined(HAVE_EVP_SHA256) && defined(USE_SHA2)
@@ -508,7 +545,7 @@ verify_canonrrset(sldns_buffer* buf, int algo, unsigned char* sigblock,
 	char** reason)
 {
 	const EVP_MD *digest_type;
-	EVP_MD_CTX ctx;
+	EVP_MD_CTX* ctx;
 	int res, dofree = 0;
 	EVP_PKEY *evp_key = NULL;
 	
@@ -518,6 +555,7 @@ verify_canonrrset(sldns_buffer* buf, int algo, unsigned char* sigblock,
 		EVP_PKEY_free(evp_key);
 		return sec_status_bogus;
 	}
+#ifdef USE_DSA
 	/* if it is a DSA signature in bind format, convert to DER format */
 	if((algo == LDNS_DSA || algo == LDNS_DSA_NSEC3) && 
 		sigblock_len == 1+2*SHA_DIGEST_LENGTH) {
@@ -529,8 +567,12 @@ verify_canonrrset(sldns_buffer* buf, int algo, unsigned char* sigblock,
 		}
 		dofree = 1;
 	}
+#endif
+#if defined(USE_ECDSA) && defined(USE_DSA)
+	else 
+#endif
 #ifdef USE_ECDSA
-	else if(algo == LDNS_ECDSAP256SHA256 || algo == LDNS_ECDSAP384SHA384) {
+	if(algo == LDNS_ECDSAP256SHA256 || algo == LDNS_ECDSAP384SHA384) {
 		/* EVP uses ASN prefix on sig, which is not in the wire data */
 		if(!setup_ecdsa_sig(&sigblock, &sigblock_len)) {
 			verbose(VERB_QUERY, "verify: failed to setup ECDSA sig");
@@ -543,14 +585,25 @@ verify_canonrrset(sldns_buffer* buf, int algo, unsigned char* sigblock,
 #endif /* USE_ECDSA */
 
 	/* do the signature cryptography work */
-	EVP_MD_CTX_init(&ctx);
-	if(EVP_VerifyInit(&ctx, digest_type) == 0) {
+#ifdef HAVE_EVP_MD_CTX_NEW
+	ctx = EVP_MD_CTX_new();
+#else
+	ctx = (EVP_MD_CTX*)malloc(sizeof(*ctx));
+	if(ctx) EVP_MD_CTX_init(ctx);
+#endif
+	if(!ctx) {
+		log_err("EVP_MD_CTX_new: malloc failure");
+		EVP_PKEY_free(evp_key);
+		if(dofree) free(sigblock);
+		return sec_status_unchecked;
+	}
+	if(EVP_VerifyInit(ctx, digest_type) == 0) {
 		verbose(VERB_QUERY, "verify: EVP_VerifyInit failed");
 		EVP_PKEY_free(evp_key);
 		if(dofree) free(sigblock);
 		return sec_status_unchecked;
 	}
-	if(EVP_VerifyUpdate(&ctx, (unsigned char*)sldns_buffer_begin(buf), 
+	if(EVP_VerifyUpdate(ctx, (unsigned char*)sldns_buffer_begin(buf), 
 		(unsigned int)sldns_buffer_limit(buf)) == 0) {
 		verbose(VERB_QUERY, "verify: EVP_VerifyUpdate failed");
 		EVP_PKEY_free(evp_key);
@@ -558,13 +611,8 @@ verify_canonrrset(sldns_buffer* buf, int algo, unsigned char* sigblock,
 		return sec_status_unchecked;
 	}
 
-	res = EVP_VerifyFinal(&ctx, sigblock, sigblock_len, evp_key);
-	if(EVP_MD_CTX_cleanup(&ctx) == 0) {
-		verbose(VERB_QUERY, "verify: EVP_MD_CTX_cleanup failed");
-		EVP_PKEY_free(evp_key);
-		if(dofree) free(sigblock);
-		return sec_status_unchecked;
-	}
+	res = EVP_VerifyFinal(ctx, sigblock, sigblock_len, evp_key);
+	EVP_MD_CTX_destroy(ctx);
 	EVP_PKEY_free(evp_key);
 
 	if(dofree)
@@ -678,8 +726,10 @@ dnskey_algo_id_is_supported(int id)
 	case LDNS_RSAMD5:
 		/* RFC 6725 deprecates RSAMD5 */
 		return 0;
+#ifdef USE_DSA
 	case LDNS_DSA:
 	case LDNS_DSA_NSEC3:
+#endif
 	case LDNS_RSASHA1:
 	case LDNS_RSASHA1_NSEC3:
 #ifdef USE_SHA2
@@ -920,6 +970,7 @@ nss_setup_key_digest(int algo, SECKEYPublicKey** pubkey, HASH_HashType* htype,
 	*/
 
 	switch(algo) {
+#ifdef USE_DSA
 		case LDNS_DSA:
 		case LDNS_DSA_NSEC3:
 			*pubkey = nss_buf2dsa(key, keylen);
@@ -930,6 +981,7 @@ nss_setup_key_digest(int algo, SECKEYPublicKey** pubkey, HASH_HashType* htype,
 			*htype = HASH_AlgSHA1;
 			/* no prefix for DSA verification */
 			break;
+#endif
 		case LDNS_RSASHA1:
 		case LDNS_RSASHA1_NSEC3:
 #ifdef USE_SHA2
@@ -1046,6 +1098,7 @@ verify_canonrrset(sldns_buffer* buf, int algo, unsigned char* sigblock,
 		return sec_status_bogus;
 	}
 
+#ifdef USE_DSA
 	/* need to convert DSA, ECDSA signatures? */
 	if((algo == LDNS_DSA || algo == LDNS_DSA_NSEC3)) {
 		if(sigblock_len == 1+2*SHA1_LENGTH) {
@@ -1068,6 +1121,7 @@ verify_canonrrset(sldns_buffer* buf, int algo, unsigned char* sigblock,
 			SECITEM_FreeItem(p, PR_TRUE);
 		}
 	}
+#endif /* USE_DSA */
 
 	/* do the signature cryptography work */
 	/* hash the data */
@@ -1263,8 +1317,10 @@ dnskey_algo_id_is_supported(int id)
 {
 	/* uses libnettle */
 	switch(id) {
+#ifdef USE_DSA
 	case LDNS_DSA:
 	case LDNS_DSA_NSEC3:
+#endif
 	case LDNS_RSASHA1:
 	case LDNS_RSASHA1_NSEC3:
 #ifdef USE_SHA2
@@ -1541,6 +1597,7 @@ verify_canonrrset(sldns_buffer* buf, int algo, unsigned char* sigblock,
 	}
 
 	switch(algo) {
+#ifdef USE_DSA
 	case LDNS_DSA:
 	case LDNS_DSA_NSEC3:
 		*reason = _verify_nettle_dsa(buf, sigblock, sigblock_len, key, keylen);
@@ -1548,6 +1605,7 @@ verify_canonrrset(sldns_buffer* buf, int algo, unsigned char* sigblock,
 			return sec_status_bogus;
 		else
 			return sec_status_secure;
+#endif /* USE_DSA */
 
 	case LDNS_RSASHA1:
 	case LDNS_RSASHA1_NSEC3:

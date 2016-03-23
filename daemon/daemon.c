@@ -644,17 +644,23 @@ daemon_delete(struct daemon* daemon)
 #  endif
 #  if HAVE_DECL_SSL_COMP_GET_COMPRESSION_METHODS && HAVE_DECL_SK_SSL_COMP_POP_FREE
 #    ifndef S_SPLINT_S
+#      if OPENSSL_VERSION_NUMBER < 0x10100000
 	sk_SSL_COMP_pop_free(comp_meth, (void(*)())CRYPTO_free);
+#      endif
 #    endif
 #  endif
 #  ifdef HAVE_OPENSSL_CONFIG
 	EVP_cleanup();
+#  if OPENSSL_VERSION_NUMBER < 0x10100000
 	ENGINE_cleanup();
+#  endif
 	CONF_modules_free();
 #  endif
 	CRYPTO_cleanup_all_ex_data(); /* safe, no more threads right now */
 	ERR_free_strings();
+#  if OPENSSL_VERSION_NUMBER < 0x10100000
 	RAND_cleanup();
+#  endif
 #  if defined(HAVE_SSL) && defined(OPENSSL_THREADS) && !defined(THREADS_DISABLED)
 	ub_openssl_lock_delete();
 #  endif

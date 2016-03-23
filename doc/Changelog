@@ -1,3 +1,6 @@
+23 March 2016: Wouter
+	- OpenSSL 1.1.0 portability, --disable-dsa configure option.
+
 21 March 2016: Wouter
 	- Fix compile of getentropy_linux for SLES11 servicepack 4.
 	- Fix dnstap-log-resolver-response-messages, from Nikolay Edigaryev.

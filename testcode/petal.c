@@ -643,6 +643,5 @@ int main(int argc, char* argv[])
 
 	CRYPTO_cleanup_all_ex_data();
 	ERR_free_strings();
-	RAND_cleanup();
 	return 0;
 }
