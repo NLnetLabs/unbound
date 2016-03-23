@@ -599,6 +599,7 @@ verify_canonrrset(sldns_buffer* buf, int algo, unsigned char* sigblock,
 	}
 	if(EVP_VerifyInit(ctx, digest_type) == 0) {
 		verbose(VERB_QUERY, "verify: EVP_VerifyInit failed");
+		EVP_MD_CTX_destroy(ctx);
 		EVP_PKEY_free(evp_key);
 		if(dofree) free(sigblock);
 		return sec_status_unchecked;
@@ -606,6 +607,7 @@ verify_canonrrset(sldns_buffer* buf, int algo, unsigned char* sigblock,
 	if(EVP_VerifyUpdate(ctx, (unsigned char*)sldns_buffer_begin(buf), 
 		(unsigned int)sldns_buffer_limit(buf)) == 0) {
 		verbose(VERB_QUERY, "verify: EVP_VerifyUpdate failed");
+		EVP_MD_CTX_destroy(ctx);
 		EVP_PKEY_free(evp_key);
 		if(dofree) free(sigblock);
 		return sec_status_unchecked;
