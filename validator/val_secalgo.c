@@ -299,7 +299,7 @@ i	 * the '44' is the total remaining length.
         int raw_sig_len, r_high, s_high, r_rem=0, s_rem=0;
 	int bnsize = (int)((*len)/2);
         unsigned char* d = *sig;
-	unsigned char* p;
+	uint8_t* p;
 	/* if too short or not even length, fails */
 	if(*len < 16 || bnsize*2 != (int)*len)
 		return 0;
@@ -315,10 +315,10 @@ i	 * the '44' is the total remaining length.
         s_high = ((d[bnsize+s_rem]&0x80)?1:0);
         raw_sig_len = pre_len + r_high + bnsize - r_rem + mid_len +
                 s_high + bnsize - s_rem;
-	*sig = (unsigned char*)malloc(raw_sig_len);
+	*sig = (unsigned char*)malloc((size_t)raw_sig_len);
 	if(!*sig)
 		return 0;
-	p = *sig;
+	p = (uint8_t*)*sig;
 	p[0] = pre[0];
 	p[1] = raw_sig_len-2;
 	p[2] = pre[2];
@@ -328,9 +328,9 @@ i	 * the '44' is the total remaining length.
 		*p = 0;
 		p += 1;
 	}
-	memmove(p, d+r_rem, bnsize-r_rem);
+	memmove(p, d+r_rem, (size_t)bnsize-r_rem);
 	p += bnsize-r_rem;
-	memmove(p, mid, mid_len-1);
+	memmove(p, mid, (size_t)mid_len-1);
 	p += mid_len-1;
 	*p = bnsize + s_high - s_rem;
 	p += 1;
@@ -338,7 +338,7 @@ i	 * the '44' is the total remaining length.
 		*p = 0;
 		p += 1;
 	}
-	memmove(p, d+bnsize+s_rem, bnsize-s_rem);
+	memmove(p, d+bnsize+s_rem, (size_t)bnsize-s_rem);
 	*len = (unsigned int)raw_sig_len;
 	return 1;
 }
