@@ -360,7 +360,7 @@ struct iter_qstate {
 	/** list of pending queries to authoritative servers. */
 	struct outbound_list outlist;
 
-	/** QNAME minimisation state */
+	/** QNAME minimisation state, RFC7816 */
 	enum minimisation_state minimisation_state;
 
 	/**
