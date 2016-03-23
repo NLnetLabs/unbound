@@ -332,7 +332,7 @@ i	 * the '44' is the total remaining length.
 	p += bnsize-r_rem;
 	memmove(p, mid, (size_t)mid_len-1);
 	p += mid_len-1;
-	*p = bnsize + s_high - s_rem;
+	*p = (uint8_t)(bnsize + s_high - s_rem);
 	p += 1;
         if(s_high) {
 		*p = 0;
