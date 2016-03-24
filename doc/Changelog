@@ -1,5 +1,7 @@
 24 March 2016: Wouter
 	- Document permit-small-holddown for 5011 debug.
+	- Fix #749: unbound-checkconf gets SIGSEGV when use against a
+	  malformatted conf file.
 
 23 March 2016: Wouter
 	- OpenSSL 1.1.0 portability, --disable-dsa configure option.
