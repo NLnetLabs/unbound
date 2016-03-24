@@ -464,7 +464,8 @@ server:
 	# If the value 0 is given, missing anchors are not removed.
 	# keep-missing: 31622400 # 366 days
 
-	# debug option that allows very small holddown times for key rollover
+	# debug option that allows very small holddown times for key rollover,
+	# otherwise the RFC mandates probe intervals must be at least 1 hour.
 	# permit-small-holddown: no
 
 	# the amount of memory to use for the key cache.
