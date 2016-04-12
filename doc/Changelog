@@ -1,3 +1,6 @@
+12 April 2016: Wouter
+	- Fix #753: document dump_requestlist is for first thread.
+
 24 March 2016: Wouter
 	- Document permit-small-holddown for 5011 debug.
 	- Fix #749: unbound-checkconf gets SIGSEGV when use against a
