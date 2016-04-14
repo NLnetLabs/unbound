@@ -586,6 +586,9 @@
 /* define this to enable debug checks. */
 #undef UNBOUND_DEBUG
 
+/* Define to 1 to use cachedb support */
+#undef USE_CACHEDB
+
 /* Define to 1 to enable dnstap support */
 #undef USE_DNSTAP
 

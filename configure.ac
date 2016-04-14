@@ -1227,6 +1227,17 @@ dt_DNSTAP([$UNBOUND_RUN_DIR/dnstap.sock],
     ]
 )
 
+# check for cachedb if requested
+AC_ARG_ENABLE(cachedb, AC_HELP_STRING([--enable-cachedb], [enable cachedb module that can use external cache storage]))
+case "$enable_cachedb" in
+    yes)
+    	AC_DEFINE([USE_CACHEDB], [1], [Define to 1 to use cachedb support])
+    	;;
+    no|*)
+    	# nothing
+    	;;
+esac
+
 AC_MSG_CHECKING([if ${MAKE:-make} supports $< with implicit rule in scope])
 # on openBSD, the implicit rule make $< work.
 # on Solaris, it does not work ($? is changed sources, $^ lists dependencies).
