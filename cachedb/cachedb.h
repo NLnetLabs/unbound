@@ -40,6 +40,7 @@
  * dns responses.
  */
 #include "util/module.h"
+struct cachedb_backend;
 
 /**
  * The global variable environment contents for the cachedb
@@ -47,7 +48,14 @@
  * Like database connections.
  */
 struct cachedb_env {
-	int todo;
+	/** true is cachedb is enabled, the backend is turned on */
+	int enabled;
+
+	/** the backend routines */
+	struct cachedb_backend* backend;
+
+	/** backend specific data here */
+	void* backend_data;
 };
 
 /**
@@ -55,6 +63,28 @@ struct cachedb_env {
  */
 struct cachedb_qstate {
 	int todo;
+};
+
+/**
+ * Backend call routines
+ */
+struct cachedb_backend {
+	/** backend name */
+	const char* name;
+
+	/** Init(env, cachedb_env): false on setup failure */
+	int (*init)(struct module_env*, struct cachedb_env*);
+
+	/** Deinit - close db for program exit */
+	void (*deinit)(struct module_env*, struct cachedb_env*);
+
+	/** Lookup (env, cachedb_env, key, result_buffer): true if found */
+	int (*lookup)(struct module_env*, struct cachedb_env*, char*,
+		struct sldns_buffer*);
+	
+	/** Store (env, cachedb_env, key, data, data_len) */
+	void (*store)(struct module_env*, struct cachedb_env*, char*,
+		uint8_t*, size_t);
 };
 
 /** Init the cachedb module */

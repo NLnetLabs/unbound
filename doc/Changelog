@@ -1,3 +1,6 @@
+15 April 2016: Wouter
+	- cachedb module event handling design.
+
 14 April 2016: Wouter
 	- cachedb module framework (empty).
 	- iana portlist update.

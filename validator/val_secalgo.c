@@ -98,6 +98,12 @@ secalgo_nsec3_hash(int algo, unsigned char* buf, size_t len,
 	}
 }
 
+void
+secalgo_hash_sha256(unsigned char* buf, size_t len, unsigned char* res)
+{
+	(void)SHA256(buf, len, res);
+}
+
 /**
  * Return size of DS digest according to its hash algorithm.
  * @param algo: DS digest algo.
@@ -668,6 +674,12 @@ secalgo_nsec3_hash(int algo, unsigned char* buf, size_t len,
 	default:
 		return 0;
 	}
+}
+
+void
+secalgo_hash_sha256(unsigned char* buf, size_t len, unsigned char* res)
+{
+	(void)HASH_HashBuf(HASH_AlgSHA256, res, buf, (unsigned long)len);
 }
 
 size_t
@@ -1260,6 +1272,12 @@ secalgo_nsec3_hash(int algo, unsigned char* buf, size_t len,
 	default:
 		return 0;
 	}
+}
+
+void
+secalgo_hash_sha256(unsigned char* buf, size_t len, unsigned char* res)
+{
+	_digest_nettle(SHA256_DIGEST_SIZE, (uint8_t*)buf, len, res);
 }
 
 /**
