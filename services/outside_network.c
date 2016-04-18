@@ -1714,7 +1714,7 @@ serviced_tcp_send(struct serviced_query* sq, sldns_buffer* buff)
  * We try to detect their output; without resorting to a full parse or
  * check for too many bytes after the end of the packet. */
 static int
-packet_edns_malformed(struct sldns_buffer* buf, uint16_t qtype)
+packet_edns_malformed(struct sldns_buffer* buf, int qtype)
 {
 	size_t len;
 	if(sldns_buffer_limit(buf) < LDNS_HEADER_SIZE)
