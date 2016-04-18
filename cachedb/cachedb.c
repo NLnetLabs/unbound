@@ -44,22 +44,142 @@
 #ifdef USE_CACHEDB
 #include "cachedb/cachedb.h"
 #include "util/regional.h"
+#include "util/net_help.h"
 #include "util/config_file.h"
 #include "util/data/msgreply.h"
+#include "util/data/msgencode.h"
 #include "services/cache/dns.h"
 #include "validator/val_neg.h"
 #include "validator/val_secalgo.h"
+#include "iterator/iter_utils.h"
 #include "sldns/parseutil.h"
 #include "sldns/wire2str.h"
 #include "sldns/sbuffer.h"
 
 #define CACHEDB_HASHSIZE 256 /* bit hash */
 
+/** the unit test testframe for cachedb, its module state contains
+ * a cache for a couple queries (in memory). */
+struct testframe_moddata {
+	/** key for single stored data element, NULL if none */
+	char* stored_key;
+	/** data for single stored data element, NULL if none */
+	uint8_t* stored_data;
+	/** length of stored data */
+	size_t stored_datalen;
+};
+
+static int
+testframe_init(struct module_env* env, struct cachedb_env* cachedb_env)
+{
+	(void)env;
+	verbose(VERB_ALGO, "testframe_init");
+	cachedb_env->backend_data = (void*)calloc(1,
+		sizeof(struct testframe_moddata));
+	if(!cachedb_env->backend_data) {
+		log_err("out of memory");
+		return 0;
+	}
+	return 1;
+}
+
+static void
+testframe_deinit(struct module_env* env, struct cachedb_env* cachedb_env)
+{
+	struct testframe_moddata* d = (struct testframe_moddata*)
+		cachedb_env->backend_data;
+	(void)env;
+	verbose(VERB_ALGO, "testframe_deinit");
+	if(!d)
+		return;
+	free(d->stored_key);
+	free(d->stored_data);
+	free(d);
+}
+
+static int
+testframe_lookup(struct module_env* env, struct cachedb_env* cachedb_env,
+	char* key, struct sldns_buffer* result_buffer)
+{
+	struct testframe_moddata* d = (struct testframe_moddata*)
+		cachedb_env->backend_data;
+	(void)env;
+	verbose(VERB_ALGO, "testframe_lookup of %s", key);
+	if(d->stored_key && strcmp(d->stored_key, key) == 0) {
+		if(d->stored_datalen > sldns_buffer_capacity(result_buffer))
+			return 0; /* too large */
+		verbose(VERB_ALGO, "testframe_lookup found %d bytes",
+			(int)d->stored_datalen);
+		sldns_buffer_clear(result_buffer);
+		sldns_buffer_write(result_buffer, d->stored_data,
+			d->stored_datalen);
+		sldns_buffer_flip(result_buffer);
+		return 1;
+	}
+	return 0;
+}
+
+static void
+testframe_store(struct module_env* env, struct cachedb_env* cachedb_env,
+	char* key, uint8_t* data, size_t data_len)
+{
+	struct testframe_moddata* d = (struct testframe_moddata*)
+		cachedb_env->backend_data;
+	(void)env;
+	verbose(VERB_ALGO, "testframe_store %s (%d bytes)", key, (int)data_len);
+
+	/* free old data element (if any) */
+	free(d->stored_key);
+	d->stored_key = NULL;
+	free(d->stored_data);
+	d->stored_data = NULL;
+	d->stored_datalen = 0;
+
+	d->stored_data = memdup(data, data_len);
+	if(!d->stored_data) {
+		log_err("out of memory");
+		return;
+	}
+	d->stored_datalen = data_len;
+	d->stored_key = strdup(key);
+	if(!d->stored_key) {
+		free(d->stored_data);
+		d->stored_data = NULL;
+		d->stored_datalen = 0;
+		return;
+	}
+	/* (key,data) successfully stored */
+}
+
+/** The testframe backend is for unit tests */
+static struct cachedb_backend testframe_backend = { "testframe",
+	testframe_init, testframe_deinit, testframe_lookup, testframe_store
+};
+
+/** find a particular backend from possible backends */
+static struct cachedb_backend*
+cachedb_find_backend(const char* str)
+{
+	if(strcmp(str, testframe_backend.name) == 0)
+		return &testframe_backend;
+	/* TODO add more backends here */
+	return NULL;
+}
+
 /** apply configuration to cachedb module 'global' state */
 static int
 cachedb_apply_cfg(struct cachedb_env* cachedb_env, struct config_file* cfg)
 {
-	/* TODO */
+	const char* backend_str = "testframe"; /* TODO get from cfg */
+	if(backend_str && backend_str[0]) {
+		cachedb_env->backend = cachedb_find_backend(backend_str);
+		if(!cachedb_env->backend) {
+			log_err("cachedb: cannot find backend name '%s",
+				backend_str);
+			return NULL;
+		}
+	}
+	/* TODO see if more configuration needs to be applied or not */
 	return 1;
 }
 
@@ -193,25 +313,129 @@ calc_hash(struct module_qstate* qstate, char* buf, size_t len)
 }
 
 /** convert data from return_msg into the data buffer */
-static void
+static int
 prep_data(struct module_qstate* qstate, struct sldns_buffer* buf)
 {
-	/* TODO */
+	uint64_t timestamp, expiry;
+	size_t oldlim;
+	struct edns_data edns;
+	memset(&edns, 0, sizeof(edns));
+	edns.edns_present = 1;
+	edns.bits = EDNS_DO;
+	edns.ext_rcode = 0;
+	edns.edns_version = EDNS_ADVERTISED_VERSION;
+	edns.udp_size = EDNS_ADVERTISED_SIZE;
+
+	if(!qstate->return_msg || !qstate->return_msg->rep)
+		return 0;
+	if(verbosity >= VERB_ALGO)
+		log_dns_msg("cachedb encoding", &qstate->return_msg->qinfo,
+	                qstate->return_msg->rep);
+	if(!reply_info_answer_encode(&qstate->return_msg->qinfo,
+		qstate->return_msg->rep, 0, qstate->query_flags,
+		buf, 0, 1, qstate->env->scratch, 65535, &edns, 1, 0))
+		return 0;
+
+	/* TTLs in the return_msg are relative to time(0) so we have to
+	 * store that, we also store the smallest ttl in the packet+time(0)
+	 * as the packet expiry time */
+	/* qstate->return_msg->rep->ttl contains that relative shortest ttl */
+	timestamp = (uint64_t)*qstate->env->now;
+	expiry = timestamp + (uint64_t)qstate->return_msg->rep->ttl;
+	timestamp = htobe64(timestamp);
+	expiry = htobe64(expiry);
+	oldlim = sldns_buffer_limit(buf);
+	if(oldlim + sizeof(timestamp)+sizeof(expiry) >=
+		sldns_buffer_capacity(buf))
+		return 0; /* doesn't fit. */
+	sldns_buffer_set_limit(buf, oldlim + sizeof(timestamp)+sizeof(expiry));
+	sldns_buffer_write_at(buf, oldlim, &timestamp, sizeof(timestamp));
+	sldns_buffer_write_at(buf, oldlim+sizeof(timestamp), &expiry,
+		sizeof(expiry));
+
+	return 1;
 }
 
-/** check expiry and query details, return true if matches OK */
+/** check expiry, return true if matches OK */
 static int
 good_expiry_and_qinfo(struct module_qstate* qstate, struct sldns_buffer* buf)
 {
-	/* TODO */
-	return 0;
+	uint64_t expiry;
+	/* the expiry time is the last bytes of the buffer */
+	if(sldns_buffer_limit(buf) < sizeof(expiry))
+		return 0;
+	sldns_buffer_read_at(buf, sldns_buffer_limit(buf)-sizeof(expiry),
+		&expiry, sizeof(expiry));
+	expiry = be64toh(expiry);
+
+	if((time_t)expiry < *qstate->env->now)
+		return 0;
+
+	return 1;
 }
 
 /** convert dns message in buffer to return_msg */
 static int
 parse_data(struct module_qstate* qstate, struct sldns_buffer* buf)
 {
+	struct msg_parse* prs;
+	struct edns_data edns;
+	uint64_t timestamp, expiry;
+	time_t adjust;
+	size_t lim = sldns_buffer_limit(buf);
+	if(lim < LDNS_HEADER_SIZE+sizeof(timestamp)+sizeof(expiry))
+		return 0; /* too short */
+
+	/* remove timestamp and expiry from end */
+	sldns_buffer_read_at(buf, lim-sizeof(expiry), &expiry, sizeof(expiry));
+	sldns_buffer_read_at(buf, lim-sizeof(expiry)-sizeof(timestamp),
+		&timestamp, sizeof(timestamp));
+	expiry = be64toh(expiry);
+	timestamp = be64toh(timestamp);
+
+	/* parse DNS packet */
+	regional_free_all(qstate->env->scratch);
+	prs = (struct msg_parse*)regional_alloc(qstate->env->scratch,
+		sizeof(struct msg_parse));
+	if(!prs)
+		return 0; /* out of memory */
+	memset(prs, 0, sizeof(*prs));
+	memset(&edns, 0, sizeof(edns));
+	sldns_buffer_set_limit(buf, lim - sizeof(expiry)-sizeof(timestamp));
+	if(parse_packet(buf, prs, qstate->env->scratch) != LDNS_RCODE_NOERROR) {
+		sldns_buffer_set_limit(buf, lim);
+		return 0;
+	}
+	if(parse_extract_edns(prs, &edns) != LDNS_RCODE_NOERROR) {
+		sldns_buffer_set_limit(buf, lim);
+		return 0;
+	}
+
+	qstate->return_msg = dns_alloc_msg(buf, prs, qstate->region);
+	sldns_buffer_set_limit(buf, lim);
+	if(!qstate->return_msg)
+		return 0;
+	
+	qstate->return_rcode = LDNS_RCODE_NOERROR;
+
+	/* see how much of the TTL expired, and remove it */
+	adjust = *qstate->env->now - (time_t)timestamp;
+	verbose(VERB_ALGO, "cachedb msg adjusted down by %d", (int)adjust);
+	/*adjust_msg(qstate->return_msg, adjust);*/
+	/* TODO:
+		msg->rep->ttl = r->ttl - now;
+		msg->rep->prefetch_ttl = PREFETCH_TTL_CALC(msg->rep->ttl);
+		for(i=0; i<d->count + d->rrsig_count; i++) {
+		if(d->rr_ttl[i] < now)
+		d->rr_ttl[i] = 0;
+		else    d->rr_ttl[i] -= now;
+		}
+		if(d->ttl < now)
+		d->ttl = 0;
+		else    d->ttl -= now;
+		*/
 	/* TODO */
+
 	return 0;
 }
 
@@ -253,7 +477,8 @@ cachedb_extcache_store(struct module_qstate* qstate, struct cachedb_env* ie)
 	calc_hash(qstate, key, sizeof(key));
 
 	/* prepare data in scratch buffer */
-	prep_data(qstate, qstate->env->scratch_buffer);
+	if(!prep_data(qstate, qstate->env->scratch_buffer))
+		return;
 	
 	/* call backend */
 	(*ie->backend->store)(qstate->env, ie, key,
@@ -310,7 +535,8 @@ cachedb_intcache_store(struct module_qstate* qstate)
  * @param id: module id.
  */
 static void
-cachedb_handle_query(struct module_qstate* qstate, struct cachedb_qstate* iq,
+cachedb_handle_query(struct module_qstate* qstate,
+	struct cachedb_qstate* ATTR_UNUSED(iq),
 	struct cachedb_env* ie, int id)
 {
 	/* check if we are enabled, and skip if so */
@@ -366,7 +592,7 @@ cachedb_handle_query(struct module_qstate* qstate, struct cachedb_qstate* iq,
  */
 static void
 cachedb_handle_response(struct module_qstate* qstate,
-	struct cachedb_qstate* iq, struct cachedb_env* ie, int id)
+	struct cachedb_qstate* ATTR_UNUSED(iq), struct cachedb_env* ie, int id)
 {
 	/* check if we are enabled, and skip if not */
 	if(!ie->enabled) {
