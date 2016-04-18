@@ -1708,7 +1708,11 @@ serviced_tcp_send(struct serviced_query* sq, sldns_buffer* buff)
 	return sq->pending != NULL;
 }
 
-/* see if packet is edns malformed; got zeroes at start */
+/* see if packet is edns malformed; got zeroes at start.
+ * This is from servers that return malformed packets to EDNS0 queries,
+ * but they return good packets for nonEDNS0 queries.
+ * We try to detect their output; without resorting to a full parse or
+ * check for too many bytes after the end of the packet. */
 static int
 packet_edns_malformed(struct sldns_buffer* buf, uint16_t qtype)
 {
