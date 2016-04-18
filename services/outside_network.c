@@ -1726,13 +1726,13 @@ packet_edns_malformed(struct sldns_buffer* buf, uint16_t qtype)
 	if(LDNS_QDCOUNT(sldns_buffer_begin(buf)) != 1 ||
 		LDNS_ANCOUNT(sldns_buffer_begin(buf)) == 0)
 		return 0;
-	if(qtype == 0)
-		return 0; /* we asked for type 0 */
 	/* skip qname */
 	len = dname_valid(sldns_buffer_at(buf, LDNS_HEADER_SIZE),
 		sldns_buffer_limit(buf)-LDNS_HEADER_SIZE);
 	if(len == 0)
 		return 0;
+	if(len == 1 && qtype == 0)
+		return 0; /* we asked for '.' and type 0 */
 	/* and then 4 bytes (type and class of query) */
 	if(sldns_buffer_limit(buf) < LDNS_HEADER_SIZE + len + 4 + 3)
 		return 0;
