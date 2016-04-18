@@ -1708,6 +1708,40 @@ serviced_tcp_send(struct serviced_query* sq, sldns_buffer* buff)
 	return sq->pending != NULL;
 }
 
+/* see if packet is edns malformed; got zeroes at start */
+static int
+packet_edns_malformed(struct sldns_buffer* buf, uint16_t qtype)
+{
+	size_t len;
+	if(sldns_buffer_limit(buf) < LDNS_HEADER_SIZE)
+		return 1; /* malformed */
+	/* they have NOERROR rcode, 1 answer. */
+	if(LDNS_RCODE_WIRE(sldns_buffer_begin(buf)) != LDNS_RCODE_NOERROR)
+		return 0;
+	/* one query (to skip) and answer records */
+	if(LDNS_QDCOUNT(sldns_buffer_begin(buf)) != 1 ||
+		LDNS_ANCOUNT(sldns_buffer_begin(buf)) == 0)
+		return 0;
+	if(qtype == 0)
+		return 0; /* we asked for type 0 */
+	/* skip qname */
+	len = dname_valid(sldns_buffer_at(buf, LDNS_HEADER_SIZE),
+		sldns_buffer_limit(buf)-LDNS_HEADER_SIZE);
+	if(len == 0)
+		return 0;
+	/* and then 4 bytes (type and class of query) */
+	if(sldns_buffer_limit(buf) < LDNS_HEADER_SIZE + len + 4 + 3)
+		return 0;
+
+	/* and start with 11 zeroes as the answer RR */
+	/* so check the qtype of the answer record, qname=0, type=0 */
+	if(sldns_buffer_at(buf, LDNS_HEADER_SIZE+len+4)[0] == 0 &&
+	   sldns_buffer_at(buf, LDNS_HEADER_SIZE+len+4)[1] == 0 &&
+	   sldns_buffer_at(buf, LDNS_HEADER_SIZE+len+4)[2] == 0)
+		return 1;
+	return 0;
+}
+
 int 
 serviced_udp_callback(struct comm_point* c, void* arg, int error,
         struct comm_reply* rep)
@@ -1778,7 +1812,9 @@ serviced_udp_callback(struct comm_point* c, void* arg, int error,
 	        ||sq->status == serviced_query_UDP_EDNS_FRAG)
 		&& (LDNS_RCODE_WIRE(sldns_buffer_begin(c->buffer)) 
 			== LDNS_RCODE_FORMERR || LDNS_RCODE_WIRE(
-			sldns_buffer_begin(c->buffer)) == LDNS_RCODE_NOTIMPL)) {
+			sldns_buffer_begin(c->buffer)) == LDNS_RCODE_NOTIMPL
+		    || packet_edns_malformed(c->buffer, sq->qtype)
+			)) {
 		/* try to get an answer by falling back without EDNS */
 		verbose(VERB_ALGO, "serviced query: attempt without EDNS");
 		sq->status = serviced_query_UDP_EDNS_fallback;
