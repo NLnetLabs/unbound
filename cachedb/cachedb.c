@@ -423,16 +423,16 @@ parse_data(struct module_qstate* qstate, struct sldns_buffer* buf)
 	verbose(VERB_ALGO, "cachedb msg adjusted down by %d", (int)adjust);
 	/*adjust_msg(qstate->return_msg, adjust);*/
 	/* TODO:
-		msg->rep->ttl = r->ttl - now;
+		msg->rep->ttl = r->ttl - adjust;
 		msg->rep->prefetch_ttl = PREFETCH_TTL_CALC(msg->rep->ttl);
 		for(i=0; i<d->count + d->rrsig_count; i++) {
-		if(d->rr_ttl[i] < now)
-		d->rr_ttl[i] = 0;
-		else    d->rr_ttl[i] -= now;
+			if(d->rr_ttl[i] < adjust)
+				d->rr_ttl[i] = 0;
+			else    d->rr_ttl[i] -= adjust;
 		}
-		if(d->ttl < now)
-		d->ttl = 0;
-		else    d->ttl -= now;
+		if(d->ttl < adjust)
+			d->ttl = 0;
+		else    d->ttl -= adjust;
 		*/
 	/* TODO */
 
