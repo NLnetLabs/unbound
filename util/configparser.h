@@ -208,7 +208,9 @@ extern int yydebug;
     VAR_CACHE_MAX_NEGATIVE_TTL = 418,
     VAR_PERMIT_SMALL_HOLDDOWN = 419,
     VAR_QNAME_MINIMISATION = 420,
-    VAR_IP_FREEBIND = 421
+    VAR_IP_FREEBIND = 421,
+    VAR_DEFINE_TAG = 422,
+    VAR_LOCAL_ZONE_TAG = 423
   };
 #endif
 /* Tokens.  */
@@ -376,6 +378,8 @@ extern int yydebug;
 #define VAR_PERMIT_SMALL_HOLDDOWN 419
 #define VAR_QNAME_MINIMISATION 420
 #define VAR_IP_FREEBIND 421
+#define VAR_DEFINE_TAG 422
+#define VAR_LOCAL_ZONE_TAG 423
 
 /* Value type.  */
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
@@ -386,7 +390,7 @@ union YYSTYPE
 
 	char*	str;
 
-#line 390 "util/configparser.h" /* yacc.c:1909  */
+#line 394 "util/configparser.h" /* yacc.c:1909  */
 };
 
 typedef union YYSTYPE YYSTYPE;

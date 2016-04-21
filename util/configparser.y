@@ -124,7 +124,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_RATELIMIT VAR_RATELIMIT_SLABS VAR_RATELIMIT_SIZE
 %token VAR_RATELIMIT_FOR_DOMAIN VAR_RATELIMIT_BELOW_DOMAIN VAR_RATELIMIT_FACTOR
 %token VAR_CAPS_WHITELIST VAR_CACHE_MAX_NEGATIVE_TTL VAR_PERMIT_SMALL_HOLDDOWN
-%token VAR_QNAME_MINIMISATION VAR_IP_FREEBIND
+%token VAR_QNAME_MINIMISATION VAR_IP_FREEBIND VAR_DEFINE_TAG VAR_LOCAL_ZONE_TAG
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -192,7 +192,7 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_ratelimit_below_domain | server_ratelimit_factor |
 	server_caps_whitelist | server_cache_max_negative_ttl |
 	server_permit_small_holddown | server_qname_minimisation |
-	server_ip_freebind
+	server_ip_freebind | server_define_tag | server_local_zone_tag
 	;
 stubstart: VAR_STUB_ZONE
 	{
@@ -1295,6 +1295,39 @@ server_dns64_synthall: VAR_DNS64_SYNTHALL STRING_ARG
 			yyerror("expected yes or no.");
 		else cfg_parser->cfg->dns64_synthall = (strcmp($2, "yes")==0);
 		free($2);
+	}
+	;
+server_define_tag: VAR_DEFINE_TAG STRING_ARG
+	{
+		char* p, *s = $2;
+		OUTYY(("P(server_define_tag:%s)\n", $2));
+		while((p=strsep(&s, " \t\n")) != NULL) {
+			if(*p) {
+				if(!config_add_tag(cfg_parser->cfg, p))
+					yyerror("could not define-tag, "
+						"out of memory");
+			}
+		}
+		free($2);
+	}
+	;
+server_local_zone_tag: VAR_LOCAL_ZONE_TAG STRING_ARG STRING_ARG
+	{
+		size_t len = 0;
+		uint8_t* bitlist = config_parse_taglist(cfg_parser->cfg, $3,
+			&len);
+		free($3);
+		OUTYY(("P(server_local_zone_tag:%s)\n", $2));
+		if(!bitlist)
+			yyerror("could not parse tags, (define-tag them first)");
+		if(bitlist) {
+			if(!cfg_strbytelist_insert(
+				&cfg_parser->cfg->local_zone_tags,
+				$2, bitlist, len)) {
+				yyerror("out of memory");
+				free($2);
+			}
+		}
 	}
 	;
 server_ratelimit: VAR_RATELIMIT STRING_ARG 

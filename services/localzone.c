@@ -94,6 +94,7 @@ local_zone_delete(struct local_zone* z)
 	lock_rw_destroy(&z->lock);
 	regional_destroy(z->region);
 	free(z->name);
+	free(z->taglist);
 	free(z);
 }
 
@@ -506,6 +507,40 @@ lz_enter_rr_str(struct local_zones* zones, const char* rr)
 	return r;
 }
 
+/** enter tagstring into zone */
+static int
+lz_enter_zone_tag(struct local_zones* zones, char* zname, uint8_t* list,
+	size_t len, uint16_t rr_class)
+{
+	uint8_t dname[LDNS_MAX_DOMAINLEN+1];
+	size_t dname_len, dname_labs;
+	struct local_zone* z;
+	int r = 0;
+
+	if(sldns_str2wire_dname_buf(zname, dname, &dname_len) != 0) {
+		log_err("cannot parse zone name in local-zone-tag: %s", zname);
+		return 0;
+	}
+	dname_labs = dname_count_labels(dname);
+	
+	lock_rw_rdlock(&zones->lock);
+	z = local_zones_lookup(zones, dname, dname_len, dname_labs, rr_class);
+	if(!z) {
+		lock_rw_unlock(&zones->lock);
+		log_err("no local-zone for tag %s", zname);
+		return 0;
+	}
+	lock_rw_wrlock(&z->lock);
+	lock_rw_unlock(&zones->lock);
+	free(z->taglist);
+	z->taglist = memdup(list, len);
+	z->taglen = len;
+	if(z->taglist)
+		r = 1;
+	lock_rw_unlock(&z->lock);
+	return r;
+}
+
 /** parse local-zone: statements */
 static int
 lz_enter_zones(struct local_zones* zones, struct config_file* cfg)
@@ -800,6 +835,22 @@ lz_setup_implicit(struct local_zones* zones, struct config_file* cfg)
 	return 1;
 }
 
+/** enter local-zone-tag info */
+static int
+lz_enter_zone_tags(struct local_zones* zones, struct config_file* cfg)
+{
+	struct config_strbytelist* p;
+	int c = 0;
+	for(p = cfg->local_zone_tags; p; p = p->next) {
+		if(!lz_enter_zone_tag(zones, p->str, p->str2, p->str2len,
+			LDNS_RR_CLASS_IN))
+			return 0;
+		c++;
+	}
+	if(c) verbose(VERB_ALGO, "applied tags to %d local zones", c);
+	return 1;
+}
+	
 /** enter auth data */
 static int
 lz_enter_data(struct local_zones* zones, struct config_file* cfg)
@@ -842,6 +893,10 @@ local_zones_apply_cfg(struct local_zones* zones, struct config_file* cfg)
 
 	/* setup parent ptrs for lookup during data entry */
 	init_parents(zones);
+	/* insert local zone tags */
+	if(!lz_enter_zone_tags(zones, cfg)) {
+		return 0;
+	}
 	/* insert local data */
 	if(!lz_enter_data(zones, cfg)) {
 		return 0;
