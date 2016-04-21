@@ -1386,7 +1386,7 @@ uint8_t* config_parse_taglist(struct config_file* cfg, char* str,
 		log_err("parse taglist, but no tags defined");
 		return 0;
 	}
-	len = (cfg->num_tags+7)/8;
+	len = (size_t)(cfg->num_tags+7)/8;
 	taglist = calloc(1, len);
 	if(!taglist) {
 		log_err("out of memory");
@@ -1416,15 +1416,14 @@ char* config_taglist2str(struct config_file* cfg, uint8_t* taglist,
         size_t taglen)
 {
 	char buf[10240];
-	size_t i, len = 0;
-	int j;
+	size_t i, j, len = 0;
 	buf[0] = 0;
 	for(i=0; i<taglen; i++) {
 		if(taglist[i] == 0)
 			continue;
 		for(j=0; j<8; j++) {
 			if((taglist[i] & (1<<j)) != 0) {
-				int id = i*8 + j;
+				size_t id = i*8 + j;
 				snprintf(buf+len, sizeof(buf)-len, "%s%s",
 					(len==0?"":" "), cfg->tagname[id]);
 				len += strlen(buf+len);
