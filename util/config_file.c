@@ -1359,9 +1359,8 @@ config_add_tag(struct config_file* cfg, const char* tag)
 		memcpy(newarray, cfg->tagname, sizeof(char*)*cfg->num_tags);
 		free(cfg->tagname);
 	}
-	newarray[cfg->num_tags] = newtag;
+	newarray[cfg->num_tags++] = newtag;
 	cfg->tagname = newarray;
-	cfg->num_tags++;
 	return 1;
 }
 
