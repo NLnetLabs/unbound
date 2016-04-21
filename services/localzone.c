@@ -513,9 +513,9 @@ lz_enter_zone_tag(struct local_zones* zones, char* zname, uint8_t* list,
 	size_t len, uint16_t rr_class)
 {
 	uint8_t dname[LDNS_MAX_DOMAINLEN+1];
-	size_t dname_len, dname_labs;
+	size_t dname_len;
+	int dname_labs, r = 0;
 	struct local_zone* z;
-	int r = 0;
 
 	if(sldns_str2wire_dname_buf(zname, dname, &dname_len) != 0) {
 		log_err("cannot parse zone name in local-zone-tag: %s", zname);
