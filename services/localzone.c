@@ -513,7 +513,7 @@ lz_enter_zone_tag(struct local_zones* zones, char* zname, uint8_t* list,
 	size_t len, uint16_t rr_class)
 {
 	uint8_t dname[LDNS_MAX_DOMAINLEN+1];
-	size_t dname_len;
+	size_t dname_len = sizeof(dname);
 	int dname_labs, r = 0;
 	struct local_zone* z;
 
