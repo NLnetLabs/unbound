@@ -98,6 +98,19 @@ MATCH opcode qtype qname
 ADJUST copy_id
 REPLY QR NOERROR
 SECTION QUESTION
+ns3.example.com. IN AAAA
+SECTION ANSWER
+SECTION AUTHORITY
+example.com. IN SOA alfa.ns.example.com.cz. hostmaster.example.com. 2010030800 10800 86400 604800 86400
+example.com.	3600	IN	RRSIG	SOA 3 2 3600 20070926134150 20070829134150 2854 example.com. ADsxLOHjxFzwFmwIiGOubqD9nKWAp4RccRIXQ0+EAUGfSDZMCB0ZiFA= ;{id = 2854}
+SECTION ADDITIONAL
+ENTRY_END
+
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR NOERROR
+SECTION QUESTION
 ns.example.com. IN A
 SECTION ANSWER
 ns.example.com.         IN      A       1.2.3.4
@@ -182,26 +195,58 @@ SECTION QUESTION
 foo.www.example.com. IN DS
 SECTION ANSWER
 SECTION AUTHORITY
+mipf0g23547qunto04vboegh9vadsrpo.example.com. IN NSEC3 1 0 1 1234  mipf0g23547qunto04vboegh9vadsrpq TXT
+mipf0g23547qunto04vboegh9vadsrpo.example.com.	3600	IN	RRSIG	NSEC3 3 3 3600 20070926134150 20070829134150 2854 example.com. ADc6JrdKuTmIJe4sAjpKZSUZKdHdfhmREk2F5A5cftU9053b0/3ILQM=
+
+example.com. IN SOA alfa.ns.example.com.cz. hostmaster.example.com. 2010030800 10800 86400 604800 86400
+example.com.	3600	IN	RRSIG	SOA 3 2 3600 20070926134150 20070829134150 2854 example.com. ADsxLOHjxFzwFmwIiGOubqD9nKWAp4RccRIXQ0+EAUGfSDZMCB0ZiFA= ;{id = 2854}
+
+
+;www.example.com. IN NS ns3.example.com.
+;h8c0nvkuibedn7ia997iegdl7h0i6h8b.example.com. IN NSEC3 1 0 1 1234 h8c0nvkuibedn7ia997iegdl7h0i6h8c TXT
+;h8c0nvkuibedn7ia997iegdl7h0i6h8b.example.com.	3600	IN	RRSIG	NSEC3 3 3 3600 20070926134150 20070829134150 2854 example.com. AH+bPQZST3COwJ1vSe05N7E5BM2GmXzJUKsiWwXKrmm/XjYKSxSuNPE=
+;SECTION ADDITIONAL
+;ns3.example.com. IN A 1.2.3.5
+
+
 ; NSEC3 here: 1 0 1 1234
 ; www.example.com. -> h8c0nvkuibedn7ia997iegdl7h0i6h8b.
 ; *.www.example.com. -> cg2lpgpr8k7ck69h7bqu3od9pkht2o79.
 ; foo.www.example.com. -> mipf0g23547qunto04vboegh9vadsrpo.
 
-h8c0nvkuibedn7ia997iegdl7h0i6h8b.example.com. IN NSEC3 1 0 1 1234 h8c0nvkuibedn7ia997iegdl7h0i6h8c TXT
-h8c0nvkuibedn7ia997iegdl7h0i6h8b.example.com.	3600	IN	RRSIG	NSEC3 3 3 3600 20070926134150 20070829134150 2854 example.com. AH+bPQZST3COwJ1vSe05N7E5BM2GmXzJUKsiWwXKrmm/XjYKSxSuNPE=
-cg2lpgpr8k7ck69h7bqu3od9pkht2o78.example.com. IN NSEC3 1 0 1 1234 cg2lpgpr8k7ck69h7bqu3od9pkht2o89 TXT
-cg2lpgpr8k7ck69h7bqu3od9pkht2o78.example.com.	3600	IN	RRSIG	NSEC3 3 3 3600 20070926134150 20070829134150 2854 example.com. ACzxBHMyDB5tTrXijboPSsB0ws1lJe3/B62QNAMcZv7l9DYNDEDKsXY=
-mipf0g23547qunto04vboegh9vadsrph.example.com. IN NSEC3 1 0 1 1234 mipf0g23547qunto04vboegh9vadsrpp TXT
-mipf0g23547qunto04vboegh9vadsrph.example.com.	3600	IN	RRSIG	NSEC3 3 3 3600 20070926134150 20070829134150 2854 example.com. AG2B7lrIVtBgg+WIt0yNYekGDBKkY7xkKfI0GLQ8q3brGy/+jubxba0=
+;h8c0nvkuibedn7ia997iegdl7h0i6h8b.example.com. IN NSEC3 1 0 1 1234 h8c0nvkuibedn7ia997iegdl7h0i6h8c TXT
+;h8c0nvkuibedn7ia997iegdl7h0i6h8b.example.com.	3600	IN	RRSIG	NSEC3 3 3 3600 20070926134150 20070829134150 2854 example.com. AH+bPQZST3COwJ1vSe05N7E5BM2GmXzJUKsiWwXKrmm/XjYKSxSuNPE=
+;cg2lpgpr8k7ck69h7bqu3od9pkht2o78.example.com. IN NSEC3 1 0 1 1234 cg2lpgpr8k7ck69h7bqu3od9pkht2o89 TXT
+;cg2lpgpr8k7ck69h7bqu3od9pkht2o78.example.com.	3600	IN	RRSIG	NSEC3 3 3 3600 20070926134150 20070829134150 2854 example.com. ACzxBHMyDB5tTrXijboPSsB0ws1lJe3/B62QNAMcZv7l9DYNDEDKsXY=
+;mipf0g23547qunto04vboegh9vadsrph.example.com. IN NSEC3 1 0 1 1234 mipf0g23547qunto04vboegh9vadsrpp TXT
+;mipf0g23547qunto04vboegh9vadsrph.example.com.	3600	IN	RRSIG	NSEC3 3 3 3600 20070926134150 20070829134150 2854 example.com. AG2B7lrIVtBgg+WIt0yNYekGDBKkY7xkKfI0GLQ8q3brGy/+jubxba0=
 
 ;www.example.com. IN NSEC zzz.example.com. RRSIG NSEC
 ;www.example.com.	3600	IN	RRSIG	NSEC 3 3 3600 20070926134150 20070829134150 2854 example.com. AA9Dm626WvHXHPQXJkVyjyTqJ/dCHfZgt6PWCn9gd8ZmPxyl3STW3iI=
-example.com. IN SOA alfa.ns.example.com.cz. hostmaster.example.com. 2010030800 10800 86400 604800 86400
-example.com.	3600	IN	RRSIG	SOA 3 2 3600 20070926134150 20070829134150 2854 example.com. ADsxLOHjxFzwFmwIiGOubqD9nKWAp4RccRIXQ0+EAUGfSDZMCB0ZiFA= ;{id = 2854}
+
+;example.com. IN SOA alfa.ns.example.com.cz. hostmaster.example.com. 2010030800 10800 86400 604800 86400
+;example.com.	3600	IN	RRSIG	SOA 3 2 3600 20070926134150 20070829134150 2854 example.com. ADsxLOHjxFzwFmwIiGOubqD9nKWAp4RccRIXQ0+EAUGfSDZMCB0ZiFA= ;{id = 2854}
 SECTION ADDITIONAL
 ENTRY_END
 
 RANGE_END
+
+; ns3.example.com.
+RANGE_BEGIN 0 100
+	ADDRESS 1.2.3.5
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR NOERROR
+SECTION QUESTION
+foo.www.example.com. IN DS
+SECTION ANSWER
+SECTION AUTHORITY
+foo.www.example.com. IN SOA alfa.ns.example.com.cz. hostmaster.example.com. 2010030800 10800 86400 604800 86400
+SECTION ADDITIONAL
+ENTRY_END
+RANGE_END
+
 
 STEP 1 QUERY
 ENTRY_BEGIN
