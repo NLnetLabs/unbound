@@ -1527,7 +1527,10 @@ serviced_callbacks(struct serviced_query* sq, int error, struct comm_point* c,
 	sq->to_be_deleted = 1; 
 	verbose(VERB_ALGO, "svcd callbacks start");
 	if(sq->outnet->use_caps_for_id && error == NETEVENT_NOERROR && c &&
-		!sq->nocaps) {
+		!sq->nocaps && sq->qtype != LDNS_RR_TYPE_PTR) {
+		/* for type PTR do not check perturbed name in answer,
+		 * compatibility with cisco dns guard boxes that mess up
+		 * reverse queries 0x20 contents */
 		/* noerror and nxdomain must have a qname in reply */
 		if(sldns_buffer_read_u16_at(c->buffer, 4) == 0 &&
 			(LDNS_RCODE_WIRE(sldns_buffer_begin(c->buffer))

@@ -1,3 +1,7 @@
+28 April 2016: Wouter
+	- Fix #759: 0x20 capsforid no longer checks type PTR, for
+	  compatibility with cisco dns guard.  This lowers false positives.
+
 18 April 2016: Wouter
 	- Fix some malformed reponses to edns queries get fallback to nonedns.
 
