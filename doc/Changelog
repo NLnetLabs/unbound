@@ -1,3 +1,6 @@
+29 April 2016: Wouter
+	- Fix sldns with static checking fixes copied from getdns.
+
 28 April 2016: Wouter
 	- Fix #759: 0x20 capsforid no longer checks type PTR, for
 	  compatibility with cisco dns guard.  This lowers false positives.
