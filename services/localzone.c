@@ -172,6 +172,7 @@ lz_enter_zone_dname(struct local_zones* zones, uint8_t* nm, size_t len,
 {
 	struct local_zone* z = local_zone_create(nm, len, labs, t, c);
 	if(!z) {
+		free(nm);
 		log_err("out of memory");
 		return NULL;
 	}
@@ -1275,7 +1276,10 @@ struct local_zone* local_zones_add_zone(struct local_zones* zones,
 {
 	/* create */
 	struct local_zone* z = local_zone_create(name, len, labs, tp, dclass);
-	if(!z) return NULL;
+	if(!z) {
+		free(name);
+		return NULL;
+	}
 	lock_rw_wrlock(&z->lock);
 
 	/* find the closest parent */

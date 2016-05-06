@@ -1,3 +1,6 @@
+6 May 2016: Wouter
+	- Fix memory leak in out-of-memory conditions of local zone add.
+
 29 April 2016: Wouter
 	- Fix sldns with static checking fixes copied from getdns.
 
