@@ -1,3 +1,6 @@
+17 May 2016: Wouter
+	- trunk updated with output of flex 2.6.0.
+
 6 May 2016: Wouter
 	- Fix memory leak in out-of-memory conditions of local zone add.
 
