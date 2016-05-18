@@ -2174,6 +2174,7 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 	}
 	if(iq->dnssec_expected && !iq->dnssec_lame_query &&
 		!(iq->chase_flags&BIT_RD) 
+		&& iq->sent_count < DNSSEC_LAME_DETECT_COUNT
 		&& type != RESPONSE_TYPE_LAME 
 		&& type != RESPONSE_TYPE_REC_LAME 
 		&& type != RESPONSE_TYPE_THROWAWAY 

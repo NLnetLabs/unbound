@@ -1,3 +1,6 @@
+18 May 2016: Wouter
+	- Fix #761: DNSSEC LAME false positive resolving nic.club.
+
 17 May 2016: Wouter
 	- trunk updated with output of flex 2.6.0.
 

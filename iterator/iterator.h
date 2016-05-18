@@ -61,6 +61,9 @@ struct rbtree_t;
 #define MAX_REFERRAL_COUNT	130
 /** max number of queries-sent-out.  Make sure large NS set does not loop */
 #define MAX_SENT_COUNT		32
+/** max number of queries for which to perform dnsseclameness detection,
+ * (rrsigs misssing detection) after that, just pick up that response */
+#define DNSSEC_LAME_DETECT_COUNT 4
 /**
  * max number of QNAME minimisation iterations. Limits number of queries for
  * QNAMEs with a lot of labels.
