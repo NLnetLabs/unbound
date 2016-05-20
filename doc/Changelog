@@ -1,3 +1,6 @@
+19 May 2016: Wouter
+	- Fix #766: dns64 should synthesize results on timeout/errors.
+
 18 May 2016: Wouter
 	- Fix #761: DNSSEC LAME false positive resolving nic.club.
 
