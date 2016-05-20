@@ -1,6 +1,7 @@
 20 May 2016: Ralph
 	- No QNAME minimisation fall-back for NXDOMAIN answers from DNSSEC 
 	  signed zones.
+	- iana portlist update.
 
 19 May 2016: Wouter
 	- Fix #766: dns64 should synthesize results on timeout/errors.
