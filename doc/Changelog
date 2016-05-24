@@ -1,6 +1,7 @@
 24 May 2016: Wouter
 	- disable-dnssec-lame-check config option from Charles Walker.
 	- remove memory leak from lame-check patch.
+	- iana portlist update.
 
 23 May 2016: Wouter
 	- Fix #767:  Reference to an expired Internet-Draft in
