@@ -121,6 +121,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_DNSTAP_LOG_FORWARDER_QUERY_MESSAGES
 %token VAR_DNSTAP_LOG_FORWARDER_RESPONSE_MESSAGES
 %token VAR_HARDEN_ALGO_DOWNGRADE VAR_IP_TRANSPARENT
+%token VAR_DISABLE_DNSSEC_LAME_CHECK
 %token VAR_RATELIMIT VAR_RATELIMIT_SLABS VAR_RATELIMIT_SIZE
 %token VAR_RATELIMIT_FOR_DOMAIN VAR_RATELIMIT_BELOW_DOMAIN VAR_RATELIMIT_FACTOR
 %token VAR_CAPS_WHITELIST VAR_CACHE_MAX_NEGATIVE_TTL VAR_PERMIT_SMALL_HOLDDOWN
@@ -192,7 +193,8 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_ratelimit_below_domain | server_ratelimit_factor |
 	server_caps_whitelist | server_cache_max_negative_ttl |
 	server_permit_small_holddown | server_qname_minimisation |
-	server_ip_freebind | server_define_tag | server_local_zone_tag
+	server_ip_freebind | server_define_tag | server_local_zone_tag |
+	server_disable_dnssec_lame_check
 	;
 stubstart: VAR_STUB_ZONE
 	{
@@ -1686,6 +1688,14 @@ py_script: VAR_PYTHON_SCRIPT STRING_ARG
 		OUTYY(("P(python-script:%s)\n", $2));
 		free(cfg_parser->cfg->python_script);
 		cfg_parser->cfg->python_script = $2;
+	}
+server_disable_dnssec_lame_check: VAR_DISABLE_DNSSEC_LAME_CHECK STRING_ARG
+	{
+		OUTYY(("P(disable_dnssec_lame_check:%s)\n", $2));
+		if (strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else cfg_parser->cfg->disable_dnssec_lame_check =
+			(strcmp($2, "yes")==0);
 	}
 %%
 

@@ -238,6 +238,7 @@ config_create(void)
 	if(!(cfg->dnstap_socket_path = strdup(DNSTAP_SOCKET_PATH)))
 		goto error_exit;
 #endif
+	cfg->disable_dnssec_lame_check = 0;
 	cfg->ratelimit = 0;
 	cfg->ratelimit_slabs = 4;
 	cfg->ratelimit_size = 4*1024*1024;
@@ -475,6 +476,7 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	else S_STR("control-cert-file:", control_cert_file)
 	else S_STR("module-config:", module_conf)
 	else S_STR("python-script:", python_script)
+	else S_YNO("disable-dnssec-lame-check:", disable_dnssec_lame_check)
 	else if(strcmp(opt, "ratelimit:") == 0) {
 	    IS_NUMBER_OR_ZERO; cfg->ratelimit = atoi(val);
 	    infra_dp_ratelimit=cfg->ratelimit;
@@ -770,6 +772,7 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_YNO(opt, "insecure-lan-zones", insecure_lan_zones)
 	else O_DEC(opt, "max-udp-size", max_udp_size)
 	else O_STR(opt, "python-script", python_script)
+	else O_YNO(opt, "disable-dnssec-lame-check", disable_dnssec_lame_check)
 	else O_DEC(opt, "ratelimit", ratelimit)
 	else O_MEM(opt, "ratelimit-size", ratelimit_size)
 	else O_DEC(opt, "ratelimit-slabs", ratelimit_slabs)

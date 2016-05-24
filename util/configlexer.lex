@@ -364,6 +364,7 @@ dnstap-log-forwarder-query-messages{COLON}	{
 		YDVAR(1, VAR_DNSTAP_LOG_FORWARDER_QUERY_MESSAGES) }
 dnstap-log-forwarder-response-messages{COLON}	{
 		YDVAR(1, VAR_DNSTAP_LOG_FORWARDER_RESPONSE_MESSAGES) }
+disable-dnssec-lame-check{COLON} { YDVAR(1, VAR_DISABLE_DNSSEC_LAME_CHECK) }
 ratelimit{COLON}		{ YDVAR(1, VAR_RATELIMIT) }
 ratelimit-slabs{COLON}		{ YDVAR(1, VAR_RATELIMIT_SLABS) }
 ratelimit-size{COLON}		{ YDVAR(1, VAR_RATELIMIT_SIZE) }

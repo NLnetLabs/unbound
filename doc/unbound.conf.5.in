@@ -681,6 +681,13 @@ This may cause a slight speedup.  The default is no, because the DNS
 protocol RFCs mandate these sections, and the additional content could
 be of use and save roundtrips for clients.
 .TP
+.B disable-dnssec-lame-check: \fI<yes or no>
+If true, disables the DNSSEC lameness check in the iterator.  This check
+sees if RRSIGs are present in the answer, when dnssec is expected,
+and retries another authority if RRSIGs are unexpectedly missing.
+The validator will insist in RRSIGs for DNSSEC signed domains regardless
+of this setting, if a trust anchor is loaded.
+.TP
 .B module\-config: \fI<"module names">
 Module configuration, a list of module names separated by spaces, surround
 the string with quotes (""). The modules can be validator, iterator.

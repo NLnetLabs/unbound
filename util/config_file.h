@@ -367,6 +367,9 @@ struct config_file {
 	/** true to log dnstap FORWARDER_RESPONSE message events */
 	int dnstap_log_forwarder_response_messages;
 
+	/** true to disable DNSSEC lameness check in iterator */
+	int disable_dnssec_lame_check;
+
 	/** ratelimit 0 is off, otherwise qps (unless overridden) */
 	int ratelimit;
 	/** number of slabs for ratelimit cache */

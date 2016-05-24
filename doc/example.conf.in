@@ -369,6 +369,9 @@ server:
 	# into response messages when those sections are not required.
 	# minimal-responses: no
 
+	# true to disable DNSSEC lameness check in iterator.
+	# disable-dnssec-lame-check: no
+
 	# module configuration of the server. A string with identifiers
 	# separated by spaces. Syntax: "[dns64] [validator] iterator"
 	# module-config: "validator iterator"

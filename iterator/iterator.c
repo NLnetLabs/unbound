@@ -2172,7 +2172,8 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 		 * differently. No queries should be sent elsewhere */
 		type = RESPONSE_TYPE_ANSWER;
 	}
-	if(iq->dnssec_expected && !iq->dnssec_lame_query &&
+	if(!qstate->env->cfg->disable_dnssec_lame_check && iq->dnssec_expected 
+                && !iq->dnssec_lame_query &&
 		!(iq->chase_flags&BIT_RD) 
 		&& iq->sent_count < DNSSEC_LAME_DETECT_COUNT
 		&& type != RESPONSE_TYPE_LAME 
@@ -2464,7 +2465,8 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 		verbose(VERB_ALGO, "cleared outbound list for query restart");
 		/* go to INIT_REQUEST_STATE for new qname. */
 		return next_state(iq, INIT_REQUEST_STATE);
-	} else if(type == RESPONSE_TYPE_LAME) {
+	} else if(!qstate->env->cfg->disable_dnssec_lame_check 
+                      && type == RESPONSE_TYPE_LAME) {
 		/* Cache the LAMEness. */
 		verbose(VERB_DETAIL, "query response was %sLAME",
 			dnsseclame?"DNSSEC ":"");
