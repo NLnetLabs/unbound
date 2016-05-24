@@ -1696,6 +1696,7 @@ server_disable_dnssec_lame_check: VAR_DISABLE_DNSSEC_LAME_CHECK STRING_ARG
 			yyerror("expected yes or no.");
 		else cfg_parser->cfg->disable_dnssec_lame_check =
 			(strcmp($2, "yes")==0);
+		free($2);
 	}
 %%
 

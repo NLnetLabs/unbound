@@ -4008,12 +4008,13 @@ yyreduce:
 			yyerror("expected yes or no.");
 		else cfg_parser->cfg->disable_dnssec_lame_check =
 			(strcmp((yyvsp[0].str), "yes")==0);
+		free((yyvsp[0].str));
 	}
-#line 4013 "util/configparser.c" /* yacc.c:1646  */
+#line 4014 "util/configparser.c" /* yacc.c:1646  */
     break;
 
 
-#line 4017 "util/configparser.c" /* yacc.c:1646  */
+#line 4018 "util/configparser.c" /* yacc.c:1646  */
       default: break;
     }
   /* User semantic actions sometimes alter yychar, and that requires
@@ -4241,7 +4242,7 @@ yyreturn:
 #endif
   return yyresult;
 }
-#line 1700 "./util/configparser.y" /* yacc.c:1906  */
+#line 1701 "./util/configparser.y" /* yacc.c:1906  */
 
 
 /* parse helper routines could be here */
