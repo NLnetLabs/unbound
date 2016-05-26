@@ -2465,8 +2465,7 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 		verbose(VERB_ALGO, "cleared outbound list for query restart");
 		/* go to INIT_REQUEST_STATE for new qname. */
 		return next_state(iq, INIT_REQUEST_STATE);
-	} else if(!qstate->env->cfg->disable_dnssec_lame_check 
-                      && type == RESPONSE_TYPE_LAME) {
+	} else if(type == RESPONSE_TYPE_LAME) {
 		/* Cache the LAMEness. */
 		verbose(VERB_DETAIL, "query response was %sLAME",
 			dnsseclame?"DNSSEC ":"");
