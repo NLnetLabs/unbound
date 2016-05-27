@@ -2,6 +2,8 @@
 	- Fix #770: Small subgroup attack on DH used in unix pipe on localhost
 	  if unbound control uses a unix local named pipe.
 	- Document write permission to directory of trust anchor needed.
+	- Fix #768:  Unbound Service Sometimes Can Not Shutdown
+	  Completely, WER Report Shown Up.  Close handle before closing WSA.
 
 26 May 2016: Wouter
 	- Updated patch from Charles Walker.

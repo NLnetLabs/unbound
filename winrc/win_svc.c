@@ -453,9 +453,9 @@ service_main(DWORD ATTR_UNUSED(argc), LPTSTR* ATTR_UNUSED(argv))
 	/* exit */
 	verbose(VERB_ALGO, "winservice - cleanup.");
 	report_status(SERVICE_STOP_PENDING, NO_ERROR, 0);
+	if(service_stop_event) (void)WSACloseEvent(service_stop_event);
 	service_deinit(daemon, cfg);
 	free(service_cfgfile);
-	if(service_stop_event) (void)WSACloseEvent(service_stop_event);
 	verbose(VERB_QUERY, "winservice - full stop");
 	report_status(SERVICE_STOPPED, NO_ERROR, 0);
 }
