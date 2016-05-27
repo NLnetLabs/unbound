@@ -1,6 +1,7 @@
 27 May 2016: Wouter
 	- Fix #770: Small subgroup attack on DH used in unix pipe on localhost
 	  if unbound control uses a unix local named pipe.
+	- Document write permission to directory of trust anchor needed.
 
 26 May 2016: Wouter
 	- Updated patch from Charles Walker.

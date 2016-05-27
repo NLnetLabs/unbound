@@ -706,7 +706,9 @@ File with trust anchor for one zone, which is tracked with RFC5011 probes.
 The probes are several times per month, thus the machine must be online
 frequently.  The initial file can be one with contents as described in
 \fBtrust\-anchor\-file\fR.  The file is written to when the anchor is updated,
-so the unbound user must have write permission.
+so the unbound user must have write permission.  Write permission to the file,
+but also to the directory it is in (to create a temporary file, which is
+necessary to deal with filesystem full events).
 .TP
 .B trust\-anchor: \fI<"Resource Record">
 A DS or DNSKEY RR for a key to use for validation. Multiple entries can be
