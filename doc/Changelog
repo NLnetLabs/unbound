@@ -1,5 +1,6 @@
 30 May 2016: Wouter
 	- Fix time in case answer comes from cache in ub_resolve_event().
+	- Attempted fix for #765: _unboundmodule missing for python3.
 
 27 May 2016: Wouter
 	- Fix #770: Small subgroup attack on DH used in unix pipe on localhost
