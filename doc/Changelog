@@ -1,3 +1,6 @@
+30 May 2016: Wouter
+	- Fix time in case answer comes from cache in ub_resolve_event().
+
 27 May 2016: Wouter
 	- Fix #770: Small subgroup attack on DH used in unix pipe on localhost
 	  if unbound control uses a unix local named pipe.

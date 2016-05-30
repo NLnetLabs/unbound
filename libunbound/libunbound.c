@@ -717,6 +717,9 @@ ub_resolve_event(struct ub_ctx* ctx, const char* name, int rrtype,
 		}
 	}
 
+	/* set time in case answer comes from cache */
+	ub_comm_base_now(ctx->event_worker->base);
+
 	/* create new ctx_query and attempt to add to the list */
 	q = context_new(ctx, name, rrtype, rrclass, (ub_callback_t)callback,
 		mydata);
