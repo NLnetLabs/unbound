@@ -3,6 +3,10 @@
 	  network service account, from Mario Turschmann.
 	- compat strsep implementation.
 	- generic edns option parse and store code.
+	- and also generic edns options for upstream messages (and replies).
+	  after parse use edns_opt_find(edns.opt_list, LDNS_EDNS_NSID),
+	  to insert use edns_opt_append(edns, region, code, len, bindata) on
+	  the opt_list passed to send_query, or in edns_opt_inplace_reply.
 
 30 May 2016: Wouter
 	- Fix time in case answer comes from cache in ub_resolve_event().

@@ -444,6 +444,14 @@ int edns_opt_append(struct edns_data* edns, struct regional* region,
 	uint16_t code, size_t len, uint8_t* data);
 
 /**
+ * Find edns option in edns list
+ * @param list: list of edns options (eg. edns.opt_list)
+ * @param code: opt code to find.
+ * @return NULL or the edns_option element.
+ */
+struct edns_option* edns_opt_find(struct edns_option* list, uint16_t code);
+
+/**
  * Transform edns data structure from query structure into reply structure.
  * In place transform, for errors and cache replies.
  * @param edns: on input contains the edns from the query.  On output contains
@@ -462,8 +470,23 @@ struct edns_option* edns_opt_copy_region(struct edns_option* list,
 	struct regional* region);
 
 /**
- * See if edns option lists are equal, also order and contents of options.
+ * Copy edns option list allocated with malloc
  */
-int edns_opt_list_equal(struct edns_option* p, struct edns_option* q);
+struct edns_option* edns_opt_copy_alloc(struct edns_option* list);
+
+/**
+ * Free edns option list allocated with malloc
+ */
+void edns_opt_list_free(struct edns_option* list);
+
+/**
+ * Compare an edns option. (not entire list).  Also compares contents.
+ */
+int edns_opt_compare(struct edns_option* p, struct edns_option* q);
+
+/**
+ * Compare edns option lists, also the order and contents of edns-options.
+ */
+int edns_opt_list_compare(struct edns_option* p, struct edns_option* q);
 
 #endif /* UTIL_DATA_MSGREPLY_H */

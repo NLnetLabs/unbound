@@ -923,22 +923,89 @@ struct edns_option* edns_opt_copy_region(struct edns_option* list,
 	return result;
 }
 
-int edns_opt_list_equal(struct edns_option* p, struct edns_option* q)
+int edns_opt_compare(struct edns_option* p, struct edns_option* q)
 {
-	while(p && q) {
-		/* compare elements */
-		if(p->opt_code != q->opt_code ||
-			p->opt_len != q->opt_len)
-			return 0;
-		if(p->opt_len > 0 && q->opt_len > 0) {
-			if(memcmp(p->opt_data, q->opt_data, p->opt_len) != 0)
-				return 0;
-		}
+	if(!p && !q) return 0;
+	if(!p) return -1;
+	if(!q) return 1;
+	log_assert(p && q);
+	if(p->opt_code != q->opt_code)
+		return (int)q->opt_code - (int)p->opt_code;
+	if(p->opt_len != q->opt_len)
+		return (int)q->opt_len - (int)p->opt_len;
+	if(p->opt_len != 0)
+		return memcmp(p->opt_data, q->opt_data, p->opt_len);
+	return 0;
+}
 
+int edns_opt_list_compare(struct edns_option* p, struct edns_option* q)
+{
+	int r;
+	while(p && q) {
+		r = edns_opt_compare(p, q);
+		if(r != 0)
+			return r;
 		p = p->next;
 		q = q->next;
 	}
-	if(p || q)
-		return 0; /* uneven length lists */
-	return 1;
+	if(p || q) {
+		/* uneven length lists */
+		if(p) return 1;
+		if(q) return -1;
+	}
+	return 0;
+}
+
+void edns_opt_list_free(struct edns_option* list)
+{
+	struct edns_option* n;
+	while(list) {
+		free(list->opt_data);
+		n = list->next;
+		free(list);
+		list = n;
+	}
+}
+
+struct edns_option* edns_opt_copy_alloc(struct edns_option* list)
+{
+	struct edns_option* result = NULL, *cur = NULL, *s;
+	while(list) {
+		/* copy edns option structure */
+		s = memdup(list, sizeof(*list));
+		if(!s) {
+			edns_opt_list_free(result);
+			return NULL;
+		}
+		s->next = NULL;
+
+		/* copy option data */
+		if(s->opt_data) {
+			s->opt_data = memdup(s->opt_data, s->opt_len);
+			if(!s->opt_data) {
+				edns_opt_list_free(result);
+				return NULL;
+			}
+		}
+
+		/* link into list */
+		if(cur)
+			cur->next = s;
+		else	result = s;
+		cur = s;
+
+		/* examine next element */
+		list = list->next;
+	}
+	return result;
+}
+
+struct edns_option* edns_opt_find(struct edns_option* list, uint16_t code)
+{
+	struct edns_option* p;
+	for(p=list; p; p=p->next) {
+		if(p->opt_code == code)
+			return p;
+	}
+	return NULL;
 }

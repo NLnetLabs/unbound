@@ -1786,6 +1786,8 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 	int tf_policy;
 	struct delegpt_addr* target;
 	struct outbound_entry* outq;
+	/* EDNS options to set on outgoing packet */
+	struct edns_option* opt_list = NULL;
 
 	/* NOTE: a request will encounter this state for each target it 
 	 * needs to send a query to. That is, at least one per referral, 
@@ -2103,8 +2105,8 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 		!qstate->blacklist&&(!iter_indicates_dnssec_fwd(qstate->env,
 		&iq->qinfo_out)||target->attempts==1)?0:BIT_CD), 
 		iq->dnssec_expected, iq->caps_fallback || is_caps_whitelisted(
-		ie, iq), &target->addr, target->addrlen, iq->dp->name,
-		iq->dp->namelen, qstate);
+		ie, iq), opt_list, &target->addr, target->addrlen,
+		iq->dp->name, iq->dp->namelen, qstate);
 	if(!outq) {
 		log_addr(VERB_DETAIL, "error sending query to auth server", 
 			&target->addr, target->addrlen);

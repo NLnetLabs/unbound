@@ -122,6 +122,8 @@ serviced_cmp(const void* key1, const void* key2)
 	}
 	if((r = query_dname_compare(q1->qbuf+10, q2->qbuf+10)) != 0)
 		return r;
+	if((r = edns_opt_list_compare(q1->opt_list, q2->opt_list)) != 0)
+		return r;
 	return sockaddr_cmp(&q1->addr, q1->addrlen, &q2->addr, q2->addrlen);
 }
 
@@ -757,6 +759,7 @@ serviced_node_del(rbnode_t* node, void* ATTR_UNUSED(arg))
 	struct service_callback* p = sq->cblist, *np;
 	free(sq->qbuf);
 	free(sq->zone);
+	edns_opt_list_free(sq->opt_list);
 	while(p) {
 		np = p->next;
 		free(p);
@@ -1219,7 +1222,8 @@ serviced_gen_query(sldns_buffer* buff, uint8_t* qname, size_t qnamelen,
 /** lookup serviced query in serviced query rbtree */
 static struct serviced_query*
 lookup_serviced(struct outside_network* outnet, sldns_buffer* buff, int dnssec,
-	struct sockaddr_storage* addr, socklen_t addrlen)
+	struct sockaddr_storage* addr, socklen_t addrlen,
+	struct edns_option* opt_list)
 {
 	struct serviced_query key;
 	key.node.key = &key;
@@ -1229,6 +1233,7 @@ lookup_serviced(struct outside_network* outnet, sldns_buffer* buff, int dnssec,
 	memcpy(&key.addr, addr, addrlen);
 	key.addrlen = addrlen;
 	key.outnet = outnet;
+	key.opt_list = opt_list;
 	return (struct serviced_query*)rbtree_search(outnet->serviced, &key);
 }
 
@@ -1237,7 +1242,7 @@ static struct serviced_query*
 serviced_create(struct outside_network* outnet, sldns_buffer* buff, int dnssec,
 	int want_dnssec, int nocaps, int tcp_upstream, int ssl_upstream,
 	struct sockaddr_storage* addr, socklen_t addrlen, uint8_t* zone,
-	size_t zonelen, int qtype)
+	size_t zonelen, int qtype, struct edns_option* opt_list)
 {
 	struct serviced_query* sq = (struct serviced_query*)malloc(sizeof(*sq));
 #ifdef UNBOUND_DEBUG
@@ -1267,6 +1272,16 @@ serviced_create(struct outside_network* outnet, sldns_buffer* buff, int dnssec,
 	sq->ssl_upstream = ssl_upstream;
 	memcpy(&sq->addr, addr, addrlen);
 	sq->addrlen = addrlen;
+	sq->opt_list = NULL;
+	if(opt_list) {
+		sq->opt_list = edns_opt_copy_alloc(opt_list);
+		if(!sq->opt_list) {
+			free(sq->zone);
+			free(sq->qbuf);
+			free(sq);
+			return NULL;
+		}
+	}
 	sq->outnet = outnet;
 	sq->cblist = NULL;
 	sq->pending = NULL;
@@ -1394,9 +1409,7 @@ serviced_encode(struct serviced_query* sq, sldns_buffer* buff, int with_edns)
 		edns.edns_present = 1;
 		edns.ext_rcode = 0;
 		edns.edns_version = EDNS_ADVERTISED_VERSION;
-		/* insert EDNS options here for upstream messages,
-		 * stored from sq */
-		edns.opt_list = NULL;
+		edns.opt_list = sq->opt_list;
 		if(sq->status == serviced_query_UDP_EDNS_FRAG) {
 			if(addr_is_ip6(&sq->addr, sq->addrlen)) {
 				if(EDNS_FRAG_SIZE_IP6 < EDNS_ADVERTISED_SIZE)
@@ -1919,15 +1932,15 @@ struct serviced_query*
 outnet_serviced_query(struct outside_network* outnet,
 	uint8_t* qname, size_t qnamelen, uint16_t qtype, uint16_t qclass,
 	uint16_t flags, int dnssec, int want_dnssec, int nocaps,
-	int tcp_upstream, int ssl_upstream, struct sockaddr_storage* addr,
-	socklen_t addrlen, uint8_t* zone, size_t zonelen,
-	comm_point_callback_t* callback, void* callback_arg,
+	int tcp_upstream, int ssl_upstream, struct edns_option* opt_list,
+	struct sockaddr_storage* addr, socklen_t addrlen, uint8_t* zone,
+	size_t zonelen, comm_point_callback_t* callback, void* callback_arg,
 	sldns_buffer* buff)
 {
 	struct serviced_query* sq;
 	struct service_callback* cb;
 	serviced_gen_query(buff, qname, qnamelen, qtype, qclass, flags);
-	sq = lookup_serviced(outnet, buff, dnssec, addr, addrlen);
+	sq = lookup_serviced(outnet, buff, dnssec, addr, addrlen, opt_list);
 	/* duplicate entries are included in the callback list, because
 	 * there is a counterpart registration by our caller that needs to
 	 * be doubly-removed (with callbacks perhaps). */
@@ -1937,7 +1950,7 @@ outnet_serviced_query(struct outside_network* outnet,
 		/* make new serviced query entry */
 		sq = serviced_create(outnet, buff, dnssec, want_dnssec, nocaps,
 			tcp_upstream, ssl_upstream, addr, addrlen, zone,
-			zonelen, (int)qtype);
+			zonelen, (int)qtype, opt_list);
 		if(!sq) {
 			free(cb);
 			return NULL;
