@@ -1,3 +1,7 @@
+31 May 2016: Wouter
+	- Fix windows service to be created run with limited rights, as a
+	  network service account, from Mario Turschmann.
+
 30 May 2016: Wouter
 	- Fix time in case answer comes from cache in ub_resolve_event().
 	- Attempted fix for #765: _unboundmodule missing for python3.
