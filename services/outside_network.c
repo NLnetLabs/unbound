@@ -1394,6 +1394,9 @@ serviced_encode(struct serviced_query* sq, sldns_buffer* buff, int with_edns)
 		edns.edns_present = 1;
 		edns.ext_rcode = 0;
 		edns.edns_version = EDNS_ADVERTISED_VERSION;
+		/* insert EDNS options here for upstream messages,
+		 * stored from sq */
+		edns.opt_list = NULL;
 		if(sq->status == serviced_query_UDP_EDNS_FRAG) {
 			if(addr_is_ip6(&sq->addr, sq->addrlen)) {
 				if(EDNS_FRAG_SIZE_IP6 < EDNS_ADVERTISED_SIZE)
