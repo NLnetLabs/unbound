@@ -60,7 +60,7 @@ static SERVICE_STATUS_HANDLE service_status_handle;
 /** global service stop event */
 static WSAEVENT service_stop_event = NULL;
 /** event struct for stop callbacks */
-static struct event* service_stop_ev = NULL;
+static struct ub_event* service_stop_ev = NULL;
 /** if stop even means shutdown or restart */
 static int service_stop_shutdown = 0;
 /** config file to open. global communication to service_main() */

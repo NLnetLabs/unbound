@@ -35,7 +35,7 @@
 static int
 in_delim(char c, const char* delim)
 {
-	char* p;
+	const char* p;
 	if(!delim)
 		return 0;
 	for(p=delim; *p; p++) {
@@ -59,7 +59,7 @@ char *strsep(char **stringp, const char *delim)
 		*s = 0;
 		*stringp = s+1;
 	} else {
-		*stringp = s;
+		*stringp = NULL;
 	}
 	return orig;
 }
