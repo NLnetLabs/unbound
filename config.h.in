@@ -383,6 +383,9 @@
 /* Define to 1 if you have the `strptime' function. */
 #undef HAVE_STRPTIME
 
+/* Define to 1 if you have the `strsep' function. */
+#undef HAVE_STRSEP
+
 /* Define to 1 if `ipi_spec_dst' is a member of `struct in_pktinfo'. */
 #undef HAVE_STRUCT_IN_PKTINFO_IPI_SPEC_DST
 
@@ -989,6 +992,11 @@ int memcmp(const void *x, const void *y, size_t n);
 #ifndef HAVE_CTIME_R
 #define ctime_r unbound_ctime_r
 char *ctime_r(const time_t *timep, char *buf);
+#endif
+
+#ifndef HAVE_STRSEP
+#define strsep unbound_strsep
+char *strsep(char **stringp, const char *delim);
 #endif
 
 #ifndef HAVE_ISBLANK

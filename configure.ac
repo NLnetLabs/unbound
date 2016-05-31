@@ -1175,6 +1175,7 @@ fi
 LIBOBJ_WITHOUT_CTIME="$LIBOBJS"
 AC_SUBST(LIBOBJ_WITHOUT_CTIME)
 AC_REPLACE_FUNCS(ctime_r)
+AC_REPLACE_FUNCS(strsep)
 
 AC_ARG_ENABLE(allsymbols, AC_HELP_STRING([--enable-allsymbols], [export all symbols from libunbound and link binaries to it, smaller install size but libunbound export table is polluted by internal symbols]))
 case "$enable_allsymbols" in
@@ -1402,6 +1403,11 @@ AHX_MEMCMP_BROKEN(unbound)
 #ifndef HAVE_CTIME_R
 #define ctime_r unbound_ctime_r
 char *ctime_r(const time_t *timep, char *buf);
+#endif
+
+#ifndef HAVE_STRSEP
+#define strsep unbound_strsep
+char *strsep(char **stringp, const char *delim);
 #endif
 
 #ifndef HAVE_ISBLANK

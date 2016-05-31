@@ -19346,6 +19346,20 @@ esac
 fi
 
 
+ac_fn_c_check_func "$LINENO" "strsep" "ac_cv_func_strsep"
+if test "x$ac_cv_func_strsep" = xyes; then :
+  $as_echo "#define HAVE_STRSEP 1" >>confdefs.h
+
+else
+  case " $LIBOBJS " in
+  *" strsep.$ac_objext "* ) ;;
+  *) LIBOBJS="$LIBOBJS strsep.$ac_objext"
+ ;;
+esac
+
+fi
+
+
 
 # Check whether --enable-allsymbols was given.
 if test "${enable_allsymbols+set}" = set; then :
