@@ -659,6 +659,7 @@ reply_and_prefetch(struct worker* worker, struct query_info* qinfo,
  * @param pkt: buffer
  * @param str: string to put into text record (<255).
  * @param edns: edns reply information.
+ * @param worker: worker with scratch region.
  */
 static void
 chaos_replystr(sldns_buffer* pkt, const char* str, struct edns_data* edns,
