@@ -231,7 +231,7 @@ wsvc_install(FILE* out, const char* rename)
                 NULL, /* no load ordering group */
                 NULL, /* no tag identifier */
                 NULL, /* no deps */
-		_T("NT AUTHORITY\\NetworkService"), /* network service account with restricted rights */
+		(_T)("NT AUTHORITY\\NetworkService"), /* network service account with restricted rights */
                 "" /* no password (must be an empty string) */
                 );
         if(!sv) {
