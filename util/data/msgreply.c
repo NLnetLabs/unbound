@@ -461,7 +461,7 @@ int reply_info_parse(sldns_buffer* pkt, struct alloc_cache* alloc,
 	if((ret = parse_packet(pkt, msg, region)) != 0) {
 		return ret;
 	}
-	if((ret = parse_extract_edns(msg, edns)) != 0)
+	if((ret = parse_extract_edns(msg, edns, region)) != 0)
 		return ret;
 
 	/* parse OK, allocate return structures */
@@ -855,5 +855,90 @@ reply_all_rrsets_secure(struct reply_info* rep)
 			->security != sec_status_secure )
 		return 0;
 	}
+	return 1;
+}
+
+int edns_opt_append(struct edns_data* edns, struct regional* region,
+	uint16_t code, size_t len, uint8_t* data)
+{
+	struct edns_option** prevp;
+	struct edns_option* opt;
+
+	/* allocate new element */
+	opt = (struct edns_option*)regional_alloc(region, sizeof(*opt));
+	if(!opt)
+		return 0;
+	opt->next = NULL;
+	opt->opt_code = code;
+	opt->opt_len = len;
+	opt->opt_data = regional_alloc_init(region, data, len);
+	if(!opt->opt_data)
+		return 0;
+	
+	/* append at end of list */
+	prevp = &edns->opt_list;
+	while(*prevp != NULL)
+		prevp = &((*prevp)->next);
+	*prevp = opt;
+	return 1;
+}
+
+int edns_opt_inplace_reply(struct edns_data* edns, struct regional* region)
+{
+	(void)region;
+	/* remove all edns options from the reply, because only the
+	 * options that we understand should be in the reply
+	 * (sec 6.1.2 RFC 6891) */
+	edns->opt_list = NULL;
+	return 1;
+}
+
+struct edns_option* edns_opt_copy_region(struct edns_option* list,
+        struct regional* region)
+{
+	struct edns_option* result = NULL, *cur = NULL, *s;
+	while(list) {
+		/* copy edns option structure */
+		s = regional_alloc_init(region, list, sizeof(*list));
+		if(!s) return NULL;
+		s->next = NULL;
+
+		/* copy option data */
+		if(s->opt_data) {
+			s->opt_data = regional_alloc_init(region, s->opt_data,
+				s->opt_len);
+			if(!s->opt_data)
+				return NULL;
+		}
+
+		/* link into list */
+		if(cur)
+			cur->next = s;
+		else	result = s;
+		cur = s;
+
+		/* examine next element */
+		list = list->next;
+	}
+	return result;
+}
+
+int edns_opt_list_equal(struct edns_option* p, struct edns_option* q)
+{
+	while(p && q) {
+		/* compare elements */
+		if(p->opt_code != q->opt_code ||
+			p->opt_len != q->opt_len)
+			return 0;
+		if(p->opt_len > 0 && q->opt_len > 0) {
+			if(memcmp(p->opt_data, q->opt_data, p->opt_len) != 0)
+				return 0;
+		}
+
+		p = p->next;
+		q = q->next;
+	}
+	if(p || q)
+		return 0; /* uneven length lists */
 	return 1;
 }

@@ -1042,7 +1042,8 @@ local_encode(struct query_info* qinfo, struct edns_data* edns,
 	edns->udp_size = EDNS_ADVERTISED_SIZE;
 	edns->ext_rcode = 0;
 	edns->bits &= EDNS_DO;
-	if(!reply_info_answer_encode(qinfo, &rep, 
+	if(!edns_opt_inplace_reply(edns, temp) ||
+	   !reply_info_answer_encode(qinfo, &rep, 
 		*(uint16_t*)sldns_buffer_begin(buf),
 		sldns_buffer_read_u16_at(buf, 2),
 		buf, 0, 0, temp, udpsize, edns, 

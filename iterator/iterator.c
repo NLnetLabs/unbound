@@ -3124,7 +3124,8 @@ process_response(struct module_qstate* qstate, struct iter_qstate* iq,
 		goto handle_it;
 	}
 	/* edns is not examined, but removed from message to help cache */
-	if(parse_extract_edns(prs, &edns) != LDNS_RCODE_NOERROR)
+	if(parse_extract_edns(prs, &edns, qstate->env->scratch) !=
+		LDNS_RCODE_NOERROR)
 		goto handle_it;
 	/* remove CD-bit, we asked for in case we handle validation ourself */
 	prs->flags &= ~BIT_CD;

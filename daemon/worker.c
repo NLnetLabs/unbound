@@ -483,7 +483,6 @@ answer_norec_from_cache(struct worker* worker, struct query_info* qinfo,
 		qinfo->qname_len, qinfo->qtype, qinfo->qclass,
 		worker->scratchpad, &msg, timenow);
 	if(!dp) { /* no delegation, need to reprime */
-		regional_free_all(worker->scratchpad);
 		return 0;
 	}
 	if(must_validate) {
@@ -491,7 +490,6 @@ answer_norec_from_cache(struct worker* worker, struct query_info* qinfo,
 		case sec_status_unchecked:
 			/* some rrsets have not been verified yet, go and 
 			 * let validator do that */
-			regional_free_all(worker->scratchpad);
 			return 0;
 		case sec_status_bogus:
 			/* some rrsets are bogus, reply servfail */
@@ -499,9 +497,10 @@ answer_norec_from_cache(struct worker* worker, struct query_info* qinfo,
 			edns->udp_size = EDNS_ADVERTISED_SIZE;
 			edns->ext_rcode = 0;
 			edns->bits &= EDNS_DO;
+			if(!edns_opt_inplace_reply(edns, worker->scratchpad))
+				return 0;
 			error_encode(repinfo->c->buffer, LDNS_RCODE_SERVFAIL, 
 				&msg->qinfo, id, flags, edns);
-			regional_free_all(worker->scratchpad);
 			if(worker->stats.extended) {
 				worker->stats.ans_bogus++;
 				worker->stats.ans_rcode[LDNS_RCODE_SERVFAIL]++;
@@ -527,6 +526,8 @@ answer_norec_from_cache(struct worker* worker, struct query_info* qinfo,
 	edns->udp_size = EDNS_ADVERTISED_SIZE;
 	edns->ext_rcode = 0;
 	edns->bits &= EDNS_DO;
+	if(!edns_opt_inplace_reply(edns, worker->scratchpad))
+		return 0;
 	msg->rep->flags |= BIT_QR|BIT_RA;
 	if(!reply_info_answer_encode(&msg->qinfo, msg->rep, id, flags, 
 		repinfo->c->buffer, 0, 1, worker->scratchpad,
@@ -534,7 +535,6 @@ answer_norec_from_cache(struct worker* worker, struct query_info* qinfo,
 		error_encode(repinfo->c->buffer, LDNS_RCODE_SERVFAIL, 
 			&msg->qinfo, id, flags, edns);
 	}
-	regional_free_all(worker->scratchpad);
 	if(worker->stats.extended) {
 		if(secure) worker->stats.ans_secure++;
 		server_stats_insrcode(&worker->stats, repinfo->c->buffer);
@@ -574,7 +574,6 @@ answer_from_cache(struct worker* worker, struct query_info* qinfo,
 		bail_out:
 			rrset_array_unlock_touch(worker->env.rrset_cache, 
 				worker->scratchpad, rep->ref, rep->rrset_count);
-			regional_free_all(worker->scratchpad);
 			return 0;
 		}
 	}
@@ -585,11 +584,12 @@ answer_from_cache(struct worker* worker, struct query_info* qinfo,
 		edns->udp_size = EDNS_ADVERTISED_SIZE;
 		edns->ext_rcode = 0;
 		edns->bits &= EDNS_DO;
+		if(!edns_opt_inplace_reply(edns, worker->scratchpad))
+			return 0;
 		error_encode(repinfo->c->buffer, LDNS_RCODE_SERVFAIL, 
 			qinfo, id, flags, edns);
 		rrset_array_unlock_touch(worker->env.rrset_cache, 
 			worker->scratchpad, rep->ref, rep->rrset_count);
-		regional_free_all(worker->scratchpad);
 		if(worker->stats.extended) {
 			worker->stats.ans_bogus ++;
 			worker->stats.ans_rcode[LDNS_RCODE_SERVFAIL] ++;
@@ -616,6 +616,8 @@ answer_from_cache(struct worker* worker, struct query_info* qinfo,
 	edns->udp_size = EDNS_ADVERTISED_SIZE;
 	edns->ext_rcode = 0;
 	edns->bits &= EDNS_DO;
+	if(!edns_opt_inplace_reply(edns, worker->scratchpad))
+		return 0;
 	if(!reply_info_answer_encode(qinfo, rep, id, flags, 
 		repinfo->c->buffer, timenow, 1, worker->scratchpad,
 		udpsize, edns, (int)(edns->bits & EDNS_DO), secure)) {
@@ -626,7 +628,6 @@ answer_from_cache(struct worker* worker, struct query_info* qinfo,
 	 * is bad while holding locks. */
 	rrset_array_unlock_touch(worker->env.rrset_cache, worker->scratchpad,
 		rep->ref, rep->rrset_count);
-	regional_free_all(worker->scratchpad);
 	if(worker->stats.extended) {
 		if(secure) worker->stats.ans_secure++;
 		server_stats_insrcode(&worker->stats, repinfo->c->buffer);
@@ -660,7 +661,8 @@ reply_and_prefetch(struct worker* worker, struct query_info* qinfo,
  * @param edns: edns reply information.
  */
 static void
-chaos_replystr(sldns_buffer* pkt, const char* str, struct edns_data* edns)
+chaos_replystr(sldns_buffer* pkt, const char* str, struct edns_data* edns,
+	struct worker* worker)
 {
 	size_t len = strlen(str);
 	unsigned int rd = LDNS_RD_WIRE(sldns_buffer_begin(pkt));
@@ -689,6 +691,8 @@ chaos_replystr(sldns_buffer* pkt, const char* str, struct edns_data* edns)
 	edns->edns_version = EDNS_ADVERTISED_VERSION;
 	edns->udp_size = EDNS_ADVERTISED_SIZE;
 	edns->bits &= EDNS_DO;
+	if(!edns_opt_inplace_reply(edns, worker->scratchpad))
+		edns->opt_list = NULL;
 	attach_edns_record(pkt, edns);
 }
 
@@ -718,13 +722,13 @@ answer_chaos(struct worker* w, struct query_info* qinfo,
 			char buf[MAXHOSTNAMELEN+1];
 			if (gethostname(buf, MAXHOSTNAMELEN) == 0) {
 				buf[MAXHOSTNAMELEN] = 0;
-				chaos_replystr(pkt, buf, edns);
+				chaos_replystr(pkt, buf, edns, w);
 			} else 	{
 				log_err("gethostname: %s", strerror(errno));
-				chaos_replystr(pkt, "no hostname", edns);
+				chaos_replystr(pkt, "no hostname", edns, w);
 			}
 		}
-		else 	chaos_replystr(pkt, cfg->identity, edns);
+		else 	chaos_replystr(pkt, cfg->identity, edns, w);
 		return 1;
 	}
 	if(query_dname_compare(qinfo->qname, 
@@ -735,8 +739,8 @@ answer_chaos(struct worker* w, struct query_info* qinfo,
 		if(cfg->hide_version) 
 			return 0;
 		if(cfg->version==NULL || cfg->version[0]==0)
-			chaos_replystr(pkt, PACKAGE_STRING, edns);
-		else 	chaos_replystr(pkt, cfg->version, edns);
+			chaos_replystr(pkt, PACKAGE_STRING, edns, w);
+		else 	chaos_replystr(pkt, cfg->version, edns, w);
 		return 1;
 	}
 	return 0;
@@ -865,7 +869,7 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 		}
 		goto send_reply;
 	}
-	if((ret=parse_edns_from_pkt(c->buffer, &edns)) != 0) {
+	if((ret=parse_edns_from_pkt(c->buffer, &edns, worker->scratchpad)) != 0) {
 		struct edns_data reply_edns;
 		verbose(VERB_ALGO, "worker parse edns: formerror.");
 		log_addr(VERB_CLIENT,"from",&repinfo->addr, repinfo->addrlen);
@@ -876,6 +880,7 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 		error_encode(c->buffer, ret, &qinfo,
 			*(uint16_t*)(void *)sldns_buffer_begin(c->buffer),
 			sldns_buffer_read_u16_at(c->buffer, 2), &reply_edns);
+		regional_free_all(worker->scratchpad);
 		server_stats_insrcode(&worker->stats, c->buffer);
 		goto send_reply;
 	}
@@ -884,12 +889,14 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 		edns.edns_version = EDNS_ADVERTISED_VERSION;
 		edns.udp_size = EDNS_ADVERTISED_SIZE;
 		edns.bits &= EDNS_DO;
+		edns.opt_list = NULL;
 		verbose(VERB_ALGO, "query with bad edns version.");
 		log_addr(VERB_CLIENT,"from",&repinfo->addr, repinfo->addrlen);
 		error_encode(c->buffer, EDNS_RCODE_BADVERS&0xf, &qinfo,
 			*(uint16_t*)(void *)sldns_buffer_begin(c->buffer),
 			sldns_buffer_read_u16_at(c->buffer, 2), NULL);
 		attach_edns_record(c->buffer, &edns);
+		regional_free_all(worker->scratchpad);
 		goto send_reply;
 	}
 	if(edns.edns_present && edns.udp_size < NORMAL_UDP_SIZE &&
@@ -918,6 +925,7 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 		sldns_buffer_write_at(c->buffer, 4, 
 			(uint8_t*)"\0\0\0\0\0\0\0\0", 8);
 		sldns_buffer_flip(c->buffer);
+		regional_free_all(worker->scratchpad);
 		goto send_reply;
 	}
 	if(worker->stats.extended)
@@ -928,6 +936,7 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 	if(qinfo.qclass == LDNS_RR_CLASS_CH && answer_chaos(worker, &qinfo,
 		&edns, c->buffer)) {
 		server_stats_insrcode(&worker->stats, c->buffer);
+		regional_free_all(worker->scratchpad);
 		goto send_reply;
 	}
 	if(local_zones_answer(worker->daemon->local_zones, &qinfo, &edns, 
@@ -945,6 +954,7 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 	 * might need to bail out based on ACLs now. */
 	if((ret=deny_refuse_non_local(c, acl, worker, repinfo)) != -1)
 	{
+		regional_free_all(worker->scratchpad);
 		if(ret == 1)
 			goto send_reply;
 		return ret;
@@ -961,6 +971,7 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 		LDNS_RCODE_SET(sldns_buffer_begin(c->buffer), 
 			LDNS_RCODE_REFUSED);
 		sldns_buffer_flip(c->buffer);
+		regional_free_all(worker->scratchpad);
 		server_stats_insrcode(&worker->stats, c->buffer);
 		log_addr(VERB_ALGO, "refused nonrec (cache snoop) query from",
 			&repinfo->addr, repinfo->addrlen);
@@ -984,9 +995,11 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 					sldns_buffer_read_u16_at(c->buffer, 2),
 					repinfo, leeway);
 				rc = 0;
+				regional_free_all(worker->scratchpad);
 				goto send_reply_rc;
 			}
 			lock_rw_unlock(&e->lock);
+			regional_free_all(worker->scratchpad);
 			goto send_reply;
 		}
 		verbose(VERB_ALGO, "answer from the cache failed");
@@ -997,6 +1010,7 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 			*(uint16_t*)(void *)sldns_buffer_begin(c->buffer), 
 			sldns_buffer_read_u16_at(c->buffer, 2), repinfo, 
 			&edns)) {
+			regional_free_all(worker->scratchpad);
 			goto send_reply;
 		}
 		verbose(VERB_ALGO, "answer norec from cache -- "
@@ -1017,6 +1031,7 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 	mesh_new_client(worker->env.mesh, &qinfo, 
 		sldns_buffer_read_u16_at(c->buffer, 2),
 		&edns, repinfo, *(uint16_t*)(void *)sldns_buffer_begin(c->buffer));
+	regional_free_all(worker->scratchpad);
 	worker_mem_report(worker, NULL);
 	return 0;
 

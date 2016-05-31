@@ -2,6 +2,7 @@
 	- Fix windows service to be created run with limited rights, as a
 	  network service account, from Mario Turschmann.
 	- compat strsep implementation.
+	- generic edns option parse and store code.
 
 30 May 2016: Wouter
 	- Fix time in case answer comes from cache in ub_resolve_event().
