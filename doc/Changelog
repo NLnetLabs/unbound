@@ -3,6 +3,7 @@
 	- Fix distinction between free and CRYPTO_free in dsa and ecdsa alloc.
 	- Fix #752: retry resource temporarily unavailable on control pipe.
 	- un-document localzone tags.
+	- tag for release 1.5.9rc1.
 
 31 May 2016: Wouter
 	- Fix windows service to be created run with limited rights, as a
