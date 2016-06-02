@@ -4064,7 +4064,7 @@ fi
 if test $on_mingw = "no"; then
   ub_conf_file=`eval echo "${sysconfdir}/unbound/unbound.conf"`
 else
-  ub_conf_file="C:\\Program Files\\Unbound\\service.conf"
+  ub_conf_file="C:\\Program Files (x86)\\Unbound\\service.conf"
 fi
 
 # Check whether --with-conf_file was given.
@@ -4195,7 +4195,7 @@ else
   if test $on_mingw = no; then
     UNBOUND_ROOTKEY_FILE="$UNBOUND_RUN_DIR/root.key"
 else
-    UNBOUND_ROOTKEY_FILE="C:\\Program Files\\Unbound\\root.key"
+    UNBOUND_ROOTKEY_FILE="C:\\Program Files (x86)\\Unbound\\root.key"
 fi
 
 fi
@@ -4217,7 +4217,7 @@ else
   if test $on_mingw = no; then
     UNBOUND_ROOTCERT_FILE="$UNBOUND_RUN_DIR/icannbundle.pem"
 else
-    UNBOUND_ROOTCERT_FILE="C:\\Program Files\\Unbound\\icannbundle.pem"
+    UNBOUND_ROOTCERT_FILE="C:\\Program Files (x86)\\Unbound\\icannbundle.pem"
 fi
 
 fi

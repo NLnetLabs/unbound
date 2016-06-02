@@ -117,7 +117,7 @@ fi
 if test $on_mingw = "no"; then
   ub_conf_file=`eval echo "${sysconfdir}/unbound/unbound.conf"`
 else
-  ub_conf_file="C:\\Program Files\\Unbound\\service.conf"
+  ub_conf_file="C:\\Program Files (x86)\\Unbound\\service.conf"
 fi
 AC_ARG_WITH([conf_file],
         AC_HELP_STRING([--with-conf-file=path], 
@@ -187,7 +187,7 @@ AC_ARG_WITH(rootkey-file,
 if test $on_mingw = no; then
     UNBOUND_ROOTKEY_FILE="$UNBOUND_RUN_DIR/root.key"
 else
-    UNBOUND_ROOTKEY_FILE="C:\\Program Files\\Unbound\\root.key"
+    UNBOUND_ROOTKEY_FILE="C:\\Program Files (x86)\\Unbound\\root.key"
 fi
 )
 AC_SUBST(UNBOUND_ROOTKEY_FILE)
@@ -201,7 +201,7 @@ AC_ARG_WITH(rootcert-file,
 if test $on_mingw = no; then
     UNBOUND_ROOTCERT_FILE="$UNBOUND_RUN_DIR/icannbundle.pem"
 else
-    UNBOUND_ROOTCERT_FILE="C:\\Program Files\\Unbound\\icannbundle.pem"
+    UNBOUND_ROOTCERT_FILE="C:\\Program Files (x86)\\Unbound\\icannbundle.pem"
 fi
 )
 AC_SUBST(UNBOUND_ROOTCERT_FILE)
