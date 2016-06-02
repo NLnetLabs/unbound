@@ -304,6 +304,8 @@ int tube_write_msg(struct tube* tube, uint8_t* buf, uint32_t len,
 	d = r;
 	while(d != (ssize_t)sizeof(len)) {
 		if((r=write(fd, ((char*)&len)+d, sizeof(len)-d)) == -1) {
+			if(errno == EAGAIN)
+				continue; /* temporarily unavail: try again*/
 			log_err("tube msg write failed: %s", strerror(errno));
 			(void)fd_set_nonblock(fd);
 			return 0;
@@ -313,6 +315,8 @@ int tube_write_msg(struct tube* tube, uint8_t* buf, uint32_t len,
 	d = 0;
 	while(d != (ssize_t)len) {
 		if((r=write(fd, buf+d, len-d)) == -1) {
+			if(errno == EAGAIN)
+				continue; /* temporarily unavail: try again*/
 			log_err("tube msg write failed: %s", strerror(errno));
 			(void)fd_set_nonblock(fd);
 			return 0;

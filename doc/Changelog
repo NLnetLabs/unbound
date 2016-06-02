@@ -1,6 +1,7 @@
 2 June 2016: Wouter
 	- Fix libubound for edns optlist feature.
 	- Fix distinction between free and CRYPTO_free in dsa and ecdsa alloc.
+	- Fix #752: retry resource temporarily unavailable on control pipe.
 
 31 May 2016: Wouter
 	- Fix windows service to be created run with limited rights, as a
