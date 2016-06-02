@@ -6,6 +6,7 @@
 	- tag for release 1.5.9rc1.
 	- Fix (for 1.5.10): Fix unbound-anchor.exe file location defaults to
 	  Program Files with (x86) appended.
+	- re-documented localzone tags in example.conf.
 
 31 May 2016: Wouter
 	- Fix windows service to be created run with limited rights, as a
