@@ -1,3 +1,6 @@
+2 June 2016: Wouter
+	- Fix libubound for edns optlist feature.
+
 31 May 2016: Wouter
 	- Fix windows service to be created run with limited rights, as a
 	  network service account, from Mario Turschmann.
