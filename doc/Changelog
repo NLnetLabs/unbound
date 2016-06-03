@@ -1,3 +1,6 @@
+3 June 2016: Wouter
+	- Fix to not ignore return value of chown() in daemon startup.
+
 2 June 2016: Wouter
 	- Fix libubound for edns optlist feature.
 	- Fix distinction between free and CRYPTO_free in dsa and ecdsa alloc.
