@@ -996,8 +996,7 @@ config_del_strarray(char** array, int num)
 	free(array);
 }
 
-/** delete stringbytelist */
-static void
+void
 config_del_strbytelist(struct config_strbytelist* p)
 {
 	struct config_strbytelist* np;

@@ -664,6 +664,9 @@ void config_deldblstrlist(struct config_str2list* list);
  */
 void config_deltrplstrlist(struct config_str3list* list);
 
+/** delete stringbytelist */
+void config_del_strbytelist(struct config_strbytelist* list);
+
 /**
  * Delete a stub item
  * @param p: stub item

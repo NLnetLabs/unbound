@@ -298,8 +298,10 @@ read_acl_tags(struct acl_list* acl, struct config_file* cfg)
 	cfg->acl_tags = NULL;
 	while(p) {
 		log_assert(p->str && p->str2);
-		if(!acl_list_tags_cfg(acl, p->str, p->str2, p->str2len))
+		if(!acl_list_tags_cfg(acl, p->str, p->str2, p->str2len)) {
+			config_del_strbytelist(p);
 			return 0;
+		}
 		/* free the items as we go to free up memory */
 		np = p->next;
 		free(p->str);
