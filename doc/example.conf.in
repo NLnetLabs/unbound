@@ -588,6 +588,9 @@ server:
 	# tag a localzone with a list of tag names (in "" with spaces between)
 	# local-zone-tag: "example.com" "tag2 tag3"
 
+	# add a netblock specific override to a localzone, with zone type
+	# local-zone-override: "example.com" 192.0.2.0/24 refuse
+
 	# service clients over SSL (on the TCP sockets), with plain DNS inside
 	# the SSL stream.  Give the certificate to use and private key.
 	# default is "" (disabled).  requires restart to take effect.

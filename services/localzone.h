@@ -43,6 +43,7 @@
 #define SERVICES_LOCALZONE_H
 #include "util/rbtree.h"
 #include "util/locks.h"
+#include "util/storage/dnstree.h"
 struct ub_packed_rrset_key;
 struct regional;
 struct config_file;
@@ -119,6 +120,9 @@ struct local_zone {
 	uint8_t* taglist;
 	/** length of the taglist (in bytes) */
 	size_t taglen;
+	/** netblock addr_tree with struct local_zone_override information
+	 * or NULL if there are no override elements */
+	struct rbtree_t* override_tree;
 
 	/** in this region the zone's data is allocated.
 	 * the struct local_zone itself is malloced. */
@@ -155,6 +159,16 @@ struct local_rrset {
 	struct local_rrset* next;
 	/** RRset data item */
 	struct ub_packed_rrset_key* rrset;
+};
+
+/**
+ * Local zone override information
+ */
+struct local_zone_override {
+	/** node in addrtree */
+	struct addr_tree_node node;
+	/** override for local zone type */
+	enum localzone_type type;
 };
 
 /**

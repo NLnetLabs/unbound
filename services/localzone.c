@@ -542,6 +542,89 @@ lz_enter_zone_tag(struct local_zones* zones, char* zname, uint8_t* list,
 	return r;
 }
 
+/** enter override into zone */
+static int
+lz_enter_override(struct local_zones* zones, char* zname, char* netblock,
+	char* type, uint16_t rr_class)
+{
+	uint8_t dname[LDNS_MAX_DOMAINLEN+1];
+	size_t dname_len = sizeof(dname);
+	int dname_labs;
+	struct sockaddr_storage addr;
+	int net;
+	socklen_t addrlen;
+	struct local_zone* z;
+	enum localzone_type t;
+
+	/* parse zone name */
+	if(sldns_str2wire_dname_buf(zname, dname, &dname_len) != 0) {
+		log_err("cannot parse zone name in local-zone-override: %s %s",
+			zname, netblock);
+		return 0;
+	}
+	dname_labs = dname_count_labels(dname);
+
+	/* parse netblock */
+	if(!netblockstrtoaddr(netblock, UNBOUND_DNS_PORT, &addr, &addrlen,
+		&net)) {
+		log_err("cannot parse netblock in local-zone-override: %s %s",
+			zname, netblock);
+		return 0;
+	}
+
+	/* parse zone type */
+	if(!local_zone_str2type(type, &t)) {
+		log_err("cannot parse type in local-zone-override: %s %s %s",
+			zname, netblock, type);
+		return 0;
+	}
+
+	/* find localzone entry */
+	lock_rw_rdlock(&zones->lock);
+	z = local_zones_lookup(zones, dname, dname_len, dname_labs, rr_class);
+	if(!z) {
+		lock_rw_unlock(&zones->lock);
+		log_err("no local-zone for local-zone-override %s", zname);
+		return 0;
+	}
+	lock_rw_wrlock(&z->lock);
+	lock_rw_unlock(&zones->lock);
+
+	/* create netblock addr_tree if not present yet */
+	if(!z->override_tree) {
+		z->override_tree = (struct rbtree_t*)regional_alloc_zero(
+			z->region, sizeof(*z->override_tree));
+		if(!z->override_tree) {
+			lock_rw_unlock(&z->lock);
+			log_err("out of memory");
+			return 0;
+		}
+		addr_tree_init(z->override_tree);
+	}
+	/* add new elem to tree */
+	if(z->override_tree) {
+		struct local_zone_override* n;
+		n = (struct local_zone_override*)regional_alloc_zero(
+			z->region, sizeof(*n));
+		if(!n) {
+			lock_rw_unlock(&z->lock);
+			log_err("out of memory");
+			return 0;
+		}
+		n->type = t;
+		if(!addr_tree_insert(z->override_tree,
+			(struct addr_tree_node*)n, &addr, addrlen, net)) {
+			lock_rw_unlock(&z->lock);
+			log_err("duplicate local-zone-override %s %s",
+				zname, netblock);
+			return 0;
+		}
+	}
+
+	lock_rw_unlock(&z->lock);
+	return 1;
+}
+
 /** parse local-zone: statements */
 static int
 lz_enter_zones(struct local_zones* zones, struct config_file* cfg)
@@ -720,6 +803,19 @@ lz_enter_defaults(struct local_zones* zones, struct config_file* cfg)
 	return 1;
 }
 
+/** parse local-zone-override: statements */
+static int
+lz_enter_overrides(struct local_zones* zones, struct config_file* cfg)
+{
+	struct config_str3list* p;
+	for(p = cfg->local_zone_overrides; p; p = p->next) {
+		if(!lz_enter_override(zones, p->str, p->str2, p->str3,
+			LDNS_RR_CLASS_IN))
+			return 0;
+	}
+	return 1;
+}
+
 /** setup parent pointers, so that a lookup can be done for closest match */
 static void
 init_parents(struct local_zones* zones)
@@ -749,6 +845,9 @@ init_parents(struct local_zones* zones)
                                 break;
                         }
                 prev = node;
+
+		if(node->override_tree)
+			addr_tree_init_parents(node->override_tree);
 		lock_rw_unlock(&node->lock);
         }
 	lock_rw_unlock(&zones->lock);
@@ -885,6 +984,10 @@ local_zones_apply_cfg(struct local_zones* zones, struct config_file* cfg)
 	}
 	/* apply default zones+content (unless disabled, or overridden) */
 	if(!lz_enter_defaults(zones, cfg)) {
+		return 0;
+	}
+	/* enter local zone overrides */
+	if(!lz_enter_overrides(zones, cfg)) {
 		return 0;
 	}
 	/* create implicit transparent zone from data. */

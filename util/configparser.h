@@ -212,7 +212,8 @@ extern int yydebug;
     VAR_IP_FREEBIND = 422,
     VAR_DEFINE_TAG = 423,
     VAR_LOCAL_ZONE_TAG = 424,
-    VAR_ACCESS_CONTROL_TAG = 425
+    VAR_ACCESS_CONTROL_TAG = 425,
+    VAR_LOCAL_ZONE_OVERRIDE = 426
   };
 #endif
 /* Tokens.  */
@@ -384,6 +385,7 @@ extern int yydebug;
 #define VAR_DEFINE_TAG 423
 #define VAR_LOCAL_ZONE_TAG 424
 #define VAR_ACCESS_CONTROL_TAG 425
+#define VAR_LOCAL_ZONE_OVERRIDE 426
 
 /* Value type.  */
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
@@ -394,7 +396,7 @@ union YYSTYPE
 
 	char*	str;
 
-#line 398 "util/configparser.h" /* yacc.c:1909  */
+#line 400 "util/configparser.h" /* yacc.c:1909  */
 };
 
 typedef union YYSTYPE YYSTYPE;
