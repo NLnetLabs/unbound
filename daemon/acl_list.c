@@ -188,7 +188,7 @@ acl_list_tag_action_cfg(struct acl_list* acl, struct config_file* cfg,
 			log_err("out of memory");
 			return 0;
 		}
-		node->tag_actions_size = cfg->num_tags;
+		node->tag_actions_size = (size_t)cfg->num_tags;
 	}
 	/* parse tag */
 	if((tagid=find_tag_id(cfg, tag)) == -1) {
@@ -245,7 +245,7 @@ acl_list_tag_data_cfg(struct acl_list* acl, struct config_file* cfg,
 			log_err("out of memory");
 			return 0;
 		}
-		node->tag_datas_size = cfg->num_tags;
+		node->tag_datas_size = (size_t)cfg->num_tags;
 	}
 	/* parse tag */
 	if((tagid=find_tag_id(cfg, tag)) == -1) {
