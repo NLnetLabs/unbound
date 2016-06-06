@@ -194,7 +194,6 @@ struct addr_tree_node* addr_tree_lookup(rbtree_t* tree,
 struct addr_tree_node* addr_tree_find(rbtree_t* tree, 
 	struct sockaddr_storage* addr, socklen_t addrlen, int net);
 
-
 /** compare name tree nodes */
 int name_tree_compare(const void* k1, const void* k2);
 
