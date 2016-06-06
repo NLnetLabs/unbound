@@ -294,11 +294,18 @@ read_acl_list(struct acl_list* acl, struct config_file* cfg)
 static int 
 read_acl_tags(struct acl_list* acl, struct config_file* cfg)
 {
-	struct config_strbytelist* p;
-	for(p = cfg->acl_tags; p; p = p->next) {
+	struct config_strbytelist* np, *p = cfg->acl_tags;
+	cfg->acl_tags = NULL;
+	while(p) {
 		log_assert(p->str && p->str2);
 		if(!acl_list_tags_cfg(acl, p->str, p->str2, p->str2len))
 			return 0;
+		/* free the items as we go to free up memory */
+		np = p->next;
+		free(p->str);
+		free(p->str2);
+		free(p);
+		p = np;
 	}
 	return 1;
 }
@@ -307,12 +314,23 @@ read_acl_tags(struct acl_list* acl, struct config_file* cfg)
 static int 
 read_acl_tag_actions(struct acl_list* acl, struct config_file* cfg)
 {
-	struct config_str3list* p;
-	for(p = cfg->acl_tag_actions; p; p = p->next) {
+	struct config_str3list* p, *np;
+	p = cfg->acl_tag_actions;
+	cfg->acl_tag_actions = NULL;
+	while(p) {
 		log_assert(p->str && p->str2 && p->str3);
 		if(!acl_list_tag_action_cfg(acl, cfg, p->str, p->str2,
-			p->str3))
+			p->str3)) {
+			config_deltrplstrlist(p);
 			return 0;
+		}
+		/* free the items as we go to free up memory */
+		np = p->next;
+		free(p->str);
+		free(p->str2);
+		free(p->str3);
+		free(p);
+		p = np;
 	}
 	return 1;
 }
@@ -321,11 +339,22 @@ read_acl_tag_actions(struct acl_list* acl, struct config_file* cfg)
 static int 
 read_acl_tag_datas(struct acl_list* acl, struct config_file* cfg)
 {
-	struct config_str3list* p;
-	for(p = cfg->acl_tag_datas; p; p = p->next) {
+	struct config_str3list* p, *np;
+	p = cfg->acl_tag_datas;
+	cfg->acl_tag_datas = NULL;
+	while(p) {
 		log_assert(p->str && p->str2 && p->str3);
-		if(!acl_list_tag_data_cfg(acl, cfg, p->str, p->str2, p->str3))
+		if(!acl_list_tag_data_cfg(acl, cfg, p->str, p->str2, p->str3)) {
+			config_deltrplstrlist(p);
 			return 0;
+		}
+		/* free the items as we go to free up memory */
+		np = p->next;
+		free(p->str);
+		free(p->str2);
+		free(p->str3);
+		free(p);
+		p = np;
 	}
 	return 1;
 }

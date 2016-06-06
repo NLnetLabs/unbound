@@ -4,6 +4,8 @@
 	- local-zone-override config directive.
 	- access-control-tag-action and access-control-tag-data config
 	  directives.
+	- free acl-tags, acltag-action and acltag-data config lists during
+	  initialisation to free up memory for more entries.
 
 3 June 2016: Wouter
 	- Fix to not ignore return value of chown() in daemon startup.
