@@ -126,6 +126,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_RATELIMIT_FOR_DOMAIN VAR_RATELIMIT_BELOW_DOMAIN VAR_RATELIMIT_FACTOR
 %token VAR_CAPS_WHITELIST VAR_CACHE_MAX_NEGATIVE_TTL VAR_PERMIT_SMALL_HOLDDOWN
 %token VAR_QNAME_MINIMISATION VAR_IP_FREEBIND VAR_DEFINE_TAG VAR_LOCAL_ZONE_TAG
+%token VAR_ACCESS_CONTROL_TAG
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -194,7 +195,7 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_caps_whitelist | server_cache_max_negative_ttl |
 	server_permit_small_holddown | server_qname_minimisation |
 	server_ip_freebind | server_define_tag | server_local_zone_tag |
-	server_disable_dnssec_lame_check
+	server_disable_dnssec_lame_check | access_control_tag
 	;
 stubstart: VAR_STUB_ZONE
 	{
@@ -1325,6 +1326,25 @@ server_local_zone_tag: VAR_LOCAL_ZONE_TAG STRING_ARG STRING_ARG
 		if(bitlist) {
 			if(!cfg_strbytelist_insert(
 				&cfg_parser->cfg->local_zone_tags,
+				$2, bitlist, len)) {
+				yyerror("out of memory");
+				free($2);
+			}
+		}
+	}
+	;
+access_control_tag: VAR_ACCESS_CONTROL_TAG STRING_ARG STRING_ARG
+	{
+		size_t len = 0;
+		uint8_t* bitlist = config_parse_taglist(cfg_parser->cfg, $3,
+			&len);
+		free($3);
+		OUTYY(("P(server_access_control_tag:%s)\n", $2));
+		if(!bitlist)
+			yyerror("could not parse tags, (define-tag them first)");
+		if(bitlist) {
+			if(!cfg_strbytelist_insert(
+				&cfg_parser->cfg->acl_tags,
 				$2, bitlist, len)) {
 				yyerror("out of memory");
 				free($2);

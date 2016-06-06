@@ -87,6 +87,10 @@ struct acl_addr {
 	struct addr_tree_node node;
 	/** access control on this netblock */
 	enum acl_access control;
+	/** tag bitlist */
+	uint8_t* taglist;
+	/** length of the taglist (in bytes) */
+	size_t taglen;
 };
 
 /**

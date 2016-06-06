@@ -345,6 +345,7 @@ dns64-prefix{COLON}		{ YDVAR(1, VAR_DNS64_PREFIX) }
 dns64-synthall{COLON}		{ YDVAR(1, VAR_DNS64_SYNTHALL) }
 define-tag{COLON}		{ YDVAR(1, VAR_DEFINE_TAG) }
 local-zone-tag{COLON}		{ YDVAR(2, VAR_LOCAL_ZONE_TAG) }
+access-control-tag{COLON}	{ YDVAR(2, VAR_ACCESS_CONTROL_TAG) }
 dnstap{COLON}			{ YDVAR(0, VAR_DNSTAP) }
 dnstap-enable{COLON}		{ YDVAR(1, VAR_DNSTAP_ENABLE) }
 dnstap-socket-path{COLON}	{ YDVAR(1, VAR_DNSTAP_SOCKET_PATH) }

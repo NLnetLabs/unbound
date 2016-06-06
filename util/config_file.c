@@ -784,6 +784,7 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_YNO(opt, "qname-minimisation", qname_minimisation)
 	else O_IFC(opt, "define-tag", num_tags, tagname)
 	else O_LTG(opt, "local-zone-tag", local_zone_tags)
+	else O_LTG(opt, "access-control-tag", acl_tags)
 	/* not here:
 	 * outgoing-permit, outgoing-avoid - have list of ports
 	 * local-zone - zones and nodefault variables
@@ -1022,6 +1023,7 @@ config_delete(struct config_file* cfg)
 	config_delstrlist(cfg->local_data);
 	config_del_strarray(cfg->tagname, cfg->num_tags);
 	config_del_strbytelist(cfg->local_zone_tags);
+	config_del_strbytelist(cfg->acl_tags);
 	config_delstrlist(cfg->control_ifs);
 	free(cfg->server_key_file);
 	free(cfg->server_cert_file);

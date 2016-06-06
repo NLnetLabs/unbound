@@ -298,6 +298,8 @@ struct config_file {
 	int insecure_lan_zones;
 	/** list of zonename, tagbitlist */
 	struct config_strbytelist* local_zone_tags;
+	/** list of aclname, tagbitlist */
+	struct config_strbytelist* acl_tags;
 	/** tag list, array with tagname[i] is malloced string */
 	char** tagname;
 	/** number of items in the taglist */

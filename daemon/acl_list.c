@@ -71,7 +71,7 @@ acl_list_delete(struct acl_list* acl)
 }
 
 /** insert new address into acl_list structure */
-static int
+static struct acl_addr*
 acl_list_insert(struct acl_list* acl, struct sockaddr_storage* addr, 
 	socklen_t addrlen, int net, enum acl_access control, 
 	int complain_duplicates)
@@ -79,13 +79,15 @@ acl_list_insert(struct acl_list* acl, struct sockaddr_storage* addr,
 	struct acl_addr* node = regional_alloc(acl->region,
 		sizeof(struct acl_addr));
 	if(!node)
-		return 0;
+		return NULL;
 	node->control = control;
+	node->taglist = NULL;
+	node->taglen = 0;
 	if(!addr_tree_insert(&acl->tree, &node->node, addr, addrlen, net)) {
 		if(complain_duplicates)
 			verbose(VERB_QUERY, "duplicate acl address ignored.");
 	}
-	return 1;
+	return node;
 }
 
 /** apply acl_list string */
@@ -125,6 +127,40 @@ acl_list_str_cfg(struct acl_list* acl, const char* str, const char* s2,
 	return 1;
 }
 
+/** apply acl_tag string */
+static int
+acl_list_tags_cfg(struct acl_list* acl, const char* str, uint8_t* bitmap,
+	size_t bitmaplen)
+{
+	struct sockaddr_storage addr;
+	int net;
+	socklen_t addrlen;
+	struct acl_addr* node;
+	if(!netblockstrtoaddr(str, UNBOUND_DNS_PORT, &addr, &addrlen, &net)) {
+		log_err("cannot parse netblock in access-control-tag: %s", str);
+		return 0;
+	}
+	/* find or create node */
+	if(!(node=(struct acl_addr*)addr_tree_find(&acl->tree, &addr,
+		addrlen, net))) {
+		/* create node, type 'allow' since otherwise tags are
+		 * pointless, can override with specific access-control: cfg */
+		if(!(node=(struct acl_addr*)acl_list_insert(acl, &addr,
+			addrlen, net, acl_allow, 1))) {
+			log_err("out of memory");
+			return 0;
+		}
+	}
+	log_assert(node);
+	node->taglen = bitmaplen;
+	node->taglist = regional_alloc_init(acl->region, bitmap, bitmaplen);
+	if(!node->taglist) {
+		log_err("out of memory");
+		return 0;
+	}
+	return 1;
+}
+
 /** read acl_list config */
 static int 
 read_acl_list(struct acl_list* acl, struct config_file* cfg)
@@ -138,12 +174,27 @@ read_acl_list(struct acl_list* acl, struct config_file* cfg)
 	return 1;
 }
 
+/** read acl tags config */
+static int 
+read_acl_tags(struct acl_list* acl, struct config_file* cfg)
+{
+	struct config_strbytelist* p;
+	for(p = cfg->acl_tags; p; p = p->next) {
+		log_assert(p->str && p->str2);
+		if(!acl_list_tags_cfg(acl, p->str, p->str2, p->str2len))
+			return 0;
+	}
+	return 1;
+}
+
 int 
 acl_list_apply_cfg(struct acl_list* acl, struct config_file* cfg)
 {
 	regional_free_all(acl->region);
 	addr_tree_init(&acl->tree);
 	if(!read_acl_list(acl, cfg))
+		return 0;
+	if(!read_acl_tags(acl, cfg))
 		return 0;
 	/* insert defaults, with '0' to ignore them if they are duplicates */
 	if(!acl_list_str_cfg(acl, "0.0.0.0/0", "refuse", 0))
