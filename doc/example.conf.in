@@ -206,7 +206,7 @@ server:
 	# tag access-control with list of tags (in "" with spaces between)
 	# Clients using this access control element use localzones that
 	# are tagged with one of these tags.
-	# access-control-tag: "192.0.2.0/24" "tag2 tag3"
+	# access-control-tag: 192.0.2.0/24 "tag2 tag3"
 
 	# if given, a chroot(2) is done to the given directory.
 	# i.e. you can chroot to the working directory, for example,
