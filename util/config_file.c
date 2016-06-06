@@ -795,6 +795,8 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_LTG(opt, "local-zone-tag", local_zone_tags)
 	else O_LTG(opt, "access-control-tag", acl_tags)
 	else O_LS3(opt, "local-zone-override", local_zone_overrides)
+	else O_LS3(opt, "access-control-tag-action", acl_tag_actions)
+	else O_LS3(opt, "access-control-tag-data", acl_tag_datas)
 	/* not here:
 	 * outgoing-permit, outgoing-avoid - have list of ports
 	 * local-zone - zones and nodefault variables
@@ -1049,6 +1051,8 @@ config_delete(struct config_file* cfg)
 	config_del_strarray(cfg->tagname, cfg->num_tags);
 	config_del_strbytelist(cfg->local_zone_tags);
 	config_del_strbytelist(cfg->acl_tags);
+	config_deltrplstrlist(cfg->acl_tag_actions);
+	config_deltrplstrlist(cfg->acl_tag_datas);
 	config_delstrlist(cfg->control_ifs);
 	free(cfg->server_key_file);
 	free(cfg->server_cert_file);
@@ -1203,6 +1207,23 @@ int cfg_strlist_append(struct config_strlist_head* list, char* item)
 	else
 		list->first = s;
 	list->last = s;
+	return 1;
+}
+
+int 
+cfg_region_strlist_insert(struct regional* region,
+	struct config_strlist** head, char* item)
+{
+	struct config_strlist *s;
+	if(!item || !head)
+		return 0;
+	s = (struct config_strlist*)regional_alloc_zero(region,
+		sizeof(struct config_strlist));
+	if(!s)
+		return 0;
+	s->str = item;
+	s->next = *head;
+	*head = s;
 	return 1;
 }
 

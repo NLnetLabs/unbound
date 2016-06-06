@@ -91,6 +91,15 @@ struct acl_addr {
 	uint8_t* taglist;
 	/** length of the taglist (in bytes) */
 	size_t taglen;
+	/** array per tagnumber of localzonetype(in one byte). NULL if none. */
+	uint8_t* tag_actions;
+	/** size of the tag_actions_array */
+	size_t tag_actions_size;
+	/** array per tagnumber, with per tag a list of rdata strings.
+	 * NULL if none.  strings are like 'A 127.0.0.1' 'AAAA ::1' */
+	struct config_strlist** tag_datas;
+	/** size of the tag_datas array */
+	size_t tag_datas_size;
 };
 
 /**

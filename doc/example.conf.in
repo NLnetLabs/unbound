@@ -212,6 +212,12 @@ server:
 	# are tagged with one of these tags.
 	# access-control-tag: 192.0.2.0/24 "tag2 tag3"
 
+	# set action for particular tag for given access control element
+	# access-control-tag-action: 192.0.2.0/24 tag3 refuse
+
+	# set redirect data for particular tag for access control element
+	# access-control-tag-data: 192.0.2.0/24 tag2 "A 127.0.0.1"
+
 	# if given, a chroot(2) is done to the given directory.
 	# i.e. you can chroot to the working directory, for example,
 	# for extra security, but make sure all files are in that directory.

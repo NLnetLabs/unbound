@@ -49,6 +49,7 @@ struct config_strbytelist;
 struct module_qstate;
 struct sock_list;
 struct ub_packed_rrset_key;
+struct regional;
 
 /**
  * The configuration options.
@@ -303,6 +304,10 @@ struct config_file {
 	struct config_strbytelist* local_zone_tags;
 	/** list of aclname, tagbitlist */
 	struct config_strbytelist* acl_tags;
+	/** list of aclname, tagname, localzonetype */
+	struct config_str3list* acl_tag_actions;
+	/** list of aclname, tagname, redirectdata */
+	struct config_str3list* acl_tag_datas;
 	/** tag list, array with tagname[i] is malloced string */
 	char** tagname;
 	/** number of items in the taglist */
@@ -594,6 +599,10 @@ int cfg_strlist_append(struct config_strlist_head* list, char* item);
  * @return: true on success.
  */
 int cfg_strlist_insert(struct config_strlist** head, char* item);
+
+/** insert with region for allocation. */
+int cfg_region_strlist_insert(struct regional* region,
+	struct config_strlist** head, char* item);
 
 /**
  * Insert string into str2list.

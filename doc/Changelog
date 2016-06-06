@@ -2,6 +2,8 @@
 	- Better help text from -h (from Ray Griffith).
 	- access-control-tag config directive.
 	- local-zone-override config directive.
+	- access-control-tag-action and access-control-tag-data config
+	  directives.
 
 3 June 2016: Wouter
 	- Fix to not ignore return value of chown() in daemon startup.

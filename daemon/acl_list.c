@@ -45,6 +45,8 @@
 #include "util/log.h"
 #include "util/config_file.h"
 #include "util/net_help.h"
+#include "services/localzone.h"
+#include "sldns/str2wire.h"
 
 struct acl_list* 
 acl_list_create(void)
@@ -76,13 +78,11 @@ acl_list_insert(struct acl_list* acl, struct sockaddr_storage* addr,
 	socklen_t addrlen, int net, enum acl_access control, 
 	int complain_duplicates)
 {
-	struct acl_addr* node = regional_alloc(acl->region,
+	struct acl_addr* node = regional_alloc_zero(acl->region,
 		sizeof(struct acl_addr));
 	if(!node)
 		return NULL;
 	node->control = control;
-	node->taglist = NULL;
-	node->taglen = 0;
 	if(!addr_tree_insert(&acl->tree, &node->node, addr, addrlen, net)) {
 		if(complain_duplicates)
 			verbose(VERB_QUERY, "duplicate acl address ignored.");
@@ -127,18 +127,17 @@ acl_list_str_cfg(struct acl_list* acl, const char* str, const char* s2,
 	return 1;
 }
 
-/** apply acl_tag string */
-static int
-acl_list_tags_cfg(struct acl_list* acl, const char* str, uint8_t* bitmap,
-	size_t bitmaplen)
+/** find or create node (NULL on parse or error) */
+static struct acl_addr*
+acl_find_or_create(struct acl_list* acl, const char* str)
 {
+	struct acl_addr* node;
 	struct sockaddr_storage addr;
 	int net;
 	socklen_t addrlen;
-	struct acl_addr* node;
 	if(!netblockstrtoaddr(str, UNBOUND_DNS_PORT, &addr, &addrlen, &net)) {
-		log_err("cannot parse netblock in access-control-tag: %s", str);
-		return 0;
+		log_err("cannot parse netblock: %s", str);
+		return NULL;
 	}
 	/* find or create node */
 	if(!(node=(struct acl_addr*)addr_tree_find(&acl->tree, &addr,
@@ -148,13 +147,130 @@ acl_list_tags_cfg(struct acl_list* acl, const char* str, uint8_t* bitmap,
 		if(!(node=(struct acl_addr*)acl_list_insert(acl, &addr,
 			addrlen, net, acl_allow, 1))) {
 			log_err("out of memory");
-			return 0;
+			return NULL;
 		}
 	}
-	log_assert(node);
+	return node;
+}
+
+/** apply acl_tag string */
+static int
+acl_list_tags_cfg(struct acl_list* acl, const char* str, uint8_t* bitmap,
+	size_t bitmaplen)
+{
+	struct acl_addr* node;
+	if(!(node=acl_find_or_create(acl, str)))
+		return 0;
 	node->taglen = bitmaplen;
 	node->taglist = regional_alloc_init(acl->region, bitmap, bitmaplen);
 	if(!node->taglist) {
+		log_err("out of memory");
+		return 0;
+	}
+	return 1;
+}
+
+/** apply acl_tag_action string */
+static int
+acl_list_tag_action_cfg(struct acl_list* acl, struct config_file* cfg,
+	const char* str, const char* tag, const char* action)
+{
+	struct acl_addr* node;
+	int tagid;
+	enum localzone_type t;
+	if(!(node=acl_find_or_create(acl, str)))
+		return 0;
+	/* allocate array if not yet */
+	if(!node->tag_actions) {
+		node->tag_actions = (uint8_t*)regional_alloc_zero(acl->region,
+			sizeof(*node->tag_actions)*cfg->num_tags);
+		if(!node->tag_actions) {
+			log_err("out of memory");
+			return 0;
+		}
+		node->tag_actions_size = cfg->num_tags;
+	}
+	/* parse tag */
+	if((tagid=find_tag_id(cfg, tag)) == -1) {
+		log_err("cannot parse tag (define-tag it): %s %s", str, tag);
+		return 0;
+	}
+	if((size_t)tagid >= node->tag_actions_size) {
+		log_err("tagid too large for array %s %s", str, tag);
+		return 0;
+	}
+	if(!local_zone_str2type(action, &t)) {
+		log_err("cannot parse access control action type: %s %s %s",
+			str, tag, action);
+		return 0;
+	}
+	node->tag_actions[tagid] = (uint8_t)t;
+	return 1;
+}
+
+/** check wire data parse */
+static int
+check_data(const char* data)
+{
+	char buf[65536];
+	uint8_t rr[LDNS_RR_BUF_SIZE];
+	size_t len = sizeof(rr);
+	int res;
+	snprintf(buf, sizeof(buf), "%s %s", "example.com.", data);
+	res = sldns_str2wire_rr_buf(buf, rr, &len, NULL, 3600, NULL, 0,
+		NULL, 0);
+	if(res == 0)
+		return 1;
+	log_err("rr data [char %d] parse error %s",
+		(int)LDNS_WIREPARSE_OFFSET(res)-13,
+		sldns_get_errorstr_parse(res));
+	return 0;
+}
+
+/** apply acl_tag_data string */
+static int
+acl_list_tag_data_cfg(struct acl_list* acl, struct config_file* cfg,
+	const char* str, const char* tag, const char* data)
+{
+	struct acl_addr* node;
+	int tagid;
+	char* dupdata;
+	if(!(node=acl_find_or_create(acl, str)))
+		return 0;
+	/* allocate array if not yet */
+	if(!node->tag_datas) {
+		node->tag_datas = (struct config_strlist**)regional_alloc_zero(
+			acl->region, sizeof(*node->tag_datas)*cfg->num_tags);
+		if(!node->tag_datas) {
+			log_err("out of memory");
+			return 0;
+		}
+		node->tag_datas_size = cfg->num_tags;
+	}
+	/* parse tag */
+	if((tagid=find_tag_id(cfg, tag)) == -1) {
+		log_err("cannot parse tag (define-tag it): %s %s", str, tag);
+		return 0;
+	}
+	if((size_t)tagid >= node->tag_datas_size) {
+		log_err("tagid too large for array %s %s", str, tag);
+		return 0;
+	}
+
+	/* check data? */
+	if(!check_data(data)) {
+		log_err("cannot parse access-control-tag data: %s %s '%s'",
+			str, tag, data);
+		return 0;
+	}
+
+	dupdata = regional_strdup(acl->region, data);
+	if(!dupdata) {
+		log_err("out of memory");
+		return 0;
+	}
+	if(!cfg_region_strlist_insert(acl->region,
+		&(node->tag_datas[tagid]), dupdata)) {
 		log_err("out of memory");
 		return 0;
 	}
@@ -187,6 +303,33 @@ read_acl_tags(struct acl_list* acl, struct config_file* cfg)
 	return 1;
 }
 
+/** read acl tag actions config */
+static int 
+read_acl_tag_actions(struct acl_list* acl, struct config_file* cfg)
+{
+	struct config_str3list* p;
+	for(p = cfg->acl_tag_actions; p; p = p->next) {
+		log_assert(p->str && p->str2 && p->str3);
+		if(!acl_list_tag_action_cfg(acl, cfg, p->str, p->str2,
+			p->str3))
+			return 0;
+	}
+	return 1;
+}
+
+/** read acl tag datas config */
+static int 
+read_acl_tag_datas(struct acl_list* acl, struct config_file* cfg)
+{
+	struct config_str3list* p;
+	for(p = cfg->acl_tag_datas; p; p = p->next) {
+		log_assert(p->str && p->str2 && p->str3);
+		if(!acl_list_tag_data_cfg(acl, cfg, p->str, p->str2, p->str3))
+			return 0;
+	}
+	return 1;
+}
+
 int 
 acl_list_apply_cfg(struct acl_list* acl, struct config_file* cfg)
 {
@@ -195,6 +338,10 @@ acl_list_apply_cfg(struct acl_list* acl, struct config_file* cfg)
 	if(!read_acl_list(acl, cfg))
 		return 0;
 	if(!read_acl_tags(acl, cfg))
+		return 0;
+	if(!read_acl_tag_actions(acl, cfg))
+		return 0;
+	if(!read_acl_tag_datas(acl, cfg))
 		return 0;
 	/* insert defaults, with '0' to ignore them if they are duplicates */
 	if(!acl_list_str_cfg(acl, "0.0.0.0/0", "refuse", 0))
