@@ -568,6 +568,9 @@ void unit_show_feature(const char* feature)
 	printf("test %s functions\n", feature);
 }
 
+#ifdef USE_ECDSA_EVP_WORKAROUND
+void ecdsa_evp_workaround_init(void);
+#endif
 /**
  * Main unit test program. Setup, teardown and report errors.
  * @param argc: arg count.
@@ -588,6 +591,9 @@ main(int argc, char* argv[])
 	ERR_load_crypto_strings();
 #  ifdef USE_GOST
 	(void)sldns_key_EVP_load_gost_id();
+#  endif
+#  ifdef USE_ECDSA_EVP_WORKAROUND
+	ecdsa_evp_workaround_init();
 #  endif
 #elif defined(HAVE_NSS)
 	if(NSS_NoDB_Init(".") != SECSuccess)

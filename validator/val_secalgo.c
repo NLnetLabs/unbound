@@ -350,6 +350,23 @@ i	 * the '44' is the total remaining length.
 }
 #endif /* USE_ECDSA */
 
+#ifdef USE_ECDSA_EVP_WORKAROUND
+static EVP_MD ecdsa_evp_256_md;
+static EVP_MD ecdsa_evp_384_md;
+void ecdsa_evp_workaround_init(void)
+{
+	/* openssl before 1.0.0 fixes RSA with the SHA256
+	 * hash in EVP.  We create one for ecdsa_sha256 */
+	ecdsa_evp_256_md = *EVP_sha256();
+	ecdsa_evp_256_md.required_pkey_type[0] = EVP_PKEY_EC;
+	ecdsa_evp_256_md.verify = (void*)ECDSA_verify;
+
+	ecdsa_evp_384_md = *EVP_sha384();
+	ecdsa_evp_384_md.required_pkey_type[0] = EVP_PKEY_EC;
+	ecdsa_evp_384_md.verify = (void*)ECDSA_verify;
+}
+#endif /* USE_ECDSA_EVP_WORKAROUND */
+
 /**
  * Setup key and digest for verification. Adjust sig if necessary.
  *
@@ -478,20 +495,7 @@ setup_key_digest(int algo, EVP_PKEY** evp_key, const EVP_MD** digest_type,
 				return 0;
 			}
 #ifdef USE_ECDSA_EVP_WORKAROUND
-			/* openssl before 1.0.0 fixes RSA with the SHA256
-			 * hash in EVP.  We create one for ecdsa_sha256 */
-			{
-				static int md_ecdsa_256_done = 0;
-				static EVP_MD md;
-				if(!md_ecdsa_256_done) {
-					EVP_MD m = *EVP_sha256();
-					md_ecdsa_256_done = 1;
-					m.required_pkey_type[0] = (*evp_key)->type;
-					m.verify = (void*)ECDSA_verify;
-					md = m;
-				}
-				*digest_type = &md;
-			}
+			*digest_type = &ecdsa_evp_256_md;
 #else
 			*digest_type = EVP_sha256();
 #endif
@@ -505,20 +509,7 @@ setup_key_digest(int algo, EVP_PKEY** evp_key, const EVP_MD** digest_type,
 				return 0;
 			}
 #ifdef USE_ECDSA_EVP_WORKAROUND
-			/* openssl before 1.0.0 fixes RSA with the SHA384
-			 * hash in EVP.  We create one for ecdsa_sha384 */
-			{
-				static int md_ecdsa_384_done = 0;
-				static EVP_MD md;
-				if(!md_ecdsa_384_done) {
-					EVP_MD m = *EVP_sha384();
-					md_ecdsa_384_done = 1;
-					m.required_pkey_type[0] = (*evp_key)->type;
-					m.verify = (void*)ECDSA_verify;
-					md = m;
-				}
-				*digest_type = &md;
-			}
+			*digest_type = &ecdsa_evp_384_md;
 #else
 			*digest_type = EVP_sha384();
 #endif
