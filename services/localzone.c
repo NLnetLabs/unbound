@@ -1015,13 +1015,13 @@ local_zones_lookup(struct local_zones* zones,
         uint8_t* name, size_t len, int labs, uint16_t dclass)
 {
 	return local_zones_tags_lookup(zones, name, len, labs,
-		dclass, NULL, 0);
+		dclass, NULL, 0, 1);
 }
 
 struct local_zone* 
 local_zones_tags_lookup(struct local_zones* zones,
         uint8_t* name, size_t len, int labs, uint16_t dclass,
-	uint8_t* taglist, size_t taglen)
+	uint8_t* taglist, size_t taglen, int ignoretags)
 {
 	rbnode_t* res = NULL;
 	struct local_zone *result;
@@ -1041,13 +1041,11 @@ local_zones_tags_lookup(struct local_zones* zones,
 	(void)dname_lab_cmp(result->name, result->namelabs, key.name,
 		key.namelabs, &m);
 	while(result) { /* go up until qname is zone or subdomain of zone */
-		if(result->namelabs <= m) {
-			if(!result->taglist)
-				break;
-			if(taglist_intersect(result->taglist, 
+		if(result->namelabs <= m)
+			if(ignoretags || !result->taglist ||
+				taglist_intersect(result->taglist, 
 				result->taglen, taglist, taglen))
 				break;
-		}
 		result = result->parent;
 	}
 	return result;
@@ -1299,7 +1297,7 @@ local_zones_answer(struct local_zones* zones, struct query_info* qinfo,
 	int r;
 	lock_rw_rdlock(&zones->lock);
 	z = local_zones_tags_lookup(zones, qinfo->qname,
-		qinfo->qname_len, labs, qinfo->qclass, taglist, taglen);
+		qinfo->qname_len, labs, qinfo->qclass, taglist, taglen, 0);
 	if(!z) {
 		lock_rw_unlock(&zones->lock);
 		return 0;

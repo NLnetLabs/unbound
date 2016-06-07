@@ -1,5 +1,7 @@
 7 June 2016: Ralph
 	- Lookup localzones by taglist from acl.
+	- Possibility to lookup local_zone, regardless the taglist.
+	- Added local_zone/taglist/acl unit test.
 
 7 June 2016: Wouter
 	- Fix #773: Non-standard Python location build failure with pyunbound.

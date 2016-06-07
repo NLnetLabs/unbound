@@ -225,11 +225,13 @@ void local_zone_delete(struct local_zone* z);
  * @param dclass: class to lookup.
  * @param taglist: taglist to lookup.
  * @param taglen: lenth of taglist.
+ * @param ignoretags: lookup zone by name and class, regardless the
+ * local-zone's tags.
  * @return closest local_zone or NULL if no covering zone is found.
  */
 struct local_zone* local_zones_tags_lookup(struct local_zones* zones, 
 	uint8_t* name, size_t len, int labs, uint16_t dclass, 
-	uint8_t* taglist, size_t taglen);
+	uint8_t* taglist, size_t taglen, int ignoretags);
 
 /**
  * Lookup zone that contains the given name, class.
