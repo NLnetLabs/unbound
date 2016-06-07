@@ -16714,7 +16714,7 @@ $as_echo "$PYTHON_CPPFLAGS" >&6; }
 $as_echo_n "checking for Python library path... " >&6; }
         if test -z "$PYTHON_LDFLAGS"; then
                 PYTHON_LDFLAGS=`$PYTHON -c "from distutils.sysconfig import *; \
-                        print(get_config_var('BLDLIBRARY'));"`
+                        print('-L'+get_config_var('LIBDIR')+' -L'+get_config_var('LIBDEST')+' '+get_config_var('BLDLIBRARY'));"`
         fi
         { $as_echo "$as_me:${as_lineno-$LINENO}: result: $PYTHON_LDFLAGS" >&5
 $as_echo "$PYTHON_LDFLAGS" >&6; }

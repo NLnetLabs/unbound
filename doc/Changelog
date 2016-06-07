@@ -1,3 +1,6 @@
+7 June 2016: Wouter
+	- Fix #773: Non-standard Python location build failure with pyunbound.
+
 6 June 2016: Wouter
 	- Better help text from -h (from Ray Griffith).
 	- access-control-tag config directive.
