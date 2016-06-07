@@ -525,7 +525,7 @@ lz_enter_zone_tag(struct local_zones* zones, char* zname, uint8_t* list,
 	dname_labs = dname_count_labels(dname);
 	
 	lock_rw_rdlock(&zones->lock);
-	z = local_zones_lookup(zones, dname, dname_len, dname_labs, rr_class);
+	z = local_zones_find(zones, dname, dname_len, dname_labs, rr_class);
 	if(!z) {
 		lock_rw_unlock(&zones->lock);
 		log_err("no local-zone for tag %s", zname);
@@ -581,7 +581,7 @@ lz_enter_override(struct local_zones* zones, char* zname, char* netblock,
 
 	/* find localzone entry */
 	lock_rw_rdlock(&zones->lock);
-	z = local_zones_lookup(zones, dname, dname_len, dname_labs, rr_class);
+	z = local_zones_find(zones, dname, dname_len, dname_labs, rr_class);
 	if(!z) {
 		lock_rw_unlock(&zones->lock);
 		log_err("no local-zone for local-zone-override %s", zname);
