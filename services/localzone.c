@@ -1026,6 +1026,7 @@ local_zones_tags_lookup(struct local_zones* zones,
 	rbnode_t* res = NULL;
 	struct local_zone *result;
 	struct local_zone key;
+	int m;
 	key.node.key = &key;
 	key.dclass = dclass;
 	key.name = name;
@@ -1034,7 +1035,6 @@ local_zones_tags_lookup(struct local_zones* zones,
 	rbtree_find_less_equal(&zones->ztree, &key, &res);
 	result = (struct local_zone*)res;
 	/* exact or smaller element (or no element) */
-	int m;
 	if(!result || result->dclass != dclass)
 		return NULL;
 	/* count number of labels matched */
