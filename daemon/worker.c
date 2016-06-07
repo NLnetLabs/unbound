@@ -804,6 +804,7 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 	struct query_info qinfo;
 	struct edns_data edns;
 	enum acl_access acl;
+	struct acl_addr* acladdr;
 	int rc = 0;
 
 	if(error != NETEVENT_NOERROR) {
@@ -816,8 +817,9 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 		dt_msg_send_client_query(&worker->dtenv, &repinfo->addr, c->type,
 			c->buffer);
 #endif
-	acl = acl_list_lookup(worker->daemon->acl, &repinfo->addr, 
+	acladdr = acl_addr_lookup(worker->daemon->acl, &repinfo->addr, 
 		repinfo->addrlen);
+	acl = acl_get_control(acladdr);
 	if((ret=deny_refuse_all(c, acl, worker, repinfo)) != -1)
 	{
 		if(ret == 1)
@@ -941,7 +943,8 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 		goto send_reply;
 	}
 	if(local_zones_answer(worker->daemon->local_zones, &qinfo, &edns, 
-		c->buffer, worker->scratchpad, repinfo)) {
+		c->buffer, worker->scratchpad, repinfo,	
+		acladdr->taglist, acladdr->taglen)) {
 		regional_free_all(worker->scratchpad);
 		if(sldns_buffer_limit(c->buffer) == 0) {
 			comm_point_drop_reply(repinfo);

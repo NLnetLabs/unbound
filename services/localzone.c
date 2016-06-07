@@ -1014,6 +1014,15 @@ struct local_zone*
 local_zones_lookup(struct local_zones* zones,
         uint8_t* name, size_t len, int labs, uint16_t dclass)
 {
+	return local_zones_tags_lookup(zones, name, len, labs,
+		dclass, NULL, 0);
+}
+
+struct local_zone* 
+local_zones_tags_lookup(struct local_zones* zones,
+        uint8_t* name, size_t len, int labs, uint16_t dclass,
+	uint8_t* taglist, size_t taglen)
+{
 	rbnode_t* res = NULL;
 	struct local_zone *result;
 	struct local_zone key;
@@ -1022,25 +1031,26 @@ local_zones_lookup(struct local_zones* zones,
 	key.name = name;
 	key.namelen = len;
 	key.namelabs = labs;
-	if(rbtree_find_less_equal(&zones->ztree, &key, &res)) {
-		/* exact */
-		return (struct local_zone*)res;
-	} else {
-	        /* smaller element (or no element) */
-                int m;
-                result = (struct local_zone*)res;
-                if(!result || result->dclass != dclass)
-                        return NULL;
-                /* count number of labels matched */
-                (void)dname_lab_cmp(result->name, result->namelabs, key.name,
-                        key.namelabs, &m);
-                while(result) { /* go up until qname is subdomain of zone */
-                        if(result->namelabs <= m)
-                                break;
-                        result = result->parent;
-                }
-		return result;
+	rbtree_find_less_equal(&zones->ztree, &key, &res);
+	result = (struct local_zone*)res;
+	/* exact or smaller element (or no element) */
+	int m;
+	if(!result || result->dclass != dclass)
+		return NULL;
+	/* count number of labels matched */
+	(void)dname_lab_cmp(result->name, result->namelabs, key.name,
+		key.namelabs, &m);
+	while(result) { /* go up until qname is zone or subdomain of zone */
+		if(result->namelabs <= m) {
+			if(!result->taglist)
+				break;
+			if(taglist_intersect(result->taglist, 
+				result->taglen, taglist, taglen))
+				break;
+		}
+		result = result->parent;
 	}
+	return result;
 }
 
 struct local_zone* 
@@ -1278,7 +1288,7 @@ lz_inform_print(struct local_zone* z, struct query_info* qinfo,
 int 
 local_zones_answer(struct local_zones* zones, struct query_info* qinfo,
 	struct edns_data* edns, sldns_buffer* buf, struct regional* temp,
-	struct comm_reply* repinfo)
+	struct comm_reply* repinfo, uint8_t* taglist, size_t taglen)
 {
 	/* see if query is covered by a zone,
 	 * 	if so:	- try to match (exact) local data 
@@ -1288,8 +1298,8 @@ local_zones_answer(struct local_zones* zones, struct query_info* qinfo,
 	struct local_zone* z;
 	int r;
 	lock_rw_rdlock(&zones->lock);
-	z = local_zones_lookup(zones, qinfo->qname,
-		qinfo->qname_len, labs, qinfo->qclass);
+	z = local_zones_tags_lookup(zones, qinfo->qname,
+		qinfo->qname_len, labs, qinfo->qclass, taglist, taglen);
 	if(!z) {
 		lock_rw_unlock(&zones->lock);
 		return 0;

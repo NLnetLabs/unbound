@@ -216,6 +216,22 @@ int local_data_cmp(const void* d1, const void* d2);
 void local_zone_delete(struct local_zone* z);
 
 /**
+ * Lookup zone that contains the given name, class and taglist.
+ * User must lock the tree or result zone.
+ * @param zones: the zones tree
+ * @param name: dname to lookup
+ * @param len: length of name.
+ * @param labs: labelcount of name.
+ * @param dclass: class to lookup.
+ * @param taglist: taglist to lookup.
+ * @param taglen: lenth of taglist.
+ * @return closest local_zone or NULL if no covering zone is found.
+ */
+struct local_zone* local_zones_tags_lookup(struct local_zones* zones, 
+	uint8_t* name, size_t len, int labs, uint16_t dclass, 
+	uint8_t* taglist, size_t taglen);
+
+/**
  * Lookup zone that contains the given name, class.
  * User must lock the tree or result zone.
  * @param zones: the zones tree
@@ -244,13 +260,15 @@ void local_zones_print(struct local_zones* zones);
  * @param buf: buffer with query ID and flags, also for reply.
  * @param temp: temporary storage region.
  * @param repinfo: source address for checks. may be NULL.
+ * @param taglist: taglist for checks. May be NULL.
+ * @param taglen: length of the taglist.
  * @return true if answer is in buffer. false if query is not answered 
  * by authority data. If the reply should be dropped altogether, the return 
  * value is true, but the buffer is cleared (empty).
  */
 int local_zones_answer(struct local_zones* zones, struct query_info* qinfo,
 	struct edns_data* edns, struct sldns_buffer* buf, struct regional* temp,
-	struct comm_reply* repinfo);
+	struct comm_reply* repinfo, uint8_t* taglist, size_t taglen);
 
 /**
  * Parse the string into localzone type.

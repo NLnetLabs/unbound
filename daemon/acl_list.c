@@ -392,13 +392,18 @@ acl_list_apply_cfg(struct acl_list* acl, struct config_file* cfg)
 }
 
 enum acl_access 
-acl_list_lookup(struct acl_list* acl, struct sockaddr_storage* addr,
+acl_get_control(struct acl_addr* acl)
+{
+	if(acl) return acl->control;
+	return acl_deny;
+}
+
+struct acl_addr*
+acl_addr_lookup(struct acl_list* acl, struct sockaddr_storage* addr,
         socklen_t addrlen)
 {
-	struct acl_addr* r = (struct acl_addr*)addr_tree_lookup(&acl->tree,
+	return (struct acl_addr*)addr_tree_lookup(&acl->tree,
 		addr, addrlen);
-	if(r) return r->control;
-	return acl_deny;
 }
 
 size_t 

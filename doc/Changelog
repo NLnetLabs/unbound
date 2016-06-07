@@ -1,3 +1,6 @@
+7 June 2016: Ralph
+	- Lookup localzones by taglist from acl.
+
 7 June 2016: Wouter
 	- Fix #773: Non-standard Python location build failure with pyunbound.
 

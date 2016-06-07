@@ -123,14 +123,22 @@ void acl_list_delete(struct acl_list* acl);
 int acl_list_apply_cfg(struct acl_list* acl, struct config_file* cfg);
 
 /**
- * Lookup address to see its access control status.
+ * Lookup access control status for acl structure.
+ * @param acl: structure for acl storage.
+ * @return: what to do with message from this address.
+ */
+enum acl_access acl_get_control(struct acl_addr* acl);
+
+/**
+ * Lookup address to see its acl structure
  * @param acl: structure for address storage.
  * @param addr: address to check
  * @param addrlen: length of addr.
- * @return: what to do with message from this address.
+ * @return: acl structure from this address.
  */
-enum acl_access acl_list_lookup(struct acl_list* acl, 
-	struct sockaddr_storage* addr, socklen_t addrlen);
+struct acl_addr*
+acl_addr_lookup(struct acl_list* acl, struct sockaddr_storage* addr,
+        socklen_t addrlen);
 
 /**
  * Get memory used by acl structure.
