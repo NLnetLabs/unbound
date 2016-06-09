@@ -98,7 +98,7 @@ section "-hidden.postinstall"
 	# Does service.conf already exist?
 	IfFileExists "$INSTDIR\service.conf" 0 service_conf_not_found
 	# if so, leave it be and place the shipped file under another name
-	File "service.conf" /oname="service.conf.shipped"
+	File /oname=service.conf.shipped "service.conf"
 	goto end_service_conf_not_found
 	# or, it is not there, place it and fill it.
 	service_conf_not_found:
