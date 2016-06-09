@@ -3,6 +3,8 @@
 	  june).
 	- Revert fix for NetworkService account on windows due to breakage
 	  it causes.
+	- Fix that windows install will not overwrite existing service.conf
+	  file (and ignore gui config choices if it exists).
 
 7 June 2016: Ralph
 	- Lookup localzones by taglist from acl.
