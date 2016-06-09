@@ -525,6 +525,12 @@ server_directory: VAR_DIRECTORY STRING_ARG
 		OUTYY(("P(server_directory:%s)\n", $2));
 		free(cfg_parser->cfg->directory);
 		cfg_parser->cfg->directory = $2;
+		/* change there right away for includes relative to this */
+		if($2[0]) {
+			if(chdir($2))
+				log_err("cannot chdir to directory: %s (%s)",
+					$2, strerror(errno));
+		}
 	}
 	;
 server_logfile: VAR_LOGFILE STRING_ARG
