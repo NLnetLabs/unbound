@@ -1,6 +1,8 @@
 9 June 2016: Wouter
 	- Trunk is called 1.5.10 (with previous fixes already in there to 2
 	  june).
+	- Revert fix for NetworkService account on windows due to breakage
+	  it causes.
 
 7 June 2016: Ralph
 	- Lookup localzones by taglist from acl.
