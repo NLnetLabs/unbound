@@ -527,9 +527,16 @@ server_directory: VAR_DIRECTORY STRING_ARG
 		cfg_parser->cfg->directory = $2;
 		/* change there right away for includes relative to this */
 		if($2[0]) {
-			if(chdir($2))
+			char* d = $2;
+			/* adjust directory if we have already chroot,
+			 * like, we reread after sighup */
+			if(cfg_parser->chroot && cfg_parser->chroot[0] &&
+				strncmp(d, cfg_parser->chroot, strlen(
+				cfg_parser->chroot)) == 0)
+				d += strlen(cfg_parser->chroot);
+			if(chdir(d))
 				log_err("cannot chdir to directory: %s (%s)",
-					$2, strerror(errno));
+					d, strerror(errno));
 		}
 	}
 	;
