@@ -1,3 +1,6 @@
+10 June 2016: Wouter
+	- And delete service.conf.shipped on uninstall.
+
 9 June 2016: Wouter
 	- Trunk is called 1.5.10 (with previous fixes already in there to 2
 	  june).
