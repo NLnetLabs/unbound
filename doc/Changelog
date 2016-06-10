@@ -5,6 +5,8 @@
 	  With chroot, make the directory an absolute path inside chroot.
 	- keep debug symbols in windows build.
 	- do not delete service.conf on windows uninstall.
+	- document directory immediate fix and allow EXECUTABLE syntax in it
+	  on windows.
 
 9 June 2016: Wouter
 	- Trunk is called 1.5.10 (with previous fixes already in there to 2

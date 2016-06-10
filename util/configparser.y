@@ -527,7 +527,11 @@ server_directory: VAR_DIRECTORY STRING_ARG
 		cfg_parser->cfg->directory = $2;
 		/* change there right away for includes relative to this */
 		if($2[0]) {
-			char* d = $2;
+			char* d;
+#ifdef UB_ON_WINDOWS
+			w_config_adjust_directory(cfg_parser->cfg);
+#endif
+			d = cfg_parser->cfg->directory;
 			/* adjust directory if we have already chroot,
 			 * like, we reread after sighup */
 			if(cfg_parser->chroot && cfg_parser->chroot[0] &&

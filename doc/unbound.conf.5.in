@@ -72,7 +72,8 @@ Processing continues as if the text from the included file was copied into
 the config file at that point.  If also using chroot, using full path names
 for the included files works, relative pathnames for the included names work
 if the directory where the daemon is started equals its chroot/working 
-directory.  Wildcards can be used to include multiple files, see \fIglob\fR(7).
+directory or is specified before the include statement with directory: dir.
+Wildcards can be used to include multiple files, see \fIglob\fR(7).
 .SS "Server Options"
 These options are part of the
 .B server:
@@ -469,6 +470,8 @@ requires privileges, then a reload will fail; a restart is needed.
 Sets the working directory for the program. Default is "@UNBOUND_RUN_DIR@".
 On Windows the string "%EXECUTABLE%" tries to change to the directory
 that unbound.exe resides in.
+If you give a server: directory: dir before include: file statements
+then those includes can be relative to the working directory.
 .TP
 .B logfile: \fI<filename>
 If "" is given, logging goes to stderr, or nowhere once daemonized.

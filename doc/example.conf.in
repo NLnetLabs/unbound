@@ -251,6 +251,8 @@ server:
 	# the working directory. The relative files in this config are
 	# relative to this directory. If you give "" the working directory
 	# is not changed.
+	# If you give a server: directory: dir before include: file statements
+	# then those includes can be relative to the working directory.
 	# directory: "@UNBOUND_RUN_DIR@"
 
 	# the log file, "" means log to stderr.
