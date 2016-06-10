@@ -3,6 +3,7 @@
 	- In unbound.conf directory: dir immediately changes to that directory,
 	  so that include: file below that is relative to that directory.
 	  With chroot, make the directory an absolute path inside chroot.
+	- keep debug symbols in windows build.
 
 9 June 2016: Wouter
 	- Trunk is called 1.5.10 (with previous fixes already in there to 2

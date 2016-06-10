@@ -319,14 +319,15 @@ if [ "$DOWIN" = "yes" ]; then
     rm -f $file
     info "Creating $file"
     mkdir tmp.$$
-    $strip unbound.exe
-    $strip anchor-update.exe
-    $strip unbound-control.exe
-    $strip unbound-host.exe
-    $strip unbound-anchor.exe
-    $strip unbound-checkconf.exe
-    $strip unbound-service-install.exe
-    $strip unbound-service-remove.exe
+    # keep debug symbols
+    #$strip unbound.exe
+    #$strip anchor-update.exe
+    #$strip unbound-control.exe
+    #$strip unbound-host.exe
+    #$strip unbound-anchor.exe
+    #$strip unbound-checkconf.exe
+    #$strip unbound-service-install.exe
+    #$strip unbound-service-remove.exe
     cd tmp.$$
     cp ../doc/example.conf ../doc/Changelog .
     cp ../unbound.exe ../unbound-anchor.exe ../unbound-host.exe ../unbound-control.exe ../unbound-checkconf.exe ../unbound-service-install.exe ../unbound-service-remove.exe ../LICENSE ../winrc/unbound-control-setup.cmd ../winrc/unbound-website.url ../winrc/service.conf ../winrc/README.txt ../contrib/create_unbound_ad_servers.cmd ../contrib/warmup.cmd ../contrib/unbound_cache.cmd .
