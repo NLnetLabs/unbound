@@ -97,6 +97,9 @@ static void usage()
 {
 	const char** m;
 	const char *evnm="event", *evsys="", *evmethod="";
+	time_t t;
+	struct timeval now;
+	struct ub_event_base* base;
 	printf("usage:  unbound [options]\n");
 	printf("	start unbound daemon DNS resolver.\n");
 	printf("-h	this help\n");
@@ -110,7 +113,8 @@ static void usage()
 	printf("   	service - used to start from services control panel\n");
 #endif
 	printf("Version %s\n", PACKAGE_VERSION);
-	ub_get_event_sys(NULL, &evnm, &evsys, &evmethod);
+	base = ub_default_event_base(0,&t,&now);
+	ub_get_event_sys(base, &evnm, &evsys, &evmethod);
 	printf("linked libs: %s %s (it uses %s), %s\n", 
 		evnm, evsys, evmethod,
 #ifdef HAVE_SSL
@@ -127,6 +131,7 @@ static void usage()
 	printf("\n");
 	printf("BSD licensed, see LICENSE in source package for details.\n");
 	printf("Report bugs to %s\n", PACKAGE_BUGREPORT);
+	ub_event_base_free(base);
 }
 
 #ifndef unbound_testbound
