@@ -1,3 +1,9 @@
+13 June 2016: Ralph
+	- Use QTYPE=A for QNAME minimisation.
+	- Keep track of number of time-outs when performing QNAME minimisation.
+	  Stop minimising when number of time-outs for a QNAME/QTYPE pair is
+	  more than three.
+
 13 June 2016: Wouter
 	- Fix #778: unbound 1.5.9: -h segfault (null deref).
 
