@@ -6,6 +6,7 @@
 
 13 June 2016: Wouter
 	- Fix #778: unbound 1.5.9: -h segfault (null deref).
+	- Fix directory: fix for unbound-checkconf, it restores cwd.
 
 10 June 2016: Wouter
 	- And delete service.conf.shipped on uninstall.

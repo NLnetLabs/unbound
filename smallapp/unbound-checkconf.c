@@ -481,14 +481,22 @@ check_hints(struct config_file* cfg)
 static void
 checkconf(const char* cfgfile, const char* opt, int final)
 {
+	char oldwd[PATH_MAX];
 	struct config_file* cfg = config_create();
 	if(!cfg)
 		fatal_exit("out of memory");
+	oldwd[0] = 0;
+	if(!getcwd(oldwd, sizeof(oldwd))) {
+		log_err("cannot getcwd: %s", strerror(errno));
+		oldwd[0] = 0;
+	}
 	if(!config_read(cfg, cfgfile, NULL)) {
 		/* config_read prints messages to stderr */
 		config_delete(cfg);
 		exit(1);
 	}
+	if(oldwd[0] && chdir(oldwd) == -1)
+		log_err("cannot chdir(%s): %s", oldwd, strerror(errno));
 	if(opt) {
 		print_option(cfg, opt, final);
 		config_delete(cfg);
