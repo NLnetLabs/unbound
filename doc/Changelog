@@ -5,6 +5,7 @@
 	- Fix windows link of ssl with crypt32.
 	- Fix 779: Union casting is non-portable.
 	- Fix 780: MAP_ANON not defined in HP-UX 11.31.
+	- Fix 781: prealloc() is an HP-UX system library call.
 
 13 June 2016: Ralph
 	- Use QTYPE=A for QNAME minimisation.
