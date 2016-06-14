@@ -3,6 +3,7 @@
 	  null delete for wsaevent.
 	- Fix spelling in freebind option man page text.
 	- Fix windows link of ssl with crypt32.
+	- Fix 779:  Union casting is non-portable.
 
 13 June 2016: Ralph
 	- Use QTYPE=A for QNAME minimisation.

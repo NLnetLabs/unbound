@@ -144,10 +144,8 @@ struct my_event {
 	struct event ev;
 };
 
-#define AS_MY_EVENT_BASE(x) \
-	(((union {struct ub_event_base* a; struct my_event_base* b;})x).b)
-#define AS_MY_EVENT(x) \
-	(((union {struct ub_event* a; struct my_event* b;})x).b)
+#define AS_MY_EVENT_BASE(x) ((struct my_event_base*)x)
+#define AS_MY_EVENT(x) ((struct my_event*)x)
 
 const char* ub_event_get_version()
 {
