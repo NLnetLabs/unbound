@@ -282,7 +282,7 @@ permissions on some systems.  The option uses IP_BINDANY on FreeBSD systems.
 If yes, then use IP_FREEBIND socket option on sockets where unbound
 is listening to incoming traffic.  Default no.  Allows you to bind to
 IP addresses that are nonlocal or do not exist, like when the network
-interface or IP adress is down.  Exists only on Linux, where the similar
+interface or IP address is down.  Exists only on Linux, where the similar
 ip\-transparent option is also available.
 .TP
 .B rrset\-cache\-size: \fI<number>

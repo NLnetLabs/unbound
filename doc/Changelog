@@ -1,6 +1,7 @@
 14 June 2016: Ralph
 	- Fix 775: unbound-host and unbound-anchor crash on windows, ignore
 	  null delete for wsaevent.
+	- Fix spelling in freebind option man page text.
 
 13 June 2016: Ralph
 	- Use QTYPE=A for QNAME minimisation.
