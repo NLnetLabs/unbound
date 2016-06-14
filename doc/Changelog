@@ -3,7 +3,8 @@
 	  null delete for wsaevent.
 	- Fix spelling in freebind option man page text.
 	- Fix windows link of ssl with crypt32.
-	- Fix 779:  Union casting is non-portable.
+	- Fix 779: Union casting is non-portable.
+	- Fix 780: MAP_ANON not defined in HP-UX 11.31.
 
 13 June 2016: Ralph
 	- Use QTYPE=A for QNAME minimisation.
