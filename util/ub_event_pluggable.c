@@ -597,7 +597,7 @@ ub_event_add(struct ub_event* ev, struct timeval* tv)
 int
 ub_event_del(struct ub_event* ev)
 {
-	if (ev->magic == UB_EVENT_MAGIC) {
+	if (ev && ev->magic == UB_EVENT_MAGIC) {
 		fptr_ok(ev->vmt != &default_event_vmt ||
 			ev->vmt->del == my_event_del);
 		return (*ev->vmt->del)(ev);
@@ -620,7 +620,7 @@ ub_timer_add(struct ub_event* ev, struct ub_event_base* base,
 int
 ub_timer_del(struct ub_event* ev)
 {
-	if (ev->magic == UB_EVENT_MAGIC) {
+	if (ev && ev->magic == UB_EVENT_MAGIC) {
 		fptr_ok(ev->vmt != &default_event_vmt ||
 			ev->vmt->del_timer == my_timer_del);
 		return (*ev->vmt->del_timer)(ev);
@@ -642,7 +642,7 @@ ub_signal_add(struct ub_event* ev, struct timeval* tv)
 int
 ub_signal_del(struct ub_event* ev)
 {
-	if (ev->magic == UB_EVENT_MAGIC) {
+	if (ev && ev->magic == UB_EVENT_MAGIC) {
 		fptr_ok(ev->vmt != &default_event_vmt ||
 			ev->vmt->del_signal == my_signal_del);
 		return (*ev->vmt->del_signal)(ev);
@@ -653,7 +653,7 @@ ub_signal_del(struct ub_event* ev)
 void
 ub_winsock_unregister_wsaevent(struct ub_event* ev)
 {
-	if (ev->magic == UB_EVENT_MAGIC) {
+	if (ev && ev->magic == UB_EVENT_MAGIC) {
 		fptr_ok(ev->vmt != &default_event_vmt ||
 			ev->vmt->winsock_unregister_wsaevent ==
 			my_winsock_unregister_wsaevent);
