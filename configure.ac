@@ -647,6 +647,20 @@ if test $USE_NSS = "no" -a $USE_NETTLE = "no"; then
 ACX_WITH_SSL
 ACX_LIB_SSL
 SSLLIB="-lssl"
+
+# check if -lcrypt32 is needed because CAPIENG needs that. (on windows)
+BAKLIBS="$LIBS"
+LIBS="-lssl $LIBS"
+AC_MSG_CHECKING([if libssl needs -lcrypt32])
+AC_TRY_LINK_FUNC([OPENSSL_config], [
+	AC_MSG_RESULT([no])
+	LIBS="$BAKLIBS"
+], [
+	AC_MSG_RESULT([yes])
+	LIBS="$BAKLIBS"
+	SSLLIB="$SSLLIB -lcrypt32"
+])
+
 AC_MSG_CHECKING([for LibreSSL])
 if grep VERSION_TEXT $ssldir/include/openssl/opensslv.h | grep "LibreSSL" >/dev/null; then
 	AC_MSG_RESULT([yes])
