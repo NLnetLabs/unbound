@@ -17433,7 +17433,7 @@ else
 	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 $as_echo "yes" >&6; }
 	LIBS="$BAKLIBS"
-	SSLLIB="$SSLLIB -lcrypt32"
+	LIBS="$LIBS -lcrypt32"
 
 fi
 rm -f core conftest.err conftest.$ac_objext \

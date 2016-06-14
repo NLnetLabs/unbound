@@ -658,7 +658,7 @@ AC_TRY_LINK_FUNC([OPENSSL_config], [
 ], [
 	AC_MSG_RESULT([yes])
 	LIBS="$BAKLIBS"
-	SSLLIB="$SSLLIB -lcrypt32"
+	LIBS="$LIBS -lcrypt32"
 ])
 
 AC_MSG_CHECKING([for LibreSSL])
