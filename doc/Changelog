@@ -1,5 +1,7 @@
 15 June 2016: Wouter
 	- TCP_TIMEOUT is specified in milliseconds.
+	- If more than half of tcp connections are in use, a shorter timeout
+	  is used (200 msec, vs 2 minutes) to pressure tcp for new connects.
 
 14 June 2016: Ralph
 	- QNAME minimisation unit test for dropped QTYPE=A queries.

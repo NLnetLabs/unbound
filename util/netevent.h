@@ -225,6 +225,9 @@ struct comm_point {
 	    So that when that is done the callback is called. */
 	int tcp_do_toggle_rw;
 
+	/** timeout in msec for TCP wait times for this connection */
+	int tcp_timeout_msec;
+
 	/** if set, checks for pending error from nonblocking connect() call.*/
 	int tcp_check_nb_connect;
 

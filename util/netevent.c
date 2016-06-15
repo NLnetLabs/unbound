@@ -82,6 +82,8 @@
 
 /** The TCP reading or writing query timeout in milliseconds */
 #define TCP_QUERY_TIMEOUT 120000
+/** The TCP timeout in msec for fast queries, above half are used */
+#define TCP_QUERY_TIMEOUT_FAST 200
 
 #ifndef NONBLOCKING_IS_BROKEN
 /** number of UDP reads to perform per read indication from select */
@@ -710,14 +712,20 @@ comm_point_udp_callback(int fd, short event, void* arg)
 
 /** Use a new tcp handler for new query fd, set to read query */
 static void
-setup_tcp_handler(struct comm_point* c, int fd) 
+setup_tcp_handler(struct comm_point* c, int fd, int cur, int max) 
 {
 	log_assert(c->type == comm_tcp);
 	log_assert(c->fd == -1);
 	sldns_buffer_clear(c->buffer);
 	c->tcp_is_reading = 1;
 	c->tcp_byte_count = 0;
-	comm_point_start_listening(c, fd, TCP_QUERY_TIMEOUT);
+	c->tcp_timeout_msec = TCP_QUERY_TIMEOUT;
+	/* if more than half the tcp handlers are in use, use a shorter
+	 * timeout for this TCP connection, we need to make space for
+	 * other connections to be able to get attention */
+	if(cur > max/2)
+		c->tcp_timeout_msec = TCP_QUERY_TIMEOUT_FAST;
+	comm_point_start_listening(c, fd, c->tcp_timeout_msec);
 }
 
 void comm_base_handle_slow_accept(int ATTR_UNUSED(fd),
@@ -886,7 +894,7 @@ comm_point_tcp_accept_callback(int fd, short event, void* arg)
 		/* stop accepting incoming queries for now. */
 		comm_point_stop_listening(c);
 	}
-	setup_tcp_handler(c_hdl, new_fd);
+	setup_tcp_handler(c_hdl, new_fd, c->cur_tcp_count, c->max_tcp_count);
 }
 
 /** Make tcp handler free for next assignment */
@@ -940,7 +948,7 @@ tcp_callback_reader(struct comm_point* c)
 		comm_point_stop_listening(c);
 	fptr_ok(fptr_whitelist_comm_point(c->callback));
 	if( (*c->callback)(c, c->cb_arg, NETEVENT_NOERROR, &c->repinfo) ) {
-		comm_point_start_listening(c, -1, TCP_QUERY_TIMEOUT);
+		comm_point_start_listening(c, -1, c->tcp_timeout_msec);
 	}
 }
 
@@ -1983,7 +1991,8 @@ comm_point_send_reply(struct comm_reply *repinfo)
 			dt_msg_send_client_response(repinfo->c->tcp_parent->dtenv,
 			&repinfo->addr, repinfo->c->type, repinfo->c->buffer);
 #endif
-		comm_point_start_listening(repinfo->c, -1, TCP_QUERY_TIMEOUT);
+		comm_point_start_listening(repinfo->c, -1,
+			repinfo->c->tcp_timeout_msec);
 	}
 }
 
