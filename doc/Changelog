@@ -1,3 +1,6 @@
+15 June 2016: Wouter
+	- TCP_TIMEOUT is specified in milliseconds.
+
 14 June 2016: Ralph
 	- QNAME minimisation unit test for dropped QTYPE=A queries.
 

@@ -80,8 +80,8 @@
 #  endif
 #endif
 
-/** The TCP reading or writing query timeout in seconds */
-#define TCP_QUERY_TIMEOUT 120 
+/** The TCP reading or writing query timeout in milliseconds */
+#define TCP_QUERY_TIMEOUT 120000
 
 #ifndef NONBLOCKING_IS_BROKEN
 /** number of UDP reads to perform per read indication from select */
@@ -2009,7 +2009,7 @@ comm_point_stop_listening(struct comm_point* c)
 }
 
 void 
-comm_point_start_listening(struct comm_point* c, int newfd, int sec)
+comm_point_start_listening(struct comm_point* c, int newfd, int msec)
 {
 	verbose(VERB_ALGO, "comm point start listening %d", 
 		c->fd==-1?newfd:c->fd);
@@ -2017,7 +2017,7 @@ comm_point_start_listening(struct comm_point* c, int newfd, int sec)
 		/* no use to start listening no free slots. */
 		return;
 	}
-	if(sec != -1 && sec != 0) {
+	if(msec != -1 && msec != 0) {
 		if(!c->timeout) {
 			c->timeout = (struct timeval*)malloc(sizeof(
 				struct timeval));
@@ -2028,8 +2028,8 @@ comm_point_start_listening(struct comm_point* c, int newfd, int sec)
 		}
 		ub_event_add_bits(c->ev->ev, UB_EV_TIMEOUT);
 #ifndef S_SPLINT_S /* splint fails on struct timeval. */
-		c->timeout->tv_sec = sec;
-		c->timeout->tv_usec = 0;
+		c->timeout->tv_sec = msec/1000;
+		c->timeout->tv_usec = msec%1000;
 #endif /* S_SPLINT_S */
 	}
 	if(c->type == comm_tcp) {
@@ -2049,7 +2049,7 @@ comm_point_start_listening(struct comm_point* c, int newfd, int sec)
 		c->fd = newfd;
 		ub_event_set_fd(c->ev->ev, c->fd);
 	}
-	if(ub_event_add(c->ev->ev, sec==0?NULL:c->timeout) != 0) {
+	if(ub_event_add(c->ev->ev, msec==0?NULL:c->timeout) != 0) {
 		log_err("event_add failed. in cpsl.");
 	}
 }

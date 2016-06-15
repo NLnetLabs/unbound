@@ -496,9 +496,10 @@ void comm_point_stop_listening(struct comm_point* c);
  * Start listening again for input on the comm point.
  * @param c: commpoint to enable again.
  * @param newfd: new fd, or -1 to leave fd be.
- * @param sec: timeout in seconds, or -1 for no (change to the) timeout.
+ * @param msec: timeout in milliseconds, or -1 for no (change to the) timeout.
+ *	So seconds*1000.
  */
-void comm_point_start_listening(struct comm_point* c, int newfd, int sec);
+void comm_point_start_listening(struct comm_point* c, int newfd, int msec);
 
 /**
  * Stop listening and start listening again for reading or writing.
