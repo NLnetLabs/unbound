@@ -2026,6 +2026,8 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 		iq->minimise_count++;
 		iq->minimise_timeout_count = 0;
 
+		iter_dec_attempts(iq->dp, 1);
+
 		/* Limit number of iterations for QNAMEs with more
 		 * than MAX_MINIMISE_COUNT labels. Send first MINIMISE_ONE_LAB
 		 * labels of QNAME always individually.
