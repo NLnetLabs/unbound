@@ -777,7 +777,7 @@ int comm_point_perform_accept(struct comm_point* c,
 				(*b->stop_accept)(b->cb_arg);
 				/* set timeout, no mallocs */
 				tv.tv_sec = NETEVENT_SLOW_ACCEPT_TIME/1000;
-				tv.tv_usec = NETEVENT_SLOW_ACCEPT_TIME%1000;
+				tv.tv_usec = (NETEVENT_SLOW_ACCEPT_TIME%1000)*1000;
 				b->eb->slow_accept = ub_event_new(b->eb->base,
 					-1, UB_EV_TIMEOUT,
 					comm_base_handle_slow_accept, b);
@@ -2038,7 +2038,7 @@ comm_point_start_listening(struct comm_point* c, int newfd, int msec)
 		ub_event_add_bits(c->ev->ev, UB_EV_TIMEOUT);
 #ifndef S_SPLINT_S /* splint fails on struct timeval. */
 		c->timeout->tv_sec = msec/1000;
-		c->timeout->tv_usec = msec%1000;
+		c->timeout->tv_usec = (msec%1000)*1000;
 #endif /* S_SPLINT_S */
 	}
 	if(c->type == comm_tcp) {
