@@ -1337,7 +1337,7 @@ local_zones_answer(struct local_zones* zones, struct query_info* qinfo,
 	 * 	if so:	- try to match (exact) local data 
 	 * 		- look at zone type for negative response. */
 	int labs = dname_count_labels(qinfo->qname);
-	struct local_data* ld = NULL;;
+	struct local_data* ld = NULL;
 	struct local_zone* z;
 	enum localzone_type lzt;
 	int r;
