@@ -1120,6 +1120,18 @@ void local_zones_print(struct local_zones* zones)
 			log_nametypeclass(0, "inform_deny zone", 
 				z->name, 0, z->dclass);
 			break;
+		case local_zone_always_transparent:
+			log_nametypeclass(0, "always_transparent zone", 
+				z->name, 0, z->dclass);
+			break;
+		case local_zone_always_refuse:
+			log_nametypeclass(0, "always_refuse zone", 
+				z->name, 0, z->dclass);
+			break;
+		case local_zone_always_nxdomain:
+			log_nametypeclass(0, "always_nxdomain zone", 
+				z->name, 0, z->dclass);
+			break;
 		default:
 			log_nametypeclass(0, "badtyped zone", 
 				z->name, 0, z->dclass);
@@ -1169,7 +1181,7 @@ local_encode(struct query_info* qinfo, struct edns_data* edns,
 static int
 local_data_answer(struct local_zone* z, struct query_info* qinfo,
 	struct edns_data* edns, sldns_buffer* buf, struct regional* temp,
-	int labs, struct local_data** ldp)
+	int labs, struct local_data** ldp, enum localzone_type lz_type)
 {
 	struct local_data key;
 	struct local_data* ld;
@@ -1178,7 +1190,7 @@ local_data_answer(struct local_zone* z, struct query_info* qinfo,
 	key.name = qinfo->qname;
 	key.namelen = qinfo->qname_len;
 	key.namelabs = labs;
-	if(z->type == local_zone_redirect) {
+	if(lz_type == local_zone_redirect) {
 		key.name = z->name;
 		key.namelen = z->namelen;
 		key.namelabs = z->namelabs;
@@ -1191,7 +1203,7 @@ local_data_answer(struct local_zone* z, struct query_info* qinfo,
 	lr = local_data_find_type(ld, qinfo->qtype);
 	if(!lr)
 		return 0;
-	if(z->type == local_zone_redirect) {
+	if(lz_type == local_zone_redirect) {
 		/* convert rrset name to query name; like a wildcard */
 		struct ub_packed_rrset_key r = *lr->rrset;
 		r.rk.dname = qinfo->qname;
@@ -1211,25 +1223,28 @@ local_data_answer(struct local_zone* z, struct query_info* qinfo,
  * @param buf: buffer for answer.
  * @param temp: temp region for encoding
  * @param ld: local data, if NULL, no such name exists in localdata.
+ * @param lz_type: type of the local zone
  * @return 1 if a reply is to be sent, 0 if not.
  */
 static int
 lz_zone_answer(struct local_zone* z, struct query_info* qinfo,
 	struct edns_data* edns, sldns_buffer* buf, struct regional* temp,
-	struct local_data* ld)
+	struct local_data* ld, enum localzone_type lz_type)
 {
-	if(z->type == local_zone_deny || z->type == local_zone_inform_deny) {
+	if(lz_type == local_zone_deny || lz_type == local_zone_inform_deny) {
 		/** no reply at all, signal caller by clearing buffer. */
 		sldns_buffer_clear(buf);
 		sldns_buffer_flip(buf);
 		return 1;
-	} else if(z->type == local_zone_refuse) {
+	} else if(lz_type == local_zone_refuse
+		|| lz_type == local_zone_always_refuse) {
 		error_encode(buf, (LDNS_RCODE_REFUSED|BIT_AA), qinfo,
 			*(uint16_t*)sldns_buffer_begin(buf),
 		       sldns_buffer_read_u16_at(buf, 2), edns);
 		return 1;
-	} else if(z->type == local_zone_static ||
-		z->type == local_zone_redirect) {
+	} else if(lz_type == local_zone_static ||
+		lz_type == local_zone_redirect ||
+		lz_type == local_zone_always_nxdomain) {
 		/* for static, reply nodata or nxdomain
 		 * for redirect, reply nodata */
 		/* no additional section processing,
@@ -1245,11 +1260,12 @@ lz_zone_answer(struct local_zone* z, struct query_info* qinfo,
 			*(uint16_t*)sldns_buffer_begin(buf), 
 			sldns_buffer_read_u16_at(buf, 2), edns);
 		return 1;
-	} else if(z->type == local_zone_typetransparent) {
+	} else if(lz_type == local_zone_typetransparent
+		|| lz_type == local_zone_always_transparent) {
 		/* no NODATA or NXDOMAINS for this zone type */
 		return 0;
 	}
-	/* else z->type == local_zone_transparent */
+	/* else lz_type == local_zone_transparent */
 
 	/* if the zone is transparent and the name exists, but the type
 	 * does not, then we should make this noerror/nodata */
@@ -1283,17 +1299,47 @@ lz_inform_print(struct local_zone* z, struct query_info* qinfo,
 	log_nametypeclass(0, txt, qinfo->qname, qinfo->qtype, qinfo->qclass);
 }
 
+enum localzone_type
+lz_type(uint8_t *taglist, size_t taglen, uint8_t *taglist2, size_t taglen2,
+	uint8_t *tagactions, size_t tagactionssize, enum localzone_type lzt,
+	struct comm_reply* repinfo, struct rbtree_t* override_tree)
+{
+	size_t i, j;
+	uint8_t tagmatch;
+	struct local_zone_override* lzo;	
+	if(repinfo && override_tree) {
+		lzo = (struct local_zone_override*)addr_tree_lookup(
+			override_tree, &repinfo->addr, repinfo->addrlen);
+		if(lzo && lzo->type)
+			return lzo->type;
+	}
+	if(!taglist || !taglist2 || !tagactions)
+		return lzt;
+	for(i=0; i<taglen && i<taglen2; i++) {
+		tagmatch = (taglist[i] & taglist2[i]);
+		for(j=0; j<8 && tagmatch>0; j++) {
+			if((tagmatch & 0x1) && i*8+j < tagactionssize 
+				&& tagactions[i*8+j] != 0)
+				return (enum localzone_type)tagactions[i*8+j];
+			tagmatch >>= 1;	
+		}
+	}
+	return lzt;
+}
+
 int 
 local_zones_answer(struct local_zones* zones, struct query_info* qinfo,
 	struct edns_data* edns, sldns_buffer* buf, struct regional* temp,
-	struct comm_reply* repinfo, uint8_t* taglist, size_t taglen)
+	struct comm_reply* repinfo, uint8_t* taglist, size_t taglen,
+	uint8_t* tagactions, size_t tagactionssize)
 {
 	/* see if query is covered by a zone,
 	 * 	if so:	- try to match (exact) local data 
 	 * 		- look at zone type for negative response. */
 	int labs = dname_count_labels(qinfo->qname);
-	struct local_data* ld;
+	struct local_data* ld = NULL;;
 	struct local_zone* z;
+	enum localzone_type lzt;
 	int r;
 	lock_rw_rdlock(&zones->lock);
 	z = local_zones_tags_lookup(zones, qinfo->qname,
@@ -1305,15 +1351,20 @@ local_zones_answer(struct local_zones* zones, struct query_info* qinfo,
 	lock_rw_rdlock(&z->lock);
 	lock_rw_unlock(&zones->lock);
 
-	if((z->type == local_zone_inform || z->type == local_zone_inform_deny)
+	lzt = lz_type(taglist, taglen, z->taglist, z->taglen, tagactions,
+		tagactionssize, z->type, repinfo, z->override_tree);
+
+	if((lzt == local_zone_inform || lzt == local_zone_inform_deny)
 		&& repinfo)
 		lz_inform_print(z, qinfo, repinfo);
 
-	if(local_data_answer(z, qinfo, edns, buf, temp, labs, &ld)) {
+	if(lzt != local_zone_always_refuse && lzt != local_zone_always_transparent
+		&& lzt != local_zone_always_nxdomain
+		&& local_data_answer(z, qinfo, edns, buf, temp, labs, &ld, lzt)) {
 		lock_rw_unlock(&z->lock);
 		return 1;
 	}
-	r = lz_zone_answer(z, qinfo, edns, buf, temp, ld);
+	r = lz_zone_answer(z, qinfo, edns, buf, temp, ld, lzt);
 	lock_rw_unlock(&z->lock);
 	return r;
 }
@@ -1330,6 +1381,9 @@ const char* local_zone_type2str(enum localzone_type t)
 		case local_zone_nodefault: return "nodefault";
 		case local_zone_inform: return "inform";
 		case local_zone_inform_deny: return "inform_deny";
+		case local_zone_always_transparent: return "always_transparent";
+		case local_zone_always_refuse: return "always_refuse";
+		case local_zone_always_nxdomain: return "always_nxdomain";
 	}
 	return "badtyped"; 
 }
@@ -1352,6 +1406,12 @@ int local_zone_str2type(const char* type, enum localzone_type* t)
 		*t = local_zone_inform;
 	else if(strcmp(type, "inform_deny") == 0)
 		*t = local_zone_inform_deny;
+	else if(strcmp(type, "always_transparent") == 0)
+		*t = local_zone_always_transparent;
+	else if(strcmp(type, "always_refuse") == 0)
+		*t = local_zone_always_refuse;
+	else if(strcmp(type, "always_nxdomain") == 0)
+		*t = local_zone_always_nxdomain;
 	else return 0;
 	return 1;
 }

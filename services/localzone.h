@@ -76,7 +76,13 @@ enum localzone_type {
 	/** log client address, but no block (transparent) */
 	local_zone_inform,
 	/** log client address, and block (drop) */
-	local_zone_inform_deny
+	local_zone_inform_deny,
+	/** resolve normally, even when there is local data */	
+	local_zone_always_transparent,
+	/** answer with error, even when there is local data */	
+	local_zone_always_refuse,
+	/** answer with nxdomain, even when there is local data */
+	local_zone_always_nxdomain
 };
 
 /**
@@ -264,13 +270,16 @@ void local_zones_print(struct local_zones* zones);
  * @param repinfo: source address for checks. may be NULL.
  * @param taglist: taglist for checks. May be NULL.
  * @param taglen: length of the taglist.
+ * @param tagactions: local zone actions for tags. May be NULL.
+ * @param tagactionssize: length of the tagactions.
  * @return true if answer is in buffer. false if query is not answered 
  * by authority data. If the reply should be dropped altogether, the return 
  * value is true, but the buffer is cleared (empty).
  */
 int local_zones_answer(struct local_zones* zones, struct query_info* qinfo,
 	struct edns_data* edns, struct sldns_buffer* buf, struct regional* temp,
-	struct comm_reply* repinfo, uint8_t* taglist, size_t taglen);
+	struct comm_reply* repinfo, uint8_t* taglist, size_t taglen,
+	uint8_t* tagactions, size_t tagactionssize);
 
 /**
  * Parse the string into localzone type.
