@@ -1,3 +1,8 @@
+27 June 2016: Wouter
+	- Fix #784: Build configure assumess that having getpwnam means there
+	  is endpwent function available.
+	- Updated repository with newer flex and bison output.
+
 24 June 2016: Ralph
 	- Possibility to specify local-zone type for an acl/tag pair
 	- Possibility to specify (override) local-zone type for a source address

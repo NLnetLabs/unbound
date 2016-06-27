@@ -436,7 +436,9 @@ morechecks(struct config_file* cfg, const char* fname)
 	if(cfg->username && cfg->username[0]) {
 		if(getpwnam(cfg->username) == NULL)
 			fatal_exit("user '%s' does not exist.", cfg->username);
+#  ifdef HAVE_ENDPWENT
 		endpwent();
+#  endif
 	}
 #endif
 	if(cfg->remote_control_enable && cfg->remote_control_use_cert) {

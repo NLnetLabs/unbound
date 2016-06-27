@@ -544,7 +544,9 @@ perform_setup(struct daemon* daemon, struct config_file* cfg, int debug_mode,
 			log_warn("unable to initgroups %s: %s",
 				cfg->username, strerror(errno));
 #  endif /* HAVE_INITGROUPS */
+#  ifdef HAVE_ENDPWENT
 		endpwent();
+#  endif
 
 #ifdef HAVE_SETRESGID
 		if(setresgid(cfg_gid,cfg_gid,cfg_gid) != 0)

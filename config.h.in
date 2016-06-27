@@ -110,6 +110,9 @@
 /* Define to 1 if you have the `endprotoent' function. */
 #undef HAVE_ENDPROTOENT
 
+/* Define to 1 if you have the `endpwent' function. */
+#undef HAVE_ENDPWENT
+
 /* Define to 1 if you have the `endservent' function. */
 #undef HAVE_ENDSERVENT
 
