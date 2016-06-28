@@ -1,3 +1,6 @@
+28 June 2016: Wouter
+	- Create a pkg-config file for libunbound in contrib.
+
 27 June 2016: Wouter
 	- Fix #784: Build configure assumess that having getpwnam means there
 	  is endpwent function available.

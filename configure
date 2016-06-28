@@ -19848,7 +19848,7 @@ version=1.5.10
 date=`date +'%b %e, %Y'`
 
 
-ac_config_files="$ac_config_files Makefile doc/example.conf doc/libunbound.3 doc/unbound.8 doc/unbound-anchor.8 doc/unbound-checkconf.8 doc/unbound.conf.5 doc/unbound-control.8 doc/unbound-host.1 smallapp/unbound-control-setup.sh dnstap/dnstap_config.h"
+ac_config_files="$ac_config_files Makefile doc/example.conf doc/libunbound.3 doc/unbound.8 doc/unbound-anchor.8 doc/unbound-checkconf.8 doc/unbound.conf.5 doc/unbound-control.8 doc/unbound-host.1 smallapp/unbound-control-setup.sh dnstap/dnstap_config.h contrib/libunbound.pc"
 
 ac_config_headers="$ac_config_headers config.h"
 
@@ -20846,6 +20846,7 @@ do
     "doc/unbound-host.1") CONFIG_FILES="$CONFIG_FILES doc/unbound-host.1" ;;
     "smallapp/unbound-control-setup.sh") CONFIG_FILES="$CONFIG_FILES smallapp/unbound-control-setup.sh" ;;
     "dnstap/dnstap_config.h") CONFIG_FILES="$CONFIG_FILES dnstap/dnstap_config.h" ;;
+    "contrib/libunbound.pc") CONFIG_FILES="$CONFIG_FILES contrib/libunbound.pc" ;;
     "config.h") CONFIG_HEADERS="$CONFIG_HEADERS config.h" ;;
 
   *) as_fn_error $? "invalid argument: \`$ac_config_target'" "$LINENO" 5;;
