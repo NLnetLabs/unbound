@@ -1,3 +1,6 @@
+29 June 2016: Wouter
+	- Fix static compile on windows missing gdi32.
+
 28 June 2016: Wouter
 	- Create a pkg-config file for libunbound in contrib.
 
