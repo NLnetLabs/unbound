@@ -1,3 +1,6 @@
+30 June 2016: Wouter
+	- Document always_transparent, always_refuse, always_nxdomain types.
+
 29 June 2016: Wouter
 	- Fix static compile on windows missing gdi32.
 

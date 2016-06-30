@@ -886,6 +886,7 @@ address space are not validated.  This is usually required whenever
 Configure a local zone. The type determines the answer to give if
 there is no match from local\-data. The types are deny, refuse, static,
 transparent, redirect, nodefault, typetransparent, inform, inform_deny,
+always_transparent, always_refuse, always_nxdomain,
 and are explained below. After that the default settings are listed. Use
 local\-data: to enter data into the local zone. Answers for local zones
 are authoritative DNS answers. By default the zones are class IN.
@@ -945,6 +946,15 @@ logged, eg. to run antivirus on them.
 \h'5'\fIinform_deny\fR 
 The query is dropped, like 'deny', and logged, like 'inform'.  Ie. find
 infected machines without answering the queries.
+.TP 10
+\h'5'\fIalways_transparent\fR 
+Like transparent, but ignores local data and resolves normally.
+.TP 10
+\h'5'\fIalways_refuse\fR 
+Like refuse, but ignores local data and refuses the query.
+.TP 10
+\h'5'\fIalways_nxdomain\fR 
+Like static, but ignores local data and returns nxdomain for the query.
 .TP 10
 \h'5'\fInodefault\fR 
 Used to turn off default contents for AS112 zones. The other types

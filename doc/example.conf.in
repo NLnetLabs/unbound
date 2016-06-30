@@ -567,6 +567,8 @@ server:
 	# o typetransparent resolves normally for other types and other names
 	# o inform resolves normally, but logs client IP address
 	# o inform_deny drops queries and logs client IP address
+	# o always_transparent, always_refuse, always_nxdomain, resolve in
+	#   that way but ignore local data for that name.
 	#
 	# defaults are localhost address, reverse for 127.0.0.1 and ::1
 	# and nxdomain for AS112 zones. If you configure one of these zones
