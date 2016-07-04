@@ -52,6 +52,15 @@ server:
 	# outgoing-interface: 192.0.2.153
 	# outgoing-interface: 2001:DB8::5
 	# outgoing-interface: 2001:DB8::6
+	
+	# Specify a netblock to use remainder 64 bits as random bits for
+	# upstream queries.  Uses freebind option (Linux).
+	# outgoing-interface: 2001:DB8::/64
+	# Also (Linux:) ip -6 addr add 2001:db8::/64 dev lo
+	# And: ip -6 route add local 2001:db8::/64 dev lo
+	# And set prefer-ip6: yes to use the ip6 randomness from a netblock.
+	# Set this to yes to prefer ipv6 upstream servers over ipv4.
+	# prefer-ip6: no
 
 	# number of ports to allocate per thread, determines the size of the
 	# port range that can be open simultaneously.  About double the

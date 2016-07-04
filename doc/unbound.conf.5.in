@@ -149,6 +149,10 @@ options, but do not specify both an individual IPv6 address and an IPv6
 netblock, or the randomisation will be compromised.  Consider combining with
 .B prefer\-ip6: yes
 to increase the likelihood of IPv6 nameservers being selected for queries.
+On Linux you need these two commands to be able to use the freebind socket
+option to receive traffic for the ip6 netblock:
+ip -6 addr add mynetblock/64 dev lo &&
+ip -6 route add local mynetblock/64 dev lo
 .TP
 .B outgoing\-range: \fI<number>
 Number of ports to open. This number of file descriptors can be opened per 
