@@ -127,7 +127,7 @@ Detect source interface on UDP queries and copy them to replies.  This
 feature is experimental, and needs support in your OS for particular socket
 options.  Default value is no.
 .TP
-.B outgoing\-interface: \fI<ip address>
+.B outgoing\-interface: \fI<ip address or ip6 netblock>
 Interface to use to connect to the network. This interface is used to send
 queries to authoritative servers and receive their replies. Can be given 
 multiple times to work on several interfaces. If none are given the 
@@ -137,6 +137,18 @@ and
 .B outgoing\-interface:
 lines, the interfaces are then used for both purposes. Outgoing queries are 
 sent via a random outgoing interface to counter spoofing.
+.IP
+If an IPv6 netblock is specified instead of an individual IPv6 address,
+outgoing UDP queries will use a randomised source address taken from the
+netblock to counter spoofing. Requires the IPv6 netblock to be routed to the
+host running unbound, and requires OS support for unprivileged non-local binds
+(currently only supported on Linux). Several netblocks may be specified with
+multiple
+.B outgoing\-interface:
+options, but do not specify both an individual IPv6 address and an IPv6
+netblock, or the randomisation will be compromised.  Consider combining with
+.B prefer\-ip6: yes
+to increase the likelihood of IPv6 nameservers being selected for queries.
 .TP
 .B outgoing\-range: \fI<number>
 Number of ports to open. This number of file descriptors can be opened per 

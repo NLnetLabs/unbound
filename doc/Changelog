@@ -1,6 +1,9 @@
 4 July 2016: Wouter
 	- For #787: prefer-ip6 option for unbound.conf prefers to send
 	  upstream queries to ipv6 servers.
+	- Fix #787: outgoing-interface netblock/64 ipv6 option to use linux
+	  freebind to use 64bits of entropy for every query with random local
+	  part.
 
 30 June 2016: Wouter
 	- Document always_transparent, always_refuse, always_nxdomain types.

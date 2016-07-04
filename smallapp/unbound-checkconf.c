@@ -161,6 +161,7 @@ warn_hosts(const char* typ, struct config_stub* list)
 static void
 interfacechecks(struct config_file* cfg)
 {
+	int d;
 	struct sockaddr_storage a;
 	socklen_t alen;
 	int i, j;
@@ -177,8 +178,8 @@ interfacechecks(struct config_file* cfg)
 		}
 	}
 	for(i=0; i<cfg->num_out_ifs; i++) {
-		if(!ipstrtoaddr(cfg->out_ifs[i], UNBOUND_DNS_PORT, 
-			&a, &alen)) {
+		if(!ipstrtoaddr(cfg->out_ifs[i], UNBOUND_DNS_PORT, &a, &alen) &&
+		   !netblockstrtoaddr(cfg->out_ifs[i], UNBOUND_DNS_PORT, &a, &alen, &d)) {
 			fatal_exit("cannot parse outgoing-interface "
 				"specified as '%s'", cfg->out_ifs[i]);
 		}

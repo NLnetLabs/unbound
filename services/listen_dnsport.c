@@ -184,14 +184,6 @@ create_udp_sock(int family, int socktype, struct sockaddr* addr,
 #else
 		(void)reuseport;
 #endif /* defined(SO_REUSEPORT) */
-#ifdef IP_FREEBIND
-		if (freebind &&
-		    setsockopt(s, IPPROTO_IP, IP_FREEBIND, (void*)&on,
-		    (socklen_t)sizeof(on)) < 0) {
-			log_warn("setsockopt(.. IP_FREEBIND ..) failed: %s",
-			strerror(errno));
-		}
-#endif /* IP_FREEBIND */
 #ifdef IP_TRANSPARENT
 		if (transparent &&
 		    setsockopt(s, IPPROTO_IP, IP_TRANSPARENT, (void*)&on,
@@ -209,6 +201,14 @@ create_udp_sock(int family, int socktype, struct sockaddr* addr,
 		}
 #endif /* IP_TRANSPARENT || IP_BINDANY */
 	}
+#ifdef IP_FREEBIND
+	if(freebind &&
+	    setsockopt(s, IPPROTO_IP, IP_FREEBIND, (void*)&on,
+	    (socklen_t)sizeof(on)) < 0) {
+		log_warn("setsockopt(.. IP_FREEBIND ..) failed: %s",
+		strerror(errno));
+	}
+#endif /* IP_FREEBIND */
 	if(rcv) {
 #ifdef SO_RCVBUF
 		int got;
