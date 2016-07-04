@@ -340,6 +340,10 @@ IPv6 to the internet nameservers.  With this option you can disable the
 ipv6 transport for sending DNS traffic, it does not impact the contents of
 the DNS traffic, which may have ip4 and ip6 addresses in it.
 .TP
+.B prefer\-ip6: \fI<yes or no>
+If enabled, prefer IPv6 transport for sending DNS queries to internet
+nameservers. Default is no.
+.TP
 .B do\-udp: \fI<yes or no>
 Enable or disable whether UDP queries are answered or issued. Default is yes.
 .TP
