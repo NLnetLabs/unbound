@@ -1836,7 +1836,7 @@ write_unsigned_root(const char* root_anchor_file)
 #ifdef HAVE_FSYNC
 	fsync(fileno(out));
 #else
-	FlushFileBuffers((HANDLE)_fileno(out));
+	FlushFileBuffers((HANDLE)get_osfhandle(_fileno(out)));
 #endif
 	fclose(out);
 }
@@ -1868,7 +1868,7 @@ write_root_anchor(const char* root_anchor_file, BIO* ds)
 #ifdef HAVE_FSYNC
 	fsync(fileno(out));
 #else
-	FlushFileBuffers((HANDLE)_fileno(out));
+	FlushFileBuffers((HANDLE)get_osfhandle(_fileno(out)));
 #endif
 	fclose(out);
 }
