@@ -257,6 +257,9 @@
 /* Use libnettle for crypto */
 #undef HAVE_NETTLE
 
+/* Define to 1 if you have the <nettle/dsa-compat.h> header file. */
+#undef HAVE_NETTLE_DSA_COMPAT_H
+
 /* Use libnss for crypto */
 #undef HAVE_NSS
 

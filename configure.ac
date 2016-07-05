@@ -630,6 +630,7 @@ AC_ARG_WITH([nettle], AC_HELP_STRING([--with-nettle=path],
 	[
 	USE_NETTLE="yes"
 	AC_DEFINE(HAVE_NETTLE, 1, [Use libnettle for crypto])
+	AC_CHECK_HEADERS([nettle/dsa-compat.h],,, [AC_INCLUDES_DEFAULT])
 	if test "$withval" != "" -a "$withval" != "yes"; then
 		CPPFLAGS="$CPPFLAGS -I$withval/include/nettle"
 		LDFLAGS="$LDFLAGS -L$withval/lib"

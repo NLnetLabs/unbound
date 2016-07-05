@@ -1198,6 +1198,9 @@ verify_canonrrset(sldns_buffer* buf, int algo, unsigned char* sigblock,
 #include "macros.h"
 #include "rsa.h"
 #include "dsa.h"
+#ifdef HAVE_NETTLE_DSA_COMPAT_H
+#include "dsa-compat.h"
+#endif
 #include "asn1.h"
 #ifdef USE_ECDSA
 #include "ecdsa.h"

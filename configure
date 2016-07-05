@@ -17034,6 +17034,19 @@ if test "${with_nettle+set}" = set; then :
 
 $as_echo "#define HAVE_NETTLE 1" >>confdefs.h
 
+	for ac_header in nettle/dsa-compat.h
+do :
+  ac_fn_c_check_header_compile "$LINENO" "nettle/dsa-compat.h" "ac_cv_header_nettle_dsa_compat_h" "$ac_includes_default
+"
+if test "x$ac_cv_header_nettle_dsa_compat_h" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_NETTLE_DSA_COMPAT_H 1
+_ACEOF
+
+fi
+
+done
+
 	if test "$withval" != "" -a "$withval" != "yes"; then
 		CPPFLAGS="$CPPFLAGS -I$withval/include/nettle"
 		LDFLAGS="$LDFLAGS -L$withval/lib"
