@@ -228,7 +228,7 @@ SVCUNINST_OBJ_LINK=$(SVCUNINST_OBJ) w_inst.lo rsrc_svcuninst.o \
 $(COMPAT_OBJ_WITHOUT_CTIMEARC4)
 ANCHORUPD_SRC=winrc/anchor-update.c
 ANCHORUPD_OBJ=anchor-update.lo
-ANCHORUPD_OBJ_LINK=$(ANCHORUPD_OBJ) rsrc_anchorupd.o $(COMPAT_OBJ_WITHOUT_CTIMEARC4)
+ANCHORUPD_OBJ_LINK=$(ANCHORUPD_OBJ) rsrc_anchorupd.o $(COMPAT_OBJ_WITHOUT_CTIMEARC4) wire2str.lo str2wire.lo parseutil.lo sbuffer.lo  rrdef.lo keyraw.lo  parse.lo
 RSRC_OBJ=rsrc_svcinst.o rsrc_svcuninst.o rsrc_anchorupd.o rsrc_unbound.o \
 	rsrc_unbound_host.o rsrc_unbound_anchor.o rsrc_unbound_control.o \
 	rsrc_unbound_checkconf.o
