@@ -108,7 +108,7 @@ esac
 # are we on MinGW?
 if uname -s 2>&1 | grep MINGW32 >/dev/null; then on_mingw="yes"
 else 
-	if echo $target | grep mingw32 >/dev/null; then on_mingw="yes"
+	if echo $host $target | grep mingw32 >/dev/null; then on_mingw="yes"
 	else on_mingw="no"; fi
 fi
 

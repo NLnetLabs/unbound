@@ -1,5 +1,6 @@
 5 July 2016: Wouter
 	- Fix dynamic link of anchor-update.exe on windows.
+	- Fix detect of mingw for MXE package build.
 
 4 July 2016: Wouter
 	- For #787: prefer-ip6 option for unbound.conf prefers to send
