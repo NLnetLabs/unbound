@@ -945,7 +945,9 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 	if(local_zones_answer(worker->daemon->local_zones, &qinfo, &edns, 
 		c->buffer, worker->scratchpad, repinfo,	
 		acladdr->taglist, acladdr->taglen, acladdr->tag_actions,
-		acladdr->tag_actions_size)) {
+		acladdr->tag_actions_size, acladdr->tag_datas,
+		acladdr->tag_datas_size, worker->daemon->cfg->tagname,
+		worker->daemon->cfg->num_tags)) {
 		regional_free_all(worker->scratchpad);
 		if(sldns_buffer_limit(c->buffer) == 0) {
 			comm_point_drop_reply(repinfo);

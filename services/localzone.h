@@ -51,6 +51,7 @@ struct edns_data;
 struct query_info;
 struct sldns_buffer;
 struct comm_reply;
+struct config_strlist;
 
 /**
  * Local zone type
@@ -272,6 +273,10 @@ void local_zones_print(struct local_zones* zones);
  * @param taglen: length of the taglist.
  * @param tagactions: local zone actions for tags. May be NULL.
  * @param tagactionssize: length of the tagactions.
+ * @param tag_datas: array per tag of strlist with rdata strings. or NULL.
+ * @param tag_datas_size: size of tag_datas array.
+ * @param tagname: array of tag name strings (for debug output).
+ * @param num_tags: number of items in tagname array.
  * @return true if answer is in buffer. false if query is not answered 
  * by authority data. If the reply should be dropped altogether, the return 
  * value is true, but the buffer is cleared (empty).
@@ -279,7 +284,9 @@ void local_zones_print(struct local_zones* zones);
 int local_zones_answer(struct local_zones* zones, struct query_info* qinfo,
 	struct edns_data* edns, struct sldns_buffer* buf, struct regional* temp,
 	struct comm_reply* repinfo, uint8_t* taglist, size_t taglen,
-	uint8_t* tagactions, size_t tagactionssize);
+	uint8_t* tagactions, size_t tagactionssize,
+	struct config_strlist** tag_datas, size_t tag_datas_size,
+	char** tagname, int num_tags);
 
 /**
  * Parse the string into localzone type.

@@ -222,6 +222,9 @@ server:
 	# access-control-tag: 192.0.2.0/24 "tag2 tag3"
 
 	# set action for particular tag for given access control element
+	# if you have multiple tag values, the tag used to lookup the action
+	# is the first tag match between access-control-tag and local-zone-tag
+	# where "first" comes from the order of the define-tag values.
 	# access-control-tag-action: 192.0.2.0/24 tag3 refuse
 
 	# set redirect data for particular tag for access control element

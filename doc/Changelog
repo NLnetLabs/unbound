@@ -1,3 +1,6 @@
+7 July 2016: Wouter
+	- access-control-tag-data implemented. verbose(4) prints tag debug.
+
 5 July 2016: Wouter
 	- Fix dynamic link of anchor-update.exe on windows.
 	- Fix detect of mingw for MXE package build.

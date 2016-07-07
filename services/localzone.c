@@ -1177,11 +1177,98 @@ local_encode(struct query_info* qinfo, struct edns_data* edns,
 	return 1;
 }
 
+/** find local data tag string match for the given type in the list */
+static int
+find_tag_datas(struct query_info* qinfo, struct config_strlist* list,
+	struct ub_packed_rrset_key* r, struct regional* temp,
+	uint8_t* zname, size_t zlen)
+{
+	struct config_strlist* p;
+	char buf[65536];
+	uint8_t rr[LDNS_RR_BUF_SIZE];
+	size_t len = sizeof(rr);
+	int res;
+	struct packed_rrset_data* d;
+	for(p=list; p; p=p->next) {
+		/* does this element match the type? */
+		snprintf(buf, sizeof(buf), ". %s", p->str);
+		res = sldns_str2wire_rr_buf(buf, rr, &len, NULL, 3600,
+			zname, zlen, NULL, 0);
+		if(res != 0)
+			/* parse errors are already checked before, in
+			 * acllist check_data, skip this for robustness */
+			continue;
+		if(len < 1 /* . */ + 8 /* typeclassttl*/ + 2 /*rdatalen*/)
+			continue;
+		if(sldns_wirerr_get_type(rr, len, 1) != qinfo->qtype)
+			continue;
+		
+		/* do we have entries already? if not setup key */
+		if(r->rk.dname == NULL) {
+			r->entry.key = r;
+			r->rk.dname = qinfo->qname;
+			r->rk.dname_len = qinfo->qname_len;
+			r->rk.type = htons(qinfo->qtype);
+			r->rk.rrset_class = htons(qinfo->qclass);
+			r->rk.flags = 0;
+			d = (struct packed_rrset_data*)regional_alloc_zero(
+				temp, sizeof(struct packed_rrset_data)
+				+ sizeof(size_t) + sizeof(uint8_t*) +
+				sizeof(time_t));
+			if(!d) return 0; /* out of memory */
+			r->entry.data = d;
+			d->ttl = sldns_wirerr_get_ttl(rr, len, 1);
+			d->rr_len = (size_t*)((uint8_t*)d +
+				sizeof(struct packed_rrset_data));
+			d->rr_data = (uint8_t**)&(d->rr_len[1]);
+			d->rr_ttl = (time_t*)&(d->rr_data[1]);
+		}
+		d = (struct packed_rrset_data*)r->entry.data;
+		/* add entry to the data */
+		if(d->count != 0) {
+			size_t* oldlen = d->rr_len;
+			uint8_t** olddata = d->rr_data;
+			time_t* oldttl = d->rr_ttl;
+			/* increase arrays for lookup */
+			/* this is of course slow for very many records,
+			 * but most redirects are expected with few records */
+			d->rr_len = (size_t*)regional_alloc_zero(temp,
+				(d->count+1)*sizeof(size_t));
+			d->rr_data = (uint8_t**)regional_alloc_zero(temp,
+				(d->count+1)*sizeof(uint8_t*));
+			d->rr_ttl = (time_t*)regional_alloc_zero(temp,
+				(d->count+1)*sizeof(time_t));
+			if(!d->rr_len || !d->rr_data || !d->rr_ttl)
+				return 0; /* out of memory */
+			/* first one was allocated after struct d, but new
+			 * ones get their own array increment alloc, so
+			 * copy old content */
+			memmove(d->rr_len, oldlen, d->count*sizeof(size_t));
+			memmove(d->rr_data, olddata, d->count*sizeof(uint8_t*));
+			memmove(d->rr_ttl, oldttl, d->count*sizeof(time_t));
+		}
+
+		d->rr_len[d->count] = sldns_wirerr_get_rdatalen(rr, len, 1)+2;
+		d->rr_ttl[d->count] = sldns_wirerr_get_ttl(rr, len, 1);
+		d->rr_data[d->count] = regional_alloc_init(temp,
+			sldns_wirerr_get_rdatawl(rr, len, 1),
+			d->rr_len[d->count]);
+		if(!d->rr_data[d->count])
+			if(!d) return 0; /* out of memory */
+		d->count++;
+	}
+	if(r->rk.dname)
+		return 1;
+	return 0;
+}
+
 /** answer local data match */
 static int
 local_data_answer(struct local_zone* z, struct query_info* qinfo,
 	struct edns_data* edns, sldns_buffer* buf, struct regional* temp,
-	int labs, struct local_data** ldp, enum localzone_type lz_type)
+	int labs, struct local_data** ldp, enum localzone_type lz_type,
+	int tag, struct config_strlist** tag_datas, size_t tag_datas_size,
+	char** tagname, int num_tags)
 {
 	struct local_data key;
 	struct local_data* ld;
@@ -1194,6 +1281,17 @@ local_data_answer(struct local_zone* z, struct query_info* qinfo,
 		key.name = z->name;
 		key.namelen = z->namelen;
 		key.namelabs = z->namelabs;
+		if(tag != -1 && (size_t)tag<tag_datas_size && tag_datas[tag]) {
+			struct ub_packed_rrset_key r;
+			memset(&r, 0, sizeof(r));
+			if(find_tag_datas(qinfo, tag_datas[tag], &r, temp,
+				z->name, z->namelen)) {
+				verbose(VERB_ALGO, "redirect with tag data [%d] %s",
+					tag, (tag<num_tags?tagname[tag]:"null"));
+				return local_encode(qinfo, edns, buf, temp,
+					&r, 1, LDNS_RCODE_NOERROR);
+			}
+		}
 	}
 	ld = (struct local_data*)rbtree_search(&z->data, &key.node);
 	*ldp = ld;
@@ -1302,7 +1400,8 @@ lz_inform_print(struct local_zone* z, struct query_info* qinfo,
 enum localzone_type
 lz_type(uint8_t *taglist, size_t taglen, uint8_t *taglist2, size_t taglen2,
 	uint8_t *tagactions, size_t tagactionssize, enum localzone_type lzt,
-	struct comm_reply* repinfo, struct rbtree_t* override_tree)
+	struct comm_reply* repinfo, struct rbtree_t* override_tree, int* tag,
+	char** tagname, int num_tags)
 {
 	size_t i, j;
 	uint8_t tagmatch;
@@ -1310,17 +1409,33 @@ lz_type(uint8_t *taglist, size_t taglen, uint8_t *taglist2, size_t taglen2,
 	if(repinfo && override_tree) {
 		lzo = (struct local_zone_override*)addr_tree_lookup(
 			override_tree, &repinfo->addr, repinfo->addrlen);
-		if(lzo && lzo->type)
+		if(lzo && lzo->type) {
+			verbose(VERB_ALGO, "local zone override to type %s",
+				local_zone_type2str(lzo->type));
 			return lzo->type;
+		}
 	}
-	if(!taglist || !taglist2 || !tagactions)
+	if(!taglist || !taglist2)
 		return lzt;
 	for(i=0; i<taglen && i<taglen2; i++) {
 		tagmatch = (taglist[i] & taglist2[i]);
 		for(j=0; j<8 && tagmatch>0; j++) {
-			if((tagmatch & 0x1) && i*8+j < tagactionssize 
-				&& tagactions[i*8+j] != 0)
-				return (enum localzone_type)tagactions[i*8+j];
+			if((tagmatch & 0x1)) {
+				*tag = i*8+j;
+				verbose(VERB_ALGO, "matched tag [%d] %s",
+					*tag, (*tag<num_tags?tagname[*tag]:"null"));
+				/* does this tag have a tag action? */
+				if(i*8+j < tagactionssize && tagactions
+				   && tagactions[i*8+j] != 0) {
+				  verbose(VERB_ALGO, "tag action [%d] %s to type %s",
+					*tag, (*tag<num_tags?tagname[*tag]:"null"),
+				  	local_zone_type2str(
+					(enum localzone_type)
+					tagactions[i*8+j]));
+				  return (enum localzone_type)tagactions[i*8+j];
+				}
+				return lzt;
+			}
 			tagmatch >>= 1;	
 		}
 	}
@@ -1331,7 +1446,9 @@ int
 local_zones_answer(struct local_zones* zones, struct query_info* qinfo,
 	struct edns_data* edns, sldns_buffer* buf, struct regional* temp,
 	struct comm_reply* repinfo, uint8_t* taglist, size_t taglen,
-	uint8_t* tagactions, size_t tagactionssize)
+	uint8_t* tagactions, size_t tagactionssize,
+	struct config_strlist** tag_datas, size_t tag_datas_size,
+	char** tagname, int num_tags)
 {
 	/* see if query is covered by a zone,
 	 * 	if so:	- try to match (exact) local data 
@@ -1340,7 +1457,7 @@ local_zones_answer(struct local_zones* zones, struct query_info* qinfo,
 	struct local_data* ld = NULL;
 	struct local_zone* z;
 	enum localzone_type lzt;
-	int r;
+	int r, tag = -1;
 	lock_rw_rdlock(&zones->lock);
 	z = local_zones_tags_lookup(zones, qinfo->qname,
 		qinfo->qname_len, labs, qinfo->qclass, taglist, taglen, 0);
@@ -1352,7 +1469,8 @@ local_zones_answer(struct local_zones* zones, struct query_info* qinfo,
 	lock_rw_unlock(&zones->lock);
 
 	lzt = lz_type(taglist, taglen, z->taglist, z->taglen, tagactions,
-		tagactionssize, z->type, repinfo, z->override_tree);
+		tagactionssize, z->type, repinfo, z->override_tree, &tag,
+		tagname, num_tags);
 
 	if((lzt == local_zone_inform || lzt == local_zone_inform_deny)
 		&& repinfo)
@@ -1360,7 +1478,8 @@ local_zones_answer(struct local_zones* zones, struct query_info* qinfo,
 
 	if(lzt != local_zone_always_refuse && lzt != local_zone_always_transparent
 		&& lzt != local_zone_always_nxdomain
-		&& local_data_answer(z, qinfo, edns, buf, temp, labs, &ld, lzt)) {
+		&& local_data_answer(z, qinfo, edns, buf, temp, labs, &ld, lzt,
+		tag, tag_datas, tag_datas_size, tagname, num_tags)) {
 		lock_rw_unlock(&z->lock);
 		return 1;
 	}

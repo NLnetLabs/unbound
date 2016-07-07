@@ -9,7 +9,7 @@ server:
 	access-control: 10.10.10.0/24 allow
 	access-control-tag: 10.10.10.10/32 "tag1"
 	access-control-tag: 10.10.10.20/32 "tag2 tag3"
-	access-control-tag: 10.10.10.30/32 "tag2 tag3"
+	access-control-tag: 10.10.10.30/32 "tag3"
 	access-control-tag: 10.10.10.40/32 "tag3"
 	access-control-tag: 10.10.10.50/32 "tag3"
 
