@@ -902,7 +902,7 @@ sai6_putrandom(struct sockaddr_in6 *sa, int pfxlen, struct ub_randstate *rnd)
 	if(!(pfxlen > 0 && pfxlen < 128))
 		return;
 	for(i = 0; i < (128 - pfxlen) / 8; i++) {
-		sa->sin6_addr.s6_addr[15-i] = ub_random_max(rnd, 256);
+		sa->sin6_addr.s6_addr[15-i] = (uint8_t)ub_random_max(rnd, 256);
 	}
 	last = pfxlen & 7;
 	if(last != 0) {
