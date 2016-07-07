@@ -1421,7 +1421,7 @@ lz_type(uint8_t *taglist, size_t taglen, uint8_t *taglist2, size_t taglen2,
 		tagmatch = (taglist[i] & taglist2[i]);
 		for(j=0; j<8 && tagmatch>0; j++) {
 			if((tagmatch & 0x1)) {
-				*tag = i*8+j;
+				*tag = (int)(i*8+j);
 				verbose(VERB_ALGO, "matched tag [%d] %s",
 					*tag, (*tag<num_tags?tagname[*tag]:"null"));
 				/* does this tag have a tag action? */
