@@ -616,6 +616,12 @@
 /* Define if you want to use internal select based events */
 #undef USE_MINI_EVENT
 
+/* Define this to enable client TCP Fast Open. */
+#undef USE_MSG_FASTOPEN
+
+/* Define this to enable client TCP Fast Open. */
+#undef USE_OSX_MSG_FASTOPEN
+
 /* Define this to enable SHA256 and SHA512 support. */
 #undef USE_SHA2
 
@@ -640,6 +646,9 @@
 # undef __EXTENSIONS__
 #endif
 
+
+/* Define this to enable server TCP Fast Open. */
+#undef USE_TCP_FASTOPEN
 
 /* Whether the windows socket API is used */
 #undef USE_WINSOCK

@@ -834,6 +834,8 @@ enable_gost
 enable_ecdsa
 enable_dsa
 enable_event_api
+enable_tfo_client
+enable_tfo_server
 with_libevent
 with_libexpat
 enable_static_exe
@@ -1500,6 +1502,8 @@ Optional Features:
   --disable-dsa           Disable DSA support
   --enable-event-api      Enable (experimental) pluggable event base
                           libunbound API installed to unbound-event.h
+  --enable-tfo-client     Enable TCP Fast Open for client mode
+  --enable-tfo-server     Enable TCP Fast Open for server mode
   --enable-static-exe     enable to compile executables statically against
                           (event) libs, for debug purposes
   --enable-lock-checks    enable to check lock and unlock calls, for debug
@@ -17953,6 +17957,82 @@ case "$enable_event_api" in
       ;;
     *)
       ;;
+esac
+
+# Check whether --enable-tfo-client was given.
+if test "${enable_tfo_client+set}" = set; then :
+  enableval=$enable_tfo_client;
+fi
+
+case "$enable_tfo_client" in
+	yes)
+		case `uname` in
+			Linux) ac_fn_c_check_decl "$LINENO" "MSG_FASTOPEN" "ac_cv_have_decl_MSG_FASTOPEN" "$ac_includes_default
+#include <netinet/tcp.h>
+
+"
+if test "x$ac_cv_have_decl_MSG_FASTOPEN" = xyes; then :
+  { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: Check the platform specific TFO kernel parameters are correctly configured to support client mode TFO" >&5
+$as_echo "$as_me: WARNING: Check the platform specific TFO kernel parameters are correctly configured to support client mode TFO" >&2;}
+else
+  as_fn_error $? "TCP Fast Open is not available for client mode: please rerun without --enable-tfo-client" "$LINENO" 5
+fi
+
+
+cat >>confdefs.h <<_ACEOF
+#define USE_MSG_FASTOPEN 1
+_ACEOF
+
+			  ;;
+			Darwin) ac_fn_c_check_decl "$LINENO" "CONNECT_RESUME_ON_READ_WRITE" "ac_cv_have_decl_CONNECT_RESUME_ON_READ_WRITE" "$ac_includes_default
+#include <sys/socket.h>
+
+"
+if test "x$ac_cv_have_decl_CONNECT_RESUME_ON_READ_WRITE" = xyes; then :
+  { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: Check the platform specific TFO kernel parameters are correctly configured to support client mode TFO" >&5
+$as_echo "$as_me: WARNING: Check the platform specific TFO kernel parameters are correctly configured to support client mode TFO" >&2;}
+else
+  as_fn_error $? "TCP Fast Open is not available for client mode: please rerun without --enable-tfo-client" "$LINENO" 5
+fi
+
+
+cat >>confdefs.h <<_ACEOF
+#define USE_OSX_MSG_FASTOPEN 1
+_ACEOF
+
+			  ;;
+		esac
+	;;
+	no|*)
+		;;
+esac
+
+# Check whether --enable-tfo-server was given.
+if test "${enable_tfo_server+set}" = set; then :
+  enableval=$enable_tfo_server;
+fi
+
+case "$enable_tfo_server" in
+	yes)
+	      ac_fn_c_check_decl "$LINENO" "TCP_FASTOPEN" "ac_cv_have_decl_TCP_FASTOPEN" "$ac_includes_default
+#include <netinet/tcp.h>
+
+"
+if test "x$ac_cv_have_decl_TCP_FASTOPEN" = xyes; then :
+  { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: Check the platform specific TFO kernel parameters are correctly configured to support server mode TFO" >&5
+$as_echo "$as_me: WARNING: Check the platform specific TFO kernel parameters are correctly configured to support server mode TFO" >&2;}
+else
+  as_fn_error $? "TCP Fast Open is not available for server mode: please rerun without --enable-tfo-server" "$LINENO" 5
+fi
+
+
+cat >>confdefs.h <<_ACEOF
+#define USE_TCP_FASTOPEN 1
+_ACEOF
+
+		;;
+	no|*)
+		;;
 esac
 
 # check for libevent
