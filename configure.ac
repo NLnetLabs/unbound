@@ -881,6 +881,42 @@ case "$enable_event_api" in
       ;;
 esac
 
+AC_ARG_ENABLE(tfo-client, AC_HELP_STRING([--enable-tfo-client], [Enable TCP Fast Open for client mode]))
+case "$enable_tfo_client" in
+	yes)
+		case `uname` in
+			Linux) AC_CHECK_DECL([MSG_FASTOPEN], [AC_MSG_WARN([Check the platform specific TFO kernel parameters are correctly configured to support client mode TFO])],
+			                     [AC_MSG_ERROR([TCP Fast Open is not available for client mode: please rerun without --enable-tfo-client])], 
+			                     [AC_INCLUDES_DEFAULT 
+#include <netinet/tcp.h>
+])
+					AC_DEFINE_UNQUOTED([USE_MSG_FASTOPEN], [1], [Define this to enable client TCP Fast Open.])
+			  ;;
+			Darwin) AC_CHECK_DECL([CONNECT_RESUME_ON_READ_WRITE], [AC_MSG_WARN([Check the platform specific TFO kernel parameters are correctly configured to support client mode TFO])], 
+			                      [AC_MSG_ERROR([TCP Fast Open is not available for client mode: please rerun without --enable-tfo-client])], 
+			                      [AC_INCLUDES_DEFAULT
+#include <sys/socket.h>
+])
+					AC_DEFINE_UNQUOTED([USE_OSX_MSG_FASTOPEN], [1], [Define this to enable client TCP Fast Open.])
+			  ;;
+		esac
+	;;
+	no|*)
+		;;
+esac
+
+AC_ARG_ENABLE(tfo-server, AC_HELP_STRING([--enable-tfo-server], [Enable TCP Fast Open for server mode]))
+case "$enable_tfo_server" in
+	yes)
+	      AC_CHECK_DECL([TCP_FASTOPEN], [AC_MSG_WARN([Check the platform specific TFO kernel parameters are correctly configured to support server mode TFO])], [AC_MSG_ERROR([TCP Fast Open is not available for server mode: please rerun without --enable-tfo-server])], [AC_INCLUDES_DEFAULT
+#include <netinet/tcp.h>
+	      ])
+		AC_DEFINE_UNQUOTED([USE_TCP_FASTOPEN], [1], [Define this to enable server TCP Fast Open.])
+		;;
+	no|*)
+		;;
+esac
+
 # check for libevent
 AC_ARG_WITH(libevent, AC_HELP_STRING([--with-libevent=pathname],
     [use libevent (will check /usr/local /opt/local /usr/lib /usr/pkg /usr/sfw /usr  or you can specify an explicit path). Slower, but allows use of large outgoing port ranges.]),

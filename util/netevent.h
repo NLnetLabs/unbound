@@ -231,6 +231,11 @@ struct comm_point {
 	/** if set, checks for pending error from nonblocking connect() call.*/
 	int tcp_check_nb_connect;
 
+#ifdef USE_MSG_FASTOPEN
+	/** used to track if the sendto() call should be done when using TFO. */
+	int tcp_do_fastopen;
+#endif
+
 	/** number of queries outstanding on this socket, used by
 	 * outside network for udp ports */
 	int inuse;

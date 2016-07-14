@@ -43,6 +43,9 @@
 #  include <sys/types.h>
 #endif
 #include <sys/time.h>
+#ifdef USE_TCP_FASTOPEN
+#include <netinet/tcp.h>
+#endif
 #include "services/listen_dnsport.h"
 #include "services/outside_network.h"
 #include "util/netevent.h"
@@ -669,6 +672,22 @@ create_tcp_accept_sock(struct addrinfo *addr, int v6only, int* noproto,
 #endif
 		return -1;
 	}
+#ifdef USE_TCP_FASTOPEN
+	/* qlen specifies how many outstanding TFO requests to allow. Limit is a defense
+	   against IP spoofing attacks as suggested in RFC7413 */
+#ifdef __APPLE__
+	/* OS X implementation only supports qlen of 1 via this call. Actual
+	   value is configured by the net.inet.tcp.fastopen_backlog kernel parm. */
+	int qlen = 1;
+#else
+	/* 5 is recommended on linux */
+	int qlen = 5;
+#endif
+	if ((setsockopt(s, IPPROTO_TCP, TCP_FASTOPEN, &qlen, 
+		  sizeof(qlen))) == -1 ) {
+		log_err("Setting TCP Fast Open as server failed: %s", strerror(errno));
+	}
+#endif
 	return s;
 }
 

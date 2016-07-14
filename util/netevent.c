@@ -1356,6 +1356,63 @@ comm_point_tcp_handle_write(int fd, struct comm_point* c)
 	if(c->ssl)
 		return ssl_handle_it(c);
 
+#ifdef USE_MSG_FASTOPEN
+	/* Only try this on first use of a connection that uses tfo, 
+	   otherwise fall through to normal write */
+	/* Also, TFO not available on WINDOWS at the moment */
+	if(c->tcp_do_fastopen == 1) {
+		c->tcp_do_fastopen = 0;
+		/* We need to have all the bytes to send in one buffer to try a single
+		   sendto() for the message to go in the syn packet, so we must
+		   create that buffer here, even though it means a malloc. 
+		   NOTE: When there is a general solution for composing a TCP message
+		    (inc length) in one buffer this code should use that mechanism.*/
+		struct sldns_buffer* sendto_buf = NULL;
+		uint16_t len = sldns_buffer_limit(c->buffer);
+		sendto_buf = sldns_buffer_new(len + sizeof(uint16_t));
+		if (!sendto_buf)
+			return 0;
+		sldns_buffer_write_u16_at(sendto_buf, 0, len);
+		sldns_buffer_write_at(sendto_buf, sizeof(uint16_t), 
+		                                  sldns_buffer_begin(c->buffer),
+		                                  sldns_buffer_limit(c->buffer));
+		r = sendto(fd, sldns_buffer_begin(sendto_buf), 
+					sldns_buffer_limit(sendto_buf),
+					MSG_FASTOPEN, (struct sockaddr*)&(c->repinfo.addr),
+					c->repinfo.addrlen);
+		sldns_buffer_free(sendto_buf);
+		/* this form of sendto() does both a connect() and send() so need to
+		   look for various flavours of error*/
+		if (r == -1) {
+#if defined(EINPROGRESS) && defined(EWOULDBLOCK)
+			/* Handshake is underway, maybe because no TFO cookie available.
+			   Come back to write the messsage*/
+			if(errno == EINPROGRESS || errno == EWOULDBLOCK)
+				return 1;
+#endif
+			if(errno == EINTR || errno == EAGAIN)
+				return 1;
+			/* Not handling EISCONN here as shouldn't ever hit that case.*/
+			if(errno != 0 && verbosity < 2)
+				return 0; /* silence lots of chatter in the logs */
+			else if(errno != 0) 
+				log_err_addr("tcp sendto", strerror(errno),
+					&c->repinfo.addr, c->repinfo.addrlen);
+			return 0;
+		} else {
+			c->tcp_byte_count += r;
+			if(c->tcp_byte_count < sizeof(uint16_t))
+				return 1;
+			sldns_buffer_set_position(c->buffer, c->tcp_byte_count - 
+				sizeof(uint16_t));
+			if(sldns_buffer_remaining(c->buffer) == 0) {
+				tcp_callback_writer(c);
+				return 1;
+			}
+		}
+	}
+#endif /* USE_MSG_FASTOPEN */
+
 	if(c->tcp_byte_count < sizeof(uint16_t)) {
 		uint16_t len = htons(sldns_buffer_limit(c->buffer));
 #ifdef HAVE_WRITEV
@@ -1548,6 +1605,9 @@ comm_point_create_udp(struct comm_base *base, int fd, sldns_buffer* buffer,
 	c->do_not_close = 0;
 	c->tcp_do_toggle_rw = 0;
 	c->tcp_check_nb_connect = 0;
+#ifdef USE_MSG_FASTOPEN
+	c->tcp_do_fastopen = 0;
+#endif
 	c->inuse = 0;
 	c->callback = callback;
 	c->cb_arg = callback_arg;
@@ -1601,6 +1661,9 @@ comm_point_create_udp_ancil(struct comm_base *base, int fd,
 	c->inuse = 0;
 	c->tcp_do_toggle_rw = 0;
 	c->tcp_check_nb_connect = 0;
+#ifdef USE_MSG_FASTOPEN
+	c->tcp_do_fastopen = 0;
+#endif
 	c->callback = callback;
 	c->cb_arg = callback_arg;
 	evbits = UB_EV_READ | UB_EV_PERSIST;
@@ -1663,6 +1726,9 @@ comm_point_create_tcp_handler(struct comm_base *base,
 	c->do_not_close = 0;
 	c->tcp_do_toggle_rw = 1;
 	c->tcp_check_nb_connect = 0;
+#ifdef USE_MSG_FASTOPEN
+	c->tcp_do_fastopen = 0;
+#endif
 	c->repinfo.c = c;
 	c->callback = callback;
 	c->cb_arg = callback_arg;
@@ -1723,6 +1789,9 @@ comm_point_create_tcp(struct comm_base *base, int fd, int num, size_t bufsize,
 	c->do_not_close = 0;
 	c->tcp_do_toggle_rw = 0;
 	c->tcp_check_nb_connect = 0;
+#ifdef USE_MSG_FASTOPEN
+	c->tcp_do_fastopen = 0;
+#endif
 	c->callback = NULL;
 	c->cb_arg = NULL;
 	evbits = UB_EV_READ | UB_EV_PERSIST;
@@ -1788,6 +1857,9 @@ comm_point_create_tcp_out(struct comm_base *base, size_t bufsize,
 	c->do_not_close = 0;
 	c->tcp_do_toggle_rw = 1;
 	c->tcp_check_nb_connect = 1;
+#ifdef USE_MSG_FASTOPEN
+	c->tcp_do_fastopen = 1;
+#endif
 	c->repinfo.c = c;
 	c->callback = callback;
 	c->cb_arg = callback_arg;
@@ -1842,6 +1914,9 @@ comm_point_create_local(struct comm_base *base, int fd, size_t bufsize,
 	c->do_not_close = 1;
 	c->tcp_do_toggle_rw = 0;
 	c->tcp_check_nb_connect = 0;
+#ifdef USE_MSG_FASTOPEN
+	c->tcp_do_fastopen = 0;
+#endif
 	c->callback = callback;
 	c->cb_arg = callback_arg;
 	/* ub_event stuff */
@@ -1895,6 +1970,9 @@ comm_point_create_raw(struct comm_base* base, int fd, int writing,
 	c->do_not_close = 1;
 	c->tcp_do_toggle_rw = 0;
 	c->tcp_check_nb_connect = 0;
+#ifdef USE_MSG_FASTOPEN
+	c->tcp_do_fastopen = 0;
+#endif
 	c->callback = callback;
 	c->cb_arg = callback_arg;
 	/* ub_event stuff */

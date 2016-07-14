@@ -243,7 +243,32 @@ outnet_tcp_take_into_use(struct waiting_tcp* w, uint8_t* pkt, size_t pkt_len)
 		return 0;
 
 	fd_set_nonblock(s);
+#ifdef USE_OSX_MSG_FASTOPEN
+	/* API for fast open is different here. We use a connectx() function and 
+	   then writes can happen as normal even using SSL.*/
+	/* connectx requires that the len be set in the sockaddr struct*/
+	struct sockaddr_in *addr_in = (struct sockaddr_in *)&w->addr;
+	addr_in->sin_len = w->addrlen;
+	sa_endpoints_t endpoints;
+	endpoints.sae_srcif = 0;
+	endpoints.sae_srcaddr = NULL;
+	endpoints.sae_srcaddrlen = 0;
+	endpoints.sae_dstaddr = (struct sockaddr *)&w->addr;
+	endpoints.sae_dstaddrlen = w->addrlen;
+	if (connectx(s, &endpoints, SAE_ASSOCID_ANY,  
+	             CONNECT_DATA_IDEMPOTENT | CONNECT_RESUME_ON_READ_WRITE,
+	             NULL, 0, NULL, NULL) == -1) {
+#else /* USE_OSX_MSG_FASTOPEN*/
+#ifdef USE_MSG_FASTOPEN
+	/* Only do TFO for TCP in which case no connect() is required here.
+	   Don't combine client TFO with SSL, since OpenSSL can't 
+	   currently support doing a handshake on fd that already isn't connected*/
+	if (w->outnet->sslctx && w->ssl_upstream) {
+		if(connect(s, (struct sockaddr*)&w->addr, w->addrlen) == -1) {
+#else /* USE_MSG_FASTOPEN*/
 	if(connect(s, (struct sockaddr*)&w->addr, w->addrlen) == -1) {
+#endif /* USE_MSG_FASTOPEN*/
+#endif /* USE_OSX_MSG_FASTOPEN*/
 #ifndef USE_WINSOCK
 #ifdef EINPROGRESS
 		if(errno != EINPROGRESS) {
@@ -263,6 +288,9 @@ outnet_tcp_take_into_use(struct waiting_tcp* w, uint8_t* pkt, size_t pkt_len)
 			return 0;
 		}
 	}
+#ifdef USE_MSG_FASTOPEN
+	}
+#endif /* USE_MSG_FASTOPEN */
 	if(w->outnet->sslctx && w->ssl_upstream) {
 		pend->c->ssl = outgoing_ssl_fd(w->outnet->sslctx, s);
 		if(!pend->c->ssl) {
