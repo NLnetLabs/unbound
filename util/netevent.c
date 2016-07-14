@@ -1361,7 +1361,6 @@ comm_point_tcp_handle_write(int fd, struct comm_point* c)
 	   otherwise fall through to normal write */
 	/* Also, TFO not available on WINDOWS at the moment */
 	if(c->tcp_do_fastopen == 1) {
-		c->tcp_do_fastopen = 0;
 		/* We need to have all the bytes to send in one buffer to try a single
 		   sendto() for the message to go in the syn packet, so we must
 		   create that buffer here, even though it means a malloc. 
@@ -1369,6 +1368,7 @@ comm_point_tcp_handle_write(int fd, struct comm_point* c)
 		    (inc length) in one buffer this code should use that mechanism.*/
 		struct sldns_buffer* sendto_buf = NULL;
 		uint16_t len = sldns_buffer_limit(c->buffer);
+		c->tcp_do_fastopen = 0;
 		sendto_buf = sldns_buffer_new(len + sizeof(uint16_t));
 		if (!sendto_buf)
 			return 0;
