@@ -260,6 +260,7 @@ outnet_tcp_take_into_use(struct waiting_tcp* w, uint8_t* pkt, size_t pkt_len)
 	             NULL, 0, NULL, NULL) == -1) {
 #else /* USE_OSX_MSG_FASTOPEN*/
 #ifdef USE_MSG_FASTOPEN
+	pend->c->tcp_do_fastopen = 1;
 	/* Only do TFO for TCP in which case no connect() is required here.
 	   Don't combine client TFO with SSL, since OpenSSL can't 
 	   currently support doing a handshake on fd that already isn't connected*/

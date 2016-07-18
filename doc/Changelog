@@ -1,3 +1,6 @@
+18 July 2016: Wouter
+	- Fix #798: Client-side TCP fast open fails (Linux).
+
 14 July 2016: Wouter
 	- TCP Fast open patch from Sara Dickinson.
 	- Fixed unbound.doxygen for 1.8.11.
