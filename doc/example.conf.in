@@ -351,6 +351,7 @@ server:
 	# Domains (and domains in them) without support for dns-0x20 and
 	# the fallback fails because they keep sending different answers.
 	# caps-whitelist: "licdn.com"
+	# caps-whitelist: "senderbase.org"
 
 	# Enforce privacy of these addresses. Strips them away from answers.
 	# It may cause DNSSEC validation to additionally mark it as bogus.
