@@ -512,6 +512,9 @@ create_tcp_accept_sock(struct addrinfo *addr, int v6only, int* noproto,
 #if defined(SO_REUSEADDR) || defined(SO_REUSEPORT) || defined(IPV6_V6ONLY) || defined(IP_TRANSPARENT) || defined(IP_BINDANY) || defined(IP_FREEBIND)
 	int on = 1;
 #endif
+#ifdef USE_TCP_FASTOPEN
+	int qlen;
+#endif
 #if !defined(IP_TRANSPARENT) && !defined(IP_BINDANY)
 	(void)transparent;
 #endif
@@ -678,10 +681,10 @@ create_tcp_accept_sock(struct addrinfo *addr, int v6only, int* noproto,
 #ifdef __APPLE__
 	/* OS X implementation only supports qlen of 1 via this call. Actual
 	   value is configured by the net.inet.tcp.fastopen_backlog kernel parm. */
-	int qlen = 1;
+	qlen = 1;
 #else
 	/* 5 is recommended on linux */
-	int qlen = 5;
+	qlen = 5;
 #endif
 	if ((setsockopt(s, IPPROTO_TCP, TCP_FASTOPEN, &qlen, 
 		  sizeof(qlen))) == -1 ) {
