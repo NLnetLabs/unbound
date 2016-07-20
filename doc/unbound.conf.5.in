@@ -158,7 +158,7 @@ ip -6 route add local mynetblock/64 dev lo
 Number of ports to open. This number of file descriptors can be opened per 
 thread. Must be at least 1. Default depends on compile options. Larger 
 numbers need extra resources from the operating system.  For performance a
-a very large value is best, use libevent to make this possible.
+very large value is best, use libevent to make this possible.
 .TP
 .B outgoing\-port\-permit: \fI<port number or range>
 Permit unbound to open this port or range of ports for use to send queries.
