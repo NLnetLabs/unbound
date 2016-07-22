@@ -404,6 +404,8 @@ daemon_create_workers(struct daemon* daemon)
 	}
 	daemon->workers = (struct worker**)calloc((size_t)daemon->num, 
 		sizeof(struct worker*));
+	if(!daemon->workers)
+		fatal_exit("out of memory during daemon init");
 	if(daemon->cfg->dnstap) {
 #ifdef USE_DNSTAP
 		daemon->dtenv = dt_create(daemon->cfg->dnstap_socket_path,

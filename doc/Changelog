@@ -1,3 +1,7 @@
+22 July 2016: Wouter
+	- Fix #801: missing error condition handling in
+	  daemon_create_workers().
+
 20 July 2016: Wouter
 	- Fix typo in unbound.conf.
 
