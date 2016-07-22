@@ -3,6 +3,7 @@
 	  daemon_create_workers().
 	- Fix #802: workaround for function parameters that are "unused"
 	  without log_assert.
+	- Fix #803: confusing (and incorrect) code comment in daemon_cleanup().
 
 20 July 2016: Wouter
 	- Fix typo in unbound.conf.

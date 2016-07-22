@@ -594,7 +594,7 @@ daemon_cleanup(struct daemon* daemon)
 	slabhash_clear(daemon->env->msg_cache);
 	local_zones_delete(daemon->local_zones);
 	daemon->local_zones = NULL;
-	/* key cache is cleared by module desetup during next daemon_init() */
+	/* key cache is cleared by module desetup during next daemon_fork() */
 	daemon_remote_clear(daemon->rc);
 	for(i=0; i<daemon->num; i++)
 		worker_delete(daemon->workers[i]);
