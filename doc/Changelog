@@ -1,6 +1,8 @@
 22 July 2016: Wouter
 	- Fix #801: missing error condition handling in
 	  daemon_create_workers().
+	- Fix #802: workaround for function parameters that are "unused"
+	  without log_assert.
 
 20 July 2016: Wouter
 	- Fix typo in unbound.conf.

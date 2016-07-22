@@ -1416,6 +1416,7 @@ serviced_perturb_qname(struct ub_randstate* rnd, uint8_t* qbuf, size_t len)
 	long int random = 0;
 	int bits = 0;
 	log_assert(len >= 10 + 5 /* offset qname, root, qtype, qclass */);
+	(void)len;
 	lablen = *d++;
 	while(lablen) {
 		while(lablen--) {

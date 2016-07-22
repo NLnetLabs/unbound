@@ -870,6 +870,7 @@ comm_point_tcp_accept_callback(int fd, short event, void* arg)
 	/* accept incoming connection. */
 	c_hdl = c->tcp_free;
 	log_assert(fd != -1);
+	(void)fd;
 	new_fd = comm_point_perform_accept(c, &c_hdl->repinfo.addr,
 		&c_hdl->repinfo.addrlen);
 	if(new_fd == -1)

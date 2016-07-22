@@ -1438,6 +1438,7 @@ cfg_set_bit(uint8_t* bitlist, size_t len, int id)
 {
 	int pos = id/8;
 	log_assert((size_t)pos < len);
+	(void)len;
 	bitlist[pos] |= 1<<(id%8);
 }
 
