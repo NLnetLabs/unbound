@@ -1,3 +1,6 @@
+26 July 2016: Wouter
+	- nicer ratelimit-below-domain explanation.
+
 22 July 2016: Wouter
 	- Fix #801: missing error condition handling in
 	  daemon_create_workers().

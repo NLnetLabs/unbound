@@ -647,7 +647,7 @@ server:
 	# ratelimit-for-domain: example.com 1000
 	# override the ratelimits for all domains below a domain name
 	# can give this multiple times, the name closest to the zone is used.
-	# ratelimit-below-domain: example 1000
+	# ratelimit-below-domain: com 1000
 
 # Python config section. To enable:
 # o use --with-pythonmodule to configure before compiling.
