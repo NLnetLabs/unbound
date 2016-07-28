@@ -1,3 +1,6 @@
+28 July 2016: Wouter
+	- Fix #806: wrong comment removed.
+
 26 July 2016: Wouter
 	- nicer ratelimit-below-domain explanation.
 

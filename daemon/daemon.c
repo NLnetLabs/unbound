@@ -588,8 +588,7 @@ daemon_cleanup(struct daemon* daemon)
 	log_thread_set(NULL);
 	/* clean up caches because
 	 * a) RRset IDs will be recycled after a reload, causing collisions
-	 * b) validation config can change, thus rrset, msg, keycache clear 
-	 * The infra cache is kept, the timing and edns info is still valid */
+	 * b) validation config can change, thus rrset, msg, keycache clear */
 	slabhash_clear(&daemon->env->rrset_cache->table);
 	slabhash_clear(daemon->env->msg_cache);
 	local_zones_delete(daemon->local_zones);
