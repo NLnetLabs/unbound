@@ -1360,30 +1360,26 @@ comm_point_tcp_handle_write(int fd, struct comm_point* c)
 #ifdef USE_MSG_FASTOPEN
 	/* Only try this on first use of a connection that uses tfo, 
 	   otherwise fall through to normal write */
-	/* Also, TFO not available on WINDOWS at the moment */
+	/* Also, TFO support on WINDOWS not implemented at the moment */
 	if(c->tcp_do_fastopen == 1) {
-		/* We need to have all the bytes to send in one buffer to try a single
-		   sendto() for the message to go in the syn packet, so we must
-		   create that buffer here, even though it means a malloc. 
-		   NOTE: When there is a general solution for composing a TCP message
-		    (inc length) in one buffer this code should use that mechanism.*/
-		struct sldns_buffer* sendto_buf = NULL;
-		uint16_t len = sldns_buffer_limit(c->buffer);
-		c->tcp_do_fastopen = 0;
-		sendto_buf = sldns_buffer_new(len + sizeof(uint16_t));
-		if (!sendto_buf)
-			return 0;
-		sldns_buffer_write_u16_at(sendto_buf, 0, len);
-		sldns_buffer_write_at(sendto_buf, sizeof(uint16_t), 
-		                                  sldns_buffer_begin(c->buffer),
-		                                  sldns_buffer_limit(c->buffer));
-		r = sendto(fd, sldns_buffer_begin(sendto_buf), 
-					sldns_buffer_limit(sendto_buf),
-					MSG_FASTOPEN, (struct sockaddr*)&(c->repinfo.addr),
-					c->repinfo.addrlen);
-		sldns_buffer_free(sendto_buf);
-		/* this form of sendto() does both a connect() and send() so need to
+		/* this form of sendmsg() does both a connect() and send() so need to
 		   look for various flavours of error*/
+		uint16_t len = htons(sldns_buffer_limit(c->buffer));
+		struct msghdr msg;
+		struct iovec iov[2];
+		c->tcp_do_fastopen = 0;
+		memset(&msg, 0, sizeof(msg));
+		iov[0].iov_base = (uint8_t*)&len + c->tcp_byte_count;
+		iov[0].iov_len = sizeof(uint16_t) - c->tcp_byte_count;
+		iov[1].iov_base = sldns_buffer_begin(c->buffer);
+		iov[1].iov_len = sldns_buffer_limit(c->buffer);
+		log_assert(iov[0].iov_len > 0);
+		log_assert(iov[1].iov_len > 0);
+		msg.msg_name = &c->repinfo.addr;
+		msg.msg_namelen = c->repinfo.addrlen;
+		msg.msg_iov = iov;
+		msg.msg_iovlen = 2;
+		r = sendmsg(fd, &msg, MSG_FASTOPEN);
 		if (r == -1) {
 #if defined(EINPROGRESS) && defined(EWOULDBLOCK)
 			/* Handshake is underway, maybe because no TFO cookie available.
@@ -1397,7 +1393,7 @@ comm_point_tcp_handle_write(int fd, struct comm_point* c)
 			if(errno != 0 && verbosity < 2)
 				return 0; /* silence lots of chatter in the logs */
 			else if(errno != 0) 
-				log_err_addr("tcp sendto", strerror(errno),
+				log_err_addr("tcp sendmsg", strerror(errno),
 					&c->repinfo.addr, c->repinfo.addrlen);
 			return 0;
 		} else {
