@@ -1,3 +1,6 @@
+8 August 2016: Wouter
+	- Note that OPENPGPKEY type is RFC 7929.
+
 4 August 2016: Wouter
 	- Fix #807: workaround for possible some "unused" function parameters
 	  in test code, from Jinmei Tatuya.
