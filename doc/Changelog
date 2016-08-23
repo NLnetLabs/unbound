@@ -1,3 +1,7 @@
+23 August 2016: Wouter
+	- Fix #804: unbound stops responding after outage.  Fixes queries
+	  that attempt to wait for an empty list of subqueries.
+
 8 August 2016: Wouter
 	- Note that OPENPGPKEY type is RFC 7929.
 
