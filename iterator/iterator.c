@@ -216,6 +216,7 @@ error_supers(struct module_qstate* qstate, int id, struct module_qstate* super)
 		qstate->qinfo.qtype == LDNS_RR_TYPE_AAAA) {
 		/* mark address as failed. */
 		struct delegpt_ns* dpns = NULL;
+		super_iq->num_target_queries--; 
 		if(super_iq->dp)
 			dpns = delegpt_find_ns(super_iq->dp, 
 				qstate->qinfo.qname, qstate->qinfo.qname_len);
@@ -235,7 +236,6 @@ error_supers(struct module_qstate* qstate, int id, struct module_qstate* super)
 				log_err("out of memory adding missing");
 		}
 		dpns->resolved = 1; /* mark as failed */
-		super_iq->num_target_queries--; 
 	}
 	if(qstate->qinfo.qtype == LDNS_RR_TYPE_NS) {
 		/* prime failed to get delegation */
@@ -2661,6 +2661,10 @@ processTargetResponse(struct module_qstate* qstate, int id,
 	log_query_info(VERB_ALGO, "processTargetResponse", &qstate->qinfo);
 	log_query_info(VERB_ALGO, "processTargetResponse super", &forq->qinfo);
 
+	/* Tell the originating event that this target query has finished
+	 * (regardless if it succeeded or not). */
+	foriq->num_target_queries--;
+
 	/* check to see if parent event is still interested (in orig name).  */
 	if(!foriq->dp) {
 		verbose(VERB_ALGO, "subq: parent not interested, was reset");
@@ -2675,10 +2679,6 @@ processTargetResponse(struct module_qstate* qstate, int id,
 		   and a new identical query arrived, that does not want it*/
 		return;
 	}
-
-	/* Tell the originating event that this target query has finished
-	 * (regardless if it succeeded or not). */
-	foriq->num_target_queries--;
 
 	/* if iq->query_for_pside_glue then add the pside_glue (marked lame) */
 	if(iq->pside_glue) {
