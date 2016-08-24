@@ -346,6 +346,10 @@ Lower limit for dynamic retransmit timeout calculation in infrastructure
 cache. Default is 50 milliseconds. Increase this value if using forwarders
 needing more time to do recursive name resolution.
 .TP
+.B define\-tag: \fI<"list of tags">
+Define the tags that can be used with local\-zone and access\-control.
+Enclose the list between quotes ("") and put spaces between tags.
+.TP
 .B do\-ip4: \fI<yes or no>
 Enable or disable whether ip4 queries are answered or issued. Default is yes.
 .TP
@@ -452,6 +456,23 @@ only allowed to query for the authoritative local\-data, they are not
 allowed full recursion but only the static data.  With deny_non_local,
 messages that are disallowed are dropped, with refuse_non_local they
 receive error code REFUSED.
+.TP
+.B access\-control\-tag: \fI<IP netblock> <"list of tags">
+Assign tags to access-control elements. Clients using this access control
+element use localzones that are tagged with one of these tags. Tags must be
+defined in \fIdefine\-tags\fR.  Enclose list of tags in quotes ("") and put
+spaces between tags. If access\-control\-tag is configured for a netblock that
+does not have an access\-control, an access\-control element with action
+\fIallow\fR is configured for this netblock.
+.TP
+.B access\-control\-tag\-action: \fI<IP netblock> <tag> <action>
+Set action for particular tag for given access control element. If you have
+multiple tag values, the tag used to lookup the action is the first tag match
+between access\-control\-tag and local\-zone\-tag where "first" comes from the
+order of the define-tag values.
+.TP
+.B access\-control\-tag\-data: \fI<IP netblock> <tag> <"resource record string">
+Set redirect data for particular tag for given access control element.
 .TP
 .B chroot: \fI<directory>
 If chroot is enabled, you should pass the configfile (from the
@@ -1092,6 +1113,17 @@ it as detailed in the stub zone section below.
 Configure local data shorthand for a PTR record with the reversed IPv4 or
 IPv6 address and the host name.  For example "192.0.2.4 www.example.com".
 TTL can be inserted like this: "2001:DB8::4 7200 www.example.com"
+.TP 5
+.B local\-zone\-tag: \fI<zone> <"list of tags">
+Assign tags to localzones. Tagged localzones will only be applied when the
+used access-control element has a matching tag. Tags must be defined in
+\fIdefine\-tags\fR.  Enclose list of tags in quotes ("") and put spaces between
+tags.
+.TP 5
+.B local\-zone\-override: \fI<zone> <IP netblock> <type>
+Override the localzone type for queries from addresses matching netblock.
+Overrides types configured in both tagged and untagged localzones, and 
+access\-control\-tag\-action.
 .TP 5
 .B ratelimit: \fI<number or 0>
 Enable ratelimiting of queries sent to nameserver for performing recursion.

@@ -1,6 +1,9 @@
 24 August 2016: Ralph
 	- Fix #820: set sldns_str2wire_rr_buf() dual meaning len parameter
 	  in each iteration in find_tag_datas().
+	- unbound.conf.5 entries for define-tag, access-control-tag,
+	  access-control-tag-action, access-control-tag-data, local-zone-tag,
+	  and local-zone-override.
 	  
 23 August 2016: Wouter
 	- Fix #804: unbound stops responding after outage.  Fixes queries
