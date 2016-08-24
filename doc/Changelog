@@ -1,3 +1,7 @@
+24 August 2016: Ralph
+	- Fix #820: set sldns_str2wire_rr_buf() dual meaning len parameter
+	  in each iteration in find_tag_datas().
+	  
 23 August 2016: Wouter
 	- Fix #804: unbound stops responding after outage.  Fixes queries
 	  that attempt to wait for an empty list of subqueries.

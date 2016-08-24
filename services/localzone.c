@@ -1186,10 +1186,11 @@ find_tag_datas(struct query_info* qinfo, struct config_strlist* list,
 	struct config_strlist* p;
 	char buf[65536];
 	uint8_t rr[LDNS_RR_BUF_SIZE];
-	size_t len = sizeof(rr);
+	size_t len;
 	int res;
 	struct packed_rrset_data* d;
 	for(p=list; p; p=p->next) {
+		len = sizeof(rr);
 		/* does this element match the type? */
 		snprintf(buf, sizeof(buf), ". %s", p->str);
 		res = sldns_str2wire_rr_buf(buf, rr, &len, NULL, 3600,
