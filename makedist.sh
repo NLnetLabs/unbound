@@ -236,7 +236,7 @@ if [ "$DOWIN" = "yes" ]; then
 		mw64="mingw32"
 	fi
 	configure="${mw64}-configure"   # mingw32-configure, mingw64-configure
-	strip="${w32}-w64-mingw32-strip"
+	strip="${warch}-w64-mingw32-strip"
 	makensis="makensis"	# from mingw32-nsis package
 	# flags for crosscompiled dependency libraries
 	cross_flag=""
