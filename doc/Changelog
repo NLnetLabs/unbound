@@ -1,3 +1,6 @@
+25 August 2016: Ralph
+	- 64bit build option for makedist windows compile, -w64.
+
 24 August 2016: Ralph
 	- Fix #820: set sldns_str2wire_rr_buf() dual meaning len parameter
 	  in each iteration in find_tag_datas().

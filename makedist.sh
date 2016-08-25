@@ -55,6 +55,7 @@ Generate a distribution tar file for unbound.
                  Detected from svn working copy if not specified.
     -wssl openssl.xx.tar.gz Also build openssl from tarball for windows dist.
     -wxp expat.xx.tar.gz Also build expat from tarball for windows dist.
+    -w64	 64bit windows compile.
     -w ...       Build windows binary dist. last args passed to configure.
 EOF
     exit 1
@@ -177,6 +178,7 @@ storehash () {
 SNAPSHOT="no"
 RC="no"
 DOWIN="no"
+W64="no"
 WINSSL=""
 WINEXPAT=""
 
@@ -201,6 +203,10 @@ while [ "$1" ]; do
 	    WINEXPAT="$2"
 	    shift
 	    ;;
+	"-w64")
+	    W64="yes"
+	    shift
+	    ;;
         "-w")
             DOWIN="yes"
 	    shift
@@ -222,8 +228,15 @@ if [ "$DOWIN" = "yes" ]; then
     if test "`uname`" = "Linux"; then 
 	info "Crosscompile windows dist"
         cross="yes"
-	configure="mingw32-configure"
-	strip="i686-w64-mingw32-strip"
+	if test "$W64" = "yes"; then
+		warch="x86_64"   # i686 for 32bit, or x86_64 for 64bit
+		mw64="mingw64"   # mingw32 or mingw64
+	else
+		warch="i686"
+		mw64="mingw32"
+	fi
+	configure="${mw64}-configure"   # mingw32-configure, mingw64-configure
+	strip="${w32}-w64-mingw32-strip"
 	makensis="makensis"	# from mingw32-nsis package
 	# flags for crosscompiled dependency libraries
 	cross_flag=""
@@ -241,9 +254,13 @@ if [ "$DOWIN" = "yes" ]; then
 		# configure for crosscompile, without CAPI because it fails
 		# cross-compilation and it is not used anyway
 		# before 1.0.1i need --cross-compile-prefix=i686-w64-mingw32-
-		sslflags="no-asm -DOPENSSL_NO_CAPIENG mingw"
+		if test "$mw64" = "mingw64"; then
+			sslflags="no-asm -DOPENSSL_NO_CAPIENG mingw64"
+		else
+			sslflags="no-asm -DOPENSSL_NO_CAPIENG mingw"
+		fi
 		info "winssl: Configure $sslflags"
-		CC=i686-w64-mingw32-gcc AR=i686-w64-mingw32-ar RANLIB=i686-w64-mingw32-ranlib ./Configure --prefix="$sslinstall" $sslflags || error_cleanup "OpenSSL Configure failed"
+		CC=${warch}-w64-mingw32-gcc AR=${warch}-w64-mingw32-ar RANLIB=${warch}-w64-mingw32-ranlib ./Configure --prefix="$sslinstall" $sslflags || error_cleanup "OpenSSL Configure failed"
 		info "winssl: make"
 		make || error_cleanup "OpenSSL crosscompile failed"
 		# only install sw not docs, which take a long time.
@@ -260,7 +277,7 @@ if [ "$DOWIN" = "yes" ]; then
 		wxpinstall="`pwd`/wxpinstall"
 		cd expat-* || error_cleanup "no expat-X dir in tarball"
 		info "wxp: configure"
-		mingw32-configure --prefix="$wxpinstall" --exec-prefix="$wxpinstall" --bindir="$wxpinstall/bin" --includedir="$wxpinstall/include" --mandir="$wxpinstall/man" --libdir="$wxpinstall/lib"  || error_cleanup "libexpat configure failed"
+		$configure --prefix="$wxpinstall" --exec-prefix="$wxpinstall" --bindir="$wxpinstall/bin" --includedir="$wxpinstall/include" --mandir="$wxpinstall/man" --libdir="$wxpinstall/lib"  || error_cleanup "libexpat configure failed"
 		#info "wxp: make"
 		#make || error_cleanup "libexpat crosscompile failed"
 		info "wxp: make installlib"
