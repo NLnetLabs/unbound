@@ -1121,8 +1121,9 @@ used access-control element has a matching tag. Tags must be defined in
 tags.
 .TP 5
 .B local\-zone\-override: \fI<zone> <IP netblock> <type>
-Override the localzone type for queries from addresses matching netblock.
-Overrides types configured in both tagged and untagged localzones, and 
+Override the localzone type for queries from addresses matching netblock. 
+Use this localzone type, regardless the type configured for the local-zone
+(both tagged and untagged) and regardless the type configured using
 access\-control\-tag\-action.
 .TP 5
 .B ratelimit: \fI<number or 0>

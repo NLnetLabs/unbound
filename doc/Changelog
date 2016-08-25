@@ -1,4 +1,7 @@
 25 August 2016: Ralph
+	- Clarify local-zone-override entry in unbound.conf.5 
+	
+25 August 2016: Wouter
 	- 64bit build option for makedist windows compile, -w64.
 
 24 August 2016: Ralph
