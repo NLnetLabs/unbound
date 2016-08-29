@@ -1,6 +1,7 @@
 29 August 2016: Ralph
 	- Fix #777: OpenSSL 1.1.0 compatibility, patch from Sebastian A.
 	  Siewior.
+	- Add default root hints for IPv6 E.ROOT-SERVERS.NET, 2001:500:a8::e.
 
 25 August 2016: Ralph
 	- Clarify local-zone-override entry in unbound.conf.5 
