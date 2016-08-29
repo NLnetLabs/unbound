@@ -592,7 +592,7 @@ verify_canonrrset(sldns_buffer* buf, int algo, unsigned char* sigblock,
 		log_err("EVP_MD_CTX_new: malloc failure");
 		EVP_PKEY_free(evp_key);
 		if(dofree) free(sigblock);
-		else if(docrypto_free) CRYPTO_free(sigblock);
+		else if(docrypto_free) OPENSSL_free(sigblock);
 		return sec_status_unchecked;
 	}
 	if(EVP_VerifyInit(ctx, digest_type) == 0) {
@@ -600,7 +600,7 @@ verify_canonrrset(sldns_buffer* buf, int algo, unsigned char* sigblock,
 		EVP_MD_CTX_destroy(ctx);
 		EVP_PKEY_free(evp_key);
 		if(dofree) free(sigblock);
-		else if(docrypto_free) CRYPTO_free(sigblock);
+		else if(docrypto_free) OPENSSL_free(sigblock);
 		return sec_status_unchecked;
 	}
 	if(EVP_VerifyUpdate(ctx, (unsigned char*)sldns_buffer_begin(buf), 
@@ -609,7 +609,7 @@ verify_canonrrset(sldns_buffer* buf, int algo, unsigned char* sigblock,
 		EVP_MD_CTX_destroy(ctx);
 		EVP_PKEY_free(evp_key);
 		if(dofree) free(sigblock);
-		else if(docrypto_free) CRYPTO_free(sigblock);
+		else if(docrypto_free) OPENSSL_free(sigblock);
 		return sec_status_unchecked;
 	}
 
@@ -623,7 +623,7 @@ verify_canonrrset(sldns_buffer* buf, int algo, unsigned char* sigblock,
 	EVP_PKEY_free(evp_key);
 
 	if(dofree) free(sigblock);
-	else if(docrypto_free) CRYPTO_free(sigblock);
+	else if(docrypto_free) OPENSSL_free(sigblock);
 
 	if(res == 1) {
 		return sec_status_secure;

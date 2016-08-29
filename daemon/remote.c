@@ -144,7 +144,7 @@ timeval_divide(struct timeval* avg, const struct timeval* sum, size_t d)
  * (some openssl versions reject DH that is 'too small', eg. 512).
  */
 #ifndef S_SPLINT_S
-DH *get_dh2048()
+static DH *get_dh2048(void)
 {
 	static unsigned char dh2048_p[]={
 		0xE7,0x36,0x28,0x3B,0xE4,0xC3,0x32,0x1C,0x01,0xC3,0x67,0xD6,
@@ -173,14 +173,31 @@ DH *get_dh2048()
 	static unsigned char dh2048_g[]={
 		0x02,
 		};
-	DH *dh;
+	DH *dh = NULL;
+	BIGNUM *p = NULL, *g = NULL;
 
-	if ((dh=DH_new()) == NULL) return(NULL);
-	dh->p=BN_bin2bn(dh2048_p,sizeof(dh2048_p),NULL);
-	dh->g=BN_bin2bn(dh2048_g,sizeof(dh2048_g),NULL);
-	if ((dh->p == NULL) || (dh->g == NULL))
-		{ DH_free(dh); return(NULL); }
-	return(dh);
+	dh = DH_new();
+	p = BN_bin2bn(dh2048_p, sizeof(dh2048_p), NULL);
+	g = BN_bin2bn(dh2048_g, sizeof(dh2048_g), NULL);
+	if (!dh || !p || !g)
+		goto err;
+
+#if OPENSSL_VERSION_NUMBER < 0x10100000
+	dh->p = p;
+	dh->g = g;
+#else
+	if (!DH_set0_pqg(dh, p, NULL, g))
+		goto err;
+#endif
+	return dh;
+err:
+	if (p)
+		BN_free(p);
+	if (g)
+		BN_free(g);
+	if (dh)
+		DH_free(dh);
+	return NULL;
 }
 #endif /* SPLINT */
 
