@@ -773,6 +773,7 @@ deny_refuse(struct comm_point* c, enum acl_access acl,
 		LDNS_QR_SET(sldns_buffer_begin(c->buffer));
 		LDNS_RCODE_SET(sldns_buffer_begin(c->buffer), 
 			LDNS_RCODE_REFUSED);
+		sldns_buffer_set_position(c->buffer, LDNS_HEADER_SIZE);
 		sldns_buffer_flip(c->buffer);
 		return 1;
 	}
