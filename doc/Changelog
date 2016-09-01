@@ -2,6 +2,7 @@
 	- RFC 7958 is now out, updated docs for unbound-anchor.
 	- Fix for compile without warnings with openssl 1.1.0.
 	- Fix #826: Fix refuse_non_local could result in a broken response.
+	- iana portlist update.
 
 29 August 2016: Wouter
 	- Fix #777: OpenSSL 1.1.0 compatibility, patch from Sebastian A.
