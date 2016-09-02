@@ -406,14 +406,14 @@ int main(int argc, char** argv)
 	}
 	if(usessl) {
 		ERR_load_SSL_strings();
-#ifdef HAVE_OPENSSL_ADD_ALL_ALGORITHMS
+#if OPENSSL_VERSION_NUMBER < 0x10100000
 		OpenSSL_add_all_algorithms();
 #else
 		OPENSSL_init_crypto(OPENSSL_INIT_ADD_ALL_CIPHERS
 			| OPENSSL_INIT_ADD_ALL_DIGESTS
 			| OPENSSL_INIT_LOAD_CRYPTO_STRINGS, NULL);
 #endif
-#ifdef HAVE_SSL_LIBRARY_INIT
+#if OPENSSL_VERSION_NUMBER < 0x10100000
 		(void)SSL_library_init();
 #else
 		(void)OPENSSL_init_ssl(0, NULL);
