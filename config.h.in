@@ -51,6 +51,9 @@
 /* Define to 1 if you have the `chroot' function. */
 #undef HAVE_CHROOT
 
+/* Define to 1 if you have the `CRYPTO_cleanup_all_ex_data' function. */
+#undef HAVE_CRYPTO_CLEANUP_ALL_EX_DATA
+
 /* Define to 1 if you have the `ctime_r' function. */
 #undef HAVE_CTIME_R
 
@@ -116,6 +119,12 @@
 /* Define to 1 if you have the `endservent' function. */
 #undef HAVE_ENDSERVENT
 
+/* Define to 1 if you have the `ERR_free_strings' function. */
+#undef HAVE_ERR_FREE_STRINGS
+
+/* Define to 1 if you have the `ERR_load_crypto_strings' function. */
+#undef HAVE_ERR_LOAD_CRYPTO_STRINGS
+
 /* Define to 1 if you have the `event_base_free' function. */
 #undef HAVE_EVENT_BASE_FREE
 
@@ -130,6 +139,9 @@
 
 /* Define to 1 if you have the <event.h> header file. */
 #undef HAVE_EVENT_H
+
+/* Define to 1 if you have the `EVP_cleanup' function. */
+#undef HAVE_EVP_CLEANUP
 
 /* Define to 1 if you have the `EVP_MD_CTX_new' function. */
 #undef HAVE_EVP_MD_CTX_NEW
@@ -263,11 +275,26 @@
 /* Use libnss for crypto */
 #undef HAVE_NSS
 
+/* Define to 1 if you have the `OpenSSL_add_all_algorithms' function. */
+#undef HAVE_OPENSSL_ADD_ALL_ALGORITHMS
+
+/* Define to 1 if you have the `OpenSSL_add_all_digests' function. */
+#undef HAVE_OPENSSL_ADD_ALL_DIGESTS
+
+/* Define to 1 if you have the <openssl/bn.h> header file. */
+#undef HAVE_OPENSSL_BN_H
+
 /* Define to 1 if you have the `OPENSSL_config' function. */
 #undef HAVE_OPENSSL_CONFIG
 
 /* Define to 1 if you have the <openssl/conf.h> header file. */
 #undef HAVE_OPENSSL_CONF_H
+
+/* Define to 1 if you have the <openssl/dh.h> header file. */
+#undef HAVE_OPENSSL_DH_H
+
+/* Define to 1 if you have the <openssl/dsa.h> header file. */
+#undef HAVE_OPENSSL_DSA_H
 
 /* Define to 1 if you have the <openssl/engine.h> header file. */
 #undef HAVE_OPENSSL_ENGINE_H
@@ -277,6 +304,9 @@
 
 /* Define to 1 if you have the <openssl/rand.h> header file. */
 #undef HAVE_OPENSSL_RAND_H
+
+/* Define to 1 if you have the <openssl/rsa.h> header file. */
+#undef HAVE_OPENSSL_RSA_H
 
 /* Define to 1 if you have the <openssl/ssl.h> header file. */
 #undef HAVE_OPENSSL_SSL_H
@@ -301,6 +331,9 @@
 
 /* Define to 1 if you have the `random' function. */
 #undef HAVE_RANDOM
+
+/* Define to 1 if you have the `RAND_cleanup' function. */
+#undef HAVE_RAND_CLEANUP
 
 /* Define to 1 if you have the `reallocarray' function. */
 #undef HAVE_REALLOCARRAY
@@ -358,6 +391,9 @@
 
 /* Define if you have the SSL libraries installed. */
 #undef HAVE_SSL
+
+/* Define to 1 if you have the `SSL_library_init' function. */
+#undef HAVE_SSL_LIBRARY_INIT
 
 /* Define to 1 if you have the <stdarg.h> header file. */
 #undef HAVE_STDARG_H

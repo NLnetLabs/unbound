@@ -634,14 +634,30 @@ int main(int argc, char* argv[])
 #ifdef SIGPIPE
 	(void)signal(SIGPIPE, SIG_IGN);
 #endif
+#ifdef HAVE_ERR_LOAD_CRYPTO_STRINGS
 	ERR_load_crypto_strings();
+#endif
 	ERR_load_SSL_strings();
+#ifdef HAVE_OPENSSL_ADD_ALL_ALGORITHMS
 	OpenSSL_add_all_algorithms();
+#else
+	OPENSSL_init_crypto(OPENSSL_INIT_ADD_ALL_CIPHERS
+		| OPENSSL_INIT_ADD_ALL_DIGESTS
+		| OPENSSL_INIT_LOAD_CRYPTO_STRINGS, NULL);
+#endif
+#ifdef HAVE_SSL_LIBRARY_INIT
 	(void)SSL_library_init();
+#else
+	(void)OPENSSL_init_ssl(0, NULL);
+#endif
 
 	do_service(addr, port, key, cert);
 
+#ifdef HAVE_CRYPTO_CLEANUP_ALL_EX_DATA
 	CRYPTO_cleanup_all_ex_data();
+#endif
+#ifdef HAVE_ERR_FREE_STRINGS
 	ERR_free_strings();
+#endif
 	return 0;
 }

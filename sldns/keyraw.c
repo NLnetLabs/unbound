@@ -23,6 +23,15 @@
 #ifdef HAVE_OPENSSL_ENGINE_H
 #  include <openssl/engine.h>
 #endif
+#ifdef HAVE_OPENSSL_BN_H
+#include <openssl/bn.h>
+#endif
+#ifdef HAVE_OPENSSL_RSA_H
+#include <openssl/rsa.h>
+#endif
+#ifdef HAVE_OPENSSL_DSA_H
+#include <openssl/dsa.h>
+#endif
 #endif /* HAVE_SSL */
 
 size_t

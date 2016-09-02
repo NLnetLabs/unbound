@@ -204,17 +204,29 @@ daemon_init(void)
 	signal_handling_record();
 	checklock_start();
 #ifdef HAVE_SSL
+#  ifdef HAVE_ERR_LOAD_CRYPTO_STRINGS
 	ERR_load_crypto_strings();
+#  endif
 	ERR_load_SSL_strings();
 #  ifdef USE_GOST
 	(void)sldns_key_EVP_load_gost_id();
 #  endif
+#  ifdef HAVE_OPENSSL_ADD_ALL_ALGORITHMS
 	OpenSSL_add_all_algorithms();
+#  else
+	OPENSSL_init_crypto(OPENSSL_INIT_ADD_ALL_CIPHERS
+		| OPENSSL_INIT_ADD_ALL_DIGESTS
+		| OPENSSL_INIT_LOAD_CRYPTO_STRINGS, NULL);
+#  endif
 #  if HAVE_DECL_SSL_COMP_GET_COMPRESSION_METHODS
 	/* grab the COMP method ptr because openssl leaks it */
 	comp_meth = (void*)SSL_COMP_get_compression_methods();
 #  endif
+#  ifdef HAVE_SSL_LIBRARY_INIT
 	(void)SSL_library_init();
+#  else
+	(void)OPENSSL_init_ssl(0, NULL);
+#  endif
 #  if defined(HAVE_SSL) && defined(OPENSSL_THREADS) && !defined(THREADS_DISABLED)
 	if(!ub_openssl_lock_init())
 		fatal_exit("could not init openssl locks");
@@ -657,8 +669,12 @@ daemon_delete(struct daemon* daemon)
 #  endif
 	CONF_modules_free();
 #  endif
+#  ifdef HAVE_CRYPTO_CLEANUP_ALL_EX_DATA
 	CRYPTO_cleanup_all_ex_data(); /* safe, no more threads right now */
+#  endif
+#  ifdef HAVE_ERR_FREE_STRINGS
 	ERR_free_strings();
+#  endif
 #  if OPENSSL_VERSION_NUMBER < 0x10100000
 	RAND_cleanup();
 #  endif

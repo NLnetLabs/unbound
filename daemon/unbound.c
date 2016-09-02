@@ -118,7 +118,11 @@ static void usage()
 	printf("linked libs: %s %s (it uses %s), %s\n", 
 		evnm, evsys, evmethod,
 #ifdef HAVE_SSL
+#  ifdef SSLEAY_VERSION
 		SSLeay_version(SSLEAY_VERSION)
+#  else
+		OpenSSL_version(OPENSSL_VERSION)
+#  endif
 #elif defined(HAVE_NSS)
 		NSS_GetVersion()
 #elif defined(HAVE_NETTLE)

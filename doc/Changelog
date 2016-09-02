@@ -1,3 +1,6 @@
+2 September 2016: Wouter
+	- Fix compile with openssl 1.1.0 with api=1.1.0.
+
 1 September 2016: Wouter
 	- RFC 7958 is now out, updated docs for unbound-anchor.
 	- Fix for compile without warnings with openssl 1.1.0.

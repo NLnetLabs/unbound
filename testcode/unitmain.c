@@ -588,7 +588,9 @@ main(int argc, char* argv[])
 	}
 	printf("Start of %s unit test.\n", PACKAGE_STRING);
 #ifdef HAVE_SSL
+#  ifdef HAVE_ERR_LOAD_CRYPTO_STRINGS
 	ERR_load_crypto_strings();
+#  endif
 #  ifdef USE_GOST
 	(void)sldns_key_EVP_load_gost_id();
 #  endif
@@ -623,13 +625,21 @@ main(int argc, char* argv[])
 	sldns_key_EVP_unload_gost();
 #  endif
 #  ifdef HAVE_OPENSSL_CONFIG
+#  ifdef HAVE_EVP_CLEANUP
 	EVP_cleanup();
+#  endif
 	ENGINE_cleanup();
 	CONF_modules_free();
 #  endif
+#  ifdef HAVE_CRYPTO_CLEANUP_ALL_EX_DATA
 	CRYPTO_cleanup_all_ex_data();
+#  endif
+#  ifdef HAVE_ERR_FREE_STRINGS
 	ERR_free_strings();
+#  endif
+#  ifdef HAVE_RAND_CLEANUP
 	RAND_cleanup();
+#  endif
 #elif defined(HAVE_NSS)
 	if(NSS_Shutdown() != SECSuccess)
 		fatal_exit("could not shutdown NSS");

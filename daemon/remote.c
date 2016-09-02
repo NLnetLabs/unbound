@@ -46,8 +46,11 @@
 #ifdef HAVE_OPENSSL_ERR_H
 #include <openssl/err.h>
 #endif
-#ifndef HEADER_DH_H
+#ifdef HAVE_OPENSSL_DH_H
 #include <openssl/dh.h>
+#endif
+#ifdef HAVE_OPENSSL_BN_H
+#include <openssl/bn.h>
 #endif
 
 #include <ctype.h>
