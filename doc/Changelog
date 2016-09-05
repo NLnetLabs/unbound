@@ -1,3 +1,7 @@
+5 September 2016: Ralph
+	- Take configured minimum TTL into consideration when reducing TTL
+	  to original TTL from RRSIG.
+
 5 September 2016: Wouter
 	- Fix #829: doc of sldns_wire2str_rdata_buf() return value has an
 	  off-by-one typo, from Jinmei Tatuya (Infoblox).
