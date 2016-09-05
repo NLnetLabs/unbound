@@ -1,6 +1,7 @@
 5 September 2016: Wouter
 	- Fix #829: doc of sldns_wire2str_rdata_buf() return value has an
 	  off-by-one typo, from Jinmei Tatuya (Infoblox).
+	- Fix incomplete prototypes reported by Dag-Erling Smørgrav.
 
 2 September 2016: Wouter
 	- Fix compile with openssl 1.1.0 with api=1.1.0.

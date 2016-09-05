@@ -72,7 +72,7 @@
 
 /** Give checkconf usage, and exit (1). */
 static void
-usage()
+usage(void)
 {
 	printf("Usage:	unbound-checkconf [file]\n");
 	printf("	Checks unbound configuration file for errors.\n");

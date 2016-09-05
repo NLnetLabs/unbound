@@ -172,7 +172,7 @@ struct ip_list {
 
 /** Give unbound-anchor usage, and exit (1). */
 static void
-usage()
+usage(void)
 {
 	printf("Usage:	unbound-anchor [opts]\n");
 	printf("	Setup or update root anchor. "

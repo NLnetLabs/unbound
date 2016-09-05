@@ -147,7 +147,7 @@ struct my_event {
 #define AS_MY_EVENT_BASE(x) ((struct my_event_base*)x)
 #define AS_MY_EVENT(x) ((struct my_event*)x)
 
-const char* ub_event_get_version()
+const char* ub_event_get_version(void)
 {
 	return "pluggable-event"PACKAGE_VERSION;
 }

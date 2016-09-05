@@ -93,7 +93,7 @@ void* unbound_start_brk = 0;
 #endif
 
 /** print usage. */
-static void usage()
+static void usage(void)
 {
 	const char** m;
 	const char *evnm="event", *evsys="", *evmethod="";

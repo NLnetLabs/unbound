@@ -65,7 +65,7 @@
 
 /** Give unbound-control usage, and exit (1). */
 static void
-usage()
+usage(void)
 {
 	printf("Usage:	unbound-control [options] command\n");
 	printf("	Remote control utility for unbound server.\n");

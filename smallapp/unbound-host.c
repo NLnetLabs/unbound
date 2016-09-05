@@ -72,7 +72,7 @@ static int verb = 0;
 
 /** Give unbound-host usage, and exit (1). */
 static void
-usage()
+usage(void)
 {
 	printf("Usage:	unbound-host [-vdhr46] [-c class] [-t type] hostname\n");
 	printf("                     [-y key] [-f keyfile] [-F namedkeyfile]\n");

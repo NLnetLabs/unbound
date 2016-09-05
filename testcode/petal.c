@@ -70,7 +70,7 @@ static int verb = 0;
 
 /** Give petal usage, and exit (1). */
 static void
-usage()
+usage(void)
 {
 	printf("Usage:	petal [opts]\n");
 	printf("	https daemon serves files from ./'host'/filename\n");

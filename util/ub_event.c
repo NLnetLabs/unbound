@@ -137,7 +137,7 @@ static void (*NATIVE_BITS_CB(void (*cb)(int, short, void*)))(int, short, void*)
 #define AS_EVENT(x) ((struct event*)x)
 #define AS_UB_EVENT(x) ((struct ub_event*)x)
 
-const char* ub_event_get_version()
+const char* ub_event_get_version(void)
 {
 	return event_get_version();
 }
