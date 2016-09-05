@@ -6,6 +6,8 @@
 	- Fix #829: doc of sldns_wire2str_rdata_buf() return value has an
 	  off-by-one typo, from Jinmei Tatuya (Infoblox).
 	- Fix incomplete prototypes reported by Dag-Erling Smørgrav.
+	- Fix #828: missing type in access-control-tag-action redirect results
+	  in NXDOMAIN.
 
 2 September 2016: Wouter
 	- Fix compile with openssl 1.1.0 with api=1.1.0.

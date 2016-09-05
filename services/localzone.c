@@ -1351,7 +1351,8 @@ lz_zone_answer(struct local_zone* z, struct query_info* qinfo,
 		 * or using closest match for NSEC.
 		 * or using closest match for returning delegation downwards
 		 */
-		int rcode = ld?LDNS_RCODE_NOERROR:LDNS_RCODE_NXDOMAIN;
+		int rcode = (ld || lz_type == local_zone_redirect)?
+			LDNS_RCODE_NOERROR:LDNS_RCODE_NXDOMAIN;
 		if(z->soa)
 			return local_encode(qinfo, edns, buf, temp, 
 				z->soa, 0, rcode);
