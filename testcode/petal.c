@@ -429,6 +429,7 @@ static void
 provide_file_chunked(SSL* ssl, char* fname)
 {
 	char buf[16384];
+	char* tmpbuf = NULL;
 	char* at = buf;
 	size_t avail = sizeof(buf);
 	size_t r;
@@ -471,9 +472,13 @@ provide_file_chunked(SSL* ssl, char* fname)
 	}
 
 	do {
-		char tmpbuf[sizeof(buf)];
+		size_t red;
+		free(tmpbuf);
+		tmpbuf = malloc(avail-16);
+		if(!tmpbuf)
+			break;
 		/* read chunk; space-16 for xxxxCRLF..CRLF0CRLFCRLF (3 spare)*/
-		size_t red = in?fread(tmpbuf, 1, avail-16, in):0;
+		red = in?fread(tmpbuf, 1, avail-16, in):0;
 		/* prepare chunk */
 		snprintf(at, avail, "%x\r\n", (unsigned)red);
 		r = strlen(at);
@@ -514,6 +519,7 @@ provide_file_chunked(SSL* ssl, char* fname)
 		avail = sizeof(buf);
 	} while(in && !feof(in) && !ferror(in));
 
+	free(tmpbuf);
 	if(in) fclose(in);
 }
 

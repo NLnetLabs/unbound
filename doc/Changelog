@@ -1,3 +1,6 @@
+9 September 2016: Wouter
+	- Fix #831: workaround for spurious fread_chk warning against petal.c
+
 5 September 2016: Ralph
 	- Take configured minimum TTL into consideration when reducing TTL
 	  to original TTL from RRSIG.
