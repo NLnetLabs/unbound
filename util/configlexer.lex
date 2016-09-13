@@ -7,6 +7,10 @@
  * See LICENSE for the license.
  *
  */
+
+/* because flex keeps having sign-unsigned compare problems that are unfixed*/
+#pragma GCC diagnostic ignored "-Wsign-compare"
+
 #include <ctype.h>
 #include <string.h>
 #include <strings.h>

@@ -1,3 +1,7 @@
+13 September 2016: Wouter
+	- Silenced flex-generated sign-unsigned warning print with gcc
+	  diagnostic pragma.
+
 9 September 2016: Wouter
 	- Fix #831: workaround for spurious fread_chk warning against petal.c
 
