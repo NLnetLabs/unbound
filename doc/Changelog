@@ -1,6 +1,7 @@
 13 September 2016: Wouter
 	- Silenced flex-generated sign-unsigned warning print with gcc
 	  diagnostic pragma.
+	- Fix for new splint on FreeBSD.  Fix cast for sockaddr_un.sun_len.
 
 9 September 2016: Wouter
 	- Fix #831: workaround for spurious fread_chk warning against petal.c

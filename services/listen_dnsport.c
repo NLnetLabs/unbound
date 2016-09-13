@@ -704,7 +704,7 @@ create_local_accept_sock(const char *path, int* noproto)
 	verbose(VERB_ALGO, "creating unix socket %s", path);
 #ifdef HAVE_STRUCT_SOCKADDR_UN_SUN_LEN
 	/* this member exists on BSDs, not Linux */
-	usock.sun_len = (socklen_t)sizeof(usock);
+	usock.sun_len = (unsigned char)sizeof(usock);
 #endif
 	usock.sun_family = AF_LOCAL;
 	/* length is 92-108, 104 on FreeBSD */
