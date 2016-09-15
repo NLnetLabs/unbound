@@ -430,6 +430,8 @@ find_add_tp(struct val_anchors* anchors, uint8_t* rr, size_t rr_len,
 	}
 	tp = autr_tp_create(anchors, rr, dname_len, sldns_wirerr_get_class(rr,
 		rr_len, dname_len));
+	if(!tp)	
+		return NULL;
 	lock_basic_lock(&tp->lock);
 	return tp;
 }

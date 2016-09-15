@@ -245,6 +245,7 @@ daemon_remote_create(struct config_file* cfg)
 		/* No certificates are requested */
 		if(!SSL_CTX_set_cipher_list(rc->ctx, "aNULL")) {
 			log_crypto_err("Failed to set aNULL cipher list");
+			daemon_remote_delete(rc);
 			return NULL;
 		}
 
@@ -253,6 +254,7 @@ daemon_remote_create(struct config_file* cfg)
 		 */
 		if(!SSL_CTX_set_tmp_dh(rc->ctx,get_dh2048())) {
 			log_crypto_err("Wanted to set DH param, but failed");
+			daemon_remote_delete(rc);
 			return NULL;
 		}
 		return rc;
