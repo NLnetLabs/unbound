@@ -1,3 +1,6 @@
+15 September 2016: Wouter
+	- Fix 883: error for duplicate local zone entry.
+
 15 September 2016: Ralph
 	- fix potential memory leak in daemon/remote.c and nullpointer
 	  dereference in validator/autotrust.
