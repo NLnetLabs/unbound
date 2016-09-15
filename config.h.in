@@ -299,6 +299,12 @@
 /* Define to 1 if you have the <openssl/err.h> header file. */
 #undef HAVE_OPENSSL_ERR_H
 
+/* Define to 1 if you have the `OPENSSL_init_crypto' function. */
+#undef HAVE_OPENSSL_INIT_CRYPTO
+
+/* Define to 1 if you have the `OPENSSL_init_ssl' function. */
+#undef HAVE_OPENSSL_INIT_SSL
+
 /* Define to 1 if you have the <openssl/rand.h> header file. */
 #undef HAVE_OPENSSL_RAND_H
 

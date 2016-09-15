@@ -211,7 +211,7 @@ daemon_init(void)
 #  ifdef USE_GOST
 	(void)sldns_key_EVP_load_gost_id();
 #  endif
-#  if OPENSSL_VERSION_NUMBER < 0x10100000
+#  if OPENSSL_VERSION_NUMBER < 0x10100000 || !defined(HAVE_OPENSSL_INIT_CRYPTO)
 	OpenSSL_add_all_algorithms();
 #  else
 	OPENSSL_init_crypto(OPENSSL_INIT_ADD_ALL_CIPHERS
@@ -222,7 +222,7 @@ daemon_init(void)
 	/* grab the COMP method ptr because openssl leaks it */
 	comp_meth = (void*)SSL_COMP_get_compression_methods();
 #  endif
-#  if OPENSSL_VERSION_NUMBER < 0x10100000
+#  if OPENSSL_VERSION_NUMBER < 0x10100000 || !defined(HAVE_OPENSSL_INIT_SSL)
 	(void)SSL_library_init();
 #  else
 	(void)OPENSSL_init_ssl(0, NULL);
