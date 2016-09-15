@@ -1,6 +1,7 @@
 15 September 2016: Ralph
 	- fix potential memory leak in daemon/remote.c and nullpointer
 	  dereference in validator/autotrust.
+	- iana portlist update.
 
 13 September 2016: Wouter
 	- Silenced flex-generated sign-unsigned warning print with gcc
