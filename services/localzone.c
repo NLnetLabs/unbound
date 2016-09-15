@@ -184,10 +184,10 @@ lz_enter_zone_dname(struct local_zones* zones, uint8_t* nm, size_t len,
 		log_warn("duplicate local-zone");
 		lock_rw_unlock(&z->lock);
 		local_zone_delete(z);
-		lock_rw_unlock(&zones->lock);
 		/* find the correct zone, so not an error for duplicate */
 		z = local_zones_find(zones, nm, len, labs, c);
 		lock_rw_wrlock(&z->lock);
+		lock_rw_unlock(&zones->lock);
 		return z;
 	}
 	lock_rw_unlock(&zones->lock);
