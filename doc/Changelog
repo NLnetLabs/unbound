@@ -1,3 +1,6 @@
+20 September 2016: Wouter
+	- iana portlist update.
+
 15 September 2016: Wouter
 	- Fix 883: error for duplicate local zone entry.
 	- Test for openssl init_crypto and init_ssl functions.
