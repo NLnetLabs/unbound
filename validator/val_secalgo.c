@@ -1361,6 +1361,7 @@ dnskey_algo_id_is_supported(int id)
 	}
 }
 
+#ifdef USE_DSA
 static char *
 _verify_nettle_dsa(sldns_buffer* buf, unsigned char* sigblock,
 	unsigned int sigblock_len, unsigned char* key, unsigned int keylen)
@@ -1448,6 +1449,7 @@ _verify_nettle_dsa(sldns_buffer* buf, unsigned char* sigblock,
 	else
 		return NULL;
 }
+#endif /* USE_DSA */
 
 static char *
 _verify_nettle_rsa(sldns_buffer* buf, unsigned int digest_size, char* sigblock,
