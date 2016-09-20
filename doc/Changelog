@@ -1,6 +1,7 @@
 20 September 2016: Wouter
 	- iana portlist update.
 	- Fix #835: fix --disable-dsa with nettle verify.
+	- tag for 1.5.10rc1 release.
 
 15 September 2016: Wouter
 	- Fix 883: error for duplicate local zone entry.
