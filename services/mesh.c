@@ -878,6 +878,8 @@ mesh_send_reply(struct mesh_state* m, int rcode, struct reply_info* rep,
 		comm_point_send_reply(&r->query_reply);
 	} else if(rcode) {
 		m->s.qinfo.qname = r->qname;
+		if(!edns_opt_inplace_reply(&r->edns, m->s.region))
+			r->edns.opt_list = NULL;
 		error_encode(r->query_reply.c->buffer, rcode, &m->s.qinfo,
 			r->qid, r->qflags, &r->edns);
 		comm_point_send_reply(&r->query_reply);

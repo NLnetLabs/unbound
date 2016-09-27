@@ -3,6 +3,7 @@
 	- trunk contains 1.5.11 in development.
 	- Fix dnstap relaying "random" messages instead of resolver/forwarder
 	  responses, from Nikolay Edigaryev.
+	- Fix #836: unbound could echo back EDNS options in an error response.
 
 20 September 2016: Wouter
 	- iana portlist update.
