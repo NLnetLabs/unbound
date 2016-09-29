@@ -150,7 +150,7 @@ get_state ( ) {
 			fi
 		done
 		# try to get it
-		echo $$ >$lock
+		if echo $$ >$lock ; then : ; else break; fi
 	done
 	# do not refetch if the file exists and only LEE seconds old
 	if test -f $state; then
