@@ -53,6 +53,10 @@
 #include "util/data/msgparse.h"
 #include "util/as112.h"
 
+/* maximum RRs in an RRset, to cap possible 'endless' list RRs.
+ * with 16 bytes for an A record, a 64K packet has about 4000 max */
+#define LOCALZONE_RRSET_COUNT_MAX 4096
+
 struct local_zones* 
 local_zones_create(void)
 {
@@ -342,13 +346,18 @@ new_local_rrset(struct regional* region, struct local_data* node,
 /** insert RR into RRset data structure; Wastes a couple of bytes */
 static int
 insert_rr(struct regional* region, struct packed_rrset_data* pd,
-	uint8_t* rdata, size_t rdata_len, time_t ttl)
+	uint8_t* rdata, size_t rdata_len, time_t ttl, const char* rrstr)
 {
 	size_t* oldlen = pd->rr_len;
 	time_t* oldttl = pd->rr_ttl;
 	uint8_t** olddata = pd->rr_data;
 
 	/* add RR to rrset */
+	if(pd->count > LOCALZONE_RRSET_COUNT_MAX) {
+		log_warn("RRset '%s' has more than %d records, record ignored",
+			rrstr, LOCALZONE_RRSET_COUNT_MAX);
+		return 1;
+	}
 	pd->count++;
 	pd->rr_len = regional_alloc(region, sizeof(*pd->rr_len)*pd->count);
 	pd->rr_ttl = regional_alloc(region, sizeof(*pd->rr_ttl)*pd->count);
@@ -479,7 +488,7 @@ lz_enter_rr_into_zone(struct local_zone* z, const char* rrstr)
 		verbose(VERB_ALGO, "ignoring duplicate RR: %s", rrstr);
 		return 1;
 	} 
-	return insert_rr(z->region, pd, rdata, rdata_len, ttl);
+	return insert_rr(z->region, pd, rdata, rdata_len, ttl, rrstr);
 }
 
 /** enter a data RR into auth data; a zone for it must exist */
