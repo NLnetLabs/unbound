@@ -486,7 +486,7 @@ check_hints(struct config_file* cfg)
 static void
 checkconf(const char* cfgfile, const char* opt, int final)
 {
-	char oldwd[PATH_MAX];
+	char oldwd[4096];
 	struct config_file* cfg = config_create();
 	if(!cfg)
 		fatal_exit("out of memory");

@@ -1,3 +1,6 @@
+29 September 2016: Wouter
+	- Fix #838: 1.5.10 cannot be built on Solaris, undefined PATH_MAX.
+
 27 September 2016: Wouter
 	- tag for 1.5.10 release
 	- trunk contains 1.5.11 in development.
