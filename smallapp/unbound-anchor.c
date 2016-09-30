@@ -420,7 +420,7 @@ read_builtin_cert(void)
 {
 	const char* builtin_cert = get_builtin_cert();
 	STACK_OF(X509)* sk;
-	BIO *bio = BIO_new_mem_buf((void*)builtin_cert,
+	BIO *bio = BIO_new_mem_buf(builtin_cert,
 		(int)strlen(builtin_cert));
 	if(!bio) {
 		if(verb) printf("out of memory\n");

@@ -1,3 +1,6 @@
+30 September 2016: Wouter
+	- Fix Nits for 1.5.10 reported by Dag-Erling Smorgrav.
+
 29 September 2016: Wouter
 	- Fix #838: 1.5.10 cannot be built on Solaris, undefined PATH_MAX.
 	- Fix #839: Memory grows unexpectedly with large RPZ files.

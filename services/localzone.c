@@ -1411,7 +1411,7 @@ lz_inform_print(struct local_zone* z, struct query_info* qinfo,
 	log_nametypeclass(0, txt, qinfo->qname, qinfo->qtype, qinfo->qclass);
 }
 
-enum localzone_type
+static enum localzone_type
 lz_type(uint8_t *taglist, size_t taglen, uint8_t *taglist2, size_t taglen2,
 	uint8_t *tagactions, size_t tagactionssize, enum localzone_type lzt,
 	struct comm_reply* repinfo, struct rbtree_t* override_tree, int* tag,
