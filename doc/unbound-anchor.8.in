@@ -67,7 +67,7 @@ List the builtin root key and builtin root update certificate on stdout.
 .B \-u \fIname
 The server name, it connects to https://name.  Specify without https:// prefix.
 The default is "data.iana.org".  It connects to the port specified with \-P.
-You can pass an IPv4 addres or IPv6 address (no brackets) if you want.
+You can pass an IPv4 address or IPv6 address (no brackets) if you want.
 .TP
 .B \-x \fIpath
 The pathname to the root\-anchors.xml file on the server. (forms URL with \-u).
