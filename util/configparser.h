@@ -1,8 +1,8 @@
-/* A Bison parser, made by GNU Bison 3.0.4.  */
+/* A Bison parser, made by GNU Bison 3.0.2.  */
 
 /* Bison interface for Yacc-like parsers in C
 
-   Copyright (C) 1984, 1989-1990, 2000-2015 Free Software Foundation, Inc.
+   Copyright (C) 1984, 1989-1990, 2000-2013 Free Software Foundation, Inc.
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -216,7 +216,10 @@ extern int yydebug;
     VAR_ACCESS_CONTROL_TAG = 426,
     VAR_LOCAL_ZONE_OVERRIDE = 427,
     VAR_ACCESS_CONTROL_TAG_ACTION = 428,
-    VAR_ACCESS_CONTROL_TAG_DATA = 429
+    VAR_ACCESS_CONTROL_TAG_DATA = 429,
+    VAR_VIEW = 430,
+    VAR_ACCESS_CONTROL_VIEW = 431,
+    VAR_VIEW_FIRST = 432
   };
 #endif
 /* Tokens.  */
@@ -392,20 +395,21 @@ extern int yydebug;
 #define VAR_LOCAL_ZONE_OVERRIDE 427
 #define VAR_ACCESS_CONTROL_TAG_ACTION 428
 #define VAR_ACCESS_CONTROL_TAG_DATA 429
+#define VAR_VIEW 430
+#define VAR_ACCESS_CONTROL_VIEW 431
+#define VAR_VIEW_FIRST 432
 
 /* Value type.  */
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
-
+typedef union YYSTYPE YYSTYPE;
 union YYSTYPE
 {
 #line 64 "./util/configparser.y" /* yacc.c:1909  */
 
 	char*	str;
 
-#line 406 "util/configparser.h" /* yacc.c:1909  */
+#line 412 "util/configparser.h" /* yacc.c:1909  */
 };
-
-typedef union YYSTYPE YYSTYPE;
 # define YYSTYPE_IS_TRIVIAL 1
 # define YYSTYPE_IS_DECLARED 1
 #endif

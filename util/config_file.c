@@ -512,7 +512,7 @@ int config_set_option(struct config_file* cfg, const char* opt,
 		 * forward-first, stub-first,
 		 * forward-zone, name, forward-addr, forward-host,
 		 * ratelimit-for-domain, ratelimit-below-domain,
-		 * local-zone-tag */
+		 * local-zone-tag, access-control-view */
 		return 0;
 	}
 	return 1;
@@ -797,6 +797,7 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_LS3(opt, "local-zone-override", local_zone_overrides)
 	else O_LS3(opt, "access-control-tag-action", acl_tag_actions)
 	else O_LS3(opt, "access-control-tag-data", acl_tag_datas)
+	else O_LS2(opt, "access-control-view", acl_view)
 	/* not here:
 	 * outgoing-permit, outgoing-avoid - have list of ports
 	 * local-zone - zones and nodefault variables
@@ -983,6 +984,25 @@ config_delstubs(struct config_stub* p)
 	}
 }
 
+void
+config_delview(struct config_view* p)
+{
+	if(!p) return;
+	free(p->name);
+	config_deldblstrlist(p->local_zones);
+	free(p);
+}
+
+void
+config_delviews(struct config_view* p)
+{
+	struct config_view* np;
+	while(p) {
+		np = p->next;
+		config_delview(p);
+		p = np;
+	}
+}
 /** delete string array */
 static void
 config_del_strarray(char** array, int num)

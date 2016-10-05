@@ -230,6 +230,9 @@ server:
 	# set redirect data for particular tag for access control element
 	# access-control-tag-data: 192.0.2.0/24 tag2 "A 127.0.0.1"
 
+	# Set view for access control element
+	# access-control-view: 192.0.2.0/24 viewname
+
 	# if given, a chroot(2) is done to the given directory.
 	# i.e. you can chroot to the working directory, for example,
 	# for extra security, but make sure all files are in that directory.
@@ -718,3 +721,19 @@ remote-control:
 # forward-zone:
 # 	name: "example.org"
 # 	forward-host: fwd.example.com
+
+# Views
+# Create named views. Name must be unique. Map views to requests using
+# the access-control-view option. Views can contain zero or more local-zone
+# and local-data options. Options from matching views will override global
+# options. Global options will be used if no matching view is found.
+# With view-first yes, it will try to answer using the global local-zone and
+# local-data elements if there is no view specific match. 
+# view:
+#	name: "viewname"
+#	local-zone: "example.com" redirect
+#	local-data: "example.com A 192.0.2.3"
+#	view-first: no
+# view:
+#	name: "anotherview"
+#	local-zone: "example.com" refuse

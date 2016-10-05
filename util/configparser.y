@@ -128,12 +128,14 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_QNAME_MINIMISATION VAR_IP_FREEBIND VAR_DEFINE_TAG VAR_LOCAL_ZONE_TAG
 %token VAR_ACCESS_CONTROL_TAG VAR_LOCAL_ZONE_OVERRIDE
 %token VAR_ACCESS_CONTROL_TAG_ACTION VAR_ACCESS_CONTROL_TAG_DATA
+%token VAR_VIEW VAR_ACCESS_CONTROL_VIEW VAR_VIEW_FIRST
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
 toplevelvar: serverstart contents_server | stubstart contents_stub |
 	forwardstart contents_forward | pythonstart contents_py | 
-	rcstart contents_rc | dtstart contents_dt
+	rcstart contents_rc | dtstart contents_dt | viewstart 
+	contents_view
 	;
 
 /* server: declaration */
@@ -199,7 +201,7 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_ip_freebind | server_define_tag | server_local_zone_tag |
 	server_disable_dnssec_lame_check | server_access_control_tag |
 	server_local_zone_override | server_access_control_tag_action |
-	server_access_control_tag_data
+	server_access_control_tag_data | server_access_control_view
 	;
 stubstart: VAR_STUB_ZONE
 	{
@@ -232,6 +234,24 @@ forwardstart: VAR_FORWARD_ZONE
 contents_forward: contents_forward content_forward 
 	| ;
 content_forward: forward_name | forward_host | forward_addr | forward_first
+	;
+viewstart: VAR_VIEW
+	{
+		struct config_view* s;
+		OUTYY(("\nP(view:)\n")); 
+		s = (struct config_view*)calloc(1, sizeof(struct config_view));
+		if(s) {
+			s->next = cfg_parser->cfg->views;
+			if(s->next && !s->next->name)
+				yyerror("view without name");
+			cfg_parser->cfg->views = s;
+		} else 
+			yyerror("out of memory");
+	}
+	;
+contents_view: contents_view content_view 
+	| ;
+content_view: view_name | view_local_zone | view_local_data | view_first
 	;
 server_num_threads: VAR_NUM_THREADS STRING_ARG 
 	{ 
@@ -1422,6 +1442,17 @@ server_local_zone_override: VAR_LOCAL_ZONE_OVERRIDE STRING_ARG STRING_ARG STRING
 		}
 	}
 	;
+server_access_control_view: VAR_ACCESS_CONTROL_VIEW STRING_ARG STRING_ARG
+	{
+		OUTYY(("P(server_access_control_view:%s %s)\n", $2, $3));
+		if(!cfg_str2list_insert(&cfg_parser->cfg->acl_view,
+			$2, $3)) {
+			yyerror("out of memory");
+			free($2);
+			free($3);
+		}
+	}
+	;
 server_ratelimit: VAR_RATELIMIT STRING_ARG 
 	{ 
 		OUTYY(("P(server_ratelimit:%s)\n", $2)); 
@@ -1570,6 +1601,63 @@ forward_first: VAR_FORWARD_FIRST STRING_ARG
 		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
 			yyerror("expected yes or no.");
 		else cfg_parser->cfg->forwards->isfirst=(strcmp($2, "yes")==0);
+		free($2);
+	}
+	;
+view_name: VAR_NAME STRING_ARG
+	{
+		OUTYY(("P(name:%s)\n", $2));
+		if(cfg_parser->cfg->views->name)
+			yyerror("view name override, there must be one "
+				"name for one view");
+		free(cfg_parser->cfg->views->name);
+		cfg_parser->cfg->views->name = $2;
+	}
+	;
+view_local_zone: VAR_LOCAL_ZONE STRING_ARG STRING_ARG
+	{
+		OUTYY(("P(view_local_zone:%s %s)\n", $2, $3));
+		if(strcmp($3, "static")!=0 && strcmp($3, "deny")!=0 &&
+		   strcmp($3, "refuse")!=0 && strcmp($3, "redirect")!=0 &&
+		   strcmp($3, "transparent")!=0 && strcmp($3, "nodefault")!=0
+		   && strcmp($3, "typetransparent")!=0
+		   && strcmp($3, "always_transparent")!=0
+		   && strcmp($3, "always_refuse")!=0
+		   && strcmp($3, "always_nxdomain")!=0
+		   && strcmp($3, "inform")!=0 && strcmp($3, "inform_deny")!=0)
+			yyerror("local-zone type: expected static, deny, "
+				"refuse, redirect, transparent, "
+				"typetransparent, inform, inform_deny, "
+				"always_transparent, always_refuse, "
+				"always_nxdomain or nodefault");
+		else if(strcmp($3, "nodefault")==0) {
+			if(!cfg_strlist_insert(&cfg_parser->cfg->views->
+				local_zones_nodefault, $2))
+				fatal_exit("out of memory adding local-zone");
+			free($3);
+		} else {
+			if(!cfg_str2list_insert(
+				&cfg_parser->cfg->views->local_zones, 
+				$2, $3))
+				fatal_exit("out of memory adding local-zone");
+		}
+	}
+	;
+view_local_data: VAR_LOCAL_DATA STRING_ARG
+	{
+		OUTYY(("P(view_local_data:%s)\n", $2));
+		if(!cfg_strlist_insert(&cfg_parser->cfg->views->local_data, $2)) {
+			fatal_exit("out of memory adding local-data");
+			free($2);
+		}
+	}
+	;
+view_first: VAR_VIEW_FIRST STRING_ARG
+	{
+		OUTYY(("P(view-first:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else cfg_parser->cfg->views->isfirst=(strcmp($2, "yes")==0);
 		free($2);
 	}
 	;

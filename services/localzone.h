@@ -44,6 +44,7 @@
 #include "util/rbtree.h"
 #include "util/locks.h"
 #include "util/storage/dnstree.h"
+#include "services/view.h"
 struct ub_packed_rrset_key;
 struct regional;
 struct config_file;
@@ -277,6 +278,7 @@ void local_zones_print(struct local_zones* zones);
  * @param tag_datas_size: size of tag_datas array.
  * @param tagname: array of tag name strings (for debug output).
  * @param num_tags: number of items in tagname array.
+ * @param view: answer using this view. May be NULL.
  * @return true if answer is in buffer. false if query is not answered 
  * by authority data. If the reply should be dropped altogether, the return 
  * value is true, but the buffer is cleared (empty).
@@ -286,7 +288,7 @@ int local_zones_answer(struct local_zones* zones, struct query_info* qinfo,
 	struct comm_reply* repinfo, uint8_t* taglist, size_t taglen,
 	uint8_t* tagactions, size_t tagactionssize,
 	struct config_strlist** tag_datas, size_t tag_datas_size,
-	char** tagname, int num_tags);
+	char** tagname, int num_tags, struct view* view);
 
 /**
  * Parse the string into localzone type.

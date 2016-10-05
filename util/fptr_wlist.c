@@ -51,6 +51,7 @@
 #include "services/localzone.h"
 #include "services/cache/infra.h"
 #include "services/cache/rrset.h"
+#include "services/view.h"
 #include "dns64/dns64.h"
 #include "iterator/iterator.h"
 #include "iterator/iter_fwd.h"
@@ -203,6 +204,7 @@ fptr_whitelist_rbtree_cmp(int (*fptr) (const void *, const void *))
 	else if(fptr == &val_neg_zone_compare) return 1;
 	else if(fptr == &probetree_cmp) return 1;
 	else if(fptr == &replay_var_compare) return 1;
+	else if(fptr == &view_cmp) return 1;
 	return 0;
 }
 

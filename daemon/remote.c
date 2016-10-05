@@ -1124,7 +1124,7 @@ find_arg2(SSL* ssl, char* arg, char** arg2)
 
 /** Add a new zone */
 static void
-do_zone_add(SSL* ssl, struct worker* worker, char* arg)
+do_zone_add(SSL* ssl, struct local_zones* zones, char* arg)
 {
 	uint8_t* nm;
 	int nmlabs;
@@ -1141,31 +1141,31 @@ do_zone_add(SSL* ssl, struct worker* worker, char* arg)
 		free(nm);
 		return;
 	}
-	lock_rw_wrlock(&worker->daemon->local_zones->lock);
-	if((z=local_zones_find(worker->daemon->local_zones, nm, nmlen, 
+	lock_rw_wrlock(&zones->lock);
+	if((z=local_zones_find(zones, nm, nmlen, 
 		nmlabs, LDNS_RR_CLASS_IN))) {
 		/* already present in tree */
 		lock_rw_wrlock(&z->lock);
 		z->type = t; /* update type anyway */
 		lock_rw_unlock(&z->lock);
 		free(nm);
-		lock_rw_unlock(&worker->daemon->local_zones->lock);
+		lock_rw_unlock(&zones->lock);
 		send_ok(ssl);
 		return;
 	}
-	if(!local_zones_add_zone(worker->daemon->local_zones, nm, nmlen, 
+	if(!local_zones_add_zone(zones, nm, nmlen, 
 		nmlabs, LDNS_RR_CLASS_IN, t)) {
-		lock_rw_unlock(&worker->daemon->local_zones->lock);
+		lock_rw_unlock(&zones->lock);
 		ssl_printf(ssl, "error out of memory\n");
 		return;
 	}
-	lock_rw_unlock(&worker->daemon->local_zones->lock);
+	lock_rw_unlock(&zones->lock);
 	send_ok(ssl);
 }
 
 /** Remove a zone */
 static void
-do_zone_remove(SSL* ssl, struct worker* worker, char* arg)
+do_zone_remove(SSL* ssl, struct local_zones* zones, char* arg)
 {
 	uint8_t* nm;
 	int nmlabs;
@@ -1173,22 +1173,22 @@ do_zone_remove(SSL* ssl, struct worker* worker, char* arg)
 	struct local_zone* z;
 	if(!parse_arg_name(ssl, arg, &nm, &nmlen, &nmlabs))
 		return;
-	lock_rw_wrlock(&worker->daemon->local_zones->lock);
-	if((z=local_zones_find(worker->daemon->local_zones, nm, nmlen, 
+	lock_rw_wrlock(&zones->lock);
+	if((z=local_zones_find(zones, nm, nmlen, 
 		nmlabs, LDNS_RR_CLASS_IN))) {
 		/* present in tree */
-		local_zones_del_zone(worker->daemon->local_zones, z);
+		local_zones_del_zone(zones, z);
 	}
-	lock_rw_unlock(&worker->daemon->local_zones->lock);
+	lock_rw_unlock(&zones->lock);
 	free(nm);
 	send_ok(ssl);
 }
 
 /** Add new RR data */
 static void
-do_data_add(SSL* ssl, struct worker* worker, char* arg)
+do_data_add(SSL* ssl, struct local_zones* zones, char* arg)
 {
-	if(!local_zones_add_RR(worker->daemon->local_zones, arg)) {
+	if(!local_zones_add_RR(zones, arg)) {
 		ssl_printf(ssl,"error in syntax or out of memory, %s\n", arg);
 		return;
 	}
@@ -1197,17 +1197,89 @@ do_data_add(SSL* ssl, struct worker* worker, char* arg)
 
 /** Remove RR data */
 static void
-do_data_remove(SSL* ssl, struct worker* worker, char* arg)
+do_data_remove(SSL* ssl, struct local_zones* zones, char* arg)
 {
 	uint8_t* nm;
 	int nmlabs;
 	size_t nmlen;
 	if(!parse_arg_name(ssl, arg, &nm, &nmlen, &nmlabs))
 		return;
-	local_zones_del_data(worker->daemon->local_zones, nm,
+	local_zones_del_data(zones, nm,
 		nmlen, nmlabs, LDNS_RR_CLASS_IN);
 	free(nm);
 	send_ok(ssl);
+}
+
+/** Add a new zone to view */
+static void
+do_view_zone_add(SSL* ssl, struct worker* worker, char* arg)
+{
+	char* arg2;
+	struct view* v;
+	if(!find_arg2(ssl, arg, &arg2))
+		return;
+	v = views_find_view(worker->daemon->views,
+		arg, 1 /* get write lock*/);
+	if(!v) {
+		ssl_printf(ssl,"no view with name: %s\n", arg);
+		return;
+	}
+	do_zone_add(ssl, v->local_zones, arg2);
+	lock_rw_unlock(&v->lock);
+}
+
+/** Remove a zone from view */
+static void
+do_view_zone_remove(SSL* ssl, struct worker* worker, char* arg)
+{
+	char* arg2;
+	struct view* v;
+	if(!find_arg2(ssl, arg, &arg2))
+		return;
+	v = views_find_view(worker->daemon->views,
+		arg, 1 /* get write lock*/);
+	if(!v) {
+		ssl_printf(ssl,"no view with name: %s\n", arg);
+		return;
+	}
+	do_zone_remove(ssl, v->local_zones, arg2);
+	lock_rw_unlock(&v->lock);
+}
+
+/** Add new RR data to view */
+static void
+do_view_data_add(SSL* ssl, struct worker* worker, char* arg)
+{
+	char* arg2;
+	struct view* v;
+	if(!find_arg2(ssl, arg, &arg2))
+		return;
+	v = views_find_view(worker->daemon->views,
+		arg, 1 /* get write lock*/);
+	if(!v) {
+		ssl_printf(ssl,"no view with name: %s\n", arg);
+		return;
+	}
+	do_data_add(ssl, v->local_zones, arg2);
+	lock_rw_unlock(&v->lock);
+}
+
+/** Remove RR data from view */
+static void
+do_view_data_remove(SSL* ssl, struct worker* worker, char* arg)
+{
+	char* arg2;
+	struct view* v;
+	if(!find_arg2(ssl, arg, &arg2))
+		return;
+	v = views_find_view(worker->daemon->views,
+		arg, 1 /* get write lock*/);
+	if(!v) {
+		ssl_printf(ssl,"no view with name: %s\n", arg);
+		return;
+	}
+	do_data_remove(ssl, v->local_zones, arg2);
+	lock_rw_unlock(&v->lock);
 }
 
 /** cache lookup of nameservers */
@@ -2263,9 +2335,8 @@ do_list_stubs(SSL* ssl, struct worker* worker)
 
 /** do the list_local_zones command */
 static void
-do_list_local_zones(SSL* ssl, struct worker* worker)
+do_list_local_zones(SSL* ssl, struct local_zones* zones)
 {
-	struct local_zones* zones = worker->daemon->local_zones;
 	struct local_zone* z;
 	char buf[257];
 	lock_rw_rdlock(&zones->lock);
@@ -2286,9 +2357,8 @@ do_list_local_zones(SSL* ssl, struct worker* worker)
 
 /** do the list_local_data command */
 static void
-do_list_local_data(SSL* ssl, struct worker* worker)
+do_list_local_data(SSL* ssl, struct worker* worker, struct local_zones* zones)
 {
-	struct local_zones* zones = worker->daemon->local_zones;
 	struct local_zone* z;
 	struct local_data* d;
 	struct local_rrset* p;
@@ -2322,6 +2392,34 @@ do_list_local_data(SSL* ssl, struct worker* worker)
 		lock_rw_unlock(&z->lock);
 	}
 	lock_rw_unlock(&zones->lock);
+}
+
+/** do the view_list_local_zones command */
+static void
+do_view_list_local_zones(SSL* ssl, struct worker* worker, char* arg)
+{
+	struct view* v = views_find_view(worker->daemon->views,
+		arg, 0 /* get read lock*/);
+	if(!v) {
+		ssl_printf(ssl,"no view with name: %s\n", arg);
+		return;
+	}
+	do_list_local_zones(ssl, v->local_zones);
+	lock_rw_unlock(&v->lock);
+}
+
+/** do the view_list_local_data command */
+static void
+do_view_list_local_data(SSL* ssl, struct worker* worker, char* arg)
+{
+	struct view* v = views_find_view(worker->daemon->views,
+		arg, 0 /* get read lock*/);
+	if(!v) {
+		ssl_printf(ssl,"no view with name: %s\n", arg);
+		return;
+	}
+	do_list_local_data(ssl, worker, v->local_zones);
+	lock_rw_unlock(&v->lock);
 }
 
 /** struct for user arg ratelimit list */
@@ -2436,10 +2534,16 @@ execute_cmd(struct daemon_remote* rc, SSL* ssl, char* cmd,
 		do_insecure_list(ssl, worker);
 		return;
 	} else if(cmdcmp(p, "list_local_zones", 16)) {
-		do_list_local_zones(ssl, worker);
+		do_list_local_zones(ssl, worker->daemon->local_zones);
 		return;
 	} else if(cmdcmp(p, "list_local_data", 15)) {
-		do_list_local_data(ssl, worker);
+		do_list_local_data(ssl, worker, worker->daemon->local_zones);
+		return;
+	} else if(cmdcmp(p, "view_list_local_zones", 21)) {
+		do_view_list_local_zones(ssl, worker, skipwhite(p+21));
+		return;
+	} else if(cmdcmp(p, "view_list_local_data", 20)) {
+		do_view_list_local_data(ssl, worker, skipwhite(p+20));
 		return;
 	} else if(cmdcmp(p, "ratelimit_list", 14)) {
 		do_ratelimit_list(ssl, worker, p+14);
@@ -2505,13 +2609,21 @@ execute_cmd(struct daemon_remote* rc, SSL* ssl, char* cmd,
 	if(cmdcmp(p, "verbosity", 9)) {
 		do_verbosity(ssl, skipwhite(p+9));
 	} else if(cmdcmp(p, "local_zone_remove", 17)) {
-		do_zone_remove(ssl, worker, skipwhite(p+17));
+		do_zone_remove(ssl, worker->daemon->local_zones, skipwhite(p+17));
 	} else if(cmdcmp(p, "local_zone", 10)) {
-		do_zone_add(ssl, worker, skipwhite(p+10));
+		do_zone_add(ssl, worker->daemon->local_zones, skipwhite(p+10));
 	} else if(cmdcmp(p, "local_data_remove", 17)) {
-		do_data_remove(ssl, worker, skipwhite(p+17));
+		do_data_remove(ssl, worker->daemon->local_zones, skipwhite(p+17));
 	} else if(cmdcmp(p, "local_data", 10)) {
-		do_data_add(ssl, worker, skipwhite(p+10));
+		do_data_add(ssl, worker->daemon->local_zones, skipwhite(p+10));
+	} else if(cmdcmp(p, "view_local_zone_remove", 22)) {
+		do_view_zone_remove(ssl, worker, skipwhite(p+22));
+	} else if(cmdcmp(p, "view_local_zone", 15)) {
+		do_view_zone_add(ssl, worker, skipwhite(p+15));
+	} else if(cmdcmp(p, "view_local_data_remove", 22)) {
+		do_view_data_remove(ssl, worker, skipwhite(p+22));
+	} else if(cmdcmp(p, "view_local_data", 15)) {
+		do_view_data_add(ssl, worker, skipwhite(p+15));
 	} else if(cmdcmp(p, "flush_zone", 10)) {
 		do_flush_zone(ssl, worker, skipwhite(p+10));
 	} else if(cmdcmp(p, "flush_type", 10)) {

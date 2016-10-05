@@ -474,6 +474,9 @@ order of the define-tag values.
 .B access\-control\-tag\-data: \fI<IP netblock> <tag> <"resource record string">
 Set redirect data for particular tag for given access control element.
 .TP
+.B access\-control\-view: \fI<IP netblock> <view name>
+Set view for given access control element.
+.TP
 .B chroot: \fI<directory>
 If chroot is enabled, you should pass the configfile (from the
 commandline) as a full path from the original root. After the
@@ -1309,6 +1312,32 @@ To use a nondefault port for DNS communication append '@' with the port number.
 If enabled, a query is attempted without the forward clause if it fails.
 The data could not be retrieved and would have caused SERVFAIL because
 the servers are unreachable, instead it is tried without this clause.
+The default is no.
+.SS "View Options"
+.LP
+There may be multiple
+.B view:
+clauses. Each with a \fBname:\fR and zero or more \fBlocal\-zone\fR and
+\fBlocal\-data\fR elements. View can be mapped to requests by specifying the view
+name in an \fBaccess\-control\-view\fR element. Options from matching views will
+override global options. Global options will be used if no matching view
+is found.
+.TP
+.B name: \fI<view name>
+Name of the view. Must be unique. This name is used in access\-control\-view
+elements.
+.TP
+.B local\-zone: \fI<zone> <type>
+View specific local\-zone elements. Has the same types and behaviour as the
+global local\-zone elements.
+.TP
+.B local\-data: \fI"<resource record string>"
+View specific local\-data elements. Has the same behaviour as the global
+local\-data elements.
+.TP
+.B view\-first: \fI<yes or no>
+If enabled, it attempts to use the global local\-zone and local\-data if there
+is no match in the view specific options.
 The default is no.
 .SS "Python Module Options"
 .LP

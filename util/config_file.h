@@ -42,6 +42,7 @@
 #ifndef UTIL_CONFIG_FILE_H
 #define UTIL_CONFIG_FILE_H
 struct config_stub;
+struct config_view;
 struct config_strlist;
 struct config_str2list;
 struct config_str3list;
@@ -167,6 +168,8 @@ struct config_file {
 	struct config_stub* stubs;
 	/** the forward zone definitions, linked list */
 	struct config_stub* forwards;
+	/** the views definitions, linked list */
+	struct config_view* views;
 	/** list of donotquery addresses, linked list */
 	struct config_strlist* donotqueryaddrs;
 	/** list of access control entries, linked list */
@@ -310,6 +313,8 @@ struct config_file {
 	struct config_str3list* acl_tag_actions;
 	/** list of aclname, tagname, redirectdata */
 	struct config_str3list* acl_tag_datas;
+	/** list of aclname, view*/
+	struct config_str2list* acl_view;
 	/** tag list, array with tagname[i] is malloced string */
 	char** tagname;
 	/** number of items in the taglist */
@@ -420,6 +425,25 @@ struct config_stub {
 	/** if stub-prime is set */
 	int isprime;
 	/** if forward-first is set (failover to without if fails) */
+	int isfirst;
+};
+
+/**
+ * View config options
+ */
+struct config_view {
+	/** next in list */
+	struct config_view* next;
+	/** view name */
+	char* name;
+	/** local zones */
+	struct config_str2list* local_zones;
+	/** local data RRs */
+	struct config_strlist* local_data;
+	/** local zones nodefault list */
+	struct config_strlist* local_zones_nodefault;
+	/** Fallback to global local_zones when there is no match in the view
+	 * view specific tree. 1 for yes, 0 for no */	
 	int isfirst;
 };
 
@@ -680,6 +704,18 @@ void config_delstub(struct config_stub* p);
  * @param list: list.
  */
 void config_delstubs(struct config_stub* list);
+
+/**
+ * Delete a view item
+ * @param p: view item
+ */
+void config_delview(struct config_view* p);
+
+/**
+ * Delete items in config view list.
+ * @param list: list.
+ */
+void config_delviews(struct config_view* list);
 
 /**
  * Convert 14digit to time value

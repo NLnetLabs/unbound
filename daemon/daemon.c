@@ -79,6 +79,7 @@
 #include "services/cache/rrset.h"
 #include "services/cache/infra.h"
 #include "services/localzone.h"
+#include "services/view.h"
 #include "services/modstack.h"
 #include "util/module.h"
 #include "util/random.h"
@@ -542,8 +543,15 @@ void
 daemon_fork(struct daemon* daemon)
 {
 	log_assert(daemon);
-	if(!acl_list_apply_cfg(daemon->acl, daemon->cfg))
+	if(!(daemon->views = views_create()))
+		fatal_exit("Could not create views: out of memory");
+	/* create individual views and their localzone/data trees */
+	if(!views_apply_cfg(daemon->views, daemon->cfg))
+		fatal_exit("Could not set up views");
+
+	if(!acl_list_apply_cfg(daemon->acl, daemon->cfg, daemon->views))
 		fatal_exit("Could not setup access control list");
+	/* create global local_zones */
 	if(!(daemon->local_zones = local_zones_create()))
 		fatal_exit("Could not create local zones: out of memory");
 	if(!local_zones_apply_cfg(daemon->local_zones, daemon->cfg))
@@ -605,6 +613,8 @@ daemon_cleanup(struct daemon* daemon)
 	slabhash_clear(daemon->env->msg_cache);
 	local_zones_delete(daemon->local_zones);
 	daemon->local_zones = NULL;
+	views_delete(daemon->views);
+	daemon->views = NULL;
 	/* key cache is cleared by module desetup during next daemon_fork() */
 	daemon_remote_clear(daemon->rc);
 	for(i=0; i<daemon->num; i++)

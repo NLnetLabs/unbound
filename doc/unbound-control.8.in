@@ -263,6 +263,21 @@ estimated qps and qps limit from config.  With +a it prints all domains, not
 just the ratelimited domains, with their estimated qps.  The ratelimited
 domains return an error for uncached (new) queries, but cached queries work
 as normal.
+.TP
+.B view_list_local_zones \fIview\fR
+\fIlist_local_zones\fR for given view.
+.TP
+.B view_local_zone \fIview\fR \fIname\fR \fItype
+\fIlocal_zone\fR for given view.
+.TP
+.B view_local_zone_remove \fIview\fR \fIname
+\fIlocal_zone_remove\fR for given view.
+.TP
+.B view_local_data \fIview\fR \fIRR data...
+\fIlocal_data\fR for given view.
+.TP
+.B view_local_data_remove \fIview\fR \fIname
+\fIlocal_data_remove\fR for given view.
 .SH "EXIT CODE"
 The unbound\-control program exits with status code 1 on error, 0 on success.
 .SH "SET UP"

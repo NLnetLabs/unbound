@@ -52,6 +52,7 @@
 #include "util/data/msgreply.h"
 #include "util/data/msgparse.h"
 #include "util/as112.h"
+#include "util/config_file.h"
 
 /* maximum RRs in an RRset, to cap possible 'endless' list RRs.
  * with 16 bytes for an A record, a 64K packet has about 4000 max */
@@ -158,7 +159,7 @@ local_zone_create(uint8_t* nm, size_t len, int labs,
 	z->namelen = len;
 	z->namelabs = labs;
 	lock_rw_init(&z->lock);
-	z->region = regional_create_custom(sizeof(struct regional));
+	z->region = regional_create();
 	if(!z->region) {
 		free(z);
 		return NULL;
@@ -1462,38 +1463,60 @@ local_zones_answer(struct local_zones* zones, struct query_info* qinfo,
 	struct comm_reply* repinfo, uint8_t* taglist, size_t taglen,
 	uint8_t* tagactions, size_t tagactionssize,
 	struct config_strlist** tag_datas, size_t tag_datas_size,
-	char** tagname, int num_tags)
+	char** tagname, int num_tags, struct view* view)
 {
 	/* see if query is covered by a zone,
 	 * 	if so:	- try to match (exact) local data 
 	 * 		- look at zone type for negative response. */
 	int labs = dname_count_labels(qinfo->qname);
 	struct local_data* ld = NULL;
-	struct local_zone* z;
+	struct local_zone* z = NULL;
 	enum localzone_type lzt;
 	int r, tag = -1;
-	lock_rw_rdlock(&zones->lock);
-	z = local_zones_tags_lookup(zones, qinfo->qname,
-		qinfo->qname_len, labs, qinfo->qclass, taglist, taglen, 0);
-	if(!z) {
-		lock_rw_unlock(&zones->lock);
-		return 0;
+
+	if(view) {
+		lock_rw_rdlock(&view->lock);
+		if(view->local_zones &&
+			(z = local_zones_lookup(view->local_zones,
+			qinfo->qname, qinfo->qname_len, labs,
+			qinfo->qclass))) {
+			verbose(VERB_ALGO, 
+				"using localzone from view: %s", 
+				view->name);
+			lock_rw_rdlock(&z->lock);
+			lzt = z->type;
+		}
+		if(!z && !view->isfirst){
+			lock_rw_unlock(&view->lock);
+			return 0;
+		}
+		lock_rw_unlock(&view->lock);
 	}
-	lock_rw_rdlock(&z->lock);
-	lock_rw_unlock(&zones->lock);
+	if(!z) {
+		/* try global local_zones tree */
+		lock_rw_rdlock(&zones->lock);
+		if(!(z = local_zones_tags_lookup(zones, qinfo->qname,
+			qinfo->qname_len, labs, qinfo->qclass, taglist,
+			taglen, 0))) {
+			lock_rw_unlock(&zones->lock);
+			return 0;
+		}
+		lock_rw_rdlock(&z->lock);
 
-	lzt = lz_type(taglist, taglen, z->taglist, z->taglen, tagactions,
-		tagactionssize, z->type, repinfo, z->override_tree, &tag,
-		tagname, num_tags);
-
+		lzt = lz_type(taglist, taglen, z->taglist, z->taglen,
+			tagactions, tagactionssize, z->type, repinfo,
+			z->override_tree, &tag, tagname, num_tags);
+		lock_rw_unlock(&zones->lock);
+	}
 	if((lzt == local_zone_inform || lzt == local_zone_inform_deny)
 		&& repinfo)
 		lz_inform_print(z, qinfo, repinfo);
 
-	if(lzt != local_zone_always_refuse && lzt != local_zone_always_transparent
+	if(lzt != local_zone_always_refuse
+		&& lzt != local_zone_always_transparent
 		&& lzt != local_zone_always_nxdomain
 		&& local_data_answer(z, qinfo, edns, buf, temp, labs, &ld, lzt,
-		tag, tag_datas, tag_datas_size, tagname, num_tags)) {
+			tag, tag_datas, tag_datas_size, tagname, num_tags)) {
 		lock_rw_unlock(&z->lock);
 		return 1;
 	}

@@ -170,6 +170,23 @@ acl_list_tags_cfg(struct acl_list* acl, const char* str, uint8_t* bitmap,
 	return 1;
 }
 
+/** apply acl_view string */
+static int
+acl_list_view_cfg(struct acl_list* acl, const char* str, const char* str2,
+	struct views* vs)
+{
+	struct acl_addr* node;
+	if(!(node=acl_find_or_create(acl, str)))
+		return 0;
+	node->view = views_find_view(vs, str2, 0 /* get read lock*/);
+	if(!node->view) {
+		log_err("no view with name: %s", str2);
+		return 0;
+	}
+	lock_rw_unlock(&node->view->lock);
+	return 1;
+}
+
 /** apply acl_tag_action string */
 static int
 acl_list_tag_action_cfg(struct acl_list* acl, struct config_file* cfg,
@@ -312,6 +329,27 @@ read_acl_tags(struct acl_list* acl, struct config_file* cfg)
 	return 1;
 }
 
+/** read acl view config */
+static int 
+read_acl_view(struct acl_list* acl, struct config_file* cfg, struct views* v)
+{
+	struct config_str2list* np, *p = cfg->acl_view;
+	cfg->acl_view = NULL;
+	while(p) {
+		log_assert(p->str && p->str2);
+		if(!acl_list_view_cfg(acl, p->str, p->str2, v)) {
+			return 0;
+		}
+		/* free the items as we go to free up memory */
+		np = p->next;
+		free(p->str);
+		free(p->str2);
+		free(p);
+		p = np;
+	}
+	return 1;
+}
+
 /** read acl tag actions config */
 static int 
 read_acl_tag_actions(struct acl_list* acl, struct config_file* cfg)
@@ -362,11 +400,14 @@ read_acl_tag_datas(struct acl_list* acl, struct config_file* cfg)
 }
 
 int 
-acl_list_apply_cfg(struct acl_list* acl, struct config_file* cfg)
+acl_list_apply_cfg(struct acl_list* acl, struct config_file* cfg,
+	struct views* v)
 {
 	regional_free_all(acl->region);
 	addr_tree_init(&acl->tree);
 	if(!read_acl_list(acl, cfg))
+		return 0;
+	if(!read_acl_view(acl, cfg, v))
 		return 0;
 	if(!read_acl_tags(acl, cfg))
 		return 0;
