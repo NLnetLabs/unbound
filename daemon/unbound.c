@@ -253,6 +253,7 @@ apply_settings(struct daemon* daemon, struct config_file* cfg,
 	verbosity = cmdline_verbose + cfg->verbosity;
 	if (debug_mode > 1) {
 		cfg->use_syslog = 0;
+		free(cfg->logfile);
 		cfg->logfile = NULL;
 	}
 	daemon_apply_cfg(daemon, cfg);

@@ -1,5 +1,7 @@
-11 October 2016:
+11 October 2016: Ralph
 	- Added qname-minimisation-strict config option.
+	- iana portlist update.
+	- fix memoryleak logfile when in debug mode.
 
 5 October 2016: Ralph
 	- Added views functionality.
