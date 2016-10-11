@@ -661,8 +661,15 @@ Can be given multiple times, for different domains.
 .B qname\-minimisation: \fI<yes or no>
 Send minimum amount of information to upstream servers to enhance privacy.
 Only sent minimum required labels of the QNAME and set QTYPE to NS when 
-possible. Best effort approach, full QNAME and original QTYPE will be sent when
-upstream replies with a RCODE other than NOERROR. Default is off.
+possible. Best effort approach; full QNAME and original QTYPE will be sent when
+upstream replies with a RCODE other than NOERROR, except when receiving
+NXDOMAIN from a DNSSEC signed zone. Default is off.
+.TP
+.B qname\-minimisation\-strict: \fI<yes or no>
+QNAME minimisation in strict mode. Do not fall-back to sending full QNAME to
+potentially broken nameservers. A lot of domains will not be resolvable when
+this option in enabled. Only use if you know what you are doing.
+This option only has effect when qname-minimisation is enabled. Default is off.
 .TP
 .B private\-address: \fI<IP address or subnet>
 Give IPv4 of IPv6 addresses or classless subnets. These are addresses

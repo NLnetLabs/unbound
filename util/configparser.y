@@ -125,10 +125,11 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_RATELIMIT VAR_RATELIMIT_SLABS VAR_RATELIMIT_SIZE
 %token VAR_RATELIMIT_FOR_DOMAIN VAR_RATELIMIT_BELOW_DOMAIN VAR_RATELIMIT_FACTOR
 %token VAR_CAPS_WHITELIST VAR_CACHE_MAX_NEGATIVE_TTL VAR_PERMIT_SMALL_HOLDDOWN
-%token VAR_QNAME_MINIMISATION VAR_IP_FREEBIND VAR_DEFINE_TAG VAR_LOCAL_ZONE_TAG
-%token VAR_ACCESS_CONTROL_TAG VAR_LOCAL_ZONE_OVERRIDE
-%token VAR_ACCESS_CONTROL_TAG_ACTION VAR_ACCESS_CONTROL_TAG_DATA
-%token VAR_VIEW VAR_ACCESS_CONTROL_VIEW VAR_VIEW_FIRST
+%token VAR_QNAME_MINIMISATION VAR_QNAME_MINIMISATION_STRICT VAR_IP_FREEBIND
+%token VAR_DEFINE_TAG VAR_LOCAL_ZONE_TAG VAR_ACCESS_CONTROL_TAG
+%token VAR_LOCAL_ZONE_OVERRIDE VAR_ACCESS_CONTROL_TAG_ACTION
+%token VAR_ACCESS_CONTROL_TAG_DATA VAR_VIEW VAR_ACCESS_CONTROL_VIEW
+%token VAR_VIEW_FIRST
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -201,7 +202,8 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_ip_freebind | server_define_tag | server_local_zone_tag |
 	server_disable_dnssec_lame_check | server_access_control_tag |
 	server_local_zone_override | server_access_control_tag_action |
-	server_access_control_tag_data | server_access_control_view
+	server_access_control_tag_data | server_access_control_view |
+	server_qname_minimisation_strict
 	;
 stubstart: VAR_STUB_ZONE
 	{
@@ -1524,6 +1526,16 @@ server_qname_minimisation: VAR_QNAME_MINIMISATION STRING_ARG
 		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
 			yyerror("expected yes or no.");
 		else cfg_parser->cfg->qname_minimisation = 
+			(strcmp($2, "yes")==0);
+		free($2);
+	}
+	;
+server_qname_minimisation_strict: VAR_QNAME_MINIMISATION_STRICT STRING_ARG
+	{
+		OUTYY(("P(server_qname_minimisation_strict:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else cfg_parser->cfg->qname_minimisation_strict = 
 			(strcmp($2, "yes")==0);
 		free($2);
 	}

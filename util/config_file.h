@@ -401,6 +401,9 @@ struct config_file {
 	int ratelimit_factor;
 	/** minimise outgoing QNAME and hide original QTYPE if possible */
 	int qname_minimisation;
+	/** minimise QNAME in strict mode, minimise according to RFC.
+	 *  Do not apply fallback */
+	int qname_minimisation_strict;
 };
 
 /** from cfg username, after daemonise setup performed */

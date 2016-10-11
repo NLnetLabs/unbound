@@ -247,6 +247,7 @@ config_create(void)
 	cfg->ratelimit_below_domain = NULL;
 	cfg->ratelimit_factor = 10;
 	cfg->qname_minimisation = 0;
+	cfg->qname_minimisation_strict = 0;
 	return cfg;
 error_exit:
 	config_delete(cfg); 
@@ -486,6 +487,7 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	else S_POW2("ratelimit-slabs:", ratelimit_slabs)
 	else S_NUMBER_OR_ZERO("ratelimit-factor:", ratelimit_factor)
 	else S_YNO("qname-minimisation:", qname_minimisation)
+	else S_YNO("qname-minimisation-strict:", qname_minimisation_strict)
 	else if(strcmp(opt, "define-tag:") ==0) {
 		return config_add_tag(cfg, val);
 	/* val_sig_skew_min and max are copied into val_env during init,
@@ -791,6 +793,7 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_DEC(opt, "val-sig-skew-min", val_sig_skew_min)
 	else O_DEC(opt, "val-sig-skew-max", val_sig_skew_max)
 	else O_YNO(opt, "qname-minimisation", qname_minimisation)
+	else O_YNO(opt, "qname-minimisation-strict", qname_minimisation_strict)
 	else O_IFC(opt, "define-tag", num_tags, tagname)
 	else O_LTG(opt, "local-zone-tag", local_zone_tags)
 	else O_LTG(opt, "access-control-tag", acl_tags)

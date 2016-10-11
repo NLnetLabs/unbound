@@ -346,6 +346,12 @@ server:
 	# privacy. Only sent minimum required labels of the QNAME and set QTYPE
 	# to NS when possible.
 	# qname-minimisation: no
+	
+	# QNAME minimisation in strict mode. Do not fall-back to sending full
+	# QNAME to potentially broken nameservers. A lot of domains will not be
+	# resolvable when this option in enabled.
+	# This option only has effect when qname-minimisation is enabled.
+	# qname-minimisation-strict: no
 
 	# Use 0x20-encoded random bits in the query to foil spoof attempts.
 	# This feature is an experimental implementation of draft dns-0x20.

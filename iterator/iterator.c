@@ -2088,7 +2088,7 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 			/* Do not increment qname, continue incrementing next 
 			 * iteration */
 			iq->minimisation_state = MINIMISE_STATE;
-		else
+		else if(!qstate->env->cfg->qname_minimisation_strict)
 			/* Too many time-outs detected for this QNAME and QTYPE.
 			 * We give up, disable QNAME minimisation. */
 			iq->minimisation_state = DONOT_MINIMISE_STATE;
@@ -2275,12 +2275,15 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 				&qstate->reply->addr, qstate->reply->addrlen, 
 				qstate->region);
 		if(iq->minimisation_state != DONOT_MINIMISE_STATE) {
-			/* Best effort qname-minimisation. 
-			 * Stop minimising and send full query when RCODE
-			 * is not NOERROR. */
 			if(FLAGS_GET_RCODE(iq->response->rep->flags) != 
-				LDNS_RCODE_NOERROR)
+				LDNS_RCODE_NOERROR) {
+				if(qstate->env->cfg->qname_minimisation_strict)
+					return final_state(iq);
+				/* Best effort qname-minimisation. 
+				 * Stop minimising and send full query when
+				 * RCODE is not NOERROR. */
 				iq->minimisation_state = DONOT_MINIMISE_STATE;
+			}
 			if(FLAGS_GET_RCODE(iq->response->rep->flags) ==
 				LDNS_RCODE_NXDOMAIN) {
 				/* Stop resolving when NXDOMAIN is DNSSEC
@@ -2527,7 +2530,8 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 	/* LAME, THROWAWAY and "unknown" all end up here.
 	 * Recycle to the QUERYTARGETS state to hopefully try a 
 	 * different target. */
-	if (qstate->env->cfg->qname_minimisation)
+	if (qstate->env->cfg->qname_minimisation &&
+		!qstate->env->cfg->qname_minimisation_strict)
 		iq->minimisation_state = DONOT_MINIMISE_STATE;
 	return next_state(iq, QUERYTARGETS_STATE);
 }
