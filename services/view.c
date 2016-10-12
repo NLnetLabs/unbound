@@ -166,6 +166,12 @@ views_apply_cfg(struct views* vs, struct config_file* cfg)
 				lock_rw_unlock(&v->lock);
 				return 0;
 			}
+			/* local_zones, local_zones_nodefault and local_data 
+			 * are free'd from config_view by local_zones_apply_cfg.
+			 * Set pointers to NULL. */
+			cv->local_zones = NULL;
+			cv->local_data = NULL;
+			cv->local_zones_nodefault = NULL;
 		}
 		lock_rw_unlock(&v->lock);
 	}

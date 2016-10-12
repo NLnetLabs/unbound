@@ -170,6 +170,7 @@ config_create(void)
 	cfg->out_ifs = NULL;
 	cfg->stubs = NULL;
 	cfg->forwards = NULL;
+	cfg->views = NULL;
 	cfg->acls = NULL;
 	cfg->harden_short_bufsize = 0;
 	cfg->harden_large_queries = 0;
@@ -993,6 +994,8 @@ config_delview(struct config_view* p)
 	if(!p) return;
 	free(p->name);
 	config_deldblstrlist(p->local_zones);
+	config_delstrlist(p->local_zones_nodefault);
+	config_delstrlist(p->local_data);
 	free(p);
 }
 
@@ -1048,6 +1051,7 @@ config_delete(struct config_file* cfg)
 	config_del_strarray(cfg->out_ifs, cfg->num_out_ifs);
 	config_delstubs(cfg->stubs);
 	config_delstubs(cfg->forwards);
+	config_delviews(cfg->views);
 	config_delstrlist(cfg->donotqueryaddrs);
 	config_delstrlist(cfg->root_hints);
 	free(cfg->identity);
