@@ -1,3 +1,6 @@
+17 October 2016: Wouter
+	- Re-fix #839 from view commit overwrite.
+
 12 October 2016: Ralph
 	- Free view config elements.
 
