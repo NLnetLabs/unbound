@@ -461,7 +461,6 @@ int mesh_state_attachment(struct mesh_state* super, struct mesh_state* sub);
  * @param rep: comm point reply info.
  * @param qid: ID of reply.
  * @param qflags: original query flags.
- * @param qname: original query name.
  * @param qinfo: original query info.
  * @return: 0 on alloc error.
  */

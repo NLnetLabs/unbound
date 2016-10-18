@@ -8,6 +8,7 @@
 	  clients with different EDNS parameters, from Jinmei Tatuya.
 	- Fix #1118: libunbound.pc sets strange Libs, Libs.private values.
 	- Added Requires line to libunbound.pc
+	- Please doxygen by modifying mesh.h
 
 17 October 2016: Wouter
 	- Re-fix #839 from view commit overwrite.
