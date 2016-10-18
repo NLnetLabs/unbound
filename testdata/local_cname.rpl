@@ -1,0 +1,57 @@
+; config options
+server:
+	# put unbound.conf config options here.
+        target-fetch-policy: "0 0 0 0 0"
+
+# send the queries to the test server (see the 10.0.10.3 entries below)
+forward-zone:
+	name: "."
+	forward-addr: 10.0.10.3
+CONFIG_END
+
+; short one-line description of scenario:
+SCENARIO_BEGIN Test local-data CNAME aliases
+
+; Specification of the answers that the upstream server provides to unbound
+RANGE_BEGIN 0 1000
+	ADDRESS 10.0.10.3
+; put entries here with answers to specific qname, qtype
+
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR NOERROR
+SECTION QUESTION
+example.com. IN A
+SECTION ANSWER
+example.com. IN A 1.2.3.4
+SECTION AUTHORITY
+SECTION ADDITIONAL
+ENTRY_END
+
+; end of entries with answers from upstream server
+RANGE_END
+; Steps where queries are sent, one at a time, to unbound.
+; QUERY is what the downstream client sends to unbound.
+; CHECK_ANSWER contains the response from unbound.
+
+STEP 10 QUERY
+ENTRY_BEGIN
+REPLY RD
+SECTION QUESTION
+example.com. IN A
+ENTRY_END
+
+STEP 20 CHECK_ANSWER
+ENTRY_BEGIN
+MATCH all
+REPLY QR RD RA NOERROR
+SECTION QUESTION
+example.com. IN A
+SECTION ANSWER
+example.com. IN A   1.2.3.4
+SECTION AUTHORITY
+SECTION ADDITIONAL
+ENTRY_END
+
+SCENARIO_END
