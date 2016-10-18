@@ -377,6 +377,7 @@ generate_request(struct module_qstate* qstate, int id, uint8_t* name,
 	ask.qname_len = namelen;
 	ask.qtype = qtype;
 	ask.qclass = qclass;
+	ask.local_alias = NULL;
 	log_query_info(VERB_ALGO, "generate request", &ask);
 	fptr_ok(fptr_whitelist_modenv_attach_sub(qstate->env->attach_sub));
 	/* enable valrec flag to avoid recursion to the same validation

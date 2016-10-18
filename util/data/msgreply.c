@@ -76,6 +76,7 @@ parse_create_qinfo(sldns_buffer* pkt, struct msg_parse* msg,
 	qinf->qname_len = msg->qname_len;
 	qinf->qtype = msg->qtype;
 	qinf->qclass = msg->qclass;
+	qinf->local_alias = NULL;
 	return 1;
 }
 
@@ -451,6 +452,7 @@ int reply_info_parse(sldns_buffer* pkt, struct alloc_cache* alloc,
 	int ret;
 	
 	qinf->qname = NULL;
+	qinf->local_alias = NULL;
 	*rep = NULL;
 	if(!(msg = regional_alloc(region, sizeof(*msg)))) {
 		return LDNS_RCODE_SERVFAIL;
@@ -542,6 +544,7 @@ query_info_parse(struct query_info* m, sldns_buffer* query)
 		return 0; /* need qtype, qclass */
 	m->qtype = sldns_buffer_read_u16(query);
 	m->qclass = sldns_buffer_read_u16(query);
+	m->local_alias = NULL;
 	return 1;
 }
 

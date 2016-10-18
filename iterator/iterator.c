@@ -551,6 +551,7 @@ generate_sub_request(uint8_t* qname, size_t qnamelen, uint16_t qtype,
 	qinf.qname_len = qnamelen;
 	qinf.qtype = qtype;
 	qinf.qclass = qclass;
+	qinf.local_alias = NULL;
 
 	/* RD should be set only when sending the query back through the INIT
 	 * state. */

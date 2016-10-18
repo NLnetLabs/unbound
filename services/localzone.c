@@ -280,15 +280,19 @@ get_rr_nameclass(const char* str, uint8_t** nm, uint16_t* dclass)
  * Find an rrset in local data structure.
  * @param data: local data domain name structure.
  * @param type: type to look for (host order).
+ * @param alias_ok: 1 if matching a non-exact, alias type such as CNAME is
+ * allowed.  otherwise 0.
  * @return rrset pointer or NULL if not found.
  */
 static struct local_rrset*
-local_data_find_type(struct local_data* data, uint16_t type)
+local_data_find_type(struct local_data* data, uint16_t type, int alias_ok)
 {
 	struct local_rrset* p;
 	type = htons(type);
 	for(p = data->rrsets; p; p = p->next) {
 		if(p->rrset->rk.type == type)
+			return p;
+		if(alias_ok && p->rrset->rk.type == htons(LDNS_RR_TYPE_CNAME))
 			return p;
 	}
 	return NULL;
@@ -469,7 +473,23 @@ lz_enter_rr_into_zone(struct local_zone* z, const char* rrstr)
 	log_assert(node);
 	free(nm);
 
-	rrset = local_data_find_type(node, rrtype);
+	/* Reject it if we would end up having CNAME and other data (including
+	 * another CNAME) for a redirect zone. */
+	if(z->type == local_zone_redirect && node->rrsets) {
+		const char* othertype = NULL;
+		if (rrtype == LDNS_RR_TYPE_CNAME)
+			othertype = "other";
+		else if (node->rrsets->rrset->rk.type ==
+			 htons(LDNS_RR_TYPE_CNAME)) {
+			othertype = "CNAME";
+		}
+		if(othertype) {
+			log_err("local-data '%s' in redirect zone must not "
+				"coexist with %s local-data", rrstr, othertype);
+			return 0;
+		}
+	}
+	rrset = local_data_find_type(node, rrtype, 0);
 	if(!rrset) {
 		rrset = new_local_rrset(z->region, node, rrtype, rrclass);
 		if(!rrset)
@@ -1203,6 +1223,8 @@ find_tag_datas(struct query_info* qinfo, struct config_strlist* list,
 	int res;
 	struct packed_rrset_data* d;
 	for(p=list; p; p=p->next) {
+		uint16_t rdr_type;
+
 		len = sizeof(rr);
 		/* does this element match the type? */
 		snprintf(buf, sizeof(buf), ". %s", p->str);
@@ -1214,7 +1236,8 @@ find_tag_datas(struct query_info* qinfo, struct config_strlist* list,
 			continue;
 		if(len < 1 /* . */ + 8 /* typeclassttl*/ + 2 /*rdatalen*/)
 			continue;
-		if(sldns_wirerr_get_type(rr, len, 1) != qinfo->qtype)
+		rdr_type = sldns_wirerr_get_type(rr, len, 1);
+		if(rdr_type != qinfo->qtype && rdr_type != LDNS_RR_TYPE_CNAME)
 			continue;
 		
 		/* do we have entries already? if not setup key */
@@ -1222,7 +1245,7 @@ find_tag_datas(struct query_info* qinfo, struct config_strlist* list,
 			r->entry.key = r;
 			r->rk.dname = qinfo->qname;
 			r->rk.dname_len = qinfo->qname_len;
-			r->rk.type = htons(qinfo->qtype);
+			r->rk.type = htons(rdr_type);
 			r->rk.rrset_class = htons(qinfo->qclass);
 			r->rk.flags = 0;
 			d = (struct packed_rrset_data*)regional_alloc_zero(
@@ -1271,6 +1294,20 @@ find_tag_datas(struct query_info* qinfo, struct config_strlist* list,
 			if(!d) return 0; /* out of memory */
 		d->count++;
 	}
+	/* If we've found a non-exact alias type of local data, make a shallow
+	 * copy of the RRset and remember it in qinfo to complete the alias
+	 * chain later. */
+	if(r->rk.dname && qinfo->qtype != LDNS_RR_TYPE_CNAME &&
+		r->rk.type == htons(LDNS_RR_TYPE_CNAME)) {
+		qinfo->local_alias =
+			regional_alloc_zero(temp, sizeof(struct local_rrset));
+		if(!qinfo->local_alias)
+			return 0; /* out of memory */
+		qinfo->local_alias->rrset =
+			regional_alloc_init(temp, r, sizeof(*r));
+		if(!qinfo->local_alias->rrset)
+			return 0; /* out of memory */
+	}
 	if(r->rk.dname)
 		return 1;
 	return 0;
@@ -1302,6 +1339,13 @@ local_data_answer(struct local_zone* z, struct query_info* qinfo,
 				z->name, z->namelen)) {
 				verbose(VERB_ALGO, "redirect with tag data [%d] %s",
 					tag, (tag<num_tags?tagname[tag]:"null"));
+
+				/* If we found a matching alias, we should
+				 * use it as part of the answer, but we can't
+				 * encode it until we complete the alias
+				 * chain. */
+				if(qinfo->local_alias)
+					return 1;
 				return local_encode(qinfo, edns, buf, temp,
 					&r, 1, LDNS_RCODE_NOERROR);
 			}
@@ -1312,9 +1356,26 @@ local_data_answer(struct local_zone* z, struct query_info* qinfo,
 	if(!ld) {
 		return 0;
 	}
-	lr = local_data_find_type(ld, qinfo->qtype);
+	lr = local_data_find_type(ld, qinfo->qtype, 1);
 	if(!lr)
 		return 0;
+
+	/* Special case for alias matching.  See local_data_answer(). */
+	if(lz_type == local_zone_redirect &&
+		qinfo->qtype != LDNS_RR_TYPE_CNAME &&
+		lr->rrset->rk.type == htons(LDNS_RR_TYPE_CNAME)) {
+		qinfo->local_alias =
+			regional_alloc_zero(temp, sizeof(struct local_rrset));
+		if(!qinfo->local_alias)
+			return 0; /* out of memory */
+		qinfo->local_alias->rrset =
+			regional_alloc_init(temp, lr->rrset, sizeof(*lr->rrset));
+		if(!qinfo->local_alias->rrset)
+			return 0; /* out of memory */
+		qinfo->local_alias->rrset->rk.dname = qinfo->qname;
+		qinfo->local_alias->rrset->rk.dname_len = qinfo->qname_len;
+		return 1;
+	}
 	if(lz_type == local_zone_redirect) {
 		/* convert rrset name to query name; like a wildcard */
 		struct ub_packed_rrset_key r = *lr->rrset;
@@ -1518,11 +1579,13 @@ local_zones_answer(struct local_zones* zones, struct query_info* qinfo,
 		&& local_data_answer(z, qinfo, edns, buf, temp, labs, &ld, lzt,
 			tag, tag_datas, tag_datas_size, tagname, num_tags)) {
 		lock_rw_unlock(&z->lock);
-		return 1;
+		/* We should tell the caller that encode is deferred if we found
+		 * a local alias. */
+		return !qinfo->local_alias;
 	}
 	r = lz_zone_answer(z, qinfo, edns, buf, temp, ld, lzt);
 	lock_rw_unlock(&z->lock);
-	return r;
+	return r && !qinfo->local_alias; /* see above */
 }
 
 const char* local_zone_type2str(enum localzone_type t)

@@ -56,6 +56,8 @@
 #include "util/alloc.h"
 #include "util/config_file.h"
 #include "sldns/sbuffer.h"
+#include "services/localzone.h"
+#include "util/data/dname.h"
 
 /** subtract timers and the values do not overflow or become negative */
 static void
@@ -338,7 +340,7 @@ void mesh_new_client(struct mesh_area* mesh, struct query_info* qinfo,
 	if(!s->reply_list && !s->cb_list)
 		was_noreply = 1;
 	/* add reply to s */
-	if(!mesh_state_add_reply(s, edns, rep, qid, qflags, qinfo->qname)) {
+	if(!mesh_state_add_reply(s, edns, rep, qid, qflags, qinfo)) {
 			log_err("mesh_new_client: out of memory; SERVFAIL");
 			if(!edns_opt_inplace_reply(edns, mesh->env->scratch))
 				edns->opt_list = NULL;
@@ -847,6 +849,10 @@ mesh_send_reply(struct mesh_state* m, int rcode, struct reply_info* rep,
 	struct timeval end_time;
 	struct timeval duration;
 	int secure;
+	/* Copy the client's EDNS for later restore to fix a bug of the
+	 * original code.  See unbound bug #1125.  Once NLNet Labs fixes it
+	 * we should replace this local fix with the upstream one. */
+	struct edns_data edns_bak = r->edns;
 	/* examine security status */
 	if(m->s.env->need_to_validate && (!(r->qflags&BIT_CD) ||
 		m->s.env->cfg->ignore_cd) && rep && 
@@ -861,7 +867,13 @@ mesh_send_reply(struct mesh_state* m, int rcode, struct reply_info* rep,
 	if(!rep && rcode == LDNS_RCODE_NOERROR)
 		rcode = LDNS_RCODE_SERVFAIL;
 	/* send the reply */
+	/* We don't reuse the encoded answer if either the previous or current
+	 * response has a local alias.  We could compare the alias records
+	 * and still reuse the previous answer if they are the same, but that
+	 * would be complicated and error prone for the relatively minor case.
+	 * So we err on the side of safety. */
 	if(prev && prev->qflags == r->qflags && 
+		!prev->local_alias && !r->local_alias &&
 		prev->edns.edns_present == r->edns.edns_present && 
 		prev->edns.bits == r->edns.bits && 
 		prev->edns.udp_size == r->edns.udp_size &&
@@ -880,6 +892,7 @@ mesh_send_reply(struct mesh_state* m, int rcode, struct reply_info* rep,
 		m->s.qinfo.qname = r->qname;
 		if(!edns_opt_inplace_reply(&r->edns, m->s.region))
 			r->edns.opt_list = NULL;
+		m->s.qinfo.local_alias = r->local_alias;
 		error_encode(r->query_reply.c->buffer, rcode, &m->s.qinfo,
 			r->qid, r->qflags, &r->edns);
 		comm_point_send_reply(&r->query_reply);
@@ -890,6 +903,7 @@ mesh_send_reply(struct mesh_state* m, int rcode, struct reply_info* rep,
 		r->edns.ext_rcode = 0;
 		r->edns.bits &= EDNS_DO;
 		m->s.qinfo.qname = r->qname;
+		m->s.qinfo.local_alias = r->local_alias;
 		if(!edns_opt_inplace_reply(&r->edns, m->s.region) ||
 		   !reply_info_answer_encode(&m->s.qinfo, rep, r->qid, 
 			r->qflags, r->query_reply.c->buffer, 0, 1, 
@@ -900,6 +914,7 @@ mesh_send_reply(struct mesh_state* m, int rcode, struct reply_info* rep,
 				LDNS_RCODE_SERVFAIL, &m->s.qinfo, r->qid, 
 				r->qflags, &r->edns);
 		}
+		r->edns = edns_bak; /* Fix unbound bug #1125.  See above. */
 		comm_point_send_reply(&r->query_reply);
 	}
 	/* account */
@@ -998,7 +1013,8 @@ int mesh_state_add_cb(struct mesh_state* s, struct edns_data* edns,
 }
 
 int mesh_state_add_reply(struct mesh_state* s, struct edns_data* edns,
-        struct comm_reply* rep, uint16_t qid, uint16_t qflags, uint8_t* qname)
+        struct comm_reply* rep, uint16_t qid, uint16_t qflags,
+        const struct query_info* qinfo)
 {
 	struct mesh_reply* r = regional_alloc(s->s.region, 
 		sizeof(struct mesh_reply));
@@ -1016,10 +1032,62 @@ int mesh_state_add_reply(struct mesh_state* s, struct edns_data* edns,
 	r->qflags = qflags;
 	r->start_time = *s->s.env->now_tv;
 	r->next = s->reply_list;
-	r->qname = regional_alloc_init(s->s.region, qname, 
+	r->qname = regional_alloc_init(s->s.region, qinfo->qname,
 		s->s.qinfo.qname_len);
 	if(!r->qname)
 		return 0;
+
+	/* Data related to local alias stored in 'qinfo' (if any) is ephemeral
+	 * and can be different for different original queries (even if the
+	 * replaced query name is the same).  So we need to make a deep copy
+	 * and store the copy for each reply info. */
+	if(qinfo->local_alias) {
+		struct packed_rrset_data* d;
+		struct packed_rrset_data* dsrc;
+		r->local_alias = regional_alloc_zero(s->s.region,
+			sizeof(*qinfo->local_alias));
+		if(!r->local_alias)
+			return 0;
+		r->local_alias->rrset = regional_alloc_init(s->s.region,
+			qinfo->local_alias->rrset,
+			sizeof(*qinfo->local_alias->rrset));
+		if(!r->local_alias->rrset)
+			return 0;
+		dsrc = qinfo->local_alias->rrset->entry.data;
+
+		/* In the current implementation, a local alias must be
+		 * a single CNAME RR (see worker_handle_request()). */
+		log_assert(!qinfo->local_alias->next && dsrc->count == 1 &&
+			qinfo->local_alias->rrset->rk.type ==
+			htons(LDNS_RR_TYPE_CNAME));
+		/* Technically, we should make a local copy for the owner
+		 * name of the RRset, but in the case of the first (and
+		 * currently only) local alias RRset, the owner name should
+		 * point to the qname of the corresponding query, which should
+		 * be valid throughout the lifetime of this mesh_reply.  So
+		 * we can skip copying. */
+		log_assert(qinfo->local_alias->rrset->rk.dname ==
+			sldns_buffer_at(rep->c->buffer, LDNS_HEADER_SIZE));
+
+		d = regional_alloc_init(s->s.region, dsrc,
+			sizeof(struct packed_rrset_data)
+			+ sizeof(size_t) + sizeof(uint8_t*) + sizeof(time_t));
+		if(!d)
+			return 0;
+		r->local_alias->rrset->entry.data = d;
+		d->rr_len = (size_t*)((uint8_t*)d +
+			sizeof(struct packed_rrset_data));
+		d->rr_data = (uint8_t**)&(d->rr_len[1]);
+		d->rr_ttl = (time_t*)&(d->rr_data[1]);
+		d->rr_len[0] = dsrc->rr_len[0];
+		d->rr_ttl[0] = dsrc->rr_ttl[0];
+		d->rr_data[0] = regional_alloc_init(s->s.region,
+			dsrc->rr_data[0], d->rr_len[0]);
+		if(!d->rr_data[0])
+			return 0;
+	} else
+		r->local_alias = NULL;
+
 	s->reply_list = r;
 	return 1;
 }

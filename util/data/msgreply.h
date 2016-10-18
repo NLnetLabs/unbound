@@ -51,6 +51,7 @@ struct regional;
 struct edns_data;
 struct msg_parse;
 struct rrset_parse;
+struct local_rrset;
 
 /** calculate the prefetch TTL as 90% of original. Calculation
  * without numerical overflow (uin32_t) */
@@ -73,6 +74,23 @@ struct query_info {
 	uint16_t qtype;
 	/** qclass, host byte order */
 	uint16_t qclass;
+	/**
+	 * Alias local answer(s) for the qname.  If 'qname' is an alias defined
+	 * in a local zone, this field will be set to the corresponding local
+	 * RRset when the alias is determined.
+	 * In the initial implementation this can only be a single CNAME RR
+	 * (or NULL), but it could possibly be extended to be a DNAME or a
+	 * chain of aliases.
+	 * Users of this structure are responsible to initialize this field
+	 * to be NULL; otherwise other part of query handling code may be
+	 * confused.
+	 * Users also have to be careful about the lifetime of data.  On return
+	 * from local zone lookup, it may point to data derived from
+	 * configuration that may be dynamically invalidated or data allocated
+	 * in an ephemeral regional allocator.  A deep copy of the data may
+	 * have to be generated if it has to be kept during iterative
+	 * resolution. */
+	struct local_rrset* local_alias;
 };
 
 /**

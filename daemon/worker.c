@@ -485,6 +485,10 @@ answer_norec_from_cache(struct worker* worker, struct query_info* qinfo,
 	if(!dp) { /* no delegation, need to reprime */
 		return 0;
 	}
+	/* In case we have a local alias, copy it into the delegation message.
+	 * Shallow copy should be fine, as we'll be done with msg in this
+	 * function. */
+	msg->qinfo.local_alias = qinfo->local_alias;
 	if(must_validate) {
 		switch(check_delegation_secure(msg->rep)) {
 		case sec_status_unchecked:
@@ -986,6 +990,26 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 			&repinfo->addr, repinfo->addrlen);
 		goto send_reply;
 	}
+
+	/* If we've found a local alias, replace the qname with the alias
+	 * target before resolving it. */
+	if(qinfo.local_alias) {
+		struct ub_packed_rrset_key* rrset = qinfo.local_alias->rrset;
+		struct packed_rrset_data* d = rrset->entry.data;
+
+		/* Sanity check: our current implementation only supports
+		 * a single CNAME RRset as a local alias. */
+		if(qinfo.local_alias->next ||
+			rrset->rk.type != htons(LDNS_RR_TYPE_CNAME) ||
+			d->count != 1) {
+			log_err("assumption failure: unexpected local alias");
+			regional_free_all(worker->scratchpad);
+			return 0; /* drop it */
+		}
+		qinfo.qname = d->rr_data[0] + 2;
+		qinfo.qname_len = d->rr_len[0] - 2;
+	}
+
 	h = query_info_hash(&qinfo, sldns_buffer_read_u16_at(c->buffer, 2));
 	if((e=slabhash_lookup(worker->env.msg_cache, h, &qinfo, 0))) {
 		/* answer from cache - we have acquired a readlock on it */

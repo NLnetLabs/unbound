@@ -282,6 +282,14 @@ void local_zones_print(struct local_zones* zones);
  * @return true if answer is in buffer. false if query is not answered 
  * by authority data. If the reply should be dropped altogether, the return 
  * value is true, but the buffer is cleared (empty).
+ * It can also return true if a non-exact alias answer is found.  In this
+ * case qinfo->local_alias points to the corresponding alias RRset but the
+ * answer is NOT encoded in buffer.  It's the caller's responsibility to
+ * complete the alias chain (if needed) and encode the final set of answer.
+ * Data pointed to by qinfo->local_alias is allocated in 'temp' or refers to
+ * configuration data.  So the caller will need to make a deep copy of it
+ * if it needs to keep it beyond the lifetime of 'temp' or a dynamic update
+ * to local zone data.
  */
 int local_zones_answer(struct local_zones* zones, struct query_info* qinfo,
 	struct edns_data* edns, struct sldns_buffer* buf, struct regional* temp,
