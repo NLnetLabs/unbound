@@ -6,7 +6,7 @@
 	  from Jinmei Tatuya (Infoblox).
 	- Fix #1125: unbound could reuse an answer packet incorrectly for
 	  clients with different EDNS parameters, from Jinmei Tatuya.
-	- Fix #1117: libunbound.pc sets strange Libs, Libs.private values.
+	- Fix #1118: libunbound.pc sets strange Libs, Libs.private values.
 	- Added Requires line to libunbound.pc
 
 17 October 2016: Wouter
