@@ -544,6 +544,8 @@ if test x_$ub_test_python != x_no; then
       LIBS="$PYTHON_LDFLAGS $LIBS"
       CPPFLAGS="$CPPFLAGS $PYTHON_CPPFLAGS"
       ub_have_python=yes
+      PC_PY_DEPENDENCY="python"
+      AC_SUBST(PC_PY_DEPENDENCY)
 
       # Check for SWIG
       ub_have_swig=no
@@ -1001,6 +1003,8 @@ large outgoing port ranges.  ])
 	AC_CHECK_FUNCS([event_base_get_method]) # only in libevent 1.4.3 and later
 	AC_CHECK_FUNCS([ev_loop]) # only in libev. (tested on 3.51)
 	AC_CHECK_FUNCS([ev_default_loop]) # only in libev. (tested on 4.00)
+        PC_LIBEVENT_DEPENDENCY="libevent"
+        AC_SUBST(PC_LIBEVENT_DEPENDENCY)
 	if test -n "$BAK_LDFLAGS_SET"; then
 		LDFLAGS="$BAK_LDFLAGS"
 	fi

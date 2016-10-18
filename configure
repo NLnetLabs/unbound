@@ -659,6 +659,7 @@ WINAPPS
 WINDRES
 CHECKLOCK_OBJ
 staticexe
+PC_LIBEVENT_DEPENDENCY
 UNBOUND_EVENT_UNINSTALL
 UNBOUND_EVENT_INSTALL
 SSLLIB
@@ -678,6 +679,7 @@ WITH_PYTHONMODULE
 swig
 SWIG_LIB
 SWIG
+PC_PY_DEPENDENCY
 PY_MAJOR_VERSION
 PYTHON_SITE_PKG
 PYTHON_LDFLAGS
@@ -16824,6 +16826,8 @@ $as_echo "#define HAVE_PYTHON 1" >>confdefs.h
       LIBS="$PYTHON_LDFLAGS $LIBS"
       CPPFLAGS="$CPPFLAGS $PYTHON_CPPFLAGS"
       ub_have_python=yes
+      PC_PY_DEPENDENCY="python"
+
 
       # Check for SWIG
       ub_have_swig=no
@@ -18379,6 +18383,8 @@ _ACEOF
 fi
 done
  # only in libev. (tested on 4.00)
+        PC_LIBEVENT_DEPENDENCY="libevent"
+
 	if test -n "$BAK_LDFLAGS_SET"; then
 		LDFLAGS="$BAK_LDFLAGS"
 	fi
