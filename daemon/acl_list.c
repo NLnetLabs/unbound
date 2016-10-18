@@ -234,8 +234,7 @@ check_data(const char* data, const struct config_strlist* head)
 	size_t len = sizeof(rr);
 	int res;
 	/* '.' is sufficient for validation, and it makes the call to
-	 * sldns_wirerr_get_type() simpler below.
-	 * (once adopted, this comment can be removed) */
+	 * sldns_wirerr_get_type() simpler below. */
 	snprintf(buf, sizeof(buf), "%s %s", ".", data);
 	res = sldns_str2wire_rr_buf(buf, rr, &len, NULL, 3600, NULL, 0,
 		NULL, 0);

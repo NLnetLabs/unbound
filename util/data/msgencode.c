@@ -538,10 +538,7 @@ insert_section(struct reply_info* rep, size_t num_rrsets, uint16_t* num_rrs,
 	/* we now allow this function to be called multiple times for the
 	 * same section, incrementally updating num_rrs.  The caller is
 	 * responsible for initializing it (which is the case in the current
-	 * implementation).
-	 * Note: once approved, this comment and the following line should be
-	 * removed. */
-	/**num_rrs = 0;*/
+	 * implementation). */
 
 	if(s != LDNS_SECTION_ADDITIONAL) {
 		if(s == LDNS_SECTION_ANSWER && qtype == LDNS_RR_TYPE_ANY)
