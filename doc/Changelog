@@ -2,6 +2,8 @@
 	- Patch that resolves CNAMEs entered in local-data conf statements that
 	  point to data on the internet, from Jinmei Tatuya (Infoblox).
 	- Removed patch comments from acllist.c and msgencode.c
+	- Added documentation doc/CNAME-basedRedirectionDesignNotes.pdf,
+	  from Jinmei Tatuya (Infoblox).
 
 17 October 2016: Wouter
 	- Re-fix #839 from view commit overwrite.
