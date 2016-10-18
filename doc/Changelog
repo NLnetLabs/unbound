@@ -4,6 +4,8 @@
 	- Removed patch comments from acllist.c and msgencode.c
 	- Added documentation doc/CNAME-basedRedirectionDesignNotes.pdf,
 	  from Jinmei Tatuya (Infoblox).
+	- Fix #1125: unbound could reuse an answer packet incorrectly for
+	  clients with different EDNS parameters, from Jinmei Tatuya.
 
 17 October 2016: Wouter
 	- Re-fix #839 from view commit overwrite.

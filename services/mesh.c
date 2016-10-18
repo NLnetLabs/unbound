@@ -849,9 +849,8 @@ mesh_send_reply(struct mesh_state* m, int rcode, struct reply_info* rep,
 	struct timeval end_time;
 	struct timeval duration;
 	int secure;
-	/* Copy the client's EDNS for later restore to fix a bug of the
-	 * original code.  See unbound bug #1125.  Once NLNet Labs fixes it
-	 * we should replace this local fix with the upstream one. */
+	/* Copy the client's EDNS for later restore, to make sure the edns
+	 * compare is with the correct edns options. */
 	struct edns_data edns_bak = r->edns;
 	/* examine security status */
 	if(m->s.env->need_to_validate && (!(r->qflags&BIT_CD) ||
