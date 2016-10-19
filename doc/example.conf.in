@@ -52,7 +52,7 @@ server:
 	# outgoing-interface: 192.0.2.153
 	# outgoing-interface: 2001:DB8::5
 	# outgoing-interface: 2001:DB8::6
-	
+
 	# Specify a netblock to use remainder 64 bits as random bits for
 	# upstream queries.  Uses freebind option (Linux).
 	# outgoing-interface: 2001:DB8::/64
@@ -171,7 +171,7 @@ server:
 
 	# the maximum number of hosts that are cached (roundtrip, EDNS, lame).
 	# infra-cache-numhosts: 10000
-	
+
 	# define a number of tags here, use with local-zone, access-control.
 	# repeat the define-tag statement to add additional tags.
 	# define-tag: "tag1 tag2 tag3"
@@ -331,7 +331,7 @@ server:
 	# Harden against queries that fall under dnssec-signed nxdomain names.
 	# harden-below-nxdomain: no
 
-        # Harden the referral path by performing additional queries for
+	# Harden the referral path by performing additional queries for
 	# infrastructure data.  Validates the replies (if possible).
 	# Default off, because the lookups burden the server.  Experimental
 	# implementation of draft-wijngaards-dnsext-resolver-side-mitigation.
@@ -346,7 +346,7 @@ server:
 	# privacy. Only sent minimum required labels of the QNAME and set QTYPE
 	# to NS when possible.
 	# qname-minimisation: no
-	
+
 	# QNAME minimisation in strict mode. Do not fall-back to sending full
 	# QNAME to potentially broken nameservers. A lot of domains will not be
 	# resolvable when this option in enabled.
@@ -734,7 +734,7 @@ remote-control:
 # and local-data options. Options from matching views will override global
 # options. Global options will be used if no matching view is found.
 # With view-first yes, it will try to answer using the global local-zone and
-# local-data elements if there is no view specific match. 
+# local-data elements if there is no view specific match.
 # view:
 #	name: "viewname"
 #	local-zone: "example.com" redirect
