@@ -556,10 +556,15 @@ cachedb_handle_query(struct module_qstate* qstate,
 
 	/* lookup inside unbound's internal cache */
 	if(cachedb_intcache_lookup(qstate)) {
-		if(verbosity >= VERB_ALGO)
-			log_dns_msg("cachedb internal cache lookup",
-				&qstate->return_msg->qinfo,
-				qstate->return_msg->rep);
+		if(verbosity >= VERB_ALGO) {
+			if(qstate->return_msg->rep)
+				log_dns_msg("cachedb internal cache lookup",
+					&qstate->return_msg->qinfo,
+					qstate->return_msg->rep);
+			else log_info("cachedb internal cache lookup: rcode %s",
+				sldns_lookup_by_id(sldns_rcodes, qstate->return_rcode)?
+				sldns_lookup_by_id(sldns_rcodes, qstate->return_rcode)->name:"??");
+		}
 		/* we are done with the query */
 		qstate->ext_state[id] = module_finished;
 		return;
