@@ -1,5 +1,6 @@
 20 October 2016: Wouter
 	- suppress compile warning in lex files.
+	- init lzt variable, for older gcc compiler warnings.
 
 19 October 2016: Wouter
 	- Fix #1130: whitespace in example.conf.in more consistent.

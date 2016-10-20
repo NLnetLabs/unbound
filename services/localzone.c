@@ -1532,7 +1532,7 @@ local_zones_answer(struct local_zones* zones, struct query_info* qinfo,
 	int labs = dname_count_labels(qinfo->qname);
 	struct local_data* ld = NULL;
 	struct local_zone* z = NULL;
-	enum localzone_type lzt;
+	enum localzone_type lzt = local_zone_transparent;
 	int r, tag = -1;
 
 	if(view) {
