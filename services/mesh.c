@@ -530,6 +530,7 @@ mesh_state_create(struct module_env* env, struct query_info* qinfo,
 	/* init module qstate */
 	mstate->s.qinfo.qtype = qinfo->qtype;
 	mstate->s.qinfo.qclass = qinfo->qclass;
+	mstate->s.qinfo.local_alias = NULL;
 	mstate->s.qinfo.qname_len = qinfo->qname_len;
 	mstate->s.qinfo.qname = regional_alloc_init(region, qinfo->qname,
 		qinfo->qname_len);

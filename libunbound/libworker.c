@@ -573,6 +573,7 @@ setup_qinfo_edns(struct libworker* w, struct ctx_query* q,
 {
 	qinfo->qtype = (uint16_t)q->res->qtype;
 	qinfo->qclass = (uint16_t)q->res->qclass;
+	qinfo->local_alias = NULL;
 	qinfo->qname = sldns_str2wire_dname(q->res->qname, &qinfo->qname_len);
 	if(!qinfo->qname) {
 		return 0;

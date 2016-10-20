@@ -2012,6 +2012,7 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 			iq->qinfo_out.qname_len = iq->dp->namelen;
 			iq->qinfo_out.qtype = LDNS_RR_TYPE_A;
 			iq->qinfo_out.qclass = iq->qchase.qclass;
+			iq->qinfo_out.local_alias = NULL;
 			iq->minimise_count = 0;
 		}
 

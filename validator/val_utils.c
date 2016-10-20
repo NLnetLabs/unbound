@@ -1138,6 +1138,7 @@ val_find_DS(struct module_env* env, uint8_t* nm, size_t nmlen, uint16_t c,
 	qinfo.qname_len = nmlen;
 	qinfo.qtype = LDNS_RR_TYPE_DS;
 	qinfo.qclass = c;
+	qinfo.local_alias = NULL;
 	/* do not add SOA to reply message, it is going to be used internal */
 	msg = val_neg_getmsg(env->neg_cache, &qinfo, region, env->rrset_cache,
 		env->scratch_buffer, *env->now, 0, topname);
