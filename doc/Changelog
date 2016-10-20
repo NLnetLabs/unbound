@@ -3,6 +3,7 @@
 	- init lzt variable, for older gcc compiler warnings.
 	- fix --enable-dsa to work, instead of copying ecdsa enable.
 	- Fix DNSSEC validation of query type ANY with DNAME answers.
+	- Fixup query_info local_alias init.
 
 19 October 2016: Wouter
 	- Fix #1130: whitespace in example.conf.in more consistent.
