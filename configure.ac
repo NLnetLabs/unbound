@@ -867,7 +867,7 @@ esac
 
 AC_ARG_ENABLE(dsa, AC_HELP_STRING([--disable-dsa], [Disable DSA support]))
 use_dsa="no"
-case "$enable_ecdsa" in
+case "$enable_dsa" in
     no)
       ;;
     *)

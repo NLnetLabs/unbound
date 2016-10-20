@@ -17930,7 +17930,7 @@ if test "${enable_dsa+set}" = set; then :
 fi
 
 use_dsa="no"
-case "$enable_ecdsa" in
+case "$enable_dsa" in
     no)
       ;;
     *)
