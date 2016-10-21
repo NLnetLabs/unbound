@@ -1,3 +1,6 @@
+21 October 2016: Wouter
+	- Ported tests for local_cname unit test to testbound framework.
+
 20 October 2016: Wouter
 	- suppress compile warning in lex files.
 	- init lzt variable, for older gcc compiler warnings.
