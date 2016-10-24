@@ -1,8 +1,8 @@
-/* A Bison parser, made by GNU Bison 3.0.2.  */
+/* A Bison parser, made by GNU Bison 3.0.4.  */
 
 /* Bison interface for Yacc-like parsers in C
 
-   Copyright (C) 1984, 1989-1990, 2000-2013 Free Software Foundation, Inc.
+   Copyright (C) 1984, 1989-1990, 2000-2015 Free Software Foundation, Inc.
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -220,7 +220,8 @@ extern int yydebug;
     VAR_ACCESS_CONTROL_TAG_DATA = 430,
     VAR_VIEW = 431,
     VAR_ACCESS_CONTROL_VIEW = 432,
-    VAR_VIEW_FIRST = 433
+    VAR_VIEW_FIRST = 433,
+    VAR_SERVE_EXPIRED = 434
   };
 #endif
 /* Tokens.  */
@@ -400,18 +401,21 @@ extern int yydebug;
 #define VAR_VIEW 431
 #define VAR_ACCESS_CONTROL_VIEW 432
 #define VAR_VIEW_FIRST 433
+#define VAR_SERVE_EXPIRED 434
 
 /* Value type.  */
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
-typedef union YYSTYPE YYSTYPE;
+
 union YYSTYPE
 {
 #line 64 "./util/configparser.y" /* yacc.c:1909  */
 
 	char*	str;
 
-#line 414 "util/configparser.h" /* yacc.c:1909  */
+#line 416 "util/configparser.h" /* yacc.c:1909  */
 };
+
+typedef union YYSTYPE YYSTYPE;
 # define YYSTYPE_IS_TRIVIAL 1
 # define YYSTYPE_IS_DECLARED 1
 #endif

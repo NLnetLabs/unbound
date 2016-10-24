@@ -275,6 +275,8 @@ struct config_file {
 	int val_permissive_mode;
 	/** ignore the CD flag in incoming queries and refuse them bogus data */
 	int ignore_cd;
+	/** serve expired entries and prefetch them */
+	int serve_expired;
 	/** nsec3 maximum iterations per key size, string */
 	char* val_nsec3_key_iterations;
 	/** autotrust add holddown time, in seconds */

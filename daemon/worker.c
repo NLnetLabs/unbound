@@ -557,17 +557,25 @@ answer_from_cache(struct worker* worker, struct query_info* qinfo,
 	int secure;
 	int must_validate = (!(flags&BIT_CD) || worker->env.cfg->ignore_cd)
 		&& worker->env.need_to_validate;
-	/* see if it is possible */
-	if(rep->ttl < timenow) {
-		/* the rrsets may have been updated in the meantime.
-		 * we will refetch the message format from the
-		 * authoritative server 
-		 */
-		return 0;
+	if(worker->env.cfg->serve_expired) {
+		/* always lock rrsets, rep->ttl is ignored */
+		if(!rrset_array_lock(rep->ref, rep->rrset_count, 0))
+			return 0;
+		/* below, rrsets with ttl before timenow become TTL 0 in
+		 * the response */
+	} else {
+		/* see if it is possible */
+		if(rep->ttl < timenow) {
+			/* the rrsets may have been updated in the meantime.
+			 * we will refetch the message format from the
+			 * authoritative server 
+			 */
+			return 0;
+		}
+		if(!rrset_array_lock(rep->ref, rep->rrset_count, timenow))
+			return 0;
+		/* locked and ids and ttls are OK. */
 	}
-	if(!rrset_array_lock(rep->ref, rep->rrset_count, timenow))
-		return 0;
-	/* locked and ids and ttls are OK. */
 	/* check CNAME chain (if any) */
 	if(rep->an_numrrsets > 0 && (rep->rrsets[0]->rk.type == 
 		htons(LDNS_RR_TYPE_CNAME) || rep->rrsets[0]->rk.type == 
@@ -1019,10 +1027,14 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 			sldns_buffer_read_u16_at(c->buffer, 2), repinfo, 
 			&edns)) {
 			/* prefetch it if the prefetch TTL expired */
-			if(worker->env.cfg->prefetch && *worker->env.now >=
-				((struct reply_info*)e->data)->prefetch_ttl) {
+			if((worker->env.cfg->prefetch && *worker->env.now >=
+				((struct reply_info*)e->data)->prefetch_ttl)
+				|| worker->env.cfg->serve_expired) {
 				time_t leeway = ((struct reply_info*)e->
 					data)->ttl - *worker->env.now;
+				if(((struct reply_info*)e->data)->ttl
+					< *worker->env.now)
+					leeway = 0;
 				lock_rw_unlock(&e->lock);
 				reply_and_prefetch(worker, &qinfo, 
 					sldns_buffer_read_u16_at(c->buffer, 2),

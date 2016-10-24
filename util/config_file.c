@@ -203,6 +203,7 @@ config_create(void)
 	cfg->val_log_squelch = 0;
 	cfg->val_permissive_mode = 0;
 	cfg->ignore_cd = 0;
+	cfg->serve_expired = 0;
 	cfg->add_holddown = 30*24*3600;
 	cfg->del_holddown = 30*24*3600;
 	cfg->keep_missing = 366*24*3600; /* one year plus a little leeway */
@@ -455,6 +456,7 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	else S_YNO("log-queries:", log_queries)
 	else S_YNO("val-permissive-mode:", val_permissive_mode)
 	else S_YNO("ignore-cd-flag:", ignore_cd)
+	else S_YNO("serve-expired:", serve_expired)
 	else S_STR("val-nsec3-keysize-iterations:", val_nsec3_key_iterations)
 	else S_UNSIGNED_OR_ZERO("add-holddown:", add_holddown)
 	else S_UNSIGNED_OR_ZERO("del-holddown:", del_holddown)
@@ -751,6 +753,7 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_DEC(opt, "val-log-level", val_log_level)
 	else O_YNO(opt, "val-permissive-mode", val_permissive_mode)
 	else O_YNO(opt, "ignore-cd-flag", ignore_cd)
+	else O_YNO(opt, "serve-expired", serve_expired)
 	else O_STR(opt, "val-nsec3-keysize-iterations",val_nsec3_key_iterations)
 	else O_UNS(opt, "add-holddown", add_holddown)
 	else O_UNS(opt, "del-holddown", del_holddown)

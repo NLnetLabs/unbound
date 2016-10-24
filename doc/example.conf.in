@@ -486,6 +486,10 @@ server:
 	# that set CD but cannot validate themselves.
 	# ignore-cd-flag: no
 
+	# Serve expired reponses from cache, with TTL 0 in the response,
+	# and then attempt to fetch the data afresh.
+	# serve-expired: no
+
 	# Have the validator log failed validations for your diagnosis.
 	# 0: off. 1: A line per failed user query. 2: With reason and bad IP.
 	# val-log-level: 0
