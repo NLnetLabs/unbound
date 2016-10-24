@@ -1027,9 +1027,9 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 			sldns_buffer_read_u16_at(c->buffer, 2), repinfo, 
 			&edns)) {
 			/* prefetch it if the prefetch TTL expired */
-			if((worker->env.cfg->prefetch && *worker->env.now >=
-				((struct reply_info*)e->data)->prefetch_ttl)
-				|| worker->env.cfg->serve_expired) {
+			if((worker->env.cfg->prefetch || worker->env.cfg->serve_expired)
+				&& *worker->env.now >=
+				((struct reply_info*)e->data)->prefetch_ttl) {
 				time_t leeway = ((struct reply_info*)e->
 					data)->ttl - *worker->env.now;
 				if(((struct reply_info*)e->data)->ttl
