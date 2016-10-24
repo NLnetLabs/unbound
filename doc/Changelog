@@ -1,5 +1,6 @@
 24 October 2016: Wouter
 	- serve-expired config option: serve expired responses with TTL 0.
+	- g.root-servers.net has AAAA address.
 
 21 October 2016: Wouter
 	- Ported tests for local_cname unit test to testbound framework.
