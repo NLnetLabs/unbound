@@ -654,6 +654,11 @@ cachedb_operate(struct module_qstate* qstate, enum module_ev event, int id,
 		(void)error_response(qstate, id, LDNS_RCODE_SERVFAIL);
 		return;
 	}
+	if(!iq && (event == module_event_moddone)) {
+		/* during priming, module done but we never started */
+		qstate->ext_state[id] = module_finished;
+		return;
+	}
 
 	log_err("bad event for cachedb");
 	(void)error_response(qstate, id, LDNS_RCODE_SERVFAIL);
