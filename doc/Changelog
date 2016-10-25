@@ -1,3 +1,7 @@
+25 October 2016: Wouter
+	- Fix #1134: unbound-control set_option val-date-override: -1 works
+	  immediately to ignore datetime, or back to 0 to enable it again.
+
 24 October 2016: Wouter
 	- serve-expired config option: serve expired responses with TTL 0.
 	- g.root-servers.net has AAAA address.

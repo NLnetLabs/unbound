@@ -2256,6 +2256,14 @@ do_set_option(SSL* ssl, struct worker* worker, char* arg)
 		(void)ssl_printf(ssl, "error setting option\n");
 		return;
 	}
+	/* effectuate some arguments */
+	if(strcmp(arg, "val-override-date:") == 0) {
+		int m = modstack_find(&worker->env.mesh->mods, "validator");
+		struct val_env* val_env = NULL;
+		if(m != -1) val_env = (struct val_env*)worker->env.modinfo[m];
+		if(val_env)
+			val_env->date_override = worker->env.cfg->val_date_override;
+	}
 	send_ok(ssl);
 }
 
