@@ -129,7 +129,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_DEFINE_TAG VAR_LOCAL_ZONE_TAG VAR_ACCESS_CONTROL_TAG
 %token VAR_LOCAL_ZONE_OVERRIDE VAR_ACCESS_CONTROL_TAG_ACTION
 %token VAR_ACCESS_CONTROL_TAG_DATA VAR_VIEW VAR_ACCESS_CONTROL_VIEW
-%token VAR_VIEW_FIRST VAR_SERVE_EXPIRED
+%token VAR_VIEW_FIRST VAR_SERVE_EXPIRED VAR_FAKE_DSA
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -203,7 +203,8 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_disable_dnssec_lame_check | server_access_control_tag |
 	server_local_zone_override | server_access_control_tag_action |
 	server_access_control_tag_data | server_access_control_view |
-	server_qname_minimisation_strict | server_serve_expired
+	server_qname_minimisation_strict | server_serve_expired |
+	server_fake_dsa
 	;
 stubstart: VAR_STUB_ZONE
 	{
@@ -1188,6 +1189,17 @@ server_serve_expired: VAR_SERVE_EXPIRED STRING_ARG
 		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
 			yyerror("expected yes or no.");
 		else cfg_parser->cfg->serve_expired = (strcmp($2, "yes")==0);
+		free($2);
+	}
+	;
+server_fake_dsa: VAR_FAKE_DSA STRING_ARG
+	{
+		OUTYY(("P(server_fake_dsa:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else fake_dsa = (strcmp($2, "yes")==0);
+		if(fake_dsa)
+			log_warn("test option fake_dsa is enabled");
 		free($2);
 	}
 	;

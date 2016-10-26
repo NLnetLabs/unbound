@@ -945,4 +945,7 @@ char* w_lookup_reg_str(const char* key, const char* name);
 void w_config_adjust_directory(struct config_file* cfg);
 #endif /* UB_ON_WINDOWS */
 
+/** debug option for unit tests. */
+extern int fake_dsa;
+
 #endif /* UTIL_CONFIG_FILE_H */

@@ -1,3 +1,7 @@
+26 October 2016: Wouter
+	- Fix unit tests for openssl 1.1, with no DSA, by faking DSA, enabled
+	  with the undocumented switch 'fake-dsa'.  It logs a warning.
+
 25 October 2016: Wouter
 	- Fix #1134: unbound-control set_option -- val-override-date: -1 works
 	  immediately to ignore datetime, or back to 0 to enable it again.

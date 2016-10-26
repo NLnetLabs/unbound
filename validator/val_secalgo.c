@@ -72,6 +72,9 @@
 #include <openssl/engine.h>
 #endif
 
+/** fake DSA support for unit tests */
+int fake_dsa = 0;
+
 /* return size of digest if supported, or 0 otherwise */
 size_t
 nsec3_hash_algo_size_supported(int id)
@@ -192,9 +195,13 @@ dnskey_algo_id_is_supported(int id)
 	case LDNS_RSAMD5:
 		/* RFC 6725 deprecates RSAMD5 */
 		return 0;
-#ifdef USE_DSA
 	case LDNS_DSA:
 	case LDNS_DSA_NSEC3:
+#ifdef USE_DSA
+		return 1;
+#else
+		if(fake_dsa) return 1;
+		return 0;
 #endif
 	case LDNS_RSASHA1:
 	case LDNS_RSASHA1_NSEC3:
@@ -545,6 +552,11 @@ verify_canonrrset(sldns_buffer* buf, int algo, unsigned char* sigblock,
 	EVP_MD_CTX* ctx;
 	int res, dofree = 0, docrypto_free = 0;
 	EVP_PKEY *evp_key = NULL;
+
+#ifndef USE_DSA
+	if((algo == LDNS_DSA || algo == LDNS_DSA_NSEC3) && fake_dsa)
+		return sec_status_secure;
+#endif
 	
 	if(!setup_key_digest(algo, &evp_key, &digest_type, key, keylen)) {
 		verbose(VERB_QUERY, "verify: failed to setup key");
