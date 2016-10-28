@@ -563,6 +563,10 @@ answer_from_cache(struct worker* worker, struct query_info* qinfo,
 			return 0;
 		/* below, rrsets with ttl before timenow become TTL 0 in
 		 * the response */
+		/* This response was served with zero TTL */
+		if (timenow >= rep->ttl) {
+			worker->stats.zero_ttl_responses++;
+		}
 	} else {
 		/* see if it is possible */
 		if(rep->ttl < timenow) {

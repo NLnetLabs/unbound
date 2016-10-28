@@ -1,3 +1,7 @@
+28 October 2016: Wouter
+	- Patch for server.num.zero_ttl stats for count of expired replies,
+	  from Pavel Odintsov.
+
 26 October 2016: Wouter
 	- Fix unit tests for openssl 1.1, with no DSA, by faking DSA, enabled
 	  with the undocumented switch 'fake-dsa'.  It logs a warning.

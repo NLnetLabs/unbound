@@ -316,6 +316,9 @@ and resulted in recursive processing, taking a slot in the requestlist.
 Not part of the recursivereplies (or the histogram thereof) or cachemiss,
 as a cache response was sent.
 .TP
+.I threadX.num.zero_ttl
+number of replies with ttl zero, because they served an expired cache entry.
+.TP
 .I threadX.num.recursivereplies
 The number of replies sent to queries that needed recursive processing. Could be smaller than threadX.num.cachemiss if due to timeouts no replies were sent for some queries.
 .TP
@@ -363,6 +366,9 @@ summed over threads.
 summed over threads.
 .TP
 .I total.num.prefetch
+summed over threads.
+.TP
+.I total.num.zero_ttl
 summed over threads.
 .TP
 .I total.num.recursivereplies
