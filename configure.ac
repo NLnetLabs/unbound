@@ -1147,7 +1147,8 @@ AC_CHECK_FUNCS([tzset sigprocmask fcntl getpwnam endpwent getrlimit setrlimit se
 AC_CHECK_FUNCS([setresuid],,[AC_CHECK_FUNCS([setreuid])])
 AC_CHECK_FUNCS([setresgid],,[AC_CHECK_FUNCS([setregid])])
 
-AC_MSG_CHECKING([for sbrk])
+AC_CHECK_FUNCS([sbrk],[
+AC_MSG_CHECKING([if sbrk is not deprecated])
 # catch the warning of deprecated sbrk
 old_cflags="$CFLAGS"
 CFLAGS="$CFLAGS -Werror"
@@ -1159,6 +1160,7 @@ int main(void) { void* cur = sbrk(0); printf("%u\n", (unsigned)(size_t)((char*)c
 	AC_DEFINE(HAVE_SBRK, 1, [define if you have the sbrk() call])
     ], [AC_MSG_RESULT(no)])
 CFLAGS="$old_cflags"
+])
 
 # check if setreuid en setregid fail, on MacOSX10.4(darwin8).
 if echo $build_os | grep darwin8 > /dev/null; then
