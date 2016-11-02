@@ -1,5 +1,5 @@
 31 October 2016: Wouter
-	- Fix failure to build on arm64 with no sbrk
+	- Fix failure to build on arm64 with no sbrk.
 	- iana portlist update.
 
 28 October 2016: Wouter
