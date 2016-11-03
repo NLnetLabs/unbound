@@ -275,8 +275,12 @@ server:
 	# logfile: ""
 
 	# Log to syslog(3) if yes. The log facility LOG_DAEMON is used to
-	# log to, with identity "unbound". If yes, it overrides the logfile.
+	# log to. If yes, it overrides the logfile.
 	# use-syslog: yes
+
+	# Log identity to report. if empty, defaults to the name of argv[0]
+	# (usually "unbound").
+	# log-identity: ""
 
 	# print UTC timestamp in ascii to logfile, default is epoch in seconds.
 	# log-time-ascii: no

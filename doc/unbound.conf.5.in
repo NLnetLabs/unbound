@@ -534,6 +534,13 @@ The log facility LOG_DAEMON is used, with identity "unbound".
 The logfile setting is overridden when use\-syslog is turned on.
 The default is to log to syslog.
 .TP
+.B log\-identity: \fI<string>
+If "" is given (default), then the name of the executable, usually "unbound"
+is used to report to the log.  Enter a string to override it
+with that, which is useful on systems that run more than one instance of
+unbound, with different configurations, so that the logs can be easily
+distinguished against.
+.TP
 .B log\-time\-ascii: \fI<yes or no>
 Sets logfile lines to use a timestamp in UTC ascii. Default is no, which
 prints the seconds since 1970 in brackets. No effect if using syslog, in

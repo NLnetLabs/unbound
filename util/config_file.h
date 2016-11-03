@@ -229,6 +229,8 @@ struct config_file {
 	int log_time_ascii;
 	/** log queries with one line per query */
 	int log_queries;
+	/** log identity to report */
+	char* log_identity;
 
 	/** do not report identity (id.server, hostname.bind) */
 	int hide_identity;

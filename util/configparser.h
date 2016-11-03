@@ -222,7 +222,8 @@ extern int yydebug;
     VAR_ACCESS_CONTROL_VIEW = 432,
     VAR_VIEW_FIRST = 433,
     VAR_SERVE_EXPIRED = 434,
-    VAR_FAKE_DSA = 435
+    VAR_FAKE_DSA = 435,
+    VAR_LOG_IDENTITY = 436
   };
 #endif
 /* Tokens.  */
@@ -404,6 +405,7 @@ extern int yydebug;
 #define VAR_VIEW_FIRST 433
 #define VAR_SERVE_EXPIRED 434
 #define VAR_FAKE_DSA 435
+#define VAR_LOG_IDENTITY 436
 
 /* Value type.  */
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
@@ -414,7 +416,7 @@ union YYSTYPE
 
 	char*	str;
 
-#line 418 "util/configparser.h" /* yacc.c:1909  */
+#line 420 "util/configparser.h" /* yacc.c:1909  */
 };
 
 typedef union YYSTYPE YYSTYPE;

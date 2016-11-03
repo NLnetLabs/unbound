@@ -130,6 +130,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_LOCAL_ZONE_OVERRIDE VAR_ACCESS_CONTROL_TAG_ACTION
 %token VAR_ACCESS_CONTROL_TAG_DATA VAR_VIEW VAR_ACCESS_CONTROL_VIEW
 %token VAR_VIEW_FIRST VAR_SERVE_EXPIRED VAR_FAKE_DSA
+%token VAR_LOG_IDENTITY
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -204,7 +205,7 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_local_zone_override | server_access_control_tag_action |
 	server_access_control_tag_data | server_access_control_view |
 	server_qname_minimisation_strict | server_serve_expired |
-	server_fake_dsa
+	server_fake_dsa | server_log_identity
 	;
 stubstart: VAR_STUB_ZONE
 	{
@@ -1909,6 +1910,14 @@ server_disable_dnssec_lame_check: VAR_DISABLE_DNSSEC_LAME_CHECK STRING_ARG
 			(strcmp($2, "yes")==0);
 		free($2);
 	}
+	;
+server_log_identity: VAR_LOG_IDENTITY STRING_ARG
+	{
+		OUTYY(("P(server_log_identity:%s)\n", $2));
+		free(cfg_parser->cfg->log_identity);
+		cfg_parser->cfg->log_identity = $2;
+	}
+	;
 %%
 
 /* parse helper routines could be here */

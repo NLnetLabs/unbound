@@ -244,10 +244,21 @@ checkrlimits(struct config_file* cfg)
 #endif /* S_SPLINT_S */
 }
 
+/** set default logfile identity based on value from argv[0] at startup **/
+static void
+log_ident_set_fromdefault(struct config_file* cfg,
+	const char *log_default_identity)
+{
+	if(cfg->log_identity == NULL || cfg->log_identity[0] == 0)
+		log_ident_set(log_default_identity);
+	else
+		log_ident_set(cfg->log_identity);
+}
+
 /** set verbosity, check rlimits, cache settings */
 static void
 apply_settings(struct daemon* daemon, struct config_file* cfg, 
-	int cmdline_verbose, int debug_mode)
+	int cmdline_verbose, int debug_mode, const char* log_default_identity)
 {
 	/* apply if they have changed */
 	verbosity = cmdline_verbose + cfg->verbosity;
@@ -258,6 +269,7 @@ apply_settings(struct daemon* daemon, struct config_file* cfg,
 	}
 	daemon_apply_cfg(daemon, cfg);
 	checkrlimits(cfg);
+	log_ident_set_fromdefault(cfg, log_default_identity);
 }
 
 #ifdef HAVE_KILL
@@ -587,9 +599,10 @@ perform_setup(struct daemon* daemon, struct config_file* cfg, int debug_mode,
  * @param cmdline_verbose: verbosity resulting from commandline -v.
  *    These increase verbosity as specified in the config file.
  * @param debug_mode: if set, do not daemonize.
+ * @param log_default_identity: Default identity to report in logs
  */
 static void 
-run_daemon(const char* cfgfile, int cmdline_verbose, int debug_mode)
+run_daemon(const char* cfgfile, int cmdline_verbose, int debug_mode, const char* log_default_identity)
 {
 	struct config_file* cfg = NULL;
 	struct daemon* daemon = NULL;
@@ -611,7 +624,7 @@ run_daemon(const char* cfgfile, int cmdline_verbose, int debug_mode)
 					cfgfile);
 			log_warn("Continuing with default config settings");
 		}
-		apply_settings(daemon, cfg, cmdline_verbose, debug_mode);
+		apply_settings(daemon, cfg, cmdline_verbose, debug_mode, log_default_identity);
 		if(!done_setup)
 			config_lookup_uid(cfg);
 	
@@ -619,7 +632,7 @@ run_daemon(const char* cfgfile, int cmdline_verbose, int debug_mode)
 		if(!daemon_open_shared_ports(daemon))
 			fatal_exit("could not open ports");
 		if(!done_setup) { 
-			perform_setup(daemon, cfg, debug_mode, &cfgfile); 
+			perform_setup(daemon, cfg, debug_mode, &cfgfile);
 			done_setup = 1; 
 		} else {
 			/* reopen log after HUP to facilitate log rotation */
@@ -666,6 +679,7 @@ main(int argc, char* argv[])
 	int c;
 	const char* cfgfile = CONFIGFILE;
 	const char* winopt = NULL;
+	const char* log_ident_default;
 	int cmdline_verbose = 0;
 	int debug_mode = 0;
 #ifdef UB_ON_WINDOWS
@@ -678,7 +692,8 @@ main(int argc, char* argv[])
 #endif
 
 	log_init(NULL, 0, NULL);
-	log_ident_set(strrchr(argv[0],'/')?strrchr(argv[0],'/')+1:argv[0]);
+	log_ident_default = strrchr(argv[0],'/')?strrchr(argv[0],'/')+1:argv[0];
+	log_ident_set(log_ident_default);
 	/* parse the options */
 	while( (c=getopt(argc, argv, "c:dhvw:")) != -1) {
 		switch(c) {
@@ -711,7 +726,7 @@ main(int argc, char* argv[])
 	if(winopt) {
 #ifdef UB_ON_WINDOWS
 		wsvc_command_option(winopt, cfgfile, cmdline_verbose, 
-			cmdline_cfg);
+			cmdline_cfg, log_ident_default);
 #else
 		fatal_exit("option not supported");
 #endif
@@ -722,7 +737,7 @@ main(int argc, char* argv[])
 		return 1;
 	}
 
-	run_daemon(cfgfile, cmdline_verbose, debug_mode);
+	run_daemon(cfgfile, cmdline_verbose, debug_mode, log_ident_default);
 	log_init(NULL, 0, NULL); /* close logfile */
 	return 0;
 }

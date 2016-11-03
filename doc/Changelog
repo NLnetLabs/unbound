@@ -1,5 +1,7 @@
 3 November 2016: Wouter
 	- .gitattributes line for githubs code language display.
+	- log-identity: config option to set sys log identity, patch from
+	  "Robin H. Johnson" <robbat2@gentoo.org>
 
 2 November 2016: Wouter
 	- iana portlist update.
