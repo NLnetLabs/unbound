@@ -1,3 +1,6 @@
+3 November 2016: Ralph
+	- Set OpenSSL security level to 0 when using aNULL ciphers.
+
 3 November 2016: Wouter
 	- .gitattributes line for githubs code language display.
 	- log-identity: config option to set sys log identity, patch from
