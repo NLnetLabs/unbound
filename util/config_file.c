@@ -1053,6 +1053,7 @@ config_delete(struct config_file* cfg)
 	free(cfg->target_fetch_policy);
 	free(cfg->ssl_service_key);
 	free(cfg->ssl_service_pem);
+	free(cfg->log_identity);
 	config_del_strarray(cfg->ifs, cfg->num_ifs);
 	config_del_strarray(cfg->out_ifs, cfg->num_out_ifs);
 	config_delstubs(cfg->stubs);
