@@ -631,6 +631,7 @@ might return nxdomain for empty nonterminals (that usually happen for reverse
 IP address lookups), and thus may be incompatible with this.  To try to avoid
 this only DNSSEC-secure nxdomains are used, because the old software does not
 have DNSSEC.  Default is off.
+The nxdomain must be secure, this means nsec3 with optout is insufficient.
 Currently, draft\-ietf\-dnsop\-nxdomain\-cut promotes this technique.
 .TP
 .B harden\-referral\-path: \fI<yes or no>
