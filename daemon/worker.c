@@ -1421,7 +1421,7 @@ worker_send_query(uint8_t* qname, size_t qnamelen, uint16_t qtype,
 	uint16_t qclass, uint16_t flags, int dnssec, int want_dnssec,
 	int nocaps, struct edns_option* opt_list,
 	struct sockaddr_storage* addr, socklen_t addrlen, uint8_t* zone,
-	size_t zonelen, uint8_t ssl_upstream, struct module_qstate* q)
+	size_t zonelen, int ssl_upstream, struct module_qstate* q)
 {
 	struct worker* worker = q->env->worker;
 	struct outbound_entry* e = (struct outbound_entry*)regional_alloc(
@@ -1480,7 +1480,7 @@ struct outbound_entry* libworker_send_query(uint8_t* ATTR_UNUSED(qname),
 	int ATTR_UNUSED(nocaps), struct edns_option* ATTR_UNUSED(opt_list),
 	struct sockaddr_storage* ATTR_UNUSED(addr), 
 	socklen_t ATTR_UNUSED(addrlen), uint8_t* ATTR_UNUSED(zone),
-	size_t ATTR_UNUSED(zonelen), uint8_t ATTR_UNUSED(ssl_upstream),
+	size_t ATTR_UNUSED(zonelen), int ATTR_UNUSED(ssl_upstream),
 	struct module_qstate* ATTR_UNUSED(q))
 {
 	log_assert(0);

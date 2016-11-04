@@ -231,7 +231,7 @@ struct module_env {
 		uint16_t qtype, uint16_t qclass, uint16_t flags, int dnssec, 
 		int want_dnssec, int nocaps, struct edns_option* opt_list,
 		struct sockaddr_storage* addr, socklen_t addrlen,
-		uint8_t* zone, size_t zonelen, uint8_t ssl_upstream,
+		uint8_t* zone, size_t zonelen, int ssl_upstream,
 		struct module_qstate* q);
 
 	/**

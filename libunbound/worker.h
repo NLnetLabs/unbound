@@ -74,7 +74,7 @@ struct outbound_entry* libworker_send_query(uint8_t* qname, size_t qnamelen,
         uint16_t qtype, uint16_t qclass, uint16_t flags, int dnssec,
 	int want_dnssec, int nocaps, struct edns_option* opt_list,
 	struct sockaddr_storage* addr, socklen_t addrlen, uint8_t* zone,
-	size_t zonelen, uint8_t ssl_upstream, struct module_qstate* q);
+	size_t zonelen, int ssl_upstream, struct module_qstate* q);
 
 /** process incoming replies from the network */
 int libworker_handle_reply(struct comm_point* c, void* arg, int error,
@@ -131,7 +131,7 @@ struct outbound_entry* worker_send_query(uint8_t* qname, size_t qnamelen,
 	uint16_t qtype, uint16_t qclass, uint16_t flags, int dnssec, 
 	int want_dnssec, int nocaps, struct edns_option* opt_list,
 	struct sockaddr_storage* addr, socklen_t addrlen, uint8_t* zone,
-	size_t zonelen, uint8_t ssl_upstream, struct module_qstate* q);
+	size_t zonelen, int ssl_upstream, struct module_qstate* q);
 
 /** 
  * process control messages from the main thread. Frees the control 
