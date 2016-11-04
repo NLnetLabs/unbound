@@ -186,13 +186,17 @@ lz_enter_zone_dname(struct local_zones* zones, uint8_t* nm, size_t len,
 	lock_rw_wrlock(&zones->lock);
 	lock_rw_wrlock(&z->lock);
 	if(!rbtree_insert(&zones->ztree, &z->node)) {
+		struct local_zone* oldz;
 		log_warn("duplicate local-zone");
 		lock_rw_unlock(&z->lock);
-		local_zone_delete(z);
+		/* save zone name locally before deallocation,
+		 * otherwise, nm is gone if we zone_delete now. */
+		oldz = z;
 		/* find the correct zone, so not an error for duplicate */
 		z = local_zones_find(zones, nm, len, labs, c);
 		lock_rw_wrlock(&z->lock);
 		lock_rw_unlock(&zones->lock);
+		local_zone_delete(oldz);
 		return z;
 	}
 	lock_rw_unlock(&zones->lock);
