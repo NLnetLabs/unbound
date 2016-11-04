@@ -395,6 +395,9 @@
 /* Define if you have the SSL libraries installed. */
 #undef HAVE_SSL
 
+/* Define to 1 if you have the `SSL_CTX_set_security_level' function. */
+#undef HAVE_SSL_CTX_SET_SECURITY_LEVEL
+
 /* Define to 1 if you have the <stdarg.h> header file. */
 #undef HAVE_STDARG_H
 

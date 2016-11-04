@@ -1,3 +1,8 @@
+4 November 2016: Wouter
+	- configure detects ssl security level API function in the autoconf
+	  manner.  Every function on its own, so that other libraries (eg.
+	  LibreSSL) can develop their API without hindrance.
+
 3 November 2016: Ralph
 	- Set OpenSSL security level to 0 when using aNULL ciphers.
 

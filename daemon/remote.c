@@ -243,7 +243,7 @@ daemon_remote_create(struct config_file* cfg)
 
 	if (cfg->remote_control_use_cert == 0) {
 		/* No certificates are requested */
-#if OPENSSL_VERSION_NUMBER >= 0x10100000 && !defined(HAVE_LIBRESSL)
+#ifdef HAVE_SSL_CTX_SET_SECURITY_LEVEL
 		SSL_CTX_set_security_level(rc->ctx, 0);
 #endif
 		if(!SSL_CTX_set_cipher_list(rc->ctx, "aNULL")) {
