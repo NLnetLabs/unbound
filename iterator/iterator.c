@@ -2120,7 +2120,8 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 		&iq->qinfo_out)||target->attempts==1)?0:BIT_CD), 
 		iq->dnssec_expected, iq->caps_fallback || is_caps_whitelisted(
 		ie, iq), opt_list, &target->addr, target->addrlen,
-		iq->dp->name, iq->dp->namelen, qstate);
+		iq->dp->name, iq->dp->namelen,
+		(iq->dp->ssl_upstream || qstate->env->cfg->ssl_upstream), qstate);
 	if(!outq) {
 		log_addr(VERB_DETAIL, "error sending query to auth server", 
 			&target->addr, target->addrlen);

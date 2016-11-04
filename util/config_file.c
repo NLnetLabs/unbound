@@ -516,8 +516,9 @@ int config_set_option(struct config_file* cfg, const char* opt,
 		/* unknown or unsupported (from the set_option interface):
 		 * interface, outgoing-interface, access-control, 
 		 * stub-zone, name, stub-addr, stub-host, stub-prime
-		 * forward-first, stub-first,
-		 * forward-zone, name, forward-addr, forward-host,
+		 * forward-first, stub-first, forward-ssl-upstream,
+		 * stub-ssl-upstream, forward-zone,
+		 * name, forward-addr, forward-host,
 		 * ratelimit-for-domain, ratelimit-below-domain,
 		 * local-zone-tag, access-control-view */
 		return 0;

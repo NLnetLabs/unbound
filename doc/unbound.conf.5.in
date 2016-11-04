@@ -1302,6 +1302,10 @@ If enabled, a query is attempted without the stub clause if it fails.
 The data could not be retrieved and would have caused SERVFAIL because
 the servers are unreachable, instead it is tried without this clause.
 The default is no.
+.TP
+.B stub\-ssl\-upstream: \fI<yes or no>
+Enabled or disable whether the queries to this stub use SSL for transport.
+Default is no.
 .SS "Forward Zone Options"
 .LP
 There may be multiple
@@ -1332,6 +1336,10 @@ If enabled, a query is attempted without the forward clause if it fails.
 The data could not be retrieved and would have caused SERVFAIL because
 the servers are unreachable, instead it is tried without this clause.
 The default is no.
+.TP
+.B forward\-ssl\-upstream: \fI<yes or no>
+Enabled or disable whether the queries to this forwarder use SSL for transport.
+Default is no.
 .SS "View Options"
 .LP
 There may be multiple

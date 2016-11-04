@@ -270,7 +270,7 @@ fptr_whitelist_modenv_send_query(struct outbound_entry* (*fptr)(
         uint8_t* qname, size_t qnamelen, uint16_t qtype, uint16_t qclass,
         uint16_t flags, int dnssec, int want_dnssec, int nocaps,
 	struct edns_option* opt_list, struct sockaddr_storage* addr,
-	socklen_t addrlen, uint8_t* zone, size_t zonelen,
+	socklen_t addrlen, uint8_t* zone, size_t zonelen, uint8_t ssl_upstream,
 	struct module_qstate* q))
 {
 	if(fptr == &worker_send_query) return 1;

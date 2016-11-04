@@ -1,5 +1,5 @@
 /*
- * libunbound/worker.h - worker thread or process that resolves
+ * libunbound/libworker.h - worker thread or process that resolves
  *
  * Copyright (c) 2007, NLnet Labs. All rights reserved.
  *

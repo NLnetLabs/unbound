@@ -106,7 +106,8 @@ struct outbound_entry* worker_send_query(uint8_t* ATTR_UNUSED(qname),
 	int ATTR_UNUSED(nocaps), struct edns_option* ATTR_UNUSED(opt_list),
 	struct sockaddr_storage* ATTR_UNUSED(addr), 
 	socklen_t ATTR_UNUSED(addrlen), uint8_t* ATTR_UNUSED(zone),
-	size_t ATTR_UNUSED(zonelen), struct module_qstate* ATTR_UNUSED(q))
+	size_t ATTR_UNUSED(zonelen), uint8_t ATTR_UNUSED(ssl_upstream),
+	struct module_qstate* ATTR_UNUSED(q))
 {
 	log_assert(0);
 	return 0;
@@ -139,7 +140,8 @@ struct outbound_entry* libworker_send_query(uint8_t* ATTR_UNUSED(qname),
 	int ATTR_UNUSED(nocaps), struct edns_option* ATTR_UNUSED(opt_list),
 	struct sockaddr_storage* ATTR_UNUSED(addr), 
 	socklen_t ATTR_UNUSED(addrlen), uint8_t* ATTR_UNUSED(zone),
-	size_t ATTR_UNUSED(zonelen), struct module_qstate* ATTR_UNUSED(q))
+	size_t ATTR_UNUSED(zonelen), uint8_t ATTR_UNUSED(ssl_upstream),
+	struct module_qstate* ATTR_UNUSED(q))
 {
 	log_assert(0);
 	return 0;
