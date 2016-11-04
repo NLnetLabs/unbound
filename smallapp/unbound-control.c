@@ -176,9 +176,9 @@ setup_ctx(struct config_file* cfg)
 		free(c_cert);
 	} else {
 		/* Use ciphers that don't require authentication  */
-		#if OPENSSL_VERSION_NUMBER >= 0x10100000 && !defined(HAVE_LIBRESSL)
-			SSL_CTX_set_security_level(ctx, 0);
-		#endif
+#if OPENSSL_VERSION_NUMBER >= 0x10100000 && !defined(HAVE_LIBRESSL)
+		SSL_CTX_set_security_level(ctx, 0);
+#endif
 		if(!SSL_CTX_set_cipher_list(ctx, "aNULL"))
 			ssl_err("Error setting NULL cipher!");
 	}
