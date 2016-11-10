@@ -1,3 +1,7 @@
+10 November 2016: Ralph
+	- Fix #1155: test status code of unbound-control in 04-checkconf,
+	  not the status code from the tee command.
+
 4 November 2016: Ralph
 	- Added stub-ssl-upstream and forward-ssl-upstream options.
 
