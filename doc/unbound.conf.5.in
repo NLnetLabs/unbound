@@ -624,7 +624,8 @@ unsigned to badly signed often. If turned off you run the risk of a
 downgrade attack that disables security for a zone. Default is on.
 .TP
 .B harden\-below\-nxdomain: \fI<yes or no>
-From draft\-vixie\-dnsext\-resimprove, returns nxdomain to queries for a name
+From RFC 8020 (with title "NXDOMAIN: There Really Is Nothing Underneath"),
+returns nxdomain to queries for a name
 below another name that is already known to be nxdomain.  DNSSEC mandates
 noerror for empty nonterminals, hence this is possible.  Very old software
 might return nxdomain for empty nonterminals (that usually happen for reverse
@@ -632,7 +633,6 @@ IP address lookups), and thus may be incompatible with this.  To try to avoid
 this only DNSSEC-secure nxdomains are used, because the old software does not
 have DNSSEC.  Default is off.
 The nxdomain must be secure, this means nsec3 with optout is insufficient.
-Currently, draft\-ietf\-dnsop\-nxdomain\-cut promotes this technique.
 .TP
 .B harden\-referral\-path: \fI<yes or no>
 Harden the referral path by performing additional queries for
