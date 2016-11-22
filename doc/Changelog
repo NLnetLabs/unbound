@@ -5,6 +5,8 @@
 	  subdomain of the NSEC owner.
 	- QNAME minimisation uses QTYPE=A, therefore always check cache for
 	  this type in harden-below-nxdomain functionality.
+	- Added unit test for QNAME minimisation + harden below nxdomain
+	  synergy.
 
 22 November 2016: Wouter
 	- iana portlist update.
