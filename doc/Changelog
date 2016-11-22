@@ -3,6 +3,8 @@
 	  origin consistent between local-data and access-control-tag-data.
 	- Fix NSEC ENT wildcard check. Matching wildcard does not have to be a
 	  subdomain of the NSEC owner.
+	- QNAME minimisation uses QTYPE=A, therefore always check cache for
+	  this type in harden-below-nxdomain functionality.
 
 22 November 2016: Wouter
 	- iana portlist update.
