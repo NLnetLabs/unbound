@@ -101,57 +101,14 @@
  */
 #define PREFETCH_EXPIRY_ADD 60
 
-#ifdef UNBOUND_ALLOC_STATS
-/** measure memory leakage */
-static void
-debug_memleak(size_t accounted, size_t heap, 
-	size_t total_alloc, size_t total_free)
-{
-	static int init = 0;
-	static size_t base_heap, base_accounted, base_alloc, base_free;
-	size_t base_af, cur_af, grow_af, grow_acc;
-	if(!init) {
-		init = 1;
-		base_heap = heap;
-		base_accounted = accounted;
-		base_alloc = total_alloc;
-		base_free = total_free;
-	}
-	base_af = base_alloc - base_free;
-	cur_af = total_alloc - total_free;
-	grow_af = cur_af - base_af;
-	grow_acc = accounted - base_accounted;
-	log_info("Leakage: %d leaked. growth: %u use, %u acc, %u heap",
-		(int)(grow_af - grow_acc), (unsigned)grow_af, 
-		(unsigned)grow_acc, (unsigned)(heap - base_heap));
-}
-
-/** give debug heap size indication */
-static void
-debug_total_mem(size_t calctotal)
-{
-#ifdef HAVE_SBRK
-	extern void* unbound_start_brk;
-	extern size_t unbound_mem_alloc, unbound_mem_freed;
-	void* cur = sbrk(0);
-	int total = cur-unbound_start_brk;
-	log_info("Total heap memory estimate: %u  total-alloc: %u  "
-		"total-free: %u", (unsigned)total, 
-		(unsigned)unbound_mem_alloc, (unsigned)unbound_mem_freed);
-	debug_memleak(calctotal, (size_t)total, 
-		unbound_mem_alloc, unbound_mem_freed);
-#else
-	(void)calctotal;
-#endif /* HAVE_SBRK */
-}
-#endif /* UNBOUND_ALLOC_STATS */
-
 /** Report on memory usage by this thread and global */
 static void
 worker_mem_report(struct worker* ATTR_UNUSED(worker), 
 	struct serviced_query* ATTR_UNUSED(cur_serv))
 {
 #ifdef UNBOUND_ALLOC_STATS
+	/* measure memory leakage */
+	extern size_t unbound_mem_alloc, unbound_mem_freed;
 	/* debug func in validator module */
 	size_t total, front, back, mesh, msg, rrset, infra, ac, superac;
 	size_t me, iter, val, anch;
@@ -199,7 +156,9 @@ worker_mem_report(struct worker* ATTR_UNUSED(worker),
 		(unsigned)mesh, (unsigned)msg, (unsigned)rrset, 
 		(unsigned)infra, (unsigned)iter, (unsigned)val, (unsigned)anch,
 		(unsigned)ac, (unsigned)superac, (unsigned)me);
-	debug_total_mem(total);
+	log_info("Total heap memory estimate: %u  total-alloc: %u  "
+		"total-free: %u", (unsigned)total, 
+		(unsigned)unbound_mem_alloc, (unsigned)unbound_mem_freed);
 #else /* no UNBOUND_ALLOC_STATS */
 	size_t val = 0;
 	int i;

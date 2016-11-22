@@ -823,12 +823,6 @@ print_mem(SSL* ssl, struct worker* worker, struct daemon* daemon)
 {
 	int m;
 	size_t msg, rrset, val, iter;
-#ifdef HAVE_SBRK
-	extern void* unbound_start_brk;
-	void* cur = sbrk(0);
-	if(!print_longnum(ssl, "mem.total.sbrk"SQ, 
-		(size_t)((char*)cur - (char*)unbound_start_brk))) return 0;
-#endif /* HAVE_SBRK */
 	msg = slabhash_get_mem(daemon->env->msg_cache);
 	rrset = slabhash_get_mem(&daemon->env->rrset_cache->table);
 	val=0;

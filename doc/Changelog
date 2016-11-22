@@ -11,6 +11,8 @@
 22 November 2016: Wouter
 	- iana portlist update.
 	- Fix unit tests for DS hash processing for fake-dsa test option.
+	- patch from Dag-Erling Smorgrav that removes code that relies
+	  on sbrk().
 
 21 November 2016: Wouter
 	- Fix #1158: reference RFC 8020 "NXDOMAIN: There Really Is Nothing

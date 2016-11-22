@@ -1147,21 +1147,6 @@ AC_CHECK_FUNCS([tzset sigprocmask fcntl getpwnam endpwent getrlimit setrlimit se
 AC_CHECK_FUNCS([setresuid],,[AC_CHECK_FUNCS([setreuid])])
 AC_CHECK_FUNCS([setresgid],,[AC_CHECK_FUNCS([setregid])])
 
-AC_CHECK_FUNCS([sbrk],[
-AC_MSG_CHECKING([if sbrk is not deprecated])
-# catch the warning of deprecated sbrk
-old_cflags="$CFLAGS"
-CFLAGS="$CFLAGS -Werror"
-AC_COMPILE_IFELSE([AC_LANG_SOURCE(AC_INCLUDES_DEFAULT
-[[
-int main(void) { void* cur = sbrk(0); printf("%u\n", (unsigned)(size_t)((char*)cur - (char*)sbrk(0))); return 0; }
-]])], [
-	AC_MSG_RESULT(yes)
-	AC_DEFINE(HAVE_SBRK, 1, [define if you have the sbrk() call])
-    ], [AC_MSG_RESULT(no)])
-CFLAGS="$old_cflags"
-])
-
 # check if setreuid en setregid fail, on MacOSX10.4(darwin8).
 if echo $build_os | grep darwin8 > /dev/null; then
 	AC_DEFINE(DARWIN_BROKEN_SETREUID, 1, [Define this if on macOSX10.4-darwin8 and setreuid and setregid do not work])

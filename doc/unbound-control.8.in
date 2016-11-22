@@ -405,9 +405,6 @@ uptime since server boot in seconds.
 time since last statistics printout, in seconds.
 .SH EXTENDED STATISTICS
 .TP
-.I mem.total.sbrk
-If sbrk(2) is available, an estimate of the heap size of the program in number of bytes. Close to the total memory used by the program, as reported by top and ps.  Could be wrong if the OS allocates memory non\-contiguously.
-.TP
 .I mem.cache.rrset
 Memory in bytes in use by the RRset cache.
 .TP

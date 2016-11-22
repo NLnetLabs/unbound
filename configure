@@ -18967,45 +18967,6 @@ fi
 done
 
 
-for ac_func in sbrk
-do :
-  ac_fn_c_check_func "$LINENO" "sbrk" "ac_cv_func_sbrk"
-if test "x$ac_cv_func_sbrk" = xyes; then :
-  cat >>confdefs.h <<_ACEOF
-#define HAVE_SBRK 1
-_ACEOF
-
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking if sbrk is not deprecated" >&5
-$as_echo_n "checking if sbrk is not deprecated... " >&6; }
-# catch the warning of deprecated sbrk
-old_cflags="$CFLAGS"
-CFLAGS="$CFLAGS -Werror"
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-$ac_includes_default
-
-int main(void) { void* cur = sbrk(0); printf("%u\n", (unsigned)(size_t)((char*)cur - (char*)sbrk(0))); return 0; }
-
-_ACEOF
-if ac_fn_c_try_compile "$LINENO"; then :
-
-	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-$as_echo "yes" >&6; }
-
-$as_echo "#define HAVE_SBRK 1" >>confdefs.h
-
-
-else
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-fi
-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-CFLAGS="$old_cflags"
-
-fi
-done
-
-
 # check if setreuid en setregid fail, on MacOSX10.4(darwin8).
 if echo $build_os | grep darwin8 > /dev/null; then
 

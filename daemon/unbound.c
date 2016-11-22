@@ -87,11 +87,6 @@
 #  include "nss.h"
 #endif
 
-#ifdef HAVE_SBRK
-/** global debug value to keep track of heap memory allocation */
-void* unbound_start_brk = 0;
-#endif
-
 /** print usage. */
 static void usage(void)
 {
@@ -684,11 +679,6 @@ main(int argc, char* argv[])
 	int debug_mode = 0;
 #ifdef UB_ON_WINDOWS
 	int cmdline_cfg = 0;
-#endif
-
-#ifdef HAVE_SBRK
-	/* take debug snapshot of heap */
-	unbound_start_brk = sbrk(0);
 #endif
 
 	log_init(NULL, 0, NULL);
