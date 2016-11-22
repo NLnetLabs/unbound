@@ -1217,8 +1217,7 @@ local_encode(struct query_info* qinfo, struct edns_data* edns,
 /** find local data tag string match for the given type in the list */
 static int
 find_tag_datas(struct query_info* qinfo, struct config_strlist* list,
-	struct ub_packed_rrset_key* r, struct regional* temp,
-	uint8_t* zname, size_t zlen)
+	struct ub_packed_rrset_key* r, struct regional* temp)
 {
 	struct config_strlist* p;
 	char buf[65536];
@@ -1339,8 +1338,7 @@ local_data_answer(struct local_zone* z, struct query_info* qinfo,
 		if(tag != -1 && (size_t)tag<tag_datas_size && tag_datas[tag]) {
 			struct ub_packed_rrset_key r;
 			memset(&r, 0, sizeof(r));
-			if(find_tag_datas(qinfo, tag_datas[tag], &r, temp,
-				z->name, z->namelen)) {
+			if(find_tag_datas(qinfo, tag_datas[tag], &r, temp)) {
 				verbose(VERB_ALGO, "redirect with tag data [%d] %s",
 					tag, (tag<num_tags?tagname[tag]:"null"));
 
