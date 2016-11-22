@@ -1,3 +1,6 @@
+22 November 2016: Wouter
+	- iana portlist update.
+
 21 November 2016: Wouter
 	- Fix #1158: reference RFC 8020 "NXDOMAIN: There Really Is Nothing
 	  Underneath" for the harden-below-nxdomain option.
