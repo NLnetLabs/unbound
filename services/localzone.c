@@ -1233,7 +1233,7 @@ find_tag_datas(struct query_info* qinfo, struct config_strlist* list,
 		/* does this element match the type? */
 		snprintf(buf, sizeof(buf), ". %s", p->str);
 		res = sldns_str2wire_rr_buf(buf, rr, &len, NULL, 3600,
-			zname, zlen, NULL, 0);
+			NULL, 0, NULL, 0);
 		if(res != 0)
 			/* parse errors are already checked before, in
 			 * acllist check_data, skip this for robustness */

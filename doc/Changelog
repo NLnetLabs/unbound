@@ -1,3 +1,9 @@
+22 Novenber 2016: Ralph
+	- Make access-control-tag-data RDATA absolute. This makes the RDATA
+	  origin consistent between local-data and access-control-tag-data.
+	- Fix NSEC ENT wildcard check. Matching wildcard does not have to be a
+	  subdomain of the NSEC owner.
+
 22 November 2016: Wouter
 	- iana portlist update.
 	- Fix unit tests for DS hash processing for fake-dsa test option.
