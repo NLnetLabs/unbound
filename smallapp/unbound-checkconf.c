@@ -97,7 +97,10 @@ static void
 print_option(struct config_file* cfg, const char* opt, int final)
 {
 	if(strcmp(opt, "pidfile") == 0 && final) {
-		printf("%s\n", fname_after_chroot(cfg->pidfile, cfg, 1));
+		char *p = fname_after_chroot(cfg->pidfile, cfg, 1);
+		if(!p) fatal_exit("out of memory");
+		printf("%s\n", p);
+		free(p);
 		return;
 	}
 	if(!config_get_option(cfg, opt, config_print_func, stdout))
