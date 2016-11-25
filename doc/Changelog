@@ -1,3 +1,7 @@
+25 November 2016: Wouter
+	- Fix that with openssl 1.1 control-use-cert: no uses less cpu, by
+	  using no encryption over the unix socket.
+
 22 Novenber 2016: Ralph
 	- Make access-control-tag-data RDATA absolute. This makes the RDATA
 	  origin consistent between local-data and access-control-tag-data.

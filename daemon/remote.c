@@ -146,6 +146,7 @@ timeval_divide(struct timeval* avg, const struct timeval* sum, size_t d)
  * the command : "openssl dhparam -C 2048"
  * (some openssl versions reject DH that is 'too small', eg. 512).
  */
+#if OPENSSL_VERSION_NUMBER < 0x10100000
 #ifndef S_SPLINT_S
 static DH *get_dh2048(void)
 {
@@ -203,6 +204,7 @@ err:
 	return NULL;
 }
 #endif /* SPLINT */
+#endif /* OPENSSL_VERSION_NUMBER < 0x10100000 */
 
 struct daemon_remote*
 daemon_remote_create(struct config_file* cfg)
@@ -246,12 +248,15 @@ daemon_remote_create(struct config_file* cfg)
 #ifdef HAVE_SSL_CTX_SET_SECURITY_LEVEL
 		SSL_CTX_set_security_level(rc->ctx, 0);
 #endif
-		if(!SSL_CTX_set_cipher_list(rc->ctx, "aNULL")) {
+		if(!SSL_CTX_set_cipher_list(rc->ctx, "aNULL, eNULL")) {
 			log_crypto_err("Failed to set aNULL cipher list");
 			daemon_remote_delete(rc);
 			return NULL;
 		}
 
+		/* in openssl 1.1, the securitylevel 0 allows eNULL, that
+		 * does not need the DH */
+#if OPENSSL_VERSION_NUMBER < 0x10100000
 		/* Since we have no certificates and hence no source of
 		 * DH params, let's generate and set them
 		 */
@@ -260,6 +265,7 @@ daemon_remote_create(struct config_file* cfg)
 			daemon_remote_delete(rc);
 			return NULL;
 		}
+#endif
 		return rc;
 	}
 	rc->use_cert = 1;

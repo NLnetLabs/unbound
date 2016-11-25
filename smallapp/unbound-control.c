@@ -179,7 +179,7 @@ setup_ctx(struct config_file* cfg)
 #ifdef HAVE_SSL_CTX_SET_SECURITY_LEVEL
 		SSL_CTX_set_security_level(ctx, 0);
 #endif
-		if(!SSL_CTX_set_cipher_list(ctx, "aNULL"))
+		if(!SSL_CTX_set_cipher_list(ctx, "aNULL, eNULL"))
 			ssl_err("Error setting NULL cipher!");
 	}
 	return ctx;
