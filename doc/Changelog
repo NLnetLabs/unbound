@@ -1,3 +1,6 @@
+28 November 2016: Wouter
+	- new install-sh.
+
 25 November 2016: Wouter
 	- Fix that with openssl 1.1 control-use-cert: no uses less cpu, by
 	  using no encryption over the unix socket.
