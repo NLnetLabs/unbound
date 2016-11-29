@@ -191,10 +191,11 @@ views_find_view(struct views* vs, const char* name, int write)
 		lock_rw_unlock(&vs->lock);
 		return 0;
 	}
-	if(write)
+	if(write) {
 		lock_rw_wrlock(&v->lock);
-	else
+	} else {
 		lock_rw_rdlock(&v->lock);
+	}
 	lock_rw_unlock(&vs->lock);
 	return v;
 }

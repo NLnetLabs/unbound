@@ -1,5 +1,6 @@
 29 November 2016: Wouter
 	- version 1.6.0 is in the development branch.
+	- braces in view.c around lock statements.
 
 28 November 2016: Wouter
 	- new install-sh.
