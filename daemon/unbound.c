@@ -716,7 +716,7 @@ main(int argc, char* argv[])
 	if(winopt) {
 #ifdef UB_ON_WINDOWS
 		wsvc_command_option(winopt, cfgfile, cmdline_verbose, 
-			cmdline_cfg, log_ident_default);
+			cmdline_cfg);
 #else
 		fatal_exit("option not supported");
 #endif
