@@ -1128,8 +1128,8 @@ find_arg2(SSL* ssl, char* arg, char** arg2)
 }
 
 /** Add a new zone */
-static void
-do_zone_add(SSL* ssl, struct local_zones* zones, char* arg)
+static int
+perform_zone_add(SSL* ssl, struct local_zones* zones, char* arg)
 {
 	uint8_t* nm;
 	int nmlabs;
@@ -1138,13 +1138,13 @@ do_zone_add(SSL* ssl, struct local_zones* zones, char* arg)
 	enum localzone_type t;
 	struct local_zone* z;
 	if(!find_arg2(ssl, arg, &arg2))
-		return;
+		return 0;
 	if(!parse_arg_name(ssl, arg, &nm, &nmlen, &nmlabs))
-		return;
+		return 0;
 	if(!local_zone_str2type(arg2, &t)) {
 		ssl_printf(ssl, "error not a zone type. %s\n", arg2);
 		free(nm);
-		return;
+		return 0;
 	}
 	lock_rw_wrlock(&zones->lock);
 	if((z=local_zones_find(zones, nm, nmlen, 
@@ -1155,29 +1155,56 @@ do_zone_add(SSL* ssl, struct local_zones* zones, char* arg)
 		lock_rw_unlock(&z->lock);
 		free(nm);
 		lock_rw_unlock(&zones->lock);
-		send_ok(ssl);
-		return;
+		return 1;
 	}
 	if(!local_zones_add_zone(zones, nm, nmlen, 
 		nmlabs, LDNS_RR_CLASS_IN, t)) {
 		lock_rw_unlock(&zones->lock);
 		ssl_printf(ssl, "error out of memory\n");
-		return;
+		return 0;
 	}
 	lock_rw_unlock(&zones->lock);
+	return 1;
+}
+
+/** Do the local_zone command */
+static void
+do_zone_add(SSL* ssl, struct local_zones* zones, char* arg)
+{
+	if(!perform_zone_add(ssl, zones, arg))
+		return;
 	send_ok(ssl);
 }
 
-/** Remove a zone */
+/** Do the local_zones command */
 static void
-do_zone_remove(SSL* ssl, struct local_zones* zones, char* arg)
+do_zones_add(SSL* ssl, struct local_zones* zones)
+{
+	char buf[2048];
+	int num = 0;
+	while(ssl_read_line(ssl, buf, sizeof(buf))) {
+		if(buf[0] == 0x04 && buf[1] == 0)
+			break; /* end of transmission */
+		if(!perform_zone_add(ssl, zones, buf)) {
+			if(!ssl_printf(ssl, "error for input line: %s\n", buf))
+				return;
+		}
+		else
+			num++;
+	}
+	(void)ssl_printf(ssl, "added %d zones\n", num);
+}
+
+/** Remove a zone */
+static int
+perform_zone_remove(SSL* ssl, struct local_zones* zones, char* arg)
 {
 	uint8_t* nm;
 	int nmlabs;
 	size_t nmlen;
 	struct local_zone* z;
 	if(!parse_arg_name(ssl, arg, &nm, &nmlen, &nmlabs))
-		return;
+		return 0;
 	lock_rw_wrlock(&zones->lock);
 	if((z=local_zones_find(zones, nm, nmlen, 
 		nmlabs, LDNS_RR_CLASS_IN))) {
@@ -1186,33 +1213,117 @@ do_zone_remove(SSL* ssl, struct local_zones* zones, char* arg)
 	}
 	lock_rw_unlock(&zones->lock);
 	free(nm);
+	return 1;
+}
+
+/** Do the local_zone_remove command */
+static void
+do_zone_remove(SSL* ssl, struct local_zones* zones, char* arg)
+{
+	if(!perform_zone_remove(ssl, zones, arg))
+		return;
 	send_ok(ssl);
+}
+
+/** Do the local_zones_remove command */
+static void
+do_zones_remove(SSL* ssl, struct local_zones* zones)
+{
+	char buf[2048];
+	int num = 0;
+	while(ssl_read_line(ssl, buf, sizeof(buf))) {
+		if(buf[0] == 0x04 && buf[1] == 0)
+			break; /* end of transmission */
+		if(!perform_zone_remove(ssl, zones, buf)) {
+			if(!ssl_printf(ssl, "error for input line: %s\n", buf))
+				return;
+		}
+		else
+			num++;
+	}
+	(void)ssl_printf(ssl, "removed %d zones\n", num);
 }
 
 /** Add new RR data */
-static void
-do_data_add(SSL* ssl, struct local_zones* zones, char* arg)
+static int
+perform_data_add(SSL* ssl, struct local_zones* zones, char* arg)
 {
 	if(!local_zones_add_RR(zones, arg)) {
 		ssl_printf(ssl,"error in syntax or out of memory, %s\n", arg);
-		return;
+		return 0;
 	}
+	return 1;
+}
+
+/** Do the local_data command */
+static void
+do_data_add(SSL* ssl, struct local_zones* zones, char* arg)
+{
+	if(!perform_data_add(ssl, zones, arg))
+		return;
 	send_ok(ssl);
 }
 
-/** Remove RR data */
+/** Do the local_datas command */
 static void
-do_data_remove(SSL* ssl, struct local_zones* zones, char* arg)
+do_datas_add(SSL* ssl, struct local_zones* zones)
+{
+	char buf[2048];
+	int num = 0;
+	while(ssl_read_line(ssl, buf, sizeof(buf))) {
+		if(buf[0] == 0x04 && buf[1] == 0)
+			break; /* end of transmission */
+		if(!perform_data_add(ssl, zones, buf)) {
+			if(!ssl_printf(ssl, "error for input line: %s\n", buf))
+				return;
+		}
+		else
+			num++;
+	}
+	(void)ssl_printf(ssl, "added %d datas\n", num);
+}
+
+/** Remove RR data */
+static int
+perform_data_remove(SSL* ssl, struct local_zones* zones, char* arg)
 {
 	uint8_t* nm;
 	int nmlabs;
 	size_t nmlen;
 	if(!parse_arg_name(ssl, arg, &nm, &nmlen, &nmlabs))
-		return;
+		return 0;
 	local_zones_del_data(zones, nm,
 		nmlen, nmlabs, LDNS_RR_CLASS_IN);
 	free(nm);
+	return 1;
+}
+
+/** Do the local_data_remove command */
+static void
+do_data_remove(SSL* ssl, struct local_zones* zones, char* arg)
+{
+	if(!perform_data_remove(ssl, zones, arg))
+		return;
 	send_ok(ssl);
+}
+
+/** Do the local_datas_remove command */
+static void
+do_datas_remove(SSL* ssl, struct local_zones* zones)
+{
+	char buf[2048];
+	int num = 0;
+	while(ssl_read_line(ssl, buf, sizeof(buf))) {
+		if(buf[0] == 0x04 && buf[1] == 0)
+			break; /* end of transmission */
+		if(!perform_data_remove(ssl, zones, buf)) {
+			if(!ssl_printf(ssl, "error for input line: %s\n", buf))
+				return;
+		}
+		else
+			num++;
+	}
+	(void)ssl_printf(ssl, "removed %d datas\n", num);
 }
 
 /** Add a new zone to view */
@@ -2624,12 +2735,20 @@ execute_cmd(struct daemon_remote* rc, SSL* ssl, char* cmd,
 		do_verbosity(ssl, skipwhite(p+9));
 	} else if(cmdcmp(p, "local_zone_remove", 17)) {
 		do_zone_remove(ssl, worker->daemon->local_zones, skipwhite(p+17));
+	} else if(cmdcmp(p, "local_zones_remove", 18)) {
+		do_zones_remove(ssl, worker->daemon->local_zones);
 	} else if(cmdcmp(p, "local_zone", 10)) {
 		do_zone_add(ssl, worker->daemon->local_zones, skipwhite(p+10));
+	} else if(cmdcmp(p, "local_zones", 11)) {
+		do_zones_add(ssl, worker->daemon->local_zones);
 	} else if(cmdcmp(p, "local_data_remove", 17)) {
 		do_data_remove(ssl, worker->daemon->local_zones, skipwhite(p+17));
+	} else if(cmdcmp(p, "local_datas_remove", 18)) {
+		do_datas_remove(ssl, worker->daemon->local_zones);
 	} else if(cmdcmp(p, "local_data", 10)) {
 		do_data_add(ssl, worker->daemon->local_zones, skipwhite(p+10));
+	} else if(cmdcmp(p, "local_datas", 11)) {
+		do_datas_add(ssl, worker->daemon->local_zones);
 	} else if(cmdcmp(p, "view_local_zone_remove", 22)) {
 		do_view_zone_remove(ssl, worker, skipwhite(p+22));
 	} else if(cmdcmp(p, "view_local_zone", 15)) {

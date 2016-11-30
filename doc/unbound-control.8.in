@@ -99,6 +99,22 @@ but if the name has become an empty nonterminal (there is still data in
 domain names below the removed name), NOERROR nodata answers are the 
 result for that name.
 .TP
+.B local_zones
+Add local zones read from stdin of unbound\-control. Input is read per line,
+with name space type on a line. For bulk additions.
+.TP
+.B local_zones_remove
+Remove local zones read from stdin of unbound\-control. Input is one name per
+line. For bulk removals.
+.TP
+.B local_datas
+Add local data RRs read from stdin of unbound\-control. Input is one RR per
+line. For bulk additions.
+.TP
+.B local_datas_remove
+Remove local data RRs read from stdin of unbound\-control. Input is one name per
+line. For bulk removals.
+.TP
 .B dump_cache
 The contents of the cache is printed in a text format to stdout. You can
 redirect it to a file to store the cache in a file.

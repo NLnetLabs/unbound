@@ -1,3 +1,9 @@
+30 November 2016: Ralph
+	- Added local-zones and local-data bulk addition and removal
+	  functionality in unbound-control (local_zones, local_zones_remove,
+	  local_datas and local_datas_remove).
+	- iana portlist update
+
 29 November 2016: Wouter
 	- version 1.6.0 is in the development branch.
 	- braces in view.c around lock statements.
