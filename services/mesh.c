@@ -914,7 +914,7 @@ mesh_send_reply(struct mesh_state* m, int rcode, struct reply_info* rep,
 				LDNS_RCODE_SERVFAIL, &m->s.qinfo, r->qid, 
 				r->qflags, &r->edns);
 		}
-		r->edns = edns_bak; /* Fix unbound bug #1125.  See above. */
+		r->edns = edns_bak;
 		comm_point_send_reply(&r->query_reply);
 	}
 	/* account */
