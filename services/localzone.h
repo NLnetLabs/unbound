@@ -60,8 +60,8 @@ struct config_strlist;
  * local-data directly.
  */
 enum localzone_type {
-	/** drop query */
-	local_zone_deny = 0,
+	/** drop query. Start at 1 to differ from unset tag_actions element. */
+	local_zone_deny = 1,
 	/** answer with error */
 	local_zone_refuse,
 	/** answer nxdomain or nodata */

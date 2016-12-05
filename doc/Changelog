@@ -1,8 +1,12 @@
+5 December 2016: Ralph
+	- Fix #1173: differ local-zone type deny from unset
+	  tag_actions element.
+
 5 December 2016: Wouter
 	- Fix #1170: document that 'inform' local-zone uses local-data.
 
- 1 December 2016: Ralph
- 	- hyphen as minus fix, by Andreas Schulze
+1 December 2016: Ralph
+	- hyphen as minus fix, by Andreas Schulze
 
 30 November 2016: Ralph
 	- Added local-zones and local-data bulk addition and removal
