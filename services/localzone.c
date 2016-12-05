@@ -1593,6 +1593,7 @@ local_zones_answer(struct local_zones* zones, struct query_info* qinfo,
 const char* local_zone_type2str(enum localzone_type t)
 {
 	switch(t) {
+		case local_zone_unset: return "unset";
 		case local_zone_deny: return "deny";
 		case local_zone_refuse: return "refuse";
 		case local_zone_redirect: return "redirect";
