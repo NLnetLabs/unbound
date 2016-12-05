@@ -1,3 +1,6 @@
+5 December 2016: Wouter
+	- Fix #1170: document that 'inform' local-zone uses local-data.
+
  1 December 2016: Ralph
  	- hyphen as minus fix, by Andreas Schulze
 

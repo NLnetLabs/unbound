@@ -1001,11 +1001,11 @@ queries for www.example.com and www.foo.example.com are redirected, so
 that users with web browsers cannot access sites with suffix example.com.
 .TP 10
 \h'5'\fIinform\fR 
-The query is answered normally.  The client IP address (@portnumber)
-is printed to the logfile.  The log message is: timestamp, unbound-pid,
-info: zonename inform IP@port queryname type class.  This option can be
-used for normal resolution, but machines looking up infected names are
-logged, eg. to run antivirus on them.
+The query is answered normally, same as transparent.  The client IP
+address (@portnumber) is printed to the logfile.  The log message is:
+timestamp, unbound-pid, info: zonename inform IP@port queryname type
+class.  This option can be used for normal resolution, but machines
+looking up infected names are logged, eg. to run antivirus on them.
 .TP 10
 \h'5'\fIinform_deny\fR 
 The query is dropped, like 'deny', and logged, like 'inform'.  Ie. find

@@ -595,7 +595,7 @@ server:
 	# o redirect serves the zone data for any subdomain in the zone.
 	# o nodefault can be used to normally resolve AS112 zones.
 	# o typetransparent resolves normally for other types and other names
-	# o inform resolves normally, but logs client IP address
+	# o inform acts like transparent, but logs client IP address
 	# o inform_deny drops queries and logs client IP address
 	# o always_transparent, always_refuse, always_nxdomain, resolve in
 	#   that way but ignore local data for that name.
