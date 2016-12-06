@@ -93,7 +93,7 @@ int
 edns_register_option(uint16_t opt_code, int bypass_cache_stage,
 	int no_aggregation, struct module_env* env)
 {
-	int i;
+	size_t i;
 	if(env->worker) {
 		log_err("invalid edns registration: "
 			"trying to register option after module init phase");
@@ -272,7 +272,7 @@ inplace_cb_lists_delete(struct module_env* env)
 struct edns_known_option*
 edns_option_is_known(uint16_t opt_code, struct module_env* env)
 {
-	int i;
+	size_t i;
 	for(i=0; i<env->edns_known_options_num; i++)
 		if(env->edns_known_options[i].opt_code == opt_code)
 			return env->edns_known_options + i;
@@ -282,7 +282,7 @@ edns_option_is_known(uint16_t opt_code, struct module_env* env)
 int
 edns_bypass_cache_stage(struct edns_option* list, struct module_env* env)
 {
-	int i;
+	size_t i;
 	for(; list; list=list->next)
 		for(i=0; i<env->edns_known_options_num; i++)
 			if(env->edns_known_options[i].opt_code == list->opt_code &&
@@ -294,7 +294,7 @@ edns_bypass_cache_stage(struct edns_option* list, struct module_env* env)
 int
 edns_unique_mesh_state(struct edns_option* list, struct module_env* env)
 {
-	int i;
+	size_t i;
 	for(; list; list=list->next)
 		for(i=0; i<env->edns_known_options_num; i++)
 			if(env->edns_known_options[i].opt_code == list->opt_code &&
@@ -306,7 +306,7 @@ edns_unique_mesh_state(struct edns_option* list, struct module_env* env)
 void
 log_edns_known_options(enum verbosity_value level, struct module_env* env)
 {
-	int i;
+	size_t i;
 	char str[32], *s;
 	size_t slen;
 	if(env->edns_known_options_num > 0 && verbosity >= level) {
