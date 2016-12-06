@@ -436,6 +436,9 @@ int fptr_whitelist_print_func(void (*fptr)(char*,void*))
 int fptr_whitelist_inplace_cb_reply_generic(inplace_cb_reply_func_t* fptr,
 	enum inplace_cb_list_type type)
 {
+#ifndef WITH_PYTHONMODULE
+	(void)fptr;
+#endif
 	if(type == inplace_cb_reply) {
 #ifdef WITH_PYTHONMODULE
 		if(fptr == &python_inplace_cb_reply_generic) return 1;
@@ -456,7 +459,7 @@ int fptr_whitelist_inplace_cb_reply_generic(inplace_cb_reply_func_t* fptr,
 	return 0;
 }
 
-int fptr_whitelist_inplace_cb_query(inplace_cb_query_func_t* fptr)
+int fptr_whitelist_inplace_cb_query(inplace_cb_query_func_t* ATTR_UNUSED(fptr))
 {
 	return 0;
 }
