@@ -491,7 +491,7 @@ answer_norec_from_cache(struct worker* worker, struct query_info* qinfo,
 	edns->ext_rcode = 0;
 	edns->bits &= EDNS_DO;
 	if(!inplace_cb_reply_cache_call(&worker->env, qinfo, NULL, msg->rep,
-		flags & LDNS_RCODE_MASK, edns, worker->scratchpad))
+		(int)flags & LDNS_RCODE_MASK, edns, worker->scratchpad))
 			return 0;
 	msg->rep->flags |= BIT_QR|BIT_RA;
 	if(!reply_info_answer_encode(&msg->qinfo, msg->rep, id, flags, 
@@ -598,7 +598,7 @@ answer_from_cache(struct worker* worker, struct query_info* qinfo,
 	edns->ext_rcode = 0;
 	edns->bits &= EDNS_DO;
 	if(!inplace_cb_reply_cache_call(&worker->env, qinfo, NULL, rep,
-		flags & LDNS_RCODE_MASK, edns, worker->scratchpad))
+		(int)flags & LDNS_RCODE_MASK, edns, worker->scratchpad))
 			return 0;
 	if(!reply_info_answer_encode(qinfo, rep, id, flags, 
 		repinfo->c->buffer, timenow, 1, worker->scratchpad,
