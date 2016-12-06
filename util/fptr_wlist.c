@@ -267,11 +267,9 @@ fptr_whitelist_hash_markdelfunc(lruhash_markdelfunc_t fptr)
 /** whitelist env->send_query callbacks */
 int 
 fptr_whitelist_modenv_send_query(struct outbound_entry* (*fptr)(
-        uint8_t* qname, size_t qnamelen, uint16_t qtype, uint16_t qclass,
-        uint16_t flags, int dnssec, int want_dnssec, int nocaps,
-	struct edns_option* opt_list, struct sockaddr_storage* addr,
-	socklen_t addrlen, uint8_t* zone, size_t zonelen, int ssl_upstream,
-	struct module_qstate* q))
+	struct query_info* qinfo, uint16_t flags, int dnssec, int want_dnssec,
+	int nocaps, struct sockaddr_storage* addr, socklen_t addrlen,
+	uint8_t* zone, size_t zonelen, int ssl_upstream, struct module_qstate* q))
 {
 	if(fptr == &worker_send_query) return 1;
 	else if(fptr == &libworker_send_query) return 1;
@@ -432,5 +430,33 @@ int fptr_whitelist_print_func(void (*fptr)(char*,void*))
 	if(fptr == &config_print_func) return 1;
 	else if(fptr == &config_collate_func) return 1;
 	else if(fptr == &remote_get_opt_ssl) return 1;
+	return 0;
+}
+
+int fptr_whitelist_inplace_cb_reply_generic(inplace_cb_reply_func_t* fptr,
+	enum inplace_cb_list_type type)
+{
+	if(type == inplace_cb_reply) {
+#ifdef WITH_PYTHONMODULE
+		if(fptr == &python_inplace_cb_reply_generic) return 1;
+#endif
+	} else if(type == inplace_cb_reply_cache) {
+#ifdef WITH_PYTHONMODULE
+		if(fptr == &python_inplace_cb_reply_generic) return 1;
+#endif
+	} else if(type == inplace_cb_reply_local) {
+#ifdef WITH_PYTHONMODULE
+		if(fptr == &python_inplace_cb_reply_generic) return 1;
+#endif
+	} else if(type == inplace_cb_reply_servfail) {
+#ifdef WITH_PYTHONMODULE
+		if(fptr == &python_inplace_cb_reply_generic) return 1;
+#endif
+	}
+	return 0;
+}
+
+int fptr_whitelist_inplace_cb_query(inplace_cb_query_func_t* fptr)
+{
 	return 0;
 }

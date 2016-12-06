@@ -249,9 +249,16 @@ daemon_init(void)
 		free(daemon);
 		return NULL;
 	}
+	/* init edns_known_options */
+	if(!edns_known_options_init(daemon->env)) {
+		free(daemon->env);
+		free(daemon);
+		return NULL;
+	}
 	alloc_init(&daemon->superalloc, NULL, 0);
 	daemon->acl = acl_list_create();
 	if(!daemon->acl) {
+		edns_known_options_delete(daemon->env);
 		free(daemon->env);
 		free(daemon);
 		return NULL;
@@ -348,6 +355,7 @@ static void daemon_setup_modules(struct daemon* daemon)
 		daemon->env)) {
 		fatal_exit("failed to setup modules");
 	}
+	log_edns_known_options(VERB_ALGO, daemon->env);
 }
 
 /**
@@ -644,6 +652,8 @@ daemon_delete(struct daemon* daemon)
 		slabhash_delete(daemon->env->msg_cache);
 		rrset_cache_delete(daemon->env->rrset_cache);
 		infra_delete(daemon->env->infra_cache);
+		edns_known_options_delete(daemon->env);
+		inplace_cb_lists_delete(daemon->env);
 	}
 	ub_randfree(daemon->rand);
 	alloc_clear(&daemon->superalloc);

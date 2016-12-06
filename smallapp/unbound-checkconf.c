@@ -118,12 +118,15 @@ check_mod(struct config_file* cfg, struct module_func_block* fb)
 	env.scratch_buffer = sldns_buffer_new(BUFSIZ);
 	if(!env.scratch || !env.scratch_buffer)
 		fatal_exit("out of memory");
+	if(!edns_known_options_init(&env))
+		fatal_exit("out of memory");
 	if(!(*fb->init)(&env, 0)) {
 		fatal_exit("bad config for %s module", fb->name);
 	}
 	(*fb->deinit)(&env, 0);
 	sldns_buffer_free(env.scratch_buffer);
 	regional_destroy(env.scratch);
+	edns_known_options_delete(&env);
 }
 
 /** check localzones */

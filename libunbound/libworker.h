@@ -59,6 +59,7 @@ struct regional;
 struct tube;
 struct sldns_buffer;
 struct ub_event_base;
+struct query_info;
 
 /** 
  * The library-worker status structure

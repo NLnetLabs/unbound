@@ -547,8 +547,8 @@ cachedb_handle_query(struct module_qstate* qstate,
 		return;
 	}
 
-	if(qstate->blacklist) {
-		/* cache is blacklisted */
+	if(qstate->blacklist || qstate->no_cache_lookup) {
+		/* cache is blacklisted or we are instructed from edns to not look */
 		/* pass request to next module */
 		qstate->ext_state[id] = module_wait_module;
 		return;
@@ -600,8 +600,8 @@ static void
 cachedb_handle_response(struct module_qstate* qstate,
 	struct cachedb_qstate* ATTR_UNUSED(iq), struct cachedb_env* ie, int id)
 {
-	/* check if we are enabled, and skip if not */
-	if(!ie->enabled) {
+	/* check if we are not enabled or instructed to not cache, and skip */
+	if(!ie->enabled || qstate->no_cache_store) {
 		/* we are done with the query */
 		qstate->ext_state[id] = module_finished;
 		return;

@@ -1,3 +1,19 @@
+6 December 2016: George
+	- Added generic EDNS code for registering known EDNS option codes,
+	  bypassing the cache response stage and uniquifying mesh states. Four EDNS
+	  option lists were added to module_qstate (module_qstate.edns_opts_*) to
+	  store EDNS options from/to front/back side.
+	- Added two flags to module_qstate (no_cache_lookup, no_cache_store) that
+	  control the modules' cache interactions.
+	- Added code for registering inplace callback functions. The registered
+	  functions can be called just before replying with local data or Chaos,
+	  replying from cache, replying with SERVFAIL, replying with a resolved
+	  query, sending a query to a nameserver. The functions can inspect the
+	  available data and maybe change response/query related data (i.e. append
+	  EDNS options).
+	- Updated Python module for the above.
+	- Updated Python documentation.
+
 5 December 2016: Ralph
 	- Fix #1173: differ local-zone type deny from unset
 	  tag_actions element.

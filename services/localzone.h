@@ -44,6 +44,7 @@
 #include "util/rbtree.h"
 #include "util/locks.h"
 #include "util/storage/dnstree.h"
+#include "util/module.h"
 #include "services/view.h"
 struct ub_packed_rrset_key;
 struct regional;
@@ -267,6 +268,7 @@ void local_zones_print(struct local_zones* zones);
  * Answer authoritatively for local zones.
  * Takes care of locking.
  * @param zones: the stored zones (shared, read only).
+ * @param env: the module environment.
  * @param qinfo: query info (parsed).
  * @param edns: edns info (parsed).
  * @param buf: buffer with query ID and flags, also for reply.
@@ -293,10 +295,10 @@ void local_zones_print(struct local_zones* zones);
  * if it needs to keep it beyond the lifetime of 'temp' or a dynamic update
  * to local zone data.
  */
-int local_zones_answer(struct local_zones* zones, struct query_info* qinfo,
-	struct edns_data* edns, struct sldns_buffer* buf, struct regional* temp,
-	struct comm_reply* repinfo, uint8_t* taglist, size_t taglen,
-	uint8_t* tagactions, size_t tagactionssize,
+int local_zones_answer(struct local_zones* zones, struct module_env* env,
+	struct query_info* qinfo, struct edns_data* edns, struct sldns_buffer* buf,
+	struct regional* temp, struct comm_reply* repinfo, uint8_t* taglist,
+	size_t taglen, uint8_t* tagactions, size_t tagactionssize,
 	struct config_strlist** tag_datas, size_t tag_datas_size,
 	char** tagname, int num_tags, struct view* view);
 
