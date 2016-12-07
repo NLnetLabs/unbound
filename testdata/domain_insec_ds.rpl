@@ -5,7 +5,6 @@ server:
 	domain-insecure: "sub.example.com"
 	val-override-date: "20070916134226"
 	target-fetch-policy: "0 0 0 0 0"
-	fake-dsa: yes
 
 stub-zone:
 	name: "."

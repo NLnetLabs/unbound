@@ -1,3 +1,6 @@
+7 December 2016: Ralph
+	- Add DSA support for OpenSSL 1.1.0
+
 6 December 2016: George
 	- Added generic EDNS code for registering known EDNS option codes,
 	  bypassing the cache response stage and uniquifying mesh states. Four EDNS

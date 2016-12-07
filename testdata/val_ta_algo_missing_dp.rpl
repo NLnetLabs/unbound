@@ -7,7 +7,6 @@ server:
 	val-override-date: "20070916134226"
 	target-fetch-policy: "0 0 0 0 0"
 	harden-algo-downgrade: no
-	fake-dsa: yes
 
 stub-zone:
 	name: "."
