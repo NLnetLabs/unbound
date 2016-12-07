@@ -146,7 +146,7 @@ timeval_divide(struct timeval* avg, const struct timeval* sum, size_t d)
  * the command : "openssl dhparam -C 2048"
  * (some openssl versions reject DH that is 'too small', eg. 512).
  */
-#if OPENSSL_VERSION_NUMBER < 0x10100000
+#if OPENSSL_VERSION_NUMBER < 0x10100000 || defined(HAVE_LIBRESSL)
 #ifndef S_SPLINT_S
 static DH *get_dh2048(void)
 {
@@ -256,7 +256,7 @@ daemon_remote_create(struct config_file* cfg)
 
 		/* in openssl 1.1, the securitylevel 0 allows eNULL, that
 		 * does not need the DH */
-#if OPENSSL_VERSION_NUMBER < 0x10100000
+#if OPENSSL_VERSION_NUMBER < 0x10100000 || defined(HAVE_LIBRESSL)
 		/* Since we have no certificates and hence no source of
 		 * DH params, let's generate and set them
 		 */
