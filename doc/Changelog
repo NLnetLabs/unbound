@@ -1,3 +1,6 @@
+8 December 2016: Wouter
+	- Fix downcast warnings from visual studio in sldns code.
+
 7 December 2016: Ralph
 	- Add DSA support for OpenSSL 1.1.0
 	- Fix remote control without cert for LibreSSL
