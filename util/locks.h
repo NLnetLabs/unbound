@@ -163,7 +163,7 @@ Wrapper for set up thread stack size */
 		LOCKRET(pthread_attr_setstacksize(&attr, stackrequired)); \
 		LOCKRET(pthread_create(thr, &attr, func, arg)); \
 		LOCKRET(pthread_attr_getstacksize(&attr, &stacksize)); \
-		verbose(VERB_ALGO, "Thread stack size set to %zu", stacksize); \
+		verbose(VERB_ALGO, "Thread stack size set to %u", (unsigned)stacksize); \
 	} else {LOCKRET(pthread_create(thr, NULL, func, arg));} \
 	} while(0)
 /** Use wrapper for set thread stack size on attributes. */
