@@ -1,5 +1,9 @@
+9 December 2016: Wouter
+	- Fix #1176: stack size too small for Alpine Linux.
+
 8 December 2016: Wouter
 	- Fix downcast warnings from visual studio in sldns code.
+	- tag 1.6.0rc1
 
 7 December 2016: Ralph
 	- Add DSA support for OpenSSL 1.1.0

@@ -149,8 +149,25 @@ typedef pthread_spinlock_t lock_quick_t;
 
 /** Thread creation */
 typedef pthread_t ub_thread_t;
-/** Pass where to store tread_t in thr. Use default NULL attributes. */
-#define ub_thread_create(thr, func, arg) LOCKRET(pthread_create(thr, NULL, func, arg))
+/** On alpine linux default thread stack size is 80 Kb. See
+http://wiki.musl-libc.org/wiki/Functional_differences_from_glibc#Thread_stack_size
+This is not enough and cause segfault. Other linux distros have 2 Mb at least.
+Wrapper for set up thread stack size */
+#define PTHREADSTACKSIZE 2*1024*1024
+#define PTHREADCREATE(thr, stackrequired, func, arg) do {\
+	pthread_attr_t attr; \
+	size_t stacksize; \
+	LOCKRET(pthread_attr_init(&attr)); \
+	LOCKRET(pthread_attr_getstacksize(&attr, &stacksize)); \
+	if (stacksize < stackrequired) { \
+		LOCKRET(pthread_attr_setstacksize(&attr, stackrequired)); \
+		LOCKRET(pthread_create(thr, &attr, func, arg)); \
+		LOCKRET(pthread_attr_getstacksize(&attr, &stacksize)); \
+		verbose(VERB_ALGO, "Thread stack size set to %zu", stacksize); \
+	} else {LOCKRET(pthread_create(thr, NULL, func, arg));} \
+	} while(0)
+/** Use wrapper for set thread stack size on attributes. */
+#define ub_thread_create(thr, func, arg) PTHREADCREATE(thr, PTHREADSTACKSIZE, func, arg)
 /** get self id. */
 #define ub_thread_self() pthread_self()
 /** wait for another thread to terminate */
