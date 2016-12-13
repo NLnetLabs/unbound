@@ -195,9 +195,13 @@ contact_server(const char* svr, struct config_file* cfg, int statuscmd)
 	int fd;
 	/* use svr or the first config entry */
 	if(!svr) {
-		if(cfg->control_ifs)
+		if(cfg->control_ifs) {
 			svr = cfg->control_ifs->str;
-		else	svr = "127.0.0.1";
+		} else if(cfg->do_ip4) {
+			svr = "127.0.0.1";
+		} else {
+			svr = "::1";
+		}
 		/* config 0 addr (everything), means ask localhost */
 		if(strcmp(svr, "0.0.0.0") == 0)
 			svr = "127.0.0.1";
