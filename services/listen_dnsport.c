@@ -720,28 +720,37 @@ create_local_accept_sock(const char *path, int* noproto)
 		/* The socket already exists and cannot be removed */
 		log_err("Cannot remove old local socket %s (%s)",
 			path, strerror(errno));
-		return -1;
+		goto err;
 	}
 
 	if (bind(s, (struct sockaddr *)&usock,
 		(socklen_t)sizeof(struct sockaddr_un)) == -1) {
 		log_err("Cannot bind local socket %s (%s)",
 			path, strerror(errno));
-		return -1;
+		goto err;
 	}
 
 	if (!fd_set_nonblock(s)) {
 		log_err("Cannot set non-blocking mode");
-		return -1;
+		goto err;
 	}
 
 	if (listen(s, TCP_BACKLOG) == -1) {
 		log_err("can't listen: %s", strerror(errno));
-		return -1;
+		goto err;
 	}
 
 	(void)noproto; /*unused*/
 	return s;
+
+err:
+#ifndef USE_WINSOCK
+	close(s);
+#else
+	closesocket(s);
+#endif
+	return -1;
+
 #else
 	(void)path;
 	log_err("Local sockets are not supported");

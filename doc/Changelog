@@ -1,3 +1,6 @@
+13 December 2016: Wouter
+	- Fix #1182: Fix Resource leak (socket), at startup.
+
 9 December 2016: Wouter
 	- Fix #1176: stack size too small for Alpine Linux.
 
