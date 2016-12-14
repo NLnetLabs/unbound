@@ -1,3 +1,7 @@
+14 December 2016: Wouter
+	- Fix #1178: attempt to fix setup error at end, pop result values
+	  at end of install.
+
 13 December 2016: Wouter
 	- Fix #1182: Fix Resource leak (socket), at startup.
 	- Fix unbound-control and ipv6 only.
