@@ -1,6 +1,7 @@
 15 December 2016: Wouter
 	- iana portlist update
 	- 64bit is default for windows builds.
+	- Fix inet_ntop and inet_pton warnings in windows compile.
 
 14 December 2016: Wouter
 	- Fix #1178: attempt to fix setup error at end, pop result values
