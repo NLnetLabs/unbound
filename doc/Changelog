@@ -11,7 +11,7 @@
 
 8 December 2016: Wouter
 	- Fix downcast warnings from visual studio in sldns code.
-	- tag 1.6.0rc1
+	- tag 1.6.0rc1 which became 1.6.0 on 15 dec.
 
 7 December 2016: Ralph
 	- Add DSA support for OpenSSL 1.1.0
