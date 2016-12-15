@@ -55,7 +55,7 @@ Generate a distribution tar file for unbound.
                  Detected from svn working copy if not specified.
     -wssl openssl.xx.tar.gz Also build openssl from tarball for windows dist.
     -wxp expat.xx.tar.gz Also build expat from tarball for windows dist.
-    -w64	 64bit windows compile.
+    -w32	 32bit windows compile.
     -w ...       Build windows binary dist. last args passed to configure.
 EOF
     exit 1
@@ -178,7 +178,7 @@ storehash () {
 SNAPSHOT="no"
 RC="no"
 DOWIN="no"
-W64="no"
+W64="yes"
 WINSSL=""
 WINEXPAT=""
 
@@ -203,8 +203,8 @@ while [ "$1" ]; do
 	    WINEXPAT="$2"
 	    shift
 	    ;;
-	"-w64")
-	    W64="yes"
+	"-w32")
+	    W64="no"
 	    shift
 	    ;;
         "-w")
