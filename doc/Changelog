@@ -1,3 +1,6 @@
+19 December 2016: Ralph
+	- Fix #1191: remove comment about view deletion.
+
 15 December 2016: Wouter
 	- iana portlist update
 	- 64bit is default for windows builds.

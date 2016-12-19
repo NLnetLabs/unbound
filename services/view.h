@@ -75,9 +75,8 @@ struct view {
 	 * specific tree. 1 for yes, 0 for no */	
 	int isfirst;
 	/** lock on the data in the structure
-	 * For the node and name you
-	 * need to also hold the views_tree lock to change them (or to
-	 * delete this view) */
+	 * For the node and name you need to also hold the views_tree lock to
+	 * change them. */
 	lock_rw_t lock;
 };
 
