@@ -1,3 +1,7 @@
+21 December 2016: Ralph
+	- Fix #1188: Unresolved symbol 'fake_dsa' in libunbound.so when built
+	  with Nettle
+
 19 December 2016: Ralph
 	- Fix #1191: remove comment about view deletion.
 
