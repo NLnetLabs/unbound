@@ -1218,7 +1218,7 @@ local_encode(struct query_info* qinfo, struct module_env* env,
 static void
 local_error_encode(struct query_info* qinfo, struct module_env* env,
 	struct edns_data* edns, sldns_buffer* buf, struct regional* temp,
-	int rcode, uint16_t flags)
+	int rcode, int r)
 {
 	edns->edns_version = EDNS_ADVERTISED_VERSION;
 	edns->udp_size = EDNS_ADVERTISED_SIZE;
@@ -1228,7 +1228,7 @@ local_error_encode(struct query_info* qinfo, struct module_env* env,
 	if(!inplace_cb_reply_local_call(env, qinfo, NULL, NULL,
 		rcode, edns, temp))
 		edns->opt_list = NULL;
-	error_encode(buf, flags, qinfo, *(uint16_t*)sldns_buffer_begin(buf),
+	error_encode(buf, r, qinfo, *(uint16_t*)sldns_buffer_begin(buf),
 		sldns_buffer_read_u16_at(buf, 2), edns);
 }
 
