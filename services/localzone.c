@@ -1214,6 +1214,24 @@ local_encode(struct query_info* qinfo, struct module_env* env,
 	return 1;
 }
 
+/** encode local error answer */
+static void
+local_error_encode(struct query_info* qinfo, struct module_env* env,
+	struct edns_data* edns, sldns_buffer* buf, struct regional* temp,
+	int rcode, uint16_t flags)
+{
+	edns->edns_version = EDNS_ADVERTISED_VERSION;
+	edns->udp_size = EDNS_ADVERTISED_SIZE;
+	edns->ext_rcode = 0;
+	edns->bits &= EDNS_DO;
+
+	if(!inplace_cb_reply_local_call(env, qinfo, NULL, NULL,
+		rcode, edns, temp))
+		edns->opt_list = NULL;
+	error_encode(buf, flags, qinfo, *(uint16_t*)sldns_buffer_begin(buf),
+		sldns_buffer_read_u16_at(buf, 2), edns);
+}
+
 /** find local data tag string match for the given type in the list */
 static int
 find_tag_datas(struct query_info* qinfo, struct config_strlist* list,
@@ -1414,9 +1432,8 @@ lz_zone_answer(struct local_zone* z, struct module_env* env,
 		return 1;
 	} else if(lz_type == local_zone_refuse
 		|| lz_type == local_zone_always_refuse) {
-		error_encode(buf, (LDNS_RCODE_REFUSED|BIT_AA), qinfo,
-			*(uint16_t*)sldns_buffer_begin(buf),
-		       sldns_buffer_read_u16_at(buf, 2), edns);
+		local_error_encode(qinfo, env, edns, buf, temp,
+			LDNS_RCODE_REFUSED, (LDNS_RCODE_REFUSED|BIT_AA));
 		return 1;
 	} else if(lz_type == local_zone_static ||
 		lz_type == local_zone_redirect ||
@@ -1433,9 +1450,8 @@ lz_zone_answer(struct local_zone* z, struct module_env* env,
 		if(z->soa)
 			return local_encode(qinfo, env, edns, buf, temp, 
 				z->soa, 0, rcode);
-		error_encode(buf, (rcode|BIT_AA), qinfo, 
-			*(uint16_t*)sldns_buffer_begin(buf), 
-			sldns_buffer_read_u16_at(buf, 2), edns);
+		local_error_encode(qinfo, env, edns, buf, temp, rcode,
+			(rcode|BIT_AA));
 		return 1;
 	} else if(lz_type == local_zone_typetransparent
 		|| lz_type == local_zone_always_transparent) {
@@ -1451,9 +1467,8 @@ lz_zone_answer(struct local_zone* z, struct module_env* env,
 		if(z->soa)
 			return local_encode(qinfo, env, edns, buf, temp, 
 				z->soa, 0, rcode);
-		error_encode(buf, (rcode|BIT_AA), qinfo, 
-			*(uint16_t*)sldns_buffer_begin(buf), 
-			sldns_buffer_read_u16_at(buf, 2), edns);
+		local_error_encode(qinfo, env, edns, buf, temp, rcode,
+			(rcode|BIT_AA));
 		return 1;
 	}
 

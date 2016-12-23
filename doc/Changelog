@@ -1,3 +1,7 @@
+23 December 2016: Ralph
+	- Fix #1190: Do not echo back EDNS options in local-zone error response.
+	- iana portlist update
+
 21 December 2016: Ralph
 	- Fix #1188: Unresolved symbol 'fake_dsa' in libunbound.so when built
 	  with Nettle
