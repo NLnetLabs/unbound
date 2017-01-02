@@ -19283,7 +19283,7 @@ else
 esac
 
 		    else
-			case `uname` in
+			case "$host" in
 			Darwin)
 				case " $LIBOBJS " in
   *" getentropy_osx.$ac_objext "* ) ;;

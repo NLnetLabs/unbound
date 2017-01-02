@@ -1211,7 +1211,7 @@ if test "$USE_NSS" = "no"; then
 		    if test "$USE_WINSOCK" = 1; then
 			AC_LIBOBJ(getentropy_win)
 		    else
-			case `uname` in
+			case "$host" in
 			Darwin)
 				AC_LIBOBJ(getentropy_osx)
 			;;

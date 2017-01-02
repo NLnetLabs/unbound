@@ -1,3 +1,6 @@
+2 January 2017: Wouter
+	- Fix #1194: Cross build fails when $host isn't `uname` for getentropy.
+
 23 December 2016: Ralph
 	- Fix #1190: Do not echo back EDNS options in local-zone error response.
 	- iana portlist update
