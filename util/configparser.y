@@ -585,9 +585,11 @@ server_directory: VAR_DIRECTORY STRING_ARG
 				strncmp(d, cfg_parser->chroot, strlen(
 				cfg_parser->chroot)) == 0)
 				d += strlen(cfg_parser->chroot);
-			if(chdir(d))
+			if(d[0]) {
+			    if(chdir(d))
 				log_err("cannot chdir to directory: %s (%s)",
 					d, strerror(errno));
+			}
 		}
 	}
 	;

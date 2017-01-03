@@ -4,6 +4,7 @@
 	  Also there are contrib/unbound.socket and contrib/unbound.service:
 	  systemd files for unbound, install them in /usr/lib/systemd/system.
 	  Contributed by Sami Kerola and Pavel Odintsov.
+	- Fix reload chdir failure when also chrooted to that directory.
 
 2 January 2017: Wouter
 	- Fix #1194: Cross build fails when $host isn't `uname` for getentropy.
