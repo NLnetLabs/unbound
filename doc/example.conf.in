@@ -200,7 +200,11 @@ server:
 	# Default is 0, system default MSS.
 	# outgoing-tcp-mss: 0
 
+	# Use systemd socket activation for UDP, TCP, and control sockets.
+	# use-systemd: no
+
 	# Detach from the terminal, run in background, "yes" or "no".
+	# Set the value to "no" when unbound runs as systemd service.
 	# do-daemonize: yes
 
 	# control which clients are allowed to make (recursive) queries

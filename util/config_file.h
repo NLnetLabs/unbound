@@ -344,6 +344,9 @@ struct config_file {
 	/** Python script file */
 	char* python_script;
 
+	/** Use systemd socket activation. */
+	int use_systemd;
+
 	/** daemonize, i.e. fork into the background. */
 	int do_daemonize;
 

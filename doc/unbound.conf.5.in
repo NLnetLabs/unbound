@@ -413,9 +413,14 @@ turned off.
 The port number on which to provide TCP SSL service, default 853, only
 interfaces configured with that port number as @number get the SSL service.
 .TP
+.B use\-systemd: \fI<yes or no>
+Enable or disable systemd socket activation.
+Default is no.
+.TP
 .B do\-daemonize: \fI<yes or no>
 Enable or disable whether the unbound server forks into the background as
-a daemon. Default is yes.
+a daemon.  Set the value to \fIno\fR when unbound runs as systemd service.
+Default is yes.
 .TP
 .B access\-control: \fI<IP netblock> <action>
 The netblock is given as an IP4 or IP6 address with /size appended for a 

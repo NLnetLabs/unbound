@@ -1,3 +1,10 @@
+3 January 2017: Wouter
+	- configure --enable-systemd and lets unbound use systemd sockets if
+	  you enable use-systemd: yes in unbound.conf.
+	  Also there are contrib/unbound.socket and contrib/unbound.service:
+	  systemd files for unbound, install them in /usr/lib/systemd/system.
+	  Contributed by Sami Kerola and Pavel Odintsov.
+
 2 January 2017: Wouter
 	- Fix #1194: Cross build fails when $host isn't `uname` for getentropy.
 

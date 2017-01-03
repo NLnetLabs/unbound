@@ -132,6 +132,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_ACCESS_CONTROL_TAG_DATA VAR_VIEW VAR_ACCESS_CONTROL_VIEW
 %token VAR_VIEW_FIRST VAR_SERVE_EXPIRED VAR_FAKE_DSA
 %token VAR_LOG_IDENTITY
+%token VAR_USE_SYSTEMD
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -206,7 +207,7 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_local_zone_override | server_access_control_tag_action |
 	server_access_control_tag_data | server_access_control_view |
 	server_qname_minimisation_strict | server_serve_expired |
-	server_fake_dsa | server_log_identity
+	server_fake_dsa | server_log_identity | server_use_systemd
 	;
 stubstart: VAR_STUB_ZONE
 	{
@@ -499,6 +500,15 @@ server_ssl_port: VAR_SSL_PORT STRING_ARG
 		if(atoi($2) == 0)
 			yyerror("port number expected");
 		else cfg_parser->cfg->ssl_port = atoi($2);
+		free($2);
+	}
+	;
+server_use_systemd: VAR_USE_SYSTEMD STRING_ARG
+	{
+		OUTYY(("P(server_use_systemd:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else cfg_parser->cfg->use_systemd = (strcmp($2, "yes")==0);
 		free($2);
 	}
 	;

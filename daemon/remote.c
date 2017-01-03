@@ -381,7 +381,7 @@ add_open(const char* ip, int nr, struct listen_port** list, int noproto_is_err,
 
 	if(ip[0] == '/') {
 		/* This looks like a local socket */
-		fd = create_local_accept_sock(ip, &noproto);
+		fd = create_local_accept_sock(ip, &noproto, cfg->use_systemd);
 		/*
 		 * Change socket ownership and permissions so users other
 		 * than root can access it provided they are in the same
@@ -424,7 +424,7 @@ add_open(const char* ip, int nr, struct listen_port** list, int noproto_is_err,
 
 		/* open fd */
 		fd = create_tcp_accept_sock(res, 1, &noproto, 0,
-			cfg->ip_transparent, 0, cfg->ip_freebind);
+			cfg->ip_transparent, 0, cfg->ip_freebind, cfg->use_systemd);
 		freeaddrinfo(res);
 	}
 
