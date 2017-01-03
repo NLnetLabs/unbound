@@ -195,6 +195,8 @@ create_udp_sock(int family, int socktype, struct sockaddr* addr,
 	    || (use_systemd
 		&& (s = systemd_get_activated(family, socktype, -1, addr,
 					      addrlen, NULL)) == -1)) {
+#else
+	(void)use_systemd;
 #endif
 	if((s = socket(family, socktype, 0)) == -1) {
 		*inuse = 0;
@@ -613,6 +615,8 @@ create_tcp_accept_sock(struct addrinfo *addr, int v6only, int* noproto,
 	     && (s = systemd_get_activated(addr->ai_family, addr->ai_socktype, 1,
 					   addr->ai_addr, addr->ai_addrlen,
 					   NULL)) == -1)) {
+#else
+	(void)use_systemd;
 #endif
 	if((s = socket(addr->ai_family, addr->ai_socktype, 0)) == -1) {
 #ifndef USE_WINSOCK
@@ -807,6 +811,9 @@ create_local_accept_sock(const char *path, int* noproto, int use_systemd)
 #ifdef HAVE_SYS_UN_H
 	int s;
 	struct sockaddr_un usock;
+#ifndef HAVE_SYSTEMD
+	(void)use_systemd;
+#endif
 
 	verbose(VERB_ALGO, "creating unix socket %s", path);
 #ifdef HAVE_STRUCT_SOCKADDR_UN_SUN_LEN
