@@ -867,6 +867,10 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 		qinfo.qtype == LDNS_RR_TYPE_MAILB) {
 		verbose(VERB_ALGO, "worker request: formerror for meta-type.");
 		log_addr(VERB_CLIENT,"from",&repinfo->addr, repinfo->addrlen);
+		if(worker_err_ratelimit(worker, LDNS_RCODE_FORMERR) == -1) {
+			comm_point_drop_reply(repinfo);
+			return 0;
+		}
 		sldns_buffer_rewind(c->buffer);
 		LDNS_QR_SET(sldns_buffer_begin(c->buffer));
 		LDNS_RCODE_SET(sldns_buffer_begin(c->buffer), 
