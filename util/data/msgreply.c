@@ -835,7 +835,7 @@ log_reply_info(enum verbosity_value v, struct query_info *qinf,
 	if(verbosity < v)
 	  return;
 
-	sldns_wire2str_rcode_buf(rcode, rcode_buf, sizeof(rcode_buf));
+	sldns_wire2str_rcode_buf((int)rcode, rcode_buf, sizeof(rcode_buf));
 	addr_to_str(addr, addrlen, clientip_buf, sizeof(clientip_buf));
 	if(rcode == LDNS_RCODE_FORMERR)
 	{
