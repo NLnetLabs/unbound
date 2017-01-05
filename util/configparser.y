@@ -124,8 +124,10 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_DNSTAP_LOG_FORWARDER_RESPONSE_MESSAGES
 %token VAR_HARDEN_ALGO_DOWNGRADE VAR_IP_TRANSPARENT
 %token VAR_DISABLE_DNSSEC_LAME_CHECK
+%token VAR_IP_RATELIMIT VAR_IP_RATELIMIT_SLABS VAR_IP_RATELIMIT_SIZE
 %token VAR_RATELIMIT VAR_RATELIMIT_SLABS VAR_RATELIMIT_SIZE
-%token VAR_RATELIMIT_FOR_DOMAIN VAR_RATELIMIT_BELOW_DOMAIN VAR_RATELIMIT_FACTOR
+%token VAR_RATELIMIT_FOR_DOMAIN VAR_RATELIMIT_BELOW_DOMAIN
+%token VAR_IP_RATELIMIT_FACTOR VAR_RATELIMIT_FACTOR
 %token VAR_CAPS_WHITELIST VAR_CACHE_MAX_NEGATIVE_TTL VAR_PERMIT_SMALL_HOLDDOWN
 %token VAR_QNAME_MINIMISATION VAR_QNAME_MINIMISATION_STRICT VAR_IP_FREEBIND
 %token VAR_DEFINE_TAG VAR_LOCAL_ZONE_TAG VAR_ACCESS_CONTROL_TAG
@@ -198,9 +200,12 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_unblock_lan_zones | server_insecure_lan_zones |
 	server_dns64_prefix | server_dns64_synthall |
 	server_infra_cache_min_rtt | server_harden_algo_downgrade |
-	server_ip_transparent | server_ratelimit | server_ratelimit_slabs |
-	server_ratelimit_size | server_ratelimit_for_domain |
+	server_ip_transparent | server_ip_ratelimit | server_ratelimit |
+	server_ip_ratelimit_slabs | server_ratelimit_slabs |
+	server_ip_ratelimit_size | server_ratelimit_size |
+	server_ratelimit_for_domain |
 	server_ratelimit_below_domain | server_ratelimit_factor |
+	server_ip_ratelimit_factor |
 	server_caps_whitelist | server_cache_max_negative_ttl |
 	server_permit_small_holddown | server_qname_minimisation |
 	server_ip_freebind | server_define_tag | server_local_zone_tag |
@@ -1504,6 +1509,16 @@ server_access_control_view: VAR_ACCESS_CONTROL_VIEW STRING_ARG STRING_ARG
 		}
 	}
 	;
+server_ip_ratelimit: VAR_IP_RATELIMIT STRING_ARG 
+	{ 
+		OUTYY(("P(server_ip_ratelimit:%s)\n", $2)); 
+		if(atoi($2) == 0 && strcmp($2, "0") != 0)
+			yyerror("number expected");
+		else cfg_parser->cfg->ip_ratelimit = atoi($2);
+		free($2);
+	}
+	;
+
 server_ratelimit: VAR_RATELIMIT STRING_ARG 
 	{ 
 		OUTYY(("P(server_ratelimit:%s)\n", $2)); 
@@ -1513,6 +1528,14 @@ server_ratelimit: VAR_RATELIMIT STRING_ARG
 		free($2);
 	}
 	;
+server_ip_ratelimit_size: VAR_IP_RATELIMIT_SIZE STRING_ARG
+  {
+  	OUTYY(("P(server_ip_ratelimit_size:%s)\n", $2));
+  	if(!cfg_parse_memsize($2, &cfg_parser->cfg->ip_ratelimit_size))
+  		yyerror("memory size expected");
+  	free($2);
+  }
+  ;
 server_ratelimit_size: VAR_RATELIMIT_SIZE STRING_ARG
 	{
 		OUTYY(("P(server_ratelimit_size:%s)\n", $2));
@@ -1521,6 +1544,19 @@ server_ratelimit_size: VAR_RATELIMIT_SIZE STRING_ARG
 		free($2);
 	}
 	;
+server_ip_ratelimit_slabs: VAR_IP_RATELIMIT_SLABS STRING_ARG
+  {
+  	OUTYY(("P(server_ip_ratelimit_slabs:%s)\n", $2));
+  	if(atoi($2) == 0)
+  		yyerror("number expected");
+  	else {
+  		cfg_parser->cfg->ip_ratelimit_slabs = atoi($2);
+  		if(!is_pow2(cfg_parser->cfg->ip_ratelimit_slabs))
+  			yyerror("must be a power of 2");
+  	}
+  	free($2);
+  }
+  ;
 server_ratelimit_slabs: VAR_RATELIMIT_SLABS STRING_ARG
 	{
 		OUTYY(("P(server_ratelimit_slabs:%s)\n", $2));
@@ -1558,6 +1594,15 @@ server_ratelimit_below_domain: VAR_RATELIMIT_BELOW_DOMAIN STRING_ARG STRING_ARG
 				fatal_exit("out of memory adding "
 					"ratelimit-below-domain");
 		}
+	}
+	;
+server_ip_ratelimit_factor: VAR_IP_RATELIMIT_FACTOR STRING_ARG 
+  { 
+  	OUTYY(("P(server_ip_ratelimit_factor:%s)\n", $2)); 
+  	if(atoi($2) == 0 && strcmp($2, "0") != 0)
+  		yyerror("number expected");
+  	else cfg_parser->cfg->ip_ratelimit_factor = atoi($2);
+  	free($2);
 	}
 	;
 server_ratelimit_factor: VAR_RATELIMIT_FACTOR STRING_ARG 

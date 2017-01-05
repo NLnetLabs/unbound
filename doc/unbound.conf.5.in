@@ -1205,6 +1205,34 @@ in different parts of the namespace.  The closest matching suffix is used
 to determine the qps limit.  The rate for the exact matching domain name
 is not changed, use ratelimit\-for\-domain to set that, you might want
 to use different settings for a top\-level\-domain and subdomains.
+.TP 5
+.B ip\-ratelimit: \fI<number or 0>
+Enable global ratelimiting of queries accepted per ip address.
+If 0, the default, it is disabled.  This option is experimental at this time.
+The ratelimit is in queries per second that are allowed.  More queries are
+completely dropped and will not receive a reply, SERVFAIL or otherwise.
+IP ratelimiting happens before looking in the cache. This may be useful for
+mitigating amplification attacks.
+.TP 5
+.B ip\-ratelimit\-size: \fI<memory size>
+Give the size of the data structure in which the current ongoing rates are
+kept track in.  Default 4m.  In bytes or use m(mega), k(kilo), g(giga).
+The ip ratelimit structure is small, so this data structure likely does
+not need to be large.
+.TP 5
+.B ip\-ratelimit\-slabs: \fI<number>
+Give power of 2 number of slabs, this is used to reduce lock contention
+in the ip ratelimit tracking data structure.  Close to the number of cpus is
+a fairly good setting.
+.TP 5
+.B ip\-ratelimit\-factor: \fI<number>
+Set the amount of queries to rate limit when the limit is exceeded.
+If set to 0, all queries are dropped for addresses where the limit is
+exceeded.  If set to another value, 1 in that number is allowed through
+to complete.  Default is 10, allowing 1/10 traffic to flow normally.
+This can make ordinary queries complete (if repeatedly queried for),
+and enter the cache, whilst also mitigating the traffic flow by the
+factor given.
 .SS "Remote Control Options"
 In the
 .B remote\-control:

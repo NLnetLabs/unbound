@@ -124,6 +124,7 @@ usage(void)
 	printf("				or off to turn off root forwarding\n");
 	printf("				or give list of ip addresses\n");
 	printf("  ratelimit_list [+a]		list ratelimited domains\n");
+	printf("  ip_ratelimit_list [+a]	list ratelimited ip addresses\n");
 	printf("		+a		list all, also not ratelimited\n");
 	printf("Version %s\n", PACKAGE_VERSION);
 	printf("BSD licensed, see LICENSE in source package for details.\n");

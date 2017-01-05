@@ -216,6 +216,7 @@ fptr_whitelist_hash_sizefunc(lruhash_sizefunc_t fptr)
 	else if(fptr == &infra_sizefunc) return 1;
 	else if(fptr == &key_entry_sizefunc) return 1;
 	else if(fptr == &rate_sizefunc) return 1;
+	else if(fptr == &ip_rate_sizefunc) return 1;
 	else if(fptr == &test_slabhash_sizefunc) return 1;
 	return 0;
 }
@@ -228,6 +229,7 @@ fptr_whitelist_hash_compfunc(lruhash_compfunc_t fptr)
 	else if(fptr == &infra_compfunc) return 1;
 	else if(fptr == &key_entry_compfunc) return 1;
 	else if(fptr == &rate_compfunc) return 1;
+	else if(fptr == &ip_rate_compfunc) return 1;
 	else if(fptr == &test_slabhash_compfunc) return 1;
 	return 0;
 }
@@ -240,6 +242,7 @@ fptr_whitelist_hash_delkeyfunc(lruhash_delkeyfunc_t fptr)
 	else if(fptr == &infra_delkeyfunc) return 1;
 	else if(fptr == &key_entry_delkeyfunc) return 1;
 	else if(fptr == &rate_delkeyfunc) return 1;
+	else if(fptr == &ip_rate_delkeyfunc) return 1;
 	else if(fptr == &test_slabhash_delkey) return 1;
 	return 0;
 }

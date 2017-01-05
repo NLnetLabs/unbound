@@ -825,7 +825,29 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 		comm_point_drop_reply(repinfo);
 		return 0;
 	}
+
 	worker->stats.num_queries++;
+
+	/* check if this query should be dropped based on source ip rate limiting */
+	if(!infra_ip_ratelimit_inc(worker->env.infra_cache, repinfo,
+			*worker->env.now)) {
+		/* See if we are passed through with slip factor */
+		if(worker->env.cfg->ip_ratelimit_factor != 0 &&
+			ub_random_max(worker->env.rnd,
+						  worker->env.cfg->ip_ratelimit_factor) == 1) {
+
+			char addrbuf[128];
+			addr_to_str(&repinfo->addr, repinfo->addrlen,
+						addrbuf, sizeof(addrbuf));
+		  verbose(VERB_OPS, "ip_ratelimit allowed through for ip address %s ",
+				  addrbuf);
+		} else {
+			worker->stats.num_queries_ip_ratelimited++;
+			comm_point_drop_reply(repinfo);
+			return 0;
+		}
+	}
+
 	/* see if query is in the cache */
 	if(!query_info_parse(&qinfo, c->buffer)) {
 		verbose(VERB_ALGO, "worker parse request: formerror.");

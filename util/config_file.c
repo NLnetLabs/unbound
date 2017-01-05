@@ -245,11 +245,15 @@ config_create(void)
 		goto error_exit;
 #endif
 	cfg->disable_dnssec_lame_check = 0;
+	cfg->ip_ratelimit = 0;
 	cfg->ratelimit = 0;
+	cfg->ip_ratelimit_slabs = 4;
 	cfg->ratelimit_slabs = 4;
+	cfg->ip_ratelimit_size = 4*1024*1024;
 	cfg->ratelimit_size = 4*1024*1024;
 	cfg->ratelimit_for_domain = NULL;
 	cfg->ratelimit_below_domain = NULL;
+	cfg->ip_ratelimit_factor = 10;
 	cfg->ratelimit_factor = 10;
 	cfg->qname_minimisation = 0;
 	cfg->qname_minimisation_strict = 0;
@@ -488,12 +492,19 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	else S_STR("module-config:", module_conf)
 	else S_STR("python-script:", python_script)
 	else S_YNO("disable-dnssec-lame-check:", disable_dnssec_lame_check)
+	else if(strcmp(opt, "ip-ratelimit:") == 0) {
+	    IS_NUMBER_OR_ZERO; cfg->ip_ratelimit = atoi(val);
+	    infra_ip_ratelimit=cfg->ip_ratelimit;
+	}
 	else if(strcmp(opt, "ratelimit:") == 0) {
 	    IS_NUMBER_OR_ZERO; cfg->ratelimit = atoi(val);
 	    infra_dp_ratelimit=cfg->ratelimit;
 	}
+	else S_MEMSIZE("ip-ratelimit-size:", ip_ratelimit_size)
 	else S_MEMSIZE("ratelimit-size:", ratelimit_size)
+	else S_POW2("ip-ratelimit-slabs:", ip_ratelimit_slabs)
 	else S_POW2("ratelimit-slabs:", ratelimit_slabs)
+	else S_NUMBER_OR_ZERO("ip-ratelimit-factor:", ip_ratelimit_factor)
 	else S_NUMBER_OR_ZERO("ratelimit-factor:", ratelimit_factor)
 	else S_YNO("qname-minimisation:", qname_minimisation)
 	else S_YNO("qname-minimisation-strict:", qname_minimisation_strict)
@@ -798,11 +809,15 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_DEC(opt, "max-udp-size", max_udp_size)
 	else O_STR(opt, "python-script", python_script)
 	else O_YNO(opt, "disable-dnssec-lame-check", disable_dnssec_lame_check)
+	else O_DEC(opt, "ip-ratelimit", ip_ratelimit)
 	else O_DEC(opt, "ratelimit", ratelimit)
+	else O_MEM(opt, "ip-ratelimit-size", ip_ratelimit_size)
 	else O_MEM(opt, "ratelimit-size", ratelimit_size)
+	else O_DEC(opt, "ip-ratelimit-slabs", ip_ratelimit_slabs)
 	else O_DEC(opt, "ratelimit-slabs", ratelimit_slabs)
 	else O_LS2(opt, "ratelimit-for-domain", ratelimit_for_domain)
 	else O_LS2(opt, "ratelimit-below-domain", ratelimit_below_domain)
+	else O_DEC(opt, "ip-ratelimit-factor", ip_ratelimit_factor)
 	else O_DEC(opt, "ratelimit-factor", ratelimit_factor)
 	else O_DEC(opt, "val-sig-skew-min", val_sig_skew_min)
 	else O_DEC(opt, "val-sig-skew-max", val_sig_skew_max)

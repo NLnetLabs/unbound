@@ -456,7 +456,7 @@ void log_dns_msg(const char* str, struct query_info* qinfo,
  * status code from, and size of a query response.
  *
  * @param v: at what verbosity level to print this.
- * @param qinfo: query section.
+ * @param qinf: query section.
  * @param addr: address of the client.
  * @param addrlen: length of the client address.
  * @param dur: how long it took to complete the query.

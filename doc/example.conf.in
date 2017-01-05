@@ -674,6 +674,20 @@ server:
 	# can give this multiple times, the name closest to the zone is used.
 	# ratelimit-below-domain: com 1000
 
+	# global query ratelimit for all ip addresses.
+	# feature is experimental.
+	# if 0(default) it is disabled, otherwise states qps allowed per ip address
+	# ip-ratelimit: 0
+
+	# ip ratelimits are tracked in a cache, size in bytes of cache (or k,m).
+	# ip-ratelimit-size: 4m
+	# ip ratelimit cache slabs, reduces lock contention if equal to cpucount.
+	# ip-ratelimit-slabs: 4
+
+	# 0 blocks when ip is ratelimited, otherwise let 1/xth traffic through
+	# ip-ratelimit-factor: 10
+
+
 # Python config section. To enable:
 # o use --with-pythonmodule to configure before compiling.
 # o list python in the module-config string (above) to enable.
