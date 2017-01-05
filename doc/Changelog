@@ -1,6 +1,9 @@
 5 January 2017: Wouter
 	- Fix to return formerr for queries for meta-types, to avoid
 	  packet amplification if this meta-type is sent on to upstream.
+	- Fix #1184: Log DNS replies. This includes the same logging
+	  information that DNS queries and response code and response size,
+	  patch from Larissa Feng.
 
 3 January 2017: Wouter
 	- configure --enable-systemd and lets unbound use systemd sockets if

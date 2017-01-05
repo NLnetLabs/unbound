@@ -1019,6 +1019,12 @@ mesh_send_reply(struct mesh_state* m, int rcode, struct reply_info* rep,
 			query_reply.c->buffer)) == 0)
 			m->s.env->mesh->ans_nodata++;
 	}
+	/* Log reply sent */
+	if(m->s.env->cfg->log_replies) {
+		log_reply_info(0, &m->s.qinfo, &r->query_reply.addr,
+			r->query_reply.addrlen, duration, 0,
+			r->query_reply.c->buffer);
+	}
 }
 
 void mesh_query_done(struct mesh_state* mstate)

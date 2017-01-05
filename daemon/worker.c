@@ -1085,6 +1085,12 @@ send_reply_rc:
 		dt_msg_send_client_response(&worker->dtenv, &repinfo->addr,
 			c->type, c->buffer);
 #endif
+	if(worker->env.cfg->log_replies)
+	{
+		struct timeval tv = {0, 0};
+		log_reply_info(0, &qinfo, &repinfo->addr, repinfo->addrlen,
+			tv, 1, c->buffer);
+	}
 	return rc;
 }
 

@@ -247,65 +247,66 @@ extern int yydebug;
     VAR_HARDEN_BELOW_NXDOMAIN = 378,
     VAR_IGNORE_CD_FLAG = 379,
     VAR_LOG_QUERIES = 380,
-    VAR_TCP_UPSTREAM = 381,
-    VAR_SSL_UPSTREAM = 382,
-    VAR_SSL_SERVICE_KEY = 383,
-    VAR_SSL_SERVICE_PEM = 384,
-    VAR_SSL_PORT = 385,
-    VAR_FORWARD_FIRST = 386,
-    VAR_STUB_SSL_UPSTREAM = 387,
-    VAR_FORWARD_SSL_UPSTREAM = 388,
-    VAR_STUB_FIRST = 389,
-    VAR_MINIMAL_RESPONSES = 390,
-    VAR_RRSET_ROUNDROBIN = 391,
-    VAR_MAX_UDP_SIZE = 392,
-    VAR_DELAY_CLOSE = 393,
-    VAR_UNBLOCK_LAN_ZONES = 394,
-    VAR_INSECURE_LAN_ZONES = 395,
-    VAR_INFRA_CACHE_MIN_RTT = 396,
-    VAR_DNS64_PREFIX = 397,
-    VAR_DNS64_SYNTHALL = 398,
-    VAR_DNSTAP = 399,
-    VAR_DNSTAP_ENABLE = 400,
-    VAR_DNSTAP_SOCKET_PATH = 401,
-    VAR_DNSTAP_SEND_IDENTITY = 402,
-    VAR_DNSTAP_SEND_VERSION = 403,
-    VAR_DNSTAP_IDENTITY = 404,
-    VAR_DNSTAP_VERSION = 405,
-    VAR_DNSTAP_LOG_RESOLVER_QUERY_MESSAGES = 406,
-    VAR_DNSTAP_LOG_RESOLVER_RESPONSE_MESSAGES = 407,
-    VAR_DNSTAP_LOG_CLIENT_QUERY_MESSAGES = 408,
-    VAR_DNSTAP_LOG_CLIENT_RESPONSE_MESSAGES = 409,
-    VAR_DNSTAP_LOG_FORWARDER_QUERY_MESSAGES = 410,
-    VAR_DNSTAP_LOG_FORWARDER_RESPONSE_MESSAGES = 411,
-    VAR_HARDEN_ALGO_DOWNGRADE = 412,
-    VAR_IP_TRANSPARENT = 413,
-    VAR_DISABLE_DNSSEC_LAME_CHECK = 414,
-    VAR_RATELIMIT = 415,
-    VAR_RATELIMIT_SLABS = 416,
-    VAR_RATELIMIT_SIZE = 417,
-    VAR_RATELIMIT_FOR_DOMAIN = 418,
-    VAR_RATELIMIT_BELOW_DOMAIN = 419,
-    VAR_RATELIMIT_FACTOR = 420,
-    VAR_CAPS_WHITELIST = 421,
-    VAR_CACHE_MAX_NEGATIVE_TTL = 422,
-    VAR_PERMIT_SMALL_HOLDDOWN = 423,
-    VAR_QNAME_MINIMISATION = 424,
-    VAR_QNAME_MINIMISATION_STRICT = 425,
-    VAR_IP_FREEBIND = 426,
-    VAR_DEFINE_TAG = 427,
-    VAR_LOCAL_ZONE_TAG = 428,
-    VAR_ACCESS_CONTROL_TAG = 429,
-    VAR_LOCAL_ZONE_OVERRIDE = 430,
-    VAR_ACCESS_CONTROL_TAG_ACTION = 431,
-    VAR_ACCESS_CONTROL_TAG_DATA = 432,
-    VAR_VIEW = 433,
-    VAR_ACCESS_CONTROL_VIEW = 434,
-    VAR_VIEW_FIRST = 435,
-    VAR_SERVE_EXPIRED = 436,
-    VAR_FAKE_DSA = 437,
-    VAR_LOG_IDENTITY = 438,
-    VAR_USE_SYSTEMD = 439
+    VAR_LOG_REPLIES = 381,
+    VAR_TCP_UPSTREAM = 382,
+    VAR_SSL_UPSTREAM = 383,
+    VAR_SSL_SERVICE_KEY = 384,
+    VAR_SSL_SERVICE_PEM = 385,
+    VAR_SSL_PORT = 386,
+    VAR_FORWARD_FIRST = 387,
+    VAR_STUB_SSL_UPSTREAM = 388,
+    VAR_FORWARD_SSL_UPSTREAM = 389,
+    VAR_STUB_FIRST = 390,
+    VAR_MINIMAL_RESPONSES = 391,
+    VAR_RRSET_ROUNDROBIN = 392,
+    VAR_MAX_UDP_SIZE = 393,
+    VAR_DELAY_CLOSE = 394,
+    VAR_UNBLOCK_LAN_ZONES = 395,
+    VAR_INSECURE_LAN_ZONES = 396,
+    VAR_INFRA_CACHE_MIN_RTT = 397,
+    VAR_DNS64_PREFIX = 398,
+    VAR_DNS64_SYNTHALL = 399,
+    VAR_DNSTAP = 400,
+    VAR_DNSTAP_ENABLE = 401,
+    VAR_DNSTAP_SOCKET_PATH = 402,
+    VAR_DNSTAP_SEND_IDENTITY = 403,
+    VAR_DNSTAP_SEND_VERSION = 404,
+    VAR_DNSTAP_IDENTITY = 405,
+    VAR_DNSTAP_VERSION = 406,
+    VAR_DNSTAP_LOG_RESOLVER_QUERY_MESSAGES = 407,
+    VAR_DNSTAP_LOG_RESOLVER_RESPONSE_MESSAGES = 408,
+    VAR_DNSTAP_LOG_CLIENT_QUERY_MESSAGES = 409,
+    VAR_DNSTAP_LOG_CLIENT_RESPONSE_MESSAGES = 410,
+    VAR_DNSTAP_LOG_FORWARDER_QUERY_MESSAGES = 411,
+    VAR_DNSTAP_LOG_FORWARDER_RESPONSE_MESSAGES = 412,
+    VAR_HARDEN_ALGO_DOWNGRADE = 413,
+    VAR_IP_TRANSPARENT = 414,
+    VAR_DISABLE_DNSSEC_LAME_CHECK = 415,
+    VAR_RATELIMIT = 416,
+    VAR_RATELIMIT_SLABS = 417,
+    VAR_RATELIMIT_SIZE = 418,
+    VAR_RATELIMIT_FOR_DOMAIN = 419,
+    VAR_RATELIMIT_BELOW_DOMAIN = 420,
+    VAR_RATELIMIT_FACTOR = 421,
+    VAR_CAPS_WHITELIST = 422,
+    VAR_CACHE_MAX_NEGATIVE_TTL = 423,
+    VAR_PERMIT_SMALL_HOLDDOWN = 424,
+    VAR_QNAME_MINIMISATION = 425,
+    VAR_QNAME_MINIMISATION_STRICT = 426,
+    VAR_IP_FREEBIND = 427,
+    VAR_DEFINE_TAG = 428,
+    VAR_LOCAL_ZONE_TAG = 429,
+    VAR_ACCESS_CONTROL_TAG = 430,
+    VAR_LOCAL_ZONE_OVERRIDE = 431,
+    VAR_ACCESS_CONTROL_TAG_ACTION = 432,
+    VAR_ACCESS_CONTROL_TAG_DATA = 433,
+    VAR_VIEW = 434,
+    VAR_ACCESS_CONTROL_VIEW = 435,
+    VAR_VIEW_FIRST = 436,
+    VAR_SERVE_EXPIRED = 437,
+    VAR_FAKE_DSA = 438,
+    VAR_LOG_IDENTITY = 439,
+    VAR_USE_SYSTEMD = 440
   };
 #endif
 /* Tokens.  */
@@ -432,65 +433,66 @@ extern int yydebug;
 #define VAR_HARDEN_BELOW_NXDOMAIN 378
 #define VAR_IGNORE_CD_FLAG 379
 #define VAR_LOG_QUERIES 380
-#define VAR_TCP_UPSTREAM 381
-#define VAR_SSL_UPSTREAM 382
-#define VAR_SSL_SERVICE_KEY 383
-#define VAR_SSL_SERVICE_PEM 384
-#define VAR_SSL_PORT 385
-#define VAR_FORWARD_FIRST 386
-#define VAR_STUB_SSL_UPSTREAM 387
-#define VAR_FORWARD_SSL_UPSTREAM 388
-#define VAR_STUB_FIRST 389
-#define VAR_MINIMAL_RESPONSES 390
-#define VAR_RRSET_ROUNDROBIN 391
-#define VAR_MAX_UDP_SIZE 392
-#define VAR_DELAY_CLOSE 393
-#define VAR_UNBLOCK_LAN_ZONES 394
-#define VAR_INSECURE_LAN_ZONES 395
-#define VAR_INFRA_CACHE_MIN_RTT 396
-#define VAR_DNS64_PREFIX 397
-#define VAR_DNS64_SYNTHALL 398
-#define VAR_DNSTAP 399
-#define VAR_DNSTAP_ENABLE 400
-#define VAR_DNSTAP_SOCKET_PATH 401
-#define VAR_DNSTAP_SEND_IDENTITY 402
-#define VAR_DNSTAP_SEND_VERSION 403
-#define VAR_DNSTAP_IDENTITY 404
-#define VAR_DNSTAP_VERSION 405
-#define VAR_DNSTAP_LOG_RESOLVER_QUERY_MESSAGES 406
-#define VAR_DNSTAP_LOG_RESOLVER_RESPONSE_MESSAGES 407
-#define VAR_DNSTAP_LOG_CLIENT_QUERY_MESSAGES 408
-#define VAR_DNSTAP_LOG_CLIENT_RESPONSE_MESSAGES 409
-#define VAR_DNSTAP_LOG_FORWARDER_QUERY_MESSAGES 410
-#define VAR_DNSTAP_LOG_FORWARDER_RESPONSE_MESSAGES 411
-#define VAR_HARDEN_ALGO_DOWNGRADE 412
-#define VAR_IP_TRANSPARENT 413
-#define VAR_DISABLE_DNSSEC_LAME_CHECK 414
-#define VAR_RATELIMIT 415
-#define VAR_RATELIMIT_SLABS 416
-#define VAR_RATELIMIT_SIZE 417
-#define VAR_RATELIMIT_FOR_DOMAIN 418
-#define VAR_RATELIMIT_BELOW_DOMAIN 419
-#define VAR_RATELIMIT_FACTOR 420
-#define VAR_CAPS_WHITELIST 421
-#define VAR_CACHE_MAX_NEGATIVE_TTL 422
-#define VAR_PERMIT_SMALL_HOLDDOWN 423
-#define VAR_QNAME_MINIMISATION 424
-#define VAR_QNAME_MINIMISATION_STRICT 425
-#define VAR_IP_FREEBIND 426
-#define VAR_DEFINE_TAG 427
-#define VAR_LOCAL_ZONE_TAG 428
-#define VAR_ACCESS_CONTROL_TAG 429
-#define VAR_LOCAL_ZONE_OVERRIDE 430
-#define VAR_ACCESS_CONTROL_TAG_ACTION 431
-#define VAR_ACCESS_CONTROL_TAG_DATA 432
-#define VAR_VIEW 433
-#define VAR_ACCESS_CONTROL_VIEW 434
-#define VAR_VIEW_FIRST 435
-#define VAR_SERVE_EXPIRED 436
-#define VAR_FAKE_DSA 437
-#define VAR_LOG_IDENTITY 438
-#define VAR_USE_SYSTEMD 439
+#define VAR_LOG_REPLIES 381
+#define VAR_TCP_UPSTREAM 382
+#define VAR_SSL_UPSTREAM 383
+#define VAR_SSL_SERVICE_KEY 384
+#define VAR_SSL_SERVICE_PEM 385
+#define VAR_SSL_PORT 386
+#define VAR_FORWARD_FIRST 387
+#define VAR_STUB_SSL_UPSTREAM 388
+#define VAR_FORWARD_SSL_UPSTREAM 389
+#define VAR_STUB_FIRST 390
+#define VAR_MINIMAL_RESPONSES 391
+#define VAR_RRSET_ROUNDROBIN 392
+#define VAR_MAX_UDP_SIZE 393
+#define VAR_DELAY_CLOSE 394
+#define VAR_UNBLOCK_LAN_ZONES 395
+#define VAR_INSECURE_LAN_ZONES 396
+#define VAR_INFRA_CACHE_MIN_RTT 397
+#define VAR_DNS64_PREFIX 398
+#define VAR_DNS64_SYNTHALL 399
+#define VAR_DNSTAP 400
+#define VAR_DNSTAP_ENABLE 401
+#define VAR_DNSTAP_SOCKET_PATH 402
+#define VAR_DNSTAP_SEND_IDENTITY 403
+#define VAR_DNSTAP_SEND_VERSION 404
+#define VAR_DNSTAP_IDENTITY 405
+#define VAR_DNSTAP_VERSION 406
+#define VAR_DNSTAP_LOG_RESOLVER_QUERY_MESSAGES 407
+#define VAR_DNSTAP_LOG_RESOLVER_RESPONSE_MESSAGES 408
+#define VAR_DNSTAP_LOG_CLIENT_QUERY_MESSAGES 409
+#define VAR_DNSTAP_LOG_CLIENT_RESPONSE_MESSAGES 410
+#define VAR_DNSTAP_LOG_FORWARDER_QUERY_MESSAGES 411
+#define VAR_DNSTAP_LOG_FORWARDER_RESPONSE_MESSAGES 412
+#define VAR_HARDEN_ALGO_DOWNGRADE 413
+#define VAR_IP_TRANSPARENT 414
+#define VAR_DISABLE_DNSSEC_LAME_CHECK 415
+#define VAR_RATELIMIT 416
+#define VAR_RATELIMIT_SLABS 417
+#define VAR_RATELIMIT_SIZE 418
+#define VAR_RATELIMIT_FOR_DOMAIN 419
+#define VAR_RATELIMIT_BELOW_DOMAIN 420
+#define VAR_RATELIMIT_FACTOR 421
+#define VAR_CAPS_WHITELIST 422
+#define VAR_CACHE_MAX_NEGATIVE_TTL 423
+#define VAR_PERMIT_SMALL_HOLDDOWN 424
+#define VAR_QNAME_MINIMISATION 425
+#define VAR_QNAME_MINIMISATION_STRICT 426
+#define VAR_IP_FREEBIND 427
+#define VAR_DEFINE_TAG 428
+#define VAR_LOCAL_ZONE_TAG 429
+#define VAR_ACCESS_CONTROL_TAG 430
+#define VAR_LOCAL_ZONE_OVERRIDE 431
+#define VAR_ACCESS_CONTROL_TAG_ACTION 432
+#define VAR_ACCESS_CONTROL_TAG_DATA 433
+#define VAR_VIEW 434
+#define VAR_ACCESS_CONTROL_VIEW 435
+#define VAR_VIEW_FIRST 436
+#define VAR_SERVE_EXPIRED 437
+#define VAR_FAKE_DSA 438
+#define VAR_LOG_IDENTITY 439
+#define VAR_USE_SYSTEMD 440
 
 /* Value type.  */
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
@@ -501,7 +503,7 @@ union YYSTYPE
 
 	char*	str;
 
-#line 505 "util/configparser.c" /* yacc.c:355  */
+#line 507 "util/configparser.c" /* yacc.c:355  */
 };
 
 typedef union YYSTYPE YYSTYPE;
@@ -518,7 +520,7 @@ int yyparse (void);
 
 /* Copy the second part of user declarations.  */
 
-#line 522 "util/configparser.c" /* yacc.c:358  */
+#line 524 "util/configparser.c" /* yacc.c:358  */
 
 #ifdef short
 # undef short
@@ -760,21 +762,21 @@ union yyalloc
 /* YYFINAL -- State number of the termination state.  */
 #define YYFINAL  2
 /* YYLAST -- Last index in YYTABLE.  */
-#define YYLAST   365
+#define YYLAST   367
 
 /* YYNTOKENS -- Number of terminals.  */
-#define YYNTOKENS  185
+#define YYNTOKENS  186
 /* YYNNTS -- Number of nonterminals.  */
-#define YYNNTS  195
+#define YYNNTS  196
 /* YYNRULES -- Number of rules.  */
-#define YYNRULES  373
+#define YYNRULES  375
 /* YYNSTATES -- Number of states.  */
-#define YYNSTATES  559
+#define YYNSTATES  562
 
 /* YYTRANSLATE[YYX] -- Symbol number corresponding to YYX as returned
    by yylex, with out-of-bounds checking.  */
 #define YYUNDEFTOK  2
-#define YYMAXUTOK   439
+#define YYMAXUTOK   440
 
 #define YYTRANSLATE(YYX)                                                \
   ((unsigned int) (YYX) <= YYMAXUTOK ? yytranslate[YYX] : YYUNDEFTOK)
@@ -826,51 +828,52 @@ static const yytype_uint8 yytranslate[] =
      145,   146,   147,   148,   149,   150,   151,   152,   153,   154,
      155,   156,   157,   158,   159,   160,   161,   162,   163,   164,
      165,   166,   167,   168,   169,   170,   171,   172,   173,   174,
-     175,   176,   177,   178,   179,   180,   181,   182,   183,   184
+     175,   176,   177,   178,   179,   180,   181,   182,   183,   184,
+     185
 };
 
 #if YYDEBUG
   /* YYRLINE[YYN] -- Source line where rule number YYN was defined.  */
 static const yytype_uint16 yyrline[] =
 {
-       0,   138,   138,   138,   139,   139,   140,   140,   141,   141,
-     141,   146,   151,   152,   153,   153,   153,   154,   154,   155,
-     155,   156,   156,   157,   157,   158,   158,   158,   159,   159,
-     159,   160,   160,   161,   161,   162,   162,   163,   163,   164,
-     164,   165,   165,   166,   166,   167,   167,   168,   168,   168,
-     169,   169,   169,   170,   170,   170,   171,   171,   172,   172,
-     173,   173,   174,   174,   175,   175,   175,   176,   176,   177,
-     177,   178,   178,   178,   179,   179,   180,   180,   181,   181,
-     182,   182,   182,   183,   183,   184,   184,   185,   185,   186,
-     186,   187,   187,   188,   188,   188,   189,   189,   190,   190,
-     190,   191,   191,   191,   192,   192,   192,   193,   193,   193,
-     194,   194,   194,   195,   195,   195,   196,   196,   197,   197,
-     198,   198,   199,   199,   200,   200,   200,   201,   201,   202,
-     202,   203,   203,   204,   204,   205,   205,   205,   206,   206,
-     207,   207,   208,   208,   209,   209,   210,   210,   210,   212,
-     224,   225,   226,   226,   226,   226,   226,   227,   229,   241,
-     242,   243,   243,   243,   243,   244,   246,   260,   261,   262,
-     262,   262,   262,   264,   273,   282,   293,   302,   311,   320,
-     333,   348,   357,   366,   375,   384,   393,   402,   411,   420,
-     429,   438,   447,   456,   465,   474,   483,   490,   497,   506,
-     515,   524,   538,   547,   556,   563,   570,   596,   604,   611,
-     618,   625,   632,   640,   648,   656,   663,   670,   679,   688,
-     695,   702,   710,   718,   728,   738,   748,   761,   772,   780,
-     793,   802,   811,   820,   830,   840,   848,   861,   870,   878,
-     887,   895,   908,   917,   924,   934,   944,   954,   964,   974,
-     984,   994,  1004,  1011,  1018,  1025,  1034,  1043,  1052,  1059,
-    1069,  1086,  1093,  1111,  1124,  1137,  1146,  1155,  1164,  1173,
-    1183,  1193,  1202,  1211,  1224,  1233,  1240,  1249,  1258,  1267,
-    1276,  1284,  1297,  1305,  1333,  1340,  1355,  1365,  1375,  1382,
-    1389,  1398,  1412,  1431,  1450,  1462,  1474,  1486,  1497,  1506,
-    1514,  1527,  1540,  1553,  1562,  1572,  1582,  1592,  1599,  1606,
-    1615,  1625,  1635,  1645,  1652,  1659,  1668,  1678,  1688,  1717,
-    1726,  1735,  1740,  1741,  1742,  1742,  1742,  1743,  1743,  1743,
-    1744,  1744,  1746,  1756,  1765,  1772,  1782,  1789,  1796,  1803,
-    1810,  1815,  1816,  1817,  1817,  1818,  1818,  1819,  1819,  1820,
-    1821,  1822,  1823,  1824,  1825,  1827,  1835,  1842,  1850,  1858,
-    1865,  1872,  1881,  1890,  1899,  1908,  1917,  1926,  1931,  1932,
-    1933,  1935,  1941,  1951
+       0,   139,   139,   139,   140,   140,   141,   141,   142,   142,
+     142,   147,   152,   153,   154,   154,   154,   155,   155,   156,
+     156,   157,   157,   158,   158,   159,   159,   159,   160,   160,
+     160,   161,   161,   162,   162,   163,   163,   164,   164,   165,
+     165,   166,   166,   167,   167,   168,   168,   169,   169,   169,
+     170,   170,   170,   171,   171,   171,   172,   172,   173,   173,
+     174,   174,   175,   175,   176,   176,   176,   177,   177,   178,
+     178,   179,   179,   179,   180,   180,   181,   181,   182,   182,
+     183,   183,   183,   184,   184,   185,   185,   186,   186,   187,
+     187,   188,   188,   189,   189,   189,   190,   190,   191,   191,
+     191,   192,   192,   192,   193,   193,   193,   194,   194,   194,
+     194,   195,   195,   195,   196,   196,   196,   197,   197,   198,
+     198,   199,   199,   200,   200,   201,   201,   201,   202,   202,
+     203,   203,   204,   204,   205,   205,   206,   206,   206,   207,
+     207,   208,   208,   209,   209,   210,   210,   211,   211,   211,
+     213,   225,   226,   227,   227,   227,   227,   227,   228,   230,
+     242,   243,   244,   244,   244,   244,   245,   247,   261,   262,
+     263,   263,   263,   263,   265,   274,   283,   294,   303,   312,
+     321,   334,   349,   358,   367,   376,   385,   394,   403,   412,
+     421,   430,   439,   448,   457,   466,   475,   484,   491,   498,
+     507,   516,   525,   539,   548,   557,   566,   573,   580,   606,
+     614,   621,   628,   635,   642,   650,   658,   666,   673,   680,
+     689,   698,   705,   712,   720,   728,   738,   748,   758,   771,
+     782,   790,   803,   812,   821,   830,   840,   850,   858,   871,
+     880,   888,   897,   905,   918,   927,   934,   944,   954,   964,
+     974,   984,   994,  1004,  1014,  1021,  1028,  1035,  1044,  1053,
+    1062,  1069,  1079,  1096,  1103,  1121,  1134,  1147,  1156,  1165,
+    1174,  1183,  1193,  1203,  1212,  1221,  1234,  1243,  1250,  1259,
+    1268,  1277,  1286,  1294,  1307,  1315,  1343,  1350,  1365,  1375,
+    1385,  1392,  1399,  1408,  1422,  1441,  1460,  1472,  1484,  1496,
+    1507,  1516,  1524,  1537,  1550,  1563,  1572,  1582,  1592,  1602,
+    1609,  1616,  1625,  1635,  1645,  1655,  1662,  1669,  1678,  1688,
+    1698,  1727,  1736,  1745,  1750,  1751,  1752,  1752,  1752,  1753,
+    1753,  1753,  1754,  1754,  1756,  1766,  1775,  1782,  1792,  1799,
+    1806,  1813,  1820,  1825,  1826,  1827,  1827,  1828,  1828,  1829,
+    1829,  1830,  1831,  1832,  1833,  1834,  1835,  1837,  1845,  1852,
+    1860,  1868,  1875,  1882,  1891,  1900,  1909,  1918,  1927,  1936,
+    1941,  1942,  1943,  1945,  1951,  1961
 };
 #endif
 
@@ -918,15 +921,15 @@ static const char *const yytname[] =
   "VAR_SO_RCVBUF", "VAR_EDNS_BUFFER_SIZE", "VAR_PREFETCH",
   "VAR_PREFETCH_KEY", "VAR_SO_SNDBUF", "VAR_SO_REUSEPORT",
   "VAR_HARDEN_BELOW_NXDOMAIN", "VAR_IGNORE_CD_FLAG", "VAR_LOG_QUERIES",
-  "VAR_TCP_UPSTREAM", "VAR_SSL_UPSTREAM", "VAR_SSL_SERVICE_KEY",
-  "VAR_SSL_SERVICE_PEM", "VAR_SSL_PORT", "VAR_FORWARD_FIRST",
-  "VAR_STUB_SSL_UPSTREAM", "VAR_FORWARD_SSL_UPSTREAM", "VAR_STUB_FIRST",
-  "VAR_MINIMAL_RESPONSES", "VAR_RRSET_ROUNDROBIN", "VAR_MAX_UDP_SIZE",
-  "VAR_DELAY_CLOSE", "VAR_UNBLOCK_LAN_ZONES", "VAR_INSECURE_LAN_ZONES",
-  "VAR_INFRA_CACHE_MIN_RTT", "VAR_DNS64_PREFIX", "VAR_DNS64_SYNTHALL",
-  "VAR_DNSTAP", "VAR_DNSTAP_ENABLE", "VAR_DNSTAP_SOCKET_PATH",
-  "VAR_DNSTAP_SEND_IDENTITY", "VAR_DNSTAP_SEND_VERSION",
-  "VAR_DNSTAP_IDENTITY", "VAR_DNSTAP_VERSION",
+  "VAR_LOG_REPLIES", "VAR_TCP_UPSTREAM", "VAR_SSL_UPSTREAM",
+  "VAR_SSL_SERVICE_KEY", "VAR_SSL_SERVICE_PEM", "VAR_SSL_PORT",
+  "VAR_FORWARD_FIRST", "VAR_STUB_SSL_UPSTREAM", "VAR_FORWARD_SSL_UPSTREAM",
+  "VAR_STUB_FIRST", "VAR_MINIMAL_RESPONSES", "VAR_RRSET_ROUNDROBIN",
+  "VAR_MAX_UDP_SIZE", "VAR_DELAY_CLOSE", "VAR_UNBLOCK_LAN_ZONES",
+  "VAR_INSECURE_LAN_ZONES", "VAR_INFRA_CACHE_MIN_RTT", "VAR_DNS64_PREFIX",
+  "VAR_DNS64_SYNTHALL", "VAR_DNSTAP", "VAR_DNSTAP_ENABLE",
+  "VAR_DNSTAP_SOCKET_PATH", "VAR_DNSTAP_SEND_IDENTITY",
+  "VAR_DNSTAP_SEND_VERSION", "VAR_DNSTAP_IDENTITY", "VAR_DNSTAP_VERSION",
   "VAR_DNSTAP_LOG_RESOLVER_QUERY_MESSAGES",
   "VAR_DNSTAP_LOG_RESOLVER_RESPONSE_MESSAGES",
   "VAR_DNSTAP_LOG_CLIENT_QUERY_MESSAGES",
@@ -959,8 +962,8 @@ static const char *const yytname[] =
   "server_outgoing_tcp_mss", "server_tcp_upstream", "server_ssl_upstream",
   "server_ssl_service_key", "server_ssl_service_pem", "server_ssl_port",
   "server_use_systemd", "server_do_daemonize", "server_use_syslog",
-  "server_log_time_ascii", "server_log_queries", "server_chroot",
-  "server_username", "server_directory", "server_logfile",
+  "server_log_time_ascii", "server_log_queries", "server_log_replies",
+  "server_chroot", "server_username", "server_directory", "server_logfile",
   "server_pidfile", "server_root_hints", "server_dlv_anchor_file",
   "server_dlv_anchor", "server_auto_trust_anchor_file",
   "server_trust_anchor_file", "server_trusted_keys_file",
@@ -1049,14 +1052,14 @@ static const yytype_uint16 yytoknum[] =
      405,   406,   407,   408,   409,   410,   411,   412,   413,   414,
      415,   416,   417,   418,   419,   420,   421,   422,   423,   424,
      425,   426,   427,   428,   429,   430,   431,   432,   433,   434,
-     435,   436,   437,   438,   439
+     435,   436,   437,   438,   439,   440
 };
 # endif
 
-#define YYPACT_NINF -130
+#define YYPACT_NINF -131
 
 #define yypact_value_is_default(Yystate) \
-  (!!((Yystate) == (-130)))
+  (!!((Yystate) == (-131)))
 
 #define YYTABLE_NINF -1
 
@@ -1067,62 +1070,63 @@ static const yytype_uint16 yytoknum[] =
      STATE-NUM.  */
 static const yytype_int16 yypact[] =
 {
-    -130,     0,  -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,
-    -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,   135,   -38,
-     -34,   -39,   -64,  -129,  -105,    -3,    -2,    -1,     2,     3,
+    -131,     0,  -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,
+    -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,   136,   -38,
+     -34,   -39,   -64,  -130,  -105,    -3,    -2,    -1,     2,     3,
       26,    29,    30,    32,    33,    34,    35,    36,    38,    39,
       40,    41,    42,    43,    44,    45,    46,    47,    48,    49,
       50,    51,    52,    53,    54,    56,    57,    58,    59,    60,
       61,    62,    63,    64,    65,    66,    67,    68,    69,    70,
       71,    72,    73,    74,    75,    76,    77,    78,    79,    80,
-      82,    83,    85,    88,    90,    91,    92,    93,    94,    95,
+      82,    83,    84,    86,    89,    91,    92,    93,    94,    95,
       96,    98,    99,   100,   101,   102,   103,   104,   105,   106,
      107,   108,   109,   110,   111,   112,   113,   114,   115,   116,
      117,   118,   119,   120,   121,   122,   123,   124,   125,   126,
-     127,   128,   129,   130,   132,   133,   136,   165,   166,   167,
-     172,   173,   174,   216,   217,   218,   219,   220,   221,   222,
-     223,   224,   228,   232,   233,   256,   257,   258,   259,   269,
-     270,   271,   272,   273,   274,   275,   276,   277,   278,   279,
-    -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,
-    -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,
-    -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,
-    -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,
-    -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,
-    -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,
-    -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,
-    -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,
-    -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,
-    -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,
-    -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,
-    -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,
-    -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,
-    -130,  -130,  -130,  -130,  -130,  -130,   280,   281,   303,   305,
-     310,   311,  -130,  -130,  -130,  -130,  -130,  -130,  -130,   312,
-     313,   314,   315,   316,  -130,  -130,  -130,  -130,  -130,  -130,
-     317,   318,   319,   320,  -130,  -130,  -130,  -130,  -130,   321,
-     322,   323,   324,   325,   326,   327,   328,  -130,  -130,  -130,
-    -130,  -130,  -130,  -130,  -130,  -130,   329,   330,   331,   332,
-     333,   334,   335,   336,   337,   338,   339,   340,  -130,  -130,
-    -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,
-    -130,   341,  -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,
-    -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,
-    -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,
-    -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,
-    -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,
-    -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,
-     342,   343,  -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,
-    -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,
-    -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,
-    -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,
-    -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,
-    -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,   344,
-     345,  -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,   346,
-     347,   348,   349,   350,   351,  -130,  -130,  -130,  -130,  -130,
-    -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,
-    -130,   352,  -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,
-    -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,
-    -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,
-    -130,   353,   354,   355,  -130,  -130,  -130,  -130,  -130
+     127,   128,   129,   130,   131,   133,   134,   137,   166,   167,
+     168,   173,   174,   175,   217,   218,   219,   220,   221,   222,
+     223,   224,   225,   229,   233,   234,   258,   259,   260,   261,
+     271,   272,   273,   274,   275,   276,   277,   278,   279,   280,
+     281,  -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,
+    -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,
+    -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,
+    -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,
+    -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,
+    -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,
+    -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,
+    -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,
+    -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,
+    -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,
+    -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,
+    -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,
+    -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,
+    -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,   282,   283,
+     305,   307,   312,   313,  -131,  -131,  -131,  -131,  -131,  -131,
+    -131,   314,   315,   316,   317,   318,  -131,  -131,  -131,  -131,
+    -131,  -131,   319,   320,   321,   322,  -131,  -131,  -131,  -131,
+    -131,   323,   324,   325,   326,   327,   328,   329,   330,  -131,
+    -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,   331,   332,
+     333,   334,   335,   336,   337,   338,   339,   340,   341,   342,
+    -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,
+    -131,  -131,  -131,   343,  -131,  -131,  -131,  -131,  -131,  -131,
+    -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,
+    -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,
+    -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,
+    -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,
+    -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,
+    -131,  -131,   344,   345,  -131,  -131,  -131,  -131,  -131,  -131,
+    -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,
+    -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,
+    -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,
+    -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,
+    -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,
+    -131,  -131,   346,   347,  -131,  -131,  -131,  -131,  -131,  -131,
+    -131,  -131,   348,   349,   350,   351,   352,   353,  -131,  -131,
+    -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,
+    -131,  -131,  -131,  -131,   354,  -131,  -131,  -131,  -131,  -131,
+    -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,
+    -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,
+    -131,  -131,  -131,  -131,   355,   356,   357,  -131,  -131,  -131,
+    -131,  -131
 };
 
   /* YYDEFACT[STATE-NUM] -- Default reduction number in state STATE-NUM.
@@ -1130,8 +1134,8 @@ static const yytype_int16 yypact[] =
      means the default is an error.  */
 static const yytype_uint16 yydefact[] =
 {
-       2,     0,     1,    11,   149,   158,   321,   367,   340,   166,
-       3,    13,   151,   160,   168,   323,   342,   369,     4,     5,
+       2,     0,     1,    11,   150,   159,   323,   369,   342,   167,
+       3,    13,   152,   161,   169,   325,   344,   371,     4,     5,
        6,    10,     8,     9,     7,     0,     0,     0,     0,     0,
        0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
        0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
@@ -1146,96 +1150,97 @@ static const yytype_uint16 yydefact[] =
        0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
        0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
        0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
-      12,    14,    15,    74,    77,    86,    16,    25,    65,    17,
-      78,    79,    36,    58,    73,    18,    19,    21,    22,    20,
-      23,    24,   108,   109,   110,   111,   112,   148,    75,    64,
-      90,   107,    26,    27,    28,    29,    30,    66,    80,    81,
-      96,    52,    62,    53,    91,    46,    47,    48,    49,   100,
-     104,   116,   124,   135,   101,    59,    31,    32,    33,    88,
-     117,   118,   119,    34,    35,    37,    38,    40,    41,    39,
-     122,    42,    43,    44,    50,    69,   105,    83,   123,    76,
-     131,    84,    85,   102,   103,    89,    45,    67,    70,    51,
-      54,    92,    93,    68,   132,    94,    55,    56,    57,   106,
-     145,   146,    95,    63,    97,    98,    99,   133,    60,    61,
-      82,    71,    72,    87,   113,   114,   115,   120,   121,   136,
-     137,   139,   141,   142,   140,   143,   125,   127,   126,   128,
-     129,   130,   134,   144,   138,   147,     0,     0,     0,     0,
-       0,     0,   150,   152,   153,   154,   156,   157,   155,     0,
-       0,     0,     0,     0,   159,   161,   162,   163,   164,   165,
-       0,     0,     0,     0,   167,   169,   170,   171,   172,     0,
-       0,     0,     0,     0,     0,     0,     0,   322,   324,   326,
-     325,   331,   327,   328,   329,   330,     0,     0,     0,     0,
-       0,     0,     0,     0,     0,     0,     0,     0,   341,   343,
-     344,   345,   346,   347,   348,   349,   350,   351,   352,   353,
-     354,     0,   368,   370,   174,   173,   178,   181,   179,   187,
-     188,   191,   189,   190,   192,   193,   204,   205,   206,   207,
-     208,   228,   229,   230,   235,   236,   184,   237,   238,   241,
-     239,   240,   243,   244,   245,   258,   217,   218,   219,   220,
-     246,   261,   213,   215,   262,   268,   269,   270,   185,   227,
-     280,   281,   214,   275,   201,   180,   209,   259,   265,   247,
-       0,     0,   284,   186,   175,   200,   251,   176,   182,   183,
-     210,   211,   282,   249,   253,   254,   177,   285,   231,   257,
-     202,   216,   263,   264,   267,   274,   212,   278,   276,   277,
-     221,   226,   255,   256,   222,   223,   248,   271,   203,   194,
-     195,   196,   197,   198,   286,   287,   288,   232,   233,   234,
-     242,   289,   290,   250,   224,   372,   298,   300,   299,     0,
-       0,   303,   252,   266,   279,   304,   305,   225,   291,     0,
-       0,     0,     0,     0,     0,   272,   273,   373,   199,   306,
-     307,   308,   311,   310,   309,   312,   313,   314,   315,   316,
-     317,     0,   319,   320,   332,   334,   333,   336,   337,   338,
-     339,   335,   355,   356,   357,   358,   359,   360,   361,   362,
-     363,   364,   365,   366,   371,   260,   283,   301,   302,   292,
-     293,     0,     0,     0,   297,   318,   296,   294,   295
+       0,    12,    14,    15,    74,    77,    86,    16,    25,    65,
+      17,    78,    79,    36,    58,    73,    18,    19,    21,    22,
+      20,    23,    24,   109,   110,   111,   112,   113,   149,    75,
+      64,    90,   107,   108,    26,    27,    28,    29,    30,    66,
+      80,    81,    96,    52,    62,    53,    91,    46,    47,    48,
+      49,   100,   104,   117,   125,   136,   101,    59,    31,    32,
+      33,    88,   118,   119,   120,    34,    35,    37,    38,    40,
+      41,    39,   123,    42,    43,    44,    50,    69,   105,    83,
+     124,    76,   132,    84,    85,   102,   103,    89,    45,    67,
+      70,    51,    54,    92,    93,    68,   133,    94,    55,    56,
+      57,   106,   146,   147,    95,    63,    97,    98,    99,   134,
+      60,    61,    82,    71,    72,    87,   114,   115,   116,   121,
+     122,   137,   138,   140,   142,   143,   141,   144,   126,   128,
+     127,   129,   130,   131,   135,   145,   139,   148,     0,     0,
+       0,     0,     0,     0,   151,   153,   154,   155,   157,   158,
+     156,     0,     0,     0,     0,     0,   160,   162,   163,   164,
+     165,   166,     0,     0,     0,     0,   168,   170,   171,   172,
+     173,     0,     0,     0,     0,     0,     0,     0,     0,   324,
+     326,   328,   327,   333,   329,   330,   331,   332,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+     343,   345,   346,   347,   348,   349,   350,   351,   352,   353,
+     354,   355,   356,     0,   370,   372,   175,   174,   179,   182,
+     180,   188,   189,   192,   190,   191,   193,   194,   206,   207,
+     208,   209,   210,   230,   231,   232,   237,   238,   185,   239,
+     240,   243,   241,   242,   245,   246,   247,   260,   219,   220,
+     221,   222,   248,   263,   215,   217,   264,   270,   271,   272,
+     186,   229,   282,   283,   216,   277,   202,   181,   211,   261,
+     267,   249,     0,     0,   286,   187,   176,   201,   253,   177,
+     183,   184,   212,   213,   284,   251,   255,   256,   178,   287,
+     233,   259,   203,   218,   265,   266,   269,   276,   214,   280,
+     278,   279,   223,   228,   257,   258,   224,   225,   250,   273,
+     204,   205,   195,   196,   197,   198,   199,   288,   289,   290,
+     234,   235,   236,   244,   291,   292,   252,   226,   374,   300,
+     302,   301,     0,     0,   305,   254,   268,   281,   306,   307,
+     227,   293,     0,     0,     0,     0,     0,     0,   274,   275,
+     375,   200,   308,   309,   310,   313,   312,   311,   314,   315,
+     316,   317,   318,   319,     0,   321,   322,   334,   336,   335,
+     338,   339,   340,   341,   337,   357,   358,   359,   360,   361,
+     362,   363,   364,   365,   366,   367,   368,   373,   262,   285,
+     303,   304,   294,   295,     0,     0,     0,   299,   320,   298,
+     296,   297
 };
 
   /* YYPGOTO[NTERM-NUM].  */
 static const yytype_int16 yypgoto[] =
 {
-    -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,
-    -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,
-    -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,
-    -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,
-    -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,
-    -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,
-    -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,
-    -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,
-    -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,
-    -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,
-    -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,
-    -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,
-    -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,
-    -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,
-    -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,
-    -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,
-    -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,
-    -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,
-    -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,  -130,
-    -130,  -130,  -130,  -130,  -130
+    -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,
+    -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,
+    -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,
+    -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,
+    -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,
+    -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,
+    -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,
+    -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,
+    -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,
+    -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,
+    -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,
+    -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,
+    -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,
+    -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,
+    -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,
+    -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,
+    -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,
+    -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,
+    -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,  -131,
+    -131,  -131,  -131,  -131,  -131,  -131
 };
 
   /* YYDEFGOTO[NTERM-NUM].  */
 static const yytype_int16 yydefgoto[] =
 {
-      -1,     1,    10,    11,    18,   160,    12,    19,   302,    13,
-      20,   314,    14,    21,   324,   161,   162,   163,   164,   165,
-     166,   167,   168,   169,   170,   171,   172,   173,   174,   175,
-     176,   177,   178,   179,   180,   181,   182,   183,   184,   185,
-     186,   187,   188,   189,   190,   191,   192,   193,   194,   195,
-     196,   197,   198,   199,   200,   201,   202,   203,   204,   205,
-     206,   207,   208,   209,   210,   211,   212,   213,   214,   215,
-     216,   217,   218,   219,   220,   221,   222,   223,   224,   225,
-     226,   227,   228,   229,   230,   231,   232,   233,   234,   235,
-     236,   237,   238,   239,   240,   241,   242,   243,   244,   245,
-     246,   247,   248,   249,   250,   251,   252,   253,   254,   255,
-     256,   257,   258,   259,   260,   261,   262,   263,   264,   265,
-     266,   267,   268,   269,   270,   271,   272,   273,   274,   275,
-     276,   277,   278,   279,   280,   281,   282,   283,   284,   285,
-     286,   287,   288,   289,   290,   291,   292,   293,   303,   304,
-     305,   306,   307,   308,   315,   316,   317,   318,   319,   325,
-     326,   327,   328,    15,    22,   337,   338,   339,   340,   341,
-     342,   343,   344,   345,    16,    23,   358,   359,   360,   361,
-     362,   363,   364,   365,   366,   367,   368,   369,   370,    17,
-      24,   372,   373,   294,   295
+      -1,     1,    10,    11,    18,   161,    12,    19,   304,    13,
+      20,   316,    14,    21,   326,   162,   163,   164,   165,   166,
+     167,   168,   169,   170,   171,   172,   173,   174,   175,   176,
+     177,   178,   179,   180,   181,   182,   183,   184,   185,   186,
+     187,   188,   189,   190,   191,   192,   193,   194,   195,   196,
+     197,   198,   199,   200,   201,   202,   203,   204,   205,   206,
+     207,   208,   209,   210,   211,   212,   213,   214,   215,   216,
+     217,   218,   219,   220,   221,   222,   223,   224,   225,   226,
+     227,   228,   229,   230,   231,   232,   233,   234,   235,   236,
+     237,   238,   239,   240,   241,   242,   243,   244,   245,   246,
+     247,   248,   249,   250,   251,   252,   253,   254,   255,   256,
+     257,   258,   259,   260,   261,   262,   263,   264,   265,   266,
+     267,   268,   269,   270,   271,   272,   273,   274,   275,   276,
+     277,   278,   279,   280,   281,   282,   283,   284,   285,   286,
+     287,   288,   289,   290,   291,   292,   293,   294,   295,   305,
+     306,   307,   308,   309,   310,   317,   318,   319,   320,   321,
+     327,   328,   329,   330,    15,    22,   339,   340,   341,   342,
+     343,   344,   345,   346,   347,    16,    23,   360,   361,   362,
+     363,   364,   365,   366,   367,   368,   369,   370,   371,   372,
+      17,    24,   374,   375,   296,   297
 };
 
   /* YYTABLE[YYPACT[STATE-NUM]] -- What to do in state STATE-NUM.  If
@@ -1243,93 +1248,93 @@ static const yytype_int16 yydefgoto[] =
      number is the opposite.  If YYTABLE_NINF, syntax error.  */
 static const yytype_uint16 yytable[] =
 {
-       2,   320,   296,   371,   297,   298,   309,   374,   375,   376,
-       0,     3,   377,   378,   310,   311,   346,   347,   348,   349,
-     350,   351,   352,   353,   354,   355,   356,   357,   329,   330,
-     331,   332,   333,   334,   335,   336,   379,   321,   322,   380,
-     381,     4,   382,   383,   384,   385,   386,     5,   387,   388,
-     389,   390,   391,   392,   393,   394,   395,   396,   397,   398,
-     399,   400,   401,   402,   403,   299,   404,   405,   406,   407,
-     408,   409,   410,   411,   412,   413,   414,   415,   416,   417,
-     418,   419,   420,   421,   422,   423,   424,   425,   426,   427,
-     428,     6,   429,   430,   300,   431,   301,   312,   432,   313,
-     433,   434,   435,   436,   437,   438,   439,     7,   440,   441,
-     442,   443,   444,   445,   446,   447,   448,   449,   450,   451,
-     452,   453,   454,   455,   456,   457,   458,   459,   460,   461,
-     462,   463,   464,   465,   466,   467,   468,   469,   470,   471,
-     472,   323,   473,   474,     8,     0,   475,    25,    26,    27,
-      28,    29,    30,    31,    32,    33,    34,    35,    36,    37,
-      38,    39,    40,    41,    42,    43,    44,    45,    46,    47,
-      48,    49,    50,    51,    52,   476,   477,   478,     9,    53,
-      54,    55,   479,   480,   481,    56,    57,    58,    59,    60,
-      61,    62,    63,    64,    65,    66,    67,    68,    69,    70,
-      71,    72,    73,    74,    75,    76,    77,    78,    79,    80,
-      81,    82,    83,    84,    85,    86,    87,    88,    89,    90,
-      91,    92,    93,    94,    95,    96,   482,   483,   484,   485,
-     486,   487,   488,   489,   490,    97,    98,    99,   491,   100,
-     101,   102,   492,   493,   103,   104,   105,   106,   107,   108,
-     109,   110,   111,   112,   113,   114,   115,   116,   117,   118,
-     119,   120,   121,   122,   123,   124,   494,   495,   496,   497,
-     125,   126,   127,   128,   129,   130,   131,   132,   133,   498,
-     499,   500,   501,   502,   503,   504,   505,   506,   507,   508,
-     509,   510,   134,   135,   136,   137,   138,   139,   140,   141,
-     142,   143,   144,   145,   146,   147,   148,   149,   150,   151,
-     152,   153,   154,   511,   155,   512,   156,   157,   158,   159,
-     513,   514,   515,   516,   517,   518,   519,   520,   521,   522,
-     523,   524,   525,   526,   527,   528,   529,   530,   531,   532,
-     533,   534,   535,   536,   537,   538,   539,   540,   541,   542,
-     543,   544,   545,   546,   547,   548,   549,   550,   551,   552,
-     553,   554,   555,   556,   557,   558
+       2,   322,   298,   373,   299,   300,   311,   376,   377,   378,
+       0,     3,   379,   380,   312,   313,   348,   349,   350,   351,
+     352,   353,   354,   355,   356,   357,   358,   359,   331,   332,
+     333,   334,   335,   336,   337,   338,   381,   323,   324,   382,
+     383,     4,   384,   385,   386,   387,   388,     5,   389,   390,
+     391,   392,   393,   394,   395,   396,   397,   398,   399,   400,
+     401,   402,   403,   404,   405,   301,   406,   407,   408,   409,
+     410,   411,   412,   413,   414,   415,   416,   417,   418,   419,
+     420,   421,   422,   423,   424,   425,   426,   427,   428,   429,
+     430,     6,   431,   432,   433,   302,   434,   303,   314,   435,
+     315,   436,   437,   438,   439,   440,   441,     7,   442,   443,
+     444,   445,   446,   447,   448,   449,   450,   451,   452,   453,
+     454,   455,   456,   457,   458,   459,   460,   461,   462,   463,
+     464,   465,   466,   467,   468,   469,   470,   471,   472,   473,
+     474,   475,   325,   476,   477,     8,     0,   478,    25,    26,
+      27,    28,    29,    30,    31,    32,    33,    34,    35,    36,
+      37,    38,    39,    40,    41,    42,    43,    44,    45,    46,
+      47,    48,    49,    50,    51,    52,   479,   480,   481,     9,
+      53,    54,    55,   482,   483,   484,    56,    57,    58,    59,
+      60,    61,    62,    63,    64,    65,    66,    67,    68,    69,
+      70,    71,    72,    73,    74,    75,    76,    77,    78,    79,
+      80,    81,    82,    83,    84,    85,    86,    87,    88,    89,
+      90,    91,    92,    93,    94,    95,    96,   485,   486,   487,
+     488,   489,   490,   491,   492,   493,    97,    98,    99,   494,
+     100,   101,   102,   495,   496,   103,   104,   105,   106,   107,
+     108,   109,   110,   111,   112,   113,   114,   115,   116,   117,
+     118,   119,   120,   121,   122,   123,   124,   125,   497,   498,
+     499,   500,   126,   127,   128,   129,   130,   131,   132,   133,
+     134,   501,   502,   503,   504,   505,   506,   507,   508,   509,
+     510,   511,   512,   513,   135,   136,   137,   138,   139,   140,
+     141,   142,   143,   144,   145,   146,   147,   148,   149,   150,
+     151,   152,   153,   154,   155,   514,   156,   515,   157,   158,
+     159,   160,   516,   517,   518,   519,   520,   521,   522,   523,
+     524,   525,   526,   527,   528,   529,   530,   531,   532,   533,
+     534,   535,   536,   537,   538,   539,   540,   541,   542,   543,
+     544,   545,   546,   547,   548,   549,   550,   551,   552,   553,
+     554,   555,   556,   557,   558,   559,   560,   561
 };
 
 static const yytype_int16 yycheck[] =
 {
        0,    40,    40,   108,    42,    43,    40,    10,    10,    10,
-      -1,    11,    10,    10,    48,    49,   145,   146,   147,   148,
-     149,   150,   151,   152,   153,   154,   155,   156,    92,    93,
+      -1,    11,    10,    10,    48,    49,   146,   147,   148,   149,
+     150,   151,   152,   153,   154,   155,   156,   157,    92,    93,
       94,    95,    96,    97,    98,    99,    10,    76,    77,    10,
       10,    41,    10,    10,    10,    10,    10,    47,    10,    10,
       10,    10,    10,    10,    10,    10,    10,    10,    10,    10,
       10,    10,    10,    10,    10,   103,    10,    10,    10,    10,
       10,    10,    10,    10,    10,    10,    10,    10,    10,    10,
       10,    10,    10,    10,    10,    10,    10,    10,    10,    10,
-      10,    91,    10,    10,   132,    10,   134,   131,    10,   133,
-      10,    10,    10,    10,    10,    10,    10,   107,    10,    10,
+      10,    91,    10,    10,    10,   133,    10,   135,   132,    10,
+     134,    10,    10,    10,    10,    10,    10,   107,    10,    10,
       10,    10,    10,    10,    10,    10,    10,    10,    10,    10,
       10,    10,    10,    10,    10,    10,    10,    10,    10,    10,
       10,    10,    10,    10,    10,    10,    10,    10,    10,    10,
-      10,   180,    10,    10,   144,    -1,    10,    12,    13,    14,
-      15,    16,    17,    18,    19,    20,    21,    22,    23,    24,
-      25,    26,    27,    28,    29,    30,    31,    32,    33,    34,
-      35,    36,    37,    38,    39,    10,    10,    10,   178,    44,
-      45,    46,    10,    10,    10,    50,    51,    52,    53,    54,
-      55,    56,    57,    58,    59,    60,    61,    62,    63,    64,
-      65,    66,    67,    68,    69,    70,    71,    72,    73,    74,
-      75,    76,    77,    78,    79,    80,    81,    82,    83,    84,
-      85,    86,    87,    88,    89,    90,    10,    10,    10,    10,
-      10,    10,    10,    10,    10,   100,   101,   102,    10,   104,
-     105,   106,    10,    10,   109,   110,   111,   112,   113,   114,
-     115,   116,   117,   118,   119,   120,   121,   122,   123,   124,
-     125,   126,   127,   128,   129,   130,    10,    10,    10,    10,
-     135,   136,   137,   138,   139,   140,   141,   142,   143,    10,
+      10,    10,   181,    10,    10,   145,    -1,    10,    12,    13,
+      14,    15,    16,    17,    18,    19,    20,    21,    22,    23,
+      24,    25,    26,    27,    28,    29,    30,    31,    32,    33,
+      34,    35,    36,    37,    38,    39,    10,    10,    10,   179,
+      44,    45,    46,    10,    10,    10,    50,    51,    52,    53,
+      54,    55,    56,    57,    58,    59,    60,    61,    62,    63,
+      64,    65,    66,    67,    68,    69,    70,    71,    72,    73,
+      74,    75,    76,    77,    78,    79,    80,    81,    82,    83,
+      84,    85,    86,    87,    88,    89,    90,    10,    10,    10,
+      10,    10,    10,    10,    10,    10,   100,   101,   102,    10,
+     104,   105,   106,    10,    10,   109,   110,   111,   112,   113,
+     114,   115,   116,   117,   118,   119,   120,   121,   122,   123,
+     124,   125,   126,   127,   128,   129,   130,   131,    10,    10,
+      10,    10,   136,   137,   138,   139,   140,   141,   142,   143,
+     144,    10,    10,    10,    10,    10,    10,    10,    10,    10,
+      10,    10,    10,    10,   158,   159,   160,   161,   162,   163,
+     164,   165,   166,   167,   168,   169,   170,   171,   172,   173,
+     174,   175,   176,   177,   178,    10,   180,    10,   182,   183,
+     184,   185,    10,    10,    10,    10,    10,    10,    10,    10,
       10,    10,    10,    10,    10,    10,    10,    10,    10,    10,
-      10,    10,   157,   158,   159,   160,   161,   162,   163,   164,
-     165,   166,   167,   168,   169,   170,   171,   172,   173,   174,
-     175,   176,   177,    10,   179,    10,   181,   182,   183,   184,
       10,    10,    10,    10,    10,    10,    10,    10,    10,    10,
       10,    10,    10,    10,    10,    10,    10,    10,    10,    10,
-      10,    10,    10,    10,    10,    10,    10,    10,    10,    10,
-      10,    10,    10,    10,    10,    10,    10,    10,    10,    10,
-      10,    10,    10,    10,    10,    10
+      10,    10,    10,    10,    10,    10,    10,    10
 };
 
   /* YYSTOS[STATE-NUM] -- The (internal number of the) accessing
      symbol of state STATE-NUM.  */
 static const yytype_uint16 yystos[] =
 {
-       0,   186,     0,    11,    41,    47,    91,   107,   144,   178,
-     187,   188,   191,   194,   197,   348,   359,   374,   189,   192,
-     195,   198,   349,   360,   375,    12,    13,    14,    15,    16,
+       0,   187,     0,    11,    41,    47,    91,   107,   145,   179,
+     188,   189,   192,   195,   198,   350,   361,   376,   190,   193,
+     196,   199,   351,   362,   377,    12,    13,    14,    15,    16,
       17,    18,    19,    20,    21,    22,    23,    24,    25,    26,
       27,    28,    29,    30,    31,    32,    33,    34,    35,    36,
       37,    38,    39,    44,    45,    46,    50,    51,    52,    53,
@@ -1339,11 +1344,11 @@ static const yytype_uint16 yystos[] =
       84,    85,    86,    87,    88,    89,    90,   100,   101,   102,
      104,   105,   106,   109,   110,   111,   112,   113,   114,   115,
      116,   117,   118,   119,   120,   121,   122,   123,   124,   125,
-     126,   127,   128,   129,   130,   135,   136,   137,   138,   139,
-     140,   141,   142,   143,   157,   158,   159,   160,   161,   162,
+     126,   127,   128,   129,   130,   131,   136,   137,   138,   139,
+     140,   141,   142,   143,   144,   158,   159,   160,   161,   162,
      163,   164,   165,   166,   167,   168,   169,   170,   171,   172,
-     173,   174,   175,   176,   177,   179,   181,   182,   183,   184,
-     190,   200,   201,   202,   203,   204,   205,   206,   207,   208,
+     173,   174,   175,   176,   177,   178,   180,   182,   183,   184,
+     185,   191,   201,   202,   203,   204,   205,   206,   207,   208,
      209,   210,   211,   212,   213,   214,   215,   216,   217,   218,
      219,   220,   221,   222,   223,   224,   225,   226,   227,   228,
      229,   230,   231,   232,   233,   234,   235,   236,   237,   238,
@@ -1356,15 +1361,15 @@ static const yytype_uint16 yystos[] =
      299,   300,   301,   302,   303,   304,   305,   306,   307,   308,
      309,   310,   311,   312,   313,   314,   315,   316,   317,   318,
      319,   320,   321,   322,   323,   324,   325,   326,   327,   328,
-     329,   330,   331,   332,   378,   379,    40,    42,    43,   103,
-     132,   134,   193,   333,   334,   335,   336,   337,   338,    40,
-      48,    49,   131,   133,   196,   339,   340,   341,   342,   343,
-      40,    76,    77,   180,   199,   344,   345,   346,   347,    92,
-      93,    94,    95,    96,    97,    98,    99,   350,   351,   352,
-     353,   354,   355,   356,   357,   358,   145,   146,   147,   148,
-     149,   150,   151,   152,   153,   154,   155,   156,   361,   362,
+     329,   330,   331,   332,   333,   334,   380,   381,    40,    42,
+      43,   103,   133,   135,   194,   335,   336,   337,   338,   339,
+     340,    40,    48,    49,   132,   134,   197,   341,   342,   343,
+     344,   345,    40,    76,    77,   181,   200,   346,   347,   348,
+     349,    92,    93,    94,    95,    96,    97,    98,    99,   352,
+     353,   354,   355,   356,   357,   358,   359,   360,   146,   147,
+     148,   149,   150,   151,   152,   153,   154,   155,   156,   157,
      363,   364,   365,   366,   367,   368,   369,   370,   371,   372,
-     373,   108,   376,   377,    10,    10,    10,    10,    10,    10,
+     373,   374,   375,   108,   378,   379,    10,    10,    10,    10,
       10,    10,    10,    10,    10,    10,    10,    10,    10,    10,
       10,    10,    10,    10,    10,    10,    10,    10,    10,    10,
       10,    10,    10,    10,    10,    10,    10,    10,    10,    10,
@@ -1382,30 +1387,31 @@ static const yytype_uint16 yystos[] =
       10,    10,    10,    10,    10,    10,    10,    10,    10,    10,
       10,    10,    10,    10,    10,    10,    10,    10,    10,    10,
       10,    10,    10,    10,    10,    10,    10,    10,    10,    10,
-      10,    10,    10,    10,    10,    10,    10,    10,    10
+      10,    10,    10,    10,    10,    10,    10,    10,    10,    10,
+      10,    10
 };
 
   /* YYR1[YYN] -- Symbol number of symbol that rule YYN derives.  */
 static const yytype_uint16 yyr1[] =
 {
-       0,   185,   186,   186,   187,   187,   187,   187,   187,   187,
-     187,   188,   189,   189,   190,   190,   190,   190,   190,   190,
-     190,   190,   190,   190,   190,   190,   190,   190,   190,   190,
-     190,   190,   190,   190,   190,   190,   190,   190,   190,   190,
-     190,   190,   190,   190,   190,   190,   190,   190,   190,   190,
-     190,   190,   190,   190,   190,   190,   190,   190,   190,   190,
-     190,   190,   190,   190,   190,   190,   190,   190,   190,   190,
-     190,   190,   190,   190,   190,   190,   190,   190,   190,   190,
-     190,   190,   190,   190,   190,   190,   190,   190,   190,   190,
-     190,   190,   190,   190,   190,   190,   190,   190,   190,   190,
-     190,   190,   190,   190,   190,   190,   190,   190,   190,   190,
-     190,   190,   190,   190,   190,   190,   190,   190,   190,   190,
-     190,   190,   190,   190,   190,   190,   190,   190,   190,   190,
-     190,   190,   190,   190,   190,   190,   190,   190,   190,   190,
-     190,   190,   190,   190,   190,   190,   190,   190,   190,   191,
-     192,   192,   193,   193,   193,   193,   193,   193,   194,   195,
-     195,   196,   196,   196,   196,   196,   197,   198,   198,   199,
-     199,   199,   199,   200,   201,   202,   203,   204,   205,   206,
+       0,   186,   187,   187,   188,   188,   188,   188,   188,   188,
+     188,   189,   190,   190,   191,   191,   191,   191,   191,   191,
+     191,   191,   191,   191,   191,   191,   191,   191,   191,   191,
+     191,   191,   191,   191,   191,   191,   191,   191,   191,   191,
+     191,   191,   191,   191,   191,   191,   191,   191,   191,   191,
+     191,   191,   191,   191,   191,   191,   191,   191,   191,   191,
+     191,   191,   191,   191,   191,   191,   191,   191,   191,   191,
+     191,   191,   191,   191,   191,   191,   191,   191,   191,   191,
+     191,   191,   191,   191,   191,   191,   191,   191,   191,   191,
+     191,   191,   191,   191,   191,   191,   191,   191,   191,   191,
+     191,   191,   191,   191,   191,   191,   191,   191,   191,   191,
+     191,   191,   191,   191,   191,   191,   191,   191,   191,   191,
+     191,   191,   191,   191,   191,   191,   191,   191,   191,   191,
+     191,   191,   191,   191,   191,   191,   191,   191,   191,   191,
+     191,   191,   191,   191,   191,   191,   191,   191,   191,   191,
+     192,   193,   193,   194,   194,   194,   194,   194,   194,   195,
+     196,   196,   197,   197,   197,   197,   197,   198,   199,   199,
+     200,   200,   200,   200,   201,   202,   203,   204,   205,   206,
      207,   208,   209,   210,   211,   212,   213,   214,   215,   216,
      217,   218,   219,   220,   221,   222,   223,   224,   225,   226,
      227,   228,   229,   230,   231,   232,   233,   234,   235,   236,
@@ -1420,12 +1426,12 @@ static const yytype_uint16 yyr1[] =
      317,   318,   319,   320,   321,   322,   323,   324,   325,   326,
      327,   328,   329,   330,   331,   332,   333,   334,   335,   336,
      337,   338,   339,   340,   341,   342,   343,   344,   345,   346,
-     347,   348,   349,   349,   350,   350,   350,   350,   350,   350,
-     350,   350,   351,   352,   353,   354,   355,   356,   357,   358,
-     359,   360,   360,   361,   361,   361,   361,   361,   361,   361,
-     361,   361,   361,   361,   361,   362,   363,   364,   365,   366,
-     367,   368,   369,   370,   371,   372,   373,   374,   375,   375,
-     376,   377,   378,   379
+     347,   348,   349,   350,   351,   351,   352,   352,   352,   352,
+     352,   352,   352,   352,   353,   354,   355,   356,   357,   358,
+     359,   360,   361,   362,   362,   363,   363,   363,   363,   363,
+     363,   363,   363,   363,   363,   363,   363,   364,   365,   366,
+     367,   368,   369,   370,   371,   372,   373,   374,   375,   376,
+     377,   377,   378,   379,   380,   381
 };
 
   /* YYR2[YYN] -- Number of symbols on the right hand side of rule YYN.  */
@@ -1446,29 +1452,29 @@ static const yytype_uint8 yyr2[] =
        1,     1,     1,     1,     1,     1,     1,     1,     1,     1,
        1,     1,     1,     1,     1,     1,     1,     1,     1,     1,
        1,     1,     1,     1,     1,     1,     1,     1,     1,     1,
-       2,     0,     1,     1,     1,     1,     1,     1,     1,     2,
-       0,     1,     1,     1,     1,     1,     1,     2,     0,     1,
-       1,     1,     1,     2,     2,     2,     2,     2,     2,     2,
-       2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
-       2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
-       2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
-       2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
-       2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
-       2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
-       2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
-       2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
-       3,     2,     2,     2,     2,     2,     2,     2,     2,     2,
-       2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
-       2,     2,     2,     3,     2,     2,     2,     2,     2,     2,
-       2,     2,     3,     3,     4,     4,     4,     3,     2,     2,
-       2,     3,     3,     2,     2,     2,     2,     2,     2,     2,
-       2,     2,     2,     2,     2,     2,     2,     2,     3,     2,
-       2,     1,     2,     0,     1,     1,     1,     1,     1,     1,
-       1,     1,     2,     2,     2,     2,     2,     2,     2,     2,
        1,     2,     0,     1,     1,     1,     1,     1,     1,     1,
-       1,     1,     1,     1,     1,     2,     2,     2,     2,     2,
-       2,     2,     2,     2,     2,     2,     2,     1,     2,     0,
-       1,     2,     2,     2
+       2,     0,     1,     1,     1,     1,     1,     1,     2,     0,
+       1,     1,     1,     1,     2,     2,     2,     2,     2,     2,
+       2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
+       2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
+       2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
+       2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
+       2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
+       2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
+       2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
+       2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
+       2,     2,     3,     2,     2,     2,     2,     2,     2,     2,
+       2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
+       2,     2,     2,     2,     2,     3,     2,     2,     2,     2,
+       2,     2,     2,     2,     3,     3,     4,     4,     4,     3,
+       2,     2,     2,     3,     3,     2,     2,     2,     2,     2,
+       2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
+       3,     2,     2,     1,     2,     0,     1,     1,     1,     1,
+       1,     1,     1,     1,     2,     2,     2,     2,     2,     2,
+       2,     2,     1,     2,     0,     1,     1,     1,     1,     1,
+       1,     1,     1,     1,     1,     1,     1,     2,     2,     2,
+       2,     2,     2,     2,     2,     2,     2,     2,     2,     1,
+       2,     0,     1,     2,     2,     2
 };
 
 
@@ -2145,15 +2151,15 @@ yyreduce:
   switch (yyn)
     {
         case 11:
-#line 147 "./util/configparser.y" /* yacc.c:1646  */
+#line 148 "./util/configparser.y" /* yacc.c:1646  */
     { 
 		OUTYY(("\nP(server:)\n")); 
 	}
-#line 2153 "util/configparser.c" /* yacc.c:1646  */
+#line 2159 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 149:
-#line 213 "./util/configparser.y" /* yacc.c:1646  */
+  case 150:
+#line 214 "./util/configparser.y" /* yacc.c:1646  */
     {
 		struct config_stub* s;
 		OUTYY(("\nP(stub_zone:)\n")); 
@@ -2164,11 +2170,11 @@ yyreduce:
 		} else 
 			yyerror("out of memory");
 	}
-#line 2168 "util/configparser.c" /* yacc.c:1646  */
+#line 2174 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 158:
-#line 230 "./util/configparser.y" /* yacc.c:1646  */
+  case 159:
+#line 231 "./util/configparser.y" /* yacc.c:1646  */
     {
 		struct config_stub* s;
 		OUTYY(("\nP(forward_zone:)\n")); 
@@ -2179,11 +2185,11 @@ yyreduce:
 		} else 
 			yyerror("out of memory");
 	}
-#line 2183 "util/configparser.c" /* yacc.c:1646  */
+#line 2189 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 166:
-#line 247 "./util/configparser.y" /* yacc.c:1646  */
+  case 167:
+#line 248 "./util/configparser.y" /* yacc.c:1646  */
     {
 		struct config_view* s;
 		OUTYY(("\nP(view:)\n")); 
@@ -2196,11 +2202,11 @@ yyreduce:
 		} else 
 			yyerror("out of memory");
 	}
-#line 2200 "util/configparser.c" /* yacc.c:1646  */
+#line 2206 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 173:
-#line 265 "./util/configparser.y" /* yacc.c:1646  */
+  case 174:
+#line 266 "./util/configparser.y" /* yacc.c:1646  */
     { 
 		OUTYY(("P(server_num_threads:%s)\n", (yyvsp[0].str))); 
 		if(atoi((yyvsp[0].str)) == 0 && strcmp((yyvsp[0].str), "0") != 0)
@@ -2208,11 +2214,11 @@ yyreduce:
 		else cfg_parser->cfg->num_threads = atoi((yyvsp[0].str));
 		free((yyvsp[0].str));
 	}
-#line 2212 "util/configparser.c" /* yacc.c:1646  */
+#line 2218 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 174:
-#line 274 "./util/configparser.y" /* yacc.c:1646  */
+  case 175:
+#line 275 "./util/configparser.y" /* yacc.c:1646  */
     { 
 		OUTYY(("P(server_verbosity:%s)\n", (yyvsp[0].str))); 
 		if(atoi((yyvsp[0].str)) == 0 && strcmp((yyvsp[0].str), "0") != 0)
@@ -2220,11 +2226,11 @@ yyreduce:
 		else cfg_parser->cfg->verbosity = atoi((yyvsp[0].str));
 		free((yyvsp[0].str));
 	}
-#line 2224 "util/configparser.c" /* yacc.c:1646  */
+#line 2230 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 175:
-#line 283 "./util/configparser.y" /* yacc.c:1646  */
+  case 176:
+#line 284 "./util/configparser.y" /* yacc.c:1646  */
     { 
 		OUTYY(("P(server_statistics_interval:%s)\n", (yyvsp[0].str))); 
 		if(strcmp((yyvsp[0].str), "") == 0 || strcmp((yyvsp[0].str), "0") == 0)
@@ -2234,11 +2240,11 @@ yyreduce:
 		else cfg_parser->cfg->stat_interval = atoi((yyvsp[0].str));
 		free((yyvsp[0].str));
 	}
-#line 2238 "util/configparser.c" /* yacc.c:1646  */
+#line 2244 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 176:
-#line 294 "./util/configparser.y" /* yacc.c:1646  */
+  case 177:
+#line 295 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_statistics_cumulative:%s)\n", (yyvsp[0].str)));
 		if(strcmp((yyvsp[0].str), "yes") != 0 && strcmp((yyvsp[0].str), "no") != 0)
@@ -2246,11 +2252,11 @@ yyreduce:
 		else cfg_parser->cfg->stat_cumulative = (strcmp((yyvsp[0].str), "yes")==0);
 		free((yyvsp[0].str));
 	}
-#line 2250 "util/configparser.c" /* yacc.c:1646  */
+#line 2256 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 177:
-#line 303 "./util/configparser.y" /* yacc.c:1646  */
+  case 178:
+#line 304 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_extended_statistics:%s)\n", (yyvsp[0].str)));
 		if(strcmp((yyvsp[0].str), "yes") != 0 && strcmp((yyvsp[0].str), "no") != 0)
@@ -2258,11 +2264,11 @@ yyreduce:
 		else cfg_parser->cfg->stat_extended = (strcmp((yyvsp[0].str), "yes")==0);
 		free((yyvsp[0].str));
 	}
-#line 2262 "util/configparser.c" /* yacc.c:1646  */
+#line 2268 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 178:
-#line 312 "./util/configparser.y" /* yacc.c:1646  */
+  case 179:
+#line 313 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_port:%s)\n", (yyvsp[0].str)));
 		if(atoi((yyvsp[0].str)) == 0)
@@ -2270,11 +2276,11 @@ yyreduce:
 		else cfg_parser->cfg->port = atoi((yyvsp[0].str));
 		free((yyvsp[0].str));
 	}
-#line 2274 "util/configparser.c" /* yacc.c:1646  */
+#line 2280 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 179:
-#line 321 "./util/configparser.y" /* yacc.c:1646  */
+  case 180:
+#line 322 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_interface:%s)\n", (yyvsp[0].str)));
 		if(cfg_parser->cfg->num_ifs == 0)
@@ -2286,11 +2292,11 @@ yyreduce:
 		else
 			cfg_parser->cfg->ifs[cfg_parser->cfg->num_ifs++] = (yyvsp[0].str);
 	}
-#line 2290 "util/configparser.c" /* yacc.c:1646  */
+#line 2296 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 180:
-#line 334 "./util/configparser.y" /* yacc.c:1646  */
+  case 181:
+#line 335 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_outgoing_interface:%s)\n", (yyvsp[0].str)));
 		if(cfg_parser->cfg->num_out_ifs == 0)
@@ -2304,11 +2310,11 @@ yyreduce:
 			cfg_parser->cfg->out_ifs[
 				cfg_parser->cfg->num_out_ifs++] = (yyvsp[0].str);
 	}
-#line 2308 "util/configparser.c" /* yacc.c:1646  */
+#line 2314 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 181:
-#line 349 "./util/configparser.y" /* yacc.c:1646  */
+  case 182:
+#line 350 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_outgoing_range:%s)\n", (yyvsp[0].str)));
 		if(atoi((yyvsp[0].str)) == 0)
@@ -2316,11 +2322,11 @@ yyreduce:
 		else cfg_parser->cfg->outgoing_num_ports = atoi((yyvsp[0].str));
 		free((yyvsp[0].str));
 	}
-#line 2320 "util/configparser.c" /* yacc.c:1646  */
+#line 2326 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 182:
-#line 358 "./util/configparser.y" /* yacc.c:1646  */
+  case 183:
+#line 359 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_outgoing_port_permit:%s)\n", (yyvsp[0].str)));
 		if(!cfg_mark_ports((yyvsp[0].str), 1, 
@@ -2328,11 +2334,11 @@ yyreduce:
 			yyerror("port number or range (\"low-high\") expected");
 		free((yyvsp[0].str));
 	}
-#line 2332 "util/configparser.c" /* yacc.c:1646  */
+#line 2338 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 183:
-#line 367 "./util/configparser.y" /* yacc.c:1646  */
+  case 184:
+#line 368 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_outgoing_port_avoid:%s)\n", (yyvsp[0].str)));
 		if(!cfg_mark_ports((yyvsp[0].str), 0, 
@@ -2340,11 +2346,11 @@ yyreduce:
 			yyerror("port number or range (\"low-high\") expected");
 		free((yyvsp[0].str));
 	}
-#line 2344 "util/configparser.c" /* yacc.c:1646  */
+#line 2350 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 184:
-#line 376 "./util/configparser.y" /* yacc.c:1646  */
+  case 185:
+#line 377 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_outgoing_num_tcp:%s)\n", (yyvsp[0].str)));
 		if(atoi((yyvsp[0].str)) == 0 && strcmp((yyvsp[0].str), "0") != 0)
@@ -2352,11 +2358,11 @@ yyreduce:
 		else cfg_parser->cfg->outgoing_num_tcp = atoi((yyvsp[0].str));
 		free((yyvsp[0].str));
 	}
-#line 2356 "util/configparser.c" /* yacc.c:1646  */
+#line 2362 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 185:
-#line 385 "./util/configparser.y" /* yacc.c:1646  */
+  case 186:
+#line 386 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_incoming_num_tcp:%s)\n", (yyvsp[0].str)));
 		if(atoi((yyvsp[0].str)) == 0 && strcmp((yyvsp[0].str), "0") != 0)
@@ -2364,11 +2370,11 @@ yyreduce:
 		else cfg_parser->cfg->incoming_num_tcp = atoi((yyvsp[0].str));
 		free((yyvsp[0].str));
 	}
-#line 2368 "util/configparser.c" /* yacc.c:1646  */
+#line 2374 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 186:
-#line 394 "./util/configparser.y" /* yacc.c:1646  */
+  case 187:
+#line 395 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_interface_automatic:%s)\n", (yyvsp[0].str)));
 		if(strcmp((yyvsp[0].str), "yes") != 0 && strcmp((yyvsp[0].str), "no") != 0)
@@ -2376,11 +2382,11 @@ yyreduce:
 		else cfg_parser->cfg->if_automatic = (strcmp((yyvsp[0].str), "yes")==0);
 		free((yyvsp[0].str));
 	}
-#line 2380 "util/configparser.c" /* yacc.c:1646  */
+#line 2386 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 187:
-#line 403 "./util/configparser.y" /* yacc.c:1646  */
+  case 188:
+#line 404 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_do_ip4:%s)\n", (yyvsp[0].str)));
 		if(strcmp((yyvsp[0].str), "yes") != 0 && strcmp((yyvsp[0].str), "no") != 0)
@@ -2388,11 +2394,11 @@ yyreduce:
 		else cfg_parser->cfg->do_ip4 = (strcmp((yyvsp[0].str), "yes")==0);
 		free((yyvsp[0].str));
 	}
-#line 2392 "util/configparser.c" /* yacc.c:1646  */
+#line 2398 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 188:
-#line 412 "./util/configparser.y" /* yacc.c:1646  */
+  case 189:
+#line 413 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_do_ip6:%s)\n", (yyvsp[0].str)));
 		if(strcmp((yyvsp[0].str), "yes") != 0 && strcmp((yyvsp[0].str), "no") != 0)
@@ -2400,11 +2406,11 @@ yyreduce:
 		else cfg_parser->cfg->do_ip6 = (strcmp((yyvsp[0].str), "yes")==0);
 		free((yyvsp[0].str));
 	}
-#line 2404 "util/configparser.c" /* yacc.c:1646  */
+#line 2410 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 189:
-#line 421 "./util/configparser.y" /* yacc.c:1646  */
+  case 190:
+#line 422 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_do_udp:%s)\n", (yyvsp[0].str)));
 		if(strcmp((yyvsp[0].str), "yes") != 0 && strcmp((yyvsp[0].str), "no") != 0)
@@ -2412,11 +2418,11 @@ yyreduce:
 		else cfg_parser->cfg->do_udp = (strcmp((yyvsp[0].str), "yes")==0);
 		free((yyvsp[0].str));
 	}
-#line 2416 "util/configparser.c" /* yacc.c:1646  */
+#line 2422 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 190:
-#line 430 "./util/configparser.y" /* yacc.c:1646  */
+  case 191:
+#line 431 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_do_tcp:%s)\n", (yyvsp[0].str)));
 		if(strcmp((yyvsp[0].str), "yes") != 0 && strcmp((yyvsp[0].str), "no") != 0)
@@ -2424,11 +2430,11 @@ yyreduce:
 		else cfg_parser->cfg->do_tcp = (strcmp((yyvsp[0].str), "yes")==0);
 		free((yyvsp[0].str));
 	}
-#line 2428 "util/configparser.c" /* yacc.c:1646  */
+#line 2434 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 191:
-#line 439 "./util/configparser.y" /* yacc.c:1646  */
+  case 192:
+#line 440 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_prefer_ip6:%s)\n", (yyvsp[0].str)));
 		if(strcmp((yyvsp[0].str), "yes") != 0 && strcmp((yyvsp[0].str), "no") != 0)
@@ -2436,11 +2442,11 @@ yyreduce:
 		else cfg_parser->cfg->prefer_ip6 = (strcmp((yyvsp[0].str), "yes")==0);
 		free((yyvsp[0].str));
 	}
-#line 2440 "util/configparser.c" /* yacc.c:1646  */
+#line 2446 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 192:
-#line 448 "./util/configparser.y" /* yacc.c:1646  */
+  case 193:
+#line 449 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_tcp_mss:%s)\n", (yyvsp[0].str)));
                 if(atoi((yyvsp[0].str)) == 0 && strcmp((yyvsp[0].str), "0") != 0)
@@ -2448,11 +2454,11 @@ yyreduce:
                 else cfg_parser->cfg->tcp_mss = atoi((yyvsp[0].str));
                 free((yyvsp[0].str));
 	}
-#line 2452 "util/configparser.c" /* yacc.c:1646  */
+#line 2458 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 193:
-#line 457 "./util/configparser.y" /* yacc.c:1646  */
+  case 194:
+#line 458 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_outgoing_tcp_mss:%s)\n", (yyvsp[0].str)));
 		if(atoi((yyvsp[0].str)) == 0 && strcmp((yyvsp[0].str), "0") != 0)
@@ -2460,11 +2466,11 @@ yyreduce:
 		else cfg_parser->cfg->outgoing_tcp_mss = atoi((yyvsp[0].str));
 		free((yyvsp[0].str));
 	}
-#line 2464 "util/configparser.c" /* yacc.c:1646  */
+#line 2470 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 194:
-#line 466 "./util/configparser.y" /* yacc.c:1646  */
+  case 195:
+#line 467 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_tcp_upstream:%s)\n", (yyvsp[0].str)));
 		if(strcmp((yyvsp[0].str), "yes") != 0 && strcmp((yyvsp[0].str), "no") != 0)
@@ -2472,11 +2478,11 @@ yyreduce:
 		else cfg_parser->cfg->tcp_upstream = (strcmp((yyvsp[0].str), "yes")==0);
 		free((yyvsp[0].str));
 	}
-#line 2476 "util/configparser.c" /* yacc.c:1646  */
+#line 2482 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 195:
-#line 475 "./util/configparser.y" /* yacc.c:1646  */
+  case 196:
+#line 476 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_ssl_upstream:%s)\n", (yyvsp[0].str)));
 		if(strcmp((yyvsp[0].str), "yes") != 0 && strcmp((yyvsp[0].str), "no") != 0)
@@ -2484,31 +2490,31 @@ yyreduce:
 		else cfg_parser->cfg->ssl_upstream = (strcmp((yyvsp[0].str), "yes")==0);
 		free((yyvsp[0].str));
 	}
-#line 2488 "util/configparser.c" /* yacc.c:1646  */
+#line 2494 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 196:
-#line 484 "./util/configparser.y" /* yacc.c:1646  */
+  case 197:
+#line 485 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_ssl_service_key:%s)\n", (yyvsp[0].str)));
 		free(cfg_parser->cfg->ssl_service_key);
 		cfg_parser->cfg->ssl_service_key = (yyvsp[0].str);
 	}
-#line 2498 "util/configparser.c" /* yacc.c:1646  */
+#line 2504 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 197:
-#line 491 "./util/configparser.y" /* yacc.c:1646  */
+  case 198:
+#line 492 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_ssl_service_pem:%s)\n", (yyvsp[0].str)));
 		free(cfg_parser->cfg->ssl_service_pem);
 		cfg_parser->cfg->ssl_service_pem = (yyvsp[0].str);
 	}
-#line 2508 "util/configparser.c" /* yacc.c:1646  */
+#line 2514 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 198:
-#line 498 "./util/configparser.y" /* yacc.c:1646  */
+  case 199:
+#line 499 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_ssl_port:%s)\n", (yyvsp[0].str)));
 		if(atoi((yyvsp[0].str)) == 0)
@@ -2516,11 +2522,11 @@ yyreduce:
 		else cfg_parser->cfg->ssl_port = atoi((yyvsp[0].str));
 		free((yyvsp[0].str));
 	}
-#line 2520 "util/configparser.c" /* yacc.c:1646  */
+#line 2526 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 199:
-#line 507 "./util/configparser.y" /* yacc.c:1646  */
+  case 200:
+#line 508 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_use_systemd:%s)\n", (yyvsp[0].str)));
 		if(strcmp((yyvsp[0].str), "yes") != 0 && strcmp((yyvsp[0].str), "no") != 0)
@@ -2528,11 +2534,11 @@ yyreduce:
 		else cfg_parser->cfg->use_systemd = (strcmp((yyvsp[0].str), "yes")==0);
 		free((yyvsp[0].str));
 	}
-#line 2532 "util/configparser.c" /* yacc.c:1646  */
+#line 2538 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 200:
-#line 516 "./util/configparser.y" /* yacc.c:1646  */
+  case 201:
+#line 517 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_do_daemonize:%s)\n", (yyvsp[0].str)));
 		if(strcmp((yyvsp[0].str), "yes") != 0 && strcmp((yyvsp[0].str), "no") != 0)
@@ -2540,11 +2546,11 @@ yyreduce:
 		else cfg_parser->cfg->do_daemonize = (strcmp((yyvsp[0].str), "yes")==0);
 		free((yyvsp[0].str));
 	}
-#line 2544 "util/configparser.c" /* yacc.c:1646  */
+#line 2550 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 201:
-#line 525 "./util/configparser.y" /* yacc.c:1646  */
+  case 202:
+#line 526 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_use_syslog:%s)\n", (yyvsp[0].str)));
 		if(strcmp((yyvsp[0].str), "yes") != 0 && strcmp((yyvsp[0].str), "no") != 0)
@@ -2557,11 +2563,11 @@ yyreduce:
 #endif
 		free((yyvsp[0].str));
 	}
-#line 2561 "util/configparser.c" /* yacc.c:1646  */
+#line 2567 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 202:
-#line 539 "./util/configparser.y" /* yacc.c:1646  */
+  case 203:
+#line 540 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_log_time_ascii:%s)\n", (yyvsp[0].str)));
 		if(strcmp((yyvsp[0].str), "yes") != 0 && strcmp((yyvsp[0].str), "no") != 0)
@@ -2569,11 +2575,11 @@ yyreduce:
 		else cfg_parser->cfg->log_time_ascii = (strcmp((yyvsp[0].str), "yes")==0);
 		free((yyvsp[0].str));
 	}
-#line 2573 "util/configparser.c" /* yacc.c:1646  */
+#line 2579 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 203:
-#line 548 "./util/configparser.y" /* yacc.c:1646  */
+  case 204:
+#line 549 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_log_queries:%s)\n", (yyvsp[0].str)));
 		if(strcmp((yyvsp[0].str), "yes") != 0 && strcmp((yyvsp[0].str), "no") != 0)
@@ -2581,31 +2587,43 @@ yyreduce:
 		else cfg_parser->cfg->log_queries = (strcmp((yyvsp[0].str), "yes")==0);
 		free((yyvsp[0].str));
 	}
-#line 2585 "util/configparser.c" /* yacc.c:1646  */
+#line 2591 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 204:
-#line 557 "./util/configparser.y" /* yacc.c:1646  */
+  case 205:
+#line 558 "./util/configparser.y" /* yacc.c:1646  */
+    {
+  	OUTYY(("P(server_log_replies:%s)\n", (yyvsp[0].str)));
+  	if(strcmp((yyvsp[0].str), "yes") != 0 && strcmp((yyvsp[0].str), "no") != 0)
+  		yyerror("expected yes or no.");
+  	else cfg_parser->cfg->log_replies = (strcmp((yyvsp[0].str), "yes")==0);
+  	free((yyvsp[0].str));
+  }
+#line 2603 "util/configparser.c" /* yacc.c:1646  */
+    break;
+
+  case 206:
+#line 567 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_chroot:%s)\n", (yyvsp[0].str)));
 		free(cfg_parser->cfg->chrootdir);
 		cfg_parser->cfg->chrootdir = (yyvsp[0].str);
 	}
-#line 2595 "util/configparser.c" /* yacc.c:1646  */
+#line 2613 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 205:
-#line 564 "./util/configparser.y" /* yacc.c:1646  */
+  case 207:
+#line 574 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_username:%s)\n", (yyvsp[0].str)));
 		free(cfg_parser->cfg->username);
 		cfg_parser->cfg->username = (yyvsp[0].str);
 	}
-#line 2605 "util/configparser.c" /* yacc.c:1646  */
+#line 2623 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 206:
-#line 571 "./util/configparser.y" /* yacc.c:1646  */
+  case 208:
+#line 581 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_directory:%s)\n", (yyvsp[0].str)));
 		free(cfg_parser->cfg->directory);
@@ -2630,115 +2648,115 @@ yyreduce:
 			}
 		}
 	}
-#line 2634 "util/configparser.c" /* yacc.c:1646  */
+#line 2652 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 207:
-#line 597 "./util/configparser.y" /* yacc.c:1646  */
+  case 209:
+#line 607 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_logfile:%s)\n", (yyvsp[0].str)));
 		free(cfg_parser->cfg->logfile);
 		cfg_parser->cfg->logfile = (yyvsp[0].str);
 		cfg_parser->cfg->use_syslog = 0;
 	}
-#line 2645 "util/configparser.c" /* yacc.c:1646  */
+#line 2663 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 208:
-#line 605 "./util/configparser.y" /* yacc.c:1646  */
+  case 210:
+#line 615 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_pidfile:%s)\n", (yyvsp[0].str)));
 		free(cfg_parser->cfg->pidfile);
 		cfg_parser->cfg->pidfile = (yyvsp[0].str);
 	}
-#line 2655 "util/configparser.c" /* yacc.c:1646  */
+#line 2673 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 209:
-#line 612 "./util/configparser.y" /* yacc.c:1646  */
+  case 211:
+#line 622 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_root_hints:%s)\n", (yyvsp[0].str)));
 		if(!cfg_strlist_insert(&cfg_parser->cfg->root_hints, (yyvsp[0].str)))
 			yyerror("out of memory");
 	}
-#line 2665 "util/configparser.c" /* yacc.c:1646  */
+#line 2683 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 210:
-#line 619 "./util/configparser.y" /* yacc.c:1646  */
+  case 212:
+#line 629 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_dlv_anchor_file:%s)\n", (yyvsp[0].str)));
 		free(cfg_parser->cfg->dlv_anchor_file);
 		cfg_parser->cfg->dlv_anchor_file = (yyvsp[0].str);
 	}
-#line 2675 "util/configparser.c" /* yacc.c:1646  */
+#line 2693 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 211:
-#line 626 "./util/configparser.y" /* yacc.c:1646  */
+  case 213:
+#line 636 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_dlv_anchor:%s)\n", (yyvsp[0].str)));
 		if(!cfg_strlist_insert(&cfg_parser->cfg->dlv_anchor_list, (yyvsp[0].str)))
 			yyerror("out of memory");
 	}
-#line 2685 "util/configparser.c" /* yacc.c:1646  */
+#line 2703 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 212:
-#line 633 "./util/configparser.y" /* yacc.c:1646  */
+  case 214:
+#line 643 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_auto_trust_anchor_file:%s)\n", (yyvsp[0].str)));
 		if(!cfg_strlist_insert(&cfg_parser->cfg->
 			auto_trust_anchor_file_list, (yyvsp[0].str)))
 			yyerror("out of memory");
 	}
-#line 2696 "util/configparser.c" /* yacc.c:1646  */
+#line 2714 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 213:
-#line 641 "./util/configparser.y" /* yacc.c:1646  */
+  case 215:
+#line 651 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_trust_anchor_file:%s)\n", (yyvsp[0].str)));
 		if(!cfg_strlist_insert(&cfg_parser->cfg->
 			trust_anchor_file_list, (yyvsp[0].str)))
 			yyerror("out of memory");
 	}
-#line 2707 "util/configparser.c" /* yacc.c:1646  */
+#line 2725 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 214:
-#line 649 "./util/configparser.y" /* yacc.c:1646  */
+  case 216:
+#line 659 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_trusted_keys_file:%s)\n", (yyvsp[0].str)));
 		if(!cfg_strlist_insert(&cfg_parser->cfg->
 			trusted_keys_file_list, (yyvsp[0].str)))
 			yyerror("out of memory");
 	}
-#line 2718 "util/configparser.c" /* yacc.c:1646  */
+#line 2736 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 215:
-#line 657 "./util/configparser.y" /* yacc.c:1646  */
+  case 217:
+#line 667 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_trust_anchor:%s)\n", (yyvsp[0].str)));
 		if(!cfg_strlist_insert(&cfg_parser->cfg->trust_anchor_list, (yyvsp[0].str)))
 			yyerror("out of memory");
 	}
-#line 2728 "util/configparser.c" /* yacc.c:1646  */
+#line 2746 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 216:
-#line 664 "./util/configparser.y" /* yacc.c:1646  */
+  case 218:
+#line 674 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_domain_insecure:%s)\n", (yyvsp[0].str)));
 		if(!cfg_strlist_insert(&cfg_parser->cfg->domain_insecure, (yyvsp[0].str)))
 			yyerror("out of memory");
 	}
-#line 2738 "util/configparser.c" /* yacc.c:1646  */
+#line 2756 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 217:
-#line 671 "./util/configparser.y" /* yacc.c:1646  */
+  case 219:
+#line 681 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_hide_identity:%s)\n", (yyvsp[0].str)));
 		if(strcmp((yyvsp[0].str), "yes") != 0 && strcmp((yyvsp[0].str), "no") != 0)
@@ -2746,11 +2764,11 @@ yyreduce:
 		else cfg_parser->cfg->hide_identity = (strcmp((yyvsp[0].str), "yes")==0);
 		free((yyvsp[0].str));
 	}
-#line 2750 "util/configparser.c" /* yacc.c:1646  */
+#line 2768 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 218:
-#line 680 "./util/configparser.y" /* yacc.c:1646  */
+  case 220:
+#line 690 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_hide_version:%s)\n", (yyvsp[0].str)));
 		if(strcmp((yyvsp[0].str), "yes") != 0 && strcmp((yyvsp[0].str), "no") != 0)
@@ -2758,53 +2776,53 @@ yyreduce:
 		else cfg_parser->cfg->hide_version = (strcmp((yyvsp[0].str), "yes")==0);
 		free((yyvsp[0].str));
 	}
-#line 2762 "util/configparser.c" /* yacc.c:1646  */
+#line 2780 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 219:
-#line 689 "./util/configparser.y" /* yacc.c:1646  */
+  case 221:
+#line 699 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_identity:%s)\n", (yyvsp[0].str)));
 		free(cfg_parser->cfg->identity);
 		cfg_parser->cfg->identity = (yyvsp[0].str);
 	}
-#line 2772 "util/configparser.c" /* yacc.c:1646  */
+#line 2790 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 220:
-#line 696 "./util/configparser.y" /* yacc.c:1646  */
+  case 222:
+#line 706 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_version:%s)\n", (yyvsp[0].str)));
 		free(cfg_parser->cfg->version);
 		cfg_parser->cfg->version = (yyvsp[0].str);
 	}
-#line 2782 "util/configparser.c" /* yacc.c:1646  */
+#line 2800 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 221:
-#line 703 "./util/configparser.y" /* yacc.c:1646  */
+  case 223:
+#line 713 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_so_rcvbuf:%s)\n", (yyvsp[0].str)));
 		if(!cfg_parse_memsize((yyvsp[0].str), &cfg_parser->cfg->so_rcvbuf))
 			yyerror("buffer size expected");
 		free((yyvsp[0].str));
 	}
-#line 2793 "util/configparser.c" /* yacc.c:1646  */
+#line 2811 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 222:
-#line 711 "./util/configparser.y" /* yacc.c:1646  */
+  case 224:
+#line 721 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_so_sndbuf:%s)\n", (yyvsp[0].str)));
 		if(!cfg_parse_memsize((yyvsp[0].str), &cfg_parser->cfg->so_sndbuf))
 			yyerror("buffer size expected");
 		free((yyvsp[0].str));
 	}
-#line 2804 "util/configparser.c" /* yacc.c:1646  */
+#line 2822 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 223:
-#line 719 "./util/configparser.y" /* yacc.c:1646  */
+  case 225:
+#line 729 "./util/configparser.y" /* yacc.c:1646  */
     {
         OUTYY(("P(server_so_reuseport:%s)\n", (yyvsp[0].str)));
         if(strcmp((yyvsp[0].str), "yes") != 0 && strcmp((yyvsp[0].str), "no") != 0)
@@ -2813,11 +2831,11 @@ yyreduce:
             (strcmp((yyvsp[0].str), "yes")==0);
         free((yyvsp[0].str));
     }
-#line 2817 "util/configparser.c" /* yacc.c:1646  */
+#line 2835 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 224:
-#line 729 "./util/configparser.y" /* yacc.c:1646  */
+  case 226:
+#line 739 "./util/configparser.y" /* yacc.c:1646  */
     {
         OUTYY(("P(server_ip_transparent:%s)\n", (yyvsp[0].str)));
         if(strcmp((yyvsp[0].str), "yes") != 0 && strcmp((yyvsp[0].str), "no") != 0)
@@ -2826,11 +2844,11 @@ yyreduce:
             (strcmp((yyvsp[0].str), "yes")==0);
         free((yyvsp[0].str));
     }
-#line 2830 "util/configparser.c" /* yacc.c:1646  */
+#line 2848 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 225:
-#line 739 "./util/configparser.y" /* yacc.c:1646  */
+  case 227:
+#line 749 "./util/configparser.y" /* yacc.c:1646  */
     {
         OUTYY(("P(server_ip_freebind:%s)\n", (yyvsp[0].str)));
         if(strcmp((yyvsp[0].str), "yes") != 0 && strcmp((yyvsp[0].str), "no") != 0)
@@ -2839,11 +2857,11 @@ yyreduce:
             (strcmp((yyvsp[0].str), "yes")==0);
         free((yyvsp[0].str));
     }
-#line 2843 "util/configparser.c" /* yacc.c:1646  */
+#line 2861 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 226:
-#line 749 "./util/configparser.y" /* yacc.c:1646  */
+  case 228:
+#line 759 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_edns_buffer_size:%s)\n", (yyvsp[0].str)));
 		if(atoi((yyvsp[0].str)) == 0)
@@ -2855,11 +2873,11 @@ yyreduce:
 		else cfg_parser->cfg->edns_buffer_size = atoi((yyvsp[0].str));
 		free((yyvsp[0].str));
 	}
-#line 2859 "util/configparser.c" /* yacc.c:1646  */
+#line 2877 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 227:
-#line 762 "./util/configparser.y" /* yacc.c:1646  */
+  case 229:
+#line 772 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_msg_buffer_size:%s)\n", (yyvsp[0].str)));
 		if(atoi((yyvsp[0].str)) == 0)
@@ -2869,22 +2887,22 @@ yyreduce:
 		else cfg_parser->cfg->msg_buffer_size = atoi((yyvsp[0].str));
 		free((yyvsp[0].str));
 	}
-#line 2873 "util/configparser.c" /* yacc.c:1646  */
+#line 2891 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 228:
-#line 773 "./util/configparser.y" /* yacc.c:1646  */
+  case 230:
+#line 783 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_msg_cache_size:%s)\n", (yyvsp[0].str)));
 		if(!cfg_parse_memsize((yyvsp[0].str), &cfg_parser->cfg->msg_cache_size))
 			yyerror("memory size expected");
 		free((yyvsp[0].str));
 	}
-#line 2884 "util/configparser.c" /* yacc.c:1646  */
+#line 2902 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 229:
-#line 781 "./util/configparser.y" /* yacc.c:1646  */
+  case 231:
+#line 791 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_msg_cache_slabs:%s)\n", (yyvsp[0].str)));
 		if(atoi((yyvsp[0].str)) == 0)
@@ -2896,11 +2914,11 @@ yyreduce:
 		}
 		free((yyvsp[0].str));
 	}
-#line 2900 "util/configparser.c" /* yacc.c:1646  */
+#line 2918 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 230:
-#line 794 "./util/configparser.y" /* yacc.c:1646  */
+  case 232:
+#line 804 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_num_queries_per_thread:%s)\n", (yyvsp[0].str)));
 		if(atoi((yyvsp[0].str)) == 0)
@@ -2908,11 +2926,11 @@ yyreduce:
 		else cfg_parser->cfg->num_queries_per_thread = atoi((yyvsp[0].str));
 		free((yyvsp[0].str));
 	}
-#line 2912 "util/configparser.c" /* yacc.c:1646  */
+#line 2930 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 231:
-#line 803 "./util/configparser.y" /* yacc.c:1646  */
+  case 233:
+#line 813 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_jostle_timeout:%s)\n", (yyvsp[0].str)));
 		if(atoi((yyvsp[0].str)) == 0 && strcmp((yyvsp[0].str), "0") != 0)
@@ -2920,11 +2938,11 @@ yyreduce:
 		else cfg_parser->cfg->jostle_time = atoi((yyvsp[0].str));
 		free((yyvsp[0].str));
 	}
-#line 2924 "util/configparser.c" /* yacc.c:1646  */
+#line 2942 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 232:
-#line 812 "./util/configparser.y" /* yacc.c:1646  */
+  case 234:
+#line 822 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_delay_close:%s)\n", (yyvsp[0].str)));
 		if(atoi((yyvsp[0].str)) == 0 && strcmp((yyvsp[0].str), "0") != 0)
@@ -2932,11 +2950,11 @@ yyreduce:
 		else cfg_parser->cfg->delay_close = atoi((yyvsp[0].str));
 		free((yyvsp[0].str));
 	}
-#line 2936 "util/configparser.c" /* yacc.c:1646  */
+#line 2954 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 233:
-#line 821 "./util/configparser.y" /* yacc.c:1646  */
+  case 235:
+#line 831 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_unblock_lan_zones:%s)\n", (yyvsp[0].str)));
 		if(strcmp((yyvsp[0].str), "yes") != 0 && strcmp((yyvsp[0].str), "no") != 0)
@@ -2945,11 +2963,11 @@ yyreduce:
 			(strcmp((yyvsp[0].str), "yes")==0);
 		free((yyvsp[0].str));
 	}
-#line 2949 "util/configparser.c" /* yacc.c:1646  */
+#line 2967 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 234:
-#line 831 "./util/configparser.y" /* yacc.c:1646  */
+  case 236:
+#line 841 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_insecure_lan_zones:%s)\n", (yyvsp[0].str)));
 		if(strcmp((yyvsp[0].str), "yes") != 0 && strcmp((yyvsp[0].str), "no") != 0)
@@ -2958,22 +2976,22 @@ yyreduce:
 			(strcmp((yyvsp[0].str), "yes")==0);
 		free((yyvsp[0].str));
 	}
-#line 2962 "util/configparser.c" /* yacc.c:1646  */
+#line 2980 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 235:
-#line 841 "./util/configparser.y" /* yacc.c:1646  */
+  case 237:
+#line 851 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_rrset_cache_size:%s)\n", (yyvsp[0].str)));
 		if(!cfg_parse_memsize((yyvsp[0].str), &cfg_parser->cfg->rrset_cache_size))
 			yyerror("memory size expected");
 		free((yyvsp[0].str));
 	}
-#line 2973 "util/configparser.c" /* yacc.c:1646  */
+#line 2991 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 236:
-#line 849 "./util/configparser.y" /* yacc.c:1646  */
+  case 238:
+#line 859 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_rrset_cache_slabs:%s)\n", (yyvsp[0].str)));
 		if(atoi((yyvsp[0].str)) == 0)
@@ -2985,11 +3003,11 @@ yyreduce:
 		}
 		free((yyvsp[0].str));
 	}
-#line 2989 "util/configparser.c" /* yacc.c:1646  */
+#line 3007 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 237:
-#line 862 "./util/configparser.y" /* yacc.c:1646  */
+  case 239:
+#line 872 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_infra_host_ttl:%s)\n", (yyvsp[0].str)));
 		if(atoi((yyvsp[0].str)) == 0 && strcmp((yyvsp[0].str), "0") != 0)
@@ -2997,22 +3015,22 @@ yyreduce:
 		else cfg_parser->cfg->host_ttl = atoi((yyvsp[0].str));
 		free((yyvsp[0].str));
 	}
-#line 3001 "util/configparser.c" /* yacc.c:1646  */
+#line 3019 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 238:
-#line 871 "./util/configparser.y" /* yacc.c:1646  */
+  case 240:
+#line 881 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_infra_lame_ttl:%s)\n", (yyvsp[0].str)));
 		verbose(VERB_DETAIL, "ignored infra-lame-ttl: %s (option "
 			"removed, use infra-host-ttl)", (yyvsp[0].str));
 		free((yyvsp[0].str));
 	}
-#line 3012 "util/configparser.c" /* yacc.c:1646  */
+#line 3030 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 239:
-#line 879 "./util/configparser.y" /* yacc.c:1646  */
+  case 241:
+#line 889 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_infra_cache_numhosts:%s)\n", (yyvsp[0].str)));
 		if(atoi((yyvsp[0].str)) == 0)
@@ -3020,22 +3038,22 @@ yyreduce:
 		else cfg_parser->cfg->infra_cache_numhosts = atoi((yyvsp[0].str));
 		free((yyvsp[0].str));
 	}
-#line 3024 "util/configparser.c" /* yacc.c:1646  */
+#line 3042 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 240:
-#line 888 "./util/configparser.y" /* yacc.c:1646  */
+  case 242:
+#line 898 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_infra_cache_lame_size:%s)\n", (yyvsp[0].str)));
 		verbose(VERB_DETAIL, "ignored infra-cache-lame-size: %s "
 			"(option removed, use infra-cache-numhosts)", (yyvsp[0].str));
 		free((yyvsp[0].str));
 	}
-#line 3035 "util/configparser.c" /* yacc.c:1646  */
+#line 3053 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 241:
-#line 896 "./util/configparser.y" /* yacc.c:1646  */
+  case 243:
+#line 906 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_infra_cache_slabs:%s)\n", (yyvsp[0].str)));
 		if(atoi((yyvsp[0].str)) == 0)
@@ -3047,11 +3065,11 @@ yyreduce:
 		}
 		free((yyvsp[0].str));
 	}
-#line 3051 "util/configparser.c" /* yacc.c:1646  */
+#line 3069 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 242:
-#line 909 "./util/configparser.y" /* yacc.c:1646  */
+  case 244:
+#line 919 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_infra_cache_min_rtt:%s)\n", (yyvsp[0].str)));
 		if(atoi((yyvsp[0].str)) == 0 && strcmp((yyvsp[0].str), "0") != 0)
@@ -3059,21 +3077,21 @@ yyreduce:
 		else cfg_parser->cfg->infra_cache_min_rtt = atoi((yyvsp[0].str));
 		free((yyvsp[0].str));
 	}
-#line 3063 "util/configparser.c" /* yacc.c:1646  */
+#line 3081 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 243:
-#line 918 "./util/configparser.y" /* yacc.c:1646  */
+  case 245:
+#line 928 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_target_fetch_policy:%s)\n", (yyvsp[0].str)));
 		free(cfg_parser->cfg->target_fetch_policy);
 		cfg_parser->cfg->target_fetch_policy = (yyvsp[0].str);
 	}
-#line 3073 "util/configparser.c" /* yacc.c:1646  */
+#line 3091 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 244:
-#line 925 "./util/configparser.y" /* yacc.c:1646  */
+  case 246:
+#line 935 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_harden_short_bufsize:%s)\n", (yyvsp[0].str)));
 		if(strcmp((yyvsp[0].str), "yes") != 0 && strcmp((yyvsp[0].str), "no") != 0)
@@ -3082,11 +3100,11 @@ yyreduce:
 			(strcmp((yyvsp[0].str), "yes")==0);
 		free((yyvsp[0].str));
 	}
-#line 3086 "util/configparser.c" /* yacc.c:1646  */
+#line 3104 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 245:
-#line 935 "./util/configparser.y" /* yacc.c:1646  */
+  case 247:
+#line 945 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_harden_large_queries:%s)\n", (yyvsp[0].str)));
 		if(strcmp((yyvsp[0].str), "yes") != 0 && strcmp((yyvsp[0].str), "no") != 0)
@@ -3095,11 +3113,11 @@ yyreduce:
 			(strcmp((yyvsp[0].str), "yes")==0);
 		free((yyvsp[0].str));
 	}
-#line 3099 "util/configparser.c" /* yacc.c:1646  */
+#line 3117 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 246:
-#line 945 "./util/configparser.y" /* yacc.c:1646  */
+  case 248:
+#line 955 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_harden_glue:%s)\n", (yyvsp[0].str)));
 		if(strcmp((yyvsp[0].str), "yes") != 0 && strcmp((yyvsp[0].str), "no") != 0)
@@ -3108,11 +3126,11 @@ yyreduce:
 			(strcmp((yyvsp[0].str), "yes")==0);
 		free((yyvsp[0].str));
 	}
-#line 3112 "util/configparser.c" /* yacc.c:1646  */
+#line 3130 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 247:
-#line 955 "./util/configparser.y" /* yacc.c:1646  */
+  case 249:
+#line 965 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_harden_dnssec_stripped:%s)\n", (yyvsp[0].str)));
 		if(strcmp((yyvsp[0].str), "yes") != 0 && strcmp((yyvsp[0].str), "no") != 0)
@@ -3121,11 +3139,11 @@ yyreduce:
 			(strcmp((yyvsp[0].str), "yes")==0);
 		free((yyvsp[0].str));
 	}
-#line 3125 "util/configparser.c" /* yacc.c:1646  */
+#line 3143 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 248:
-#line 965 "./util/configparser.y" /* yacc.c:1646  */
+  case 250:
+#line 975 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_harden_below_nxdomain:%s)\n", (yyvsp[0].str)));
 		if(strcmp((yyvsp[0].str), "yes") != 0 && strcmp((yyvsp[0].str), "no") != 0)
@@ -3134,11 +3152,11 @@ yyreduce:
 			(strcmp((yyvsp[0].str), "yes")==0);
 		free((yyvsp[0].str));
 	}
-#line 3138 "util/configparser.c" /* yacc.c:1646  */
+#line 3156 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 249:
-#line 975 "./util/configparser.y" /* yacc.c:1646  */
+  case 251:
+#line 985 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_harden_referral_path:%s)\n", (yyvsp[0].str)));
 		if(strcmp((yyvsp[0].str), "yes") != 0 && strcmp((yyvsp[0].str), "no") != 0)
@@ -3147,11 +3165,11 @@ yyreduce:
 			(strcmp((yyvsp[0].str), "yes")==0);
 		free((yyvsp[0].str));
 	}
-#line 3151 "util/configparser.c" /* yacc.c:1646  */
+#line 3169 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 250:
-#line 985 "./util/configparser.y" /* yacc.c:1646  */
+  case 252:
+#line 995 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_harden_algo_downgrade:%s)\n", (yyvsp[0].str)));
 		if(strcmp((yyvsp[0].str), "yes") != 0 && strcmp((yyvsp[0].str), "no") != 0)
@@ -3160,11 +3178,11 @@ yyreduce:
 			(strcmp((yyvsp[0].str), "yes")==0);
 		free((yyvsp[0].str));
 	}
-#line 3164 "util/configparser.c" /* yacc.c:1646  */
+#line 3182 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 251:
-#line 995 "./util/configparser.y" /* yacc.c:1646  */
+  case 253:
+#line 1005 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_use_caps_for_id:%s)\n", (yyvsp[0].str)));
 		if(strcmp((yyvsp[0].str), "yes") != 0 && strcmp((yyvsp[0].str), "no") != 0)
@@ -3173,41 +3191,41 @@ yyreduce:
 			(strcmp((yyvsp[0].str), "yes")==0);
 		free((yyvsp[0].str));
 	}
-#line 3177 "util/configparser.c" /* yacc.c:1646  */
+#line 3195 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 252:
-#line 1005 "./util/configparser.y" /* yacc.c:1646  */
+  case 254:
+#line 1015 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_caps_whitelist:%s)\n", (yyvsp[0].str)));
 		if(!cfg_strlist_insert(&cfg_parser->cfg->caps_whitelist, (yyvsp[0].str)))
 			yyerror("out of memory");
 	}
-#line 3187 "util/configparser.c" /* yacc.c:1646  */
+#line 3205 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 253:
-#line 1012 "./util/configparser.y" /* yacc.c:1646  */
+  case 255:
+#line 1022 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_private_address:%s)\n", (yyvsp[0].str)));
 		if(!cfg_strlist_insert(&cfg_parser->cfg->private_address, (yyvsp[0].str)))
 			yyerror("out of memory");
 	}
-#line 3197 "util/configparser.c" /* yacc.c:1646  */
+#line 3215 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 254:
-#line 1019 "./util/configparser.y" /* yacc.c:1646  */
+  case 256:
+#line 1029 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_private_domain:%s)\n", (yyvsp[0].str)));
 		if(!cfg_strlist_insert(&cfg_parser->cfg->private_domain, (yyvsp[0].str)))
 			yyerror("out of memory");
 	}
-#line 3207 "util/configparser.c" /* yacc.c:1646  */
+#line 3225 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 255:
-#line 1026 "./util/configparser.y" /* yacc.c:1646  */
+  case 257:
+#line 1036 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_prefetch:%s)\n", (yyvsp[0].str)));
 		if(strcmp((yyvsp[0].str), "yes") != 0 && strcmp((yyvsp[0].str), "no") != 0)
@@ -3215,11 +3233,11 @@ yyreduce:
 		else cfg_parser->cfg->prefetch = (strcmp((yyvsp[0].str), "yes")==0);
 		free((yyvsp[0].str));
 	}
-#line 3219 "util/configparser.c" /* yacc.c:1646  */
+#line 3237 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 256:
-#line 1035 "./util/configparser.y" /* yacc.c:1646  */
+  case 258:
+#line 1045 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_prefetch_key:%s)\n", (yyvsp[0].str)));
 		if(strcmp((yyvsp[0].str), "yes") != 0 && strcmp((yyvsp[0].str), "no") != 0)
@@ -3227,11 +3245,11 @@ yyreduce:
 		else cfg_parser->cfg->prefetch_key = (strcmp((yyvsp[0].str), "yes")==0);
 		free((yyvsp[0].str));
 	}
-#line 3231 "util/configparser.c" /* yacc.c:1646  */
+#line 3249 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 257:
-#line 1044 "./util/configparser.y" /* yacc.c:1646  */
+  case 259:
+#line 1054 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_unwanted_reply_threshold:%s)\n", (yyvsp[0].str)));
 		if(atoi((yyvsp[0].str)) == 0 && strcmp((yyvsp[0].str), "0") != 0)
@@ -3239,21 +3257,21 @@ yyreduce:
 		else cfg_parser->cfg->unwanted_threshold = atoi((yyvsp[0].str));
 		free((yyvsp[0].str));
 	}
-#line 3243 "util/configparser.c" /* yacc.c:1646  */
+#line 3261 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 258:
-#line 1053 "./util/configparser.y" /* yacc.c:1646  */
+  case 260:
+#line 1063 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_do_not_query_address:%s)\n", (yyvsp[0].str)));
 		if(!cfg_strlist_insert(&cfg_parser->cfg->donotqueryaddrs, (yyvsp[0].str)))
 			yyerror("out of memory");
 	}
-#line 3253 "util/configparser.c" /* yacc.c:1646  */
+#line 3271 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 259:
-#line 1060 "./util/configparser.y" /* yacc.c:1646  */
+  case 261:
+#line 1070 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_do_not_query_localhost:%s)\n", (yyvsp[0].str)));
 		if(strcmp((yyvsp[0].str), "yes") != 0 && strcmp((yyvsp[0].str), "no") != 0)
@@ -3262,11 +3280,11 @@ yyreduce:
 			(strcmp((yyvsp[0].str), "yes")==0);
 		free((yyvsp[0].str));
 	}
-#line 3266 "util/configparser.c" /* yacc.c:1646  */
+#line 3284 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 260:
-#line 1070 "./util/configparser.y" /* yacc.c:1646  */
+  case 262:
+#line 1080 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_access_control:%s %s)\n", (yyvsp[-1].str), (yyvsp[0].str)));
 		if(strcmp((yyvsp[0].str), "deny")!=0 && strcmp((yyvsp[0].str), "refuse")!=0 &&
@@ -3282,21 +3300,21 @@ yyreduce:
 				fatal_exit("out of memory adding acl");
 		}
 	}
-#line 3286 "util/configparser.c" /* yacc.c:1646  */
+#line 3304 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 261:
-#line 1087 "./util/configparser.y" /* yacc.c:1646  */
+  case 263:
+#line 1097 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_module_conf:%s)\n", (yyvsp[0].str)));
 		free(cfg_parser->cfg->module_conf);
 		cfg_parser->cfg->module_conf = (yyvsp[0].str);
 	}
-#line 3296 "util/configparser.c" /* yacc.c:1646  */
+#line 3314 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 262:
-#line 1094 "./util/configparser.y" /* yacc.c:1646  */
+  case 264:
+#line 1104 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_val_override_date:%s)\n", (yyvsp[0].str)));
 		if(*(yyvsp[0].str) == '\0' || strcmp((yyvsp[0].str), "0") == 0) {
@@ -3313,11 +3331,11 @@ yyreduce:
 		}
 		free((yyvsp[0].str));
 	}
-#line 3317 "util/configparser.c" /* yacc.c:1646  */
+#line 3335 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 263:
-#line 1112 "./util/configparser.y" /* yacc.c:1646  */
+  case 265:
+#line 1122 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_val_sig_skew_min:%s)\n", (yyvsp[0].str)));
 		if(*(yyvsp[0].str) == '\0' || strcmp((yyvsp[0].str), "0") == 0) {
@@ -3329,11 +3347,11 @@ yyreduce:
 		}
 		free((yyvsp[0].str));
 	}
-#line 3333 "util/configparser.c" /* yacc.c:1646  */
+#line 3351 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 264:
-#line 1125 "./util/configparser.y" /* yacc.c:1646  */
+  case 266:
+#line 1135 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_val_sig_skew_max:%s)\n", (yyvsp[0].str)));
 		if(*(yyvsp[0].str) == '\0' || strcmp((yyvsp[0].str), "0") == 0) {
@@ -3345,11 +3363,11 @@ yyreduce:
 		}
 		free((yyvsp[0].str));
 	}
-#line 3349 "util/configparser.c" /* yacc.c:1646  */
+#line 3367 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 265:
-#line 1138 "./util/configparser.y" /* yacc.c:1646  */
+  case 267:
+#line 1148 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_cache_max_ttl:%s)\n", (yyvsp[0].str)));
 		if(atoi((yyvsp[0].str)) == 0 && strcmp((yyvsp[0].str), "0") != 0)
@@ -3357,11 +3375,11 @@ yyreduce:
 		else cfg_parser->cfg->max_ttl = atoi((yyvsp[0].str));
 		free((yyvsp[0].str));
 	}
-#line 3361 "util/configparser.c" /* yacc.c:1646  */
+#line 3379 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 266:
-#line 1147 "./util/configparser.y" /* yacc.c:1646  */
+  case 268:
+#line 1157 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_cache_max_negative_ttl:%s)\n", (yyvsp[0].str)));
 		if(atoi((yyvsp[0].str)) == 0 && strcmp((yyvsp[0].str), "0") != 0)
@@ -3369,11 +3387,11 @@ yyreduce:
 		else cfg_parser->cfg->max_negative_ttl = atoi((yyvsp[0].str));
 		free((yyvsp[0].str));
 	}
-#line 3373 "util/configparser.c" /* yacc.c:1646  */
+#line 3391 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 267:
-#line 1156 "./util/configparser.y" /* yacc.c:1646  */
+  case 269:
+#line 1166 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_cache_min_ttl:%s)\n", (yyvsp[0].str)));
 		if(atoi((yyvsp[0].str)) == 0 && strcmp((yyvsp[0].str), "0") != 0)
@@ -3381,11 +3399,11 @@ yyreduce:
 		else cfg_parser->cfg->min_ttl = atoi((yyvsp[0].str));
 		free((yyvsp[0].str));
 	}
-#line 3385 "util/configparser.c" /* yacc.c:1646  */
+#line 3403 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 268:
-#line 1165 "./util/configparser.y" /* yacc.c:1646  */
+  case 270:
+#line 1175 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_bogus_ttl:%s)\n", (yyvsp[0].str)));
 		if(atoi((yyvsp[0].str)) == 0 && strcmp((yyvsp[0].str), "0") != 0)
@@ -3393,11 +3411,11 @@ yyreduce:
 		else cfg_parser->cfg->bogus_ttl = atoi((yyvsp[0].str));
 		free((yyvsp[0].str));
 	}
-#line 3397 "util/configparser.c" /* yacc.c:1646  */
+#line 3415 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 269:
-#line 1174 "./util/configparser.y" /* yacc.c:1646  */
+  case 271:
+#line 1184 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_val_clean_additional:%s)\n", (yyvsp[0].str)));
 		if(strcmp((yyvsp[0].str), "yes") != 0 && strcmp((yyvsp[0].str), "no") != 0)
@@ -3406,11 +3424,11 @@ yyreduce:
 			(strcmp((yyvsp[0].str), "yes")==0);
 		free((yyvsp[0].str));
 	}
-#line 3410 "util/configparser.c" /* yacc.c:1646  */
+#line 3428 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 270:
-#line 1184 "./util/configparser.y" /* yacc.c:1646  */
+  case 272:
+#line 1194 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_val_permissive_mode:%s)\n", (yyvsp[0].str)));
 		if(strcmp((yyvsp[0].str), "yes") != 0 && strcmp((yyvsp[0].str), "no") != 0)
@@ -3419,11 +3437,11 @@ yyreduce:
 			(strcmp((yyvsp[0].str), "yes")==0);
 		free((yyvsp[0].str));
 	}
-#line 3423 "util/configparser.c" /* yacc.c:1646  */
+#line 3441 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 271:
-#line 1194 "./util/configparser.y" /* yacc.c:1646  */
+  case 273:
+#line 1204 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_ignore_cd_flag:%s)\n", (yyvsp[0].str)));
 		if(strcmp((yyvsp[0].str), "yes") != 0 && strcmp((yyvsp[0].str), "no") != 0)
@@ -3431,11 +3449,11 @@ yyreduce:
 		else cfg_parser->cfg->ignore_cd = (strcmp((yyvsp[0].str), "yes")==0);
 		free((yyvsp[0].str));
 	}
-#line 3435 "util/configparser.c" /* yacc.c:1646  */
+#line 3453 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 272:
-#line 1203 "./util/configparser.y" /* yacc.c:1646  */
+  case 274:
+#line 1213 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_serve_expired:%s)\n", (yyvsp[0].str)));
 		if(strcmp((yyvsp[0].str), "yes") != 0 && strcmp((yyvsp[0].str), "no") != 0)
@@ -3443,11 +3461,11 @@ yyreduce:
 		else cfg_parser->cfg->serve_expired = (strcmp((yyvsp[0].str), "yes")==0);
 		free((yyvsp[0].str));
 	}
-#line 3447 "util/configparser.c" /* yacc.c:1646  */
+#line 3465 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 273:
-#line 1212 "./util/configparser.y" /* yacc.c:1646  */
+  case 275:
+#line 1222 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_fake_dsa:%s)\n", (yyvsp[0].str)));
 		if(strcmp((yyvsp[0].str), "yes") != 0 && strcmp((yyvsp[0].str), "no") != 0)
@@ -3459,11 +3477,11 @@ yyreduce:
 #endif
 		free((yyvsp[0].str));
 	}
-#line 3463 "util/configparser.c" /* yacc.c:1646  */
+#line 3481 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 274:
-#line 1225 "./util/configparser.y" /* yacc.c:1646  */
+  case 276:
+#line 1235 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_val_log_level:%s)\n", (yyvsp[0].str)));
 		if(atoi((yyvsp[0].str)) == 0 && strcmp((yyvsp[0].str), "0") != 0)
@@ -3471,21 +3489,21 @@ yyreduce:
 		else cfg_parser->cfg->val_log_level = atoi((yyvsp[0].str));
 		free((yyvsp[0].str));
 	}
-#line 3475 "util/configparser.c" /* yacc.c:1646  */
+#line 3493 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 275:
-#line 1234 "./util/configparser.y" /* yacc.c:1646  */
+  case 277:
+#line 1244 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_val_nsec3_keysize_iterations:%s)\n", (yyvsp[0].str)));
 		free(cfg_parser->cfg->val_nsec3_key_iterations);
 		cfg_parser->cfg->val_nsec3_key_iterations = (yyvsp[0].str);
 	}
-#line 3485 "util/configparser.c" /* yacc.c:1646  */
+#line 3503 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 276:
-#line 1241 "./util/configparser.y" /* yacc.c:1646  */
+  case 278:
+#line 1251 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_add_holddown:%s)\n", (yyvsp[0].str)));
 		if(atoi((yyvsp[0].str)) == 0 && strcmp((yyvsp[0].str), "0") != 0)
@@ -3493,11 +3511,11 @@ yyreduce:
 		else cfg_parser->cfg->add_holddown = atoi((yyvsp[0].str));
 		free((yyvsp[0].str));
 	}
-#line 3497 "util/configparser.c" /* yacc.c:1646  */
+#line 3515 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 277:
-#line 1250 "./util/configparser.y" /* yacc.c:1646  */
+  case 279:
+#line 1260 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_del_holddown:%s)\n", (yyvsp[0].str)));
 		if(atoi((yyvsp[0].str)) == 0 && strcmp((yyvsp[0].str), "0") != 0)
@@ -3505,11 +3523,11 @@ yyreduce:
 		else cfg_parser->cfg->del_holddown = atoi((yyvsp[0].str));
 		free((yyvsp[0].str));
 	}
-#line 3509 "util/configparser.c" /* yacc.c:1646  */
+#line 3527 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 278:
-#line 1259 "./util/configparser.y" /* yacc.c:1646  */
+  case 280:
+#line 1269 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_keep_missing:%s)\n", (yyvsp[0].str)));
 		if(atoi((yyvsp[0].str)) == 0 && strcmp((yyvsp[0].str), "0") != 0)
@@ -3517,11 +3535,11 @@ yyreduce:
 		else cfg_parser->cfg->keep_missing = atoi((yyvsp[0].str));
 		free((yyvsp[0].str));
 	}
-#line 3521 "util/configparser.c" /* yacc.c:1646  */
+#line 3539 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 279:
-#line 1268 "./util/configparser.y" /* yacc.c:1646  */
+  case 281:
+#line 1278 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_permit_small_holddown:%s)\n", (yyvsp[0].str)));
 		if(strcmp((yyvsp[0].str), "yes") != 0 && strcmp((yyvsp[0].str), "no") != 0)
@@ -3530,22 +3548,22 @@ yyreduce:
 			(strcmp((yyvsp[0].str), "yes")==0);
 		free((yyvsp[0].str));
 	}
-#line 3534 "util/configparser.c" /* yacc.c:1646  */
+#line 3552 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 280:
-#line 1277 "./util/configparser.y" /* yacc.c:1646  */
+  case 282:
+#line 1287 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_key_cache_size:%s)\n", (yyvsp[0].str)));
 		if(!cfg_parse_memsize((yyvsp[0].str), &cfg_parser->cfg->key_cache_size))
 			yyerror("memory size expected");
 		free((yyvsp[0].str));
 	}
-#line 3545 "util/configparser.c" /* yacc.c:1646  */
+#line 3563 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 281:
-#line 1285 "./util/configparser.y" /* yacc.c:1646  */
+  case 283:
+#line 1295 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_key_cache_slabs:%s)\n", (yyvsp[0].str)));
 		if(atoi((yyvsp[0].str)) == 0)
@@ -3557,22 +3575,22 @@ yyreduce:
 		}
 		free((yyvsp[0].str));
 	}
-#line 3561 "util/configparser.c" /* yacc.c:1646  */
+#line 3579 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 282:
-#line 1298 "./util/configparser.y" /* yacc.c:1646  */
+  case 284:
+#line 1308 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_neg_cache_size:%s)\n", (yyvsp[0].str)));
 		if(!cfg_parse_memsize((yyvsp[0].str), &cfg_parser->cfg->neg_cache_size))
 			yyerror("memory size expected");
 		free((yyvsp[0].str));
 	}
-#line 3572 "util/configparser.c" /* yacc.c:1646  */
+#line 3590 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 283:
-#line 1306 "./util/configparser.y" /* yacc.c:1646  */
+  case 285:
+#line 1316 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_local_zone:%s %s)\n", (yyvsp[-1].str), (yyvsp[0].str)));
 		if(strcmp((yyvsp[0].str), "static")!=0 && strcmp((yyvsp[0].str), "deny")!=0 &&
@@ -3599,21 +3617,21 @@ yyreduce:
 				fatal_exit("out of memory adding local-zone");
 		}
 	}
-#line 3603 "util/configparser.c" /* yacc.c:1646  */
+#line 3621 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 284:
-#line 1334 "./util/configparser.y" /* yacc.c:1646  */
+  case 286:
+#line 1344 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_local_data:%s)\n", (yyvsp[0].str)));
 		if(!cfg_strlist_insert(&cfg_parser->cfg->local_data, (yyvsp[0].str)))
 			fatal_exit("out of memory adding local-data");
 	}
-#line 3613 "util/configparser.c" /* yacc.c:1646  */
+#line 3631 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 285:
-#line 1341 "./util/configparser.y" /* yacc.c:1646  */
+  case 287:
+#line 1351 "./util/configparser.y" /* yacc.c:1646  */
     {
 		char* ptr;
 		OUTYY(("P(server_local_data_ptr:%s)\n", (yyvsp[0].str)));
@@ -3627,11 +3645,11 @@ yyreduce:
 			yyerror("local-data-ptr could not be reversed");
 		}
 	}
-#line 3631 "util/configparser.c" /* yacc.c:1646  */
+#line 3649 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 286:
-#line 1356 "./util/configparser.y" /* yacc.c:1646  */
+  case 288:
+#line 1366 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_minimal_responses:%s)\n", (yyvsp[0].str)));
 		if(strcmp((yyvsp[0].str), "yes") != 0 && strcmp((yyvsp[0].str), "no") != 0)
@@ -3640,11 +3658,11 @@ yyreduce:
 			(strcmp((yyvsp[0].str), "yes")==0);
 		free((yyvsp[0].str));
 	}
-#line 3644 "util/configparser.c" /* yacc.c:1646  */
+#line 3662 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 287:
-#line 1366 "./util/configparser.y" /* yacc.c:1646  */
+  case 289:
+#line 1376 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_rrset_roundrobin:%s)\n", (yyvsp[0].str)));
 		if(strcmp((yyvsp[0].str), "yes") != 0 && strcmp((yyvsp[0].str), "no") != 0)
@@ -3653,31 +3671,31 @@ yyreduce:
 			(strcmp((yyvsp[0].str), "yes")==0);
 		free((yyvsp[0].str));
 	}
-#line 3657 "util/configparser.c" /* yacc.c:1646  */
+#line 3675 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 288:
-#line 1376 "./util/configparser.y" /* yacc.c:1646  */
+  case 290:
+#line 1386 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_max_udp_size:%s)\n", (yyvsp[0].str)));
 		cfg_parser->cfg->max_udp_size = atoi((yyvsp[0].str));
 		free((yyvsp[0].str));
 	}
-#line 3667 "util/configparser.c" /* yacc.c:1646  */
+#line 3685 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 289:
-#line 1383 "./util/configparser.y" /* yacc.c:1646  */
+  case 291:
+#line 1393 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(dns64_prefix:%s)\n", (yyvsp[0].str)));
 		free(cfg_parser->cfg->dns64_prefix);
 		cfg_parser->cfg->dns64_prefix = (yyvsp[0].str);
 	}
-#line 3677 "util/configparser.c" /* yacc.c:1646  */
+#line 3695 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 290:
-#line 1390 "./util/configparser.y" /* yacc.c:1646  */
+  case 292:
+#line 1400 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_dns64_synthall:%s)\n", (yyvsp[0].str)));
 		if(strcmp((yyvsp[0].str), "yes") != 0 && strcmp((yyvsp[0].str), "no") != 0)
@@ -3685,11 +3703,11 @@ yyreduce:
 		else cfg_parser->cfg->dns64_synthall = (strcmp((yyvsp[0].str), "yes")==0);
 		free((yyvsp[0].str));
 	}
-#line 3689 "util/configparser.c" /* yacc.c:1646  */
+#line 3707 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 291:
-#line 1399 "./util/configparser.y" /* yacc.c:1646  */
+  case 293:
+#line 1409 "./util/configparser.y" /* yacc.c:1646  */
     {
 		char* p, *s = (yyvsp[0].str);
 		OUTYY(("P(server_define_tag:%s)\n", (yyvsp[0].str)));
@@ -3702,11 +3720,11 @@ yyreduce:
 		}
 		free((yyvsp[0].str));
 	}
-#line 3706 "util/configparser.c" /* yacc.c:1646  */
+#line 3724 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 292:
-#line 1413 "./util/configparser.y" /* yacc.c:1646  */
+  case 294:
+#line 1423 "./util/configparser.y" /* yacc.c:1646  */
     {
 		size_t len = 0;
 		uint8_t* bitlist = config_parse_taglist(cfg_parser->cfg, (yyvsp[0].str),
@@ -3724,11 +3742,11 @@ yyreduce:
 			}
 		}
 	}
-#line 3728 "util/configparser.c" /* yacc.c:1646  */
+#line 3746 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 293:
-#line 1432 "./util/configparser.y" /* yacc.c:1646  */
+  case 295:
+#line 1442 "./util/configparser.y" /* yacc.c:1646  */
     {
 		size_t len = 0;
 		uint8_t* bitlist = config_parse_taglist(cfg_parser->cfg, (yyvsp[0].str),
@@ -3746,11 +3764,11 @@ yyreduce:
 			}
 		}
 	}
-#line 3750 "util/configparser.c" /* yacc.c:1646  */
+#line 3768 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 294:
-#line 1451 "./util/configparser.y" /* yacc.c:1646  */
+  case 296:
+#line 1461 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_access_control_tag_action:%s %s %s)\n", (yyvsp[-2].str), (yyvsp[-1].str), (yyvsp[0].str)));
 		if(!cfg_str3list_insert(&cfg_parser->cfg->acl_tag_actions,
@@ -3761,11 +3779,11 @@ yyreduce:
 			free((yyvsp[0].str));
 		}
 	}
-#line 3765 "util/configparser.c" /* yacc.c:1646  */
+#line 3783 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 295:
-#line 1463 "./util/configparser.y" /* yacc.c:1646  */
+  case 297:
+#line 1473 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_access_control_tag_data:%s %s %s)\n", (yyvsp[-2].str), (yyvsp[-1].str), (yyvsp[0].str)));
 		if(!cfg_str3list_insert(&cfg_parser->cfg->acl_tag_datas,
@@ -3776,11 +3794,11 @@ yyreduce:
 			free((yyvsp[0].str));
 		}
 	}
-#line 3780 "util/configparser.c" /* yacc.c:1646  */
+#line 3798 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 296:
-#line 1475 "./util/configparser.y" /* yacc.c:1646  */
+  case 298:
+#line 1485 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_local_zone_override:%s %s %s)\n", (yyvsp[-2].str), (yyvsp[-1].str), (yyvsp[0].str)));
 		if(!cfg_str3list_insert(&cfg_parser->cfg->local_zone_overrides,
@@ -3791,11 +3809,11 @@ yyreduce:
 			free((yyvsp[0].str));
 		}
 	}
-#line 3795 "util/configparser.c" /* yacc.c:1646  */
+#line 3813 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 297:
-#line 1487 "./util/configparser.y" /* yacc.c:1646  */
+  case 299:
+#line 1497 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_access_control_view:%s %s)\n", (yyvsp[-1].str), (yyvsp[0].str)));
 		if(!cfg_str2list_insert(&cfg_parser->cfg->acl_view,
@@ -3805,11 +3823,11 @@ yyreduce:
 			free((yyvsp[0].str));
 		}
 	}
-#line 3809 "util/configparser.c" /* yacc.c:1646  */
+#line 3827 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 298:
-#line 1498 "./util/configparser.y" /* yacc.c:1646  */
+  case 300:
+#line 1508 "./util/configparser.y" /* yacc.c:1646  */
     { 
 		OUTYY(("P(server_ratelimit:%s)\n", (yyvsp[0].str))); 
 		if(atoi((yyvsp[0].str)) == 0 && strcmp((yyvsp[0].str), "0") != 0)
@@ -3817,22 +3835,22 @@ yyreduce:
 		else cfg_parser->cfg->ratelimit = atoi((yyvsp[0].str));
 		free((yyvsp[0].str));
 	}
-#line 3821 "util/configparser.c" /* yacc.c:1646  */
+#line 3839 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 299:
-#line 1507 "./util/configparser.y" /* yacc.c:1646  */
+  case 301:
+#line 1517 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_ratelimit_size:%s)\n", (yyvsp[0].str)));
 		if(!cfg_parse_memsize((yyvsp[0].str), &cfg_parser->cfg->ratelimit_size))
 			yyerror("memory size expected");
 		free((yyvsp[0].str));
 	}
-#line 3832 "util/configparser.c" /* yacc.c:1646  */
+#line 3850 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 300:
-#line 1515 "./util/configparser.y" /* yacc.c:1646  */
+  case 302:
+#line 1525 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_ratelimit_slabs:%s)\n", (yyvsp[0].str)));
 		if(atoi((yyvsp[0].str)) == 0)
@@ -3844,11 +3862,11 @@ yyreduce:
 		}
 		free((yyvsp[0].str));
 	}
-#line 3848 "util/configparser.c" /* yacc.c:1646  */
+#line 3866 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 301:
-#line 1528 "./util/configparser.y" /* yacc.c:1646  */
+  case 303:
+#line 1538 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_ratelimit_for_domain:%s %s)\n", (yyvsp[-1].str), (yyvsp[0].str)));
 		if(atoi((yyvsp[0].str)) == 0 && strcmp((yyvsp[0].str), "0") != 0) {
@@ -3860,11 +3878,11 @@ yyreduce:
 					"ratelimit-for-domain");
 		}
 	}
-#line 3864 "util/configparser.c" /* yacc.c:1646  */
+#line 3882 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 302:
-#line 1541 "./util/configparser.y" /* yacc.c:1646  */
+  case 304:
+#line 1551 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_ratelimit_below_domain:%s %s)\n", (yyvsp[-1].str), (yyvsp[0].str)));
 		if(atoi((yyvsp[0].str)) == 0 && strcmp((yyvsp[0].str), "0") != 0) {
@@ -3876,11 +3894,11 @@ yyreduce:
 					"ratelimit-below-domain");
 		}
 	}
-#line 3880 "util/configparser.c" /* yacc.c:1646  */
+#line 3898 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 303:
-#line 1554 "./util/configparser.y" /* yacc.c:1646  */
+  case 305:
+#line 1564 "./util/configparser.y" /* yacc.c:1646  */
     { 
 		OUTYY(("P(server_ratelimit_factor:%s)\n", (yyvsp[0].str))); 
 		if(atoi((yyvsp[0].str)) == 0 && strcmp((yyvsp[0].str), "0") != 0)
@@ -3888,11 +3906,11 @@ yyreduce:
 		else cfg_parser->cfg->ratelimit_factor = atoi((yyvsp[0].str));
 		free((yyvsp[0].str));
 	}
-#line 3892 "util/configparser.c" /* yacc.c:1646  */
+#line 3910 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 304:
-#line 1563 "./util/configparser.y" /* yacc.c:1646  */
+  case 306:
+#line 1573 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_qname_minimisation:%s)\n", (yyvsp[0].str)));
 		if(strcmp((yyvsp[0].str), "yes") != 0 && strcmp((yyvsp[0].str), "no") != 0)
@@ -3901,11 +3919,11 @@ yyreduce:
 			(strcmp((yyvsp[0].str), "yes")==0);
 		free((yyvsp[0].str));
 	}
-#line 3905 "util/configparser.c" /* yacc.c:1646  */
+#line 3923 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 305:
-#line 1573 "./util/configparser.y" /* yacc.c:1646  */
+  case 307:
+#line 1583 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_qname_minimisation_strict:%s)\n", (yyvsp[0].str)));
 		if(strcmp((yyvsp[0].str), "yes") != 0 && strcmp((yyvsp[0].str), "no") != 0)
@@ -3914,11 +3932,11 @@ yyreduce:
 			(strcmp((yyvsp[0].str), "yes")==0);
 		free((yyvsp[0].str));
 	}
-#line 3918 "util/configparser.c" /* yacc.c:1646  */
+#line 3936 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 306:
-#line 1583 "./util/configparser.y" /* yacc.c:1646  */
+  case 308:
+#line 1593 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(name:%s)\n", (yyvsp[0].str)));
 		if(cfg_parser->cfg->stubs->name)
@@ -3927,31 +3945,31 @@ yyreduce:
 		free(cfg_parser->cfg->stubs->name);
 		cfg_parser->cfg->stubs->name = (yyvsp[0].str);
 	}
-#line 3931 "util/configparser.c" /* yacc.c:1646  */
+#line 3949 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 307:
-#line 1593 "./util/configparser.y" /* yacc.c:1646  */
+  case 309:
+#line 1603 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(stub-host:%s)\n", (yyvsp[0].str)));
 		if(!cfg_strlist_insert(&cfg_parser->cfg->stubs->hosts, (yyvsp[0].str)))
 			yyerror("out of memory");
 	}
-#line 3941 "util/configparser.c" /* yacc.c:1646  */
+#line 3959 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 308:
-#line 1600 "./util/configparser.y" /* yacc.c:1646  */
+  case 310:
+#line 1610 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(stub-addr:%s)\n", (yyvsp[0].str)));
 		if(!cfg_strlist_insert(&cfg_parser->cfg->stubs->addrs, (yyvsp[0].str)))
 			yyerror("out of memory");
 	}
-#line 3951 "util/configparser.c" /* yacc.c:1646  */
+#line 3969 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 309:
-#line 1607 "./util/configparser.y" /* yacc.c:1646  */
+  case 311:
+#line 1617 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(stub-first:%s)\n", (yyvsp[0].str)));
 		if(strcmp((yyvsp[0].str), "yes") != 0 && strcmp((yyvsp[0].str), "no") != 0)
@@ -3959,11 +3977,11 @@ yyreduce:
 		else cfg_parser->cfg->stubs->isfirst=(strcmp((yyvsp[0].str), "yes")==0);
 		free((yyvsp[0].str));
 	}
-#line 3963 "util/configparser.c" /* yacc.c:1646  */
+#line 3981 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 310:
-#line 1616 "./util/configparser.y" /* yacc.c:1646  */
+  case 312:
+#line 1626 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(stub-ssl-upstream:%s)\n", (yyvsp[0].str)));
 		if(strcmp((yyvsp[0].str), "yes") != 0 && strcmp((yyvsp[0].str), "no") != 0)
@@ -3972,11 +3990,11 @@ yyreduce:
 			(strcmp((yyvsp[0].str), "yes")==0);
 		free((yyvsp[0].str));
 	}
-#line 3976 "util/configparser.c" /* yacc.c:1646  */
+#line 3994 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 311:
-#line 1626 "./util/configparser.y" /* yacc.c:1646  */
+  case 313:
+#line 1636 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(stub-prime:%s)\n", (yyvsp[0].str)));
 		if(strcmp((yyvsp[0].str), "yes") != 0 && strcmp((yyvsp[0].str), "no") != 0)
@@ -3985,11 +4003,11 @@ yyreduce:
 			(strcmp((yyvsp[0].str), "yes")==0);
 		free((yyvsp[0].str));
 	}
-#line 3989 "util/configparser.c" /* yacc.c:1646  */
+#line 4007 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 312:
-#line 1636 "./util/configparser.y" /* yacc.c:1646  */
+  case 314:
+#line 1646 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(name:%s)\n", (yyvsp[0].str)));
 		if(cfg_parser->cfg->forwards->name)
@@ -3998,31 +4016,31 @@ yyreduce:
 		free(cfg_parser->cfg->forwards->name);
 		cfg_parser->cfg->forwards->name = (yyvsp[0].str);
 	}
-#line 4002 "util/configparser.c" /* yacc.c:1646  */
+#line 4020 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 313:
-#line 1646 "./util/configparser.y" /* yacc.c:1646  */
+  case 315:
+#line 1656 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(forward-host:%s)\n", (yyvsp[0].str)));
 		if(!cfg_strlist_insert(&cfg_parser->cfg->forwards->hosts, (yyvsp[0].str)))
 			yyerror("out of memory");
 	}
-#line 4012 "util/configparser.c" /* yacc.c:1646  */
+#line 4030 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 314:
-#line 1653 "./util/configparser.y" /* yacc.c:1646  */
+  case 316:
+#line 1663 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(forward-addr:%s)\n", (yyvsp[0].str)));
 		if(!cfg_strlist_insert(&cfg_parser->cfg->forwards->addrs, (yyvsp[0].str)))
 			yyerror("out of memory");
 	}
-#line 4022 "util/configparser.c" /* yacc.c:1646  */
+#line 4040 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 315:
-#line 1660 "./util/configparser.y" /* yacc.c:1646  */
+  case 317:
+#line 1670 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(forward-first:%s)\n", (yyvsp[0].str)));
 		if(strcmp((yyvsp[0].str), "yes") != 0 && strcmp((yyvsp[0].str), "no") != 0)
@@ -4030,11 +4048,11 @@ yyreduce:
 		else cfg_parser->cfg->forwards->isfirst=(strcmp((yyvsp[0].str), "yes")==0);
 		free((yyvsp[0].str));
 	}
-#line 4034 "util/configparser.c" /* yacc.c:1646  */
+#line 4052 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 316:
-#line 1669 "./util/configparser.y" /* yacc.c:1646  */
+  case 318:
+#line 1679 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(forward-ssl-upstream:%s)\n", (yyvsp[0].str)));
 		if(strcmp((yyvsp[0].str), "yes") != 0 && strcmp((yyvsp[0].str), "no") != 0)
@@ -4043,11 +4061,11 @@ yyreduce:
 			(strcmp((yyvsp[0].str), "yes")==0);
 		free((yyvsp[0].str));
 	}
-#line 4047 "util/configparser.c" /* yacc.c:1646  */
+#line 4065 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 317:
-#line 1679 "./util/configparser.y" /* yacc.c:1646  */
+  case 319:
+#line 1689 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(name:%s)\n", (yyvsp[0].str)));
 		if(cfg_parser->cfg->views->name)
@@ -4056,11 +4074,11 @@ yyreduce:
 		free(cfg_parser->cfg->views->name);
 		cfg_parser->cfg->views->name = (yyvsp[0].str);
 	}
-#line 4060 "util/configparser.c" /* yacc.c:1646  */
+#line 4078 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 318:
-#line 1689 "./util/configparser.y" /* yacc.c:1646  */
+  case 320:
+#line 1699 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(view_local_zone:%s %s)\n", (yyvsp[-1].str), (yyvsp[0].str)));
 		if(strcmp((yyvsp[0].str), "static")!=0 && strcmp((yyvsp[0].str), "deny")!=0 &&
@@ -4088,11 +4106,11 @@ yyreduce:
 				fatal_exit("out of memory adding local-zone");
 		}
 	}
-#line 4092 "util/configparser.c" /* yacc.c:1646  */
+#line 4110 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 319:
-#line 1718 "./util/configparser.y" /* yacc.c:1646  */
+  case 321:
+#line 1728 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(view_local_data:%s)\n", (yyvsp[0].str)));
 		if(!cfg_strlist_insert(&cfg_parser->cfg->views->local_data, (yyvsp[0].str))) {
@@ -4100,11 +4118,11 @@ yyreduce:
 			free((yyvsp[0].str));
 		}
 	}
-#line 4104 "util/configparser.c" /* yacc.c:1646  */
+#line 4122 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 320:
-#line 1727 "./util/configparser.y" /* yacc.c:1646  */
+  case 322:
+#line 1737 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(view-first:%s)\n", (yyvsp[0].str)));
 		if(strcmp((yyvsp[0].str), "yes") != 0 && strcmp((yyvsp[0].str), "no") != 0)
@@ -4112,19 +4130,19 @@ yyreduce:
 		else cfg_parser->cfg->views->isfirst=(strcmp((yyvsp[0].str), "yes")==0);
 		free((yyvsp[0].str));
 	}
-#line 4116 "util/configparser.c" /* yacc.c:1646  */
+#line 4134 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 321:
-#line 1736 "./util/configparser.y" /* yacc.c:1646  */
+  case 323:
+#line 1746 "./util/configparser.y" /* yacc.c:1646  */
     { 
 		OUTYY(("\nP(remote-control:)\n")); 
 	}
-#line 4124 "util/configparser.c" /* yacc.c:1646  */
+#line 4142 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 332:
-#line 1747 "./util/configparser.y" /* yacc.c:1646  */
+  case 334:
+#line 1757 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(control_enable:%s)\n", (yyvsp[0].str)));
 		if(strcmp((yyvsp[0].str), "yes") != 0 && strcmp((yyvsp[0].str), "no") != 0)
@@ -4133,11 +4151,11 @@ yyreduce:
 			(strcmp((yyvsp[0].str), "yes")==0);
 		free((yyvsp[0].str));
 	}
-#line 4137 "util/configparser.c" /* yacc.c:1646  */
+#line 4155 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 333:
-#line 1757 "./util/configparser.y" /* yacc.c:1646  */
+  case 335:
+#line 1767 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(control_port:%s)\n", (yyvsp[0].str)));
 		if(atoi((yyvsp[0].str)) == 0)
@@ -4145,21 +4163,21 @@ yyreduce:
 		else cfg_parser->cfg->control_port = atoi((yyvsp[0].str));
 		free((yyvsp[0].str));
 	}
-#line 4149 "util/configparser.c" /* yacc.c:1646  */
+#line 4167 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 334:
-#line 1766 "./util/configparser.y" /* yacc.c:1646  */
+  case 336:
+#line 1776 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(control_interface:%s)\n", (yyvsp[0].str)));
 		if(!cfg_strlist_insert(&cfg_parser->cfg->control_ifs, (yyvsp[0].str)))
 			yyerror("out of memory");
 	}
-#line 4159 "util/configparser.c" /* yacc.c:1646  */
+#line 4177 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 335:
-#line 1773 "./util/configparser.y" /* yacc.c:1646  */
+  case 337:
+#line 1783 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(control_use_cert:%s)\n", (yyvsp[0].str)));
 		if(strcmp((yyvsp[0].str), "yes") != 0 && strcmp((yyvsp[0].str), "no") != 0)
@@ -4168,122 +4186,122 @@ yyreduce:
 			(strcmp((yyvsp[0].str), "yes")==0);
 		free((yyvsp[0].str));
 	}
-#line 4172 "util/configparser.c" /* yacc.c:1646  */
+#line 4190 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 336:
-#line 1783 "./util/configparser.y" /* yacc.c:1646  */
+  case 338:
+#line 1793 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(rc_server_key_file:%s)\n", (yyvsp[0].str)));
 		free(cfg_parser->cfg->server_key_file);
 		cfg_parser->cfg->server_key_file = (yyvsp[0].str);
 	}
-#line 4182 "util/configparser.c" /* yacc.c:1646  */
+#line 4200 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 337:
-#line 1790 "./util/configparser.y" /* yacc.c:1646  */
+  case 339:
+#line 1800 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(rc_server_cert_file:%s)\n", (yyvsp[0].str)));
 		free(cfg_parser->cfg->server_cert_file);
 		cfg_parser->cfg->server_cert_file = (yyvsp[0].str);
 	}
-#line 4192 "util/configparser.c" /* yacc.c:1646  */
+#line 4210 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 338:
-#line 1797 "./util/configparser.y" /* yacc.c:1646  */
+  case 340:
+#line 1807 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(rc_control_key_file:%s)\n", (yyvsp[0].str)));
 		free(cfg_parser->cfg->control_key_file);
 		cfg_parser->cfg->control_key_file = (yyvsp[0].str);
 	}
-#line 4202 "util/configparser.c" /* yacc.c:1646  */
+#line 4220 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 339:
-#line 1804 "./util/configparser.y" /* yacc.c:1646  */
+  case 341:
+#line 1814 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(rc_control_cert_file:%s)\n", (yyvsp[0].str)));
 		free(cfg_parser->cfg->control_cert_file);
 		cfg_parser->cfg->control_cert_file = (yyvsp[0].str);
 	}
-#line 4212 "util/configparser.c" /* yacc.c:1646  */
+#line 4230 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 340:
-#line 1811 "./util/configparser.y" /* yacc.c:1646  */
+  case 342:
+#line 1821 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("\nP(dnstap:)\n"));
 	}
-#line 4220 "util/configparser.c" /* yacc.c:1646  */
+#line 4238 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 355:
-#line 1828 "./util/configparser.y" /* yacc.c:1646  */
+  case 357:
+#line 1838 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(dt_dnstap_enable:%s)\n", (yyvsp[0].str)));
 		if(strcmp((yyvsp[0].str), "yes") != 0 && strcmp((yyvsp[0].str), "no") != 0)
 			yyerror("expected yes or no.");
 		else cfg_parser->cfg->dnstap = (strcmp((yyvsp[0].str), "yes")==0);
 	}
-#line 4231 "util/configparser.c" /* yacc.c:1646  */
+#line 4249 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 356:
-#line 1836 "./util/configparser.y" /* yacc.c:1646  */
+  case 358:
+#line 1846 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(dt_dnstap_socket_path:%s)\n", (yyvsp[0].str)));
 		free(cfg_parser->cfg->dnstap_socket_path);
 		cfg_parser->cfg->dnstap_socket_path = (yyvsp[0].str);
 	}
-#line 4241 "util/configparser.c" /* yacc.c:1646  */
+#line 4259 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 357:
-#line 1843 "./util/configparser.y" /* yacc.c:1646  */
+  case 359:
+#line 1853 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(dt_dnstap_send_identity:%s)\n", (yyvsp[0].str)));
 		if(strcmp((yyvsp[0].str), "yes") != 0 && strcmp((yyvsp[0].str), "no") != 0)
 			yyerror("expected yes or no.");
 		else cfg_parser->cfg->dnstap_send_identity = (strcmp((yyvsp[0].str), "yes")==0);
 	}
-#line 4252 "util/configparser.c" /* yacc.c:1646  */
+#line 4270 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 358:
-#line 1851 "./util/configparser.y" /* yacc.c:1646  */
+  case 360:
+#line 1861 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(dt_dnstap_send_version:%s)\n", (yyvsp[0].str)));
 		if(strcmp((yyvsp[0].str), "yes") != 0 && strcmp((yyvsp[0].str), "no") != 0)
 			yyerror("expected yes or no.");
 		else cfg_parser->cfg->dnstap_send_version = (strcmp((yyvsp[0].str), "yes")==0);
 	}
-#line 4263 "util/configparser.c" /* yacc.c:1646  */
+#line 4281 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 359:
-#line 1859 "./util/configparser.y" /* yacc.c:1646  */
+  case 361:
+#line 1869 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(dt_dnstap_identity:%s)\n", (yyvsp[0].str)));
 		free(cfg_parser->cfg->dnstap_identity);
 		cfg_parser->cfg->dnstap_identity = (yyvsp[0].str);
 	}
-#line 4273 "util/configparser.c" /* yacc.c:1646  */
+#line 4291 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 360:
-#line 1866 "./util/configparser.y" /* yacc.c:1646  */
+  case 362:
+#line 1876 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(dt_dnstap_version:%s)\n", (yyvsp[0].str)));
 		free(cfg_parser->cfg->dnstap_version);
 		cfg_parser->cfg->dnstap_version = (yyvsp[0].str);
 	}
-#line 4283 "util/configparser.c" /* yacc.c:1646  */
+#line 4301 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 361:
-#line 1873 "./util/configparser.y" /* yacc.c:1646  */
+  case 363:
+#line 1883 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(dt_dnstap_log_resolver_query_messages:%s)\n", (yyvsp[0].str)));
 		if(strcmp((yyvsp[0].str), "yes") != 0 && strcmp((yyvsp[0].str), "no") != 0)
@@ -4291,11 +4309,11 @@ yyreduce:
 		else cfg_parser->cfg->dnstap_log_resolver_query_messages =
 			(strcmp((yyvsp[0].str), "yes")==0);
 	}
-#line 4295 "util/configparser.c" /* yacc.c:1646  */
+#line 4313 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 362:
-#line 1882 "./util/configparser.y" /* yacc.c:1646  */
+  case 364:
+#line 1892 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(dt_dnstap_log_resolver_response_messages:%s)\n", (yyvsp[0].str)));
 		if(strcmp((yyvsp[0].str), "yes") != 0 && strcmp((yyvsp[0].str), "no") != 0)
@@ -4303,11 +4321,11 @@ yyreduce:
 		else cfg_parser->cfg->dnstap_log_resolver_response_messages =
 			(strcmp((yyvsp[0].str), "yes")==0);
 	}
-#line 4307 "util/configparser.c" /* yacc.c:1646  */
+#line 4325 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 363:
-#line 1891 "./util/configparser.y" /* yacc.c:1646  */
+  case 365:
+#line 1901 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(dt_dnstap_log_client_query_messages:%s)\n", (yyvsp[0].str)));
 		if(strcmp((yyvsp[0].str), "yes") != 0 && strcmp((yyvsp[0].str), "no") != 0)
@@ -4315,11 +4333,11 @@ yyreduce:
 		else cfg_parser->cfg->dnstap_log_client_query_messages =
 			(strcmp((yyvsp[0].str), "yes")==0);
 	}
-#line 4319 "util/configparser.c" /* yacc.c:1646  */
+#line 4337 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 364:
-#line 1900 "./util/configparser.y" /* yacc.c:1646  */
+  case 366:
+#line 1910 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(dt_dnstap_log_client_response_messages:%s)\n", (yyvsp[0].str)));
 		if(strcmp((yyvsp[0].str), "yes") != 0 && strcmp((yyvsp[0].str), "no") != 0)
@@ -4327,11 +4345,11 @@ yyreduce:
 		else cfg_parser->cfg->dnstap_log_client_response_messages =
 			(strcmp((yyvsp[0].str), "yes")==0);
 	}
-#line 4331 "util/configparser.c" /* yacc.c:1646  */
+#line 4349 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 365:
-#line 1909 "./util/configparser.y" /* yacc.c:1646  */
+  case 367:
+#line 1919 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(dt_dnstap_log_forwarder_query_messages:%s)\n", (yyvsp[0].str)));
 		if(strcmp((yyvsp[0].str), "yes") != 0 && strcmp((yyvsp[0].str), "no") != 0)
@@ -4339,11 +4357,11 @@ yyreduce:
 		else cfg_parser->cfg->dnstap_log_forwarder_query_messages =
 			(strcmp((yyvsp[0].str), "yes")==0);
 	}
-#line 4343 "util/configparser.c" /* yacc.c:1646  */
+#line 4361 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 366:
-#line 1918 "./util/configparser.y" /* yacc.c:1646  */
+  case 368:
+#line 1928 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(dt_dnstap_log_forwarder_response_messages:%s)\n", (yyvsp[0].str)));
 		if(strcmp((yyvsp[0].str), "yes") != 0 && strcmp((yyvsp[0].str), "no") != 0)
@@ -4351,29 +4369,29 @@ yyreduce:
 		else cfg_parser->cfg->dnstap_log_forwarder_response_messages =
 			(strcmp((yyvsp[0].str), "yes")==0);
 	}
-#line 4355 "util/configparser.c" /* yacc.c:1646  */
+#line 4373 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 367:
-#line 1927 "./util/configparser.y" /* yacc.c:1646  */
+  case 369:
+#line 1937 "./util/configparser.y" /* yacc.c:1646  */
     { 
 		OUTYY(("\nP(python:)\n")); 
 	}
-#line 4363 "util/configparser.c" /* yacc.c:1646  */
+#line 4381 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 371:
-#line 1936 "./util/configparser.y" /* yacc.c:1646  */
+  case 373:
+#line 1946 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(python-script:%s)\n", (yyvsp[0].str)));
 		free(cfg_parser->cfg->python_script);
 		cfg_parser->cfg->python_script = (yyvsp[0].str);
 	}
-#line 4373 "util/configparser.c" /* yacc.c:1646  */
+#line 4391 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 372:
-#line 1942 "./util/configparser.y" /* yacc.c:1646  */
+  case 374:
+#line 1952 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(disable_dnssec_lame_check:%s)\n", (yyvsp[0].str)));
 		if (strcmp((yyvsp[0].str), "yes") != 0 && strcmp((yyvsp[0].str), "no") != 0)
@@ -4382,21 +4400,21 @@ yyreduce:
 			(strcmp((yyvsp[0].str), "yes")==0);
 		free((yyvsp[0].str));
 	}
-#line 4386 "util/configparser.c" /* yacc.c:1646  */
+#line 4404 "util/configparser.c" /* yacc.c:1646  */
     break;
 
-  case 373:
-#line 1952 "./util/configparser.y" /* yacc.c:1646  */
+  case 375:
+#line 1962 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(server_log_identity:%s)\n", (yyvsp[0].str)));
 		free(cfg_parser->cfg->log_identity);
 		cfg_parser->cfg->log_identity = (yyvsp[0].str);
 	}
-#line 4396 "util/configparser.c" /* yacc.c:1646  */
+#line 4414 "util/configparser.c" /* yacc.c:1646  */
     break;
 
 
-#line 4400 "util/configparser.c" /* yacc.c:1646  */
+#line 4418 "util/configparser.c" /* yacc.c:1646  */
       default: break;
     }
   /* User semantic actions sometimes alter yychar, and that requires
@@ -4624,7 +4642,7 @@ yyreturn:
 #endif
   return yyresult;
 }
-#line 1958 "./util/configparser.y" /* yacc.c:1906  */
+#line 1968 "./util/configparser.y" /* yacc.c:1906  */
 
 
 /* parse helper routines could be here */

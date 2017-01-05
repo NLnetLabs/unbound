@@ -557,6 +557,13 @@ name, type and class.  Default is no.  Note that it takes time to print these
 lines which makes the server (significantly) slower.  Odd (nonprintable)
 characters in names are printed as '?'.
 .TP
+.B log\-replies: \fI<yes or no>
+Prints one line per reply to the log, with the log timestamp and IP address,
+name, type, class, return code, time to resolve, from cache and response size.
+Default is no.  Note that it takes time to print these
+lines which makes the server (significantly) slower.  Odd (nonprintable)
+characters in names are printed as '?'.
+.TP
 .B pidfile: \fI<filename>
 The process id is written to the file. Default is "@UNBOUND_PIDFILE@". 
 So,

@@ -229,6 +229,8 @@ struct config_file {
 	int log_time_ascii;
 	/** log queries with one line per query */
 	int log_queries;
+	/** log replies with one line per reply */
+	int log_replies;
 	/** log identity to report */
 	char* log_identity;
 
