@@ -860,6 +860,23 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 		}
 		goto send_reply;
 	}
+	if(qinfo.qtype == LDNS_RR_TYPE_OPT || 
+		qinfo.qtype == LDNS_RR_TYPE_TSIG ||
+		qinfo.qtype == LDNS_RR_TYPE_TKEY ||
+		qinfo.qtype == LDNS_RR_TYPE_MAILA ||
+		qinfo.qtype == LDNS_RR_TYPE_MAILB) {
+		verbose(VERB_ALGO, "worker request: formerror for meta-type.");
+		log_addr(VERB_CLIENT,"from",&repinfo->addr, repinfo->addrlen);
+		sldns_buffer_rewind(c->buffer);
+		LDNS_QR_SET(sldns_buffer_begin(c->buffer));
+		LDNS_RCODE_SET(sldns_buffer_begin(c->buffer), 
+			LDNS_RCODE_FORMERR);
+		if(worker->stats.extended) {
+			worker->stats.qtype[qinfo.qtype]++;
+			server_stats_insrcode(&worker->stats, c->buffer);
+		}
+		goto send_reply;
+	}
 	if((ret=parse_edns_from_pkt(c->buffer, &edns, worker->scratchpad)) != 0) {
 		struct edns_data reply_edns;
 		verbose(VERB_ALGO, "worker parse edns: formerror.");
