@@ -566,7 +566,7 @@ answer_from_cache(struct worker* worker, struct query_info* qinfo,
 		edns->bits &= EDNS_DO;
 		if(!inplace_cb_reply_servfail_call(&worker->env, qinfo, NULL, rep,
 			LDNS_RCODE_SERVFAIL, edns, worker->scratchpad))
-				return 0;
+			goto bail_out;
 		error_encode(repinfo->c->buffer, LDNS_RCODE_SERVFAIL, 
 			qinfo, id, flags, edns);
 		rrset_array_unlock_touch(worker->env.rrset_cache, 
@@ -599,7 +599,7 @@ answer_from_cache(struct worker* worker, struct query_info* qinfo,
 	edns->bits &= EDNS_DO;
 	if(!inplace_cb_reply_cache_call(&worker->env, qinfo, NULL, rep,
 		(int)(flags&LDNS_RCODE_MASK), edns, worker->scratchpad))
-			return 0;
+		goto bail_out;
 	if(!reply_info_answer_encode(qinfo, rep, id, flags, 
 		repinfo->c->buffer, timenow, 1, worker->scratchpad,
 		udpsize, edns, (int)(edns->bits & EDNS_DO), secure)) {
