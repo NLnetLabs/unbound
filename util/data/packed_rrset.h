@@ -191,6 +191,12 @@ enum sec_status {
  * RRset data.
  *
  * The data is packed, stored contiguously in memory.
+ *
+ * It is not always stored contiguously, in that case, an unpacked-packed
+ * rrset has the arrays separate.  A bunch of routines work on that, but
+ * the packed rrset that is contiguous is for the rrset-cache and the
+ * cache-response routines in daemon/worker.c.
+ *
  * memory layout:
  *	o base struct
  *	o rr_len size_t array
