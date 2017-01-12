@@ -295,6 +295,9 @@ ips are dropped before checking the cache.
 .B view_local_zone_remove \fIview\fR \fIname
 \fIlocal_zone_remove\fR for given view.
 .TP
+.B view_list_local_data \fIview\fR
+\fIlist_local_data\fR for given view.
+.TP
 .B view_local_data \fIview\fR \fIRR data...
 \fIlocal_data\fR for given view.
 .TP
