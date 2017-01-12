@@ -886,7 +886,8 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 		qinfo.qtype == LDNS_RR_TYPE_TSIG ||
 		qinfo.qtype == LDNS_RR_TYPE_TKEY ||
 		qinfo.qtype == LDNS_RR_TYPE_MAILA ||
-		qinfo.qtype == LDNS_RR_TYPE_MAILB) {
+		qinfo.qtype == LDNS_RR_TYPE_MAILB ||
+		(qinfo.qtype >= 128 && qinfo.qtype <= 248)) {
 		verbose(VERB_ALGO, "worker request: formerror for meta-type.");
 		log_addr(VERB_CLIENT,"from",&repinfo->addr, repinfo->addrlen);
 		if(worker_err_ratelimit(worker, LDNS_RCODE_FORMERR) == -1) {

@@ -1,3 +1,6 @@
+12 January 2017: Wouter
+	- Fix to also block meta types 128 through to 248 with formerr. 
+
 9 January 2017: Wouter
 	- Fix #1202: Fix code comment that packed_rrset_data is not always
 	  'packed'.
