@@ -149,7 +149,7 @@ struct ctx_query {
 	int cancelled;
 
 	/** for async query, the callback function */
-	ub_callback_t cb;
+	ub_callback_type cb;
 	/** for async query, the callback user arg */
 	void* cb_arg;
 
@@ -242,7 +242,7 @@ void context_query_delete(struct ctx_query* q);
  * @return new ctx_query or NULL for malloc failure.
  */
 struct ctx_query* context_new(struct ub_ctx* ctx, const char* name, int rrtype,
-        int rrclass, ub_callback_t cb, void* cbarg);
+        int rrclass, ub_callback_type cb, void* cbarg);
 
 /**
  * Get a new alloc. Creates a new one or uses a cached one.

@@ -500,7 +500,7 @@ ub_fd(struct ub_ctx* ctx)
 /** process answer from bg worker */
 static int
 process_answer_detail(struct ub_ctx* ctx, uint8_t* msg, uint32_t len,
-	ub_callback_t* cb, void** cbarg, int* err,
+	ub_callback_type* cb, void** cbarg, int* err,
 	struct ub_result** res)
 {
 	struct ctx_query* q;
@@ -567,7 +567,7 @@ static int
 process_answer(struct ub_ctx* ctx, uint8_t* msg, uint32_t len)
 {
 	int err;
-	ub_callback_t cb;
+	ub_callback_type cb;
 	void* cbarg;
 	struct ub_result* res;
 	int r;
@@ -610,7 +610,7 @@ int
 ub_wait(struct ub_ctx* ctx)
 {
 	int err;
-	ub_callback_t cb;
+	ub_callback_type cb;
 	void* cbarg;
 	struct ub_result* res;
 	int r;
@@ -734,7 +734,7 @@ ub_resolve_event(struct ub_ctx* ctx, const char* name, int rrtype,
 	ub_comm_base_now(ctx->event_worker->base);
 
 	/* create new ctx_query and attempt to add to the list */
-	q = context_new(ctx, name, rrtype, rrclass, (ub_callback_t)callback,
+	q = context_new(ctx, name, rrtype, rrclass, (ub_callback_type)callback,
 		mydata);
 	if(!q)
 		return UB_NOMEM;
@@ -748,7 +748,7 @@ ub_resolve_event(struct ub_ctx* ctx, const char* name, int rrtype,
 
 int 
 ub_resolve_async(struct ub_ctx* ctx, const char* name, int rrtype, 
-	int rrclass, void* mydata, ub_callback_t callback, int* async_id)
+	int rrclass, void* mydata, ub_callback_type callback, int* async_id)
 {
 	struct ctx_query* q;
 	uint8_t* msg = NULL;

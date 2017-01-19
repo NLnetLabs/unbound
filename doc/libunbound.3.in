@@ -12,7 +12,7 @@
 .B unbound.h,
 .B ub_ctx,
 .B ub_result,
-.B ub_callback_t,
+.B ub_callback_type,
 .B ub_ctx_create,
 .B ub_ctx_delete,
 .B ub_ctx_set_option,
@@ -120,7 +120,7 @@
 .br
                  \fIint\fR rrtype, \fIint\fR rrclass, \fIvoid*\fR mydata, 
 .br
-                 \fIub_callback_t\fR callback, \fIint*\fR async_id);
+                 \fIub_callback_type\fR callback, \fIint*\fR async_id);
 .LP
 \fIint\fR
 \fBub_cancel\fR(\fIstruct ub_ctx*\fR ctx, \fIint\fR async_id);

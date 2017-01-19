@@ -2805,7 +2805,7 @@ LIBUNBOUND_AGE=4
 # 1.5.9 had 6:1:4
 # 1.5.10 had 6:2:4
 # 1.6.0 had 6:3:4
-# 1.6.1 had 6:4:4
+# 1.6.1 had 7:0:5 # ub_callback_t typedef renamed to ub_callback_type
 
 #   Current  -- the number of the binary API that we're implementing
 #   Revision -- which iteration of the implementation of the binary
