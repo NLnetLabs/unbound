@@ -619,7 +619,8 @@ traverse_post(void (*func)(rbnode_type*, void*), void* arg, rbnode_type* node)
 }
 
 void 
-traverse_postorder(rbtree_type* tree, void (*func)(rbnode_type*, void*), void* arg)
+traverse_postorder(rbtree_type* tree, void (*func)(rbnode_type*, void*),
+	void* arg)
 {
 	traverse_post(func, arg, tree->root);
 }
