@@ -296,8 +296,8 @@ int parse_edns_from_pkt(struct sldns_buffer* pkt, struct edns_data* edns,
  * @param rrset_flags: rrset flags (same as packed_rrset flags).
  * @return hash value
  */
-hashvalue_type pkt_hash_rrset(struct sldns_buffer* pkt, uint8_t* dname, uint16_t type,
-        uint16_t dclass, uint32_t rrset_flags);
+hashvalue_type pkt_hash_rrset(struct sldns_buffer* pkt, uint8_t* dname,
+	uint16_t type, uint16_t dclass, uint32_t rrset_flags);
 
 /**
  * Lookup in msg hashtable to find a rrset.
