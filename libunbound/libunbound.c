@@ -706,7 +706,8 @@ ub_resolve(struct ub_ctx* ctx, const char* name, int rrtype,
 
 int 
 ub_resolve_event(struct ub_ctx* ctx, const char* name, int rrtype, 
-	int rrclass, void* mydata, ub_event_callback_type callback, int* async_id)
+	int rrclass, void* mydata, ub_event_callback_type callback,
+	int* async_id)
 {
 	struct ctx_query* q;
 	int r;

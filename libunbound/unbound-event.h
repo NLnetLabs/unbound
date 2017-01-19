@@ -254,7 +254,8 @@ int ub_ctx_set_event(struct ub_ctx* ctx, struct event_base* base);
  * @return 0 if OK, else error.
  */
 int ub_resolve_event(struct ub_ctx* ctx, const char* name, int rrtype, 
-	int rrclass, void* mydata, ub_event_callback_type callback, int* async_id);
+	int rrclass, void* mydata, ub_event_callback_type callback,
+	int* async_id);
 
 #ifdef __cplusplus
 }

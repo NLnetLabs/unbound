@@ -498,8 +498,8 @@ int mesh_state_add_reply(struct mesh_state* s, struct edns_data* edns,
  * @return: 0 on alloc error.
  */
 int mesh_state_add_cb(struct mesh_state* s, struct edns_data* edns,
-        struct sldns_buffer* buf, mesh_cb_func_type cb, void* cb_arg, uint16_t qid, 
-	uint16_t qflags);
+        struct sldns_buffer* buf, mesh_cb_func_type cb, void* cb_arg,
+	uint16_t qid, uint16_t qflags);
 
 /**
  * Run the mesh. Run all runnable mesh states. Which can create new
