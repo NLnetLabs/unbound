@@ -117,7 +117,7 @@ struct infra_cache {
 	/** hash table with query rates per name: rate_key, rate_data */
 	struct slabhash* domain_rates;
 	/** ratelimit settings for domains, struct domain_limit_data */
-	rbtree_t domain_limits;
+	rbtree_type domain_limits;
 	/** hash table with query rates per client ip: ip_rate_key, ip_rate_data */
 	struct slabhash* client_ip_rates;
 };

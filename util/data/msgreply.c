@@ -608,10 +608,10 @@ reply_info_delete(void* d, void* ATTR_UNUSED(arg))
 	free(r);
 }
 
-hashvalue_t 
+hashvalue_type
 query_info_hash(struct query_info *q, uint16_t flags)
 {
-	hashvalue_t h = 0xab;
+	hashvalue_type h = 0xab;
 	h = hashlittle(&q->qtype, sizeof(q->qtype), h);
 	if(q->qtype == LDNS_RR_TYPE_AAAA && (flags&BIT_CD))
 		h++;
@@ -622,7 +622,7 @@ query_info_hash(struct query_info *q, uint16_t flags)
 
 struct msgreply_entry* 
 query_info_entrysetup(struct query_info* q, struct reply_info* r, 
-	hashvalue_t h)
+	hashvalue_type h)
 {
 	struct msgreply_entry* e = (struct msgreply_entry*)malloc( 
 		sizeof(struct msgreply_entry));

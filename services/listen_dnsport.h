@@ -137,7 +137,7 @@ void listening_ports_free(struct listen_port* list);
  */
 struct listen_dnsport* listen_create(struct comm_base* base,
 	struct listen_port* ports, size_t bufsize, int tcp_accept_count,
-	void* sslctx, struct dt_env *dtenv, comm_point_callback_t* cb,
+	void* sslctx, struct dt_env *dtenv, comm_point_callback_type* cb,
 	void* cb_arg);
 
 /**

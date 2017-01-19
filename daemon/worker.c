@@ -787,7 +787,7 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 {
 	struct worker* worker = (struct worker*)arg;
 	int ret;
-	hashvalue_t h;
+	hashvalue_type h;
 	struct lruhash_entry* e;
 	struct query_info qinfo;
 	struct edns_data edns;

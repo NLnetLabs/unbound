@@ -260,7 +260,7 @@ infra_create(struct config_file* cfg)
 }
 
 /** delete domain_limit entries */
-static void domain_limit_free(rbnode_t* n, void* ATTR_UNUSED(arg))
+static void domain_limit_free(rbnode_type* n, void* ATTR_UNUSED(arg))
 {
 	if(n) {
 		free(((struct domain_limit_data*)n)->node.name);
@@ -300,11 +300,11 @@ infra_adjust(struct infra_cache* infra, struct config_file* cfg)
 /** calculate the hash value for a host key
  *  set use_port to a non-0 number to use the port in
  *  the hash calculation; 0 to ignore the port.*/
-static hashvalue_t
+static hashvalue_type
 hash_addr(struct sockaddr_storage* addr, socklen_t addrlen,
   int use_port)
 {
-	hashvalue_t h = 0xab;
+	hashvalue_type h = 0xab;
 	/* select the pieces to hash, some OS have changing data inside */
 	if(addr_is_ip6(addr, addrlen)) {
 		struct sockaddr_in6* in6 = (struct sockaddr_in6*)addr;
@@ -325,7 +325,7 @@ hash_addr(struct sockaddr_storage* addr, socklen_t addrlen,
 }
 
 /** calculate infra hash for a key */
-static hashvalue_t
+static hashvalue_type
 hash_infra(struct sockaddr_storage* addr, socklen_t addrlen, uint8_t* name)
 {
 	return dname_query_hash(name, hash_addr(addr, addrlen, 1));
@@ -775,7 +775,7 @@ static struct lruhash_entry* infra_find_ratedata(struct infra_cache* infra,
 	uint8_t* name, size_t namelen, int wr)
 {
 	struct rate_key key;
-	hashvalue_t h = dname_query_hash(name, 0xab);
+	hashvalue_type h = dname_query_hash(name, 0xab);
 	memset(&key, 0, sizeof(key));
 	key.name = name;
 	key.namelen = namelen;
@@ -788,7 +788,7 @@ struct lruhash_entry* infra_find_ip_ratedata(struct infra_cache* infra,
 	struct comm_reply* repinfo, int wr)
 {
 	struct ip_rate_key key;
-	hashvalue_t h = hash_addr(&(repinfo->addr),
+	hashvalue_type h = hash_addr(&(repinfo->addr),
 		repinfo->addrlen, 0);
 	memset(&key, 0, sizeof(key));
 	key.addr = repinfo->addr;
@@ -801,7 +801,7 @@ struct lruhash_entry* infra_find_ip_ratedata(struct infra_cache* infra,
 static void infra_create_ratedata(struct infra_cache* infra,
 	uint8_t* name, size_t namelen, time_t timenow)
 {
-	hashvalue_t h = dname_query_hash(name, 0xab);
+	hashvalue_type h = dname_query_hash(name, 0xab);
 	struct rate_key* k = (struct rate_key*)calloc(1, sizeof(*k));
 	struct rate_data* d = (struct rate_data*)calloc(1, sizeof(*d));
 	if(!k || !d) {
@@ -829,7 +829,7 @@ static void infra_create_ratedata(struct infra_cache* infra,
 static void infra_ip_create_ratedata(struct infra_cache* infra,
 	struct comm_reply* repinfo, time_t timenow)
 {
-	hashvalue_t h = hash_addr(&(repinfo->addr),
+	hashvalue_type h = hash_addr(&(repinfo->addr),
 	repinfo->addrlen, 0);
 	struct ip_rate_key* k = (struct ip_rate_key*)calloc(1, sizeof(*k));
 	struct ip_rate_data* d = (struct ip_rate_data*)calloc(1, sizeof(*d));

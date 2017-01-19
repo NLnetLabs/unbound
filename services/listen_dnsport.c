@@ -1163,7 +1163,7 @@ listen_cp_insert(struct comm_point* c, struct listen_dnsport* front)
 struct listen_dnsport* 
 listen_create(struct comm_base* base, struct listen_port* ports,
 	size_t bufsize, int tcp_accept_count, void* sslctx,
-	struct dt_env* dtenv, comm_point_callback_t* cb, void *cb_arg)
+	struct dt_env* dtenv, comm_point_callback_type* cb, void *cb_arg)
 {
 	struct listen_dnsport* front = (struct listen_dnsport*)
 		malloc(sizeof(struct listen_dnsport));

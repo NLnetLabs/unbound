@@ -1418,7 +1418,7 @@ static void
 do_cache_remove(struct worker* worker, uint8_t* nm, size_t nmlen,
 	uint16_t t, uint16_t c)
 {
-	hashvalue_t h;
+	hashvalue_type h;
 	struct query_info k;
 	rrset_cache_remove(worker->env.rrset_cache, nm, nmlen, t, c, 0);
 	if(t == LDNS_RR_TYPE_SOA)

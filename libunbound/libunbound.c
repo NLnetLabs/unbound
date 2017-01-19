@@ -215,7 +215,7 @@ ub_ctx_create_event(struct event_base* eb)
 	
 /** delete q */
 static void
-delq(rbnode_t* n, void* ATTR_UNUSED(arg))
+delq(rbnode_type* n, void* ATTR_UNUSED(arg))
 {
 	struct ctx_query* q = (struct ctx_query*)n;
 	context_query_delete(q);
@@ -706,7 +706,7 @@ ub_resolve(struct ub_ctx* ctx, const char* name, int rrtype,
 
 int 
 ub_resolve_event(struct ub_ctx* ctx, const char* name, int rrtype, 
-	int rrclass, void* mydata, ub_event_callback_t callback, int* async_id)
+	int rrclass, void* mydata, ub_event_callback_type callback, int* async_id)
 {
 	struct ctx_query* q;
 	int r;

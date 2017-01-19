@@ -54,9 +54,9 @@ struct config_view;
  */
 struct views {
 	/** lock on the view tree */
-	lock_rw_t lock;
+	lock_rw_type lock;
 	/** rbtree of struct view */
-	rbtree_t vtree;
+	rbtree_type vtree;
 };
 
 /**
@@ -64,7 +64,7 @@ struct views {
  */
 struct view {
 	/** rbtree node, key is name */
-	rbnode_t node;
+	rbnode_type node;
 	/** view name.
 	 * Has to be right after rbnode_t due to pointer arithmatic in
 	 * view_create's lock protect */
@@ -77,7 +77,7 @@ struct view {
 	/** lock on the data in the structure
 	 * For the node and name you need to also hold the views_tree lock to
 	 * change them. */
-	lock_rw_t lock;
+	lock_rw_type lock;
 };
 
 

@@ -105,7 +105,7 @@ struct rrset_ref {
 	/** the key with lock, and ptr to packed data. */
 	struct ub_packed_rrset_key* key;
 	/** id needed */
-	rrset_id_t id;
+	rrset_id_type id;
 };
 
 /**
@@ -330,7 +330,7 @@ void reply_info_delete(void* d, void* arg);
 
 /** calculate hash value of query_info, lowercases the qname,
  * uses CD flag for AAAA qtype */
-hashvalue_t query_info_hash(struct query_info *q, uint16_t flags);
+hashvalue_type query_info_hash(struct query_info *q, uint16_t flags);
 
 /**
  * Setup query info entry
@@ -340,7 +340,7 @@ hashvalue_t query_info_hash(struct query_info *q, uint16_t flags);
  * @return: newly allocated message reply cache item.
  */
 struct msgreply_entry* query_info_entrysetup(struct query_info* q,
-	struct reply_info* r, hashvalue_t h);
+	struct reply_info* r, hashvalue_type h);
 
 /**
  * Copy reply_info and all rrsets in it and allocate.
