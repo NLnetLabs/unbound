@@ -176,7 +176,7 @@ struct iter_forwards;
 struct iter_hints;
 
 /** Maximum number of modules in operation */
-#define MAX_MODULE 5
+#define MAX_MODULE 16
 
 /** Maximum number of known edns options */
 #define MAX_KNOWN_EDNS_OPTS 256

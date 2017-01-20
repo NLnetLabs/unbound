@@ -1,3 +1,6 @@
+20 January 2017: Wouter
+	- Increase MAX_MODULE to 16.
+
 19 January 2017: Wouter
 	- Fix to Rename ub_callback_t to ub_callback_type, because POSIX
 	  reserves _t typedefs.
