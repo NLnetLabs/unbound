@@ -60,9 +60,9 @@ struct rbnode_type {
 	/** right node (larger items) */
 	rbnode_type   *right;
 	/** pointer to sorting key */
-	const void *key;
+	const void    *key;
 	/** colour of this node */
-	uint8_t	    color;
+	uint8_t	       color;
 };
 
 /** The nullpointer, points to empty node */
@@ -78,7 +78,7 @@ struct rbtree_type {
 	rbnode_type    *root;
 
 	/** The number of the nodes in the tree */
-	size_t       count;
+	size_t          count;
 
 	/** 
 	 * Key compare function. <0,0,>0 like strcmp. 
