@@ -433,7 +433,7 @@ struct config_file {
 	char* control_cert_file;
 
 	/** Python script file */
-	char* python_script;
+	struct config_strlist* python_script;
 
 	/** Use systemd socket activation. */
 	int use_systemd;
@@ -819,6 +819,14 @@ char* config_collate_cat(struct config_strlist* list);
  * on fail the item is free()ed.
  */
 int cfg_strlist_append(struct config_strlist_head* list, char* item);
+
+/**
+ * Searches the end of a string list and appends the given text.
+ * @param head: pointer to strlist head variable.
+ * @param item: new item. malloced by caller. if NULL the insertion fails.
+ * @return true on success.
+ */
+int cfg_strlist_append_ex(struct config_strlist** head, char* item);
 
 /**
  * Find string in strlist.
