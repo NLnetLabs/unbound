@@ -1007,7 +1007,7 @@ set_recvpktinfo(int s, int family)
 		}
 #           else
 		log_err("no IPV6_RECVPKTINFO and no IPV6_PKTINFO option, please "
-			"disable interface-automatic in config");
+			"disable interface-automatic or do-ip6 in config");
 		return 0;
 #           endif /* defined IPV6_RECVPKTINFO */
 
@@ -1028,7 +1028,7 @@ set_recvpktinfo(int s, int family)
 		}
 #           else
 		log_err("no IP_SENDSRCADDR or IP_PKTINFO option, please disable "
-			"interface-automatic in config");
+			"interface-automatic or do-ip4 in config");
 		return 0;
 #           endif /* IP_PKTINFO */
 

@@ -1,3 +1,7 @@
+26 January 2017: Wouter
+	- Fix 1211: Fix can't enable interface-automatic if no IPv6 with
+	  more helpful error message.
+
 20 January 2017: Wouter
 	- Increase MAX_MODULE to 16.
 
