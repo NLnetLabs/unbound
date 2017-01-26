@@ -654,7 +654,7 @@ comm_point_udp_ancil_callback(int fd, short event, void* arg)
 	(void)fd;
 	(void)event;
 	(void)arg;
-	fatal_exit("recvmsg: No support for IPV6_PKTINFO. "
+	fatal_exit("recvmsg: No support for IPV6_PKTINFO; IP_PKTINFO or IP_RECVDSTADDR. "
 		"Please disable interface-automatic");
 #endif /* AF_INET6 && IPV6_PKTINFO && HAVE_RECVMSG */
 }
