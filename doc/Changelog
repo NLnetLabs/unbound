@@ -1,3 +1,6 @@
+4 February 2017: Wouter
+	- fix root_anchor test for updated icannbundle.pem lower certificates.
+
 26 January 2017: Wouter
 	- Fix 1211: Fix can't enable interface-automatic if no IPv6 with
 	  more helpful error message.
