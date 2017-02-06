@@ -19624,7 +19624,7 @@ esac
 
 		    else
 			case "$host" in
-			Darwin)
+			Darwin|*darwin*)
 				case " $LIBOBJS " in
   *" getentropy_osx.$ac_objext "* ) ;;
   *) LIBOBJS="$LIBOBJS getentropy_osx.$ac_objext"
@@ -19632,7 +19632,7 @@ esac
 esac
 
 			;;
-			solaris|SunOS)
+			*solaris*|*sunos*|SunOS)
 				case " $LIBOBJS " in
   *" getentropy_solaris.$ac_objext "* ) ;;
   *) LIBOBJS="$LIBOBJS getentropy_solaris.$ac_objext"
@@ -19736,7 +19736,7 @@ if test "$ac_res" != no; then :
 fi
 
 			;;
-			Linux|*)
+			*linux*|Linux|*)
 				case " $LIBOBJS " in
   *" getentropy_linux.$ac_objext "* ) ;;
   *) LIBOBJS="$LIBOBJS getentropy_linux.$ac_objext"

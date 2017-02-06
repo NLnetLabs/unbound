@@ -1216,10 +1216,10 @@ if test "$USE_NSS" = "no"; then
 			AC_LIBOBJ(getentropy_win)
 		    else
 			case "$host" in
-			Darwin)
+			Darwin|*darwin*)
 				AC_LIBOBJ(getentropy_osx)
 			;;
-			solaris|SunOS)
+			*solaris*|*sunos*|SunOS)
 				AC_LIBOBJ(getentropy_solaris)
 				AC_CHECK_HEADERS([sys/sha2.h],, [
 					AC_CHECK_FUNCS([SHA512_Update],,[
@@ -1232,7 +1232,7 @@ if test "$USE_NSS" = "no"; then
 				fi
 				AC_SEARCH_LIBS([clock_gettime], [rt])
 			;;
-			Linux|*)
+			*linux*|Linux|*)
 				AC_LIBOBJ(getentropy_linux)
 				AC_CHECK_FUNCS([SHA512_Update],,[
 					AC_DEFINE([COMPAT_SHA512], [1], [Do sha512 definitions in config.h])
