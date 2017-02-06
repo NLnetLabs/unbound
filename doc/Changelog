@@ -1,3 +1,6 @@
+6 February 2017: Wouter
+	- Fix compile on solaris of the fix to use $host detect.
+
 4 February 2017: Wouter
 	- fix root_anchor test for updated icannbundle.pem lower certificates.
 

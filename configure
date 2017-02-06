@@ -19632,7 +19632,7 @@ esac
 esac
 
 			;;
-			SunOS)
+			solaris|SunOS)
 				case " $LIBOBJS " in
   *" getentropy_solaris.$ac_objext "* ) ;;
   *) LIBOBJS="$LIBOBJS getentropy_solaris.$ac_objext"

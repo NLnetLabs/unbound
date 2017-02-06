@@ -1219,7 +1219,7 @@ if test "$USE_NSS" = "no"; then
 			Darwin)
 				AC_LIBOBJ(getentropy_osx)
 			;;
-			SunOS)
+			solaris|SunOS)
 				AC_LIBOBJ(getentropy_solaris)
 				AC_CHECK_HEADERS([sys/sha2.h],, [
 					AC_CHECK_FUNCS([SHA512_Update],,[
