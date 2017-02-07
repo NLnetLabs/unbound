@@ -1,3 +1,6 @@
+7 February 2017: Wouter
+	- Include root trust anchor id 20326 in unbound-anchor.
+
 6 February 2017: Wouter
 	- Fix compile on solaris of the fix to use $host detect.
 
