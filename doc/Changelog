@@ -1,3 +1,6 @@
+8 February 2017: Wouter
+	- Fix for type name change and fix warning on windows compile.
+
 7 February 2017: Wouter
 	- Include root trust anchor id 20326 in unbound-anchor.
 
