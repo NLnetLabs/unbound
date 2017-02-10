@@ -245,23 +245,23 @@ uint16_t ntohs(uint16_t netshort);
 }
 
 #if defined(SWIGWORDSIZE64) 
-typedef long int                rrset_id_t;
+typedef long int                rrset_id_type;
 #else 
-typedef long long int           rrset_id_t;
+typedef long long int           rrset_id_type;
 #endif 
 
 struct ub_packed_rrset_key {
    struct lruhash_entry entry;
-   rrset_id_t id;
+   rrset_id_type id;
    struct packed_rrset_key rk;
 };
 
 struct lruhash_entry {
-  lock_rw_t lock;
+  lock_rw_type lock;
   struct lruhash_entry* overflow_next;
   struct lruhash_entry* lru_next;
   struct lruhash_entry* lru_prev;
-  hashvalue_t hash;
+  hashvalue_type hash;
   void* key;
   struct packed_rrset_data* data;
 };
@@ -376,7 +376,7 @@ struct reply_info {
 
 struct rrset_ref {
    struct ub_packed_rrset_key* key;
-   rrset_id_t id;
+   rrset_id_type id;
 };
 
 struct dns_msg {
@@ -1415,13 +1415,13 @@ int edns_opt_list_append(struct edns_option** list, uint16_t code, size_t len,
 %}
 /* C declarations */
 int inplace_cb_reply_register(
-    inplace_cb_reply_func_t* cb, void* cb_arg, struct module_env* env);
+    inplace_cb_reply_func_type* cb, void* cb_arg, struct module_env* env);
 int inplace_cb_reply_cache_register(
-    inplace_cb_reply_func_t* cb, void* cb_arg, struct module_env* env);
+    inplace_cb_reply_func_type* cb, void* cb_arg, struct module_env* env);
 int inplace_cb_reply_local_register(
-    inplace_cb_reply_func_t* cb, void* cb_arg, struct module_env* env);
+    inplace_cb_reply_func_type* cb, void* cb_arg, struct module_env* env);
 int inplace_cb_reply_servfail_register(
-    inplace_cb_reply_func_t* cb, void* cb_arg, struct module_env* env);
+    inplace_cb_reply_func_type* cb, void* cb_arg, struct module_env* env);
 
 /* Swig declarations */
 static int register_inplace_cb_reply(PyObject* py_cb,
