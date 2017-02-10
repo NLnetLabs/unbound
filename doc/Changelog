@@ -1,5 +1,7 @@
 10 February 2017: Wouter
 	- Fix pythonmod for typedef changes.
+	- Fix dnstap for warning of set but not used.
+	- tag 1.6.1rc2.
 
 9 February 2017: Wouter
 	- tag 1.6.1rc1.
