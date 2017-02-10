@@ -513,7 +513,7 @@ struct edns_option {
     }
 
     PyObject* _edns_option_opt_data_get(struct edns_option* option) {
-        return PyByteArray_FromStringAndSize((uint8_t*)option->opt_data,
+        return PyByteArray_FromStringAndSize((void*)option->opt_data,
             option->opt_len);
     }
 %}
@@ -1332,7 +1332,7 @@ int edns_register_option(uint16_t opt_code, int bypass_cache_stage,
         SWIG_exception_fail(SWIG_TypeError, "Expected bytearray!");
         return NULL;
     }
-    $2 = PyByteArray_AsString($input);
+    $2 = (void*)PyByteArray_AsString($input);
     $1 = PyByteArray_Size($input);
 }
 
@@ -1353,8 +1353,8 @@ int edns_opt_list_append(struct edns_option** list, uint16_t code, size_t len,
         PyObject *result;
         int res = 0;
 
-        func = (PyObject *) python_callback;
         PyGILState_STATE gstate = PyGILState_Ensure();
+        func = (PyObject *) python_callback;
         py_edns = SWIG_NewPointerObj((void*) edns, SWIGTYPE_p_edns_data, 0);
         py_qstate = SWIG_NewPointerObj((void*) qstate,
             SWIGTYPE_p_module_qstate, 0);
