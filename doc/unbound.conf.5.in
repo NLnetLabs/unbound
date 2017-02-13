@@ -1416,9 +1416,15 @@ acts like the iterator and validator modules do, on queries and answers.
 To enable the script module it has to be compiled into the daemon,
 and the word "python" has to be put in the \fBmodule\-config:\fR option
 (usually first, or between the validator and iterator).
+.LP
+If the \fBchroot:\fR option is enabled, you should make sure Python's
+library directory structure is bind mounted in the new root environment, see
+\fImount\fR(8).  Also the \fBpython\-script:\fR path should be specified as an
+absolute path relative to the new root, or as a relative path to the working
+directory.
 .TP
 .B python\-script: \fI<python file>\fR
-The script file to load. 
+The script file to load.
 .SS "DNS64 Module Options"
 .LP
 The dns64 module must be configured in the \fBmodule\-config:\fR "dns64
