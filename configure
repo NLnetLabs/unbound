@@ -18634,6 +18634,7 @@ fi
 if test "x$enable_systemd" != xno; then :
 
 
+
 pkg_failed=no
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for SYSTEMD" >&5
 $as_echo_n "checking for SYSTEMD... " >&6; }
@@ -18795,6 +18796,7 @@ $as_echo "#define HAVE_SYSTEMD 1" >>confdefs.h
   *) :
      ;;
 esac
+
 
 fi
  if test "x$have_systemd" = xyes; then

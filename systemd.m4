@@ -6,6 +6,7 @@ AC_ARG_ENABLE([systemd],
 	[], [enable_systemd=no])
 have_systemd=no
 AS_IF([test "x$enable_systemd" != xno], [
+    ifdef([PKG_CHECK_MODULES], [
 	dnl systemd v209 or newer
 	PKG_CHECK_MODULES([SYSTEMD], [libsystemd], [have_systemd=yes], [have_systemd=no])
 	dnl old systemd library
@@ -23,5 +24,8 @@ AS_IF([test "x$enable_systemd" != xno], [
 		LIBS="$LIBS $SYSTEMD_LIBS"
 		]
 	)
+    ], [
+    	AC_MSG_ERROR([systemd enabled but need pkg-config to configure for it])
+    ])
 ])
 AM_CONDITIONAL([USE_SYSTEMD], [test "x$have_systemd" = xyes])
