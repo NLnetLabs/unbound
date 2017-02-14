@@ -1,3 +1,6 @@
+14 February 2017: Wouter
+	- tag 1.6.1rc3.
+
 13 February 2017: Wouter
 	- Fix autoconf of systemd check for lack of pkg-config.
 
