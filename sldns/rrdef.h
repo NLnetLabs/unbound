@@ -372,6 +372,8 @@ enum sldns_enum_algorithm
         LDNS_ECC_GOST           = 12,  /* RFC 5933 */
         LDNS_ECDSAP256SHA256    = 13,  /* RFC 6605 */
         LDNS_ECDSAP384SHA384    = 14,  /* RFC 6605 */
+	LDNS_ED25519		= 15,  /* RFC 8080 */
+	LDNS_ED448		= 16,  /* RFC 8080 */
         LDNS_INDIRECT           = 252,
         LDNS_PRIVATEDNS         = 253,
         LDNS_PRIVATEOID         = 254

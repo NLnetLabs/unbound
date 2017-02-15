@@ -1,3 +1,6 @@
+15 February 2017: Wouter
+	- sldns has ED25519 and ED448 algorithm number and name for display.
+
 14 February 2017: Wouter
 	- tag 1.6.1rc3.
 
