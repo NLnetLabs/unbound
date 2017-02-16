@@ -1,3 +1,6 @@
+16 February 2017: Wouter
+	- sldns updated for vfixed and buffer resize indication from getdns.
+
 15 February 2017: Wouter
 	- sldns has ED25519 and ED448 algorithm number and name for display.
 
