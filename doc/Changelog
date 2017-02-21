@@ -5,7 +5,7 @@
 	- sldns has ED25519 and ED448 algorithm number and name for display.
 
 14 February 2017: Wouter
-	- tag 1.6.1rc3.
+	- tag 1.6.1rc3. -- which became 1.6.1 on 21feb, trunk has 1.6.2
 
 13 February 2017: Wouter
 	- Fix autoconf of systemd check for lack of pkg-config.
