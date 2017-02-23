@@ -4,6 +4,7 @@
 	- Patch from Luiz Fernando Softov for Stats Shared Memory.
 	- unbound-control stats_shm command prints stats using shared memory,
 	  which uses less cpu.
+	- make depend, autoconf, doxygen and lint fixed up.
 
 22 February 2017: Wouter
 	- Fix #1224: Fix that defaults should not fall back to "Program Files
