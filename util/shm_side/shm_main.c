@@ -84,7 +84,7 @@ int shm_main_init(struct daemon* daemon)
 {
 #ifdef HAVE_SHMGET
 	struct shm_stat_info *shm_stat;
-	int shm_size;
+	size_t shm_size;
 	
 	/* sanitize */
 	if(!daemon)
