@@ -180,7 +180,7 @@ timeval_divide(struct timeval* avg, const struct timeval* sum, size_t d)
 #define PR_UL(str, var) printf(str SQ"%lu\n", (unsigned long)(var));
 #define PR_UL_SUB(str, nm, var) printf(str".%s"SQ"%lu\n", nm, (unsigned long)(var));
 #define PR_TIMEVAL(str, var) printf(str SQ ARG_LL "d.%6.6d\n", \
-	(long long)var.tv_sec, (unsigned)var.tv_usec);
+	(long long)var.tv_sec, (int)var.tv_usec);
 #define PR_LL(str, var) printf(str SQ ARG_LL"d\n", (long long)(var));
 
 /** print stat block */
@@ -260,7 +260,7 @@ static void print_extended(struct stats_info* s)
 	for(i=0; i<STATS_QTYPE_NUM; i++) {
 		if(inhibit_zero && s->svr.qtype[i] == 0)
 			continue;
-		sldns_wire2str_type_buf(i, nm, sizeof(nm));
+		sldns_wire2str_type_buf((uint16_t)i, nm, sizeof(nm));
 		PR_UL_SUB("num.query.type", nm, s->svr.qtype[i]);
 	}
 	if(!inhibit_zero || s->svr.qtype_big) {
@@ -271,7 +271,7 @@ static void print_extended(struct stats_info* s)
 	for(i=0; i<STATS_QCLASS_NUM; i++) {
 		if(inhibit_zero && s->svr.qclass[i] == 0)
 			continue;
-		sldns_wire2str_class_buf(i, nm, sizeof(nm));
+		sldns_wire2str_class_buf((uint16_t)i, nm, sizeof(nm));
 		PR_UL_SUB("num.query.class", nm, s->svr.qclass[i]);
 	}
 	if(!inhibit_zero || s->svr.qclass_big) {
