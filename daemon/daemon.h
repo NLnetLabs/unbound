@@ -56,6 +56,7 @@ struct local_zones;
 struct views;
 struct ub_randstate;
 struct daemon_remote;
+struct shm_main_info;
 
 #include "dnstap/dnstap_config.h"
 #ifdef USE_DNSTAP
@@ -118,6 +119,7 @@ struct daemon {
 	/** the dnstap environment master value, copied and changed by threads*/
 	struct dt_env* dtenv;
 #endif
+	struct shm_main_info* shm_info;
 };
 
 /**

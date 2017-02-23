@@ -385,6 +385,9 @@
 /* Define to 1 if you have the `SHA512_Update' function. */
 #undef HAVE_SHA512_UPDATE
 
+/* Define to 1 if you have the `shmget' function. */
+#undef HAVE_SHMGET
+
 /* Define to 1 if you have the `sigprocmask' function. */
 #undef HAVE_SIGPROCMASK
 
@@ -457,6 +460,9 @@
 /* Define to 1 if systemd should be used */
 #undef HAVE_SYSTEMD
 
+/* Define to 1 if you have the <sys/ipc.h> header file. */
+#undef HAVE_SYS_IPC_H
+
 /* Define to 1 if you have the <sys/param.h> header file. */
 #undef HAVE_SYS_PARAM_H
 
@@ -465,6 +471,9 @@
 
 /* Define to 1 if you have the <sys/sha2.h> header file. */
 #undef HAVE_SYS_SHA2_H
+
+/* Define to 1 if you have the <sys/shm.h> header file. */
+#undef HAVE_SYS_SHM_H
 
 /* Define to 1 if you have the <sys/socket.h> header file. */
 #undef HAVE_SYS_SOCKET_H

@@ -231,7 +231,9 @@ extern int yydebug;
     VAR_SERVE_EXPIRED = 441,
     VAR_FAKE_DSA = 442,
     VAR_LOG_IDENTITY = 443,
-    VAR_USE_SYSTEMD = 444
+    VAR_USE_SYSTEMD = 444,
+    VAR_SHM_ENABLE = 445,
+    VAR_SHM_KEY = 446
   };
 #endif
 /* Tokens.  */
@@ -422,6 +424,8 @@ extern int yydebug;
 #define VAR_FAKE_DSA 442
 #define VAR_LOG_IDENTITY 443
 #define VAR_USE_SYSTEMD 444
+#define VAR_SHM_ENABLE 445
+#define VAR_SHM_KEY 446
 
 /* Value type.  */
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
@@ -432,7 +436,7 @@ union YYSTYPE
 
 	char*	str;
 
-#line 436 "util/configparser.h" /* yacc.c:1909  */
+#line 440 "util/configparser.h" /* yacc.c:1909  */
 };
 
 typedef union YYSTYPE YYSTYPE;

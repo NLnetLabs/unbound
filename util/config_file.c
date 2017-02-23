@@ -257,6 +257,8 @@ config_create(void)
 	cfg->ratelimit_factor = 10;
 	cfg->qname_minimisation = 0;
 	cfg->qname_minimisation_strict = 0;
+	cfg->shm_enable = 0;
+	cfg->shm_key = 11777;
 	return cfg;
 error_exit:
 	config_delete(cfg); 
@@ -380,6 +382,8 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	else S_STR("log-identity:", log_identity)
 	else S_YNO("extended-statistics:", stat_extended)
 	else S_YNO("statistics-cumulative:", stat_cumulative)
+	else S_YNO("shm-enable:", shm_enable)
+	else S_NUMBER_OR_ZERO("shm-key:", shm_key)
 	else S_YNO("do-ip4:", do_ip4)
 	else S_YNO("do-ip6:", do_ip6)
 	else S_YNO("do-udp:", do_udp)
@@ -697,6 +701,8 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_DEC(opt, "statistics-interval", stat_interval)
 	else O_YNO(opt, "statistics-cumulative", stat_cumulative)
 	else O_YNO(opt, "extended-statistics", stat_extended)
+	else O_YNO(opt, "shm-enable", shm_enable)
+	else O_DEC(opt, "shm-key", shm_key)
 	else O_YNO(opt, "use-syslog", use_syslog)
 	else O_STR(opt, "log-identity", log_identity)
 	else O_YNO(opt, "log-time-ascii", log_time_ascii)

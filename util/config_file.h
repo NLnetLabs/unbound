@@ -422,6 +422,10 @@ struct config_file {
 	/** minimise QNAME in strict mode, minimise according to RFC.
 	 *  Do not apply fallback */
 	int qname_minimisation_strict;
+	/* SHM data - true if shm is enabled */
+	int shm_enable;
+	/* SHM data - key for the shm */
+	int shm_key;
 };
 
 /** from cfg username, after daemonise setup performed */

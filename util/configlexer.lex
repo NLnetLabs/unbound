@@ -343,6 +343,8 @@ insecure-lan-zones{COLON}	{ YDVAR(1, VAR_INSECURE_LAN_ZONES) }
 statistics-interval{COLON}	{ YDVAR(1, VAR_STATISTICS_INTERVAL) }
 statistics-cumulative{COLON}	{ YDVAR(1, VAR_STATISTICS_CUMULATIVE) }
 extended-statistics{COLON}	{ YDVAR(1, VAR_EXTENDED_STATISTICS) }
+shm-enable{COLON}		{ YDVAR(1, VAR_SHM_ENABLE) }
+shm-key{COLON}			{ YDVAR(1, VAR_SHM_KEY) }
 remote-control{COLON}		{ YDVAR(0, VAR_REMOTE_CONTROL) }
 control-enable{COLON}		{ YDVAR(1, VAR_CONTROL_ENABLE) }
 control-interface{COLON}	{ YDVAR(1, VAR_CONTROL_INTERFACE) }

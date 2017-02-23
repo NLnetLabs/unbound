@@ -19,6 +19,14 @@ server:
 	# Set to "" or 0 to disable. Default is disabled.
 	# statistics-interval: 0
 
+	# enable shm for stats, default no.  if you enable also enable
+	# statistics-interval, every time it also writes stats to the
+	# shared memory segment keyed with shm-key.
+	# shm-enable: no
+
+	# shm for stats uses this key, and key+1 for the shared mem segment.
+	# shm-key: 11777
+
 	# enable cumulative statistics, without clearing them after printing.
 	# statistics-cumulative: no
 

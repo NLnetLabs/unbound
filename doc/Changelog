@@ -1,6 +1,9 @@
 23 February 2017: Wouter
 	- Fix doc/CNAME-basedRedirectionDesignNotes.pdf zone static to
 	  redirect.
+	- Patch from Luiz Fernando Softov for Stats Shared Memory.
+	- unbound-control stats_shm command prints stats using shared memory,
+	  which uses less cpu.
 
 22 February 2017: Wouter
 	- Fix #1224: Fix that defaults should not fall back to "Program Files

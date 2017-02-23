@@ -305,7 +305,7 @@ AC_CHECK_TOOL(STRIP, strip)
 ACX_LIBTOOL_C_ONLY
 
 # Checks for header files.
-AC_CHECK_HEADERS([stdarg.h stdbool.h netinet/in.h netinet/tcp.h sys/param.h sys/socket.h sys/un.h sys/uio.h sys/resource.h arpa/inet.h syslog.h netdb.h sys/wait.h pwd.h glob.h grp.h login_cap.h winsock2.h ws2tcpip.h endian.h],,, [AC_INCLUDES_DEFAULT])
+AC_CHECK_HEADERS([stdarg.h stdbool.h netinet/in.h netinet/tcp.h sys/param.h sys/socket.h sys/un.h sys/uio.h sys/resource.h arpa/inet.h syslog.h netdb.h sys/wait.h pwd.h glob.h grp.h login_cap.h winsock2.h ws2tcpip.h endian.h sys/ipc.h sys/shm.h],,, [AC_INCLUDES_DEFAULT])
 
 # check for types.  
 # Using own tests for int64* because autoconf builtin only give 32bit.
@@ -1149,7 +1149,7 @@ AC_INCLUDES_DEFAULT
 #endif
 ])
 AC_SEARCH_LIBS([setusercontext], [util])
-AC_CHECK_FUNCS([tzset sigprocmask fcntl getpwnam endpwent getrlimit setrlimit setsid chroot kill chown sleep usleep random srandom recvmsg sendmsg writev socketpair glob initgroups strftime localtime_r setusercontext _beginthreadex endservent endprotoent fsync])
+AC_CHECK_FUNCS([tzset sigprocmask fcntl getpwnam endpwent getrlimit setrlimit setsid chroot kill chown sleep usleep random srandom recvmsg sendmsg writev socketpair glob initgroups strftime localtime_r setusercontext _beginthreadex endservent endprotoent fsync shmget])
 AC_CHECK_FUNCS([setresuid],,[AC_CHECK_FUNCS([setreuid])])
 AC_CHECK_FUNCS([setresgid],,[AC_CHECK_FUNCS([setregid])])
 

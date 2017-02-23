@@ -72,6 +72,7 @@
 #include "libunbound/context.h"
 #include "libunbound/libworker.h"
 #include "sldns/sbuffer.h"
+#include "util/shm_side/shm_main.h"
 
 #ifdef HAVE_SYS_TYPES_H
 #  include <sys/types.h>
@@ -1169,6 +1170,10 @@ void worker_stat_timer_cb(void* arg)
 	server_stats_log(&worker->stats, worker, worker->thread_num);
 	mesh_stats(worker->env.mesh, "mesh has");
 	worker_mem_report(worker, NULL);
+	/* SHM is enabled, process data to SHM */
+	if (worker->daemon->cfg->shm_enable) {
+		shm_main_run(worker);
+	}
 	if(!worker->daemon->cfg->stat_cumulative) {
 		worker_stats_clear(worker);
 	}

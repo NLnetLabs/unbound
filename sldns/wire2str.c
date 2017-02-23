@@ -273,6 +273,12 @@ int sldns_wire2str_rcode_buf(int rcode, char* s, size_t slen)
 	return sldns_wire2str_rcode_print(&s, &slen, rcode);
 }
 
+int sldns_wire2str_opcode_buf(int opcode, char* s, size_t slen)
+{
+	/* use arguments as temporary variables */
+	return sldns_wire2str_opcode_print(&s, &slen, opcode);
+}
+
 int sldns_wire2str_dname_buf(uint8_t* d, size_t dlen, char* s, size_t slen)
 {
 	/* use arguments as temporary variables */

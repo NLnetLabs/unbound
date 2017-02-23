@@ -135,7 +135,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_ACCESS_CONTROL_TAG_DATA VAR_VIEW VAR_ACCESS_CONTROL_VIEW
 %token VAR_VIEW_FIRST VAR_SERVE_EXPIRED VAR_FAKE_DSA
 %token VAR_LOG_IDENTITY
-%token VAR_USE_SYSTEMD
+%token VAR_USE_SYSTEMD VAR_SHM_ENABLE VAR_SHM_KEY
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -213,7 +213,8 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_local_zone_override | server_access_control_tag_action |
 	server_access_control_tag_data | server_access_control_view |
 	server_qname_minimisation_strict | server_serve_expired |
-	server_fake_dsa | server_log_identity | server_use_systemd
+	server_fake_dsa | server_log_identity | server_use_systemd |
+	server_shm_enable | server_shm_key
 	;
 stubstart: VAR_STUB_ZONE
 	{
@@ -311,6 +312,26 @@ server_extended_statistics: VAR_EXTENDED_STATISTICS STRING_ARG
 		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
 			yyerror("expected yes or no.");
 		else cfg_parser->cfg->stat_extended = (strcmp($2, "yes")==0);
+		free($2);
+	}
+	;
+server_shm_enable: VAR_SHM_ENABLE STRING_ARG
+	{
+		OUTYY(("P(server_shm_enable:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else cfg_parser->cfg->shm_enable = (strcmp($2, "yes")==0);
+		free($2);
+	}
+	;
+server_shm_key: VAR_SHM_KEY STRING_ARG 
+	{ 
+		OUTYY(("P(server_shm_key:%s)\n", $2)); 
+		if(strcmp($2, "") == 0 || strcmp($2, "0") == 0)
+			cfg_parser->cfg->shm_key = 0;
+		else if(atoi($2) == 0)
+			yyerror("number expected");
+		else cfg_parser->cfg->shm_key = atoi($2);
 		free($2);
 	}
 	;
