@@ -444,7 +444,7 @@ int sldns_wire2str_rcode_buf(int rcode, char* str, size_t len);
 /**
  * Convert host format opcode to a string. 'QUERY', 'NOTIFY', 'UPDATE'.
  * With user buffer.
- * @param rcode: rcode as integer in host order
+ * @param opcode: opcode as integer in host order
  * @param str: the string to write to.
  * @param len: length of str.
  * @return the number of characters for this element, excluding zerobyte.
