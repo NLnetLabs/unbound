@@ -40,17 +40,17 @@
  */
 
 #include "config.h"
-#include "shm_main.h"
 #include <ctype.h>
 #include <stdarg.h>
 #ifdef HAVE_SYS_IPC_H
-#include "sys/ipc.h"
+#include <sys/ipc.h>
 #endif
 #ifdef HAVE_SYS_SHM_H
-#include "sys/shm.h"
+#include <sys/shm.h>
 #endif
-#include "errno.h"
-#include "config.h"
+#include <sys/time.h>
+#include <errno.h>
+#include "shm_main.h"
 #include "daemon/daemon.h"
 #include "daemon/worker.h"
 #include "daemon/stats.h"
