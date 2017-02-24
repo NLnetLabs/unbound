@@ -1,5 +1,5 @@
 24 February 2017: Wouter
-	- include sys/time.h for new shm code on OpenBSD.
+	- include sys/time.h for new shm code on NetBSD.
 
 23 February 2017: Wouter
 	- Fix doc/CNAME-basedRedirectionDesignNotes.pdf zone static to
