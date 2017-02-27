@@ -205,7 +205,6 @@ while [ "$1" ]; do
 	    ;;
 	"-w32")
 	    W64="no"
-	    shift
 	    ;;
         "-w")
             DOWIN="yes"
@@ -324,9 +323,20 @@ if [ "$DOWIN" = "yes" ]; then
     # procedure for making unbound installer on mingw. 
     info "Creating windows dist unbound $version"
     info "Calling configure"
-    echo "$configure"' --enable-debug --enable-static-exe --disable-flto '"$* $cross_flag"
-    $configure --enable-debug --enable-static-exe --disable-flto $* $cross_flag \
+    if test "$W64" = "no"; then
+	file_flag="--with-conf-file=C:\Program Files (x86)\Unbound\service.conf"
+	file2_flag="--with-rootkey-file=C:\Program Files (x86)\Unbound\root.key"
+	file3_flag="--with-rootcert-file=C:\Program Files (x86)\Unbound\icannbundle.pem"
+	version="$version"-w32
+    fi
+    echo "$configure"' --enable-debug --enable-static-exe --disable-flto '"$* $cross_flag "$file_flag" "$file2_flag" "$file3_flag""
+    if test "$W64" = "no"; then
+        $configure --enable-debug --enable-static-exe --disable-flto $* $cross_flag "$file_flag" "$file2_flag" "$file3_flag" \
 	|| error_cleanup "Could not configure"
+    else
+        $configure --enable-debug --enable-static-exe --disable-flto $* $cross_flag \
+	|| error_cleanup "Could not configure"
+    fi
     info "Calling make"
     make || error_cleanup "Could not make"
     info "Make complete"

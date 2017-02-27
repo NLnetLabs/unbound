@@ -1,5 +1,6 @@
 27 February 2017: Wouter
 	- Fix #1227: Fix that Unbound control allows weak ciphersuits.
+	- Fix #1226: provide official 32bit binary for windows.
 
 24 February 2017: Wouter
 	- include sys/time.h for new shm code on NetBSD.
