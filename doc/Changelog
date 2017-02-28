@@ -1,3 +1,7 @@
+28 February 2017: Wouter
+	- For #1227: if we have sha256, set the cipher list to have no
+	  known vulns.
+
 27 February 2017: Wouter
 	- Fix #1227: Fix that Unbound control allows weak ciphersuits.
 	- Fix #1226: provide official 32bit binary for windows.

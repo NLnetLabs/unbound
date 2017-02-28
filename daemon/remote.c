@@ -260,8 +260,11 @@ daemon_remote_create(struct config_file* cfg)
 		return NULL;
 	}
 #endif
-	if(!SSL_CTX_set_cipher_list(rc->ctx, "DEFAULT:!CAMELLIA128:!CAMELLIA256:!SEED:!IDEA:!RC4:!3DES:!DES:!MD5:!SHA:!sect283k1:!sect283r1:!sect409k1:!sect409r1:!sect571k1:!sect571r1:!secp256k1:!brainpoolP256r1:!brainpoolP384r1:!brainpoolP512r1"))
+#ifdef SHA256_DIGEST_LENGTH
+	/* if we have sha256, set the cipher list to have no known vulns */
+	if(!SSL_CTX_set_cipher_list(rc->ctx, "ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256"))
 		log_crypto_err("coult not set cipher list with SSL_CTX_set_cipher_list");
+#endif
 
 	if (cfg->remote_control_use_cert == 0) {
 		/* No certificates are requested */
