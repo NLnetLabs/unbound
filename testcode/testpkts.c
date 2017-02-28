@@ -802,8 +802,8 @@ get_do_flag(uint8_t* pkt, size_t len)
 	uint16_t edns_bits;
 	uint8_t* walk = pkt;
 	size_t walk_len = len;
-	if(pkt_find_edns_opt(&walk, &walk_len)) {
-		return 1;
+	if(!pkt_find_edns_opt(&walk, &walk_len)) {
+		return 0;
 	}
 	if(walk_len < 6)
 		return 0; /* malformed */

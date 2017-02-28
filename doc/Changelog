@@ -1,3 +1,7 @@
+28 February 2017: Ralph
+	- Fix testpkts.c, check if DO bit is set, not only if there is an OPT
+	  record.
+
 28 February 2017: Wouter
 	- For #1227: if we have sha256, set the cipher list to have no
 	  known vulns.
