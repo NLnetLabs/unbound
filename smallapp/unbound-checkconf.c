@@ -53,6 +53,8 @@
 #include "iterator/iter_hints.h"
 #include "validator/validator.h"
 #include "services/localzone.h"
+#include "services/view.h"
+#include "respip/respip.h"
 #include "sldns/sbuffer.h"
 #ifdef HAVE_GETOPT_H
 #include <getopt.h>
@@ -139,6 +141,27 @@ localzonechecks(struct config_file* cfg)
 	if(!local_zones_apply_cfg(zs, cfg))
 		fatal_exit("failed local-zone, local-data configuration");
 	local_zones_delete(zs);
+}
+
+/** check view and response-ip configuration */
+static void
+view_and_respipchecks(struct config_file* cfg)
+{
+	struct views* views = NULL;
+	struct respip_set* respip = NULL;
+	int ignored = 0;
+	if(!(views = views_create()))
+		fatal_exit("Could not create views: out of memory");
+	if(!(respip = respip_set_create()))
+		fatal_exit("Could not create respip set: out of memory");
+	if(!views_apply_cfg(views, cfg))
+		fatal_exit("Could not set up views");
+        if(!respip_global_apply_cfg(respip, cfg))
+		fatal_exit("Could not setup respip set");
+        if(!respip_views_apply_cfg(views, cfg, &ignored))
+		fatal_exit("Could not setup per-view respip sets");
+	views_delete(views);
+	respip_set_delete(respip);
 }
 
 /** emit warnings for IP in hosts */
@@ -406,11 +429,17 @@ morechecks(struct config_file* cfg, const char* fname)
 	/* remove chroot setting so that modules are not stripping pathnames*/
 	free(cfg->chrootdir);
 	cfg->chrootdir = NULL;
-	
+
+	/* There should be no reason for 'respip' module not to work with
+	 * dns64, but it's not explicitly confirmed,  so the combination is
+	 * excluded below.   It's simply unknown yet for the combination of
+	 * respip and other modules. */
 	if(strcmp(cfg->module_conf, "iterator") != 0 
 		&& strcmp(cfg->module_conf, "validator iterator") != 0
 		&& strcmp(cfg->module_conf, "dns64 validator iterator") != 0
 		&& strcmp(cfg->module_conf, "dns64 iterator") != 0
+		&& strcmp(cfg->module_conf, "respip iterator") != 0
+		&& strcmp(cfg->module_conf, "respip validator iterator") != 0
 #ifdef WITH_PYTHONMODULE
 		&& strcmp(cfg->module_conf, "python iterator") != 0 
 		&& strcmp(cfg->module_conf, "python validator iterator") != 0 
@@ -464,6 +493,7 @@ morechecks(struct config_file* cfg, const char* fname)
 	}
 
 	localzonechecks(cfg);
+	view_and_respipchecks(cfg);
 }
 
 /** check forwards */

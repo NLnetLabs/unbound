@@ -46,6 +46,7 @@
 #include "dns64/dns64.h"
 #include "iterator/iterator.h"
 #include "validator/validator.h"
+#include "respip/respip.h"
 
 #ifdef WITH_PYTHONMODULE
 #include "pythonmod/pythonmod.h"
@@ -127,6 +128,7 @@ module_list_avail(void)
 #ifdef USE_CACHEDB
 		"cachedb",
 #endif
+		"respip",
 		"validator", 
 		"iterator", 
 		NULL};
@@ -148,6 +150,7 @@ module_funcs_avail(void)
 #ifdef USE_CACHEDB
 		&cachedb_get_funcblock,
 #endif
+		&respip_get_funcblock,
 		&val_get_funcblock, 
 		&iter_get_funcblock, 
 		NULL};

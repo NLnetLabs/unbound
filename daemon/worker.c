@@ -69,6 +69,7 @@
 #include "iterator/iter_hints.h"
 #include "validator/autotrust.h"
 #include "validator/val_anchor.h"
+#include "respip/respip.h"
 #include "libunbound/context.h"
 #include "libunbound/libworker.h"
 #include "sldns/sbuffer.h"
@@ -511,17 +512,70 @@ answer_norec_from_cache(struct worker* worker, struct query_info* qinfo,
 	return 1;
 }
 
-/** answer query from the cache */
+/** Apply, if applicable, a response IP action to a cached answer.
+ * If the answer is rewritten as a result of an action, '*encode_repp' will
+ * point to the reply info containing the modified answer.  '*encode_repp' will
+ * be intact otherwise.
+ * It returns 1 on success, 0 otherwise. */
+static int
+apply_respip_action(struct worker* worker, const struct query_info* qinfo,
+	struct respip_client_info* cinfo, struct reply_info* rep,
+	struct comm_reply* repinfo, struct ub_packed_rrset_key** alias_rrset,
+	struct reply_info** encode_repp)
+{
+	struct respip_action_info actinfo = {respip_none, NULL};
+
+	if(qinfo->qtype != LDNS_RR_TYPE_A &&
+		qinfo->qtype != LDNS_RR_TYPE_AAAA &&
+		qinfo->qtype != LDNS_RR_TYPE_ANY)
+		return 1;
+
+	if(!respip_rewrite_reply(qinfo, cinfo, rep, encode_repp, &actinfo,
+		alias_rrset, 0, worker->scratchpad))
+		return 0;
+
+	/* xxx_deny actions mean dropping the reply, unless the original reply
+	 * was redirected to response-ip data. */
+	if((actinfo.action == respip_deny ||
+		actinfo.action == respip_inform_deny) &&
+		*encode_repp == rep)
+		*encode_repp = NULL;
+
+	/* If address info is returned, it means the action should be an
+	 * 'inform' variant and the information should be logged. */
+	if(actinfo.addrinfo) {
+		respip_inform_print(actinfo.addrinfo, qinfo->qname,
+			qinfo->qtype, qinfo->qclass, qinfo->local_alias,
+			repinfo);
+	}
+
+	return 1;
+}
+
+/** answer query from the cache.
+ * Normally, the answer message will be built in repinfo->c->buffer; if the
+ * answer is supposed to be suppressed or the answer is supposed to be an
+ * incomplete CNAME chain, the buffer is explicitly cleared to signal the
+ * caller as such.  In the latter case *partial_rep will point to the incomplete
+ * reply, and this function is (possibly) supposed to be called again with that
+ * *partial_rep value to complete the chain.  In addition, if the query should
+ * be completely dropped, '*need_drop' will be set to 1. */
 static int
 answer_from_cache(struct worker* worker, struct query_info* qinfo,
+	struct respip_client_info* cinfo, int* need_drop,
+	struct ub_packed_rrset_key** alias_rrset,
+	struct reply_info** partial_repp,
 	struct reply_info* rep, uint16_t id, uint16_t flags, 
 	struct comm_reply* repinfo, struct edns_data* edns)
 {
 	time_t timenow = *worker->env.now;
 	uint16_t udpsize = edns->udp_size;
+	struct reply_info* encode_rep = rep;
+	struct reply_info* partial_rep = *partial_repp;
 	int secure;
 	int must_validate = (!(flags&BIT_CD) || worker->env.cfg->ignore_cd)
 		&& worker->env.need_to_validate;
+	*partial_repp = NULL;	/* avoid accidental further pass */
 	if(worker->env.cfg->serve_expired) {
 		/* always lock rrsets, rep->ttl is ignored */
 		if(!rrset_array_lock(rep->ref, rep->rrset_count, 0))
@@ -601,7 +655,33 @@ answer_from_cache(struct worker* worker, struct query_info* qinfo,
 	if(!inplace_cb_reply_cache_call(&worker->env, qinfo, NULL, rep,
 		(int)(flags&LDNS_RCODE_MASK), edns, worker->scratchpad))
 		goto bail_out;
-	if(!reply_info_answer_encode(qinfo, rep, id, flags, 
+	*alias_rrset = NULL; /* avoid confusion if caller set it to non-NULL */
+	if(worker->daemon->use_response_ip && !partial_rep &&
+	   !apply_respip_action(worker, qinfo, cinfo, rep, repinfo, alias_rrset,
+			&encode_rep)) {
+		goto bail_out;
+	} else if(partial_rep &&
+		!respip_merge_cname(partial_rep, qinfo, rep, cinfo,
+		must_validate, &encode_rep, worker->scratchpad)) {
+		goto bail_out;
+	}
+	if(encode_rep != rep)
+		secure = 0; /* if rewritten, it can't be considered "secure" */
+	if(!encode_rep || *alias_rrset) {
+		sldns_buffer_clear(repinfo->c->buffer);
+		sldns_buffer_flip(repinfo->c->buffer);
+		if(!encode_rep)
+			*need_drop = 1;
+		else {
+			/* If a partial CNAME chain is found, we first need to
+			 * make a copy of the reply in the scratchpad so we
+			 * can release the locks and lookup the cache again. */
+			*partial_repp = reply_info_copy(encode_rep, NULL,
+				worker->scratchpad);
+			if(!*partial_repp)
+				goto bail_out;
+		}
+	} else if(!reply_info_answer_encode(qinfo, encode_rep, id, flags,
 		repinfo->c->buffer, timenow, 1, worker->scratchpad,
 		udpsize, edns, (int)(edns->bits & EDNS_DO), secure)) {
 		if(!inplace_cb_reply_servfail_call(&worker->env, qinfo, NULL, NULL,
@@ -622,14 +702,18 @@ answer_from_cache(struct worker* worker, struct query_info* qinfo,
 	return 1;
 }
 
-/** Reply to client and perform prefetch to keep cache up to date */
+/** Reply to client and perform prefetch to keep cache up to date.
+ * If the buffer for the reply is empty, it indicates that only prefetch is
+ * necessary and the reply should be suppressed (because it's dropped or
+ * being deferred). */
 static void
 reply_and_prefetch(struct worker* worker, struct query_info* qinfo, 
 	uint16_t flags, struct comm_reply* repinfo, time_t leeway)
 {
 	/* first send answer to client to keep its latency 
 	 * as small as a cachereply */
-	comm_point_send_reply(repinfo);
+	if(sldns_buffer_limit(repinfo->c->buffer) != 0)
+		comm_point_send_reply(repinfo);
 	server_stats_prefetch(&worker->stats, worker);
 	
 	/* create the prefetch in the mesh as a normal lookup without
@@ -795,6 +879,15 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 	enum acl_access acl;
 	struct acl_addr* acladdr;
 	int rc = 0;
+	int need_drop = 0;
+	/* We might have to chase a CNAME chain internally, in which case
+	 * we'll have up to two replies and combine them to build a complete
+	 * answer.  These variables control this case. */
+	struct ub_packed_rrset_key* alias_rrset = NULL;
+	struct reply_info* partial_rep = NULL;
+	struct query_info* lookup_qinfo = &qinfo;
+	struct query_info qinfo_tmp; /* placeholdoer for lookup_qinfo */
+	struct respip_client_info* cinfo = NULL, cinfo_tmp;
 
 	if(error != NETEVENT_NOERROR) {
 		/* some bad tcp query DNS formats give these error calls */
@@ -1037,16 +1130,43 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 		qinfo.qname_len = d->rr_len[0] - 2;
 	}
 
+	/* If we may apply IP-based actions to the answer, build the client
+	 * information.  As this can be expensive, skip it if there is
+	 * absolutely no possibility of it. */
+	if(worker->daemon->use_response_ip &&
+		(qinfo.qtype == LDNS_RR_TYPE_A ||
+		qinfo.qtype == LDNS_RR_TYPE_AAAA ||
+		qinfo.qtype == LDNS_RR_TYPE_ANY)) {
+		cinfo_tmp.taglist = acladdr->taglist;
+		cinfo_tmp.taglen = acladdr->taglen;
+		cinfo_tmp.tag_actions = acladdr->tag_actions;
+		cinfo_tmp.tag_actions_size = acladdr->tag_actions_size;
+		cinfo_tmp.tag_datas = acladdr->tag_datas;
+		cinfo_tmp.tag_datas_size = acladdr->tag_datas_size;
+		cinfo_tmp.view = acladdr->view;
+		cinfo_tmp.respip_set = worker->daemon->respip_set;
+		cinfo = &cinfo_tmp;
+	}
+
+lookup_cache:
+	/* Lookup the cache.  In case we chase an intermediate CNAME chain
+	 * this is a two-pass operation, and lookup_qinfo is different for
+	 * each pass.  We should still pass the original qinfo to
+	 * answer_from_cache(), however, since it's used to build the reply. */
 	if(!edns_bypass_cache_stage(edns.opt_list, &worker->env)) {
-		h = query_info_hash(&qinfo, sldns_buffer_read_u16_at(c->buffer, 2));
-		if((e=slabhash_lookup(worker->env.msg_cache, h, &qinfo, 0))) {
+		h = query_info_hash(lookup_qinfo, sldns_buffer_read_u16_at(c->buffer, 2));
+		if((e=slabhash_lookup(worker->env.msg_cache, h, lookup_qinfo, 0))) {
 			/* answer from cache - we have acquired a readlock on it */
 			if(answer_from_cache(worker, &qinfo, 
+				cinfo, &need_drop, &alias_rrset, &partial_rep,
 				(struct reply_info*)e->data, 
 				*(uint16_t*)(void *)sldns_buffer_begin(c->buffer), 
 				sldns_buffer_read_u16_at(c->buffer, 2), repinfo, 
 				&edns)) {
-				/* prefetch it if the prefetch TTL expired */
+				/* prefetch it if the prefetch TTL expired.
+				 * Note that if there is more than one pass
+				 * its qname must be that used for cache
+				 * lookup. */
 				if((worker->env.cfg->prefetch || worker->env.cfg->serve_expired)
 					&& *worker->env.now >=
 					((struct reply_info*)e->data)->prefetch_ttl) {
@@ -1056,16 +1176,38 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 						< *worker->env.now)
 						leeway = 0;
 					lock_rw_unlock(&e->lock);
-					reply_and_prefetch(worker, &qinfo, 
+					reply_and_prefetch(worker, lookup_qinfo,
 						sldns_buffer_read_u16_at(c->buffer, 2),
 						repinfo, leeway);
-					rc = 0;
+					if(!partial_rep) {
+						rc = 0;
+						regional_free_all(worker->scratchpad);
+						goto send_reply_rc;
+					}
+				} else if(!partial_rep) {
+					lock_rw_unlock(&e->lock);
 					regional_free_all(worker->scratchpad);
-					goto send_reply_rc;
+					goto send_reply;
 				}
+				/* We've found a partial reply ending with an
+				 * alias.  Replace the lookup qinfo for the
+				 * alias target and lookup the cache again to
+				 * (possibly) complete the reply.  As we're
+				 * passing the "base" reply, there will be no
+				 * more alias chasing. */
 				lock_rw_unlock(&e->lock);
-				regional_free_all(worker->scratchpad);
-				goto send_reply;
+				memset(&qinfo_tmp, 0, sizeof(qinfo_tmp));
+				get_cname_target(alias_rrset, &qinfo_tmp.qname,
+					&qinfo_tmp.qname_len);
+				if(!qinfo_tmp.qname) {
+					log_err("unexpected: invalid answer alias");
+					regional_free_all(worker->scratchpad);
+					return 0; /* drop query */
+				}
+				qinfo_tmp.qtype = qinfo.qtype;
+				qinfo_tmp.qclass = qinfo.qclass;
+				lookup_qinfo = &qinfo_tmp;
+				goto lookup_cache;
 			}
 			verbose(VERB_ALGO, "answer from the cache failed");
 			lock_rw_unlock(&e->lock);
@@ -1094,7 +1236,7 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 	}
 
 	/* grab a work request structure for this new request */
-	mesh_new_client(worker->env.mesh, &qinfo, 
+	mesh_new_client(worker->env.mesh, &qinfo, cinfo,
 		sldns_buffer_read_u16_at(c->buffer, 2),
 		&edns, repinfo, *(uint16_t*)(void *)sldns_buffer_begin(c->buffer));
 	regional_free_all(worker->scratchpad);
@@ -1104,6 +1246,10 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 send_reply:
 	rc = 1;
 send_reply_rc:
+	if(need_drop) {
+		comm_point_drop_reply(repinfo);
+		return 0;
+	}
 #ifdef USE_DNSTAP
 	if(worker->dtenv.log_client_response_messages)
 		dt_msg_send_client_response(&worker->dtenv, &repinfo->addr,

@@ -357,6 +357,21 @@ struct reply_info* reply_info_copy(struct reply_info* rep,
 	struct alloc_cache* alloc, struct regional* region);
 
 /**
+ * Allocate (special) rrset keys.
+ * @param rep: reply info in which the rrset keys to be allocated, rrset[]
+ *	array should have bee allocated with NULL pointers.
+ * @param alloc: how to allocate rrset keys.
+ *	Not used if region!=NULL, it can be NULL in that case.
+ * @region: if this parameter is NULL then the alloc is used.
+ *	otherwise, rrset keys are allocated in this region.
+ *	In a region, no special rrset key structures are needed (not shared).
+ *	and no rrset_ref array in the reply needs to be built up.
+ * @return 1 on success, 0 on error
+ */
+int reply_info_alloc_rrset_keys(struct reply_info* rep,
+	struct alloc_cache* alloc, struct regional* region);
+
+/**
  * Copy a parsed rrset into given key, decompressing and allocating rdata.
  * @param pkt: packet for decompression
  * @param msg: the parser message (for flags for trust).

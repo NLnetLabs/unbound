@@ -113,7 +113,8 @@ util/ub_event.c util/ub_event_pluggable.c util/winsock_event.c \
 validator/autotrust.c validator/val_anchor.c validator/validator.c \
 validator/val_kcache.c validator/val_kentry.c validator/val_neg.c \
 validator/val_nsec3.c validator/val_nsec.c validator/val_secalgo.c \
-validator/val_sigcrypt.c validator/val_utils.c dns64/dns64.c cachedb/cachedb.c $(CHECKLOCK_SRC) \
+validator/val_sigcrypt.c validator/val_utils.c dns64/dns64.c \
+cachedb/cachedb.c respip/respip.c $(CHECKLOCK_SRC) \
 $(DNSTAP_SRC)
 COMMON_OBJ_WITHOUT_NETCALL=dns.lo infra.lo rrset.lo dname.lo msgencode.lo \
 as112.lo msgparse.lo msgreply.lo packed_rrset.lo iterator.lo iter_delegpt.lo \
@@ -126,6 +127,7 @@ slabhash.lo timehist.lo tube.lo winsock_event.lo autotrust.lo val_anchor.lo \
 validator.lo val_kcache.lo val_kentry.lo val_neg.lo val_nsec3.lo val_nsec.lo \
 val_secalgo.lo val_sigcrypt.lo val_utils.lo dns64.lo cachedb.lo \
 $(PYTHONMOD_OBJ) $(CHECKLOCK_OBJ) $(DNSTAP_OBJ)
+COMMON_OBJ_WITHOUT_NETCALL+=respip.lo
 COMMON_OBJ_WITHOUT_UB_EVENT=$(COMMON_OBJ_WITHOUT_NETCALL) netevent.lo listen_dnsport.lo \
 outside_network.lo
 COMMON_OBJ=$(COMMON_OBJ_WITHOUT_UB_EVENT) ub_event.lo
@@ -1294,3 +1296,4 @@ sha512.lo sha512.o: $(srcdir)/compat/sha512.c config.h
 reallocarray.lo reallocarray.o: $(srcdir)/compat/reallocarray.c config.h
 isblank.lo isblank.o: $(srcdir)/compat/isblank.c config.h
 strsep.lo strsep.o: $(srcdir)/compat/strsep.c config.h
+respip.lo respip.o: $(srcdir)/respip/respip.c config.h $(srcdir)/respip/respip.h $(srcdir)/util/module.h $(srcdir)/services/outbound_list.h

@@ -174,6 +174,9 @@ struct val_anchors;
 struct val_neg_cache;
 struct iter_forwards;
 struct iter_hints;
+struct respip_set;
+struct respip_client_info;
+struct respip_addr_info;
 
 /** Maximum number of modules in operation */
 #define MAX_MODULE 16
@@ -508,6 +511,8 @@ struct sock_list {
 	struct sockaddr_storage addr;
 };
 
+struct respip_action_info;
+
 /**
  * Module state, per query.
  */
@@ -562,6 +567,19 @@ struct module_qstate {
 	int no_cache_lookup;
 	/** whether modules should store answer in the cache */
 	int no_cache_store;
+
+	/**
+	 * Attributes of clients that share the qstate that may affect IP-based
+	 * actions.
+	 */
+	struct respip_client_info* client_info;
+
+	/** Extended result of response-ip action processing, mainly
+	 *  for logging purposes. */
+	struct respip_action_info* respip_action_info;
+
+	/** whether the reply should be dropped */
+	int is_drop;
 };
 
 /** 

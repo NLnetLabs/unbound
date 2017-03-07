@@ -321,6 +321,12 @@ struct config_file {
 	struct config_str3list* acl_tag_datas;
 	/** list of aclname, view*/
 	struct config_str2list* acl_view;
+	/** list of IP-netblock, tagbitlist */
+	struct config_strbytelist* respip_tags;
+	/** list of response-driven access control entries, linked list */
+	struct config_str2list* respip_actions;
+	/** RRs configured for response-driven access controls */
+	struct config_str2list* respip_data;
 	/** tag list, array with tagname[i] is malloced string */
 	char** tagname;
 	/** number of items in the taglist */
@@ -472,6 +478,10 @@ struct config_view {
 	/** Fallback to global local_zones when there is no match in the view
 	 * view specific tree. 1 for yes, 0 for no */	
 	int isfirst;
+	/** predefined actions for particular IP address responses */
+	struct config_str2list* respip_actions;
+	/** data complementing the 'redirect' response IP actions */
+	struct config_str2list* respip_data;
 };
 
 /**

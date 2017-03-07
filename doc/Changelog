@@ -1,6 +1,7 @@
 7 March 2017: Wouter
 	- Fix #1230: swig version 2.0.0 is required for pythonmod, with
 	  1.3.40 it crashes when running repeatly unbound-control reload.
+	- Response actions based on IP address from Jinmei Tatuya (Infoblox).
 
 6 March 2017: Wouter
 	- Fix #1229: Systemd service sandboxing in contrib/unbound.service.

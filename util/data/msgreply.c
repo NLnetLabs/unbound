@@ -133,9 +133,8 @@ parse_create_repinfo(struct msg_parse* msg, struct reply_info** rep,
 	return 1;
 }
 
-/** allocate (special) rrset keys, return 0 on error */
-static int
-repinfo_alloc_rrset_keys(struct reply_info* rep, struct alloc_cache* alloc, 
+int
+reply_info_alloc_rrset_keys(struct reply_info* rep, struct alloc_cache* alloc,
 	struct regional* region)
 {
 	size_t i;
@@ -438,7 +437,7 @@ parse_create_msg(sldns_buffer* pkt, struct msg_parse* msg,
 		return 0;
 	if(!parse_create_repinfo(msg, rep, region))
 		return 0;
-	if(!repinfo_alloc_rrset_keys(*rep, alloc, region))
+	if(!reply_info_alloc_rrset_keys(*rep, alloc, region))
 		return 0;
 	if(!parse_copy_decompress(pkt, msg, *rep, region))
 		return 0;
@@ -688,7 +687,7 @@ reply_info_copy(struct reply_info* rep, struct alloc_cache* alloc,
 	if(!cp)
 		return NULL;
 	/* allocate ub_key structures special or not */
-	if(!repinfo_alloc_rrset_keys(cp, alloc, region)) {
+	if(!reply_info_alloc_rrset_keys(cp, alloc, region)) {
 		if(!region)
 			reply_info_parsedelete(cp, alloc);
 		return NULL;

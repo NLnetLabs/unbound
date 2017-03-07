@@ -87,6 +87,7 @@
 #include "util/tube.h"
 #include "util/net_help.h"
 #include "sldns/keyraw.h"
+#include "respip/respip.h"
 #include <signal.h>
 
 #ifdef HAVE_SYSTEMD
@@ -562,6 +563,8 @@ daemon_stop_others(struct daemon* daemon)
 void 
 daemon_fork(struct daemon* daemon)
 {
+	int have_view_respip_cfg = 0;
+
 	log_assert(daemon);
 	if(!(daemon->views = views_create()))
 		fatal_exit("Could not create views: out of memory");
@@ -577,8 +580,26 @@ daemon_fork(struct daemon* daemon)
 	if(!local_zones_apply_cfg(daemon->local_zones, daemon->cfg))
 		fatal_exit("Could not set up local zones");
 
+	/* process raw response-ip configuration data */
+	if(!(daemon->respip_set = respip_set_create()))
+		fatal_exit("Could not create response IP set");
+	if(!respip_global_apply_cfg(daemon->respip_set, daemon->cfg))
+		fatal_exit("Could not set up response IP set");
+	if(!respip_views_apply_cfg(daemon->views, daemon->cfg,
+		&have_view_respip_cfg))
+		fatal_exit("Could not set up per-view response IP sets");
+	daemon->use_response_ip = !respip_set_is_empty(daemon->respip_set) ||
+		have_view_respip_cfg;
+
 	/* setup modules */
 	daemon_setup_modules(daemon);
+
+	/* response-ip-xxx options don't work as expected without the respip
+	 * module.  To avoid run-time operational surprise we reject such
+	 * configuration. */
+	if(daemon->use_response_ip &&
+		modstack_find(&daemon->mods, "respip") < 0)
+		fatal_exit("response-ip options require respip module");
 
 	/* first create all the worker structures, so we can pass
 	 * them to the newly created threads. 
@@ -645,6 +666,8 @@ daemon_cleanup(struct daemon* daemon)
 	slabhash_clear(daemon->env->msg_cache);
 	local_zones_delete(daemon->local_zones);
 	daemon->local_zones = NULL;
+	respip_set_delete(daemon->respip_set);
+	daemon->respip_set = NULL;
 	views_delete(daemon->views);
 	daemon->views = NULL;
 	/* key cache is cleared by module desetup during next daemon_fork() */

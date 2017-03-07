@@ -853,11 +853,12 @@ static int
 print_mem(SSL* ssl, struct worker* worker, struct daemon* daemon)
 {
 	int m;
-	size_t msg, rrset, val, iter;
+	size_t msg, rrset, val, iter, respip;
 	msg = slabhash_get_mem(daemon->env->msg_cache);
 	rrset = slabhash_get_mem(&daemon->env->rrset_cache->table);
 	val=0;
 	iter=0;
+	respip=0;
 	m = modstack_find(&worker->env.mesh->mods, "validator");
 	if(m != -1) {
 		fptr_ok(fptr_whitelist_mod_get_mem(worker->env.mesh->
@@ -872,6 +873,13 @@ print_mem(SSL* ssl, struct worker* worker, struct daemon* daemon)
 		iter = (*worker->env.mesh->mods.mod[m]->get_mem)
 			(&worker->env, m);
 	}
+	m = modstack_find(&worker->env.mesh->mods, "respip");
+	if(m != -1) {
+		fptr_ok(fptr_whitelist_mod_get_mem(worker->env.mesh->
+			mods.mod[m]->get_mem));
+		respip = (*worker->env.mesh->mods.mod[m]->get_mem)
+			(&worker->env, m);
+	}
 
 	if(!print_longnum(ssl, "mem.cache.rrset"SQ, rrset))
 		return 0;
@@ -880,6 +888,8 @@ print_mem(SSL* ssl, struct worker* worker, struct daemon* daemon)
 	if(!print_longnum(ssl, "mem.mod.iterator"SQ, iter))
 		return 0;
 	if(!print_longnum(ssl, "mem.mod.validator"SQ, val))
+		return 0;
+	if(!print_longnum(ssl, "mem.mod.respip"SQ, respip))
 		return 0;
 	return 1;
 }
