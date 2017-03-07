@@ -551,7 +551,7 @@ if test x_$ub_test_python != x_no; then
 
       # Check for SWIG
       ub_have_swig=no
-      AC_PROG_SWIG
+      AC_PROG_SWIG(2.0.0)
       AC_MSG_CHECKING(SWIG)
       if test ! -x "$SWIG"; then
          AC_ERROR([failed to find swig tool, install it, or do not build Python module and PyUnbound])

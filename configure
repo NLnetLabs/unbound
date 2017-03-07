@@ -16909,7 +16909,7 @@ fi
                 { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: cannot find 'swig' program. You should look at http://www.swig.org" >&5
 $as_echo "$as_me: WARNING: cannot find 'swig' program. You should look at http://www.swig.org" >&2;}
                 SWIG='echo "Error: SWIG is not installed. You should look at http://www.swig.org" ; false'
-        elif test -n "" ; then
+        elif test -n "2.0.0" ; then
                 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for SWIG version" >&5
 $as_echo_n "checking for SWIG version... " >&6; }
                 swig_version=`$SWIG -version 2>&1 | grep 'SWIG Version' | sed 's/.*\([0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*\).*/\1/g'`
@@ -16917,7 +16917,7 @@ $as_echo_n "checking for SWIG version... " >&6; }
 $as_echo "$swig_version" >&6; }
                 if test -n "$swig_version" ; then
                         # Calculate the required version number components
-                        required=
+                        required=2.0.0
                         required_major=`echo $required | sed 's/[^0-9].*//'`
                         if test -z "$required_major" ; then
                                 required_major=0
@@ -16948,12 +16948,23 @@ $as_echo "$swig_version" >&6; }
                         if test -z "$available_patch" ; then
                                 available_patch=0
                         fi
-                        if test $available_major -ne $required_major \
-                                -o $available_minor -ne $required_minor \
-                                -o $available_patch -lt $required_patch ; then
-                                { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: SWIG version >=  is required.  You have $swig_version.  You should look at http://www.swig.org" >&5
-$as_echo "$as_me: WARNING: SWIG version >=  is required.  You have $swig_version.  You should look at http://www.swig.org" >&2;}
-                                SWIG='echo "Error: SWIG version >=  is required.  You have '"$swig_version"'.  You should look at http://www.swig.org" ; false'
+			badversion=0
+			if test $available_major -lt $required_major ; then
+				badversion=1
+			fi
+                        if test $available_major -eq $required_major \
+                                -a $available_minor -lt $required_minor ; then
+				badversion=1
+			fi
+                        if test $available_major -eq $required_major \
+                                -a $available_minor -eq $required_minor \
+                                -a $available_patch -lt $required_patch ; then
+				badversion=1
+			fi
+			if test $badversion -eq 1 ; then
+                                { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: SWIG version >= 2.0.0 is required.  You have $swig_version.  You should look at http://www.swig.org" >&5
+$as_echo "$as_me: WARNING: SWIG version >= 2.0.0 is required.  You have $swig_version.  You should look at http://www.swig.org" >&2;}
+                                SWIG='echo "Error: SWIG version >= 2.0.0 is required.  You have '"$swig_version"'.  You should look at http://www.swig.org" ; false'
                         else
                                 { $as_echo "$as_me:${as_lineno-$LINENO}: SWIG executable is '$SWIG'" >&5
 $as_echo "$as_me: SWIG executable is '$SWIG'" >&6;}
