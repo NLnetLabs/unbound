@@ -863,9 +863,10 @@ respip_rewrite_reply(const struct query_info* qinfo,
 	}
 	if(!raddr && ipset && (raddr = respip_addr_lookup(rep, &ipset->ip_tree,
 		&rrset_id))) {
-		action = local_data_find_tag_action(raddr->taglist,
-			raddr->taglen, ctaglist, ctaglen, tag_actions,
-			tag_actions_size, raddr->action, &tag,
+		action = (enum respip_action)local_data_find_tag_action(
+			raddr->taglist, raddr->taglen, ctaglist, ctaglen,
+			tag_actions, tag_actions_size,
+			(enum localzone_type)raddr->action, &tag,
 			ipset->tagname, ipset->num_tags);
 	}
 	if(raddr && !search_only) {
