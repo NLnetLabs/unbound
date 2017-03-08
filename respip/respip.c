@@ -1025,7 +1025,7 @@ respip_merge_cname(struct reply_info* base_rep,
 	struct reply_info* new_rep;
 	struct reply_info* tmp_rep = NULL; /* just a placeholder */
 	struct ub_packed_rrset_key* alias_rrset = NULL; /* ditto */
-	int tgt_rcode;
+	uint16_t tgt_rcode;
 	size_t i, j;
 	struct respip_action_info actinfo = {respip_none, NULL};
 
@@ -1166,7 +1166,7 @@ respip_inform_print(struct respip_addr_info* respip_addr, uint8_t* qname,
 
 	if(local_alias)
 		qname = local_alias->rrset->rk.dname;
-	port = (repinfo->addr.ss_family == AF_INET) ?
+	port = (unsigned)(repinfo->addr.ss_family == AF_INET) ?
 		ntohs(((struct sockaddr_in*)&repinfo->addr)->sin_port) :
 		ntohs(((struct sockaddr_in6*)&repinfo->addr)->sin6_port);
 	addr_to_str(&repinfo->addr, repinfo->addrlen, srcip, sizeof(srcip));
