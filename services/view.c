@@ -68,7 +68,7 @@ views_create(void)
 
 /** This prototype is defined in in respip.h, but we want to avoid
   * unnecessary dependencies */
-void respip_set_delete(struct respip_set *);
+void respip_set_delete(struct respip_set *set);
 
 void 
 view_delete(struct view* v)

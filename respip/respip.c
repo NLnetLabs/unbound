@@ -632,16 +632,16 @@ make_new_reply_info(const struct reply_info* rep, struct regional* region,
  * the "no data" action in case of error.
  * @param raddr: address span that requires an action
  * @param action: action to apply
- * @apram qtype: original query type
+ * @param qtype: original query type
  * @param rep: original reply message
  * @param rrset_id: the rrset ID in 'rep' to which the action should apply
  * @param new_repp: see respip_rewrite_reply
- * @tag: if >= 0 the tag ID used to determine the action and data
- * @tag_datas: data corresponding to 'tag'.
- * @tag_datas_size: size of 'tag_datas'
- * @tagname: array of tag names, used for logging
- * @num_tags: size of 'tagname', used for logging
- * @redirect_rrsetp: ptr to redirect record
+ * @param tag: if >= 0 the tag ID used to determine the action and data
+ * @param tag_datas: data corresponding to 'tag'.
+ * @param tag_datas_size: size of 'tag_datas'
+ * @param tagname: array of tag names, used for logging
+ * @param num_tags: size of 'tagname', used for logging
+ * @param redirect_rrsetp: ptr to redirect record
  * @param region: region for building new reply
  * @return 1 if overridden, 0 if not overridden, -1 on error.
  */
@@ -729,6 +729,7 @@ respip_data_answer(const struct resp_addr* raddr, enum respip_action action,
  * @param action: found action
  * @param rep:
  * @param new_repp
+ * @param rrset_id
  * @param region: region for building new reply
  * @return 1 on success, 0 on error.
  */

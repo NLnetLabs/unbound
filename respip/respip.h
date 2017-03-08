@@ -213,15 +213,15 @@ int respip_set_is_empty(const struct respip_set* set);
 /**
  * print log information for a query subject to an inform or inform-deny
  * response-ip action.
- * @param resp_addr response-ip information that causes the action
- * @param qname query name in the context, will be ignored if local_alias is
+ * @param respip_addr: response-ip information that causes the action
+ * @param qname: query name in the context, will be ignored if local_alias is
  *   non-NULL.
- * @param qtype query type, in host byte order.
- * @param qclass query class, in host byte order.
- * @param local_alias set to a local alias if the query matches an alias in
+ * @param qtype: query type, in host byte order.
+ * @param qclass: query class, in host byte order.
+ * @param local_alias: set to a local alias if the query matches an alias in
  *  a local zone.  In this case its owner name will be considered the actual
  *  query name.
- * @param repinfo reply info containing the client's source address and port.
+ * @param repinfo: reply info containing the client's source address and port.
  */
 void respip_inform_print(struct respip_addr_info* respip_addr, uint8_t* qname,
 	uint16_t qtype, uint16_t qclass, struct local_rrset* local_alias,

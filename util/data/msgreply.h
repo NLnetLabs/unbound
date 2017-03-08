@@ -362,7 +362,7 @@ struct reply_info* reply_info_copy(struct reply_info* rep,
  *	array should have bee allocated with NULL pointers.
  * @param alloc: how to allocate rrset keys.
  *	Not used if region!=NULL, it can be NULL in that case.
- * @region: if this parameter is NULL then the alloc is used.
+ * @param region: if this parameter is NULL then the alloc is used.
  *	otherwise, rrset keys are allocated in this region.
  *	In a region, no special rrset key structures are needed (not shared).
  *	and no rrset_ref array in the reply needs to be built up.
