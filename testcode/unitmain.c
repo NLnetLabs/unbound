@@ -609,7 +609,7 @@ respip_conf_actions_test(void)
 	int i;
 	struct respip_set* set = respip_set_create();
 	struct config_file cfg;
-	int clen = sizeof(config_response_ip) / sizeof(addr_action_t);
+	int clen = (int)(sizeof(config_response_ip) / sizeof(addr_action_t));
 
 	unit_assert(set);
 	unit_show_feature("global respip config actions apply");
@@ -643,8 +643,8 @@ respip_view_conf_actions_test(void)
 	};
 	int i;
 	struct config_file cfg;
-	int clen1 = sizeof(config_response_ip_view1) / sizeof(addr_action_t);
-	int clen2 = sizeof(config_response_ip_view2) / sizeof(addr_action_t);
+	int clen1 = (int)(sizeof(config_response_ip_view1) / sizeof(addr_action_t));
+	int clen2 = (int)(sizeof(config_response_ip_view2) / sizeof(addr_action_t));
 	struct config_view* cv1;
 	struct config_view* cv2;
 	int have_respip_cfg = 0;
@@ -733,7 +733,7 @@ static void
 cfg_insert_respip_data(struct config_str2list** respip_actions,
 	struct config_str2list** respip_data)
 {
-	int clen = sizeof(config_response_ip_data) / sizeof(addr_data_t);
+	int clen = (int)(sizeof(config_response_ip_data) / sizeof(addr_data_t));
 	int i = 0;
 
 	/* insert actions (duplicate netblocks don't matter) */
