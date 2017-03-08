@@ -1,5 +1,6 @@
 8 March 2017: Wouter
 	- make depend for build dependencies.
+	- swig version 2.0.1 required.
 
 7 March 2017: Wouter
 	- Fix #1230: swig version 2.0.0 is required for pythonmod, with
