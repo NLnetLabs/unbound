@@ -2,6 +2,8 @@
 	- --disable-sha1 disables SHA1 support in RRSIG, so from DNSKEY and
 	  DS records.  NSEC3 is not disabled.
 	- fake-sha1 test option; print warning if used.  To make unit tests.
+	- unbound-control list local zone and data commands listed in the
+	  help output.
 
 8 March 2017: Wouter
 	- make depend for build dependencies.

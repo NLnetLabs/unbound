@@ -102,6 +102,9 @@ usage(void)
 	printf("  local_data <RR data...>	add local data, for example\n");
 	printf("				local_data www.example.com A 192.0.2.1\n");
 	printf("  local_data_remove <name>	remove local RR data from name\n");
+	printf("  local_zones, local_zones_remove, local_datas, local_datas_remove\n");
+	printf("  				same, but read list from stdin\n");
+	printf("  				(one entry per line).\n");
 	printf("  dump_cache			print cache to stdout\n");
 	printf("  load_cache			load cache from stdin\n");
 	printf("  lookup <name>			print nameservers for name\n");
