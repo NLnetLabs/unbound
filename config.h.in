@@ -684,6 +684,9 @@
 /* Define this to enable client TCP Fast Open. */
 #undef USE_OSX_MSG_FASTOPEN
 
+/* Define this to enable SHA1 support. */
+#undef USE_SHA1
+
 /* Define this to enable SHA256 and SHA512 support. */
 #undef USE_SHA2
 

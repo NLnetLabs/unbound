@@ -840,6 +840,7 @@ with_pythonmodule
 with_nss
 with_nettle
 with_ssl
+enable_sha1
 enable_sha2
 enable_gost
 enable_ecdsa
@@ -1515,6 +1516,8 @@ Optional Features:
                           enable nonregional allocs, slow but exposes regional
                           allocations to other memory purifiers, for debug
                           purposes
+  --disable-sha1          Disable SHA1 RRSIG support, does not disable nsec3
+                          support
   --disable-sha2          Disable SHA256 and SHA512 RRSIG support
   --disable-gost          Disable GOST support
   --disable-ecdsa         Disable ECDSA support
@@ -17707,6 +17710,22 @@ _ACEOF
 
 fi
 
+
+
+# Check whether --enable-sha1 was given.
+if test "${enable_sha1+set}" = set; then :
+  enableval=$enable_sha1;
+fi
+
+case "$enable_sha1" in
+	no)
+	;;
+	yes|*)
+
+$as_echo "#define USE_SHA1 1" >>confdefs.h
+
+	;;
+esac
 
 
 # Check whether --enable-sha2 was given.

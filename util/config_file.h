@@ -978,6 +978,6 @@ void w_config_adjust_directory(struct config_file* cfg);
 #endif /* UB_ON_WINDOWS */
 
 /** debug option for unit tests. */
-extern int fake_dsa;
+extern int fake_dsa, fake_sha1;
 
 #endif /* UTIL_CONFIG_FILE_H */

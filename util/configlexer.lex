@@ -320,6 +320,7 @@ val-permissive-mode{COLON}	{ YDVAR(1, VAR_VAL_PERMISSIVE_MODE) }
 ignore-cd-flag{COLON}		{ YDVAR(1, VAR_IGNORE_CD_FLAG) }
 serve-expired{COLON}		{ YDVAR(1, VAR_SERVE_EXPIRED) }
 fake-dsa{COLON}			{ YDVAR(1, VAR_FAKE_DSA) }
+fake-sha1{COLON}		{ YDVAR(1, VAR_FAKE_SHA1) }
 val-log-level{COLON}		{ YDVAR(1, VAR_VAL_LOG_LEVEL) }
 key-cache-size{COLON}		{ YDVAR(1, VAR_KEY_CACHE_SIZE) }
 key-cache-slabs{COLON}		{ YDVAR(1, VAR_KEY_CACHE_SLABS) }

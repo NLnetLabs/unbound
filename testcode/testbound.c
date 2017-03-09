@@ -73,6 +73,7 @@ testbound_usage(void)
 	printf("\ttest the unbound daemon.\n");
 	printf("-h      this help\n");
 	printf("-p file	playback text file\n");
+	printf("-1 	detect SHA1 support (exit code 0 or 1)\n");
 	printf("-2 	detect SHA256 support (exit code 0 or 1)\n");
 	printf("-g 	detect GOST support (exit code 0 or 1)\n");
 	printf("-e 	detect ECDSA support (exit code 0 or 1)\n");
@@ -285,6 +286,15 @@ main(int argc, char* argv[])
 			free(pass_argv[1]);
 			testbound_selftest();
 			exit(0);
+		case '1':
+#ifdef USE_SHA1
+			printf("SHA1 supported\n");
+			exit(0);
+#else
+			printf("SHA1 not supported\n");
+			exit(1);
+#endif
+			break;
 		case '2':
 #if (defined(HAVE_EVP_SHA256) || defined(HAVE_NSS) || defined(HAVE_NETTLE)) && defined(USE_SHA2)
 			printf("SHA256 supported\n");

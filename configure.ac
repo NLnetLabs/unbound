@@ -710,6 +710,16 @@ fi
 AC_SUBST(SSLLIB)
 
 
+AC_ARG_ENABLE(sha1, AC_HELP_STRING([--disable-sha1], [Disable SHA1 RRSIG support, does not disable nsec3 support]))
+case "$enable_sha1" in
+	no)
+	;;
+	yes|*)
+	AC_DEFINE([USE_SHA1], [1], [Define this to enable SHA1 support.])
+	;;
+esac
+
+
 AC_ARG_ENABLE(sha2, AC_HELP_STRING([--disable-sha2], [Disable SHA256 and SHA512 RRSIG support]))
 case "$enable_sha2" in
 	no)

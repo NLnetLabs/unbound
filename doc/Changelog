@@ -1,3 +1,8 @@
+9 March 2017: Wouter
+	- --disable-sha1 disables SHA1 support in RRSIG, so from DNSKEY and
+	  DS records.  NSEC3 is not disabled.
+	- fake-sha1 test option; print warning if used.  To make unit tests.
+
 8 March 2017: Wouter
 	- make depend for build dependencies.
 	- swig version 2.0.1 required.

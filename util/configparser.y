@@ -136,7 +136,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_DEFINE_TAG VAR_LOCAL_ZONE_TAG VAR_ACCESS_CONTROL_TAG
 %token VAR_LOCAL_ZONE_OVERRIDE VAR_ACCESS_CONTROL_TAG_ACTION
 %token VAR_ACCESS_CONTROL_TAG_DATA VAR_VIEW VAR_ACCESS_CONTROL_VIEW
-%token VAR_VIEW_FIRST VAR_SERVE_EXPIRED VAR_FAKE_DSA
+%token VAR_VIEW_FIRST VAR_SERVE_EXPIRED VAR_FAKE_DSA VAR_FAKE_SHA1
 %token VAR_LOG_IDENTITY
 %token VAR_USE_SYSTEMD VAR_SHM_ENABLE VAR_SHM_KEY
 
@@ -218,7 +218,7 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_qname_minimisation_strict | server_serve_expired |
 	server_fake_dsa | server_log_identity | server_use_systemd |
 	server_response_ip_tag | server_response_ip | server_response_ip_data |
-	server_shm_enable | server_shm_key
+	server_shm_enable | server_shm_key | server_fake_sha1
 	;
 stubstart: VAR_STUB_ZONE
 	{
@@ -1258,6 +1258,19 @@ server_fake_dsa: VAR_FAKE_DSA STRING_ARG
 		else fake_dsa = (strcmp($2, "yes")==0);
 		if(fake_dsa)
 			log_warn("test option fake_dsa is enabled");
+#endif
+		free($2);
+	}
+	;
+server_fake_sha1: VAR_FAKE_SHA1 STRING_ARG
+	{
+		OUTYY(("P(server_fake_sha1:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+#ifdef HAVE_SSL
+		else fake_sha1 = (strcmp($2, "yes")==0);
+		if(fake_sha1)
+			log_warn("test option fake_sha1 is enabled");
 #endif
 		free($2);
 	}
