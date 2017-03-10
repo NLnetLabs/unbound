@@ -1128,6 +1128,9 @@ match_all(uint8_t* q, size_t qlen, uint8_t* p, size_t plen, int mttl,
 		/* check for reordered sections */
 		r = match_noloc(qstr, pstr, q, qlen, p, plen);
 	}
+	if(!r) {
+		verbose(3, "mismatch pkt '%s' and '%s'", qstr, pstr);
+	}
 	free(qstr);
 	free(pstr);
 	free(qb);

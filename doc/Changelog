@@ -1,3 +1,7 @@
+10 March 2017: Wouter
+	- Fix #1234: shortening DNAME loop produces duplicate DNAME records
+	  in ANSWER section.
+
 9 March 2017: Wouter
 	- --disable-sha1 disables SHA1 support in RRSIG, so from DNSKEY and
 	  DS records.  NSEC3 is not disabled.

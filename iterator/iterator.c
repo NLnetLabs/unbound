@@ -373,6 +373,29 @@ iter_prepend(struct iter_qstate* iq, struct dns_msg* msg,
 }
 
 /**
+ * Find rrset in ANSWER prepend list.
+ * to avoid duplicate DNAMEs when a DNAME is traversed twice.
+ * @param iq: iterator query state.
+ * @param rrset: rrset to add.
+ * @return false if not found
+ */
+static int
+iter_find_rrset_in_prepend_answer(struct iter_qstate* iq,
+	struct ub_packed_rrset_key* rrset)
+{
+	struct iter_prep_list* p = iq->an_prepend_list;
+	while(p) {
+		if(ub_rrset_compare(p->rrset, rrset) == 0 &&
+			rrsetdata_equal((struct packed_rrset_data*)p->rrset
+			->entry.data, (struct packed_rrset_data*)rrset
+			->entry.data))
+			return 1;
+		p = p->next;
+	}
+	return 0;
+}
+
+/**
  * Add rrset to ANSWER prepend list
  * @param qstate: query state.
  * @param iq: iterator query state.
@@ -454,14 +477,16 @@ handle_cname_response(struct module_qstate* qstate, struct iter_qstate* iq,
 		 * by this DNAME following, so we don't process the DNAME 
 		 * directly.  */
 		if(ntohs(r->rk.type) == LDNS_RR_TYPE_DNAME &&
-			dname_strict_subdomain_c(*mname, r->rk.dname)) {
+			dname_strict_subdomain_c(*mname, r->rk.dname) &&
+			!iter_find_rrset_in_prepend_answer(iq, r)) {
 			if(!iter_add_prepend_answer(qstate, iq, r))
 				return 0;
 			continue;
 		}
 
 		if(ntohs(r->rk.type) == LDNS_RR_TYPE_CNAME &&
-			query_dname_compare(*mname, r->rk.dname) == 0) {
+			query_dname_compare(*mname, r->rk.dname) == 0 &&
+			!iter_find_rrset_in_prepend_answer(iq, r)) {
 			/* Add this relevant CNAME rrset to the prepend list.*/
 			if(!iter_add_prepend_answer(qstate, iq, r))
 				return 0;
