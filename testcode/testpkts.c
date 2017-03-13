@@ -1149,12 +1149,12 @@ match_question(uint8_t* q, size_t qlen, uint8_t* p, size_t plen, int mttl)
 	if(!s) s = strstr(qcmpstr, ";; AUTHORITY SECTION");
 	if(!s) s = strstr(qcmpstr, ";; ADDITIONAL SECTION");
 	if(!s) s = strstr(qcmpstr, ";; MSG SIZE");
-	if(s) s = 0;
+	if(s) *s = 0;
 	s = strstr(pcmpstr, ";; ANSWER SECTION");
 	if(!s) s = strstr(pcmpstr, ";; AUTHORITY SECTION");
 	if(!s) s = strstr(pcmpstr, ";; ADDITIONAL SECTION");
 	if(!s) s = strstr(pcmpstr, ";; MSG SIZE");
-	if(s) s = 0;
+	if(s) *s = 0;
 
 	r = (strcmp(qcmpstr, pcmpstr) == 0);
 
@@ -1215,11 +1215,11 @@ match_answer(uint8_t* q, size_t qlen, uint8_t* p, size_t plen, int mttl)
 	s = strstr(qcmpstr, ";; AUTHORITY SECTION");
 	if(!s) s = strstr(qcmpstr, ";; ADDITIONAL SECTION");
 	if(!s) s = strstr(qcmpstr, ";; MSG SIZE");
-	if(s) s = 0;
+	if(s) *s = 0;
 	s = strstr(pcmpstr, ";; AUTHORITY SECTION");
 	if(!s) s = strstr(pcmpstr, ";; ADDITIONAL SECTION");
 	if(!s) s = strstr(pcmpstr, ";; MSG SIZE");
-	if(s) s = 0;
+	if(s) *s = 0;
 
 	r = (strcmp(qcmpstr, pcmpstr) == 0);
 

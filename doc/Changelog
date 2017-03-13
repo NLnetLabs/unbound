@@ -1,5 +1,7 @@
 13 March 2017: Wouter
 	- testbound understands Deckard MATCH rcode question answer commands.
+	- Fix #1235: Fix too long DNAME expansion produces SERVFAIL instead
+	  of YXDOMAIN + query loop, reported by Petr Spacek.
 
 10 March 2017: Wouter
 	- Fix #1234: shortening DNAME loop produces duplicate DNAME records

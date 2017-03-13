@@ -2258,6 +2258,11 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 		} else
 			iter_scrub_ds(iq->response, ns, iq->dp->name);
 	} else iter_scrub_ds(iq->response, NULL, NULL);
+	if(type == RESPONSE_TYPE_THROWAWAY &&
+		FLAGS_GET_RCODE(iq->response->rep->flags) == LDNS_RCODE_YXDOMAIN) {
+		/* YXDOMAIN is a permanent error, no need to retry */
+		type = RESPONSE_TYPE_ANSWER;
+	}
 
 	/* handle each of the type cases */
 	if(type == RESPONSE_TYPE_ANSWER) {
