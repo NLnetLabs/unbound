@@ -118,6 +118,12 @@ static void matchline(char* line, struct entry* e)
 			e->match_qtype = 1;
 		} else if(str_keyword(&parse, "qname")) {
 			e->match_qname = 1;
+		} else if(str_keyword(&parse, "rcode")) {
+			e->match_rcode = 1;
+		} else if(str_keyword(&parse, "question")) {
+			e->match_question = 1;
+		} else if(str_keyword(&parse, "answer")) {
+			e->match_answer = 1;
 		} else if(str_keyword(&parse, "subdomain")) {
 			e->match_subdomain = 1;
 		} else if(str_keyword(&parse, "all")) {
@@ -247,6 +253,9 @@ static struct entry* new_entry(void)
 	e->match_opcode = 0;
 	e->match_qtype = 0;
 	e->match_qname = 0;
+	e->match_rcode = 0;
+	e->match_question = 0;
+	e->match_answer = 0;
 	e->match_subdomain = 0;
 	e->match_all = 0;
 	e->match_ttl = 0;
@@ -691,6 +700,14 @@ static int get_opcode(uint8_t* pkt, size_t pktlen)
 	return (int)LDNS_OPCODE_WIRE(pkt);
 }
 
+/** returns rcode from packet */
+static int get_rcode(uint8_t* pkt, size_t pktlen)
+{
+	if(pktlen < LDNS_HEADER_SIZE)
+		return 0;
+	return (int)LDNS_RCODE_WIRE(pkt);
+}
+
 /** get authority section SOA serial value */
 static uint32_t get_serial(uint8_t* p, size_t plen)
 {
@@ -1086,6 +1103,138 @@ static void lowercase_pkt(uint8_t* pkt, size_t pktlen)
 	}
 }
 
+/** match question section of packet */
+static int
+match_question(uint8_t* q, size_t qlen, uint8_t* p, size_t plen, int mttl)
+{
+	char* qstr, *pstr, *s, *qcmpstr, *pcmpstr;
+	uint8_t* qb = q, *pb = p;
+	int r;
+	/* zero TTLs */
+	qb = memdup(q, qlen);
+	pb = memdup(p, plen);
+	if(!qb || !pb) error("out of memory");
+	if(!mttl) {
+		zerottls(qb, qlen);
+		zerottls(pb, plen);
+	}
+	lowercase_pkt(qb, qlen);
+	lowercase_pkt(pb, plen);
+	qstr = sldns_wire2str_pkt(qb, qlen);
+	pstr = sldns_wire2str_pkt(pb, plen);
+	if(!qstr || !pstr) error("cannot pkt2string");
+
+	/* remove before ;; QUESTION */
+	s = strstr(qstr, ";; QUESTION SECTION");
+	qcmpstr = s;
+	s = strstr(pstr, ";; QUESTION SECTION");
+	pcmpstr = s;
+	if(!qcmpstr && !pcmpstr) {
+		free(qstr);
+		free(pstr);
+		free(qb);
+		free(pb);
+		return 1;
+	}
+	if(!qcmpstr || !pcmpstr) {
+		free(qstr);
+		free(pstr);
+		free(qb);
+		free(pb);
+		return 0;
+	}
+	
+	/* remove after answer section, (;; AUTH, ;; ADD, ;; MSG size ..) */
+	s = strstr(qcmpstr, ";; ANSWER SECTION");
+	if(!s) s = strstr(qcmpstr, ";; AUTHORITY SECTION");
+	if(!s) s = strstr(qcmpstr, ";; ADDITIONAL SECTION");
+	if(!s) s = strstr(qcmpstr, ";; MSG SIZE");
+	if(s) s = 0;
+	s = strstr(pcmpstr, ";; ANSWER SECTION");
+	if(!s) s = strstr(pcmpstr, ";; AUTHORITY SECTION");
+	if(!s) s = strstr(pcmpstr, ";; ADDITIONAL SECTION");
+	if(!s) s = strstr(pcmpstr, ";; MSG SIZE");
+	if(s) s = 0;
+
+	r = (strcmp(qcmpstr, pcmpstr) == 0);
+
+	if(!r) {
+		verbose(3, "mismatch question section '%s' and '%s'",
+			qcmpstr, pcmpstr);
+	}
+
+	free(qstr);
+	free(pstr);
+	free(qb);
+	free(pb);
+	return r;
+}
+
+/** match answer section of packet */
+static int
+match_answer(uint8_t* q, size_t qlen, uint8_t* p, size_t plen, int mttl)
+{
+	char* qstr, *pstr, *s, *qcmpstr, *pcmpstr;
+	uint8_t* qb = q, *pb = p;
+	int r;
+	/* zero TTLs */
+	qb = memdup(q, qlen);
+	pb = memdup(p, plen);
+	if(!qb || !pb) error("out of memory");
+	if(!mttl) {
+		zerottls(qb, qlen);
+		zerottls(pb, plen);
+	}
+	lowercase_pkt(qb, qlen);
+	lowercase_pkt(pb, plen);
+	qstr = sldns_wire2str_pkt(qb, qlen);
+	pstr = sldns_wire2str_pkt(pb, plen);
+	if(!qstr || !pstr) error("cannot pkt2string");
+
+	/* remove before ;; ANSWER */
+	s = strstr(qstr, ";; ANSWER SECTION");
+	qcmpstr = s;
+	s = strstr(pstr, ";; ANSWER SECTION");
+	pcmpstr = s;
+	if(!qcmpstr && !pcmpstr) {
+		free(qstr);
+		free(pstr);
+		free(qb);
+		free(pb);
+		return 1;
+	}
+	if(!qcmpstr || !pcmpstr) {
+		free(qstr);
+		free(pstr);
+		free(qb);
+		free(pb);
+		return 0;
+	}
+	
+	/* remove after answer section, (;; AUTH, ;; ADD, ;; MSG size ..) */
+	s = strstr(qcmpstr, ";; AUTHORITY SECTION");
+	if(!s) s = strstr(qcmpstr, ";; ADDITIONAL SECTION");
+	if(!s) s = strstr(qcmpstr, ";; MSG SIZE");
+	if(s) s = 0;
+	s = strstr(pcmpstr, ";; AUTHORITY SECTION");
+	if(!s) s = strstr(pcmpstr, ";; ADDITIONAL SECTION");
+	if(!s) s = strstr(pcmpstr, ";; MSG SIZE");
+	if(s) s = 0;
+
+	r = (strcmp(qcmpstr, pcmpstr) == 0);
+
+	if(!r) {
+		verbose(3, "mismatch answer section '%s' and '%s'",
+			qcmpstr, pcmpstr);
+	}
+
+	free(qstr);
+	free(pstr);
+	free(qb);
+	free(pb);
+	return r;
+}
+
 /** match all of the packet */
 int
 match_all(uint8_t* q, size_t qlen, uint8_t* p, size_t plen, int mttl,
@@ -1214,6 +1363,31 @@ find_match(struct entry* entries, uint8_t* query_pkt, size_t len,
 		if(p->match_qname) {
 			if(!equal_dname(query_pkt, len, reply, rlen)) {
 				verbose(3, "bad qname\n");
+				continue;
+			}
+		}
+		if(p->match_rcode) {
+			if(get_rcode(query_pkt, len) != get_rcode(reply, rlen)) {
+				char *r1 = sldns_wire2str_rcode(get_rcode(query_pkt, len));
+				char *r2 = sldns_wire2str_rcode(get_rcode(reply, rlen));
+				verbose(3, "bad rcode %s instead of %s\n",
+					r1, r2);
+				free(r1);
+				free(r2);
+				continue;
+			}
+		}
+		if(p->match_question) {
+			if(!match_question(query_pkt, len, reply, rlen,
+				(int)p->match_ttl)) {
+				verbose(3, "bad question section\n");
+				continue;
+			}
+		}
+		if(p->match_answer) {
+			if(!match_answer(query_pkt, len, reply, rlen,
+				(int)p->match_ttl)) {
+				verbose(3, "bad answer section\n");
 				continue;
 			}
 		}

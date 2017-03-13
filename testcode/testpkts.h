@@ -50,6 +50,9 @@ struct sldns_file_parse_state;
 	; 'ttl' used with all, rrs in packet must also have matching TTLs.
 	; 'DO' will match only queries with DO bit set.
 	; 'noedns' matches queries without EDNS OPT records.
+	; 'rcode' makes the query match the rcode from the reply
+	; 'question' makes the query match the question section
+	; 'answer' makes the query match the answer section
 	MATCH [opcode] [qtype] [qname] [serial=<value>] [all] [ttl]
 	MATCH [UDP|TCP] DO
 	MATCH ...
@@ -161,6 +164,12 @@ struct entry {
 	uint8_t match_qtype;  
 	/** match qname with answer qname */
 	uint8_t match_qname;  
+	/** match rcode with answer rcode */
+	uint8_t match_rcode;
+	/** match question section */
+	uint8_t match_question;
+	/** match answer section */
+	uint8_t match_answer;
 	/** match qname as subdomain of answer qname */
 	uint8_t match_subdomain;  
 	/** match SOA serial number, from auth section */

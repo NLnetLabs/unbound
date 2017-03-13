@@ -1,3 +1,6 @@
+13 March 2017: Wouter
+	- testbound understands Deckard MATCH rcode question answer commands.
+
 10 March 2017: Wouter
 	- Fix #1234: shortening DNAME loop produces duplicate DNAME records
 	  in ANSWER section.
