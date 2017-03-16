@@ -789,7 +789,6 @@ chaos_trustanchor(sldns_buffer* pkt, struct edns_data* edns, struct worker* w)
 	char* str_array[16];
 	int num = 0;
 	struct trust_anchor* ta;
-	log_info("trustanchor.unbound CH TXT");
 
 	if(!w->env.need_to_validate) {
 		/* no validator module, reply no trustanchors */
@@ -839,7 +838,6 @@ chaos_trustanchor(sldns_buffer* pkt, struct edns_data* edns, struct worker* w)
 				str_len -= strlen(str); str += strlen(str);
 			}
 		}
-		log_info("insert string [%d] %s", num, str_array[num-1]);
 		lock_basic_unlock(&ta->lock);
 	}
 	lock_basic_unlock(&w->env.anchors->lock);
