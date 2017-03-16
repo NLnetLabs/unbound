@@ -1307,6 +1307,6 @@ anchor_list_keytags(struct trust_anchor* ta, uint16_t* list, int num)
 			list[ret++] = dnskey_calc_keytag(ta->dnskey_rrset, i);
 		}
 	}
-	qsort(list, ret, sizeof(*list), keytag_compare);
+	qsort(list, (size_t)ret, sizeof(*list), keytag_compare);
 	return ret;
 }
