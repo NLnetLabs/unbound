@@ -785,8 +785,9 @@ static void
 chaos_trustanchor(sldns_buffer* pkt, struct edns_data* edns, struct worker* w)
 {
 	int max_txt = 16;
-	int max_ids = 32;
+	int max_tags = 32;
 	char* str_array[16];
+	uint16_t tags[32];
 	int num = 0;
 	struct trust_anchor* ta;
 
@@ -799,12 +800,15 @@ chaos_trustanchor(sldns_buffer* pkt, struct edns_data* edns, struct worker* w)
 	/* fill the string with contents */
 	lock_basic_lock(&w->env.anchors->lock);
 	RBTREE_FOR(ta, struct trust_anchor*, w->env.anchors->tree) {
-		int numid = 0;
-		char* str = (char*)regional_alloc(w->scratchpad, 255);
+		int i, numtag;
+		char* str;
 		size_t str_len = 255;
-		if(!str || num == max_txt) continue;
+		if(num == max_txt) continue;
+		str = (char*)regional_alloc(w->scratchpad, 255);
+		if(!str) continue;
 		lock_basic_lock(&ta->lock);
-		if(ta->numDS == 0 && ta->numDNSKEY == 0) {
+		numtag = anchor_list_keytags(ta, tags, max_tags);
+		if(numtag == 0) {
 			/* empty, insecure point */
 			lock_basic_unlock(&ta->lock);
 			continue;
@@ -815,29 +819,10 @@ chaos_trustanchor(sldns_buffer* pkt, struct edns_data* edns, struct worker* w)
 		/* spool name of anchor */
 		(void)sldns_wire2str_dname_buf(ta->name, ta->namelen, str, str_len);
 		str_len -= strlen(str); str += strlen(str);
-		/* spool DS */
-		if(ta->numDS != 0 && ta->ds_rrset) {
-			struct packed_rrset_data* d=(struct packed_rrset_data*)
-				ta->ds_rrset->entry.data;
-			size_t i;
-			for(i=0; i<d->count; i++) {
-				uint16_t tag = ds_get_keytag(ta->ds_rrset, i);
-				if(numid++ > max_ids) continue;
-				snprintf(str, str_len, " %u", (unsigned)tag);
-				str_len -= strlen(str); str += strlen(str);
-			}
-		}
-		/* spool DNSKEY */
-		if(ta->numDNSKEY != 0 && ta->dnskey_rrset) {
-			struct packed_rrset_data* d=(struct packed_rrset_data*)
-				ta->dnskey_rrset->entry.data;
-			size_t i;
-			for(i=0; i<d->count; i++) {
-				uint16_t tag = dnskey_calc_keytag(ta->dnskey_rrset, i);
-				if(numid++ > max_ids) continue;
-				snprintf(str, str_len, " %u", (unsigned)tag);
-				str_len -= strlen(str); str += strlen(str);
-			}
+		/* spool tags */
+		for(i=0; i<numtag; i++) {
+			snprintf(str, str_len, " %u", (unsigned)tags[i]);
+			str_len -= strlen(str); str += strlen(str);
 		}
 		lock_basic_unlock(&ta->lock);
 	}
@@ -879,7 +864,7 @@ answer_chaos(struct worker* w, struct query_info* qinfo,
 				chaos_replystr(pkt, (char**)&"no hostname", 1, edns, w);
 			}
 		}
-		else 	chaos_replystr(pkt, &cfg->identity, 1, edns, w);
+		else 	chaos_replystr(pkt, (char**)&cfg->identity, 1, edns, w);
 		return 1;
 	}
 	if(query_dname_compare(qinfo->qname, 
