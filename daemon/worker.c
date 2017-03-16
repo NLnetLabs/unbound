@@ -779,7 +779,7 @@ chaos_replystr(sldns_buffer* pkt, char** str, int num, struct edns_data* edns,
  * Create CH class trustanchor answer.
  * @param pkt: buffer
  * @param edns: edns reply information.
- * @param worker: worker with scratch region.
+ * @param w: worker with scratch region.
  */
 static void
 chaos_trustanchor(sldns_buffer* pkt, struct edns_data* edns, struct worker* w)
