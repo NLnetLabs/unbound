@@ -189,6 +189,7 @@ config_create(void)
 	cfg->unwanted_threshold = 0;
 	cfg->hide_identity = 0;
 	cfg->hide_version = 0;
+	cfg->hide_trustanchor = 0;
 	cfg->identity = NULL;
 	cfg->version = NULL;
 	cfg->auto_trust_anchor_file_list = NULL;
@@ -437,6 +438,7 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	else S_STR("pidfile:", pidfile)
 	else S_YNO("hide-identity:", hide_identity)
 	else S_YNO("hide-version:", hide_version)
+	else S_YNO("hide-trustanchor:", hide_trustanchor)
 	else S_STR("identity:", identity)
 	else S_STR("version:", version)
 	else S_STRLIST("root-hints:", root_hints)
@@ -759,6 +761,7 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_STR(opt, "pidfile", pidfile)
 	else O_YNO(opt, "hide-identity", hide_identity)
 	else O_YNO(opt, "hide-version", hide_version)
+	else O_YNO(opt, "hide-trustanchor", hide_trustanchor)
 	else O_STR(opt, "identity", identity)
 	else O_STR(opt, "version", version)
 	else O_STR(opt, "target-fetch-policy", target_fetch_policy)

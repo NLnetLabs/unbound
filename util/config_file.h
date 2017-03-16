@@ -238,6 +238,8 @@ struct config_file {
 	int hide_identity;
 	/** do not report version (version.server, version.bind) */
 	int hide_version;
+	/** do not report trustanchor (trustanchor.unbound) */
+	int hide_trustanchor;
 	/** identity, hostname is returned if "". */
 	char* identity;
 	/** version, package version returned if "". */

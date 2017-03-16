@@ -89,6 +89,8 @@ int shm_main_init(struct daemon* daemon)
 	/* sanitize */
 	if(!daemon)
 		return 0;
+	if(!daemon->cfg->shm_enable)
+		return 1;
 	if(daemon->cfg->stat_interval == 0)
 		log_warn("shm-enable is yes but statistics-interval is 0");
 

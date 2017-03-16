@@ -596,6 +596,9 @@ If enabled version.server and version.bind queries are refused.
 Set the version to report. If set to "", the default, then the package
 version is returned.
 .TP
+.B hide\-trustanchor: \fI<yes or no>
+If enabled trustanchor.unbound queries are refused.
+.TP
 .B target\-fetch\-policy: \fI<"list of numbers">
 Set the target fetch policy used by unbound to determine if it should fetch
 nameserver target addresses opportunistically. The policy is described per

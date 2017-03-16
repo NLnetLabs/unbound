@@ -69,10 +69,12 @@
 #include "iterator/iter_hints.h"
 #include "validator/autotrust.h"
 #include "validator/val_anchor.h"
+#include "validator/val_sigcrypt.h"
 #include "respip/respip.h"
 #include "libunbound/context.h"
 #include "libunbound/libworker.h"
 #include "sldns/sbuffer.h"
+#include "sldns/wire2str.h"
 #include "util/shm_side/shm_main.h"
 
 #ifdef HAVE_SYS_TYPES_H
@@ -728,36 +730,41 @@ reply_and_prefetch(struct worker* worker, struct query_info* qinfo,
  * Fill CH class answer into buffer. Keeps query.
  * @param pkt: buffer
  * @param str: string to put into text record (<255).
+ * 	array of strings, every string becomes a text record.
+ * @param num: number of strings in array.
  * @param edns: edns reply information.
  * @param worker: worker with scratch region.
  */
 static void
-chaos_replystr(sldns_buffer* pkt, const char* str, struct edns_data* edns,
+chaos_replystr(sldns_buffer* pkt, char** str, int num, struct edns_data* edns,
 	struct worker* worker)
 {
-	size_t len = strlen(str);
+	int i;
 	unsigned int rd = LDNS_RD_WIRE(sldns_buffer_begin(pkt));
 	unsigned int cd = LDNS_CD_WIRE(sldns_buffer_begin(pkt));
-	if(len>255) len=255; /* cap size of TXT record */
 	sldns_buffer_clear(pkt);
 	sldns_buffer_skip(pkt, (ssize_t)sizeof(uint16_t)); /* skip id */
 	sldns_buffer_write_u16(pkt, (uint16_t)(BIT_QR|BIT_RA));
 	if(rd) LDNS_RD_SET(sldns_buffer_begin(pkt));
 	if(cd) LDNS_CD_SET(sldns_buffer_begin(pkt));
 	sldns_buffer_write_u16(pkt, 1); /* qdcount */
-	sldns_buffer_write_u16(pkt, 1); /* ancount */
+	sldns_buffer_write_u16(pkt, (uint16_t)num); /* ancount */
 	sldns_buffer_write_u16(pkt, 0); /* nscount */
 	sldns_buffer_write_u16(pkt, 0); /* arcount */
 	(void)query_dname_len(pkt); /* skip qname */
 	sldns_buffer_skip(pkt, (ssize_t)sizeof(uint16_t)); /* skip qtype */
 	sldns_buffer_skip(pkt, (ssize_t)sizeof(uint16_t)); /* skip qclass */
-	sldns_buffer_write_u16(pkt, 0xc00c); /* compr ptr to query */
-	sldns_buffer_write_u16(pkt, LDNS_RR_TYPE_TXT);
-	sldns_buffer_write_u16(pkt, LDNS_RR_CLASS_CH);
-	sldns_buffer_write_u32(pkt, 0); /* TTL */
-	sldns_buffer_write_u16(pkt, sizeof(uint8_t) + len);
-	sldns_buffer_write_u8(pkt, len);
-	sldns_buffer_write(pkt, str, len);
+	for(i=0; i<num; i++) {
+		size_t len = strlen(str[i]);
+		if(len>255) len=255; /* cap size of TXT record */
+		sldns_buffer_write_u16(pkt, 0xc00c); /* compr ptr to query */
+		sldns_buffer_write_u16(pkt, LDNS_RR_TYPE_TXT);
+		sldns_buffer_write_u16(pkt, LDNS_RR_CLASS_CH);
+		sldns_buffer_write_u32(pkt, 0); /* TTL */
+		sldns_buffer_write_u16(pkt, sizeof(uint8_t) + len);
+		sldns_buffer_write_u8(pkt, len);
+		sldns_buffer_write(pkt, str[i], len);
+	}
 	sldns_buffer_flip(pkt);
 	edns->edns_version = EDNS_ADVERTISED_VERSION;
 	edns->udp_size = EDNS_ADVERTISED_SIZE;
@@ -766,6 +773,79 @@ chaos_replystr(sldns_buffer* pkt, const char* str, struct edns_data* edns,
 		LDNS_RCODE_NOERROR, edns, worker->scratchpad))
 			edns->opt_list = NULL;
 	attach_edns_record(pkt, edns);
+}
+
+/**
+ * Create CH class trustanchor answer.
+ * @param pkt: buffer
+ * @param edns: edns reply information.
+ * @param worker: worker with scratch region.
+ */
+static void
+chaos_trustanchor(sldns_buffer* pkt, struct edns_data* edns, struct worker* w)
+{
+	int max_txt = 16;
+	int max_ids = 32;
+	char* str_array[16];
+	int num = 0;
+	struct trust_anchor* ta;
+	log_info("trustanchor.unbound CH TXT");
+
+	if(!w->env.need_to_validate) {
+		/* no validator module, reply no trustanchors */
+		chaos_replystr(pkt, NULL, 0, edns, w);
+	}
+
+	/* fill the string with contents */
+	lock_basic_lock(&w->env.anchors->lock);
+	RBTREE_FOR(ta, struct trust_anchor*, w->env.anchors->tree) {
+		int numid = 0;
+		char* str = (char*)regional_alloc(w->scratchpad, 255);
+		size_t str_len = 255;
+		if(!str || num == max_txt) continue;
+		lock_basic_lock(&ta->lock);
+		if(ta->numDS == 0 && ta->numDNSKEY == 0) {
+			/* empty, insecure point */
+			lock_basic_unlock(&ta->lock);
+			continue;
+		}
+		str_array[num] = str;
+		num++;
+
+		/* spool name of anchor */
+		(void)sldns_wire2str_dname_buf(ta->name, ta->namelen, str, str_len);
+		str_len -= strlen(str); str += strlen(str);
+		/* spool DS */
+		if(ta->numDS != 0 && ta->ds_rrset) {
+			struct packed_rrset_data* d=(struct packed_rrset_data*)
+				ta->ds_rrset->entry.data;
+			size_t i;
+			for(i=0; i<d->count; i++) {
+				uint16_t tag = ds_get_keytag(ta->ds_rrset, i);
+				if(numid++ > max_ids) continue;
+				snprintf(str, str_len, " %u", (unsigned)tag);
+				str_len -= strlen(str); str += strlen(str);
+			}
+		}
+		/* spool DNSKEY */
+		if(ta->numDNSKEY != 0 && ta->dnskey_rrset) {
+			struct packed_rrset_data* d=(struct packed_rrset_data*)
+				ta->dnskey_rrset->entry.data;
+			size_t i;
+			for(i=0; i<d->count; i++) {
+				uint16_t tag = dnskey_calc_keytag(ta->dnskey_rrset, i);
+				if(numid++ > max_ids) continue;
+				snprintf(str, str_len, " %u", (unsigned)tag);
+				str_len -= strlen(str); str += strlen(str);
+			}
+		}
+		log_info("insert string [%d] %s", num, str_array[num-1]);
+		lock_basic_unlock(&ta->lock);
+	}
+	lock_basic_unlock(&w->env.anchors->lock);
+
+	chaos_replystr(pkt, str_array, num, edns, w);
+	regional_free_all(w->scratchpad);
 }
 
 /**
@@ -794,13 +874,13 @@ answer_chaos(struct worker* w, struct query_info* qinfo,
 			char buf[MAXHOSTNAMELEN+1];
 			if (gethostname(buf, MAXHOSTNAMELEN) == 0) {
 				buf[MAXHOSTNAMELEN] = 0;
-				chaos_replystr(pkt, buf, edns, w);
+				chaos_replystr(pkt, (char**)&buf, 1, edns, w);
 			} else 	{
 				log_err("gethostname: %s", strerror(errno));
-				chaos_replystr(pkt, "no hostname", edns, w);
+				chaos_replystr(pkt, (char**)&"no hostname", 1, edns, w);
 			}
 		}
-		else 	chaos_replystr(pkt, cfg->identity, edns, w);
+		else 	chaos_replystr(pkt, &cfg->identity, 1, edns, w);
 		return 1;
 	}
 	if(query_dname_compare(qinfo->qname, 
@@ -811,10 +891,19 @@ answer_chaos(struct worker* w, struct query_info* qinfo,
 		if(cfg->hide_version) 
 			return 0;
 		if(cfg->version==NULL || cfg->version[0]==0)
-			chaos_replystr(pkt, PACKAGE_STRING, edns, w);
-		else 	chaos_replystr(pkt, cfg->version, edns, w);
+			chaos_replystr(pkt, (char**)&PACKAGE_STRING, 1, edns, w);
+		else 	chaos_replystr(pkt, (char**)&cfg->version, 1, edns, w);
 		return 1;
 	}
+	if(query_dname_compare(qinfo->qname,
+		(uint8_t*)"\013trustanchor\007unbound") == 0)
+	{
+		if(cfg->hide_trustanchor)
+			return 0;
+		chaos_trustanchor(pkt, edns, w);
+		return 1;
+	}
+
 	return 0;
 }
 
