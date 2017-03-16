@@ -791,10 +791,10 @@ chaos_replyonestr(sldns_buffer* pkt, const char* str, struct edns_data* edns,
 static void
 chaos_trustanchor(sldns_buffer* pkt, struct edns_data* edns, struct worker* w)
 {
-	int max_txt = 16;
-	int max_tags = 32;
-	char* str_array[16];
-	uint16_t tags[32];
+#define TA_RESPONSE_MAX_TXT 16 /* max number of TXT records */
+#define TA_RESPONSE_MAX_TAGS 32 /* max number of tags printed per zone */
+	char* str_array[TA_RESPONSE_MAX_TXT];
+	uint16_t tags[TA_RESPONSE_MAX_TAGS];
 	int num = 0;
 	struct trust_anchor* ta;
 
@@ -807,14 +807,13 @@ chaos_trustanchor(sldns_buffer* pkt, struct edns_data* edns, struct worker* w)
 	/* fill the string with contents */
 	lock_basic_lock(&w->env.anchors->lock);
 	RBTREE_FOR(ta, struct trust_anchor*, w->env.anchors->tree) {
-		int i, numtag;
 		char* str;
-		size_t str_len = 255;
-		if(num == max_txt) continue;
-		str = (char*)regional_alloc(w->scratchpad, 255);
+		size_t i, numtag, str_len = 255;
+		if(num == TA_RESPONSE_MAX_TXT) continue;
+		str = (char*)regional_alloc(w->scratchpad, str_len);
 		if(!str) continue;
 		lock_basic_lock(&ta->lock);
-		numtag = anchor_list_keytags(ta, tags, max_tags);
+		numtag = anchor_list_keytags(ta, tags, TA_RESPONSE_MAX_TAGS);
 		if(numtag == 0) {
 			/* empty, insecure point */
 			lock_basic_unlock(&ta->lock);

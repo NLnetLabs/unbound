@@ -225,6 +225,6 @@ void anchors_delete_insecure(struct val_anchors* anchors, uint16_t c,
  * bigger than the array, it is truncated at num.  On errors, less keytags
  * are filled in.  The array is sorted.
  */
-int anchor_list_keytags(struct trust_anchor* ta, uint16_t* list, int num);
+size_t anchor_list_keytags(struct trust_anchor* ta, uint16_t* list, size_t num);
 
 #endif /* VALIDATOR_VAL_ANCHOR_H */

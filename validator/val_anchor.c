@@ -1284,11 +1284,10 @@ keytag_compare(const void* x, const void* y)
 	return -1;
 }
 
-int
-anchor_list_keytags(struct trust_anchor* ta, uint16_t* list, int num)
+size_t
+anchor_list_keytags(struct trust_anchor* ta, uint16_t* list, size_t num)
 {
-	size_t i;
-	int ret = 0;
+	size_t i, ret = 0;
 	if(ta->numDS == 0 && ta->numDNSKEY == 0)
 		return 0; /* insecure point */
 	if(ta->numDS != 0 && ta->ds_rrset) {
@@ -1307,6 +1306,6 @@ anchor_list_keytags(struct trust_anchor* ta, uint16_t* list, int num)
 			list[ret++] = dnskey_calc_keytag(ta->dnskey_rrset, i);
 		}
 	}
-	qsort(list, (size_t)ret, sizeof(*list), keytag_compare);
+	qsort(list, ret, sizeof(*list), keytag_compare);
 	return ret;
 }
