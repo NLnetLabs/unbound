@@ -793,6 +793,7 @@ chaos_trustanchor(sldns_buffer* pkt, struct edns_data* edns, struct worker* w)
 	if(!w->env.need_to_validate) {
 		/* no validator module, reply no trustanchors */
 		chaos_replystr(pkt, NULL, 0, edns, w);
+		return;
 	}
 
 	/* fill the string with contents */
