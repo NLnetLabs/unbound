@@ -774,6 +774,14 @@ chaos_replystr(sldns_buffer* pkt, char** str, int num, struct edns_data* edns,
 	attach_edns_record(pkt, edns);
 }
 
+/** Reply with one string */
+static void
+chaos_replyonestr(sldns_buffer* pkt, const char* str, struct edns_data* edns,
+	struct worker* worker)
+{
+	chaos_replystr(pkt, (char**)&str, 1, edns, worker);
+}
+
 /**
  * Create CH class trustanchor answer.
  * @param pkt: buffer
@@ -857,13 +865,13 @@ answer_chaos(struct worker* w, struct query_info* qinfo,
 			char buf[MAXHOSTNAMELEN+1];
 			if (gethostname(buf, MAXHOSTNAMELEN) == 0) {
 				buf[MAXHOSTNAMELEN] = 0;
-				chaos_replystr(pkt, (char**)&buf, 1, edns, w);
+				chaos_replyonestr(pkt, buf, edns, w);
 			} else 	{
 				log_err("gethostname: %s", strerror(errno));
-				chaos_replystr(pkt, (char**)&"no hostname", 1, edns, w);
+				chaos_replyonestr(pkt, "no hostname", edns, w);
 			}
 		}
-		else 	chaos_replystr(pkt, (char**)&cfg->identity, 1, edns, w);
+		else 	chaos_replyonestr(pkt, cfg->identity, edns, w);
 		return 1;
 	}
 	if(query_dname_compare(qinfo->qname, 
@@ -874,8 +882,8 @@ answer_chaos(struct worker* w, struct query_info* qinfo,
 		if(cfg->hide_version) 
 			return 0;
 		if(cfg->version==NULL || cfg->version[0]==0)
-			chaos_replystr(pkt, (char**)&PACKAGE_STRING, 1, edns, w);
-		else 	chaos_replystr(pkt, (char**)&cfg->version, 1, edns, w);
+			chaos_replyonestr(pkt, PACKAGE_STRING, edns, w);
+		else 	chaos_replyonestr(pkt, cfg->version, edns, w);
 		return 1;
 	}
 	if(query_dname_compare(qinfo->qname,
