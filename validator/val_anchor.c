@@ -1277,7 +1277,11 @@ anchors_delete_insecure(struct val_anchors* anchors, uint16_t c,
 static int
 keytag_compare(const void* x, const void* y)
 {
-	return *(uint16_t*)x - *(uint16_t*)y;
+	if(*(uint16_t*)x == *(uint16_t*)y)
+		return 0;
+	if(*(uint16_t*)x > *(uint16_t*)y)
+		return 1;
+	return -1;
 }
 
 int
