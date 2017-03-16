@@ -918,7 +918,7 @@ val_sigcrypt.lo val_sigcrypt.o: $(srcdir)/validator/val_sigcrypt.c config.h \
  $(srcdir)/util/locks.h $(srcdir)/util/log.h $(srcdir)/validator/val_secalgo.h $(srcdir)/validator/validator.h \
  $(srcdir)/util/module.h $(srcdir)/util/data/msgreply.h $(srcdir)/util/data/msgparse.h $(srcdir)/sldns/pkthdr.h \
  $(srcdir)/sldns/rrdef.h $(srcdir)/validator/val_utils.h $(srcdir)/util/data/dname.h $(srcdir)/util/rbtree.h \
- $(srcdir)/util/net_help.h $(srcdir)/util/regional.h $(srcdir)/sldns/keyraw.h \
+ $(srcdir)/util/net_help.h $(srcdir)/util/regional.h $(srcdir)/util/config_file.h $(srcdir)/sldns/keyraw.h \
  $(srcdir)/sldns/sbuffer.h $(srcdir)/sldns/parseutil.h $(srcdir)/sldns/wire2str.h \
  
 val_utils.lo val_utils.o: $(srcdir)/validator/val_utils.c config.h $(srcdir)/validator/val_utils.h \
@@ -1083,7 +1083,8 @@ worker.lo worker.o: $(srcdir)/daemon/worker.c config.h $(srcdir)/util/log.h $(sr
  $(srcdir)/util/data/msgencode.h $(srcdir)/util/data/dname.h $(srcdir)/util/fptr_wlist.h $(srcdir)/util/tube.h \
  $(srcdir)/iterator/iter_fwd.h $(srcdir)/iterator/iter_hints.h $(srcdir)/validator/autotrust.h \
  $(srcdir)/validator/val_anchor.h $(srcdir)/respip/respip.h $(srcdir)/libunbound/context.h \
- $(srcdir)/libunbound/unbound.h $(srcdir)/libunbound/libworker.h $(srcdir)/util/shm_side/shm_main.h
+ $(srcdir)/libunbound/unbound.h $(srcdir)/libunbound/libworker.h $(srcdir)/sldns/wire2str.h \
+ $(srcdir)/util/shm_side/shm_main.h
 testbound.lo testbound.o: $(srcdir)/testcode/testbound.c config.h $(srcdir)/testcode/testpkts.h \
  $(srcdir)/testcode/replay.h $(srcdir)/util/netevent.h $(srcdir)/util/rbtree.h $(srcdir)/testcode/fake_event.h \
  $(srcdir)/daemon/remote.h \
@@ -1113,7 +1114,8 @@ worker.lo worker.o: $(srcdir)/daemon/worker.c config.h $(srcdir)/util/log.h $(sr
  $(srcdir)/util/data/msgencode.h $(srcdir)/util/data/dname.h $(srcdir)/util/fptr_wlist.h $(srcdir)/util/tube.h \
  $(srcdir)/iterator/iter_fwd.h $(srcdir)/iterator/iter_hints.h $(srcdir)/validator/autotrust.h \
  $(srcdir)/validator/val_anchor.h $(srcdir)/respip/respip.h $(srcdir)/libunbound/context.h \
- $(srcdir)/libunbound/unbound.h $(srcdir)/libunbound/libworker.h $(srcdir)/util/shm_side/shm_main.h
+ $(srcdir)/libunbound/unbound.h $(srcdir)/libunbound/libworker.h $(srcdir)/sldns/wire2str.h \
+ $(srcdir)/util/shm_side/shm_main.h
 acl_list.lo acl_list.o: $(srcdir)/daemon/acl_list.c config.h $(srcdir)/daemon/acl_list.h \
  $(srcdir)/util/storage/dnstree.h $(srcdir)/util/rbtree.h $(srcdir)/services/view.h $(srcdir)/util/locks.h \
  $(srcdir)/util/log.h $(srcdir)/util/regional.h $(srcdir)/util/config_file.h $(srcdir)/util/net_help.h \

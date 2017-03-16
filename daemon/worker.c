@@ -69,7 +69,6 @@
 #include "iterator/iter_hints.h"
 #include "validator/autotrust.h"
 #include "validator/val_anchor.h"
-#include "validator/val_sigcrypt.h"
 #include "respip/respip.h"
 #include "libunbound/context.h"
 #include "libunbound/libworker.h"
