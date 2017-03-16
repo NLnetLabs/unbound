@@ -3,6 +3,7 @@
 	- Add trustanchor.unbound CH TXT that gets a response with a number
 	  of TXT RRs with a string like "example.com. 2345 1234" with
 	  the trust anchors and their keytags.
+	- Fix that looped DNAMEs do not cause unbound to spend effort.
 
 13 March 2017: Wouter
 	- testbound understands Deckard MATCH rcode question answer commands.

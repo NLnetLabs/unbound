@@ -2263,6 +2263,17 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 		/* YXDOMAIN is a permanent error, no need to retry */
 		type = RESPONSE_TYPE_ANSWER;
 	}
+	if(type == RESPONSE_TYPE_CNAME && iq->response->rep->an_numrrsets >= 1
+		&& ntohs(iq->response->rep->rrsets[0]->rk.type) == LDNS_RR_TYPE_DNAME) {
+		uint8_t* sname = NULL;
+		size_t snamelen = 0;
+		get_cname_target(iq->response->rep->rrsets[0], &sname,
+			&snamelen);
+		if(snamelen && dname_subdomain_c(sname, iq->response->rep->rrsets[0]->rk.dname)) {
+			/* DNAME to a subdomain loop; do not recurse */
+			type = RESPONSE_TYPE_ANSWER;
+		}
+	}
 
 	/* handle each of the type cases */
 	if(type == RESPONSE_TYPE_ANSWER) {

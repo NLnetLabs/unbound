@@ -691,9 +691,12 @@ STEP 220902 CHECK_ANSWER
 ENTRY_BEGIN
 MATCH all
 REPLY QR RD RA DO
-REPLY SERVFAIL
+REPLY NOERROR
 SECTION QUESTION
 cyc.example.com. IN A
+SECTION ANSWER
+example.com.	0	IN	DNAME	example.com.
+cyc.example.com.	0	IN	CNAME	cyc.example.com.
 ENTRY_END
 
 ; ns1.example.com.
