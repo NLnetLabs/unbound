@@ -1406,6 +1406,10 @@ global local\-zone elements.
 View specific local\-data elements. Has the same behaviour as the global
 local\-data elements.
 .TP
+.B local\-data\-ptr: \fI"IPaddr name"
+View specific local\-data\-ptr elements. Has the same behaviour as the global
+local\-data\-ptr elements.
+.TP
 .B view\-first: \fI<yes or no>
 If enabled, it attempts to use the global local\-zone and local\-data if there
 is no match in the view specific options.

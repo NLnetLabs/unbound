@@ -782,6 +782,7 @@ remote-control:
 #	name: "viewname"
 #	local-zone: "example.com" redirect
 #	local-data: "example.com A 192.0.2.3"
+# 	local-data-ptr: "192.0.2.3 www.example.com"
 #	view-first: no
 # view:
 #	name: "anotherview"

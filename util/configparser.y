@@ -272,7 +272,7 @@ viewstart: VAR_VIEW
 contents_view: contents_view content_view 
 	| ;
 content_view: view_name | view_local_zone | view_local_data | view_first |
-		view_response_ip | view_response_ip_data
+		view_response_ip | view_response_ip_data | view_local_data_ptr
 	;
 server_num_threads: VAR_NUM_THREADS STRING_ARG 
 	{ 
@@ -1861,6 +1861,21 @@ view_local_data: VAR_LOCAL_DATA STRING_ARG
 		if(!cfg_strlist_insert(&cfg_parser->cfg->views->local_data, $2)) {
 			fatal_exit("out of memory adding local-data");
 			free($2);
+		}
+	}
+	;
+view_local_data_ptr: VAR_LOCAL_DATA_PTR STRING_ARG
+	{
+		char* ptr;
+		OUTYY(("P(view_local_data_ptr:%s)\n", $2));
+		ptr = cfg_ptr_reverse($2);
+		free($2);
+		if(ptr) {
+			if(!cfg_strlist_insert(&cfg_parser->cfg->views->
+				local_data, ptr))
+				fatal_exit("out of memory adding local-data");
+		} else {
+			yyerror("local-data-ptr could not be reversed");
 		}
 	}
 	;

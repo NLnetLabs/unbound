@@ -1,3 +1,6 @@
+17 March 2017: Wouter
+	- Patch for view functionality for local-data-ptr from Björn Ketelaars.
+
 16 March 2017: Wouter
 	- Fix that SHM is not inited if not enabled.
 	- Add trustanchor.unbound CH TXT that gets a response with a number
