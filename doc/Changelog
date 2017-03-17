@@ -1,5 +1,7 @@
 17 March 2017: Wouter
 	- Patch for view functionality for local-data-ptr from Björn Ketelaars.
+	- Fix #1237 - Wrong resolving in chain, for norec queries that get
+	  SERVFAIL returned.
 
 16 March 2017: Wouter
 	- Fix that SHM is not inited if not enabled.

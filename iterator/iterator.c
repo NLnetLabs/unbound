@@ -1351,7 +1351,7 @@ processInitRequest3(struct module_qstate* qstate, struct iter_qstate* iq,
 
 	/* If the RD flag wasn't set, then we just finish with the 
 	 * cached referral as the response. */
-	if(!(qstate->query_flags & BIT_RD)) {
+	if(!(qstate->query_flags & BIT_RD) && iq->deleg_msg) {
 		iq->response = iq->deleg_msg;
 		if(verbosity >= VERB_ALGO && iq->response)
 			log_dns_msg("no RD requested, using delegation msg", 
