@@ -1,6 +1,9 @@
 #ifndef UNBOUND_DNSCRYPT_H
 #define UNBOUND_DNSCRYPT_H
 
+#include "dnscrypt/dnscrypt_config.h"
+#ifdef USE_DNSCRYPT
+
 #define DNSCRYPT_MAGIC_HEADER_LEN 8U
 #define DNSCRYPT_MAGIC_RESPONSE  "r6fnvWj8"
 
@@ -90,4 +93,5 @@ int dnsc_handle_curved_request(struct dnsc_env* dnscenv,
  */
 
 int dnsc_handle_uncurved_request(struct comm_reply *repinfo);
+#endif /* USE_DNSCRYPT */
 #endif
