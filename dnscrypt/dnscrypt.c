@@ -139,9 +139,10 @@ dnscrypt_hrtime(void)
     int ret;
 
     ret = gettimeofday(&tv, NULL);
-    assert(ret == 0);
     if (ret == 0) {
         ts = (uint64_t)tv.tv_sec * 1000000U + (uint64_t)tv.tv_usec;
+    } else {
+	log_err("gettimeofday: %s", strerror(errno));
     }
     return ts;
 }
