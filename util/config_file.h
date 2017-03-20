@@ -434,6 +434,18 @@ struct config_file {
 	int shm_enable;
 	/* SHM data - key for the shm */
 	int shm_key;
+
+	/** DNSCrypt */
+	/** true to enable dnscrypt */
+	int dnscrypt;
+	/** port on which to provide dnscrypt service */
+	int dnscrypt_port;
+	/** provider name 2.dnscrypt-cert.example.com */
+	char* dnscrypt_provider;
+	/** dnscrypt secret keys 1.key */
+	struct config_strlist* dnscrypt_secret_key;
+	/** dnscrypt provider certs 1.cert */
+	struct config_strlist* dnscrypt_provider_cert;
 };
 
 /** from cfg username, after daemonise setup performed */

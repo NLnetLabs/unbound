@@ -574,6 +574,17 @@ daemon_fork(struct daemon* daemon)
 
 	if(!acl_list_apply_cfg(daemon->acl, daemon->cfg, daemon->views))
 		fatal_exit("Could not setup access control list");
+	if(daemon->cfg->dnscrypt) {
+#ifdef USE_DNSCRYPT
+		daemon->dnscenv = dnsc_create();
+		if (!daemon->dnscenv)
+			fatal_exit("dnsc_create failed");
+		dnsc_apply_cfg(daemon->dnscenv, daemon->cfg);
+#else
+		fatal_exit("dnscrypt enabled in config but unbound was not built with "
+				   "dnscypt support");
+#endif
+	}
 	/* create global local_zones */
 	if(!(daemon->local_zones = local_zones_create()))
 		fatal_exit("Could not create local zones: out of memory");

@@ -404,6 +404,12 @@ ratelimit-factor{COLON}		{ YDVAR(1, VAR_RATELIMIT_FACTOR) }
 response-ip-tag{COLON}		{ YDVAR(2, VAR_RESPONSE_IP_TAG) }
 response-ip{COLON}		{ YDVAR(2, VAR_RESPONSE_IP) }
 response-ip-data{COLON}		{ YDVAR(2, VAR_RESPONSE_IP_DATA) }
+dnscrypt{COLON}			{ YDVAR(0, VAR_DNSCRYPT) }
+dnscrypt-enable{COLON}		{ YDVAR(1, VAR_DNSCRYPT_ENABLE) }
+dnscrypt-port{COLON}		{ YDVAR(1, VAR_DNSCRYPT_PORT) }
+dnscrypt-provider{COLON}	{ YDVAR(1, VAR_DNSCRYPT_PROVIDER) }
+dnscrypt-secret-key{COLON}	{ YDVAR(1, VAR_DNSCRYPT_SECRET_KEY) }
+dnscrypt-provider-cert{COLON}	{ YDVAR(1, VAR_DNSCRYPT_PROVIDER_CERT) }
 <INITIAL,val>{NEWLINE}		{ LEXOUT(("NL\n")); cfg_parser->line++; }
 
 	/* Quoted strings. Strip leading and ending quotes */

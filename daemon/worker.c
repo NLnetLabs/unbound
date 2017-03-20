@@ -75,6 +75,7 @@
 #include "sldns/sbuffer.h"
 #include "sldns/wire2str.h"
 #include "util/shm_side/shm_main.h"
+#include "dnscrypt/dnscrypt.h"
 
 #ifdef HAVE_SYS_TYPES_H
 #  include <sys/types.h>
@@ -973,6 +974,40 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 		verbose(VERB_ALGO, "handle request called with err=%d", error);
 		return 0;
 	}
+#ifdef USE_DNSCRYPT
+    repinfo->max_udp_size = worker->daemon->cfg->max_udp_size;
+    if(!dnsc_handle_curved_request(worker->daemon->dnscenv, repinfo)) {
+        return 0;
+    }
+    if(c->dnscrypt && !repinfo->is_dnscrypted) {
+        char buf[LDNS_MAX_DOMAINLEN+1];
+        // Check if this is unencrypted and asking for certs
+        if(worker_check_request(c->buffer, worker) != 0) {
+            verbose(VERB_ALGO, "dnscrypt: worker check request: bad query.");
+            log_addr(VERB_CLIENT,"from",&repinfo->addr, repinfo->addrlen);
+            comm_point_drop_reply(repinfo);
+            return 0;
+        }
+        if(!query_info_parse(&qinfo, c->buffer)) {
+            verbose(VERB_ALGO, "dnscrypt: worker parse request: formerror.");
+            log_addr(VERB_CLIENT,"from",&repinfo->addr, repinfo->addrlen);
+            comm_point_drop_reply(repinfo);
+            return 0;
+        }
+        dname_str(qinfo.qname, buf);
+        if(!(qinfo.qtype == LDNS_RR_TYPE_TXT &&
+             strcasecmp(buf, worker->daemon->dnscenv->provider_name) == 0)) {
+            verbose(VERB_ALGO,
+                    "dnscrypt: not TXT %s. Receive: %s %s",
+                    worker->daemon->dnscenv->provider_name,
+                    sldns_rr_descript(qinfo.qtype)->_name,
+                    buf);
+            comm_point_drop_reply(repinfo);
+            return 0;
+        }
+        sldns_buffer_rewind(c->buffer);
+    }
+#endif
 #ifdef USE_DNSTAP
 	if(worker->dtenv.log_client_query_messages)
 		dt_msg_send_client_query(&worker->dtenv, &repinfo->addr, c->type,
@@ -1340,6 +1375,11 @@ send_reply_rc:
 		log_reply_info(0, &qinfo, &repinfo->addr, repinfo->addrlen,
 			tv, 1, c->buffer);
 	}
+#ifdef USE_DNSCRYPT
+    if(!dnsc_handle_uncurved_request(repinfo)) {
+        return 0;
+    }
+#endif
 	return rc;
 }
 

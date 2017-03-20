@@ -64,6 +64,11 @@ struct shm_main_info;
 struct dt_env;
 #endif
 
+#include "dnscrypt/dnscrypt_config.h"
+#ifdef USE_DNSCRYPT
+struct dnsc_env;
+#endif
+
 /**
  * Structure holding worker list.
  * Holds globally visible information.
@@ -125,6 +130,10 @@ struct daemon {
 	struct respip_set* respip_set;
 	/** some response-ip tags or actions are configured if true */
 	int use_response_ip;
+#ifdef USE_DNSCRYPT
+	/** the dnscrypt environment */
+	struct dnsc_env* dnscenv;
+#endif
 };
 
 /**

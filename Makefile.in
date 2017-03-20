@@ -23,6 +23,8 @@ CHECKLOCK_SRC=testcode/checklocks.c
 CHECKLOCK_OBJ=@CHECKLOCK_OBJ@
 DNSTAP_SRC=@DNSTAP_SRC@
 DNSTAP_OBJ=@DNSTAP_OBJ@
+DNSCRYPT_SRC=@DNSCRYPT_SRC@
+DNSCRYPT_OBJ=@DNSCRYPT_OBJ@
 WITH_PYTHONMODULE=@WITH_PYTHONMODULE@
 WITH_PYUNBOUND=@WITH_PYUNBOUND@
 PY_MAJOR_VERSION=@PY_MAJOR_VERSION@
@@ -115,7 +117,7 @@ validator/val_kcache.c validator/val_kentry.c validator/val_neg.c \
 validator/val_nsec3.c validator/val_nsec.c validator/val_secalgo.c \
 validator/val_sigcrypt.c validator/val_utils.c dns64/dns64.c \
 cachedb/cachedb.c respip/respip.c $(CHECKLOCK_SRC) \
-$(DNSTAP_SRC)
+$(DNSTAP_SRC) $(DNSCRYPT_SRC)
 COMMON_OBJ_WITHOUT_NETCALL=dns.lo infra.lo rrset.lo dname.lo msgencode.lo \
 as112.lo msgparse.lo msgreply.lo packed_rrset.lo iterator.lo iter_delegpt.lo \
 iter_donotq.lo iter_fwd.lo iter_hints.lo iter_priv.lo iter_resptype.lo \
@@ -126,7 +128,7 @@ random.lo rbtree.lo regional.lo rtt.lo dnstree.lo lookup3.lo lruhash.lo \
 slabhash.lo timehist.lo tube.lo winsock_event.lo autotrust.lo val_anchor.lo \
 validator.lo val_kcache.lo val_kentry.lo val_neg.lo val_nsec3.lo val_nsec.lo \
 val_secalgo.lo val_sigcrypt.lo val_utils.lo dns64.lo cachedb.lo \
-$(PYTHONMOD_OBJ) $(CHECKLOCK_OBJ) $(DNSTAP_OBJ)
+$(PYTHONMOD_OBJ) $(CHECKLOCK_OBJ) $(DNSTAP_OBJ) $(DNSCRYPT_OBJ)
 COMMON_OBJ_WITHOUT_NETCALL+=respip.lo
 COMMON_OBJ_WITHOUT_UB_EVENT=$(COMMON_OBJ_WITHOUT_NETCALL) netevent.lo listen_dnsport.lo \
 outside_network.lo
@@ -382,6 +384,13 @@ dnstap/dnstap.pb-c.c dnstap/dnstap.pb-c.h: $(srcdir)/dnstap/dnstap.proto
 
 dnstap.pb-c.lo dnstap.pb-c.o: dnstap/dnstap.pb-c.c dnstap/dnstap.pb-c.h
 
+# dnscrypt
+dnscrypt.lo dnscrypt.o: $(srcdir)/dnscrypt/dnscrypt.c config.h \
+	dnscrypt/dnscrypt_config.h \
+	$(srcdir)/dnscrypt/dnscrypt.h $(srcdir)/dnscrypt/cert.h \
+	$(srcdir)/util/config_file.h $(srcdir)/util/log.h \
+	$(srcdir)/util/netevent.h
+
 # Python Module
 pythonmod.lo pythonmod.o: $(srcdir)/pythonmod/pythonmod.c config.h \
 	pythonmod/interface.h \
@@ -587,6 +596,7 @@ depend:
 			-e 's?$$(srcdir)/util/configparser.c?util/configparser.c?g' \
 			-e 's?$$(srcdir)/util/configparser.h?util/configparser.h?g' \
 			-e 's?$$(srcdir)/dnstap/dnstap_config.h??g' \
+			-e 's?$$(srcdir)/dnscrypt/dnscrypt_config.h??g' \
 			-e 's?$$(srcdir)/pythonmod/pythonmod.h?$$(PYTHONMOD_HEADER)?g' \
 			-e 's!\(.*\)\.o[ :]*!\1.lo \1.o: !g' \
 			> $(DEPEND_TMP)

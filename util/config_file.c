@@ -260,6 +260,11 @@ config_create(void)
 	cfg->qname_minimisation_strict = 0;
 	cfg->shm_enable = 0;
 	cfg->shm_key = 11777;
+    cfg->dnscrypt = 0;
+	cfg->dnscrypt_port = 0;
+	cfg->dnscrypt_provider = NULL;
+	cfg->dnscrypt_provider_cert = NULL;
+	cfg->dnscrypt_secret_key = NULL;
 	return cfg;
 error_exit:
 	config_delete(cfg); 
@@ -943,6 +948,8 @@ config_read(struct config_file* cfg, const char* filename, const char* chroot)
 	ub_c_in = in;
 	ub_c_parse();
 	fclose(in);
+
+    if(!cfg->dnscrypt) cfg->dnscrypt_port = 0;
 
 	if(cfg_parser->errors != 0) {
 		fprintf(stderr, "read %s failed: %d errors in configuration file\n",

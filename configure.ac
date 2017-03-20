@@ -6,6 +6,7 @@ sinclude(ax_pthread.m4)
 sinclude(acx_python.m4)
 sinclude(ac_pkg_swig.m4)
 sinclude(dnstap/dnstap.m4)
+sinclude(dnscrypt/dnscrypt.m4)
 
 # must be numbers. ac_defun because of later processing
 m4_define([VERSION_MAJOR],[1])
@@ -1314,6 +1315,19 @@ dt_DNSTAP([$UNBOUND_RUN_DIR/dnstap.sock],
     ]
 )
 
+# check for dnscrypt if requested
+dnsc_DNSCRYPT([
+        AC_DEFINE([USE_DNSCRYPT], [1], [Define to 1 to enable dnscrypt support])
+        AC_SUBST([ENABLE_DNSCRYPT], [1])
+
+        AC_SUBST([DNSCRYPT_SRC], ["dnscrypt/dnscrypt.c"])
+        AC_SUBST([DNSCRYPT_OBJ], ["dnscrypt.lo"])
+    ],
+    [
+        AC_SUBST([ENABLE_DNSCRYPT], [0])
+    ]
+)
+
 # check for cachedb if requested
 AC_ARG_ENABLE(cachedb, AC_HELP_STRING([--enable-cachedb], [enable cachedb module that can use external cache storage]))
 case "$enable_cachedb" in
@@ -1617,6 +1631,6 @@ dnl if this is a distro tarball, that was already done by makedist.sh
 AC_SUBST(version, [VERSION_MAJOR.VERSION_MINOR.VERSION_MICRO])
 AC_SUBST(date, [`date +'%b %e, %Y'`])
 
-AC_CONFIG_FILES([Makefile doc/example.conf doc/libunbound.3 doc/unbound.8 doc/unbound-anchor.8 doc/unbound-checkconf.8 doc/unbound.conf.5 doc/unbound-control.8 doc/unbound-host.1 smallapp/unbound-control-setup.sh dnstap/dnstap_config.h contrib/libunbound.pc contrib/unbound.socket contrib/unbound.service])
+AC_CONFIG_FILES([Makefile doc/example.conf doc/libunbound.3 doc/unbound.8 doc/unbound-anchor.8 doc/unbound-checkconf.8 doc/unbound.conf.5 doc/unbound-control.8 doc/unbound-host.1 smallapp/unbound-control-setup.sh dnstap/dnstap_config.h dnscrypt/dnscrypt_config.h contrib/libunbound.pc contrib/unbound.socket contrib/unbound.service])
 AC_CONFIG_HEADER([config.h])
 AC_OUTPUT
