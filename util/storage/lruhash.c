@@ -555,7 +555,7 @@ lru_demote(struct lruhash* table, struct lruhash_entry* entry)
 	log_assert(table && entry);
 	if (entry == table->lru_end)
 		return; /* nothing to do */
-				/* remove from current lru position */
+	/* remove from current lru position */
 	lru_remove(table, entry);
 	/* add at end */
 	entry->lru_next = NULL;
