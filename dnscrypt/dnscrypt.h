@@ -58,7 +58,7 @@ struct dnscrypt_query_header {
 /**
  * Initialize DNSCrypt enviroment.
  * Initialize sodium library and allocate the dnsc_env structure.
- * \return an unitialized struct dnsc_env.
+ * \return an uninitialized struct dnsc_env.
  */
 struct dnsc_env * dnsc_create(void);
 

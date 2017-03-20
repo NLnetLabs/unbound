@@ -582,7 +582,7 @@ daemon_fork(struct daemon* daemon)
 		dnsc_apply_cfg(daemon->dnscenv, daemon->cfg);
 #else
 		fatal_exit("dnscrypt enabled in config but unbound was not built with "
-				   "dnscypt support");
+				   "dnscrypt support");
 #endif
 	}
 	/* create global local_zones */

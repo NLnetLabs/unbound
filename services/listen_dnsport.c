@@ -1072,6 +1072,7 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 			(!strchr(ifname, '@') && atoi(port) == dnscrypt_port));
 #else
 	int is_dnscrypt = 0;
+	(void)dnscrypt_port;
 #endif
 
 	if(!do_udp && !do_tcp)

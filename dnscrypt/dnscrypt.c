@@ -72,7 +72,8 @@ dnscrypt_server_uncurve(const KeyPair *keypair,
         return -1;
     }
 
-    while (*sldns_buffer_at(buffer, --len) == 0);
+    while (*sldns_buffer_at(buffer, --len) == 0)
+	    ;
 
     if (*sldns_buffer_at(buffer, len) != 0x80) {
         return -1;
@@ -137,7 +138,7 @@ dnscrypt_hrtime(void)
     uint64_t ts = (uint64_t)0U;
     int ret;
 
-    ret = evutil_gettimeofday(&tv, NULL);
+    ret = gettimeofday(&tv, NULL);
     assert(ret == 0);
     if (ret == 0) {
         ts = (uint64_t)tv.tv_sec * 1000000U + (uint64_t)tv.tv_usec;
@@ -281,7 +282,7 @@ dnsc_parse_certs(struct dnsc_env *env, struct config_file *cfg)
 				head->str,
 				(char *)(env->signed_certs + signed_cert_id),
 				sizeof(struct SignedCert)) != 0) {
-			fatal_exit("dnsc_parse_certs: failed to load %s", head->str);
+			fatal_exit("dnsc_parse_certs: failed to load %s: %s", head->str, strerror(errno));
 		}
 		verbose(VERB_OPS, "Loaded cert %s", head->str);
 	}
@@ -419,7 +420,7 @@ dnsc_parse_keys(struct dnsc_env *env, struct config_file *cfg)
 				head->str,
 				(char *)(env->keypairs[keypair_id].crypt_secretkey),
 				crypto_box_SECRETKEYBYTES) != 0) {
-			fatal_exit("dnsc_parse_keys: failed to load %s", head->str);
+			fatal_exit("dnsc_parse_keys: failed to load %s: %s", head->str, strerror(errno));
 		}
 		verbose(VERB_OPS, "Loaded key %s", head->str);
 		if (crypto_scalarmult_base(env->keypairs[keypair_id].crypt_publickey,
