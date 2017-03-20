@@ -3,6 +3,8 @@
 	  enabled in the config file from Manu Bretelle.
 	- make depend, autoconf, remove warnings about statement before var.
 	- lru_demote and lruhash_insert_or_retrieve functions for getdns.
+	- fixup for lruhash (whitespace and header file comment).
+	- dnscrypt tests.
 
 17 March 2017: Wouter
 	- Patch for view functionality for local-data-ptr from Björn Ketelaars.

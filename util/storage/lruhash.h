@@ -326,7 +326,7 @@ void lru_demote(struct lruhash* table, struct lruhash_entry* entry);
  * @param hash: hash value. User calculates the hash.
  * @param entry: identifies the entry.
  * @param data: the data.
- * @param cb_override: if not null overrides the cb_arg for the deletefunc.
+ * @param cb_arg: if not null overrides the cb_arg for the deletefunc.
  * @return: pointer to the existing entry if the key was already present,
  *     or to the entry argument if it was not.
  */
