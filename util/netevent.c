@@ -1321,10 +1321,12 @@ static int
 comm_point_tcp_handle_write(int fd, struct comm_point* c)
 {
 	ssize_t r;
+	struct sldns_buffer *buffer;
 	log_assert(c->type == comm_tcp);
-    struct sldns_buffer *buffer = c->buffer;
 #ifdef USE_DNSCRYPT
-    buffer = c->dnscrypt_buffer;
+	buffer = c->dnscrypt_buffer;
+#else
+	buffer = c->buffer;
 #endif
 	if(c->tcp_is_reading && !c->ssl)
 		return 0;
@@ -2109,13 +2111,15 @@ comm_point_delete(struct comm_point* c)
 void 
 comm_point_send_reply(struct comm_reply *repinfo)
 {
+	struct sldns_buffer* buffer;
 	log_assert(repinfo && repinfo->c);
-    struct sldns_buffer* buffer = repinfo->c->buffer;
 #ifdef USE_DNSCRYPT
-    buffer = repinfo->c->dnscrypt_buffer;
-    if(!dnsc_handle_uncurved_request(repinfo)) {
-        return;
-    }
+	buffer = repinfo->c->dnscrypt_buffer;
+    	if(!dnsc_handle_uncurved_request(repinfo)) {
+		return;
+	}
+#else
+	buffer = repinfo->c->buffer;
 #endif
 	if(repinfo->c->type == comm_udp) {
 		if(repinfo->srctype)

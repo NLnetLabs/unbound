@@ -326,12 +326,12 @@ dnsc_find_keypair(struct dnsc_env* dnscenv, struct sldns_buffer* buffer)
 {
 	const KeyPair *keypairs = dnscenv->keypairs;
 	struct dnscrypt_query_header *dnscrypt_header;
+	size_t i;
 
 	if (sldns_buffer_limit(buffer) < DNSCRYPT_QUERY_HEADER_SIZE) {
 		return NULL;
 	}
 	dnscrypt_header = (struct dnscrypt_query_header *)sldns_buffer_begin(buffer);
-	size_t i;
 	for (i = 0U; i < dnscenv->keypairs_count; i++) {
 		if (memcmp(keypairs[i].crypt_publickey, dnscrypt_header->magic_query,
                    DNSCRYPT_MAGIC_HEADER_LEN) == 0) {
@@ -352,7 +352,7 @@ dnsc_find_keypair(struct dnsc_env* dnscenv, struct sldns_buffer* buffer)
 static int
 dnsc_load_local_data(struct dnsc_env* dnscenv, struct config_file *cfg)
 {
-    int i, j;
+    size_t i, j;
 	// Insert 'local-zone: "2.dnscrypt-cert.example.com" deny'
     if(!cfg_str2list_insert(&cfg->local_zones,
                             strdup(dnscenv->provider_name),
@@ -377,10 +377,9 @@ dnsc_load_local_data(struct dnsc_env* dnscenv, struct config_file *cfg)
             log_err("Could not allocate memory");
             return -2;
         }
-        int c;
         snprintf(rr, rrlen - 1, "%s 86400 IN TXT \"", dnscenv->provider_name);
         for(j=0; j<sizeof(struct SignedCert); j++) {
-            c = (int)*((const uint8_t *) cert + j);
+       	    int c = (int)*((const uint8_t *) cert + j);
             if (isprint(c) && c != '"' && c != '\\') {
                 snprintf(rr + strlen(rr), rrlen - 1 - strlen(rr), "%c", c);
             } else {

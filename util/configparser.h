@@ -238,7 +238,13 @@ extern int yydebug;
     VAR_HIDE_TRUSTANCHOR = 448,
     VAR_USE_SYSTEMD = 449,
     VAR_SHM_ENABLE = 450,
-    VAR_SHM_KEY = 451
+    VAR_SHM_KEY = 451,
+    VAR_DNSCRYPT = 452,
+    VAR_DNSCRYPT_ENABLE = 453,
+    VAR_DNSCRYPT_PORT = 454,
+    VAR_DNSCRYPT_PROVIDER = 455,
+    VAR_DNSCRYPT_SECRET_KEY = 456,
+    VAR_DNSCRYPT_PROVIDER_CERT = 457
   };
 #endif
 /* Tokens.  */
@@ -436,6 +442,12 @@ extern int yydebug;
 #define VAR_USE_SYSTEMD 449
 #define VAR_SHM_ENABLE 450
 #define VAR_SHM_KEY 451
+#define VAR_DNSCRYPT 452
+#define VAR_DNSCRYPT_ENABLE 453
+#define VAR_DNSCRYPT_PORT 454
+#define VAR_DNSCRYPT_PROVIDER 455
+#define VAR_DNSCRYPT_SECRET_KEY 456
+#define VAR_DNSCRYPT_PROVIDER_CERT 457
 
 /* Value type.  */
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
@@ -446,7 +458,7 @@ union YYSTYPE
 
 	char*	str;
 
-#line 450 "util/configparser.h" /* yacc.c:1909  */
+#line 462 "util/configparser.h" /* yacc.c:1909  */
 };
 
 typedef union YYSTYPE YYSTYPE;

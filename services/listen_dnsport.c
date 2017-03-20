@@ -1389,16 +1389,16 @@ void listening_ports_free(struct listen_port* list)
 
 size_t listen_get_mem(struct listen_dnsport* listen)
 {
+	struct listen_list* p;
 	size_t s = sizeof(*listen) + sizeof(*listen->base) + 
 		sizeof(*listen->udp_buff) + 
 		sldns_buffer_capacity(listen->udp_buff);
 #ifdef USE_DNSCRYPT
-    s += sizeof(*listen->dnscrypt_udp_buff);
-    if(listen->udp_buff != listen->dnscrypt_udp_buff){
-        s += sldns_buffer_capacity(listen->dnscrypt_udp_buff);
-    }
+	s += sizeof(*listen->dnscrypt_udp_buff);
+	if(listen->udp_buff != listen->dnscrypt_udp_buff){
+		s += sldns_buffer_capacity(listen->dnscrypt_udp_buff);
+	}
 #endif
-	struct listen_list* p;
 	for(p = listen->cps; p; p = p->next) {
 		s += sizeof(*p);
 		s += comm_point_get_mem(p->com);

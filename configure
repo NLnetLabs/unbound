@@ -638,6 +638,9 @@ INSTALLTARGET
 ALLTARGET
 SOURCEFILE
 SOURCEDETERMINE
+DNSCRYPT_OBJ
+DNSCRYPT_SRC
+ENABLE_DNSCRYPT
 DNSTAP_OBJ
 DNSTAP_SRC
 opt_dnstap_socket_path
@@ -858,6 +861,8 @@ enable_dnstap
 with_dnstap_socket_path
 with_protobuf_c
 with_libfstrm
+enable_dnscrypt
+with_libsodium
 enable_cachedb
 with_libunbound_only
 '
@@ -1535,6 +1540,7 @@ Optional Features:
                           to it, smaller install size but libunbound export
                           table is polluted by internal symbols
   --enable-dnstap         Enable dnstap support (requires fstrm, protobuf-c)
+  --enable-dnscrypt       Enable dnscrypt support (requires libsodium)
   --enable-cachedb        enable cachedb module that can use external cache
                           storage
 
@@ -1589,6 +1595,7 @@ Optional Packages:
                           set default dnstap socket path
   --with-protobuf-c=path  Path where protobuf-c is installed, for dnstap
   --with-libfstrm=path    Path where libfstrm is installed, for dnstap
+  --with-libsodium=path   Path where libsodium is installed, for dnscrypt
   --with-libunbound-only  do not build daemon and tool programs
 
 Some influential environment variables:
@@ -20201,6 +20208,105 @@ _ACEOF
   fi
 
 
+# check for dnscrypt if requested
+
+  # Check whether --enable-dnscrypt was given.
+if test "${enable_dnscrypt+set}" = set; then :
+  enableval=$enable_dnscrypt; opt_dnscrypt=$enableval
+else
+  opt_dnscrypt=no
+fi
+
+
+  if test "x$opt_dnscrypt" != "xno"; then
+
+# Check whether --with-libsodium was given.
+if test "${with_libsodium+set}" = set; then :
+  withval=$with_libsodium;
+	CFLAGS="$CFLAGS -I$withval/include"
+	LDFLAGS="$LDFLAGS -L$withval/lib"
+
+fi
+
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing sodium_init" >&5
+$as_echo_n "checking for library containing sodium_init... " >&6; }
+if ${ac_cv_search_sodium_init+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_func_search_save_LIBS=$LIBS
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char sodium_init ();
+int
+main ()
+{
+return sodium_init ();
+  ;
+  return 0;
+}
+_ACEOF
+for ac_lib in '' sodium; do
+  if test -z "$ac_lib"; then
+    ac_res="none required"
+  else
+    ac_res=-l$ac_lib
+    LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
+  fi
+  if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_sodium_init=$ac_res
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext
+  if ${ac_cv_search_sodium_init+:} false; then :
+  break
+fi
+done
+if ${ac_cv_search_sodium_init+:} false; then :
+
+else
+  ac_cv_search_sodium_init=no
+fi
+rm conftest.$ac_ext
+LIBS=$ac_func_search_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_sodium_init" >&5
+$as_echo "$ac_cv_search_sodium_init" >&6; }
+ac_res=$ac_cv_search_sodium_init
+if test "$ac_res" != no; then :
+  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
+
+else
+  as_fn_error $? "The sodium library was not found. Please install sodium!" "$LINENO" 5
+fi
+
+
+
+$as_echo "#define USE_DNSCRYPT 1" >>confdefs.h
+
+        ENABLE_DNSCRYPT=1
+
+
+        DNSCRYPT_SRC="dnscrypt/dnscrypt.c"
+
+        DNSCRYPT_OBJ="dnscrypt.lo"
+
+
+  else
+
+        ENABLE_DNSCRYPT=0
+
+
+
+  fi
+
+
 # check for cachedb if requested
 # Check whether --enable-cachedb was given.
 if test "${enable_cachedb+set}" = set; then :
@@ -20364,7 +20470,7 @@ version=1.6.2
 date=`date +'%b %e, %Y'`
 
 
-ac_config_files="$ac_config_files Makefile doc/example.conf doc/libunbound.3 doc/unbound.8 doc/unbound-anchor.8 doc/unbound-checkconf.8 doc/unbound.conf.5 doc/unbound-control.8 doc/unbound-host.1 smallapp/unbound-control-setup.sh dnstap/dnstap_config.h contrib/libunbound.pc contrib/unbound.socket contrib/unbound.service"
+ac_config_files="$ac_config_files Makefile doc/example.conf doc/libunbound.3 doc/unbound.8 doc/unbound-anchor.8 doc/unbound-checkconf.8 doc/unbound.conf.5 doc/unbound-control.8 doc/unbound-host.1 smallapp/unbound-control-setup.sh dnstap/dnstap_config.h dnscrypt/dnscrypt_config.h contrib/libunbound.pc contrib/unbound.socket contrib/unbound.service"
 
 ac_config_headers="$ac_config_headers config.h"
 
@@ -21366,6 +21472,7 @@ do
     "doc/unbound-host.1") CONFIG_FILES="$CONFIG_FILES doc/unbound-host.1" ;;
     "smallapp/unbound-control-setup.sh") CONFIG_FILES="$CONFIG_FILES smallapp/unbound-control-setup.sh" ;;
     "dnstap/dnstap_config.h") CONFIG_FILES="$CONFIG_FILES dnstap/dnstap_config.h" ;;
+    "dnscrypt/dnscrypt_config.h") CONFIG_FILES="$CONFIG_FILES dnscrypt/dnscrypt_config.h" ;;
     "contrib/libunbound.pc") CONFIG_FILES="$CONFIG_FILES contrib/libunbound.pc" ;;
     "contrib/unbound.socket") CONFIG_FILES="$CONFIG_FILES contrib/unbound.socket" ;;
     "contrib/unbound.service") CONFIG_FILES="$CONFIG_FILES contrib/unbound.service" ;;
