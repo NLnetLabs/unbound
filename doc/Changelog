@@ -2,6 +2,7 @@
 	- #1217. DNSCrypt support, with --enable-dnscrypt, libsodium and then
 	  enabled in the config file from Manu Bretelle.
 	- make depend, autoconf, remove warnings about statement before var.
+	- lru_demote and lruhash_insert_or_retrieve functions for getdns.
 
 17 March 2017: Wouter
 	- Patch for view functionality for local-data-ptr from Björn Ketelaars.
