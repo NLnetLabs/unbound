@@ -126,6 +126,19 @@ struct delegpt* dns_cache_find_delegation(struct module_env* env,
 	uint8_t* qname, size_t qnamelen, uint16_t qtype, uint16_t qclass, 
 	struct regional* region, struct dns_msg** msg, time_t timenow);
 
+/**
+ * generate dns_msg from cached message
+ * @param env: module environment with the DNS cache.
+ * @param q: query info, contains qname that will make up the dns message.
+ * @param r: reply info that, together with qname, will make up the dns message.
+ * @param region: where to allocate dns message.
+ * @param now: the time now, for check if TTL on cache entry is ok.
+ * @param scratch: where to allocate temporary data.
+ * */
+struct dns_msg* tomsg(struct module_env* env, struct query_info* q,
+	struct reply_info* r, struct regional* region, time_t now,
+	struct regional* scratch);
+
 /** 
  * Find cached message 
  * @param env: module environment with the DNS cache.

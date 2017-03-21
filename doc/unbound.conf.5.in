@@ -1476,6 +1476,43 @@ times.
 .B dnscrypt\-provider\-cert: \fI<path to cert file>\fR
 Path to the certificate related to the \fBdnscrypt\-secret\-key\fRs. This option
 may be specified multiple times.
+.SS "EDNS Client Subnet Module Options"
+.LP
+The ECS module must be configured in the \fBmodule\-config:\fR "subnetcache
+validator iterator" directive and be compiled into the daemon to be
+enabled.  These settings go in the \fBserver:\fR section.
+.LP
+If the destination address is whitelisted with Unbound will add the EDNS0 option
+to the query containing the relevant part of the client's address. When an
+answer contains the ECS option the response and the option are placed in a
+specialized cache. If the authority indicated no support, the response is stored
+in the regular cache.
+.LP
+Additionally, when a client includes the option in its queries, Unbound will
+forward the option to the authority regardless of the authorities presence in
+the whitelist. In this case the lookup in the regular cache is skipped.
+.LP
+The maximum size of the ECS cache is controlled by 'msg-cache-size' in the
+configuration file. On top of that, for each query only 100 different subnets
+are allowed to be stored for each address family. Exceeding that number, older
+entries will be purged from cache.
+.TP
+.B send\-client\-subnet: \fI<IP address>\fR
+Send client source address to this authority. Append /num to indicate a
+classless delegation netblock, for example like 10.2.3.4/24 or 2001::11/64. Can
+be given multiple times. Authorities not listed will not receive edns-subnet
+information.
+.TP
+.B client\-subnet\-opcode: \fI<number>\fR
+Specify positive integer smaller than 65536. Defaults to 8.
+.TP
+.B max\-client\-subnet\-ipv6: \fI<number>\fR
+Specifies the maximum prefix length of the client source address we are willing
+to expose to third parties for IPv6.  Defaults to 64.
+.TP
+.B max\-clienti-subnet\-ipv4: \fI<number>\fR
+Specifies the maximum prefix length of the client source address we are willing
+to expose to third parties for IPv4. Defaults to 24.
 .SH "MEMORY CONTROL EXAMPLE"
 In the example config settings below memory usage is reduced. Some service
 levels are lower, notable very large data and a high TCP load are no longer

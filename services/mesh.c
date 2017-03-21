@@ -348,7 +348,7 @@ void mesh_new_client(struct mesh_area* mesh, struct query_info* qinfo,
 	struct edns_data* edns, struct comm_reply* rep, uint16_t qid)
 {
 	struct mesh_state* s = NULL;
-	int unique = edns_unique_mesh_state(edns->opt_list, mesh->env);
+	int unique = unique_mesh_state(edns->opt_list, mesh->env);
 	int was_detached = 0;
 	int was_noreply = 0;
 	int added = 0;
@@ -470,7 +470,7 @@ mesh_new_callback(struct mesh_area* mesh, struct query_info* qinfo,
 	uint16_t qid, mesh_cb_func_type cb, void* cb_arg)
 {
 	struct mesh_state* s = NULL;
-	int unique = edns_unique_mesh_state(edns->opt_list, mesh->env);
+	int unique = unique_mesh_state(edns->opt_list, mesh->env);
 	int was_detached = 0;
 	int was_noreply = 0;
 	int added = 0;

@@ -52,6 +52,7 @@ struct edns_data;
 struct edns_option;
 struct inplace_cb_reply;
 struct inplace_cb_query;
+struct inplace_cb_edns_back_parsed;
 struct module_qstate;
 struct module_env;
 struct msg_parse;
@@ -621,6 +622,17 @@ int inplace_cb_query_call(struct module_env* env, struct query_info* qinfo,
 	uint16_t flags, struct sockaddr_storage* addr, socklen_t addrlen,
 	uint8_t* zone, size_t zonelen, struct module_qstate* qstate,
 	struct regional* region);
+
+/**
+ * Call the registered functions in the inplace_cb_edns_back_parsed linked list.
+ * This function is going to get called after receiving a reply from a
+ * nameserver.
+ * @param env: module environment.
+ * @param qstate: module qstate.
+ * @return false on failure (a callback function returned an error).
+ */
+int inplace_cb_edns_back_parsed_call(struct module_env* env, 
+	struct module_qstate* qstate);
 
 /**
  * Copy edns option list allocated to the new region

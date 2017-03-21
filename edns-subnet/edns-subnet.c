@@ -1,25 +1,25 @@
 /*
- * testcode/unitmain.h - unit test main program for unbound.
+ * edns-subnet/edns-subnet.c - Subnet option related constants 
  *
- * Copyright (c) 2007, NLnet Labs. All rights reserved.
+ * Copyright (c) 2013, NLnet Labs. All rights reserved.
  *
  * This software is open source.
- *
+ * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
- *
+ * 
  * Redistributions of source code must retain the above copyright notice,
  * this list of conditions and the following disclaimer.
- *
+ * 
  * Redistributions in binary form must reproduce the above copyright notice,
  * this list of conditions and the following disclaimer in the documentation
  * and/or other materials provided with the distribution.
- *
+ * 
  * Neither the name of the NLNET LABS nor the names of its contributors may
  * be used to endorse or promote products derived from this software without
  * specific prior written permission.
- *
+ * 
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
  * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -31,52 +31,40 @@
  * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
 /**
  * \file
- * Declarations useful for the unit tests.
+ * Subnet option related constants. 
  */
 
-#ifndef TESTCODE_UNITMAIN_H
-#define TESTCODE_UNITMAIN_H
-#include "util/log.h"
+#include "config.h"
 
-/** number of tests done */
-extern int testcount;
-/** test bool x, exits on failure, increases testcount. */
-#ifdef DEBUG_UNBOUND
-#define unit_assert(x) do {testcount++; log_assert(x);} while(0)
-#else
-#define unit_assert(x) do {testcount++; if(!(x)) { fprintf(stderr, "assertion failure %s:%d\n", __FILE__, __LINE__); exit(1);}} while(0)
-#endif
+#ifdef CLIENT_SUBNET /* keeps splint happy */
+#include "edns-subnet/edns-subnet.h"
+#include <string.h>
 
-/** we are now testing this function */
-void unit_show_func(const char* file, const char* func);
-/** we are testing this functionality */
-void unit_show_feature(const char* feature);
+/** Opcode for edns subnet option, as assigned by IANA. */
+uint16_t EDNSSUBNET_OPCODE = 8;
+uint8_t EDNSSUBNET_MAX_SUBNET_IP4 = 24;
+uint8_t EDNSSUBNET_MAX_SUBNET_IP6 = 64;
 
-/** unit test lruhashtable implementation */
-void lruhash_test(void);
-/** unit test slabhashtable implementation */
-void slabhash_test(void);
-/** unit test for msgreply and msgparse */
-void msgparse_test(void);
-/** unit test dname handling functions */
-void dname_test(void);
-/** unit test trust anchor storage functions */
-void anchors_test(void);
-/** unit test for verification functions */
-void verify_test(void);
-/** unit test for negative cache functions */
-void neg_test(void);
-/** unit test for regional allocator functions */
-void regional_test(void);
-#ifdef CLIENT_SUBNET
-/** Unit test for ECS functions */
-void ecs_test(void);
+int
+copy_clear(uint8_t* dst, size_t dstlen, uint8_t* src, size_t srclen, size_t n)
+{
+	size_t intpart = n / 8;  /* bytes */
+	size_t fracpart = n % 8; /* bits */
+	size_t written = intpart;
+	if (intpart > dstlen || intpart > srclen)
+		return 1;
+	if (fracpart && (intpart+1 > dstlen || intpart+1 > srclen))
+		return 1;
+	memcpy(dst, src, intpart);
+	if (fracpart) {
+		dst[intpart] = src[intpart] & ~(0xFF >> fracpart);
+		written++;
+	}
+	memset(dst + written, 0, dstlen - written);
+	return 0;
+}
+
 #endif /* CLIENT_SUBNET */
-/** unit test for ldns functions */
-void ldns_test(void);
-
-#endif /* TESTCODE_UNITMAIN_H */

@@ -3,6 +3,9 @@
 /* Directory to chroot to */
 #undef CHROOT_DIR
 
+/* Define this to enable client subnet option. */
+#undef CLIENT_SUBNET
+
 /* Do sha512 definitions in config.h */
 #undef COMPAT_SHA512
 

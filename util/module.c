@@ -216,8 +216,8 @@ void inplace_cb_reply_servfail_delete(struct module_env* env)
 }
 
 int
-inplace_cb_query_register(inplace_cb_query_func_type* cb, void* cb_arg,
-	struct module_env* env)
+inplace_cb_query_register(inplace_cb_query_func_type* cb, void* cbarg,
+	size_t cbarg_len, struct module_env* env)
 {
 	struct inplace_cb_query* callback;
 	struct inplace_cb_query** prevp;
@@ -234,7 +234,15 @@ inplace_cb_query_register(inplace_cb_query_func_type* cb, void* cb_arg,
 	}
 	callback->next = NULL;
 	callback->cb = cb;
-    callback->cb_arg = cb_arg;
+	if(cbarg) {
+		if(!(callback->cb_arg = calloc(1, cbarg_len))){
+			log_err("out of memory during edns callback argument"
+				"registration.");
+			free(callback);
+			return 0;
+		}
+		memcpy(callback->cb_arg, cbarg, cbarg_len);
+	}
 	
 	prevp = (struct inplace_cb_query**)
 		&env->inplace_cb_lists[inplace_cb_query];
@@ -253,11 +261,67 @@ inplace_cb_query_delete(struct module_env* env)
 	/* delete list */
 	while(curr) {
 		tmp = curr->next;
+		free(curr->cb_arg);
 		free(curr);
 		curr = tmp;
 	}
 	/* update head pointer */
 	env->inplace_cb_lists[inplace_cb_query] = NULL;
+}
+
+int
+inplace_cb_edns_back_parsed_register(inplace_cb_edns_back_parsed_func_type* cb,
+	void* cbarg, size_t cbarg_len, struct module_env* env)
+{
+	struct inplace_cb_edns_back_parsed* callback;
+	struct inplace_cb_edns_back_parsed** prevp;
+	if(env->worker) {
+		log_err("invalid edns callback registration: "
+			"trying to register callback after module init phase");
+		return 0;
+	}
+
+	callback = (struct inplace_cb_edns_back_parsed*)calloc(1, sizeof(*callback));
+	if(callback == NULL) {
+		log_err("out of memory during edns callback registration.");
+		return 0;
+	}
+	callback->next = NULL;
+	callback->cb = cb;
+	if(cbarg) {
+		if(!(callback->cb_arg = calloc(1, cbarg_len))){
+			log_err("out of memory during edns callback argument"
+				"registration.");
+			free(callback);
+			return 0;
+		}
+		memcpy(callback->cb_arg, cbarg, cbarg_len);
+	}
+	
+	prevp = (struct inplace_cb_edns_back_parsed**)
+		&env->inplace_cb_lists[inplace_cb_edns_back_parsed];
+	/* append at end of list */
+	while(*prevp != NULL)
+		prevp = &((*prevp)->next);
+	*prevp = callback;
+	return 1;
+}
+
+void
+inplace_cb_edns_back_parsed_delete(struct module_env* env)
+{
+	struct inplace_cb_edns_back_parsed* curr =
+		env->inplace_cb_lists[inplace_cb_edns_back_parsed];
+	struct inplace_cb_edns_back_parsed* tmp;
+	/* delete list */
+	while(curr) {
+		tmp = curr->next;
+		free(curr->cb_arg);
+		free(curr);
+		curr = tmp;
+	}
+	/* update head pointer */
+	env->inplace_cb_lists[inplace_cb_edns_back_parsed] = NULL;
 }
 
 void
@@ -292,9 +356,11 @@ edns_bypass_cache_stage(struct edns_option* list, struct module_env* env)
 }
 
 int
-edns_unique_mesh_state(struct edns_option* list, struct module_env* env)
+unique_mesh_state(struct edns_option* list, struct module_env* env)
 {
 	size_t i;
+	if(env->unique_mesh)
+		return 1;
 	for(; list; list=list->next)
 		for(i=0; i<env->edns_known_options_num; i++)
 			if(env->edns_known_options[i].opt_code == list->opt_code &&

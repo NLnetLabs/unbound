@@ -730,6 +730,19 @@ case "$enable_sha2" in
 	;;
 esac
 
+AC_ARG_ENABLE(subnet, AC_HELP_STRING([--enable-subnet], [Enable client subnet]))
+case "$enable_subnet" in
+	yes)
+	AC_DEFINE([CLIENT_SUBNET], [1], [Define this to enable client subnet option.])
+	SUBNET_OBJ="edns-subnet.lo subnetmod.lo addrtree.lo subnet-whitelist.lo"
+	AC_SUBST(SUBNET_OBJ)
+	SUBNET_HEADER='$(srcdir)/edns-subnet/subnetmod.h $(srcdir)/edns-subnet/edns-subnet.h $(srcdir)/edns-subnet/subnet-whitelist.h $(srcdir)/edns-subnet/addrtree.h'
+	AC_SUBST(SUBNET_HEADER)
+	;;
+	no|*)
+	;;
+esac
+
 # check wether gost also works
 AC_DEFUN([AC_CHECK_GOST_WORKS],
 [AC_REQUIRE([AC_PROG_CC])

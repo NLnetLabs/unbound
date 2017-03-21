@@ -197,6 +197,8 @@ enum inplace_cb_list_type {
 	inplace_cb_reply_servfail,
 	/* Inplace callbacks for when a query is ready to be sent to the back.*/
 	inplace_cb_query,
+	/* Inplace callback for when a reply is received from the back. */
+	inplace_cb_edns_back_parsed,
 	/* Total number of types. Used for array initialization.
 	 * Should always be last. */
 	inplace_cb_types_total
@@ -290,6 +292,30 @@ struct inplace_cb_query {
 	void* cb_arg;
 };
 
+/**
+ * Inplace callback function called after receiving reply from back.
+ * Called as func(qstate, cb_args)
+ * Where:
+ *	qstate: the query state
+ *	cb_args: argument passed when registering callback.
+ */
+typedef int inplace_cb_edns_back_parsed_func_type(struct module_qstate* qstate, 
+	void* cb_args);
+
+/**
+ * Inplace callback list of registered routines to be called after receiving a
+ * reply from back.
+ */
+struct inplace_cb_edns_back_parsed {
+	/** next in list */
+	struct inplace_cb_edns_back_parsed* next;
+	/**
+	 * Inplace callback routine for cache stage response.
+	 * called as cb(qstate, cb_args);
+	 */
+	inplace_cb_edns_back_parsed_func_type* cb;
+	void* cb_arg;
+};
 /**
  * Module environment.
  * Services and data provided to the module.
@@ -454,6 +480,9 @@ struct module_env {
 	struct edns_known_option* edns_known_options;
 	/* Number of known edns options */
 	size_t edns_known_options_num;
+
+	/* Make every mesh state unique, do not aggregate mesh states. */
+	int unique_mesh;
 };
 
 /**
@@ -764,19 +793,41 @@ void inplace_cb_reply_servfail_delete(struct module_env* env);
 /**
  * Register an inplace callback function called before quering a nameserver.
  * @param cb: pointer to the callback function.
- * @param cb_arg: optional argument for the callback function.
+ * @param cbarg: optional argument for the callback function.
+ * @param cbarg_len: length of the argument for the callback function, 0 if
+ * empty.
  * @param env: the module environment.
  * @return true on success, false on failure (out of memory or trying to
  *	register after the environment is copied to the threads.)
  */
-int inplace_cb_query_register(inplace_cb_query_func_type* cb, void* cb_arg,
-	struct module_env* env);
+int inplace_cb_query_register(inplace_cb_query_func_type* cb, void* cbarg,
+	size_t cbarg_len, struct module_env* env);
 
 /**
  * Delete the inplace_cb_query callback linked list.
  * @param env: the module environment.
  */
 void inplace_cb_query_delete(struct module_env* env);
+
+/**
+ * Register an inplace callback function called after receiving an reply from a
+ * namerserver.
+ * @param cb: pointer to the callback function.
+ * @param cbarg: optional argument for the callback function.
+ * @param cbarg_len: length of the argument for the callback function, 0 if
+ * empty.
+ * @param env: the module environment.
+ * @return true on success, false on failure (out of memory or trying to
+ *	register after the environment is copied to the threads.)
+ */
+int inplace_cb_edns_back_parsed_register(inplace_cb_edns_back_parsed_func_type* cb,
+	void* cbarg, size_t cbarg_len, struct module_env* env);
+
+/**
+ * Delete the inplace_cb_edns_back_parsed callback linked list.
+ * @param env: the module environment.
+ */
+void inplace_cb_edns_back_parsed_delete(struct module_env* env);
 
 /**
  * Delete all the inplace callback linked lists.
@@ -805,13 +856,14 @@ int edns_bypass_cache_stage(struct edns_option* list,
 	struct module_env* env);
 
 /**
- * Check if an edns option needs a unique mesh state.
+ * Check if an unique mesh state is required. Might be triggered by EDNS option
+ * or set for the complete env.
  * @param list: the edns options.
  * @param env: the module environment.
  * @return true if an edns option needs a unique mesh state,
  *	false otherwise.
  */
-int edns_unique_mesh_state(struct edns_option* list, struct module_env* env);
+int unique_mesh_state(struct edns_option* list, struct module_env* env);
 
 /**
  * Log the known edns options.

@@ -479,8 +479,7 @@ gen_dns_msg(struct regional* region, struct query_info* q, size_t num)
 	return msg;
 }
 
-/** generate dns_msg from cached message */
-static struct dns_msg*
+struct dns_msg*
 tomsg(struct module_env* env, struct query_info* q, struct reply_info* r, 
 	struct regional* region, time_t now, struct regional* scratch)
 {

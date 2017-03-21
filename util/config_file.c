@@ -62,6 +62,9 @@
 #ifdef HAVE_GLOB_H
 # include <glob.h>
 #endif
+#ifdef CLIENT_SUBNET
+#include "edns-subnet/edns-subnet.h"
+#endif
 #ifdef HAVE_PWD_H
 #include <pwd.h>
 #endif
@@ -173,6 +176,12 @@ config_create(void)
 	cfg->out_ifs = NULL;
 	cfg->stubs = NULL;
 	cfg->forwards = NULL;
+#ifdef CLIENT_SUBNET
+	cfg->client_subnet = NULL;
+	cfg->client_subnet_opcode = 8;
+	cfg->max_client_subnet_ipv4 = 24;
+	cfg->max_client_subnet_ipv6 = 64;
+#endif
 	cfg->views = NULL;
 	cfg->acls = NULL;
 	cfg->harden_short_bufsize = 0;
@@ -238,7 +247,11 @@ config_create(void)
 	if(!(cfg->control_cert_file = strdup(RUN_DIR"/unbound_control.pem"))) 
 		goto error_exit;
 
+#ifdef CLIENT_SUBNET
+	if(!(cfg->module_conf = strdup("subnetcache validator iterator"))) goto error_exit;
+#else
 	if(!(cfg->module_conf = strdup("validator iterator"))) goto error_exit;
+#endif
 	if(!(cfg->val_nsec3_key_iterations = 
 		strdup("1024 150 2048 500 4096 2500"))) goto error_exit;
 #if defined(DNSTAP_SOCKET_PATH)
@@ -503,6 +516,12 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	else S_STR("module-config:", module_conf)
 	else S_STR("python-script:", python_script)
 	else S_YNO("disable-dnssec-lame-check:", disable_dnssec_lame_check)
+#ifdef CLIENT_SUBNET
+	else S_STRLIST("send-client-subnet", client_subnet)
+	else S_NUMBER_OR_ZERO("max-client-subnet-ipv4:", max_client_subnet_ipv4)
+	else S_NUMBER_OR_ZERO("max-client-subnet-ipv6:", max_client_subnet_ipv6)
+	else S_NUMBER_OR_ZERO("client-subnet-opcode:", client_subnet_opcode)
+#endif
 	else if(strcmp(opt, "ip-ratelimit:") == 0) {
 	    IS_NUMBER_OR_ZERO; cfg->ip_ratelimit = atoi(val);
 	    infra_ip_ratelimit=cfg->ip_ratelimit;
@@ -818,6 +837,12 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_UNS(opt, "val-override-date", val_date_override)
 	else O_YNO(opt, "minimal-responses", minimal_responses)
 	else O_YNO(opt, "rrset-roundrobin", rrset_roundrobin)
+#ifdef CLIENT_SUBNET
+	else O_LST(opt, "send-client-subnet", client_subnet)
+	else O_DEC(opt, "max-client-subnet-ipv4", max_client_subnet_ipv4)
+	else O_DEC(opt, "max-client-subnet-ipv6", max_client_subnet_ipv6)
+	else O_DEC(opt, "client-subnet-opcode", client_subnet_opcode)
+#endif
 	else O_YNO(opt, "unblock-lan-zones", unblock_lan_zones)
 	else O_YNO(opt, "insecure-lan-zones", insecure_lan_zones)
 	else O_DEC(opt, "max-udp-size", max_udp_size)
@@ -1100,6 +1125,9 @@ config_delete(struct config_file* cfg)
 	config_delviews(cfg->views);
 	config_delstrlist(cfg->donotqueryaddrs);
 	config_delstrlist(cfg->root_hints);
+#ifdef CLIENT_SUBNET
+	config_delstrlist(cfg->client_subnet);
+#endif
 	free(cfg->identity);
 	free(cfg->version);
 	free(cfg->module_conf);
@@ -1596,6 +1624,11 @@ config_apply(struct config_file* config)
 	MAX_NEG_TTL = (time_t)config->max_negative_ttl;
 	RTT_MIN_TIMEOUT = config->infra_cache_min_rtt;
 	EDNS_ADVERTISED_SIZE = (uint16_t)config->edns_buffer_size;
+#ifdef CLIENT_SUBNET
+	EDNSSUBNET_OPCODE = (uint16_t)config->client_subnet_opcode;
+	EDNSSUBNET_MAX_SUBNET_IP4 = (uint8_t)config->max_client_subnet_ipv4;
+	EDNSSUBNET_MAX_SUBNET_IP6 = (uint8_t)config->max_client_subnet_ipv6;
+#endif
 	MINIMAL_RESPONSES = config->minimal_responses;
 	RRSET_ROUNDROBIN = config->rrset_roundrobin;
 	log_set_time_asc(config->log_time_ascii);

@@ -880,6 +880,9 @@ main(int argc, char* argv[])
 	infra_test();
 	ldns_test();
 	msgparse_test();
+#ifdef CLIENT_SUBNET
+	ecs_test();
+#endif /* CLIENT_SUBNET */
 	checklock_stop();
 	printf("%d checks ok.\n", testcount);
 #ifdef HAVE_SSL

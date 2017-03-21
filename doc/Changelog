@@ -1,3 +1,7 @@
+21 March 2017: Ralph
+	- Merge EDNS Client subnet implementation from feature branch into main
+	  branch, using new EDNS processing framework. 
+
 21 March 2017: Wouter
 	- Fix doxygen for dnscrypt files.
 

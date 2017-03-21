@@ -1057,6 +1057,18 @@ int inplace_cb_query_call(struct module_env* env, struct query_info* qinfo,
 	return 1;
 }
 
+int inplace_cb_edns_back_parsed_call(struct module_env* env, 
+	struct module_qstate* qstate)
+{
+	struct inplace_cb_edns_back_parsed* cb =
+		env->inplace_cb_lists[inplace_cb_edns_back_parsed];
+	for(; cb; cb=cb->next) {
+		fptr_ok(fptr_whitelist_inplace_cb_edns_back_parsed(cb->cb));
+		(void)(*cb->cb)(qstate, cb->cb_arg);
+	}
+	return 1;
+}
+
 struct edns_option* edns_opt_copy_region(struct edns_option* list,
         struct regional* region)
 {

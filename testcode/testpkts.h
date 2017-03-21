@@ -53,6 +53,7 @@ struct sldns_file_parse_state;
 	; 'rcode' makes the query match the rcode from the reply
 	; 'question' makes the query match the question section
 	; 'answer' makes the query match the answer section
+	; 'ednsdata' matches queries to HEX_EDNS section.
 	MATCH [opcode] [qtype] [qname] [serial=<value>] [all] [ttl]
 	MATCH [UDP|TCP] DO
 	MATCH ...
@@ -87,6 +88,11 @@ struct sldns_file_parse_state;
 				; be parsed, ADJUST rules for the answer packet
 				; are ignored. Only copy_id is done.
 	HEX_ANSWER_END
+	HEX_EDNS_BEGIN		; follow with hex data.
+				; Raw EDNS data to match against. It must be an 
+				; exact match (all options are matched) and will be 
+				; evaluated only when 'MATCH ednsdata' given.
+	HEX_EDNS_END
 	ENTRY_END
 
 
@@ -147,6 +153,8 @@ struct reply_packet {
 	uint8_t* reply_pkt;
 	/** length of reply pkt */
 	size_t reply_len;
+	/** Additional EDNS data for matching queries. */
+	struct sldns_buffer* raw_ednsdata;
 	/** or reply pkt in hex if not parsable */
 	struct sldns_buffer* reply_from_hex;
 	/** seconds to sleep before giving packet */
@@ -182,6 +190,8 @@ struct entry {
 	uint8_t match_do;
 	/** match absence of EDNS OPT record in query */
 	uint8_t match_noedns;
+	/** match edns data field given in hex */
+	uint8_t match_ednsdata_raw;
 	/** match query serial with this value. */
 	uint32_t ixfr_soa_serial; 
 	/** match on UDP/TCP */
@@ -195,6 +205,9 @@ struct entry {
 	uint8_t copy_id; 
 	/** copy the query nametypeclass from query into the answer */
 	uint8_t copy_query;
+	/** copy ednsdata to reply, assume it is clientsubnet and
+	 * adjust scopemask to match sourcemask */
+	uint8_t copy_ednsdata_assume_clientsubnet;
 	/** in seconds */
 	unsigned int sleeptime; 
 

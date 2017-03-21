@@ -54,6 +54,9 @@
 #ifdef USE_CACHEDB
 #include "cachedb/cachedb.h"
 #endif
+#ifdef CLIENT_SUBNET
+#include "edns-subnet/subnetmod.h"
+#endif
 
 /** count number of modules (words) in the string */
 static int
@@ -128,6 +131,9 @@ module_list_avail(void)
 #ifdef USE_CACHEDB
 		"cachedb",
 #endif
+#ifdef CLIENT_SUBNET
+		"subnetcache", 
+#endif
 		"respip",
 		"validator", 
 		"iterator", 
@@ -149,6 +155,9 @@ module_funcs_avail(void)
 #endif
 #ifdef USE_CACHEDB
 		&cachedb_get_funcblock,
+#endif
+#ifdef CLIENT_SUBNET
+		&subnetmod_get_funcblock, 
 #endif
 		&respip_get_funcblock,
 		&val_get_funcblock, 
