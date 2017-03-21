@@ -1,3 +1,6 @@
+21 March 2017: Wouter
+	- Fix doxygen for dnscrypt files.
+
 20 March 2017: Wouter
 	- #1217. DNSCrypt support, with --enable-dnscrypt, libsodium and then
 	  enabled in the config file from Manu Bretelle.

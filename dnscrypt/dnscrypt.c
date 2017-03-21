@@ -14,6 +14,11 @@
 
 #include <ctype.h>
 
+/**
+ * \file
+ * dnscrypt functions for encrypting DNS packets.
+ */
+
 #define DNSCRYPT_QUERY_BOX_OFFSET \
     (DNSCRYPT_MAGIC_HEADER_LEN + crypto_box_PUBLICKEYBYTES + crypto_box_HALF_NONCEBYTES)
 

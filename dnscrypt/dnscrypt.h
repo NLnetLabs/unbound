@@ -1,6 +1,11 @@
 #ifndef UNBOUND_DNSCRYPT_H
 #define UNBOUND_DNSCRYPT_H
 
+/**
+ * \file
+ * dnscrypt functions for encrypting DNS packets.
+ */
+
 #include "dnscrypt/dnscrypt_config.h"
 #ifdef USE_DNSCRYPT
 

@@ -1,6 +1,11 @@
 #ifndef UNBOUND_DNSCRYPT_CERT_H
 #define UNBOUND_DNSCRYPT_CERT_H
 
+/**
+ * \file
+ * certificate type for dnscrypt for use in other header files
+ */
+
 #include <sodium.h>
 #define CERT_MAGIC_CERT "DNSC"
 #define CERT_MAJOR_VERSION 1
