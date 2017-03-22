@@ -2,6 +2,7 @@
 	- Fix #1238: segmentation fault when adding through the remote
 	  interface a per-view local zone to a view with no previous
 	  (configured) local zones.
+	- Fix #1229: Systemd service sandboxing, options in wrong sections.
 
 21 March 2017: Ralph
 	- Merge EDNS Client subnet implementation from feature branch into main
