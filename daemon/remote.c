@@ -1375,6 +1375,13 @@ do_view_zone_add(SSL* ssl, struct worker* worker, char* arg)
 		ssl_printf(ssl,"no view with name: %s\n", arg);
 		return;
 	}
+	if(!v->local_zones) {
+		if(!(v->local_zones = local_zones_create())){
+			lock_rw_unlock(&v->lock);
+			ssl_printf(ssl,"error out of memory\n");
+			return;
+		}
+	}
 	do_zone_add(ssl, v->local_zones, arg2);
 	lock_rw_unlock(&v->lock);
 }
@@ -1391,6 +1398,11 @@ do_view_zone_remove(SSL* ssl, struct worker* worker, char* arg)
 		arg, 1 /* get write lock*/);
 	if(!v) {
 		ssl_printf(ssl,"no view with name: %s\n", arg);
+		return;
+	}
+	if(!v->local_zones) {
+		lock_rw_unlock(&v->lock);
+		send_ok(ssl);
 		return;
 	}
 	do_zone_remove(ssl, v->local_zones, arg2);
@@ -1411,6 +1423,13 @@ do_view_data_add(SSL* ssl, struct worker* worker, char* arg)
 		ssl_printf(ssl,"no view with name: %s\n", arg);
 		return;
 	}
+	if(!v->local_zones) {
+		if(!(v->local_zones = local_zones_create())){
+			lock_rw_unlock(&v->lock);
+			ssl_printf(ssl,"error out of memory\n");
+			return;
+		}
+	}
 	do_data_add(ssl, v->local_zones, arg2);
 	lock_rw_unlock(&v->lock);
 }
@@ -1427,6 +1446,11 @@ do_view_data_remove(SSL* ssl, struct worker* worker, char* arg)
 		arg, 1 /* get write lock*/);
 	if(!v) {
 		ssl_printf(ssl,"no view with name: %s\n", arg);
+		return;
+	}
+	if(!v->local_zones) {
+		lock_rw_unlock(&v->lock);
+		send_ok(ssl);
 		return;
 	}
 	do_data_remove(ssl, v->local_zones, arg2);
@@ -2564,7 +2588,9 @@ do_view_list_local_zones(SSL* ssl, struct worker* worker, char* arg)
 		ssl_printf(ssl,"no view with name: %s\n", arg);
 		return;
 	}
-	do_list_local_zones(ssl, v->local_zones);
+	if(v->local_zones) {
+		do_list_local_zones(ssl, v->local_zones);
+	}
 	lock_rw_unlock(&v->lock);
 }
 
@@ -2578,7 +2604,9 @@ do_view_list_local_data(SSL* ssl, struct worker* worker, char* arg)
 		ssl_printf(ssl,"no view with name: %s\n", arg);
 		return;
 	}
-	do_list_local_data(ssl, worker, v->local_zones);
+	if(v->local_zones) {
+		do_list_local_data(ssl, worker, v->local_zones);
+	}
 	lock_rw_unlock(&v->lock);
 }
 
