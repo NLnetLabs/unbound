@@ -16732,8 +16732,7 @@ fi
         #
         { $as_echo "$as_me:${as_lineno-$LINENO}: checking for the distutils Python package" >&5
 $as_echo_n "checking for the distutils Python package... " >&6; }
-        ac_distutils_result=`$PYTHON -c "import distutils" 2>&1`
-        if test -z "$ac_distutils_result"; then
+        if ac_distutils_result=`$PYTHON -c "import distutils" 2>&1`; then
                 { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 $as_echo "yes" >&6; }
         else

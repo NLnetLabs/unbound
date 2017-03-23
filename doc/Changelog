@@ -1,3 +1,7 @@
+23 March 2017: Wouter
+	- Fix #1239: configure fails to find python distutils if python
+	  prints warning.
+
 22 March 2017: Wouter
 	- Fix #1238: segmentation fault when adding through the remote
 	  interface a per-view local zone to a view with no previous
