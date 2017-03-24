@@ -1,3 +1,7 @@
+24 March 2017: George
+	- Fix to prevent non-referal query from being cached as referal when the
+	  no_cache_store flag was set.
+
 23 March 2017: Wouter
 	- Fix #1239: configure fails to find python distutils if python
 	  prints warning.
