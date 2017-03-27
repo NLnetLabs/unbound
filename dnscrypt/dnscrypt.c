@@ -2,6 +2,11 @@
 #include "config.h"
 #include <stdlib.h>
 #include <fcntl.h>
+#ifdef HAVE_TIME_H
+#include <time.h>
+#endif
+#include <sys/time.h>
+#include <sys/types.h>
 #include "sldns/sbuffer.h"
 #include "util/config_file.h"
 #include "util/net_help.h"
