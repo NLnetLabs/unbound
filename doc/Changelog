@@ -1,3 +1,6 @@
+27 March 2017: Wouter
+	- Remove (now unused) event2 include from dnscrypt code.
+
 24 March 2017: George
 	- Fix to prevent non-referal query from being cached as referal when the
 	  no_cache_store flag was set.

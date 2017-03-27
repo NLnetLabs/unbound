@@ -2,7 +2,6 @@
 #include "config.h"
 #include <stdlib.h>
 #include <fcntl.h>
-#include <event2/util.h>
 #include "sldns/sbuffer.h"
 #include "util/config_file.h"
 #include "util/net_help.h"
