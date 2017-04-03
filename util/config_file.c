@@ -178,7 +178,7 @@ config_create(void)
 	cfg->forwards = NULL;
 #ifdef CLIENT_SUBNET
 	cfg->client_subnet = NULL;
-	cfg->client_subnet_opcode = 8;
+	cfg->client_subnet_opcode = LDNS_EDNS_CLIENT_SUBNET;
 	cfg->max_client_subnet_ipv4 = 24;
 	cfg->max_client_subnet_ipv6 = 64;
 #endif

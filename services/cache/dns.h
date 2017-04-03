@@ -128,7 +128,8 @@ struct delegpt* dns_cache_find_delegation(struct module_env* env,
 
 /**
  * generate dns_msg from cached message
- * @param env: module environment with the DNS cache.
+ * @param env: module environment with the DNS cache. NULL if the LRU from cache
+ * 	does not need to be touched.
  * @param q: query info, contains qname that will make up the dns message.
  * @param r: reply info that, together with qname, will make up the dns message.
  * @param region: where to allocate dns message.

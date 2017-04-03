@@ -306,11 +306,11 @@ update_cache(struct module_qstate *qstate, int id)
 	struct ecs_data *edns = &sq->ecs_client_in;
 	size_t i;
 
-	/** We already calculated hash upon lookup */
+	/* We already calculated hash upon lookup */
 	hashvalue_type h = qstate->minfo[id] ? 
 		((struct subnet_qstate*)qstate->minfo[id])->qinfo_hash : 
 		query_info_hash(&qstate->qinfo, qstate->query_flags);
-	/** Step 1, general qinfo lookup */
+	/* Step 1, general qinfo lookup */
 	struct lruhash_entry *lru_entry = slabhash_lookup(subnet_msg_cache, h,
 		&qstate->qinfo, 1);
 	int acquired_lock = (lru_entry != NULL);
@@ -336,7 +336,7 @@ update_cache(struct module_qstate *qstate, int id)
 			return;
 		}
 	}
-	/** Step 2, find the correct tree */
+	/* Step 2, find the correct tree */
 	if (!(tree = get_tree(lru_entry->data, edns, sne))) {
 		if (acquired_lock) lock_rw_unlock(&lru_entry->lock);
 		log_err("Subnet cache insertion failed");
@@ -360,7 +360,7 @@ update_cache(struct module_qstate *qstate, int id)
 	addrtree_insert(tree, (addrkey_t*)edns->subnet_addr, 
 		edns->subnet_source_mask, 
 		sq->ecs_server_in.subnet_scope_mask, rep,
-		rep->ttl + *qstate->env->now, *qstate->env->now);
+		rep->ttl, *qstate->env->now);
 	if (acquired_lock) {
 		lock_rw_unlock(&lru_entry->lock);
 	} else {
@@ -369,7 +369,7 @@ update_cache(struct module_qstate *qstate, int id)
 	}
 }
 
-/* return true iff reply is sent. */
+/** Lookup in cache and reply true iff reply is sent. */
 static int
 lookup_and_reply(struct module_qstate *qstate, int id, struct subnet_qstate *sq)
 {
@@ -385,30 +385,30 @@ lookup_and_reply(struct module_qstate *qstate, int id, struct subnet_qstate *sq)
 
 	memset(&sq->ecs_client_out, 0, sizeof(sq->ecs_client_out));
 
-	if (sq) sq->qinfo_hash = h; /** Might be useful on cache miss */
+	if (sq) sq->qinfo_hash = h; /* Might be useful on cache miss */
 	e = slabhash_lookup(sne->subnet_msg_cache, h, &qstate->qinfo, 1);
-	if (!e) return 0; /** qinfo not in cache */
+	if (!e) return 0; /* qinfo not in cache */
 	data = e->data;
 	tree = (ecs->subnet_addr_fam == EDNSSUBNET_ADDRFAM_IP4)?
 		data->tree4 : data->tree6;
-	if (!tree) { /** qinfo in cache but not for this family */
+	if (!tree) { /* qinfo in cache but not for this family */
 		lock_rw_unlock(&e->lock);
 		return 0;
 	}
 	node = addrtree_find(tree, (addrkey_t*)ecs->subnet_addr, 
 		ecs->subnet_source_mask, *env->now);
-	if (!node) { /** plain old cache miss */
+	if (!node) { /* plain old cache miss */
 		lock_rw_unlock(&e->lock);
 		return 0;
 	}
 
-	qstate->return_msg = tomsg(env, &qstate->qinfo,
+	qstate->return_msg = tomsg(NULL, &qstate->qinfo,
 		(struct reply_info *)node->elem, qstate->region, *env->now,
 		env->scratch);
 	scope = (uint8_t)node->scope;
 	lock_rw_unlock(&e->lock);
 	
-	if (!qstate->return_msg) { /** TTL expired */
+	if (!qstate->return_msg) { /* Failed allocation or expired TTL */
 		return 0;
 	}
 	
@@ -452,18 +452,18 @@ eval_response(struct module_qstate *qstate, int id, struct subnet_qstate *sq)
 
 	if (!qstate->return_msg) return module_error;
 	
-	/** We have not asked for subnet data */
+	/* We have not asked for subnet data */
 	if (!sq->subnet_sent) {
 		if (s_in->subnet_validdata)
 			verbose(VERB_QUERY, "subnet: received spurious data");
-		if (sq->subnet_downstream) /** Copy back to client */
+		if (sq->subnet_downstream) /* Copy back to client */
 			cp_edns_bad_response(c_out, c_in);
 		return module_finished;
 	}
 	
-	/** subnet sent but nothing came back */
+	/* subnet sent but nothing came back */
 	if (!s_in->subnet_validdata) {
-		/** The authority indicated no support for edns subnet. As a
+		/* The authority indicated no support for edns subnet. As a
 		 * consequence the answer ended up in the regular cache. It
 		 * is still usefull to put it in the edns subnet cache for
 		 * when a client explicitly asks for subnet specific answer. */
@@ -476,17 +476,17 @@ eval_response(struct module_qstate *qstate, int id, struct subnet_qstate *sq)
 		return module_finished;
 	}
 	
-	/** Being here means we have asked for and got a subnet specific 
+	/* Being here means we have asked for and got a subnet specific 
 	 * answer. Also, the answer from the authority is not yet cached 
 	 * anywhere. */
 	
-	/** can we accept response? */
+	/* can we accept response? */
 	if(s_out->subnet_addr_fam != s_in->subnet_addr_fam ||
 		s_out->subnet_source_mask != s_in->subnet_source_mask ||
 		!common_prefix(s_out->subnet_addr, s_in->subnet_addr, 
 			s_out->subnet_source_mask))
 	{
-		/** we can not accept, restart query without option */
+		/* we can not accept, restart query without option */
 		verbose(VERB_QUERY, "subnet: forged data");
 		s_out->subnet_validdata = 0;
 		(void)edns_opt_list_remove(&qstate->edns_opts_back_out,
@@ -500,7 +500,7 @@ eval_response(struct module_qstate *qstate, int id, struct subnet_qstate *sq)
 	lock_rw_unlock(&sne->biglock);
 	
 	if (sq->subnet_downstream) {
-		/** Client wants to see the answer, echo option back
+		/* Client wants to see the answer, echo option back
 		 * and adjust the scope. */
 		c_out->subnet_addr_fam = c_in->subnet_addr_fam;
 		c_out->subnet_source_mask = c_in->subnet_source_mask;

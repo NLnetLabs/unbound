@@ -1,3 +1,8 @@
+3 April 2017: Ralph
+	- Do not add current time twice to TTL before ECS cache store.
+	- Do not touch rrset cache after ECS cache message generation.
+	- Use LDNS_EDNS_CLIENT_SUBNET as default ECS opcode.
+
 3 April 2017: Wouter
 	- Fix #1217: Add metrics to unbound-control interface showing
 	  crypted, cert request, plaintext and malformed queries (from

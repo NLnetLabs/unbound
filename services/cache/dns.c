@@ -524,8 +524,11 @@ tomsg(struct module_env* env, struct query_info* q, struct reply_info* r,
 			return NULL;
 		}
 	}
-	rrset_array_unlock_touch(env->rrset_cache, scratch, r->ref, 
+	if(env)
+		rrset_array_unlock_touch(env->rrset_cache, scratch, r->ref, 
 		r->rrset_count);
+	else
+		rrset_array_unlock(r->ref, r->rrset_count);
 	return msg;
 }
 
