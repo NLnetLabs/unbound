@@ -977,6 +977,7 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 #ifdef USE_DNSCRYPT
     repinfo->max_udp_size = worker->daemon->cfg->max_udp_size;
     if(!dnsc_handle_curved_request(worker->daemon->dnscenv, repinfo)) {
+        worker->stats.num_query_dnscrypt_crypted_malformed++;
         return 0;
     }
     if(c->dnscrypt && !repinfo->is_dnscrypted) {
@@ -1003,9 +1004,13 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
                     sldns_rr_descript(qinfo.qtype)->_name,
                     buf);
             comm_point_drop_reply(repinfo);
+            worker->stats.num_query_dnscrypt_cleartext++;
             return 0;
         }
+        worker->stats.num_query_dnscrypt_cert++;
         sldns_buffer_rewind(c->buffer);
+    } else if(c->dnscrypt && repinfo->is_dnscrypted) {
+        worker->stats.num_query_dnscrypt_crypted++;
     }
 #endif
 #ifdef USE_DNSTAP

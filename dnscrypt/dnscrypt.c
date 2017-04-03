@@ -468,7 +468,6 @@ dnsc_handle_curved_request(struct dnsc_env* dnscenv,
                                    repinfo->client_nonce,
                                    repinfo->nmkey,
                                    c->buffer) != 0){
-            // TODO: Bump counter!
             verbose(VERB_ALGO, "dnscrypt: Failed to uncurve");
             comm_point_drop_reply(repinfo);
             return 0;

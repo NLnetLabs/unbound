@@ -199,6 +199,13 @@ static void pr_stats(const char* nm, struct stats_info* s)
 	PR_UL_NM("num.prefetch", s->svr.num_queries_prefetch);
 	PR_UL_NM("num.zero_ttl", s->svr.zero_ttl_responses);
 	PR_UL_NM("num.recursivereplies", s->mesh_replies_sent);
+#ifdef USE_DNSCRYPT
+    PR_UL_NM("num.dnscrypt.crypted", s->svr.num_query_dnscrypt_crypted);
+    PR_UL_NM("num.dnscrypt.cert", s->svr.num_query_dnscrypt_cert);
+    PR_UL_NM("num.dnscrypt.cleartext", s->svr.num_query_dnscrypt_cleartext);
+    PR_UL_NM("num.dnscrypt.malformed",
+             s->svr.num_query_dnscrypt_crypted_malformed);
+#endif
 	printf("%s.requestlist.avg"SQ"%g\n", nm,
 		(s->svr.num_queries_missed_cache+s->svr.num_queries_prefetch)?
 			(double)s->svr.sum_query_list_size/
