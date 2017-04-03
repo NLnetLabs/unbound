@@ -2,6 +2,7 @@
 	- Fix #1217: Add metrics to unbound-control interface showing
 	  crypted, cert request, plaintext and malformed queries (from
 	  Manu Bretelle).
+	- iana portlist update
 
 27 March 2017: Wouter
 	- Remove (now unused) event2 include from dnscrypt code.
