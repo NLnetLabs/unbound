@@ -785,7 +785,8 @@ frequently.  The initial file can be one with contents as described in
 \fBtrust\-anchor\-file\fR.  The file is written to when the anchor is updated,
 so the unbound user must have write permission.  Write permission to the file,
 but also to the directory it is in (to create a temporary file, which is
-necessary to deal with filesystem full events).
+necessary to deal with filesystem full events), it must also be inside the
+chroot (if that is used).
 .TP
 .B trust\-anchor: \fI<"Resource Record">
 A DS or DNSKEY RR for a key to use for validation. Multiple entries can be

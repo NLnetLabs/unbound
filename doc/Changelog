@@ -1,3 +1,7 @@
+4 April 2017: Wouter
+	- Fix #1244: document that use of chroot requires trust anchor file to
+	  be under chroot.
+
 3 April 2017: Ralph
 	- Do not add current time twice to TTL before ECS cache store.
 	- Do not touch rrset cache after ECS cache message generation.
