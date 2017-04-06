@@ -1,5 +1,6 @@
 6 April 2017: Wouter
 	- Small fixup for documentation.
+	- iana portlist update
 
 4 April 2017: Wouter
 	- Fix #1244: document that use of chroot requires trust anchor file to
