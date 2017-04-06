@@ -139,7 +139,7 @@ int ecs_whitelist_check(struct query_info* ATTR_UNUSED(qinfo),
 	uint16_t ATTR_UNUSED(flags), struct module_qstate* qstate,
 	struct sockaddr_storage* addr, socklen_t addrlen,
 	uint8_t* ATTR_UNUSED(zone), size_t ATTR_UNUSED(zonelen),
-	struct regional* ATTR_UNUSED(region), int id, void* cbargs)
+	struct regional* ATTR_UNUSED(region), int id, void* ATTR_UNUSED(cbargs))
 {
 	struct subnet_qstate *sq;
 	struct subnet_env *sn_env;
@@ -589,7 +589,8 @@ subnet_option_from_ss(struct sockaddr_storage *ss, struct ecs_data* ecs,
 }
 
 int
-ecs_edns_back_parsed(struct module_qstate* qstate, int id, void* cbargs)
+ecs_edns_back_parsed(struct module_qstate* qstate, int id,
+	void* ATTR_UNUSED(cbargs))
 {
 	struct subnet_qstate *sq;
 	struct edns_option* ecs_opt;
