@@ -1346,7 +1346,7 @@ int edns_opt_list_append(struct edns_option** list, uint16_t code, size_t len,
     int python_inplace_cb_reply_generic(struct query_info* qinfo,
         struct module_qstate* qstate, struct reply_info* rep, int rcode,
         struct edns_data* edns, struct edns_option** opt_list_out,
-        struct regional* region, void* python_callback)
+        struct regional* region, int id, void* python_callback)
     {
         PyObject *func, *py_edns, *py_qstate, *py_opt_list_out, *py_qinfo;
         PyObject *py_rep, *py_region;
@@ -1379,49 +1379,51 @@ int edns_opt_list_append(struct edns_option** list, uint16_t code, size_t len,
         return res;
     }
 
+    /* register a callback */
+    static int python_inplace_cb_register(enum inplace_cb_list_type type,
+        PyObject* py_cb, struct module_env* env)
+    {
+        int id = modstack_find(&env->mesh->mods, "python");
+        int ret = inplace_cb_register(python_inplace_cb_reply_generic,
+                type, (void*) py_cb, env, id);
+        if (ret) Py_INCREF(py_cb);
+        return ret;
+    }
+
     /* Swig implementations for Python */
     static int register_inplace_cb_reply(PyObject* py_cb,
         struct module_env* env)
     {
-        int ret = inplace_cb_reply_register(
-            python_inplace_cb_reply_generic, (void*) py_cb, env);
-        if (ret) Py_INCREF(py_cb);
-        return ret;
+        return python_inplace_cb_register(inplace_cb_reply, py_cb, env);
     }
     static int register_inplace_cb_reply_cache(PyObject* py_cb,
         struct module_env* env)
     {
-        int ret = inplace_cb_reply_cache_register(
-            python_inplace_cb_reply_generic, (void*) py_cb, env);
-        if (ret) Py_INCREF(py_cb);
-        return ret;
+        return python_inplace_cb_register(inplace_cb_reply_cache, py_cb, env);
     }
     static int register_inplace_cb_reply_local(PyObject* py_cb,
         struct module_env* env)
     {
-        int ret = inplace_cb_reply_local_register(
-            python_inplace_cb_reply_generic, (void*) py_cb, env);
-        if (ret) Py_INCREF(py_cb);
-        return ret;
+        return python_inplace_cb_register(inplace_cb_reply_local, py_cb, env);
     }
     static int register_inplace_cb_reply_servfail(PyObject* py_cb,
         struct module_env* env)
     {
-        int ret = inplace_cb_reply_servfail_register(
-            python_inplace_cb_reply_generic, (void*) py_cb, env);
-        if (ret) Py_INCREF(py_cb);
-        return ret;
+        return python_inplace_cb_register(inplace_cb_reply_servfail,
+                py_cb, env);
+    }
+    static int register_inplace_cb_query(PyObject* py_cb,
+        struct module_env* env)
+    {
+        return python_inplace_cb_register(inplace_cb_query, py_cb, env);
+    }
+    static int register_inplace_cb_edns_back_parsed(PyObject* py_cb,
+        struct module_env* env)
+    {
+        return python_inplace_cb_register(inplace_cb_edns_back_parsed,
+                py_cb, env);
     }
 %}
-/* C declarations */
-int inplace_cb_reply_register(
-    inplace_cb_reply_func_type* cb, void* cb_arg, struct module_env* env);
-int inplace_cb_reply_cache_register(
-    inplace_cb_reply_func_type* cb, void* cb_arg, struct module_env* env);
-int inplace_cb_reply_local_register(
-    inplace_cb_reply_func_type* cb, void* cb_arg, struct module_env* env);
-int inplace_cb_reply_servfail_register(
-    inplace_cb_reply_func_type* cb, void* cb_arg, struct module_env* env);
 
 /* Swig declarations */
 static int register_inplace_cb_reply(PyObject* py_cb,
@@ -1431,4 +1433,8 @@ static int register_inplace_cb_reply_cache(PyObject* py_cb,
 static int register_inplace_cb_reply_local(PyObject* py_cb,
     struct module_env* env);
 static int register_inplace_cb_reply_servfail(PyObject* py_cb,
+    struct module_env* env);
+static int register_inplace_cb_query(PyObject* py_cb,
+    struct module_env* env);
+static int register_inplace_cb_edns_back_parsed(PyObject* py_cb,
     struct module_env* env);

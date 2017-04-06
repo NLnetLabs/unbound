@@ -14,6 +14,7 @@
 	- Small fixup for documentation.
 	- iana portlist update
 	- Fix respip for braces when locks arent used.
+	- Fix pythonmod for cb changes.
 
 4 April 2017: Wouter
 	- Fix #1244: document that use of chroot requires trust anchor file to
