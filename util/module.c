@@ -125,7 +125,7 @@ edns_register_option(uint16_t opt_code, int bypass_cache_stage,
 
 int
 inplace_cb_register(void* cb, enum inplace_cb_list_type type, void* cbarg,
-	size_t cbarg_len, struct module_env* env, int id)
+	struct module_env* env, int id)
 {
 	struct inplace_cb* callback;
 	struct inplace_cb** prevp;
@@ -143,15 +143,6 @@ inplace_cb_register(void* cb, enum inplace_cb_list_type type, void* cbarg,
 	callback->id = id;
 	callback->next = NULL;
 	callback->cb = cb;
-	if(cbarg) {
-		if(!(callback->cb_arg = calloc(1, cbarg_len))){
-			log_err("out of memory during edns callback argument"
-				"registration.");
-			free(callback);
-			return 0;
-		}
-		memcpy(callback->cb_arg, cbarg, cbarg_len);
-	}
 	
 	prevp = (struct inplace_cb**) &env->inplace_cb_lists[type];
 	/* append at end of list */

@@ -224,9 +224,9 @@ subnetmod_init(struct module_env *env, int id)
 		return 0;
 	}
 	inplace_cb_register((void*)ecs_whitelist_check, inplace_cb_query, NULL,
-		0, env, id);
+		env, id);
 	inplace_cb_register((void*)ecs_edns_back_parsed,
-		inplace_cb_edns_back_parsed, NULL, 0, env, id);
+		inplace_cb_edns_back_parsed, NULL, env, id);
 	lock_rw_init(&sn_env->biglock);
 	return 1;
 }

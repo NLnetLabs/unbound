@@ -696,7 +696,6 @@ int edns_register_option(uint16_t opt_code, int bypass_cache_stage,
  * @param cb: pointer to the callback function.
  * @param type: inplace callback type.
  * @param cbarg: argument for the callback function, or NULL.
- * @param cbarg_len: size of cbars, or 0.
  * @param env: the module environment.
  * @param id: module id.
  * @return true on success, false on failure (out of memory or trying to
@@ -704,7 +703,7 @@ int edns_register_option(uint16_t opt_code, int bypass_cache_stage,
  */
 int
 inplace_cb_register(void* cb, enum inplace_cb_list_type type, void* cbarg,
-	size_t cbarg_len, struct module_env* env, int id);
+	struct module_env* env, int id);
 
 /**
  * Delete callback for specified type and module id.

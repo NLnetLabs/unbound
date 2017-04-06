@@ -8,6 +8,7 @@
 	- Removed extern ECS config options
 	- module_restart_next now calls clear on all following modules
 	- Also create ECS module qstate on module_event_pass event
+	- remove malloc from inplace_cb_register
 
 6 April 2017: Wouter
 	- Small fixup for documentation.
