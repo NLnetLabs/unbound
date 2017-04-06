@@ -1511,7 +1511,7 @@ Specify positive integer smaller than 65536. Defaults to 8.
 Specifies the maximum prefix length of the client source address we are willing
 to expose to third parties for IPv6.  Defaults to 64.
 .TP
-.B max\-clienti-subnet\-ipv4: \fI<number>\fR
+.B max\-client\-subnet\-ipv4: \fI<number>\fR
 Specifies the maximum prefix length of the client source address we are willing
 to expose to third parties for IPv4. Defaults to 24.
 .SH "MEMORY CONTROL EXAMPLE"
