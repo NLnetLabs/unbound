@@ -128,7 +128,8 @@ ecs_opt_list_append(struct ecs_data* ecs, struct edns_option** list,
 				~(0xFF >> (ecs->subnet_source_mask % 8)));
 		sldns_buffer_flip(buf);
 
-		edns_opt_list_append(list, EDNSSUBNET_OPCODE,
+		edns_opt_list_append(list,
+				qstate->env->cfg->client_subnet_opcode,
 				sn_octs + sn_octs_remainder + 4,
 				sldns_buffer_begin(buf), qstate->region);
 	}
@@ -138,9 +139,8 @@ int ecs_whitelist_check(struct query_info* ATTR_UNUSED(qinfo),
 	uint16_t ATTR_UNUSED(flags), struct module_qstate* qstate,
 	struct sockaddr_storage* addr, socklen_t addrlen,
 	uint8_t* ATTR_UNUSED(zone), size_t ATTR_UNUSED(zonelen),
-	struct regional* ATTR_UNUSED(region), void* cbargs)
+	struct regional* ATTR_UNUSED(region), int id, void* cbargs)
 {
-	int id = *((int*)cbargs);
 	struct subnet_qstate *sq;
 	struct subnet_env *sn_env;
 	
@@ -152,7 +152,8 @@ int ecs_whitelist_check(struct query_info* ATTR_UNUSED(qinfo),
 	 * received from nameserver. */
 	qstate->no_cache_store = 0;
 
-	if(sq->ecs_server_out.subnet_validdata && (sq->subnet_downstream ||
+	if(sq->ecs_server_out.subnet_validdata && ((sq->subnet_downstream &&
+		qstate->env->cfg->client_subnet_always_forward) ||
 		upstream_is_whitelisted(sn_env->edns_subnet_upstreams, 
 		addr, addrlen))) {
 		/* Address on whitelist or client query contains ECS option, we
@@ -168,7 +169,7 @@ int ecs_whitelist_check(struct query_info* ATTR_UNUSED(qinfo),
 		/* Outgoing ECS option is set, but we don't want to sent it to
 		 * this address, remove option. */
 		edns_opt_list_remove(&qstate->edns_opts_back_out,
-			EDNSSUBNET_OPCODE);
+			qstate->env->cfg->client_subnet_opcode);
 		sq->subnet_sent = 0;
 	}
 	return 1;
@@ -208,11 +209,13 @@ subnetmod_init(struct module_env *env, int id)
 		return 0;
 	}
 
-	verbose(VERB_QUERY, "subnet: option registered (%d)", EDNSSUBNET_OPCODE);
+	verbose(VERB_QUERY, "subnet: option registered (%d)",
+		env->cfg->client_subnet_opcode);
 	/* Create new mesh state for all queries. */
 	env->unique_mesh = 1;
-	if(!edns_register_option(EDNSSUBNET_OPCODE,
-		1 /* bypass cache */, 0 /* no aggregation */, env)) {
+	if(!edns_register_option(env->cfg->client_subnet_opcode,
+		env->cfg->client_subnet_always_forward /* bypass cache */,
+		0 /* no aggregation */, env)) {
 		log_err("subnet: could not register opcode");
 		upstream_delete(sn_env->edns_subnet_upstreams);
 		slabhash_delete(sn_env->subnet_msg_cache);
@@ -220,9 +223,10 @@ subnetmod_init(struct module_env *env, int id)
 		env->modinfo[id] = NULL;
 		return 0;
 	}
-	inplace_cb_query_register(ecs_whitelist_check, &id, sizeof(id), env);
-	inplace_cb_edns_back_parsed_register(ecs_edns_back_parsed, &id,
-		sizeof(id), env);
+	inplace_cb_register((void*)ecs_whitelist_check, inplace_cb_query, NULL,
+		0, env, id);
+	inplace_cb_register((void*)ecs_edns_back_parsed,
+		inplace_cb_edns_back_parsed, NULL, 0, env, id);
 	lock_rw_init(&sn_env->biglock);
 	return 1;
 }
@@ -235,8 +239,8 @@ subnetmod_deinit(struct module_env *env, int id)
 		return;
 	sn_env = (struct subnet_env*)env->modinfo[id];
 	lock_rw_destroy(&sn_env->biglock);
-	inplace_cb_edns_back_parsed_delete(env);
-	inplace_cb_query_delete(env);
+	inplace_cb_delete(env, inplace_cb_edns_back_parsed, id);
+	inplace_cb_delete(env, inplace_cb_query, id);
 	upstream_delete(sn_env->edns_subnet_upstreams);
 	slabhash_delete(sn_env->subnet_msg_cache);
 	alloc_clear(&sn_env->alloc);
@@ -276,18 +280,20 @@ sizefunc(void *elemptr) {
  * NULL on failure to create. */
 static struct addrtree* 
 get_tree(struct subnet_msg_cache_data *data, struct ecs_data *edns, 
-	struct subnet_env *env)
+	struct subnet_env *env, struct config_file* cfg)
 {
 	struct addrtree *tree;
 	if (edns->subnet_addr_fam == EDNSSUBNET_ADDRFAM_IP4) {
 		if (!data->tree4)
-			data->tree4 = addrtree_create(EDNSSUBNET_MAX_SUBNET_IP4, 
-				&delfunc, &sizefunc, env, ECS_MAX_TREESIZE);
+			data->tree4 = addrtree_create(
+				cfg->max_client_subnet_ipv4, &delfunc,
+				&sizefunc, env, ECS_MAX_TREESIZE);
 		tree = data->tree4;
 	} else {
 		if (!data->tree6)
-			data->tree6 = addrtree_create(EDNSSUBNET_MAX_SUBNET_IP6, 
-				&delfunc, &sizefunc, env, ECS_MAX_TREESIZE);
+			data->tree6 = addrtree_create(
+				cfg->max_client_subnet_ipv6, &delfunc,
+				&sizefunc, env, ECS_MAX_TREESIZE);
 		tree = data->tree6;
 	}
 	return tree;
@@ -337,7 +343,7 @@ update_cache(struct module_qstate *qstate, int id)
 		}
 	}
 	/* Step 2, find the correct tree */
-	if (!(tree = get_tree(lru_entry->data, edns, sne))) {
+	if (!(tree = get_tree(lru_entry->data, edns, sne, qstate->env->cfg))) {
 		if (acquired_lock) lock_rw_unlock(&lru_entry->lock);
 		log_err("Subnet cache insertion failed");
 		return;
@@ -490,9 +496,9 @@ eval_response(struct module_qstate *qstate, int id, struct subnet_qstate *sq)
 		verbose(VERB_QUERY, "subnet: forged data");
 		s_out->subnet_validdata = 0;
 		(void)edns_opt_list_remove(&qstate->edns_opts_back_out,
-			EDNSSUBNET_OPCODE);
+			qstate->env->cfg->client_subnet_opcode);
 		sq->subnet_sent = 0;
-		return module_wait_module;
+		return module_restart_next;
 	}
 
 	lock_rw_wrlock(&sne->biglock);
@@ -550,28 +556,30 @@ parse_subnet_option(struct edns_option* ecs_option,
 }
 
 static void
-subnet_option_from_ss(struct sockaddr_storage *ss, struct ecs_data* ecs)
+subnet_option_from_ss(struct sockaddr_storage *ss, struct ecs_data* ecs,
+	struct config_file* cfg)
 {
 	void* sinaddr;
+
 	/* Construct subnet option from original query */
 	if(((struct sockaddr_in*)ss)->sin_family == AF_INET) {
-		ecs->subnet_source_mask = EDNSSUBNET_MAX_SUBNET_IP4;
+		ecs->subnet_source_mask = cfg->max_client_subnet_ipv4;
 		ecs->subnet_addr_fam = EDNSSUBNET_ADDRFAM_IP4;
 		sinaddr = &((struct sockaddr_in*)ss)->sin_addr;
 		if (!copy_clear( ecs->subnet_addr, INET6_SIZE,
 			(uint8_t *)sinaddr, INET_SIZE,
-			EDNSSUBNET_MAX_SUBNET_IP4)) {
+			ecs->subnet_source_mask)) {
 			ecs->subnet_validdata = 1;
 		}
 	}
 #ifdef INET6
 	else {
-		ecs->subnet_source_mask = EDNSSUBNET_MAX_SUBNET_IP6;
+		ecs->subnet_source_mask = cfg->max_client_subnet_ipv6;
 		ecs->subnet_addr_fam = EDNSSUBNET_ADDRFAM_IP6;
 		sinaddr = &((struct sockaddr_in6*)ss)->sin6_addr;
 		if (!copy_clear( ecs->subnet_addr, INET6_SIZE,
 			(uint8_t *)sinaddr, INET6_SIZE,
-			EDNSSUBNET_MAX_SUBNET_IP6)) {
+			ecs->subnet_source_mask)) {
 			ecs->subnet_validdata = 1;
 		}
 	}
@@ -581,16 +589,16 @@ subnet_option_from_ss(struct sockaddr_storage *ss, struct ecs_data* ecs)
 }
 
 int
-ecs_edns_back_parsed(struct module_qstate* qstate, void* cbargs)
+ecs_edns_back_parsed(struct module_qstate* qstate, int id, void* cbargs)
 {
-	int id = *((int*)cbargs);
 	struct subnet_qstate *sq;
 	struct edns_option* ecs_opt;
 	
 	if(!(sq=(struct subnet_qstate*)qstate->minfo[id]))
 		return 1;
 	if((ecs_opt = edns_opt_list_find(
-		qstate->edns_opts_back_in, EDNSSUBNET_OPCODE))) {
+		qstate->edns_opts_back_in,
+		qstate->env->cfg->client_subnet_opcode))) {
 		if(parse_subnet_option(ecs_opt, &sq->ecs_server_in) &&
 			sq->subnet_sent && sq->ecs_server_in.subnet_validdata)
 			/* Only skip global cache store if we sent an ECS option
@@ -616,7 +624,8 @@ subnetmod_operate(struct module_qstate *qstate, enum module_ev event,
 		strmodulevent(event));
 	log_query_info(VERB_QUERY, "subnet operate: query", &qstate->qinfo);
 
-	if(event == module_event_new && sq == NULL) {
+	if((event == module_event_new || event == module_event_pass) &&
+		sq == NULL) {
 		struct edns_option* ecs_opt;
 		if(!subnet_new_qstate(qstate, id)) {
 			qstate->return_msg = NULL;
@@ -627,7 +636,8 @@ subnetmod_operate(struct module_qstate *qstate, enum module_ev event,
 		sq = (struct subnet_qstate*)qstate->minfo[id];
 
 		if((ecs_opt = edns_opt_list_find(
-			qstate->edns_opts_front_in, EDNSSUBNET_OPCODE))) {
+			qstate->edns_opts_front_in,
+			qstate->env->cfg->client_subnet_opcode))) {
 			if(parse_subnet_option(ecs_opt, &sq->ecs_client_in)) {
 				sq->subnet_downstream = 1;
 			}
@@ -635,7 +645,7 @@ subnetmod_operate(struct module_qstate *qstate, enum module_ev event,
 		else if(qstate->mesh_info->reply_list) {
 			subnet_option_from_ss(
 				&qstate->mesh_info->reply_list->query_reply.addr,
-				&sq->ecs_client_in);
+				&sq->ecs_client_in, qstate->env->cfg);
 		}
 		
 		if(sq->ecs_client_in.subnet_validdata == 0) {

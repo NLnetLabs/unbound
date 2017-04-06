@@ -711,7 +711,6 @@ daemon_delete(struct daemon* daemon)
 		rrset_cache_delete(daemon->env->rrset_cache);
 		infra_delete(daemon->env->infra_cache);
 		edns_known_options_delete(daemon->env);
-		inplace_cb_lists_delete(daemon->env);
 	}
 	ub_randfree(daemon->rand);
 	alloc_clear(&daemon->superalloc);

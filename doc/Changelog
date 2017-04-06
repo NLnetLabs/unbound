@@ -1,3 +1,14 @@
+6 April 2017: Ralph
+	- Generalise inplace callback (de)registration
+	- (de)register inplace callbacks for module id
+	- No unbound-control set_option for ECS options
+	- Deprecated client-subnet-opcode config option
+	- Introduced client-subnet-always-forward config option
+	- Changed max-client-subnet-ipv6 default to 56 (as in RFC)
+	- Removed extern ECS config options
+	- module_restart_next now calls clear on all following modules
+	- Also create ECS module qstate on module_event_pass event
+
 6 April 2017: Wouter
 	- Small fixup for documentation.
 	- iana portlist update

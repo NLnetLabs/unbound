@@ -179,8 +179,9 @@ config_create(void)
 #ifdef CLIENT_SUBNET
 	cfg->client_subnet = NULL;
 	cfg->client_subnet_opcode = LDNS_EDNS_CLIENT_SUBNET;
+	cfg->client_subnet_always_forward = 0;
 	cfg->max_client_subnet_ipv4 = 24;
-	cfg->max_client_subnet_ipv6 = 64;
+	cfg->max_client_subnet_ipv6 = 56;
 #endif
 	cfg->views = NULL;
 	cfg->acls = NULL;
@@ -517,10 +518,10 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	else S_STR("python-script:", python_script)
 	else S_YNO("disable-dnssec-lame-check:", disable_dnssec_lame_check)
 #ifdef CLIENT_SUBNET
-	else S_STRLIST("send-client-subnet", client_subnet)
-	else S_NUMBER_OR_ZERO("max-client-subnet-ipv4:", max_client_subnet_ipv4)
-	else S_NUMBER_OR_ZERO("max-client-subnet-ipv6:", max_client_subnet_ipv6)
-	else S_NUMBER_OR_ZERO("client-subnet-opcode:", client_subnet_opcode)
+	/* Can't set max subnet prefix here, since that value is used when
+	 * generating the address tree. */
+	/* No client-subnet-always-forward here, module registration depends on
+	 * this option. */
 #endif
 	else if(strcmp(opt, "ip-ratelimit:") == 0) {
 	    IS_NUMBER_OR_ZERO; cfg->ip_ratelimit = atoi(val);
@@ -565,7 +566,9 @@ int config_set_option(struct config_file* cfg, const char* opt,
 		 * stub-ssl-upstream, forward-zone,
 		 * name, forward-addr, forward-host,
 		 * ratelimit-for-domain, ratelimit-below-domain,
-		 * local-zone-tag, access-control-view */
+		 * local-zone-tag, access-control-view 
+		 * send-client-subnet client-subnet-always-forward
+		 * max-client-subnet-ipv4 max-client-subnet-ipv6 */
 		return 0;
 	}
 	return 1;
@@ -841,7 +844,8 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_LST(opt, "send-client-subnet", client_subnet)
 	else O_DEC(opt, "max-client-subnet-ipv4", max_client_subnet_ipv4)
 	else O_DEC(opt, "max-client-subnet-ipv6", max_client_subnet_ipv6)
-	else O_DEC(opt, "client-subnet-opcode", client_subnet_opcode)
+	else O_YNO(opt, "client-subnet-always-forward:",
+		client_subnet_always_forward)
 #endif
 	else O_YNO(opt, "unblock-lan-zones", unblock_lan_zones)
 	else O_YNO(opt, "insecure-lan-zones", insecure_lan_zones)
@@ -1624,11 +1628,6 @@ config_apply(struct config_file* config)
 	MAX_NEG_TTL = (time_t)config->max_negative_ttl;
 	RTT_MIN_TIMEOUT = config->infra_cache_min_rtt;
 	EDNS_ADVERTISED_SIZE = (uint16_t)config->edns_buffer_size;
-#ifdef CLIENT_SUBNET
-	EDNSSUBNET_OPCODE = (uint16_t)config->client_subnet_opcode;
-	EDNSSUBNET_MAX_SUBNET_IP4 = (uint8_t)config->max_client_subnet_ipv4;
-	EDNSSUBNET_MAX_SUBNET_IP6 = (uint8_t)config->max_client_subnet_ipv6;
-#endif
 	MINIMAL_RESPONSES = config->minimal_responses;
 	RRSET_ROUNDROBIN = config->rrset_roundrobin;
 	log_set_time_asc(config->log_time_ascii);

@@ -131,7 +131,8 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_RATELIMIT VAR_RATELIMIT_SLABS VAR_RATELIMIT_SIZE
 %token VAR_RATELIMIT_FOR_DOMAIN VAR_RATELIMIT_BELOW_DOMAIN
 %token VAR_IP_RATELIMIT_FACTOR VAR_RATELIMIT_FACTOR
-%token VAR_SEND_CLIENT_SUBNET VAR_CLIENT_SUBNET_OPCODE
+%token VAR_SEND_CLIENT_SUBNET VAR_CLIENT_SUBNET_ALWAYS_FORWARD
+%token VAR_CLIENT_SUBNET_OPCODE
 %token VAR_MAX_CLIENT_SUBNET_IPV4 VAR_MAX_CLIENT_SUBNET_IPV6
 %token VAR_CAPS_WHITELIST VAR_CACHE_MAX_NEGATIVE_TTL VAR_PERMIT_SMALL_HOLDDOWN
 %token VAR_QNAME_MINIMISATION VAR_QNAME_MINIMISATION_STRICT VAR_IP_FREEBIND
@@ -213,8 +214,9 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_ip_ratelimit_size | server_ratelimit_size |
 	server_ratelimit_for_domain |
 	server_ratelimit_below_domain | server_ratelimit_factor |
-	server_ip_ratelimit_factor |
-	server_send_client_subnet | server_client_subnet_opcode |
+	server_ip_ratelimit_factor | server_send_client_subnet |
+	server_client_subnet_always_forward |
+	server_client_subnet_opcode |
 	server_max_client_subnet_ipv4 | server_max_client_subnet_ipv6 |
 	server_caps_whitelist | server_cache_max_negative_ttl |
 	server_permit_small_holddown | server_qname_minimisation |
@@ -368,15 +370,27 @@ server_send_client_subnet: VAR_SEND_CLIENT_SUBNET STRING_ARG
 	#endif
 	}
 	;
+server_client_subnet_always_forward:
+	VAR_CLIENT_SUBNET_ALWAYS_FORWARD STRING_ARG
+	{
+	#ifdef CLIENT_SUBNET
+		OUTYY(("P(server_client_subnet_always_forward:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else
+			cfg_parser->cfg->client_subnet_always_forward =
+				(strcmp($2, "yes")==0);
+	#else
+		OUTYY(("P(Compiled without edns subnet option, ignoring)\n"));
+	#endif
+		free($2);
+	}
+	;
 server_client_subnet_opcode: VAR_CLIENT_SUBNET_OPCODE STRING_ARG
 	{
 	#ifdef CLIENT_SUBNET
 		OUTYY(("P(client_subnet_opcode:%s)\n", $2));
-		if(atoi($2) == 0 && strcmp($2, "0") != 0)
-			yyerror("option code expected");
-		else if(atoi($2) > 65535 || atoi($2) < 0)
-			yyerror("option code must be in interval [0, 65535]");
-		else cfg_parser->cfg->client_subnet_opcode = atoi($2);
+		OUTYY(("P(Depricated option, ignoring)\n"));
 	#else
 		OUTYY(("P(Compiled without edns subnet option, ignoring)\n"));
 	#endif
@@ -393,7 +407,7 @@ server_max_client_subnet_ipv4: VAR_MAX_CLIENT_SUBNET_IPV4 STRING_ARG
 			cfg_parser->cfg->max_client_subnet_ipv4 = 32;
 		else if (atoi($2) < 0)
 			cfg_parser->cfg->max_client_subnet_ipv4 = 0;
-		else cfg_parser->cfg->max_client_subnet_ipv4 = atoi($2);
+		else cfg_parser->cfg->max_client_subnet_ipv4 = (uint8_t)atoi($2);
 	#else
 		OUTYY(("P(Compiled without edns subnet option, ignoring)\n"));
 	#endif
@@ -410,7 +424,7 @@ server_max_client_subnet_ipv6: VAR_MAX_CLIENT_SUBNET_IPV6 STRING_ARG
 			cfg_parser->cfg->max_client_subnet_ipv6 = 128;
 		else if (atoi($2) < 0)
 			cfg_parser->cfg->max_client_subnet_ipv6 = 0;
-		else cfg_parser->cfg->max_client_subnet_ipv6 = atoi($2);
+		else cfg_parser->cfg->max_client_subnet_ipv6 = (uint8_t)atoi($2);
 	#else
 		OUTYY(("P(Compiled without edns subnet option, ignoring)\n"));
 	#endif

@@ -43,11 +43,6 @@
 #include "edns-subnet/edns-subnet.h"
 #include <string.h>
 
-/** Opcode for edns subnet option, as assigned by IANA. */
-uint16_t EDNSSUBNET_OPCODE = 8;
-uint8_t EDNSSUBNET_MAX_SUBNET_IP4 = 24;
-uint8_t EDNSSUBNET_MAX_SUBNET_IP6 = 64;
-
 int
 copy_clear(uint8_t* dst, size_t dstlen, uint8_t* src, size_t srclen, size_t n)
 {

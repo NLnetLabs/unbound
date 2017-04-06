@@ -496,7 +496,7 @@ int fptr_whitelist_inplace_cb_reply_generic(inplace_cb_reply_func_type* fptr,
 	return 0;
 }
 
-int fptr_whitelist_inplace_cb_query(inplace_cb_query_func_type* ATTR_UNUSED(fptr))
+int fptr_whitelist_inplace_cb_query(inplace_cb_query_func_type* fptr)
 {
 #ifdef CLIENT_SUBNET
 	if(fptr == &ecs_whitelist_check)
@@ -506,7 +506,7 @@ int fptr_whitelist_inplace_cb_query(inplace_cb_query_func_type* ATTR_UNUSED(fptr
 }
 
 int fptr_whitelist_inplace_cb_edns_back_parsed(
-	inplace_cb_edns_back_parsed_func_type* ATTR_UNUSED(fptr))
+	inplace_cb_edns_back_parsed_func_type* fptr)
 {
 #ifdef CLIENT_SUBNET
 	if(fptr == &ecs_edns_back_parsed)

@@ -177,10 +177,12 @@ struct config_file {
 	 * accept option from, linked list */
 	struct config_strlist* client_subnet;
 	/** opcode assigned by IANA for edns0-client-subnet option */
-	int client_subnet_opcode;
+	uint16_t client_subnet_opcode;
+	/** Do not check whitelist if incoming query contains an ECS record */
+	int client_subnet_always_forward;
 	/** Subnet length we are willing to give up privacy for */
-	int max_client_subnet_ipv4;
-	int max_client_subnet_ipv6;
+	uint8_t max_client_subnet_ipv4;
+	uint8_t max_client_subnet_ipv6;
 #endif
 	/** list of access control entries, linked list */
 	struct config_str2list* acls;
@@ -440,9 +442,9 @@ struct config_file {
 	/** minimise QNAME in strict mode, minimise according to RFC.
 	 *  Do not apply fallback */
 	int qname_minimisation_strict;
-	/* SHM data - true if shm is enabled */
+	/** SHM data - true if shm is enabled */
 	int shm_enable;
-	/* SHM data - key for the shm */
+	/** SHM data - key for the shm */
 	int shm_key;
 
 	/** DNSCrypt */
@@ -481,7 +483,7 @@ struct config_stub {
 	int isprime;
 	/** if forward-first is set (failover to without if fails) */
 	int isfirst;
-	/* use SSL for queries to this stub */
+	/** use SSL for queries to this stub */
 	int ssl_upstream;
 };
 

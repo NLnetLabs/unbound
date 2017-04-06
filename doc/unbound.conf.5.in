@@ -1504,12 +1504,17 @@ classless delegation netblock, for example like 10.2.3.4/24 or 2001::11/64. Can
 be given multiple times. Authorities not listed will not receive edns-subnet
 information.
 .TP
-.B client\-subnet\-opcode: \fI<number>\fR
-Specify positive integer smaller than 65536. Defaults to 8.
+.B client\-subnet\-always\-forward: \fI<yes or no>\fR
+Specify whether the ECS whitelist check (configured using
+\fBsend\-client\-subnet\fR) is applied for all queries, even if the triggering
+query contains an ECS record, or only for queries for which the ECS record is
+generated using the querier address (and therefore did not contain ECS data in
+the client query). If enabled, the whitelist check is skipped when the client
+query contains an ECS record. Default is no.
 .TP
 .B max\-client\-subnet\-ipv6: \fI<number>\fR
 Specifies the maximum prefix length of the client source address we are willing
-to expose to third parties for IPv6.  Defaults to 64.
+to expose to third parties for IPv6.  Defaults to 56.
 .TP
 .B max\-client\-subnet\-ipv4: \fI<number>\fR
 Specifies the maximum prefix length of the client source address we are willing

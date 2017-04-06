@@ -1315,11 +1315,16 @@ mesh_continue(struct mesh_area* mesh, struct mesh_state* mstate,
 			return mesh_continue(mesh, mstate, module_error, ev);
 		}
 		if(s == module_restart_next) {
-			fptr_ok(fptr_whitelist_mod_clear(
-				mesh->mods.mod[mstate->s.curmod]->clear));
-			(*mesh->mods.mod[mstate->s.curmod]->clear)
-				(&mstate->s, mstate->s.curmod);
-			mstate->s.minfo[mstate->s.curmod] = NULL;
+			int curmod = mstate->s.curmod;
+			for(; mstate->s.curmod < mesh->mods.num; 
+				mstate->s.curmod++) {
+				fptr_ok(fptr_whitelist_mod_clear(
+					mesh->mods.mod[mstate->s.curmod]->clear));
+				(*mesh->mods.mod[mstate->s.curmod]->clear)
+					(&mstate->s, mstate->s.curmod);
+				mstate->s.minfo[mstate->s.curmod] = NULL;
+			}
+			mstate->s.curmod = curmod;
 		}
 		*ev = module_event_pass;
 		return 1;

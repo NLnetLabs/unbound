@@ -46,12 +46,6 @@
 #define EDNSSUBNET_ADDRFAM_IP4 1
 #define EDNSSUBNET_ADDRFAM_IP6 2
 
-/** Opcode for edns subnet option */
-extern uint16_t EDNSSUBNET_OPCODE;
-/** Maximum number of bits we are willing to expose */
-extern uint8_t EDNSSUBNET_MAX_SUBNET_IP4;
-extern uint8_t EDNSSUBNET_MAX_SUBNET_IP6;
-
 /**
  * ECS option
  */
