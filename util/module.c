@@ -143,6 +143,7 @@ inplace_cb_register(void* cb, enum inplace_cb_list_type type, void* cbarg,
 	callback->id = id;
 	callback->next = NULL;
 	callback->cb = cb;
+	callback->cb_arg = cbarg;
 	
 	prevp = (struct inplace_cb**) &env->inplace_cb_lists[type];
 	/* append at end of list */
