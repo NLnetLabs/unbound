@@ -895,8 +895,9 @@ respip_rewrite_reply(const struct query_info* qinfo,
 		}
 	}
   done:
-	if(view)
+	if(view) {
 		lock_rw_unlock(&view->lock);
+	}
 	if(ret) {
 		/* If we're redirecting the original answer to a
 		 * CNAME, record the CNAME rrset so the caller can take
