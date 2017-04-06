@@ -501,6 +501,8 @@ int fptr_whitelist_inplace_cb_query(inplace_cb_query_func_type* fptr)
 #ifdef CLIENT_SUBNET
 	if(fptr == &ecs_whitelist_check)
 		return 1;
+#else
+	(void)fptr;
 #endif
 	return 0;
 }
@@ -511,6 +513,8 @@ int fptr_whitelist_inplace_cb_edns_back_parsed(
 #ifdef CLIENT_SUBNET
 	if(fptr == &ecs_edns_back_parsed)
 		return 1;
+#else
+	(void)fptr;
 #endif
 	return 0;
 }
