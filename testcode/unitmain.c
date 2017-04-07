@@ -685,9 +685,11 @@ respip_view_conf_actions_test(void)
 	v = views_find_view(views, "view1", 0);
 	unit_assert(v);
 	verify_respip_set_actions(v->respip_set, config_response_ip_view1, clen1);
+	lock_rw_unlock(&v->lock);
 	v = views_find_view(views, "view2", 0);
 	unit_assert(v);
 	verify_respip_set_actions(v->respip_set, config_response_ip_view2, clen2);
+	lock_rw_unlock(&v->lock);
 }
 
 typedef struct addr_data {char* ip; char* data;} addr_data_t;

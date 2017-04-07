@@ -1,3 +1,6 @@
+7 april 2017: Ralph
+	- Unlock view in respip unit test
+
 6 April 2017: Ralph
 	- Generalise inplace callback (de)registration
 	- (de)register inplace callbacks for module id
