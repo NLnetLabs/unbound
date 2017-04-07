@@ -228,7 +228,7 @@ int
 modstack_find(struct module_stack* stack, const char* name)
 {
 	int i;
-        for(i=0; i<stack->num; i++) {
+	for(i=0; i<stack->num; i++) {
 		if(strcmp(stack->mod[i]->name, name) == 0)
 			return i;
 	}
