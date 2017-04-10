@@ -198,6 +198,9 @@ enum inplace_cb_list_type {
 	/* Inplace callbacks for when a query is ready to be sent to the back.*/
 	inplace_cb_query,
 	/* Inplace callback for when a reply is received from the back. */
+	inplace_cb_query_response,
+	/* Inplace callback for when EDNS is parsed on a reply received from the
+	 * back. */
 	inplace_cb_edns_back_parsed,
 	/* Total number of types. Used for array initialization.
 	 * Should always be last. */
@@ -272,14 +275,27 @@ typedef int inplace_cb_query_func_type(struct query_info* qinfo, uint16_t flags,
 	int id, void* callback);
 
 /**
- * Inplace callback function called after receiving reply from back.
+ * Inplace callback function called after parsing edns on query reply.
  * Called as func(qstate, cb_args)
  * Where:
  *	qstate: the query state
+ *	id: module id
  *	cb_args: argument passed when registering callback.
  */
 typedef int inplace_cb_edns_back_parsed_func_type(struct module_qstate* qstate, 
 	int id, void* cb_args);
+
+/**
+ * Inplace callback function called after parsing query response.
+ * Called as func(qstate, id, cb_args)
+ * Where:
+ *	qstate: the query state
+ *	response: query response
+ *	id: module id
+ *	cb_args: argument passed when registering callback.
+ */
+typedef int inplace_cb_query_response_func_type(struct module_qstate* qstate,
+	struct dns_msg* response, int id, void* cb_args);
 
 /**
  * Module environment.

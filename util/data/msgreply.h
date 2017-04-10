@@ -50,14 +50,13 @@ struct iovec;
 struct regional;
 struct edns_data;
 struct edns_option;
-struct inplace_cb_reply;
-struct inplace_cb_query;
-struct inplace_cb_edns_back_parsed;
+struct inplace_cb;
 struct module_qstate;
 struct module_env;
 struct msg_parse;
 struct rrset_parse;
 struct local_rrset;
+struct dns_msg;
 
 /** calculate the prefetch TTL as 90% of original. Calculation
  * without numerical overflow (uin32_t) */
@@ -625,14 +624,26 @@ int inplace_cb_query_call(struct module_env* env, struct query_info* qinfo,
 
 /**
  * Call the registered functions in the inplace_cb_edns_back_parsed linked list.
- * This function is going to get called after receiving a reply from a
- * nameserver.
+ * This function is going to get called after parsing the EDNS data on the
+ * reply from a nameserver.
  * @param env: module environment.
  * @param qstate: module qstate.
  * @return false on failure (a callback function returned an error).
  */
 int inplace_cb_edns_back_parsed_call(struct module_env* env, 
 	struct module_qstate* qstate);
+
+/**
+ * Call the registered functions in the inplace_cb_query_reponse linked list.
+ * This function is going to get called after receiving a reply from a
+ * nameserver.
+ * @param env: module environment.
+ * @param qstate: module qstate.
+ * @param response: received response
+ * @return false on failure (a callback function returned an error).
+ */
+int inplace_cb_query_response_call(struct module_env* env,
+	struct module_qstate* qstate, struct dns_msg* response);
 
 /**
  * Copy edns option list allocated to the new region

@@ -1074,6 +1074,19 @@ int inplace_cb_edns_back_parsed_call(struct module_env* env,
 	return 1;
 }
 
+int inplace_cb_query_response_call(struct module_env* env,
+	struct module_qstate* qstate, struct dns_msg* response) {
+	struct inplace_cb* cb =
+		env->inplace_cb_lists[inplace_cb_query_response];
+	for(; cb; cb=cb->next) {
+		fptr_ok(fptr_whitelist_inplace_cb_query_response(
+			(inplace_cb_query_response_func_type*)cb->cb));
+		(void)(*(inplace_cb_query_response_func_type*)cb->cb)(qstate,
+			response, cb->id, cb->cb_arg);
+	}
+	return 1;
+}
+
 struct edns_option* edns_opt_copy_region(struct edns_option* list,
         struct regional* region)
 {
@@ -1164,6 +1177,7 @@ struct edns_option* edns_opt_copy_alloc(struct edns_option* list)
 		if(s->opt_data) {
 			s->opt_data = memdup(s->opt_data, s->opt_len);
 			if(!s->opt_data) {
+				free(s);
 				edns_opt_list_free(result);
 				return NULL;
 			}

@@ -1,8 +1,12 @@
-7 april 2017: George
+10 April 2017: Ralph
+	- Remove ECS option after REFUSED answer
+	- Fix small memory leak in edns_opt_copy_alloc
+
+7 April 2017: George
 	- Fix pythonmod for cb changes.
 	- Some whitespace fixup.
 
-7 april 2017: Ralph
+7 April 2017: Ralph
 	- Unlock view in respip unit test
 
 6 April 2017: Ralph

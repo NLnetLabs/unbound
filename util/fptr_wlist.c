@@ -518,3 +518,15 @@ int fptr_whitelist_inplace_cb_edns_back_parsed(
 #endif
 	return 0;
 }
+
+int fptr_whitelist_inplace_cb_query_response(
+	inplace_cb_query_response_func_type* fptr)
+{
+#ifdef CLIENT_SUBNET
+	if(fptr == &ecs_query_response)
+		return 1;
+#else
+	(void)fptr;
+#endif
+	return 0;
+}

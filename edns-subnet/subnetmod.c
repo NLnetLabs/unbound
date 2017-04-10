@@ -227,6 +227,8 @@ subnetmod_init(struct module_env *env, int id)
 		env, id);
 	inplace_cb_register((void*)ecs_edns_back_parsed,
 		inplace_cb_edns_back_parsed, NULL, env, id);
+	inplace_cb_register((void*)ecs_query_response,
+		inplace_cb_query_response, NULL, env, id);
 	lock_rw_init(&sn_env->biglock);
 	return 1;
 }
@@ -586,6 +588,26 @@ subnet_option_from_ss(struct sockaddr_storage *ss, struct ecs_data* ecs,
 #else
 			/* We don't know how to handle ip6, just pass */
 #endif /* INET6 */
+}
+
+int
+ecs_query_response(struct module_qstate* qstate, struct dns_msg* response,
+	int id, void* ATTR_UNUSED(cbargs))
+{
+	struct subnet_qstate *sq;
+	
+	if(!response || !(sq=(struct subnet_qstate*)qstate->minfo[id]))
+		return 1;
+
+	if(sq->subnet_sent &&
+		FLAGS_GET_RCODE(response->rep->flags) == LDNS_RCODE_REFUSED) {
+		/* REFUSED reponse to ECS query, remove ECS option. */
+		edns_opt_list_remove(&qstate->edns_opts_back_out,
+			qstate->env->cfg->client_subnet_opcode);
+		sq->subnet_sent = 0;
+		memset(&sq->ecs_server_out, 0, sizeof(sq->ecs_server_out));
+	}
+	return 1;
 }
 
 int

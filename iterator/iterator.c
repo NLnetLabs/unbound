@@ -2194,6 +2194,10 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 	int dnsseclame = 0;
 	enum response_type type;
 	iq->num_current_queries--;
+
+	if(!inplace_cb_query_response_call(qstate->env, qstate, iq->response))
+		log_err("unable to call query_response callback");
+
 	if(iq->response == NULL) {
 		/* Don't increment qname when QNAME minimisation is enabled */
 		if(qstate->env->cfg->qname_minimisation)

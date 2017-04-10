@@ -123,4 +123,8 @@ int ecs_whitelist_check(struct query_info* qinfo, uint16_t flags,
  * store. Called just after parsing EDNS data from server. */
 int ecs_edns_back_parsed(struct module_qstate* qstate, int id, void* cbargs);
 
+/** Remove ECS record from back_out when query resulted in REFUSED response. */
+int ecs_query_response(struct module_qstate* qstate, struct dns_msg* response,
+	int id, void* cbargs);
+
 #endif /* SUBNETMOD_H */
