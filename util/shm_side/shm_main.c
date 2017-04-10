@@ -118,7 +118,7 @@ int shm_main_init(struct daemon* daemon)
 
 	/* Destroy previous SHM */
 	if (daemon->shm_info->id_arr >= 0)
-		shmctl(daemon->shm_info->id_ctl, IPC_RMID, NULL);
+		shmctl(daemon->shm_info->id_arr, IPC_RMID, NULL);
 
 	/* SHM: Create the segment */
 	daemon->shm_info->id_ctl = shmget(daemon->shm_info->key, sizeof(struct shm_stat_info), IPC_CREAT | 0666);
