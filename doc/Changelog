@@ -1,6 +1,6 @@
 10 April 2017: Wouter
-	- harden algo downgrade also makes unbound more lenient about digest
-	  algorithms in DS records.
+	- harden-algo-downgrade: no also makes unbound more lenient about
+	  digest algorithms in DS records.
 
 10 April 2017: Ralph
 	- Remove ECS option after REFUSED answer.
