@@ -124,7 +124,7 @@ addrtree_create(addrlen_t max_depth, void (*delfunc)(void *, void *),
 	struct addrtree *tree;
 	log_assert(delfunc != NULL);
 	log_assert(sizefunc != NULL);
-	tree = (struct addrtree *)malloc( sizeof (*tree) );
+	tree = (struct addrtree *)calloc(1, sizeof(*tree));
 	if (!tree)
 		return NULL;
 	tree->root = node_create(tree, NULL, 0, 0);
