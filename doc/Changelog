@@ -1,6 +1,7 @@
 10 April 2017: Ralph
-	- Remove ECS option after REFUSED answer
-	- Fix small memory leak in edns_opt_copy_alloc
+	- Remove ECS option after REFUSED answer.
+	- Fix small memory leak in edns_opt_copy_alloc.
+	- Respip dereference after NULL check.
 
 7 April 2017: George
 	- Fix pythonmod for cb changes.
