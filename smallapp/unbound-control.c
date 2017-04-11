@@ -238,6 +238,9 @@ static void print_mem(struct shm_stat_info* shm_stat)
 	PR_LL("mem.cache.message", shm_stat->mem.msg);
 	PR_LL("mem.cache.iterator", shm_stat->mem.iter);
 	PR_LL("mem.cache.validator", shm_stat->mem.val);
+#ifdef CLIENT_SUBNET
+	PR_LL("mem.cache.subnet", shm_stat->mem.subnet);
+#endif
 }
 
 /** print histogram */
