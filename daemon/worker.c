@@ -117,6 +117,9 @@ worker_mem_report(struct worker* ATTR_UNUSED(worker),
 	size_t total, front, back, mesh, msg, rrset, infra, ac, superac;
 	size_t me, iter, val, anch;
 	int i;
+#ifdef CLIENT_SUBNET
+	size_t subnet = 0;
+#endif /* CLIENT_SUBNET */
 	if(verbosity < VERB_ALGO) 
 		return;
 	front = listen_get_mem(worker->front);
@@ -136,6 +139,12 @@ worker_mem_report(struct worker* ATTR_UNUSED(worker),
 		if(strcmp(worker->env.mesh->mods.mod[i]->name, "validator")==0)
 			val += (*worker->env.mesh->mods.mod[i]->get_mem)
 				(&worker->env, i);
+#ifdef CLIENT_SUBNET
+		else if(strcmp(worker->env.mesh->mods.mod[i]->name,
+			"subnet")==0)
+			subnet += (*worker->env.mesh->mods.mod[i]->get_mem)
+				(&worker->env, i);
+#endif /* CLIENT_SUBNET */
 		else	iter += (*worker->env.mesh->mods.mod[i]->get_mem)
 				(&worker->env, i);
 	}
@@ -153,6 +162,17 @@ worker_mem_report(struct worker* ATTR_UNUSED(worker),
 		me += serviced_get_mem(cur_serv);
 	}
 	total = front+back+mesh+msg+rrset+infra+iter+val+ac+superac+me;
+#ifdef CLIENT_SUBNET
+	total += subnet;
+	log_info("Memory conditions: %u front=%u back=%u mesh=%u msg=%u "
+		"rrset=%u infra=%u iter=%u val=%u subnet=%u anchors=%u "
+		"alloccache=%u globalalloccache=%u me=%u",
+		(unsigned)total, (unsigned)front, (unsigned)back, 
+		(unsigned)mesh, (unsigned)msg, (unsigned)rrset, (unsigned)infra,
+		(unsigned)iter, (unsigned)val,
+		(unsigned)subnet, (unsigned)anch, (unsigned)ac,
+		(unsigned)superac, (unsigned)me);
+#else /* no CLIENT_SUBNET */
 	log_info("Memory conditions: %u front=%u back=%u mesh=%u msg=%u "
 		"rrset=%u infra=%u iter=%u val=%u anchors=%u "
 		"alloccache=%u globalalloccache=%u me=%u",
@@ -160,11 +180,15 @@ worker_mem_report(struct worker* ATTR_UNUSED(worker),
 		(unsigned)mesh, (unsigned)msg, (unsigned)rrset, 
 		(unsigned)infra, (unsigned)iter, (unsigned)val, (unsigned)anch,
 		(unsigned)ac, (unsigned)superac, (unsigned)me);
+#endif /* CLIENT_SUBNET */
 	log_info("Total heap memory estimate: %u  total-alloc: %u  "
 		"total-free: %u", (unsigned)total, 
 		(unsigned)unbound_mem_alloc, (unsigned)unbound_mem_freed);
 #else /* no UNBOUND_ALLOC_STATS */
 	size_t val = 0;
+#ifdef CLIENT_SUBNET
+	size_t subnet = 0;
+#endif /* CLIENT_SUBNET */
 	int i;
 	if(verbosity < VERB_QUERY)
 		return;
@@ -174,12 +198,27 @@ worker_mem_report(struct worker* ATTR_UNUSED(worker),
 		if(strcmp(worker->env.mesh->mods.mod[i]->name, "validator")==0)
 			val += (*worker->env.mesh->mods.mod[i]->get_mem)
 				(&worker->env, i);
+#ifdef CLIENT_SUBNET
+		else if(strcmp(worker->env.mesh->mods.mod[i]->name,
+			"subnet")==0)
+			subnet += (*worker->env.mesh->mods.mod[i]->get_mem)
+				(&worker->env, i);
+#endif /* CLIENT_SUBNET */
 	}
+#ifdef CLIENT_SUBNET
+	verbose(VERB_QUERY, "cache memory msg=%u rrset=%u infra=%u val=%u "
+		"subnet=%u",
+		(unsigned)slabhash_get_mem(worker->env.msg_cache),
+		(unsigned)slabhash_get_mem(&worker->env.rrset_cache->table),
+		(unsigned)infra_get_mem(worker->env.infra_cache),
+		(unsigned)val, (unsigned)subnet);
+#else /* no CLIENT_SUBNET */
 	verbose(VERB_QUERY, "cache memory msg=%u rrset=%u infra=%u val=%u",
 		(unsigned)slabhash_get_mem(worker->env.msg_cache),
 		(unsigned)slabhash_get_mem(&worker->env.rrset_cache->table),
 		(unsigned)infra_get_mem(worker->env.infra_cache),
 		(unsigned)val);
+#endif /* CLIENT_SUBNET */
 #endif /* UNBOUND_ALLOC_STATS */
 }
 

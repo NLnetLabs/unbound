@@ -1,3 +1,6 @@
+11 April 2017: Ralph
+	- Display ECS module memory usage.
+
 10 April 2017: Wouter
 	- harden-algo-downgrade: no also makes unbound more lenient about
 	  digest algorithms in DS records.

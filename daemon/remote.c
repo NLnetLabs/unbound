@@ -864,6 +864,9 @@ print_mem(SSL* ssl, struct worker* worker, struct daemon* daemon)
 {
 	int m;
 	size_t msg, rrset, val, iter, respip;
+#ifdef CLIENT_SUBNET
+	size_t subnet = 0;
+#endif /* CLIENT_SUBNET */
 	msg = slabhash_get_mem(daemon->env->msg_cache);
 	rrset = slabhash_get_mem(&daemon->env->rrset_cache->table);
 	val=0;
@@ -890,6 +893,15 @@ print_mem(SSL* ssl, struct worker* worker, struct daemon* daemon)
 		respip = (*worker->env.mesh->mods.mod[m]->get_mem)
 			(&worker->env, m);
 	}
+#ifdef CLIENT_SUBNET
+	m = modstack_find(&worker->env.mesh->mods, "subnet");
+	if(m != -1) {
+		fptr_ok(fptr_whitelist_mod_get_mem(worker->env.mesh->
+			mods.mod[m]->get_mem));
+		subnet = (*worker->env.mesh->mods.mod[m]->get_mem)
+			(&worker->env, m);
+	}
+#endif /* CLIENT_SUBNET */
 
 	if(!print_longnum(ssl, "mem.cache.rrset"SQ, rrset))
 		return 0;
@@ -901,6 +913,10 @@ print_mem(SSL* ssl, struct worker* worker, struct daemon* daemon)
 		return 0;
 	if(!print_longnum(ssl, "mem.mod.respip"SQ, respip))
 		return 0;
+#ifdef CLIENT_SUBNET
+	if(!print_longnum(ssl, "mem.mod.subnet"SQ, subnet))
+		return 0;
+#endif /* CLIENT_SUBNET */
 	return 1;
 }
 

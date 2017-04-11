@@ -761,7 +761,8 @@ subnetmod_get_mem(struct module_env *env, int id)
 	struct subnet_env *sn_env = env->modinfo[id];
 	if (!sn_env) return 0;
 	return sizeof(*sn_env) + 
-		slabhash_get_mem(sn_env->subnet_msg_cache);
+		slabhash_get_mem(sn_env->subnet_msg_cache) +
+		upstream_get_mem(sn_env->edns_subnet_upstreams);
 }
 
 /**
