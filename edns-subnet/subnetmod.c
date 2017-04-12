@@ -661,9 +661,14 @@ subnetmod_operate(struct module_qstate *qstate, enum module_ev event,
 		if((ecs_opt = edns_opt_list_find(
 			qstate->edns_opts_front_in,
 			qstate->env->cfg->client_subnet_opcode))) {
-			if(parse_subnet_option(ecs_opt, &sq->ecs_client_in)) {
-				sq->subnet_downstream = 1;
+			if(!parse_subnet_option(ecs_opt, &sq->ecs_client_in)) {
+				/* Wrongly formatted ECS option. RFC mandates to
+				 * return FORMERROR. */
+				qstate->return_rcode = LDNS_RCODE_FORMERR;
+				qstate->ext_state[id] = module_finished;
+				return;
 			}
+			sq->subnet_downstream = 1;
 		}
 		else if(qstate->mesh_info->reply_list) {
 			subnet_option_from_ss(

@@ -2,6 +2,7 @@
 	- Fix #1247: unbound does not shorten source prefix length when
 	  forwarding ECS.
 	- Properly check for allocation failure in local_data_find_tag_datas.
+	- Fix #1249: unbound doesn't return FORMERR to bogus ECS.
 
 11 April 2017: Ralph
 	- Display ECS module memory usage.
