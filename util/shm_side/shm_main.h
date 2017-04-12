@@ -61,9 +61,7 @@ struct shm_stat_info {
 		size_t rrset;
 		size_t val;
 		size_t iter;
-#ifdef CLIENT_SUBNET
 		size_t subnet;
-#endif
 	} mem;
 };
 

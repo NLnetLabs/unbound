@@ -262,8 +262,11 @@ void shm_main_run(struct worker *worker)
 			fptr_ok(fptr_whitelist_mod_get_mem(worker->env.mesh->mods.mod[modstack]->get_mem));
 			shm_stat->mem.iter = (*worker->env.mesh->mods.mod[modstack]->get_mem)(&worker->env, modstack);
 		}
-#ifdef CLIENT_SUBNET
+		/* subnet mem value is available in shm, also when not enabled,
+		 * to make the struct easier to memmap by other applications,
+		 * independent of the configuration of unbound */
 		shm_stat->mem.subnet = 0;
+#ifdef CLIENT_SUBNET
 		modstack = modstack_find(&worker->env.mesh->mods, "subnet");
 		if(modstack != -1) {
 			fptr_ok(fptr_whitelist_mod_get_mem(worker->env.mesh->mods.mod[modstack]->get_mem));
