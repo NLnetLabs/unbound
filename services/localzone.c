@@ -1312,7 +1312,7 @@ local_data_find_tag_datas(const struct query_info* qinfo,
 			sldns_wirerr_get_rdatawl(rr, len, 1),
 			d->rr_len[d->count]);
 		if(!d->rr_data[d->count])
-			if(!d) return 0; /* out of memory */
+			return 0; /* out of memory */
 		d->count++;
 	}
 	if(r->rk.dname)
