@@ -263,6 +263,7 @@ void shm_main_run(struct worker *worker)
 			shm_stat->mem.iter = (*worker->env.mesh->mods.mod[modstack]->get_mem)(&worker->env, modstack);
 		}
 #ifdef CLIENT_SUBNET
+		shm_stat->mem.subnet = 0;
 		modstack = modstack_find(&worker->env.mesh->mods, "subnet");
 		if(modstack != -1) {
 			fptr_ok(fptr_whitelist_mod_get_mem(worker->env.mesh->mods.mod[modstack]->get_mem));

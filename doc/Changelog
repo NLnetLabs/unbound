@@ -3,6 +3,7 @@
 	  forwarding ECS.
 	- Properly check for allocation failure in local_data_find_tag_datas.
 	- Fix #1249: unbound doesn't return FORMERR to bogus ECS.
+	- Set SHM ECS memory usage to 0 when module not loaded.
 
 11 April 2017: Ralph
 	- Display ECS module memory usage.
