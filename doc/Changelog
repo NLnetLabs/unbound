@@ -1,3 +1,7 @@
+12 April 2017: Ralph
+	- Fix #1247: unbound does not shorten source prefix length when
+	  forwarding ECS.
+
 11 April 2017: Ralph
 	- Display ECS module memory usage.
 

@@ -521,8 +521,7 @@ eval_response(struct module_qstate *qstate, int id, struct subnet_qstate *sq)
 
 /** Parse EDNS opt data containing ECS */
 static int
-parse_subnet_option(struct edns_option* ecs_option,
-	struct ecs_data* ecs)
+parse_subnet_option(struct edns_option* ecs_option, struct ecs_data* ecs)
 {
 	memset(ecs, 0, sizeof(*ecs));
 	if (ecs_option->opt_len < 4)
@@ -623,7 +622,8 @@ ecs_edns_back_parsed(struct module_qstate* qstate, int id,
 		qstate->edns_opts_back_in,
 		qstate->env->cfg->client_subnet_opcode))) {
 		if(parse_subnet_option(ecs_opt, &sq->ecs_server_in) &&
-			sq->subnet_sent && sq->ecs_server_in.subnet_validdata)
+			sq->subnet_sent &&
+			sq->ecs_server_in.subnet_validdata)
 			/* Only skip global cache store if we sent an ECS option
 			 * and received one back. Answers from non-whitelisted
 			 * servers will end up in global cache. Ansers for
@@ -696,6 +696,20 @@ subnetmod_operate(struct module_qstate *qstate, enum module_ev event,
 			sq->ecs_client_in.subnet_addr_fam;
 		sq->ecs_server_out.subnet_source_mask =
 			sq->ecs_client_in.subnet_source_mask;
+		/* Limit source prefix to configured maximum */
+		if(sq->ecs_server_out.subnet_addr_fam == EDNSSUBNET_ADDRFAM_IP4 
+			&& sq->ecs_server_out.subnet_source_mask >
+			qstate->env->cfg->max_client_subnet_ipv4)
+			sq->ecs_server_out.subnet_source_mask =
+				qstate->env->cfg->max_client_subnet_ipv4;
+		else if(sq->ecs_server_out.subnet_addr_fam == EDNSSUBNET_ADDRFAM_IP6 
+			&& sq->ecs_server_out.subnet_source_mask >
+			qstate->env->cfg->max_client_subnet_ipv6)
+			sq->ecs_server_out.subnet_source_mask =
+				qstate->env->cfg->max_client_subnet_ipv6;
+		/* Safe to copy completely, even if the source is limited by the
+		 * configuration. ecs_opt_list_append() will limit the address.
+		 * */
 		memcpy(&sq->ecs_server_out.subnet_addr,
 			sq->ecs_client_in.subnet_addr, INET6_SIZE);
 		sq->ecs_server_out.subnet_scope_mask = 0;
