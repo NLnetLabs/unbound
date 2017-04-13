@@ -403,6 +403,8 @@ config_tag_test(void)
 }
 	
 #include "util/rtt.h"
+#include "util/timehist.h"
+#include "libunbound/unbound.h"
 /** test RTT code */
 static void
 rtt_test(void)
@@ -426,6 +428,8 @@ rtt_test(void)
 		unit_assert( rtt_timeout(&r) > RTT_MIN_TIMEOUT-1);
 		unit_assert( rtt_timeout(&r) < RTT_MAX_TIMEOUT+1);
 	}
+	/* must be the same, timehist bucket is used in stats */
+	unit_assert(UB_STATS_BUCKET_NUM == NUM_BUCKETS_HIST);
 }
 
 #include "services/cache/infra.h"

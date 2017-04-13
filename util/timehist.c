@@ -225,7 +225,7 @@ timehist_quartile(struct timehist* hist, double q)
 }
 
 void 
-timehist_export(struct timehist* hist, size_t* array, size_t sz)
+timehist_export(struct timehist* hist, long long* array, size_t sz)
 {
 	size_t i;
 	if(!hist) return;
@@ -236,7 +236,7 @@ timehist_export(struct timehist* hist, size_t* array, size_t sz)
 }
 
 void 
-timehist_import(struct timehist* hist, size_t* array, size_t sz)
+timehist_import(struct timehist* hist, long long* array, size_t sz)
 {
 	size_t i;
 	if(!hist) return;

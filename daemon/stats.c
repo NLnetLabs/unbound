@@ -63,42 +63,42 @@
 
 /** add timers and the values do not overflow or become negative */
 static void
-timeval_add(struct timeval* d, const struct timeval* add)
+stats_timeval_add(long long* d_sec, long long* d_usec, long long add_sec, long long add_usec)
 {
 #ifndef S_SPLINT_S
-	d->tv_sec += add->tv_sec;
-	d->tv_usec += add->tv_usec;
-	if(d->tv_usec > 1000000) {
-		d->tv_usec -= 1000000;
-		d->tv_sec++;
+	(*d_sec) += add_sec;
+	(*d_usec) += add_usec;
+	if((*d_usec) > 1000000) {
+		(*d_usec) -= 1000000;
+		(*d_sec)++;
 	}
 #endif
 }
 
-void server_stats_init(struct server_stats* stats, struct config_file* cfg)
+void server_stats_init(struct ub_server_stats* stats, struct config_file* cfg)
 {
 	memset(stats, 0, sizeof(*stats));
 	stats->extended = cfg->stat_extended;
 }
 
-void server_stats_querymiss(struct server_stats* stats, struct worker* worker)
+void server_stats_querymiss(struct ub_server_stats* stats, struct worker* worker)
 {
 	stats->num_queries_missed_cache++;
 	stats->sum_query_list_size += worker->env.mesh->all.count;
-	if(worker->env.mesh->all.count > stats->max_query_list_size)
+	if((long long)worker->env.mesh->all.count > stats->max_query_list_size)
 		stats->max_query_list_size = worker->env.mesh->all.count;
 }
 
-void server_stats_prefetch(struct server_stats* stats, struct worker* worker)
+void server_stats_prefetch(struct ub_server_stats* stats, struct worker* worker)
 {
 	stats->num_queries_prefetch++;
 	/* changes the query list size so account that, like a querymiss */
 	stats->sum_query_list_size += worker->env.mesh->all.count;
-	if(worker->env.mesh->all.count > stats->max_query_list_size)
+	if((long long)worker->env.mesh->all.count > stats->max_query_list_size)
 		stats->max_query_list_size = worker->env.mesh->all.count;
 }
 
-void server_stats_log(struct server_stats* stats, struct worker* worker,
+void server_stats_log(struct ub_server_stats* stats, struct worker* worker,
 	int threadnum)
 {
 	log_info("server stats for thread %d: %u queries, "
@@ -140,7 +140,7 @@ get_rrset_bogus(struct worker* worker)
 }
 
 void
-server_stats_compile(struct worker* worker, struct stats_info* s, int reset)
+server_stats_compile(struct worker* worker, struct ub_stats_info* s, int reset)
 {
 	int i;
 	struct listen_list* lp;
@@ -151,7 +151,8 @@ server_stats_compile(struct worker* worker, struct stats_info* s, int reset)
 	s->mesh_jostled = worker->env.mesh->stats_jostled;
 	s->mesh_dropped = worker->env.mesh->stats_dropped;
 	s->mesh_replies_sent = worker->env.mesh->replies_sent;
-	s->mesh_replies_sum_wait = worker->env.mesh->replies_sum_wait;
+	s->mesh_replies_sum_wait_sec = worker->env.mesh->replies_sum_wait.tv_sec;
+	s->mesh_replies_sum_wait_usec = worker->env.mesh->replies_sum_wait.tv_usec;
 	s->mesh_time_median = timehist_quartile(worker->env.mesh->histogram,
 		0.50);
 
@@ -191,7 +192,7 @@ server_stats_compile(struct worker* worker, struct stats_info* s, int reset)
 }
 
 void server_stats_obtain(struct worker* worker, struct worker* who,
-	struct stats_info* s, int reset)
+	struct ub_stats_info* s, int reset)
 {
 	uint8_t *reply = NULL;
 	uint32_t len = 0;
@@ -217,7 +218,7 @@ void server_stats_obtain(struct worker* worker, struct worker* who,
 
 void server_stats_reply(struct worker* worker, int reset)
 {
-	struct stats_info s;
+	struct ub_stats_info s;
 	server_stats_compile(worker, &s, reset);
 	verbose(VERB_ALGO, "write stats replymsg");
 	if(!tube_write_msg(worker->daemon->workers[0]->cmd, 
@@ -225,7 +226,7 @@ void server_stats_reply(struct worker* worker, int reset)
 		fatal_exit("could not write stat values over cmd channel");
 }
 
-void server_stats_add(struct stats_info* total, struct stats_info* a)
+void server_stats_add(struct ub_stats_info* total, struct ub_stats_info* a)
 {
 	total->svr.num_queries += a->svr.num_queries;
 	total->svr.num_queries_ip_ratelimited += a->svr.num_queries_ip_ratelimited;
@@ -233,12 +234,12 @@ void server_stats_add(struct stats_info* total, struct stats_info* a)
 	total->svr.num_queries_prefetch += a->svr.num_queries_prefetch;
 	total->svr.sum_query_list_size += a->svr.sum_query_list_size;
 #ifdef USE_DNSCRYPT
-    total->svr.num_query_dnscrypt_crypted += a->svr.num_query_dnscrypt_crypted;
-    total->svr.num_query_dnscrypt_cert += a->svr.num_query_dnscrypt_cert;
-    total->svr.num_query_dnscrypt_cleartext += \
-        a->svr.num_query_dnscrypt_cleartext;
-    total->svr.num_query_dnscrypt_crypted_malformed += \
-        a->svr.num_query_dnscrypt_crypted_malformed;
+	total->svr.num_query_dnscrypt_crypted += a->svr.num_query_dnscrypt_crypted;
+	total->svr.num_query_dnscrypt_cert += a->svr.num_query_dnscrypt_cert;
+	total->svr.num_query_dnscrypt_cleartext += \
+		a->svr.num_query_dnscrypt_cleartext;
+	total->svr.num_query_dnscrypt_crypted_malformed += \
+		a->svr.num_query_dnscrypt_crypted_malformed;
 #endif
 	/* the max size reached is upped to higher of both */
 	if(a->svr.max_query_list_size > total->svr.max_query_list_size)
@@ -269,13 +270,13 @@ void server_stats_add(struct stats_info* total, struct stats_info* a)
 		total->svr.unwanted_replies += a->svr.unwanted_replies;
 		total->svr.unwanted_queries += a->svr.unwanted_queries;
 		total->svr.tcp_accept_usage += a->svr.tcp_accept_usage;
-		for(i=0; i<STATS_QTYPE_NUM; i++)
+		for(i=0; i<UB_STATS_QTYPE_NUM; i++)
 			total->svr.qtype[i] += a->svr.qtype[i];
-		for(i=0; i<STATS_QCLASS_NUM; i++)
+		for(i=0; i<UB_STATS_QCLASS_NUM; i++)
 			total->svr.qclass[i] += a->svr.qclass[i];
-		for(i=0; i<STATS_OPCODE_NUM; i++)
+		for(i=0; i<UB_STATS_OPCODE_NUM; i++)
 			total->svr.qopcode[i] += a->svr.qopcode[i];
-		for(i=0; i<STATS_RCODE_NUM; i++)
+		for(i=0; i<UB_STATS_RCODE_NUM; i++)
 			total->svr.ans_rcode[i] += a->svr.ans_rcode[i];
 		for(i=0; i<NUM_BUCKETS_HIST; i++)
 			total->svr.hist[i] += a->svr.hist[i];
@@ -286,22 +287,22 @@ void server_stats_add(struct stats_info* total, struct stats_info* a)
 	total->mesh_jostled += a->mesh_jostled;
 	total->mesh_dropped += a->mesh_dropped;
 	total->mesh_replies_sent += a->mesh_replies_sent;
-	timeval_add(&total->mesh_replies_sum_wait, &a->mesh_replies_sum_wait);
+	stats_timeval_add(&total->mesh_replies_sum_wait_sec, &total->mesh_replies_sum_wait_usec, a->mesh_replies_sum_wait_sec, a->mesh_replies_sum_wait_usec);
 	/* the medians are averaged together, this is not as accurate as
 	 * taking the median over all of the data, but is good and fast
 	 * added up here, division later*/
 	total->mesh_time_median += a->mesh_time_median;
 }
 
-void server_stats_insquery(struct server_stats* stats, struct comm_point* c,
+void server_stats_insquery(struct ub_server_stats* stats, struct comm_point* c,
 	uint16_t qtype, uint16_t qclass, struct edns_data* edns,
 	struct comm_reply* repinfo)
 {
 	uint16_t flags = sldns_buffer_read_u16_at(c->buffer, 2);
-	if(qtype < STATS_QTYPE_NUM)
+	if(qtype < UB_STATS_QTYPE_NUM)
 		stats->qtype[qtype]++;
 	else	stats->qtype_big++;
-	if(qclass < STATS_QCLASS_NUM)
+	if(qclass < UB_STATS_QCLASS_NUM)
 		stats->qclass[qclass]++;
 	else	stats->qclass_big++;
 	stats->qopcode[ LDNS_OPCODE_WIRE(sldns_buffer_begin(c->buffer)) ]++;
@@ -332,7 +333,7 @@ void server_stats_insquery(struct server_stats* stats, struct comm_point* c,
 	}
 }
 
-void server_stats_insrcode(struct server_stats* stats, sldns_buffer* buf)
+void server_stats_insrcode(struct ub_server_stats* stats, sldns_buffer* buf)
 {
 	if(stats->extended && sldns_buffer_limit(buf) != 0) {
 		int r = (int)LDNS_RCODE_WIRE( sldns_buffer_begin(buf) );

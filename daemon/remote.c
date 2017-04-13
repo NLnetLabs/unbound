@@ -780,9 +780,9 @@ do_verbosity(SSL* ssl, char* str)
 
 /** print stats from statinfo */
 static int
-print_stats(SSL* ssl, const char* nm, struct stats_info* s)
+print_stats(SSL* ssl, const char* nm, struct ub_stats_info* s)
 {
-	struct timeval avg;
+	struct timeval sumwait, avg;
 	if(!ssl_printf(ssl, "%s.num.queries"SQ"%lu\n", nm, 
 		(unsigned long)s->svr.num_queries)) return 0;
 	if(!ssl_printf(ssl, "%s.num.queries_ip_ratelimited"SQ"%lu\n", nm,
@@ -823,7 +823,9 @@ print_stats(SSL* ssl, const char* nm, struct stats_info* s)
 		(unsigned long)s->mesh_num_states)) return 0;
 	if(!ssl_printf(ssl, "%s.requestlist.current.user"SQ"%lu\n", nm,
 		(unsigned long)s->mesh_num_reply_states)) return 0;
-	timeval_divide(&avg, &s->mesh_replies_sum_wait, s->mesh_replies_sent);
+	sumwait.tv_sec = s->mesh_replies_sum_wait_sec;
+	sumwait.tv_usec = s->mesh_replies_sum_wait_usec;
+	timeval_divide(&avg, &sumwait, s->mesh_replies_sent);
 	if(!ssl_printf(ssl, "%s.recursion.time.avg"SQ ARG_LL "d.%6.6d\n", nm,
 		(long long)avg.tv_sec, (int)avg.tv_usec)) return 0;
 	if(!ssl_printf(ssl, "%s.recursion.time.median"SQ"%g\n", nm, 
@@ -835,7 +837,7 @@ print_stats(SSL* ssl, const char* nm, struct stats_info* s)
 
 /** print stats for one thread */
 static int
-print_thread_stats(SSL* ssl, int i, struct stats_info* s)
+print_thread_stats(SSL* ssl, int i, struct ub_stats_info* s)
 {
 	char nm[16];
 	snprintf(nm, sizeof(nm), "thread%d", i);
@@ -941,7 +943,7 @@ print_uptime(SSL* ssl, struct worker* worker, int reset)
 
 /** print extended histogram */
 static int
-print_hist(SSL* ssl, struct stats_info* s)
+print_hist(SSL* ssl, struct ub_stats_info* s)
 {
 	struct timehist* hist;
 	size_t i;
@@ -969,14 +971,14 @@ print_hist(SSL* ssl, struct stats_info* s)
 
 /** print extended stats */
 static int
-print_ext(SSL* ssl, struct stats_info* s)
+print_ext(SSL* ssl, struct ub_stats_info* s)
 {
 	int i;
 	char nm[16];
 	const sldns_rr_descriptor* desc;
 	const sldns_lookup_table* lt;
 	/* TYPE */
-	for(i=0; i<STATS_QTYPE_NUM; i++) {
+	for(i=0; i<UB_STATS_QTYPE_NUM; i++) {
 		if(inhibit_zero && s->svr.qtype[i] == 0)
 			continue;
 		desc = sldns_rr_descript((uint16_t)i);
@@ -1003,7 +1005,7 @@ print_ext(SSL* ssl, struct stats_info* s)
 			(unsigned long)s->svr.qtype_big)) return 0;
 	}
 	/* CLASS */
-	for(i=0; i<STATS_QCLASS_NUM; i++) {
+	for(i=0; i<UB_STATS_QCLASS_NUM; i++) {
 		if(inhibit_zero && s->svr.qclass[i] == 0)
 			continue;
 		lt = sldns_lookup_by_id(sldns_rr_classes, i);
@@ -1020,7 +1022,7 @@ print_ext(SSL* ssl, struct stats_info* s)
 			(unsigned long)s->svr.qclass_big)) return 0;
 	}
 	/* OPCODE */
-	for(i=0; i<STATS_OPCODE_NUM; i++) {
+	for(i=0; i<UB_STATS_OPCODE_NUM; i++) {
 		if(inhibit_zero && s->svr.qopcode[i] == 0)
 			continue;
 		lt = sldns_lookup_by_id(sldns_opcodes, i);
@@ -1062,7 +1064,7 @@ print_ext(SSL* ssl, struct stats_info* s)
 		(unsigned long)s->svr.qEDNS_DO)) return 0;
 
 	/* RCODE */
-	for(i=0; i<STATS_RCODE_NUM; i++) {
+	for(i=0; i<UB_STATS_RCODE_NUM; i++) {
 		/* Always include RCODEs 0-5 */
 		if(inhibit_zero && i > LDNS_RCODE_REFUSED && s->svr.ans_rcode[i] == 0)
 			continue;
@@ -1108,8 +1110,8 @@ static void
 do_stats(SSL* ssl, struct daemon_remote* rc, int reset)
 {
 	struct daemon* daemon = rc->worker->daemon;
-	struct stats_info total;
-	struct stats_info s;
+	struct ub_stats_info total;
+	struct ub_stats_info s;
 	int i;
 	log_assert(daemon->num > 0);
 	/* gather all thread statistics in one place */
