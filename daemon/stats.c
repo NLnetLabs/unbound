@@ -169,7 +169,7 @@ server_stats_compile(struct worker* worker, struct ub_stats_info* s, int reset)
 	s->svr.qtcp_outgoing = (long long)worker->back->num_tcp_outgoing;
 
 	/* get and reset validator rrset bogus number */
-	s->svr.rrset_bogus = get_rrset_bogus(worker);
+	s->svr.rrset_bogus = (long long)get_rrset_bogus(worker);
 
 	/* get cache sizes */
 	s->svr.msg_cache_count = (long long)count_slabhash_entries(worker->env.msg_cache);
