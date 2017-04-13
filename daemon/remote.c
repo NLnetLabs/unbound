@@ -124,7 +124,7 @@ timeval_subtract(struct timeval* d, const struct timeval* end,
 
 /** divide sum of timers to get average */
 static void
-timeval_divide(struct timeval* avg, const struct timeval* sum, size_t d)
+timeval_divide(struct timeval* avg, const struct timeval* sum, long long d)
 {
 #ifndef S_SPLINT_S
 	size_t leftover;
@@ -811,7 +811,7 @@ print_stats(SSL* ssl, const char* nm, struct ub_stats_info* s)
 	if(!ssl_printf(ssl, "%s.requestlist.avg"SQ"%g\n", nm,
 		(s->svr.num_queries_missed_cache+s->svr.num_queries_prefetch)?
 			(double)s->svr.sum_query_list_size/
-			(s->svr.num_queries_missed_cache+
+			(double)(s->svr.num_queries_missed_cache+
 			s->svr.num_queries_prefetch) : 0.0)) return 0;
 	if(!ssl_printf(ssl, "%s.requestlist.max"SQ"%lu\n", nm,
 		(unsigned long)s->svr.max_query_list_size)) return 0;
@@ -823,8 +823,8 @@ print_stats(SSL* ssl, const char* nm, struct ub_stats_info* s)
 		(unsigned long)s->mesh_num_states)) return 0;
 	if(!ssl_printf(ssl, "%s.requestlist.current.user"SQ"%lu\n", nm,
 		(unsigned long)s->mesh_num_reply_states)) return 0;
-	sumwait.tv_sec = s->mesh_replies_sum_wait_sec;
-	sumwait.tv_usec = s->mesh_replies_sum_wait_usec;
+	sumwait.tv_sec = (size_t)s->mesh_replies_sum_wait_sec;
+	sumwait.tv_usec = (size_t)s->mesh_replies_sum_wait_usec;
 	timeval_divide(&avg, &sumwait, s->mesh_replies_sent);
 	if(!ssl_printf(ssl, "%s.recursion.time.avg"SQ ARG_LL "d.%6.6d\n", nm,
 		(long long)avg.tv_sec, (int)avg.tv_usec)) return 0;

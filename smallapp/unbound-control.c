@@ -161,7 +161,7 @@ usage(void)
 static const int inhibit_zero = 1;
 /** divide sum of timers to get average */
 static void
-timeval_divide(struct timeval* avg, const struct timeval* sum, size_t d)
+timeval_divide(struct timeval* avg, const struct timeval* sum, long long d)
 {
 #ifndef S_SPLINT_S
 	size_t leftover;
@@ -211,15 +211,15 @@ static void pr_stats(const char* nm, struct ub_stats_info* s)
 	printf("%s.requestlist.avg"SQ"%g\n", nm,
 		(s->svr.num_queries_missed_cache+s->svr.num_queries_prefetch)?
 			(double)s->svr.sum_query_list_size/
-			(s->svr.num_queries_missed_cache+
+			(double)(s->svr.num_queries_missed_cache+
 			s->svr.num_queries_prefetch) : 0.0);
 	PR_UL_NM("requestlist.max", s->svr.max_query_list_size);
 	PR_UL_NM("requestlist.overwritten", s->mesh_jostled);
 	PR_UL_NM("requestlist.exceeded", s->mesh_dropped);
 	PR_UL_NM("requestlist.current.all", s->mesh_num_states);
 	PR_UL_NM("requestlist.current.user", s->mesh_num_reply_states);
-	sumwait.tv_sec = s->mesh_replies_sum_wait_sec;
-	sumwait.tv_usec = s->mesh_replies_sum_wait_usec;
+	sumwait.tv_sec = (size_t)s->mesh_replies_sum_wait_sec;
+	sumwait.tv_usec = (size_t)s->mesh_replies_sum_wait_usec;
 	timeval_divide(&avg, &sumwait, s->mesh_replies_sent);
 	printf("%s.", nm);
 	PR_TIMEVAL("recursion.time.avg", avg);
