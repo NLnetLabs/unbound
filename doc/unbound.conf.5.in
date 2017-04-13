@@ -1490,8 +1490,9 @@ specialized cache. If the authority indicated no support, the response is stored
 in the regular cache.
 .LP
 Additionally, when a client includes the option in its queries, Unbound will
-forward the option to the authority regardless of the authorities presence in
-the whitelist. In this case the lookup in the regular cache is skipped.
+forward the option to the authority if prensent in the whitelist, or
+\fBclient\-subnet\-always\-forward\fR is set to yes. In this case the lookup in
+the regular cache is skipped.
 .LP
 The maximum size of the ECS cache is controlled by 'msg-cache-size' in the
 configuration file. On top of that, for each query only 100 different subnets
