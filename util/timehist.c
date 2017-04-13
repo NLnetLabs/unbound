@@ -232,7 +232,7 @@ timehist_export(struct timehist* hist, long long* array, size_t sz)
 	if(sz > hist->num)
 		sz = hist->num;
 	for(i=0; i<sz; i++)
-		array[i] = hist->buckets[i].count;
+		array[i] = (long long)hist->buckets[i].count;
 }
 
 void 
@@ -243,5 +243,5 @@ timehist_import(struct timehist* hist, long long* array, size_t sz)
 	if(sz > hist->num)
 		sz = hist->num;
 	for(i=0; i<sz; i++)
-		hist->buckets[i].count = array[i];
+		hist->buckets[i].count = (size_t)array[i];
 }
