@@ -242,26 +242,26 @@ void shm_main_run(struct worker *worker)
 
 		/* Point to data into SHM */
 		shm_stat = worker->daemon->shm_info->ptr_ctl;
-		shm_stat->time.now_sec = worker->env.now_tv->tv_sec;
-		shm_stat->time.now_usec = worker->env.now_tv->tv_usec;
+		shm_stat->time.now_sec = (long long)worker->env.now_tv->tv_sec;
+		shm_stat->time.now_usec = (long long)worker->env.now_tv->tv_usec;
 
 		stat_timeval_subtract(&shm_stat->time.up_sec, &shm_stat->time.up_usec, worker->env.now_tv, &worker->daemon->time_boot);
 		stat_timeval_subtract(&shm_stat->time.elapsed_sec, &shm_stat->time.elapsed_usec, worker->env.now_tv, &worker->daemon->time_last_stat);
 
-		shm_stat->mem.msg = slabhash_get_mem(worker->env.msg_cache);
-		shm_stat->mem.rrset = slabhash_get_mem(&worker->env.rrset_cache->table);
+		shm_stat->mem.msg = (long long)slabhash_get_mem(worker->env.msg_cache);
+		shm_stat->mem.rrset = (long long)slabhash_get_mem(&worker->env.rrset_cache->table);
 		shm_stat->mem.val = 0;
 		shm_stat->mem.iter = 0;
 
 		modstack = modstack_find(&worker->env.mesh->mods, "validator");
 		if(modstack != -1) {
 			fptr_ok(fptr_whitelist_mod_get_mem(worker->env.mesh->mods.mod[modstack]->get_mem));
-			shm_stat->mem.val = (*worker->env.mesh->mods.mod[modstack]->get_mem)(&worker->env, modstack);
+			shm_stat->mem.val = (long long)(*worker->env.mesh->mods.mod[modstack]->get_mem)(&worker->env, modstack);
 		}
 		modstack = modstack_find(&worker->env.mesh->mods, "iterator");
 		if(modstack != -1) {
 			fptr_ok(fptr_whitelist_mod_get_mem(worker->env.mesh->mods.mod[modstack]->get_mem));
-			shm_stat->mem.iter = (*worker->env.mesh->mods.mod[modstack]->get_mem)(&worker->env, modstack);
+			shm_stat->mem.iter = (long long)(*worker->env.mesh->mods.mod[modstack]->get_mem)(&worker->env, modstack);
 		}
 		/* subnet mem value is available in shm, also when not enabled,
 		 * to make the struct easier to memmap by other applications,
@@ -271,7 +271,7 @@ void shm_main_run(struct worker *worker)
 		modstack = modstack_find(&worker->env.mesh->mods, "subnet");
 		if(modstack != -1) {
 			fptr_ok(fptr_whitelist_mod_get_mem(worker->env.mesh->mods.mod[modstack]->get_mem));
-			shm_stat->mem.subnet = (*worker->env.mesh->mods.mod[modstack]->get_mem)(&worker->env, modstack);
+			shm_stat->mem.subnet = (long long)(*worker->env.mesh->mods.mod[modstack]->get_mem)(&worker->env, modstack);
 		}
 #endif
 	}
