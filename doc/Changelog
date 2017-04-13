@@ -1,3 +1,6 @@
+13 April 2017: Wouter
+	- Fix #1250: inconsistent indentation in services/listen_dnsport.c.
+
 12 April 2017: Wouter
 	- subnet mem value is available in shm, also when not enabled,
 	  to make the struct easier to memmap by other applications,

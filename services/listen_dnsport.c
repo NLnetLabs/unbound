@@ -1185,7 +1185,7 @@ listen_create(struct comm_base* base, struct listen_port* ports,
 	front->cps = NULL;
 	front->udp_buff = sldns_buffer_new(bufsize);
 #ifdef USE_DNSCRYPT
-    front->dnscrypt_udp_buff = NULL;
+	front->dnscrypt_udp_buff = NULL;
 #endif
 	if(!front->udp_buff) {
 		free(front);
