@@ -218,8 +218,10 @@ static void pr_stats(const char* nm, struct ub_stats_info* s)
 	PR_UL_NM("requestlist.exceeded", s->mesh_dropped);
 	PR_UL_NM("requestlist.current.all", s->mesh_num_states);
 	PR_UL_NM("requestlist.current.user", s->mesh_num_reply_states);
-	sumwait.tv_sec = (size_t)s->mesh_replies_sum_wait_sec;
-	sumwait.tv_usec = (size_t)s->mesh_replies_sum_wait_usec;
+#ifndef S_SPLINT_S
+	sumwait.tv_sec = s->mesh_replies_sum_wait_sec;
+	sumwait.tv_usec = s->mesh_replies_sum_wait_usec;
+#endif
 	timeval_divide(&avg, &sumwait, s->mesh_replies_sent);
 	printf("%s.", nm);
 	PR_TIMEVAL("recursion.time.avg", avg);
