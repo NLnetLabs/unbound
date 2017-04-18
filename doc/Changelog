@@ -1,5 +1,6 @@
 18 April 2017: Ralph
 	- Fix #1252: more indentation inconsistencies.
+	- Fix #1253: unused variable in edns-subnet/addrtree.c:getbit().
 
 13 April 2017: Ralph
 	- Added ECS unit test (from Manu Bretelle).
