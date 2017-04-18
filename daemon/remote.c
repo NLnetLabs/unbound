@@ -799,14 +799,14 @@ print_stats(SSL* ssl, const char* nm, struct ub_stats_info* s)
 	if(!ssl_printf(ssl, "%s.num.recursivereplies"SQ"%lu\n", nm, 
 		(unsigned long)s->mesh_replies_sent)) return 0;
 #ifdef USE_DNSCRYPT
-    if(!ssl_printf(ssl, "%s.num.dnscrypt.crypted"SQ"%lu\n", nm,
-        (unsigned long)s->svr.num_query_dnscrypt_crypted)) return 0;
-    if(!ssl_printf(ssl, "%s.num.dnscrypt.cert"SQ"%lu\n", nm,
-        (unsigned long)s->svr.num_query_dnscrypt_cert)) return 0;
-    if(!ssl_printf(ssl, "%s.num.dnscrypt.cleartext"SQ"%lu\n", nm,
-        (unsigned long)s->svr.num_query_dnscrypt_cleartext)) return 0;
-    if(!ssl_printf(ssl, "%s.num.dnscrypt.malformed"SQ"%lu\n", nm,
-        (unsigned long)s->svr.num_query_dnscrypt_crypted_malformed)) return 0;
+	if(!ssl_printf(ssl, "%s.num.dnscrypt.crypted"SQ"%lu\n", nm,
+		(unsigned long)s->svr.num_query_dnscrypt_crypted)) return 0;
+	if(!ssl_printf(ssl, "%s.num.dnscrypt.cert"SQ"%lu\n", nm,
+		(unsigned long)s->svr.num_query_dnscrypt_cert)) return 0;
+	if(!ssl_printf(ssl, "%s.num.dnscrypt.cleartext"SQ"%lu\n", nm,
+		(unsigned long)s->svr.num_query_dnscrypt_cleartext)) return 0;
+	if(!ssl_printf(ssl, "%s.num.dnscrypt.malformed"SQ"%lu\n", nm,
+		(unsigned long)s->svr.num_query_dnscrypt_crypted_malformed)) return 0;
 #endif
 	if(!ssl_printf(ssl, "%s.requestlist.avg"SQ"%g\n", nm,
 		(s->svr.num_queries_missed_cache+s->svr.num_queries_prefetch)?

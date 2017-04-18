@@ -1014,43 +1014,48 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 		return 0;
 	}
 #ifdef USE_DNSCRYPT
-    repinfo->max_udp_size = worker->daemon->cfg->max_udp_size;
-    if(!dnsc_handle_curved_request(worker->daemon->dnscenv, repinfo)) {
-        worker->stats.num_query_dnscrypt_crypted_malformed++;
-        return 0;
-    }
-    if(c->dnscrypt && !repinfo->is_dnscrypted) {
-        char buf[LDNS_MAX_DOMAINLEN+1];
-        // Check if this is unencrypted and asking for certs
-        if(worker_check_request(c->buffer, worker) != 0) {
-            verbose(VERB_ALGO, "dnscrypt: worker check request: bad query.");
-            log_addr(VERB_CLIENT,"from",&repinfo->addr, repinfo->addrlen);
-            comm_point_drop_reply(repinfo);
-            return 0;
-        }
-        if(!query_info_parse(&qinfo, c->buffer)) {
-            verbose(VERB_ALGO, "dnscrypt: worker parse request: formerror.");
-            log_addr(VERB_CLIENT,"from",&repinfo->addr, repinfo->addrlen);
-            comm_point_drop_reply(repinfo);
-            return 0;
-        }
-        dname_str(qinfo.qname, buf);
-        if(!(qinfo.qtype == LDNS_RR_TYPE_TXT &&
-             strcasecmp(buf, worker->daemon->dnscenv->provider_name) == 0)) {
-            verbose(VERB_ALGO,
-                    "dnscrypt: not TXT %s. Receive: %s %s",
-                    worker->daemon->dnscenv->provider_name,
-                    sldns_rr_descript(qinfo.qtype)->_name,
-                    buf);
-            comm_point_drop_reply(repinfo);
-            worker->stats.num_query_dnscrypt_cleartext++;
-            return 0;
-        }
-        worker->stats.num_query_dnscrypt_cert++;
-        sldns_buffer_rewind(c->buffer);
-    } else if(c->dnscrypt && repinfo->is_dnscrypted) {
-        worker->stats.num_query_dnscrypt_crypted++;
-    }
+	repinfo->max_udp_size = worker->daemon->cfg->max_udp_size;
+	if(!dnsc_handle_curved_request(worker->daemon->dnscenv, repinfo)) {
+		worker->stats.num_query_dnscrypt_crypted_malformed++;
+		return 0;
+	}
+	if(c->dnscrypt && !repinfo->is_dnscrypted) {
+		char buf[LDNS_MAX_DOMAINLEN+1];
+		/* Check if this is unencrypted and asking for certs */
+		if(worker_check_request(c->buffer, worker) != 0) {
+			verbose(VERB_ALGO,
+				"dnscrypt: worker check request: bad query.");
+			log_addr(VERB_CLIENT,"from",&repinfo->addr,
+				repinfo->addrlen);
+			comm_point_drop_reply(repinfo);
+			return 0;
+		}
+		if(!query_info_parse(&qinfo, c->buffer)) {
+			verbose(VERB_ALGO,
+				"dnscrypt: worker parse request: formerror.");
+			log_addr(VERB_CLIENT, "from", &repinfo->addr,
+				repinfo->addrlen);
+			comm_point_drop_reply(repinfo);
+			return 0;
+		}
+		dname_str(qinfo.qname, buf);
+		if(!(qinfo.qtype == LDNS_RR_TYPE_TXT &&
+			strcasecmp(buf,
+			worker->daemon->dnscenv->provider_name) == 0)) {
+			verbose(VERB_ALGO,
+				"dnscrypt: not TXT %s. Receive: %s %s",
+				worker->daemon->dnscenv->provider_name,
+				sldns_rr_descript(qinfo.qtype)->_name,
+				buf);
+			comm_point_drop_reply(repinfo);
+			worker->stats.num_query_dnscrypt_cleartext++;
+			return 0;
+		}
+		worker->stats.num_query_dnscrypt_cert++;
+		sldns_buffer_rewind(c->buffer);
+	} else if(c->dnscrypt && repinfo->is_dnscrypted) {
+		worker->stats.num_query_dnscrypt_crypted++;
+	}
 #endif
 #ifdef USE_DNSTAP
 	if(worker->dtenv.log_client_query_messages)
@@ -1420,9 +1425,9 @@ send_reply_rc:
 			tv, 1, c->buffer);
 	}
 #ifdef USE_DNSCRYPT
-    if(!dnsc_handle_uncurved_request(repinfo)) {
-        return 0;
-    }
+	if(!dnsc_handle_uncurved_request(repinfo)) {
+		return 0;
+	}
 #endif
 	return rc;
 }

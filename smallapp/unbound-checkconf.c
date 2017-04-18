@@ -156,9 +156,9 @@ view_and_respipchecks(struct config_file* cfg)
 		fatal_exit("Could not create respip set: out of memory");
 	if(!views_apply_cfg(views, cfg))
 		fatal_exit("Could not set up views");
-        if(!respip_global_apply_cfg(respip, cfg))
+	if(!respip_global_apply_cfg(respip, cfg))
 		fatal_exit("Could not setup respip set");
-        if(!respip_views_apply_cfg(views, cfg, &ignored))
+	if(!respip_views_apply_cfg(views, cfg, &ignored))
 		fatal_exit("Could not setup per-view respip sets");
 	views_delete(views);
 	respip_set_delete(respip);

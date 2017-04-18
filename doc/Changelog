@@ -1,3 +1,6 @@
+18 April 2017: Ralph
+	- Fix #1252: more indentation inconsistencies.
+
 13 April 2017: Ralph
 	- Added ECS unit test (from Manu Bretelle).
 	- ECS documentation fix (from Manu Bretelle).

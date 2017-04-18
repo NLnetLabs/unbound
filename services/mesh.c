@@ -174,7 +174,7 @@ client_info_compare(const struct respip_client_info* ci_a,
 	 * but we check that just in case. */
 	if(ci_a->respip_set != ci_b->respip_set)
 		return ci_a->respip_set < ci_b->respip_set ? -1 : 1;
-        return 0;
+	return 0;
 }
 
 int
