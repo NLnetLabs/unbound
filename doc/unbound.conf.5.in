@@ -1201,6 +1201,7 @@ factor given.
 Override the global ratelimit for an exact match domain name with the listed
 number.  You can give this for any number of names.  For example, for
 a top\-level\-domain you may want to have a higher limit than other names.
+A value of \-1 will disable ratelimiting for that domain.
 .TP 5
 .B ratelimit\-below\-domain: \fI<domain> <number qps>
 Override the global ratelimit for a domain name that ends in this name.
@@ -1209,6 +1210,7 @@ in different parts of the namespace.  The closest matching suffix is used
 to determine the qps limit.  The rate for the exact matching domain name
 is not changed, use ratelimit\-for\-domain to set that, you might want
 to use different settings for a top\-level\-domain and subdomains.
+A value of \-1 will disable ratelimiting for domain names that end in this name.
 .TP 5
 .B ip\-ratelimit: \fI<number or 0>
 Enable global ratelimiting of queries accepted per ip address.

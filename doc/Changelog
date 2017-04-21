@@ -1,3 +1,6 @@
+21 April 2017: Ralph
+	- Fix #1254: clarify ratelimit-{for,below}-domain (from Manu Bretelle).
+	
 18 April 2017: Ralph
 	- Fix #1252: more indentation inconsistencies.
 	- Fix #1253: unused variable in edns-subnet/addrtree.c:getbit().
