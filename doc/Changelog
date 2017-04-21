@@ -1,5 +1,6 @@
 21 April 2017: Ralph
 	- Fix #1254: clarify ratelimit-{for,below}-domain (from Manu Bretelle).
+	- iana portlist update
 	
 18 April 2017: Ralph
 	- Fix #1252: more indentation inconsistencies.
