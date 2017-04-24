@@ -1,3 +1,7 @@
+24 April 2017: Wouter
+	- unbound-checkconf -o allows query of dnstap config variables.
+	  Also unbound-control get_option.
+
 21 April 2017: Ralph
 	- Fix #1254: clarify ratelimit-{for,below}-domain (from Manu Bretelle).
 	- iana portlist update
@@ -251,7 +255,7 @@
 	- Fix #1184: Log DNS replies. This includes the same logging
 	  information that DNS queries and response code and response size,
 	  patch from Larissa Feng.
-	- Fix #1185: Source IP rate limiting, patch from Larissa Feng.
+	- Fix #1187: Source IP rate limiting, patch from Larissa Feng.
 
 3 January 2017: Wouter
 	- configure --enable-systemd and lets unbound use systemd sockets if

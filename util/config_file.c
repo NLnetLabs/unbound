@@ -523,6 +523,26 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	/* No client-subnet-always-forward here, module registration depends on
 	 * this option. */
 #endif
+#ifdef USE_DNSTAP
+	else S_YNO("dnstap-enable:", dnstap)
+	else S_STR("dnstap-socket-path:", dnstap_socket_path)
+	else S_YNO("dnstap-send-identity:", dnstap_send_identity)
+	else S_YNO("dnstap-send-version:", dnstap_send_version)
+	else S_STR("dnstap-identity:", dnstap_identity)
+	else S_STR("dnstap-version:", dnstap_version)
+	else S_YNO("dnstap-log-resolver-query-messages:",
+		dnstap_log_resolver_query_messages)
+	else S_YNO("dnstap-log-resolver-response-messages:",
+		dnstap_log_resolver_response_messages)
+	else S_YNO("dnstap-log-client-query-messages:",
+		dnstap_log_client_query_messages)
+	else S_YNO("dnstap-log-client-response-messages:",
+		dnstap_log_client_response_messages)
+	else S_YNO("dnstap-log-forwarder-query-messages:",
+		dnstap_log_forwarder_query_messages)
+	else S_YNO("dnstap-log-forwarder-response-messages:",
+		dnstap_log_forwarder_response_messages)
+#endif
 	else if(strcmp(opt, "ip-ratelimit:") == 0) {
 	    IS_NUMBER_OR_ZERO; cfg->ip_ratelimit = atoi(val);
 	    infra_ip_ratelimit=cfg->ip_ratelimit;
@@ -846,6 +866,26 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_DEC(opt, "max-client-subnet-ipv6", max_client_subnet_ipv6)
 	else O_YNO(opt, "client-subnet-always-forward:",
 		client_subnet_always_forward)
+#endif
+#ifdef USE_DNSTAP
+	else O_YNO(opt, "dnstap-enable", dnstap)
+	else O_STR(opt, "dnstap-socket-path", dnstap_socket_path)
+	else O_YNO(opt, "dnstap-send-identity", dnstap_send_identity)
+	else O_YNO(opt, "dnstap-send-version", dnstap_send_version)
+	else O_STR(opt, "dnstap-identity", dnstap_identity)
+	else O_STR(opt, "dnstap-version", dnstap_version)
+	else O_YNO(opt, "dnstap-log-resolver-query-messages",
+		dnstap_log_resolver_query_messages)
+	else O_YNO(opt, "dnstap-log-resolver-response-messages",
+		dnstap_log_resolver_response_messages)
+	else O_YNO(opt, "dnstap-log-client-query-messages",
+		dnstap_log_client_query_messages)
+	else O_YNO(opt, "dnstap-log-client-response-messages",
+		dnstap_log_client_response_messages)
+	else O_YNO(opt, "dnstap-log-forwarder-query-messages",
+		dnstap_log_forwarder_query_messages)
+	else O_YNO(opt, "dnstap-log-forwarder-response-messages",
+		dnstap_log_forwarder_response_messages)
 #endif
 	else O_YNO(opt, "unblock-lan-zones", unblock_lan_zones)
 	else O_YNO(opt, "insecure-lan-zones", insecure_lan_zones)
