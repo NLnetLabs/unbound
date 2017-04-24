@@ -543,6 +543,13 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	else S_YNO("dnstap-log-forwarder-response-messages:",
 		dnstap_log_forwarder_response_messages)
 #endif
+#ifdef USE_DNSCRYPT
+	else S_YNO("dnscrypt-enable:", dnscrypt)
+	else S_NUMBER_NONZERO("dnscrypt-port:", dnscrypt_port)
+	else S_STR("dnscrypt-provider:", dnscrypt_provider)
+	else S_STRLIST("dnscrypt-provider-cert:", dnscrypt_provider_cert)
+	else S_STRLIST("dnscrypt-secret-key:", dnscrypt_secret_key)
+#endif
 	else if(strcmp(opt, "ip-ratelimit:") == 0) {
 	    IS_NUMBER_OR_ZERO; cfg->ip_ratelimit = atoi(val);
 	    infra_ip_ratelimit=cfg->ip_ratelimit;
@@ -886,6 +893,13 @@ config_get_option(struct config_file* cfg, const char* opt,
 		dnstap_log_forwarder_query_messages)
 	else O_YNO(opt, "dnstap-log-forwarder-response-messages",
 		dnstap_log_forwarder_response_messages)
+#endif
+#ifdef USE_DNSCRYPT
+	else O_YNO(opt, "dnscrypt-enable", dnscrypt)
+	else O_DEC(opt, "dnscrypt-port", dnscrypt_port)
+	else O_STR(opt, "dnscrypt-provider", dnscrypt_provider)
+	else O_LST(opt, "dnscrypt-provider-cert", dnscrypt_provider_cert)
+	else O_LST(opt, "dnscrypt-secret-key", dnscrypt_secret_key)
 #endif
 	else O_YNO(opt, "unblock-lan-zones", unblock_lan_zones)
 	else O_YNO(opt, "insecure-lan-zones", insecure_lan_zones)
