@@ -1,6 +1,8 @@
 24 April 2017: Wouter
 	- unbound-checkconf -o allows query of dnstap config variables.
 	  Also unbound-control get_option.  Also for dnscrypt.
+	- trunk contains 1.6.3 version number (changes from 1.6.2 back from
+	  when the 1.6.2rc1 tag has been created).
 
 21 April 2017: Ralph
 	- Fix #1254: clarify ratelimit-{for,below}-domain (from Manu Bretelle).
