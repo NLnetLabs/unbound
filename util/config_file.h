@@ -274,6 +274,8 @@ struct config_file {
 	struct config_strlist* dlv_anchor_list;
 	/** insecure domain list */
 	struct config_strlist* domain_insecure;
+	/** send key tag query */
+	int trust_anchor_signaling;
 
 	/** if not 0, this value is the validation date for RRSIGs */
 	int32_t val_date_override;

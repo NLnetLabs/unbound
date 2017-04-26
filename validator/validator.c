@@ -60,6 +60,7 @@
 #include "util/fptr_wlist.h"
 #include "sldns/rrdef.h"
 #include "sldns/wire2str.h"
+#include "sldns/str2wire.h"
 
 /* forward decl for cache response and normal super inform calls of a DS */
 static void process_ds_response(struct module_qstate* qstate, 
@@ -436,6 +437,65 @@ prime_trust_anchor(struct module_qstate* qstate, struct val_qstate* vq,
 		log_err("Could not prime trust anchor: out of memory");
 		return 0;
 	}
+	return 1;
+}
+
+/**
+ * Generate, send and detach key tag signaling query.
+ *
+ * @param qstate: query state.
+ * @param id: module id.
+ * @param ta: trust anchor, locked.
+ * @return false on a processing error.
+ */
+static int
+generate_keytag_query(struct module_qstate* qstate, int id,
+	struct trust_anchor* ta)
+{
+	/* 3 bytes for "_ta", 5 bytes per tag (4 bytes + "-") */
+#define MAX_LABEL_TAGS (LDNS_MAX_LABELLEN-3)/5
+	size_t i, numtag;
+	uint16_t tags[MAX_LABEL_TAGS];
+	char tagstr[LDNS_MAX_LABELLEN+1] = "_ta"; /* +1 for NULL byte */
+	char* tagstr_pos = tagstr + strlen(tagstr);
+	uint8_t dnamebuf[LDNS_MAX_DOMAINLEN+1]; /* +1 for label length byte */
+	size_t dnamebuf_len = sizeof(dnamebuf);
+	uint8_t* keytagdname;
+
+	numtag = anchor_list_keytags(ta, tags, MAX_LABEL_TAGS);
+	if(numtag == 0)
+		return 0;
+
+	for(i=0; i<numtag; i++) {
+		/* Buffer can't overflow; numtag is limited to tags that fit in
+		 * the buffer. */
+		sprintf(tagstr_pos, "-%04x", (unsigned)tags[i]);
+		tagstr_pos += strlen(tagstr_pos);
+	}
+	*tagstr_pos = '\0';
+
+	sldns_str2wire_dname_buf_origin(tagstr, dnamebuf, &dnamebuf_len,
+		ta->name, ta->namelen);
+	if(!(keytagdname = (uint8_t*)regional_alloc(qstate->region,
+		dnamebuf_len))) {
+		log_err("could not generate key tag query: out of memory");
+		return 0;
+	}
+	memcpy(keytagdname, dnamebuf, dnamebuf_len);
+
+	log_nametypeclass(VERB_ALGO, "keytag query", keytagdname,
+		LDNS_RR_TYPE_NULL, ta->dclass);
+	if(!generate_request(qstate, id, keytagdname, dnamebuf_len,
+		LDNS_RR_TYPE_NULL, ta->dclass, 0)) {
+		log_err("failed to generate key tag signaling request");
+		return 0;
+	}
+
+	/* We are not interrested in the response, detach this (and all other!)
+	 * subqueries. */
+	fptr_ok(fptr_whitelist_modenv_detach_subs(qstate->env->detach_subs));
+	(*qstate->env->detach_subs)(qstate);
+
 	return 1;
 }
 
@@ -2857,6 +2917,13 @@ process_prime_response(struct module_qstate* qstate, struct val_qstate* vq,
 			ta->name, ta->namelen, LDNS_RR_TYPE_DNSKEY,
 			ta->dclass);
 	}
+
+	if(qstate->env->cfg->trust_anchor_signaling &&
+		!generate_keytag_query(qstate, id, ta)) {
+		log_err("keytag signaling query failed");
+		return;
+	}
+
 	if(ta->autr) {
 		if(!autr_process_prime(qstate->env, ve, ta, dnskey_rrset)) {
 			/* trust anchor revoked, restart with less anchors */

@@ -206,6 +206,7 @@ config_create(void)
 	cfg->trust_anchor_file_list = NULL;
 	cfg->trust_anchor_list = NULL;
 	cfg->trusted_keys_file_list = NULL;
+	cfg->trust_anchor_signaling = 0;
 	cfg->dlv_anchor_file = NULL;
 	cfg->dlv_anchor_list = NULL;
 	cfg->domain_insecure = NULL;
@@ -480,6 +481,7 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	else S_STRLIST("trust-anchor-file:", trust_anchor_file_list)
 	else S_STRLIST("trust-anchor:", trust_anchor_list)
 	else S_STRLIST("trusted-keys-file:", trusted_keys_file_list)
+	else S_YNO("trust-anchor-signaling:", trust_anchor_signaling)
 	else S_STR("dlv-anchor-file:", dlv_anchor_file)
 	else S_STRLIST("dlv-anchor:", dlv_anchor_list)
 	else S_STRLIST("domain-insecure:", domain_insecure)
@@ -861,6 +863,7 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_LST(opt, "trust-anchor-file", trust_anchor_file_list)
 	else O_LST(opt, "trust-anchor", trust_anchor_list)
 	else O_LST(opt, "trusted-keys-file", trusted_keys_file_list)
+	else O_YNO(opt, "trust-anchor-signaling", trust_anchor_signaling)
 	else O_LST(opt, "dlv-anchor", dlv_anchor_list)
 	else O_LST(opt, "control-interface", control_ifs)
 	else O_LST(opt, "domain-insecure", domain_insecure)

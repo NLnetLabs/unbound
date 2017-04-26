@@ -140,7 +140,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_LOCAL_ZONE_OVERRIDE VAR_ACCESS_CONTROL_TAG_ACTION
 %token VAR_ACCESS_CONTROL_TAG_DATA VAR_VIEW VAR_ACCESS_CONTROL_VIEW
 %token VAR_VIEW_FIRST VAR_SERVE_EXPIRED VAR_FAKE_DSA VAR_FAKE_SHA1
-%token VAR_LOG_IDENTITY VAR_HIDE_TRUSTANCHOR
+%token VAR_LOG_IDENTITY VAR_HIDE_TRUSTANCHOR VAR_TRUST_ANCHOR_SIGNALING
 %token VAR_USE_SYSTEMD VAR_SHM_ENABLE VAR_SHM_KEY
 %token VAR_DNSCRYPT VAR_DNSCRYPT_ENABLE VAR_DNSCRYPT_PORT VAR_DNSCRYPT_PROVIDER
 %token VAR_DNSCRYPT_SECRET_KEY VAR_DNSCRYPT_PROVIDER_CERT
@@ -228,7 +228,7 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_fake_dsa | server_log_identity | server_use_systemd |
 	server_response_ip_tag | server_response_ip | server_response_ip_data |
 	server_shm_enable | server_shm_key | server_fake_sha1 |
-	server_hide_trustanchor
+	server_hide_trustanchor | server_trust_anchor_signaling
 	;
 stubstart: VAR_STUB_ZONE
 	{
@@ -781,6 +781,17 @@ server_trust_anchor: VAR_TRUST_ANCHOR STRING_ARG
 		OUTYY(("P(server_trust_anchor:%s)\n", $2));
 		if(!cfg_strlist_insert(&cfg_parser->cfg->trust_anchor_list, $2))
 			yyerror("out of memory");
+	}
+	;
+server_trust_anchor_signaling: VAR_TRUST_ANCHOR_SIGNALING STRING_ARG
+	{
+		OUTYY(("P(server_trust_anchor_signaling:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else
+			cfg_parser->cfg->trust_anchor_signaling =
+				(strcmp($2, "yes")==0);
+		free($2);
 	}
 	;
 server_domain_insecure: VAR_DOMAIN_INSECURE STRING_ARG

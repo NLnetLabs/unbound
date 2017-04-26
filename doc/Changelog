@@ -1,3 +1,6 @@
+26 April 2017: Ralph
+	- Implemented trust anchor signaling using key tag query.
+
 26 April 2017: Wouter
 	- Based on #1257: check parse limit before t increment in sldns RR
 	  string parse routine.

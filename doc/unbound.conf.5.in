@@ -804,6 +804,9 @@ the trusted\-keys { name flag proto algo "key"; }; clauses are read.
 It is possible to use wildcards with this statement, the wildcard is
 expanded on start and on reload.
 .TP
+.B trust\-anchor\-signaling: \fI<yes or no>
+Send RFC8145 key tag query after trust anchor priming. Default is off.
+.TP
 .B dlv\-anchor\-file: \fI<filename>
 This option was used during early days DNSSEC deployment when no parent-side
 DS record registrations were easily available.  Nowadays, it is best to have
