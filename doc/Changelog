@@ -1,3 +1,7 @@
+26 April 2017: Wouter
+	- Based on #1257: check parse limit before t increment in sldns RR
+	  string parse routine.
+
 24 April 2017: Wouter
 	- unbound-checkconf -o allows query of dnstap config variables.
 	  Also unbound-control get_option.  Also for dnscrypt.
