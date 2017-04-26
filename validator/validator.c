@@ -477,12 +477,11 @@ generate_keytag_query(struct module_qstate* qstate, int id,
 
 	sldns_str2wire_dname_buf_origin(tagstr, dnamebuf, &dnamebuf_len,
 		ta->name, ta->namelen);
-	if(!(keytagdname = (uint8_t*)regional_alloc(qstate->region,
-		dnamebuf_len))) {
+	if(!(keytagdname = (uint8_t*)regional_alloc_init(qstate->region,
+		dnamebuf, dnamebuf_len))) {
 		log_err("could not generate key tag query: out of memory");
 		return 0;
 	}
-	memcpy(keytagdname, dnamebuf, dnamebuf_len);
 
 	log_nametypeclass(VERB_ALGO, "keytag query", keytagdname,
 		LDNS_RR_TYPE_NULL, ta->dclass);
