@@ -457,6 +457,7 @@ generate_keytag_query(struct module_qstate* qstate, int id,
 	size_t i, numtag;
 	uint16_t tags[MAX_LABEL_TAGS];
 	char tagstr[LDNS_MAX_LABELLEN+1] = "_ta"; /* +1 for NULL byte */
+	size_t tagstr_left = sizeof(tagstr) - strlen(tagstr);
 	char* tagstr_pos = tagstr + strlen(tagstr);
 	uint8_t dnamebuf[LDNS_MAX_DOMAINLEN+1]; /* +1 for label length byte */
 	size_t dnamebuf_len = sizeof(dnamebuf);
@@ -469,10 +470,10 @@ generate_keytag_query(struct module_qstate* qstate, int id,
 	for(i=0; i<numtag; i++) {
 		/* Buffer can't overflow; numtag is limited to tags that fit in
 		 * the buffer. */
-		sprintf(tagstr_pos, "-%04x", (unsigned)tags[i]);
+		snprintf(tagstr_pos, tagstr_left, "-%04x", (unsigned)tags[i]);
+		tagstr_left -= strlen(tagstr_pos);
 		tagstr_pos += strlen(tagstr_pos);
 	}
-	*tagstr_pos = '\0';
 
 	sldns_str2wire_dname_buf_origin(tagstr, dnamebuf, &dnamebuf_len,
 		ta->name, ta->namelen);
