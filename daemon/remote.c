@@ -260,7 +260,7 @@ daemon_remote_create(struct config_file* cfg)
 		return NULL;
 	}
 #endif
-#ifdef SHA256_DIGEST_LENGTH
+#if defined(SHA256_DIGEST_LENGTH) && defined(USE_ECDSA)
 	/* if we have sha256, set the cipher list to have no known vulns */
 	if(!SSL_CTX_set_cipher_list(rc->ctx, "ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256"))
 		log_crypto_err("coult not set cipher list with SSL_CTX_set_cipher_list");
