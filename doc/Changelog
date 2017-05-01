@@ -1,6 +1,7 @@
 1 May 2017: Wouter
 	- Fix #1259: "--disable-ecdsa" argument overwritten 
 	  by "#ifdef SHA256_DIGEST_LENGTH@daemon/remote.c".
+	- iana portlist update
 
 26 April 2017: Ralph
 	- Implemented trust anchor signaling using key tag query.
