@@ -3,6 +3,7 @@
 	  by "#ifdef SHA256_DIGEST_LENGTH@daemon/remote.c".
 	- iana portlist update
 	- Fix #1258: Windows 10 X64 unbound 1.6.2 service will not start.
+	  and fix that 64bit getting installed in C:\Program Files (x86).
 
 26 April 2017: Ralph
 	- Implemented trust anchor signaling using key tag query.
