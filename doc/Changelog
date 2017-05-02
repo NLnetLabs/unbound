@@ -1,3 +1,6 @@
+2 May 2017: Wouter
+	- Added test for leak of stub information.
+
 1 May 2017: Wouter
 	- Fix #1259: "--disable-ecdsa" argument overwritten 
 	  by "#ifdef SHA256_DIGEST_LENGTH@daemon/remote.c".
