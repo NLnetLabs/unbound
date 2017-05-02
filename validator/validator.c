@@ -365,14 +365,17 @@ already_validated(struct dns_msg* ret_msg)
  * @param qtype: query type.
  * @param qclass: query class.
  * @param flags: additional flags, such as the CD bit (BIT_CD), or 0.
+ * @param newq: If the subquery is newly created, it is returned,
+ * 	otherwise NULL is returned
+ * @param detached: true if this qstate should not attach to the subquery
  * @return false on alloc failure.
  */
 static int
 generate_request(struct module_qstate* qstate, int id, uint8_t* name, 
-	size_t namelen, uint16_t qtype, uint16_t qclass, uint16_t flags)
+	size_t namelen, uint16_t qtype, uint16_t qclass, uint16_t flags, 
+	struct module_qstate** newq, int detached)
 {
 	struct val_qstate* vq = (struct val_qstate*)qstate->minfo[id];
-	struct module_qstate* newq;
 	struct query_info ask;
 	int valrec;
 	ask.qname = name;
@@ -381,62 +384,38 @@ generate_request(struct module_qstate* qstate, int id, uint8_t* name,
 	ask.qclass = qclass;
 	ask.local_alias = NULL;
 	log_query_info(VERB_ALGO, "generate request", &ask);
-	fptr_ok(fptr_whitelist_modenv_attach_sub(qstate->env->attach_sub));
 	/* enable valrec flag to avoid recursion to the same validation
 	 * routine, this lookup is simply a lookup. DLVs need validation */
 	if(qtype == LDNS_RR_TYPE_DLV)
 		valrec = 0;
 	else valrec = 1;
-	if(!(*qstate->env->attach_sub)(qstate, &ask, 
-		(uint16_t)(BIT_RD|flags), 0, valrec, &newq)){
-		log_err("Could not generate request: out of memory");
-		return 0;
+	if(detached) {
+		struct mesh_state* sub = NULL;
+		fptr_ok(fptr_whitelist_modenv_add_sub(
+			qstate->env->add_sub));
+		if(!(*qstate->env->add_sub)(qstate, &ask, 
+			(uint16_t)(BIT_RD|flags), 0, valrec, newq, &sub)){
+			log_err("Could not generate request: out of memory");
+			return 0;
+		}
+	}
+	else {
+		fptr_ok(fptr_whitelist_modenv_attach_sub(
+			qstate->env->attach_sub));
+		if(!(*qstate->env->attach_sub)(qstate, &ask, 
+			(uint16_t)(BIT_RD|flags), 0, valrec, newq)){
+			log_err("Could not generate request: out of memory");
+			return 0;
+		}
 	}
 	/* newq; validator does not need state created for that
 	 * query, and its a 'normal' for iterator as well */
-	if(newq) {
+	if(*newq) {
 		/* add our blacklist to the query blacklist */
-		sock_list_merge(&newq->blacklist, newq->region,
+		sock_list_merge(&(*newq)->blacklist, (*newq)->region,
 			vq->chain_blacklist);
 	}
 	qstate->ext_state[id] = module_wait_subquery;
-	return 1;
-}
-
-/**
- * Prime trust anchor for use.
- * Generate and dispatch a priming query for the given trust anchor.
- * The trust anchor can be DNSKEY or DS and does not have to be signed.
- *
- * @param qstate: query state.
- * @param vq: validator query state.
- * @param id: module id.
- * @param toprime: what to prime.
- * @return false on a processing error.
- */
-static int
-prime_trust_anchor(struct module_qstate* qstate, struct val_qstate* vq,
-	int id, struct trust_anchor* toprime)
-{
-	int ret = generate_request(qstate, id, toprime->name, toprime->namelen,
-		LDNS_RR_TYPE_DNSKEY, toprime->dclass, BIT_CD);
-	if(!ret) {
-		log_err("Could not prime trust anchor: out of memory");
-		return 0;
-	}
-	/* ignore newq; validator does not need state created for that
-	 * query, and its a 'normal' for iterator as well */
-	vq->wait_prime_ta = 1; /* to elicit PRIME_RESP_STATE processing 
-		from the validator inform_super() routine */
-	/* store trust anchor name for later lookup when prime returns */
-	vq->trust_anchor_name = regional_alloc_init(qstate->region,
-		toprime->name, toprime->namelen);
-	vq->trust_anchor_len = toprime->namelen;
-	vq->trust_anchor_labs = toprime->namelabs;
-	if(!vq->trust_anchor_name) {
-		log_err("Could not prime trust anchor: out of memory");
-		return 0;
-	}
 	return 1;
 }
 
@@ -462,6 +441,8 @@ generate_keytag_query(struct module_qstate* qstate, int id,
 	uint8_t dnamebuf[LDNS_MAX_DOMAINLEN+1]; /* +1 for label length byte */
 	size_t dnamebuf_len = sizeof(dnamebuf);
 	uint8_t* keytagdname;
+	struct module_qstate* newq = NULL;
+	enum module_ext_state ext_state = qstate->ext_state[id];
 
 	numtag = anchor_list_keytags(ta, tags, MAX_LABEL_TAGS);
 	if(numtag == 0)
@@ -486,16 +467,60 @@ generate_keytag_query(struct module_qstate* qstate, int id,
 	log_nametypeclass(VERB_ALGO, "keytag query", keytagdname,
 		LDNS_RR_TYPE_NULL, ta->dclass);
 	if(!generate_request(qstate, id, keytagdname, dnamebuf_len,
-		LDNS_RR_TYPE_NULL, ta->dclass, 0)) {
+		LDNS_RR_TYPE_NULL, ta->dclass, 0, &newq, 1)) {
 		log_err("failed to generate key tag signaling request");
 		return 0;
 	}
 
-	/* We are not interrested in the response, detach this (and all other!)
-	 * subqueries. */
-	fptr_ok(fptr_whitelist_modenv_detach_subs(qstate->env->detach_subs));
-	(*qstate->env->detach_subs)(qstate);
+	/* Not interrested in subquery response. Restore the ext_state,
+	 * that might be changed by generate_request() */
+	qstate->ext_state[id] = ext_state;
 
+	return 1;
+}
+
+/**
+ * Prime trust anchor for use.
+ * Generate and dispatch a priming query for the given trust anchor.
+ * The trust anchor can be DNSKEY or DS and does not have to be signed.
+ *
+ * @param qstate: query state.
+ * @param vq: validator query state.
+ * @param id: module id.
+ * @param toprime: what to prime.
+ * @return false on a processing error.
+ */
+static int
+prime_trust_anchor(struct module_qstate* qstate, struct val_qstate* vq,
+	int id, struct trust_anchor* toprime)
+{
+	struct module_qstate* newq = NULL;
+	int ret = generate_request(qstate, id, toprime->name, toprime->namelen,
+		LDNS_RR_TYPE_DNSKEY, toprime->dclass, BIT_CD, &newq, 0);
+
+	if(newq && qstate->env->cfg->trust_anchor_signaling &&
+		!generate_keytag_query(qstate, id, toprime)) {
+		log_err("keytag signaling query failed");
+		return 0;
+	}
+
+	if(!ret) {
+		log_err("Could not prime trust anchor: out of memory");
+		return 0;
+	}
+	/* ignore newq; validator does not need state created for that
+	 * query, and its a 'normal' for iterator as well */
+	vq->wait_prime_ta = 1; /* to elicit PRIME_RESP_STATE processing 
+		from the validator inform_super() routine */
+	/* store trust anchor name for later lookup when prime returns */
+	vq->trust_anchor_name = regional_alloc_init(qstate->region,
+		toprime->name, toprime->namelen);
+	vq->trust_anchor_len = toprime->namelen;
+	vq->trust_anchor_labs = toprime->namelabs;
+	if(!vq->trust_anchor_name) {
+		log_err("Could not prime trust anchor: out of memory");
+		return 0;
+	}
 	return 1;
 }
 
@@ -1570,6 +1595,7 @@ processFindKey(struct module_qstate* qstate, struct val_qstate* vq, int id)
 	uint8_t* target_key_name, *current_key_name;
 	size_t target_key_len;
 	int strip_lab;
+	struct module_qstate* newq = NULL;
 
 	log_query_info(VERB_ALGO, "validator: FindKey", &vq->qchase);
 	/* We know that state.key_entry is not 0 or bad key -- if it were,
@@ -1582,7 +1608,7 @@ processFindKey(struct module_qstate* qstate, struct val_qstate* vq, int id)
 	if(key_entry_isnull(vq->key_entry)) {
 		if(!generate_request(qstate, id, vq->ds_rrset->rk.dname, 
 			vq->ds_rrset->rk.dname_len, LDNS_RR_TYPE_DNSKEY, 
-			vq->qchase.qclass, BIT_CD)) {
+			vq->qchase.qclass, BIT_CD, &newq, 0)) {
 			log_err("mem error generating DNSKEY request");
 			return val_error(qstate, id);
 		}
@@ -1654,7 +1680,7 @@ processFindKey(struct module_qstate* qstate, struct val_qstate* vq, int id)
 		vq->key_entry->name) != 0) {
 		if(!generate_request(qstate, id, vq->ds_rrset->rk.dname, 
 			vq->ds_rrset->rk.dname_len, LDNS_RR_TYPE_DNSKEY, 
-			vq->qchase.qclass, BIT_CD)) {
+			vq->qchase.qclass, BIT_CD, &newq, 0)) {
 			log_err("mem error generating DNSKEY request");
 			return val_error(qstate, id);
 		}
@@ -1683,7 +1709,7 @@ processFindKey(struct module_qstate* qstate, struct val_qstate* vq, int id)
 		}
 		if(!generate_request(qstate, id, target_key_name, 
 			target_key_len, LDNS_RR_TYPE_DS, vq->qchase.qclass,
-			BIT_CD)) {
+			BIT_CD, &newq, 0)) {
 			log_err("mem error generating DS request");
 			return val_error(qstate, id);
 		}
@@ -1693,7 +1719,7 @@ processFindKey(struct module_qstate* qstate, struct val_qstate* vq, int id)
 	/* Otherwise, it is time to query for the DNSKEY */
 	if(!generate_request(qstate, id, vq->ds_rrset->rk.dname, 
 		vq->ds_rrset->rk.dname_len, LDNS_RR_TYPE_DNSKEY, 
-		vq->qchase.qclass, BIT_CD)) {
+		vq->qchase.qclass, BIT_CD, &newq, 0)) {
 		log_err("mem error generating DNSKEY request");
 		return val_error(qstate, id);
 	}
@@ -1907,6 +1933,7 @@ val_dlv_init(struct module_qstate* qstate, struct val_qstate* vq,
 {
 	uint8_t* nm;
 	size_t nm_len;
+	struct module_qstate* newq = NULL;
 	/* there must be a DLV configured */
 	log_assert(qstate->env->anchors->dlv_anchor);
 	/* this bool is true to avoid looping in the DLV checks */
@@ -2008,7 +2035,7 @@ val_dlv_init(struct module_qstate* qstate, struct val_qstate* vq,
 	vq->state = VAL_DLVLOOKUP_STATE;
 	if(!generate_request(qstate, id, vq->dlv_lookup_name, 
 		vq->dlv_lookup_name_len, LDNS_RR_TYPE_DLV,
-		vq->qchase.qclass, 0)) {
+		vq->qchase.qclass, 0, &newq, 0)) {
 		return val_error(qstate, id);
 	}
 
@@ -2188,6 +2215,7 @@ static int
 processDLVLookup(struct module_qstate* qstate, struct val_qstate* vq, 
 	struct val_env* ve, int id)
 {
+	struct module_qstate* newq = NULL;
 	/* see if this we are ready to continue normal resolution */
 	/* we may need more DLV lookups */
 	if(vq->dlv_status==dlv_error)
@@ -2236,7 +2264,7 @@ processDLVLookup(struct module_qstate* qstate, struct val_qstate* vq,
 
 		if(!generate_request(qstate, id, vq->ds_rrset->rk.dname, 
 			vq->ds_rrset->rk.dname_len, LDNS_RR_TYPE_DNSKEY, 
-			vq->qchase.qclass, BIT_CD)) {
+			vq->qchase.qclass, BIT_CD, &newq, 0)) {
 			log_err("mem error generating DNSKEY request");
 			return val_error(qstate, id);
 		}
@@ -2278,7 +2306,7 @@ processDLVLookup(struct module_qstate* qstate, struct val_qstate* vq,
 
 	if(!generate_request(qstate, id, vq->dlv_lookup_name,
 		vq->dlv_lookup_name_len, LDNS_RR_TYPE_DLV, 
-		vq->qchase.qclass, 0)) {
+		vq->qchase.qclass, 0, &newq, 0)) {
 		return val_error(qstate, id);
 	}
 
@@ -2916,12 +2944,6 @@ process_prime_response(struct module_qstate* qstate, struct val_qstate* vq,
 		dnskey_rrset = reply_find_rrset_section_an(msg->rep,
 			ta->name, ta->namelen, LDNS_RR_TYPE_DNSKEY,
 			ta->dclass);
-	}
-
-	if(qstate->env->cfg->trust_anchor_signaling &&
-		!generate_keytag_query(qstate, id, ta)) {
-		log_err("keytag signaling query failed");
-		return;
 	}
 
 	if(ta->autr) {

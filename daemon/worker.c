@@ -1669,6 +1669,7 @@ worker_init(struct worker* worker, struct config_file *cfg,
 	worker->env.mesh = mesh_create(&worker->daemon->mods, &worker->env);
 	worker->env.detach_subs = &mesh_detach_subs;
 	worker->env.attach_sub = &mesh_attach_sub;
+	worker->env.add_sub = &mesh_add_sub;
 	worker->env.kill_sub = &mesh_state_delete;
 	worker->env.detect_cycle = &mesh_detect_cycle;
 	worker->env.scratch_buffer = sldns_buffer_new(cfg->msg_buffer_size);
