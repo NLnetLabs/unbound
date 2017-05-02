@@ -38,7 +38,7 @@ extern "C" {
 #define LDNS_KEY_REVOKE_KEY 0x0080 /* used to revoke KSK, rfc 5011 */
 
 /* The first fields are contiguous and can be referenced instantly */
-#define LDNS_RDATA_FIELD_DESCRIPTORS_COMMON 258
+#define LDNS_RDATA_FIELD_DESCRIPTORS_COMMON 259
 
 /** lookuptable for rr classes  */
 extern struct sldns_struct_lookup_table* sldns_rr_classes;
@@ -226,6 +226,7 @@ enum sldns_enum_rr_type
 	LDNS_RR_TYPE_ANY = 255,
 	LDNS_RR_TYPE_URI = 256, /* RFC 7553 */
 	LDNS_RR_TYPE_CAA = 257, /* RFC 6844 */
+	LDNS_RR_TYPE_AVC = 258,
 
 	/** DNSSEC Trust Authorities */
 	LDNS_RR_TYPE_TA = 32768,

@@ -7,6 +7,7 @@
 	- Fix sldns wire2str printout of RR type CAA tags.
 	- Fix sldns int16_data parse.
 	- Fix sldns parse and printout of TSIG RRs.
+	- sldns SMIMEA and AVC definitions, same as getdns definitions.
 
 1 May 2017: Wouter
 	- Fix #1259: "--disable-ecdsa" argument overwritten 
