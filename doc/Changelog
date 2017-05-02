@@ -1,6 +1,7 @@
 2 May 2017: Wouter
 	- Added test for leak of stub information.
 	- Fix sldns wire2str printout of RR type CAA tags.
+	- Fix sldns int16_data parse.
 
 1 May 2017: Wouter
 	- Fix #1259: "--disable-ecdsa" argument overwritten 
