@@ -433,11 +433,14 @@ typedef enum sldns_enum_edns_option sldns_edns_option;
 
 #define LDNS_EDNS_MASK_DO_BIT 0x8000
 
-/** tsig rcodes */
+/** TSIG and TKEY extended rcodes (16bit), 0-15 are the normal rcodes. */
 #define LDNS_TSIG_ERROR_NOERROR  0
 #define LDNS_TSIG_ERROR_BADSIG   16
 #define LDNS_TSIG_ERROR_BADKEY   17
 #define LDNS_TSIG_ERROR_BADTIME  18
+#define LDNS_TSIG_ERROR_BADMODE  19
+#define LDNS_TSIG_ERROR_BADNAME  20
+#define LDNS_TSIG_ERROR_BADALG   21
 
 /**
  * Contains all information about resource record types.

@@ -188,6 +188,9 @@ static sldns_lookup_table sldns_tsig_errors_data[] = {
 	{ LDNS_TSIG_ERROR_BADSIG, "BADSIG" },
 	{ LDNS_TSIG_ERROR_BADKEY, "BADKEY" },
 	{ LDNS_TSIG_ERROR_BADTIME, "BADTIME" },
+	{ LDNS_TSIG_ERROR_BADMODE, "BADMODE" },
+	{ LDNS_TSIG_ERROR_BADNAME, "BADNAME" },
+	{ LDNS_TSIG_ERROR_BADALG, "BADALG" },
 	{ 0, NULL }
 };
 sldns_lookup_table* sldns_tsig_errors = sldns_tsig_errors_data;
