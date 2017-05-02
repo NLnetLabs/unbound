@@ -46,7 +46,7 @@
 #include "sldns/wire2str.h"
 
 /** verbose this unit test */
-static int vbmp = 0; 
+static int vbmp = 1; 
 
 /** print buffer to hex into string */
 static void

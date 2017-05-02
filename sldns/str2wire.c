@@ -664,6 +664,14 @@ rrinternal_parse_rdata(sldns_buffer* strbuf, char* token, size_t token_len,
 					&pre_data_pos, delimiters,
 					rdftype, &token_strlen))
 					break;
+			} else if(rdftype == LDNS_RDF_TYPE_INT16_DATA &&
+				strcmp(token, "0")!=0) {
+				/* affix len and b64 fields */
+				if(!sldns_affix_token(strbuf, token,
+					&token_len, &quoted, &parens,
+					&pre_data_pos, delimiters,
+					rdftype, &token_strlen))
+					break;
 			}
 
 			/* normal RR */
@@ -940,6 +948,8 @@ int sldns_str2wire_rdf_buf(const char* str, uint8_t* rd, size_t* len,
 		return sldns_str2wire_time_buf(str, rd, len);
 	case LDNS_RDF_TYPE_PERIOD:
 		return sldns_str2wire_period_buf(str, rd, len);
+	case LDNS_RDF_TYPE_TSIGTIME:
+		return sldns_str2wire_tsigtime_buf(str, rd, len);
 	case LDNS_RDF_TYPE_LOC:
 		return sldns_str2wire_loc_buf(str, rd, len);
 	case LDNS_RDF_TYPE_WKS:
@@ -964,6 +974,8 @@ int sldns_str2wire_rdf_buf(const char* str, uint8_t* rd, size_t* len,
 		return sldns_str2wire_tag_buf(str, rd, len);
 	case LDNS_RDF_TYPE_LONG_STR:
 		return sldns_str2wire_long_str_buf(str, rd, len);
+	case LDNS_RDF_TYPE_TSIGERROR:
+		return sldns_str2wire_tsigerror_buf(str, rd, len);
 	case LDNS_RDF_TYPE_HIP:
 		return sldns_str2wire_hip_buf(str, rd, len);
 	case LDNS_RDF_TYPE_INT16_DATA:
@@ -1341,6 +1353,21 @@ int sldns_str2wire_alg_buf(const char* str, uint8_t* rd, size_t* len)
 	return LDNS_WIREPARSE_ERR_OK;
 }
 
+int sldns_str2wire_tsigerror_buf(const char* str, uint8_t* rd, size_t* len)
+{
+	sldns_lookup_table *lt = sldns_lookup_by_name(sldns_tsig_errors, str);
+	if(*len < 2)
+		return LDNS_WIREPARSE_ERR_BUFFER_TOO_SMALL;
+	if(lt) {
+		sldns_write_uint16(rd, (uint16_t)lt->id);
+		*len = 2;
+	} else {
+		/* try as-is (a number) */
+		return sldns_str2wire_int16_buf(str, rd, len);
+	}
+	return LDNS_WIREPARSE_ERR_OK;
+}
+
 int sldns_str2wire_time_buf(const char* str, uint8_t* rd, size_t* len)
 {
 	/* convert a time YYYYDDMMHHMMSS to wireformat */
@@ -1380,6 +1407,24 @@ int sldns_str2wire_time_buf(const char* str, uint8_t* rd, size_t* len)
 		sldns_write_uint32(rd, l);
 	}
 	*len = 4;
+	return LDNS_WIREPARSE_ERR_OK;
+}
+
+int sldns_str2wire_tsigtime_buf(const char* str, uint8_t* rd, size_t* len)
+{
+	char* end;
+	uint64_t t = (uint64_t)strtol((char*)str, &end, 10);
+	uint16_t high;
+	uint32_t low;
+	if(*end != 0)
+		return RET_ERR(LDNS_WIREPARSE_ERR_SYNTAX_TIME, end-str);
+	if(*len < 6)
+		return LDNS_WIREPARSE_ERR_BUFFER_TOO_SMALL;
+	high = (uint16_t)(t>>32);
+	low = (uint32_t)(t);
+	sldns_write_uint16(rd, high);
+	sldns_write_uint32(rd+2, low);
+	*len = 6;
 	return LDNS_WIREPARSE_ERR_OK;
 }
 
@@ -2008,13 +2053,26 @@ int sldns_str2wire_hip_buf(const char* str, uint8_t* rd, size_t* len)
 
 int sldns_str2wire_int16_data_buf(const char* str, uint8_t* rd, size_t* len)
 {
-	size_t sz = sldns_b64_pton_calculate_size(strlen(str));
+	char* s;
 	int n;
-	if(*len < sz+2)
+	n = strtol(str, &s, 10);
+	if(*len < ((size_t)n)+2)
 		return LDNS_WIREPARSE_ERR_BUFFER_TOO_SMALL;
-	if(sz > 65535)
+	if(n > 65535)
 		return LDNS_WIREPARSE_ERR_LABEL_OVERFLOW;
-	n = sldns_b64_pton(str, rd+2, (*len)-2);
+
+	if(n == 0) {
+		sldns_write_uint16(rd, 0);
+		*len = 2;
+		return LDNS_WIREPARSE_ERR_OK;
+	}
+	if(*s != ' ')
+		return RET_ERR(LDNS_WIREPARSE_ERR_SYNTAX_INT, s-(char*)str);
+	s++;
+	while(*s == ' ')
+		s++;
+
+	n = sldns_b64_pton(s, rd+2, (*len)-2);
 	if(n < 0)
 		return LDNS_WIREPARSE_ERR_SYNTAX_B64;
 	sldns_write_uint16(rd, (uint16_t)n);

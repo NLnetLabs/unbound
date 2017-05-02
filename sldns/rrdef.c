@@ -185,7 +185,7 @@ static const sldns_rdf_type type_tsig_wireformat[] = {
 	LDNS_RDF_TYPE_INT16,
 	LDNS_RDF_TYPE_INT16_DATA,
 	LDNS_RDF_TYPE_INT16,
-	LDNS_RDF_TYPE_INT16,
+	LDNS_RDF_TYPE_TSIGERROR,
 	LDNS_RDF_TYPE_INT16_DATA
 };
 static const sldns_rdf_type type_tlsa_wireformat[] = {

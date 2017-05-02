@@ -350,6 +350,9 @@ enum sldns_enum_rdf_type
          */
         LDNS_RDF_TYPE_LONG_STR,
 
+	/** TSIG extended 16bit error value */
+	LDNS_RDF_TYPE_TSIGERROR,
+
         /* Aliases */
         LDNS_RDF_TYPE_BITMAP = LDNS_RDF_TYPE_NSEC
 };
@@ -429,6 +432,12 @@ enum sldns_enum_edns_option
 typedef enum sldns_enum_edns_option sldns_edns_option;
 
 #define LDNS_EDNS_MASK_DO_BIT 0x8000
+
+/** tsig rcodes */
+#define LDNS_TSIG_ERROR_NOERROR  0
+#define LDNS_TSIG_ERROR_BADSIG   16
+#define LDNS_TSIG_ERROR_BADKEY   17
+#define LDNS_TSIG_ERROR_BADTIME  18
 
 /**
  * Contains all information about resource record types.
