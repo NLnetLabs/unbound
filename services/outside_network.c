@@ -231,7 +231,7 @@ outnet_tcp_take_into_use(struct waiting_tcp* w, uint8_t* pkt, size_t pkt_len)
 			(void*)&w->outnet->tcp_mss,
 			(socklen_t)sizeof(w->outnet->tcp_mss)) < 0) {
 			verbose(VERB_ALGO, "outgoing tcp:"
-				" setsockopt(.. SO_REUSEADDR ..) failed");
+				" setsockopt(.. TCP_MAXSEG ..) failed");
 		}
 #else
 		verbose(VERB_ALGO, "outgoing tcp:"

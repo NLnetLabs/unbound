@@ -1,3 +1,6 @@
+8 May 2017: Wouter
+	- Fix tcp-mss failure printout text.
+
 2 May 2017: Ralph
 	- Added mesh_add_sub to add detached mesh entries.
 	- Use mesh_add_sub for key tag signaling query.
