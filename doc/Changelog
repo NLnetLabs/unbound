@@ -1,5 +1,8 @@
 8 May 2017: Wouter
 	- Fix tcp-mss failure printout text.
+	- Set SO_REUSEADDR on outgoing tcp connections to fix the bind before
+	  connect limited tcp connections.  With the option tcp connections
+	  can share the same source port (for different destinations).
 
 2 May 2017: Ralph
 	- Added mesh_add_sub to add detached mesh entries.
