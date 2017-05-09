@@ -281,7 +281,7 @@ main(int argc, char* argv[])
 	pass_argc = 1;
 	pass_argv[0] = "unbound";
 	add_opts("-d", &pass_argc, pass_argv);
-	while( (c=getopt(argc, argv, "12egho:p:s")) != -1) {
+	while( (c=getopt(argc, argv, "12egcho:p:s")) != -1) {
 		switch(c) {
 		case 's':
 			free(pass_argv[1]);
