@@ -182,7 +182,7 @@ addr_to_additional(struct ub_packed_rrset_key* rrset, struct regional* region,
 }
 
 /** lookup message in message cache */
-static struct msgreply_entry* 
+struct msgreply_entry* 
 msg_cache_lookup(struct module_env* env, uint8_t* qname, size_t qnamelen, 
 	uint16_t qtype, uint16_t qclass, uint16_t flags, time_t now, int wr)
 {

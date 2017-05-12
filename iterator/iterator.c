@@ -288,6 +288,22 @@ error_response_cache(struct module_qstate* qstate, int id, int rcode)
 				return error_response(qstate, id, rcode);
 			/* if that fails (not in cache), fall through to store err */
 		}
+		if(qstate->env->cfg->serve_expired) {
+			/* if serving expired contents, and such content is
+			 * already available, don't overwrite this servfail */
+			struct msgreply_entry* msg;
+			if((msg=msg_cache_lookup(qstate->env,
+				qstate->qinfo.qname, qstate->qinfo.qname_len,
+				qstate->qinfo.qtype, qstate->qinfo.qclass,
+				qstate->query_flags, 0, 0))
+				!= NULL) {
+				lock_rw_unlock(&msg->entry.lock);
+				return error_response(qstate, id, rcode);
+			}
+			/* serving expired contents, but nothing is cached
+			 * at all, so the servfail cache entry is useful
+			 * (stops waste of time on this servfail NORR_TTL) */
+		}
 		memset(&err, 0, sizeof(err));
 		err.flags = (uint16_t)(BIT_QR | BIT_RA);
 		FLAGS_SET_RCODE(err.flags, rcode);
