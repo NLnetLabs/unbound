@@ -1,6 +1,7 @@
 12 May 2017: Wouter
 	- Adjust servfail by iterator to not store in cache when serve-expired
 	  is enabled, to avoid overwriting useful information there.
+	- Fix queries for nameservers under a stub leaking to the internet.
 
 9 May 2017: Ralph
 	- Add 'c' to getopt() in testbound.

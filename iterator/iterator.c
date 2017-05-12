@@ -1576,28 +1576,26 @@ query_for_targets(struct module_qstate* qstate, struct iter_qstate* iq,
 
 /** see if last resort is possible - does config allow queries to parent */
 static int
-can_have_last_resort(struct module_env* env, struct delegpt* dp,
-	struct iter_qstate* iq)
+can_have_last_resort(struct module_env* env, uint8_t* nm, size_t nmlen,
+	uint16_t qclass)
 {
 	struct delegpt* fwddp;
 	struct iter_hints_stub* stub;
+	int labs = dname_count_labels(nm);
 	/* do not process a last resort (the parent side) if a stub
 	 * or forward is configured, because we do not want to go 'above'
 	 * the configured servers */
-	if(!dname_is_root(dp->name) && (stub = (struct iter_hints_stub*)
-		name_tree_find(&env->hints->tree, dp->name, dp->namelen,
-		dp->namelabs, iq->qchase.qclass)) &&
+	if(!dname_is_root(nm) && (stub = (struct iter_hints_stub*)
+		name_tree_find(&env->hints->tree, nm, nmlen, labs, qclass)) &&
 		/* has_parent side is turned off for stub_first, where we
 		 * are allowed to go to the parent */
 		stub->dp->has_parent_side_NS) {
-		verbose(VERB_QUERY, "configured stub servers failed -- returning SERVFAIL");
 		return 0;
 	}
-	if((fwddp = forwards_find(env->fwds, dp->name, iq->qchase.qclass)) &&
+	if((fwddp = forwards_find(env->fwds, nm, qclass)) &&
 		/* has_parent_side is turned off for forward_first, where
 		 * we are allowed to go to the parent */
 		fwddp->has_parent_side_NS) {
-		verbose(VERB_QUERY, "configured forward servers failed -- returning SERVFAIL");
 		return 0;
 	}
 	return 1;
@@ -1624,9 +1622,11 @@ processLastResort(struct module_qstate* qstate, struct iter_qstate* iq,
 	verbose(VERB_ALGO, "No more query targets, attempting last resort");
 	log_assert(iq->dp);
 
-	if(!can_have_last_resort(qstate->env, iq->dp, iq)) {
+	if(!can_have_last_resort(qstate->env, iq->dp->name, iq->dp->namelen,
+		iq->qchase.qclass)) {
 		/* fail -- no more targets, no more hope of targets, no hope 
 		 * of a response. */
+		verbose(VERB_QUERY, "configured stub or forward servers failed -- returning SERVFAIL");
 		return error_response_cache(qstate, id, LDNS_RCODE_SERVFAIL);
 	}
 	if(!iq->dp->has_parent_side_NS && dname_is_root(iq->dp->name)) {
@@ -1711,6 +1711,19 @@ processLastResort(struct module_qstate* qstate, struct iter_qstate* iq,
 	/* see if we can issue queries to get nameserver addresses */
 	/* this lookup is not randomized, but sequential. */
 	for(ns = iq->dp->nslist; ns; ns = ns->next) {
+		/* if this nameserver is at a delegation point, but that
+		 * delegation point is a stub and we cannot go higher, skip*/
+		if( ((ie->supports_ipv6 && !ns->done_pside6) ||
+		    (ie->supports_ipv4 && !ns->done_pside4)) &&
+		    !can_have_last_resort(qstate->env, ns->name, ns->namelen,
+			iq->qchase.qclass)) {
+			log_nametypeclass(VERB_ALGO, "cannot pside lookup ns "
+				"because it is also a stub/forward,",
+				ns->name, LDNS_RR_TYPE_NS, iq->qchase.qclass);
+			if(ie->supports_ipv6) ns->done_pside6 = 1;
+			if(ie->supports_ipv4) ns->done_pside4 = 1;
+			continue;
+		}
 		/* query for parent-side A and AAAA for nameservers */
 		if(ie->supports_ipv6 && !ns->done_pside6) {
 			/* Send the AAAA request. */
