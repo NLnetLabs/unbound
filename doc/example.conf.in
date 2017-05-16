@@ -448,6 +448,9 @@ server:
 	# and under the terms of our LICENSE (see that file in the source).
 	# auto-trust-anchor-file: "@UNBOUND_ROOTKEY_FILE@"
 
+	# trust anchor signaling sends a RFC8145 key tag query after priming.
+	# trust-anchor-signaling: no
+
 	# File with DLV trusted keys. Same format as trust-anchor-file.
 	# There can be only one DLV configured, it is trusted from root down.
 	# DLV is going to be decommissioned.  Please do not use it any more.
