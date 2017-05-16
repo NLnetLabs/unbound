@@ -5,6 +5,7 @@
 16 May 2017: Wouter
 	- updated dependencies in the makefile.
 	- document trust-anchor-signaling in example config file.
+	- updated configure, dependencies and flex output.
 
 12 May 2017: Wouter
 	- Adjust servfail by iterator to not store in cache when serve-expired

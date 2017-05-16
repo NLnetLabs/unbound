@@ -663,9 +663,6 @@
 /* Define to 1 to use cachedb support */
 #undef USE_CACHEDB
 
-/* Define to 1 to use ipsecmod support */
-#undef USE_IPSECMOD
-
 /* Define to 1 to enable dnscrypt support */
 #undef USE_DNSCRYPT
 
@@ -683,6 +680,9 @@
 
 /* Define this to enable GOST support. */
 #undef USE_GOST
+
+/* Define to 1 to use ipsecmod support. */
+#undef USE_IPSECMOD
 
 /* Define if you want to use internal select based events */
 #undef USE_MINI_EVENT

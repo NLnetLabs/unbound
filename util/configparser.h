@@ -250,7 +250,13 @@ extern int yydebug;
     VAR_DNSCRYPT_PORT = 460,
     VAR_DNSCRYPT_PROVIDER = 461,
     VAR_DNSCRYPT_SECRET_KEY = 462,
-    VAR_DNSCRYPT_PROVIDER_CERT = 463
+    VAR_DNSCRYPT_PROVIDER_CERT = 463,
+    VAR_IPSECMOD_ENABLED = 464,
+    VAR_IPSECMOD_HOOK = 465,
+    VAR_IPSECMOD_IGNORE_BOGUS = 466,
+    VAR_IPSECMOD_MAX_TTL = 467,
+    VAR_IPSECMOD_WHITELIST = 468,
+    VAR_IPSECMOD_STRICT = 469
   };
 #endif
 /* Tokens.  */
@@ -460,6 +466,12 @@ extern int yydebug;
 #define VAR_DNSCRYPT_PROVIDER 461
 #define VAR_DNSCRYPT_SECRET_KEY 462
 #define VAR_DNSCRYPT_PROVIDER_CERT 463
+#define VAR_IPSECMOD_ENABLED 464
+#define VAR_IPSECMOD_HOOK 465
+#define VAR_IPSECMOD_IGNORE_BOGUS 466
+#define VAR_IPSECMOD_MAX_TTL 467
+#define VAR_IPSECMOD_WHITELIST 468
+#define VAR_IPSECMOD_STRICT 469
 
 /* Value type.  */
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
@@ -470,7 +482,7 @@ union YYSTYPE
 
 	char*	str;
 
-#line 474 "util/configparser.h" /* yacc.c:1909  */
+#line 486 "util/configparser.h" /* yacc.c:1909  */
 };
 
 typedef union YYSTYPE YYSTYPE;
