@@ -172,11 +172,11 @@ generate_request(struct module_qstate* qstate, int id, uint8_t* name,
  */
 static int
 call_hook(struct module_qstate* qstate, struct ipsecmod_qstate* iq,
-	struct ipsecmod_env* ie)
+	struct ipsecmod_env* ATTR_UNUSED(ie))
 {
-	size_t slen, tempdata_len, tempstring_len;
+	size_t slen, tempdata_len, tempstring_len, i;
 	char str[65535], *s, *tempstring;
-	int i, w;
+	int w;
 	struct ub_packed_rrset_key* rrset_key;
 	struct packed_rrset_data* rrset_data;
 	uint8_t *tempdata;
@@ -360,7 +360,8 @@ ipsecmod_handle_query(struct module_qstate* qstate,
  */
 static void
 ipsecmod_handle_response(struct module_qstate* qstate,
-	struct ipsecmod_qstate* ATTR_UNUSED(iq), struct ipsecmod_env* ie, int id)
+	struct ipsecmod_qstate* ATTR_UNUSED(iq),
+	struct ipsecmod_env* ATTR_UNUSED(ie), int id)
 {
 	/* Pass to previous module if we are not enabled and whitelisted. */
 	if(!(iq->enabled && iq->is_whitelisted)) {
@@ -446,10 +447,11 @@ void
 ipsecmod_inform_super(struct module_qstate* qstate, int id,
 	struct module_qstate* super)
 {
+	struct ipsecmod_qstate* siq;
 	log_query_info(VERB_ALGO, "ipsecmod: inform_super, sub is",
 		&qstate->qinfo);
 	log_query_info(VERB_ALGO, "super is", &super->qinfo);
-	struct ipsecmod_qstate* siq = (struct ipsecmod_qstate*)super->minfo[id];
+	siq = (struct ipsecmod_qstate*)super->minfo[id];
 	if(!siq) {
 		verbose(VERB_ALGO, "super has no ipsecmod state");
 		return;
