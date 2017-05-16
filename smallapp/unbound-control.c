@@ -242,10 +242,14 @@ static void print_mem(struct ub_shm_stat_info* shm_stat)
 {
 	PR_LL("mem.cache.rrset", shm_stat->mem.rrset);
 	PR_LL("mem.cache.message", shm_stat->mem.msg);
-	PR_LL("mem.cache.iterator", shm_stat->mem.iter);
-	PR_LL("mem.cache.validator", shm_stat->mem.val);
+	PR_LL("mem.mod.iterator", shm_stat->mem.iter);
+	PR_LL("mem.mod.validator", shm_stat->mem.val);
+	PR_LL("mem.mod.respip", shm_stat->mem.respip);
 #ifdef CLIENT_SUBNET
-	PR_LL("mem.cache.subnet", shm_stat->mem.subnet);
+	PR_LL("mem.mod.subnet", shm_stat->mem.subnet);
+#endif
+#ifdef USE_IPSECMOD
+	PR_LL("mem.mod.ipsecmod", shm_stat->mem.ipsecmod);
 #endif
 }
 

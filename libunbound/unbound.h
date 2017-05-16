@@ -621,6 +621,7 @@ struct ub_shm_stat_info {
 		long long iter;
 		long long subnet;
 		long long ipsecmod;
+		long long respip;
 	} mem;
 };
 

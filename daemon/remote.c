@@ -866,7 +866,6 @@ print_longnum(SSL* ssl, const char* desc, size_t x)
 static int
 print_mem(SSL* ssl, struct worker* worker, struct daemon* daemon)
 {
-	int m;
 	size_t msg, rrset, val, iter, respip;
 #ifdef CLIENT_SUBNET
 	size_t subnet = 0;
@@ -876,47 +875,14 @@ print_mem(SSL* ssl, struct worker* worker, struct daemon* daemon)
 #endif /* USE_IPSECMOD */
 	msg = slabhash_get_mem(daemon->env->msg_cache);
 	rrset = slabhash_get_mem(&daemon->env->rrset_cache->table);
-	val=0;
-	iter=0;
-	respip=0;
-	m = modstack_find(&worker->env.mesh->mods, "validator");
-	if(m != -1) {
-		fptr_ok(fptr_whitelist_mod_get_mem(worker->env.mesh->
-			mods.mod[m]->get_mem));
-		val = (*worker->env.mesh->mods.mod[m]->get_mem)
-			(&worker->env, m);
-	}
-	m = modstack_find(&worker->env.mesh->mods, "iterator");
-	if(m != -1) {
-		fptr_ok(fptr_whitelist_mod_get_mem(worker->env.mesh->
-			mods.mod[m]->get_mem));
-		iter = (*worker->env.mesh->mods.mod[m]->get_mem)
-			(&worker->env, m);
-	}
-	m = modstack_find(&worker->env.mesh->mods, "respip");
-	if(m != -1) {
-		fptr_ok(fptr_whitelist_mod_get_mem(worker->env.mesh->
-			mods.mod[m]->get_mem));
-		respip = (*worker->env.mesh->mods.mod[m]->get_mem)
-			(&worker->env, m);
-	}
+	val = mod_get_mem(&worker->env, "validator");
+	iter = mod_get_mem(&worker->env, "iterator");
+	respip = mod_get_mem(&worker->env, "respip");
 #ifdef CLIENT_SUBNET
-	m = modstack_find(&worker->env.mesh->mods, "subnet");
-	if(m != -1) {
-		fptr_ok(fptr_whitelist_mod_get_mem(worker->env.mesh->
-			mods.mod[m]->get_mem));
-		subnet = (*worker->env.mesh->mods.mod[m]->get_mem)
-			(&worker->env, m);
-	}
+	subnet = mod_get_mem(&worker->env, "subnet");
 #endif /* CLIENT_SUBNET */
 #ifdef USE_IPSECMOD
-	m = modstack_find(&worker->env.mesh->mods, "ipsecmod");
-	if(m != -1) {
-		fptr_ok(fptr_whitelist_mod_get_mem(worker->env.mesh->
-			mods.mod[m]->get_mem));
-		ipsecmod = (*worker->env.mesh->mods.mod[m]->get_mem)
-			(&worker->env, m);
-	}
+	ipsecmod = mod_get_mem(&worker->env, "ipsecmod");
 #endif /* USE_IPSECMOD */
 
 	if(!print_longnum(ssl, "mem.cache.rrset"SQ, rrset))

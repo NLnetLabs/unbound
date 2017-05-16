@@ -243,3 +243,15 @@ modstack_find(struct module_stack* stack, const char* name)
 	}
 	return -1;
 }
+
+size_t
+mod_get_mem(struct module_env* env, const char* name)
+{
+	int m = modstack_find(&env->mesh->mods, name);
+	if(m != -1) {
+		fptr_ok(fptr_whitelist_mod_get_mem(env->mesh->
+			mods.mod[m]->get_mem));
+		return (*env->mesh->mods.mod[m]->get_mem)(env, m);
+	}
+	return 0;
+}

@@ -221,7 +221,6 @@ void shm_main_run(struct worker *worker)
 	struct ub_shm_stat_info *shm_stat;
 	struct ub_stats_info *stat_total;
 	struct ub_stats_info *stat_info;
-	int modstack;
 	int offset;
 
 	verbose(VERB_DETAIL, "SHM run - worker [%d] - daemon [%p] - timenow(%u) - timeboot(%u)",
@@ -250,40 +249,28 @@ void shm_main_run(struct worker *worker)
 
 		shm_stat->mem.msg = (long long)slabhash_get_mem(worker->env.msg_cache);
 		shm_stat->mem.rrset = (long long)slabhash_get_mem(&worker->env.rrset_cache->table);
-		shm_stat->mem.val = 0;
-		shm_stat->mem.iter = 0;
+		shm_stat->mem.val = (long long)mod_get_mem(&worker->env,
+			"validator");
+		shm_stat->mem.iter = (long long)mod_get_mem(&worker->env,
+			"iterator");
+		shm_stat->mem.respip = (long long)mod_get_mem(&worker->env,
+			"respip");
 
-		modstack = modstack_find(&worker->env.mesh->mods, "validator");
-		if(modstack != -1) {
-			fptr_ok(fptr_whitelist_mod_get_mem(worker->env.mesh->mods.mod[modstack]->get_mem));
-			shm_stat->mem.val = (long long)(*worker->env.mesh->mods.mod[modstack]->get_mem)(&worker->env, modstack);
-		}
-		modstack = modstack_find(&worker->env.mesh->mods, "iterator");
-		if(modstack != -1) {
-			fptr_ok(fptr_whitelist_mod_get_mem(worker->env.mesh->mods.mod[modstack]->get_mem));
-			shm_stat->mem.iter = (long long)(*worker->env.mesh->mods.mod[modstack]->get_mem)(&worker->env, modstack);
-		}
 		/* subnet mem value is available in shm, also when not enabled,
 		 * to make the struct easier to memmap by other applications,
 		 * independent of the configuration of unbound */
 		shm_stat->mem.subnet = 0;
 #ifdef CLIENT_SUBNET
-		modstack = modstack_find(&worker->env.mesh->mods, "subnet");
-		if(modstack != -1) {
-			fptr_ok(fptr_whitelist_mod_get_mem(worker->env.mesh->mods.mod[modstack]->get_mem));
-			shm_stat->mem.subnet = (long long)(*worker->env.mesh->mods.mod[modstack]->get_mem)(&worker->env, modstack);
-		}
+		shm_stat->mem.subnet = (long long)mod_get_mem(&worker->env,
+			"subnet");
 #endif
 		/* ipsecmod mem value is available in shm, also when not enabled,
 		 * to make the struct easier to memmap by other applications,
 		 * independent of the configuration of unbound */
 		shm_stat->mem.ipsecmod = 0;
 #ifdef USE_IPSECMOD
-		modstack = modstack_find(&worker->env.mesh->mods, "ipsecmod");
-		if(modstack != -1) {
-			fptr_ok(fptr_whitelist_mod_get_mem(worker->env.mesh->mods.mod[modstack]->get_mem));
-			shm_stat->mem.ipsecmod = (*worker->env.mesh->mods.mod[modstack]->get_mem)(&worker->env, modstack);
-		}
+		shm_stat->mem.ipsecmod = (long long)mod_get_mem(&worker->env,
+			"ipsecmod");
 #endif
 	}
 
