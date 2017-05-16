@@ -663,6 +663,9 @@
 /* Define to 1 to use cachedb support */
 #undef USE_CACHEDB
 
+/* Define to 1 to use ipsecmod support */
+#undef USE_IPSECMOD
+
 /* Define to 1 to enable dnscrypt support */
 #undef USE_DNSCRYPT
 

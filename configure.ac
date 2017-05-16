@@ -1353,6 +1353,21 @@ case "$enable_cachedb" in
     	;;
 esac
 
+# check for ipsecmod if requested
+AC_ARG_ENABLE(ipsecmod, AC_HELP_STRING([--enable-ipsecmod], [Enable ipsecmod module that facilitates opportunistic IPsec]))
+case "$enable_ipsecmod" in
+	yes)
+		AC_DEFINE([USE_IPSECMOD], [1], [Define to 1 to use ipsecmod support.])
+		IPSECMOD_OBJ="ipsecmod.lo ipsecmod-whitelist.lo"
+		AC_SUBST(IPSECMOD_OBJ)
+		IPSECMOD_HEADER='$(srcdir)/ipsecmod/ipsecmod.h $(srcdir)/ipsecmod/ipsecmod-whitelist.h'
+		AC_SUBST(IPSECMOD_HEADER)
+		;;
+	no|*)
+		# nothing
+		;;
+esac
+
 AC_MSG_CHECKING([if ${MAKE:-make} supports $< with implicit rule in scope])
 # on openBSD, the implicit rule make $< work.
 # on Solaris, it does not work ($? is changed sources, $^ lists dependencies).

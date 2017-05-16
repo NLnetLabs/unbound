@@ -871,6 +871,9 @@ print_mem(SSL* ssl, struct worker* worker, struct daemon* daemon)
 #ifdef CLIENT_SUBNET
 	size_t subnet = 0;
 #endif /* CLIENT_SUBNET */
+#ifdef USE_IPSECMOD
+	size_t ipsecmod = 0;
+#endif /* USE_IPSECMOD */
 	msg = slabhash_get_mem(daemon->env->msg_cache);
 	rrset = slabhash_get_mem(&daemon->env->rrset_cache->table);
 	val=0;
@@ -906,6 +909,15 @@ print_mem(SSL* ssl, struct worker* worker, struct daemon* daemon)
 			(&worker->env, m);
 	}
 #endif /* CLIENT_SUBNET */
+#ifdef USE_IPSECMOD
+	m = modstack_find(&worker->env.mesh->mods, "ipsecmod");
+	if(m != -1) {
+		fptr_ok(fptr_whitelist_mod_get_mem(worker->env.mesh->
+			mods.mod[m]->get_mem));
+		ipsecmod = (*worker->env.mesh->mods.mod[m]->get_mem)
+			(&worker->env, m);
+	}
+#endif /* USE_IPSECMOD */
 
 	if(!print_longnum(ssl, "mem.cache.rrset"SQ, rrset))
 		return 0;
@@ -921,6 +933,10 @@ print_mem(SSL* ssl, struct worker* worker, struct daemon* daemon)
 	if(!print_longnum(ssl, "mem.mod.subnet"SQ, subnet))
 		return 0;
 #endif /* CLIENT_SUBNET */
+#ifdef USE_IPSECMOD
+	if(!print_longnum(ssl, "mem.mod.ipsecmod"SQ, ipsecmod))
+		return 0;
+#endif /* USE_IPSECMOD */
 	return 1;
 }
 

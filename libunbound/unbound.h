@@ -606,22 +606,22 @@ const char* ub_version(void);
  * this struct is shared on a shm segment (shm-key in unbound.conf)
  */
 struct ub_shm_stat_info {
+	int num_threads;
 
-        int num_threads;
-
-        struct {
+	struct {
 		long long now_sec, now_usec;
 		long long up_sec, up_usec;
 		long long elapsed_sec, elapsed_usec;
-        } time;
+	} time;
 
-        struct {
-                long long msg;
-                long long rrset;
-                long long val;
-                long long iter;
-                long long subnet;
-        } mem;
+	struct {
+		long long msg;
+		long long rrset;
+		long long val;
+		long long iter;
+		long long subnet;
+		long long ipsecmod;
+	} mem;
 };
 
 /** number of qtype that is stored for in array */

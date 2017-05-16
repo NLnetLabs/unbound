@@ -1,3 +1,7 @@
+16 May 2017: George
+	- Implemented opportunistic IPsec support module (ipsecmod).
+	- Some whitespace fixup.
+
 16 May 2017: Wouter
 	- updated dependencies in the makefile.
 	- document trust-anchor-signaling in example config file.

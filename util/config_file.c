@@ -280,6 +280,14 @@ config_create(void)
 	cfg->dnscrypt_provider = NULL;
 	cfg->dnscrypt_provider_cert = NULL;
 	cfg->dnscrypt_secret_key = NULL;
+#ifdef USE_IPSECMOD
+	cfg->ipsecmod_enabled = 1;
+	cfg->ipsecmod_ignore_bogus = 0;
+	cfg->ipsecmod_hook = NULL;
+	cfg->ipsecmod_max_ttl = 3600;
+	cfg->ipsecmod_whitelist = NULL;
+	cfg->ipsecmod_strict = 0;
+#endif
 	return cfg;
 error_exit:
 	config_delete(cfg); 
@@ -568,6 +576,13 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	else S_NUMBER_OR_ZERO("ratelimit-factor:", ratelimit_factor)
 	else S_YNO("qname-minimisation:", qname_minimisation)
 	else S_YNO("qname-minimisation-strict:", qname_minimisation_strict)
+#ifdef USE_IPSECMOD
+	else S_YNO("ipsecmod-enabled:", ipsecmod_enabled)
+	else S_YNO("ipsecmod-ignore-bogus:", ipsecmod_ignore_bogus)
+	else if(strcmp(opt, "ipsecmod-max-ttl:") == 0)
+	{ IS_NUMBER_OR_ZERO; cfg->ipsecmod_max_ttl = atoi(val); }
+	else S_YNO("ipsecmod-strict:", ipsecmod_strict)
+#endif
 	else if(strcmp(opt, "define-tag:") ==0) {
 		return config_add_tag(cfg, val);
 	/* val_sig_skew_min and max are copied into val_env during init,
@@ -589,15 +604,16 @@ int config_set_option(struct config_file* cfg, const char* opt,
 		cfg->out_ifs = oi;
 	} else {
 		/* unknown or unsupported (from the set_option interface):
-		 * interface, outgoing-interface, access-control, 
+		 * interface, outgoing-interface, access-control,
 		 * stub-zone, name, stub-addr, stub-host, stub-prime
 		 * forward-first, stub-first, forward-ssl-upstream,
 		 * stub-ssl-upstream, forward-zone,
 		 * name, forward-addr, forward-host,
 		 * ratelimit-for-domain, ratelimit-below-domain,
-		 * local-zone-tag, access-control-view 
-		 * send-client-subnet client-subnet-always-forward
-		 * max-client-subnet-ipv4 max-client-subnet-ipv6 */
+		 * local-zone-tag, access-control-view,
+		 * send-client-subnet, client-subnet-always-forward,
+		 * max-client-subnet-ipv4, max-client-subnet-ipv6, ipsecmod_hook,
+		 * ipsecmod_whitelist. */
 		return 0;
 	}
 	return 1;
@@ -931,6 +947,14 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_LS3(opt, "access-control-tag-action", acl_tag_actions)
 	else O_LS3(opt, "access-control-tag-data", acl_tag_datas)
 	else O_LS2(opt, "access-control-view", acl_view)
+#ifdef USE_IPSECMOD
+	else O_YNO(opt, "ipsecmod-enabled", ipsecmod_enabled)
+	else O_YNO(opt, "ipsecmod-ignore-bogus", ipsecmod_ignore_bogus)
+	else O_STR(opt, "ipsecmod-hook", ipsecmod_hook)
+	else O_DEC(opt, "ipsecmod-max-ttl", ipsecmod_max_ttl)
+	else O_LST(opt, "ipsecmod-whitelist", ipsecmod_whitelist)
+	else O_YNO(opt, "ipsecmod-strict", ipsecmod_strict)
+#endif
 	/* not here:
 	 * outgoing-permit, outgoing-avoid - have list of ports
 	 * local-zone - zones and nodefault variables
@@ -1226,6 +1250,10 @@ config_delete(struct config_file* cfg)
 	free(cfg->dnstap_version);
 	config_deldblstrlist(cfg->ratelimit_for_domain);
 	config_deldblstrlist(cfg->ratelimit_below_domain);
+#ifdef USE_IPSECMOD
+	free(cfg->ipsecmod_hook);
+	config_delstrlist(cfg->ipsecmod_whitelist);
+#endif
 	free(cfg);
 }
 

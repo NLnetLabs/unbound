@@ -274,6 +274,17 @@ void shm_main_run(struct worker *worker)
 			shm_stat->mem.subnet = (long long)(*worker->env.mesh->mods.mod[modstack]->get_mem)(&worker->env, modstack);
 		}
 #endif
+		/* ipsecmod mem value is available in shm, also when not enabled,
+		 * to make the struct easier to memmap by other applications,
+		 * independent of the configuration of unbound */
+		shm_stat->mem.ipsecmod = 0;
+#ifdef USE_IPSECMOD
+		modstack = modstack_find(&worker->env.mesh->mods, "ipsecmod");
+		if(modstack != -1) {
+			fptr_ok(fptr_whitelist_mod_get_mem(worker->env.mesh->mods.mod[modstack]->get_mem));
+			shm_stat->mem.ipsecmod = (*worker->env.mesh->mods.mod[modstack]->get_mem)(&worker->env, modstack);
+		}
+#endif
 	}
 
 	server_stats_add(stat_total, stat_info);

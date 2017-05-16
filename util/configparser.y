@@ -144,6 +144,8 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_USE_SYSTEMD VAR_SHM_ENABLE VAR_SHM_KEY
 %token VAR_DNSCRYPT VAR_DNSCRYPT_ENABLE VAR_DNSCRYPT_PORT VAR_DNSCRYPT_PROVIDER
 %token VAR_DNSCRYPT_SECRET_KEY VAR_DNSCRYPT_PROVIDER_CERT
+%token VAR_IPSECMOD_ENABLED VAR_IPSECMOD_HOOK VAR_IPSECMOD_IGNORE_BOGUS
+%token VAR_IPSECMOD_MAX_TTL VAR_IPSECMOD_WHITELIST VAR_IPSECMOD_STRICT
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -228,7 +230,10 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_fake_dsa | server_log_identity | server_use_systemd |
 	server_response_ip_tag | server_response_ip | server_response_ip_data |
 	server_shm_enable | server_shm_key | server_fake_sha1 |
-	server_hide_trustanchor | server_trust_anchor_signaling
+	server_hide_trustanchor | server_trust_anchor_signaling |
+	server_ipsecmod_enabled | server_ipsecmod_hook |
+	server_ipsecmod_ignore_bogus | server_ipsecmod_max_ttl |
+	server_ipsecmod_whitelist | server_ipsecmod_strict
 	;
 stubstart: VAR_STUB_ZONE
 	{
@@ -1792,6 +1797,80 @@ server_qname_minimisation_strict: VAR_QNAME_MINIMISATION_STRICT STRING_ARG
 		else cfg_parser->cfg->qname_minimisation_strict = 
 			(strcmp($2, "yes")==0);
 		free($2);
+	}
+	;
+server_ipsecmod_enabled: VAR_IPSECMOD_ENABLED STRING_ARG
+	{
+	#ifdef USE_IPSECMOD
+		OUTYY(("P(server_ipsecmod_enabled:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else cfg_parser->cfg->ipsecmod_enabled = (strcmp($2, "yes")==0);
+		free($2);
+	#else
+		OUTYY(("P(Compiled without IPsec module, ignoring)\n"));
+	#endif
+	}
+	;
+server_ipsecmod_ignore_bogus: VAR_IPSECMOD_IGNORE_BOGUS STRING_ARG
+	{
+	#ifdef USE_IPSECMOD
+		OUTYY(("P(server_ipsecmod_ignore_bogus:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else cfg_parser->cfg->ipsecmod_ignore_bogus = (strcmp($2, "yes")==0);
+		free($2);
+	#else
+		OUTYY(("P(Compiled without IPsec module, ignoring)\n"));
+	#endif
+	}
+	;
+server_ipsecmod_hook: VAR_IPSECMOD_HOOK STRING_ARG
+	{
+	#ifdef USE_IPSECMOD
+		OUTYY(("P(server_ipsecmod_hook:%s)\n", $2));
+		free(cfg_parser->cfg->ipsecmod_hook);
+		cfg_parser->cfg->ipsecmod_hook = $2;
+	#else
+		OUTYY(("P(Compiled without IPsec module, ignoring)\n"));
+	#endif
+	}
+	;
+server_ipsecmod_max_ttl: VAR_IPSECMOD_MAX_TTL STRING_ARG
+	{
+	#ifdef USE_IPSECMOD
+		OUTYY(("P(server_ipsecmod_max_ttl:%s)\n", $2));
+		if(atoi($2) == 0 && strcmp($2, "0") != 0)
+			yyerror("number expected");
+		else cfg_parser->cfg->ipsecmod_max_ttl = atoi($2);
+		free($2);
+	#else
+		OUTYY(("P(Compiled without IPsec module, ignoring)\n"));
+	#endif
+	}
+	;
+server_ipsecmod_whitelist: VAR_IPSECMOD_WHITELIST STRING_ARG
+	{
+	#ifdef USE_IPSECMOD
+		OUTYY(("P(server_ipsecmod_whitelist:%s)\n", $2));
+		if(!cfg_strlist_insert(&cfg_parser->cfg->ipsecmod_whitelist, $2))
+			yyerror("out of memory");
+	#else
+		OUTYY(("P(Compiled without IPsec module, ignoring)\n"));
+	#endif
+	}
+	;
+server_ipsecmod_strict: VAR_IPSECMOD_STRICT STRING_ARG
+	{
+	#ifdef USE_IPSECMOD
+		OUTYY(("P(server_ipsecmod_strict:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else cfg_parser->cfg->ipsecmod_strict = (strcmp($2, "yes")==0);
+		free($2);
+	#else
+		OUTYY(("P(Compiled without IPsec module, ignoring)\n"));
+	#endif
 	}
 	;
 stub_name: VAR_NAME STRING_ARG

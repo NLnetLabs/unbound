@@ -83,6 +83,9 @@
 #ifdef USE_CACHEDB
 #include "cachedb/cachedb.h"
 #endif
+#ifdef USE_IPSECMOD
+#include "ipsecmod/ipsecmod.h"
+#endif
 #ifdef CLIENT_SUBNET
 #include "edns-subnet/subnetmod.h"
 #endif
@@ -345,6 +348,9 @@ fptr_whitelist_mod_init(int (*fptr)(struct module_env* env, int id))
 #ifdef USE_CACHEDB
 	else if(fptr == &cachedb_init) return 1;
 #endif
+#ifdef USE_IPSECMOD
+	else if(fptr == &ipsecmod_init) return 1;
+#endif
 #ifdef CLIENT_SUBNET
 	else if(fptr == &subnetmod_init) return 1;
 #endif
@@ -363,6 +369,9 @@ fptr_whitelist_mod_deinit(void (*fptr)(struct module_env* env, int id))
 #endif
 #ifdef USE_CACHEDB
 	else if(fptr == &cachedb_deinit) return 1;
+#endif
+#ifdef USE_IPSECMOD
+	else if(fptr == &ipsecmod_deinit) return 1;
 #endif
 #ifdef CLIENT_SUBNET
 	else if(fptr == &subnetmod_deinit) return 1;
@@ -384,6 +393,9 @@ fptr_whitelist_mod_operate(void (*fptr)(struct module_qstate* qstate,
 #ifdef USE_CACHEDB
 	else if(fptr == &cachedb_operate) return 1;
 #endif
+#ifdef USE_IPSECMOD
+	else if(fptr == &ipsecmod_operate) return 1;
+#endif
 #ifdef CLIENT_SUBNET
 	else if(fptr == &subnetmod_operate) return 1;
 #endif
@@ -403,6 +415,9 @@ fptr_whitelist_mod_inform_super(void (*fptr)(
 #endif
 #ifdef USE_CACHEDB
 	else if(fptr == &cachedb_inform_super) return 1;
+#endif
+#ifdef USE_IPSECMOD
+	else if(fptr == &ipsecmod_inform_super) return 1;
 #endif
 #ifdef CLIENT_SUBNET
 	else if(fptr == &subnetmod_inform_super) return 1;
@@ -424,6 +439,9 @@ fptr_whitelist_mod_clear(void (*fptr)(struct module_qstate* qstate,
 #ifdef USE_CACHEDB
 	else if(fptr == &cachedb_clear) return 1;
 #endif
+#ifdef USE_IPSECMOD
+	else if(fptr == &ipsecmod_clear) return 1;
+#endif
 #ifdef CLIENT_SUBNET
 	else if(fptr == &subnetmod_clear) return 1;
 #endif
@@ -442,6 +460,9 @@ fptr_whitelist_mod_get_mem(size_t (*fptr)(struct module_env* env, int id))
 #endif
 #ifdef USE_CACHEDB
 	else if(fptr == &cachedb_get_mem) return 1;
+#endif
+#ifdef USE_IPSECMOD
+	else if(fptr == &ipsecmod_get_mem) return 1;
 #endif
 #ifdef CLIENT_SUBNET
 	else if(fptr == &subnetmod_get_mem) return 1;

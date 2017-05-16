@@ -460,6 +460,22 @@ struct config_file {
 	struct config_strlist* dnscrypt_secret_key;
 	/** dnscrypt provider certs 1.cert */
 	struct config_strlist* dnscrypt_provider_cert;
+
+	/** IPsec module */
+#ifdef USE_IPSECMOD
+	/** false to bypass the IPsec module */
+	int ipsecmod_enabled;
+	/** whitelisted domains for ipsecmod */
+	struct config_strlist* ipsecmod_whitelist;
+	/** path to external hook */
+	char* ipsecmod_hook;
+	/** true to proceed even with a bogus IPSECKEY */
+	int ipsecmod_ignore_bogus;
+	/** max TTL for the A/AAAA records that call the hook */
+	int ipsecmod_max_ttl;
+	/** false to proceed even when ipsecmod_hook fails */
+	int ipsecmod_strict;
+#endif
 };
 
 /** from cfg username, after daemonise setup performed */
