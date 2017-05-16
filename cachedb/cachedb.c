@@ -176,7 +176,7 @@ cachedb_apply_cfg(struct cachedb_env* cachedb_env, struct config_file* cfg)
 		if(!cachedb_env->backend) {
 			log_err("cachedb: cannot find backend name '%s",
 				backend_str);
-			return NULL;
+			return 0;
 		}
 	}
 	/* TODO see if more configuration needs to be applied or not */
