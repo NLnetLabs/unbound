@@ -178,7 +178,7 @@ call_hook(struct module_qstate* qstate, struct ipsecmod_qstate* iq,
 	char str[65535], *s, *tempstring;
 	int w;
 	struct ub_packed_rrset_key* rrset_key;
-	struct packed_rrset_data* rrset_data; /* IPSECKEY rrset. */
+	struct packed_rrset_data* rrset_data;
 	uint8_t *tempdata;
 
 	/* Check if a shell is available */
