@@ -6,8 +6,8 @@ Documentation=man:unbound(8)
 WantedBy=multi-user.target
 
 [Service]
-ExecReload=/bin/kill -HUP $MAINPID
-ExecStart=/home/vagrant/unbound_systemd/unbound
+ExecReload=@bindir@/kill -HUP $MAINPID
+ExecStart=@sbindir@/unbound
 NotifyAccess=main
 Type=notify
 CapabilityBoundingSet=CAP_IPC_LOCK CAP_NET_BIND_SERVICE CAP_SETGID CAP_SETUID CAP_SYS_CHROOT
@@ -20,7 +20,7 @@ ProtectControlGroups=true
 ProtectKernelModules=true
 ProtectKernelTunables=true
 ProtectSystem=strict
-ReadWritePaths=/etc/unbound /run
+ReadWritePaths=@sysconfdir@ @localstatedir@ /run
 RestrictAddressFamilies=AF_INET AF_UNIX
 RestrictRealtime=true
 SystemCallArchitectures=native

@@ -1,4 +1,7 @@
-16 May 2017: George
+17 May 2017: Wouter
+	- Fix #1265: contrib/unbound.service contains hardcoded path.
+
+17 May 2017: George
 	- Use qstate's region for IPSECKEY rrset (ipsecmod).
 
 16 May 2017: George
