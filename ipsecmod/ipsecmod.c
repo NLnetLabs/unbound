@@ -209,7 +209,7 @@ call_hook(struct module_qstate* qstate, struct ipsecmod_qstate* iq,
 	sldns_str_print(&s, &slen, " ");
 	/* Copy the IPSECKEY TTL into the buffer. */
 	rrset_data = (struct packed_rrset_data*)iq->ipseckey_rrset->entry.data;
-	sldns_str_print(&s, &slen, "\"%ld\"", rrset_data->ttl);
+	sldns_str_print(&s, &slen, "\"%ld\"", (long)rrset_data->ttl);
 	/* Put space into the buffer. */
 	sldns_str_print(&s, &slen, " ");
 	/* Copy the A/AAAA record(s) into the buffer. Start and end this section
