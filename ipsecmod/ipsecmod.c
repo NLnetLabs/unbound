@@ -337,10 +337,12 @@ ipsecmod_handle_query(struct module_qstate* qstate,
 				for(i=0; i<rrset_data->count+rrset_data->rrsig_count; i++)
 					rrset_data->rr_ttl[i] = qstate->env->cfg->ipsecmod_max_ttl;
 				/* Also update reply_info's TTL */
-				qstate->return_msg->rep->ttl =
-					qstate->env->cfg->ipsecmod_max_ttl;
-				qstate->return_msg->rep->prefetch_ttl = PREFETCH_TTL_CALC(
-					qstate->return_msg->rep->ttl);
+				if(qstate->return_msg->rep->ttl > (time_t)qstate->env->cfg->ipsecmod_max_ttl) {
+					qstate->return_msg->rep->ttl =
+						qstate->env->cfg->ipsecmod_max_ttl;
+					qstate->return_msg->rep->prefetch_ttl = PREFETCH_TTL_CALC(
+						qstate->return_msg->rep->ttl);
+				}
 			}
 		}
 	}
