@@ -381,7 +381,7 @@ ipsecmod_handle_response(struct module_qstate* qstate,
 		reply_find_answer_rrset(&qstate->return_msg->qinfo,
 		qstate->return_msg->rep) &&
 		/* check that another module didn't SERVFAIL. */
-		qstate->return_rcode != LDNS_RCODE_SERVFAIL) {
+		qstate->return_rcode == LDNS_RCODE_NOERROR) {
 		char type[16];
 		sldns_wire2str_type_buf(qstate->qinfo.qtype, type,
 			sizeof(type));
