@@ -109,6 +109,11 @@ case "$prefix" in
 		prefix="/usr/local"
         ;;
 esac
+case "$exec_prefix" in
+        NONE)
+		exec_prefix="/usr/local"
+        ;;
+esac
 
 # are we on MinGW?
 if uname -s 2>&1 | grep MINGW32 >/dev/null; then on_mingw="yes"
@@ -120,6 +125,14 @@ fi
 #
 # Determine configuration file
 # the eval is to evaluate shell expansion twice
+UNBOUND_BIN_DIR=`eval echo "${bindir}"`
+AC_SUBST(UNBOUND_BIN_DIR)
+UNBOUND_SBIN_DIR=`eval echo "${sbindir}"`
+AC_SUBST(UNBOUND_SBIN_DIR)
+UNBOUND_SYSCONF_DIR=`eval echo "${sysconfdir}"`
+AC_SUBST(UNBOUND_SYSCONF_DIR)
+UNBOUND_LOCALSTATE_DIR=`eval echo "${localstatedir}"`
+AC_SUBST(UNBOUND_LOCALSTATE_DIR)
 if test $on_mingw = "no"; then
   ub_conf_file=`eval echo "${sysconfdir}/unbound/unbound.conf"`
 else
