@@ -1,4 +1,7 @@
 16 May 2017: George
+	- Use qstate's region for IPSECKEY rrset (ipsecmod).
+
+16 May 2017: George
 	- Implemented opportunistic IPsec support module (ipsecmod).
 	- Some whitespace fixup.
 

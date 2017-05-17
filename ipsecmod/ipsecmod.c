@@ -112,7 +112,6 @@ ipsecmod_new(struct module_qstate* qstate, int id)
 	iq->is_whitelisted = ipsecmod_domain_is_whitelisted(
 		(struct ipsecmod_env*)qstate->env->modinfo[id], qstate->qinfo.qname,
 		qstate->qinfo.qname_len, qstate->qinfo.qclass);
-	iq->region = regional_create();
 	return 1;
 }
 
@@ -471,7 +470,7 @@ ipsecmod_inform_super(struct module_qstate* qstate, int id,
 		if(rrset_key) {
 			/* We have an answer. */
 			/* Copy to super's region. */
-			rrset_key = packed_rrset_copy_region(rrset_key, siq->region, 0);
+			rrset_key = packed_rrset_copy_region(rrset_key, super->region, 0);
 			siq->ipseckey_rrset = rrset_key;
 			if(!rrset_key) {
 				log_err("ipsecmod: out of memory.");
@@ -485,14 +484,8 @@ ipsecmod_inform_super(struct module_qstate* qstate, int id,
 void
 ipsecmod_clear(struct module_qstate* qstate, int id)
 {
-	struct ipsecmod_qstate* iq;
 	if(!qstate)
 		return;
-	iq = (struct ipsecmod_qstate*)qstate->minfo[id];
-	if(iq) {
-		/* free contents of iq. */
-		regional_destroy(iq->region);
-	}
 	qstate->minfo[id] = NULL;
 }
 
