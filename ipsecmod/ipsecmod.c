@@ -296,8 +296,11 @@ ipsecmod_handle_query(struct module_qstate* qstate,
 	if(!iq->ipseckey_done) {
 		if(qstate->qinfo.qtype == LDNS_RR_TYPE_A ||
 			qstate->qinfo.qtype == LDNS_RR_TYPE_AAAA) {
+			char type[16];
+			sldns_wire2str_type_buf(qstate->qinfo.qtype, type,
+				sizeof(type));
 			verbose(VERB_ALGO, "ipsecmod: query for %s; engaging",
-				sldns_rr_descript(qstate->qinfo.qtype)->_name);
+				type);
 			qstate->no_cache_store = 1;
 		}
 		/* Pass request to next module. */
@@ -377,8 +380,11 @@ ipsecmod_handle_response(struct module_qstate* qstate,
 		qstate->return_msg->rep) &&
 		/* check that another module didn't SERVFAIL. */
 		qstate->return_rcode != LDNS_RCODE_SERVFAIL) {
+		char type[16];
+		sldns_wire2str_type_buf(qstate->qinfo.qtype, type,
+			sizeof(type));
 		verbose(VERB_ALGO, "ipsecmod: response for %s; generating IPSECKEY "
-			"subquery", sldns_rr_descript(qstate->qinfo.qtype)->_name);
+			"subquery", type);
 		/* generate an IPSECKEY query. */
 		if(!generate_request(qstate, id, qstate->qinfo.qname,
 			qstate->qinfo.qname_len, LDNS_RR_TYPE_IPSECKEY,
