@@ -66,7 +66,7 @@ struct ipsecmod_qstate {
 	/** If the qname is whitelisted or not. */
 	/** NOTE: No whitelist means all qnames are whitelisted. */
 	int is_whitelisted;
-	/** Pointer to IPSECKEY rrset allocated in the above region. NULL if there
+	/** Pointer to IPSECKEY rrset allocated in the qstate region. NULL if there
 	 *  was no IPSECKEY reply from the subquery. */
 	struct ub_packed_rrset_key* ipseckey_rrset;
 	/** If the IPSECKEY subquery has finished. */
