@@ -165,9 +165,9 @@ generate_request(struct module_qstate* qstate, int id, uint8_t* name,
 /**
  *  Prepare the data and call the hook.
  *
+ *  @param qstate: query state.
  *  @param iq: ipsecmod qstate.
  *  @param ie: ipsecmod environment.
- *  @param rrset_data: IPSECKEY rrset.
  *  @return true on success, false otherwise.
  */
 static int
@@ -178,7 +178,7 @@ call_hook(struct module_qstate* qstate, struct ipsecmod_qstate* iq,
 	char str[65535], *s, *tempstring;
 	int w;
 	struct ub_packed_rrset_key* rrset_key;
-	struct packed_rrset_data* rrset_data;
+	struct packed_rrset_data* rrset_data; /* IPSECKEY rrset. */
 	uint8_t *tempdata;
 
 	/* Check if a shell is available */
