@@ -6,7 +6,7 @@ Documentation=man:unbound(8)
 WantedBy=multi-user.target
 
 [Service]
-ExecReload=@UNBOUND_BIN_DIR@/kill -HUP $MAINPID
+ExecReload=/bin/kill -HUP $MAINPID
 ExecStart=@UNBOUND_SBIN_DIR@/unbound
 NotifyAccess=main
 Type=notify

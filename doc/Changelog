@@ -1,3 +1,6 @@
+18 May 2017: Wouter
+	- Fix #1265 to use /bin/kill.
+
 17 May 2017: Wouter
 	- Fix #1265: contrib/unbound.service contains hardcoded path.
 

@@ -125,8 +125,6 @@ fi
 #
 # Determine configuration file
 # the eval is to evaluate shell expansion twice
-UNBOUND_BIN_DIR=`eval echo "${bindir}"`
-AC_SUBST(UNBOUND_BIN_DIR)
 UNBOUND_SBIN_DIR=`eval echo "${sbindir}"`
 AC_SUBST(UNBOUND_SBIN_DIR)
 UNBOUND_SYSCONF_DIR=`eval echo "${sysconfdir}"`
