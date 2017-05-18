@@ -1,6 +1,7 @@
 18 May 2017: Wouter
 	- Fix #1265 to use /bin/kill.
-	- Fix #1267: Libunbound validator/val_secalgo.c uses obsolete APIs.
+	- Fix #1267: Libunbound validator/val_secalgo.c uses obsolete APIs,
+	  and compatibility with BoringSSL.
 
 17 May 2017: Wouter
 	- Fix #1265: contrib/unbound.service contains hardcoded path.
