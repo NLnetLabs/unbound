@@ -237,6 +237,8 @@ struct sldns_file_parse_state {
  * @param rr: this is malloced by the user and the result is stored here,
  * 	if an RR is read.  If no RR is read this is signalled with the
  * 	return len set to 0 (for ORIGIN, TTL directives).
+ * 	The read line is available in the rr_buf (zero terminated), for
+ * 	$DIRECTIVE style elements.
  * @param len: on input, the length of the rr buffer.  on output the rr len.
  * 	Buffer size of 64k should be enough.
  * @param dname_len: returns the length of the dname initial part of the rr.

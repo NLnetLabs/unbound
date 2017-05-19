@@ -869,6 +869,8 @@ int sldns_fp2wire_rr_buf(FILE* in, uint8_t* rr, size_t* len, size_t* dname_len,
 	/* we can have the situation, where we've read ok, but still got
 	 * no bytes to play with, in this case size is 0 */
 	if(size == 0) {
+		if(*len > 0)
+			rr[0] = 0;
 		*len = 0;
 		*dname_len = 0;
 		return LDNS_WIREPARSE_ERR_OK;
@@ -876,6 +878,7 @@ int sldns_fp2wire_rr_buf(FILE* in, uint8_t* rr, size_t* len, size_t* dname_len,
 
 	if(strncmp(line, "$ORIGIN", 7) == 0 && isspace((unsigned char)line[7])) {
 		int s;
+		strlcpy((char*)rr, line, *len);
 		*len = 0;
 		*dname_len = 0;
 		if(!parse_state) return LDNS_WIREPARSE_ERR_OK;
@@ -886,12 +889,19 @@ int sldns_fp2wire_rr_buf(FILE* in, uint8_t* rr, size_t* len, size_t* dname_len,
 		return s;
 	} else if(strncmp(line, "$TTL", 4) == 0 && isspace((unsigned char)line[4])) {
 		const char* end = NULL;
+		strlcpy((char*)rr, line, *len);
 		*len = 0;
 		*dname_len = 0;
 		if(!parse_state) return LDNS_WIREPARSE_ERR_OK;
 		parse_state->default_ttl = sldns_str2period(
 			sldns_strip_ws(line+5), &end);
 	} else if (strncmp(line, "$INCLUDE", 8) == 0) {
+		strlcpy((char*)rr, line, *len);
+		*len = 0;
+		*dname_len = 0;
+		return LDNS_WIREPARSE_ERR_INCLUDE;
+	} else if (strncmp(line, "$", 1) == 0) {
+		strlcpy((char*)rr, line, *len);
 		*len = 0;
 		*dname_len = 0;
 		return LDNS_WIREPARSE_ERR_INCLUDE;
