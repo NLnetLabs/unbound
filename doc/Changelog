@@ -1,3 +1,6 @@
+22 May 2017: Wouter
+	- Fix #1268: SIGSEGV after log_reopen.
+
 18 May 2017: Wouter
 	- Fix #1265 to use /bin/kill.
 	- Fix #1267: Libunbound validator/val_secalgo.c uses obsolete APIs,
