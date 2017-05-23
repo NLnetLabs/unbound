@@ -75,7 +75,7 @@ struct auth_zone {
 	size_t namelen;
 	/** number of labels in zone name */
 	int namelabs;
-	/** the class of this zone. 
+	/** the class of this zone, in host byteorder.
 	 * uses 'dclass' to not conflict with c++ keyword class. */
 	uint16_t dclass;
 
@@ -121,8 +121,10 @@ struct auth_data {
 struct auth_rrset {
 	/** next in list */
 	struct auth_rrset* next;
+	/** RR type in host byteorder */
+	uint16_t type;
 	/** RRset data item */
-	struct ub_packed_rrset_key* rrset;
+	struct packed_rrset_data* data;
 };
 
 /**

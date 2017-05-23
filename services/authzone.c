@@ -121,6 +121,23 @@ get_rrset_ttl(struct ub_packed_rrset_key* k)
 	return d->ttl;
 }
 
+/** Copy rrset into region from domain-datanode and packet rrset */
+static struct ub_packed_rrset_key*
+auth_packed_rrset_copy_region(struct auth_zone* z, struct auth_data* node,
+	struct auth_rrset* rrset, struct regional* region, time_t adjust)
+{
+	struct ub_packed_rrset_key key;
+	memset(&key, 0, sizeof(key));
+	key.entry.key = &key;
+	key.entry.data = rrset->data;
+	key.rk.dname = node->name;
+	key.rk.dname_len = node->namelen;
+	key.rk.type = htons(rrset->type);
+	key.rk.rrset_class = htons(z->dclass);
+	key.entry.hash = rrset_key_hash(&key.rk);
+	return packed_rrset_copy_region(&key, region, adjust);
+}
+
 /** fix up msg->rep TTL and prefetch ttl */
 static void
 msg_ttl(struct dns_msg* msg)
@@ -139,8 +156,8 @@ msg_ttl(struct dns_msg* msg)
 
 /** add rrset to answer section (no auth, add rrsets yet) */
 static int
-msg_add_rrset_an(struct regional* region, struct dns_msg* msg,
-	struct auth_rrset* rrset)
+msg_add_rrset_an(struct auth_zone* z, struct regional* region,
+	struct dns_msg* msg, struct auth_data* node, struct auth_rrset* rrset)
 {
 	log_assert(msg->rep->ns_numrrsets == 0);
 	log_assert(msg->rep->ar_numrrsets == 0);
@@ -151,7 +168,7 @@ msg_add_rrset_an(struct regional* region, struct dns_msg* msg,
 		return 0;
 	/* copy it */
 	if(!(msg->rep->rrsets[msg->rep->rrset_count] =
-		packed_rrset_copy_region(rrset->rrset, region, 0)))
+		auth_packed_rrset_copy_region(z, node, rrset, region, 0)))
 		return 0;
 	msg->rep->rrset_count++;
 	msg->rep->an_numrrsets++;
@@ -161,8 +178,8 @@ msg_add_rrset_an(struct regional* region, struct dns_msg* msg,
 
 /** add rrset to authority section (no additonal section rrsets yet) */
 static int
-msg_add_rrset_ns(struct regional* region, struct dns_msg* msg,
-	struct auth_rrset* rrset)
+msg_add_rrset_ns(struct auth_zone* z, struct regional* region,
+	struct dns_msg* msg, struct auth_data* node, struct auth_rrset* rrset)
 {
 	log_assert(msg->rep->ar_numrrsets == 0);
 	if(!rrset)
@@ -172,7 +189,7 @@ msg_add_rrset_ns(struct regional* region, struct dns_msg* msg,
 		return 0;
 	/* copy it */
 	if(!(msg->rep->rrsets[msg->rep->rrset_count] =
-		packed_rrset_copy_region(rrset->rrset, region, 0)))
+		auth_packed_rrset_copy_region(z, node, rrset, region, 0)))
 		return 0;
 	msg->rep->rrset_count++;
 	msg->rep->ns_numrrsets++;
@@ -182,8 +199,8 @@ msg_add_rrset_ns(struct regional* region, struct dns_msg* msg,
 
 /** add rrset to additional section */
 static int
-msg_add_rrset_ar(struct regional* region, struct dns_msg* msg,
-	struct auth_rrset* rrset)
+msg_add_rrset_ar(struct auth_zone* z, struct regional* region,
+	struct dns_msg* msg, struct auth_data* node, struct auth_rrset* rrset)
 {
 	if(!rrset)
 		return 1;
@@ -192,7 +209,7 @@ msg_add_rrset_ar(struct regional* region, struct dns_msg* msg,
 		return 0;
 	/* copy it */
 	if(!(msg->rep->rrsets[msg->rep->rrset_count] =
-		packed_rrset_copy_region(rrset->rrset, region, 0)))
+		auth_packed_rrset_copy_region(z, node, rrset, region, 0)))
 		return 0;
 	msg->rep->rrset_count++;
 	msg->rep->ar_numrrsets++;
@@ -246,9 +263,7 @@ static void
 auth_rrset_delete(struct auth_rrset* rrset)
 {
 	if(!rrset) return;
-	free(rrset->rrset->entry.data); /* struct packed_rrset_data */
-	free(rrset->rrset->rk.dname);
-	free(rrset->rrset); /* struct ub_packed_rrset_key */
+	free(rrset->data);
 	free(rrset);
 }
 
@@ -486,13 +501,6 @@ az_domain_find_or_create(struct auth_zone* z, uint8_t* dname,
 	return n;
 }
 
-/** return rr type of rrset */
-static uint16_t
-az_rrset_type(struct auth_rrset* entry)
-{
-	return ntohs(entry->rrset->rk.type);
-}
-
 /** find rrset of given type in the domain */
 static struct auth_rrset*
 az_domain_rrset(struct auth_data* n, uint16_t t)
@@ -501,7 +509,7 @@ az_domain_rrset(struct auth_data* n, uint16_t t)
 	if(!n) return NULL;
 	rrset = n->rrsets;
 	while(rrset) {
-		if(az_rrset_type(rrset) == t)
+		if(rrset->type == t)
 			return rrset;
 		rrset = rrset->next;
 	}
@@ -517,7 +525,7 @@ domain_remove_rrset(struct auth_data* node, uint16_t rr_type)
 	prev = NULL;
 	rrset = node->rrsets;
 	while(rrset) {
-		if(az_rrset_type(rrset) == rr_type) {
+		if(rrset->type == rr_type) {
 			/* found it, now delete it */
 			if(prev) prev->next = rrset->next;
 			else	node->rrsets = rrset->next;
@@ -531,10 +539,8 @@ domain_remove_rrset(struct auth_data* node, uint16_t rr_type)
 
 /** see if rdata is duplicate */
 static int
-rdata_duplicate(struct ub_packed_rrset_key* k, uint8_t* rdata, size_t len)
+rdata_duplicate(struct packed_rrset_data* d, uint8_t* rdata, size_t len)
 {
-	struct packed_rrset_data* d = (struct packed_rrset_data*)
-		k->entry.data;
 	size_t i;
 	for(i=0; i<d->count + d->rrsig_count; i++) {
 		if(d->rr_len[i] != len)
@@ -564,9 +570,7 @@ static int
 rrset_add_rr(struct auth_rrset* rrset, uint32_t rr_ttl, uint8_t* rdata,
 	size_t rdatalen, int insert_sig)
 {
-	struct packed_rrset_data* old = (struct packed_rrset_data*)rrset->
-		rrset->entry.data;
-	struct packed_rrset_data* d;
+	struct packed_rrset_data* d, *old = rrset->data;
 	size_t total, old_total;
 
 	d = (struct packed_rrset_data*)calloc(1, packed_rrset_sizeof(old)
@@ -626,7 +630,7 @@ rrset_add_rr(struct auth_rrset* rrset, uint32_t rr_ttl, uint8_t* rdata,
 		memmove(d->rr_data[total-1], rdata, rdatalen);
 	}
 
-	rrset->rrset->entry.data = d;
+	rrset->data = d;
 	free(old);
 	return 1;
 }
@@ -634,51 +638,28 @@ rrset_add_rr(struct auth_rrset* rrset, uint32_t rr_ttl, uint8_t* rdata,
 /** Create new rrset for node with packed rrset with one RR element */
 static struct auth_rrset*
 rrset_create(struct auth_data* node, uint16_t rr_type, uint32_t rr_ttl,
-	uint8_t* rdata, size_t rdatalen, uint16_t dclass)
+	uint8_t* rdata, size_t rdatalen)
 {
 	struct auth_rrset* rrset = (struct auth_rrset*)calloc(1,
 		sizeof(*rrset));
 	struct auth_rrset* p, *prev;
-	struct ub_packed_rrset_key* k;
 	struct packed_rrset_data* d;
 	if(!rrset) {
 		log_err("out of memory");
 		return NULL;
 	}
-
-	/* the rrset key structure */
-	k = (struct ub_packed_rrset_key*)calloc(1, sizeof(*k));
-	if(!k) {
-		free(rrset);
-		log_err("out of memory");
-		return NULL;
-	}
-	rrset->rrset = k;
-	k->entry.key = k;
-	k->rk.dname = memdup(node->name, node->namelen);
-	if(!k->rk.dname) {
-		free(rrset);
-		free(k);
-		log_err("out of memory");
-		return NULL;
-	}
-	k->rk.dname_len = node->namelen;
-	k->rk.type = htons(rr_type);
-	k->rk.rrset_class = htons(dclass);
-	k->entry.hash = rrset_key_hash(&k->rk);
+	rrset->type = rr_type;
 
 	/* the rrset data structure, with one RR */
 	d = (struct packed_rrset_data*)calloc(1,
 		sizeof(struct packed_rrset_data) + sizeof(size_t) +
 		sizeof(uint8_t*) + sizeof(time_t) + rdatalen);
 	if(!d) {
-		free(k->rk.dname);
-		free(k);
 		free(rrset);
 		log_err("out of memory");
 		return NULL;
 	}
-	k->entry.data = d;
+	rrset->data = d;
 	d->ttl = rr_ttl;
 	d->trust = rrset_trust_prim_noglue;
 	d->rr_len = (size_t*)((uint8_t*)d + sizeof(struct packed_rrset_data));
@@ -696,7 +677,7 @@ rrset_create(struct auth_data* node, uint16_t rr_type, uint32_t rr_ttl,
 	/* find sorted place to link the rrset into the list */
 	prev = NULL;
 	p = node->rrsets;
-	while(p && az_rrset_type(p)<=rr_type) {
+	while(p && p->type<=rr_type) {
 		prev = p;
 		p = p->next;
 	}
@@ -711,11 +692,10 @@ rrset_create(struct auth_data* node, uint16_t rr_type, uint32_t rr_ttl,
 static size_t
 rrsig_num_that_cover(struct auth_rrset* rrsig, uint16_t rr_type, size_t* sigsz)
 {
-	struct packed_rrset_data* d = (struct packed_rrset_data*)rrsig->
-		rrset->entry.data;
+	struct packed_rrset_data* d = rrsig->data;
 	size_t i, num = 0;
 	*sigsz = 0;
-	log_assert(d && az_rrset_type(rrsig) == LDNS_RR_TYPE_RRSIG);
+	log_assert(d && rrsig->type == LDNS_RR_TYPE_RRSIG);
 	for(i=0; i<d->count+d->rrsig_count; i++) {
 		if(rrsig_rdata_get_type_covered(d->rr_data[i],
 			d->rr_len[i]) == rr_type) {
@@ -732,14 +712,12 @@ rrset_moveover_rrsigs(struct auth_data* node, uint16_t rr_type,
 	struct auth_rrset* rrset, struct auth_rrset* rrsig)
 {
 	size_t sigs, sigsz, i, j, total;
-	struct packed_rrset_data* sigold = (struct packed_rrset_data*)rrsig->
-		rrset->entry.data;
-	struct packed_rrset_data* old = (struct packed_rrset_data*)rrset->
-		rrset->entry.data;
+	struct packed_rrset_data* sigold = rrsig->data;
+	struct packed_rrset_data* old = rrset->data;
 	struct packed_rrset_data* d, *sigd;
 
-	log_assert(az_rrset_type(rrset) == rr_type);
-	log_assert(az_rrset_type(rrsig) == LDNS_RR_TYPE_RRSIG);
+	log_assert(rrset->type == rr_type);
+	log_assert(rrsig->type == LDNS_RR_TYPE_RRSIG);
 	sigs = rrsig_num_that_cover(rrsig, rr_type, &sigsz);
 	if(sigs == 0) {
 		/* 0 rrsigs to move over, done */
@@ -801,7 +779,7 @@ rrset_moveover_rrsigs(struct auth_data* node, uint16_t rr_type,
 	}
 
 	/* put it in and deallocate the old rrset */
-	rrset->rrset->entry.data = d;
+	rrset->data = d;
 	free(old);
 
 	/* now make rrsig set smaller */
@@ -856,7 +834,7 @@ rrset_moveover_rrsigs(struct auth_data* node, uint16_t rr_type,
 	}
 
 	/* put it in and deallocate the old rrset */
-	rrsig->rrset->entry.data = sigd;
+	rrsig->data = sigd;
 	free(sigold);
 
 	return 1;
@@ -865,8 +843,8 @@ rrset_moveover_rrsigs(struct auth_data* node, uint16_t rr_type,
 /** Add rr to node, ignores duplicate RRs,
  * rdata points to buffer with rdatalen octets, starts with 2bytelength. */
 static int
-az_domain_add_rr(struct auth_zone* z, struct auth_data* node,
-	uint16_t rr_type, uint32_t rr_ttl, uint8_t* rdata, size_t rdatalen)
+az_domain_add_rr(struct auth_data* node, uint16_t rr_type, uint32_t rr_ttl,
+	uint8_t* rdata, size_t rdatalen)
 {
 	struct auth_rrset* rrset;
 	/* packed rrsets have their rrsigs along with them, sort them out */
@@ -875,27 +853,27 @@ az_domain_add_rr(struct auth_zone* z, struct auth_data* node,
 		if((rrset=az_domain_rrset(node, ctype))!= NULL) {
 			/* a node of the correct type exists, add the RRSIG
 			 * to the rrset of the covered data type */
-			if(rdata_duplicate(rrset->rrset, rdata, rdatalen))
+			if(rdata_duplicate(rrset->data, rdata, rdatalen))
 				return 1;
 			if(!rrset_add_rr(rrset, rr_ttl, rdata, rdatalen, 1))
 				return 0;
 		} else if((rrset=az_domain_rrset(node, rr_type))!= NULL) {
 			/* add RRSIG to rrset of type RRSIG */
-			if(rdata_duplicate(rrset->rrset, rdata, rdatalen))
+			if(rdata_duplicate(rrset->data, rdata, rdatalen))
 				return 1;
 			if(!rrset_add_rr(rrset, rr_ttl, rdata, rdatalen, 0))
 				return 0;
 		} else {
 			/* create rrset of type RRSIG */
 			if(!rrset_create(node, rr_type, rr_ttl, rdata,
-				rdatalen, z->dclass))
+				rdatalen))
 				return 0;
 		}
 	} else {
 		/* normal RR type */
 		if((rrset=az_domain_rrset(node, rr_type))!= NULL) {
 			/* add data to existing node with data type */
-			if(rdata_duplicate(rrset->rrset, rdata, rdatalen))
+			if(rdata_duplicate(rrset->data, rdata, rdatalen))
 				return 1;
 			if(!rrset_add_rr(rrset, rr_ttl, rdata, rdatalen, 0))
 				return 0;
@@ -903,7 +881,7 @@ az_domain_add_rr(struct auth_zone* z, struct auth_data* node,
 			struct auth_rrset* rrsig;
 			/* create new node with data type */
 			if(!(rrset=rrset_create(node, rr_type, rr_ttl, rdata,
-				rdatalen, z->dclass)))
+				rdatalen)))
 				return 0;
 
 			/* see if node of type RRSIG has signatures that
@@ -943,7 +921,7 @@ az_insert_rr(struct auth_zone* z, uint8_t* rr, size_t rr_len,
 		log_err("cannot create domain");
 		return 0;
 	}
-	if(!az_domain_add_rr(z, node, rr_type, rr_ttl, rdata, rdatalen)) {
+	if(!az_domain_add_rr(node, rr_type, rr_ttl, rdata, rdatalen)) {
 		log_err("cannot add RR to domain");
 		return 0;
 	}
@@ -1093,14 +1071,21 @@ write_out(FILE* out, const char* str)
 
 /** write rrset to file */
 static int
-auth_zone_write_rrset(struct auth_rrset* r, FILE* out)
+auth_zone_write_rrset(struct auth_zone* z, struct auth_data* node,
+	struct auth_rrset* r, FILE* out)
 {
-	size_t i, count = ((struct packed_rrset_data*)r->rrset->entry.data)
-		->count +((struct packed_rrset_data*)r->rrset->entry.data)
-		->rrsig_count;
+	size_t i, count = r->data->count + r->data->rrsig_count;
 	char buf[LDNS_RR_BUF_SIZE];
 	for(i=0; i<count; i++) {
-		if(!packed_rr_to_string(r->rrset, i, 0, buf, sizeof(buf))) {
+		struct ub_packed_rrset_key key;
+		memset(&key, 0, sizeof(key));
+		key.entry.key = &key;
+		key.entry.data = r->data;
+		key.rk.dname = node->name;
+		key.rk.dname_len = node->namelen;
+		key.rk.type = htons(r->type);
+		key.rk.rrset_class = htons(z->dclass);
+		if(!packed_rr_to_string(&key, i, 0, buf, sizeof(buf))) {
 			verbose(VERB_ALGO, "failed to rr2str rr %d", (int)i);
 			continue;
 		}
@@ -1119,16 +1104,16 @@ auth_zone_write_domain(struct auth_zone* z, struct auth_data* n, FILE* out)
 	if(z->namelen == n->namelen) {
 		struct auth_rrset* soa = az_domain_rrset(n, LDNS_RR_TYPE_SOA);
 		if(soa) {
-			if(!auth_zone_write_rrset(soa, out))
+			if(!auth_zone_write_rrset(z, n, soa, out))
 				return 0;
 		}
 	}
 	/* write all the RRsets for this domain */
 	for(r = n->rrsets; r; r = r->next) {
 		if(z->namelen == n->namelen &&
-			az_rrset_type(r) == LDNS_RR_TYPE_SOA)
+			r->type == LDNS_RR_TYPE_SOA)
 			continue; /* skip SOA here */
-		if(!auth_zone_write_rrset(r, out))
+		if(!auth_zone_write_rrset(z, n, r, out))
 			return 0;
 	}
 	return 1;
@@ -1258,9 +1243,9 @@ domain_has_only_nsec3(struct auth_data* n)
 	struct auth_rrset* rrset = n->rrsets;
 	int nsec3_seen = 0;
 	while(rrset) {
-		if(az_rrset_type(rrset) == LDNS_RR_TYPE_NSEC3) {
+		if(rrset->type == LDNS_RR_TYPE_NSEC3) {
 			nsec3_seen = 1;
-		} else if(az_rrset_type(rrset) != LDNS_RR_TYPE_RRSIG) {
+		} else if(rrset->type != LDNS_RR_TYPE_RRSIG) {
 			return 0;
 		}
 		rrset = rrset->next;
@@ -1419,8 +1404,7 @@ static int
 az_add_additionals_from(struct auth_zone* z, struct regional* region,
 	struct dns_msg* msg, struct auth_rrset* rrset, size_t offset)
 {
-	struct packed_rrset_data* d = (struct packed_rrset_data*)
-		rrset->rrset->entry.data;
+	struct packed_rrset_data* d = rrset->data;
 	size_t i;
 	if(!d) return 0;
 	for(i=0; i<d->count; i++) {
@@ -1436,25 +1420,15 @@ az_add_additionals_from(struct auth_zone* z, struct regional* region,
 		if(!domain)
 			continue;
 		if((ref=az_domain_rrset(domain, LDNS_RR_TYPE_A)) != NULL) {
-			if(!msg_add_rrset_ar(region, msg, ref))
+			if(!msg_add_rrset_ar(z, region, msg, domain, ref))
 				return 0;
 		}
 		if((ref=az_domain_rrset(domain, LDNS_RR_TYPE_AAAA)) != NULL) {
-			if(!msg_add_rrset_ar(region, msg, ref))
+			if(!msg_add_rrset_ar(z, region, msg, domain, ref))
 				return 0;
 		}
 	}
 	return 1;
-}
-
-/** find SOA rrset (if any) for this zone */
-static struct auth_rrset*
-az_find_soa(struct auth_zone* z)
-{
-	struct auth_data* node = az_find_name(z, z->name, z->namelen);
-	if(!node)
-		return NULL;
-	return az_domain_rrset(node, LDNS_RR_TYPE_SOA);
 }
 
 /** add negative SOA record (with negative TTL) */
@@ -1465,12 +1439,15 @@ az_add_negative_soa(struct auth_zone* z, struct regional* region,
 	uint32_t minimum;
 	struct packed_rrset_data* d;
 	struct auth_rrset* soa;
-	if(!(soa = az_find_soa(z))) return 0;
+	struct auth_data* apex = az_find_name(z, z->name, z->namelen);
+	if(!apex) return 0;
+	soa = az_domain_rrset(apex, LDNS_RR_TYPE_SOA);
+	if(!soa) return 0;
 	/* must be first to put in message; we want to fix the TTL with
 	 * one RRset here, otherwise we'd need to loop over the RRs to get
 	 * the resulting lower TTL */
 	log_assert(msg->rep->rrset_count == 0);
-	if(!msg_add_rrset_ns(region, msg, soa)) return 0;
+	if(!msg_add_rrset_ns(z, region, msg, apex, soa)) return 0;
 	/* fixup TTL */
 	d = (struct packed_rrset_data*)msg->rep->rrsets[msg->rep->rrset_count-1]->entry.data;
 	/* last 4 bytes are minimum ttl in network format */
@@ -1538,20 +1515,27 @@ synth_cname_buf(uint8_t* qname, size_t qname_len, size_t dname_len,
  * false on alloc failure, cname==NULL when name too long. */
 static int
 create_synth_cname(struct query_info* qinfo, struct regional* region,
-	struct ub_packed_rrset_key* dname, struct ub_packed_rrset_key** cname)
+	struct auth_data* node, struct auth_rrset* dname, uint16_t dclass,
+	struct ub_packed_rrset_key** cname)
 {
 	uint8_t buf[LDNS_MAX_DOMAINLEN];
 	uint8_t* dtarg;
 	size_t dtarglen, newlen;
 	struct packed_rrset_data* d;
+
+	/* get DNAME target name */
+	if(dname->data->count < 1) return 0;
+	if(dname->data->rr_len[0] < 3) return 0; /* at least rdatalen +1 */
+	dtarg = dname->data->rr_data[0]+2;
+	dtarglen = dname->data->rr_len[0]-2;
+	if(sldns_read_uint16(dname->data->rr_data[0]) != dtarglen)
+		return 0; /* rdatalen in DNAME rdata is malformed */
+	if(dname_valid(dtarg, dtarglen) != dtarglen)
+		return 0; /* DNAME RR has malformed rdata */
+
 	/* synthesize a CNAME */
-	get_cname_target(dname, &dtarg, &dtarglen);
-	if(!dtarg) {
-		/* DNAME RR has malformed rdata */
-		return 0;
-	}
 	newlen = synth_cname_buf(qinfo->qname, qinfo->qname_len,
-		dname->rk.dname_len, dtarg, dtarglen, buf, sizeof(buf));
+		node->namelen, dtarg, dtarglen, buf, sizeof(buf));
 	if(newlen == 0) {
 		/* YXDOMAIN error */
 		*cname = NULL;
@@ -1564,7 +1548,7 @@ create_synth_cname(struct query_info* qinfo, struct regional* region,
 	memset(&(*cname)->entry, 0, sizeof((*cname)->entry));
 	(*cname)->entry.key = (*cname);
 	(*cname)->rk.type = htons(LDNS_RR_TYPE_CNAME);
-	(*cname)->rk.rrset_class = dname->rk.rrset_class;
+	(*cname)->rk.rrset_class = htons(dclass);
 	(*cname)->rk.flags = 0;
 	(*cname)->rk.dname = regional_alloc_init(region, qinfo->qname,
 		qinfo->qname_len);
@@ -1611,22 +1595,28 @@ az_change_dnames(struct dns_msg* msg, uint8_t* oldname, uint8_t* newname,
 
 /** find NSEC record covering the query */
 static struct auth_rrset*
-az_find_nsec_cover(struct auth_zone* z, struct auth_data* node)
+az_find_nsec_cover(struct auth_zone* z, struct auth_data** node)
 {
+	uint8_t* nm = (*node)->name;
+	size_t nmlen = (*node)->namelen;
 	struct auth_rrset* rrset;
-	/* either the NSEC for the smallest-or-equal node */
-	if((rrset=az_domain_rrset(node, LDNS_RR_TYPE_NSEC)) != NULL)
-		return rrset;
-	/* or node == NULL, we did not find any smaller name, but the last
-	 * name NSEC wraps around, find the last NSEC in the zone */
-	if(node == NULL) {
-		struct auth_data* last = (struct auth_data*)rbtree_last(
-			&z->data);
-		if(!last || (rbnode_type*)last == RBTREE_NULL)
-			return NULL;
-		return az_domain_rrset(last, LDNS_RR_TYPE_NSEC);
+	/* find the NSEC for the smallest-or-equal node */
+	/* if node == NULL, we did not find a smaller name.  But the zone
+	 * name is the smallest name and should have an NSEC. So there is
+	 * no NSEC to return (for a properly signed zone) */
+	/* for empty nonterminals, the auth-data node should not exist,
+	 * and thus we don't need to go rbtree_previous here to find
+	 * a domain with an NSEC record */
+	/* but there could be glue, and if this is node, then it has no NSEC.
+	 * Go up to find nonglue (previous) NSEC-holding nodes */
+	while((rrset=az_domain_rrset(*node, LDNS_RR_TYPE_NSEC)) == NULL) {
+		if(dname_is_root(nm)) return NULL;
+		if(nmlen == z->namelen) return NULL;
+		dname_remove_label(&nm, &nmlen);
+		/* adjust *node for the nsec rrset to find in */
+		*node = az_find_name(z, nm, nmlen);
 	}
-	return NULL;
+	return rrset;
 }
 
 /** Find NSEC and add for wildcard denial */
@@ -1652,8 +1642,8 @@ az_nsec_wildcard_denial(struct auth_zone* z, struct regional* region,
 	qinfo.qtype = 0;
 	qinfo.qclass = 0;
 	az_find_domain(z, &qinfo, &node_exact, &node);
-	if((nsec=az_find_nsec_cover(z, node)) != NULL) {
-		if(!msg_add_rrset_ns(region, msg, nsec)) return 0;
+	if((nsec=az_find_nsec_cover(z, &node)) != NULL) {
+		if(!msg_add_rrset_ns(z, region, msg, node, nsec)) return 0;
 	}
 	return 1;
 }
@@ -1665,17 +1655,35 @@ az_nsec3_param(struct auth_zone* z, int* algo, size_t* iter, uint8_t** salt,
 {
 	struct auth_data* apex;
 	struct auth_rrset* param;
+	size_t i;
 	apex = az_find_name(z, z->name, z->namelen);
 	if(!apex) return 0;
 	param = az_domain_rrset(apex, LDNS_RR_TYPE_NSEC3PARAM);
-	if(!param || !param->rrset || ((struct packed_rrset_data*)param->
-		rrset->entry.data)->count==0)
+	if(!param || param->data->count==0)
 		return 0; /* no RRset or no RRs in rrset */
-	if(!nsec3_get_params(param->rrset, 0, algo, iter, salt, saltlen))
-		return 0; /* malformed NSEC3PARAM */
-	if(!nsec3_hash_algo_size_supported(*algo))
-		return 0; /* unsupported NSEC3 algo */
-	return 1;
+	/* find out which NSEC3PARAM RR has supported parameters */
+	/* skip unknown flags (dynamic signer is recalculating nsec3 chain) */
+	for(i=0; i<param->data->count; i++) {
+		uint8_t* rdata = param->data->rr_data[i]+2;
+		size_t rdatalen = param->data->rr_len[i];
+		if(rdatalen < 2+5)
+			continue; /* too short */
+		if(!nsec3_hash_algo_size_supported(rdata[0]))
+			continue; /* unsupported algo */
+		if(rdatalen < (size_t)(2+5+(size_t)rdata[4]))
+			continue; /* salt missing */
+		if((rdata[1]&NSEC3_UNKNOWN_FLAGS)!=0)
+			continue; /* unknown flags */
+		*algo = rdata[0];
+		*iter = sldns_read_uint16(rdata+2);
+		*saltlen = rdata[4];
+		if(*saltlen == 0)
+			*salt = NULL;
+		else	*salt = rdata+5;
+		return 1;
+	}
+	/* no supported params */
+	return 0;
 }
 
 /** Hash a name with nsec3param into buffer, it has zone name appended.
@@ -1842,14 +1850,14 @@ az_nsec3_find_ce(struct auth_zone* z, uint8_t** cenm, size_t* cenmlen,
 
 /* Insert NSEC3 record in authority section, if NULL does nothing */
 static int
-az_nsec3_insert(struct regional* region, struct dns_msg* msg,
-	struct auth_data* node)
+az_nsec3_insert(struct auth_zone* z, struct regional* region,
+	struct dns_msg* msg, struct auth_data* node)
 {
 	struct auth_rrset* nsec3;
 	if(!node) return 1; /* no node, skip this */
 	nsec3 = az_domain_rrset(node, LDNS_RR_TYPE_NSEC3);
 	if(!nsec3) return 1; /* if no nsec3 RR, skip it */
-	if(!msg_add_rrset_ns(region, msg, nsec3)) return 0;
+	if(!msg_add_rrset_ns(z, region, msg, node, nsec3)) return 0;
 	return 1;
 }
 
@@ -1883,7 +1891,7 @@ az_add_nsec3_proof(struct auth_zone* z, struct regional* region,
 	node = az_nsec3_find_ce(z, &cenm, &cenmlen, &no_exact_ce,
 		algo, iter, salt, saltlen);
 	if(no_exact_ce) nxproof = 1;
-	if(!az_nsec3_insert(region, msg, node))
+	if(!az_nsec3_insert(z, region, msg, node))
 		return 0;
 
 	if(nxproof) {
@@ -1894,7 +1902,7 @@ az_add_nsec3_proof(struct auth_zone* z, struct regional* region,
 		/* find nsec3 that matches or covers it */
 		node = az_nsec3_find_cover(z, nx, nxlen, algo, iter, salt,
 			saltlen);
-		if(!az_nsec3_insert(region, msg, node))
+		if(!az_nsec3_insert(z, region, msg, node))
 			return 0;
 	}
 	if(wcproof) {
@@ -1910,7 +1918,7 @@ az_add_nsec3_proof(struct auth_zone* z, struct regional* region,
 		/* find nsec3 that matches or covers it */
 		node = az_nsec3_find_cover(z, wc, wclen, algo, iter, salt,
 			saltlen);
-		if(!az_nsec3_insert(region, msg, node))
+		if(!az_nsec3_insert(z, region, msg, node))
 			return 0;
 	}
 	return 1;
@@ -1919,17 +1927,17 @@ az_add_nsec3_proof(struct auth_zone* z, struct regional* region,
 /** generate answer for positive answer */
 static int
 az_generate_positive_answer(struct auth_zone* z, struct regional* region,
-	struct dns_msg* msg, struct auth_rrset* rrset)
+	struct dns_msg* msg, struct auth_data* node, struct auth_rrset* rrset)
 {
-	if(!msg_add_rrset_an(region, msg, rrset)) return 0;
+	if(!msg_add_rrset_an(z, region, msg, node, rrset)) return 0;
 	/* see if we want additional rrs */
-	if(az_rrset_type(rrset) == LDNS_RR_TYPE_MX) {
+	if(rrset->type == LDNS_RR_TYPE_MX) {
 		if(!az_add_additionals_from(z, region, msg, rrset, 2))
 			return 0;
-	} else if(az_rrset_type(rrset) == LDNS_RR_TYPE_SRV) {
+	} else if(rrset->type == LDNS_RR_TYPE_SRV) {
 		if(!az_add_additionals_from(z, region, msg, rrset, 6))
 			return 0;
-	} else if(az_rrset_type(rrset) == LDNS_RR_TYPE_NS) {
+	} else if(rrset->type == LDNS_RR_TYPE_NS) {
 		if(!az_add_additionals_from(z, region, msg, rrset, 0))
 			return 0;
 	}
@@ -1938,40 +1946,41 @@ az_generate_positive_answer(struct auth_zone* z, struct regional* region,
 
 /** generate answer for type ANY answer */
 static int
-az_generate_any_answer(struct regional* region, struct dns_msg* msg,
-	struct auth_data* node)
+az_generate_any_answer(struct auth_zone* z, struct regional* region,
+	struct dns_msg* msg, struct auth_data* node)
 {
 	struct auth_rrset* rrset;
 	int added = 0;
 	/* add a couple (at least one) RRs */
 	if((rrset=az_domain_rrset(node, LDNS_RR_TYPE_SOA)) != NULL) {
-		if(!msg_add_rrset_an(region, msg, rrset)) return 0;
+		if(!msg_add_rrset_an(z, region, msg, node, rrset)) return 0;
 		added++;
 	}
 	if((rrset=az_domain_rrset(node, LDNS_RR_TYPE_MX)) != NULL) {
-		if(!msg_add_rrset_an(region, msg, rrset)) return 0;
+		if(!msg_add_rrset_an(z, region, msg, node, rrset)) return 0;
 		added++;
 	}
 	if((rrset=az_domain_rrset(node, LDNS_RR_TYPE_A)) != NULL) {
-		if(!msg_add_rrset_an(region, msg, rrset)) return 0;
+		if(!msg_add_rrset_an(z, region, msg, node, rrset)) return 0;
 		added++;
 	}
 	if((rrset=az_domain_rrset(node, LDNS_RR_TYPE_AAAA)) != NULL) {
-		if(!msg_add_rrset_an(region, msg, rrset)) return 0;
+		if(!msg_add_rrset_an(z, region, msg, node, rrset)) return 0;
 		added++;
 	}
 	if(added == 0 && node->rrsets) {
-		if(!msg_add_rrset_an(region, msg, node->rrsets)) return 0;
+		if(!msg_add_rrset_an(z, region, msg, node,
+			node->rrsets)) return 0;
 	}
 	return 1;
 }
 
 /** generate answer for cname answer */
 static int
-az_generate_cname_answer(struct regional* region, struct dns_msg* msg,
-	struct auth_rrset* rrset)
+az_generate_cname_answer(struct auth_zone* z, struct regional* region,
+	struct dns_msg* msg, struct auth_data* node, struct auth_rrset* rrset)
 {
-	if(!msg_add_rrset_an(region, msg, rrset)) return 0;
+	if(!msg_add_rrset_an(z, region, msg, node, rrset)) return 0;
 	return 1;
 }
 
@@ -1984,7 +1993,7 @@ az_generate_notype_answer(struct auth_zone* z, struct regional* region,
 	if(!az_add_negative_soa(z, region, msg)) return 0;
 	/* DNSSEC denial NSEC */
 	if((rrset=az_domain_rrset(node, LDNS_RR_TYPE_NSEC))!=NULL) {
-		if(!msg_add_rrset_ns(region, msg, rrset)) return 0;
+		if(!msg_add_rrset_ns(z, region, msg, node, rrset)) return 0;
 	} else if(node) {
 		/* DNSSEC denial NSEC3 */
 		if(!az_add_nsec3_proof(z, region, msg, node->name,
@@ -2002,16 +2011,18 @@ az_generate_referral_answer(struct auth_zone* z, struct regional* region,
 {
 	struct auth_rrset* ds, *nsec;
 	/* turn off AA flag, referral is nonAA because it leaves the zone */
+	log_assert(ce);
 	msg->rep->flags &= ~BIT_AA;
-	if(!msg_add_rrset_ns(region, msg, rrset)) return 0;
+	if(!msg_add_rrset_ns(z, region, msg, ce, rrset)) return 0;
 	/* add DS or deny it */
 	if((ds=az_domain_rrset(ce, LDNS_RR_TYPE_DS))!=NULL) {
-		if(!msg_add_rrset_ns(region, msg, ds)) return 0;
+		if(!msg_add_rrset_ns(z, region, msg, ce, ds)) return 0;
 	} else {
 		/* deny the DS */
 		if((nsec=az_domain_rrset(ce, LDNS_RR_TYPE_NSEC))!=NULL) {
-			if(!msg_add_rrset_ns(region, msg, nsec)) return 0;
-		} else if(ce) {
+			if(!msg_add_rrset_ns(z, region, msg, ce,
+				nsec)) return 0;
+		} else {
 			if(!az_add_nsec3_proof(z, region, msg, ce->name,
 				ce->namelen, msg->qinfo.qname,
 				msg->qinfo.qname_len, 0, 0))
@@ -2025,14 +2036,16 @@ az_generate_referral_answer(struct auth_zone* z, struct regional* region,
 
 /** generate answer for DNAME answer */
 static int
-az_generate_dname_answer(struct query_info* qinfo, struct regional* region,
-	struct dns_msg* msg, struct auth_rrset* rrset)
+az_generate_dname_answer(struct auth_zone* z, struct query_info* qinfo,
+	struct regional* region, struct dns_msg* msg, struct auth_data* ce,
+	struct auth_rrset* rrset)
 {
 	struct ub_packed_rrset_key* cname;
+	log_assert(ce);
 	/* add the DNAME */
-	if(!msg_add_rrset_an(region, msg, rrset)) return 0;
+	if(!msg_add_rrset_an(z, region, msg, ce, rrset)) return 0;
 	/* synthesize a CNAME */
-	if(!create_synth_cname(qinfo, region, rrset->rrset, &cname)) {
+	if(!create_synth_cname(qinfo, region, ce, rrset, z->dclass, &cname)) {
 		/* out of memory */
 		return 0;
 	}
@@ -2066,13 +2079,15 @@ az_generate_wildcard_answer(struct auth_zone* z, struct query_info* qinfo,
 	}
 	if((rrset=az_domain_rrset(wildcard, qinfo->qtype)) != NULL) {
 		/* wildcard has type, add it */
-		if(!msg_add_rrset_an(region, msg, rrset)) return 0;
+		if(!msg_add_rrset_an(z, region, msg, wildcard,
+			rrset)) return 0;
 	} else if((rrset=az_domain_rrset(wildcard, LDNS_RR_TYPE_CNAME))!=NULL) {
 		/* wildcard has cname instead, do that */
-		if(!msg_add_rrset_an(region, msg, rrset)) return 0;
+		if(!msg_add_rrset_an(z, region, msg, wildcard,
+			rrset)) return 0;
 	} else if(qinfo->qtype == LDNS_RR_TYPE_ANY && wildcard->rrsets) {
 		/* add ANY rrsets from wildcard node */
-		if(!az_generate_any_answer(region, msg, wildcard))
+		if(!az_generate_any_answer(z, region, msg, wildcard))
 			return 0;
 	} else {
 		/* wildcard has nodata, notype answer */
@@ -2082,8 +2097,8 @@ az_generate_wildcard_answer(struct auth_zone* z, struct query_info* qinfo,
 	}
 
 	/* ce and node for dnssec denial of wildcard original name */
-	if((nsec=az_find_nsec_cover(z, node)) != NULL) {
-		if(!msg_add_rrset_ns(region, msg, nsec)) return 0;
+	if((nsec=az_find_nsec_cover(z, &node)) != NULL) {
+		if(!msg_add_rrset_ns(z, region, msg, node, nsec)) return 0;
 	} else if(ce) {
 		if(!az_add_nsec3_proof(z, region, msg, ce->name,
 			ce->namelen, msg->qinfo.qname,
@@ -2106,8 +2121,8 @@ az_generate_nxdomain_answer(struct auth_zone* z, struct regional* region,
 	struct auth_rrset* nsec;
 	msg->rep->flags |= LDNS_RCODE_NXDOMAIN;
 	if(!az_add_negative_soa(z, region, msg)) return 0;
-	if((nsec=az_find_nsec_cover(z, node)) != NULL) {
-		if(!msg_add_rrset_ns(region, msg, nsec)) return 0;
+	if((nsec=az_find_nsec_cover(z, &node)) != NULL) {
+		if(!msg_add_rrset_ns(z, region, msg, node, nsec)) return 0;
 		if(ce && !az_nsec_wildcard_denial(z, region, msg, ce->name,
 			ce->namelen)) return 0;
 	} else if(ce) {
@@ -2127,15 +2142,15 @@ az_generate_answer_with_node(struct auth_zone* z, struct query_info* qinfo,
 	struct auth_rrset* rrset;
 	/* positive answer, rrset we are looking for exists */
 	if((rrset=az_domain_rrset(node, qinfo->qtype)) != NULL) {
-		return az_generate_positive_answer(z, region, msg, rrset);
+		return az_generate_positive_answer(z, region, msg, node, rrset);
 	}
 	/* CNAME? */
 	if((rrset=az_domain_rrset(node, LDNS_RR_TYPE_CNAME)) != NULL) {
-		return az_generate_cname_answer(region, msg, rrset);
+		return az_generate_cname_answer(z, region, msg, node, rrset);
 	}
 	/* type ANY ? */
 	if(qinfo->qtype == LDNS_RR_TYPE_ANY) {
-		return az_generate_any_answer(region, msg, node);
+		return az_generate_any_answer(z, region, msg, node);
 	}
 	/* NOERROR/NODATA (no such type at domain name) */
 	return az_generate_notype_answer(z, region, msg, node);
@@ -2152,11 +2167,12 @@ az_generate_answer_nonexistnode(struct auth_zone* z, struct query_info* qinfo,
 
 	/* we do not have an exact matching name (that exists) */
 	/* see if we have a NS or DNAME in the ce */
-	if(ce && rrset && az_rrset_type(rrset) == LDNS_RR_TYPE_NS) {
+	if(ce && rrset && rrset->type == LDNS_RR_TYPE_NS) {
 		return az_generate_referral_answer(z, region, msg, ce, rrset);
 	}
-	if(ce && rrset && az_rrset_type(rrset) == LDNS_RR_TYPE_DNAME) {
-		return az_generate_dname_answer(qinfo, region, msg, rrset);
+	if(ce && rrset && rrset->type == LDNS_RR_TYPE_DNAME) {
+		return az_generate_dname_answer(z, qinfo, region, msg, ce,
+			rrset);
 	}
 	/* if there is an empty nonterminal, wildcard and nxdomain don't
 	 * happen, it is a notype answer */
@@ -2209,8 +2225,8 @@ auth_zone_generate_answer(struct auth_zone* z, struct query_info* qinfo,
 			sldns_wire2str_dname_buf(ce->name, ce->namelen,
 				cename, sizeof(cename));
 		else	snprintf(cename, sizeof(cename), "NULL");
-		if(rrset) sldns_wire2str_type_buf(az_rrset_type(rrset),
-			rrstr, sizeof(rrstr));
+		if(rrset) sldns_wire2str_type_buf(rrset->type, rrstr,
+			sizeof(rrstr));
 		else	snprintf(rrstr, sizeof(rrstr), "NULL");
 		log_info("auth_zone %s query %s %s, domain %s %s %s, "
 			"ce %s, rrset %s", zname, qname, tpstr, nname,
