@@ -168,6 +168,7 @@ create_tmp_file(const char* s)
 	char buf[256];
 	char *fname;
 	FILE *out;
+	size_t r;
 	snprintf(buf, sizeof(buf), "/tmp/unbound.unittest.%u.%d",
 		(unsigned)getpid(), tempno++);
 	fname = strdup(buf);
@@ -177,7 +178,12 @@ create_tmp_file(const char* s)
 	/* if string, write to file */
 	out = fopen(fname, "w");
 	if(!out) fatal_exit("cannot open %s: %s", fname, strerror(errno));
-	fwrite(s, strlen(s), 1, out);
+	r = fwrite(s, 1, strlen(s), out);
+	if(r == 0) {
+		fatal_exit("write failed: %s", strerror(errno));
+	} else if(r < strlen(s)) {
+		fatal_exit("write failed: too short (disk full?)");
+	}
 	fclose(out);
 	return fname;
 }
@@ -232,8 +238,8 @@ checkfile(char* f1, char *f2)
 
 	while(!feof(i1) && !feof(i2)) {
 		line++;
-		fgets(buf1, sizeof(buf1), i1);
-		fgets(buf2, sizeof(buf2), i2);
+		(void)fgets(buf1, (int)sizeof(buf1), i1);
+		(void)fgets(buf2, (int)sizeof(buf2), i2);
 		if(strcmp(buf1, buf2) != 0) {
 			log_info("in files %s and %s:%d", f1, f2, line);
 			log_info("'%s'", buf1);
@@ -326,7 +332,8 @@ pr_flags(sldns_buffer* buf, uint16_t flags)
 	if((flags&BIT_RA)!=0) sldns_buffer_printf(buf, " RA");
 	if((flags&BIT_AD)!=0) sldns_buffer_printf(buf, " AD");
 	if((flags&BIT_Z)!=0) sldns_buffer_printf(buf, " Z");
-	sldns_wire2str_rcode_buf(FLAGS_GET_RCODE(flags), rcode, sizeof(rcode));
+	sldns_wire2str_rcode_buf((int)(FLAGS_GET_RCODE(flags)),
+		rcode, sizeof(rcode));
 	sldns_buffer_printf(buf, " rcode %s", rcode);
 	sldns_buffer_printf(buf, "\n");
 }
@@ -401,7 +408,9 @@ q_ans_query(struct q_ans* q, struct auth_zones* az, struct query_info* qinfo,
 		(ret?"ok":"fail"), (fallback?" fallback":""), ans_str);
 	/* check expected value for ret */
 	/* check expected value for fallback */
+	(void)expected_fallback;
 	/* check answer string */
+	(void)q;
 	free(ans_str);
 }
 
