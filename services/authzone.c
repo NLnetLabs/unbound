@@ -1459,7 +1459,7 @@ az_add_negative_soa(struct auth_zone* z, struct regional* region,
 	/* last 4 bytes are minimum ttl in network format */
 	if(d->count == 0) return 0;
 	if(d->rr_len[0] < 2+4) return 0;
-	minimum = sldns_read_uint32(d->rr_data[0]+(d->rr_len[0]-2-4));
+	minimum = sldns_read_uint32(d->rr_data[0]+(d->rr_len[0]-4));
 	d->ttl = (time_t)minimum;
 	d->rr_ttl[0] = (time_t)minimum;
 	msg->rep->ttl = get_rrset_ttl(msg->rep->rrsets[0]);
@@ -2170,6 +2170,31 @@ auth_zone_generate_answer(struct auth_zone* z, struct query_info* qinfo,
 	 * to generate answers from that is above the query */
 	node_exists = az_find_ce(z, qinfo, node, node_exact, &ce, &rrset);
 
+	if(verbosity >= VERB_ALGO) {
+		char zname[256], qname[256], nname[256], cename[256],
+			tpstr[32], rrstr[32];
+		sldns_wire2str_dname_buf(qinfo->qname, qinfo->qname_len, qname,
+			sizeof(qname));
+		sldns_wire2str_type_buf(qinfo->qtype, tpstr, sizeof(tpstr));
+		sldns_wire2str_dname_buf(z->name, z->namelen, zname,
+			sizeof(zname));
+		if(node)
+			sldns_wire2str_dname_buf(node->name, node->namelen,
+				nname, sizeof(nname));
+		else	snprintf(nname, sizeof(nname), "NULL");
+		if(ce)
+			sldns_wire2str_dname_buf(ce->name, ce->namelen,
+				cename, sizeof(cename));
+		else	snprintf(cename, sizeof(cename), "NULL");
+		if(rrset) sldns_wire2str_type_buf(az_rrset_type(rrset),
+			rrstr, sizeof(rrstr));
+		else	snprintf(rrstr, sizeof(rrstr), "NULL");
+		log_info("auth_zone %s query %s %s, domain %s %s %s, "
+			"ce %s, rrset %s", zname, qname, tpstr, nname,
+			(node_exact?"exact":"notexact"),
+			(node_exists?"exist":"notexist"), cename, rrstr);
+	}
+
 	if(node_exists) {
 		/* the node is fine, generate answer from node */
 		return az_generate_answer_with_node(z, qinfo, region, *msg,
@@ -2191,6 +2216,7 @@ int auth_zones_lookup(struct auth_zones* az, struct query_info* qinfo,
 	z = auth_zone_find(az, dp_nm, dp_nmlen, qinfo->qclass);
 	if(!z) {
 		lock_rw_unlock(&az->lock);
+		verbose(VERB_ALGO, "no auth zone for query, fallback");
 		/* no auth zone, fallback to internet */
 		*fallback = 1;
 		return 0;

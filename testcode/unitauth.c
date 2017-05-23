@@ -133,7 +133,7 @@ static const char* zone_example_com =
 
 /** queries for example.com: zone, query, flags, answer. end with NULL */
 static struct q_ans example_com_queries[] = {
-	{"example.com", "www.example.com A", "",
+	{"example.com", "www.example.com. A", "",
 ";flags QR AA rcode NOERROR\n"
 ";answer section\n"
 "www.example.com.	3600	IN	A	10.0.0.2\n"
@@ -307,6 +307,7 @@ q_ans_parse(struct q_ans* q, struct regional* region,
 	if(!*qinfo) fatal_exit("out of memory");
 	(*qinfo)->qname = regional_alloc_init(region, buf, dname_len);
 	if(!(*qinfo)->qname) fatal_exit("out of memory");
+	(*qinfo)->qname_len = dname_len;
 	(*qinfo)->qtype = sldns_wirerr_get_type(buf, len, dname_len);
 	(*qinfo)->qclass = sldns_wirerr_get_class(buf, len, dname_len);
 }
@@ -386,8 +387,12 @@ q_ans_query(struct q_ans* q, struct auth_zones* az, struct query_info* qinfo,
 	int ret, fallback = 0;
 	struct dns_msg* msg = NULL;
 	char* ans_str;
+	int oldv = verbosity;
+	/* increase verbosity to printout logic in authzone */
+	if(vbmp) verbosity = 4;
 	ret = auth_zones_lookup(az, qinfo, region, &msg, &fallback, dp_nm,
 		dp_nmlen);
+	if(vbmp) verbosity = oldv;
 
 	/* check the answer */
 	ans_str = msgtostr(msg);
@@ -445,7 +450,7 @@ check_queries(const char* name, const char* zone, struct q_ans* queries)
 static void
 authzone_read_test(void)
 {
-	if(vbmp) log_info("Testing read auth zone");
+	if(vbmp) printf("Testing read auth zone\n");
 	check_read_exact("example.com", zone_example_com);
 }
 
@@ -453,7 +458,7 @@ authzone_read_test(void)
 static void
 authzone_query_test(void)
 {
-	if(vbmp) log_info("Testing query auth zone");
+	if(vbmp) printf("Testing query auth zone\n");
 	check_queries("example.com", zone_example_com, example_com_queries);
 }
 
@@ -465,5 +470,5 @@ authzone_test(void)
 	atexit(tmpfilecleanup);
 	authzone_read_test();
 	authzone_query_test();
-	/* exit(0);*/ /* DEBUG */
+	/*exit(0);*/ /* DEBUG */
 }
