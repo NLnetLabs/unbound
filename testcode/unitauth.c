@@ -385,6 +385,49 @@ msgtostr(struct dns_msg* msg)
 	return str;
 }
 
+/** find line diff between strings */
+static void
+line_diff(const char* p, const char* q, const char* pdesc, const char* qdesc)
+{
+	char* pdup, *qdup, *pl, *ql;
+	int line = 1;
+	pdup = strdup(p);
+	qdup = strdup(q);
+	if(!pdup || !qdup) fatal_exit("out of memory");
+	pl=pdup;
+	ql=qdup;
+	printf("linediff (<%s, >%s)\n", pdesc, qdesc);
+	while(pl && ql && *pl && *ql) {
+		char* ep = strchr(pl, '\n');
+		char* eq = strchr(ql, '\n');
+		/* terminate lines */
+		if(ep) *ep = 0;
+		if(eq) *eq = 0;
+		/* printout */
+		if(strcmp(pl, ql) == 0) {
+			printf("%3d   %s\n", line, pl);
+		} else {
+			printf("%3d < %s\n", line, pl);
+			printf("%3d > %s\n", line, ql);
+		}
+		if(ep) *ep = '\n';
+		if(eq) *eq = '\n';
+		if(ep) pl = ep+1;
+		else pl = NULL;
+		if(eq) ql = eq+1;
+		else ql = NULL;
+		line++;
+	}
+	if(pl && *pl) {
+		printf("%3d < %s\n", line, pl);
+	}
+	if(ql && *ql) {
+		printf("%3d > %s\n", line, ql);
+	}
+	free(pdup);
+	free(qdup);
+}
+
 /** make q_ans query */
 static void
 q_ans_query(struct q_ans* q, struct auth_zones* az, struct query_info* qinfo,
@@ -407,10 +450,29 @@ q_ans_query(struct q_ans* q, struct auth_zones* az, struct query_info* qinfo,
 	if(vbmp) printf("got (ret=%s%s):\n%s",
 		(ret?"ok":"fail"), (fallback?" fallback":""), ans_str);
 	/* check expected value for ret */
+	if(ret == 0) {
+		/* ret is zero on fallback */
+		if(!expected_fallback) {
+			if(vbmp) printf("fallback expected, but "
+				"ret is not false\n");
+		}
+		unit_assert(expected_fallback);
+	}
 	/* check expected value for fallback */
-	(void)expected_fallback;
+	if(expected_fallback && !fallback) {
+		if(vbmp) printf("expected fallback, but fallback is no\n");
+	} else if(!expected_fallback && fallback) {
+		if(vbmp) printf("expected no fallback, but fallback is yes\n");
+	}
+	unit_assert( (expected_fallback&&fallback) ||
+		(!expected_fallback&&!fallback));
 	/* check answer string */
-	(void)q;
+	if(strcmp(q->answer, ans_str) != 0) {
+		if(vbmp) printf("wanted:\n%s", q->answer);
+		line_diff(q->answer, ans_str, "wanted", "got");
+	}
+	unit_assert(strcmp(q->answer, ans_str) == 0);
+	if(vbmp) printf("query ok\n\n");
 	free(ans_str);
 }
 
