@@ -49,7 +49,7 @@
 #include "sldns/sbuffer.h"
 
 /** verbosity for this test */
-static int vbmp = 1;
+static int vbmp = 0;
 
 /** struct for query and answer checks */
 struct q_ans {
@@ -133,12 +133,270 @@ static const char* zone_example_com =
 
 /** queries for example.com: zone, query, flags, answer. end with NULL */
 static struct q_ans example_com_queries[] = {
-	{"example.com", "www.example.com. A", "",
+	{ "example.com", "www.example.com. A", "",
 ";flags QR AA rcode NOERROR\n"
 ";answer section\n"
 "www.example.com.	3600	IN	A	10.0.0.2\n"
 "www.example.com.	3600	IN	A	10.0.0.3\n"
 	},
+
+	{ "example.com", "example.com. SOA", "",
+";flags QR AA rcode NOERROR\n"
+";answer section\n"
+"example.com.	3600	IN	SOA	ns.example.org. noc.example.org. 2017042710 7200 3600 1209600 3600\n"
+	},
+
+	{ "example.com", "example.com. A", "",
+";flags QR AA rcode NOERROR\n"
+";answer section\n"
+"example.com.	3600	IN	A	10.0.0.1\n"
+	},
+
+	{ "example.com", "example.com. AAAA", "",
+";flags QR AA rcode NOERROR\n"
+";authority section\n"
+"example.com.	3600	IN	SOA	ns.example.org. noc.example.org. 2017042710 7200 3600 1209600 3600\n"
+	},
+
+	{ "example.com", "example.com. NS", "",
+";flags QR AA rcode NOERROR\n"
+";answer section\n"
+"example.com.	3600	IN	NS	ns.example.com.\n"
+";additional section\n"
+"ns.example.com.	3600	IN	A	10.0.0.5\n"
+	},
+
+	{ "example.com", "example.com. MX", "",
+";flags QR AA rcode NOERROR\n"
+";answer section\n"
+"example.com.	3600	IN	MX	50 mail.example.com.\n"
+";additional section\n"
+"mail.example.com.	3600	IN	A	10.0.0.4\n"
+	},
+
+	{ "example.com", "example.com. IN ANY", "",
+";flags QR AA rcode NOERROR\n"
+";answer section\n"
+"example.com.	3600	IN	SOA	ns.example.org. noc.example.org. 2017042710 7200 3600 1209600 3600\n"
+"example.com.	3600	IN	MX	50 mail.example.com.\n"
+"example.com.	3600	IN	A	10.0.0.1\n"
+	},
+
+	{ "example.com", "nonexist.example.com. A", "",
+";flags QR AA rcode NXDOMAIN\n"
+";authority section\n"
+"example.com.	3600	IN	SOA	ns.example.org. noc.example.org. 2017042710 7200 3600 1209600 3600\n"
+	},
+
+	{ "example.com", "deep.ent.example.com. A", "",
+";flags QR AA rcode NOERROR\n"
+";answer section\n"
+"deep.ent.example.com.	3600	IN	A	10.0.0.9\n"
+	},
+
+	{ "example.com", "ent.example.com. A", "",
+";flags QR AA rcode NOERROR\n"
+";authority section\n"
+"example.com.	3600	IN	SOA	ns.example.org. noc.example.org. 2017042710 7200 3600 1209600 3600\n"
+	},
+
+	{ "example.com", "below.deep.ent.example.com. A", "",
+";flags QR AA rcode NXDOMAIN\n"
+";authority section\n"
+"example.com.	3600	IN	SOA	ns.example.org. noc.example.org. 2017042710 7200 3600 1209600 3600\n"
+	},
+
+	{ "example.com", "mail.example.com. A", "",
+";flags QR AA rcode NOERROR\n"
+";answer section\n"
+"mail.example.com.	3600	IN	A	10.0.0.4\n"
+	},
+
+	{ "example.com", "ns.example.com. A", "",
+";flags QR AA rcode NOERROR\n"
+";answer section\n"
+"ns.example.com.	3600	IN	A	10.0.0.5\n"
+	},
+
+	{ "example.com", "out.example.com. A", "",
+";flags QR AA rcode NOERROR\n"
+";answer section\n"
+"out.example.com.	3600	IN	CNAME	www.example.com.\n"
+	},
+
+	{ "example.com", "out.example.com. CNAME", "",
+";flags QR AA rcode NOERROR\n"
+";answer section\n"
+"out.example.com.	3600	IN	CNAME	www.example.com.\n"
+	},
+
+	{ "example.com", "plan.example.com. A", "",
+";flags QR AA rcode NOERROR\n"
+";answer section\n"
+"plan.example.com.	3600	IN	CNAME	nonexist.example.com.\n"
+	},
+
+	{ "example.com", "plan.example.com. CNAME", "",
+";flags QR AA rcode NOERROR\n"
+";answer section\n"
+"plan.example.com.	3600	IN	CNAME	nonexist.example.com.\n"
+	},
+
+	{ "example.com", "redir.example.com. A", "",
+";flags QR AA rcode NOERROR\n"
+";authority section\n"
+"example.com.	3600	IN	SOA	ns.example.org. noc.example.org. 2017042710 7200 3600 1209600 3600\n"
+	},
+
+	{ "example.com", "redir.example.com. DNAME", "",
+";flags QR AA rcode NOERROR\n"
+";answer section\n"
+"redir.example.com.	3600	IN	DNAME	redir.example.org.\n"
+	},
+
+	{ "example.com", "abc.redir.example.com. A", "",
+";flags QR AA rcode NOERROR\n"
+";answer section\n"
+"redir.example.com.	3600	IN	DNAME	redir.example.org.\n"
+"abc.redir.example.com.	0	IN	CNAME	abc.redir.example.org.\n"
+	},
+
+	{ "example.com", "foo.abc.redir.example.com. A", "",
+";flags QR AA rcode NOERROR\n"
+";answer section\n"
+"redir.example.com.	3600	IN	DNAME	redir.example.org.\n"
+"foo.abc.redir.example.com.	0	IN	CNAME	foo.abc.redir.example.org.\n"
+	},
+
+	{ "example.com", "sub.example.com. NS", "",
+";flags QR rcode NOERROR\n"
+";authority section\n"
+"sub.example.com.	3600	IN	NS	ns1.sub.example.com.\n"
+"sub.example.com.	3600	IN	NS	ns2.sub.example.com.\n"
+";additional section\n"
+"ns1.sub.example.com.	3600	IN	A	10.0.0.6\n"
+"ns2.sub.example.com.	3600	IN	AAAA	2001::7\n"
+	},
+
+	{ "example.com", "sub.example.com. DS", "",
+";flags QR AA rcode NOERROR\n"
+";authority section\n"
+"example.com.	3600	IN	SOA	ns.example.org. noc.example.org. 2017042710 7200 3600 1209600 3600\n"
+	},
+
+	{ "example.com", "www.sub.example.com. NS", "",
+";flags QR rcode NOERROR\n"
+";authority section\n"
+"sub.example.com.	3600	IN	NS	ns1.sub.example.com.\n"
+"sub.example.com.	3600	IN	NS	ns2.sub.example.com.\n"
+";additional section\n"
+"ns1.sub.example.com.	3600	IN	A	10.0.0.6\n"
+"ns2.sub.example.com.	3600	IN	AAAA	2001::7\n"
+	},
+
+	{ "example.com", "foo.abc.sub.example.com. NS", "",
+";flags QR rcode NOERROR\n"
+";authority section\n"
+"sub.example.com.	3600	IN	NS	ns1.sub.example.com.\n"
+"sub.example.com.	3600	IN	NS	ns2.sub.example.com.\n"
+";additional section\n"
+"ns1.sub.example.com.	3600	IN	A	10.0.0.6\n"
+"ns2.sub.example.com.	3600	IN	AAAA	2001::7\n"
+	},
+
+	{ "example.com", "ns1.sub.example.com. A", "",
+";flags QR rcode NOERROR\n"
+";authority section\n"
+"sub.example.com.	3600	IN	NS	ns1.sub.example.com.\n"
+"sub.example.com.	3600	IN	NS	ns2.sub.example.com.\n"
+";additional section\n"
+"ns1.sub.example.com.	3600	IN	A	10.0.0.6\n"
+"ns2.sub.example.com.	3600	IN	AAAA	2001::7\n"
+	},
+
+	{ "example.com", "ns1.sub.example.com. AAAA", "",
+";flags QR rcode NOERROR\n"
+";authority section\n"
+"sub.example.com.	3600	IN	NS	ns1.sub.example.com.\n"
+"sub.example.com.	3600	IN	NS	ns2.sub.example.com.\n"
+";additional section\n"
+"ns1.sub.example.com.	3600	IN	A	10.0.0.6\n"
+"ns2.sub.example.com.	3600	IN	AAAA	2001::7\n"
+	},
+
+	{ "example.com", "ns2.sub.example.com. A", "",
+";flags QR rcode NOERROR\n"
+";authority section\n"
+"sub.example.com.	3600	IN	NS	ns1.sub.example.com.\n"
+"sub.example.com.	3600	IN	NS	ns2.sub.example.com.\n"
+";additional section\n"
+"ns1.sub.example.com.	3600	IN	A	10.0.0.6\n"
+"ns2.sub.example.com.	3600	IN	AAAA	2001::7\n"
+	},
+
+	{ "example.com", "ns2.sub.example.com. AAAA", "",
+";flags QR rcode NOERROR\n"
+";authority section\n"
+"sub.example.com.	3600	IN	NS	ns1.sub.example.com.\n"
+"sub.example.com.	3600	IN	NS	ns2.sub.example.com.\n"
+";additional section\n"
+"ns1.sub.example.com.	3600	IN	A	10.0.0.6\n"
+"ns2.sub.example.com.	3600	IN	AAAA	2001::7\n"
+	},
+
+	{ "example.com", "wild.example.com. A", "",
+";flags QR AA rcode NOERROR\n"
+";authority section\n"
+"example.com.	3600	IN	SOA	ns.example.org. noc.example.org. 2017042710 7200 3600 1209600 3600\n"
+	},
+
+	{ "example.com", "*.wild.example.com. A", "",
+";flags QR AA rcode NOERROR\n"
+";answer section\n"
+"*.wild.example.com.	3600	IN	A	10.0.0.8\n"
+	},
+
+	{ "example.com", "*.wild.example.com. AAAA", "",
+";flags QR AA rcode NOERROR\n"
+";authority section\n"
+"example.com.	3600	IN	SOA	ns.example.org. noc.example.org. 2017042710 7200 3600 1209600 3600\n"
+	},
+
+	{ "example.com", "abc.wild.example.com. A", "",
+";flags QR AA rcode NOERROR\n"
+";answer section\n"
+"abc.wild.example.com.	3600	IN	A	10.0.0.8\n"
+	},
+
+	{ "example.com", "abc.wild.example.com. AAAA", "",
+";flags QR AA rcode NOERROR\n"
+";authority section\n"
+"example.com.	3600	IN	SOA	ns.example.org. noc.example.org. 2017042710 7200 3600 1209600 3600\n"
+	},
+
+	{ "example.com", "foo.abc.wild.example.com. A", "",
+";flags QR AA rcode NOERROR\n"
+";answer section\n"
+"foo.abc.wild.example.com.	3600	IN	A	10.0.0.8\n"
+	},
+
+	{ "example.com", "foo.abc.wild.example.com. AAAA", "",
+";flags QR AA rcode NOERROR\n"
+";authority section\n"
+"example.com.	3600	IN	SOA	ns.example.org. noc.example.org. 2017042710 7200 3600 1209600 3600\n"
+	},
+
+	{ "example.com", "yy.example.com. TXT", "",
+";flags QR AA rcode NOERROR\n"
+";answer section\n"
+"yy.example.com.	3600	IN	TXT	\"a\"\n"
+"yy.example.com.	3600	IN	TXT	\"b\"\n"
+"yy.example.com.	3600	IN	TXT	\"c\"\n"
+"yy.example.com.	3600	IN	TXT	\"d\"\n"
+"yy.example.com.	3600	IN	TXT	\"e\"\n"
+"yy.example.com.	3600	IN	TXT	\"f\"\n"
+	},
+
 	{NULL, NULL, NULL, NULL}
 };
 
@@ -450,11 +708,16 @@ q_ans_query(struct q_ans* q, struct auth_zones* az, struct query_info* qinfo,
 	if(vbmp) printf("got (ret=%s%s):\n%s",
 		(ret?"ok":"fail"), (fallback?" fallback":""), ans_str);
 	/* check expected value for ret */
-	if(ret == 0) {
+	if(expected_fallback && ret != 0) {
 		/* ret is zero on fallback */
+		if(vbmp) printf("fallback expected, but "
+			"return value is not false\n");
+		unit_assert(expected_fallback && ret == 0);
+	}
+	if(ret == 0) {
 		if(!expected_fallback) {
-			if(vbmp) printf("fallback expected, but "
-				"ret is not false\n");
+			if(vbmp) printf("return value is false, "
+				"(unexpected)\n");
 		}
 		unit_assert(expected_fallback);
 	}
@@ -541,5 +804,4 @@ authzone_test(void)
 	atexit(tmpfilecleanup);
 	authzone_read_test();
 	authzone_query_test();
-	/*exit(0);*/ /* DEBUG */
 }

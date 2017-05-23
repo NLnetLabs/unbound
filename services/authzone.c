@@ -1268,26 +1268,40 @@ domain_has_only_nsec3(struct auth_data* n)
 	return nsec3_seen;
 }
 
-/** see if the domain has a wildcard childe '*.domain' */
+/** see if the domain has a wildcard child '*.domain' */
 static struct auth_data*
-az_find_wildcard(struct auth_zone* z, struct auth_data* ce)
+az_find_wildcard_domain(struct auth_zone* z, uint8_t* nm, size_t nmlen)
 {
 	uint8_t wc[LDNS_MAX_DOMAINLEN];
-	uint8_t* ce_nm;
-	size_t ce_nmlen;
-	if(ce) {
-		ce_nm = ce->name;
-		ce_nmlen = ce->namelen;
-	} else {
-		ce_nm = z->name;
-		ce_nmlen = z->namelen;
-	}
-	if(ce_nmlen+2 > sizeof(wc))
+	if(nmlen+2 > sizeof(wc))
 		return NULL; /* result would be too long */
 	wc[0] = 1; /* length of wildcard label */
 	wc[1] = (uint8_t)'*'; /* wildcard label */
-	memmove(wc+2, ce_nm, ce_nmlen);
-	return az_find_name(z, wc, ce_nmlen+2);
+	memmove(wc+2, nm, nmlen);
+	return az_find_name(z, wc, nmlen+2);
+}
+
+/** find wildcard between qname and cename */
+static struct auth_data*
+az_find_wildcard(struct auth_zone* z, struct query_info* qinfo,
+	struct auth_data* ce)
+{
+	uint8_t* nm = qinfo->qname;
+	size_t nmlen = qinfo->qname_len;
+	struct auth_data* node;
+	if(!dname_subdomain_c(nm, z->name))
+		return NULL; /* out of zone */
+	while((node=az_find_wildcard_domain(z, nm, nmlen))==NULL) {
+		/* see if we can go up to find the wildcard */
+		if(nmlen == z->namelen)
+			return NULL; /* top of zone reached */
+		if(ce && nmlen == ce->namelen)
+			return NULL; /* ce reached */
+		if(dname_is_root(nm))
+			return NULL; /* cannot go up */
+		dname_remove_label(&nm, &nmlen);
+	}
+	return node;
 }
 
 /** domain is not exact, find first candidate ce (name that matches
@@ -1369,7 +1383,10 @@ az_find_ce(struct auth_zone* z, struct query_info* qinfo,
 		/* see if the current candidate has issues */
 		/* not zone apex and has type NS */
 		if(n->namelen != z->namelen &&
-			(*rrset=az_domain_rrset(n, LDNS_RR_TYPE_NS))) {
+			(*rrset=az_domain_rrset(n, LDNS_RR_TYPE_NS)) &&
+			/* delegate here, but DS at exact the dp has notype */
+			(qinfo->qtype != LDNS_RR_TYPE_DS || 
+			n->namelen != qinfo->qname_len)) {
 			/* referral */
 			/* this is ce and the lowernode is nonexisting */
 			*ce = n;
@@ -1551,7 +1568,7 @@ create_synth_cname(struct query_info* qinfo, struct regional* region,
 	(*cname)->rk.flags = 0;
 	(*cname)->rk.dname = regional_alloc_init(region, qinfo->qname,
 		qinfo->qname_len);
-	if((*cname)->rk.dname)
+	if(!(*cname)->rk.dname)
 		return 0; /* out of memory */
 	(*cname)->rk.dname_len = qinfo->qname_len;
 	(*cname)->entry.hash = rrset_key_hash(&(*cname)->rk);
@@ -2041,6 +2058,12 @@ az_generate_wildcard_answer(struct auth_zone* z, struct query_info* qinfo,
 	struct auth_data* wildcard, struct auth_data* node)
 {
 	struct auth_rrset* rrset, *nsec;
+	if(verbosity>=VERB_ALGO) {
+		char wcname[256];
+		sldns_wire2str_dname_buf(wildcard->name, wildcard->namelen,
+			wcname, sizeof(wcname));
+		log_info("wildcard %s", wcname);
+	}
 	if((rrset=az_domain_rrset(wildcard, qinfo->qtype)) != NULL) {
 		/* wildcard has type, add it */
 		if(!msg_add_rrset_an(region, msg, rrset)) return 0;
@@ -2141,7 +2164,7 @@ az_generate_answer_nonexistnode(struct auth_zone* z, struct query_info* qinfo,
 		return az_generate_notype_answer(z, region, msg, node);
 	}
 	/* see if we have a wildcard under the ce */
-	if((wildcard=az_find_wildcard(z, ce)) != NULL) {
+	if((wildcard=az_find_wildcard(z, qinfo, ce)) != NULL) {
 		return az_generate_wildcard_answer(z, qinfo, region, msg,
 			ce, wildcard, node);
 	}
