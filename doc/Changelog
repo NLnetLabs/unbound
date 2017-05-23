@@ -1,6 +1,7 @@
 23 May 2017: Wouter
 	- first services/authzone check in, it compiles and reads and writes
 	  zonefiles.
+	- iana portlist update
 
 22 May 2017: Wouter
 	- Fix #1268: SIGSEGV after log_reopen.
