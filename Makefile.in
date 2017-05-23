@@ -1108,7 +1108,9 @@ unitecs.lo unitecs.o: $(srcdir)/testcode/unitecs.c config.h $(srcdir)/util/log.h
  $(srcdir)/util/net_help.h $(srcdir)/util/storage/slabhash.h $(srcdir)/edns-subnet/edns-subnet.h
 unitauth.lo unitauth.o: $(srcdir)/testcode/unitauth.c config.h $(srcdir)/services/authzone.h \
  $(srcdir)/util/rbtree.h $(srcdir)/util/locks.h $(srcdir)/util/log.h $(srcdir)/testcode/unitmain.h \
- $(srcdir)/sldns/str2wire.h $(srcdir)/sldns/rrdef.h
+ $(srcdir)/util/regional.h $(srcdir)/util/net_help.h $(srcdir)/util/data/msgreply.h \
+ $(srcdir)/util/storage/lruhash.h $(srcdir)/util/data/packed_rrset.h $(srcdir)/services/cache/dns.h \
+ $(srcdir)/sldns/str2wire.h $(srcdir)/sldns/rrdef.h $(srcdir)/sldns/wire2str.h $(srcdir)/sldns/sbuffer.h
 acl_list.lo acl_list.o: $(srcdir)/daemon/acl_list.c config.h $(srcdir)/daemon/acl_list.h \
  $(srcdir)/util/storage/dnstree.h $(srcdir)/util/rbtree.h $(srcdir)/services/view.h $(srcdir)/util/locks.h \
  $(srcdir)/util/log.h $(srcdir)/util/regional.h $(srcdir)/util/config_file.h $(srcdir)/util/net_help.h \
