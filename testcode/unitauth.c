@@ -844,5 +844,4 @@ authzone_test(void)
 	atexit(tmpfilecleanup);
 	authzone_read_test();
 	authzone_query_test();
-	exit(0);
 }
