@@ -84,7 +84,7 @@ msg_create(struct regional* region, struct query_info* qinfo)
 		sizeof(struct reply_info)-sizeof(struct rrset_ref));
 	if(!msg->rep)
 		return NULL;
-	msg->rep->flags = BIT_QR | BIT_AA;
+	msg->rep->flags = (uint16_t)(BIT_QR | BIT_AA);
 	msg->rep->authoritative = 1;
 	msg->rep->qdcount = 1;
 	/* rrsets is NULL, no rrsets yet */
@@ -1285,7 +1285,7 @@ az_find_wildcard(struct auth_zone* z, struct auth_data* ce)
 	if(ce_nmlen+2 > sizeof(wc))
 		return NULL; /* result would be too long */
 	wc[0] = 1; /* length of wildcard label */
-	wc[1] = '*'; /* wildcard label */
+	wc[1] = (uint8_t)'*'; /* wildcard label */
 	memmove(wc+2, ce_nm, ce_nmlen);
 	return az_find_name(z, wc, ce_nmlen+2);
 }
@@ -1625,7 +1625,7 @@ az_nsec_wildcard_denial(struct auth_zone* z, struct regional* region,
 	if(cenmlen+2 > sizeof(wc))
 		return 0; /* result would be too long */
 	wc[0] = 1; /* length of wildcard label */
-	wc[1] = '*'; /* wildcard label */
+	wc[1] = (uint8_t)'*'; /* wildcard label */
 	memmove(wc+2, cenm, cenmlen);
 
 	/* we have '*.ce' in wc wildcard name buffer */
@@ -1670,7 +1670,7 @@ az_nsec3_hash(uint8_t* buf, size_t buflen, uint8_t* nm, size_t nmlen,
 	size_t hlen = nsec3_hash_algo_size_supported(algo);
 	/* buffer has domain name, nsec3hash, and 256 is for max saltlen
 	 * (salt has 0-255 length) */
-	uint8_t p[LDNS_MAX_DOMAINLEN+1+N3HASHBUFLEN+256];
+	unsigned char p[LDNS_MAX_DOMAINLEN+1+N3HASHBUFLEN+256];
 	size_t i;
 	if(nmlen+saltlen > sizeof(p) || hlen+saltlen > sizeof(p))
 		return 0;
@@ -1680,12 +1680,13 @@ az_nsec3_hash(uint8_t* buf, size_t buflen, uint8_t* nm, size_t nmlen,
 	memmove(p, nm, nmlen);
 	query_dname_tolower(p);
 	memmove(p+nmlen, salt, saltlen);
-	(void)secalgo_nsec3_hash(algo, p, nmlen+saltlen, buf);
+	(void)secalgo_nsec3_hash(algo, p, nmlen+saltlen, (unsigned char*)buf);
 	for(i=0; i<iter; i++) {
 		/* hashfunc(hash, salt) */
 		memmove(p, buf, hlen);
 		memmove(p+hlen, salt, saltlen);
-		(void)secalgo_nsec3_hash(algo, p, hlen+saltlen, buf);
+		(void)secalgo_nsec3_hash(algo, p, hlen+saltlen,
+			(unsigned char*)buf);
 	}
 	return hlen;
 }
@@ -1886,7 +1887,7 @@ az_add_nsec3_proof(struct auth_zone* z, struct regional* region,
 		if(cenmlen+2 > sizeof(wc))
 			return 0; /* result would be too long */
 		wc[0] = 1; /* length of wildcard label */
-		wc[1] = '*'; /* wildcard label */
+		wc[1] = (uint8_t)'*'; /* wildcard label */
 		memmove(wc+2, cenm, cenmlen);
 		wclen = cenmlen+2;
 		/* find nsec3 that matches or covers it */
