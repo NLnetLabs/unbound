@@ -869,6 +869,7 @@ main(int argc, char* argv[])
 		fatal_exit("could not init NSS");
 #endif /* HAVE_SSL or HAVE_NSS*/
 	checklock_start();
+	authzone_test();
 	neg_test();
 	rnd_test();
 	respip_test();

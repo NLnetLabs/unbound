@@ -49,6 +49,7 @@
 #include "services/outside_network.h"
 #include "services/mesh.h"
 #include "services/localzone.h"
+#include "services/authzone.h"
 #include "services/cache/infra.h"
 #include "services/cache/rrset.h"
 #include "services/view.h"
@@ -212,6 +213,8 @@ fptr_whitelist_rbtree_cmp(int (*fptr) (const void *, const void *))
 	else if(fptr == &probetree_cmp) return 1;
 	else if(fptr == &replay_var_compare) return 1;
 	else if(fptr == &view_cmp) return 1;
+	else if(fptr == &auth_zone_cmp) return 1;
+	else if(fptr == &auth_data_cmp) return 1;
 	return 0;
 }
 
