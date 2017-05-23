@@ -80,6 +80,9 @@ static const char* zone_example_com =
 "ns1.sub.example.com.	3600	IN	A	10.0.0.6\n"
 "ns2.sub.example.com.	3600	IN	AAAA	2001::7\n"
 "*.wild.example.com.	3600	IN	A	10.0.0.8\n"
+"*.wild2.example.com.	3600	IN	CNAME	www.example.com.\n"
+"*.wild3.example.com.	3600	IN	A	10.0.0.8\n"
+"*.wild3.example.com.	3600	IN	MX	50 mail.example.com.\n"
 "www.example.com.	3600	IN	A	10.0.0.2\n"
 "www.example.com.	3600	IN	A	10.0.0.3\n"
 "yy.example.com.	3600	IN	TXT	\"a\"\n"
@@ -384,6 +387,43 @@ static struct q_ans example_com_queries[] = {
 ";flags QR AA rcode NOERROR\n"
 ";authority section\n"
 "example.com.	3600	IN	SOA	ns.example.org. noc.example.org. 2017042710 7200 3600 1209600 3600\n"
+	},
+
+	{ "example.com", "wild2.example.com. A", "",
+";flags QR AA rcode NOERROR\n"
+";authority section\n"
+"example.com.	3600	IN	SOA	ns.example.org. noc.example.org. 2017042710 7200 3600 1209600 3600\n"
+	},
+
+	{ "example.com", "*.wild2.example.com. A", "",
+";flags QR AA rcode NOERROR\n"
+";answer section\n"
+"*.wild2.example.com.	3600	IN	CNAME	www.example.com.\n"
+	},
+
+	{ "example.com", "abc.wild2.example.com. A", "",
+";flags QR AA rcode NOERROR\n"
+";answer section\n"
+"abc.wild2.example.com.	3600	IN	CNAME	www.example.com.\n"
+	},
+
+	{ "example.com", "foo.abc.wild2.example.com. A", "",
+";flags QR AA rcode NOERROR\n"
+";answer section\n"
+"foo.abc.wild2.example.com.	3600	IN	CNAME	www.example.com.\n"
+	},
+
+	{ "example.com", "abc.wild2.example.com. CNAME", "",
+";flags QR AA rcode NOERROR\n"
+";answer section\n"
+"abc.wild2.example.com.	3600	IN	CNAME	www.example.com.\n"
+	},
+
+	{ "example.com", "abc.wild3.example.com. IN ANY", "",
+";flags QR AA rcode NOERROR\n"
+";answer section\n"
+"abc.wild3.example.com.	3600	IN	MX	50 mail.example.com.\n"
+"abc.wild3.example.com.	3600	IN	A	10.0.0.8\n"
 	},
 
 	{ "example.com", "yy.example.com. TXT", "",
@@ -804,4 +844,5 @@ authzone_test(void)
 	atexit(tmpfilecleanup);
 	authzone_read_test();
 	authzone_query_test();
+	exit(0);
 }
