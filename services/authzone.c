@@ -1725,13 +1725,13 @@ az_nsec3_param(struct auth_zone* z, int* algo, size_t* iter, uint8_t** salt,
 		size_t rdatalen = param->data->rr_len[i];
 		if(rdatalen < 2+5)
 			continue; /* too short */
-		if(!nsec3_hash_algo_size_supported(rdata[0]))
+		if(!nsec3_hash_algo_size_supported((int)(rdata[0])))
 			continue; /* unsupported algo */
 		if(rdatalen < (size_t)(2+5+(size_t)rdata[4]))
 			continue; /* salt missing */
 		if((rdata[1]&NSEC3_UNKNOWN_FLAGS)!=0)
 			continue; /* unknown flags */
-		*algo = rdata[0];
+		*algo = (int)(rdata[0]);
 		*iter = sldns_read_uint16(rdata+2);
 		*saltlen = rdata[4];
 		if(*saltlen == 0)
