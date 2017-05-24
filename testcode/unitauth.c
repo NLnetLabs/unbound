@@ -225,6 +225,8 @@ static struct q_ans example_com_queries[] = {
 ";flags QR AA rcode NOERROR\n"
 ";answer section\n"
 "out.example.com.	3600	IN	CNAME	www.example.com.\n"
+"www.example.com.	3600	IN	A	10.0.0.2\n"
+"www.example.com.	3600	IN	A	10.0.0.3\n"
 	},
 
 	{ "example.com", "out.example.com. CNAME", "",
@@ -399,18 +401,24 @@ static struct q_ans example_com_queries[] = {
 ";flags QR AA rcode NOERROR\n"
 ";answer section\n"
 "*.wild2.example.com.	3600	IN	CNAME	www.example.com.\n"
+"www.example.com.	3600	IN	A	10.0.0.2\n"
+"www.example.com.	3600	IN	A	10.0.0.3\n"
 	},
 
 	{ "example.com", "abc.wild2.example.com. A", "",
 ";flags QR AA rcode NOERROR\n"
 ";answer section\n"
 "abc.wild2.example.com.	3600	IN	CNAME	www.example.com.\n"
+"www.example.com.	3600	IN	A	10.0.0.2\n"
+"www.example.com.	3600	IN	A	10.0.0.3\n"
 	},
 
 	{ "example.com", "foo.abc.wild2.example.com. A", "",
 ";flags QR AA rcode NOERROR\n"
 ";answer section\n"
 "foo.abc.wild2.example.com.	3600	IN	CNAME	www.example.com.\n"
+"www.example.com.	3600	IN	A	10.0.0.2\n"
+"www.example.com.	3600	IN	A	10.0.0.3\n"
 	},
 
 	{ "example.com", "abc.wild2.example.com. CNAME", "",

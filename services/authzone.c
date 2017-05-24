@@ -62,6 +62,8 @@
 
 /** bytes to use for NSEC3 hash buffer. 20 for sha1 */
 #define N3HASHBUFLEN 32
+/** max number of CNAMEs we are willing to follow (in one answer) */
+#define MAX_CNAME_CHAIN 8
 
 /** create new dns_msg */
 static struct dns_msg*
@@ -154,6 +156,22 @@ msg_ttl(struct dns_msg* msg)
 	}
 }
 
+/** see if rrset is a duplicate in the answer message */
+static int
+msg_rrset_duplicate(struct dns_msg* msg, uint8_t* nm, size_t nmlen,
+	uint16_t type, uint16_t dclass)
+{
+	size_t i;
+	for(i=0; i<msg->rep->rrset_count; i++) {
+		struct ub_packed_rrset_key* k = msg->rep->rrsets[i];
+		if(ntohs(k->rk.type) == type && k->rk.dname_len == nmlen &&
+			ntohs(k->rk.rrset_class) == dclass &&
+			query_dname_compare(k->rk.dname, nm) == 0)
+			return 1;
+	}
+	return 0;
+}
+
 /** add rrset to answer section (no auth, add rrsets yet) */
 static int
 msg_add_rrset_an(struct auth_zone* z, struct regional* region,
@@ -162,6 +180,9 @@ msg_add_rrset_an(struct auth_zone* z, struct regional* region,
 	log_assert(msg->rep->ns_numrrsets == 0);
 	log_assert(msg->rep->ar_numrrsets == 0);
 	if(!rrset)
+		return 1;
+	if(msg_rrset_duplicate(msg, node->name, node->namelen, rrset->type,
+		z->dclass))
 		return 1;
 	/* grow array */
 	if(!msg_grow_array(region, msg))
@@ -184,6 +205,9 @@ msg_add_rrset_ns(struct auth_zone* z, struct regional* region,
 	log_assert(msg->rep->ar_numrrsets == 0);
 	if(!rrset)
 		return 1;
+	if(msg_rrset_duplicate(msg, node->name, node->namelen, rrset->type,
+		z->dclass))
+		return 1;
 	/* grow array */
 	if(!msg_grow_array(region, msg))
 		return 0;
@@ -203,6 +227,9 @@ msg_add_rrset_ar(struct auth_zone* z, struct regional* region,
 	struct dns_msg* msg, struct auth_data* node, struct auth_rrset* rrset)
 {
 	if(!rrset)
+		return 1;
+	if(msg_rrset_duplicate(msg, node->name, node->namelen, rrset->type,
+		z->dclass))
 		return 1;
 	/* grow array */
 	if(!msg_grow_array(region, msg))
@@ -1514,7 +1541,7 @@ synth_cname_buf(uint8_t* qname, size_t qname_len, size_t dname_len,
 /** create synthetic CNAME rrset for in a DNAME answer in region,
  * false on alloc failure, cname==NULL when name too long. */
 static int
-create_synth_cname(struct query_info* qinfo, struct regional* region,
+create_synth_cname(uint8_t* qname, size_t qname_len, struct regional* region,
 	struct auth_data* node, struct auth_rrset* dname, uint16_t dclass,
 	struct ub_packed_rrset_key** cname)
 {
@@ -1534,8 +1561,8 @@ create_synth_cname(struct query_info* qinfo, struct regional* region,
 		return 0; /* DNAME RR has malformed rdata */
 
 	/* synthesize a CNAME */
-	newlen = synth_cname_buf(qinfo->qname, qinfo->qname_len,
-		node->namelen, dtarg, dtarglen, buf, sizeof(buf));
+	newlen = synth_cname_buf(qname, qname_len, node->namelen,
+		dtarg, dtarglen, buf, sizeof(buf));
 	if(newlen == 0) {
 		/* YXDOMAIN error */
 		*cname = NULL;
@@ -1550,11 +1577,10 @@ create_synth_cname(struct query_info* qinfo, struct regional* region,
 	(*cname)->rk.type = htons(LDNS_RR_TYPE_CNAME);
 	(*cname)->rk.rrset_class = htons(dclass);
 	(*cname)->rk.flags = 0;
-	(*cname)->rk.dname = regional_alloc_init(region, qinfo->qname,
-		qinfo->qname_len);
+	(*cname)->rk.dname = regional_alloc_init(region, qname, qname_len);
 	if(!(*cname)->rk.dname)
 		return 0; /* out of memory */
-	(*cname)->rk.dname_len = qinfo->qname_len;
+	(*cname)->rk.dname_len = qname_len;
 	(*cname)->entry.hash = rrset_key_hash(&(*cname)->rk);
 	d = (struct packed_rrset_data*)regional_alloc_zero(region,
 		sizeof(struct packed_rrset_data) + sizeof(size_t) +
@@ -1577,13 +1603,44 @@ create_synth_cname(struct query_info* qinfo, struct regional* region,
 	return 1;
 }
 
+/** add a synthesized CNAME to the answer section */
+static int
+add_synth_cname(struct auth_zone* z, uint8_t* qname, size_t qname_len,
+	struct regional* region, struct dns_msg* msg, struct auth_data* dname,
+	struct auth_rrset* rrset)
+{
+	struct ub_packed_rrset_key* cname;
+	/* synthesize a CNAME */
+	if(!create_synth_cname(qname, qname_len, region, dname, rrset,
+		z->dclass, &cname)) {
+		/* out of memory */
+		return 0;
+	}
+	if(!cname) {
+		/* cname cannot be create because of YXDOMAIN */
+		msg->rep->flags |= LDNS_RCODE_YXDOMAIN;
+		return 1;
+	}
+	/* add cname to message */
+	if(!msg_grow_array(region, msg))
+		return 0;
+	msg->rep->rrsets[msg->rep->rrset_count] = cname;
+	msg->rep->rrset_count++;
+	msg->rep->an_numrrsets++;
+	msg_ttl(msg);
+	return 1;
+}
+
 /** Change a dname to a different one, for wildcard namechange */
 static void
 az_change_dnames(struct dns_msg* msg, uint8_t* oldname, uint8_t* newname,
-	size_t newlen)
+	size_t newlen, int an_only)
 {
 	size_t i;
-	for(i=0; i<msg->rep->rrset_count; i++) {
+	size_t start = 0, end = msg->rep->rrset_count;
+	if(!an_only) start = msg->rep->an_numrrsets;
+	if(an_only) end = msg->rep->an_numrrsets;
+	for(i=start; i<end; i++) {
 		/* allocated in region so we can change the ptrs */
 		if(query_dname_compare(msg->rep->rrsets[i]->rk.dname, oldname)
 			== 0) {
@@ -1975,12 +2032,51 @@ az_generate_any_answer(struct auth_zone* z, struct regional* region,
 	return 1;
 }
 
+/** follow cname chain and add more data to the answer section */
+static int
+follow_cname_chain(struct auth_zone* z, uint16_t qtype,
+	struct regional* region, struct dns_msg* msg,
+	struct packed_rrset_data* d)
+{
+	int maxchain = 0;
+	/* see if we can add the target of the CNAME into the answer */
+	while(maxchain++ < MAX_CNAME_CHAIN) {
+		struct auth_data* node;
+		struct auth_rrset* rrset;
+		size_t clen;
+		/* d has cname rdata */
+		if(d->count == 0) break; /* no CNAME */
+		if(d->rr_len[0] < 2+1) break; /* too small */
+		if((clen=dname_valid(d->rr_data[0]+2, d->rr_len[0]-2))==0)
+			break; /* malformed */
+		if(!dname_subdomain_c(d->rr_data[0]+2, z->name))
+			break; /* target out of zone */
+		if((node = az_find_name(z, d->rr_data[0]+2, clen))==NULL)
+			break; /* no such target name */
+		if((rrset=az_domain_rrset(node, qtype))!=NULL) {
+			/* done we found the target */
+			if(!msg_add_rrset_an(z, region, msg, node, rrset))
+				return 0;
+			break;
+		}
+		if((rrset=az_domain_rrset(node, LDNS_RR_TYPE_CNAME))==NULL)
+			break; /* no further CNAME chain, notype */
+		if(!msg_add_rrset_an(z, region, msg, node, rrset)) return 0;
+		d = rrset->data;
+	}
+	return 1;
+}
+
 /** generate answer for cname answer */
 static int
-az_generate_cname_answer(struct auth_zone* z, struct regional* region,
-	struct dns_msg* msg, struct auth_data* node, struct auth_rrset* rrset)
+az_generate_cname_answer(struct auth_zone* z, struct query_info* qinfo,
+	struct regional* region, struct dns_msg* msg,
+	struct auth_data* node, struct auth_rrset* rrset)
 {
 	if(!msg_add_rrset_an(z, region, msg, node, rrset)) return 0;
+	if(!rrset) return 1;
+	if(!follow_cname_chain(z, qinfo->qtype, region, msg, rrset->data))
+		return 0;
 	return 1;
 }
 
@@ -2020,8 +2116,8 @@ az_generate_referral_answer(struct auth_zone* z, struct regional* region,
 	} else {
 		/* deny the DS */
 		if((nsec=az_domain_rrset(ce, LDNS_RR_TYPE_NSEC))!=NULL) {
-			if(!msg_add_rrset_ns(z, region, msg, ce,
-				nsec)) return 0;
+			if(!msg_add_rrset_ns(z, region, msg, ce, nsec))
+				return 0;
 		} else {
 			if(!az_add_nsec3_proof(z, region, msg, ce->name,
 				ce->namelen, msg->qinfo.qname,
@@ -2040,27 +2136,20 @@ az_generate_dname_answer(struct auth_zone* z, struct query_info* qinfo,
 	struct regional* region, struct dns_msg* msg, struct auth_data* ce,
 	struct auth_rrset* rrset)
 {
-	struct ub_packed_rrset_key* cname;
 	log_assert(ce);
-	/* add the DNAME */
+	/* add the DNAME and then a CNAME */
 	if(!msg_add_rrset_an(z, region, msg, ce, rrset)) return 0;
-	/* synthesize a CNAME */
-	if(!create_synth_cname(qinfo, region, ce, rrset, z->dclass, &cname)) {
-		/* out of memory */
-		return 0;
-	}
-	if(!cname) {
-		/* cname cannot be create because of YXDOMAIN */
-		msg->rep->flags |= LDNS_RCODE_YXDOMAIN;
+	if(!add_synth_cname(z, qinfo->qname, qinfo->qname_len, region,
+		msg, ce, rrset)) return 0;
+	if(FLAGS_GET_RCODE(msg->rep->flags) == LDNS_RCODE_YXDOMAIN)
 		return 1;
-	}
-	/* add cname to message */
-	if(!msg_grow_array(region, msg))
+	if(msg->rep->rrset_count == 0 ||
+		!msg->rep->rrsets[msg->rep->rrset_count-1])
 		return 0;
-	msg->rep->rrsets[msg->rep->rrset_count] = cname;
-	msg->rep->rrset_count++;
-	msg->rep->an_numrrsets++;
-	msg_ttl(msg);
+	if(!follow_cname_chain(z, qinfo->qtype, region, msg, 
+		(struct packed_rrset_data*)msg->rep->rrsets[
+		msg->rep->rrset_count-1]->entry.data))
+		return 0;
 	return 1;
 }
 
@@ -2079,16 +2168,25 @@ az_generate_wildcard_answer(struct auth_zone* z, struct query_info* qinfo,
 	}
 	if((rrset=az_domain_rrset(wildcard, qinfo->qtype)) != NULL) {
 		/* wildcard has type, add it */
-		if(!msg_add_rrset_an(z, region, msg, wildcard,
-			rrset)) return 0;
+		if(!msg_add_rrset_an(z, region, msg, wildcard, rrset))
+			return 0;
+		az_change_dnames(msg, wildcard->name, msg->qinfo.qname,
+			msg->qinfo.qname_len, 1);
 	} else if((rrset=az_domain_rrset(wildcard, LDNS_RR_TYPE_CNAME))!=NULL) {
 		/* wildcard has cname instead, do that */
-		if(!msg_add_rrset_an(z, region, msg, wildcard,
-			rrset)) return 0;
+		if(!msg_add_rrset_an(z, region, msg, wildcard, rrset))
+			return 0;
+		az_change_dnames(msg, wildcard->name, msg->qinfo.qname,
+			msg->qinfo.qname_len, 1);
+		if(!follow_cname_chain(z, qinfo->qtype, region, msg,
+			rrset->data))
+			return 0;
 	} else if(qinfo->qtype == LDNS_RR_TYPE_ANY && wildcard->rrsets) {
 		/* add ANY rrsets from wildcard node */
 		if(!az_generate_any_answer(z, region, msg, wildcard))
 			return 0;
+		az_change_dnames(msg, wildcard->name, msg->qinfo.qname,
+			msg->qinfo.qname_len, 1);
 	} else {
 		/* wildcard has nodata, notype answer */
 		/* call other notype routine for dnssec notype denials */
@@ -2109,7 +2207,7 @@ az_generate_wildcard_answer(struct auth_zone* z, struct query_info* qinfo,
 	/* fixup name of wildcard from *.zone to qname, use already allocated
 	 * pointer to msg qname */
 	az_change_dnames(msg, wildcard->name, msg->qinfo.qname,
-		msg->qinfo.qname_len);
+		msg->qinfo.qname_len, 0);
 	return 1;
 }
 
@@ -2146,7 +2244,8 @@ az_generate_answer_with_node(struct auth_zone* z, struct query_info* qinfo,
 	}
 	/* CNAME? */
 	if((rrset=az_domain_rrset(node, LDNS_RR_TYPE_CNAME)) != NULL) {
-		return az_generate_cname_answer(z, region, msg, node, rrset);
+		return az_generate_cname_answer(z, qinfo, region, msg,
+			node, rrset);
 	}
 	/* type ANY ? */
 	if(qinfo->qtype == LDNS_RR_TYPE_ANY) {
