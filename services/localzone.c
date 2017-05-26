@@ -187,7 +187,9 @@ lz_enter_zone_dname(struct local_zones* zones, uint8_t* nm, size_t len,
 	lock_rw_wrlock(&z->lock);
 	if(!rbtree_insert(&zones->ztree, &z->node)) {
 		struct local_zone* oldz;
-		log_warn("duplicate local-zone");
+		char str[256];
+		dname_str(nm, str);
+		log_warn("duplicate local-zone %s", str);
 		lock_rw_unlock(&z->lock);
 		/* save zone name locally before deallocation,
 		 * otherwise, nm is gone if we zone_delete now. */

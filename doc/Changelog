@@ -2,6 +2,7 @@
 	- Fix #1270: unitauth.c doesn't compile with higher warning level
 	  and optimization
 	- exec_prefix is by default equal to prefix.
+	- printout localzone for duplicate local-zone warnings.
 
 24 May 2017: Wouter
 	- authzone cname chain, no rrset duplicates, wildcard doesn't change
