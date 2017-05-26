@@ -1,3 +1,6 @@
+26 May 2017: Ralph
+	- Added redirect-bogus.patch to contrib directory.
+
 26 May 2017: Wouter
 	- Fix #1270: unitauth.c doesn't compile with higher warning level
 	  and optimization
