@@ -111,7 +111,7 @@ case "$prefix" in
 esac
 case "$exec_prefix" in
         NONE)
-		exec_prefix="/usr/local"
+		exec_prefix="$prefix"
         ;;
 esac
 
