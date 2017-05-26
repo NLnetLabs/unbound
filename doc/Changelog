@@ -1,3 +1,7 @@
+26 May 2017: Wouter
+	- Fix #1270: unitauth.c doesn't compile with higher warning level
+	  and optimization
+
 24 May 2017: Wouter
 	- authzone cname chain, no rrset duplicates, wildcard doesn't change
 	  rrsets added for cname chain.

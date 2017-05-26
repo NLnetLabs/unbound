@@ -543,9 +543,12 @@ checkfile(char* f1, char *f2)
 	if(!i2) fatal_exit("cannot open %s: %s", f2, strerror(errno));
 
 	while(!feof(i1) && !feof(i2)) {
+		char* cp1, *cp2;
 		line++;
-		(void)fgets(buf1, (int)sizeof(buf1), i1);
-		(void)fgets(buf2, (int)sizeof(buf2), i2);
+		cp1 = fgets(buf1, (int)sizeof(buf1), i1);
+		cp2 = fgets(buf2, (int)sizeof(buf2), i2);
+		if((!cp1 && !feof(i1)) || (!cp2 && !feof(i2)))
+			fatal_exit("fgets failed: %s", strerror(errno));
 		if(strcmp(buf1, buf2) != 0) {
 			log_info("in files %s and %s:%d", f1, f2, line);
 			log_info("'%s'", buf1);
