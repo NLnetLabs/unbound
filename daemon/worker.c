@@ -811,7 +811,9 @@ chaos_replystr(sldns_buffer* pkt, char** str, int num, struct edns_data* edns,
 	if(!inplace_cb_reply_local_call(&worker->env, NULL, NULL, NULL,
 		LDNS_RCODE_NOERROR, edns, worker->scratchpad))
 			edns->opt_list = NULL;
-	attach_edns_record(pkt, edns);
+	if(sldns_buffer_capacity(pkt) >=
+		sldns_buffer_limit(pkt)+calc_edns_field_size(edns))
+		attach_edns_record(pkt, edns);
 }
 
 /** Reply with one string */
@@ -1187,7 +1189,9 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 		error_encode(c->buffer, EDNS_RCODE_BADVERS&0xf, &qinfo,
 			*(uint16_t*)(void *)sldns_buffer_begin(c->buffer),
 			sldns_buffer_read_u16_at(c->buffer, 2), NULL);
-		attach_edns_record(c->buffer, &edns);
+		if(sldns_buffer_capacity(c->buffer) >=
+			sldns_buffer_limit(c->buffer)+calc_edns_field_size(&edns))
+			attach_edns_record(c->buffer, &edns);
 		regional_free_all(worker->scratchpad);
 		goto send_reply;
 	}

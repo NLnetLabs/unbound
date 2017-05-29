@@ -1,3 +1,7 @@
+29 May 2017: Wouter
+	- Fix assertion for low buffer size and big edns payload when worker
+	  overrides udpsize.
+
 26 May 2017: Ralph
 	- Added redirect-bogus.patch to contrib directory.
 
