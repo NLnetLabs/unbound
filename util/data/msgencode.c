@@ -842,7 +842,7 @@ reply_info_answer_encode(struct query_info* qinf, struct reply_info* rep,
 		attach_edns = 0;
 	} else {
 		/* reserve space for edns record */
-		attach_edns = (int)calc_edns_field_size(edns);
+		attach_edns = (unsigned int)calc_edns_field_size(edns);
 		udpsize -= attach_edns;
 	}
 
