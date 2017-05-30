@@ -856,6 +856,7 @@ enable_subnet
 enable_gost
 enable_ecdsa
 enable_dsa
+enable_ed25519
 enable_event_api
 enable_tfo_client
 enable_tfo_server
@@ -1537,6 +1538,7 @@ Optional Features:
   --disable-gost          Disable GOST support
   --disable-ecdsa         Disable ECDSA support
   --disable-dsa           Disable DSA support
+  --disable-ed25519       Disable ED25519 support
   --enable-event-api      Enable (experimental) pluggable event base
                           libunbound API installed to unbound-event.h
   --enable-tfo-client     Enable TCP Fast Open for client mode
@@ -17617,7 +17619,7 @@ fi
 
 done
 
-for ac_func in OPENSSL_config EVP_sha1 EVP_sha256 EVP_sha512 FIPS_mode EVP_MD_CTX_new OpenSSL_add_all_digests OPENSSL_init_crypto EVP_cleanup ERR_load_crypto_strings CRYPTO_cleanup_all_ex_data ERR_free_strings RAND_cleanup DSA_SIG_set0 EVP_dss1
+for ac_func in OPENSSL_config EVP_sha1 EVP_sha256 EVP_sha512 FIPS_mode EVP_MD_CTX_new OpenSSL_add_all_digests OPENSSL_init_crypto EVP_cleanup ERR_load_crypto_strings CRYPTO_cleanup_all_ex_data ERR_free_strings RAND_cleanup DSA_SIG_set0 EVP_dss1 EVP_DigestVerify
 do :
   as_ac_var=`$as_echo "ac_cv_func_$ac_func" | $as_tr_sh`
 ac_fn_c_check_func "$LINENO" "$ac_func" "$as_ac_var"
@@ -18065,6 +18067,47 @@ fi
       ;;
 esac
 
+# Check whether --enable-ed25519 was given.
+if test "${enable_ed25519+set}" = set; then :
+  enableval=$enable_ed25519;
+fi
+
+use_ed25519="no"
+case "$enable_ed25519" in
+    no)
+      ;;
+    *)
+      if test $USE_NSS = "no" -a $USE_NETTLE = "no"; then
+	      ac_fn_c_check_decl "$LINENO" "NID_ED25519" "ac_cv_have_decl_NID_ED25519" "$ac_includes_default
+#include <openssl/evp.h>
+
+"
+if test "x$ac_cv_have_decl_NID_ED25519" = xyes; then :
+  ac_have_decl=1
+else
+  ac_have_decl=0
+fi
+
+cat >>confdefs.h <<_ACEOF
+#define HAVE_DECL_NID_ED25519 $ac_have_decl
+_ACEOF
+if test $ac_have_decl = 1; then :
+
+
+cat >>confdefs.h <<_ACEOF
+#define USE_ED25519 1
+_ACEOF
+
+      		use_ed25519="yes"
+
+else
+   if test "x$enable_ed25519" = "xyes"; then as_fn_error $? "OpenSSL does not support ED25519 and you used --enable-ed25519." "$LINENO" 5
+	      	fi
+fi
+
+      fi
+      ;;
+esac
 
 # Check whether --enable-event-api was given.
 if test "${enable_event_api+set}" = set; then :

@@ -1,3 +1,7 @@
+30 May 2017: Wouter
+	- Support for openssl EVP_DigestVerify.
+	- Support for the ED25519 algorithm with openssl (from openssl 1.1.1).
+
 29 May 2017: Wouter
 	- Fix assertion for low buffer size and big edns payload when worker
 	  overrides udpsize.
