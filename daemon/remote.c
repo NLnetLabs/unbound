@@ -1393,6 +1393,14 @@ do_view_zone_add(SSL* ssl, struct worker* worker, char* arg)
 			ssl_printf(ssl,"error out of memory\n");
 			return;
 		}
+		if(!v->isfirst) {
+			/* Global local-zone is not used for this view,
+			 * therefore add defaults to this view-specic
+			 * local-zone. */
+			struct config_file lz_cfg;
+			memset(&lz_cfg, 0, sizeof(lz_cfg));
+			local_zone_enter_defaults(v->local_zones, &lz_cfg);
+		}
 	}
 	do_zone_add(ssl, v->local_zones, arg2);
 	lock_rw_unlock(&v->lock);

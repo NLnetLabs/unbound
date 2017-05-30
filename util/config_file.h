@@ -319,6 +319,8 @@ struct config_file {
 	struct config_str2list* local_zones;
 	/** local zones nodefault list */
 	struct config_strlist* local_zones_nodefault;
+	/** do not add any default local zone */
+	int local_zones_disable_default;
 	/** local data RRs configured */
 	struct config_strlist* local_data;
 	/** local zone override types per netblock */

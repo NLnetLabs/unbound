@@ -1,3 +1,8 @@
+30 May 2017: Ralph
+	- Fix #1269: inconsistent use of built-in local zones with views.
+	- Add defaults for new local-zone trees added to views using
+	  unbound-control.
+
 30 May 2017: Wouter
 	- Support for openssl EVP_DigestVerify.
 	- Support for the ED25519 algorithm with openssl (from openssl 1.1.1).

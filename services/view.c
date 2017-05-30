@@ -167,6 +167,22 @@ views_apply_cfg(struct views* vs, struct config_file* cfg)
 			lz_cfg.local_data = cv->local_data;
 			lz_cfg.local_zones_nodefault =
 				cv->local_zones_nodefault;
+			if(v->isfirst) {
+				/* Do not add defaults to view-specific
+				 * local-zone when global local zone will be
+				 * used. */
+				struct config_strlist* nd;
+				lz_cfg.local_zones_disable_default = 1;
+				/* Add nodefault zones to list of zones to add,
+				 * so they will be used as if they are
+				 * configured as type transparent */
+				for(nd = cv->local_zones_nodefault; nd;
+					nd = nd->next) {
+					cfg_str2list_insert(&lz_cfg.local_zones,
+						strdup(nd->str),
+						strdup("nodefault"));
+				}
+			}
 			if(!local_zones_apply_cfg(v->local_zones, &lz_cfg)){
 				lock_rw_unlock(&v->lock);
 				return 0;
