@@ -1,5 +1,6 @@
 31 May 2017: Wouter
 	- Fix #1273: cachedb.c doesn't compile with -Wextra.
+	- If MSG_FASTOPEN gives EPIPE fallthrough to try normal tcp write.
 
 30 May 2017: Ralph
 	- Fix #1269: inconsistent use of built-in local zones with views.

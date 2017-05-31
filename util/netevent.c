@@ -1407,12 +1407,15 @@ comm_point_tcp_handle_write(int fd, struct comm_point* c)
 			if(errno == EINTR || errno == EAGAIN)
 				return 1;
 			/* Not handling EISCONN here as shouldn't ever hit that case.*/
-			if(errno != 0 && verbosity < 2)
+			if(errno != EPIPE && errno != 0 && verbosity < 2)
 				return 0; /* silence lots of chatter in the logs */
-			else if(errno != 0) 
+			if(errno != EPIPE && errno != 0) {
 				log_err_addr("tcp sendmsg", strerror(errno),
 					&c->repinfo.addr, c->repinfo.addrlen);
-			return 0;
+				return 0;
+			}
+			/* fallthrough to nonFASTOPEN
+			 * (MSG_FASTOPEN on Linux 3 produces EPIPE) */
 		} else {
 			c->tcp_byte_count += r;
 			if(c->tcp_byte_count < sizeof(uint16_t))
