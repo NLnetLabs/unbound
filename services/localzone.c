@@ -1590,7 +1590,7 @@ local_zones_answer(struct local_zones* zones, struct module_env* env,
 			lock_rw_rdlock(&z->lock);
 			lzt = z->type;
 		}
-		if(!z && !view->isfirst){
+		if(view->local_zones && !z && !view->isfirst){
 			lock_rw_unlock(&view->lock);
 			return 0;
 		}

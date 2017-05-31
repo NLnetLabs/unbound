@@ -1400,7 +1400,7 @@ clauses. Each with a \fBname:\fR and zero or more \fBlocal\-zone\fR and
 \fBlocal\-data\fR elements. View can be mapped to requests by specifying the
 view name in an \fBaccess\-control\-view\fR element. Options from matching
 views will override global options. Global options will be used if no matching
-view is found.
+view is found, or when the matching view does not have the option specified.
 .TP
 .B name: \fI<view name>
 Name of the view. Must be unique. This name is used in access\-control\-view
@@ -1408,7 +1408,11 @@ elements.
 .TP
 .B local\-zone: \fI<zone> <type>
 View specific local\-zone elements. Has the same types and behaviour as the
-global local\-zone elements.
+global local\-zone elements. When there is at least one local\-zone specified
+and view\-first is no, the default local-zones will be added to this view.
+Defaults can be disabled using the nodefault type. When view\-first is yes or
+when a view does not have a local\-zone, the global local\-zone will be used
+including it's default zones.
 .TP
 .B local\-data: \fI"<resource record string>"
 View specific local\-data elements. Has the same behaviour as the global

@@ -1,3 +1,7 @@
+31 May 2017: Ralph
+	- Also use global local-zones when there is a matching view that does
+	  not have any local-zone specified.
+
 31 May 2017: Wouter
 	- Fix #1273: cachedb.c doesn't compile with -Wextra.
 	- If MSG_FASTOPEN gives EPIPE fallthrough to try normal tcp write.
