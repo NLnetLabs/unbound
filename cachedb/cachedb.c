@@ -171,6 +171,7 @@ static int
 cachedb_apply_cfg(struct cachedb_env* cachedb_env, struct config_file* cfg)
 {
 	const char* backend_str = "testframe"; /* TODO get from cfg */
+	(void)cfg;     /* need this until the TODO is implemented */
 	if(backend_str && backend_str[0]) {
 		cachedb_env->backend = cachedb_find_backend(backend_str);
 		if(!cachedb_env->backend) {

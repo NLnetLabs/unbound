@@ -1,3 +1,6 @@
+31 May 2017: Wouter
+	- Fix #1273: cachedb.c doesn't compile with -Wextra.
+
 30 May 2017: Ralph
 	- Fix #1269: inconsistent use of built-in local zones with views.
 	- Add defaults for new local-zone trees added to views using
