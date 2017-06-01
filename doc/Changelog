@@ -1,3 +1,6 @@
+1 June 2017: Wouter
+	- Fix fastopen EPIPE fallthrough to perform connect.
+
 31 May 2017: Ralph
 	- Also use global local-zones when there is a matching view that does
 	  not have any local-zone specified.

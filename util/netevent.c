@@ -1415,7 +1415,26 @@ comm_point_tcp_handle_write(int fd, struct comm_point* c)
 				return 0;
 			}
 			/* fallthrough to nonFASTOPEN
-			 * (MSG_FASTOPEN on Linux 3 produces EPIPE) */
+			 * (MSG_FASTOPEN on Linux 3 produces EPIPE)
+			 * we need to perform connect() */
+			if(connect(fd, &c->repinfo.addr, c->repinfo.addrlen) == -1) {
+#ifdef EINPROGRESS
+				if(errno == EINPROGRESS)
+					return 1; /* wait until connect done*/
+#endif
+#ifdef USE_WINSOCK
+				if(WSAGetLastError() == WSAEINPROGRESS ||
+					WSAGetLastError() == WSAEWOULDBLOCK)
+					return 1; /* wait until connect done*/
+#endif
+				if(tcp_connect_errno_needs_log(
+					&c->repinfo.addr, c->repinfo.addrlen)) {
+					log_err_addr("outgoing tcp: connect after EPIPE for fastopen",
+						strerror(errno), &c->repinfo.addr, c->repinfo.addrlen);
+				}
+				return 0;
+			}
+
 		} else {
 			c->tcp_byte_count += r;
 			if(c->tcp_byte_count < sizeof(uint16_t))
