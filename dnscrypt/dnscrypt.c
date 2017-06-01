@@ -267,6 +267,25 @@ dnsc_read_from_file(char *fname, char *buf, size_t count)
 }
 
 /**
+ * Given an absolute path on the original root, returns the absolute path
+ * within the chroot. If chroot is disabled, the path is not modified.
+ * No char * is malloced so there is no need to free this.
+ * \param[in] cfg the configuration.
+ * \param[in] path the path from the original root.
+ * \return the path from inside the chroot.
+ */
+static char *
+dnsc_chroot_path(struct config_file *cfg, char *path)
+{
+	char *nm;
+	nm = path;
+	if(cfg->chrootdir && cfg->chrootdir[0] && strncmp(nm,
+		cfg->chrootdir, strlen(cfg->chrootdir)) == 0)
+		nm += strlen(cfg->chrootdir);
+	return nm;
+}
+
+/**
  * Parse certificates files provided by the configuration and load them into
  * dnsc_env.
  * \param[in] env the dnsc_env structure to load the certs into.
@@ -278,6 +297,7 @@ dnsc_parse_certs(struct dnsc_env *env, struct config_file *cfg)
 {
 	struct config_strlist *head;
 	size_t signed_cert_id;
+	char *nm;
 
 	env->signed_certs_count = 0U;
 	for (head = cfg->dnscrypt_provider_cert; head; head = head->next) {
@@ -288,8 +308,9 @@ dnsc_parse_certs(struct dnsc_env *env, struct config_file *cfg)
 
 	signed_cert_id = 0U;
 	for(head = cfg->dnscrypt_provider_cert; head; head = head->next, signed_cert_id++) {
+		nm = dnsc_chroot_path(cfg, head->str);
 		if(dnsc_read_from_file(
-				head->str,
+				nm,
 				(char *)(env->signed_certs + signed_cert_id),
 				sizeof(struct SignedCert)) != 0) {
 			fatal_exit("dnsc_parse_certs: failed to load %s: %s", head->str, strerror(errno));
@@ -415,6 +436,7 @@ dnsc_parse_keys(struct dnsc_env *env, struct config_file *cfg)
 {
 	struct config_strlist *head;
 	size_t keypair_id;
+	char *nm;
 
 	env->keypairs_count = 0U;
 	for (head = cfg->dnscrypt_secret_key; head; head = head->next) {
@@ -426,8 +448,9 @@ dnsc_parse_keys(struct dnsc_env *env, struct config_file *cfg)
 	keypair_id = 0U;
 	for(head = cfg->dnscrypt_secret_key; head; head = head->next, keypair_id++) {
 		char fingerprint[80];
+		nm = dnsc_chroot_path(cfg, head->str);
 		if(dnsc_read_from_file(
-				head->str,
+				nm,
 				(char *)(env->keypairs[keypair_id].crypt_secretkey),
 				crypto_box_SECRETKEYBYTES) != 0) {
 			fatal_exit("dnsc_parse_keys: failed to load %s: %s", head->str, strerror(errno));

@@ -1,3 +1,7 @@
+1 June 2017: Ralph
+	- Fix #1274: automatically trim chroot path from dnscrypt key/cert paths
+	  (from Manu Bretelle).
+
 1 June 2017: Wouter
 	- Fix fastopen EPIPE fallthrough to perform connect.
 
