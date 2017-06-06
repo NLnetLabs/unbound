@@ -1,6 +1,7 @@
 6 June 2017: Wouter
 	- Add an explicit type cast for TCP FASTOPEN fix.
 	- renumbering B-Root's IPv6 address to 2001:500:200::b.
+	- Fix #1275: cached data in cachedb is never used.
 
 1 June 2017: Ralph
 	- Fix #1274: automatically trim chroot path from dnscrypt key/cert paths
