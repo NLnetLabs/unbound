@@ -988,7 +988,8 @@ val_utils.lo val_utils.o: $(srcdir)/validator/val_utils.c config.h $(srcdir)/val
  $(srcdir)/validator/val_sigcrypt.h $(srcdir)/validator/val_anchor.h $(srcdir)/util/rbtree.h \
  $(srcdir)/validator/val_nsec.h $(srcdir)/validator/val_neg.h $(srcdir)/services/cache/rrset.h \
  $(srcdir)/util/storage/slabhash.h $(srcdir)/services/cache/dns.h $(srcdir)/util/data/dname.h \
- $(srcdir)/util/net_help.h $(srcdir)/util/regional.h $(srcdir)/sldns/wire2str.h $(srcdir)/sldns/parseutil.h
+ $(srcdir)/util/net_help.h $(srcdir)/util/regional.h $(srcdir)/util/config_file.h $(srcdir)/sldns/wire2str.h \
+ $(srcdir)/sldns/parseutil.h
 dns64.lo dns64.o: $(srcdir)/dns64/dns64.c config.h $(srcdir)/dns64/dns64.h $(srcdir)/util/module.h \
  $(srcdir)/util/storage/lruhash.h $(srcdir)/util/locks.h $(srcdir)/util/log.h $(srcdir)/util/data/msgreply.h \
  $(srcdir)/util/data/packed_rrset.h $(srcdir)/util/data/msgparse.h $(srcdir)/sldns/pkthdr.h \
@@ -1062,8 +1063,7 @@ unitlruhash.lo unitlruhash.o: $(srcdir)/testcode/unitlruhash.c config.h $(srcdir
  $(srcdir)/util/log.h $(srcdir)/util/storage/lruhash.h $(srcdir)/util/locks.h $(srcdir)/util/storage/slabhash.h
 unitmain.lo unitmain.o: $(srcdir)/testcode/unitmain.c config.h \
  $(srcdir)/sldns/rrdef.h $(srcdir)/sldns/keyraw.h \
- $(srcdir)/util/log.h \
- $(srcdir)/testcode/unitmain.h $(srcdir)/util/alloc.h $(srcdir)/util/locks.h $(srcdir)/util/net_help.h \
+ $(srcdir)/util/log.h $(srcdir)/testcode/unitmain.h $(srcdir)/util/alloc.h $(srcdir)/util/locks.h $(srcdir)/util/net_help.h \
  $(srcdir)/util/config_file.h $(srcdir)/util/rtt.h $(srcdir)/util/timehist.h $(srcdir)/libunbound/unbound.h \
  $(srcdir)/services/cache/infra.h $(srcdir)/util/storage/lruhash.h $(srcdir)/util/storage/dnstree.h \
  $(srcdir)/util/rbtree.h $(srcdir)/util/netevent.h $(srcdir)/dnscrypt/dnscrypt.h \
@@ -1368,10 +1368,9 @@ perf.lo perf.o: $(srcdir)/testcode/perf.c config.h $(srcdir)/util/log.h $(srcdir
 delayer.lo delayer.o: $(srcdir)/testcode/delayer.c config.h $(srcdir)/util/net_help.h $(srcdir)/util/log.h \
  $(srcdir)/util/config_file.h $(srcdir)/sldns/sbuffer.h
 unbound-control.lo unbound-control.o: $(srcdir)/smallapp/unbound-control.c config.h \
- $(srcdir)/util/log.h \
- $(srcdir)/util/config_file.h $(srcdir)/util/locks.h $(srcdir)/util/net_help.h $(srcdir)/util/shm_side/shm_main.h \
- $(srcdir)/libunbound/unbound.h $(srcdir)/daemon/stats.h $(srcdir)/util/timehist.h $(srcdir)/sldns/wire2str.h \
- $(srcdir)/sldns/pkthdr.h
+ $(srcdir)/util/log.h $(srcdir)/util/config_file.h $(srcdir)/util/locks.h $(srcdir)/util/net_help.h \
+ $(srcdir)/util/shm_side/shm_main.h $(srcdir)/libunbound/unbound.h $(srcdir)/daemon/stats.h \
+ $(srcdir)/util/timehist.h $(srcdir)/sldns/wire2str.h $(srcdir)/sldns/pkthdr.h
 unbound-anchor.lo unbound-anchor.o: $(srcdir)/smallapp/unbound-anchor.c config.h $(srcdir)/libunbound/unbound.h \
  $(srcdir)/sldns/rrdef.h $(srcdir)/sldns/parseutil.h \
  
