@@ -2128,7 +2128,7 @@ processFinished(struct module_qstate* qstate, struct val_qstate* vq,
 		 * a different signer name). And drop additional rrsets
 		 * that are not secure (if clean-additional option is set) */
 		/* this may cause the msg to be marked bogus */
-		val_check_nonsecure(ve, vq->orig_msg->rep);
+		val_check_nonsecure(qstate->env, vq->orig_msg->rep);
 		if(vq->orig_msg->rep->security == sec_status_secure) {
 			log_query_info(VERB_DETAIL, "validation success", 
 				&qstate->qinfo);
