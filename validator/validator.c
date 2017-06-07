@@ -113,8 +113,6 @@ val_apply_cfg(struct module_env* env, struct val_env* val_env,
 {
 	int c;
 	val_env->bogus_ttl = (uint32_t)cfg->bogus_ttl;
-	val_env->clean_additional = cfg->val_clean_additional;
-	val_env->permissive_mode = cfg->val_permissive_mode;
 	if(!env->anchors)
 		env->anchors = anchors_create();
 	if(!env->anchors) {
@@ -171,7 +169,6 @@ val_init(struct module_env* env, int id)
 	}
 	env->modinfo[id] = (void*)val_env;
 	env->need_to_validate = 1;
-	val_env->permissive_mode = 0;
 	lock_basic_init(&val_env->bogus_lock);
 	lock_protect(&val_env->bogus_lock, &val_env->num_rrset_bogus,
 		sizeof(val_env->num_rrset_bogus));
@@ -619,9 +616,11 @@ validate_msg_signatures(struct module_qstate* qstate, struct module_env* env,
 		}
 	}
 
-	/* attempt to validate the ADDITIONAL section rrsets */
-	if(!ve->clean_additional)
+	/* If set, the validator should clean the additional section of
+	 * secure messages. */
+	if(!env->cfg->val_clean_additional)
 		return 1;
+	/* attempt to validate the ADDITIONAL section rrsets */
 	for(i=chase_reply->an_numrrsets+chase_reply->ns_numrrsets; 
 		i<chase_reply->rrset_count; i++) {
 		s = chase_reply->rrsets[i];
@@ -2170,8 +2169,14 @@ processFinished(struct module_qstate* qstate, struct val_qstate* vq,
 				free(err);
 			}
 		}
+		/*
+		 * If set, the validator will not make messages bogus, instead
+		 * indeterminate is issued, so that no clients receive SERVFAIL.
+		 * This allows an operator to run validation 'shadow' without
+		 * hurting responses to clients.
+		 */
 		/* If we are in permissive mode, bogus gets indeterminate */
-		if(ve->permissive_mode)
+		if(qstate->env->cfg->val_permissive_mode)
 			vq->orig_msg->rep->security = sec_status_indeterminate;
 	}
 
