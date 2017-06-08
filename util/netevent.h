@@ -120,7 +120,7 @@ struct comm_reply {
 #ifdef USE_DNSCRYPT
 	uint8_t client_nonce[crypto_box_HALF_NONCEBYTES];
 	uint8_t nmkey[crypto_box_BEFORENMBYTES];
-	const KeyPair *keypair;
+	const dnsccert *dnsc_cert;
 	int is_dnscrypted;
 #endif
 	/** the return source interface data */
