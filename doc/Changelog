@@ -1,5 +1,6 @@
 8 June 2017: Wouter
 	- Detect chacha for dnscrypt at configure time.
+	- dnscrypt unit tests with chacha.
 
 7 June 2017: Wouter
 	- Fix that unbound-control can set val_clean_additional and val_permissive_mode.
