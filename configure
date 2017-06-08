@@ -643,6 +643,7 @@ IPSECMOD_OBJ
 DNSCRYPT_OBJ
 DNSCRYPT_SRC
 ENABLE_DNSCRYPT
+ENABLE_DNSCRYPT_XCHACHA20
 DNSTAP_OBJ
 DNSTAP_SRC
 opt_dnstap_socket_path
@@ -20371,6 +20372,73 @@ else
   as_fn_error $? "The sodium library was not found. Please install sodium!" "$LINENO" 5
 fi
 
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing crypto_box_curve25519xchacha20poly1305_beforenm" >&5
+$as_echo_n "checking for library containing crypto_box_curve25519xchacha20poly1305_beforenm... " >&6; }
+if ${ac_cv_search_crypto_box_curve25519xchacha20poly1305_beforenm+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_func_search_save_LIBS=$LIBS
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char crypto_box_curve25519xchacha20poly1305_beforenm ();
+int
+main ()
+{
+return crypto_box_curve25519xchacha20poly1305_beforenm ();
+  ;
+  return 0;
+}
+_ACEOF
+for ac_lib in '' sodium; do
+  if test -z "$ac_lib"; then
+    ac_res="none required"
+  else
+    ac_res=-l$ac_lib
+    LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
+  fi
+  if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_crypto_box_curve25519xchacha20poly1305_beforenm=$ac_res
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext
+  if ${ac_cv_search_crypto_box_curve25519xchacha20poly1305_beforenm+:} false; then :
+  break
+fi
+done
+if ${ac_cv_search_crypto_box_curve25519xchacha20poly1305_beforenm+:} false; then :
+
+else
+  ac_cv_search_crypto_box_curve25519xchacha20poly1305_beforenm=no
+fi
+rm conftest.$ac_ext
+LIBS=$ac_func_search_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_crypto_box_curve25519xchacha20poly1305_beforenm" >&5
+$as_echo "$ac_cv_search_crypto_box_curve25519xchacha20poly1305_beforenm" >&6; }
+ac_res=$ac_cv_search_crypto_box_curve25519xchacha20poly1305_beforenm
+if test "$ac_res" != no; then :
+  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
+
+            ENABLE_DNSCRYPT_XCHACHA20=1
+
+
+$as_echo "#define USE_DNSCRYPT_XCHACHA20 1" >>confdefs.h
+
+
+else
+
+            ENABLE_DNSCRYPT_XCHACHA20=0
+
+
+fi
+
 
 
 $as_echo "#define USE_DNSCRYPT 1" >>confdefs.h
@@ -20384,6 +20452,8 @@ $as_echo "#define USE_DNSCRYPT 1" >>confdefs.h
 
 
   else
+    ENABLE_DNSCRYPT_XCHACHA20=0
+
 
         ENABLE_DNSCRYPT=0
 

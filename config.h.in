@@ -673,6 +673,9 @@
 /* Define to 1 to enable dnscrypt support */
 #undef USE_DNSCRYPT
 
+/* Define to 1 to enable dnscrypt with xchacha20 support */
+#undef USE_DNSCRYPT_XCHACHA20
+
 /* Define to 1 to enable dnstap support */
 #undef USE_DNSTAP
 

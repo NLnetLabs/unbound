@@ -35,10 +35,6 @@
 #define DNSCRYPT_REPLY_HEADER_SIZE \
     (DNSCRYPT_MAGIC_HEADER_LEN + crypto_box_HALF_NONCEBYTES * 2 + crypto_box_MACBYTES)
 
-#ifdef crypto_box_curve25519xchacha20poly1305_MACBYTES
-# define HAVE_XCHACHA20 1
-#endif
-
 struct sldns_buffer;
 struct config_file;
 struct comm_reply;
