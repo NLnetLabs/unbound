@@ -1515,7 +1515,12 @@ entries will be purged from cache.
 Send client source address to this authority. Append /num to indicate a
 classless delegation netblock, for example like 10.2.3.4/24 or 2001::11/64. Can
 be given multiple times. Authorities not listed will not receive edns-subnet
-information.
+information, unless domain in query is specified in \fBclient\-subnet\-zone\fR.
+.TP
+.B client\-subnet\-zone: \fI<domain>\fR
+Send client source address in queries for this domain and its subdomains. Can be
+given multiple times. Zones not listed will not receive edns-subnet information,
+unless hosted by authority specified in \fBsend\-client\-subnet\fR.
 .TP
 .B client\-subnet\-always\-forward: \fI<yes or no>\fR
 Specify whether the ECS whitelist check (configured using

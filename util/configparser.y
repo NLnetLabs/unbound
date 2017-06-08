@@ -131,8 +131,8 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_RATELIMIT VAR_RATELIMIT_SLABS VAR_RATELIMIT_SIZE
 %token VAR_RATELIMIT_FOR_DOMAIN VAR_RATELIMIT_BELOW_DOMAIN
 %token VAR_IP_RATELIMIT_FACTOR VAR_RATELIMIT_FACTOR
-%token VAR_SEND_CLIENT_SUBNET VAR_CLIENT_SUBNET_ALWAYS_FORWARD
-%token VAR_CLIENT_SUBNET_OPCODE
+%token VAR_SEND_CLIENT_SUBNET VAR_CLIENT_SUBNET_ZONE
+%token VAR_CLIENT_SUBNET_ALWAYS_FORWARD VAR_CLIENT_SUBNET_OPCODE
 %token VAR_MAX_CLIENT_SUBNET_IPV4 VAR_MAX_CLIENT_SUBNET_IPV6
 %token VAR_CAPS_WHITELIST VAR_CACHE_MAX_NEGATIVE_TTL VAR_PERMIT_SMALL_HOLDDOWN
 %token VAR_QNAME_MINIMISATION VAR_QNAME_MINIMISATION_STRICT VAR_IP_FREEBIND
@@ -217,7 +217,7 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_ratelimit_for_domain |
 	server_ratelimit_below_domain | server_ratelimit_factor |
 	server_ip_ratelimit_factor | server_send_client_subnet |
-	server_client_subnet_always_forward |
+	server_client_subnet_zone | server_client_subnet_always_forward |
 	server_client_subnet_opcode |
 	server_max_client_subnet_ipv4 | server_max_client_subnet_ipv6 |
 	server_caps_whitelist | server_cache_max_negative_ttl |
@@ -370,6 +370,18 @@ server_send_client_subnet: VAR_SEND_CLIENT_SUBNET STRING_ARG
 		OUTYY(("P(server_send_client_subnet:%s)\n", $2));
 		if(!cfg_strlist_insert(&cfg_parser->cfg->client_subnet, $2))
 			fatal_exit("out of memory adding client-subnet");
+	#else
+		OUTYY(("P(Compiled without edns subnet option, ignoring)\n"));
+	#endif
+	}
+	;
+server_client_subnet_zone: VAR_CLIENT_SUBNET_ZONE STRING_ARG
+	{
+	#ifdef CLIENT_SUBNET
+		OUTYY(("P(server_client_subnet_zone:%s)\n", $2));
+		if(!cfg_strlist_insert(&cfg_parser->cfg->client_subnet_zone,
+			$2))
+			fatal_exit("out of memory adding client-subnet-zone");
 	#else
 		OUTYY(("P(Compiled without edns subnet option, ignoring)\n"));
 	#endif

@@ -176,6 +176,8 @@ struct config_file {
 	/** list of servers we send edns-client-subnet option to and 
 	 * accept option from, linked list */
 	struct config_strlist* client_subnet;
+	/** list of zones we send edns-client-subnet option for */
+	struct config_strlist* client_subnet_zone;
 	/** opcode assigned by IANA for edns0-client-subnet option */
 	uint16_t client_subnet_opcode;
 	/** Do not check whitelist if incoming query contains an ECS record */

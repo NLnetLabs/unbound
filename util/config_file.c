@@ -178,6 +178,7 @@ config_create(void)
 	cfg->forwards = NULL;
 #ifdef CLIENT_SUBNET
 	cfg->client_subnet = NULL;
+	cfg->client_subnet_zone = NULL;
 	cfg->client_subnet_opcode = LDNS_EDNS_CLIENT_SUBNET;
 	cfg->client_subnet_always_forward = 0;
 	cfg->max_client_subnet_ipv4 = 24;
@@ -889,6 +890,7 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_YNO(opt, "rrset-roundrobin", rrset_roundrobin)
 #ifdef CLIENT_SUBNET
 	else O_LST(opt, "send-client-subnet", client_subnet)
+	else O_LST(opt, "client-subnet-zone", client_subnet_zone)
 	else O_DEC(opt, "max-client-subnet-ipv4", max_client_subnet_ipv4)
 	else O_DEC(opt, "max-client-subnet-ipv6", max_client_subnet_ipv6)
 	else O_YNO(opt, "client-subnet-always-forward:",
@@ -1213,6 +1215,7 @@ config_delete(struct config_file* cfg)
 	config_delstrlist(cfg->root_hints);
 #ifdef CLIENT_SUBNET
 	config_delstrlist(cfg->client_subnet);
+	config_delstrlist(cfg->client_subnet_zone);
 #endif
 	free(cfg->identity);
 	free(cfg->version);
