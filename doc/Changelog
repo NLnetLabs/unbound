@@ -1,3 +1,6 @@
+12 June 2017: Wouter
+	- Fix #1278: Incomplete wildcard proof.
+
 8 June 2017: Ralph
 	- Added domain name based ECS whitelist.
 
