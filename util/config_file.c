@@ -1221,6 +1221,7 @@ config_delete(struct config_file* cfg)
 	free(cfg->version);
 	free(cfg->module_conf);
 	free(cfg->outgoing_avail_ports);
+	free(cfg->python_script);
 	config_delstrlist(cfg->caps_whitelist);
 	config_delstrlist(cfg->private_address);
 	config_delstrlist(cfg->private_domain);
