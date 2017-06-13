@@ -1548,18 +1548,22 @@ serviced_udp_send(struct serviced_query* sq, sldns_buffer* buff)
 static int
 serviced_check_qname(sldns_buffer* pkt, uint8_t* qbuf, size_t qbuflen)
 {
-	uint8_t* d1 = sldns_buffer_at(pkt, 12);
+	uint8_t* d1 = sldns_buffer_begin(pkt)+12;
 	uint8_t* d2 = qbuf+10;
 	uint8_t len1, len2;
 	int count = 0;
+	if(sldns_buffer_limit(pkt) < 12+1+4) /* packet too small for qname */
+		return 0;
 	log_assert(qbuflen >= 15 /* 10 header, root, type, class */);
 	len1 = *d1++;
 	len2 = *d2++;
-	if(sldns_buffer_limit(pkt) < 12+1+4) /* packet too small for qname */
-		return 0;
 	while(len1 != 0 || len2 != 0) {
 		if(LABEL_IS_PTR(len1)) {
+			/* check if we can read *d1 with compression ptr rest */
+			if(d1 >= sldns_buffer_at(pkt, sldns_buffer_limit(pkt)))
+				return 0;
 			d1 = sldns_buffer_begin(pkt)+PTR_OFFSET(len1, *d1);
+			/* check if we can read the destination *d1 */
 			if(d1 >= sldns_buffer_at(pkt, sldns_buffer_limit(pkt)))
 				return 0;
 			len1 = *d1++;
@@ -1572,6 +1576,9 @@ serviced_check_qname(sldns_buffer* pkt, uint8_t* qbuf, size_t qbuflen)
 		if(len1 != len2)
 			return 0;
 		if(len1 > LDNS_MAX_LABELLEN)
+			return 0;
+		/* check len1 + 1(next length) are okay to read */
+		if(d1+len1 >= sldns_buffer_at(pkt, sldns_buffer_limit(pkt)))
 			return 0;
 		log_assert(len1 <= LDNS_MAX_LABELLEN);
 		log_assert(len2 <= LDNS_MAX_LABELLEN);
