@@ -525,6 +525,33 @@ handle_cname_response(struct module_qstate* qstate, struct iter_qstate* iq,
 	return 1;
 }
 
+/** see if last resort is possible - does config allow queries to parent */
+static int
+can_have_last_resort(struct module_env* env, uint8_t* nm, size_t nmlen,
+	uint16_t qclass)
+{
+	struct delegpt* fwddp;
+	struct iter_hints_stub* stub;
+	int labs = dname_count_labels(nm);
+	/* do not process a last resort (the parent side) if a stub
+	 * or forward is configured, because we do not want to go 'above'
+	 * the configured servers */
+	if(!dname_is_root(nm) && (stub = (struct iter_hints_stub*)
+		name_tree_find(&env->hints->tree, nm, nmlen, labs, qclass)) &&
+		/* has_parent side is turned off for stub_first, where we
+		 * are allowed to go to the parent */
+		stub->dp->has_parent_side_NS) {
+		return 0;
+	}
+	if((fwddp = forwards_find(env->fwds, nm, qclass)) &&
+		/* has_parent_side is turned off for forward_first, where
+		 * we are allowed to go to the parent */
+		fwddp->has_parent_side_NS) {
+		return 0;
+	}
+	return 1;
+}
+
 /** see if target name is caps-for-id whitelisted */
 static int
 is_caps_whitelisted(struct iter_env* ie, struct iter_qstate* iq)
@@ -868,6 +895,9 @@ generate_ns_check(struct module_qstate* qstate, struct iter_qstate* iq, int id)
 	log_assert(iq->dp);
 
 	if(iq->depth == ie->max_dependency_depth)
+		return;
+	if(!can_have_last_resort(qstate->env, iq->dp->name, iq->dp->namelen,
+		iq->qchase.qclass))
 		return;
 	/* is this query the same as the nscheck? */
 	if(qstate->qinfo.qtype == LDNS_RR_TYPE_NS &&
@@ -1571,33 +1601,6 @@ query_for_targets(struct module_qstate* qstate, struct iter_qstate* iq,
 	if(query_count > 0)
 		qstate->ext_state[id] = module_wait_subquery;
 
-	return 1;
-}
-
-/** see if last resort is possible - does config allow queries to parent */
-static int
-can_have_last_resort(struct module_env* env, uint8_t* nm, size_t nmlen,
-	uint16_t qclass)
-{
-	struct delegpt* fwddp;
-	struct iter_hints_stub* stub;
-	int labs = dname_count_labels(nm);
-	/* do not process a last resort (the parent side) if a stub
-	 * or forward is configured, because we do not want to go 'above'
-	 * the configured servers */
-	if(!dname_is_root(nm) && (stub = (struct iter_hints_stub*)
-		name_tree_find(&env->hints->tree, nm, nmlen, labs, qclass)) &&
-		/* has_parent side is turned off for stub_first, where we
-		 * are allowed to go to the parent */
-		stub->dp->has_parent_side_NS) {
-		return 0;
-	}
-	if((fwddp = forwards_find(env->fwds, nm, qclass)) &&
-		/* has_parent_side is turned off for forward_first, where
-		 * we are allowed to go to the parent */
-		fwddp->has_parent_side_NS) {
-		return 0;
-	}
 	return 1;
 }
 
