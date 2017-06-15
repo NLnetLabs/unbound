@@ -1071,6 +1071,20 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 		return next_state(iq, COLLECT_CLASS_STATE);
 	}
 
+	/*
+	 * If we are restricted by a forward-zone or a stub-zone, we
+	 * can't re-fetch glue for this delegation point.
+	 * we won’t try to re-fetch glue if the iq->dp is null.
+	 */
+	if (iq->refetch_glue &&
+	        iq->dp &&
+	        !can_have_last_resort(qstate->env,
+	                              iq->dp->name,
+	                              iq->dp->namelen,
+	                              iq->qchase.qclass)) {
+	    iq->refetch_glue = 0;
+	}
+
 	/* Resolver Algorithm Step 1 -- Look for the answer in local data. */
 
 	/* This either results in a query restart (CNAME cache response), a

@@ -1,6 +1,7 @@
 15 June 2017: Wouter
 	- Fix stub zone queries leaking to the internet for
 	  harden-referral-path ns checks.
+	- Fix query for refetch_glue of stub leaking to internet.
 
 13 June 2017: Wouter
 	- Fix #1279: Memory leak on reload when python module is enabled.
