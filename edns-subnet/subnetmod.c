@@ -244,6 +244,7 @@ subnetmod_deinit(struct module_env *env, int id)
 	lock_rw_destroy(&sn_env->biglock);
 	inplace_cb_delete(env, inplace_cb_edns_back_parsed, id);
 	inplace_cb_delete(env, inplace_cb_query, id);
+	inplace_cb_delete(env, inplace_cb_query_response, id);
 	ecs_whitelist_delete(sn_env->whitelist);
 	slabhash_delete(sn_env->subnet_msg_cache);
 	alloc_clear(&sn_env->alloc);
