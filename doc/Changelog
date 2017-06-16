@@ -1,3 +1,6 @@
+16 June 2017: Ralph
+	- Fix #1277: disable domain ratelimit by setting value to 0.
+
 16 June 2017: Wouter
 	- Fix #1301: memory leak in respip and tests.
 	- Free callback in edns-subnetmod on exit and restart.
