@@ -825,6 +825,7 @@ respip_view_conf_data_test(void)
 		0, LDNS_RR_TYPE_CNAME);
 	verify_rrset(v->respip_set, "2001:db8:1::/48", "2001:db8:1::2:1",
 		0, LDNS_RR_TYPE_AAAA);
+	lock_rw_unlock(&v->lock);
 
 	views_delete(views);
 	free(cv->name);

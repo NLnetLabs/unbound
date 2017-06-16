@@ -6,6 +6,7 @@
 	- Fix dnscrypt chacha cert support ifdefs.
 	- Fix dnscrypt chacha cert unit test escapes in grep.
 	- Remove asynclook tests that cause test and purifier problems.
+	- Fix to unlock view in view test.
 
 15 June 2017: Wouter
 	- Fix stub zone queries leaking to the internet for
