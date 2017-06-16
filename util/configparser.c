@@ -945,7 +945,7 @@ static const yytype_uint16 yyrline[] =
     2166,  2174,  2181,  2189,  2197,  2204,  2211,  2220,  2229,  2238,
     2247,  2256,  2265,  2270,  2271,  2272,  2274,  2280,  2290,  2297,
     2306,  2314,  2320,  2321,  2323,  2323,  2323,  2324,  2324,  2326,
-    2335,  2345,  2352,  2359
+    2336,  2346,  2353,  2360
 };
 #endif
 
@@ -4996,12 +4996,13 @@ yyreduce:
 		if(strcmp((yyvsp[0].str), "yes") != 0 && strcmp((yyvsp[0].str), "no") != 0)
 			yyerror("expected yes or no.");
 		else cfg_parser->cfg->dnscrypt = (strcmp((yyvsp[0].str), "yes")==0);
+		free((yyvsp[0].str));
 	}
-#line 5001 "util/configparser.c" /* yacc.c:1646  */
+#line 5002 "util/configparser.c" /* yacc.c:1646  */
     break;
 
   case 440:
-#line 2336 "./util/configparser.y" /* yacc.c:1646  */
+#line 2337 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(dnsc_dnscrypt_port:%s)\n", (yyvsp[0].str)));
 
@@ -5010,41 +5011,41 @@ yyreduce:
 		else cfg_parser->cfg->dnscrypt_port = atoi((yyvsp[0].str));
 		free((yyvsp[0].str));
 	}
-#line 5014 "util/configparser.c" /* yacc.c:1646  */
+#line 5015 "util/configparser.c" /* yacc.c:1646  */
     break;
 
   case 441:
-#line 2346 "./util/configparser.y" /* yacc.c:1646  */
+#line 2347 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(dnsc_dnscrypt_provider:%s)\n", (yyvsp[0].str)));
 		free(cfg_parser->cfg->dnscrypt_provider);
 		cfg_parser->cfg->dnscrypt_provider = (yyvsp[0].str);
 	}
-#line 5024 "util/configparser.c" /* yacc.c:1646  */
+#line 5025 "util/configparser.c" /* yacc.c:1646  */
     break;
 
   case 442:
-#line 2353 "./util/configparser.y" /* yacc.c:1646  */
+#line 2354 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(dnsc_dnscrypt_provider_cert:%s)\n", (yyvsp[0].str)));
 		if(!cfg_strlist_insert(&cfg_parser->cfg->dnscrypt_provider_cert, (yyvsp[0].str)))
 			fatal_exit("out of memory adding dnscrypt-provider-cert");
 	}
-#line 5034 "util/configparser.c" /* yacc.c:1646  */
+#line 5035 "util/configparser.c" /* yacc.c:1646  */
     break;
 
   case 443:
-#line 2360 "./util/configparser.y" /* yacc.c:1646  */
+#line 2361 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(dnsc_dnscrypt_secret_key:%s)\n", (yyvsp[0].str)));
 		if(!cfg_strlist_insert(&cfg_parser->cfg->dnscrypt_secret_key, (yyvsp[0].str)))
 			fatal_exit("out of memory adding dnscrypt-secret-key");
 	}
-#line 5044 "util/configparser.c" /* yacc.c:1646  */
+#line 5045 "util/configparser.c" /* yacc.c:1646  */
     break;
 
 
-#line 5048 "util/configparser.c" /* yacc.c:1646  */
+#line 5049 "util/configparser.c" /* yacc.c:1646  */
       default: break;
     }
   /* User semantic actions sometimes alter yychar, and that requires
@@ -5272,7 +5273,7 @@ yyreturn:
 #endif
   return yyresult;
 }
-#line 2366 "./util/configparser.y" /* yacc.c:1906  */
+#line 2367 "./util/configparser.y" /* yacc.c:1906  */
 
 
 /* parse helper routines could be here */
