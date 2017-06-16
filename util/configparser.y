@@ -2329,6 +2329,7 @@ dnsc_dnscrypt_enable: VAR_DNSCRYPT_ENABLE STRING_ARG
 		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
 			yyerror("expected yes or no.");
 		else cfg_parser->cfg->dnscrypt = (strcmp($2, "yes")==0);
+		free($2);
 	}
 	;
 

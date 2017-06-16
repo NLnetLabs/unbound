@@ -2,6 +2,7 @@
 	- Fix #1301: memory leak in respip and tests.
 	- Free callback in edns-subnetmod on exit and restart.
 	- Fix memory leak in sldns_buffer_new_frm_data.
+	- Fix memory leak in dnscrypt config read.
 
 15 June 2017: Wouter
 	- Fix stub zone queries leaking to the internet for
