@@ -64,7 +64,7 @@ dnscrypt_server_uncurve(const dnsccert *cert,
     query_header = (struct dnscrypt_query_header *)buf;
     memcpy(nmkey, query_header->publickey, crypto_box_PUBLICKEYBYTES);
     if(cert->es_version[1] == 2) {
-#ifdef HAVE_XCHACHA20
+#ifdef USE_DNSCRYPT_XCHACHA20
         if (crypto_box_curve25519xchacha20poly1305_beforenm(
                 nmkey, nmkey, cert->keypair->crypt_secretkey) != 0) {
             return -1;
@@ -82,7 +82,7 @@ dnscrypt_server_uncurve(const dnsccert *cert,
     memset(nonce + crypto_box_HALF_NONCEBYTES, 0, crypto_box_HALF_NONCEBYTES);
 
     if(cert->es_version[1] == 2) {
-#ifdef HAVE_XCHACHA20
+#ifdef USE_DNSCRYPT_XCHACHA20
         if (crypto_box_curve25519xchacha20poly1305_open_easy_afternm
                 (buf,
                 buf + DNSCRYPT_QUERY_BOX_OFFSET,
@@ -253,7 +253,7 @@ dnscrypt_server_curve(const dnsccert *cert,
     add_server_nonce(nonce);
 
     if(cert->es_version[1] == 2) {
-#ifdef HAVE_XCHACHA20
+#ifdef USE_DNSCRYPT_XCHACHA20
         if (crypto_box_curve25519xchacha20poly1305_easy_afternm
             (boxed, boxed + crypto_box_MACBYTES, len, nonce, nmkey) != 0) {
             return -1;
@@ -546,7 +546,7 @@ dnsc_parse_keys(struct dnsc_env *env, struct config_file *cfg)
 					head->str, fingerprint);
 				verbose(VERB_OPS, "Using %s",
 					key_get_es_version(current_cert->es_version));
-#ifndef HAVE_XCHACHA20
+#ifndef USE_DNSCRYPT_XCHACHA20
 				if (current_cert->es_version[1] == 0x02) {
 				    fatal_exit("Certificate for XChacha20 but libsodium does not support it.");
 				}
