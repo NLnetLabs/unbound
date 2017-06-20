@@ -1,5 +1,6 @@
 20 June 2017: Wouter
 	- Fix warning in pythonmod under clang compiler.
+	- Tag 1.6.4rc1
 
 16 June 2017: Ralph
 	- Fix #1277: disable domain ratelimit by setting value to 0.
