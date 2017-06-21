@@ -1,3 +1,6 @@
+21 June 2017: Wouter
+	- Fix #1316: heap read buffer overflow in parse_edns_options.
+
 20 June 2017: Wouter
 	- Fix warning in pythonmod under clang compiler.
 	- Tag 1.6.4rc1
