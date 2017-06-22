@@ -1,3 +1,6 @@
+22 June 2017: Ralph
+	- Added fastrpz patch to contrib
+
 21 June 2017: Wouter
 	- Fix #1316: heap read buffer overflow in parse_edns_options.
 
