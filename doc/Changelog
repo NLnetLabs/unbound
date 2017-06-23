@@ -1,3 +1,6 @@
+23 June 2017: Wouter
+	- (for 1.6.5): fixup of dnscrypt_cert_chacha test (from Manu Bretelle).
+
 22 June 2017: Wouter
 	- Tag 1.6.4rc2
 
