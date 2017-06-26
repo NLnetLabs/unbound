@@ -2389,10 +2389,16 @@ dump_infra_host(struct lruhash_entry* e, void* arg)
 	struct infra_data* d = (struct infra_data*)e->data;
 	char ip_str[1024];
 	char name[257];
+	int port;
 	if(a->ssl_failed)
 		return;
 	addr_to_str(&k->addr, k->addrlen, ip_str, sizeof(ip_str));
 	dname_str(k->zonename, name);
+	port = (int)ntohs(((struct sockaddr_in*)&k->addr)->sin_port);
+	if(port != UNBOUND_DNS_PORT) {
+		snprintf(ip_str+strlen(ip_str), sizeof(ip_str)-strlen(ip_str),
+			"@%d", port);
+	}
 	/* skip expired stuff (only backed off) */
 	if(d->ttl < a->now) {
 		if(d->rtt.rto >= USEFUL_SERVER_TOP_TIMEOUT) {
