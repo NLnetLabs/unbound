@@ -1220,11 +1220,17 @@ static int sldns_wire2str_b64_scan_num(uint8_t** d, size_t* dl, char** s,
 
 int sldns_wire2str_b64_scan(uint8_t** d, size_t* dl, char** s, size_t* sl)
 {
+	if(*dl == 0) {
+		return sldns_str_print(s, sl, "0");
+	}
 	return sldns_wire2str_b64_scan_num(d, dl, s, sl, *dl);
 }
 
 int sldns_wire2str_hex_scan(uint8_t** d, size_t* dl, char** s, size_t* sl)
 {
+	if(*dl == 0) {
+		return sldns_str_print(s, sl, "0");
+	}
 	return print_remainder_hex("", d, dl, s, sl);
 }
 

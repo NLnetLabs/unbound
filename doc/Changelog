@@ -1,5 +1,6 @@
 26 June 2017: Wouter
 	- Better fixup of dnscrypt_cert_chacha test for different escapes.
+	- First fix for zero b64 and hex text zone format in sldns.
 
 23 June 2017: Wouter
 	- (for 1.6.5): fixup of dnscrypt_cert_chacha test (from Manu Bretelle).

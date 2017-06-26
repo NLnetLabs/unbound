@@ -1190,6 +1190,10 @@ int sldns_str2wire_b64_buf(const char* str, uint8_t* rd, size_t* len)
 {
 	size_t sz = sldns_b64_pton_calculate_size(strlen(str));
 	int n;
+	if(strcmp(str, "0") == 0) {
+		*len = 0;
+		return LDNS_WIREPARSE_ERR_OK;
+	}
 	if(*len < sz)
 		return LDNS_WIREPARSE_ERR_BUFFER_TOO_SMALL;
 	n = sldns_b64_pton(str, rd, *len);
@@ -1222,6 +1226,10 @@ int sldns_str2wire_hex_buf(const char* str, uint8_t* rd, size_t* len)
 		if(isspace((unsigned char)*s)) {
 			s++;
 			continue;
+		}
+		if(dlen == 0 && *s == '0' && *(s+1) == 0) {
+			*len = 0;
+			return LDNS_WIREPARSE_ERR_OK;
 		}
 		if(!isxdigit((unsigned char)*s))
 			return RET_ERR(LDNS_WIREPARSE_ERR_SYNTAX_HEX, s-str);
