@@ -2,6 +2,7 @@
 	- Tag 1.6.4 is created with the 1.6.4rc2 contents.
 	- Trunk contains 1.6.5, with changes from 26, 27 june.
 	- Remove signed unsigned warning from authzone.
+	- Fix that infra cache host hash does not change after reconfig.
 
 26 June 2017: Wouter
 	- (for 1.6.5)
