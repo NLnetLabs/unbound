@@ -1,5 +1,10 @@
+27 June 2017: Wouter
+	- Tag 1.6.4 is created with the 1.6.4rc2 contents.
+	- Trunk contains 1.6.5, with changes from 26, 27 june.
+
 26 June 2017: Wouter
-	- Better fixup of dnscrypt_cert_chacha test for different escapes.
+	- (for 1.6.5)
+	  Better fixup of dnscrypt_cert_chacha test for different escapes.
 	- First fix for zero b64 and hex text zone format in sldns.
 	- unbound-control dump_infra prints port number for address if not 53.
 
