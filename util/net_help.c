@@ -647,7 +647,12 @@ listen_sslctx_setup(void* ctxt)
 		log_crypto_err("could not set cipher list with SSL_CTX_set_cipher_list");
 #endif
 
-	SSL_CTX_set_options(ctx, SSL_OP_CIPHER_SERVER_PREFERENCE);
+	if((SSL_CTX_set_options(ctx, SSL_OP_CIPHER_SERVER_PREFERENCE) &
+		SSL_OP_CIPHER_SERVER_PREFERENCE) !=
+		SSL_OP_CIPHER_SERVER_PREFERENCE) {
+		log_crypto_err("could not set SSL_OP_CIPHER_SERVER_PREFERENCE");
+		return 0;
+	}
 
 #ifdef HAVE_SSL_CTX_SET_SECURITY_LEVEL
 	SSL_CTX_set_security_level(ctx, 0);
