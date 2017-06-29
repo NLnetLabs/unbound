@@ -229,42 +229,10 @@ daemon_remote_create(struct config_file* cfg)
 		free(rc);
 		return NULL;
 	}
-	/* no SSLv2, SSLv3 because has defects */
-	if((SSL_CTX_set_options(rc->ctx, SSL_OP_NO_SSLv2) & SSL_OP_NO_SSLv2)
-		!= SSL_OP_NO_SSLv2){
-		log_crypto_err("could not set SSL_OP_NO_SSLv2");
+	if(!listen_sslctx_setup(rc->ctx)) {
 		daemon_remote_delete(rc);
 		return NULL;
 	}
-	if((SSL_CTX_set_options(rc->ctx, SSL_OP_NO_SSLv3) & SSL_OP_NO_SSLv3)
-		!= SSL_OP_NO_SSLv3){
-		log_crypto_err("could not set SSL_OP_NO_SSLv3");
-		daemon_remote_delete(rc);
-		return NULL;
-	}
-#if defined(SSL_OP_NO_TLSv1) && defined(SSL_OP_NO_TLSv1_1)
-	/* if we have tls 1.1 disable 1.0 */
-	if((SSL_CTX_set_options(rc->ctx, SSL_OP_NO_TLSv1) & SSL_OP_NO_TLSv1)
-		!= SSL_OP_NO_TLSv1){
-		log_crypto_err("could not set SSL_OP_NO_TLSv1");
-		daemon_remote_delete(rc);
-		return NULL;
-	}
-#endif
-#if defined(SSL_OP_NO_TLSv1_1) && defined(SSL_OP_NO_TLSv1_2)
-	/* if we have tls 1.2 disable 1.1 */
-	if((SSL_CTX_set_options(rc->ctx, SSL_OP_NO_TLSv1_1) & SSL_OP_NO_TLSv1_1)
-		!= SSL_OP_NO_TLSv1_1){
-		log_crypto_err("could not set SSL_OP_NO_TLSv1_1");
-		daemon_remote_delete(rc);
-		return NULL;
-	}
-#endif
-#if defined(SHA256_DIGEST_LENGTH) && defined(USE_ECDSA)
-	/* if we have sha256, set the cipher list to have no known vulns */
-	if(!SSL_CTX_set_cipher_list(rc->ctx, "ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256"))
-		log_crypto_err("could not set cipher list with SSL_CTX_set_cipher_list");
-#endif
 
 	if (cfg->remote_control_use_cert == 0) {
 		/* No certificates are requested */
@@ -314,23 +282,7 @@ daemon_remote_create(struct config_file* cfg)
 		log_crypto_err("Error in SSL_CTX check_private_key");
 		goto setup_error;
 	}
-#if HAVE_DECL_SSL_CTX_SET_ECDH_AUTO
-	if(!SSL_CTX_set_ecdh_auto(rc->ctx,1)) {
-		log_crypto_err("Error in SSL_CTX_ecdh_auto, not enabling ECDHE");
-	}
-#elif defined(USE_ECDSA)
-	if(1) {
-		EC_KEY *ecdh = EC_KEY_new_by_curve_name (NID_X9_62_prime256v1);
-		if (!ecdh) {
-			log_crypto_err("could not find p256, not enabling ECDHE");
-		} else {
-			if (1 != SSL_CTX_set_tmp_ecdh (rc->ctx, ecdh)) {
-				log_crypto_err("Error in SSL_CTX_set_tmp_ecdh, not enabling ECDHE");
-			}
-			EC_KEY_free (ecdh);
-		}
-	}
-#endif
+	listen_sslctx_setup_2(rc->ctx);
 	if(!SSL_CTX_load_verify_locations(rc->ctx, s_cert, NULL)) {
 		log_crypto_err("Error setting up SSL_CTX verify locations");
 	setup_error:
