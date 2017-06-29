@@ -1,5 +1,6 @@
 29 June 2017: Wouter
 	- Fix python example0 return module wait instead of error for pass.
+	- iana portlist update
 
 27 June 2017: Wouter
 	- Tag 1.6.4 is created with the 1.6.4rc2 contents.
