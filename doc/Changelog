@@ -1,3 +1,7 @@
+3 July 2017: Wouter
+	- Fix for unbound-checkconf, check ipsecmod-hook if ipsecmod is turned
+	  on.
+
 29 June 2017: Wouter
 	- Fix python example0 return module wait instead of error for pass.
 	- iana portlist update
