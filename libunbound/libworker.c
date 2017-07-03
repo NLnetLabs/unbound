@@ -749,7 +749,7 @@ libworker_bg_done_cb(void* arg, int rcode, sldns_buffer* buf, enum sec_status s,
 {
 	struct ctx_query* q = (struct ctx_query*)arg;
 
-	if(q->cancelled) {
+	if(q->cancelled || q->w->back->want_to_quit) {
 		if(q->w->is_bg_thread) {
 			/* delete it now */
 			struct ub_ctx* ctx = q->w->ctx;
