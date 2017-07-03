@@ -221,7 +221,9 @@ daemon_init(void)
 #  ifdef HAVE_ERR_LOAD_CRYPTO_STRINGS
 	ERR_load_crypto_strings();
 #  endif
+#if OPENSSL_VERSION_NUMBER < 0x10100000 || !defined(HAVE_OPENSSL_INIT_CRYPTO)
 	ERR_load_SSL_strings();
+#endif
 #  ifdef USE_GOST
 	(void)sldns_key_EVP_load_gost_id();
 #  endif
@@ -239,7 +241,7 @@ daemon_init(void)
 #  if OPENSSL_VERSION_NUMBER < 0x10100000 || !defined(HAVE_OPENSSL_INIT_SSL)
 	(void)SSL_library_init();
 #  else
-	(void)OPENSSL_init_ssl(0, NULL);
+	(void)OPENSSL_init_ssl(OPENSSL_INIT_LOAD_SSL_STRINGS, NULL);
 #  endif
 #  if defined(HAVE_SSL) && defined(OPENSSL_THREADS) && !defined(THREADS_DISABLED)
 	if(!ub_openssl_lock_init())

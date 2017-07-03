@@ -4,6 +4,7 @@
 	- Fix #1331: libunbound segfault in threaded mode when context is
 	  deleted.
 	- Fix pythonmod link line option flag.
+	- Fix openssl 1.1.0 load of ssl error strings from ssl init.
 
 29 June 2017: Wouter
 	- Fix python example0 return module wait instead of error for pass.
