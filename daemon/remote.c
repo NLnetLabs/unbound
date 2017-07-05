@@ -367,7 +367,7 @@ add_open(const char* ip, int nr, struct listen_port** list, int noproto_is_err,
 			if (cfg->username && cfg->username[0] &&
 				cfg_uid != (uid_t)-1) {
 				if(chown(ip, cfg_uid, cfg_gid) == -1)
-					log_err("cannot chown %u.%u %s: %s",
+					verbose(VERB_QUERY, "cannot chown %u.%u %s: %s",
 					  (unsigned)cfg_uid, (unsigned)cfg_gid,
 					  ip, strerror(errno));
 			}

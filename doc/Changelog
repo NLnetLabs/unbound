@@ -1,3 +1,6 @@
+4 July 2017: Wouter
+	- Fix 1332: Bump verbosity of failed chown'ing of the control socket.
+
 3 July 2017: Wouter
 	- Fix for unbound-checkconf, check ipsecmod-hook if ipsecmod is turned
 	  on.
