@@ -16,6 +16,50 @@ if test "$1" = "fake"; then
 	echo "fake" > .done-`basename $2 .tdir`
 	exit 0
 fi
+if test "$1" = "-f" && test "$2" = "report"; then
+	echo "Minitdir Long Report"
+	pass=0
+	fail=0
+	skip=0
+	echo "   STATUS    ELAPSED TESTNAME TESTDESCRIPTION"
+	for result in *.tdir; do
+		name=`basename $result .tdir`
+		timelen="     "
+		desc=""
+		if test -f "result.$name"; then
+			timestart=`grep ^DateRunStart: "result.$name" | sed -e 's/DateRunStart: //'`
+			timeend=`grep ^DateRunEnd: "result.$name" | sed -e 's/DateRunEnd: //'`
+			timesec=`expr $timeend - $timestart`
+			timelen=`printf %4ds $timesec`
+			if test $? -ne 0; then
+				timelen="$timesec""s"
+			fi
+			desc=`grep ^Description: "result.$name" | sed -e 's/Description: //'`
+		fi
+		if test -f ".done-$name"; then
+			if test "$1" != "-q"; then
+				echo "** PASSED ** $timelen $name: $desc"
+				pass=`expr $pass + 1`
+			fi
+		else
+			if test -f "result.$name"; then
+				echo "!! FAILED !! $timelen $name: $desc"
+				fail=`expr $fail + 1`
+			else
+				echo ">> SKIPPED<< $timelen $name: $desc"
+				skip=`expr $skip + 1`
+			fi
+		fi
+	done
+	echo ""
+	if test "$skip" = "0"; then
+		echo "$pass pass, $fail fail"
+	else
+		echo "$pass pass, $fail fail, $skip skip"
+	fi
+	echo ""
+	exit 0
+fi
 if test "$1" = "report" || test "$2" = "report"; then
 	echo "Minitdir Report"
 	for result in *.tdir; do
@@ -41,7 +85,7 @@ if test "$1" != 'exe'; then
 	echo "	tdir exe <file>"
 	echo "	tdir fake <file>"
 	echo "	tdir clean"
-	echo "	tdir [-q] report"
+	echo "	tdir [-q|-f] report"
 	exit 1
 fi
 shift
