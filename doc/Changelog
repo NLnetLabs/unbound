@@ -1,3 +1,6 @@
+6 July 2017: Wouter
+	- Fix tests to use .tdir (from Manu Bretelle) instead of .tpkg.
+
 4 July 2017: Wouter
 	- Fix 1332: Bump verbosity of failed chown'ing of the control socket.
 
