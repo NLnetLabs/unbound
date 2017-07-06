@@ -24,8 +24,8 @@ else
 fi
 cd testdata
 TPKG=../testcode/mini_tdir.sh
-#RUNLIST=`(ls -1 *.tdir|grep -v '^0[016]')`
-RUNLIST=`(ls -1 *.tdir)`
+#RUNLIST=`(ls -1d *.tdir|grep -v '^0[016]')`
+RUNLIST=`(ls -1d *.tdir)`
 if test "$#" = "1"; then RUNLIST="$1"; fi
 
 # fix up tdir that was edited on keyboard interrupt.
