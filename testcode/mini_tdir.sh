@@ -46,7 +46,7 @@ if test "$1" = "-f" && test "$2" = "report"; then
 				echo "!! FAILED !! $timelen $name: $desc"
 				fail=`expr $fail + 1`
 			else
-				echo ">> SKIPPED<< $timelen $name: $desc"
+				echo ".> SKIPPED<< $timelen $name: $desc"
 				skip=`expr $skip + 1`
 			fi
 		fi
