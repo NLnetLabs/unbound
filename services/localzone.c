@@ -762,7 +762,7 @@ int local_zone_enter_defaults(struct local_zones* zones, struct config_file* cfg
 	/* localhost. zone */
 	if(!lz_exists(zones, "localhost.") &&
 		!lz_nodefault(cfg, "localhost.")) {
-		if(!(z=lz_enter_zone(zones, "localhost.", "static", 
+		if(!(z=lz_enter_zone(zones, "localhost.", "redirect", 
 			LDNS_RR_CLASS_IN)) ||
 		   !lz_enter_rr_into_zone(z,
 			"localhost. 10800 IN NS localhost.") ||

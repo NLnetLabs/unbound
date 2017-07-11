@@ -1,5 +1,6 @@
 11 July 2017: Wouter
 	- Fix #1344: RFC6761-reserved domains: test. and invalid.
+	- Redirect all localhost names to localhost address for RFC6761.
 
 6 July 2017: Wouter
 	- Fix tests to use .tdir (from Manu Bretelle) instead of .tpkg.
