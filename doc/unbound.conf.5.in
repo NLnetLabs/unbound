@@ -1060,7 +1060,7 @@ type. Below is a list of the default zone contents.
 The IP4 and IP6 localhost information is given. NS and SOA records are provided
 for completeness and to satisfy some DNS update tools. Default content:
 .nf
-local\-zone: "localhost." static
+local\-zone: "localhost." redirect
 local\-data: "localhost. 10800 IN NS localhost."
 local\-data: "localhost. 10800 IN
     SOA localhost. nobody.invalid. 1 3600 1200 604800 10800"
