@@ -1048,13 +1048,13 @@ has no other effect than turning off default contents for the
 given zone.  Use \fInodefault\fR if you use exactly that zone, if you want to
 use a subzone, use \fItransparent\fR.
 .P
-The default zones are localhost, reverse 127.0.0.1 and ::1, the onion and
-the AS112 zones. The AS112 zones are reverse DNS zones for private use and
-reserved IP addresses for which the servers on the internet cannot provide
-correct answers. They are configured by default to give nxdomain (no reverse
-information) answers. The defaults can be turned off by specifying your
-own local\-zone of that name, or using the 'nodefault' type. Below is a
-list of the default zone contents.
+The default zones are localhost, reverse 127.0.0.1 and ::1, the onion, test,
+invalid and the AS112 zones. The AS112 zones are reverse DNS zones for
+private use and reserved IP addresses for which the servers on the internet
+cannot provide correct answers. They are configured by default to give
+nxdomain (no reverse information) answers. The defaults can be turned off
+by specifying your own local\-zone of that name, or using the 'nodefault'
+type. Below is a list of the default zone contents.
 .TP 10
 \h'5'\fIlocalhost\fR
 The IP4 and IP6 localhost information is given. NS and SOA records are provided
@@ -1101,6 +1101,24 @@ Default content:
 local\-zone: "onion." static
 local\-data: "onion. 10800 IN NS localhost."
 local\-data: "onion. 10800 IN
+    SOA localhost. nobody.invalid. 1 3600 1200 604800 10800"
+.fi
+.TP 10
+\h'5'\fItest (RFC 7686)\fR
+Default content:
+.nf
+local\-zone: "test." static
+local\-data: "test. 10800 IN NS localhost."
+local\-data: "test. 10800 IN
+    SOA localhost. nobody.invalid. 1 3600 1200 604800 10800"
+.fi
+.TP 10
+\h'5'\fIinvalid (RFC 7686)\fR
+Default content:
+.nf
+local\-zone: "invalid." static
+local\-data: "invalid. 10800 IN NS localhost."
+local\-data: "invalid. 10800 IN
     SOA localhost. nobody.invalid. 1 3600 1200 604800 10800"
 .fi
 .TP 10

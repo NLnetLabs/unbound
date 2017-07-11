@@ -719,9 +719,9 @@ lz_nodefault(struct config_file* cfg, const char* name)
 	return 0;
 }
 
-/** enter AS112 default zone */
+/** enter (AS112) empty default zone */
 static int
-add_as112_default(struct local_zones* zones, struct config_file* cfg,
+add_empty_default(struct local_zones* zones, struct config_file* cfg,
         const char* name)
 {
 	struct local_zone* z;
@@ -816,26 +816,24 @@ int local_zone_enter_defaults(struct local_zones* zones, struct config_file* cfg
 		lock_rw_unlock(&z->lock);
 	}
 	/* onion. zone (RFC 7686) */
-	if(!lz_exists(zones, "onion.") &&
-		!lz_nodefault(cfg, "onion.")) {
-		if(!(z=lz_enter_zone(zones, "onion.", "static", 
-			LDNS_RR_CLASS_IN)) ||
-		   !lz_enter_rr_into_zone(z,
-			"onion. 10800 IN NS localhost.") ||
-		   !lz_enter_rr_into_zone(z,
-			"onion. 10800 IN SOA localhost. nobody.invalid. "
-			"1 3600 1200 604800 10800")) {
-			log_err("out of memory adding default zone");
-			if(z) { lock_rw_unlock(&z->lock); }
-			return 0;
-		}
-		lock_rw_unlock(&z->lock);
+	if(!add_empty_default(zones, cfg, "onion.")) {
+		log_err("out of memory adding default zone");
+		return 0;
 	}
-
+	/* test. zone (RFC 7686) */
+	if(!add_empty_default(zones, cfg, "test.")) {
+		log_err("out of memory adding default zone");
+		return 0;
+	}
+	/* invalid. zone (RFC 7686) */
+	if(!add_empty_default(zones, cfg, "invalid.")) {
+		log_err("out of memory adding default zone");
+		return 0;
+	}
 	/* block AS112 zones, unless asked not to */
 	if(!cfg->unblock_lan_zones) {
 		for(zstr = as112_zones; *zstr; zstr++) {
-			if(!add_as112_default(zones, cfg, *zstr)) {
+			if(!add_empty_default(zones, cfg, *zstr)) {
 				log_err("out of memory adding default zone");
 				return 0;
 			}
