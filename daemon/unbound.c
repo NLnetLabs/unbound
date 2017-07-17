@@ -600,6 +600,7 @@ perform_setup(struct daemon* daemon, struct config_file* cfg, int debug_mode,
  *    These increase verbosity as specified in the config file.
  * @param debug_mode: if set, do not daemonize.
  * @param log_default_identity: Default identity to report in logs
+ * @param need_pidfile: if false, no pidfile is checked or created.
  */
 static void 
 run_daemon(const char* cfgfile, int cmdline_verbose, int debug_mode, const char* log_default_identity, int need_pidfile)
