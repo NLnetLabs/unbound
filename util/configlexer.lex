@@ -423,6 +423,8 @@ ipsecmod-hook{COLON}		{ YDVAR(1, VAR_IPSECMOD_HOOK) }
 ipsecmod-max-ttl{COLON}		{ YDVAR(1, VAR_IPSECMOD_MAX_TTL) }
 ipsecmod-whitelist{COLON}	{ YDVAR(1, VAR_IPSECMOD_WHITELIST) }
 ipsecmod-strict{COLON}		{ YDVAR(1, VAR_IPSECMOD_STRICT) }
+cachedb{COLON}			{ YDVAR(0, VAR_CACHEDB) }
+backend{COLON}			{ YDVAR(1, VAR_CACHEDB_BACKEND) }
 <INITIAL,val>{NEWLINE}		{ LEXOUT(("NL\n")); cfg_parser->line++; }
 
 	/* Quoted strings. Strip leading and ending quotes */

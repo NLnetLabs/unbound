@@ -480,6 +480,12 @@ struct config_file {
 	/** false to proceed even when ipsecmod_hook fails */
 	int ipsecmod_strict;
 #endif
+
+	/* cachedb module */
+#ifdef USE_CACHEDB
+	/** backend DB name */
+	char* cachedb_backend;
+#endif
 };
 
 /** from cfg username, after daemonise setup performed */

@@ -170,16 +170,17 @@ cachedb_find_backend(const char* str)
 static int
 cachedb_apply_cfg(struct cachedb_env* cachedb_env, struct config_file* cfg)
 {
-	const char* backend_str = "testframe"; /* TODO get from cfg */
-	(void)cfg;     /* need this until the TODO is implemented */
-	if(backend_str && backend_str[0]) {
-		cachedb_env->backend = cachedb_find_backend(backend_str);
-		if(!cachedb_env->backend) {
-			log_err("cachedb: cannot find backend name '%s",
-				backend_str);
-			return 0;
-		}
+	const char* backend_str = cfg->cachedb_backend;
+
+	/* If unspecified we use the in-memory test DB. */
+	if(!backend_str)
+		backend_str = "testframe";
+	cachedb_env->backend = cachedb_find_backend(backend_str);
+	if(!cachedb_env->backend) {
+		log_err("cachedb: cannot find backend name '%s'", backend_str);
+		return 0;
 	}
+
 	/* TODO see if more configuration needs to be applied or not */
 	return 1;
 }

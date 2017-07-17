@@ -1,3 +1,6 @@
+17 July 2017: Wouter
+	- Fix #1350: make cachedb backend configurable (from JINMEI Tatuya).
+
 11 July 2017: Wouter
 	- Fix #1344: RFC6761-reserved domains: test. and invalid.
 	- Redirect all localhost names to localhost address for RFC6761.

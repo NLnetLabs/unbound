@@ -146,6 +146,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_DNSCRYPT_SECRET_KEY VAR_DNSCRYPT_PROVIDER_CERT
 %token VAR_IPSECMOD_ENABLED VAR_IPSECMOD_HOOK VAR_IPSECMOD_IGNORE_BOGUS
 %token VAR_IPSECMOD_MAX_TTL VAR_IPSECMOD_WHITELIST VAR_IPSECMOD_STRICT
+%token VAR_CACHEDB VAR_CACHEDB_BACKEND
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -153,7 +154,8 @@ toplevelvar: serverstart contents_server | stubstart contents_stub |
 	forwardstart contents_forward | pythonstart contents_py | 
 	rcstart contents_rc | dtstart contents_dt | viewstart 
 	contents_view |
-	dnscstart contents_dnsc
+	dnscstart contents_dnsc |
+	cachedbstart contents_cachedb
 	;
 
 /* server: declaration */
@@ -2362,6 +2364,30 @@ dnsc_dnscrypt_secret_key: VAR_DNSCRYPT_SECRET_KEY STRING_ARG
 		OUTYY(("P(dnsc_dnscrypt_secret_key:%s)\n", $2));
 		if(!cfg_strlist_insert(&cfg_parser->cfg->dnscrypt_secret_key, $2))
 			fatal_exit("out of memory adding dnscrypt-secret-key");
+	}
+	;
+
+cachedbstart: VAR_CACHEDB
+	{
+		OUTYY(("\nP(cachedb:)\n"));
+	}
+	;
+contents_cachedb: contents_cachedb content_cachedb
+	| ;
+content_cachedb: cachedb_backend_name
+	;
+cachedb_backend_name: VAR_CACHEDB_BACKEND STRING_ARG
+	{
+	#ifdef USE_CACHEDB
+		OUTYY(("P(backend:%s)\n", $2));
+		if(cfg_parser->cfg->cachedb_backend)
+			yyerror("cachedb backend override, there must be one "
+				"backend");
+		free(cfg_parser->cfg->cachedb_backend);
+		cfg_parser->cfg->cachedb_backend = $2;
+	#else
+		OUTYY(("P(Compiled without cachedb, ignoring)\n"));
+	#endif
 	}
 	;
 %%

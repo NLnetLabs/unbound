@@ -840,3 +840,11 @@ remote-control:
 #     dnscrypt-secret-key: /path/unbound-conf/keys2/1.key
 #     dnscrypt-provider-cert: /path/unbound-conf/keys1/1.cert
 #     dnscrypt-provider-cert: /path/unbound-conf/keys2/1.cert
+
+# CacheDB
+# Enable external backend DB as auxiliary cache.  Specify the backend name
+# (default is "testframe", which has no use other than for debugging and
+# testing) and backend-specific options.  The 'cachedb' module must be
+# included in module-config.
+# cachedb:
+#     backend: "testframe"
