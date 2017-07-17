@@ -1,5 +1,7 @@
 17 July 2017: Wouter
 	- Fix #1350: make cachedb backend configurable (from JINMEI Tatuya).
+	- Fix #1349: allow suppression of pidfiles (from Daniel Kahn Gillmor).
+	  With the -p option unbound does not create a pidfile.
 
 11 July 2017: Wouter
 	- Fix #1344: RFC6761-reserved domains: test. and invalid.
