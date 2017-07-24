@@ -793,7 +793,7 @@ print_stats(SSL* ssl, const char* nm, struct ub_stats_info* s)
 static int
 print_thread_stats(SSL* ssl, int i, struct ub_stats_info* s)
 {
-	char nm[16];
+	char nm[32];
 	snprintf(nm, sizeof(nm), "thread%d", i);
 	nm[sizeof(nm)-1]=0;
 	return print_stats(ssl, nm, s);

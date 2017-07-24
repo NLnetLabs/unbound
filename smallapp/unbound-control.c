@@ -356,7 +356,7 @@ static void do_stats_shm(struct config_file* cfg, struct ub_stats_info* stats,
 	struct ub_shm_stat_info* shm_stat)
 {
 	int i;
-	char nm[16];
+	char nm[32];
 	for(i=0; i<cfg->num_threads; i++) {
 		snprintf(nm, sizeof(nm), "thread%d", i);
 		pr_stats(nm, &stats[i+1]);
