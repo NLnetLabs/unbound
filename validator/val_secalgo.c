@@ -1740,7 +1740,7 @@ _verify_nettle_ed25519(sldns_buffer* buf, unsigned char* sigblock,
 	}
 
 	res = ed25519_sha512_verify((uint8_t*)key, sldns_buffer_limit(buf),
-		sldns_buffer_begin(buf), sigblock);
+		sldns_buffer_begin(buf), (uint8_t*)sigblock);
 
 	if (!res)
 		return "ED25519 signature verification failed";
