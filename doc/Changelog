@@ -4,6 +4,8 @@
 	- annotate case statement fallthrough for gcc 7.1.1.
 	- flex output from flex 2.6.1.
 	- snprintf of thread number does not warn about truncated string.
+	- squelch TCP fast open error on FreeBSD when kernel has it disabled,
+	  unless verbosity is high.
 
 17 July 2017: Wouter
 	- Fix #1350: make cachedb backend configurable (from JINMEI Tatuya).
