@@ -8,6 +8,7 @@
 	  unless verbosity is high.
 	- remove warning from windows compile.
 	- Fix compile with libnettle
+	- Fix DSA configure switch (--disable dsa) for libnettle and libnss.
 
 17 July 2017: Wouter
 	- Fix #1350: make cachedb backend configurable (from JINMEI Tatuya).

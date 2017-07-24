@@ -18053,6 +18053,7 @@ case "$enable_dsa" in
       ;;
     *)
       # detect if DSA is supported, and turn it off if not.
+      if test $USE_NSS = "no" -a $USE_NETTLE = "no"; then
       ac_fn_c_check_func "$LINENO" "DSA_SIG_new" "ac_cv_func_DSA_SIG_new"
 if test "x$ac_cv_func_DSA_SIG_new" = xyes; then :
 
@@ -18067,6 +18068,13 @@ else
                fi
 fi
 
+      else
+
+cat >>confdefs.h <<_ACEOF
+#define USE_DSA 1
+_ACEOF
+
+      fi
       ;;
 esac
 
