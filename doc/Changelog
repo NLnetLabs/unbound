@@ -10,6 +10,7 @@
 	- Fix compile with libnettle
 	- Fix DSA configure switch (--disable dsa) for libnettle and libnss.
 	- Fix #1365: Add Ed25519 support using libnettle.
+	- iana portlist update
 
 17 July 2017: Wouter
 	- Fix #1350: make cachedb backend configurable (from JINMEI Tatuya).
