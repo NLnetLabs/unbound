@@ -18104,17 +18104,34 @@ cat >>confdefs.h <<_ACEOF
 _ACEOF
 if test $ac_have_decl = 1; then :
 
-
-cat >>confdefs.h <<_ACEOF
-#define USE_ED25519 1
-_ACEOF
-
       		use_ed25519="yes"
 
 else
    if test "x$enable_ed25519" = "xyes"; then as_fn_error $? "OpenSSL does not support ED25519 and you used --enable-ed25519." "$LINENO" 5
 	      	fi
 fi
+
+      fi
+      if test $USE_NETTLE = "yes"; then
+		for ac_header in nettle/eddsa.h
+do :
+  ac_fn_c_check_header_compile "$LINENO" "nettle/eddsa.h" "ac_cv_header_nettle_eddsa_h" "$ac_includes_default
+"
+if test "x$ac_cv_header_nettle_eddsa_h" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_NETTLE_EDDSA_H 1
+_ACEOF
+ use_ed25519="yes"
+fi
+
+done
+
+      fi
+      if test $use_ed25519 = "yes"; then
+
+cat >>confdefs.h <<_ACEOF
+#define USE_ED25519 1
+_ACEOF
 
       fi
       ;;

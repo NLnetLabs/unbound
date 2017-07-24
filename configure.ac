@@ -931,12 +931,17 @@ case "$enable_ed25519" in
     *)
       if test $USE_NSS = "no" -a $USE_NETTLE = "no"; then
 	      AC_CHECK_DECLS([NID_ED25519], [
-      		AC_DEFINE_UNQUOTED([USE_ED25519], [1], [Define this to enable ED25519 support.])
       		use_ed25519="yes"
 	      ], [ if test "x$enable_ed25519" = "xyes"; then AC_MSG_ERROR([OpenSSL does not support ED25519 and you used --enable-ed25519.])
 	      	fi ], [AC_INCLUDES_DEFAULT
 #include <openssl/evp.h>
 	      ])
+      fi
+      if test $USE_NETTLE = "yes"; then
+		AC_CHECK_HEADERS([nettle/eddsa.h], use_ed25519="yes",, [AC_INCLUDES_DEFAULT])
+      fi
+      if test $use_ed25519 = "yes"; then
+      		AC_DEFINE_UNQUOTED([USE_ED25519], [1], [Define this to enable ED25519 support.])
       fi
       ;;
 esac
