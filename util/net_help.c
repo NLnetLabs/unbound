@@ -658,10 +658,10 @@ listen_sslctx_setup(void* ctxt)
 #ifdef HAVE_SSL_CTX_SET_SECURITY_LEVEL
 	SSL_CTX_set_security_level(ctx, 0);
 #endif
-	return 1;
 #else
 	(void)ctxt;
 #endif /* HAVE_SSL */
+	return 1;
 }
 
 void
