@@ -6,6 +6,7 @@
 	- snprintf of thread number does not warn about truncated string.
 	- squelch TCP fast open error on FreeBSD when kernel has it disabled,
 	  unless verbosity is high.
+	- remove warning from windows compile.
 
 17 July 2017: Wouter
 	- Fix #1350: make cachedb backend configurable (from JINMEI Tatuya).

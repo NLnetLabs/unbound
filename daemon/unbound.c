@@ -484,6 +484,7 @@ perform_setup(struct daemon* daemon, struct config_file* cfg, int debug_mode,
 	}
 #else
 	(void)daemon;
+	(void)need_pidfile;
 #endif /* HAVE_KILL */
 
 	/* Set user context */
