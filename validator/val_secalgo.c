@@ -1758,9 +1758,11 @@ verify_canonrrset(sldns_buffer* buf, int algo, unsigned char* sigblock,
 	case LDNS_RSASHA1:
 	case LDNS_RSASHA1_NSEC3:
 		digest_size = (digest_size ? digest_size : SHA1_DIGEST_SIZE);
-		/* fallthrough */
 #endif
+		/* double fallthrough annotation to please gcc parser */
+		/* fallthrough */
 #ifdef USE_SHA2
+		/* fallthrough */
 	case LDNS_RSASHA256:
 		digest_size = (digest_size ? digest_size : SHA256_DIGEST_SIZE);
 		/* fallthrough */
