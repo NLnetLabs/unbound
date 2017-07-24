@@ -613,6 +613,7 @@ log_crypto_err(const char* str)
 int
 listen_sslctx_setup(void* ctxt)
 {
+#ifdef HAVE_SSL
 	SSL_CTX* ctx = (SSL_CTX*)ctxt;
 	/* no SSLv2, SSLv3 because has defects */
 	if((SSL_CTX_set_options(ctx, SSL_OP_NO_SSLv2) & SSL_OP_NO_SSLv2)
@@ -658,11 +659,15 @@ listen_sslctx_setup(void* ctxt)
 	SSL_CTX_set_security_level(ctx, 0);
 #endif
 	return 1;
+#else
+	(void)ctxt;
+#endif /* HAVE_SSL */
 }
 
 void
 listen_sslctx_setup_2(void* ctxt)
 {
+#ifdef HAVE_SSL
 	SSL_CTX* ctx = (SSL_CTX*)ctxt;
 	(void)ctx;
 #if HAVE_DECL_SSL_CTX_SET_ECDH_AUTO
@@ -682,6 +687,9 @@ listen_sslctx_setup_2(void* ctxt)
 		}
 	}
 #endif
+#else
+	(void)ctxt;
+#endif /* HAVE_SSL */
 }
 
 void* listen_sslctx_create(char* key, char* pem, char* verifypem)

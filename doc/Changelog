@@ -7,6 +7,7 @@
 	- squelch TCP fast open error on FreeBSD when kernel has it disabled,
 	  unless verbosity is high.
 	- remove warning from windows compile.
+	- Fix compile with libnettle
 
 17 July 2017: Wouter
 	- Fix #1350: make cachedb backend configurable (from JINMEI Tatuya).
