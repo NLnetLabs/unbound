@@ -1,3 +1,6 @@
+3 August 2017: Wouter
+	- Fix #1394: mix of serve-expired and response-ip could cause a crash.
+
 24 July 2017: Wouter
 	- upgrade aclocal(pkg.m4 0.29.1), config.guess(2016-10-02),
 	  config.sub(2016-09-05).

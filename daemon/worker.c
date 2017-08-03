@@ -1355,6 +1355,10 @@ lookup_cache:
 					lock_rw_unlock(&e->lock);
 					regional_free_all(worker->scratchpad);
 					goto send_reply;
+				} else {
+					/* Note that we've already released the
+					 * lock if we're here after prefetch. */
+					lock_rw_unlock(&e->lock);
 				}
 				/* We've found a partial reply ending with an
 				 * alias.  Replace the lookup qinfo for the
@@ -1362,7 +1366,6 @@ lookup_cache:
 				 * (possibly) complete the reply.  As we're
 				 * passing the "base" reply, there will be no
 				 * more alias chasing. */
-				lock_rw_unlock(&e->lock);
 				memset(&qinfo_tmp, 0, sizeof(qinfo_tmp));
 				get_cname_target(alias_rrset, &qinfo_tmp.qname,
 					&qinfo_tmp.qname_len);
@@ -1669,7 +1672,17 @@ worker_init(struct worker* worker, struct config_file *cfg,
 	worker->env.send_query = &worker_send_query;
 	worker->env.alloc = &worker->alloc;
 	worker->env.rnd = worker->rndstate;
-	worker->env.scratch = worker->scratchpad;
+	/* If case prefetch is triggered, the corresponding mesh will clear
+	 * the scratchpad for the module env in the middle of request handling.
+	 * It would be prone to a use-after-free kind of bug, so we avoid
+	 * sharing it with worker's own scratchpad at the cost of having
+	 * one more pad per worker. */
+	worker->env.scratch = regional_create_custom(cfg->msg_buffer_size);
+	if(!worker->env.scratch) {
+		log_err("malloc failure");
+		worker_delete(worker);
+		return 0;
+	}
 	worker->env.mesh = mesh_create(&worker->daemon->mods, &worker->env);
 	worker->env.detach_subs = &mesh_detach_subs;
 	worker->env.attach_sub = &mesh_attach_sub;
@@ -1758,6 +1771,7 @@ worker_delete(struct worker* worker)
 	comm_base_delete(worker->base);
 	ub_randfree(worker->rndstate);
 	alloc_clear(&worker->alloc);
+	regional_destroy(worker->env.scratch);
 	regional_destroy(worker->scratchpad);
 	free(worker);
 }
