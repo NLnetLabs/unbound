@@ -288,8 +288,6 @@ void server_stats_add(struct ub_stats_info* total, struct ub_stats_info* a)
 		total->svr.zero_ttl_responses += a->svr.zero_ttl_responses;
 		total->svr.ans_secure += a->svr.ans_secure;
 		total->svr.ans_bogus += a->svr.ans_bogus;
-		total->svr.rrset_bogus += a->svr.rrset_bogus;
-		total->svr.queries_ratelimited += a->svr.queries_ratelimited;
 		total->svr.unwanted_replies += a->svr.unwanted_replies;
 		total->svr.unwanted_queries += a->svr.unwanted_queries;
 		total->svr.tcp_accept_usage += a->svr.tcp_accept_usage;

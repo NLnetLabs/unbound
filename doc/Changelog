@@ -3,6 +3,8 @@
 	- Do not reset rrset.bogus stats when called using stats_noreset.
 	- Added stats for queries that have been ratelimited by domain
 	  recursion.
+	- Do not add rrset_bogus and query ratelimiting stats per thread, these
+	  module stats are global.
 
 3 August 2017: Wouter
 	- Fix #1394: mix of serve-expired and response-ip could cause a crash.
