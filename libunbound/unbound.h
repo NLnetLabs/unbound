@@ -704,6 +704,8 @@ struct ub_server_stats {
 	long long ans_bogus;
 	/** rrsets marked bogus by validator */
 	long long rrset_bogus;
+	/** number of queries that have been ratelimited by domain recursion. */
+	long long queries_ratelimited;
 	/** unwanted traffic received on server-facing ports */
 	long long unwanted_replies;
 	/** unwanted traffic received on client-facing ports */

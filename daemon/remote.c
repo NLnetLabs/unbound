@@ -1017,6 +1017,9 @@ print_ext(SSL* ssl, struct ub_stats_info* s)
 		if(!ssl_printf(ssl, "num.answer.rcode.nodata"SQ"%lu\n", 
 			(unsigned long)s->svr.ans_rcode_nodata)) return 0;
 	}
+	/* iteration */
+	if(!ssl_printf(ssl, "num.query.ratelimited"SQ"%lu\n", 
+		(unsigned long)s->svr.queries_ratelimited)) return 0;
 	/* validation */
 	if(!ssl_printf(ssl, "num.answer.secure"SQ"%lu\n", 
 		(unsigned long)s->svr.ans_secure)) return 0;

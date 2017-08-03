@@ -1,6 +1,8 @@
 3 August 2017: Ralph
 	- Remove unused iter_env member (ip6arpa_dname)
 	- Do not reset rrset.bogus stats when called using stats_noreset.
+	- Added stats for queries that have been ratelimited by domain
+	  recursion.
 
 3 August 2017: Wouter
 	- Fix #1394: mix of serve-expired and response-ip could cause a crash.

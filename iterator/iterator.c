@@ -78,6 +78,12 @@ iter_init(struct module_env* env, int id)
 		return 0;
 	}
 	env->modinfo[id] = (void*)iter_env;
+
+	lock_basic_init(&iter_env->queries_ratelimit_lock);
+	lock_protect(&iter_env->queries_ratelimit_lock,
+			&iter_env->num_queries_ratelimited,
+		sizeof(iter_env->num_queries_ratelimited));
+
 	if(!iter_apply_cfg(iter_env, env->cfg)) {
 		log_err("iterator: could not apply configuration settings.");
 		return 0;
@@ -103,6 +109,7 @@ iter_deinit(struct module_env* env, int id)
 	if(!env || !env->modinfo[id])
 		return;
 	iter_env = (struct iter_env*)env->modinfo[id];
+	lock_basic_destroy(&iter_env->queries_ratelimit_lock);
 	free(iter_env->target_fetch_policy);
 	priv_delete(iter_env->priv);
 	donotq_delete(iter_env->donotq);
@@ -1276,6 +1283,9 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 					"delegation point", iq->dp->name,
 					LDNS_RR_TYPE_NS, LDNS_RR_CLASS_IN);
 			} else {
+				lock_basic_lock(&ie->queries_ratelimit_lock);
+				ie->num_queries_ratelimited++;
+				lock_basic_unlock(&ie->queries_ratelimit_lock);
 				log_nametypeclass(VERB_ALGO, "ratelimit exceeded with "
 					"delegation point", iq->dp->name,
 					LDNS_RR_TYPE_NS, LDNS_RR_CLASS_IN);
@@ -2064,6 +2074,9 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 	if(!(iq->chase_flags & BIT_RD) && !iq->ratelimit_ok) {
 		if(!infra_ratelimit_inc(qstate->env->infra_cache, iq->dp->name,
 			iq->dp->namelen, *qstate->env->now)) {
+			lock_basic_lock(&ie->queries_ratelimit_lock);
+			ie->num_queries_ratelimited++;
+			lock_basic_unlock(&ie->queries_ratelimit_lock);
 			verbose(VERB_ALGO, "query exceeded ratelimits");
 			return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
 		}

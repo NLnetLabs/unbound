@@ -493,6 +493,10 @@ number of queries that had an EDNS OPT record present.
 number of queries that had an EDNS OPT record with the DO (DNSSEC OK) bit set.
 These queries are also included in the num.query.edns.present number.
 .TP
+.I num.query.ratelimited
+The number of queries that are turned away from being send to nameserver due to
+ratelimiting.
+.TP
 .I num.answer.rcode.NXDOMAIN
 The number of answers to queries, from cache or from recursion, that had the
 return code NXDOMAIN. Also printed for the other return codes.

@@ -337,6 +337,8 @@ static void print_extended(struct ub_stats_info* s)
 	if(!inhibit_zero || s->svr.ans_rcode_nodata) {
 		PR_UL("num.answer.rcode.nodata", s->svr.ans_rcode_nodata);
 	}
+	/* iteration */
+	PR_UL("num.query.ratelimited", s->svr.queries_ratelimited);
 	/* validation */
 	PR_UL("num.answer.secure", s->svr.ans_secure);
 	PR_UL("num.answer.bogus", s->svr.ans_bogus);

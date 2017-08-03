@@ -129,6 +129,11 @@ struct iter_env {
 	 * array of max_dependency_depth+1 size.
 	 */
 	int* target_fetch_policy;
+
+	/** lock on ratelimit counter */
+	lock_basic_type queries_ratelimit_lock;
+	/** number of queries that have been ratelimited */
+	size_t num_queries_ratelimited;
 };
 
 /**
