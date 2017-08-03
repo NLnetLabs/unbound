@@ -123,7 +123,7 @@ void server_stats_log(struct ub_server_stats* stats, struct worker* worker,
 
 /** get rrsets bogus number from validator */
 static size_t
-get_rrset_bogus(struct worker* worker)
+get_rrset_bogus(struct worker* worker, int reset)
 {
 	int m = modstack_find(&worker->env.mesh->mods, "validator");
 	struct val_env* ve;
@@ -133,7 +133,7 @@ get_rrset_bogus(struct worker* worker)
 	ve = (struct val_env*)worker->env.modinfo[m];
 	lock_basic_lock(&ve->bogus_lock);
 	r = ve->num_rrset_bogus;
-	if(!worker->env.cfg->stat_cumulative)
+	if(reset && !worker->env.cfg->stat_cumulative)
 		ve->num_rrset_bogus = 0;
 	lock_basic_unlock(&ve->bogus_lock);
 	return r;
@@ -169,7 +169,7 @@ server_stats_compile(struct worker* worker, struct ub_stats_info* s, int reset)
 	s->svr.qtcp_outgoing = (long long)worker->back->num_tcp_outgoing;
 
 	/* get and reset validator rrset bogus number */
-	s->svr.rrset_bogus = (long long)get_rrset_bogus(worker);
+	s->svr.rrset_bogus = (long long)get_rrset_bogus(worker, reset);
 
 	/* get cache sizes */
 	s->svr.msg_cache_count = (long long)count_slabhash_entries(worker->env.msg_cache);
