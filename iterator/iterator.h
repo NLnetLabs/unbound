@@ -129,9 +129,6 @@ struct iter_env {
 	 * array of max_dependency_depth+1 size.
 	 */
 	int* target_fetch_policy;
-
-	/** ip6.arpa dname in wireformat, used for qname-minimisation */
-	uint8_t* ip6arpa_dname;
 };
 
 /**
