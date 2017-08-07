@@ -1,3 +1,6 @@
+7 August 2017: Wouter
+	- Fix #1397: Recursive DS lookups for AS112 zones names should recurse.
+
 3 August 2017: Ralph
 	- Remove unused iter_env member (ip6arpa_dname)
 	- Do not reset rrset.bogus stats when called using stats_noreset.
