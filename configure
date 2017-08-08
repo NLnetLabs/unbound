@@ -16464,7 +16464,9 @@ if test x"$ax_pthread_ok" = xyes; then
 
 $as_echo "#define HAVE_PTHREAD 1" >>confdefs.h
 
-		LIBS="$PTHREAD_LIBS $LIBS"
+		if test -n "$PTHREAD_LIBS"; then
+		  LIBS="$PTHREAD_LIBS $LIBS"
+		fi
 		CFLAGS="$CFLAGS $PTHREAD_CFLAGS"
 		CC="$PTHREAD_CC"
 		ub_have_pthreads=yes
@@ -16894,8 +16896,16 @@ ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
 $as_echo "#define HAVE_PYTHON 1" >>confdefs.h
 
-      LIBS="$PYTHON_LDFLAGS $LIBS"
-      CPPFLAGS="$CPPFLAGS $PYTHON_CPPFLAGS"
+      if test -n "$LIBS"; then
+        LIBS="$PYTHON_LDFLAGS $LIBS"
+      else
+        LIBS="$PYTHON_LDFLAGS"
+      fi
+      if test -n "$CPPFLAGS"; then
+        CPPFLAGS="$CPPFLAGS $PYTHON_CPPFLAGS"
+      else
+        CPPFLAGS="$PYTHON_CPPFLAGS"
+      fi
       ub_have_python=yes
       PC_PY_DEPENDENCY="python"
 
@@ -20658,7 +20668,12 @@ $as_echo "#define OMITTED__D_LARGEFILE_SOURCE_1 1" >>confdefs.h
   fi
 
 
-LDFLAGS="$LATE_LDFLAGS $LDFLAGS"
+if test -n "$LATE_LDFLAGS"; then
+  LDFLAGS="$LATE_LDFLAGS $LDFLAGS"
+fi
+# remove start spaces
+LDFLAGS=`echo "$LDFLAGS"|sed -e 's/^ *//'`
+LIBS=`echo "$LIBS"|sed -e 's/^ *//'`
 
 
 cat >>confdefs.h <<_ACEOF

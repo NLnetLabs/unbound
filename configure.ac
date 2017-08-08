@@ -456,7 +456,9 @@ ub_have_pthreads=no
 if test x_$withval != x_no; then
 	AX_PTHREAD([
 		AC_DEFINE(HAVE_PTHREAD,1,[Define if you have POSIX threads libraries and header files.])
-		LIBS="$PTHREAD_LIBS $LIBS"
+		if test -n "$PTHREAD_LIBS"; then
+		  LIBS="$PTHREAD_LIBS $LIBS"
+		fi
 		CFLAGS="$CFLAGS $PTHREAD_CFLAGS"
 		CC="$PTHREAD_CC"
 		ub_have_pthreads=yes
@@ -558,8 +560,16 @@ if test x_$ub_test_python != x_no; then
       AC_SUBST(PY_MAJOR_VERSION)
       # Have Python
       AC_DEFINE(HAVE_PYTHON,1,[Define if you have Python libraries and header files.])
-      LIBS="$PYTHON_LDFLAGS $LIBS"
-      CPPFLAGS="$CPPFLAGS $PYTHON_CPPFLAGS"
+      if test -n "$LIBS"; then
+        LIBS="$PYTHON_LDFLAGS $LIBS"
+      else
+        LIBS="$PYTHON_LDFLAGS"
+      fi
+      if test -n "$CPPFLAGS"; then
+        CPPFLAGS="$CPPFLAGS $PYTHON_CPPFLAGS"
+      else
+        CPPFLAGS="$PYTHON_CPPFLAGS"
+      fi
       ub_have_python=yes
       PC_PY_DEPENDENCY="python"
       AC_SUBST(PC_PY_DEPENDENCY)
@@ -1457,7 +1467,12 @@ AC_SUBST(ALLTARGET)
 AC_SUBST(INSTALLTARGET)
 
 ACX_STRIP_EXT_FLAGS
-LDFLAGS="$LATE_LDFLAGS $LDFLAGS"
+if test -n "$LATE_LDFLAGS"; then
+  LDFLAGS="$LATE_LDFLAGS $LDFLAGS"
+fi
+# remove start spaces 
+LDFLAGS=`echo "$LDFLAGS"|sed -e 's/^ *//'`
+LIBS=`echo "$LIBS"|sed -e 's/^ *//'`
 
 AC_DEFINE_UNQUOTED([MAXSYSLOGMSGLEN], [10240], [Define to the maximum message length to pass to syslog.])
 

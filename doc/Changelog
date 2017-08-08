@@ -1,5 +1,6 @@
 8 August 2017: Wouter
 	- Fix #1398: make cachedb secret configurable.
+	- Remove spaces from Makefile.
 
 7 August 2017: Wouter
 	- Fix #1397: Recursive DS lookups for AS112 zones names should recurse.
