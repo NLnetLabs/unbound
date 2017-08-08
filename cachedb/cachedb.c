@@ -278,9 +278,10 @@ calc_hash(struct module_qstate* qstate, char* buf, size_t len)
 	size_t clen = 0;
 	uint8_t hash[CACHEDB_HASHSIZE/8];
 	const char* hex = "0123456789ABCDEF";
-	const char* secret = "default"; /* TODO: from qstate->env->cfg */
+	const char* secret = qstate->env->cfg->cachedb_secret ?
+		qstate->env->cfg->cachedb_secret : "default";
 	size_t i;
-	
+
 	/* copy the hash info into the clear buffer */
 	if(clen + qstate->qinfo.qname_len < sizeof(clear)) {
 		memmove(clear+clen, qstate->qinfo.qname,

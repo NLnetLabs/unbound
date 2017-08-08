@@ -425,6 +425,7 @@ ipsecmod-whitelist{COLON}	{ YDVAR(1, VAR_IPSECMOD_WHITELIST) }
 ipsecmod-strict{COLON}		{ YDVAR(1, VAR_IPSECMOD_STRICT) }
 cachedb{COLON}			{ YDVAR(0, VAR_CACHEDB) }
 backend{COLON}			{ YDVAR(1, VAR_CACHEDB_BACKEND) }
+secret-seed{COLON}		{ YDVAR(1, VAR_CACHEDB_SECRETSEED) }
 <INITIAL,val>{NEWLINE}		{ LEXOUT(("NL\n")); cfg_parser->line++; }
 
 	/* Quoted strings. Strip leading and ending quotes */

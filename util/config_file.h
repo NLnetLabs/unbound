@@ -485,6 +485,8 @@ struct config_file {
 #ifdef USE_CACHEDB
 	/** backend DB name */
 	char* cachedb_backend;
+	/** secret seed for hash key calculation */
+	char* cachedb_secret;
 #endif
 };
 

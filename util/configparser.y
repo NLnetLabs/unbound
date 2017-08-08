@@ -146,7 +146,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_DNSCRYPT_SECRET_KEY VAR_DNSCRYPT_PROVIDER_CERT
 %token VAR_IPSECMOD_ENABLED VAR_IPSECMOD_HOOK VAR_IPSECMOD_IGNORE_BOGUS
 %token VAR_IPSECMOD_MAX_TTL VAR_IPSECMOD_WHITELIST VAR_IPSECMOD_STRICT
-%token VAR_CACHEDB VAR_CACHEDB_BACKEND
+%token VAR_CACHEDB VAR_CACHEDB_BACKEND VAR_CACHEDB_SECRETSEED
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -2374,7 +2374,7 @@ cachedbstart: VAR_CACHEDB
 	;
 contents_cachedb: contents_cachedb content_cachedb
 	| ;
-content_cachedb: cachedb_backend_name
+content_cachedb: cachedb_backend_name | cachedb_secret_seed
 	;
 cachedb_backend_name: VAR_CACHEDB_BACKEND STRING_ARG
 	{
@@ -2387,6 +2387,21 @@ cachedb_backend_name: VAR_CACHEDB_BACKEND STRING_ARG
 		cfg_parser->cfg->cachedb_backend = $2;
 	#else
 		OUTYY(("P(Compiled without cachedb, ignoring)\n"));
+	#endif
+	}
+	;
+cachedb_secret_seed: VAR_CACHEDB_SECRETSEED STRING_ARG
+	{
+	#ifdef USE_CACHEDB
+		OUTYY(("P(secret-seed:%s)\n", $2));
+		if(cfg_parser->cfg->cachedb_secret)
+			yyerror("cachedb secret-seed override, there must be "
+				"only one secret");
+		free(cfg_parser->cfg->cachedb_secret);
+		cfg_parser->cfg->cachedb_secret = $2;
+	#else
+		OUTYY(("P(Compiled without cachedb, ignoring)\n"));
+		free($2);
 	#endif
 	}
 	;

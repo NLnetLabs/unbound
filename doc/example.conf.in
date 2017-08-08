@@ -848,3 +848,5 @@ remote-control:
 # included in module-config.
 # cachedb:
 #     backend: "testframe"
+#     # secret seed string to calculate hashed keys
+#     secret-seed: "default"

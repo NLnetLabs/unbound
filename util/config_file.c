@@ -292,6 +292,7 @@ config_create(void)
 #endif
 #ifdef USE_CACHEDB
 	cfg->cachedb_backend = NULL;
+	cfg->cachedb_secret = NULL;
 #endif
 	return cfg;
 error_exit:
@@ -963,6 +964,7 @@ config_get_option(struct config_file* cfg, const char* opt,
 #endif
 #ifdef USE_CACHEDB
 	else O_STR(opt, "backend", cachedb_backend)
+	else O_STR(opt, "secret-seed", cachedb_secret)
 #endif
 	/* not here:
 	 * outgoing-permit, outgoing-avoid - have list of ports
@@ -1267,6 +1269,7 @@ config_delete(struct config_file* cfg)
 #endif
 #ifdef USE_CACHEDB
 	free(cfg->cachedb_backend);
+	free(cfg->cachedb_secret);
 #endif
 	free(cfg);
 }
