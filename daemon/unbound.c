@@ -128,6 +128,9 @@ static void usage(void)
 	for(m = module_list_avail(); *m; m++)
 		printf(" %s", *m);
 	printf("\n");
+#ifdef USE_DNSCRYPT
+	printf("DNSCrypt enabled\n");
+#endif
 	printf("BSD licensed, see LICENSE in source package for details.\n");
 	printf("Report bugs to %s\n", PACKAGE_BUGREPORT);
 	ub_event_base_free(base);

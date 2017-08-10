@@ -1,3 +1,7 @@
+10 August 2017: Wouter
+	- Patch to show DNSCrypt status in help output, from Carsten
+	  Strotmann.
+
 8 August 2017: Wouter
 	- Fix #1398: make cachedb secret configurable.
 	- Remove spaces from Makefile.
