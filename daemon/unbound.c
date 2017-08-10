@@ -129,7 +129,7 @@ static void usage(void)
 		printf(" %s", *m);
 	printf("\n");
 #ifdef USE_DNSCRYPT
-	printf("DNSCrypt enabled\n");
+	printf("DNSCrypt feature available\n");
 #endif
 	printf("BSD licensed, see LICENSE in source package for details.\n");
 	printf("Report bugs to %s\n", PACKAGE_BUGREPORT);
