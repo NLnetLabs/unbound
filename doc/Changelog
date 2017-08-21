@@ -4,6 +4,10 @@
 	  installs between sep11 and oct11 2017.
 	- tag 1.6.5 with pointrelease 1.6.5 (1.6.4 plus 5011 fix).
 	- trunk version 1.6.6 in development.
+	- Fix issue on macOX 10.10 where TCP fast open is detected but not
+	  implemented causing TCP to fail. The fix allows fallback to regular
+	  TCP in this case and is also more robust for cases where connectx()
+	  fails for some reason.
 
 10 August 2017: Wouter
 	- Patch to show DNSCrypt status in help output, from Carsten
