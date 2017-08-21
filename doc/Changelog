@@ -9,6 +9,7 @@
 	  implemented causing TCP to fail. The fix allows fallback to regular
 	  TCP in this case and is also more robust for cases where connectx()
 	  fails for some reason.
+	- Fix #1402: squelch invalid argument error for fd_set_block on windows.
 
 10 August 2017: Wouter
 	- Patch to show DNSCrypt status in help output, from Carsten

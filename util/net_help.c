@@ -114,8 +114,9 @@ fd_set_block(int s)
 #elif defined(HAVE_IOCTLSOCKET)
 	unsigned long off = 0;
 	if(ioctlsocket(s, FIONBIO, &off) != 0) {
-		log_err("can't ioctlsocket FIONBIO off: %s", 
-			wsa_strerror(WSAGetLastError()));
+		if(WSAGetLastError() != WSAEINVAL || verbosity >= 4)
+			log_err("can't ioctlsocket FIONBIO off: %s", 
+				wsa_strerror(WSAGetLastError()));
 	}
 #endif	
 	return 1;
