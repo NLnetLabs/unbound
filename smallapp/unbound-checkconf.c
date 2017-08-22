@@ -71,6 +71,9 @@
 #ifdef WITH_PYTHONMODULE
 #include "pythonmod/pythonmod.h"
 #endif
+#ifdef CLIENT_SUBNET
+#include "edns-subnet/subnet-whitelist.h"
+#endif
 
 /** Give checkconf usage, and exit (1). */
 static void
@@ -345,6 +348,20 @@ check_chroot_filelist_wild(const char* desc, struct config_strlist* list,
 	}
 }
 
+#ifdef CLIENT_SUBNET
+/** check ECS configuration */
+static void
+ecs_conf_checks(struct config_file* cfg)
+{
+	struct ecs_whitelist* whitelist = NULL;
+	if(!(whitelist = ecs_whitelist_create()))
+		fatal_exit("Could not create ednssubnet whitelist: out of memory");
+        if(!ecs_whitelist_apply_cfg(whitelist, cfg))
+		fatal_exit("Could not setup ednssubnet whitelist");
+	ecs_whitelist_delete(whitelist);
+}
+#endif /* CLIENT_SUBNET */
+
 /** check configuration for errors */
 static void
 morechecks(struct config_file* cfg, const char* fname)
@@ -527,6 +544,9 @@ morechecks(struct config_file* cfg, const char* fname)
 
 	localzonechecks(cfg);
 	view_and_respipchecks(cfg);
+#ifdef CLIENT_SUBNET
+	ecs_conf_checks(cfg);
+#endif
 }
 
 /** check forwards */

@@ -1,3 +1,6 @@
+23 August 2017: Wouter
+	- Fix #1407: Add ECS options check to unbound-checkconf.
+
 22 August 2017: Wouter
 	- Fix install of trust anchor when two anchors are present, makes both
 	  valid. Checks hash of DS but not signature of new key. This fixes
