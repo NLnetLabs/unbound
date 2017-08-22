@@ -1,6 +1,8 @@
 23 August 2017: Wouter
 	- Fix #1407: Add ECS options check to unbound-checkconf.
 	- make depend
+	- Fix to reclaim tcp handler when it is closed due to dnscrypt buffer
+	  allocation failure.
 
 22 August 2017: Wouter
 	- Fix install of trust anchor when two anchors are present, makes both
