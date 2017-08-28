@@ -1693,8 +1693,8 @@ int sldns_str2wire_wks_buf(const char* str, uint8_t* rd, size_t* len)
 			struct protoent *p = getprotobyname(token);
 			have_proto = 1;
 			if(p) rd[0] = (uint8_t)p->p_proto;
-			else if(!p && strcasecmp(token, "tcp")==0) rd[0]=6;
-			else if(!p && strcasecmp(token, "udp")==0) rd[0]=17;
+			else if(strcasecmp(token, "tcp")==0) rd[0]=6;
+			else if(strcasecmp(token, "udp")==0) rd[0]=17;
 			else rd[0] = (uint8_t)atoi(token);
 			(void)strlcpy(proto_str, token, sizeof(proto_str));
 		} else {
