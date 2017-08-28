@@ -3,6 +3,7 @@
 	- iana portlist update
 	- Fix #1415: [dnscrypt] shared secret cache, patch from
 	  Manu Bretelle.
+	- Small fixes for the shared secret cache patch.
 
 23 August 2017: Wouter
 	- Fix #1407: Add ECS options check to unbound-checkconf.

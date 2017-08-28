@@ -55,7 +55,7 @@
 struct shared_secret_cache_key {
     /** the hash table key */
     uint8_t key[DNSCRYPT_SHARED_SECRET_KEY_LENGTH];
-    /** the hash table entry, data is struct reply_info* */
+    /** the hash table entry, data is uint8_t pointer of size crypto_box_BEFORENMBYTES which contains the shared secret. */
     struct lruhash_entry entry;
 };
 
@@ -786,7 +786,7 @@ dnsc_apply_cfg(struct dnsc_env *env, struct config_file *cfg)
     env->shared_secrets_cache = slabhash_create(
         cfg->msg_cache_slabs,
         HASH_DEFAULT_STARTARRAY,
-        cfg->msg_cache_size,
+        4000000,
         dnsc_shared_secrets_sizefunc,
         dnsc_shared_secrets_compfunc,
         dnsc_shared_secrets_delkeyfunc,
@@ -820,12 +820,13 @@ dnsc_delete(struct dnsc_env *env)
  */
 
 size_t
-dnsc_shared_secrets_sizefunc(void *k, void *d)
+dnsc_shared_secrets_sizefunc(void *k, void* ATTR_UNUSED(d))
 {
     struct shared_secret_cache_key* ssk = (struct shared_secret_cache_key*)k;
     size_t key_size = sizeof(struct shared_secret_cache_key)
         + lock_get_mem(&ssk->entry.lock);
     size_t data_size = crypto_box_BEFORENMBYTES;
+    (void)ssk; /* otherwise ssk is unused if no threading, or fixed locksize */
     return key_size + data_size;
 }
 
