@@ -52,7 +52,7 @@ typedef struct cert_ {
 
 struct dnsc_env {
 	struct SignedCert *signed_certs;
-    dnsccert *certs;
+	dnsccert *certs;
 	size_t signed_certs_count;
 	uint8_t provider_publickey[crypto_sign_ed25519_PUBLICKEYBYTES];
 	uint8_t provider_secretkey[crypto_sign_ed25519_SECRETKEYBYTES];
@@ -71,7 +71,7 @@ struct dnscrypt_query_header {
 };
 
 /**
- * Initialize DNSCrypt enviroment.
+ * Initialize DNSCrypt environment.
  * Initialize sodium library and allocate the dnsc_env structure.
  * \return an uninitialized struct dnsc_env.
  */
@@ -87,6 +87,12 @@ struct dnsc_env * dnsc_create(void);
  * \return 0 on success.
  */
 int dnsc_apply_cfg(struct dnsc_env *env, struct config_file *cfg);
+
+/**
+ * Delete DNSCrypt environment
+ *
+ */
+void dnsc_delete(struct dnsc_env *env);
 
 /**
  * handle a crypted dnscrypt request.

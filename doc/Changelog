@@ -1,3 +1,6 @@
+28 August 2017: Wouter
+	- Fix #1415: patch to free dnscrypt environment on reload.
+
 23 August 2017: Wouter
 	- Fix #1407: Add ECS options check to unbound-checkconf.
 	- make depend

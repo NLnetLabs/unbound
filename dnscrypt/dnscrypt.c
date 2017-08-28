@@ -450,6 +450,7 @@ dnsc_load_local_data(struct dnsc_env* dnscenv, struct config_file *cfg)
                 snprintf(rr + strlen(rr), rrlen - 1 - strlen(rr), "\\%03d", c);
             }
         }
+        verbose(VERB_OPS, "DNSCrypt: adding local data to config: %s", rr);
         snprintf(rr + strlen(rr), rrlen - 1 - strlen(rr), "\"");
         cfg_strlist_insert(&cfg->local_data, strdup(rr));
         free(rr);
@@ -502,7 +503,7 @@ dnsc_parse_keys(struct dnsc_env *env, struct config_file *cfg)
 
 	env->keypairs = sodium_allocarray(env->keypairs_count,
 		sizeof *env->keypairs);
-	env->certs = sodium_allocarray(env->signed_certs_count, 
+	env->certs = sodium_allocarray(env->signed_certs_count,
 		sizeof *env->certs);
 
 	cert_id = 0U;
@@ -648,4 +649,17 @@ dnsc_apply_cfg(struct dnsc_env *env, struct config_file *cfg)
 		fatal_exit("dnsc_apply_cfg: could not load local data");
 	}
 	return 0;
+}
+
+void
+dnsc_delete(struct dnsc_env *env)
+{
+	if(!env) {
+		return;
+	}
+	verbose(VERB_OPS, "DNSCrypt: Freeing environment.");
+	sodium_free(env->signed_certs);
+	sodium_free(env->certs);
+	sodium_free(env->keypairs);
+	free(env);
 }

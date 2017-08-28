@@ -693,6 +693,9 @@ daemon_cleanup(struct daemon* daemon)
 #ifdef USE_DNSTAP
 	dt_delete(daemon->dtenv);
 #endif
+#ifdef USE_DNSCRYPT
+	dnsc_delete(daemon->dnscenv);
+#endif
 	daemon->cfg = NULL;
 }
 
