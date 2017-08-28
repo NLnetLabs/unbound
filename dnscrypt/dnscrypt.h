@@ -38,6 +38,7 @@
 struct sldns_buffer;
 struct config_file;
 struct comm_reply;
+struct slabhash;
 
 typedef struct KeyPair_ {
     uint8_t crypt_publickey[crypto_box_PUBLICKEYBYTES];
@@ -61,6 +62,7 @@ struct dnsc_env {
 	uint64_t nonce_ts_last;
 	unsigned char hash_key[crypto_shorthash_KEYBYTES];
 	char * provider_name;
+	struct slabhash *shared_secrets_cache;
 };
 
 struct dnscrypt_query_header {
@@ -111,5 +113,26 @@ int dnsc_handle_curved_request(struct dnsc_env* dnscenv,
  */
 
 int dnsc_handle_uncurved_request(struct comm_reply *repinfo);
+
+/**
+ * Computes the size of the shared secret cache entry.
+ */
+size_t dnsc_shared_secrets_sizefunc(void *k, void *d);
+
+/**
+ * Compares two shared secret cache keys.
+ */
+int dnsc_shared_secrets_compfunc(void *m1, void *m2);
+
+/**
+ * Function to delete a shared secret cache key.
+ */
+void dnsc_shared_secrets_delkeyfunc(void *k, void* arg);
+
+/**
+ * Function to delete a share secret cache value.
+ */
+void dnsc_shared_secrets_deldatafunc(void* d, void* arg);
+
 #endif /* USE_DNSCRYPT */
 #endif
