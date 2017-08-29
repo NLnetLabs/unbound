@@ -1,5 +1,7 @@
 29 August 2017: Wouter
 	- Fix #1414: fix segfault on parse failure and log_replies.
+	- zero qinfo in handle_request, this zeroes local_alias and also the
+	  qname member.
 
 28 August 2017: Wouter
 	- Fix #1415: patch to free dnscrypt environment on reload.
