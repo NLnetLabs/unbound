@@ -3,6 +3,7 @@
 	- zero qinfo in handle_request, this zeroes local_alias and also the
 	  qname member.
 	- new keys and certs for dnscrypt tests.
+	- fixup WKS test on buildhost without servicebyname.
 
 28 August 2017: Wouter
 	- Fix #1415: patch to free dnscrypt environment on reload.

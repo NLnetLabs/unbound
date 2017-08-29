@@ -1701,6 +1701,7 @@ int sldns_str2wire_wks_buf(const char* str, uint8_t* rd, size_t* len)
 			int serv_port;
 			struct servent *serv = getservbyname(token, proto_str);
 			if(serv) serv_port=(int)ntohs((uint16_t)serv->s_port);
+			else if(strcasecmp(token, "domain")==0) serv_port=53;
 			else {
 				serv_port = atoi(token);
 				if(serv_port == 0 && strcmp(token, "0") != 0) {
