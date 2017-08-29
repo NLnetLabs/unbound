@@ -1111,6 +1111,7 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 	if(!query_info_parse(&qinfo, c->buffer)) {
 		verbose(VERB_ALGO, "worker parse request: formerror.");
 		log_addr(VERB_CLIENT,"from",&repinfo->addr, repinfo->addrlen);
+		memset(&qinfo, 0, sizeof(qinfo)); /* zero qinfo.qname */
 		if(worker_err_ratelimit(worker, LDNS_RCODE_FORMERR) == -1) {
 			comm_point_drop_reply(repinfo);
 			return 0;

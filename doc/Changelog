@@ -1,3 +1,6 @@
+29 August 2017: Wouter
+	- Fix #1414: fix segfault on parse failure and log_replies.
+
 28 August 2017: Wouter
 	- Fix #1415: patch to free dnscrypt environment on reload.
 	- iana portlist update
