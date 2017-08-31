@@ -5,6 +5,8 @@
 	- Fix #1417: [dnscrypt] shared secret cache counters, and works when
 	  dnscrypt is not enabled.  And cache size configuration option.
 	- make depend
+	- Fix #1418: [ip ratelimit] initialize slabhash using
+	  ip-ratelimit-slabs.
 
 30 August 2017: Wouter
 	- updated contrib/fastrpz.patch to apply with configparser changes.
