@@ -825,6 +825,9 @@ print_mem(SSL* ssl, struct worker* worker, struct daemon* daemon)
 #ifdef USE_IPSECMOD
 	size_t ipsecmod = 0;
 #endif /* USE_IPSECMOD */
+#ifdef USE_DNSCRYPT
+	size_t dnscrypt_shared_secret = 0;
+#endif /* USE_DNSCRYPT */
 	msg = slabhash_get_mem(daemon->env->msg_cache);
 	rrset = slabhash_get_mem(&daemon->env->rrset_cache->table);
 	val = mod_get_mem(&worker->env, "validator");
@@ -836,6 +839,12 @@ print_mem(SSL* ssl, struct worker* worker, struct daemon* daemon)
 #ifdef USE_IPSECMOD
 	ipsecmod = mod_get_mem(&worker->env, "ipsecmod");
 #endif /* USE_IPSECMOD */
+#ifdef USE_DNSCRYPT
+	if(daemon->dnscenv) {
+		dnscrypt_shared_secret = slabhash_get_mem(
+			daemon->dnscenv->shared_secrets_cache);
+	}
+#endif /* USE_DNSCRYPT */
 
 	if(!print_longnum(ssl, "mem.cache.rrset"SQ, rrset))
 		return 0;
@@ -855,6 +864,11 @@ print_mem(SSL* ssl, struct worker* worker, struct daemon* daemon)
 	if(!print_longnum(ssl, "mem.mod.ipsecmod"SQ, ipsecmod))
 		return 0;
 #endif /* USE_IPSECMOD */
+#ifdef USE_DNSCRYPT
+	if(!print_longnum(ssl, "mem.cache.dnscrypt_shared_secret"SQ,
+			dnscrypt_shared_secret))
+		return 0;
+#endif /* USE_DNSCRYPT */
 	return 1;
 }
 
@@ -1041,6 +1055,12 @@ print_ext(SSL* ssl, struct ub_stats_info* s)
 		(unsigned)s->svr.infra_cache_count)) return 0;
 	if(!ssl_printf(ssl, "key.cache.count"SQ"%u\n",
 		(unsigned)s->svr.key_cache_count)) return 0;
+#ifdef USE_DNSCRYPT
+	if(!ssl_printf(ssl, "dnscrypt_shared_secret.cache.count"SQ"%u\n",
+		(unsigned)s->svr.shared_secret_cache_count)) return 0;
+	if(!ssl_printf(ssl, "num.query.dnscrypt.shared_secret.cachemiss"SQ"%lu\n",
+		(unsigned long)s->svr.num_query_dnscrypt_secret_missed_cache)) return 0;
+#endif /* USE_DNSCRYPT */
 	return 1;
 }
 

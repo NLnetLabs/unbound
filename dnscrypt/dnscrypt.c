@@ -177,6 +177,9 @@ dnscrypt_server_uncurve(struct dnsc_env* env,
                                        hash);
 
     if(!entry) {
+        lock_basic_lock(&env->shared_secrets_cache_lock);
+        env->num_query_dnscrypt_secret_missed_cache++;
+        lock_basic_unlock(&env->shared_secrets_cache_lock);
         if(cert->es_version[1] == 2) {
 #ifdef USE_DNSCRYPT_XCHACHA20
             if (crypto_box_curve25519xchacha20poly1305_beforenm(
@@ -765,6 +768,10 @@ dnsc_create(void)
 		fatal_exit("dnsc_create: could not initialize libsodium.");
 	}
 	env = (struct dnsc_env *) calloc(1, sizeof(struct dnsc_env));
+	lock_basic_init(&env->shared_secrets_cache_lock);
+	lock_protect(&env->shared_secrets_cache_lock,
+				 &env->num_query_dnscrypt_secret_missed_cache,
+				 sizeof(env->num_query_dnscrypt_secret_missed_cache));
 	return env;
 }
 
@@ -810,6 +817,7 @@ dnsc_delete(struct dnsc_env *env)
 	sodium_free(env->certs);
 	sodium_free(env->keypairs);
 	slabhash_delete(env->shared_secrets_cache);
+	lock_basic_destroy(&env->shared_secrets_cache_lock);
 	free(env);
 }
 

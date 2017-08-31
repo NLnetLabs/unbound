@@ -622,6 +622,7 @@ struct ub_shm_stat_info {
 		long long subnet;
 		long long ipsecmod;
 		long long respip;
+		long long dnscrypt_shared_secret;
 	} mem;
 };
 
@@ -737,6 +738,10 @@ struct ub_server_stats {
 	long long num_query_dnscrypt_cleartext;
 	/** number of malformed encrypted queries */
 	long long num_query_dnscrypt_crypted_malformed;
+	/** number of queries which did not have a shared secret in cache */
+	long long num_query_dnscrypt_secret_missed_cache;
+	/** number of dnscrypt shared secret cache entries */
+	long long shared_secret_cache_count;
 };
 
 /** 

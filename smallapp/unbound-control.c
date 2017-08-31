@@ -207,7 +207,7 @@ static void pr_stats(const char* nm, struct ub_stats_info* s)
     PR_UL_NM("num.dnscrypt.cleartext", s->svr.num_query_dnscrypt_cleartext);
     PR_UL_NM("num.dnscrypt.malformed",
              s->svr.num_query_dnscrypt_crypted_malformed);
-#endif
+#endif /* USE_DNSCRYPT */
 	printf("%s.requestlist.avg"SQ"%g\n", nm,
 		(s->svr.num_queries_missed_cache+s->svr.num_queries_prefetch)?
 			(double)s->svr.sum_query_list_size/
@@ -250,6 +250,10 @@ static void print_mem(struct ub_shm_stat_info* shm_stat)
 #endif
 #ifdef USE_IPSECMOD
 	PR_LL("mem.mod.ipsecmod", shm_stat->mem.ipsecmod);
+#endif
+#ifdef USE_DNSCRYPT
+	PR_LL("mem.cache.dnscrypt_shared_secret",
+		shm_stat->mem.dnscrypt_shared_secret);
 #endif
 }
 
@@ -351,6 +355,12 @@ static void print_extended(struct ub_stats_info* s)
 	PR_UL("rrset.cache.count", s->svr.rrset_cache_count);
 	PR_UL("infra.cache.count", s->svr.infra_cache_count);
 	PR_UL("key.cache.count", s->svr.key_cache_count);
+#ifdef USE_DNSCRYPT
+	PR_UL("dnscrypt_shared_secret.cache.count",
+			 s->svr.shared_secret_cache_count);
+	PR_UL("num.query.dnscrypt.shared_secret.cachemiss",
+			 s->svr.num_query_dnscrypt_secret_missed_cache);
+#endif /* USE_DNSCRYPT */
 }
 
 /** print statistics out of memory structures */

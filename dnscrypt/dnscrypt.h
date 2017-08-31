@@ -26,6 +26,7 @@
 
 #include "config.h"
 #include "dnscrypt/cert.h"
+#include "util/locks.h"
 
 #define DNSCRYPT_QUERY_HEADER_SIZE \
     (DNSCRYPT_MAGIC_HEADER_LEN + crypto_box_PUBLICKEYBYTES + crypto_box_HALF_NONCEBYTES + crypto_box_MACBYTES)
@@ -63,6 +64,10 @@ struct dnsc_env {
 	unsigned char hash_key[crypto_shorthash_KEYBYTES];
 	char * provider_name;
 	struct slabhash *shared_secrets_cache;
+	/** lock on shared secret cache counters */
+	lock_basic_type shared_secrets_cache_lock;
+	/** number of misses from shared_secrets_cache */
+	size_t num_query_dnscrypt_secret_missed_cache;
 };
 
 struct dnscrypt_query_header {
