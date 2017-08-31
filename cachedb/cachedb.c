@@ -85,6 +85,7 @@ testframe_init(struct module_env* env, struct cachedb_env* cachedb_env)
 		return 0;
 	}
 	lock_basic_init(&d->lock);
+	lock_protect(&d->lock, d, sizeof(*d));
 	return 1;
 }
 
