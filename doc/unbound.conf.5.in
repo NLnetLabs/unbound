@@ -1507,6 +1507,17 @@ times.
 .B dnscrypt\-provider\-cert: \fI<path to cert file>\fR
 Path to the certificate related to the \fBdnscrypt\-secret\-key\fRs.
 This option may be specified multiple times.
+.TP
+.B dnscrypt\-shared\-secret\-cache\-size: \fI<memory size>
+Give the size of the data structure in which the shared secret keys are kept
+in.  Default 4m.  In bytes or use m(mega), k(kilo), g(giga).
+The shared secret cache is used when a same client is making multiple queries
+using the same public key. It saves a substantial amount of CPU.
+.TP
+.B dnscrypt\-shared\-secret\-cache\-slabs: \fI<number>
+Give power of 2 number of slabs, this is used to reduce lock contention
+in the dnscrypt shared secrets cache.  Close to the number of cpus is
+a fairly good setting.
 .SS "EDNS Client Subnet Module Options"
 .LP
 The ECS module must be configured in the \fBmodule\-config:\fR "subnetcache

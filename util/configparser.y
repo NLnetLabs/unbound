@@ -144,6 +144,8 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_USE_SYSTEMD VAR_SHM_ENABLE VAR_SHM_KEY
 %token VAR_DNSCRYPT VAR_DNSCRYPT_ENABLE VAR_DNSCRYPT_PORT VAR_DNSCRYPT_PROVIDER
 %token VAR_DNSCRYPT_SECRET_KEY VAR_DNSCRYPT_PROVIDER_CERT
+%token VAR_DNSCRYPT_SHARED_SECRET_CACHE_SIZE
+%token VAR_DNSCRYPT_SHARED_SECRET_CACHE_SLABS
 %token VAR_IPSECMOD_ENABLED VAR_IPSECMOD_HOOK VAR_IPSECMOD_IGNORE_BOGUS
 %token VAR_IPSECMOD_MAX_TTL VAR_IPSECMOD_WHITELIST VAR_IPSECMOD_STRICT
 %token VAR_CACHEDB VAR_CACHEDB_BACKEND VAR_CACHEDB_SECRETSEED
@@ -2323,7 +2325,9 @@ contents_dnsc: contents_dnsc content_dnsc
 	| ;
 content_dnsc:
 	dnsc_dnscrypt_enable | dnsc_dnscrypt_port | dnsc_dnscrypt_provider |
-	dnsc_dnscrypt_secret_key | dnsc_dnscrypt_provider_cert
+	dnsc_dnscrypt_secret_key | dnsc_dnscrypt_provider_cert |
+	dnsc_dnscrypt_shared_secret_cache_size |
+    dnsc_dnscrypt_shared_secret_cache_slabs
 	;
 dnsc_dnscrypt_enable: VAR_DNSCRYPT_ENABLE STRING_ARG
 	{
@@ -2366,7 +2370,27 @@ dnsc_dnscrypt_secret_key: VAR_DNSCRYPT_SECRET_KEY STRING_ARG
 			fatal_exit("out of memory adding dnscrypt-secret-key");
 	}
 	;
-
+dnsc_dnscrypt_shared_secret_cache_size: VAR_DNSCRYPT_SHARED_SECRET_CACHE_SIZE STRING_ARG
+  {
+  	OUTYY(("P(dnscrypt_shared_secret_cache_size:%s)\n", $2));
+  	if(!cfg_parse_memsize($2, &cfg_parser->cfg->dnscrypt_shared_secret_cache_size))
+  		yyerror("memory size expected");
+  	free($2);
+  }
+  ;
+dnsc_dnscrypt_shared_secret_cache_slabs: VAR_DNSCRYPT_SHARED_SECRET_CACHE_SLABS STRING_ARG
+  {
+  	OUTYY(("P(dnscrypt_shared_secret_cache_slabs:%s)\n", $2));
+  	if(atoi($2) == 0)
+  		yyerror("number expected");
+  	else {
+  		cfg_parser->cfg->dnscrypt_shared_secret_cache_slabs = atoi($2);
+  		if(!is_pow2(cfg_parser->cfg->dnscrypt_shared_secret_cache_slabs))
+  			yyerror("must be a power of 2");
+  	}
+  	free($2);
+  }
+  ;
 cachedbstart: VAR_CACHEDB
 	{
 		OUTYY(("\nP(cachedb:)\n"));

@@ -417,6 +417,10 @@ dnscrypt-port{COLON}		{ YDVAR(1, VAR_DNSCRYPT_PORT) }
 dnscrypt-provider{COLON}	{ YDVAR(1, VAR_DNSCRYPT_PROVIDER) }
 dnscrypt-secret-key{COLON}	{ YDVAR(1, VAR_DNSCRYPT_SECRET_KEY) }
 dnscrypt-provider-cert{COLON}	{ YDVAR(1, VAR_DNSCRYPT_PROVIDER_CERT) }
+dnscrypt-shared-secret-cache-size{COLON}	{
+		YDVAR(1, VAR_DNSCRYPT_SHARED_SECRET_CACHE_SIZE) }
+dnscrypt-shared-secret-cache-slabs{COLON}	{
+		YDVAR(1, VAR_DNSCRYPT_SHARED_SECRET_CACHE_SLABS) }
 ipsecmod-enabled{COLON}		{ YDVAR(1, VAR_IPSECMOD_ENABLED) }
 ipsecmod-ignore-bogus{COLON}	{ YDVAR(1, VAR_IPSECMOD_IGNORE_BOGUS) }
 ipsecmod-hook{COLON}		{ YDVAR(1, VAR_IPSECMOD_HOOK) }

@@ -791,9 +791,9 @@ dnsc_apply_cfg(struct dnsc_env *env, struct config_file *cfg)
         fatal_exit("dnsc_apply_cfg: could not load local data");
     }
     env->shared_secrets_cache = slabhash_create(
-        cfg->msg_cache_slabs,
+        cfg->dnscrypt_shared_secret_cache_slabs,
         HASH_DEFAULT_STARTARRAY,
-        4000000,
+        cfg->dnscrypt_shared_secret_cache_size,
         dnsc_shared_secrets_sizefunc,
         dnsc_shared_secrets_compfunc,
         dnsc_shared_secrets_delkeyfunc,

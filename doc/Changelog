@@ -3,7 +3,7 @@
 	- For #1417: escape ; in dnscrypt tests.
 	- but reverted that, tests fails with that escape.
 	- Fix #1417: [dnscrypt] shared secret cache counters, and works when
-	  dnscrypt is not enabled.
+	  dnscrypt is not enabled.  And cache size configuration option.
 	- make depend
 
 30 August 2017: Wouter
