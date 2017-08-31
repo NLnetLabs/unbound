@@ -4,6 +4,7 @@
 	- but reverted that, tests fails with that escape.
 	- Fix #1417: [dnscrypt] shared secret cache counters, and works when
 	  dnscrypt is not enabled.
+	- make depend
 
 30 August 2017: Wouter
 	- updated contrib/fastrpz.patch to apply with configparser changes.
