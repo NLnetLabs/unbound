@@ -1,5 +1,6 @@
 31 August 2017: Wouter
 	- Fix #1424: cachedb:testframe is not thread safe.
+	- For #1417: escape ; in dnscrypt tests.
 
 30 August 2017: Wouter
 	- updated contrib/fastrpz.patch to apply with configparser changes.
