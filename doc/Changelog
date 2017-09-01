@@ -1,3 +1,6 @@
+1 September 2017: Wouter
+	- Recommend 1472 buffer size in unbound.conf
+
 31 August 2017: Wouter
 	- Fix #1424: cachedb:testframe is not thread safe.
 	- For #1417: escape ; in dnscrypt tests.

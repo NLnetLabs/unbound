@@ -116,7 +116,7 @@ server:
 	# ip-freebind: no
 
 	# EDNS reassembly buffer to advertise to UDP peers (the actual buffer
-	# is set with msg-buffer-size). 1480 can solve fragmentation (timeouts).
+	# is set with msg-buffer-size). 1472 can solve fragmentation (timeouts)
 	# edns-buffer-size: 4096
 
 	# Maximum UDP response size (not applied to TCP response).
