@@ -259,7 +259,7 @@ if [ "$DOWIN" = "yes" ]; then
 			sslflags="no-asm -DOPENSSL_NO_CAPIENG mingw"
 		fi
 		info "winssl: Configure $sslflags"
-		CC=${warch}-w64-mingw32-gcc AR=${warch}-w64-mingw32-ar RANLIB=${warch}-w64-mingw32-ranlib ./Configure --prefix="$sslinstall" $sslflags || error_cleanup "OpenSSL Configure failed"
+		CC=${warch}-w64-mingw32-gcc AR=${warch}-w64-mingw32-ar RANLIB=${warch}-w64-mingw32-ranlib WINDRES=${warch}-w64-mingw32-windres ./Configure --prefix="$sslinstall" $sslflags || error_cleanup "OpenSSL Configure failed"
 		info "winssl: make"
 		make || error_cleanup "OpenSSL crosscompile failed"
 		# only install sw not docs, which take a long time.
@@ -279,8 +279,8 @@ if [ "$DOWIN" = "yes" ]; then
 		$configure --prefix="$wxpinstall" --exec-prefix="$wxpinstall" --bindir="$wxpinstall/bin" --includedir="$wxpinstall/include" --mandir="$wxpinstall/man" --libdir="$wxpinstall/lib"  || error_cleanup "libexpat configure failed"
 		#info "wxp: make"
 		#make || error_cleanup "libexpat crosscompile failed"
-		info "wxp: make installlib"
-		make installlib || error_cleanup "libexpat install failed"
+		info "wxp: make install"
+		make install || error_cleanup "libexpat install failed"
 		cross_flag="$cross_flag --with-libexpat=$wxpinstall"
 		cd ..
 	fi
