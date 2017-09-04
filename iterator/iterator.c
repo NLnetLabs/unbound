@@ -2169,7 +2169,6 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 		}
 	}
 	if(iq->minimisation_state == SKIP_MINIMISE_STATE) {
-		iq->minimise_timeout_count++;
 		if(iq->minimise_timeout_count < MAX_MINIMISE_TIMEOUT_COUNT)
 			/* Do not increment qname, continue incrementing next 
 			 * iteration */
@@ -2210,6 +2209,8 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 		if(!(iq->chase_flags & BIT_RD) && !iq->ratelimit_ok)
 		    infra_ratelimit_dec(qstate->env->infra_cache, iq->dp->name,
 			iq->dp->namelen, *qstate->env->now);
+		if(qstate->env->cfg->qname_minimisation)
+			iq->minimisation_state = SKIP_MINIMISE_STATE;
 		return next_state(iq, QUERYTARGETS_STATE);
 	}
 	outbound_list_insert(&iq->outlist, outq);
@@ -2259,8 +2260,10 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 
 	if(iq->response == NULL) {
 		/* Don't increment qname when QNAME minimisation is enabled */
-		if(qstate->env->cfg->qname_minimisation)
+		if(qstate->env->cfg->qname_minimisation) {
+			iq->minimise_timeout_count++;
 			iq->minimisation_state = SKIP_MINIMISE_STATE;
+		}
 		iq->chase_to_rd = 0;
 		iq->dnssec_lame_query = 0;
 		verbose(VERB_ALGO, "query response was timeout");
