@@ -17261,8 +17261,8 @@ $as_echo "no" >&6; }
                 # check if -lwsock32 or -lgdi32 are needed.
                 BAKLIBS="$LIBS"
                 BAKSSLLIBS="$LIBSSL_LIBS"
-                LIBS="$LIBS -lgdi32"
-                LIBSSL_LIBS="$LIBSSL_LIBS -lgdi32"
+		LIBS="$LIBS -lgdi32 -lws2_32"
+		LIBSSL_LIBS="$LIBSSL_LIBS -lgdi32 -lws2_32"
                 { $as_echo "$as_me:${as_lineno-$LINENO}: checking if -lcrypto needs -lgdi32" >&5
 $as_echo_n "checking if -lcrypto needs -lgdi32... " >&6; }
                 cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -18657,7 +18657,12 @@ if test x_$enable_static_exe = x_yes; then
 	if test "$on_mingw" = yes; then
 		staticexe="-all-static"
 		# for static compile, include gdi32 and zlib here.
-		LIBS="$LIBS -lgdi32 -lz"
+		if echo $LIBS | grep 'lgdi32' >/dev/null; then
+			:
+		else
+			LIBS="$LIBS -lgdi32"
+		fi
+		LIBS="$LIBS -lz"
 	fi
 fi
 
@@ -19015,7 +19020,11 @@ if test "$ac_cv_header_windows_h" = "yes"; then
 $as_echo "#define USE_WINSOCK 1" >>confdefs.h
 
 	USE_WINSOCK="1"
-	LIBS="$LIBS -lws2_32"
+	if echo $LIBS | grep 'lws2_32' >/dev/null; then
+		:
+	else
+		LIBS="$LIBS -lws2_32"
+	fi
 fi
 
 else

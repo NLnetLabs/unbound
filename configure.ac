@@ -1126,7 +1126,12 @@ if test x_$enable_static_exe = x_yes; then
 	if test "$on_mingw" = yes; then
 		staticexe="-all-static"
 		# for static compile, include gdi32 and zlib here.
-		LIBS="$LIBS -lgdi32 -lz"
+		if echo $LIBS | grep 'lgdi32' >/dev/null; then
+			:
+		else
+			LIBS="$LIBS -lgdi32"
+		fi
+		LIBS="$LIBS -lz"
 	fi
 fi
 

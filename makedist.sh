@@ -87,7 +87,7 @@ question () {
 # working directory.
 cleanup () {
     info "Deleting temporary working directory."
-    cd $cwd && rm -rf $temp_dir
+    #cd $cwd && rm -rf $temp_dir
 }
 
 error_cleanup () {
@@ -254,9 +254,9 @@ if [ "$DOWIN" = "yes" ]; then
 		# cross-compilation and it is not used anyway
 		# before 1.0.1i need --cross-compile-prefix=i686-w64-mingw32-
 		if test "$mw64" = "mingw64"; then
-			sslflags="no-asm -DOPENSSL_NO_CAPIENG mingw64"
+			sslflags="no-shared no-asm -DOPENSSL_NO_CAPIENG mingw64"
 		else
-			sslflags="no-asm -DOPENSSL_NO_CAPIENG mingw"
+			sslflags="no-shared no-asm -DOPENSSL_NO_CAPIENG mingw"
 		fi
 		info "winssl: Configure $sslflags"
 		CC=${warch}-w64-mingw32-gcc AR=${warch}-w64-mingw32-ar RANLIB=${warch}-w64-mingw32-ranlib WINDRES=${warch}-w64-mingw32-windres ./Configure --prefix="$sslinstall" $sslflags || error_cleanup "OpenSSL Configure failed"
