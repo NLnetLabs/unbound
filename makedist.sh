@@ -87,7 +87,7 @@ question () {
 # working directory.
 cleanup () {
     info "Deleting temporary working directory."
-    #cd $cwd && rm -rf $temp_dir
+    cd $cwd && rm -rf $temp_dir
 }
 
 error_cleanup () {
