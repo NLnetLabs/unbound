@@ -1,3 +1,6 @@
+12 September 2017: Wouter
+	- Add dns64 for client-subnet in unbound-checkconf.
+
 4 September 2017: Ralph
 	- Fix #1412: QNAME minimisation strict mode not honored
 	- Fix #1434: Fix windows openssl 1.1.0 linking.
