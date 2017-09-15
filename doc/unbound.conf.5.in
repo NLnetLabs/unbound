@@ -1531,7 +1531,7 @@ specialized cache. If the authority indicated no support, the response is
 stored in the regular cache.
 .LP
 Additionally, when a client includes the option in its queries, Unbound will
-forward the option to the authority if prensent in the whitelist, or
+forward the option to the authority if present in the whitelist, or
 \fBclient\-subnet\-always\-forward\fR is set to yes. In this case the lookup in
 the regular cache is skipped.
 .LP

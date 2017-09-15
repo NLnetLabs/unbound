@@ -721,7 +721,7 @@ int main(int argc, char* argv[])
 	WSADATA wsa_data;
 #endif
 #ifdef USE_THREAD_DEBUG
-	/* stop the file output from unbound-control, overwites the servers */
+	/* stop the file output from unbound-control, overwrites the servers */
 	extern int check_locking_order;
 	check_locking_order = 0;
 #endif /* USE_THREAD_DEBUG */

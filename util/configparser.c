@@ -2552,7 +2552,7 @@ yyreduce:
     {
 	#ifdef CLIENT_SUBNET
 		OUTYY(("P(client_subnet_opcode:%s)\n", (yyvsp[0].str)));
-		OUTYY(("P(Depricated option, ignoring)\n"));
+		OUTYY(("P(Deprecated option, ignoring)\n"));
 	#else
 		OUTYY(("P(Compiled without edns subnet option, ignoring)\n"));
 	#endif

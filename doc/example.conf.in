@@ -512,7 +512,7 @@ server:
 	# that set CD but cannot validate themselves.
 	# ignore-cd-flag: no
 
-	# Serve expired reponses from cache, with TTL 0 in the response,
+	# Serve expired responses from cache, with TTL 0 in the response,
 	# and then attempt to fetch the data afresh.
 	# serve-expired: no
 

@@ -494,9 +494,9 @@ struct config_file {
 #endif
 };
 
-/** from cfg username, after daemonise setup performed */
+/** from cfg username, after daemonize setup performed */
 extern uid_t cfg_uid;
-/** from cfg username, after daemonise setup performed */
+/** from cfg username, after daemonize setup performed */
 extern gid_t cfg_gid;
 /** debug and enable small timeouts */
 extern int autr_permit_small_holddown;

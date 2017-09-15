@@ -1771,7 +1771,7 @@ negative_del_rrset(struct lruhash_entry* e, void* arg)
 	struct ub_packed_rrset_key* k = (struct ub_packed_rrset_key*)e->key;
 	struct packed_rrset_data* d = (struct packed_rrset_data*)e->data;
 	/* delete the parentside negative cache rrsets,
-	 * these are namerserver rrsets that failed lookup, rdata empty */
+	 * these are nameserver rrsets that failed lookup, rdata empty */
 	if((k->rk.flags & PACKED_RRSET_PARENT_SIDE) && d->count == 1 &&
 		d->rrsig_count == 0 && d->rr_len[0] == 0) {
 		d->ttl = inf->expired;

@@ -411,7 +411,7 @@ server_client_subnet_opcode: VAR_CLIENT_SUBNET_OPCODE STRING_ARG
 	{
 	#ifdef CLIENT_SUBNET
 		OUTYY(("P(client_subnet_opcode:%s)\n", $2));
-		OUTYY(("P(Depricated option, ignoring)\n"));
+		OUTYY(("P(Deprecated option, ignoring)\n"));
 	#else
 		OUTYY(("P(Compiled without edns subnet option, ignoring)\n"));
 	#endif

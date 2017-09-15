@@ -1290,7 +1290,7 @@ int mesh_state_add_reply(struct mesh_state* s, struct edns_data* edns,
 
 /**
  * Continue processing the mesh state at another module.
- * Handles module to modules tranfer of control.
+ * Handles module to modules transfer of control.
  * Handles module finished.
  * @param mesh: the mesh area.
  * @param mstate: currently active mesh state.

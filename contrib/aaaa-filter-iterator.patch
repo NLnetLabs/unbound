@@ -244,7 +244,7 @@ Index: trunk/iterator/iterator.c
 +/* ASN: End of added code */
 +
  /*
-  * Return priming query results to interestes super querystates.
+  * Return priming query results to interested super querystates.
   * 
 @@ -2941,6 +3050,9 @@
  	else if(super->qinfo.qtype == LDNS_RR_TYPE_DS && ((struct iter_qstate*)
@@ -311,7 +311,7 @@ Index: trunk/iterator/iterator.h
 +	/**
  	 * Each time a delegation point changes for a given query or a 
  	 * query times out and/or wakes up, this state is (re)visited. 
- 	 * This state is reponsible for iterating through a list of 
+ 	 * This state is responsible for iterating through a list of 
 @@ -346,6 +357,13 @@
  	 */
  	int refetch_glue;

@@ -90,7 +90,7 @@ LIBUNBOUND_AGE=5
 # Current and Age.  Set Revision to 0, since this is the first
 # implementation of the new API.
 #
-# Otherwise, we're changing the binary API and breaking bakward
+# Otherwise, we're changing the binary API and breaking backward
 # compatibility with old binaries.  Increment Current.  Set Age to 0,
 # since we're backward compatible with no previous APIs.  Set Revision
 # to 0 too.

@@ -416,7 +416,7 @@ struct module_env {
 	/**
 	 * Kill newly attached sub. If attach_sub returns newq for 
 	 * initialisation, but that fails, then this routine will cleanup and
-	 * delete the fresly created sub.
+	 * delete the freshly created sub.
 	 * @param newq: the new subquery that is no longer needed.
 	 * 	It is removed.
 	 */

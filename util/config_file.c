@@ -69,9 +69,9 @@
 #include <pwd.h>
 #endif
 
-/** from cfg username, after daemonise setup performed */
+/** from cfg username, after daemonize setup performed */
 uid_t cfg_uid = (uid_t)-1;
-/** from cfg username, after daemonise setup performed */
+/** from cfg username, after daemonize setup performed */
 gid_t cfg_gid = (gid_t)-1;
 /** for debug allow small timeout values for fast rollovers */
 int autr_permit_small_holddown = 0;

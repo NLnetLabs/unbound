@@ -547,7 +547,7 @@ dnsc_find_cert(struct dnsc_env* dnscenv, struct sldns_buffer* buffer)
  * In order to be able to serve certs over TXT, we can reuse the local-zone and
  * local-data config option. The zone and qname are infered from the
  * provider_name and the content of the TXT record from the certificate content.
- * returns the number of certtificate TXT record that were loaded.
+ * returns the number of certificate TXT record that were loaded.
  * < 0 in case of error.
  */
 static int
