@@ -101,6 +101,7 @@ config_create(void)
 	cfg->do_udp = 1;
 	cfg->do_tcp = 1;
 	cfg->tcp_upstream = 0;
+	cfg->udp_upstream_without_downstream = 0;
 	cfg->tcp_mss = 0;
 	cfg->outgoing_tcp_mss = 0;
 	cfg->ssl_service_key = NULL;
@@ -426,6 +427,8 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	else S_YNO("do-udp:", do_udp)
 	else S_YNO("do-tcp:", do_tcp)
 	else S_YNO("tcp-upstream:", tcp_upstream)
+	else S_YNO("udp-upstream-without-downstream:",
+		udp_upstream_without_downstream)
 	else S_NUMBER_NONZERO("tcp-mss:", tcp_mss)
 	else S_NUMBER_NONZERO("outgoing-tcp-mss:", outgoing_tcp_mss)
 	else S_YNO("ssl-upstream:", ssl_upstream)
@@ -828,6 +831,7 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_YNO(opt, "do-udp", do_udp)
 	else O_YNO(opt, "do-tcp", do_tcp)
 	else O_YNO(opt, "tcp-upstream", tcp_upstream)
+	else O_YNO(opt, "udp-upstream-without-downstream", udp_upstream_without_downstream)
 	else O_DEC(opt, "tcp-mss", tcp_mss)
 	else O_DEC(opt, "outgoing-tcp-mss", outgoing_tcp_mss)
 	else O_YNO(opt, "ssl-upstream", ssl_upstream)

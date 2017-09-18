@@ -84,6 +84,8 @@ struct config_file {
 	int do_tcp;
 	/** tcp upstream queries (no UDP upstream queries) */
 	int tcp_upstream;
+	/** udp upstream enabled when no UDP downstream is enabled (do_udp no)*/
+	int udp_upstream_without_downstream;
 	/** maximum segment size of tcp socket which queries are answered */
 	int tcp_mss;
 	/** maximum segment size of tcp socket for outgoing queries */

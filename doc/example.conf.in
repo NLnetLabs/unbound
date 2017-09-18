@@ -199,6 +199,10 @@ server:
 	# upstream connections use TCP only (and no UDP), "yes" or "no"
 	# useful for tunneling scenarios, default no.
 	# tcp-upstream: no
+	
+	# upstream connections also use UDP (even if do-udp is no).
+	# useful if if you want UDP upstream, but don't provide UDP downstream.
+	# udp-upstream-without-downstream: no
 
 	# Maximum segment size (MSS) of TCP socket on which the server
 	# responds to queries. Default is 0, system default MSS.

@@ -262,7 +262,8 @@ extern int yydebug;
     VAR_IPSECMOD_STRICT = 472,
     VAR_CACHEDB = 473,
     VAR_CACHEDB_BACKEND = 474,
-    VAR_CACHEDB_SECRETSEED = 475
+    VAR_CACHEDB_SECRETSEED = 475,
+    VAR_UDP_UPSTREAM_WITHOUT_DOWNSTREAM = 476
   };
 #endif
 /* Tokens.  */
@@ -484,6 +485,7 @@ extern int yydebug;
 #define VAR_CACHEDB 473
 #define VAR_CACHEDB_BACKEND 474
 #define VAR_CACHEDB_SECRETSEED 475
+#define VAR_UDP_UPSTREAM_WITHOUT_DOWNSTREAM 476
 
 /* Value type.  */
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
@@ -494,7 +496,7 @@ union YYSTYPE
 
 	char*	str;
 
-#line 498 "util/configparser.h" /* yacc.c:1909  */
+#line 500 "util/configparser.h" /* yacc.c:1909  */
 };
 
 typedef union YYSTYPE YYSTYPE;

@@ -149,6 +149,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_IPSECMOD_ENABLED VAR_IPSECMOD_HOOK VAR_IPSECMOD_IGNORE_BOGUS
 %token VAR_IPSECMOD_MAX_TTL VAR_IPSECMOD_WHITELIST VAR_IPSECMOD_STRICT
 %token VAR_CACHEDB VAR_CACHEDB_BACKEND VAR_CACHEDB_SECRETSEED
+%token VAR_UDP_UPSTREAM_WITHOUT_DOWNSTREAM
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -237,7 +238,8 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_hide_trustanchor | server_trust_anchor_signaling |
 	server_ipsecmod_enabled | server_ipsecmod_hook |
 	server_ipsecmod_ignore_bogus | server_ipsecmod_max_ttl |
-	server_ipsecmod_whitelist | server_ipsecmod_strict
+	server_ipsecmod_whitelist | server_ipsecmod_strict |
+	server_udp_upstream_without_downstream
 	;
 stubstart: VAR_STUB_ZONE
 	{
@@ -603,6 +605,15 @@ server_tcp_upstream: VAR_TCP_UPSTREAM STRING_ARG
 		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
 			yyerror("expected yes or no.");
 		else cfg_parser->cfg->tcp_upstream = (strcmp($2, "yes")==0);
+		free($2);
+	}
+	;
+server_udp_upstream_without_downstream: VAR_UDP_UPSTREAM_WITHOUT_DOWNSTREAM STRING_ARG
+	{
+		OUTYY(("P(server_udp_upstream_without_downstream:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else cfg_parser->cfg->udp_upstream_without_downstream = (strcmp($2, "yes")==0);
 		free($2);
 	}
 	;
