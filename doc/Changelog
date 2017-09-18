@@ -4,6 +4,7 @@
 	  control.
 	- Fix #1435: Please allow UDP to be disabled separately upstream and
 	  downstream.
+	- Fix #1440: [dnscrypt] client nonce cache.
 
 15 September 2017: Wouter
 	- Fix unbound-host to report error for DNSSEC state of failed lookups.

@@ -254,6 +254,8 @@ static void print_mem(struct ub_shm_stat_info* shm_stat)
 #ifdef USE_DNSCRYPT
 	PR_LL("mem.cache.dnscrypt_shared_secret",
 		shm_stat->mem.dnscrypt_shared_secret);
+	PR_LL("mem.cache.dnscrypt_nonce",
+		shm_stat->mem.dnscrypt_nonce);
 #endif
 }
 
@@ -360,6 +362,9 @@ static void print_extended(struct ub_stats_info* s)
 			 s->svr.shared_secret_cache_count);
 	PR_UL("num.query.dnscrypt.shared_secret.cachemiss",
 			 s->svr.num_query_dnscrypt_secret_missed_cache);
+	PR_UL("dnscrypt_nonce.cache.count", s->svr.nonce_cache_count);
+	PR_UL("num.query.dnscrypt.replay",
+			 s->svr.num_query_dnscrypt_replay);
 #endif /* USE_DNSCRYPT */
 }
 

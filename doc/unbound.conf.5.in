@@ -1523,6 +1523,17 @@ using the same public key. It saves a substantial amount of CPU.
 Give power of 2 number of slabs, this is used to reduce lock contention
 in the dnscrypt shared secrets cache.  Close to the number of cpus is
 a fairly good setting.
+.TP
+.B dnscrypt\-nonce\-cache\-size: \fI<memory size>
+Give the size of the data structure in which the client nonces are kept in.
+Default 4m. In bytes or use m(mega), k(kilo), g(giga).
+The nonce cache is used to prevent dnscrypt message replaying. Client nonce
+should be unique for any pair of client pk/server sk.
+.TP
+.B dnscrypt\-nonce\-cache\-slabs: \fI<number>
+Give power of 2 number of slabs, this is used to reduce lock contention
+in the dnscrypt nonce cache.  Close to the number of cpus is
+a fairly good setting.
 .SS "EDNS Client Subnet Module Options"
 .LP
 The ECS module must be configured in the \fBmodule\-config:\fR "subnetcache

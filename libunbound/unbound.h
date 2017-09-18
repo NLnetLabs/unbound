@@ -623,6 +623,7 @@ struct ub_shm_stat_info {
 		long long ipsecmod;
 		long long respip;
 		long long dnscrypt_shared_secret;
+		long long dnscrypt_nonce;
 	} mem;
 };
 
@@ -742,6 +743,10 @@ struct ub_server_stats {
 	long long num_query_dnscrypt_secret_missed_cache;
 	/** number of dnscrypt shared secret cache entries */
 	long long shared_secret_cache_count;
+	/** number of queries which are replays */
+	long long num_query_dnscrypt_replay;
+	/** number of dnscrypt nonces cache entries */
+	long long nonce_cache_count;
 };
 
 /** 

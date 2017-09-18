@@ -470,7 +470,10 @@ struct config_file {
 	size_t dnscrypt_shared_secret_cache_size;
 	/** number of slabs for dnscrypt shared secrets cache */
 	size_t dnscrypt_shared_secret_cache_slabs;
-
+	/** memory size in bytes for dnscrypt nonces cache */
+	size_t dnscrypt_nonce_cache_size;
+	/** number of slabs for dnscrypt nonces cache */
+	size_t dnscrypt_nonce_cache_slabs;
 	/** IPsec module */
 #ifdef USE_IPSECMOD
 	/** false to bypass the IPsec module */

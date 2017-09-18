@@ -285,6 +285,8 @@ config_create(void)
 	cfg->dnscrypt_secret_key = NULL;
 	cfg->dnscrypt_shared_secret_cache_size = 4*1024*1024;
 	cfg->dnscrypt_shared_secret_cache_slabs = 4;
+	cfg->dnscrypt_nonce_cache_size = 4*1024*1024;
+	cfg->dnscrypt_nonce_cache_slabs = 4;
 #ifdef USE_IPSECMOD
 	cfg->ipsecmod_enabled = 1;
 	cfg->ipsecmod_ignore_bogus = 0;
@@ -574,6 +576,10 @@ int config_set_option(struct config_file* cfg, const char* opt,
 		dnscrypt_shared_secret_cache_size)
 	else S_POW2("dnscrypt-shared-secret-cache-slabs:",
 		dnscrypt_shared_secret_cache_slabs)
+	else S_MEMSIZE("dnscrypt-nonce-cache-size:",
+		dnscrypt_nonce_cache_size)
+	else S_POW2("dnscrypt-nonce-cache-slabs:",
+		dnscrypt_nonce_cache_slabs)
 #endif
 	else if(strcmp(opt, "ip-ratelimit:") == 0) {
 	    IS_NUMBER_OR_ZERO; cfg->ip_ratelimit = atoi(val);
@@ -940,6 +946,10 @@ config_get_option(struct config_file* cfg, const char* opt,
 		dnscrypt_shared_secret_cache_size)
 	else O_DEC(opt, "dnscrypt-shared-secret-cache-slabs",
 		dnscrypt_shared_secret_cache_slabs)
+	else O_MEM(opt, "dnscrypt-nonce-cache-size",
+		dnscrypt_nonce_cache_size)
+	else O_DEC(opt, "dnscrypt-nonce-cache-slabs",
+		dnscrypt_nonce_cache_slabs)
 #endif
 	else O_YNO(opt, "unblock-lan-zones", unblock_lan_zones)
 	else O_YNO(opt, "insecure-lan-zones", insecure_lan_zones)
