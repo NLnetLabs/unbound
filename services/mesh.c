@@ -1350,7 +1350,13 @@ mesh_continue(struct mesh_area* mesh, struct mesh_state* mstate,
 		/* error is bad, handle pass back up below */
 		mstate->s.return_rcode = LDNS_RCODE_SERVFAIL;
 	}
-	if(s == module_error || s == module_finished) {
+	if(s == module_error) {
+		mesh_query_done(mstate);
+		mesh_walk_supers(mesh, mstate);
+		mesh_state_delete(&mstate->s);
+		return 0;
+	}
+	if(s == module_finished) {
 		if(mstate->s.curmod == 0) {
 			mesh_query_done(mstate);
 			mesh_walk_supers(mesh, mstate);
