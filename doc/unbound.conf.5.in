@@ -391,6 +391,11 @@ negotiation between Unbound and other servers.
 Enable or disable whether the upstream queries use TCP only for transport.
 Default is no.  Useful in tunneling scenarios.
 .TP
+.B udp\-upstream\-without\-downstream: \fI<yes or no>
+Enable udp upstream even if do-udp is no.  Default is no, and this does not
+change anything.  Useful for TLS service providers, that want no udp downstream
+but use udp to fetch data upstream.
+.TP
 .B ssl\-upstream: \fI<yes or no>
 Enabled or disable whether the upstream queries use SSL only for transport.
 Default is no.  Useful in tunneling scenarios.  The SSL contains plain DNS in
