@@ -1,3 +1,7 @@
+18 September 2017: Ralph
+	- Fix #1400: allowing use of global cache on ECS-forwarding unless
+	  always-forward.
+
 18 September 2017: Wouter
 	- tag 1.6.6 (is 1.6.6rc2)
 	- Fix that looping modules always stop the query, and don't pass

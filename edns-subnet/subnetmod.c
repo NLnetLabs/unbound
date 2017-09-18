@@ -722,6 +722,7 @@ subnetmod_operate(struct module_qstate *qstate, enum module_ev event,
 		sq->ecs_server_out.subnet_scope_mask = 0;
 		sq->ecs_server_out.subnet_validdata = 1;
 		if(sq->ecs_server_out.subnet_source_mask != 0 &&
+			qstate->env->cfg->client_subnet_always_forward &&
 			sq->subnet_downstream)
 			/* ECS specific data required, do not look at the global
 			 * cache in other modules. */
