@@ -1,3 +1,11 @@
+19 September 2017: Wouter
+	- use a cachedb answer even if it's "expired" when serve-expired is yes
+	  (patch from Jinmei Tatuya).
+	- trigger refetching of the answer in that case (this will bypass
+	  cachedb lookup)
+	- allow storing a 0-TTL answer from cachedb in the in-memory message
+	  cache when serve-expired is yes
+
 18 September 2017: Ralph
 	- Fix #1400: allowing use of global cache on ECS-forwarding unless
 	  always-forward.

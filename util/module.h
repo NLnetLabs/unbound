@@ -608,6 +608,8 @@ struct module_qstate {
 	int no_cache_lookup;
 	/** whether modules should store answer in the cache */
 	int no_cache_store;
+	/** whether to refetch a fresh answer on finishing this state*/
+	int need_refetch;
 
 	/**
 	 * Attributes of clients that share the qstate that may affect IP-based
