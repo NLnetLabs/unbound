@@ -5,6 +5,7 @@
 	  cachedb lookup)
 	- allow storing a 0-TTL answer from cachedb in the in-memory message
 	  cache when serve-expired is yes
+	- Fix DNSCACHE_STORE_ZEROTTL to be bigger than 0xffff.
 
 18 September 2017: Ralph
 	- Fix #1400: allowing use of global cache on ECS-forwarding unless
