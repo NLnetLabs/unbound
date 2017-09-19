@@ -605,7 +605,13 @@ static void mesh_schedule_prefetch(struct mesh_area* mesh,
 	}
 
 	if(!run) {
+#ifdef UNBOUND_DEBUG
+		n =
+#else
+		(void)
+#endif
 		rbtree_insert(&mesh->run, &s->run_node);
+		log_assert(n != NULL);
 		return;
 	}
 
