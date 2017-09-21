@@ -1,3 +1,6 @@
+21 September 2017: Ralph
+	- Log name of looping module
+
 19 September 2017: Wouter
 	- use a cachedb answer even if it's "expired" when serve-expired is yes
 	  (patch from Jinmei Tatuya).

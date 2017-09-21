@@ -1359,7 +1359,8 @@ mesh_continue(struct mesh_area* mesh, struct mesh_state* mstate,
 	mstate->num_activated++;
 	if(mstate->num_activated > MESH_MAX_ACTIVATION) {
 		/* module is looping. Stop it. */
-		log_err("internal error: looping module stopped");
+		log_err("internal error: looping module (%s) stopped",
+			mesh->mods.mod[mstate->s.curmod]->name);
 		log_query_info(VERB_QUERY, "pass error for qstate",
 			&mstate->s.qinfo);
 		s = module_error;
