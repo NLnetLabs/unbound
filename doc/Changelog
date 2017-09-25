@@ -1,3 +1,7 @@
+25 September 2017: Ralph
+	-  Fix #1450: Generate again patch contrib/aaaa-filter-iterator.patch
+	   (by Danilo G. Baio).
+
 21 September 2017: Ralph
 	- Log name of looping module
 
