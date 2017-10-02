@@ -1,3 +1,6 @@
+2 October 2017: Wouter
+	- Fix param unused warning for windows exportsymbol compile.
+
 25 September 2017: Ralph
 	-  Fix #1450: Generate again patch contrib/aaaa-filter-iterator.patch
 	   (by Danilo G. Baio).
