@@ -16,7 +16,6 @@ server:
 	ipsecmod-strict: no
 	ipsecmod-max-ttl: 200
 	ipsecmod-ignore-bogus: yes
-	trust-anchor-signaling: no
 
 stub-zone:
 	name: "."
