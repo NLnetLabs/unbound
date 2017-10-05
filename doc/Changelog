@@ -4,6 +4,7 @@
 
 5 October 2017: Ralph 
 	- Set trust-anchor-signaling default to yes
+	- Use RCODE from A query on DNS64 synthesized answer.
 
 2 October 2017: Wouter
 	- Fix param unused warning for windows exportsymbol compile.
