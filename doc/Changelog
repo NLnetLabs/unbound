@@ -1,3 +1,6 @@
+5 October 2017: Wouter 
+	- Fix trust-anchor-signaling works in libunbound.
+
 5 October 2017: Ralph 
 	- Set trust-anchor-signaling default to yes
 
