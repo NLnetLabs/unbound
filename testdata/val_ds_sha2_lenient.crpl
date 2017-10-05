@@ -7,6 +7,7 @@ server:
 	fake-dsa: yes
 	fake-sha1: yes
 	harden-algo-downgrade: no
+	trust-anchor-signaling: no
 
 stub-zone:
 	name: "."

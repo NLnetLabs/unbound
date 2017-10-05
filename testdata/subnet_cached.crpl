@@ -10,6 +10,7 @@ server:
 	module-config: "subnetcache validator iterator"
 	verbosity: 3
 	access-control: 127.0.0.1 allow_snoop
+	trust-anchor-signaling: no
 
 stub-zone:
 	name: "."
