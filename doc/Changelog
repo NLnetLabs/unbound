@@ -1,5 +1,6 @@
 5 October 2017: Wouter 
 	- Fix trust-anchor-signaling works in libunbound.
+	- Fix some more crpls in testdata for different signaling default.
 
 5 October 2017: Ralph 
 	- Set trust-anchor-signaling default to yes
