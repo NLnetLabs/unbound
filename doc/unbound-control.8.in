@@ -338,7 +338,7 @@ number of queries that were successfully answered using a cache lookup
 number of queries that needed recursive processing
 .TP
 .I threadX.num.dnscrypt.crypted
-number of queries that were encrypted and sucessfully decapsulated by dnscrypt.
+number of queries that were encrypted and successfully decapsulated by dnscrypt.
 .TP
 .I threadX.num.dnscrypt.cert
 number of queries that were requesting dnscrypt certificates.
@@ -589,8 +589,8 @@ per delegation point, and their validation status.
 .I dnscrypt_shared_secret.cache.count
 The number of items in the shared secret cache. These are precomputed shared
 secrets for a given client public key/server secret key pair. Shared secrets
-are CPU intensive and this cache allow to avoid recomputing the shared secret
-when multiple dnscrypt queries are sent from the same client.
+are CPU intensive and this cache allows unbound to avoid recomputing the
+shared secret when multiple dnscrypt queries are sent from the same client.
 .TP
 .I dnscrypt_nonce.cache.count
 The number of items in the client nonce cache. This cache is used to prevent

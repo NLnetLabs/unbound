@@ -1,3 +1,6 @@
+6 October 2017: Wouter 
+	- Fix spelling in unbound-control man page.
+
 5 October 2017: Wouter 
 	- Fix trust-anchor-signaling works in libunbound.
 	- Fix some more crpls in testdata for different signaling default.
