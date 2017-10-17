@@ -2377,7 +2377,7 @@ dnsc_dnscrypt_provider_cert: VAR_DNSCRYPT_PROVIDER_CERT STRING_ARG
 	{
 		OUTYY(("P(dnsc_dnscrypt_provider_cert:%s)\n", $2));
 		if(cfg_strlist_find(cfg_parser->cfg->dnscrypt_provider_cert, $2))
-			fatal_exit("dnscrypt-provider-cert %s is a duplicate", $2);
+			log_warn("dnscrypt-provider-cert %s is a duplicate", $2);
 		if(!cfg_strlist_insert(&cfg_parser->cfg->dnscrypt_provider_cert, $2))
 			fatal_exit("out of memory adding dnscrypt-provider-cert");
 	}
@@ -2393,7 +2393,7 @@ dnsc_dnscrypt_secret_key: VAR_DNSCRYPT_SECRET_KEY STRING_ARG
 	{
 		OUTYY(("P(dnsc_dnscrypt_secret_key:%s)\n", $2));
 		if(cfg_strlist_find(cfg_parser->cfg->dnscrypt_secret_key, $2))
-			fatal_exit("dnscrypt-secret-key: %s is a duplicate", $2);
+			log_warn("dnscrypt-secret-key: %s is a duplicate", $2);
 		if(!cfg_strlist_insert(&cfg_parser->cfg->dnscrypt_secret_key, $2))
 			fatal_exit("out of memory adding dnscrypt-secret-key");
 	}

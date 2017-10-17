@@ -710,7 +710,9 @@ dnsc_load_local_data(struct dnsc_env* dnscenv, struct config_file *cfg)
     for(i=0; i<dnscenv->signed_certs_count; i++) {
         const char *ttl_class_type = " 86400 IN TXT \"";
         int rotated_cert = 0;
-		uint32_t serial;
+	uint32_t serial;
+	uint16_t rrlen;
+	char* rr;
         struct SignedCert *cert = dnscenv->signed_certs + i;
 		// Check if the certificate is being rotated and should not be published
         for(j=0; j<dnscenv->rotated_certs_count; j++){
@@ -730,12 +732,12 @@ dnsc_load_local_data(struct dnsc_env* dnscenv, struct config_file *cfg)
             );
             continue;
         }
-        uint16_t rrlen = strlen(dnscenv->provider_name) +
+        rrlen = strlen(dnscenv->provider_name) +
                          strlen(ttl_class_type) +
                          4 * sizeof(struct SignedCert) + // worst case scenario
                          1 + // trailing double quote
                          1;
-        char *rr = malloc(rrlen);
+        rr = malloc(rrlen);
         if(!rr) {
             log_err("Could not allocate memory");
             return -2;

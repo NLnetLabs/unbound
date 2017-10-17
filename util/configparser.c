@@ -5090,7 +5090,7 @@ yyreduce:
     {
 		OUTYY(("P(dnsc_dnscrypt_provider_cert:%s)\n", (yyvsp[0].str)));
 		if(cfg_strlist_find(cfg_parser->cfg->dnscrypt_provider_cert, (yyvsp[0].str)))
-			fatal_exit("dnscrypt-provider-cert %s is a duplicate", (yyvsp[0].str));
+			log_warn("dnscrypt-provider-cert %s is a duplicate", (yyvsp[0].str));
 		if(!cfg_strlist_insert(&cfg_parser->cfg->dnscrypt_provider_cert, (yyvsp[0].str)))
 			fatal_exit("out of memory adding dnscrypt-provider-cert");
 	}
@@ -5112,7 +5112,7 @@ yyreduce:
     {
 		OUTYY(("P(dnsc_dnscrypt_secret_key:%s)\n", (yyvsp[0].str)));
 		if(cfg_strlist_find(cfg_parser->cfg->dnscrypt_secret_key, (yyvsp[0].str)))
-			fatal_exit("dnscrypt-secret-key: %s is a duplicate", (yyvsp[0].str));
+			log_warn("dnscrypt-secret-key: %s is a duplicate", (yyvsp[0].str));
 		if(!cfg_strlist_insert(&cfg_parser->cfg->dnscrypt_secret_key, (yyvsp[0].str)))
 			fatal_exit("out of memory adding dnscrypt-secret-key");
 	}
