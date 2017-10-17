@@ -914,6 +914,9 @@ generate_ns_check(struct module_qstate* qstate, struct iter_qstate* iq, int id)
 		generate_a_aaaa_check(qstate, iq, id);
 		return;
 	}
+	/* no need to get the NS record for DS, it is above the zonecut */
+	if(qstate->qinfo.qtype == LDNS_RR_TYPE_DS)
+		return;
 
 	log_nametypeclass(VERB_ALGO, "schedule ns fetch", 
 		iq->dp->name, LDNS_RR_TYPE_NS, iq->qchase.qclass);

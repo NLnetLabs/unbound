@@ -1,3 +1,7 @@
+11 October 2017: Wouter 
+	- Fix #1749: With harden-referral-path: performance drops, due to
+	  circular dependency in NS and DS lookups.
+
 10 October 2017: Wouter 
 	- tag 1.6.7
 	- trunk has version 1.6.8.
