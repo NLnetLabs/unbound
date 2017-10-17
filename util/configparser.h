@@ -266,7 +266,13 @@ extern int yydebug;
     VAR_CACHEDB = 476,
     VAR_CACHEDB_BACKEND = 477,
     VAR_CACHEDB_SECRETSEED = 478,
-    VAR_UDP_UPSTREAM_WITHOUT_DOWNSTREAM = 479
+    VAR_UDP_UPSTREAM_WITHOUT_DOWNSTREAM = 479,
+    VAR_FOR_UPSTREAM = 480,
+    VAR_AUTH_ZONE = 481,
+    VAR_ZONEFILE = 482,
+    VAR_MASTER = 483,
+    VAR_URL = 484,
+    VAR_FOR_DOWNSTREAM = 485
   };
 #endif
 /* Tokens.  */
@@ -492,6 +498,12 @@ extern int yydebug;
 #define VAR_CACHEDB_BACKEND 477
 #define VAR_CACHEDB_SECRETSEED 478
 #define VAR_UDP_UPSTREAM_WITHOUT_DOWNSTREAM 479
+#define VAR_FOR_UPSTREAM 480
+#define VAR_AUTH_ZONE 481
+#define VAR_ZONEFILE 482
+#define VAR_MASTER 483
+#define VAR_URL 484
+#define VAR_FOR_DOWNSTREAM 485
 
 /* Value type.  */
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
@@ -502,7 +514,7 @@ union YYSTYPE
 
 	char*	str;
 
-#line 506 "util/configparser.h" /* yacc.c:1909  */
+#line 518 "util/configparser.h" /* yacc.c:1909  */
 };
 
 typedef union YYSTYPE YYSTYPE;

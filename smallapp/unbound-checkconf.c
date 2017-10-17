@@ -54,6 +54,7 @@
 #include "validator/validator.h"
 #include "services/localzone.h"
 #include "services/view.h"
+#include "services/authzone.h"
 #include "respip/respip.h"
 #include "sldns/sbuffer.h"
 #ifdef HAVE_GETOPT_H
@@ -573,6 +574,17 @@ check_hints(struct config_file* cfg)
 	hints_delete(hints);
 }
 
+/** check auth zones */
+static void
+check_auth(struct config_file* cfg)
+{
+	struct auth_zones* az = auth_zones_create();
+	if(!az || !auth_zones_apply_cfg(az, cfg)) {
+		fatal_exit("Could not setup authority zones");
+	}
+	auth_zones_delete(az);
+}
+
 /** check config file */
 static void
 checkconf(const char* cfgfile, const char* opt, int final)
@@ -607,6 +619,7 @@ checkconf(const char* cfgfile, const char* opt, int final)
 #endif
 	check_fwd(cfg);
 	check_hints(cfg);
+	check_auth(cfg);
 	printf("unbound-checkconf: no errors in %s\n", cfgfile);
 	config_delete(cfg);
 }

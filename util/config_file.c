@@ -177,6 +177,7 @@ config_create(void)
 	cfg->out_ifs = NULL;
 	cfg->stubs = NULL;
 	cfg->forwards = NULL;
+	cfg->auths = NULL;
 #ifdef CLIENT_SUBNET
 	cfg->client_subnet = NULL;
 	cfg->client_subnet_zone = NULL;
@@ -634,7 +635,7 @@ int config_set_option(struct config_file* cfg, const char* opt,
 		 * interface, outgoing-interface, access-control,
 		 * stub-zone, name, stub-addr, stub-host, stub-prime
 		 * forward-first, stub-first, forward-ssl-upstream,
-		 * stub-ssl-upstream, forward-zone,
+		 * stub-ssl-upstream, forward-zone, auth-zone
 		 * name, forward-addr, forward-host,
 		 * ratelimit-for-domain, ratelimit-below-domain,
 		 * local-zone-tag, access-control-view,
@@ -1165,6 +1166,28 @@ config_deltrplstrlist(struct config_str3list* p)
 }
 
 void
+config_delauth(struct config_auth* p)
+{
+	if(!p) return;
+	free(p->name);
+	config_delstrlist(p->masters);
+	config_delstrlist(p->urls);
+	free(p->zonefile);
+	free(p);
+}
+
+void
+config_delauths(struct config_auth* p)
+{
+	struct config_auth* np;
+	while(p) {
+		np = p->next;
+		config_delauth(p);
+		p = np;
+	}
+}
+
+void
 config_delstub(struct config_stub* p)
 {
 	if(!p) return;
@@ -1249,6 +1272,7 @@ config_delete(struct config_file* cfg)
 	config_del_strarray(cfg->out_ifs, cfg->num_out_ifs);
 	config_delstubs(cfg->stubs);
 	config_delstubs(cfg->forwards);
+	config_delauths(cfg->auths);
 	config_delviews(cfg->views);
 	config_delstrlist(cfg->donotqueryaddrs);
 	config_delstrlist(cfg->root_hints);

@@ -42,6 +42,7 @@
 #ifndef UTIL_CONFIG_FILE_H
 #define UTIL_CONFIG_FILE_H
 struct config_stub;
+struct config_auth;
 struct config_view;
 struct config_strlist;
 struct config_str2list;
@@ -170,6 +171,8 @@ struct config_file {
 	struct config_stub* stubs;
 	/** the forward zone definitions, linked list */
 	struct config_stub* forwards;
+	/** the auth zone definitions, linked list */
+	struct config_auth* auths;
 	/** the views definitions, linked list */
 	struct config_view* views;
 	/** list of donotquery addresses, linked list */
@@ -531,6 +534,26 @@ struct config_stub {
 };
 
 /**
+ * Auth config options
+ */
+struct config_auth {
+	/** next in list */
+	struct config_auth* next;
+	/** domain name (in text) of the auth apex domain */
+	char* name;
+	/** list of masters */
+	struct config_strlist* masters;
+	/** list of urls */
+	struct config_strlist* urls;
+	/** zonefile (or NULL) */
+	char* zonefile;
+	/** provide downstream answers */
+	int for_downstream;
+	/** provide upstream answers */
+	int for_upstream;
+};
+
+/**
  * View config options
  */
 struct config_view {
@@ -819,6 +842,18 @@ void config_delstub(struct config_stub* p);
  * @param list: list.
  */
 void config_delstubs(struct config_stub* list);
+
+/**
+ * Delete an auth item
+ * @param p: auth item
+ */
+void config_delauth(struct config_auth* p);
+
+/**
+ * Delete items in config auth list.
+ * @param list: list.
+ */
+void config_delauths(struct config_auth* list);
 
 /**
  * Delete a view item

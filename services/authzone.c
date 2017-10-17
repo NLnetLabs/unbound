@@ -44,12 +44,16 @@
 #include "config.h"
 #include "services/authzone.h"
 #include "util/data/dname.h"
+#include "util/data/msgparse.h"
 #include "util/data/msgreply.h"
+#include "util/data/msgencode.h"
 #include "util/data/packed_rrset.h"
 #include "util/regional.h"
 #include "util/net_help.h"
+#include "util/netevent.h"
 #include "util/config_file.h"
 #include "util/log.h"
+#include "util/module.h"
 #include "services/cache/dns.h"
 #include "sldns/rrdef.h"
 #include "sldns/pkthdr.h"
@@ -252,9 +256,11 @@ struct auth_zones* auth_zones_create(void)
 		return NULL;
 	}
 	rbtree_init(&az->ztree, &auth_zone_cmp);
+	rbtree_init(&az->xtree, &auth_xfer_cmp);
 	lock_rw_init(&az->lock);
 	lock_protect(&az->lock, &az->ztree, sizeof(az->ztree));
-	/* also lock protects the rbnode's in struct auth_zone */
+	lock_protect(&az->lock, &az->xtree, sizeof(az->xtree));
+	/* also lock protects the rbnode's in struct auth_zone, auth_xfer */
 	return az;
 }
 
@@ -283,6 +289,23 @@ int auth_data_cmp(const void* z1, const void* z2)
 	/* canonical sort, because DNSSEC needs that */
 	return dname_canon_lab_cmp(a->name, a->namelabs, b->name,
 		b->namelabs, &m);
+}
+
+int auth_xfer_cmp(const void* z1, const void* z2)
+{
+	/* first sort on class, so that hierarchy can be maintained within
+	 * a class */
+	struct auth_xfer* a = (struct auth_xfer*)z1;
+	struct auth_xfer* b = (struct auth_xfer*)z2;
+	int m;
+	if(a->dclass != b->dclass) {
+		if(a->dclass < b->dclass)
+			return -1;
+		return 1;
+	}
+	/* sorted such that higher zones sort before lower zones (their
+	 * contents) */
+	return dname_lab_cmp(a->name, a->namelabs, b->name, b->namelabs, &m);
 }
 
 /** delete auth rrset node */
@@ -374,6 +397,19 @@ auth_zone_find(struct auth_zones* az, uint8_t* nm, size_t nmlen,
 	return (struct auth_zone*)rbtree_search(&az->ztree, &key);
 }
 
+struct auth_xfer*
+auth_xfer_find(struct auth_zones* az, uint8_t* nm, size_t nmlen,
+	uint16_t dclass)
+{
+	struct auth_xfer key;
+	key.node.key = &key;
+	key.dclass = dclass;
+	key.name = nm;
+	key.namelen = nmlen;
+	key.namelabs = dname_count_labels(nm);
+	return (struct auth_xfer*)rbtree_search(&az->xtree, &key);
+}
+
 /** find an auth zone or sorted less-or-equal, return true if exact */
 static int
 auth_zone_find_less_equal(struct auth_zones* az, uint8_t* nm, size_t nmlen,
@@ -435,6 +471,23 @@ auth_zones_find_or_add_zone(struct auth_zones* az, char* name)
 		lock_rw_wrlock(&z->lock);
 	}
 	return z;
+}
+
+/** find or create xfer zone with name str. caller must have lock on az. 
+ * returns a locked xfer */
+static struct auth_xfer*
+auth_zones_find_or_add_xfer(struct auth_zones* az, struct auth_zone* z)
+{
+	struct auth_xfer* x;
+	x = auth_xfer_find(az, z->name, z->namelen, z->dclass);
+	if(!x) {
+		/* not found, create the zone */
+		x = auth_xfer_create(az, z);
+		lock_basic_lock(&x->lock);
+	} else {
+		lock_basic_lock(&x->lock);
+	}
+	return x;
 }
 
 int
@@ -1052,6 +1105,13 @@ auth_zone_read_zonefile(struct auth_zone* z)
 	in = fopen(z->zonefile, "r");
 	if(!in) {
 		char* n = sldns_wire2str_dname(z->name, z->namelen);
+		if(z->zone_is_slave && errno == ENOENT) {
+			/* we fetch the zone contents later, no file yet */
+			verbose(VERB_ALGO, "no zonefile %s for %s",
+				z->zonefile, n?n:"error");
+			free(n);
+			return 1;
+		}
 		log_err("cannot open zonefile %s for %s: %s",
 			z->zonefile, n?n:"error", strerror(errno));
 		free(n);
@@ -1185,66 +1245,175 @@ auth_zones_read_zones(struct auth_zones* az)
 	return 1;
 }
 
-/** set str2list with (zonename, zonefile) config items and create zones */
-static int
-auth_zones_cfg_zonefile(struct auth_zones* az, struct config_str2list* zlist)
+/** setup all auth zones */
+int
+auth_zones_setup_zones(struct auth_zones* az, struct module_env* env)
 {
 	struct auth_zone* z;
-	while(zlist) {
-		lock_rw_wrlock(&az->lock);
-		if(!(z=auth_zones_find_or_add_zone(az, zlist->str))) {
+	struct auth_xfer* x;
+	lock_rw_wrlock(&az->lock);
+	RBTREE_FOR(z, struct auth_zone*, &az->ztree) {
+		lock_rw_wrlock(&z->lock);
+		x = auth_xfer_find(az, z->name, z->namelen, z->dclass);
+		if(x) {
+			lock_basic_lock(&x->lock);
+		}
+		if(!auth_xfer_setup(z, x, env)) {
+			if(x) {
+				lock_basic_unlock(&x->lock);
+			}
+			lock_rw_unlock(&z->lock);
 			lock_rw_unlock(&az->lock);
 			return 0;
 		}
-		lock_rw_unlock(&az->lock);
-		if(!auth_zone_set_zonefile(z, zlist->str2)) {
-			lock_rw_unlock(&z->lock);
-			return 0;
+		if(x) {
+			lock_basic_unlock(&x->lock);
 		}
 		lock_rw_unlock(&z->lock);
-		zlist = zlist->next;
 	}
+	lock_rw_unlock(&az->lock);
 	return 1;
 }
 
-/** set str2list with (zonename, fallback) config items and create zones */
+/** set config items and create zones */
 static int
-auth_zones_cfg_fallback(struct auth_zones* az, struct config_str2list* zlist)
+auth_zones_cfg(struct auth_zones* az, struct config_auth* c)
 {
 	struct auth_zone* z;
-	while(zlist) {
-		lock_rw_wrlock(&az->lock);
-		if(!(z=auth_zones_find_or_add_zone(az, zlist->str))) {
-			lock_rw_unlock(&az->lock);
-			return 0;
-		}
+	struct auth_xfer* x = NULL;
+
+	/* create zone */
+	lock_rw_wrlock(&az->lock);
+	if(!(z=auth_zones_find_or_add_zone(az, c->name))) {
 		lock_rw_unlock(&az->lock);
-		if(!auth_zone_set_fallback(z, zlist->str2)) {
+		return 0;
+	}
+	if(c->masters || c->urls) {
+		if(!(x=auth_zones_find_or_add_xfer(az, z))) {
+			lock_rw_unlock(&az->lock);
 			lock_rw_unlock(&z->lock);
 			return 0;
 		}
-		lock_rw_unlock(&z->lock);
-		zlist = zlist->next;
 	}
+	if(c->for_downstream)
+		az->have_downstream = 1;
+	lock_rw_unlock(&az->lock);
+
+	/* set options */
+	if(!auth_zone_set_zonefile(z, c->zonefile)) {
+		if(x) {
+			lock_basic_unlock(&x->lock);
+		}
+		lock_rw_unlock(&z->lock);
+		return 0;
+	}
+	z->for_downstream = c->for_downstream;
+	z->for_upstream = c->for_upstream;
+	/* TODO fallback option */
+	//if(!auth_zone_set_fallback(z, zlist->str2)) {
+	/* TODO other options */
+
+	/* xfer zone */
+	if(x) {
+		z->zone_is_slave = 1;
+		/* set options on xfer zone */
+		if(!xfer_set_masters(&x->task_probe->masters, c)) {
+			lock_basic_unlock(&x->lock);
+			lock_rw_unlock(&z->lock);
+			return 0;
+		}
+		if(!xfer_set_masters(&x->task_transfer->masters, c)) {
+			lock_basic_unlock(&x->lock);
+			lock_rw_unlock(&z->lock);
+			return 0;
+		}
+		lock_basic_unlock(&x->lock);
+	}
+
+	lock_rw_unlock(&z->lock);
 	return 1;
 }
 
-int auth_zones_apply_config(struct auth_zones* az, struct config_file* cfg)
+int auth_zones_apply_cfg(struct auth_zones* az, struct config_file* cfg)
 {
-	(void)cfg;
-	/* TODO cfg str2lists */
-	/* create config items for
-	 * auth-zone:	name: "example.com"
-	 * 		zonefile: "zones/example.com"
-	 * 		fallback: yes
-	 */
-	if(!auth_zones_cfg_zonefile(az, NULL /*cfg->auth_zones*/))
-		return 0;
-	if(!auth_zones_cfg_fallback(az, NULL /*cfg->auth_zones*/))
-		return 0;
+	struct config_auth* p;
+	for(p = cfg->auths; p; p = p->next) {
+		if(!p->name || p->name[0] == 0) {
+			log_warn("auth-zone without a name, skipped");
+			continue;
+		}
+		if(!auth_zones_cfg(az, p)) {
+			log_err("cannot config auth zone %s", p->name);
+			return 0;
+		}
+	}
 	if(!auth_zones_read_zones(az))
 		return 0;
 	return 1;
+}
+
+/** delete chunks
+ * @param at: transfer structure with chunks list.  The chunks and their
+ * 	data are freed.
+ */
+void
+auth_chunks_delete(struct auth_transfer* at)
+{
+	if(at->chunks_first) {
+		struct auth_chunk* c, *cn;
+		c = at->chunks_first;
+		while(c) {
+			cn = c->next;
+			free(c->data);
+			free(c);
+			c = cn;
+		}
+	}
+	at->chunks_first = NULL;
+	at->chunks_last = NULL;
+}
+
+/** free the masters list */
+static void
+auth_free_masters(struct auth_master* list)
+{
+	struct auth_master* n;
+	while(list) {
+		n = list->next;
+		free(list->host);
+		free(list->file);
+		free(list);
+		list = n;
+	}
+}
+
+/** delete auth xfer structure
+ * @param xfr: delete this xfer and its tasks.
+ */
+void
+auth_xfer_delete(struct auth_xfer* xfr)
+{
+	if(!xfr) return;
+	lock_basic_destroy(&xfr->lock);
+	free(xfr->name);
+	if(xfr->task_nextprobe) {
+		comm_timer_delete(xfr->task_nextprobe->timer);
+		free(xfr->task_nextprobe);
+	}
+	if(xfr->task_probe) {
+		auth_free_masters(xfr->task_probe->masters);
+		comm_point_delete(xfr->task_probe->cp);
+		free(xfr->task_probe);
+	}
+	if(xfr->task_transfer) {
+		auth_free_masters(xfr->task_transfer->masters);
+		comm_point_delete(xfr->task_transfer->cp);
+		if(xfr->task_transfer->chunks_first) {
+			auth_chunks_delete(xfr->task_transfer);
+		}
+		free(xfr->task_transfer);
+	}
+	free(xfr);
 }
 
 /** helper traverse to delete zones */
@@ -1255,11 +1424,20 @@ auth_zone_del(rbnode_type* n, void* ATTR_UNUSED(arg))
 	auth_zone_delete(z);
 }
 
+/** helper traverse to delete xfer zones */
+static void
+auth_xfer_del(rbnode_type* n, void* ATTR_UNUSED(arg))
+{
+	struct auth_xfer* z = (struct auth_xfer*)n->key;
+	auth_xfer_delete(z);
+}
+
 void auth_zones_delete(struct auth_zones* az)
 {
 	if(!az) return;
 	lock_rw_destroy(&az->lock);
 	traverse_postorder(&az->ztree, auth_zone_del, NULL);
+	traverse_postorder(&az->xtree, auth_xfer_del, NULL);
 	free(az);
 }
 
@@ -1848,7 +2026,7 @@ az_nsec3_find_cover(struct auth_zone* z, uint8_t* nm, size_t nmlen,
 		!az_domain_rrset(node, LDNS_RR_TYPE_NSEC3)) {
 		node = (struct auth_data*)rbtree_previous(&node->node);
 	}
-        if((rbnode_type*)node == RBTREE_NULL)
+	if((rbnode_type*)node == RBTREE_NULL)
 		node = NULL;
 	return node;
 }
@@ -2366,4 +2544,302 @@ int auth_zones_lookup(struct auth_zones* az, struct query_info* qinfo,
 	r = auth_zone_generate_answer(z, qinfo, region, msg, fallback);
 	lock_rw_unlock(&z->lock);
 	return r;
+}
+
+/** encode auth answer */
+static void
+auth_answer_encode(struct query_info* qinfo, struct module_env* env,
+	struct edns_data* edns, sldns_buffer* buf, struct regional* temp,
+	struct dns_msg* msg)
+{
+	uint16_t udpsize;
+	udpsize = edns->udp_size;
+	edns->edns_version = EDNS_ADVERTISED_VERSION;
+	edns->udp_size = EDNS_ADVERTISED_SIZE;
+	edns->ext_rcode = 0;
+	edns->bits &= EDNS_DO;
+
+	if(!inplace_cb_reply_local_call(env, qinfo, NULL, msg->rep,
+		FLAGS_GET_RCODE(msg->rep->flags), edns, temp)
+		|| !reply_info_answer_encode(qinfo, msg->rep,
+		*(uint16_t*)sldns_buffer_begin(buf),
+		sldns_buffer_read_u16_at(buf, 2),
+		buf, 0, 0, temp, udpsize, edns,
+		(int)(edns->bits&EDNS_DO), 0)) {
+		error_encode(buf, (LDNS_RCODE_SERVFAIL|BIT_AA), qinfo,
+			*(uint16_t*)sldns_buffer_begin(buf),
+			sldns_buffer_read_u16_at(buf, 2), edns);
+	}
+}
+
+/** encode auth error answer */
+static void
+auth_error_encode(struct query_info* qinfo, struct module_env* env,
+	struct edns_data* edns, sldns_buffer* buf, struct regional* temp,
+	int rcode)
+{
+	edns->edns_version = EDNS_ADVERTISED_VERSION;
+	edns->udp_size = EDNS_ADVERTISED_SIZE;
+	edns->ext_rcode = 0;
+	edns->bits &= EDNS_DO;
+
+	if(!inplace_cb_reply_local_call(env, qinfo, NULL, NULL,
+		rcode, edns, temp))
+		edns->opt_list = NULL;
+	error_encode(buf, rcode|BIT_AA, qinfo,
+		*(uint16_t*)sldns_buffer_begin(buf),
+		sldns_buffer_read_u16_at(buf, 2), edns);
+}
+
+int auth_zones_answer(struct auth_zones* az, struct module_env* env,
+	struct query_info* qinfo, struct edns_data* edns, struct sldns_buffer* buf,
+	struct regional* temp)
+{
+	struct dns_msg* msg = NULL;
+	struct auth_zone* z;
+	int r;
+	int fallback = 0;
+
+	lock_rw_rdlock(&az->lock);
+	if(!az->have_downstream) {
+		/* no downstream auth zones */
+		lock_rw_unlock(&az->lock);
+		return 0;
+	}
+	z = auth_zones_find_zone(az, qinfo);
+	if(!z) {
+		/* no zone above it */
+		lock_rw_unlock(&az->lock);
+		return 0;
+	}
+	lock_rw_unlock(&az->lock);
+	if(!z->for_downstream) {
+		lock_rw_unlock(&z->lock);
+		return 0;
+	}
+
+	/* answer it from zone z */
+	r = auth_zone_generate_answer(z, qinfo, temp, &msg, &fallback);
+	lock_rw_unlock(&z->lock);
+	if(fallback) {
+		/* fallback to regular answering (recursive) */
+		return 0;
+	}
+
+	/* encode answer */
+	if(!r)
+		auth_error_encode(qinfo, env, edns, buf, temp,
+			LDNS_RCODE_SERVFAIL);
+	else	auth_answer_encode(qinfo, env, edns, buf, temp, msg);
+
+	return 1;
+}
+
+/** the current transfer has finished, apply the results.
+ * set timer for future probe. See if zone is expired now. */
+void
+xfr_master_transferresult(struct auth_xfer* xfr)
+{
+	(void)xfr;
+	/* TODO */
+}
+
+/** the current probe has finished, inspect the results. 
+ * move on to the next master or start a transfer, or at last master,
+ * set timer for future probe. See if zone is expired now. */
+void
+xfr_master_proberesult(struct auth_xfer* xfr)
+{
+	(void)xfr;
+	/* TODO */
+}
+
+/** with current master selected, start the probe, or transfer */
+int
+xfr_master_start(struct auth_xfer* xfr)
+{
+	(void)xfr;
+	/* TODO */
+	return 0;
+}
+
+/** Find auth_zone SOA and populate the values in xfr(soa values). */
+static int
+xfr_find_soa(struct auth_zone* z, struct auth_xfer* xfr)
+{
+	struct auth_data* apex;
+	struct auth_rrset* soa;
+	struct packed_rrset_data* d;
+	apex = az_find_name(z, z->name, z->namelen);
+	if(!apex) return 0;
+	soa = az_domain_rrset(apex, LDNS_RR_TYPE_SOA);
+	if(!soa || soa->data->count==0)
+		return 0; /* no RRset or no RRs in rrset */
+	if(soa->data->rr_len[0] < 2+4*5) return 0; /* SOA too short */
+	/* SOA record ends with serial, refresh, retry, expiry, minimum,
+	 * as 4 byte fields */
+	d = soa->data;
+	xfr->have_zone = 1;
+	xfr->serial = sldns_read_uint32(d->rr_data[0]+(d->rr_len[0]-20));
+	xfr->retry = sldns_read_uint32(d->rr_data[0]+(d->rr_len[0]-16));
+	xfr->refresh = sldns_read_uint32(d->rr_data[0]+(d->rr_len[0]-12));
+	xfr->expiry = sldns_read_uint32(d->rr_data[0]+(d->rr_len[0]-8));
+	/* soa minimum at d->rr_len[0]-4 */
+	return 1;
+}
+
+/** determine next timeout for auth_xfer. Also (re)sets timer. */
+void
+xfr_set_timeout(struct auth_xfer* xfr)
+{
+	(void)xfr;
+	/* TODO */
+}
+
+/**
+ * malloc the xfer and tasks
+ * @param z: auth_zone with name of zone.
+ */
+static struct auth_xfer*
+auth_xfer_new(struct auth_zone* z)
+{
+	struct auth_xfer* xfr;
+	xfr = (struct auth_xfer*)calloc(1, sizeof(*xfr));
+	if(!xfr) return NULL;
+	xfr->name = memdup(z->name, z->namelen);
+	if(!xfr->name) {
+		free(xfr);
+		return NULL;
+	}
+	xfr->node.key = xfr;
+	xfr->namelen = z->namelen;
+	xfr->namelabs = z->namelabs;
+	xfr->dclass = z->dclass;
+
+	xfr->task_nextprobe = (struct auth_nextprobe*)calloc(1,
+		sizeof(struct auth_nextprobe));
+	if(!xfr->task_nextprobe) {
+		free(xfr->name);
+		free(xfr);
+		return NULL;
+	}
+	xfr->task_nextprobe->workernum = -1;
+	xfr->task_probe = (struct auth_probe*)calloc(1,
+		sizeof(struct auth_probe));
+	if(!xfr->task_probe) {
+		free(xfr->task_nextprobe);
+		free(xfr->name);
+		free(xfr);
+		return NULL;
+	}
+	xfr->task_probe->workernum = -1;
+	xfr->task_transfer = (struct auth_transfer*)calloc(1,
+		sizeof(struct auth_transfer));
+	if(!xfr->task_transfer) {
+		free(xfr->task_probe);
+		free(xfr->task_nextprobe);
+		free(xfr->name);
+		free(xfr);
+		return NULL;
+	}
+	xfr->task_transfer->workernum = -1;
+
+	lock_basic_init(&xfr->lock);
+	lock_protect(&xfr->lock, xfr, sizeof(*xfr));
+	lock_protect(&xfr->lock, &xfr->task_nextprobe->workernum,
+		sizeof(xfr->task_nextprobe->workernum));
+	lock_protect(&xfr->lock, &xfr->task_probe->workernum,
+		sizeof(xfr->task_probe->workernum));
+	lock_protect(&xfr->lock, &xfr->task_transfer->workernum,
+		sizeof(xfr->task_transfer->workernum));
+	return xfr;
+}
+
+/** 
+ * Setup auth_xfer zone
+ * This populates the have_zone, soa values, next_probe and so on times.
+ * Doesn't do network traffic yet, sets the timeout.
+ */
+int
+auth_xfer_setup(struct auth_zone* z, struct auth_xfer* x, struct module_env* env)
+{
+	if(!z || !x) return 1;
+	if(!xfr_find_soa(z, x)) {
+		return 1;
+	}
+	/* nextprobe setup */
+	x->task_nextprobe->next_probe = 0;
+	if(x->have_zone)
+		x->task_nextprobe->lease_time = *env->now;
+	/* nothing for probe and transfer tasks */
+	return 1;
+}
+
+/** Create auth_xfer structure.
+ * This populates the have_zone, soa values, next_probe and so on times.
+ * and sets the timeout, if a zone transfer is needed a short timeout is set.
+ * For that the auth_zone itself must exist (and read in zonefile)
+ * returns false on alloc failure. */
+struct auth_xfer*
+auth_xfer_create(struct auth_zones* az, struct auth_zone* z)
+{
+	struct auth_xfer* xfr;
+
+	/* malloc it */
+	xfr = auth_xfer_new(z);
+	if(!xfr) {
+		log_err("malloc failure");
+		return NULL;
+	}
+	/* insert in tree */
+	(void)rbtree_insert(&az->xtree, &xfr->node);
+	return xfr;
+}
+
+/** create new auth_master structure */
+static struct auth_master*
+auth_master_new(struct auth_master*** list)
+{
+	struct auth_master *m;
+	m = (struct auth_master*)calloc(1, sizeof(*m));
+	if(!m) {
+		log_err("malloc failure");
+		return NULL;
+	}
+	/* set first pointer to m, or next pointer of previous element to m */
+	(**list) = m;
+	/* store m's next pointer as future point to store at */
+	(*list) = &(m->next);
+	return m;
+}
+
+int
+xfer_set_masters(struct auth_master** list, struct config_auth* c)
+{
+	struct auth_master* m;
+	struct config_strlist* p;
+	/* list points to the first, or next pointer for the new element */
+	while(*list) {
+		list = &( (*list)->next );
+	}
+	for(p = c->masters; p; p = p->next) {
+		m = auth_master_new(&list);
+		m->ixfr = 1;
+		m->host = strdup(p->str);
+		if(!m->host) {
+			log_err("malloc failure");
+			return 0;
+		}
+	}
+	for(p = c->urls; p; p = p->next) {
+		m = auth_master_new(&list);
+		m->http = 1;
+		/* TODO parse url, get host, file */
+		m->host = strdup(p->str);
+		if(!m->host) {
+			log_err("malloc failure");
+			return 0;
+		}
+	}
+	return 1;
 }

@@ -215,6 +215,7 @@ fptr_whitelist_rbtree_cmp(int (*fptr) (const void *, const void *))
 	else if(fptr == &view_cmp) return 1;
 	else if(fptr == &auth_zone_cmp) return 1;
 	else if(fptr == &auth_data_cmp) return 1;
+	else if(fptr == &auth_xfer_cmp) return 1;
 	return 0;
 }
 

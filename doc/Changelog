@@ -16,6 +16,7 @@
 	The `dnscrypt-provider-cert-rotated` allow to instruct unbound to not
 	publish the cert as part of the DNS's provider_name's TXT answer.
 	- Better documentation for cache-max-negative-ttl.
+	- Work on local root zone code.
 
 10 October 2017: Wouter 
 	- tag 1.6.7

@@ -295,6 +295,12 @@ forward-addr{COLON}		{ YDVAR(1, VAR_FORWARD_ADDR) }
 forward-host{COLON}		{ YDVAR(1, VAR_FORWARD_HOST) }
 forward-first{COLON}		{ YDVAR(1, VAR_FORWARD_FIRST) }
 forward-ssl-upstream{COLON}	{ YDVAR(1, VAR_FORWARD_SSL_UPSTREAM) }
+auth-zone{COLON}		{ YDVAR(0, VAR_AUTH_ZONE) }
+zonefile{COLON}			{ YDVAR(1, VAR_ZONEFILE) }
+master{COLON}			{ YDVAR(1, VAR_MASTER) }
+url{COLON}			{ YDVAR(1, VAR_URL) }
+for-downstream{COLON}		{ YDVAR(1, VAR_FOR_DOWNSTREAM) }
+for-upstream{COLON}		{ YDVAR(1, VAR_FOR_UPSTREAM) }
 view{COLON}			{ YDVAR(0, VAR_VIEW) }
 view-first{COLON}		{ YDVAR(1, VAR_VIEW_FIRST) }
 do-not-query-address{COLON}	{ YDVAR(1, VAR_DO_NOT_QUERY_ADDRESS) }
