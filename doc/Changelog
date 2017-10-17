@@ -1,6 +1,20 @@
-11 October 2017: Wouter 
+17 October 2017: Wouter 
 	- Fix #1749: With harden-referral-path: performance drops, due to
 	  circular dependency in NS and DS lookups.
+	- [dnscrypt] prevent dnscrypt-secret-key, dnscrypt-provider-cert
+	  duplicates
+	- [dnscrypt] introduce dnscrypt-provider-cert-rotated option,
+	  from Manu Bretelle.
+	This option allows handling multiple cert/key pairs while only
+	distributing some of them.
+	In order to reliably match a client magic with a given key without
+	strong assumption as to how those were generated, we need both key and
+	cert. Likewise, in order to know which ES version should be used.
+	On the other hand, when rotating a cert, it can be desirable to only
+	serve the new cert but still be able to handle clients that are still
+	using the old certs's public key.
+	The `dnscrypt-provider-cert-rotated` allow to instruct unbound to not
+	publish the cert as part of the DNS's provider_name's TXT answer.
 
 10 October 2017: Wouter 
 	- tag 1.6.7

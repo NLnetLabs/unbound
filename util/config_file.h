@@ -466,6 +466,10 @@ struct config_file {
 	struct config_strlist* dnscrypt_secret_key;
 	/** dnscrypt provider certs 1.cert */
 	struct config_strlist* dnscrypt_provider_cert;
+	/** dnscrypt provider certs 1.cert which have been rotated and should not be
+	* advertised through DNS's providername TXT record but are required to be
+	* able to handle existing traffic using the old cert. */
+	struct config_strlist* dnscrypt_provider_cert_rotated;
 	/** memory size in bytes for dnscrypt shared secrets cache */
 	size_t dnscrypt_shared_secret_cache_size;
 	/** number of slabs for dnscrypt shared secrets cache */
@@ -719,6 +723,15 @@ char* config_collate_cat(struct config_strlist* list);
  * @return true on success.
  */
 int cfg_strlist_append(struct config_strlist_head* list, char* item);
+
+/**
+ * Find string in strlist.
+ * @param head: pointer to strlist head variable.
+ * @param item: the item to search for.
+ * @return: the element in the list when found, NULL otherwise.
+ */
+struct config_strlist* cfg_strlist_find(struct config_strlist* head,
+	const char* item);
 
 /**
  * Insert string into strlist.

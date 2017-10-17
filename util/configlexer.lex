@@ -417,6 +417,7 @@ dnscrypt-port{COLON}		{ YDVAR(1, VAR_DNSCRYPT_PORT) }
 dnscrypt-provider{COLON}	{ YDVAR(1, VAR_DNSCRYPT_PROVIDER) }
 dnscrypt-secret-key{COLON}	{ YDVAR(1, VAR_DNSCRYPT_SECRET_KEY) }
 dnscrypt-provider-cert{COLON}	{ YDVAR(1, VAR_DNSCRYPT_PROVIDER_CERT) }
+dnscrypt-provider-cert-rotated{COLON}	{ YDVAR(1, VAR_DNSCRYPT_PROVIDER_CERT_ROTATED) }
 dnscrypt-shared-secret-cache-size{COLON}	{
 		YDVAR(1, VAR_DNSCRYPT_SHARED_SECRET_CACHE_SIZE) }
 dnscrypt-shared-secret-cache-slabs{COLON}	{

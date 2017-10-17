@@ -5,6 +5,7 @@
 #ifdef HAVE_TIME_H
 #include <time.h>
 #endif
+#include <inttypes.h>
 #include <sys/time.h>
 #include <sys/types.h>
 #include "sldns/sbuffer.h"
@@ -588,18 +589,26 @@ dnsc_chroot_path(struct config_file *cfg, char *path)
 static int
 dnsc_parse_certs(struct dnsc_env *env, struct config_file *cfg)
 {
-	struct config_strlist *head;
+	struct config_strlist *head, *head2;
 	size_t signed_cert_id;
+	size_t rotated_cert_id;
 	char *nm;
 
 	env->signed_certs_count = 0U;
+	env->rotated_certs_count = 0U;
 	for (head = cfg->dnscrypt_provider_cert; head; head = head->next) {
 		env->signed_certs_count++;
+	}
+	for (head = cfg->dnscrypt_provider_cert_rotated; head; head = head->next) {
+		env->rotated_certs_count++;
 	}
 	env->signed_certs = sodium_allocarray(env->signed_certs_count,
 										  sizeof *env->signed_certs);
 
+	env->rotated_certs = sodium_allocarray(env->rotated_certs_count,
+										  sizeof env->signed_certs);
 	signed_cert_id = 0U;
+	rotated_cert_id = 0U;
 	for(head = cfg->dnscrypt_provider_cert; head; head = head->next, signed_cert_id++) {
 		nm = dnsc_chroot_path(cfg, head->str);
 		if(dnsc_read_from_file(
@@ -607,6 +616,14 @@ dnsc_parse_certs(struct dnsc_env *env, struct config_file *cfg)
 				(char *)(env->signed_certs + signed_cert_id),
 				sizeof(struct SignedCert)) != 0) {
 			fatal_exit("dnsc_parse_certs: failed to load %s: %s", head->str, strerror(errno));
+		}
+		for(head2 = cfg->dnscrypt_provider_cert_rotated; head2; head2 = head2->next) {
+			if(strcmp(head->str, head2->str) == 0) {
+				*(env->rotated_certs + rotated_cert_id) = env->signed_certs + signed_cert_id;
+				rotated_cert_id++;
+				verbose(VERB_OPS, "Cert %s is rotated and will not be distributed via DNS", head->str);
+				break;
+			}
 		}
 		verbose(VERB_OPS, "Loaded cert %s", head->str);
 	}
@@ -692,7 +709,27 @@ dnsc_load_local_data(struct dnsc_env* dnscenv, struct config_file *cfg)
     // 2.dnscrypt-cert.example.com 86400 IN TXT "DNSC......"
     for(i=0; i<dnscenv->signed_certs_count; i++) {
         const char *ttl_class_type = " 86400 IN TXT \"";
+        int rotated_cert = 0;
+		uint32_t serial;
         struct SignedCert *cert = dnscenv->signed_certs + i;
+		// Check if the certificate is being rotated and should not be published
+        for(j=0; j<dnscenv->rotated_certs_count; j++){
+            if(cert == dnscenv->rotated_certs[j]) {
+                rotated_cert = 1;
+                break;
+            }
+        }
+		memcpy(&serial, cert->serial, sizeof serial);
+		serial = htonl(serial);
+        if(rotated_cert) {
+            verbose(VERB_OPS,
+                "DNSCrypt: not adding cert with serial #%"
+                PRIu32
+                " to local-data as it is rotated",
+                serial
+            );
+            continue;
+        }
         uint16_t rrlen = strlen(dnscenv->provider_name) +
                          strlen(ttl_class_type) +
                          4 * sizeof(struct SignedCert) + // worst case scenario
@@ -705,14 +742,19 @@ dnsc_load_local_data(struct dnsc_env* dnscenv, struct config_file *cfg)
         }
         snprintf(rr, rrlen - 1, "%s 86400 IN TXT \"", dnscenv->provider_name);
         for(j=0; j<sizeof(struct SignedCert); j++) {
-       	    int c = (int)*((const uint8_t *) cert + j);
+			int c = (int)*((const uint8_t *) cert + j);
             if (isprint(c) && c != '"' && c != '\\') {
                 snprintf(rr + strlen(rr), rrlen - 1 - strlen(rr), "%c", c);
             } else {
                 snprintf(rr + strlen(rr), rrlen - 1 - strlen(rr), "\\%03d", c);
             }
         }
-        verbose(VERB_OPS, "DNSCrypt: adding local data to config: %s", rr);
+        verbose(VERB_OPS,
+			"DNSCrypt: adding cert with serial #%"
+			PRIu32
+			" to local-data to config: %s",
+			serial, rr
+		);
         snprintf(rr + strlen(rr), rrlen - 1 - strlen(rr), "\"");
         cfg_strlist_insert(&cfg->local_data, strdup(rr));
         free(rr);
@@ -957,6 +999,7 @@ dnsc_delete(struct dnsc_env *env)
 	}
 	verbose(VERB_OPS, "DNSCrypt: Freeing environment.");
 	sodium_free(env->signed_certs);
+	sodium_free(env->rotated_certs);
 	sodium_free(env->certs);
 	sodium_free(env->keypairs);
 	slabhash_delete(env->shared_secrets_cache);

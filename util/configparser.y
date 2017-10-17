@@ -144,6 +144,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_USE_SYSTEMD VAR_SHM_ENABLE VAR_SHM_KEY
 %token VAR_DNSCRYPT VAR_DNSCRYPT_ENABLE VAR_DNSCRYPT_PORT VAR_DNSCRYPT_PROVIDER
 %token VAR_DNSCRYPT_SECRET_KEY VAR_DNSCRYPT_PROVIDER_CERT
+%token VAR_DNSCRYPT_PROVIDER_CERT_ROTATED
 %token VAR_DNSCRYPT_SHARED_SECRET_CACHE_SIZE
 %token VAR_DNSCRYPT_SHARED_SECRET_CACHE_SLABS
 %token VAR_DNSCRYPT_NONCE_CACHE_SIZE
@@ -2339,6 +2340,7 @@ contents_dnsc: contents_dnsc content_dnsc
 content_dnsc:
 	dnsc_dnscrypt_enable | dnsc_dnscrypt_port | dnsc_dnscrypt_provider |
 	dnsc_dnscrypt_secret_key | dnsc_dnscrypt_provider_cert |
+	dnsc_dnscrypt_provider_cert_rotated |
 	dnsc_dnscrypt_shared_secret_cache_size |
 	dnsc_dnscrypt_shared_secret_cache_slabs |
 	dnsc_dnscrypt_nonce_cache_size |
@@ -2374,13 +2376,24 @@ dnsc_dnscrypt_provider: VAR_DNSCRYPT_PROVIDER STRING_ARG
 dnsc_dnscrypt_provider_cert: VAR_DNSCRYPT_PROVIDER_CERT STRING_ARG
 	{
 		OUTYY(("P(dnsc_dnscrypt_provider_cert:%s)\n", $2));
+		if(cfg_strlist_find(cfg_parser->cfg->dnscrypt_provider_cert, $2))
+			fatal_exit("dnscrypt-provider-cert %s is a duplicate", $2);
 		if(!cfg_strlist_insert(&cfg_parser->cfg->dnscrypt_provider_cert, $2))
 			fatal_exit("out of memory adding dnscrypt-provider-cert");
+	}
+	;
+dnsc_dnscrypt_provider_cert_rotated: VAR_DNSCRYPT_PROVIDER_CERT_ROTATED STRING_ARG
+	{
+		OUTYY(("P(dnsc_dnscrypt_provider_cert_rotated:%s)\n", $2));
+		if(!cfg_strlist_insert(&cfg_parser->cfg->dnscrypt_provider_cert_rotated, $2))
+			fatal_exit("out of memory adding dnscrypt-provider-cert-rotated");
 	}
 	;
 dnsc_dnscrypt_secret_key: VAR_DNSCRYPT_SECRET_KEY STRING_ARG
 	{
 		OUTYY(("P(dnsc_dnscrypt_secret_key:%s)\n", $2));
+		if(cfg_strlist_find(cfg_parser->cfg->dnscrypt_secret_key, $2))
+			fatal_exit("dnscrypt-secret-key: %s is a duplicate", $2);
 		if(!cfg_strlist_insert(&cfg_parser->cfg->dnscrypt_secret_key, $2))
 			fatal_exit("out of memory adding dnscrypt-secret-key");
 	}
