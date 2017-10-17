@@ -330,6 +330,7 @@ the data in the cache does not match up with the actual data any more.
 .B cache\-max\-negative\-ttl: \fI<seconds>
 Time to live maximum for negative responses, these have a SOA in the
 authority section that is limited in time.  Default is 3600.
+This applies to nxdomain and nodata answers.
 .TP
 .B infra\-host\-ttl: \fI<seconds>
 Time to live for entries in the host cache. The host cache contains
