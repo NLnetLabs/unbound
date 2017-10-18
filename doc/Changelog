@@ -1,3 +1,6 @@
+18 October 2017: Wouter 
+	- lint for recent authzone commit.
+
 17 October 2017: Wouter 
 	- Fix #1749: With harden-referral-path: performance drops, due to
 	  circular dependency in NS and DS lookups.

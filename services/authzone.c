@@ -2560,7 +2560,7 @@ auth_answer_encode(struct query_info* qinfo, struct module_env* env,
 	edns->bits &= EDNS_DO;
 
 	if(!inplace_cb_reply_local_call(env, qinfo, NULL, msg->rep,
-		FLAGS_GET_RCODE(msg->rep->flags), edns, temp)
+		(int)FLAGS_GET_RCODE(msg->rep->flags), edns, temp)
 		|| !reply_info_answer_encode(qinfo, msg->rep,
 		*(uint16_t*)sldns_buffer_begin(buf),
 		sldns_buffer_read_u16_at(buf, 2),
