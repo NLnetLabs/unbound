@@ -56,6 +56,7 @@ struct module_env;
 struct worker;
 struct comm_point;
 struct comm_timer;
+struct comm_reply;
 struct auth_rrset;
 struct auth_nextprobe;
 struct auth_probe;
@@ -275,10 +276,10 @@ struct auth_nextprobe {
  * waiting uninterrupted).
  */
 struct auth_probe {
-	/** worker num (or -1 unowned) that is performing this task */
-	int workernum;
-	/* Worker pointer. Used by the worker during callbacks. */
+	/* Worker pointer. NULL means unowned. */
 	struct worker* worker;
+	/* module env for this task */
+	struct module_env* env;
 
 	/** list of upstream masters for this zone, from config */
 	struct auth_master* masters;
@@ -290,6 +291,8 @@ struct auth_probe {
 	 * or NULL if not working on sequential scan */
 	struct auth_master* scan_target;
 
+	/** dns id of packet in flight */
+	uint16_t id;
 	/** the SOA probe udp event.
 	 * on the workers event base. */
 	struct comm_point* cp;
@@ -301,9 +304,7 @@ struct auth_probe {
  * with failure or success.  If failure, use shorter timeout for wait time.
  */
 struct auth_transfer {
-	/** worker num (or -1 unowned) that is performing this task */
-	int workernum;
-	/* Worker pointer. Used by the worker during callbacks. */
+	/* Worker pointer. NULL means unowned. */
 	struct worker* worker;
 
 	/** xfer data that has been transferred, the data is applied
@@ -487,5 +488,13 @@ struct auth_xfer* auth_xfer_create(struct auth_zones* az, struct auth_zone* z);
  * @return false on failure.
  */
 int xfer_set_masters(struct auth_master** list, struct config_auth* c);
+
+
+/** xfer nextprobe timeout callback, this is part of task_nextprobe */
+void auth_xfer_timer(void* arg);
+
+/** callback for commpoint udp replies to task_probe */
+int auth_xfer_probe_udp_callback(struct comm_point* c, void* arg, int err,
+        struct comm_reply* repinfo);
 
 #endif /* SERVICES_AUTHZONE_H */

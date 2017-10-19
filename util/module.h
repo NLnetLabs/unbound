@@ -168,6 +168,7 @@ struct regional;
 struct worker;
 struct comm_base;
 struct auth_zones;
+struct outside_network;
 struct module_qstate;
 struct ub_randstate;
 struct mesh_area;
@@ -449,6 +450,8 @@ struct module_env {
 	struct worker* worker;
 	/** the worker event base */
 	struct comm_base* worker_base;
+	/** the outside network */
+	struct outside_network* outnet;
 	/** mesh area with query state dependencies */
 	struct mesh_area* mesh;
 	/** allocation service */

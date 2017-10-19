@@ -648,7 +648,7 @@ comm_point_udp_ancil_callback(int fd, short event, void* arg)
 			(void)comm_point_send_udp_msg_if(rep.c, rep.c->buffer,
 				(struct sockaddr*)&rep.addr, rep.addrlen, &rep);
 		}
-		if(rep.c->fd == -1) /* commpoint closed */
+		if(!rep.c || rep.c->fd == -1) /* commpoint closed */
 			break;
 	}
 #else
@@ -711,7 +711,7 @@ comm_point_udp_callback(int fd, short event, void* arg)
 			(void)comm_point_send_udp_msg(rep.c, buffer,
 				(struct sockaddr*)&rep.addr, rep.addrlen);
 		}
-		if(rep.c->fd != fd) /* commpoint closed to -1 or reused for
+		if(!rep.c || rep.c->fd != fd) /* commpoint closed to -1 or reused for
 		another UDP port. Note rep.c cannot be reused with TCP fd. */
 			break;
 	}

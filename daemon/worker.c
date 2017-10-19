@@ -1675,6 +1675,7 @@ worker_init(struct worker* worker, struct config_file *cfg,
 	worker->env.worker_base = worker->base;
 	worker->env.send_query = &worker_send_query;
 	worker->env.alloc = &worker->alloc;
+	worker->env.outnet = worker->back;
 	worker->env.rnd = worker->rndstate;
 	/* If case prefetch is triggered, the corresponding mesh will clear
 	 * the scratchpad for the module env in the middle of request handling.
