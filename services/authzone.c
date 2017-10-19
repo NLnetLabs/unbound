@@ -250,6 +250,7 @@ msg_add_rrset_ar(struct auth_zone* z, struct regional* region,
 
 struct auth_zones* auth_zones_create(void)
 {
+	/* TODO: create and put in env in worker and libworker */
 	struct auth_zones* az = (struct auth_zones*)calloc(1, sizeof(*az));
 	if(!az) {
 		log_err("out of memory");
@@ -1245,8 +1246,62 @@ auth_zones_read_zones(struct auth_zones* az)
 	return 1;
 }
 
-/** setup all auth zones */
-int
+/** Find auth_zone SOA and populate the values in xfr(soa values). */
+static int
+xfr_find_soa(struct auth_zone* z, struct auth_xfer* xfr)
+{
+	struct auth_data* apex;
+	struct auth_rrset* soa;
+	struct packed_rrset_data* d;
+	apex = az_find_name(z, z->name, z->namelen);
+	if(!apex) return 0;
+	soa = az_domain_rrset(apex, LDNS_RR_TYPE_SOA);
+	if(!soa || soa->data->count==0)
+		return 0; /* no RRset or no RRs in rrset */
+	if(soa->data->rr_len[0] < 2+4*5) return 0; /* SOA too short */
+	/* SOA record ends with serial, refresh, retry, expiry, minimum,
+	 * as 4 byte fields */
+	d = soa->data;
+	xfr->have_zone = 1;
+	xfr->serial = sldns_read_uint32(d->rr_data[0]+(d->rr_len[0]-20));
+	xfr->retry = sldns_read_uint32(d->rr_data[0]+(d->rr_len[0]-16));
+	xfr->refresh = sldns_read_uint32(d->rr_data[0]+(d->rr_len[0]-12));
+	xfr->expiry = sldns_read_uint32(d->rr_data[0]+(d->rr_len[0]-8));
+	/* soa minimum at d->rr_len[0]-4 */
+	return 1;
+}
+
+/** 
+ * Setup auth_xfer zone
+ * This populates the have_zone, soa values, next_probe and so on times.
+ * Doesn't do network traffic yet, sets the timeout.
+ * @param z: locked by caller, and modified for setup
+ * @param x: locked by caller, and modified, timers and timeouts.
+ * @param env: module env with time.
+ * @return false on failure.
+ */
+static int
+auth_xfer_setup(struct auth_zone* z, struct auth_xfer* x, struct module_env* env)
+{
+	if(!z || !x) return 1;
+	if(!xfr_find_soa(z, x)) {
+		return 1;
+	}
+	/* nextprobe setup */
+	x->task_nextprobe->next_probe = 0;
+	if(x->have_zone)
+		x->task_nextprobe->lease_time = *env->now;
+	/* nothing for probe and transfer tasks */
+	return 1;
+}
+
+/**
+ * Setup all zones
+ * @param az: auth zones structure
+ * @param env: module env with time.
+ * @return false on failure.
+ */
+static int
 auth_zones_setup_zones(struct auth_zones* az, struct module_env* env)
 {
 	struct auth_zone* z;
@@ -1334,7 +1389,8 @@ auth_zones_cfg(struct auth_zones* az, struct config_auth* c)
 	return 1;
 }
 
-int auth_zones_apply_cfg(struct auth_zones* az, struct config_file* cfg)
+int auth_zones_apply_cfg(struct auth_zones* az, struct config_file* cfg,
+	int setup, struct module_env* env)
 {
 	struct config_auth* p;
 	for(p = cfg->auths; p; p = p->next) {
@@ -1349,6 +1405,10 @@ int auth_zones_apply_cfg(struct auth_zones* az, struct config_file* cfg)
 	}
 	if(!auth_zones_read_zones(az))
 		return 0;
+	if(setup) {
+		if(!auth_zones_setup_zones(az, env))
+			return 0;
+	}
 	return 1;
 }
 
@@ -2635,6 +2695,34 @@ int auth_zones_answer(struct auth_zones* az, struct module_env* env,
 	return 1;
 }
 
+/** set a zone expired */
+static void
+auth_xfer_set_expired(struct auth_xfer* xfr, struct module_env* env,
+	int expired)
+{
+	struct auth_zone* z;
+
+	/* expire xfr */
+	lock_basic_lock(&xfr->lock);
+	xfr->zone_expired = expired;
+	lock_basic_unlock(&xfr->lock);
+
+	/* find auth_zone */
+	lock_rw_rdlock(&env->auth_zones->lock);
+	z = auth_zone_find(env->auth_zones, xfr->name, xfr->namelen,
+		xfr->dclass);
+	if(!z) {
+		lock_rw_unlock(&env->auth_zones->lock);
+		return;
+	}
+	lock_rw_wrlock(&z->lock);
+	lock_rw_unlock(&env->auth_zones->lock);
+
+	/* expire auth_zone */
+	z->zone_expired = expired;
+	lock_rw_unlock(&z->lock);
+}
+
 /** the current transfer has finished, apply the results.
  * set timer for future probe. See if zone is expired now. */
 void
@@ -2663,37 +2751,99 @@ xfr_master_start(struct auth_xfer* xfr)
 	return 0;
 }
 
-/** Find auth_zone SOA and populate the values in xfr(soa values). */
-static int
-xfr_find_soa(struct auth_zone* z, struct auth_xfer* xfr)
+/** xfer nextprobe timeout callback */
+void auth_xfer_timer(void* arg)
 {
-	struct auth_data* apex;
-	struct auth_rrset* soa;
-	struct packed_rrset_data* d;
-	apex = az_find_name(z, z->name, z->namelen);
-	if(!apex) return 0;
-	soa = az_domain_rrset(apex, LDNS_RR_TYPE_SOA);
-	if(!soa || soa->data->count==0)
-		return 0; /* no RRset or no RRs in rrset */
-	if(soa->data->rr_len[0] < 2+4*5) return 0; /* SOA too short */
-	/* SOA record ends with serial, refresh, retry, expiry, minimum,
-	 * as 4 byte fields */
-	d = soa->data;
-	xfr->have_zone = 1;
-	xfr->serial = sldns_read_uint32(d->rr_data[0]+(d->rr_len[0]-20));
-	xfr->retry = sldns_read_uint32(d->rr_data[0]+(d->rr_len[0]-16));
-	xfr->refresh = sldns_read_uint32(d->rr_data[0]+(d->rr_len[0]-12));
-	xfr->expiry = sldns_read_uint32(d->rr_data[0]+(d->rr_len[0]-8));
-	/* soa minimum at d->rr_len[0]-4 */
-	return 1;
+	struct auth_xfer* xfr = (struct auth_xfer*)arg;
+	log_assert(xfr->task_nextprobe);
+
+	/* see if zone has expired, and if so, also set auth_zone expired */
+	if(xfr->have_zone && !xfr->zone_expired &&
+	   *(xfr->task_nextprobe->env->now) >= xfr->task_nextprobe->lease_time
+	   + xfr->expiry) {
+		auth_xfer_set_expired(xfr, xfr->task_nextprobe->env, 1);
+	}
+
+	/* see if we need to start a probe (or maybe it is already in
+	 * progress (due to notify)) */
+	/* TODO */
+
+	/* if we don't end up resetting the timer, delete it, because
+	 * the next worker to pick this up does not have the same
+	 * event base */
+	comm_timer_delete(xfr->task_nextprobe->timer);
+	xfr->task_nextprobe->timer = NULL;
+	xfr->task_nextprobe->next_probe = 0;
+	/* we don't own this item anymore */
+	xfr->task_nextprobe->worker = NULL;
+	xfr->task_nextprobe->env = NULL;
 }
 
-/** determine next timeout for auth_xfer. Also (re)sets timer. */
-void
-xfr_set_timeout(struct auth_xfer* xfr)
+/** for task_nextprobe.
+ * determine next timeout for auth_xfer. Also (re)sets timer.
+ * @param xfr: task structure
+ * @param env: module environment, with worker and time.
+ * @param failure: set true if timer should be set for failure retry.
+ */
+static void
+xfr_set_timeout(struct auth_xfer* xfr, struct module_env* env,
+	int failure)
 {
-	(void)xfr;
-	/* TODO */
+	struct timeval tv;
+	log_assert(xfr->task_nextprobe != NULL);
+	log_assert(xfr->task_nextprobe->worker == NULL ||
+		xfr->task_nextprobe->worker == env->worker);
+	/* normally, nextprobe = startoflease + refresh,
+	 * but if expiry is sooner, use that one.
+	 * after a failure, use the retry timer instead. */
+	xfr->task_nextprobe->next_probe = *env->now;
+	if(xfr->task_nextprobe->lease_time)
+		xfr->task_nextprobe->next_probe =
+			xfr->task_nextprobe->lease_time;
+	if(xfr->have_zone) {
+		time_t wait = xfr->refresh;
+		if(failure) wait = xfr->retry;
+		if(xfr->expiry < wait)
+			xfr->task_nextprobe->next_probe += xfr->expiry;
+		else	xfr->task_nextprobe->next_probe += wait;
+	}
+
+	if(!xfr->task_nextprobe->timer) {
+		xfr->task_nextprobe->timer = comm_timer_create(
+			env->worker_base, auth_xfer_timer, xfr);
+		if(!xfr->task_nextprobe->timer) {
+			/* failed to malloc memory. likely zone transfer
+			 * also fails for that. skip the timeout */
+			char zname[255+1];
+			dname_str(xfr->name, zname);
+			log_err("cannot allocate timer, no refresh for %s",
+				zname);
+			return;
+		}
+	}
+	xfr->task_nextprobe->worker = env->worker;
+	xfr->task_nextprobe->env = env;
+	if(*(xfr->task_nextprobe->env->now) <= xfr->task_nextprobe->next_probe)
+		tv.tv_sec = xfr->task_nextprobe->next_probe - 
+			*(xfr->task_nextprobe->env->now);
+	else	tv.tv_sec = 0;
+	tv.tv_usec = 0;
+	comm_timer_set(xfr->task_nextprobe->timer, &tv);
+}
+
+/** initial pick up of worker timeouts, ties events to worker event loop */
+void
+auth_xfer_pickup_initial(struct auth_zones* az, struct module_env* env)
+{
+	struct auth_xfer* x;
+	lock_rw_wrlock(&az->lock);
+	RBTREE_FOR(x, struct auth_xfer*, &az->xtree) {
+		lock_basic_lock(&x->lock);
+		if(x->task_nextprobe && x->task_nextprobe->worker == NULL)
+			xfr_set_timeout(x, env, 0);
+		lock_basic_unlock(&x->lock);
+	}
+	lock_rw_unlock(&az->lock);
 }
 
 /**
@@ -2723,7 +2873,6 @@ auth_xfer_new(struct auth_zone* z)
 		free(xfr);
 		return NULL;
 	}
-	xfr->task_nextprobe->workernum = -1;
 	xfr->task_probe = (struct auth_probe*)calloc(1,
 		sizeof(struct auth_probe));
 	if(!xfr->task_probe) {
@@ -2753,26 +2902,6 @@ auth_xfer_new(struct auth_zone* z)
 	lock_protect(&xfr->lock, &xfr->task_transfer->workernum,
 		sizeof(xfr->task_transfer->workernum));
 	return xfr;
-}
-
-/** 
- * Setup auth_xfer zone
- * This populates the have_zone, soa values, next_probe and so on times.
- * Doesn't do network traffic yet, sets the timeout.
- */
-int
-auth_xfer_setup(struct auth_zone* z, struct auth_xfer* x, struct module_env* env)
-{
-	if(!z || !x) return 1;
-	if(!xfr_find_soa(z, x)) {
-		return 1;
-	}
-	/* nextprobe setup */
-	x->task_nextprobe->next_probe = 0;
-	if(x->have_zone)
-		x->task_nextprobe->lease_time = *env->now;
-	/* nothing for probe and transfer tasks */
-	return 1;
 }
 
 /** Create auth_xfer structure.

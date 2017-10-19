@@ -1672,6 +1672,7 @@ worker_init(struct worker* worker, struct config_file *cfg,
 	if(worker->thread_num == 0)
 		log_set_time(worker->env.now);
 	worker->env.worker = worker;
+	worker->env.worker_base = worker->base;
 	worker->env.send_query = &worker_send_query;
 	worker->env.alloc = &worker->alloc;
 	worker->env.rnd = worker->rndstate;

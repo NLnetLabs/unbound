@@ -247,10 +247,10 @@ struct auth_xfer {
  * if unowned.
  */
 struct auth_nextprobe {
-	/** worker num (or -1 unowned) that is performing this task */
-	int workernum;
-	/* Worker pointer. Used by the worker during callbacks. */
+	/* Worker pointer. NULL means unowned. */
 	struct worker* worker;
+	/* module env for this task */
+	struct module_env* env;
 
 	/** Timeout for next probe (for SOA) */
 	time_t next_probe;
@@ -372,8 +372,14 @@ struct auth_zones* auth_zones_create(void);
 
 /**
  * Apply configuration to auth zones.  Reads zonefiles.
+ * @param az: auth zones structure
+ * @param cfg: config to apply.
+ * @param setup: if true, also sets up values in the auth zones structure
+ * @parm env: for setup, with current time.
+ * @return false on failure.
  */
-int auth_zones_apply_cfg(struct auth_zones* az, struct config_file* cfg);
+int auth_zones_apply_cfg(struct auth_zones* az, struct config_file* cfg,
+	int setup, struct module_env* env);
 
 /**
  * Delete auth zones structure
@@ -481,23 +487,5 @@ struct auth_xfer* auth_xfer_create(struct auth_zones* az, struct auth_zone* z);
  * @return false on failure.
  */
 int xfer_set_masters(struct auth_master** list, struct config_auth* c);
-
-/**
- * Setup auth_xfer zone.  Populates timeouts.
- * @param z: locked by caller, and modified for setup
- * @param x: locked by caller, and modified, timers and timeouts.
- * @param env: module env with time.
- * @return false on failure.
- */
-int auth_xfer_setup(struct auth_zone* z, struct auth_xfer* xfr,
-	struct module_env* env);
-
-/**
- * Setup all zones
- * @param az: auth zones structure
- * @param env: module env with time.
- * @return false on failure.
- */
-int auth_zones_setup_zones(struct auth_zones* az, struct module_env* env);
 
 #endif /* SERVICES_AUTHZONE_H */

@@ -214,6 +214,7 @@ libworker_setup(struct ub_ctx* ctx, int is_bg, struct ub_event_base* eb)
 		libworker_delete(w);
 		return NULL;
 	}
+	w->env->worker_base = w->base;
 	if(!w->is_bg || w->is_bg_thread) {
 		lock_basic_lock(&ctx->cfglock);
 	}

@@ -579,7 +579,7 @@ static void
 check_auth(struct config_file* cfg)
 {
 	struct auth_zones* az = auth_zones_create();
-	if(!az || !auth_zones_apply_cfg(az, cfg)) {
+	if(!az || !auth_zones_apply_cfg(az, cfg, 0, NULL)) {
 		fatal_exit("Could not setup authority zones");
 	}
 	auth_zones_delete(az);
