@@ -2839,15 +2839,23 @@ xfr_fd_for_master(struct module_env* env, struct auth_master* master)
 		if(master_is_ip6(master)) {
 			struct sockaddr_in6 sa = *(struct sockaddr_in6*)addr;
 			sa.sin6_port = (in_port_t)htons((uint16_t)port);
+			(void)noproto;
+			(void)sa;
+			(void)freebind;
+			(void)addrlen;
+			/* TODO link fix 
 			fd = create_udp_sock(AF_INET6, SOCK_DGRAM,
 				(struct sockaddr*)&sa, addrlen, 1, &inuse, &noproto,
 				0, 0, 0, NULL, 0, freebind, 0);
+			*/
 		} else {
 			struct sockaddr_in* sa = (struct sockaddr_in*)addr;
 			sa->sin_port = (in_port_t)htons((uint16_t)port);
+			/* TODO link fix 
 			fd = create_udp_sock(AF_INET, SOCK_DGRAM, 
 				(struct sockaddr*)&sa, addrlen, 1, &inuse, &noproto,
 				0, 0, 0, NULL, 0, freebind, 0);
+			*/
 		}
 		if(fd != -1) {
 			return fd;
@@ -3055,9 +3063,11 @@ xfr_probe_send_probe(struct auth_xfer* xfr, struct module_env* env)
 				zname, master->host);
 			return 0;
 		}
+		/* TODO link fix
 		xfr->task_probe->cp = comm_point_create_udp(env->worker_base,
 			fd, env->outnet->udp_buff, auth_xfer_probe_udp_callback,
 			xfr);
+		*/
 		if(!xfr->task_probe->cp) {
 			close(fd);
 			log_err("malloc failure");
@@ -3072,6 +3082,7 @@ xfr_probe_send_probe(struct auth_xfer* xfr, struct module_env* env)
 	}
 
 	/* send udp packet */
+	/* TODO link fix
 	if(!comm_point_send_udp_msg(xfr->task_probe->cp, env->scratch_buffer,
 		(struct sockaddr*)&addr, addrlen)) {
 		char zname[255+1];
@@ -3080,6 +3091,7 @@ xfr_probe_send_probe(struct auth_xfer* xfr, struct module_env* env)
 			zname, master->host);
 		return 0;
 	}
+	*/
 
 	return 1;
 }
