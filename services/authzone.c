@@ -2586,6 +2586,8 @@ int auth_zones_lookup(struct auth_zones* az, struct query_info* qinfo,
 {
 	int r;
 	struct auth_zone* z;
+	/* TODO: in iterator, after cache lookup, before network lookup,
+	 * call this to get answer */
 
 	/* find the zone that should contain the answer. */
 	lock_rw_rdlock(&az->lock);
@@ -2655,6 +2657,8 @@ int auth_zones_answer(struct auth_zones* az, struct module_env* env,
 	struct query_info* qinfo, struct edns_data* edns, struct sldns_buffer* buf,
 	struct regional* temp)
 {
+	/* TODO: in handle after localzones, before cache, if az != NULL,
+	 * call this function to answer downstream */
 	struct dns_msg* msg = NULL;
 	struct auth_zone* z;
 	int r;
@@ -2835,6 +2839,7 @@ xfr_set_timeout(struct auth_xfer* xfr, struct module_env* env,
 void
 auth_xfer_pickup_initial(struct auth_zones* az, struct module_env* env)
 {
+	/* TODO: call this from worker0 at start of unbound */
 	struct auth_xfer* x;
 	lock_rw_wrlock(&az->lock);
 	RBTREE_FOR(x, struct auth_xfer*, &az->xtree) {
