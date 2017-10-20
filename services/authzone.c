@@ -2918,7 +2918,7 @@ check_packet_ok(sldns_buffer* pkt, uint16_t qtype, struct auth_xfer* xfr,
 	uint32_t* serial)
 {
 	uint16_t id;
-	/* TODO parse to see if packet worked, valid reply */
+	/* parse to see if packet worked, valid reply */
 
 	/* check serial number of SOA */
 	if(sldns_buffer_limit(pkt) < LDNS_HEADER_SIZE)
@@ -2994,6 +2994,65 @@ check_packet_ok(sldns_buffer* pkt, uint16_t qtype, struct auth_xfer* xfr,
 	return 1;
 }
 
+/** see if the serial means the zone has to be updated, i.e. the serial
+ * is newer than the zone serial, or we have no zone */
+static int
+xfr_serial_means_update(struct auth_xfer* xfr, uint32_t serial)
+{
+	uint32_t zserial;
+	int have_zone, zone_expired;
+	lock_basic_lock(&xfr->lock);
+	zserial = xfr->serial;
+	have_zone = xfr->have_zone;
+	zone_expired = xfr->zone_expired;
+	lock_basic_unlock(&xfr->lock);
+
+	if(!have_zone)
+		return 1; /* no zone, anything is better */
+	if(zone_expired)
+		return 1; /* expired, the sent serial is better than expired
+			data */
+	if(compare_serial(zserial, serial) < 0)
+		return 1; /* our serial is smaller than the sent serial,
+			the data is newer, fetch it */
+	return 0;
+}
+
+/** find master (from notify or probe) in list of masters */
+static struct auth_master*
+find_master_by_host(struct auth_master* list, char* host)
+{
+	struct auth_master* p;
+	for(p=list; p; p=p->next) {
+		if(strcmp(p->host, host) == 0)
+			return p;
+	}
+	return NULL;
+}
+
+/** start transfer task by this worker , xfr is locked. */
+static void
+xfr_start_transfer(struct auth_xfer* xfr, struct module_env* env,
+	struct auth_master* master)
+{
+	log_assert(xfr->task_transfer != NULL);
+	log_assert(xfr->task_transfer->worker == NULL);
+	log_assert(xfr->task_transfer->chunks_first == NULL);
+	log_assert(xfr->task_transfer->chunks_last == NULL);
+	xfr->task_transfer->worker = env->worker;
+	xfr->task_transfer->env = env;
+	
+	/* init transfer process */
+	/* find that master in the transfer's list of masters? */
+	xfr->task_transfer->scan_specific = find_master_by_host(
+		xfr->task_transfer->masters, master->host);
+	if(xfr->task_transfer->scan_specific)
+		xfr->task_transfer->scan_target = NULL;
+	else	xfr->task_transfer->scan_target = xfr->task_transfer->masters;
+
+	/* TODO initiate TCP, and set timeout on it */
+}
+
 /** callback for task_probe udp packets */
 int
 auth_xfer_probe_udp_callback(struct comm_point* c, void* arg, int err,
@@ -3010,11 +3069,28 @@ auth_xfer_probe_udp_callback(struct comm_point* c, void* arg, int err,
 	/* TODO */
 
 	if(err == NETEVENT_NOERROR) {
-		uint32_t serial;
+		uint32_t serial = 0;
 		if(check_packet_ok(c->buffer, LDNS_RR_TYPE_SOA, xfr,
 			&serial)) {
 			/* successful lookup */
-			/* TODO */
+			/* see if this serial indicates that the zone has
+			 * to be updated */
+			lock_basic_lock(&xfr->lock);
+			if(xfr_serial_means_update(xfr, serial)) {
+				/* if updated, start the transfer task, if needed */
+				if(xfr->task_transfer->worker == NULL) {
+					xfr_start_transfer(xfr, env, 
+						(xfr->task_probe->scan_specific?xfr->task_probe->scan_specific:xfr->task_probe->scan_target));
+				}
+			} else {
+				/* if zone not updated, start the wait timer again */
+				if(xfr->task_nextprobe->worker == NULL)
+					xfr_set_timeout(xfr, env, 0);
+			}
+			lock_basic_unlock(&xfr->lock);
+			/* return, we don't sent a reply to this udp packet,
+			 * and we setup the tasks to do next */
+			return 0;
 		}
 	}
 	
@@ -3043,6 +3119,9 @@ xfr_probe_send_probe(struct auth_xfer* xfr, struct module_env* env)
 	struct auth_master* master = xfr->task_probe->scan_specific;
 	if(!master) master = xfr->task_probe->scan_target;
 	if(!master) return 0;
+
+	/* TODO: use mesh_new_callback to probe for non-addr hosts,
+	 * and then wait for them to be looked up (in cache, or query) */
 
 	/* create packet */
 	xfr_create_probe_packet(xfr, env, env->scratch_buffer, 1);
@@ -3352,4 +3431,19 @@ xfer_set_masters(struct auth_master** list, struct config_auth* c)
 		}
 	}
 	return 1;
+}
+
+#define SERIAL_BITS      32
+int
+compare_serial(uint32_t a, uint32_t b)
+{
+        const uint32_t cutoff = ((uint32_t) 1 << (SERIAL_BITS - 1));
+
+        if (a == b) {
+                return 0;
+        } else if ((a < b && b - a < cutoff) || (a > b && a - b > cutoff)) {
+                return -1;
+        } else {
+                return 1;
+        }
 }

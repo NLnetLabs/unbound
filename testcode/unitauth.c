@@ -831,6 +831,24 @@ check_queries(const char* name, const char* zone, struct q_ans* queries)
 	auth_zones_delete(az);
 }
 
+/** Test authzone compare_serial */
+static void
+authzone_compare_serial(void)
+{
+	if(vbmp) printf("Testing compare_serial\n");
+	unit_assert(compare_serial(0, 1) < 0);
+	unit_assert(compare_serial(1, 0) > 0);
+	unit_assert(compare_serial(0, 0) == 0);
+	unit_assert(compare_serial(1, 1) == 0);
+	unit_assert(compare_serial(0xf0000000, 0xf0000000) == 0);
+	unit_assert(compare_serial(0, 0xf0000000) > 0);
+	unit_assert(compare_serial(0xf0000000, 0) < 0);
+	unit_assert(compare_serial(0xf0000000, 0xf0000001) < 0);
+	unit_assert(compare_serial(0xf0000002, 0xf0000001) > 0);
+	unit_assert(compare_serial(0x70000000, 0x80000000) < 0);
+	unit_assert(compare_serial(0x90000000, 0x70000000) > 0);
+}
+
 /** Test authzone read from file */
 static void
 authzone_read_test(void)
@@ -853,6 +871,7 @@ authzone_test(void)
 {
 	unit_show_feature("authzone");
 	atexit(tmpfilecleanup);
+	authzone_compare_serial();
 	authzone_read_test();
 	authzone_query_test();
 }

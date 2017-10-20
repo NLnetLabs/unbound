@@ -827,7 +827,9 @@ authzone.lo authzone.o: $(srcdir)/services/authzone.c config.h $(srcdir)/service
  $(srcdir)/util/data/msgreply.h $(srcdir)/util/data/packed_rrset.h $(srcdir)/util/data/msgencode.h \
  $(srcdir)/util/regional.h $(srcdir)/util/net_help.h $(srcdir)/util/netevent.h $(srcdir)/dnscrypt/dnscrypt.h \
   $(srcdir)/dnscrypt/cert.h $(srcdir)/util/config_file.h \
- $(srcdir)/util/module.h $(srcdir)/services/cache/dns.h $(srcdir)/sldns/sbuffer.h $(srcdir)/sldns/str2wire.h \
+ $(srcdir)/util/module.h $(srcdir)/util/random.h $(srcdir)/services/cache/dns.h \
+ $(srcdir)/services/outside_network.h  \
+ $(srcdir)/services/listen_dnsport.h $(srcdir)/sldns/sbuffer.h $(srcdir)/sldns/str2wire.h \
  $(srcdir)/sldns/wire2str.h $(srcdir)/sldns/parseutil.h $(srcdir)/validator/val_nsec3.h \
  $(srcdir)/validator/val_secalgo.h
 fptr_wlist.lo fptr_wlist.o: $(srcdir)/util/fptr_wlist.c config.h $(srcdir)/util/fptr_wlist.h \

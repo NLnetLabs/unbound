@@ -306,6 +306,8 @@ struct auth_probe {
 struct auth_transfer {
 	/* Worker pointer. NULL means unowned. */
 	struct worker* worker;
+	/* module env for this task */
+	struct module_env* env;
 
 	/** xfer data that has been transferred, the data is applied
 	 * once the transfer has completed correctly */
@@ -496,5 +498,13 @@ void auth_xfer_timer(void* arg);
 /** callback for commpoint udp replies to task_probe */
 int auth_xfer_probe_udp_callback(struct comm_point* c, void* arg, int err,
         struct comm_reply* repinfo);
+
+/*
+ * Compares two 32-bit serial numbers as defined in RFC1982.  Returns
+ * <0 if a < b, 0 if a == b, and >0 if a > b.  The result is undefined
+ * if a != b but neither is greater or smaller (see RFC1982 section
+ * 3.2.).
+ */
+int compare_serial(uint32_t a, uint32_t b);
 
 #endif /* SERVICES_AUTHZONE_H */
