@@ -1420,4 +1420,33 @@ void daemon_remote_stop_accept(struct daemon_remote* ATTR_UNUSED(rc))
 {
 }
 
+int create_udp_sock(int ATTR_UNUSED(family), int ATTR_UNUSED(socktype),
+	struct sockaddr* ATTR_UNUSED(addr), socklen_t ATTR_UNUSED(addrlen),
+	int ATTR_UNUSED(v6only), int* ATTR_UNUSED(inuse),
+	int* ATTR_UNUSED(noproto), int ATTR_UNUSED(rcv), int ATTR_UNUSED(snd),
+	int ATTR_UNUSED(listen), int* ATTR_UNUSED(reuseport),
+	int ATTR_UNUSED(transparent), int ATTR_UNUSED(freebind),
+	int ATTR_UNUSED(use_systemd))
+{
+	/* if you actually print to this, it'll be stdout during test */
+	return 1;
+}
+
+struct comm_point* comm_point_create_udp(struct comm_base *ATTR_UNUSED(base),
+	int ATTR_UNUSED(fd), sldns_buffer* ATTR_UNUSED(buffer),
+	comm_point_callback_type* ATTR_UNUSED(callback),
+	void* ATTR_UNUSED(callback_arg))
+{
+	/* could create a test framework; and intercept eg. authzone probes */
+	return NULL;
+}
+
+int comm_point_send_udp_msg(struct comm_point *ATTR_UNUSED(c),
+	sldns_buffer* ATTR_UNUSED(packet), struct sockaddr* ATTR_UNUSED(addr),
+	socklen_t ATTR_UNUSED(addrlen)) 
+{
+	/* could create a test framework; and intercept eg. authzone probes */
+	return 0;
+}
+
 /*********** End of Dummy routines ***********/
