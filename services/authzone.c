@@ -2886,7 +2886,7 @@ xfr_create_probe_packet(struct auth_xfer* xfr, struct module_env* env,
 	}
 	qinfo.qclass = xfr->dclass;
 	qinfo_query_encode(buf, &qinfo);
-	xfr->task_probe->id = ub_random(env->rnd)&0xffff;
+	xfr->task_probe->id = (uint16_t)(ub_random(env->rnd)&0xffff);
 	sldns_buffer_write_at(buf, 0, &xfr->task_probe->id, 2);
 
 	/* append serial for IXFR */
@@ -2945,7 +2945,7 @@ check_packet_ok(sldns_buffer* pkt, uint16_t qtype, struct auth_xfer* xfr,
 		return 0;
 	if(query_dname_compare(sldns_buffer_current(pkt), xfr->name) != 0)
 		return 0;
-	sldns_buffer_skip(pkt, xfr->namelen);
+	sldns_buffer_skip(pkt, (ssize_t)xfr->namelen);
 
 	/* check qtype, qclass */
 	if(sldns_buffer_remaining(pkt) < 4)
