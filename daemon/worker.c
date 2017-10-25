@@ -1046,7 +1046,7 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 			strcasecmp(buf,
 			worker->daemon->dnscenv->provider_name) == 0)) {
 			verbose(VERB_ALGO,
-				"dnscrypt: not TXT %s. Receive: %s %s",
+				"dnscrypt: not TXT \"%s\". Received: %s \"%s\"",
 				worker->daemon->dnscenv->provider_name,
 				sldns_rr_descript(qinfo.qtype)->_name,
 				buf);

@@ -1,5 +1,6 @@
 25 October 2017: Ralph
 	- Fixed libunbound manual typo.
+	- Fix #1949: [dnscrypt] make provider name mismatch more obvious.
 
 24 October 2017: Ralph
 	- Update B root ipv4 address.
