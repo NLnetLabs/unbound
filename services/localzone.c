@@ -52,7 +52,6 @@
 #include "util/data/msgreply.h"
 #include "util/data/msgparse.h"
 #include "util/as112.h"
-#include "util/config_file.h"
 
 /* maximum RRs in an RRset, to cap possible 'endless' list RRs.
  * with 16 bytes for an A record, a 64K packet has about 4000 max */

@@ -14,7 +14,6 @@
 #endif
 
 #include <ctype.h>
-#include <string.h>
 #include <strings.h>
 #ifdef HAVE_GLOB_H
 # include <glob.h>
