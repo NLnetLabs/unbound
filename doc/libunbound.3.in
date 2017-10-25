@@ -162,7 +162,7 @@ and deleting it with
 It can be created and deleted at any time. Creating it anew removes any 
 previous configuration (such as trusted keys) and clears any cached results.
 .P
-The functions are thread\-safe, and a context an be used in a threaded (as 
+The functions are thread\-safe, and a context can be used in a threaded (as 
 well as in a non\-threaded) environment. Also resolution (and validation) 
 can be performed blocking and non\-blocking (also called asynchronous). 
 The async method returns from the call immediately, so that processing 
