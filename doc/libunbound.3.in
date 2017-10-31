@@ -407,6 +407,10 @@ returns NULL on an error (a malloc failure).
 returns true if some information may be available, false otherwise.
 .B ub_fd
 returns a file descriptor or \-1 on error.
+.B ub_ctx_config
+and
+.B ub_ctx_resolvconf
+attempt to leave errno informative on a function return with file read failure.
 .SH "SEE ALSO"
 \fIunbound.conf\fR(5), 
 \fIunbound\fR(8).

@@ -1,3 +1,7 @@
+31 October 2017: Wouter 
+	- Document that errno is left informative on libunbound config read
+	  fail.
+
 25 October 2017: Ralph
 	- Fixed libunbound manual typo.
 	- Fix #1949: [dnscrypt] make provider name mismatch more obvious.
