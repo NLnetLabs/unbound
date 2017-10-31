@@ -2,6 +2,7 @@
 	- Document that errno is left informative on libunbound config read
 	  fail.
 	- lexer output.
+	- iana port update.
 
 25 October 2017: Ralph
 	- Fixed libunbound manual typo.
