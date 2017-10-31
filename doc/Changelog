@@ -1,6 +1,7 @@
 31 October 2017: Wouter 
 	- Document that errno is left informative on libunbound config read
 	  fail.
+	- lexer output.
 
 25 October 2017: Ralph
 	- Fixed libunbound manual typo.
