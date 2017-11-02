@@ -204,7 +204,7 @@ A power\-user interface that lets you specify an unbound config file, see
 \fIunbound.conf\fR(5), which is read for configuration. Not all options are
 relevant. For some specific options, such as adding trust anchors, special
 routines exist.  This function is thread\-safe only if a single instance of
-ub_ctx* exists in the application,  If several instances exist the
+ub_ctx* exists in the application.  If several instances exist the
 application has to ensure that ub_ctx_config is not called in parallel by
 the different instances.
 .TP
