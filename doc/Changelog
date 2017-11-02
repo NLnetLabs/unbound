@@ -1,5 +1,6 @@
 2 November 2017: Wouter 
 	- Fix #1913: ub_ctx_config is under circumstances thread-safe.
+	- make ip-transparent option work on OpenBSD.
 
 31 October 2017: Wouter 
 	- Document that errno is left informative on libunbound config read
