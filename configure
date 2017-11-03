@@ -4429,6 +4429,7 @@ ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $
 ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
 # allow user to override the -g -O2 flags.
+default_cflags=no
 if test "x$CFLAGS" = "x" ; then
 
 
@@ -4492,6 +4493,7 @@ $as_echo "no" >&6; }
 
 fi
 
+default_cflags=yes
 fi
 ac_ext=c
 ac_cpp='$CPP $CPPFLAGS'
@@ -5945,6 +5947,10 @@ $as_echo "#define UNBOUND_DEBUG /**/" >>confdefs.h
 		# nothing to do.
 		;;
 esac
+if test "$default_cflags" = "yes"; then
+	# only when CFLAGS was "" at the start, if the users wants to
+	# override we shouldn't add default cflags, because they wouldn't
+	# be able to turn off these options and set the CFLAGS wanted.
 
     # Check whether --enable-flto was given.
 if test "${enable_flto+set}" = set; then :
@@ -6079,6 +6085,7 @@ rm -f core conftest.err conftest.$ac_objext \
 
 fi
 
+fi
 
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for inline" >&5
 $as_echo_n "checking for inline... " >&6; }

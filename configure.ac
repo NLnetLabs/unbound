@@ -246,9 +246,11 @@ AC_DEFINE_UNQUOTED(RSRC_PACKAGE_VERSION, [$wnvs], [version number for resource f
 AC_C_CONST
 AC_LANG_C
 # allow user to override the -g -O2 flags.
+default_cflags=no
 if test "x$CFLAGS" = "x" ; then
 ACX_CHECK_COMPILER_FLAG(g, [CFLAGS="$CFLAGS -g"])
 ACX_CHECK_COMPILER_FLAG(O2, [CFLAGS="$CFLAGS -O2"])
+default_cflags=yes
 fi
 AC_PROG_CC
 ACX_DEPFLAG
@@ -272,9 +274,14 @@ case "$debug_enabled" in
 		# nothing to do.
 		;;
 esac
-ACX_CHECK_FLTO
-ACX_CHECK_PIE
-ACX_CHECK_RELRO_NOW
+if test "$default_cflags" = "yes"; then
+	# only when CFLAGS was "" at the start, if the users wants to
+	# override we shouldn't add default cflags, because they wouldn't
+	# be able to turn off these options and set the CFLAGS wanted.
+	ACX_CHECK_FLTO
+	ACX_CHECK_PIE
+	ACX_CHECK_RELRO_NOW
+fi
 
 AC_C_INLINE
 ACX_CHECK_FORMAT_ATTRIBUTE
