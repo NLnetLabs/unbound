@@ -646,6 +646,9 @@
 /* define if (v)snprintf does not return length needed, (but length used) */
 #undef SNPRINTF_RET_BROKEN
 
+/* Define to 1 if libsodium supports sodium_set_misuse_handler */
+#undef SODIUM_MISUSE_HANDLER
+
 /* Define to 1 if you have the ANSI C header files. */
 #undef STDC_HEADERS
 

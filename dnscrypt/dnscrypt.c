@@ -870,6 +870,16 @@ dnsc_parse_keys(struct dnsc_env *env, struct config_file *cfg)
 	return cert_id;
 }
 
+static void
+sodium_misuse_handler(void)
+{
+	fatal_exit(
+		"dnscrypt: libsodium could not be initialized, this typically"
+		" happens when no good source of entropy is found. If you run"
+		" unbound in a chroot, make sure /dev/random is available. See"
+		" https://www.unbound.net/documentation/unbound.conf.html");
+}
+
 
 /**
  * #########################################################
@@ -933,6 +943,9 @@ struct dnsc_env *
 dnsc_create(void)
 {
 	struct dnsc_env *env;
+#ifdef SODIUM_MISUSE_HANDLER
+	sodium_set_misuse_handler(sodium_misuse_handler);
+#endif
 	if (sodium_init() == -1) {
 		fatal_exit("dnsc_create: could not initialize libsodium.");
 	}

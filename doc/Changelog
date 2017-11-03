@@ -1,6 +1,8 @@
 3 November 2017: Wouter 
 	- Fix #2362: TLS1.3/openssl-1.1.1 not working.
 	- Fix #2034 - Autoconf and -flto.
+	- Fix #2141 - for libsodium detect lack of entropy in chroot, print
+	  a message and exit.
 
 2 November 2017: Wouter 
 	- Fix #1913: ub_ctx_config is under circumstances thread-safe.
