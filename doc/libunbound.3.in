@@ -150,7 +150,8 @@
 is an implementation of a DNS resolver, that does caching and 
 DNSSEC validation. This is the library API, for using the \-lunbound library.
 The server daemon is described in \fIunbound\fR(8).
-The library can be used to convert hostnames to ip addresses, and back,
+The library works independent from a running unbound server, and
+can be used to convert hostnames to ip addresses, and back,
 and obtain other information from the DNS. The library performs public\-key
 validation of results with DNSSEC.
 .P
