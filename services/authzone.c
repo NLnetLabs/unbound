@@ -3063,7 +3063,6 @@ auth_xfer_probe_udp_callback(struct comm_point* c, void* arg, int err,
 	log_assert(xfr->task_probe);
 	env = xfr->task_probe->env;
 
-	(void)c;
 	(void)repinfo;
 	/* TODO need a comm_timer for a timeout too */
 	/* TODO */
