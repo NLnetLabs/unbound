@@ -2154,7 +2154,8 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 		}
 		if(labdiff < 1 || (labdiff < 2 
 			&& (iq->qchase.qtype == LDNS_RR_TYPE_DS
-			|| iq->qchase.qtype == LDNS_RR_TYPE_A)))
+			|| iq->qchase.qtype == LDNS_RR_TYPE_A
+			|| iq->qchase.qtype == LDNS_RR_TYPE_AAAA)))
 			/* Stop minimising this query, resolve "as usual" */
 			iq->minimisation_state = DONOT_MINIMISE_STATE;
 		else if(!qstate->no_cache_lookup) {

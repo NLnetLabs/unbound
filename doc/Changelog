@@ -1,5 +1,6 @@
 13 November 2017: Wouter 
 	- Fix #2801: Install libunbound.pc.
+	- Fix qname minimisation to send AAAA queries at zonecut like type A.
 
 7 November 2017: Wouter 
 	- Fix #2492: Documentation libunbound.
