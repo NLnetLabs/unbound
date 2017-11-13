@@ -1,3 +1,6 @@
+13 November 2017: Wouter 
+	- Fix #2801: Install libunbound.pc.
+
 7 November 2017: Wouter 
 	- Fix #2492: Documentation libunbound.
 
