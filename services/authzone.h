@@ -45,6 +45,7 @@
 #define SERVICES_AUTHZONE_H
 #include "util/rbtree.h"
 #include "util/locks.h"
+#include "services/mesh.h"
 struct ub_packed_rrset_key;
 struct regional;
 struct config_file;
@@ -296,6 +297,11 @@ struct auth_probe {
 	/** the SOA probe udp event.
 	 * on the workers event base. */
 	struct comm_point* cp;
+	/** timeout for packets.
+	 * on the workers event base. */
+	struct comm_timer* timer;
+	/** timeout in msec */
+	int timeout;
 };
 
 /**
@@ -498,6 +504,11 @@ void auth_xfer_timer(void* arg);
 /** callback for commpoint udp replies to task_probe */
 int auth_xfer_probe_udp_callback(struct comm_point* c, void* arg, int err,
         struct comm_reply* repinfo);
+/** xfer probe timeout callback, part of task_probe */
+void auth_xfer_probe_timer_callback(void* arg);
+/** mesh callback for task_probe on lookup of host names */
+void auth_xfer_probe_lookup_callback(void* arg, int rcode,
+	struct sldns_buffer* buf, enum sec_status sec, char* why_bogus);
 
 /*
  * Compares two 32-bit serial numbers as defined in RFC1982.  Returns

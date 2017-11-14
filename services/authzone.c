@@ -58,6 +58,7 @@
 #include "services/cache/dns.h"
 #include "services/outside_network.h"
 #include "services/listen_dnsport.h"
+#include "services/mesh.h"
 #include "sldns/rrdef.h"
 #include "sldns/pkthdr.h"
 #include "sldns/sbuffer.h"
@@ -71,6 +72,10 @@
 #define N3HASHBUFLEN 32
 /** max number of CNAMEs we are willing to follow (in one answer) */
 #define MAX_CNAME_CHAIN 8
+/** timeout for probe packets for SOA */
+#define AUTH_PROBE_TIMEOUT 100 /* msec */
+/** when to stop with SOA probes (when exponential timeouts exceed this) */
+#define AUTH_PROBE_TIMEOUT_STOP 1000 /* msec */
 
 /** pick up nextprobe task to start waiting to perform transfer actions */
 static void xfr_set_timeout(struct auth_xfer* xfr, struct module_env* env,
@@ -2863,8 +2868,7 @@ xfr_fd_for_master(struct module_env* env, struct auth_master* master)
 
 /** create probe packet for xfr */
 static void
-xfr_create_probe_packet(struct auth_xfer* xfr, struct module_env* env,
-	sldns_buffer* buf, int soa)
+xfr_create_probe_packet(struct auth_xfer* xfr, sldns_buffer* buf, int soa)
 {
 	struct query_info qinfo;
 	uint32_t serial;
@@ -2886,7 +2890,6 @@ xfr_create_probe_packet(struct auth_xfer* xfr, struct module_env* env,
 	}
 	qinfo.qclass = xfr->dclass;
 	qinfo_query_encode(buf, &qinfo);
-	xfr->task_probe->id = (uint16_t)(ub_random(env->rnd)&0xffff);
 	sldns_buffer_write_at(buf, 0, &xfr->task_probe->id, 2);
 
 	/* append serial for IXFR */
@@ -3053,77 +3056,40 @@ xfr_start_transfer(struct auth_xfer* xfr, struct module_env* env,
 	/* TODO initiate TCP, and set timeout on it */
 }
 
-/** callback for task_probe udp packets */
-int
-auth_xfer_probe_udp_callback(struct comm_point* c, void* arg, int err,
-        struct comm_reply* repinfo)
+/** disown task_probe.  caller must hold xfr.lock */
+static void
+xfr_probe_disown(struct auth_xfer* xfr)
 {
-	struct auth_xfer* xfr = (struct auth_xfer*)arg;
-	struct module_env* env;
-	log_assert(xfr->task_probe);
-	env = xfr->task_probe->env;
-
-	(void)repinfo;
-	/* TODO need a comm_timer for a timeout too */
-	/* TODO */
-
-	if(err == NETEVENT_NOERROR) {
-		uint32_t serial = 0;
-		if(check_packet_ok(c->buffer, LDNS_RR_TYPE_SOA, xfr,
-			&serial)) {
-			/* successful lookup */
-			/* see if this serial indicates that the zone has
-			 * to be updated */
-			lock_basic_lock(&xfr->lock);
-			if(xfr_serial_means_update(xfr, serial)) {
-				/* if updated, start the transfer task, if needed */
-				if(xfr->task_transfer->worker == NULL) {
-					xfr_start_transfer(xfr, env, 
-						(xfr->task_probe->scan_specific?xfr->task_probe->scan_specific:xfr->task_probe->scan_target));
-				}
-			} else {
-				/* if zone not updated, start the wait timer again */
-				if(xfr->task_nextprobe->worker == NULL)
-					xfr_set_timeout(xfr, env, 0);
-			}
-			lock_basic_unlock(&xfr->lock);
-			/* return, we don't sent a reply to this udp packet,
-			 * and we setup the tasks to do next */
-			return 0;
-		}
-	}
-	
-	/* failed lookup */
+	/* remove timer (from this worker's event base) */
+	comm_timer_delete(xfr->task_probe->timer);
+	xfr->task_probe->timer = NULL;
 	/* remove the commpoint */
-	comm_point_delete(c);
+	comm_point_delete(xfr->task_probe->cp);
 	xfr->task_probe->cp = NULL;
-	/* the comm_point_udp_callback is in a for loop for NUM_UDP_PER_SELECT
-	 * and we set rep.c=NULL to stop if from looking inside the commpoint*/
-	repinfo->c = NULL;
-
-	/* create a new commpoint (new fd, address), for next packet, maybe */
-	/* this, if the result was not a successfull probe, we need
-	 * to send the next one */
-	xfr_probe_send_or_end(xfr, env);
-	return 0;
+	/* we don't own this item anymore */
+	xfr->task_probe->worker = NULL;
+	xfr->task_probe->env = NULL;
 }
 
 /** send the UDP probe to the master, this is part of task_probe */
 static int
-xfr_probe_send_probe(struct auth_xfer* xfr, struct module_env* env)
+xfr_probe_send_probe(struct auth_xfer* xfr, struct module_env* env,
+	int timeout)
 {
 	struct sockaddr_storage addr;
 	socklen_t addrlen = 0;
+	struct timeval t;
 	/* pick master */
 	struct auth_master* master = xfr->task_probe->scan_specific;
 	if(!master) master = xfr->task_probe->scan_target;
 	if(!master) return 0;
 
-	/* TODO: use mesh_new_callback to probe for non-addr hosts,
-	 * and then wait for them to be looked up (in cache, or query) */
-
 	/* create packet */
-	xfr_create_probe_packet(xfr, env, env->scratch_buffer, 1);
+	/* create new ID for new probes, but not on timeout retries,
+	 * this means we'll accept replies to previous retries to same ip */
+	if(timeout == AUTH_PROBE_TIMEOUT)
+		xfr->task_probe->id = (uint16_t)(ub_random(env->rnd)&0xffff);
+	xfr_create_probe_packet(xfr, env->scratch_buffer, 1);
 	if(!xfr->task_probe->cp) {
 		int fd = xfr_fd_for_master(env, master);
 		if(fd == -1) {
@@ -3138,6 +3104,14 @@ xfr_probe_send_probe(struct auth_xfer* xfr, struct module_env* env)
 			xfr);
 		if(!xfr->task_probe->cp) {
 			close(fd);
+			log_err("malloc failure");
+			return 0;
+		}
+	}
+	if(!xfr->task_probe->timer) {
+		xfr->task_probe->timer = comm_timer_create(env->worker_base,
+			auth_xfer_probe_timer_callback, xfr);
+		if(!xfr->task_probe->timer) {
 			log_err("malloc failure");
 			return 0;
 		}
@@ -3158,7 +3132,142 @@ xfr_probe_send_probe(struct auth_xfer* xfr, struct module_env* env)
 			zname, master->host);
 		return 0;
 	}
+	xfr->task_probe->timeout = timeout;
+	t.tv_sec = timeout/1000;
+	t.tv_usec = (timeout%1000)*1000;
+	comm_timer_set(xfr->task_probe->timer, &t);
 
+	return 1;
+}
+
+/** callback for task_probe timer */
+void
+auth_xfer_probe_timer_callback(void* arg)
+{
+	struct auth_xfer* xfr = (struct auth_xfer*)arg;
+	struct module_env* env;
+	log_assert(xfr->task_probe);
+	env = xfr->task_probe->env;
+
+	if(xfr->task_probe->timeout <= AUTH_PROBE_TIMEOUT_STOP) {
+		/* try again with bigger timeout */
+		if(xfr_probe_send_probe(xfr, env, xfr->task_probe->timeout*2)) {
+			return;
+		}
+	}
+	/* delete commpoint so a new one is created, with a fresh port nr */
+	comm_point_delete(xfr->task_probe->cp);
+	xfr->task_probe->cp = NULL;
+
+	/* too many timeouts (or fail to send), move to next or end */
+	xfr_probe_send_or_end(xfr, env);
+}
+
+/** callback for task_probe udp packets */
+int
+auth_xfer_probe_udp_callback(struct comm_point* c, void* arg, int err,
+        struct comm_reply* repinfo)
+{
+	struct auth_xfer* xfr = (struct auth_xfer*)arg;
+	struct module_env* env;
+	log_assert(xfr->task_probe);
+	env = xfr->task_probe->env;
+
+	/* the comm_point_udp_callback is in a for loop for NUM_UDP_PER_SELECT
+	 * and we set rep.c=NULL to stop if from looking inside the commpoint*/
+	repinfo->c = NULL;
+	/* stop the timer */
+	comm_timer_disable(xfr->task_probe->timer);
+
+	/* see if we got a packet and what that means */
+	if(err == NETEVENT_NOERROR) {
+		uint32_t serial = 0;
+		if(check_packet_ok(c->buffer, LDNS_RR_TYPE_SOA, xfr,
+			&serial)) {
+			/* successful lookup */
+			/* see if this serial indicates that the zone has
+			 * to be updated */
+			lock_basic_lock(&xfr->lock);
+			if(xfr_serial_means_update(xfr, serial)) {
+				/* if updated, start the transfer task, if needed */
+				if(xfr->task_transfer->worker == NULL) {
+					xfr_start_transfer(xfr, env, 
+						(xfr->task_probe->scan_specific?xfr->task_probe->scan_specific:xfr->task_probe->scan_target));
+				}
+			} else {
+				/* if zone not updated, start the wait timer again */
+				if(xfr->task_nextprobe->worker == NULL)
+					xfr_set_timeout(xfr, env, 0);
+			}
+			/* other tasks are running, we don't do this anymore */
+			xfr_probe_disown(xfr);
+			lock_basic_unlock(&xfr->lock);
+			/* return, we don't sent a reply to this udp packet,
+			 * and we setup the tasks to do next */
+			return 0;
+		}
+	}
+	
+	/* failed lookup */
+	/* delete commpoint so a new one is created, with a fresh port nr */
+	comm_point_delete(xfr->task_probe->cp);
+	xfr->task_probe->cp = NULL;
+
+	/* if the result was not a successfull probe, we need
+	 * to send the next one */
+	xfr_probe_send_or_end(xfr, env);
+	return 0;
+}
+
+/** lookup a host name for its addresses, if needed */
+static int
+xfr_probe_lookup_host(struct auth_xfer* xfr, struct module_env* env)
+{
+	struct sockaddr_storage addr;
+	socklen_t addrlen = 0;
+	struct auth_master* master = xfr->task_probe->scan_specific;
+	struct query_info qinfo;
+	uint16_t qflags = BIT_RD;
+	uint8_t dname[LDNS_MAX_DOMAINLEN+1];
+	struct edns_data edns;
+	sldns_buffer* buf = env->scratch_buffer;
+	if(!master) master = xfr->task_probe->scan_target;
+	if(!master) return 0;
+	if(extstrtoaddr(master->host, &addr, &addrlen)) {
+		/* not needed, host is in IP addr format */
+		return 0;
+	}
+
+	/* use mesh_new_callback to probe for non-addr hosts,
+	 * and then wait for them to be looked up (in cache, or query) */
+	qinfo.qname_len = sizeof(dname);
+	if(sldns_str2wire_dname_buf(master->host, dname, &qinfo.qname_len)
+		!= 0) {
+		log_err("cannot parse host name of master %s", master->host);
+		return 0;
+	}
+	qinfo.qname = dname;
+	qinfo.qclass = xfr->dclass;
+	qinfo.qtype = LDNS_RR_TYPE_A;
+	if(!env->cfg->do_ip4) qinfo.qtype = LDNS_RR_TYPE_AAAA;
+	qinfo.local_alias = NULL;
+	log_query_info(VERB_ALGO, "auth xfer master lookup", &qinfo);
+	edns.edns_present = 1;
+	edns.ext_rcode = 0;
+	edns.edns_version = 0;
+	edns.bits = EDNS_DO;
+	edns.opt_list = NULL;
+        if(sldns_buffer_capacity(buf) < 65535)
+                edns.udp_size = (uint16_t)sldns_buffer_capacity(buf);
+        else    edns.udp_size = 65535;
+
+	if(!mesh_new_callback(env->mesh, &qinfo, qflags, &edns, buf, 0,
+		&auth_xfer_probe_lookup_callback, xfr)) {
+		log_err("out of memory lookup up master %s", master->host);
+		free(qinfo.qname);
+		return 0;
+	}
+	free(qinfo.qname);
 	return 1;
 }
 
@@ -3167,7 +3276,12 @@ static void
 xfr_probe_send_or_end(struct auth_xfer* xfr, struct module_env* env)
 {
 	while(!xfr_probe_end_of_list(xfr)) {
-		if(xfr_probe_send_probe(xfr, env)) {
+		if(xfr_probe_lookup_host(xfr, env)) {
+			/* wait for lookup to finish */
+			return;
+		}
+
+		if(xfr_probe_send_probe(xfr, env, AUTH_PROBE_TIMEOUT)) {
 			/* successfully sent probe, wait for callback */
 			return;
 		}
@@ -3180,15 +3294,33 @@ xfr_probe_send_or_end(struct auth_xfer* xfr, struct module_env* env)
 	lock_basic_lock(&xfr->lock);
 	/* we failed to send this as well, move to the wait task,
 	 * use the shorter retry timeout */
-	comm_point_delete(xfr->task_probe->cp);
-	xfr->task_probe->cp = NULL;
-	/* we don't own this item anymore */
-	xfr->task_probe->worker = NULL;
-	xfr->task_probe->env = NULL;
+	xfr_probe_disown(xfr);
 
 	/* pick up the nextprobe task and wait */
 	xfr_set_timeout(xfr, env, 1);
 	lock_basic_unlock(&xfr->lock);
+}
+
+/** callback for task_probe lookup of host name, of A or AAAA */
+void auth_xfer_probe_lookup_callback(void* arg, int ATTR_UNUSED(rcode),
+        sldns_buffer* ATTR_UNUSED(buf), enum sec_status ATTR_UNUSED(sec),
+        char* ATTR_UNUSED(why_bogus))
+{
+	struct auth_xfer* xfr = (struct auth_xfer*)arg;
+	struct module_env* env;
+	log_assert(xfr->task_probe);
+	env = xfr->task_probe->env;
+
+	/* TODO process result */
+
+	/* setup timestamp of result to remove when expired */ 
+	/* TODO: remove expired results from list of addrs, before scan */
+
+	/* TODO setup lookup of AAAA (unless this was the AAAA, or no ip6) */
+
+	/* if finished, resume send_or_end, set it to not start this again */
+	/* TODO: set send_or_end to not call lookups on this master */
+	xfr_probe_send_or_end(xfr, env);
 }
 
 /** xfer nextprobe timeout callback, this is part of task_nextprobe */
