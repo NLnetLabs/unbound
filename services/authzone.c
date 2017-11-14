@@ -3133,8 +3133,10 @@ xfr_probe_send_probe(struct auth_xfer* xfr, struct module_env* env,
 		return 0;
 	}
 	xfr->task_probe->timeout = timeout;
+#ifndef S_SPLINT_S
 	t.tv_sec = timeout/1000;
 	t.tv_usec = (timeout%1000)*1000;
+#endif
 	comm_timer_set(xfr->task_probe->timer, &t);
 
 	return 1;
