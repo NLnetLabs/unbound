@@ -3315,8 +3315,8 @@ void auth_xfer_probe_lookup_callback(void* arg, int ATTR_UNUSED(rcode),
 
 	/* TODO process result */
 
-	/* setup timestamp of result to remove when expired */ 
-	/* TODO: remove expired results from list of addrs, before scan */
+	/* TODO: set previously looked up A and AAAAs before a scan starts
+	 * to be fetched again */
 
 	/* TODO setup lookup of AAAA (unless this was the AAAA, or no ip6) */
 
