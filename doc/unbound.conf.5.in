@@ -1394,6 +1394,9 @@ forward the queries to. The servers listed as \fBforward\-host:\fR and
 those servers are not authority servers, but are (just like unbound is)
 recursive servers too; unbound does not perform recursion itself for the
 forward zone, it lets the remote server do it.  Class IN is assumed.
+CNAMEs are chased by unbound itself, asking the remote server for every
+name in the indirection chain, to protect the local cache from illegal
+indirect referenced items.
 A forward\-zone entry with name "." and a forward\-addr target will
 forward all queries to that other server (unless it can answer from
 the cache).

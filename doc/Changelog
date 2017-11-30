@@ -1,3 +1,6 @@
+30 November 2017: Wouter 
+	- Fix #3299 - forward CNAME daisy chain is not working
+
 14 November 2017: Wouter 
 	- Fix #2882: Unbound behaviour changes (wrong) when domain-insecure is
 	  set for stub zone.  It no longer searches for DNSSEC information.
