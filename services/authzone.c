@@ -3312,6 +3312,8 @@ void auth_xfer_probe_lookup_callback(void* arg, int ATTR_UNUSED(rcode),
 	struct module_env* env;
 	log_assert(xfr->task_probe);
 	env = xfr->task_probe->env;
+	
+	/* TODO: have A,AAAA phase bools stored in task_probe for this name */
 
 	/* TODO process result */
 
