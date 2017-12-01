@@ -2857,13 +2857,21 @@ xfr_probe_start_list(struct auth_xfer* xfr, struct auth_master* spec)
 			xfr->task_probe->masters, spec->host);
 		if(xfr->task_probe->scan_specific) {
 			xfr->task_probe->scan_target = NULL;
+			xfr->task_probe->scan_addr = NULL;
+			if(xfr->task_probe->scan_specific->list)
+				xfr->task_probe->scan_addr =
+					xfr->task_probe->scan_specific->list;
 			return;
 		}
 	}
 	/* no specific (notified) host to scan */
 	xfr->task_probe->scan_specific = NULL;
+	xfr->task_probe->scan_addr = NULL;
 	/* pick up first scan target */
 	xfr->task_probe->scan_target = xfr->task_probe->masters;
+	if(xfr->task_probe->scan_target && xfr->task_probe->scan_target->list)
+		xfr->task_probe->scan_addr =
+			xfr->task_probe->scan_target->list;
 }
 
 /** pick up the master that is being scanned right now */
@@ -2888,6 +2896,11 @@ xfr_probe_nextmaster(struct auth_xfer* xfr)
 {
 	if(!xfr->task_probe->scan_specific && !xfr->task_probe->scan_target)
 		return 0;
+	if(xfr->task_probe->scan_addr) {
+		xfr->task_probe->scan_addr = xfr->task_probe->scan_addr->next;
+		if(xfr->task_probe->scan_addr)
+			return 1;
+	}
 	if(xfr->task_probe->scan_specific) {
 		xfr->task_probe->scan_specific = NULL;
 		xfr->task_probe->scan_target = xfr->task_probe->masters;
@@ -2901,19 +2914,10 @@ xfr_probe_nextmaster(struct auth_xfer* xfr)
 	return 1;
 }
 
-/** find out if the master is ipv6 */
-static int
-master_is_ip6(struct auth_master* master)
-{
-	if(str_is_ip6(master->host))
-		return 1;
-	/* TODO other addrs */
-	return 0;
-}
-
 /** create fd to send to this master */
 static int
-xfr_fd_for_master(struct module_env* env, struct auth_master* master)
+xfr_fd_for_master(struct module_env* env, struct sockaddr_storage* to_addr,
+	socklen_t to_addrlen, char* host)
 {
 	struct sockaddr_storage* addr;
 	socklen_t addrlen;
@@ -2921,9 +2925,9 @@ xfr_fd_for_master(struct module_env* env, struct auth_master* master)
 	int try;
 
 	/* select interface */
-	if(master_is_ip6(master)) {
+	if(addr_is_ip6(to_addr, to_addrlen)) {
 		if(env->outnet->num_ip6 == 0) {
-			log_err("need ipv6 to send, but no ipv6 outgoing interfaces, for %s", master->host);
+			verbose(VERB_QUERY, "need ipv6 to send, but no ipv6 outgoing interfaces, for %s", host);
 			return -1;
 		}
 		i = ub_random_max(env->rnd, env->outnet->num_ip6);
@@ -2931,7 +2935,7 @@ xfr_fd_for_master(struct module_env* env, struct auth_master* master)
 		addrlen = env->outnet->ip6_ifs[i].addrlen;
 	} else {
 		if(env->outnet->num_ip4 == 0) {
-			log_err("need ipv4 to send, but no ipv4 outgoing interfaces, for %s", master->host);
+			verbose(VERB_QUERY, "need ipv4 to send, but no ipv4 outgoing interfaces, for %s", host);
 			return -1;
 		}
 		i = ub_random_max(env->rnd, env->outnet->num_ip4);
@@ -2946,7 +2950,7 @@ xfr_fd_for_master(struct module_env* env, struct auth_master* master)
 		int inuse = 0;
 		int port = ub_random(env->rnd)&0xffff;
 		int fd = -1;
-		if(master_is_ip6(master)) {
+		if(addr_is_ip6(to_addr, to_addrlen)) {
 			struct sockaddr_in6 sa = *(struct sockaddr_in6*)addr;
 			sa.sin6_port = (in_port_t)htons((uint16_t)port);
 			fd = create_udp_sock(AF_INET6, SOCK_DGRAM,
@@ -3172,6 +3176,20 @@ xfr_probe_send_probe(struct auth_xfer* xfr, struct module_env* env,
 	struct auth_master* master = xfr_probe_current_master(xfr);
 	if(!master) return 0;
 
+	/* get master addr */
+	if(xfr->task_probe->scan_addr) {
+		addrlen = xfr->task_probe->scan_addr->addrlen;
+		memmove(&addr, &xfr->task_probe->scan_addr->addr, addrlen);
+	} else {
+		if(!extstrtoaddr(master->host, &addr, &addrlen)) {
+			char zname[255+1];
+			dname_str(xfr->name, zname);
+			log_err("%s: cannot parse master %s", zname,
+				master->host);
+			return 0;
+		}
+	}
+
 	/* create packet */
 	/* create new ID for new probes, but not on timeout retries,
 	 * this means we'll accept replies to previous retries to same ip */
@@ -3179,12 +3197,12 @@ xfr_probe_send_probe(struct auth_xfer* xfr, struct module_env* env,
 		xfr->task_probe->id = (uint16_t)(ub_random(env->rnd)&0xffff);
 	xfr_create_probe_packet(xfr, env->scratch_buffer, 1);
 	if(!xfr->task_probe->cp) {
-		int fd = xfr_fd_for_master(env, master);
+		int fd = xfr_fd_for_master(env, &addr, addrlen, master->host);
 		if(fd == -1) {
 			char zname[255+1];
 			dname_str(xfr->name, zname);
-			log_err("cannot create fd for probe %s to %s",
-				zname, master->host);
+			verbose(VERB_ALGO, "cannot create fd for "
+				"probe %s to %s", zname, master->host);
 			return 0;
 		}
 		xfr->task_probe->cp = comm_point_create_udp(env->worker_base,
@@ -3203,12 +3221,6 @@ xfr_probe_send_probe(struct auth_xfer* xfr, struct module_env* env,
 			log_err("malloc failure");
 			return 0;
 		}
-	}
-
-	/* get master addr */
-	if(!extstrtoaddr(master->host, &addr, &addrlen)) {
-		log_err("cannot parse master %s", master->host);
-		return 0;
 	}
 
 	/* send udp packet */

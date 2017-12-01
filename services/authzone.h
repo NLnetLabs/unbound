@@ -296,6 +296,8 @@ struct auth_probe {
 	/** scan tries all the upstream masters. the scan current target. 
 	 * or NULL if not working on sequential scan */
 	struct auth_master* scan_target;
+	/** if not NULL, the specific addr for the current master */
+	struct auth_addr* scan_addr;
 
 	/** dns id of packet in flight */
 	uint16_t id;
