@@ -1448,6 +1448,18 @@ auth_chunks_delete(struct auth_transfer* at)
 	at->chunks_last = NULL;
 }
 
+/** free master addr list */
+static void
+auth_free_master_addrs(struct auth_addr* list)
+{
+	struct auth_addr *n;
+	while(list) {
+		n = list->next;
+		free(list);
+		list = n;
+	}
+}
+
 /** free the masters list */
 static void
 auth_free_masters(struct auth_master* list)
@@ -1455,6 +1467,7 @@ auth_free_masters(struct auth_master* list)
 	struct auth_master* n;
 	while(list) {
 		n = list->next;
+		auth_free_master_addrs(list->list);
 		free(list->host);
 		free(list->file);
 		free(list);
@@ -2770,6 +2783,98 @@ xfr_master_start(struct auth_xfer* xfr)
 	return 0;
 }
 
+/** find master (from notify or probe) in list of masters */
+static struct auth_master*
+find_master_by_host(struct auth_master* list, char* host)
+{
+	struct auth_master* p;
+	for(p=list; p; p=p->next) {
+		if(strcmp(p->host, host) == 0)
+			return p;
+	}
+	return NULL;
+}
+
+/** start the lookups for task_probe */
+static void
+xfr_probe_start_lookups(struct auth_xfer* xfr)
+{
+	struct auth_master* m;
+	/* delete all the looked up addresses in the list */
+	for(m=xfr->task_probe->masters; m; m=m->next) {
+		if(m->list) {
+			auth_free_master_addrs(m->list);
+			m->list = NULL;
+		}
+	}
+	/* start lookup at the first master */
+	xfr->task_probe->lookup_target = xfr->task_probe->masters;
+	xfr->task_probe->lookup_aaaa = 0;
+}
+
+/** move to the next lookup of hostname for task_probe */
+static void
+xfr_probe_move_to_next_lookup(struct auth_xfer* xfr, struct module_env* env)
+{
+	if(!xfr->task_probe->lookup_target)
+		return; /* already at end of list */
+	if(!xfr->task_probe->lookup_aaaa && env->cfg->do_ip6) {
+		/* move to lookup AAAA */
+		xfr->task_probe->lookup_aaaa = 1;
+		return;
+	}
+	xfr->task_probe->lookup_target = xfr->task_probe->lookup_target->next;
+	xfr->task_probe->lookup_aaaa = 0;
+	if(!env->cfg->do_ip4 && xfr->task_probe->lookup_target!=NULL)
+		xfr->task_probe->lookup_aaaa = 1;
+}
+
+/** start the iteration of the task_transfer list of masters */
+static void
+xfr_transfer_start_list(struct auth_xfer* xfr, struct auth_master* spec) 
+{
+	if(spec) {
+		xfr->task_transfer->scan_specific = find_master_by_host(
+			xfr->task_transfer->masters, spec->host);
+		if(xfr->task_transfer->scan_specific) {
+			xfr->task_transfer->scan_target = NULL;
+			return;
+		}
+	}
+	/* no specific (notified) host to scan */
+	xfr->task_transfer->scan_specific = NULL;
+	/* pick up first scan target */
+	xfr->task_transfer->scan_target = xfr->task_transfer->masters;
+}
+
+
+/** start the iteration of the task_probe list of masters */
+static void
+xfr_probe_start_list(struct auth_xfer* xfr, struct auth_master* spec) 
+{
+	if(spec) {
+		xfr->task_probe->scan_specific = find_master_by_host(
+			xfr->task_probe->masters, spec->host);
+		if(xfr->task_probe->scan_specific) {
+			xfr->task_probe->scan_target = NULL;
+			return;
+		}
+	}
+	/* no specific (notified) host to scan */
+	xfr->task_probe->scan_specific = NULL;
+	/* pick up first scan target */
+	xfr->task_probe->scan_target = xfr->task_probe->masters;
+}
+
+/** pick up the master that is being scanned right now */
+static struct auth_master*
+xfr_probe_current_master(struct auth_xfer* xfr)
+{
+	if(xfr->task_probe->scan_specific)
+		return xfr->task_probe->scan_specific;
+	return xfr->task_probe->scan_target;
+}
+
 /** true if at end of list, task_probe */
 static int
 xfr_probe_end_of_list(struct auth_xfer* xfr)
@@ -3021,18 +3126,6 @@ xfr_serial_means_update(struct auth_xfer* xfr, uint32_t serial)
 	return 0;
 }
 
-/** find master (from notify or probe) in list of masters */
-static struct auth_master*
-find_master_by_host(struct auth_master* list, char* host)
-{
-	struct auth_master* p;
-	for(p=list; p; p=p->next) {
-		if(strcmp(p->host, host) == 0)
-			return p;
-	}
-	return NULL;
-}
-
 /** start transfer task by this worker , xfr is locked. */
 static void
 xfr_start_transfer(struct auth_xfer* xfr, struct module_env* env,
@@ -3047,11 +3140,7 @@ xfr_start_transfer(struct auth_xfer* xfr, struct module_env* env,
 	
 	/* init transfer process */
 	/* find that master in the transfer's list of masters? */
-	xfr->task_transfer->scan_specific = find_master_by_host(
-		xfr->task_transfer->masters, master->host);
-	if(xfr->task_transfer->scan_specific)
-		xfr->task_transfer->scan_target = NULL;
-	else	xfr->task_transfer->scan_target = xfr->task_transfer->masters;
+	xfr_transfer_start_list(xfr, master);
 
 	/* TODO initiate TCP, and set timeout on it */
 }
@@ -3080,8 +3169,7 @@ xfr_probe_send_probe(struct auth_xfer* xfr, struct module_env* env,
 	socklen_t addrlen = 0;
 	struct timeval t;
 	/* pick master */
-	struct auth_master* master = xfr->task_probe->scan_specific;
-	if(!master) master = xfr->task_probe->scan_target;
+	struct auth_master* master = xfr_probe_current_master(xfr);
 	if(!master) return 0;
 
 	/* create packet */
@@ -3194,7 +3282,7 @@ auth_xfer_probe_udp_callback(struct comm_point* c, void* arg, int err,
 				/* if updated, start the transfer task, if needed */
 				if(xfr->task_transfer->worker == NULL) {
 					xfr_start_transfer(xfr, env, 
-						(xfr->task_probe->scan_specific?xfr->task_probe->scan_specific:xfr->task_probe->scan_target));
+						xfr_probe_current_master(xfr));
 				}
 			} else {
 				/* if zone not updated, start the wait timer again */
@@ -3227,13 +3315,12 @@ xfr_probe_lookup_host(struct auth_xfer* xfr, struct module_env* env)
 {
 	struct sockaddr_storage addr;
 	socklen_t addrlen = 0;
-	struct auth_master* master = xfr->task_probe->scan_specific;
+	struct auth_master* master = xfr->task_probe->lookup_target;
 	struct query_info qinfo;
 	uint16_t qflags = BIT_RD;
 	uint8_t dname[LDNS_MAX_DOMAINLEN+1];
 	struct edns_data edns;
 	sldns_buffer* buf = env->scratch_buffer;
-	if(!master) master = xfr->task_probe->scan_target;
 	if(!master) return 0;
 	if(extstrtoaddr(master->host, &addr, &addrlen)) {
 		/* not needed, host is in IP addr format */
@@ -3251,9 +3338,17 @@ xfr_probe_lookup_host(struct auth_xfer* xfr, struct module_env* env)
 	qinfo.qname = dname;
 	qinfo.qclass = xfr->dclass;
 	qinfo.qtype = LDNS_RR_TYPE_A;
-	if(!env->cfg->do_ip4) qinfo.qtype = LDNS_RR_TYPE_AAAA;
+	if(xfr->task_probe->lookup_aaaa)
+		qinfo.qtype = LDNS_RR_TYPE_AAAA;
 	qinfo.local_alias = NULL;
-	log_query_info(VERB_ALGO, "auth xfer master lookup", &qinfo);
+	if(verbosity >= VERB_ALGO) {
+		char buf[512];
+		char buf2[LDNS_MAX_DOMAINLEN+1];
+		dname_str(xfr->name, buf2);
+		snprintf(buf, sizeof(buf), "auth zone %s: master lookup"
+			" for task_probe", buf2);
+		log_query_info(VERB_ALGO, buf, &qinfo);
+	}
 	edns.edns_present = 1;
 	edns.ext_rcode = 0;
 	edns.edns_version = 0;
@@ -3277,12 +3372,21 @@ xfr_probe_lookup_host(struct auth_xfer* xfr, struct module_env* env)
 static void
 xfr_probe_send_or_end(struct auth_xfer* xfr, struct module_env* env)
 {
-	while(!xfr_probe_end_of_list(xfr)) {
+	/* are we doing hostname lookups? */
+	while(xfr->task_probe->lookup_target) {
 		if(xfr_probe_lookup_host(xfr, env)) {
-			/* wait for lookup to finish */
+			/* wait for lookup to finish,
+			 * note that the hostname may be in unbound's cache
+			 * and we may then get an instant cache response,
+			 * and that calls the callback just like a full
+			 * lookup and lookup failures also call callback */
 			return;
 		}
+		xfr_probe_move_to_next_lookup(xfr, env);
+	}
 
+	/* send probe packets */
+	while(!xfr_probe_end_of_list(xfr)) {
 		if(xfr_probe_send_probe(xfr, env, AUTH_PROBE_TIMEOUT)) {
 			/* successfully sent probe, wait for callback */
 			return;
@@ -3303,27 +3407,84 @@ xfr_probe_send_or_end(struct auth_xfer* xfr, struct module_env* env)
 	lock_basic_unlock(&xfr->lock);
 }
 
+/** add addrs from A or AAAA rrset to the master */
+static void
+xfr_probe_add_addrs(struct auth_master* m, struct ub_packed_rrset_key* rrset,
+	uint16_t rrtype)
+{
+	size_t i;
+	struct packed_rrset_data* data;
+	if(!m || !rrset) return;
+	data = (struct packed_rrset_data*)rrset->entry.data;
+	for(i=0; i<data->count; i++) {
+		struct auth_addr* a;
+		size_t len = data->rr_len[i] - 2;
+		uint8_t* rdata = data->rr_data[i]+2;
+		if(rrtype == LDNS_RR_TYPE_A && len != INET_SIZE)
+			continue; /* wrong length for A */
+		if(rrtype == LDNS_RR_TYPE_AAAA && len != INET6_SIZE)
+			continue; /* wrong length for AAAA */
+		
+		/* add and alloc it */
+		a = (struct auth_addr*)calloc(1, sizeof(*a));
+		if(!a) {
+			log_err("out of memory");
+			return;
+		}
+		if(rrtype == LDNS_RR_TYPE_A) {
+			struct sockaddr_in* sa;
+			a->addrlen = (socklen_t)sizeof(*sa);
+			sa = (struct sockaddr_in*)&a->addr;
+			sa->sin_family = AF_INET;
+			sa->sin_port = (in_port_t)htons(UNBOUND_DNS_PORT);
+			memmove(&sa->sin_addr, rdata, INET_SIZE);
+		} else {
+			struct sockaddr_in6* sa;
+			a->addrlen = (socklen_t)sizeof(*sa);
+			sa = (struct sockaddr_in6*)&a->addr;
+			sa->sin6_family = AF_INET6;
+			sa->sin6_port = (in_port_t)htons(UNBOUND_DNS_PORT);
+			memmove(&sa->sin6_addr, rdata, INET6_SIZE);
+		}
+		/* append to list */
+		a->next = m->list;
+		m->list = a;
+	}
+}
+
 /** callback for task_probe lookup of host name, of A or AAAA */
-void auth_xfer_probe_lookup_callback(void* arg, int ATTR_UNUSED(rcode),
-        sldns_buffer* ATTR_UNUSED(buf), enum sec_status ATTR_UNUSED(sec),
-        char* ATTR_UNUSED(why_bogus))
+void auth_xfer_probe_lookup_callback(void* arg, int rcode, sldns_buffer* buf,
+	enum sec_status ATTR_UNUSED(sec), char* ATTR_UNUSED(why_bogus))
 {
 	struct auth_xfer* xfr = (struct auth_xfer*)arg;
 	struct module_env* env;
 	log_assert(xfr->task_probe);
 	env = xfr->task_probe->env;
-	
-	/* TODO: have A,AAAA phase bools stored in task_probe for this name */
 
-	/* TODO process result */
+	/* process result */
+	if(rcode == LDNS_RCODE_NOERROR) {
+		uint16_t wanted_qtype = LDNS_RR_TYPE_A;
+		struct regional* temp = env->scratch;
+		struct query_info rq;
+		struct reply_info* rep;
+		if(xfr->task_probe->lookup_aaaa)
+			wanted_qtype = LDNS_RR_TYPE_AAAA;
+		memset(&rq, 0, sizeof(rq));
+		rep = parse_reply_in_temp_region(buf, temp, &rq);
+		if(rep && rq.qtype == wanted_qtype &&
+			FLAGS_GET_RCODE(rep->flags) == LDNS_RCODE_NOERROR) {
+			/* parsed successfully */
+			struct ub_packed_rrset_key* answer =
+				reply_find_answer_rrset(&rq, rep);
+			if(answer) {
+				xfr_probe_add_addrs(xfr->task_probe->
+					lookup_target, answer, wanted_qtype);
+			}
+		}
+	}
 
-	/* TODO: set previously looked up A and AAAAs before a scan starts
-	 * to be fetched again */
-
-	/* TODO setup lookup of AAAA (unless this was the AAAA, or no ip6) */
-
-	/* if finished, resume send_or_end, set it to not start this again */
-	/* TODO: set send_or_end to not call lookups on this master */
+	/* move to lookup AAAA after A lookup, move to next hostname lookup,
+	 * or move to send the probes, or, if nothing to do, end task_probe */
 	xfr_probe_send_or_end(xfr, env);
 }
 
@@ -3364,10 +3525,10 @@ auth_xfer_timer(void* arg)
 		xfr->task_probe->cp = NULL;
 
 		/* start the task */
-		/* timeout, no specific (notified) host to scan */
-		xfr->task_probe->scan_specific = NULL;
-		/* pick up first scan target */
-		xfr->task_probe->scan_target = xfr->task_probe->masters;
+		/* this was a timeout, so no specific first master to scan */
+		xfr_probe_start_list(xfr, NULL);
+		/* setup to start the lookup of hostnames of masters afresh */
+		xfr_probe_start_lookups(xfr);
 		/* send the probe packet or next send, or end task */
 		xfr_probe_send_or_end(xfr, env);
 	} else {

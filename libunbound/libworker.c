@@ -421,25 +421,6 @@ int libworker_bg(struct ub_ctx* ctx)
 	return UB_NOERROR;
 }
 
-/** get msg reply struct (in temp region) */
-static struct reply_info*
-parse_reply(sldns_buffer* pkt, struct regional* region, struct query_info* qi)
-{
-	struct reply_info* rep;
-	struct msg_parse* msg;
-	if(!(msg = regional_alloc(region, sizeof(*msg)))) {
-		return NULL;
-	}
-	memset(msg, 0, sizeof(*msg));
-	sldns_buffer_set_position(pkt, 0);
-	if(parse_packet(pkt, msg, region) != 0)
-		return 0;
-	if(!parse_create_msg(pkt, msg, NULL, qi, &rep, region)) {
-		return 0;
-	}
-	return rep;
-}
-
 /** insert canonname */
 static int
 fill_canon(struct ub_result* res, uint8_t* s)
@@ -513,7 +494,7 @@ libworker_enter_result(struct ub_result* res, sldns_buffer* buf,
 	struct query_info rq;
 	struct reply_info* rep;
 	res->rcode = LDNS_RCODE_SERVFAIL;
-	rep = parse_reply(buf, temp, &rq);
+	rep = parse_reply_in_temp_region(buf, temp, &rq);
 	if(!rep) {
 		log_err("cannot parse buf");
 		return; /* error parsing buf, or out of memory */

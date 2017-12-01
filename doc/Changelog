@@ -1,3 +1,6 @@
+1 December 2017: Wouter 
+	- auth zone work.
+
 30 November 2017: Wouter 
 	- Fix #3299 - forward CNAME daisy chain is not working
 

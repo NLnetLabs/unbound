@@ -285,6 +285,11 @@ struct auth_probe {
 	/** list of upstream masters for this zone, from config */
 	struct auth_master* masters;
 
+	/** for the hostname lookups, which master is current */
+	struct auth_master* lookup_target;
+	/** are we looking up A or AAAA, first A, then AAAA (if ip6 enabled) */
+	int lookup_aaaa;
+
 	/** once notified, or the timeout has been reached. a scan starts. */
 	/** the scan specific target (notify source), or NULL if none */
 	struct auth_master* scan_specific;
@@ -346,6 +351,16 @@ struct auth_transfer {
 	struct comm_point* cp;
 };
 
+/** list of addresses */
+struct auth_addr {
+	/** next in list */
+	struct auth_addr* next;
+	/** IP address */
+	struct sockaddr_storage addr;
+	/** addr length */
+	socklen_t addrlen;
+};
+
 /** auth zone master upstream, and the config settings for it */
 struct auth_master {
 	/** next master in list */
@@ -360,6 +375,8 @@ struct auth_master {
 	int ixfr;
 	/** use ssl for channel */
 	int ssl;
+	/** if the host is a hostname, the list of resolved addrs, if any*/
+	struct auth_addr* list;
 };
 
 /** auth zone master zone transfer data chunk */
