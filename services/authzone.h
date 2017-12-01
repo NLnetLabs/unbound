@@ -331,6 +331,11 @@ struct auth_transfer {
 	/** list of upstream masters for this zone, from config */
 	struct auth_master* masters;
 
+	/** for the hostname lookups, which master is current */
+	struct auth_master* lookup_target;
+	/** are we looking up A or AAAA, first A, then AAAA (if ip6 enabled) */
+	int lookup_aaaa;
+
 	/** once notified, or the timeout has been reached. a scan starts. */
 	/** the scan specific target (notify source), or NULL if none */
 	struct auth_master* scan_specific;

@@ -2795,18 +2795,38 @@ find_master_by_host(struct auth_master* list, char* host)
 	return NULL;
 }
 
-/** start the lookups for task_probe */
+/** delete the looked up auth_addrs for all the masters in the list */
 static void
-xfr_probe_start_lookups(struct auth_xfer* xfr)
+xfr_masterlist_free_addrs(struct auth_master* list)
 {
 	struct auth_master* m;
-	/* delete all the looked up addresses in the list */
-	for(m=xfr->task_probe->masters; m; m=m->next) {
+	for(m=list; m; m=m->next) {
 		if(m->list) {
 			auth_free_master_addrs(m->list);
 			m->list = NULL;
 		}
 	}
+}
+
+/** start the lookups for task_transfer */
+static void
+xfr_transfer_start_lookups(struct auth_xfer* xfr)
+{
+	/* delete all the looked up addresses in the list */
+	xfr_masterlist_free_addrs(xfr->task_transfer->masters);
+
+	/* start lookup at the first master */
+	xfr->task_transfer->lookup_target = xfr->task_transfer->masters;
+	xfr->task_transfer->lookup_aaaa = 0;
+}
+
+/** start the lookups for task_probe */
+static void
+xfr_probe_start_lookups(struct auth_xfer* xfr)
+{
+	/* delete all the looked up addresses in the list */
+	xfr_masterlist_free_addrs(xfr->task_probe->masters);
+
 	/* start lookup at the first master */
 	xfr->task_probe->lookup_target = xfr->task_probe->masters;
 	xfr->task_probe->lookup_aaaa = 0;
@@ -3130,6 +3150,52 @@ xfr_serial_means_update(struct auth_xfer* xfr, uint32_t serial)
 	return 0;
 }
 
+/** perform next lookup, next transfer TCP, or end and resume wait time task */
+static void
+xfr_transfer_nexttarget_or_end(struct auth_xfer* xfr, struct module_env* env)
+{
+	log_assert(xfr->task_transfer->worker == env->worker);
+	/* TODO: setup locks, also in probe lookups */
+	(void)xfr; (void)env;
+
+	/* TODO */
+#if 0
+	/* are we performing lookups? */
+	while(xfr->task_transfer->lookup_target) {
+		if(xfr_transfer_lookup_host(xfr, env)) {
+			/* wait for lookup to finish,
+			 * note that the hostname may be in unbound's cache
+			 * and we may then get an instant cache response,
+			 * and that calls the callback just like a full
+			 * lookup and lookup failures also call callback */
+			return;
+		}
+		xfr_transfer_move_to_next_lookup(xfr, env);
+	}
+
+	/* initiate TCP and fetch the zone from the master */
+	while(!xfr_transfer_end_of_list(xfr)) {
+		if(xfr_transfer_init_fetch(xfr, env)) {
+			/* successfully started, wait for callback */
+			return;
+		}
+		/* failed to fetch, next master */
+		if(!xfr_transfer_nextmaster(xfr)) {
+			break;
+		}
+	}
+
+	lock_basic_lock(&xfr->lock);
+	/* we failed to fetch the zone, move to wait task
+	 * use the shorter retry timeout */
+	xfr_transfer_disown(xfr);
+
+	/* pick up the nextprobe task and wait */
+	xfr_set_timeout(xfr, env, 1);
+	lock_basic_unlock(&xfr->lock);
+#endif
+}
+
 /** start transfer task by this worker , xfr is locked. */
 static void
 xfr_start_transfer(struct auth_xfer* xfr, struct module_env* env,
@@ -3145,8 +3211,11 @@ xfr_start_transfer(struct auth_xfer* xfr, struct module_env* env,
 	/* init transfer process */
 	/* find that master in the transfer's list of masters? */
 	xfr_transfer_start_list(xfr, master);
+	/* start lookup for hostnames in transfer master list */
+	xfr_transfer_start_lookups(xfr);
 
 	/* TODO initiate TCP, and set timeout on it */
+	xfr_transfer_nexttarget_or_end(xfr, env);
 }
 
 /** disown task_probe.  caller must hold xfr.lock */
