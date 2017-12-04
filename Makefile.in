@@ -137,8 +137,7 @@ slabhash.lo timehist.lo tube.lo winsock_event.lo autotrust.lo val_anchor.lo \
 validator.lo val_kcache.lo val_kentry.lo val_neg.lo val_nsec3.lo val_nsec.lo \
 val_secalgo.lo val_sigcrypt.lo val_utils.lo dns64.lo cachedb.lo authzone.lo\
 $(SUBNET_OBJ) $(PYTHONMOD_OBJ) $(CHECKLOCK_OBJ) $(DNSTAP_OBJ) $(DNSCRYPT_OBJ) \
-$(IPSECMOD_OBJ)
-COMMON_OBJ_WITHOUT_NETCALL+=respip.lo
+$(IPSECMOD_OBJ) respip.lo
 COMMON_OBJ_WITHOUT_UB_EVENT=$(COMMON_OBJ_WITHOUT_NETCALL) netevent.lo listen_dnsport.lo \
 outside_network.lo
 COMMON_OBJ=$(COMMON_OBJ_WITHOUT_UB_EVENT) ub_event.lo
