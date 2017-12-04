@@ -342,6 +342,9 @@ struct auth_transfer {
 	/** scan tries all the upstream masters. the scan current target. 
 	 * or NULL if not working on sequential scan */
 	struct auth_master* scan_target;
+	/** what address we are scanning for the master, or NULL if the
+	 * master is in IP format itself */
+	struct auth_addr* scan_addr;
 	/** the zone transfer in progress (or NULL if in scan).  It is
 	 * from this master */
 	struct auth_master* master;
@@ -353,6 +356,8 @@ struct auth_transfer {
 	 * with axfr is done. */
 	int ixfr_fail;
 
+	/** dns id of AXFR query */
+	uint16_t id;
 	/** the transfer (TCP) to the master.
 	 * on the workers event base. */
 	struct comm_point* cp;
@@ -528,10 +533,16 @@ void auth_xfer_timer(void* arg);
 /** callback for commpoint udp replies to task_probe */
 int auth_xfer_probe_udp_callback(struct comm_point* c, void* arg, int err,
         struct comm_reply* repinfo);
+/** callback for task_transfer tcp connections */
+int auth_xfer_transfer_tcp_callback(struct comm_point* c, void* arg, int err,
+        struct comm_reply* repinfo);
 /** xfer probe timeout callback, part of task_probe */
 void auth_xfer_probe_timer_callback(void* arg);
 /** mesh callback for task_probe on lookup of host names */
 void auth_xfer_probe_lookup_callback(void* arg, int rcode,
+	struct sldns_buffer* buf, enum sec_status sec, char* why_bogus);
+/** mesh callback for task_transfer on lookup of host names */
+void auth_xfer_transfer_lookup_callback(void* arg, int rcode,
 	struct sldns_buffer* buf, enum sec_status sec, char* why_bogus);
 
 /*

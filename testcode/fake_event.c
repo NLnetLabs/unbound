@@ -1441,6 +1441,15 @@ struct comm_point* comm_point_create_udp(struct comm_base *ATTR_UNUSED(base),
 	return NULL;
 }
 
+struct comm_point* comm_point_create_tcp_out(struct comm_base*
+	ATTR_UNUSED(base), size_t ATTR_UNUSED(bufsize),
+	comm_point_callback_type* ATTR_UNUSED(callback),
+	void* ATTR_UNUSED(callback_arg))
+{
+	/* used by authzone transfers */
+	return NULL;
+}
+
 int comm_point_send_udp_msg(struct comm_point *ATTR_UNUSED(c),
 	sldns_buffer* ATTR_UNUSED(packet), struct sockaddr* ATTR_UNUSED(addr),
 	socklen_t ATTR_UNUSED(addrlen)) 
