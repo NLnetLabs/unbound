@@ -3207,6 +3207,7 @@ xfr_start_transfer(struct auth_xfer* xfr, struct module_env* env,
 	log_assert(xfr->task_transfer->chunks_last == NULL);
 	xfr->task_transfer->worker = env->worker;
 	xfr->task_transfer->env = env;
+	lock_basic_unlock(&xfr->lock);
 	
 	/* init transfer process */
 	/* find that master in the transfer's list of masters? */
@@ -3362,8 +3363,11 @@ auth_xfer_probe_udp_callback(struct comm_point* c, void* arg, int err,
 			if(xfr_serial_means_update(xfr, serial)) {
 				/* if updated, start the transfer task, if needed */
 				if(xfr->task_transfer->worker == NULL) {
+					xfr_probe_disown(xfr);
 					xfr_start_transfer(xfr, env, 
 						xfr_probe_current_master(xfr));
+					return 0;
+
 				}
 			} else {
 				/* if zone not updated, start the wait timer again */
@@ -3576,10 +3580,10 @@ auth_xfer_timer(void* arg)
 	struct auth_xfer* xfr = (struct auth_xfer*)arg;
 	struct module_env* env;
 	log_assert(xfr->task_nextprobe);
+	lock_basic_lock(&xfr->lock);
 	env = xfr->task_nextprobe->env;
 
 	/* see if zone has expired, and if so, also set auth_zone expired */
-	lock_basic_lock(&xfr->lock);
 	if(xfr->have_zone && !xfr->zone_expired &&
 	   *env->now >= xfr->task_nextprobe->lease_time + xfr->expiry) {
 		lock_basic_unlock(&xfr->lock);
@@ -3601,8 +3605,8 @@ auth_xfer_timer(void* arg)
 	if(xfr->task_probe->worker == NULL) {
 		/* pick up the probe task ourselves */
 		xfr->task_probe->worker = env->worker;
-		lock_basic_unlock(&xfr->lock);
 		xfr->task_probe->env = env;
+		lock_basic_unlock(&xfr->lock);
 		xfr->task_probe->cp = NULL;
 
 		/* start the task */
