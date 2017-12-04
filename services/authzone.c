@@ -3150,13 +3150,23 @@ xfr_serial_means_update(struct auth_xfer* xfr, uint32_t serial)
 	return 0;
 }
 
+/** disown task_transfer.  caller must hold xfr.lock */
+static void
+xfr_transfer_disown(struct auth_xfer* xfr)
+{
+	/* remove the commpoint */
+	comm_point_delete(xfr->task_transfer->cp);
+	xfr->task_transfer->cp = NULL;
+	/* we don't own this item anymore */
+	xfr->task_transfer->worker = NULL;
+	xfr->task_transfer->env = NULL;
+}
+
 /** perform next lookup, next transfer TCP, or end and resume wait time task */
 static void
 xfr_transfer_nexttarget_or_end(struct auth_xfer* xfr, struct module_env* env)
 {
 	log_assert(xfr->task_transfer->worker == env->worker);
-	/* TODO: setup locks, also in probe lookups */
-	(void)xfr; (void)env;
 
 	/* TODO */
 #if 0
@@ -3174,6 +3184,7 @@ xfr_transfer_nexttarget_or_end(struct auth_xfer* xfr, struct module_env* env)
 	}
 
 	/* initiate TCP and fetch the zone from the master */
+	/* and set timeout on it */
 	while(!xfr_transfer_end_of_list(xfr)) {
 		if(xfr_transfer_init_fetch(xfr, env)) {
 			/* successfully started, wait for callback */
@@ -3184,6 +3195,7 @@ xfr_transfer_nexttarget_or_end(struct auth_xfer* xfr, struct module_env* env)
 			break;
 		}
 	}
+#endif
 
 	lock_basic_lock(&xfr->lock);
 	/* we failed to fetch the zone, move to wait task
@@ -3193,7 +3205,6 @@ xfr_transfer_nexttarget_or_end(struct auth_xfer* xfr, struct module_env* env)
 	/* pick up the nextprobe task and wait */
 	xfr_set_timeout(xfr, env, 1);
 	lock_basic_unlock(&xfr->lock);
-#endif
 }
 
 /** start transfer task by this worker , xfr is locked. */
@@ -3208,14 +3219,14 @@ xfr_start_transfer(struct auth_xfer* xfr, struct module_env* env,
 	xfr->task_transfer->worker = env->worker;
 	xfr->task_transfer->env = env;
 	lock_basic_unlock(&xfr->lock);
-	
+
 	/* init transfer process */
 	/* find that master in the transfer's list of masters? */
 	xfr_transfer_start_list(xfr, master);
 	/* start lookup for hostnames in transfer master list */
 	xfr_transfer_start_lookups(xfr);
 
-	/* TODO initiate TCP, and set timeout on it */
+	/* initiate TCP, and set timeout on it */
 	xfr_transfer_nexttarget_or_end(xfr, env);
 }
 
