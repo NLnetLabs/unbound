@@ -1478,6 +1478,15 @@ AC_ARG_WITH(libunbound-only, AC_HELP_STRING([--with-libunbound-only],
 		INSTALLTARGET="install-lib"
 	fi
 ])
+if test $ALLTARGET = "alltargets"; then
+	if test $USE_NSS = "yes"; then 
+		AC_ERROR([--with-nss can only be used in combination with --with-libunbound-only.])	
+	fi
+	if test $USE_NETTLE = "yes"; then
+		AC_ERROR([--with-nettle can only be used in combination with --with-libunbound-only.])	
+	fi
+fi
+
 AC_SUBST(ALLTARGET)
 AC_SUBST(INSTALLTARGET)
 
