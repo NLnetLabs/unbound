@@ -3351,6 +3351,8 @@ xfr_transfer_init_fetch(struct auth_xfer* xfr, struct module_env* env)
 			log_err("malloc failure");
 			return 0;
 		}
+		xfr->task_transfer->cp->repinfo.addrlen = addrlen;
+		memcpy(&xfr->task_transfer->cp->repinfo.addr, &addr, addrlen);
 		/* set timeout on TCP connection */
 		comm_point_start_listening(xfr->task_transfer->cp, fd,
 			AUTH_TRANSFER_TIMEOUT);
@@ -3492,13 +3494,12 @@ void auth_xfer_transfer_lookup_callback(void* arg, int rcode, sldns_buffer* buf,
 /** callback for task_transfer tcp connections */
 int
 auth_xfer_transfer_tcp_callback(struct comm_point* c, void* arg, int err,
-        struct comm_reply* repinfo)
+        struct comm_reply* ATTR_UNUSED(repinfo))
 {
 	struct auth_xfer* xfr = (struct auth_xfer*)arg;
 	struct module_env* env;
 	log_assert(xfr->task_probe);
 	env = xfr->task_probe->env;
-	(void)repinfo;
 
 	if(err != NETEVENT_NOERROR) {
 		/* connection failed, closed, or timeout */
