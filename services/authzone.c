@@ -3506,7 +3506,8 @@ auth_xfer_transfer_tcp_callback(struct comm_point* c, void* arg, int err,
 		 * and continue task_transfer*/
 		verbose(VERB_ALGO, "xfr stopped, connection lost to %s",
 			xfr->task_transfer->master->host);
-		comm_point_close(c);
+		comm_point_delete(xfr->task_transfer->cp);
+		xfr->task_transfer->cp = NULL;
 		xfr_transfer_nexttarget_or_end(xfr, env);
 		return 0;
 	}
