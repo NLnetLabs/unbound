@@ -2959,6 +2959,7 @@ xfr_probe_end_of_list(struct auth_xfer* xfr)
 static int
 xfr_transfer_nextmaster(struct auth_xfer* xfr)
 {
+	/* TODO: no return value */
 	if(!xfr->task_transfer->scan_specific &&
 		!xfr->task_transfer->scan_target)
 		return 0;
@@ -2985,6 +2986,7 @@ xfr_transfer_nextmaster(struct auth_xfer* xfr)
 static int
 xfr_probe_nextmaster(struct auth_xfer* xfr)
 {
+	/* TODO: no return value */
 	if(!xfr->task_probe->scan_specific && !xfr->task_probe->scan_target)
 		return 0;
 	if(xfr->task_probe->scan_addr) {
@@ -3488,6 +3490,7 @@ void auth_xfer_transfer_lookup_callback(void* arg, int rcode, sldns_buffer* buf,
 
 	/* move to lookup AAAA after A lookup, move to next hostname lookup,
 	 * or move to fetch the zone, or, if nothing to do, end task_transfer */
+	xfr_transfer_move_to_next_lookup(xfr, env);
 	xfr_transfer_nexttarget_or_end(xfr, env);
 }
 
@@ -3509,6 +3512,7 @@ auth_xfer_transfer_tcp_callback(struct comm_point* c, void* arg, int err,
 			xfr->task_transfer->master->host);
 		comm_point_delete(xfr->task_transfer->cp);
 		xfr->task_transfer->cp = NULL;
+		xfr_transfer_nextmaster(xfr);
 		xfr_transfer_nexttarget_or_end(xfr, env);
 		return 0;
 	}
@@ -3663,6 +3667,7 @@ auth_xfer_probe_timer_callback(void* arg)
 	xfr->task_probe->cp = NULL;
 
 	/* too many timeouts (or fail to send), move to next or end */
+	xfr_probe_nextmaster(xfr);
 	xfr_probe_send_or_end(xfr, env);
 }
 
@@ -3721,6 +3726,7 @@ auth_xfer_probe_udp_callback(struct comm_point* c, void* arg, int err,
 
 	/* if the result was not a successfull probe, we need
 	 * to send the next one */
+	xfr_probe_nextmaster(xfr);
 	xfr_probe_send_or_end(xfr, env);
 	return 0;
 }
@@ -3856,6 +3862,7 @@ void auth_xfer_probe_lookup_callback(void* arg, int rcode, sldns_buffer* buf,
 
 	/* move to lookup AAAA after A lookup, move to next hostname lookup,
 	 * or move to send the probes, or, if nothing to do, end task_probe */
+	xfr_probe_move_to_next_lookup(xfr, env);
 	xfr_probe_send_or_end(xfr, env);
 }
 
