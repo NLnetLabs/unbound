@@ -3317,10 +3317,15 @@ xfr_transfer_init_fetch(struct auth_xfer* xfr, struct module_env* env)
 		}
 	}
 
-	/* always new cp? TODO */
-	/* TODO: set REUSEADDR and tcp nonblock, and call connect on fd */
+	/* remove previous TCP connection (if any) */
+	if(xfr->task_transfer->cp) {
+		comm_point_delete(xfr->task_transfer->cp);
+		xfr->task_transfer->cp = NULL;
+	}
+
+	/* connect on fd */
 	if(!xfr->task_transfer->cp) {
-		int fd = xfr_fd_for_master(env, &addr, addrlen, master->host);
+		int fd = outnet_get_tcp_fd(&addr, addrlen, env->cfg->tcp_mss);
 		if(fd == -1) {
 			char zname[255+1];
 			dname_str(xfr->name, zname);
@@ -3328,6 +3333,16 @@ xfr_transfer_init_fetch(struct auth_xfer* xfr, struct module_env* env)
 				"xfr %s to %s", zname, master->host);
 			return 0;
 		}
+		fd_set_nonblock(fd);
+		if(!outnet_tcp_connect(fd, &addr, addrlen)) {
+			/* outnet_tcp_connect has closed fd on error for us */
+			char zname[255+1];
+			dname_str(xfr->name, zname);
+			verbose(VERB_ALGO, "cannot tcp connect() for"
+				"xfr %s to %s", zname, master->host);
+			return 0;
+		}
+
 		xfr->task_transfer->cp = comm_point_create_tcp_out(
 			env->worker_base, 65552,
 			auth_xfer_transfer_tcp_callback, xfr);
@@ -3338,9 +3353,6 @@ xfr_transfer_init_fetch(struct auth_xfer* xfr, struct module_env* env)
 		}
 		/* set timeout on TCP connection */
 		comm_point_start_listening(xfr->task_transfer->cp, fd,
-			AUTH_TRANSFER_TIMEOUT);
-	} else {
-		comm_point_start_listening(xfr->task_transfer->cp, -1,
 			AUTH_TRANSFER_TIMEOUT);
 	}
 
@@ -3486,13 +3498,28 @@ auth_xfer_transfer_tcp_callback(struct comm_point* c, void* arg, int err,
 	struct module_env* env;
 	log_assert(xfr->task_probe);
 	env = xfr->task_probe->env;
-
-	/* TODO */
-	(void)xfr;
-	(void)env;
 	(void)repinfo;
-	(void)c;
-	(void)err;
+
+	if(err != NETEVENT_NOERROR) {
+		/* connection failed, closed, or timeout */
+		/* stop this transfer, cleanup 
+		 * and continue task_transfer*/
+		verbose(VERB_ALGO, "xfr stopped, connection lost to %s",
+			xfr->task_transfer->master->host);
+		comm_point_close(c);
+		xfr_transfer_nexttarget_or_end(xfr, env);
+		return 0;
+	}
+
+	/* TODO: handle returned packet */
+	/* if it fails, cleanup and end this transfer */
+	/* if it needs to fallback from IXFR to AXFR, do that */
+	/* if it is good, link it into the list of data */
+
+	/* if we want to read more messages, setup the commpoint to read
+	 * a DNS packet, and the timeout */
+	c->tcp_is_reading = 1;
+	comm_point_start_listening(c, -1, AUTH_TRANSFER_TIMEOUT);
 	return 0;
 }
 

@@ -198,21 +198,17 @@ pick_outgoing_tcp(struct waiting_tcp* w, int s)
 	return 1;
 }
 
-/** use next free buffer to service a tcp query */
-static int
-outnet_tcp_take_into_use(struct waiting_tcp* w, uint8_t* pkt, size_t pkt_len)
+/** get TCP file descriptor for address, returns -1 on failure,
+ * tcp_mss is 0 or maxseg size to set for TCP packets. */
+int
+outnet_get_tcp_fd(struct sockaddr_storage* addr, socklen_t addrlen, int tcp_mss)
 {
-	struct pending_tcp* pend = w->outnet->tcp_free;
 	int s;
 #ifdef SO_REUSEADDR
 	int on = 1;
 #endif
-	log_assert(pend);
-	log_assert(pkt);
-	log_assert(w->addrlen > 0);
-	/* open socket */
 #ifdef INET6
-	if(addr_is_ip6(&w->addr, w->addrlen))
+	if(addr_is_ip6(addr, addrlen))
 		s = socket(PF_INET6, SOCK_STREAM, IPPROTO_TCP);
 	else
 #endif
@@ -220,12 +216,12 @@ outnet_tcp_take_into_use(struct waiting_tcp* w, uint8_t* pkt, size_t pkt_len)
 	if(s == -1) {
 #ifndef USE_WINSOCK
 		log_err_addr("outgoing tcp: socket", strerror(errno),
-			&w->addr, w->addrlen);
+			addr, addrlen);
 #else
 		log_err_addr("outgoing tcp: socket", 
-			wsa_strerror(WSAGetLastError()), &w->addr, w->addrlen);
+			wsa_strerror(WSAGetLastError()), addr, addrlen);
 #endif
-		return 0;
+		return -1;
 	}
 
 #ifdef SO_REUSEADDR
@@ -235,11 +231,11 @@ outnet_tcp_take_into_use(struct waiting_tcp* w, uint8_t* pkt, size_t pkt_len)
 			" setsockopt(.. SO_REUSEADDR ..) failed");
 	}
 #endif
-	if (w->outnet->tcp_mss > 0) {
+
+	if(tcp_mss > 0) {
 #if defined(IPPROTO_TCP) && defined(TCP_MAXSEG)
 		if(setsockopt(s, IPPROTO_TCP, TCP_MAXSEG,
-			(void*)&w->outnet->tcp_mss,
-			(socklen_t)sizeof(w->outnet->tcp_mss)) < 0) {
+			(void*)&tcp_mss, (socklen_t)sizeof(tcp_mss)) < 0) {
 			verbose(VERB_ALGO, "outgoing tcp:"
 				" setsockopt(.. TCP_MAXSEG ..) failed");
 		}
@@ -248,6 +244,49 @@ outnet_tcp_take_into_use(struct waiting_tcp* w, uint8_t* pkt, size_t pkt_len)
 			" setsockopt(TCP_MAXSEG) unsupported");
 #endif /* defined(IPPROTO_TCP) && defined(TCP_MAXSEG) */
 	}
+
+	return s;
+}
+
+/** connect tcp connection to addr, 0 on failure */
+int
+outnet_tcp_connect(int s, struct sockaddr_storage* addr, socklen_t addrlen)
+{
+	if(connect(s, (struct sockaddr*)addr, addrlen) == -1) {
+#ifndef USE_WINSOCK
+#ifdef EINPROGRESS
+		if(errno != EINPROGRESS) {
+#endif
+			if(tcp_connect_errno_needs_log(
+				(struct sockaddr*)addr, addrlen))
+				log_err_addr("outgoing tcp: connect",
+					strerror(errno), addr, addrlen);
+			close(s);
+#ifdef EINPROGRESS
+		}
+#endif
+#else /* USE_WINSOCK */
+		if(WSAGetLastError() != WSAEINPROGRESS &&
+			WSAGetLastError() != WSAEWOULDBLOCK) {
+			closesocket(s);
+		}
+#endif
+		return 0;
+	}
+	return 1;
+}
+
+/** use next free buffer to service a tcp query */
+static int
+outnet_tcp_take_into_use(struct waiting_tcp* w, uint8_t* pkt, size_t pkt_len)
+{
+	struct pending_tcp* pend = w->outnet->tcp_free;
+	int s;
+	log_assert(pend);
+	log_assert(pkt);
+	log_assert(w->addrlen > 0);
+	/* open socket */
+	s = outnet_get_tcp_fd(&w->addr, w->addrlen, w->outnet->tcp_mss);
 
 	if(!pick_outgoing_tcp(w, s))
 		return 0;

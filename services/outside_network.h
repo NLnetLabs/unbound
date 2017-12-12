@@ -533,6 +533,13 @@ size_t outnet_get_mem(struct outside_network* outnet);
  */
 size_t serviced_get_mem(struct serviced_query* sq);
 
+/** get TCP file descriptor for address, returns -1 on failure,
+ * tcp_mss is 0 or maxseg size to set for TCP packets. */
+int outnet_get_tcp_fd(struct sockaddr_storage* addr, socklen_t addrlen, int tcp_mss);
+
+/** connect tcp connection to addr, 0 on failure */
+int outnet_tcp_connect(int s, struct sockaddr_storage* addr, socklen_t addrlen);
+
 /** callback for incoming udp answers from the network */
 int outnet_udp_cb(struct comm_point* c, void* arg, int error,
 	struct comm_reply *reply_info);

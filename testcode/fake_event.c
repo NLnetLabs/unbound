@@ -1458,4 +1458,16 @@ int comm_point_send_udp_msg(struct comm_point *ATTR_UNUSED(c),
 	return 0;
 }
 
+int outnet_get_tcp_fd(struct sockaddr_storage* ATTR_UNUSED(addr),
+	socklen_t ATTR_UNUSED(addrlen), int ATTR_UNUSED(tcp_mss))
+{
+	return -1;
+}
+
+int outnet_tcp_connect(int ATTR_UNUSED(s), struct sockaddr_storage* ATTR_UNUSED(addr),
+	socklen_t ATTR_UNUSED(addrlen))
+{
+	return 0;
+}
+
 /*********** End of Dummy routines ***********/

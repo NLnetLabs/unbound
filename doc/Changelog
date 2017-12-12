@@ -1,6 +1,9 @@
 12 December 2017: Ralph
 	- Fix qname-minimisation documentation (A QTYPE, not NS)
 
+12 December 2017: Wouter
+	- authzone work, transfer connect.
+
 7 December 2017: Ralph
 	- Check whether --with-libunbound-only is set when using --with-nettle
 	  or --with-nss.
