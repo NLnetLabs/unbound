@@ -1,6 +1,10 @@
+12 December 2017: Ralph
+	- Fix qname-minimisation documentation (A QTYPE, not NS)
+
 7 December 2017: Ralph
 	- Check whether --with-libunbound-only is set when using --with-nettle
 	  or --with-nss.
+
 4 December 2017: Wouter 
 	- Fix link failure on OmniOS.
 

@@ -371,7 +371,7 @@ server:
 
 	# Sent minimum amount of information to upstream servers to enhance
 	# privacy. Only sent minimum required labels of the QNAME and set QTYPE
-	# to NS when possible.
+	# to A when possible.
 	# qname-minimisation: no
 
 	# QNAME minimisation in strict mode. Do not fall-back to sending full
