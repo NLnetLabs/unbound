@@ -1230,7 +1230,6 @@ check_dates(struct val_env* ve, uint32_t unow,
 	/* check them */
 	incepminexpi = incep-expi;
 	if(incepminexpi > 0) {
-		log_info("incep-expi failure");
 		sigdate_error("verify: inception after expiration, "
 			"signature bad", expi, incep, now);
 		*reason = "signature inception after expiration";
