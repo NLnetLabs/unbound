@@ -1211,6 +1211,7 @@ check_dates(struct val_env* ve, uint32_t unow,
 {
 	/* read out the dates */
 	int32_t expi, incep, now;
+	int32_t incepminexpi;
 	memmove(&expi, expi_p, sizeof(expi));
 	memmove(&incep, incep_p, sizeof(incep));
 	expi = ntohl(expi);
@@ -1227,7 +1228,9 @@ check_dates(struct val_env* ve, uint32_t unow,
 	} else	now = (int32_t)unow;
 
 	/* check them */
-	if(incep - expi > 0) {
+	incepminexpi = incep-expi;
+	if(incepminexpi > 0) {
+		log_info("incep-expi failure");
 		sigdate_error("verify: inception after expiration, "
 			"signature bad", expi, incep, now);
 		*reason = "signature inception after expiration";
