@@ -1,6 +1,7 @@
 15 December 2017: Wouter
 	- Fix timestamp failure because of clang optimizer failure, by
 	  disabling -O2 when the compiler --version is clang.
+	- iana port update.
 
 12 December 2017: Ralph
 	- Fix qname-minimisation documentation (A QTYPE, not NS)
