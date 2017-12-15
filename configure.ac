@@ -255,8 +255,8 @@ if $CC --version 2>&1 | grep "clang" >/dev/null; then
 	:
 else
 ACX_CHECK_COMPILER_FLAG(O2, [CFLAGS="$CFLAGS -O2"])
-fi
 default_cflags=yes
+fi
 fi
 AC_PROG_CC
 ACX_DEPFLAG

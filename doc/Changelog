@@ -2,6 +2,8 @@
 	- Fix timestamp failure because of clang optimizer failure, by
 	  disabling -O2 when the compiler --version is clang.
 	- iana port update.
+	- Also disable -flto for clang, to make incep-expi signature check
+	  work.
 
 12 December 2017: Ralph
 	- Fix qname-minimisation documentation (A QTYPE, not NS)
