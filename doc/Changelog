@@ -3,6 +3,8 @@
 	  away, without a repeat query picking the DS from cache.
 	  The correct reply should have been an answer, the reply is fixed
 	  by the scrubber to have the answer in the answer section.
+	- Remove clang optimizer disable,
+	  Fix that expiration date checks don't fail with clang -O2.
 
 15 December 2017: Wouter
 	- Fix timestamp failure because of clang optimizer failure, by

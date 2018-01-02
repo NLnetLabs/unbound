@@ -4462,11 +4462,6 @@ $as_echo "no" >&6; }
 
 fi
 
-# ommit -O2 for clang because of optimizer failures (in expi-incep in
-# the signature serial timestamp checks.)
-if $CC --version 2>&1 | grep "clang" >/dev/null; then
-	:
-else
 
 
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether $CC supports -O2" >&5
@@ -4499,7 +4494,6 @@ $as_echo "no" >&6; }
 fi
 
 default_cflags=yes
-fi
 fi
 ac_ext=c
 ac_cpp='$CPP $CPPFLAGS'

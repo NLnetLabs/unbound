@@ -249,14 +249,8 @@ AC_LANG_C
 default_cflags=no
 if test "x$CFLAGS" = "x" ; then
 ACX_CHECK_COMPILER_FLAG(g, [CFLAGS="$CFLAGS -g"])
-# ommit -O2 for clang because of optimizer failures (in expi-incep in
-# the signature serial timestamp checks.)
-if $CC --version 2>&1 | grep "clang" >/dev/null; then
-	:
-else
 ACX_CHECK_COMPILER_FLAG(O2, [CFLAGS="$CFLAGS -O2"])
 default_cflags=yes
-fi
 fi
 AC_PROG_CC
 ACX_DEPFLAG
