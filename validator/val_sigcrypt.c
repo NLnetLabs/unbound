@@ -1235,7 +1235,11 @@ subtract_1918(uint32_t a, uint32_t b)
 	if(a < b && b - a < cutoff) {
 		return b-a;
 	}
-	return a-b;
+	if(a > b && a - b > cutoff) {
+		return ((uint32_t)0xffffffff) - (a-b);
+	}
+	/* wrong case, b smaller than a */
+	return 0;
 }
 
 /** check rrsig dates */
