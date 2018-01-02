@@ -1236,7 +1236,7 @@ subtract_1918(uint32_t a, uint32_t b)
 		return b-a;
 	}
 	if(a > b && a - b > cutoff) {
-		return ((uint32_t)0xffffffff) - (a-b);
+		return ((uint32_t)0xffffffff) - (a-b-1);
 	}
 	/* wrong case, b smaller than a */
 	return 0;
