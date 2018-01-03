@@ -1377,13 +1377,14 @@ processInitRequest2(struct module_qstate* qstate, struct iter_qstate* iq,
 	delname = iq->qchase.qname;
 	delnamelen = iq->qchase.qname_len;
 	if(iq->refetch_glue) {
+		struct iter_hints_stub* stub;
 		if(!iq->dp) {
 			log_err("internal or malloc fail: no dp for refetch");
 			return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
 		}
 		/* Do not send queries above stub, do not set delname to dp if
 		 * this is above stub without stub-first. */
-		struct iter_hints_stub* stub = hints_lookup_stub(
+		stub = hints_lookup_stub(
 			qstate->env->hints, iq->qchase.qname, iq->qchase.qclass,
 			iq->dp);
 		if(!stub || !stub->dp->has_parent_side_NS || 
