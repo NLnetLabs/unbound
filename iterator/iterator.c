@@ -1374,16 +1374,23 @@ processInitRequest2(struct module_qstate* qstate, struct iter_qstate* iq,
 	log_query_info(VERB_QUERY, "resolving (init part 2): ", 
 		&qstate->qinfo);
 
+	delname = iq->qchase.qname;
+	delnamelen = iq->qchase.qname_len;
 	if(iq->refetch_glue) {
 		if(!iq->dp) {
 			log_err("internal or malloc fail: no dp for refetch");
 			return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
 		}
-		delname = iq->dp->name;
-		delnamelen = iq->dp->namelen;
-	} else {
-		delname = iq->qchase.qname;
-		delnamelen = iq->qchase.qname_len;
+		/* Do not send queries above stub, do not set delname to dp if
+		 * this is above stub without stub-first. */
+		struct iter_hints_stub* stub = hints_lookup_stub(
+			qstate->env->hints, iq->qchase.qname, iq->qchase.qclass,
+			iq->dp);
+		if(!stub || !stub->dp->has_parent_side_NS || 
+			dname_subdomain_c(iq->dp->name, stub->dp->name)) {
+			delname = iq->dp->name;
+			delnamelen = iq->dp->namelen;
+		}
 	}
 	if(iq->qchase.qtype == LDNS_RR_TYPE_DS || iq->refetch_glue) {
 		if(!dname_is_root(delname))
