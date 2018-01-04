@@ -1,3 +1,7 @@
+4 January 2018: Ralph
+	- Copy query and correctly set flags on REFUSED answers when cache
+	  snooping is not allowed.
+
 3 January 2018: Ralph
 	- Fix queries being leaked above stub when refetching glue.
 

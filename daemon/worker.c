@@ -1266,13 +1266,9 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 	 * ACLs allow the snooping. */
 	if(!(LDNS_RD_WIRE(sldns_buffer_begin(c->buffer))) &&
 		acl != acl_allow_snoop ) {
-		sldns_buffer_set_limit(c->buffer, LDNS_HEADER_SIZE);
-		sldns_buffer_write_at(c->buffer, 4, 
-			(uint8_t*)"\0\0\0\0\0\0\0\0", 8);
-		LDNS_QR_SET(sldns_buffer_begin(c->buffer));
-		LDNS_RCODE_SET(sldns_buffer_begin(c->buffer), 
-			LDNS_RCODE_REFUSED);
-		sldns_buffer_flip(c->buffer);
+		error_encode(c->buffer, LDNS_RCODE_REFUSED, &qinfo,
+			*(uint16_t*)(void *)sldns_buffer_begin(c->buffer),
+			sldns_buffer_read_u16_at(c->buffer, 2), NULL);
 		regional_free_all(worker->scratchpad);
 		server_stats_insrcode(&worker->stats, c->buffer);
 		log_addr(VERB_ALGO, "refused nonrec (cache snoop) query from",
