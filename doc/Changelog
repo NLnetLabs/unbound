@@ -1,3 +1,7 @@
+19 January 2018: Wouter
+	- tag 1.6.8 for release with CVE fix.
+	- trunk has 1.6.9 with fix and previous commits.
+
 4 January 2018: Ralph
 	- Copy query and correctly set flags on REFUSED answers when cache
 	  snooping is not allowed.
