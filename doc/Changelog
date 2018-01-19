@@ -1,6 +1,8 @@
 19 January 2018: Wouter
 	- tag 1.6.8 for release with CVE fix.
 	- trunk has 1.6.9 with fix and previous commits.
+	- patch for CVE-2017-15105: vulnerability in the processing of
+	  wildcard synthesized NSEC records.
 
 4 January 2018: Ralph
 	- Copy query and correctly set flags on REFUSED answers when cache
