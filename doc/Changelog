@@ -4,6 +4,7 @@
 	- patch for CVE-2017-15105: vulnerability in the processing of
 	  wildcard synthesized NSEC records.
 	- iana port update.
+	- make depend: code dependencies updated in Makefile.
 
 4 January 2018: Ralph
 	- Copy query and correctly set flags on REFUSED answers when cache
