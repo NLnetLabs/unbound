@@ -1109,7 +1109,7 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 		msg = dns_cache_lookup(qstate->env, iq->qchase.qname, 
 			iq->qchase.qname_len, iq->qchase.qtype, 
 			iq->qchase.qclass, qstate->query_flags,
-			qstate->region, qstate->env->scratch);
+			qstate->region, qstate->env->scratch, 0);
 		if(!msg && qstate->env->neg_cache) {
 			/* lookup in negative cache; may result in
 			 * NOERROR/NODATA or NXDOMAIN answers that need validation */
@@ -2170,7 +2170,7 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 				iq->qinfo_out.qname, iq->qinfo_out.qname_len, 
 				iq->qinfo_out.qtype, iq->qinfo_out.qclass, 
 				qstate->query_flags, qstate->region, 
-				qstate->env->scratch);
+				qstate->env->scratch, 0);
 			if(msg && msg->rep->an_numrrsets == 0
 				&& FLAGS_GET_RCODE(msg->rep->flags) == 
 				LDNS_RCODE_NOERROR)

@@ -711,7 +711,8 @@ fill_any(struct module_env* env,
 struct dns_msg* 
 dns_cache_lookup(struct module_env* env,
 	uint8_t* qname, size_t qnamelen, uint16_t qtype, uint16_t qclass,
-	uint16_t flags, struct regional* region, struct regional* scratch)
+	uint16_t flags, struct regional* region, struct regional* scratch,
+	int no_partial)
 {
 	struct lruhash_entry* e;
 	struct query_info k;
@@ -743,7 +744,8 @@ dns_cache_lookup(struct module_env* env,
 	/* see if a DNAME exists. Checked for first, to enforce that DNAMEs
 	 * are more important, the CNAME is resynthesized and thus 
 	 * consistent with the DNAME */
-	if( (rrset=find_closest_of_type(env, qname, qnamelen, qclass, now,
+	if(!no_partial &&
+		(rrset=find_closest_of_type(env, qname, qnamelen, qclass, now,
 		LDNS_RR_TYPE_DNAME, 1))) {
 		/* synthesize a DNAME+CNAME message based on this */
 		struct dns_msg* msg = synth_dname_msg(rrset, region, now, &k);
@@ -756,7 +758,7 @@ dns_cache_lookup(struct module_env* env,
 
 	/* see if we have CNAME for this domain,
 	 * but not for DS records (which are part of the parent) */
-	if( qtype != LDNS_RR_TYPE_DS &&
+	if(!no_partial && qtype != LDNS_RR_TYPE_DS &&
 	   (rrset=rrset_cache_lookup(env->rrset_cache, qname, qnamelen, 
 		LDNS_RR_TYPE_CNAME, qclass, 0, now, 0))) {
 		uint8_t* wc = NULL;

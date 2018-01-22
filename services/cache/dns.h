@@ -159,13 +159,16 @@ struct dns_msg* tomsg(struct module_env* env, struct query_info* q,
  * @param flags: flags with BIT_CD for AAAA queries in dns64 translation.
  * @param region: where to allocate result.
  * @param scratch: where to allocate temporary data.
+ * @param no_partial: if true, only complete messages and not a partial
+ *   one (with only the start of the CNAME chain and not the rest).
  * @return new response message (alloced in region, rrsets do not have IDs).
  * 	or NULL on error or if not found in cache.
  *	TTLs are made relative to the current time.
  */
 struct dns_msg* dns_cache_lookup(struct module_env* env,
 	uint8_t* qname, size_t qnamelen, uint16_t qtype, uint16_t qclass,
-	uint16_t flags, struct regional* region, struct regional* scratch);
+	uint16_t flags, struct regional* region, struct regional* scratch,
+	int no_partial);
 
 /** 
  * find and add A and AAAA records for missing nameservers in delegpt 
