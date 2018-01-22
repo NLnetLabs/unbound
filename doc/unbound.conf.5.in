@@ -398,29 +398,42 @@ Enable udp upstream even if do-udp is no.  Default is no, and this does not
 change anything.  Useful for TLS service providers, that want no udp downstream
 but use udp to fetch data upstream.
 .TP
-.B ssl\-upstream: \fI<yes or no>
+.B tls\-upstream: \fI<yes or no>
 Enabled or disable whether the upstream queries use SSL only for transport.
 Default is no.  Useful in tunneling scenarios.  The SSL contains plain DNS in
 TCP wireformat.  The other server must support this (see
-\fBssl\-service\-key\fR).
+\fBtls\-service\-key\fR).
 .TP
-.B ssl\-service-key: \fI<file>
+.B ssl\-upstream: \fI<yes or no>
+Alternate syntax for \fBtls\-upstream\fR.  If both are present in the config
+file the last is used.
+.TP
+.B tls\-service\-key: \fI<file>
 If enabled, the server provider SSL service on its TCP sockets.  The clients
-have to use ssl\-upstream: yes.  The file is the private key for the TLS
-session.  The public certificate is in the ssl\-service\-pem file.  Default
+have to use tls\-upstream: yes.  The file is the private key for the TLS
+session.  The public certificate is in the tls\-service\-pem file.  Default
 is "", turned off.  Requires a restart (a reload is not enough) if changed,
 because the private key is read while root permissions are held and before
 chroot (if any).  Normal DNS TCP service is not provided and gives errors,
 this service is best run with a different \fBport:\fR config or \fI@port\fR
 suffixes in the \fBinterface\fR config.
 .TP
-.B ssl\-service\-pem: \fI<file>
-The public key certificate pem file for the ssl service.  Default is "",
+.B ssl\-service\-key: \fI<file>
+Alternate syntax for \fBtls\-service\-key\fR.
+.TP
+.B tls\-service\-pem: \fI<file>
+The public key certificate pem file for the tls service.  Default is "",
 turned off.
 .TP
-.B ssl\-port: \fI<number>
+.B ssl\-service\-pem: \fI<file>
+Alternate syntax for \fBtls\-service\-pem\fR.
+.TP
+.B tls\-port: \fI<number>
 The port number on which to provide TCP SSL service, default 853, only
 interfaces configured with that port number as @number get the SSL service.
+.TP
+.B ssl\-port: \fI<number>
+Alternate syntax for \fBtls\-port\fR.
 .TP
 .B use\-systemd: \fI<yes or no>
 Enable or disable systemd socket activation.
@@ -1380,9 +1393,12 @@ The data could not be retrieved and would have caused SERVFAIL because
 the servers are unreachable, instead it is tried without this clause.
 The default is no.
 .TP
-.B stub\-ssl\-upstream: \fI<yes or no>
+.B stub\-tls\-upstream: \fI<yes or no>
 Enabled or disable whether the queries to this stub use SSL for transport.
 Default is no.
+.TP
+.B stub\-ssl\-upstream: \fI<yes or no>
+Alternate syntax for \fBstub\-tls\-upstream\fR.
 .SS "Forward Zone Options"
 .LP
 There may be multiple
@@ -1417,9 +1433,12 @@ The data could not be retrieved and would have caused SERVFAIL because
 the servers are unreachable, instead it is tried without this clause.
 The default is no.
 .TP
-.B forward\-ssl\-upstream: \fI<yes or no>
+.B forward\-tls\-upstream: \fI<yes or no>
 Enabled or disable whether the queries to this forwarder use SSL for transport.
 Default is no.
+.TP
+.B forward\-ssl\-upstream: \fI<yes or no>
+Alternate syntax for \fBforward\-tls\-upstream\fR.
 .SS "View Options"
 .LP
 There may be multiple

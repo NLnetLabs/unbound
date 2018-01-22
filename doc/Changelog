@@ -1,3 +1,9 @@
+22 January 2018: Wouter
+	- Accept tls-upstream in unbound.conf, the ssl-upstream keyword is
+	  also recognized and means the same.  Also for tls-port,
+	  tls-service-key, tls-service-pem, stub-tls-upstream and
+	  forward-tls-upstream.
+
 19 January 2018: Wouter
 	- tag 1.6.8 for release with CVE fix.
 	- trunk has 1.6.9 with fix and previous commits.
