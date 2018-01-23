@@ -1,6 +1,8 @@
 23 January 2018: Wouter
 	- Fix that unbound-checkconf -f flag works with auto-trust-anchor-file
 	  for startup scripts to get the full pathname(s) of anchor file(s).
+	- Print fatal errors about remote control setup before log init,
+	  so that it is printed to console.
 
 22 January 2018: Wouter
 	- Accept tls-upstream in unbound.conf, the ssl-upstream keyword is

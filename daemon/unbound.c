@@ -421,17 +421,6 @@ perform_setup(struct daemon* daemon, struct config_file* cfg, int debug_mode,
 	w_config_adjust_directory(cfg);
 #endif
 
-	/* init syslog (as root) if needed, before daemonize, otherwise
-	 * a fork error could not be printed since daemonize closed stderr.*/
-	if(cfg->use_syslog) {
-		log_init(cfg->logfile, cfg->use_syslog, cfg->chrootdir);
-	}
-	/* if using a logfile, we cannot open it because the logfile would
-	 * be created with the wrong permissions, we cannot chown it because
-	 * we cannot chown system logfiles, so we do not open at all.
-	 * So, using a logfile, the user does not see errors unless -d is
-	 * given to unbound on the commandline. */
-
 	/* read ssl keys while superuser and outside chroot */
 #ifdef HAVE_SSL
 	if(!(daemon->rc = daemon_remote_create(cfg)))
@@ -444,6 +433,17 @@ perform_setup(struct daemon* daemon, struct config_file* cfg, int debug_mode,
 	if(!(daemon->connect_sslctx = connect_sslctx_create(NULL, NULL, NULL)))
 		fatal_exit("could not set up connect SSL_CTX");
 #endif
+
+	/* init syslog (as root) if needed, before daemonize, otherwise
+	 * a fork error could not be printed since daemonize closed stderr.*/
+	if(cfg->use_syslog) {
+		log_init(cfg->logfile, cfg->use_syslog, cfg->chrootdir);
+	}
+	/* if using a logfile, we cannot open it because the logfile would
+	 * be created with the wrong permissions, we cannot chown it because
+	 * we cannot chown system logfiles, so we do not open at all.
+	 * So, using a logfile, the user does not see errors unless -d is
+	 * given to unbound on the commandline. */
 
 #ifdef HAVE_KILL
 	/* true if pidfile is inside chrootdir, or nochroot */
