@@ -1,3 +1,6 @@
+25 January 2018: Wouter
+	- ltrace.conf file for libunbound in contrib.
+
 23 January 2018: Wouter
 	- Fix that unbound-checkconf -f flag works with auto-trust-anchor-file
 	  for startup scripts to get the full pathname(s) of anchor file(s).
