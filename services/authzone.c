@@ -3075,7 +3075,7 @@ xfr_create_soa_probe_packet(struct auth_xfer* xfr, sldns_buffer* buf,
 	qinfo.qtype = LDNS_RR_TYPE_SOA;
 	qinfo.qclass = xfr->dclass;
 	qinfo_query_encode(buf, &qinfo);
-	sldns_buffer_write_at(buf, 0, &id, 2);
+	sldns_buffer_write_u16_at(buf, 0, id);
 }
 
 /** create IXFR/AXFR packet for xfr */
@@ -3107,7 +3107,7 @@ xfr_create_ixfr_packet(struct auth_xfer* xfr, sldns_buffer* buf, uint16_t id)
 
 	qinfo.qclass = xfr->dclass;
 	qinfo_query_encode(buf, &qinfo);
-	sldns_buffer_write_at(buf, 0, &id, 2);
+	sldns_buffer_write_u16_at(buf, 0, id);
 
 	/* append serial for IXFR */
 	if(qinfo.qtype == LDNS_RR_TYPE_IXFR) {
@@ -3137,7 +3137,6 @@ static int
 check_packet_ok(sldns_buffer* pkt, uint16_t qtype, struct auth_xfer* xfr,
 	uint32_t* serial)
 {
-	uint16_t id;
 	/* parse to see if packet worked, valid reply */
 
 	/* check serial number of SOA */
@@ -3145,8 +3144,7 @@ check_packet_ok(sldns_buffer* pkt, uint16_t qtype, struct auth_xfer* xfr,
 		return 0;
 
 	/* check ID */
-	sldns_buffer_read_at(pkt, 0, &id, 2);
-	if(id != xfr->task_probe->id)
+	if(LDNS_ID_WIRE(sldns_buffer_begin(pkt)) != xfr->task_probe->id)
 		return 0;
 
 	/* check flag bits and rcode */
