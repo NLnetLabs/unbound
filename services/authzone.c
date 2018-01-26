@@ -3256,7 +3256,7 @@ chunk_rrlist_end(struct auth_chunk* rr_chunk, int rr_num)
 	while(rr_chunk) {
 		if(rr_chunk->len < LDNS_HEADER_SIZE)
 			return 1;
-		if(rr_num < LDNS_ANCOUNT(rr_chunk->data))
+		if(rr_num < (int)LDNS_ANCOUNT(rr_chunk->data))
 			return 0;
 		/* no more RRs in this chunk */
 		if(!rr_chunk->next)
@@ -3279,7 +3279,7 @@ chunk_rrlist_gonext(struct auth_chunk** rr_chunk, int* rr_num,
 	while(*rr_chunk) {
 		/* move within this chunk */
 		if((*rr_chunk)->len < LDNS_HEADER_SIZE &&
-			(*rr_num)+1 < LDNS_ANCOUNT((*rr_chunk)->data)) {
+			(*rr_num)+1 < (int)LDNS_ANCOUNT((*rr_chunk)->data)) {
 			(*rr_num) += 1;
 			*rr_pos = rr_nextpos;
 			return ;
@@ -3310,7 +3310,7 @@ chunk_rrlist_get_current(struct auth_chunk* rr_chunk, int rr_num,
 	/* integrity checks on position */
 	if(!rr_chunk) return 0;
 	if(rr_chunk->len < LDNS_HEADER_SIZE) return 0;
-	if(rr_num >= LDNS_ANCOUNT(rr_chunk->data)) return 0;
+	if(rr_num >= (int)LDNS_ANCOUNT(rr_chunk->data)) return 0;
 	if(rr_pos >= rr_chunk->len) return 0;
 
 	/* fetch rr information */
@@ -3832,7 +3832,7 @@ check_xfer_packet(sldns_buffer* pkt, struct auth_xfer* xfr,
 	}
 	if(LDNS_RCODE_WIRE(wire) != LDNS_RCODE_NOERROR) {
 		char rcode[32];
-		sldns_wire2str_rcode_buf(LDNS_RCODE_WIRE(wire), rcode,
+		sldns_wire2str_rcode_buf((int)LDNS_RCODE_WIRE(wire), rcode,
 			sizeof(rcode));
 		/* if we are doing IXFR, check for fallback */
 		if(xfr->task_transfer->on_ixfr) {
@@ -4026,7 +4026,7 @@ check_xfer_packet(sldns_buffer* pkt, struct auth_xfer* xfr,
 		xfr->task_transfer->rr_scan_num++;
 
 		/* skip over RR rdata to go to the next RR */
-		sldns_buffer_skip(pkt, rdlen);
+		sldns_buffer_skip(pkt, (ssize_t)rdlen);
 	}
 
 	/* check authority section */
@@ -4056,7 +4056,7 @@ check_xfer_packet(sldns_buffer* pkt, struct auth_xfer* xfr,
 			return 0;
 		}
 		/* skip over RR rdata to go to the next RR */
-		sldns_buffer_skip(pkt, rdlen);
+		sldns_buffer_skip(pkt, (ssize_t)rdlen);
 	}
 
 	/* check additional section */
@@ -4085,7 +4085,7 @@ check_xfer_packet(sldns_buffer* pkt, struct auth_xfer* xfr,
 			return 0;
 		}
 		/* skip over RR rdata to go to the next RR */
-		sldns_buffer_skip(pkt, rdlen);
+		sldns_buffer_skip(pkt, (ssize_t)rdlen);
 	}
 
 	return 1;
