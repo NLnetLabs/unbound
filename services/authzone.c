@@ -3282,12 +3282,6 @@ chunk_rrlist_gonext(struct auth_chunk** rr_chunk, int* rr_num,
 		}
 
 		/* no more RRs in this chunk */
-		if(!(*rr_chunk)->next) {
-			*rr_chunk = NULL;
-			*rr_num = 0;
-			*rr_pos = 0;
-			return;
-		}
 		/* continue with next chunk, see if it has RRs */
 		*rr_chunk = (*rr_chunk)->next;
 		*rr_num = 0;
