@@ -3257,8 +3257,6 @@ chunk_rrlist_end(struct auth_chunk* rr_chunk, int rr_num)
 		if(rr_num < (int)LDNS_ANCOUNT(rr_chunk->data))
 			return 0;
 		/* no more RRs in this chunk */
-		if(!rr_chunk->next)
-			return 1;
 		/* continue with next chunk, see if it has RRs */
 		rr_chunk = rr_chunk->next;
 		rr_num = 0;
