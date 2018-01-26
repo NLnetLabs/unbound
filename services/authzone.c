@@ -2956,55 +2956,49 @@ xfr_probe_end_of_list(struct auth_xfer* xfr)
 }
 
 /** move to next master in list, task_transfer */
-static int
+static void
 xfr_transfer_nextmaster(struct auth_xfer* xfr)
 {
-	/* TODO: no return value */
 	if(!xfr->task_transfer->scan_specific &&
 		!xfr->task_transfer->scan_target)
-		return 0;
+		return;
 	if(xfr->task_transfer->scan_addr) {
 		xfr->task_transfer->scan_addr =
 			xfr->task_transfer->scan_addr->next;
 		if(xfr->task_transfer->scan_addr)
-			return 1;
+			return;
 	}
 	if(xfr->task_transfer->scan_specific) {
 		xfr->task_transfer->scan_specific = NULL;
 		xfr->task_transfer->scan_target = xfr->task_transfer->masters;
-		return 1;
+		return;
 	}
 	if(!xfr->task_transfer->scan_target)
-		return 0;
-	if(!xfr->task_transfer->scan_target->next)
-		return 0;
+		return;
 	xfr->task_transfer->scan_target = xfr->task_transfer->scan_target->next;
-	return 1;
+	return;
 }
 
 /** move to next master in list, task_probe */
-static int
+static void
 xfr_probe_nextmaster(struct auth_xfer* xfr)
 {
-	/* TODO: no return value */
 	if(!xfr->task_probe->scan_specific && !xfr->task_probe->scan_target)
-		return 0;
+		return;
 	if(xfr->task_probe->scan_addr) {
 		xfr->task_probe->scan_addr = xfr->task_probe->scan_addr->next;
 		if(xfr->task_probe->scan_addr)
-			return 1;
+			return;
 	}
 	if(xfr->task_probe->scan_specific) {
 		xfr->task_probe->scan_specific = NULL;
 		xfr->task_probe->scan_target = xfr->task_probe->masters;
-		return 1;
+		return;
 	}
 	if(!xfr->task_probe->scan_target)
-		return 0;
-	if(!xfr->task_probe->scan_target->next)
-		return 0;
+		return;
 	xfr->task_probe->scan_target = xfr->task_probe->scan_target->next;
-	return 1;
+	return;
 }
 
 /** create fd to send to this master */
@@ -3068,10 +3062,25 @@ xfr_fd_for_master(struct module_env* env, struct sockaddr_storage* to_addr,
 	return -1;
 }
 
-/** create probe packet for xfr */
+/** create SOA probe packet for xfr */
 static void
-xfr_create_probe_packet(struct auth_xfer* xfr, sldns_buffer* buf, int soa,
+xfr_create_soa_probe_packet(struct auth_xfer* xfr, sldns_buffer* buf, 
 	uint16_t id)
+{
+	struct query_info qinfo;
+
+	memset(&qinfo, 0, sizeof(qinfo));
+	qinfo.qname = xfr->name;
+	qinfo.qname_len = xfr->namelen;
+	qinfo.qtype = LDNS_RR_TYPE_SOA;
+	qinfo.qclass = xfr->dclass;
+	qinfo_query_encode(buf, &qinfo);
+	sldns_buffer_write_at(buf, 0, &id, 2);
+}
+
+/** create IXFR/AXFR packet for xfr */
+static void
+xfr_create_ixfr_packet(struct auth_xfer* xfr, sldns_buffer* buf, uint16_t id)
 {
 	struct query_info qinfo;
 	uint32_t serial;
@@ -3084,13 +3093,16 @@ xfr_create_probe_packet(struct auth_xfer* xfr, sldns_buffer* buf, int soa,
 	memset(&qinfo, 0, sizeof(qinfo));
 	qinfo.qname = xfr->name;
 	qinfo.qname_len = xfr->namelen;
-	if(soa) {
-		qinfo.qtype = LDNS_RR_TYPE_SOA;
-	} else {
-		qinfo.qtype = LDNS_RR_TYPE_IXFR;
-		if(!have_zone)
-			qinfo.qtype = LDNS_RR_TYPE_AXFR;
+	xfr->task_transfer->got_xfr_serial = 0;
+	xfr->task_transfer->incoming_xfr_serial = 0;
+	xfr->task_transfer->on_ixfr = 1;
+	qinfo.qtype = LDNS_RR_TYPE_IXFR;
+	if(!have_zone || xfr->task_transfer->ixfr_fail) {
+		qinfo.qtype = LDNS_RR_TYPE_AXFR;
+		xfr->task_transfer->ixfr_fail = 0;
+		xfr->task_transfer->on_ixfr = 0;
 	}
+
 	qinfo.qclass = xfr->dclass;
 	qinfo_query_encode(buf, &qinfo);
 	sldns_buffer_write_at(buf, 0, &id, 2);
@@ -3222,6 +3234,296 @@ xfr_serial_means_update(struct auth_xfer* xfr, uint32_t serial)
 		return 1; /* our serial is smaller than the sent serial,
 			the data is newer, fetch it */
 	return 0;
+}
+
+/** RR list iterator, returns RRs from answer section one by one from the
+ * dns packets in the chunklist */
+static void
+chunk_rrlist_start(struct auth_xfer* xfr, struct auth_chunk** rr_chunk,
+	int* rr_num, size_t* rr_pos)
+{
+	*rr_chunk = xfr->task_transfer->chunks_first;
+	*rr_num = 0;
+	*rr_pos = 0;
+}
+
+/** RR list iterator, see if we are at the end of the list */
+static int
+chunk_rrlist_end(struct auth_chunk* rr_chunk, int rr_num)
+{
+	while(rr_chunk) {
+		if(rr_chunk->len < LDNS_HEADER_SIZE)
+			return 1;
+		if(rr_num < LDNS_ANCOUNT(rr_chunk->data))
+			return 0;
+		/* no more RRs in this chunk */
+		if(!rr_chunk->next)
+			return 1;
+		/* continue with next chunk, see if it has RRs */
+		rr_chunk = rr_chunk->next;
+		rr_num = 0;
+	}
+	return 1;
+}
+
+/** RR list iterator, move to next RR */
+static void
+chunk_rrlist_gonext(struct auth_chunk** rr_chunk, int* rr_num,
+	size_t* rr_pos, size_t rr_nextpos)
+{
+	/* already at end of chunks? */
+	if(!*rr_chunk)
+		return;
+	while(*rr_chunk) {
+		/* move within this chunk */
+		if((*rr_chunk)->len < LDNS_HEADER_SIZE &&
+			(*rr_num)+1 < LDNS_ANCOUNT((*rr_chunk)->data)) {
+			(*rr_num) += 1;
+			*rr_pos = rr_nextpos;
+			return ;
+		}
+
+		/* no more RRs in this chunk */
+		if(!(*rr_chunk)->next) {
+			*rr_chunk = NULL;
+			*rr_num = 0;
+			*rr_pos = 0;
+			return;
+		}
+		/* continue with next chunk, see if it has RRs */
+		*rr_chunk = (*rr_chunk)->next;
+		*rr_num = 0;
+		*rr_pos = 0;
+	}
+}
+
+/** RR iterator, get current RR information, false on parse error */
+static int
+chunk_rrlist_get_current(struct auth_chunk* rr_chunk, int rr_num,
+	size_t rr_pos, uint8_t** rr_dname, uint16_t* rr_type,
+	uint16_t* rr_class, uint32_t* rr_ttl, uint16_t* rr_rdlen,
+	uint8_t** rr_rdata, uint8_t** rr_pkt, size_t* rr_nextpos)
+{
+	sldns_buffer pkt;
+	/* integrity checks on position */
+	if(!rr_chunk) return 0;
+	if(rr_chunk->len < LDNS_HEADER_SIZE) return 0;
+	if(rr_num >= LDNS_ANCOUNT(rr_chunk->data)) return 0;
+	if(rr_pos >= rr_chunk->len) return 0;
+
+	/* fetch rr information */
+	sldns_buffer_init_frm_data(&pkt, rr_chunk->data, rr_chunk->len);
+	sldns_buffer_set_position(&pkt, rr_pos);
+	*rr_dname = sldns_buffer_current(&pkt);
+	if(pkt_dname_len(&pkt) == 0) return 0;
+	if(sldns_buffer_remaining(&pkt) < 10) return 0;
+	*rr_type = sldns_buffer_read_u16(&pkt);
+	*rr_class = sldns_buffer_read_u16(&pkt);
+	*rr_ttl = sldns_buffer_read_u32(&pkt);
+	*rr_rdlen = sldns_buffer_read_u16(&pkt);
+	if(sldns_buffer_remaining(&pkt) < (*rr_rdlen)) return 0;
+	*rr_rdata = sldns_buffer_current(&pkt);
+	*rr_pkt = sldns_buffer_begin(&pkt);
+	sldns_buffer_skip(&pkt, *rr_rdlen);
+	*rr_nextpos = sldns_buffer_position(&pkt);
+	return 1;
+}
+
+/** apply IXFR to zone in memory. z is locked. false on failure(mallocfail) */
+static int
+apply_ixfr(struct auth_xfer* xfr, struct auth_zone* z, int* is_axfr)
+{
+	struct auth_chunk* rr_chunk;
+	int rr_num;
+	size_t rr_pos;
+	uint8_t* rr_dname, *rr_rdata, *rr_pkt;
+	uint16_t rr_type, rr_class, rr_rdlen;
+	uint32_t rr_ttl;
+	size_t rr_nextpos;
+	int have_transfer_serial = 0;
+	uint32_t transfer_serial = 0;
+	size_t rr_counter = 0;
+	int delmode = 0;
+	int softfail = 0;
+
+	/* start RR iterator over chunklist of packets */
+	chunk_rrlist_start(xfr, &rr_chunk, &rr_num, &rr_pos);
+	while(!chunk_rrlist_end(rr_chunk, rr_num)) {
+		if(!chunk_rrlist_get_current(rr_chunk, rr_num, rr_pos,
+			&rr_dname, &rr_type, &rr_class, &rr_ttl, &rr_rdlen,
+			&rr_rdata, &rr_pkt, &rr_nextpos)) {
+			/* failed to parse RR */
+			return 0;
+		}
+		/* twiddle add/del mode and check for start and end */
+		if(rr_counter == 0 && rr_type != LDNS_RR_TYPE_SOA)
+			return 0;
+		if(rr_counter == 1 && rr_type != LDNS_RR_TYPE_SOA) {
+			/* this is an AXFR returned from the IXFR master */
+			*is_axfr = 1;
+			return 1;
+		}
+		if(rr_type == LDNS_RR_TYPE_SOA) {
+			uint32_t serial;
+			if(rr_rdlen < 22) return 0; /* bad SOA rdlen */
+			serial = sldns_read_uint32(rr_rdata+rr_rdlen-20);
+			if(have_transfer_serial == 0) {
+				have_transfer_serial = 1;
+				transfer_serial = serial;
+				delmode = 0;
+			} else if(transfer_serial == serial) {
+				have_transfer_serial++;
+				if(rr_counter == 1) {
+					/* empty AXFR, with SOA; SOA; */
+					*is_axfr = 1;
+					return 1;
+				}
+				if(have_transfer_serial == 3) {
+					/* see serial three times for end */
+					/* eg. IXFR:
+					 *  SOA 3 start
+					 *  SOA 1 second RR, followed by del
+					 *  SOA 2 followed by add
+					 *  SOA 2 followed by del
+					 *  SOA 3 followed by add
+					 *  SOA 3 end */
+					/* ended by SOA record */
+					return 1;
+				}
+			}
+			/* twiddle add/del mode */
+			/* switch from delete part to add part and back again
+			 * just before the soa, it gets deleted and added too
+			 * this means we switch to delete mode for the final
+			 * SOA(so skip that one) */
+			delmode = !delmode;
+		}
+		/* process this RR */
+		/* if the RR is deleted twice or added twice, then we 
+		 * softfail, and continue with the rest of the IXFR, so
+		 * that we serve something fairly nice during the refetch */
+		if(delmode) {
+			/* delete this RR */
+			(void)z;
+			/* TODO */
+		} else {
+			/* add this RR */
+			/* TODO */
+		}
+
+		rr_counter++;
+		chunk_rrlist_gonext(&rr_chunk, &rr_num, &rr_pos, rr_nextpos);
+	}
+	if(softfail) return 0;
+	return 1;
+}
+
+/** apply AXFR to zone in memory. z is locked. false on failure(mallocfail) */
+static int
+apply_axfr(struct auth_xfer* xfr, struct auth_zone* z)
+{
+	/* TODO */
+	(void)xfr; (void)z;
+	return 1;
+}
+
+/** write to zonefile after zone has been updated */
+static void
+xfr_write_after_update(struct auth_xfer* xfr, struct module_env* env)
+{
+	struct auth_zone* z;
+	char tmpfile[1024];
+
+	/* get lock again, so it is a readlock and concurrently queries
+	 * can be answered */
+	lock_rw_rdlock(&env->auth_zones->lock);
+	z = auth_zone_find(env->auth_zones, xfr->name, xfr->namelen,
+		xfr->dclass);
+	if(!z) {
+		lock_rw_unlock(&env->auth_zones->lock);
+		/* the zone is gone, ignore xfr results */
+		return;
+	}
+	lock_rw_rdlock(&z->lock);
+	lock_rw_unlock(&env->auth_zones->lock);
+
+	if(z->zonefile == NULL) {
+		lock_rw_unlock(&z->lock);
+		/* no write needed, no zonefile set */
+		return;
+	}
+
+	/* write to tempfile first */
+	if((size_t)strlen(z->zonefile) + 16 > sizeof(tmpfile)) {
+		verbose(VERB_ALGO, "tmpfilename too long, cannot update "
+			" zonefile %s", z->zonefile);
+		lock_rw_unlock(&z->lock);
+		return;
+	}
+	snprintf(tmpfile, sizeof(tmpfile), "%s.tmp%u", z->zonefile,
+		(unsigned)getpid());
+	if(!auth_zone_write_file(z, tmpfile)) {
+		unlink(tmpfile);
+		lock_rw_unlock(&z->lock);
+		return;
+	}
+	if(rename(tmpfile, z->zonefile) < 0) {
+		log_err("could not rename(%s, %s): %s", tmpfile, z->zonefile,
+			strerror(errno));
+		unlink(tmpfile);
+		lock_rw_unlock(&z->lock);
+		return;
+	}
+	lock_rw_unlock(&z->lock);
+}
+
+/** process chunk list and update zone in memory,
+ * return false if it did not work */
+static int
+xfr_process_chunk_list(struct auth_xfer* xfr, struct module_env* env,
+	int* ixfr_fail)
+{
+	struct auth_zone* z;
+	int is_axfr = 0;
+
+	/* obtain locks and structures */
+	lock_rw_rdlock(&env->auth_zones->lock);
+	z = auth_zone_find(env->auth_zones, xfr->name, xfr->namelen,
+		xfr->dclass);
+	if(!z) {
+		lock_rw_unlock(&env->auth_zones->lock);
+		/* the zone is gone, ignore xfr results */
+		return 0;
+	}
+	lock_rw_wrlock(&z->lock);
+	lock_rw_unlock(&env->auth_zones->lock);
+
+	/* apply data */
+	if(xfr->task_transfer->on_ixfr) {
+		if(!apply_ixfr(xfr, z, &is_axfr)) {
+			lock_rw_unlock(&z->lock);
+			verbose(VERB_ALGO, "xfr from %s: could not store IXFR"
+				" data", xfr->task_transfer->master->host);
+			*ixfr_fail = 1;
+			return 0;
+		}
+		/* succeeded with IXFR, or noted it is an is_axfr */
+	}
+	if(!xfr->task_transfer->on_ixfr || is_axfr) {
+		if(!apply_axfr(xfr, z)) {
+			lock_rw_unlock(&z->lock);
+			verbose(VERB_ALGO, "xfr from %s: could not store AXFR"
+				" data", xfr->task_transfer->master->host);
+			return 0;
+		}
+	}
+
+	/* unlock */
+	lock_rw_unlock(&z->lock);
+
+	/* see if we need to write to a zonefile */
+	xfr_write_after_update(xfr, env);
+	return 1;
 }
 
 /** disown task_transfer.  caller must hold xfr.lock */
@@ -3363,7 +3665,7 @@ xfr_transfer_init_fetch(struct auth_xfer* xfr, struct module_env* env)
 	/* set the packet to be written */
 	/* create new ID */
 	xfr->task_transfer->id = (uint16_t)(ub_random(env->rnd)&0xffff);
-	xfr_create_probe_packet(xfr, xfr->task_transfer->cp->buffer, 0,
+	xfr_create_ixfr_packet(xfr, xfr->task_transfer->cp->buffer,
 		xfr->task_transfer->id);
 
 	return 1;
@@ -3397,9 +3699,7 @@ xfr_transfer_nexttarget_or_end(struct auth_xfer* xfr, struct module_env* env)
 			return;
 		}
 		/* failed to fetch, next master */
-		if(!xfr_transfer_nextmaster(xfr)) {
-			break;
-		}
+		xfr_transfer_nextmaster(xfr);
 	}
 
 	lock_basic_lock(&xfr->lock);
@@ -3494,6 +3794,334 @@ void auth_xfer_transfer_lookup_callback(void* arg, int rcode, sldns_buffer* buf,
 	xfr_transfer_nexttarget_or_end(xfr, env);
 }
 
+/** check if xfer (AXFR or IXFR) packet is OK.
+ * return false if we lost connection (SERVFAIL, or unreadable).
+ * return false if we need to move from IXFR to AXFR, with gonextonfail
+ * 	set to false, so the same master is tried again, but with AXFR.
+ * return true if fine to link into data.
+ * return true with transferdone=true when the transfer has ended.
+ */
+static int
+check_xfer_packet(sldns_buffer* pkt, struct auth_xfer* xfr,
+	int* gonextonfail, int* transferdone)
+{
+	uint8_t* wire = sldns_buffer_begin(pkt);
+	int i;
+	if(sldns_buffer_limit(pkt) < LDNS_HEADER_SIZE) {
+		verbose(VERB_ALGO, "xfr to %s failed, packet too small",
+			xfr->task_transfer->master->host);
+		return 0;
+	}
+	if(!LDNS_QR_WIRE(wire)) {
+		verbose(VERB_ALGO, "xfr to %s failed, packet has no QR flag",
+			xfr->task_transfer->master->host);
+		return 0;
+	}
+	if(LDNS_TC_WIRE(wire)) {
+		verbose(VERB_ALGO, "xfr to %s failed, packet has TC flag",
+			xfr->task_transfer->master->host);
+		return 0;
+	}
+	/* check ID */
+	if(LDNS_ID_WIRE(wire) != xfr->task_transfer->id) {
+		verbose(VERB_ALGO, "xfr to %s failed, packet wrong ID",
+			xfr->task_transfer->master->host);
+		return 0;
+	}
+	if(LDNS_RCODE_WIRE(wire) != LDNS_RCODE_NOERROR) {
+		char rcode[32];
+		sldns_wire2str_rcode_buf(LDNS_RCODE_WIRE(wire), rcode,
+			sizeof(rcode));
+		/* if we are doing IXFR, check for fallback */
+		if(xfr->task_transfer->on_ixfr) {
+			if(LDNS_RCODE_WIRE(wire) == LDNS_RCODE_NOTIMPL ||
+				LDNS_RCODE_WIRE(wire) == LDNS_RCODE_SERVFAIL ||
+				LDNS_RCODE_WIRE(wire) == LDNS_RCODE_REFUSED ||
+				LDNS_RCODE_WIRE(wire) == LDNS_RCODE_FORMERR) {
+				verbose(VERB_ALGO, "xfr to %s, fallback "
+					"from IXFR to AXFR (with rcode %s)",
+					xfr->task_transfer->master->host,
+					rcode);
+				xfr->task_transfer->ixfr_fail = 1;
+				*gonextonfail = 0;
+				return 0;
+			}
+		}
+		verbose(VERB_ALGO, "xfr to %s failed, packet with rcode %s",
+			xfr->task_transfer->master->host, rcode);
+		return 0;
+	}
+	if(LDNS_OPCODE_WIRE(wire) != LDNS_PACKET_QUERY) {
+		verbose(VERB_ALGO, "xfr to %s failed, packet with bad opcode",
+			xfr->task_transfer->master->host);
+		return 0;
+	}
+	if(LDNS_QDCOUNT(wire) > 1) {
+		verbose(VERB_ALGO, "xfr to %s failed, packet has qdcount %d",
+			xfr->task_transfer->master->host,
+			(int)LDNS_QDCOUNT(wire));
+		return 0;
+	}
+
+	/* check qname */
+	sldns_buffer_set_position(pkt, LDNS_HEADER_SIZE);
+	for(i=0; i<(int)LDNS_QDCOUNT(wire); i++) {
+		size_t pos = sldns_buffer_position(pkt);
+		uint16_t qtype, qclass;
+		if(pkt_dname_len(pkt) == 0) {
+			verbose(VERB_ALGO, "xfr to %s failed, packet with "
+				"malformed dname",
+				xfr->task_transfer->master->host);
+			return 0;
+		}
+		if(dname_pkt_compare(pkt, sldns_buffer_at(pkt, pos),
+			xfr->name) != 0) {
+			verbose(VERB_ALGO, "xfr to %s failed, packet with "
+				"wrong qname",
+				xfr->task_transfer->master->host);
+			return 0;
+		}
+		if(sldns_buffer_remaining(pkt) < 4) {
+			verbose(VERB_ALGO, "xfr to %s failed, packet with "
+				"truncated query RR",
+				xfr->task_transfer->master->host);
+			return 0;
+		}
+		qtype = sldns_buffer_read_u16(pkt);
+		qclass = sldns_buffer_read_u16(pkt);
+		if(qclass != xfr->dclass) {
+			verbose(VERB_ALGO, "xfr to %s failed, packet with "
+				"wrong qclass",
+				xfr->task_transfer->master->host);
+			return 0;
+		}
+		if(xfr->task_transfer->on_ixfr) {
+			if(qtype != LDNS_RR_TYPE_IXFR) {
+				verbose(VERB_ALGO, "xfr to %s failed, packet "
+					"with wrong qtype, expected IXFR",
+				xfr->task_transfer->master->host);
+				return 0;
+			}
+		} else {
+			if(qtype != LDNS_RR_TYPE_AXFR) {
+				verbose(VERB_ALGO, "xfr to %s failed, packet "
+					"with wrong qtype, expected AXFR",
+				xfr->task_transfer->master->host);
+				return 0;
+			}
+		}
+	}
+
+	/* check parse of RRs in packet, store first SOA serial
+	 * to be able to detect last SOA (with that serial) to see if done */
+	/* also check for IXFR 'zone up to date' reply */
+	for(i=0; i<(int)LDNS_ANCOUNT(wire); i++) {
+		size_t pos = sldns_buffer_position(pkt);
+		uint16_t tp, rdlen;
+		if(pkt_dname_len(pkt) == 0) {
+			verbose(VERB_ALGO, "xfr to %s failed, packet with "
+				"malformed dname in answer section",
+				xfr->task_transfer->master->host);
+			return 0;
+		}
+		if(sldns_buffer_remaining(pkt) < 10) {
+			verbose(VERB_ALGO, "xfr to %s failed, packet with "
+				"truncated RR",
+				xfr->task_transfer->master->host);
+			return 0;
+		}
+		tp = sldns_buffer_read_u16(pkt);
+		(void)sldns_buffer_read_u16(pkt); /* class */
+		(void)sldns_buffer_read_u32(pkt); /* ttl */
+		rdlen = sldns_buffer_read_u16(pkt);
+		if(sldns_buffer_remaining(pkt) < rdlen) {
+			verbose(VERB_ALGO, "xfr to %s failed, packet with "
+				"truncated RR rdata",
+				xfr->task_transfer->master->host);
+			return 0;
+		}
+
+		/* RR parses (haven't checked rdata itself), now look at
+		 * SOA records to see serial number */
+		if(tp == LDNS_RR_TYPE_SOA) {
+			uint32_t serial;
+			if(rdlen < 22) {
+				verbose(VERB_ALGO, "xfr to %s failed, packet "
+					"with SOA with malformed rdata",
+					xfr->task_transfer->master->host);
+				return 0;
+			}
+			if(dname_pkt_compare(pkt, sldns_buffer_at(pkt, pos),
+				xfr->name) != 0) {
+				verbose(VERB_ALGO, "xfr to %s failed, packet "
+					"with SOA with wrong dname",
+					xfr->task_transfer->master->host);
+				return 0;
+			}
+
+			/* read serial number of SOA */
+			serial = sldns_buffer_read_u32_at(pkt,
+				sldns_buffer_position(pkt)+rdlen-20);
+
+			/* check for IXFR 'zone has SOA x' reply */
+			if(xfr->task_transfer->on_ixfr &&
+				LDNS_ANCOUNT(wire)==1 && 
+				xfr->task_transfer->got_xfr_serial == 0) {
+				verbose(VERB_ALGO, "xfr to %s ended, "
+					"IXFR reply that zone has serial %u",
+					xfr->task_transfer->master->host,
+					(unsigned)serial);
+				return 0;
+			}
+
+			/* if first SOA, store serial number */
+			if(xfr->task_transfer->got_xfr_serial == 0) {
+				xfr->task_transfer->got_xfr_serial = 1;
+				xfr->task_transfer->incoming_xfr_serial =
+					serial;
+				verbose(VERB_ALGO, "xfr %s: contains "
+					"SOA serial %u",
+					xfr->task_transfer->master->host,
+					(unsigned)serial);
+			/* count SOA records with that serial */
+			} else if(xfr->task_transfer->incoming_xfr_serial ==
+				serial && xfr->task_transfer->got_xfr_serial
+				== 1) {
+				xfr->task_transfer->got_xfr_serial++;
+			/* if not first soa, if serial==firstserial, the
+			 * third time we are at the end */
+			} else if(xfr->task_transfer->incoming_xfr_serial ==
+				serial && xfr->task_transfer->got_xfr_serial
+				== 2) {
+				verbose(VERB_ALGO, "xfr %s: last packet",
+					xfr->task_transfer->master->host);
+				*transferdone = 1;
+				/* continue parse check, if that succeeds,
+				 * transfer is done */
+			}
+		}
+
+		/* skip over RR rdata to go to the next RR */
+		sldns_buffer_skip(pkt, rdlen);
+	}
+
+	/* check authority section */
+	/* we skip over the RRs checking packet format */
+	for(i=0; i<(int)LDNS_NSCOUNT(wire); i++) {
+		uint16_t rdlen;
+		if(pkt_dname_len(pkt) == 0) {
+			verbose(VERB_ALGO, "xfr to %s failed, packet with "
+				"malformed dname in authority section",
+				xfr->task_transfer->master->host);
+			return 0;
+		}
+		if(sldns_buffer_remaining(pkt) < 10) {
+			verbose(VERB_ALGO, "xfr to %s failed, packet with "
+				"truncated RR",
+				xfr->task_transfer->master->host);
+			return 0;
+		}
+		(void)sldns_buffer_read_u16(pkt); /* type */
+		(void)sldns_buffer_read_u16(pkt); /* class */
+		(void)sldns_buffer_read_u32(pkt); /* ttl */
+		rdlen = sldns_buffer_read_u16(pkt);
+		if(sldns_buffer_remaining(pkt) < rdlen) {
+			verbose(VERB_ALGO, "xfr to %s failed, packet with "
+				"truncated RR rdata",
+				xfr->task_transfer->master->host);
+			return 0;
+		}
+		/* skip over RR rdata to go to the next RR */
+		sldns_buffer_skip(pkt, rdlen);
+	}
+
+	/* check additional section */
+	for(i=0; i<(int)LDNS_ARCOUNT(wire); i++) {
+		uint16_t rdlen;
+		if(pkt_dname_len(pkt) == 0) {
+			verbose(VERB_ALGO, "xfr to %s failed, packet with "
+				"malformed dname in additional section",
+				xfr->task_transfer->master->host);
+			return 0;
+		}
+		if(sldns_buffer_remaining(pkt) < 10) {
+			verbose(VERB_ALGO, "xfr to %s failed, packet with "
+				"truncated RR",
+				xfr->task_transfer->master->host);
+			return 0;
+		}
+		(void)sldns_buffer_read_u16(pkt); /* type */
+		(void)sldns_buffer_read_u16(pkt); /* class */
+		(void)sldns_buffer_read_u32(pkt); /* ttl */
+		rdlen = sldns_buffer_read_u16(pkt);
+		if(sldns_buffer_remaining(pkt) < rdlen) {
+			verbose(VERB_ALGO, "xfr to %s failed, packet with "
+				"truncated RR rdata",
+				xfr->task_transfer->master->host);
+			return 0;
+		}
+		/* skip over RR rdata to go to the next RR */
+		sldns_buffer_skip(pkt, rdlen);
+	}
+
+	return 1;
+}
+
+/** Link the data from this packet into the worklist of transferred data */
+static int
+xfer_link_data(sldns_buffer* pkt, struct auth_xfer* xfr)
+{
+	/* alloc it */
+	struct auth_chunk* e;
+	e = (struct auth_chunk*)calloc(1, sizeof(*e));
+	if(!e) return 0;
+	e->next = NULL;
+	e->len = sldns_buffer_limit(pkt);
+	e->data = memdup(sldns_buffer_begin(pkt), e->len);
+	if(!e->data) {
+		free(e);
+		return 0;
+	}
+
+	/* alloc succeeded, link into list */
+	if(!xfr->task_transfer->chunks_first)
+		xfr->task_transfer->chunks_first = e;
+	if(xfr->task_transfer->chunks_last)
+		xfr->task_transfer->chunks_last->next = e;
+	xfr->task_transfer->chunks_last = e;
+	return 1;
+}
+
+/** task transfer.  the list of data is complete. process it and if failed
+ * move to next master, if succeeded, end the task transfer */
+static void
+process_list_end_transfer(struct auth_xfer* xfr, struct module_env* env)
+{
+	int ixfr_fail = 0;
+	if(xfr_process_chunk_list(xfr, env, &ixfr_fail)) {
+		/* it worked! */
+		auth_chunks_delete(xfr->task_transfer);
+
+		lock_basic_lock(&xfr->lock);
+		/* we fetched the zone, move to wait task */
+		xfr_transfer_disown(xfr);
+
+		/* pick up the nextprobe task and wait (normail wait time) */
+		xfr_set_timeout(xfr, env, 0);
+		lock_basic_unlock(&xfr->lock);
+		return;
+	}
+	/* processing failed */
+	/* when done, delete data from list */
+	auth_chunks_delete(xfr->task_transfer);
+	if(ixfr_fail) {
+		xfr->task_transfer->ixfr_fail = 1;
+	} else {
+		xfr_transfer_nextmaster(xfr);
+	}
+	xfr_transfer_nexttarget_or_end(xfr, env);
+}
+
 /** callback for task_transfer tcp connections */
 int
 auth_xfer_transfer_tcp_callback(struct comm_point* c, void* arg, int err,
@@ -3501,8 +4129,10 @@ auth_xfer_transfer_tcp_callback(struct comm_point* c, void* arg, int err,
 {
 	struct auth_xfer* xfr = (struct auth_xfer*)arg;
 	struct module_env* env;
-	log_assert(xfr->task_probe);
-	env = xfr->task_probe->env;
+	int gonextonfail = 1;
+	int transferdone = 0;
+	log_assert(xfr->task_transfer);
+	env = xfr->task_transfer->env;
 
 	if(err != NETEVENT_NOERROR) {
 		/* connection failed, closed, or timeout */
@@ -3510,6 +4140,9 @@ auth_xfer_transfer_tcp_callback(struct comm_point* c, void* arg, int err,
 		 * and continue task_transfer*/
 		verbose(VERB_ALGO, "xfr stopped, connection lost to %s",
 			xfr->task_transfer->master->host);
+	failed:
+		/* delete transferred data from list */
+		auth_chunks_delete(xfr->task_transfer);
 		comm_point_delete(xfr->task_transfer->cp);
 		xfr->task_transfer->cp = NULL;
 		xfr_transfer_nextmaster(xfr);
@@ -3517,10 +4150,26 @@ auth_xfer_transfer_tcp_callback(struct comm_point* c, void* arg, int err,
 		return 0;
 	}
 
-	/* TODO: handle returned packet */
+	/* handle returned packet */
 	/* if it fails, cleanup and end this transfer */
 	/* if it needs to fallback from IXFR to AXFR, do that */
+	if(!check_xfer_packet(c->buffer, xfr, &gonextonfail, &transferdone)) {
+		goto failed;
+	}
 	/* if it is good, link it into the list of data */
+	/* if the link into list of data fails (malloc fail) cleanup and end */
+	if(!xfer_link_data(c->buffer, xfr)) {
+		verbose(VERB_ALGO, "xfr stopped to %s, malloc failed",
+			xfr->task_transfer->master->host);
+		goto failed;
+	}
+	/* if the transfer is done now, disconnect and process the list */
+	if(transferdone) {
+		comm_point_delete(xfr->task_transfer->cp);
+		xfr->task_transfer->cp = NULL;
+		process_list_end_transfer(xfr, env);
+		return 0;
+	}
 
 	/* if we want to read more messages, setup the commpoint to read
 	 * a DNS packet, and the timeout */
@@ -3528,7 +4177,6 @@ auth_xfer_transfer_tcp_callback(struct comm_point* c, void* arg, int err,
 	comm_point_start_listening(c, -1, AUTH_TRANSFER_TIMEOUT);
 	return 0;
 }
-
 
 /** start transfer task by this worker , xfr is locked. */
 static void
@@ -3599,7 +4247,7 @@ xfr_probe_send_probe(struct auth_xfer* xfr, struct module_env* env,
 	 * this means we'll accept replies to previous retries to same ip */
 	if(timeout == AUTH_PROBE_TIMEOUT)
 		xfr->task_probe->id = (uint16_t)(ub_random(env->rnd)&0xffff);
-	xfr_create_probe_packet(xfr, env->scratch_buffer, 1,
+	xfr_create_soa_probe_packet(xfr, env->scratch_buffer, 
 		xfr->task_probe->id);
 	if(!xfr->task_probe->cp) {
 		int fd = xfr_fd_for_master(env, &addr, addrlen, master->host);
@@ -3814,9 +4462,7 @@ xfr_probe_send_or_end(struct auth_xfer* xfr, struct module_env* env)
 			return;
 		}
 		/* failed to send probe, next master */
-		if(!xfr_probe_nextmaster(xfr)) {
-			break;
-		}
+		xfr_probe_nextmaster(xfr);
 	}
 
 	lock_basic_lock(&xfr->lock);

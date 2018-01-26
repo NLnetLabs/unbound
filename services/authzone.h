@@ -355,6 +355,13 @@ struct auth_transfer {
 	 * data or add of duplicate data).  Flag is cleared once the retry
 	 * with axfr is done. */
 	int ixfr_fail;
+	/** we are doing IXFR right now */
+	int on_ixfr;
+	/** did we detect the current AXFR/IXFR serial number yet */
+	int got_xfr_serial;
+	/** the serial number for the current AXFR/IXFR incoming reply,
+	 * for IXFR, the outermost SOA records serial */
+	uint32_t incoming_xfr_serial;
 
 	/** dns id of AXFR query */
 	uint16_t id;
