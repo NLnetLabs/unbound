@@ -3094,7 +3094,9 @@ xfr_create_ixfr_packet(struct auth_xfer* xfr, sldns_buffer* buf, uint16_t id)
 	qinfo.qname = xfr->name;
 	qinfo.qname_len = xfr->namelen;
 	xfr->task_transfer->got_xfr_serial = 0;
+	xfr->task_transfer->rr_scan_num = 0;
 	xfr->task_transfer->incoming_xfr_serial = 0;
+	xfr->task_transfer->on_ixfr_is_axfr = 0;
 	xfr->task_transfer->on_ixfr = 1;
 	qinfo.qtype = LDNS_RR_TYPE_IXFR;
 	if(!have_zone || xfr->task_transfer->ixfr_fail) {
@@ -3331,7 +3333,7 @@ chunk_rrlist_get_current(struct auth_chunk* rr_chunk, int rr_num,
 
 /** apply IXFR to zone in memory. z is locked. false on failure(mallocfail) */
 static int
-apply_ixfr(struct auth_xfer* xfr, struct auth_zone* z, int* is_axfr)
+apply_ixfr(struct auth_xfer* xfr, struct auth_zone* z)
 {
 	struct auth_chunk* rr_chunk;
 	int rr_num;
@@ -3360,8 +3362,9 @@ apply_ixfr(struct auth_xfer* xfr, struct auth_zone* z, int* is_axfr)
 			return 0;
 		if(rr_counter == 1 && rr_type != LDNS_RR_TYPE_SOA) {
 			/* this is an AXFR returned from the IXFR master */
-			*is_axfr = 1;
-			return 1;
+			/* but that should already have been detected, by
+			 * on_ixfr_is_axfr */
+			return 0;
 		}
 		if(rr_type == LDNS_RR_TYPE_SOA) {
 			uint32_t serial;
@@ -3375,8 +3378,9 @@ apply_ixfr(struct auth_xfer* xfr, struct auth_zone* z, int* is_axfr)
 				have_transfer_serial++;
 				if(rr_counter == 1) {
 					/* empty AXFR, with SOA; SOA; */
-					*is_axfr = 1;
-					return 1;
+					/* should have been detected by
+					 * on_ixfr_is_axfr */
+					return 0;
 				}
 				if(have_transfer_serial == 3) {
 					/* see serial three times for end */
@@ -3484,7 +3488,6 @@ xfr_process_chunk_list(struct auth_xfer* xfr, struct module_env* env,
 	int* ixfr_fail)
 {
 	struct auth_zone* z;
-	int is_axfr = 0;
 
 	/* obtain locks and structures */
 	lock_rw_rdlock(&env->auth_zones->lock);
@@ -3499,17 +3502,16 @@ xfr_process_chunk_list(struct auth_xfer* xfr, struct module_env* env,
 	lock_rw_unlock(&env->auth_zones->lock);
 
 	/* apply data */
-	if(xfr->task_transfer->on_ixfr) {
-		if(!apply_ixfr(xfr, z, &is_axfr)) {
+	if(xfr->task_transfer->on_ixfr &&
+		!xfr->task_transfer->on_ixfr_is_axfr) {
+		if(!apply_ixfr(xfr, z)) {
 			lock_rw_unlock(&z->lock);
 			verbose(VERB_ALGO, "xfr from %s: could not store IXFR"
 				" data", xfr->task_transfer->master->host);
 			*ixfr_fail = 1;
 			return 0;
 		}
-		/* succeeded with IXFR, or noted it is an is_axfr */
-	}
-	if(!xfr->task_transfer->on_ixfr || is_axfr) {
+	} else {
 		if(!apply_axfr(xfr, z)) {
 			lock_rw_unlock(&z->lock);
 			verbose(VERB_ALGO, "xfr from %s: could not store AXFR"
@@ -3943,6 +3945,19 @@ check_xfer_packet(sldns_buffer* pkt, struct auth_xfer* xfr,
 
 		/* RR parses (haven't checked rdata itself), now look at
 		 * SOA records to see serial number */
+		if(xfr->task_transfer->rr_scan_num == 0 &&
+			tp != LDNS_RR_TYPE_SOA) {
+			verbose(VERB_ALGO, "xfr to %s failed, packet with "
+				"malformed zone transfer, no start SOA",
+				xfr->task_transfer->master->host);
+			return 0;
+		}
+		if(xfr->task_transfer->rr_scan_num == 1 &&
+			tp != LDNS_RR_TYPE_SOA) {
+			/* second RR is not a SOA record, this is not an IXFR
+			 * the master is replying with an AXFR */
+			xfr->task_transfer->on_ixfr_is_axfr = 1;
+		}
 		if(tp == LDNS_RR_TYPE_SOA) {
 			uint32_t serial;
 			if(rdlen < 22) {
@@ -3965,8 +3980,8 @@ check_xfer_packet(sldns_buffer* pkt, struct auth_xfer* xfr,
 
 			/* check for IXFR 'zone has SOA x' reply */
 			if(xfr->task_transfer->on_ixfr &&
-				LDNS_ANCOUNT(wire)==1 && 
-				xfr->task_transfer->got_xfr_serial == 0) {
+				xfr->task_transfer->rr_scan_num == 0 &&
+				LDNS_ANCOUNT(wire)==1) {
 				verbose(VERB_ALGO, "xfr to %s ended, "
 					"IXFR reply that zone has serial %u",
 					xfr->task_transfer->master->host,
@@ -3983,23 +3998,32 @@ check_xfer_packet(sldns_buffer* pkt, struct auth_xfer* xfr,
 					"SOA serial %u",
 					xfr->task_transfer->master->host,
 					(unsigned)serial);
-			/* count SOA records with that serial */
+			/* see if end of AXFR */
+			} else if(!xfr->task_transfer->on_ixfr ||
+				xfr->task_transfer->on_ixfr_is_axfr) {
+				/* second SOA with serial is the end
+				 * for AXFR */
+				*transferdone = 1;
+				verbose(VERB_ALGO, "xfr %s: last AXFR packet",
+					xfr->task_transfer->master->host);
+			/* for IXFR, count SOA records with that serial */
 			} else if(xfr->task_transfer->incoming_xfr_serial ==
 				serial && xfr->task_transfer->got_xfr_serial
 				== 1) {
 				xfr->task_transfer->got_xfr_serial++;
 			/* if not first soa, if serial==firstserial, the
-			 * third time we are at the end */
+			 * third time we are at the end, for IXFR */
 			} else if(xfr->task_transfer->incoming_xfr_serial ==
 				serial && xfr->task_transfer->got_xfr_serial
 				== 2) {
-				verbose(VERB_ALGO, "xfr %s: last packet",
+				verbose(VERB_ALGO, "xfr %s: last IXFR packet",
 					xfr->task_transfer->master->host);
 				*transferdone = 1;
 				/* continue parse check, if that succeeds,
 				 * transfer is done */
 			}
 		}
+		xfr->task_transfer->rr_scan_num++;
 
 		/* skip over RR rdata to go to the next RR */
 		sldns_buffer_skip(pkt, rdlen);

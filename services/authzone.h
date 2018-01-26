@@ -357,8 +357,13 @@ struct auth_transfer {
 	int ixfr_fail;
 	/** we are doing IXFR right now */
 	int on_ixfr;
-	/** did we detect the current AXFR/IXFR serial number yet */
+	/** did we detect the current AXFR/IXFR serial number yet, 0 not yet,
+	 * 1 we saw the first, 2 we saw the second, 3 must be last SOA in xfr*/
 	int got_xfr_serial;
+	/** number of RRs scanned for AXFR/IXFR detection */
+	size_t rr_scan_num;
+	/** we are doing an IXFR but we detected an AXFR contents */
+	int on_ixfr_is_axfr;
 	/** the serial number for the current AXFR/IXFR incoming reply,
 	 * for IXFR, the outermost SOA records serial */
 	uint32_t incoming_xfr_serial;
