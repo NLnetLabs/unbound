@@ -3326,7 +3326,7 @@ chunk_rrlist_get_current(struct auth_chunk* rr_chunk, int rr_num,
 	if(sldns_buffer_remaining(&pkt) < (*rr_rdlen)) return 0;
 	*rr_rdata = sldns_buffer_current(&pkt);
 	*rr_pkt = sldns_buffer_begin(&pkt);
-	sldns_buffer_skip(&pkt, *rr_rdlen);
+	sldns_buffer_skip(&pkt, (ssize_t)(*rr_rdlen));
 	*rr_nextpos = sldns_buffer_position(&pkt);
 	return 1;
 }
