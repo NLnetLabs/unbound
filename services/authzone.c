@@ -3274,7 +3274,7 @@ chunk_rrlist_gonext(struct auth_chunk** rr_chunk, int* rr_num,
 		return;
 	while(*rr_chunk) {
 		/* move within this chunk */
-		if((*rr_chunk)->len < LDNS_HEADER_SIZE &&
+		if((*rr_chunk)->len >= LDNS_HEADER_SIZE &&
 			(*rr_num)+1 < (int)LDNS_ANCOUNT((*rr_chunk)->data)) {
 			(*rr_num) += 1;
 			*rr_pos = rr_nextpos;
