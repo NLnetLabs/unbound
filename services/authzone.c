@@ -3146,34 +3146,6 @@ auth_xfer_set_expired(struct auth_xfer* xfr, struct module_env* env,
 	lock_rw_unlock(&z->lock);
 }
 
-/** the current transfer has finished, apply the results.
- * set timer for future probe. See if zone is expired now. */
-void
-xfr_master_transferresult(struct auth_xfer* xfr)
-{
-	(void)xfr;
-	/* TODO */
-}
-
-/** the current probe has finished, inspect the results. 
- * move on to the next master or start a transfer, or at last master,
- * set timer for future probe. See if zone is expired now. */
-void
-xfr_master_proberesult(struct auth_xfer* xfr)
-{
-	(void)xfr;
-	/* TODO */
-}
-
-/** with current master selected, start the probe, or transfer */
-int
-xfr_master_start(struct auth_xfer* xfr)
-{
-	(void)xfr;
-	/* TODO */
-	return 0;
-}
-
 /** find master (from notify or probe) in list of masters */
 static struct auth_master*
 find_master_by_host(struct auth_master* list, char* host)
