@@ -739,7 +739,7 @@ rrset_remove_rr(struct auth_rrset* rrset, size_t index)
 	
 	/* move over rr_data */
 	for(i=0; i<d->count+d->rrsig_count; i++) {
-		int oldi;
+		size_t oldi;
 		if(i < index) oldi = i;
 		else oldi = i+1;
 		memmove(d->rr_data[i], old->rr_data[oldi], d->rr_len[i]);
@@ -1265,7 +1265,7 @@ az_remove_rr(struct auth_zone* z, uint8_t* rr, size_t rr_len,
 	/* an rrsets==NULL entry is not kept around for empty nonterminals,
 	 * and also parent nodes are not kept around, so we just delete it */
 	if(node->rrsets == NULL) {
-		rbtree_delete(&z->data, node);
+		(void)rbtree_delete(&z->data, node);
 		auth_data_delete(node);
 	}
 	return 1;
@@ -1289,7 +1289,7 @@ decompress_rr_into_buffer(struct sldns_buffer* buf, uint8_t* pkt,
 
 	/* decompress dname */
 	sldns_buffer_set_position(&pktbuf,
-		dname - sldns_buffer_current(&pktbuf));
+		(size_t)(dname - sldns_buffer_current(&pktbuf)));
 	dname_len = pkt_dname_len(&pktbuf);
 	if(dname_len == 0) return 0; /* parse fail on dname */
 	if(!sldns_buffer_available(buf, dname_len)) return 0;
@@ -1319,7 +1319,8 @@ decompress_rr_into_buffer(struct sldns_buffer* buf, uint8_t* pkt,
 			switch(desc->_wireformat[rdf]) {
 			case LDNS_RDF_TYPE_DNAME:
 				sldns_buffer_set_position(&pktbuf,
-					rd - sldns_buffer_current(&pktbuf));
+					(size_t)(rd -
+					sldns_buffer_current(&pktbuf)));
 				oldpos = sldns_buffer_position(&pktbuf);
 				/* moves pktbuf to right after the
 				 * compressed dname, and returns uncompressed
