@@ -635,6 +635,40 @@ domain_remove_rrset(struct auth_data* node, uint16_t rr_type)
 	}
 }
 
+/** find an rr index in the rrset.  returns true if found */
+static int
+az_rrset_find_rr(struct packed_rrset_data* d, uint8_t* rdata, size_t len,
+	size_t* index)
+{
+	size_t i;
+	for(i=0; i<d->count; i++) {
+		if(d->rr_len[i] != len)
+			continue;
+		if(memcmp(d->rr_data[i], rdata, len) == 0) {
+			*index = i;
+			return 1;
+		}
+	}
+	return 0;
+}
+
+/** find an rrsig index in the rrset.  returns true if found */
+static int
+az_rrset_find_rrsig(struct packed_rrset_data* d, uint8_t* rdata, size_t len,
+	size_t* index)
+{
+	size_t i;
+	for(i=d->count; i<d->count + d->rrsig_count; i++) {
+		if(d->rr_len[i] != len)
+			continue;
+		if(memcmp(d->rr_data[i], rdata, len) == 0) {
+			*index = i;
+			return 1;
+		}
+	}
+	return 0;
+}
+
 /** see if rdata is duplicate */
 static int
 rdata_duplicate(struct packed_rrset_data* d, uint8_t* rdata, size_t len)
@@ -660,6 +694,68 @@ rrsig_rdata_get_type_covered(uint8_t* rdata, size_t rdatalen)
 	if(rdatalen < 4)
 		return 0;
 	return sldns_read_uint16(rdata+2);
+}
+
+/** remove RR from existing RRset. Also sig, if it is a signature.
+ * reallocates the packed rrset for a new one, false on alloc failure */
+static int
+rrset_remove_rr(struct auth_rrset* rrset, size_t index)
+{
+	struct packed_rrset_data* d, *old = rrset->data;
+	size_t i;
+	if(index >= old->count + old->rrsig_count)
+		return 0; /* index out of bounds */
+	d = (struct packed_rrset_data*)calloc(1, packed_rrset_sizeof(old) - (
+		sizeof(size_t) + sizeof(uint8_t*) + sizeof(time_t) +
+		old->rr_len[index]));
+	if(!d) {
+		log_err("malloc failure");
+		return 0;
+	}
+	d->ttl = old->ttl;
+	d->count = old->count;
+	d->rrsig_count = old->rrsig_count;
+	if(index < d->count) d->count--;
+	else d->rrsig_count--;
+	d->trust = old->trust;
+	d->security = old->security;
+
+	/* set rr_len, needed for ptr_fixup */
+	d->rr_len = (size_t*)((uint8_t*)d +
+		sizeof(struct packed_rrset_data));
+	if(index > 0)
+		memmove(d->rr_len, old->rr_len, (index)*sizeof(size_t));
+	if(index+1 < old->count+old->rrsig_count)
+		memmove(&d->rr_len[index], &old->rr_len[index+1],
+		(old->count+old->rrsig_count - (index+1))*sizeof(size_t));
+	packed_rrset_ptr_fixup(d);
+
+	/* move over ttls */
+	if(index > 0)
+		memmove(d->rr_ttl, old->rr_ttl, (index)*sizeof(time_t));
+	if(index+1 < old->count+old->rrsig_count)
+		memmove(&d->rr_ttl[index], &old->rr_ttl[index+1],
+		(old->count+old->rrsig_count - (index+1))*sizeof(time_t));
+	
+	/* move over rr_data */
+	for(i=0; i<d->count+d->rrsig_count; i++) {
+		int oldi;
+		if(i < index) oldi = i;
+		else oldi = i+1;
+		memmove(d->rr_data[i], old->rr_data[oldi], d->rr_len[i]);
+	}
+
+	/* recalc ttl (lowest of remaining RR ttls) */
+	if(d->count + d->rrsig_count > 0)
+		d->ttl = d->rr_ttl[0];
+	for(i=0; i<d->count+d->rrsig_count; i++) {
+		if(d->rr_ttl[i] < d->ttl)
+			d->ttl = d->rr_ttl[i];
+	}
+
+	free(rrset->data);
+	rrset->data = d;
+	return 1;
 }
 
 /** add RR to existing RRset. If insert_sig is true, add to rrsigs. 
@@ -938,11 +1034,38 @@ rrset_moveover_rrsigs(struct auth_data* node, uint16_t rr_type,
 	return 1;
 }
 
+/** copy the rrsigs from the rrset to the rrsig rrset, because the rrset
+ * is going to be deleted.  reallocates the RRSIG rrset data. */
+static int
+rrsigs_copy_from_rrset_to_rrsigset(struct auth_rrset* rrset,
+	struct auth_rrset* rrsigset)
+{
+	size_t i;
+	if(rrset->data->rrsig_count == 0)
+		return 1;
+
+	/* move them over one by one, because there might be duplicates,
+	 * duplicates are ignored */
+	for(i=rrset->data->count;
+		i<rrset->data->count+rrset->data->rrsig_count; i++) {
+		uint8_t* rdata = rrset->data->rr_data[i];
+		size_t rdatalen = rrset->data->rr_len[i];
+		time_t rr_ttl  = rrset->data->rr_ttl[i];
+
+		if(rdata_duplicate(rrsigset->data, rdata, rdatalen)) {
+			continue;
+		}
+		if(!rrset_add_rr(rrsigset, rr_ttl, rdata, rdatalen, 0))
+			return 0;
+	}
+	return 1;
+}
+
 /** Add rr to node, ignores duplicate RRs,
  * rdata points to buffer with rdatalen octets, starts with 2bytelength. */
 static int
 az_domain_add_rr(struct auth_data* node, uint16_t rr_type, uint32_t rr_ttl,
-	uint8_t* rdata, size_t rdatalen)
+	uint8_t* rdata, size_t rdatalen, int* duplicate)
 {
 	struct auth_rrset* rrset;
 	/* packed rrsets have their rrsigs along with them, sort them out */
@@ -951,14 +1074,18 @@ az_domain_add_rr(struct auth_data* node, uint16_t rr_type, uint32_t rr_ttl,
 		if((rrset=az_domain_rrset(node, ctype))!= NULL) {
 			/* a node of the correct type exists, add the RRSIG
 			 * to the rrset of the covered data type */
-			if(rdata_duplicate(rrset->data, rdata, rdatalen))
+			if(rdata_duplicate(rrset->data, rdata, rdatalen)) {
+				if(duplicate) *duplicate = 1;
 				return 1;
+			}
 			if(!rrset_add_rr(rrset, rr_ttl, rdata, rdatalen, 1))
 				return 0;
 		} else if((rrset=az_domain_rrset(node, rr_type))!= NULL) {
 			/* add RRSIG to rrset of type RRSIG */
-			if(rdata_duplicate(rrset->data, rdata, rdatalen))
+			if(rdata_duplicate(rrset->data, rdata, rdatalen)) {
+				if(duplicate) *duplicate = 1;
 				return 1;
+			}
 			if(!rrset_add_rr(rrset, rr_ttl, rdata, rdatalen, 0))
 				return 0;
 		} else {
@@ -971,8 +1098,10 @@ az_domain_add_rr(struct auth_data* node, uint16_t rr_type, uint32_t rr_ttl,
 		/* normal RR type */
 		if((rrset=az_domain_rrset(node, rr_type))!= NULL) {
 			/* add data to existing node with data type */
-			if(rdata_duplicate(rrset->data, rdata, rdatalen))
+			if(rdata_duplicate(rrset->data, rdata, rdatalen)) {
+				if(duplicate) *duplicate = 1;
 				return 1;
+			}
 			if(!rrset_add_rr(rrset, rr_ttl, rdata, rdatalen, 0))
 				return 0;
 		} else {
@@ -999,7 +1128,7 @@ az_domain_add_rr(struct auth_data* node, uint16_t rr_type, uint32_t rr_ttl,
 /** insert RR into zone, ignore duplicates */
 static int
 az_insert_rr(struct auth_zone* z, uint8_t* rr, size_t rr_len,
-	size_t dname_len)
+	size_t dname_len, int* duplicate)
 {
 	struct auth_data* node;
 	uint8_t* dname = rr;
@@ -1019,11 +1148,271 @@ az_insert_rr(struct auth_zone* z, uint8_t* rr, size_t rr_len,
 		log_err("cannot create domain");
 		return 0;
 	}
-	if(!az_domain_add_rr(node, rr_type, rr_ttl, rdata, rdatalen)) {
+	if(!az_domain_add_rr(node, rr_type, rr_ttl, rdata, rdatalen,
+		duplicate)) {
 		log_err("cannot add RR to domain");
 		return 0;
 	}
 	return 1;
+}
+
+/** Remove rr from node, ignores nonexisting RRs,
+ * rdata points to buffer with rdatalen octets, starts with 2bytelength. */
+static int
+az_domain_remove_rr(struct auth_data* node, uint16_t rr_type,
+	uint8_t* rdata, size_t rdatalen, int* nonexist)
+{
+	struct auth_rrset* rrset;
+	size_t index = 0;
+
+	/* find the plain RR of the given type */
+	if((rrset=az_domain_rrset(node, rr_type))!= NULL) {
+		if(az_rrset_find_rr(rrset->data, rdata, rdatalen, &index)) {
+			if(rrset->data->count == 1 &&
+				rrset->data->rrsig_count == 0) {
+				/* last RR, delete the rrset */
+				domain_remove_rrset(node, rr_type);
+			} else if(rrset->data->count == 1 &&
+				rrset->data->rrsig_count != 0) {
+				/* move RRSIGs to the RRSIG rrset, or
+				 * this one becomes that RRset */
+				struct auth_rrset* rrsigset = az_domain_rrset(
+					node, LDNS_RR_TYPE_RRSIG);
+				if(rrsigset) {
+					/* move left over rrsigs to the
+					 * existing rrset of type RRSIG */
+					rrsigs_copy_from_rrset_to_rrsigset(
+						rrset, rrsigset);
+					/* and then delete the rrset */
+					domain_remove_rrset(node, rr_type);
+				} else {
+					/* no rrset of type RRSIG, this
+					 * set is now of that type,
+					 * just remove the rr */
+					if(!rrset_remove_rr(rrset, index))
+						return 0;
+					rrset->type = LDNS_RR_TYPE_RRSIG;
+					rrset->data->count = rrset->data->rrsig_count;
+					rrset->data->rrsig_count = 0;
+				}
+			} else {
+				/* remove the RR from the rrset */
+				if(!rrset_remove_rr(rrset, index))
+					return 0;
+			}
+			return 1;
+		}
+		/* rr not found in rrset */
+	}
+
+	/* is it a type RRSIG, look under the covered type */
+	if(rr_type == LDNS_RR_TYPE_RRSIG) {
+		uint16_t ctype = rrsig_rdata_get_type_covered(rdata, rdatalen);
+		if((rrset=az_domain_rrset(node, ctype))!= NULL) {
+			if(az_rrset_find_rrsig(rrset->data, rdata, rdatalen,
+				&index)) {
+				/* rrsig should have d->count > 0, be
+				 * over some rr of that type */
+				/* remove the rrsig from the rrsigs list of the
+				 * rrset */
+				if(!rrset_remove_rr(rrset, index))
+					return 0;
+				return 1;
+			}
+		}
+		/* also RRSIG not found */
+	}
+
+	/* nothing found to delete */
+	if(nonexist) *nonexist = 1;
+	return 1;
+}
+
+/** remove RR from zone, ignore if it does not exist, false on alloc failure*/
+static int
+az_remove_rr(struct auth_zone* z, uint8_t* rr, size_t rr_len,
+	size_t dname_len, int* nonexist)
+{
+	struct auth_data* node;
+	uint8_t* dname = rr;
+	uint16_t rr_type = sldns_wirerr_get_type(rr, rr_len, dname_len);
+	uint16_t rr_class = sldns_wirerr_get_class(rr, rr_len, dname_len);
+	size_t rdatalen = ((size_t)sldns_wirerr_get_rdatalen(rr, rr_len,
+		dname_len))+2;
+	/* rdata points to rdata prefixed with uint16 rdatalength */
+	uint8_t* rdata = sldns_wirerr_get_rdatawl(rr, rr_len, dname_len);
+
+	if(rr_class != z->dclass) {
+		log_err("wrong class for RR");
+		/* really also a nonexisting entry, because no records
+		 * of that class in the zone, but return an error because
+		 * getting records of the wrong class is a failure of the
+		 * zone transfer */
+		return 0;
+	}
+	node = az_find_name(z, dname, dname_len);
+	if(!node) {
+		/* node with that name does not exist */
+		/* nonexisting entry, because no such name */
+		*nonexist = 1;
+		return 1;
+	}
+	if(!az_domain_remove_rr(node, rr_type, rdata, rdatalen, nonexist)) {
+		/* alloc failure or so */
+		return 0;
+	}
+	/* remove the node, if necessary */
+	/* an rrsets==NULL entry is not kept around for empty nonterminals,
+	 * and also parent nodes are not kept around, so we just delete it */
+	if(node->rrsets == NULL) {
+		rbtree_delete(&z->data, node);
+		auth_data_delete(node);
+	}
+	return 1;
+}
+
+/** decompress an RR into the buffer where it'll be an uncompressed RR
+ * with uncompressed dname and uncompressed rdata (dnames) */
+static int
+decompress_rr_into_buffer(struct sldns_buffer* buf, uint8_t* pkt,
+	size_t pktlen, uint8_t* dname, uint16_t rr_type, uint16_t rr_class,
+	uint32_t rr_ttl, uint8_t* rr_data, uint16_t rr_rdlen)
+{
+	sldns_buffer pktbuf;
+	size_t dname_len = 0;
+	size_t rdlenpos;
+	size_t rdlen;
+	uint8_t* rd;
+	const sldns_rr_descriptor* desc;
+	sldns_buffer_init_frm_data(&pktbuf, pkt, pktlen);
+	sldns_buffer_clear(buf);
+
+	/* decompress dname */
+	sldns_buffer_set_position(&pktbuf,
+		dname - sldns_buffer_current(&pktbuf));
+	dname_len = pkt_dname_len(&pktbuf);
+	if(dname_len == 0) return 0; /* parse fail on dname */
+	if(!sldns_buffer_available(buf, dname_len)) return 0;
+	dname_pkt_copy(&pktbuf, sldns_buffer_current(buf), dname);
+	sldns_buffer_skip(buf, dname_len);
+
+	/* type, class, ttl and rdatalength fields */
+	if(!sldns_buffer_available(buf, 10)) return 0;
+	sldns_buffer_write_u16(buf, rr_type);
+	sldns_buffer_write_u16(buf, rr_class);
+	sldns_buffer_write_u32(buf, rr_ttl);
+	rdlenpos = sldns_buffer_position(buf);
+	sldns_buffer_write_u16(buf, 0); /* rd length position */
+
+	/* decompress rdata */
+	desc = sldns_rr_descript(rr_type);
+	rd = rr_data;
+	rdlen = rr_rdlen;
+	if(rdlen > 0 && desc && desc->_dname_count > 0) {
+		int count = (int)desc->_dname_count;
+		int rdf = 0;
+		size_t len; /* how much rdata to plain copy */
+		size_t uncompressed_len, compressed_len;
+		size_t oldpos;
+		/* decompress dnames. */
+		while(rdlen > 0 && count) {
+			switch(desc->_wireformat[rdf]) {
+			case LDNS_RDF_TYPE_DNAME:
+				sldns_buffer_set_position(&pktbuf,
+					rd - sldns_buffer_current(&pktbuf));
+				oldpos = sldns_buffer_position(&pktbuf);
+				/* moves pktbuf to right after the
+				 * compressed dname, and returns uncompressed
+				 * dname length */
+				uncompressed_len = pkt_dname_len(&pktbuf);
+				if(!uncompressed_len)
+					return 0; /* parse error in dname */
+				if(!sldns_buffer_available(buf,
+					uncompressed_len))
+					/* dname too long for buffer */
+					return 0;
+				dname_pkt_copy(&pktbuf, 
+					sldns_buffer_current(buf), rd);
+				sldns_buffer_skip(buf, uncompressed_len);
+				compressed_len = sldns_buffer_position(
+					&pktbuf) - oldpos;
+				rd += compressed_len;
+				rdlen -= compressed_len;
+				count--;
+				len = 0;
+				break;
+			case LDNS_RDF_TYPE_STR:
+				len = rd[0] + 1;
+				break;
+			default:
+				len = get_rdf_size(desc->_wireformat[rdf]);
+				break;
+			}
+			if(len) {
+				if(!sldns_buffer_available(buf, len))
+					return 0; /* too long for buffer */
+				sldns_buffer_write(buf, rd, len);
+				rd += len;
+				rdlen -= len;
+			}
+			rdf++;
+		}
+	}
+	/* copy remaining data */
+	if(rdlen > 0) {
+		if(!sldns_buffer_available(buf, rdlen)) return 0;
+		sldns_buffer_write(buf, rd, rdlen);
+	}
+	sldns_buffer_flip(buf);
+	
+	/* fixup rdlength */
+	sldns_buffer_write_u16_at(buf, rdlenpos,
+		sldns_buffer_position(buf)-rdlenpos-2);
+	return 1;
+}
+
+/** insert RR into zone, from packet, decompress RR,
+ * if duplicate is nonNULL set the flag but otherwise ignore duplicates */
+static int
+az_insert_rr_decompress(struct auth_zone* z, uint8_t* pkt, size_t pktlen,
+	struct sldns_buffer* scratch_buffer, uint8_t* dname, uint16_t rr_type,
+	uint16_t rr_class, uint32_t rr_ttl, uint8_t* rr_data,
+	uint16_t rr_rdlen, int* duplicate)
+{
+	uint8_t* rr;
+	size_t rr_len;
+	size_t dname_len;
+	if(!decompress_rr_into_buffer(scratch_buffer, pkt, pktlen, dname,
+		rr_type, rr_class, rr_ttl, rr_data, rr_rdlen)) {
+		log_err("could not decompress RR");
+		return 0;
+	}
+	rr = sldns_buffer_begin(scratch_buffer);
+	rr_len = sldns_buffer_limit(scratch_buffer);
+	dname_len = dname_valid(rr, rr_len);
+	return az_insert_rr(z, rr, rr_len, dname_len, duplicate);
+}
+
+/** remove RR from zone, from packet, decompress RR,
+ * if nonexist is nonNULL set the flag but otherwise ignore nonexisting entries*/
+static int
+az_remove_rr_decompress(struct auth_zone* z, uint8_t* pkt, size_t pktlen,
+	struct sldns_buffer* scratch_buffer, uint8_t* dname, uint16_t rr_type,
+	uint16_t rr_class, uint32_t rr_ttl, uint8_t* rr_data,
+	uint16_t rr_rdlen, int* nonexist)
+{
+	uint8_t* rr;
+	size_t rr_len;
+	size_t dname_len;
+	if(!decompress_rr_into_buffer(scratch_buffer, pkt, pktlen, dname,
+		rr_type, rr_class, rr_ttl, rr_data, rr_rdlen)) {
+		log_err("could not decompress RR");
+		return 0;
+	}
+	rr = sldns_buffer_begin(scratch_buffer);
+	rr_len = sldns_buffer_limit(scratch_buffer);
+	dname_len = dname_valid(rr, rr_len);
+	return az_remove_rr(z, rr, rr_len, dname_len, nonexist);
 }
 
 /** 
@@ -1099,7 +1488,7 @@ az_parse_file(struct auth_zone* z, FILE* in, uint8_t* rr, size_t rrbuflen,
 			continue;
 		}
 		/* insert wirerr in rrbuf */
-		if(!az_insert_rr(z, rr, rr_len, dname_len)) {
+		if(!az_insert_rr(z, rr, rr_len, dname_len, NULL)) {
 			char buf[17];
 			sldns_wire2str_type_buf(sldns_wirerr_get_type(rr,
 				rr_len, dname_len), buf, sizeof(buf));
@@ -3294,7 +3683,7 @@ static int
 chunk_rrlist_get_current(struct auth_chunk* rr_chunk, int rr_num,
 	size_t rr_pos, uint8_t** rr_dname, uint16_t* rr_type,
 	uint16_t* rr_class, uint32_t* rr_ttl, uint16_t* rr_rdlen,
-	uint8_t** rr_rdata, uint8_t** rr_pkt, size_t* rr_nextpos)
+	uint8_t** rr_rdata, size_t* rr_nextpos)
 {
 	sldns_buffer pkt;
 	/* integrity checks on position */
@@ -3315,7 +3704,6 @@ chunk_rrlist_get_current(struct auth_chunk* rr_chunk, int rr_num,
 	*rr_rdlen = sldns_buffer_read_u16(&pkt);
 	if(sldns_buffer_remaining(&pkt) < (*rr_rdlen)) return 0;
 	*rr_rdata = sldns_buffer_current(&pkt);
-	*rr_pkt = sldns_buffer_begin(&pkt);
 	sldns_buffer_skip(&pkt, (ssize_t)(*rr_rdlen));
 	*rr_nextpos = sldns_buffer_position(&pkt);
 	return 1;
@@ -3323,12 +3711,13 @@ chunk_rrlist_get_current(struct auth_chunk* rr_chunk, int rr_num,
 
 /** apply IXFR to zone in memory. z is locked. false on failure(mallocfail) */
 static int
-apply_ixfr(struct auth_xfer* xfr, struct auth_zone* z)
+apply_ixfr(struct auth_xfer* xfr, struct auth_zone* z,
+	struct sldns_buffer* scratch_buffer)
 {
 	struct auth_chunk* rr_chunk;
 	int rr_num;
 	size_t rr_pos;
-	uint8_t* rr_dname, *rr_rdata, *rr_pkt;
+	uint8_t* rr_dname, *rr_rdata;
 	uint16_t rr_type, rr_class, rr_rdlen;
 	uint32_t rr_ttl;
 	size_t rr_nextpos;
@@ -3343,7 +3732,7 @@ apply_ixfr(struct auth_xfer* xfr, struct auth_zone* z)
 	while(!chunk_rrlist_end(rr_chunk, rr_num)) {
 		if(!chunk_rrlist_get_current(rr_chunk, rr_num, rr_pos,
 			&rr_dname, &rr_type, &rr_class, &rr_ttl, &rr_rdlen,
-			&rr_rdata, &rr_pkt, &rr_nextpos)) {
+			&rr_rdata, &rr_nextpos)) {
 			/* failed to parse RR */
 			return 0;
 		}
@@ -3382,7 +3771,8 @@ apply_ixfr(struct auth_xfer* xfr, struct auth_zone* z)
 					 *  SOA 3 followed by add
 					 *  SOA 3 end */
 					/* ended by SOA record */
-					return 1;
+					xfr->serial = transfer_serial;
+					break;
 				}
 			}
 			/* twiddle add/del mode */
@@ -3398,11 +3788,32 @@ apply_ixfr(struct auth_xfer* xfr, struct auth_zone* z)
 		 * that we serve something fairly nice during the refetch */
 		if(delmode) {
 			/* delete this RR */
-			(void)z;
-			/* TODO */
+			int nonexist = 0;
+			if(!az_remove_rr_decompress(z, rr_chunk->data,
+				rr_chunk->len, scratch_buffer, rr_dname,
+				rr_type, rr_class, rr_ttl, rr_rdata, rr_rdlen,
+				&nonexist)) {
+				/* failed, malloc error or so */
+				return 0;
+			}
+			if(nonexist) {
+				/* it was removal of a nonexisting RR */
+				softfail = 1;
+			}
 		} else {
+			int duplicate = 0;
 			/* add this RR */
-			/* TODO */
+			if(!az_insert_rr_decompress(z, rr_chunk->data,
+				rr_chunk->len, scratch_buffer, rr_dname,
+				rr_type, rr_class, rr_ttl, rr_rdata, rr_rdlen,
+				&duplicate)) {
+				/* failed, malloc error or so */
+				return 0;
+			}
+			if(duplicate) {
+				/* it was a duplicate */
+				softfail = 1;
+			}
 		}
 
 		rr_counter++;
@@ -3414,10 +3825,59 @@ apply_ixfr(struct auth_xfer* xfr, struct auth_zone* z)
 
 /** apply AXFR to zone in memory. z is locked. false on failure(mallocfail) */
 static int
-apply_axfr(struct auth_xfer* xfr, struct auth_zone* z)
+apply_axfr(struct auth_xfer* xfr, struct auth_zone* z,
+	struct sldns_buffer* scratch_buffer)
 {
-	/* TODO */
-	(void)xfr; (void)z;
+	struct auth_chunk* rr_chunk;
+	int rr_num;
+	size_t rr_pos;
+	uint8_t* rr_dname, *rr_rdata;
+	uint16_t rr_type, rr_class, rr_rdlen;
+	uint32_t rr_ttl;
+	uint32_t serial = 0;
+	size_t rr_nextpos;
+	size_t rr_counter = 0;
+
+	/* clear the data tree */
+	traverse_postorder(&z->data, auth_data_del, NULL);
+	rbtree_init(&z->data, &auth_data_cmp);
+	xfr->have_zone = 0;
+	xfr->serial = 0;
+
+	/* insert all RRs in to the zone */
+	/* insert the SOA only once, skip the last one */
+	/* start RR iterator over chunklist of packets */
+	chunk_rrlist_start(xfr, &rr_chunk, &rr_num, &rr_pos);
+	while(!chunk_rrlist_end(rr_chunk, rr_num)) {
+		if(!chunk_rrlist_get_current(rr_chunk, rr_num, rr_pos,
+			&rr_dname, &rr_type, &rr_class, &rr_ttl, &rr_rdlen,
+			&rr_rdata, &rr_nextpos)) {
+			/* failed to parse RR */
+			return 0;
+		}
+		if(rr_type == LDNS_RR_TYPE_SOA) {
+			if(rr_counter != 0) {
+				/* end of the axfr */
+				break;
+			}
+			if(rr_rdlen < 22) return 0; /* bad SOA rdlen */
+			serial = sldns_read_uint32(rr_rdata+rr_rdlen-20);
+		}
+
+		/* add this RR */
+		if(!az_insert_rr_decompress(z, rr_chunk->data, rr_chunk->len,
+			scratch_buffer, rr_dname, rr_type, rr_class, rr_ttl,
+			rr_rdata, rr_rdlen, NULL)) {
+			/* failed, malloc error or so */
+			return 0;
+		}
+
+		rr_counter++;
+		chunk_rrlist_gonext(&rr_chunk, &rr_num, &rr_pos, rr_nextpos);
+	}
+
+	xfr->serial = serial;
+	xfr->have_zone = 1;
 	return 1;
 }
 
@@ -3494,7 +3954,7 @@ xfr_process_chunk_list(struct auth_xfer* xfr, struct module_env* env,
 	/* apply data */
 	if(xfr->task_transfer->on_ixfr &&
 		!xfr->task_transfer->on_ixfr_is_axfr) {
-		if(!apply_ixfr(xfr, z)) {
+		if(!apply_ixfr(xfr, z, env->scratch_buffer)) {
 			lock_rw_unlock(&z->lock);
 			verbose(VERB_ALGO, "xfr from %s: could not store IXFR"
 				" data", xfr->task_transfer->master->host);
@@ -3502,13 +3962,21 @@ xfr_process_chunk_list(struct auth_xfer* xfr, struct module_env* env,
 			return 0;
 		}
 	} else {
-		if(!apply_axfr(xfr, z)) {
+		if(!apply_axfr(xfr, z, env->scratch_buffer)) {
 			lock_rw_unlock(&z->lock);
 			verbose(VERB_ALGO, "xfr from %s: could not store AXFR"
 				" data", xfr->task_transfer->master->host);
 			return 0;
 		}
 	}
+	if(!xfr_find_soa(z, xfr)) {
+		lock_rw_unlock(&z->lock);
+		verbose(VERB_ALGO, "xfr from %s: no SOA in zone after update"
+			" (or malformed RR)", xfr->task_transfer->master->host);
+		return 0;
+	}
+	xfr->zone_expired = 0;
+	z->zone_expired = 0;
 
 	/* unlock */
 	lock_rw_unlock(&z->lock);
