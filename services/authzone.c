@@ -1294,7 +1294,7 @@ decompress_rr_into_buffer(struct sldns_buffer* buf, uint8_t* pkt,
 	if(dname_len == 0) return 0; /* parse fail on dname */
 	if(!sldns_buffer_available(buf, dname_len)) return 0;
 	dname_pkt_copy(&pktbuf, sldns_buffer_current(buf), dname);
-	sldns_buffer_skip(buf, dname_len);
+	sldns_buffer_skip(buf, (ssize_t)dname_len);
 
 	/* type, class, ttl and rdatalength fields */
 	if(!sldns_buffer_available(buf, 10)) return 0;
@@ -1334,7 +1334,7 @@ decompress_rr_into_buffer(struct sldns_buffer* buf, uint8_t* pkt,
 					return 0;
 				dname_pkt_copy(&pktbuf, 
 					sldns_buffer_current(buf), rd);
-				sldns_buffer_skip(buf, uncompressed_len);
+				sldns_buffer_skip(buf, (ssize_t)uncompressed_len);
 				compressed_len = sldns_buffer_position(
 					&pktbuf) - oldpos;
 				rd += compressed_len;
