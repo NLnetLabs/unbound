@@ -1309,6 +1309,9 @@ validate_cname_noanswer_response(struct module_env* env, struct val_env* ve,
 	int nsec3s_seen = 0; /* nsec3s seen */
 	struct ub_packed_rrset_key* s; 
 	size_t i;
+	uint8_t* nsec_ce; /* Used to find the NSEC with the longest ce */
+	int ce_labs = 0;
+	int prev_ce_labs = 0;
 
 	/* the AUTHORITY section */
 	for(i=chase_reply->an_numrrsets; i<chase_reply->an_numrrsets+
@@ -1327,9 +1330,19 @@ validate_cname_noanswer_response(struct module_env* env, struct val_env* ve,
 				ce = nsec_closest_encloser(qchase->qname, s);
 				nxdomain_valid_nsec = 1;
 			}
-			if(val_nsec_proves_no_wc(s, qchase->qname, 
-				qchase->qname_len))
-				nxdomain_valid_wnsec = 1;
+			nsec_ce = nsec_closest_encloser(qchase->qname, s);
+			ce_labs = dname_count_labels(nsec_ce);
+			/* Use longest closest encloser to prove wildcard. */
+			if(ce_labs > prev_ce_labs ||
+			       (ce_labs == prev_ce_labs &&
+				       nxdomain_valid_wnsec == 0)) {
+			       if(val_nsec_proves_no_wc(s, qchase->qname,
+				       qchase->qname_len))
+				       nxdomain_valid_wnsec = 1;
+			       else
+				       nxdomain_valid_wnsec = 0;
+			}
+			prev_ce_labs = ce_labs;
 			if(val_nsec_proves_insecuredelegation(s, qchase)) {
 				verbose(VERB_ALGO, "delegation is insecure");
 				chase_reply->security = sec_status_insecure;
