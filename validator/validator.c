@@ -944,6 +944,9 @@ validate_nameerror_response(struct module_env* env, struct val_env* ve,
 	int nsec3s_seen = 0;
 	struct ub_packed_rrset_key* s; 
 	size_t i;
+	uint8_t* ce;
+	int ce_labs = 0;
+	int prev_ce_labs = 0;
 
 	for(i=chase_reply->an_numrrsets; i<chase_reply->an_numrrsets+
 		chase_reply->ns_numrrsets; i++) {
@@ -951,9 +954,19 @@ validate_nameerror_response(struct module_env* env, struct val_env* ve,
 		if(ntohs(s->rk.type) == LDNS_RR_TYPE_NSEC) {
 			if(val_nsec_proves_name_error(s, qchase->qname))
 				has_valid_nsec = 1;
-			if(val_nsec_proves_no_wc(s, qchase->qname, 
-				qchase->qname_len))
-				has_valid_wnsec = 1;
+			ce = nsec_closest_encloser(qchase->qname, s);            
+			ce_labs = dname_count_labels(ce);                        
+			/* Use longest closest encloser to prove wildcard. */
+			if(ce_labs > prev_ce_labs ||                             
+			       (ce_labs == prev_ce_labs &&                      
+				       has_valid_wnsec == 0)) {                 
+			       if(val_nsec_proves_no_wc(s, qchase->qname,       
+				       qchase->qname_len))                      
+				       has_valid_wnsec = 1;                     
+			       else                                             
+				       has_valid_wnsec = 0;                     
+			}                                                        
+			prev_ce_labs = ce_labs; 
 			if(val_nsec_proves_insecuredelegation(s, qchase)) {
 				verbose(VERB_ALGO, "delegation is insecure");
 				chase_reply->security = sec_status_insecure;
