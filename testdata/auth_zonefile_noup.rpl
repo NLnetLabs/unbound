@@ -34,14 +34,8 @@ example	3600	IN	SOA	dns.example.de. hostmaster.dns.example.de. (
 	3600	IN	NS	ns2.example.com.
 $ORIGIN example.com.
 www	3600	IN	A	1.2.3.4
-mail	3600	IN	A	1.2.3.5
-	3600	IN	AAAA	::5
 ns1	3600	IN	A	1.2.3.4
 ns2	3600	IN	AAAA	::2
-$INCLUDE_TEMPFILE example.inc
-TEMPFILE_END
-TEMPFILE_CONTENTS example.inc
-other	7200	IN	A	1.2.3.6
 TEMPFILE_END
 
 stub-zone:
