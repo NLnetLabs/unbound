@@ -267,7 +267,6 @@ msg_add_rrset_ar(struct auth_zone* z, struct regional* region,
 
 struct auth_zones* auth_zones_create(void)
 {
-	/* TODO: create and put in env in worker and libworker */
 	struct auth_zones* az = (struct auth_zones*)calloc(1, sizeof(*az));
 	if(!az) {
 		log_err("out of memory");
@@ -1509,7 +1508,11 @@ auth_zone_read_zonefile(struct auth_zone* z)
 	FILE* in;
 	if(!z || !z->zonefile || z->zonefile[0]==0)
 		return 1; /* no file, or "", nothing to read */
-	verbose(VERB_ALGO, "read zonefile %s", z->zonefile);
+	if(verbosity >= VERB_ALGO) {
+		char nm[255+1];
+		dname_str(z->name, nm);
+		verbose(VERB_ALGO, "read zonefile %s for %s", z->zonefile, nm);
+	}
 	in = fopen(z->zonefile, "r");
 	if(!in) {
 		char* n = sldns_wire2str_dname(z->name, z->namelen);
@@ -1680,36 +1683,32 @@ xfr_find_soa(struct auth_zone* z, struct auth_xfer* xfr)
 
 /** 
  * Setup auth_xfer zone
- * This populates the have_zone, soa values, next_probe and so on times.
- * Doesn't do network traffic yet, sets the timeout.
+ * This populates the have_zone, soa values, and so on times.
+ * Doesn't do network traffic yet, can set option flags.
  * @param z: locked by caller, and modified for setup
- * @param x: locked by caller, and modified, timers and timeouts.
- * @param env: module env with time.
+ * @param x: locked by caller, and modified.
  * @return false on failure.
  */
 static int
-auth_xfer_setup(struct auth_zone* z, struct auth_xfer* x, struct module_env* env)
+auth_xfer_setup(struct auth_zone* z, struct auth_xfer* x)
 {
+	/* for a zone without zone transfers, x==NULL, so skip them,
+	 * i.e. the zone config is fixed with no masters or urls */
 	if(!z || !x) return 1;
 	if(!xfr_find_soa(z, x)) {
 		return 1;
 	}
-	/* nextprobe setup */
-	x->task_nextprobe->next_probe = 0;
-	if(x->have_zone)
-		x->task_nextprobe->lease_time = *env->now;
-	/* nothing for probe and transfer tasks */
+	/* nothing for probe, nextprobe and transfer tasks */
 	return 1;
 }
 
 /**
  * Setup all zones
  * @param az: auth zones structure
- * @param env: module env with time.
  * @return false on failure.
  */
 static int
-auth_zones_setup_zones(struct auth_zones* az, struct module_env* env)
+auth_zones_setup_zones(struct auth_zones* az)
 {
 	struct auth_zone* z;
 	struct auth_xfer* x;
@@ -1720,7 +1719,7 @@ auth_zones_setup_zones(struct auth_zones* az, struct module_env* env)
 		if(x) {
 			lock_basic_lock(&x->lock);
 		}
-		if(!auth_xfer_setup(z, x, env)) {
+		if(!auth_xfer_setup(z, x)) {
 			if(x) {
 				lock_basic_unlock(&x->lock);
 			}
@@ -1771,9 +1770,7 @@ auth_zones_cfg(struct auth_zones* az, struct config_auth* c)
 	}
 	z->for_downstream = c->for_downstream;
 	z->for_upstream = c->for_upstream;
-	/* TODO fallback option */
-	//if(!auth_zone_set_fallback(z, zlist->str2)) {
-	/* TODO other options */
+	z->fallback_enabled = c->fallback_enabled;
 
 	/* xfer zone */
 	if(x) {
@@ -1797,7 +1794,7 @@ auth_zones_cfg(struct auth_zones* az, struct config_auth* c)
 }
 
 int auth_zones_apply_cfg(struct auth_zones* az, struct config_file* cfg,
-	int setup, struct module_env* env)
+	int setup)
 {
 	struct config_auth* p;
 	for(p = cfg->auths; p; p = p->next) {
@@ -1813,7 +1810,7 @@ int auth_zones_apply_cfg(struct auth_zones* az, struct config_file* cfg,
 	if(!auth_zones_read_zones(az))
 		return 0;
 	if(setup) {
-		if(!auth_zones_setup_zones(az, env))
+		if(!auth_zones_setup_zones(az))
 			return 0;
 	}
 	return 1;
@@ -3913,15 +3910,20 @@ xfr_process_chunk_list(struct auth_xfer* xfr, struct module_env* env,
 	struct auth_zone* z;
 
 	/* obtain locks and structures */
+	/* release xfr lock, then, while holding az->lock grab both
+	 * z->lock and xfr->lock */
+	lock_basic_unlock(&xfr->lock);
 	lock_rw_rdlock(&env->auth_zones->lock);
 	z = auth_zone_find(env->auth_zones, xfr->name, xfr->namelen,
 		xfr->dclass);
 	if(!z) {
 		lock_rw_unlock(&env->auth_zones->lock);
 		/* the zone is gone, ignore xfr results */
+		lock_basic_lock(&xfr->lock);
 		return 0;
 	}
 	lock_rw_wrlock(&z->lock);
+	lock_basic_lock(&xfr->lock);
 	lock_rw_unlock(&env->auth_zones->lock);
 
 	/* apply data */
@@ -3942,14 +3944,16 @@ xfr_process_chunk_list(struct auth_xfer* xfr, struct module_env* env,
 			return 0;
 		}
 	}
+	if(xfr->have_zone)
+		xfr->lease_time = *env->now;
+	xfr->zone_expired = 0;
+	z->zone_expired = 0;
 	if(!xfr_find_soa(z, xfr)) {
 		lock_rw_unlock(&z->lock);
 		verbose(VERB_ALGO, "xfr from %s: no SOA in zone after update"
 			" (or malformed RR)", xfr->task_transfer->master->host);
 		return 0;
 	}
-	xfr->zone_expired = 0;
-	z->zone_expired = 0;
 
 	/* unlock */
 	lock_rw_unlock(&z->lock);
@@ -4588,6 +4592,7 @@ auth_xfer_transfer_tcp_callback(struct comm_point* c, void* arg, int err,
 	int transferdone = 0;
 	log_assert(xfr->task_transfer);
 	env = xfr->task_transfer->env;
+	lock_basic_lock(&xfr->lock);
 
 	if(err != NETEVENT_NOERROR) {
 		/* connection failed, closed, or timeout */
@@ -4628,6 +4633,7 @@ auth_xfer_transfer_tcp_callback(struct comm_point* c, void* arg, int err,
 
 	/* if we want to read more messages, setup the commpoint to read
 	 * a DNS packet, and the timeout */
+	lock_basic_unlock(&xfr->lock);
 	c->tcp_is_reading = 1;
 	comm_point_start_listening(c, -1, AUTH_TRANSFER_TIMEOUT);
 	return 0;
@@ -4783,6 +4789,7 @@ auth_xfer_probe_udp_callback(struct comm_point* c, void* arg, int err,
 	struct module_env* env;
 	log_assert(xfr->task_probe);
 	env = xfr->task_probe->env;
+	lock_basic_lock(&xfr->lock);
 
 	/* the comm_point_udp_callback is in a for loop for NUM_UDP_PER_SELECT
 	 * and we set rep.c=NULL to stop if from looking inside the commpoint*/
@@ -4798,7 +4805,6 @@ auth_xfer_probe_udp_callback(struct comm_point* c, void* arg, int err,
 			/* successful lookup */
 			/* see if this serial indicates that the zone has
 			 * to be updated */
-			lock_basic_lock(&xfr->lock);
 			if(xfr_serial_means_update(xfr, serial)) {
 				/* if updated, start the transfer task, if needed */
 				if(xfr->task_transfer->worker == NULL) {
@@ -4810,6 +4816,8 @@ auth_xfer_probe_udp_callback(struct comm_point* c, void* arg, int err,
 				}
 			} else {
 				/* if zone not updated, start the wait timer again */
+				if(xfr->have_zone)
+					xfr->lease_time = *env->now;
 				if(xfr->task_nextprobe->worker == NULL)
 					xfr_set_timeout(xfr, env, 0);
 			}
@@ -4979,7 +4987,7 @@ auth_xfer_timer(void* arg)
 
 	/* see if zone has expired, and if so, also set auth_zone expired */
 	if(xfr->have_zone && !xfr->zone_expired &&
-	   *env->now >= xfr->task_nextprobe->lease_time + xfr->expiry) {
+	   *env->now >= xfr->lease_time + xfr->expiry) {
 		lock_basic_unlock(&xfr->lock);
 		auth_xfer_set_expired(xfr, env, 1);
 		lock_basic_lock(&xfr->lock);
@@ -5033,9 +5041,8 @@ xfr_set_timeout(struct auth_xfer* xfr, struct module_env* env,
 	 * but if expiry is sooner, use that one.
 	 * after a failure, use the retry timer instead. */
 	xfr->task_nextprobe->next_probe = *env->now;
-	if(xfr->task_nextprobe->lease_time)
-		xfr->task_nextprobe->next_probe =
-			xfr->task_nextprobe->lease_time;
+	if(xfr->lease_time)
+		xfr->task_nextprobe->next_probe = xfr->lease_time;
 	if(xfr->have_zone) {
 		time_t wait = xfr->refresh;
 		if(failure) wait = xfr->retry;
@@ -5076,6 +5083,11 @@ auth_xfer_pickup_initial(struct auth_zones* az, struct module_env* env)
 	lock_rw_wrlock(&az->lock);
 	RBTREE_FOR(x, struct auth_xfer*, &az->xtree) {
 		lock_basic_lock(&x->lock);
+		/* set lease_time, because we now have timestamp in env,
+		 * (not earlier during startup and apply_cfg), and this
+		 * notes the start time when the data was acquired */
+		if(x->have_zone)
+			x->lease_time = *env->now;
 		if(x->task_nextprobe && x->task_nextprobe->worker == NULL)
 			xfr_set_timeout(x, env, 0);
 		lock_basic_unlock(&x->lock);
@@ -5140,7 +5152,7 @@ auth_xfer_new(struct auth_zone* z)
 }
 
 /** Create auth_xfer structure.
- * This populates the have_zone, soa values, next_probe and so on times.
+ * This populates the have_zone, soa values, and so on times.
  * and sets the timeout, if a zone transfer is needed a short timeout is set.
  * For that the auth_zone itself must exist (and read in zonefile)
  * returns false on alloc failure. */

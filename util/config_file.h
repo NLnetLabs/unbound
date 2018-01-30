@@ -551,6 +551,9 @@ struct config_auth {
 	int for_downstream;
 	/** provide upstream answers */
 	int for_upstream;
+	/** fallback to recursion to authorities if zone expired and other
+	 * reasons perhaps (like, query bogus) */
+	int fallback_enabled;
 };
 
 /**

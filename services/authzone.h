@@ -237,6 +237,11 @@ struct auth_xfer {
 	 * valid any more, if no master responds within this time, either
 	 * with the current zone or a new zone. */
 	time_t expiry;
+
+	/** zone lease start time (start+expiry is expiration time).
+	 * this is renewed every SOA probe and transfer.  On zone load
+	 * from zonefile it is also set (with probe set soon to check) */
+	time_t lease_time;
 };
 
 /**
@@ -256,10 +261,6 @@ struct auth_nextprobe {
 
 	/** Timeout for next probe (for SOA) */
 	time_t next_probe;
-	/** zone lease start time (start+expiry is expiration time).
-	 * this is renewed every SOA probe and transfer.  On zone load
-	 * from zonefile it is also set (with probe set soon to check) */
-	time_t lease_time;
 	/** timeout callback for next_probe or expiry(if that is sooner).
 	 * it is on the worker's event_base */
 	struct comm_timer* timer;
@@ -425,11 +426,10 @@ struct auth_zones* auth_zones_create(void);
  * @param az: auth zones structure
  * @param cfg: config to apply.
  * @param setup: if true, also sets up values in the auth zones structure
- * @param env: for setup, with current time.
  * @return false on failure.
  */
 int auth_zones_apply_cfg(struct auth_zones* az, struct config_file* cfg,
-	int setup, struct module_env* env);
+	int setup);
 
 /**
  * Delete auth zones structure

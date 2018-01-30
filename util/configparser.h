@@ -272,7 +272,8 @@ extern int yydebug;
     VAR_ZONEFILE = 482,
     VAR_MASTER = 483,
     VAR_URL = 484,
-    VAR_FOR_DOWNSTREAM = 485
+    VAR_FOR_DOWNSTREAM = 485,
+    VAR_FALLBACK_ENABLED = 486
   };
 #endif
 /* Tokens.  */
@@ -504,6 +505,7 @@ extern int yydebug;
 #define VAR_MASTER 483
 #define VAR_URL 484
 #define VAR_FOR_DOWNSTREAM 485
+#define VAR_FALLBACK_ENABLED 486
 
 /* Value type.  */
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
@@ -514,7 +516,7 @@ union YYSTYPE
 
 	char*	str;
 
-#line 518 "util/configparser.h" /* yacc.c:1909  */
+#line 520 "util/configparser.h" /* yacc.c:1909  */
 };
 
 typedef union YYSTYPE YYSTYPE;

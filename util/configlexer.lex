@@ -306,6 +306,7 @@ master{COLON}			{ YDVAR(1, VAR_MASTER) }
 url{COLON}			{ YDVAR(1, VAR_URL) }
 for-downstream{COLON}		{ YDVAR(1, VAR_FOR_DOWNSTREAM) }
 for-upstream{COLON}		{ YDVAR(1, VAR_FOR_UPSTREAM) }
+fallback-enabled{COLON}		{ YDVAR(1, VAR_FALLBACK_ENABLED) }
 view{COLON}			{ YDVAR(0, VAR_VIEW) }
 view-first{COLON}		{ YDVAR(1, VAR_VIEW_FIRST) }
 do-not-query-address{COLON}	{ YDVAR(1, VAR_DO_NOT_QUERY_ADDRESS) }

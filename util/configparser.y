@@ -154,6 +154,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_CACHEDB VAR_CACHEDB_BACKEND VAR_CACHEDB_SECRETSEED
 %token VAR_UDP_UPSTREAM_WITHOUT_DOWNSTREAM VAR_FOR_UPSTREAM
 %token VAR_AUTH_ZONE VAR_ZONEFILE VAR_MASTER VAR_URL VAR_FOR_DOWNSTREAM
+%token VAR_FALLBACK_ENABLED
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -308,6 +309,7 @@ authstart: VAR_AUTH_ZONE
 			/* defaults for auth zone */
 			s->for_downstream = 1;
 			s->for_upstream = 1;
+			s->fallback_enabled = 0;
 		} else 
 			yyerror("out of memory");
 	}
@@ -315,7 +317,7 @@ authstart: VAR_AUTH_ZONE
 contents_auth: contents_auth content_auth 
 	| ;
 content_auth: auth_name | auth_zonefile | auth_master | auth_url |
-	auth_for_downstream | auth_for_upstream
+	auth_for_downstream | auth_for_upstream | auth_fallback_enabled
 	;
 server_num_threads: VAR_NUM_THREADS STRING_ARG 
 	{ 
@@ -2066,6 +2068,16 @@ auth_for_upstream: VAR_FOR_UPSTREAM STRING_ARG
 		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
 			yyerror("expected yes or no.");
 		else cfg_parser->cfg->auths->for_upstream =
+			(strcmp($2, "yes")==0);
+		free($2);
+	}
+	;
+auth_fallback_enabled: VAR_FALLBACK_ENABLED STRING_ARG
+	{
+		OUTYY(("P(fallback-enabled:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else cfg_parser->cfg->auths->fallback_enabled =
 			(strcmp($2, "yes")==0);
 		free($2);
 	}
