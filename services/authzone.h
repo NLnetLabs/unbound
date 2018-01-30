@@ -483,11 +483,14 @@ int auth_zones_answer(struct auth_zones* az, struct module_env* env,
  * Return NULL when there is no auth_zone above the give name, otherwise
  * returns the closest auth_zone above the qname that pertains to it.
  * @param az: auth zones structure.
+ * @param name: query to look up for.
+ * @param namelen: length of name.
+ * @param dclass: class of zone to find.
  * @param qinfo: query info to lookup.
  * @return NULL or auth_zone that pertains to the query.
  */
 struct auth_zone* auth_zones_find_zone(struct auth_zones* az,
-	struct query_info* qinfo);
+	uint8_t* name, size_t namelen, uint16_t dclass);
 
 /** find an auth zone by name (exact match by name or NULL returned) */
 struct auth_zone* auth_zone_find(struct auth_zones* az, uint8_t* nm,
@@ -496,7 +499,6 @@ struct auth_zone* auth_zone_find(struct auth_zones* az, uint8_t* nm,
 /** find an xfer zone by name (exact match by name or NULL returned) */
 struct auth_xfer* auth_xfer_find(struct auth_zones* az, uint8_t* nm,
 	size_t nmlen, uint16_t dclass);
-
 
 /** create an auth zone. returns wrlocked zone. caller must have wrlock
  * on az. returns NULL on malloc failure */
@@ -509,6 +511,18 @@ int auth_zone_set_zonefile(struct auth_zone* z, char* zonefile);
 /** set auth zone fallback. caller must have lock on zone.
  * fallbackstr is "yes" or "no". false on parse failure. */
 int auth_zone_set_fallback(struct auth_zone* z, char* fallbackstr);
+
+/** see if the auth zone for the name can fallback
+ * @param az: auth zones
+ * @param nm: name of delegation point.
+ * @param nmlen: length of nm.
+ * @param dclass: class of zone to look for.
+ * @return true if fallback_enabled is true. false if not.
+ * if the zone does not exist, fallback is true (more lenient)
+ * also true if zone does not do upstream requests.
+ */
+int auth_zones_can_fallback(struct auth_zones* az, uint8_t* nm, size_t nmlen,
+	uint16_t dclass);
 
 /** read auth zone from zonefile. caller must lock zone. false on failure */
 int auth_zone_read_zonefile(struct auth_zone* z);

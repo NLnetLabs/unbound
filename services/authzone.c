@@ -441,14 +441,16 @@ auth_zone_find_less_equal(struct auth_zones* az, uint8_t* nm, size_t nmlen,
 	return rbtree_find_less_equal(&az->ztree, &key, (rbnode_type**)z);
 }
 
+
 /** find the auth zone that is above the given qname */
 struct auth_zone*
-auth_zones_find_zone(struct auth_zones* az, struct query_info* qinfo)
+auth_zones_find_zone(struct auth_zones* az, uint8_t* qname, size_t qname_len,
+	uint16_t qclass)
 {
-	uint8_t* nm = qinfo->qname;
-	size_t nmlen = qinfo->qname_len;
+	uint8_t* nm = qname;
+	size_t nmlen = qname_len;
 	struct auth_zone* z;
-	if(auth_zone_find_less_equal(az, nm, nmlen, qinfo->qclass, &z)) {
+	if(auth_zone_find_less_equal(az, nm, nmlen, qclass, &z)) {
 		/* exact match */
 		return z;
 	} else {
@@ -456,13 +458,13 @@ auth_zones_find_zone(struct auth_zones* az, struct query_info* qinfo)
 		if(!z) return NULL; /* nothing smaller, nothing above it */
 		/* we found smaller name; smaller may be above the qname,
 		 * but not below it. */
-		nm = dname_get_shared_topdomain(z->name, qinfo->qname);
+		nm = dname_get_shared_topdomain(z->name, qname);
 		dname_count_size_labels(nm, &nmlen);
 	}
 	/* search up */
 	while(!z && !dname_is_root(nm)) {
 		dname_remove_label(&nm, &nmlen);
-		z = auth_zone_find(az, nm, nmlen, qinfo->qclass);
+		z = auth_zone_find(az, nm, nmlen, qclass);
 	}
 	return z;
 }
@@ -3010,9 +3012,6 @@ int auth_zones_lookup(struct auth_zones* az, struct query_info* qinfo,
 {
 	int r;
 	struct auth_zone* z;
-	/* TODO: in iterator, after cache lookup, before network lookup,
-	 * call this to get answer */
-
 	/* find the zone that should contain the answer. */
 	lock_rw_rdlock(&az->lock);
 	z = auth_zone_find(az, dp_nm, dp_nmlen, qinfo->qclass);
@@ -3026,6 +3025,12 @@ int auth_zones_lookup(struct auth_zones* az, struct query_info* qinfo,
 	lock_rw_rdlock(&z->lock);
 	lock_rw_unlock(&az->lock);
 
+	/* if not for upstream queries, fallback */
+	if(!z->for_upstream) {
+		lock_rw_unlock(&z->lock);
+		*fallback = 1;
+		return 0;
+	}
 	/* see what answer that zone would generate */
 	r = auth_zone_generate_answer(z, qinfo, region, msg, fallback);
 	lock_rw_unlock(&z->lock);
@@ -3094,7 +3099,16 @@ int auth_zones_answer(struct auth_zones* az, struct module_env* env,
 		lock_rw_unlock(&az->lock);
 		return 0;
 	}
-	z = auth_zones_find_zone(az, qinfo);
+	if(qinfo->qtype == LDNS_RR_TYPE_DS) {
+		uint8_t* delname = qinfo->qname;
+		size_t delnamelen = qinfo->qname_len;
+		dname_remove_label(&delname, &delnamelen);
+		z = auth_zones_find_zone(az, delname, delnamelen,
+			qinfo->qclass);
+	} else {
+		z = auth_zones_find_zone(az, qinfo->qname, qinfo->qname_len,
+			qinfo->qclass);
+	}
 	if(!z) {
 		/* no zone above it */
 		lock_rw_unlock(&az->lock);
@@ -3121,6 +3135,25 @@ int auth_zones_answer(struct auth_zones* az, struct module_env* env,
 	else	auth_answer_encode(qinfo, env, edns, buf, temp, msg);
 
 	return 1;
+}
+
+int auth_zones_can_fallback(struct auth_zones* az, uint8_t* nm, size_t nmlen,
+	uint16_t dclass)
+{
+	int r;
+	struct auth_zone* z;
+	lock_rw_rdlock(&az->lock);
+	z = auth_zone_find(az, nm, nmlen, dclass);
+	if(!z) {
+		lock_rw_unlock(&az->lock);
+		/* no such auth zone, fallback */
+		return 1;
+	}
+	lock_rw_rdlock(&z->lock);
+	lock_rw_unlock(&az->lock);
+	r = z->fallback_enabled || (!z->for_upstream);
+	lock_rw_unlock(&z->lock);
+	return r;
 }
 
 /** set a zone expired */

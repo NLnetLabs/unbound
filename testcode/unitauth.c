@@ -521,6 +521,7 @@ addzone(struct auth_zones* az, const char* name, char* fname)
 	lock_rw_unlock(&az->lock);
 	if(!z) fatal_exit("cannot find zone");
 	auth_zone_set_zonefile(z, fname);
+	z->for_upstream = 1;
 
 	if(!auth_zone_read_zonefile(z)) {
 		fatal_exit("parse failure for auth zone %s", name);
@@ -685,8 +686,12 @@ msgtostr(struct dns_msg* msg)
 	char* str;
 	sldns_buffer* buf = sldns_buffer_new(65535);
 	if(!buf) fatal_exit("out of memory");
-	pr_flags(buf, msg->rep->flags);
-	pr_rrs(buf, msg->rep);
+	if(!msg) {
+		sldns_buffer_printf(buf, "null packet\n");
+	} else {
+		pr_flags(buf, msg->rep->flags);
+		pr_rrs(buf, msg->rep);
+	}
 
 	str = strdup((char*)sldns_buffer_begin(buf));
 	if(!str) fatal_exit("out of memory");

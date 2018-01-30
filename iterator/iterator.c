@@ -53,6 +53,7 @@
 #include "validator/val_neg.h"
 #include "services/cache/dns.h"
 #include "services/cache/infra.h"
+#include "services/authzone.h"
 #include "util/module.h"
 #include "util/netevent.h"
 #include "util/net_help.h"
@@ -771,6 +772,11 @@ prime_stub(struct module_qstate* qstate, struct iter_qstate* iq, int id,
 	if(!stub)
 		return 0;
 	stub_dp = stub->dp;
+	/* if we have an auth_zone dp, and stub is equal, don't prime stub
+	 * yet, unless we want to fallback and avoid the auth_zone */
+	if(!iq->auth_zone_avoid && iq->dp && iq->dp->auth_dp && 
+		query_dname_compare(iq->dp->name, stub_dp->name) == 0)
+		return 0;
 
 	/* is it a noprime stub (always use) */
 	if(stub->noprime) {
@@ -828,6 +834,66 @@ prime_stub(struct module_qstate* qstate, struct iter_qstate* iq, int id,
 	
 	/* this module stops, our submodule starts, and does the query. */
 	qstate->ext_state[id] = module_wait_subquery;
+	return 1;
+}
+
+/**
+ * Generate a delegation point for an auth zone (unless cached dp is better)
+ * false on alloc failure.
+ */
+static int
+auth_zone_delegpt(struct module_qstate* qstate, struct iter_qstate* iq,
+	uint8_t* delname, size_t delnamelen)
+{
+	struct auth_zone* z;
+	if(iq->auth_zone_avoid)
+		return 1;
+	if(!delname) {
+		delname = iq->qchase.qname;
+		delnamelen = iq->qchase.qname_len;
+	}
+	lock_rw_rdlock(&qstate->env->auth_zones->lock);
+	z = auth_zones_find_zone(qstate->env->auth_zones, delname, delnamelen,
+		qstate->qinfo.qclass);
+	if(!z) {
+		lock_rw_unlock(&qstate->env->auth_zones->lock);
+		return 1;
+	}
+	lock_rw_rdlock(&z->lock);
+	lock_rw_unlock(&qstate->env->auth_zones->lock);
+	if(z->for_upstream) {
+		if(iq->dp==NULL || dname_subdomain_c(z->name, iq->dp->name)) {
+			struct delegpt* dp;
+			dp = (struct delegpt*)regional_alloc_zero(
+				qstate->region, sizeof(*dp));
+			if(!dp) {
+				log_err("alloc failure");
+				if(z->fallback_enabled) {
+					lock_rw_unlock(&z->lock);
+					return 1; /* just fallback */
+				}
+				lock_rw_unlock(&z->lock);
+				return 0;
+			}
+			dp->name = regional_alloc_init(qstate->region,
+				z->name, z->namelen);
+			if(!dp->name) {
+				log_err("alloc failure");
+				if(z->fallback_enabled) {
+					lock_rw_unlock(&z->lock);
+					return 1; /* just fallback */
+				}
+				lock_rw_unlock(&z->lock);
+				return 0;
+			}
+			dp->namelen = z->namelen;
+			dp->namelabs = z->namelabs;
+			dp->auth_dp = 1;
+			iq->dp = dp;
+		}
+	}
+
+	lock_rw_unlock(&z->lock);
 	return 1;
 }
 
@@ -1167,7 +1233,7 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 		iq->response = msg;
 		return final_state(iq);
 	}
-	
+
 	/* attempt to forward the request */
 	if(forward_request(qstate, iq))
 	{
@@ -1228,8 +1294,15 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 		/* If the cache has returned nothing, then we have a 
 		 * root priming situation. */
 		if(iq->dp == NULL) {
+			int r;
+			/* if under auth zone, no prime needed */
+			if(!auth_zone_delegpt(qstate, iq, delname, delnamelen))
+				return error_response(qstate, id, 
+					LDNS_RCODE_SERVFAIL);
+			if(iq->dp) /* use auth zone dp */
+				return next_state(iq, INIT_REQUEST_2_STATE);
 			/* if there is a stub, then no root prime needed */
-			int r = prime_stub(qstate, iq, id, delname,
+			r = prime_stub(qstate, iq, id, delname,
 				iq->qchase.qclass);
 			if(r == 2)
 				break; /* got noprime-stub-zone, continue */
@@ -1398,6 +1471,12 @@ processInitRequest2(struct module_qstate* qstate, struct iter_qstate* iq,
 			dname_remove_label(&delname, &delnamelen);
 		iq->refetch_glue = 0; /* if CNAME causes restart, no refetch */
 	}
+
+	/* see if we have an auth zone to answer from, improves dp from cache
+	 * (if any dp from cache) with auth zone dp, if that is lower */
+	if(!auth_zone_delegpt(qstate, iq, delname, delnamelen))
+		return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
+
 	/* Check to see if we need to prime a stub zone. */
 	if(prime_stub(qstate, iq, id, delname, iq->qchase.qclass)) {
 		/* A priming sub request was made */
@@ -1882,6 +1961,7 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 	int tf_policy;
 	struct delegpt_addr* target;
 	struct outbound_entry* outq;
+	int auth_fallback = 0;
 
 	/* NOTE: a request will encounter this state for each target it 
 	 * needs to send a query to. That is, at least one per referral, 
@@ -1925,6 +2005,152 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 		qstate->ext_state[id] = module_wait_reply;
 		return 0;
 	}
+
+	if(iq->minimisation_state == INIT_MINIMISE_STATE) {
+		/* (Re)set qinfo_out to (new) delegation point, except when
+		 * qinfo_out is already a subdomain of dp. This happens when
+		 * increasing by more than one label at once (QNAMEs with more
+		 * than MAX_MINIMISE_COUNT labels). */
+		if(!(iq->qinfo_out.qname_len 
+			&& dname_subdomain_c(iq->qchase.qname, 
+				iq->qinfo_out.qname)
+			&& dname_subdomain_c(iq->qinfo_out.qname, 
+				iq->dp->name))) {
+			iq->qinfo_out.qname = iq->dp->name;
+			iq->qinfo_out.qname_len = iq->dp->namelen;
+			iq->qinfo_out.qtype = LDNS_RR_TYPE_A;
+			iq->qinfo_out.qclass = iq->qchase.qclass;
+			iq->qinfo_out.local_alias = NULL;
+			iq->minimise_count = 0;
+		}
+
+		iq->minimisation_state = MINIMISE_STATE;
+	}
+	if(iq->minimisation_state == MINIMISE_STATE) {
+		int qchaselabs = dname_count_labels(iq->qchase.qname);
+		int labdiff = qchaselabs -
+			dname_count_labels(iq->qinfo_out.qname);
+
+		iq->qinfo_out.qname = iq->qchase.qname;
+		iq->qinfo_out.qname_len = iq->qchase.qname_len;
+		iq->minimise_count++;
+		iq->minimise_timeout_count = 0;
+
+		iter_dec_attempts(iq->dp, 1);
+
+		/* Limit number of iterations for QNAMEs with more
+		 * than MAX_MINIMISE_COUNT labels. Send first MINIMISE_ONE_LAB
+		 * labels of QNAME always individually.
+		 */
+		if(qchaselabs > MAX_MINIMISE_COUNT && labdiff > 1 && 
+			iq->minimise_count > MINIMISE_ONE_LAB) {
+			if(iq->minimise_count < MAX_MINIMISE_COUNT) {
+				int multilabs = qchaselabs - 1 - 
+					MINIMISE_ONE_LAB;
+				int extralabs = multilabs / 
+					MINIMISE_MULTIPLE_LABS;
+
+				if (MAX_MINIMISE_COUNT - iq->minimise_count >= 
+					multilabs % MINIMISE_MULTIPLE_LABS)
+					/* Default behaviour is to add 1 label
+					 * every iteration. Therefore, decrement
+					 * the extralabs by 1 */
+					extralabs--;
+				if (extralabs < labdiff)
+					labdiff -= extralabs;
+				else
+					labdiff = 1;
+			}
+			/* Last minimised iteration, send all labels with
+			 * QTYPE=NS */
+			else
+				labdiff = 1;
+		}
+
+		if(labdiff > 1) {
+			verbose(VERB_QUERY, "removing %d labels", labdiff-1);
+			dname_remove_labels(&iq->qinfo_out.qname, 
+				&iq->qinfo_out.qname_len, 
+				labdiff-1);
+		}
+		if(labdiff < 1 || (labdiff < 2 
+			&& (iq->qchase.qtype == LDNS_RR_TYPE_DS
+			|| iq->qchase.qtype == LDNS_RR_TYPE_A)))
+			/* Stop minimising this query, resolve "as usual" */
+			iq->minimisation_state = DONOT_MINIMISE_STATE;
+		else if(!qstate->no_cache_lookup) {
+			struct dns_msg* msg = dns_cache_lookup(qstate->env, 
+				iq->qinfo_out.qname, iq->qinfo_out.qname_len, 
+				iq->qinfo_out.qtype, iq->qinfo_out.qclass, 
+				qstate->query_flags, qstate->region, 
+				qstate->env->scratch, 0);
+			if(msg && msg->rep->an_numrrsets == 0
+				&& FLAGS_GET_RCODE(msg->rep->flags) == 
+				LDNS_RCODE_NOERROR)
+				/* no need to send query if it is already 
+				 * cached as NOERROR/NODATA */
+				return 1;
+		}
+	}
+	if(iq->minimisation_state == SKIP_MINIMISE_STATE) {
+		if(iq->minimise_timeout_count < MAX_MINIMISE_TIMEOUT_COUNT)
+			/* Do not increment qname, continue incrementing next 
+			 * iteration */
+			iq->minimisation_state = MINIMISE_STATE;
+		else if(!qstate->env->cfg->qname_minimisation_strict)
+			/* Too many time-outs detected for this QNAME and QTYPE.
+			 * We give up, disable QNAME minimisation. */
+			iq->minimisation_state = DONOT_MINIMISE_STATE;
+	}
+	if(iq->minimisation_state == DONOT_MINIMISE_STATE)
+		iq->qinfo_out = iq->qchase;
+
+	/* now find an answer to this query */
+	/* see if authority zones have an answer */
+	/* now we know the dp, we can check the auth zone for locally hosted
+	 * contents */
+	if(!iq->auth_zone_avoid && qstate->blacklist) {
+		if(auth_zones_can_fallback(qstate->env->auth_zones,
+			iq->dp->name, iq->dp->namelen, iq->qinfo_out.qclass)) {
+			/* if cache is blacklisted and this zone allows us
+			 * to fallback to the internet, then do so, and
+			 * fetch results from the internet servers */
+			iq->auth_zone_avoid = 1;
+		}
+	}
+	if(iq->auth_zone_avoid) {
+		iq->auth_zone_avoid = 0;
+		auth_fallback = 1;
+	} else if(auth_zones_lookup(qstate->env->auth_zones, &iq->qinfo_out,
+		qstate->region, &iq->response, &auth_fallback, iq->dp->name,
+		iq->dp->namelen)) {
+		/* use this as a response to be processed by the iterator */
+		if(verbosity >= VERB_ALGO) {
+			log_dns_msg("msg from auth zone",
+				&iq->response->qinfo, iq->response->rep);
+		}
+		iq->num_current_queries++;
+		iq->chase_to_rd = 0;
+		iq->dnssec_lame_query = 0;
+		iq->auth_zone_response = 1;
+		return next_state(iq, QUERY_RESP_STATE);
+	}
+	iq->auth_zone_response = 0;
+	if(auth_fallback == 0) {
+		/* like we got servfail from the auth zone lookup, and
+		 * no internet fallback */
+		verbose(VERB_ALGO, "auth zone lookup failed, no fallback,"
+			" servfail");
+		return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
+	}
+	if(iq->dp && iq->dp->auth_dp) {
+		/* we wanted to fallback, but had no delegpt, only the
+		 * auth zone generated delegpt, create an actual one */
+		iq->auth_zone_avoid = 1;
+		return next_state(iq, INIT_REQUEST_STATE);
+	}
+	/* but mostly, fallback==1 (like, when no such auth zone exists)
+	 * and we continue with lookups */
 
 	tf_policy = 0;
 	/* < not <=, because although the array is large enough for <=, the
@@ -2092,105 +2318,6 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 			return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
 		}
 	}
-
-	if(iq->minimisation_state == INIT_MINIMISE_STATE) {
-		/* (Re)set qinfo_out to (new) delegation point, except when
-		 * qinfo_out is already a subdomain of dp. This happens when
-		 * increasing by more than one label at once (QNAMEs with more
-		 * than MAX_MINIMISE_COUNT labels). */
-		if(!(iq->qinfo_out.qname_len 
-			&& dname_subdomain_c(iq->qchase.qname, 
-				iq->qinfo_out.qname)
-			&& dname_subdomain_c(iq->qinfo_out.qname, 
-				iq->dp->name))) {
-			iq->qinfo_out.qname = iq->dp->name;
-			iq->qinfo_out.qname_len = iq->dp->namelen;
-			iq->qinfo_out.qtype = LDNS_RR_TYPE_A;
-			iq->qinfo_out.qclass = iq->qchase.qclass;
-			iq->qinfo_out.local_alias = NULL;
-			iq->minimise_count = 0;
-		}
-
-		iq->minimisation_state = MINIMISE_STATE;
-	}
-	if(iq->minimisation_state == MINIMISE_STATE) {
-		int qchaselabs = dname_count_labels(iq->qchase.qname);
-		int labdiff = qchaselabs -
-			dname_count_labels(iq->qinfo_out.qname);
-
-		iq->qinfo_out.qname = iq->qchase.qname;
-		iq->qinfo_out.qname_len = iq->qchase.qname_len;
-		iq->minimise_count++;
-		iq->minimise_timeout_count = 0;
-
-		iter_dec_attempts(iq->dp, 1);
-
-		/* Limit number of iterations for QNAMEs with more
-		 * than MAX_MINIMISE_COUNT labels. Send first MINIMISE_ONE_LAB
-		 * labels of QNAME always individually.
-		 */
-		if(qchaselabs > MAX_MINIMISE_COUNT && labdiff > 1 && 
-			iq->minimise_count > MINIMISE_ONE_LAB) {
-			if(iq->minimise_count < MAX_MINIMISE_COUNT) {
-				int multilabs = qchaselabs - 1 - 
-					MINIMISE_ONE_LAB;
-				int extralabs = multilabs / 
-					MINIMISE_MULTIPLE_LABS;
-
-				if (MAX_MINIMISE_COUNT - iq->minimise_count >= 
-					multilabs % MINIMISE_MULTIPLE_LABS)
-					/* Default behaviour is to add 1 label
-					 * every iteration. Therefore, decrement
-					 * the extralabs by 1 */
-					extralabs--;
-				if (extralabs < labdiff)
-					labdiff -= extralabs;
-				else
-					labdiff = 1;
-			}
-			/* Last minimised iteration, send all labels with
-			 * QTYPE=NS */
-			else
-				labdiff = 1;
-		}
-
-		if(labdiff > 1) {
-			verbose(VERB_QUERY, "removing %d labels", labdiff-1);
-			dname_remove_labels(&iq->qinfo_out.qname, 
-				&iq->qinfo_out.qname_len, 
-				labdiff-1);
-		}
-		if(labdiff < 1 || (labdiff < 2 
-			&& (iq->qchase.qtype == LDNS_RR_TYPE_DS
-			|| iq->qchase.qtype == LDNS_RR_TYPE_A)))
-			/* Stop minimising this query, resolve "as usual" */
-			iq->minimisation_state = DONOT_MINIMISE_STATE;
-		else if(!qstate->no_cache_lookup) {
-			struct dns_msg* msg = dns_cache_lookup(qstate->env, 
-				iq->qinfo_out.qname, iq->qinfo_out.qname_len, 
-				iq->qinfo_out.qtype, iq->qinfo_out.qclass, 
-				qstate->query_flags, qstate->region, 
-				qstate->env->scratch, 0);
-			if(msg && msg->rep->an_numrrsets == 0
-				&& FLAGS_GET_RCODE(msg->rep->flags) == 
-				LDNS_RCODE_NOERROR)
-				/* no need to send query if it is already 
-				 * cached as NOERROR/NODATA */
-				return 1;
-		}
-	}
-	if(iq->minimisation_state == SKIP_MINIMISE_STATE) {
-		if(iq->minimise_timeout_count < MAX_MINIMISE_TIMEOUT_COUNT)
-			/* Do not increment qname, continue incrementing next 
-			 * iteration */
-			iq->minimisation_state = MINIMISE_STATE;
-		else if(!qstate->env->cfg->qname_minimisation_strict)
-			/* Too many time-outs detected for this QNAME and QTYPE.
-			 * We give up, disable QNAME minimisation. */
-			iq->minimisation_state = DONOT_MINIMISE_STATE;
-	}
-	if(iq->minimisation_state == DONOT_MINIMISE_STATE)
-		iq->qinfo_out = iq->qchase;
 
 	/* We have a valid target. */
 	if(verbosity >= VERB_QUERY) {
@@ -2584,6 +2711,7 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 		iq->deleg_msg = NULL;
 		iq->dp = NULL;
 		iq->dsns_point = NULL;
+		iq->auth_zone_response = 0;
 		/* Note the query restart. */
 		iq->query_restart_count++;
 		iq->sent_count = 0;
@@ -2656,6 +2784,25 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 	if (qstate->env->cfg->qname_minimisation &&
 		!qstate->env->cfg->qname_minimisation_strict)
 		iq->minimisation_state = DONOT_MINIMISE_STATE;
+	if(iq->auth_zone_response) {
+		/* can we fallback? */
+		iq->auth_zone_response = 0;
+		if(!auth_zones_can_fallback(qstate->env->auth_zones,
+			iq->dp->name, iq->dp->namelen, qstate->qinfo.qclass)) {
+			verbose(VERB_ALGO, "auth zone response bad, and no"
+				" fallback possible, servfail");
+			return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
+		}
+		verbose(VERB_ALGO, "auth zone response was bad, "
+			"fallback enabled");
+		iq->auth_zone_avoid = 1;
+		if(iq->dp->auth_dp) {
+			/* we are using a dp for the auth zone, with no
+			 * nameservers, get one first */
+			iq->dp = NULL;
+			return next_state(iq, INIT_REQUEST_STATE);
+		}
+	}
 	return next_state(iq, QUERYTARGETS_STATE);
 }
 

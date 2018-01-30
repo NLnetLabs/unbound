@@ -135,6 +135,65 @@ echo_cmdline(int argc, char* argv[])
 	fprintf(stderr, "\n");
 }
 
+/** spool temp file name */
+static void
+spool_temp_file_name(int* lineno, FILE* cfg, char* id)
+{
+	char line[MAX_LINE_LEN];
+	/* find filename for new file */
+	while(isspace((unsigned char)*id))
+		id++;
+	if(*id == '\0') 
+		fatal_exit("TEMPFILE_NAME must have id, line %d", *lineno);
+	id[strlen(id)-1]=0; /* remove newline */
+	fake_temp_file("_temp_", id, line, sizeof(line));
+	fprintf(cfg, "\"%s\"\n", line);
+}
+
+/** spool temp file */
+static void
+spool_temp_file(FILE* in, int* lineno, char* id)
+{
+	char line[MAX_LINE_LEN];
+	char* parse;
+	FILE* spool;
+	/* find filename for new file */
+	while(isspace((unsigned char)*id))
+		id++;
+	if(*id == '\0') 
+		fatal_exit("TEMPFILE_CONTENTS must have id, line %d", *lineno);
+	id[strlen(id)-1]=0; /* remove newline */
+	fake_temp_file("_temp_", id, line, sizeof(line));
+	/* open file and spool to it */
+	spool = fopen(line, "w");
+	if(!spool) fatal_exit("could not open %s: %s", line, strerror(errno));
+	fprintf(stderr, "testbound is spooling temp file: %s\n", line);
+	if(!cfg_strlist_insert(&cfgfiles, strdup(line))) 
+		fatal_exit("out of memory");
+	line[sizeof(line)-1] = 0;
+	while(fgets(line, MAX_LINE_LEN-1, in)) {
+		parse = line;
+		(*lineno)++;
+		while(isspace((unsigned char)*parse))
+			parse++;
+		if(strncmp(parse, "$INCLUDE_TEMPFILE", 17) == 0) {
+			char l2[MAX_LINE_LEN];
+			char* tid = parse+17;
+			while(isspace((unsigned char)*tid))
+				tid++;
+			tid[strlen(tid)-1]=0; /* remove newline */
+			fake_temp_file("_temp_", tid, l2, sizeof(l2));
+			snprintf(line, sizeof(line), "$INCLUDE %s\n", l2);
+		}
+		if(strncmp(parse, "TEMPFILE_END", 12) == 0) {
+			fclose(spool);
+			return;
+		}
+		fputs(line, spool);
+	}
+	fatal_exit("no TEMPFILE_END in input file");
+}
+
 /** spool autotrust file */
 static void
 spool_auto_file(FILE* in, int* lineno, FILE* cfg, char* id)
@@ -211,6 +270,14 @@ setup_config(FILE* in, int* lineno, int* pass_argc, char* pass_argv[])
 		}
 		if(strncmp(parse, "AUTOTRUST_FILE", 14) == 0) {
 			spool_auto_file(in, lineno, cfg, parse+14);
+			continue;
+		}
+		if(strncmp(parse, "TEMPFILE_NAME", 13) == 0) {
+			spool_temp_file_name(lineno, cfg, parse+13);
+			continue;
+		}
+		if(strncmp(parse, "TEMPFILE_CONTENTS", 17) == 0) {
+			spool_temp_file(in, lineno, parse+17);
 			continue;
 		}
 		if(strncmp(parse, "CONFIG_END", 10) == 0) {

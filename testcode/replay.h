@@ -49,6 +49,14 @@
  * AUTOTRUST_FILE id
  * ; contents of that file
  * AUTOTRUST_END
+ * ; temp file names are echoed as "tmp/xxx.fname"
+ * TEMPFILE_NAME fname
+ * ; temp file contents, inline, deleted at end of run
+ * TEMPFILE_CONTENTS fname
+ * ; contents of that file
+ * ; this creates $INCLUDE /tmp/xxx.fname
+ * $INCLUDE_TEMPFILE fname
+ * TEMPFILE_END
  * CONFIG_END
  * ; comment line.
  * SCENARIO_BEGIN name_of_scenario
