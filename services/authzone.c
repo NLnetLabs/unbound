@@ -3017,7 +3017,6 @@ int auth_zones_lookup(struct auth_zones* az, struct query_info* qinfo,
 	z = auth_zone_find(az, dp_nm, dp_nmlen, qinfo->qclass);
 	if(!z) {
 		lock_rw_unlock(&az->lock);
-		verbose(VERB_ALGO, "no auth zone for query, fallback");
 		/* no auth zone, fallback to internet */
 		*fallback = 1;
 		return 0;
