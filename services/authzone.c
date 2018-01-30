@@ -442,29 +442,29 @@ auth_zone_find_less_equal(struct auth_zones* az, uint8_t* nm, size_t nmlen,
 }
 
 
-/** find the auth zone that is above the given qname */
+/** find the auth zone that is above the given name */
 struct auth_zone*
-auth_zones_find_zone(struct auth_zones* az, uint8_t* qname, size_t qname_len,
-	uint16_t qclass)
+auth_zones_find_zone(struct auth_zones* az, uint8_t* name, size_t name_len,
+	uint16_t dclass)
 {
-	uint8_t* nm = qname;
-	size_t nmlen = qname_len;
+	uint8_t* nm = name;
+	size_t nmlen = name_len;
 	struct auth_zone* z;
-	if(auth_zone_find_less_equal(az, nm, nmlen, qclass, &z)) {
+	if(auth_zone_find_less_equal(az, nm, nmlen, dclass, &z)) {
 		/* exact match */
 		return z;
 	} else {
 		/* less-or-nothing */
 		if(!z) return NULL; /* nothing smaller, nothing above it */
-		/* we found smaller name; smaller may be above the qname,
+		/* we found smaller name; smaller may be above the name,
 		 * but not below it. */
-		nm = dname_get_shared_topdomain(z->name, qname);
+		nm = dname_get_shared_topdomain(z->name, name);
 		dname_count_size_labels(nm, &nmlen);
 	}
 	/* search up */
 	while(!z && !dname_is_root(nm)) {
 		dname_remove_label(&nm, &nmlen);
-		z = auth_zone_find(az, nm, nmlen, qclass);
+		z = auth_zone_find(az, nm, nmlen, dclass);
 	}
 	return z;
 }

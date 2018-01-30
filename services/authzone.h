@@ -484,13 +484,12 @@ int auth_zones_answer(struct auth_zones* az, struct module_env* env,
  * returns the closest auth_zone above the qname that pertains to it.
  * @param az: auth zones structure.
  * @param name: query to look up for.
- * @param namelen: length of name.
+ * @param name_len: length of name.
  * @param dclass: class of zone to find.
- * @param qinfo: query info to lookup.
  * @return NULL or auth_zone that pertains to the query.
  */
 struct auth_zone* auth_zones_find_zone(struct auth_zones* az,
-	uint8_t* name, size_t namelen, uint16_t dclass);
+	uint8_t* name, size_t name_len, uint16_t dclass);
 
 /** find an auth zone by name (exact match by name or NULL returned) */
 struct auth_zone* auth_zone_find(struct auth_zones* az, uint8_t* nm,
