@@ -1451,6 +1451,11 @@ az_parse_file(struct auth_zone* z, FILE* in, uint8_t* rr, size_t rrbuflen,
 				/* skip spaces */
 				while(*incfile == ' ' || *incfile == '\t')
 					incfile++;
+				incfile = strdup(incfile);
+				if(!incfile) {
+					log_err("malloc failure");
+					return 0;
+				}
 				verbose(VERB_ALGO, "opening $INCLUDE %s",
 					incfile);
 				inc = fopen(incfile, "r");
@@ -1459,6 +1464,7 @@ az_parse_file(struct auth_zone* z, FILE* in, uint8_t* rr, size_t rrbuflen,
 						"file %s: %s", z->zonefile,
 						lineno_orig, incfile,
 						strerror(errno));
+					free(incfile);
 					return 0;
 				}
 				/* recurse read that file now */
@@ -1473,6 +1479,7 @@ az_parse_file(struct auth_zone* z, FILE* in, uint8_t* rr, size_t rrbuflen,
 				fclose(inc);
 				verbose(VERB_ALGO, "done with $INCLUDE %s",
 					incfile);
+				free(incfile);
 				state->lineno = lineno_orig;
 			}
 			continue;
