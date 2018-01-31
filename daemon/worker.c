@@ -1738,6 +1738,14 @@ worker_init(struct worker* worker, struct config_file *cfg,
 			comm_timer_set(worker->env.probe_timer, &tv);
 		}
 	}
+	/* zone transfer tasks, setup once per process, if any */
+	if(worker->env.auth_zones
+#ifndef THREADS_DISABLED
+		&& worker->thread_num == 0
+#endif
+		) {
+		auth_xfer_pickup_initial(worker->env.auth_zones, &worker->env);
+	}
 	if(!worker->env.mesh || !worker->env.scratch_buffer) {
 		worker_delete(worker);
 		return 0;

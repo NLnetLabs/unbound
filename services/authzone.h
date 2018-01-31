@@ -259,6 +259,8 @@ struct auth_nextprobe {
 	/* module env for this task */
 	struct module_env* env;
 
+	/** increasing backoff for failures */
+	time_t backoff;
 	/** Timeout for next probe (for SOA) */
 	time_t next_probe;
 	/** timeout callback for next_probe or expiry(if that is sooner).
@@ -430,6 +432,13 @@ struct auth_zones* auth_zones_create(void);
  */
 int auth_zones_apply_cfg(struct auth_zones* az, struct config_file* cfg,
 	int setup);
+
+/** initial pick up of worker timeouts, ties events to worker event loop
+ * @param az: auth zones structure
+ * @param env: worker env, of first worker that receives the events (if any)
+ * 	in its eventloop.
+ */
+void auth_xfer_pickup_initial(struct auth_zones* az, struct module_env* env);
 
 /**
  * Delete auth zones structure

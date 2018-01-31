@@ -78,6 +78,8 @@
 #define AUTH_PROBE_TIMEOUT_STOP 1000 /* msec */
 /* auth transfer timeout for TCP connections, in msec */
 #define AUTH_TRANSFER_TIMEOUT 10000 /* msec */
+/* auth transfer max backoff for failed tranfers and probes */
+#define AUTH_TRANSFER_MAX_BACKOFF 86400 /* sec */
 
 /** pick up nextprobe task to start waiting to perform transfer actions */
 static void xfr_set_timeout(struct auth_xfer* xfr, struct module_env* env,
@@ -5086,6 +5088,21 @@ xfr_set_timeout(struct auth_xfer* xfr, struct module_env* env,
 		if(xfr->expiry < wait)
 			xfr->task_nextprobe->next_probe += xfr->expiry;
 		else	xfr->task_nextprobe->next_probe += wait;
+		if(!failure) xfr->task_nextprobe->backoff = 0;
+	} else {
+		if(!failure) {
+			xfr->task_nextprobe->backoff = 0;
+		} else {
+			if(xfr->task_nextprobe->backoff == 0)
+				xfr->task_nextprobe->backoff = 3;
+			else	xfr->task_nextprobe->backoff *= 2;
+			if(xfr->task_nextprobe->backoff >
+				AUTH_TRANSFER_MAX_BACKOFF)
+				xfr->task_nextprobe->backoff =
+					AUTH_TRANSFER_MAX_BACKOFF;
+		}
+		xfr->task_nextprobe->next_probe +=
+			xfr->task_nextprobe->backoff;
 	}
 
 	if(!xfr->task_nextprobe->timer) {

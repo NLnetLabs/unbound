@@ -695,6 +695,8 @@ daemon_cleanup(struct daemon* daemon)
 	daemon->respip_set = NULL;
 	views_delete(daemon->views);
 	daemon->views = NULL;
+	auth_zones_delete(daemon->env->auth_zones);
+	daemon->env->auth_zones = NULL;
 	/* key cache is cleared by module desetup during next daemon_fork() */
 	daemon_remote_clear(daemon->rc);
 	for(i=0; i<daemon->num; i++)
@@ -728,7 +730,6 @@ daemon_delete(struct daemon* daemon)
 		rrset_cache_delete(daemon->env->rrset_cache);
 		infra_delete(daemon->env->infra_cache);
 		edns_known_options_delete(daemon->env);
-		auth_zones_delete(daemon->env->auth_zones);
 	}
 	ub_randfree(daemon->rand);
 	alloc_clear(&daemon->superalloc);
