@@ -862,8 +862,38 @@ auth_zone_delegpt(struct module_qstate* qstate, struct iter_qstate* iq,
 	lock_rw_rdlock(&z->lock);
 	lock_rw_unlock(&qstate->env->auth_zones->lock);
 	if(z->for_upstream) {
+		if(iq->dp && query_dname_compare(z->name, iq->dp->name) == 0
+			&& iq->dp->auth_dp && qstate->blacklist &&
+			z->fallback_enabled) {
+			/* cache is blacklisted and fallback, and we
+			 * already have an auth_zone dp */
+			if(verbosity>=VERB_ALGO) {
+				char buf[255+1];
+				dname_str(z->name, buf);
+				verbose(VERB_ALGO, "auth_zone %s "
+				  "fallback because cache blacklisted",
+				  buf);
+			}
+			lock_rw_unlock(&z->lock);
+			iq->dp = NULL;
+			return 1;
+		}
 		if(iq->dp==NULL || dname_subdomain_c(z->name, iq->dp->name)) {
 			struct delegpt* dp;
+			if(qstate->blacklist && z->fallback_enabled) {
+				/* cache is blacklisted because of a DNSSEC
+				 * validation failure, and the zone allows
+				 * fallback to the internet, query there. */
+				if(verbosity>=VERB_ALGO) {
+					char buf[255+1];
+					dname_str(z->name, buf);
+					verbose(VERB_ALGO, "auth_zone %s "
+					  "fallback because cache blacklisted",
+					  buf);
+				}
+				lock_rw_unlock(&z->lock);
+				return 1;
+			}
 			dp = (struct delegpt*)regional_alloc_zero(
 				qstate->region, sizeof(*dp));
 			if(!dp) {
