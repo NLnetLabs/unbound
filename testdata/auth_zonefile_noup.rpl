@@ -13,6 +13,7 @@ auth-zone:
 	## url:
 	## queries from downstream clients get authoritative answers.
 	## for-downstream: yes
+	for-downstream: no
 	## queries are used to fetch authoritative answers from this zone,
 	## instead of unbound itself sending queries there.
 	## for-upstream: yes

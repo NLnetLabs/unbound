@@ -13,11 +13,11 @@ auth-zone:
 	## url:
 	## queries from downstream clients get authoritative answers.
 	## for-downstream: yes
-	for-downstream: no
+	for-downstream: yes
 	## queries are used to fetch authoritative answers from this zone,
 	## instead of unbound itself sending queries there.
 	## for-upstream: yes
-	for-upstream: yes
+	for-upstream: no
 	## on failures with for-upstream, fallback to sending queries to
 	## the authority servers
 	## fallback-enabled: no
@@ -39,10 +39,6 @@ mail	3600	IN	A	1.2.3.5
 	3600	IN	AAAA	::5
 ns1	3600	IN	A	1.2.3.4
 ns2	3600	IN	AAAA	::2
-$INCLUDE_TEMPFILE example.inc
-TEMPFILE_END
-TEMPFILE_CONTENTS example.inc
-other	7200	IN	A	1.2.3.6
 TEMPFILE_END
 
 stub-zone:
@@ -50,7 +46,7 @@ stub-zone:
 	stub-addr: 193.0.14.129 	# K.ROOT-SERVERS.NET.
 CONFIG_END
 
-SCENARIO_BEGIN Test authority zone with zonefile
+SCENARIO_BEGIN Test authority zone with zonefile for downstream responses
 
 ; K.ROOT-SERVERS.NET.
 RANGE_BEGIN 0 100
@@ -179,7 +175,7 @@ ENTRY_END
 STEP 20 CHECK_ANSWER
 ENTRY_BEGIN
 MATCH all
-REPLY QR RD RA NOERROR
+REPLY QR RD RA AA NOERROR
 SECTION QUESTION
 www.example.com. IN A
 SECTION ANSWER

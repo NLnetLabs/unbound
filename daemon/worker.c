@@ -58,6 +58,7 @@
 #include "services/cache/rrset.h"
 #include "services/cache/infra.h"
 #include "services/cache/dns.h"
+#include "services/authzone.h"
 #include "services/mesh.h"
 #include "services/localzone.h"
 #include "util/data/msgparse.h"
@@ -1248,6 +1249,22 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 			comm_point_drop_reply(repinfo);
 			return 0;
 		}
+		server_stats_insrcode(&worker->stats, c->buffer);
+		goto send_reply;
+	}
+	if(worker->env.auth_zones &&
+		auth_zones_answer(worker->env.auth_zones, &worker->env,
+		&qinfo, &edns, c->buffer, worker->scratchpad)) {
+		regional_free_all(worker->scratchpad);
+		if(sldns_buffer_limit(c->buffer) == 0) {
+			comm_point_drop_reply(repinfo);
+			return 0;
+		}
+		/* set RA for everyone that can have recursion (based on
+		 * access control list) */
+		if(LDNS_RD_WIRE(sldns_buffer_begin(c->buffer)) &&
+		   acl != acl_deny_non_local && acl != acl_refuse_non_local)
+			LDNS_RA_SET(sldns_buffer_begin(c->buffer));
 		server_stats_insrcode(&worker->stats, c->buffer);
 		goto send_reply;
 	}

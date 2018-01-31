@@ -3085,8 +3085,6 @@ int auth_zones_answer(struct auth_zones* az, struct module_env* env,
 	struct query_info* qinfo, struct edns_data* edns, struct sldns_buffer* buf,
 	struct regional* temp)
 {
-	/* TODO: in handle after localzones, before cache, if az != NULL,
-	 * call this function to answer downstream */
 	struct dns_msg* msg = NULL;
 	struct auth_zone* z;
 	int r;
