@@ -2140,6 +2140,122 @@ void outnet_serviced_query_stop(struct serviced_query* sq, void* cb_arg)
 	}
 }
 
+/** create fd to send to this destination */
+static int
+fd_for_dest(struct outside_network* outnet, struct sockaddr_storage* to_addr,
+	socklen_t to_addrlen)
+{
+	struct sockaddr_storage* addr;
+	socklen_t addrlen;
+	int i;
+	int try;
+
+	/* select interface */
+	if(addr_is_ip6(to_addr, to_addrlen)) {
+		if(outnet->num_ip6 == 0) {
+			char to[64];
+			addr_to_str(to_addr, to_addrlen, to, sizeof(to));
+			verbose(VERB_QUERY, "need ipv6 to send, but no ipv6 outgoing interfaces, for %s", to);
+			return -1;
+		}
+		i = ub_random_max(outnet->rnd, outnet->num_ip6);
+		addr = &outnet->ip6_ifs[i].addr;
+		addrlen = outnet->ip6_ifs[i].addrlen;
+	} else {
+		if(outnet->num_ip4 == 0) {
+			char to[64];
+			addr_to_str(to_addr, to_addrlen, to, sizeof(to));
+			verbose(VERB_QUERY, "need ipv4 to send, but no ipv4 outgoing interfaces, for %s", to);
+			return -1;
+		}
+		i = ub_random_max(outnet->rnd, outnet->num_ip4);
+		addr = &outnet->ip4_ifs[i].addr;
+		addrlen = outnet->ip4_ifs[i].addrlen;
+	}
+
+	/* create fd */
+	for(try = 0; try<1000; try++) {
+		int freebind = 0;
+		int noproto = 0;
+		int inuse = 0;
+		int port = ub_random(outnet->rnd)&0xffff;
+		int fd = -1;
+		if(addr_is_ip6(to_addr, to_addrlen)) {
+			struct sockaddr_in6 sa = *(struct sockaddr_in6*)addr;
+			sa.sin6_port = (in_port_t)htons((uint16_t)port);
+			fd = create_udp_sock(AF_INET6, SOCK_DGRAM,
+				(struct sockaddr*)&sa, addrlen, 1, &inuse, &noproto,
+				0, 0, 0, NULL, 0, freebind, 0);
+		} else {
+			struct sockaddr_in* sa = (struct sockaddr_in*)addr;
+			sa->sin_port = (in_port_t)htons((uint16_t)port);
+			fd = create_udp_sock(AF_INET, SOCK_DGRAM, 
+				(struct sockaddr*)&sa, addrlen, 1, &inuse, &noproto,
+				0, 0, 0, NULL, 0, freebind, 0);
+		}
+		if(fd != -1) {
+			return fd;
+		}
+		if(!inuse) {
+			return -1;
+		}
+	}
+	/* too many tries */
+	log_err("cannot send probe, ports are in use");
+	return -1;
+}
+
+struct comm_point*
+outnet_comm_point_for_udp(struct outside_network* outnet,
+	comm_point_callback_type* cb, void* cb_arg,
+	struct sockaddr_storage* to_addr, socklen_t to_addrlen)
+{
+	struct comm_point* cp;
+	int fd = fd_for_dest(outnet, to_addr, to_addrlen);
+	if(fd == -1) {
+		return NULL;
+	}
+	cp = comm_point_create_udp(outnet->base, fd, outnet->udp_buff,
+		cb, cb_arg);
+	if(!cp) {
+		log_err("malloc failure");
+		close(fd);
+		return NULL;
+	}
+	return cp;
+}
+
+struct comm_point*
+outnet_comm_point_for_tcp(struct outside_network* outnet,
+	comm_point_callback_type* cb, void* cb_arg,
+	struct sockaddr_storage* to_addr, socklen_t to_addrlen,
+	sldns_buffer* query, int timeout)
+{
+	struct comm_point* cp;
+	int fd = outnet_get_tcp_fd(to_addr, to_addrlen, outnet->tcp_mss);
+	if(fd == -1) {
+		return 0;
+	}
+	fd_set_nonblock(fd);
+	if(!outnet_tcp_connect(fd, to_addr, to_addrlen)) {
+		/* outnet_tcp_connect has closed fd on error for us */
+		return 0;
+	}
+	cp = comm_point_create_tcp_out(outnet->base, 65552, cb, cb_arg);
+	if(!cp) {
+		log_err("malloc failure");
+		close(fd);
+		return 0;
+	}
+	cp->repinfo.addrlen = to_addrlen;
+	memcpy(&cp->repinfo.addr, to_addr, to_addrlen);
+	/* set timeout on TCP connection */
+	comm_point_start_listening(cp, fd, timeout);
+	/* copy scratch buffer to cp->buffer */
+	sldns_buffer_copy(cp->buffer, query);
+	return cp;
+}
+
 /** get memory used by waiting tcp entry (in use or not) */
 static size_t
 waiting_tcp_get_mem(struct waiting_tcp* w)

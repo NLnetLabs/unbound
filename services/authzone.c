@@ -3399,67 +3399,6 @@ xfr_probe_nextmaster(struct auth_xfer* xfr)
 	return;
 }
 
-/** create fd to send to this master */
-static int
-xfr_fd_for_master(struct module_env* env, struct sockaddr_storage* to_addr,
-	socklen_t to_addrlen, char* host)
-{
-	struct sockaddr_storage* addr;
-	socklen_t addrlen;
-	int i;
-	int try;
-
-	/* select interface */
-	if(addr_is_ip6(to_addr, to_addrlen)) {
-		if(env->outnet->num_ip6 == 0) {
-			verbose(VERB_QUERY, "need ipv6 to send, but no ipv6 outgoing interfaces, for %s", host);
-			return -1;
-		}
-		i = ub_random_max(env->rnd, env->outnet->num_ip6);
-		addr = &env->outnet->ip6_ifs[i].addr;
-		addrlen = env->outnet->ip6_ifs[i].addrlen;
-	} else {
-		if(env->outnet->num_ip4 == 0) {
-			verbose(VERB_QUERY, "need ipv4 to send, but no ipv4 outgoing interfaces, for %s", host);
-			return -1;
-		}
-		i = ub_random_max(env->rnd, env->outnet->num_ip4);
-		addr = &env->outnet->ip4_ifs[i].addr;
-		addrlen = env->outnet->ip4_ifs[i].addrlen;
-	}
-
-	/* create fd */
-	for(try = 0; try<1000; try++) {
-		int freebind = 0;
-		int noproto = 0;
-		int inuse = 0;
-		int port = ub_random(env->rnd)&0xffff;
-		int fd = -1;
-		if(addr_is_ip6(to_addr, to_addrlen)) {
-			struct sockaddr_in6 sa = *(struct sockaddr_in6*)addr;
-			sa.sin6_port = (in_port_t)htons((uint16_t)port);
-			fd = create_udp_sock(AF_INET6, SOCK_DGRAM,
-				(struct sockaddr*)&sa, addrlen, 1, &inuse, &noproto,
-				0, 0, 0, NULL, 0, freebind, 0);
-		} else {
-			struct sockaddr_in* sa = (struct sockaddr_in*)addr;
-			sa->sin_port = (in_port_t)htons((uint16_t)port);
-			fd = create_udp_sock(AF_INET, SOCK_DGRAM, 
-				(struct sockaddr*)&sa, addrlen, 1, &inuse, &noproto,
-				0, 0, 0, NULL, 0, freebind, 0);
-		}
-		if(fd != -1) {
-			return fd;
-		}
-		if(!inuse) {
-			return -1;
-		}
-	}
-	/* too many tries */
-	log_err("cannot send probe, ports are in use");
-	return -1;
-}
-
 /** create SOA probe packet for xfr */
 static void
 xfr_create_soa_probe_packet(struct auth_xfer* xfr, sldns_buffer* buf, 
@@ -4103,47 +4042,23 @@ xfr_transfer_init_fetch(struct auth_xfer* xfr, struct module_env* env)
 		xfr->task_transfer->cp = NULL;
 	}
 
-	/* connect on fd */
-	if(!xfr->task_transfer->cp) {
-		int fd = outnet_get_tcp_fd(&addr, addrlen, env->cfg->tcp_mss);
-		if(fd == -1) {
-			char zname[255+1];
-			dname_str(xfr->name, zname);
-			verbose(VERB_ALGO, "cannot create fd for "
-				"xfr %s to %s", zname, master->host);
-			return 0;
-		}
-		fd_set_nonblock(fd);
-		if(!outnet_tcp_connect(fd, &addr, addrlen)) {
-			/* outnet_tcp_connect has closed fd on error for us */
-			char zname[255+1];
-			dname_str(xfr->name, zname);
-			verbose(VERB_ALGO, "cannot tcp connect() for"
-				"xfr %s to %s", zname, master->host);
-			return 0;
-		}
-
-		xfr->task_transfer->cp = comm_point_create_tcp_out(
-			env->worker_base, 65552,
-			auth_xfer_transfer_tcp_callback, xfr);
-		if(!xfr->task_transfer->cp) {
-			close(fd);
-			log_err("malloc failure");
-			return 0;
-		}
-		xfr->task_transfer->cp->repinfo.addrlen = addrlen;
-		memcpy(&xfr->task_transfer->cp->repinfo.addr, &addr, addrlen);
-		/* set timeout on TCP connection */
-		comm_point_start_listening(xfr->task_transfer->cp, fd,
-			AUTH_TRANSFER_TIMEOUT);
-	}
-
 	/* set the packet to be written */
 	/* create new ID */
 	xfr->task_transfer->id = (uint16_t)(ub_random(env->rnd)&0xffff);
-	xfr_create_ixfr_packet(xfr, xfr->task_transfer->cp->buffer,
+	xfr_create_ixfr_packet(xfr, env->scratch_buffer,
 		xfr->task_transfer->id);
 
+	/* connect on fd */
+	xfr->task_transfer->cp = outnet_comm_point_for_tcp(env->outnet,
+		auth_xfer_transfer_tcp_callback, xfr, &addr, addrlen,
+		env->scratch_buffer, AUTH_TRANSFER_TIMEOUT);
+	if(!xfr->task_transfer->cp) {
+		char zname[255+1];
+		dname_str(xfr->name, zname);
+		verbose(VERB_ALGO, "cannot create tcp cp connection for "
+			"xfr %s to %s", zname, master->host);
+		return 0;
+	}
 	return 1;
 }
 
@@ -4750,20 +4665,13 @@ xfr_probe_send_probe(struct auth_xfer* xfr, struct module_env* env,
 	xfr_create_soa_probe_packet(xfr, env->scratch_buffer, 
 		xfr->task_probe->id);
 	if(!xfr->task_probe->cp) {
-		int fd = xfr_fd_for_master(env, &addr, addrlen, master->host);
-		if(fd == -1) {
+		xfr->task_probe->cp = outnet_comm_point_for_udp(env->outnet,
+			auth_xfer_probe_udp_callback, xfr, &addr, addrlen);
+		if(!xfr->task_probe->cp) {
 			char zname[255+1];
 			dname_str(xfr->name, zname);
-			verbose(VERB_ALGO, "cannot create fd for "
+			verbose(VERB_ALGO, "cannot create udp cp for "
 				"probe %s to %s", zname, master->host);
-			return 0;
-		}
-		xfr->task_probe->cp = comm_point_create_udp(env->worker_base,
-			fd, env->outnet->udp_buff, auth_xfer_probe_udp_callback,
-			xfr);
-		if(!xfr->task_probe->cp) {
-			close(fd);
-			log_err("malloc failure");
 			return 0;
 		}
 	}

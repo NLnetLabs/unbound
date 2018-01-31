@@ -1437,7 +1437,6 @@ struct comm_point* comm_point_create_udp(struct comm_base *ATTR_UNUSED(base),
 	comm_point_callback_type* ATTR_UNUSED(callback),
 	void* ATTR_UNUSED(callback_arg))
 {
-	/* could create a test framework; and intercept eg. authzone probes */
 	return NULL;
 }
 
@@ -1446,7 +1445,37 @@ struct comm_point* comm_point_create_tcp_out(struct comm_base*
 	comm_point_callback_type* ATTR_UNUSED(callback),
 	void* ATTR_UNUSED(callback_arg))
 {
+	return NULL;
+}
+
+struct comm_point* outnet_comm_point_for_udp(struct outside_network* outnet,
+	comm_point_callback_type* cb, void* cb_arg,
+	struct sockaddr_storage* to_addr, socklen_t to_addrlen)
+{
 	/* used by authzone transfers */
+	(void)outnet;
+	(void)cb;
+	(void)cb_arg;
+	(void)to_addr;
+	(void)to_addrlen;
+	/* TODO */
+	return NULL;
+}
+
+struct comm_point* outnet_comm_point_for_tcp(struct outside_network* outnet,
+	comm_point_callback_type* cb, void* cb_arg,
+	struct sockaddr_storage* to_addr, socklen_t to_addrlen,
+	struct sldns_buffer* query, int timeout)
+{
+	/* used by authzone transfers */
+	(void)outnet;
+	(void)cb;
+	(void)cb_arg;
+	(void)to_addr;
+	(void)to_addrlen;
+	(void)query;
+	(void)timeout;
+	/* TODO */
 	return NULL;
 }
 
