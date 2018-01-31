@@ -565,7 +565,7 @@ struct comm_point* outnet_comm_point_for_udp(struct outside_network* outnet,
  * @param timeout: timeout for the TCP connection.
  * 	timeout in milliseconds, or -1 for no (change to the) timeout.
  *	So seconds*1000.
- * @return commpoint that you can comm_point_send_udp_msg with, or NULL.
+ * @return tcp_out commpoint, or NULL.
  */
 struct comm_point* outnet_comm_point_for_tcp(struct outside_network* outnet,
 	comm_point_callback_type* cb, void* cb_arg,
