@@ -441,6 +441,13 @@ int auth_zones_apply_cfg(struct auth_zones* az, struct config_file* cfg,
 void auth_xfer_pickup_initial(struct auth_zones* az, struct module_env* env);
 
 /**
+ * Cleanup auth zones.  This removes all events from event bases.
+ * Stops the xfr tasks.  But leaves zone data.
+ * @param az: auth zones structure.
+ */
+void auth_zones_cleanup(struct auth_zones* az);
+
+/**
  * Delete auth zones structure
  */
 void auth_zones_delete(struct auth_zones* az);

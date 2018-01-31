@@ -5014,6 +5014,20 @@ void auth_xfer_probe_lookup_callback(void* arg, int rcode, sldns_buffer* buf,
 	xfr_probe_send_or_end(xfr, env);
 }
 
+/** disown task_nextprobe.  caller must hold xfr.lock */
+static void
+xfr_nextprobe_disown(struct auth_xfer* xfr)
+{
+	/* delete the timer, because the next worker to pick this up may
+	 * not have the same event base */
+	comm_timer_delete(xfr->task_nextprobe->timer);
+	xfr->task_nextprobe->timer = NULL;
+	xfr->task_nextprobe->next_probe = 0;
+	/* we don't own this item anymore */
+	xfr->task_nextprobe->worker = NULL;
+	xfr->task_nextprobe->env = NULL;
+}
+
 /** xfer nextprobe timeout callback, this is part of task_nextprobe */
 void
 auth_xfer_timer(void* arg)
@@ -5032,14 +5046,7 @@ auth_xfer_timer(void* arg)
 		lock_basic_lock(&xfr->lock);
 	}
 
-	/* delete the timer, because the next worker to pick this up may
-	 * not have the same event base */
-	comm_timer_delete(xfr->task_nextprobe->timer);
-	xfr->task_nextprobe->timer = NULL;
-	xfr->task_nextprobe->next_probe = 0;
-	/* we don't own this item anymore */
-	xfr->task_nextprobe->worker = NULL;
-	xfr->task_nextprobe->env = NULL;
+	xfr_nextprobe_disown(xfr);
 
 	/* see if we need to start a probe (or maybe it is already in
 	 * progress (due to notify)) */
@@ -5082,25 +5089,28 @@ xfr_set_timeout(struct auth_xfer* xfr, struct module_env* env,
 	xfr->task_nextprobe->next_probe = *env->now;
 	if(xfr->lease_time)
 		xfr->task_nextprobe->next_probe = xfr->lease_time;
+	
+	if(!failure) {
+		xfr->task_nextprobe->backoff = 0;
+	} else {
+		if(xfr->task_nextprobe->backoff == 0)
+				xfr->task_nextprobe->backoff = 3;
+		else	xfr->task_nextprobe->backoff *= 2;
+		if(xfr->task_nextprobe->backoff > AUTH_TRANSFER_MAX_BACKOFF)
+			xfr->task_nextprobe->backoff =
+				AUTH_TRANSFER_MAX_BACKOFF;
+	}
+
 	if(xfr->have_zone) {
 		time_t wait = xfr->refresh;
 		if(failure) wait = xfr->retry;
 		if(xfr->expiry < wait)
 			xfr->task_nextprobe->next_probe += xfr->expiry;
 		else	xfr->task_nextprobe->next_probe += wait;
-		if(!failure) xfr->task_nextprobe->backoff = 0;
+		if(failure)
+			xfr->task_nextprobe->next_probe +=
+				xfr->task_nextprobe->backoff;
 	} else {
-		if(!failure) {
-			xfr->task_nextprobe->backoff = 0;
-		} else {
-			if(xfr->task_nextprobe->backoff == 0)
-				xfr->task_nextprobe->backoff = 3;
-			else	xfr->task_nextprobe->backoff *= 2;
-			if(xfr->task_nextprobe->backoff >
-				AUTH_TRANSFER_MAX_BACKOFF)
-				xfr->task_nextprobe->backoff =
-					AUTH_TRANSFER_MAX_BACKOFF;
-		}
 		xfr->task_nextprobe->next_probe +=
 			xfr->task_nextprobe->backoff;
 	}
@@ -5132,7 +5142,6 @@ xfr_set_timeout(struct auth_xfer* xfr, struct module_env* env,
 void
 auth_xfer_pickup_initial(struct auth_zones* az, struct module_env* env)
 {
-	/* TODO: call this from worker0 at start of unbound */
 	struct auth_xfer* x;
 	lock_rw_wrlock(&az->lock);
 	RBTREE_FOR(x, struct auth_xfer*, &az->xtree) {
@@ -5144,6 +5153,27 @@ auth_xfer_pickup_initial(struct auth_zones* az, struct module_env* env)
 			x->lease_time = *env->now;
 		if(x->task_nextprobe && x->task_nextprobe->worker == NULL)
 			xfr_set_timeout(x, env, 0);
+		lock_basic_unlock(&x->lock);
+	}
+	lock_rw_unlock(&az->lock);
+}
+
+void auth_zones_cleanup(struct auth_zones* az)
+{
+	struct auth_xfer* x;
+	lock_rw_wrlock(&az->lock);
+	RBTREE_FOR(x, struct auth_xfer*, &az->xtree) {
+		lock_basic_lock(&x->lock);
+		if(x->task_nextprobe && x->task_nextprobe->worker != NULL) {
+			xfr_nextprobe_disown(x);
+		}
+		if(x->task_probe && x->task_probe->worker != NULL) {
+			xfr_probe_disown(x);
+		}
+		if(x->task_transfer && x->task_transfer->worker != NULL) {
+			auth_chunks_delete(x->task_transfer);
+			xfr_transfer_disown(x);
+		}
 		lock_basic_unlock(&x->lock);
 	}
 	lock_rw_unlock(&az->lock);
