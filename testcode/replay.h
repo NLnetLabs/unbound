@@ -83,6 +83,7 @@
  *		the step waits for traffic to stop.
  *      o CHECK_AUTOTRUST [id] - followed by FILE_BEGIN [to match] FILE_END.
  *      	The file contents is macro expanded before match.
+ *      o CHECK_TEMPFILE [fname] - followed by FILE_BEGIN [to match] FILE_END
  *      o INFRA_RTT [ip] [dp] [rtt] - update infra cache entry with rtt.
  *      o ERROR
  * ; following entry starts on the next line, ENTRY_BEGIN.
@@ -203,6 +204,8 @@ struct replay_moment {
 		repevt_back_query,
 		/** check autotrust key file */
 		repevt_autotrust_check,
+		/** check a temp file */
+		repevt_tempfile_check,
 		/** an error happens to outbound query */
 		repevt_error,
 		/** assignment to a variable */

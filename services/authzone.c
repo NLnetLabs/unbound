@@ -1390,9 +1390,6 @@ az_insert_rr_decompress(struct auth_zone* z, uint8_t* pkt, size_t pktlen,
 	}
 	rr = sldns_buffer_begin(scratch_buffer);
 	rr_len = sldns_buffer_limit(scratch_buffer);
-	char buf[512];
-	(void)sldns_wire2str_rr_buf(rr, rr_len, buf, sizeof(buf));
-	log_info("decompress is %s", buf);
 	dname_len = dname_valid(rr, rr_len);
 	return az_insert_rr(z, rr, rr_len, dname_len, duplicate);
 }
@@ -1685,8 +1682,8 @@ xfr_find_soa(struct auth_zone* z, struct auth_xfer* xfr)
 	d = soa->data;
 	xfr->have_zone = 1;
 	xfr->serial = sldns_read_uint32(d->rr_data[0]+(d->rr_len[0]-20));
-	xfr->retry = sldns_read_uint32(d->rr_data[0]+(d->rr_len[0]-16));
-	xfr->refresh = sldns_read_uint32(d->rr_data[0]+(d->rr_len[0]-12));
+	xfr->refresh = sldns_read_uint32(d->rr_data[0]+(d->rr_len[0]-16));
+	xfr->retry = sldns_read_uint32(d->rr_data[0]+(d->rr_len[0]-12));
 	xfr->expiry = sldns_read_uint32(d->rr_data[0]+(d->rr_len[0]-8));
 	/* soa minimum at d->rr_len[0]-4 */
 	return 1;
@@ -3974,6 +3971,12 @@ xfr_process_chunk_list(struct auth_xfer* xfr, struct module_env* env,
 	/* unlock */
 	lock_rw_unlock(&z->lock);
 
+	if(verbosity >= VERB_QUERY && xfr->have_zone) {
+		char zname[256];
+		dname_str(xfr->name, zname);
+		verbose(VERB_QUERY, "auth zone %s updated to serial %u", zname,
+			(unsigned)xfr->serial);
+	}
 	/* see if we need to write to a zonefile */
 	xfr_write_after_update(xfr, env);
 	return 1;
