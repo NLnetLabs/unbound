@@ -632,8 +632,9 @@ query_info_entrysetup(struct query_info* q, struct reply_info* r,
 	e->entry.data = r;
 	lock_rw_init(&e->entry.lock);
 	lock_protect(&e->entry.lock, &e->key, sizeof(e->key));
-	lock_protect(&e->entry.lock, &e->entry.hash, sizeof(e->entry.hash) +
-		sizeof(e->entry.key) + sizeof(e->entry.data));
+	lock_protect(&e->entry.lock, &e->entry.hash, sizeof(e->entry.hash));
+	lock_protect(&e->entry.lock, &e->entry.key, sizeof(e->entry.key));
+	lock_protect(&e->entry.lock, &e->entry.data, sizeof(e->entry.data));
 	lock_protect(&e->entry.lock, e->key.qname, e->key.qname_len);
 	q->qname = NULL;
 	return e;

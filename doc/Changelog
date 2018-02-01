@@ -1,3 +1,7 @@
+1 February 2018: Wouter
+	- fix unaligned structure making a false positive in checklock
+	  unitialised memory.
+
 29 January 2018: Ralph
 	- Use NSEC with longest ce to prove wildcard absence.
 	- Only use *.ce to prove wildcard absence, no longer names.
