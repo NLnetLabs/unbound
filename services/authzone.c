@@ -3554,20 +3554,12 @@ check_packet_ok(sldns_buffer* pkt, uint16_t qtype, struct auth_xfer* xfr,
 static int
 xfr_serial_means_update(struct auth_xfer* xfr, uint32_t serial)
 {
-	uint32_t zserial;
-	int have_zone, zone_expired;
-	lock_basic_lock(&xfr->lock);
-	zserial = xfr->serial;
-	have_zone = xfr->have_zone;
-	zone_expired = xfr->zone_expired;
-	lock_basic_unlock(&xfr->lock);
-
-	if(!have_zone)
+	if(!xfr->have_zone)
 		return 1; /* no zone, anything is better */
-	if(zone_expired)
+	if(xfr->zone_expired)
 		return 1; /* expired, the sent serial is better than expired
 			data */
-	if(compare_serial(zserial, serial) < 0)
+	if(compare_serial(xfr->serial, serial) < 0)
 		return 1; /* our serial is smaller than the sent serial,
 			the data is newer, fetch it */
 	return 0;
@@ -4711,10 +4703,12 @@ auth_xfer_probe_timer_callback(void* arg)
 	struct module_env* env;
 	log_assert(xfr->task_probe);
 	env = xfr->task_probe->env;
+	lock_basic_lock(&xfr->lock);
 
 	if(xfr->task_probe->timeout <= AUTH_PROBE_TIMEOUT_STOP) {
 		/* try again with bigger timeout */
 		if(xfr_probe_send_probe(xfr, env, xfr->task_probe->timeout*2)) {
+			lock_basic_unlock(&xfr->lock);
 			return;
 		}
 	}
@@ -4750,19 +4744,28 @@ auth_xfer_probe_udp_callback(struct comm_point* c, void* arg, int err,
 		if(check_packet_ok(c->buffer, LDNS_RR_TYPE_SOA, xfr,
 			&serial)) {
 			/* successful lookup */
+			if(verbosity >= VERB_ALGO) {
+				char buf[256];
+				dname_str(xfr->name, buf);
+				verbose(VERB_ALGO, "auth zone %s: soa probe "
+					"serial is %u", buf, (unsigned)serial);
+			}
 			/* see if this serial indicates that the zone has
 			 * to be updated */
 			if(xfr_serial_means_update(xfr, serial)) {
 				/* if updated, start the transfer task, if needed */
+				verbose(VERB_ALGO, "auth_zone updated, start transfer");
 				if(xfr->task_transfer->worker == NULL) {
 					xfr_probe_disown(xfr);
 					xfr_start_transfer(xfr, env, 
 						xfr_probe_current_master(xfr));
+					lock_basic_unlock(&xfr->lock);
 					return 0;
 
 				}
 			} else {
 				/* if zone not updated, start the wait timer again */
+				verbose(VERB_ALGO, "auth_zone unchanged, new lease, wait");
 				if(xfr->have_zone)
 					xfr->lease_time = *env->now;
 				if(xfr->task_nextprobe->worker == NULL)
@@ -4775,6 +4778,11 @@ auth_xfer_probe_udp_callback(struct comm_point* c, void* arg, int err,
 			 * and we setup the tasks to do next */
 			return 0;
 		}
+	}
+	if(verbosity >= VERB_ALGO) {
+		char buf[256];
+		dname_str(xfr->name, buf);
+		verbose(VERB_ALGO, "auth zone %s: soa probe failed", buf);
 	}
 	
 	/* failed lookup */
@@ -4875,7 +4883,6 @@ xfr_probe_send_or_end(struct auth_xfer* xfr, struct module_env* env)
 		xfr_probe_nextmaster(xfr);
 	}
 
-	lock_basic_lock(&xfr->lock);
 	/* we failed to send this as well, move to the wait task,
 	 * use the shorter retry timeout */
 	xfr_probe_disown(xfr);

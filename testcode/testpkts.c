@@ -572,6 +572,10 @@ read_entry(FILE* in, const char* name, struct sldns_file_parse_state* pstate,
 		} else if(str_keyword(&parse, "ADJUST")) {
 			adjustline(parse, current, cur_reply);
 		} else if(str_keyword(&parse, "EXTRA_PACKET")) {
+			cur_reply->reply_pkt = memdup(pktbuf, pktlen);
+			cur_reply->reply_len = pktlen;
+			if(!cur_reply->reply_pkt)
+				error("out of memory");
 			cur_reply = entry_add_reply(current);
 		} else if(str_keyword(&parse, "SECTION")) {
 			if(str_keyword(&parse, "QUESTION"))
@@ -1558,10 +1562,10 @@ adjust_packet(struct entry* match, uint8_t** answer_pkt, size_t *answer_len,
 		return;
 	}
 	/* copy the ID */
-	if(match->copy_id && reslen >= 2)
-		res[1] = orig[1];
-	if(match->copy_id && reslen >= 1)
-		res[0] = orig[0];
+	if(match->copy_id && reslen >= 2 && query_len >= 2)
+		res[1] = query_pkt[1];
+	if(match->copy_id && reslen >= 1 && query_len >= 1)
+		res[0] = query_pkt[0];
 
 	if(match->copy_ednsdata_assume_clientsubnet) {
 		/** Assume there is only one EDNS option, which is ECS.

@@ -152,6 +152,35 @@ www.example.com. IN A
 SECTION ANSWER
 www.example.com. IN A	10.20.30.40
 ENTRY_END
+
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR NOERROR
+SECTION QUESTION
+example.com. IN SOA
+SECTION ANSWER
+; serial, refresh, retry, expire, minimum
+example.com. IN SOA ns.example.com. hostmaster.example.com. 1 3600 900 86400 3600
+ENTRY_END
+
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR AA NOERROR
+SECTION QUESTION
+example.com. IN AXFR
+SECTION ANSWER
+example.com. IN SOA ns.example.com. hostmaster.example.com. 1 3600 900 86400 3600
+example.com.	IN NS	ns.example.net.
+EXTRA_PACKET
+REPLY QR AA NOERROR
+SECTION QUESTION
+example.com. IN AXFR
+SECTION ANSWER
+www.example.com. IN A	1.2.3.4
+example.com. IN SOA ns.example.com. hostmaster.example.com. 1 3600 900 86400 3600
+ENTRY_END
 RANGE_END
 
 STEP 1 QUERY
@@ -172,5 +201,6 @@ SECTION ANSWER
 ENTRY_END
 
 STEP 30 TIME_PASSES ELAPSE 10
+STEP 40 TRAFFIC
 
 SCENARIO_END
