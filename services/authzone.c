@@ -462,13 +462,17 @@ auth_zones_find_zone(struct auth_zones* az, uint8_t* name, size_t name_len,
 		 * but not below it. */
 		nm = dname_get_shared_topdomain(z->name, name);
 		dname_count_size_labels(nm, &nmlen);
+		z = NULL;
 	}
+
 	/* search up */
-	while(!z && !dname_is_root(nm)) {
-		dname_remove_label(&nm, &nmlen);
+	while(!z) {
 		z = auth_zone_find(az, nm, nmlen, dclass);
+		if(z) return z;
+		if(dname_is_root(nm)) break;
+		dname_remove_label(&nm, &nmlen);
 	}
-	return z;
+	return NULL;
 }
 
 /** find or create zone with name str. caller must have lock on az. 
@@ -4043,13 +4047,16 @@ xfr_transfer_lookup_host(struct auth_xfer* xfr, struct module_env* env)
                 edns.udp_size = (uint16_t)sldns_buffer_capacity(buf);
         else    edns.udp_size = 65535;
 
+	/* unlock xfr during mesh_new_callback() because the callback can be
+	 * called straight away */
+	lock_basic_unlock(&xfr->lock);
 	if(!mesh_new_callback(env->mesh, &qinfo, qflags, &edns, buf, 0,
 		&auth_xfer_transfer_lookup_callback, xfr)) {
+		lock_basic_lock(&xfr->lock);
 		log_err("out of memory lookup up master %s", master->host);
-		free(qinfo.qname);
 		return 0;
 	}
-	free(qinfo.qname);
+	lock_basic_lock(&xfr->lock);
 	return 1;
 }
 
@@ -4069,10 +4076,13 @@ xfr_transfer_init_fetch(struct auth_xfer* xfr, struct module_env* env)
 		memmove(&addr, &xfr->task_transfer->scan_addr->addr, addrlen);
 	} else {
 		if(!extstrtoaddr(master->host, &addr, &addrlen)) {
+			/* the ones that are not in addr format are supposed
+			 * to be looked up.  The lookup has failed however,
+			 * so skip them */
 			char zname[255+1];
 			dname_str(xfr->name, zname);
-			log_err("%s: cannot parse master %s", zname,
-				master->host);
+			log_err("%s: failed lookup, cannot transfer from master %s",
+				zname, master->host);
 			return 0;
 		}
 	}
@@ -4184,6 +4194,12 @@ xfr_master_add_addrs(struct auth_master* m, struct ub_packed_rrset_key* rrset,
 			sa->sin6_port = (in_port_t)htons(UNBOUND_DNS_PORT);
 			memmove(&sa->sin6_addr, rdata, INET6_SIZE);
 		}
+		if(verbosity >= VERB_ALGO) {
+			char s[64];
+			addr_to_str(&a->addr, a->addrlen, s, sizeof(s));
+			verbose(VERB_ALGO, "auth host %s lookup %s",
+				m->host, s);
+		}
 		/* append to list */
 		a->next = m->list;
 		m->list = a;
@@ -4221,6 +4237,9 @@ void auth_xfer_transfer_lookup_callback(void* arg, int rcode, sldns_buffer* buf,
 			}
 		}
 	}
+	if(xfr->task_transfer->lookup_target->list &&
+		xfr->task_transfer->lookup_target == xfr_transfer_current_master(xfr))
+		xfr->task_transfer->scan_addr = xfr->task_transfer->lookup_target->list;
 
 	/* move to lookup AAAA after A lookup, move to next hostname lookup,
 	 * or move to fetch the zone, or, if nothing to do, end task_transfer */
@@ -4690,10 +4709,13 @@ xfr_probe_send_probe(struct auth_xfer* xfr, struct module_env* env,
 		memmove(&addr, &xfr->task_probe->scan_addr->addr, addrlen);
 	} else {
 		if(!extstrtoaddr(master->host, &addr, &addrlen)) {
+			/* the ones that are not in addr format are supposed
+			 * to be looked up.  The lookup has failed however,
+			 * so skip them */
 			char zname[255+1];
 			dname_str(xfr->name, zname);
-			log_err("%s: cannot parse master %s", zname,
-				master->host);
+			log_err("%s: failed lookup, cannot probe to master %s",
+				zname, master->host);
 			return 0;
 		}
 	}
@@ -4894,13 +4916,16 @@ xfr_probe_lookup_host(struct auth_xfer* xfr, struct module_env* env)
                 edns.udp_size = (uint16_t)sldns_buffer_capacity(buf);
         else    edns.udp_size = 65535;
 
+	/* unlock xfr during mesh_new_callback() because the callback can be
+	 * called straight away */
+	lock_basic_unlock(&xfr->lock);
 	if(!mesh_new_callback(env->mesh, &qinfo, qflags, &edns, buf, 0,
 		&auth_xfer_probe_lookup_callback, xfr)) {
+		lock_basic_lock(&xfr->lock);
 		log_err("out of memory lookup up master %s", master->host);
-		free(qinfo.qname);
 		return 0;
 	}
-	free(qinfo.qname);
+	lock_basic_lock(&xfr->lock);
 	return 1;
 }
 
@@ -4916,6 +4941,7 @@ xfr_probe_send_or_end(struct auth_xfer* xfr, struct module_env* env)
 			 * and we may then get an instant cache response,
 			 * and that calls the callback just like a full
 			 * lookup and lookup failures also call callback */
+			lock_basic_unlock(&xfr->lock);
 			return;
 		}
 		xfr_probe_move_to_next_lookup(xfr, env);
@@ -4925,6 +4951,7 @@ xfr_probe_send_or_end(struct auth_xfer* xfr, struct module_env* env)
 	while(!xfr_probe_end_of_list(xfr)) {
 		if(xfr_probe_send_probe(xfr, env, AUTH_PROBE_TIMEOUT)) {
 			/* successfully sent probe, wait for callback */
+			lock_basic_unlock(&xfr->lock);
 			return;
 		}
 		/* failed to send probe, next master */
@@ -4947,6 +4974,7 @@ void auth_xfer_probe_lookup_callback(void* arg, int rcode, sldns_buffer* buf,
 	struct auth_xfer* xfr = (struct auth_xfer*)arg;
 	struct module_env* env;
 	log_assert(xfr->task_probe);
+	lock_basic_lock(&xfr->lock);
 	env = xfr->task_probe->env;
 
 	/* process result */
@@ -4970,6 +4998,9 @@ void auth_xfer_probe_lookup_callback(void* arg, int rcode, sldns_buffer* buf,
 			}
 		}
 	}
+	if(xfr->task_probe->lookup_target->list &&
+		xfr->task_probe->lookup_target == xfr_probe_current_master(xfr))
+		xfr->task_probe->scan_addr = xfr->task_probe->lookup_target->list;
 
 	/* move to lookup AAAA after A lookup, move to next hostname lookup,
 	 * or move to send the probes, or, if nothing to do, end task_probe */
@@ -5017,7 +5048,6 @@ auth_xfer_timer(void* arg)
 		/* pick up the probe task ourselves */
 		xfr->task_probe->worker = env->worker;
 		xfr->task_probe->env = env;
-		lock_basic_unlock(&xfr->lock);
 		xfr->task_probe->cp = NULL;
 
 		/* start the task */
