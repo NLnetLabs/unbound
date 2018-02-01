@@ -3639,7 +3639,7 @@ chunk_rrlist_get_current(struct auth_chunk* rr_chunk, int rr_num,
 		/* skip question section */
 		sldns_buffer_set_position(&pkt, LDNS_HEADER_SIZE);
 		for(i=0; i<LDNS_QDCOUNT(rr_chunk->data); i++) {
-			if(pkt_dname_len(&pkt) ==0) return 0;
+			if(pkt_dname_len(&pkt) == 0) return 0;
 			if(sldns_buffer_remaining(&pkt) < 4) return 0;
 			sldns_buffer_skip(&pkt, 4); /* type and class */
 		}
@@ -3709,7 +3709,7 @@ apply_ixfr(struct auth_xfer* xfr, struct auth_zone* z,
 			/* failed to parse RR */
 			return 0;
 		}
-		if(verbosity>=VERB_ALGO) log_rrlist_position("apply_ixfr",
+		if(verbosity>=7) log_rrlist_position("apply_ixfr",
 			rr_chunk, rr_dname, rr_type, rr_counter);
 		/* twiddle add/del mode and check for start and end */
 		if(rr_counter == 0 && rr_type != LDNS_RR_TYPE_SOA)
@@ -3831,7 +3831,7 @@ apply_axfr(struct auth_xfer* xfr, struct auth_zone* z,
 			/* failed to parse RR */
 			return 0;
 		}
-		if(verbosity>=VERB_ALGO) log_rrlist_position("apply_axfr",
+		if(verbosity>=7) log_rrlist_position("apply_axfr",
 			rr_chunk, rr_dname, rr_type, rr_counter);
 		if(rr_type == LDNS_RR_TYPE_SOA) {
 			if(rr_counter != 0) {
