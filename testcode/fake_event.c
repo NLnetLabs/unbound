@@ -268,6 +268,11 @@ pending_matches_range(struct replay_runtime* runtime,
 	struct fake_pending* p = runtime->pending_list;
 	/* slow, O(N*N), but it works as advertised with weird matching */
 	while(p) {
+		if(p->tcp_pkt_counter != 0) {
+			/* continue tcp transfer */
+			*pend = p;
+			return 1;
+		}
 		if(pending_find_match(runtime, entry, p)) {
 			*pend = p;
 			return 1;
@@ -298,24 +303,45 @@ pending_list_delete(struct replay_runtime* runtime, struct fake_pending* pend)
 	}
 }
 
+/** number of replies in entry */
+static int
+count_reply_packets(struct entry* entry)
+{
+	int count = 0;
+	struct reply_packet* reppkt = entry->reply_list;
+	while(reppkt) {
+		count++;
+		reppkt = reppkt->next;
+	}
+	return count;
+}
+
 /**
  * Fill buffer with reply from the entry.
  */
 static void
 fill_buffer_with_reply(sldns_buffer* buffer, struct entry* entry, uint8_t* q,
-	size_t qlen)
+	size_t qlen, int tcp_pkt_counter)
 {
+	struct reply_packet* reppkt;
 	uint8_t* c;
 	size_t clen;
 	log_assert(entry && entry->reply_list);
 	sldns_buffer_clear(buffer);
-	if(entry->reply_list->reply_from_hex) {
-		c = sldns_buffer_begin(entry->reply_list->reply_from_hex);
-		clen = sldns_buffer_limit(entry->reply_list->reply_from_hex);
+	reppkt = entry->reply_list;
+	if(tcp_pkt_counter > 0) {
+		int i = tcp_pkt_counter;
+		while(reppkt && i--)
+			reppkt = reppkt->next;
+		log_pkt("extra_packet ", reppkt->reply_pkt, reppkt->reply_len);
+	}
+	if(reppkt->reply_from_hex) {
+		c = sldns_buffer_begin(reppkt->reply_from_hex);
+		clen = sldns_buffer_limit(reppkt->reply_from_hex);
 		if(!c) fatal_exit("out of memory");
 	} else {
-		c = entry->reply_list->reply_pkt;
-		clen = entry->reply_list->reply_len;
+		c = reppkt->reply_pkt;
+		clen = reppkt->reply_len;
 	}
 	if(c) {
 		if(q) adjust_packet(entry, &c, &clen, q, qlen);
@@ -346,12 +372,20 @@ answer_callback_from_entry(struct replay_runtime* runtime,
 	c.type = comm_udp;
 	if(pend->transport == transport_tcp)
 		c.type = comm_tcp;
-	fill_buffer_with_reply(c.buffer, entry, pend->pkt, pend->pkt_len);
+	fill_buffer_with_reply(c.buffer, entry, pend->pkt, pend->pkt_len,
+		pend->tcp_pkt_counter);
 	repinfo.c = &c;
 	repinfo.addrlen = pend->addrlen;
 	memcpy(&repinfo.addr, &pend->addr, pend->addrlen);
-	if(!pend->serviced)
-		pending_list_delete(runtime, pend);
+	if(!pend->serviced) {
+		if(entry->reply_list->next &&
+			pend->tcp_pkt_counter < count_reply_packets(entry)) {
+			/* go to next packet next time */
+			pend->tcp_pkt_counter++;
+		} else {
+			pending_list_delete(runtime, pend);
+		}
+	}
 	if((*cb)(&c, cb_arg, NETEVENT_NOERROR, &repinfo)) {
 		fatal_exit("testbound: unexpected: callback returned 1");
 	}
@@ -417,7 +451,7 @@ fake_front_query(struct replay_runtime* runtime, struct replay_moment *todo)
 	if(todo->match->match_transport == transport_tcp)
 		repinfo.c->type = comm_tcp;
 	else	repinfo.c->type = comm_udp;
-	fill_buffer_with_reply(repinfo.c->buffer, todo->match, NULL, 0);
+	fill_buffer_with_reply(repinfo.c->buffer, todo->match, NULL, 0, 0);
 	log_info("testbound: incoming QUERY");
 	log_pkt("query pkt", todo->match->reply_list->reply_pkt,
 		todo->match->reply_list->reply_len);
@@ -454,13 +488,20 @@ fake_pending_callback(struct replay_runtime* runtime,
 		c.type = comm_tcp;
 	if(todo->evt_type == repevt_back_reply && todo->match) {
 		fill_buffer_with_reply(c.buffer, todo->match, p->pkt,
-			p->pkt_len);
+			p->pkt_len, p->tcp_pkt_counter);
 	}
 	repinfo.c = &c;
 	repinfo.addrlen = p->addrlen;
 	memcpy(&repinfo.addr, &p->addr, p->addrlen);
-	if(!p->serviced)
-		pending_list_delete(runtime, p);
+	if(!p->serviced) {
+		if(todo->match->reply_list->next && !error &&
+			p->tcp_pkt_counter < count_reply_packets(todo->match)) {
+			/* go to next packet next time */
+			p->tcp_pkt_counter++;
+		} else {
+			pending_list_delete(runtime, p);
+		}
+	}
 	if((*cb)(&c, cb_arg, error, &repinfo)) {
 		fatal_exit("unexpected: pending callback returned 1");
 	}

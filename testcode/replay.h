@@ -348,6 +348,8 @@ struct fake_pending {
 	enum transport_type transport;
 	/** if this is a serviced query */
 	int serviced;
+	/** if we are handling a multi pkt tcp stream, non 0 and the pkt nr*/
+	int tcp_pkt_counter;
 	/** the runtime structure this is part of */
 	struct replay_runtime* runtime;
 };

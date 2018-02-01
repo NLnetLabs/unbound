@@ -572,11 +572,15 @@ read_entry(FILE* in, const char* name, struct sldns_file_parse_state* pstate,
 		} else if(str_keyword(&parse, "ADJUST")) {
 			adjustline(parse, current, cur_reply);
 		} else if(str_keyword(&parse, "EXTRA_PACKET")) {
+			/* copy current packet into buffer */
 			cur_reply->reply_pkt = memdup(pktbuf, pktlen);
 			cur_reply->reply_len = pktlen;
 			if(!cur_reply->reply_pkt)
 				error("out of memory");
 			cur_reply = entry_add_reply(current);
+			/* clear for next packet */
+			pktlen = LDNS_HEADER_SIZE;
+			memset(pktbuf, 0, pktlen); /* ID = 0, FLAGS="", and rr counts 0 */
 		} else if(str_keyword(&parse, "SECTION")) {
 			if(str_keyword(&parse, "QUESTION"))
 				add_section = LDNS_SECTION_QUESTION;
