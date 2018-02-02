@@ -2857,11 +2857,6 @@ az_generate_wildcard_answer(struct auth_zone* z, struct query_info* qinfo,
 	struct auth_data* wildcard, struct auth_data* node)
 {
 	struct auth_rrset* rrset, *nsec;
-	if(verbosity>=VERB_ALGO) {
-		char wcname[256];
-		sldns_wire2str_dname_buf(wildcard->name, wildcard->namelen,
-			wcname, sizeof(wcname));
-	}
 	if((rrset=az_domain_rrset(wildcard, qinfo->qtype)) != NULL) {
 		/* wildcard has type, add it */
 		if(!msg_add_rrset_an(z, region, msg, wildcard, rrset))
