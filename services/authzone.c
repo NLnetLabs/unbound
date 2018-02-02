@@ -65,6 +65,7 @@
 #include "sldns/str2wire.h"
 #include "sldns/wire2str.h"
 #include "sldns/parseutil.h"
+#include "sldns/keyraw.h"
 #include "validator/val_nsec3.h"
 #include "validator/val_secalgo.h"
 
@@ -1579,6 +1580,42 @@ write_out(FILE* out, const char* str)
 	return 1;
 }
 
+/** convert auth rr to string */
+static int
+auth_rr_to_string(uint8_t* nm, size_t nmlen, uint16_t tp, uint16_t cl,
+	struct packed_rrset_data* data, size_t i, char* s, size_t buflen)
+{
+	int w = 0;
+	size_t slen = buflen, datlen;
+	uint8_t* dat;
+	if(i >= data->count) tp = LDNS_RR_TYPE_RRSIG;
+	dat = nm;
+	datlen = nmlen;
+	w += sldns_wire2str_dname_scan(&dat, &datlen, &s, &slen, NULL, 0);
+	w += sldns_str_print(&s, &slen, "\t");
+	w += sldns_str_print(&s, &slen, "%lu\t", (unsigned long)data->rr_ttl[i]);
+	w += sldns_wire2str_class_print(&s, &slen, cl);
+	w += sldns_str_print(&s, &slen, "\t");
+	w += sldns_wire2str_type_print(&s, &slen, tp);
+	w += sldns_str_print(&s, &slen, "\t");
+	datlen = data->rr_len[i]-2;
+	dat = data->rr_data[i]+2;
+	w += sldns_wire2str_rdata_scan(&dat, &datlen, &s, &slen, tp, NULL, 0);
+
+	if(tp == LDNS_RR_TYPE_DNSKEY) {
+		w += sldns_str_print(&s, &slen, " ;{id = %u}",
+			sldns_calc_keytag_raw(data->rr_data[i]+2,
+				data->rr_len[i]-2));
+	}
+	w += sldns_str_print(&s, &slen, "\n");
+
+	if(w > (int)buflen) {
+		log_nametypeclass(0, "RR too long to print", nm, tp, cl);
+		return 0;
+	}
+	return 1;
+}
+
 /** write rrset to file */
 static int
 auth_zone_write_rrset(struct auth_zone* z, struct auth_data* node,
@@ -1587,15 +1624,8 @@ auth_zone_write_rrset(struct auth_zone* z, struct auth_data* node,
 	size_t i, count = r->data->count + r->data->rrsig_count;
 	char buf[LDNS_RR_BUF_SIZE];
 	for(i=0; i<count; i++) {
-		struct ub_packed_rrset_key key;
-		memset(&key, 0, sizeof(key));
-		key.entry.key = &key;
-		key.entry.data = r->data;
-		key.rk.dname = node->name;
-		key.rk.dname_len = node->namelen;
-		key.rk.type = htons(r->type);
-		key.rk.rrset_class = htons(z->dclass);
-		if(!packed_rr_to_string(&key, i, 0, buf, sizeof(buf))) {
+		if(!auth_rr_to_string(node->name, node->namelen, r->type,
+			z->dclass, r->data, i, buf, sizeof(buf))) {
 			verbose(VERB_ALGO, "failed to rr2str rr %d", (int)i);
 			continue;
 		}
@@ -4279,10 +4309,6 @@ check_xfer_packet(sldns_buffer* pkt, struct auth_xfer* xfr,
 		return 0;
 	}
 	/* check ID */
-	/*
-	log_info("id wire %x, want %x", (int)LDNS_ID_WIRE(wire),
-		(int)xfr->task_transfer->id);
-	*/
 	if(LDNS_ID_WIRE(wire) != xfr->task_transfer->id) {
 		verbose(VERB_ALGO, "xfr to %s failed, packet wrong ID",
 			xfr->task_transfer->master->host);
@@ -4657,6 +4683,7 @@ auth_xfer_transfer_tcp_callback(struct comm_point* c, void* arg, int err,
 	 * a DNS packet, and the timeout */
 	lock_basic_unlock(&xfr->lock);
 	c->tcp_is_reading = 1;
+	sldns_buffer_clear(c->buffer);
 	comm_point_start_listening(c, -1, AUTH_TRANSFER_TIMEOUT);
 	return 0;
 }
