@@ -2,6 +2,8 @@
 	- Fix unfreed locks in log and arc4random at exit of unbound.
 	- unit test with valgrind
 	- Fix lock race condition in dns cache dname synthesis.
+	- lock subnet new item before insertion to please checklocks,
+	  no modification of critical regions outside of lock region.
 
 1 February 2018: Wouter
 	- fix unaligned structure making a false positive in checklock

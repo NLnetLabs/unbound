@@ -339,6 +339,7 @@ update_cache(struct module_qstate *qstate, int id)
 			return;
 		}
 		lru_entry = &mrep_entry->entry;
+		lock_rw_wrlock(&lru_entry->lock);
 		lru_entry->data = calloc(1,
 			sizeof(struct subnet_msg_cache_data));
 		if (!lru_entry->data) {
@@ -374,6 +375,7 @@ update_cache(struct module_qstate *qstate, int id)
 	if (acquired_lock) {
 		lock_rw_unlock(&lru_entry->lock);
 	} else {
+		lock_rw_unlock(&lru_entry->lock);
 		slabhash_insert(subnet_msg_cache, h, lru_entry, lru_entry->data,
 			NULL);
 	}
