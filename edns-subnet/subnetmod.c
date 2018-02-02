@@ -353,7 +353,9 @@ update_cache(struct module_qstate *qstate, int id)
 		log_err("Subnet cache insertion failed");
 		return;
 	}
+	lock_quick_lock(&sne->alloc.lock);
 	rep = reply_info_copy(qstate->return_msg->rep, &sne->alloc, NULL);
+	lock_quick_unlock(&sne->alloc.lock);
 	if (!rep) {
 		if (acquired_lock) lock_rw_unlock(&lru_entry->lock);
 		log_err("Subnet cache insertion failed");
