@@ -456,7 +456,10 @@ main(int argc, char* argv[])
 	for(c=1; c<pass_argc; c++)
 		free(pass_argv[c]);
 	if(res == 0) {
-		log_info("Testbound Exit Success");
+		log_info("Testbound Exit Success\n");
+		if(log_get_lock()) {
+			lock_quick_destroy((lock_quick_type*)log_get_lock());
+		}
 #ifdef HAVE_PTHREAD
 		/* dlopen frees its thread state (dlopen of gost engine) */
 		pthread_exit(NULL);

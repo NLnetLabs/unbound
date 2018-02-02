@@ -127,6 +127,9 @@ void log_set_time(time_t* t);
  */
 void log_set_time_asc(int use_asc);
 
+/** get log lock */
+void* log_get_lock(void);
+
 /**
  * Log informational message.
  * Pass printf formatted arguments. No trailing newline is needed.

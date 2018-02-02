@@ -1,3 +1,6 @@
+2 February 2018: Wouter
+	- Fix unfreed locks in log and arc4random at exit of unbound.
+
 1 February 2018: Wouter
 	- fix unaligned structure making a false positive in checklock
 	  unitialised memory.

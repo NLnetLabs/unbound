@@ -744,5 +744,10 @@ main(int argc, char* argv[])
 
 	run_daemon(cfgfile, cmdline_verbose, debug_mode, log_ident_default, need_pidfile);
 	log_init(NULL, 0, NULL); /* close logfile */
+#ifndef unbound_testbound
+	if(log_get_lock()) {
+		lock_quick_destroy((lock_quick_type*)log_get_lock());
+	}
+#endif
 	return 0;
 }

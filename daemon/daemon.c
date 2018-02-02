@@ -778,6 +778,9 @@ daemon_delete(struct daemon* daemon)
 #  if defined(HAVE_SSL) && defined(OPENSSL_THREADS) && !defined(THREADS_DISABLED)
 	ub_openssl_lock_delete();
 #  endif
+#ifndef HAVE_ARC4RANDOM
+	_ARC4_LOCK_DESTROY();
+#endif
 #elif defined(HAVE_NSS)
 	NSS_Shutdown();
 #endif /* HAVE_SSL or HAVE_NSS */

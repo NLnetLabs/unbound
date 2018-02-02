@@ -4276,6 +4276,8 @@ check_xfer_packet(sldns_buffer* pkt, struct auth_xfer* xfr,
 		return 0;
 	}
 	/* check ID */
+	log_info("id wire %x, want %x", (int)LDNS_ID_WIRE(wire),
+		(int)xfr->task_transfer->id);
 	if(LDNS_ID_WIRE(wire) != xfr->task_transfer->id) {
 		verbose(VERB_ALGO, "xfr to %s failed, packet wrong ID",
 			xfr->task_transfer->master->host);
