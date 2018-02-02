@@ -3874,6 +3874,7 @@ xfr_write_after_update(struct auth_xfer* xfr, struct module_env* env)
 {
 	struct auth_zone* z;
 	char tmpfile[1024];
+	lock_basic_unlock(&xfr->lock);
 
 	/* get lock again, so it is a readlock and concurrently queries
 	 * can be answered */
@@ -3883,9 +3884,11 @@ xfr_write_after_update(struct auth_xfer* xfr, struct module_env* env)
 	if(!z) {
 		lock_rw_unlock(&env->auth_zones->lock);
 		/* the zone is gone, ignore xfr results */
+		lock_basic_lock(&xfr->lock);
 		return;
 	}
 	lock_rw_rdlock(&z->lock);
+	lock_basic_lock(&xfr->lock);
 	lock_rw_unlock(&env->auth_zones->lock);
 
 	if(z->zonefile == NULL) {
