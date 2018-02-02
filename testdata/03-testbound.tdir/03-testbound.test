@@ -107,7 +107,7 @@ for input in $PRE/testdata/*.rpl $PRE/testdata/*.crpl; do
 		if grep "All heap blocks were freed -- no leaks are possible" tmpout >/dev/null 2>&1; then
 			:  # clean
 		else
-			cat tmpout
+			grep "^==" tmpout
 			echo "Memory leaked in $cleaninput"
 			grep "in use at exit" tmpout
 			exitval=1

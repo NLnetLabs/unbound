@@ -568,7 +568,7 @@ rrset_msg(struct ub_packed_rrset_key* rrset, struct regional* region,
 /** synthesize DNAME+CNAME response from cached DNAME item */
 static struct dns_msg*
 synth_dname_msg(struct ub_packed_rrset_key* rrset, struct regional* region, 
-	time_t now, struct query_info* q, struct module_env* env)
+	time_t now, struct query_info* q, enum sec_status* sec_status)
 {
 	struct dns_msg* msg;
 	struct ub_packed_rrset_key* ck;
@@ -580,19 +580,9 @@ synth_dname_msg(struct ub_packed_rrset_key* rrset, struct regional* region,
 		return NULL;
 	/* only allow validated (with DNSSEC) DNAMEs used from cache 
 	 * for insecure DNAMEs, query again. */
-	if(d->security != sec_status_secure) {
-		/* but if we have a CNAME cached with this name, then we
-		 * have previously already allowed this name to pass.
-		 * the next cache lookup is going to fetch that CNAME itself,
-		 * but it is better to have the (unsigned)DNAME + CNAME in
-		 * that case */
-		struct ub_packed_rrset_key* cname_rrset = rrset_cache_lookup(
-			env->rrset_cache, q->qname, q->qname_len,
-			LDNS_RR_TYPE_CNAME, q->qclass, 0, now, 0);
-		if(!cname_rrset)
-			return NULL;
-		lock_rw_unlock(&cname_rrset->entry.lock);
-	}
+	*sec_status = d->security;
+	/* return sec status, so the status of the CNAME can be checked
+	 * by the calling routine. */
 	msg = gen_dns_msg(region, q, 2); /* DNAME + CNAME RRset */
 	if(!msg)
 		return NULL;
@@ -759,13 +749,37 @@ dns_cache_lookup(struct module_env* env,
 		(rrset=find_closest_of_type(env, qname, qnamelen, qclass, now,
 		LDNS_RR_TYPE_DNAME, 1))) {
 		/* synthesize a DNAME+CNAME message based on this */
+		enum sec_status sec_status = sec_status_unchecked;
 		struct dns_msg* msg = synth_dname_msg(rrset, region, now, &k,
-			env);
+			&sec_status);
 		if(msg) {
+			struct ub_packed_rrset_key* cname_rrset;
 			lock_rw_unlock(&rrset->entry.lock);
-			return msg;
+			/* now, after unlocking the DNAME rrset lock,
+			 * check the sec_status, and see if we need to look
+			 * up the CNAME record associated before it can
+			 * be used */
+			/* normally, only secure DNAMEs allowed from cache*/
+			if(sec_status == sec_status_secure)
+				return msg;
+			/* but if we have a CNAME cached with this name, then we
+			 * have previously already allowed this name to pass.
+			 * the next cache lookup is going to fetch that CNAME itself,
+			 * but it is better to have the (unsigned)DNAME + CNAME in
+			 * that case */
+			cname_rrset = rrset_cache_lookup(
+				env->rrset_cache, qname, qnamelen,
+				LDNS_RR_TYPE_CNAME, qclass, 0, now, 0);
+			if(cname_rrset) {
+				/* CNAME already synthesized by
+				 * synth_dname_msg routine, so we can
+				 * straight up return the msg */
+				lock_rw_unlock(&cname_rrset->entry.lock);
+				return msg;
+			}
+		} else {
+			lock_rw_unlock(&rrset->entry.lock);
 		}
-		lock_rw_unlock(&rrset->entry.lock);
 	}
 
 	/* see if we have CNAME for this domain,
