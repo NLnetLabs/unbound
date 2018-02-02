@@ -354,6 +354,10 @@ main(int argc, char* argv[])
 		case 's':
 			free(pass_argv[1]);
 			testbound_selftest();
+			checklock_stop();
+			if(log_get_lock()) {
+				lock_quick_destroy((lock_quick_type*)log_get_lock());
+			}
 			exit(0);
 		case '1':
 #ifdef USE_SHA1
