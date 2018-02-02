@@ -11,7 +11,11 @@ get_make
 exitval=0
 # quiet="" to make verbose
 
-do_valgrind=no
+if test -f $PRE/unbound_do_valgrind_in_test; then
+	do_valgrind=yes
+else
+	do_valgrind=no
+fi
 VALGRIND_FLAGS="--leak-check=full --show-leak-kinds=all"
 # valgrind mode for debug
 #if grep "staticexe=-static" $PRE/Makefile >/dev/null 2>&1; then
