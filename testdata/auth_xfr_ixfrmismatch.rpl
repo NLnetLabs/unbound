@@ -36,18 +36,6 @@ mail.example.com.	3600	IN	A	1.2.3.4
 mail.example.com.	3600	IN	A	1.2.3.5
 mail.example.com.	3600	IN	A	1.2.3.6
 mail.example.com.	3600	IN	A	1.2.3.7
-zup.example.com.	3600	IN	A	1.2.3.4
-yyy.example.com.	3600	IN	A	1.2.3.4
-yyy.example.com.	3600	IN	AAAA	::5
-r1.example.com.	3600	IN	A	1.2.3.4
-r1.example.com.	3600	IN	RRSIG	A 8 3 10200 20170612005010 20170515005010 42393 nlnetlabs.nl. NhEDrHkuIgHkjWhDRVsGOIJWZpSs+QdduilWFe5d+/ZhOheLJbaTYD5w6+ZZ3yPh1tNud+jlg+GyiOSVapLEO31swDCIarL1UfRjRSpxxDCHGag5Zu+S4hF+KURxO3cJk8jLBELMQyRuMRHoKrw/wsiLGVu1YpAyAPPMcjFBNbk=
-r2.example.com.	3600	IN	A	1.2.3.4
-r2.example.com.	3600	IN	RRSIG	A 8 3 10200 20170612005010 20170515005010 42393 nlnetlabs.nl. NhEDrHkuIgHkjWhDRVsGOIJWZpSs+QdduilWFe5d+/ZhOheLJbaTYD5w6+ZZ3yPh1tNud+jlg+GyiOSVapLEO31swDCIarL1UfRjRSpxxDCHGag5Zu+S4hF+KURxO3cJk8jLBELMQyRuMRHoKrw/wsiLGVu1YpAyAPPMcjFBNbk=
-r2.example.com.	3600	IN	RRSIG	AAAA 8 3 10200 20170612005010 20170515005010 42393 nlnetlabs.nl. NhEDrHkuIgHkjWhDRVsGOIJWZpSs+QdduilWFe5d+/ZhOheLJbaTYD5w6+ZZ3yPh1tNud+jlg+GyiOSVapLEO31swDCIarL1UfRjRSpxxDCHGag5Zu+S4hF+KURxO3cJk8jLBELMQyRuMRHoKrw/wsiLGVu1YpAyAPPMcjFBNbk=
-r3.example.com.	3600	IN	A	1.2.3.4
-r3.example.com.	3600	IN	RRSIG	A 8 3 10200 20170612005010 20170515005010 42393 nlnetlabs.nl. NhEDrHkuIgHkjWhDRVsGOIJWZpSs+QdduilWFe5d+/ZhOheLJbaTYD5w6+ZZ3yPh1tNud+jlg+GyiOSVapLEO31swDCIarL1UfRjRSpxxDCHGag5Zu+S4hF+KURxO3cJk8jLBELMQyRuMRHoKrw/wsiLGVu1YpAyAPPMcjFBNbk=
-r3.example.com.	3600	IN	RRSIG	A 8 3 10200 20170612005010 20170515005010 12345 nlnetlabs.nl. NhEDrHkuIgHkjWhDRVsGOIJWZpSs+QdduilWFe5d+/ZhOheLJbaTYD5w6+ZZ3yPh1tNud+jlg+GyiOSVapLEO31swDCIarL1UfRjRSpxxDCHGag5Zu+S4hF+KURxO3cJk8jLBELMQyRuMRHoKrw/wsiLGVu1YpAyAPPMcjFBNbk=
-add.example.com.	3600	IN	A	1.2.3.4
 TEMPFILE_END
 
 stub-zone:
@@ -55,7 +43,7 @@ stub-zone:
 	stub-addr: 193.0.14.129 	# K.ROOT-SERVERS.NET.
 CONFIG_END
 
-SCENARIO_BEGIN Test authority zone with IXFR
+SCENARIO_BEGIN Test authority zone with IXFR that has mismatched data
 
 ; K.ROOT-SERVERS.NET.
 RANGE_BEGIN 0 100
@@ -194,11 +182,8 @@ example.com. IN SOA ns.example.com. hostmaster.example.com. 2 3600 900 86400 360
 example.com. IN SOA ns.example.com. hostmaster.example.com. 1 3600 900 86400 3600
 www.example.com. IN A	1.2.3.4
 mail.example.com.	3600	IN	A	1.2.3.6
-zup.example.com.	3600	IN	A	1.2.3.4
-yyy.example.com.	3600	IN	AAAA	::5
-r1.example.com.	3600	IN	A	1.2.3.4
-r2.example.com.	3600	IN	A	1.2.3.4
-r3.example.com.	3600	IN	RRSIG A 8 3 10200 20170612005010 20170515005010 12345 nlnetlabs.nl. NhEDrHkuIgHkjWhDRVsGOIJWZpSs+QdduilWFe5d+/ZhOheLJbaTYD5w6+ZZ3yPh1tNud+jlg+GyiOSVapLEO31swDCIarL1UfRjRSpxxDCHGag5Zu+S4hF+KURxO3cJk8jLBELMQyRuMRHoKrw/wsiLGVu1YpAyAPPMcjFBNbk=
+; this is the delete of the nonexistant entry
+nonexist.example.com.	3600	IN	A	1.2.3.4
 example.com. IN SOA ns.example.com. hostmaster.example.com. 2 3600 900 86400 3600
 EXTRA_PACKET
 REPLY QR AA NOERROR
@@ -209,6 +194,24 @@ www.example.com. IN A	1.2.3.5
 mail.example.com.	3600	IN	A	1.2.3.8
 mail.example.com. IN AAAA	::5
 add2.example.com.	3600	IN	A	1.2.3.4
+example.com. IN SOA ns.example.com. hostmaster.example.com. 2 3600 900 86400 3600
+ENTRY_END
+
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR AA NOERROR
+SECTION QUESTION
+example.com. IN AXFR
+SECTION ANSWER
+example.com. IN SOA ns.example.com. hostmaster.example.com. 2 3600 900 86400 3600
+example.com.	IN NS	ns.example.net.
+EXTRA_PACKET
+REPLY QR AA NOERROR
+SECTION QUESTION
+example.com. IN AXFR
+SECTION ANSWER
+www.example.com. IN A	1.2.3.6
 example.com. IN SOA ns.example.com. hostmaster.example.com. 2 3600 900 86400 3600
 ENTRY_END
 RANGE_END
@@ -249,7 +252,7 @@ REPLY QR AA RD RA NOERROR
 SECTION QUESTION
 www.example.com. IN A
 SECTION ANSWER
-www.example.com. IN A	1.2.3.5
+www.example.com. IN A	1.2.3.6
 ENTRY_END
 
 ; the zonefile was updated with new contents
@@ -257,20 +260,7 @@ STEP 70 CHECK_TEMPFILE example.com
 FILE_BEGIN
 example.com.	3600	IN	SOA	ns.example.com. hostmaster.example.com. 2 3600 900 86400 3600
 example.com.	3600	IN	NS	ns.example.net.
-add.example.com.	3600	IN	A	1.2.3.4
-add2.example.com.	3600	IN	A	1.2.3.4
-mail.example.com.	3600	IN	A	1.2.3.4
-mail.example.com.	3600	IN	A	1.2.3.5
-mail.example.com.	3600	IN	A	1.2.3.7
-mail.example.com.	3600	IN	A	1.2.3.8
-mail.example.com.	3600	IN	AAAA	::5
-r1.example.com.	3600	IN	RRSIG	A 8 3 10200 20170612005010 20170515005010 42393 nlnetlabs.nl. NhEDrHkuIgHkjWhDRVsGOIJWZpSs+QdduilWFe5d+/ZhOheLJbaTYD5w6+ZZ3yPh1tNud+jlg+GyiOSVapLEO31swDCIarL1UfRjRSpxxDCHGag5Zu+S4hF+KURxO3cJk8jLBELMQyRuMRHoKrw/wsiLGVu1YpAyAPPMcjFBNbk=
-r2.example.com.	3600	IN	RRSIG	AAAA 8 3 10200 20170612005010 20170515005010 42393 nlnetlabs.nl. NhEDrHkuIgHkjWhDRVsGOIJWZpSs+QdduilWFe5d+/ZhOheLJbaTYD5w6+ZZ3yPh1tNud+jlg+GyiOSVapLEO31swDCIarL1UfRjRSpxxDCHGag5Zu+S4hF+KURxO3cJk8jLBELMQyRuMRHoKrw/wsiLGVu1YpAyAPPMcjFBNbk=
-r2.example.com.	3600	IN	RRSIG	A 8 3 10200 20170612005010 20170515005010 42393 nlnetlabs.nl. NhEDrHkuIgHkjWhDRVsGOIJWZpSs+QdduilWFe5d+/ZhOheLJbaTYD5w6+ZZ3yPh1tNud+jlg+GyiOSVapLEO31swDCIarL1UfRjRSpxxDCHGag5Zu+S4hF+KURxO3cJk8jLBELMQyRuMRHoKrw/wsiLGVu1YpAyAPPMcjFBNbk=
-r3.example.com.	3600	IN	A	1.2.3.4
-r3.example.com.	3600	IN	RRSIG	A 8 3 10200 20170612005010 20170515005010 42393 nlnetlabs.nl. NhEDrHkuIgHkjWhDRVsGOIJWZpSs+QdduilWFe5d+/ZhOheLJbaTYD5w6+ZZ3yPh1tNud+jlg+GyiOSVapLEO31swDCIarL1UfRjRSpxxDCHGag5Zu+S4hF+KURxO3cJk8jLBELMQyRuMRHoKrw/wsiLGVu1YpAyAPPMcjFBNbk=
-www.example.com.	3600	IN	A	1.2.3.5
-yyy.example.com.	3600	IN	A	1.2.3.4
+www.example.com.	3600	IN	A	1.2.3.6
 FILE_END
 
 SCENARIO_END
