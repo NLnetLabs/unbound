@@ -334,6 +334,7 @@ fill_buffer_with_reply(sldns_buffer* buffer, struct entry* entry, uint8_t* q,
 		int i = tcp_pkt_counter;
 		while(reppkt && i--)
 			reppkt = reppkt->next;
+		if(!reppkt) fatal_exit("extra packet read from TCP stream but none is available");
 		log_pkt("extra_packet ", reppkt->reply_pkt, reppkt->reply_len);
 	}
 	if(reppkt->reply_from_hex) {

@@ -3472,13 +3472,15 @@ xfr_create_ixfr_packet(struct auth_xfer* xfr, sldns_buffer* buf, uint16_t id)
 
 	/* append serial for IXFR */
 	if(qinfo.qtype == LDNS_RR_TYPE_IXFR) {
-		sldns_buffer_set_position(buf, sldns_buffer_limit(buf));
+		size_t end = sldns_buffer_limit(buf);
+		sldns_buffer_clear(buf);
+		sldns_buffer_set_position(buf, end);
 		/* auth section count 1 */
-		sldns_buffer_write_u16_at(buf, 1, LDNS_NSCOUNT_OFF);
+		sldns_buffer_write_u16_at(buf, LDNS_NSCOUNT_OFF, 1);
 		/* write SOA */
 		sldns_buffer_write_u8(buf, 0xC0); /* compressed ptr to qname */
 		sldns_buffer_write_u8(buf, 0x0C);
-		sldns_buffer_write_u16(buf, qinfo.qtype);
+		sldns_buffer_write_u16(buf, LDNS_RR_TYPE_SOA);
 		sldns_buffer_write_u16(buf, qinfo.qclass);
 		sldns_buffer_write_u32(buf, 0); /* ttl */
 		sldns_buffer_write_u16(buf, 22); /* rdata length */
@@ -3738,7 +3740,7 @@ apply_ixfr(struct auth_xfer* xfr, struct auth_zone* z,
 			/* failed to parse RR */
 			return 0;
 		}
-		if(verbosity>=7) log_rrlist_position("apply_ixfr",
+		if(verbosity>=7) log_rrlist_position("apply ixfr",
 			rr_chunk, rr_dname, rr_type, rr_counter);
 		/* twiddle add/del mode and check for start and end */
 		if(rr_counter == 0 && rr_type != LDNS_RR_TYPE_SOA)
@@ -3756,7 +3758,7 @@ apply_ixfr(struct auth_xfer* xfr, struct auth_zone* z,
 			if(have_transfer_serial == 0) {
 				have_transfer_serial = 1;
 				transfer_serial = serial;
-				delmode = 0;
+				delmode = 1; /* gets negated below */
 			} else if(transfer_serial == serial) {
 				have_transfer_serial++;
 				if(rr_counter == 1) {
@@ -3790,6 +3792,8 @@ apply_ixfr(struct auth_xfer* xfr, struct auth_zone* z,
 		/* if the RR is deleted twice or added twice, then we 
 		 * softfail, and continue with the rest of the IXFR, so
 		 * that we serve something fairly nice during the refetch */
+		if(verbosity>=7) log_rrlist_position((delmode?"del":"add"),
+			rr_chunk, rr_dname, rr_type, rr_counter);
 		if(delmode) {
 			/* delete this RR */
 			int nonexist = 0;
@@ -3802,9 +3806,15 @@ apply_ixfr(struct auth_xfer* xfr, struct auth_zone* z,
 			}
 			if(nonexist) {
 				/* it was removal of a nonexisting RR */
+				if(verbosity>=4) log_rrlist_position(
+					"IXFR error nonexistent RR",
+					rr_chunk, rr_dname, rr_type, rr_counter);
 				softfail = 1;
 			}
-		} else {
+		} else if(rr_counter != 0) {
+			/* skip first SOA RR for addition, it is added in
+			 * the addition part near the end of the ixfr, when
+			 * that serial is seen the second time. */
 			int duplicate = 0;
 			/* add this RR */
 			if(!az_insert_rr_decompress(z, rr_chunk->data,
@@ -3816,6 +3826,9 @@ apply_ixfr(struct auth_xfer* xfr, struct auth_zone* z,
 			}
 			if(duplicate) {
 				/* it was a duplicate */
+				if(verbosity>=4) log_rrlist_position(
+					"IXFR error duplicate RR",
+					rr_chunk, rr_dname, rr_type, rr_counter);
 				softfail = 1;
 			}
 		}
@@ -3823,7 +3836,10 @@ apply_ixfr(struct auth_xfer* xfr, struct auth_zone* z,
 		rr_counter++;
 		chunk_rrlist_gonext(&rr_chunk, &rr_num, &rr_pos, rr_nextpos);
 	}
-	if(softfail) return 0;
+	if(softfail) {
+		verbose(VERB_ALGO, "IXFR did not apply cleanly, fetching full zone");
+		return 0;
+	}
 	return 1;
 }
 
