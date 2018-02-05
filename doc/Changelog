@@ -1,3 +1,7 @@
+5 February 2018: Wouter
+	- Fix #3451: dnstap not building when you have a separate build dir.
+	  And removed protoc warning, set dnstap.proto syntax to proto2.
+
 2 February 2018: Wouter
 	- Fix unfreed locks in log and arc4random at exit of unbound.
 	- unit test with valgrind

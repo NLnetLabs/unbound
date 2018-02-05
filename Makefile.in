@@ -389,7 +389,7 @@ dnstap.lo dnstap.o: $(srcdir)/dnstap/dnstap.c config.h dnstap/dnstap_config.h \
 
 dnstap/dnstap.pb-c.c dnstap/dnstap.pb-c.h: $(srcdir)/dnstap/dnstap.proto
 	@-if test ! -d dnstap; then $(INSTALL) -d dnstap; fi
-	$(PROTOC_C) --c_out=. $(srcdir)/dnstap/dnstap.proto
+	$(PROTOC_C) --c_out=. --proto_path=$(srcdir) $(srcdir)/dnstap/dnstap.proto
 
 dnstap.pb-c.lo dnstap.pb-c.o: dnstap/dnstap.pb-c.c dnstap/dnstap.pb-c.h
 
