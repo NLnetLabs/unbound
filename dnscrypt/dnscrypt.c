@@ -980,6 +980,7 @@ dnsc_apply_cfg(struct dnsc_env *env, struct config_file *cfg)
     if(dnsc_load_local_data(env, cfg) <= 0) {
         fatal_exit("dnsc_apply_cfg: could not load local data");
     }
+    lock_basic_lock(&env->shared_secrets_cache_lock);
     env->shared_secrets_cache = slabhash_create(
         cfg->dnscrypt_shared_secret_cache_slabs,
         HASH_DEFAULT_STARTARRAY,
@@ -990,9 +991,11 @@ dnsc_apply_cfg(struct dnsc_env *env, struct config_file *cfg)
         dnsc_shared_secrets_deldatafunc,
         NULL
     );
+    lock_basic_unlock(&env->shared_secrets_cache_lock);
     if(!env->shared_secrets_cache){
         fatal_exit("dnsc_apply_cfg: could not create shared secrets cache.");
     }
+    lock_basic_lock(&env->nonces_cache_lock);
     env->nonces_cache = slabhash_create(
         cfg->dnscrypt_nonce_cache_slabs,
         HASH_DEFAULT_STARTARRAY,
@@ -1003,6 +1006,7 @@ dnsc_apply_cfg(struct dnsc_env *env, struct config_file *cfg)
         dnsc_nonces_deldatafunc,
         NULL
     );
+    lock_basic_unlock(&env->nonces_cache_lock);
     return 0;
 }
 
@@ -1017,10 +1021,10 @@ dnsc_delete(struct dnsc_env *env)
 	sodium_free(env->rotated_certs);
 	sodium_free(env->certs);
 	sodium_free(env->keypairs);
-	slabhash_delete(env->shared_secrets_cache);
-	slabhash_delete(env->nonces_cache);
 	lock_basic_destroy(&env->shared_secrets_cache_lock);
 	lock_basic_destroy(&env->nonces_cache_lock);
+	slabhash_delete(env->shared_secrets_cache);
+	slabhash_delete(env->nonces_cache);
 	free(env);
 }
 

@@ -89,6 +89,7 @@ static struct ub_ctx* ub_ctx_create_nopipe(void)
 	WSADATA wsa_data;
 #endif
 	
+	checklock_start();
 	log_init(NULL, 0, NULL); /* logs to stderr */
 	log_ident_set("libunbound");
 #ifdef USE_WINSOCK
