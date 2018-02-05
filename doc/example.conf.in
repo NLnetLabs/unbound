@@ -814,11 +814,12 @@ remote-control:
 # upstream (which saves a lookup to the upstream).  The first example
 # has a copy of the root for local usage.  The second serves example.org
 # authoritatively.  zonefile: reads from file (and writes to it if you also
-# download it), master: fetches with AXFR, url: fetches zonefile over http.
+# download it), master: fetches with AXFR and IXFR
 # auth-zone:
 #	name: "."
 #	for-downstream: no
 #	for-upstream: yes
+#	fallback-enabled: yes
 #	master: b.root-servers.net
 #	master: c.root-servers.net
 #	master: e.root-servers.net
@@ -830,7 +831,6 @@ remote-control:
 #	for-downstream: yes
 #	for-upstream: yes
 #	zonefile: "example.org.zone"
-#	url: "http://www.example.com/example.org.zone"
 
 # Views
 # Create named views. Name must be unique. Map views to requests using

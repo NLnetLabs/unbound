@@ -1439,6 +1439,56 @@ Default is no.
 .TP
 .B forward\-ssl\-upstream: \fI<yes or no>
 Alternate syntax for \fBforward\-tls\-upstream\fR.
+.SS "Authority Zone Options"
+.LP
+Authority zones are configured with \fBauth\-zone:\fR, and each one must
+have a \fBname:\fR.  There can be multiple ones, by listing multiple auth\-zone clauses, each with a different name, pertaining to that part of the namespace.
+The authority zone with the name closest to the name looked up is used.
+Authority zones are processed after \fBlocal\-zones\fR and before
+cache (\fBfor\-downstream:\fR \fIyes\fR), and when used in this manner
+make unbound respond like an authority server.  Authority zones are also
+processed after cache, just before going to the network to fetch
+information for recursion (\fBfor\-upstream:\fR \fIyes\fR), and when used
+in this manner provide a local copy of an authority server that speeds up
+lookups of that data.
+.LP
+Authority zones can be read from zonefile.  And can be kept updated via
+AXFR and IXFR.  After update the zonefile is rewritten.  The update mechanism
+uses the SOA timer values and performs SOA UDP queries to detect zone changes.
+.TP
+.B name: \fI<zone name>
+Name of the authority zone.
+.TP
+.B master: \fI<IP address or host name>
+Where to download a copy of the zone from, with AXFR and IXFR.  Multiple
+masters can be specified.  They are all tried if one fails.
+.TP
+.B fallback\-enabled: \fI<yes or no>
+Default no.  If enabled, unbound falls back to querying the internet as
+a resolver for this zone when lookups fail.  For example for DNSSEC
+validation failures.
+.TP
+.B for\-downstream: \fI<yes or no>
+Default yes.  If enabled, unbound serves authority responses to
+downstream clients for this zone.  This option makes unbound behave, for
+the queries with names in this zone, like one of the authority servers for
+that zone.  Turn it off if you want unbound to provide recursion for the
+zone but have a local copy of zone data.  If for\-downstream is no and
+for\-upstream is yes, then unbound will DNSSEC validate the contents of the
+zone before serving the zone contents to clients and store validation
+results in the cache.
+.TP
+.B for\-upstream: \fI<yes or no>
+Default yes.  If enabled, unbound fetches data from this data collection
+for answering recursion queries.  Instead of sending queries over the internet
+to the authority servers for this zone, it'll fetch the data directly from
+the zone data.  Turn it on when you want unbound to provide recursion for
+downstream clients, and use the zone data as a local copy to speed up lookups.
+.TP
+.B zonefile: \fI<filename>
+The filename where the zone is stored.  If not given then no zonefile is used.
+If the file does not exist or is empty, unbound will attempt to fetch zone
+data (eg. from the master servers).
 .SS "View Options"
 .LP
 There may be multiple
