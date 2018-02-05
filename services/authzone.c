@@ -5263,7 +5263,20 @@ auth_xfer_new(struct auth_zone* z)
 	}
 
 	lock_basic_init(&xfr->lock);
-	lock_protect(&xfr->lock, xfr, sizeof(*xfr));
+	lock_protect(&xfr->lock, &xfr->name, sizeof(xfr->name));
+	lock_protect(&xfr->lock, &xfr->namelen, sizeof(xfr->namelen));
+	lock_protect(&xfr->lock, xfr->name, xfr->namelen);
+	lock_protect(&xfr->lock, &xfr->namelabs, sizeof(xfr->namelabs));
+	lock_protect(&xfr->lock, &xfr->dclass, sizeof(xfr->dclass));
+	lock_protect(&xfr->lock, &xfr->notify_received, sizeof(xfr->notify_received));
+	lock_protect(&xfr->lock, &xfr->notify_serial, sizeof(xfr->notify_serial));
+	lock_protect(&xfr->lock, &xfr->zone_expired, sizeof(xfr->zone_expired));
+	lock_protect(&xfr->lock, &xfr->have_zone, sizeof(xfr->have_zone));
+	lock_protect(&xfr->lock, &xfr->serial, sizeof(xfr->serial));
+	lock_protect(&xfr->lock, &xfr->retry, sizeof(xfr->retry));
+	lock_protect(&xfr->lock, &xfr->refresh, sizeof(xfr->refresh));
+	lock_protect(&xfr->lock, &xfr->expiry, sizeof(xfr->expiry));
+	lock_protect(&xfr->lock, &xfr->lease_time, sizeof(xfr->lease_time));
 	lock_protect(&xfr->lock, &xfr->task_nextprobe->worker,
 		sizeof(xfr->task_nextprobe->worker));
 	lock_protect(&xfr->lock, &xfr->task_probe->worker,
