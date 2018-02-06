@@ -3612,7 +3612,7 @@ chunkline_get_line(struct auth_chunk** chunk, size_t* chunk_pos,
 						"line too long");
 					return 0;
 				}
-				sldns_buffer_write_u8(buf, c);
+				sldns_buffer_write_u8(buf, (uint8_t)c);
 				if(c == '\n') {
 					/* we are done */
 					return 1;
