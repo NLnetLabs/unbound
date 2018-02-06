@@ -5438,7 +5438,7 @@ parse_url(char* url, char** host, char** file, int* port, int* ssl)
 		char* end = strchr(p, ']');
 		p++; /* skip over [ */
 		if(end) {
-			*host = dup_prefix(p, (end-p));
+			*host = dup_prefix(p, (size_t)(end-p));
 			if(!*host) return 0;
 			p = end+1; /* skip over ] */
 		} else {
@@ -5449,7 +5449,7 @@ parse_url(char* url, char** host, char** file, int* port, int* ssl)
 	} else {
 		char* end = str_find_first_of_chars(p, ':', '/');
 		if(end) {
-			*host = dup_prefix(p, (end-p));
+			*host = dup_prefix(p, (size_t)(end-p));
 			if(!*host) return 0;
 		} else {
 			*host = dup_all(p);
