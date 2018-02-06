@@ -402,6 +402,8 @@ struct auth_master {
 	int ixfr;
 	/** use ssl for channel */
 	int ssl;
+	/** the port number (for urls) */
+	int port;
 	/** if the host is a hostname, the list of resolved addrs, if any*/
 	struct auth_addr* list;
 };
@@ -563,10 +565,11 @@ struct auth_xfer* auth_xfer_create(struct auth_zones* az, struct auth_zone* z);
  * Set masters in auth xfer structure from config.
  * @param list: pointer to start of list.  The malloced list is returned here.
  * @param c: the config items to copy over.
+ * @param with_http: if true, http urls are also included, before the masters.
  * @return false on failure.
  */
-int xfer_set_masters(struct auth_master** list, struct config_auth* c);
-
+int xfer_set_masters(struct auth_master** list, struct config_auth* c,
+	int with_http);
 
 /** xfer nextprobe timeout callback, this is part of task_nextprobe */
 void auth_xfer_timer(void* arg);
@@ -576,6 +579,9 @@ int auth_xfer_probe_udp_callback(struct comm_point* c, void* arg, int err,
         struct comm_reply* repinfo);
 /** callback for task_transfer tcp connections */
 int auth_xfer_transfer_tcp_callback(struct comm_point* c, void* arg, int err,
+        struct comm_reply* repinfo);
+/** callback for task_transfer http connections */
+int auth_xfer_transfer_http_callback(struct comm_point* c, void* arg, int err,
         struct comm_reply* repinfo);
 /** xfer probe timeout callback, part of task_probe */
 void auth_xfer_probe_timer_callback(void* arg);

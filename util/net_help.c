@@ -271,6 +271,19 @@ int netblockstrtoaddr(const char* str, int port, struct sockaddr_storage* addr,
 	return 1;
 }
 
+/** store port number into sockaddr structure */
+void
+sockaddr_store_port(struct sockaddr_storage* addr, socklen_t addrlen, int port)
+{
+	if(addr_is_ip6(addr, addrlen)) {
+		struct sockaddr_in6* sa = (struct sockaddr_in6*)addr;
+		sa->sin6_port = (in_port_t)htons(port);
+	} else {
+		struct sockaddr_in* sa = (struct sockaddr_in*)addr;
+		sa->sin_port = (in_port_t)htons(port);
+	}
+}
+
 void
 log_nametypeclass(enum verbosity_value v, const char* str, uint8_t* name, 
 	uint16_t type, uint16_t dclass)

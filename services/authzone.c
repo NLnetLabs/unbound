@@ -1818,12 +1818,12 @@ auth_zones_cfg(struct auth_zones* az, struct config_auth* c)
 	if(x) {
 		z->zone_is_slave = 1;
 		/* set options on xfer zone */
-		if(!xfer_set_masters(&x->task_probe->masters, c)) {
+		if(!xfer_set_masters(&x->task_probe->masters, c, 0)) {
 			lock_basic_unlock(&x->lock);
 			lock_rw_unlock(&z->lock);
 			return 0;
 		}
-		if(!xfer_set_masters(&x->task_transfer->masters, c)) {
+		if(!xfer_set_masters(&x->task_transfer->masters, c, 1)) {
 			lock_basic_unlock(&x->lock);
 			lock_rw_unlock(&z->lock);
 			return 0;
@@ -3443,7 +3443,8 @@ xfr_create_soa_probe_packet(struct auth_xfer* xfr, sldns_buffer* buf,
 
 /** create IXFR/AXFR packet for xfr */
 static void
-xfr_create_ixfr_packet(struct auth_xfer* xfr, sldns_buffer* buf, uint16_t id)
+xfr_create_ixfr_packet(struct auth_xfer* xfr, sldns_buffer* buf, uint16_t id,
+	struct auth_master* master)
 {
 	struct query_info qinfo;
 	uint32_t serial;
@@ -3460,7 +3461,7 @@ xfr_create_ixfr_packet(struct auth_xfer* xfr, sldns_buffer* buf, uint16_t id)
 	xfr->task_transfer->on_ixfr_is_axfr = 0;
 	xfr->task_transfer->on_ixfr = 1;
 	qinfo.qtype = LDNS_RR_TYPE_IXFR;
-	if(!have_zone || xfr->task_transfer->ixfr_fail) {
+	if(!have_zone || xfr->task_transfer->ixfr_fail || !master->ixfr) {
 		qinfo.qtype = LDNS_RR_TYPE_AXFR;
 		xfr->task_transfer->ixfr_fail = 0;
 		xfr->task_transfer->on_ixfr = 0;
@@ -4137,11 +4138,34 @@ xfr_transfer_init_fetch(struct auth_xfer* xfr, struct module_env* env)
 		xfr->task_transfer->cp = NULL;
 	}
 
+	if(master->http) {
+		/* perform http fetch */
+		/* store http port number into sockaddr,
+		 * unless someone used unbound's host@port notation */
+		if(strchr(master->host, '@') == NULL)
+			sockaddr_store_port(&addr, addrlen, master->port);
+		/* TODO
+		xfr->task_transfer->cp = outnet_comm_point_for_http(env->outnet,
+			auth_xfer_transfer_http_callback, xfr, &addr, addrlen,
+			env->scratch_buffer, AUTH_TRANSFER_TIMEOUT,
+			master->ssl, master->host, master->file);
+		*/
+		if(!xfr->task_transfer->cp) {
+			char zname[255+1];
+			dname_str(xfr->name, zname);
+			verbose(VERB_ALGO, "cannot create http cp connection for "
+				"%s to %s", zname, master->host);
+			return 0;
+		}
+		return 1;
+	}
+
+	/* perform AXFR/IXFR */
 	/* set the packet to be written */
 	/* create new ID */
 	xfr->task_transfer->id = (uint16_t)(ub_random(env->rnd)&0xffff);
 	xfr_create_ixfr_packet(xfr, env->scratch_buffer,
-		xfr->task_transfer->id);
+		xfr->task_transfer->id, master);
 
 	/* connect on fd */
 	xfr->task_transfer->cp = outnet_comm_point_for_tcp(env->outnet,
@@ -4698,6 +4722,29 @@ auth_xfer_transfer_tcp_callback(struct comm_point* c, void* arg, int err,
 	comm_point_start_listening(c, -1, AUTH_TRANSFER_TIMEOUT);
 	return 0;
 }
+
+/** callback for task_transfer http connections */
+int
+auth_xfer_transfer_http_callback(struct comm_point* c, void* arg, int err,
+        struct comm_reply* ATTR_UNUSED(repinfo))
+{
+	struct auth_xfer* xfr = (struct auth_xfer*)arg;
+	struct module_env* env;
+	log_assert(xfr->task_transfer);
+	env = xfr->task_transfer->env;
+	lock_basic_lock(&xfr->lock);
+	/* TODO */
+	(void)env;
+	(void)err;
+	/* if we want to read more messages, setup the commpoint to read
+	 * a DNS packet, and the timeout */
+	lock_basic_unlock(&xfr->lock);
+	c->tcp_is_reading = 1;
+	sldns_buffer_clear(c->buffer);
+	comm_point_start_listening(c, -1, AUTH_TRANSFER_TIMEOUT);
+	return 0;
+}
+
 
 /** start transfer task by this worker , xfr is locked. */
 static void
@@ -5325,8 +5372,115 @@ auth_master_new(struct auth_master*** list)
 	return m;
 }
 
+/** dup_prefix : create string from initial part of other string, malloced */
+static char*
+dup_prefix(char* str, size_t num)
+{
+	char* result;
+	size_t len = strlen(str);
+	if(len < num) num = len; /* not more than strlen */
+	result = (char*)malloc(num+1);
+	if(!result) {
+		log_err("malloc failure");
+		return result;
+	}
+	memmove(result, str, num);
+	result[num] = 0;
+	return result;
+}
+
+/** dup string and print error on error */
+static char*
+dup_all(char* str)
+{
+	char* result = strdup(str);
+	if(!str) {
+		log_err("malloc failure");
+		return NULL;
+	}
+	return result;
+}
+
+/** find first of two characters */
+static char*
+str_find_first_of_chars(char* s, char a, char b)
+{
+	char* ra = strchr(s, a);
+	char* rb = strchr(s, b);
+	if(!ra) return rb;
+	if(!rb) return ra;
+	if(ra < rb) return ra;
+	return rb;
+}
+
+/** parse URL into host and file parts, false on malloc or parse error */
+static int
+parse_url(char* url, char** host, char** file, int* port, int* ssl)
+{
+	char* p = url;
+	/* parse http://www.example.com/file.htm
+	 * or http://127.0.0.1   (index.html)
+	 * or https://[::1@1234]/a/b/c/d */
+	*ssl = 0;
+	*port = 80;
+
+	/* parse http:// or https:// */
+	if(strncmp(p, "http://", 7) == 0) {
+		p += 7;
+	} else if(strncmp(p, "https://", 8) == 0) {
+		p += 8;
+		*ssl = 1;
+		*port = 443;
+	}
+
+	/* parse hostname part */
+	if(p[0] == '[') {
+		char* end = strchr(p, ']');
+		p++; /* skip over [ */
+		if(end) {
+			*host = dup_prefix(p, (end-p));
+			if(!*host) return 0;
+			p = end+1; /* skip over ] */
+		} else {
+			*host = dup_all(p);
+			if(!*host) return 0;
+			p = end;
+		}
+	} else {
+		char* end = str_find_first_of_chars(p, ':', '/');
+		if(end) {
+			*host = dup_prefix(p, (end-p));
+			if(!*host) return 0;
+		} else {
+			*host = dup_all(p);
+			if(!*host) return 0;
+		}
+		p = end; /* at next : or / or NULL */
+	}
+
+	/* parse port number */
+	if(p && p[0] == ':') {
+		char* end = NULL;
+		*port = strtol(p+1, &end, 10);
+		p = end;
+	}
+
+	/* parse filename part */
+	while(p && *p == '/')
+		p++;
+	if(!p || p[0] == 0)
+		*file = strdup("index.html");
+	else	*file = strdup(p);
+	if(!*file) {
+		log_err("malloc failure");
+		return 0;
+	}
+	return 1;
+}
+
 int
-xfer_set_masters(struct auth_master** list, struct config_auth* c)
+xfer_set_masters(struct auth_master** list, struct config_auth* c,
+	int with_http)
 {
 	struct auth_master* m;
 	struct config_strlist* p;
@@ -5334,19 +5488,16 @@ xfer_set_masters(struct auth_master** list, struct config_auth* c)
 	while(*list) {
 		list = &( (*list)->next );
 	}
-	for(p = c->masters; p; p = p->next) {
-		m = auth_master_new(&list);
-		m->ixfr = 1;
-		m->host = strdup(p->str);
-		if(!m->host) {
-			log_err("malloc failure");
-			return 0;
-		}
-	}
-	for(p = c->urls; p; p = p->next) {
+	if(with_http)
+	  for(p = c->urls; p; p = p->next) {
 		m = auth_master_new(&list);
 		m->http = 1;
-		/* TODO parse url, get host, file */
+		if(!parse_url(p->str, &m->host, &m->file, &m->port, &m->ssl))
+			return 0;
+	}
+	for(p = c->masters; p; p = p->next) {
+		m = auth_master_new(&list);
+		m->ixfr = 1; /* this flag is not configurable */
 		m->host = strdup(p->str);
 		if(!m->host) {
 			log_err("malloc failure");
