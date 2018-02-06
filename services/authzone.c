@@ -68,6 +68,7 @@
 #include "sldns/keyraw.h"
 #include "validator/val_nsec3.h"
 #include "validator/val_secalgo.h"
+#include <ctype.h>
 
 /** bytes to use for NSEC3 hash buffer. 20 for sha1 */
 #define N3HASHBUFLEN 32
@@ -3592,6 +3593,277 @@ xfr_serial_means_update(struct auth_xfer* xfr, uint32_t serial)
 	return 0;
 }
 
+/** read one line from chunks into buffer at current position */
+static int
+chunkline_get_line(struct auth_chunk** chunk, size_t* chunk_pos,
+	sldns_buffer* buf)
+{
+	int readsome = 0;
+	while(*chunk) {
+		/* more text in this chunk? */
+		if(*chunk_pos < (*chunk)->len) {
+			readsome = 1;
+			while(*chunk_pos < (*chunk)->len) {
+				char c = (char)((*chunk)->data[*chunk_pos]);
+				(*chunk_pos)++;
+				if(sldns_buffer_remaining(buf) < 2) {
+					/* buffer too short */
+					verbose(VERB_ALGO, "http chunkline, "
+						"line too long");
+					return 0;
+				}
+				sldns_buffer_write_u8(buf, c);
+				if(c == '\n') {
+					/* we are done */
+					return 1;
+				}
+			}
+		}
+		/* move to next chunk */
+		*chunk = (*chunk)->next;
+		*chunk_pos = 0;
+	}
+	/* no more text */
+	if(readsome) return 1;
+	return 0;
+}
+
+/** count number of open and closed parenthesis in a chunkline */
+static int
+chunkline_count_parens(sldns_buffer* buf, size_t start)
+{
+	size_t end = sldns_buffer_position(buf);
+	size_t i;
+	int count = 0;
+	int squote = 0, dquote = 0;
+	for(i=start; i<end; i++) {
+		char c = (char)sldns_buffer_read_u8_at(buf, i);
+		if(squote && c != '\'') continue;
+		if(dquote && c != '"') continue;
+		if(c == '"')
+			dquote = !dquote; /* skip quoted part */
+		else if(c == '\'')
+			squote = !squote; /* skip quoted part */
+		else if(c == '(')
+			count ++;
+		else if(c == ')')
+			count --;
+		else if(c == ';') {
+			/* rest is a comment */
+			return count;
+		}
+	}
+	return count;
+}
+
+/** remove trailing ;... comment from a line in the chunkline buffer */
+static void
+chunkline_remove_trailcomment(sldns_buffer* buf, size_t start)
+{
+	size_t end = sldns_buffer_position(buf);
+	size_t i;
+	int squote = 0, dquote = 0;
+	for(i=start; i<end; i++) {
+		char c = (char)sldns_buffer_read_u8_at(buf, i);
+		if(squote && c != '\'') continue;
+		if(dquote && c != '"') continue;
+		if(c == '"')
+			dquote = !dquote; /* skip quoted part */
+		else if(c == '\'')
+			squote = !squote; /* skip quoted part */
+		else if(c == ';') {
+			/* rest is a comment */
+			sldns_buffer_set_position(buf, i);
+			return;
+		}
+	}
+	/* nothing to remove */
+}
+
+/** see if a chunkline is a comment line (or empty line) */
+static int
+chunkline_is_comment_line_or_empty(sldns_buffer* buf)
+{
+	size_t i, end = sldns_buffer_limit(buf);
+	for(i=0; i<end; i++) {
+		char c = (char)sldns_buffer_read_u8_at(buf, i);
+		if(c == ';')
+			return 1; /* comment */
+		else if(c != ' ' && c != '\t' && c != '\r' && c != '\n')
+			return 0; /* not a comment */
+	}
+	return 1; /* empty */
+}
+
+/** find a line with ( ) collated */
+static int
+chunkline_get_line_collated(struct auth_chunk** chunk, size_t* chunk_pos,
+        sldns_buffer* buf)
+{
+	size_t pos;
+	int parens = 0;
+	sldns_buffer_clear(buf);
+	pos = sldns_buffer_position(buf);
+	if(!chunkline_get_line(chunk, chunk_pos, buf)) {
+		if(sldns_buffer_position(buf) < sldns_buffer_limit(buf))
+			sldns_buffer_write_u8_at(buf, sldns_buffer_position(buf), 0);
+		else sldns_buffer_write_u8_at(buf, sldns_buffer_position(buf)-1, 0);
+		sldns_buffer_flip(buf);
+		return 0;
+	}
+	parens += chunkline_count_parens(buf, pos);
+	while(parens > 0) {
+		chunkline_remove_trailcomment(buf, pos);
+		pos = sldns_buffer_position(buf);
+		if(!chunkline_get_line(chunk, chunk_pos, buf)) {
+			if(sldns_buffer_position(buf) < sldns_buffer_limit(buf))
+				sldns_buffer_write_u8_at(buf, sldns_buffer_position(buf), 0);
+			else sldns_buffer_write_u8_at(buf, sldns_buffer_position(buf)-1, 0);
+			sldns_buffer_flip(buf);
+			return 0;
+		}
+		parens += chunkline_count_parens(buf, pos);
+	}
+
+	if(sldns_buffer_remaining(buf) < 1) {
+		verbose(VERB_ALGO, "http chunkline: "
+			"line too long");
+		return 0;
+	}
+	sldns_buffer_write_u8_at(buf, sldns_buffer_position(buf), 0);
+	sldns_buffer_flip(buf);
+	return 1;
+}
+
+/** find noncomment RR line in chunks, collates lines if ( ) format */
+static int
+chunkline_non_comment_RR(struct auth_chunk** chunk, size_t* chunk_pos,
+	sldns_buffer* buf)
+{
+	while(chunkline_get_line_collated(chunk, chunk_pos, buf)) {
+		if(chunkline_is_comment_line_or_empty(buf)) {
+			/* a comment, go to next line */
+			continue;
+		}
+		if(strncmp((char*)sldns_buffer_begin(buf), "$ORIGIN", 7)==0) {
+			/* skip $ORIGIN to find RR */
+			continue;
+		}
+		if(strncmp((char*)sldns_buffer_begin(buf), "$TTL", 4)==0) {
+			/* skip $TTL to find RR */
+			continue;
+		}
+		return 1;
+	}
+	/* no noncomments, fail */
+	return 0;
+}
+
+/** check syntax of chunklist zonefile, parse SOA RR, return false on
+ * failure and return a string in the scratch buffer (SOA RR string)
+ * on failure. */
+static int
+http_zonefile_syntax_check(struct auth_xfer* xfr, sldns_buffer* buf)
+{
+	uint8_t rr[LDNS_RR_BUF_SIZE];
+	size_t rr_len = 0, dname_len = 0;
+	struct auth_chunk* chunk;
+	size_t chunk_pos;
+	int e;
+	chunk = xfr->task_transfer->chunks_first;
+	chunk_pos = 0;
+	if(!chunkline_non_comment_RR(&chunk, &chunk_pos, buf)) {
+		return 0;
+	}
+	e=sldns_str2wire_rr_buf((char*)sldns_buffer_begin(buf), rr, &rr_len,
+		&dname_len, 3600, NULL, 0, NULL, 0);
+	if(e != 0) {
+		log_err("parse failure on SOA RR[%d]: %s",
+			LDNS_WIREPARSE_OFFSET(e),
+			sldns_get_errorstr_parse(LDNS_WIREPARSE_ERROR(e)));
+		return 0;
+	}
+	return 1;
+}
+
+/** remove newlines from collated line */
+static void
+chunkline_newline_removal(sldns_buffer* buf)
+{
+	size_t i, end=sldns_buffer_limit(buf);
+	for(i=0; i<end; i++) {
+		char c = (char)sldns_buffer_read_u8_at(buf, i);
+		if(c == '\n')
+			sldns_buffer_write_u8_at(buf, i, (uint8_t)' ');
+	}
+}
+
+/** process $ORIGIN for http */
+static int
+http_parse_origin(sldns_buffer* buf, struct sldns_file_parse_state* pstate)
+{
+	char* line = (char*)sldns_buffer_begin(buf);
+	if(strncmp(line, "$ORIGIN", 7) == 0 &&
+		isspace((unsigned char)line[7])) {
+		int s;
+		pstate->origin_len = sizeof(pstate->origin);
+		s = sldns_str2wire_dname_buf(sldns_strip_ws(line+8),
+			pstate->origin, &pstate->origin_len);
+		if(s) pstate->origin_len = 0;
+		return 1;
+	}
+	return 0;
+}
+
+/** process $TTL for http */
+static int
+http_parse_ttl(sldns_buffer* buf, struct sldns_file_parse_state* pstate)
+{
+	char* line = (char*)sldns_buffer_begin(buf);
+	if(strncmp(line, "$TTL", 4) == 0 &&
+		isspace((unsigned char)line[4])) {
+		const char* end = NULL;
+		pstate->default_ttl = sldns_str2period(
+			sldns_strip_ws(line+5), &end);
+		return 1;
+	}
+	return 0;
+}
+
+/** for http download, parse and add RR to zone */
+static int
+http_parse_add_rr(struct auth_xfer* xfr, struct auth_zone* z,
+	sldns_buffer* buf, struct sldns_file_parse_state* pstate)
+{
+	uint8_t rr[LDNS_RR_BUF_SIZE];
+	size_t rr_len = 0, dname_len = 0;
+	int e;
+	char* line = (char*)sldns_buffer_begin(buf);
+	e = sldns_str2wire_rr_buf(line, rr, &rr_len, &dname_len,
+		pstate->default_ttl,
+		pstate->origin_len?pstate->origin:NULL, pstate->origin_len,
+		pstate->prev_rr_len?pstate->prev_rr:NULL, pstate->prev_rr_len);
+	if(e != 0) {
+		log_err("%s/%s parse failure RR[%d]: %s in '%s'",
+			xfr->task_transfer->master->host,
+			xfr->task_transfer->master->file,
+			LDNS_WIREPARSE_OFFSET(e),
+			sldns_get_errorstr_parse(LDNS_WIREPARSE_ERROR(e)),
+			line);
+		return 0;
+	}
+	if(rr_len == 0)
+		return 1; /* empty line or so */
+
+	/* set prev */
+	if(dname_len < sizeof(pstate->prev_rr)) {
+		memmove(pstate->prev_rr, rr, dname_len);
+		pstate->prev_rr_len = dname_len;
+	}
+
+	return az_insert_rr(z, rr, rr_len, dname_len, NULL);
+}
+
 /** RR list iterator, returns RRs from answer section one by one from the
  * dns packets in the chunklist */
 static void
@@ -3910,6 +4182,62 @@ apply_axfr(struct auth_xfer* xfr, struct auth_zone* z,
 	return 1;
 }
 
+/** apply HTTP to zone in memory. z is locked. false on failure(mallocfail) */
+static int
+apply_http(struct auth_xfer* xfr, struct auth_zone* z,
+	struct sldns_buffer* scratch_buffer)
+{
+	/* parse data in chunks */
+	/* parse RR's and read into memory. ignore $INCLUDE from the
+	 * downloaded file*/
+	struct sldns_file_parse_state pstate;
+	struct auth_chunk* chunk;
+	size_t chunk_pos;
+	memset(&pstate, 0, sizeof(pstate));
+	pstate.default_ttl = 3600;
+	if(xfr->namelen < sizeof(pstate.origin)) {
+		pstate.origin_len = xfr->namelen;
+		memmove(pstate.origin, xfr->name, xfr->namelen);
+	}
+
+	/* perhaps a little syntax check before we try to apply the data? */
+	if(!http_zonefile_syntax_check(xfr, scratch_buffer)) {
+		log_err("http download %s/%s does not contain a zonefile, "
+			" no SOA but got '%s'",
+			xfr->task_transfer->master->host,
+			xfr->task_transfer->master->file,
+			sldns_buffer_begin(scratch_buffer));
+		return 0;
+	}
+
+	/* clear the data tree */
+	traverse_postorder(&z->data, auth_data_del, NULL);
+	rbtree_init(&z->data, &auth_data_cmp);
+	xfr->have_zone = 0;
+	xfr->serial = 0;
+
+	chunk = xfr->task_transfer->chunks_first;
+	chunk_pos = 0;
+	while(chunkline_get_line_collated(&chunk, &chunk_pos, scratch_buffer)) {
+		/* process this line */
+		chunkline_newline_removal(scratch_buffer);
+		if(!chunkline_is_comment_line_or_empty(scratch_buffer)) {
+			continue;
+		}
+		/* parse line and add RR */
+		if(http_parse_origin(scratch_buffer, &pstate)) {
+			continue; /* $ORIGIN has been handled */
+		}
+		if(http_parse_ttl(scratch_buffer, &pstate)) {
+			continue; /* $TTL has been handled */
+		}
+		if(!http_parse_add_rr(xfr, z, scratch_buffer, &pstate)) {
+			return 0;
+		}
+	}
+	return 1;
+}
+
 /** write to zonefile after zone has been updated */
 static void
 xfr_write_after_update(struct auth_xfer* xfr, struct module_env* env)
@@ -3989,7 +4317,14 @@ xfr_process_chunk_list(struct auth_xfer* xfr, struct module_env* env,
 	lock_rw_unlock(&env->auth_zones->lock);
 
 	/* apply data */
-	if(xfr->task_transfer->on_ixfr &&
+	if(xfr->task_transfer->master->http) {
+		if(!apply_http(xfr, z, env->scratch_buffer)) {
+			lock_rw_unlock(&z->lock);
+			verbose(VERB_ALGO, "http from %s: could not store data",
+				xfr->task_transfer->master->host);
+			return 0;
+		}
+	} else if(xfr->task_transfer->on_ixfr &&
 		!xfr->task_transfer->on_ixfr_is_axfr) {
 		if(!apply_ixfr(xfr, z, env->scratch_buffer)) {
 			lock_rw_unlock(&z->lock);
@@ -4144,7 +4479,8 @@ xfr_transfer_init_fetch(struct auth_xfer* xfr, struct module_env* env)
 		 * unless someone used unbound's host@port notation */
 		if(strchr(master->host, '@') == NULL)
 			sockaddr_store_port(&addr, addrlen, master->port);
-		/* TODO
+		/* TODO http comm point, with NETEVENT_DONE */
+		/*
 		xfr->task_transfer->cp = outnet_comm_point_for_http(env->outnet,
 			auth_xfer_transfer_http_callback, xfr, &addr, addrlen,
 			env->scratch_buffer, AUTH_TRANSFER_TIMEOUT,
@@ -4733,9 +5069,40 @@ auth_xfer_transfer_http_callback(struct comm_point* c, void* arg, int err,
 	log_assert(xfr->task_transfer);
 	env = xfr->task_transfer->env;
 	lock_basic_lock(&xfr->lock);
-	/* TODO */
-	(void)env;
-	(void)err;
+
+	if(err != NETEVENT_NOERROR && err != NETEVENT_DONE) {
+		/* connection failed, closed, or timeout */
+		/* stop this transfer, cleanup 
+		 * and continue task_transfer*/
+		verbose(VERB_ALGO, "http stopped, connection lost to %s",
+			xfr->task_transfer->master->host);
+	failed:
+		/* delete transferred data from list */
+		auth_chunks_delete(xfr->task_transfer);
+		comm_point_delete(xfr->task_transfer->cp);
+		xfr->task_transfer->cp = NULL;
+		xfr_transfer_nextmaster(xfr);
+		xfr_transfer_nexttarget_or_end(xfr, env);
+		return 0;
+	}
+
+	/* if it is good, link it into the list of data */
+	/* if the link into list of data fails (malloc fail) cleanup and end */
+	if(sldns_buffer_limit(c->buffer) > 0) {
+		if(!xfer_link_data(c->buffer, xfr)) {
+			verbose(VERB_ALGO, "http stopped to %s, malloc failed",
+				xfr->task_transfer->master->host);
+			goto failed;
+		}
+	}
+	/* if the transfer is done now, disconnect and process the list */
+	if(err == NETEVENT_DONE) {
+		comm_point_delete(xfr->task_transfer->cp);
+		xfr->task_transfer->cp = NULL;
+		process_list_end_transfer(xfr, env);
+		return 0;
+	}
+
 	/* if we want to read more messages, setup the commpoint to read
 	 * a DNS packet, and the timeout */
 	lock_basic_unlock(&xfr->lock);

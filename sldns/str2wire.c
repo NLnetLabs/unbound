@@ -836,7 +836,7 @@ const char* sldns_get_errorstr_parse(int e)
 }
 
 /* Strip whitespace from the start and the end of <line>.  */
-static char *
+char *
 sldns_strip_ws(char *line)
 {
         char *s = line, *e;

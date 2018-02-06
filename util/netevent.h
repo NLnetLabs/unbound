@@ -84,6 +84,8 @@ typedef int comm_point_callback_type(struct comm_point*, void*, int,
 #define NETEVENT_TIMEOUT -2 
 /** to pass fallback from capsforID to callback function; 0x20 failed */
 #define NETEVENT_CAPSFAIL -3
+/** to pass done transfer to callback function; http file is complete */
+#define NETEVENT_DONE -4
 
 /** timeout to slow accept calls when not possible, in msec. */
 #define NETEVENT_SLOW_ACCEPT_TIME 2000
