@@ -277,10 +277,10 @@ sockaddr_store_port(struct sockaddr_storage* addr, socklen_t addrlen, int port)
 {
 	if(addr_is_ip6(addr, addrlen)) {
 		struct sockaddr_in6* sa = (struct sockaddr_in6*)addr;
-		sa->sin6_port = (in_port_t)htons(port);
+		sa->sin6_port = (in_port_t)htons((uint16_t)port);
 	} else {
 		struct sockaddr_in* sa = (struct sockaddr_in*)addr;
-		sa->sin_port = (in_port_t)htons(port);
+		sa->sin_port = (in_port_t)htons((uint16_t)port);
 	}
 }
 
