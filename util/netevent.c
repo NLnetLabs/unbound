@@ -1600,6 +1600,636 @@ comm_point_tcp_handle_callback(int fd, short event, void* arg)
 	log_err("Ignored event %d for tcphdl.", event);
 }
 
+/** Make http handler free for next assignment */
+static void
+reclaim_http_handler(struct comm_point* c)
+{
+	log_assert(c->type == comm_http);
+	if(c->ssl) {
+#ifdef HAVE_SSL
+		SSL_shutdown(c->ssl);
+		SSL_free(c->ssl);
+		c->ssl = NULL;
+#endif
+	}
+	comm_point_close(c);
+	if(c->tcp_parent) {
+		c->tcp_parent->cur_tcp_count--;
+		c->tcp_free = c->tcp_parent->tcp_free;
+		c->tcp_parent->tcp_free = c;
+		if(!c->tcp_free) {
+			/* re-enable listening on accept socket */
+			comm_point_start_listening(c->tcp_parent, -1, -1);
+		}
+	}
+}
+
+/** read more data for http (with ssl) */
+static int
+ssl_http_read_more(struct comm_point* c)
+{
+#ifdef HAVE_SSL
+	int r;
+	log_assert(sldns_buffer_remaining(c->buffer) > 0);
+	ERR_clear_error();
+	r = SSL_read(c->ssl, (void*)sldns_buffer_current(c->buffer),
+		(int)sldns_buffer_remaining(c->buffer));
+	if(r <= 0) {
+		int want = SSL_get_error(c->ssl, r);
+		if(want == SSL_ERROR_ZERO_RETURN) {
+			return 0; /* shutdown, closed */
+		} else if(want == SSL_ERROR_WANT_READ) {
+			return 1; /* read more later */
+		} else if(want == SSL_ERROR_WANT_WRITE) {
+			c->ssl_shake_state = comm_ssl_shake_hs_write;
+			comm_point_listen_for_rw(c, 0, 1);
+			return 1;
+		} else if(want == SSL_ERROR_SYSCALL) {
+			if(errno != 0)
+				log_err("SSL_read syscall: %s",
+					strerror(errno));
+			return 0;
+		}
+		log_crypto_err("could not SSL_read");
+		return 0;
+	}
+	sldns_buffer_skip(c->buffer, (ssize_t)r);
+	return 1;
+#else
+	(void)c;
+	return 0;
+#endif /* HAVE_SSL */
+}
+
+/** read more data for http */
+static int
+http_read_more(int fd, struct comm_point* c)
+{
+	ssize_t r;
+	log_assert(sldns_buffer_remaining(c->buffer) > 0);
+	r = recv(fd, (void*)sldns_buffer_current(c->buffer), 
+		sldns_buffer_remaining(c->buffer), 0);
+	if(r == 0) {
+		return 0;
+	} else if(r == -1) {
+#ifndef USE_WINSOCK
+		if(errno == EINTR || errno == EAGAIN)
+			return 1;
+		log_err_addr("read (in http r)", strerror(errno),
+			&c->repinfo.addr, c->repinfo.addrlen);
+#else /* USE_WINSOCK */
+		if(WSAGetLastError() == WSAECONNRESET)
+			return 0;
+		if(WSAGetLastError() == WSAEINPROGRESS)
+			return 1;
+		if(WSAGetLastError() == WSAEWOULDBLOCK) {
+			ub_winsock_tcp_wouldblock(c->ev->ev, UB_EV_READ);
+			return 1;
+		}
+		log_err_addr("read (in http r)",
+			wsa_strerror(WSAGetLastError()),
+			&c->repinfo.addr, c->repinfo.addrlen);
+#endif
+		return 0;
+	}
+	sldns_buffer_skip(c->buffer, r);
+	return 1;
+}
+
+/** return true if http header has been read (one line complete) */
+static int
+http_header_done(sldns_buffer* buf)
+{
+	size_t i;
+	for(i=sldns_buffer_position(buf); i<sldns_buffer_limit(buf); i++) {
+		/* there was a \r before the \n, but we ignore that */
+		if((char)sldns_buffer_read_u8_at(buf, i) == '\n')
+			return 1;
+	}
+	return 0;
+}
+
+/** return character string into buffer for header line, moves buffer
+ * past that line and puts zero terminator (into \r\n) */
+static char*
+http_header_line(sldns_buffer* buf)
+{
+	char* result = (char*)sldns_buffer_current(buf);
+	size_t i;
+	for(i=sldns_buffer_position(buf); i<sldns_buffer_limit(buf); i++) {
+		/* terminate the string on the \r */
+		if((char)sldns_buffer_read_u8_at(buf, i) == '\r')
+			sldns_buffer_write_u8_at(buf, i, 0);
+		/* terminate on the \n and skip past the it and done */
+		if((char)sldns_buffer_read_u8_at(buf, i) == '\n') {
+			sldns_buffer_write_u8_at(buf, i, 0);
+			sldns_buffer_set_position(buf, i);
+			return result;
+		}
+	}
+	return NULL;
+}
+
+/** move unread buffer to start and clear rest for putting the rest into it */
+static void
+http_moveover_buffer(sldns_buffer* buf)
+{
+	size_t pos = sldns_buffer_position(buf);
+	size_t len = sldns_buffer_remaining(buf);
+	sldns_buffer_clear(buf);
+	memmove(sldns_buffer_begin(buf), sldns_buffer_at(buf, pos), len);
+	sldns_buffer_set_position(buf, len);
+}
+
+/** a http header is complete, process it */
+static int
+http_process_initial_header(struct comm_point* c)
+{
+	char* line = http_header_line(c->buffer);
+	if(!line) return 1;
+	verbose(VERB_ALGO, "http header: %s", line);
+	if(strncasecmp(line, "HTTP/1.1 ", 9) == 0) {
+		/* check returncode */
+		if(line[9] != '2') {
+			verbose(VERB_ALGO, "http bad status %s", line+9);
+			return 0;
+		}
+	} else if(strncasecmp(line, "Content-Length: ", 16) == 0) {
+		if(!c->http_is_chunked)
+			c->tcp_byte_count = (size_t)atoi(line+16);
+	} else if(strncasecmp(line, "Transfer-Encoding: chunked", 19+7) == 0) {
+		c->tcp_byte_count = 0;
+		c->http_is_chunked = 1;
+	} else if(line[0] == 0) {
+		/* end of initial headers */
+		c->http_in_headers = 0;
+		if(c->http_is_chunked)
+			c->http_in_chunk_headers = 1;
+		/* remove header text from front of buffer */
+		http_moveover_buffer(c->buffer);
+		sldns_buffer_flip(c->buffer);
+		return 1;
+	}
+	/* ignore other headers */
+	return 1;
+}
+
+/** a chunk header is complete, process it, return 0=fail, 1=continue next
+ * header line, 2=done with chunked transfer*/
+static int
+http_process_chunk_header(struct comm_point* c)
+{
+	char* line = http_header_line(c->buffer);
+	if(!line) return 1;
+	if(c->http_in_chunk_headers == 3) {
+		verbose(VERB_ALGO, "http chunk trailer: %s", line);
+		/* are we done ? */
+		if(line[0] == 0 && c->tcp_byte_count == 0) {
+			/* callback of http reader when NETEVENT_DONE,
+			 * end of data, with no data in buffer */
+			sldns_buffer_set_position(c->buffer, 0);
+			sldns_buffer_set_limit(c->buffer, 0);
+			fptr_ok(fptr_whitelist_comm_point(c->callback));
+			(void)(*c->callback)(c, c->cb_arg, NETEVENT_DONE, NULL);
+			return 2;
+		}
+		if(line[0] == 0) {
+			/* continue with header of the next chunk */
+			c->http_in_chunk_headers = 1;
+			/* remove header text from front of buffer */
+			http_moveover_buffer(c->buffer);
+			sldns_buffer_flip(c->buffer);
+			return 1;
+		}
+		/* ignore further trail headers */
+		return 1;
+	}
+	verbose(VERB_ALGO, "http chunk header: %s", line);
+	if(c->http_in_chunk_headers == 1) {
+		/* read chunked start line */
+		char* end = NULL;
+		c->tcp_byte_count = (size_t)strtol(line, &end, 16);
+		if(end == line)
+			return 0;
+		c->http_in_chunk_headers = 2;
+		return 1;
+	}
+	if(line[0] == 0) {
+		/* end of chunk headers */
+		c->http_in_chunk_headers = 0;
+		/* remove header text from front of buffer */
+		http_moveover_buffer(c->buffer);
+		sldns_buffer_flip(c->buffer);
+		if(c->tcp_byte_count == 0) {
+			/* done with chunks, process chunk_trailer lines */
+			c->http_in_chunk_headers = 3;
+		}
+	}
+	/* ignore other headers */
+	return 1;
+}
+
+/** handle nonchunked data segment */
+static int
+http_nonchunk_segment(struct comm_point* c)
+{
+	/* c->buffer at position..limit has new data we read in.
+	 * the buffer itself is full of nonchunked data.
+	 * we are looking to read tcp_byte_count more data
+	 * and then the transfer is done. */
+	size_t remainbufferlen;
+	size_t got_now = sldns_buffer_remaining(c->buffer);
+	if(c->tcp_byte_count <= got_now) {
+		/* done, this is the last data fragment */
+		sldns_buffer_set_position(c->buffer, 0);
+		fptr_ok(fptr_whitelist_comm_point(c->callback));
+		(void)(*c->callback)(c, c->cb_arg, NETEVENT_DONE, NULL);
+		return 1;
+	}
+	c->tcp_byte_count -= got_now;
+	/* if we have lots of buffer space,
+	 * read more data collected into the buffer */
+	remainbufferlen = sldns_buffer_capacity(c->buffer) -
+		sldns_buffer_limit(c->buffer);
+	if(remainbufferlen >= c->tcp_byte_count ||
+		remainbufferlen >= 1024) {
+		size_t total = sldns_buffer_limit(c->buffer);
+		sldns_buffer_clear(c->buffer);
+		sldns_buffer_set_position(c->buffer, total);
+		/* return and wait to read more */
+		return 1;
+	}
+	/* call callback with this data amount, then
+	 * wait for more */
+	sldns_buffer_set_position(c->buffer, 0);
+	fptr_ok(fptr_whitelist_comm_point(c->callback));
+	(void)(*c->callback)(c, c->cb_arg, NETEVENT_NOERROR, NULL);
+	/* c->callback has to buffer_clear(c->buffer). */
+	/* return and wait to read more */
+	return 1;
+}
+
+/** handle nonchunked data segment, return 0=fail, 1=wait, 2=process more */
+static int
+http_chunked_segment(struct comm_point* c)
+{
+	/* the c->buffer has from position..limit new data we read. */
+	/* the current chunk has length tcp_byte_count.
+	 * once we read that read more chunk headers.
+	 */
+	size_t remainbufferlen;
+	size_t got_now = sldns_buffer_remaining(c->buffer);
+	if(c->tcp_byte_count <= got_now) {
+		/* the chunk has completed (with perhaps some extra data
+		 * from next chunk header and next chunk) */
+		/* save too much info into temp buffer */
+		size_t fraglen;
+		struct comm_reply repinfo;
+		sldns_buffer_skip(c->buffer, c->tcp_byte_count);
+		c->tcp_byte_count = 0;
+		sldns_buffer_clear(c->http_temp);
+		sldns_buffer_write(c->http_temp,
+			sldns_buffer_current(c->buffer),
+			sldns_buffer_remaining(c->buffer));
+		sldns_buffer_flip(c->http_temp);
+
+		/* callback with this fragment */
+		fraglen = sldns_buffer_position(c->buffer);
+		sldns_buffer_set_position(c->buffer, 0);
+		sldns_buffer_set_limit(c->buffer, fraglen);
+		repinfo = c->repinfo;
+		fptr_ok(fptr_whitelist_comm_point(c->callback));
+		(void)(*c->callback)(c, c->cb_arg, NETEVENT_NOERROR, &repinfo);
+		/* c->callback has to buffer_clear(). */
+
+		/* is commpoint deleted? */
+		if(!repinfo.c) {
+			return 1;
+		}
+		/* copy waiting info */
+		sldns_buffer_clear(c->buffer);
+		sldns_buffer_write(c->buffer,
+			sldns_buffer_begin(c->http_temp),
+			sldns_buffer_remaining(c->http_temp));
+		/* process end of chunk trailer header lines, until
+		 * an empty line */
+		c->http_in_chunk_headers = 3;
+		/* process more data in buffer (if any) */
+		return 2;
+	}
+	c->tcp_byte_count -= got_now;
+
+	/* if we have lots of buffer space,
+	 * read more data collected into the buffer */
+	remainbufferlen = sldns_buffer_capacity(c->buffer) -
+		sldns_buffer_limit(c->buffer);
+	if(remainbufferlen >= c->tcp_byte_count ||
+		remainbufferlen >= 1024) {
+		size_t total = sldns_buffer_limit(c->buffer);
+		sldns_buffer_clear(c->buffer);
+		sldns_buffer_set_position(c->buffer, total);
+		/* return and wait to read more */
+		return 1;
+	}
+	
+	/* callback of http reader for a new part of the data */
+	sldns_buffer_set_position(c->buffer, 0);
+	fptr_ok(fptr_whitelist_comm_point(c->callback));
+	(void)(*c->callback)(c, c->cb_arg, NETEVENT_NOERROR, NULL);
+	/* c->callback has to buffer_clear(c->buffer). */
+	/* return and wait to read more */
+	return 1;
+}
+
+/**
+ * Handle http reading callback. 
+ * @param fd: file descriptor of socket.
+ * @param c: comm point to read from into buffer.
+ * @return: 0 on error 
+ */
+static int
+comm_point_http_handle_read(int fd, struct comm_point* c)
+{
+	log_assert(c->type == comm_http);
+	if(!c->tcp_is_reading)
+		return 0;
+
+	log_assert(fd != -1);
+
+	/* if we are in ssl handshake, handle SSL handshake */
+	if(c->ssl && c->ssl_shake_state != comm_ssl_shake_none) {
+		if(!ssl_handshake(c))
+			return 0;
+		if(c->ssl_shake_state != comm_ssl_shake_none)
+			return 1;
+	}
+
+	/* read more data */
+	if(c->ssl) {
+		if(!ssl_http_read_more(c))
+			return 0;
+	} else {
+		if(!http_read_more(fd, c))
+			return 0;
+	}
+
+	sldns_buffer_flip(c->buffer);
+	while(sldns_buffer_remaining(c->buffer) > 0) {
+		/* if we are reading headers, read more headers */
+		if(c->http_in_headers || c->http_in_chunk_headers) {
+			/* if header is done, process the header */
+			if(!http_header_done(c->buffer)) {
+				/* copy remaining data to front of buffer
+				 * and set rest for writing into it */
+				http_moveover_buffer(c->buffer);
+				/* return and wait to read more */
+				return 1;
+			}
+			if(!c->http_in_chunk_headers) {
+				/* process initial headers */
+				if(!http_process_initial_header(c))
+					return 0;
+			} else {
+				/* process chunk headers */
+				int r = http_process_chunk_header(c);
+				if(r == 0) return 0;
+				if(r == 2) return 1; /* done */
+				/* r == 1, continue */
+			}
+			/* see if we have more to process */
+			continue;
+		}
+
+		if(!c->http_is_chunked) {
+			/* if we are reading nonchunks, process that*/
+			return http_nonchunk_segment(c);
+		} else {
+			/* if we are reading chunks, read the chunk */
+			int r = http_chunked_segment(c);
+			if(r == 0) return 0;
+			if(r == 1) return 1;
+			continue;
+		}
+	}
+	/* broke out of the loop; could not process header instead need
+	 * to read more */
+	/* moveover any remaining data and read more data */
+	http_moveover_buffer(c->buffer);
+	/* return and wait to read more */
+	return 1;
+}
+
+/** check pending connect for http */
+static int
+http_check_connect(int fd, struct comm_point* c)
+{
+	/* check for pending error from nonblocking connect */
+	/* from Stevens, unix network programming, vol1, 3rd ed, p450*/
+	int error = 0;
+	socklen_t len = (socklen_t)sizeof(error);
+	if(getsockopt(fd, SOL_SOCKET, SO_ERROR, (void*)&error, 
+		&len) < 0){
+#ifndef USE_WINSOCK
+		error = errno; /* on solaris errno is error */
+#else /* USE_WINSOCK */
+		error = WSAGetLastError();
+#endif
+	}
+#ifndef USE_WINSOCK
+#if defined(EINPROGRESS) && defined(EWOULDBLOCK)
+	if(error == EINPROGRESS || error == EWOULDBLOCK)
+		return 1; /* try again later */
+	else
+#endif
+	if(error != 0 && verbosity < 2)
+		return 0; /* silence lots of chatter in the logs */
+	else if(error != 0) {
+		log_err_addr("http connect", strerror(error),
+			&c->repinfo.addr, c->repinfo.addrlen);
+#else /* USE_WINSOCK */
+	/* examine error */
+	if(error == WSAEINPROGRESS)
+		return 1;
+	else if(error == WSAEWOULDBLOCK) {
+		ub_winsock_tcp_wouldblock(c->ev->ev, UB_EV_WRITE);
+		return 1;
+	} else if(error != 0 && verbosity < 2)
+		return 0;
+	else if(error != 0) {
+		log_err_addr("http connect", wsa_strerror(error),
+			&c->repinfo.addr, c->repinfo.addrlen);
+#endif /* USE_WINSOCK */
+		return 0;
+	}
+	/* keep on processing this socket */
+	return 2;
+}
+
+/** write more data for http (with ssl) */
+static int
+ssl_http_write_more(struct comm_point* c)
+{
+#ifdef HAVE_SSL
+	int r;
+	log_assert(sldns_buffer_remaining(c->buffer) > 0);
+	ERR_clear_error();
+	r = SSL_write(c->ssl, (void*)sldns_buffer_current(c->buffer),
+		(int)sldns_buffer_remaining(c->buffer));
+	if(r <= 0) {
+		int want = SSL_get_error(c->ssl, r);
+		if(want == SSL_ERROR_ZERO_RETURN) {
+			return 0; /* closed */
+		} else if(want == SSL_ERROR_WANT_READ) {
+			c->ssl_shake_state = comm_ssl_shake_read;
+			comm_point_listen_for_rw(c, 1, 0);
+			return 1; /* wait for read condition */
+		} else if(want == SSL_ERROR_WANT_WRITE) {
+			return 1; /* write more later */
+		} else if(want == SSL_ERROR_SYSCALL) {
+			if(errno != 0)
+				log_err("SSL_write syscall: %s",
+					strerror(errno));
+			return 0;
+		}
+		log_crypto_err("could not SSL_write");
+		return 0;
+	}
+	sldns_buffer_skip(c->buffer, (ssize_t)r);
+	return 1;
+#else
+	(void)c;
+	return 0;
+#endif /* HAVE_SSL */
+}
+
+/** write more data for http */
+static int
+http_write_more(int fd, struct comm_point* c)
+{
+	ssize_t r;
+	log_assert(sldns_buffer_remaining(c->buffer) > 0);
+	r = send(fd, (void*)sldns_buffer_current(c->buffer), 
+		sldns_buffer_remaining(c->buffer), 0);
+	if(r == -1) {
+#ifndef USE_WINSOCK
+		if(errno == EINTR || errno == EAGAIN)
+			return 1;
+		log_err_addr("http send r", strerror(errno),
+			&c->repinfo.addr, c->repinfo.addrlen);
+#else
+		if(WSAGetLastError() == WSAEINPROGRESS)
+			return 1;
+		if(WSAGetLastError() == WSAEWOULDBLOCK) {
+			ub_winsock_tcp_wouldblock(c->ev->ev, UB_EV_WRITE);
+			return 1; 
+		}
+		log_err_addr("http send r", wsa_strerror(WSAGetLastError()),
+			&c->repinfo.addr, c->repinfo.addrlen);
+#endif
+		return 0;
+	}
+	sldns_buffer_skip(c->buffer, r);
+	return 1;
+}
+
+/** 
+ * Handle http writing callback. 
+ * @param fd: file descriptor of socket.
+ * @param c: comm point to write buffer out of.
+ * @return: 0 on error
+ */
+static int
+comm_point_http_handle_write(int fd, struct comm_point* c)
+{
+	log_assert(c->type == comm_http);
+	if(c->tcp_is_reading)
+		return 0;
+
+	log_assert(fd != -1);
+
+	/* check pending connect errors, if that fails, we wait for more,
+	 * or we can continue to write contents */
+	if(c->tcp_check_nb_connect) {
+		int r = http_check_connect(fd, c);
+		if(r == 0) return 0;
+		if(r == 1) return 1;
+		c->tcp_check_nb_connect = 0;
+	}
+	/* if we are in ssl handshake, handle SSL handshake */
+	if(c->ssl && c->ssl_shake_state != comm_ssl_shake_none) {
+		if(!ssl_handshake(c))
+			return 0;
+		if(c->ssl_shake_state != comm_ssl_shake_none)
+			return 1;
+	}
+	/* if we are writing, write more */
+	if(c->ssl) {
+		if(!ssl_http_write_more(c))
+			return 0;
+	} else {
+		if(!http_write_more(fd, c))
+			return 0;
+	}
+
+	/* we write a single buffer contents, that can contain
+	 * the http request, and then flip to read the results */
+	/* see if write is done */
+	if(sldns_buffer_remaining(c->buffer) == 0) {
+		sldns_buffer_clear(c->buffer);
+		if(c->tcp_do_toggle_rw)
+			c->tcp_is_reading = 1;
+		c->tcp_byte_count = 0;
+		/* switch from listening(write) to listening(read) */
+		comm_point_stop_listening(c);
+		comm_point_start_listening(c, -1, -1);
+	}
+	return 1;
+}
+
+void 
+comm_point_http_handle_callback(int fd, short event, void* arg)
+{
+	struct comm_point* c = (struct comm_point*)arg;
+	log_assert(c->type == comm_http);
+	ub_comm_base_now(c->ev->base);
+
+	if(event&UB_EV_READ) {
+		if(!comm_point_http_handle_read(fd, c)) {
+			reclaim_http_handler(c);
+			if(!c->tcp_do_close) {
+				fptr_ok(fptr_whitelist_comm_point(
+					c->callback));
+				(void)(*c->callback)(c, c->cb_arg, 
+					NETEVENT_CLOSED, NULL);
+			}
+		}
+		return;
+	}
+	if(event&UB_EV_WRITE) {
+		if(!comm_point_http_handle_write(fd, c)) {
+			reclaim_http_handler(c);
+			if(!c->tcp_do_close) {
+				fptr_ok(fptr_whitelist_comm_point(
+					c->callback));
+				(void)(*c->callback)(c, c->cb_arg, 
+					NETEVENT_CLOSED, NULL);
+			}
+		}
+		return;
+	}
+	if(event&UB_EV_TIMEOUT) {
+		verbose(VERB_QUERY, "http took too long, dropped");
+		reclaim_http_handler(c);
+		if(!c->tcp_do_close) {
+			fptr_ok(fptr_whitelist_comm_point(c->callback));
+			(void)(*c->callback)(c, c->cb_arg,
+				NETEVENT_TIMEOUT, NULL);
+		}
+		return;
+	}
+	log_err("Ignored event %d for httphdl.", event);
+}
+
 void comm_point_local_handle_callback(int fd, short event, void* arg)
 {
 	struct comm_point* c = (struct comm_point*)arg;
@@ -1948,6 +2578,73 @@ comm_point_create_tcp_out(struct comm_base *base, size_t bufsize,
 	if(c->ev->ev == NULL)
 	{
 		log_err("could not baseset tcpout event");
+		sldns_buffer_free(c->buffer);
+		free(c->ev);
+		free(c);
+		return NULL;
+	}
+
+	return c;
+}
+
+struct comm_point* 
+comm_point_create_http_out(struct comm_base *base, size_t bufsize,
+        comm_point_callback_type* callback, void* callback_arg,
+	sldns_buffer* temp)
+{
+	struct comm_point* c = (struct comm_point*)calloc(1,
+		sizeof(struct comm_point));
+	short evbits;
+	if(!c)
+		return NULL;
+	c->ev = (struct internal_event*)calloc(1,
+		sizeof(struct internal_event));
+	if(!c->ev) {
+		free(c);
+		return NULL;
+	}
+	c->ev->base = base;
+	c->fd = -1;
+	c->buffer = sldns_buffer_new(bufsize);
+	if(!c->buffer) {
+		free(c->ev);
+		free(c);
+		return NULL;
+	}
+	c->timeout = NULL;
+	c->tcp_is_reading = 0;
+	c->tcp_byte_count = 0;
+	c->tcp_parent = NULL;
+	c->max_tcp_count = 0;
+	c->cur_tcp_count = 0;
+	c->tcp_handlers = NULL;
+	c->tcp_free = NULL;
+	c->type = comm_http;
+	c->tcp_do_close = 0;
+	c->do_not_close = 0;
+	c->tcp_do_toggle_rw = 1;
+	c->tcp_check_nb_connect = 1;
+	c->http_in_headers = 1;
+	c->http_in_chunk_headers = 0;
+	c->http_is_chunked = 0;
+	c->http_temp = temp;
+#ifdef USE_MSG_FASTOPEN
+	c->tcp_do_fastopen = 1;
+#endif
+#ifdef USE_DNSCRYPT
+	c->dnscrypt = 0;
+	c->dnscrypt_buffer = c->buffer;
+#endif
+	c->repinfo.c = c;
+	c->callback = callback;
+	c->cb_arg = callback_arg;
+	evbits = UB_EV_PERSIST | UB_EV_WRITE;
+	c->ev->ev = ub_event_new(base->eb->base, c->fd, evbits,
+		comm_point_http_handle_callback, c);
+	if(c->ev->ev == NULL)
+	{
+		log_err("could not baseset tcpout event");
+		SSL_free(c->ssl);
 		sldns_buffer_free(c->buffer);
 		free(c->ev);
 		free(c);

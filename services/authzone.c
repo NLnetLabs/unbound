@@ -4479,18 +4479,16 @@ xfr_transfer_init_fetch(struct auth_xfer* xfr, struct module_env* env)
 		 * unless someone used unbound's host@port notation */
 		if(strchr(master->host, '@') == NULL)
 			sockaddr_store_port(&addr, addrlen, master->port);
-		/* TODO http comm point, with NETEVENT_DONE */
-		/*
-		xfr->task_transfer->cp = outnet_comm_point_for_http(env->outnet,
-			auth_xfer_transfer_http_callback, xfr, &addr, addrlen,
-			env->scratch_buffer, AUTH_TRANSFER_TIMEOUT,
-			master->ssl, master->host, master->file);
-		*/
+		xfr->task_transfer->cp = outnet_comm_point_for_http(
+			env->outnet, auth_xfer_transfer_http_callback, xfr,
+			&addr, addrlen, AUTH_TRANSFER_TIMEOUT, master->ssl,
+			master->host, master->file);
 		if(!xfr->task_transfer->cp) {
 			char zname[255+1];
 			dname_str(xfr->name, zname);
-			verbose(VERB_ALGO, "cannot create http cp connection for "
-				"%s to %s", zname, master->host);
+			verbose(VERB_ALGO, "cannot create http cp "
+				"connection for %s to %s", zname,
+				master->host);
 			return 0;
 		}
 		return 1;
@@ -5062,7 +5060,7 @@ auth_xfer_transfer_tcp_callback(struct comm_point* c, void* arg, int err,
 /** callback for task_transfer http connections */
 int
 auth_xfer_transfer_http_callback(struct comm_point* c, void* arg, int err,
-        struct comm_reply* ATTR_UNUSED(repinfo))
+        struct comm_reply* repinfo)
 {
 	struct auth_xfer* xfr = (struct auth_xfer*)arg;
 	struct module_env* env;
@@ -5079,6 +5077,8 @@ auth_xfer_transfer_http_callback(struct comm_point* c, void* arg, int err,
 	failed:
 		/* delete transferred data from list */
 		auth_chunks_delete(xfr->task_transfer);
+		if(repinfo) repinfo->c = NULL; /* signal cp deleted to
+				the routine calling this callback */
 		comm_point_delete(xfr->task_transfer->cp);
 		xfr->task_transfer->cp = NULL;
 		xfr_transfer_nextmaster(xfr);
@@ -5097,6 +5097,8 @@ auth_xfer_transfer_http_callback(struct comm_point* c, void* arg, int err,
 	}
 	/* if the transfer is done now, disconnect and process the list */
 	if(err == NETEVENT_DONE) {
+		if(repinfo) repinfo->c = NULL; /* signal cp deleted to
+				the routine calling this callback */
 		comm_point_delete(xfr->task_transfer->cp);
 		xfr->task_transfer->cp = NULL;
 		process_list_end_transfer(xfr, env);

@@ -2257,6 +2257,79 @@ outnet_comm_point_for_tcp(struct outside_network* outnet,
 	return cp;
 }
 
+/** setup http request headers in buffer for sending query to destination */
+static int
+setup_http_request(sldns_buffer* buf, char* host, char* path)
+{
+	sldns_buffer_clear(buf);
+	sldns_buffer_printf(buf, "GET /%s HTTP/1.1\r\n", path);
+	sldns_buffer_printf(buf, "Host: %s\r\n", host);
+	sldns_buffer_printf(buf, "User-Agent: unbound/%s\r\n",
+		PACKAGE_VERSION);
+	/* We do not really do multiple queries per connection,
+	 * but this header setting is also not needed.
+	 * sldns_buffer_printf(buf, "Connection: close\r\n") */
+	sldns_buffer_printf(buf, "\r\n");
+	if(sldns_buffer_position(buf)+10 > sldns_buffer_capacity(buf))
+		return 0; /* somehow buffer too short, but it is about 60K
+		and the request is only a couple bytes long. */
+	sldns_buffer_flip(buf);
+	return 1;
+}
+
+struct comm_point*
+outnet_comm_point_for_http(struct outside_network* outnet,
+	comm_point_callback_type* cb, void* cb_arg,
+	struct sockaddr_storage* to_addr, socklen_t to_addrlen, int timeout,
+	int ssl, char* host, char* path)
+{
+	/* cp calls cb with err=NETEVENT_DONE when transfer is done */
+	struct comm_point* cp;
+	int fd = outnet_get_tcp_fd(to_addr, to_addrlen, outnet->tcp_mss);
+	if(fd == -1) {
+		return 0;
+	}
+	fd_set_nonblock(fd);
+	if(!outnet_tcp_connect(fd, to_addr, to_addrlen)) {
+		/* outnet_tcp_connect has closed fd on error for us */
+		return 0;
+	}
+	cp = comm_point_create_http_out(outnet->base, 65552, cb, cb_arg,
+		outnet->udp_buff);
+	if(!cp) {
+		log_err("malloc failure");
+		close(fd);
+		return 0;
+	}
+	cp->repinfo.addrlen = to_addrlen;
+	memcpy(&cp->repinfo.addr, to_addr, to_addrlen);
+
+	/* setup for SSL (if needed) */
+	if(ssl) {
+		cp->ssl = outgoing_ssl_fd(outnet->sslctx, fd);
+		if(!cp->ssl) {
+			log_err("cannot setup https");
+			comm_point_delete(cp);
+			return NULL;
+		}
+#ifdef USE_WINSOCK
+		comm_point_tcp_win_bio_cb(c, c->ssl);
+#endif
+		cp->ssl_shake_state = comm_ssl_shake_write;
+	}
+
+	/* set timeout on TCP connection */
+	comm_point_start_listening(cp, fd, timeout);
+
+	/* setup http request in cp->buffer */
+	if(!setup_http_request(cp->buffer, host, path)) {
+		log_err("error setting up http request");
+		comm_point_delete(cp);
+		return NULL;
+	}
+	return NULL;
+}
+
 /** get memory used by waiting tcp entry (in use or not) */
 static size_t
 waiting_tcp_get_mem(struct waiting_tcp* w)

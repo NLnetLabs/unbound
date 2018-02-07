@@ -75,8 +75,10 @@ struct fake_commpoint {
 	int typecode;
 	/** if this is a udp outgoing type of commpoint */
 	int type_udp_out;
-	/** if this is a tcp outgoing tcp of commpoint */
+	/** if this is a tcp outgoing type of commpoint */
 	int type_tcp_out;
+	/** if this is a http outgoing type of commpoint. */
+	int type_http_out;
 
 	/** the callback, stored for usage */
 	comm_point_callback_type* cb;
@@ -1420,6 +1422,12 @@ void comm_signal_callback(int ATTR_UNUSED(fd),
 	log_assert(0);
 }
 
+void comm_point_http_handle_callback(int ATTR_UNUSED(fd), 
+	short ATTR_UNUSED(event), void* ATTR_UNUSED(arg))
+{
+	log_assert(0);
+}
+
 void comm_point_local_handle_callback(int ATTR_UNUSED(fd), 
 	short ATTR_UNUSED(event), void* ATTR_UNUSED(arg))
 {
@@ -1673,6 +1681,36 @@ struct comm_point* outnet_comm_point_for_tcp(struct outside_network* outnet,
 	pend->next = runtime->pending_list;
 	runtime->pending_list = pend;
 
+	return (struct comm_point*)fc;
+}
+
+struct comm_point* outnet_comm_point_for_http(struct outside_network* outnet,
+	comm_point_callback_type* cb, void* cb_arg,
+	struct sockaddr_storage* to_addr, socklen_t to_addrlen, int timeout,
+	int ssl, char* host, char* path)
+{
+	struct replay_runtime* runtime = (struct replay_runtime*)
+		outnet->base;
+	struct fake_commpoint* fc = (struct fake_commpoint*)calloc(1,
+		sizeof(*fc));
+	if(!fc) {
+		return NULL;
+	}
+	fc->typecode = FAKE_COMMPOINT_TYPECODE;
+	fc->type_http_out = 1;
+	fc->cb = cb;
+	fc->cb_arg = cb_arg;
+	fc->runtime = runtime;
+
+	(void)to_addr;
+	(void)to_addrlen;
+	(void)timeout;
+
+	(void)ssl;
+	(void)host;
+	(void)path;
+
+	/* handle http comm point and return contents from test script */
 	return (struct comm_point*)fc;
 }
 

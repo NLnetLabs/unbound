@@ -572,6 +572,28 @@ struct comm_point* outnet_comm_point_for_tcp(struct outside_network* outnet,
 	struct sockaddr_storage* to_addr, socklen_t to_addrlen,
 	struct sldns_buffer* query, int timeout);
 
+/**
+ * Create http commpoint suitable for communication to the destination.
+ * Creates the http request buffer. It also performs connect() to the to_addr.
+ * @param outnet: outside_network with the comm_base it is attached to,
+ * 	and the tcp_mss.
+ * @param cb: callback function for the commpoint.
+ * @param cb_arg: callback argument for cb.
+ * @param to_addr: intended destination.
+ * @param to_addrlen: length of to_addr.
+ * @param timeout: timeout for the TCP connection.
+ * 	timeout in milliseconds, or -1 for no (change to the) timeout.
+ *	So seconds*1000.
+ * @param ssl: set to true for https.
+ * @param host: hostname to use for the destination. part of http request.
+ * @param path: pathname to lookup, eg. name of the file on the destination.
+ * @return http_out commpoint, or NULL.
+ */
+struct comm_point* outnet_comm_point_for_http(struct outside_network* outnet,
+	comm_point_callback_type* cb, void* cb_arg,
+	struct sockaddr_storage* to_addr, socklen_t to_addrlen, int timeout,
+	int ssl, char* host, char* path);
+
 /** connect tcp connection to addr, 0 on failure */
 int outnet_tcp_connect(int s, struct sockaddr_storage* addr, socklen_t addrlen);
 

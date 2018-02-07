@@ -100,6 +100,7 @@ fptr_whitelist_comm_point(comm_point_callback_type *fptr)
 	else if(fptr == &tube_handle_listen) return 1;
 	else if(fptr == &auth_xfer_probe_udp_callback) return 1;
 	else if(fptr == &auth_xfer_transfer_tcp_callback) return 1;
+	else if(fptr == &auth_xfer_transfer_http_callback) return 1;
 	return 0;
 }
 
@@ -161,6 +162,7 @@ fptr_whitelist_event(void (*fptr)(int, short, void *))
 	else if(fptr == &comm_point_raw_handle_callback) return 1;
 	else if(fptr == &tube_handle_signal) return 1;
 	else if(fptr == &comm_base_handle_slow_accept) return 1;
+	else if(fptr == &comm_point_http_handle_callback) return 1;
 #ifdef UB_ON_WINDOWS
 	else if(fptr == &worker_win_stop_cb) return 1;
 #endif
