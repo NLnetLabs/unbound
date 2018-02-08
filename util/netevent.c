@@ -1765,7 +1765,10 @@ http_process_initial_header(struct comm_point* c)
 		c->http_in_headers = 0;
 		if(c->http_is_chunked)
 			c->http_in_chunk_headers = 1;
-		/* remove header text from front of buffer */
+		/* remove header text from front of buffer
+		 * the buffer is going to be used to return the data segment
+		 * itself and we don't want the header to get returned
+		 * prepended with it */
 		http_moveover_buffer(c->buffer);
 		sldns_buffer_flip(c->buffer);
 		return 1;
@@ -1791,6 +1794,7 @@ http_process_chunk_header(struct comm_point* c)
 			sldns_buffer_set_limit(c->buffer, 0);
 			fptr_ok(fptr_whitelist_comm_point(c->callback));
 			(void)(*c->callback)(c, c->cb_arg, NETEVENT_DONE, NULL);
+			/* return that we are done */
 			return 2;
 		}
 		if(line[0] == 0) {
@@ -1847,7 +1851,7 @@ http_nonchunk_segment(struct comm_point* c)
 		return 1;
 	}
 	c->tcp_byte_count -= got_now;
-	/* if we have lots of buffer space,
+	/* if we have the buffer space,
 	 * read more data collected into the buffer */
 	remainbufferlen = sldns_buffer_capacity(c->buffer) -
 		sldns_buffer_limit(c->buffer);
@@ -1919,7 +1923,7 @@ http_chunked_segment(struct comm_point* c)
 	}
 	c->tcp_byte_count -= got_now;
 
-	/* if we have lots of buffer space,
+	/* if we have the buffer space,
 	 * read more data collected into the buffer */
 	remainbufferlen = sldns_buffer_capacity(c->buffer) -
 		sldns_buffer_limit(c->buffer);
