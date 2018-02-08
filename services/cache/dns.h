@@ -208,6 +208,18 @@ int dns_msg_authadd(struct dns_msg* msg, struct regional* region,
 	struct ub_packed_rrset_key* rrset, time_t now);
 
 /**
+ * Add rrset to authority section in unpacked dns_msg message. Must have enough
+ * space left, does not grow the array.
+ * @param msg: msg to put it in.
+ * @param region: region to alloc in
+ * @param rrset: to add in authority section
+ * @param now: now.
+ * @return true if worked, false on fail
+ */
+int dns_msg_ansadd(struct dns_msg* msg, struct regional* region, 
+	struct ub_packed_rrset_key* rrset, time_t now);
+
+/**
  * Adjust the prefetch_ttl for a cached message.  This adds a value to the
  * prefetch ttl - postponing the time when it will be prefetched for future
  * incoming queries.

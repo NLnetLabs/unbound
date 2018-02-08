@@ -141,7 +141,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_ACCESS_CONTROL_TAG_DATA VAR_VIEW VAR_ACCESS_CONTROL_VIEW
 %token VAR_VIEW_FIRST VAR_SERVE_EXPIRED VAR_FAKE_DSA VAR_FAKE_SHA1
 %token VAR_LOG_IDENTITY VAR_HIDE_TRUSTANCHOR VAR_TRUST_ANCHOR_SIGNALING
-%token VAR_USE_SYSTEMD VAR_SHM_ENABLE VAR_SHM_KEY
+%token VAR_AGGRESSIVE_NSEC VAR_USE_SYSTEMD VAR_SHM_ENABLE VAR_SHM_KEY
 %token VAR_DNSCRYPT VAR_DNSCRYPT_ENABLE VAR_DNSCRYPT_PORT VAR_DNSCRYPT_PROVIDER
 %token VAR_DNSCRYPT_SECRET_KEY VAR_DNSCRYPT_PROVIDER_CERT
 %token VAR_DNSCRYPT_PROVIDER_CERT_ROTATED
@@ -243,7 +243,7 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_ipsecmod_enabled | server_ipsecmod_hook |
 	server_ipsecmod_ignore_bogus | server_ipsecmod_max_ttl |
 	server_ipsecmod_whitelist | server_ipsecmod_strict |
-	server_udp_upstream_without_downstream
+	server_udp_upstream_without_downstream | server_aggressive_nsec
 	;
 stubstart: VAR_STUB_ZONE
 	{
@@ -1387,6 +1387,17 @@ server_val_permissive_mode: VAR_VAL_PERMISSIVE_MODE STRING_ARG
 			yyerror("expected yes or no.");
 		else cfg_parser->cfg->val_permissive_mode = 
 			(strcmp($2, "yes")==0);
+		free($2);
+	}
+	;
+server_aggressive_nsec: VAR_AGGRESSIVE_NSEC STRING_ARG
+	{
+		OUTYY(("P(server_aggressive_nsec:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else
+			cfg_parser->cfg->aggressive_nsec =
+				(strcmp($2, "yes")==0);
 		free($2);
 	}
 	;

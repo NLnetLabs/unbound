@@ -1,3 +1,7 @@
+8 February 2018: Ralph
+	- Aggressive use of NSEC implementation. Use cached NSEC records to
+	  generate NXDOMAIN, NODATA and positive wildcard answers.
+
 8 February 2018: Wouter
 	- iana port update.
 

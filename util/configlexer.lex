@@ -337,6 +337,7 @@ val-sig-skew-max{COLON}		{ YDVAR(1, VAR_VAL_SIG_SKEW_MAX) }
 val-bogus-ttl{COLON}		{ YDVAR(1, VAR_BOGUS_TTL) }
 val-clean-additional{COLON}	{ YDVAR(1, VAR_VAL_CLEAN_ADDITIONAL) }
 val-permissive-mode{COLON}	{ YDVAR(1, VAR_VAL_PERMISSIVE_MODE) }
+aggressive-nsec{COLON}		{ YDVAR(1, VAR_AGGRESSIVE_NSEC) }
 ignore-cd-flag{COLON}		{ YDVAR(1, VAR_IGNORE_CD_FLAG) }
 serve-expired{COLON}		{ YDVAR(1, VAR_SERVE_EXPIRED) }
 fake-dsa{COLON}			{ YDVAR(1, VAR_FAKE_DSA) }

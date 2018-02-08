@@ -395,8 +395,7 @@ dns_msg_authadd(struct dns_msg* msg, struct regional* region,
 	return 1;
 }
 
-/** add rrset to answer section */
-static int
+int
 dns_msg_ansadd(struct dns_msg* msg, struct regional* region, 
 	struct ub_packed_rrset_key* rrset, time_t now)
 {

@@ -1212,7 +1212,8 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 			msg = val_neg_getmsg(qstate->env->neg_cache, &iq->qchase,
 				qstate->region, qstate->env->rrset_cache,
 				qstate->env->scratch_buffer, 
-				*qstate->env->now, 1/*add SOA*/, NULL);
+				*qstate->env->now, 1/*add SOA*/, NULL, 
+				qstate->env->cfg);
 		}
 		/* item taken from cache does not match our query name, thus
 		 * security needs to be re-examined later */

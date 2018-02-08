@@ -2160,6 +2160,10 @@ processFinished(struct module_qstate* qstate, struct val_qstate* vq,
 		if(vq->orig_msg->rep->security == sec_status_secure) {
 			log_query_info(VERB_DETAIL, "validation success", 
 				&qstate->qinfo);
+			if(!qstate->no_cache_store) {
+				val_neg_addreply(qstate->env->neg_cache,
+					vq->orig_msg->rep);
+			}
 		}
 	}
 
