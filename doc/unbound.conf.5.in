@@ -1463,6 +1463,15 @@ Name of the authority zone.
 Where to download a copy of the zone from, with AXFR and IXFR.  Multiple
 masters can be specified.  They are all tried if one fails.
 .TP
+.B url: \fI<url to zonefile>
+Where to download a zonefile for the zone.  With http or https.  An example
+for the url is "http://www.example.com/example.org.zone".  Multiple url
+statements can be given, they are tried in turn.  If only urls are given
+the SOA refresh timer is used to wait for making new downloads.  If also
+masters are listed, the masters are first probed with UDP SOA queries to
+see if the SOA serial number has changed, reducing the number of downloads.
+If none of the urls work, the masters are tried with IXFR and AXFR.
+.TP
 .B fallback\-enabled: \fI<yes or no>
 Default no.  If enabled, unbound falls back to querying the internet as
 a resolver for this zone when lookups fail.  For example for DNSSEC

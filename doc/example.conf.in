@@ -814,7 +814,7 @@ remote-control:
 # upstream (which saves a lookup to the upstream).  The first example
 # has a copy of the root for local usage.  The second serves example.org
 # authoritatively.  zonefile: reads from file (and writes to it if you also
-# download it), master: fetches with AXFR and IXFR
+# download it), master: fetches with AXFR and IXFR, or url to zonefile.
 # auth-zone:
 #	name: "."
 #	for-downstream: no

@@ -1838,9 +1838,10 @@ http_nonchunk_segment(struct comm_point* c)
 	 * we are looking to read tcp_byte_count more data
 	 * and then the transfer is done. */
 	size_t remainbufferlen;
-	size_t got_now = sldns_buffer_remaining(c->buffer);
+	size_t got_now = sldns_buffer_limit(c->buffer) - c->http_stored;
 	if(c->tcp_byte_count <= got_now) {
 		/* done, this is the last data fragment */
+		c->http_stored = 0;
 		sldns_buffer_set_position(c->buffer, 0);
 		fptr_ok(fptr_whitelist_comm_point(c->callback));
 		(void)(*c->callback)(c, c->cb_arg, NETEVENT_DONE, NULL);
@@ -1852,15 +1853,17 @@ http_nonchunk_segment(struct comm_point* c)
 	remainbufferlen = sldns_buffer_capacity(c->buffer) -
 		sldns_buffer_limit(c->buffer);
 	if(remainbufferlen >= c->tcp_byte_count ||
-		remainbufferlen >= 1024) {
+		remainbufferlen >= 2048) {
 		size_t total = sldns_buffer_limit(c->buffer);
 		sldns_buffer_clear(c->buffer);
 		sldns_buffer_set_position(c->buffer, total);
+		c->http_stored = total;
 		/* return and wait to read more */
 		return 1;
 	}
 	/* call callback with this data amount, then
 	 * wait for more */
+	c->http_stored = 0;
 	sldns_buffer_set_position(c->buffer, 0);
 	fptr_ok(fptr_whitelist_comm_point(c->callback));
 	(void)(*c->callback)(c, c->cb_arg, NETEVENT_NOERROR, NULL);
@@ -1878,13 +1881,14 @@ http_chunked_segment(struct comm_point* c)
 	 * once we read that read more chunk headers.
 	 */
 	size_t remainbufferlen;
-	size_t got_now = sldns_buffer_remaining(c->buffer);
+	size_t got_now = sldns_buffer_limit(c->buffer) - c->http_stored;
 	if(c->tcp_byte_count <= got_now) {
 		/* the chunk has completed (with perhaps some extra data
 		 * from next chunk header and next chunk) */
 		/* save too much info into temp buffer */
 		size_t fraglen;
 		struct comm_reply repinfo;
+		c->http_stored = 0;
 		sldns_buffer_skip(c->buffer, (ssize_t)c->tcp_byte_count);
 		sldns_buffer_clear(c->http_temp);
 		sldns_buffer_write(c->http_temp,
@@ -1924,15 +1928,17 @@ http_chunked_segment(struct comm_point* c)
 	remainbufferlen = sldns_buffer_capacity(c->buffer) -
 		sldns_buffer_limit(c->buffer);
 	if(remainbufferlen >= c->tcp_byte_count ||
-		remainbufferlen >= 1024) {
+		remainbufferlen >= 2048) {
 		size_t total = sldns_buffer_limit(c->buffer);
 		sldns_buffer_clear(c->buffer);
 		sldns_buffer_set_position(c->buffer, total);
+		c->http_stored = total;
 		/* return and wait to read more */
 		return 1;
 	}
 	
 	/* callback of http reader for a new part of the data */
+	c->http_stored = 0;
 	sldns_buffer_set_position(c->buffer, 0);
 	fptr_ok(fptr_whitelist_comm_point(c->callback));
 	(void)(*c->callback)(c, c->cb_arg, NETEVENT_NOERROR, NULL);

@@ -4,6 +4,7 @@
 
 8 February 2018: Wouter
 	- iana port update.
+	- auth zone url config.
 
 5 February 2018: Wouter
 	- Fix #3451: dnstap not building when you have a separate build dir.

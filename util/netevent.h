@@ -213,6 +213,8 @@ struct comm_point {
 	int http_is_chunked;
 	/** http temp buffer (shared buffer for temporary work) */
 	struct sldns_buffer* http_temp;
+	/** http stored content in buffer */
+	size_t http_stored;
 
 	/* -------- dnstap ------- */
 	/** the dnstap environment */
