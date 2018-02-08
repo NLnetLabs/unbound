@@ -1710,7 +1710,7 @@ http_header_done(sldns_buffer* buf)
 }
 
 /** return character string into buffer for header line, moves buffer
- * past that line and puts zero terminator (into \r\n) */
+ * past that line and puts zero terminator into linefeed-newline */
 static char*
 http_header_line(sldns_buffer* buf)
 {
@@ -1885,7 +1885,7 @@ http_chunked_segment(struct comm_point* c)
 		/* save too much info into temp buffer */
 		size_t fraglen;
 		struct comm_reply repinfo;
-		sldns_buffer_skip(c->buffer, c->tcp_byte_count);
+		sldns_buffer_skip(c->buffer, (ssize_t)c->tcp_byte_count);
 		c->tcp_byte_count = 0;
 		sldns_buffer_clear(c->http_temp);
 		sldns_buffer_write(c->http_temp,
