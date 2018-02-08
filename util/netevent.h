@@ -206,8 +206,8 @@ struct comm_point {
 	/* -------- HTTP ------- */
 	/** Currently reading in http headers */
 	int http_in_headers;
-	/** Currently reading in chunk headers, 0=not, 1=firstline, 2=rest
-	 * of chunk header, 3=trailer headers after chunk */
+	/** Currently reading in chunk headers, 0=not, 1=firstline, 2=unused
+	 * (more lines), 3=trailer headers after chunk */
 	int http_in_chunk_headers;
 	/** chunked transfer */
 	int http_is_chunked;

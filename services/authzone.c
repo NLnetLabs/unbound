@@ -3766,7 +3766,7 @@ static int
 http_zonefile_syntax_check(struct auth_xfer* xfr, sldns_buffer* buf)
 {
 	uint8_t rr[LDNS_RR_BUF_SIZE];
-	size_t rr_len = 0, dname_len = 0;
+	size_t rr_len, dname_len = 0;
 	struct auth_chunk* chunk;
 	size_t chunk_pos;
 	int e;
@@ -3775,6 +3775,7 @@ http_zonefile_syntax_check(struct auth_xfer* xfr, sldns_buffer* buf)
 	if(!chunkline_non_comment_RR(&chunk, &chunk_pos, buf)) {
 		return 0;
 	}
+	rr_len = sizeof(rr);
 	e=sldns_str2wire_rr_buf((char*)sldns_buffer_begin(buf), rr, &rr_len,
 		&dname_len, 3600, NULL, 0, NULL, 0);
 	if(e != 0) {
@@ -5089,6 +5090,8 @@ auth_xfer_transfer_http_callback(struct comm_point* c, void* arg, int err,
 	/* if it is good, link it into the list of data */
 	/* if the link into list of data fails (malloc fail) cleanup and end */
 	if(sldns_buffer_limit(c->buffer) > 0) {
+		verbose(VERB_ALGO, "auth zone http queued up %d bytes",
+			(int)sldns_buffer_limit(c->buffer));
 		if(!xfer_link_data(c->buffer, xfr)) {
 			verbose(VERB_ALGO, "http stopped to %s, malloc failed",
 				xfr->task_transfer->master->host);
@@ -5506,6 +5509,18 @@ auth_xfer_timer(void* arg)
 	/* see if we need to start a probe (or maybe it is already in
 	 * progress (due to notify)) */
 	if(xfr->task_probe->worker == NULL) {
+		if(xfr->task_probe->masters == NULL) {
+			/* useless to pick up task_probe, no masters to
+			 * probe. Instead attempt to pick up task transfer */
+			if(xfr->task_transfer->worker == NULL) {
+				xfr_start_transfer(xfr, env, NULL);
+			} else {
+				/* task transfer already in progress */
+				lock_basic_unlock(&xfr->lock);
+			}
+			return;
+		}
+
 		/* pick up the probe task ourselves */
 		xfr->task_probe->worker = env->worker;
 		xfr->task_probe->env = env;

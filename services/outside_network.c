@@ -2327,7 +2327,7 @@ outnet_comm_point_for_http(struct outside_network* outnet,
 		comm_point_delete(cp);
 		return NULL;
 	}
-	return NULL;
+	return cp;
 }
 
 /** get memory used by waiting tcp entry (in use or not) */

@@ -1723,7 +1723,7 @@ http_header_line(sldns_buffer* buf)
 		/* terminate on the \n and skip past the it and done */
 		if((char)sldns_buffer_read_u8_at(buf, i) == '\n') {
 			sldns_buffer_write_u8_at(buf, i, 0);
-			sldns_buffer_set_position(buf, i);
+			sldns_buffer_set_position(buf, i+1);
 			return result;
 		}
 	}
@@ -1815,11 +1815,6 @@ http_process_chunk_header(struct comm_point* c)
 		c->tcp_byte_count = (size_t)strtol(line, &end, 16);
 		if(end == line)
 			return 0;
-		c->http_in_chunk_headers = 2;
-		return 1;
-	}
-	if(line[0] == 0) {
-		/* end of chunk headers */
 		c->http_in_chunk_headers = 0;
 		/* remove header text from front of buffer */
 		http_moveover_buffer(c->buffer);
@@ -1828,6 +1823,7 @@ http_process_chunk_header(struct comm_point* c)
 			/* done with chunks, process chunk_trailer lines */
 			c->http_in_chunk_headers = 3;
 		}
+		return 1;
 	}
 	/* ignore other headers */
 	return 1;
@@ -1915,6 +1911,7 @@ http_chunked_segment(struct comm_point* c)
 		sldns_buffer_write(c->buffer,
 			sldns_buffer_begin(c->http_temp),
 			sldns_buffer_remaining(c->http_temp));
+		sldns_buffer_flip(c->buffer);
 		/* process end of chunk trailer header lines, until
 		 * an empty line */
 		c->http_in_chunk_headers = 3;
@@ -1955,9 +1952,6 @@ static int
 comm_point_http_handle_read(int fd, struct comm_point* c)
 {
 	log_assert(c->type == comm_http);
-	if(!c->tcp_is_reading)
-		return 0;
-
 	log_assert(fd != -1);
 
 	/* if we are in ssl handshake, handle SSL handshake */
@@ -1968,6 +1962,8 @@ comm_point_http_handle_read(int fd, struct comm_point* c)
 			return 1;
 	}
 
+	if(!c->tcp_is_reading)
+		return 1;
 	/* read more data */
 	if(c->ssl) {
 		if(!ssl_http_read_more(c))
@@ -2146,9 +2142,6 @@ static int
 comm_point_http_handle_write(int fd, struct comm_point* c)
 {
 	log_assert(c->type == comm_http);
-	if(c->tcp_is_reading)
-		return 0;
-
 	log_assert(fd != -1);
 
 	/* check pending connect errors, if that fails, we wait for more,
@@ -2166,6 +2159,8 @@ comm_point_http_handle_write(int fd, struct comm_point* c)
 		if(c->ssl_shake_state != comm_ssl_shake_none)
 			return 1;
 	}
+	if(c->tcp_is_reading)
+		return 1;
 	/* if we are writing, write more */
 	if(c->ssl) {
 		if(!ssl_http_write_more(c))
@@ -2811,7 +2806,7 @@ comm_point_delete(struct comm_point* c)
 {
 	if(!c) 
 		return;
-	if(c->type == comm_tcp && c->ssl) {
+	if((c->type == comm_tcp || c->type == comm_http) && c->ssl) {
 #ifdef HAVE_SSL
 		SSL_shutdown(c->ssl);
 		SSL_free(c->ssl);
@@ -2825,7 +2820,7 @@ comm_point_delete(struct comm_point* c)
 		free(c->tcp_handlers);
 	}
 	free(c->timeout);
-	if(c->type == comm_tcp || c->type == comm_local) {
+	if(c->type == comm_tcp || c->type == comm_local || c->type == comm_http) {
 		sldns_buffer_free(c->buffer);
 #ifdef USE_DNSCRYPT
 		if(c->dnscrypt && c->dnscrypt_buffer != c->buffer) {
