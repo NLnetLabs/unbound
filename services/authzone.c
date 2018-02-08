@@ -3735,70 +3735,6 @@ chunkline_get_line_collated(struct auth_chunk** chunk, size_t* chunk_pos,
 	return 1;
 }
 
-/** find noncomment RR line in chunks, collates lines if ( ) format */
-static int
-chunkline_non_comment_RR(struct auth_chunk** chunk, size_t* chunk_pos,
-	sldns_buffer* buf)
-{
-	while(chunkline_get_line_collated(chunk, chunk_pos, buf)) {
-		if(chunkline_is_comment_line_or_empty(buf)) {
-			/* a comment, go to next line */
-			continue;
-		}
-		if(strncmp((char*)sldns_buffer_begin(buf), "$ORIGIN", 7)==0) {
-			/* skip $ORIGIN to find RR */
-			continue;
-		}
-		if(strncmp((char*)sldns_buffer_begin(buf), "$TTL", 4)==0) {
-			/* skip $TTL to find RR */
-			continue;
-		}
-		return 1;
-	}
-	/* no noncomments, fail */
-	return 0;
-}
-
-/** check syntax of chunklist zonefile, parse SOA RR, return false on
- * failure and return a string in the scratch buffer (SOA RR string)
- * on failure. */
-static int
-http_zonefile_syntax_check(struct auth_xfer* xfr, sldns_buffer* buf)
-{
-	uint8_t rr[LDNS_RR_BUF_SIZE];
-	size_t rr_len, dname_len = 0;
-	struct auth_chunk* chunk;
-	size_t chunk_pos;
-	int e;
-	chunk = xfr->task_transfer->chunks_first;
-	chunk_pos = 0;
-	if(!chunkline_non_comment_RR(&chunk, &chunk_pos, buf)) {
-		return 0;
-	}
-	rr_len = sizeof(rr);
-	e=sldns_str2wire_rr_buf((char*)sldns_buffer_begin(buf), rr, &rr_len,
-		&dname_len, 3600, NULL, 0, NULL, 0);
-	if(e != 0) {
-		log_err("parse failure on SOA RR[%d]: %s",
-			LDNS_WIREPARSE_OFFSET(e),
-			sldns_get_errorstr_parse(LDNS_WIREPARSE_ERROR(e)));
-		return 0;
-	}
-	return 1;
-}
-
-/** remove newlines from collated line */
-static void
-chunkline_newline_removal(sldns_buffer* buf)
-{
-	size_t i, end=sldns_buffer_limit(buf);
-	for(i=0; i<end; i++) {
-		char c = (char)sldns_buffer_read_u8_at(buf, i);
-		if(c == '\n')
-			sldns_buffer_write_u8_at(buf, i, (uint8_t)' ');
-	}
-}
-
 /** process $ORIGIN for http */
 static int
 http_parse_origin(sldns_buffer* buf, struct sldns_file_parse_state* pstate)
@@ -3829,6 +3765,110 @@ http_parse_ttl(sldns_buffer* buf, struct sldns_file_parse_state* pstate)
 		return 1;
 	}
 	return 0;
+}
+
+/** find noncomment RR line in chunks, collates lines if ( ) format */
+static int
+chunkline_non_comment_RR(struct auth_chunk** chunk, size_t* chunk_pos,
+	sldns_buffer* buf, struct sldns_file_parse_state* pstate)
+{
+	while(chunkline_get_line_collated(chunk, chunk_pos, buf)) {
+		if(chunkline_is_comment_line_or_empty(buf)) {
+			/* a comment, go to next line */
+			continue;
+		}
+		if(http_parse_origin(buf, pstate)) {
+			continue; /* $ORIGIN has been handled */
+		}
+		if(http_parse_ttl(buf, pstate)) {
+			continue; /* $TTL has been handled */
+		}
+		return 1;
+	}
+	/* no noncomments, fail */
+	return 0;
+}
+
+/** check syntax of chunklist zonefile, parse SOA RR, return false on
+ * failure and return a string in the scratch buffer (SOA RR string)
+ * on failure. */
+static int
+http_zonefile_syntax_check(struct auth_xfer* xfr, sldns_buffer* buf)
+{
+	uint8_t rr[LDNS_RR_BUF_SIZE];
+	size_t rr_len, dname_len = 0;
+	struct sldns_file_parse_state pstate;
+	struct auth_chunk* chunk;
+	size_t chunk_pos;
+	int e;
+	memset(&pstate, 0, sizeof(pstate));
+	pstate.default_ttl = 3600;
+	if(xfr->namelen < sizeof(pstate.origin)) {
+		pstate.origin_len = xfr->namelen;
+		memmove(pstate.origin, xfr->name, xfr->namelen);
+	}
+	chunk = xfr->task_transfer->chunks_first;
+	chunk_pos = 0;
+	if(!chunkline_non_comment_RR(&chunk, &chunk_pos, buf, &pstate)) {
+		return 0;
+	}
+	rr_len = sizeof(rr);
+	e=sldns_str2wire_rr_buf((char*)sldns_buffer_begin(buf), rr, &rr_len,
+		&dname_len, pstate.default_ttl,
+		pstate.origin_len?pstate.origin:NULL, pstate.origin_len,
+		pstate.prev_rr_len?pstate.prev_rr:NULL, pstate.prev_rr_len);
+	if(e != 0) {
+		log_err("parse failure on SOA RR[%d]: %s",
+			LDNS_WIREPARSE_OFFSET(e),
+			sldns_get_errorstr_parse(LDNS_WIREPARSE_ERROR(e)));
+		return 0;
+	}
+	/* check that name is correct */
+	if(query_dname_compare(rr, xfr->name) != 0) {
+		char nm[255+1], zname[255+1];
+		dname_str(rr, nm);
+		dname_str(xfr->name, zname);
+		log_err("parse failure for %s, SOA RR for %s found instead",
+			zname, nm);
+		return 0;
+	}
+	/* check that type is SOA */
+	if(sldns_wirerr_get_type(rr, rr_len, dname_len) != LDNS_RR_TYPE_SOA) {
+		log_err("parse failure: first record in downloaded zonefile "
+			"not of type SOA");
+		return 0;
+	}
+	/* check that class is correct */
+	if(sldns_wirerr_get_class(rr, rr_len, dname_len) != xfr->dclass) {
+		log_err("parse failure: first record in downloaded zonefile "
+			"from wrong RR class");
+		return 0;
+	}
+	return 1;
+}
+
+/** sum sizes of chunklist */
+static size_t
+chunklist_sum(struct auth_chunk* list)
+{
+	struct auth_chunk* p;
+	size_t s = 0;
+	for(p=list; p; p=p->next) {
+		s += p->len;
+	}
+	return s;
+}
+
+/** remove newlines from collated line */
+static void
+chunkline_newline_removal(sldns_buffer* buf)
+{
+	size_t i, end=sldns_buffer_limit(buf);
+	for(i=0; i<end; i++) {
+		char c = (char)sldns_buffer_read_u8_at(buf, i);
+		if(c == '\n')
+			sldns_buffer_write_u8_at(buf, i, (uint8_t)' ');
+	}
 }
 
 /** for http download, parse and add RR to zone */
@@ -4202,6 +4242,10 @@ apply_http(struct auth_xfer* xfr, struct auth_zone* z,
 		memmove(pstate.origin, xfr->name, xfr->namelen);
 	}
 
+	if(verbosity >= VERB_ALGO)
+		verbose(VERB_ALGO, "http download %s of size %d",
+		xfr->task_transfer->master->file,
+		(int)chunklist_sum(xfr->task_transfer->chunks_first));
 	if(xfr->task_transfer->chunks_first && verbosity >= VERB_ALGO) {
 		char preview[1024];
 		if(xfr->task_transfer->chunks_first->len+1 > sizeof(preview)) {
@@ -4220,8 +4264,7 @@ apply_http(struct auth_xfer* xfr, struct auth_zone* z,
 	/* perhaps a little syntax check before we try to apply the data? */
 	if(!http_zonefile_syntax_check(xfr, scratch_buffer)) {
 		log_err("http download %s/%s does not contain a zonefile, "
-			" no SOA but got '%s'",
-			xfr->task_transfer->master->host,
+			"but got '%s'", xfr->task_transfer->master->host,
 			xfr->task_transfer->master->file,
 			sldns_buffer_begin(scratch_buffer));
 		return 0;

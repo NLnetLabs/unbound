@@ -2916,7 +2916,7 @@ comm_point_start_listening(struct comm_point* c, int newfd, int msec)
 		c->timeout->tv_usec = (msec%1000)*1000;
 #endif /* S_SPLINT_S */
 	}
-	if(c->type == comm_tcp) {
+	if(c->type == comm_tcp || c->type == comm_http) {
 		ub_event_del_bits(c->ev->ev, UB_EV_READ|UB_EV_WRITE);
 		if(c->tcp_is_reading)
 			ub_event_add_bits(c->ev->ev, UB_EV_READ);
