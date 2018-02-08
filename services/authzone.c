@@ -3837,9 +3837,10 @@ http_parse_add_rr(struct auth_xfer* xfr, struct auth_zone* z,
 	sldns_buffer* buf, struct sldns_file_parse_state* pstate)
 {
 	uint8_t rr[LDNS_RR_BUF_SIZE];
-	size_t rr_len = 0, dname_len = 0;
+	size_t rr_len, dname_len = 0;
 	int e;
 	char* line = (char*)sldns_buffer_begin(buf);
+	rr_len = sizeof(rr);
 	e = sldns_str2wire_rr_buf(line, rr, &rr_len, &dname_len,
 		pstate->default_ttl,
 		pstate->origin_len?pstate->origin:NULL, pstate->origin_len,
@@ -4201,6 +4202,21 @@ apply_http(struct auth_xfer* xfr, struct auth_zone* z,
 		memmove(pstate.origin, xfr->name, xfr->namelen);
 	}
 
+	if(xfr->task_transfer->chunks_first && verbosity >= VERB_ALGO) {
+		char preview[1024];
+		if(xfr->task_transfer->chunks_first->len+1 > sizeof(preview)) {
+			memmove(preview, xfr->task_transfer->chunks_first->data,
+				sizeof(preview)-1);
+			preview[sizeof(preview)-1]=0;
+		} else {
+			memmove(preview, xfr->task_transfer->chunks_first->data,
+				xfr->task_transfer->chunks_first->len);
+			preview[xfr->task_transfer->chunks_first->len]=0;
+		}
+		log_info("auth zone http downloaded content preview: %s",
+			preview);
+	}
+
 	/* perhaps a little syntax check before we try to apply the data? */
 	if(!http_zonefile_syntax_check(xfr, scratch_buffer)) {
 		log_err("http download %s/%s does not contain a zonefile, "
@@ -4219,10 +4235,12 @@ apply_http(struct auth_xfer* xfr, struct auth_zone* z,
 
 	chunk = xfr->task_transfer->chunks_first;
 	chunk_pos = 0;
+	pstate.lineno = 0;
 	while(chunkline_get_line_collated(&chunk, &chunk_pos, scratch_buffer)) {
 		/* process this line */
+		pstate.lineno++;
 		chunkline_newline_removal(scratch_buffer);
-		if(!chunkline_is_comment_line_or_empty(scratch_buffer)) {
+		if(chunkline_is_comment_line_or_empty(scratch_buffer)) {
 			continue;
 		}
 		/* parse line and add RR */
@@ -4233,6 +4251,10 @@ apply_http(struct auth_xfer* xfr, struct auth_zone* z,
 			continue; /* $TTL has been handled */
 		}
 		if(!http_parse_add_rr(xfr, z, scratch_buffer, &pstate)) {
+			verbose(VERB_ALGO, "error parsing line [%s:%d] %s",
+				xfr->task_transfer->master->file,
+				pstate.lineno,
+				sldns_buffer_begin(scratch_buffer));
 			return 0;
 		}
 	}
@@ -4342,8 +4364,6 @@ xfr_process_chunk_list(struct auth_xfer* xfr, struct module_env* env,
 			return 0;
 		}
 	}
-	if(xfr->have_zone)
-		xfr->lease_time = *env->now;
 	xfr->zone_expired = 0;
 	z->zone_expired = 0;
 	if(!xfr_find_soa(z, xfr)) {
@@ -4352,6 +4372,8 @@ xfr_process_chunk_list(struct auth_xfer* xfr, struct module_env* env,
 			" (or malformed RR)", xfr->task_transfer->master->host);
 		return 0;
 	}
+	if(xfr->have_zone)
+		xfr->lease_time = *env->now;
 
 	/* unlock */
 	lock_rw_unlock(&z->lock);
@@ -5068,6 +5090,7 @@ auth_xfer_transfer_http_callback(struct comm_point* c, void* arg, int err,
 	log_assert(xfr->task_transfer);
 	env = xfr->task_transfer->env;
 	lock_basic_lock(&xfr->lock);
+	verbose(VERB_ALGO, "auth zone transfer http callback");
 
 	if(err != NETEVENT_NOERROR && err != NETEVENT_DONE) {
 		/* connection failed, closed, or timeout */
@@ -5291,9 +5314,16 @@ auth_xfer_probe_udp_callback(struct comm_point* c, void* arg, int err,
 				/* if updated, start the transfer task, if needed */
 				verbose(VERB_ALGO, "auth_zone updated, start transfer");
 				if(xfr->task_transfer->worker == NULL) {
+					struct auth_master* master =
+						xfr_probe_current_master(xfr);
+					/* if we have download URLs use them
+					 * in preference to this master we
+					 * just probed the SOA from */
+					if(xfr->task_transfer->masters &&
+						xfr->task_transfer->masters->http)
+						master = NULL;
 					xfr_probe_disown(xfr);
-					xfr_start_transfer(xfr, env, 
-						xfr_probe_current_master(xfr));
+					xfr_start_transfer(xfr, env, master);
 					return 0;
 
 				}
@@ -5603,6 +5633,12 @@ xfr_set_timeout(struct auth_xfer* xfr, struct module_env* env,
 		tv.tv_sec = xfr->task_nextprobe->next_probe - 
 			*(xfr->task_nextprobe->env->now);
 	else	tv.tv_sec = 0;
+	if(verbosity >= VERB_ALGO) {
+		char zname[255+1];
+		dname_str(xfr->name, zname);
+		verbose(VERB_ALGO, "auth zone %s timeout in %d seconds",
+			zname, (int)tv.tv_sec);
+	}
 	tv.tv_usec = 0;
 	comm_timer_set(xfr->task_nextprobe->timer, &tv);
 }

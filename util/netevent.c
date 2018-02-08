@@ -1886,7 +1886,6 @@ http_chunked_segment(struct comm_point* c)
 		size_t fraglen;
 		struct comm_reply repinfo;
 		sldns_buffer_skip(c->buffer, (ssize_t)c->tcp_byte_count);
-		c->tcp_byte_count = 0;
 		sldns_buffer_clear(c->http_temp);
 		sldns_buffer_write(c->http_temp,
 			sldns_buffer_current(c->buffer),
