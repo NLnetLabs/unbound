@@ -4681,8 +4681,12 @@ void auth_xfer_transfer_lookup_callback(void* arg, int rcode, sldns_buffer* buf,
 	struct auth_xfer* xfr = (struct auth_xfer*)arg;
 	struct module_env* env;
 	log_assert(xfr->task_transfer);
-	env = xfr->task_transfer->env;
 	lock_basic_lock(&xfr->lock);
+	env = xfr->task_transfer->env;
+	if(env->outnet->want_to_quit) {
+		lock_basic_unlock(&xfr->lock);
+		return; /* stop on quit */
+	}
 
 	/* process result */
 	if(rcode == LDNS_RCODE_NOERROR) {
@@ -5074,8 +5078,12 @@ auth_xfer_transfer_tcp_callback(struct comm_point* c, void* arg, int err,
 	int gonextonfail = 1;
 	int transferdone = 0;
 	log_assert(xfr->task_transfer);
-	env = xfr->task_transfer->env;
 	lock_basic_lock(&xfr->lock);
+	env = xfr->task_transfer->env;
+	if(env->outnet->want_to_quit) {
+		lock_basic_unlock(&xfr->lock);
+		return 0; /* stop on quit */
+	}
 
 	if(err != NETEVENT_NOERROR) {
 		/* connection failed, closed, or timeout */
@@ -5131,9 +5139,13 @@ auth_xfer_transfer_http_callback(struct comm_point* c, void* arg, int err,
 	struct auth_xfer* xfr = (struct auth_xfer*)arg;
 	struct module_env* env;
 	log_assert(xfr->task_transfer);
-	env = xfr->task_transfer->env;
 	lock_basic_lock(&xfr->lock);
+	env = xfr->task_transfer->env;
 	verbose(VERB_ALGO, "auth zone transfer http callback");
+	if(env->outnet->want_to_quit) {
+		lock_basic_unlock(&xfr->lock);
+		return 0; /* stop on quit */
+	}
 
 	if(err != NETEVENT_NOERROR && err != NETEVENT_DONE) {
 		/* connection failed, closed, or timeout */
@@ -5303,8 +5315,12 @@ auth_xfer_probe_timer_callback(void* arg)
 	struct auth_xfer* xfr = (struct auth_xfer*)arg;
 	struct module_env* env;
 	log_assert(xfr->task_probe);
-	env = xfr->task_probe->env;
 	lock_basic_lock(&xfr->lock);
+	env = xfr->task_probe->env;
+	if(env->outnet->want_to_quit) {
+		lock_basic_unlock(&xfr->lock);
+		return; /* stop on quit */
+	}
 
 	if(xfr->task_probe->timeout <= AUTH_PROBE_TIMEOUT_STOP) {
 		/* try again with bigger timeout */
@@ -5330,8 +5346,12 @@ auth_xfer_probe_udp_callback(struct comm_point* c, void* arg, int err,
 	struct auth_xfer* xfr = (struct auth_xfer*)arg;
 	struct module_env* env;
 	log_assert(xfr->task_probe);
-	env = xfr->task_probe->env;
 	lock_basic_lock(&xfr->lock);
+	env = xfr->task_probe->env;
+	if(env->outnet->want_to_quit) {
+		lock_basic_unlock(&xfr->lock);
+		return 0; /* stop on quit */
+	}
 
 	/* the comm_point_udp_callback is in a for loop for NUM_UDP_PER_SELECT
 	 * and we set rep.c=NULL to stop if from looking inside the commpoint*/
@@ -5513,6 +5533,10 @@ void auth_xfer_probe_lookup_callback(void* arg, int rcode, sldns_buffer* buf,
 	log_assert(xfr->task_probe);
 	lock_basic_lock(&xfr->lock);
 	env = xfr->task_probe->env;
+	if(env->outnet->want_to_quit) {
+		lock_basic_unlock(&xfr->lock);
+		return; /* stop on quit */
+	}
 
 	/* process result */
 	if(rcode == LDNS_RCODE_NOERROR) {
@@ -5568,6 +5592,10 @@ auth_xfer_timer(void* arg)
 	log_assert(xfr->task_nextprobe);
 	lock_basic_lock(&xfr->lock);
 	env = xfr->task_nextprobe->env;
+	if(env->outnet->want_to_quit) {
+		lock_basic_unlock(&xfr->lock);
+		return; /* stop on quit */
+	}
 
 	/* see if zone has expired, and if so, also set auth_zone expired */
 	if(xfr->have_zone && !xfr->zone_expired &&
