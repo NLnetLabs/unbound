@@ -5141,11 +5141,11 @@ auth_xfer_transfer_http_callback(struct comm_point* c, void* arg, int err,
 	log_assert(xfr->task_transfer);
 	lock_basic_lock(&xfr->lock);
 	env = xfr->task_transfer->env;
-	verbose(VERB_ALGO, "auth zone transfer http callback");
 	if(env->outnet->want_to_quit) {
 		lock_basic_unlock(&xfr->lock);
 		return 0; /* stop on quit */
 	}
+	verbose(VERB_ALGO, "auth zone transfer http callback");
 
 	if(err != NETEVENT_NOERROR && err != NETEVENT_DONE) {
 		/* connection failed, closed, or timeout */
