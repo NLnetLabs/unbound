@@ -1,5 +1,6 @@
 12 February 2018: Ralph
 	- Added tests with wildcard expanded NSEC records (CVE-2017-15105 test)
+	- Processed aggressive NSEC code review remarks Wouter
 
 8 February 2018: Ralph
 	- Aggressive use of NSEC implementation. Use cached NSEC records to

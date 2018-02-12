@@ -1508,7 +1508,7 @@ val_neg_getmsg(struct val_neg_cache* neg, struct query_info* qinfo,
 		return msg;
 	} else if(nsec && val_nsec_proves_name_error(nsec, qinfo->qname)) {
 		if(!(msg = dns_msg_create(qinfo->qname, qinfo->qname_len, 
-			qinfo->qtype, qinfo->qclass, region, 2))) 
+			qinfo->qtype, qinfo->qclass, region, 3))) 
 			return NULL;
 		if(!(ce = nsec_closest_encloser(qinfo->qname, nsec)))
 			return NULL;
@@ -1526,9 +1526,8 @@ val_neg_getmsg(struct val_neg_cache* neg, struct query_info* qinfo,
 			wc_ce[0] = 1;
 			wc_ce[1] = (uint8_t)'*';
 			memmove(wc_ce+2, ce, ce_len);
-			ce_len += 2;
 			wc_qinfo.qname = wc_ce;
-			wc_qinfo.qname_len = ce_len;
+			wc_qinfo.qname_len = ce_len += 2;
 			wc_qinfo.qtype = qinfo->qtype;
 
 
@@ -1559,9 +1558,9 @@ val_neg_getmsg(struct val_neg_cache* neg, struct query_info* qinfo,
 			} else {
 				/* Get wildcard NSEC for possible non existence
 				 * proof */
-				if(!(wcrr = neg_find_nsec(neg, wc_ce, ce_len,
-					qinfo->qclass, rrset_cache, now,
-					region)))
+				if(!(wcrr = neg_find_nsec(neg, wc_qinfo.qname,
+					wc_qinfo.qname_len, qinfo->qclass,
+					rrset_cache, now, region)))
 					return NULL;
 
 				nodata_wc = NULL;
