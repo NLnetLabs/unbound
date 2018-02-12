@@ -1,3 +1,6 @@
+12 February 2018: Wouter
+	- Unit test for auth zone https url download.
+
 12 February 2018: Ralph
 	- Added tests with wildcard expanded NSEC records (CVE-2017-15105 test)
 	- Processed aggressive NSEC code review remarks Wouter
