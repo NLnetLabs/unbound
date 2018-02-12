@@ -1527,7 +1527,7 @@ val_neg_getmsg(struct val_neg_cache* neg, struct query_info* qinfo,
 			wc_ce[1] = (uint8_t)'*';
 			memmove(wc_ce+2, ce, ce_len);
 			wc_qinfo.qname = wc_ce;
-			wc_qinfo.qname_len = ce_len += 2;
+			wc_qinfo.qname_len = ce_len + 2;
 			wc_qinfo.qtype = qinfo->qtype;
 
 
