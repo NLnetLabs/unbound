@@ -2062,9 +2062,9 @@ az_domain_go_up(struct auth_zone* z, struct auth_data* n)
  * return true if the node (param node) is existing, nonobscured and
  * 	can be used to generate answers from.  It is then also node_exact.
  * returns false if the node is not good enough (or it wasn't node_exact)
- *      in this case the ce can be filled.
- *      if ce is NULL, no ce exists, and likely the zone is completely empty,
- *      not even with a zone apex.
+ *	in this case the ce can be filled.
+ *	if ce is NULL, no ce exists, and likely the zone is completely empty,
+ *	not even with a zone apex.
  *	if ce is nonNULL it is the closest enclosing upper name (that exists
  *	itself for answer purposes).  That name may have DNAME, NS or wildcard
  *	rrset is the closest DNAME or NS rrset that was found.
@@ -3702,7 +3702,7 @@ chunkline_is_comment_line_or_empty(sldns_buffer* buf)
 /** find a line with ( ) collated */
 static int
 chunkline_get_line_collated(struct auth_chunk** chunk, size_t* chunk_pos,
-        sldns_buffer* buf)
+	sldns_buffer* buf)
 {
 	size_t pos;
 	int parens = 0;
@@ -4493,9 +4493,9 @@ xfr_transfer_lookup_host(struct auth_xfer* xfr, struct module_env* env)
 	edns.edns_version = 0;
 	edns.bits = EDNS_DO;
 	edns.opt_list = NULL;
-        if(sldns_buffer_capacity(buf) < 65535)
-                edns.udp_size = (uint16_t)sldns_buffer_capacity(buf);
-        else    edns.udp_size = 65535;
+	if(sldns_buffer_capacity(buf) < 65535)
+		edns.udp_size = (uint16_t)sldns_buffer_capacity(buf);
+	else	edns.udp_size = 65535;
 
 	/* unlock xfr during mesh_new_callback() because the callback can be
 	 * called straight away */
@@ -4516,7 +4516,7 @@ static int
 xfr_transfer_init_fetch(struct auth_xfer* xfr, struct module_env* env)
 {
 	struct sockaddr_storage addr;
-        socklen_t addrlen = 0;
+	socklen_t addrlen = 0;
 	struct auth_master* master = xfr->task_transfer->master;
 	if(!master) return 0;
 
@@ -5075,7 +5075,7 @@ process_list_end_transfer(struct auth_xfer* xfr, struct module_env* env)
 /** callback for task_transfer tcp connections */
 int
 auth_xfer_transfer_tcp_callback(struct comm_point* c, void* arg, int err,
-        struct comm_reply* ATTR_UNUSED(repinfo))
+	struct comm_reply* ATTR_UNUSED(repinfo))
 {
 	struct auth_xfer* xfr = (struct auth_xfer*)arg;
 	struct module_env* env;
@@ -5138,7 +5138,7 @@ auth_xfer_transfer_tcp_callback(struct comm_point* c, void* arg, int err,
 /** callback for task_transfer http connections */
 int
 auth_xfer_transfer_http_callback(struct comm_point* c, void* arg, int err,
-        struct comm_reply* repinfo)
+	struct comm_reply* repinfo)
 {
 	struct auth_xfer* xfr = (struct auth_xfer*)arg;
 	struct module_env* env;
@@ -5345,7 +5345,7 @@ auth_xfer_probe_timer_callback(void* arg)
 /** callback for task_probe udp packets */
 int
 auth_xfer_probe_udp_callback(struct comm_point* c, void* arg, int err,
-        struct comm_reply* repinfo)
+	struct comm_reply* repinfo)
 {
 	struct auth_xfer* xfr = (struct auth_xfer*)arg;
 	struct module_env* env;
@@ -5473,9 +5473,9 @@ xfr_probe_lookup_host(struct auth_xfer* xfr, struct module_env* env)
 	edns.edns_version = 0;
 	edns.bits = EDNS_DO;
 	edns.opt_list = NULL;
-        if(sldns_buffer_capacity(buf) < 65535)
-                edns.udp_size = (uint16_t)sldns_buffer_capacity(buf);
-        else    edns.udp_size = 65535;
+	if(sldns_buffer_capacity(buf) < 65535)
+		edns.udp_size = (uint16_t)sldns_buffer_capacity(buf);
+	else	edns.udp_size = 65535;
 
 	/* unlock xfr during mesh_new_callback() because the callback can be
 	 * called straight away */
@@ -5926,6 +5926,13 @@ parse_url(char* url, char** host, char** file, int* port, int* ssl)
 		p += 8;
 		*ssl = 1;
 		*port = AUTH_HTTPS_PORT;
+	} else if(strstr(p, "://") && strchr(p, '/') > strstr(p, "://") &&
+		strchr(p, ':') >= strstr(p, "://")) {
+		char* uri = dup_prefix(p, (size_t)(strstr(p, "://")-p));
+		log_err("protocol %s:// not supported (for url %s)",
+			uri?uri:"", p);
+		free(uri);
+		return 0;
 	}
 
 	/* parse hostname part */
@@ -6002,17 +6009,17 @@ xfer_set_masters(struct auth_master** list, struct config_auth* c,
 	return 1;
 }
 
-#define SERIAL_BITS      32
+#define SERIAL_BITS	32
 int
 compare_serial(uint32_t a, uint32_t b)
 {
-        const uint32_t cutoff = ((uint32_t) 1 << (SERIAL_BITS - 1));
+	const uint32_t cutoff = ((uint32_t) 1 << (SERIAL_BITS - 1));
 
-        if (a == b) {
-                return 0;
-        } else if ((a < b && b - a < cutoff) || (a > b && a - b > cutoff)) {
-                return -1;
-        } else {
-                return 1;
-        }
+	if (a == b) {
+		return 0;
+	} else if ((a < b && b - a < cutoff) || (a > b && a - b > cutoff)) {
+		return -1;
+	} else {
+		return 1;
+	}
 }
