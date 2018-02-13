@@ -82,6 +82,10 @@
 #define AUTH_TRANSFER_TIMEOUT 10000 /* msec */
 /* auth transfer max backoff for failed tranfers and probes */
 #define AUTH_TRANSFER_MAX_BACKOFF 86400 /* sec */
+/* auth http port number */
+#define AUTH_HTTP_PORT 80
+/* auth https port number */
+#define AUTH_HTTPS_PORT 443
 
 /** pick up nextprobe task to start waiting to perform transfer actions */
 static void xfr_set_timeout(struct auth_xfer* xfr, struct module_env* env,
@@ -5913,7 +5917,7 @@ parse_url(char* url, char** host, char** file, int* port, int* ssl)
 	 * or http://127.0.0.1   (index.html)
 	 * or https://[::1@1234]/a/b/c/d */
 	*ssl = 0;
-	*port = 80;
+	*port = AUTH_HTTP_PORT;
 
 	/* parse http:// or https:// */
 	if(strncmp(p, "http://", 7) == 0) {
@@ -5921,7 +5925,7 @@ parse_url(char* url, char** host, char** file, int* port, int* ssl)
 	} else if(strncmp(p, "https://", 8) == 0) {
 		p += 8;
 		*ssl = 1;
-		*port = 443;
+		*port = AUTH_HTTPS_PORT;
 	}
 
 	/* parse hostname part */

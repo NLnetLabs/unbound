@@ -981,7 +981,7 @@ log_cert(unsigned level, const char* str, X509* cert)
                         |X509_FLAG_NO_ISSUER|X509_FLAG_NO_VALIDITY
 			|X509_FLAG_NO_EXTENSIONS|X509_FLAG_NO_AUX
 			|X509_FLAG_NO_ATTRIBUTES));
-	BIO_write(bio, &nul, sizeof(nul));
+	BIO_write(bio, &nul, (int)sizeof(nul));
 	len = BIO_get_mem_data(bio, &pp);
 	if(len != 0 && pp) {
 		verbose(level, "%s: \n%s", str, pp);
