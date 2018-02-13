@@ -1,5 +1,6 @@
 13 February 2018: Wouter
 	- tls-cert-bundle option in unbound.conf enables TLS authentication.
+	- iana port update.
 
 12 February 2018: Wouter
 	- Unit test for auth zone https url download.
