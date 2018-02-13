@@ -5916,16 +5916,16 @@ parse_url(char* url, char** host, char** file, int* port, int* ssl)
 	/* parse http://www.example.com/file.htm
 	 * or http://127.0.0.1   (index.html)
 	 * or https://[::1@1234]/a/b/c/d */
-	*ssl = 0;
-	*port = AUTH_HTTP_PORT;
+	*ssl = 1;
+	*port = AUTH_HTTPS_PORT;
 
 	/* parse http:// or https:// */
 	if(strncmp(p, "http://", 7) == 0) {
 		p += 7;
+		*ssl = 0;
+		*port = AUTH_HTTP_PORT;
 	} else if(strncmp(p, "https://", 8) == 0) {
 		p += 8;
-		*ssl = 1;
-		*port = AUTH_HTTPS_PORT;
 	} else if(strstr(p, "://") && strchr(p, '/') > strstr(p, "://") &&
 		strchr(p, ':') >= strstr(p, "://")) {
 		char* uri = dup_prefix(p, (size_t)(strstr(p, "://")-p));
