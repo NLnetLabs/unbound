@@ -100,6 +100,8 @@ struct config_file {
 	int ssl_port;
 	/** if outgoing tcp connections use SSL */
 	int ssl_upstream;
+	/** cert bundle for outgoing connections */
+	char* tls_cert_bundle;
 
 	/** outgoing port range number of ports (per thread) */
 	int outgoing_num_ports;

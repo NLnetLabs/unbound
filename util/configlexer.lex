@@ -236,6 +236,8 @@ ssl-service-pem{COLON}		{ YDVAR(1, VAR_SSL_SERVICE_PEM) }
 tls-service-pem{COLON}		{ YDVAR(1, VAR_SSL_SERVICE_PEM) }
 ssl-port{COLON}			{ YDVAR(1, VAR_SSL_PORT) }
 tls-port{COLON}			{ YDVAR(1, VAR_SSL_PORT) }
+ssl-cert-bundle{COLON}		{ YDVAR(1, VAR_TLS_CERT_BUNDLE) }
+tls-cert-bundle{COLON}		{ YDVAR(1, VAR_TLS_CERT_BUNDLE) }
 use-systemd{COLON}		{ YDVAR(1, VAR_USE_SYSTEMD) }
 do-daemonize{COLON}		{ YDVAR(1, VAR_DO_DAEMONIZE) }
 interface{COLON}		{ YDVAR(1, VAR_INTERFACE) }

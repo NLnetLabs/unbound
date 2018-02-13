@@ -108,6 +108,7 @@ config_create(void)
 	cfg->ssl_service_pem = NULL;
 	cfg->ssl_port = 853;
 	cfg->ssl_upstream = 0;
+	cfg->tls_cert_bundle = NULL;
 	cfg->use_syslog = 1;
 	cfg->log_identity = NULL; /* changed later with argv[0] */
 	cfg->log_time_ascii = 0;
@@ -444,6 +445,7 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	else S_STR("ssl-service-key:", ssl_service_key)
 	else S_STR("ssl-service-pem:", ssl_service_pem)
 	else S_NUMBER_NONZERO("ssl-port:", ssl_port)
+	else S_STR("tls-cert-bundle:", tls_cert_bundle)
 	else S_YNO("interface-automatic:", if_automatic)
 	else S_YNO("use-systemd:", use_systemd)
 	else S_YNO("do-daemonize:", do_daemonize)
@@ -853,6 +855,7 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_STR(opt, "ssl-service-key", ssl_service_key)
 	else O_STR(opt, "ssl-service-pem", ssl_service_pem)
 	else O_DEC(opt, "ssl-port", ssl_port)
+	else O_STR(opt, "tls-cert-bundle", tls_cert_bundle)
 	else O_YNO(opt, "use-systemd", use_systemd)
 	else O_YNO(opt, "do-daemonize", do_daemonize)
 	else O_STR(opt, "chroot", chrootdir)
@@ -1270,6 +1273,7 @@ config_delete(struct config_file* cfg)
 	free(cfg->target_fetch_policy);
 	free(cfg->ssl_service_key);
 	free(cfg->ssl_service_pem);
+	free(cfg->tls_cert_bundle);
 	free(cfg->log_identity);
 	config_del_strarray(cfg->ifs, cfg->num_ifs);
 	config_del_strarray(cfg->out_ifs, cfg->num_out_ifs);

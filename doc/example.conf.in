@@ -670,6 +670,9 @@ server:
 	# Default is no.  Can be turned on and off with unbound-control.
 	# tls-upstream: no
 
+	# Certificates used to authenticate connections made upstream.
+	# tls-cert-bundle: ""
+
 	# DNS64 prefix. Must be specified when DNS64 is use.
 	# Enable dns64 in module-config.  Used to synthesize IPv6 from IPv4.
 	# dns64-prefix: 64:ff9b::0/96

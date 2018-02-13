@@ -425,6 +425,12 @@
 /* Define to 1 if you have the `SSL_CTX_set_security_level' function. */
 #undef HAVE_SSL_CTX_SET_SECURITY_LEVEL
 
+/* Define to 1 if you have the `SSL_get0_peername' function. */
+#undef HAVE_SSL_GET0_PEERNAME
+
+/* Define to 1 if you have the `SSL_set1_host' function. */
+#undef HAVE_SSL_SET1_HOST
+
 /* Define to 1 if you have the <stdarg.h> header file. */
 #undef HAVE_STDARG_H
 

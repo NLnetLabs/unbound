@@ -435,6 +435,15 @@ interfaces configured with that port number as @number get the SSL service.
 .B ssl\-port: \fI<number>
 Alternate syntax for \fBtls\-port\fR.
 .TP
+.B tls\-cert\-bundle: \fI<file>
+If null or "", no file is used.  Set it to the certificate bundle file,
+for example "/etc/pki/tls/certs/ca\-bundle.crt".  These certificates are used
+for authenticating connections made to outside peers.  For example auth\-zone
+urls, and also DNS over TLS connections.
+.TP
+.B ssl\-cert\-bundle: \fI<file>
+Alternate syntax for \fBtls\-cert\-bundle\fR.
+.TP
 .B use\-systemd: \fI<yes or no>
 Enable or disable systemd socket activation.
 Default is no.
@@ -1471,6 +1480,8 @@ the SOA refresh timer is used to wait for making new downloads.  If also
 masters are listed, the masters are first probed with UDP SOA queries to
 see if the SOA serial number has changed, reducing the number of downloads.
 If none of the urls work, the masters are tried with IXFR and AXFR.
+For https, the \fBtls\-cert\-bundle\fR and the hostname from the url are used
+to authenticate the connection.
 .TP
 .B fallback\-enabled: \fI<yes or no>
 Default no.  If enabled, unbound falls back to querying the internet as

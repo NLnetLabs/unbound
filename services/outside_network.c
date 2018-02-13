@@ -2316,6 +2316,26 @@ outnet_comm_point_for_http(struct outside_network* outnet,
 		comm_point_tcp_win_bio_cb(c, c->ssl);
 #endif
 		cp->ssl_shake_state = comm_ssl_shake_write;
+		/* https verification */
+#ifdef HAVE_SSL_SET1_HOST
+		if((SSL_CTX_get_verify_mode(outnet->sslctx)&SSL_VERIFY_PEER)) {
+			/* because we set SSL_VERIFY_PEER, in netevent in
+			 * ssl_handshake, it'll check if the certificate
+			 * verification has succeeded */
+			/* SSL_VERIFY_PEER is set on the sslctx */
+			/* and the certificates to verify with are loaded into
+			 * it with SSL_load_verify_locations or
+			 * SSL_CTX_set_default_verify_paths */
+			/* setting the hostname makes openssl verify the
+			 * host name in the x509 certificate in the
+			 * SSL connection*/
+		 	if(!SSL_set1_host(cp->ssl, host)) {
+				log_err("SSL_set1_host failed");
+				comm_point_delete(cp);
+				return NULL;
+			}
+		}
+#endif /* HAVE_SSL_SET1_HOST */
 	}
 
 	/* set timeout on TCP connection */

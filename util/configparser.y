@@ -109,7 +109,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_IGNORE_CD_FLAG VAR_LOG_QUERIES VAR_LOG_REPLIES
 %token VAR_TCP_UPSTREAM VAR_SSL_UPSTREAM
 %token VAR_SSL_SERVICE_KEY VAR_SSL_SERVICE_PEM VAR_SSL_PORT VAR_FORWARD_FIRST
-%token VAR_STUB_SSL_UPSTREAM VAR_FORWARD_SSL_UPSTREAM
+%token VAR_STUB_SSL_UPSTREAM VAR_FORWARD_SSL_UPSTREAM VAR_TLS_CERT_BUNDLE
 %token VAR_STUB_FIRST VAR_MINIMAL_RESPONSES VAR_RRSET_ROUNDROBIN
 %token VAR_MAX_UDP_SIZE VAR_DELAY_CLOSE
 %token VAR_UNBLOCK_LAN_ZONES VAR_INSECURE_LAN_ZONES
@@ -243,7 +243,8 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_ipsecmod_enabled | server_ipsecmod_hook |
 	server_ipsecmod_ignore_bogus | server_ipsecmod_max_ttl |
 	server_ipsecmod_whitelist | server_ipsecmod_strict |
-	server_udp_upstream_without_downstream | server_aggressive_nsec
+	server_udp_upstream_without_downstream | server_aggressive_nsec |
+	server_tls_cert_bundle
 	;
 stubstart: VAR_STUB_ZONE
 	{
@@ -672,6 +673,13 @@ server_ssl_port: VAR_SSL_PORT STRING_ARG
 			yyerror("port number expected");
 		else cfg_parser->cfg->ssl_port = atoi($2);
 		free($2);
+	}
+	;
+server_tls_cert_bundle: VAR_TLS_CERT_BUNDLE STRING_ARG
+	{
+		OUTYY(("P(server_tls_cert_bundle:%s)\n", $2));
+		free(cfg_parser->cfg->tls_cert_bundle);
+		cfg_parser->cfg->tls_cert_bundle = $2;
 	}
 	;
 server_use_systemd: VAR_USE_SYSTEMD STRING_ARG

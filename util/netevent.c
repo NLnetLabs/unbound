@@ -964,6 +964,32 @@ tcp_callback_reader(struct comm_point* c)
 	}
 }
 
+#ifdef HAVE_SSL
+/** log certificate details */
+static void
+log_cert(unsigned level, const char* str, X509* cert)
+{
+	BIO* bio;
+	char nul = 0;
+	char* pp = NULL;
+	long len;
+	if(verbosity < level) return;
+	bio = BIO_new(BIO_s_mem());
+	if(!bio) return;
+	X509_print_ex(bio, cert, 0, (unsigned long)-1
+		^(X509_FLAG_NO_SUBJECT
+                        |X509_FLAG_NO_ISSUER|X509_FLAG_NO_VALIDITY
+			|X509_FLAG_NO_EXTENSIONS|X509_FLAG_NO_AUX
+			|X509_FLAG_NO_ATTRIBUTES));
+	BIO_write(bio, &nul, sizeof(nul));
+	len = BIO_get_mem_data(bio, &pp);
+	if(len != 0 && pp) {
+		verbose(level, "%s: \n%s", str, pp);
+	}
+	BIO_free(bio);
+}
+#endif /* HAVE_SSL */
+
 /** continue ssl handshake */
 #ifdef HAVE_SSL
 static int
@@ -1015,8 +1041,51 @@ ssl_handshake(struct comm_point* c)
 		}
 	}
 	/* this is where peer verification could take place */
-	log_addr(VERB_ALGO, "SSL DNS connection", &c->repinfo.addr,
-		c->repinfo.addrlen);
+	if((SSL_get_verify_mode(c->ssl)&SSL_VERIFY_PEER)) {
+		/* verification */
+		if(SSL_get_verify_result(c->ssl) == X509_V_OK) {
+			X509* x = SSL_get_peer_certificate(c->ssl);
+			if(!x) {
+				log_addr(VERB_ALGO, "SSL connection failed: "
+					"no certificate",
+					&c->repinfo.addr, c->repinfo.addrlen);
+				return 0;
+			}
+			log_cert(VERB_ALGO, "peer certificate", x);
+#ifdef HAVE_SSL_GET0_PEERNAME
+			if(SSL_get0_peername(c->ssl)) {
+				char buf[255];
+				snprintf(buf, sizeof(buf), "SSL connection "
+					"to %s authenticated",
+					SSL_get0_peername(c->ssl));
+				log_addr(VERB_ALGO, buf, &c->repinfo.addr,
+					c->repinfo.addrlen);
+			} else {
+#endif
+				log_addr(VERB_ALGO, "SSL connection "
+					"authenticated", &c->repinfo.addr,
+					c->repinfo.addrlen);
+#ifdef HAVE_SSL_GET0_PEERNAME
+			}
+#endif
+			X509_free(x);
+		} else {
+			X509* x = SSL_get_peer_certificate(c->ssl);
+			if(x) {
+				log_cert(VERB_ALGO, "peer certificate", x);
+				X509_free(x);
+			}
+			log_addr(VERB_ALGO, "SSL connection failed: "
+				"failed to authenticate",
+				&c->repinfo.addr, c->repinfo.addrlen);
+			return 0;
+		}
+	} else {
+		/* unauthenticated, the verify peer flag was not set
+		 * in c->ssl when the ssl object was created from ssl_ctx */
+		log_addr(VERB_ALGO, "SSL connection", &c->repinfo.addr,
+			c->repinfo.addrlen);
+	}
 
 	/* setup listen rw correctly */
 	if(c->tcp_is_reading) {
