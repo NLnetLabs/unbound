@@ -1,3 +1,8 @@
+16 February 2018: Wouter
+	- Fixes for clang static analyzer, the missing ; in
+	  edns-subnet/addrtree.c after the assert made clang analyzer
+	  produce a failure to analyze it.
+
 13 February 2018: Ralph
 	- Aggressive NSEC tests
 
