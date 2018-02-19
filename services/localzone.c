@@ -1543,9 +1543,10 @@ local_zones_answer(struct local_zones* zones, struct module_env* env,
 			(z = local_zones_lookup(view->local_zones,
 			qinfo->qname, qinfo->qname_len, labs,
 			qinfo->qclass, qinfo->qtype))) {
-			verbose(VERB_ALGO, 
-				"using localzone from view: %s", 
-				view->name);
+			if(z->type != local_zone_noview)
+				verbose(VERB_ALGO, 
+					"using localzone from view: %s", 
+					view->name);
 			lock_rw_rdlock(&z->lock);
 			lzt = z->type;
 		}

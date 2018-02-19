@@ -1544,12 +1544,13 @@ server_local_zone: VAR_LOCAL_ZONE STRING_ARG STRING_ARG
 		   && strcmp($3, "always_transparent")!=0
 		   && strcmp($3, "always_refuse")!=0
 		   && strcmp($3, "always_nxdomain")!=0
+		   && strcmp($3, "noview")!=0
 		   && strcmp($3, "inform")!=0 && strcmp($3, "inform_deny")!=0)
 			yyerror("local-zone type: expected static, deny, "
 				"refuse, redirect, transparent, "
 				"typetransparent, inform, inform_deny, "
 				"always_transparent, always_refuse, "
-				"always_nxdomain or nodefault");
+				"always_nxdomain, noview or nodefault");
 		else if(strcmp($3, "nodefault")==0) {
 			if(!cfg_strlist_insert(&cfg_parser->cfg->
 				local_zones_nodefault, $2))
@@ -2121,12 +2122,13 @@ view_local_zone: VAR_LOCAL_ZONE STRING_ARG STRING_ARG
 		   && strcmp($3, "always_transparent")!=0
 		   && strcmp($3, "always_refuse")!=0
 		   && strcmp($3, "always_nxdomain")!=0
+		   && strcmp($3, "noview")!=0
 		   && strcmp($3, "inform")!=0 && strcmp($3, "inform_deny")!=0)
 			yyerror("local-zone type: expected static, deny, "
 				"refuse, redirect, transparent, "
 				"typetransparent, inform, inform_deny, "
 				"always_transparent, always_refuse, "
-				"always_nxdomain or nodefault");
+				"always_nxdomain, noview or nodefault");
 		else if(strcmp($3, "nodefault")==0) {
 			if(!cfg_strlist_insert(&cfg_parser->cfg->views->
 				local_zones_nodefault, $2))
