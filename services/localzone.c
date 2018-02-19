@@ -1132,61 +1132,11 @@ void local_zones_print(struct local_zones* zones)
 	lock_rw_rdlock(&zones->lock);
 	log_info("number of auth zones %u", (unsigned)zones->ztree.count);
 	RBTREE_FOR(z, struct local_zone*, &zones->ztree) {
+		char buf[64];
 		lock_rw_rdlock(&z->lock);
-		switch(z->type) {
-		case local_zone_deny:
-			log_nametypeclass(0, "deny zone", 
-				z->name, 0, z->dclass);
-			break;
-		case local_zone_refuse:
-			log_nametypeclass(0, "refuse zone", 
-				z->name, 0, z->dclass);
-			break;
-		case local_zone_redirect:
-			log_nametypeclass(0, "redirect zone", 
-				z->name, 0, z->dclass);
-			break;
-		case local_zone_transparent:
-			log_nametypeclass(0, "transparent zone", 
-				z->name, 0, z->dclass);
-			break;
-		case local_zone_typetransparent:
-			log_nametypeclass(0, "typetransparent zone", 
-				z->name, 0, z->dclass);
-			break;
-		case local_zone_static:
-			log_nametypeclass(0, "static zone", 
-				z->name, 0, z->dclass);
-			break;
-		case local_zone_inform:
-			log_nametypeclass(0, "inform zone", 
-				z->name, 0, z->dclass);
-			break;
-		case local_zone_inform_deny:
-			log_nametypeclass(0, "inform_deny zone", 
-				z->name, 0, z->dclass);
-			break;
-		case local_zone_always_transparent:
-			log_nametypeclass(0, "always_transparent zone", 
-				z->name, 0, z->dclass);
-			break;
-		case local_zone_always_refuse:
-			log_nametypeclass(0, "always_refuse zone", 
-				z->name, 0, z->dclass);
-			break;
-		case local_zone_always_nxdomain:
-			log_nametypeclass(0, "always_nxdomain zone", 
-				z->name, 0, z->dclass);
-			break;
-		case local_zone_noview:
-			log_nametypeclass(0, "noview zone", 
-				z->name, 0, z->dclass);
-			break;
-		default:
-			log_nametypeclass(0, "badtyped zone", 
-				z->name, 0, z->dclass);
-			break;
-		}
+		snprintf(buf, sizeof(buf), "%s zone",
+			local_zone_type2str(z->type));
+		log_nametypeclass(0, buf, z->name, 0, z->dclass);
 		local_zone_out(z);
 		lock_rw_unlock(&z->lock);
 	}

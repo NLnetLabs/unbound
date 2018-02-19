@@ -3,6 +3,7 @@
 	  wrong RFC.
 	- Fix #3494: local-zone noview can be used to break out of the view
 	  to the global local zone contents, for queries for that zone.
+	- Fix for more maintainable code in localzone.
 
 16 February 2018: Wouter
 	- Fixes for clang static analyzer, the missing ; in
