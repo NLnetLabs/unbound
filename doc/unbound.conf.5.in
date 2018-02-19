@@ -1000,7 +1000,7 @@ address space are not validated.  This is usually required whenever
 Configure a local zone. The type determines the answer to give if
 there is no match from local\-data. The types are deny, refuse, static,
 transparent, redirect, nodefault, typetransparent, inform, inform_deny,
-always_transparent, always_refuse, always_nxdomain,
+always_transparent, always_refuse, always_nxdomain, noview,
 and are explained below. After that the default settings are listed. Use
 local\-data: to enter data into the local zone. Answers for local zones
 are authoritative DNS answers. By default the zones are class IN.
@@ -1069,6 +1069,13 @@ Like refuse, but ignores local data and refuses the query.
 .TP 10
 \h'5'\fIalways_nxdomain\fR
 Like static, but ignores local data and returns nxdomain for the query.
+.TP 10
+\h'5'\fInoview\fR
+Breaks out of that view and moves towards the global local zones for answer
+to the query.  If the view first is no, it'll resolve normally.  If view first
+is enabled, it'll break perform that step and check the global answers.
+For when the view has view specific overrides but some zone has to be
+answered from global local zone contents. 
 .TP 10
 \h'5'\fInodefault\fR
 Used to turn off default contents for AS112 zones. The other types

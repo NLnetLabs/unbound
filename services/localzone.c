@@ -1178,6 +1178,10 @@ void local_zones_print(struct local_zones* zones)
 			log_nametypeclass(0, "always_nxdomain zone", 
 				z->name, 0, z->dclass);
 			break;
+		case local_zone_noview:
+			log_nametypeclass(0, "noview zone", 
+				z->name, 0, z->dclass);
+			break;
 		default:
 			log_nametypeclass(0, "badtyped zone", 
 				z->name, 0, z->dclass);
@@ -1595,6 +1599,10 @@ local_zones_answer(struct local_zones* zones, struct module_env* env,
 			lock_rw_rdlock(&z->lock);
 			lzt = z->type;
 		}
+		if(lzt == local_zone_noview) {
+			lock_rw_unlock(&z->lock);
+			z = NULL;
+		}
 		if(view->local_zones && !z && !view->isfirst){
 			lock_rw_unlock(&view->lock);
 			return 0;
@@ -1652,6 +1660,7 @@ const char* local_zone_type2str(enum localzone_type t)
 		case local_zone_always_transparent: return "always_transparent";
 		case local_zone_always_refuse: return "always_refuse";
 		case local_zone_always_nxdomain: return "always_nxdomain";
+		case local_zone_noview: return "noview";
 	}
 	return "badtyped"; 
 }
@@ -1680,6 +1689,8 @@ int local_zone_str2type(const char* type, enum localzone_type* t)
 		*t = local_zone_always_refuse;
 	else if(strcmp(type, "always_nxdomain") == 0)
 		*t = local_zone_always_nxdomain;
+	else if(strcmp(type, "noview") == 0)
+		*t = local_zone_noview;
 	else if(strcmp(type, "nodefault") == 0)
 		*t = local_zone_nodefault;
 	else return 0;

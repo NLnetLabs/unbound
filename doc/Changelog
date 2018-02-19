@@ -1,6 +1,8 @@
 19 February 2018: Wouter
 	- Fix #3505: Documentation for default local zones references
 	  wrong RFC.
+	- local-zone noview can be used to break out of the view to the
+	  global local zone contents, for queries for that zone.
 
 16 February 2018: Wouter
 	- Fixes for clang static analyzer, the missing ; in
