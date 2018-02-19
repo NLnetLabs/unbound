@@ -1133,7 +1133,7 @@ local\-data: "onion. 10800 IN
     SOA localhost. nobody.invalid. 1 3600 1200 604800 10800"
 .fi
 .TP 10
-\h'5'\fItest (RFC 7686)\fR
+\h'5'\fItest (RFC 2606)\fR
 Default content:
 .nf
 local\-zone: "test." static
@@ -1142,7 +1142,7 @@ local\-data: "test. 10800 IN
     SOA localhost. nobody.invalid. 1 3600 1200 604800 10800"
 .fi
 .TP 10
-\h'5'\fIinvalid (RFC 7686)\fR
+\h'5'\fIinvalid (RFC 2606)\fR
 Default content:
 .nf
 local\-zone: "invalid." static
