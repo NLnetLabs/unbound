@@ -1158,6 +1158,10 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 		verbose(VERB_QUERY, "request has exceeded the maximum number"
 			" of query restarts with %d", iq->query_restart_count);
 		if(iq->response) {
+			/* return the partial CNAME loop, i.e. with the
+			 * actual packet in iq->response cleared of RRsets,
+			 * the stored prepend RRsets contain the loop contents
+			 * with duplicates removed */
 			iq->state = FINISHED_STATE;
 			return 1;
 		}
