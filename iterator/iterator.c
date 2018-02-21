@@ -1257,6 +1257,7 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 			msg->rep->ns_numrrsets = 0;
 			msg->rep->ar_numrrsets = 0;
 			msg->rep->rrset_count = 0;
+			iq->response = msg;
 			iq->dp = NULL;
 			iq->refetch_glue = 0;
 			iq->query_restart_count++;

@@ -1529,6 +1529,22 @@ processInit(struct module_qstate* qstate, struct val_qstate* vq,
 		if(verbosity >= VERB_ALGO)
 			log_dns_msg("chased extract", &vq->qchase, 
 				vq->chase_reply);
+		/* we skipped cnames, and now the reply is empty, is this
+		 * a CNAME loop? */
+		if(vq->rrset_skip > 0 && vq->chase_reply->rrset_count == 0) {
+			if(reply_find_rrset_section_an(vq->orig_msg->rep,
+				lookup_name, lookup_len, LDNS_RR_TYPE_CNAME,
+				vq->qchase.qclass)) {
+				if(anchor) {
+					lock_basic_unlock(&anchor->lock);
+				}
+				verbose(VERB_ALGO, "validator: encountered "
+					"CNAME loop - terminating");
+				vq->chase_reply->security = vq->orig_msg->rep->security;
+				vq->state = VAL_FINISHED_STATE;
+				return 1;
+			}
+		}
 	}
 
 	vq->key_entry = key_cache_obtain(ve->kcache, lookup_name, lookup_len,
