@@ -776,7 +776,7 @@ ENTRY_END
 
 ; Expected result is defined by RFC 1034 section 3.6.2:
 ; CNAME chains should be followed and CNAME loops signalled as an error
-; but bug#3512: return partial contentes with NOERROR.
+; but bug#3512: return partial contents with NOERROR.
 STEP 221002 CHECK_ANSWER
 ENTRY_BEGIN
 MATCH all
