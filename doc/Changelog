@@ -4,6 +4,7 @@
 	- Fix validation for CNAME loops.  When it detects a cname loop,
 	  by finding the cname, cname in the existing list, it returns
 	  the partial result with the validation result up to then.
+	- more robust cachedump rrset routine.
 
 19 February 2018: Wouter
 	- Fix #3505: Documentation for default local zones references
