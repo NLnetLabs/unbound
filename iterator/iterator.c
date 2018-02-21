@@ -1162,8 +1162,7 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 			 * actual packet in iq->response cleared of RRsets,
 			 * the stored prepend RRsets contain the loop contents
 			 * with duplicates removed */
-			iq->state = FINISHED_STATE;
-			return 1;
+			return next_state(iq, FINISHED_STATE);
 		}
 		return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
 	}
