@@ -787,10 +787,11 @@ dns_cache_lookup(struct module_env* env,
 	   (rrset=rrset_cache_lookup(env->rrset_cache, qname, qnamelen, 
 		LDNS_RR_TYPE_CNAME, qclass, 0, now, 0))) {
 		uint8_t* wc = NULL;
+		size_t wl;
 		/* if the rrset is not a wildcard expansion, with wcname */
 		/* because, if we return that CNAME rrset on its own, it is
 		 * missing the NSEC or NSEC3 proof */
-		if(!(val_rrset_wildcard(rrset, &wc) && wc != NULL)) {
+		if(!(val_rrset_wildcard(rrset, &wc, &wl) && wc != NULL)) {
 			struct dns_msg* msg = rrset_msg(rrset, region, now, &k);
 			if(msg) {
 				lock_rw_unlock(&rrset->entry.lock);

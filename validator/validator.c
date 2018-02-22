@@ -51,6 +51,7 @@
 #include "validator/val_sigcrypt.h"
 #include "validator/autotrust.h"
 #include "services/cache/dns.h"
+#include "services/cache/rrset.h"
 #include "util/data/dname.h"
 #include "util/module.h"
 #include "util/log.h"
@@ -745,6 +746,8 @@ validate_positive_response(struct module_env* env, struct val_env* ve,
 	struct key_entry_key* kkey)
 {
 	uint8_t* wc = NULL;
+	size_t wl;
+	int wc_cached = 0;
 	int wc_NSEC_ok = 0;
 	int nsec3s_seen = 0;
 	size_t i;
@@ -757,13 +760,19 @@ validate_positive_response(struct module_env* env, struct val_env* ve,
 		/* Check to see if the rrset is the result of a wildcard 
 		 * expansion. If so, an additional check will need to be 
 		 * made in the authority section. */
-		if(!val_rrset_wildcard(s, &wc)) {
+		if(!val_rrset_wildcard(s, &wc, &wl)) {
 			log_nametypeclass(VERB_QUERY, "Positive response has "
 				"inconsistent wildcard sigs:", s->rk.dname,
 				ntohs(s->rk.type), ntohs(s->rk.rrset_class));
 			chase_reply->security = sec_status_bogus;
 			return;
 		}
+		if(wc && !wc_cached && env->cfg->aggressive_nsec) {
+			rrset_cache_update_wildcard(env->rrset_cache, s, wc, wl,
+				env->alloc, *env->now);
+			wc_cached = 1;
+		}
+
 	}
 
 	/* validate the AUTHORITY section as well - this will generally be 
@@ -1081,6 +1090,7 @@ validate_any_response(struct module_env* env, struct val_env* ve,
 	/* but check if a wildcard response is given, then check NSEC/NSEC3
 	 * for qname denial to see if wildcard is applicable */
 	uint8_t* wc = NULL;
+	size_t wl;
 	int wc_NSEC_ok = 0;
 	int nsec3s_seen = 0;
 	size_t i;
@@ -1099,7 +1109,7 @@ validate_any_response(struct module_env* env, struct val_env* ve,
 		/* Check to see if the rrset is the result of a wildcard 
 		 * expansion. If so, an additional check will need to be 
 		 * made in the authority section. */
-		if(!val_rrset_wildcard(s, &wc)) {
+		if(!val_rrset_wildcard(s, &wc, &wl)) {
 			log_nametypeclass(VERB_QUERY, "Positive ANY response"
 				" has inconsistent wildcard sigs:", 
 				s->rk.dname, ntohs(s->rk.type), 
@@ -1188,6 +1198,7 @@ validate_cname_response(struct module_env* env, struct val_env* ve,
 	struct key_entry_key* kkey)
 {
 	uint8_t* wc = NULL;
+	size_t wl;
 	int wc_NSEC_ok = 0;
 	int nsec3s_seen = 0;
 	size_t i;
@@ -1200,7 +1211,7 @@ validate_cname_response(struct module_env* env, struct val_env* ve,
 		/* Check to see if the rrset is the result of a wildcard 
 		 * expansion. If so, an additional check will need to be 
 		 * made in the authority section. */
-		if(!val_rrset_wildcard(s, &wc)) {
+		if(!val_rrset_wildcard(s, &wc, &wl)) {
 			log_nametypeclass(VERB_QUERY, "Cname response has "
 				"inconsistent wildcard sigs:", s->rk.dname,
 				ntohs(s->rk.type), ntohs(s->rk.rrset_class));
@@ -2178,7 +2189,7 @@ processFinished(struct module_qstate* qstate, struct val_qstate* vq,
 				&qstate->qinfo);
 			if(!qstate->no_cache_store) {
 				val_neg_addreply(qstate->env->neg_cache,
-					vq->orig_msg->rep);
+					vq->orig_msg->rep, qstate->qinfo.qname);
 			}
 		}
 	}
@@ -3109,7 +3120,7 @@ process_dlv_response(struct module_qstate* qstate, struct val_qstate* vq,
 		return;
 	}
 	/* store NSECs into negative cache */
-	val_neg_addreply(ve->neg_cache, msg->rep);
+	val_neg_addreply(ve->neg_cache, msg->rep, NULL);
 
 	/* was the lookup a failure? 
 	 *   if we have to go up into the DLV for a higher DLV anchor

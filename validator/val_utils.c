@@ -767,7 +767,8 @@ rrsig_get_labcount(struct packed_rrset_data* d, size_t sig)
 }
 
 int 
-val_rrset_wildcard(struct ub_packed_rrset_key* rrset, uint8_t** wc)
+val_rrset_wildcard(struct ub_packed_rrset_key* rrset, uint8_t** wc,
+	size_t* wc_len)
 {
 	struct packed_rrset_data* d = (struct packed_rrset_data*)rrset->
 		entry.data;
@@ -800,6 +801,7 @@ val_rrset_wildcard(struct ub_packed_rrset_key* rrset, uint8_t** wc)
 	if(labdiff > 0) {
 		*wc = wn;
 		dname_remove_labels(wc, &wl, labdiff);
+		*wc_len = wl;
 		return 1;
 	}
 	return 1;

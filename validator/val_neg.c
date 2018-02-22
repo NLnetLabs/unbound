@@ -847,34 +847,56 @@ void neg_insert_data(struct val_neg_cache* neg,
 	wipeout(neg, zone, el, nsec);
 }
 
-void val_neg_addreply(struct val_neg_cache* neg, struct reply_info* rep)
+void val_neg_addreply(struct val_neg_cache* neg, struct reply_info* rep,
+	uint8_t* qname)
 {
 	size_t i, need;
 	struct ub_packed_rrset_key* soa;
+	uint8_t* dname = NULL;
+	size_t dname_len;
+	uint16_t rrset_class;
 	struct val_neg_zone* zone;
 	/* see if secure nsecs inside */
 	if(!reply_has_nsec(rep))
 		return;
 	/* find the zone name in message */
-	soa = reply_find_soa(rep);
-	if(!soa)
-		return;
+	if((soa = reply_find_soa(rep))) {
+		dname = soa->rk.dname;
+		dname_len = soa->rk.dname_len;
+		rrset_class = soa->rk.rrset_class;
+	}
+	else {
+		/* No SOA in positive (wildcard) answer. Use signer from the 
+		 * validated answer RRsets' signature. */
+		size_t i;
+		for(i=0; i<rep->an_numrrsets; i++) {
+			if(qname && query_dname_compare(qname,
+				rep->rrsets[i]->rk.dname) == 0) {
+				val_find_rrset_signer(rep->rrsets[i], 
+					&dname, &dname_len);
+				rrset_class = rep->rrsets[i]->rk.rrset_class;
+				break;
+			}
+		}
+		if(!dname)
+			return;
+	}
 
 	log_nametypeclass(VERB_ALGO, "negcache insert for zone",
-		soa->rk.dname, LDNS_RR_TYPE_SOA, ntohs(soa->rk.rrset_class));
+		dname, LDNS_RR_TYPE_SOA, ntohs(rrset_class));
 	
 	/* ask for enough space to store all of it */
 	need = calc_data_need(rep) + 
-		calc_zone_need(soa->rk.dname, soa->rk.dname_len);
+		calc_zone_need(dname, dname_len);
 	lock_basic_lock(&neg->lock);
 	neg_make_space(neg, need);
 
 	/* find or create the zone entry */
-	zone = neg_find_zone(neg, soa->rk.dname, soa->rk.dname_len,
-		ntohs(soa->rk.rrset_class));
+	zone = neg_find_zone(neg, dname, dname_len,
+		ntohs(rrset_class));
 	if(!zone) {
-		if(!(zone = neg_create_zone(neg, soa->rk.dname, 
-			soa->rk.dname_len, ntohs(soa->rk.rrset_class)))) {
+		if(!(zone = neg_create_zone(neg, dname, 
+			dname_len, ntohs(rrset_class)))) {
 			lock_basic_unlock(&neg->lock);
 			log_err("out of memory adding negative zone");
 			return;

@@ -1,3 +1,7 @@
+22 February 2018: Ralph
+	- Save wildcard RRset from answer with original owner for use in
+ 	  aggressive NSEC.
+
 21 February 2018: Wouter
 	- Fix #3512: unbound incorrectly reports SERVFAIL for CAA query
 	  when there is a CNAME loop.
