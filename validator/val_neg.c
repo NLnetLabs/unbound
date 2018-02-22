@@ -847,6 +847,33 @@ void neg_insert_data(struct val_neg_cache* neg,
 	wipeout(neg, zone, el, nsec);
 }
 
+/** see if the reply has signed NSEC records and return the signer */
+static uint8_t* reply_nsec_signer(struct reply_info* rep, size_t* signer_len,
+	uint16_t* dclass)
+{
+	size_t i;
+	struct packed_rrset_data* d;
+	uint8_t* s;
+	for(i=rep->an_numrrsets; i< rep->an_numrrsets+rep->ns_numrrsets; i++){
+		if(ntohs(rep->rrsets[i]->rk.type) == LDNS_RR_TYPE_NSEC ||
+			ntohs(rep->rrsets[i]->rk.type) == LDNS_RR_TYPE_NSEC3) {
+			d = (struct packed_rrset_data*)rep->rrsets[i]->
+				entry.data;
+			/* return first signer name of first NSEC */
+			if(d->rrsig_count != 0) {
+				val_find_rrset_signer(rep->rrsets[i],
+					&s, signer_len);
+				if(s && *signer_len) {
+					*dclass = ntohs(rep->rrsets[i]->
+						rk.rrset_class);
+					return s;
+				}
+			}
+		}
+	}
+	return 0;
+}
+
 void val_neg_addreply(struct val_neg_cache* neg, struct reply_info* rep,
 	uint8_t* qname)
 {
@@ -863,27 +890,17 @@ void val_neg_addreply(struct val_neg_cache* neg, struct reply_info* rep,
 	if((soa = reply_find_soa(rep))) {
 		dname = soa->rk.dname;
 		dname_len = soa->rk.dname_len;
-		rrset_class = soa->rk.rrset_class;
+		rrset_class = ntohs(soa->rk.rrset_class);
 	}
 	else {
 		/* No SOA in positive (wildcard) answer. Use signer from the 
 		 * validated answer RRsets' signature. */
-		size_t i;
-		for(i=0; i<rep->an_numrrsets; i++) {
-			if(qname && query_dname_compare(qname,
-				rep->rrsets[i]->rk.dname) == 0) {
-				val_find_rrset_signer(rep->rrsets[i], 
-					&dname, &dname_len);
-				rrset_class = rep->rrsets[i]->rk.rrset_class;
-				break;
-			}
-		}
-		if(!dname)
+		if(!(dname = reply_nsec_signer(rep, &dname_len, &rrset_class)))
 			return;
 	}
 
 	log_nametypeclass(VERB_ALGO, "negcache insert for zone",
-		dname, LDNS_RR_TYPE_SOA, ntohs(rrset_class));
+		dname, LDNS_RR_TYPE_SOA, rrset_class);
 	
 	/* ask for enough space to store all of it */
 	need = calc_data_need(rep) + 
@@ -892,11 +909,10 @@ void val_neg_addreply(struct val_neg_cache* neg, struct reply_info* rep,
 	neg_make_space(neg, need);
 
 	/* find or create the zone entry */
-	zone = neg_find_zone(neg, dname, dname_len,
-		ntohs(rrset_class));
+	zone = neg_find_zone(neg, dname, dname_len, rrset_class);
 	if(!zone) {
-		if(!(zone = neg_create_zone(neg, dname, 
-			dname_len, ntohs(rrset_class)))) {
+		if(!(zone = neg_create_zone(neg, dname, dname_len,
+			rrset_class))) {
 			lock_basic_unlock(&neg->lock);
 			log_err("out of memory adding negative zone");
 			return;
@@ -1049,33 +1065,6 @@ int val_neg_dlvlookup(struct val_neg_cache* neg, uint8_t* qname, size_t len,
 	lock_basic_unlock(&neg->lock);
 	verbose(VERB_ALGO, "negcache DLV denial proven");
 	return 1;
-}
-
-/** see if the reply has signed NSEC records and return the signer */
-static uint8_t* reply_nsec_signer(struct reply_info* rep, size_t* signer_len,
-	uint16_t* dclass)
-{
-	size_t i;
-	struct packed_rrset_data* d;
-	uint8_t* s;
-	for(i=rep->an_numrrsets; i< rep->an_numrrsets+rep->ns_numrrsets; i++){
-		if(ntohs(rep->rrsets[i]->rk.type) == LDNS_RR_TYPE_NSEC ||
-			ntohs(rep->rrsets[i]->rk.type) == LDNS_RR_TYPE_NSEC3) {
-			d = (struct packed_rrset_data*)rep->rrsets[i]->
-				entry.data;
-			/* return first signer name of first NSEC */
-			if(d->rrsig_count != 0) {
-				val_find_rrset_signer(rep->rrsets[i],
-					&s, signer_len);
-				if(s && *signer_len) {
-					*dclass = ntohs(rep->rrsets[i]->
-						rk.rrset_class);
-					return s;
-				}
-			}
-		}
-	}
-	return 0;
 }
 
 void val_neg_addreferral(struct val_neg_cache* neg, struct reply_info* rep,
