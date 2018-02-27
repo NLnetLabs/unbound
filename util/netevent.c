@@ -2029,12 +2029,14 @@ comm_point_http_handle_read(int fd, struct comm_point* c)
 	log_assert(fd != -1);
 
 	/* if we are in ssl handshake, handle SSL handshake */
+#ifdef HAVE_SSL
 	if(c->ssl && c->ssl_shake_state != comm_ssl_shake_none) {
 		if(!ssl_handshake(c))
 			return 0;
 		if(c->ssl_shake_state != comm_ssl_shake_none)
 			return 1;
 	}
+#endif /* HAVE_SSL */
 
 	if(!c->tcp_is_reading)
 		return 1;
@@ -2227,12 +2229,14 @@ comm_point_http_handle_write(int fd, struct comm_point* c)
 		c->tcp_check_nb_connect = 0;
 	}
 	/* if we are in ssl handshake, handle SSL handshake */
+#ifdef HAVE_SSL
 	if(c->ssl && c->ssl_shake_state != comm_ssl_shake_none) {
 		if(!ssl_handshake(c))
 			return 0;
 		if(c->ssl_shake_state != comm_ssl_shake_none)
 			return 1;
 	}
+#endif /* HAVE_SSL */
 	if(c->tcp_is_reading)
 		return 1;
 	/* if we are writing, write more */
@@ -2717,7 +2721,9 @@ comm_point_create_http_out(struct comm_base *base, size_t bufsize,
 	if(c->ev->ev == NULL)
 	{
 		log_err("could not baseset tcpout event");
+#ifdef HAVE_SSL
 		SSL_free(c->ssl);
+#endif
 		sldns_buffer_free(c->buffer);
 		free(c->ev);
 		free(c);
