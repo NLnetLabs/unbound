@@ -1,3 +1,6 @@
+27 February 2018: Wouter
+	- Fixup contrib/fastrpz.patch so that it applies.
+
 22 February 2018: Ralph
 	- Save wildcard RRset from answer with original owner for use in
  	  aggressive NSEC.

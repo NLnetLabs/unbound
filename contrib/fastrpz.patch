@@ -24,13 +24,13 @@ diff -u --unidirectional-new-file -r1.1 ./Makefile.in
  iter_donotq.lo iter_fwd.lo iter_hints.lo iter_priv.lo iter_resptype.lo \
 @@ -137,7 +139,7 @@
  validator.lo val_kcache.lo val_kentry.lo val_neg.lo val_nsec3.lo val_nsec.lo \
- val_secalgo.lo val_sigcrypt.lo val_utils.lo dns64.lo cachedb.lo \
+ val_secalgo.lo val_sigcrypt.lo val_utils.lo dns64.lo cachedb.lo authzone.lo\
  $(SUBNET_OBJ) $(PYTHONMOD_OBJ) $(CHECKLOCK_OBJ) $(DNSTAP_OBJ) $(DNSCRYPT_OBJ) \
--$(IPSECMOD_OBJ)
-+$(FASTRPZ_OBJ) $(DNSCRYPT_OBJ)
- COMMON_OBJ_WITHOUT_NETCALL+=respip.lo
+-$(IPSECMOD_OBJ) respip.lo
++$(FASTRPZ_OBJ) $(IPSECMOD_OBJ) respip.lo
  COMMON_OBJ_WITHOUT_UB_EVENT=$(COMMON_OBJ_WITHOUT_NETCALL) netevent.lo listen_dnsport.lo \
  outside_network.lo
+ COMMON_OBJ=$(COMMON_OBJ_WITHOUT_UB_EVENT) ub_event.lo
 @@ -398,6 +401,11 @@
  	$(srcdir)/util/config_file.h $(srcdir)/util/log.h \
  	$(srcdir)/util/netevent.h
@@ -3263,15 +3263,15 @@ diff -u --unidirectional-new-file -r1.1 ./util/configparser.y
  %token VAR_RESPONSE_IP_TAG VAR_RESPONSE_IP VAR_RESPONSE_IP_DATA
  %token VAR_HARDEN_ALGO_DOWNGRADE VAR_IP_TRANSPARENT
  %token VAR_DISABLE_DNSSEC_LAME_CHECK
-@@ -153,7 +154,7 @@
- toplevelvar: serverstart contents_server | stubstart contents_stub |
+@@ -158,7 +159,7 @@
+ 
+ %%
+ toplevelvars: /* empty */ | toplevelvars toplevelvar ;
+-toplevelvar: serverstart contents_server | stubstart contents_stub |
++toplevelvar: serverstart contents_server | stubstart contents_stub | rpzstart contents_rpz |
  	forwardstart contents_forward | pythonstart contents_py | 
- 	rcstart contents_rc | dtstart contents_dt | viewstart 
--	contents_view |
-+	contents_view | rpzstart contents_rpz |
- 	dnscstart contents_dnsc |
- 	cachedbstart contents_cachedb
- 	;
+ 	rcstart contents_rc | dtstart contents_dt | viewstart contents_view |
+ 	dnscstart contents_dnsc | cachedbstart contents_cachedb |
 @@ -2160,6 +2161,50 @@
  			(strcmp($2, "yes")==0);
  	}
@@ -3468,7 +3468,7 @@ diff -u --unidirectional-new-file -r1.1 ./util/netevent.c
 +#ifdef ENABLE_FASTRPZ
 +		rpz_end(&rep);
 +#endif
- 		if(rep.c->fd != fd) /* commpoint closed to -1 or reused for
+ 		if(!rep.c || rep.c->fd != fd) /* commpoint closed to -1 or reused for
  		another UDP port. Note rep.c cannot be reused with TCP fd. */
  			break;
 @@ -2145,6 +2157,9 @@
