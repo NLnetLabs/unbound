@@ -1,6 +1,7 @@
 27 February 2018: Wouter
 	- Fixup contrib/fastrpz.patch so that it applies.
 	- Fix compile without threads, and remove unused variable.
+	- Fix compile with staticexe and python module.
 
 22 February 2018: Ralph
 	- Save wildcard RRset from answer with original owner for use in
