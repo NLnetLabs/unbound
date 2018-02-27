@@ -874,8 +874,7 @@ static uint8_t* reply_nsec_signer(struct reply_info* rep, size_t* signer_len,
 	return 0;
 }
 
-void val_neg_addreply(struct val_neg_cache* neg, struct reply_info* rep,
-	uint8_t* qname)
+void val_neg_addreply(struct val_neg_cache* neg, struct reply_info* rep)
 {
 	size_t i, need;
 	struct ub_packed_rrset_key* soa;

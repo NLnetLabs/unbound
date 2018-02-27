@@ -198,12 +198,9 @@ int val_neg_zone_compare(const void* a, const void* b);
  * Insert NSECs from this message into the negative cache for reference.
  * @param neg: negative cache
  * @param rep: reply with NSECs.
- * @param qname: used to find correct signer, needed when rep does not contain
- * 	a SOA record.
  * Errors are ignored, means that storage is omitted.
  */
-void val_neg_addreply(struct val_neg_cache* neg, struct reply_info* rep,
-	uint8_t* qname);
+void val_neg_addreply(struct val_neg_cache* neg, struct reply_info* rep);
 
 /**
  * Insert NSECs from this referral into the negative cache for reference.

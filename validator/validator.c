@@ -2189,7 +2189,7 @@ processFinished(struct module_qstate* qstate, struct val_qstate* vq,
 				&qstate->qinfo);
 			if(!qstate->no_cache_store) {
 				val_neg_addreply(qstate->env->neg_cache,
-					vq->orig_msg->rep, qstate->qinfo.qname);
+					vq->orig_msg->rep);
 			}
 		}
 	}
@@ -3120,7 +3120,7 @@ process_dlv_response(struct module_qstate* qstate, struct val_qstate* vq,
 		return;
 	}
 	/* store NSECs into negative cache */
-	val_neg_addreply(ve->neg_cache, msg->rep, NULL);
+	val_neg_addreply(ve->neg_cache, msg->rep);
 
 	/* was the lookup a failure? 
 	 *   if we have to go up into the DLV for a higher DLV anchor
