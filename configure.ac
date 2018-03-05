@@ -955,8 +955,6 @@ AC_INCLUDES_DEFAULT
 #ifdef HAVE_OPENSSL_ENGINE_H
 #include <openssl/engine.h>
 #endif
-#include <openssl/ssl.h>
-#include <openssl/evp.h>
       ])
       ], [if test "x$enable_dsa" = "xyes"; then AC_MSG_ERROR([OpenSSL does not support DSA and you used --enable-dsa.])
                fi ])
