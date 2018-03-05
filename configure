@@ -18078,10 +18078,40 @@ case "$enable_dsa" in
       ac_fn_c_check_func "$LINENO" "DSA_SIG_new" "ac_cv_func_DSA_SIG_new"
 if test "x$ac_cv_func_DSA_SIG_new" = xyes; then :
 
+      as_ac_Type=`$as_echo "ac_cv_type_DSA_SIG*" | $as_tr_sh`
+ac_fn_c_check_type "$LINENO" "DSA_SIG*" "$as_ac_Type" "
+$ac_includes_default
+#ifdef HAVE_OPENSSL_ERR_H
+#include <openssl/err.h>
+#endif
+
+#ifdef HAVE_OPENSSL_RAND_H
+#include <openssl/rand.h>
+#endif
+
+#ifdef HAVE_OPENSSL_CONF_H
+#include <openssl/conf.h>
+#endif
+
+#ifdef HAVE_OPENSSL_ENGINE_H
+#include <openssl/engine.h>
+#endif
+#include <openssl/ssl.h>
+#include <openssl/evp.h>
+
+"
+if eval test \"x\$"$as_ac_Type"\" = x"yes"; then :
+
 
 cat >>confdefs.h <<_ACEOF
 #define USE_DSA 1
 _ACEOF
+
+
+else
+  if test "x$enable_dsa" = "xyes"; then as_fn_error $? "OpenSSL does not support DSA and you used --enable-dsa." "$LINENO" 5
+               fi
+fi
 
 
 else

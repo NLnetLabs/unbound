@@ -1,3 +1,6 @@
+5 March 2018: Wouter
+	- Fix to check define of DSA for when openssl is without deprecated.
+
 27 February 2018: Wouter
 	- Fixup contrib/fastrpz.patch so that it applies.
 	- Fix compile without threads, and remove unused variable.
