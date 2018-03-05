@@ -1,6 +1,8 @@
 5 March 2018: Wouter
 	- Fix to check define of DSA for when openssl is without deprecated.
 	- iana port update.
+	- Fix #3582: Squelch address already in use log when reuseaddr option
+	  causes same port to be used twice for tcp connections.
 
 27 February 2018: Wouter
 	- Fixup contrib/fastrpz.patch so that it applies.

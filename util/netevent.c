@@ -299,6 +299,12 @@ udp_send_errno_needs_log(struct sockaddr* addr, socklen_t addrlen)
 #  endif
 		) && verbosity < VERB_DETAIL)
 		return 0;
+#  ifdef EADDRINUSE
+	/* If SO_REUSEADDR is set, we could try to connect to the same server
+	 * from the same source port twice. */
+	if(errno == EADDRINUSE && verbosity < VERB_DETAIL)
+		return 0;
+#  endif
 	/* squelch errors where people deploy AAAA ::ffff:bla for
 	 * authority servers, which we try for intranets. */
 	if(errno == EINVAL && addr_is_ip4mapped(
