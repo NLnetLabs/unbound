@@ -2,6 +2,7 @@
 	- Reverted fix for #3512, this may not be the best way forward;
 	  although it could be changed at a later time, to stay similar to
 	  other implementations.
+	- svn trunk contains 1.7.0, this is the number for the next release.
 
 5 March 2018: Wouter
 	- Fix to check define of DSA for when openssl is without deprecated.
