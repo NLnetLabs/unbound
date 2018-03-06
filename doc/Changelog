@@ -3,6 +3,7 @@
 	  although it could be changed at a later time, to stay similar to
 	  other implementations.
 	- svn trunk contains 1.7.0, this is the number for the next release.
+	- Fix for windows compile.
 
 5 March 2018: Wouter
 	- Fix to check define of DSA for when openssl is without deprecated.
