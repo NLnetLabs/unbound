@@ -2313,7 +2313,7 @@ outnet_comm_point_for_http(struct outside_network* outnet,
 			return NULL;
 		}
 #ifdef USE_WINSOCK
-		comm_point_tcp_win_bio_cb(c, c->ssl);
+		comm_point_tcp_win_bio_cb(cp, cp->ssl);
 #endif
 		cp->ssl_shake_state = comm_ssl_shake_write;
 		/* https verification */
