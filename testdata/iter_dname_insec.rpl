@@ -776,18 +776,12 @@ ENTRY_END
 
 ; Expected result is defined by RFC 1034 section 3.6.2:
 ; CNAME chains should be followed and CNAME loops signalled as an error
-; but bug#3512: return partial contents with NOERROR.
 STEP 221002 CHECK_ANSWER
 ENTRY_BEGIN
 MATCH all
-REPLY QR RD RA DO NOERROR
+REPLY QR RD RA DO SERVFAIL
 SECTION QUESTION
 cyc2.example.com. IN A
-SECTION ANSWER
-example.com.	0	IN	DNAME	cyc2.example.net.
-cyc2.example.com.	0	IN	CNAME	cyc2.cyc2.example.net.
-cyc2.example.net.	0	IN	DNAME	example.com.
-cyc2.cyc2.example.net.	0	IN	CNAME	cyc2.example.com.
 ENTRY_END
 
 ; ns1.example.com.

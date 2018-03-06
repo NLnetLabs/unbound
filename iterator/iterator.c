@@ -1157,13 +1157,6 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 	if(iq->query_restart_count > MAX_RESTART_COUNT) {
 		verbose(VERB_QUERY, "request has exceeded the maximum number"
 			" of query restarts with %d", iq->query_restart_count);
-		if(iq->response) {
-			/* return the partial CNAME loop, i.e. with the
-			 * actual packet in iq->response cleared of RRsets,
-			 * the stored prepend RRsets contain the loop contents
-			 * with duplicates removed */
-			return next_state(iq, FINISHED_STATE);
-		}
 		return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
 	}
 
@@ -1253,11 +1246,6 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 			iq->qchase.qname_len = slen;
 			/* This *is* a query restart, even if it is a cheap 
 			 * one. */
-			msg->rep->an_numrrsets = 0;
-			msg->rep->ns_numrrsets = 0;
-			msg->rep->ar_numrrsets = 0;
-			msg->rep->rrset_count = 0;
-			iq->response = msg;
 			iq->dp = NULL;
 			iq->refetch_glue = 0;
 			iq->query_restart_count++;
@@ -2751,10 +2739,6 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 		if (qstate->env->cfg->qname_minimisation)
 			iq->minimisation_state = INIT_MINIMISE_STATE;
 		/* Clear the query state, since this is a query restart. */
-		iq->response->rep->an_numrrsets = 0;
-		iq->response->rep->ns_numrrsets = 0;
-		iq->response->rep->ar_numrrsets = 0;
-		iq->response->rep->rrset_count = 0;
 		iq->deleg_msg = NULL;
 		iq->dp = NULL;
 		iq->dsns_point = NULL;

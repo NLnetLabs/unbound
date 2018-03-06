@@ -5,7 +5,6 @@ server:
 	val-override-date: "20070916134226"
 	target-fetch-policy: "0 0 0 0 0"
 	fake-sha1: yes
-	trust-anchor-signaling: no
 
 stub-zone:
 	name: "."
@@ -87,17 +86,6 @@ ns.example.com.         IN      A       1.2.3.4
 ns.example.com. 3600    IN      RRSIG   A 3 3 3600 20070926135752 20070829135752 2854 example.com. MC0CFQCMSWxVehgOQLoYclB9PIAbNP229AIUeH0vNNGJhjnZiqgIOKvs1EhzqAo= ;{id = 2854}
 ENTRY_END
 
-ENTRY_BEGIN
-MATCH opcode qtype qname
-ADJUST copy_id
-REPLY QR NOERROR
-SECTION QUESTION
-ns.example.com. IN AAAA
-SECTION AUTHORITY
-ns.example.com. IN NSEC www.example.com. A RRSIG NSEC
-ns.example.com.	3600	IN	RRSIG	NSEC 3 3 3600 20070926134150 20070829134150 2854 example.com. AE+zfHodyVCTnni/bur8IiUhTUtdac6ip/znrYYN0l1nqll1fon2+kQ=
-ENTRY_END
-
 ; response to DNSKEY priming query
 ENTRY_BEGIN
 MATCH opcode qtype qname
@@ -114,18 +102,6 @@ example.com.    3600    IN      RRSIG   NS 3 2 3600 20070926134150 2007082913415
 SECTION ADDITIONAL
 ns.example.com.		IN 	A	1.2.3.4
 ns.example.com. 3600    IN      RRSIG   A 3 3 3600 20070926135752 20070829135752 2854 example.com. MC0CFQCMSWxVehgOQLoYclB9PIAbNP229AIUeH0vNNGJhjnZiqgIOKvs1EhzqAo= ;{id = 2854}
-ENTRY_END
-
-; response to DNSKEY priming query
-ENTRY_BEGIN
-MATCH opcode qtype qname
-ADJUST copy_id
-REPLY QR NOERROR
-SECTION QUESTION
-www.example.com. IN DS
-SECTION AUTHORITY
-www.example.com. IN NSEC z.example.com. CNAME RRSIG NSEC
-www.example.com.	3600	IN	RRSIG	NSEC 3 3 3600 20070926134150 20070829134150 2854 example.com. AJ8hqdeoKtvR094y+0KjO6LkCe1SCs6z5YhuY2YZCmzvUiYHP9wiMTw=
 ENTRY_END
 
 ; response to query of interest
@@ -158,12 +134,10 @@ ENTRY_END
 STEP 10 CHECK_ANSWER
 ENTRY_BEGIN
 MATCH all
-REPLY QR RD RA DO AD NOERROR
+REPLY QR RD RA DO SERVFAIL
 SECTION QUESTION
 www.example.com. IN A
 SECTION ANSWER
-www.example.com.        3600    IN      CNAME   www.example.com.
-www.example.com.        3600    IN      RRSIG   CNAME 3 3 3600 20070926134150 20070829134150 2854 example.com. MCwCFH0SwLHe7u56TshoVciFRHEl1KqbAhQ3zBOZMlL8bt1DqoDoM5ni8U/1UA== ;{id = 2854}
 SECTION AUTHORITY
 SECTION ADDITIONAL
 ENTRY_END

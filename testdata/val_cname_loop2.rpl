@@ -5,7 +5,6 @@ server:
 	val-override-date: "20070916134226"
 	target-fetch-policy: "0 0 0 0 0"
 	fake-sha1: yes
-	trust-anchor-signaling: no
 
 stub-zone:
 	name: "."
@@ -114,7 +113,7 @@ SECTION QUESTION
 www.example.com. IN A
 SECTION ANSWER
 www.example.com. IN	CNAME	foo.example.com.
-www.example.com.	3600	IN	RRSIG	CNAME 3 3 3600 20070926134150 20070829134150 2854 example.com. AD50yy1elnzRmjGCd7FBiWEkYlhQYXaZu0g1JoJMr/ONiXVnV2yiONg=
+www.example.com.        3600    IN      RRSIG   CNAME DSA 3 3600 20070926134150 20070829134150 2854 example.com. MCwCFH0SwLHe7u56TshoVciFRHEl1KqbAhQ3zBOZMlL8bt1DqoDoM5ni8U/1UA== ;{id = 2854}
 SECTION AUTHORITY
 SECTION ADDITIONAL
 ENTRY_END
@@ -127,7 +126,7 @@ SECTION QUESTION
 foo.example.com. IN A
 SECTION ANSWER
 foo.example.com. IN	CNAME	www.example.com.
-foo.example.com.	3600	IN	RRSIG	CNAME 3 3 3600 20070926134150 20070829134150 2854 example.com. AEEIVUwbtfcn2RP41l0PDO+Sk4YdJ0HyRVsgq20fJnrDDC6eFXFGqUg=
+foo.example.com.        3600    IN      RRSIG   CNAME DSA 3 3600 20070926134150 20070829134150 2854 example.com. MC0CFC7kcWPsMnGbjvzj5UNnxQzM0YvnAhUAgxIKgs1huJHvcAP2Xt3p8Adpy/c= ;{id = 2854}
 SECTION AUTHORITY
 SECTION ADDITIONAL
 ENTRY_END
@@ -144,14 +143,10 @@ ENTRY_END
 STEP 10 CHECK_ANSWER
 ENTRY_BEGIN
 MATCH all
-REPLY QR RD RA DO AD NOERROR
+REPLY QR RD RA DO SERVFAIL
 SECTION QUESTION
 www.example.com. IN A
 SECTION ANSWER
-www.example.com.        3600    IN      CNAME   foo.example.com.
-www.example.com.        3600    IN      RRSIG   CNAME 3 3 3600 20070926134150 20070829134150 2854 example.com. AD50yy1elnzRmjGCd7FBiWEkYlhQYXaZu0g1JoJMr/ONiXVnV2yiONg= ;{id = 2854}
-foo.example.com.        3600    IN      CNAME   www.example.com.
-foo.example.com.        3600    IN      RRSIG   CNAME 3 3 3600 20070926134150 20070829134150 2854 example.com. AEEIVUwbtfcn2RP41l0PDO+Sk4YdJ0HyRVsgq20fJnrDDC6eFXFGqUg= ;{id = 2854}
 SECTION AUTHORITY
 SECTION ADDITIONAL
 ENTRY_END
