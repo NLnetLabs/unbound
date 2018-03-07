@@ -1620,7 +1620,7 @@ but do not want to advertise over \fBdnscrypt\-provider\fR's TXT record certs
 distribution.
 A typical use case is when rotating certificates, existing clients may still use
 the client magic from the old cert in their queries until they fetch and update
-the new cert. Likewise, it would allow to prime the new cert/key without
+the new cert. Likewise, it would allow one to prime the new cert/key without
 distributing the new cert yet, this can be useful when using a network of
 servers using anycast and on which the configuration may not get updated at the
 exact same time. By priming the cert, the servers can handle both old and new

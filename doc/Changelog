@@ -2,6 +2,8 @@
 	- Fixed contrib/fastrpz.patch, even though this already applied
 	  cleanly for me, now also for others.
 	- patch to log creates keytag queries, from A. Schulze.
+	- patch suggested by Debian lintian: allow to -> allow one to, from 
+	  A. Schulze.
 
 6 March 2018: Wouter
 	- Reverted fix for #3512, this may not be the best way forward;
