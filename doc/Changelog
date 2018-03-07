@@ -12,6 +12,7 @@
 	  other implementations.
 	- svn trunk contains 1.7.0, this is the number for the next release.
 	- Fix for windows compile.
+	- tag 1.7.0rc1.
 
 5 March 2018: Wouter
 	- Fix to check define of DSA for when openssl is without deprecated.
