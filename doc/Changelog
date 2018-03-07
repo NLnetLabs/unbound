@@ -4,6 +4,7 @@
 	- patch to log creates keytag queries, from A. Schulze.
 	- patch suggested by Debian lintian: allow to -> allow one to, from 
 	  A. Schulze.
+	- Attempt to remove warning about trailing whitespace.
 
 6 March 2018: Wouter
 	- Reverted fix for #3512, this may not be the best way forward;

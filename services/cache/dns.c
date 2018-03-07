@@ -870,7 +870,7 @@ dns_cache_lookup(struct module_env* env,
 	return NULL;
 }
 
-int 
+int
 dns_cache_store(struct module_env* env, struct query_info* msgqinf,
         struct reply_info* msgrep, int is_referral, time_t leeway, int pside,
 	struct regional* region, uint32_t flags)
@@ -880,7 +880,7 @@ dns_cache_store(struct module_env* env, struct query_info* msgqinf,
 	rep = reply_info_copy(msgrep, env->alloc, NULL);
 	if(!rep)
 		return 0;
-	/* ttl must be relative ;i.e. 0..86400 not  time(0)+86400. 
+	/* ttl must be relative ;i.e. 0..86400 not  time(0)+86400.
 	 * the env->now is added to message and RRsets in this routine. */
 	/* the leeway is used to invalidate other rrsets earlier */
 

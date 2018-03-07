@@ -1339,11 +1339,11 @@ lookup_cache:
 		h = query_info_hash(lookup_qinfo, sldns_buffer_read_u16_at(c->buffer, 2));
 		if((e=slabhash_lookup(worker->env.msg_cache, h, lookup_qinfo, 0))) {
 			/* answer from cache - we have acquired a readlock on it */
-			if(answer_from_cache(worker, &qinfo, 
+			if(answer_from_cache(worker, &qinfo,
 				cinfo, &need_drop, &alias_rrset, &partial_rep,
-				(struct reply_info*)e->data, 
-				*(uint16_t*)(void *)sldns_buffer_begin(c->buffer), 
-				sldns_buffer_read_u16_at(c->buffer, 2), repinfo, 
+				(struct reply_info*)e->data,
+				*(uint16_t*)(void *)sldns_buffer_begin(c->buffer),
+				sldns_buffer_read_u16_at(c->buffer, 2), repinfo,
 				&edns)) {
 				/* prefetch it if the prefetch TTL expired.
 				 * Note that if there is more than one pass
