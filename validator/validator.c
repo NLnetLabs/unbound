@@ -462,7 +462,7 @@ generate_keytag_query(struct module_qstate* qstate, int id,
 		return 0;
 	}
 
-	log_nametypeclass(VERB_ALGO, "keytag query", keytagdname,
+	log_nametypeclass(VERB_OPS, "generate keytag query", keytagdname,
 		LDNS_RR_TYPE_NULL, ta->dclass);
 	if(!generate_request(qstate, id, keytagdname, dnamebuf_len,
 		LDNS_RR_TYPE_NULL, ta->dclass, 0, &newq, 1)) {
