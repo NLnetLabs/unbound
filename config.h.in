@@ -135,6 +135,10 @@
 /* Define to 1 if you have the <sys/endian.h> header file. */
 #undef HAVE_SYS_ENDIAN_H
 
+/* Define to 1 if you have the <libkern/OSByteOrder.h> header file, which is
+ * in effect MacOS X specific. */
+#undef HAVE_LIBKERN_OSBYTEORDER_H
+
 /* Define to 1 if you have the `endprotoent' function. */
 #undef HAVE_ENDPROTOENT
 
