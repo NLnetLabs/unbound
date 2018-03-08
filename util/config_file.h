@@ -507,6 +507,14 @@ struct config_file {
 	char* cachedb_backend;
 	/** secret seed for hash key calculation */
 	char* cachedb_secret;
+#ifdef USE_REDIS
+	/** redis server's IP address or host name */
+	char* redis_server_host;
+	/** redis server's TCP port */
+	int redis_server_port;
+	/** timeout (in ms) for communication with the redis server */
+	int redis_timeout;
+#endif
 #endif
 };
 

@@ -95,6 +95,10 @@
    don't. */
 #undef HAVE_DECL_REALLOCARRAY
 
+/* Define to 1 if you have the declaration of `redisConnect', and to 0 if you
+   don't. */
+#undef HAVE_DECL_REDISCONNECT
+
 /* Define to 1 if you have the declaration of `sk_SSL_COMP_pop_free', and to 0
    if you don't. */
 #undef HAVE_DECL_SK_SSL_COMP_POP_FREE
@@ -717,6 +721,9 @@
 
 /* Define this to enable client TCP Fast Open. */
 #undef USE_OSX_MSG_FASTOPEN
+
+/* Define this to use hiredis client. */
+#undef USE_REDIS
 
 /* Define this to enable SHA1 support. */
 #undef USE_SHA1

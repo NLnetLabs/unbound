@@ -1145,6 +1145,40 @@ AC_CHECK_DECLS([XML_StopParser], [], [], [AC_INCLUDES_DEFAULT
 #include <expat.h>
 ])
 
+# hiredis (redis C client for cachedb)
+AC_ARG_WITH(libhiredis, AC_HELP_STRING([--with-libhiredis=path],
+    [specify explicit path for libhiredis.]),
+    [ ],[ withval="no" ])
+AC_MSG_CHECKING(for libhiredis)
+found_libhiredis="no"
+if test x_$withval = x_yes -o x_$withval != x_no; then
+   if test x_$withval = x_ -o x_$withval = x_yes; then
+            withval="/usr/local /opt/local /usr/lib /usr/pkg /usr/sfw /usr"
+   fi
+   for dir in $withval ; do
+       AC_MSG_RESULT($dir)
+            if test -f "$dir/include/hiredis/hiredis.h"; then
+		found_libhiredis="yes"
+		dnl assume /usr is in default path.
+		if test "$dir" != "/usr"; then
+                    CPPFLAGS="$CPPFLAGS -I$dir/include"
+		    LDFLAGS="$LDFLAGS -L$dir/lib"
+		fi
+		AC_MSG_RESULT(found in $dir)
+		AC_DEFINE([USE_REDIS], [1], [Define this to use hiredis client.])
+		LIBS="$LIBS -lhiredis"
+                break;
+            fi
+    done
+    if test x_$found_libhiredis != x_yes; then
+	AC_ERROR([Could not find libhiredis, hiredis.h])
+    fi
+    AC_CHECK_HEADERS([hiredis/hiredis.h],,, [AC_INCLUDES_DEFAULT])
+    AC_CHECK_DECLS([redisConnect], [], [], [AC_INCLUDES_DEFAULT
+    #include <hiredis/hiredis.h>
+    ])
+fi
+
 # set static linking if requested
 AC_SUBST(staticexe)
 staticexe=""
