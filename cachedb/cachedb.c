@@ -57,6 +57,14 @@
 #include "sldns/wire2str.h"
 #include "sldns/sbuffer.h"
 
+/* header file for htobe64 */
+#ifdef HAVE_ENDIAN_H
+#  include <endian.h>
+#endif
+#ifdef HAVE_SYS_ENDIAN_H
+#  include <sys/endian.h>
+#endif
+
 #ifdef USE_REDIS
 #include "hiredis/hiredis.h"
 #endif
