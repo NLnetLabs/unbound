@@ -1,3 +1,6 @@
+8 March 2018: Wouter
+	- tag 1.7.0rc2.
+
 7 March 2018: Wouter
 	- Fixed contrib/fastrpz.patch, even though this already applied
 	  cleanly for me, now also for others.
