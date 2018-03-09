@@ -848,6 +848,7 @@ with_pthreads
 with_solaris_threads
 with_pyunbound
 with_pythonmodule
+enable_swig_version_check
 with_nss
 with_nettle
 with_ssl
@@ -1532,6 +1533,9 @@ Optional Features:
                           enable nonregional allocs, slow but exposes regional
                           allocations to other memory purifiers, for debug
                           purposes
+  --disable-swig-version-check
+                          Disable swig version check to build python modules
+                          with older swig even though that is unreliable
   --disable-sha1          Disable SHA1 RRSIG support, does not disable nsec3
                           support
   --disable-sha2          Disable SHA256 and SHA512 RRSIG support
@@ -16923,6 +16927,12 @@ $as_echo "#define HAVE_PYTHON 1" >>confdefs.h
 
       # Check for SWIG
       ub_have_swig=no
+      # Check whether --enable-swig-version-check was given.
+if test "${enable_swig_version_check+set}" = set; then :
+  enableval=$enable_swig_version_check;
+fi
+
+      if test "$enable_swig_version_check" = "yes"; then
 
         # Extract the first word of "swig", so it can be a program name with args.
 set dummy swig; ac_word=$2
@@ -17039,6 +17049,124 @@ $as_echo "$as_me: WARNING: cannot determine SWIG version" >&2;}
         fi
 
 
+      else
+
+        # Extract the first word of "swig", so it can be a program name with args.
+set dummy swig; ac_word=$2
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+$as_echo_n "checking for $ac_word... " >&6; }
+if ${ac_cv_path_SWIG+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  case $SWIG in
+  [\\/]* | ?:[\\/]*)
+  ac_cv_path_SWIG="$SWIG" # Let the user override the test with a path.
+  ;;
+  *)
+  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if as_fn_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
+    ac_cv_path_SWIG="$as_dir/$ac_word$ac_exec_ext"
+    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+  done
+IFS=$as_save_IFS
+
+  ;;
+esac
+fi
+SWIG=$ac_cv_path_SWIG
+if test -n "$SWIG"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $SWIG" >&5
+$as_echo "$SWIG" >&6; }
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+
+
+        if test -z "$SWIG" ; then
+                { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: cannot find 'swig' program. You should look at http://www.swig.org" >&5
+$as_echo "$as_me: WARNING: cannot find 'swig' program. You should look at http://www.swig.org" >&2;}
+                SWIG='echo "Error: SWIG is not installed. You should look at http://www.swig.org" ; false'
+        elif test -n "" ; then
+                { $as_echo "$as_me:${as_lineno-$LINENO}: checking for SWIG version" >&5
+$as_echo_n "checking for SWIG version... " >&6; }
+                swig_version=`$SWIG -version 2>&1 | grep 'SWIG Version' | sed 's/.*\([0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*\).*/\1/g'`
+                { $as_echo "$as_me:${as_lineno-$LINENO}: result: $swig_version" >&5
+$as_echo "$swig_version" >&6; }
+                if test -n "$swig_version" ; then
+                        # Calculate the required version number components
+                        required=
+                        required_major=`echo $required | sed 's/[^0-9].*//'`
+                        if test -z "$required_major" ; then
+                                required_major=0
+                        fi
+                        required=`echo $required | sed 's/[0-9]*[^0-9]//'`
+                        required_minor=`echo $required | sed 's/[^0-9].*//'`
+                        if test -z "$required_minor" ; then
+                                required_minor=0
+                        fi
+                        required=`echo $required | sed 's/[0-9]*[^0-9]//'`
+                        required_patch=`echo $required | sed 's/[^0-9].*//'`
+                        if test -z "$required_patch" ; then
+                                required_patch=0
+                        fi
+                        # Calculate the available version number components
+                        available=$swig_version
+                        available_major=`echo $available | sed 's/[^0-9].*//'`
+                        if test -z "$available_major" ; then
+                                available_major=0
+                        fi
+                        available=`echo $available | sed 's/[0-9]*[^0-9]//'`
+                        available_minor=`echo $available | sed 's/[^0-9].*//'`
+                        if test -z "$available_minor" ; then
+                                available_minor=0
+                        fi
+                        available=`echo $available | sed 's/[0-9]*[^0-9]//'`
+                        available_patch=`echo $available | sed 's/[^0-9].*//'`
+                        if test -z "$available_patch" ; then
+                                available_patch=0
+                        fi
+			badversion=0
+			if test $available_major -lt $required_major ; then
+				badversion=1
+			fi
+                        if test $available_major -eq $required_major \
+                                -a $available_minor -lt $required_minor ; then
+				badversion=1
+			fi
+                        if test $available_major -eq $required_major \
+                                -a $available_minor -eq $required_minor \
+                                -a $available_patch -lt $required_patch ; then
+				badversion=1
+			fi
+			if test $badversion -eq 1 ; then
+                                { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: SWIG version >=  is required.  You have $swig_version.  You should look at http://www.swig.org" >&5
+$as_echo "$as_me: WARNING: SWIG version >=  is required.  You have $swig_version.  You should look at http://www.swig.org" >&2;}
+                                SWIG='echo "Error: SWIG version >=  is required.  You have '"$swig_version"'.  You should look at http://www.swig.org" ; false'
+                        else
+                                { $as_echo "$as_me:${as_lineno-$LINENO}: SWIG executable is '$SWIG'" >&5
+$as_echo "$as_me: SWIG executable is '$SWIG'" >&6;}
+                                SWIG_LIB=`$SWIG -swiglib`
+                                { $as_echo "$as_me:${as_lineno-$LINENO}: SWIG library directory is '$SWIG_LIB'" >&5
+$as_echo "$as_me: SWIG library directory is '$SWIG_LIB'" >&6;}
+                        fi
+                else
+                        { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: cannot determine SWIG version" >&5
+$as_echo "$as_me: WARNING: cannot determine SWIG version" >&2;}
+                        SWIG='echo "Error: Cannot determine SWIG version.  You should look at http://www.swig.org" ; false'
+                fi
+        fi
+
+
+      fi
       { $as_echo "$as_me:${as_lineno-$LINENO}: checking SWIG" >&5
 $as_echo_n "checking SWIG... " >&6; }
       if test ! -x "$SWIG"; then

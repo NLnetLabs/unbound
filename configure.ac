@@ -587,7 +587,12 @@ if test x_$ub_test_python != x_no; then
 
       # Check for SWIG
       ub_have_swig=no
-      AC_PROG_SWIG(2.0.1)
+      AC_ARG_ENABLE(swig-version-check, AC_HELP_STRING([--disable-swig-version-check], [Disable swig version check to build python modules with older swig even though that is unreliable]))
+      if test "$enable_swig_version_check" = "yes"; then
+      	AC_PROG_SWIG(2.0.1)
+      else
+      	AC_PROG_SWIG
+      fi
       AC_MSG_CHECKING(SWIG)
       if test ! -x "$SWIG"; then
          AC_ERROR([failed to find swig tool, install it, or do not build Python module and PyUnbound])
