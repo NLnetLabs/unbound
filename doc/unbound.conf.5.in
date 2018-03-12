@@ -725,6 +725,12 @@ potentially broken nameservers. A lot of domains will not be resolvable when
 this option in enabled. Only use if you know what you are doing.
 This option only has effect when qname-minimisation is enabled. Default is off.
 .TP
+.B aggressive\-nsec: \fI<yes or no>
+Aggressive NSEC uses the DNSSEC NSEC chain to synthesize NXDOMAIN
+and other denials, using information from previous NXDOMAINs answers.
+Default is off.  It helps to reduce the query rate towards targets that get
+a very high nonexistant name lookup rate.
+.TP
 .B private\-address: \fI<IP address or subnet>
 Give IPv4 of IPv6 addresses or classless subnets. These are addresses
 on your private network, and are not allowed to be returned for

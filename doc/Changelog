@@ -1,3 +1,6 @@
+12 March 2018: Wouter
+	- Added documentation for aggressive-nsec: yes.
+
 9 March 2018: Wouter
 	- Fix #3598: Fix swig build issue on rhel6 based system.
 	  configure --disable-swig-version-check stops the swig version check.

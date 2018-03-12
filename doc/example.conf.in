@@ -380,6 +380,10 @@ server:
 	# This option only has effect when qname-minimisation is enabled.
 	# qname-minimisation-strict: no
 
+	# Aggressive NSEC uses the DNSSEC NSEC chain to synthesize NXDOMAIN
+	# and other denials, using information from previous NXDOMAINs answers.
+	# aggressive-nsec: no
+
 	# Use 0x20-encoded random bits in the query to foil spoof attempts.
 	# This feature is an experimental implementation of draft dns-0x20.
 	# use-caps-for-id: no
