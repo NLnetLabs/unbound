@@ -4032,6 +4032,56 @@ log_rrlist_position(const char* label, struct auth_chunk* rr_chunk,
 		str, typestr);
 }
 
+/** check that start serial is OK for ixfr. we are at rr_counter == 0,
+ * and we are going to check rr_counter == 1 (has to be type SOA) serial */
+static int
+ixfr_start_serial(struct auth_chunk* rr_chunk, int rr_num, size_t rr_pos,
+	uint8_t* rr_dname, uint16_t rr_type, uint16_t rr_class,
+	uint32_t rr_ttl, uint16_t rr_rdlen, uint8_t* rr_rdata,
+	size_t rr_nextpos, uint32_t transfer_serial, uint32_t xfr_serial)
+{
+	uint32_t startserial;
+	/* move forward on RR */
+	chunk_rrlist_gonext(&rr_chunk, &rr_num, &rr_pos, rr_nextpos);
+	if(chunk_rrlist_end(rr_chunk, rr_num)) {
+		/* no second SOA */
+		verbose(VERB_OPS, "IXFR has no second SOA record");
+		return 0;
+	}
+	if(!chunk_rrlist_get_current(rr_chunk, rr_num, rr_pos,
+		&rr_dname, &rr_type, &rr_class, &rr_ttl, &rr_rdlen,
+		&rr_rdata, &rr_nextpos)) {
+		verbose(VERB_OPS, "IXFR cannot parse second SOA record");
+		/* failed to parse RR */
+		return 0;
+	}
+	if(rr_type != LDNS_RR_TYPE_SOA) {
+		verbose(VERB_OPS, "IXFR second record is not type SOA");
+		return 0;
+	}
+	if(rr_rdlen < 22) {
+		verbose(VERB_OPS, "IXFR, second SOA has short rdlength");
+		return 0; /* bad SOA rdlen */
+	}
+	startserial = sldns_read_uint32(rr_rdata+rr_rdlen-20);
+	if(startserial == transfer_serial) {
+		/* empty AXFR, not an IXFR */
+		verbose(VERB_OPS, "IXFR second serial same as first");
+		return 0;
+	}
+	if(startserial != xfr_serial) {
+		/* wrong start serial, it does not match the serial in
+		 * memory */
+		verbose(VERB_OPS, "IXFR is from serial %u to %u but %u "
+			"in memory, rejecting the zone transfer",
+			(unsigned)startserial, (unsigned)transfer_serial,
+			(unsigned)xfr_serial);
+		return 0;
+	}
+	/* everything OK in second SOA serial */
+	return 1;
+}
+
 /** apply IXFR to zone in memory. z is locked. false on failure(mallocfail) */
 static int
 apply_ixfr(struct auth_xfer* xfr, struct auth_zone* z,
@@ -4078,6 +4128,13 @@ apply_ixfr(struct auth_xfer* xfr, struct auth_zone* z,
 				have_transfer_serial = 1;
 				transfer_serial = serial;
 				delmode = 1; /* gets negated below */
+				/* check second RR before going any further */
+				if(!ixfr_start_serial(rr_chunk, rr_num, rr_pos,
+					rr_dname, rr_type, rr_class, rr_ttl,
+					rr_rdlen, rr_rdata, rr_nextpos,
+					transfer_serial, xfr->serial)) {
+					return 0;
+				}
 			} else if(transfer_serial == serial) {
 				have_transfer_serial++;
 				if(rr_counter == 1) {

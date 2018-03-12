@@ -3,6 +3,7 @@
 	- tag 1.7.0rc3.
 	- Fix #3727: Protocol name is TLS, options have been renamed but
 	  documentation is not consistent.
+	- Check IXFR start serial.
 
 9 March 2018: Wouter
 	- Fix #3598: Fix swig build issue on rhel6 based system.
