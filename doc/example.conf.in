@@ -664,14 +664,14 @@ server:
 	# add a netblock specific override to a localzone, with zone type
 	# local-zone-override: "example.com" 192.0.2.0/24 refuse
 
-	# service clients over SSL (on the TCP sockets), with plain DNS inside
-	# the SSL stream.  Give the certificate to use and private key.
+	# service clients over TLS (on the TCP sockets), with plain DNS inside
+	# the TLS stream.  Give the certificate to use and private key.
 	# default is "" (disabled).  requires restart to take effect.
 	# tls-service-key: "path/to/privatekeyfile.key"
 	# tls-service-pem: "path/to/publiccertfile.pem"
 	# tls-port: 853
 
-	# request upstream over SSL (with plain DNS inside the SSL stream).
+	# request upstream over TLS (with plain DNS inside the TLS stream).
 	# Default is no.  Can be turned on and off with unbound-control.
 	# tls-upstream: no
 

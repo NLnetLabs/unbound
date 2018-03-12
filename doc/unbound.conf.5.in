@@ -399,8 +399,8 @@ change anything.  Useful for TLS service providers, that want no udp downstream
 but use udp to fetch data upstream.
 .TP
 .B tls\-upstream: \fI<yes or no>
-Enabled or disable whether the upstream queries use SSL only for transport.
-Default is no.  Useful in tunneling scenarios.  The SSL contains plain DNS in
+Enabled or disable whether the upstream queries use TLS only for transport.
+Default is no.  Useful in tunneling scenarios.  The TLS contains plain DNS in
 TCP wireformat.  The other server must support this (see
 \fBtls\-service\-key\fR).
 .TP
@@ -409,7 +409,7 @@ Alternate syntax for \fBtls\-upstream\fR.  If both are present in the config
 file the last is used.
 .TP
 .B tls\-service\-key: \fI<file>
-If enabled, the server provider SSL service on its TCP sockets.  The clients
+If enabled, the server provider TLS service on its TCP sockets.  The clients
 have to use tls\-upstream: yes.  The file is the private key for the TLS
 session.  The public certificate is in the tls\-service\-pem file.  Default
 is "", turned off.  Requires a restart (a reload is not enough) if changed,
@@ -429,8 +429,8 @@ turned off.
 Alternate syntax for \fBtls\-service\-pem\fR.
 .TP
 .B tls\-port: \fI<number>
-The port number on which to provide TCP SSL service, default 853, only
-interfaces configured with that port number as @number get the SSL service.
+The port number on which to provide TCP TLS service, default 853, only
+interfaces configured with that port number as @number get the TLS service.
 .TP
 .B ssl\-port: \fI<number>
 Alternate syntax for \fBtls\-port\fR.
@@ -1310,7 +1310,7 @@ In the
 clause are the declarations for the remote control facility.  If this is
 enabled, the \fIunbound\-control\fR(8) utility can be used to send
 commands to the running unbound server.  The server uses these clauses
-to setup SSLv3 / TLSv1 security for the connection.  The
+to setup TLSv1 security for the connection.  The
 \fIunbound\-control\fR(8) utility also reads the \fBremote\-control\fR
 section for options.  To setup the correct self\-signed certificates use the
 \fIunbound\-control\-setup\fR(8) utility.
@@ -1416,7 +1416,7 @@ the servers are unreachable, instead it is tried without this clause.
 The default is no.
 .TP
 .B stub\-tls\-upstream: \fI<yes or no>
-Enabled or disable whether the queries to this stub use SSL for transport.
+Enabled or disable whether the queries to this stub use TLS for transport.
 Default is no.
 .TP
 .B stub\-ssl\-upstream: \fI<yes or no>
@@ -1456,7 +1456,7 @@ the servers are unreachable, instead it is tried without this clause.
 The default is no.
 .TP
 .B forward\-tls\-upstream: \fI<yes or no>
-Enabled or disable whether the queries to this forwarder use SSL for transport.
+Enabled or disable whether the queries to this forwarder use TLS for transport.
 Default is no.
 .TP
 .B forward\-ssl\-upstream: \fI<yes or no>
