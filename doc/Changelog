@@ -1,5 +1,7 @@
 13 March 2018: Wouter
 	- Fix typo in documentation.
+	- Fix #3736: Fix 0 TTL domains stuck on SERVFAIL unless manually
+	  flushed with serve-expired on.
 
 12 March 2018: Wouter
 	- Added documentation for aggressive-nsec: yes.
