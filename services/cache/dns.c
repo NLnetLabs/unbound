@@ -135,7 +135,7 @@ msg_del_servfail(struct module_env* env, struct query_info* qinfo,
 	 * lookups move from the cacheresponse stage to the recursionresponse
 	 * stage */
 	e = msg_cache_lookup(env, qinfo->qname, qinfo->qname_len,
-		qinfo->qtype, qinfo->qclass, flags, *env->now, 0);
+		qinfo->qtype, qinfo->qclass, flags, 0, 0);
 	if(!e) return;
 	/* we don't check for the ttl here, also expired servfail entries
 	 * are removed.  If the user uses serve-expired, they would still be
