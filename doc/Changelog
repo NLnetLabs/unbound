@@ -5,6 +5,8 @@
 	  And unbound should be built with both --enable-cachedb and
 	  --with-libhiredis[=PATH] (where $PATH/include/hiredis/hiredis.h
 	  should exist).  Patch from Jinmei Tatuya (Infoblox).
+	- Fix #3817: core dump happens in libunbound delete, when queued
+	  servfail hits deleted message queue.
 
 13 March 2018: Wouter
 	- Fix typo in documentation.

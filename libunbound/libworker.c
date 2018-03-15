@@ -365,6 +365,7 @@ libworker_dobg(void* arg)
 
 	/* cleanup */
 	m = UB_LIBCMD_QUIT;
+	w->want_quit = 1;
 	tube_remove_bg_listen(w->ctx->qq_pipe);
 	tube_remove_bg_write(w->ctx->rr_pipe);
 	libworker_delete(w);
@@ -713,6 +714,10 @@ add_bg_result(struct libworker* w, struct ctx_query* q, sldns_buffer* pkt,
 	uint8_t* msg = NULL;
 	uint32_t len = 0;
 
+	if(w->want_quit) {
+		context_query_delete(q);
+		return;
+	}
 	/* serialize and delete unneeded q */
 	if(w->is_bg_thread) {
 		lock_basic_lock(&w->ctx->cfglock);
