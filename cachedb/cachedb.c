@@ -43,6 +43,7 @@
 #include "config.h"
 #ifdef USE_CACHEDB
 #include "cachedb/cachedb.h"
+#include "cachedb/redis.h"
 #include "util/regional.h"
 #include "util/net_help.h"
 #include "util/config_file.h"
@@ -55,8 +56,6 @@
 #include "sldns/parseutil.h"
 #include "sldns/wire2str.h"
 #include "sldns/sbuffer.h"
-
-#define CACHEDB_HASHSIZE 256 /* bit hash */
 
 /** the unit test testframe for cachedb, its module state contains
  * a cache for a couple queries (in memory). */
@@ -176,6 +175,10 @@ static struct cachedb_backend testframe_backend = { "testframe",
 static struct cachedb_backend*
 cachedb_find_backend(const char* str)
 {
+#ifdef USE_REDIS
+	if(strcmp(str, redis_backend.name) == 0)
+		return &redis_backend;
+#endif
 	if(strcmp(str, testframe_backend.name) == 0)
 		return &testframe_backend;
 	/* TODO add more backends here */

@@ -1781,15 +1781,42 @@ If it finds a valid answer in the backend, Unbound uses it to respond
 to the query without performing iterative DNS resolution.
 If Unbound cannot even find an answer in the backend, it resolves the
 query as usual, and stores the answer in the backend.
+.P
+If Unbound was built with
+\fB\-\-with\-libhiredis\fR
+on a system that has installed the hiredis C client library of Redis,
+then the "redis" backend can be used.
+This backend communicates with the specified Redis server over a TCP
+connection to store and retrive cache data.
+It can be used as a persistent and/or shared cache backend.
+It should be noted that Unbound never removes data stored in the Redis server,
+even if some data have expired in terms of DNS TTL or the Redis server has
+cached too much data;
+if necessary the Redis server must be configured to limit the cache size,
+preferably with some kind of least-recently-used eviction policy.
+This backend uses synchronous communication with the Redis server
+based on the assumption that the communication is stable and sufficiently
+fast.
+The thread waiting for a response from the Redis server cannot handle
+other DNS queries.
+Although the backend has the ability to reconnect to the server when
+the connection is closed unexpectedly and there is a configurable timeout
+in case the server is overly slow or hangs up, these cases are assumed
+to be very rare.
+If connection close or timeout happens too often, Unbound will be
+effectively unusable with this backend.
+It's the administrator's responsibility to make the assumption hold.
+.P
 The
 .B cachedb:
 clause gives custom settings of the cache DB module.
 .TP
 .B backend: \fI<backend name>\fR
 Specify the backend database name.
-Currently, only the in-memory "testframe" backend is supported.
-As the name suggests this backend is not of any practical use.
-This option defaults to "testframe".
+The default database is the in-memory backend named "testframe", which,
+as the name suggests, is not of any practical use.
+Depending on the build-time configuration, "redis" backend may also be
+used as described above.
 .TP
 .B secret-seed: \fI<"secret string">\fR
 Specify a seed to calculate a hash value from query information.
@@ -1799,6 +1826,28 @@ operationally.
 If the backend database is shared by multiple Unbound instances,
 all instances must use the same secret seed.
 This option defaults to "default".
+.P
+The following
+.B cachedb
+otions are specific to the redis backend.
+.TP
+.B redis-server-host: \fI<server address or name>\fR
+The IP (either v6 or v4) address or domain name of the Redis server.
+In general an IP address should be specified as otherwise Unbound will have to
+resolve the name of the server every time it establishes a connection
+to the server.
+This option defaults to "127.0.0.1".
+.TP
+.B redis-server-port: \fI<port number>\fR
+The TCP port number of the Redis server.
+This option defaults to 6379.
+.TP
+.B redis-timeout: \fI<msec>\fR
+The period until when Unbound waits for a response from the Redis sever.
+If this timeout expires Unbound closes the connection, treats it as
+if the Redis server does not have the requested data, and will try to
+re-establish a new connection later.
+This option defaults to 100 milliseconds.
 .SH "MEMORY CONTROL EXAMPLE"
 In the example config settings below memory usage is reduced. Some service
 levels are lower, notable very large data and a high TCP load are no longer

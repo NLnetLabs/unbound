@@ -1,3 +1,11 @@
+15 March 2018: Wouter
+	- Add --with-libhiredis, unbound support for a new cached backend
+	  that uses a Redis server as the storage.  This implementation
+	  depends on the hiredis client library (https://redislabs.com/lp/hiredis/).
+	  And unbound should be built with both --enable-cachedb and
+	  --with-libhiredis[=PATH] (where $PATH/include/hiredis/hiredis.h
+	  should exist).  Patch from Jinmei Tatuya (Infoblox).
+
 13 March 2018: Wouter
 	- Fix typo in documentation.
 	- Fix #3736: Fix 0 TTL domains stuck on SERVFAIL unless manually

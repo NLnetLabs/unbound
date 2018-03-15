@@ -886,3 +886,11 @@ remote-control:
 #     backend: "testframe"
 #     # secret seed string to calculate hashed keys
 #     secret-seed: "default"
+#
+#     # For "redis" backend:
+#     # redis server's IP address or host name
+#     redis-server-host: 127.0.0.1
+#     # redis server's TCP port
+#     redis-server-port: 6379
+#     # timeout (in ms) for communication with the redis server
+#     redis-timeout: 100

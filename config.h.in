@@ -95,6 +95,10 @@
    don't. */
 #undef HAVE_DECL_REALLOCARRAY
 
+/* Define to 1 if you have the declaration of `redisConnect', and to 0 if you
+   don't. */
+#undef HAVE_DECL_REDISCONNECT
+
 /* Define to 1 if you have the declaration of `sk_SSL_COMP_pop_free', and to 0
    if you don't. */
 #undef HAVE_DECL_SK_SSL_COMP_POP_FREE
@@ -233,6 +237,9 @@
 /* Define to 1 if you have the <grp.h> header file. */
 #undef HAVE_GRP_H
 
+/* Define to 1 if you have the <hiredis/hiredis.h> header file. */
+#undef HAVE_HIREDIS_HIREDIS_H
+
 /* If you have HMAC_Update */
 #undef HAVE_HMAC_UPDATE
 
@@ -262,6 +269,9 @@
 
 /* Define to 1 if you have the `kill' function. */
 #undef HAVE_KILL
+
+/* Define to 1 if you have the <libkern/OSByteOrder.h> header file. */
+#undef HAVE_LIBKERN_OSBYTEORDER_H
 
 /* Define if we have LibreSSL */
 #undef HAVE_LIBRESSL
@@ -478,6 +488,9 @@
 
 /* Define to 1 if systemd should be used */
 #undef HAVE_SYSTEMD
+
+/* Define to 1 if you have the <sys/endian.h> header file. */
+#undef HAVE_SYS_ENDIAN_H
 
 /* Define to 1 if you have the <sys/ipc.h> header file. */
 #undef HAVE_SYS_IPC_H
@@ -717,6 +730,9 @@
 
 /* Define this to enable client TCP Fast Open. */
 #undef USE_OSX_MSG_FASTOPEN
+
+/* Define this to use hiredis client. */
+#undef USE_REDIS
 
 /* Define this to enable SHA1 support. */
 #undef USE_SHA1

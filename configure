@@ -864,6 +864,7 @@ enable_tfo_client
 enable_tfo_server
 with_libevent
 with_libexpat
+with_libhiredis
 enable_static_exe
 enable_systemd
 enable_lock_checks
@@ -1610,6 +1611,7 @@ Optional Packages:
                           an explicit path). Slower, but allows use of large
                           outgoing port ranges.
   --with-libexpat=path    specify explicit path for libexpat.
+  --with-libhiredis=path  specify explicit path for libhiredis.
   --with-dnstap-socket-path=pathname
                           set default dnstap socket path
   --with-protobuf-c=path  Path where protobuf-c is installed, for dnstap
@@ -14478,7 +14480,7 @@ CC=$lt_save_CC
 
 
 # Checks for header files.
-for ac_header in stdarg.h stdbool.h netinet/in.h netinet/tcp.h sys/param.h sys/socket.h sys/un.h sys/uio.h sys/resource.h arpa/inet.h syslog.h netdb.h sys/wait.h pwd.h glob.h grp.h login_cap.h winsock2.h ws2tcpip.h endian.h sys/ipc.h sys/shm.h
+for ac_header in stdarg.h stdbool.h netinet/in.h netinet/tcp.h sys/param.h sys/socket.h sys/un.h sys/uio.h sys/resource.h arpa/inet.h syslog.h netdb.h sys/wait.h pwd.h glob.h grp.h login_cap.h winsock2.h ws2tcpip.h endian.h sys/endian.h libkern/OSByteOrder.h sys/ipc.h sys/shm.h
 do :
   as_ac_Header=`$as_echo "ac_cv_header_$ac_header" | $as_tr_sh`
 ac_fn_c_check_header_compile "$LINENO" "$ac_header" "$as_ac_Header" "$ac_includes_default
@@ -18810,6 +18812,70 @@ cat >>confdefs.h <<_ACEOF
 #define HAVE_DECL_XML_STOPPARSER $ac_have_decl
 _ACEOF
 
+
+# hiredis (redis C client for cachedb)
+
+# Check whether --with-libhiredis was given.
+if test "${with_libhiredis+set}" = set; then :
+  withval=$with_libhiredis;
+else
+   withval="no"
+fi
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for libhiredis" >&5
+$as_echo_n "checking for libhiredis... " >&6; }
+found_libhiredis="no"
+if test x_$withval = x_yes -o x_$withval != x_no; then
+   if test x_$withval = x_ -o x_$withval = x_yes; then
+            withval="/usr/local /opt/local /usr/lib /usr/pkg /usr/sfw /usr"
+   fi
+   for dir in $withval ; do
+            if test -f "$dir/include/hiredis/hiredis.h"; then
+		found_libhiredis="yes"
+				if test "$dir" != "/usr"; then
+                    CPPFLAGS="$CPPFLAGS -I$dir/include"
+		    LDFLAGS="$LDFLAGS -L$dir/lib"
+		fi
+		{ $as_echo "$as_me:${as_lineno-$LINENO}: result: found in $dir" >&5
+$as_echo "found in $dir" >&6; }
+
+$as_echo "#define USE_REDIS 1" >>confdefs.h
+
+		LIBS="$LIBS -lhiredis"
+                break;
+            fi
+    done
+    if test x_$found_libhiredis != x_yes; then
+	as_fn_error $? "Could not find libhiredis, hiredis.h" "$LINENO" 5
+    fi
+    for ac_header in hiredis/hiredis.h
+do :
+  ac_fn_c_check_header_compile "$LINENO" "hiredis/hiredis.h" "ac_cv_header_hiredis_hiredis_h" "$ac_includes_default
+"
+if test "x$ac_cv_header_hiredis_hiredis_h" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_HIREDIS_HIREDIS_H 1
+_ACEOF
+
+fi
+
+done
+
+    ac_fn_c_check_decl "$LINENO" "redisConnect" "ac_cv_have_decl_redisConnect" "$ac_includes_default
+    #include <hiredis/hiredis.h>
+
+"
+if test "x$ac_cv_have_decl_redisConnect" = xyes; then :
+  ac_have_decl=1
+else
+  ac_have_decl=0
+fi
+
+cat >>confdefs.h <<_ACEOF
+#define HAVE_DECL_REDISCONNECT $ac_have_decl
+_ACEOF
+
+fi
 
 # set static linking if requested
 
