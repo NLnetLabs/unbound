@@ -1068,7 +1068,9 @@ if_is_ssl(const char* ifname, const char* port, int ssl_port,
 	if(p && atoi(p+1) == ssl_port)
 		return 1;
 	for(s = additional_tls_port; s; s = s->next) {
-		if(atoi(s->str) == atoi(port))
+		if(p && atoi(p+1) == atoi(s->str))
+			return 1;
+		if(!p && atoi(port) == atoi(s->str))
 			return 1;
 	}
 	return 0;
