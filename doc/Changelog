@@ -5,7 +5,8 @@
 
 12 March 2018: Wouter
 	- Added documentation for aggressive-nsec: yes.
-	- tag 1.7.0rc3.
+	- tag 1.7.0rc3.  That became the 1.7.0 release on 15 Mar, trunk
+	  now has 1.7.1 in development.
 	- Fix #3727: Protocol name is TLS, options have been renamed but
 	  documentation is not consistent.
 	- Check IXFR start serial.
