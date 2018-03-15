@@ -57,6 +57,21 @@
 #include "sldns/wire2str.h"
 #include "sldns/sbuffer.h"
 
+/* header file for htobe64 */
+#ifdef HAVE_ENDIAN_H
+#  include <endian.h>
+#endif
+#ifdef HAVE_SYS_ENDIAN_H
+#  include <sys/endian.h>
+#endif
+#ifdef HAVE_LIBKERN_OSBYTEORDER_H
+/* In practice this is specific to MacOS X.  We assume it doesn't have
+* htobe64/be64toh but has alternatives with a different name. */
+#  include <libkern/OSByteOrder.h>
+#  define htobe64(x) OSSwapHostToBigInt64(x)
+#  define be64toh(x) OSSwapBigToHostInt64(x)
+#endif
+
 /** the unit test testframe for cachedb, its module state contains
  * a cache for a couple queries (in memory). */
 struct testframe_moddata {
