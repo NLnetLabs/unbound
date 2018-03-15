@@ -155,7 +155,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_CACHEDB_REDISHOST VAR_CACHEDB_REDISPORT VAR_CACHEDB_REDISTIMEOUT
 %token VAR_UDP_UPSTREAM_WITHOUT_DOWNSTREAM VAR_FOR_UPSTREAM
 %token VAR_AUTH_ZONE VAR_ZONEFILE VAR_MASTER VAR_URL VAR_FOR_DOWNSTREAM
-%token VAR_FALLBACK_ENABLED
+%token VAR_FALLBACK_ENABLED VAR_ADDITIONAL_TLS_PORT
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -245,7 +245,7 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_ipsecmod_ignore_bogus | server_ipsecmod_max_ttl |
 	server_ipsecmod_whitelist | server_ipsecmod_strict |
 	server_udp_upstream_without_downstream | server_aggressive_nsec |
-	server_tls_cert_bundle
+	server_tls_cert_bundle | server_additional_tls_port
 	;
 stubstart: VAR_STUB_ZONE
 	{
@@ -681,6 +681,14 @@ server_tls_cert_bundle: VAR_TLS_CERT_BUNDLE STRING_ARG
 		OUTYY(("P(server_tls_cert_bundle:%s)\n", $2));
 		free(cfg_parser->cfg->tls_cert_bundle);
 		cfg_parser->cfg->tls_cert_bundle = $2;
+	}
+	;
+server_additional_tls_port: VAR_ADDITIONAL_TLS_PORT STRING_ARG
+	{
+		OUTYY(("P(server_additional_tls_port:%s)\n", $2));
+		if(!cfg_strlist_insert(&cfg_parser->cfg->additional_tls_port,
+			$2))
+			yyerror("out of memory");
 	}
 	;
 server_use_systemd: VAR_USE_SYSTEMD STRING_ARG

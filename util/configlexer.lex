@@ -238,6 +238,8 @@ ssl-port{COLON}			{ YDVAR(1, VAR_SSL_PORT) }
 tls-port{COLON}			{ YDVAR(1, VAR_SSL_PORT) }
 ssl-cert-bundle{COLON}		{ YDVAR(1, VAR_TLS_CERT_BUNDLE) }
 tls-cert-bundle{COLON}		{ YDVAR(1, VAR_TLS_CERT_BUNDLE) }
+additional-ssl-port{COLON}	{ YDVAR(1, VAR_ADDITIONAL_TLS_PORT) }
+additional-tls-port{COLON}	{ YDVAR(1, VAR_ADDITIONAL_TLS_PORT) }
 use-systemd{COLON}		{ YDVAR(1, VAR_USE_SYSTEMD) }
 do-daemonize{COLON}		{ YDVAR(1, VAR_DO_DAEMONIZE) }
 interface{COLON}		{ YDVAR(1, VAR_INTERFACE) }

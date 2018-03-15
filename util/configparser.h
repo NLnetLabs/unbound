@@ -278,7 +278,8 @@ extern int yydebug;
     VAR_MASTER = 488,
     VAR_URL = 489,
     VAR_FOR_DOWNSTREAM = 490,
-    VAR_FALLBACK_ENABLED = 491
+    VAR_FALLBACK_ENABLED = 491,
+    VAR_ADDITIONAL_TLS_PORT = 492
   };
 #endif
 /* Tokens.  */
@@ -516,6 +517,7 @@ extern int yydebug;
 #define VAR_URL 489
 #define VAR_FOR_DOWNSTREAM 490
 #define VAR_FALLBACK_ENABLED 491
+#define VAR_ADDITIONAL_TLS_PORT 492
 
 /* Value type.  */
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
@@ -526,7 +528,7 @@ union YYSTYPE
 
 	char*	str;
 
-#line 530 "util/configparser.h" /* yacc.c:1909  */
+#line 532 "util/configparser.h" /* yacc.c:1909  */
 };
 
 typedef union YYSTYPE YYSTYPE;

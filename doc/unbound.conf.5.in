@@ -444,6 +444,11 @@ urls, and also DNS over TLS connections.
 .B ssl\-cert\-bundle: \fI<file>
 Alternate syntax for \fBtls\-cert\-bundle\fR.
 .TP
+.B additional\-tls\-port: \fI<portnr>
+List portnumbers as additional\-tls\-port, and when interfaces are defined,
+eg. with the @port suffix, as this port number, they provide dns over TLS
+service.  Can list multiple, each on a new statement.
+.TP
 .B use\-systemd: \fI<yes or no>
 Enable or disable systemd socket activation.
 Default is no.
