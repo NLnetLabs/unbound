@@ -1,6 +1,6 @@
 21 March 2018: Ralph
-	- Do use cached NSEC records to generate negative answers for domains
-	  under DNSSEC Negative Trust Anchors.
+	- Do not use cached NSEC records to generate negative answers for
+	  domains under DNSSEC Negative Trust Anchors.
 
 19 March 2018: Wouter
 	- iana port update.
