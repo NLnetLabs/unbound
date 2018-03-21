@@ -1206,7 +1206,8 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 			iq->qchase.qname_len, iq->qchase.qtype, 
 			iq->qchase.qclass, qstate->query_flags,
 			qstate->region, qstate->env->scratch, 0);
-		if(!msg && qstate->env->neg_cache) {
+		if(!msg && qstate->env->neg_cache &&
+			iter_qname_indicates_dnssec(qstate->env, &iq->qchase)) {
 			/* lookup in negative cache; may result in
 			 * NOERROR/NODATA or NXDOMAIN answers that need validation */
 			msg = val_neg_getmsg(qstate->env->neg_cache, &iq->qchase,
@@ -2366,7 +2367,7 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 		 * (blacklist nonempty) and no trust-anchors are configured
 		 * above the qname or on the first attempt when dnssec is on */
 		EDNS_DO| ((iq->chase_to_rd||(iq->chase_flags&BIT_RD)!=0)&&
-		!qstate->blacklist&&(!iter_indicates_dnssec_fwd(qstate->env,
+		!qstate->blacklist&&(!iter_qname_indicates_dnssec(qstate->env,
 		&iq->qinfo_out)||target->attempts==1)?0:BIT_CD), 
 		iq->dnssec_expected, iq->caps_fallback || is_caps_whitelisted(
 		ie, iq), &target->addr, target->addrlen,

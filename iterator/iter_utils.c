@@ -625,7 +625,7 @@ iter_dp_is_useless(struct query_info* qinfo, uint16_t qflags,
 }
 
 int
-iter_indicates_dnssec_fwd(struct module_env* env, struct query_info *qinfo)
+iter_qname_indicates_dnssec(struct module_env* env, struct query_info *qinfo)
 {
 	struct trust_anchor* a;
 	if(!env || !env->anchors || !qinfo || !qinfo->qname)
