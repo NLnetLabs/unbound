@@ -590,7 +590,7 @@ cachedb_intcache_lookup(struct module_qstate* qstate)
 		1 /* no partial messages with only a CNAME */
 		);
 	if(!msg && qstate->env->neg_cache &&
-		iter_qname_indicates_dnssec(qstate->env, &iq->qchase)) {
+		iter_qname_indicates_dnssec(qstate->env, &qstate->qinfo)) {
 		/* lookup in negative cache; may result in 
 		 * NOERROR/NODATA or NXDOMAIN answers that need validation */
 		msg = val_neg_getmsg(qstate->env->neg_cache, &qstate->qinfo,
