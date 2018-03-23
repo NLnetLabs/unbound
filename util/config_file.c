@@ -890,7 +890,7 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_YNO(opt, "val-clean-additional", val_clean_additional)
 	else O_DEC(opt, "val-log-level", val_log_level)
 	else O_YNO(opt, "val-permissive-mode", val_permissive_mode)
-	else O_YNO(opt, "aggressive-nsec:", aggressive_nsec)
+	else O_YNO(opt, "aggressive-nsec", aggressive_nsec)
 	else O_YNO(opt, "ignore-cd-flag", ignore_cd)
 	else O_YNO(opt, "serve-expired", serve_expired)
 	else O_STR(opt, "val-nsec3-keysize-iterations",val_nsec3_key_iterations)

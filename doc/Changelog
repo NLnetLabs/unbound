@@ -1,3 +1,6 @@
+23 March 2018: Ralph
+	- Fix unbound-control get_option aggressive-nsec
+
 21 March 2018: Ralph
 	- Do not use cached NSEC records to generate negative answers for
 	  domains under DNSSEC Negative Trust Anchors.
