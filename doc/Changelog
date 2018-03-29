@@ -1,3 +1,6 @@
+29 March 2018: Ralph
+	- Check "result" in dup_all(), by Florian Obser.
+
 23 March 2018: Ralph
 	- Fix unbound-control get_option aggressive-nsec
 

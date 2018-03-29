@@ -5946,7 +5946,7 @@ static char*
 dup_all(char* str)
 {
 	char* result = strdup(str);
-	if(!str) {
+	if(!result) {
 		log_err("malloc failure");
 		return NULL;
 	}
