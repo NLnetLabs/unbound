@@ -1,3 +1,6 @@
+3 April 2018: Wouter
+	- Fix #4043: make test fails due to v6 presentation issue in macOS.
+
 29 March 2018: Ralph
 	- Check "result" in dup_all(), by Florian Obser.
 
