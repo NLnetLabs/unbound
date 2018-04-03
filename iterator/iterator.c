@@ -2161,11 +2161,15 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 			log_dns_msg("msg from auth zone",
 				&iq->response->qinfo, iq->response->rep);
 		}
-		iq->num_current_queries++;
-		iq->chase_to_rd = 0;
-		iq->dnssec_lame_query = 0;
-		iq->auth_zone_response = 1;
-		return next_state(iq, QUERY_RESP_STATE);
+		if((iq->chase_flags&BIT_RD) && !(iq->response->rep->flags&BIT_AA)) {
+			verbose(VERB_ALGO, "forwarder, ignoring referral from auth zone");
+		} else {
+			iq->num_current_queries++;
+			iq->chase_to_rd = 0;
+			iq->dnssec_lame_query = 0;
+			iq->auth_zone_response = 1;
+			return next_state(iq, QUERY_RESP_STATE);
+		}
 	}
 	iq->auth_zone_response = 0;
 	if(auth_fallback == 0) {
@@ -2443,7 +2447,8 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 		(int)((iq->chase_flags&BIT_RD) || iq->chase_to_rd),
 		iq->response, &iq->qchase, iq->dp);
 	iq->chase_to_rd = 0;
-	if(type == RESPONSE_TYPE_REFERRAL && (iq->chase_flags&BIT_RD)) {
+	if(type == RESPONSE_TYPE_REFERRAL && (iq->chase_flags&BIT_RD) &&
+		!iq->auth_zone_response) {
 		/* When forwarding (RD bit is set), we handle referrals 
 		 * differently. No queries should be sent elsewhere */
 		type = RESPONSE_TYPE_ANSWER;

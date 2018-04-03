@@ -1,5 +1,8 @@
 3 April 2018: Wouter
 	- Fix #4043: make test fails due to v6 presentation issue in macOS.
+	- Fix unable to resolve after new WLAN connection, due to auth-zone
+	  failing with a forwarder set.  Now, auth-zone is only used for
+	  answers (not referrals) when a forwarder is set.
 
 29 March 2018: Ralph
 	- Check "result" in dup_all(), by Florian Obser.
