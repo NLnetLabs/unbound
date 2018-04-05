@@ -1,3 +1,6 @@
+5 April 2018: Wouter
+	- Combine write of tcp length and tcp query for dns over tls.
+
 3 April 2018: Wouter
 	- Fix #4043: make test fails due to v6 presentation issue in macOS.
 	- Fix unable to resolve after new WLAN connection, due to auth-zone
