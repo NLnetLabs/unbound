@@ -199,7 +199,7 @@ server:
 	# upstream connections use TCP only (and no UDP), "yes" or "no"
 	# useful for tunneling scenarios, default no.
 	# tcp-upstream: no
-	
+
 	# upstream connections also use UDP (even if do-udp is no).
 	# useful if if you want UDP upstream, but don't provide UDP downstream.
 	# udp-upstream-without-downstream: no
@@ -320,7 +320,7 @@ server:
 
 	# enable to not answer version.server and version.bind queries.
 	# hide-version: no
-	
+
 	# enable to not answer trustanchor.unbound queries.
 	# hide-trustanchor: no
 
@@ -630,7 +630,7 @@ server:
 	# o inform acts like transparent, but logs client IP address
 	# o inform_deny drops queries and logs client IP address
 	# o always_transparent, always_refuse, always_nxdomain, resolve in
-	#   that way but ignore local data for that name.
+	#   that way but ignore local data for that name
 	# o noview breaks out of that view towards global local-zones.
 	#
 	# defaults are localhost address, reverse for 127.0.0.1 and ::1
@@ -854,7 +854,7 @@ remote-control:
 #	name: "viewname"
 #	local-zone: "example.com" redirect
 #	local-data: "example.com A 192.0.2.3"
-# 	local-data-ptr: "192.0.2.3 www.example.com"
+#	local-data-ptr: "192.0.2.3 www.example.com"
 #	view-first: no
 # view:
 #	name: "anotherview"
