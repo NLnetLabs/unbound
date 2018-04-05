@@ -1416,6 +1416,12 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 		 */
 		if(iter_dp_is_useless(&qstate->qinfo, qstate->query_flags, 
 			iq->dp)) {
+			if(!can_have_last_resort(qstate->env, iq->dp->name, iq->dp->namelen, iq->qchase.qclass)) {
+				verbose(VERB_ALGO, "useless dp "
+					"but cannot go up, servfail");
+				return error_response(qstate, id, 
+					LDNS_RCODE_SERVFAIL);
+			}
 			if(dname_is_root(iq->dp->name)) {
 				/* use safety belt */
 				verbose(VERB_QUERY, "Cache has root NS but "
@@ -1440,12 +1446,6 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 				verbose(VERB_ALGO, 
 					"cache delegation was useless:");
 				delegpt_log(VERB_ALGO, iq->dp);
-				if(!can_have_last_resort(qstate->env, delname, delnamelen, iq->qchase.qclass)) {
-					verbose(VERB_ALGO, "useless dp "
-						"but cannot go up, servfail");
-					return error_response(qstate, id, 
-						LDNS_RCODE_SERVFAIL);
-				}
 				/* go up */
 				delname = iq->dp->name;
 				delnamelen = iq->dp->namelen;
