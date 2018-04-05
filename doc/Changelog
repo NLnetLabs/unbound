@@ -1,6 +1,7 @@
 5 April 2018: Wouter
 	- Combine write of tcp length and tcp query for dns over tls.
 	- nitpick fixes in example.conf.
+	- Fix above stub queries for type NS and useless delegation point.
 
 3 April 2018: Wouter
 	- Fix #4043: make test fails due to v6 presentation issue in macOS.

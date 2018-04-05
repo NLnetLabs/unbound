@@ -1299,7 +1299,8 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 		delnamelen = iq->qchase.qname_len;
 	}
 	if(iq->qchase.qtype == LDNS_RR_TYPE_DS || iq->refetch_glue ||
-	   (iq->qchase.qtype == LDNS_RR_TYPE_NS && qstate->prefetch_leeway)) {
+	   (iq->qchase.qtype == LDNS_RR_TYPE_NS && qstate->prefetch_leeway
+	   && can_have_last_resort(qstate->env, delname, delnamelen, iq->qchase.qclass))) {
 		/* remove first label from delname, root goes to hints,
 		 * but only to fetch glue, not for qtype=DS. */
 		/* also when prefetching an NS record, fetch it again from
@@ -1439,6 +1440,12 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 				verbose(VERB_ALGO, 
 					"cache delegation was useless:");
 				delegpt_log(VERB_ALGO, iq->dp);
+				if(!can_have_last_resort(qstate->env, delname, delnamelen, iq->qchase.qclass)) {
+					verbose(VERB_ALGO, "useless dp "
+						"but cannot go up, servfail");
+					return error_response(qstate, id, 
+						LDNS_RCODE_SERVFAIL);
+				}
 				/* go up */
 				delname = iq->dp->name;
 				delnamelen = iq->dp->namelen;
