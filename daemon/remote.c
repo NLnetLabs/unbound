@@ -236,10 +236,15 @@ daemon_remote_create(struct config_file* cfg)
 
 	if (cfg->remote_control_use_cert == 0) {
 		/* No certificates are requested */
+#if defined(SSL_OP_NO_TLSv1_3)
+		/* in openssl 1.1.1, negotiation code for tls 1.3 does
+		 * not allow the unauthenticated aNULL and eNULL ciphers */
+		SSL_CTX_set_options(rc->ctx, SSL_OP_NO_TLSv1_3);
+#endif
 #ifdef HAVE_SSL_CTX_SET_SECURITY_LEVEL
 		SSL_CTX_set_security_level(rc->ctx, 0);
 #endif
-		if(!SSL_CTX_set_cipher_list(rc->ctx, "aNULL, eNULL")) {
+		if(!SSL_CTX_set_cipher_list(rc->ctx, "aNULL:eNULL")) {
 			log_crypto_err("Failed to set aNULL cipher list");
 			daemon_remote_delete(rc);
 			return NULL;

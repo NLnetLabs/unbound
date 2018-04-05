@@ -476,10 +476,15 @@ setup_ctx(struct config_file* cfg)
 		free(c_cert);
 	} else {
 		/* Use ciphers that don't require authentication  */
+#if defined(SSL_OP_NO_TLSv1_3)
+		/* in openssl 1.1.1, negotiation code for tls 1.3 does
+		 * not allow the unauthenticated aNULL and eNULL ciphers */
+		SSL_CTX_set_options(ctx, SSL_OP_NO_TLSv1_3);
+#endif
 #ifdef HAVE_SSL_CTX_SET_SECURITY_LEVEL
 		SSL_CTX_set_security_level(ctx, 0);
 #endif
-		if(!SSL_CTX_set_cipher_list(ctx, "aNULL, eNULL"))
+		if(!SSL_CTX_set_cipher_list(ctx, "aNULL:eNULL"))
 			ssl_err("Error setting NULL cipher!");
 	}
 	return ctx;
