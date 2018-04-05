@@ -83,6 +83,10 @@
    don't. */
 #undef HAVE_DECL_NID_ED25519
 
+/* Define to 1 if you have the declaration of `NID_ED448', and to 0 if you
+   don't. */
+#undef HAVE_DECL_NID_ED448
+
 /* Define to 1 if you have the declaration of `NID_secp384r1', and to 0 if you
    don't. */
 #undef HAVE_DECL_NID_SECP384R1
@@ -715,6 +719,9 @@
 
 /* Define this to enable ED25519 support. */
 #undef USE_ED25519
+
+/* Define this to enable ED448 support. */
+#undef USE_ED448
 
 /* Define this to enable GOST support. */
 #undef USE_GOST

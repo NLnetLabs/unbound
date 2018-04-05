@@ -859,6 +859,7 @@ enable_gost
 enable_ecdsa
 enable_dsa
 enable_ed25519
+enable_ed448
 enable_event_api
 enable_tfo_client
 enable_tfo_server
@@ -1545,6 +1546,7 @@ Optional Features:
   --disable-ecdsa         Disable ECDSA support
   --disable-dsa           Disable DSA support
   --disable-ed25519       Disable ED25519 support
+  --disable-ed448         Disable ED448 support
   --enable-event-api      Enable (experimental) pluggable event base
                           libunbound API installed to unbound-event.h
   --enable-tfo-client     Enable TCP Fast Open for client mode
@@ -18311,6 +18313,50 @@ done
 
 cat >>confdefs.h <<_ACEOF
 #define USE_ED25519 1
+_ACEOF
+
+      fi
+      ;;
+esac
+
+# Check whether --enable-ed448 was given.
+if test "${enable_ed448+set}" = set; then :
+  enableval=$enable_ed448;
+fi
+
+use_ed448="no"
+case "$enable_ed448" in
+    no)
+      ;;
+    *)
+      if test $USE_NSS = "no" -a $USE_NETTLE = "no"; then
+	      ac_fn_c_check_decl "$LINENO" "NID_ED448" "ac_cv_have_decl_NID_ED448" "$ac_includes_default
+#include <openssl/evp.h>
+
+"
+if test "x$ac_cv_have_decl_NID_ED448" = xyes; then :
+  ac_have_decl=1
+else
+  ac_have_decl=0
+fi
+
+cat >>confdefs.h <<_ACEOF
+#define HAVE_DECL_NID_ED448 $ac_have_decl
+_ACEOF
+if test $ac_have_decl = 1; then :
+
+      		use_ed448="yes"
+
+else
+   if test "x$enable_ed448" = "xyes"; then as_fn_error $? "OpenSSL does not support ED448 and you used --enable-ed448." "$LINENO" 5
+	      	fi
+fi
+
+      fi
+      if test $use_ed448 = "yes"; then
+
+cat >>confdefs.h <<_ACEOF
+#define USE_ED448 1
 _ACEOF
 
       fi

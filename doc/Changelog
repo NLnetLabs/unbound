@@ -5,6 +5,7 @@
 	- Fix unbound-control over pipe with openssl 1.1.1, the TLSv1.3
 	  tls_choose_sigalg routine does not allow the ciphers for the pipe,
 	  so use TLSv1.2.
+	- ED448 support.
 
 3 April 2018: Wouter
 	- Fix #4043: make test fails due to v6 presentation issue in macOS.
