@@ -4,6 +4,8 @@
 	- num.query.authzone.up and num.query.authzone.down statistics counters.
 	- Fix downstream auth zone, only fallback when auth zone fails to
 	  answer and fallback is enabled.
+	- Accept both option names with and without colon for get_option
+	  and set_option.
 
 5 April 2018: Wouter
 	- Combine write of tcp length and tcp query for dns over tls.

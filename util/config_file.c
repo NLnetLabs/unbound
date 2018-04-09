@@ -386,6 +386,12 @@ struct config_file* config_create_forlib(void)
 int config_set_option(struct config_file* cfg, const char* opt,
 	const char* val)
 {
+	char buf[64];
+	if(!opt) return 0;
+	if(opt[strlen(opt)-1] != ':' && strlen(opt)+2<sizeof(buf)) {
+		snprintf(buf, sizeof(buf), "%s:", opt);
+		opt = buf;
+	}
 	S_NUMBER_OR_ZERO("verbosity:", verbosity)
 	else if(strcmp(opt, "statistics-interval:") == 0) {
 		if(strcmp(val, "0") == 0 || strcmp(val, "") == 0)
@@ -801,8 +807,13 @@ int
 config_get_option(struct config_file* cfg, const char* opt, 
 	void (*func)(char*,void*), void* arg)
 {
-	char buf[1024];
+	char buf[1024], nopt[64];
 	size_t len = sizeof(buf);
+	if(opt && opt[strlen(opt)-1] == ':' && strlen(opt)<sizeof(nopt)) {
+		memmove(nopt, opt, strlen(opt));
+		nopt[strlen(opt)-1] = 0;
+		opt = nopt;
+	}
 	fptr_ok(fptr_whitelist_print_func(func));
 	O_DEC(opt, "verbosity", verbosity)
 	else O_DEC(opt, "statistics-interval", stat_interval)
