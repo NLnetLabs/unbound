@@ -161,6 +161,8 @@ config_create(void)
 	if(!(cfg->logfile = strdup(""))) goto error_exit;
 	if(!(cfg->pidfile = strdup(PIDFILE))) goto error_exit;
 	if(!(cfg->target_fetch_policy = strdup("3 2 1 0 0"))) goto error_exit;
+	cfg->low_rtt_pct = 0;
+	cfg->low_rtt = 45;
 	cfg->donotqueryaddrs = NULL;
 	cfg->donotquery_localhost = 1;
 	cfg->root_hints = NULL;

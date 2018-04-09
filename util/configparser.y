@@ -155,7 +155,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_CACHEDB_REDISHOST VAR_CACHEDB_REDISPORT VAR_CACHEDB_REDISTIMEOUT
 %token VAR_UDP_UPSTREAM_WITHOUT_DOWNSTREAM VAR_FOR_UPSTREAM
 %token VAR_AUTH_ZONE VAR_ZONEFILE VAR_MASTER VAR_URL VAR_FOR_DOWNSTREAM
-%token VAR_FALLBACK_ENABLED VAR_ADDITIONAL_TLS_PORT
+%token VAR_FALLBACK_ENABLED VAR_ADDITIONAL_TLS_PORT VAR_LOW_RTT VAR_LOW_RTT_PCT
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -245,7 +245,8 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_ipsecmod_ignore_bogus | server_ipsecmod_max_ttl |
 	server_ipsecmod_whitelist | server_ipsecmod_strict |
 	server_udp_upstream_without_downstream | server_aggressive_nsec |
-	server_tls_cert_bundle | server_additional_tls_port
+	server_tls_cert_bundle | server_additional_tls_port | server_low_rtt |
+	server_low_rtt_pct
 	;
 stubstart: VAR_STUB_ZONE
 	{
@@ -1857,6 +1858,24 @@ server_ratelimit_factor: VAR_RATELIMIT_FACTOR STRING_ARG
 		if(atoi($2) == 0 && strcmp($2, "0") != 0)
 			yyerror("number expected");
 		else cfg_parser->cfg->ratelimit_factor = atoi($2);
+		free($2);
+	}
+	;
+server_low_rtt: VAR_LOW_RTT STRING_ARG 
+	{ 
+		OUTYY(("P(server_low_rtt:%s)\n", $2)); 
+		if(atoi($2) == 0 && strcmp($2, "0") != 0)
+			yyerror("number expected");
+		else cfg_parser->cfg->low_rtt = atoi($2);
+		free($2);
+	}
+	;
+server_low_rtt_pct: VAR_LOW_RTT_PCT STRING_ARG 
+	{ 
+		OUTYY(("P(server_low_rtt_pct:%s)\n", $2)); 
+		if(atoi($2) == 0 && strcmp($2, "0") != 0)
+			yyerror("number expected");
+		else cfg_parser->cfg->low_rtt_pct = atoi($2);
 		free($2);
 	}
 	;

@@ -143,6 +143,10 @@ struct config_file {
 
 	/** the target fetch policy for the iterator */
 	char* target_fetch_policy;
+	/** percent*10, how many times in 1000 to pick low rtt destinations */
+	int low_rtt_pct;
+	/** what time in msec is a low rtt destination */
+	int low_rtt;
 
 	/** automatic interface for incoming messages. Uses ipv6 remapping,
 	 * and recvmsg/sendmsg ancillary data to detect interfaces, boolean */

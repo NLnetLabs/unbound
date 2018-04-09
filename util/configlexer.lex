@@ -425,6 +425,8 @@ ratelimit-for-domain{COLON}	{ YDVAR(2, VAR_RATELIMIT_FOR_DOMAIN) }
 ratelimit-below-domain{COLON}	{ YDVAR(2, VAR_RATELIMIT_BELOW_DOMAIN) }
 ip-ratelimit-factor{COLON}		{ YDVAR(1, VAR_IP_RATELIMIT_FACTOR) }
 ratelimit-factor{COLON}		{ YDVAR(1, VAR_RATELIMIT_FACTOR) }
+low-rtt{COLON}			{ YDVAR(1, VAR_LOW_RTT) }
+low-rtt-pct{COLON}		{ YDVAR(1, VAR_LOW_RTT_PCT) }
 response-ip-tag{COLON}		{ YDVAR(2, VAR_RESPONSE_IP_TAG) }
 response-ip{COLON}		{ YDVAR(2, VAR_RESPONSE_IP) }
 response-ip-data{COLON}		{ YDVAR(2, VAR_RESPONSE_IP_DATA) }

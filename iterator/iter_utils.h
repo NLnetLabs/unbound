@@ -87,13 +87,18 @@ int iter_apply_cfg(struct iter_env* iter_env, struct config_file* cfg);
  * @param open_target: number of currently outstanding target queries.
  * 	If we wait for these, perhaps more server addresses become available.
  * @param blacklist: the IP blacklist to use.
+ * @param prefetch: if not 0, prefetch is in use for this query.
+ * 	This means the query can have different timing, because prefetch is
+ * 	not waited upon by the downstream client, and thus a good time to
+ * 	perform exploration of other targets.
  * @return best target or NULL if no target.
  *	if not null, that target is removed from the result list in the dp.
  */
 struct delegpt_addr* iter_server_selection(struct iter_env* iter_env, 
 	struct module_env* env, struct delegpt* dp, uint8_t* name, 
 	size_t namelen, uint16_t qtype, int* dnssec_lame,
-	int* chase_to_rd, int open_target, struct sock_list* blacklist);
+	int* chase_to_rd, int open_target, struct sock_list* blacklist,
+	time_t prefetch);
 
 /**
  * Allocate dns_msg from parsed msg, in regional.

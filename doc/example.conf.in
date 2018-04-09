@@ -718,6 +718,12 @@ server:
 	# 0 blocks when ip is ratelimited, otherwise let 1/xth traffic through
 	# ip-ratelimit-factor: 10
 
+	# what is considered a low rtt (ping time for upstream server), in msec
+	# low-rtt: 45
+	# select low rtt this many times out of 1000. 0 means the fast server
+	# select is disabled.  prefetches are not sped up.
+	# low-rtt-pct: 0
+
 	# Specific options for ipsecmod. unbound needs to be configured with
 	# --enable-ipsecmod for these to take effect.
 	#

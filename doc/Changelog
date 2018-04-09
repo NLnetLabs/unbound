@@ -6,6 +6,8 @@
 	  answer and fallback is enabled.
 	- Accept both option names with and without colon for get_option
 	  and set_option.
+	- low-rtt and low-rtt-pct in unbound.conf enable the server selection
+	  of fast servers for some percentage of the time.
 
 5 April 2018: Wouter
 	- Combine write of tcp length and tcp query for dns over tls.
