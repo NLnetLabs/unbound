@@ -1,3 +1,7 @@
+9 April 2018: Wouter
+	- Fix that flush_zone sets prefetch ttl expired, so that with
+	  serve-expired enabled it'll start prefetching those entries.
+
 5 April 2018: Wouter
 	- Combine write of tcp length and tcp query for dns over tls.
 	- nitpick fixes in example.conf.

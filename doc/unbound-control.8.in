@@ -144,6 +144,9 @@ Remove the name, type information from the cache.
 Remove all information at or below the name from the cache. 
 The rrsets and key entries are removed so that new lookups will be performed.
 This needs to walk and inspect the entire cache, and is a slow operation.
+The entries are set to expired in the implementation of this command (so,
+with serve\-expired enabled, it'll serve that information but schedule a
+prefetch for new information).
 .TP
 .B flush_bogus
 Remove all bogus data from the cache.

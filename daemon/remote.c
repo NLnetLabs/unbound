@@ -1649,6 +1649,7 @@ zone_del_msg(struct lruhash_entry* e, void* arg)
 		struct reply_info* d = (struct reply_info*)e->data;
 		if(d->ttl > inf->expired) {
 			d->ttl = inf->expired;
+			d->prefetch_ttl = inf->expired;
 			inf->num_msgs++;
 		}
 	}
