@@ -60,6 +60,7 @@
 #include "sldns/sbuffer.h"
 #include "services/cache/rrset.h"
 #include "services/cache/infra.h"
+#include "services/authzone.h"
 #include "validator/val_kcache.h"
 
 /** add timers and the values do not overflow or become negative */
@@ -256,6 +257,22 @@ server_stats_compile(struct worker* worker, struct ub_stats_info* s, int reset)
 	s->svr.nonce_cache_count = 0;
 	s->svr.num_query_dnscrypt_replay = 0;
 #endif /* USE_DNSCRYPT */
+	if(worker->env.auth_zones) {
+		if(reset && !worker->env.cfg->stat_cumulative) {
+			lock_rw_wrlock(&worker->env.auth_zones->lock);
+		} else {
+			lock_rw_rdlock(&worker->env.auth_zones->lock);
+		}
+		s->svr.num_query_authzone_up = (long long)worker->env.
+			auth_zones->num_query_up;
+		s->svr.num_query_authzone_down = (long long)worker->env.
+			auth_zones->num_query_down;
+		if(reset && !worker->env.cfg->stat_cumulative) {
+			worker->env.auth_zones->num_query_up = 0;
+			worker->env.auth_zones->num_query_down = 0;
+		}
+		lock_rw_unlock(&worker->env.auth_zones->lock);
+	}
 
 	/* get tcp accept usage */
 	s->svr.tcp_accept_usage = 0;

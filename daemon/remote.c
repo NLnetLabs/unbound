@@ -1075,6 +1075,10 @@ print_ext(SSL* ssl, struct ub_stats_info* s)
 	if(!ssl_printf(ssl, "num.query.dnscrypt.replay"SQ"%lu\n",
 		(unsigned long)s->svr.num_query_dnscrypt_replay)) return 0;
 #endif /* USE_DNSCRYPT */
+	if(!ssl_printf(ssl, "num.query.authzone.up"SQ"%lu\n",
+		(unsigned long)s->svr.num_query_authzone_up)) return 0;
+	if(!ssl_printf(ssl, "num.query.authzone.down"SQ"%lu\n",
+		(unsigned long)s->svr.num_query_authzone_down)) return 0;
 	return 1;
 }
 

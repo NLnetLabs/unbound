@@ -3153,10 +3153,13 @@ int auth_zones_answer(struct auth_zones* az, struct module_env* env,
 	/* answer it from zone z */
 	r = auth_zone_generate_answer(z, qinfo, temp, &msg, &fallback);
 	lock_rw_unlock(&z->lock);
-	if(fallback) {
+	if(!r && fallback) {
 		/* fallback to regular answering (recursive) */
 		return 0;
 	}
+	lock_rw_wrlock(&az->lock);
+	az->num_query_down++;
+	lock_rw_unlock(&az->lock);
 
 	/* encode answer */
 	if(!r)

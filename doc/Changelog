@@ -1,6 +1,9 @@
 9 April 2018: Wouter
 	- Fix that flush_zone sets prefetch ttl expired, so that with
 	  serve-expired enabled it'll start prefetching those entries.
+	- num.query.authzone.up and num.query.authzone.down statistics counters.
+	- Fix downstream auth zone, only fallback when auth zone fails to
+	  answer and fallback is enabled.
 
 5 April 2018: Wouter
 	- Combine write of tcp length and tcp query for dns over tls.

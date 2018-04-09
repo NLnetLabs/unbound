@@ -601,6 +601,16 @@ dnscrypt queries replay. The client nonce must be unique for each client public
 key/server secret key pair. This cache should be able to host QPS * `replay
 window` interval keys to prevent replay of a query during `replay window`
 seconds.
+.TP
+.I num.query.authzone.up
+The number of queries answered from auth\-zone data, upstream queries.
+These queries would otherwise have been sent (with fallback enabled) to
+the internet, but are now answered from the auth zone.
+.TP
+.I num.query.authzone.down
+The number of queries for downstream answered from auth\-zone data.
+These queries are from downstream clients, and have had an answer from
+the data in the auth zone.
 .SH "FILES"
 .TP
 .I @ub_conf_file@

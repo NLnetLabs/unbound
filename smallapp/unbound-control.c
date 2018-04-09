@@ -366,6 +366,8 @@ static void print_extended(struct ub_stats_info* s)
 	PR_UL("num.query.dnscrypt.replay",
 			 s->svr.num_query_dnscrypt_replay);
 #endif /* USE_DNSCRYPT */
+	PR_UL("num.query.authzone.up", s->svr.num_query_authzone_up);
+	PR_UL("num.query.authzone.down", s->svr.num_query_authzone_down);
 }
 
 /** print statistics out of memory structures */
