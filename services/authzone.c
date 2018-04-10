@@ -3210,7 +3210,7 @@ auth_zone_parse_notify_serial(sldns_buffer* pkt, uint32_t *serial)
 	rdlen = sldns_buffer_read_u16(pkt); /* rdatalen */
 	if(sldns_buffer_remaining(pkt) < rdlen) return 0;
 	if(rdlen < 22) return 0; /* bad soa length */
-	sldns_buffer_skip(pkt, rdlen-20);
+	sldns_buffer_skip(pkt, (ssize_t)(rdlen-20));
 	*serial = sldns_buffer_read_u32(pkt);
 	/* return true when has serial in answer section */
 	return 1;
