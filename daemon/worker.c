@@ -950,6 +950,7 @@ answer_chaos(struct worker* w, struct query_info* qinfo,
  * @param w: worker
  * @param qinfo: query info. Pointer into packet buffer.
  * @param edns: edns info from query.
+ * @param repinfo: reply info with source address.
  * @param pkt: packet buffer.
  */
 static void
