@@ -1325,6 +1325,7 @@ sped up, because there is no one waiting for it, and it presents a good
 moment to perform server exploration.  The low\-rtt option can be used
 to specify which servers are picked for fast server selection, servers
 with a ping roundtrip time below that value are considered.
+The default for low\-rtt\-pct is 0.
 .SS "Remote Control Options"
 In the
 .B remote\-control:
