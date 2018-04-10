@@ -545,6 +545,29 @@ int auth_zone_set_fallback(struct auth_zone* z, char* fallbackstr);
 int auth_zones_can_fallback(struct auth_zones* az, uint8_t* nm, size_t nmlen,
 	uint16_t dclass);
 
+/** process notify for auth zones.
+ * first checks the access list.  Then processes the notify. This starts
+ * the probe sequence or it notes the serial number (if any)
+ * @param az: auth zones structure.
+ * @param nm: name of the zone.  Uncompressed. from query.
+ * @param nmlen: length of name.
+ * @param dclass: class of zone.
+ * @param addr: source address of notify
+ * @param addrlen: length of addr.
+ * @param has_serial: if true, the notify has a serial attached.
+ * @param serial: the serial number, if has_serial is true.
+ * @param refused: is set to true on failure to note refused access.
+ * @return fail on failures (refused is false) and when access is
+ * 	denied (refused is true).  True when processed.
+ */
+int auth_zones_notify(struct auth_zones* az, uint8_t* nm, size_t nmlen,
+	uint16_t dclass, struct sockaddr_storage* addr, socklen_t addrlen,
+	int has_serial, uint32_t serial, int* refused);
+
+/** process notify packet and read serial number from SOA.
+ * returns 0 if no soa record in the notify */
+int auth_zone_parse_notify_serial(struct sldns_buffer* pkt, uint32_t *serial);
+
 /** read auth zone from zonefile. caller must lock zone. false on failure */
 int auth_zone_read_zonefile(struct auth_zone* z);
 

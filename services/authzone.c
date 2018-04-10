@@ -3189,6 +3189,94 @@ int auth_zones_can_fallback(struct auth_zones* az, uint8_t* nm, size_t nmlen,
 	return r;
 }
 
+int
+auth_zone_parse_notify_serial(sldns_buffer* pkt, uint32_t *serial)
+{
+	struct query_info q;
+	uint16_t rdlen;
+	memset(&q, 0, sizeof(q));
+	sldns_buffer_set_position(pkt, 0);
+	if(!query_info_parse(&q, pkt)) return 0;
+	if(LDNS_ANCOUNT(sldns_buffer_begin(pkt)) == 0) return 0;
+	/* skip name of RR in answer section */
+	if(sldns_buffer_remaining(pkt) < 1) return 0;
+	if(pkt_dname_len(pkt) == 0) return 0;
+	/* check type */
+	if(sldns_buffer_remaining(pkt) < 10 /* type,class,ttl,rdatalen*/)
+		return 0;
+	if(sldns_buffer_read_u16(pkt) != LDNS_RR_TYPE_SOA) return 0;
+	sldns_buffer_skip(pkt, 2); /* class */
+	sldns_buffer_skip(pkt, 4); /* ttl */
+	rdlen = sldns_buffer_read_u16(pkt); /* rdatalen */
+	if(sldns_buffer_remaining(pkt) < rdlen) return 0;
+	if(rdlen < 22) return 0; /* bad soa length */
+	sldns_buffer_skip(pkt, rdlen-20);
+	*serial = sldns_buffer_read_u32(pkt);
+	/* return true when has serial in answer section */
+	return 1;
+}
+
+/** check access list for notifies */
+static int
+az_xfr_allowed_notify(struct auth_xfer* xfr, struct sockaddr_storage* addr,
+	socklen_t addrlen)
+{
+	/* TODO */
+	(void)xfr;
+	(void)addr;
+	(void)addrlen;
+	return 0;
+}
+
+/** process a notify serial, start new probe or note serial. xfr is locked */
+static int
+xfr_process_notify(struct auth_xfer* xfr, int has_serial, uint32_t serial)
+{
+	/* start new probe with this addr src, or note serial */
+	/* TODO */
+	(void)xfr;
+	(void)has_serial;
+	(void)serial;
+	return 1;
+}
+
+int auth_zones_notify(struct auth_zones* az, uint8_t* nm, size_t nmlen,
+	uint16_t dclass, struct sockaddr_storage* addr, socklen_t addrlen,
+	int has_serial, uint32_t serial, int* refused)
+{
+	struct auth_xfer* xfr;
+	/* see which zone this is */
+	lock_rw_rdlock(&az->lock);
+	xfr = auth_xfer_find(az, nm, nmlen, dclass);
+	if(!xfr) {
+		lock_rw_unlock(&az->lock);
+		/* no such zone, refuse the notify */
+		*refused = 1;
+		return 0;
+	}
+	lock_basic_lock(&xfr->lock);
+	lock_rw_unlock(&az->lock);
+	
+	/* check access list for notifies */
+	if(!az_xfr_allowed_notify(xfr, addr, addrlen)) {
+		lock_basic_unlock(&xfr->lock);
+		/* notify not allowed, refuse the notify */
+		*refused = 1;
+		return 0;
+	}
+
+	/* process the notify */
+	if(!xfr_process_notify(xfr, has_serial, serial)) {
+		lock_basic_unlock(&xfr->lock);
+		/* servfail */
+		*refused = 0;
+		return 0;
+	}
+
+	lock_basic_unlock(&xfr->lock);
+	return 1;
+}
+
 /** set a zone expired */
 static void
 auth_xfer_set_expired(struct auth_xfer* xfr, struct module_env* env,
