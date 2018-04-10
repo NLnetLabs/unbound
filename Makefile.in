@@ -1228,7 +1228,8 @@ stats.lo stats.o: $(srcdir)/daemon/stats.c config.h $(srcdir)/daemon/stats.h $(s
  $(srcdir)/util/tube.h $(srcdir)/util/net_help.h $(srcdir)/validator/validator.h $(srcdir)/validator/val_utils.h \
  $(srcdir)/iterator/iterator.h $(srcdir)/services/outbound_list.h $(srcdir)/services/cache/rrset.h \
  $(srcdir)/util/storage/slabhash.h $(srcdir)/services/cache/infra.h $(srcdir)/util/storage/dnstree.h \
- $(srcdir)/util/rtt.h $(srcdir)/services/authzone.h $(srcdir)/validator/val_kcache.h
+ $(srcdir)/util/rtt.h $(srcdir)/services/authzone.h $(srcdir)/validator/val_kcache.h \
+ $(srcdir)/validator/val_neg.h
 unbound.lo unbound.o: $(srcdir)/daemon/unbound.c config.h $(srcdir)/util/log.h $(srcdir)/daemon/daemon.h \
  $(srcdir)/util/locks.h $(srcdir)/testcode/checklocks.h $(srcdir)/util/alloc.h $(srcdir)/services/modstack.h \
    $(srcdir)/daemon/remote.h \
@@ -1325,7 +1326,8 @@ stats.lo stats.o: $(srcdir)/daemon/stats.c config.h $(srcdir)/daemon/stats.h $(s
  $(srcdir)/util/tube.h $(srcdir)/util/net_help.h $(srcdir)/validator/validator.h $(srcdir)/validator/val_utils.h \
  $(srcdir)/iterator/iterator.h $(srcdir)/services/outbound_list.h $(srcdir)/services/cache/rrset.h \
  $(srcdir)/util/storage/slabhash.h $(srcdir)/services/cache/infra.h $(srcdir)/util/storage/dnstree.h \
- $(srcdir)/util/rtt.h $(srcdir)/services/authzone.h $(srcdir)/validator/val_kcache.h
+ $(srcdir)/util/rtt.h $(srcdir)/services/authzone.h $(srcdir)/validator/val_kcache.h \
+ $(srcdir)/validator/val_neg.h
 replay.lo replay.o: $(srcdir)/testcode/replay.c config.h $(srcdir)/util/log.h $(srcdir)/util/net_help.h \
  $(srcdir)/util/config_file.h $(srcdir)/testcode/replay.h $(srcdir)/util/netevent.h $(srcdir)/dnscrypt/dnscrypt.h \
   $(srcdir)/dnscrypt/cert.h $(srcdir)/util/locks.h \
