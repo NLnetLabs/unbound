@@ -139,8 +139,8 @@ set_neg_cache_stats(struct worker* worker, struct ub_server_stats* svr,
 		return;
 	neg = ve->neg_cache;
 	lock_basic_lock(&neg->lock);
-	svr->num_neg_cache_noerror = neg->num_neg_cache_noerror;
-	svr->num_neg_cache_nxdomain = neg->num_neg_cache_nxdomain;
+	svr->num_neg_cache_noerror = (long long)neg->num_neg_cache_noerror;
+	svr->num_neg_cache_nxdomain = (long long)neg->num_neg_cache_nxdomain;
 	if(reset && !worker->env.cfg->stat_cumulative) {
 		neg->num_neg_cache_noerror = 0;
 		neg->num_neg_cache_nxdomain = 0;
