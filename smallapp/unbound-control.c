@@ -349,6 +349,8 @@ static void print_extended(struct ub_stats_info* s)
 	PR_UL("num.answer.secure", s->svr.ans_secure);
 	PR_UL("num.answer.bogus", s->svr.ans_bogus);
 	PR_UL("num.rrset.bogus", s->svr.rrset_bogus);
+	PR_UL("num.query.aggressive.NOERROR", s->svr.num_neg_cache_noerror);
+	PR_UL("num.query.aggressive.NXDOMAIN", s->svr.num_neg_cache_nxdomain);
 	/* threat detection */
 	PR_UL("unwanted.queries", s->svr.unwanted_queries);
 	PR_UL("unwanted.replies", s->svr.unwanted_replies);

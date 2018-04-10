@@ -1,3 +1,7 @@
+10 April 2018: Ralph
+	- num.query.aggressive.NOERROR and num.query.aggressive.NXDOMAIN
+	  statistics counters.
+
 10 April 2018: Wouter
 	- documentation for low-rtt and low-rtt-pct.
 

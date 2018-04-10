@@ -611,6 +611,16 @@ the internet, but are now answered from the auth zone.
 The number of queries for downstream answered from auth\-zone data.
 These queries are from downstream clients, and have had an answer from
 the data in the auth zone.
+.TP
+.I num.query.aggressive.NOERROR
+The number of queries answered using cached NSEC records with NODATA RCODE.
+These queries would otherwise have been sent to the internet, but are now
+answered using cached data.
+.TP
+.I num.query.aggressive.NXDOMAIN
+The number of queries answered using cached NSEC records with NXDOMAIN RCODE.
+These queries would otherwise have been sent to the internet, but are now
+answered using cached data.
 .SH "FILES"
 .TP
 .I @ub_conf_file@
