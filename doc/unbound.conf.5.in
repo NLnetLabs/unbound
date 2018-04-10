@@ -1309,6 +1309,22 @@ to complete.  Default is 10, allowing 1/10 traffic to flow normally.
 This can make ordinary queries complete (if repeatedly queried for),
 and enter the cache, whilst also mitigating the traffic flow by the
 factor given.
+.TP 5
+.B low\-rtt: \fI<msec time>
+Set the time in millisecond that is considere a low ping time for fast
+server selection with the low\-rtt\-pct option, that turns this on or off.
+The default is 45 msec, a number from IPv6 quick response documents.
+.TP 5
+.B low\-rtt\-pct: \fI<number>
+Specify how many times out of 1000 to pick the fast server from the low
+rtt band.  0 turns the feature off.  A value of 900 would pick the fast
+server when such fast servers are available 90 percent of the time, and
+the remaining time perform normal exploration of random servers.
+When prefetch is enabled (or serve\-expired), such prefetches are not
+sped up, because there is no one waiting for it, and it presents a good
+moment to perform server exploration.  The low\-rtt option can be used
+to specify which servers are picked for fast server selection, servers
+with a ping roundtrip time below that value are considered.
 .SS "Remote Control Options"
 In the
 .B remote\-control:

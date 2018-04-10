@@ -1,3 +1,6 @@
+10 April 2018: Wouter
+	- documentation for low-rtt and low-rtt-pct.
+
 9 April 2018: Wouter
 	- Fix that flush_zone sets prefetch ttl expired, so that with
 	  serve-expired enabled it'll start prefetching those entries.
