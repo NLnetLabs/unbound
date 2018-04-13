@@ -86,6 +86,8 @@
 #define AUTH_HTTP_PORT 80
 /* auth https port number */
 #define AUTH_HTTPS_PORT 443
+/* max depth for nested $INCLUDEs */
+#define MAX_INCLUDE_DEPTH 10
 
 /** pick up nextprobe task to start waiting to perform transfer actions */
 static void xfr_set_timeout(struct auth_xfer* xfr, struct module_env* env,
@@ -1437,11 +1439,13 @@ az_remove_rr_decompress(struct auth_zone* z, uint8_t* pkt, size_t pktlen,
  * @param state: parse state with $ORIGIN, $TTL and 'prev-dname' and so on,
  *	that is kept between includes.
  *	The lineno is set at 1 and then increased by the function.
+ * @param fname: file name.
+ * @param depth: recursion depth for includes
  * returns false on failure, has printed an error message
  */
 static int
 az_parse_file(struct auth_zone* z, FILE* in, uint8_t* rr, size_t rrbuflen,
-	struct sldns_file_parse_state* state)
+	struct sldns_file_parse_state* state, char* fname, int depth)
 {
 	size_t rr_len, dname_len;
 	int status;
@@ -1459,6 +1463,11 @@ az_parse_file(struct auth_zone* z, FILE* in, uint8_t* rr, size_t rrbuflen,
 				FILE* inc;
 				int lineno_orig = state->lineno;
 				char* incfile = (char*)rr + 8;
+				if(depth > MAX_INCLUDE_DEPTH) {
+					log_err("%s:%d max include depth"
+					  "exceeded", fname, state->lineno);
+					return 0;
+				}
 				/* skip spaces */
 				while(*incfile == ' ' || *incfile == '\t')
 					incfile++;
@@ -1480,9 +1489,9 @@ az_parse_file(struct auth_zone* z, FILE* in, uint8_t* rr, size_t rrbuflen,
 				}
 				/* recurse read that file now */
 				if(!az_parse_file(z, inc, rr, rrbuflen,
-					state)) {
+					state, incfile, depth+1)) {
 					log_err("%s:%d cannot parse include "
-						"file %s", z->zonefile,
+						"file %s", fname,
 						lineno_orig, incfile);
 					fclose(inc);
 					return 0;
@@ -1496,7 +1505,7 @@ az_parse_file(struct auth_zone* z, FILE* in, uint8_t* rr, size_t rrbuflen,
 			continue;
 		}
 		if(status != 0) {
-			log_err("parse error %s %d:%d: %s", z->zonefile,
+			log_err("parse error %s %d:%d: %s", fname,
 				state->lineno, LDNS_WIREPARSE_OFFSET(status),
 				sldns_get_errorstr_parse(status));
 			return 0;
@@ -1511,7 +1520,7 @@ az_parse_file(struct auth_zone* z, FILE* in, uint8_t* rr, size_t rrbuflen,
 			sldns_wire2str_type_buf(sldns_wirerr_get_type(rr,
 				rr_len, dname_len), buf, sizeof(buf));
 			log_err("%s:%d cannot insert RR of type %s",
-				z->zonefile, state->lineno, buf);
+				fname, state->lineno, buf);
 			return 0;
 		}
 	}
@@ -1555,7 +1564,7 @@ auth_zone_read_zonefile(struct auth_zone* z)
 		state.origin_len = z->namelen;
 	}
 	/* parse the (toplevel) file */
-	if(!az_parse_file(z, in, rr, sizeof(rr), &state)) {
+	if(!az_parse_file(z, in, rr, sizeof(rr), &state, z->zonefile, 0)) {
 		char* n = sldns_wire2str_dname(z->name, z->namelen);
 		log_err("error parsing zonefile %s for %s",
 			z->zonefile, n?n:"error");
