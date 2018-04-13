@@ -220,6 +220,10 @@ struct auth_xfer {
 	int notify_received;
 	/** serial number of the notify */
 	uint32_t notify_serial;
+	/** the list of masters for checking notifies.  This list is
+	 * empty on start, and a copy of the list from the probe_task when
+	 * it is done looking them up. */
+	struct auth_master* allow_notify_list;
 
 	/* protected by the lock on the structure, information about
 	 * the loaded authority zone. */

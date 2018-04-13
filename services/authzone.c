@@ -1494,6 +1494,7 @@ az_parse_file(struct auth_zone* z, FILE* in, uint8_t* rr, size_t rrbuflen,
 						"file %s", fname,
 						lineno_orig, incfile);
 					fclose(inc);
+					free(incfile);
 					return 0;
 				}
 				fclose(inc);
@@ -1946,6 +1947,7 @@ auth_xfer_delete(struct auth_xfer* xfr)
 		}
 		free(xfr->task_transfer);
 	}
+	auth_free_masters(xfr->allow_notify_list);
 	free(xfr);
 }
 
@@ -3225,15 +3227,49 @@ auth_zone_parse_notify_serial(sldns_buffer* pkt, uint32_t *serial)
 	return 1;
 }
 
+/** see if addr appears in the list */
+static int
+addr_in_list(struct auth_addr* list, struct sockaddr_storage* addr,
+	socklen_t addrlen)
+{
+	struct auth_addr* p;
+	for(p=list; p; p=p->next) {
+		if(sockaddr_cmp_addr(addr, addrlen, &p->addr, p->addrlen)==0)
+			return 1;
+	}
+	return 0;
+}
+
+/** check if an address matches a master specification (or one of its
+ * addresses in the addr list) */
+static int
+addr_matches_master(struct auth_master* master, struct sockaddr_storage* addr,
+	socklen_t addrlen)
+{
+	struct sockaddr_storage a;
+	socklen_t alen = 0;
+	if(addr_in_list(master->list, addr, addrlen))
+		return 1;
+	/* could be nice to note host is an IP literal? TODO */
+	if(extstrtoaddr(master->host, &a, &alen) &&
+		sockaddr_cmp_addr(addr, addrlen, &a, alen)==0)
+		return 1;
+	/* TODO prefixes need a bool to note they are or detectable with
+	 * a detector routine, also to avoid looking them up. */
+	return 0;
+}
+
 /** check access list for notifies */
 static int
 az_xfr_allowed_notify(struct auth_xfer* xfr, struct sockaddr_storage* addr,
 	socklen_t addrlen)
 {
-	/* TODO */
-	(void)xfr;
-	(void)addr;
-	(void)addrlen;
+	struct auth_master* p;
+	for(p=xfr->allow_notify_list; p; p=p->next) {
+		if(addr_matches_master(p, addr, addrlen)) {
+			return 1;
+		}
+	}
 	return 0;
 }
 
@@ -3337,6 +3373,93 @@ xfr_masterlist_free_addrs(struct auth_master* list)
 			m->list = NULL;
 		}
 	}
+}
+
+/** copy a list of auth_addrs */
+static struct auth_addr*
+auth_addr_list_copy(struct auth_addr* source)
+{
+	struct auth_addr* list = NULL, *last = NULL;
+	struct auth_addr* p;
+	for(p=source; p; p=p->next) {
+		struct auth_addr* a = (struct auth_addr*)memdup(p, sizeof(*p));
+		if(!a) {
+			log_err("malloc failure");
+			auth_free_master_addrs(list);
+			return NULL;
+		}
+		a->next = NULL;
+		if(last) last->next = a;
+		if(!list) list = a;
+		last = a;
+	}
+	return list;
+}
+
+/** copy a master to a new structure, NULL on alloc failure */
+static struct auth_master*
+auth_master_copy(struct auth_master* o)
+{
+	struct auth_master* m;
+	if(!o) return NULL;
+	m = (struct auth_master*)memdup(o, sizeof(*o));
+	if(!m) {
+		log_err("malloc failure");
+		return NULL;
+	}
+	m->next = NULL;
+	if(m->host) {
+		m->host = strdup(m->host);
+		if(!m->host) {
+			free(m);
+			log_err("malloc failure");
+			return NULL;
+		}
+	}
+	if(m->file) {
+		m->file = strdup(m->file);
+		if(!m->file) {
+			free(m->host);
+			free(m);
+			log_err("malloc failure");
+			return NULL;
+		}
+	}
+	if(m->list) {
+		m->list = auth_addr_list_copy(m->list);
+		if(!m->list) {
+			free(m->file);
+			free(m->host);
+			free(m);
+			return NULL;
+		}
+	}
+	return m;
+}
+
+/** copy the master addresses from the task_probe lookups to the allow_notify
+ * list of masters */
+static void
+probe_copy_masters_for_allow_notify(struct auth_xfer* xfr)
+{
+	struct auth_master* list = NULL, *last = NULL;
+	struct auth_master* p;
+	/* build up new list with copies */
+	for(p = xfr->task_probe->masters; p; p=p->next) {
+		struct auth_master* m = auth_master_copy(p);
+		if(!m) {
+			auth_free_masters(list);
+			/* failed because of malloc failure, use old list */
+			return;
+		}
+		m->next = NULL;
+		if(last) last->next = m;
+		if(!list) list = m;
+		last = m;
+	}
+	/* success, replace list */
+	auth_free_masters(xfr->allow_notify_list);
+	xfr->allow_notify_list = list;
 }
 
 /** start the lookups for task_transfer */
@@ -4792,6 +4915,8 @@ xfr_master_add_addrs(struct auth_master* m, struct ub_packed_rrset_key* rrset,
 	size_t i;
 	struct packed_rrset_data* data;
 	if(!m || !rrset) return;
+	if(rrtype != LDNS_RR_TYPE_A && rrtype != LDNS_RR_TYPE_AAAA)
+		return;
 	data = (struct packed_rrset_data*)rrset->entry.data;
 	for(i=0; i<data->count; i++) {
 		struct auth_addr* a;
@@ -5664,6 +5789,14 @@ xfr_probe_send_or_end(struct auth_xfer* xfr, struct module_env* env)
 		}
 		xfr_probe_move_to_next_lookup(xfr, env);
 	}
+	/* TODO Also lookup notify in masterlist.
+	 * but skip them for xfr and probe attempts.  (allow_notify_only).
+	 * and here, copy the list of addresses for the masters/notifies
+	 * to a separate list.  
+	 */ 
+	/* probe of list has ended.  Create or refresh the list of of
+	 * allow_notify addrs */
+	probe_copy_masters_for_allow_notify(xfr);
 
 	/* send probe packets */
 	while(!xfr_probe_end_of_list(xfr)) {

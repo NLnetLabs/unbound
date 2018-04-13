@@ -1,5 +1,9 @@
 13 April 2018: Wouter
 	- Fix for max include depth for authzones.
+	- Fix memory free on fail for $INCLUDE in authzone.
+	- Fix that an internal error to look up the wrong rr type for
+	  auth zone gets stopped, before trying to send there.
+	- auth zone notify work.
 
 10 April 2018: Ralph
 	- num.query.aggressive.NOERROR and num.query.aggressive.NXDOMAIN
