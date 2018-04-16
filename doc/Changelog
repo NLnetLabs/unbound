@@ -1,6 +1,7 @@
 16 April 2018: Wouter
 	- Fix auth zone target lookup iterator.
-	- notify with prefix
+	- auth zone notify with prefix
+	- auth zone notify work.
 
 13 April 2018: Wouter
 	- Fix for max include depth for authzones.

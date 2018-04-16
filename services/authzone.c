@@ -95,6 +95,10 @@ static void xfr_set_timeout(struct auth_xfer* xfr, struct module_env* env,
 /** move to sending the probe packets, next if fails. task_probe */
 static void xfr_probe_send_or_end(struct auth_xfer* xfr,
 	struct module_env* env);
+/** pick up probe task with specified(or NULL) destination first,
+ * or transfer task if nothing to probe, or false if already in progress */
+static int xfr_start_probe(struct auth_xfer* xfr, struct module_env* env,
+	struct auth_master* spec);
 
 /** create new dns_msg */
 static struct dns_msg*
@@ -3244,25 +3248,36 @@ addr_in_list(struct auth_addr* list, struct sockaddr_storage* addr,
  * addresses in the addr list) */
 static int
 addr_matches_master(struct auth_master* master, struct sockaddr_storage* addr,
-	socklen_t addrlen)
+	socklen_t addrlen, struct auth_master** fromhost)
 {
 	struct sockaddr_storage a;
 	socklen_t alen = 0;
 	int net = 0;
-	if(addr_in_list(master->list, addr, addrlen))
-		return 1;
+	if(addr_in_list(master->list, addr, addrlen)) {
+		*fromhost = master;
+		return 1;	
+	}
+	/* compare address (but not port number, that is the destination
+	 * port of the master, the port number of the received notify is
+	 * allowed to by any port on that master) */
 	if(extstrtoaddr(master->host, &a, &alen) &&
-		sockaddr_cmp_addr(addr, addrlen, &a, alen)==0)
+		sockaddr_cmp_addr(addr, addrlen, &a, alen)==0) {
+		*fromhost = master;
 		return 1;
+	}
 	/* prefixes, addr/len, like 10.0.0.0/8 */
 	/* not http and has a / and there is one / */
+	/* TODO: for allow-notify elements */
 	if(!master->http && strchr(master->host, '/')!=NULL &&
 		strchr(master->host, '/') == strrchr(master->host, '/') &&
 		netblockstrtoaddr(master->host, UNBOUND_DNS_PORT, &a, &alen,
 		&net) && alen == addrlen) {
 		if(addr_in_common(addr, (addr_is_ip6(addr, addrlen)?128:32),
-			&a, net, alen) >= net)
+			&a, net, alen) >= net) {
+			*fromhost = NULL; /* prefix does not have destination
+				to send the probe or transfer with */
 			return 1; /* matches the netblock */
+		}
 	}
 	return 0;
 }
@@ -3270,34 +3285,74 @@ addr_matches_master(struct auth_master* master, struct sockaddr_storage* addr,
 /** check access list for notifies */
 static int
 az_xfr_allowed_notify(struct auth_xfer* xfr, struct sockaddr_storage* addr,
-	socklen_t addrlen)
+	socklen_t addrlen, struct auth_master** fromhost)
 {
 	struct auth_master* p;
 	for(p=xfr->allow_notify_list; p; p=p->next) {
-		if(addr_matches_master(p, addr, addrlen)) {
+		if(addr_matches_master(p, addr, addrlen, fromhost)) {
 			return 1;
 		}
 	}
 	return 0;
 }
 
-/** process a notify serial, start new probe or note serial. xfr is locked */
+/** see if the serial means the zone has to be updated, i.e. the serial
+ * is newer than the zone serial, or we have no zone */
 static int
-xfr_process_notify(struct auth_xfer* xfr, int has_serial, uint32_t serial)
+xfr_serial_means_update(struct auth_xfer* xfr, uint32_t serial)
 {
-	/* start new probe with this addr src, or note serial */
-	/* TODO */
-	(void)xfr;
-	(void)has_serial;
-	(void)serial;
-	return 1;
+	if(!xfr->have_zone)
+		return 1; /* no zone, anything is better */
+	if(xfr->zone_expired)
+		return 1; /* expired, the sent serial is better than expired
+			data */
+	if(compare_serial(xfr->serial, serial) < 0)
+		return 1; /* our serial is smaller than the sent serial,
+			the data is newer, fetch it */
+	return 0;
 }
 
-int auth_zones_notify(struct auth_zones* az, uint8_t* nm, size_t nmlen,
-	uint16_t dclass, struct sockaddr_storage* addr, socklen_t addrlen,
-	int has_serial, uint32_t serial, int* refused)
+/** process a notify serial, start new probe or note serial. xfr is locked */
+static void
+xfr_process_notify(struct auth_xfer* xfr, struct module_env* env,
+	int has_serial, uint32_t serial, struct auth_master* fromhost)
+{
+	/* if the serial of notify is older than we have, don't fetch
+	 * a zone, we already have it */
+	if(has_serial && !xfr_serial_means_update(xfr, serial))
+		return;
+	/* start new probe with this addr src, or note serial */
+	if(!xfr_start_probe(xfr, env, fromhost)) {
+		/* not started because already in progress, note the serial */
+		if(xfr->notify_received && xfr->notify_has_serial &&
+			has_serial) {
+			/* see if this serial is newer */
+			if(compare_serial(xfr->notify_serial, serial) < 0)
+				xfr->notify_serial = serial;
+		} else if(xfr->notify_received && xfr->notify_has_serial &&
+			!has_serial) {
+			/* remove serial, we have notify without serial */
+			xfr->notify_has_serial = 0;
+			xfr->notify_serial = 0;
+		} else if(xfr->notify_received && !xfr->notify_has_serial) {
+			/* we already have notify without serial, keep it
+			 * that way; no serial check when current operation
+			 * is done */
+		} else {
+			xfr->notify_received = 1;
+			xfr->notify_has_serial = has_serial;
+			xfr->notify_serial = serial;
+		}
+	}
+}
+
+int auth_zones_notify(struct auth_zones* az, struct module_env* env,
+	uint8_t* nm, size_t nmlen, uint16_t dclass,
+	struct sockaddr_storage* addr, socklen_t addrlen, int has_serial,
+	uint32_t serial, int* refused)
 {
 	struct auth_xfer* xfr;
+	struct auth_master* fromhost = NULL;
 	/* see which zone this is */
 	lock_rw_rdlock(&az->lock);
 	xfr = auth_xfer_find(az, nm, nmlen, dclass);
@@ -3311,7 +3366,7 @@ int auth_zones_notify(struct auth_zones* az, uint8_t* nm, size_t nmlen,
 	lock_rw_unlock(&az->lock);
 	
 	/* check access list for notifies */
-	if(!az_xfr_allowed_notify(xfr, addr, addrlen)) {
+	if(!az_xfr_allowed_notify(xfr, addr, addrlen, &fromhost)) {
 		lock_basic_unlock(&xfr->lock);
 		/* notify not allowed, refuse the notify */
 		*refused = 1;
@@ -3319,13 +3374,7 @@ int auth_zones_notify(struct auth_zones* az, uint8_t* nm, size_t nmlen,
 	}
 
 	/* process the notify */
-	if(!xfr_process_notify(xfr, has_serial, serial)) {
-		lock_basic_unlock(&xfr->lock);
-		/* servfail */
-		*refused = 0;
-		return 0;
-	}
-
+	xfr_process_notify(xfr, env, has_serial, serial, fromhost);
 	lock_basic_unlock(&xfr->lock);
 	return 1;
 }
@@ -3826,22 +3875,6 @@ check_packet_ok(sldns_buffer* pkt, uint16_t qtype, struct auth_xfer* xfr,
 		*serial = sldns_buffer_read_u32(pkt);
 	}
 	return 1;
-}
-
-/** see if the serial means the zone has to be updated, i.e. the serial
- * is newer than the zone serial, or we have no zone */
-static int
-xfr_serial_means_update(struct auth_xfer* xfr, uint32_t serial)
-{
-	if(!xfr->have_zone)
-		return 1; /* no zone, anything is better */
-	if(xfr->zone_expired)
-		return 1; /* expired, the sent serial is better than expired
-			data */
-	if(compare_serial(xfr->serial, serial) < 0)
-		return 1; /* our serial is smaller than the sent serial,
-			the data is newer, fetch it */
-	return 0;
 }
 
 /** read one line from chunks into buffer at current position */
@@ -5362,8 +5395,22 @@ process_list_end_transfer(struct auth_xfer* xfr, struct module_env* env)
 		/* we fetched the zone, move to wait task */
 		xfr_transfer_disown(xfr);
 
-		/* pick up the nextprobe task and wait (normail wait time) */
-		xfr_set_timeout(xfr, env, 0);
+		if(xfr->notify_received && (!xfr->notify_has_serial ||
+			(xfr->notify_has_serial && 
+			xfr_serial_means_update(xfr, xfr->notify_serial)))) {
+			/* we received a notify while probe/transfer was
+			 * in progress.  start a new probe and transfer */
+			if(xfr_start_probe(xfr, env, NULL)) {
+				/* probe started successfully, we can remove
+				 * the stored notify */
+				xfr->notify_received = 0;
+				xfr->notify_has_serial = 0;
+				xfr->notify_serial = 0;
+			}
+		} else {
+			/* pick up the nextprobe task and wait (normail wait time) */
+			xfr_set_timeout(xfr, env, 0);
+		}
 		lock_basic_unlock(&xfr->lock);
 		return;
 	}
@@ -5925,6 +5972,19 @@ auth_xfer_timer(void* arg)
 
 	xfr_nextprobe_disown(xfr);
 
+	if(!xfr_start_probe(xfr, env, NULL)) {
+		/* not started because already in progress */
+		lock_basic_unlock(&xfr->lock);
+	}
+}
+
+/** start task_probe if possible, if no masters for probe start task_transfer
+ * returns true if task has been started, and false if the task is already
+ * in progress. */
+static int
+xfr_start_probe(struct auth_xfer* xfr, struct module_env* env,
+	struct auth_master* spec)
+{
 	/* see if we need to start a probe (or maybe it is already in
 	 * progress (due to notify)) */
 	if(xfr->task_probe->worker == NULL) {
@@ -5932,12 +5992,11 @@ auth_xfer_timer(void* arg)
 			/* useless to pick up task_probe, no masters to
 			 * probe. Instead attempt to pick up task transfer */
 			if(xfr->task_transfer->worker == NULL) {
-				xfr_start_transfer(xfr, env, NULL);
-			} else {
-				/* task transfer already in progress */
-				lock_basic_unlock(&xfr->lock);
+				xfr_start_transfer(xfr, env, spec);
+				return 1;
 			}
-			return;
+			/* task transfer already in progress */
+			return 0;
 		}
 
 		/* pick up the probe task ourselves */
@@ -5946,15 +6005,17 @@ auth_xfer_timer(void* arg)
 		xfr->task_probe->cp = NULL;
 
 		/* start the task */
-		/* this was a timeout, so no specific first master to scan */
-		xfr_probe_start_list(xfr, NULL);
+		/* if this was a timeout, no specific first master to scan */
+		/* otherwise, spec is nonNULL the notified master, scan
+		 * first and also transfer first from it */
+		xfr_probe_start_list(xfr, spec);
 		/* setup to start the lookup of hostnames of masters afresh */
 		xfr_probe_start_lookups(xfr);
 		/* send the probe packet or next send, or end task */
 		xfr_probe_send_or_end(xfr, env);
-	} else {
-		lock_basic_unlock(&xfr->lock);
+		return 1;
 	}
+	return 0;
 }
 
 /** for task_nextprobe.

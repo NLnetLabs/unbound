@@ -963,7 +963,7 @@ answer_notify(struct worker* w, struct query_info* qinfo,
 	int has_serial;
 	if(!w->env.auth_zones) return;
 	has_serial = auth_zone_parse_notify_serial(pkt, &serial);
-	if(auth_zones_notify(w->env.auth_zones, qinfo->qname,
+	if(auth_zones_notify(w->env.auth_zones, &w->env, qinfo->qname,
 		qinfo->qname_len, qinfo->qclass, &repinfo->addr,
 		repinfo->addrlen, has_serial, serial, &refused)) {
 		rcode = LDNS_RCODE_NOERROR;

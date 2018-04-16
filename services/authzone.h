@@ -218,6 +218,8 @@ struct auth_xfer {
 	 * Hold the lock to access this member (and the serial).
 	 */
 	int notify_received;
+	/** true if the notify_received has a serial number */
+	int notify_has_serial;
 	/** serial number of the notify */
 	uint32_t notify_serial;
 	/** the list of masters for checking notifies.  This list is
@@ -553,6 +555,9 @@ int auth_zones_can_fallback(struct auth_zones* az, uint8_t* nm, size_t nmlen,
  * first checks the access list.  Then processes the notify. This starts
  * the probe sequence or it notes the serial number (if any)
  * @param az: auth zones structure.
+ * @param env: module env of the worker that is handling the notify. it will
+ * 	pick up the task probe (or transfer), unless already in progress by
+ * 	another worker.
  * @param nm: name of the zone.  Uncompressed. from query.
  * @param nmlen: length of name.
  * @param dclass: class of zone.
@@ -564,9 +569,10 @@ int auth_zones_can_fallback(struct auth_zones* az, uint8_t* nm, size_t nmlen,
  * @return fail on failures (refused is false) and when access is
  * 	denied (refused is true).  True when processed.
  */
-int auth_zones_notify(struct auth_zones* az, uint8_t* nm, size_t nmlen,
-	uint16_t dclass, struct sockaddr_storage* addr, socklen_t addrlen,
-	int has_serial, uint32_t serial, int* refused);
+int auth_zones_notify(struct auth_zones* az, struct module_env* env,
+	uint8_t* nm, size_t nmlen, uint16_t dclass,
+	struct sockaddr_storage* addr, socklen_t addrlen, int has_serial,
+	uint32_t serial, int* refused);
 
 /** process notify packet and read serial number from SOA.
  * returns 0 if no soa record in the notify */
