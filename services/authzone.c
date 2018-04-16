@@ -3248,14 +3248,22 @@ addr_matches_master(struct auth_master* master, struct sockaddr_storage* addr,
 {
 	struct sockaddr_storage a;
 	socklen_t alen = 0;
+	int net = 0;
 	if(addr_in_list(master->list, addr, addrlen))
 		return 1;
-	/* could be nice to note host is an IP literal? TODO */
 	if(extstrtoaddr(master->host, &a, &alen) &&
 		sockaddr_cmp_addr(addr, addrlen, &a, alen)==0)
 		return 1;
-	/* TODO prefixes need a bool to note they are or detectable with
-	 * a detector routine, also to avoid looking them up. */
+	/* prefixes, addr/len, like 10.0.0.0/8 */
+	/* not http and has a / and there is one / */
+	if(!master->http && strchr(master->host, '/')!=NULL &&
+		strchr(master->host, '/') == strrchr(master->host, '/') &&
+		netblockstrtoaddr(master->host, UNBOUND_DNS_PORT, &a, &alen,
+		&net) && alen == addrlen) {
+		if(addr_in_common(addr, (addr_is_ip6(addr, addrlen)?128:32),
+			&a, net, alen) >= net)
+			return 1; /* matches the netblock */
+	}
 	return 0;
 }
 
@@ -3623,11 +3631,19 @@ xfr_transfer_nextmaster(struct auth_xfer* xfr)
 	if(xfr->task_transfer->scan_specific) {
 		xfr->task_transfer->scan_specific = NULL;
 		xfr->task_transfer->scan_target = xfr->task_transfer->masters;
+		if(xfr->task_transfer->scan_target && xfr->task_transfer->
+			scan_target->list)
+			xfr->task_transfer->scan_addr =
+				xfr->task_transfer->scan_target->list;
 		return;
 	}
 	if(!xfr->task_transfer->scan_target)
 		return;
 	xfr->task_transfer->scan_target = xfr->task_transfer->scan_target->next;
+	if(xfr->task_transfer->scan_target && xfr->task_transfer->
+		scan_target->list)
+		xfr->task_transfer->scan_addr =
+			xfr->task_transfer->scan_target->list;
 	return;
 }
 
@@ -3645,11 +3661,19 @@ xfr_probe_nextmaster(struct auth_xfer* xfr)
 	if(xfr->task_probe->scan_specific) {
 		xfr->task_probe->scan_specific = NULL;
 		xfr->task_probe->scan_target = xfr->task_probe->masters;
+		if(xfr->task_probe->scan_target && xfr->task_probe->
+			scan_target->list)
+			xfr->task_probe->scan_addr =
+				xfr->task_probe->scan_target->list;
 		return;
 	}
 	if(!xfr->task_probe->scan_target)
 		return;
 	xfr->task_probe->scan_target = xfr->task_probe->scan_target->next;
+	if(xfr->task_probe->scan_target && xfr->task_probe->
+		scan_target->list)
+		xfr->task_probe->scan_addr =
+			xfr->task_probe->scan_target->list;
 	return;
 }
 

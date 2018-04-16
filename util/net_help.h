@@ -190,7 +190,7 @@ int ipstrtoaddr(const char* ip, int port, struct sockaddr_storage* addr,
 
 /**
  * Convert ip netblock (ip/netsize) string and port to sockaddr.
- * *SLOW*, does a malloc internally to avoid writing over 'ip' string.
+ * performs a copy internally to avoid writing over 'ip' string.
  * @param ip: ip4 or ip6 address string.
  * @param port: port number, host format.
  * @param addr: where to store sockaddr.

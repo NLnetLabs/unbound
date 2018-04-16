@@ -1,3 +1,7 @@
+16 April 2018: Wouter
+	- Fix auth zone target lookup iterator.
+	- notify with prefix
+
 13 April 2018: Wouter
 	- Fix for max include depth for authzones.
 	- Fix memory free on fail for $INCLUDE in authzone.

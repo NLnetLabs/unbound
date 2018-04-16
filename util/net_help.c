@@ -241,7 +241,8 @@ ipstrtoaddr(const char* ip, int port, struct sockaddr_storage* addr,
 int netblockstrtoaddr(const char* str, int port, struct sockaddr_storage* addr,
         socklen_t* addrlen, int* net)
 {
-	char* s = NULL;
+	char buf[64];
+	char* s;
 	*net = (str_is_ip6(str)?128:32);
 	if((s=strchr(str, '/'))) {
 		if(atoi(s+1) > *net) {
@@ -253,11 +254,10 @@ int netblockstrtoaddr(const char* str, int port, struct sockaddr_storage* addr,
 			log_err("cannot parse netblock: '%s'", str);
 			return 0;
 		}
-		if(!(s = strdup(str))) {
-			log_err("out of memory");
-			return 0;
-		}
-		*strchr(s, '/') = '\0';
+		strlcpy(buf, str, sizeof(buf));
+		s = strchr(buf, '/');
+		if(s) *s = 0;
+		s = buf;
 	}
 	if(!ipstrtoaddr(s?s:str, port, addr, addrlen)) {
 		free(s);
@@ -265,7 +265,6 @@ int netblockstrtoaddr(const char* str, int port, struct sockaddr_storage* addr,
 		return 0;
 	}
 	if(s) {
-		free(s);
 		addr_mask(addr, *addrlen, *net);
 	}
 	return 1;
