@@ -302,6 +302,9 @@ struct auth_probe {
 	struct auth_master* lookup_target;
 	/** are we looking up A or AAAA, first A, then AAAA (if ip6 enabled) */
 	int lookup_aaaa;
+	/** we only want to do lookups for making config work (for notify),
+	 * don't proceed with UDP SOA probe queries */
+	int only_lookup;
 
 	/** once notified, or the timeout has been reached. a scan starts. */
 	/** the scan specific target (notify source), or NULL if none */

@@ -91,7 +91,7 @@
 
 /** pick up nextprobe task to start waiting to perform transfer actions */
 static void xfr_set_timeout(struct auth_xfer* xfr, struct module_env* env,
-	int failure);
+	int failure, int lookup_only);
 /** move to sending the probe packets, next if fails. task_probe */
 static void xfr_probe_send_or_end(struct auth_xfer* xfr,
 	struct module_env* env);
@@ -3343,6 +3343,7 @@ xfr_process_notify(struct auth_xfer* xfr, struct module_env* env,
 			xfr->notify_has_serial = has_serial;
 			xfr->notify_serial = serial;
 		}
+		lock_basic_unlock(&xfr->lock);
 	}
 }
 
@@ -3375,7 +3376,6 @@ int auth_zones_notify(struct auth_zones* az, struct module_env* env,
 
 	/* process the notify */
 	xfr_process_notify(xfr, env, has_serial, serial, fromhost);
-	lock_basic_unlock(&xfr->lock);
 	return 1;
 }
 
@@ -4960,7 +4960,7 @@ xfr_transfer_nexttarget_or_end(struct auth_xfer* xfr, struct module_env* env)
 	xfr_transfer_disown(xfr);
 
 	/* pick up the nextprobe task and wait */
-	xfr_set_timeout(xfr, env, 1);
+	xfr_set_timeout(xfr, env, 1, 0);
 	lock_basic_unlock(&xfr->lock);
 }
 
@@ -5398,18 +5398,26 @@ process_list_end_transfer(struct auth_xfer* xfr, struct module_env* env)
 		if(xfr->notify_received && (!xfr->notify_has_serial ||
 			(xfr->notify_has_serial && 
 			xfr_serial_means_update(xfr, xfr->notify_serial)))) {
+			uint32_t sr = xfr->notify_serial;
+			int has_sr = xfr->notify_has_serial;
 			/* we received a notify while probe/transfer was
 			 * in progress.  start a new probe and transfer */
-			if(xfr_start_probe(xfr, env, NULL)) {
-				/* probe started successfully, we can remove
-				 * the stored notify */
-				xfr->notify_received = 0;
-				xfr->notify_has_serial = 0;
-				xfr->notify_serial = 0;
+			xfr->notify_received = 0;
+			xfr->notify_has_serial = 0;
+			xfr->notify_serial = 0;
+			if(!xfr_start_probe(xfr, env, NULL)) {
+				/* if we couldn't start it, already in
+				 * progress; restore notify serial,
+				 * while xfr still locked */
+				xfr->notify_received = 1;
+				xfr->notify_has_serial = has_sr;
+				xfr->notify_serial = sr;
+				lock_basic_unlock(&xfr->lock);
 			}
+			return;
 		} else {
 			/* pick up the nextprobe task and wait (normail wait time) */
-			xfr_set_timeout(xfr, env, 0);
+			xfr_set_timeout(xfr, env, 0, 0);
 		}
 		lock_basic_unlock(&xfr->lock);
 		return;
@@ -5753,7 +5761,7 @@ auth_xfer_probe_udp_callback(struct comm_point* c, void* arg, int err,
 				if(xfr->have_zone)
 					xfr->lease_time = *env->now;
 				if(xfr->task_nextprobe->worker == NULL)
-					xfr_set_timeout(xfr, env, 0);
+					xfr_set_timeout(xfr, env, 0, 0);
 			}
 			/* other tasks are running, we don't do this anymore */
 			xfr_probe_disown(xfr);
@@ -5868,6 +5876,14 @@ xfr_probe_send_or_end(struct auth_xfer* xfr, struct module_env* env)
 	/* probe of list has ended.  Create or refresh the list of of
 	 * allow_notify addrs */
 	probe_copy_masters_for_allow_notify(xfr);
+	if(xfr->task_probe->only_lookup) {
+		/* only wanted lookups for copy, stop probe and start wait */
+		xfr->task_probe->only_lookup = 0;
+		xfr_probe_disown(xfr);
+		xfr_set_timeout(xfr, env, 0, 0);
+		lock_basic_unlock(&xfr->lock);
+		return;
+	}
 
 	/* send probe packets */
 	while(!xfr_probe_end_of_list(xfr)) {
@@ -5885,7 +5901,7 @@ xfr_probe_send_or_end(struct auth_xfer* xfr, struct module_env* env)
 	xfr_probe_disown(xfr);
 
 	/* pick up the nextprobe task and wait */
-	xfr_set_timeout(xfr, env, 1);
+	xfr_set_timeout(xfr, env, 1, 0);
 	lock_basic_unlock(&xfr->lock);
 }
 
@@ -6023,10 +6039,11 @@ xfr_start_probe(struct auth_xfer* xfr, struct module_env* env,
  * @param xfr: task structure
  * @param env: module environment, with worker and time.
  * @param failure: set true if timer should be set for failure retry.
+ * @param lookup_only: only perform lookups when timer done, 0 sec timeout
  */
 static void
 xfr_set_timeout(struct auth_xfer* xfr, struct module_env* env,
-	int failure)
+	int failure, int lookup_only)
 {
 	struct timeval tv;
 	log_assert(xfr->task_nextprobe != NULL);
@@ -6083,6 +6100,13 @@ xfr_set_timeout(struct auth_xfer* xfr, struct module_env* env,
 		tv.tv_sec = xfr->task_nextprobe->next_probe - 
 			*(xfr->task_nextprobe->env->now);
 	else	tv.tv_sec = 0;
+	if(tv.tv_sec != 0 && lookup_only && xfr->task_probe->masters) {
+		/* don't lookup_only, if lookup timeout is 0 anyway,
+		 * or if we don't have masters to lookup */
+		tv.tv_sec = 0;
+		if(xfr->task_probe && xfr->task_probe->worker == NULL)
+			xfr->task_probe->only_lookup = 1;
+	}
 	if(verbosity >= VERB_ALGO) {
 		char zname[255+1];
 		dname_str(xfr->name, zname);
@@ -6106,8 +6130,9 @@ auth_xfer_pickup_initial(struct auth_zones* az, struct module_env* env)
 		 * notes the start time when the data was acquired */
 		if(x->have_zone)
 			x->lease_time = *env->now;
-		if(x->task_nextprobe && x->task_nextprobe->worker == NULL)
-			xfr_set_timeout(x, env, 0);
+		if(x->task_nextprobe && x->task_nextprobe->worker == NULL) {
+			xfr_set_timeout(x, env, 0, 1);
+		}
 		lock_basic_unlock(&x->lock);
 	}
 	lock_rw_unlock(&az->lock);
