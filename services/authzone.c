@@ -3312,6 +3312,30 @@ xfr_serial_means_update(struct auth_xfer* xfr, uint32_t serial)
 	return 0;
 }
 
+/** note notify serial, updates the notify information in the xfr struct */
+static void
+xfr_note_notify_serial(struct auth_xfer* xfr, int has_serial, uint32_t serial)
+{
+	if(xfr->notify_received && xfr->notify_has_serial && has_serial) {
+		/* see if this serial is newer */
+		if(compare_serial(xfr->notify_serial, serial) < 0)
+			xfr->notify_serial = serial;
+	} else if(xfr->notify_received && xfr->notify_has_serial &&
+		!has_serial) {
+		/* remove serial, we have notify without serial */
+		xfr->notify_has_serial = 0;
+		xfr->notify_serial = 0;
+	} else if(xfr->notify_received && !xfr->notify_has_serial) {
+		/* we already have notify without serial, keep it
+		 * that way; no serial check when current operation
+		 * is done */
+	} else {
+		xfr->notify_received = 1;
+		xfr->notify_has_serial = has_serial;
+		xfr->notify_serial = serial;
+	}
+}
+
 /** process a notify serial, start new probe or note serial. xfr is locked */
 static void
 xfr_process_notify(struct auth_xfer* xfr, struct module_env* env,
@@ -3324,25 +3348,7 @@ xfr_process_notify(struct auth_xfer* xfr, struct module_env* env,
 	/* start new probe with this addr src, or note serial */
 	if(!xfr_start_probe(xfr, env, fromhost)) {
 		/* not started because already in progress, note the serial */
-		if(xfr->notify_received && xfr->notify_has_serial &&
-			has_serial) {
-			/* see if this serial is newer */
-			if(compare_serial(xfr->notify_serial, serial) < 0)
-				xfr->notify_serial = serial;
-		} else if(xfr->notify_received && xfr->notify_has_serial &&
-			!has_serial) {
-			/* remove serial, we have notify without serial */
-			xfr->notify_has_serial = 0;
-			xfr->notify_serial = 0;
-		} else if(xfr->notify_received && !xfr->notify_has_serial) {
-			/* we already have notify without serial, keep it
-			 * that way; no serial check when current operation
-			 * is done */
-		} else {
-			xfr->notify_received = 1;
-			xfr->notify_has_serial = has_serial;
-			xfr->notify_serial = serial;
-		}
+		xfr_note_notify_serial(xfr, has_serial, serial);
 		lock_basic_unlock(&xfr->lock);
 	}
 }

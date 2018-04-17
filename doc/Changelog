@@ -1,3 +1,6 @@
+17 April 2018: Wouter
+	- auth zone notify work.
+
 16 April 2018: Wouter
 	- Fix auth zone target lookup iterator.
 	- auth zone notify with prefix
