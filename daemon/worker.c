@@ -1000,6 +1000,7 @@ answer_notify(struct worker* w, struct query_info* qinfo,
 	error_encode(pkt, rcode, qinfo,
 		*(uint16_t*)(void *)sldns_buffer_begin(pkt),
 		sldns_buffer_read_u16_at(pkt, 2), edns);
+	LDNS_OPCODE_SET(sldns_buffer_begin(pkt), LDNS_PACKET_NOTIFY);
 }
 
 static int
