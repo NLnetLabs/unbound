@@ -281,7 +281,8 @@ extern int yydebug;
     VAR_FALLBACK_ENABLED = 491,
     VAR_ADDITIONAL_TLS_PORT = 492,
     VAR_LOW_RTT = 493,
-    VAR_LOW_RTT_PCT = 494
+    VAR_LOW_RTT_PCT = 494,
+    VAR_ALLOW_NOTIFY = 495
   };
 #endif
 /* Tokens.  */
@@ -522,6 +523,7 @@ extern int yydebug;
 #define VAR_ADDITIONAL_TLS_PORT 492
 #define VAR_LOW_RTT 493
 #define VAR_LOW_RTT_PCT 494
+#define VAR_ALLOW_NOTIFY 495
 
 /* Value type.  */
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
@@ -532,7 +534,7 @@ union YYSTYPE
 
 	char*	str;
 
-#line 536 "util/configparser.h" /* yacc.c:1909  */
+#line 538 "util/configparser.h" /* yacc.c:1909  */
 };
 
 typedef union YYSTYPE YYSTYPE;

@@ -563,6 +563,8 @@ struct config_auth {
 	struct config_strlist* masters;
 	/** list of urls */
 	struct config_strlist* urls;
+	/** list of allow-notify */
+	struct config_strlist* allow_notify;
 	/** zonefile (or NULL) */
 	char* zonefile;
 	/** provide downstream answers */

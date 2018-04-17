@@ -3267,8 +3267,8 @@ addr_matches_master(struct auth_master* master, struct sockaddr_storage* addr,
 	}
 	/* prefixes, addr/len, like 10.0.0.0/8 */
 	/* not http and has a / and there is one / */
-	/* TODO: for allow-notify elements */
-	if(!master->http && strchr(master->host, '/')!=NULL &&
+	if(master->allow_notify && !master->http &&
+		strchr(master->host, '/') != NULL &&
 		strchr(master->host, '/') == strrchr(master->host, '/') &&
 		netblockstrtoaddr(master->host, UNBOUND_DNS_PORT, &a, &alen,
 		&net) && alen == addrlen) {
@@ -4808,6 +4808,9 @@ xfr_transfer_lookup_host(struct auth_xfer* xfr, struct module_env* env)
 		/* not needed, host is in IP addr format */
 		return 0;
 	}
+	if(master->allow_notify)
+		return 0; /* allow-notifies are not transferred from, no
+		lookup is needed */
 
 	/* use mesh_new_callback to probe for non-addr hosts,
 	 * and then wait for them to be looked up (in cache, or query) */
@@ -4862,6 +4865,7 @@ xfr_transfer_init_fetch(struct auth_xfer* xfr, struct module_env* env)
 	socklen_t addrlen = 0;
 	struct auth_master* master = xfr->task_transfer->master;
 	if(!master) return 0;
+	if(master->allow_notify) return 0; /* only for notify */
 
 	/* get master addr */
 	if(xfr->task_transfer->scan_addr) {
@@ -5615,6 +5619,7 @@ xfr_probe_send_probe(struct auth_xfer* xfr, struct module_env* env,
 	/* pick master */
 	struct auth_master* master = xfr_probe_current_master(xfr);
 	if(!master) return 0;
+	if(master->allow_notify) return 0; /* only for notify */
 
 	/* get master addr */
 	if(xfr->task_probe->scan_addr) {
@@ -5812,6 +5817,11 @@ xfr_probe_lookup_host(struct auth_xfer* xfr, struct module_env* env)
 		/* not needed, host is in IP addr format */
 		return 0;
 	}
+	if(master->allow_notify && !master->http &&
+		strchr(master->host, '/') != NULL &&
+		strchr(master->host, '/') == strrchr(master->host, '/')) {
+		return 0; /* is IP/prefix format, not something to look up */
+	}
 
 	/* use mesh_new_callback to probe for non-addr hosts,
 	 * and then wait for them to be looked up (in cache, or query) */
@@ -5874,11 +5884,6 @@ xfr_probe_send_or_end(struct auth_xfer* xfr, struct module_env* env)
 		}
 		xfr_probe_move_to_next_lookup(xfr, env);
 	}
-	/* TODO Also lookup notify in masterlist.
-	 * but skip them for xfr and probe attempts.  (allow_notify_only).
-	 * and here, copy the list of addresses for the masters/notifies
-	 * to a separate list.  
-	 */ 
 	/* probe of list has ended.  Create or refresh the list of of
 	 * allow_notify addrs */
 	probe_copy_masters_for_allow_notify(xfr);
@@ -6000,6 +6005,18 @@ auth_xfer_timer(void* arg)
 	}
 }
 
+/** return true if there are probe (SOA UDP query) targets in the master list*/
+static int
+have_probe_targets(struct auth_master* list)
+{
+	struct auth_master* p;
+	for(p=list; p; p = p->next) {
+		if(!p->allow_notify && p->host)
+			return 1;
+	}
+	return 0;
+}
+
 /** start task_probe if possible, if no masters for probe start task_transfer
  * returns true if task has been started, and false if the task is already
  * in progress. */
@@ -6010,7 +6027,9 @@ xfr_start_probe(struct auth_xfer* xfr, struct module_env* env,
 	/* see if we need to start a probe (or maybe it is already in
 	 * progress (due to notify)) */
 	if(xfr->task_probe->worker == NULL) {
-		if(xfr->task_probe->masters == NULL) {
+		if(!have_probe_targets(xfr->task_probe->masters) &&
+			!(xfr->task_probe->only_lookup &&
+			xfr->task_probe->masters != NULL)) {
 			/* useless to pick up task_probe, no masters to
 			 * probe. Instead attempt to pick up task transfer */
 			if(xfr->task_transfer->worker == NULL) {
@@ -6406,6 +6425,15 @@ xfer_set_masters(struct auth_master** list, struct config_auth* c,
 	for(p = c->masters; p; p = p->next) {
 		m = auth_master_new(&list);
 		m->ixfr = 1; /* this flag is not configurable */
+		m->host = strdup(p->str);
+		if(!m->host) {
+			log_err("malloc failure");
+			return 0;
+		}
+	}
+	for(p = c->allow_notify; p; p = p->next) {
+		m = auth_master_new(&list);
+		m->allow_notify = 1;
 		m->host = strdup(p->str);
 		if(!m->host) {
 			log_err("malloc failure");

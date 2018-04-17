@@ -156,6 +156,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_UDP_UPSTREAM_WITHOUT_DOWNSTREAM VAR_FOR_UPSTREAM
 %token VAR_AUTH_ZONE VAR_ZONEFILE VAR_MASTER VAR_URL VAR_FOR_DOWNSTREAM
 %token VAR_FALLBACK_ENABLED VAR_ADDITIONAL_TLS_PORT VAR_LOW_RTT VAR_LOW_RTT_PCT
+%token VAR_ALLOW_NOTIFY
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -320,7 +321,8 @@ authstart: VAR_AUTH_ZONE
 contents_auth: contents_auth content_auth 
 	| ;
 content_auth: auth_name | auth_zonefile | auth_master | auth_url |
-	auth_for_downstream | auth_for_upstream | auth_fallback_enabled
+	auth_for_downstream | auth_for_upstream | auth_fallback_enabled |
+	auth_allow_notify
 	;
 server_num_threads: VAR_NUM_THREADS STRING_ARG 
 	{ 
@@ -2097,6 +2099,14 @@ auth_url: VAR_URL STRING_ARG
 	{
 		OUTYY(("P(url:%s)\n", $2));
 		if(!cfg_strlist_insert(&cfg_parser->cfg->auths->urls, $2))
+			yyerror("out of memory");
+	}
+	;
+auth_allow_notify: VAR_ALLOW_NOTIFY STRING_ARG
+	{
+		OUTYY(("P(allow-notify:%s)\n", $2));
+		if(!cfg_strlist_insert(&cfg_parser->cfg->auths->allow_notify,
+			$2))
 			yyerror("out of memory");
 	}
 	;

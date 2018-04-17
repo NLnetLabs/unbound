@@ -1518,6 +1518,14 @@ If none of the urls work, the masters are tried with IXFR and AXFR.
 For https, the \fBtls\-cert\-bundle\fR and the hostname from the url are used
 to authenticate the connection.
 .TP
+.B allow\-notify: \fI<IP address or host name or netblockIP/prefix>
+With allow\-notify you can specify additional sources of notifies.
+When notified, the server attempts to first probe and then zone transfer.
+If the notify is from a master, it first attempts that master.  Otherwise
+other masters are attempted.  If there are no masters, but only urls, the
+file is downloaded when notified.  The masters from master: statements are
+allowed notify by default.
+.TP
 .B fallback\-enabled: \fI<yes or no>
 Default no.  If enabled, unbound falls back to querying the internet as
 a resolver for this zone when lookups fail.  For example for DNSSEC

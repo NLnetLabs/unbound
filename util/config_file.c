@@ -1197,6 +1197,7 @@ config_delauth(struct config_auth* p)
 	free(p->name);
 	config_delstrlist(p->masters);
 	config_delstrlist(p->urls);
+	config_delstrlist(p->allow_notify);
 	free(p->zonefile);
 	free(p);
 }

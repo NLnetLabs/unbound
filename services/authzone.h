@@ -413,6 +413,9 @@ struct auth_master {
 	int http;
 	/** use IXFR for this master */
 	int ixfr;
+	/** this is an allow notify member, the master can send notifies
+	 * to us, but we don't send SOA probes, or zone transfer from it */
+	int allow_notify;
 	/** use ssl for channel */
 	int ssl;
 	/** the port number (for urls) */
