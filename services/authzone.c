@@ -5620,6 +5620,8 @@ xfr_probe_send_probe(struct auth_xfer* xfr, struct module_env* env,
 	struct auth_master* master = xfr_probe_current_master(xfr);
 	if(!master) return 0;
 	if(master->allow_notify) return 0; /* only for notify */
+	if(master->http) return 0; /* only masters get SOA UDP probe,
+		not urls, if those are in this list */
 
 	/* get master addr */
 	if(xfr->task_probe->scan_addr) {
@@ -6078,7 +6080,7 @@ xfr_set_timeout(struct auth_xfer* xfr, struct module_env* env,
 	 * but if expiry is sooner, use that one.
 	 * after a failure, use the retry timer instead. */
 	xfr->task_nextprobe->next_probe = *env->now;
-	if(xfr->lease_time)
+	if(xfr->lease_time && !failure)
 		xfr->task_nextprobe->next_probe = xfr->lease_time;
 	
 	if(!failure) {
@@ -6101,6 +6103,12 @@ xfr_set_timeout(struct auth_xfer* xfr, struct module_env* env,
 		if(failure)
 			xfr->task_nextprobe->next_probe +=
 				xfr->task_nextprobe->backoff;
+		/* put the timer exactly on expiry, if possible */
+		if(xfr->lease_time && xfr->lease_time+xfr->expiry <
+			xfr->task_nextprobe->next_probe &&
+			xfr->lease_time+xfr->expiry > *env->now)
+			xfr->task_nextprobe->next_probe =
+				xfr->lease_time+xfr->expiry;
 	} else {
 		xfr->task_nextprobe->next_probe +=
 			xfr->task_nextprobe->backoff;

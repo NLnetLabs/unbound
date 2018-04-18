@@ -1,3 +1,7 @@
+18 April 2018: Wouter
+	- Fix auth-zone retry timer to be on schedule with retry timeout,
+	  with backoff.  Also time a refresh at the zone expiry.
+
 17 April 2018: Wouter
 	- auth zone notify work.
 	- allow-notify: config statement for auth-zones.
