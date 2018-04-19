@@ -489,6 +489,8 @@ void pending_delete(struct outside_network* outnet, struct pending* p);
  * @param nocaps: ignore use_caps_for_id and use unperturbed qname.
  * @param tcp_upstream: use TCP for upstream queries.
  * @param ssl_upstream: use SSL for upstream queries.
+ * @param tls_auth_name: when ssl_upstream is true, use this name to check
+ * 	the server's peer certificate.
  * @param addr: to which server to send the query.
  * @param addrlen: length of addr.
  * @param zone: name of the zone of the delegation point. wireformat dname.
