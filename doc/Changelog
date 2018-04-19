@@ -1,6 +1,8 @@
 19 April 2018: Wouter
 	- Can set tls authentication with forward-addr: IP#tls.auth.name
 	  And put the public cert bundle in tls-cert-bundle: "ca-bundle.pem".
+	  such as forward-addr: 9.9.9.9@853#dns.quad9.net or
+	  1.1.1.1@853#cloudflare-dns.com
 
 18 April 2018: Wouter
 	- Fix auth-zone retry timer to be on schedule with retry timeout,
