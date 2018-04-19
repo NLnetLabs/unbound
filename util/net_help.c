@@ -306,6 +306,7 @@ int authextstrtoaddr(char* str, struct sockaddr_storage* addr,
 		}
 		(void)strlcpy(buf, str, sizeof(buf));
 		buf[len] = 0;
+		port = UNBOUND_DNS_OVER_TLS_PORT;
 		*auth_name = s+1;
 		return ipstrtoaddr(buf, port, addr, addrlen);
 	}

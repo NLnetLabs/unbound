@@ -5,6 +5,7 @@
 	  1.1.1.1@853#cloudflare-dns.com
 	- Fix #658: unbound using TLS in a forwarding configuration does not
 	  verify the server's certificate (RFC 8310 support).
+	- For addr with #authname and no @port notation, the default is 853.
 
 18 April 2018: Wouter
 	- Fix auth-zone retry timer to be on schedule with retry timeout,
