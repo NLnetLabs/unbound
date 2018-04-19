@@ -277,7 +277,7 @@ int authextstrtoaddr(char* str, struct sockaddr_storage* addr,
 	int port = UNBOUND_DNS_PORT;
 	if((s=strchr(str, '@'))) {
 		char buf[MAX_ADDR_STRLEN];
-		size_t len = s-str;
+		size_t len = (size_t)(s-str);
 		char* hash = strchr(s+1, '#');
 		if(hash) {
 			*auth_name = hash+1;
@@ -300,7 +300,7 @@ int authextstrtoaddr(char* str, struct sockaddr_storage* addr,
 	}
 	if((s=strchr(str, '#'))) {
 		char buf[MAX_ADDR_STRLEN];
-		size_t len = s-str;
+		size_t len = (size_t)(s-str);
 		if(len >= MAX_ADDR_STRLEN) {
 			return 0;
 		}
