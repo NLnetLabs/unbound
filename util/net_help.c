@@ -270,6 +270,49 @@ int netblockstrtoaddr(const char* str, int port, struct sockaddr_storage* addr,
 	return 1;
 }
 
+int authextstrtoaddr(char* str, struct sockaddr_storage* addr, 
+	socklen_t* addrlen, char** auth_name)
+{
+	char* s;
+	int port = UNBOUND_DNS_PORT;
+	if((s=strchr(str, '@'))) {
+		char buf[MAX_ADDR_STRLEN];
+		size_t len = s-str;
+		char* hash = strchr(s+1, '#');
+		if(hash) {
+			*auth_name = hash+1;
+		} else {
+			*auth_name = NULL;
+		}
+		if(len >= MAX_ADDR_STRLEN) {
+			return 0;
+		}
+		(void)strlcpy(buf, str, sizeof(buf));
+		buf[len] = 0;
+		port = atoi(s+1);
+		if(port == 0) {
+			if(!hash && strcmp(s+1,"0")!=0)
+				return 0;
+			if(hash && strncmp(s+1,"0#",2)!=0)
+				return 0;
+		}
+		return ipstrtoaddr(buf, port, addr, addrlen);
+	}
+	if((s=strchr(str, '#'))) {
+		char buf[MAX_ADDR_STRLEN];
+		size_t len = s-str;
+		if(len >= MAX_ADDR_STRLEN) {
+			return 0;
+		}
+		(void)strlcpy(buf, str, sizeof(buf));
+		buf[len] = 0;
+		*auth_name = s+1;
+		return ipstrtoaddr(buf, port, addr, addrlen);
+	}
+	*auth_name = NULL;
+	return ipstrtoaddr(str, port, addr, addrlen);
+}
+
 /** store port number into sockaddr structure */
 void
 sockaddr_store_port(struct sockaddr_storage* addr, socklen_t addrlen, int port)

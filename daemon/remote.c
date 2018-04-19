@@ -1941,6 +1941,7 @@ parse_delegpt(SSL* ssl, char* args, uint8_t* nm, int allow_names)
 	struct delegpt* dp = delegpt_create_mlc(nm);
 	struct sockaddr_storage addr;
 	socklen_t addrlen;
+	char* auth_name;
 	if(!dp) {
 		(void)ssl_printf(ssl, "error out of memory\n");
 		return NULL;
@@ -1953,7 +1954,7 @@ parse_delegpt(SSL* ssl, char* args, uint8_t* nm, int allow_names)
 			p = skipwhite(p); /* position at next spot */
 		}
 		/* parse address */
-		if(!extstrtoaddr(todo, &addr, &addrlen)) {
+		if(!authextstrtoaddr(todo, &addr, &addrlen, &auth_name)) {
 			if(allow_names) {
 				uint8_t* n = NULL;
 				size_t ln;
@@ -1981,7 +1982,8 @@ parse_delegpt(SSL* ssl, char* args, uint8_t* nm, int allow_names)
 			}
 		} else {
 			/* add address */
-			if(!delegpt_add_addr_mlc(dp, &addr, addrlen, 0, 0)) {
+			if(!delegpt_add_addr_mlc(dp, &addr, addrlen, 0, 0,
+				auth_name)) {
 				(void)ssl_printf(ssl, "error out of memory\n");
 				delegpt_free_mlc(dp);
 				return NULL;

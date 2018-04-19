@@ -290,6 +290,8 @@ struct waiting_tcp {
 	void* cb_arg;
 	/** if it uses ssl upstream */
 	int ssl_upstream;
+	/** ref to the tls_auth_name from the serviced_query */
+	char* tls_auth_name;
 };
 
 /**
@@ -332,6 +334,9 @@ struct serviced_query {
 	int nocaps;
 	/** tcp upstream used, use tcp, or ssl_upstream for SSL */
 	int tcp_upstream, ssl_upstream;
+	/** the name of the tls authentication name, eg. 'ns.example.com'
+	 * or NULL */
+	char* tls_auth_name;
 	/** where to send it */
 	struct sockaddr_storage addr;
 	/** length of addr field in use. */
@@ -501,7 +506,7 @@ void pending_delete(struct outside_network* outnet, struct pending* p);
  */
 struct serviced_query* outnet_serviced_query(struct outside_network* outnet,
 	struct query_info* qinfo, uint16_t flags, int dnssec, int want_dnssec,
-	int nocaps, int tcp_upstream, int ssl_upstream,
+	int nocaps, int tcp_upstream, int ssl_upstream, char* tls_auth_name,
 	struct sockaddr_storage* addr, socklen_t addrlen, uint8_t* zone,
 	size_t zonelen, struct module_qstate* qstate,
 	comm_point_callback_type* callback, void* callback_arg,

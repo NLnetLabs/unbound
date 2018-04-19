@@ -1799,7 +1799,7 @@ processLastResort(struct module_qstate* qstate, struct iter_qstate* iq,
 			for(a = p->target_list; a; a=a->next_target) {
 				(void)delegpt_add_addr(iq->dp, qstate->region,
 					&a->addr, a->addrlen, a->bogus,
-					a->lame);
+					a->lame, a->tls_auth_name);
 			}
 		}
 		iq->dp->has_parent_side_NS = 1;
@@ -2387,7 +2387,8 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 		iq->dnssec_expected, iq->caps_fallback || is_caps_whitelisted(
 		ie, iq), &target->addr, target->addrlen,
 		iq->dp->name, iq->dp->namelen,
-		(iq->dp->ssl_upstream || qstate->env->cfg->ssl_upstream), qstate);
+		(iq->dp->ssl_upstream || qstate->env->cfg->ssl_upstream),
+		target->tls_auth_name, qstate);
 	if(!outq) {
 		log_addr(VERB_DETAIL, "error sending query to auth server", 
 			&target->addr, target->addrlen);

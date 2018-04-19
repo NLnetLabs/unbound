@@ -1,3 +1,7 @@
+19 April 2018: Wouter
+	- Can set tls authentication with forward-addr: IP#tls.auth.name
+	  And put the public cert bundle in tls-cert-bundle: "ca-bundle.pem".
+
 18 April 2018: Wouter
 	- Fix auth-zone retry timer to be on schedule with retry timeout,
 	  with backoff.  Also time a refresh at the zone expiry.
