@@ -1,5 +1,6 @@
 20 April 2018: Wouter
 	- man page documentation for dns-over-tls forward-addr '#' notation.
+	- removed free from failed parse case.
 
 19 April 2018: Wouter
 	- Can set tls authentication with forward-addr: IP#tls.auth.name

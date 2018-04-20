@@ -260,7 +260,6 @@ int netblockstrtoaddr(const char* str, int port, struct sockaddr_storage* addr,
 		s = buf;
 	}
 	if(!ipstrtoaddr(s?s:str, port, addr, addrlen)) {
-		free(s);
 		log_err("cannot parse ip address: '%s'", str);
 		return 0;
 	}
