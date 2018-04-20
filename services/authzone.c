@@ -1560,6 +1560,11 @@ auth_zone_read_zonefile(struct auth_zone* z)
 		free(n);
 		return 0;
 	}
+
+	/* clear the data tree */
+	traverse_postorder(&z->data, auth_data_del, NULL);
+	rbtree_init(&z->data, &auth_data_cmp);
+
 	memset(&state, 0, sizeof(state));
 	/* default TTL to 3600 */
 	state.default_ttl = 3600;
