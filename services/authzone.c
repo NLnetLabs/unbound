@@ -99,6 +99,8 @@ static void xfr_probe_send_or_end(struct auth_xfer* xfr,
  * or transfer task if nothing to probe, or false if already in progress */
 static int xfr_start_probe(struct auth_xfer* xfr, struct module_env* env,
 	struct auth_master* spec);
+/** delete xfer structure (not its tree entry) */
+void auth_xfer_delete(struct auth_xfer* xfr);
 
 /** create new dns_msg */
 static struct dns_msg*
@@ -1827,6 +1829,7 @@ auth_zones_cfg(struct auth_zones* az, struct config_auth* c)
 	lock_rw_unlock(&az->lock);
 
 	/* set options */
+	z->zone_deleted = 0;
 	if(!auth_zone_set_zonefile(z, c->zonefile)) {
 		if(x) {
 			lock_basic_unlock(&x->lock);
@@ -1859,10 +1862,65 @@ auth_zones_cfg(struct auth_zones* az, struct config_auth* c)
 	return 1;
 }
 
+/** set all auth zones deleted, then in auth_zones_cfg, it marks them
+ * as nondeleted (if they are still in the config), and then later
+ * we can find deleted zones */
+static void
+az_setall_deleted(struct auth_zones* az)
+{
+	struct auth_zone* z;
+	lock_rw_wrlock(&az->lock);
+	RBTREE_FOR(z, struct auth_zone*, &az->ztree) {
+		lock_rw_wrlock(&z->lock);
+		z->zone_deleted = 1;
+		lock_rw_unlock(&z->lock);
+	}
+	lock_rw_unlock(&az->lock);
+}
+
+/** find zones that are marked deleted and delete them.
+ * This is called from apply_cfg, and there are no threads and no
+ * workers, so the xfr can just be deleted. */
+static void
+az_delete_deleted_zones(struct auth_zones* az)
+{
+	struct auth_zone* z;
+	struct auth_zone* delete_list = NULL, *next;
+	struct auth_xfer* xfr;
+	lock_rw_wrlock(&az->lock);
+	RBTREE_FOR(z, struct auth_zone*, &az->ztree) {
+		lock_rw_wrlock(&z->lock);
+		if(z->zone_deleted) {
+			/* we cannot alter the rbtree right now, but
+			 * we can put it on a linked list and then
+			 * delete it */
+			z->delete_next = delete_list;
+			delete_list = z;
+		}
+		lock_rw_unlock(&z->lock);
+	}
+	/* now we are out of the tree loop and we can loop and delete
+	 * the zones */
+	z = delete_list;
+	while(z) {
+		next = z->delete_next;
+		xfr = auth_xfer_find(az, z->name, z->namelen, z->dclass);
+		if(xfr) {
+			(void)rbtree_delete(&az->xtree, &xfr->node);
+			auth_xfer_delete(xfr);
+		}
+		(void)rbtree_delete(&az->ztree, &z->node);
+		auth_zone_delete(z);
+		z = next;
+	}
+	lock_rw_unlock(&az->lock);
+}
+
 int auth_zones_apply_cfg(struct auth_zones* az, struct config_file* cfg,
 	int setup)
 {
 	struct config_auth* p;
+	az_setall_deleted(az);
 	for(p = cfg->auths; p; p = p->next) {
 		if(!p->name || p->name[0] == 0) {
 			log_warn("auth-zone without a name, skipped");
@@ -1873,6 +1931,7 @@ int auth_zones_apply_cfg(struct auth_zones* az, struct config_file* cfg,
 			return 0;
 		}
 	}
+	az_delete_deleted_zones(az);
 	if(!auth_zones_read_zones(az))
 		return 0;
 	if(setup) {

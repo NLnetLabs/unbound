@@ -126,6 +126,10 @@ struct auth_zone {
 	/** for upstream: this zone answers queries that unbound intends to
 	 * send upstream. */
 	int for_upstream;
+	/** zone has been deleted */
+	int zone_deleted;
+	/** deletelist pointer, unused normally except during delete */
+	struct auth_zone* delete_next;
 };
 
 /**

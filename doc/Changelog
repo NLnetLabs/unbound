@@ -3,6 +3,7 @@
 	- removed free from failed parse case.
 	- Fix #4091: Fix that reload of auth-zone does not merge the zonefile
 	  with the previous contents.
+	- Delete auth zone when removed from config.
 
 19 April 2018: Wouter
 	- Can set tls authentication with forward-addr: IP#tls.auth.name
