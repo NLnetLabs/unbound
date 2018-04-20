@@ -1470,6 +1470,9 @@ Name of server to forward to. Is itself resolved before it is used.
 .B forward\-addr: \fI<IP address>
 IP address of server to forward to. Can be IP 4 or IP 6.
 To use a nondefault port for DNS communication append '@' with the port number.
+If tls is enabled, then you can append a '#' and a name, then it'll check
+the tls authentication certificates with that name.  If you combine
+the '@' and '#', the '@' comes first.
 .TP
 .B forward\-first: \fI<yes or no>
 If enabled, a query is attempted without the forward clause if it fails.
