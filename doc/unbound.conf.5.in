@@ -1473,6 +1473,10 @@ To use a nondefault port for DNS communication append '@' with the port number.
 If tls is enabled, then you can append a '#' and a name, then it'll check
 the tls authentication certificates with that name.  If you combine
 the '@' and '#', the '@' comes first.
+.IP
+At high verbosity it logs the TLS certificate, with TLS enabled.
+If you leave out the '#' and auth name from the forward\-addr, any
+name is accepted.  The cert must also match a CA from the tls\-cert\-bundle.
 .TP
 .B forward\-first: \fI<yes or no>
 If enabled, a query is attempted without the forward clause if it fails.
