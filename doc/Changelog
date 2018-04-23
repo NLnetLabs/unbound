@@ -1,5 +1,7 @@
 23 April 2018: Wouter
 	- makedist uses bz2 for expat code, instead of tar.gz.
+	- Fix #4092: libunbound: use-caps-for-id lacks colon in
+	  config_set_option.
 
 20 April 2018: Wouter
 	- man page documentation for dns-over-tls forward-addr '#' notation.
