@@ -1,3 +1,6 @@
+23 April 2018: Wouter
+	- makedist uses bz2 for expat code, instead of tar.gz.
+
 20 April 2018: Wouter
 	- man page documentation for dns-over-tls forward-addr '#' notation.
 	- removed free from failed parse case.

@@ -272,7 +272,7 @@ if [ "$DOWIN" = "yes" ]; then
 	if test -n "$WINEXPAT"; then
 		info "Cross compile $WINEXPAT"
 		info "wxp: tar unpack"
-		(cd ..; gzip -cd $WINEXPAT) | tar xf - || error_cleanup "tar unpack of $WINEXPAT failed"
+		(cd ..; bzip2 -cd $WINEXPAT) | tar xf - || error_cleanup "tar unpack of $WINEXPAT failed"
 		wxpinstall="`pwd`/wxpinstall"
 		cd expat-* || error_cleanup "no expat-X dir in tarball"
 		info "wxp: configure"
