@@ -8,6 +8,7 @@
 	- Attempt for auth zone fix; add of callback in mesh gets from
 	  callback does not skip callback of result.
 	- Fix cname classification with qname minimisation enabled.
+	- list_auth_zones unbound-control command.
 
 20 April 2018: Wouter
 	- man page documentation for dns-over-tls forward-addr '#' notation.

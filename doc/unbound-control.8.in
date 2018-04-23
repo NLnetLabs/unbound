@@ -289,6 +289,10 @@ estimated qps and qps limit from config.  With +a it prints all ips, not
 just the ratelimited ips, with their estimated qps.  The ratelimited
 ips are dropped before checking the cache.
 .TP
+.B list_auth_zones
+List the auth zones that are configured.  Printed one per line with a
+status, indicating if the zone is expired and current serial number.
+.TP
 .B view_list_local_zones \fIview\fR
 \fIlist_local_zones\fR for given view.
 .TP

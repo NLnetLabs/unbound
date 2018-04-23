@@ -68,6 +68,7 @@
 #include "services/cache/infra.h"
 #include "services/mesh.h"
 #include "services/localzone.h"
+#include "services/authzone.h"
 #include "util/storage/slabhash.h"
 #include "util/fptr_wlist.h"
 #include "util/data/dname.h"
@@ -2543,6 +2544,36 @@ do_list_stubs(SSL* ssl, struct worker* worker)
 	}
 }
 
+/** do the list_auth_zones command */
+static void
+do_list_auth_zones(SSL* ssl, struct auth_zones* az)
+{
+	struct auth_zone* z;
+	char buf[257], buf2[256];
+	lock_rw_rdlock(&az->lock);
+	RBTREE_FOR(z, struct auth_zone*, &az->ztree) {
+		lock_rw_rdlock(&z->lock);
+		dname_str(z->name, buf);
+		if(z->zone_expired)
+			snprintf(buf2, sizeof(buf2), "expired");
+		else {
+			uint32_t serial = 0;
+			if(auth_zone_get_serial(z, &serial))
+				snprintf(buf2, sizeof(buf2), "serial %u",
+					(unsigned)serial);
+			else	snprintf(buf2, sizeof(buf2), "no serial");
+		}
+		if(!ssl_printf(ssl, "%s\t%s\n", buf, buf2)) {
+			/* failure to print */
+			lock_rw_unlock(&z->lock);
+			lock_rw_unlock(&az->lock);
+			return;
+		}
+		lock_rw_unlock(&z->lock);
+	}
+	lock_rw_unlock(&az->lock);
+}
+
 /** do the list_local_zones command */
 static void
 do_list_local_zones(SSL* ssl, struct local_zones* zones)
@@ -2802,6 +2833,9 @@ execute_cmd(struct daemon_remote* rc, SSL* ssl, char* cmd,
 		return;
 	} else if(cmdcmp(p, "ip_ratelimit_list", 17)) {
 		do_ip_ratelimit_list(ssl, worker, p+17);
+		return;
+	} else if(cmdcmp(p, "list_auth_zones", 15)) {
+		do_list_auth_zones(ssl, worker->env.auth_zones);
 		return;
 	} else if(cmdcmp(p, "stub_add", 8)) {
 		/* must always distribute this cmd */

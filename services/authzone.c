@@ -1724,6 +1724,24 @@ auth_zones_read_zones(struct auth_zones* az)
 	return 1;
 }
 
+/** find serial number of zone or false if none */
+int
+auth_zone_get_serial(struct auth_zone* z, uint32_t* serial)
+{
+	struct auth_data* apex;
+	struct auth_rrset* soa;
+	struct packed_rrset_data* d;
+	apex = az_find_name(z, z->name, z->namelen);
+	if(!apex) return 0;
+	soa = az_domain_rrset(apex, LDNS_RR_TYPE_SOA);
+	if(!soa || soa->data->count==0)
+		return 0; /* no RRset or no RRs in rrset */
+	if(soa->data->rr_len[0] < 2+4*5) return 0; /* SOA too short */
+	d = soa->data;
+	*serial = sldns_read_uint32(d->rr_data[0]+(d->rr_len[0]-20));
+	return 1;
+}
+
 /** Find auth_zone SOA and populate the values in xfr(soa values). */
 static int
 xfr_find_soa(struct auth_zone* z, struct auth_xfer* xfr)

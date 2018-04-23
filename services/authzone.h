@@ -591,6 +591,9 @@ int auth_zone_parse_notify_serial(struct sldns_buffer* pkt, uint32_t *serial);
 /** read auth zone from zonefile. caller must lock zone. false on failure */
 int auth_zone_read_zonefile(struct auth_zone* z);
 
+/** find serial number of zone or false if none (no SOA record) */
+int auth_zone_get_serial(struct auth_zone* z, uint32_t* serial);
+
 /** compare auth_zones for sorted rbtree */
 int auth_zone_cmp(const void* z1, const void* z2);
 
