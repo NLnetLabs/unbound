@@ -4,6 +4,7 @@
 	  config_set_option.
 	- auth zone http download stores exact copy of downloaded file,
 	  including comments in the file.
+	- Fix sldns parse failure for CDS alternate delete syntax empty hex.
 
 20 April 2018: Wouter
 	- man page documentation for dns-over-tls forward-addr '#' notation.
