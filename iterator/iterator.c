@@ -2457,7 +2457,7 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 	}
 	type = response_type_from_server(
 		(int)((iq->chase_flags&BIT_RD) || iq->chase_to_rd),
-		iq->response, &iq->qchase, iq->dp);
+		iq->response, &iq->qinfo_out, iq->dp);
 	iq->chase_to_rd = 0;
 	if(type == RESPONSE_TYPE_REFERRAL && (iq->chase_flags&BIT_RD) &&
 		!iq->auth_zone_response) {
