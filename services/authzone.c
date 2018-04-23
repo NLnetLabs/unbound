@@ -1590,9 +1590,9 @@ auth_zone_read_zonefile(struct auth_zone* z)
 
 /** write buffer to file and check return codes */
 static int
-write_out(FILE* out, const char* str)
+write_out(FILE* out, const char* str, size_t len)
 {
-	size_t r, len = strlen(str);
+	size_t r;
 	if(len == 0)
 		return 1;
 	r = fwrite(str, 1, len, out);
@@ -1655,7 +1655,7 @@ auth_zone_write_rrset(struct auth_zone* z, struct auth_data* node,
 			verbose(VERB_ALGO, "failed to rr2str rr %d", (int)i);
 			continue;
 		}
-		if(!write_out(out, buf))
+		if(!write_out(out, buf, strlen(buf)))
 			return 0;
 	}
 	return 1;
@@ -4715,6 +4715,28 @@ apply_http(struct auth_xfer* xfr, struct auth_zone* z,
 	return 1;
 }
 
+/** write http chunks to zonefile to create downloaded file */
+static int
+auth_zone_write_chunks(struct auth_xfer* xfr, const char* fname)
+{
+	FILE* out;
+	struct auth_chunk* p;
+	out = fopen(fname, "w");
+	if(!out) {
+		log_err("could not open %s: %s", fname, strerror(errno));
+		return 0;
+	}
+	for(p = xfr->task_transfer->chunks_first; p ; p = p->next) {
+		if(!write_out(out, (char*)p->data, p->len)) {
+			log_err("could not write http download to %s", fname);
+			fclose(out);
+			return 0;
+		}
+	}
+	fclose(out);
+	return 1;
+}
+
 /** write to zonefile after zone has been updated */
 static void
 xfr_write_after_update(struct auth_xfer* xfr, struct module_env* env)
@@ -4753,7 +4775,13 @@ xfr_write_after_update(struct auth_xfer* xfr, struct module_env* env)
 	}
 	snprintf(tmpfile, sizeof(tmpfile), "%s.tmp%u", z->zonefile,
 		(unsigned)getpid());
-	if(!auth_zone_write_file(z, tmpfile)) {
+	if(xfr->task_transfer->master->http) {
+		/* use the stored chunk list to write them */
+		if(!auth_zone_write_chunks(xfr, tmpfile)) {
+			unlink(tmpfile);
+			lock_rw_unlock(&z->lock);
+		}
+	} else if(!auth_zone_write_file(z, tmpfile)) {
 		unlink(tmpfile);
 		lock_rw_unlock(&z->lock);
 		return;

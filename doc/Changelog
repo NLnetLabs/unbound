@@ -2,6 +2,8 @@
 	- makedist uses bz2 for expat code, instead of tar.gz.
 	- Fix #4092: libunbound: use-caps-for-id lacks colon in
 	  config_set_option.
+	- auth zone http download stores exact copy of downloaded file,
+	  including comments in the file.
 
 20 April 2018: Wouter
 	- man page documentation for dns-over-tls forward-addr '#' notation.
