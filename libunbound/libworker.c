@@ -513,7 +513,8 @@ libworker_enter_result(struct ub_result* res, sldns_buffer* buf,
 		res->nxdomain = 1;
 	if(msg_security == sec_status_secure)
 		res->secure = 1;
-	if(msg_security == sec_status_bogus)
+	if(msg_security == sec_status_bogus ||
+		msg_security == sec_status_secure_sentinel_fail)
 		res->bogus = 1;
 }
 
