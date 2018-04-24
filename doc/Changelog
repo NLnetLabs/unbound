@@ -1,3 +1,6 @@
+24 April 2018: Wouter
+	- Fix contrib/fastrpz.patch for this release.
+
 24 April 2018: Ralph
 	- Added root-key-sentinel support
 
