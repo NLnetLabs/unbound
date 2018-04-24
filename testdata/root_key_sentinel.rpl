@@ -10,7 +10,7 @@ stub-zone:
 	stub-addr: 193.0.14.129 	# K.ROOT-SERVERS.NET.
 CONFIG_END
 
-SCENARIO_BEGIN Test validator with nxdomain response
+SCENARIO_BEGIN Test root key sentinel (draft-ietf-dnsop-kskroll-sentinel)
 
 ; K.ROOT-SERVERS.NET.
 RANGE_BEGIN 0 100
