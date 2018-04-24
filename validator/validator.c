@@ -492,7 +492,7 @@ sentinel_get_keytag(char* start, uint16_t* keytag) {
 	keytag_str = calloc(1, SENTINEL_KEYTAG_LEN + 1 /* null byte */);
 	if(!keytag_str)
 		return 0;
-	strncpy(keytag_str, start, SENTINEL_KEYTAG_LEN);
+	memmove(keytag_str, start, SENTINEL_KEYTAG_LEN);
 	keytag_str[SENTINEL_KEYTAG_LEN] = '\0';
 	*keytag = (uint16_t)strtol(keytag_str, &e, 10);
 	if(!e || *e != '\0') {
