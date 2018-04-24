@@ -123,8 +123,11 @@ static void (*NATIVE_BITS_CB(void (*cb)(int, short, void*)))(int, short, void*)
 		return my_tube_handle_signal;
 	else if(cb == comm_base_handle_slow_accept)
 		return my_comm_base_handle_slow_accept;
-	else
+	else {
+		log_assert(0); /* this NULL callback pointer should not happen,
+			we should have the necessary routine listed above */
 		return NULL;
+	}
 }
 #else 
 #  define NATIVE_BITS(b) (b)
