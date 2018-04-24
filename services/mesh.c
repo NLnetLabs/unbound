@@ -975,7 +975,8 @@ mesh_do_callback(struct mesh_state* m, int rcode, struct reply_info* rep,
 	else	secure = 0;
 	if(!rep && rcode == LDNS_RCODE_NOERROR)
 		rcode = LDNS_RCODE_SERVFAIL;
-	if(!rcode && rep->security == sec_status_bogus) {
+	if(!rcode && (rep->security == sec_status_bogus ||
+		rep->security == sec_status_secure_sentinel_fail)) {
 		if(!(reason = errinf_to_str(&m->s)))
 			rcode = LDNS_RCODE_SERVFAIL;
 	}
@@ -1041,7 +1042,8 @@ mesh_send_reply(struct mesh_state* m, int rcode, struct reply_info* rep,
 	/* examine security status */
 	if(m->s.env->need_to_validate && (!(r->qflags&BIT_CD) ||
 		m->s.env->cfg->ignore_cd) && rep && 
-		rep->security <= sec_status_bogus) {
+		(rep->security <= sec_status_bogus ||
+		rep->security == sec_status_secure_sentinel_fail)) {
 		rcode = LDNS_RCODE_SERVFAIL;
 		if(m->s.env->cfg->stat_extended) 
 			m->s.env->mesh->ans_bogus++;

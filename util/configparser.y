@@ -142,6 +142,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_VIEW_FIRST VAR_SERVE_EXPIRED VAR_FAKE_DSA VAR_FAKE_SHA1
 %token VAR_LOG_IDENTITY VAR_HIDE_TRUSTANCHOR VAR_TRUST_ANCHOR_SIGNALING
 %token VAR_AGGRESSIVE_NSEC VAR_USE_SYSTEMD VAR_SHM_ENABLE VAR_SHM_KEY
+%token VAR_ROOT_KEY_SENTINEL
 %token VAR_DNSCRYPT VAR_DNSCRYPT_ENABLE VAR_DNSCRYPT_PORT VAR_DNSCRYPT_PROVIDER
 %token VAR_DNSCRYPT_SECRET_KEY VAR_DNSCRYPT_PROVIDER_CERT
 %token VAR_DNSCRYPT_PROVIDER_CERT_ROTATED
@@ -242,6 +243,7 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_response_ip_tag | server_response_ip | server_response_ip_data |
 	server_shm_enable | server_shm_key | server_fake_sha1 |
 	server_hide_trustanchor | server_trust_anchor_signaling |
+	server_root_key_sentinel |
 	server_ipsecmod_enabled | server_ipsecmod_hook |
 	server_ipsecmod_ignore_bogus | server_ipsecmod_max_ttl |
 	server_ipsecmod_whitelist | server_ipsecmod_strict |
@@ -867,6 +869,17 @@ server_trust_anchor_signaling: VAR_TRUST_ANCHOR_SIGNALING STRING_ARG
 			yyerror("expected yes or no.");
 		else
 			cfg_parser->cfg->trust_anchor_signaling =
+				(strcmp($2, "yes")==0);
+		free($2);
+	}
+	;
+server_root_key_sentinel: VAR_ROOT_KEY_SENTINEL STRING_ARG
+	{
+		OUTYY(("P(server_root_key_sentinel:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else
+			cfg_parser->cfg->root_key_sentinel =
 				(strcmp($2, "yes")==0);
 		free($2);
 	}

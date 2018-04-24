@@ -502,6 +502,7 @@ answer_norec_from_cache(struct worker* worker, struct query_info* qinfo,
 			 * let validator do that */
 			return 0;
 		case sec_status_bogus:
+		case sec_status_secure_sentinel_fail:
 			/* some rrsets are bogus, reply servfail */
 			edns->edns_version = EDNS_ADVERTISED_VERSION;
 			edns->udp_size = EDNS_ADVERTISED_SIZE;
@@ -658,7 +659,8 @@ answer_from_cache(struct worker* worker, struct query_info* qinfo,
 		}
 	}
 	/* check security status of the cached answer */
-	if( rep->security == sec_status_bogus && must_validate) {
+	if(must_validate && (rep->security == sec_status_bogus ||
+		rep->security == sec_status_secure_sentinel_fail)) {
 		/* BAD cached */
 		edns->edns_version = EDNS_ADVERTISED_VERSION;
 		edns->udp_size = EDNS_ADVERTISED_SIZE;

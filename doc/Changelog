@@ -1,3 +1,6 @@
+24 April 2018: Ralph
+	- Added root-key-sentinel support
+
 23 April 2018: Wouter
 	- makedist uses bz2 for expat code, instead of tar.gz.
 	- Fix #4092: libunbound: use-caps-for-id lacks colon in

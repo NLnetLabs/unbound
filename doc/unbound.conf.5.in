@@ -849,6 +849,9 @@ expanded on start and on reload.
 .B trust\-anchor\-signaling: \fI<yes or no>
 Send RFC8145 key tag query after trust anchor priming. Default is on.
 .TP
+.B root\-key\-sentinel: \fI<yes or no>
+Root key trust anchor sentinel. Default is on.
+.TP
 .B dlv\-anchor\-file: \fI<filename>
 This option was used during early days DNSSEC deployment when no parent-side
 DS record registrations were easily available.  Nowadays, it is best to have

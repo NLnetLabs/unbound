@@ -291,6 +291,8 @@ struct config_file {
 	struct config_strlist* domain_insecure;
 	/** send key tag query */
 	int trust_anchor_signaling;
+	/** enable root key sentinel */
+	int root_key_sentinel;
 
 	/** if not 0, this value is the validation date for RRSIGs */
 	int32_t val_date_override;

@@ -336,6 +336,7 @@ auto-trust-anchor-file{COLON}	{ YDVAR(1, VAR_AUTO_TRUST_ANCHOR_FILE) }
 trusted-keys-file{COLON}	{ YDVAR(1, VAR_TRUSTED_KEYS_FILE) }
 trust-anchor{COLON}		{ YDVAR(1, VAR_TRUST_ANCHOR) }
 trust-anchor-signaling{COLON}	{ YDVAR(1, VAR_TRUST_ANCHOR_SIGNALING) }
+root-key-sentinel{COLON}	{ YDVAR(1, VAR_ROOT_KEY_SENTINEL) }
 val-override-date{COLON}	{ YDVAR(1, VAR_VAL_OVERRIDE_DATE) }
 val-sig-skew-min{COLON}		{ YDVAR(1, VAR_VAL_SIG_SKEW_MIN) }
 val-sig-skew-max{COLON}		{ YDVAR(1, VAR_VAL_SIG_SKEW_MAX) }
