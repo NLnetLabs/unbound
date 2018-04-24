@@ -112,7 +112,7 @@ iterator/iter_scrub.c iterator/iter_utils.c services/listen_dnsport.c \
 services/localzone.c services/mesh.c services/modstack.c services/view.c \
 services/outbound_list.c services/outside_network.c util/alloc.c \
 util/config_file.c util/configlexer.c util/configparser.c \
-util/shm_side/shm_main.c services/authzone.c\
+util/shm_side/shm_main.c services/authzone.c \
 util/fptr_wlist.c util/locks.c util/log.c util/mini_event.c util/module.c \
 util/netevent.c util/net_help.c util/random.c util/rbtree.c util/regional.c \
 util/rtt.c util/storage/dnstree.c util/storage/lookup3.c \
@@ -135,7 +135,7 @@ fptr_wlist.lo locks.lo log.lo mini_event.lo module.lo net_help.lo \
 random.lo rbtree.lo regional.lo rtt.lo dnstree.lo lookup3.lo lruhash.lo \
 slabhash.lo timehist.lo tube.lo winsock_event.lo autotrust.lo val_anchor.lo \
 validator.lo val_kcache.lo val_kentry.lo val_neg.lo val_nsec3.lo val_nsec.lo \
-val_secalgo.lo val_sigcrypt.lo val_utils.lo dns64.lo cachedb.lo redis.lo authzone.lo\
+val_secalgo.lo val_sigcrypt.lo val_utils.lo dns64.lo cachedb.lo redis.lo authzone.lo \
 $(SUBNET_OBJ) $(PYTHONMOD_OBJ) $(CHECKLOCK_OBJ) $(DNSTAP_OBJ) $(DNSCRYPT_OBJ) \
 $(IPSECMOD_OBJ) respip.lo
 COMMON_OBJ_WITHOUT_UB_EVENT=$(COMMON_OBJ_WITHOUT_NETCALL) netevent.lo listen_dnsport.lo \
