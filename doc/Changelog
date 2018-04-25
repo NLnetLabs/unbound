@@ -1,3 +1,6 @@
+25 April 2018: Ralph
+	- Fix memory leak when caching wildcard records for aggressive NSEC use
+
 24 April 2018: Wouter
 	- Fix contrib/fastrpz.patch for this release.
 	- Fix auth https for libev.
