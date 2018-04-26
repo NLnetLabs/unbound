@@ -1,3 +1,8 @@
+26 April 2018: Wouter
+	- Fix for crash in daemon_cleanup with dnstap during reload,
+	  from Saksham Manchanda.
+	- Also that for dnscrypt.
+
 25 April 2018: Ralph
 	- Fix memory leak when caching wildcard records for aggressive NSEC use
 
