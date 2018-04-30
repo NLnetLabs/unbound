@@ -691,7 +691,7 @@ infrastructure data.  Validates the replies if trust anchors are configured
 and the zones are signed.  This enforces DNSSEC validation on nameserver
 NS sets and the nameserver addresses that are encountered on the referral
 path to the answer.
-Default off, because it burdens the authority servers, and it is
+Default no, because it burdens the authority servers, and it is
 not RFC standard, and could lead to performance problems because of the
 extra query load that is generated.  Experimental option.
 If you enable it consider adding more numbers after the target\-fetch\-policy
@@ -1429,7 +1429,7 @@ IP address of stub zone nameserver. Can be IP 4 or IP 6.
 To use a nondefault port for DNS communication append '@' with the port number.
 .TP
 .B stub\-prime: \fI<yes or no>
-This option is by default off.  If enabled it performs NS set priming,
+This option is by default no.  If enabled it performs NS set priming,
 which is similar to root hints, where it starts using the list of nameservers
 currently published by the zone.  Thus, if the hint list is slightly outdated,
 the resolver picks up a correct list online.
@@ -1827,7 +1827,7 @@ If Unbound was built with
 on a system that has installed the hiredis C client library of Redis,
 then the "redis" backend can be used.
 This backend communicates with the specified Redis server over a TCP
-connection to store and retrive cache data.
+connection to store and retrieve cache data.
 It can be used as a persistent and/or shared cache backend.
 It should be noted that Unbound never removes data stored in the Redis server,
 even if some data have expired in terms of DNS TTL or the Redis server has
