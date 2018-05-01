@@ -1,3 +1,7 @@
+1 May 2018: Wouter
+	- Fix that unbound-control reload frees the rrset keys and returns
+	  the memory pages to the system.
+
 30 April 2018: Wouter
 	- Fix spelling error in man page and note defaults as no instead of
 	  off.
