@@ -1,3 +1,6 @@
+2 May 2018: Wouter
+	- Fix fail to reject dead peers in forward-zone, with ssl-upstream.
+
 1 May 2018: Wouter
 	- Fix that unbound-control reload frees the rrset keys and returns
 	  the memory pages to the system.
