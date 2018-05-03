@@ -747,8 +747,7 @@ ub_resolve_event(struct ub_ctx* ctx, const char* name, int rrtype,
 	ub_comm_base_now(ctx->event_worker->base);
 
 	/* create new ctx_query and attempt to add to the list */
-	q = context_new(ctx, name, rrtype, rrclass, (ub_callback_type)callback,
-		mydata);
+	q = context_new(ctx, name, rrtype, rrclass, callback, mydata);
 	if(!q)
 		return UB_NOMEM;
 

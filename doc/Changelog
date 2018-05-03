@@ -1,6 +1,7 @@
 3 May 2018: Wouter
 	- Fix that configure --with-libhiredis also turns on cachedb.
 	- Fix gcc 8 buffer warning in testcode.
+	- Fix function type cast warning in libunbound context callback type.
 
 2 May 2018: Wouter
 	- Fix fail to reject dead peers in forward-zone, with ssl-upstream.
