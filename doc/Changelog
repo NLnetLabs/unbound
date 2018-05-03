@@ -13,7 +13,8 @@
 	- Fix for crash in daemon_cleanup with dnstap during reload,
 	  from Saksham Manchanda.
 	- Also that for dnscrypt.
-	- tag for 1.7.1rc1 release.
+	- tag for 1.7.1rc1 release.  Became 1.7.1 release on 3 May, trunk
+	  is from here 1.7.2 in development.
 
 25 April 2018: Ralph
 	- Fix memory leak when caching wildcard records for aggressive NSEC use
