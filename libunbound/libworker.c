@@ -637,7 +637,7 @@ libworker_event_done_cb(void* arg, int rcode, sldns_buffer* buf,
 	enum sec_status s, char* why_bogus)
 {
 	struct ctx_query* q = (struct ctx_query*)arg;
-	ub_event_callback_type cb = (ub_event_callback_type)q->cb;
+	ub_event_callback_type cb = q->cb_event;
 	void* cb_arg = q->cb_arg;
 	int cancelled = q->cancelled;
 
