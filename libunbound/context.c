@@ -142,7 +142,7 @@ context_new(struct ub_ctx* ctx, const char* name, int rrtype, int rrclass,
 	}
 	lock_basic_unlock(&ctx->cfglock);
 	q->node.key = &q->querynum;
-	q->async = (cb != NULL && cb_event != NULL);
+	q->async = (cb != NULL || cb_event != NULL);
 	q->cb = cb;
 	q->cb_event = cb_event;
 	q->cb_arg = cbarg;
