@@ -1489,6 +1489,8 @@ dnsc_DNSCRYPT([
 
 # check for cachedb if requested
 AC_ARG_ENABLE(cachedb, AC_HELP_STRING([--enable-cachedb], [enable cachedb module that can use external cache storage]))
+# turn on cachedb when hiredis support is enabled.
+if test "$found_libhiredis" = "yes"; then enable_cachedb="yes"; fi
 case "$enable_cachedb" in
     yes)
     	AC_DEFINE([USE_CACHEDB], [1], [Define to 1 to use cachedb support])

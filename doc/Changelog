@@ -1,3 +1,6 @@
+3 May 2018: Wouter
+	- Fix that configure --with-libhiredis also turns on cachedb.
+
 2 May 2018: Wouter
 	- Fix fail to reject dead peers in forward-zone, with ssl-upstream.
 

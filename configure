@@ -20855,6 +20855,8 @@ if test "${enable_cachedb+set}" = set; then :
   enableval=$enable_cachedb;
 fi
 
+# turn on cachedb when hiredis support is enabled.
+if test "$found_libhiredis" = "yes"; then enable_cachedb="yes"; fi
 case "$enable_cachedb" in
     yes)
 
