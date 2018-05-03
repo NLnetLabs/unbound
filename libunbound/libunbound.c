@@ -537,7 +537,7 @@ process_answer_detail(struct ub_ctx* ctx, uint8_t* msg, uint32_t len,
 		*cb = NULL;
 		*cbarg = NULL;
 	} else {
-		*cb = q->cb;
+		*cb = (ub_callback_type)q->cb;
 		*cbarg = q->cb_arg;
 	}
 	if(*err) {
