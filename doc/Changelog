@@ -1,3 +1,7 @@
+7 May 2018: Wouter
+	- Fix windows to not have sticky TLS events for TCP.
+	- Fix read of DNS over TLS length and data in one read call.
+
 3 May 2018: Wouter
 	- Fix that configure --with-libhiredis also turns on cachedb.
 	- Fix gcc 8 buffer warning in testcode.
