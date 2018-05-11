@@ -1,3 +1,7 @@
+11 May 2018: Wouter
+	- Fix contrib/libunbound.pc for libssl libcrypto references,
+	  from https://bugs.freebsd.org/bugzilla/show_bug.cgi?id=226914
+
 7 May 2018: Wouter
 	- Fix windows to not have sticky TLS events for TCP.
 	- Fix read of DNS over TLS length and data in one read call.
