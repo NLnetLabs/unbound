@@ -363,7 +363,7 @@ extern int yydebug;
     VAR_FALLBACK_ENABLED = 492,
     VAR_ADDITIONAL_TLS_PORT = 493,
     VAR_LOW_RTT = 494,
-    VAR_LOW_RTT_PCT = 495,
+    VAR_LOW_RTT_PERMIL = 495,
     VAR_ALLOW_NOTIFY = 496
   };
 #endif
@@ -605,7 +605,7 @@ extern int yydebug;
 #define VAR_FALLBACK_ENABLED 492
 #define VAR_ADDITIONAL_TLS_PORT 493
 #define VAR_LOW_RTT 494
-#define VAR_LOW_RTT_PCT 495
+#define VAR_LOW_RTT_PERMIL 495
 #define VAR_ALLOW_NOTIFY 496
 
 /* Value type.  */
@@ -1101,7 +1101,7 @@ static const char *const yytname[] =
   "VAR_CACHEDB_REDISTIMEOUT", "VAR_UDP_UPSTREAM_WITHOUT_DOWNSTREAM",
   "VAR_FOR_UPSTREAM", "VAR_AUTH_ZONE", "VAR_ZONEFILE", "VAR_MASTER",
   "VAR_URL", "VAR_FOR_DOWNSTREAM", "VAR_FALLBACK_ENABLED",
-  "VAR_ADDITIONAL_TLS_PORT", "VAR_LOW_RTT", "VAR_LOW_RTT_PCT",
+  "VAR_ADDITIONAL_TLS_PORT", "VAR_LOW_RTT", "VAR_LOW_RTT_PERMIL",
   "VAR_ALLOW_NOTIFY", "$accept", "toplevelvars", "toplevelvar",
   "serverstart", "contents_server", "content_server", "stubstart",
   "contents_stub", "content_stub", "forwardstart", "contents_forward",
@@ -1172,7 +1172,7 @@ static const char *const yytname[] =
   "server_ratelimit_size", "server_ip_ratelimit_slabs",
   "server_ratelimit_slabs", "server_ratelimit_for_domain",
   "server_ratelimit_below_domain", "server_ip_ratelimit_factor",
-  "server_ratelimit_factor", "server_low_rtt", "server_low_rtt_pct",
+  "server_ratelimit_factor", "server_low_rtt", "server_low_rtt_permil",
   "server_qname_minimisation", "server_qname_minimisation_strict",
   "server_ipsecmod_enabled", "server_ipsecmod_ignore_bogus",
   "server_ipsecmod_hook", "server_ipsecmod_max_ttl",
@@ -4553,10 +4553,10 @@ yyreduce:
   case 376:
 #line 1889 "./util/configparser.y" /* yacc.c:1646  */
     { 
-		OUTYY(("P(server_low_rtt_pct:%s)\n", (yyvsp[0].str))); 
+		OUTYY(("P(server_low_rtt_permil:%s)\n", (yyvsp[0].str))); 
 		if(atoi((yyvsp[0].str)) == 0 && strcmp((yyvsp[0].str), "0") != 0)
 			yyerror("number expected");
-		else cfg_parser->cfg->low_rtt_pct = atoi((yyvsp[0].str));
+		else cfg_parser->cfg->low_rtt_permil = atoi((yyvsp[0].str));
 		free((yyvsp[0].str));
 	}
 #line 4563 "util/configparser.c" /* yacc.c:1646  */

@@ -282,7 +282,7 @@ extern int yydebug;
     VAR_FALLBACK_ENABLED = 492,
     VAR_ADDITIONAL_TLS_PORT = 493,
     VAR_LOW_RTT = 494,
-    VAR_LOW_RTT_PCT = 495,
+    VAR_LOW_RTT_PERMIL = 495,
     VAR_ALLOW_NOTIFY = 496
   };
 #endif
@@ -524,7 +524,7 @@ extern int yydebug;
 #define VAR_FALLBACK_ENABLED 492
 #define VAR_ADDITIONAL_TLS_PORT 493
 #define VAR_LOW_RTT 494
-#define VAR_LOW_RTT_PCT 495
+#define VAR_LOW_RTT_PERMIL 495
 #define VAR_ALLOW_NOTIFY 496
 
 /* Value type.  */
