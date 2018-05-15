@@ -1315,10 +1315,10 @@ factor given.
 .TP 5
 .B low\-rtt: \fI<msec time>
 Set the time in millisecond that is considere a low ping time for fast
-server selection with the low\-rtt\-pct option, that turns this on or off.
+server selection with the low\-rtt\-permil option, that turns this on or off.
 The default is 45 msec, a number from IPv6 quick response documents.
 .TP 5
-.B low\-rtt\-pct: \fI<number>
+.B low\-rtt\-permil: \fI<number>
 Specify how many times out of 1000 to pick the fast server from the low
 rtt band.  0 turns the feature off.  A value of 900 would pick the fast
 server when such fast servers are available 90 percent of the time, and
@@ -1328,7 +1328,7 @@ sped up, because there is no one waiting for it, and it presents a good
 moment to perform server exploration.  The low\-rtt option can be used
 to specify which servers are picked for fast server selection, servers
 with a ping roundtrip time below that value are considered.
-The default for low\-rtt\-pct is 0.
+The default for low\-rtt\-permil is 0.
 .SS "Remote Control Options"
 In the
 .B remote\-control:

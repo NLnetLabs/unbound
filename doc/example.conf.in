@@ -725,7 +725,7 @@ server:
 	# low-rtt: 45
 	# select low rtt this many times out of 1000. 0 means the fast server
 	# select is disabled.  prefetches are not sped up.
-	# low-rtt-pct: 0
+	# low-rtt-permil: 0
 
 	# Specific options for ipsecmod. unbound needs to be configured with
 	# --enable-ipsecmod for these to take effect.

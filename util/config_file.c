@@ -161,7 +161,7 @@ config_create(void)
 	if(!(cfg->logfile = strdup(""))) goto error_exit;
 	if(!(cfg->pidfile = strdup(PIDFILE))) goto error_exit;
 	if(!(cfg->target_fetch_policy = strdup("3 2 1 0 0"))) goto error_exit;
-	cfg->low_rtt_pct = 0;
+	cfg->low_rtt_permil = 0;
 	cfg->low_rtt = 45;
 	cfg->donotqueryaddrs = NULL;
 	cfg->donotquery_localhost = 1;
@@ -618,7 +618,8 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	else S_NUMBER_OR_ZERO("ip-ratelimit-factor:", ip_ratelimit_factor)
 	else S_NUMBER_OR_ZERO("ratelimit-factor:", ratelimit_factor)
 	else S_NUMBER_OR_ZERO("low-rtt:", low_rtt)
-	else S_NUMBER_OR_ZERO("low-rtt-pct:", low_rtt_pct)
+	else S_NUMBER_OR_ZERO("low-rtt-pct:", low_rtt_permil)
+	else S_NUMBER_OR_ZERO("low-rtt-permil:", low_rtt_permil)
 	else S_YNO("qname-minimisation:", qname_minimisation)
 	else S_YNO("qname-minimisation-strict:", qname_minimisation_strict)
 #ifdef USE_IPSECMOD
@@ -1001,7 +1002,8 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_DEC(opt, "ip-ratelimit-factor", ip_ratelimit_factor)
 	else O_DEC(opt, "ratelimit-factor", ratelimit_factor)
 	else O_DEC(opt, "low-rtt", low_rtt)
-	else O_DEC(opt, "low-rtt-pct", low_rtt_pct)
+	else O_DEC(opt, "low-rtt-pct", low_rtt_permil)
+	else O_DEC(opt, "low-rtt-permil", low_rtt_permil)
 	else O_DEC(opt, "val-sig-skew-min", val_sig_skew_min)
 	else O_DEC(opt, "val-sig-skew-max", val_sig_skew_max)
 	else O_YNO(opt, "qname-minimisation", qname_minimisation)

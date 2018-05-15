@@ -1,3 +1,6 @@
+15 May 2018: Wouter
+	- Fix low-rtt-pct to low-rtt-permil, as it is parts in one thousand.
+
 11 May 2018: Wouter
 	- Fix contrib/libunbound.pc for libssl libcrypto references,
 	  from https://bugs.freebsd.org/bugzilla/show_bug.cgi?id=226914
