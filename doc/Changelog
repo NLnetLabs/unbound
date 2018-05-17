@@ -1,3 +1,6 @@
+17 May 2018: Ralph
+	- Qname minimisation default changed to yes.
+
 15 May 2018: Wouter
 	- Fix low-rtt-pct to low-rtt-permil, as it is parts in one thousand.
 

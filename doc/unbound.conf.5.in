@@ -722,7 +722,7 @@ Send minimum amount of information to upstream servers to enhance privacy.
 Only sent minimum required labels of the QNAME and set QTYPE to A when
 possible. Best effort approach; full QNAME and original QTYPE will be sent when
 upstream replies with a RCODE other than NOERROR, except when receiving
-NXDOMAIN from a DNSSEC signed zone. Default is off.
+NXDOMAIN from a DNSSEC signed zone. Default is yes.
 .TP
 .B qname\-minimisation\-strict: \fI<yes or no>
 QNAME minimisation in strict mode. Do not fall-back to sending full QNAME to

@@ -280,7 +280,7 @@ config_create(void)
 	cfg->ratelimit_below_domain = NULL;
 	cfg->ip_ratelimit_factor = 10;
 	cfg->ratelimit_factor = 10;
-	cfg->qname_minimisation = 0;
+	cfg->qname_minimisation = 1;
 	cfg->qname_minimisation_strict = 0;
 	cfg->shm_enable = 0;
 	cfg->shm_key = 11777;
