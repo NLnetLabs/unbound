@@ -764,7 +764,12 @@ int comm_point_perform_accept(struct comm_point* c,
 {
 	int new_fd;
 	*addrlen = (socklen_t)sizeof(*addr);
+#ifndef HAVE_ACCEPT4
 	new_fd = accept(c->fd, (struct sockaddr*)addr, addrlen);
+#else
+	/* SOCK_NONBLOCK saves extra calls to fcntl for the same result */
+	new_fd = accept4(c->fd, (struct sockaddr*)addr, addrlen, SOCK_NONBLOCK);
+#endif
 	if(new_fd == -1) {
 #ifndef USE_WINSOCK
 		/* EINTR is signal interrupt. others are closed connection. */
@@ -827,7 +832,9 @@ int comm_point_perform_accept(struct comm_point* c,
 #endif
 		return -1;
 	}
+#ifndef HAVE_ACCEPT4
 	fd_set_nonblock(new_fd);
+#endif
 	return new_fd;
 }
 
