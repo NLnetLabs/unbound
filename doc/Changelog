@@ -2,7 +2,7 @@
 	- Fix that libunbound can do DNS-over-TLS, when configured.
 	- Fix that windows unbound service can use DNS-over-TLS.
 	- unbound-host initializes ssl (for potential DNS-over-TLS usage
-	  inside libunbound).
+	  inside libunbound), when ssl upstream or a cert-bundle is configured.
 
 23 May 2018: Wouter
 	- Use accept4 to speed up incoming TCP (and TLS) connections,
