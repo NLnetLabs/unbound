@@ -327,7 +327,7 @@ unbound-control$(EXEEXT):	$(CONTROL_OBJ_LINK) libunbound.la
 	$(LINK) -o $@ $(CONTROL_OBJ_LINK) $(EXTRALINK) $(SSLLIB) $(LIBS)
 
 unbound-host$(EXEEXT):	$(HOST_OBJ_LINK) libunbound.la
-	$(LINK) -o $@ $(HOST_OBJ_LINK) -L. -L.libs -lunbound $(LIBS)
+	$(LINK) -o $@ $(HOST_OBJ_LINK) -L. -L.libs -lunbound $(SSLLIB) $(LIBS)
 
 unbound-anchor$(EXEEXT):	$(UBANCHOR_OBJ_LINK) libunbound.la
 	$(LINK) -o $@ $(UBANCHOR_OBJ_LINK) -L. -L.libs -lunbound -lexpat $(SSLLIB) $(LIBS)
