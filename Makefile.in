@@ -360,7 +360,7 @@ memstats$(EXEEXT):	$(MEMSTATS_OBJ_LINK)
 	$(LINK) -o $@ $(MEMSTATS_OBJ_LINK) $(SSLLIB) $(LIBS)
 
 asynclook$(EXEEXT):	$(ASYNCLOOK_OBJ_LINK) libunbound.la
-	$(LINK) -o $@ $(ASYNCLOOK_OBJ_LINK) $(LIBS) -L. -L.libs -lunbound
+	$(LINK) -o $@ $(ASYNCLOOK_OBJ_LINK) -L. -L.libs -lunbound $(SSLLIB) $(LIBS)
 
 streamtcp$(EXEEXT):	$(STREAMTCP_OBJ_LINK)
 	$(LINK) -o $@ $(STREAMTCP_OBJ_LINK) $(SSLLIB) $(LIBS)
