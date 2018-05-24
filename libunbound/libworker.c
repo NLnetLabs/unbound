@@ -158,14 +158,12 @@ libworker_setup(struct ub_ctx* ctx, int is_bg, struct ub_event_base* eb)
 		hints_delete(w->env->hints);
 		w->env->hints = NULL;
 	}
-	if(cfg->ssl_upstream) {
-		w->sslctx = connect_sslctx_create(NULL, NULL,
-			cfg->tls_cert_bundle);
-		if(!w->sslctx) {
-			/* to make the setup fail after unlock */
-			hints_delete(w->env->hints);
-			w->env->hints = NULL;
-		}
+	w->sslctx = connect_sslctx_create(NULL, NULL,
+		cfg->tls_cert_bundle);
+	if(!w->sslctx) {
+		/* to make the setup fail after unlock */
+		hints_delete(w->env->hints);
+		w->env->hints = NULL;
 	}
 	if(!w->is_bg || w->is_bg_thread) {
 		lock_basic_unlock(&ctx->cfglock);

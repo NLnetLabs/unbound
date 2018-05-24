@@ -1,3 +1,6 @@
+24 May 2018: Wouter
+	- Fix that libunbound can do DNS-over-TLS, when configured.
+
 23 May 2018: Wouter
 	- Use accept4 to speed up incoming TCP (and TLS) connections,
 	  available on Linux and FreeBSD.
