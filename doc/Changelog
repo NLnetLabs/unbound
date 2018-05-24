@@ -1,5 +1,6 @@
 24 May 2018: Wouter
 	- Fix that libunbound can do DNS-over-TLS, when configured.
+	- Fix that windows unbound service can use DNS-over-TLS.
 
 23 May 2018: Wouter
 	- Use accept4 to speed up incoming TCP (and TLS) connections,
