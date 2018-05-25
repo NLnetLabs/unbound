@@ -2904,12 +2904,14 @@ comm_point_close(struct comm_point* c)
 		if(ub_event_del(c->ev->ev) != 0) {
 			log_err("could not event_del on close");
 		}
-		/* delete sticky events for the fr, it gets closed */
-		ub_winsock_tcp_wouldblock(c->ev->ev, UB_EV_READ);
-		ub_winsock_tcp_wouldblock(c->ev->ev, UB_EV_WRITE);
 	}
 	/* close fd after removing from event lists, or epoll.. is messed up */
 	if(c->fd != -1 && !c->do_not_close) {
+		if(c->type == comm_tcp || c->type == comm_http) {
+			/* delete sticky events for the fd, it gets closed */
+			ub_winsock_tcp_wouldblock(c->ev->ev, UB_EV_READ);
+			ub_winsock_tcp_wouldblock(c->ev->ev, UB_EV_WRITE);
+		}
 		verbose(VERB_ALGO, "close fd %d", c->fd);
 #ifndef USE_WINSOCK
 		close(c->fd);
