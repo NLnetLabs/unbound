@@ -1812,7 +1812,7 @@ serviced_tcp_callback(struct comm_point* c, void* arg, int error,
 	}
 	if(sq->tcp_upstream || sq->ssl_upstream) {
 	    struct timeval now = *sq->outnet->now_tv;
-	    if(error==NETEVENT_TIMEOUT) {
+	    if(error!=NETEVENT_NOERROR) {
 	        if(!infra_rtt_update(sq->outnet->infra, &sq->addr,
 		    sq->addrlen, sq->zone, sq->zonelen, sq->qtype,
 		    -1, sq->last_rtt, (time_t)now.tv_sec))
