@@ -1,6 +1,7 @@
 25 May 2018: Wouter
 	- For TCP and TLS connections that don't establish, perform address
 	  update in infra cache, so future selections can exclude them.
+	- Fix that tcp sticky events are removed for closed fd on windows.
 
 24 May 2018: Wouter
 	- Fix that libunbound can do DNS-over-TLS, when configured.
