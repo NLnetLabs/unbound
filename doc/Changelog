@@ -1,6 +1,9 @@
 28 May 2018: Wouter
 	- Fix windows tcp and tls spin on events.
 	- Add routine from getdns to add windows cert store to the SSL_CTX.
+	- tls-win-cert option that adds the system certificate store for
+	  authenticating DNS-over-TLS connections.  It can be used instead
+	  of the tls-cert-bundle option, or with it to add certificates.
 
 25 May 2018: Wouter
 	- For TCP and TLS connections that don't establish, perform address

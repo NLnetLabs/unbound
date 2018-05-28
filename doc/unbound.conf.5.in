@@ -403,6 +403,8 @@ Enabled or disable whether the upstream queries use TLS only for transport.
 Default is no.  Useful in tunneling scenarios.  The TLS contains plain DNS in
 TCP wireformat.  The other server must support this (see
 \fBtls\-service\-key\fR).
+If you enable this, also configure a tls\-cert\-bundle or use tls\-win\cert to
+load CA certs, otherwise the connections cannot be authenticated.
 .TP
 .B ssl\-upstream: \fI<yes or no>
 Alternate syntax for \fBtls\-upstream\fR.  If both are present in the config
@@ -443,6 +445,12 @@ urls, and also DNS over TLS connections.
 .TP
 .B ssl\-cert\-bundle: \fI<file>
 Alternate syntax for \fBtls\-cert\-bundle\fR.
+.TP
+.B tls\-win\-cert: \fI<yes or no>
+Add the system certificates to the cert bundle certificates for authentication.
+If no cert bundle, it uses only these certificates.  Default is no.
+On windows this option uses the certificates from the cert store.  Use
+the tls\-cert\-bundle option on other systems.
 .TP
 .B additional\-tls\-port: \fI<portnr>
 List portnumbers as additional\-tls\-port, and when interfaces are defined,
@@ -1490,6 +1498,8 @@ The default is no.
 .B forward\-tls\-upstream: \fI<yes or no>
 Enabled or disable whether the queries to this forwarder use TLS for transport.
 Default is no.
+If you enable this, also configure a tls\-cert\-bundle or use tls\-win\cert to
+load CA certs, otherwise the connections cannot be authenticated.
 .TP
 .B forward\-ssl\-upstream: \fI<yes or no>
 Alternate syntax for \fBforward\-tls\-upstream\fR.

@@ -681,6 +681,9 @@ server:
 	# Certificates used to authenticate connections made upstream.
 	# tls-cert-bundle: ""
 
+	# Add system certs to the cert bundle, from the Windows Cert Store
+	# tls-win-cert: no
+
 	# Also serve tls on these port numbers (eg. 443, ...), by listing
 	# additional-tls-port: portno for each of the port numbers.
 

@@ -157,7 +157,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_UDP_UPSTREAM_WITHOUT_DOWNSTREAM VAR_FOR_UPSTREAM
 %token VAR_AUTH_ZONE VAR_ZONEFILE VAR_MASTER VAR_URL VAR_FOR_DOWNSTREAM
 %token VAR_FALLBACK_ENABLED VAR_ADDITIONAL_TLS_PORT VAR_LOW_RTT VAR_LOW_RTT_PERMIL
-%token VAR_ALLOW_NOTIFY
+%token VAR_ALLOW_NOTIFY VAR_TLS_WIN_CERT
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -249,7 +249,7 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_ipsecmod_whitelist | server_ipsecmod_strict |
 	server_udp_upstream_without_downstream | server_aggressive_nsec |
 	server_tls_cert_bundle | server_additional_tls_port | server_low_rtt |
-	server_low_rtt_permil
+	server_low_rtt_permil | server_tls_win_cert
 	;
 stubstart: VAR_STUB_ZONE
 	{
@@ -686,6 +686,15 @@ server_tls_cert_bundle: VAR_TLS_CERT_BUNDLE STRING_ARG
 		OUTYY(("P(server_tls_cert_bundle:%s)\n", $2));
 		free(cfg_parser->cfg->tls_cert_bundle);
 		cfg_parser->cfg->tls_cert_bundle = $2;
+	}
+	;
+server_tls_win_cert: VAR_TLS_WIN_CERT STRING_ARG
+	{
+		OUTYY(("P(server_tls_win_cert:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else cfg_parser->cfg->tls_win_cert = (strcmp($2, "yes")==0);
+		free($2);
 	}
 	;
 server_additional_tls_port: VAR_ADDITIONAL_TLS_PORT STRING_ARG
