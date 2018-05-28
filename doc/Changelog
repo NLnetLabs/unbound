@@ -1,3 +1,6 @@
+28 May 2018: Wouter
+	- Fix windows tcp and tls spin on events.
+
 25 May 2018: Wouter
 	- For TCP and TLS connections that don't establish, perform address
 	  update in infra cache, so future selections can exclude them.

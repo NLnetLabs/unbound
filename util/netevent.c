@@ -842,20 +842,21 @@ int comm_point_perform_accept(struct comm_point* c,
 static long win_bio_cb(BIO *b, int oper, const char* ATTR_UNUSED(argp),
         int ATTR_UNUSED(argi), long argl, long retvalue)
 {
+	int wsa_err = WSAGetLastError(); /* store errcode before it is gone */
 	verbose(VERB_ALGO, "bio_cb %d, %s %s %s", oper,
 		(oper&BIO_CB_RETURN)?"return":"before",
 		(oper&BIO_CB_READ)?"read":((oper&BIO_CB_WRITE)?"write":"other"),
-		WSAGetLastError()==WSAEWOULDBLOCK?"wsawb":"");
+		wsa_err==WSAEWOULDBLOCK?"wsawb":"");
 	/* on windows, check if previous operation caused EWOULDBLOCK */
 	if( (oper == (BIO_CB_READ|BIO_CB_RETURN) && argl == 0) ||
 		(oper == (BIO_CB_GETS|BIO_CB_RETURN) && argl == 0)) {
-		if(WSAGetLastError() == WSAEWOULDBLOCK)
+		if(wsa_err == WSAEWOULDBLOCK)
 			ub_winsock_tcp_wouldblock((struct ub_event*)
 				BIO_get_callback_arg(b), UB_EV_READ);
 	}
 	if( (oper == (BIO_CB_WRITE|BIO_CB_RETURN) && argl == 0) ||
 		(oper == (BIO_CB_PUTS|BIO_CB_RETURN) && argl == 0)) {
-		if(WSAGetLastError() == WSAEWOULDBLOCK)
+		if(wsa_err == WSAEWOULDBLOCK)
 			ub_winsock_tcp_wouldblock((struct ub_event*)
 				BIO_get_callback_arg(b), UB_EV_WRITE);
 	}
