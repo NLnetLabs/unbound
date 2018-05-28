@@ -395,9 +395,11 @@ void* listen_sslctx_create(char* key, char* pem, char* verifypem);
  * @param key: if nonNULL (also pem nonNULL), the client private key.
  * @param pem: client public key (or NULL if key is NULL).
  * @param verifypem: if nonNULL used for verifylocation file.
+ * @param wincert: add system certificate store to ctx (add to verifypem ca
+ * 	certs).
  * @return SSL_CTX* or NULL on failure (logged).
  */
-void* connect_sslctx_create(char* key, char* pem, char* verifypem);
+void* connect_sslctx_create(char* key, char* pem, char* verifypem, int wincert);
 
 /**
  * accept a new fd and wrap it in a BIO in SSL

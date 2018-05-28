@@ -1,5 +1,6 @@
 28 May 2018: Wouter
 	- Fix windows tcp and tls spin on events.
+	- Add routine from getdns to add windows cert store to the SSL_CTX.
 
 25 May 2018: Wouter
 	- For TCP and TLS connections that don't establish, perform address

@@ -19468,7 +19468,7 @@ else
   WINDRES="$ac_cv_prog_WINDRES"
 fi
 
-	LIBS="$LIBS -liphlpapi"
+	LIBS="$LIBS -liphlpapi -lcrypt32"
 	WINAPPS="unbound-service-install.exe unbound-service-remove.exe anchor-update.exe"
 
 	WIN_DAEMON_SRC="winrc/win_svc.c winrc/w_inst.c"
