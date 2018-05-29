@@ -1,3 +1,7 @@
+29 May 2018: Wouter
+	- in compat/arc4random call getentropy_urandom when getentropy fails
+	  with ENOSYS.
+
 28 May 2018: Wouter
 	- Fix windows tcp and tls spin on events.
 	- Add routine from getdns to add windows cert store to the SSL_CTX.
