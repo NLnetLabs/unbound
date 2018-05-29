@@ -111,7 +111,9 @@ start:
 		goto nodevrandom;
 	}
 #ifndef O_CLOEXEC
+#  ifdef HAVE_FCNTL
 	fcntl(fd, F_SETFD, fcntl(fd, F_GETFD) | FD_CLOEXEC);
+#  endif
 #endif
 	for (i = 0; i < len; ) {
 		size_t wanted = len - i;
