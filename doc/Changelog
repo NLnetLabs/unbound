@@ -1,3 +1,7 @@
+30 May 2018: Wouter
+	- Patch from Syzdek: Add ability to ignore RD bit and treat all
+	  requests as if the RD bit is set.
+
 29 May 2018: Wouter
 	- in compat/arc4random call getentropy_urandom when getentropy fails
 	  with ENOSYS.

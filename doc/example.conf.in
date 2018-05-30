@@ -223,7 +223,8 @@ server:
 	# to this server. Specify classless netblocks with /size and action.
 	# By default everything is refused, except for localhost.
 	# Choose deny (drop message), refuse (polite error reply),
-	# allow (recursive ok), allow_snoop (recursive and nonrecursive ok)
+	# allow (recursive ok), allow_setrd (recursive ok, rd bit is forced on),
+	# allow_snoop (recursive and nonrecursive ok)
 	# deny_non_local (drop queries unless can be answered from local-data)
 	# refuse_non_local (like deny_non_local but polite error reply).
 	# access-control: 0.0.0.0/0 refuse

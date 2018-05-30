@@ -3836,10 +3836,11 @@ yyreduce:
 			strcmp((yyvsp[0].str), "deny_non_local")!=0 &&
 			strcmp((yyvsp[0].str), "refuse_non_local")!=0 &&
 			strcmp((yyvsp[0].str), "allow")!=0 && 
+			strcmp((yyvsp[0].str), "allow_setrd")!=0 && 
 			strcmp((yyvsp[0].str), "allow_snoop")!=0) {
 			yyerror("expected deny, refuse, deny_non_local, "
-				"refuse_non_local, allow or allow_snoop "
-				"in access control action");
+				"refuse_non_local, allow, allow_setrd or "
+				"allow_snoop in access control action");
 		} else {
 			if(!cfg_str2list_insert(&cfg_parser->cfg->acls, (yyvsp[-1].str), (yyvsp[0].str)))
 				fatal_exit("out of memory adding acl");

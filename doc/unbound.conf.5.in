@@ -469,7 +469,8 @@ Default is yes.
 .B access\-control: \fI<IP netblock> <action>
 The netblock is given as an IP4 or IP6 address with /size appended for a
 classless network block. The action can be \fIdeny\fR, \fIrefuse\fR,
-\fIallow\fR, \fIallow_snoop\fR, \fIdeny_non_local\fR or \fIrefuse_non_local\fR.
+\fIallow\fR, \fIallow_setrd\fR, \fIallow_snoop\fR, \fIdeny_non_local\fR or
+\fIrefuse_non_local\fR.
 The most specific netblock match is used, if none match \fIdeny\fR is used.
 .IP
 The action \fIdeny\fR stops queries from hosts from that netblock.
@@ -487,6 +488,15 @@ the unbound server recursive lookup algorithm, and static data is served
 in the reply.  This supports normal operations where nonrecursive queries
 are made for the authoritative data.  For nonrecursive queries any replies
 from the dynamic cache are refused.
+.IP
+The \fIallow_setrd\fR action ignores the recursion desired (RD) bit and
+treats all requests as if the recursion desired bit is set.  Note that this
+behavior violates RFC 1034 which states that a name server should never perform
+recursive service unless asked via the RD bit since this interferes with
+trouble shooting of name servers and their databases. This prohibited behavior
+may be useful if another DNS server must forward requests for specific
+zones to a resolver DNS server, but only supports stub domains and
+sends queries to the resolver DNS server with the RD bit cleared.
 .IP
 The action \fIallow_snoop\fR gives nonrecursive access too.  This give
 both recursive and non recursive access.  The name \fIallow_snoop\fR refers

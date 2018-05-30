@@ -1314,11 +1314,12 @@ server_access_control: VAR_ACCESS_CONTROL STRING_ARG STRING_ARG
 		if(strcmp($3, "deny")!=0 && strcmp($3, "refuse")!=0 &&
 			strcmp($3, "deny_non_local")!=0 &&
 			strcmp($3, "refuse_non_local")!=0 &&
+			strcmp($3, "allow_setrd")!=0 && 
 			strcmp($3, "allow")!=0 && 
 			strcmp($3, "allow_snoop")!=0) {
 			yyerror("expected deny, refuse, deny_non_local, "
-				"refuse_non_local, allow or allow_snoop "
-				"in access control action");
+				"refuse_non_local, allow, allow_setrd or "
+				"allow_snoop in access control action");
 		} else {
 			if(!cfg_str2list_insert(&cfg_parser->cfg->acls, $2, $3))
 				fatal_exit("out of memory adding acl");
