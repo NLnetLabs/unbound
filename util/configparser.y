@@ -156,7 +156,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_CACHEDB_REDISHOST VAR_CACHEDB_REDISPORT VAR_CACHEDB_REDISTIMEOUT
 %token VAR_UDP_UPSTREAM_WITHOUT_DOWNSTREAM VAR_FOR_UPSTREAM
 %token VAR_AUTH_ZONE VAR_ZONEFILE VAR_MASTER VAR_URL VAR_FOR_DOWNSTREAM
-%token VAR_FALLBACK_ENABLED VAR_ADDITIONAL_TLS_PORT VAR_LOW_RTT VAR_LOW_RTT_PERMIL
+%token VAR_FALLBACK_ENABLED VAR_TLS_ADDITIONAL_PORTS VAR_LOW_RTT VAR_LOW_RTT_PERMIL
 %token VAR_ALLOW_NOTIFY VAR_TLS_WIN_CERT
 
 %%
@@ -248,7 +248,7 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_ipsecmod_ignore_bogus | server_ipsecmod_max_ttl |
 	server_ipsecmod_whitelist | server_ipsecmod_strict |
 	server_udp_upstream_without_downstream | server_aggressive_nsec |
-	server_tls_cert_bundle | server_additional_tls_port | server_low_rtt |
+	server_tls_cert_bundle | server_tls_additional_ports | server_low_rtt |
 	server_low_rtt_permil | server_tls_win_cert
 	;
 stubstart: VAR_STUB_ZONE
@@ -697,10 +697,10 @@ server_tls_win_cert: VAR_TLS_WIN_CERT STRING_ARG
 		free($2);
 	}
 	;
-server_additional_tls_port: VAR_ADDITIONAL_TLS_PORT STRING_ARG
+server_tls_additional_ports: VAR_TLS_ADDITIONAL_PORTS STRING_ARG
 	{
-		OUTYY(("P(server_additional_tls_port:%s)\n", $2));
-		if(!cfg_strlist_insert(&cfg_parser->cfg->additional_tls_port,
+		OUTYY(("P(server_tls_additional_ports:%s)\n", $2));
+		if(!cfg_strlist_insert(&cfg_parser->cfg->tls_additional_ports,
 			$2))
 			yyerror("out of memory");
 	}

@@ -1,3 +1,7 @@
+1 June 2018: Wouter
+	- Rename additional-tls-port to tls-additional-ports.
+	  The older name is accepted for backwards compatibility.
+
 30 May 2018: Wouter
 	- Patch from Syzdek: Add ability to ignore RD bit and treat all
 	  requests as if the RD bit is set.

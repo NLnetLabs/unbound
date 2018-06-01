@@ -105,7 +105,7 @@ struct config_file {
 	/** should the system certificate store get added to the cert bundle */
 	int tls_win_cert;
 	/** additional tls ports */
-	struct config_strlist* additional_tls_port;
+	struct config_strlist* tls_additional_ports;
 
 	/** outgoing port range number of ports (per thread) */
 	int outgoing_num_ports;

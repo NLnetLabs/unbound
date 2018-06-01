@@ -457,7 +457,8 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	else S_NUMBER_NONZERO("ssl-port:", ssl_port)
 	else S_STR("tls-cert-bundle:", tls_cert_bundle)
 	else S_YNO("tls-win-cert:", tls_win_cert)
-	else S_STRLIST("additional-tls-port:", additional_tls_port)
+	else S_STRLIST("additional-tls-port:", tls_additional_ports)
+	else S_STRLIST("tls-additional-ports:", tls_additional_ports)
 	else S_YNO("interface-automatic:", if_automatic)
 	else S_YNO("use-systemd:", use_systemd)
 	else S_YNO("do-daemonize:", do_daemonize)
@@ -878,7 +879,7 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_DEC(opt, "ssl-port", ssl_port)
 	else O_STR(opt, "tls-cert-bundle", tls_cert_bundle)
 	else O_YNO(opt, "tls-win-cert", tls_win_cert)
-	else O_LST(opt, "additional-tls-port", additional_tls_port)
+	else O_LST(opt, "tls-additional-ports", tls_additional_ports)
 	else O_YNO(opt, "use-systemd", use_systemd)
 	else O_YNO(opt, "do-daemonize", do_daemonize)
 	else O_STR(opt, "chroot", chrootdir)
@@ -1302,7 +1303,7 @@ config_delete(struct config_file* cfg)
 	free(cfg->ssl_service_key);
 	free(cfg->ssl_service_pem);
 	free(cfg->tls_cert_bundle);
-	config_delstrlist(cfg->additional_tls_port);
+	config_delstrlist(cfg->tls_additional_ports);
 	free(cfg->log_identity);
 	config_del_strarray(cfg->ifs, cfg->num_ifs);
 	config_del_strarray(cfg->out_ifs, cfg->num_out_ifs);

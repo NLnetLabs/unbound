@@ -452,8 +452,8 @@ If no cert bundle, it uses only these certificates.  Default is no.
 On windows this option uses the certificates from the cert store.  Use
 the tls\-cert\-bundle option on other systems.
 .TP
-.B additional\-tls\-port: \fI<portnr>
-List portnumbers as additional\-tls\-port, and when interfaces are defined,
+.B tls\-additional\-ports: \fI<portnr>
+List portnumbers as tls\-additional\-ports, and when interfaces are defined,
 eg. with the @port suffix, as this port number, they provide dns over TLS
 service.  Can list multiple, each on a new statement.
 .TP
