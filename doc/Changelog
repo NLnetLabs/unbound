@@ -1,3 +1,6 @@
+4 June 2018: Wouter
+	- Fix deadlock caused by incoming notify for auth-zone.
+
 1 June 2018: Wouter
 	- Rename additional-tls-port to tls-additional-ports.
 	  The older name is accepted for backwards compatibility.
