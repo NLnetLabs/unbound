@@ -536,7 +536,7 @@ handle_cname_response(struct module_qstate* qstate, struct iter_qstate* iq,
 /** see if last resort is possible - does config allow queries to parent */
 static int
 can_have_last_resort(struct module_env* env, uint8_t* nm, size_t nmlen,
-	uint16_t qclass, struct iter_hints_stub** retstub)
+	uint16_t qclass, struct delegpt** retdp)
 {
 	struct delegpt* fwddp;
 	struct iter_hints_stub* stub;
@@ -549,13 +549,14 @@ can_have_last_resort(struct module_env* env, uint8_t* nm, size_t nmlen,
 		/* has_parent side is turned off for stub_first, where we
 		 * are allowed to go to the parent */
 		stub->dp->has_parent_side_NS) {
-		if(retstub) *retstub = stub;
+		if(retdp) *retdp = stub->dp;
 		return 0;
 	}
 	if((fwddp = forwards_find(env->fwds, nm, qclass)) &&
 		/* has_parent_side is turned off for forward_first, where
 		 * we are allowed to go to the parent */
 		fwddp->has_parent_side_NS) {
+		if(retdp) *retdp = fwddp;
 		return 0;
 	}
 	return 1;
@@ -1415,17 +1416,17 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 		 */
 		if(iter_dp_is_useless(&qstate->qinfo, qstate->query_flags, 
 			iq->dp)) {
-			struct iter_hints_stub* stub = NULL;
-			if(!can_have_last_resort(qstate->env, iq->dp->name, iq->dp->namelen, iq->qchase.qclass, &stub)) {
-				if(stub && !stub->noprime) {
+			struct delegpt* retdp = NULL;
+			if(!can_have_last_resort(qstate->env, iq->dp->name, iq->dp->namelen, iq->qchase.qclass, &retdp)) {
+				if(retdp) {
 					verbose(VERB_QUERY, "cache has stub "
-						"but no addresses, fallback "
-						"to stub prime addresses");
-					iq->dp = delegpt_copy(stub->dp,
+						"or fwd but no addresses, "
+						"fallback to config");
+					iq->dp = delegpt_copy(retdp,
 						qstate->region);
 					if(!iq->dp) {
 						log_err("out of memory in "
-							"stub fallback");
+							"stub/fwd fallback");
 						return error_response(qstate,
 						    id, LDNS_RCODE_SERVFAIL);
 					}
@@ -1433,6 +1434,7 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 				}
 				verbose(VERB_ALGO, "useless dp "
 					"but cannot go up, servfail");
+				delegpt_log(VERB_ALGO, iq->dp);
 				return error_response(qstate, id, 
 					LDNS_RCODE_SERVFAIL);
 			}
