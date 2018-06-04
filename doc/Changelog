@@ -1,5 +1,6 @@
 4 June 2018: Wouter
 	- Fix deadlock caused by incoming notify for auth-zone.
+	- tag for 1.7.2rc1
 
 1 June 2018: Wouter
 	- Rename additional-tls-port to tls-additional-ports.
