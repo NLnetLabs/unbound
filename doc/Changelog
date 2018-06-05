@@ -37,7 +37,7 @@
 
 23 May 2018: Wouter
 	- Use accept4 to speed up incoming TCP (and TLS) connections,
-	  available on Linux and FreeBSD.
+	  available on Linux and FreeBSD and OpenBSD.
 
 17 May 2018: Ralph
 	- Qname minimisation default changed to yes.
