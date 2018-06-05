@@ -1,3 +1,7 @@
+5 June 2018: Wouter
+	- Fix crash if ratelimit taken into use with unbound-control
+	  instead of with unbound.conf.
+
 4 June 2018: Wouter
 	- Fix deadlock caused by incoming notify for auth-zone.
 	- tag for 1.7.2rc1
