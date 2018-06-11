@@ -7,7 +7,8 @@
 
 4 June 2018: Wouter
 	- Fix deadlock caused by incoming notify for auth-zone.
-	- tag for 1.7.2rc1
+	- tag for 1.7.2rc1, became 1.7.2 release on 11 June 2018,
+	  trunk is 1.7.3 in development from this point.
 	- #4100: Fix stub reprime when it becomes useless.
 
 1 June 2018: Wouter
