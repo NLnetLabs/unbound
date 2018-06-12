@@ -5,6 +5,7 @@
 	  used, and ignored if found in unbound.conf.
 	- Rename tls-additional-ports to tls-additional-port, because every
 	  line adds one port.
+	- Fix buffer size warning in unit test.
 
 6 June 2018: Wouter
 	- Patch to fix openwrt for mac os build darwin detection in configure.
