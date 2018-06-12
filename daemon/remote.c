@@ -3005,8 +3005,8 @@ remote_handshake_later(struct daemon_remote* rc, struct rc_state* s,
 			&s->c->repinfo.addr, s->c->repinfo.addrlen);
 		log_crypto_err("remote control failed ssl");
 		clean_point(rc, s);
-		return 0;
 	}
+	return 0;
 }
 
 int remote_control_callback(struct comm_point* c, void* arg, int err, 
