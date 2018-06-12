@@ -6,6 +6,7 @@
 	- Rename tls-additional-ports to tls-additional-port, because every
 	  line adds one port.
 	- Fix buffer size warning in unit test.
+	- remade dependencies in the Makefile.
 
 6 June 2018: Wouter
 	- Patch to fix openwrt for mac os build darwin detection in configure.
