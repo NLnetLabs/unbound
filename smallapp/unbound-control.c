@@ -488,7 +488,7 @@ contact_server(const char* svr, struct config_file* cfg, int statuscmd)
 	struct sockaddr_storage addr;
 	socklen_t addrlen;
 	int addrfamily = 0;
-	int fd;
+	int fd, useport = 1;
 	/* use svr or the first config entry */
 	if(!svr) {
 		if(cfg->control_ifs) {
@@ -520,6 +520,7 @@ contact_server(const char* svr, struct config_file* cfg, int statuscmd)
 		(void)strlcpy(usock->sun_path, svr, sizeof(usock->sun_path));
 		addrlen = (socklen_t)sizeof(struct sockaddr_un);
 		addrfamily = AF_LOCAL;
+		useport = 0;
 #endif
 	} else {
 		if(!ipstrtoaddr(svr, cfg->control_port, &addr, &addrlen))
@@ -538,14 +539,18 @@ contact_server(const char* svr, struct config_file* cfg, int statuscmd)
 	}
 	if(connect(fd, (struct sockaddr*)&addr, addrlen) < 0) {
 #ifndef USE_WINSOCK
-		log_err_addr("connect", strerror(errno), &addr, addrlen);
-		if(errno == ECONNREFUSED && statuscmd) {
+		int err = errno;
+		if(!useport) log_err("connect: %s for %s", strerror(err), svr);
+		else log_err_addr("connect", strerror(err), &addr, addrlen);
+		if(err == ECONNREFUSED && statuscmd) {
 			printf("unbound is stopped\n");
 			exit(3);
 		}
 #else
-		log_err_addr("connect", wsa_strerror(WSAGetLastError()), &addr, addrlen);
-		if(WSAGetLastError() == WSAECONNREFUSED && statuscmd) {
+		int wsaerr = WSAGetLastError();
+		if(!useport) log_err("connect: %s for %s", wsa_strerror(wsaerr), svr);
+		else log_err_addr("connect", wsa_strerror(wsaerr), &addr, addrlen);
+		if(wsaerr == WSAECONNREFUSED && statuscmd) {
 			printf("unbound is stopped\n");
 			exit(3);
 		}
