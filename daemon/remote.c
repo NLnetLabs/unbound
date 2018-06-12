@@ -2199,7 +2199,7 @@ do_status(RES* ssl, struct worker* worker)
 		return;
 	if(!ssl_printf(ssl, "options:%s%s\n" , 
 		(worker->daemon->reuseport?" reuseport":""),
-		(worker->daemon->rc->accept_list?" control(ssl)":"")))
+		(worker->daemon->rc->accept_list?(worker->daemon->rc->use_cert?" control(ssl)":" control(namedpipe)"):"")))
 		return;
 	if(!ssl_printf(ssl, "unbound (pid %d) is running...\n",
 		(int)getpid()))
