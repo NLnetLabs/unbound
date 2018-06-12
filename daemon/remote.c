@@ -614,14 +614,19 @@ ssl_read_line(RES* res, char* buf, size_t max)
 				return 0;
 			}
 		} else {
-			ssize_t rr = read(res->fd, buf+len, 1);
-			if(rr <= 0) {
-				if(rr == 0) {
-					buf[len] = 0;
-					return 1;
+			while(1) {
+				ssize_t rr = read(res->fd, buf+len, 1);
+				if(rr <= 0) {
+					if(rr == 0) {
+						buf[len] = 0;
+						return 1;
+					}
+					if(errno == EINTR || errno == EAGAIN)
+						continue;
+					log_err("could not read: %s", strerror(errno));
+					return 0;
 				}
-				log_err("could not read: %s", strerror(errno));
-				return 0;
+				break;
 			}
 		}
 		if(buf[len] == '\n') {
@@ -2935,13 +2940,18 @@ handle_req(struct daemon_remote* rc, struct rc_state* s, RES* res)
 			return;
 		}
 	} else {
-		ssize_t rr = read(res->fd, magic, sizeof(magic)-1);
-		if(rr < (ssize_t)sizeof(magic)-1) {
-			if(rr == 0) return;
-			log_err("could not read: %s", strerror(errno));
-			return;
+		while(1) {
+			ssize_t rr = read(res->fd, magic, sizeof(magic)-1);
+			if(rr <= 0) {
+				if(rr == 0) return;
+				if(errno == EINTR || errno == EAGAIN)
+					continue;
+				log_err("could not read: %s", strerror(errno));
+				return;
+			}
+			r = (int)rr;
+			break;
 		}
-		r = (int)rr;
 	}
 	magic[6] = 0;
 	if( r != 6 || strncmp(magic, "UBCT", 4) != 0) {
