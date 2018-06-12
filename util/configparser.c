@@ -361,7 +361,7 @@ extern int yydebug;
     VAR_URL = 490,
     VAR_FOR_DOWNSTREAM = 491,
     VAR_FALLBACK_ENABLED = 492,
-    VAR_TLS_ADDITIONAL_PORTS = 493,
+    VAR_TLS_ADDITIONAL_PORT = 493,
     VAR_LOW_RTT = 494,
     VAR_LOW_RTT_PERMIL = 495,
     VAR_ALLOW_NOTIFY = 496,
@@ -604,7 +604,7 @@ extern int yydebug;
 #define VAR_URL 490
 #define VAR_FOR_DOWNSTREAM 491
 #define VAR_FALLBACK_ENABLED 492
-#define VAR_TLS_ADDITIONAL_PORTS 493
+#define VAR_TLS_ADDITIONAL_PORT 493
 #define VAR_LOW_RTT 494
 #define VAR_LOW_RTT_PERMIL 495
 #define VAR_ALLOW_NOTIFY 496
@@ -1103,7 +1103,7 @@ static const char *const yytname[] =
   "VAR_CACHEDB_REDISTIMEOUT", "VAR_UDP_UPSTREAM_WITHOUT_DOWNSTREAM",
   "VAR_FOR_UPSTREAM", "VAR_AUTH_ZONE", "VAR_ZONEFILE", "VAR_MASTER",
   "VAR_URL", "VAR_FOR_DOWNSTREAM", "VAR_FALLBACK_ENABLED",
-  "VAR_TLS_ADDITIONAL_PORTS", "VAR_LOW_RTT", "VAR_LOW_RTT_PERMIL",
+  "VAR_TLS_ADDITIONAL_PORT", "VAR_LOW_RTT", "VAR_LOW_RTT_PERMIL",
   "VAR_ALLOW_NOTIFY", "VAR_TLS_WIN_CERT", "$accept", "toplevelvars",
   "toplevelvar", "serverstart", "contents_server", "content_server",
   "stubstart", "contents_stub", "content_stub", "forwardstart",
@@ -1124,7 +1124,7 @@ static const char *const yytname[] =
   "server_udp_upstream_without_downstream", "server_ssl_upstream",
   "server_ssl_service_key", "server_ssl_service_pem", "server_ssl_port",
   "server_tls_cert_bundle", "server_tls_win_cert",
-  "server_tls_additional_ports", "server_use_systemd",
+  "server_tls_additional_port", "server_use_systemd",
   "server_do_daemonize", "server_use_syslog", "server_log_time_ascii",
   "server_log_queries", "server_log_replies", "server_chroot",
   "server_username", "server_directory", "server_logfile",
@@ -3022,8 +3022,8 @@ yyreduce:
   case 260:
 #line 701 "./util/configparser.y" /* yacc.c:1646  */
     {
-		OUTYY(("P(server_tls_additional_ports:%s)\n", (yyvsp[0].str)));
-		if(!cfg_strlist_insert(&cfg_parser->cfg->tls_additional_ports,
+		OUTYY(("P(server_tls_additional_port:%s)\n", (yyvsp[0].str)));
+		if(!cfg_strlist_insert(&cfg_parser->cfg->tls_additional_port,
 			(yyvsp[0].str)))
 			yyerror("out of memory");
 	}

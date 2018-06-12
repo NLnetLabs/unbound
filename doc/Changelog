@@ -3,6 +3,8 @@
 	  certificate and key files, access can be restricted with file and
 	  directory permissions.  The option control-use-cert is no longer
 	  used, and ignored if found in unbound.conf.
+	- Rename tls-additional-ports to tls-additional-port, because every
+	  line adds one port.
 
 6 June 2018: Wouter
 	- Patch to fix openwrt for mac os build darwin detection in configure.

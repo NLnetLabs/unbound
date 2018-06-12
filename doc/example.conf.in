@@ -686,7 +686,7 @@ server:
 	# tls-win-cert: no
 
 	# Also serve tls on these port numbers (eg. 443, ...), by listing
-	# tls-additional-ports: portno for each of the port numbers.
+	# tls-additional-port: portno for each of the port numbers.
 
 	# DNS64 prefix. Must be specified when DNS64 is use.
 	# Enable dns64 in module-config.  Used to synthesize IPv6 from IPv4.
