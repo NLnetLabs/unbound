@@ -1369,19 +1369,20 @@ By default localhost (127.0.0.1 and ::1) is listened to.
 Use 0.0.0.0 and ::0 to listen to all interfaces.
 If you change this and permissions have been dropped, you must restart
 the server for the change to take effect.
+.IP
+If you set it to an absolute path, a local socket is used.  The local socket
+does not use the certificates and keys, so those files need not be present.
+To restrict access, unbound sets permissions on the file to the user and
+group that is configured, the access bits are set to allow the group members
+to access the control socket file.  Put users that need to access the socket
+in the that group.  To restrict access further, create a directory to put
+the control socket in and restrict access to that directory.
 .TP 5
 .B control\-port: \fI<port number>
 The port number to listen on for IPv4 or IPv6 control interfaces,
 default is 8953.
 If you change this and permissions have been dropped, you must restart
 the server for the change to take effect.
-.TP 5
-.B control\-use\-cert: \fI<yes or no>
-Whether to require certificate authentication of control connections.
-The default is "yes".
-This should not be changed unless there are other mechanisms in place
-to prevent untrusted users from accessing the remote control
-interface.
 .TP 5
 .B server\-key\-file: \fI<private key file>
 Path to the server private key, by default unbound_server.key.

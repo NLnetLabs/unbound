@@ -2294,10 +2294,7 @@ rc_control_interface: VAR_CONTROL_INTERFACE STRING_ARG
 rc_control_use_cert: VAR_CONTROL_USE_CERT STRING_ARG
 	{
 		OUTYY(("P(control_use_cert:%s)\n", $2));
-		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
-			yyerror("expected yes or no.");
-		else cfg_parser->cfg->remote_control_use_cert =
-			(strcmp($2, "yes")==0);
+		/* ignored */
 		free($2);
 	}
 	;

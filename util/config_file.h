@@ -377,8 +377,6 @@ struct config_file {
 	struct config_strlist* control_ifs;
 	/** port number for the control port */
 	int control_port;
-	/** use certificates for remote control */
-	int remote_control_use_cert;
 	/** private key file for server */
 	char* server_key_file;
 	/** certificate file for server */
@@ -893,6 +891,10 @@ void config_delview(struct config_view* p);
  * @param list: list.
  */
 void config_delviews(struct config_view* list);
+
+/** check if config turns on IP-address interface with certificates or a
+ * named pipe without certificates. */
+int options_remote_is_address(struct config_file* cfg);
 
 /**
  * Convert 14digit to time value

@@ -1,3 +1,9 @@
+12 June 2018: Wouter
+	- #4102 for NSD, but for Unbound.  Named unix pipes do not use
+	  certificate and key files, access can be restricted with file and
+	  directory permissions.  The option control-use-cert is no longer
+	  used, and ignored if found in unbound.conf.
+
 6 June 2018: Wouter
 	- Patch to fix openwrt for mac os build darwin detection in configure.
 

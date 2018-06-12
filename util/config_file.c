@@ -246,7 +246,6 @@ config_create(void)
 	cfg->remote_control_enable = 0;
 	cfg->control_ifs = NULL;
 	cfg->control_port = UNBOUND_CONTROL_PORT;
-	cfg->remote_control_use_cert = 1;
 	cfg->minimal_responses = 0;
 	cfg->rrset_roundrobin = 0;
 	cfg->max_udp_size = 4096;
@@ -2263,4 +2262,13 @@ void errinf_dname(struct module_qstate* qstate, const char* str, uint8_t* dname)
 	dname_str(dname, buf);
 	snprintf(b, sizeof(b), "%s %s", str, buf);
 	errinf(qstate, b);
+}
+
+int options_remote_is_address(struct config_file* cfg)
+{
+	if(!cfg->remote_control_enable) return 0;
+	if(!cfg->control_ifs) return 1;
+	if(!cfg->control_ifs->str) return 1;
+	if(cfg->control_ifs->str[0] == 0) return 1;
+	return (cfg->control_ifs->str[0] != '/');
 }
