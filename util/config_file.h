@@ -892,8 +892,8 @@ void config_delview(struct config_view* p);
  */
 void config_delviews(struct config_view* list);
 
-/** check if config turns on IP-address interface with certificates or a
- * named pipe without certificates. */
+/** check if config for remote control turns on IP-address interface
+ * with certificates or a named pipe without certificates. */
 int options_remote_is_address(struct config_file* cfg);
 
 /**
