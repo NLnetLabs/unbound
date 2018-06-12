@@ -1,3 +1,7 @@
+12 June 2018: Ralph
+	- Don't count CNAME response types received during qname minimisation as
+	  query restart.
+
 12 June 2018: Wouter
 	- #4102 for NSD, but for Unbound.  Named unix pipes do not use
 	  certificate and key files, access can be restricted with file and

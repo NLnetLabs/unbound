@@ -2770,16 +2770,18 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 		/* set the current request's qname to the new value. */
 		iq->qchase.qname = sname;
 		iq->qchase.qname_len = snamelen;
-		if (qstate->env->cfg->qname_minimisation)
-			iq->minimisation_state = INIT_MINIMISE_STATE;
 		/* Clear the query state, since this is a query restart. */
 		iq->deleg_msg = NULL;
 		iq->dp = NULL;
 		iq->dsns_point = NULL;
 		iq->auth_zone_response = 0;
-		/* Note the query restart. */
-		iq->query_restart_count++;
 		iq->sent_count = 0;
+		if(iq->minimisation_state != MINIMISE_STATE)
+			/* Only count as query restart when it is not an extra
+			 * query as result of qname minimisation. */
+			iq->query_restart_count++;
+		if(qstate->env->cfg->qname_minimisation)
+			iq->minimisation_state = INIT_MINIMISE_STATE;
 
 		/* stop current outstanding queries. 
 		 * FIXME: should the outstanding queries be waited for and
