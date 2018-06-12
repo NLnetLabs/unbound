@@ -102,10 +102,10 @@ static char* get_random_zone(void)
 
 	for(i=0; i<labels; i++) {
 		labnum = random()%10;
-		snprintf(p, 256-(p-zname), "\003%3.3d", labnum);
+		snprintf(p, sizeof(zname)-(p-zname), "\003%3.3d", labnum);
 		p+=4;
 	}
-	snprintf(p, 256-(p-zname), "\007example\003com");
+	snprintf(p, sizeof(zname)-(p-zname), "\007example\003com");
 	return zname;
 }
 
