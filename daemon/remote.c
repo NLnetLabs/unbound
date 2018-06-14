@@ -215,8 +215,13 @@ daemon_remote_create(struct config_file* cfg)
 		}
 		rc->use_cert = 1;
 	} else {
+		struct config_strlist* p;
 		rc->ctx = NULL;
 		rc->use_cert = 0;
+		for(p = cfg->control_ifs.first; p; p = p->next) {
+			if(p->str && p->str[0] != '/')
+				log_warn("control-interface %s is not using TLS, but plain transfer, because first control-interface in config file is a local socket (starts with a /).", p->str);
+		}
 	}
 	return rc;
 }
@@ -358,9 +363,9 @@ struct listen_port* daemon_remote_open_ports(struct config_file* cfg)
 {
 	struct listen_port* l = NULL;
 	log_assert(cfg->remote_control_enable && cfg->control_port);
-	if(cfg->control_ifs) {
+	if(cfg->control_ifs.first) {
 		struct config_strlist* p;
-		for(p = cfg->control_ifs; p; p = p->next) {
+		for(p = cfg->control_ifs.first; p; p = p->next) {
 			if(!add_open(p->str, cfg->control_port, &l, 1, cfg)) {
 				listening_ports_free(l);
 				return NULL;

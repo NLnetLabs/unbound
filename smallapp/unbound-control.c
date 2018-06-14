@@ -491,8 +491,8 @@ contact_server(const char* svr, struct config_file* cfg, int statuscmd)
 	int fd, useport = 1;
 	/* use svr or the first config entry */
 	if(!svr) {
-		if(cfg->control_ifs) {
-			svr = cfg->control_ifs->str;
+		if(cfg->control_ifs.first) {
+			svr = cfg->control_ifs.first->str;
 		} else if(cfg->do_ip4) {
 			svr = "127.0.0.1";
 		} else {

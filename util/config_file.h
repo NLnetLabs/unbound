@@ -53,6 +53,14 @@ struct sock_list;
 struct ub_packed_rrset_key;
 struct regional;
 
+/** List head for strlist processing, used for append operation. */
+struct config_strlist_head {
+	/** first in list of text items */
+	struct config_strlist* first;
+	/** last in list of text items */
+	struct config_strlist* last;
+};
+
 /**
  * The configuration options.
  * Strings are malloced.
@@ -374,7 +382,7 @@ struct config_file {
 	/** remote control section. enable toggle. */
 	int remote_control_enable;
 	/** the interfaces the remote control should listen on */
-	struct config_strlist* control_ifs;
+	struct config_strlist_head control_ifs;
 	/** port number for the control port */
 	int control_port;
 	/** private key file for server */
@@ -649,14 +657,6 @@ struct config_strbytelist {
 	/** second bytestring */
 	uint8_t* str2;
 	size_t str2len;
-};
-
-/** List head for strlist processing, used for append operation. */
-struct config_strlist_head {
-	/** first in list of text items */
-	struct config_strlist* first;
-	/** last in list of text items */
-	struct config_strlist* last;
 };
 
 /**

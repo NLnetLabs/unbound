@@ -244,7 +244,8 @@ config_create(void)
 	cfg->insecure_lan_zones = 0;
 	cfg->python_script = NULL;
 	cfg->remote_control_enable = 0;
-	cfg->control_ifs = NULL;
+	cfg->control_ifs.first = NULL;
+	cfg->control_ifs.last = NULL;
 	cfg->control_port = UNBOUND_CONTROL_PORT;
 	cfg->minimal_responses = 0;
 	cfg->rrset_roundrobin = 0;
@@ -385,6 +386,9 @@ struct config_file* config_create_forlib(void)
 #define S_STRLIST_UNIQ(str, var) if(strcmp(opt, str)==0) \
 	{ if(cfg_strlist_find(cfg->var, val)) { return 0;} \
 	  return cfg_strlist_insert(&cfg->var, strdup(val)); }
+/** append string to strlist */
+#define S_STRLIST_APPEND(str, var) if(strcmp(opt, str)==0) \
+	{ return cfg_strlist_append(&cfg->var, strdup(val)); }
 
 int config_set_option(struct config_file* cfg, const char* opt,
 	const char* val)
@@ -555,7 +559,7 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	else S_YNO("unblock-lan-zones:", unblock_lan_zones)
 	else S_YNO("insecure-lan-zones:", insecure_lan_zones)
 	else S_YNO("control-enable:", remote_control_enable)
-	else S_STRLIST("control-interface:", control_ifs)
+	else S_STRLIST_APPEND("control-interface:", control_ifs)
 	else S_NUMBER_NONZERO("control-port:", control_port)
 	else S_STR("server-key-file:", server_key_file)
 	else S_STR("server-cert-file:", server_cert_file)
@@ -941,7 +945,7 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_YNO(opt, "trust-anchor-signaling", trust_anchor_signaling)
 	else O_YNO(opt, "root-key-sentinel", root_key_sentinel)
 	else O_LST(opt, "dlv-anchor", dlv_anchor_list)
-	else O_LST(opt, "control-interface", control_ifs)
+	else O_LST(opt, "control-interface", control_ifs.first)
 	else O_LST(opt, "domain-insecure", domain_insecure)
 	else O_UNS(opt, "val-override-date", val_date_override)
 	else O_YNO(opt, "minimal-responses", minimal_responses)
@@ -1344,7 +1348,7 @@ config_delete(struct config_file* cfg)
 	config_del_strbytelist(cfg->respip_tags);
 	config_deltrplstrlist(cfg->acl_tag_actions);
 	config_deltrplstrlist(cfg->acl_tag_datas);
-	config_delstrlist(cfg->control_ifs);
+	config_delstrlist(cfg->control_ifs.first);
 	free(cfg->server_key_file);
 	free(cfg->server_cert_file);
 	free(cfg->control_key_file);
@@ -2268,8 +2272,8 @@ void errinf_dname(struct module_qstate* qstate, const char* str, uint8_t* dname)
 int options_remote_is_address(struct config_file* cfg)
 {
 	if(!cfg->remote_control_enable) return 0;
-	if(!cfg->control_ifs) return 1;
-	if(!cfg->control_ifs->str) return 1;
-	if(cfg->control_ifs->str[0] == 0) return 1;
-	return (cfg->control_ifs->str[0] != '/');
+	if(!cfg->control_ifs.first) return 1;
+	if(!cfg->control_ifs.first->str) return 1;
+	if(cfg->control_ifs.first->str[0] == 0) return 1;
+	return (cfg->control_ifs.first->str[0] != '/');
 }

@@ -2287,7 +2287,7 @@ rc_control_port: VAR_CONTROL_PORT STRING_ARG
 rc_control_interface: VAR_CONTROL_INTERFACE STRING_ARG
 	{
 		OUTYY(("P(control_interface:%s)\n", $2));
-		if(!cfg_strlist_insert(&cfg_parser->cfg->control_ifs, $2))
+		if(!cfg_strlist_append(&cfg_parser->cfg->control_ifs, $2))
 			yyerror("out of memory");
 	}
 	;
