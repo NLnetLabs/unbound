@@ -109,8 +109,10 @@ struct daemon_remote {
  * Connection to print to, either SSL or plain over fd
  */
 struct remote_stream {
+#ifdef HAVE_SSL
 	/** SSL structure, nonNULL if using SSL */
 	SSL* ssl;
+#endif
 	/** file descriptor for plain transfer */
 	int fd;
 };
