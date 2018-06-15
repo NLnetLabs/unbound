@@ -2437,6 +2437,24 @@ do_auth_zone_reload(RES* ssl, struct worker* worker, char* arg)
 	send_ok(ssl);
 }
 
+/** do the auth_zone_transfer command */
+static void
+do_auth_zone_transfer(RES* ssl, struct worker* worker, char* arg)
+{
+	size_t nmlen;
+	int nmlabs;
+	uint8_t* nm = NULL;
+	struct auth_zones* az = worker->env.auth_zones;
+	if(!parse_arg_name(ssl, arg, &nm, &nmlen, &nmlabs))
+		return;
+	if(!az || !auth_zones_startprobesequence(az, &worker->env, nm, nmlen,
+		LDNS_RR_CLASS_IN)) {
+		(void)ssl_printf(ssl, "error zone xfr task not found %s\n", arg);
+		return;
+	}
+	send_ok(ssl);
+}
+	
 /** do the set_option command */
 static void
 do_set_option(RES* ssl, struct worker* worker, char* arg)
@@ -2829,6 +2847,9 @@ execute_cmd(struct daemon_remote* rc, RES* ssl, char* cmd,
 		return;
 	} else if(cmdcmp(p, "auth_zone_reload", 16)) {
 		do_auth_zone_reload(ssl, worker, skipwhite(p+16));
+		return;
+	} else if(cmdcmp(p, "auth_zone_transfer", 18)) {
+		do_auth_zone_transfer(ssl, worker, skipwhite(p+18));
 		return;
 	} else if(cmdcmp(p, "stub_add", 8)) {
 		/* must always distribute this cmd */

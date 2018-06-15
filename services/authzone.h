@@ -588,6 +588,12 @@ int auth_zones_notify(struct auth_zones* az, struct module_env* env,
  * returns 0 if no soa record in the notify */
 int auth_zone_parse_notify_serial(struct sldns_buffer* pkt, uint32_t *serial);
 
+/** for the zone and if not already going, starts the probe sequence.
+ * false if zone cannot be found.  This is like a notify arrived and was
+ * accepted for that zone. */
+int auth_zones_startprobesequence(struct auth_zones* az,
+	struct module_env* env, uint8_t* nm, size_t nmlen, uint16_t dclass);
+
 /** read auth zone from zonefile. caller must lock zone. false on failure */
 int auth_zone_read_zonefile(struct auth_zone* z);
 

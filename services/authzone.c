@@ -3470,6 +3470,23 @@ int auth_zones_notify(struct auth_zones* az, struct module_env* env,
 	return 1;
 }
 
+int auth_zones_startprobesequence(struct auth_zones* az,
+	struct module_env* env, uint8_t* nm, size_t nmlen, uint16_t dclass)
+{
+	struct auth_xfer* xfr;
+	lock_rw_rdlock(&az->lock);
+	xfr = auth_xfer_find(az, nm, nmlen, dclass);
+	if(!xfr) {
+		lock_rw_unlock(&az->lock);
+		return 0;
+	}
+	lock_basic_lock(&xfr->lock);
+	lock_rw_unlock(&az->lock);
+
+	xfr_process_notify(xfr, env, 0, 0, NULL);
+	return 1;
+}
+
 /** set a zone expired */
 static void
 auth_xfer_set_expired(struct auth_xfer* xfr, struct module_env* env,

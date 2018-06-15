@@ -300,6 +300,11 @@ contents itself, not the cache contents.  Such cache contents exists if
 you set unbound to validate with for-upstream yes and that can be cleared
 with \fBflush_zone\fR \fIzone\fR.
 .TP
+.B auth_zone_transfer \fIzone\fR
+Tranfer the auth zone from master.  The auth zone probe sequence is started,
+where the masters are probed to see if they have an updated zone (with the SOA
+serial check).  And then the zone is transferred for a newer zone version.
+.TP
 .B view_list_local_zones \fIview\fR
 \fIlist_local_zones\fR for given view.
 .TP
