@@ -293,6 +293,13 @@ ips are dropped before checking the cache.
 List the auth zones that are configured.  Printed one per line with a
 status, indicating if the zone is expired and current serial number.
 .TP
+.B auth_zone_reload \fIzone\fR
+Reload the auth zone from zonefile.  The zonefile is read in overwriting
+the current contents of the zone in memory.  This changes the auth zone
+contents itself, not the cache contents.  Such cache contents exists if
+you set unbound to validate with for-upstream yes and that can be cleared
+with \fBflush_zone\fR \fIzone\fR.
+.TP
 .B view_list_local_zones \fIview\fR
 \fIlist_local_zones\fR for given view.
 .TP

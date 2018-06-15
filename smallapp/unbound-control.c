@@ -143,6 +143,7 @@ usage(void)
 	printf("  ip_ratelimit_list [+a]	list ratelimited ip addresses\n");
 	printf("		+a		list all, also not ratelimited\n");
 	printf("  list_auth_zones		list auth zones\n");
+	printf("  auth_zone_reload zone		reload auth zone from zonefile\n");
 	printf("  view_list_local_zones	view	list local-zones in view\n");
 	printf("  view_list_local_data	view	list local-data RRs in view\n");
 	printf("  view_local_zone view name type  	add local-zone in view\n");

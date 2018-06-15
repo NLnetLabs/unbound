@@ -1,6 +1,7 @@
 15 June 2018: Wouter
 	- tag for 1.7.3rc1.
 	- trunk has 1.7.4.
+	- unbound-control auth_zone_reload _zone_ option rereads the zonefile.
 
 14 June 2018: Wouter
 	- #4103: Fix that auth-zone does not insist on SOA record first in
