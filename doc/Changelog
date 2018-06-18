@@ -1,6 +1,5 @@
 18 June 2018: Wouter
-	- Print warning when control-use-cert is used with an IP-address
-	  in unbound-control, and that TLS is enabled.
+	- Fix that control-use-cert: no works for 127.0.0.1 to disable certs.
 
 15 June 2018: Wouter
 	- tag for 1.7.3rc1.

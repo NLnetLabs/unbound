@@ -784,6 +784,10 @@ remote-control:
 	# port number for remote control operations.
 	# control-port: 8953
 
+	# for localhost, you can disable use of TLS by setting this to "no"
+	# For local sockets this option is ignored, and TLS is not used.
+	# control-use-cert: "yes"
+
 	# unbound server key file.
 	# server-key-file: "@UNBOUND_RUN_DIR@/unbound_server.key"
 

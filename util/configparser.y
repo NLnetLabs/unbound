@@ -2294,18 +2294,7 @@ rc_control_interface: VAR_CONTROL_INTERFACE STRING_ARG
 rc_control_use_cert: VAR_CONTROL_USE_CERT STRING_ARG
 	{
 		OUTYY(("P(control_use_cert:%s)\n", $2));
-		if(strcmp($2, "no") == 0 &&
-			!(cfg_parser->cfg->control_ifs.first &&
-			cfg_parser->cfg->control_ifs.first->str &&
-			cfg_parser->cfg->control_ifs.first->str[0] == '/')) {
-			log_warn("For an ip-address in control-interface "
-				"the tls certificates are enabled, but "
-				"the old option control-use-cert: no is set "
-				"with what looks like an IP-address. "
-				"You may need to set up the certificates with "
-				"unbound-control-setup.");
-		}
-		/* ignored */
+		cfg_parser->cfg->control_use_cert = (strcmp($2, "yes")==0);
 		free($2);
 	}
 	;

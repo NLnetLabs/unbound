@@ -453,7 +453,7 @@ setup_ctx(struct config_file* cfg)
 	char* s_cert=NULL, *c_key=NULL, *c_cert=NULL;
 	SSL_CTX* ctx;
 
-	if(!options_remote_is_address(cfg))
+	if(!(options_remote_is_address(cfg) && cfg->control_use_cert))
 		return NULL;
 	s_cert = fname_after_chroot(cfg->server_cert_file, cfg, 1);
 	c_key = fname_after_chroot(cfg->control_key_file, cfg, 1);

@@ -247,6 +247,7 @@ config_create(void)
 	cfg->control_ifs.first = NULL;
 	cfg->control_ifs.last = NULL;
 	cfg->control_port = UNBOUND_CONTROL_PORT;
+	cfg->control_use_cert = 1;
 	cfg->minimal_responses = 0;
 	cfg->rrset_roundrobin = 0;
 	cfg->max_udp_size = 4096;
