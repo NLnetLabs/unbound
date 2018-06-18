@@ -1,5 +1,6 @@
 18 June 2018: Wouter
 	- Fix that control-use-cert: no works for 127.0.0.1 to disable certs.
+	  This fix is part of 1.7.3rc2.
 
 15 June 2018: Wouter
 	- tag for 1.7.3rc1.
