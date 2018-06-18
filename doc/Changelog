@@ -1,3 +1,7 @@
+18 June 2018: Wouter
+	- Print warning when control-use-cert is used with an IP-address
+	  in unbound-control, and that TLS is enabled.
+
 15 June 2018: Wouter
 	- tag for 1.7.3rc1.
 	- trunk has 1.7.4.
