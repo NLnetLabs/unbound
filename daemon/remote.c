@@ -208,7 +208,7 @@ daemon_remote_create(struct config_file* cfg)
 		rc->ctx = NULL;
 		return rc;
 	}
-	if(options_remote_is_address(cfg)) {
+	if(options_remote_is_address(cfg) && cfg->control_use_cert) {
 		if(!remote_setup_ctx(rc, cfg)) {
 			daemon_remote_delete(rc);
 			return NULL;
@@ -218,7 +218,8 @@ daemon_remote_create(struct config_file* cfg)
 		struct config_strlist* p;
 		rc->ctx = NULL;
 		rc->use_cert = 0;
-		for(p = cfg->control_ifs.first; p; p = p->next) {
+		if(!options_remote_is_address(cfg))
+		  for(p = cfg->control_ifs.first; p; p = p->next) {
 			if(p->str && p->str[0] != '/')
 				log_warn("control-interface %s is not using TLS, but plain transfer, because first control-interface in config file is a local socket (starts with a /).", p->str);
 		}
@@ -2207,9 +2208,12 @@ do_status(RES* ssl, struct worker* worker)
 	uptime = (time_t)time(NULL) - (time_t)worker->daemon->time_boot.tv_sec;
 	if(!ssl_printf(ssl, "uptime: " ARG_LL "d seconds\n", (long long)uptime))
 		return;
-	if(!ssl_printf(ssl, "options:%s%s\n" , 
+	if(!ssl_printf(ssl, "options:%s%s%s%s\n" , 
 		(worker->daemon->reuseport?" reuseport":""),
-		(worker->daemon->rc->accept_list?(worker->daemon->rc->use_cert?" control(ssl)":" control(namedpipe)"):"")))
+		(worker->daemon->rc->accept_list?" control":""),
+		(worker->daemon->rc->accept_list && worker->daemon->rc->use_cert?"(ssl)":""),
+		(worker->daemon->rc->accept_list && worker->daemon->cfg->control_ifs.first && worker->daemon->cfg->control_ifs.first->str && worker->daemon->cfg->control_ifs.first->str[0] == '/'?"(namedpipe)":"")
+		))
 		return;
 	if(!ssl_printf(ssl, "unbound (pid %d) is running...\n",
 		(int)getpid()))

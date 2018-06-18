@@ -5082,7 +5082,7 @@ yyreduce:
 #line 2295 "./util/configparser.y" /* yacc.c:1646  */
     {
 		OUTYY(("P(control_use_cert:%s)\n", (yyvsp[0].str)));
-		/* ignored */
+		cfg_parser->cfg->control_use_cert = (strcmp((yyvsp[0].str), "yes")==0);
 		free((yyvsp[0].str));
 	}
 #line 5089 "util/configparser.c" /* yacc.c:1646  */

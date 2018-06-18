@@ -383,6 +383,8 @@ struct config_file {
 	int remote_control_enable;
 	/** the interfaces the remote control should listen on */
 	struct config_strlist_head control_ifs;
+	/** if the use-cert option is set */
+	int control_use_cert;
 	/** port number for the control port */
 	int control_port;
 	/** private key file for server */

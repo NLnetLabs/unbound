@@ -2294,7 +2294,7 @@ rc_control_interface: VAR_CONTROL_INTERFACE STRING_ARG
 rc_control_use_cert: VAR_CONTROL_USE_CERT STRING_ARG
 	{
 		OUTYY(("P(control_use_cert:%s)\n", $2));
-		/* ignored */
+		cfg_parser->cfg->control_use_cert = (strcmp($2, "yes")==0);
 		free($2);
 	}
 	;
