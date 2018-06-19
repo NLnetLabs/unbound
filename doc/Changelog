@@ -1,6 +1,8 @@
 19 June 2018: Wouter
 	- Fix for unbound-control on Windows and set TCP socket parameters
 	  more closely.
+	- Windows example service.conf edited with more windows specific
+	  configuration.
 
 18 June 2018: Wouter
 	- Fix that control-use-cert: no works for 127.0.0.1 to disable certs.
