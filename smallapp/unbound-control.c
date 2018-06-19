@@ -489,7 +489,7 @@ contact_server(const char* svr, struct config_file* cfg, int statuscmd)
 {
 	struct sockaddr_storage addr;
 	socklen_t addrlen;
-	int addrfamily = 0;
+	int addrfamily = 0, proto = IPPROTO_TCP;
 	int fd, useport = 1;
 	/* use svr or the first config entry */
 	if(!svr) {
@@ -523,6 +523,7 @@ contact_server(const char* svr, struct config_file* cfg, int statuscmd)
 		addrlen = (socklen_t)sizeof(struct sockaddr_un);
 		addrfamily = AF_LOCAL;
 		useport = 0;
+		proto = 0;
 #endif
 	} else {
 		if(!ipstrtoaddr(svr, cfg->control_port, &addr, &addrlen))
@@ -530,8 +531,8 @@ contact_server(const char* svr, struct config_file* cfg, int statuscmd)
 	}
 
 	if(addrfamily == 0)
-		addrfamily = addr_is_ip6(&addr, addrlen)?AF_INET6:AF_INET;
-	fd = socket(addrfamily, SOCK_STREAM, 0);
+		addrfamily = addr_is_ip6(&addr, addrlen)?PF_INET6:PF_INET;
+	fd = socket(addrfamily, SOCK_STREAM, proto);
 	if(fd == -1) {
 #ifndef USE_WINSOCK
 		fatal_exit("socket: %s", strerror(errno));
