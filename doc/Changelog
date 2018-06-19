@@ -3,6 +3,7 @@
 	  more closely.
 	- Windows example service.conf edited with more windows specific
 	  configuration.
+	- Fix windows unbound-control no cert bad file descriptor error.
 
 18 June 2018: Wouter
 	- Fix that control-use-cert: no works for 127.0.0.1 to disable certs.

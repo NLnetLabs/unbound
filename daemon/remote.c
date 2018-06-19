@@ -568,11 +568,15 @@ ssl_print_text(RES* res, const char* text)
 	} else {
 		size_t at = 0;
 		while(at < strlen(text)) {
-			ssize_t r = write(res->fd, text+at, strlen(text)-at);
+			ssize_t r = send(res->fd, text+at, strlen(text)-at, 0);
 			if(r == -1) {
 				if(errno == EAGAIN || errno == EINTR)
 					continue;
-				log_err("could not write: %s", strerror(errno));
+#ifndef USE_WINSOCK
+				log_err("could not send: %s", strerror(errno));
+#else
+				log_err("could not send: %s", wsa_strerror(WSAGetLastError()));
+#endif
 				return 0;
 			}
 			at += r;
@@ -621,7 +625,7 @@ ssl_read_line(RES* res, char* buf, size_t max)
 			}
 		} else {
 			while(1) {
-				ssize_t rr = read(res->fd, buf+len, 1);
+				ssize_t rr = recv(res->fd, buf+len, 1, 0);
 				if(rr <= 0) {
 					if(rr == 0) {
 						buf[len] = 0;
@@ -629,7 +633,11 @@ ssl_read_line(RES* res, char* buf, size_t max)
 					}
 					if(errno == EINTR || errno == EAGAIN)
 						continue;
-					log_err("could not read: %s", strerror(errno));
+#ifndef USE_WINSOCK
+					log_err("could not recv: %s", strerror(errno));
+#else
+					log_err("could not recv: %s", wsa_strerror(WSAGetLastError()));
+#endif
 					return 0;
 				}
 				break;
@@ -3007,12 +3015,16 @@ handle_req(struct daemon_remote* rc, struct rc_state* s, RES* res)
 		}
 	} else {
 		while(1) {
-			ssize_t rr = read(res->fd, magic, sizeof(magic)-1);
+			ssize_t rr = recv(res->fd, magic, sizeof(magic)-1, 0);
 			if(rr <= 0) {
 				if(rr == 0) return;
 				if(errno == EINTR || errno == EAGAIN)
 					continue;
-				log_err("could not read: %s", strerror(errno));
+#ifndef USE_WINSOCK
+				log_err("could not recv: %s", strerror(errno));
+#else
+				log_err("could not recv: %s", wsa_strerror(WSAGetLastError()));
+#endif
 				return;
 			}
 			r = (int)rr;

@@ -616,13 +616,17 @@ remote_read(SSL* ssl, int fd, char* buf, size_t len)
 		}
 		buf[r] = 0;
 	} else {
-		ssize_t rr = read(fd, buf, len-1);
+		ssize_t rr = recv(fd, buf, len-1, 0);
 		if(rr <= 0) {
 			if(rr == 0) {
 				/* EOF */
 				return 0;
 			}
-			fatal_exit("could not read: %s", strerror(errno));
+#ifndef USE_WINSOCK
+			fatal_exit("could not recv: %s", strerror(errno));
+#else
+			fatal_exit("could not recv: %s", wsa_strerror(WSAGetLastError()));
+#endif
 		}
 		buf[rr] = 0;
 	}
@@ -637,8 +641,13 @@ remote_write(SSL* ssl, int fd, const char* buf, size_t len)
 		if(SSL_write(ssl, buf, (int)len) <= 0)
 			ssl_err("could not SSL_write");
 	} else {
-		if(write(fd, buf, len) < (ssize_t)len)
-			fatal_exit("could not write: %s", strerror(errno));
+		if(send(fd, buf, len, 0) < (ssize_t)len) {
+#ifndef USE_WINSOCK
+			fatal_exit("could not send: %s", strerror(errno));
+#else
+			fatal_exit("could not send: %s", wsa_strerror(WSAGetLastError()));
+#endif
+		}
 	}
 }
 
