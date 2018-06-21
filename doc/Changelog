@@ -1,3 +1,6 @@
+21 June 2018: Wouter
+	- #4108: systemd reload hang fix.
+
 19 June 2018: Wouter
 	- Fix for unbound-control on Windows and set TCP socket parameters
 	  more closely.
