@@ -97,6 +97,8 @@ usage(void)
 	printf("    -f keyfile		read trust anchors from file, with lines as -y.\n");
 	printf("    -F keyfile		read named.conf-style trust anchors.\n");
 	printf("    -C config		use the specified unbound.conf (none read by default)\n");
+	printf("			pass as first argument if you want to override some\n");
+	printf("			options with further arguments\n");
 	printf("    -r			read forwarder information from /etc/resolv.conf\n");
 	printf("      			breaks validation if the forwarder does not do DNSSEC.\n");
 	printf("    -v			be more verbose, shows nodata and security.\n");
