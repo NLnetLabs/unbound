@@ -82,9 +82,9 @@ static int verb = 0;
 static void
 usage(void)
 {
-	printf("Usage:	unbound-host [-vdhr46] [-c class] [-t type] hostname\n");
+	printf("Usage:	unbound-host [-vdhr46] [-c class] [-t type]\n");
 	printf("                     [-y key] [-f keyfile] [-F namedkeyfile]\n");
-	printf("                     [-C configfile]\n");
+	printf("                     [-C configfile] hostname\n");
 	printf("  Queries the DNS for information.\n");
 	printf("  The hostname is looked up for IP4, IP6 and mail.\n");
 	printf("  If an ip-address is given a reverse lookup is done.\n");

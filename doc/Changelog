@@ -1,5 +1,7 @@
 21 June 2018: Wouter
 	- #4108: systemd reload hang fix.
+	- Fix usage printout for unbound-host, hostname has to be last
+	  argument on BSDs and Windows.
 
 19 June 2018: Wouter
 	- Fix for unbound-control on Windows and set TCP socket parameters
