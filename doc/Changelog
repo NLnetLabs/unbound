@@ -1,5 +1,11 @@
+19 June 2018: Wouter
+	- Fix for unbound-control on Windows and set TCP socket parameters
+	  more closely.
+	- Fix windows unbound-control no cert bad file descriptor error.
+
 18 June 2018: Wouter
 	- Fix that control-use-cert: no works for 127.0.0.1 to disable certs.
+	- Fix unbound-checkconf for control-use-cert.
 
 15 June 2018: Wouter
 	- tag for 1.7.3rc1.
