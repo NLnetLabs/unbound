@@ -2,6 +2,8 @@
 	- Tentative fix for permission denied on IPv6 address on FreeBSD.
 	- Fix that auth-zone master reply with current SOA serial does not
 	  stop scan of masters for an updated zone.
+	- Fix that auth-zone does not start the wait timer without checking
+	  if the wait timer has already been started.
 
 21 June 2018: Wouter
 	- #4108: systemd reload hang fix.
