@@ -1,3 +1,6 @@
+26 June 2018: Wouter
+	- Tentative fix for permission denied on IPv6 address on FreeBSD.
+
 21 June 2018: Wouter
 	- #4108: systemd reload hang fix.
 	- Fix usage printout for unbound-host, hostname has to be last

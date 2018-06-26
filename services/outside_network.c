@@ -1036,6 +1036,8 @@ udp_sockport(struct sockaddr_storage* addr, socklen_t addrlen, int pfxlen,
 		int freebind = 0;
 		struct sockaddr_in6 sa = *(struct sockaddr_in6*)addr;
 		sa.sin6_port = (in_port_t)htons((uint16_t)port);
+		sa.sin6_flowinfo = 0;
+		sa.sin6_scope_id = 0;
 		if(pfxlen != 0) {
 			freebind = 1;
 			sai6_putrandom(&sa, pfxlen, rnd);
