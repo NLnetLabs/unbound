@@ -5090,7 +5090,8 @@ xfr_transfer_nexttarget_or_end(struct auth_xfer* xfr, struct module_env* env)
 	xfr_transfer_disown(xfr);
 
 	/* pick up the nextprobe task and wait */
-	xfr_set_timeout(xfr, env, 1, 0);
+	if(xfr->task_nextprobe->worker == NULL)
+		xfr_set_timeout(xfr, env, 1, 0);
 	lock_basic_unlock(&xfr->lock);
 }
 
@@ -5547,7 +5548,8 @@ process_list_end_transfer(struct auth_xfer* xfr, struct module_env* env)
 			return;
 		} else {
 			/* pick up the nextprobe task and wait (normail wait time) */
-			xfr_set_timeout(xfr, env, 0, 0);
+			if(xfr->task_nextprobe->worker == NULL)
+				xfr_set_timeout(xfr, env, 0, 0);
 		}
 		lock_basic_unlock(&xfr->lock);
 		return;
@@ -5888,29 +5890,35 @@ auth_xfer_probe_udp_callback(struct comm_point* c, void* arg, int err,
 					return 0;
 
 				}
+				/* other tasks are running, we don't do this anymore */
+				xfr_probe_disown(xfr);
+				lock_basic_unlock(&xfr->lock);
+				/* return, we don't sent a reply to this udp packet,
+				 * and we setup the tasks to do next */
+				return 0;
 			} else {
-				/* if zone not updated, start the wait timer again */
-				verbose(VERB_ALGO, "auth_zone unchanged, new lease, wait");
-				if(xfr->have_zone)
-					xfr->lease_time = *env->now;
-				if(xfr->task_nextprobe->worker == NULL)
-					xfr_set_timeout(xfr, env, 0, 0);
+				verbose(VERB_ALGO, "auth_zone master reports unchanged soa serial");
+				/* we if cannot find updates amongst the
+				 * masters, this means we then have a new lease
+				 * on the zone */
+				xfr->task_probe->have_new_lease = 1;
 			}
-			/* other tasks are running, we don't do this anymore */
-			xfr_probe_disown(xfr);
-			lock_basic_unlock(&xfr->lock);
-			/* return, we don't sent a reply to this udp packet,
-			 * and we setup the tasks to do next */
-			return 0;
+		} else {
+			if(verbosity >= VERB_ALGO) {
+				char buf[256];
+				dname_str(xfr->name, buf);
+				verbose(VERB_ALGO, "auth zone %s: bad reply to soa probe", buf);
+			}
+		}
+	} else {
+		if(verbosity >= VERB_ALGO) {
+			char buf[256];
+			dname_str(xfr->name, buf);
+			verbose(VERB_ALGO, "auth zone %s: soa probe failed", buf);
 		}
 	}
-	if(verbosity >= VERB_ALGO) {
-		char buf[256];
-		dname_str(xfr->name, buf);
-		verbose(VERB_ALGO, "auth zone %s: soa probe failed", buf);
-	}
 	
-	/* failed lookup */
+	/* failed lookup or not an update */
 	/* delete commpoint so a new one is created, with a fresh port nr */
 	comm_point_delete(xfr->task_probe->cp);
 	xfr->task_probe->cp = NULL;
@@ -6013,7 +6021,8 @@ xfr_probe_send_or_end(struct auth_xfer* xfr, struct module_env* env)
 		/* only wanted lookups for copy, stop probe and start wait */
 		xfr->task_probe->only_lookup = 0;
 		xfr_probe_disown(xfr);
-		xfr_set_timeout(xfr, env, 0, 0);
+		if(xfr->task_nextprobe->worker == NULL)
+			xfr_set_timeout(xfr, env, 0, 0);
 		lock_basic_unlock(&xfr->lock);
 		return;
 	}
@@ -6029,12 +6038,24 @@ xfr_probe_send_or_end(struct auth_xfer* xfr, struct module_env* env)
 		xfr_probe_nextmaster(xfr);
 	}
 
-	/* we failed to send this as well, move to the wait task,
-	 * use the shorter retry timeout */
-	xfr_probe_disown(xfr);
+	/* done with probe sequence, wait */
+	if(xfr->task_probe->have_new_lease) {
+		/* if zone not updated, start the wait timer again */
+		verbose(VERB_ALGO, "auth_zone unchanged, new lease, wait");
+		xfr_probe_disown(xfr);
+		if(xfr->have_zone)
+			xfr->lease_time = *env->now;
+		if(xfr->task_nextprobe->worker == NULL)
+			xfr_set_timeout(xfr, env, 0, 0);
+	} else {
+		/* we failed to send this as well, move to the wait task,
+		 * use the shorter retry timeout */
+		xfr_probe_disown(xfr);
+		/* pick up the nextprobe task and wait */
+		if(xfr->task_nextprobe->worker == NULL)
+			xfr_set_timeout(xfr, env, 1, 0);
+	}
 
-	/* pick up the nextprobe task and wait */
-	xfr_set_timeout(xfr, env, 1, 0);
 	lock_basic_unlock(&xfr->lock);
 }
 
@@ -6168,6 +6189,8 @@ xfr_start_probe(struct auth_xfer* xfr, struct module_env* env,
 		xfr->task_probe->cp = NULL;
 
 		/* start the task */
+		/* have not seen a new lease yet, this scan */
+		xfr->task_probe->have_new_lease = 0;
 		/* if this was a timeout, no specific first master to scan */
 		/* otherwise, spec is nonNULL the notified master, scan
 		 * first and also transfer first from it */

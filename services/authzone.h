@@ -309,6 +309,9 @@ struct auth_probe {
 	/** we only want to do lookups for making config work (for notify),
 	 * don't proceed with UDP SOA probe queries */
 	int only_lookup;
+	/** we have seen a new lease this scan, because one of the masters
+	 * replied with the current SOA serial version */
+	int have_new_lease;
 
 	/** once notified, or the timeout has been reached. a scan starts. */
 	/** the scan specific target (notify source), or NULL if none */
