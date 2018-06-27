@@ -586,7 +586,10 @@ if test x_$ub_test_python != x_no; then
         CPPFLAGS="$PYTHON_CPPFLAGS"
       fi
       ub_have_python=yes
-      PC_PY_DEPENDENCY="python"
+      PKG_PROG_PKG_CONFIG
+      PKG_CHECK_EXISTS(["python${PY_MAJOR_VERSION}"],
+                       [PC_PY_DEPENDENCY="python${PY_MAJOR_VERSION}"],
+                       [PC_PY_DEPENDENCY="python"])
       AC_SUBST(PC_PY_DEPENDENCY)
 
       # Check for SWIG
