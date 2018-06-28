@@ -529,6 +529,7 @@ other servers.
 .TP
 .I num.query.tls
 Number of queries that were made using TLS towards the unbound server.
+These are also counted in num.query.tcp, because TLS uses TCP.
 .TP
 .I num.query.ipv6
 Number of queries that were made using IPv6 towards the unbound server.
