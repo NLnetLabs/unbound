@@ -1,3 +1,8 @@
+29 June 2018: Wouter
+	- dns64-ignore-aaaa: config option to list domain names for which the
+	  existing AAAA is ignored and dns64 processing is used on the A
+	  record.
+
 28 June 2018: Wouter
 	- num.queries.tls counter for queries over TLS.
 	- log port number with err_addr logs.
