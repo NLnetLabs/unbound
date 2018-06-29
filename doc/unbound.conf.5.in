@@ -1653,6 +1653,12 @@ It must be /96 or shorter.  The default prefix is 64:ff9b::/96.
 .B dns64\-synthall: \fI<yes or no>\fR
 Debug option, default no.  If enabled, synthesize all AAAA records
 despite the presence of actual AAAA records.
+.TP
+.B dns64\-ignore\-aaaa: \fI<name>\fR
+List domain for which the AAAA records are ignored and the A record is
+used by dns64 processing instead.  Can be entered multiple times, list a
+new domain for which it applies, one per line.  Applies also to names
+underneath the name given.
 .SS "DNSCrypt Options"
 .LP
 The

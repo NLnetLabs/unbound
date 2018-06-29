@@ -692,6 +692,9 @@ server:
 	# Enable dns64 in module-config.  Used to synthesize IPv6 from IPv4.
 	# dns64-prefix: 64:ff9b::0/96
 
+	# DNS64 ignore AAAA records for these domains and use A instead.
+	# dns64-ignore-aaaa: "example.com"
+
 	# ratelimit for uncached, new queries, this limits recursion effort.
 	# ratelimiting is experimental, and may help against randomqueryflood.
 	# if 0(default) it is disabled, otherwise state qps allowed per zone.
