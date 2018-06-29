@@ -1,5 +1,6 @@
 28 June 2018: Wouter
 	- num.queries.tls counter for queries over TLS.
+	- log port number with err_addr logs.
 
 27 June 2018: Wouter
 	- #4109: Fix that package config depends on python unconditionally.
