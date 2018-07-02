@@ -121,7 +121,7 @@ interface and port number), if not specified the default port (from
 \fBport\fR) is used.
 .TP
 .B ip\-address: \fI<ip address[@port]>
-Same as interface: (for easy of compatibility with nsd.conf).
+Same as interface: (for ease of compatibility with nsd.conf).
 .TP
 .B interface\-automatic: \fI<yes or no>
 Detect source interface on UDP queries and copy them to replies.  This
