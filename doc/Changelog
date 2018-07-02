@@ -1,6 +1,8 @@
 2 July 2018: Wouter
 	- Fix checking for libhiredis printout in configure output.
 	- Fix typo on man page in ip-address description.
+	- Update libunbound/python/examples/dnssec_test.py example code to
+	  also set the 20326 trust anchor for the root in the example code.
 
 29 June 2018: Wouter
 	- dns64-ignore-aaaa: config option to list domain names for which the
