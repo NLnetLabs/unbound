@@ -16,7 +16,7 @@
 	- Patch, do not export python from pkg-config, from Petr Menšík.
 
 26 June 2018: Wouter
-	- Tentative fix for permission denied on IPv6 address on FreeBSD.
+	- Partial fix for permission denied on IPv6 address on FreeBSD.
 	- Fix that auth-zone master reply with current SOA serial does not
 	  stop scan of masters for an updated zone.
 	- Fix that auth-zone does not start the wait timer without checking
