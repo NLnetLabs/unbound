@@ -1,3 +1,6 @@
+2 July 2018: Wouter
+	- Fix checking for libhiredis printout in configure output.
+
 29 June 2018: Wouter
 	- dns64-ignore-aaaa: config option to list domain names for which the
 	  existing AAAA is ignored and dns64 processing is used on the A

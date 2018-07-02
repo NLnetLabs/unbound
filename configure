@@ -19000,10 +19000,10 @@ else
    withval="no"
 fi
 
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for libhiredis" >&5
-$as_echo_n "checking for libhiredis... " >&6; }
 found_libhiredis="no"
 if test x_$withval = x_yes -o x_$withval != x_no; then
+   { $as_echo "$as_me:${as_lineno-$LINENO}: checking for libhiredis" >&5
+$as_echo_n "checking for libhiredis... " >&6; }
    if test x_$withval = x_ -o x_$withval = x_yes; then
             withval="/usr/local /opt/local /usr/lib /usr/pkg /usr/sfw /usr"
    fi

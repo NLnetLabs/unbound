@@ -1181,9 +1181,9 @@ AC_CHECK_DECLS([XML_StopParser], [], [], [AC_INCLUDES_DEFAULT
 AC_ARG_WITH(libhiredis, AC_HELP_STRING([--with-libhiredis=path],
     [specify explicit path for libhiredis.]),
     [ ],[ withval="no" ])
-AC_MSG_CHECKING(for libhiredis)
 found_libhiredis="no"
 if test x_$withval = x_yes -o x_$withval != x_no; then
+   AC_MSG_CHECKING(for libhiredis)
    if test x_$withval = x_ -o x_$withval = x_yes; then
             withval="/usr/local /opt/local /usr/lib /usr/pkg /usr/sfw /usr"
    fi
