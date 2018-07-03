@@ -1,6 +1,7 @@
 3 July 2018: Wouter
 	- Better documentation for unblock-lan-zones and insecure-lan-zones
 	  config statements.
+	- Fix permission denied printed for auth zone probe random port nrs.
 
 2 July 2018: Wouter
 	- Fix checking for libhiredis printout in configure output.

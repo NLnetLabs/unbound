@@ -2192,39 +2192,48 @@ fd_for_dest(struct outside_network* outnet, struct sockaddr_storage* to_addr,
 {
 	struct sockaddr_storage* addr;
 	socklen_t addrlen;
-	int i;
-	int try;
-
-	/* select interface */
-	if(addr_is_ip6(to_addr, to_addrlen)) {
-		if(outnet->num_ip6 == 0) {
-			char to[64];
-			addr_to_str(to_addr, to_addrlen, to, sizeof(to));
-			verbose(VERB_QUERY, "need ipv6 to send, but no ipv6 outgoing interfaces, for %s", to);
-			return -1;
-		}
-		i = ub_random_max(outnet->rnd, outnet->num_ip6);
-		addr = &outnet->ip6_ifs[i].addr;
-		addrlen = outnet->ip6_ifs[i].addrlen;
-	} else {
-		if(outnet->num_ip4 == 0) {
-			char to[64];
-			addr_to_str(to_addr, to_addrlen, to, sizeof(to));
-			verbose(VERB_QUERY, "need ipv4 to send, but no ipv4 outgoing interfaces, for %s", to);
-			return -1;
-		}
-		i = ub_random_max(outnet->rnd, outnet->num_ip4);
-		addr = &outnet->ip4_ifs[i].addr;
-		addrlen = outnet->ip4_ifs[i].addrlen;
-	}
+	int i, try, pnum;
+	struct port_if* pif;
 
 	/* create fd */
 	for(try = 0; try<1000; try++) {
+		int port = 0;
 		int freebind = 0;
 		int noproto = 0;
 		int inuse = 0;
-		int port = ub_random(outnet->rnd)&0xffff;
 		int fd = -1;
+
+		/* select interface */
+		if(addr_is_ip6(to_addr, to_addrlen)) {
+			if(outnet->num_ip6 == 0) {
+				char to[64];
+				addr_to_str(to_addr, to_addrlen, to, sizeof(to));
+				verbose(VERB_QUERY, "need ipv6 to send, but no ipv6 outgoing interfaces, for %s", to);
+				return -1;
+			}
+			i = ub_random_max(outnet->rnd, outnet->num_ip6);
+			pif = &outnet->ip6_ifs[i];
+		} else {
+			if(outnet->num_ip4 == 0) {
+				char to[64];
+				addr_to_str(to_addr, to_addrlen, to, sizeof(to));
+				verbose(VERB_QUERY, "need ipv4 to send, but no ipv4 outgoing interfaces, for %s", to);
+				return -1;
+			}
+			i = ub_random_max(outnet->rnd, outnet->num_ip4);
+			pif = &outnet->ip4_ifs[i];
+		}
+		addr = &pif->addr;
+		addrlen = pif->addrlen;
+		pnum = ub_random_max(outnet->rnd, pif->avail_total);
+		if(pnum < pif->inuse) {
+			/* port already open */
+			port = pif->out[pnum]->number;
+		} else {
+			/* unused ports in start part of array */
+			port = pif->avail_ports[pnum - pif->inuse];
+		}
+
 		if(addr_is_ip6(to_addr, to_addrlen)) {
 			struct sockaddr_in6 sa = *(struct sockaddr_in6*)addr;
 			sa.sin6_port = (in_port_t)htons((uint16_t)port);
