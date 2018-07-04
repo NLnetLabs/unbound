@@ -109,6 +109,11 @@ It does so, because the tool when used for bootstrapping the recursive
 resolver, cannot use that recursive resolver itself because it is bootstrapping
 that server.
 .TP
+.B \-R
+Allow fallback from \-f resolv.conf file to direct root servers query.
+It allows you to prefer local resolvers, but fallback automatically
+to direct root query if they do not respond or do not support DNSSEC.
+.TP
 .B \-v
 More verbose. Once prints informational messages, multiple times may enable
 large debug amounts (such as full certificates or byte\-dumps of downloaded
