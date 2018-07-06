@@ -2,7 +2,8 @@
 	- Fix documentation ambiguity for tls-win-cert in tls-upstream and
 	  forward-tls-upstream docs.
 	- iana port update.
-	- Note RFC8162 support.
+	- Note RFC8162 support.  SMIMEA record type can be read in by the
+	  zone record parser.
 
 4 July 2018: Wouter
 	- Fix #4112: Fix that unbound-anchor -f /etc/resolv.conf will not pass
