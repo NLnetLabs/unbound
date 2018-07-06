@@ -4,6 +4,7 @@
 	- iana port update.
 	- Note RFC8162 support.  SMIMEA record type can be read in by the
 	  zone record parser.
+	- Fix round robin for failed addresses with prefer-ip6: yes
 
 4 July 2018: Wouter
 	- Fix #4112: Fix that unbound-anchor -f /etc/resolv.conf will not pass
