@@ -1,6 +1,7 @@
 6 July 2018: Wouter
 	- Fix documentation ambiguity for tls-win-cert in tls-upstream and
 	  forward-tls-upstream docs.
+	- iana port update.
 
 4 July 2018: Wouter
 	- Fix #4112: Fix that unbound-anchor -f /etc/resolv.conf will not pass
