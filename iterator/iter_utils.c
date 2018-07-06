@@ -375,12 +375,20 @@ iter_filter_order(struct iter_env* iter_env, struct module_env* env,
 		int got_num6 = 0;
 		int low_rtt6 = 0;
 		int i;
+		int attempt = -1; /* filter to make sure addresses have
+		  less attempts on them than the first, to force round
+		  robin when all the IPv6 addresses fail */
 		prev = NULL;
 		a = dp->result_list;
 		for(i = 0; i < got_num; i++) {
 			swap_to_front = 0;
-			if(a->addr.ss_family == AF_INET6) {
+			if(a->addr.ss_family != AF_INET6 && attempt == -1)
+				attempt = a->attempts;
+			if(a->addr.ss_family == AF_INET6 &&
+				(attempt==-1 || a->attempts<=attempt)) {
 				got_num6++;
+				if(attempt == -1)
+					attempt = a->attempts;
 				swap_to_front = 1;
 				if(low_rtt6 == 0 || a->sel_rtt < low_rtt6) {
 					low_rtt6 = a->sel_rtt;
