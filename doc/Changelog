@@ -1,3 +1,7 @@
+10 July 2018: Wouter
+	- Note in documentation that the cert name match code needs
+	  OpenSSL 1.1.0 or later to be enabled.
+
 6 July 2018: Wouter
 	- Fix documentation ambiguity for tls-win-cert in tls-upstream and
 	  forward-tls-upstream docs.
