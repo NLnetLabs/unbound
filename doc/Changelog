@@ -1,3 +1,7 @@
+12 July 2018: Wouter
+	- Fix to improve systemd socket activation code file descriptor
+	  assignment.
+
 10 July 2018: Wouter
 	- Note in documentation that the cert name match code needs
 	  OpenSSL 1.1.0 or later to be enabled.
