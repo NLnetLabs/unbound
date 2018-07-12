@@ -1,6 +1,8 @@
 12 July 2018: Wouter
 	- Fix to improve systemd socket activation code file descriptor
 	  assignment.
+	- Fix for 4126 that the #define for UNKNOWN_SERVER_NICENESS can be more
+	  easily changed to adjust default rtt assumptions.
 
 10 July 2018: Wouter
 	- Note in documentation that the cert name match code needs

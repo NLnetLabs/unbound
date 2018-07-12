@@ -48,6 +48,7 @@
 #include "services/outside_network.h"
 #include "services/listen_dnsport.h"
 #include "services/cache/infra.h"
+#include "iterator/iterator.h"
 #include "util/data/msgparse.h"
 #include "util/data/msgreply.h"
 #include "util/data/msgencode.h"
@@ -1884,7 +1885,7 @@ serviced_tcp_send(struct serviced_query* sq, sldns_buffer* buff)
 	sq->last_sent_time = *sq->outnet->now_tv;
 	if(sq->tcp_upstream || sq->ssl_upstream) {
 		timeout = rtt;
-		if(rtt >= 376 && rtt < TCP_AUTH_QUERY_TIMEOUT)
+		if(rtt >= UNKNOWN_SERVER_NICENESS && rtt < TCP_AUTH_QUERY_TIMEOUT)
 			timeout = TCP_AUTH_QUERY_TIMEOUT;
 	} else {
 		timeout = TCP_AUTH_QUERY_TIMEOUT;
