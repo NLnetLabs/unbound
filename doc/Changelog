@@ -1,3 +1,7 @@
+16 July 2018: Wouter
+	- Fix qname minimisation NXDOMAIN validation lookup failures causing
+	  error_supers assertion fails.
+
 12 July 2018: Wouter
 	- Fix to improve systemd socket activation code file descriptor
 	  assignment.

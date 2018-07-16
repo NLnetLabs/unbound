@@ -230,11 +230,12 @@ error_supers(struct module_qstate* qstate, int id, struct module_qstate* super)
 				qstate->qinfo.qname, qstate->qinfo.qname_len);
 		if(!dpns) {
 			/* not interested */
+			/* this can happen, for eg. qname minimisation asked
+			 * for an NXDOMAIN to be validated, and used qtype
+			 * A for that, and the error of that, the name, is
+			 * not listed in super_iq->dp */
 			verbose(VERB_ALGO, "subq error, but not interested");
 			log_query_info(VERB_ALGO, "superq", &super->qinfo);
-			if(super_iq->dp)
-				delegpt_log(VERB_ALGO, super_iq->dp);
-			log_assert(0);
 			return;
 		} else {
 			/* see if the failure did get (parent-lame) info */
