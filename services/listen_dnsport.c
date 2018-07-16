@@ -574,7 +574,7 @@ create_udp_sock(int family, int socktype, struct sockaddr* addr,
 		if(family==AF_INET6 && errno==EINVAL)
 			*noproto = 1;
 		else if(errno != EADDRINUSE &&
-			!(errno == EACCES && verbosity < 4)) {
+			!(errno == EACCES && verbosity < 4 && !listen)) {
 			log_err_addr("can't bind socket", strerror(errno),
 				(struct sockaddr_storage*)addr, addrlen);
 		}
@@ -583,7 +583,7 @@ create_udp_sock(int family, int socktype, struct sockaddr* addr,
 #else /* USE_WINSOCK */
 		if(WSAGetLastError() != WSAEADDRINUSE &&
 			WSAGetLastError() != WSAEADDRNOTAVAIL &&
-			!(WSAGetLastError() == WSAEACCES && verbosity < 4)) {
+			!(WSAGetLastError() == WSAEACCES && verbosity < 4 && !listen)) {
 			log_err_addr("can't bind socket", 
 				wsa_strerror(WSAGetLastError()),
 				(struct sockaddr_storage*)addr, addrlen);
