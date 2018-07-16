@@ -573,7 +573,8 @@ create_udp_sock(int family, int socktype, struct sockaddr* addr,
 		/* detect freebsd jail with no ipv6 permission */
 		if(family==AF_INET6 && errno==EINVAL)
 			*noproto = 1;
-		else if(errno != EADDRINUSE) {
+		else if(errno != EADDRINUSE &&
+			!(errno == EACCES && verbosity < 4)) {
 			log_err_addr("can't bind socket", strerror(errno),
 				(struct sockaddr_storage*)addr, addrlen);
 		}
@@ -581,7 +582,8 @@ create_udp_sock(int family, int socktype, struct sockaddr* addr,
 		close(s);
 #else /* USE_WINSOCK */
 		if(WSAGetLastError() != WSAEADDRINUSE &&
-			WSAGetLastError() != WSAEADDRNOTAVAIL) {
+			WSAGetLastError() != WSAEADDRNOTAVAIL &&
+			!(WSAGetLastError() == WSAEACCES && verbosity < 4)) {
 			log_err_addr("can't bind socket", 
 				wsa_strerror(WSAGetLastError()),
 				(struct sockaddr_storage*)addr, addrlen);

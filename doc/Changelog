@@ -1,6 +1,8 @@
 16 July 2018: Wouter
 	- Fix qname minimisation NXDOMAIN validation lookup failures causing
 	  error_supers assertion fails.
+	- Squelch can't bind socket errors with Permission denied unless
+	  verbosity is 4 or higher, for UDP sockets.
 
 12 July 2018: Wouter
 	- Fix to improve systemd socket activation code file descriptor
