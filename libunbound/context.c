@@ -71,9 +71,8 @@ context_finalize(struct ub_ctx* ctx)
 		return UB_INITFAIL;
 	if(!auth_zones_apply_cfg(ctx->env->auth_zones, cfg, 1))
 		return UB_INITFAIL;
-	if(!ctx->env->msg_cache ||
-	   cfg->msg_cache_slabs != ctx->env->msg_cache->size ||
-	   (cfg->msg_cache_size/cfg->msg_cache_slabs)*cfg->msg_cache_slabs != slabhash_get_size(ctx->env->msg_cache)) {
+	if(!slabhash_is_size(ctx->env->msg_cache, cfg->msg_cache_size,
+		cfg->msg_cache_slabs)) {
 		slabhash_delete(ctx->env->msg_cache);
 		ctx->env->msg_cache = slabhash_create(cfg->msg_cache_slabs,
 			HASH_DEFAULT_STARTARRAY, cfg->msg_cache_size,
