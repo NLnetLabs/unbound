@@ -2,6 +2,8 @@
 	- Fix #4127 unbound -h does not list -p help.
 	- Print error if SSL name verification configured but not available
 	  in the ssl library.
+	- Fix that ratelimit and ip-ratelimit are applied after reload of
+	  changed config file.
 
 16 July 2018: Wouter
 	- Fix qname minimisation NXDOMAIN validation lookup failures causing
