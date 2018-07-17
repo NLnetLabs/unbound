@@ -1950,6 +1950,11 @@ parse_delegpt(RES* ssl, char* args, uint8_t* nm, int allow_names)
 				return NULL;
 			}
 		} else {
+#ifndef HAVE_SSL_SET1_HOST
+			if(auth_name)
+			  log_err("no name verification functionality in "
+				"ssl library, ignored name for %s", p->str);
+#endif
 			/* add address */
 			if(!delegpt_add_addr_mlc(dp, &addr, addrlen, 0, 0,
 				auth_name)) {

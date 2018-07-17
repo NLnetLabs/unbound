@@ -239,6 +239,11 @@ read_fwds_addr(struct config_stub* s, struct delegpt* dp)
 				s->name, p->str);
 			return 0;
 		}
+#ifndef HAVE_SSL_SET1_HOST
+		if(tls_auth_name)
+			log_err("no name verification functionality in "
+				"ssl library, ignored name for %s", p->str);
+#endif
 		if(!delegpt_add_addr_mlc(dp, &addr, addrlen, 0, 0,
 			tls_auth_name)) {
 			log_err("out of memory");
