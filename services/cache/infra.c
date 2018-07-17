@@ -305,9 +305,9 @@ infra_adjust(struct infra_cache* infra, struct config_file* cfg)
 	if(maxmem != slabhash_get_size(infra->hosts) ||
 		cfg->infra_cache_slabs != infra->hosts->size ||
 		cfg->ratelimit_slabs != infra->domain_rates->size ||
-		cfg->ratelimit_size/cfg->ratelimit_slabs*cfg->ratelimit_slabs != slabhash_get_size(infra->domain_rates) ||
+		(cfg->ratelimit_size/cfg->ratelimit_slabs)*cfg->ratelimit_slabs != slabhash_get_size(infra->domain_rates) ||
 		cfg->ip_ratelimit_slabs != infra->client_ip_rates->size ||
-		cfg->ip_ratelimit_size/cfg->ip_ratelimit_slabs*cfg->ip_ratelimit_slabs != slabhash_get_size(infra->client_ip_rates)) {
+		(cfg->ip_ratelimit_size/cfg->ip_ratelimit_slabs)*cfg->ip_ratelimit_slabs != slabhash_get_size(infra->client_ip_rates)) {
 		infra_delete(infra);
 		infra = infra_create(cfg);
 	} else {
