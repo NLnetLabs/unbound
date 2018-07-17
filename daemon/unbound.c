@@ -101,6 +101,7 @@ static void usage(void)
 	printf("-c file	config file to read instead of %s\n", CONFIGFILE);
 	printf("	file format is described in unbound.conf(5).\n");
 	printf("-d	do not fork into the background.\n");
+	printf("-p	do not create a pidfile.\n");
 	printf("-v	verbose (more times to increase verbosity)\n");
 #ifdef UB_ON_WINDOWS
 	printf("-w opt	windows option: \n");
