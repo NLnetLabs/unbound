@@ -804,8 +804,8 @@ void daemon_apply_cfg(struct daemon* daemon, struct config_file* cfg)
         daemon->cfg = cfg;
 	config_apply(cfg);
 	if(!daemon->env->msg_cache ||
-	   cfg->msg_cache_size != slabhash_get_size(daemon->env->msg_cache) ||
-	   cfg->msg_cache_slabs != daemon->env->msg_cache->size) {
+	   cfg->msg_cache_slabs != daemon->env->msg_cache->size ||
+	   (cfg->msg_cache_size/cfg->msg_cache_slabs)*cfg->msg_cache_slabs != slabhash_get_size(daemon->env->msg_cache)) {
 		slabhash_delete(daemon->env->msg_cache);
 		daemon->env->msg_cache = slabhash_create(cfg->msg_cache_slabs,
 			HASH_DEFAULT_STARTARRAY, cfg->msg_cache_size,
