@@ -1,3 +1,7 @@
+19 July 2018: Wouter
+	- Fix #4129 unbound-control error message with wrong cert permissions
+	  is too cryptic.
+
 17 July 2018: Wouter
 	- Fix #4127 unbound -h does not list -p help.
 	- Print error if SSL name verification configured but not available
