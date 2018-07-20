@@ -335,12 +335,12 @@ AC_DEFUN([ACX_YYLEX_OPTION], [
 EOF
 		AC_MSG_RESULT(yes)
 	else AC_MSG_RESULT(no);
-		LEX=""
+		LEX=":"
 	fi
 ])
 
 AC_PROG_LEX
-if test "$LEX" != ""; then
+if test "$LEX" != "" -a "$LEX" != ":"; then
 ACX_YYLEX_DESTROY
 ACX_YYLEX_OPTION
 fi

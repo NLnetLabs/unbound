@@ -6435,7 +6435,7 @@ fi
 rm -f conftest.l $LEX_OUTPUT_ROOT.c
 
 fi
-if test "$LEX" != ""; then
+if test "$LEX" != "" -a "$LEX" != ":"; then
 
 	{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for yylex_destroy" >&5
 $as_echo_n "checking for yylex_destroy... " >&6; }
@@ -6459,7 +6459,7 @@ EOF
 $as_echo "yes" >&6; }
 	else { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
 $as_echo "no" >&6; };
-		LEX=""
+		LEX=":"
 	fi
 
 fi
