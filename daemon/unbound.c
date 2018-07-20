@@ -627,8 +627,10 @@ run_daemon(const char* cfgfile, int cmdline_verbose, int debug_mode, const char*
 			fatal_exit("Could not alloc config defaults");
 		if(!config_read(cfg, cfgfile, daemon->chroot)) {
 			if(errno != ENOENT)
-				fatal_exit("Could not read config file: %s",
-					cfgfile);
+				fatal_exit("Could not read config file: %s."
+					" With unbound -dd it stays on the "
+					" commandline to see more errors, "
+					" or unbound-checkconf", cfgfile);
 			log_warn("Continuing with default config settings");
 		}
 		apply_settings(daemon, cfg, cmdline_verbose, debug_mode, log_default_identity);

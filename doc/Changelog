@@ -1,3 +1,8 @@
+20 July 2018: Wouter
+	- Fix #4130: print text describing -dd and unbound-checkconf on
+	  config file read error at startup, the errors may have been moved
+	  away by the startup process.
+
 19 July 2018: Wouter
 	- Fix #4129 unbound-control error message with wrong cert permissions
 	  is too cryptic.
