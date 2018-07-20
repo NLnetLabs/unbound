@@ -628,8 +628,8 @@ run_daemon(const char* cfgfile, int cmdline_verbose, int debug_mode, const char*
 		if(!config_read(cfg, cfgfile, daemon->chroot)) {
 			if(errno != ENOENT)
 				fatal_exit("Could not read config file: %s."
-					" With unbound -dd it stays on the "
-					"commandline to see more errors, "
+					" Maybe try unbound -dd, it stays on "
+					"the commandline to see more errors, "
 					"or unbound-checkconf", cfgfile);
 			log_warn("Continuing with default config settings");
 		}
