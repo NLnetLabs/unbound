@@ -327,8 +327,23 @@ AC_DEFUN([ACX_YYLEX_DESTROY], [
 	else AC_MSG_RESULT(no); fi
 ])
 
+AC_DEFUN([ACX_YYLEX_OPTION], [
+	AC_MSG_CHECKING([for lex %option])
+	if cat <<EOF | $LEX -t 2>&1 | grep yy_delete_buffer >/dev/null 2>&1; then
+%option nounput
+%%
+EOF
+		AC_MSG_RESULT(yes)
+	else AC_MSG_RESULT(no);
+		LEX=""
+	fi
+])
+
 AC_PROG_LEX
+if test "$LEX" != ""; then
 ACX_YYLEX_DESTROY
+ACX_YYLEX_OPTION
+fi
 AC_PROG_YACC
 AC_CHECK_PROG(doxygen, doxygen, doxygen)
 AC_CHECK_TOOL(STRIP, strip)

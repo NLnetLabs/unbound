@@ -6274,6 +6274,8 @@ fi
 
 
 
+
+
 for ac_prog in flex lex
 do
   # Extract the first word of "$ac_prog", so it can be a program name with args.
@@ -6433,6 +6435,7 @@ fi
 rm -f conftest.l $LEX_OUTPUT_ROOT.c
 
 fi
+if test "$LEX" != ""; then
 
 	{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for yylex_destroy" >&5
 $as_echo_n "checking for yylex_destroy... " >&6; }
@@ -6445,6 +6448,21 @@ $as_echo "yes" >&6; }
 	else { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
 $as_echo "no" >&6; }; fi
 
+
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for lex %option" >&5
+$as_echo_n "checking for lex %option... " >&6; }
+	if cat <<EOF | $LEX -t 2>&1 | grep yy_delete_buffer >/dev/null 2>&1; then
+%option nounput
+%%
+EOF
+		{ $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+	else { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; };
+		LEX=""
+	fi
+
+fi
 for ac_prog in 'bison -y' byacc
 do
   # Extract the first word of "$ac_prog", so it can be a program name with args.
