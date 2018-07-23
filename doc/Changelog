@@ -1,3 +1,7 @@
+23 July 2018: Wouter
+	- Fix use-systemd readiness signalling, only when use-systemd is yes
+	  and not in signal handler.
+
 20 July 2018: Wouter
 	- Fix #4130: print text describing -dd and unbound-checkconf on
 	  config file read error at startup, the errors may have been moved
