@@ -368,9 +368,9 @@ if [ "$DOWIN" = "yes" ]; then
     info "Creating installer"
     quadversion=`cat ../config.h | grep RSRC_PACKAGE_VERSION | sed -e 's/#define RSRC_PACKAGE_VERSION //' -e 's/,/\\./g'`
     cat ../winrc/setup.nsi | sed -e 's/define VERSION.*$/define VERSION "'$version'"/' -e 's/define QUADVERSION.*$/define QUADVERSION "'$quadversion'"/' > ../winrc/setup_ed.nsi
-    if test "$W64" = "yes"; then
+    if test "$W64" = "no"; then
 	mv ../winrc/setup_ed.nsi ../winrc/setup_ed_old.nsi
-	cat ../winrc/setup_ed_old.nsi | sed -e 's/PROGRAMFILES/PROGRAMFILES64/' > ../winrc/setup_ed.nsi
+	cat ../winrc/setup_ed_old.nsi | sed -e 's/PROGRAMFILES64/PROGRAMFILES/' -e 's/SetRegView 64/SetRegView 32/' > ../winrc/setup_ed.nsi
     fi
     "$makensis" ../winrc/setup_ed.nsi
     info "Created installer"

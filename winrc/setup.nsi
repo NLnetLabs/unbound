@@ -14,7 +14,8 @@ outFile "unbound_setup_${VERSION}.exe"
 Name "Unbound"
 
 # default install directory
-installDir "$PROGRAMFILES\Unbound"
+SetRegView 64
+installDir "$PROGRAMFILES64\Unbound"
 installDirRegKey HKLM "Software\Unbound" "InstallLocation"
 RequestExecutionLevel admin
 #give credits to Nullsoft: BrandingText ""
