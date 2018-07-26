@@ -1,6 +1,6 @@
 26 July 2018: Wouter
 	- Fix #4135: 64-bit Windows Installer Creates Entries Under The
-	  Wrong Registry Key.
+	  Wrong Registry Key, reported by Brian White.
 
 23 July 2018: Wouter
 	- Fix use-systemd readiness signalling, only when use-systemd is yes
