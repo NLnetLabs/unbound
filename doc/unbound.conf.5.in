@@ -557,8 +557,9 @@ to chroot and dropping permissions. This allows the pidfile to be
 Additionally, unbound may need to access /dev/random (for entropy)
 from inside the chroot.
 .IP
-If given a chroot is done to the given directory. The default is
-"@UNBOUND_CHROOT_DIR@". If you give "" no chroot is performed.
+If given a chroot is done to the given directory. By default chroot is
+enabled and the default is "@UNBOUND_CHROOT_DIR@". If you give "" no
+chroot is performed.
 .TP
 .B username: \fI<name>
 If given, after binding the port the user privileges are dropped. Default is

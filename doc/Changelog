@@ -1,3 +1,6 @@
+27 July 2018: Wouter
+	- Fix man page, say that chroot is enabled by default.
+
 26 July 2018: Wouter
 	- Fix #4135: 64-bit Windows Installer Creates Entries Under The
 	  Wrong Registry Key, reported by Brian White.
