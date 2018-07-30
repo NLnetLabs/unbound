@@ -1,3 +1,7 @@
+30 July 2018: Wouter
+	- Fix #4136: insufficiency from mismatch of FLEX capability between
+	  released tarball and build host.
+
 27 July 2018: Wouter
 	- Fix man page, say that chroot is enabled by default.
 
