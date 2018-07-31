@@ -730,6 +730,7 @@ comm_point_udp_callback(int fd, short event, void* arg)
 static void
 setup_tcp_handler(struct comm_point* c, int fd, int cur, int max) 
 {
+	int handler_usage;
 	log_assert(c->type == comm_tcp);
 	log_assert(c->fd == -1);
 	sldns_buffer_clear(c->buffer);
@@ -742,7 +743,12 @@ setup_tcp_handler(struct comm_point* c, int fd, int cur, int max)
 	/* if more than half the tcp handlers are in use, use a shorter
 	 * timeout for this TCP connection, we need to make space for
 	 * other connections to be able to get attention */
-	if(cur > max/2)
+	handler_usage = (cur * 100) / max;
+	if(handler_usage > 50 && handler_usage <= 65)
+		c->tcp_timeout_msec /= 100;
+	else if (handler_usage > 65 && handler_usage <= 80)
+		c->tcp_timeout_msec /= 500;
+	else if (handler_usage > 80)
 		c->tcp_timeout_msec = 0;
 	comm_point_start_listening(c, fd,
 		c->tcp_timeout_msec < TCP_QUERY_TIMEOUT_MINIMUM
