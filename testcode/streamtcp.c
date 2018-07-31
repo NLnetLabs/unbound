@@ -410,7 +410,8 @@ int main(int argc, char** argv)
 				break;
 			case 'd':
 				if(atoi(optarg)==0 && strcmp(optarg,"0")!=0) {
-					printf("bad delay: %s\n", optarg);
+					printf("error parsing delay, "
+					    "number expected: %s\n", optarg);
 					return 1;
 				}
 				delay = atoi(optarg);
