@@ -99,6 +99,8 @@ struct config_file {
 	int tcp_mss;
 	/** maximum segment size of tcp socket for outgoing queries */
 	int outgoing_tcp_mss;
+	/** tcp idle timeout */
+	int tcp_idle_timeout;
 
 	/** private key file for dnstcp-ssl service (enabled if not NULL) */
 	char* ssl_service_key;

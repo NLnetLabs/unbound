@@ -856,6 +856,7 @@ run_scenario(struct replay_runtime* runtime)
 struct listen_dnsport* 
 listen_create(struct comm_base* base, struct listen_port* ATTR_UNUSED(ports),
 	size_t bufsize, int ATTR_UNUSED(tcp_accept_count),
+	int ATTR_UNUSED(tcp_idle_timeout),
 	void* ATTR_UNUSED(sslctx), struct dt_env* ATTR_UNUSED(dtenv),
 	comm_point_callback_type* cb, void* cb_arg)
 {

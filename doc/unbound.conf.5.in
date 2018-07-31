@@ -389,6 +389,11 @@ Note that not all platform supports socket option to set MSS (TCP_MAXSEG).
 Default is system default MSS determined by interface MTU and
 negotiation between Unbound and other servers.
 .TP
+.B tcp-idle-timeout: \fI<msec>\fR
+The period Unbound will wait for a query on a TCP connection.
+If this timeout expires Unbound closes the connection.
+This option defaults to 30000 milliseconds.
+.TP
 .B tcp\-upstream: \fI<yes or no>
 Enable or disable whether the upstream queries use TCP only for transport.
 Default is no.  Useful in tunneling scenarios.

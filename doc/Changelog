@@ -1,3 +1,16 @@
+31 July 2018: Wouter
+	- Patches from Jim Hague (Sinodun) for EDNS KeepAlive.
+	- Sort out test runs when the build directory isn't the project
+	  root directory.
+	- Add config tcp-idle-timeout (default 30s). This applies to
+	  client connections only; the timeout on TCP connections upstream
+	  is unaffected.
+	- Error if EDNS Keepalive received over UDP.
+	- Add edns-tcp-keepalive and edns-tcp-keepalive timeout options
+	  and implement option in client responses.
+	- Correct and expand manual page entries for keepalive and idle timeout.
+	- Implement progressive backoff of TCP idle/keepalive timeout.
+
 30 July 2018: Wouter
 	- Fix #4136: insufficiency from mismatch of FLEX capability between
 	  released tarball and build host.

@@ -233,6 +233,7 @@ do-tcp{COLON}			{ YDVAR(1, VAR_DO_TCP) }
 tcp-upstream{COLON}		{ YDVAR(1, VAR_TCP_UPSTREAM) }
 tcp-mss{COLON}			{ YDVAR(1, VAR_TCP_MSS) }
 outgoing-tcp-mss{COLON}		{ YDVAR(1, VAR_OUTGOING_TCP_MSS) }
+tcp-idle-timeout{COLON}		{ YDVAR(1, VAR_TCP_IDLE_TIMEOUT) }
 ssl-upstream{COLON}		{ YDVAR(1, VAR_SSL_UPSTREAM) }
 tls-upstream{COLON}		{ YDVAR(1, VAR_SSL_UPSTREAM) }
 ssl-service-key{COLON}		{ YDVAR(1, VAR_SSL_SERVICE_KEY) }

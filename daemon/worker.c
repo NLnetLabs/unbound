@@ -1708,9 +1708,9 @@ worker_init(struct worker* worker, struct config_file *cfg,
 		worker->comsig = NULL;
 	}
 	worker->front = listen_create(worker->base, ports,
-		cfg->msg_buffer_size, (int)cfg->incoming_num_tcp, 
-		worker->daemon->listen_sslctx, dtenv, worker_handle_request,
-		worker);
+		cfg->msg_buffer_size, (int)cfg->incoming_num_tcp,
+		cfg->tcp_idle_timeout, worker->daemon->listen_sslctx,
+		dtenv, worker_handle_request, worker);
 	if(!worker->front) {
 		log_err("could not create listening sockets");
 		worker_delete(worker);

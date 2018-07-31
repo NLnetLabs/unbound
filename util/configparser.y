@@ -72,7 +72,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_SERVER VAR_VERBOSITY VAR_NUM_THREADS VAR_PORT
 %token VAR_OUTGOING_RANGE VAR_INTERFACE
 %token VAR_DO_IP4 VAR_DO_IP6 VAR_PREFER_IP6 VAR_DO_UDP VAR_DO_TCP
-%token VAR_TCP_MSS VAR_OUTGOING_TCP_MSS
+%token VAR_TCP_MSS VAR_OUTGOING_TCP_MSS VAR_TCP_IDLE_TIMEOUT
 %token VAR_CHROOT VAR_USERNAME VAR_DIRECTORY VAR_LOGFILE VAR_PIDFILE
 %token VAR_MSG_CACHE_SIZE VAR_MSG_CACHE_SLABS VAR_NUM_QUERIES_PER_THREAD
 %token VAR_RRSET_CACHE_SIZE VAR_RRSET_CACHE_SLABS VAR_OUTGOING_NUM_TCP
@@ -180,7 +180,7 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_outgoing_range | server_do_ip4 |
 	server_do_ip6 | server_prefer_ip6 |
 	server_do_udp | server_do_tcp |
-	server_tcp_mss | server_outgoing_tcp_mss |
+	server_tcp_mss | server_outgoing_tcp_mss | server_tcp_idle_timeout |
 	server_interface | server_chroot | server_username | 
 	server_directory | server_logfile | server_pidfile |
 	server_msg_cache_size | server_msg_cache_slabs |
@@ -628,6 +628,19 @@ server_outgoing_tcp_mss: VAR_OUTGOING_TCP_MSS STRING_ARG
 		if(atoi($2) == 0 && strcmp($2, "0") != 0)
 			yyerror("number expected");
 		else cfg_parser->cfg->outgoing_tcp_mss = atoi($2);
+		free($2);
+	}
+	;
+server_tcp_idle_timeout: VAR_TCP_IDLE_TIMEOUT STRING_ARG
+	{
+		OUTYY(("P(server_tcp_idle_timeout:%s)\n", $2));
+		if(atoi($2) == 0 && strcmp($2, "0") != 0)
+			yyerror("number expected");
+		else if (atoi($2) > 120000)
+			cfg_parser->cfg->tcp_idle_timeout = 120000;
+		else if (atoi($2) < 1)
+			cfg_parser->cfg->tcp_idle_timeout = 1;
+		else cfg_parser->cfg->tcp_idle_timeout = atoi($2);
 		free($2);
 	}
 	;

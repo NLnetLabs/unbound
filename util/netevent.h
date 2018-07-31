@@ -443,6 +443,7 @@ struct comm_point* comm_point_create_udp_ancil(struct comm_base* base,
  * @param fd: file descriptor of open TCP socket set to listen nonblocking.
  * @param num: becomes max_tcp_count, the routine allocates that
  *	many tcp handler commpoints.
+ * @param idle_timeout: TCP idle timeout in ms.
  * @param bufsize: size of buffer to create for handlers.
  * @param callback: callback function pointer for TCP handlers.
  * @param callback_arg: will be passed to your callback function.
@@ -452,7 +453,7 @@ struct comm_point* comm_point_create_udp_ancil(struct comm_base* base,
  * Inits timeout to NULL. All handlers are on the free list.
  */
 struct comm_point* comm_point_create_tcp(struct comm_base* base,
-	int fd, int num, size_t bufsize, 
+	int fd, int num, int idle_timeout, size_t bufsize, 
 	comm_point_callback_type* callback, void* callback_arg);
 
 /**
