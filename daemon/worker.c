@@ -1246,29 +1246,52 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 		server_stats_insrcode(&worker->stats, c->buffer);
 		goto send_reply;
 	}
-	if(edns.edns_present && edns.edns_version != 0) {
-		edns.ext_rcode = (uint8_t)(EDNS_RCODE_BADVERS>>4);
-		edns.edns_version = EDNS_ADVERTISED_VERSION;
-		edns.udp_size = EDNS_ADVERTISED_SIZE;
-		edns.bits &= EDNS_DO;
-		edns.opt_list = NULL;
-		verbose(VERB_ALGO, "query with bad edns version.");
-		log_addr(VERB_CLIENT,"from",&repinfo->addr, repinfo->addrlen);
-		error_encode(c->buffer, EDNS_RCODE_BADVERS&0xf, &qinfo,
-			*(uint16_t*)(void *)sldns_buffer_begin(c->buffer),
-			sldns_buffer_read_u16_at(c->buffer, 2), NULL);
-		if(sldns_buffer_capacity(c->buffer) >=
-			sldns_buffer_limit(c->buffer)+calc_edns_field_size(&edns))
-			attach_edns_record(c->buffer, &edns);
-		regional_free_all(worker->scratchpad);
-		goto send_reply;
-	}
-	if(edns.edns_present && edns.udp_size < NORMAL_UDP_SIZE &&
-		worker->daemon->cfg->harden_short_bufsize) {
-		verbose(VERB_QUERY, "worker request: EDNS bufsize %d ignored",
-			(int)edns.udp_size);
-		log_addr(VERB_CLIENT,"from",&repinfo->addr, repinfo->addrlen);
-		edns.udp_size = NORMAL_UDP_SIZE;
+	if(edns.edns_present) {
+		struct edns_option* edns_opt;
+		if(edns.edns_version != 0) {
+			edns.ext_rcode = (uint8_t)(EDNS_RCODE_BADVERS>>4);
+			edns.edns_version = EDNS_ADVERTISED_VERSION;
+			edns.udp_size = EDNS_ADVERTISED_SIZE;
+			edns.bits &= EDNS_DO;
+			edns.opt_list = NULL;
+			verbose(VERB_ALGO, "query with bad edns version.");
+			log_addr(VERB_CLIENT,"from",&repinfo->addr, repinfo->addrlen);
+			error_encode(c->buffer, EDNS_RCODE_BADVERS&0xf, &qinfo,
+				*(uint16_t*)(void *)sldns_buffer_begin(c->buffer),
+				sldns_buffer_read_u16_at(c->buffer, 2), NULL);
+			if(sldns_buffer_capacity(c->buffer) >=
+			   sldns_buffer_limit(c->buffer)+calc_edns_field_size(&edns))
+				attach_edns_record(c->buffer, &edns);
+			regional_free_all(worker->scratchpad);
+			goto send_reply;
+		}
+		if(edns.udp_size < NORMAL_UDP_SIZE &&
+		   worker->daemon->cfg->harden_short_bufsize) {
+			verbose(VERB_QUERY, "worker request: EDNS bufsize %d ignored",
+				(int)edns.udp_size);
+			log_addr(VERB_CLIENT,"from",&repinfo->addr, repinfo->addrlen);
+			edns.udp_size = NORMAL_UDP_SIZE;
+		}
+		edns_opt = edns_opt_list_find(edns.opt_list, LDNS_EDNS_KEEPALIVE);
+		if(edns_opt && c->type != comm_udp) {
+			if(edns_opt->opt_len > 0) {
+				edns.ext_rcode = 0;
+				edns.edns_version = EDNS_ADVERTISED_VERSION;
+				edns.udp_size = EDNS_ADVERTISED_SIZE;
+				edns.bits &= EDNS_DO;
+				edns.opt_list = NULL;
+				verbose(VERB_ALGO, "query with bad edns keepalive.");
+				log_addr(VERB_CLIENT,"from",&repinfo->addr, repinfo->addrlen);
+				error_encode(c->buffer, LDNS_RCODE_FORMERR, &qinfo,
+					*(uint16_t*)(void *)sldns_buffer_begin(c->buffer),
+					sldns_buffer_read_u16_at(c->buffer, 2), NULL);
+				if(sldns_buffer_capacity(c->buffer) >=
+				   sldns_buffer_limit(c->buffer)+calc_edns_field_size(&edns))
+					attach_edns_record(c->buffer, &edns);
+				regional_free_all(worker->scratchpad);
+				goto send_reply;
+			}
+		}
 	}
 	if(edns.udp_size > worker->daemon->cfg->max_udp_size &&
 		c->type == comm_udp) {
