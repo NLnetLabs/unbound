@@ -10,8 +10,9 @@
 	  and implement option in client responses.
 	- Correct and expand manual page entries for keepalive and idle timeout.
 	- Implement progressive backoff of TCP idle/keepalive timeout.
+	- Fix 'make depend' to work when build dir is not project root.
 	- From Wouter: make depend, the dependencies in the patches did not
-	  apply cleanly.
+	  apply cleanly.  Also remade yacc and lex.
 	- Fix mesh.c incompatible pointer pass.
 
 30 July 2018: Wouter

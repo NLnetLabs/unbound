@@ -588,7 +588,7 @@ iana_update:
 DEPEND_TMP=depend1073.tmp
 DEPEND_TMP2=depend1074.tmp
 DEPEND_TARGET=Makefile
-DEPEND_TARGET2=Makefile.in
+DEPEND_TARGET2=$(srcdir)/Makefile.in
 # actions: generate deplines from gcc,
 # then, filter out home/xx, /usr/xx and /opt/xx lines (some cc already do this)
 # then, remove empty " \" lines
@@ -596,7 +596,8 @@ DEPEND_TARGET2=Makefile.in
 # then, remove srcdir from the (generated) parser and lexer.
 # and mention the .lo
 depend:
-	(cd $(srcdir) ; $(CC) $(DEPFLAG) $(CPPFLAGS) $(CFLAGS) @PTHREAD_CFLAGS_ONLY@ $(ALL_SRC) $(COMPAT_SRC)) | \
+	(BUILDDIR=$$PWD; cd $(srcdir) ; $(CC) $(DEPFLAG) $(CPPFLAGS) $(CFLAGS) -I$$BUILDDIR @PTHREAD_CFLAGS_ONLY@ $(ALL_SRC) $(COMPAT_SRC)) | \
+		sed -e 's?'$$PWD'/config.h?config.h?g' | \
 		sed -e 's!'$$HOME'[^ ]* !!g' -e 's!'$$HOME'[^ ]*$$!!g' \
 			-e 's!/usr[^ ]* !!g' -e 's!/usr[^ ]*$$!!g' \
 			-e 's!/opt[^ ]* !!g' -e 's!/opt[^ ]*$$!!g' | \
