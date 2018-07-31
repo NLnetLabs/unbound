@@ -99,11 +99,11 @@ struct config_file {
 	int tcp_mss;
 	/** maximum segment size of tcp socket for outgoing queries */
 	int outgoing_tcp_mss;
-	/** tcp idle timeout */
+	/** tcp idle timeout, in msec */
 	int tcp_idle_timeout;
 	/** do edns tcp keepalive */
 	int do_tcp_keepalive;
-	/** tcp keepalive timeout */
+	/** tcp keepalive timeout, in msec */
 	int tcp_keepalive_timeout;
 
 	/** private key file for dnstcp-ssl service (enabled if not NULL) */

@@ -54,6 +54,7 @@ struct regional;
  * @param edns_in: initialised edns information with received edns.
  * @param cfg: configuration.
  * @param c: comm channel.
+ * @param region: the region to allocate the edns options in.
  */
 int apply_edns_options(struct edns_data* edns_out, struct edns_data* edns_in,
 	struct config_file* cfg, struct comm_point* c, struct regional* region);

@@ -137,6 +137,7 @@ void listening_ports_free(struct listen_port* list);
  * @param bufsize: size of datagram buffer.
  * @param tcp_accept_count: max number of simultaneous TCP connections 
  * 	from clients.
+ * @param tcp_idle_timeout: idle timeout for TCP connections in msec.
  * @param sslctx: nonNULL if ssl context.
  * @param dtenv: nonNULL if dnstap enabled.
  * @param cb: callback function when a request arrives. It is passed

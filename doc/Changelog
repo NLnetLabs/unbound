@@ -16,6 +16,7 @@
 	- From Wouter: make depend, the dependencies in the patches did not
 	  apply cleanly.  Also remade yacc and lex.
 	- Fix mesh.c incompatible pointer pass.
+	- Please doxygen so it passes.
 
 30 July 2018: Wouter
 	- Fix #4136: insufficiency from mismatch of FLEX capability between
