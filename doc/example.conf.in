@@ -215,6 +215,12 @@ server:
 	# Idle TCP timeout, connection closed in milliseconds
 	# tcp-idle-timeout: 30000
 
+	# Enable EDNS TCP keepalive option.
+	# edns-tcp-keepalive: no
+
+	# Timeout for EDNS TCP keepalive, in msec.
+	# edns-tcp-keepalive-timeout: 120000
+
 	# Use systemd socket activation for UDP, TCP, and control sockets.
 	# use-systemd: no
 
