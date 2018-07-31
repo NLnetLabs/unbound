@@ -62,8 +62,8 @@ static int edns_keepalive(struct edns_data* edns_out, struct edns_data* edns_in,
 		edns_opt_list_find(edns_in->opt_list, LDNS_EDNS_KEEPALIVE)) {
 		int keepalive = c->tcp_timeout_msec / 100;
 		uint8_t data[2];
-		data[0] = (keepalive >> 8) & 0xff;
-		data[1] = keepalive & 0xff;
+		data[0] = (uint8_t)((keepalive >> 8) & 0xff);
+		data[1] = (uint8_t)(keepalive & 0xff);
 		if(!edns_opt_list_append(&edns_out->opt_list, LDNS_EDNS_KEEPALIVE,
 			sizeof(data), data, region))
 			return 0;
