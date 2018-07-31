@@ -212,6 +212,9 @@ server:
 	# Default is 0, system default MSS.
 	# outgoing-tcp-mss: 0
 
+	# Idle TCP timeout, connection closed in milliseconds
+	# tcp-idle-timeout: 30000
+
 	# Use systemd socket activation for UDP, TCP, and control sockets.
 	# use-systemd: no
 

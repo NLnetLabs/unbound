@@ -314,8 +314,13 @@ send_em(const char* svr, int udp, int usessl, int noanswer, int delay,
 		}
 	}
 	for(i=0; i<num; i+=3) {
-		if (delay != 0)
+		if (delay != 0) {
+#ifdef HAVE_SLEEP
 			sleep((unsigned)delay);
+#else
+			Sleep(delay*1000);
+#endif
+		}
 		printf("\nNext query is %s %s %s\n", qs[i], qs[i+1], qs[i+2]);
 		write_q(fd, udp, ssl, buf, (uint16_t)get_random(), qs[i],
 			qs[i+1], qs[i+2]);
