@@ -12,6 +12,7 @@
 	- Implement progressive backoff of TCP idle/keepalive timeout.
 	- From Wouter: make depend, the dependencies in the patches did not
 	  apply cleanly.
+	- Fix mesh.c incompatible pointer pass.
 
 30 July 2018: Wouter
 	- Fix #4136: insufficiency from mismatch of FLEX capability between
