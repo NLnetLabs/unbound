@@ -84,9 +84,8 @@
 
 /** The TCP writing query timeout in milliseconds */
 #define TCP_QUERY_TIMEOUT 120000
-/** The TCP timeout in msec for fast queries, above half are used */
-#define TCP_QUERY_TIMEOUT_FAST 200
-/** The minimum actual TCP timeout to use, regardless of what we advertise */
+/** The minimum actual TCP timeout to use, regardless of what we advertise,
+ * in msec */
 #define TCP_QUERY_TIMEOUT_MINIMUM 200
 
 #ifndef NONBLOCKING_IS_BROKEN
