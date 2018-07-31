@@ -55,6 +55,7 @@
 #include "util/fptr_wlist.h"
 #include "util/alloc.h"
 #include "util/config_file.h"
+#include "util/edns.h"
 #include "sldns/sbuffer.h"
 #include "sldns/wire2str.h"
 #include "services/localzone.h"
@@ -1100,6 +1101,9 @@ mesh_send_reply(struct mesh_state* m, int rcode, struct reply_info* rep,
 		m->s.qinfo.local_alias = r->local_alias;
 		if(!inplace_cb_reply_call(m->s.env, &m->s.qinfo, &m->s, rep,
 			LDNS_RCODE_NOERROR, &r->edns, m->s.region) ||
+			!apply_edns_options(&r->edns, &edns_bak,
+				&m->s.env->cfg, r->query_reply.c,
+				m->s.region) ||
 			!reply_info_answer_encode(&m->s.qinfo, rep, r->qid, 
 			r->qflags, r->query_reply.c->buffer, 0, 1, 
 			m->s.env->scratch, udp_size, &r->edns, 

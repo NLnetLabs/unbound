@@ -394,6 +394,17 @@ The period Unbound will wait for a query on a TCP connection.
 If this timeout expires Unbound closes the connection.
 This option defaults to 30000 milliseconds.
 .TP
+.B edns-tcp-keepalive: \fI<yes or no>\fR
+Enable or disable EDNS TCP Keepalive. Default is no.
+.TP
+.B edns-tcp-keepalive-timeout: \fI<msec>\fR
+The period Unbound will wait for a query on a TCP connection when
+EDNS TCP Keepalive is active. If this timeout expires Unbound closes
+the connection. This option defaults to 120000 milliseconds.
+Unbound sends this value less 200 milliseconds in the EDNS TCP Keepalive
+option to give the client time to close the connection before the server
+times out.
+.TP
 .B tcp\-upstream: \fI<yes or no>
 Enable or disable whether the upstream queries use TCP only for transport.
 Default is no.  Useful in tunneling scenarios.

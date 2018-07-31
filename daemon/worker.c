@@ -66,6 +66,7 @@
 #include "util/data/dname.h"
 #include "util/fptr_wlist.h"
 #include "util/tube.h"
+#include "util/edns.h"
 #include "iterator/iter_fwd.h"
 #include "iterator/iter_hints.h"
 #include "validator/autotrust.h"
@@ -477,6 +478,7 @@ answer_norec_from_cache(struct worker* worker, struct query_info* qinfo,
 	 * Then check if it needs validation, if so, this routine fails,
 	 * so that iterator can prime and validator can verify rrsets.
 	 */
+	struct edns_data edns_bak;
 	uint16_t udpsize = edns->udp_size;
 	int secure = 0;
 	time_t timenow = *worker->env.now;
@@ -534,6 +536,7 @@ answer_norec_from_cache(struct worker* worker, struct query_info* qinfo,
 		}
 	}
 	/* return this delegation from the cache */
+	edns_bak = *edns;
 	edns->edns_version = EDNS_ADVERTISED_VERSION;
 	edns->udp_size = EDNS_ADVERTISED_SIZE;
 	edns->ext_rcode = 0;
@@ -542,7 +545,9 @@ answer_norec_from_cache(struct worker* worker, struct query_info* qinfo,
 		(int)(flags&LDNS_RCODE_MASK), edns, worker->scratchpad))
 			return 0;
 	msg->rep->flags |= BIT_QR|BIT_RA;
-	if(!reply_info_answer_encode(&msg->qinfo, msg->rep, id, flags, 
+	if(!apply_edns_options(edns, &edns_bak, worker->env.cfg,
+		repinfo->c, worker->scratchpad) ||
+		!reply_info_answer_encode(&msg->qinfo, msg->rep, id, flags, 
 		repinfo->c->buffer, 0, 1, worker->scratchpad,
 		udpsize, edns, (int)(edns->bits & EDNS_DO), secure)) {
 		if(!inplace_cb_reply_servfail_call(&worker->env, qinfo, NULL, NULL,
@@ -614,6 +619,7 @@ answer_from_cache(struct worker* worker, struct query_info* qinfo,
 	struct reply_info* rep, uint16_t id, uint16_t flags, 
 	struct comm_reply* repinfo, struct edns_data* edns)
 {
+	struct edns_data edns_bak;
 	time_t timenow = *worker->env.now;
 	uint16_t udpsize = edns->udp_size;
 	struct reply_info* encode_rep = rep;
@@ -695,6 +701,7 @@ answer_from_cache(struct worker* worker, struct query_info* qinfo,
 		}
 	} else	secure = 0;
 
+	edns_bak = *edns;
 	edns->edns_version = EDNS_ADVERTISED_VERSION;
 	edns->udp_size = EDNS_ADVERTISED_SIZE;
 	edns->ext_rcode = 0;
@@ -728,7 +735,9 @@ answer_from_cache(struct worker* worker, struct query_info* qinfo,
 			if(!*partial_repp)
 				goto bail_out;
 		}
-	} else if(!reply_info_answer_encode(qinfo, encode_rep, id, flags,
+	} else if(!apply_edns_options(edns, &edns_bak, worker->env.cfg,
+		repinfo->c, worker->scratchpad) ||
+		!reply_info_answer_encode(qinfo, encode_rep, id, flags,
 		repinfo->c->buffer, timenow, 1, worker->scratchpad,
 		udpsize, edns, (int)(edns->bits & EDNS_DO), secure)) {
 		if(!inplace_cb_reply_servfail_call(&worker->env, qinfo, NULL, NULL,
@@ -1272,9 +1281,9 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 			log_addr(VERB_CLIENT,"from",&repinfo->addr, repinfo->addrlen);
 			edns.udp_size = NORMAL_UDP_SIZE;
 		}
-		edns_opt = edns_opt_list_find(edns.opt_list, LDNS_EDNS_KEEPALIVE);
-		if(edns_opt && c->type != comm_udp) {
-			if(edns_opt->opt_len > 0) {
+		if(c->type != comm_udp) {
+			edns_opt = edns_opt_list_find(edns.opt_list, LDNS_EDNS_KEEPALIVE);
+			if(edns_opt && edns_opt->opt_len > 0) {
 				edns.ext_rcode = 0;
 				edns.edns_version = EDNS_ADVERTISED_VERSION;
 				edns.udp_size = EDNS_ADVERTISED_SIZE;
@@ -1732,7 +1741,10 @@ worker_init(struct worker* worker, struct config_file *cfg,
 	}
 	worker->front = listen_create(worker->base, ports,
 		cfg->msg_buffer_size, (int)cfg->incoming_num_tcp,
-		cfg->tcp_idle_timeout, worker->daemon->listen_sslctx,
+		cfg->do_tcp_keepalive
+			? cfg->tcp_keepalive_timeout
+			: cfg->tcp_idle_timeout,
+		worker->daemon->listen_sslctx,
 		dtenv, worker_handle_request, worker);
 	if(!worker->front) {
 		log_err("could not create listening sockets");

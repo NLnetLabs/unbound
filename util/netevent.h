@@ -256,6 +256,9 @@ struct comm_point {
 	/** timeout in msec for TCP wait times for this connection */
 	int tcp_timeout_msec;
 
+	/** if set, tcp keepalive is enabled on this connection */
+	int tcp_keepalive;
+
 	/** if set, checks for pending error from nonblocking connect() call.*/
 	int tcp_check_nb_connect;
 

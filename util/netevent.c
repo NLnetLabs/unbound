@@ -86,6 +86,8 @@
 #define TCP_QUERY_TIMEOUT 120000
 /** The TCP timeout in msec for fast queries, above half are used */
 #define TCP_QUERY_TIMEOUT_FAST 200
+/** The minimum actual TCP timeout to use, regardless of what we advertise */
+#define TCP_QUERY_TIMEOUT_MINIMUM 200
 
 #ifndef NONBLOCKING_IS_BROKEN
 /** number of UDP reads to perform per read indication from select */
@@ -741,8 +743,11 @@ setup_tcp_handler(struct comm_point* c, int fd, int cur, int max)
 	 * timeout for this TCP connection, we need to make space for
 	 * other connections to be able to get attention */
 	if(cur > max/2)
-		c->tcp_timeout_msec = TCP_QUERY_TIMEOUT_FAST;
-	comm_point_start_listening(c, fd, c->tcp_timeout_msec);
+		c->tcp_timeout_msec = 0;
+	comm_point_start_listening(c, fd,
+		c->tcp_timeout_msec < TCP_QUERY_TIMEOUT_MINIMUM
+			? TCP_QUERY_TIMEOUT_MINIMUM
+			: c->tcp_timeout_msec);
 }
 
 void comm_base_handle_slow_accept(int ATTR_UNUSED(fd),
@@ -2525,6 +2530,7 @@ comm_point_create_tcp_handler(struct comm_base *base,
 	c->tcp_byte_count = 0;
 	c->tcp_parent = parent;
 	c->tcp_timeout_msec = parent->tcp_timeout_msec;
+	c->tcp_keepalive = 0;
 	c->max_tcp_count = 0;
 	c->cur_tcp_count = 0;
 	c->tcp_handlers = NULL;
@@ -2589,6 +2595,7 @@ comm_point_create_tcp(struct comm_base *base, int fd, int num,
 	c->tcp_is_reading = 0;
 	c->tcp_byte_count = 0;
 	c->tcp_timeout_msec = idle_timeout;
+	c->tcp_keepalive = 0;
 	c->tcp_parent = NULL;
 	c->max_tcp_count = num;
 	c->cur_tcp_count = 0;
@@ -2668,6 +2675,7 @@ comm_point_create_tcp_out(struct comm_base *base, size_t bufsize,
 	c->tcp_is_reading = 0;
 	c->tcp_byte_count = 0;
 	c->tcp_timeout_msec = TCP_QUERY_TIMEOUT;
+	c->tcp_keepalive = 0;
 	c->tcp_parent = NULL;
 	c->max_tcp_count = 0;
 	c->cur_tcp_count = 0;

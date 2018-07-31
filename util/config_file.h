@@ -101,6 +101,10 @@ struct config_file {
 	int outgoing_tcp_mss;
 	/** tcp idle timeout */
 	int tcp_idle_timeout;
+	/** do edns tcp keepalive */
+	int do_tcp_keepalive;
+	/** tcp keepalive timeout */
+	int tcp_keepalive_timeout;
 
 	/** private key file for dnstcp-ssl service (enabled if not NULL) */
 	char* ssl_service_key;
