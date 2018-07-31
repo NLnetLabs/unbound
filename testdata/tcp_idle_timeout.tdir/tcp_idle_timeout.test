@@ -4,6 +4,10 @@
 # use .tpkg.var.test for in test variable passing
 [ -f .tpkg.var.test ] && source .tpkg.var.test
 
+
+# Run up unbound with a 2s idle timeout. Try a normal TCP query, check it works, and then check that a connection with a 4s send delay fails.
+
+
 if uname | grep MINGW >/dev/null; then
 	echo "no job control in shell on windows. end test"
 	exit 0

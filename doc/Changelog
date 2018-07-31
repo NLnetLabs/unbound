@@ -11,6 +11,8 @@
 	- Correct and expand manual page entries for keepalive and idle timeout.
 	- Implement progressive backoff of TCP idle/keepalive timeout.
 	- Fix 'make depend' to work when build dir is not project root.
+	- Add delay parameter to streamtcp, -d secs.
+	  To be used when testing idle timeout.
 	- From Wouter: make depend, the dependencies in the patches did not
 	  apply cleanly.  Also remade yacc and lex.
 	- Fix mesh.c incompatible pointer pass.
