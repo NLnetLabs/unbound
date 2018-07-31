@@ -340,6 +340,7 @@ pretty_output(char* q, int t, int c, struct ub_result* result, int docname)
 					exit(1);
 				}
 				printf("%s\n", s);
+				free(s);
 			} else	printf(" has no %s record", tstr);
 			printf(" %s\n", secstatus);
 		}
