@@ -310,7 +310,7 @@ test:	unittest$(EXEEXT) testbound$(EXEEXT)
 	@echo test OK
 
 longtest:	tests
-	if test ! $(srcdir)/testdata -ef ./testdata; then rm -rf testcode testdata; mkdir testcode testdata; cp -R $(srcdir)/testdata/*.sh $(srcdir)/testdata/*.tdir testdata; cp $(srcdir)/testcode/*.sh testcode; fi
+	if test ! $(srcdir)/testdata -ef ./testdata; then rm -rf testcode testdata; mkdir testcode testdata; cp -R $(srcdir)/testdata/*.sh $(srcdir)/testdata/*.tdir testdata; cp $(srcdir)/testcode/*.sh testcode; if test ! -d util; then mkdir util; fi; cp $(srcdir)/util/iana_ports.inc util; fi
 	if test -x "`which bash`"; then bash testcode/do-tests.sh; else sh testcode/do-tests.sh; fi
 
 lib:	libunbound.la unbound.h
