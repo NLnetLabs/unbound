@@ -53,6 +53,11 @@ static int edns_keepalive(struct edns_data* edns_out, struct edns_data* edns_in,
 	if(c->type == comm_udp)
 		return 1;
 
+	/* To respond with a Keepalive option, the client connection
+	 * must have received one message with a TCP Keepalive EDNS option,
+	 * and that option must have 0 length data. Subsequent messages
+	 * sent on that connection will have a TCP Keepalive option.
+	 */
 	if(c->tcp_keepalive ||
 		edns_opt_list_find(edns_in->opt_list, LDNS_EDNS_KEEPALIVE)) {
 		int keepalive = c->tcp_timeout_msec / 100;

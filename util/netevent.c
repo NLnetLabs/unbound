@@ -743,6 +743,15 @@ setup_tcp_handler(struct comm_point* c, int fd, int cur, int max)
 	/* if more than half the tcp handlers are in use, use a shorter
 	 * timeout for this TCP connection, we need to make space for
 	 * other connections to be able to get attention */
+	/* If > 50% TCP handler structures in use, set timeout to 1/100th
+	 * 	configured value.
+	 * If > 65%TCP handler structures in use, set to 1/500th configured
+	 * 	value.
+	 * If > 80% TCP handler structures in use, set to 0.
+	 *
+	 * If the timeout to use falls below 200 milliseconds, an actual
+	 * timeout of 200ms is used.
+	 */
 	handler_usage = (cur * 100) / max;
 	if(handler_usage > 50 && handler_usage <= 65)
 		c->tcp_timeout_msec /= 100;
