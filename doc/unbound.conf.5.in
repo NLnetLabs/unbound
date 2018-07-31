@@ -392,7 +392,10 @@ negotiation between Unbound and other servers.
 .B tcp-idle-timeout: \fI<msec>\fR
 The period Unbound will wait for a query on a TCP connection.
 If this timeout expires Unbound closes the connection.
-This option defaults to 30000 milliseconds.
+This option defaults to 30000 milliseconds. A mimum timeout of
+200 milliseconds is observed regardless of the configured timeout.
+When the number of free incoming TCP buffers falls below 50% of the
+total number configured, the timeout is reduced to the minimum.
 .TP
 .B edns-tcp-keepalive: \fI<yes or no>\fR
 Enable or disable EDNS TCP Keepalive. Default is no.
@@ -400,10 +403,14 @@ Enable or disable EDNS TCP Keepalive. Default is no.
 .B edns-tcp-keepalive-timeout: \fI<msec>\fR
 The period Unbound will wait for a query on a TCP connection when
 EDNS TCP Keepalive is active. If this timeout expires Unbound closes
-the connection. This option defaults to 120000 milliseconds.
-Unbound sends this value less 200 milliseconds in the EDNS TCP Keepalive
-option to give the client time to close the connection before the server
-times out.
+the connection. If the client supports the EDNS TCP Keepalive option,
+Unbound sends the timeout value to the client to encourage it to
+close the connection before the server times out.
+This option defaults to 120000 milliseconds.
+When the number of free incoming TCP buffers falls below 50% of
+the total number configured, the advertised timeout is reduced to 0.
+A minimum actual timeout of 200 milliseconds is observed regardless of the
+advertised timeout.
 .TP
 .B tcp\-upstream: \fI<yes or no>
 Enable or disable whether the upstream queries use TCP only for transport.
