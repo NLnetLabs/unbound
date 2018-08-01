@@ -2,6 +2,7 @@
 	- Fix to remove systemd sockaddr function check, that is not
 	  always present.  Make socket activation more lenient.  But not
 	  different when socket activation is not used.
+	- iana port list update.
 
 31 July 2018: Wouter
 	- Patches from Jim Hague (Sinodun) for EDNS KeepAlive.
