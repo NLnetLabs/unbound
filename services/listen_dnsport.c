@@ -144,17 +144,8 @@ systemd_get_activated(int family, int socktype, int listen,
 	
 	for(i = 0; i < r; i++) {
 		if(sd_is_socket(SD_LISTEN_FDS_START + i, family, socktype, listen)) {
-			if( (family == AF_INET || family == AF_INET6) ) {
-				if(sd_is_socket_sockaddr(
-					SD_LISTEN_FDS_START + i, family,
-					addr, addrlen)) {
-					s = SD_LISTEN_FDS_START + i;
-					break;
-				}
-			} else {
-				s = SD_LISTEN_FDS_START + i;
-				break;
-			}
+			s = SD_LISTEN_FDS_START + i;
+			break;
 		}
 	}
 	if (s == -1) {

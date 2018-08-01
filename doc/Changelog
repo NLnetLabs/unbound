@@ -1,3 +1,8 @@
+1 August 2018: Wouter
+	- Fix to remove systemd sockaddr function check, that is not
+	  always present.  Make socket activation more lenient.  But not
+	  different when socket activation is not used.
+
 31 July 2018: Wouter
 	- Patches from Jim Hague (Sinodun) for EDNS KeepAlive.
 	- Sort out test runs when the build directory isn't the project
