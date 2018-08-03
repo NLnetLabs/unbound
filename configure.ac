@@ -324,7 +324,9 @@ AC_DEFUN([ACX_YYLEX_DESTROY], [
 	if echo %% | $LEX -t 2>&1 | grep yylex_destroy >/dev/null 2>&1; then
 		AC_DEFINE(LEX_HAS_YYLEX_DESTROY, 1, [if lex has yylex_destroy])
 		AC_MSG_RESULT(yes)
-	else AC_MSG_RESULT(no); fi
+	else AC_MSG_RESULT(no);
+		LEX=":"
+	fi
 ])
 
 AC_DEFUN([ACX_YYLEX_OPTION], [
@@ -342,6 +344,8 @@ EOF
 AC_PROG_LEX
 if test "$LEX" != "" -a "$LEX" != ":"; then
 ACX_YYLEX_DESTROY
+fi
+if test "$LEX" != "" -a "$LEX" != ":"; then
 ACX_YYLEX_OPTION
 fi
 AC_PROG_YACC

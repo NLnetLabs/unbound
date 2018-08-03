@@ -1,6 +1,8 @@
 3 August 2018: Wouter
 	- Revert previous change for #4136: because it introduces build
 	  problems.
+	- New fix for #4136: This one ignores lex without without
+	  yylex_destroy.
 
 1 August 2018: Wouter
 	- Fix to remove systemd sockaddr function check, that is not
