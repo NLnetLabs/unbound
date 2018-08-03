@@ -75,6 +75,7 @@ def test_ratelimit_fg_on(ctx):
 
     """
     ctx.set_option("ratelimit:", "1")
+    ctx.set_option("ratelimit-factor:", "0")
     status, result = ctx.resolve(qname, qtype, qclass)
     if status == 0 and result.was_ratelimited:
         print("Ratelimit-fg-on: pass")
@@ -100,6 +101,7 @@ def test_ratelimit_bg_on(ctx):
 
     """
     ctx.set_option("ratelimit:", "1")
+    ctx.set_option("ratelimit-factor:", "0")
     cb_data = dict(done=False)
     retval, async_id = ctx.resolve_async(qname, cb_data, callback, qtype, qclass)
     while retval == 0 and not cb_data['done']:
