@@ -1399,6 +1399,7 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 				log_nametypeclass(VERB_ALGO, "ratelimit exceeded with "
 					"delegation point", iq->dp->name,
 					LDNS_RR_TYPE_NS, LDNS_RR_CLASS_IN);
+				qstate->was_ratelimited = 1;
 				return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
 			}
 		}
@@ -2379,6 +2380,7 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 			ie->num_queries_ratelimited++;
 			lock_basic_unlock(&ie->queries_ratelimit_lock);
 			verbose(VERB_ALGO, "query exceeded ratelimits");
+			qstate->was_ratelimited = 1;
 			return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
 		}
 	}

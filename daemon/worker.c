@@ -2007,22 +2007,22 @@ void libworker_handle_control_cmd(struct tube* ATTR_UNUSED(tube),
 }
 
 void libworker_fg_done_cb(void* ATTR_UNUSED(arg), int ATTR_UNUSED(rcode),
-        sldns_buffer* ATTR_UNUSED(buf), enum sec_status ATTR_UNUSED(s),
-	char* ATTR_UNUSED(why_bogus))
+	sldns_buffer* ATTR_UNUSED(buf), enum sec_status ATTR_UNUSED(s),
+	char* ATTR_UNUSED(why_bogus), int ATTR_UNUSED(was_ratelimited))
 {
 	log_assert(0);
 }
 
 void libworker_bg_done_cb(void* ATTR_UNUSED(arg), int ATTR_UNUSED(rcode),
-        sldns_buffer* ATTR_UNUSED(buf), enum sec_status ATTR_UNUSED(s),
-	char* ATTR_UNUSED(why_bogus))
+	sldns_buffer* ATTR_UNUSED(buf), enum sec_status ATTR_UNUSED(s),
+	char* ATTR_UNUSED(why_bogus), int ATTR_UNUSED(was_ratelimited))
 {
 	log_assert(0);
 }
 
 void libworker_event_done_cb(void* ATTR_UNUSED(arg), int ATTR_UNUSED(rcode),
-        sldns_buffer* ATTR_UNUSED(buf), enum sec_status ATTR_UNUSED(s),
-	char* ATTR_UNUSED(why_bogus))
+	sldns_buffer* ATTR_UNUSED(buf), enum sec_status ATTR_UNUSED(s),
+	char* ATTR_UNUSED(why_bogus), int ATTR_UNUSED(was_ratelimited))
 {
 	log_assert(0);
 }
@@ -2035,13 +2035,13 @@ int context_query_cmp(const void* ATTR_UNUSED(a), const void* ATTR_UNUSED(b))
 
 int order_lock_cmp(const void* ATTR_UNUSED(e1), const void* ATTR_UNUSED(e2))
 {
-        log_assert(0);
-        return 0;
+	log_assert(0);
+	return 0;
 }
 
 int codeline_cmp(const void* ATTR_UNUSED(a), const void* ATTR_UNUSED(b))
 {
-        log_assert(0);
-        return 0;
+	log_assert(0);
+	return 0;
 }
 

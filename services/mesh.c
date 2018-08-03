@@ -632,8 +632,8 @@ void mesh_report_reply(struct mesh_area* mesh, struct outbound_entry* e,
 	mesh_run(mesh, e->qstate->mesh_info, event, e);
 }
 
-struct mesh_state* 
-mesh_state_create(struct module_env* env, struct query_info* qinfo, 
+struct mesh_state*
+mesh_state_create(struct module_env* env, struct query_info* qinfo,
 	struct respip_client_info* cinfo, uint16_t qflags, int prime,
 	int valrec)
 {
@@ -694,6 +694,7 @@ mesh_state_create(struct module_env* env, struct query_info* qinfo,
 	mstate->s.no_cache_lookup = 0;
 	mstate->s.no_cache_store = 0;
 	mstate->s.need_refetch = 0;
+	mstate->s.was_ratelimited = 0;
 
 	/* init modules */
 	for(i=0; i<env->mesh->mods.num; i++) {
@@ -741,7 +742,7 @@ mesh_state_cleanup(struct mesh_state* mstate)
 			mstate->cb_list = cb->next;
 			fptr_ok(fptr_whitelist_mesh_cb(cb->cb));
 			(*cb->cb)(cb->cb_arg, LDNS_RCODE_SERVFAIL, NULL,
-				sec_status_unchecked, NULL);
+				sec_status_unchecked, NULL, 0);
 			mesh->num_reply_addrs--;
 		}
 	}
@@ -969,7 +970,8 @@ mesh_do_callback(struct mesh_state* m, int rcode, struct reply_info* rep,
 {
 	int secure;
 	char* reason = NULL;
-	/* bogus messages are not made into servfail, sec_status passed 
+	int was_ratelimited = m->s.was_ratelimited;
+	/* bogus messages are not made into servfail, sec_status passed
 	 * to the callback function */
 	if(rep && rep->security == sec_status_secure)
 		secure = 1;
@@ -993,7 +995,8 @@ mesh_do_callback(struct mesh_state* m, int rcode, struct reply_info* rep,
 					r->edns.opt_list = NULL;
 		}
 		fptr_ok(fptr_whitelist_mesh_cb(r->cb));
-		(*r->cb)(r->cb_arg, rcode, r->buf, sec_status_unchecked, NULL);
+		(*r->cb)(r->cb_arg, rcode, r->buf, sec_status_unchecked, NULL,
+			was_ratelimited);
 	} else {
 		size_t udp_size = r->edns.udp_size;
 		sldns_buffer_clear(r->buf);
@@ -1011,11 +1014,11 @@ mesh_do_callback(struct mesh_state* m, int rcode, struct reply_info* rep,
 		{
 			fptr_ok(fptr_whitelist_mesh_cb(r->cb));
 			(*r->cb)(r->cb_arg, LDNS_RCODE_SERVFAIL, r->buf,
-				sec_status_unchecked, NULL);
+				sec_status_unchecked, NULL, 0);
 		} else {
 			fptr_ok(fptr_whitelist_mesh_cb(r->cb));
 			(*r->cb)(r->cb_arg, LDNS_RCODE_NOERROR, r->buf,
-				rep->security, reason);
+				rep->security, reason, was_ratelimited);
 		}
 	}
 	free(reason);
@@ -1201,6 +1204,8 @@ void mesh_walk_supers(struct mesh_area* mesh, struct mesh_state* mstate)
 			mesh->mods.mod[ref->s->s.curmod]->inform_super));
 		(*mesh->mods.mod[ref->s->s.curmod]->inform_super)(&mstate->s, 
 			ref->s->s.curmod, &ref->s->s);
+		/* copy state that is always relevant to super */
+		copy_state_to_super(&mstate->s, ref->s->s.curmod, &ref->s->s);
 	}
 }
 

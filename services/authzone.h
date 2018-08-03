@@ -646,10 +646,12 @@ int auth_xfer_transfer_http_callback(struct comm_point* c, void* arg, int err,
 void auth_xfer_probe_timer_callback(void* arg);
 /** mesh callback for task_probe on lookup of host names */
 void auth_xfer_probe_lookup_callback(void* arg, int rcode,
-	struct sldns_buffer* buf, enum sec_status sec, char* why_bogus);
+	struct sldns_buffer* buf, enum sec_status sec, char* why_bogus,
+	int was_ratelimited);
 /** mesh callback for task_transfer on lookup of host names */
 void auth_xfer_transfer_lookup_callback(void* arg, int rcode,
-	struct sldns_buffer* buf, enum sec_status sec, char* why_bogus);
+	struct sldns_buffer* buf, enum sec_status sec, char* why_bogus,
+	int was_ratelimited);
 
 /*
  * Compares two 32-bit serial numbers as defined in RFC1982.  Returns

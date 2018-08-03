@@ -913,8 +913,9 @@ parse_reply_in_temp_region(sldns_buffer* pkt, struct regional* region,
 	}
 	memset(msg, 0, sizeof(*msg));
 	sldns_buffer_set_position(pkt, 0);
-	if(parse_packet(pkt, msg, region) != 0)
+	if(parse_packet(pkt, msg, region) != 0){
 		return 0;
+	}
 	if(!parse_create_msg(pkt, msg, NULL, qi, &rep, region)) {
 		return 0;
 	}

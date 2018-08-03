@@ -621,6 +621,8 @@ struct module_qstate {
 	int no_cache_store;
 	/** whether to refetch a fresh answer on finishing this state*/
 	int need_refetch;
+	/** whether the query (or a subquery) was ratelimited */
+	int was_ratelimited;
 
 	/**
 	 * Attributes of clients that share the qstate that may affect IP-based
@@ -818,5 +820,15 @@ int unique_mesh_state(struct edns_option* list, struct module_env* env);
  */
 void log_edns_known_options(enum verbosity_value level,
 	struct module_env* env);
+
+/**
+ * Copy state that may have happened in the subquery and is always relevant to
+ * the super.
+ * @param qstate: query state that finished.
+ * @param id: module id.
+ * @param super: the qstate to inform.
+ */
+void copy_state_to_super(struct module_qstate* qstate, int id,
+	struct module_qstate* super);
 
 #endif /* UTIL_MODULE_H */

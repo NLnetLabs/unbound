@@ -1,3 +1,10 @@
+3 August 2018: George
+	- Expose if a query (or a subquery) was ratelimited (not src IP
+	  ratelimiting) to libunbound under 'ub_result.was_ratelimited'.
+	  This also introduces a change to 'ub_event_callback_type' in
+	  libunbound/unbound-event.h.
+	- Tidy pylib tests.
+
 3 August 2018: Wouter
 	- Revert previous change for #4136: because it introduces build
 	  problems.
