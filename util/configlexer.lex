@@ -29,11 +29,6 @@ void ub_c_error(const char *message);
 #define LEXOUT(s)
 #endif
 
-#ifndef LEX_HAS_YYLEX_DESTROY
-/* dummy yylex destroy so we can call it */
-int yylex_destroy(void) { return 0; }
-#endif
-
 /** avoid warning in about fwrite return value */
 #define ECHO ub_c_error_msg("syntax error at text: %s", yytext)
 

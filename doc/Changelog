@@ -1,3 +1,7 @@
+3 August 2018: Wouter
+	- Revert previous change for #4136: because it introduces build
+	  problems.
+
 1 August 2018: Wouter
 	- Fix to remove systemd sockaddr function check, that is not
 	  always present.  Make socket activation more lenient.  But not
