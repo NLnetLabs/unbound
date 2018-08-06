@@ -1,5 +1,5 @@
 6 August 2018: Wouter
-	- Fix for #4136: Fix to unconditionally call destroy in daemon.c.
+	- Another Fix for #4136: Fix to unconditionally call destroy in daemon.c.
 
 3 August 2018: George
 	- Expose if a query (or a subquery) was ratelimited (not src IP
