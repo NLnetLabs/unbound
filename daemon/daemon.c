@@ -104,10 +104,8 @@ static int sig_record_reload = 0;
 /** cleaner ssl memory freeup */
 static void* comp_meth = NULL;
 #endif
-#ifdef LEX_HAS_YYLEX_DESTROY
 /** remove buffers for parsing and init */
 int ub_c_lex_destroy(void);
-#endif
 
 /** used when no other sighandling happens, so we don't die
   * when multiple signals in quick succession are sent to us. 
@@ -745,10 +743,8 @@ daemon_delete(struct daemon* daemon)
 	SSL_CTX_free((SSL_CTX*)daemon->connect_sslctx);
 #endif
 	free(daemon);
-#ifdef LEX_HAS_YYLEX_DESTROY
 	/* lex cleanup */
 	ub_c_lex_destroy();
-#endif
 	/* libcrypto cleanup */
 #ifdef HAVE_SSL
 #  if defined(USE_GOST) && defined(HAVE_LDNS_KEY_EVP_UNLOAD_GOST)
