@@ -335,7 +335,7 @@ context_deserialize_answer(struct ub_ctx* ctx,
 	if(!q) return NULL; 
 	*err = (int)sldns_read_uint32(p+2*sizeof(uint32_t));
 	q->msg_security = sldns_read_uint32(p+3*sizeof(uint32_t));
-	q->res->was_ratelimited = sldns_read_uint32(p+4*sizeof(uint32_t));
+	q->res->was_ratelimited = (int)sldns_read_uint32(p+4*sizeof(uint32_t));
 	wlen = (size_t)sldns_read_uint32(p+5*sizeof(uint32_t));
 	if(len > size_of_uint32s && wlen > 0) {
 		if(len >= size_of_uint32s+wlen)
