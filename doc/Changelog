@@ -5,6 +5,9 @@
 	  about missing privileges during startup). Add 'AF_INET6' to
 	  'RestrictAddressFamilies' (without it IPV6 can't work). From
 	  Guido Shanahan.
+	- Patch to implement tcp-connection-limit from Jim Hague (Sinodun).
+	  This limits the number of simultaneous TCP client connections
+	  from a nominated netblock.
 
 6 August 2018: Wouter
 	- Fix for #4136: Fix to unconditionally call destroy in daemon.c.

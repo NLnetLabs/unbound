@@ -220,6 +220,9 @@ struct config_file {
 	/** use default localhost donotqueryaddr entries */
 	int donotquery_localhost;
 
+	/** list of tcp connection limitss, linked list */
+	struct config_str2list* tcp_connection_limits;
+
 	/** harden against very small edns buffer sizes */
 	int harden_short_bufsize;
 	/** harden against very large query sizes */

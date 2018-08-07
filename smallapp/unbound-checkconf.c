@@ -252,6 +252,23 @@ aclchecks(struct config_file* cfg)
 	}
 }
 
+/** check tcp connection limit ips */
+static void
+tcpconnlimitchecks(struct config_file* cfg)
+{
+	int d;
+	struct sockaddr_storage a;
+	socklen_t alen;
+	struct config_str2list* tcl;
+	for(tcl=cfg->tcp_connection_limits; tcl; tcl = tcl->next) {
+		if(!netblockstrtoaddr(tcl->str, UNBOUND_DNS_PORT, &a, &alen,
+			&d)) {
+			fatal_exit("cannot parse tcp connection limit address %s %s",
+				tcl->str, tcl->str2);
+		}
+	}
+}
+
 /** true if fname is a file */
 static int
 is_file(const char* fname)
@@ -381,6 +398,7 @@ morechecks(struct config_file* cfg, const char* fname)
 	warn_hosts("forward-host", cfg->forwards);
 	interfacechecks(cfg);
 	aclchecks(cfg);
+	tcpconnlimitchecks(cfg);
 
 	if(cfg->verbosity < 0)
 		fatal_exit("verbosity value < 0");

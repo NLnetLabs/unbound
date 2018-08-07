@@ -43,6 +43,7 @@
 #include "util/ub_event.h"
 #include "util/log.h"
 #include "util/net_help.h"
+#include "util/tcp_conn_limit.h"
 #include "util/fptr_wlist.h"
 #include "sldns/pkthdr.h"
 #include "sldns/sbuffer.h"
@@ -849,6 +850,15 @@ int comm_point_perform_accept(struct comm_point* c,
 			addr, *addrlen);
 #endif
 		return -1;
+	}
+	if(c->tcp_conn_limit && c->type == comm_tcp_accept) {
+		c->tcl_addr = tcl_addr_lookup(c->tcp_conn_limit, addr, *addrlen);
+		if(!tcl_new_connection(c->tcl_addr)) {
+			log_err_addr("accept rejected",
+				"connection limit exceeded", addr, *addrlen);
+			close(new_fd);
+			return -1;
+		}
 	}
 #ifndef HAVE_ACCEPT4
 	fd_set_nonblock(new_fd);
@@ -2544,6 +2554,8 @@ comm_point_create_tcp_handler(struct comm_base *base,
 	c->tcp_byte_count = 0;
 	c->tcp_parent = parent;
 	c->tcp_timeout_msec = parent->tcp_timeout_msec;
+	c->tcp_conn_limit = parent->tcp_conn_limit;
+	c->tcl_addr = NULL;
 	c->tcp_keepalive = 0;
 	c->max_tcp_count = 0;
 	c->cur_tcp_count = 0;
@@ -2586,7 +2598,7 @@ comm_point_create_tcp_handler(struct comm_base *base,
 
 struct comm_point* 
 comm_point_create_tcp(struct comm_base *base, int fd, int num,
-	int idle_timeout, size_t bufsize,
+	int idle_timeout, struct tcl_list* tcp_conn_limit, size_t bufsize,
         comm_point_callback_type* callback, void* callback_arg)
 {
 	struct comm_point* c = (struct comm_point*)calloc(1,
@@ -2609,6 +2621,8 @@ comm_point_create_tcp(struct comm_base *base, int fd, int num,
 	c->tcp_is_reading = 0;
 	c->tcp_byte_count = 0;
 	c->tcp_timeout_msec = idle_timeout;
+	c->tcp_conn_limit = tcp_conn_limit;
+	c->tcl_addr = NULL;
 	c->tcp_keepalive = 0;
 	c->tcp_parent = NULL;
 	c->max_tcp_count = num;
@@ -2689,6 +2703,8 @@ comm_point_create_tcp_out(struct comm_base *base, size_t bufsize,
 	c->tcp_is_reading = 0;
 	c->tcp_byte_count = 0;
 	c->tcp_timeout_msec = TCP_QUERY_TIMEOUT;
+	c->tcp_conn_limit = NULL;
+	c->tcl_addr = NULL;
 	c->tcp_keepalive = 0;
 	c->tcp_parent = NULL;
 	c->max_tcp_count = 0;
@@ -2931,6 +2947,7 @@ comm_point_close(struct comm_point* c)
 			log_err("could not event_del on close");
 		}
 	}
+	tcl_close_connection(c->tcl_addr);
 	/* close fd after removing from event lists, or epoll.. is messed up */
 	if(c->fd != -1 && !c->do_not_close) {
 		if(c->type == comm_tcp || c->type == comm_http) {

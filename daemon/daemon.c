@@ -76,6 +76,7 @@
 #include "util/shm_side/shm_main.h"
 #include "util/storage/lookup3.h"
 #include "util/storage/slabhash.h"
+#include "util/tcp_conn_limit.h"
 #include "services/listen_dnsport.h"
 #include "services/cache/rrset.h"
 #include "services/cache/infra.h"
@@ -270,11 +271,20 @@ daemon_init(void)
 		free(daemon);
 		return NULL;
 	}
+	daemon->tcl = tcl_list_create();
+	if(!daemon->tcl) {
+		acl_list_delete(daemon->acl);
+		edns_known_options_delete(daemon->env);
+		free(daemon->env);
+		free(daemon);
+		return NULL;
+	}
 	if(gettimeofday(&daemon->time_boot, NULL) < 0)
 		log_err("gettimeofday: %s", strerror(errno));
 	daemon->time_last_stat = daemon->time_boot;
 	if((daemon->env->auth_zones = auth_zones_create()) == 0) {
 		acl_list_delete(daemon->acl);
+		tcl_list_delete(daemon->tcl);
 		edns_known_options_delete(daemon->env);
 		free(daemon->env);
 		free(daemon);
@@ -575,6 +585,8 @@ daemon_fork(struct daemon* daemon)
 
 	if(!acl_list_apply_cfg(daemon->acl, daemon->cfg, daemon->views))
 		fatal_exit("Could not setup access control list");
+	if(!tcl_list_apply_cfg(daemon->tcl, daemon->cfg))
+		fatal_exit("Could not setup TCP connection limits");
 	if(daemon->cfg->dnscrypt) {
 #ifdef USE_DNSCRYPT
 		daemon->dnscenv = dnsc_create();
@@ -735,6 +747,7 @@ daemon_delete(struct daemon* daemon)
 	ub_randfree(daemon->rand);
 	alloc_clear(&daemon->superalloc);
 	acl_list_delete(daemon->acl);
+	tcl_list_delete(daemon->tcl);
 	free(daemon->chroot);
 	free(daemon->pidfile);
 	free(daemon->env);

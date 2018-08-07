@@ -158,7 +158,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_UDP_UPSTREAM_WITHOUT_DOWNSTREAM VAR_FOR_UPSTREAM
 %token VAR_AUTH_ZONE VAR_ZONEFILE VAR_MASTER VAR_URL VAR_FOR_DOWNSTREAM
 %token VAR_FALLBACK_ENABLED VAR_TLS_ADDITIONAL_PORT VAR_LOW_RTT VAR_LOW_RTT_PERMIL
-%token VAR_ALLOW_NOTIFY VAR_TLS_WIN_CERT
+%token VAR_ALLOW_NOTIFY VAR_TLS_WIN_CERT VAR_TCP_CONNECTION_LIMIT
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -251,7 +251,8 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_ipsecmod_whitelist | server_ipsecmod_strict |
 	server_udp_upstream_without_downstream | server_aggressive_nsec |
 	server_tls_cert_bundle | server_tls_additional_port | server_low_rtt |
-	server_low_rtt_permil | server_tls_win_cert
+	server_low_rtt_permil | server_tls_win_cert |
+	server_tcp_connection_limit
 	;
 stubstart: VAR_STUB_ZONE
 	{
@@ -2724,6 +2725,17 @@ redis_timeout: VAR_CACHEDB_REDISTIMEOUT STRING_ARG
 		OUTYY(("P(Compiled without cachedb or redis, ignoring)\n"));
 	#endif
 		free($2);
+	}
+	;
+server_tcp_connection_limit: VAR_TCP_CONNECTION_LIMIT STRING_ARG STRING_ARG
+	{
+		OUTYY(("P(server_tcp_connection_limit:%s %s)\n", $2, $3));
+		if (atoi($3) < 0)
+			yyerror("positive number expected");
+		else {
+			if(!cfg_str2list_insert(&cfg_parser->cfg->tcp_connection_limits, $2, $3))
+				fatal_exit("out of memory adding tcp connection limit");
+		}
 	}
 	;
 %%

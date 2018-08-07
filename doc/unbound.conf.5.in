@@ -497,6 +497,11 @@ Enable or disable whether the unbound server forks into the background as
 a daemon.  Set the value to \fIno\fR when unbound runs as systemd service.
 Default is yes.
 .TP
+.B tcp\-connection\-limit: \fI<IP netblock> <limit>
+Allow up to \fIlimit\R simultaneous TCP connections from the given netblock.
+When at the limit, further connections are accepted but closed immediately.
+This option is experimental at this time.
+.TP
 .B access\-control: \fI<IP netblock> <action>
 The netblock is given as an IP4 or IP6 address with /size appended for a
 classless network block. The action can be \fIdeny\fR, \fIrefuse\fR,

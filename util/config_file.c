@@ -195,6 +195,7 @@ config_create(void)
 #endif
 	cfg->views = NULL;
 	cfg->acls = NULL;
+	cfg->tcp_connection_limits = NULL;
 	cfg->harden_short_bufsize = 0;
 	cfg->harden_large_queries = 0;
 	cfg->harden_glue = 1;
@@ -945,6 +946,7 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_STR(opt, "control-cert-file", control_cert_file)
 	else O_LST(opt, "root-hints", root_hints)
 	else O_LS2(opt, "access-control", acls)
+	else O_LS2(opt, "tcp-connection-limit", tcp_connection_limits)
 	else O_LST(opt, "do-not-query-address", donotqueryaddrs)
 	else O_LST(opt, "private-address", private_address)
 	else O_LST(opt, "private-domain", private_domain)
@@ -1347,6 +1349,7 @@ config_delete(struct config_file* cfg)
 	free(cfg->dlv_anchor_file);
 	config_delstrlist(cfg->dlv_anchor_list);
 	config_deldblstrlist(cfg->acls);
+	config_deldblstrlist(cfg->tcp_connection_limits);
 	free(cfg->val_nsec3_key_iterations);
 	config_deldblstrlist(cfg->local_zones);
 	config_delstrlist(cfg->local_zones_nodefault);
