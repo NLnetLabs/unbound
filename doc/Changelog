@@ -1,3 +1,6 @@
+7 August 2018: Ralph
+	- Make capsforid fallback QNAME minimisation aware.
+
 7 August 2018: Wouter
 	- Fix #4142: unbound.service.in: improvements and fixes.
 	  Add unit dependency ordering (based on systemd-resolved).

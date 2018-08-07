@@ -3448,6 +3448,7 @@ process_response(struct module_qstate* qstate, struct iter_qstate* iq,
 			iq->caps_server = 0;
 			iq->caps_reply = NULL;
 			iq->caps_response = NULL;
+			iq->caps_minimisation_state = DONOT_MINIMISE_STATE;
 			iq->state = QUERYTARGETS_STATE;
 			iq->num_current_queries--;
 			/* need fresh attempts for the 0x20 fallback, if
@@ -3514,6 +3515,7 @@ process_response(struct module_qstate* qstate, struct iter_qstate* iq,
 			iq->caps_server = 0;
 			iq->caps_reply = NULL;
 			iq->caps_response = NULL;
+			iq->caps_minimisation_state = DONOT_MINIMISE_STATE;
 			iq->state = QUERYTARGETS_STATE;
 			iq->num_current_queries--;
 			verbose(VERB_DETAIL, "Capsforid: scrub failed, starting fallback with no response");
@@ -3533,15 +3535,30 @@ process_response(struct module_qstate* qstate, struct iter_qstate* iq,
 			iq->response->rep);
 	
 	if(event == module_event_capsfail || iq->caps_fallback) {
+		if(qstate->env->cfg->qname_minimisation &&
+			iq->minimisation_state != DONOT_MINIMISE_STATE) {
+			/* Skip QNAME minimisation for next query, since that
+			 * one has to match the current query. */
+			iq->minimisation_state = SKIP_MINIMISE_STATE;
+		}
 		/* for fallback we care about main answer, not additionals */
 		/* removing that makes comparison more likely to succeed */
 		caps_strip_reply(iq->response->rep);
+
+		if(iq->caps_fallback &&
+			iq->caps_minimisation_state != iq->minimisation_state) {
+			/* QNAME minimisation state has changed, restart caps
+			 * fallback. */
+			iq->caps_fallback = 0;
+		}
+
 		if(!iq->caps_fallback) {
 			/* start fallback */
 			iq->caps_fallback = 1;
 			iq->caps_server = 0;
 			iq->caps_reply = iq->response->rep;
 			iq->caps_response = iq->response;
+			iq->caps_minimisation_state = iq->minimisation_state;
 			iq->state = QUERYTARGETS_STATE;
 			iq->num_current_queries--;
 			verbose(VERB_DETAIL, "Capsforid: starting fallback");
