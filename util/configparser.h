@@ -288,7 +288,8 @@ extern int yydebug;
     VAR_LOW_RTT = 498,
     VAR_LOW_RTT_PERMIL = 499,
     VAR_ALLOW_NOTIFY = 500,
-    VAR_TLS_WIN_CERT = 501
+    VAR_TLS_WIN_CERT = 501,
+    VAR_TCP_CONNECTION_LIMIT = 502
   };
 #endif
 /* Tokens.  */
@@ -536,6 +537,7 @@ extern int yydebug;
 #define VAR_LOW_RTT_PERMIL 499
 #define VAR_ALLOW_NOTIFY 500
 #define VAR_TLS_WIN_CERT 501
+#define VAR_TCP_CONNECTION_LIMIT 502
 
 /* Value type.  */
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
@@ -546,7 +548,7 @@ union YYSTYPE
 
 	char*	str;
 
-#line 550 "util/configparser.h" /* yacc.c:1909  */
+#line 552 "util/configparser.h" /* yacc.c:1909  */
 };
 
 typedef union YYSTYPE YYSTYPE;
