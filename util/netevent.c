@@ -854,7 +854,8 @@ int comm_point_perform_accept(struct comm_point* c,
 	if(c->tcp_conn_limit && c->type == comm_tcp_accept) {
 		c->tcl_addr = tcl_addr_lookup(c->tcp_conn_limit, addr, *addrlen);
 		if(!tcl_new_connection(c->tcl_addr)) {
-			log_err_addr("accept rejected",
+			if(verbosity >= 3)
+				log_err_addr("accept rejected",
 				"connection limit exceeded", addr, *addrlen);
 			close(new_fd);
 			return -1;

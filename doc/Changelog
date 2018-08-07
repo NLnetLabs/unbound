@@ -11,6 +11,9 @@
 	- Patch to implement tcp-connection-limit from Jim Hague (Sinodun).
 	  This limits the number of simultaneous TCP client connections
 	  from a nominated netblock.
+	- make depend, yacc, lex, doc, headers.  And log the limit exceeded
+	  message only on high verbosity, so as to not spam the logs when
+	  it is busy.
 
 6 August 2018: Wouter
 	- Fix for #4136: Fix to unconditionally call destroy in daemon.c.
