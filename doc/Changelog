@@ -1,3 +1,11 @@
+7 August 2018: Wouter
+	- Fix #4142: unbound.service.in: improvements and fixes.
+	  Add unit dependency ordering (based on systemd-resolved).
+	  Add 'CAP_SYS_RESOURCE' to 'CapabilityBoundingSet' (fixes warnings
+	  about missing privileges during startup). Add 'AF_INET6' to
+	  'RestrictAddressFamilies' (without it IPV6 can't work). From
+	  Guido Shanahan.
+
 6 August 2018: Wouter
 	- Fix for #4136: Fix to unconditionally call destroy in daemon.c.
 
