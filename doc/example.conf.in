@@ -737,6 +737,9 @@ server:
 	# 0 blocks when ip is ratelimited, otherwise let 1/xth traffic through
 	# ip-ratelimit-factor: 10
 
+	# Limit the number of connections simultaneous from a netblock
+	# tcp-connection-limit: 192.0.2.0/24 12
+
 	# what is considered a low rtt (ping time for upstream server), in msec
 	# low-rtt: 45
 	# select low rtt this many times out of 1000. 0 means the fast server
