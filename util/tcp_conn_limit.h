@@ -117,7 +117,7 @@ void tcl_close_connection(struct tcl_addr* tcl);
  * @return: tcl structure from this address.
  */
 struct tcl_addr*
-tcl_addr_lookup(struct tcl_list* acl, struct sockaddr_storage* addr,
+tcl_addr_lookup(struct tcl_list* tcl, struct sockaddr_storage* addr,
         socklen_t addrlen);
 
 /**
