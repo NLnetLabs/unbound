@@ -1136,16 +1136,26 @@ iter_stub_fwd_no_cache(struct module_qstate *qstate, struct iter_qstate *iq)
 	stub = hints_lookup_stub(qstate->env->hints, iq->qchase.qname,
 	    iq->qchase.qclass, iq->dp);
 	if (stub != NULL && stub->dp != NULL) {
-		verbose(VERB_ALGO, "%s: stub for '%s'/'%s' no_cache %d", __func__,
-		    iq->qchase.qname, stub->dp->name, stub->dp->no_cache);
+		if(stub->dp->no_cache) {
+			char qname[255+1];
+			char dpname[255+1];
+			dname_str(iq->qchase.qname, qname);
+			dname_str(stub->dp->name, dpname);
+			verbose(VERB_ALGO, "stub for %s %s has no_cache", qname, dpname);
+		}
 		return (stub->dp->no_cache);
 	}
 
 	/* Check for forward. */
 	dp = forwards_lookup(qstate->env->fwds, iq->qchase.qname, iq->qchase.qclass);
 	if (dp) {
-		verbose(VERB_ALGO, "%s: fwd for '%s'/'%s' no_cache %d", __func__,
-		    iq->qchase.qname, dp->name, dp->no_cache);
+		if(dp->no_cache) {
+			char qname[255+1];
+			char dpname[255+1];
+			dname_str(iq->qchase.qname, qname);
+			dname_str(dp->name, dpname);
+			verbose(VERB_ALGO, "forward for %s %s has no_cache", qname, dpname);
+		}
 		return (dp->no_cache);
 	}
 
