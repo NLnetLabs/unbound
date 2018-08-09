@@ -1135,6 +1135,19 @@ iter_stub_fwd_no_cache(struct module_qstate *qstate, struct iter_qstate *iq)
 	/* Check for stub. */
 	stub = hints_lookup_stub(qstate->env->hints, iq->qchase.qname,
 	    iq->qchase.qclass, iq->dp);
+	dp = forwards_lookup(qstate->env->fwds, iq->qchase.qname, iq->qchase.qclass);
+
+	/* see if forward or stub is more pertinent */
+	if(stub && stub->dp && dp) {
+		if(dname_strict_subdomain(dp->name, dp->namelabs,
+			stub->dp->name, stub->dp->namelabs)) {
+			stub = NULL; /* ignore stub, forward is lower */
+		} else {
+			dp = NULL; /* ignore forward, stub is lower */
+		}
+	}
+
+	/* check stub */
 	if (stub != NULL && stub->dp != NULL) {
 		if(stub->dp->no_cache) {
 			char qname[255+1];
@@ -1147,7 +1160,6 @@ iter_stub_fwd_no_cache(struct module_qstate *qstate, struct iter_qstate *iq)
 	}
 
 	/* Check for forward. */
-	dp = forwards_lookup(qstate->env->fwds, iq->qchase.qname, iq->qchase.qclass);
 	if (dp) {
 		if(dp->no_cache) {
 			char qname[255+1];
@@ -1158,12 +1170,7 @@ iter_stub_fwd_no_cache(struct module_qstate *qstate, struct iter_qstate *iq)
 		}
 		return (dp->no_cache);
 	}
-
-#if 0
-	verbose(VERB_ALGO, "%s: no stub or fwd for '%s' found no_cache 0",
-	    __func__, iq->qchase.qname);
-#endif
-	return (0);
+	return 0;
 }
 
 /** 
