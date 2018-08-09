@@ -1507,6 +1507,10 @@ Default is no.
 .TP
 .B stub\-ssl\-upstream: \fI<yes or no>
 Alternate syntax for \fBstub\-tls\-upstream\fR.
+.TP
+.B stub\-no\-cache: \fI<yes or no>
+Default is no.  If enabled, data inside the stub is not cached.  This is
+useful when you want immediate changes to be visible.
 .SS "Forward Zone Options"
 .LP
 There may be multiple
@@ -1557,6 +1561,10 @@ load CA certs, otherwise the connections cannot be authenticated.
 .TP
 .B forward\-ssl\-upstream: \fI<yes or no>
 Alternate syntax for \fBforward\-tls\-upstream\fR.
+.TP
+.B forward\-no\-cache: \fI<yes or no>
+Default is no.  If enabled, data inside the forward is not cached.  This is
+useful when you want immediate changes to be visible.
 .SS "Authority Zone Options"
 .LP
 Authority zones are configured with \fBauth\-zone:\fR, and each one must

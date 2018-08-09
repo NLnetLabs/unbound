@@ -829,6 +829,7 @@ remote-control:
 #	stub-prime: no
 #	stub-first: no
 #	stub-tls-upstream: no
+#	stub-no-cache: no
 # stub-zone:
 #	name: "example.org"
 #	stub-host: ns.example.com.
@@ -845,6 +846,7 @@ remote-control:
 # 	forward-addr: 192.0.2.73@5355  # forward to port 5355.
 # 	forward-first: no
 # 	forward-tls-upstream: no
+#	forward-no-cache: no
 # forward-zone:
 # 	name: "example.org"
 # 	forward-host: fwd.example.com
