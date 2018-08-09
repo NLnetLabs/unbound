@@ -402,6 +402,7 @@ check_modules_exist(const char* module_conf)
 		int is_ok = 0;
 		while(*s && isspace((unsigned char)*s))
 			s++;
+		if(!*s) break;
 		while(names[i]) {
 			if(strncmp(names[i], s, strlen(names[i])) == 0) {
 				is_ok = 1;
