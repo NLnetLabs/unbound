@@ -414,7 +414,7 @@ check_modules_exist(const char* module_conf)
 			size_t j;
 			n[0]=0;
 			n[sizeof(n)-1]=0;
-			for(j=0; j<sizeof(n); j++) {
+			for(j=0; j<sizeof(n)-1; j++) {
 				if(!s[j] || isspace((unsigned char)s[j])) {
 					n[j] = 0;
 					break;
