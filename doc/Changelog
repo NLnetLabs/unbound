@@ -1,3 +1,7 @@
+9 August 2018: Wouter
+	- unbound-checkconf checks if modules exist and prints if they are
+	  not compiled in the name of the wrong module.
+
 7 August 2018: Ralph
 	- Make capsforid fallback QNAME minimisation aware.
 

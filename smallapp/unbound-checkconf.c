@@ -43,6 +43,7 @@
  */
 
 #include "config.h"
+#include <ctype.h>
 #include "util/log.h"
 #include "util/config_file.h"
 #include "util/module.h"
@@ -390,6 +391,43 @@ ecs_conf_checks(struct config_file* cfg)
 }
 #endif /* CLIENT_SUBNET */
 
+/** check that the modules exist, are compiled in */
+static void
+check_modules_exist(const char* module_conf)
+{
+	const char** names = module_list_avail();
+	const char* s = module_conf;
+	while(*s) {
+		int i = 0;
+		int is_ok = 0;
+		while(*s && isspace((unsigned char)*s))
+			s++;
+		while(names[i]) {
+			if(strncmp(names[i], s, strlen(names[i])) == 0) {
+				is_ok = 1;
+				break;
+			}
+			i++;
+		}
+		if(is_ok == 0) {
+			char n[64];
+			size_t j;
+			n[0]=0;
+			n[sizeof(n)-1]=0;
+			for(j=0; j<sizeof(n); j++) {
+				if(!s[j] || isspace((unsigned char)s[j])) {
+					n[j] = 0;
+					break;
+				}
+				n[j] = s[j];
+			}
+			fatal_exit("module_conf lists module '%s' but that "
+				"module is not available.", n);
+		}
+		s += strlen(names[i]);
+	}
+}
+
 /** check configuration for errors */
 static void
 morechecks(struct config_file* cfg, const char* fname)
@@ -483,6 +521,9 @@ morechecks(struct config_file* cfg, const char* fname)
 	free(cfg->chrootdir);
 	cfg->chrootdir = NULL;
 
+	/* check that the modules listed in module_conf exist */
+	check_modules_exist(cfg->module_conf);
+
 	/* There should be no reason for 'respip' module not to work with
 	 * dns64, but it's not explicitly confirmed,  so the combination is
 	 * excluded below.   It's simply unknown yet for the combination of
@@ -529,7 +570,6 @@ morechecks(struct config_file* cfg, const char* fname)
 #if defined(WITH_PYTHONMODULE) && defined(CLIENT_SUBNET)
 		&& strcmp(cfg->module_conf, "python subnetcache iterator") != 0
 		&& strcmp(cfg->module_conf, "subnetcache python iterator") != 0
-		&& strcmp(cfg->module_conf, "subnetcache validator iterator") != 0
 		&& strcmp(cfg->module_conf, "python subnetcache validator iterator") != 0
 		&& strcmp(cfg->module_conf, "subnetcache python validator iterator") != 0
 		&& strcmp(cfg->module_conf, "subnetcache validator python iterator") != 0
