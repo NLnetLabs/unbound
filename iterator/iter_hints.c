@@ -283,6 +283,8 @@ read_stubs(struct iter_hints* hints, struct config_file* cfg)
 		 * last resort will ask for parent-side NS record and thus
 		 * fallback to the internet name servers on a failure */
 		dp->has_parent_side_NS = (uint8_t)!s->isfirst;
+		/* Do not cache if set. */
+		dp->no_cache = s->no_cache;
 		/* ssl_upstream */
 		dp->ssl_upstream = (uint8_t)s->ssl_upstream;
 		delegpt_log(VERB_QUERY, dp);

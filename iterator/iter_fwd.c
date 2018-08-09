@@ -272,6 +272,8 @@ read_forwards(struct iter_forwards* fwd, struct config_file* cfg)
 		 * last resort will ask for parent-side NS record and thus
 		 * fallback to the internet name servers on a failure */
 		dp->has_parent_side_NS = (uint8_t)!s->isfirst;
+		/* Do not cache if set. */
+		dp->no_cache = s->no_cache;
 		/* use SSL for queries to this forwarder */
 		dp->ssl_upstream = (uint8_t)s->ssl_upstream;
 		verbose(VERB_QUERY, "Forward zone server list:");

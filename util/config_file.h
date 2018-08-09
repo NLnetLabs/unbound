@@ -572,6 +572,8 @@ struct config_stub {
 	int isfirst;
 	/** use SSL for queries to this stub */
 	int ssl_upstream;
+	/*** no cache */
+	int no_cache;
 };
 
 /**

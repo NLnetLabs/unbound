@@ -159,6 +159,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_AUTH_ZONE VAR_ZONEFILE VAR_MASTER VAR_URL VAR_FOR_DOWNSTREAM
 %token VAR_FALLBACK_ENABLED VAR_TLS_ADDITIONAL_PORT VAR_LOW_RTT VAR_LOW_RTT_PERMIL
 %token VAR_ALLOW_NOTIFY VAR_TLS_WIN_CERT VAR_TCP_CONNECTION_LIMIT
+%token VAR_FORWARD_NO_CACHE VAR_STUB_NO_CACHE
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -269,7 +270,7 @@ stubstart: VAR_STUB_ZONE
 contents_stub: contents_stub content_stub 
 	| ;
 content_stub: stub_name | stub_host | stub_addr | stub_prime | stub_first |
-	stub_ssl_upstream
+	stub_no_cache | stub_ssl_upstream
 	;
 forwardstart: VAR_FORWARD_ZONE
 	{
@@ -286,7 +287,7 @@ forwardstart: VAR_FORWARD_ZONE
 contents_forward: contents_forward content_forward 
 	| ;
 content_forward: forward_name | forward_host | forward_addr | forward_first |
-	forward_ssl_upstream
+	forward_no_cache | forward_ssl_upstream
 	;
 viewstart: VAR_VIEW
 	{
@@ -2077,6 +2078,15 @@ stub_first: VAR_STUB_FIRST STRING_ARG
 		free($2);
 	}
 	;
+stub_no_cache: VAR_STUB_NO_CACHE STRING_ARG
+	{
+		OUTYY(("P(stub-no-cache:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else cfg_parser->cfg->stubs->no_cache=(strcmp($2, "yes")==0);
+		free($2);
+	}
+	;
 stub_ssl_upstream: VAR_STUB_SSL_UPSTREAM STRING_ARG
 	{
 		OUTYY(("P(stub-ssl-upstream:%s)\n", $2));
@@ -2127,6 +2137,15 @@ forward_first: VAR_FORWARD_FIRST STRING_ARG
 		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
 			yyerror("expected yes or no.");
 		else cfg_parser->cfg->forwards->isfirst=(strcmp($2, "yes")==0);
+		free($2);
+	}
+	;
+forward_no_cache: VAR_FORWARD_NO_CACHE STRING_ARG
+	{
+		OUTYY(("P(forward-no-cache:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else cfg_parser->cfg->forwards->no_cache=(strcmp($2, "yes")==0);
 		free($2);
 	}
 	;

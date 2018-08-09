@@ -302,12 +302,14 @@ stub-addr{COLON}		{ YDVAR(1, VAR_STUB_ADDR) }
 stub-host{COLON}		{ YDVAR(1, VAR_STUB_HOST) }
 stub-prime{COLON}		{ YDVAR(1, VAR_STUB_PRIME) }
 stub-first{COLON}		{ YDVAR(1, VAR_STUB_FIRST) }
+stub-no-cache{COLON}		{ YDVAR(1, VAR_STUB_NO_CACHE) }
 stub-ssl-upstream{COLON}	{ YDVAR(1, VAR_STUB_SSL_UPSTREAM) }
 stub-tls-upstream{COLON}	{ YDVAR(1, VAR_STUB_SSL_UPSTREAM) }
 forward-zone{COLON}		{ YDVAR(0, VAR_FORWARD_ZONE) }
 forward-addr{COLON}		{ YDVAR(1, VAR_FORWARD_ADDR) }
 forward-host{COLON}		{ YDVAR(1, VAR_FORWARD_HOST) }
 forward-first{COLON}		{ YDVAR(1, VAR_FORWARD_FIRST) }
+forward-no-cache{COLON}		{ YDVAR(1, VAR_FORWARD_NO_CACHE) }
 forward-ssl-upstream{COLON}	{ YDVAR(1, VAR_FORWARD_SSL_UPSTREAM) }
 forward-tls-upstream{COLON}	{ YDVAR(1, VAR_FORWARD_SSL_UPSTREAM) }
 auth-zone{COLON}		{ YDVAR(0, VAR_AUTH_ZONE) }

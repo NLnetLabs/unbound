@@ -1126,6 +1126,36 @@ forward_request(struct module_qstate* qstate, struct iter_qstate* iq)
 	return 1;
 }
 
+static int
+iter_stub_fwd_no_cache(struct module_qstate *qstate, struct iter_qstate *iq)
+{
+	struct iter_hints_stub *stub;
+	struct delegpt *dp;
+
+	/* Check for stub. */
+	stub = hints_lookup_stub(qstate->env->hints, iq->qchase.qname,
+	    iq->qchase.qclass, iq->dp);
+	if (stub != NULL && stub->dp != NULL) {
+		verbose(VERB_ALGO, "%s: stub for '%s'/'%s' no_cache %d", __func__,
+		    iq->qchase.qname, stub->dp->name, stub->dp->no_cache);
+		return (stub->dp->no_cache);
+	}
+
+	/* Check for forward. */
+	dp = forwards_lookup(qstate->env->fwds, iq->qchase.qname, iq->qchase.qclass);
+	if (dp) {
+		verbose(VERB_ALGO, "%s: fwd for '%s'/'%s' no_cache %d", __func__,
+		    iq->qchase.qname, dp->name, dp->no_cache);
+		return (dp->no_cache);
+	}
+
+#if 0
+	verbose(VERB_ALGO, "%s: no stub or fwd for '%s' found no_cache 0",
+	    __func__, iq->qchase.qname);
+#endif
+	return (0);
+}
+
 /** 
  * Process the initial part of the request handling. This state roughly
  * corresponds to resolver algorithms steps 1 (find answer in cache) and 2
@@ -1197,7 +1227,13 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 	/* This either results in a query restart (CNAME cache response), a
 	 * terminating response (ANSWER), or a cache miss (null). */
 	
-	if(qstate->blacklist) {
+	if (iter_stub_fwd_no_cache(qstate, iq)) {
+		/* Asked to not query cache. */
+		verbose(VERB_ALGO, "no-cache set, going to the network");
+		qstate->no_cache_lookup = 1;
+		qstate->no_cache_store = 1;
+		msg = NULL;
+	} else if(qstate->blacklist) {
 		/* if cache, or anything else, was blacklisted then
 		 * getting older results from cache is a bad idea, no cache */
 		verbose(VERB_ALGO, "cache blacklisted, going to the network");
