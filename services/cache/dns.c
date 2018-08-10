@@ -109,7 +109,7 @@ store_rrsets(struct module_env* env, struct reply_info* rep, time_t now,
 }
 
 /** delete message from message cache */
-static void
+void
 msg_cache_remove(struct module_env* env, uint8_t* qname, size_t qnamelen, 
 	uint16_t qtype, uint16_t qclass, uint16_t flags)
 {

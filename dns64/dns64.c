@@ -809,6 +809,12 @@ dns64_adjust_a(int id, struct module_qstate* super, struct module_qstate* qstate
 			rrset_cache_remove(super->env->rrset_cache, dk->rk.dname, 
 					   dk->rk.dname_len, LDNS_RR_TYPE_AAAA, 
 					   LDNS_RR_CLASS_IN, 0);
+			/* Delete negative AAAA in msg cache for CNAMEs,
+			 * stored by the iterator module */
+			if(i != 0) /* if not the first RR */
+			    msg_cache_remove(super->env, dk->rk.dname,
+				dk->rk.dname_len, LDNS_RR_TYPE_AAAA,
+				LDNS_RR_CLASS_IN, 0);
 		} else {
 			dk->entry.hash = fk->entry.hash;
 			dk->rk.dname = (uint8_t*)regional_alloc_init(super->region,

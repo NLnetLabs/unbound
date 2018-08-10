@@ -1,3 +1,6 @@
+10 August 2018: Wouter
+	- Fix #4144: dns64 module caches wrong (negative) information.
+
 9 August 2018: Wouter
 	- unbound-checkconf checks if modules exist and prints if they are
 	  not compiled in the name of the wrong module.
