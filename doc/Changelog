@@ -1,6 +1,8 @@
 14 August 2018: Wouter
 	- Fix that printout of error for cycle targets is a verbosity 4
 	  printout and does not wrongly print it is a memory error.
+	- Upgraded crosscompile script to include libunbound DLL in the
+	  zipfile.
 
 10 August 2018: Wouter
 	- Fix #4144: dns64 module caches wrong (negative) information.

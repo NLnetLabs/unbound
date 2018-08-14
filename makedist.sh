@@ -181,6 +181,7 @@ DOWIN="no"
 W64="yes"
 WINSSL=""
 WINEXPAT=""
+MINJ=""
 
 # Parse the command line arguments.
 while [ "$1" ]; do
@@ -239,6 +240,7 @@ if [ "$DOWIN" = "yes" ]; then
 	makensis="makensis"	# from mingw32-nsis package
 	# flags for crosscompiled dependency libraries
 	cross_flag=""
+	shared_cross_flag=""
 
 	check_svn_root
 	create_temp_dir
@@ -249,23 +251,36 @@ if [ "$DOWIN" = "yes" ]; then
 		info "winssl tar unpack"
 		(cd ..; gzip -cd $WINSSL) | tar xf - || error_cleanup "tar unpack of $WINSSL failed"
 		sslinstall="`pwd`/sslinstall"
+		cp -r openssl-* openssl_shared
 		cd openssl-* || error_cleanup "no openssl-X dir in tarball"
 		# configure for crosscompile, without CAPI because it fails
 		# cross-compilation and it is not used anyway
 		# before 1.0.1i need --cross-compile-prefix=i686-w64-mingw32-
 		if test "$mw64" = "mingw64"; then
-			sslflags="no-shared no-asm -DOPENSSL_NO_CAPIENG mingw64"
+			sslflags="no-asm -DOPENSSL_NO_CAPIENG mingw64"
 		else
-			sslflags="no-shared no-asm -DOPENSSL_NO_CAPIENG mingw"
+			sslflags="no-asm -DOPENSSL_NO_CAPIENG mingw"
 		fi
-		info "winssl: Configure $sslflags"
-		CC=${warch}-w64-mingw32-gcc AR=${warch}-w64-mingw32-ar RANLIB=${warch}-w64-mingw32-ranlib WINDRES=${warch}-w64-mingw32-windres ./Configure --prefix="$sslinstall" $sslflags || error_cleanup "OpenSSL Configure failed"
+		info "winssl: Configure no-shared $sslflags"
+		CC=${warch}-w64-mingw32-gcc AR=${warch}-w64-mingw32-ar RANLIB=${warch}-w64-mingw32-ranlib WINDRES=${warch}-w64-mingw32-windres ./Configure --prefix="$sslinstall" no-shared $sslflags || error_cleanup "OpenSSL Configure failed"
 		info "winssl: make"
-		make || error_cleanup "OpenSSL crosscompile failed"
+		make $MINJ || error_cleanup "OpenSSL crosscompile failed"
 		# only install sw not docs, which take a long time.
 		info "winssl: make install_sw"
 		make install_sw || error_cleanup "OpenSSL install failed"
 		cross_flag="$cross_flag --with-ssl=$sslinstall"
+		cd ..
+
+		# shared compile
+		sslsharedinstall="`pwd`/sslsharedinstall"
+		cd openssl_shared
+		info "winssl: Configure shared $sslflags"
+		CC=${warch}-w64-mingw32-gcc AR=${warch}-w64-mingw32-ar RANLIB=${warch}-w64-mingw32-ranlib WINDRES=${warch}-w64-mingw32-windres ./Configure --prefix="$sslsharedinstall" shared $sslflags || error_cleanup "OpenSSL Configure failed"
+		info "winssl: make"
+		make $MINJ || error_cleanup "OpenSSL crosscompile failed"
+		info "winssl: make install_sw"
+		make install_sw || error_cleanup "OpenSSL install failed"
+		shared_cross_flag="$shared_cross_flag --with-ssl=$sslsharedinstall"
 		cd ..
 	fi
 
@@ -277,11 +292,12 @@ if [ "$DOWIN" = "yes" ]; then
 		cd expat-* || error_cleanup "no expat-X dir in tarball"
 		info "wxp: configure"
 		$configure --prefix="$wxpinstall" --exec-prefix="$wxpinstall" --bindir="$wxpinstall/bin" --includedir="$wxpinstall/include" --mandir="$wxpinstall/man" --libdir="$wxpinstall/lib"  || error_cleanup "libexpat configure failed"
-		#info "wxp: make"
-		#make || error_cleanup "libexpat crosscompile failed"
+		info "wxp: make"
+		make $MINJ || error_cleanup "libexpat crosscompile failed"
 		info "wxp: make install"
 		make install || error_cleanup "libexpat install failed"
 		cross_flag="$cross_flag --with-libexpat=$wxpinstall"
+		shared_cross_flag="$shared_cross_flag --with-libexpat=$wxpinstall"
 		cd ..
 	fi
 
@@ -320,6 +336,10 @@ if [ "$DOWIN" = "yes" ]; then
     	rm -r autom4te* || echo "ignored"
     fi
 
+    if test "`uname`" = "Linux"; then 
+	    (cd ..; cp -r unbound unbound_shared)
+    fi
+
     # procedure for making unbound installer on mingw. 
     info "Creating windows dist unbound $version"
     info "Calling configure"
@@ -338,8 +358,25 @@ if [ "$DOWIN" = "yes" ]; then
 	|| error_cleanup "Could not configure"
     fi
     info "Calling make"
-    make || error_cleanup "Could not make"
+    make $MINJ || error_cleanup "Could not make"
     info "Make complete"
+
+    if test "`uname`" = "Linux"; then 
+    info "Make DLL"
+    cd ../unbound_shared
+    echo "$configure"' --enable-debug --disable-flto '"$* $shared_cross_flag "$file_flag" "$file2_flag" "$file3_flag""
+    if test "$W64" = "no"; then
+        $configure --enable-debug --disable-flto $* $shared_cross_flag "$file_flag" "$file2_flag" "$file3_flag" \
+	|| error_cleanup "Could not configure"
+    else
+        $configure --enable-debug --disable-flto $* $shared_cross_flag \
+	|| error_cleanup "Could not configure"
+    fi
+    info "Calling make for DLL"
+    make $MINJ || error_cleanup "Could not make DLL"
+    info "Make DLL complete"
+    cd ../unbound
+    fi
 
     info "Unbound version: $version"
     file="unbound-$version.zip"
@@ -360,8 +397,10 @@ if [ "$DOWIN" = "yes" ]; then
     cp ../root.key .
     cp ../doc/example.conf ../doc/Changelog .
     cp ../unbound.exe ../unbound-anchor.exe ../unbound-host.exe ../unbound-control.exe ../unbound-checkconf.exe ../unbound-service-install.exe ../unbound-service-remove.exe ../LICENSE ../winrc/unbound-control-setup.cmd ../winrc/unbound-website.url ../winrc/service.conf ../winrc/README.txt ../contrib/create_unbound_ad_servers.cmd ../contrib/warmup.cmd ../contrib/unbound_cache.cmd .
+    mkdir libunbound
+    cp ../../unbound_shared/unbound.h ../../unbound_shared/.libs/libunbound*.dll ../../unbound_shared/.libs/libunbound.dll.a ../../unbound_shared/.libs/libunbound.a ../../unbound_shared/.libs/libunbound*.def ../../sslsharedinstall/lib/libcrypto.dll.a ../../sslsharedinstall/lib/libssl.dll.a ../../sslsharedinstall/bin/libcrypto*.dll ../../sslsharedinstall/bin/libssl*.dll ../../wxpinstall/bin/libexpat*.dll ../../wxpinstall/lib/libexpat.dll.a libunbound/.
     # zipfile
-    zip ../$file LICENSE README.txt unbound.exe unbound-anchor.exe unbound-host.exe unbound-control.exe unbound-checkconf.exe unbound-service-install.exe unbound-service-remove.exe unbound-control-setup.cmd example.conf service.conf root.key unbound-website.url create_unbound_ad_servers.cmd warmup.cmd unbound_cache.cmd Changelog
+    zip -r ../$file LICENSE README.txt unbound.exe unbound-anchor.exe unbound-host.exe unbound-control.exe unbound-checkconf.exe unbound-service-install.exe unbound-service-remove.exe unbound-control-setup.cmd example.conf service.conf root.key unbound-website.url create_unbound_ad_servers.cmd warmup.cmd unbound_cache.cmd Changelog libunbound
     info "Testing $file"
     (cd .. ; zip -T $file )
     # installer
