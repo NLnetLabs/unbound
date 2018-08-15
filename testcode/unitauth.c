@@ -131,6 +131,12 @@ static const char* zone_example_com =
 "z9.example.com.	3600	IN	A	10.0.0.10\n"
 "z9.example.com.	3600	IN	RRSIG	A 8 3 10200 20170612005010 20170515005010 42393 nlnetlabs.nl. NhEDrHkuIgHkjWhDRVsGOIJWZpSs+QdduilWFe5d+/ZhOheLJbaTYD5w6+ZZ3yPh1tNud+jlg+GyiOSVapLEO31swDCIarL1UfRjRSpxxDCHGag5Zu+S4hF+KURxO3cJk8jLBELMQyRuMRHoKrw/wsiLGVu1YpAyAPPMcjFBNbk=\n"
 "z9.example.com.	3600	IN	RRSIG	A 8 3 10200 20170612005010 20170515005010 42393 nlnetlabs.nl. NhEDrHkuIgHkjWhDRVsGOIJWZpSs+QdduilWFe5d+/ZhOheLJbaTYD5w6+ZZ3yPh1tNud+jlg+GyiOSVapLEO31swDCIarL1UfRjRSpxxDCHGag5Zu+S4hF+KURxO3cJk8jLBELMQyRuMRHoKrw/wsiLGVu1YpAyAPPMcjFBNbk=\n"
+/* different covered types, first RRSIGs then, RRs, then another RRSIG */
+"z10.example.com.	3600	IN	RRSIG	AAAA 8 3 10200 20170612005010 20170515005010 42393 nlnetlabs.nl. NhEDrHkuIgHkjWhDRVsGOIJWZpSs+QdduilWFe5d+/ZhOheLJbaTYD5w6+ZZ3yPh1tNud+jlg+GyiOSVapLEO31swDCIarL1UfRjRSpxxDCHGag5Zu+S4hF+KURxO3cJk8jLBELMQyRuMRHoKrw/wsiLGVu1YpAyAPPMcjFBNbk=\n"
+"z10.example.com.	3600	IN	RRSIG	A 8 3 10200 20170612005010 20170515005010 42393 nlnetlabs.nl. NhEDrHkuIgHkjWhDRVsGOIJWZpSs+QdduilWFe5d+/ZhOheLJbaTYD5w6+ZZ3yPh1tNud+jlg+GyiOSVapLEO31swDCIarL1UfRjRSpxxDCHGag5Zu+S4hF+KURxO3cJk8jLBELMQyRuMRHoKrw/wsiLGVu1YpAyAPPMcjFBNbk=\n"
+"z10.example.com.	3600	IN	A	10.0.0.10\n"
+"z10.example.com.	3600	IN	RRSIG	CNAME 8 3 10200 20170612005010 20170515005010 42393 nlnetlabs.nl. NhEDrHkuIgHkjWhDRVsGOIJWZpSs+QdduilWFe5d+/ZhOheLJbaTYD5w6+ZZ3yPh1tNud+jlg+GyiOSVapLEO31swDCIarL1UfRjRSpxxDCHGag5Zu+S4hF+KURxO3cJk8jLBELMQyRuMRHoKrw/wsiLGVu1YpAyAPPMcjFBNbk=\n"
+"z10.example.com.	3600	IN	AAAA	::11\n"
 #endif /* if0 for duplicates and reordering */
 ;
 
@@ -554,7 +560,7 @@ checkfile(char* f1, char *f2)
 			log_info("in files %s and %s:%d", f1, f2, line);
 			log_info("'%s'", buf1);
 			log_info("'%s'", buf2);
-			fatal_exit("files are not eqaul");
+			fatal_exit("files are not equal");
 		}
 	}
 	unit_assert(feof(i1) && feof(i2));

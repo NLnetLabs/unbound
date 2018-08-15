@@ -1,3 +1,6 @@
+15 August 2018: Wouter
+	- Fix segfault in auth-zone read and reorder of RRSIGs.
+
 14 August 2018: Wouter
 	- Fix that printout of error for cycle targets is a verbosity 4
 	  printout and does not wrongly print it is a memory error.

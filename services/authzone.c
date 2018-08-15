@@ -1014,7 +1014,8 @@ rrset_moveover_rrsigs(struct auth_data* node, uint16_t rr_type,
 	}
 	/* copy base values */
 	memcpy(sigd, sigold, sizeof(struct packed_rrset_data));
-	sigd->rrsig_count -= sigs;
+	/* in sigd the RRSIGs are stored in the base of the RR, in count */
+	sigd->count -= sigs;
 	/* setup rr_len */
 	sigd->rr_len = (size_t*)((uint8_t*)sigd +
 		sizeof(struct packed_rrset_data));
