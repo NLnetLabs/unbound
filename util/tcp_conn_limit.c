@@ -67,6 +67,9 @@ tcl_list_free_node(rbnode_type* node, void* ATTR_UNUSED(arg))
 {
 	struct tcl_addr* n = (struct tcl_addr*) node;
 	lock_quick_destroy(&n->lock);
+#ifdef THREADS_DISABLED
+	(void)n;
+#endif
 }
 
 void
