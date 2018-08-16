@@ -1,5 +1,6 @@
 16 August 2018: Wouter
 	- Fix warning on compile without threads.
+	- Fix contrib/fastrpz.patch.
 
 15 August 2018: Wouter
 	- Fix segfault in auth-zone read and reorder of RRSIGs.
