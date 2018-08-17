@@ -1,3 +1,8 @@
+17 August 2018: Wouter
+	- Set libunbound to increase current, because the libunbound change
+	  to the event callback function signature.  That needs programs,
+	  that use it, to recompile against the new header definition.
+
 16 August 2018: Wouter
 	- Fix warning on compile without threads.
 	- Fix contrib/fastrpz.patch.
