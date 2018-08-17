@@ -7,6 +7,7 @@
 	  to the event callback function signature.  That needs programs,
 	  that use it, to recompile against the new header definition.
 	- print servfail info to log as error.
+	- added more servfail printout statements, to the iterator.
 
 16 August 2018: Wouter
 	- Fix warning on compile without threads.

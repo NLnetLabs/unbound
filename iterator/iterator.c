@@ -790,6 +790,7 @@ prime_stub(struct module_qstate* qstate, struct iter_qstate* iq, int id,
 		iq->dp = delegpt_copy(stub_dp, qstate->region);
 		if(!iq->dp) {
 			log_err("out of memory priming stub");
+			errinf(qstate, "malloc failure, priming stub");
 			(void)error_response(qstate, id, LDNS_RCODE_SERVFAIL);
 			return 1; /* return 1 to make module stop, with error */
 		}
@@ -808,6 +809,7 @@ prime_stub(struct module_qstate* qstate, struct iter_qstate* iq, int id,
 		LDNS_RR_TYPE_NS, qclass, qstate, id, iq,
 		QUERYTARGETS_STATE, PRIME_RESP_STATE, &subq, 0)) {
 		verbose(VERB_ALGO, "could not prime stub");
+		errinf(qstate, "could not generate lookup for stub prime");
 		(void)error_response(qstate, id, LDNS_RCODE_SERVFAIL);
 		return 1; /* return 1 to make module stop, with error */
 	}
@@ -823,6 +825,7 @@ prime_stub(struct module_qstate* qstate, struct iter_qstate* iq, int id,
 			fptr_ok(fptr_whitelist_modenv_kill_sub(
 				qstate->env->kill_sub));
 			(*qstate->env->kill_sub)(subq);
+			errinf(qstate, "malloc failure, in stub prime");
 			(void)error_response(qstate, id, LDNS_RCODE_SERVFAIL);
 			return 1; /* return 1 to make module stop, with error */
 		}
@@ -906,6 +909,7 @@ auth_zone_delegpt(struct module_qstate* qstate, struct iter_qstate* iq,
 					return 1; /* just fallback */
 				}
 				lock_rw_unlock(&z->lock);
+				errinf(qstate, "malloc failure");
 				return 0;
 			}
 			dp->name = regional_alloc_init(qstate->region,
@@ -917,6 +921,7 @@ auth_zone_delegpt(struct module_qstate* qstate, struct iter_qstate* iq,
 					return 1; /* just fallback */
 				}
 				lock_rw_unlock(&z->lock);
+				errinf(qstate, "malloc failure");
 				return 0;
 			}
 			dp->namelen = z->namelen;
@@ -1207,6 +1212,10 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 	if(iq->query_restart_count > MAX_RESTART_COUNT) {
 		verbose(VERB_QUERY, "request has exceeded the maximum number"
 			" of query restarts with %d", iq->query_restart_count);
+		errinf(qstate, "request has exceeded the maximum number "
+			"restarts (eg. indirections)");
+		if(iq->qchase.qname)
+			errinf_dname(qstate, "stop at", iq->qchase.qname);
 		return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
 	}
 
@@ -1218,6 +1227,8 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 	if(iq->depth > ie->max_dependency_depth) {
 		verbose(VERB_QUERY, "request has exceeded the maximum "
 			"dependency depth with depth of %d", iq->depth);
+		errinf(qstate, "request has exceeded the maximum dependency "
+			"depth (eg. nameserver lookup recursion)");
 		return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
 	}
 
@@ -1294,9 +1305,12 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 			verbose(VERB_ALGO, "returning CNAME response from "
 				"cache");
 			if(!handle_cname_response(qstate, iq, msg, 
-				&sname, &slen))
+				&sname, &slen)) {
+				errinf(qstate, "failed to prepend CNAME "
+					"components, malloc failure");
 				return error_response(qstate, id, 
 					LDNS_RCODE_SERVFAIL);
+			}
 			iq->qchase.qname = sname;
 			iq->qchase.qname_len = slen;
 			/* This *is* a query restart, even if it is a cheap 
@@ -1325,6 +1339,7 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 	{
 		if(!iq->dp) {
 			log_err("alloc failure for forward dp");
+			errinf(qstate, "malloc failure for forward zone");
 			return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
 		}
 		iq->refetch_glue = 0;
@@ -1344,6 +1359,7 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 	if(iq->refetch_glue) {
 		if(!iq->dp) {
 			log_err("internal or malloc fail: no dp for refetch");
+			errinf(qstate, "malloc failure, for delegation info");
 			return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
 		}
 		delname = iq->dp->name;
@@ -1403,12 +1419,14 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 					iq->qchase.qclass);
 				if(!iq->dp) {
 					log_err("internal error: no hints dp");
+					errinf(qstate, "no hints for this class");
 					return error_response(qstate, id, 
 						LDNS_RCODE_SERVFAIL);
 				}
 				iq->dp = delegpt_copy(iq->dp, qstate->region);
 				if(!iq->dp) {
 					log_err("out of memory in safety belt");
+					errinf(qstate, "malloc failure, in safety belt");
 					return error_response(qstate, id, 
 						LDNS_RCODE_SERVFAIL);
 				}
@@ -1453,6 +1471,8 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 					"delegation point", iq->dp->name,
 					LDNS_RR_TYPE_NS, LDNS_RR_CLASS_IN);
 				qstate->was_ratelimited = 1;
+				errinf(qstate, "query was ratelimited");
+				errinf_dname(qstate, "for zone", iq->dp->name);
 				return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
 			}
 		}
@@ -1482,6 +1502,7 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 					if(!iq->dp) {
 						log_err("out of memory in "
 							"stub/fwd fallback");
+						errinf(qstate, "malloc failure, for fallback to config");
 						return error_response(qstate,
 						    id, LDNS_RCODE_SERVFAIL);
 					}
@@ -1490,6 +1511,9 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 				verbose(VERB_ALGO, "useless dp "
 					"but cannot go up, servfail");
 				delegpt_log(VERB_ALGO, iq->dp);
+				errinf(qstate, "no useful nameservers, "
+					"and cannot go up");
+				errinf_dname(qstate, "for zone", iq->dp->name);
 				return error_response(qstate, id, 
 					LDNS_RCODE_SERVFAIL);
 			}
@@ -1509,6 +1533,7 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 				iq->dp = delegpt_copy(iq->dp, qstate->region);
 				if(!iq->dp) {
 					log_err("out of memory in safety belt");
+					errinf(qstate, "malloc failure, in safety belt, for root");
 					return error_response(qstate, id, 
 						LDNS_RCODE_SERVFAIL);
 				}
@@ -1563,6 +1588,7 @@ processInitRequest2(struct module_qstate* qstate, struct iter_qstate* iq,
 		struct iter_hints_stub* stub;
 		if(!iq->dp) {
 			log_err("internal or malloc fail: no dp for refetch");
+			errinf(qstate, "malloc failure, no delegation info");
 			return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
 		}
 		/* Do not send queries above stub, do not set delname to dp if
@@ -1914,6 +1940,8 @@ processLastResort(struct module_qstate* qstate, struct iter_qstate* iq,
 		int qs = 0;
 		verbose(VERB_ALGO, "try parent-side target name");
 		if(!query_for_targets(qstate, iq, ie, id, 1, &qs)) {
+			errinf(qstate, "could not fetch nameserver");
+			errinf_dname(qstate, "at zone", iq->dp->name);
 			return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
 		}
 		iq->num_target_queries += qs;
@@ -1925,6 +1953,7 @@ processLastResort(struct module_qstate* qstate, struct iter_qstate* iq,
 	}
 	if(iq->depth == ie->max_dependency_depth) {
 		verbose(VERB_QUERY, "maxdepth and need more nameservers, fail");
+		errinf(qstate, "cannot fetch more nameservers because at max dependency depth");
 		return error_response_cache(qstate, id, LDNS_RCODE_SERVFAIL);
 	}
 	if(iq->depth > 0 && iq->target_count &&
@@ -1933,6 +1962,7 @@ processLastResort(struct module_qstate* qstate, struct iter_qstate* iq,
 		dname_str(qstate->qinfo.qname, s);
 		verbose(VERB_QUERY, "request %s has exceeded the maximum "
 			"number of glue fetches %d", s, iq->target_count[1]);
+		errinf(qstate, "exceeded the maximum number of glue fetches");
 		return error_response_cache(qstate, id, LDNS_RCODE_SERVFAIL);
 	}
 	/* mark cycle targets for parent-side lookups */
@@ -1958,9 +1988,11 @@ processLastResort(struct module_qstate* qstate, struct iter_qstate* iq,
 			/* Send the AAAA request. */
 			if(!generate_parentside_target_query(qstate, iq, id, 
 				ns->name, ns->namelen,
-				LDNS_RR_TYPE_AAAA, iq->qchase.qclass))
+				LDNS_RR_TYPE_AAAA, iq->qchase.qclass)) {
+				errinf_dname(qstate, "could not generate nameserver AAAA lookup for", ns->name);
 				return error_response(qstate, id,
 					LDNS_RCODE_SERVFAIL);
+			}
 			ns->done_pside6 = 1;
 			query_count++;
 		}
@@ -1968,9 +2000,11 @@ processLastResort(struct module_qstate* qstate, struct iter_qstate* iq,
 			/* Send the A request. */
 			if(!generate_parentside_target_query(qstate, iq, id, 
 				ns->name, ns->namelen, 
-				LDNS_RR_TYPE_A, iq->qchase.qclass))
+				LDNS_RR_TYPE_A, iq->qchase.qclass)) {
+				errinf_dname(qstate, "could not generate nameserver A lookup for", ns->name);
 				return error_response(qstate, id,
 					LDNS_RCODE_SERVFAIL);
+			}
 			ns->done_pside4 = 1;
 			query_count++;
 		}
@@ -2026,6 +2060,7 @@ processDSNSFind(struct module_qstate* qstate, struct iter_qstate* iq, int id)
 	}
 	/* robustcheck for internal error: we are not underneath the dp */
 	if(!dname_subdomain_c(iq->dsns_point, iq->dp->name)) {
+		errinf_dname(qstate, "for DS query parent-child nameserver search the query is not under the zone", iq->dp->name);
 		return error_response_cache(qstate, id, LDNS_RCODE_SERVFAIL);
 	}
 
@@ -2046,6 +2081,7 @@ processDSNSFind(struct module_qstate* qstate, struct iter_qstate* iq, int id)
 	if(!generate_sub_request(iq->dsns_point, iq->dsns_point_len, 
 		LDNS_RR_TYPE_NS, iq->qchase.qclass, qstate, id, iq,
 		INIT_REQUEST_STATE, FINISHED_STATE, &subq, 0)) {
+		errinf_dname(qstate, "for DS query parent-child nameserver search, could not generate NS lookup for", iq->dsns_point);
 		return error_response_cache(qstate, id, LDNS_RCODE_SERVFAIL);
 	}
 
@@ -2091,11 +2127,13 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 	if(iq->referral_count > MAX_REFERRAL_COUNT) {
 		verbose(VERB_QUERY, "request has exceeded the maximum "
 			"number of referrrals with %d", iq->referral_count);
+		errinf(qstate, "exceeded the maximum of referrals");
 		return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
 	}
 	if(iq->sent_count > MAX_SENT_COUNT) {
 		verbose(VERB_QUERY, "request has exceeded the maximum "
 			"number of sends with %d", iq->sent_count);
+		errinf(qstate, "exceeded the maximum number of sends");
 		return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
 	}
 	
@@ -2103,6 +2141,7 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 	 * or another failure occurred */
 	if(!iq->dp) {
 		verbose(VERB_QUERY, "Failed to get a delegation, giving up");
+		errinf(qstate, "failed to get a delegation (eg. prime failure)");
 		return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
 	}
 	if(!ie->supports_ipv6)
@@ -2262,6 +2301,7 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 		 * no internet fallback */
 		verbose(VERB_ALGO, "auth zone lookup failed, no fallback,"
 			" servfail");
+		errinf(qstate, "auth zone lookup failed, fallback is off");
 		return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
 	}
 	if(iq->dp && iq->dp->auth_dp) {
@@ -2287,6 +2327,7 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 		int extra = 0;
 		size_t naddr, nres, navail;
 		if(!query_for_targets(qstate, iq, ie, id, -1, &extra)) {
+			errinf(qstate, "could not fetch nameservers for 0x20 fallback");
 			return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
 		}
 		iq->num_target_queries += extra;
@@ -2367,6 +2408,8 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 					"missing target");
 				if(!query_for_targets(qstate, iq, ie, id, 
 					1, &qs)) {
+					errinf(qstate, "could not fetch nameserver");
+					errinf_dname(qstate, "at zone", iq->dp->name);
 					return error_response(qstate, id,
 						LDNS_RCODE_SERVFAIL);
 				}
@@ -2438,6 +2481,8 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 			lock_basic_unlock(&ie->queries_ratelimit_lock);
 			verbose(VERB_ALGO, "query exceeded ratelimits");
 			qstate->was_ratelimited = 1;
+			errinf_dname(qstate, "exceeded ratelimit for zone",
+				iq->dp->name);
 			return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
 		}
 	}
@@ -2759,11 +2804,15 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 		iq->dp = delegpt_from_message(iq->response, qstate->region);
 		if (qstate->env->cfg->qname_minimisation)
 			iq->minimisation_state = INIT_MINIMISE_STATE;
-		if(!iq->dp)
+		if(!iq->dp) {
+			errinf(qstate, "malloc failure, for delegation point");
 			return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
+		}
 		if(!cache_fill_missing(qstate->env, iq->qchase.qclass, 
-			qstate->region, iq->dp))
+			qstate->region, iq->dp)) {
+			errinf(qstate, "malloc failure, copy extra info into delegation point");
 			return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
+		}
 		if(iq->store_parent_NS && query_dname_compare(iq->dp->name,
 			iq->store_parent_NS->name) == 0)
 			iter_merge_retry_counts(iq->dp, iq->store_parent_NS);
@@ -2825,8 +2874,10 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 		}
 		/* Process the CNAME response. */
 		if(!handle_cname_response(qstate, iq, iq->response, 
-			&sname, &snamelen))
+			&sname, &snamelen)) {
+			errinf(qstate, "malloc failure, CNAME info");
 			return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
+		}
 		/* cache the CNAME response under the current query */
 		/* NOTE : set referral=1, so that rrsets get stored but not 
 		 * the partial query answer (CNAME only). */
@@ -2927,6 +2978,8 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 			iq->dp->name, iq->dp->namelen, qstate->qinfo.qclass)) {
 			verbose(VERB_ALGO, "auth zone response bad, and no"
 				" fallback possible, servfail");
+			errinf_dname(qstate, "reponse is bad, no fallback, "
+				"for auth zone", iq->dp->name);
 			return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
 		}
 		verbose(VERB_ALGO, "auth zone response was bad, "
@@ -3017,6 +3070,8 @@ processPrimeResponse(struct module_qstate* qstate, int id)
 		qstate->return_rcode = LDNS_RCODE_NOERROR;
 		qstate->return_msg = iq->response;
 	} else {
+		errinf(qstate, "prime response did not get an answer");
+		errinf_dname(qstate, "for", qstate->qinfo.qname);
 		qstate->return_rcode = LDNS_RCODE_SERVFAIL;
 		qstate->return_msg = NULL;
 	}
@@ -3160,6 +3215,7 @@ processDSNSResponse(struct module_qstate* qstate, int id,
 	foriq->dp = delegpt_from_message(qstate->return_msg, forq->region);
 	if(!foriq->dp) {
 		log_err("out of memory in dsns dp alloc");
+		errinf(qstate, "malloc failure, in DS search");
 		return; /* dp==NULL in QUERYTARGETS makes SERVFAIL */
 	}
 	/* success, go query the querytargets in the new dp (and go down) */
@@ -3298,6 +3354,8 @@ processCollectClass(struct module_qstate* qstate, int id)
 				c, qstate, id, iq, INIT_REQUEST_STATE,
 				FINISHED_STATE, &subq, 
 				(int)!(qstate->query_flags&BIT_CD))) {
+				errinf(qstate, "could not generate class ANY"
+					" lookup query");
 				return error_response(qstate, id, 
 					LDNS_RCODE_SERVFAIL);
 			}
@@ -3344,6 +3402,7 @@ processFinished(struct module_qstate* qstate, struct iter_qstate* iq,
 				(iq->response?iq->response->rep:NULL));
 	if(!iq->response) {
 		verbose(VERB_ALGO, "No response is set, servfail");
+		errinf(qstate, "(no response found at query finish)");
 		return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
 	}
 
@@ -3529,6 +3588,7 @@ process_response(struct module_qstate* qstate, struct iter_qstate* iq,
 		|| !qstate->reply) {
 		log_err("Bad event combined with response");
 		outbound_list_remove(&iq->outlist, outbound);
+		errinf(qstate, "module iterator received wrong internal event with a response message");
 		(void)error_response(qstate, id, LDNS_RCODE_SERVFAIL);
 		return;
 	}
@@ -3656,6 +3716,7 @@ process_response(struct module_qstate* qstate, struct iter_qstate* iq,
 				verbose(VERB_DETAIL, "Capsforid fallback: "
 					"getting different replies, failed");
 				outbound_list_remove(&iq->outlist, outbound);
+				errinf(qstate, "0x20 failed, then got different replies in fallback");
 				(void)error_response(qstate, id, 
 					LDNS_RCODE_SERVFAIL);
 				return;
@@ -3694,6 +3755,7 @@ iter_operate(struct module_qstate* qstate, enum module_ev event, int id,
 	if((event == module_event_new || event == module_event_pass) && 
 		iq == NULL) {
 		if(!iter_new(qstate, id)) {
+			errinf(qstate, "malloc failure, new iterator module allocation");
 			(void)error_response(qstate, id, LDNS_RCODE_SERVFAIL);
 			return;
 		}
@@ -3711,11 +3773,13 @@ iter_operate(struct module_qstate* qstate, enum module_ev event, int id,
 	}
 	if(event == module_event_error) {
 		verbose(VERB_ALGO, "got called with event error, giving up");
+		errinf(qstate, "iterator module got the error event");
 		(void)error_response(qstate, id, LDNS_RCODE_SERVFAIL);
 		return;
 	}
 
 	log_err("bad event for iterator");
+	errinf(qstate, "iterator module received wrong event");
 	(void)error_response(qstate, id, LDNS_RCODE_SERVFAIL);
 }
 
