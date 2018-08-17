@@ -2241,7 +2241,7 @@ processFinished(struct module_qstate* qstate, struct val_qstate* vq,
 				log_query_info(0, "validation failure",
 					&qstate->qinfo);
 			else {
-				char* err = errinf_to_str(qstate);
+				char* err = errinf_to_str_bogus(qstate);
 				if(err) log_info("%s", err);
 				free(err);
 			}

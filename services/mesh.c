@@ -980,7 +980,7 @@ mesh_do_callback(struct mesh_state* m, int rcode, struct reply_info* rep,
 		rcode = LDNS_RCODE_SERVFAIL;
 	if(!rcode && (rep->security == sec_status_bogus ||
 		rep->security == sec_status_secure_sentinel_fail)) {
-		if(!(reason = errinf_to_str(&m->s)))
+		if(!(reason = errinf_to_str_bogus(&m->s)))
 			rcode = LDNS_RCODE_SERVFAIL;
 	}
 	/* send the reply */
@@ -1157,18 +1157,10 @@ void mesh_query_done(struct mesh_state* mstate)
 		mstate->s.return_msg->rep:NULL);
 	if(mstate->s.return_rcode == LDNS_RCODE_SERVFAIL ||
 		(rep && FLAGS_GET_RCODE(rep->flags) == LDNS_RCODE_SERVFAIL)) {
-		char* err = errinf_to_str(&mstate->s);
-		if(err) {
-			char nm[255+1];
-			char* tp = sldns_wire2str_type(mstate->s.qinfo.qtype);
-			char* cl = sldns_wire2str_class(mstate->s.qinfo.qclass);
-			dname_str(mstate->s.qinfo.qname, nm);
-			log_err("query %s %s %s SERVFAIL with reason: %s",
-				nm, tp?tp:"t", cl?cl:"c", err);
-			free(err);
-			free(tp);
-			free(cl);
-		}
+		char* err = errinf_to_str_servfail(&mstate->s);
+		if(err)
+			log_err("%s", err);
+		free(err);
 	}
 	for(r = mstate->reply_list; r; r = r->next) {
 		/* if a response-ip address block has been stored the

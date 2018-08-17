@@ -1853,7 +1853,8 @@ processLastResort(struct module_qstate* qstate, struct iter_qstate* iq,
 		iq->qchase.qclass, NULL)) {
 		/* fail -- no more targets, no more hope of targets, no hope 
 		 * of a response. */
-		errinf(qstate, "all the configured stub or forward servers failed");
+		errinf(qstate, "all the configured stub or forward servers failed,");
+		errinf_dname(qstate, "at zone", iq->dp->name);
 		verbose(VERB_QUERY, "configured stub or forward servers failed -- returning SERVFAIL");
 		return error_response_cache(qstate, id, LDNS_RCODE_SERVFAIL);
 	}
@@ -1990,8 +1991,8 @@ processLastResort(struct module_qstate* qstate, struct iter_qstate* iq,
 				iq->deleg_msg?iq->deleg_msg->rep:
 				(iq->response?iq->response->rep:NULL));
 
-	errinf(qstate, "all servers for this domain failed");
-	errinf_dname(qstate, ", at zonecut", iq->dp->name);
+	errinf(qstate, "all servers for this domain failed,");
+	errinf_dname(qstate, "at zone", iq->dp->name);
 	verbose(VERB_QUERY, "out of query targets -- returning SERVFAIL");
 	/* fail -- no more targets, no more hope of targets, no hope 
 	 * of a response. */

@@ -2233,7 +2233,7 @@ void errinf_origin(struct module_qstate* qstate, struct sock_list *origin)
 	}
 }
 
-char* errinf_to_str(struct module_qstate* qstate)
+char* errinf_to_str_bogus(struct module_qstate* qstate)
 {
 	char buf[20480];
 	char* p = buf;
@@ -2245,6 +2245,31 @@ char* errinf_to_str(struct module_qstate* qstate)
 	sldns_wire2str_class_buf(qstate->qinfo.qclass, c, sizeof(c));
 	dname_str(qstate->qinfo.qname, dname);
 	snprintf(p, left, "validation failure <%s %s %s>:", dname, t, c);
+	left -= strlen(p); p += strlen(p);
+	if(!qstate->errinf)
+		snprintf(p, left, " misc failure");
+	else for(s=qstate->errinf; s; s=s->next) {
+		snprintf(p, left, " %s", s->str);
+		left -= strlen(p); p += strlen(p);
+	}
+	p = strdup(buf);
+	if(!p)
+		log_err("malloc failure in errinf_to_str");
+	return p;
+}
+
+char* errinf_to_str_servfail(struct module_qstate* qstate)
+{
+	char buf[20480];
+	char* p = buf;
+	size_t left = sizeof(buf);
+	struct config_strlist* s;
+	char dname[LDNS_MAX_DOMAINLEN+1];
+	char t[16], c[16];
+	sldns_wire2str_type_buf(qstate->qinfo.qtype, t, sizeof(t));
+	sldns_wire2str_class_buf(qstate->qinfo.qclass, c, sizeof(c));
+	dname_str(qstate->qinfo.qname, dname);
+	snprintf(p, left, "SERVFAIL <%s %s %s>:", dname, t, c);
 	left -= strlen(p); p += strlen(p);
 	if(!qstate->errinf)
 		snprintf(p, left, " misc failure");
