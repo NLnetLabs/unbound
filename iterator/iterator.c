@@ -1328,6 +1328,8 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 		/* if from cache, NULL, else insert 'cache IP' len=0 */
 		if(qstate->reply_origin)
 			sock_list_insert(&qstate->reply_origin, NULL, 0, qstate->region);
+		if(FLAGS_GET_RCODE(msg->rep->flags) == LDNS_RCODE_SERVFAIL)
+			errinf(qstate, "SERVFAIL in cache");
 		/* it is an answer, response, to final state */
 		verbose(VERB_ALGO, "returning answer from cache.");
 		iq->response = msg;

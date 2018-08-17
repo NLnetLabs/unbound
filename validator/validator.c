@@ -2340,6 +2340,7 @@ processDLVLookup(struct module_qstate* qstate, struct val_qstate* vq,
 
 	if(vq->dlv_status == dlv_error) {
 		verbose(VERB_QUERY, "failed DLV lookup");
+		errinf(qstate, "failed DLV lookup");
 		return val_error(qstate, id);
 	} else if(vq->dlv_status == dlv_success) {
 		uint8_t* nm;
