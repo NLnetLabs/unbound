@@ -1,3 +1,7 @@
+17 August 2018: Ralph
+	- Fix classification for QTYPE=CNAME queries when QNAME minimisation is
+ 	  enabled.
+
 17 August 2018: Wouter
 	- Set libunbound to increase current, because the libunbound change
 	  to the event callback function signature.  That needs programs,

@@ -2598,6 +2598,15 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 			/* DNAME to a subdomain loop; do not recurse */
 			type = RESPONSE_TYPE_ANSWER;
 		}
+	} else if(type == RESPONSE_TYPE_CNAME &&
+		iq->qchase.qtype == LDNS_RR_TYPE_CNAME &&
+		iq->minimisation_state == MINIMISE_STATE &&
+		query_dname_compare(iq->qchase.qname, iq->qinfo_out.qname) == 0) {
+		/* The minimised query for full QTYPE and hidden QTYPE can be
+		 * classified as CNAME response type, even when the original
+		 * QTYPE=CNAME. This should be treated as answer response type.
+		 */
+		type = RESPONSE_TYPE_ANSWER;
 	}
 
 	/* handle each of the type cases */
