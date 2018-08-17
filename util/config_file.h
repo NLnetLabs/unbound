@@ -277,6 +277,8 @@ struct config_file {
 	int log_queries;
 	/** log replies with one line per reply */
 	int log_replies;
+	/** log servfails with a reason */
+	int log_servfail;
 	/** log identity to report */
 	char* log_identity;
 

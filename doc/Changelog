@@ -8,6 +8,8 @@
 	  that use it, to recompile against the new header definition.
 	- print servfail info to log as error.
 	- added more servfail printout statements, to the iterator.
+	- log-servfail: yes prints log lines that say why queries are
+	  returning SERVFAIL to clients.
 
 16 August 2018: Wouter
 	- Fix warning on compile without threads.

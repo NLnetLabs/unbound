@@ -1155,8 +1155,10 @@ void mesh_query_done(struct mesh_state* mstate)
 	struct mesh_cb* c;
 	struct reply_info* rep = (mstate->s.return_msg?
 		mstate->s.return_msg->rep:NULL);
-	if(mstate->s.return_rcode == LDNS_RCODE_SERVFAIL ||
-		(rep && FLAGS_GET_RCODE(rep->flags) == LDNS_RCODE_SERVFAIL)) {
+	if((mstate->s.return_rcode == LDNS_RCODE_SERVFAIL ||
+		(rep && FLAGS_GET_RCODE(rep->flags) == LDNS_RCODE_SERVFAIL))
+		&& mstate->s.env->cfg->log_servfail
+		&& !mstate->s.env->cfg->val_log_squelch) {
 		char* err = errinf_to_str_servfail(&mstate->s);
 		if(err)
 			log_err("%s", err);
