@@ -2197,7 +2197,7 @@ void w_config_adjust_directory(struct config_file* cfg)
 void errinf(struct module_qstate* qstate, const char* str)
 {
 	struct config_strlist* p;
-	if(qstate->env->cfg->val_log_level < 2 || !str)
+	if((qstate->env->cfg->val_log_level < 2 && !qstate->env->cfg->log_servfail) || !str)
 		return;
 	p = (struct config_strlist*)regional_alloc(qstate->region, sizeof(*p));
 	if(!p) {
@@ -2222,7 +2222,7 @@ void errinf(struct module_qstate* qstate, const char* str)
 void errinf_origin(struct module_qstate* qstate, struct sock_list *origin)
 {
 	struct sock_list* p;
-	if(qstate->env->cfg->val_log_level < 2)
+	if(qstate->env->cfg->val_log_level < 2 && !qstate->env->cfg->log_servfail)
 		return;
 	for(p=origin; p; p=p->next) {
 		char buf[256];
@@ -2294,7 +2294,7 @@ void errinf_rrset(struct module_qstate* qstate, struct ub_packed_rrset_key *rr)
 	char buf[1024];
 	char dname[LDNS_MAX_DOMAINLEN+1];
 	char t[16], c[16];
-	if(qstate->env->cfg->val_log_level < 2 || !rr)
+	if((qstate->env->cfg->val_log_level < 2 && !qstate->env->cfg->log_servfail) || !rr)
 		return;
 	sldns_wire2str_type_buf(ntohs(rr->rk.type), t, sizeof(t));
 	sldns_wire2str_class_buf(ntohs(rr->rk.rrset_class), c, sizeof(c));
@@ -2307,7 +2307,7 @@ void errinf_dname(struct module_qstate* qstate, const char* str, uint8_t* dname)
 {
 	char b[1024];
 	char buf[LDNS_MAX_DOMAINLEN+1];
-	if(qstate->env->cfg->val_log_level < 2 || !str || !dname)
+	if((qstate->env->cfg->val_log_level < 2 && !qstate->env->cfg->log_servfail) || !str || !dname)
 		return;
 	dname_str(dname, buf);
 	snprintf(b, sizeof(b), "%s %s", str, buf);

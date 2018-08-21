@@ -2,6 +2,8 @@
 	- log-local-actions: yes option for unbound.conf that logs all the
 	  local zone actions, a patch from Saksham Manchanda (Secure64).
 	- #4146: num.query.subnet and num.query.subnet_cache counters.
+	- Fix only misc failure from log-servfail when val-log-level is not
+	  enabled.
 
 17 August 2018: Ralph
 	- Fix classification for QTYPE=CNAME queries when QNAME minimisation is
