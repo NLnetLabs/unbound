@@ -641,6 +641,14 @@ answered using cached data.
 The number of queries answered using cached NSEC records with NXDOMAIN RCODE.
 These queries would otherwise have been sent to the internet, but are now
 answered using cached data.
+.TP
+.I num.query.subnet
+Number of queries that got an answer that contained EDNS client subnet data.
+.TP
+.I num.query.subnet_cache
+Number of queries answered from the edns client subnet cache.  These are
+counted as cachemiss by the main counters, but hit the client subnet
+specific cache, after getting processed by the edns client subnet module.
 .SH "FILES"
 .TP
 .I @ub_conf_file@

@@ -765,6 +765,11 @@ struct ub_server_stats {
 	/** number of times neg cache records were used to generate NXDOMAIN
 	 * responses. */
 	long long num_neg_cache_nxdomain;
+	/** number of queries answered from edns-subnet specific data */
+	long long num_query_subnet;
+	/** number of queries answered from edns-subnet specific data, and
+	 * the answer was from the edns-subnet cache. */
+	long long num_query_subnet_cache;
 };
 
 /** 

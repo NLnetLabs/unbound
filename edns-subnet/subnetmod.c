@@ -511,6 +511,7 @@ eval_response(struct module_qstate *qstate, int id, struct subnet_qstate *sq)
 
 	lock_rw_wrlock(&sne->biglock);
 	update_cache(qstate, id);
+	sne->num_msg_nocache++;
 	lock_rw_unlock(&sne->biglock);
 	
 	if (sq->subnet_downstream) {
@@ -693,6 +694,7 @@ subnetmod_operate(struct module_qstate *qstate, enum module_ev event,
 
 		lock_rw_wrlock(&sne->biglock);
 		if (lookup_and_reply(qstate, id, sq)) {
+			sne->num_msg_cache++;
 			lock_rw_unlock(&sne->biglock);
 			verbose(VERB_QUERY, "subnet: answered from cache");
 			qstate->ext_state[id] = module_finished;

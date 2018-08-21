@@ -374,6 +374,10 @@ static void print_extended(struct ub_stats_info* s)
 #endif /* USE_DNSCRYPT */
 	PR_UL("num.query.authzone.up", s->svr.num_query_authzone_up);
 	PR_UL("num.query.authzone.down", s->svr.num_query_authzone_down);
+#ifdef CLIENT_SUBNET
+	PR_UL("num.query.subnet", s->svr.num_query_subnet);
+	PR_UL("num.query.subnet_cache", s->svr.num_query_subnet_cache);
+#endif
 }
 
 /** print statistics out of memory structures */

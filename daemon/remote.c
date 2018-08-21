@@ -1052,6 +1052,12 @@ print_ext(RES* ssl, struct ub_stats_info* s)
 		(unsigned long)s->svr.num_query_authzone_up)) return 0;
 	if(!ssl_printf(ssl, "num.query.authzone.down"SQ"%lu\n",
 		(unsigned long)s->svr.num_query_authzone_down)) return 0;
+#ifdef CLIENT_SUBNET
+	if(!ssl_printf(ssl, "num.query.subnet"SQ"%lu\n",
+		(unsigned long)s->svr.num_query_subnet)) return 0;
+	if(!ssl_printf(ssl, "num.query.subnet_cache"SQ"%lu\n",
+		(unsigned long)s->svr.num_query_subnet_cache)) return 0;
+#endif /* CLIENT_SUBNET */
 	return 1;
 }
 
