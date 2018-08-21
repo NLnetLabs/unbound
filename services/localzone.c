@@ -1459,7 +1459,7 @@ lz_inform_print(struct local_zone* z, struct query_info* qinfo,
 	uint16_t port = ntohs(((struct sockaddr_in*)&repinfo->addr)->sin_port);
 	dname_str(z->name, zname);
 	addr_to_str(&repinfo->addr, repinfo->addrlen, ip, sizeof(ip));
-	snprintf(txt, sizeof(txt), "%s inform %s@%u", zname, ip,
+	snprintf(txt, sizeof(txt), "%s %s %s@%u", zname, local_zone_type2str(z->type), ip,
 		(unsigned)port);
 	log_nametypeclass(0, txt, qinfo->qname, qinfo->qtype, qinfo->qclass);
 }
@@ -1576,8 +1576,9 @@ local_zones_answer(struct local_zones* zones, struct module_env* env,
 			z->override_tree, &tag, tagname, num_tags);
 		lock_rw_unlock(&zones->lock);
 	}
-	if((lzt == local_zone_inform || lzt == local_zone_inform_deny)
-		&& repinfo)
+	if((env->cfg->log_local_actions ||
+			lzt == local_zone_inform || lzt == local_zone_inform_deny)
+			&& repinfo)
 		lz_inform_print(z, qinfo, repinfo);
 
 	if(lzt != local_zone_always_refuse

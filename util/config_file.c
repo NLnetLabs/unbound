@@ -118,6 +118,7 @@ config_create(void)
 	cfg->log_time_ascii = 0;
 	cfg->log_queries = 0;
 	cfg->log_replies = 0;
+	cfg->log_local_actions = 0;
 	cfg->log_servfail = 0;
 #ifndef USE_WINSOCK
 #  ifdef USE_MINI_EVENT
@@ -548,6 +549,7 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	else S_YNO("val-log-squelch:", val_log_squelch)
 	else S_YNO("log-queries:", log_queries)
 	else S_YNO("log-replies:", log_replies)
+	else S_YNO("log-local-actions:", log_local_actions)
 	else S_YNO("log-servfail:", log_servfail)
 	else S_YNO("val-permissive-mode:", val_permissive_mode)
 	else S_YNO("aggressive-nsec:", aggressive_nsec)
@@ -905,6 +907,7 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_STR(opt, "logfile", logfile)
 	else O_YNO(opt, "log-queries", log_queries)
 	else O_YNO(opt, "log-replies", log_replies)
+	else O_YNO(opt, "log-local-actions", log_local_actions)
 	else O_YNO(opt, "log-servfail", log_servfail)
 	else O_STR(opt, "pidfile", pidfile)
 	else O_YNO(opt, "hide-identity", hide_identity)

@@ -371,6 +371,7 @@ log-identity{COLON}		{ YDVAR(1, VAR_LOG_IDENTITY) }
 log-time-ascii{COLON}		{ YDVAR(1, VAR_LOG_TIME_ASCII) }
 log-queries{COLON}		{ YDVAR(1, VAR_LOG_QUERIES) }
 log-replies{COLON}		{ YDVAR(1, VAR_LOG_REPLIES) }
+log-local-actions{COLON}       { YDVAR(1, VAR_LOG_LOCAL_ACTIONS) }
 log-servfail{COLON}		{ YDVAR(1, VAR_LOG_SERVFAIL) }
 local-zone{COLON}		{ YDVAR(2, VAR_LOCAL_ZONE) }
 local-data{COLON}		{ YDVAR(1, VAR_LOCAL_DATA) }
