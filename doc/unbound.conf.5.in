@@ -655,6 +655,11 @@ Default is no.  Note that it takes time to print these
 lines which makes the server (significantly) slower.  Odd (nonprintable)
 characters in names are printed as '?'.
 .TP
+.B log\-local\-actions: \fI<yes or no>
+Print log lines to inform about local zone actions.  These lines are like the
+local\-zone type inform prints out, but they are also printed for the other
+types of local zones.
+.TP
 .B log\-servfail: \fI<yes or no>
 Print log lines that say why queries return SERVFAIL to clients.
 This is separate from the verbosity debug logs, much smaller, and printed

@@ -318,6 +318,10 @@ server:
 	# timetoresolve, fromcache and responsesize.
 	# log-replies: no
 
+	# log the local-zone actions, like local-zone type inform is enabled
+	# also for the other local zone types.
+	# log-local-actions: no
+
 	# print log lines that say why queries return SERVFAIL to clients.
 	# log-servfail: no
 
