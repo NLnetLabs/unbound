@@ -1014,7 +1014,7 @@ static int inplace_cb_reply_call_generic(
     struct inplace_cb* callback_list, enum inplace_cb_list_type type,
 	struct query_info* qinfo, struct module_qstate* qstate,
 	struct reply_info* rep, int rcode, struct edns_data* edns,
-	struct regional* region)
+	struct comm_reply* repinfo, struct regional* region)
 {
 	struct inplace_cb* cb;
 	struct edns_option* opt_list_out = NULL;
@@ -1027,7 +1027,7 @@ static int inplace_cb_reply_call_generic(
 		fptr_ok(fptr_whitelist_inplace_cb_reply_generic(
 			(inplace_cb_reply_func_type*)cb->cb, type));
 		(void)(*(inplace_cb_reply_func_type*)cb->cb)(qinfo, qstate, rep,
-			rcode, edns, &opt_list_out, region, cb->id, cb->cb_arg);
+			rcode, edns, &opt_list_out, repinfo, region, cb->id, cb->cb_arg);
 	}
 	edns->opt_list = opt_list_out;
 	return 1;
@@ -1035,44 +1035,45 @@ static int inplace_cb_reply_call_generic(
 
 int inplace_cb_reply_call(struct module_env* env, struct query_info* qinfo,
 	struct module_qstate* qstate, struct reply_info* rep, int rcode,
-	struct edns_data* edns, struct regional* region)
+	struct edns_data* edns, struct comm_reply* repinfo, struct regional* region)
 {
 	return inplace_cb_reply_call_generic(
 		env->inplace_cb_lists[inplace_cb_reply], inplace_cb_reply, qinfo,
-		qstate, rep, rcode, edns, region);
+		qstate, rep, rcode, edns, repinfo, region);
 }
 
 int inplace_cb_reply_cache_call(struct module_env* env,
 	struct query_info* qinfo, struct module_qstate* qstate,
 	struct reply_info* rep, int rcode, struct edns_data* edns,
-	struct regional* region)
+	struct comm_reply* repinfo, struct regional* region)
 {
 	return inplace_cb_reply_call_generic(
 		env->inplace_cb_lists[inplace_cb_reply_cache], inplace_cb_reply_cache,
-		qinfo, qstate, rep, rcode, edns, region);
+		qinfo, qstate, rep, rcode, edns, repinfo, region);
 }
 
 int inplace_cb_reply_local_call(struct module_env* env,
 	struct query_info* qinfo, struct module_qstate* qstate,
 	struct reply_info* rep, int rcode, struct edns_data* edns,
-	struct regional* region)
+	struct comm_reply* repinfo, struct regional* region)
 {
 	return inplace_cb_reply_call_generic(
 		env->inplace_cb_lists[inplace_cb_reply_local], inplace_cb_reply_local,
-		qinfo, qstate, rep, rcode, edns, region);
+		qinfo, qstate, rep, rcode, edns, repinfo, region);
 }
 
 int inplace_cb_reply_servfail_call(struct module_env* env,
 	struct query_info* qinfo, struct module_qstate* qstate,
 	struct reply_info* rep, int rcode, struct edns_data* edns,
-	struct regional* region)
+	struct comm_reply* repinfo, struct regional* region)
 {
 	/* We are going to servfail. Remove any potential edns options. */
 	if(qstate)
 		qstate->edns_opts_front_out = NULL;
 	return inplace_cb_reply_call_generic(
 		env->inplace_cb_lists[inplace_cb_reply_servfail],
-		inplace_cb_reply_servfail, qinfo, qstate, rep, rcode, edns, region);
+		inplace_cb_reply_servfail, qinfo, qstate, rep, rcode, edns, repinfo,
+		region);
 }
 
 int inplace_cb_query_call(struct module_env* env, struct query_info* qinfo,

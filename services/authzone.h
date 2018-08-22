@@ -512,12 +512,13 @@ int auth_zones_lookup(struct auth_zones* az, struct query_info* qinfo,
  * @param qinfo: query info (parsed).
  * @param edns: edns info (parsed).
  * @param buf: buffer with query ID and flags, also for reply.
+ * @param repinfo: reply information for a communication point.
  * @param temp: temporary storage region.
  * @return false if not answered
  */
 int auth_zones_answer(struct auth_zones* az, struct module_env* env,
-	struct query_info* qinfo, struct edns_data* edns, struct sldns_buffer* buf,
-	struct regional* temp);
+	struct query_info* qinfo, struct edns_data* edns,
+	struct comm_reply* repinfo, struct sldns_buffer* buf, struct regional* temp);
 
 /** 
  * Find the auth zone that is above the given qname.

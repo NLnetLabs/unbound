@@ -386,7 +386,7 @@ void mesh_new_client(struct mesh_area* mesh, struct query_info* qinfo,
 		if(!s) {
 			log_err("mesh_state_create: out of memory; SERVFAIL");
 			if(!inplace_cb_reply_servfail_call(mesh->env, qinfo, NULL, NULL,
-				LDNS_RCODE_SERVFAIL, edns, mesh->env->scratch))
+				LDNS_RCODE_SERVFAIL, edns, rep, mesh->env->scratch))
 					edns->opt_list = NULL;
 			error_encode(rep->c->buffer, LDNS_RCODE_SERVFAIL,
 				qinfo, qid, qflags, edns);
@@ -402,7 +402,7 @@ void mesh_new_client(struct mesh_area* mesh, struct query_info* qinfo,
 			if(!s->s.edns_opts_front_in) {
 				log_err("mesh_state_create: out of memory; SERVFAIL");
 				if(!inplace_cb_reply_servfail_call(mesh->env, qinfo, NULL,
-					NULL, LDNS_RCODE_SERVFAIL, edns, mesh->env->scratch))
+					NULL, LDNS_RCODE_SERVFAIL, edns, rep, mesh->env->scratch))
 						edns->opt_list = NULL;
 				error_encode(rep->c->buffer, LDNS_RCODE_SERVFAIL,
 					qinfo, qid, qflags, edns);
@@ -430,7 +430,7 @@ void mesh_new_client(struct mesh_area* mesh, struct query_info* qinfo,
 	if(!mesh_state_add_reply(s, edns, rep, qid, qflags, qinfo)) {
 			log_err("mesh_new_client: out of memory; SERVFAIL");
 			if(!inplace_cb_reply_servfail_call(mesh->env, qinfo, &s->s,
-				NULL, LDNS_RCODE_SERVFAIL, edns, mesh->env->scratch))
+				NULL, LDNS_RCODE_SERVFAIL, edns, rep, mesh->env->scratch))
 					edns->opt_list = NULL;
 			error_encode(rep->c->buffer, LDNS_RCODE_SERVFAIL,
 				qinfo, qid, qflags, edns);
@@ -987,11 +987,11 @@ mesh_do_callback(struct mesh_state* m, int rcode, struct reply_info* rep,
 	if(rcode) {
 		if(rcode == LDNS_RCODE_SERVFAIL) {
 			if(!inplace_cb_reply_servfail_call(m->s.env, &m->s.qinfo, &m->s,
-				rep, rcode, &r->edns, m->s.region))
+				rep, rcode, &r->edns, NULL, m->s.region))
 					r->edns.opt_list = NULL;
 		} else {
 			if(!inplace_cb_reply_call(m->s.env, &m->s.qinfo, &m->s, rep, rcode,
-				&r->edns, m->s.region))
+				&r->edns, NULL, m->s.region))
 					r->edns.opt_list = NULL;
 		}
 		fptr_ok(fptr_whitelist_mesh_cb(r->cb));
@@ -1006,7 +1006,7 @@ mesh_do_callback(struct mesh_state* m, int rcode, struct reply_info* rep,
 		r->edns.bits &= EDNS_DO;
 
 		if(!inplace_cb_reply_call(m->s.env, &m->s.qinfo, &m->s, rep,
-			LDNS_RCODE_NOERROR, &r->edns, m->s.region) ||
+			LDNS_RCODE_NOERROR, &r->edns, NULL, m->s.region) ||
 			!reply_info_answer_encode(&m->s.qinfo, rep, r->qid, 
 			r->qflags, r->buf, 0, 1, 
 			m->s.env->scratch, udp_size, &r->edns, 
@@ -1084,11 +1084,11 @@ mesh_send_reply(struct mesh_state* m, int rcode, struct reply_info* rep,
 		m->s.qinfo.local_alias = r->local_alias;
 		if(rcode == LDNS_RCODE_SERVFAIL) {
 			if(!inplace_cb_reply_servfail_call(m->s.env, &m->s.qinfo, &m->s,
-				rep, rcode, &r->edns, m->s.region))
+				rep, rcode, &r->edns, NULL, m->s.region))
 					r->edns.opt_list = NULL;
 		} else { 
 			if(!inplace_cb_reply_call(m->s.env, &m->s.qinfo, &m->s, rep, rcode,
-				&r->edns, m->s.region))
+				&r->edns, NULL, m->s.region))
 					r->edns.opt_list = NULL;
 		}
 		error_encode(r->query_reply.c->buffer, rcode, &m->s.qinfo,
@@ -1103,7 +1103,7 @@ mesh_send_reply(struct mesh_state* m, int rcode, struct reply_info* rep,
 		m->s.qinfo.qname = r->qname;
 		m->s.qinfo.local_alias = r->local_alias;
 		if(!inplace_cb_reply_call(m->s.env, &m->s.qinfo, &m->s, rep,
-			LDNS_RCODE_NOERROR, &r->edns, m->s.region) ||
+			LDNS_RCODE_NOERROR, &r->edns, NULL, m->s.region) ||
 			!apply_edns_options(&r->edns, &edns_bak,
 				m->s.env->cfg, r->query_reply.c,
 				m->s.region) ||
@@ -1113,7 +1113,7 @@ mesh_send_reply(struct mesh_state* m, int rcode, struct reply_info* rep,
 			(int)(r->edns.bits & EDNS_DO), secure)) 
 		{
 			if(!inplace_cb_reply_servfail_call(m->s.env, &m->s.qinfo, &m->s,
-			rep, LDNS_RCODE_SERVFAIL, &r->edns, m->s.region))
+			rep, LDNS_RCODE_SERVFAIL, &r->edns, NULL, m->s.region))
 				r->edns.opt_list = NULL;
 			error_encode(r->query_reply.c->buffer, 
 				LDNS_RCODE_SERVFAIL, &m->s.qinfo, r->qid, 

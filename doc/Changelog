@@ -1,3 +1,10 @@
+22 August 2018: George
+	- #4140: Expose repinfo (comm_reply) to the inplace_callbacks. This
+	  gives access to reply information for the client's communication
+	  point when the callback is called before the mesh state (modules).
+	  Changes to C and Python's inplace_callback signatures were also
+	  necessary.
+
 21 August 2018: Wouter
 	- log-local-actions: yes option for unbound.conf that logs all the
 	  local zone actions, a patch from Saksham Manchanda (Secure64).

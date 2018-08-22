@@ -511,7 +511,7 @@ answer_norec_from_cache(struct worker* worker, struct query_info* qinfo,
 			edns->ext_rcode = 0;
 			edns->bits &= EDNS_DO;
 			if(!inplace_cb_reply_servfail_call(&worker->env, qinfo, NULL,
-				msg->rep, LDNS_RCODE_SERVFAIL, edns, worker->scratchpad))
+				msg->rep, LDNS_RCODE_SERVFAIL, edns, repinfo, worker->scratchpad))
 					return 0;
 			error_encode(repinfo->c->buffer, LDNS_RCODE_SERVFAIL, 
 				&msg->qinfo, id, flags, edns);
@@ -542,7 +542,7 @@ answer_norec_from_cache(struct worker* worker, struct query_info* qinfo,
 	edns->ext_rcode = 0;
 	edns->bits &= EDNS_DO;
 	if(!inplace_cb_reply_cache_call(&worker->env, qinfo, NULL, msg->rep,
-		(int)(flags&LDNS_RCODE_MASK), edns, worker->scratchpad))
+		(int)(flags&LDNS_RCODE_MASK), edns, repinfo, worker->scratchpad))
 			return 0;
 	msg->rep->flags |= BIT_QR|BIT_RA;
 	if(!apply_edns_options(edns, &edns_bak, worker->env.cfg,
@@ -551,7 +551,7 @@ answer_norec_from_cache(struct worker* worker, struct query_info* qinfo,
 		repinfo->c->buffer, 0, 1, worker->scratchpad,
 		udpsize, edns, (int)(edns->bits & EDNS_DO), secure)) {
 		if(!inplace_cb_reply_servfail_call(&worker->env, qinfo, NULL, NULL,
-			LDNS_RCODE_SERVFAIL, edns, worker->scratchpad))
+			LDNS_RCODE_SERVFAIL, edns, repinfo, worker->scratchpad))
 				edns->opt_list = NULL;
 		error_encode(repinfo->c->buffer, LDNS_RCODE_SERVFAIL, 
 			&msg->qinfo, id, flags, edns);
@@ -673,7 +673,7 @@ answer_from_cache(struct worker* worker, struct query_info* qinfo,
 		edns->ext_rcode = 0;
 		edns->bits &= EDNS_DO;
 		if(!inplace_cb_reply_servfail_call(&worker->env, qinfo, NULL, rep,
-			LDNS_RCODE_SERVFAIL, edns, worker->scratchpad))
+			LDNS_RCODE_SERVFAIL, edns, repinfo, worker->scratchpad))
 			goto bail_out;
 		error_encode(repinfo->c->buffer, LDNS_RCODE_SERVFAIL, 
 			qinfo, id, flags, edns);
@@ -707,7 +707,7 @@ answer_from_cache(struct worker* worker, struct query_info* qinfo,
 	edns->ext_rcode = 0;
 	edns->bits &= EDNS_DO;
 	if(!inplace_cb_reply_cache_call(&worker->env, qinfo, NULL, rep,
-		(int)(flags&LDNS_RCODE_MASK), edns, worker->scratchpad))
+		(int)(flags&LDNS_RCODE_MASK), edns, repinfo, worker->scratchpad))
 		goto bail_out;
 	*alias_rrset = NULL; /* avoid confusion if caller set it to non-NULL */
 	if(worker->daemon->use_response_ip && !partial_rep &&
@@ -741,7 +741,7 @@ answer_from_cache(struct worker* worker, struct query_info* qinfo,
 		repinfo->c->buffer, timenow, 1, worker->scratchpad,
 		udpsize, edns, (int)(edns->bits & EDNS_DO), secure)) {
 		if(!inplace_cb_reply_servfail_call(&worker->env, qinfo, NULL, NULL,
-			LDNS_RCODE_SERVFAIL, edns, worker->scratchpad))
+			LDNS_RCODE_SERVFAIL, edns, repinfo, worker->scratchpad))
 				edns->opt_list = NULL;
 		error_encode(repinfo->c->buffer, LDNS_RCODE_SERVFAIL, 
 			qinfo, id, flags, edns);
@@ -788,10 +788,11 @@ reply_and_prefetch(struct worker* worker, struct query_info* qinfo,
  * @param num: number of strings in array.
  * @param edns: edns reply information.
  * @param worker: worker with scratch region.
+ * @param repinfo: reply information for a communication point.
  */
 static void
 chaos_replystr(sldns_buffer* pkt, char** str, int num, struct edns_data* edns,
-	struct worker* worker)
+	struct worker* worker, struct comm_reply* repinfo)
 {
 	int i;
 	unsigned int rd = LDNS_RD_WIRE(sldns_buffer_begin(pkt));
@@ -824,7 +825,7 @@ chaos_replystr(sldns_buffer* pkt, char** str, int num, struct edns_data* edns,
 	edns->udp_size = EDNS_ADVERTISED_SIZE;
 	edns->bits &= EDNS_DO;
 	if(!inplace_cb_reply_local_call(&worker->env, NULL, NULL, NULL,
-		LDNS_RCODE_NOERROR, edns, worker->scratchpad))
+		LDNS_RCODE_NOERROR, edns, repinfo, worker->scratchpad))
 			edns->opt_list = NULL;
 	if(sldns_buffer_capacity(pkt) >=
 		sldns_buffer_limit(pkt)+calc_edns_field_size(edns))
@@ -834,9 +835,9 @@ chaos_replystr(sldns_buffer* pkt, char** str, int num, struct edns_data* edns,
 /** Reply with one string */
 static void
 chaos_replyonestr(sldns_buffer* pkt, const char* str, struct edns_data* edns,
-	struct worker* worker)
+	struct worker* worker, struct comm_reply* repinfo)
 {
-	chaos_replystr(pkt, (char**)&str, 1, edns, worker);
+	chaos_replystr(pkt, (char**)&str, 1, edns, worker, repinfo);
 }
 
 /**
@@ -844,9 +845,11 @@ chaos_replyonestr(sldns_buffer* pkt, const char* str, struct edns_data* edns,
  * @param pkt: buffer
  * @param edns: edns reply information.
  * @param w: worker with scratch region.
+ * @param repinfo: reply information for a communication point.
  */
 static void
-chaos_trustanchor(sldns_buffer* pkt, struct edns_data* edns, struct worker* w)
+chaos_trustanchor(sldns_buffer* pkt, struct edns_data* edns, struct worker* w,
+	struct comm_reply* repinfo)
 {
 #define TA_RESPONSE_MAX_TXT 16 /* max number of TXT records */
 #define TA_RESPONSE_MAX_TAGS 32 /* max number of tags printed per zone */
@@ -857,7 +860,7 @@ chaos_trustanchor(sldns_buffer* pkt, struct edns_data* edns, struct worker* w)
 
 	if(!w->env.need_to_validate) {
 		/* no validator module, reply no trustanchors */
-		chaos_replystr(pkt, NULL, 0, edns, w);
+		chaos_replystr(pkt, NULL, 0, edns, w, repinfo);
 		return;
 	}
 
@@ -891,7 +894,7 @@ chaos_trustanchor(sldns_buffer* pkt, struct edns_data* edns, struct worker* w)
 	}
 	lock_basic_unlock(&w->env.anchors->lock);
 
-	chaos_replystr(pkt, str_array, num, edns, w);
+	chaos_replystr(pkt, str_array, num, edns, w, repinfo);
 	regional_free_all(w->scratchpad);
 }
 
@@ -900,12 +903,13 @@ chaos_trustanchor(sldns_buffer* pkt, struct edns_data* edns, struct worker* w)
  * @param w: worker
  * @param qinfo: query info. Pointer into packet buffer.
  * @param edns: edns info from query.
+ * @param repinfo: reply information for a communication point.
  * @param pkt: packet buffer.
  * @return: true if a reply is to be sent.
  */
 static int
-answer_chaos(struct worker* w, struct query_info* qinfo, 
-	struct edns_data* edns, sldns_buffer* pkt)
+answer_chaos(struct worker* w, struct query_info* qinfo,
+	struct edns_data* edns, struct comm_reply* repinfo, sldns_buffer* pkt)
 {
 	struct config_file* cfg = w->env.cfg;
 	if(qinfo->qtype != LDNS_RR_TYPE_ANY && qinfo->qtype != LDNS_RR_TYPE_TXT)
@@ -921,13 +925,13 @@ answer_chaos(struct worker* w, struct query_info* qinfo,
 			char buf[MAXHOSTNAMELEN+1];
 			if (gethostname(buf, MAXHOSTNAMELEN) == 0) {
 				buf[MAXHOSTNAMELEN] = 0;
-				chaos_replyonestr(pkt, buf, edns, w);
+				chaos_replyonestr(pkt, buf, edns, w, repinfo);
 			} else 	{
 				log_err("gethostname: %s", strerror(errno));
-				chaos_replyonestr(pkt, "no hostname", edns, w);
+				chaos_replyonestr(pkt, "no hostname", edns, w, repinfo);
 			}
 		}
-		else 	chaos_replyonestr(pkt, cfg->identity, edns, w);
+		else 	chaos_replyonestr(pkt, cfg->identity, edns, w, repinfo);
 		return 1;
 	}
 	if(query_dname_compare(qinfo->qname, 
@@ -938,8 +942,8 @@ answer_chaos(struct worker* w, struct query_info* qinfo,
 		if(cfg->hide_version) 
 			return 0;
 		if(cfg->version==NULL || cfg->version[0]==0)
-			chaos_replyonestr(pkt, PACKAGE_STRING, edns, w);
-		else 	chaos_replyonestr(pkt, cfg->version, edns, w);
+			chaos_replyonestr(pkt, PACKAGE_STRING, edns, w, repinfo);
+		else 	chaos_replyonestr(pkt, cfg->version, edns, w, repinfo);
 		return 1;
 	}
 	if(query_dname_compare(qinfo->qname,
@@ -947,7 +951,7 @@ answer_chaos(struct worker* w, struct query_info* qinfo,
 	{
 		if(cfg->hide_trustanchor)
 			return 0;
-		chaos_trustanchor(pkt, edns, w);
+		chaos_trustanchor(pkt, edns, w, repinfo);
 		return 1;
 	}
 
@@ -1330,7 +1334,7 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 	if(c->type != comm_udp)
 		edns.udp_size = 65535; /* max size for TCP replies */
 	if(qinfo.qclass == LDNS_RR_CLASS_CH && answer_chaos(worker, &qinfo,
-		&edns, c->buffer)) {
+		&edns, repinfo, c->buffer)) {
 		server_stats_insrcode(&worker->stats, c->buffer);
 		regional_free_all(worker->scratchpad);
 		goto send_reply;
@@ -1357,7 +1361,7 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 	}
 	if(worker->env.auth_zones &&
 		auth_zones_answer(worker->env.auth_zones, &worker->env,
-		&qinfo, &edns, c->buffer, worker->scratchpad)) {
+		&qinfo, &edns, repinfo, c->buffer, worker->scratchpad)) {
 		regional_free_all(worker->scratchpad);
 		if(sldns_buffer_limit(c->buffer) == 0) {
 			comm_point_drop_reply(repinfo);

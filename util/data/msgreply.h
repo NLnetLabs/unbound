@@ -545,12 +545,13 @@ struct edns_option* edns_opt_list_find(struct edns_option* list, uint16_t code);
  * @param rep: Reply info. Could be NULL.
  * @param rcode: return code.
  * @param edns: edns data of the reply.
+ * @param repinfo: comm_reply. NULL.
  * @param region: region to store data.
  * @return false on failure (a callback function returned an error).
  */
 int inplace_cb_reply_call(struct module_env* env, struct query_info* qinfo,
 	struct module_qstate* qstate, struct reply_info* rep, int rcode,
-	struct edns_data* edns, struct regional* region);
+	struct edns_data* edns, struct comm_reply* repinfo, struct regional* region);
 
 /**
  * Call the registered functions in the inplace_cb_reply_cache linked list.
@@ -561,13 +562,14 @@ int inplace_cb_reply_call(struct module_env* env, struct query_info* qinfo,
  * @param rep: Reply info.
  * @param rcode: return code.
  * @param edns: edns data of the reply. Edns input can be found here.
+ * @param repinfo: comm_reply. Reply information for a communication point.
  * @param region: region to store data.
  * @return false on failure (a callback function returned an error).
  */
 int inplace_cb_reply_cache_call(struct module_env* env,
 	struct query_info* qinfo, struct module_qstate* qstate,
 	struct reply_info* rep, int rcode, struct edns_data* edns,
-	struct regional* region);
+	struct comm_reply* repinfo, struct regional* region);
 
 /**
  * Call the registered functions in the inplace_cb_reply_local linked list.
@@ -578,13 +580,14 @@ int inplace_cb_reply_cache_call(struct module_env* env,
  * @param rep: Reply info.
  * @param rcode: return code.
  * @param edns: edns data of the reply. Edns input can be found here.
+ * @param repinfo: comm_reply. Reply information for a communication point.
  * @param region: region to store data.
  * @return false on failure (a callback function returned an error).
  */
 int inplace_cb_reply_local_call(struct module_env* env,
 	struct query_info* qinfo, struct module_qstate* qstate,
 	struct reply_info* rep, int rcode, struct edns_data* edns,
-	struct regional* region);
+	struct comm_reply* repinfo, struct regional* region);
 
 /**
  * Call the registered functions in the inplace_cb_reply linked list.
@@ -596,13 +599,14 @@ int inplace_cb_reply_local_call(struct module_env* env,
  * @param rcode: return code. LDNS_RCODE_SERVFAIL.
  * @param edns: edns data of the reply. Edns input can be found here if qstate
  *	is NULL.
+ * @param repinfo: comm_reply. Reply information for a communication point.
  * @param region: region to store data.
  * @return false on failure (a callback function returned an error).
  */
 int inplace_cb_reply_servfail_call(struct module_env* env,
 	struct query_info* qinfo, struct module_qstate* qstate,
 	struct reply_info* rep, int rcode, struct edns_data* edns,
-	struct regional* region);
+	struct comm_reply* repinfo, struct regional* region);
 
 /**
  * Call the registered functions in the inplace_cb_query linked list.

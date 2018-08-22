@@ -1146,8 +1146,9 @@ void local_zones_print(struct local_zones* zones)
 /** encode answer consisting of 1 rrset */
 static int
 local_encode(struct query_info* qinfo, struct module_env* env,
-	struct edns_data* edns, sldns_buffer* buf, struct regional* temp,
-	struct ub_packed_rrset_key* rrset, int ansec, int rcode)
+	struct edns_data* edns, struct comm_reply* repinfo, sldns_buffer* buf,
+	struct regional* temp, struct ub_packed_rrset_key* rrset, int ansec,
+	int rcode)
 {
 	struct reply_info rep;
 	uint16_t udpsize;
@@ -1165,23 +1166,22 @@ local_encode(struct query_info* qinfo, struct module_env* env,
 	edns->udp_size = EDNS_ADVERTISED_SIZE;
 	edns->ext_rcode = 0;
 	edns->bits &= EDNS_DO;
-	if(!inplace_cb_reply_local_call(env, qinfo, NULL, &rep, rcode, edns, temp)
-		|| !reply_info_answer_encode(qinfo, &rep,
-		*(uint16_t*)sldns_buffer_begin(buf),
-		sldns_buffer_read_u16_at(buf, 2),
-		buf, 0, 0, temp, udpsize, edns,
-		(int)(edns->bits&EDNS_DO), 0))
+	if(!inplace_cb_reply_local_call(env, qinfo, NULL, &rep, rcode, edns,
+		repinfo, temp) || !reply_info_answer_encode(qinfo, &rep,
+		*(uint16_t*)sldns_buffer_begin(buf), sldns_buffer_read_u16_at(buf, 2),
+		buf, 0, 0, temp, udpsize, edns, (int)(edns->bits&EDNS_DO), 0)) {
 		error_encode(buf, (LDNS_RCODE_SERVFAIL|BIT_AA), qinfo,
 			*(uint16_t*)sldns_buffer_begin(buf),
 			sldns_buffer_read_u16_at(buf, 2), edns);
+	}
 	return 1;
 }
 
 /** encode local error answer */
 static void
 local_error_encode(struct query_info* qinfo, struct module_env* env,
-	struct edns_data* edns, sldns_buffer* buf, struct regional* temp,
-	int rcode, int r)
+	struct edns_data* edns, struct comm_reply* repinfo, sldns_buffer* buf,
+	struct regional* temp, int rcode, int r)
 {
 	edns->edns_version = EDNS_ADVERTISED_VERSION;
 	edns->udp_size = EDNS_ADVERTISED_SIZE;
@@ -1189,7 +1189,7 @@ local_error_encode(struct query_info* qinfo, struct module_env* env,
 	edns->bits &= EDNS_DO;
 
 	if(!inplace_cb_reply_local_call(env, qinfo, NULL, NULL,
-		rcode, edns, temp))
+		rcode, edns, repinfo, temp))
 		edns->opt_list = NULL;
 	error_encode(buf, r, qinfo, *(uint16_t*)sldns_buffer_begin(buf),
 		sldns_buffer_read_u16_at(buf, 2), edns);
@@ -1310,7 +1310,8 @@ find_tag_datas(struct query_info* qinfo, struct config_strlist* list,
 /** answer local data match */
 static int
 local_data_answer(struct local_zone* z, struct module_env* env,
-	struct query_info* qinfo, struct edns_data* edns, sldns_buffer* buf,
+	struct query_info* qinfo, struct edns_data* edns,
+	struct comm_reply* repinfo, sldns_buffer* buf,
 	struct regional* temp, int labs, struct local_data** ldp,
 	enum localzone_type lz_type, int tag, struct config_strlist** tag_datas,
 	size_t tag_datas_size, char** tagname, int num_tags)
@@ -1339,7 +1340,7 @@ local_data_answer(struct local_zone* z, struct module_env* env,
 				 * chain. */
 				if(qinfo->local_alias)
 					return 1;
-				return local_encode(qinfo, env, edns, buf, temp,
+				return local_encode(qinfo, env, edns, repinfo, buf, temp,
 					&r, 1, LDNS_RCODE_NOERROR);
 			}
 		}
@@ -1374,29 +1375,31 @@ local_data_answer(struct local_zone* z, struct module_env* env,
 		struct ub_packed_rrset_key r = *lr->rrset;
 		r.rk.dname = qinfo->qname;
 		r.rk.dname_len = qinfo->qname_len;
-		return local_encode(qinfo, env, edns, buf, temp, &r, 1, 
+		return local_encode(qinfo, env, edns, repinfo, buf, temp, &r, 1,
 			LDNS_RCODE_NOERROR);
 	}
-	return local_encode(qinfo, env, edns, buf, temp, lr->rrset, 1, 
+	return local_encode(qinfo, env, edns, repinfo, buf, temp, lr->rrset, 1,
 		LDNS_RCODE_NOERROR);
 }
 
 /** 
- * answer in case where no exact match is found 
- * @param z: zone for query
- * @param env: module environment
- * @param qinfo: query
- * @param edns: edns from query
+ * Answer in case where no exact match is found.
+ * @param z: zone for query.
+ * @param env: module environment.
+ * @param qinfo: query.
+ * @param edns: edns from query.
+ * @param repinfo: source address for checks. may be NULL.
  * @param buf: buffer for answer.
- * @param temp: temp region for encoding
+ * @param temp: temp region for encoding.
  * @param ld: local data, if NULL, no such name exists in localdata.
- * @param lz_type: type of the local zone
+ * @param lz_type: type of the local zone.
  * @return 1 if a reply is to be sent, 0 if not.
  */
 static int
 lz_zone_answer(struct local_zone* z, struct module_env* env,
-	struct query_info* qinfo, struct edns_data* edns, sldns_buffer* buf,
-	struct regional* temp, struct local_data* ld, enum localzone_type lz_type)
+	struct query_info* qinfo, struct edns_data* edns,
+	struct comm_reply* repinfo, sldns_buffer* buf, struct regional* temp,
+	struct local_data* ld, enum localzone_type lz_type)
 {
 	if(lz_type == local_zone_deny || lz_type == local_zone_inform_deny) {
 		/** no reply at all, signal caller by clearing buffer. */
@@ -1405,7 +1408,7 @@ lz_zone_answer(struct local_zone* z, struct module_env* env,
 		return 1;
 	} else if(lz_type == local_zone_refuse
 		|| lz_type == local_zone_always_refuse) {
-		local_error_encode(qinfo, env, edns, buf, temp,
+		local_error_encode(qinfo, env, edns, repinfo, buf, temp,
 			LDNS_RCODE_REFUSED, (LDNS_RCODE_REFUSED|BIT_AA));
 		return 1;
 	} else if(lz_type == local_zone_static ||
@@ -1421,9 +1424,9 @@ lz_zone_answer(struct local_zone* z, struct module_env* env,
 		int rcode = (ld || lz_type == local_zone_redirect)?
 			LDNS_RCODE_NOERROR:LDNS_RCODE_NXDOMAIN;
 		if(z->soa)
-			return local_encode(qinfo, env, edns, buf, temp, 
+			return local_encode(qinfo, env, edns, repinfo, buf, temp,
 				z->soa, 0, rcode);
-		local_error_encode(qinfo, env, edns, buf, temp, rcode,
+		local_error_encode(qinfo, env, edns, repinfo, buf, temp, rcode,
 			(rcode|BIT_AA));
 		return 1;
 	} else if(lz_type == local_zone_typetransparent
@@ -1438,9 +1441,9 @@ lz_zone_answer(struct local_zone* z, struct module_env* env,
 	if(ld && ld->rrsets) {
 		int rcode = LDNS_RCODE_NOERROR;
 		if(z->soa)
-			return local_encode(qinfo, env, edns, buf, temp, 
+			return local_encode(qinfo, env, edns, repinfo, buf, temp,
 				z->soa, 0, rcode);
-		local_error_encode(qinfo, env, edns, buf, temp, rcode,
+		local_error_encode(qinfo, env, edns, repinfo, buf, temp, rcode,
 			(rcode|BIT_AA));
 		return 1;
 	}
@@ -1584,14 +1587,14 @@ local_zones_answer(struct local_zones* zones, struct module_env* env,
 	if(lzt != local_zone_always_refuse
 		&& lzt != local_zone_always_transparent
 		&& lzt != local_zone_always_nxdomain
-		&& local_data_answer(z, env, qinfo, edns, buf, temp, labs, &ld, lzt,
-			tag, tag_datas, tag_datas_size, tagname, num_tags)) {
+		&& local_data_answer(z, env, qinfo, edns, repinfo, buf, temp, labs,
+			&ld, lzt, tag, tag_datas, tag_datas_size, tagname, num_tags)) {
 		lock_rw_unlock(&z->lock);
 		/* We should tell the caller that encode is deferred if we found
 		 * a local alias. */
 		return !qinfo->local_alias;
 	}
-	r = lz_zone_answer(z, env, qinfo, edns, buf, temp, ld, lzt);
+	r = lz_zone_answer(z, env, qinfo, edns, repinfo, buf, temp, ld, lzt);
 	lock_rw_unlock(&z->lock);
 	return r && !qinfo->local_alias; /* see above */
 }

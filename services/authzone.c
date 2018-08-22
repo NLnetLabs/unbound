@@ -3169,8 +3169,8 @@ int auth_zones_lookup(struct auth_zones* az, struct query_info* qinfo,
 /** encode auth answer */
 static void
 auth_answer_encode(struct query_info* qinfo, struct module_env* env,
-	struct edns_data* edns, sldns_buffer* buf, struct regional* temp,
-	struct dns_msg* msg)
+	struct edns_data* edns, struct comm_reply* repinfo, sldns_buffer* buf,
+	struct regional* temp, struct dns_msg* msg)
 {
 	uint16_t udpsize;
 	udpsize = edns->udp_size;
@@ -3180,7 +3180,7 @@ auth_answer_encode(struct query_info* qinfo, struct module_env* env,
 	edns->bits &= EDNS_DO;
 
 	if(!inplace_cb_reply_local_call(env, qinfo, NULL, msg->rep,
-		(int)FLAGS_GET_RCODE(msg->rep->flags), edns, temp)
+		(int)FLAGS_GET_RCODE(msg->rep->flags), edns, repinfo, temp)
 		|| !reply_info_answer_encode(qinfo, msg->rep,
 		*(uint16_t*)sldns_buffer_begin(buf),
 		sldns_buffer_read_u16_at(buf, 2),
@@ -3195,8 +3195,8 @@ auth_answer_encode(struct query_info* qinfo, struct module_env* env,
 /** encode auth error answer */
 static void
 auth_error_encode(struct query_info* qinfo, struct module_env* env,
-	struct edns_data* edns, sldns_buffer* buf, struct regional* temp,
-	int rcode)
+	struct edns_data* edns, struct comm_reply* repinfo, sldns_buffer* buf,
+	struct regional* temp, int rcode)
 {
 	edns->edns_version = EDNS_ADVERTISED_VERSION;
 	edns->udp_size = EDNS_ADVERTISED_SIZE;
@@ -3204,7 +3204,7 @@ auth_error_encode(struct query_info* qinfo, struct module_env* env,
 	edns->bits &= EDNS_DO;
 
 	if(!inplace_cb_reply_local_call(env, qinfo, NULL, NULL,
-		rcode, edns, temp))
+		rcode, edns, repinfo, temp))
 		edns->opt_list = NULL;
 	error_encode(buf, rcode|BIT_AA, qinfo,
 		*(uint16_t*)sldns_buffer_begin(buf),
@@ -3212,8 +3212,8 @@ auth_error_encode(struct query_info* qinfo, struct module_env* env,
 }
 
 int auth_zones_answer(struct auth_zones* az, struct module_env* env,
-	struct query_info* qinfo, struct edns_data* edns, struct sldns_buffer* buf,
-	struct regional* temp)
+	struct query_info* qinfo, struct edns_data* edns,
+	struct comm_reply* repinfo, struct sldns_buffer* buf, struct regional* temp)
 {
 	struct dns_msg* msg = NULL;
 	struct auth_zone* z;
@@ -3261,9 +3261,9 @@ int auth_zones_answer(struct auth_zones* az, struct module_env* env,
 
 	/* encode answer */
 	if(!r)
-		auth_error_encode(qinfo, env, edns, buf, temp,
+		auth_error_encode(qinfo, env, edns, repinfo, buf, temp,
 			LDNS_RCODE_SERVFAIL);
-	else	auth_answer_encode(qinfo, env, edns, buf, temp, msg);
+	else	auth_answer_encode(qinfo, env, edns, repinfo, buf, temp, msg);
 
 	return 1;
 }
