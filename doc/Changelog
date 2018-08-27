@@ -10,6 +10,7 @@
 	  together with the recently default enabled qname minimisation, this
 	  causes more fetches to use information from the cache.
 	- next release is called 1.8.0.
+	- Fix lintflags for lint on FreeBSD.
 
 22 August 2018: George
 	- #4140: Expose repinfo (comm_reply) to the inplace_callbacks. This

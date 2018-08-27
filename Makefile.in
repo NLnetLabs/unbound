@@ -83,7 +83,7 @@ LINTFLAGS+=@NETBSD_LINTFLAGS@
 # compat with OpenBSD
 LINTFLAGS+="-Dsigset_t=long"
 # FreeBSD
-LINTFLAGS+="-D__uint16_t=uint16_t" "-DEVP_PKEY_ASN1_METHOD=int" "-D_RuneLocale=int" "-D__va_list=va_list" "-D__uint32_t=uint32_t"
+LINTFLAGS+="-D__uint16_t=uint16_t" "-DEVP_PKEY_ASN1_METHOD=int" "-D_RuneLocale=int" "-D__va_list=va_list" "-D__uint32_t=uint32_t" "-D_Alignof(x)=x" "-D__aligned(x)=" "-D__requires_exclusive(x)=" "-D__requires_unlocked(x)=" "-D__locks_exclusive(x)=" "-D__trylocks_exclusive(x)="  "-D__unlocks(x)=" "-D__locks_shared(x)=" "-D__trylocks_shared(x)="
 
 INSTALL=$(SHELL) $(srcdir)/install-sh
 
