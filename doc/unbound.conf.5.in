@@ -278,9 +278,9 @@ to so\-rcvbuf.
 .B so\-reuseport: \fI<yes or no>
 If yes, then open dedicated listening sockets for incoming queries for each
 thread and try to set the SO_REUSEPORT socket option on each socket.  May
-distribute incoming queries to threads more evenly.  Default is no.  On Linux
-it is supported in kernels >= 3.9.  On other systems, FreeBSD, OSX it may
-also work.  You can enable it (on any platform and kernel),
+distribute incoming queries to threads more evenly.  Default is yes.
+On Linux it is supported in kernels >= 3.9.  On other systems, FreeBSD, OSX
+it may also work.  You can enable it (on any platform and kernel),
 it then attempts to open the port and passes the option if it was available
 at compile time, if that works it is used, if it fails, it continues
 silently (unless verbosity 3) without the option.
@@ -747,7 +747,7 @@ noerror for empty nonterminals, hence this is possible.  Very old software
 might return nxdomain for empty nonterminals (that usually happen for reverse
 IP address lookups), and thus may be incompatible with this.  To try to avoid
 this only DNSSEC-secure nxdomains are used, because the old software does not
-have DNSSEC.  Default is off.
+have DNSSEC.  Default is on.
 The nxdomain must be secure, this means nsec3 with optout is insufficient.
 .TP
 .B harden\-referral\-path: \fI<yes or no>
@@ -861,9 +861,11 @@ from the query ID, for speed and thread safety).  Default is no.
 If yes, Unbound doesn't insert authority/additional sections into response
 messages when those sections are not required.  This reduces response
 size significantly, and may avoid TCP fallback for some responses.
-This may cause a slight speedup.  The default is no, because the DNS
+This may cause a slight speedup.  The default is yes, even though the DNS
 protocol RFCs mandate these sections, and the additional content could
-be of use and save roundtrips for clients.
+be of use and save roundtrips for clients.  Because they are not used,
+and the saved roundtrips are easier saved with prefetch, whilst this is
+faster.
 .TP
 .B disable-dnssec-lame-check: \fI<yes or no>
 If true, disables the DNSSEC lameness check in the iterator.  This check

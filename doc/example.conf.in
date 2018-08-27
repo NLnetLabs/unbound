@@ -103,7 +103,7 @@ server:
 	# so-sndbuf: 0
 
 	# use SO_REUSEPORT to distribute queries over threads.
-	# so-reuseport: no
+	# so-reuseport: yes
 
 	# use IP_TRANSPARENT so the interface: addresses can be non-local
 	# and you can config non-existing IPs that are going to work later on
@@ -373,7 +373,7 @@ server:
 	# harden-dnssec-stripped: yes
 
 	# Harden against queries that fall under dnssec-signed nxdomain names.
-	# harden-below-nxdomain: no
+	# harden-below-nxdomain: yes
 
 	# Harden the referral path by performing additional queries for
 	# infrastructure data.  Validates the replies (if possible).
@@ -454,7 +454,7 @@ server:
 
 	# if yes, Unbound doesn't insert authority/additional sections
 	# into response messages when those sections are not required.
-	# minimal-responses: no
+	# minimal-responses: yes
 
 	# true to disable DNSSEC lameness check in iterator.
 	# disable-dnssec-lame-check: no

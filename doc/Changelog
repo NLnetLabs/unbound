@@ -1,3 +1,15 @@
+27 August 2018: Wouter
+	- Set defaults to yes for a number of options to increase speed and
+	  resilience of the server.  The so-reuseport, harden-below-nxdomain,
+	  and minimal-responses options are enabled by default.  They used
+	  to be disabled by default, waiting to make sure they worked.  They
+	  are enabled by default now, and can be disabled explicitly by
+	  setting them to "no" in the unbound.conf config file.  The reuseport
+	  and minimal options increases speed of the server, and should be
+	  otherwise harmless.  The harden-below-nxdomain option works well
+	  together with the recently default enabled qname minimisation, this
+	  causes more fetches to use information from the cache.
+
 22 August 2018: George
 	- #4140: Expose repinfo (comm_reply) to the inplace_callbacks. This
 	  gives access to reply information for the client's communication

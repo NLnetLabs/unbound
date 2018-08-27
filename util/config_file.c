@@ -177,7 +177,7 @@ config_create(void)
 	cfg->if_automatic = 0;
 	cfg->so_rcvbuf = 0;
 	cfg->so_sndbuf = 0;
-	cfg->so_reuseport = 0;
+	cfg->so_reuseport = 1;
 	cfg->ip_transparent = 0;
 	cfg->ip_freebind = 0;
 	cfg->num_ifs = 0;
@@ -202,7 +202,7 @@ config_create(void)
 	cfg->harden_large_queries = 0;
 	cfg->harden_glue = 1;
 	cfg->harden_dnssec_stripped = 1;
-	cfg->harden_below_nxdomain = 0;
+	cfg->harden_below_nxdomain = 1;
 	cfg->harden_referral_path = 0;
 	cfg->harden_algo_downgrade = 0;
 	cfg->use_caps_bits_for_id = 0;
@@ -254,7 +254,7 @@ config_create(void)
 	cfg->control_ifs.last = NULL;
 	cfg->control_port = UNBOUND_CONTROL_PORT;
 	cfg->control_use_cert = 1;
-	cfg->minimal_responses = 0;
+	cfg->minimal_responses = 1;
 	cfg->rrset_roundrobin = 0;
 	cfg->max_udp_size = 4096;
 	if(!(cfg->server_key_file = strdup(RUN_DIR"/unbound_server.key"))) 
@@ -344,6 +344,7 @@ struct config_file* config_create_forlib(void)
 		forward nameserver running on localhost */
 	cfg->val_log_level = 2; /* to fill why_bogus with */
 	cfg->val_log_squelch = 1;
+	cfg->minimal_responses = 0;
 	return cfg;
 }
 
