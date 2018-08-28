@@ -156,6 +156,12 @@ struct reply_info {
 	 */
 	time_t prefetch_ttl;
 
+	/** 
+	 * Reply TTL extended with serve exipred TTL, to limit time to serve
+	 * expired message.
+	 */
+	time_t serve_expired_ttl;
+
 	/**
 	 * The security status from DNSSEC validation of this message.
 	 */
@@ -222,6 +228,7 @@ struct msgreply_entry {
  * @param qd: qd count
  * @param ttl: TTL of replyinfo
  * @param prettl: prefetch ttl
+ * @param expttl: serve expired ttl
  * @param an: an count
  * @param ns: ns count
  * @param ar: ar count
@@ -232,8 +239,8 @@ struct msgreply_entry {
  */
 struct reply_info*
 construct_reply_info_base(struct regional* region, uint16_t flags, size_t qd,
-		time_t ttl, time_t prettl, size_t an, size_t ns, size_t ar,
-		size_t total, enum sec_status sec);
+		time_t ttl, time_t prettl, time_t expttl, size_t an, size_t ns,
+		size_t ar, size_t total, enum sec_status sec);
 
 /** 
  * Parse wire query into a queryinfo structure, return 0 on parse error. 

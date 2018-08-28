@@ -629,7 +629,9 @@ answer_from_cache(struct worker* worker, struct query_info* qinfo,
 		&& worker->env.need_to_validate;
 	*partial_repp = NULL;	/* avoid accidental further pass */
 	if(worker->env.cfg->serve_expired) {
-		/* always lock rrsets, rep->ttl is ignored */
+		if(worker->env.cfg->serve_expired_ttl &&
+			rep->serve_expired_ttl < timenow)
+			return 0;
 		if(!rrset_array_lock(rep->ref, rep->rrset_count, 0))
 			return 0;
 		/* below, rrsets with ttl before timenow become TTL 0 in

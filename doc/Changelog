@@ -1,5 +1,6 @@
 28 August 2018: Ralph
 	- Disable minimal-responses in ipsecmod unit tests.
+	- Added serve-expired-ttl and serve-expired-ttl-reset options.
 
 27 August 2018: Wouter
 	- Set defaults to yes for a number of options to increase speed and

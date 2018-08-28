@@ -339,6 +339,10 @@ struct config_file {
 	int ignore_cd;
 	/** serve expired entries and prefetch them */
 	int serve_expired;
+	/** serve expired entries until TTL after expiration */
+	int serve_expired_ttl;
+	/** reset serve expired TTL after failed update attempt */
+	int serve_expired_ttl_reset;
 	/** nsec3 maximum iterations per key size, string */
 	char* val_nsec3_key_iterations;
 	/** autotrust add holddown time, in seconds */

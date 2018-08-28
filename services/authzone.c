@@ -185,11 +185,13 @@ msg_ttl(struct dns_msg* msg)
 	if(msg->rep->rrset_count == 1) {
 		msg->rep->ttl = get_rrset_ttl(msg->rep->rrsets[0]);
 		msg->rep->prefetch_ttl = PREFETCH_TTL_CALC(msg->rep->ttl);
+		msg->rep->serve_expired_ttl = msg->rep->ttl + SERVE_EXPIRED_TTL;
 	} else if(get_rrset_ttl(msg->rep->rrsets[msg->rep->rrset_count-1]) <
 		msg->rep->ttl) {
 		msg->rep->ttl = get_rrset_ttl(msg->rep->rrsets[
 			msg->rep->rrset_count-1]);
 		msg->rep->prefetch_ttl = PREFETCH_TTL_CALC(msg->rep->ttl);
+		msg->rep->serve_expired_ttl = msg->rep->ttl + SERVE_EXPIRED_TTL;
 	}
 }
 
@@ -2285,6 +2287,7 @@ az_add_negative_soa(struct auth_zone* z, struct regional* region,
 	d->rr_ttl[0] = (time_t)minimum;
 	msg->rep->ttl = get_rrset_ttl(msg->rep->rrsets[0]);
 	msg->rep->prefetch_ttl = PREFETCH_TTL_CALC(msg->rep->ttl);
+	msg->rep->serve_expired_ttl = msg->rep->ttl + SERVE_EXPIRED_TTL;
 	return 1;
 }
 

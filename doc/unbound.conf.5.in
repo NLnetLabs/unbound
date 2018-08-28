@@ -1013,6 +1013,17 @@ If enabled, unbound attempts to serve old responses from cache with a
 TTL of 0 in the response without waiting for the actual resolution to finish.
 The actual resolution answer ends up in the cache later on.  Default is "no".
 .TP
+.B serve\-expired\-ttl: \fI<seconds>
+Limit serving of expired responses to configured seconds after expiration. 0
+disables the limit. This option only applies when \fBserve\-expired\fR is
+enabled. The default is 0.
+.TP
+.B serve\-expired\-ttl\-reset: \fI<yes or no>
+Set the TTL of expired records to the \fBserve\-expired\-ttl\fR value after a
+failed attempt to retrieve the record from upstream. This makes sure that the
+expired records will be served as long as there are queries for it. Default is
+"no".
+.TP
 .B val\-nsec3\-keysize\-iterations: \fI<"list of values">
 List of keysize and iteration count values, separated by spaces, surrounded
 by quotes. Default is "1024 150 2048 500 4096 2500". This determines the

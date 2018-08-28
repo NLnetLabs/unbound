@@ -2235,6 +2235,8 @@ processFinished(struct module_qstate* qstate, struct val_qstate* vq,
 		vq->orig_msg->rep->ttl = ve->bogus_ttl;
 		vq->orig_msg->rep->prefetch_ttl = 
 			PREFETCH_TTL_CALC(vq->orig_msg->rep->ttl);
+		vq->orig_msg->rep->serve_expired_ttl = 
+			vq->orig_msg->rep->ttl + qstate->env->cfg->serve_expired_ttl;
 		if((qstate->env->cfg->val_log_level >= 1 ||
 			qstate->env->cfg->log_servfail) &&
 			!qstate->env->cfg->val_log_squelch) {

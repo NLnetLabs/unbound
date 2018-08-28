@@ -61,6 +61,8 @@ time_t MAX_TTL = 3600 * 24 * 10; /* ten days */
 time_t MIN_TTL = 0;
 /** MAX Negative TTL, for SOA records in authority section */
 time_t MAX_NEG_TTL = 3600; /* one hour */
+/** Time to serve records after expiration */
+time_t SERVE_EXPIRED_TTL = 0;
 
 /** allocate qinfo, return 0 on error */
 static int
@@ -85,8 +87,8 @@ parse_create_qinfo(sldns_buffer* pkt, struct msg_parse* msg,
 /** constructor for replyinfo */
 struct reply_info*
 construct_reply_info_base(struct regional* region, uint16_t flags, size_t qd,
-	time_t ttl, time_t prettl, size_t an, size_t ns, size_t ar, 
-	size_t total, enum sec_status sec)
+	time_t ttl, time_t prettl, time_t expttl, size_t an, size_t ns,
+	size_t ar, size_t total, enum sec_status sec)
 {
 	struct reply_info* rep;
 	/* rrset_count-1 because the first ref is part of the struct. */
@@ -103,6 +105,7 @@ construct_reply_info_base(struct regional* region, uint16_t flags, size_t qd,
 	rep->qdcount = qd;
 	rep->ttl = ttl;
 	rep->prefetch_ttl = prettl;
+	rep->serve_expired_ttl = expttl;
 	rep->an_numrrsets = an;
 	rep->ns_numrrsets = ns;
 	rep->ar_numrrsets = ar;
@@ -126,7 +129,7 @@ parse_create_repinfo(struct msg_parse* msg, struct reply_info** rep,
 	struct regional* region)
 {
 	*rep = construct_reply_info_base(region, msg->flags, msg->qdcount, 0, 
-		0, msg->an_rrsets, msg->ns_rrsets, msg->ar_rrsets, 
+		0, 0, msg->an_rrsets, msg->ns_rrsets, msg->ar_rrsets, 
 		msg->rrset_count, sec_status_unchecked);
 	if(!*rep)
 		return 0;
@@ -424,6 +427,7 @@ parse_copy_decompress(sldns_buffer* pkt, struct msg_parse* msg,
 		pset = pset->rrset_all_next;
 	}
 	rep->prefetch_ttl = PREFETCH_TTL_CALC(rep->ttl);
+	rep->serve_expired_ttl = rep->ttl + SERVE_EXPIRED_TTL;
 	return 1;
 }
 
@@ -502,6 +506,7 @@ reply_info_set_ttls(struct reply_info* rep, time_t timenow)
 	size_t i, j;
 	rep->ttl += timenow;
 	rep->prefetch_ttl += timenow;
+	rep->serve_expired_ttl += timenow;
 	for(i=0; i<rep->rrset_count; i++) {
 		struct packed_rrset_data* data = (struct packed_rrset_data*)
 			rep->ref[i].key->entry.data;
@@ -687,9 +692,9 @@ reply_info_copy(struct reply_info* rep, struct alloc_cache* alloc,
 {
 	struct reply_info* cp;
 	cp = construct_reply_info_base(region, rep->flags, rep->qdcount, 
-		rep->ttl, rep->prefetch_ttl, rep->an_numrrsets, 
-		rep->ns_numrrsets, rep->ar_numrrsets, rep->rrset_count, 
-		rep->security);
+		rep->ttl, rep->prefetch_ttl, rep->serve_expired_ttl, 
+		rep->an_numrrsets, rep->ns_numrrsets, rep->ar_numrrsets,
+		rep->rrset_count, rep->security);
 	if(!cp)
 		return NULL;
 	/* allocate ub_key structures special or not */

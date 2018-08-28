@@ -304,8 +304,20 @@ error_response_cache(struct module_qstate* qstate, int id, int rcode)
 			if((msg=msg_cache_lookup(qstate->env,
 				qstate->qinfo.qname, qstate->qinfo.qname_len,
 				qstate->qinfo.qtype, qstate->qinfo.qclass,
-				qstate->query_flags, 0, 0))
+				qstate->query_flags, 0,
+				qstate->env->cfg->serve_expired_ttl_reset))
 				!= NULL) {
+				if(qstate->env->cfg->serve_expired_ttl_reset) {
+					struct reply_info* rep =
+						(struct reply_info*)msg->entry.data;
+					if(rep && *qstate->env->now +
+						qstate->env->cfg->serve_expired_ttl  >
+						rep->serve_expired_ttl) {
+						rep->serve_expired_ttl =
+							*qstate->env->now +
+							qstate->env->cfg->serve_expired_ttl;
+					}
+				}
 				lock_rw_unlock(&msg->entry.lock);
 				return error_response(qstate, id, rcode);
 			}
@@ -319,6 +331,7 @@ error_response_cache(struct module_qstate* qstate, int id, int rcode)
 		err.qdcount = 1;
 		err.ttl = NORR_TTL;
 		err.prefetch_ttl = PREFETCH_TTL_CALC(err.ttl);
+		err.serve_expired_ttl = NORR_TTL;
 		/* do not waste time trying to validate this servfail */
 		err.security = sec_status_indeterminate;
 		verbose(VERB_ALGO, "store error response in message cache");
@@ -3318,6 +3331,8 @@ processClassResponse(struct module_qstate* qstate, int id,
 			to->rep->ttl = from->rep->ttl;
 		if(from->rep->prefetch_ttl < to->rep->prefetch_ttl)
 			to->rep->prefetch_ttl = from->rep->prefetch_ttl;
+		if(from->rep->serve_expired_ttl < to->rep->serve_expired_ttl)
+			to->rep->serve_expired_ttl = from->rep->serve_expired_ttl;
 	}
 	/* are we done? */
 	foriq->num_current_queries --;

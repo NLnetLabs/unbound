@@ -140,7 +140,8 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_DEFINE_TAG VAR_LOCAL_ZONE_TAG VAR_ACCESS_CONTROL_TAG
 %token VAR_LOCAL_ZONE_OVERRIDE VAR_ACCESS_CONTROL_TAG_ACTION
 %token VAR_ACCESS_CONTROL_TAG_DATA VAR_VIEW VAR_ACCESS_CONTROL_VIEW
-%token VAR_VIEW_FIRST VAR_SERVE_EXPIRED VAR_FAKE_DSA VAR_FAKE_SHA1
+%token VAR_VIEW_FIRST VAR_SERVE_EXPIRED VAR_SERVE_EXPIRED_TTL
+%token VAR_SERVE_EXPIRED_TTL_RESET VAR_FAKE_DSA VAR_FAKE_SHA1
 %token VAR_LOG_IDENTITY VAR_HIDE_TRUSTANCHOR VAR_TRUST_ANCHOR_SIGNALING
 %token VAR_AGGRESSIVE_NSEC VAR_USE_SYSTEMD VAR_SHM_ENABLE VAR_SHM_KEY
 %token VAR_ROOT_KEY_SENTINEL
@@ -243,6 +244,7 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_local_zone_override | server_access_control_tag_action |
 	server_access_control_tag_data | server_access_control_view |
 	server_qname_minimisation_strict | server_serve_expired |
+	server_serve_expired_ttl | server_serve_expired_ttl_reset |
 	server_fake_dsa | server_log_identity | server_use_systemd |
 	server_response_ip_tag | server_response_ip | server_response_ip_data |
 	server_shm_enable | server_shm_key | server_fake_sha1 |
@@ -1517,6 +1519,24 @@ server_serve_expired: VAR_SERVE_EXPIRED STRING_ARG
 		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
 			yyerror("expected yes or no.");
 		else cfg_parser->cfg->serve_expired = (strcmp($2, "yes")==0);
+		free($2);
+	}
+	;
+server_serve_expired_ttl: VAR_SERVE_EXPIRED_TTL STRING_ARG
+	{
+		OUTYY(("P(server_serve_expired_ttl:%s)\n", $2));
+		if(atoi($2) == 0 && strcmp($2, "0") != 0)
+			yyerror("number expected");
+		else cfg_parser->cfg->serve_expired_ttl = atoi($2);
+		free($2);
+	}
+	;
+server_serve_expired_ttl_reset: VAR_SERVE_EXPIRED_TTL_RESET STRING_ARG
+	{
+		OUTYY(("P(server_serve_expired_ttl_reset:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else cfg_parser->cfg->serve_expired_ttl_reset = (strcmp($2, "yes")==0);
 		free($2);
 	}
 	;

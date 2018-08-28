@@ -543,6 +543,16 @@ server:
 	# Serve expired responses from cache, with TTL 0 in the response,
 	# and then attempt to fetch the data afresh.
 	# serve-expired: no
+	#
+	# Limit serving of expired responses to configured seconds after
+	# expiration. 0 disables the limit.
+	# serve-expired-ttl: 0
+	#
+	# Set the TTL of expired records to the serve-expired-ttl value after a
+	# failed attempt to retrieve the record from upstream. This makes sure
+	# that the expired records will be served as long as there are queries
+	# for it.
+	# serve-expired-ttl-reset: no
 
 	# Have the validator log failed validations for your diagnosis.
 	# 0: off. 1: A line per failed user query. 2: With reason and bad IP.
