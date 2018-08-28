@@ -1,3 +1,6 @@
+28 August 2018: Ralph
+	- Disable minimal-responses in ipsecmod unit tests.
+
 27 August 2018: Wouter
 	- Set defaults to yes for a number of options to increase speed and
 	  resilience of the server.  The so-reuseport, harden-below-nxdomain,
