@@ -1615,13 +1615,13 @@ local_zones_answer(struct local_zones* zones, struct module_env* env,
 		lzt = lz_type(taglist, taglen, z->taglist, z->taglen,
 			tagactions, tagactionssize, z->type, repinfo,
 			z->override_tree, &tag, tagname, num_tags);
+		lock_rw_unlock(&zones->lock);
 		if(z && verbosity >= VERB_ALGO) {
 			char zname[255+1];
 			dname_str(z->name, zname);
 			verbose(VERB_ALGO, "using localzone %s %s", zname,
 				local_zone_type2str(lzt));
 		}
-		lock_rw_unlock(&zones->lock);
 	}
 	if((env->cfg->log_local_actions ||
 			lzt == local_zone_inform || lzt == local_zone_inform_deny)
