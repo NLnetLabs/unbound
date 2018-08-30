@@ -1382,6 +1382,35 @@ local_data_answer(struct local_zone* z, struct module_env* env,
 		LDNS_RCODE_NOERROR);
 }
 
+/**
+ * See if the local zone does not cover the name, eg. the name is not
+ * in the zone and the zone is transparent */
+static int
+local_zone_does_not_cover(struct local_zone* z, struct query_info* qinfo,
+	int labs)
+{
+	struct local_data key;
+	struct local_data* ld = NULL;
+	struct local_rrset* lr = NULL;
+	if(z->type == local_zone_always_transparent)
+		return 1;
+	if(z->type != local_zone_transparent
+		&& z->type != local_zone_typetransparent
+		&& z->type != local_zone_inform)
+		return 0;
+	key.node.key = &key;
+	key.name = qinfo->qname;
+	key.namelen = qinfo->qname_len;
+	key.namelabs = labs;
+	ld = (struct local_data*)rbtree_search(&z->data, &key.node);
+	if(z->type == local_zone_transparent || z->type == local_zone_inform)
+		return (ld == NULL);
+	if(ld)
+		lr = local_data_find_type(ld, qinfo->qtype, 1);
+	/* local_zone_typetransparent */
+	return (lr == NULL);
+}
+
 /** 
  * Answer in case where no exact match is found.
  * @param z: zone for query.
@@ -1546,10 +1575,6 @@ local_zones_answer(struct local_zones* zones, struct module_env* env,
 			(z = local_zones_lookup(view->local_zones,
 			qinfo->qname, qinfo->qname_len, labs,
 			qinfo->qclass, qinfo->qtype))) {
-			if(z->type != local_zone_noview)
-				verbose(VERB_ALGO, 
-					"using localzone from view: %s", 
-					view->name);
 			lock_rw_rdlock(&z->lock);
 			lzt = z->type;
 		}
@@ -1557,9 +1582,23 @@ local_zones_answer(struct local_zones* zones, struct module_env* env,
 			lock_rw_unlock(&z->lock);
 			z = NULL;
 		}
+		if(z && (lzt == local_zone_transparent ||
+			lzt == local_zone_typetransparent ||
+			lzt == local_zone_inform ||
+			lzt == local_zone_always_transparent) &&
+			local_zone_does_not_cover(z, qinfo, labs)) {
+			lock_rw_unlock(&z->lock);
+			z = NULL;
+		}
 		if(view->local_zones && !z && !view->isfirst){
 			lock_rw_unlock(&view->lock);
 			return 0;
+		}
+		if(z && verbosity >= VERB_ALGO) {
+			char zname[255+1];
+			dname_str(z->name, zname);
+			verbose(VERB_ALGO, "using localzone %s %s from view %s", 
+				zname, local_zone_type2str(lzt), view->name);
 		}
 		lock_rw_unlock(&view->lock);
 	}
@@ -1573,10 +1612,15 @@ local_zones_answer(struct local_zones* zones, struct module_env* env,
 			return 0;
 		}
 		lock_rw_rdlock(&z->lock);
-
 		lzt = lz_type(taglist, taglen, z->taglist, z->taglen,
 			tagactions, tagactionssize, z->type, repinfo,
 			z->override_tree, &tag, tagname, num_tags);
+		if(z && verbosity >= VERB_ALGO) {
+			char zname[255+1];
+			dname_str(z->name, zname);
+			verbose(VERB_ALGO, "using localzone %s %s", zname,
+				local_zone_type2str(lzt));
+		}
 		lock_rw_unlock(&zones->lock);
 	}
 	if((env->cfg->log_local_actions ||

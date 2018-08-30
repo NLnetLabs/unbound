@@ -1,3 +1,8 @@
+30 August 2018: Wouter
+	- Fix that a local-zone with a local-zone-type that is transparent
+	  in a view with view-first, makes queries check for answers from the
+	  local-zones defined outside of views.
+
 28 August 2018: Ralph
 	- Disable minimal-responses in ipsecmod unit tests.
 	- Added serve-expired-ttl and serve-expired-ttl-reset options.
