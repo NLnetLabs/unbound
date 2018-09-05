@@ -1,3 +1,6 @@
+5 September 2018: Wouter
+	- Fix spelling error in header, from getdns commit by Andreas Gelmini.
+
 4 September 2018: Ralph
 	- More explicitly mention the type of ratelimit when applying
 	  ip-ratelimit.
