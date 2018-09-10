@@ -6,7 +6,7 @@
 	  ip-ratelimit.
 
 4 September 2018: Wouter
-	- Tag for 1.8.0rc1 release.
+	- Tag for 1.8.0rc1 release, became 1.8.0 release on 10 Sep 2018.
 
 31 August 2018: Wouter
 	- Disable minimal-responses in subnet unit tests.
