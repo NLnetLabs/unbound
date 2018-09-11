@@ -3269,7 +3269,7 @@ Index: unbound-1.7.0~rc1/util/configparser.y
 +
 +		OUTYY(("P(rpz_zone:%s)\n", $2));
 +		old_cstr = cfg_parser->cfg->rpz_cstr;
-+		asprintf(&new_cstr, "%s\nzone %s", old_cstr?old_cstr:"", $2);
++		(void)asprintf(&new_cstr, "%s\nzone %s", old_cstr?old_cstr:"", $2);
 +		if(!new_cstr)
 +			yyerror("out of memory");
 +		free(old_cstr);
@@ -3282,7 +3282,7 @@ Index: unbound-1.7.0~rc1/util/configparser.y
 +
 +		OUTYY(("P(rpz_option:%s)\n", $2));
 +		old_cstr = cfg_parser->cfg->rpz_cstr;
-+		asprintf(&new_cstr, "%s\n%s", old_cstr ? old_cstr : "", $2);
++		(void)asprintf(&new_cstr, "%s\n%s", old_cstr ? old_cstr : "", $2);
 +		if(!new_cstr)
 +			yyerror("out of memory");
 +		free(old_cstr);
