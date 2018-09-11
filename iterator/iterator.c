@@ -2993,7 +2993,7 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 			iq->dp->name, iq->dp->namelen, qstate->qinfo.qclass)) {
 			verbose(VERB_ALGO, "auth zone response bad, and no"
 				" fallback possible, servfail");
-			errinf_dname(qstate, "reponse is bad, no fallback, "
+			errinf_dname(qstate, "response is bad, no fallback, "
 				"for auth zone", iq->dp->name);
 			return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
 		}

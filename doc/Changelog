@@ -3,6 +3,7 @@
 	  asprintf.
 	- Fix to squelch respip warning in unit test, it is printed at
 	  higher verbosity settings.
+	- Fix spelling errors.
 
 10 September 2018: Wouter
 	- 1.8.1 in svn trunk. (changes from 4,5,.. sep apply).
@@ -1873,7 +1874,7 @@
 	  compatibility with cisco dns guard.  This lowers false positives.
 
 18 April 2016: Wouter
-	- Fix some malformed reponses to edns queries get fallback to nonedns.
+	- Fix some malformed responses to edns queries get fallback to nonedns.
 
 15 April 2016: Wouter
 	- cachedb module event handling design.
