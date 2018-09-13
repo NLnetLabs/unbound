@@ -1,5 +1,8 @@
 /* config.h.in.  Generated from configure.ac by autoheader.  */
 
+/* apply the noreturn attribute to a function that exits the program */
+#undef ATTR_NORETURN
+
 /* Directory to chroot to */
 #undef CHROOT_DIR
 
@@ -44,6 +47,9 @@
 
 /* Whether the C compiler accepts the "format" attribute */
 #undef HAVE_ATTR_FORMAT
+
+/* Whether the C compiler accepts the "noreturn" attribute */
+#undef HAVE_ATTR_NORETURN
 
 /* Whether the C compiler accepts the "unused" attribute */
 #undef HAVE_ATTR_UNUSED

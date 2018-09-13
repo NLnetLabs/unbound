@@ -2349,7 +2349,7 @@ int main(int argc, char* argv[])
 		}
 	}
 	argc -= optind;
-	argv += optind;
+	/* argv += optind; not using further arguments */
 	if(argc != 0)
 		usage();
 
