@@ -10,6 +10,10 @@
 	- Free memory leak in config strlist append.
 	- make sure nsec3 comparison salt is initialized.
 	- unit test has clang analysis.
+	- remove unused variable assignment from iterator scrub routine.
+	- check for null in delegation point during iterator refetch
+	  in forward zone.
+	- neater pointer cast in libunbound context quit routine.
 
 11 September 2018: Wouter
 	- Fixed unused return value warnings in contrib/fastrpz.patch for

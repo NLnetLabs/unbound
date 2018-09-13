@@ -1125,7 +1125,7 @@ forward_request(struct module_qstate* qstate, struct iter_qstate* iq)
 	struct delegpt* dp;
 	uint8_t* delname = iq->qchase.qname;
 	size_t delnamelen = iq->qchase.qname_len;
-	if(iq->refetch_glue) {
+	if(iq->refetch_glue && iq->dp) {
 		delname = iq->dp->name;
 		delnamelen = iq->dp->namelen;
 	}
