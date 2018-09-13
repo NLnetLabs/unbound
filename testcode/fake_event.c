@@ -1195,6 +1195,7 @@ struct serviced_query* outnet_serviced_query(struct outside_network* outnet,
 	/* create packet with EDNS */
 	pend->buffer = sldns_buffer_new(512);
 	log_assert(pend->buffer);
+	log_assert(pend->buffer->_data);
 	sldns_buffer_write_u16(pend->buffer, 0); /* id */
 	sldns_buffer_write_u16(pend->buffer, flags);
 	sldns_buffer_write_u16(pend->buffer, 1); /* qdcount */

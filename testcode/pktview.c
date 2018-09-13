@@ -155,6 +155,7 @@ static void analyze(sldns_buffer* pkt)
 {
 	uint16_t i, f, qd, an, ns, ar;
 	int rrnum = 0;
+	log_assert(pkt && pkt->_data);
 	printf("packet length %d\n", (int)sldns_buffer_limit(pkt));
 	if(sldns_buffer_limit(pkt) < 12) return;
 

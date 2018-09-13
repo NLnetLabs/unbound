@@ -4,6 +4,9 @@
 	- free memory leaks in config strlist and str2list insert functions.
 	- do not move unused argv variable after getopt.
 	- Remove unused if clause in testcode.
+	- in testcode, free async ids, initialise array, and check for null
+	  pointer during test of the test.  And use exit for return to note
+	  irregular program stop.
 
 11 September 2018: Wouter
 	- Fixed unused return value warnings in contrib/fastrpz.patch for
