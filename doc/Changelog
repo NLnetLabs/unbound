@@ -14,6 +14,10 @@
 	- check for null in delegation point during iterator refetch
 	  in forward zone.
 	- neater pointer cast in libunbound context quit routine.
+	- initialize statistics totals for printout.
+	- in authzone check that node exists before adding rrset.
+	- in unbound-anchor, use readwrite memory BIO.
+	- assertion in autotrust that packed rrset is formed correctly.
 
 11 September 2018: Wouter
 	- Fixed unused return value warnings in contrib/fastrpz.patch for

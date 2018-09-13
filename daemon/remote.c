@@ -1070,6 +1070,7 @@ do_stats(RES* ssl, struct daemon_remote* rc, int reset)
 	struct ub_stats_info total;
 	struct ub_stats_info s;
 	int i;
+	memset(&total, 0, sizeof(total));
 	log_assert(daemon->num > 0);
 	/* gather all thread statistics in one place */
 	for(i=0; i<daemon->num; i++) {

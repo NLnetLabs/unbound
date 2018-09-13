@@ -44,7 +44,7 @@ if test ! -z "$WINAPPS"; then WIN_SRC="winrc/*.c"; fi
 cd $PRE; cd $srcdir
 # check the files in the srcdir
 fail="no"
-for x in cachedb/*.c daemon/*.c dns64/*.c $DNSCRYPT_SRC $DNSTAP_SRC edns-subnet/*.c ipsecmod/*.c iterator/*.c libunbound/*.c $PYTHONMOD_SRC respip/*.c services/*.c services/*/*.c sldns/*.c smallapp/*.c util/*.c validator/*.c $WIN_SRC $compatfiles testcode/*.c; do
+for x in cachedb/*.c daemon/*.c dns64/*.c $DNSCRYPT_SRC $DNSTAP_SRC edns-subnet/*.c ipsecmod/*.c iterator/*.c libunbound/*.c $PYTHONMOD_SRC respip/*.c services/*.c services/*/*.c sldns/*.c smallapp/*.c util/*.c util/*/*.c validator/*.c $WIN_SRC $compatfiles testcode/*.c; do
 	if test "$x" = "util/configlexer.c"; then continue; fi
 	if test "$x" = "util/configparser.c"; then continue; fi
 	if test "$x" = "testcode/signit.c"; then continue; fi
