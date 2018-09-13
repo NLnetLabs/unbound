@@ -20,6 +20,7 @@
 	- assertion in autotrust that packed rrset is formed correctly.
 	- Fix memory leak when message parse fails partway through copy.
 	- remove unused udpsize assignment in message encode.
+	- nicer bio free code in unbound-anchor.
 
 11 September 2018: Wouter
 	- Fixed unused return value warnings in contrib/fastrpz.patch for

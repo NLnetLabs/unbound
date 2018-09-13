@@ -1171,13 +1171,6 @@ https(struct ip_list* ip_list, const char* pathname, const char* urlname)
 	return bio;
 }
 
-/** free up a downloaded file BIO */
-static void
-free_file_bio(BIO* bio)
-{
-	BIO_free(bio);
-}
-
 /** XML parse private data during the parse */
 struct xml_data {
 	/** the parser, reference */
@@ -1955,8 +1948,8 @@ do_certupdate(const char* root_anchor_file, const char* root_cert_file,
 	if(verb) printf("success: the anchor has been updated "
 			"using the cert\n");
 
-	free_file_bio(xml);
-	free_file_bio(p7s);
+	BIO_free(xml);
+	BIO_free(p7s);
 #ifndef S_SPLINT_S
 	sk_X509_pop_free(cert, X509_free);
 #endif
