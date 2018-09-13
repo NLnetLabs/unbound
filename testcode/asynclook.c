@@ -382,7 +382,7 @@ ext_test(struct ub_ctx* ctx, int argc, char** argv)
 	for(i=0; i<NUMTHR; i++) {
 		if(inf[i].id_list) {
 			int j;
-			for(j=0; j<inf->numq; j++) {
+			for(j=0; j<inf[i].numq; j++) {
 				lock_basic_destroy(&inf[i].id_list[j].lock);
 			}
 			free(inf[i].id_list);
