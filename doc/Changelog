@@ -9,6 +9,7 @@
 	  irregular program stop.
 	- Free memory leak in config strlist append.
 	- make sure nsec3 comparison salt is initialized.
+	- unit test has clang analysis.
 
 11 September 2018: Wouter
 	- Fixed unused return value warnings in contrib/fastrpz.patch for
