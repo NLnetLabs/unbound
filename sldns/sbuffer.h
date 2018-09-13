@@ -160,7 +160,7 @@ sldns_buffer_invariant(sldns_buffer *buffer)
 	assert(buffer != NULL);
 	assert(buffer->_position <= buffer->_limit || buffer->_vfixed);
 	assert(buffer->_limit <= buffer->_capacity);
-	assert(buffer->_data != NULL || (buffer->_vfixed && buffer->_capacity == 0));
+	assert(buffer->_data != NULL || (buffer->_vfixed && buffer->_capacity == 0 && buffer->_limit == 0));
 }
 #endif
 

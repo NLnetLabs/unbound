@@ -532,7 +532,6 @@ qlist_add_line(struct perfinfo* info, char* line, int no)
 		printf("error parsing query %d: %s\n", no, line);
 		exit(1);
 	}
-	log_assert(info->buf->_data);
 	sldns_buffer_write_u16_at(info->buf, 0, (uint16_t)info->qlist_size); 
 	if(info->qlist_size + 1 > info->qlist_capacity) {
 		qlist_grow_capacity(info);
