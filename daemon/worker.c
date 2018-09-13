@@ -1671,14 +1671,14 @@ worker_create(struct daemon* daemon, int id, int* ports, int n)
 		(((unsigned int)worker->thread_num)<<17);
 		/* shift thread_num so it does not match out pid bits */
 	if(!(worker->rndstate = ub_initstate(seed, daemon->rand))) {
-		seed = 0;
+		explicit_bzero(&seed, sizeof(seed));
 		log_err("could not init random numbers.");
 		tube_delete(worker->cmd);
 		free(worker->ports);
 		free(worker);
 		return NULL;
 	}
-	seed = 0;
+	explicit_bzero(&seed, sizeof(seed));
 #ifdef USE_DNSTAP
 	if(daemon->cfg->dnstap) {
 		log_assert(daemon->dtenv != NULL);
