@@ -841,6 +841,7 @@ config_get_option(struct config_file* cfg, const char* opt,
 {
 	char buf[1024], nopt[64];
 	size_t len = sizeof(buf);
+	if(!opt) return 0;
 	if(opt && opt[strlen(opt)-1] == ':' && strlen(opt)<sizeof(nopt)) {
 		memmove(nopt, opt, strlen(opt));
 		nopt[strlen(opt)-1] = 0;
@@ -1526,11 +1527,15 @@ int ub_c_wrap(void)
 int cfg_strlist_append(struct config_strlist_head* list, char* item)
 {
 	struct config_strlist *s;
-	if(!item || !list)
+	if(!item || !list) {
+		free(item);
 		return 0;
+	}
 	s = (struct config_strlist*)calloc(1, sizeof(struct config_strlist));
-	if(!s)
+	if(!s) {
+		free(item);
 		return 0;
+	}
 	s->str = item;
 	s->next = NULL;
 	if(list->last)

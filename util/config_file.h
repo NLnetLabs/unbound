@@ -792,6 +792,7 @@ char* config_collate_cat(struct config_strlist* list);
  * @param list: list head. zeroed at start.
  * @param item: new item. malloced by caller. if NULL the insertion fails.
  * @return true on success.
+ * on fail the item is free()ed.
  */
 int cfg_strlist_append(struct config_strlist_head* list, char* item);
 
