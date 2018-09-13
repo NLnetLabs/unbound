@@ -21,6 +21,7 @@
 	- Fix memory leak when message parse fails partway through copy.
 	- remove unused udpsize assignment in message encode.
 	- nicer bio free code in unbound-anchor.
+	- annotate exit functions with noreturn in unbound-control.
 
 11 September 2018: Wouter
 	- Fixed unused return value warnings in contrib/fastrpz.patch for
