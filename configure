@@ -6266,6 +6266,9 @@ if test $ac_cv_c_weak_attribute = yes; then
 
 $as_echo "#define HAVE_ATTR_WEAK 1" >>confdefs.h
 
+
+$as_echo "#define ATTR_WEAK __attribute__((weak))" >>confdefs.h
+
 fi
 
 
@@ -20079,6 +20082,20 @@ esac
 fi
 
 
+ac_fn_c_check_func "$LINENO" "explicit_bzero" "ac_cv_func_explicit_bzero"
+if test "x$ac_cv_func_explicit_bzero" = xyes; then :
+  $as_echo "#define HAVE_EXPLICIT_BZERO 1" >>confdefs.h
+
+else
+  case " $LIBOBJS " in
+  *" explicit_bzero.$ac_objext "* ) ;;
+  *) LIBOBJS="$LIBOBJS explicit_bzero.$ac_objext"
+ ;;
+esac
+
+fi
+
+
 LIBOBJ_WITHOUT_CTIMEARC4="$LIBOBJS"
 
 ac_fn_c_check_func "$LINENO" "reallocarray" "ac_cv_func_reallocarray"
@@ -20125,12 +20142,6 @@ fi
 
 
 	if test "$ac_cv_func_arc4random" = "no"; then
-		case " $LIBOBJS " in
-  *" explicit_bzero.$ac_objext "* ) ;;
-  *) LIBOBJS="$LIBOBJS explicit_bzero.$ac_objext"
- ;;
-esac
-
 		case " $LIBOBJS " in
   *" arc4_lock.$ac_objext "* ) ;;
   *) LIBOBJS="$LIBOBJS arc4_lock.$ac_objext"
