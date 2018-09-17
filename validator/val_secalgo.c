@@ -223,7 +223,7 @@ secalgo_ds_digest(int algo, unsigned char* buf, size_t len,
 		case LDNS_SHA384:
 #ifdef OPENSSL_FIPS
 			if(!sldns_digest_evp(buf, len, res, EVP_sha384()))
-				log_crypto_error("could not digest with EVP_sha256",
+				log_crypto_error("could not digest with EVP_sha384",
 					ERR_get_error());
 #else
 			(void)SHA384(buf, len, res);
