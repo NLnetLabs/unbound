@@ -2752,6 +2752,12 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 						verbose(VERB_ALGO,
 						"could not validate NXDOMAIN "
 						"response");
+					outbound_list_clear(&iq->outlist);
+					iq->num_current_queries = 0;
+					fptr_ok(fptr_whitelist_modenv_detach_subs(
+						qstate->env->detach_subs));
+					(*qstate->env->detach_subs)(qstate);
+					iq->num_target_queries = 0;
 				}
 			}
 			return next_state(iq, QUERYTARGETS_STATE);
