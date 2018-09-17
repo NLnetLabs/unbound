@@ -9,6 +9,7 @@
 	- Stop UDP to TCP failover after timeouts that causes the ping count
 	  to be reset by the TCP time measurement (that exists for TLS),
 	  because that causes the UDP part to not be measured as timeout.
+	- Fix #4156: Fix systemd service manager state change notification.
 
 13 September 2018: Wouter
 	- Fix seed for random backup code to use explicit zero when wiped.
