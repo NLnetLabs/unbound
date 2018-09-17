@@ -113,7 +113,7 @@ secalgo_nsec3_hash(int algo, unsigned char* buf, size_t len,
 	switch(algo) {
 	case NSEC3_HASH_SHA1:
 #ifdef OPENSSL_FIPS
-		if(!sldns_digest_evp(buf, les, rest, EVP_sha1()))
+		if(!sldns_digest_evp(buf, les, res, EVP_sha1()))
 			log_crypto_error("could not digest with EVP_sha1",
 				ERR_get_error());
 #else
@@ -129,7 +129,7 @@ void
 secalgo_hash_sha256(unsigned char* buf, size_t len, unsigned char* res)
 {
 #ifdef OPENSSL_FIPS
-	if(!sldns_digest_evp(buf, les, rest, EVP_sha256()))
+	if(!sldns_digest_evp(buf, les, res, EVP_sha256()))
 		log_crypto_error("could not digest with EVP_sha256",
 			ERR_get_error());
 #else
@@ -194,7 +194,7 @@ secalgo_ds_digest(int algo, unsigned char* buf, size_t len,
 #if defined(HAVE_EVP_SHA1) && defined(USE_SHA1)
 		case LDNS_SHA1:
 #ifdef OPENSSL_FIPS
-			if(!sldns_digest_evp(buf, les, rest, EVP_sha1()))
+			if(!sldns_digest_evp(buf, les, res, EVP_sha1()))
 				log_crypto_error("could not digest with EVP_sha1",
 					ERR_get_error());
 #else
@@ -205,7 +205,7 @@ secalgo_ds_digest(int algo, unsigned char* buf, size_t len,
 #ifdef HAVE_EVP_SHA256
 		case LDNS_SHA256:
 #ifdef OPENSSL_FIPS
-			if(!sldns_digest_evp(buf, les, rest, EVP_sha256()))
+			if(!sldns_digest_evp(buf, les, res, EVP_sha256()))
 				log_crypto_error("could not digest with EVP_sha256",
 					ERR_get_error());
 #else
@@ -222,7 +222,7 @@ secalgo_ds_digest(int algo, unsigned char* buf, size_t len,
 #ifdef USE_ECDSA
 		case LDNS_SHA384:
 #ifdef OPENSSL_FIPS
-			if(!sldns_digest_evp(buf, les, rest, EVP_sha384()))
+			if(!sldns_digest_evp(buf, les, res, EVP_sha384()))
 				log_crypto_error("could not digest with EVP_sha256",
 					ERR_get_error());
 #else
