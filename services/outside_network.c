@@ -365,6 +365,9 @@ outnet_tcp_take_into_use(struct waiting_tcp* w, uint8_t* pkt, size_t pkt_len)
 		comm_point_tcp_win_bio_cb(pend->c, pend->c->ssl);
 #endif
 		pend->c->ssl_shake_state = comm_ssl_shake_write;
+		if(w->tls_auth_name) {
+			(void)SSL_set_tlsext_host_name(pend->c->ssl, w->tls_auth_name);
+		}
 #ifdef HAVE_SSL_SET1_HOST
 		if(w->tls_auth_name) {
 			SSL_set_verify(pend->c->ssl, SSL_VERIFY_PEER, NULL);

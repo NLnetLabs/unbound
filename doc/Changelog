@@ -1,3 +1,9 @@
+25 September 2018: Wouter
+	- Perform TLS SNI indication of the host that is being contacted
+	  for DNS over TLS service.  It sets the configured tls auth name.
+	  This is useful for hosts that apart from the DNS over TLS services
+	  also provide other (web) services.
+
 17 September 2018: Wouter
 	- Fix compile on Mac for unbound, provide explicit_bzero when libc
 	  does not have it.
