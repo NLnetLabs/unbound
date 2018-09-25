@@ -366,7 +366,9 @@ outnet_tcp_take_into_use(struct waiting_tcp* w, uint8_t* pkt, size_t pkt_len)
 #endif
 		pend->c->ssl_shake_state = comm_ssl_shake_write;
 		if(w->tls_auth_name) {
+#ifdef HAVE_SSL
 			(void)SSL_set_tlsext_host_name(pend->c->ssl, w->tls_auth_name);
+#endif
 		}
 #ifdef HAVE_SSL_SET1_HOST
 		if(w->tls_auth_name) {
@@ -377,6 +379,8 @@ outnet_tcp_take_into_use(struct waiting_tcp* w, uint8_t* pkt, size_t pkt_len)
                         if(!SSL_set1_host(pend->c->ssl, w->tls_auth_name)) {
                                 log_err("SSL_set1_host failed");
 				pend->c->fd = s;
+				SSL_free(pend->c->ssl);
+				pend->c->ssl = NULL;
 				comm_point_close(pend->c);
 				return 0;
 			}
@@ -1264,6 +1268,13 @@ outnet_tcptimer(void* arg)
 	} else {
 		/* it was in use */
 		struct pending_tcp* pend=(struct pending_tcp*)w->next_waiting;
+		if(pend->c->ssl) {
+#ifdef HAVE_SSL
+			SSL_shutdown(pend->c->ssl);
+			SSL_free(pend->c->ssl);
+			pend->c->ssl = NULL;
+#endif
+		}
 		comm_point_close(pend->c);
 		pend->query = NULL;
 		pend->next_free = outnet->tcp_free;
