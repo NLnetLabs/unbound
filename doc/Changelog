@@ -1,3 +1,8 @@
+27 September 2018: Wouter
+	- Fix #4188: IPv6 forwarders without ipv6 result in SERVFAIL, fixes
+	  qname minimisation with a forwarder when connectivity has issues
+	  from rejecting responses.
+
 25 September 2018: Wouter
 	- Perform TLS SNI indication of the host that is being contacted
 	  for DNS over TLS service.  It sets the configured tls auth name.
