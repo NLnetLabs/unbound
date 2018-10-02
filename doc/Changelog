@@ -1,7 +1,6 @@
 2 October 2018: Wouter
 	- updated contrib/fastrpz.patch to apply for this version
 	- dnscrypt.c removed sizeof to get array bounds.
-	- Fix clang analyzer for optimize compile analysis.
 	- Fix testlock code to set noreturn on error routine.
 	- Remove unused variable from contrib fastrpz/rpz.c and
 	  remove unused diagnostic pragmas that themselves generate warnings

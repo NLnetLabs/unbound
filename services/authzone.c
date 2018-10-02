@@ -2828,7 +2828,7 @@ az_generate_any_answer(struct auth_zone* z, struct regional* region,
 		if(!msg_add_rrset_an(z, region, msg, node, rrset)) return 0;
 		added++;
 	}
-	if(added == 0 && node->rrsets) {
+	if(added == 0 && node && node->rrsets) {
 		if(!msg_add_rrset_an(z, region, msg, node,
 			node->rrsets)) return 0;
 	}
