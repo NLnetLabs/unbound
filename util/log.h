@@ -201,7 +201,12 @@ void log_vmsg(int pri, const char* type, const char* format, va_list args);
 	} while(0);
 #endif
 #else
+#ifdef __clang_analyzer__
+/* tell clang analyzer that the code path with !x is not there */
+#define log_assert(x) if(!(x)) fatal_exit("error")
+#else
 #  define log_assert(x) /*nothing*/
+#endif
 #endif
 
 #ifdef USE_WINSOCK
