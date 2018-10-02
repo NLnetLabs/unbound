@@ -1434,8 +1434,6 @@ Index: unboundfastrpz/fastrpz/rpz.c
 +static void
 +log_fnc(librpz_log_level_t level, void* ATTR_UNUSED(ctx), const char* buf)
 +{
-+	char label_buf[sizeof("rpz ")+8];
-+
 +	/* Setting librpz_log_level overrides the unbound "verbose" level. */
 +	if(level > LIBRPZ_LOG_TRACE1 &&
 +	   level <= librpz->log_level_val(LIBRPZ_LOG_INVALID))
