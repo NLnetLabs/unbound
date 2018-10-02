@@ -1,3 +1,7 @@
+2 October 2018: Wouter
+	- updated contrib/fastrpz.patch to apply for this version
+	- dnscrypt.c removed sizeof to get array bounds.
+
 1 October 2018: Wouter
 	- tag for release 1.8.1rc1.
 
