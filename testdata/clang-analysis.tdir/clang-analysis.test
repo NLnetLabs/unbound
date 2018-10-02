@@ -6,11 +6,21 @@
 # common functions
 . ../common.sh
 
+PRE="../.."
 if test ! -x "`which clang 2>&1`"; then
 	echo "No clang in path"
 	exit 0
 fi
 #echo "have clang"
+# test if assertions are enabled
+if grep "^#define UNBOUND_DEBUG" $PRE/config.h >/dev/null; then
+	:
+else
+	echo "UNBOUND_DEBUG is not enabled, skip test"
+	# no unbound debug means no assertions, and clang analyzer uses
+	# the assertions to make inferences.
+	exit 0
+fi
 
 # read value from Makefile
 # $1: result variable name
@@ -23,7 +33,6 @@ read_value () {
 	#echo $1"="'"'"`eval echo '$'$1`"'"'
 }
 
-PRE="../.."
 # read some values from the Makefile
 read_value srcdir '^srcdir=' $PRE/Makefile
 read_value CPPFLAGS '^CPPFLAGS=' $PRE/Makefile

@@ -4,6 +4,7 @@
 	- Fix testlock code to set noreturn on error routine.
 	- Remove unused variable from contrib fastrpz/rpz.c and
 	  remove unused diagnostic pragmas that themselves generate warnings
+	- clang analyze test is used only when assertions are enabled.
 
 1 October 2018: Wouter
 	- tag for release 1.8.1rc1.
