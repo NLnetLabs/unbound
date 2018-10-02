@@ -3041,9 +3041,9 @@ Index: unbound-1.7.0~rc1/iterator/iterator.c
 +			}
 +		}
 +#endif
- 		if(iq->minimisation_state != DONOT_MINIMISE_STATE) {
+ 		if(iq->minimisation_state != DONOT_MINIMISE_STATE
+			&& !(iq->chase_flags & BIT_RD)) {
  			if(FLAGS_GET_RCODE(iq->response->rep->flags) != 
- 				LDNS_RCODE_NOERROR) {
 @@ -3273,12 +3367,44 @@ processFinished(struct module_qstate* qs
  		 * but only if we did recursion. The nonrecursion referral
  		 * from cache does not need to be stored in the msg cache. */
