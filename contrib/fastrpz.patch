@@ -1318,7 +1318,7 @@ Index: unboundfastrpz/fastrpz/rpz.c
 ===================================================================
 --- unboundfastrpz/fastrpz/rpz.c	(nonexistent)
 +++ unboundfastrpz/fastrpz/rpz.c	(working copy)
-@@ -0,0 +1,1355 @@
+@@ -0,0 +1,1352 @@
 +/*
 + * fastrpz/rpz.c - interface to the fastrpz response policy zone library
 + *
@@ -1943,12 +1943,9 @@ Index: unboundfastrpz/fastrpz/rpz.c
 +	case st_ck_ns:
 +		/* An NSDNAME or NSIP check failed for lack of cached data. */
 +		return false;
-+#pragma clang diagnostic push
-+#pragma clang diagnostic ignored "-Wunreachable-code"
 +	default:
 +		fatal_exit("impossible RPZ state %d in rpz_worker_cache()",
 +			   rpz->st);
-+#pragma clang diagnostic pop
 +	}
 +
 +	/* Wait for a trigger. */
