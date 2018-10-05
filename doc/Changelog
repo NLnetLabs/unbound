@@ -5,6 +5,7 @@
 	- Set default for so-reuseport to no for FreeBSD.  It is enabled
 	  by default for Linux and DragonFlyBSD.  The setting can 
 	  be configured in unbound.conf to override the default.
+	- iana port update.
 
 2 October 2018: Wouter
 	- updated contrib/fastrpz.patch to apply for this version
