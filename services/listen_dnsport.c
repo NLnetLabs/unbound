@@ -565,7 +565,11 @@ create_udp_sock(int family, int socktype, struct sockaddr* addr,
 		if(family==AF_INET6 && errno==EINVAL)
 			*noproto = 1;
 		else if(errno != EADDRINUSE &&
-			!(errno == EACCES && verbosity < 4 && !listen)) {
+			!(errno == EACCES && verbosity < 4 && !listen)
+#ifdef EADDRNOTAVAIL
+			&& !(errno == EADDRNOTAVAIL && verbosity < 4 && !listen)
+#endif
+			) {
 			log_err_addr("can't bind socket", strerror(errno),
 				(struct sockaddr_storage*)addr, addrlen);
 		}
