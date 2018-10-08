@@ -1876,7 +1876,7 @@ serviced_tcp_initiate(struct serviced_query* sq, sldns_buffer* buff)
 	if(!sq->pending) {
 		/* delete from tree so that a retry by above layer does not
 		 * clash with this entry */
-		log_err("serviced_tcp_initiate: failed to send tcp query");
+		verbose(VERB_ALGO, "serviced_tcp_initiate: failed to send tcp query");
 		serviced_callbacks(sq, NETEVENT_CLOSED, NULL, NULL);
 	}
 }
