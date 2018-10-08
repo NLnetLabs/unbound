@@ -16,7 +16,8 @@
 	- clang analyze test is used only when assertions are enabled.
 
 1 October 2018: Wouter
-	- tag for release 1.8.1rc1.
+	- tag for release 1.8.1rc1.  Became release 1.8.1 on 8 oct, with
+	  fastrpz.patch fix included.
 
 27 September 2018: Wouter
 	- Fix #4188: IPv6 forwarders without ipv6 result in SERVFAIL, fixes
