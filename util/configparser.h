@@ -290,12 +290,14 @@ extern int yydebug;
     VAR_TLS_ADDITIONAL_PORT = 500,
     VAR_LOW_RTT = 501,
     VAR_LOW_RTT_PERMIL = 502,
-    VAR_ALLOW_NOTIFY = 503,
-    VAR_TLS_WIN_CERT = 504,
-    VAR_TCP_CONNECTION_LIMIT = 505,
-    VAR_FORWARD_NO_CACHE = 506,
-    VAR_STUB_NO_CACHE = 507,
-    VAR_LOG_SERVFAIL = 508
+    VAR_FAST_SERVER_PERMIL = 503,
+    VAR_FAST_SERVER_NUM = 504,
+    VAR_ALLOW_NOTIFY = 505,
+    VAR_TLS_WIN_CERT = 506,
+    VAR_TCP_CONNECTION_LIMIT = 507,
+    VAR_FORWARD_NO_CACHE = 508,
+    VAR_STUB_NO_CACHE = 509,
+    VAR_LOG_SERVFAIL = 510
   };
 #endif
 /* Tokens.  */
@@ -544,12 +546,14 @@ extern int yydebug;
 #define VAR_TLS_ADDITIONAL_PORT 500
 #define VAR_LOW_RTT 501
 #define VAR_LOW_RTT_PERMIL 502
-#define VAR_ALLOW_NOTIFY 503
-#define VAR_TLS_WIN_CERT 504
-#define VAR_TCP_CONNECTION_LIMIT 505
-#define VAR_FORWARD_NO_CACHE 506
-#define VAR_STUB_NO_CACHE 507
-#define VAR_LOG_SERVFAIL 508
+#define VAR_FAST_SERVER_PERMIL 503
+#define VAR_FAST_SERVER_NUM 504
+#define VAR_ALLOW_NOTIFY 505
+#define VAR_TLS_WIN_CERT 506
+#define VAR_TCP_CONNECTION_LIMIT 507
+#define VAR_FORWARD_NO_CACHE 508
+#define VAR_STUB_NO_CACHE 509
+#define VAR_LOG_SERVFAIL 510
 
 /* Value type.  */
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
@@ -560,7 +564,7 @@ union YYSTYPE
 
 	char*	str;
 
-#line 564 "util/configparser.h" /* yacc.c:1909  */
+#line 568 "util/configparser.h" /* yacc.c:1909  */
 };
 
 typedef union YYSTYPE YYSTYPE;

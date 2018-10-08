@@ -1,3 +1,7 @@
+8 October 2018: Ralph
+	- Add fast-server-permil and fast-server-num options.
+	- Deprecate low-rtt and low-rtt-permil options.
+
 8 October 2018: Wouter
 	- Squelch log of failed to tcp initiate after TCP Fastopen failure.
 

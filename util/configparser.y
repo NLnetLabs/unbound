@@ -159,6 +159,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_UDP_UPSTREAM_WITHOUT_DOWNSTREAM VAR_FOR_UPSTREAM
 %token VAR_AUTH_ZONE VAR_ZONEFILE VAR_MASTER VAR_URL VAR_FOR_DOWNSTREAM
 %token VAR_FALLBACK_ENABLED VAR_TLS_ADDITIONAL_PORT VAR_LOW_RTT VAR_LOW_RTT_PERMIL
+%token VAR_FAST_SERVER_PERMIL VAR_FAST_SERVER_NUM
 %token VAR_ALLOW_NOTIFY VAR_TLS_WIN_CERT VAR_TCP_CONNECTION_LIMIT
 %token VAR_FORWARD_NO_CACHE VAR_STUB_NO_CACHE VAR_LOG_SERVFAIL
 
@@ -255,7 +256,7 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_ipsecmod_whitelist | server_ipsecmod_strict |
 	server_udp_upstream_without_downstream | server_aggressive_nsec |
 	server_tls_cert_bundle | server_tls_additional_port | server_low_rtt |
-	server_low_rtt_permil | server_tls_win_cert |
+	server_fast_server_permil | server_fast_server_num  | server_tls_win_cert |
 	server_tcp_connection_limit | server_log_servfail
 	;
 stubstart: VAR_STUB_ZONE
@@ -1974,19 +1975,25 @@ server_ratelimit_factor: VAR_RATELIMIT_FACTOR STRING_ARG
 	;
 server_low_rtt: VAR_LOW_RTT STRING_ARG 
 	{ 
-		OUTYY(("P(server_low_rtt:%s)\n", $2)); 
-		if(atoi($2) == 0 && strcmp($2, "0") != 0)
-			yyerror("number expected");
-		else cfg_parser->cfg->low_rtt = atoi($2);
+		OUTYY(("P(low-rtt option is deprecated, use fast-server-num instead)\n"));
 		free($2);
 	}
 	;
-server_low_rtt_permil: VAR_LOW_RTT_PERMIL STRING_ARG 
+server_fast_server_num: VAR_FAST_SERVER_NUM STRING_ARG 
 	{ 
-		OUTYY(("P(server_low_rtt_permil:%s)\n", $2)); 
+		OUTYY(("P(server_fast_server_num:%s)\n", $2)); 
+		if(atoi($2) <= 0)
+			yyerror("number expected");
+		else cfg_parser->cfg->fast_server_num = atoi($2);
+		free($2);
+	}
+	;
+server_fast_server_permil: VAR_FAST_SERVER_PERMIL STRING_ARG 
+	{ 
+		OUTYY(("P(server_fast_server_permil:%s)\n", $2)); 
 		if(atoi($2) == 0 && strcmp($2, "0") != 0)
 			yyerror("number expected");
-		else cfg_parser->cfg->low_rtt_permil = atoi($2);
+		else cfg_parser->cfg->fast_server_permil = atoi($2);
 		free($2);
 	}
 	;

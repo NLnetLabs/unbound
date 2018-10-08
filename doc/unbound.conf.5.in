@@ -1391,22 +1391,20 @@ This can make ordinary queries complete (if repeatedly queried for),
 and enter the cache, whilst also mitigating the traffic flow by the
 factor given.
 .TP 5
-.B low\-rtt: \fI<msec time>
-Set the time in millisecond that is considere a low ping time for fast
-server selection with the low\-rtt\-permil option, that turns this on or off.
-The default is 45 msec, a number from IPv6 quick response documents.
+.B fast\-server\-permil: \fI<number>
+Specify how many times out of 1000 to pick from the set of fastest servers.
+0 turns the feature off.  A value of 900 would pick from the fastest
+servers 90 percent of the time, and would perform normal exploration of random
+servers for the remaining time. When prefetch is enabled (or serve\-expired),
+such prefetches are not sped up, because there is no one waiting for it, and it
+presents a good moment to perform server exploration. The
+\fBfast\-server\-num\fR option can be used to specify the size of the fastest
+servers set. The default for fast\-server\-permil is 0.
 .TP 5
-.B low\-rtt\-permil: \fI<number>
-Specify how many times out of 1000 to pick the fast server from the low
-rtt band.  0 turns the feature off.  A value of 900 would pick the fast
-server when such fast servers are available 90 percent of the time, and
-the remaining time perform normal exploration of random servers.
-When prefetch is enabled (or serve\-expired), such prefetches are not
-sped up, because there is no one waiting for it, and it presents a good
-moment to perform server exploration.  The low\-rtt option can be used
-to specify which servers are picked for fast server selection, servers
-with a ping roundtrip time below that value are considered.
-The default for low\-rtt\-permil is 0.
+.B fast\-server\-num: \fI<number>
+Set the number of servers that should be used for fast server selection. Only
+use the fastest specified number of servers with the fast\-server\-permil
+option, that turns this on or off. The default is to use the fastest 4 servers.
 .SS "Remote Control Options"
 In the
 .B remote\-control:

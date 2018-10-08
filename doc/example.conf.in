@@ -757,12 +757,12 @@ server:
 	# Limit the number of connections simultaneous from a netblock
 	# tcp-connection-limit: 192.0.2.0/24 12
 
-	# what is considered a low rtt (ping time for upstream server), in msec
-	# low-rtt: 45
-	# select low rtt this many times out of 1000. 0 means the fast server
-	# select is disabled.  prefetches are not sped up.
-	# low-rtt-permil: 0
-
+	# select from the fastest servers this many times out of 1000. 0 means
+	# the fast server select is disabled. prefetches are not sped up.
+	# fast-server-permil: 0
+	# the number of servers that will be used in the fast server selection.
+	# fast-server-num: 4
+	
 	# Specific options for ipsecmod. unbound needs to be configured with
 	# --enable-ipsecmod for these to take effect.
 	#
