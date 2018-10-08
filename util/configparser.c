@@ -4725,7 +4725,7 @@ yyreduce:
   case 397:
 #line 1977 "./util/configparser.y" /* yacc.c:1646  */
     { 
-		OUTYY(("P(low-rtt option is depricated, use fast-server-num instead)\n"));
+		OUTYY(("P(low-rtt option is deprecated, use fast-server-num instead)\n"));
 		free((yyvsp[0].str));
 	}
 #line 4732 "util/configparser.c" /* yacc.c:1646  */

@@ -163,7 +163,7 @@ struct config_file {
 	 * destinations */
 	int fast_server_permil;
 	/** number of fastest server to select from */
-	int fast_server_num;
+	size_t fast_server_num;
 
 	/** automatic interface for incoming messages. Uses ipv6 remapping,
 	 * and recvmsg/sendmsg ancillary data to detect interfaces, boolean */

@@ -283,7 +283,7 @@ static int
 iter_fill_rtt(struct iter_env* iter_env, struct module_env* env,
 	uint8_t* name, size_t namelen, uint16_t qtype, time_t now, 
 	struct delegpt* dp, int* best_rtt, struct sock_list* blacklist,
-	int* num_suitable_results)
+	size_t* num_suitable_results)
 {
 	int got_it = 0;
 	struct delegpt_addr* a;
@@ -323,9 +323,10 @@ rtt_compare(const void* x, const void* y)
 
 /** get RTT for the Nth fastest server */
 static int
-nth_rtt(struct delegpt_addr* result_list, int num_results, int n)
+nth_rtt(struct delegpt_addr* result_list, size_t num_results, size_t n)
 {
-	int rtt_band, i;
+	int rtt_band;
+	size_t i;
 	int* rtt_list, *rtt_index;
 	
 	if(num_results < 1 || n >= num_results) {
@@ -363,8 +364,8 @@ iter_filter_order(struct iter_env* iter_env, struct module_env* env,
 	struct delegpt* dp, int* selected_rtt, int open_target, 
 	struct sock_list* blacklist, time_t prefetch)
 {
-	int got_num = 0, low_rtt = 0, swap_to_front, rtt_band = RTT_BAND,
-		num_results, nth;
+	int got_num = 0, low_rtt = 0, swap_to_front, rtt_band = RTT_BAND, nth;
+	size_t num_results;
 	struct delegpt_addr* a, *n, *prev=NULL;
 
 	/* fillup sel_rtt and find best rtt in the bunch */
