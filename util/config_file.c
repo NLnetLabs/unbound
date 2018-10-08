@@ -642,7 +642,7 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	else S_POW2("ratelimit-slabs:", ratelimit_slabs)
 	else S_NUMBER_OR_ZERO("ip-ratelimit-factor:", ip_ratelimit_factor)
 	else S_NUMBER_OR_ZERO("ratelimit-factor:", ratelimit_factor)
-	else S_NUMBER_NONZERO("fast-server-num:", fast_server_num)
+	else S_SIZET_NONZERO("fast-server-num:", fast_server_num)
 	else S_NUMBER_OR_ZERO("fast-server-permil:", fast_server_permil)
 	else S_YNO("qname-minimisation:", qname_minimisation)
 	else S_YNO("qname-minimisation-strict:", qname_minimisation_strict)
