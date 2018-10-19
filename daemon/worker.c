@@ -1397,7 +1397,8 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 
 	/* If this request does not have the recursion bit set, verify
 	 * ACLs allow the snooping. */
-	if(!(LDNS_RD_WIRE(sldns_buffer_begin(c->buffer))) &&
+	if(qinfo.qname_len > 1 && /* non-recursive query "." is allowed */
+		!(LDNS_RD_WIRE(sldns_buffer_begin(c->buffer))) &&
 		acl != acl_allow_snoop ) {
 		error_encode(c->buffer, LDNS_RCODE_REFUSED, &qinfo,
 			*(uint16_t*)(void *)sldns_buffer_begin(c->buffer),
