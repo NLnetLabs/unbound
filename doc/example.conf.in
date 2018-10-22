@@ -761,7 +761,7 @@ server:
 	# the fast server select is disabled. prefetches are not sped up.
 	# fast-server-permil: 0
 	# the number of servers that will be used in the fast server selection.
-	# fast-server-num: 4
+	# fast-server-num: 3
 	
 	# Specific options for ipsecmod. unbound needs to be configured with
 	# --enable-ipsecmod for these to take effect.

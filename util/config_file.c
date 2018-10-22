@@ -168,7 +168,7 @@ config_create(void)
 	if(!(cfg->pidfile = strdup(PIDFILE))) goto error_exit;
 	if(!(cfg->target_fetch_policy = strdup("3 2 1 0 0"))) goto error_exit;
 	cfg->fast_server_permil = 0;
-	cfg->fast_server_num = 4;
+	cfg->fast_server_num = 3;
 	cfg->donotqueryaddrs = NULL;
 	cfg->donotquery_localhost = 1;
 	cfg->root_hints = NULL;

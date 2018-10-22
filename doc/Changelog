@@ -1,3 +1,6 @@
+22 October 2018: Ralph
+	- Change fast-server-num default to 3.
+
 8 October 2018: Ralph
 	- Add fast-server-permil and fast-server-num options.
 	- Deprecate low-rtt and low-rtt-permil options.
