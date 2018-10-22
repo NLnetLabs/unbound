@@ -194,6 +194,8 @@ config_create(void)
 	cfg->client_subnet_always_forward = 0;
 	cfg->max_client_subnet_ipv4 = 24;
 	cfg->max_client_subnet_ipv6 = 56;
+	cfg->max_ecs_tree_size_ipv4 = 100;
+	cfg->max_ecs_tree_size_ipv6 = 100;
 #endif
 	cfg->views = NULL;
 	cfg->acls = NULL;
@@ -682,7 +684,8 @@ int config_set_option(struct config_file* cfg, const char* opt,
 		 * ratelimit-for-domain, ratelimit-below-domain,
 		 * local-zone-tag, access-control-view,
 		 * send-client-subnet, client-subnet-always-forward,
-		 * max-client-subnet-ipv4, max-client-subnet-ipv6, ipsecmod_hook,
+		 * max-client-subnet-ipv4, max-client-subnet-ipv6,
+		 * max-ecs-tree-size-ipv4, max-ecs-tree-size-ipv6, ipsecmod_hook,
 		 * ipsecmod_whitelist. */
 		return 0;
 	}
@@ -981,6 +984,8 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_LST(opt, "client-subnet-zone", client_subnet_zone)
 	else O_DEC(opt, "max-client-subnet-ipv4", max_client_subnet_ipv4)
 	else O_DEC(opt, "max-client-subnet-ipv6", max_client_subnet_ipv6)
+	else O_DEC(opt, "max-ecs-tree-size-ipv4", max_ecs_tree_size_ipv4)
+	else O_DEC(opt, "max-ecs-tree-size-ipv6", max_ecs_tree_size_ipv6)
 	else O_YNO(opt, "client-subnet-always-forward:",
 		client_subnet_always_forward)
 #endif

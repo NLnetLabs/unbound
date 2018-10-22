@@ -215,6 +215,9 @@ struct config_file {
 	/** Subnet length we are willing to give up privacy for */
 	uint8_t max_client_subnet_ipv4;
 	uint8_t max_client_subnet_ipv6;
+	/** Max number of nodes in the ECS radix tree */
+	uint32_t max_ecs_tree_size_ipv4;
+	uint32_t max_ecs_tree_size_ipv6;
 #endif
 	/** list of access control entries, linked list */
 	struct config_str2list* acls;

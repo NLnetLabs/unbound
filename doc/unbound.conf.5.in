@@ -1841,6 +1841,14 @@ to expose to third parties for IPv6.  Defaults to 56.
 .B max\-client\-subnet\-ipv4: \fI<number>\fR
 Specifies the maximum prefix length of the client source address we are willing
 to expose to third parties for IPv4. Defaults to 24.
+.TP
+.B max\-ecs\-tree\-size\-ipv4: \fI<number>\fR
+Specifies the maximum number of subnets ECS answers kept in the ECS radix tree.
+This number applies for each qname/qclass/qtype tuple. Defaults to 100.
+.TP
+.B max\-ecs\-tree\-size\-ipv6: \fI<number>\fR
+Specifies the maximum number of subnets ECS answers kept in the ECS radix tree.
+This number applies for each qname/qclass/qtype tuple. Defaults to 100.
 .SS "Opportunistic IPsec Support Module Options"
 .LP
 The IPsec module must be configured in the \fBmodule\-config:\fR "ipsecmod

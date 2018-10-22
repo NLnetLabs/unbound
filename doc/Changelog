@@ -3,6 +3,8 @@
 	  group.
 	- check that the dnstap socket file can be opened and exists, print
 	  error if not.
+	- Fix #4154: make ECS_MAX_TREESIZE configurable, with
+	  the max-ecs-tree-size-ipv4 and max-ecs-tree-size-ipv6 options.
 
 22 October 2018: Ralph
 	- Change fast-server-num default to 3.
