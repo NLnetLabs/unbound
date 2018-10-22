@@ -1,3 +1,7 @@
+22 October 2018: Wouter
+	- Fix #4192: unbound-control-setup generates keys not readable by
+	  group.
+
 22 October 2018: Ralph
 	- Change fast-server-num default to 3.
 
