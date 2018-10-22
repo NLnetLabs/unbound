@@ -39,7 +39,9 @@
 #include "config.h"
 #include <string.h>
 #include <sys/time.h>
+#ifdef HAVE_SYS_STAT_H
 #include <sys/stat.h>
+#endif
 #include <errno.h>
 #include "sldns/sbuffer.h"
 #include "util/config_file.h"
