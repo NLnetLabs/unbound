@@ -131,4 +131,7 @@ int ecs_edns_back_parsed(struct module_qstate* qstate, int id, void* cbargs);
 int ecs_query_response(struct module_qstate* qstate, struct dns_msg* response,
 	int id, void* cbargs);
 
+/** mark subnet msg to be deleted */
+void subnet_markdel(void* key);
+
 #endif /* SUBNETMOD_H */

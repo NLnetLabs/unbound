@@ -175,6 +175,14 @@ int ecs_whitelist_check(struct query_info* qinfo,
 }
 
 
+void
+subnet_markdel(void* key)
+{
+	struct msgreply_entry *e = (struct msgreply_entry*)key;
+	e->key.qtype = 0;
+	e->key.qclass = 0;
+}
+
 int
 subnetmod_init(struct module_env *env, int id)
 {
@@ -191,6 +199,7 @@ subnetmod_init(struct module_env *env, int id)
 		HASH_DEFAULT_STARTARRAY, env->cfg->msg_cache_size,
 		msg_cache_sizefunc, query_info_compare, query_entry_delete,
 		subnet_data_delete, NULL);
+	slabhash_setmarkdel(sn_env->subnet_msg_cache, &subnet_markdel);
 	if(!sn_env->subnet_msg_cache) {
 		log_err("subnet: could not create cache");
 		free(sn_env);
@@ -524,6 +533,19 @@ eval_response(struct module_qstate *qstate, int id, struct subnet_qstate *sq)
 		c_out->subnet_source_mask = c_in->subnet_source_mask;
 		memcpy(&c_out->subnet_addr, &c_in->subnet_addr, INET6_SIZE);
 		c_out->subnet_scope_mask = s_in->subnet_scope_mask;
+		/* Limit scope returned to client to scope used for caching. */
+		if(c_out->subnet_addr_fam == EDNSSUBNET_ADDRFAM_IP4) {
+			if(c_out->subnet_scope_mask >
+				qstate->env->cfg->max_client_subnet_ipv4) {
+				c_out->subnet_scope_mask =
+					qstate->env->cfg->max_client_subnet_ipv4;
+			}
+		}
+		else if(c_out->subnet_scope_mask >
+				qstate->env->cfg->max_client_subnet_ipv6) {
+				c_out->subnet_scope_mask =
+					qstate->env->cfg->max_client_subnet_ipv6;
+		}
 		c_out->subnet_validdata = 1;
 	}
 	return module_finished;
