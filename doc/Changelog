@@ -1,3 +1,6 @@
+25 October 2018: Ralph
+	- Add min-client-subnet-ipv6 and min-client-subnet-ipv4 options.
+
 25 October 2018: Wouter
 	- Fix #4191: NXDOMAIN vs SERVFAIL during dns64 PTR query.
 	- Fix #4190: Please create a "ANY" deny option, adds the option

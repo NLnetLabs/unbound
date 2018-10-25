@@ -1848,6 +1848,14 @@ to expose to third parties for IPv6.  Defaults to 56.
 Specifies the maximum prefix length of the client source address we are willing
 to expose to third parties for IPv4. Defaults to 24.
 .TP
+.B min\-client\-subnet\-ipv6: \fI<number>\fR
+Specifies the minimum prefix length of the IPv6 source mask we are willing to
+accept in queries. Shorter source masks result in REFUSED answers.
+.TP
+.B min\-client\-subnet\-ipv4: \fI<number>\fR
+Specifies the minimum prefix length of the IPv4 source mask we are willing to
+accept in queries. Shorter source masks result in REFUSED answers.
+.TP
 .B max\-ecs\-tree\-size\-ipv4: \fI<number>\fR
 Specifies the maximum number of subnets ECS answers kept in the ECS radix tree.
 This number applies for each qname/qclass/qtype tuple. Defaults to 100.
