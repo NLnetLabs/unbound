@@ -7,6 +7,7 @@
 	  deny-any: yes in unbound.conf.  This responds with an empty message
 	  to queries of type ANY.
 	- Fix #4141: More randomness to rrset-roundrobin.
+	- Fix #4132: Openness/closeness of RANGE intervals in rpl files.
 
 24 October 2018: Ralph
 	- Add markdel function to ECS slabhash.
