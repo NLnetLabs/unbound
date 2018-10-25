@@ -1802,8 +1802,6 @@ worker_init(struct worker* worker, struct config_file *cfg,
 	alloc_set_id_cleanup(&worker->alloc, &worker_alloc_cleanup, worker);
 	worker->env = *worker->daemon->env;
 	comm_base_timept(worker->base, &worker->env.now, &worker->env.now_tv);
-	if(worker->thread_num == 0)
-		log_set_time(worker->env.now);
 	worker->env.worker = worker;
 	worker->env.worker_base = worker->base;
 	worker->env.send_query = &worker_send_query;
@@ -1909,7 +1907,6 @@ worker_delete(struct worker* worker)
 	comm_timer_delete(worker->env.probe_timer);
 	free(worker->ports);
 	if(worker->thread_num == 0) {
-		log_set_time(NULL);
 #ifdef UB_ON_WINDOWS
 		wsvc_desetup_worker(worker);
 #endif /* UB_ON_WINDOWS */

@@ -12,6 +12,7 @@
 	  adds the option unknown-server-time-limit to unbound.conf that
 	  can be increased to avoid the problem.
 	- remade makefile dependencies.
+	- Fix #4152: Logs shows wrong time when using log-time-ascii: yes.
 
 24 October 2018: Ralph
 	- Add markdel function to ECS slabhash.

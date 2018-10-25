@@ -113,13 +113,6 @@ int log_thread_get(void);
 void log_ident_set(const char* id);
 
 /**
- * Set the time value to print in log entries.
- * @param t: the point is copied and used to find the time.
- * 	if NULL, time(2) is used.
- */
-void log_set_time(time_t* t);
-
-/**
  * Set if the time value is printed ascii or decimal in log entries.
  * @param use_asc: if true, ascii is printed, otherwise decimal.
  *	If the conversion fails or you have no time functions, 
