@@ -672,7 +672,7 @@ reply_info_encode(struct query_info* qinfo, struct reply_info* rep,
 	}
 	/* roundrobin offset. using query id for random number.  With ntohs
 	 * for different roundrobins for sequential id client senders. */
-	rr_offset = RRSET_ROUNDROBIN?ntohs(id):0;
+	rr_offset = RRSET_ROUNDROBIN?ntohs(id)+(timenow?timenow:time(NULL)):0;
 
 	/* "prepend" any local alias records in the answer section if this
 	 * response is supposed to be authoritative.  Currently it should
