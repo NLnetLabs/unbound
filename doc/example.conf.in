@@ -449,6 +449,9 @@ server:
 	# if yes, perform key lookups adjacent to normal lookups.
 	# prefetch-key: no
 
+	# deny queries of type ANY with an empty response.
+	# deny-any: no
+
 	# if yes, Unbound rotates RRSet order in response.
 	# rrset-roundrobin: no
 

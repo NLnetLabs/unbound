@@ -1,5 +1,8 @@
 25 October 2018: Wouter
 	- Fix #4191: NXDOMAIN vs SERVFAIL during dns64 PTR query.
+	- Fix #4190: Please create a "ANY" deny option, adds the option
+	  deny-any: yes in unbound.conf.  This responds with an empty message
+	  to queries of type ANY.
 
 24 October 2018: Ralph
 	- Add markdel function to ECS slabhash.

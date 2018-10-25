@@ -848,12 +848,18 @@ keep the cache up to date.  Default is no.  Turning it on gives about
 10 percent more traffic and load on the machine, but popular items do
 not expire from the cache.
 .TP
-.B prefetch-key: \fI<yes or no>
+.B prefetch\-key: \fI<yes or no>
 If yes, fetch the DNSKEYs earlier in the validation process, when a DS
 record is encountered.  This lowers the latency of requests.  It does use
 a little more CPU.  Also if the cache is set to 0, it is no use. Default is no.
 .TP
-.B rrset-roundrobin: \fI<yes or no>
+.B deny\-any: \fI<yes or no>
+If yes, deny queries of type ANY with an empty response.  Default is no.
+If disabled, unbound responds with a short list of resource records if some
+can be found in the cache and makes the upstream type ANY query if there
+are none.
+.TP
+.B rrset\-roundrobin: \fI<yes or no>
 If yes, Unbound rotates RRSet order in response (the random number is taken
 from the query ID, for speed and thread safety).  Default is no.
 .TP

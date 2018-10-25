@@ -296,6 +296,7 @@ private-address{COLON}		{ YDVAR(1, VAR_PRIVATE_ADDRESS) }
 private-domain{COLON}		{ YDVAR(1, VAR_PRIVATE_DOMAIN) }
 prefetch-key{COLON}		{ YDVAR(1, VAR_PREFETCH_KEY) }
 prefetch{COLON}			{ YDVAR(1, VAR_PREFETCH) }
+deny-any{COLON}			{ YDVAR(1, VAR_DENY_ANY) }
 stub-zone{COLON}		{ YDVAR(0, VAR_STUB_ZONE) }
 name{COLON}			{ YDVAR(1, VAR_NAME) }
 stub-addr{COLON}		{ YDVAR(1, VAR_STUB_ADDR) }

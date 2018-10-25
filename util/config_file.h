@@ -261,6 +261,8 @@ struct config_file {
 	int prefetch;
 	/** if prefetching of DNSKEYs should be performed. */
 	int prefetch_key;
+	/** deny queries of type ANY with an empty answer */
+	int deny_any;
 
 	/** chrootdir, if not "" or chroot will be done */
 	char* chrootdir;

@@ -299,7 +299,8 @@ extern int yydebug;
     VAR_TCP_CONNECTION_LIMIT = 509,
     VAR_FORWARD_NO_CACHE = 510,
     VAR_STUB_NO_CACHE = 511,
-    VAR_LOG_SERVFAIL = 512
+    VAR_LOG_SERVFAIL = 512,
+    VAR_DENY_ANY = 513
   };
 #endif
 /* Tokens.  */
@@ -558,6 +559,7 @@ extern int yydebug;
 #define VAR_FORWARD_NO_CACHE 510
 #define VAR_STUB_NO_CACHE 511
 #define VAR_LOG_SERVFAIL 512
+#define VAR_DENY_ANY 513
 
 /* Value type.  */
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
@@ -568,7 +570,7 @@ union YYSTYPE
 
 	char*	str;
 
-#line 572 "util/configparser.h" /* yacc.c:1909  */
+#line 574 "util/configparser.h" /* yacc.c:1909  */
 };
 
 typedef union YYSTYPE YYSTYPE;
