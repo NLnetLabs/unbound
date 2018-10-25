@@ -69,6 +69,9 @@
 #include "sldns/parseutil.h"
 #include "sldns/sbuffer.h"
 
+/* in msec */
+int UNKNOWN_SERVER_NICENESS = 376;
+
 int 
 iter_init(struct module_env* env, int id)
 {

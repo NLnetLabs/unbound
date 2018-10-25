@@ -145,6 +145,10 @@ server:
 	# msec to wait before close of port on timeout UDP. 0 disables.
 	# delay-close: 0
 
+	# msec for waiting for an unknown server to reply.  Increase if you
+	# are behind a slow satellite link, to eg. 1128.
+	# unknown-server-time-limit: 376
+
 	# the amount of memory to use for the RRset cache.
 	# plain value in bytes or you can append k, m or G. default is "4Mb".
 	# rrset-cache-size: 4m

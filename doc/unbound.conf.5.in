@@ -253,6 +253,12 @@ eg. 1500 msec.  When timeouts happen you need extra sockets, it checks
 the ID and remote IP of packets, and unwanted packets are added to the
 unwanted packet counter.
 .TP
+.B unknown\-server\-time\-limit: \fI<msec>
+The wait time in msec for waiting for an unknown server to reply.
+Increase this if you are behind a slow satellite link, to eg. 1128.
+That would then avoid re\-querying every initial query because it times out.
+Default is 376 msec.
+.TP
 .B so\-rcvbuf: \fI<number>
 If not 0, then set the SO_RCVBUF socket option to get more buffer
 space on UDP port 53 incoming queries.  So that short spikes on busy

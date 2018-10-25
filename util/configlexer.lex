@@ -404,6 +404,7 @@ python{COLON}			{ YDVAR(0, VAR_PYTHON) }
 domain-insecure{COLON}		{ YDVAR(1, VAR_DOMAIN_INSECURE) }
 minimal-responses{COLON}	{ YDVAR(1, VAR_MINIMAL_RESPONSES) }
 rrset-roundrobin{COLON}		{ YDVAR(1, VAR_RRSET_ROUNDROBIN) }
+unknown-server-time-limit{COLON} { YDVAR(1, VAR_UNKNOWN_SERVER_TIME_LIMIT) }
 max-udp-size{COLON}		{ YDVAR(1, VAR_MAX_UDP_SIZE) }
 dns64-prefix{COLON}		{ YDVAR(1, VAR_DNS64_PREFIX) }
 dns64-synthall{COLON}		{ YDVAR(1, VAR_DNS64_SYNTHALL) }

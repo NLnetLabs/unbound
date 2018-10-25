@@ -302,7 +302,8 @@ extern int yydebug;
     VAR_FORWARD_NO_CACHE = 512,
     VAR_STUB_NO_CACHE = 513,
     VAR_LOG_SERVFAIL = 514,
-    VAR_DENY_ANY = 515
+    VAR_DENY_ANY = 515,
+    VAR_UNKNOWN_SERVER_TIME_LIMIT = 516
   };
 #endif
 /* Tokens.  */
@@ -564,6 +565,7 @@ extern int yydebug;
 #define VAR_STUB_NO_CACHE 513
 #define VAR_LOG_SERVFAIL 514
 #define VAR_DENY_ANY 515
+#define VAR_UNKNOWN_SERVER_TIME_LIMIT 516
 
 /* Value type.  */
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
@@ -574,7 +576,7 @@ union YYSTYPE
 
 	char*	str;
 
-#line 578 "util/configparser.h" /* yacc.c:1909  */
+#line 580 "util/configparser.h" /* yacc.c:1909  */
 };
 
 typedef union YYSTYPE YYSTYPE;

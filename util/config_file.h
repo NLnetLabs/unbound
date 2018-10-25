@@ -437,6 +437,9 @@ struct config_file {
 	/* RRSet roundrobin */
 	int rrset_roundrobin;
 
+	/* wait time for unknown server in msec */
+	int unknown_server_time_limit;
+
 	/* maximum UDP response size */
 	size_t max_udp_size;
 

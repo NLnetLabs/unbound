@@ -164,6 +164,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_FAST_SERVER_PERMIL VAR_FAST_SERVER_NUM
 %token VAR_ALLOW_NOTIFY VAR_TLS_WIN_CERT VAR_TCP_CONNECTION_LIMIT
 %token VAR_FORWARD_NO_CACHE VAR_STUB_NO_CACHE VAR_LOG_SERVFAIL VAR_DENY_ANY
+%token VAR_UNKNOWN_SERVER_TIME_LIMIT
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -261,7 +262,8 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_udp_upstream_without_downstream | server_aggressive_nsec |
 	server_tls_cert_bundle | server_tls_additional_port | server_low_rtt |
 	server_fast_server_permil | server_fast_server_num  | server_tls_win_cert |
-	server_tcp_connection_limit | server_log_servfail | server_deny_any
+	server_tcp_connection_limit | server_log_servfail | server_deny_any |
+	server_unknown_server_time_limit
 	;
 stubstart: VAR_STUB_ZONE
 	{
@@ -1793,6 +1795,13 @@ server_rrset_roundrobin: VAR_RRSET_ROUNDROBIN STRING_ARG
 			yyerror("expected yes or no.");
 		else cfg_parser->cfg->rrset_roundrobin =
 			(strcmp($2, "yes")==0);
+		free($2);
+	}
+	;
+server_unknown_server_time_limit: VAR_UNKNOWN_SERVER_TIME_LIMIT STRING_ARG
+	{
+		OUTYY(("P(server_unknown_server_time_limit:%s)\n", $2));
+		cfg_parser->cfg->unknown_server_time_limit = atoi($2);
 		free($2);
 	}
 	;

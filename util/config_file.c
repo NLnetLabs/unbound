@@ -59,6 +59,7 @@
 #include "services/cache/infra.h"
 #include "sldns/wire2str.h"
 #include "sldns/parseutil.h"
+#include "iterator/iterator.h"
 #ifdef HAVE_GLOB_H
 # include <glob.h>
 #endif
@@ -263,6 +264,7 @@ config_create(void)
 	cfg->control_use_cert = 1;
 	cfg->minimal_responses = 1;
 	cfg->rrset_roundrobin = 0;
+	cfg->unknown_server_time_limit = 376;
 	cfg->max_udp_size = 4096;
 	if(!(cfg->server_key_file = strdup(RUN_DIR"/unbound_server.key"))) 
 		goto error_exit;
@@ -579,6 +581,7 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	else S_MEMSIZE("neg-cache-size:", neg_cache_size)
 	else S_YNO("minimal-responses:", minimal_responses)
 	else S_YNO("rrset-roundrobin:", rrset_roundrobin)
+	else S_NUMBER_OR_ZERO("unknown-server-time-limit:", unknown_server_time_limit)
 	else S_STRLIST("local-data:", local_data)
 	else S_YNO("unblock-lan-zones:", unblock_lan_zones)
 	else S_YNO("insecure-lan-zones:", insecure_lan_zones)
@@ -985,6 +988,7 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_UNS(opt, "val-override-date", val_date_override)
 	else O_YNO(opt, "minimal-responses", minimal_responses)
 	else O_YNO(opt, "rrset-roundrobin", rrset_roundrobin)
+	else O_DEC(opt, "unknown-server-time-limit", unknown_server_time_limit)
 #ifdef CLIENT_SUBNET
 	else O_LST(opt, "send-client-subnet", client_subnet)
 	else O_LST(opt, "client-subnet-zone", client_subnet_zone)
@@ -1899,6 +1903,7 @@ config_apply(struct config_file* config)
 	EDNS_ADVERTISED_SIZE = (uint16_t)config->edns_buffer_size;
 	MINIMAL_RESPONSES = config->minimal_responses;
 	RRSET_ROUNDROBIN = config->rrset_roundrobin;
+	UNKNOWN_SERVER_NICENESS = config->unknown_server_time_limit;
 	log_set_time_asc(config->log_time_ascii);
 	autr_permit_small_holddown = config->permit_small_holddown;
 }
