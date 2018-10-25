@@ -867,9 +867,10 @@ dns64_adjust_ptr(struct module_qstate* qstate, struct module_qstate* super)
      * initial query's domain name.
      */
     answer = reply_find_answer_rrset(&qstate->qinfo, super->return_msg->rep);
-    log_assert(answer);
-    answer->rk.dname = super->qinfo.qname;
-    answer->rk.dname_len = super->qinfo.qname_len;
+    if(answer) {
+	    answer->rk.dname = super->qinfo.qname;
+	    answer->rk.dname_len = super->qinfo.qname_len;
+    }
 }
 
 /**
@@ -895,17 +896,16 @@ dns64_inform_super(struct module_qstate* qstate, int id,
 	 */
 	super->minfo[id] = (void*)DNS64_SUBQUERY_FINISHED;
 
-	/* If there is no successful answer, we're done. */
-	if (qstate->return_rcode != LDNS_RCODE_NOERROR
-	    || !qstate->return_msg
-	    || !qstate->return_msg->rep
-	    || !reply_find_answer_rrset(&qstate->qinfo,
-					qstate->return_msg->rep))
-		return;
-
 	/* Use return code from A query in response to client. */
 	if (super->return_rcode != LDNS_RCODE_NOERROR)
 		super->return_rcode = qstate->return_rcode;
+
+	/* If there is no successful answer, we're done. */
+	if (qstate->return_rcode != LDNS_RCODE_NOERROR
+	    || !qstate->return_msg
+	    || !qstate->return_msg->rep) {
+		return;
+	}
 
 	/* Generate a response suitable for the original query. */
 	if (qstate->qinfo.qtype == LDNS_RR_TYPE_A) {

@@ -1,3 +1,6 @@
+25 October 2018: Wouter
+	- Fix #4191: NXDOMAIN vs SERVFAIL during dns64 PTR query.
+
 24 October 2018: Ralph
 	- Add markdel function to ECS slabhash.
 	- Limit ECS scope returned to client to the scope used for caching.
