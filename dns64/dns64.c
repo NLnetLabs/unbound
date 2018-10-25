@@ -896,16 +896,16 @@ dns64_inform_super(struct module_qstate* qstate, int id,
 	 */
 	super->minfo[id] = (void*)DNS64_SUBQUERY_FINISHED;
 
-	/* Use return code from A query in response to client. */
-	if (super->return_rcode != LDNS_RCODE_NOERROR)
-		super->return_rcode = qstate->return_rcode;
-
 	/* If there is no successful answer, we're done. */
 	if (qstate->return_rcode != LDNS_RCODE_NOERROR
 	    || !qstate->return_msg
 	    || !qstate->return_msg->rep) {
 		return;
 	}
+
+	/* Use return code from A query in response to client. */
+	if (super->return_rcode != LDNS_RCODE_NOERROR)
+		super->return_rcode = qstate->return_rcode;
 
 	/* Generate a response suitable for the original query. */
 	if (qstate->qinfo.qtype == LDNS_RR_TYPE_A) {
