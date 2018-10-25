@@ -11,6 +11,7 @@
 	- Fix #4126: RTT_band too low on VSAT links with 600+ms latency,
 	  adds the option unknown-server-time-limit to unbound.conf that
 	  can be increased to avoid the problem.
+	- remade makefile dependencies.
 
 24 October 2018: Ralph
 	- Add markdel function to ECS slabhash.
