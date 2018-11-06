@@ -722,7 +722,7 @@ subnetmod_operate(struct module_qstate *qstate, enum module_ev event,
 			(sq->ecs_client_in.subnet_addr_fam == EDNSSUBNET_ADDRFAM_IP4 &&
 			 sq->ecs_client_in.subnet_source_mask < qstate->env->cfg->min_client_subnet_ipv4) ||
 			(sq->ecs_client_in.subnet_addr_fam == EDNSSUBNET_ADDRFAM_IP6 &&
-			 sq->ecs_client_in.subnet_source_mask < qstate->env->cfg->max_client_subnet_ipv6))) {
+			 sq->ecs_client_in.subnet_source_mask < qstate->env->cfg->min_client_subnet_ipv6))) {
 				qstate->return_rcode = LDNS_RCODE_REFUSED;
 				qstate->ext_state[id] = module_finished;
 				return;
