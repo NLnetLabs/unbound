@@ -1006,10 +1006,10 @@ void* outgoing_ssl_fd(void* sslctx, int fd)
 static lock_basic_type *ub_openssl_locks = NULL;
 
 /** callback that gets thread id for openssl */
-static unsigned long
-ub_crypto_id_cb(void)
+static void
+ub_crypto_id_cb(CRYPTO_THREADID *id)
 {
-	return (unsigned long)log_thread_get();
+	CRYPTO_THREADID_set_numeric(id, (unsigned long)log_thread_get());
 }
 
 static void
@@ -1035,7 +1035,7 @@ int ub_openssl_lock_init(void)
 	for(i=0; i<CRYPTO_num_locks(); i++) {
 		lock_basic_init(&ub_openssl_locks[i]);
 	}
-	CRYPTO_set_id_callback(&ub_crypto_id_cb);
+	CRYPTO_THREADID_set_callback(&ub_crypto_id_cb);
 	CRYPTO_set_locking_callback(&ub_crypto_lock_cb);
 #endif /* OPENSSL_THREADS */
 	return 1;
@@ -1047,7 +1047,7 @@ void ub_openssl_lock_delete(void)
 	int i;
 	if(!ub_openssl_locks)
 		return;
-	CRYPTO_set_id_callback(NULL);
+	CRYPTO_THREADID_set_callback(NULL);
 	CRYPTO_set_locking_callback(NULL);
 	for(i=0; i<CRYPTO_num_locks(); i++) {
 		lock_basic_destroy(&ub_openssl_locks[i]);
