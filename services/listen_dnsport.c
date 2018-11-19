@@ -247,6 +247,26 @@ create_udp_sock(int family, int socktype, struct sockaddr* addr,
 		}
 #endif /* SO_REUSEADDR */
 #ifdef SO_REUSEPORT
+#  ifdef SO_REUSEPORT_LB
+		/* on FreeBSD 12 we have SO_REUSEPORT_LB that does loadbalance
+		 * like SO_REUSEPORT on Linux.  This is what the users want
+		 * with the config option in unbound.conf; if we actually
+		 * need local address and port reuse they'll also need to
+		 * have SO_REUSEPORT set for them, assume it was _LB they want.
+		 */
+		if (reuseport && *reuseport &&
+		    setsockopt(s, SOL_SOCKET, SO_REUSEPORT_LB, (void*)&on,
+			(socklen_t)sizeof(on)) < 0) {
+#ifdef ENOPROTOOPT
+			if(errno != ENOPROTOOPT || verbosity >= 3)
+				log_warn("setsockopt(.. SO_REUSEPORT_LB ..) failed: %s",
+					strerror(errno));
+#endif
+			/* this option is not essential, we can continue */
+			*reuseport = 0;
+		}
+#  else /* no SO_REUSEPORT_LB */
+
 		/* try to set SO_REUSEPORT so that incoming
 		 * queries are distributed evenly among the receiving threads.
 		 * Each thread must have its own socket bound to the same port,
@@ -263,6 +283,7 @@ create_udp_sock(int family, int socktype, struct sockaddr* addr,
 			/* this option is not essential, we can continue */
 			*reuseport = 0;
 		}
+#  endif /* SO_REUSEPORT_LB */
 #else
 		(void)reuseport;
 #endif /* defined(SO_REUSEPORT) */

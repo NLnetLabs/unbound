@@ -1,4 +1,8 @@
-6 November 2018:
+19 November 2018: Wouter
+	- Support SO_REUSEPORT_LB in FreeBSD 12 with the so-reuseport: yes
+	  option in unbound.conf.
+
+6 November 2018: Ralph
 	- Bugfix min-client-subnet-ipv6
 
 25 October 2018: Ralph
