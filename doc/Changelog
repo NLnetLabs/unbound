@@ -1,3 +1,7 @@
+20 November 2018: Wouter
+	- Scrub NS records from NXDOMAIN responses to stop fragmentation
+	  poisoning of the cache.
+
 19 November 2018: Wouter
 	- Support SO_REUSEPORT_LB in FreeBSD 12 with the so-reuseport: yes
 	  option in unbound.conf.

@@ -497,6 +497,16 @@ scrub_normalize(sldns_buffer* pkt, struct msg_parse* msg,
 					"RRset:", pkt, msg, prev, &rrset);
 				continue;
 			}
+			/* we don't want NS sets for NXDOMAIN answers,
+			 * because they could contain poisonous contents,
+			 * from. eg. fragmentation attacks, inserted after
+			 * long RRSIGs in the packet get to the packet
+			 * border and such */
+			if(FLAGS_GET_RCODE(msg->flags) == LDNS_RCODE_NXDOMAIN) {
+				remove_rrset("normalize: removing irrelevant "
+					"RRset:", pkt, msg, prev, &rrset);
+				continue;
+			}
 			if(nsset == NULL) {
 				nsset = rrset;
 			} else {
