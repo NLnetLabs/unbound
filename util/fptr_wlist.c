@@ -564,9 +564,12 @@ int fptr_whitelist_inplace_cb_query(inplace_cb_query_func_type* fptr)
 #ifdef CLIENT_SUBNET
 	if(fptr == &ecs_whitelist_check)
 		return 1;
-#else
-	(void)fptr;
 #endif
+#ifdef WITH_PYTHONMODULE
+        if(fptr == &python_inplace_cb_query_generic)
+                return 1;
+#endif
+	(void)fptr;
 	return 0;
 }
 

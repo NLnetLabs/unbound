@@ -1,6 +1,9 @@
 20 November 2018: Wouter
 	- Scrub NS records from NXDOMAIN responses to stop fragmentation
 	  poisoning of the cache.
+	- Add patch from Jan Vcelak for pythonmod,
+	  add sockaddr_storage getters, add support for query callbacks,
+	  allow raw address access via comm_reply and update API documentation.
 
 19 November 2018: Wouter
 	- Support SO_REUSEPORT_LB in FreeBSD 12 with the so-reuseport: yes
