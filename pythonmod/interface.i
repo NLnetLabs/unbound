@@ -464,17 +464,20 @@ struct sockaddr_storage {};
     }
 
     PyObject *_sockaddr_storage_addr(const struct sockaddr_storage *ss) {
+        const struct sockaddr *sa;
+        size_t sa_len;
+        char name[NI_MAXHOST] = {0};
+
         if (ss == NULL) {
             return Py_None;
         }
 
-        const struct sockaddr *sa = (struct sockaddr *)ss;
-        size_t sa_len = _sockaddr_storage_len(ss);
+        sa = (struct sockaddr *)ss;
+        sa_len = _sockaddr_storage_len(ss);
         if (sa_len == 0) {
             return Py_None;
         }
 
-        char name[NI_MAXHOST] = {0};
         if (getnameinfo(sa, sa_len, name, sizeof(name), NULL, 0, NI_NUMERICHOST) != 0) {
             return Py_None;
         }
@@ -483,11 +486,13 @@ struct sockaddr_storage {};
     }
 
     PyObject *_sockaddr_storage_raw_addr(const struct sockaddr_storage *ss) {
+        size_t sa_len;
+
         if (ss == NULL) {
             return Py_None;
         }
 
-        size_t sa_len = _sockaddr_storage_len(ss);
+        sa_len = _sockaddr_storage_len(ss);
         if (sa_len == 0) {
             return Py_None;
         }
@@ -531,20 +536,24 @@ struct sockaddr_storage {};
     }
 
     PyObject *_sockaddr_storage_flowinfo(const struct sockaddr_storage *ss) {
+        const struct sockaddr_in6 *sa6;
+
         if (ss == NULL || ss->ss_family != AF_INET6) {
             return Py_None;
         }
 
-        const struct sockaddr_in6 *sa6 = (struct sockaddr_in6 *)ss;
+        sa6 = (struct sockaddr_in6 *)ss;
         return PyInt_FromLong(ntohl(sa6->sin6_flowinfo));
     }
 
     PyObject *_sockaddr_storage_scope_id(const struct sockaddr_storage *ss) {
+        const struct sockaddr_in6 *sa6;
+
         if (ss == NULL || ss->ss_family != AF_INET6) {
             return Py_None;
         }
 
-        const struct sockaddr_in6 *sa6 = (struct sockaddr_in6 *)ss;
+        sa6 = (struct sockaddr_in6 *)ss;
         return PyInt_FromLong(ntohl(sa6->sin6_scope_id));
     }
 %}
