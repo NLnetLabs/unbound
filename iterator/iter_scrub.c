@@ -316,6 +316,18 @@ sub_of_pkt(sldns_buffer* pkt, uint8_t* zone, uint8_t* comprname)
 	return dname_subdomain_c(zone, buf);
 }
 
+/** Check if there are SOA records in the authority section (negative) */
+static int
+soa_in_auth(struct msg_parse* msg)
+{
+	struct rrset_parse* rrset;
+	for(rrset = msg->rrset_first; rrset; rrset = rrset->rrset_all_next)
+		if(rrset->type == LDNS_RR_TYPE_SOA &&
+			rrset->section == LDNS_SECTION_AUTHORITY) 
+			return 1;
+	return 0;
+}
+
 /**
  * This routine normalizes a response. This includes removing "irrelevant"
  * records from the answer and additional sections and (re)synthesizing
@@ -502,14 +514,10 @@ scrub_normalize(sldns_buffer* pkt, struct msg_parse* msg,
 			 * from. eg. fragmentation attacks, inserted after
 			 * long RRSIGs in the packet get to the packet
 			 * border and such */
-			/* also for NODATA answers
-			 * (nodata has an empty answer section, ie. the
-			 * first rr is from the next section */
+			/* also for NODATA answers */
 			if(FLAGS_GET_RCODE(msg->flags) == LDNS_RCODE_NXDOMAIN ||
 			   (FLAGS_GET_RCODE(msg->flags) == LDNS_RCODE_NOERROR
-			    && (msg->rrset_first->section == LDNS_SECTION_AUTHORITY
-			        || msg->rrset_first->section == LDNS_SECTION_ADDITIONAL)
-			   )) {
+			    && soa_in_auth(msg) && msg->an_rrsets == 0)) {
 				remove_rrset("normalize: removing irrelevant "
 					"RRset:", pkt, msg, prev, &rrset);
 				continue;
@@ -612,18 +620,6 @@ store_rrset(sldns_buffer* pkt, struct msg_parse* msg, struct module_env* env,
 	(void)rrset_cache_update(env->rrset_cache, &ref, env->alloc, now);
 }
 
-/** Check if there are SOA records in the authority section (negative) */
-static int
-soa_in_auth(struct msg_parse* msg)
-{
-	struct rrset_parse* rrset;
-	for(rrset = msg->rrset_first; rrset; rrset = rrset->rrset_all_next)
-		if(rrset->type == LDNS_RR_TYPE_SOA &&
-			rrset->section == LDNS_SECTION_AUTHORITY) 
-			return 1;
-	return 0;
-}
- 
 /**
  * Check if right hand name in NSEC is within zone
  * @param rrset: the NSEC rrset
