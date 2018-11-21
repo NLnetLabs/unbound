@@ -502,7 +502,14 @@ scrub_normalize(sldns_buffer* pkt, struct msg_parse* msg,
 			 * from. eg. fragmentation attacks, inserted after
 			 * long RRSIGs in the packet get to the packet
 			 * border and such */
-			if(FLAGS_GET_RCODE(msg->flags) == LDNS_RCODE_NXDOMAIN) {
+			/* also for NODATA answers
+			 * (nodata has an empty answer section, ie. the
+			 * first rr is from the next section */
+			if(FLAGS_GET_RCODE(msg->flags) == LDNS_RCODE_NXDOMAIN ||
+			   (FLAGS_GET_RCODE(msg->flags) == LDNS_RCODE_NOERROR
+			    && (msg->rrset_first->section == LDNS_SECTION_AUTHORITY
+			        || msg->rrset_first->section == LDNS_SECTION_ADDITIONAL)
+			   )) {
 				remove_rrset("normalize: removing irrelevant "
 					"RRset:", pkt, msg, prev, &rrset);
 				continue;

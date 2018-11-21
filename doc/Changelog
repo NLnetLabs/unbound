@@ -1,3 +1,6 @@
+21 November 2018: Wouter
+	- Scrub NS records from NODATA responses as well.
+
 20 November 2018: Wouter
 	- Scrub NS records from NXDOMAIN responses to stop fragmentation
 	  poisoning of the cache.
