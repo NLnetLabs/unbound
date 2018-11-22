@@ -115,6 +115,7 @@ static void
 log_py_err(void)
 {
 	char *result = NULL;
+	const char* iomod = "cStringIO";
 	PyObject *modStringIO = NULL;
 	PyObject *modTB = NULL;
 	PyObject *obFuncStringIO = NULL;
@@ -133,10 +134,16 @@ log_py_err(void)
 
 	/* Import the modules we need - cStringIO and traceback */
 	modStringIO = PyImport_ImportModule("cStringIO");
-	if (modStringIO==NULL) /* python 1.4 and before */
+	if (modStringIO==NULL) {
+		/* python 1.4 and before */
 		modStringIO = PyImport_ImportModule("StringIO");
-	if (modStringIO==NULL) /* python 3 */
+		iomod = "StringIO";
+	}
+	if (modStringIO==NULL) {
+		/* python 3 */
 		modStringIO = PyImport_ImportModule("io");
+		iomod = "io";
+	}
 	if (modStringIO==NULL) {
 		log_err("pythonmod: cannot print exception, "
 			"cannot ImportModule cStringIO or StringIO or io");
@@ -153,13 +160,13 @@ log_py_err(void)
 	obFuncStringIO = PyObject_GetAttrString(modStringIO, "StringIO");
 	if (obFuncStringIO==NULL) {
 		log_err("pythonmod: cannot print exception, "
-			"cannot GetAttrString cStringIO.StringIO");
+			"cannot GetAttrString %s.StringIO", iomod);
 		goto cleanup;
 	}
 	obStringIO = PyObject_CallObject(obFuncStringIO, NULL);
 	if (obStringIO==NULL) {
 		log_err("pythonmod: cannot print exception, "
-			"cannot call cStringIO.StringIO()");
+			"cannot call %s.StringIO()", iomod);
 		goto cleanup;
 	}
 
@@ -192,21 +199,21 @@ log_py_err(void)
 	obFuncStringIO = PyObject_GetAttrString(obStringIO, "getvalue");
 	if (obFuncStringIO==NULL) {
 		log_err("pythonmod: cannot print exception, "
-			"cannot GetAttrString cStringIO.getvalue");
+			"cannot GetAttrString StringIO.getvalue");
 		goto cleanup;
 	}
 	Py_DECREF(obResult);
 	obResult = PyObject_CallObject(obFuncStringIO, NULL);
 	if (obResult==NULL) {
 		log_err("pythonmod: cannot print exception, "
-			"call cStringIO.getvalue() failed");
+			"call StringIO.getvalue() failed");
 		goto cleanup;
 	}
 
 	/* And it should be a string all ready to go - duplicate it. */
 	if (!PyString_Check(obResult) && !PyUnicode_Check(obResult)) {
 		log_err("pythonmod: cannot print exception, "
-			"cStringIO.getvalue() result did not String_Check"
+			"StringIO.getvalue() result did not String_Check"
 			" or Unicode_Check");
 		goto cleanup;
 	}
