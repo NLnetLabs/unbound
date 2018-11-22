@@ -4799,7 +4799,7 @@ xfr_write_after_update(struct auth_xfer* xfr, struct module_env* env)
 	lock_basic_lock(&xfr->lock);
 	lock_rw_unlock(&env->auth_zones->lock);
 
-	if(z->zonefile == NULL) {
+	if(z->zonefile == NULL || z->zonefile[0] == 0) {
 		lock_rw_unlock(&z->lock);
 		/* no write needed, no zonefile set */
 		return;

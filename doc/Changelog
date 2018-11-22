@@ -8,6 +8,7 @@
 	- Fix #4209: Crash in libunbound when called from getdns.
 	- auth zone zonefiles can be in a chroot, the chroot directory
 	  components are removed before use.
+	- Fix that empty zonefile means the zonefile is not set and not used.
 
 21 November 2018: Wouter
 	- Scrub NS records from NODATA responses as well.
