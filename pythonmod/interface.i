@@ -45,15 +45,20 @@
 
      i = 0;
      while (i < len) {
-        i += name[i] + 1;
+        i += ((unsigned int)name[i]) + 1;
         cnt++;
      }
 
      list = PyList_New(cnt);
      i = 0; cnt = 0;
      while (i < len) {
-        PyList_SetItem(list, cnt, PyBytes_FromStringAndSize(name + i + 1, name[i]));
-        i += name[i] + 1;
+        char buf[LDNS_MAX_LABELLEN+1];
+        if(((unsigned int)name[i])+1 <= (int)sizeof(buf)) {
+                memmove(buf, name + i + 1, (unsigned int)name[i]);
+                buf[(unsigned int)name[i]] = 0;
+                PyList_SetItem(list, cnt, PyString_FromString(buf));
+        }
+        i += ((unsigned int)name[i]) + 1;
         cnt++;
      }
      return list;
@@ -161,11 +166,11 @@ struct query_info {
 %}
 
 %inline %{
-   PyObject* dnameAsStr(const char* dname) {
+   PyObject* dnameAsStr(PyObject* dname) {
        char buf[LDNS_MAX_DOMAINLEN+1];
        buf[0] = '\0';
-       dname_str((uint8_t*)dname, buf);
-       return PyBytes_FromString(buf);
+       dname_str((uint8_t*)PyBytes_AsString(dname), buf);
+       return PyString_FromString(buf);
    }
 %}
 
@@ -1211,7 +1216,7 @@ int checkList(PyObject *l)
        for (i=0; i < PyList_Size(l); i++)
        {
            item = PyList_GetItem(l, i);
-           if (!PyBytes_Check(item))
+           if (!PyBytes_Check(item) && !PyUnicode_Check(item))
               return 0;
        }
        return 1;
@@ -1226,23 +1231,40 @@ int pushRRList(sldns_buffer* qb, PyObject *l, uint32_t default_ttl, int qsec,
     PyObject* item;
     int i;
     size_t len;
+    char* s;
+    PyObject* ascstr;
 
     for (i=0; i < PyList_Size(l); i++)
     {
+        ascstr = NULL;
         item = PyList_GetItem(l, i);
+        if(PyObject_TypeCheck(item, &PyBytes_Type)) {
+                s = PyBytes_AsString(item);
+        } else {
+                ascstr = PyUnicode_AsASCIIString(item);
+                s = PyBytes_AsString(ascstr);
+        }
 
         len = sldns_buffer_remaining(qb);
         if(qsec) {
-                if(sldns_str2wire_rr_question_buf(PyBytes_AsString(item),
+                if(sldns_str2wire_rr_question_buf(s,
                         sldns_buffer_current(qb), &len, NULL, NULL, 0, NULL, 0)
-                        != 0)
+                        != 0) {
+                        if(ascstr)
+                            Py_DECREF(ascstr);
                         return 0;
+                }
         } else {
-                if(sldns_str2wire_rr_buf(PyBytes_AsString(item),
+                if(sldns_str2wire_rr_buf(s,
                         sldns_buffer_current(qb), &len, NULL, default_ttl,
-                        NULL, 0, NULL, 0) != 0)
+                        NULL, 0, NULL, 0) != 0) {
+                        if(ascstr)
+                            Py_DECREF(ascstr);
                         return 0;
+                }
         }
+        if(ascstr)
+            Py_DECREF(ascstr);
         sldns_buffer_skip(qb, len);
 
         sldns_buffer_write_u16_at(qb, count_offset,

@@ -1,3 +1,9 @@
+22 November 2018: Wouter
+	- With ./configure --with-pyunbound --with-pythonmodule
+	  PYTHON_VERSION=3.6 or with 2.7 unbound can compile and unit tests
+	  succeed for the python module.
+	- pythonmod logs the python error and traceback on failure.
+
 21 November 2018: Wouter
 	- Scrub NS records from NODATA responses as well.
 

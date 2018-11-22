@@ -482,9 +482,9 @@ doc:
 	if test -n "$(doxygen)"; then \
 		$(doxygen) $(srcdir)/doc/unbound.doxygen; fi
 	if test "$(WITH_PYUNBOUND)" = "yes" -o "$(WITH_PYTHONMODULE)" = "yes"; \
-	    then if test -x "`which sphinx-build 2>&1`"; then \
-		sphinx-build -b html pythonmod/doc doc/html/pythonmod; \
-		sphinx-build -b html libunbound/python/doc doc/html/pyunbound;\
+	    then if test -x "`which sphinx-build-$(PY_MAJOR_VERSION) 2>&1`"; then \
+		sphinx-build-$(PY_MAJOR_VERSION) -b html pythonmod/doc doc/html/pythonmod; \
+		sphinx-build-$(PY_MAJOR_VERSION) -b html libunbound/python/doc doc/html/pyunbound;\
 	    fi ;\
 	fi
 
