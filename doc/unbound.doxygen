@@ -623,6 +623,7 @@ EXCLUDE                = ./build \
                          pythonmod/interface.h \
                          pythonmod/ubmodule-msg.py \
                          pythonmod/ubmodule-tst.py \
+			 unboundmodule.py \
                          libunbound/python/unbound.py \
                          libunbound/python/libunbound_wrap.c \
                          libunbound/python/doc \
