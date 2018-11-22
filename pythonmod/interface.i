@@ -53,7 +53,8 @@
      i = 0; cnt = 0;
      while (i < len) {
         char buf[LDNS_MAX_LABELLEN+1];
-        if(((unsigned int)name[i])+1 <= (unsigned int)sizeof(buf)) {
+        if(((unsigned int)name[i])+1 <= (unsigned int)sizeof(buf) &&
+                i+(int)((unsigned int)name[i]) < len) {
                 memmove(buf, name + i + 1, (unsigned int)name[i]);
                 buf[(unsigned int)name[i]] = 0;
                 PyList_SetItem(list, cnt, PyString_FromString(buf));

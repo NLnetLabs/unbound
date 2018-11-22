@@ -4,6 +4,7 @@
 	  succeed for the python module.
 	- pythonmod logs the python error and traceback on failure.
 	- ignore debug python module for test in doxygen output.
+	- review fixes for python module.
 
 21 November 2018: Wouter
 	- Scrub NS records from NODATA responses as well.

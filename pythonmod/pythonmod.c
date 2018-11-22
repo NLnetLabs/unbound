@@ -139,7 +139,7 @@ log_py_err(void)
 		modStringIO = PyImport_ImportModule("io");
 	if (modStringIO==NULL) {
 		log_err("pythonmod: cannot print exception, "
-			"cannot ImportModule cStringIO or StringIO");
+			"cannot ImportModule cStringIO or StringIO or io");
 		goto cleanup;
 	}
 	modTB = PyImport_ImportModule("traceback");
@@ -159,7 +159,7 @@ log_py_err(void)
 	obStringIO = PyObject_CallObject(obFuncStringIO, NULL);
 	if (obStringIO==NULL) {
 		log_err("pythonmod: cannot print exception, "
-			"cannot cStringIO.StringIO()");
+			"cannot call cStringIO.StringIO()");
 		goto cleanup;
 	}
 
@@ -206,7 +206,8 @@ log_py_err(void)
 	/* And it should be a string all ready to go - duplicate it. */
 	if (!PyString_Check(obResult) && !PyUnicode_Check(obResult)) {
 		log_err("pythonmod: cannot print exception, "
-			"cStringIO.getvalue() result did not String_Check");
+			"cStringIO.getvalue() result did not String_Check"
+			" or Unicode_Check");
 		goto cleanup;
 	}
 	if(PyString_Check(obResult)) {
