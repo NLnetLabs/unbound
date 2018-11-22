@@ -599,7 +599,7 @@ int auth_zones_startprobesequence(struct auth_zones* az,
 	struct module_env* env, uint8_t* nm, size_t nmlen, uint16_t dclass);
 
 /** read auth zone from zonefile. caller must lock zone. false on failure */
-int auth_zone_read_zonefile(struct auth_zone* z);
+int auth_zone_read_zonefile(struct auth_zone* z, struct config_file* cfg);
 
 /** find serial number of zone or false if none (no SOA record) */
 int auth_zone_get_serial(struct auth_zone* z, uint32_t* serial);

@@ -6,6 +6,8 @@
 	- ignore debug python module for test in doxygen output.
 	- review fixes for python module.
 	- Fix #4209: Crash in libunbound when called from getdns.
+	- auth zone zonefiles can be in a chroot, the chroot directory
+	  components are removed before use.
 
 21 November 2018: Wouter
 	- Scrub NS records from NODATA responses as well.

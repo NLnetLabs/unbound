@@ -2456,7 +2456,7 @@ do_auth_zone_reload(RES* ssl, struct worker* worker, char* arg)
 		(void)ssl_printf(ssl, "error no auth-zone %s\n", arg);
 		return;
 	}
-	if(!auth_zone_read_zonefile(z)) {
+	if(!auth_zone_read_zonefile(z, worker->env.cfg)) {
 		lock_rw_unlock(&z->lock);
 		(void)ssl_printf(ssl, "error failed to read %s\n", arg);
 		return;
