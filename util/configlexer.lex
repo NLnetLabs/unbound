@@ -120,9 +120,8 @@ static void config_start_include_glob(const char* filename)
 #ifdef GLOB_ERR
 			| GLOB_ERR
 #endif
-#ifdef GLOB_NOSORT
-			| GLOB_NOSORT
-#endif
+			 /* do not set GLOB_NOSORT so the results are sorted
+			    and in a predictable order. */
 #ifdef GLOB_BRACE
 			| GLOB_BRACE
 #endif
