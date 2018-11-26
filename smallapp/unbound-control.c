@@ -719,9 +719,10 @@ go_cmd(SSL* ssl, int fd, int quiet, int argc, char* argv[])
 	if(argc == 1 && strcmp(argv[0], "load_cache") == 0) {
 		send_file(ssl, fd, stdin, buf, sizeof(buf));
 	}
-	else if(argc == 1 && (strcmp(argv[0], "local_zones") == 0 ||
+	else if(argc >= 1 && (strcmp(argv[0], "local_zones") == 0 ||
 		strcmp(argv[0], "local_zones_remove") == 0 ||
 		strcmp(argv[0], "local_datas") == 0 ||
+		strcmp(argv[0], "view_local_datas") == 0 ||
 		strcmp(argv[0], "local_datas_remove") == 0)) {
 		send_file(ssl, fd, stdin, buf, sizeof(buf));
 		send_eof(ssl, fd);
