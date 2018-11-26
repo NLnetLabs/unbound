@@ -292,7 +292,7 @@ error_response_cache(struct module_qstate* qstate, int id, int rcode)
 	if(!qstate->no_cache_store) {
 		/* store in cache */
 		struct reply_info err;
-		if(qstate->prefetch_leeway > NORR_TTL) {
+		if(qstate->prefetch_leeway > 0) {
 			verbose(VERB_ALGO, "error response for prefetch in cache");
 			/* attempt to adjust the cache entry prefetch */
 			if(dns_cache_prefetch_adjust(qstate->env, &qstate->qinfo,

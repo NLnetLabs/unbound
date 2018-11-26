@@ -1,6 +1,8 @@
 26 November 2018: Wouter
 	- Fix to not set GLOB_NOSORT so the unbound.conf include: files are
 	  sorted and in a predictable order.
+	- Fix #4193: Fix that prefetch failure does not overwrite valid cache
+	  entry with SERVFAIL.
 
 22 November 2018: Wouter
 	- With ./configure --with-pyunbound --with-pythonmodule
