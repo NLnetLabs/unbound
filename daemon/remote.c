@@ -1428,6 +1428,28 @@ do_view_data_add(RES* ssl, struct worker* worker, char* arg)
 	lock_rw_unlock(&v->lock);
 }
 
+/** Add new RR data from stdin to view */
+static void
+do_view_datas_add(RES* ssl, struct worker* worker, char* arg)
+{
+	struct view* v;
+	v = views_find_view(worker->daemon->views,
+		arg, 1 /* get write lock*/);
+	if(!v) {
+		ssl_printf(ssl,"no view with name: %s\n", arg);
+		return;
+	}
+	if(!v->local_zones) {
+		if(!(v->local_zones = local_zones_create())){
+			lock_rw_unlock(&v->lock);
+			ssl_printf(ssl,"error out of memory\n");
+			return;
+		}
+	}
+	do_datas_add(ssl, v->local_zones);
+	lock_rw_unlock(&v->lock);
+}
+
 /** Remove RR data from view */
 static void
 do_view_data_remove(RES* ssl, struct worker* worker, char* arg)
@@ -2963,6 +2985,8 @@ execute_cmd(struct daemon_remote* rc, RES* ssl, char* cmd,
 		do_view_data_remove(ssl, worker, skipwhite(p+22));
 	} else if(cmdcmp(p, "view_local_data", 15)) {
 		do_view_data_add(ssl, worker, skipwhite(p+15));
+	} else if(cmdcmp(p, "view_local_datas", 16)) {
+		do_view_datas_add(ssl, worker, skipwhite(p+16));
 	} else if(cmdcmp(p, "flush_zone", 10)) {
 		do_flush_zone(ssl, worker, skipwhite(p+10));
 	} else if(cmdcmp(p, "flush_type", 10)) {

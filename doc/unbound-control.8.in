@@ -322,6 +322,9 @@ serial check).  And then the zone is transferred for a newer zone version.
 .TP
 .B view_local_data_remove \fIview\fR \fIname
 \fIlocal_data_remove\fR for given view.
+.TP
+.B view_local_datas \fIview\fR
+Add a list of \fIlocal_data\fR for given view from stdin.  Like local_datas.
 .SH "EXIT CODE"
 The unbound\-control program exits with status code 1 on error, 0 on success.
 .SH "SET UP"

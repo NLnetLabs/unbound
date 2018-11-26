@@ -3,6 +3,7 @@
 	  sorted and in a predictable order.
 	- Fix #4193: Fix that prefetch failure does not overwrite valid cache
 	  entry with SERVFAIL.
+	- Add unbound-control view_local_datas command, like local_datas.
 
 22 November 2018: Wouter
 	- With ./configure --with-pyunbound --with-pythonmodule

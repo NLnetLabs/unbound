@@ -154,6 +154,8 @@ usage(void)
 	printf("  view_local_zone view name type  	add local-zone in view\n");
 	printf("  view_local_zone_remove view name  	remove local-zone in view\n");
 	printf("  view_local_data view RR...		add local-data in view\n");
+	printf("  view_local_datas view 		add list of local-data to view\n");
+	printf("  					one entry per line read from stdin\n");
 	printf("  view_local_data_remove view name  	remove local-data in view\n");
 	printf("Version %s\n", PACKAGE_VERSION);
 	printf("BSD licensed, see LICENSE in source package for details.\n");
