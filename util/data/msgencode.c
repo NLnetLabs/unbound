@@ -50,6 +50,10 @@
 #include "sldns/sbuffer.h"
 #include "services/localzone.h"
 
+#ifdef HAVE_SYS_TYPES_H
+#  include <sys/types.h>
+#endif
+
 /** return code that means the function ran out of memory. negative so it does
  * not conflict with DNS rcodes. */
 #define RETVAL_OUTMEM	-2
