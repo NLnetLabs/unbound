@@ -929,6 +929,7 @@ dns64_inform_super(struct module_qstate* qstate, int id,
 			sizeof(*super_dq));
 		super->minfo[id] = super_dq;
 		memset(super_dq, 0, sizeof(*super_dq));
+		super_dq->started_no_cache_store = super->no_cache_store;
 	}
 	super_dq->state = DNS64_SUBQUERY_FINISHED;
 
