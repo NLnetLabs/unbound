@@ -292,7 +292,7 @@ error_response_cache(struct module_qstate* qstate, int id, int rcode)
 	if(!qstate->no_cache_store) {
 		/* store in cache */
 		struct reply_info err;
-		if(qstate->prefetch_leeway > 0) {
+		if(qstate->prefetch_leeway > NORR_TTL) {
 			verbose(VERB_ALGO, "error response for prefetch in cache");
 			/* attempt to adjust the cache entry prefetch */
 			if(dns_cache_prefetch_adjust(qstate->env, &qstate->qinfo,
@@ -327,6 +327,29 @@ error_response_cache(struct module_qstate* qstate, int id, int rcode)
 			/* serving expired contents, but nothing is cached
 			 * at all, so the servfail cache entry is useful
 			 * (stops waste of time on this servfail NORR_TTL) */
+		} else {
+			/* don't overwrite existing (non-expired) data in
+			 * cache with a servfail */
+			struct msgreply_entry* msg;
+			if((msg=msg_cache_lookup(qstate->env,
+				qstate->qinfo.qname, qstate->qinfo.qname_len,
+				qstate->qinfo.qtype, qstate->qinfo.qclass,
+				qstate->query_flags, *qstate->env->now, 0))
+				!= NULL) {
+				struct reply_info* rep = (struct reply_info*)
+					msg->entry.data;
+				if(FLAGS_GET_RCODE(rep->flags) ==
+					LDNS_RCODE_NOERROR ||
+					FLAGS_GET_RCODE(rep->flags) ==
+					LDNS_RCODE_NXDOMAIN) {
+					/* we have a good entry,
+					 * don't overwrite */
+					lock_rw_unlock(&msg->entry.lock);
+					return error_response(qstate, id, rcode);
+				}
+				lock_rw_unlock(&msg->entry.lock);
+			}
+			
 		}
 		memset(&err, 0, sizeof(err));
 		err.flags = (uint16_t)(BIT_QR | BIT_RA);
