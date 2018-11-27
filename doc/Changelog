@@ -8,6 +8,7 @@
 	- auth-zone give SERVFAIL when expired, fallback activates when
 	  expired, and this is documented in the man page.
 	- stat count SERVFAIL downstream auth-zone queries for expired zones.
+	- Put new logos into windows installer.
 
 26 November 2018: Wouter
 	- Fix to not set GLOB_NOSORT so the unbound.conf include: files are
