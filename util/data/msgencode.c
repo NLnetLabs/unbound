@@ -50,9 +50,10 @@
 #include "sldns/sbuffer.h"
 #include "services/localzone.h"
 
-#ifdef HAVE_SYS_TYPES_H
-#  include <sys/types.h>
+#ifdef HAVE_TIME_H
+#include <time.h>
 #endif
+#include <sys/time.h>
 
 /** return code that means the function ran out of memory. negative so it does
  * not conflict with DNS rcodes. */
