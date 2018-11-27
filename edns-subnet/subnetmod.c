@@ -55,6 +55,7 @@
 #include "util/config_file.h"
 #include "util/data/msgreply.h"
 #include "sldns/sbuffer.h"
+#include "iterator/iter_utils.h"
 
 /** externally called */
 void 
@@ -91,6 +92,7 @@ subnet_new_qstate(struct module_qstate *qstate, int id)
 		return 0;
 	qstate->minfo[id] = sq;
 	memset(sq, 0, sizeof(*sq));
+	sq->started_no_cache_store = qstate->no_cache_store;
 	return 1;
 }
 
@@ -148,7 +150,9 @@ int ecs_whitelist_check(struct query_info* qinfo,
 
 	/* Cache by default, might be disabled after parsing EDNS option
 	 * received from nameserver. */
-	qstate->no_cache_store = 0;
+	if(!iter_stub_fwd_no_cache(qstate, &qstate->qinfo)) {
+		qstate->no_cache_store = 0;
+	}
 
 	if(sq->ecs_server_out.subnet_validdata && ((sq->subnet_downstream &&
 		qstate->env->cfg->client_subnet_always_forward) ||
@@ -494,9 +498,11 @@ eval_response(struct module_qstate *qstate, int id, struct subnet_qstate *sq)
 		 * is still usefull to put it in the edns subnet cache for
 		 * when a client explicitly asks for subnet specific answer. */
 		verbose(VERB_QUERY, "subnet: Authority indicates no support");
-		lock_rw_wrlock(&sne->biglock);
-		update_cache(qstate, id);
-		lock_rw_unlock(&sne->biglock);
+		if(!sq->started_no_cache_store) {
+			lock_rw_wrlock(&sne->biglock);
+			update_cache(qstate, id);
+			lock_rw_unlock(&sne->biglock);
+		}
 		if (sq->subnet_downstream)
 			cp_edns_bad_response(c_out, c_in);
 		return module_finished;
@@ -522,7 +528,9 @@ eval_response(struct module_qstate *qstate, int id, struct subnet_qstate *sq)
 	}
 
 	lock_rw_wrlock(&sne->biglock);
-	update_cache(qstate, id);
+	if(!sq->started_no_cache_store) {
+		update_cache(qstate, id);
+	}
 	sne->num_msg_nocache++;
 	lock_rw_unlock(&sne->biglock);
 	
@@ -784,6 +792,7 @@ subnetmod_operate(struct module_qstate *qstate, enum module_ev event,
 			ecs_opt_list_append(&sq->ecs_client_out,
 				&qstate->edns_opts_front_out, qstate);
 		}
+		qstate->no_cache_store = sq->started_no_cache_store;
 		return;
 	}
 	if(sq && outbound) {

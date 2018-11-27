@@ -2,6 +2,7 @@
 	- Fix DNS64 to not store intermediate results in cache, this avoids
 	  other threads from picking up the wrong data.  The module restores
 	  the previous no_cache_store setting when the the module is finished.
+	- Fix #4208: 'stub-no-cache' and 'forward-no-cache' not work.
 
 26 November 2018: Wouter
 	- Fix to not set GLOB_NOSORT so the unbound.conf include: files are

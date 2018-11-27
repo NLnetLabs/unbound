@@ -83,6 +83,8 @@ struct subnet_qstate {
 	struct ecs_data	ecs_server_out;
 	int subnet_downstream;
 	int subnet_sent;
+	/** has the subnet module been started with no_cache_store? */
+	int started_no_cache_store;
 };
 
 void subnet_data_delete(void* d, void* ATTR_UNUSED(arg));
