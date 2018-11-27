@@ -3169,6 +3169,11 @@ int auth_zones_lookup(struct auth_zones* az, struct query_info* qinfo,
 		*fallback = 1;
 		return 0;
 	}
+	if(z->zone_expired) {
+		*fallback = z->fallback_enabled;
+		lock_rw_unlock(&z->lock);
+		return 0;
+	}
 	/* see what answer that zone would generate */
 	r = auth_zone_generate_answer(z, qinfo, region, msg, fallback);
 	lock_rw_unlock(&z->lock);
@@ -3255,6 +3260,16 @@ int auth_zones_answer(struct auth_zones* az, struct module_env* env,
 	if(!z->for_downstream) {
 		lock_rw_unlock(&z->lock);
 		return 0;
+	}
+	if(z->zone_expired) {
+		if(z->fallback_enabled) {
+			lock_rw_unlock(&z->lock);
+			return 0;
+		}
+		lock_rw_unlock(&z->lock);
+		auth_error_encode(qinfo, env, edns, repinfo, buf, temp,
+			LDNS_RCODE_SERVFAIL);
+		return 1;
 	}
 
 	/* answer it from zone z */

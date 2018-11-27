@@ -5,6 +5,8 @@
 	- Fix #4208: 'stub-no-cache' and 'forward-no-cache' not work.
 	- New and better fix for Fix #4193: Fix that prefetch failure does
 	  not overwrite valid cache entry with SERVFAIL.
+	- auth-zone give SERVFAIL when expired, fallback activates when
+	  expired, and this is documented in the man page.
 
 26 November 2018: Wouter
 	- Fix to not set GLOB_NOSORT so the unbound.conf include: files are

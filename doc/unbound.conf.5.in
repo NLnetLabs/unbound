@@ -1614,6 +1614,13 @@ lookups of that data.
 Authority zones can be read from zonefile.  And can be kept updated via
 AXFR and IXFR.  After update the zonefile is rewritten.  The update mechanism
 uses the SOA timer values and performs SOA UDP queries to detect zone changes.
+.LP
+If the update fetch fails, the timers in the SOA record are used to time
+another fetch attempt.  Until the SOA expiry timer is reached.  Then the
+zone is expired.  When a zone is expired, queries are SERVFAIL, and
+any new serial number is accepted from the master (even if older), and if
+fallback is enabled, the fallback activates to fetch from the upstream instead
+of the SERVFAIL.
 .TP
 .B name: \fI<zone name>
 Name of the authority zone.
