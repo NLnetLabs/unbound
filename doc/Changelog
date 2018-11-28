@@ -1,3 +1,6 @@
+28 November 2018: Wouter
+	- Fix leak in chroot fix for auth-zone.
+
 27 November 2018: Wouter
 	- Fix DNS64 to not store intermediate results in cache, this avoids
 	  other threads from picking up the wrong data.  The module restores
