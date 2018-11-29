@@ -759,7 +759,7 @@ outside_network_create(struct comm_base *base, size_t bufsize,
 		outnet->delay_tv.tv_usec = (delayclose%1000)*1000;
 	}
 #endif
-	if(numavailports == 0) {
+	if(numavailports == 0 || num_ports == 0) {
 		log_err("no outgoing ports available");
 		outside_network_delete(outnet);
 		return NULL;

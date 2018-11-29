@@ -4,6 +4,7 @@
 	- tag for 1.8.2rc1.
 	- Fix that unbound-checkconf does not complains if the config file
 	  is not placed inside the chroot.
+	- Refuse to start with no ports.
 
 28 November 2018: Wouter
 	- Fix leak in chroot fix for auth-zone.
