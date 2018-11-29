@@ -59,6 +59,7 @@ for x in cachedb/*.c daemon/*.c dns64/*.c $DNSCRYPT_SRC $DNSTAP_SRC edns-subnet/
 	if test "$x" = "util/configlexer.c"; then continue; fi
 	if test "$x" = "util/configparser.c"; then continue; fi
 	if test "$x" = "testcode/signit.c"; then continue; fi
+	if test "$x" = "compat/reallocarray.c"; then continue; fi
 	echo clang --analyze $CPPFLAGS $x
 	plist=`basename $x .c`.plist
 	rm -rf $plist

@@ -5,6 +5,7 @@
 	- Fix that unbound-checkconf does not complains if the config file
 	  is not placed inside the chroot.
 	- Refuse to start with no ports.
+	- Remove clang analysis warnings.
 
 28 November 2018: Wouter
 	- Fix leak in chroot fix for auth-zone.
