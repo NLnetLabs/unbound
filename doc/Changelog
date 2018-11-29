@@ -1,3 +1,6 @@
+29 November 2018: Wouter
+	- iana portlist updated.
+
 28 November 2018: Wouter
 	- Fix leak in chroot fix for auth-zone.
 	- Fix clang analysis for outside directory build test.
