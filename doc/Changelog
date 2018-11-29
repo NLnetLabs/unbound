@@ -1,6 +1,7 @@
 29 November 2018: Wouter
 	- iana portlist updated.
 	- Fix chroot auth-zone fix to remove chroot prefix.
+	- tag for 1.8.2rc1.
 
 28 November 2018: Wouter
 	- Fix leak in chroot fix for auth-zone.
