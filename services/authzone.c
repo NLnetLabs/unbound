@@ -1483,7 +1483,11 @@ az_parse_file(struct auth_zone* z, FILE* in, uint8_t* rr, size_t rrbuflen,
 				while(*incfile == ' ' || *incfile == '\t')
 					incfile++;
 				/* adjust for chroot on include file */
-				incfile = fname_after_chroot(incfile, cfg, 1);
+				if(cfg->chrootdir && cfg->chrootdir[0] &&
+					strncmp(incfile, cfg->chrootdir,
+						strlen(cfg->chrootdir)) == 0)
+					incfile += strlen(cfg->chrootdir);
+				incfile = strdup(incfile);
 				if(!incfile) {
 					log_err("malloc failure");
 					return 0;
@@ -1549,7 +1553,11 @@ auth_zone_read_zonefile(struct auth_zone* z, struct config_file* cfg)
 	FILE* in;
 	if(!z || !z->zonefile || z->zonefile[0]==0)
 		return 1; /* no file, or "", nothing to read */
-	zfilename = fname_after_chroot(z->zonefile, cfg, 1);
+	
+	zfilename = z->zonefile;
+	if(cfg->chrootdir && cfg->chrootdir[0] && strncmp(zfilename,
+		cfg->chrootdir, strlen(cfg->chrootdir)) == 0)
+		zfilename += strlen(cfg->chrootdir);
 	if(verbosity >= VERB_ALGO) {
 		char nm[255+1];
 		dname_str(z->name, nm);
@@ -1563,13 +1571,11 @@ auth_zone_read_zonefile(struct auth_zone* z, struct config_file* cfg)
 			verbose(VERB_ALGO, "no zonefile %s for %s",
 				zfilename, n?n:"error");
 			free(n);
-			free(zfilename);
 			return 1;
 		}
 		log_err("cannot open zonefile %s for %s: %s",
 			zfilename, n?n:"error", strerror(errno));
 		free(n);
-		free(zfilename);
 		return 0;
 	}
 
@@ -1591,11 +1597,9 @@ auth_zone_read_zonefile(struct auth_zone* z, struct config_file* cfg)
 		log_err("error parsing zonefile %s for %s",
 			zfilename, n?n:"error");
 		free(n);
-		free(zfilename);
 		fclose(in);
 		return 0;
 	}
-	free(zfilename);
 	fclose(in);
 	return 1;
 }
@@ -4800,6 +4804,7 @@ auth_zone_write_chunks(struct auth_xfer* xfr, const char* fname)
 static void
 xfr_write_after_update(struct auth_xfer* xfr, struct module_env* env)
 {
+	struct config_file* cfg = env->cfg;
 	struct auth_zone* z;
 	char tmpfile[1024];
 	char* zfilename;
@@ -4825,14 +4830,16 @@ xfr_write_after_update(struct auth_xfer* xfr, struct module_env* env)
 		/* no write needed, no zonefile set */
 		return;
 	}
-	zfilename = fname_after_chroot(z->zonefile, env->cfg, 1);
+	zfilename = z->zonefile;
+	if(cfg->chrootdir && cfg->chrootdir[0] && strncmp(zfilename,
+		cfg->chrootdir, strlen(cfg->chrootdir)) == 0)
+		zfilename += strlen(cfg->chrootdir);
 
 	/* write to tempfile first */
 	if((size_t)strlen(zfilename) + 16 > sizeof(tmpfile)) {
 		verbose(VERB_ALGO, "tmpfilename too long, cannot update "
 			" zonefile %s", zfilename);
 		lock_rw_unlock(&z->lock);
-		free(zfilename);
 		return;
 	}
 	snprintf(tmpfile, sizeof(tmpfile), "%s.tmp%u", zfilename,
@@ -4846,7 +4853,6 @@ xfr_write_after_update(struct auth_xfer* xfr, struct module_env* env)
 	} else if(!auth_zone_write_file(z, tmpfile)) {
 		unlink(tmpfile);
 		lock_rw_unlock(&z->lock);
-		free(zfilename);
 		return;
 	}
 	if(rename(tmpfile, zfilename) < 0) {
@@ -4854,11 +4860,9 @@ xfr_write_after_update(struct auth_xfer* xfr, struct module_env* env)
 			strerror(errno));
 		unlink(tmpfile);
 		lock_rw_unlock(&z->lock);
-		free(zfilename);
 		return;
 	}
 	lock_rw_unlock(&z->lock);
-	free(zfilename);
 }
 
 /** process chunk list and update zone in memory,
