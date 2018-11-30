@@ -286,6 +286,8 @@ struct config_file {
 	int log_queries;
 	/** log replies with one line per reply */
 	int log_replies;
+	/** tag log_queries and log_replies for filtering */
+	int log_tag_queryreply;
 	/** log every local-zone hit **/
 	int log_local_actions;
 	/** log servfails with a reason */

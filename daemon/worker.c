@@ -1208,7 +1208,7 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 	if(worker->env.cfg->log_queries) {
 		char ip[128];
 		addr_to_str(&repinfo->addr, repinfo->addrlen, ip, sizeof(ip));
-		log_nametypeclass(0, ip, qinfo.qname, qinfo.qtype, qinfo.qclass);
+		log_query_in(ip, qinfo.qname, qinfo.qtype, qinfo.qclass);
 	}
 	if(qinfo.qtype == LDNS_RR_TYPE_AXFR || 
 		qinfo.qtype == LDNS_RR_TYPE_IXFR) {

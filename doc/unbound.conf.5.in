@@ -661,6 +661,11 @@ Default is no.  Note that it takes time to print these
 lines which makes the server (significantly) slower.  Odd (nonprintable)
 characters in names are printed as '?'.
 .TP
+.B log\-tag\-queryreply: \fI<yes or no>
+Prints the word 'query' and 'reply' with log\-queries and log\-replies.
+This makes filtering logs easier.  The default is off (for backwards
+compatibility).
+.TP
 .B log\-local\-actions: \fI<yes or no>
 Print log lines to inform about local zone actions.  These lines are like the
 local\-zone type inform prints out, but they are also printed for the other

@@ -1,5 +1,7 @@
 30 November 2018: Wouter
 	- Patch for typo in unbound.conf man page.
+	- log-tag-queryreply: yes in unbound.conf tags the log-queries and
+	  log-replies in the log file for easier log filter maintenance.
 
 29 November 2018: Wouter
 	- iana portlist updated.

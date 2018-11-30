@@ -67,6 +67,9 @@ int MINIMAL_RESPONSES = 0;
 /** rrset order roundrobin: default is no */
 int RRSET_ROUNDROBIN = 0;
 
+/** log tag queries with name instead of 'info' for filtering */
+int LOG_TAG_QUERYREPLY = 0;
+
 /* returns true is string addr is an ip6 specced address */
 int
 str_is_ip6(const char* str)
@@ -359,6 +362,37 @@ log_nametypeclass(enum verbosity_value v, const char* str, uint8_t* name,
 		cs = c;
 	}
 	log_info("%s %s %s %s", str, buf, ts, cs);
+}
+
+void
+log_query_in(const char* str, uint8_t* name, uint16_t type, uint16_t dclass)
+{
+	char buf[LDNS_MAX_DOMAINLEN+1];
+	char t[12], c[12];
+	const char *ts, *cs; 
+	dname_str(name, buf);
+	if(type == LDNS_RR_TYPE_TSIG) ts = "TSIG";
+	else if(type == LDNS_RR_TYPE_IXFR) ts = "IXFR";
+	else if(type == LDNS_RR_TYPE_AXFR) ts = "AXFR";
+	else if(type == LDNS_RR_TYPE_MAILB) ts = "MAILB";
+	else if(type == LDNS_RR_TYPE_MAILA) ts = "MAILA";
+	else if(type == LDNS_RR_TYPE_ANY) ts = "ANY";
+	else if(sldns_rr_descript(type) && sldns_rr_descript(type)->_name)
+		ts = sldns_rr_descript(type)->_name;
+	else {
+		snprintf(t, sizeof(t), "TYPE%d", (int)type);
+		ts = t;
+	}
+	if(sldns_lookup_by_id(sldns_rr_classes, (int)dclass) &&
+		sldns_lookup_by_id(sldns_rr_classes, (int)dclass)->name)
+		cs = sldns_lookup_by_id(sldns_rr_classes, (int)dclass)->name;
+	else {
+		snprintf(c, sizeof(c), "CLASS%d", (int)dclass);
+		cs = c;
+	}
+	if(LOG_TAG_QUERYREPLY)
+		log_query("%s %s %s %s", str, buf, ts, cs);
+	else	log_info("%s %s %s %s", str, buf, ts, cs);
 }
 
 void log_name_addr(enum verbosity_value v, const char* str, uint8_t* zone, 

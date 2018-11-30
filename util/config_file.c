@@ -119,6 +119,7 @@ config_create(void)
 	cfg->log_time_ascii = 0;
 	cfg->log_queries = 0;
 	cfg->log_replies = 0;
+	cfg->log_tag_queryreply = 0;
 	cfg->log_local_actions = 0;
 	cfg->log_servfail = 0;
 #ifndef USE_WINSOCK
@@ -560,6 +561,7 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	else S_YNO("val-log-squelch:", val_log_squelch)
 	else S_YNO("log-queries:", log_queries)
 	else S_YNO("log-replies:", log_replies)
+	else S_YNO("log-tag-queryreply:", log_tag_queryreply)
 	else S_YNO("log-local-actions:", log_local_actions)
 	else S_YNO("log-servfail:", log_servfail)
 	else S_YNO("val-permissive-mode:", val_permissive_mode)
@@ -925,6 +927,7 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_STR(opt, "logfile", logfile)
 	else O_YNO(opt, "log-queries", log_queries)
 	else O_YNO(opt, "log-replies", log_replies)
+	else O_YNO(opt, "log-tag-queryreply", log_tag_queryreply)
 	else O_YNO(opt, "log-local-actions", log_local_actions)
 	else O_YNO(opt, "log-servfail", log_servfail)
 	else O_STR(opt, "pidfile", pidfile)
@@ -1903,6 +1906,7 @@ config_apply(struct config_file* config)
 	EDNS_ADVERTISED_SIZE = (uint16_t)config->edns_buffer_size;
 	MINIMAL_RESPONSES = config->minimal_responses;
 	RRSET_ROUNDROBIN = config->rrset_roundrobin;
+	LOG_TAG_QUERYREPLY = config->log_tag_queryreply;
 	UNKNOWN_SERVER_NICENESS = config->unknown_server_time_limit;
 	log_set_time_asc(config->log_time_ascii);
 	autr_permit_small_holddown = config->permit_small_holddown;

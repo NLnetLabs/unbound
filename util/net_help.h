@@ -99,6 +99,9 @@ extern int MINIMAL_RESPONSES;
 /** rrset order roundrobin */
 extern int RRSET_ROUNDROBIN;
 
+/** log tag queries with name instead of 'info' for filtering */
+extern int LOG_TAG_QUERYREPLY;
+
 /**
  * See if string is ip4 or ip6.
  * @param str: IP specification.
@@ -234,6 +237,12 @@ void sockaddr_store_port(struct sockaddr_storage* addr, socklen_t addrlen,
  */
 void log_nametypeclass(enum verbosity_value v, const char* str, 
 	uint8_t* name, uint16_t type, uint16_t dclass);
+
+/**
+ * Like log_nametypeclass, but logs with log_query for query logging
+ */
+void log_query_in(const char* str, uint8_t* name, uint16_t type,
+	uint16_t dclass);
 
 /**
  * Compare two sockaddrs. Imposes an ordering on the addresses.

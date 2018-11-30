@@ -322,6 +322,10 @@ server:
 	# timetoresolve, fromcache and responsesize.
 	# log-replies: no
 
+	# log with tag 'query' and 'reply' instead of 'info' for
+	# filtering log-queries and log-replies from the log.
+	# log-tag-queryreply: no
+
 	# log the local-zone actions, like local-zone type inform is enabled
 	# also for the other local zone types.
 	# log-local-actions: no

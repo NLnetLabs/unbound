@@ -154,6 +154,20 @@ void log_warn(const char* format, ...) ATTR_FORMAT(printf, 1, 2);
 void log_hex(const char* msg, void* data, size_t length);
 
 /**
+ * Log query.
+ * Pass printf formatted arguments. No trailing newline is needed.
+ * @param format: printf-style format string. Arguments follow.
+ */
+void log_query(const char* format, ...) ATTR_FORMAT(printf, 1, 2);
+
+/**
+ * Log reply.
+ * Pass printf formatted arguments. No trailing newline is needed.
+ * @param format: printf-style format string. Arguments follow.
+ */
+void log_reply(const char* format, ...) ATTR_FORMAT(printf, 1, 2);
+
+/**
  * Easy alternative for log_hex, takes a sldns_buffer.
  * @param level: verbosity level for this message, compared to global 
  *	verbosity setting.
