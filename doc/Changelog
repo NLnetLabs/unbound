@@ -1,3 +1,6 @@
+30 November 2018: Wouter
+	- Patch for typo in unbound.conf man page.
+
 29 November 2018: Wouter
 	- iana portlist updated.
 	- Fix chroot auth-zone fix to remove chroot prefix.

@@ -448,7 +448,7 @@ Alternate syntax for \fBtls\-upstream\fR.  If both are present in the config
 file the last is used.
 .TP
 .B tls\-service\-key: \fI<file>
-If enabled, the server provider TLS service on its TCP sockets.  The clients
+If enabled, the server provides TLS service on its TCP sockets.  The clients
 have to use tls\-upstream: yes.  The file is the private key for the TLS
 session.  The public certificate is in the tls\-service\-pem file.  Default
 is "", turned off.  Requires a restart (a reload is not enough) if changed,
