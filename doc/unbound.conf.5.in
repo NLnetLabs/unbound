@@ -320,11 +320,9 @@ Must be set to a power of 2.
 .TP
 .B cache\-max\-ttl: \fI<seconds>
 Time to live maximum for RRsets and messages in the cache. Default is
-86400 seconds (1 day). If the maximum kicks in, responses to clients
-still get decrementing TTLs based on the original (larger) values.
-When the internal TTL expires, the cache item has expired.
+86400 seconds (1 day).  When the TTL expires, the cache item has expired.
 Can be set lower to force the resolver to query for data often, and not
-trust (very large) TTL values.
+trust (very large) TTL values.  Downstream clients also see the lower TTL.
 .TP
 .B cache\-min\-ttl: \fI<seconds>
 Time to live minimum for RRsets and messages in the cache. Default is 0.
