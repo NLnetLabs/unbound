@@ -1,3 +1,7 @@
+3 December 2018: Wouter
+	- Fix icon, no ragged edges and nicer resolutions available, for eg.
+	  Win 7 and Windows 10 display.
+
 30 November 2018: Wouter
 	- Patch for typo in unbound.conf man page.
 	- log-tag-queryreply: yes in unbound.conf tags the log-queries and
