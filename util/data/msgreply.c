@@ -195,6 +195,8 @@ rdata_copy(sldns_buffer* pkt, struct packed_rrset_data* data, uint8_t* to,
 	}
 	if(*rr_ttl < MIN_TTL)
 		*rr_ttl = MIN_TTL;
+	if(*rr_ttl > MAX_TTL)
+		*rr_ttl = MAX_TTL;
 	if(*rr_ttl < data->ttl)
 		data->ttl = *rr_ttl;
 

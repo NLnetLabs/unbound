@@ -1,6 +1,7 @@
 3 December 2018: Wouter
 	- Fix icon, no ragged edges and nicer resolutions available, for eg.
 	  Win 7 and Windows 10 display.
+	- cache-max-ttl also defines upperbound of initial TTL in response.
 
 30 November 2018: Wouter
 	- Patch for typo in unbound.conf man page.
