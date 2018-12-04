@@ -11,7 +11,8 @@
 29 November 2018: Wouter
 	- iana portlist updated.
 	- Fix chroot auth-zone fix to remove chroot prefix.
-	- tag for 1.8.2rc1.
+	- tag for 1.8.2rc1, which became 1.8.2 on 4 dec 2018, with icon
+	  updated.  Trunk contains 1.8.3 in development.
 	- Fix that unbound-checkconf does not complains if the config file
 	  is not placed inside the chroot.
 	- Refuse to start with no ports.
