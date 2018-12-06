@@ -1,3 +1,6 @@
+6 December 2018: Wouter
+	- Fix dns64 allocation in wrong region for returned internal queries.
+
 3 December 2018: Wouter
 	- Fix icon, no ragged edges and nicer resolutions available, for eg.
 	  Win 7 and Windows 10 display.

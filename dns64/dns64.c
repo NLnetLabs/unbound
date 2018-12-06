@@ -925,7 +925,7 @@ dns64_inform_super(struct module_qstate* qstate, int id,
 	 * successful or not. This lets the state machine terminate.
 	 */
 	if(!super_dq) {
-		super_dq = (struct dns64_qstate*)regional_alloc(qstate->region,
+		super_dq = (struct dns64_qstate*)regional_alloc(super->region,
 			sizeof(*super_dq));
 		super->minfo[id] = super_dq;
 		memset(super_dq, 0, sizeof(*super_dq));
