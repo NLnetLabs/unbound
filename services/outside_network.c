@@ -385,6 +385,22 @@ outnet_tcp_take_into_use(struct waiting_tcp* w, uint8_t* pkt, size_t pkt_len)
 				return 0;
 			}
 		}
+#elif defined(HAVE_X509_VERIFY_PARAM_SET1_HOST)
+		/* openssl 1.0.2 has this function that can be used for
+		 * set1_host like verification */
+		if(w->tls_auth_name) {
+			X509_VERIFY_PARAM* param = SSL_get0_param(pend->c->ssl);
+			X509_VERIFY_PARAM_set_hostflags(param, X509_CHECK_FLAG_NO_PARTIAL_WILDCARDS);
+			if(!X509_VERIFY_PARAM_set1_host(param, w->tls_auth_name, strlen(w->tls_auth_name))) {
+				log_err("X509_VERIFY_PARAM_set1_host failed");
+				pend->c->fd = s;
+				SSL_free(pend->c->ssl);
+				pend->c->ssl = NULL;
+				comm_point_close(pend->c);
+				return 0;
+			}
+			SSL_set_verify(ssl, SSL_VERIFY_PEER, NULL);
+		}
 #endif /* HAVE_SSL_SET1_HOST */
 	}
 	w->pkt = NULL;
@@ -2399,6 +2415,18 @@ outnet_comm_point_for_http(struct outside_network* outnet,
 			 * SSL connection*/
 		 	if(!SSL_set1_host(cp->ssl, host)) {
 				log_err("SSL_set1_host failed");
+				comm_point_delete(cp);
+				return NULL;
+			}
+		}
+#elif defined(HAVE_X509_VERIFY_PARAM_SET1_HOST)
+		/* openssl 1.0.2 has this function that can be used for
+		 * set1_host like verification */
+		if((SSL_CTX_get_verify_mode(outnet->sslctx)&SSL_VERIFY_PEER)) {
+			X509_VERIFY_PARAM* param = SSL_get0_param(pend->c->ssl);
+			X509_VERIFY_PARAM_set_hostflags(param, X509_CHECK_FLAG_NO_PARTIAL_WILDCARDS);
+			if(!X509_VERIFY_PARAM_set1_host(param, host, strlen(host))) {
+				log_err("X509_VERIFY_PARAM_set1_host failed");
 				comm_point_delete(cp);
 				return NULL;
 			}

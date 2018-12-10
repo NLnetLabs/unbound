@@ -3,6 +3,8 @@
 	- ip-ratelimit-factor of 1 allows all traffic through, instead of the
 	  previous blocking everything.
 	- Fix for FreeBSD port make with dnscrypt and dnstap enabled.
+	- Fix #4206: support openssl 1.0.2 for TLS hostname verification,
+	  alongside the 1.1.0 and later support that is already there.
 
 6 December 2018: Wouter
 	- Fix dns64 allocation in wrong region for returned internal queries.
