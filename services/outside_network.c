@@ -63,6 +63,9 @@
 #ifdef HAVE_OPENSSL_SSL_H
 #include <openssl/ssl.h>
 #endif
+#ifdef HAVE_X509_VERIFY_PARAM_SET1_HOST
+#include <openssl/x509v3.h>
+#endif
 
 #ifdef HAVE_NETDB_H
 #include <netdb.h>
@@ -399,7 +402,7 @@ outnet_tcp_take_into_use(struct waiting_tcp* w, uint8_t* pkt, size_t pkt_len)
 				comm_point_close(pend->c);
 				return 0;
 			}
-			SSL_set_verify(ssl, SSL_VERIFY_PEER, NULL);
+			SSL_set_verify(pend->c->ssl, SSL_VERIFY_PEER, NULL);
 		}
 #endif /* HAVE_SSL_SET1_HOST */
 	}
@@ -2423,7 +2426,7 @@ outnet_comm_point_for_http(struct outside_network* outnet,
 		/* openssl 1.0.2 has this function that can be used for
 		 * set1_host like verification */
 		if((SSL_CTX_get_verify_mode(outnet->sslctx)&SSL_VERIFY_PEER)) {
-			X509_VERIFY_PARAM* param = SSL_get0_param(pend->c->ssl);
+			X509_VERIFY_PARAM* param = SSL_get0_param(cp->ssl);
 			X509_VERIFY_PARAM_set_hostflags(param, X509_CHECK_FLAG_NO_PARTIAL_WILDCARDS);
 			if(!X509_VERIFY_PARAM_set1_host(param, host, strlen(host))) {
 				log_err("X509_VERIFY_PARAM_set1_host failed");
