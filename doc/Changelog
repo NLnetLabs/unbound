@@ -1,5 +1,7 @@
 10 December 2018: Wouter
 	- Fix config parser memory leaks.
+	- ip-ratelimit-factor of 1 allows all traffic through, instead of the
+	  previous blocking everything.
 
 6 December 2018: Wouter
 	- Fix dns64 allocation in wrong region for returned internal queries.

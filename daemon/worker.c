@@ -1175,7 +1175,7 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 		/* See if we are passed through with slip factor */
 		if(worker->env.cfg->ip_ratelimit_factor != 0 &&
 			ub_random_max(worker->env.rnd,
-						  worker->env.cfg->ip_ratelimit_factor) == 1) {
+						  worker->env.cfg->ip_ratelimit_factor) == 0) {
 
 			char addrbuf[128];
 			addr_to_str(&repinfo->addr, repinfo->addrlen,
