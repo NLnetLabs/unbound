@@ -1,3 +1,6 @@
+12 December 2018: Wouter
+	- Fix for crash in dns64 module if response is null.
+
 10 December 2018: Wouter
 	- Fix config parser memory leaks.
 	- ip-ratelimit-factor of 1 allows all traffic through, instead of the

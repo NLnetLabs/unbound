@@ -628,6 +628,7 @@ handle_event_moddone(struct module_qstate* qstate, int id)
 
 	/* Store the response in cache. */
 	if ( (!iq || !iq->started_no_cache_store) &&
+		qstate->return_msg && qstate->return_msg->rep &&
 		!dns_cache_store(qstate->env, &qstate->qinfo, qstate->return_msg->rep,
 		0, 0, 0, NULL, qstate->query_flags))
 		log_err("out of memory");
