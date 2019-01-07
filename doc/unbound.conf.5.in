@@ -440,6 +440,8 @@ TCP wireformat.  The other server must support this (see
 \fBtls\-service\-key\fR).
 If you enable this, also configure a tls\-cert\-bundle or use tls\-win\-cert to
 load CA certs, otherwise the connections cannot be authenticated.
+This option enables TLS for all of them, but if you do not set this you can
+configure TLS specifically for some forward zones with forward\-tls\-upstream.  And also with stub\-tls\-upstream.
 .TP
 .B ssl\-upstream: \fI<yes or no>
 Alternate syntax for \fBtls\-upstream\fR.  If both are present in the config

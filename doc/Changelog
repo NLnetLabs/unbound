@@ -1,6 +1,8 @@
 7 January 2018: Wouter
 	- On FreeBSD warn if systcl settings do not allow server TCP FASTOPEN,
 	  and server tcp fastopen is enabled at compile time.
+	- Document interaction between the tls-upstream option in the server
+	  section and forward-tls-upstream option in the forward-zone sections.
 
 12 December 2018: Wouter
 	- Fix for crash in dns64 module if response is null.
