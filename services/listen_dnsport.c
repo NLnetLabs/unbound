@@ -838,7 +838,11 @@ create_tcp_accept_sock(struct addrinfo *addr, int v6only, int* noproto,
 		   disabled, except when verbosity enabled for debugging */
 		if(errno != ENOPROTOOPT || verbosity >= 3)
 #endif
-		  log_err("Setting TCP Fast Open as server failed: %s", strerror(errno));
+		  if(errno == EPERM) {
+		  	log_warn("Setting TCP Fast Open as server failed: %s ; this could likely be because sysctl net.inet.tcp.fastopen.enabled, net.inet.tcp.fastopen.server_enable, or net.ipv4.tcp_fastopen is disabled", strerror(errno));
+		  } else {
+		  	log_err("Setting TCP Fast Open as server failed: %s", strerror(errno));
+		  }
 	}
 #endif
 	return s;
