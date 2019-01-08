@@ -1088,7 +1088,7 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 	struct ub_packed_rrset_key* alias_rrset = NULL;
 	struct reply_info* partial_rep = NULL;
 	struct query_info* lookup_qinfo = &qinfo;
-	struct query_info qinfo_tmp; /* placeholdoer for lookup_qinfo */
+	struct query_info qinfo_tmp; /* placeholder for lookup_qinfo */
 	struct respip_client_info* cinfo = NULL, cinfo_tmp;
 	memset(&qinfo, 0, sizeof(qinfo));
 

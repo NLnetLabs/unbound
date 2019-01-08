@@ -1,3 +1,6 @@
+8 January 2018: Wouter
+	- Fix syntax in comment of local alias processing.
+
 7 January 2018: Wouter
 	- On FreeBSD warn if systcl settings do not allow server TCP FASTOPEN,
 	  and server tcp fastopen is enabled at compile time.
