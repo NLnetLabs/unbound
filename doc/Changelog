@@ -1,5 +1,7 @@
 8 January 2018: Wouter
 	- Fix syntax in comment of local alias processing.
+	- Fix NSEC3 record that is returned in wildcard replies from
+	  auth-zone zones with NSEC3 and wildcards.
 
 7 January 2018: Wouter
 	- On FreeBSD warn if systcl settings do not allow server TCP FASTOPEN,
