@@ -633,4 +633,14 @@ void mesh_list_insert(struct mesh_state* m, struct mesh_state** fp,
 void mesh_list_remove(struct mesh_state* m, struct mesh_state** fp,
 	struct mesh_state** lp);
 
+/**
+ * Remove mesh reply entry from the reply entry list.  Searches for
+ * the repinfo pointer.
+ * @param mesh: to update the counters.
+ * @param m: the mesh state.
+ * @param cp: the commpoint to remove from the list.
+ */
+void mesh_state_remove_reply(struct mesh_area* mesh, struct mesh_state* m,
+	struct comm_point* cp);
+
 #endif /* SERVICES_MESH_H */

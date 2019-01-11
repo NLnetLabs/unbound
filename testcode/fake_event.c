@@ -1802,4 +1802,18 @@ int outnet_tcp_connect(int ATTR_UNUSED(s), struct sockaddr_storage* ATTR_UNUSED(
 	return 0;
 }
 
+int tcp_req_info_add_meshstate(struct tcp_req_info* ATTR_UNUSED(req),
+        struct mesh_area* ATTR_UNUSED(mesh), struct mesh_state* ATTR_UNUSED(m))
+{
+	log_assert(0);
+	return 0;
+}
+
+void
+tcp_req_info_remove_mesh_state(struct tcp_req_info* ATTR_UNUSED(req),
+	struct mesh_state* ATTR_UNUSED(m))
+{
+	log_assert(0);
+}
+
 /*********** End of Dummy routines ***********/
