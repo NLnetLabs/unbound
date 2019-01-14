@@ -740,9 +740,13 @@ mesh_state_cleanup(struct mesh_state* mstate)
 	mesh = mstate->s.env->mesh;
 	/* drop unsent replies */
 	if(!mstate->replies_sent) {
-		struct mesh_reply* rep;
+		struct mesh_reply* rep = mstate->reply_list;
 		struct mesh_cb* cb;
-		for(rep=mstate->reply_list; rep; rep=rep->next) {
+		/* in tcp_req_info, the mstates linked are removed, but
+		 * the reply_list is now NULL, so the remove-from-empty-list
+		 * takes no time and also it does not do the mesh accounting */
+		mstate->reply_list = NULL;
+		for(; rep; rep=rep->next) {
 			comm_point_drop_reply(&rep->query_reply);
 			mesh->num_reply_addrs--;
 		}

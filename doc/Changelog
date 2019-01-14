@@ -1,3 +1,9 @@
+14 January 2018: Wouter
+	- streamtcp option -a send queries consecutively and prints answers
+	  as they arrive.
+	- Fix for out of order processing administration quit cleanup.
+	- unit test for tcp out of order processing.
+
 11 January 2018: Wouter
 	- Initial commit for out-of-order processing for TCP and TLS.
 

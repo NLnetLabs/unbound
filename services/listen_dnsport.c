@@ -72,6 +72,9 @@
 /** number of queued TCP connections for listen() */
 #define TCP_BACKLOG 256 
 
+/** number of simultaneous requests a client can have */
+#define TCP_MAX_REQ_SIMULTANEOUS 32
+
 /**
  * Debug print of the getaddrinfo returned address.
  * @param addr: the address returned.
@@ -1591,9 +1594,6 @@ tcp_req_info_remove_mesh_state(struct tcp_req_info* req, struct mesh_state* m)
 	}
 }
 
-/** number of simultaneous requests a client can have */
-#define TCP_MAX_REQ_SIMULTANEOUS 10
-
 /** setup listening for read or write */
 static void
 tcp_req_info_setup_listen(struct tcp_req_info* req)
@@ -1669,13 +1669,16 @@ int
 tcp_req_info_handle_read_close(struct tcp_req_info* req)
 {
 	verbose(VERB_ALGO, "tcp channel read side closed %d", req->cp->fd);
+	/* if we still have results to write, pick up next and write it */
 	if(req->num_done_req != 0) {
 		tcp_req_pickup_next_result(req);
 		tcp_req_info_setup_listen(req);
 		return 1;
 	}
+	/* if nothing to do, this closes the connection */
 	if(req->num_open_req == 0 && req->num_done_req == 0)
 		return 0;
+	/* otherwise, we must be waiting for dns resolve, wait with timeout */
 	req->read_is_closed = 1;
 	tcp_req_info_setup_listen(req);
 	return 1;
