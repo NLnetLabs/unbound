@@ -1669,6 +1669,8 @@ int
 tcp_req_info_handle_read_close(struct tcp_req_info* req)
 {
 	verbose(VERB_ALGO, "tcp channel read side closed %d", req->cp->fd);
+	/* reset byte count for (potential) partial read */
+	req->cp->tcp_byte_count = 0;
 	/* if we still have results to write, pick up next and write it */
 	if(req->num_done_req != 0) {
 		tcp_req_pickup_next_result(req);
