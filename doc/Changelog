@@ -1,6 +1,7 @@
 15 January 2018: Wouter
 	- In the out of order processing, reset byte count for (potential)
 	  partial read.
+	- Review fixes in out of order processing.
 
 14 January 2018: Wouter
 	- streamtcp option -a send queries consecutively and prints answers

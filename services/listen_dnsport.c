@@ -1691,6 +1691,11 @@ tcp_req_info_handle_writedone(struct tcp_req_info* req)
 {
 	/* back to reading state, we finished this write event */
 	sldns_buffer_clear(req->cp->buffer);
+	if(req->num_done_req == 0 && req->read_is_closed) {
+		/* no more to write and nothing to read, close it */
+		comm_point_drop_reply(&req->cp->repinfo);
+		return;
+	}
 	req->cp->tcp_is_reading = 1;
 	/* see if another result needs writing */
 	tcp_req_pickup_next_result(req);
@@ -1712,7 +1717,10 @@ tcp_req_info_handle_readdone(struct tcp_req_info* req)
 	req->is_drop = 0;
 	req->is_reply = 0;
 	req->in_worker_handle = 1;
-	/* handle the current request,  */
+	/* handle the current request */
+	/* this calls the worker handle request routine that could give
+	 * a cache response, or localdata response, or drop the reply,
+	 * or schedule a mesh entry for later */
 	fptr_ok(fptr_whitelist_comm_point(c->callback));
 	if( (*c->callback)(c, c->cb_arg, NETEVENT_NOERROR, &c->repinfo) ) {
 		req->in_worker_handle = 0;
@@ -1727,9 +1735,16 @@ tcp_req_info_handle_readdone(struct tcp_req_info* req)
 	}
 	req->in_worker_handle = 0;
 	/* it should be waiting in the mesh for recursion.
-	 * If mesh failed(formerr) and called commpoint_drop_reply.  Then the
-	 * mesh state has been cleared. */
+	 * If mesh failed to add a new entry and called commpoint_drop_reply. 
+	 * Then the mesh state has been cleared. */
 	if(req->is_drop) {
+		/* we can now call drop_reply without recursing into ourselves
+		 * whilst in the callback */
+		/* we have to close the stream because there is no reply,
+		 * no servfail to send, but the query needs an action, for
+		 * a stream that is close the connection */
+		sldns_buffer_clear(c->buffer);
+		comm_point_drop_reply(&c->repinfo);
 		return;
 	}
 	/* If mesh failed(mallocfail) and called commpoint_send_reply with
@@ -1738,7 +1753,7 @@ tcp_req_info_handle_readdone(struct tcp_req_info* req)
 		goto send_it;
 	}
 
-	sldns_buffer_clear(req->cp->buffer);
+	sldns_buffer_clear(c->buffer);
 	/* if pending answers, pick up an answer and start sending it */
 	tcp_req_pickup_next_result(req);
 
