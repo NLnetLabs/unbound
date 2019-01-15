@@ -1636,6 +1636,8 @@ void mesh_state_remove_reply(struct mesh_area* mesh, struct mesh_state* m,
 {
 	struct mesh_reply* n, *prev = NULL;
 	n = m->reply_list;
+	/* when in mesh_cleanup, it sets the reply_list to NULL, so that
+	 * there is no accounting twice */
 	if(!n) return; /* nothing to remove, also no accounting needed */
 	while(n) {
 		if(n->query_reply.c == cp) {

@@ -326,11 +326,13 @@ void tcp_req_info_remove_mesh_state(struct tcp_req_info* req,
 
 /**
  * Handle write done of the last result packet
+ * @param req: the tcp req info.
  */
 void tcp_req_info_handle_writedone(struct tcp_req_info* req);
 
 /**
  * Handle read done of a new request from the client
+ * @param req: the tcp req info.
  */
 void tcp_req_info_handle_readdone(struct tcp_req_info* req);
 
@@ -338,7 +340,7 @@ void tcp_req_info_handle_readdone(struct tcp_req_info* req);
  * Add mesh state to the tcp req list of open requests.
  * So the comm_reply can be removed off the mesh reply list when
  * the tcp channel has to be closed (for other reasons then that that
- * request was done, eg. channel closed by client or some format error.
+ * request was done, eg. channel closed by client or some format error).
  * @param req: tcp req info structure.  It keeps track of the simultaneous
  * 	requests and results on a tcp (or TLS) channel.
  * @param mesh: mesh area for the state.

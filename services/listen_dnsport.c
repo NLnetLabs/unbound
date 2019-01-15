@@ -1818,8 +1818,9 @@ tcp_req_info_send_reply(struct tcp_req_info* req)
 		return;
 	}
 	/* now that the query has been handled, that mesh_reply entry
-	 * should be removed, from the tcp_req_info list */
-	/* TODO: find it, need mstate ptr */
+	 * should be removed, from the tcp_req_info list,
+	 * the mesh state cleanup removes then with region_cleanup and
+	 * replies_sent true. */
 	/* see if we can send it straight away (we are not doing
 	 * anything else).  If so, copy to buffer and start */
 	if(req->cp->tcp_is_reading && req->cp->tcp_byte_count == 0) {
