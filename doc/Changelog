@@ -1,3 +1,7 @@
+16 January 2018: Ralph
+	- Get ready for the DNS flag day: remove EDNS lame procedure, do not
+	  re-query without EDNS after timeout.
+
 15 January 2018: Wouter
 	- In the out of order processing, reset byte count for (potential)
 	  partial read.
