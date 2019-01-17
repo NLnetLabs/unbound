@@ -1,6 +1,7 @@
 17 January 2018: Wouter
 	- For caps-for-id fallback, use the whitelist to avoid timeout
 	  starting a fallback sequence for it.
+	- increase mesh max activation count for capsforid long fetches.
 
 16 January 2018: Ralph
 	- Get ready for the DNS flag day: remove EDNS lame procedure, do not

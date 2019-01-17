@@ -65,7 +65,7 @@ struct respip_client_info;
  * Maximum number of mesh state activations. Any more is likely an
  * infinite loop in the module. It is then terminated.
  */
-#define MESH_MAX_ACTIVATION 3000
+#define MESH_MAX_ACTIVATION 10000
 
 /**
  * Max number of references-to-references-to-references.. search size.
