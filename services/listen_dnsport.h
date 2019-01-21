@@ -364,4 +364,7 @@ void tcp_req_info_send_reply(struct tcp_req_info* req);
  */
 int tcp_req_info_handle_read_close(struct tcp_req_info* req);
 
+/** get the size of currently used tcp stream wait buffers (in bytes) */
+size_t tcp_req_info_get_stream_buffer_size(void);
+
 #endif /* LISTEN_DNSPORT_H */

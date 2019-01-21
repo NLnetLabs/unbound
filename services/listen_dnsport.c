@@ -55,6 +55,7 @@
 #include "sldns/sbuffer.h"
 #include "services/mesh.h"
 #include "util/fptr_wlist.h"
+#include "util/locks.h"
 
 #ifdef HAVE_NETDB_H
 #include <netdb.h>
@@ -74,6 +75,13 @@
 
 /** number of simultaneous requests a client can have */
 #define TCP_MAX_REQ_SIMULTANEOUS 32
+
+/** lock on the counter of stream buffer memory */
+static lock_basic_type stream_wait_count_lock;
+/** size (in bytes) of stream wait buffers */
+static size_t stream_wait_count = 0;
+/** is the lock initialised for stream wait buffers */
+static int stream_wait_lock_inited = 0;
 
 /**
  * Debug print of the getaddrinfo returned address.
@@ -1269,6 +1277,10 @@ listen_create(struct comm_base* base, struct listen_port* ports,
 		free(front);
 		return NULL;
 	}
+	if(!stream_wait_lock_inited) {
+		lock_basic_init(&stream_wait_count_lock);
+		stream_wait_lock_inited = 1;
+	}
 
 	/* create comm points as needed */
 	while(ports) {
@@ -1358,6 +1370,10 @@ listen_delete(struct listen_dnsport* front)
 #endif
 	sldns_buffer_free(front->udp_buff);
 	free(front);
+	if(stream_wait_lock_inited) {
+		stream_wait_lock_inited = 0;
+		lock_basic_destroy(&stream_wait_count_lock);
+	}
 }
 
 struct listen_port* 
@@ -1560,6 +1576,10 @@ void tcp_req_info_clear(struct tcp_req_info* req)
 	item = req->done_req_list;
 	while(item) {
 		nitem = item->next;
+		lock_basic_lock(&stream_wait_count_lock);
+		stream_wait_count -= (sizeof(struct tcp_req_done_item)
+			+item->len);
+		lock_basic_unlock(&stream_wait_count_lock);
 		free(item->buf);
 		free(item);
 		item = nitem;
@@ -1638,6 +1658,9 @@ tcp_req_info_pop_done(struct tcp_req_info* req)
 	struct tcp_req_done_item* item;
 	log_assert(req->num_done_req > 0 && req->done_req_list);
 	item = req->done_req_list;
+	lock_basic_lock(&stream_wait_count_lock);
+	stream_wait_count -= (sizeof(struct tcp_req_done_item)+item->len);
+	lock_basic_unlock(&stream_wait_count_lock);
 	req->done_req_list = req->done_req_list->next;
 	req->num_done_req --;
 	return item;
@@ -1788,6 +1811,19 @@ tcp_req_info_add_result(struct tcp_req_info* req, uint8_t* buf, size_t len)
 {
 	struct tcp_req_done_item* last = NULL;
 	struct tcp_req_done_item* item;
+	size_t space;
+
+	/* see if we have space */
+	space = sizeof(struct tcp_req_done_item) + len;
+	lock_basic_lock(&stream_wait_count_lock);
+	if(stream_wait_count + space > stream_wait_max) {
+		lock_basic_unlock(&stream_wait_count_lock);
+		verbose(VERB_ALGO, "drop stream reply, no space left, in stream-wait-size");
+		return 0;
+	}
+	stream_wait_count += stream_wait_max;
+	lock_basic_unlock(&stream_wait_count_lock);
+
 	/* find last element */
 	last = req->done_req_list;
 	while(last && last->next)
@@ -1796,6 +1832,7 @@ tcp_req_info_add_result(struct tcp_req_info* req, uint8_t* buf, size_t len)
 	/* create new element */
 	item = (struct tcp_req_done_item*)malloc(sizeof(*item));
 	if(!item) {
+		log_err("malloc failure, for stream result list");
 		return 0;
 	}
 	item->next = NULL;
@@ -1803,6 +1840,7 @@ tcp_req_info_add_result(struct tcp_req_info* req, uint8_t* buf, size_t len)
 	item->buf = memdup(buf, len);
 	if(!item->buf) {
 		free(item);
+		log_err("malloc failure, adding reply to stream result list");
 		return 0;
 	}
 
@@ -1842,6 +1880,18 @@ tcp_req_info_send_reply(struct tcp_req_info* req)
 	/* queue up the answer behind the others already pending */
 	if(!tcp_req_info_add_result(req, sldns_buffer_begin(req->spool_buffer),
 		sldns_buffer_limit(req->spool_buffer))) {
-		log_err("malloc failure adding reply to stream result list");
+		/* drop the connection, we are out of resources */
+		comm_point_drop_reply(&req->cp->repinfo);
 	}
+}
+
+size_t tcp_req_info_get_stream_buffer_size(void)
+{
+	size_t s;
+	if(!stream_wait_lock_inited)
+		return stream_wait_count;
+	lock_basic_lock(&stream_wait_count_lock);
+	s = stream_wait_count;
+	lock_basic_unlock(&stream_wait_count_lock);
+	return s;
 }

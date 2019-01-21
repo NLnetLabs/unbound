@@ -3,6 +3,9 @@
 	- Unit test for tcp request reorder and timeouts.
 	- Unit tests for ssl out of order processing.
 	- Fix that multiple dns fragments can be carried in one TLS frame.
+	- Add stream-wait-size: 4m config option to limit the maximum
+	  memory used by waiting tcp and tls stream replies.  This avoids
+	  a denial of service where these replies use up all of the memory.
 
 17 January 2018: Wouter
 	- For caps-for-id fallback, use the whitelist to avoid timeout

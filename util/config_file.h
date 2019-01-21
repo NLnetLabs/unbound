@@ -132,6 +132,8 @@ struct config_file {
 
 	/** EDNS buffer size to use */
 	size_t edns_buffer_size;
+	/** size of the stream wait buffers, max */
+	size_t stream_wait_size;
 	/** number of bytes buffer size for DNS messages */
 	size_t msg_buffer_size;
 	/** size of the message cache */
@@ -575,6 +577,8 @@ extern uid_t cfg_uid;
 extern gid_t cfg_gid;
 /** debug and enable small timeouts */
 extern int autr_permit_small_holddown;
+/** size (in bytes) of stream wait buffers max */
+extern size_t stream_wait_max;
 
 /**
  * Stub config options

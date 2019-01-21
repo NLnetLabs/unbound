@@ -123,6 +123,9 @@ server:
 	# Suggested values are 512 to 4096. Default is 4096. 65536 disables it.
 	# max-udp-size: 4096
 
+	# max memory to use for stream(tcp and tls) waiting result buffers.
+	# stream-wait-size: 4m
+
 	# buffer size for handling DNS data. No messages larger than this
 	# size can be sent or received, by UDP or TCP. In bytes.
 	# msg-buffer-size: 65552

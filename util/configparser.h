@@ -304,7 +304,8 @@ extern int yydebug;
     VAR_LOG_SERVFAIL = 514,
     VAR_DENY_ANY = 515,
     VAR_UNKNOWN_SERVER_TIME_LIMIT = 516,
-    VAR_LOG_TAG_QUERYREPLY = 517
+    VAR_LOG_TAG_QUERYREPLY = 517,
+    VAR_STREAM_WAIT_SIZE = 518
   };
 #endif
 /* Tokens.  */
@@ -568,6 +569,7 @@ extern int yydebug;
 #define VAR_DENY_ANY 515
 #define VAR_UNKNOWN_SERVER_TIME_LIMIT 516
 #define VAR_LOG_TAG_QUERYREPLY 517
+#define VAR_STREAM_WAIT_SIZE 518
 
 /* Value type.  */
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
@@ -578,7 +580,7 @@ union YYSTYPE
 
 	char*	str;
 
-#line 582 "util/configparser.h" /* yacc.c:1909  */
+#line 584 "util/configparser.h" /* yacc.c:1909  */
 };
 
 typedef union YYSTYPE YYSTYPE;

@@ -165,6 +165,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_ALLOW_NOTIFY VAR_TLS_WIN_CERT VAR_TCP_CONNECTION_LIMIT
 %token VAR_FORWARD_NO_CACHE VAR_STUB_NO_CACHE VAR_LOG_SERVFAIL VAR_DENY_ANY
 %token VAR_UNKNOWN_SERVER_TIME_LIMIT VAR_LOG_TAG_QUERYREPLY
+%token VAR_STREAM_WAIT_SIZE
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -263,7 +264,8 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_tls_cert_bundle | server_tls_additional_port | server_low_rtt |
 	server_fast_server_permil | server_fast_server_num  | server_tls_win_cert |
 	server_tcp_connection_limit | server_log_servfail | server_deny_any |
-	server_unknown_server_time_limit | server_log_tag_queryreply
+	server_unknown_server_time_limit | server_log_tag_queryreply |
+	server_stream_wait_size
 	;
 stubstart: VAR_STUB_ZONE
 	{
@@ -1127,6 +1129,14 @@ server_ip_freebind: VAR_IP_FREEBIND STRING_ARG
         free($2);
     }
     ;
+server_stream_wait_size: VAR_STREAM_WAIT_SIZE STRING_ARG
+	{
+		OUTYY(("P(server_stream_wait_size:%s)\n", $2));
+		if(!cfg_parse_memsize($2, &cfg_parser->cfg->stream_wait_size))
+			yyerror("memory size expected");
+		free($2);
+	}
+	;
 server_edns_buffer_size: VAR_EDNS_BUFFER_SIZE STRING_ARG
 	{
 		OUTYY(("P(server_edns_buffer_size:%s)\n", $2));
