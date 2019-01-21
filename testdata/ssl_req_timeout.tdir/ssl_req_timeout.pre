@@ -21,7 +21,7 @@ echo "FWD_PID=$FWD_PID" >> .tpkg.var.test
 sed -e 's/@PORT\@/'$UNBOUND_PORT'/' -e 's/@TOPORT\@/'$FWD_PORT'/' < ssl_req_timeout.conf > ub.conf
 # start unbound in the background
 PRE="../.."
-valgrind $PRE/unbound -vvvv -d -c ub.conf >unbound.log 2>&1 &
+$PRE/unbound -vvvv -d -c ub.conf >unbound.log 2>&1 &
 UNBOUND_PID=$!
 echo "UNBOUND_PID=$UNBOUND_PID" >> .tpkg.var.test
 
