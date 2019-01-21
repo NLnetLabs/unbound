@@ -1620,6 +1620,10 @@ tcp_req_info_setup_listen(struct tcp_req_info* req)
 		req->cp->tcp_is_reading = 1;
 		comm_point_start_listening(req->cp, -1,
 			req->cp->tcp_timeout_msec);
+		/* and also read it (from SSL stack buffers), so
+		 * no event read event is expected since the remainder of
+		 * the TLS frame is sitting in the buffers. */
+		req->read_again = 1;
 	} else {
 		comm_point_start_listening(req->cp, -1,
 			req->cp->tcp_timeout_msec);

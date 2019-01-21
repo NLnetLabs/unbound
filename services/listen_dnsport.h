@@ -258,6 +258,8 @@ struct tcp_req_info {
 	int is_reply;
 	/** read channel has closed, just write pending results */
 	int read_is_closed;
+	/** read again */
+	int read_again;
 	/** number of outstanding requests */
 	int num_open_req;
 	/** list of outstanding requests */

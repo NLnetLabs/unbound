@@ -1353,6 +1353,17 @@ ssl_handle_write(struct comm_point* c)
 static int
 ssl_handle_it(struct comm_point* c)
 {
+	if(c->tcp_req_info) {
+		do {
+			int r;
+			c->tcp_req_info->read_again = 0;
+			if(c->tcp_is_reading)
+				r = ssl_handle_read(c);
+			else r = ssl_handle_write(c);
+			if(!r) return r;
+		} while (c->tcp_req_info->read_again);
+		return 1;
+	}
 	if(c->tcp_is_reading)
 		return ssl_handle_read(c);
 	return ssl_handle_write(c);
