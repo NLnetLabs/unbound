@@ -1,6 +1,7 @@
 21 January 2018: Wouter
 	- Fix tcp idle timeout test, for difference in the tcp reply code.
 	- Unit test for tcp request reorder and timeouts.
+	- Unit tests for ssl out of order processing.
 
 17 January 2018: Wouter
 	- For caps-for-id fallback, use the whitelist to avoid timeout
