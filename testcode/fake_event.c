@@ -1816,4 +1816,10 @@ tcp_req_info_remove_mesh_state(struct tcp_req_info* ATTR_UNUSED(req),
 	log_assert(0);
 }
 
+size_t
+tcp_req_info_get_stream_buffer_size(void)
+{
+	return 0;
+}
+
 /*********** End of Dummy routines ***********/
