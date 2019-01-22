@@ -5658,7 +5658,8 @@ auth_xfer_transfer_tcp_callback(struct comm_point* c, void* arg, int err,
 		auth_chunks_delete(xfr->task_transfer);
 		comm_point_delete(xfr->task_transfer->cp);
 		xfr->task_transfer->cp = NULL;
-		xfr_transfer_nextmaster(xfr);
+		if(gonextonfail)
+			xfr_transfer_nextmaster(xfr);
 		xfr_transfer_nexttarget_or_end(xfr, env);
 		return 0;
 	}
