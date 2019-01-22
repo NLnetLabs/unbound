@@ -378,6 +378,8 @@ struct auth_transfer {
 	 * data or add of duplicate data).  Flag is cleared once the retry
 	 * with axfr is done. */
 	int ixfr_fail;
+	/** we saw an ixfr-indicating timeout, count of them */
+	int ixfr_possible_timeout_count;
 	/** we are doing IXFR right now */
 	int on_ixfr;
 	/** did we detect the current AXFR/IXFR serial number yet, 0 not yet,

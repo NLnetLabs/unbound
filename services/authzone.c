@@ -88,6 +88,9 @@
 #define AUTH_HTTPS_PORT 443
 /* max depth for nested $INCLUDEs */
 #define MAX_INCLUDE_DEPTH 10
+/** number of timeouts before we fallback from IXFR to AXFR,
+ * because some versions of servers (eg. dnsmasq) drop IXFR packets. */
+#define NUM_TIMEOUTS_FALLBACK_IXFR 3
 
 /** pick up nextprobe task to start waiting to perform transfer actions */
 static void xfr_set_timeout(struct auth_xfer* xfr, struct module_env* env,
@@ -5636,6 +5639,20 @@ auth_xfer_transfer_tcp_callback(struct comm_point* c, void* arg, int err,
 		 * and continue task_transfer*/
 		verbose(VERB_ALGO, "xfr stopped, connection lost to %s",
 			xfr->task_transfer->master->host);
+
+		/* see if IXFR caused the failure, if so, try AXFR */
+		if(xfr->task_transfer->on_ixfr) {
+			xfr->task_transfer->ixfr_possible_timeout_count++;
+			if(xfr->task_transfer->ixfr_possible_timeout_count >=
+				NUM_TIMEOUTS_FALLBACK_IXFR) {
+				verbose(VERB_ALGO, "xfr to %s, fallback "
+					"from IXFR to AXFR (because of timeouts)",
+					xfr->task_transfer->master->host);
+				xfr->task_transfer->ixfr_fail = 1;
+				gonextonfail = 0;
+			}
+		}
+
 	failed:
 		/* delete transferred data from list */
 		auth_chunks_delete(xfr->task_transfer);
@@ -5645,6 +5662,7 @@ auth_xfer_transfer_tcp_callback(struct comm_point* c, void* arg, int err,
 		xfr_transfer_nexttarget_or_end(xfr, env);
 		return 0;
 	}
+	xfr->task_transfer->ixfr_possible_timeout_count = 0;
 
 	/* handle returned packet */
 	/* if it fails, cleanup and end this transfer */
