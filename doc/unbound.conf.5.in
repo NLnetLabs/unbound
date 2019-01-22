@@ -207,6 +207,16 @@ Maximum UDP response size (not applied to TCP response).  65536 disables the
 udp response size maximum, and uses the choice from the client, always.
 Suggested values are 512 to 4096. Default is 4096.
 .TP
+.B stream\-wait\-size: \fI<number>
+Number of bytes size maximum to use for waiting stream buffers.  Default is
+4 megabytes.  A plain number is in bytes, append 'k', 'm' or 'g' for kilobytes,
+megabytes or gigabytes (1024*1024 bytes in a megabyte).  As TCP and TLS streams
+queue up multiple results, the amount of memory used for these buffers does
+not exceed this number, otherwise the responses are dropped.  This manages
+the total memory usage of the server (under heavy use), the number of requests
+that can be queued up per connection is also limited, with further requests
+waiting in TCP buffers.
+.TP
 .B msg\-buffer\-size: \fI<number>
 Number of bytes size of the message buffers. Default is 65552 bytes, enough
 for 64 Kb packets, the maximum DNS message size. No message larger than this

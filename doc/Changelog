@@ -1,5 +1,6 @@
 22 January 2018: Wouter
 	- Fix space calculation for tcp req buffer size.
+	- Doc for stream-wait-size and unit test.
 
 21 January 2018: Wouter
 	- Fix tcp idle timeout test, for difference in the tcp reply code.
