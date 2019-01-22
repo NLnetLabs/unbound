@@ -789,7 +789,8 @@ print_longnum(RES* ssl, const char* desc, size_t x)
 
 /** print mem stats */
 static int
-print_mem(RES* ssl, struct worker* worker, struct daemon* daemon)
+print_mem(RES* ssl, struct worker* worker, struct daemon* daemon,
+	struct ub_stats_info* s)
 {
 	size_t msg, rrset, val, iter, respip;
 #ifdef CLIENT_SUBNET
@@ -847,6 +848,9 @@ print_mem(RES* ssl, struct worker* worker, struct daemon* daemon)
 			dnscrypt_nonce))
 		return 0;
 #endif /* USE_DNSCRYPT */
+	if(!print_longnum(ssl, "mem.streamwait"SQ,
+		(size_t)s->svr.mem_stream_wait))
+		return 0;
 	return 1;
 }
 
@@ -1088,7 +1092,7 @@ do_stats(RES* ssl, struct daemon_remote* rc, int reset)
 	if(!print_uptime(ssl, rc->worker, reset))
 		return;
 	if(daemon->cfg->stat_extended) {
-		if(!print_mem(ssl, rc->worker, daemon)) 
+		if(!print_mem(ssl, rc->worker, daemon, &total)) 
 			return;
 		if(!print_hist(ssl, &total))
 			return;

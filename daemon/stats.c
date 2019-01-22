@@ -328,6 +328,7 @@ server_stats_compile(struct worker* worker, struct ub_stats_info* s, int reset)
 		}
 		lock_rw_unlock(&worker->env.auth_zones->lock);
 	}
+	s->svr.mem_stream_wait = tcp_req_info_get_stream_buffer_size();
 
 	/* Set neg cache usage numbers */
 	set_neg_cache_stats(worker, &s->svr, reset);
