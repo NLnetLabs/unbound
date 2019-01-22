@@ -1821,7 +1821,7 @@ tcp_req_info_add_result(struct tcp_req_info* req, uint8_t* buf, size_t len)
 		verbose(VERB_ALGO, "drop stream reply, no space left, in stream-wait-size");
 		return 0;
 	}
-	stream_wait_count += stream_wait_max;
+	stream_wait_count += space;
 	lock_basic_unlock(&stream_wait_count_lock);
 
 	/* find last element */
