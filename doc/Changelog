@@ -1,6 +1,7 @@
 23 January 2018: Wouter
 	- Patch from Manabu Sonoda with tls-ciphers and tls-ciphersuites
 	  options for unbound.conf.
+	- Fixes for the patch, and man page entry.
 
 22 January 2018: Wouter
 	- Fix space calculation for tcp req buffer size.

@@ -120,9 +120,9 @@ struct config_file {
 	int tls_win_cert;
 	/** additional tls ports */
 	struct config_strlist* tls_additional_port;
-	/** TLS chiper **/
+	/** TLS ciphers */
 	char* tls_ciphers;
-	/** TLS chipersuites (TLSv1.3) **/
+	/** TLS chipersuites (TLSv1.3) */
 	char* tls_ciphersuites;
 
 	/** outgoing port range number of ports (per thread) */

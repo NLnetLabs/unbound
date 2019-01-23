@@ -433,13 +433,13 @@ perform_setup(struct daemon* daemon, struct config_file* cfg, int debug_mode,
 			fatal_exit("could not set up listen SSL_CTX");
 		if(cfg->tls_ciphers && cfg->tls_ciphers[0]) {
 			if (!SSL_CTX_set_cipher_list(daemon->listen_sslctx, cfg->tls_ciphers)) {
-				fatal_exit("faild to set tls-cipher %s",cfg->tls_ciphers);
+				fatal_exit("failed to set tls-cipher %s", cfg->tls_ciphers);
 			}
 		}
 #if OPENSSL_VERSION_NUMBER >= 0x1010101
 		if(cfg->tls_ciphersuites && cfg->tls_ciphersuites[0]) {
 			if (!SSL_CTX_set_ciphersuites(daemon->listen_sslctx, cfg->tls_ciphersuites)) {
-				fatal_exit("faild to set tls-ciphersuites %s",cfg->tls_ciphersuites);
+				fatal_exit("failed to set tls-ciphersuites %s", cfg->tls_ciphersuites);
 			}
 		}
 #endif

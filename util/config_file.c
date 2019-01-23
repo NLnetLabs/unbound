@@ -487,8 +487,8 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	else S_STRLIST("additional-tls-port:", tls_additional_port)
 	else S_STRLIST("tls-additional-ports:", tls_additional_port)
 	else S_STRLIST("tls-additional-port:", tls_additional_port)
-	else S_STR("tls_ciphers:", tls_ciphers)
-	else S_STR("tls_ciphersuites:", tls_ciphersuites)
+	else S_STR("tls-ciphers:", tls_ciphers)
+	else S_STR("tls-ciphersuites:", tls_ciphersuites)
 	else S_YNO("interface-automatic:", if_automatic)
 	else S_YNO("use-systemd:", use_systemd)
 	else S_YNO("do-daemonize:", do_daemonize)
@@ -1362,6 +1362,8 @@ config_delete(struct config_file* cfg)
 	free(cfg->ssl_service_pem);
 	free(cfg->tls_cert_bundle);
 	config_delstrlist(cfg->tls_additional_port);
+	free(cfg->tls_ciphers);
+	free(cfg->tls_ciphersuites);
 	free(cfg->log_identity);
 	config_del_strarray(cfg->ifs, cfg->num_ifs);
 	config_del_strarray(cfg->out_ifs, cfg->num_out_ifs);

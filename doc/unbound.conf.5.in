@@ -504,6 +504,14 @@ List portnumbers as tls\-additional\-port, and when interfaces are defined,
 eg. with the @port suffix, as this port number, they provide dns over TLS
 service.  Can list multiple, each on a new statement.
 .TP
+.B tls\-ciphers: \fI<string with cipher list>
+Set the list of ciphers to allow when serving TLS.  Use "" for defaults,
+and that is the default.
+.TP
+.B tls\-ciphersuites: \fI<string with ciphersuites list>
+Set the list of ciphersuites to allow when serving TLS.  This is for newer
+TLS 1.3 connections.  Use "" for defaults, and that is the default.
+.TP
 .B use\-systemd: \fI<yes or no>
 Enable or disable systemd socket activation.
 Default is no.
