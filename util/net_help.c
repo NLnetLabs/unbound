@@ -1101,7 +1101,7 @@ void ub_openssl_lock_delete(void)
 
 int listen_sslctx_setup_ticket_keys(void* sslctx, struct config_strlist* tls_session_ticket_keys) {
 #ifdef HAVE_SSL
-	int s = 1;
+	size_t s = 1;
 	struct config_strlist* p;
 	struct tls_session_ticket_key *keys;
 	for(p = tls_session_ticket_keys; p; p = p->next) {
@@ -1112,18 +1112,20 @@ int listen_sslctx_setup_ticket_keys(void* sslctx, struct config_strlist* tls_ses
 	ticket_keys = keys;
 
 	for(p = tls_session_ticket_keys; p; p = p->next) {
-		int n;
+		size_t n;
 		unsigned char *data = (unsigned char *)malloc(80);
 		FILE *f = fopen(p->str, "r");
 		if(!f) {
 			log_err("could not read tls-session-ticket-key  %s: %s", p->str, strerror(errno));
+			free(data);
 			return 0;
 		}
 		n = fread(data, 1, 80, f);
 		fclose(f);
 
 		if(n != 80) {
-			log_err("tls-session-ticket-key %s is %d bytes, must be 80 bytes", p->str, n);
+			log_err("tls-session-ticket-key %s is %d bytes, must be 80 bytes", p->str, (int)n);
+			free(data);
 			return 0;
 		}
 		verbose(VERB_OPS, "read tls-session-ticket-key: %s", p->str);
