@@ -1116,7 +1116,7 @@ int listen_sslctx_setup_ticket_keys(void* sslctx, struct config_strlist* tls_ses
 		unsigned char *data = (unsigned char *)malloc(80);
 		FILE *f = fopen(p->str, "r");
 		if(!f) {
-			log_err("could not read tls-session-ticket-key  %s: %s", p->str, strerror(errno));
+			log_err("could not read tls-session-ticket-key %s: %s", p->str, strerror(errno));
 			free(data);
 			return 0;
 		}
