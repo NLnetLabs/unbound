@@ -122,7 +122,7 @@ struct config_file {
 	struct config_strlist* tls_additional_port;
 	/** TLS ciphers */
 	char* tls_ciphers;
-	/** TLS chipersuites (TLSv1.3) */
+	/** TLS chiphersuites (TLSv1.3) */
 	char* tls_ciphersuites;
 
 	/** outgoing port range number of ports (per thread) */
