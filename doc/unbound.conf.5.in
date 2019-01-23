@@ -504,6 +504,16 @@ List portnumbers as tls\-additional\-port, and when interfaces are defined,
 eg. with the @port suffix, as this port number, they provide dns over TLS
 service.  Can list multiple, each on a new statement.
 .TP
+.B tls-session-ticket-keys: \fI<file>
+If not "", lists files with 80 bytes of random contents that are used to
+perform TLS session resumption for clients using the unbound server.
+These files contain the secret key for the TLS session tickets.
+First key use to encrypt and decrypt TLS session tickets.
+Other keys use to decrypt only.  With this you can roll over to new keys,
+by generating a new first file and allowing decrypt of the old file by
+listing it after the first file for some time, after the wait clients are not
+using the old key any more and the old key can be removed.
+.TP
 .B tls\-ciphers: \fI<string with cipher list>
 Set the list of ciphers to allow when serving TLS.  Use "" for defaults,
 and that is the default.

@@ -682,8 +682,6 @@ struct ub_server_stats {
 	long long qtcp_outgoing;
 	/** number of queries over (DNS over) TLS */
 	long long qtls;
-	/** number of TLS connection resume */
-	long long qtls_resume;
 	/** number of queries over IPv6 */
 	long long qipv6;
 	/** number of queries with QR bit */
@@ -774,6 +772,8 @@ struct ub_server_stats {
 	long long num_query_subnet_cache;
 	/** number of bytes in the stream wait buffers */
 	long long mem_stream_wait;
+	/** number of TLS connection resume */
+	long long qtls_resume;
 };
 
 /** 
