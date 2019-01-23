@@ -720,6 +720,14 @@ server:
 	# cipher setting for TLSv1.3 
 	# tls-ciphersuites: "TLS_AES_128_GCM_SHA256:TLS_AES_128_CCM_8_SHA256:TLS_AES_128_CCM_SHA256:TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256"
 
+	# Add the secret file for TLS Session Ticket.
+	# Secret file must be 80 bytes of random data.
+	# First key use to encrypt and decrypt TLS session tickets.
+	# Other keys use to decrypt only.
+	# requires restart to take effect.
+	# tls-session-ticket-keys: "path/to/secret_file1"
+	# tls-session-ticket-keys: "path/to/secret_file2"
+
 	# request upstream over TLS (with plain DNS inside the TLS stream).
 	# Default is no.  Can be turned on and off with unbound-control.
 	# tls-upstream: no

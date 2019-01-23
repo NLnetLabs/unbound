@@ -42,6 +42,7 @@
 #ifndef NET_HELP_H
 #define NET_HELP_H
 #include "util/log.h"
+#include "util/config_file.h"
 struct sock_list;
 struct regional;
 
@@ -437,4 +438,24 @@ int ub_openssl_lock_init(void);
  */
 void ub_openssl_lock_delete(void);
 
+/**
+ * setup TLS session ticket
+ * @param sslctx: the SSL_CTX to use (from connect_sslctx_create())
+ * @param tls_session_ticket_keys: TLS ticket secret filenames
+ * @return false on failure (alloc failure).
+ */
+int listen_sslctx_setup_ticket_keys(void* sslctx, struct config_strlist* tls_session_ticket_keys);
+
+/**
+ * callback TLS session ticket encrypt and decrypt
+ * @param s: the SSL_CTX to use (from connect_sslctx_create())
+ * @param key_name: secret name
+ * @param iv: 
+ * @param evp_ctx:
+ * @param hmac_ctx:
+ * @param enc: 1 is encrypt, 0 is decrypt
+ * @return false on failure (alloc failure).
+ */
+
+int tls_session_ticket_key_cb(void *s, unsigned char* key_name,unsigned char* iv, void *evp_ctx, void *hmac_ctx, int enc);
 #endif /* NET_HELP_H */

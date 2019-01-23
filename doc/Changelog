@@ -4,6 +4,8 @@
 	- Fixes for the patch, and man page entry.
 	- Fix configure to detect SSL_CTX_set_ciphersuites, for better
 	  library compatibility when compiling.
+	- Patch for TLS session resumption from Manabu Sonoda,
+	  enable with tls-session-ticket-keys in unbound.conf.
 
 22 January 2018: Wouter
 	- Fix space calculation for tcp req buffer size.

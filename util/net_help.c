@@ -48,6 +48,7 @@
 #include <fcntl.h>
 #ifdef HAVE_OPENSSL_SSL_H
 #include <openssl/ssl.h>
+#include <openssl/evp.h>
 #endif
 #ifdef HAVE_OPENSSL_ERR_H
 #include <openssl/err.h>
@@ -69,6 +70,12 @@ int RRSET_ROUNDROBIN = 0;
 
 /** log tag queries with name instead of 'info' for filtering */
 int LOG_TAG_QUERYREPLY = 0;
+
+static struct tls_session_ticket_key {
+    unsigned char *key_name;
+    unsigned char *aes_key;
+    unsigned char *hmac_key;
+} *ticket_keys;
 
 /* returns true is string addr is an ip6 specced address */
 int
@@ -1090,3 +1097,106 @@ void ub_openssl_lock_delete(void)
 #endif /* OPENSSL_THREADS */
 }
 
+int listen_sslctx_setup_ticket_keys(void* sslctx, struct config_strlist* tls_session_ticket_keys) {
+#ifdef HAVE_SSL
+	int s = 1;
+	struct config_strlist* p;
+	struct tls_session_ticket_key *keys;
+	for(p = tls_session_ticket_keys; p; p = p->next) {
+		s++;
+	}
+	keys = calloc(s, sizeof(struct tls_session_ticket_key));
+	memset(keys, 0, sizeof(keys));
+	ticket_keys = keys;
+
+	for(p = tls_session_ticket_keys; p; p = p->next) {
+		unsigned char *data = (unsigned char *)malloc(80);
+		FILE *f = fopen(p->str, "r");
+		if(!f) {
+			log_err("could not read tls-session-ticket-key  %s: %s", p->str, strerror(errno));
+			return 0;
+		}
+		int n = fread(data, 1, 80, f);
+		fclose(f);
+
+		if(n != 80) {
+			log_err("tls-session-ticket-key %s is %d bytes, must be 80 bytes", p->str, n);
+			return 0;
+		}
+		verbose(VERB_OPS, "read tls-session-ticket-key: %s", p->str);
+
+		keys->key_name = data;
+		keys->aes_key = data + 16;
+		keys->hmac_key = data + 48;
+		keys++;
+	}
+	keys->key_name = NULL;
+    if(SSL_CTX_set_tlsext_ticket_key_cb(sslctx, tls_session_ticket_key_cb) == 0) {
+		log_err("not support TLS session ticket");
+		return 0;
+    }
+    return 1;
+#else
+	return 0;
+#endif
+
+}
+
+int tls_session_ticket_key_cb(void *sslctx, unsigned char* key_name,unsigned char* iv, void *evp_sctx, void *hmac_ctx, int enc)
+{
+#ifdef HAVE_SSL
+    const EVP_MD                  *digest;
+    const EVP_CIPHER              *cipher;
+	int evp_chiper_length;
+	digest = EVP_sha256();
+	cipher = EVP_aes_256_cbc();
+	evp_chiper_length = EVP_CIPHER_iv_length(cipher);
+	if( enc == 1 ) {
+		// encrypt
+		verbose(VERB_CLIENT, "start session encrypt");
+		memcpy(key_name, ticket_keys->key_name, 16);
+		if (RAND_bytes(iv, evp_chiper_length) != 1) {
+			verbose(VERB_CLIENT, "RAND_bytes failed");
+            return -1;
+		}
+        if (EVP_EncryptInit_ex(evp_sctx, cipher, NULL, ticket_keys->aes_key, iv) != 1) {
+			verbose(VERB_CLIENT, "EVP_EncryptInit_ex failed");
+            return -1;
+		}
+        if (HMAC_Init_ex(hmac_ctx, ticket_keys->hmac_key, 32, digest, NULL) != 1) {
+			verbose(VERB_CLIENT, "HMAC_Init_ex failed");
+            return -1;
+        }
+        return 1;
+    } else if (enc == 0) {
+		//decrypt
+		verbose(VERB_CLIENT, "start session decrypt");
+		struct tls_session_ticket_key *key;
+		for(key = ticket_keys; key->key_name != NULL; key++) {
+        	if (!memcmp(key_name, key->key_name, 16)) {
+				verbose(VERB_CLIENT, "Found session_key");
+				break;
+			}
+		}
+		if(key->key_name == NULL) {
+			verbose(VERB_CLIENT, "Not found session_key");
+			return 0;
+		}
+
+        if (HMAC_Init_ex(hmac_ctx, key->hmac_key, 32, digest, NULL) != 1) {
+			verbose(VERB_CLIENT, "HMAC_Init_ex failed");
+            return -1;
+        }
+        if (EVP_DecryptInit_ex(evp_sctx, cipher, NULL, key->aes_key, iv) != 1) {
+			log_err("EVP_DecryptInit_ex failed");
+            return -1;
+        }
+
+		return (key == ticket_keys) ? 1 : 2;
+	}
+    return -1;
+#else
+	return 0;
+#endif
+
+}

@@ -166,6 +166,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_FORWARD_NO_CACHE VAR_STUB_NO_CACHE VAR_LOG_SERVFAIL VAR_DENY_ANY
 %token VAR_UNKNOWN_SERVER_TIME_LIMIT VAR_LOG_TAG_QUERYREPLY
 %token VAR_STREAM_WAIT_SIZE VAR_TLS_CIPHERS VAR_TLS_CIPHERSUITES
+%token VAR_TLS_SESSION_TICKET_KEYS
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -265,7 +266,8 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_fast_server_permil | server_fast_server_num  | server_tls_win_cert |
 	server_tcp_connection_limit | server_log_servfail | server_deny_any |
 	server_unknown_server_time_limit | server_log_tag_queryreply |
-	server_stream_wait_size | server_tls_ciphers | server_tls_ciphersuites
+	server_stream_wait_size | server_tls_ciphers |
+	server_tls_ciphersuites | server_tls_session_ticket_keys
 	;
 stubstart: VAR_STUB_ZONE
 	{
@@ -832,6 +834,14 @@ server_tls_ciphersuites: VAR_TLS_CIPHERSUITES STRING_ARG
 		OUTYY(("P(server_tls_ciphersuites:%s)\n", $2));
 		free(cfg_parser->cfg->tls_ciphersuites);
 		cfg_parser->cfg->tls_ciphersuites = $2;
+	}
+	;
+server_tls_session_ticket_keys: VAR_TLS_SESSION_TICKET_KEYS STRING_ARG
+	{
+		OUTYY(("P(server_tls_session_ticket_keys:%s)\n", $2));
+		if(!cfg_strlist_insert(&cfg_parser->cfg->tls_session_ticket_keys,
+			$2))
+			yyerror("out of memory");
 	}
 	;
 server_use_systemd: VAR_USE_SYSTEMD STRING_ARG

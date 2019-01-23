@@ -487,6 +487,7 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	else S_STRLIST("additional-tls-port:", tls_additional_port)
 	else S_STRLIST("tls-additional-ports:", tls_additional_port)
 	else S_STRLIST("tls-additional-port:", tls_additional_port)
+	else S_STRLIST("tls-session-ticket-keys:", tls_session_ticket_keys)
 	else S_STR("tls-ciphers:", tls_ciphers)
 	else S_STR("tls-ciphersuites:", tls_ciphersuites)
 	else S_YNO("interface-automatic:", if_automatic)
@@ -926,6 +927,7 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_STR(opt, "tls-cert-bundle", tls_cert_bundle)
 	else O_YNO(opt, "tls-win-cert", tls_win_cert)
 	else O_LST(opt, "tls-additional-port", tls_additional_port)
+	else O_LST(opt, "tls-session-ticket-keys", tls_session_ticket_keys)
 	else O_STR(opt, "tls-ciphers", tls_ciphers)
 	else O_STR(opt, "tls-ciphersuites", tls_ciphersuites)
 	else O_YNO(opt, "use-systemd", use_systemd)
@@ -1362,6 +1364,7 @@ config_delete(struct config_file* cfg)
 	free(cfg->ssl_service_pem);
 	free(cfg->tls_cert_bundle);
 	config_delstrlist(cfg->tls_additional_port);
+	config_delstrlist(cfg->tls_session_ticket_keys);
 	free(cfg->tls_ciphers);
 	free(cfg->tls_ciphersuites);
 	free(cfg->log_identity);
