@@ -121,7 +121,7 @@ struct config_file {
 	/** additional tls ports */
 	struct config_strlist* tls_additional_port;
 	/** secret key used to encrypt and decrypt TLS session ticket */
-	struct config_strlist* tls_session_ticket_keys;
+	struct config_strlist_head tls_session_ticket_keys;
 	/** TLS ciphers */
 	char* tls_ciphers;
 	/** TLS chiphersuites (TLSv1.3) */

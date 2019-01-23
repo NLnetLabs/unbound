@@ -443,8 +443,8 @@ perform_setup(struct daemon* daemon, struct config_file* cfg, int debug_mode,
 			}
 		}
 #endif
-		if(cfg->tls_session_ticket_keys) {
-			if(!listen_sslctx_setup_ticket_keys(daemon->listen_sslctx, cfg->tls_session_ticket_keys)) {
+		if(cfg->tls_session_ticket_keys.first) {
+			if(!listen_sslctx_setup_ticket_keys(daemon->listen_sslctx, cfg->tls_session_ticket_keys.first)) {
 				fatal_exit("could not set session ticket SSL_CTX");
 			}
 		}

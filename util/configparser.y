@@ -839,7 +839,7 @@ server_tls_ciphersuites: VAR_TLS_CIPHERSUITES STRING_ARG
 server_tls_session_ticket_keys: VAR_TLS_SESSION_TICKET_KEYS STRING_ARG
 	{
 		OUTYY(("P(server_tls_session_ticket_keys:%s)\n", $2));
-		if(!cfg_strlist_insert(&cfg_parser->cfg->tls_session_ticket_keys,
+		if(!cfg_strlist_append(&cfg_parser->cfg->tls_session_ticket_keys,
 			$2))
 			yyerror("out of memory");
 	}
