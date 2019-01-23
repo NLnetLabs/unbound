@@ -165,7 +165,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_ALLOW_NOTIFY VAR_TLS_WIN_CERT VAR_TCP_CONNECTION_LIMIT
 %token VAR_FORWARD_NO_CACHE VAR_STUB_NO_CACHE VAR_LOG_SERVFAIL VAR_DENY_ANY
 %token VAR_UNKNOWN_SERVER_TIME_LIMIT VAR_LOG_TAG_QUERYREPLY
-%token VAR_STREAM_WAIT_SIZE
+%token VAR_STREAM_WAIT_SIZE VAR_TLS_CIPHERS VAR_TLS_CIPHERSUITES
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -265,7 +265,7 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_fast_server_permil | server_fast_server_num  | server_tls_win_cert |
 	server_tcp_connection_limit | server_log_servfail | server_deny_any |
 	server_unknown_server_time_limit | server_log_tag_queryreply |
-	server_stream_wait_size
+	server_stream_wait_size | server_tls_ciphers | server_tls_ciphersuites
 	;
 stubstart: VAR_STUB_ZONE
 	{
@@ -818,6 +818,20 @@ server_tls_additional_port: VAR_TLS_ADDITIONAL_PORT STRING_ARG
 		if(!cfg_strlist_insert(&cfg_parser->cfg->tls_additional_port,
 			$2))
 			yyerror("out of memory");
+	}
+	;
+server_tls_ciphers: VAR_TLS_CIPHERS STRING_ARG
+	{
+		OUTYY(("P(server_tls_ciphers:%s)\n", $2));
+		free(cfg_parser->cfg->tls_ciphers);
+		cfg_parser->cfg->tls_ciphers = $2;
+	}
+	;
+server_tls_ciphersuites: VAR_TLS_CIPHERSUITES STRING_ARG
+	{
+		OUTYY(("P(server_tls_ciphersuites:%s)\n", $2));
+		free(cfg_parser->cfg->tls_ciphersuites);
+		cfg_parser->cfg->tls_ciphersuites = $2;
 	}
 	;
 server_use_systemd: VAR_USE_SYSTEMD STRING_ARG

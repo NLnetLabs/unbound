@@ -715,6 +715,11 @@ server:
 	# tls-service-pem: "path/to/publiccertfile.pem"
 	# tls-port: 853
 
+	# cipher setting for TLSv1.2
+	# tls-chiphers: "DHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-SHA256:DHE-RSA-AES128-SHA256:ECDHE-RSA-AES256-SHA384:ECDHE-RSA-AES128-SHA256"
+	# cipher setting for TLSv1.3 
+	# tls-ciphersuites: "TLS_AES_128_GCM_SHA256:TLS_AES_128_CCM_8_SHA256:TLS_AES_128_CCM_SHA256:TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256"
+
 	# request upstream over TLS (with plain DNS inside the TLS stream).
 	# Default is no.  Can be turned on and off with unbound-control.
 	# tls-upstream: no
