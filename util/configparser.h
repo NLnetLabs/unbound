@@ -305,7 +305,9 @@ extern int yydebug;
     VAR_DENY_ANY = 515,
     VAR_UNKNOWN_SERVER_TIME_LIMIT = 516,
     VAR_LOG_TAG_QUERYREPLY = 517,
-    VAR_STREAM_WAIT_SIZE = 518
+    VAR_STREAM_WAIT_SIZE = 518,
+    VAR_TLS_CIPHERS = 519,
+    VAR_TLS_CIPHERSUITES = 520
   };
 #endif
 /* Tokens.  */
@@ -570,6 +572,8 @@ extern int yydebug;
 #define VAR_UNKNOWN_SERVER_TIME_LIMIT 516
 #define VAR_LOG_TAG_QUERYREPLY 517
 #define VAR_STREAM_WAIT_SIZE 518
+#define VAR_TLS_CIPHERS 519
+#define VAR_TLS_CIPHERSUITES 520
 
 /* Value type.  */
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
@@ -580,7 +584,7 @@ union YYSTYPE
 
 	char*	str;
 
-#line 584 "util/configparser.h" /* yacc.c:1909  */
+#line 588 "util/configparser.h" /* yacc.c:1909  */
 };
 
 typedef union YYSTYPE YYSTYPE;
