@@ -9,6 +9,7 @@
 	- Fixes for patch (includes, declarations, warnings).  Free at end
 	  and keep config options in order read from file to keep the first
 	  one as the first one.
+	- Fix for IXFR fallback to reset counter when IXFR does not timeout.
 
 22 January 2018: Wouter
 	- Fix space calculation for tcp req buffer size.

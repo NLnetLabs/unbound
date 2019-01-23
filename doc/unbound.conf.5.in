@@ -513,6 +513,9 @@ Other keys use to decrypt only.  With this you can roll over to new keys,
 by generating a new first file and allowing decrypt of the old file by
 listing it after the first file for some time, after the wait clients are not
 using the old key any more and the old key can be removed.
+One way to create the file is dd if=/dev/random bs=1 count=80 of=ticket.dat
+The first 16 bytes should be different from the old one if you create a second key, that is the name used to identify the key.  Then there is 32 bytes random
+data for an AES key and then 32 bytes random data for the HMAC key.
 .TP
 .B tls\-ciphers: \fI<string with cipher list>
 Set the list of ciphers to allow when serving TLS.  Use "" for defaults,

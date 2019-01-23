@@ -5663,7 +5663,9 @@ auth_xfer_transfer_tcp_callback(struct comm_point* c, void* arg, int err,
 		xfr_transfer_nexttarget_or_end(xfr, env);
 		return 0;
 	}
-	xfr->task_transfer->ixfr_possible_timeout_count = 0;
+	/* note that IXFR worked without timeout */
+	if(xfr->task_transfer->on_ixfr)
+		xfr->task_transfer->ixfr_possible_timeout_count = 0;
 
 	/* handle returned packet */
 	/* if it fails, cleanup and end this transfer */
