@@ -120,7 +120,7 @@ struct config_file {
 	int tls_win_cert;
 	/** additional tls ports */
 	struct config_strlist* tls_additional_port;
-	/** secret key used to encrypt and decrypt TLS session ticket -**/
+	/** secret key used to encrypt and decrypt TLS session ticket */
 	struct config_strlist* tls_session_ticket_keys;
 	/** TLS ciphers */
 	char* tls_ciphers;

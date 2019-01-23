@@ -42,9 +42,9 @@
 #ifndef NET_HELP_H
 #define NET_HELP_H
 #include "util/log.h"
-#include "util/config_file.h"
 struct sock_list;
 struct regional;
+struct config_strlist;
 
 /** DNS constants for uint16_t style flag manipulation. host byteorder. 
  *                                1  1  1  1  1  1

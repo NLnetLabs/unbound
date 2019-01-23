@@ -43,12 +43,14 @@
 #include "util/data/dname.h"
 #include "util/module.h"
 #include "util/regional.h"
+#include "util/config_file.h"
 #include "sldns/parseutil.h"
 #include "sldns/wire2str.h"
 #include <fcntl.h>
 #ifdef HAVE_OPENSSL_SSL_H
 #include <openssl/ssl.h>
 #include <openssl/evp.h>
+#include <openssl/rand.h>
 #endif
 #ifdef HAVE_OPENSSL_ERR_H
 #include <openssl/err.h>
@@ -1106,17 +1108,18 @@ int listen_sslctx_setup_ticket_keys(void* sslctx, struct config_strlist* tls_ses
 		s++;
 	}
 	keys = calloc(s, sizeof(struct tls_session_ticket_key));
-	memset(keys, 0, sizeof(keys));
+	memset(keys, 0, sizeof(*keys));
 	ticket_keys = keys;
 
 	for(p = tls_session_ticket_keys; p; p = p->next) {
+		int n;
 		unsigned char *data = (unsigned char *)malloc(80);
 		FILE *f = fopen(p->str, "r");
 		if(!f) {
 			log_err("could not read tls-session-ticket-key  %s: %s", p->str, strerror(errno));
 			return 0;
 		}
-		int n = fread(data, 1, 80, f);
+		n = fread(data, 1, 80, f);
 		fclose(f);
 
 		if(n != 80) {
@@ -1132,7 +1135,7 @@ int listen_sslctx_setup_ticket_keys(void* sslctx, struct config_strlist* tls_ses
 	}
 	keys->key_name = NULL;
     if(SSL_CTX_set_tlsext_ticket_key_cb(sslctx, tls_session_ticket_key_cb) == 0) {
-		log_err("not support TLS session ticket");
+		log_err("no support for TLS session ticket");
 		return 0;
     }
     return 1;
@@ -1142,7 +1145,7 @@ int listen_sslctx_setup_ticket_keys(void* sslctx, struct config_strlist* tls_ses
 
 }
 
-int tls_session_ticket_key_cb(void *sslctx, unsigned char* key_name,unsigned char* iv, void *evp_sctx, void *hmac_ctx, int enc)
+int tls_session_ticket_key_cb(void *ATTR_UNUSED(sslctx), unsigned char* key_name,unsigned char* iv, void *evp_sctx, void *hmac_ctx, int enc)
 {
 #ifdef HAVE_SSL
     const EVP_MD                  *digest;
@@ -1152,7 +1155,7 @@ int tls_session_ticket_key_cb(void *sslctx, unsigned char* key_name,unsigned cha
 	cipher = EVP_aes_256_cbc();
 	evp_chiper_length = EVP_CIPHER_iv_length(cipher);
 	if( enc == 1 ) {
-		// encrypt
+		/* encrypt */
 		verbose(VERB_CLIENT, "start session encrypt");
 		memcpy(key_name, ticket_keys->key_name, 16);
 		if (RAND_bytes(iv, evp_chiper_length) != 1) {
@@ -1169,9 +1172,9 @@ int tls_session_ticket_key_cb(void *sslctx, unsigned char* key_name,unsigned cha
         }
         return 1;
     } else if (enc == 0) {
-		//decrypt
-		verbose(VERB_CLIENT, "start session decrypt");
+		/* decrypt */
 		struct tls_session_ticket_key *key;
+		verbose(VERB_CLIENT, "start session decrypt");
 		for(key = ticket_keys; key->key_name != NULL; key++) {
         	if (!memcmp(key_name, key->key_name, 16)) {
 				verbose(VERB_CLIENT, "Found session_key");
