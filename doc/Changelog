@@ -30,6 +30,7 @@
 	  declaration shadows a local variable in libunbound.c
 	  no need for another variable "ns"; gets rid of compiler warning:
 	  declaration shadows a local variable in iterator.c
+	- Moved includes and make depend.
 
 23 January 2018: Wouter
 	- Patch from Manabu Sonoda with tls-ciphers and tls-ciphersuites

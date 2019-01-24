@@ -894,10 +894,10 @@ rtt.lo rtt.o: $(srcdir)/util/rtt.c config.h $(srcdir)/util/rtt.h $(srcdir)/itera
  $(srcdir)/services/outbound_list.h $(srcdir)/util/data/msgreply.h $(srcdir)/util/storage/lruhash.h \
  $(srcdir)/util/locks.h $(srcdir)/util/log.h $(srcdir)/util/data/packed_rrset.h $(srcdir)/util/module.h \
  $(srcdir)/util/data/msgparse.h $(srcdir)/sldns/pkthdr.h $(srcdir)/sldns/rrdef.h
-edns.lo edns.o: $(srcdir)/util/edns.c config.h $(srcdir)/util/config_file.h $(srcdir)/util/netevent.h \
- $(srcdir)/dnscrypt/dnscrypt.h  $(srcdir)/util/regional.h \
- $(srcdir)/util/data/msgparse.h $(srcdir)/util/storage/lruhash.h $(srcdir)/util/locks.h $(srcdir)/util/log.h \
- $(srcdir)/sldns/pkthdr.h $(srcdir)/sldns/rrdef.h $(srcdir)/util/data/msgreply.h \
+edns.lo edns.o: $(srcdir)/util/edns.c config.h $(srcdir)/util/edns.h $(srcdir)/util/config_file.h \
+ $(srcdir)/util/netevent.h $(srcdir)/dnscrypt/dnscrypt.h  \
+ $(srcdir)/util/regional.h $(srcdir)/util/data/msgparse.h $(srcdir)/util/storage/lruhash.h $(srcdir)/util/locks.h \
+ $(srcdir)/util/log.h $(srcdir)/sldns/pkthdr.h $(srcdir)/sldns/rrdef.h $(srcdir)/util/data/msgreply.h \
  $(srcdir)/util/data/packed_rrset.h
 dnstree.lo dnstree.o: $(srcdir)/util/storage/dnstree.c config.h $(srcdir)/util/storage/dnstree.h \
  $(srcdir)/util/rbtree.h $(srcdir)/util/data/dname.h $(srcdir)/util/storage/lruhash.h $(srcdir)/util/locks.h \
