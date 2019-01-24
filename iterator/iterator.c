@@ -2299,7 +2299,7 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 		errinf(qstate, "auth zone lookup failed, fallback is off");
 		return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
 	}
-	if(iq->dp && iq->dp->auth_dp) {
+	if(iq->dp->auth_dp) {
 		/* we wanted to fallback, but had no delegpt, only the
 		 * auth zone generated delegpt, create an actual one */
 		iq->auth_zone_avoid = 1;

@@ -2,6 +2,14 @@
 	- Newer aclocal and libtoolize used for generating configure scripts,
 	  aclocal 1.16.1 and libtoolize 2.4.6.
 	- Fix unit test for python 3.7 new keyword 'async'.
+	- clang analysis fixes, assert arc4random buffer in init,
+	  no check for already checked delegation pointer in iterator,
+	  in testcode check for NULL packet matches, in perf do not copy
+	  from NULL start list when growing capacity.  Adjust host and file
+	  only when present in test header read to please checker.  In
+	  testcode for unknown macro operand give zero result. Initialise the
+	  passed argv array in test code.  In test code add EDNS data
+	  segment copy only when nonempty.
 
 23 January 2018: Wouter
 	- Patch from Manabu Sonoda with tls-ciphers and tls-ciphersuites
