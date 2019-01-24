@@ -724,7 +724,7 @@ ub_resolve_event(struct ub_ctx* ctx, const char* name, int rrtype,
 		*async_id = 0;
 	lock_basic_lock(&ctx->cfglock);
 	if(!ctx->finalized) {
-		int r = context_finalize(ctx);
+		r = context_finalize(ctx);
 		if(r) {
 			lock_basic_unlock(&ctx->cfglock);
 			return r;

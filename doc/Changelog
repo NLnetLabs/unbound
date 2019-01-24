@@ -10,6 +10,26 @@
 	  testcode for unknown macro operand give zero result. Initialise the
 	  passed argv array in test code.  In test code add EDNS data
 	  segment copy only when nonempty.
+	- Patch from Florian Obser fixes some compiler warnings:
+	  include mini_event.h to have a prototype for mini_ev_cmp
+	  include edns.h to have a prototype for apply_edns_options
+	  sldns_wire2str_edns_keepalive_print is only called in the wire2str,
+	  module declare it static to get rid of compiler warning:
+	  no previous prototype for function
+	  infra_find_ip_ratedata() is only called in the infra module,
+	  declare it static to get rid of compiler warning:
+	  no previous prototype for function
+	  do not shadow local variable buf in authzone
+	  auth_chunks_delete and az_nsec3_findnode are only called in the
+	  authzone module, declare them static to get rid of compiler warning:
+	  no previous prototype for function...
+	  copy_rrset() is only called in the respip module, declare it
+	  static to get rid of compiler warning:
+	  no previous prototype for function 'copy_rrset'
+	  no need for another variable "r"; gets rid of compiler warning:
+	  declaration shadows a local variable in libunbound.c
+	  no need for another variable "ns"; gets rid of compiler warning:
+	  declaration shadows a local variable in iterator.c
 
 23 January 2018: Wouter
 	- Patch from Manabu Sonoda with tls-ciphers and tls-ciphersuites

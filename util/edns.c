@@ -42,6 +42,7 @@
 #include "config.h"
 
 #include "util/config_file.h"
+#include "util/edns.h"
 #include "util/netevent.h"
 #include "util/regional.h"
 #include "util/data/msgparse.h"

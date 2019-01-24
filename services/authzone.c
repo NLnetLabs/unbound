@@ -1982,7 +1982,7 @@ int auth_zones_apply_cfg(struct auth_zones* az, struct config_file* cfg,
  * @param at: transfer structure with chunks list.  The chunks and their
  * 	data are freed.
  */
-void
+static void
 auth_chunks_delete(struct auth_transfer* at)
 {
 	if(at->chunks_first) {
@@ -2621,7 +2621,7 @@ az_nsec3_hashname(struct auth_zone* z, uint8_t* hashname, size_t* hashnmlen,
 }
 
 /** Find the datanode that covers the nsec3hash-name */
-struct auth_data*
+static struct auth_data*
 az_nsec3_findnode(struct auth_zone* z, uint8_t* hashnm, size_t hashnmlen)
 {
 	struct query_info qinfo;
@@ -4997,12 +4997,12 @@ xfr_transfer_lookup_host(struct auth_xfer* xfr, struct module_env* env)
 		qinfo.qtype = LDNS_RR_TYPE_AAAA;
 	qinfo.local_alias = NULL;
 	if(verbosity >= VERB_ALGO) {
-		char buf[512];
+		char buf1[512];
 		char buf2[LDNS_MAX_DOMAINLEN+1];
 		dname_str(xfr->name, buf2);
-		snprintf(buf, sizeof(buf), "auth zone %s: master lookup"
+		snprintf(buf1, sizeof(buf1), "auth zone %s: master lookup"
 			" for task_transfer", buf2);
-		log_query_info(VERB_ALGO, buf, &qinfo);
+		log_query_info(VERB_ALGO, buf1, &qinfo);
 	}
 	edns.edns_present = 1;
 	edns.ext_rcode = 0;
@@ -6037,12 +6037,12 @@ xfr_probe_lookup_host(struct auth_xfer* xfr, struct module_env* env)
 		qinfo.qtype = LDNS_RR_TYPE_AAAA;
 	qinfo.local_alias = NULL;
 	if(verbosity >= VERB_ALGO) {
-		char buf[512];
+		char buf1[512];
 		char buf2[LDNS_MAX_DOMAINLEN+1];
 		dname_str(xfr->name, buf2);
-		snprintf(buf, sizeof(buf), "auth zone %s: master lookup"
+		snprintf(buf1, sizeof(buf1), "auth zone %s: master lookup"
 			" for task_probe", buf2);
-		log_query_info(VERB_ALGO, buf, &qinfo);
+		log_query_info(VERB_ALGO, buf1, &qinfo);
 	}
 	edns.edns_present = 1;
 	edns.ext_rcode = 0;

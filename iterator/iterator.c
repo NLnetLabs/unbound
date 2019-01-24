@@ -1882,7 +1882,6 @@ processLastResort(struct module_qstate* qstate, struct iter_qstate* iq,
 		struct delegpt* p = hints_lookup_root(qstate->env->hints,
 			iq->qchase.qclass);
 		if(p) {
-			struct delegpt_ns* ns;
 			struct delegpt_addr* a;
 			iq->chase_flags &= ~BIT_RD; /* go to authorities */
 			for(ns = p->nslist; ns; ns=ns->next) {
