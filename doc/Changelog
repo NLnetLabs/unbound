@@ -1,3 +1,7 @@
+24 January 2018: Wouter
+	- Newer aclocal and libtoolize used for generating configure scripts,
+	  aclocal 1.16.1 and libtoolize 2.4.6.
+
 23 January 2018: Wouter
 	- Patch from Manabu Sonoda with tls-ciphers and tls-ciphersuites
 	  options for unbound.conf.
