@@ -76,8 +76,10 @@
 /** number of simultaneous requests a client can have */
 #define TCP_MAX_REQ_SIMULTANEOUS 32
 
+#ifndef THREADS_DISABLED
 /** lock on the counter of stream buffer memory */
 static lock_basic_type stream_wait_count_lock;
+#endif
 /** size (in bytes) of stream wait buffers */
 static size_t stream_wait_count = 0;
 /** is the lock initialised for stream wait buffers */

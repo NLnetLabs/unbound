@@ -2,6 +2,7 @@
 	- Fix that tcp for auth zone and outgoing does not remove and
 	  then gets the ssl read again applied to the deleted commpoint.
 	- updated contrib/fastrpz.patch to cleanly diff.
+	- no lock when threads disabled in tcp request buffer count.
 
 24 January 2018: Wouter
 	- Newer aclocal and libtoolize used for generating configure scripts,
