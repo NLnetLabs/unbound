@@ -1143,6 +1143,8 @@ int listen_sslctx_setup_ticket_keys(void* sslctx, struct config_strlist* tls_ses
 	}
 	return 1;
 #else
+	(void)sslctx;
+	(void)tls_session_ticket_keys;
 	return 0;
 #endif
 
@@ -1202,6 +1204,11 @@ int tls_session_ticket_key_cb(void *ATTR_UNUSED(sslctx), unsigned char* key_name
 	}
 	return -1;
 #else
+	(void)key_name;
+	(void)iv;
+	(void)evp_sctx;
+	(void)hmac_ctx;
+	(void)enc;
 	return 0;
 #endif
 }
