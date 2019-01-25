@@ -1,3 +1,7 @@
+25 January 2018: Wouter
+	- Fix that tcp for auth zone and outgoing does not remove and
+	  then gets the ssl read again applied to the deleted commpoint.
+
 24 January 2018: Wouter
 	- Newer aclocal and libtoolize used for generating configure scripts,
 	  aclocal 1.16.1 and libtoolize 2.4.6.

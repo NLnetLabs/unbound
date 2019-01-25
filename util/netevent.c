@@ -1739,6 +1739,7 @@ comm_point_tcp_handle_callback(int fd, short event, void* arg)
 #endif
 
 	if(event&UB_EV_READ) {
+		int has_tcpq = (c->tcp_req_info != NULL);
 		if(!comm_point_tcp_handle_read(fd, c, 0)) {
 			reclaim_tcp_handler(c);
 			if(!c->tcp_do_close) {
@@ -1748,11 +1749,12 @@ comm_point_tcp_handle_callback(int fd, short event, void* arg)
 					NETEVENT_CLOSED, NULL);
 			}
 		}
-		if(c->tcp_req_info && c->tcp_req_info->read_again)
+		if(has_tcpq && c->tcp_req_info && c->tcp_req_info->read_again)
 			tcp_req_info_read_again(fd, c);
 		return;
 	}
 	if(event&UB_EV_WRITE) {
+		int has_tcpq = (c->tcp_req_info != NULL);
 		if(!comm_point_tcp_handle_write(fd, c)) {
 			reclaim_tcp_handler(c);
 			if(!c->tcp_do_close) {
@@ -1762,7 +1764,7 @@ comm_point_tcp_handle_callback(int fd, short event, void* arg)
 					NETEVENT_CLOSED, NULL);
 			}
 		}
-		if(c->tcp_req_info && c->tcp_req_info->read_again)
+		if(has_tcpq && c->tcp_req_info && c->tcp_req_info->read_again)
 			tcp_req_info_read_again(fd, c);
 		return;
 	}
