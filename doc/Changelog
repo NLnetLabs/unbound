@@ -1,4 +1,4 @@
-25 January 2018: Wouter
+25 January 2019: Wouter
 	- Fix that tcp for auth zone and outgoing does not remove and
 	  then gets the ssl read again applied to the deleted commpoint.
 	- updated contrib/fastrpz.patch to cleanly diff.
@@ -6,7 +6,7 @@
 	- remove compile warnings from libnettle compile.
 	- output of newer lex 2.6.1 and bison 3.0.5.
 
-24 January 2018: Wouter
+24 January 2019: Wouter
 	- Newer aclocal and libtoolize used for generating configure scripts,
 	  aclocal 1.16.1 and libtoolize 2.4.6.
 	- Fix unit test for python 3.7 new keyword 'async'.
@@ -40,7 +40,7 @@
 	  declaration shadows a local variable in iterator.c
 	- Moved includes and make depend.
 
-23 January 2018: Wouter
+23 January 2019: Wouter
 	- Patch from Manabu Sonoda with tls-ciphers and tls-ciphersuites
 	  options for unbound.conf.
 	- Fixes for the patch, and man page entry.
@@ -53,7 +53,7 @@
 	  one as the first one.
 	- Fix for IXFR fallback to reset counter when IXFR does not timeout.
 
-22 January 2018: Wouter
+22 January 2019: Wouter
 	- Fix space calculation for tcp req buffer size.
 	- Doc for stream-wait-size and unit test.
 	- unbound-control stats has mem.streamwait that counts TCP and TLS
@@ -62,7 +62,7 @@
 	  falls back to AXFR after IXFR gives several timeout failures.
 	- Fix that auth zone after IXFR fallback tries the same master.
 
-21 January 2018: Wouter
+21 January 2019: Wouter
 	- Fix tcp idle timeout test, for difference in the tcp reply code.
 	- Unit test for tcp request reorder and timeouts.
 	- Unit tests for ssl out of order processing.
@@ -71,38 +71,38 @@
 	  memory used by waiting tcp and tls stream replies.  This avoids
 	  a denial of service where these replies use up all of the memory.
 
-17 January 2018: Wouter
+17 January 2019: Wouter
 	- For caps-for-id fallback, use the whitelist to avoid timeout
 	  starting a fallback sequence for it.
 	- increase mesh max activation count for capsforid long fetches.
 
-16 January 2018: Ralph
+16 January 2019: Ralph
 	- Get ready for the DNS flag day: remove EDNS lame procedure, do not
 	  re-query without EDNS after timeout.
 
-15 January 2018: Wouter
+15 January 2019: Wouter
 	- In the out of order processing, reset byte count for (potential)
 	  partial read.
 	- Review fixes in out of order processing.
 
-14 January 2018: Wouter
+14 January 2019: Wouter
 	- streamtcp option -a send queries consecutively and prints answers
 	  as they arrive.
 	- Fix for out of order processing administration quit cleanup.
 	- unit test for tcp out of order processing.
 
-11 January 2018: Wouter
+11 January 2019: Wouter
 	- Initial commit for out-of-order processing for TCP and TLS.
 
-9 January 2018: Wouter
+9 January 2019: Wouter
 	- Log query name for looping module errors.
 
-8 January 2018: Wouter
+8 January 2019: Wouter
 	- Fix syntax in comment of local alias processing.
 	- Fix NSEC3 record that is returned in wildcard replies from
 	  auth-zone zones with NSEC3 and wildcards.
 
-7 January 2018: Wouter
+7 January 2019: Wouter
 	- On FreeBSD warn if systcl settings do not allow server TCP FASTOPEN,
 	  and server tcp fastopen is enabled at compile time.
 	- Document interaction between the tls-upstream option in the server
