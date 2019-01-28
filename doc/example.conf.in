@@ -906,16 +906,25 @@ remote-control:
 # notifies.
 # auth-zone:
 #	name: "."
-#	for-downstream: no
+#	master: 199.9.14.201         # b.root-servers.net	
+#	master: 192.33.4.12          # c.root-servers.net	
+#	master: 199.7.91.13          # d.root-servers.net	
+#	master: 192.5.5.241          # f.root-servers.net	
+#	master: 192.112.36.4         # g.root-servers.net	
+#	master: 193.0.14.129         # k.root-servers.net	
+#	master: 192.0.47.132         # xfr.cjr.dns.icann.org	
+#	master: 192.0.32.132         # xfr.lax.dns.icann.org	
+#	master: 2001:500:200::b      # b.root-servers.net	
+#	master: 2001:500:2::c        # c.root-servers.net	
+#	master: 2001:500:2d::d       # d.root-servers.net	
+#	master: 2001:500:2f::f       # f.root-servers.net	
+#	master: 2001:500:12::d0d     # g.root-servers.net	
+#	master: 2001:7fd::1          # k.root-servers.net	
+#	master: 2620:0:2830:202::132 # xfr.cjr.dns.icann.org	
+#	master: 2620:0:2d0:202::132  # xfr.lax.dns.icann.org	
+#	fallback-enabled: yes	
+#	for-downstream: no	
 #	for-upstream: yes
-#	fallback-enabled: yes
-#	master: b.root-servers.net
-#	master: c.root-servers.net
-#	master: d.root-servers.net
-#	master: e.root-servers.net
-#	master: f.root-servers.net
-#	master: g.root-servers.net
-#	master: k.root-servers.net
 # auth-zone:
 #	name: "example.org"
 #	for-downstream: yes
