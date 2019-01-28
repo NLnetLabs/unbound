@@ -911,6 +911,7 @@ remote-control:
 #	fallback-enabled: yes
 #	master: b.root-servers.net
 #	master: c.root-servers.net
+#	master: d.root-servers.net
 #	master: e.root-servers.net
 #	master: f.root-servers.net
 #	master: g.root-servers.net
