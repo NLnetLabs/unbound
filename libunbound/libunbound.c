@@ -966,6 +966,19 @@ ub_ctx_set_fwd(struct ub_ctx* ctx, const char* addr)
 	return UB_NOERROR;
 }
 
+int ub_ctx_set_tls(struct ub_ctx* ctx, int tls)
+{
+	lock_basic_lock(&ctx->cfglock);
+	if(ctx->finalized) {
+		lock_basic_unlock(&ctx->cfglock);
+		errno=EINVAL;
+		return UB_AFTERFINAL;
+	}
+	ctx->env->cfg->ssl_upstream = tls;
+	lock_basic_unlock(&ctx->cfglock);
+	return UB_NOERROR;
+}
+
 int ub_ctx_set_stub(struct ub_ctx* ctx, const char* zone, const char* addr,
 	int isprime)
 {

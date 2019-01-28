@@ -1,3 +1,7 @@
+28 January 2019: Wouter
+	- ub_ctx_set_tls call for libunbound that enables DoT for the machines
+	  set with ub_ctx_set_fwd.  Patch from Florian Obser.
+
 25 January 2019: Wouter
 	- Fix that tcp for auth zone and outgoing does not remove and
 	  then gets the ssl read again applied to the deleted commpoint.
