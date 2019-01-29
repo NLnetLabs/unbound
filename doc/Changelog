@@ -1,6 +1,7 @@
 29 January 2019: Wouter
 	- Fix spelling of tls-ciphers in example.conf.in.
 	- Fix #4224: auth_xfr_notify.rpl test broken due to typo
+	- Fix locking for libunbound context setup with broken port config.
 
 28 January 2019: Wouter
 	- ub_ctx_set_tls call for libunbound that enables DoT for the machines
