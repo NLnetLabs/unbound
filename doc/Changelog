@@ -5,6 +5,7 @@
 	- List example config for root zone copy locally hosted with auth-zone
 	  as suggested from draft-ietf-dnsop-7706-bis-02.  But with updated
 	  B root address.
+	- set version to 1.9.0 for release.
 
 25 January 2019: Wouter
 	- Fix that tcp for auth zone and outgoing does not remove and
