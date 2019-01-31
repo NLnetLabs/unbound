@@ -4,6 +4,9 @@
 	- improve documentation for tls-service-key and forward-first.
 	- fixed pkg-config operations, PKG_PROG_PKG_CONFIG moved out of
 	  conditional section, fixes systemd builds, from Enrico Scholz.
+	- For openssl 1.0.2 use the CRYPTO_THREADID locking callbacks,
+	  still supports the set_id_callback previous API.  And for 1.1.0
+	  no locking callbacks are needed.
 
 30 January 2019: Ralph
 	- Fix case in which query timeout can result in marking delegation
