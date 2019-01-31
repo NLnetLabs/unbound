@@ -382,6 +382,8 @@ AC_CHECK_PROG(doxygen, doxygen, doxygen)
 AC_CHECK_TOOL(STRIP, strip)
 ACX_LIBTOOL_C_ONLY
 
+PKG_PROG_PKG_CONFIG
+
 # Checks for header files.
 AC_CHECK_HEADERS([stdarg.h stdbool.h netinet/in.h netinet/tcp.h sys/param.h sys/socket.h sys/un.h sys/uio.h sys/resource.h arpa/inet.h syslog.h netdb.h sys/wait.h pwd.h glob.h grp.h login_cap.h winsock2.h ws2tcpip.h endian.h sys/endian.h libkern/OSByteOrder.h sys/ipc.h sys/shm.h],,, [AC_INCLUDES_DEFAULT])
 
@@ -641,7 +643,6 @@ if test x_$ub_test_python != x_no; then
         CPPFLAGS="$PYTHON_CPPFLAGS"
       fi
       ub_have_python=yes
-      PKG_PROG_PKG_CONFIG
       PKG_CHECK_EXISTS(["python${PY_MAJOR_VERSION}"],
                        [PC_PY_DEPENDENCY="python${PY_MAJOR_VERSION}"],
                        [PC_PY_DEPENDENCY="python"])
