@@ -1618,10 +1618,9 @@ name is accepted.  The cert must also match a CA from the tls\-cert\-bundle.
 The cert name match code needs OpenSSL 1.1.0 or later to be enabled.
 .TP
 .B forward\-first: \fI<yes or no>
-If enabled, a query is attempted without the forward clause if it fails.
-The data could not be retrieved and would have caused SERVFAIL because
-the servers are unreachable, instead it is tried without this clause.
-The default is no.
+If a forwarded query is met with a SERVFAIL error, and this option is
+enabled, unbound will fall back to normal recursive resolution for this
+query as if no query forwarding had been specified.  The default is "no".
 .TP
 .B forward\-tls\-upstream: \fI<yes or no>
 Enabled or disable whether the queries to this forwarder use TLS for transport.
