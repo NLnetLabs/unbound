@@ -1,3 +1,7 @@
+31 January 2019: Wouter
+	- Set ub_ctx_set_tls call signature in ltrace config file for
+	  libunbound in contrib/libunbound.so.conf.
+
 30 January 2019: Ralph
 	- Fix case in which query timeout can result in marking delegation
 	  as edns_lame_known.
