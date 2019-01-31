@@ -1235,6 +1235,7 @@ listen_sslctx_delete_ticket_keys(void)
 	struct tls_session_ticket_key *key;
 	if(!ticket_keys) return;
 	for(key = ticket_keys; key->key_name != NULL; key++) {
+		memset(key->key_name, 0xdd, 80); /* wipe key data from memory*/
 		free(key->key_name);
 	}
 	free(ticket_keys);

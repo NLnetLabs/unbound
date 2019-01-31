@@ -8,6 +8,7 @@
 	  still supports the set_id_callback previous API.  And for 1.1.0
 	  no locking callbacks are needed.
 	- #8: Fix OpenSSL without ENGINE support compilation.
+	- Wipe TLS session key data from memory on exit.
 
 30 January 2019: Ralph
 	- Fix case in which query timeout can result in marking delegation
