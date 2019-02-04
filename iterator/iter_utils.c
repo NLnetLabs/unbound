@@ -939,7 +939,10 @@ reply_equal(struct reply_info* p, struct reply_info* q, struct regional* region)
 
 	sorted_q = (struct ub_packed_rrset_key**)regional_alloc_init(
 		region, q->rrsets, sizeof(*sorted_q)*q->rrset_count);
-	if(!sorted_q) return 0;
+	if(!sorted_q) {
+		regional_free_all(region);
+		return 0;
+	}
 	log_assert(q->an_numrrsets + q->ns_numrrsets + q->ar_numrrsets <=
 		q->rrset_count);
 	qsort(sorted_q + q->an_numrrsets, q->ns_numrrsets,
