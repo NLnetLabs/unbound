@@ -673,6 +673,7 @@ server:
 	# o typetransparent resolves normally for other types and other names
 	# o inform acts like transparent, but logs client IP address
 	# o inform_deny drops queries and logs client IP address
+	# o inform_redirect redirects queries and logs client IP address
 	# o always_transparent, always_refuse, always_nxdomain, resolve in
 	#   that way but ignore local data for that name
 	# o noview breaks out of that view towards global local-zones.

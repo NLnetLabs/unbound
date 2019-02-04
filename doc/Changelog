@@ -1,3 +1,10 @@
+4 February 2019: Wouter
+	- Fix that log-replies prints the correct name for local-alias
+	  names, for names that have a CNAME in local-data configuration.
+	  It logs the original query name, not the target of the CNAME.
+	- Add local-zone type inform_redirect, which logs like type inform,
+	  and redirects like type redirect.
+
 31 January 2019: Wouter
 	- Set ub_ctx_set_tls call signature in ltrace config file for
 	  libunbound in contrib/libunbound.so.conf.
