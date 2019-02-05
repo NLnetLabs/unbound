@@ -1,3 +1,6 @@
+5 February 2019: Wouter
+	- Fix tls-ciphers spelling in example.conf
+
 28 January 2019: Wouter
 	- ub_ctx_set_tls call for libunbound that enables DoT for the machines
 	  set with ub_ctx_set_fwd.  Patch from Florian Obser.
