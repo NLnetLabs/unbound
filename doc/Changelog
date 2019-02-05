@@ -36,7 +36,9 @@
 	- List example config for root zone copy locally hosted with auth-zone
 	  as suggested from draft-ietf-dnsop-7706-bis-02.  But with updated
 	  B root address.
-	- set version to 1.9.0 for release.
+	- set version to 1.9.0 for release.  And this was released with the
+	  spelling for tls-ciphers fix as 1.9.0 on Feb 5.  Trunk has 1.9.1 in
+	  development.
 
 25 January 2019: Wouter
 	- Fix that tcp for auth zone and outgoing does not remove and
