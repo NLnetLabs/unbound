@@ -1,3 +1,6 @@
+7 February 2019: Wouter
+	- Fix #4206: OpenSSL 1.0.2 hostname verification for FreeBSD 11.2.
+
 4 February 2019: Wouter
 	- Fix that log-replies prints the correct name for local-alias
 	  names, for names that have a CNAME in local-data configuration.
