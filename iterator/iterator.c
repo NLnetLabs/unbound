@@ -2105,6 +2105,8 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 	struct delegpt_addr* target;
 	struct outbound_entry* outq;
 	int auth_fallback = 0;
+	uint8_t* qout_orig = NULL;
+	size_t qout_orig_len = 0;
 
 	/* NOTE: a request will encounter this state for each target it 
 	 * needs to send a query to. That is, at least one per referral, 
@@ -2178,6 +2180,8 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 		int labdiff = qchaselabs -
 			dname_count_labels(iq->qinfo_out.qname);
 
+		qout_orig = iq->qinfo_out.qname;
+		qout_orig_len = iq->qinfo_out.qname_len;
 		iq->qinfo_out.qname = iq->qchase.qname;
 		iq->qinfo_out.qname_len = iq->qchase.qname_len;
 		iq->minimise_count++;
@@ -2330,6 +2334,13 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 			/* wait to get all targets, we want to try em */
 			verbose(VERB_ALGO, "wait for all targets for fallback");
 			qstate->ext_state[id] = module_wait_reply;
+			/* undo qname minimise step because we'll get back here
+			 * to do it again */
+			if(qout_orig && iq->minimise_count > 0) {
+				iq->minimise_count--;
+				iq->qinfo_out.qname = qout_orig;
+				iq->qinfo_out.qname_len = qout_orig_len;
+			}
 			return 0;
 		}
 		/* did we do enough fallback queries already? */
@@ -2462,6 +2473,13 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 				"for %d outstanding queries to respond.",
 				iq->num_current_queries);
 			qstate->ext_state[id] = module_wait_reply;
+		}
+		/* undo qname minimise step because we'll get back here
+		 * to do it again */
+		if(qout_orig && iq->minimise_count > 0) {
+			iq->minimise_count--;
+			iq->qinfo_out.qname = qout_orig;
+			iq->qinfo_out.qname_len = qout_orig_len;
 		}
 		return 0;
 	}
