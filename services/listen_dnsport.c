@@ -1779,6 +1779,12 @@ tcp_req_info_handle_readdone(struct tcp_req_info* req)
 	/* If mesh failed(mallocfail) and called commpoint_send_reply with
 	 * something like servfail then we pick up that reply below. */
 	if(req->is_reply) {
+		/* reply from mesh is in the spool_buffer */
+		sldns_buffer_clear(c->buffer);
+		sldns_buffer_write(c->buffer,
+			sldns_buffer_begin(req->spool_buffer),
+			sldns_buffer_limit(req->spool_buffer));
+		sldns_buffer_flip(c->buffer);
 		goto send_it;
 	}
 
