@@ -930,6 +930,8 @@ Setting this to "iterator" will result in a non\-validating server.
 Setting this to "validator iterator" will turn on DNSSEC validation.
 The ordering of the modules is important.
 You must also set trust\-anchors for validation to be useful.
+The default is "validator iterator".  When the server is built with
+EDNS client subnet support the default is "subnetcache validator iterator".
 .TP
 .B trust\-anchor\-file: \fI<filename>
 File with trusted keys for validation. Both DS and DNSKEY entries can appear
