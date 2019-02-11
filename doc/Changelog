@@ -4,6 +4,7 @@
 	  that were not present in the set of prepared answers.
 	- Fix #13: Remove left-over requirements on OpenSSL >= 1.1.0 for
 	  cert name matching, from man page.
+	- make depend, with newer gcc, nicer layout.
 
 7 February 2019: Wouter
 	- Fix #4206: OpenSSL 1.0.2 hostname verification for FreeBSD 11.2.
