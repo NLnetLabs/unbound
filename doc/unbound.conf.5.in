@@ -1621,7 +1621,6 @@ the '@' and '#', the '@' comes first.
 At high verbosity it logs the TLS certificate, with TLS enabled.
 If you leave out the '#' and auth name from the forward\-addr, any
 name is accepted.  The cert must also match a CA from the tls\-cert\-bundle.
-The cert name match code needs OpenSSL 1.1.0 or later to be enabled.
 .TP
 .B forward\-first: \fI<yes or no>
 If a forwarded query is met with a SERVFAIL error, and this option is
