@@ -1,3 +1,6 @@
+14 February 2019: Wouter
+	- Fix capsforid canonical sort qsort callback.
+
 11 February 2019: Wouter
 	- Note default for module-config in man page.
 	- Fix recursion lame test for qname minimisation asked queries,

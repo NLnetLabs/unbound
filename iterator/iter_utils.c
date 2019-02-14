@@ -888,8 +888,8 @@ rrset_equal(struct ub_packed_rrset_key* k1, struct ub_packed_rrset_key* k2)
 static int
 rrset_canonical_sort_cmp(const void* x, const void* y)
 {
-	struct ub_packed_rrset_key* rrx = (struct ub_packed_rrset_key*)x;
-	struct ub_packed_rrset_key* rry = (struct ub_packed_rrset_key*)y;
+	struct ub_packed_rrset_key* rrx = *(struct ub_packed_rrset_key**)x;
+	struct ub_packed_rrset_key* rry = *(struct ub_packed_rrset_key**)y;
 	int r = dname_canonical_compare(rrx->rk.dname, rry->rk.dname);
 	if(r != 0)
 		return r;
