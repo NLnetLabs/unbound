@@ -1171,7 +1171,7 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 
 	/* check if this query should be dropped based on source ip rate limiting */
 	if(!infra_ip_ratelimit_inc(worker->env.infra_cache, repinfo,
-			*worker->env.now)) {
+			*worker->env.now, c->buffer)) {
 		/* See if we are passed through with slip factor */
 		if(worker->env.cfg->ip_ratelimit_factor != 0 &&
 			ub_random_max(worker->env.rnd,

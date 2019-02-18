@@ -410,10 +410,12 @@ int infra_find_ratelimit(struct infra_cache* infra, uint8_t* name,
  *  @param infra: infra cache
  *  @param repinfo: information about client
  *  @param timenow: what time it is now.
+ *  @param buffer: with query for logging.
  *  @return 1 if it could be incremented. 0 if the increment overshot the
  *  ratelimit and the query should be dropped. */
 int infra_ip_ratelimit_inc(struct infra_cache* infra,
-	struct comm_reply* repinfo, time_t timenow);
+	struct comm_reply* repinfo, time_t timenow,
+	struct sldns_buffer* buffer);
 
 /**
  * Get memory used by the infra cache.
