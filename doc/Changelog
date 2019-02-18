@@ -1,5 +1,6 @@
 18 February 2019: Wouter
 	- Print query name with ip_ratelimit exceeded log lines.
+	- Spaces instead of tabs in that log message.
 
 14 February 2019: Wouter
 	- Fix capsforid canonical sort qsort callback.

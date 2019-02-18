@@ -1024,6 +1024,10 @@ int infra_ip_ratelimit_inc(struct infra_cache* infra,
 					qnm, sizeof(qnm));
 				if(strlen(qnm)>0 && qnm[strlen(qnm)-1]=='\n')
 					qnm[strlen(qnm)-1] = 0; /*remove newline*/
+				if(strchr(qnm, '\t'))
+					*strchr(qnm, '\t') = ' ';
+				if(strchr(qnm, '\t'))
+					*strchr(qnm, '\t') = ' ';
 				verbose(VERB_OPS, "ip_ratelimit exceeded %s %d %s",
 					client_ip, infra_ip_ratelimit, qnm);
 			} else {
