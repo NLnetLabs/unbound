@@ -1448,7 +1448,8 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 			 * now will also exceed the rate, keeping cache fresh */
 			(void)infra_ratelimit_inc(qstate->env->infra_cache,
 				iq->dp->name, iq->dp->namelen,
-				*qstate->env->now);
+				*qstate->env->now, &qstate->qinfo,
+				qstate->reply);
 			/* see if we are passed through with slip factor */
 			if(qstate->env->cfg->ratelimit_factor != 0 &&
 				ub_random_max(qstate->env->rnd,
@@ -2487,7 +2488,8 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 	/* if not forwarding, check ratelimits per delegationpoint name */
 	if(!(iq->chase_flags & BIT_RD) && !iq->ratelimit_ok) {
 		if(!infra_ratelimit_inc(qstate->env->infra_cache, iq->dp->name,
-			iq->dp->namelen, *qstate->env->now)) {
+			iq->dp->namelen, *qstate->env->now, &qstate->qinfo,
+			qstate->reply)) {
 			lock_basic_lock(&ie->queries_ratelimit_lock);
 			ie->num_queries_ratelimited++;
 			lock_basic_unlock(&ie->queries_ratelimit_lock);

@@ -909,7 +909,8 @@ int infra_rate_max(void* data, time_t now)
 }
 
 int infra_ratelimit_inc(struct infra_cache* infra, uint8_t* name,
-	size_t namelen, time_t timenow)
+	size_t namelen, time_t timenow, struct query_info* qinfo,
+	struct comm_reply* replylist)
 {
 	int lim, max;
 	struct lruhash_entry* entry;
@@ -932,9 +933,19 @@ int infra_ratelimit_inc(struct infra_cache* infra, uint8_t* name,
 		lock_rw_unlock(&entry->lock);
 
 		if(premax < lim && max >= lim) {
-			char buf[257];
+			char buf[257], qnm[257], ts[12], cs[12], ip[128];
 			dname_str(name, buf);
-			verbose(VERB_OPS, "ratelimit exceeded %s %d", buf, lim);
+			dname_str(qinfo->qname, qnm);
+			sldns_wire2str_type_buf(qinfo->qtype, ts, sizeof(ts));
+			sldns_wire2str_class_buf(qinfo->qclass, cs, sizeof(cs));
+			ip[0]=0;
+			if(replylist) {
+				addr_to_str((struct sockaddr_storage *)&replylist->addr,
+					replylist->addrlen, ip, sizeof(ip));
+				verbose(VERB_OPS, "ratelimit exceeded %s %d query %s %s %s from %s", buf, lim, qnm, cs, ts, ip);
+			} else {
+				verbose(VERB_OPS, "ratelimit exceeded %s %d query %s %s %s", buf, lim, qnm, cs, ts);
+			}
 		}
 		return (max < lim);
 	}
