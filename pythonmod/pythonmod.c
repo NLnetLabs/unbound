@@ -517,8 +517,7 @@ void pythonmod_clear(struct module_qstate* qstate, int id)
       return;
 
    pq = (struct pythonmod_qstate*)qstate->minfo[id];
-   verbose(VERB_ALGO, "pythonmod: clear, id: %d, pq:%lX", id,
-   	(unsigned long int)pq);
+   verbose(VERB_ALGO, "pythonmod: clear, id: %d, pq:%p", id, pq);
    if(pq != NULL)
    {
       PyGILState_STATE gil = PyGILState_Ensure();
@@ -534,8 +533,7 @@ void pythonmod_clear(struct module_qstate* qstate, int id)
 size_t pythonmod_get_mem(struct module_env* env, int id)
 {
    struct pythonmod_env* pe = (struct pythonmod_env*)env->modinfo[id];
-   verbose(VERB_ALGO, "pythonmod: get_mem, id: %d, pe:%lX", id,
-   	(unsigned long int)pe);
+   verbose(VERB_ALGO, "pythonmod: get_mem, id: %d, pe:%p", id, pe);
    if(!pe)
       return 0;
    return sizeof(*pe);

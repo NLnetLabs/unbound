@@ -36,9 +36,15 @@
 %module unbound
 %{
    #include <sys/types.h>
+   #ifdef HAVE_SYS_SOCKET_H
    #include <sys/socket.h>
+   #endif
+   #ifdef HAVE_NETINET_IN_H
    #include <netinet/in.h>
+   #endif
+   #ifdef HAVE_ARPA_INET_H
    #include <arpa/inet.h>
+   #endif
    #include "libunbound/unbound.h"
 %}
 
@@ -108,7 +114,7 @@
 
 %inline %{
   void ub_ctx_free_dbg (struct ub_ctx* c) {
-    printf("******** UB_CTX free 0x%lX ************\n", (long unsigned int)c);
+    printf("******** UB_CTX free 0x%p ************\n", c);
     ub_ctx_delete(c);
   }
 
@@ -648,7 +654,7 @@ Result: ['74.125.43.147', '74.125.43.99', '74.125.43.103', '74.125.43.104']
  
 %inline %{
   void ub_resolve_free_dbg (struct ub_result* r) {
-    printf("******** UB_RESOLVE free 0x%lX ************\n", (long unsigned int)r);
+    printf("******** UB_RESOLVE free 0x%p ************\n", r);
     ub_resolve_free(r);
   }
 %} 

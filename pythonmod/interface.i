@@ -9,11 +9,21 @@
  * called to perform operations on queries.
  */
    #include <sys/types.h>
+   #ifdef HAVE_SYS_SOCKET_H
    #include <sys/socket.h>
+   #endif
+   #ifdef HAVE_NETINET_IN_H
    #include <netinet/in.h>
+   #endif
+   #ifdef HAVE_ARPA_INET_H
    #include <arpa/inet.h>
+   #endif
+   #ifdef HAVE_NETDB_H
    #include <netdb.h>
+   #endif
+   #ifdef HAVE_SYS_UN_H
    #include <sys/un.h>
+   #endif
    #include <stdarg.h>
    #include "config.h"
    #include "util/log.h"
@@ -449,7 +459,9 @@ struct sockaddr_storage {};
         switch (ss->ss_family) {
         case AF_INET:  return sizeof(struct sockaddr_in);
         case AF_INET6: return sizeof(struct sockaddr_in6);
+#ifdef HAVE_SYS_UN_H
         case AF_UNIX:  return sizeof(struct sockaddr_un);
+#endif
         default:
             return 0;
         }
@@ -515,10 +527,12 @@ struct sockaddr_storage {};
             return PyBytes_FromStringAndSize((const char *)raw, sizeof(*raw));
         }
 
+#ifdef HAVE_SYS_UN_H
         if (ss->ss_family == AF_UNIX) {
             const struct sockaddr_un *sa = (struct sockaddr_un *)ss;
             return PyBytes_FromString(sa->sun_path);
         }
+#endif
 
         return Py_None;
     }

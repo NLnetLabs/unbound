@@ -1,3 +1,7 @@
+20 February 2019: Wouter
+	- Fix pythonmod include and sockaddr_un ifdefs for compile on
+	  Windows, and for libunbound.
+
 18 February 2019: Wouter
 	- Print query name with ip_ratelimit exceeded log lines.
 	- Spaces instead of tabs in that log message.
