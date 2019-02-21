@@ -973,7 +973,7 @@ remote-control:
 # Enable external backend DB as auxiliary cache.  Specify the backend name
 # (default is "testframe", which has no use other than for debugging and
 # testing) and backend-specific options.  The 'cachedb' module must be
-# included in module-config.
+# included in module-config, just before the iterator module.
 # cachedb:
 #     backend: "testframe"
 #     # secret seed string to calculate hashed keys

@@ -1,6 +1,7 @@
 21 February 2019: Wouter
 	- Fix the error for unknown module in module-config is understandable,
 	  and explains it was not compiled in and where to see the list.
+	- In example.conf explain where to put cachedb module in module-config.
 
 20 February 2019: Wouter
 	- Fix pythonmod include and sockaddr_un ifdefs for compile on
