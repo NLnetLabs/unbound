@@ -932,6 +932,10 @@ The ordering of the modules is important.
 You must also set trust\-anchors for validation to be useful.
 The default is "validator iterator".  When the server is built with
 EDNS client subnet support the default is "subnetcache validator iterator".
+Most modules that need to be listed here have to be listed at the beginning
+of the line.  The cachedb module has to be listed just before the iterator.
+The python module can be listed in different places, it then processes the
+output of the module it is just before.
 .TP
 .B trust\-anchor\-file: \fI<filename>
 File with trusted keys for validation. Both DS and DNSKEY entries can appear

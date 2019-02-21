@@ -475,6 +475,9 @@ server:
 
 	# module configuration of the server. A string with identifiers
 	# separated by spaces. Syntax: "[dns64] [validator] iterator"
+	# most modules have to be listed at the beginning of the line,
+	# except cachedb(just before iterator), and python (at the beginning,
+	# or, just before the iterator).
 	# module-config: "validator iterator"
 
 	# File with trusted keys, kept uptodate using RFC5011 probes,
@@ -823,6 +826,8 @@ server:
 # Python config section. To enable:
 # o use --with-pythonmodule to configure before compiling.
 # o list python in the module-config string (above) to enable.
+#   It can be at the start, it gets validated results, or just before
+#   the iterator and process before DNSSEC validation.
 # o and give a python-script to run.
 python:
 	# Script file to load
