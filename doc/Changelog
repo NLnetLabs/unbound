@@ -1,3 +1,6 @@
+25 February 2019: Wouter
+	- Fix #4227: pair event del and add for libevent for tcp_req_info.
+
 21 February 2019: Wouter
 	- Fix the error for unknown module in module-config is understandable,
 	  and explains it was not compiled in and where to see the list.
