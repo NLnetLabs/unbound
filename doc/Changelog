@@ -3,6 +3,7 @@
 	  order and local zone tags, and elements in views.
 	- Fix #14: contrib/unbound.init: Fix wrong comparison judgment
 	  before copying.
+	- Fix for python module on Windows, fix fopen.
 
 25 February 2019: Wouter
 	- Fix #4227: pair event del and add for libevent for tcp_req_info.
