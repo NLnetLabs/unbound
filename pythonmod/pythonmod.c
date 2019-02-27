@@ -313,8 +313,8 @@ int pythonmod_init(struct module_env* env, int id)
    /* uses python to open the file, this works on other platforms,
     * eg. Windows, to open the file in the correct mode for python */
 #if PY_MAJOR_VERSION < 3
-   PyObject* PyFileObject = PyFile_FromString(pe->fname, "r");
-   script_py = PyFile_AsFile(PyFileObject, pe->fname, 1);
+   PyFileObject = PyFile_FromString((char*)pe->fname, "r");
+   script_py = PyFile_AsFile(PyFileObject);
 #else
    script_py = _Py_fopen(pe->fname, "r");
 #endif
