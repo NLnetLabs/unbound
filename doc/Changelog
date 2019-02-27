@@ -1,3 +1,7 @@
+27 February 2019: Wouter
+	- Fix #4229: Unbound man pages lack information, about access-control
+	  order and local zone tags, and elements in views.
+
 25 February 2019: Wouter
 	- Fix #4227: pair event del and add for libevent for tcp_req_info.
 

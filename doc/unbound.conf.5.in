@@ -546,6 +546,7 @@ classless network block. The action can be \fIdeny\fR, \fIrefuse\fR,
 \fIallow\fR, \fIallow_setrd\fR, \fIallow_snoop\fR, \fIdeny_non_local\fR or
 \fIrefuse_non_local\fR.
 The most specific netblock match is used, if none match \fIdeny\fR is used.
+The order of the access\-control statements therefore does not matter.
 .IP
 The action \fIdeny\fR stops queries from hosts from that netblock.
 .IP
@@ -1367,7 +1368,8 @@ TTL can be inserted like this: "2001:DB8::4 7200 www.example.com"
 Assign tags to localzones. Tagged localzones will only be applied when the
 used access-control element has a matching tag. Tags must be defined in
 \fIdefine\-tags\fR.  Enclose list of tags in quotes ("") and put spaces between
-tags.
+tags.  When there are multiple tags it checks if the intersection of the
+list of tags for the query and local\-zone\-tag is non-empty.
 .TP 5
 .B local\-zone\-override: \fI<zone> <IP netblock> <type>
 Override the localzone type for queries from addresses matching netblock.
@@ -1724,7 +1726,9 @@ data (eg. from the master servers).
 There may be multiple
 .B view:
 clauses. Each with a \fBname:\fR and zero or more \fBlocal\-zone\fR and
-\fBlocal\-data\fR elements. View can be mapped to requests by specifying the
+\fBlocal\-data\fR elements. Views can also contain view\-first, 
+response\-ip, response\-ip\-data and local\-data\-ptr elements.
+View can be mapped to requests by specifying the
 view name in an \fBaccess\-control\-view\fR element. Options from matching
 views will override global options. Global options will be used if no matching
 view is found, or when the matching view does not have the option specified.
