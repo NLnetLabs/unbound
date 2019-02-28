@@ -116,6 +116,7 @@ modstack_config(struct module_stack* stack, const char* module_conf)
 			char md[256];
 			snprintf(md, sizeof(md), "%s", module_conf);
 			if(strchr(md, ' ')) *(strchr(md, ' ')) = 0;
+			if(strchr(md, '\t')) *(strchr(md, '\t')) = 0;
                         log_err("Unknown value in module-config, module: '%s'."
 				" This module is not present (not compiled in),"
 				" See the list of linked modules with unbound -h",
