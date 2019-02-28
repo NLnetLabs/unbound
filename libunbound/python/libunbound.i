@@ -33,8 +33,16 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
+%begin %{
+/* store state of warning output, restored at later pop */
+#pragma GCC diagnostic push
+/* ignore gcc8 METH_NOARGS function cast warnings for swig function pointers */
+#pragma GCC diagnostic ignored "-Wcast-function-type"
+%}
 %module unbound
 %{
+/* restore state of warning output, remove the functioncast ignore */
+#pragma GCC diagnostic pop
    #include <sys/types.h>
    #ifdef HAVE_SYS_SOCKET_H
    #include <sys/socket.h>

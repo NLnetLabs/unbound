@@ -1,3 +1,7 @@
+28 February 2019: Wouter
+	- Remove memory leak on pythonmod python2 script file init.
+	- Remove swig gcc8 python function cast warnings, they are ignored.
+
 27 February 2019: Wouter
 	- Fix #4229: Unbound man pages lack information, about access-control
 	  order and local zone tags, and elements in views.

@@ -354,7 +354,11 @@ int pythonmod_init(struct module_env* env, int id)
       PyGILState_Release(gil);
       return 0;
    }
+#if PY_MAJOR_VERSION < 3
+   Py_XDECREF(PyFileObject);
+#else
    fclose(script_py);
+#endif
 
    if ((pe->func_init = PyDict_GetItemString(pe->dict, "init_standard")) == NULL)
    {

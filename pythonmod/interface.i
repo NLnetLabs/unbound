@@ -1,8 +1,16 @@
 /*
  * interface.i: unbound python module
  */
+%begin %{
+/* store state of warning output, restored at later pop */
+#pragma GCC diagnostic push
+/* ignore gcc8 METH_NOARGS function cast warnings for swig function pointers */
+#pragma GCC diagnostic ignored "-Wcast-function-type"
+%}
 %module unboundmodule
 %{
+/* restore state of warning output, remove the functioncast ignore */
+#pragma GCC diagnostic pop
 /**
  * \file
  * This is the interface between the unbound server and a python module
