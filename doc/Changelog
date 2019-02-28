@@ -1,6 +1,7 @@
 28 February 2019: Wouter
 	- Remove memory leak on pythonmod python2 script file init.
 	- Remove swig gcc8 python function cast warnings, they are ignored.
+	- Print correct module that failed when module-config is wrong.
 
 27 February 2019: Wouter
 	- Fix #4229: Unbound man pages lack information, about access-control
