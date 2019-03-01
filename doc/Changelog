@@ -1,3 +1,6 @@
+1 March 2019: Wouter
+	- output forwarder log in ssl_req_order test.
+
 28 February 2019: Wouter
 	- Remove memory leak on pythonmod python2 script file init.
 	- Remove swig gcc8 python function cast warnings, they are ignored.
