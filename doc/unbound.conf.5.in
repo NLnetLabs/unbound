@@ -1752,7 +1752,8 @@ clause gives the settings for the \fIpython\fR(1) script module.  This module
 acts like the iterator and validator modules do, on queries and answers.
 To enable the script module it has to be compiled into the daemon,
 and the word "python" has to be put in the \fBmodule\-config:\fR option
-(usually first, or between the validator and iterator).
+(usually first, or between the validator and iterator). Multiple instances of
+the python module are supported by adding the word "python" more than once.
 .LP
 If the \fBchroot:\fR option is enabled, you should make sure Python's
 library directory structure is bind mounted in the new root environment, see
@@ -1761,7 +1762,8 @@ absolute path relative to the new root, or as a relative path to the working
 directory.
 .TP
 .B python\-script: \fI<python file>\fR
-The script file to load.
+The script file to load. Repeat this option for every python module instance
+added to the \fBmodule\-config:\fR option.
 .SS "DNS64 Module Options"
 .LP
 The dns64 module must be configured in the \fBmodule\-config:\fR "dns64
