@@ -317,8 +317,7 @@ int pythonmod_init(struct module_env* env, int id)
    /* Load file */
    pe->module = PyImport_AddModule("__main__");
    pe->dict = PyModule_GetDict(pe->module);
-   pe->data = Py_None;
-   Py_INCREF(pe->data);
+   pe->data = PyDict_New();
    PyModule_AddObject(pe->module, "mod_env", pe->data);
 
    /* TODO: deallocation of pe->... if an error occurs */
@@ -485,8 +484,7 @@ void pythonmod_operate(struct module_qstate* qstate, enum module_ev event,
       pq = qstate->minfo[id] = malloc(sizeof(struct pythonmod_qstate));
 
       /* Initialize per query data */
-      pq->data = Py_None;
-      Py_INCREF(pq->data);
+      pq->data = PyDict_New();
    }
 
    /* Call operate */
