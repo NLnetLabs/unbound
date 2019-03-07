@@ -1,3 +1,7 @@
+7 March 2019: Wouter
+	- Fix for #4233: guard use of NDEBUG, so that it can be passed in
+	  CFLAGS into configure.
+
 5 March 2019: Wouter
 	- Tag release 1.9.1rc1.
 

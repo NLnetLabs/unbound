@@ -1652,7 +1652,9 @@ AHX_CONFIG_EXT_FLAGS
 dnl includes
 [
 #ifndef UNBOUND_DEBUG
+# ifndef NDEBUG
 #  define NDEBUG
+# endif
 #endif
 
 /** Use small-ldns codebase */
