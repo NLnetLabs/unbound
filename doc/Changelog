@@ -3,7 +3,8 @@
 	  CFLAGS into configure.
 
 5 March 2019: Wouter
-	- Tag release 1.9.1rc1.
+	- Tag release 1.9.1rc1.  Which became 1.9.1 on 12 March 2019.  Trunk
+	  has 1.9.2 in development.
 
 1 March 2019: Wouter
 	- output forwarder log in ssl_req_order test.
