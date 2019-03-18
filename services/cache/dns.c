@@ -728,6 +728,8 @@ fill_any(struct module_env* env,
 		if(!msg) {
 			return NULL;
 		}
+		/* set NOTIMPL for RFC 8482 */
+		msg->rep->flags |= LDNS_RCODE_NOTIMPL;
 		msg->rep->security = sec_status_indeterminate;
 		return msg;
 	}
