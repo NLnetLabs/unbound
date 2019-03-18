@@ -1,3 +1,7 @@
+18 March 2019: Wouter
+	- Add log message, at verbosity 4, that says the query is encrypted
+	  with TLS, if that is enabled for the query.
+
 7 March 2019: Wouter
 	- Fix for #4233: guard use of NDEBUG, so that it can be passed in
 	  CFLAGS into configure.

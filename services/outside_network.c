@@ -364,6 +364,8 @@ outnet_tcp_take_into_use(struct waiting_tcp* w, uint8_t* pkt, size_t pkt_len)
 			comm_point_close(pend->c);
 			return 0;
 		}
+		verbose(VERB_ALGO, "the query is using TLS encryption, for %s",
+			(w->tls_auth_name?w->tls_auth_name:"an unauthenticated connection"));
 #ifdef USE_WINSOCK
 		comm_point_tcp_win_bio_cb(pend->c, pend->c->ssl);
 #endif
@@ -404,6 +406,8 @@ outnet_tcp_take_into_use(struct waiting_tcp* w, uint8_t* pkt, size_t pkt_len)
 			}
 			SSL_set_verify(pend->c->ssl, SSL_VERIFY_PEER, NULL);
 		}
+#else
+		verbose(VERB_ALGO, "the query has an auth_name, but libssl has no call to perform TLS authentication");
 #endif /* HAVE_SSL_SET1_HOST */
 	}
 	w->pkt = NULL;
