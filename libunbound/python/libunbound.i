@@ -242,6 +242,7 @@
     RR_TYPE_MAILA = 254,
     /**  any type (wildcard) */
     RR_TYPE_ANY = 255,
+    RR_TYPE_CAA = 257,
 
     /* RFC 4431, 5074, DNSSEC Lookaside Validation */
     RR_TYPE_DLV = 32769,
