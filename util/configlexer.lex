@@ -485,6 +485,8 @@ redis-server-port{COLON}	{ YDVAR(1, VAR_CACHEDB_REDISPORT) }
 redis-timeout{COLON}		{ YDVAR(1, VAR_CACHEDB_REDISTIMEOUT) }
 udp-upstream-without-downstream{COLON} { YDVAR(1, VAR_UDP_UPSTREAM_WITHOUT_DOWNSTREAM) }
 tcp-connection-limit{COLON}	{ YDVAR(2, VAR_TCP_CONNECTION_LIMIT) }
+answer-cookie{COLON}		{ YDVAR(1, VAR_ANSWER_COOKIE ) }
+cookie-secret{COLON}		{ YDVAR(1, VAR_COOKIE_SECRET) }
 <INITIAL,val>{NEWLINE}		{ LEXOUT(("NL\n")); cfg_parser->line++; }
 
 	/* Quoted strings. Strip leading and ending quotes */

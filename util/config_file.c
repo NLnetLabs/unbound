@@ -55,6 +55,7 @@
 #include "util/regional.h"
 #include "util/fptr_wlist.h"
 #include "util/data/dname.h"
+#include "util/random.h"
 #include "util/rtt.h"
 #include "services/cache/infra.h"
 #include "sldns/wire2str.h"
@@ -84,6 +85,9 @@ struct config_parser_state* cfg_parser = 0;
 
 /** init ports possible for use */
 static void init_outgoing_availports(int* array, int num);
+
+/** init cookie with random data */
+static void init_cookie_secret(uint8_t* cookie_secret,size_t cookie_secret_len);
 
 struct config_file* 
 config_create(void)
@@ -327,6 +331,10 @@ config_create(void)
 	cfg->cachedb_backend = NULL;
 	cfg->cachedb_secret = NULL;
 #endif
+	cfg->do_answer_cookie = 1;
+	memset(cfg->cookie_secret, 0, sizeof(cfg->cookie_secret));
+	cfg->cookie_secret_len = 8;
+	init_cookie_secret(cfg->cookie_secret, cfg->cookie_secret_len);
 	return cfg;
 error_exit:
 	config_delete(cfg); 
@@ -1430,6 +1438,23 @@ config_delete(struct config_file* cfg)
 #endif
 	free(cfg);
 }
+
+static void
+init_cookie_secret(uint8_t* cookie_secret, size_t cookie_secret_len)
+{
+	unsigned int seed = (unsigned int)time(NULL) ^
+		(unsigned int)getpid() ^ 0x9a65;
+	struct ub_randstate *rand = ub_initstate(seed, NULL);
+
+	if (!rand)
+		fatal_exit("could not init random generator");
+	while (cookie_secret_len) {
+		*cookie_secret++ = (uint8_t)ub_random(rand);
+		cookie_secret_len--;
+	}
+	ub_randfree(rand);
+}
+
 
 static void 
 init_outgoing_availports(int* a, int num)

@@ -575,6 +575,13 @@ struct config_file {
 	int redis_timeout;
 #endif
 #endif
+	/** Downstream DNS Cookies */
+	/** do answer with server cookie when request contained cookie option */
+	int do_answer_cookie;
+	/** cookie secret */
+	uint8_t cookie_secret[32];
+	/** cookie secret length */
+	size_t  cookie_secret_len;
 };
 
 /** from cfg username, after daemonize setup performed */
