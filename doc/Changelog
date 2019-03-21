@@ -1,3 +1,6 @@
+21 March 2019: Wouter
+	- Fix #4240: Fix whitespace cleanup in example.conf.
+
 19 March 2019: Wouter
 	- add type CAA to libpyunbound (accessing libunbound from python).
 
