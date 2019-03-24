@@ -184,8 +184,7 @@ int edns_cookie_validate(struct config_file* cfg,
 	if(cookie_opt->opt_data[8] != 1)
 		return 0;
 
-	cookie_time =
-		(time_t)ntohl(sldns_read_uint32(cookie_opt->opt_data + 12));
+	cookie_time = sldns_read_uint32(cookie_opt->opt_data + 12);
 
 	if(compare_1982(now_uint32, cookie_time) > 0) {
 		if (subtract_1982(cookie_time, now_uint32) > 3600)
@@ -235,7 +234,7 @@ static int edns_cookie(struct edns_data* edns_out, struct edns_data* edns_in,
 		data_out[ 9] = cfg->cookie_secret_len == 16 ? 4 : 3;
 		data_out[10] = 0;   /* Reserved */
 		data_out[11] = 0;   /* Reserved */
-		sldns_write_uint32(data_out + 12, htonl(time(NULL)));
+		sldns_write_uint32(data_out + 12, time(NULL));
 		if (data_out[9] == 4)
 			siphash(data_out, 16,
 				cfg->cookie_secret, data_out + 16, 8);
