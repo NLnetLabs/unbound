@@ -333,7 +333,7 @@ config_create(void)
 #endif
 	cfg->do_answer_cookie = 1;
 	memset(cfg->cookie_secret, 0, sizeof(cfg->cookie_secret));
-	cfg->cookie_secret_len = 8;
+	cfg->cookie_secret_len = 16;
 	init_cookie_secret(cfg->cookie_secret, cfg->cookie_secret_len);
 	return cfg;
 error_exit:

@@ -130,11 +130,11 @@ static int aes_server_cookie(uint8_t *server_cookie_out,
 #endif
 }
 
-/** RFC 1918 comparison, uses unsigned integers, and tries to avoid
+/** RFC 1982 comparison, uses unsigned integers, and tries to avoid
  * compiler optimization (eg. by avoiding a-b<0 comparisons),
  * this routine matches compare_serial(), for SOA serial number checks */
 static int
-compare_1918(uint32_t a, uint32_t b)
+compare_1982(uint32_t a, uint32_t b)
 {
 	/* for 32 bit values */
 	const uint32_t cutoff = ((uint32_t) 1 << (32 - 1));
@@ -149,9 +149,9 @@ compare_1918(uint32_t a, uint32_t b)
 }
 
 /** if we know that b is larger than a, return the difference between them,
- * that is the distance between them. in RFC1918 arith */
+ * that is the distance between them. in RFC1982 arith */
 static uint32_t
-subtract_1918(uint32_t a, uint32_t b)
+subtract_1982(uint32_t a, uint32_t b)
 {
 	/* for 32 bit values */
 	const uint32_t cutoff = ((uint32_t) 1 << (32 - 1));
@@ -187,11 +187,11 @@ int edns_cookie_validate(struct config_file* cfg,
 	cookie_time =
 		(time_t)ntohl(sldns_read_uint32(cookie_opt->opt_data + 12));
 
-	if(compare_1918(now_uint32, cookie_time) > 0) {
-		if (subtract_1918(cookie_time, now_uint32) > 3600)
+	if(compare_1982(now_uint32, cookie_time) > 0) {
+		if (subtract_1982(cookie_time, now_uint32) > 3600)
 			return 0; /* Not older than 1 hour */
 
-	} else if (subtract_1918(now_uint32, cookie_time) > 300)
+	} else if (subtract_1982(now_uint32, cookie_time) > 300)
 		/* ignore cookies > 5 minutes in future */
 		return 0;
 
@@ -200,7 +200,7 @@ int edns_cookie_validate(struct config_file* cfg,
 				cfg->cookie_secret_len, cookie_opt->opt_data))
 			break;
 		else	return 0;
-	case 4:	if(cfg->cookie_secret_len != 8)
+	case 4:	if(cfg->cookie_secret_len != 16)
 			return 0;
 		siphash(cookie_opt->opt_data, 16,
 				cfg->cookie_secret, server_cookie, 8);
@@ -227,12 +227,12 @@ static int edns_cookie(struct edns_data* edns_out, struct edns_data* edns_in,
 	if (opt && opt->opt_len >= 8) {
 		uint8_t data_out[24];
 
-		log_assert(cfg->cookie_secret_len >= 8);
+		log_assert(cfg->cookie_secret_len >= 16);
 
 		(void)memcpy(data_out, opt->opt_data, 8);
 		data_out[ 8] = 1;   /* Version */
 		                    /* Algorithm, 3 = AES, 4 = SipHash2.4 */
-		data_out[ 9] = cfg->cookie_secret_len == 8 ? 4 : 3;
+		data_out[ 9] = cfg->cookie_secret_len == 16 ? 4 : 3;
 		data_out[10] = 0;   /* Reserved */
 		data_out[11] = 0;   /* Reserved */
 		sldns_write_uint32(data_out + 12, htonl(time(NULL)));
