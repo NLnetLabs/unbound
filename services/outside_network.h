@@ -575,7 +575,7 @@ struct comm_point* outnet_comm_point_for_udp(struct outside_network* outnet,
 struct comm_point* outnet_comm_point_for_tcp(struct outside_network* outnet,
 	comm_point_callback_type* cb, void* cb_arg,
 	struct sockaddr_storage* to_addr, socklen_t to_addrlen,
-	struct sldns_buffer* query, int timeout);
+	struct sldns_buffer* query, int timeout, int ssl, char* host);
 
 /**
  * Create http commpoint suitable for communication to the destination.
