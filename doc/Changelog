@@ -1,6 +1,7 @@
 25 March 2019: Wouter
 	- Fix that tls-session-ticket-keys: "" on its own in unbound.conf
 	  disables the tls session ticker key calls into the OpenSSL API.
+	- Fix crash if tls-servic-pem not filled in when necessary.
 
 21 March 2019: Wouter
 	- Fix #4240: Fix whitespace cleanup in example.conf.

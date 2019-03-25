@@ -802,6 +802,16 @@ void* listen_sslctx_create(char* key, char* pem, char* verifypem)
 		log_crypto_err("could not SSL_CTX_new");
 		return NULL;
 	}
+	if(!key || key[0] == 0) {
+		log_err("error: no tls-service-key file specified");
+		SSL_CTX_free(ctx);
+		return NULL;
+	}
+	if(!pem || pem[0] == 0) {
+		log_err("error: no tls-service-pem file specified");
+		SSL_CTX_free(ctx);
+		return NULL;
+	}
 	if(!listen_sslctx_setup(ctx)) {
 		SSL_CTX_free(ctx);
 		return NULL;
