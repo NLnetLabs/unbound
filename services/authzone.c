@@ -2646,19 +2646,6 @@ az_nsec3_findnode(struct auth_zone* z, uint8_t* hashnm, size_t hashnmlen)
 	return node;
 }
 
-/** Find exact match (or NULL) */
-static struct auth_data*
-az_nsec3_find_exact_match(struct auth_zone* z, uint8_t* nm, size_t nmlen,
-	int algo, size_t iter, uint8_t* salt, size_t saltlen)
-{
-	uint8_t hname[LDNS_MAX_DOMAINLEN];
-	size_t hlen = sizeof(hname);
-	if(!az_nsec3_hashname(z, hname, &hlen, nm, nmlen, algo, iter,
-		salt, saltlen))
-		return NULL;
-	return az_nsec3_findnode(z, hname, hlen);
-}
-
 /** Find cover for hashed(nm, nmlen) (or NULL) */
 static struct auth_data*
 az_nsec3_find_cover(struct auth_zone* z, uint8_t* nm, size_t nmlen,
@@ -2783,7 +2770,7 @@ az_add_nsec3_proof(struct auth_zone* z, struct regional* region,
 		/* see if the node has a hash of itself for the nodata
 		 * proof nsec3, this has to be an exact match nsec3. */
 		struct auth_data* match;
-		match = az_nsec3_find_exact_match(z, qname, qname_len, algo,
+		match = az_nsec3_find_exact(z, qname, qname_len, algo,
 			iter, salt, saltlen);
 		if(match) {
 			if(!az_nsec3_insert(z, region, msg, match))

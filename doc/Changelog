@@ -3,6 +3,7 @@
 	  match nsec3 records.
 	- Fix for out of bounds integers, thanks to OSTIF audit.  It is in
 	  allocation debug code.
+	- Fix for auth zone nsec3 ent fix for wildcard nodata.
 
 25 March 2019: Wouter
 	- Fix that tls-session-ticket-keys: "" on its own in unbound.conf
