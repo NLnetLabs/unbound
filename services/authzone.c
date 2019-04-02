@@ -2646,6 +2646,19 @@ az_nsec3_findnode(struct auth_zone* z, uint8_t* hashnm, size_t hashnmlen)
 	return node;
 }
 
+/** Find exact match (or NULL) */
+static struct auth_data*
+az_nsec3_find_exact_match(struct auth_zone* z, uint8_t* nm, size_t nmlen,
+	int algo, size_t iter, uint8_t* salt, size_t saltlen)
+{
+	uint8_t hname[LDNS_MAX_DOMAINLEN];
+	size_t hlen = sizeof(hname);
+	if(!az_nsec3_hashname(z, hname, &hlen, nm, nmlen, algo, iter,
+		salt, saltlen))
+		return NULL;
+	return az_nsec3_findnode(z, hname, hlen);
+}
+
 /** Find cover for hashed(nm, nmlen) (or NULL) */
 static struct auth_data*
 az_nsec3_find_cover(struct auth_zone* z, uint8_t* nm, size_t nmlen,
@@ -2746,6 +2759,7 @@ az_nsec3_insert(struct auth_zone* z, struct regional* region,
  * 	that is an exact match that should exist for it.
  * 	If that does not exist, a higher exact match + nxproof is enabled
  * 	(for some sort of opt-out empty nonterminal cases).
+ * nodataproof: search for exact match and include that instead.
  * ceproof: include ce proof NSEC3 (omitted for wildcard replies).
  * nxproof: include denial of the qname.
  * wcproof: include denial of wildcard (wildcard.ce).
@@ -2753,7 +2767,8 @@ az_nsec3_insert(struct auth_zone* z, struct regional* region,
 static int
 az_add_nsec3_proof(struct auth_zone* z, struct regional* region,
 	struct dns_msg* msg, uint8_t* cenm, size_t cenmlen, uint8_t* qname,
-	size_t qname_len, int ceproof, int nxproof, int wcproof)
+	size_t qname_len, int nodataproof, int ceproof, int nxproof,
+	int wcproof)
 {
 	int algo;
 	size_t iter, saltlen;
@@ -2764,6 +2779,19 @@ az_add_nsec3_proof(struct auth_zone* z, struct regional* region,
 	/* find parameters of nsec3 proof */
 	if(!az_nsec3_param(z, &algo, &iter, &salt, &saltlen))
 		return 1; /* no nsec3 */
+	if(nodataproof) {
+		/* see if the node has a hash of itself for the nodata
+		 * proof nsec3, this has to be an exact match nsec3. */
+		struct auth_data* match;
+		match = az_nsec3_find_exact_match(z, qname, qname_len, algo,
+			iter, salt, saltlen);
+		if(match) {
+			if(!az_nsec3_insert(z, region, msg, match))
+				return 0;
+			/* only nodata NSEC3 needed, no CE or others. */
+			return 1;
+		}
+	}
 	/* find ce that has an NSEC3 */
 	if(ceproof) {
 		node = az_nsec3_find_ce(z, &cenm, &cenmlen, &no_exact_ce,
@@ -2916,7 +2944,7 @@ az_generate_notype_answer(struct auth_zone* z, struct regional* region,
 		/* DNSSEC denial NSEC3 */
 		if(!az_add_nsec3_proof(z, region, msg, node->name,
 			node->namelen, msg->qinfo.qname,
-			msg->qinfo.qname_len, 1, 0, 0))
+			msg->qinfo.qname_len, 1, 1, 0, 0))
 			return 0;
 	}
 	return 1;
@@ -2943,7 +2971,7 @@ az_generate_referral_answer(struct auth_zone* z, struct regional* region,
 		} else {
 			if(!az_add_nsec3_proof(z, region, msg, ce->name,
 				ce->namelen, msg->qinfo.qname,
-				msg->qinfo.qname_len, 1, 0, 0))
+				msg->qinfo.qname_len, 1, 1, 0, 0))
 				return 0;
 		}
 	}
@@ -3019,7 +3047,7 @@ az_generate_wildcard_answer(struct auth_zone* z, struct query_info* qinfo,
 		dname_remove_label(&wildup, &wilduplen);
 		if(!az_add_nsec3_proof(z, region, msg, wildup,
 			wilduplen, msg->qinfo.qname,
-			msg->qinfo.qname_len, 0, 1, 0))
+			msg->qinfo.qname_len, 0, 0, 1, 0))
 			return 0;
 	}
 
@@ -3045,7 +3073,7 @@ az_generate_nxdomain_answer(struct auth_zone* z, struct regional* region,
 	} else if(ce) {
 		if(!az_add_nsec3_proof(z, region, msg, ce->name,
 			ce->namelen, msg->qinfo.qname,
-			msg->qinfo.qname_len, 1, 1, 1))
+			msg->qinfo.qname_len, 0, 1, 1, 1))
 			return 0;
 	}
 	return 1;
