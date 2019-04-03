@@ -2997,6 +2997,7 @@ az_generate_wildcard_answer(struct auth_zone* z, struct query_info* qinfo,
 	struct auth_data* wildcard, struct auth_data* node)
 {
 	struct auth_rrset* rrset, *nsec;
+	int insert_ce = 0;
 	if((rrset=az_domain_rrset(wildcard, qinfo->qtype)) != NULL) {
 		/* wildcard has type, add it */
 		if(!msg_add_rrset_an(z, region, msg, wildcard, rrset))
@@ -3023,6 +3024,10 @@ az_generate_wildcard_answer(struct auth_zone* z, struct query_info* qinfo,
 		/* call other notype routine for dnssec notype denials */
 		if(!az_generate_notype_answer(z, region, msg, wildcard))
 			return 0;
+		/* because the notype, there is no positive data with an
+		 * RRSIG that indicates the wildcard position.  Thus the
+		 * wildcard qname denial needs to have a CE nsec3. */
+		insert_ce = 1;
 	}
 
 	/* ce and node for dnssec denial of wildcard original name */
@@ -3034,7 +3039,7 @@ az_generate_wildcard_answer(struct auth_zone* z, struct query_info* qinfo,
 		dname_remove_label(&wildup, &wilduplen);
 		if(!az_add_nsec3_proof(z, region, msg, wildup,
 			wilduplen, msg->qinfo.qname,
-			msg->qinfo.qname_len, 0, 0, 1, 0))
+			msg->qinfo.qname_len, 0, insert_ce, 1, 0))
 			return 0;
 	}
 
