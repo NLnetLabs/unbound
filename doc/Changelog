@@ -1,3 +1,7 @@
+3 April 2019: Wouter
+	- Move goto label in answer_from_cache to the end of the function
+	  where it is more visible.
+
 2 April 2019: Wouter
 	- Fix auth-zone NSEC3 response for empty nonterminals with exact
 	  match nsec3 records.
