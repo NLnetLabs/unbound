@@ -2310,7 +2310,7 @@ outnet_comm_point_for_tcp(struct outside_network* outnet,
 	if(ssl) {
 		cp->ssl = outgoing_ssl_fd(outnet->sslctx, fd);
 		if(!cp->ssl) {
-			log_err("cannot setup https");
+			log_err("cannot setup XoT");
 			comm_point_delete(cp);
 			return NULL;
 		}
@@ -2318,7 +2318,7 @@ outnet_comm_point_for_tcp(struct outside_network* outnet,
 		comm_point_tcp_win_bio_cb(cp, cp->ssl);
 #endif
 		cp->ssl_shake_state = comm_ssl_shake_write;
-		/* https verification */
+		/* XoT verification */
 #ifdef HAVE_SSL_SET1_HOST
 		if((SSL_CTX_get_verify_mode(outnet->sslctx)&SSL_VERIFY_PEER)) {
 			/* because we set SSL_VERIFY_PEER, in netevent in
