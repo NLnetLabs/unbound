@@ -178,7 +178,7 @@ comm_base_create(int sigs)
 	}
 	ub_comm_base_now(b);
 	ub_get_event_sys(b->eb->base, &evnm, &evsys, &evmethod);
-	verbose(VERB_ALGO, "%s %s user %s method.", evnm, evsys, evmethod);
+	verbose(VERB_ALGO, "%s %s uses %s method.", evnm, evsys, evmethod);
 	return b;
 }
 

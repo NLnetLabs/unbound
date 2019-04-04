@@ -1,3 +1,6 @@
+4 April 2019: Wouter
+	- Fix spelling error in log output for event method.
+
 3 April 2019: Wouter
 	- Move goto label in answer_from_cache to the end of the function
 	  where it is more visible.
