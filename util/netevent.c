@@ -926,6 +926,14 @@ comm_point_tcp_accept_callback(int fd, short event, void* arg)
 	}
 	/* accept incoming connection. */
 	c_hdl = c->tcp_free;
+	/* clear leftover flags from previous use, and then set the
+	 * correct event base for the event structure for libevent */
+	ub_event_free(c_hdl->ev->ev);
+	c_hdl->ev->ev = ub_event_new(c_hdl->ev->base->eb->base, -1, UB_EV_PERSIST | UB_EV_READ | UB_EV_TIMEOUT, comm_point_tcp_handle_callback, c_hdl);
+	if(!c_hdl->ev->ev) {
+		log_warn("could not ub_event_new, dropped tcp");
+		return;
+	}
 	log_assert(fd != -1);
 	(void)fd;
 	new_fd = comm_point_perform_accept(c, &c_hdl->repinfo.addr,

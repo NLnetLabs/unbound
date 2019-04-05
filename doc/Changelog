@@ -1,3 +1,6 @@
+5 April 2019: Wouter
+	- Fix to reinit event structure for accepted TCP (and TLS) sockets.
+
 4 April 2019: Wouter
 	- Fix spelling error in log output for event method.
 
