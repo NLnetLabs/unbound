@@ -165,7 +165,7 @@ int sldns_str2wire_dname_buf_origin(const char* str, uint8_t* buf, size_t* len,
 
 uint8_t* sldns_str2wire_dname(const char* str, size_t* len)
 {
-	uint8_t dname[LDNS_MAX_DOMAINLEN+1];
+	uint8_t dname[LDNS_MAX_DOMAINLEN];
 	*len = sizeof(dname);
 	if(sldns_str2wire_dname_buf(str, dname, len) == 0) {
 		uint8_t* r = (uint8_t*)malloc(*len);

@@ -46,6 +46,7 @@
 #include "util/storage/dnstree.h"
 #include "util/module.h"
 #include "services/view.h"
+#include "sldns/sbuffer.h"
 struct packed_rrset_data;
 struct ub_packed_rrset_key;
 struct regional;
@@ -91,6 +92,8 @@ enum localzone_type {
 	local_zone_always_refuse,
 	/** answer with nxdomain, even when there is local data */
 	local_zone_always_nxdomain,
+	/** answer with noerror/nodata, even when there is local data */
+	local_zone_always_nodata,
 	/** answer not from the view, but global or no-answer */
 	local_zone_noview
 };
@@ -310,6 +313,25 @@ int local_zones_answer(struct local_zones* zones, struct module_env* env,
 	struct config_strlist** tag_datas, size_t tag_datas_size,
 	char** tagname, int num_tags, struct view* view);
 
+/** 
+ * Answer using the local zone only (not local data used).
+ * @param z: zone for query.
+ * @param env: module environment.
+ * @param qinfo: query.
+ * @param edns: edns from query.
+ * @param repinfo: source address for checks. may be NULL.
+ * @param buf: buffer for answer.
+ * @param temp: temp region for encoding.
+ * @param ld: local data, if NULL, no such name exists in localdata.
+ * @param lz_type: type of the local zone.
+ * @return 1 if a reply is to be sent, 0 if not.
+ */
+int
+local_zones_zone_answer(struct local_zone* z, struct module_env* env,
+	struct query_info* qinfo, struct edns_data* edns,
+	struct comm_reply* repinfo, sldns_buffer* buf, struct regional* temp,
+	struct local_data* ld, enum localzone_type lz_type);
+
 /**
  * Parse the string into localzone type.
  *
@@ -339,6 +361,22 @@ const char* local_zone_type2str(enum localzone_type t);
  */
 struct local_zone* local_zones_find(struct local_zones* zones, 
 	uint8_t* name, size_t len, int labs, uint16_t dclass);
+
+/**
+ * Find zone that with exactly or smaller name/class
+ * User must lock the tree or result zone.
+ * @param zones: the zones tree
+ * @param name: dname to lookup
+ * @param len: length of name.
+ * @param labs: labelcount of name.
+ * @param dclass: class to lookup.
+ * @param exact: 1 on return is this is an exact match.
+ * @return the exact or smaller local_zone or NULL.
+ */
+struct local_zone*
+local_zones_find_le(struct local_zones* zones,
+        uint8_t* name, size_t len, int labs, uint16_t dclass,
+	int* exact);
 
 /**
  * Add a new zone. Caller must hold the zones lock.
@@ -501,6 +539,8 @@ enum respip_action {
 	respip_always_refuse = local_zone_always_refuse,
         /** answer with 'no such domain' response */
 	respip_always_nxdomain = local_zone_always_nxdomain,
+        /** answer with nodata response */
+	respip_always_nodata = local_zone_always_nodata,
 
 	/* The rest of the values are only possible as
 	 * access-control-tag-action */
@@ -515,4 +555,16 @@ enum respip_action {
 	respip_typetransparent = local_zone_typetransparent,
 };
 
+int
+local_data_answer(struct local_zone* z, struct module_env* env,
+	struct query_info* qinfo, struct edns_data* edns,
+	struct comm_reply* repinfo, sldns_buffer* buf,
+	struct regional* temp, int labs, struct local_data** ldp,
+	enum localzone_type lz_type, int tag, struct config_strlist** tag_datas,
+	size_t tag_datas_size, char** tagname, int num_tags);
+
+int
+local_zone_enter_rr(struct local_zone* z, uint8_t* nm, size_t nmlen,
+	int nmlabs, uint16_t rrtype, uint16_t rrclass, time_t ttl,
+	uint8_t* rdata, size_t rdata_len, const char* rrstr);
 #endif /* SERVICES_LOCALZONE_H */

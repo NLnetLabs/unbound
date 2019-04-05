@@ -1,8 +1,8 @@
-/* A Bison parser, made by GNU Bison 3.0.5.  */
+/* A Bison parser, made by GNU Bison 3.0.4.  */
 
 /* Bison interface for Yacc-like parsers in C
 
-   Copyright (C) 1984, 1989-1990, 2000-2015, 2018 Free Software Foundation, Inc.
+   Copyright (C) 1984, 1989-1990, 2000-2015 Free Software Foundation, Inc.
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -308,7 +308,9 @@ extern int yydebug;
     VAR_STREAM_WAIT_SIZE = 518,
     VAR_TLS_CIPHERS = 519,
     VAR_TLS_CIPHERSUITES = 520,
-    VAR_TLS_SESSION_TICKET_KEYS = 521
+    VAR_TLS_SESSION_TICKET_KEYS = 521,
+    VAR_RPZ = 522,
+    VAR_TAGS = 523
   };
 #endif
 /* Tokens.  */
@@ -576,17 +578,19 @@ extern int yydebug;
 #define VAR_TLS_CIPHERS 519
 #define VAR_TLS_CIPHERSUITES 520
 #define VAR_TLS_SESSION_TICKET_KEYS 521
+#define VAR_RPZ 522
+#define VAR_TAGS 523
 
 /* Value type.  */
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 
 union YYSTYPE
 {
-#line 66 "./util/configparser.y" /* yacc.c:1910  */
+#line 66 "./util/configparser.y" /* yacc.c:1909  */
 
 	char*	str;
 
-#line 590 "util/configparser.h" /* yacc.c:1910  */
+#line 594 "util/configparser.h" /* yacc.c:1909  */
 };
 
 typedef union YYSTYPE YYSTYPE;

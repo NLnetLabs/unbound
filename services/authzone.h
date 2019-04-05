@@ -46,6 +46,7 @@
 #include "util/rbtree.h"
 #include "util/locks.h"
 #include "services/mesh.h"
+#include "services/rpz.h"
 struct ub_packed_rrset_key;
 struct regional;
 struct config_file;
@@ -81,6 +82,11 @@ struct auth_zones {
 	size_t num_query_up;
 	/** number of queries downstream */
 	size_t num_query_down;
+	/** first rpz item in linked list */
+	struct rpz* rpz_first;
+	/** rw lock for rpz linked list, needed when iterating or editing linked
+	 * list. */
+	lock_rw_type rpz_lock;
 };
 
 /**
@@ -126,6 +132,8 @@ struct auth_zone {
 	/** for upstream: this zone answers queries that unbound intends to
 	 * send upstream. */
 	int for_upstream;
+	/** RPZ zones */
+	struct rpz* rpz;
 	/** zone has been deleted */
 	int zone_deleted;
 	/** deletelist pointer, unused normally except during delete */

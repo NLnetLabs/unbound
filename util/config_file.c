@@ -1268,6 +1268,8 @@ config_delauth(struct config_auth* p)
 	config_delstrlist(p->urls);
 	config_delstrlist(p->allow_notify);
 	free(p->zonefile);
+	if(p->rpz_taglist)
+		free(p->rpz_taglist);
 	free(p);
 }
 

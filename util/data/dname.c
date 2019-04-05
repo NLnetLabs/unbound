@@ -584,7 +584,7 @@ void dname_str(uint8_t* dname, char* str)
 			return;
 		}
 		len += lablen+1;
-		if(len >= LDNS_MAX_DOMAINLEN-1) {
+		if(len >= LDNS_MAX_DOMAINLEN) {
 			*s++ = '&';
 			*s = 0;
 			return;

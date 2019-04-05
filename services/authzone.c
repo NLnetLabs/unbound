@@ -381,11 +381,25 @@ auth_data_del(rbnode_type* n, void* ATTR_UNUSED(arg))
 
 /** delete an auth zone structure (tree remove must be done elsewhere) */
 static void
-auth_zone_delete(struct auth_zone* z)
+auth_zone_delete(struct auth_zone* z, struct auth_zones* az)
 {
 	if(!z) return;
 	lock_rw_destroy(&z->lock);
 	traverse_postorder(&z->data, auth_data_del, NULL);
+
+	if(az && z->rpz) {
+		/* keep RPZ linked list intact */
+		lock_rw_wrlock(&az->rpz_lock);
+		if(z->rpz->prev)
+			z->rpz->prev->next = z->rpz->next;
+		else
+			az->rpz_first = z->rpz->next;
+		if(z->rpz->next)
+			z->rpz->next->prev = z->rpz->prev;
+		lock_rw_unlock(&az->rpz_lock);
+	}
+	if(z->rpz)
+		rpz_delete(z->rpz);
 	free(z->name);
 	free(z->zonefile);
 	free(z);
@@ -415,7 +429,7 @@ auth_zone_create(struct auth_zones* az, uint8_t* nm, size_t nmlen,
 	/* z lock protects all, except rbtree itself, which is az->lock */
 	if(!rbtree_insert(&az->ztree, &z->node)) {
 		lock_rw_unlock(&z->lock);
-		auth_zone_delete(z);
+		auth_zone_delete(z, NULL);
 		log_warn("duplicate auth zone");
 		return NULL;
 	}
@@ -1178,6 +1192,10 @@ az_insert_rr(struct auth_zone* z, uint8_t* rr, size_t rr_len,
 		log_err("cannot add RR to domain");
 		return 0;
 	}
+	if(z->rpz) {
+		rpz_insert_rr(z->rpz, z->namelen, dname, dname_len, rr_type, rr_class, rr_ttl, rdata,
+			rdatalen, rr, rr_len);
+	}
 	return 1;
 }
 
@@ -1292,6 +1310,10 @@ az_remove_rr(struct auth_zone* z, uint8_t* rr, size_t rr_len,
 	if(node->rrsets == NULL) {
 		(void)rbtree_delete(&z->data, node);
 		auth_data_delete(node);
+	}
+	if(z->rpz) {
+		rpz_remove_rr(z->rpz, z->namelen, dname, dname_len, rr_type,
+			rr_class, rdata, rdatalen, rr, rr_len);
 	}
 	return 1;
 }
@@ -1585,6 +1607,9 @@ auth_zone_read_zonefile(struct auth_zone* z, struct config_file* cfg)
 	/* clear the data tree */
 	traverse_postorder(&z->data, auth_data_del, NULL);
 	rbtree_init(&z->data, &auth_data_cmp);
+	/* clear the RPZ local_zone tree */
+	if(z->rpz)
+		rpz_clear_lz(z->rpz);
 
 	memset(&state, 0, sizeof(state));
 	/* default TTL to 3600 */
@@ -1877,6 +1902,18 @@ auth_zones_cfg(struct auth_zones* az, struct config_auth* c)
 	z->for_downstream = c->for_downstream;
 	z->for_upstream = c->for_upstream;
 	z->fallback_enabled = c->fallback_enabled;
+	if(c->isrpz && !z->rpz){
+		if(!(z->rpz = rpz_create(c))){
+			fatal_exit("Could not setup RPZ zones");
+			return 0;
+		}
+		lock_rw_wrlock(&az->rpz_lock);
+		z->rpz->next = az->rpz_first;
+		if(az->rpz_first)
+			az->rpz_first->prev = z->rpz;
+		az->rpz_first = z->rpz;
+		lock_rw_unlock(&az->rpz_lock);
+	}
 
 	/* xfer zone */
 	if(x) {
@@ -1947,7 +1984,7 @@ az_delete_deleted_zones(struct auth_zones* az)
 			auth_xfer_delete(xfr);
 		}
 		(void)rbtree_delete(&az->ztree, &z->node);
-		auth_zone_delete(z);
+		auth_zone_delete(z, az);
 		z = next;
 	}
 	lock_rw_unlock(&az->lock);
@@ -2061,7 +2098,7 @@ static void
 auth_zone_del(rbnode_type* n, void* ATTR_UNUSED(arg))
 {
 	struct auth_zone* z = (struct auth_zone*)n->key;
-	auth_zone_delete(z);
+	auth_zone_delete(z, NULL);
 }
 
 /** helper traverse to delete xfer zones */
@@ -4680,6 +4717,10 @@ apply_axfr(struct auth_xfer* xfr, struct auth_zone* z,
 	/* clear the data tree */
 	traverse_postorder(&z->data, auth_data_del, NULL);
 	rbtree_init(&z->data, &auth_data_cmp);
+	/* clear the RPZ local_zone tree */
+	if(z->rpz)
+		rpz_clear_lz(z->rpz);
+
 	xfr->have_zone = 0;
 	xfr->serial = 0;
 
@@ -4776,6 +4817,10 @@ apply_http(struct auth_xfer* xfr, struct auth_zone* z,
 	/* clear the data tree */
 	traverse_postorder(&z->data, auth_data_del, NULL);
 	rbtree_init(&z->data, &auth_data_cmp);
+	/* clear the RPZ local_zone tree */
+	if(z->rpz)
+		rpz_clear_lz(z->rpz);
+
 	xfr->have_zone = 0;
 	xfr->serial = 0;
 

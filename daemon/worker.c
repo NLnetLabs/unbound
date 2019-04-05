@@ -1364,6 +1364,18 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 		goto send_reply;
 	}
 	if(worker->env.auth_zones &&
+		rpz_apply_qname_trigger(worker->env.auth_zones,
+		&worker->env, &qinfo, &edns, c->buffer, worker->scratchpad,
+		repinfo, acladdr->taglist, acladdr->taglen)) {
+		regional_free_all(worker->scratchpad);
+		if(sldns_buffer_limit(c->buffer) == 0) {
+			comm_point_drop_reply(repinfo);
+			return 0;
+		}
+		server_stats_insrcode(&worker->stats, c->buffer);
+		goto send_reply;
+	}
+	if(worker->env.auth_zones &&
 		auth_zones_answer(worker->env.auth_zones, &worker->env,
 		&qinfo, &edns, repinfo, c->buffer, worker->scratchpad)) {
 		regional_free_all(worker->scratchpad);

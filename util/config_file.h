@@ -631,6 +631,13 @@ struct config_auth {
 	/** fallback to recursion to authorities if zone expired and other
 	 * reasons perhaps (like, query bogus) */
 	int fallback_enabled;
+	/** this zone is used to create local-zone policies */
+	int isrpz;
+	/** rpz tags (or NULL) */
+	uint8_t* rpz_taglist;
+	/** length of the taglist (in bytes) */
+	size_t rpz_taglistlen;
+
 };
 
 /**
