@@ -245,6 +245,9 @@ additional-ssl-port{COLON}	{ YDVAR(1, VAR_TLS_ADDITIONAL_PORT) }
 additional-tls-port{COLON}	{ YDVAR(1, VAR_TLS_ADDITIONAL_PORT) }
 tls-additional-ports{COLON}	{ YDVAR(1, VAR_TLS_ADDITIONAL_PORT) }
 tls-additional-port{COLON}	{ YDVAR(1, VAR_TLS_ADDITIONAL_PORT) }
+tls-session-ticket-keys{COLON}	{ YDVAR(1, VAR_TLS_SESSION_TICKET_KEYS) }
+tls-ciphers{COLON}		{ YDVAR(1, VAR_TLS_CIPHERS) }
+tls-ciphersuites{COLON}		{ YDVAR(1, VAR_TLS_CIPHERSUITES) }
 use-systemd{COLON}		{ YDVAR(1, VAR_USE_SYSTEMD) }
 do-daemonize{COLON}		{ YDVAR(1, VAR_DO_DAEMONIZE) }
 interface{COLON}		{ YDVAR(1, VAR_INTERFACE) }
@@ -262,6 +265,7 @@ directory{COLON}		{ YDVAR(1, VAR_DIRECTORY) }
 logfile{COLON}			{ YDVAR(1, VAR_LOGFILE) }
 pidfile{COLON}			{ YDVAR(1, VAR_PIDFILE) }
 root-hints{COLON}		{ YDVAR(1, VAR_ROOT_HINTS) }
+stream-wait-size{COLON}		{ YDVAR(1, VAR_STREAM_WAIT_SIZE) }
 edns-buffer-size{COLON}		{ YDVAR(1, VAR_EDNS_BUFFER_SIZE) }
 msg-buffer-size{COLON}		{ YDVAR(1, VAR_MSG_BUFFER_SIZE) }
 msg-cache-size{COLON}		{ YDVAR(1, VAR_MSG_CACHE_SIZE) }

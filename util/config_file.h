@@ -120,6 +120,12 @@ struct config_file {
 	int tls_win_cert;
 	/** additional tls ports */
 	struct config_strlist* tls_additional_port;
+	/** secret key used to encrypt and decrypt TLS session ticket */
+	struct config_strlist_head tls_session_ticket_keys;
+	/** TLS ciphers */
+	char* tls_ciphers;
+	/** TLS chiphersuites (TLSv1.3) */
+	char* tls_ciphersuites;
 
 	/** outgoing port range number of ports (per thread) */
 	int outgoing_num_ports;
@@ -132,6 +138,8 @@ struct config_file {
 
 	/** EDNS buffer size to use */
 	size_t edns_buffer_size;
+	/** size of the stream wait buffers, max */
+	size_t stream_wait_size;
 	/** number of bytes buffer size for DNS messages */
 	size_t msg_buffer_size;
 	/** size of the message cache */
@@ -575,6 +583,8 @@ extern uid_t cfg_uid;
 extern gid_t cfg_gid;
 /** debug and enable small timeouts */
 extern int autr_permit_small_holddown;
+/** size (in bytes) of stream wait buffers max */
+extern size_t stream_wait_max;
 
 /**
  * Stub config options

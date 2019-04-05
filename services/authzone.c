@@ -88,6 +88,9 @@
 #define AUTH_HTTPS_PORT 443
 /* max depth for nested $INCLUDEs */
 #define MAX_INCLUDE_DEPTH 10
+/** number of timeouts before we fallback from IXFR to AXFR,
+ * because some versions of servers (eg. dnsmasq) drop IXFR packets. */
+#define NUM_TIMEOUTS_FALLBACK_IXFR 3
 
 /** pick up nextprobe task to start waiting to perform transfer actions */
 static void xfr_set_timeout(struct auth_xfer* xfr, struct module_env* env,
@@ -1979,7 +1982,7 @@ int auth_zones_apply_cfg(struct auth_zones* az, struct config_file* cfg,
  * @param at: transfer structure with chunks list.  The chunks and their
  * 	data are freed.
  */
-void
+static void
 auth_chunks_delete(struct auth_transfer* at)
 {
 	if(at->chunks_first) {
@@ -2618,7 +2621,7 @@ az_nsec3_hashname(struct auth_zone* z, uint8_t* hashname, size_t* hashnmlen,
 }
 
 /** Find the datanode that covers the nsec3hash-name */
-struct auth_data*
+static struct auth_data*
 az_nsec3_findnode(struct auth_zone* z, uint8_t* hashnm, size_t hashnmlen)
 {
 	struct query_info qinfo;
@@ -2743,13 +2746,16 @@ az_nsec3_insert(struct auth_zone* z, struct regional* region,
  * 	that is an exact match that should exist for it.
  * 	If that does not exist, a higher exact match + nxproof is enabled
  * 	(for some sort of opt-out empty nonterminal cases).
+ * nodataproof: search for exact match and include that instead.
+ * ceproof: include ce proof NSEC3 (omitted for wildcard replies).
  * nxproof: include denial of the qname.
  * wcproof: include denial of wildcard (wildcard.ce).
  */
 static int
 az_add_nsec3_proof(struct auth_zone* z, struct regional* region,
 	struct dns_msg* msg, uint8_t* cenm, size_t cenmlen, uint8_t* qname,
-	size_t qname_len, int nxproof, int wcproof)
+	size_t qname_len, int nodataproof, int ceproof, int nxproof,
+	int wcproof)
 {
 	int algo;
 	size_t iter, saltlen;
@@ -2760,12 +2766,27 @@ az_add_nsec3_proof(struct auth_zone* z, struct regional* region,
 	/* find parameters of nsec3 proof */
 	if(!az_nsec3_param(z, &algo, &iter, &salt, &saltlen))
 		return 1; /* no nsec3 */
+	if(nodataproof) {
+		/* see if the node has a hash of itself for the nodata
+		 * proof nsec3, this has to be an exact match nsec3. */
+		struct auth_data* match;
+		match = az_nsec3_find_exact(z, qname, qname_len, algo,
+			iter, salt, saltlen);
+		if(match) {
+			if(!az_nsec3_insert(z, region, msg, match))
+				return 0;
+			/* only nodata NSEC3 needed, no CE or others. */
+			return 1;
+		}
+	}
 	/* find ce that has an NSEC3 */
-	node = az_nsec3_find_ce(z, &cenm, &cenmlen, &no_exact_ce,
-		algo, iter, salt, saltlen);
-	if(no_exact_ce) nxproof = 1;
-	if(!az_nsec3_insert(z, region, msg, node))
-		return 0;
+	if(ceproof) {
+		node = az_nsec3_find_ce(z, &cenm, &cenmlen, &no_exact_ce,
+			algo, iter, salt, saltlen);
+		if(no_exact_ce) nxproof = 1;
+		if(!az_nsec3_insert(z, region, msg, node))
+			return 0;
+	}
 
 	if(nxproof) {
 		uint8_t* nx;
@@ -2910,7 +2931,7 @@ az_generate_notype_answer(struct auth_zone* z, struct regional* region,
 		/* DNSSEC denial NSEC3 */
 		if(!az_add_nsec3_proof(z, region, msg, node->name,
 			node->namelen, msg->qinfo.qname,
-			msg->qinfo.qname_len, 0, 0))
+			msg->qinfo.qname_len, 1, 1, 0, 0))
 			return 0;
 	}
 	return 1;
@@ -2937,7 +2958,7 @@ az_generate_referral_answer(struct auth_zone* z, struct regional* region,
 		} else {
 			if(!az_add_nsec3_proof(z, region, msg, ce->name,
 				ce->namelen, msg->qinfo.qname,
-				msg->qinfo.qname_len, 0, 0))
+				msg->qinfo.qname_len, 1, 1, 0, 0))
 				return 0;
 		}
 	}
@@ -2976,6 +2997,7 @@ az_generate_wildcard_answer(struct auth_zone* z, struct query_info* qinfo,
 	struct auth_data* wildcard, struct auth_data* node)
 {
 	struct auth_rrset* rrset, *nsec;
+	int insert_ce = 0;
 	if((rrset=az_domain_rrset(wildcard, qinfo->qtype)) != NULL) {
 		/* wildcard has type, add it */
 		if(!msg_add_rrset_an(z, region, msg, wildcard, rrset))
@@ -3002,15 +3024,22 @@ az_generate_wildcard_answer(struct auth_zone* z, struct query_info* qinfo,
 		/* call other notype routine for dnssec notype denials */
 		if(!az_generate_notype_answer(z, region, msg, wildcard))
 			return 0;
+		/* because the notype, there is no positive data with an
+		 * RRSIG that indicates the wildcard position.  Thus the
+		 * wildcard qname denial needs to have a CE nsec3. */
+		insert_ce = 1;
 	}
 
 	/* ce and node for dnssec denial of wildcard original name */
 	if((nsec=az_find_nsec_cover(z, &node)) != NULL) {
 		if(!msg_add_rrset_ns(z, region, msg, node, nsec)) return 0;
 	} else if(ce) {
-		if(!az_add_nsec3_proof(z, region, msg, ce->name,
-			ce->namelen, msg->qinfo.qname,
-			msg->qinfo.qname_len, 1, 0))
+		uint8_t* wildup = wildcard->name;
+		size_t wilduplen= wildcard->namelen;
+		dname_remove_label(&wildup, &wilduplen);
+		if(!az_add_nsec3_proof(z, region, msg, wildup,
+			wilduplen, msg->qinfo.qname,
+			msg->qinfo.qname_len, 0, insert_ce, 1, 0))
 			return 0;
 	}
 
@@ -3036,7 +3065,7 @@ az_generate_nxdomain_answer(struct auth_zone* z, struct regional* region,
 	} else if(ce) {
 		if(!az_add_nsec3_proof(z, region, msg, ce->name,
 			ce->namelen, msg->qinfo.qname,
-			msg->qinfo.qname_len, 1, 1))
+			msg->qinfo.qname_len, 0, 1, 1, 1))
 			return 0;
 	}
 	return 1;
@@ -4988,12 +5017,12 @@ xfr_transfer_lookup_host(struct auth_xfer* xfr, struct module_env* env)
 		qinfo.qtype = LDNS_RR_TYPE_AAAA;
 	qinfo.local_alias = NULL;
 	if(verbosity >= VERB_ALGO) {
-		char buf[512];
+		char buf1[512];
 		char buf2[LDNS_MAX_DOMAINLEN+1];
 		dname_str(xfr->name, buf2);
-		snprintf(buf, sizeof(buf), "auth zone %s: master lookup"
+		snprintf(buf1, sizeof(buf1), "auth zone %s: master lookup"
 			" for task_transfer", buf2);
-		log_query_info(VERB_ALGO, buf, &qinfo);
+		log_query_info(VERB_ALGO, buf1, &qinfo);
 	}
 	edns.edns_present = 1;
 	edns.ext_rcode = 0;
@@ -5630,15 +5659,33 @@ auth_xfer_transfer_tcp_callback(struct comm_point* c, void* arg, int err,
 		 * and continue task_transfer*/
 		verbose(VERB_ALGO, "xfr stopped, connection lost to %s",
 			xfr->task_transfer->master->host);
+
+		/* see if IXFR caused the failure, if so, try AXFR */
+		if(xfr->task_transfer->on_ixfr) {
+			xfr->task_transfer->ixfr_possible_timeout_count++;
+			if(xfr->task_transfer->ixfr_possible_timeout_count >=
+				NUM_TIMEOUTS_FALLBACK_IXFR) {
+				verbose(VERB_ALGO, "xfr to %s, fallback "
+					"from IXFR to AXFR (because of timeouts)",
+					xfr->task_transfer->master->host);
+				xfr->task_transfer->ixfr_fail = 1;
+				gonextonfail = 0;
+			}
+		}
+
 	failed:
 		/* delete transferred data from list */
 		auth_chunks_delete(xfr->task_transfer);
 		comm_point_delete(xfr->task_transfer->cp);
 		xfr->task_transfer->cp = NULL;
-		xfr_transfer_nextmaster(xfr);
+		if(gonextonfail)
+			xfr_transfer_nextmaster(xfr);
 		xfr_transfer_nexttarget_or_end(xfr, env);
 		return 0;
 	}
+	/* note that IXFR worked without timeout */
+	if(xfr->task_transfer->on_ixfr)
+		xfr->task_transfer->ixfr_possible_timeout_count = 0;
 
 	/* handle returned packet */
 	/* if it fails, cleanup and end this transfer */
@@ -6010,12 +6057,12 @@ xfr_probe_lookup_host(struct auth_xfer* xfr, struct module_env* env)
 		qinfo.qtype = LDNS_RR_TYPE_AAAA;
 	qinfo.local_alias = NULL;
 	if(verbosity >= VERB_ALGO) {
-		char buf[512];
+		char buf1[512];
 		char buf2[LDNS_MAX_DOMAINLEN+1];
 		dname_str(xfr->name, buf2);
-		snprintf(buf, sizeof(buf), "auth zone %s: master lookup"
+		snprintf(buf1, sizeof(buf1), "auth zone %s: master lookup"
 			" for task_probe", buf2);
-		log_query_info(VERB_ALGO, buf, &qinfo);
+		log_query_info(VERB_ALGO, buf1, &qinfo);
 	}
 	edns.edns_present = 1;
 	edns.ext_rcode = 0;

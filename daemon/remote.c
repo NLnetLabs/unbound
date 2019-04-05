@@ -789,7 +789,8 @@ print_longnum(RES* ssl, const char* desc, size_t x)
 
 /** print mem stats */
 static int
-print_mem(RES* ssl, struct worker* worker, struct daemon* daemon)
+print_mem(RES* ssl, struct worker* worker, struct daemon* daemon,
+	struct ub_stats_info* s)
 {
 	size_t msg, rrset, val, iter, respip;
 #ifdef CLIENT_SUBNET
@@ -847,6 +848,9 @@ print_mem(RES* ssl, struct worker* worker, struct daemon* daemon)
 			dnscrypt_nonce))
 		return 0;
 #endif /* USE_DNSCRYPT */
+	if(!print_longnum(ssl, "mem.streamwait"SQ,
+		(size_t)s->svr.mem_stream_wait))
+		return 0;
 	return 1;
 }
 
@@ -969,6 +973,8 @@ print_ext(RES* ssl, struct ub_stats_info* s)
 		(unsigned long)s->svr.qtcp_outgoing)) return 0;
 	if(!ssl_printf(ssl, "num.query.tls"SQ"%lu\n", 
 		(unsigned long)s->svr.qtls)) return 0;
+	if(!ssl_printf(ssl, "num.query.tls.resume"SQ"%lu\n", 
+		(unsigned long)s->svr.qtls_resume)) return 0;
 	if(!ssl_printf(ssl, "num.query.ipv6"SQ"%lu\n", 
 		(unsigned long)s->svr.qipv6)) return 0;
 	/* flags */
@@ -1088,7 +1094,7 @@ do_stats(RES* ssl, struct daemon_remote* rc, int reset)
 	if(!print_uptime(ssl, rc->worker, reset))
 		return;
 	if(daemon->cfg->stat_extended) {
-		if(!print_mem(ssl, rc->worker, daemon)) 
+		if(!print_mem(ssl, rc->worker, daemon, &total)) 
 			return;
 		if(!print_hist(ssl, &total))
 			return;
@@ -1981,7 +1987,7 @@ parse_delegpt(RES* ssl, char* args, uint8_t* nm, int allow_names)
 				return NULL;
 			}
 		} else {
-#ifndef HAVE_SSL_SET1_HOST
+#if ! defined(HAVE_SSL_SET1_HOST) && ! defined(HAVE_X509_VERIFY_PARAM_SET1_HOST)
 			if(auth_name)
 			  log_err("no name verification functionality in "
 				"ssl library, ignored name for %s", todo);

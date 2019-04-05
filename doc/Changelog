@@ -1,3 +1,249 @@
+4 April 2019: Wouter
+	- Fix spelling error in log output for event method.
+
+3 April 2019: Wouter
+	- Move goto label in answer_from_cache to the end of the function
+	  where it is more visible.
+	- Fix auth-zone NSEC3 response for wildcard nodata answers,
+	  include the closest encloser in the answer.
+
+2 April 2019: Wouter
+	- Fix auth-zone NSEC3 response for empty nonterminals with exact
+	  match nsec3 records.
+	- Fix for out of bounds integers, thanks to OSTIF audit.  It is in
+	  allocation debug code.
+	- Fix for auth zone nsec3 ent fix for wildcard nodata.
+
+25 March 2019: Wouter
+	- Fix that tls-session-ticket-keys: "" on its own in unbound.conf
+	  disables the tls session ticker key calls into the OpenSSL API.
+	- Fix crash if tls-servic-pem not filled in when necessary.
+
+21 March 2019: Wouter
+	- Fix #4240: Fix whitespace cleanup in example.conf.
+
+19 March 2019: Wouter
+	- add type CAA to libpyunbound (accessing libunbound from python).
+
+18 March 2019: Wouter
+	- Add log message, at verbosity 4, that says the query is encrypted
+	  with TLS, if that is enabled for the query.
+	- Fix #4239: set NOTIMPL when deny-any is enabled, for RFC8482.
+
+7 March 2019: Wouter
+	- Fix for #4233: guard use of NDEBUG, so that it can be passed in
+	  CFLAGS into configure.
+
+5 March 2019: Wouter
+	- Tag release 1.9.1rc1.  Which became 1.9.1 on 12 March 2019.  Trunk
+	  has 1.9.2 in development.
+
+1 March 2019: Wouter
+	- output forwarder log in ssl_req_order test.
+
+28 February 2019: Wouter
+	- Remove memory leak on pythonmod python2 script file init.
+	- Remove swig gcc8 python function cast warnings, they are ignored.
+	- Print correct module that failed when module-config is wrong.
+
+27 February 2019: Wouter
+	- Fix #4229: Unbound man pages lack information, about access-control
+	  order and local zone tags, and elements in views.
+	- Fix #14: contrib/unbound.init: Fix wrong comparison judgment
+	  before copying.
+	- Fix for python module on Windows, fix fopen.
+
+25 February 2019: Wouter
+	- Fix #4227: pair event del and add for libevent for tcp_req_info.
+
+21 February 2019: Wouter
+	- Fix the error for unknown module in module-config is understandable,
+	  and explains it was not compiled in and where to see the list.
+	- In example.conf explain where to put cachedb module in module-config.
+	- In man page and example config explain that most modules have to
+	  be listed at the start of module-config.
+
+20 February 2019: Wouter
+	- Fix pythonmod include and sockaddr_un ifdefs for compile on
+	  Windows, and for libunbound.
+
+18 February 2019: Wouter
+	- Print query name with ip_ratelimit exceeded log lines.
+	- Spaces instead of tabs in that log message.
+	- Print query name and IP address when domain rate limit exceeded.
+
+14 February 2019: Wouter
+	- Fix capsforid canonical sort qsort callback.
+
+11 February 2019: Wouter
+	- Note default for module-config in man page.
+	- Fix recursion lame test for qname minimisation asked queries,
+	  that were not present in the set of prepared answers.
+	- Fix #13: Remove left-over requirements on OpenSSL >= 1.1.0 for
+	  cert name matching, from man page.
+	- make depend, with newer gcc, nicer layout.
+
+7 February 2019: Wouter
+	- Fix #4206: OpenSSL 1.0.2 hostname verification for FreeBSD 11.2.
+	- Fix that qname minimisation does not skip a label when missing
+	  nameserver targets need to be fetched.
+	- Fix #4225: clients seem to erroneously receive no answer with
+	  DNS-over-TLS and qname-minimisation.
+
+4 February 2019: Wouter
+	- Fix that log-replies prints the correct name for local-alias
+	  names, for names that have a CNAME in local-data configuration.
+	  It logs the original query name, not the target of the CNAME.
+	- Add local-zone type inform_redirect, which logs like type inform,
+	  and redirects like type redirect.
+	- Perform canonical sort for 0x20 capsforid compare of replies,
+	  this sorts rrsets in the authority and additional section before
+	  comparison, so that out of order rrsets do not cause failure.
+
+31 January 2019: Wouter
+	- Set ub_ctx_set_tls call signature in ltrace config file for
+	  libunbound in contrib/libunbound.so.conf.
+	- improve documentation for tls-service-key and forward-first.
+	- #10: fixed pkg-config operations, PKG_PROG_PKG_CONFIG moved out of
+	  conditional section, fixes systemd builds, from Enrico Scholz.
+	- #9: For openssl 1.0.2 use the CRYPTO_THREADID locking callbacks,
+	  still supports the set_id_callback previous API.  And for 1.1.0
+	  no locking callbacks are needed.
+	- #8: Fix OpenSSL without ENGINE support compilation.
+	- Wipe TLS session key data from memory on exit.
+
+30 January 2019: Ralph
+	- Fix case in which query timeout can result in marking delegation
+	  as edns_lame_known.
+
+29 January 2019: Wouter
+	- Fix spelling of tls-ciphers in example.conf.in.
+	- Fix #4224: auth_xfr_notify.rpl test broken due to typo
+	- Fix locking for libunbound context setup with broken port config.
+
+28 January 2019: Wouter
+	- ub_ctx_set_tls call for libunbound that enables DoT for the machines
+	  set with ub_ctx_set_fwd.  Patch from Florian Obser.
+	- Set build system for added call in the libunbound API.
+	- List example config for root zone copy locally hosted with auth-zone
+	  as suggested from draft-ietf-dnsop-7706-bis-02.  But with updated
+	  B root address.
+	- set version to 1.9.0 for release.  And this was released with the
+	  spelling for tls-ciphers fix as 1.9.0 on Feb 5.  Trunk has 1.9.1 in
+	  development.
+
+25 January 2019: Wouter
+	- Fix that tcp for auth zone and outgoing does not remove and
+	  then gets the ssl read again applied to the deleted commpoint.
+	- updated contrib/fastrpz.patch to cleanly diff.
+	- no lock when threads disabled in tcp request buffer count.
+	- remove compile warnings from libnettle compile.
+	- output of newer lex 2.6.1 and bison 3.0.5.
+
+24 January 2019: Wouter
+	- Newer aclocal and libtoolize used for generating configure scripts,
+	  aclocal 1.16.1 and libtoolize 2.4.6.
+	- Fix unit test for python 3.7 new keyword 'async'.
+	- clang analysis fixes, assert arc4random buffer in init,
+	  no check for already checked delegation pointer in iterator,
+	  in testcode check for NULL packet matches, in perf do not copy
+	  from NULL start list when growing capacity.  Adjust host and file
+	  only when present in test header read to please checker.  In
+	  testcode for unknown macro operand give zero result. Initialise the
+	  passed argv array in test code.  In test code add EDNS data
+	  segment copy only when nonempty.
+	- Patch from Florian Obser fixes some compiler warnings:
+	  include mini_event.h to have a prototype for mini_ev_cmp
+	  include edns.h to have a prototype for apply_edns_options
+	  sldns_wire2str_edns_keepalive_print is only called in the wire2str,
+	  module declare it static to get rid of compiler warning:
+	  no previous prototype for function
+	  infra_find_ip_ratedata() is only called in the infra module,
+	  declare it static to get rid of compiler warning:
+	  no previous prototype for function
+	  do not shadow local variable buf in authzone
+	  auth_chunks_delete and az_nsec3_findnode are only called in the
+	  authzone module, declare them static to get rid of compiler warning:
+	  no previous prototype for function...
+	  copy_rrset() is only called in the respip module, declare it
+	  static to get rid of compiler warning:
+	  no previous prototype for function 'copy_rrset'
+	  no need for another variable "r"; gets rid of compiler warning:
+	  declaration shadows a local variable in libunbound.c
+	  no need for another variable "ns"; gets rid of compiler warning:
+	  declaration shadows a local variable in iterator.c
+	- Moved includes and make depend.
+
+23 January 2019: Wouter
+	- Patch from Manabu Sonoda with tls-ciphers and tls-ciphersuites
+	  options for unbound.conf.
+	- Fixes for the patch, and man page entry.
+	- Fix configure to detect SSL_CTX_set_ciphersuites, for better
+	  library compatibility when compiling.
+	- Patch for TLS session resumption from Manabu Sonoda,
+	  enable with tls-session-ticket-keys in unbound.conf.
+	- Fixes for patch (includes, declarations, warnings).  Free at end
+	  and keep config options in order read from file to keep the first
+	  one as the first one.
+	- Fix for IXFR fallback to reset counter when IXFR does not timeout.
+
+22 January 2019: Wouter
+	- Fix space calculation for tcp req buffer size.
+	- Doc for stream-wait-size and unit test.
+	- unbound-control stats has mem.streamwait that counts TCP and TLS
+	  waiting result buffers.
+	- Fix for #4219: secondaries not updated after serial change, unbound
+	  falls back to AXFR after IXFR gives several timeout failures.
+	- Fix that auth zone after IXFR fallback tries the same master.
+
+21 January 2019: Wouter
+	- Fix tcp idle timeout test, for difference in the tcp reply code.
+	- Unit test for tcp request reorder and timeouts.
+	- Unit tests for ssl out of order processing.
+	- Fix that multiple dns fragments can be carried in one TLS frame.
+	- Add stream-wait-size: 4m config option to limit the maximum
+	  memory used by waiting tcp and tls stream replies.  This avoids
+	  a denial of service where these replies use up all of the memory.
+
+17 January 2019: Wouter
+	- For caps-for-id fallback, use the whitelist to avoid timeout
+	  starting a fallback sequence for it.
+	- increase mesh max activation count for capsforid long fetches.
+
+16 January 2019: Ralph
+	- Get ready for the DNS flag day: remove EDNS lame procedure, do not
+	  re-query without EDNS after timeout.
+
+15 January 2019: Wouter
+	- In the out of order processing, reset byte count for (potential)
+	  partial read.
+	- Review fixes in out of order processing.
+
+14 January 2019: Wouter
+	- streamtcp option -a send queries consecutively and prints answers
+	  as they arrive.
+	- Fix for out of order processing administration quit cleanup.
+	- unit test for tcp out of order processing.
+
+11 January 2019: Wouter
+	- Initial commit for out-of-order processing for TCP and TLS.
+
+9 January 2019: Wouter
+	- Log query name for looping module errors.
+
+8 January 2019: Wouter
+	- Fix syntax in comment of local alias processing.
+	- Fix NSEC3 record that is returned in wildcard replies from
+	  auth-zone zones with NSEC3 and wildcards.
+
+7 January 2019: Wouter
+	- On FreeBSD warn if systcl settings do not allow server TCP FASTOPEN,
+	  and server tcp fastopen is enabled at compile time.
+	- Document interaction between the tls-upstream option in the server
+	  section and forward-tls-upstream option in the forward-zone sections.
+	- Add contrib/unbound-fuzzme.patch from Jacob Hoffman-Andrews,
+	  the patch adds a program used for fuzzing.
+
 12 December 2018: Wouter
 	- Fix for crash in dns64 module if response is null.
 

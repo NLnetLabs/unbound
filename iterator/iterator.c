@@ -1448,7 +1448,8 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 			 * now will also exceed the rate, keeping cache fresh */
 			(void)infra_ratelimit_inc(qstate->env->infra_cache,
 				iq->dp->name, iq->dp->namelen,
-				*qstate->env->now);
+				*qstate->env->now, &qstate->qinfo,
+				qstate->reply);
 			/* see if we are passed through with slip factor */
 			if(qstate->env->cfg->ratelimit_factor != 0 &&
 				ub_random_max(qstate->env->rnd,
@@ -1882,7 +1883,6 @@ processLastResort(struct module_qstate* qstate, struct iter_qstate* iq,
 		struct delegpt* p = hints_lookup_root(qstate->env->hints,
 			iq->qchase.qclass);
 		if(p) {
-			struct delegpt_ns* ns;
 			struct delegpt_addr* a;
 			iq->chase_flags &= ~BIT_RD; /* go to authorities */
 			for(ns = p->nslist; ns; ns=ns->next) {
@@ -2106,6 +2106,8 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 	struct delegpt_addr* target;
 	struct outbound_entry* outq;
 	int auth_fallback = 0;
+	uint8_t* qout_orig = NULL;
+	size_t qout_orig_len = 0;
 
 	/* NOTE: a request will encounter this state for each target it 
 	 * needs to send a query to. That is, at least one per referral, 
@@ -2179,6 +2181,8 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 		int labdiff = qchaselabs -
 			dname_count_labels(iq->qinfo_out.qname);
 
+		qout_orig = iq->qinfo_out.qname;
+		qout_orig_len = iq->qinfo_out.qname_len;
 		iq->qinfo_out.qname = iq->qchase.qname;
 		iq->qinfo_out.qname_len = iq->qchase.qname_len;
 		iq->minimise_count++;
@@ -2299,7 +2303,7 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 		errinf(qstate, "auth zone lookup failed, fallback is off");
 		return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
 	}
-	if(iq->dp && iq->dp->auth_dp) {
+	if(iq->dp->auth_dp) {
 		/* we wanted to fallback, but had no delegpt, only the
 		 * auth zone generated delegpt, create an actual one */
 		iq->auth_zone_avoid = 1;
@@ -2331,6 +2335,13 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 			/* wait to get all targets, we want to try em */
 			verbose(VERB_ALGO, "wait for all targets for fallback");
 			qstate->ext_state[id] = module_wait_reply;
+			/* undo qname minimise step because we'll get back here
+			 * to do it again */
+			if(qout_orig && iq->minimise_count > 0) {
+				iq->minimise_count--;
+				iq->qinfo_out.qname = qout_orig;
+				iq->qinfo_out.qname_len = qout_orig_len;
+			}
 			return 0;
 		}
 		/* did we do enough fallback queries already? */
@@ -2464,13 +2475,21 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 				iq->num_current_queries);
 			qstate->ext_state[id] = module_wait_reply;
 		}
+		/* undo qname minimise step because we'll get back here
+		 * to do it again */
+		if(qout_orig && iq->minimise_count > 0) {
+			iq->minimise_count--;
+			iq->qinfo_out.qname = qout_orig;
+			iq->qinfo_out.qname_len = qout_orig_len;
+		}
 		return 0;
 	}
 
 	/* if not forwarding, check ratelimits per delegationpoint name */
 	if(!(iq->chase_flags & BIT_RD) && !iq->ratelimit_ok) {
 		if(!infra_ratelimit_inc(qstate->env->infra_cache, iq->dp->name,
-			iq->dp->namelen, *qstate->env->now)) {
+			iq->dp->namelen, *qstate->env->now, &qstate->qinfo,
+			qstate->reply)) {
 			lock_basic_lock(&ie->queries_ratelimit_lock);
 			ie->num_queries_ratelimited++;
 			lock_basic_unlock(&ie->queries_ratelimit_lock);
@@ -3571,7 +3590,7 @@ process_response(struct module_qstate* qstate, struct iter_qstate* iq,
 	if(event == module_event_noreply || event == module_event_error) {
 		if(event == module_event_noreply && iq->sent_count >= 3 &&
 			qstate->env->cfg->use_caps_bits_for_id &&
-			!iq->caps_fallback) {
+			!iq->caps_fallback && !is_caps_whitelisted(ie, iq)) {
 			/* start fallback */
 			iq->caps_fallback = 1;
 			iq->caps_server = 0;

@@ -207,6 +207,16 @@ Maximum UDP response size (not applied to TCP response).  65536 disables the
 udp response size maximum, and uses the choice from the client, always.
 Suggested values are 512 to 4096. Default is 4096.
 .TP
+.B stream\-wait\-size: \fI<number>
+Number of bytes size maximum to use for waiting stream buffers.  Default is
+4 megabytes.  A plain number is in bytes, append 'k', 'm' or 'g' for kilobytes,
+megabytes or gigabytes (1024*1024 bytes in a megabyte).  As TCP and TLS streams
+queue up multiple results, the amount of memory used for these buffers does
+not exceed this number, otherwise the responses are dropped.  This manages
+the total memory usage of the server (under heavy use), the number of requests
+that can be queued up per connection is also limited, with further requests
+waiting in TCP buffers.
+.TP
 .B msg\-buffer\-size: \fI<number>
 Number of bytes size of the message buffers. Default is 65552 bytes, enough
 for 64 Kb packets, the maximum DNS message size. No message larger than this
@@ -440,20 +450,23 @@ TCP wireformat.  The other server must support this (see
 \fBtls\-service\-key\fR).
 If you enable this, also configure a tls\-cert\-bundle or use tls\-win\-cert to
 load CA certs, otherwise the connections cannot be authenticated.
+This option enables TLS for all of them, but if you do not set this you can
+configure TLS specifically for some forward zones with forward\-tls\-upstream.  And also with stub\-tls\-upstream.
 .TP
 .B ssl\-upstream: \fI<yes or no>
 Alternate syntax for \fBtls\-upstream\fR.  If both are present in the config
 file the last is used.
 .TP
 .B tls\-service\-key: \fI<file>
-If enabled, the server provides TLS service on its TCP sockets.  The clients
-have to use tls\-upstream: yes.  The file is the private key for the TLS
-session.  The public certificate is in the tls\-service\-pem file.  Default
-is "", turned off.  Requires a restart (a reload is not enough) if changed,
-because the private key is read while root permissions are held and before
-chroot (if any).  Normal DNS TCP service is not provided and gives errors,
-this service is best run with a different \fBport:\fR config or \fI@port\fR
-suffixes in the \fBinterface\fR config.
+If enabled, the server provides TLS service on the TCP ports marked
+implicitly or explicitly for TLS service with tls\-port.  The file must
+contain the private key for the TLS session, the public certificate is in
+the tls\-service\-pem file and it must also be specified if tls\-service\-key
+is specified.  The default is "", turned off.  Enabling or disabling
+this service requires a restart (a reload is not enough), because the
+key is read while root permissions are held and before chroot (if any).
+The ports enabled implicitly or explicitly via \fBtls\-port:\fR do not provide
+normal DNS TCP service.
 .TP
 .B ssl\-service\-key: \fI<file>
 Alternate syntax for \fBtls\-service\-key\fR.
@@ -492,6 +505,27 @@ List portnumbers as tls\-additional\-port, and when interfaces are defined,
 eg. with the @port suffix, as this port number, they provide dns over TLS
 service.  Can list multiple, each on a new statement.
 .TP
+.B tls-session-ticket-keys: \fI<file>
+If not "", lists files with 80 bytes of random contents that are used to
+perform TLS session resumption for clients using the unbound server.
+These files contain the secret key for the TLS session tickets.
+First key use to encrypt and decrypt TLS session tickets.
+Other keys use to decrypt only.  With this you can roll over to new keys,
+by generating a new first file and allowing decrypt of the old file by
+listing it after the first file for some time, after the wait clients are not
+using the old key any more and the old key can be removed.
+One way to create the file is dd if=/dev/random bs=1 count=80 of=ticket.dat
+The first 16 bytes should be different from the old one if you create a second key, that is the name used to identify the key.  Then there is 32 bytes random
+data for an AES key and then 32 bytes random data for the HMAC key.
+.TP
+.B tls\-ciphers: \fI<string with cipher list>
+Set the list of ciphers to allow when serving TLS.  Use "" for defaults,
+and that is the default.
+.TP
+.B tls\-ciphersuites: \fI<string with ciphersuites list>
+Set the list of ciphersuites to allow when serving TLS.  This is for newer
+TLS 1.3 connections.  Use "" for defaults, and that is the default.
+.TP
 .B use\-systemd: \fI<yes or no>
 Enable or disable systemd socket activation.
 Default is no.
@@ -512,6 +546,7 @@ classless network block. The action can be \fIdeny\fR, \fIrefuse\fR,
 \fIallow\fR, \fIallow_setrd\fR, \fIallow_snoop\fR, \fIdeny_non_local\fR or
 \fIrefuse_non_local\fR.
 The most specific netblock match is used, if none match \fIdeny\fR is used.
+The order of the access\-control statements therefore does not matter.
 .IP
 The action \fIdeny\fR stops queries from hosts from that netblock.
 .IP
@@ -896,6 +931,12 @@ Setting this to "iterator" will result in a non\-validating server.
 Setting this to "validator iterator" will turn on DNSSEC validation.
 The ordering of the modules is important.
 You must also set trust\-anchors for validation to be useful.
+The default is "validator iterator".  When the server is built with
+EDNS client subnet support the default is "subnetcache validator iterator".
+Most modules that need to be listed here have to be listed at the beginning
+of the line.  The cachedb module has to be listed just before the iterator.
+The python module can be listed in different places, it then processes the
+output of the module it is just before.
 .TP
 .B trust\-anchor\-file: \fI<filename>
 File with trusted keys for validation. Both DS and DNSKEY entries can appear
@@ -1107,7 +1148,7 @@ address space are not validated.  This is usually required whenever
 Configure a local zone. The type determines the answer to give if
 there is no match from local\-data. The types are deny, refuse, static,
 transparent, redirect, nodefault, typetransparent, inform, inform_deny,
-always_transparent, always_refuse, always_nxdomain, noview,
+inform_redirect, always_transparent, always_refuse, always_nxdomain, noview,
 and are explained below. After that the default settings are listed. Use
 local\-data: to enter data into the local zone. Answers for local zones
 are authoritative DNS answers. By default the zones are class IN.
@@ -1167,6 +1208,10 @@ looking up infected names are logged, eg. to run antivirus on them.
 \h'5'\fIinform_deny\fR
 The query is dropped, like 'deny', and logged, like 'inform'.  Ie. find
 infected machines without answering the queries.
+.TP 10
+\h'5'\fIinform_redirect\fR
+The query is redirected, like 'redirect', and logged, like 'inform'.
+Ie. answer queries with fixed data and also log the machines that ask.
 .TP 10
 \h'5'\fIalways_transparent\fR
 Like transparent, but ignores local data and resolves normally.
@@ -1323,7 +1368,8 @@ TTL can be inserted like this: "2001:DB8::4 7200 www.example.com"
 Assign tags to localzones. Tagged localzones will only be applied when the
 used access-control element has a matching tag. Tags must be defined in
 \fIdefine\-tags\fR.  Enclose list of tags in quotes ("") and put spaces between
-tags.
+tags.  When there are multiple tags it checks if the intersection of the
+list of tags for the query and local\-zone\-tag is non-empty.
 .TP 5
 .B local\-zone\-override: \fI<zone> <IP netblock> <type>
 Override the localzone type for queries from addresses matching netblock.
@@ -1581,13 +1627,11 @@ the '@' and '#', the '@' comes first.
 At high verbosity it logs the TLS certificate, with TLS enabled.
 If you leave out the '#' and auth name from the forward\-addr, any
 name is accepted.  The cert must also match a CA from the tls\-cert\-bundle.
-The cert name match code needs OpenSSL 1.1.0 or later to be enabled.
 .TP
 .B forward\-first: \fI<yes or no>
-If enabled, a query is attempted without the forward clause if it fails.
-The data could not be retrieved and would have caused SERVFAIL because
-the servers are unreachable, instead it is tried without this clause.
-The default is no.
+If a forwarded query is met with a SERVFAIL error, and this option is
+enabled, unbound will fall back to normal recursive resolution for this
+query as if no query forwarding had been specified.  The default is "no".
 .TP
 .B forward\-tls\-upstream: \fI<yes or no>
 Enabled or disable whether the queries to this forwarder use TLS for transport.
@@ -1682,7 +1726,9 @@ data (eg. from the master servers).
 There may be multiple
 .B view:
 clauses. Each with a \fBname:\fR and zero or more \fBlocal\-zone\fR and
-\fBlocal\-data\fR elements. View can be mapped to requests by specifying the
+\fBlocal\-data\fR elements. Views can also contain view\-first, 
+response\-ip, response\-ip\-data and local\-data\-ptr elements.
+View can be mapped to requests by specifying the
 view name in an \fBaccess\-control\-view\fR element. Options from matching
 views will override global options. Global options will be used if no matching
 view is found, or when the matching view does not have the option specified.

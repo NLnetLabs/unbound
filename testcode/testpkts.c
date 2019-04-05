@@ -513,7 +513,8 @@ add_edns(uint8_t* pktbuf, size_t pktsize, int do_flag, uint8_t *ednsdata,
 	if(*pktlen + sizeof(edns) + ednslen > pktsize)
 		error("not enough space for EDNS OPT record");
 	memmove(pktbuf+*pktlen, edns, sizeof(edns));
-	memmove(pktbuf+*pktlen+sizeof(edns), ednsdata, ednslen);
+	if(ednsdata && ednslen)
+		memmove(pktbuf+*pktlen+sizeof(edns), ednsdata, ednslen);
 	sldns_write_uint16(pktbuf+10, LDNS_ARCOUNT(pktbuf)+1);
 	*pktlen += (sizeof(edns) + ednslen);
 }

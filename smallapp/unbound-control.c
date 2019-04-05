@@ -247,7 +247,8 @@ static void print_uptime(struct ub_shm_stat_info* shm_stat)
 }
 
 /** print memory usage */
-static void print_mem(struct ub_shm_stat_info* shm_stat)
+static void print_mem(struct ub_shm_stat_info* shm_stat,
+	struct ub_stats_info* s)
 {
 	PR_LL("mem.cache.rrset", shm_stat->mem.rrset);
 	PR_LL("mem.cache.message", shm_stat->mem.msg);
@@ -266,6 +267,7 @@ static void print_mem(struct ub_shm_stat_info* shm_stat)
 	PR_LL("mem.cache.dnscrypt_nonce",
 		shm_stat->mem.dnscrypt_nonce);
 #endif
+	PR_LL("mem.streamwait", s->svr.mem_stream_wait);
 }
 
 /** print histogram */
@@ -328,6 +330,7 @@ static void print_extended(struct ub_stats_info* s)
 	PR_UL("num.query.tcp", s->svr.qtcp);
 	PR_UL("num.query.tcpout", s->svr.qtcp_outgoing);
 	PR_UL("num.query.tls", s->svr.qtls);
+	PR_UL("num.query.tls_resume", s->svr.qtls_resume);
 	PR_UL("num.query.ipv6", s->svr.qipv6);
 
 	/* flags */
@@ -399,7 +402,7 @@ static void do_stats_shm(struct config_file* cfg, struct ub_stats_info* stats,
 	pr_stats("total", &stats[0]);
 	print_uptime(shm_stat);
 	if(cfg->stat_extended) {
-		print_mem(shm_stat);
+		print_mem(shm_stat, &stats[0]);
 		print_hist(stats);
 		print_extended(stats);
 	}

@@ -364,6 +364,8 @@ outnet_tcp_take_into_use(struct waiting_tcp* w, uint8_t* pkt, size_t pkt_len)
 			comm_point_close(pend->c);
 			return 0;
 		}
+		verbose(VERB_ALGO, "the query is using TLS encryption, for %s",
+			(w->tls_auth_name?w->tls_auth_name:"an unauthenticated connection"));
 #ifdef USE_WINSOCK
 		comm_point_tcp_win_bio_cb(pend->c, pend->c->ssl);
 #endif
@@ -404,6 +406,8 @@ outnet_tcp_take_into_use(struct waiting_tcp* w, uint8_t* pkt, size_t pkt_len)
 			}
 			SSL_set_verify(pend->c->ssl, SSL_VERIFY_PEER, NULL);
 		}
+#else
+		verbose(VERB_ALGO, "the query has an auth_name, but libssl has no call to perform TLS authentication");
 #endif /* HAVE_SSL_SET1_HOST */
 	}
 	w->pkt = NULL;
@@ -1506,7 +1510,6 @@ serviced_delete(struct serviced_query* sq)
 		/* clear up the pending query */
 		if(sq->status == serviced_query_UDP_EDNS ||
 			sq->status == serviced_query_UDP ||
-			sq->status == serviced_query_PROBE_EDNS ||
 			sq->status == serviced_query_UDP_EDNS_FRAG ||
 			sq->status == serviced_query_UDP_EDNS_fallback) {
 			struct pending* p = (struct pending*)sq->pending;
@@ -1633,15 +1636,7 @@ serviced_udp_send(struct serviced_query* sq, sldns_buffer* buff)
 	sq->last_rtt = rtt;
 	verbose(VERB_ALGO, "EDNS lookup known=%d vs=%d", edns_lame_known, vs);
 	if(sq->status == serviced_initial) {
-		if(edns_lame_known == 0 && rtt > 5000 && rtt < 10001) {
-			/* perform EDNS lame probe - check if server is
-			 * EDNS lame (EDNS queries to it are dropped) */
-			verbose(VERB_ALGO, "serviced query: send probe to see "
-				" if use of EDNS causes timeouts");
-			/* even 700 msec may be too small */
-			rtt = 1000;
-			sq->status = serviced_query_PROBE_EDNS;
-		} else if(vs != -1) {
+		if(vs != -1) {
 			sq->status = serviced_query_UDP_EDNS;
 		} else { 	
 			sq->status = serviced_query_UDP; 
@@ -1973,17 +1968,10 @@ serviced_udp_callback(struct comm_point* c, void* arg, int error,
 	struct serviced_query* sq = (struct serviced_query*)arg;
 	struct outside_network* outnet = sq->outnet;
 	struct timeval now = *sq->outnet->now_tv;
-	int fallback_tcp = 0;
 
 	sq->pending = NULL; /* removed after callback */
 	if(error == NETEVENT_TIMEOUT) {
 		int rto = 0;
-		if(sq->status == serviced_query_PROBE_EDNS) {
-			/* non-EDNS probe failed; we do not know its status,
-			 * keep trying with EDNS, timeout may not be caused
-			 * by EDNS. */
-			sq->status = serviced_query_UDP_EDNS;
-		}
 		if(sq->status == serviced_query_UDP_EDNS && sq->last_rtt < 5000) {
 			/* fallback to 1480/1280 */
 			sq->status = serviced_query_UDP_EDNS_FRAG;
@@ -2011,14 +1999,8 @@ serviced_udp_callback(struct comm_point* c, void* arg, int error,
 			}
 			return 0;
 		}
-		if(rto >= RTT_MAX_TIMEOUT) {
-			/* fallback_tcp = 1; */
-			/* UDP does not work, fallback to TCP below */
-		} else {
-			serviced_callbacks(sq, NETEVENT_TIMEOUT, c, rep);
-			return 0;
-		}
-	} else if(error != NETEVENT_NOERROR) {
+	}
+	if(error != NETEVENT_NOERROR) {
 		/* udp returns error (due to no ID or interface available) */
 		serviced_callbacks(sq, error, c, rep);
 		return 0;
@@ -2031,9 +2013,8 @@ serviced_udp_callback(struct comm_point* c, void* arg, int error,
 		sq->zone, sq->zonelen, sq->qbuf, sq->qbuflen,
 		&sq->last_sent_time, sq->outnet->now_tv, c->buffer);
 #endif
-	if(!fallback_tcp) {
-	    if( (sq->status == serviced_query_UDP_EDNS 
-	        ||sq->status == serviced_query_UDP_EDNS_FRAG)
+	if( (sq->status == serviced_query_UDP_EDNS 
+		||sq->status == serviced_query_UDP_EDNS_FRAG)
 		&& (LDNS_RCODE_WIRE(sldns_buffer_begin(c->buffer)) 
 			== LDNS_RCODE_FORMERR || LDNS_RCODE_WIRE(
 			sldns_buffer_begin(c->buffer)) == LDNS_RCODE_NOTIMPL
@@ -2047,19 +2028,7 @@ serviced_udp_callback(struct comm_point* c, void* arg, int error,
 			serviced_callbacks(sq, NETEVENT_CLOSED, c, rep);
 		}
 		return 0;
-	    } else if(sq->status == serviced_query_PROBE_EDNS) {
-		/* probe without EDNS succeeds, so we conclude that this
-		 * host likely has EDNS packets dropped */
-		log_addr(VERB_DETAIL, "timeouts, concluded that connection to "
-			"host drops EDNS packets", &sq->addr, sq->addrlen);
-		/* only store noEDNS in cache if domain is noDNSSEC */
-		if(!sq->want_dnssec)
-		  if(!infra_edns_update(outnet->infra, &sq->addr, sq->addrlen,
-			sq->zone, sq->zonelen, -1, (time_t)now.tv_sec)) {
-			log_err("Out of memory caching no edns for host");
-		  }
-		sq->status = serviced_query_UDP;
-	    } else if(sq->status == serviced_query_UDP_EDNS && 
+	} else if(sq->status == serviced_query_UDP_EDNS && 
 		!sq->edns_lame_known) {
 		/* now we know that edns queries received answers store that */
 		log_addr(VERB_ALGO, "serviced query: EDNS works for",
@@ -2069,7 +2038,7 @@ serviced_udp_callback(struct comm_point* c, void* arg, int error,
 			log_err("Out of memory caching edns works");
 		}
 		sq->edns_lame_known = 1;
-	    } else if(sq->status == serviced_query_UDP_EDNS_fallback &&
+	} else if(sq->status == serviced_query_UDP_EDNS_fallback &&
 		!sq->edns_lame_known && (LDNS_RCODE_WIRE(
 		sldns_buffer_begin(c->buffer)) == LDNS_RCODE_NOERROR || 
 		LDNS_RCODE_WIRE(sldns_buffer_begin(c->buffer)) == 
@@ -2087,12 +2056,12 @@ serviced_udp_callback(struct comm_point* c, void* arg, int error,
 		  }
 		} else {
 		  log_addr(VERB_ALGO, "serviced query: EDNS fails, but "
-		  	"not stored because need DNSSEC for", &sq->addr,
+			"not stored because need DNSSEC for", &sq->addr,
 			sq->addrlen);
 		}
 		sq->status = serviced_query_UDP;
-	    }
-	    if(now.tv_sec > sq->last_sent_time.tv_sec ||
+	}
+	if(now.tv_sec > sq->last_sent_time.tv_sec ||
 		(now.tv_sec == sq->last_sent_time.tv_sec &&
 		now.tv_usec > sq->last_sent_time.tv_usec)) {
 		/* convert from microseconds to milliseconds */
@@ -2108,11 +2077,10 @@ serviced_udp_callback(struct comm_point* c, void* arg, int error,
 			sq->last_rtt, (time_t)now.tv_sec))
 			log_err("out of memory noting rtt.");
 		}
-	    }
-	} /* end of if_!fallback_tcp */
+	}
 	/* perform TC flag check and TCP fallback after updating our
 	 * cache entries for EDNS status and RTT times */
-	if(LDNS_TC_WIRE(sldns_buffer_begin(c->buffer)) || fallback_tcp) {
+	if(LDNS_TC_WIRE(sldns_buffer_begin(c->buffer))) {
 		/* fallback to TCP */
 		/* this discards partial UDP contents */
 		if(sq->status == serviced_query_UDP_EDNS ||
@@ -2539,7 +2507,6 @@ serviced_get_mem(struct serviced_query* sq)
 		s += sizeof(*sb);
 	if(sq->status == serviced_query_UDP_EDNS ||
 		sq->status == serviced_query_UDP ||
-		sq->status == serviced_query_PROBE_EDNS ||
 		sq->status == serviced_query_UDP_EDNS_FRAG ||
 		sq->status == serviced_query_UDP_EDNS_fallback) {
 		s += sizeof(struct pending);
