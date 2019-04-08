@@ -7,6 +7,8 @@
 	  multicast DNS [RFC 6762] via Avahi.  The plugin communicates
 	  with Avahi via DBus. The comment section at the beginning of
 	  the file contains detailed documentation.
+	- Fix to wipe ssl ticket keys from memory with explicit_bzero,
+	  if available.
 
 5 April 2019: Wouter
 	- Fix to reinit event structure for accepted TCP (and TLS) sockets.
