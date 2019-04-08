@@ -4,7 +4,9 @@
 	  start, timeout and fail.
 	- Fix #17: Add python module example from Jan Janak, that is a
 	  plugin for the Unbound DNS resolver to resolve DNS records in
-	  multicast DNS [RFC 6762] via Avahi.
+	  multicast DNS [RFC 6762] via Avahi.  The plugin communicates
+	  with Avahi via DBus. The comment section at the beginning of
+	  the file contains detailed documentation.
 
 5 April 2019: Wouter
 	- Fix to reinit event structure for accepted TCP (and TLS) sockets.
