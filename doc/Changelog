@@ -1,5 +1,7 @@
 8 April 2019: Wouter
 	- Fix to use event_assign with libevent for thread-safety.
+	- verbose information about auth zone lookup process, also lookup
+	  start, timeout and fail.
 
 5 April 2019: Wouter
 	- Fix to reinit event structure for accepted TCP (and TLS) sockets.
