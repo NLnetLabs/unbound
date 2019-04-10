@@ -1128,7 +1128,6 @@ local_zones_find_le(struct local_zones* zones,
 	int* exact)
 {
 	struct local_zone key;
-	int r;
 	rbnode_type *node;
 	key.node.key = &key;
 	key.dclass = dclass;

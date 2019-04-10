@@ -167,7 +167,11 @@ rpz_rr_to_action(uint16_t rr_type, uint8_t* rdatawl, size_t rdatalen)
 	return RPZ_LOCAL_DATA_ACTION;
 }
 
-/** Get RPZ trigger for dname */
+/**
+ * Get RPZ trigger for dname
+ * @param dname: dname containing RPZ trigger
+ * @return: RPZ trigger enum
+ */
 static enum rpz_trigger
 rpz_dname_to_trigger(uint8_t* dname)
 {
@@ -195,6 +199,7 @@ void rpz_delete(struct rpz* r)
 	if(!r)
 		return;
 	local_zones_delete(r->local_zones);
+	free(r->taglist);
 	free(r);
 }
 
@@ -334,9 +339,26 @@ rpz_remove_rr(struct rpz* r, size_t aznamelen, uint8_t* dname,
 	size_t rdatalen, uint8_t* rr, size_t rr_len)
 {
 	/* TODO: remove RR, used for IXFR */
+	/* void cast all to prevent compiler warning */
+	(void)r;
+	(void)aznamelen;
+	(void)dname;
+	(void)dnamelen;
+	(void)rr_type;
+	(void)rr_class;
+	(void)rdatawl;
+	(void)rdatalen;
+	(void)rr;
+	(void)rr_len;
 }
 
-struct local_zone*
+/**
+ * Find RPZ local-zone by qname.
+ * @param r: rpz containing local-zone tree
+ * @param qinfo: qinfo struct
+ * @return: NULL or local-zone holding rd lock
+ */
+static struct local_zone*
 rpz_find_zone(struct rpz* r, struct query_info* qinfo)
 {
 	uint8_t* ce;
@@ -352,6 +374,7 @@ rpz_find_zone(struct rpz* r, struct query_info* qinfo)
 		lock_rw_unlock(&r->local_zones->lock);
 		return NULL;
 	}
+	lock_rw_rdlock(&z->lock);
 	lock_rw_unlock(&r->local_zones->lock);
 
 	if(exact)

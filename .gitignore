@@ -1,5 +1,6 @@
 *.lo
 *.o
+cscope.out
 /.libs/
 /Makefile
 /autom4te.cache/

@@ -348,9 +348,11 @@ content_auth: auth_name | auth_zonefile | auth_master | auth_url |
 
 rpz_tag: VAR_TAGS STRING_ARG
 	{
+		size_t len;
+		uint8_t* bitlist;
 		OUTYY(("P(server_local_zone_tag:%s)\n", $2));
-		size_t len = 0;
-		uint8_t* bitlist = config_parse_taglist(cfg_parser->cfg, $2,
+		len = 0;
+		bitlist = config_parse_taglist(cfg_parser->cfg, $2,
 			&len);
 		free($2);
 		if(!bitlist) {
