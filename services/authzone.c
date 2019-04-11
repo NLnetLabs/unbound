@@ -5739,7 +5739,6 @@ auth_xfer_transfer_timer_callback(void* arg)
 	if(gonextonfail)
 		xfr_transfer_nextmaster(xfr);
 	xfr_transfer_nexttarget_or_end(xfr, env);
-	return;
 }
 
 /** callback for task_transfer tcp connections */
