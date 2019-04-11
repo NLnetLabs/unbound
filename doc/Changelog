@@ -1,3 +1,7 @@
+11 April 2019: George
+	- Update python documentation for init_standard().
+	- Typos.
+
 11 April 2019: Wouter
 	- Fix that auth zone uses correct network type for sockets for
 	  SOA serial probes.  This fixes that probes fail because earlier
