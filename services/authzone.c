@@ -5900,7 +5900,18 @@ xfr_probe_send_probe(struct auth_xfer* xfr, struct module_env* env,
 		xfr->task_probe->id = (uint16_t)(ub_random(env->rnd)&0xffff);
 	xfr_create_soa_probe_packet(xfr, env->scratch_buffer, 
 		xfr->task_probe->id);
+	/* we need to remove the cp if we have a different ip4/ip6 type now */
+	if(xfr->task_probe->cp &&
+		((xfr->task_probe->cp_is_ip6 && !addr_is_ip6(&addr, addrlen)) ||
+		(!xfr->task_probe->cp_is_ip6 && addr_is_ip6(&addr, addrlen)))
+		) {
+		comm_point_delete(xfr->task_probe->cp);
+		xfr->task_probe->cp = NULL;
+	}
 	if(!xfr->task_probe->cp) {
+		if(addr_is_ip6(&addr, addrlen))
+			xfr->task_probe->cp_is_ip6 = 1;
+		else 	xfr->task_probe->cp_is_ip6 = 0;
 		xfr->task_probe->cp = outnet_comm_point_for_udp(env->outnet,
 			auth_xfer_probe_udp_callback, xfr, &addr, addrlen);
 		if(!xfr->task_probe->cp) {

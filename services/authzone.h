@@ -327,6 +327,8 @@ struct auth_probe {
 	/** the SOA probe udp event.
 	 * on the workers event base. */
 	struct comm_point* cp;
+	/** is the cp for ip6 or ip4 */
+	int cp_is_ip6;
 	/** timeout for packets.
 	 * on the workers event base. */
 	struct comm_timer* timer;
