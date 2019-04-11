@@ -2,6 +2,7 @@
 	- Fix that auth zone uses correct network type for sockets for
 	  SOA serial probes.  This fixes that probes fail because earlier
 	  probe addresses are unreachable.
+	- Fix that auth zone fails over to next master for timeout in tcp.
 
 8 April 2019: Wouter
 	- Fix to use event_assign with libevent for thread-safety.

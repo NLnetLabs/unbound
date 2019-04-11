@@ -1746,6 +1746,16 @@ comm_point_tcp_handle_callback(int fd, short event, void* arg)
 	}
 #endif
 
+	if(event&UB_EV_TIMEOUT) {
+		verbose(VERB_QUERY, "tcp took too long, dropped");
+		reclaim_tcp_handler(c);
+		if(!c->tcp_do_close) {
+			fptr_ok(fptr_whitelist_comm_point(c->callback));
+			(void)(*c->callback)(c, c->cb_arg,
+				NETEVENT_TIMEOUT, NULL);
+		}
+		return;
+	}
 	if(event&UB_EV_READ) {
 		int has_tcpq = (c->tcp_req_info != NULL);
 		if(!comm_point_tcp_handle_read(fd, c, 0)) {
@@ -1774,16 +1784,6 @@ comm_point_tcp_handle_callback(int fd, short event, void* arg)
 		}
 		if(has_tcpq && c->tcp_req_info && c->tcp_req_info->read_again)
 			tcp_req_info_read_again(fd, c);
-		return;
-	}
-	if(event&UB_EV_TIMEOUT) {
-		verbose(VERB_QUERY, "tcp took too long, dropped");
-		reclaim_tcp_handler(c);
-		if(!c->tcp_do_close) {
-			fptr_ok(fptr_whitelist_comm_point(c->callback));
-			(void)(*c->callback)(c, c->cb_arg,
-				NETEVENT_TIMEOUT, NULL);
-		}
 		return;
 	}
 	log_err("Ignored event %d for tcphdl.", event);
@@ -2390,6 +2390,16 @@ comm_point_http_handle_callback(int fd, short event, void* arg)
 	log_assert(c->type == comm_http);
 	ub_comm_base_now(c->ev->base);
 
+	if(event&UB_EV_TIMEOUT) {
+		verbose(VERB_QUERY, "http took too long, dropped");
+		reclaim_http_handler(c);
+		if(!c->tcp_do_close) {
+			fptr_ok(fptr_whitelist_comm_point(c->callback));
+			(void)(*c->callback)(c, c->cb_arg,
+				NETEVENT_TIMEOUT, NULL);
+		}
+		return;
+	}
 	if(event&UB_EV_READ) {
 		if(!comm_point_http_handle_read(fd, c)) {
 			reclaim_http_handler(c);
@@ -2411,16 +2421,6 @@ comm_point_http_handle_callback(int fd, short event, void* arg)
 				(void)(*c->callback)(c, c->cb_arg, 
 					NETEVENT_CLOSED, NULL);
 			}
-		}
-		return;
-	}
-	if(event&UB_EV_TIMEOUT) {
-		verbose(VERB_QUERY, "http took too long, dropped");
-		reclaim_http_handler(c);
-		if(!c->tcp_do_close) {
-			fptr_ok(fptr_whitelist_comm_point(c->callback));
-			(void)(*c->callback)(c, c->cb_arg,
-				NETEVENT_TIMEOUT, NULL);
 		}
 		return;
 	}
@@ -3146,8 +3146,8 @@ comm_point_stop_listening(struct comm_point* c)
 void 
 comm_point_start_listening(struct comm_point* c, int newfd, int msec)
 {
-	verbose(VERB_ALGO, "comm point start listening %d", 
-		c->fd==-1?newfd:c->fd);
+	verbose(VERB_ALGO, "comm point start listening %d (%d msec)", 
+		c->fd==-1?newfd:c->fd, msec);
 	if(c->type == comm_tcp_accept && !c->tcp_free) {
 		/* no use to start listening no free slots. */
 		return;
