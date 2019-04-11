@@ -1192,6 +1192,10 @@ ssl_handle_read(struct comm_point* c)
 				comm_point_listen_for_rw(c, 0, 1);
 				return 1;
 			} else if(want == SSL_ERROR_SYSCALL) {
+#ifdef ECONNRESET
+				if(errno == ECONNRESET && verbosity < 2)
+					return 0; /* silence reset by peer */
+#endif
 				if(errno != 0)
 					log_err("SSL_read syscall: %s",
 						strerror(errno));
@@ -1236,6 +1240,10 @@ ssl_handle_read(struct comm_point* c)
 				comm_point_listen_for_rw(c, 0, 1);
 				return 1;
 			} else if(want == SSL_ERROR_SYSCALL) {
+#ifdef ECONNRESET
+				if(errno == ECONNRESET && verbosity < 2)
+					return 0; /* silence reset by peer */
+#endif
 				if(errno != 0)
 					log_err("SSL_read syscall: %s",
 						strerror(errno));
@@ -1303,6 +1311,10 @@ ssl_handle_write(struct comm_point* c)
 				ub_winsock_tcp_wouldblock(c->ev->ev, UB_EV_WRITE);
 				return 1; /* write more later */
 			} else if(want == SSL_ERROR_SYSCALL) {
+#ifdef EPIPE
+				if(errno == EPIPE && verbosity < 2)
+					return 0; /* silence 'broken pipe' */
+#endif
 				if(errno != 0)
 					log_err("SSL_write syscall: %s",
 						strerror(errno));
@@ -1337,6 +1349,10 @@ ssl_handle_write(struct comm_point* c)
 			ub_winsock_tcp_wouldblock(c->ev->ev, UB_EV_WRITE);
 			return 1; /* write more later */
 		} else if(want == SSL_ERROR_SYSCALL) {
+#ifdef EPIPE
+			if(errno == EPIPE && verbosity < 2)
+				return 0; /* silence 'broken pipe' */
+#endif
 			if(errno != 0)
 				log_err("SSL_write syscall: %s",
 					strerror(errno));
@@ -1834,6 +1850,10 @@ ssl_http_read_more(struct comm_point* c)
 			comm_point_listen_for_rw(c, 0, 1);
 			return 1;
 		} else if(want == SSL_ERROR_SYSCALL) {
+#ifdef ECONNRESET
+			if(errno == ECONNRESET && verbosity < 2)
+				return 0; /* silence reset by peer */
+#endif
 			if(errno != 0)
 				log_err("SSL_read syscall: %s",
 					strerror(errno));
@@ -2282,6 +2302,10 @@ ssl_http_write_more(struct comm_point* c)
 		} else if(want == SSL_ERROR_WANT_WRITE) {
 			return 1; /* write more later */
 		} else if(want == SSL_ERROR_SYSCALL) {
+#ifdef EPIPE
+			if(errno == EPIPE && verbosity < 2)
+				return 0; /* silence 'broken pipe' */
+#endif
 			if(errno != 0)
 				log_err("SSL_write syscall: %s",
 					strerror(errno));
