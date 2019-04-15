@@ -1,3 +1,7 @@
+15 April 2019: Wouter
+	- Fix tls write event for read state change to re-call SSL_write and
+	  not resume the TLS handshake.
+
 11 April 2019: George
 	- Update python documentation for init_standard().
 	- Typos.

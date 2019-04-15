@@ -1304,7 +1304,7 @@ ssl_handle_write(struct comm_point* c)
 			if(want == SSL_ERROR_ZERO_RETURN) {
 				return 0; /* closed */
 			} else if(want == SSL_ERROR_WANT_READ) {
-				c->ssl_shake_state = comm_ssl_shake_read;
+				c->ssl_shake_state = comm_ssl_shake_hs_read;
 				comm_point_listen_for_rw(c, 1, 0);
 				return 1; /* wait for read condition */
 			} else if(want == SSL_ERROR_WANT_WRITE) {
@@ -1342,7 +1342,7 @@ ssl_handle_write(struct comm_point* c)
 		if(want == SSL_ERROR_ZERO_RETURN) {
 			return 0; /* closed */
 		} else if(want == SSL_ERROR_WANT_READ) {
-			c->ssl_shake_state = comm_ssl_shake_read;
+			c->ssl_shake_state = comm_ssl_shake_hs_read;
 			comm_point_listen_for_rw(c, 1, 0);
 			return 1; /* wait for read condition */
 		} else if(want == SSL_ERROR_WANT_WRITE) {
@@ -2296,7 +2296,7 @@ ssl_http_write_more(struct comm_point* c)
 		if(want == SSL_ERROR_ZERO_RETURN) {
 			return 0; /* closed */
 		} else if(want == SSL_ERROR_WANT_READ) {
-			c->ssl_shake_state = comm_ssl_shake_read;
+			c->ssl_shake_state = comm_ssl_shake_hs_read;
 			comm_point_listen_for_rw(c, 1, 0);
 			return 1; /* wait for read condition */
 		} else if(want == SSL_ERROR_WANT_WRITE) {
