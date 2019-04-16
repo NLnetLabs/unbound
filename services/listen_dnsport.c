@@ -851,13 +851,16 @@ create_tcp_accept_sock(struct addrinfo *addr, int v6only, int* noproto,
 #ifdef ENOPROTOOPT
 		/* squelch ENOPROTOOPT: freebsd server mode with kernel support
 		   disabled, except when verbosity enabled for debugging */
-		if(errno != ENOPROTOOPT || verbosity >= 3)
+		if(errno != ENOPROTOOPT || verbosity >= 3) {
 #endif
 		  if(errno == EPERM) {
 		  	log_warn("Setting TCP Fast Open as server failed: %s ; this could likely be because sysctl net.inet.tcp.fastopen.enabled, net.inet.tcp.fastopen.server_enable, or net.ipv4.tcp_fastopen is disabled", strerror(errno));
 		  } else {
 		  	log_err("Setting TCP Fast Open as server failed: %s", strerror(errno));
 		  }
+#ifdef ENOPROTOOPT
+		}
+#endif
 	}
 #endif
 	return s;
