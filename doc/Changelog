@@ -1,5 +1,6 @@
 16 April 2019: Wouter
 	- Better braces in if statement in TCP fastopen code.
+	- iana portlist updated.
 
 15 April 2019: Wouter
 	- Fix tls write event for read state change to re-call SSL_write and
