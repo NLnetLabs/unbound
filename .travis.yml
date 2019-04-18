@@ -1,0 +1,17 @@
+sudo: false
+language: c
+compiler:
+  - gcc
+addons:
+  apt:
+    packages:
+    - openssl-dev
+    - libevent-dev
+    - libexpat-dev
+    - clang
+script:
+  - ./configure --enable-debug
+  - make
+  - make test
+  - cd testcode
+  - ../testcode/mini_tdir.sh exe clang-analysis.tdir
