@@ -1,3 +1,9 @@
+18 April 2019: Ralph
+	- Scrub RRs from answer section when reusing NXDOMAIN message for
+	  subdomain answers.
+	- For harden-below-nxdomain: do not consider a name to be non-exitent
+	  when message contains a CNAME record.
+
 18 April 2019: Wouter
 	- travis build file.
 
