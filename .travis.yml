@@ -5,7 +5,7 @@ compiler:
 addons:
   apt:
     packages:
-    - openssl-dev
+    - libopenssl-dev
     - libevent-dev
     - libexpat-dev
     - clang
