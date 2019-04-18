@@ -9,6 +9,7 @@ addons:
     - libevent-dev
     - libexpat-dev
     - clang
+    - splint
 script:
   - ./configure --enable-debug --disable-flto
   - make
