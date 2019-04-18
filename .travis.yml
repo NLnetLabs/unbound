@@ -13,4 +13,4 @@ script:
   - ./configure --enable-debug
   - make
   - make test
-  - cd testdata; ../testcode/mini_tdir.sh exe clang-analysis.tdir
+  - cd testdata; ../testcode/mini_tdir.sh exe clang-analysis.tdir ; grep -e "warning:" -e "error:" result.clang-analysis
