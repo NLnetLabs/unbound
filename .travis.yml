@@ -13,5 +13,4 @@ script:
   - ./configure --enable-debug
   - make
   - make test
-  - cd testcode
-  - ../testcode/mini_tdir.sh exe clang-analysis.tdir
+  - cd testcode; ../testcode/mini_tdir.sh exe clang-analysis.tdir
