@@ -812,7 +812,7 @@ config_file.lo config_file.o: $(srcdir)/util/config_file.c config.h $(srcdir)/ut
  $(srcdir)/util/data/dname.h $(srcdir)/util/rtt.h $(srcdir)/services/cache/infra.h \
  $(srcdir)/util/storage/dnstree.h $(srcdir)/sldns/wire2str.h $(srcdir)/sldns/parseutil.h \
  $(srcdir)/iterator/iterator.h $(srcdir)/services/outbound_list.h $(srcdir)/util/iana_ports.inc
-configlexer.lo configlexer.o: util/configlexer.c config.h $(srcdir)/util/configyyrename.h \
+configlexer.lo configlexer.o: $(srcdir)/util/configlexer.c config.h $(srcdir)/util/configyyrename.h \
  $(srcdir)/util/config_file.h util/configparser.h
 configparser.lo configparser.o: util/configparser.c config.h $(srcdir)/util/configyyrename.h \
  $(srcdir)/util/config_file.h $(srcdir)/util/net_help.h $(srcdir)/util/log.h
