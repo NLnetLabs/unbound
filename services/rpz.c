@@ -352,7 +352,10 @@ rpz_find_zone(struct rpz* r, uint8_t* qname, size_t qname_len, uint16_t qclass,
 	uint8_t wc[LDNS_MAX_DOMAINLEN];
 	int exact;
 	struct local_zone* z = NULL;
-	lock_rw_rdlock(&r->local_zones->lock);
+	if(wr)
+		lock_rw_wrlock(&r->local_zones->lock);
+	else
+		lock_rw_rdlock(&r->local_zones->lock);
 	z = local_zones_find_le(r->local_zones, qname, qname_len,
 		dname_count_labels(qname),
 		LDNS_RR_CLASS_IN, &exact);
@@ -388,7 +391,10 @@ rpz_find_zone(struct rpz* r, uint8_t* qname, size_t qname_len, uint16_t qclass,
 	memmove(wc+2, ce, ce_len);
 	lock_rw_unlock(&z->lock);
 
-	lock_rw_rdlock(&r->local_zones->lock);
+	if(wr)
+		lock_rw_wrlock(&r->local_zones->lock);
+	else
+		lock_rw_rdlock(&r->local_zones->lock);
 	z = local_zones_find_le(r->local_zones, wc,
 		ce_len+2, ce_labs+1, qclass, &exact);
 	if(!z || !exact) {
@@ -466,6 +472,7 @@ rpz_remove_rr(struct rpz* r, size_t aznamelen, uint8_t* dname,
 	enum rpz_action a;
 	int delete_zone = 1;
 
+	/* TODO, use for logging */
 	(void)rr;
 	(void)rr_len;
 	
@@ -480,6 +487,7 @@ rpz_remove_rr(struct rpz* r, size_t aznamelen, uint8_t* dname,
 		z = rpz_find_zone(r, policydname, policydnamelen, rr_class,
 			1 /* only exact */, 1 /* wr lock */);
 		if(!z) {
+			/* TODO, not for SOA, NS, DNSSEC related RR types */
 			verbose(VERB_ALGO, "RPZ: cannot remove RR from IXFR, "
 				"RPZ domain not found");
 			free(policydname);
@@ -543,6 +551,7 @@ rpz_apply_qname_trigger(struct auth_zones* az, struct module_env* env,
 		edns, repinfo, buf, temp, dname_count_labels(qinfo->qname),
 		&ld, z->type, -1, NULL, 0, NULL, 0)) {
 		rpz_inform_print(z, qinfo, repinfo);
+		lock_rw_unlock(&z->lock);
 		return !qinfo->local_alias;
 	}
 
