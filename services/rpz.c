@@ -292,8 +292,6 @@ rpz_insert_qname_trigger(struct rpz* r, uint8_t* dname, size_t dnamelen,
 		return 0;
 	}
 	if(a == RPZ_LOCAL_DATA_ACTION) {
-		/* insert data. TODO synth wildcard cname target on
-		 * lookup */
 		rrstr = sldns_wire2str_rr(rr, rr_len);
 		/* TODO non region alloc so rrs can be free after IXFR deletion?
 		 * */
@@ -483,11 +481,10 @@ rpz_remove_rr(struct rpz* r, size_t aznamelen, uint8_t* dname,
 		return;
 	}
 	t = rpz_dname_to_trigger(policydname);
-	if(t == RPZ_QNAME_TRIGGER) {
+	if(a != RPZ_INVALID_ACTION && t != RPZ_QNAME_TRIGGER) {
 		z = rpz_find_zone(r, policydname, policydnamelen, rr_class,
 			1 /* only exact */, 1 /* wr lock */);
 		if(!z) {
-			/* TODO, not for SOA, NS, DNSSEC related RR types */
 			verbose(VERB_ALGO, "RPZ: cannot remove RR from IXFR, "
 				"RPZ domain not found");
 			free(policydname);
@@ -500,11 +497,6 @@ rpz_remove_rr(struct rpz* r, size_t aznamelen, uint8_t* dname,
 		if(delete_zone) {
 			local_zones_del_zone(r->local_zones, z);
 		}
-	}
-	else {
-		verbose(VERB_ALGO, "RPZ: skipping unusupported trigger: %s "
-				"while removing RPZ RRs",
-			rpz_trigger_to_string(t));
 	}
 	free(policydname);
 }
