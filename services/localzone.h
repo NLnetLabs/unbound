@@ -567,4 +567,15 @@ int
 local_zone_enter_rr(struct local_zone* z, uint8_t* nm, size_t nmlen,
 	int nmlabs, uint16_t rrtype, uint16_t rrclass, time_t ttl,
 	uint8_t* rdata, size_t rdata_len, const char* rrstr);
+
+/**
+ * Find a data node by exact name for a local zone
+ * @param z: local_zone containing data tree
+ * @param nm: name of local-data element to find
+ * @param nmlen: length of nm
+ * @param nmlabs: labs of nm
+ * @return local_data on exact match, NULL otherwise.
+ */
+struct local_data* 
+local_zone_find_data(struct local_zone* z, uint8_t* nm, size_t nmlen, int nmlabs);
 #endif /* SERVICES_LOCALZONE_H */

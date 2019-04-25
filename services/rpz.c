@@ -295,6 +295,8 @@ rpz_insert_qname_trigger(struct rpz* r, uint8_t* dname, size_t dnamelen,
 		/* insert data. TODO synth wildcard cname target on
 		 * lookup */
 		rrstr = sldns_wire2str_rr(rr, rr_len);
+		/* TODO non region alloc so rrs can be free after IXFR deletion?
+		 * */
 		local_zone_enter_rr(z, dname, dnamelen, dnamelabs,
 			rrtype, rrclass, ttl, rdata, rdata_len, rrstr);
 		free(rrstr);
@@ -333,33 +335,17 @@ rpz_insert_rr(struct rpz* r, size_t aznamelen, uint8_t* dname,
 	}
 }
 
-void
-rpz_remove_rr(struct rpz* r, size_t aznamelen, uint8_t* dname,
-	size_t dnamelen, uint16_t rr_type, uint16_t rr_class, uint8_t* rdatawl,
-	size_t rdatalen, uint8_t* rr, size_t rr_len)
-{
-	/* TODO: remove RR, used for IXFR */
-	/* void cast all to prevent compiler warning */
-	(void)r;
-	(void)aznamelen;
-	(void)dname;
-	(void)dnamelen;
-	(void)rr_type;
-	(void)rr_class;
-	(void)rdatawl;
-	(void)rdatalen;
-	(void)rr;
-	(void)rr_len;
-}
-
 /**
  * Find RPZ local-zone by qname.
  * @param r: rpz containing local-zone tree
  * @param qinfo: qinfo struct
- * @return: NULL or local-zone holding rd lock
+ * @param only_exact: if 1 only excact (non wildcard) matches are returned
+ * @param wr: get write lock for local-zone if 1, read lock if 0
+ * @return: NULL or local-zone holding rd or wr lock
  */
 static struct local_zone*
-rpz_find_zone(struct rpz* r, struct query_info* qinfo)
+rpz_find_zone(struct rpz* r, uint8_t* qname, size_t qname_len, uint16_t qclass,
+	int only_exact, int wr)
 {
 	uint8_t* ce;
 	size_t ce_len, ce_labs;
@@ -367,14 +353,17 @@ rpz_find_zone(struct rpz* r, struct query_info* qinfo)
 	int exact;
 	struct local_zone* z = NULL;
 	lock_rw_rdlock(&r->local_zones->lock);
-	z = local_zones_find_le(r->local_zones, qinfo->qname,
-		qinfo->qname_len, dname_count_labels(qinfo->qname),
+	z = local_zones_find_le(r->local_zones, qname, qname_len,
+		dname_count_labels(qname),
 		LDNS_RR_CLASS_IN, &exact);
-	if(!z) {
+	if(!z || (only_exact && !exact)) {
 		lock_rw_unlock(&r->local_zones->lock);
 		return NULL;
 	}
-	lock_rw_rdlock(&z->lock);
+	if(wr)
+		lock_rw_wrlock(&z->lock);
+	else
+		lock_rw_rdlock(&z->lock);
 	lock_rw_unlock(&r->local_zones->lock);
 
 	if(exact)
@@ -384,7 +373,7 @@ rpz_find_zone(struct rpz* r, struct query_info* qinfo)
 	 * be the shared parent between the qname and the best local
 	 * zone match, append '*' to that and do another lookup. */
 
-	ce = dname_get_shared_topdomain(z->name, qinfo->qname);
+	ce = dname_get_shared_topdomain(z->name, qname);
 	if(!ce /* should not happen */ || !*ce /* root */) {
 		lock_rw_unlock(&z->lock);
 		return NULL;
@@ -401,14 +390,115 @@ rpz_find_zone(struct rpz* r, struct query_info* qinfo)
 
 	lock_rw_rdlock(&r->local_zones->lock);
 	z = local_zones_find_le(r->local_zones, wc,
-		ce_len+2, ce_labs+1, qinfo->qclass, &exact);
+		ce_len+2, ce_labs+1, qclass, &exact);
 	if(!z || !exact) {
 		lock_rw_unlock(&r->local_zones->lock);
 		return NULL;
 	}
-	lock_rw_rdlock(&z->lock);
+	if(wr)
+		lock_rw_wrlock(&z->lock);
+	else
+		lock_rw_rdlock(&z->lock);
 	lock_rw_unlock(&r->local_zones->lock);
 	return z;
+}
+
+/**
+ * Remove RR from RPZ's local-data
+ * @param z: local-zone for RPZ, holding write lock
+ * @param policydname: dname of RR to remove
+ * @param policydnamelen: lenth of policydname
+ * @param rr_type: RR type of RR to remove
+ * @param rdata: rdata of RR to remove
+ * @param rdatalen: length of rdata
+ * @return: 1 if zone must be removed after RR deletion
+ */
+static int
+rpz_data_delete_rr(struct local_zone* z, uint8_t* policydname,
+	size_t policydnamelen, uint16_t rr_type, uint8_t* rdata,
+	size_t rdatalen)
+{
+	struct local_data* ld;
+	struct packed_rrset_data* d;
+	size_t index;
+	ld = local_zone_find_data(z, policydname, policydnamelen,
+		dname_count_labels(policydname));
+	if(ld) {
+		struct local_rrset* prev=NULL, *p=ld->rrsets;
+		while(p && ntohs(p->rrset->rk.type) != rr_type) {
+			prev = p;
+			p = p->next;
+		}
+		if(!p)
+			return 0;
+		d = (struct packed_rrset_data*)p->rrset->entry.data;
+		if(packed_rrset_find_rr(d, rdata, rdatalen, &index)) {
+			if(d->count == 1) {
+				/* no memory recycling for zone deletions ... */
+				if(prev) prev->next = p->next;
+				else ld->rrsets = p->next;
+
+			}
+			if(d->count > 1) {
+				struct packed_rrset_data* new;
+				new = packed_rrset_remove_rr(d, index, z->region);
+				if(!new)
+					return 0;
+				p->rrset->entry.data = new;	
+			}
+		}
+	}
+	if(ld && ld->rrsets)
+		return 0;
+	return 1;
+}
+
+void
+rpz_remove_rr(struct rpz* r, size_t aznamelen, uint8_t* dname,
+	size_t dnamelen, uint16_t rr_type, uint16_t rr_class, uint8_t* rdatawl,
+	size_t rdatalen, uint8_t* rr, size_t rr_len)
+{
+	struct local_zone* z;
+	size_t policydnamelen;
+	/* name is free'd in local_zone delete */
+	uint8_t* policydname = calloc(1, LDNS_MAX_DOMAINLEN + 1);
+	enum rpz_trigger t;
+	enum rpz_action a;
+	int delete_zone = 1;
+
+	(void)rr;
+	(void)rr_len;
+	
+	a = rpz_rr_to_action(rr_type, rdatawl, rdatalen);
+	if(!(policydnamelen = strip_dname_origin(dname, dnamelen, aznamelen,
+		policydname))) {
+		free(policydname);
+		return;
+	}
+	t = rpz_dname_to_trigger(policydname);
+	if(t == RPZ_QNAME_TRIGGER) {
+		z = rpz_find_zone(r, policydname, policydnamelen, rr_class,
+			1 /* only exact */, 1 /* wr lock */);
+		if(!z) {
+			verbose(VERB_ALGO, "RPZ: cannot remove RR from IXFR, "
+				"RPZ domain not found");
+			free(policydname);
+			return;
+		}
+		if(a == RPZ_LOCAL_DATA_ACTION)
+			delete_zone = rpz_data_delete_rr(z, policydname,
+				policydnamelen, rr_type, rdatawl, rdatalen);
+		lock_rw_unlock(&z->lock); 
+		if(delete_zone) {
+			local_zones_del_zone(r->local_zones, z);
+		}
+	}
+	else {
+		verbose(VERB_ALGO, "RPZ: skipping unusupported trigger: %s "
+				"while removing RPZ RRs",
+			rpz_trigger_to_string(t));
+	}
+	free(policydname);
 }
 
 /** print log information for an applied RPZ policy. Based on local-zone's
@@ -442,7 +532,8 @@ rpz_apply_qname_trigger(struct auth_zones* az, struct module_env* env,
 	for(r = az->rpz_first; r && !z; r = r->next) {
 		if(!r->taglist || taglist_intersect(r->taglist, 
 			r->taglistlen, taglist, taglen))
-			z = rpz_find_zone(r, qinfo);
+			z = rpz_find_zone(r, qinfo->qname, qinfo->qname_len,
+				qinfo->qclass, 0, 0);
 	}
 	lock_rw_unlock(&az->rpz_lock);
 	if(!z)
@@ -457,9 +548,8 @@ rpz_apply_qname_trigger(struct auth_zones* az, struct module_env* env,
 
 	ret = local_zones_zone_answer(z, env, qinfo, edns, repinfo, buf, temp,
 		0 /* no local data used */, z->type);
+	rpz_inform_print(z, qinfo, repinfo);
 	lock_rw_unlock(&z->lock);
-	if(ret)
-		rpz_inform_print(z, qinfo, repinfo);
 
 	return ret;
 }

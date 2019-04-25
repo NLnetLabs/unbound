@@ -394,9 +394,8 @@ rrset_insert_rr(struct regional* region, struct packed_rrset_data* pd,
 	return 1;
 }
 
-/** find a data node by exact name */
-static struct local_data* 
-lz_find_node(struct local_zone* z, uint8_t* nm, size_t nmlen, int nmlabs)
+struct local_data* 
+local_zone_find_data(struct local_zone* z, uint8_t* nm, size_t nmlen, int nmlabs)
 {
 	struct local_data key;
 	key.node.key = &key;
@@ -411,7 +410,7 @@ static int
 lz_find_create_node(struct local_zone* z, uint8_t* nm, size_t nmlen, 
 	int nmlabs, struct local_data** res)
 {
-	struct local_data* ld = lz_find_node(z, nm, nmlen, nmlabs);
+	struct local_data* ld = local_zone_find_data(z, nm, nmlen, nmlabs);
 	if(!ld) {
 		/* create a domain name to store rr. */
 		ld = (struct local_data*)regional_alloc_zero(z->region,
@@ -1395,6 +1394,7 @@ local_data_answer(struct local_zone* z, struct module_env* env,
 			regional_alloc_init(temp, lr->rrset, sizeof(*lr->rrset));
 		if(!qinfo->local_alias->rrset)
 			return 0; /* out of memory */
+		/* TODO local_alias->rrset change cnam etarget */
 		qinfo->local_alias->rrset->rk.dname = qinfo->qname;
 		qinfo->local_alias->rrset->rk.dname_len = qinfo->qname_len;
 		return 1;
@@ -1861,7 +1861,7 @@ del_empty_term(struct local_zone* z, struct local_data* d,
 			return;
 		dname_remove_label(&name, &len);
 		labs--;
-		d = lz_find_node(z, name, len, labs);
+		d = local_zone_find_data(z, name, len, labs);
 	}
 }
 
@@ -1894,7 +1894,7 @@ void local_zones_del_data(struct local_zones* zones,
 	z = local_zones_lookup(zones, name, len, labs, dclass, LDNS_RR_TYPE_DS);
 	if(z) {
 		lock_rw_wrlock(&z->lock);
-		d = lz_find_node(z, name, len, labs);
+		d = local_zone_find_data(z, name, len, labs);
 		if(d) {
 			del_local_rrset(d, LDNS_RR_TYPE_DS);
 			del_empty_term(z, d, name, len, labs);
@@ -1915,7 +1915,7 @@ void local_zones_del_data(struct local_zones* zones,
 	lock_rw_unlock(&zones->lock);
 
 	/* find the domain */
-	d = lz_find_node(z, name, len, labs);
+	d = local_zone_find_data(z, name, len, labs);
 	if(d) {
 		/* no memory recycling for zone deletions ... */
 		d->rrsets = NULL;

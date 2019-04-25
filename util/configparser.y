@@ -384,7 +384,8 @@ rpzstart: VAR_RPZ
 	;
 contents_rpz: contents_rpz content_rpz 
 	| ;
-content_rpz: auth_name | auth_zonefile | rpz_tag
+content_rpz: auth_name | auth_zonefile | rpz_tag | auth_master | auth_url |
+	   auth_allow_notify
 	;
 server_num_threads: VAR_NUM_THREADS STRING_ARG 
 	{ 

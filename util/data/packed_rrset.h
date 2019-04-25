@@ -446,4 +446,28 @@ struct ub_packed_rrset_key* packed_rrset_copy_alloc(
 	struct ub_packed_rrset_key* key, struct alloc_cache* alloc, 
 	time_t now);
 
+/**
+ * Find RR index in packed rrset
+ * @param d: packed rrset
+ * @param rdata: RDATA of RR to find
+ * @param len: length of rdata
+ * @param index: pointer to int to store index of found RR
+ * @return 1 if RR found, 0 otherwise
+ */
+int
+packed_rrset_find_rr(struct packed_rrset_data* d, uint8_t* rdata, size_t len,
+	size_t* index);
+
+/**
+ * Remove RR from packed rrset
+ * @param old: packed rrset containing RR to remove
+ * @param index: index of RR to remove
+ * @param region: region to use for allocation of new packet RR. Malloc used if
+ * 	NULL
+ * @return pointer to newly allocated packed rrset
+ */
+struct packed_rrset_data*
+packed_rrset_remove_rr(struct packed_rrset_data* old, size_t index,
+	struct regional* region);
+
 #endif /* UTIL_DATA_PACKED_RRSET_H */

@@ -674,23 +674,6 @@ domain_remove_rrset(struct auth_data* node, uint16_t rr_type)
 	}
 }
 
-/** find an rr index in the rrset.  returns true if found */
-static int
-az_rrset_find_rr(struct packed_rrset_data* d, uint8_t* rdata, size_t len,
-	size_t* index)
-{
-	size_t i;
-	for(i=0; i<d->count; i++) {
-		if(d->rr_len[i] != len)
-			continue;
-		if(memcmp(d->rr_data[i], rdata, len) == 0) {
-			*index = i;
-			return 1;
-		}
-	}
-	return 0;
-}
-
 /** find an rrsig index in the rrset.  returns true if found */
 static int
 az_rrset_find_rrsig(struct packed_rrset_data* d, uint8_t* rdata, size_t len,
@@ -740,58 +723,10 @@ rrsig_rdata_get_type_covered(uint8_t* rdata, size_t rdatalen)
 static int
 rrset_remove_rr(struct auth_rrset* rrset, size_t index)
 {
-	struct packed_rrset_data* d, *old = rrset->data;
-	size_t i;
-	if(index >= old->count + old->rrsig_count)
-		return 0; /* index out of bounds */
-	d = (struct packed_rrset_data*)calloc(1, packed_rrset_sizeof(old) - (
-		sizeof(size_t) + sizeof(uint8_t*) + sizeof(time_t) +
-		old->rr_len[index]));
-	if(!d) {
-		log_err("malloc failure");
+	struct packed_rrset_data* d =
+		packed_rrset_remove_rr(rrset->data, index, NULL);
+	if(!d)
 		return 0;
-	}
-	d->ttl = old->ttl;
-	d->count = old->count;
-	d->rrsig_count = old->rrsig_count;
-	if(index < d->count) d->count--;
-	else d->rrsig_count--;
-	d->trust = old->trust;
-	d->security = old->security;
-
-	/* set rr_len, needed for ptr_fixup */
-	d->rr_len = (size_t*)((uint8_t*)d +
-		sizeof(struct packed_rrset_data));
-	if(index > 0)
-		memmove(d->rr_len, old->rr_len, (index)*sizeof(size_t));
-	if(index+1 < old->count+old->rrsig_count)
-		memmove(&d->rr_len[index], &old->rr_len[index+1],
-		(old->count+old->rrsig_count - (index+1))*sizeof(size_t));
-	packed_rrset_ptr_fixup(d);
-
-	/* move over ttls */
-	if(index > 0)
-		memmove(d->rr_ttl, old->rr_ttl, (index)*sizeof(time_t));
-	if(index+1 < old->count+old->rrsig_count)
-		memmove(&d->rr_ttl[index], &old->rr_ttl[index+1],
-		(old->count+old->rrsig_count - (index+1))*sizeof(time_t));
-	
-	/* move over rr_data */
-	for(i=0; i<d->count+d->rrsig_count; i++) {
-		size_t oldi;
-		if(i < index) oldi = i;
-		else oldi = i+1;
-		memmove(d->rr_data[i], old->rr_data[oldi], d->rr_len[i]);
-	}
-
-	/* recalc ttl (lowest of remaining RR ttls) */
-	if(d->count + d->rrsig_count > 0)
-		d->ttl = d->rr_ttl[0];
-	for(i=0; i<d->count+d->rrsig_count; i++) {
-		if(d->rr_ttl[i] < d->ttl)
-			d->ttl = d->rr_ttl[i];
-	}
-
 	free(rrset->data);
 	rrset->data = d;
 	return 1;
@@ -1210,7 +1145,7 @@ az_domain_remove_rr(struct auth_data* node, uint16_t rr_type,
 
 	/* find the plain RR of the given type */
 	if((rrset=az_domain_rrset(node, rr_type))!= NULL) {
-		if(az_rrset_find_rr(rrset->data, rdata, rdatalen, &index)) {
+		if(packed_rrset_find_rr(rrset->data, rdata, rdatalen, &index)) {
 			if(rrset->data->count == 1 &&
 				rrset->data->rrsig_count == 0) {
 				/* last RR, delete the rrset */
