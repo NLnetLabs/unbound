@@ -2014,11 +2014,13 @@ auth_xfer_delete(struct auth_xfer* xfr)
 	if(xfr->task_probe) {
 		auth_free_masters(xfr->task_probe->masters);
 		comm_point_delete(xfr->task_probe->cp);
+		comm_timer_delete(xfr->task_probe->timer);
 		free(xfr->task_probe);
 	}
 	if(xfr->task_transfer) {
 		auth_free_masters(xfr->task_transfer->masters);
 		comm_point_delete(xfr->task_transfer->cp);
+		comm_timer_delete(xfr->task_transfer->timer);
 		if(xfr->task_transfer->chunks_first) {
 			auth_chunks_delete(xfr->task_transfer);
 		}
@@ -4953,6 +4955,9 @@ xfr_process_chunk_list(struct auth_xfer* xfr, struct module_env* env,
 static void
 xfr_transfer_disown(struct auth_xfer* xfr)
 {
+	/* remove timer (from this worker's event base) */
+	comm_timer_delete(xfr->task_transfer->timer);
+	xfr->task_transfer->timer = NULL;
 	/* remove the commpoint */
 	comm_point_delete(xfr->task_transfer->cp);
 	xfr->task_transfer->cp = NULL;
@@ -5034,6 +5039,8 @@ xfr_transfer_init_fetch(struct auth_xfer* xfr, struct module_env* env)
 	struct sockaddr_storage addr;
 	socklen_t addrlen = 0;
 	struct auth_master* master = xfr->task_transfer->master;
+	struct timeval t;
+	int timeout;
 	if(!master) return 0;
 	if(master->allow_notify) return 0; /* only for notify */
 
@@ -5059,24 +5066,45 @@ xfr_transfer_init_fetch(struct auth_xfer* xfr, struct module_env* env)
 		comm_point_delete(xfr->task_transfer->cp);
 		xfr->task_transfer->cp = NULL;
 	}
+	if(!xfr->task_transfer->timer) {
+		xfr->task_transfer->timer = comm_timer_create(env->worker_base,
+			auth_xfer_transfer_timer_callback, xfr);
+		if(!xfr->task_transfer->timer) {
+			log_err("malloc failure");
+			return 0;
+		}
+	}
+	timeout = AUTH_TRANSFER_TIMEOUT;
+#ifndef S_SPLINT_S
+        t.tv_sec = timeout/1000;
+        t.tv_usec = (timeout%1000)*1000;
+#endif
 
 	if(master->http) {
 		/* perform http fetch */
 		/* store http port number into sockaddr,
 		 * unless someone used unbound's host@port notation */
+		xfr->task_transfer->on_ixfr = 0;
 		if(strchr(master->host, '@') == NULL)
 			sockaddr_store_port(&addr, addrlen, master->port);
 		xfr->task_transfer->cp = outnet_comm_point_for_http(
 			env->outnet, auth_xfer_transfer_http_callback, xfr,
-			&addr, addrlen, AUTH_TRANSFER_TIMEOUT, master->ssl,
-			master->host, master->file);
+			&addr, addrlen, -1, master->ssl, master->host,
+			master->file);
 		if(!xfr->task_transfer->cp) {
-			char zname[255+1];
+			char zname[255+1], as[256];
 			dname_str(xfr->name, zname);
+			addr_to_str(&addr, addrlen, as, sizeof(as));
 			verbose(VERB_ALGO, "cannot create http cp "
-				"connection for %s to %s", zname,
-				master->host);
+				"connection for %s to %s", zname, as);
 			return 0;
+		}
+		comm_timer_set(xfr->task_transfer->timer, &t);
+		if(verbosity >= VERB_ALGO) {
+			char zname[255+1], as[256];
+			dname_str(xfr->name, zname);
+			addr_to_str(&addr, addrlen, as, sizeof(as));
+			verbose(VERB_ALGO, "auth zone %s transfer next HTTP fetch from %s started", zname, as);
 		}
 		return 1;
 	}
@@ -5091,13 +5119,22 @@ xfr_transfer_init_fetch(struct auth_xfer* xfr, struct module_env* env)
 	/* connect on fd */
 	xfr->task_transfer->cp = outnet_comm_point_for_tcp(env->outnet,
 		auth_xfer_transfer_tcp_callback, xfr, &addr, addrlen,
-		env->scratch_buffer, AUTH_TRANSFER_TIMEOUT);
+		env->scratch_buffer, -1);
 	if(!xfr->task_transfer->cp) {
-		char zname[255+1];
-		dname_str(xfr->name, zname);
+		char zname[255+1], as[256];
+ 		dname_str(xfr->name, zname);
+		addr_to_str(&addr, addrlen, as, sizeof(as));
 		verbose(VERB_ALGO, "cannot create tcp cp connection for "
-			"xfr %s to %s", zname, master->host);
+			"xfr %s to %s", zname, as);
 		return 0;
+	}
+	comm_timer_set(xfr->task_transfer->timer, &t);
+	if(verbosity >= VERB_ALGO) {
+		char zname[255+1], as[256];
+ 		dname_str(xfr->name, zname);
+		addr_to_str(&addr, addrlen, as, sizeof(as));
+		verbose(VERB_ALGO, "auth zone %s transfer next %s fetch from %s started", zname, 
+			(xfr->task_transfer->on_ixfr?"IXFR":"AXFR"), as);
 	}
 	return 1;
 }
@@ -5116,6 +5153,11 @@ xfr_transfer_nexttarget_or_end(struct auth_xfer* xfr, struct module_env* env)
 			 * and we may then get an instant cache response,
 			 * and that calls the callback just like a full
 			 * lookup and lookup failures also call callback */
+			if(verbosity >= VERB_ALGO) {
+				char zname[255+1];
+				dname_str(xfr->name, zname);
+				verbose(VERB_ALGO, "auth zone %s transfer next target lookup", zname);
+			}
 			lock_basic_unlock(&xfr->lock);
 			return;
 		}
@@ -5133,6 +5175,11 @@ xfr_transfer_nexttarget_or_end(struct auth_xfer* xfr, struct module_env* env)
 		}
 		/* failed to fetch, next master */
 		xfr_transfer_nextmaster(xfr);
+	}
+	if(verbosity >= VERB_ALGO) {
+		char zname[255+1];
+		dname_str(xfr->name, zname);
+		verbose(VERB_ALGO, "auth zone %s transfer failed, wait", zname);
 	}
 
 	/* we failed to fetch the zone, move to wait task
@@ -5231,7 +5278,25 @@ void auth_xfer_transfer_lookup_callback(void* arg, int rcode, sldns_buffer* buf,
 			if(answer) {
 				xfr_master_add_addrs(xfr->task_transfer->
 					lookup_target, answer, wanted_qtype);
+			} else {
+				if(verbosity >= VERB_ALGO) {
+					char zname[255+1];
+					dname_str(xfr->name, zname);
+					verbose(VERB_ALGO, "auth zone %s host %s type %s transfer lookup has nodata", zname, xfr->task_transfer->lookup_target->host, (xfr->task_transfer->lookup_aaaa?"AAAA":"A"));
+				}
 			}
+		} else {
+			if(verbosity >= VERB_ALGO) {
+				char zname[255+1];
+				dname_str(xfr->name, zname);
+				verbose(VERB_ALGO, "auth zone %s host %s type %s transfer lookup has no answer", zname, xfr->task_transfer->lookup_target->host, (xfr->task_transfer->lookup_aaaa?"AAAA":"A"));
+			}
+		}
+	} else {
+		if(verbosity >= VERB_ALGO) {
+			char zname[255+1];
+			dname_str(xfr->name, zname);
+			verbose(VERB_ALGO, "auth zone %s host %s type %s transfer lookup failed", zname, xfr->task_transfer->lookup_target->host, (xfr->task_transfer->lookup_aaaa?"AAAA":"A"));
 		}
 	}
 	if(xfr->task_transfer->lookup_target->list &&
@@ -5616,6 +5681,46 @@ process_list_end_transfer(struct auth_xfer* xfr, struct module_env* env)
 	xfr_transfer_nexttarget_or_end(xfr, env);
 }
 
+/** callback for the task_transfer timer */
+void
+auth_xfer_transfer_timer_callback(void* arg)
+{
+	struct auth_xfer* xfr = (struct auth_xfer*)arg;
+	struct module_env* env;
+	int gonextonfail = 1;
+	log_assert(xfr->task_transfer);
+	lock_basic_lock(&xfr->lock);
+	env = xfr->task_transfer->env;
+	if(env->outnet->want_to_quit) {
+		lock_basic_unlock(&xfr->lock);
+		return; /* stop on quit */
+	}
+
+	verbose(VERB_ALGO, "xfr stopped, connection timeout to %s",
+		xfr->task_transfer->master->host);
+
+	/* see if IXFR caused the failure, if so, try AXFR */
+	if(xfr->task_transfer->on_ixfr) {
+		xfr->task_transfer->ixfr_possible_timeout_count++;
+		if(xfr->task_transfer->ixfr_possible_timeout_count >=
+			NUM_TIMEOUTS_FALLBACK_IXFR) {
+			verbose(VERB_ALGO, "xfr to %s, fallback "
+				"from IXFR to AXFR (because of timeouts)",
+				xfr->task_transfer->master->host);
+			xfr->task_transfer->ixfr_fail = 1;
+			gonextonfail = 0;
+		}
+	}
+
+	/* delete transferred data from list */
+	auth_chunks_delete(xfr->task_transfer);
+	comm_point_delete(xfr->task_transfer->cp);
+	xfr->task_transfer->cp = NULL;
+	if(gonextonfail)
+		xfr_transfer_nextmaster(xfr);
+	xfr_transfer_nexttarget_or_end(xfr, env);
+}
+
 /** callback for task_transfer tcp connections */
 int
 auth_xfer_transfer_tcp_callback(struct comm_point* c, void* arg, int err,
@@ -5632,6 +5737,8 @@ auth_xfer_transfer_tcp_callback(struct comm_point* c, void* arg, int err,
 		lock_basic_unlock(&xfr->lock);
 		return 0; /* stop on quit */
 	}
+	/* stop the timer */
+	comm_timer_disable(xfr->task_transfer->timer);
 
 	if(err != NETEVENT_NOERROR) {
 		/* connection failed, closed, or timeout */
@@ -5712,6 +5819,8 @@ auth_xfer_transfer_http_callback(struct comm_point* c, void* arg, int err,
 		return 0; /* stop on quit */
 	}
 	verbose(VERB_ALGO, "auth zone transfer http callback");
+	/* stop the timer */
+	comm_timer_disable(xfr->task_transfer->timer);
 
 	if(err != NETEVENT_NOERROR && err != NETEVENT_DONE) {
 		/* connection failed, closed, or timeout */
@@ -5838,14 +5947,26 @@ xfr_probe_send_probe(struct auth_xfer* xfr, struct module_env* env,
 		xfr->task_probe->id = (uint16_t)(ub_random(env->rnd)&0xffff);
 	xfr_create_soa_probe_packet(xfr, env->scratch_buffer, 
 		xfr->task_probe->id);
+	/* we need to remove the cp if we have a different ip4/ip6 type now */
+	if(xfr->task_probe->cp &&
+		((xfr->task_probe->cp_is_ip6 && !addr_is_ip6(&addr, addrlen)) ||
+		(!xfr->task_probe->cp_is_ip6 && addr_is_ip6(&addr, addrlen)))
+		) {
+		comm_point_delete(xfr->task_probe->cp);
+		xfr->task_probe->cp = NULL;
+	}
 	if(!xfr->task_probe->cp) {
+		if(addr_is_ip6(&addr, addrlen))
+			xfr->task_probe->cp_is_ip6 = 1;
+		else 	xfr->task_probe->cp_is_ip6 = 0;
 		xfr->task_probe->cp = outnet_comm_point_for_udp(env->outnet,
 			auth_xfer_probe_udp_callback, xfr, &addr, addrlen);
 		if(!xfr->task_probe->cp) {
-			char zname[255+1];
+			char zname[255+1], as[256];
 			dname_str(xfr->name, zname);
+			addr_to_str(&addr, addrlen, as, sizeof(as));
 			verbose(VERB_ALGO, "cannot create udp cp for "
-				"probe %s to %s", zname, master->host);
+				"probe %s to %s", zname, as);
 			return 0;
 		}
 	}
@@ -5861,11 +5982,19 @@ xfr_probe_send_probe(struct auth_xfer* xfr, struct module_env* env,
 	/* send udp packet */
 	if(!comm_point_send_udp_msg(xfr->task_probe->cp, env->scratch_buffer,
 		(struct sockaddr*)&addr, addrlen)) {
-		char zname[255+1];
+		char zname[255+1], as[256];
 		dname_str(xfr->name, zname);
+		addr_to_str(&addr, addrlen, as, sizeof(as));
 		verbose(VERB_ALGO, "failed to send soa probe for %s to %s",
-			zname, master->host);
+			zname, as);
 		return 0;
+	}
+	if(verbosity >= VERB_ALGO) {
+		char zname[255+1], as[256];
+		dname_str(xfr->name, zname);
+		addr_to_str(&addr, addrlen, as, sizeof(as));
+		verbose(VERB_ALGO, "auth zone %s soa probe sent to %s", zname,
+			as);
 	}
 	xfr->task_probe->timeout = timeout;
 #ifndef S_SPLINT_S
@@ -5891,6 +6020,11 @@ auth_xfer_probe_timer_callback(void* arg)
 		return; /* stop on quit */
 	}
 
+	if(verbosity >= VERB_ALGO) {
+		char zname[255+1];
+		dname_str(xfr->name, zname);
+		verbose(VERB_ALGO, "auth zone %s soa probe timeout", zname);
+	}
 	if(xfr->task_probe->timeout <= AUTH_PROBE_TIMEOUT_STOP) {
 		/* try again with bigger timeout */
 		if(xfr_probe_send_probe(xfr, env, xfr->task_probe->timeout*2)) {
@@ -6078,6 +6212,11 @@ xfr_probe_send_or_end(struct auth_xfer* xfr, struct module_env* env)
 			 * and we may then get an instant cache response,
 			 * and that calls the callback just like a full
 			 * lookup and lookup failures also call callback */
+			if(verbosity >= VERB_ALGO) {
+				char zname[255+1];
+				dname_str(xfr->name, zname);
+				verbose(VERB_ALGO, "auth zone %s probe next target lookup", zname);
+			}
 			lock_basic_unlock(&xfr->lock);
 			return;
 		}
@@ -6086,9 +6225,19 @@ xfr_probe_send_or_end(struct auth_xfer* xfr, struct module_env* env)
 	/* probe of list has ended.  Create or refresh the list of of
 	 * allow_notify addrs */
 	probe_copy_masters_for_allow_notify(xfr);
+	if(verbosity >= VERB_ALGO) {
+		char zname[255+1];
+		dname_str(xfr->name, zname);
+		verbose(VERB_ALGO, "auth zone %s probe: notify addrs updated", zname);
+	}
 	if(xfr->task_probe->only_lookup) {
 		/* only wanted lookups for copy, stop probe and start wait */
 		xfr->task_probe->only_lookup = 0;
+		if(verbosity >= VERB_ALGO) {
+			char zname[255+1];
+			dname_str(xfr->name, zname);
+			verbose(VERB_ALGO, "auth zone %s probe: finished only_lookup", zname);
+		}
 		xfr_probe_disown(xfr);
 		if(xfr->task_nextprobe->worker == NULL)
 			xfr_set_timeout(xfr, env, 0, 0);
@@ -6110,13 +6259,22 @@ xfr_probe_send_or_end(struct auth_xfer* xfr, struct module_env* env)
 	/* done with probe sequence, wait */
 	if(xfr->task_probe->have_new_lease) {
 		/* if zone not updated, start the wait timer again */
-		verbose(VERB_ALGO, "auth_zone unchanged, new lease, wait");
+		if(verbosity >= VERB_ALGO) {
+			char zname[255+1];
+			dname_str(xfr->name, zname);
+			verbose(VERB_ALGO, "auth_zone %s unchanged, new lease, wait", zname);
+		}
 		xfr_probe_disown(xfr);
 		if(xfr->have_zone)
 			xfr->lease_time = *env->now;
 		if(xfr->task_nextprobe->worker == NULL)
 			xfr_set_timeout(xfr, env, 0, 0);
 	} else {
+		if(verbosity >= VERB_ALGO) {
+			char zname[255+1];
+			dname_str(xfr->name, zname);
+			verbose(VERB_ALGO, "auth zone %s soa probe failed, wait to retry", zname);
+		}
 		/* we failed to send this as well, move to the wait task,
 		 * use the shorter retry timeout */
 		xfr_probe_disown(xfr);
@@ -6161,7 +6319,25 @@ void auth_xfer_probe_lookup_callback(void* arg, int rcode, sldns_buffer* buf,
 			if(answer) {
 				xfr_master_add_addrs(xfr->task_probe->
 					lookup_target, answer, wanted_qtype);
+			} else {
+				if(verbosity >= VERB_ALGO) {
+					char zname[255+1];
+					dname_str(xfr->name, zname);
+					verbose(VERB_ALGO, "auth zone %s host %s type %s probe lookup has nodata", zname, xfr->task_probe->lookup_target->host, (xfr->task_probe->lookup_aaaa?"AAAA":"A"));
+				}
 			}
+		} else {
+			if(verbosity >= VERB_ALGO) {
+				char zname[255+1];
+				dname_str(xfr->name, zname);
+				verbose(VERB_ALGO, "auth zone %s host %s type %s probe lookup has no address", zname, xfr->task_probe->lookup_target->host, (xfr->task_probe->lookup_aaaa?"AAAA":"A"));
+			}
+		}
+	} else {
+		if(verbosity >= VERB_ALGO) {
+			char zname[255+1];
+			dname_str(xfr->name, zname);
+			verbose(VERB_ALGO, "auth zone %s host %s type %s probe lookup failed", zname, xfr->task_probe->lookup_target->host, (xfr->task_probe->lookup_aaaa?"AAAA":"A"));
 		}
 	}
 	if(xfr->task_probe->lookup_target->list &&

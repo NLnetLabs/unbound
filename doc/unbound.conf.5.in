@@ -828,7 +828,7 @@ Can be given multiple times, for different domains.
 .TP
 .B qname\-minimisation: \fI<yes or no>
 Send minimum amount of information to upstream servers to enhance privacy.
-Only sent minimum required labels of the QNAME and set QTYPE to A when
+Only send minimum required labels of the QNAME and set QTYPE to A when
 possible. Best effort approach; full QNAME and original QTYPE will be sent when
 upstream replies with a RCODE other than NOERROR, except when receiving
 NXDOMAIN from a DNSSEC signed zone. Default is yes.

@@ -19013,6 +19013,35 @@ _ACEOF
 fi
 done
  # only in libev. (tested on 4.00)
+	for ac_func in event_assign
+do :
+  ac_fn_c_check_func "$LINENO" "event_assign" "ac_cv_func_event_assign"
+if test "x$ac_cv_func_event_assign" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_EVENT_ASSIGN 1
+_ACEOF
+
+fi
+done
+ # in libevent, for thread-safety
+	ac_fn_c_check_decl "$LINENO" "evsignal_assign" "ac_cv_have_decl_evsignal_assign" "$ac_includes_default
+#ifdef HAVE_EVENT_H
+#  include <event.h>
+#else
+#  include \"event2/event.h\"
+#endif
+
+"
+if test "x$ac_cv_have_decl_evsignal_assign" = xyes; then :
+  ac_have_decl=1
+else
+  ac_have_decl=0
+fi
+
+cat >>confdefs.h <<_ACEOF
+#define HAVE_DECL_EVSIGNAL_ASSIGN $ac_have_decl
+_ACEOF
+
         PC_LIBEVENT_DEPENDENCY="libevent"
 
 	if test -n "$BAK_LDFLAGS_SET"; then
