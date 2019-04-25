@@ -95,7 +95,9 @@ enum localzone_type {
 	/** answer with noerror/nodata, even when there is local data */
 	local_zone_always_nodata,
 	/** answer not from the view, but global or no-answer */
-	local_zone_noview
+	local_zone_noview,
+	/** Invalid type, cannot be used to generate answer */
+	local_zone_invalid
 };
 
 /**

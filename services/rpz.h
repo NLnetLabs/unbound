@@ -117,12 +117,10 @@ void rpz_insert_rr(struct rpz* r, size_t aznamelen, uint8_t* dname,
  * @param rr_class: RR class of the RR
  * @param rdatawl: rdata of the RR, prepended with the rdata size
  * @param rdatalen: length if the RR, including the prepended rdata size
- * @param rr: the complete RR, for logging purposes
- * @param rr_len: the length of the complete RR
  */
 void rpz_remove_rr(struct rpz* r, size_t aznamelen, uint8_t* dname,
 	size_t dnamelen, uint16_t rr_type, uint16_t rr_class, uint8_t* rdatawl,
-	size_t rdatalen, uint8_t* rr, size_t rr_len);
+	size_t rdatalen);
 
 /**
  * Walk over the RPZ zones to find and apply a QNAME trigger policy.

@@ -167,6 +167,37 @@ rpz_rr_to_action(uint16_t rr_type, uint8_t* rdatawl, size_t rdatalen)
 	return RPZ_LOCAL_DATA_ACTION;
 }
 
+static enum localzone_type 
+rpz_action_to_localzone_type(enum rpz_action a)
+{
+	switch(a) {
+	case RPZ_NXDOMAIN_ACTION:	return local_zone_always_nxdomain;
+	case RPZ_NODATA_ACTION:		return local_zone_always_nodata;
+	case RPZ_DROP_ACTION:		return local_zone_deny;
+	case RPZ_PASSTHRU_ACTION:	return local_zone_always_transparent;
+	case RPZ_LOCAL_DATA_ACTION:	return local_zone_redirect;
+	case RPZ_INVALID_ACTION:
+	case RPZ_TCP_ONLY_ACTION:
+	default:
+		return local_zone_invalid;
+	}
+}
+
+static enum rpz_action
+localzone_type_to_rpz_action(enum localzone_type lzt)
+{
+	switch(lzt) {
+	case local_zone_always_nxdomain:	return RPZ_NXDOMAIN_ACTION;
+	case local_zone_always_nodata:		return RPZ_NODATA_ACTION;
+	case local_zone_deny:			return RPZ_DROP_ACTION;
+	case local_zone_always_transparent:	return RPZ_PASSTHRU_ACTION;
+	case local_zone_redirect:		return RPZ_LOCAL_DATA_ACTION;
+	case local_zone_invalid:
+	default:
+		return RPZ_INVALID_ACTION;
+	}
+}
+
 /**
  * Get RPZ trigger for dname
  * @param dname: dname containing RPZ trigger
@@ -254,17 +285,7 @@ rpz_insert_qname_trigger(struct rpz* r, uint8_t* dname, size_t dnamelen,
 	int dnamelabs = dname_count_labels(dname);
 	char* rrstr;
 
-	if(a == RPZ_NXDOMAIN_ACTION)
-		tp = local_zone_always_nxdomain;
-	else if(a == RPZ_NODATA_ACTION)
-		tp = local_zone_always_nodata;
-	else if(a == RPZ_DROP_ACTION)
-		tp = local_zone_deny;
-	else if(a == RPZ_PASSTHRU_ACTION)
-		tp = local_zone_always_transparent;
-	else if(a == RPZ_LOCAL_DATA_ACTION)
-		tp = local_zone_redirect;
-	else {
+	if(a == RPZ_TCP_ONLY_ACTION || a == RPZ_INVALID_ACTION) {
 		verbose(VERB_ALGO, "RPZ: skipping unusupported action: %s",
 			rpz_action_to_string(a));
 		return 0;
@@ -283,6 +304,7 @@ rpz_insert_qname_trigger(struct rpz* r, uint8_t* dname, size_t dnamelen,
 		return 0;
 	}
 	if(!z) {
+		tp = rpz_action_to_localzone_type(a);
 		z = local_zones_add_zone(r->local_zones, dname, dnamelen,
 			dnamelabs, rrclass, tp);
 	}
@@ -460,7 +482,7 @@ rpz_data_delete_rr(struct local_zone* z, uint8_t* policydname,
 void
 rpz_remove_rr(struct rpz* r, size_t aznamelen, uint8_t* dname,
 	size_t dnamelen, uint16_t rr_type, uint16_t rr_class, uint8_t* rdatawl,
-	size_t rdatalen, uint8_t* rr, size_t rr_len)
+	size_t rdatalen)
 {
 	struct local_zone* z;
 	size_t policydnamelen;
@@ -470,10 +492,6 @@ rpz_remove_rr(struct rpz* r, size_t aznamelen, uint8_t* dname,
 	enum rpz_action a;
 	int delete_zone = 1;
 
-	/* TODO, use for logging */
-	(void)rr;
-	(void)rr_len;
-	
 	a = rpz_rr_to_action(rr_type, rdatawl, rdatalen);
 	if(!(policydnamelen = strip_dname_origin(dname, dnamelen, aznamelen,
 		policydname))) {
@@ -481,7 +499,7 @@ rpz_remove_rr(struct rpz* r, size_t aznamelen, uint8_t* dname,
 		return;
 	}
 	t = rpz_dname_to_trigger(policydname);
-	if(a != RPZ_INVALID_ACTION && t != RPZ_QNAME_TRIGGER) {
+	if(a != RPZ_INVALID_ACTION && t == RPZ_QNAME_TRIGGER) {
 		z = rpz_find_zone(r, policydname, policydnamelen, rr_class,
 			1 /* only exact */, 1 /* wr lock */);
 		if(!z) {
@@ -493,6 +511,10 @@ rpz_remove_rr(struct rpz* r, size_t aznamelen, uint8_t* dname,
 		if(a == RPZ_LOCAL_DATA_ACTION)
 			delete_zone = rpz_data_delete_rr(z, policydname,
 				policydnamelen, rr_type, rdatawl, rdatalen);
+		else if(a != localzone_type_to_rpz_action(z->type)) {
+			free(policydname);
+			return;
+		}
 		lock_rw_unlock(&z->lock); 
 		if(delete_zone) {
 			local_zones_del_zone(r->local_zones, z);

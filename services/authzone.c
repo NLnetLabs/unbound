@@ -1248,7 +1248,7 @@ az_remove_rr(struct auth_zone* z, uint8_t* rr, size_t rr_len,
 	}
 	if(z->rpz) {
 		rpz_remove_rr(z->rpz, z->namelen, dname, dname_len, rr_type,
-			rr_class, rdata, rdatalen, rr, rr_len);
+			rr_class, rdata, rdatalen);
 	}
 	return 1;
 }
