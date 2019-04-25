@@ -1200,6 +1200,14 @@ large outgoing port ranges.  ])
 	AC_CHECK_FUNCS([event_base_get_method]) # only in libevent 1.4.3 and later
 	AC_CHECK_FUNCS([ev_loop]) # only in libev. (tested on 3.51)
 	AC_CHECK_FUNCS([ev_default_loop]) # only in libev. (tested on 4.00)
+	AC_CHECK_FUNCS([event_assign]) # in libevent, for thread-safety
+	AC_CHECK_DECLS([evsignal_assign], [], [], [AC_INCLUDES_DEFAULT
+#ifdef HAVE_EVENT_H
+#  include <event.h>
+#else
+#  include "event2/event.h"
+#endif
+	])
         PC_LIBEVENT_DEPENDENCY="libevent"
         AC_SUBST(PC_LIBEVENT_DEPENDENCY)
 	if test -n "$BAK_LDFLAGS_SET"; then
