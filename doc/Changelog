@@ -1,3 +1,7 @@
+25 April 2019: Wouter
+	- Fix wrong query name in local zone redirect answers with a CNAME,
+	  the copy of the local alias is in unpacked form.
+
 18 April 2019: Ralph
 	- Scrub RRs from answer section when reusing NXDOMAIN message for
 	  subdomain answers.

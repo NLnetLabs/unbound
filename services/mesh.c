@@ -1341,21 +1341,14 @@ int mesh_state_add_reply(struct mesh_state* s, struct edns_data* edns,
 		log_assert(qinfo->local_alias->rrset->rk.dname ==
 			sldns_buffer_at(rep->c->buffer, LDNS_HEADER_SIZE));
 
-		d = regional_alloc_init(s->s.region, dsrc,
-			sizeof(struct packed_rrset_data)
-			+ sizeof(size_t) + sizeof(uint8_t*) + sizeof(time_t));
+		/* the rrset is not packed, like in the cache, but it is
+		 * individualy allocated with an allocator from localzone. */
+		d = regional_alloc_zero(s->s.region, sizeof(*d));
 		if(!d)
 			return 0;
 		r->local_alias->rrset->entry.data = d;
-		d->rr_len = (size_t*)((uint8_t*)d +
-			sizeof(struct packed_rrset_data));
-		d->rr_data = (uint8_t**)&(d->rr_len[1]);
-		d->rr_ttl = (time_t*)&(d->rr_data[1]);
-		d->rr_len[0] = dsrc->rr_len[0];
-		d->rr_ttl[0] = dsrc->rr_ttl[0];
-		d->rr_data[0] = regional_alloc_init(s->s.region,
-			dsrc->rr_data[0], d->rr_len[0]);
-		if(!d->rr_data[0])
+		if(!rrset_insert_rr(s->s.region, d, dsrc->rr_data[0],
+			dsrc->rr_len[0], dsrc->rr_ttl[0], "CNAME local alias"))
 			return 0;
 	} else
 		r->local_alias = NULL;
