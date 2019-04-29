@@ -5966,7 +5966,7 @@ xfr_probe_send_probe(struct auth_xfer* xfr, struct module_env* env,
 			&&  ntohs(((struct sockaddr_in *)&addr)->sin_port)
 		            == env->cfg->ssl_port)
 				((struct sockaddr_in *)&addr)->sin_port
-					= htons(env->port);
+					= htons(env->cfg->port);
 			else if (addr.ss_family == AF_INET6
 			&&  ntohs(((struct sockaddr_in6 *)&addr)->sin6_port)
 		            == env->cfg->ssl_port)
