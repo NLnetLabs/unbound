@@ -1675,6 +1675,7 @@ Name of the authority zone.
 .B master: \fI<IP address or host name>
 Where to download a copy of the zone from, with AXFR and IXFR.  Multiple
 masters can be specified.  They are all tried if one fails.
+With the "ip#name" notation a AXFR over TLS can be used.
 .TP
 .B url: \fI<url to zonefile>
 Where to download a zonefile for the zone.  With http or https.  An example
