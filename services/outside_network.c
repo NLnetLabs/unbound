@@ -2324,6 +2324,8 @@ setup_comm_ssl(struct comm_point* cp, struct outside_network* outnet,
 			return 0;
 		}
 	}
+#else
+	(void)host;
 #endif /* HAVE_SSL_SET1_HOST */
 	return 1;
 }
