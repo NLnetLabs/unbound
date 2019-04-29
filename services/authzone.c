@@ -5969,7 +5969,7 @@ xfr_probe_send_probe(struct auth_xfer* xfr, struct module_env* env,
 					= htons(env->port);
 			else if (addr.ss_family == AF_INET6
 			&&  ntohs(((struct sockaddr_in6 *)&addr)->sin6_port)
-		            == 853)
+		            == env->cfg->ssl_port)
                         	((struct sockaddr_in6 *)&addr)->sin6_port
 					= htons(853);
 		}
