@@ -2289,7 +2289,7 @@ setup_comm_ssl(struct comm_point* cp, struct outside_network* outnet,
 	cp->ssl = outgoing_ssl_fd(outnet->sslctx, fd);
 	if(!cp->ssl) {
 		log_err("cannot create SSL object");
-		return NULL;
+		return 0;
 	}
 #ifdef USE_WINSOCK
 	comm_point_tcp_win_bio_cb(cp, cp->ssl);
