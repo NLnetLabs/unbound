@@ -2281,6 +2281,53 @@ outnet_comm_point_for_udp(struct outside_network* outnet,
 	return cp;
 }
 
+/** setup SSL for comm point */
+static int
+setup_comm_ssl(struct comm_point* cp, struct outside_network* outnet,
+	char* host)
+{
+	cp->ssl = outgoing_ssl_fd(outnet->sslctx, fd);
+	if(!cp->ssl) {
+		log_err("cannot create SSL object");
+		return NULL;
+	}
+#ifdef USE_WINSOCK
+	comm_point_tcp_win_bio_cb(cp, cp->ssl);
+#endif
+	cp->ssl_shake_state = comm_ssl_shake_write;
+	/* https verification */
+#ifdef HAVE_SSL_SET1_HOST
+	if((SSL_CTX_get_verify_mode(outnet->sslctx)&SSL_VERIFY_PEER)) {
+		/* because we set SSL_VERIFY_PEER, in netevent in
+		 * ssl_handshake, it'll check if the certificate
+		 * verification has succeeded */
+		/* SSL_VERIFY_PEER is set on the sslctx */
+		/* and the certificates to verify with are loaded into
+		 * it with SSL_load_verify_locations or
+		 * SSL_CTX_set_default_verify_paths */
+		/* setting the hostname makes openssl verify the
+		 * host name in the x509 certificate in the
+		 * SSL connection*/
+		if(!SSL_set1_host(cp->ssl, host)) {
+			log_err("SSL_set1_host failed");
+			return 0;
+		}
+	}
+#elif defined(HAVE_X509_VERIFY_PARAM_SET1_HOST)
+	/* openssl 1.0.2 has this function that can be used for
+	 * set1_host like verification */
+	if((SSL_CTX_get_verify_mode(outnet->sslctx)&SSL_VERIFY_PEER)) {
+		X509_VERIFY_PARAM* param = SSL_get0_param(cp->ssl);
+		X509_VERIFY_PARAM_set_hostflags(param, X509_CHECK_FLAG_NO_PARTIAL_WILDCARDS);
+		if(!X509_VERIFY_PARAM_set1_host(param, host, strlen(host))) {
+			log_err("X509_VERIFY_PARAM_set1_host failed");
+			return 0;
+		}
+	}
+#endif /* HAVE_SSL_SET1_HOST */
+	return 1;
+}
+
 struct comm_point*
 outnet_comm_point_for_tcp(struct outside_network* outnet,
 	comm_point_callback_type* cb, void* cb_arg,
@@ -2308,48 +2355,11 @@ outnet_comm_point_for_tcp(struct outside_network* outnet,
 
 	/* setup for SSL (if needed) */
 	if(ssl) {
-		cp->ssl = outgoing_ssl_fd(outnet->sslctx, fd);
-		if(!cp->ssl) {
+		if(!setup_comm_ssl(cp, outnet, host)) {
 			log_err("cannot setup XoT");
 			comm_point_delete(cp);
 			return NULL;
 		}
-#ifdef USE_WINSOCK
-		comm_point_tcp_win_bio_cb(cp, cp->ssl);
-#endif
-		cp->ssl_shake_state = comm_ssl_shake_write;
-		/* XoT verification */
-#ifdef HAVE_SSL_SET1_HOST
-		if((SSL_CTX_get_verify_mode(outnet->sslctx)&SSL_VERIFY_PEER)) {
-			/* because we set SSL_VERIFY_PEER, in netevent in
-			 * ssl_handshake, it'll check if the certificate
-			 * verification has succeeded */
-			/* SSL_VERIFY_PEER is set on the sslctx */
-			/* and the certificates to verify with are loaded into
-			 * it with SSL_load_verify_locations or
-			 * SSL_CTX_set_default_verify_paths */
-			/* setting the hostname makes openssl verify the
-			 * host name in the x509 certificate in the
-			 * SSL connection*/
-		 	if(!SSL_set1_host(cp->ssl, host)) {
-				log_err("SSL_set1_host failed");
-				comm_point_delete(cp);
-				return NULL;
-			}
-		}
-#elif defined(HAVE_X509_VERIFY_PARAM_SET1_HOST)
-		/* openssl 1.0.2 has this function that can be used for
-		 * set1_host like verification */
-		if((SSL_CTX_get_verify_mode(outnet->sslctx)&SSL_VERIFY_PEER)) {
-			X509_VERIFY_PARAM* param = SSL_get0_param(cp->ssl);
-			X509_VERIFY_PARAM_set_hostflags(param, X509_CHECK_FLAG_NO_PARTIAL_WILDCARDS);
-			if(!X509_VERIFY_PARAM_set1_host(param, host, strlen(host))) {
-				log_err("X509_VERIFY_PARAM_set1_host failed");
-				comm_point_delete(cp);
-				return NULL;
-			}
-		}
-#endif /* HAVE_SSL_SET1_HOST */
 	}
 
 	/* set timeout on TCP connection */
@@ -2408,48 +2418,11 @@ outnet_comm_point_for_http(struct outside_network* outnet,
 
 	/* setup for SSL (if needed) */
 	if(ssl) {
-		cp->ssl = outgoing_ssl_fd(outnet->sslctx, fd);
-		if(!cp->ssl) {
+		if(!setup_comm_ssl(cp, outnet, host)) {
 			log_err("cannot setup https");
 			comm_point_delete(cp);
 			return NULL;
 		}
-#ifdef USE_WINSOCK
-		comm_point_tcp_win_bio_cb(cp, cp->ssl);
-#endif
-		cp->ssl_shake_state = comm_ssl_shake_write;
-		/* https verification */
-#ifdef HAVE_SSL_SET1_HOST
-		if((SSL_CTX_get_verify_mode(outnet->sslctx)&SSL_VERIFY_PEER)) {
-			/* because we set SSL_VERIFY_PEER, in netevent in
-			 * ssl_handshake, it'll check if the certificate
-			 * verification has succeeded */
-			/* SSL_VERIFY_PEER is set on the sslctx */
-			/* and the certificates to verify with are loaded into
-			 * it with SSL_load_verify_locations or
-			 * SSL_CTX_set_default_verify_paths */
-			/* setting the hostname makes openssl verify the
-			 * host name in the x509 certificate in the
-			 * SSL connection*/
-		 	if(!SSL_set1_host(cp->ssl, host)) {
-				log_err("SSL_set1_host failed");
-				comm_point_delete(cp);
-				return NULL;
-			}
-		}
-#elif defined(HAVE_X509_VERIFY_PARAM_SET1_HOST)
-		/* openssl 1.0.2 has this function that can be used for
-		 * set1_host like verification */
-		if((SSL_CTX_get_verify_mode(outnet->sslctx)&SSL_VERIFY_PEER)) {
-			X509_VERIFY_PARAM* param = SSL_get0_param(cp->ssl);
-			X509_VERIFY_PARAM_set_hostflags(param, X509_CHECK_FLAG_NO_PARTIAL_WILDCARDS);
-			if(!X509_VERIFY_PARAM_set1_host(param, host, strlen(host))) {
-				log_err("X509_VERIFY_PARAM_set1_host failed");
-				comm_point_delete(cp);
-				return NULL;
-			}
-		}
-#endif /* HAVE_SSL_SET1_HOST */
 	}
 
 	/* set timeout on TCP connection */
