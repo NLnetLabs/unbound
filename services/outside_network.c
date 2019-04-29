@@ -2284,7 +2284,7 @@ outnet_comm_point_for_udp(struct outside_network* outnet,
 /** setup SSL for comm point */
 static int
 setup_comm_ssl(struct comm_point* cp, struct outside_network* outnet,
-	char* host)
+	int fd, char* host)
 {
 	cp->ssl = outgoing_ssl_fd(outnet->sslctx, fd);
 	if(!cp->ssl) {
@@ -2355,7 +2355,7 @@ outnet_comm_point_for_tcp(struct outside_network* outnet,
 
 	/* setup for SSL (if needed) */
 	if(ssl) {
-		if(!setup_comm_ssl(cp, outnet, host)) {
+		if(!setup_comm_ssl(cp, outnet, fd, host)) {
 			log_err("cannot setup XoT");
 			comm_point_delete(cp);
 			return NULL;
@@ -2418,7 +2418,7 @@ outnet_comm_point_for_http(struct outside_network* outnet,
 
 	/* setup for SSL (if needed) */
 	if(ssl) {
-		if(!setup_comm_ssl(cp, outnet, host)) {
+		if(!setup_comm_ssl(cp, outnet, fd, host)) {
 			log_err("cannot setup https");
 			comm_point_delete(cp);
 			return NULL;
