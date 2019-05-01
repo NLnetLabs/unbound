@@ -1,3 +1,6 @@
+1 May 2019: Wouter
+	- Update makedist for git.
+
 25 April 2019: Wouter
 	- Fix wrong query name in local zone redirect answers with a CNAME,
 	  the copy of the local alias is in unpacked form.
