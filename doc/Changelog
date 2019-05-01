@@ -1,5 +1,6 @@
 1 May 2019: Wouter
 	- Update makedist for git.
+	- Nicer travis output for clang analysis.
 
 25 April 2019: Wouter
 	- Fix wrong query name in local zone redirect answers with a CNAME,

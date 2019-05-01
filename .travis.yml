@@ -13,4 +13,4 @@ script:
   - ./configure --enable-debug --disable-flto
   - make
   - make test
-  - (cd testdata; ../testcode/mini_tdir.sh exe clang-analysis.tdir ; if grep -e "warning:" -e "error:" result.clang-analysis ; then exit 1; else exit 0; fi)
+  - (cd testdata/clang-analysis.tdir; sh clang-analysis.test)
