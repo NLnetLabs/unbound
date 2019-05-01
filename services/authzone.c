@@ -5059,6 +5059,7 @@ xfr_transfer_init_fetch(struct auth_xfer* xfr, struct module_env* env)
 	struct sockaddr_storage addr;
 	socklen_t addrlen = 0;
 	struct auth_master* master = xfr->task_transfer->master;
+	char *auth_name = NULL;
 	struct timeval t;
 	int timeout;
 	if(!master) return 0;
@@ -5069,7 +5070,7 @@ xfr_transfer_init_fetch(struct auth_xfer* xfr, struct module_env* env)
 		addrlen = xfr->task_transfer->scan_addr->addrlen;
 		memmove(&addr, &xfr->task_transfer->scan_addr->addr, addrlen);
 	} else {
-		if(!extstrtoaddr(master->host, &addr, &addrlen)) {
+		if(!authextstrtoaddr(master->host, &addr, &addrlen, &auth_name)) {
 			/* the ones that are not in addr format are supposed
 			 * to be looked up.  The lookup has failed however,
 			 * so skip them */
@@ -5139,7 +5140,8 @@ xfr_transfer_init_fetch(struct auth_xfer* xfr, struct module_env* env)
 	/* connect on fd */
 	xfr->task_transfer->cp = outnet_comm_point_for_tcp(env->outnet,
 		auth_xfer_transfer_tcp_callback, xfr, &addr, addrlen,
-		env->scratch_buffer, -1);
+		env->scratch_buffer, -1,
+		auth_name != NULL, auth_name);
 	if(!xfr->task_transfer->cp) {
 		char zname[255+1], as[256];
  		dname_str(xfr->name, zname);
@@ -5938,6 +5940,7 @@ xfr_probe_send_probe(struct auth_xfer* xfr, struct module_env* env,
 	struct timeval t;
 	/* pick master */
 	struct auth_master* master = xfr_probe_current_master(xfr);
+	char *auth_name = NULL;
 	if(!master) return 0;
 	if(master->allow_notify) return 0; /* only for notify */
 	if(master->http) return 0; /* only masters get SOA UDP probe,
@@ -5948,7 +5951,7 @@ xfr_probe_send_probe(struct auth_xfer* xfr, struct module_env* env,
 		addrlen = xfr->task_probe->scan_addr->addrlen;
 		memmove(&addr, &xfr->task_probe->scan_addr->addr, addrlen);
 	} else {
-		if(!extstrtoaddr(master->host, &addr, &addrlen)) {
+		if(!authextstrtoaddr(master->host, &addr, &addrlen, &auth_name)) {
 			/* the ones that are not in addr format are supposed
 			 * to be looked up.  The lookup has failed however,
 			 * so skip them */
@@ -5957,6 +5960,18 @@ xfr_probe_send_probe(struct auth_xfer* xfr, struct module_env* env,
 			log_err("%s: failed lookup, cannot probe to master %s",
 				zname, master->host);
 			return 0;
+		}
+		if (auth_name != NULL) {
+			if (addr.ss_family == AF_INET
+			&&  ntohs(((struct sockaddr_in *)&addr)->sin_port)
+		            == env->cfg->ssl_port)
+				((struct sockaddr_in *)&addr)->sin_port
+					= htons(env->cfg->port);
+			else if (addr.ss_family == AF_INET6
+			&&  ntohs(((struct sockaddr_in6 *)&addr)->sin6_port)
+		            == env->cfg->ssl_port)
+                        	((struct sockaddr_in6 *)&addr)->sin6_port
+					= htons(env->cfg->port);
 		}
 	}
 
