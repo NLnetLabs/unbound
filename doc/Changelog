@@ -1,6 +1,9 @@
 1 May 2019: Wouter
 	- Update makedist for git.
 	- Nicer travis output for clang analysis.
+	- PR #16: XoT support, AXFR over TLS, turn it on with
+	  master: <ip>#<authname> in unbound.conf.  This uses TLS to
+	  download the AXFR (or IXFR).
 
 25 April 2019: Wouter
 	- Fix wrong query name in local zone redirect answers with a CNAME,
