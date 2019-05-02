@@ -167,6 +167,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_UNKNOWN_SERVER_TIME_LIMIT VAR_LOG_TAG_QUERYREPLY
 %token VAR_STREAM_WAIT_SIZE VAR_TLS_CIPHERS VAR_TLS_CIPHERSUITES
 %token VAR_TLS_SESSION_TICKET_KEYS
+%token VAR_IPSET VAR_IPSET_NAME_V4 VAR_IPSET_NAME_V6
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -174,7 +175,7 @@ toplevelvar: serverstart contents_server | stubstart contents_stub |
 	forwardstart contents_forward | pythonstart contents_py | 
 	rcstart contents_rc | dtstart contents_dt | viewstart contents_view |
 	dnscstart contents_dnsc | cachedbstart contents_cachedb |
-	authstart contents_auth
+	ipsetstart contents_ipset |	authstart contents_auth
 	;
 
 /* server: declaration */
@@ -2959,6 +2960,45 @@ server_tcp_connection_limit: VAR_TCP_CONNECTION_LIMIT STRING_ARG STRING_ARG
 		}
 	}
 	;
+	ipsetstart: VAR_IPSET
+		{
+			OUTYY(("\nP(ipset:)\n"));
+		}
+		;
+	contents_ipset: contents_ipset content_ipset
+		| ;
+	content_ipset: ipset_name_v4 | ipset_name_v6
+		;
+	ipset_name_v4: VAR_IPSET_NAME_V4 STRING_ARG
+		{
+		#ifdef USE_IPSET
+			OUTYY(("P(name-v4:%s)\n", $2));
+			if(cfg_parser->cfg->ipset_name_v4)
+				yyerror("ipset name v4 override, there must be one "
+					"name for ip v4");
+			free(cfg_parser->cfg->ipset_name_v4);
+			cfg_parser->cfg->ipset_name_v4 = $2;
+		#else
+			OUTYY(("P(Compiled without ipset, ignoring)\n"));
+			free($2);
+		#endif
+		}
+	;
+	ipset_name_v6: VAR_IPSET_NAME_V6 STRING_ARG
+	{
+		#ifdef USE_IPSET
+			OUTYY(("P(name-v6:%s)\n", $2));
+			if(cfg_parser->cfg->ipset_name_v6)
+				yyerror("ipset name v6 override, there must be one "
+					"name for ip v6");
+			free(cfg_parser->cfg->ipset_name_v6);
+			cfg_parser->cfg->ipset_name_v6 = $2;
+		#else
+			OUTYY(("P(Compiled without ipset, ignoring)\n"));
+			free($2);
+		#endif
+		}
+	;
 %%
 
 /* parse helper routines could be here */
@@ -2978,3 +3018,4 @@ validate_respip_action(const char* action)
 			"always_refuse or always_nxdomain");
 	}
 }
+

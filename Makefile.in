@@ -176,11 +176,11 @@ DAEMON_OBJ=acl_list.lo cachedump.lo daemon.lo \
 shm_main.lo remote.lo stats.lo unbound.lo \
 worker.lo @WIN_DAEMON_OBJ@
 DAEMON_OBJ_LINK=$(DAEMON_OBJ) $(COMMON_OBJ_ALL_SYMBOLS) $(SLDNS_OBJ) \
-$(COMPAT_OBJ) @WIN_DAEMON_OBJ_LINK@
+$(COMPAT_OBJ) $(IPSET_OBJ) @WIN_DAEMON_OBJ_LINK@
 CHECKCONF_SRC=smallapp/unbound-checkconf.c smallapp/worker_cb.c
 CHECKCONF_OBJ=unbound-checkconf.lo worker_cb.lo
 CHECKCONF_OBJ_LINK=$(CHECKCONF_OBJ) $(COMMON_OBJ_ALL_SYMBOLS) $(SLDNS_OBJ) \
-$(COMPAT_OBJ) @WIN_CHECKCONF_OBJ_LINK@
+$(COMPAT_OBJ) $(IPSET_OBJ) @WIN_CHECKCONF_OBJ_LINK@
 CONTROL_SRC=smallapp/unbound-control.c
 CONTROL_OBJ=unbound-control.lo 
 CONTROL_OBJ_LINK=$(CONTROL_OBJ) worker_cb.lo $(COMMON_OBJ_ALL_SYMBOLS) \
@@ -229,10 +229,12 @@ DELAYER_SRC=testcode/delayer.c
 DELAYER_OBJ=delayer.lo
 DELAYER_OBJ_LINK=$(DELAYER_OBJ) worker_cb.lo $(COMMON_OBJ) $(COMPAT_OBJ) \
 $(SLDNS_OBJ)
+IPSET_SRC=@IPSET_SRC@
+IPSET_OBJ=@IPSET_OBJ@
 LIBUNBOUND_SRC=libunbound/context.c libunbound/libunbound.c \
 libunbound/libworker.c
 LIBUNBOUND_OBJ=context.lo libunbound.lo libworker.lo ub_event_pluggable.lo
-LIBUNBOUND_OBJ_LINK=$(LIBUNBOUND_OBJ) $(COMMON_OBJ_WITHOUT_UB_EVENT) $(SLDNS_OBJ) $(COMPAT_OBJ)
+LIBUNBOUND_OBJ_LINK=$(LIBUNBOUND_OBJ) $(COMMON_OBJ_WITHOUT_UB_EVENT) $(SLDNS_OBJ) $(COMPAT_OBJ) $(IPSET_OBJ)
 
 # win apps or "" if not on windows
 WINAPPS=@WINAPPS@
@@ -256,15 +258,18 @@ ALL_SRC=$(COMMON_SRC) $(UNITTEST_SRC) $(DAEMON_SRC) \
 	$(MEMSTATS_SRC) $(CHECKCONF_SRC) $(LIBUNBOUND_SRC) $(HOST_SRC) \
 	$(ASYNCLOOK_SRC) $(STREAMTCP_SRC) $(PERF_SRC) $(DELAYER_SRC) \
 	$(CONTROL_SRC) $(UBANCHOR_SRC) $(PETAL_SRC) \
-	$(PYTHONMOD_SRC) $(PYUNBOUND_SRC) $(WIN_DAEMON_THE_SRC)\
-	$(SVCINST_SRC) $(SVCUNINST_SRC) $(ANCHORUPD_SRC) $(SLDNS_SRC)
+	$(PYTHONMOD_SRC) $(PYUNBOUND_SRC) $(WIN_DAEMON_THE_SRC) \
+	$(SVCINST_SRC) $(SVCUNINST_SRC) $(ANCHORUPD_SRC) $(SLDNS_SRC) \
+	$(IPSET_SRC)
+
 ALL_OBJ=$(COMMON_OBJ) $(UNITTEST_OBJ) $(DAEMON_OBJ) \
 	$(TESTBOUND_OBJ) $(LOCKVERIFY_OBJ) $(PKTVIEW_OBJ) \
 	$(MEMSTATS_OBJ) $(CHECKCONF_OBJ) $(LIBUNBOUND_OBJ) $(HOST_OBJ) \
 	$(ASYNCLOOK_OBJ) $(STREAMTCP_OBJ) $(PERF_OBJ) $(DELAYER_OBJ) \
 	$(CONTROL_OBJ) $(UBANCHOR_OBJ) $(PETAL_OBJ) \
 	$(COMPAT_OBJ) $(PYUNBOUND_OBJ) \
-	$(SVCINST_OBJ) $(SVCUNINST_OBJ) $(ANCHORUPD_OBJ) $(SLDNS_OBJ)
+	$(SVCINST_OBJ) $(SVCUNINST_OBJ) $(ANCHORUPD_OBJ) $(SLDNS_OBJ) \
+	$(IPSET_OBJ)
 
 COMPILE=$(LIBTOOL) --tag=CC --mode=compile $(CC) $(CPPFLAGS) $(CFLAGS) @PTHREAD_CFLAGS_ONLY@
 LINK=$(LIBTOOL) --tag=CC --mode=link $(CC) $(staticexe) $(RUNTIME_PATH) $(CPPFLAGS) $(CFLAGS) $(LDFLAGS)
@@ -1462,3 +1467,6 @@ sha512.lo sha512.o: $(srcdir)/compat/sha512.c config.h
 reallocarray.lo reallocarray.o: $(srcdir)/compat/reallocarray.c config.h
 isblank.lo isblank.o: $(srcdir)/compat/isblank.c config.h
 strsep.lo strsep.o: $(srcdir)/compat/strsep.c config.h
+
+ipset.lo ipset.o: $(srcdir)/ipset/ipset.c $(srcdir)/ipset/ipset.h config.h $(srcdir)/util/module.h \
+ $(srcdir)/sldns/sbuffer.h $(srcdir)/sldns/wire2str.h $(srcdir)/services/cache/dns.h

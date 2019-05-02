@@ -327,9 +327,13 @@ config_create(void)
 	cfg->cachedb_backend = NULL;
 	cfg->cachedb_secret = NULL;
 #endif
+#ifdef USE_IPSET
+	cfg->ipset_name_v4 = NULL;
+	cfg->ipset_name_v6 = NULL;
+#endif
 	return cfg;
 error_exit:
-	config_delete(cfg); 
+	config_delete(cfg);
 	return NULL;
 }
 
@@ -1092,6 +1096,10 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_STR(opt, "backend", cachedb_backend)
 	else O_STR(opt, "secret-seed", cachedb_secret)
 #endif
+#ifdef USE_IPSET
+	else O_STR(opt, "name-v4", ipset_name_v4)
+	else O_STR(opt, "name-v6", ipset_name_v6)
+#endif
 	/* not here:
 	 * outgoing-permit, outgoing-avoid - have list of ports
 	 * local-zone - zones and nodefault variables
@@ -1427,6 +1435,10 @@ config_delete(struct config_file* cfg)
 #ifdef USE_CACHEDB
 	free(cfg->cachedb_backend);
 	free(cfg->cachedb_secret);
+#endif
+#ifdef USE_IPSET
+	free(cfg->ipset_name_v4);
+	free(cfg->ipset_name_v6);
 #endif
 	free(cfg);
 }

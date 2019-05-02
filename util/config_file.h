@@ -575,6 +575,12 @@ struct config_file {
 	int redis_timeout;
 #endif
 #endif
+
+	/* ipset module */
+#ifdef USE_IPSET
+	char* ipset_name_v4;
+	char* ipset_name_v6;
+#endif
 };
 
 /** from cfg username, after daemonize setup performed */
