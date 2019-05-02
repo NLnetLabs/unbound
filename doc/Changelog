@@ -1,6 +1,7 @@
 2 May 2019: Wouter
 	- contrib/fastrpz.patch updated for code changes, and with git diff.
 	- Fix .gitignore, add pythonmod and dnstap generated files.
+	  And unit test generated files, and generated doc files.
 
 1 May 2019: Wouter
 	- Update makedist for git.

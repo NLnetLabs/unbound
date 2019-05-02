@@ -46,3 +46,8 @@
 /libunbound/python/unbound.py
 /pythonmod/interface.h
 /pythonmod/unboundmodule.py
+/testdata/result.*
+/testdata/.done-*
+/testdata/.perfstats.txt
+/doc/html
+/doc/xml
