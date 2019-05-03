@@ -175,7 +175,7 @@ toplevelvar: serverstart contents_server | stubstart contents_stub |
 	forwardstart contents_forward | pythonstart contents_py | 
 	rcstart contents_rc | dtstart contents_dt | viewstart contents_view |
 	dnscstart contents_dnsc | cachedbstart contents_cachedb |
-	ipsetstart contents_ipset |	authstart contents_auth
+	ipsetstart contents_ipset | authstart contents_auth
 	;
 
 /* server: declaration */
@@ -1785,13 +1785,14 @@ server_local_zone: VAR_LOCAL_ZONE STRING_ARG STRING_ARG
 		   && strcmp($3, "always_nxdomain")!=0
 		   && strcmp($3, "noview")!=0
 		   && strcmp($3, "inform")!=0 && strcmp($3, "inform_deny")!=0
-		   && strcmp($3, "inform_redirect") != 0) {
+		   && strcmp($3, "inform_redirect") != 0
+			 && strcmp($3, "ipset") != 0) {
 			yyerror("local-zone type: expected static, deny, "
 				"refuse, redirect, transparent, "
 				"typetransparent, inform, inform_deny, "
 				"inform_redirect, always_transparent, "
 				"always_refuse, always_nxdomain, noview "
-				"or nodefault");
+				", nodefault or ipset");
 			free($2);
 			free($3);
 		} else if(strcmp($3, "nodefault")==0) {
@@ -1799,6 +1800,13 @@ server_local_zone: VAR_LOCAL_ZONE STRING_ARG STRING_ARG
 				local_zones_nodefault, $2))
 				fatal_exit("out of memory adding local-zone");
 			free($3);
+#ifdef USE_IPSET
+		} else if(strcmp($3, "ipset")==0) {
+			if(!cfg_strlist_insert(&cfg_parser->cfg->
+				local_zones_ipset, $2))
+				fatal_exit("out of memory adding local-zone");
+			free($3);
+#endif
 		} else {
 			if(!cfg_str2list_insert(&cfg_parser->cfg->local_zones, 
 				$2, $3))
@@ -2456,6 +2464,13 @@ view_local_zone: VAR_LOCAL_ZONE STRING_ARG STRING_ARG
 				local_zones_nodefault, $2))
 				fatal_exit("out of memory adding local-zone");
 			free($3);
+#ifdef USE_IPSET
+		} else if(strcmp($3, "ipset")==0) {
+			if(!cfg_strlist_insert(&cfg_parser->cfg->views->
+				local_zones_ipset, $2))
+				fatal_exit("out of memory adding local-zone");
+			free($3);
+#endif
 		} else {
 			if(!cfg_str2list_insert(
 				&cfg_parser->cfg->views->local_zones, 
@@ -3018,4 +3033,5 @@ validate_respip_action(const char* action)
 			"always_refuse or always_nxdomain");
 	}
 }
+
 

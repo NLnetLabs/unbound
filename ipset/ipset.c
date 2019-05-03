@@ -2,10 +2,12 @@
 #include "ipset/ipset.h"
 #include "util/regional.h"
 #include "util/config_file.h"
+
 #include "services/cache/dns.h"
-#include "sldns/parseutil.h"
+
 #include "sldns/sbuffer.h"
 #include "sldns/wire2str.h"
+#include "sldns/parseutil.h"
 
 #include <libmnl/libmnl.h>
 #include <linux/netfilter/nfnetlink.h>
@@ -21,8 +23,7 @@
  * @return: 0 for use by caller, to make notation easy, like:
  * 	return error_response(..).
  */
-static int error_response(struct module_qstate* qstate, int id, int rcode)
-{
+static int error_response(struct module_qstate* qstate, int id, int rcode) {
 	verbose(VERB_QUERY, "return error response %s",
 		sldns_lookup_by_id(sldns_rcodes, rcode)?
 		sldns_lookup_by_id(sldns_rcodes, rcode)->name:"??");
@@ -36,7 +37,7 @@ static int add_to_ipset(struct mnl_socket *mnl, const char *setname, const void 
 	struct nlmsghdr *nlh;
 	struct nfgenmsg *nfg;
 	struct nlattr *nested[2];
-	char buffer[BUFF_LEN];
+	static char buffer[BUFF_LEN];
 
 	if (strlen(setname) >= IPSET_MAXNAMELEN) {
 		errno = ENAMETOOLONG;
@@ -49,7 +50,7 @@ static int add_to_ipset(struct mnl_socket *mnl, const char *setname, const void 
 
 	nlh = mnl_nlmsg_put_header(buffer);
 	nlh->nlmsg_type = IPSET_CMD_ADD | (NFNL_SUBSYS_IPSET << 8);
-    nlh->nlmsg_flags = NLM_F_REQUEST|NLM_F_ACK|NLM_F_EXCL;
+	nlh->nlmsg_flags = NLM_F_REQUEST|NLM_F_ACK|NLM_F_EXCL;
 
 	nfg = mnl_nlmsg_put_extra_header(nlh, sizeof(struct nfgenmsg));
 	nfg->nfgen_family = af;
@@ -71,29 +72,40 @@ static int add_to_ipset(struct mnl_socket *mnl, const char *setname, const void 
 	return 0;
 }
 
-int ipset_update(struct dns_msg* return_msg, struct ipset_env *ie) {
-	int i, j;
+static int ipset_update(struct module_env *env, struct dns_msg *return_msg, struct ipset_env *ie) {
 	int ret;
-	int af;
-	uint16_t rrtype;
-	size_t rr_len, rd_len;
-	struct ub_packed_rrset_key *rrset;
-	struct packed_rrset_data* d;
-	uint8_t *rr_data;
+
+	struct mnl_socket *mnl;
+
+	int i, j;
 
 	const char *setname;
 
-	struct mnl_socket *mnl;
+	struct ub_packed_rrset_key *rrset;
+	struct packed_rrset_data *d;
+
+	int af;
+
+	static char dname[BUFF_LEN];
+	const char *s;
+	int dlen, plen;
+
+	struct config_strlist *p;
+
+	uint16_t rrtype;
+	size_t rr_len, rd_len;
+
+	uint8_t *rr_data;
 
 	mnl = (struct mnl_socket *)ie->mnl;
 	if (mnl == NULL) {
 		return -1;
 	}
 
-    for (i = 0; i < return_msg->rep->rrset_count; ++i) {
+	for (i = 0; i < return_msg->rep->rrset_count; ++i) {
 		setname = NULL;
 
-        rrset = return_msg->rep->rrsets[i];
+		rrset = return_msg->rep->rrsets[i];
 
 		if (rrset->rk.type == htons(LDNS_RR_TYPE_A)) {
 			af = AF_INET;
@@ -107,20 +119,46 @@ int ipset_update(struct dns_msg* return_msg, struct ipset_env *ie) {
 			}
 		}
 
-        if (setname != NULL) {
-            d = (struct packed_rrset_data*)rrset->entry.data;
-            for (j = 0; j < d->count + d->rrsig_count; j++) {
-				rr_len = d->rr_len[j];
-				rr_data = d->rr_data[j];
+		if (setname != NULL) {
+			dlen = sldns_wire2str_dname_buf(rrset->rk.dname, rrset->rk.dname_len, dname, BUFF_LEN);
+			if (dlen == 0) {
+				log_err("bad domain name");
+				return -1;
+			}
+			if (dname[dlen - 1] == '.') {
+				dlen--;
+				dname[dlen] = 0;
+			}
 
-                rd_len = sldns_read_uint16(rr_data);
-                if (rr_len - 2 >= rd_len) {
-                    ret = add_to_ipset(mnl, setname, rr_data + 2, af);
-                    if (ret < 0) {
-                        return ret;
-                    }
-                }
-            }
+			verbose(VERB_QUERY, "ipset domain name %d %s", dlen, dname);
+
+			for (p = env->cfg->local_zones_ipset; p; p = p->next) {
+				plen = strlen(p->str);
+
+				verbose(VERB_QUERY, "ipset local_zones_ipset name %d %s", plen, p->str);
+
+				if (dlen >= plen) {
+					s = dname + (dlen - plen);
+					verbose(VERB_QUERY, "ipset start name %s", s);
+
+					if (strncasecmp(p->str, s, plen) == 0) {
+						d = (struct packed_rrset_data*)rrset->entry.data;
+						for (j = 0; j < d->count + d->rrsig_count; j++) {
+							rr_len = d->rr_len[j];
+							rr_data = d->rr_data[j];
+
+							rd_len = sldns_read_uint16(rr_data);
+							if (rr_len - 2 >= rd_len) {
+								ret = add_to_ipset(mnl, setname, rr_data + 2, af);
+								if (ret < 0) {
+									return ret;
+								}
+							}
+						}
+
+					}
+				}
+			}
         }
     }
 
@@ -222,7 +260,7 @@ void ipset_operate(struct module_qstate *qstate, enum module_ev event, int id,
 	}
 
 	if(iq && (event == module_event_moddone)) {
-		ipset_update(qstate->return_msg, ie);
+		ipset_update(qstate->env, qstate->return_msg, ie);
 		qstate->ext_state[id] = module_finished;
 		return;
 	}
@@ -286,4 +324,5 @@ static struct module_func_block ipset_block = {
 struct module_func_block * ipset_get_funcblock(void) {
 	return &ipset_block;
 }
+
 

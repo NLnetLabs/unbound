@@ -384,6 +384,10 @@ struct config_file {
 	struct config_str2list* local_zones;
 	/** local zones nodefault list */
 	struct config_strlist* local_zones_nodefault;
+#ifdef USE_IPSET
+	/** local zones ipset list */
+	struct config_strlist* local_zones_ipset;
+#endif
 	/** do not add any default local zone */
 	int local_zones_disable_default;
 	/** local data RRs configured */
@@ -653,6 +657,10 @@ struct config_view {
 	struct config_strlist* local_data;
 	/** local zones nodefault list */
 	struct config_strlist* local_zones_nodefault;
+#ifdef USE_IPSET
+	/** local zones ipset list */
+	struct config_strlist* local_zones_ipset;
+#endif
 	/** Fallback to global local_zones when there is no match in the view
 	 * view specific tree. 1 for yes, 0 for no */	
 	int isfirst;
@@ -1187,3 +1195,4 @@ void w_config_adjust_directory(struct config_file* cfg);
 extern int fake_dsa, fake_sha1;
 
 #endif /* UTIL_CONFIG_FILE_H */
+
