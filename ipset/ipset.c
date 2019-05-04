@@ -146,6 +146,7 @@ static int ipset_update(struct module_env *env, struct dns_msg *return_msg, stru
 								ret = add_to_ipset(mnl, setname, rr_data + 2, af);
 								if (ret < 0) {
 									log_err("ipset: could not add %s into %s", dname, setname);
+									return ret;
 								}
 							}
 						}
