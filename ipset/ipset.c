@@ -127,19 +127,13 @@ static int ipset_update(struct module_env *env, struct dns_msg *return_msg, stru
 			}
 			if (dname[dlen - 1] == '.') {
 				dlen--;
-				dname[dlen] = 0;
 			}
-
-			verbose(VERB_QUERY, "ipset domain name %d %s", dlen, dname);
 
 			for (p = env->cfg->local_zones_ipset; p; p = p->next) {
 				plen = strlen(p->str);
 
-				verbose(VERB_QUERY, "ipset local_zones_ipset name %d %s", plen, p->str);
-
 				if (dlen >= plen) {
 					s = dname + (dlen - plen);
-					verbose(VERB_QUERY, "ipset start name %s", s);
 
 					if (strncasecmp(p->str, s, plen) == 0) {
 						d = (struct packed_rrset_data*)rrset->entry.data;
@@ -151,18 +145,18 @@ static int ipset_update(struct module_env *env, struct dns_msg *return_msg, stru
 							if (rr_len - 2 >= rd_len) {
 								ret = add_to_ipset(mnl, setname, rr_data + 2, af);
 								if (ret < 0) {
-									return ret;
+									log_err("ipset: could not add %s into %s", dname, setname);
 								}
 							}
 						}
-
+						break;
 					}
 				}
 			}
-        }
-    }
+	        }
+	}
 
-    return 0;
+	return 0;
 }
 
 int ipset_init(struct module_env* env, int id) {
