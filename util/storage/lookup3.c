@@ -1,6 +1,6 @@
 /*
-  May 2019(Wouter: patch to enable the valgrind clean implementation all the
-     time.  This enabled better security audit and checks, which is better
+  May 2019(Wouter) patch to enable the valgrind clean implementation all the
+     time.  This enables better security audit and checks, which is better
      than the speedup.  Git issue #30.  Renamed the define ARRAY_CLEAN_ACCESS.
   February 2013(Wouter) patch defines for BSD endianness, from Brad Smith.
   January 2012(Wouter) added randomised initial value, fallout from 28c3.
