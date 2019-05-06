@@ -1,5 +1,10 @@
 6 May 2019: Wouter
 	- Fix #29: Solaris 11.3 and missing symbols be64toh, htobe64.
+	- Fix #30: AddressSanitizer finding in lookup3.c.  This sets the
+	  hash function to use a slower but better auditable code that does
+	  not read beyond array boundaries.  This makes code better security
+	  checkable, and is better for security.  It is fixed to be slower,
+	  but not read outside of the array.
 
 2 May 2019: Wouter
 	- contrib/fastrpz.patch updated for code changes, and with git diff.
