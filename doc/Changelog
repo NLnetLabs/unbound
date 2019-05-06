@@ -1,3 +1,6 @@
+6 May 2019: Wouter
+	- Fix #29: Solaris 11.3 and missing symbols be64toh, htobe64.
+
 2 May 2019: Wouter
 	- contrib/fastrpz.patch updated for code changes, and with git diff.
 	- Fix .gitignore, add pythonmod and dnstap generated files.
