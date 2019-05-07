@@ -1,5 +1,6 @@
 7 May 2019: Wouter
 	- Fix edns-subnet locks, in error cases the lock was not unlocked.
+	- Fix doxygen output error on readme markdown vignettes.
 
 6 May 2019: Wouter
 	- Fix #29: Solaris 11.3 and missing symbols be64toh, htobe64.
