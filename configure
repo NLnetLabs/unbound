@@ -21089,6 +21089,15 @@ fi
 
 
 
+if echo "$CFLAGS" | grep 'FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION' >/dev/null; then
+	:
+	# do not strip flags, so they are on the command line for fuzzer builds.
+	# because otherwise reallocarray looks like it can link in the
+	# configure test, but doesn't really link at link time.
+	# this is, by the way, safe for production, and keeps the
+	# commandline more explicitly with the compile defines for
+	# special compile settings.
+else
 
   { $as_echo "$as_me:${as_lineno-$LINENO}: Stripping extension flags..." >&5
 $as_echo "$as_me: Stripping extension flags..." >&6;}
@@ -21165,6 +21174,7 @@ $as_echo "#define OMITTED__D_LARGEFILE_SOURCE_1 1" >>confdefs.h
   fi
 
 
+fi
 if test -n "$LATE_LDFLAGS"; then
   LDFLAGS="$LATE_LDFLAGS $LDFLAGS"
 fi
