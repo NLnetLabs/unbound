@@ -1644,17 +1644,7 @@ fi
 AC_SUBST(ALLTARGET)
 AC_SUBST(INSTALLTARGET)
 
-if echo "$CFLAGS" | grep 'FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION' >/dev/null; then
-	:
-	# do not strip flags, so they are on the command line for fuzzer builds.
-	# because otherwise reallocarray looks like it can link in the
-	# configure test, but doesn't really link at link time.
-	# this is, by the way, safe for production, and keeps the
-	# commandline more explicitly with the compile defines for
-	# special compile settings.
-else
-	ACX_STRIP_EXT_FLAGS
-fi
+ACX_STRIP_EXT_FLAGS
 if test -n "$LATE_LDFLAGS"; then
   LDFLAGS="$LATE_LDFLAGS $LDFLAGS"
 fi

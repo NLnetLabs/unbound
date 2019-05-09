@@ -1,3 +1,8 @@
+9 May 2019: Wouter
+	- Revert fix for oss-fuzz, error is in that build script that
+	  unconditionally includes .o files detected by configure, also
+	  when the machine architecture uses different LIBOBJS files.
+
 8 May 2019: Wouter
 	- Attempt to fix build failure in oss-fuzz because of reallocarray.
 	  https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=14648.
