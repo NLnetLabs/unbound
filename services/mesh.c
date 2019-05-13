@@ -1192,12 +1192,16 @@ void mesh_query_done(struct mesh_state* mstate)
 			comm_point_drop_reply(&r->query_reply);
 		else {
 			struct sldns_buffer* r_buffer = r->query_reply.c->buffer;
-			if(r->query_reply.c->tcp_req_info)
+			if(r->query_reply.c->tcp_req_info) {
 				r_buffer = r->query_reply.c->tcp_req_info->spool_buffer;
+				prev_buffer = NULL;
+			}
 			mesh_send_reply(mstate, mstate->s.return_rcode, rep,
 				r, r_buffer, prev, prev_buffer);
-			if(r->query_reply.c->tcp_req_info)
+			if(r->query_reply.c->tcp_req_info) {
 				tcp_req_info_remove_mesh_state(r->query_reply.c->tcp_req_info, mstate);
+				r_buffer = NULL;
+			}
 			prev = r;
 			prev_buffer = r_buffer;
 		}
