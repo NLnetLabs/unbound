@@ -1,3 +1,8 @@
+13 May 2019: Wouter
+	- Squelch log messages from tcp send about connection reset by peer.
+	  They can be enabled with verbosity at higher values for diagnosing
+	  network connectivity issues.
+
 9 May 2019: Wouter
 	- Revert fix for oss-fuzz, error is in that build script that
 	  unconditionally includes .o files detected by configure, also

@@ -1648,6 +1648,10 @@ comm_point_tcp_handle_write(int fd, struct comm_point* c)
   #endif
 			if(errno == EINTR || errno == EAGAIN)
 				return 1;
+#ifdef ECONNRESET
+			if(errno == ECONNRESET && verbosity < 2)
+				return 0; /* silence reset by peer */
+#endif
 #  ifdef HAVE_WRITEV
 			log_err_addr("tcp writev", strerror(errno),
 				&c->repinfo.addr, c->repinfo.addrlen);
@@ -1665,6 +1669,8 @@ comm_point_tcp_handle_write(int fd, struct comm_point* c)
 					UB_EV_WRITE);
 				return 1; 
 			}
+			if(WSAGetLastError() == WSAECONNRESET && verbosity < 2)
+				return 0; /* silence reset by peer */
 			log_err_addr("tcp send s",
 				wsa_strerror(WSAGetLastError()),
 				&c->repinfo.addr, c->repinfo.addrlen);
@@ -1688,6 +1694,10 @@ comm_point_tcp_handle_write(int fd, struct comm_point* c)
 #ifndef USE_WINSOCK
 		if(errno == EINTR || errno == EAGAIN)
 			return 1;
+#ifdef ECONNRESET
+		if(errno == ECONNRESET && verbosity < 2)
+			return 0; /* silence reset by peer */
+#endif
 		log_err_addr("tcp send r", strerror(errno),
 			&c->repinfo.addr, c->repinfo.addrlen);
 #else
@@ -1697,6 +1707,8 @@ comm_point_tcp_handle_write(int fd, struct comm_point* c)
 			ub_winsock_tcp_wouldblock(c->ev->ev, UB_EV_WRITE);
 			return 1; 
 		}
+		if(WSAGetLastError() == WSAECONNRESET && verbosity < 2)
+			return 0; /* silence reset by peer */
 		log_err_addr("tcp send r", wsa_strerror(WSAGetLastError()),
 			&c->repinfo.addr, c->repinfo.addrlen);
 #endif
