@@ -637,7 +637,13 @@ struct config_auth {
 	uint8_t* rpz_taglist;
 	/** length of the taglist (in bytes) */
 	size_t rpz_taglistlen;
-
+	/** Override RPZ action for this zone, regardless of zone content */
+	char* rpz_action_override;
+	/** Log when this RPZ policy is applied */
+	int rpz_log;
+	/** Always reply with this CNAME target if the cname override action is
+	 * used */
+	char* rpz_cname;
 };
 
 /**

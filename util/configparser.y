@@ -166,7 +166,8 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_FORWARD_NO_CACHE VAR_STUB_NO_CACHE VAR_LOG_SERVFAIL VAR_DENY_ANY
 %token VAR_UNKNOWN_SERVER_TIME_LIMIT VAR_LOG_TAG_QUERYREPLY
 %token VAR_STREAM_WAIT_SIZE VAR_TLS_CIPHERS VAR_TLS_CIPHERSUITES
-%token VAR_TLS_SESSION_TICKET_KEYS VAR_RPZ VAR_TAGS
+%token VAR_TLS_SESSION_TICKET_KEYS VAR_RPZ VAR_TAGS VAR_RPZ_ACTION_OVERRIDE
+%token VAR_RPZ_CNAME_OVERRIDE VAR_RPZ_LOG
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -365,6 +366,45 @@ rpz_tag: VAR_TAGS STRING_ARG
 		}
 	}
 	;
+
+rpz_action_override: VAR_RPZ_ACTION_OVERRIDE STRING_ARG
+	{
+		OUTYY(("P(rpz_action_override:%s)\n", $2));
+		if(strcmp($2, "nxdomain")!=0 && strcmp($2, "nodata")!=0 &&
+		   strcmp($2, "passthru")!=0 && strcmp($2, "drop")!=0 &&
+		   strcmp($2, "cname")!=0 && strcmp($2, "disabled")!=0) {
+			yyerror("rpz-action-override action: expected nxdomain, "
+				"nodata, passthru, drop cname or disabled");
+			free($2);
+			cfg_parser->cfg->auths->rpz_action_override = NULL;
+		}
+		else {
+			cfg_parser->cfg->auths->rpz_action_override = $2;
+		}
+	}
+	;
+
+rpz_cname_override: VAR_RPZ_CNAME_OVERRIDE STRING_ARG
+	{
+		OUTYY(("P(rpz_cname_override:%s)\n", $2));
+		if(cfg_parser->cfg->auths->rpz_cname)
+			yyerror("there can only be one CNAME override per "
+				"RPZ");
+		free(cfg_parser->cfg->auths->rpz_cname);
+		cfg_parser->cfg->auths->rpz_cname = $2;
+	}
+	;
+
+rpz_log: VAR_RPZ_LOG STRING_ARG
+	{
+		OUTYY(("P(rpz_log:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else cfg_parser->cfg->auths->rpz_log = (strcmp($2, "yes")==0);
+		free($2);
+	}
+	;
+
 rpzstart: VAR_RPZ
 	{
 		struct config_auth* s;
@@ -385,7 +425,8 @@ rpzstart: VAR_RPZ
 contents_rpz: contents_rpz content_rpz 
 	| ;
 content_rpz: auth_name | auth_zonefile | rpz_tag | auth_master | auth_url |
-	   auth_allow_notify
+	   auth_allow_notify | rpz_action_override | rpz_cname_override |
+	   rpz_log
 	;
 server_num_threads: VAR_NUM_THREADS STRING_ARG 
 	{ 

@@ -49,20 +49,6 @@
 #include "sldns/sbuffer.h"
 
 /**
- * RPZ containing policies. Pointed to from corresponding authz-one. Part of a
- * linked list to keep configuration order. Iterating or changing the linked
- * list requires the rpz_lock from struct auth_zones.
- */
-struct rpz {
-	struct local_zones* local_zones;
-	uint8_t* taglist;
-	size_t taglistlen;
-	struct rpz* next;
-	struct rpz* prev;
-	/* tags */
-};
-
-/**
  * RPZ triggers, only the QNAME trigger is currently supported in Unbound.
  */
 enum rpz_trigger {
@@ -87,6 +73,27 @@ enum rpz_action {
 				   "rpz-" in target, SOA, NS, DNAME and
 				   DNSSEC-related records. */
 	RPZ_LOCAL_DATA_ACTION,	/* anything else */
+	/* RPZ override actions */
+	RPZ_DISABLED_ACTION,    /* RPZ action disabled using override */
+	RPZ_NO_OVERRIDE_ACTION, /* RPZ action no override*/
+	RPZ_CNAME_OVERRIDE_ACTION, /* RPZ CNAME action override*/
+};
+
+/**
+ * RPZ containing policies. Pointed to from corresponding authz-one. Part of a
+ * linked list to keep configuration order. Iterating or changing the linked
+ * list requires the rpz_lock from struct auth_zones.
+ */
+struct rpz {
+	struct local_zones* local_zones;
+	uint8_t* taglist;
+	size_t taglistlen;
+	enum rpz_action action_override;
+	struct ub_packed_rrset_key* cname_override;
+	int log;
+	struct rpz* next;
+	struct rpz* prev;
+	struct regional* region;
 };
 
 /**

@@ -310,7 +310,10 @@ extern int yydebug;
     VAR_TLS_CIPHERSUITES = 520,
     VAR_TLS_SESSION_TICKET_KEYS = 521,
     VAR_RPZ = 522,
-    VAR_TAGS = 523
+    VAR_TAGS = 523,
+    VAR_RPZ_ACTION_OVERRIDE = 524,
+    VAR_RPZ_CNAME_OVERRIDE = 525,
+    VAR_RPZ_LOG = 526
   };
 #endif
 /* Tokens.  */
@@ -580,6 +583,9 @@ extern int yydebug;
 #define VAR_TLS_SESSION_TICKET_KEYS 521
 #define VAR_RPZ 522
 #define VAR_TAGS 523
+#define VAR_RPZ_ACTION_OVERRIDE 524
+#define VAR_RPZ_CNAME_OVERRIDE 525
+#define VAR_RPZ_LOG 526
 
 /* Value type.  */
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
@@ -590,7 +596,7 @@ union YYSTYPE
 
 	char*	str;
 
-#line 594 "util/configparser.h" /* yacc.c:1909  */
+#line 600 "util/configparser.h" /* yacc.c:1909  */
 };
 
 typedef union YYSTYPE YYSTYPE;

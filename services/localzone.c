@@ -1686,6 +1686,7 @@ const char* local_zone_type2str(enum localzone_type t)
 		case local_zone_always_nxdomain: return "always_nxdomain";
 		case local_zone_always_nodata: return "always_nodata";
 		case local_zone_noview: return "noview";
+		case local_zone_invalid: return "invalid";
 	}
 	return "badtyped"; 
 }

@@ -43,11 +43,13 @@
 #include "services/rpz.h"
 #include "util/config_file.h"
 #include "sldns/wire2str.h"
+#include "sldns/str2wire.h"
 #include "util/data/dname.h"
 #include "util/net_help.h"
 #include "util/log.h"
 #include "util/data/dname.h"
 #include "util/locks.h"
+#include "util/regional.h"
 
 /** string for RPZ action enum */
 static const char*
@@ -61,8 +63,31 @@ rpz_action_to_string(enum rpz_action a)
 	case RPZ_TCP_ONLY_ACTION:	return "TCP ONLY ACTION";
 	case RPZ_INVALID_ACTION:	return "INVALID ACTION";
 	case RPZ_LOCAL_DATA_ACTION:	return "LOCAL DATA ACTION";
+	case RPZ_DISABLED_ACTION:	return "DISABLED ACTION";
+	case RPZ_CNAME_OVERRIDE_ACTION:	return "CNAME OVERRIDE ACTION";
+	case RPZ_NO_OVERRIDE_ACTION:	return "NO OVERRIDE ACTION";
 	}
 	return "UNKNOWN RPZ ACTION";
+}
+
+static enum rpz_action
+rpz_config_to_action(char* a)
+{
+	if(strcmp(a, "nxdomain") == 0)
+		return RPZ_NXDOMAIN_ACTION;
+	else if(strcmp(a, "nodata") == 0)
+		return RPZ_NODATA_ACTION;
+	else if(strcmp(a, "passthru") == 0)
+		return RPZ_PASSTHRU_ACTION;
+	else if(strcmp(a, "drop") == 0)
+		return RPZ_DROP_ACTION;
+	else if(strcmp(a, "tcp_only") == 0)
+		return RPZ_TCP_ONLY_ACTION;
+	else if(strcmp(a, "cname") == 0)
+		return RPZ_CNAME_OVERRIDE_ACTION;
+	else if(strcmp(a, "disabled") == 0)
+		return RPZ_DISABLED_ACTION;
+	return RPZ_INVALID_ACTION;
 }
 
 /** string for RPZ trigger enum */
@@ -175,7 +200,9 @@ rpz_action_to_localzone_type(enum rpz_action a)
 	case RPZ_NODATA_ACTION:		return local_zone_always_nodata;
 	case RPZ_DROP_ACTION:		return local_zone_deny;
 	case RPZ_PASSTHRU_ACTION:	return local_zone_always_transparent;
-	case RPZ_LOCAL_DATA_ACTION:	return local_zone_redirect;
+	case RPZ_LOCAL_DATA_ACTION:
+	case RPZ_CNAME_OVERRIDE_ACTION:
+					return local_zone_redirect;
 	case RPZ_INVALID_ACTION:
 	case RPZ_TCP_ONLY_ACTION:
 	default:
@@ -230,6 +257,7 @@ void rpz_delete(struct rpz* r)
 	if(!r)
 		return;
 	local_zones_delete(r->local_zones);
+	regional_destroy(r->region);
 	free(r->taglist);
 	free(r);
 }
@@ -245,6 +273,51 @@ rpz_clear_lz(struct rpz* r)
 	return 1;
 }
 
+/** new rrset containing CNAME override, does not yet contain a dname */
+static struct ub_packed_rrset_key*
+new_cname_override(struct regional* region, uint8_t* ct, size_t ctlen)
+{
+	struct ub_packed_rrset_key* rrset;
+	struct packed_rrset_data* pd;
+	uint16_t rdlength = htons(ctlen);
+	rrset = (struct ub_packed_rrset_key*)regional_alloc_zero(region,
+		sizeof(*rrset));
+	if(!rrset) {
+		log_err("out of memory");
+		return NULL;
+	}
+	rrset->entry.key = rrset;
+	pd = (struct packed_rrset_data*)regional_alloc_zero(region, sizeof(*pd));
+	if(!pd) {
+		log_err("out of memory");
+		return NULL;
+	}
+	pd->trust = rrset_trust_prim_noglue;
+	pd->security = sec_status_insecure;
+
+	pd->count = 1;
+	pd->rr_len = regional_alloc_zero(region, sizeof(*pd->rr_len));
+	pd->rr_ttl = regional_alloc_zero(region, sizeof(*pd->rr_ttl));
+	pd->rr_data = regional_alloc_zero(region, sizeof(*pd->rr_data));
+	if(!pd->rr_len || !pd->rr_ttl || !pd->rr_data) {
+		log_err("out of memory");
+		return NULL;
+	}
+	pd->rr_len[0] = ctlen+2;
+	pd->rr_ttl[0] = 3600; /* TODO, what should this be? */
+	pd->rr_data[0] = regional_alloc_zero(region, 2 /* rdlength */ + ctlen);
+	if(!pd->rr_data[0]) {
+		log_err("out of memory");
+		return NULL;
+	}
+	memcpy(pd->rr_data[0], &rdlength, 2);
+	memcpy(pd->rr_data[0]+2, ct, ctlen);
+
+	rrset->entry.data = pd;
+	rrset->rk.type = htons(LDNS_RR_TYPE_CNAME);
+	rrset->rk.rrset_class = htons(LDNS_RR_CLASS_IN);
+	return rrset;
+}
 struct rpz*
 rpz_create(struct config_auth* p)
 {
@@ -252,12 +325,53 @@ rpz_create(struct config_auth* p)
 	if(!r)
 		return 0;
 
+	r->region = regional_create_custom(sizeof(struct regional));
+	if(!r->region) {
+		free(r);
+		return 0;
+	}
+
 	if(!(r->local_zones = local_zones_create())){
 		free(r);
 		return 0;
 	}
 	r->taglist = memdup(p->rpz_taglist, p->rpz_taglistlen);
 	r->taglistlen = p->rpz_taglistlen;
+	if(p->rpz_action_override) {
+		r->action_override = rpz_config_to_action(p->rpz_action_override);
+		free(p->rpz_action_override);
+		p->rpz_action_override = NULL;
+	}
+	else
+		r->action_override = RPZ_NO_OVERRIDE_ACTION;
+
+	if(r->action_override == RPZ_CNAME_OVERRIDE_ACTION) {
+		uint8_t nm[LDNS_MAX_DOMAINLEN+1];
+		size_t nmlen = sizeof(nm);
+
+		if(!p->rpz_cname) {
+			log_err("RPZ override with cname action found, but not "
+				"rpz-cname-override configured");
+			free(r);
+			return 0;
+		}
+
+		if(sldns_str2wire_dname_buf(p->rpz_cname, nm, &nmlen) != 0) {
+			log_err("cannot parse RPZ cname override: %s",
+				p->rpz_cname);
+			free(p->rpz_cname);
+			free(r);
+			return 0;
+		}
+		free(p->rpz_cname);
+		p->rpz_cname = NULL;
+		r->cname_override = new_cname_override(r->region, nm, nmlen);
+		if(!r->cname_override) {
+			free(r);
+			return 0;
+		}
+	}
+	r->log = p->rpz_log;
 	return r;
 }
 
@@ -286,7 +400,7 @@ rpz_insert_qname_trigger(struct rpz* r, uint8_t* dname, size_t dnamelen,
 	char* rrstr;
 
 	if(a == RPZ_TCP_ONLY_ACTION || a == RPZ_INVALID_ACTION) {
-		verbose(VERB_ALGO, "RPZ: skipping unusupported action: %s",
+		verbose(VERB_ALGO, "RPZ: skipping unsupported action: %s",
 			rpz_action_to_string(a));
 		return 0;
 	}
@@ -527,16 +641,16 @@ rpz_remove_rr(struct rpz* r, size_t aznamelen, uint8_t* dname,
  * lz_inform_print().
  */
 static void
-rpz_inform_print(struct local_zone* z, struct query_info* qinfo,
+log_rpz_apply(uint8_t* dname, enum rpz_action a, struct query_info* qinfo,
 	struct comm_reply* repinfo)
 {
 	char ip[128], txt[512];
-	char zname[LDNS_MAX_DOMAINLEN+1];
+	char dnamestr[LDNS_MAX_DOMAINLEN+1];
 	uint16_t port = ntohs(((struct sockaddr_in*)&repinfo->addr)->sin_port);
-	dname_str(z->name, zname);
+	dname_str(dname, dnamestr);
 	addr_to_str(&repinfo->addr, repinfo->addrlen, ip, sizeof(ip));
-	snprintf(txt, sizeof(txt), "RPZ applied %s %s %s@%u", zname,
-		local_zone_type2str(z->type), ip, (unsigned)port);
+	snprintf(txt, sizeof(txt), "RPZ applied %s %s %s@%u", dnamestr,
+		rpz_action_to_string(a), ip, (unsigned)port);
 	log_nametypeclass(0, txt, qinfo->qname, qinfo->qtype, qinfo->qclass);
 }
 
@@ -548,30 +662,76 @@ rpz_apply_qname_trigger(struct auth_zones* az, struct module_env* env,
 {
 	struct rpz* r;
 	int ret;
+	enum localzone_type lzt;
 	struct local_zone* z = NULL;
 	struct local_data* ld = NULL;
 	lock_rw_rdlock(&az->rpz_lock);
-	for(r = az->rpz_first; r && !z; r = r->next) {
+	for(r = az->rpz_first; r; r = r->next) {
 		if(!r->taglist || taglist_intersect(r->taglist, 
-			r->taglistlen, taglist, taglen))
+			r->taglistlen, taglist, taglen)) {
 			z = rpz_find_zone(r, qinfo->qname, qinfo->qname_len,
 				qinfo->qclass, 0, 0);
+			if(z && r->action_override == RPZ_DISABLED_ACTION) {
+				if(r->log)
+					log_rpz_apply(z->name,
+						r->action_override,
+						qinfo,repinfo);
+				lock_rw_unlock(&z->lock);
+				z = NULL;
+			}
+			if(z)
+				break;
+		}	
 	}
 	lock_rw_unlock(&az->rpz_lock);
 	if(!z)
 		return 0;
 
-	if(z->type == local_zone_redirect && local_data_answer(z, env, qinfo,
+	
+	if(r->action_override == RPZ_NO_OVERRIDE_ACTION)
+		lzt = z->type;
+	else
+		lzt = rpz_action_to_localzone_type(r->action_override);
+
+	if(r->action_override == RPZ_CNAME_OVERRIDE_ACTION) {
+		qinfo->local_alias =
+			regional_alloc_zero(temp, sizeof(struct local_rrset));
+		if(!qinfo->local_alias) {
+			lock_rw_unlock(&z->lock);
+			return 0; /* out of memory */
+		}
+		qinfo->local_alias->rrset =
+			regional_alloc_init(temp, r->cname_override,
+				sizeof(*r->cname_override));
+		if(!qinfo->local_alias->rrset) {
+			lock_rw_unlock(&z->lock);
+			return 0; /* out of memory */
+		}
+		qinfo->local_alias->rrset->rk.dname = qinfo->qname;
+		qinfo->local_alias->rrset->rk.dname_len = qinfo->qname_len;
+		if(r->log)
+			log_rpz_apply(z->name, RPZ_CNAME_OVERRIDE_ACTION, 
+				qinfo, repinfo);
+		lock_rw_unlock(&z->lock);
+		return 0;
+	}
+
+	if(lzt == local_zone_redirect && local_data_answer(z, env, qinfo,
 		edns, repinfo, buf, temp, dname_count_labels(qinfo->qname),
-		&ld, z->type, -1, NULL, 0, NULL, 0)) {
-		rpz_inform_print(z, qinfo, repinfo);
+		&ld, lzt, -1, NULL, 0, NULL, 0)) {
+		if(r->log)
+			log_rpz_apply(z->name,
+				localzone_type_to_rpz_action(lzt), qinfo,
+				repinfo);
 		lock_rw_unlock(&z->lock);
 		return !qinfo->local_alias;
 	}
 
 	ret = local_zones_zone_answer(z, env, qinfo, edns, repinfo, buf, temp,
-		0 /* no local data used */, z->type);
-	rpz_inform_print(z, qinfo, repinfo);
+		0 /* no local data used */, lzt);
+	if(r->log)
+		log_rpz_apply(z->name, localzone_type_to_rpz_action(lzt),
+			qinfo, repinfo);
 	lock_rw_unlock(&z->lock);
 
 	return ret;
