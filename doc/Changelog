@@ -1,3 +1,6 @@
+16 May 2019: Wouter
+	- Fix #31: swig 4.0 and python module.
+
 13 May 2019: Wouter
 	- Squelch log messages from tcp send about connection reset by peer.
 	  They can be enabled with verbosity at higher values for diagnosing
