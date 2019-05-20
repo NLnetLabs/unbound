@@ -1,3 +1,7 @@
+20 May 2019: Wouter
+	- Note that so-reuseport at extreme load is better turned off,
+	  otherwise queries are not distributed evenly, on Linux 4.4.x.
+
 16 May 2019: Wouter
 	- Fix #31: swig 4.0 and python module.
 

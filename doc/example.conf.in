@@ -103,6 +103,7 @@ server:
 	# so-sndbuf: 0
 
 	# use SO_REUSEPORT to distribute queries over threads.
+	# at extreme load it could be better to turn it off to distribute even.
 	# so-reuseport: yes
 
 	# use IP_TRANSPARENT so the interface: addresses can be non-local
