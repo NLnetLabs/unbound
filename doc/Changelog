@@ -1,3 +1,7 @@
+24 May 2019: Wouter
+	- Fix that spoolbuf is not used to store tcp pipelined response
+	  between mesh send and callback end.
+
 20 May 2019: Wouter
 	- Note that so-reuseport at extreme load is better turned off,
 	  otherwise queries are not distributed evenly, on Linux 4.4.x.
