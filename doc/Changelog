@@ -1,3 +1,6 @@
+27 May 2019: Wouter
+	- Fix double file close in tcp pipelined response code.
+
 24 May 2019: Wouter
 	- Fix that spoolbuf is not used to store tcp pipelined response
 	  between mesh send and callback end.

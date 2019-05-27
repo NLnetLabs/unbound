@@ -1774,13 +1774,7 @@ tcp_req_info_handle_readdone(struct tcp_req_info* req)
 	 * If mesh failed to add a new entry and called commpoint_drop_reply. 
 	 * Then the mesh state has been cleared. */
 	if(req->is_drop) {
-		/* we can now call drop_reply without recursing into ourselves
-		 * whilst in the callback */
-		/* we have to close the stream because there is no reply,
-		 * no servfail to send, but the query needs an action, for
-		 * a stream that is close the connection */
-		sldns_buffer_clear(c->buffer);
-		comm_point_drop_reply(&c->repinfo);
+		/* the reply has been dropped, stream has been closed. */
 		return;
 	}
 	/* If mesh failed(mallocfail) and called commpoint_send_reply with
