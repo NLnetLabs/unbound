@@ -413,7 +413,7 @@
 /* Define to 1 if you have the `RAND_cleanup' function. */
 #undef HAVE_RAND_CLEANUP
 
-/* Define to 1 if you have the `reallocarray' function. */
+/* If we have reallocarray(3) */
 #undef HAVE_REALLOCARRAY
 
 /* Define to 1 if you have the `recvmsg' function. */

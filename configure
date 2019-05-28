@@ -20144,20 +20144,42 @@ fi
 
 LIBOBJ_WITHOUT_CTIMEARC4="$LIBOBJS"
 
-ac_fn_c_check_func "$LINENO" "reallocarray" "ac_cv_func_reallocarray"
-if test "x$ac_cv_func_reallocarray" = xyes; then :
-  $as_echo "#define HAVE_REALLOCARRAY 1" >>confdefs.h
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for reallocarray" >&5
+$as_echo_n "checking for reallocarray... " >&6; }
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+$ac_includes_default
+
+#define _OPENBSD_SOURCE 1
+#include <stdlib.h>
+int main(void) {
+	void* p = reallocarray(NULL, 10, 100);
+	free(p);
+	return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+
+$as_echo "#define HAVE_REALLOCARRAY 1" >>confdefs.h
+
 
 else
-  case " $LIBOBJS " in
+
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+	case " $LIBOBJS " in
   *" reallocarray.$ac_objext "* ) ;;
   *) LIBOBJS="$LIBOBJS reallocarray.$ac_objext"
  ;;
 esac
 
+
 fi
-
-
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
 if test "$USE_NSS" = "no"; then
 	ac_fn_c_check_func "$LINENO" "arc4random" "ac_cv_func_arc4random"
 if test "x$ac_cv_func_arc4random" = xyes; then :

@@ -1447,7 +1447,22 @@ AC_REPLACE_FUNCS(explicit_bzero)
 dnl without CTIME, ARC4-functions and without reallocarray.
 LIBOBJ_WITHOUT_CTIMEARC4="$LIBOBJS"
 AC_SUBST(LIBOBJ_WITHOUT_CTIMEARC4)
-AC_REPLACE_FUNCS(reallocarray)
+AC_MSG_CHECKING([for reallocarray])
+AC_LINK_IFELSE([AC_LANG_SOURCE(AC_INCLUDES_DEFAULT
+[[
+#define _OPENBSD_SOURCE 1
+#include <stdlib.h>
+int main(void) {
+	void* p = reallocarray(NULL, 10, 100);
+	free(p);
+	return 0;
+}
+]])], [AC_MSG_RESULT(yes)
+	AC_DEFINE(HAVE_REALLOCARRAY, 1, [If we have reallocarray(3)])
+], [
+	AC_MSG_RESULT(no)
+	AC_LIBOBJ(reallocarray)
+])
 if test "$USE_NSS" = "no"; then
 	AC_REPLACE_FUNCS(arc4random)
 	AC_REPLACE_FUNCS(arc4random_uniform)
