@@ -972,6 +972,10 @@
 
 
 
+#ifndef _OPENBSD_SOURCE
+#define _OPENBSD_SOURCE 1
+#endif
+
 #ifndef UNBOUND_DEBUG
 # ifndef NDEBUG
 #  define NDEBUG

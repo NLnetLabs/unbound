@@ -20150,7 +20150,9 @@ cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 $ac_includes_default
 
+#ifndef _OPENBSD_SOURCE
 #define _OPENBSD_SOURCE 1
+#endif
 #include <stdlib.h>
 int main(void) {
 	void* p = reallocarray(NULL, 10, 100);

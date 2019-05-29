@@ -1450,7 +1450,9 @@ AC_SUBST(LIBOBJ_WITHOUT_CTIMEARC4)
 AC_MSG_CHECKING([for reallocarray])
 AC_LINK_IFELSE([AC_LANG_SOURCE(AC_INCLUDES_DEFAULT
 [[
+#ifndef _OPENBSD_SOURCE
 #define _OPENBSD_SOURCE 1
+#endif
 #include <stdlib.h>
 int main(void) {
 	void* p = reallocarray(NULL, 10, 100);
@@ -1675,6 +1677,10 @@ AHX_CONFIG_EXT_FLAGS
 
 dnl includes
 [
+#ifndef _OPENBSD_SOURCE
+#define _OPENBSD_SOURCE 1
+#endif
+
 #ifndef UNBOUND_DEBUG
 # ifndef NDEBUG
 #  define NDEBUG
