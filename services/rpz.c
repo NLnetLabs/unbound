@@ -51,23 +51,22 @@
 #include "util/locks.h"
 #include "util/regional.h"
 
-/** string for RPZ action enum */
-static const char*
+const char*
 rpz_action_to_string(enum rpz_action a)
 {
 	switch(a) {
-	case RPZ_NXDOMAIN_ACTION:	return "NXDOMAIN ACTION";
-	case RPZ_NODATA_ACTION:		return "NODATA ACTION";
-	case RPZ_PASSTHRU_ACTION:	return "PASSTHRU ACTION";
-	case RPZ_DROP_ACTION:		return "DROP ACTION";
-	case RPZ_TCP_ONLY_ACTION:	return "TCP ONLY ACTION";
-	case RPZ_INVALID_ACTION:	return "INVALID ACTION";
-	case RPZ_LOCAL_DATA_ACTION:	return "LOCAL DATA ACTION";
-	case RPZ_DISABLED_ACTION:	return "DISABLED ACTION";
-	case RPZ_CNAME_OVERRIDE_ACTION:	return "CNAME OVERRIDE ACTION";
-	case RPZ_NO_OVERRIDE_ACTION:	return "NO OVERRIDE ACTION";
+	case RPZ_NXDOMAIN_ACTION:	return "nxdomain";
+	case RPZ_NODATA_ACTION:		return "nodata";
+	case RPZ_PASSTHRU_ACTION:	return "passthru";
+	case RPZ_DROP_ACTION:		return "drop";
+	case RPZ_TCP_ONLY_ACTION:	return "tcp_only";
+	case RPZ_INVALID_ACTION:	return "invalid";
+	case RPZ_LOCAL_DATA_ACTION:	return "local_data";
+	case RPZ_DISABLED_ACTION:	return "disabled";
+	case RPZ_CNAME_OVERRIDE_ACTION:	return "cname_override";
+	case RPZ_NO_OVERRIDE_ACTION:	return "no_override";
 	}
-	return "UNKNOWN RPZ ACTION";
+	return "unknown";
 }
 
 static enum rpz_action
@@ -95,13 +94,13 @@ static const char*
 rpz_trigger_to_string(enum rpz_trigger r)
 {
 	switch(r) {
-	case RPZ_QNAME_TRIGGER:		return "QNAME TRIGGER";
-	case RPZ_CLIENT_IP_TRIGGER:	return "CLIENT IP TRIGGER";
-	case RPZ_RESPONSE_IP_TRIGGER:	return "RESPONSE IP TRIGGER";
-	case RPZ_NSDNAME_TRIGGER:	return "NSDNAME TRIGGER";
-	case RPZ_NSIP_TRIGGER:		return "NSIP TRIGGER";
+	case RPZ_QNAME_TRIGGER:		return "qname";
+	case RPZ_CLIENT_IP_TRIGGER:	return "client_ip";
+	case RPZ_RESPONSE_IP_TRIGGER:	return "response_ip";
+	case RPZ_NSDNAME_TRIGGER:	return "nsdname";
+	case RPZ_NSIP_TRIGGER:		return "nsip";
 	}
-	return "UNKNOWN RPZ TRIGGER";
+	return "unknown";
 }
 
 /**
@@ -335,7 +334,7 @@ rpz_create(struct config_auth* p)
 		free(r);
 		return 0;
 	}
-	r->taglist = memdup(p->rpz_taglist, p->rpz_taglistlen);
+	r->taglist = p->rpz_taglist;
 	r->taglistlen = p->rpz_taglistlen;
 	if(p->rpz_action_override) {
 		r->action_override = rpz_config_to_action(p->rpz_action_override);
@@ -372,6 +371,7 @@ rpz_create(struct config_auth* p)
 		}
 	}
 	r->log = p->rpz_log;
+	r->log_name = p->rpz_log_name;
 	return r;
 }
 
@@ -642,15 +642,20 @@ rpz_remove_rr(struct rpz* r, size_t aznamelen, uint8_t* dname,
  */
 static void
 log_rpz_apply(uint8_t* dname, enum rpz_action a, struct query_info* qinfo,
-	struct comm_reply* repinfo)
+	struct comm_reply* repinfo, char* log_name)
 {
 	char ip[128], txt[512];
 	char dnamestr[LDNS_MAX_DOMAINLEN+1];
 	uint16_t port = ntohs(((struct sockaddr_in*)&repinfo->addr)->sin_port);
 	dname_str(dname, dnamestr);
 	addr_to_str(&repinfo->addr, repinfo->addrlen, ip, sizeof(ip));
-	snprintf(txt, sizeof(txt), "RPZ applied %s %s %s@%u", dnamestr,
-		rpz_action_to_string(a), ip, (unsigned)port);
+	if(log_name)
+		snprintf(txt, sizeof(txt), "RPZ applied [%s] %s %s %s@%u",
+			log_name, dnamestr, rpz_action_to_string(a), ip,
+			(unsigned)port);
+	else
+		snprintf(txt, sizeof(txt), "RPZ applied %s %s %s@%u",
+			dnamestr, rpz_action_to_string(a), ip, (unsigned)port);
 	log_nametypeclass(0, txt, qinfo->qname, qinfo->qtype, qinfo->qclass);
 }
 
@@ -658,7 +663,7 @@ int
 rpz_apply_qname_trigger(struct auth_zones* az, struct module_env* env,
 	struct query_info* qinfo, struct edns_data* edns, sldns_buffer* buf,
 	struct regional* temp, struct comm_reply* repinfo,
-	uint8_t* taglist, size_t taglen)
+	uint8_t* taglist, size_t taglen, struct ub_server_stats* stats)
 {
 	struct rpz* r;
 	int ret;
@@ -675,7 +680,8 @@ rpz_apply_qname_trigger(struct auth_zones* az, struct module_env* env,
 				if(r->log)
 					log_rpz_apply(z->name,
 						r->action_override,
-						qinfo,repinfo);
+						qinfo, repinfo, r->log_name);
+				stats->rpz_action[r->action_override]++;
 				lock_rw_unlock(&z->lock);
 				z = NULL;
 			}
@@ -711,7 +717,8 @@ rpz_apply_qname_trigger(struct auth_zones* az, struct module_env* env,
 		qinfo->local_alias->rrset->rk.dname_len = qinfo->qname_len;
 		if(r->log)
 			log_rpz_apply(z->name, RPZ_CNAME_OVERRIDE_ACTION, 
-				qinfo, repinfo);
+				qinfo, repinfo, r->log_name);
+		stats->rpz_action[RPZ_CNAME_OVERRIDE_ACTION]++;
 		lock_rw_unlock(&z->lock);
 		return 0;
 	}
@@ -722,7 +729,8 @@ rpz_apply_qname_trigger(struct auth_zones* az, struct module_env* env,
 		if(r->log)
 			log_rpz_apply(z->name,
 				localzone_type_to_rpz_action(lzt), qinfo,
-				repinfo);
+				repinfo, r->log_name);
+		stats->rpz_action[localzone_type_to_rpz_action(lzt)]++;
 		lock_rw_unlock(&z->lock);
 		return !qinfo->local_alias;
 	}
@@ -731,7 +739,8 @@ rpz_apply_qname_trigger(struct auth_zones* az, struct module_env* env,
 		0 /* no local data used */, lzt);
 	if(r->log)
 		log_rpz_apply(z->name, localzone_type_to_rpz_action(lzt),
-			qinfo, repinfo);
+			qinfo, repinfo, r->log_name);
+	stats->rpz_action[localzone_type_to_rpz_action(lzt)]++;
 	lock_rw_unlock(&z->lock);
 
 	return ret;

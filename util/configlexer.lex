@@ -322,6 +322,7 @@ tags{COLON}			{ YDVAR(1, VAR_TAGS) }
 rpz-action-override{COLON}	{ YDVAR(1, VAR_RPZ_ACTION_OVERRIDE) }
 rpz-cname-override{COLON}	{ YDVAR(1, VAR_RPZ_CNAME_OVERRIDE) }
 rpz-log{COLON}			{ YDVAR(1, VAR_RPZ_LOG) }
+rpz-log-name{COLON}		{ YDVAR(1, VAR_RPZ_LOG_NAME) }
 zonefile{COLON}			{ YDVAR(1, VAR_ZONEFILE) }
 master{COLON}			{ YDVAR(1, VAR_MASTER) }
 url{COLON}			{ YDVAR(1, VAR_URL) }

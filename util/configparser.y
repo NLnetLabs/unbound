@@ -167,7 +167,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_UNKNOWN_SERVER_TIME_LIMIT VAR_LOG_TAG_QUERYREPLY
 %token VAR_STREAM_WAIT_SIZE VAR_TLS_CIPHERS VAR_TLS_CIPHERSUITES
 %token VAR_TLS_SESSION_TICKET_KEYS VAR_RPZ VAR_TAGS VAR_RPZ_ACTION_OVERRIDE
-%token VAR_RPZ_CNAME_OVERRIDE VAR_RPZ_LOG
+%token VAR_RPZ_CNAME_OVERRIDE VAR_RPZ_LOG VAR_RPZ_LOG_NAME
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -405,6 +405,17 @@ rpz_log: VAR_RPZ_LOG STRING_ARG
 	}
 	;
 
+rpz_log_name: VAR_RPZ_LOG_NAME STRING_ARG
+	{
+		OUTYY(("P(rpz_log_name:%s)\n", $2));
+		if(cfg_parser->cfg->auths->rpz_log_name)
+			yyerror("RPZ log name, there can only be one "
+				"rpz-log-name per rpz");
+		free(cfg_parser->cfg->auths->rpz_log_name);
+		cfg_parser->cfg->auths->rpz_log_name = $2;
+	}
+	;
+
 rpzstart: VAR_RPZ
 	{
 		struct config_auth* s;
@@ -426,7 +437,7 @@ contents_rpz: contents_rpz content_rpz
 	| ;
 content_rpz: auth_name | auth_zonefile | rpz_tag | auth_master | auth_url |
 	   auth_allow_notify | rpz_action_override | rpz_cname_override |
-	   rpz_log
+	   rpz_log | rpz_log_name
 	;
 server_num_threads: VAR_NUM_THREADS STRING_ARG 
 	{ 

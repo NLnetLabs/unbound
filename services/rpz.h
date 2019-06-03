@@ -47,6 +47,7 @@
 #include "util/config_file.h"
 #include "services/authzone.h"
 #include "sldns/sbuffer.h"
+#include "daemon/stats.h"
 
 /**
  * RPZ triggers, only the QNAME trigger is currently supported in Unbound.
@@ -91,6 +92,7 @@ struct rpz {
 	enum rpz_action action_override;
 	struct ub_packed_rrset_key* cname_override;
 	int log;
+	char* log_name;
 	struct rpz* next;
 	struct rpz* prev;
 	struct regional* region;
@@ -140,12 +142,13 @@ void rpz_remove_rr(struct rpz* r, size_t aznamelen, uint8_t* dname,
  * @param repinfo: reply info
  * @param taglist: taglist to lookup.
  * @param taglen: lenth of taglist.
+ * @param stats: worker stats struct
  * @return: 1 if client answer is ready, 0 to continue resolving
  */
 int rpz_apply_qname_trigger(struct auth_zones* az, struct module_env* env,
 	struct query_info* qinfo, struct edns_data* edns, sldns_buffer* buf,
 	struct regional* temp, struct comm_reply* repinfo,
-	uint8_t* taglist, size_t taglen);
+	uint8_t* taglist, size_t taglen, struct ub_server_stats* stats);
 
 /**
  * Delete RPZ
@@ -164,5 +167,12 @@ int rpz_clear_lz(struct rpz* r);
  * @return: the newly created RPZ
  */
 struct rpz* rpz_create(struct config_auth* p);
+
+/**
+ * String for RPZ action enum
+ * @param a: RPZ action to get string for
+ * @return: string for RPZ action
+ */
+const char* rpz_action_to_string(enum rpz_action a);
 
 #endif /* SERVICES_RPZ_H */

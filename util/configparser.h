@@ -313,7 +313,8 @@ extern int yydebug;
     VAR_TAGS = 523,
     VAR_RPZ_ACTION_OVERRIDE = 524,
     VAR_RPZ_CNAME_OVERRIDE = 525,
-    VAR_RPZ_LOG = 526
+    VAR_RPZ_LOG = 526,
+    VAR_RPZ_LOG_NAME = 527
   };
 #endif
 /* Tokens.  */
@@ -586,6 +587,7 @@ extern int yydebug;
 #define VAR_RPZ_ACTION_OVERRIDE 524
 #define VAR_RPZ_CNAME_OVERRIDE 525
 #define VAR_RPZ_LOG 526
+#define VAR_RPZ_LOG_NAME 527
 
 /* Value type.  */
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
@@ -596,7 +598,7 @@ union YYSTYPE
 
 	char*	str;
 
-#line 600 "util/configparser.h" /* yacc.c:1909  */
+#line 602 "util/configparser.h" /* yacc.c:1909  */
 };
 
 typedef union YYSTYPE YYSTYPE;

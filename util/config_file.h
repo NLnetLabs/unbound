@@ -641,6 +641,8 @@ struct config_auth {
 	char* rpz_action_override;
 	/** Log when this RPZ policy is applied */
 	int rpz_log;
+	/** Display this name in the log when RPZ policy is applied */
+	char* rpz_log_name;
 	/** Always reply with this CNAME target if the cname override action is
 	 * used */
 	char* rpz_cname;
