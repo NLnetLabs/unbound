@@ -991,3 +991,16 @@ remote-control:
 #     redis-server-port: 6379
 #     # timeout (in ms) for communication with the redis server
 #     redis-timeout: 100
+
+# Response Policy Zones
+# RPZ policies. Applied in order of configuration. QNAME trigger is the only
+# supported trigger. Supported actions are: NXDOMAIN, NODATA, PASSTHRU, DROP and
+# Local Data. Policy can be loaded from file or using zone transfer.
+# rpz:
+#     name: "rpz.example.com"
+#     zonefile: "rpz.example.com"
+#     rpz-action-override: cname
+#     rpz-cname-override: www.example.org
+#     rpz-log: yes
+#     rpz-log-name: "example policy"
+#     tags: "example"

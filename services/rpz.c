@@ -258,6 +258,7 @@ void rpz_delete(struct rpz* r)
 	local_zones_delete(r->local_zones);
 	regional_destroy(r->region);
 	free(r->taglist);
+	free(r->log_name);
 	free(r);
 }
 
@@ -334,12 +335,10 @@ rpz_create(struct config_auth* p)
 		free(r);
 		return 0;
 	}
-	r->taglist = p->rpz_taglist;
 	r->taglistlen = p->rpz_taglistlen;
+	r->taglist = memdup(p->rpz_taglist, r->taglistlen);
 	if(p->rpz_action_override) {
 		r->action_override = rpz_config_to_action(p->rpz_action_override);
-		free(p->rpz_action_override);
-		p->rpz_action_override = NULL;
 	}
 	else
 		r->action_override = RPZ_NO_OVERRIDE_ACTION;
@@ -358,12 +357,9 @@ rpz_create(struct config_auth* p)
 		if(sldns_str2wire_dname_buf(p->rpz_cname, nm, &nmlen) != 0) {
 			log_err("cannot parse RPZ cname override: %s",
 				p->rpz_cname);
-			free(p->rpz_cname);
 			free(r);
 			return 0;
 		}
-		free(p->rpz_cname);
-		p->rpz_cname = NULL;
 		r->cname_override = new_cname_override(r->region, nm, nmlen);
 		if(!r->cname_override) {
 			free(r);
@@ -371,7 +367,7 @@ rpz_create(struct config_auth* p)
 		}
 	}
 	r->log = p->rpz_log;
-	r->log_name = p->rpz_log_name;
+	r->log_name = strdup(p->rpz_log_name);
 	return r;
 }
 
