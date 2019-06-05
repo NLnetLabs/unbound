@@ -367,7 +367,8 @@ rpz_create(struct config_auth* p)
 		}
 	}
 	r->log = p->rpz_log;
-	r->log_name = strdup(p->rpz_log_name);
+	if(p->rpz_log_name)
+		r->log_name = strdup(p->rpz_log_name);
 	return r;
 }
 

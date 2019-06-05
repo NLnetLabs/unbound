@@ -387,9 +387,6 @@ rpz_action_override: VAR_RPZ_ACTION_OVERRIDE STRING_ARG
 rpz_cname_override: VAR_RPZ_CNAME_OVERRIDE STRING_ARG
 	{
 		OUTYY(("P(rpz_cname_override:%s)\n", $2));
-		if(cfg_parser->cfg->auths->rpz_cname)
-			yyerror("there can only be one CNAME override per "
-				"RPZ");
 		free(cfg_parser->cfg->auths->rpz_cname);
 		cfg_parser->cfg->auths->rpz_cname = $2;
 	}
@@ -408,9 +405,6 @@ rpz_log: VAR_RPZ_LOG STRING_ARG
 rpz_log_name: VAR_RPZ_LOG_NAME STRING_ARG
 	{
 		OUTYY(("P(rpz_log_name:%s)\n", $2));
-		if(cfg_parser->cfg->auths->rpz_log_name)
-			yyerror("RPZ log name, there can only be one "
-				"rpz-log-name per rpz");
 		free(cfg_parser->cfg->auths->rpz_log_name);
 		cfg_parser->cfg->auths->rpz_log_name = $2;
 	}
