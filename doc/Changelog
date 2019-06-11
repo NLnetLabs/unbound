@@ -1,3 +1,8 @@
+11 June 2019: Wouter
+	- Fix that fixes the Fix that spoolbuf is not used to store tcp
+	  pipelined response between mesh send and callback end, this fixes
+	  error cases that did not use the correct spoolbuf.
+
 6 June 2019: Wouter
 	- 1.9.2rc1 release candidate tag.
 

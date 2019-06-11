@@ -1752,6 +1752,7 @@ tcp_req_info_handle_readdone(struct tcp_req_info* req)
 	req->is_drop = 0;
 	req->is_reply = 0;
 	req->in_worker_handle = 1;
+	sldns_buffer_set_limit(req->spool_buffer, 0);
 	/* handle the current request */
 	/* this calls the worker handle request routine that could give
 	 * a cache response, or localdata response, or drop the reply,

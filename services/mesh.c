@@ -354,6 +354,10 @@ void mesh_new_client(struct mesh_area* mesh, struct query_info* qinfo,
 	int was_detached = 0;
 	int was_noreply = 0;
 	int added = 0;
+	struct sldns_buffer* r_buffer = rep->c->buffer;
+	if(rep->c->tcp_req_info) {
+		r_buffer = rep->c->tcp_req_info->spool_buffer;
+	}
 	if(!unique)
 		s = mesh_area_find(mesh, cinfo, qinfo, qflags&(BIT_RD|BIT_CD), 0, 0);
 	/* does this create a new reply state? */
@@ -389,7 +393,7 @@ void mesh_new_client(struct mesh_area* mesh, struct query_info* qinfo,
 			if(!inplace_cb_reply_servfail_call(mesh->env, qinfo, NULL, NULL,
 				LDNS_RCODE_SERVFAIL, edns, rep, mesh->env->scratch))
 					edns->opt_list = NULL;
-			error_encode(rep->c->buffer, LDNS_RCODE_SERVFAIL,
+			error_encode(r_buffer, LDNS_RCODE_SERVFAIL,
 				qinfo, qid, qflags, edns);
 			comm_point_send_reply(rep);
 			return;
@@ -405,7 +409,7 @@ void mesh_new_client(struct mesh_area* mesh, struct query_info* qinfo,
 				if(!inplace_cb_reply_servfail_call(mesh->env, qinfo, NULL,
 					NULL, LDNS_RCODE_SERVFAIL, edns, rep, mesh->env->scratch))
 						edns->opt_list = NULL;
-				error_encode(rep->c->buffer, LDNS_RCODE_SERVFAIL,
+				error_encode(r_buffer, LDNS_RCODE_SERVFAIL,
 					qinfo, qid, qflags, edns);
 				comm_point_send_reply(rep);
 				return;
@@ -434,7 +438,7 @@ void mesh_new_client(struct mesh_area* mesh, struct query_info* qinfo,
 			if(!inplace_cb_reply_servfail_call(mesh->env, qinfo, &s->s,
 				NULL, LDNS_RCODE_SERVFAIL, edns, rep, mesh->env->scratch))
 					edns->opt_list = NULL;
-			error_encode(rep->c->buffer, LDNS_RCODE_SERVFAIL,
+			error_encode(r_buffer, LDNS_RCODE_SERVFAIL,
 				qinfo, qid, qflags, edns);
 			comm_point_send_reply(rep);
 			if(added)
