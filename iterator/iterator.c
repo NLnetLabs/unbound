@@ -2188,7 +2188,7 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 		iq->minimise_count++;
 		iq->minimise_timeout_count = 0;
 
-		iter_dec_attempts(iq->dp, 1);
+		iter_dec_attempts(iq->dp, 1, ie->outbound_msg_retry);
 
 		/* Limit number of iterations for QNAMEs with more
 		 * than MAX_MINIMISE_COUNT labels. Send first MINIMISE_ONE_LAB
@@ -2358,7 +2358,7 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 				(int)iq->caps_server+1, (int)naddr*3);
 			iq->response = iq->caps_response;
 			iq->caps_fallback = 0;
-			iter_dec_attempts(iq->dp, 3); /* space for fallback */
+			iter_dec_attempts(iq->dp, 3, ie->outbound_msg_retry); /* space for fallback */
 			iq->num_current_queries++; /* RespState decrements it*/
 			iq->referral_count++; /* make sure we don't loop */
 			iq->sent_count = 0;
@@ -2445,7 +2445,7 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 						(int)iq->caps_server+1);
 					iq->response = iq->caps_response;
 					iq->caps_fallback = 0;
-					iter_dec_attempts(iq->dp, 3); /* space for fallback */
+					iter_dec_attempts(iq->dp, 3, ie->outbound_msg_retry); /* space for fallback */
 					iq->num_current_queries++; /* RespState decrements it*/
 					iq->referral_count++; /* make sure we don't loop */
 					iq->sent_count = 0;
@@ -2570,7 +2570,7 @@ find_NS(struct reply_info* rep, size_t from, size_t to)
  */
 static int
 processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
-	int id)
+	int id, size_t outbound_msg_retry)
 {
 	int dnsseclame = 0;
 	enum response_type type;
@@ -2843,7 +2843,7 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 		}
 		if(iq->store_parent_NS && query_dname_compare(iq->dp->name,
 			iq->store_parent_NS->name) == 0)
-			iter_merge_retry_counts(iq->dp, iq->store_parent_NS);
+			iter_merge_retry_counts(iq->dp, iq->store_parent_NS, outbound_msg_retry);
 		delegpt_log(VERB_ALGO, iq->dp);
 		/* Count this as a referral. */
 		iq->referral_count++;
@@ -3538,7 +3538,8 @@ iter_handle(struct module_qstate* qstate, struct iter_qstate* iq,
 				cont = processQueryTargets(qstate, iq, ie, id);
 				break;
 			case QUERY_RESP_STATE:
-				cont = processQueryResponse(qstate, iq, id);
+				cont = processQueryResponse(
+					qstate, iq, id, ie->outbound_msg_retry);
 				break;
 			case PRIME_RESP_STATE:
 				cont = processPrimeResponse(qstate, id);
@@ -3608,7 +3609,7 @@ process_response(struct module_qstate* qstate, struct iter_qstate* iq,
 			iq->num_current_queries--;
 			/* need fresh attempts for the 0x20 fallback, if
 			 * that was the cause for the failure */
-			iter_dec_attempts(iq->dp, 3);
+			iter_dec_attempts(iq->dp, 3, ie->outbound_msg_retry);
 			verbose(VERB_DETAIL, "Capsforid: timeouts, starting fallback");
 			goto handle_it;
 		}

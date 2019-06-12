@@ -130,6 +130,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_DISABLE_DNSSEC_LAME_CHECK
 %token VAR_IP_RATELIMIT VAR_IP_RATELIMIT_SLABS VAR_IP_RATELIMIT_SIZE
 %token VAR_RATELIMIT VAR_RATELIMIT_SLABS VAR_RATELIMIT_SIZE
+%token VAR_OUTBOUND_MSG_RETRY
 %token VAR_RATELIMIT_FOR_DOMAIN VAR_RATELIMIT_BELOW_DOMAIN
 %token VAR_IP_RATELIMIT_FACTOR VAR_RATELIMIT_FACTOR
 %token VAR_SEND_CLIENT_SUBNET VAR_CLIENT_SUBNET_ZONE
@@ -239,9 +240,9 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_ip_ratelimit_size | server_ratelimit_size |
 	server_ratelimit_for_domain |
 	server_ratelimit_below_domain | server_ratelimit_factor |
-	server_ip_ratelimit_factor | server_send_client_subnet |
-	server_client_subnet_zone | server_client_subnet_always_forward |
-	server_client_subnet_opcode |
+	server_ip_ratelimit_factor | server_outbound_msg_retry |
+	server_send_client_subnet | server_client_subnet_zone |
+	server_client_subnet_always_forward | server_client_subnet_opcode |
 	server_max_client_subnet_ipv4 | server_max_client_subnet_ipv6 |
 	server_min_client_subnet_ipv4 | server_min_client_subnet_ipv6 |
 	server_max_ecs_tree_size_ipv4 | server_max_ecs_tree_size_ipv6 |
@@ -2116,6 +2117,15 @@ server_ratelimit_factor: VAR_RATELIMIT_FACTOR STRING_ARG
 		free($2);
 	}
 	;
+server_outbound_msg_retry: VAR_OUTBOUND_MSG_RETRY STRING_ARG
+{
+	OUTYY(("P(server_outbound_msg_retry:%s)\n", $2));
+	if(atoi($2) == 0 && strcmp($2, "0") != 0)
+		yyerror("number expected");
+	else cfg_parser->cfg->outbound_msg_retry = atoi($2);
+	free($2);
+}
+;
 server_low_rtt: VAR_LOW_RTT STRING_ARG
 	{
 		OUTYY(("P(low-rtt option is deprecated, use fast-server-num instead)\n"));

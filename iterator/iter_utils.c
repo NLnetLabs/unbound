@@ -175,6 +175,7 @@ iter_apply_cfg(struct iter_env* iter_env, struct config_file* cfg)
 	}
 	iter_env->supports_ipv6 = cfg->do_ip6;
 	iter_env->supports_ipv4 = cfg->do_ip4;
+	iter_env->outbound_msg_retry = cfg->outbound_msg_retry;
 	return 1;
 }
 
@@ -532,7 +533,7 @@ iter_server_selection(struct iter_env* iter_env,
 
 	if(num == 1) {
 		a = dp->result_list;
-		if(++a->attempts < OUTBOUND_MSG_RETRY)
+		if(++a->attempts < iter_env->outbound_msg_retry)
 			return a;
 		dp->result_list = a->next_result;
 		return a;
@@ -552,7 +553,7 @@ iter_server_selection(struct iter_env* iter_env,
 	}
 	if(!a)  /* robustness */
 		return NULL;
-	if(++a->attempts < OUTBOUND_MSG_RETRY)
+	if(++a->attempts < iter_env->outbound_msg_retry)
 		return a;
 	/* remove it from the delegation point result list */
 	if(prev)
@@ -1224,11 +1225,11 @@ iter_scrub_nxdomain(struct dns_msg* msg)
 	msg->rep->an_numrrsets = 0;
 }
 
-void iter_dec_attempts(struct delegpt* dp, int d)
+void iter_dec_attempts(struct delegpt* dp, int d, size_t outbound_msg_retry)
 {
 	struct delegpt_addr* a;
 	for(a=dp->target_list; a; a = a->next_target) {
-		if(a->attempts >= OUTBOUND_MSG_RETRY) {
+		if(a->attempts >= outbound_msg_retry) {
 			/* add back to result list */
 			a->next_result = dp->result_list;
 			dp->result_list = a;
@@ -1239,7 +1240,7 @@ void iter_dec_attempts(struct delegpt* dp, int d)
 	}
 }
 
-void iter_merge_retry_counts(struct delegpt* dp, struct delegpt* old)
+void iter_merge_retry_counts(struct delegpt* dp, struct delegpt* old, size_t outbound_msg_retry)
 {
 	struct delegpt_addr* a, *o, *prev;
 	for(a=dp->target_list; a; a = a->next_target) {
@@ -1253,7 +1254,7 @@ void iter_merge_retry_counts(struct delegpt* dp, struct delegpt* old)
 	prev = NULL;
 	a = dp->usable_list;
 	while(a) {
-		if(a->attempts >= OUTBOUND_MSG_RETRY) {
+		if(a->attempts >= outbound_msg_retry) {
 			log_addr(VERB_ALGO, "remove from usable list dp",
 				&a->addr, a->addrlen);
 			/* remove from result list */
