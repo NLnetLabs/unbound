@@ -772,8 +772,14 @@ reply_and_prefetch(struct worker* worker, struct query_info* qinfo,
 {
 	/* first send answer to client to keep its latency 
 	 * as small as a cachereply */
-	if(sldns_buffer_limit(repinfo->c->buffer) != 0)
+	if(sldns_buffer_limit(repinfo->c->buffer) != 0) {
+		if(repinfo->c->tcp_req_info) {
+			sldns_buffer_copy(
+				repinfo->c->tcp_req_info->spool_buffer,
+				repinfo->c->buffer);
+		}
 		comm_point_send_reply(repinfo);
+	}
 	server_stats_prefetch(&worker->stats, worker);
 	
 	/* create the prefetch in the mesh as a normal lookup without

@@ -1,3 +1,6 @@
+12 June 2019: Wouter
+	- Fix another spoolbuf storage code point, in prefetch.
+
 11 June 2019: Wouter
 	- Fix that fixes the Fix that spoolbuf is not used to store tcp
 	  pipelined response between mesh send and callback end, this fixes

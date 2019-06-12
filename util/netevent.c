@@ -1567,7 +1567,6 @@ comm_point_tcp_handle_write(int fd, struct comm_point* c)
 		iov[1].iov_base = sldns_buffer_begin(buffer);
 		iov[1].iov_len = sldns_buffer_limit(buffer);
 		log_assert(iov[0].iov_len > 0);
-		log_assert(iov[1].iov_len > 0);
 		msg.msg_name = &c->repinfo.addr;
 		msg.msg_namelen = c->repinfo.addrlen;
 		msg.msg_iov = iov;
@@ -1634,7 +1633,6 @@ comm_point_tcp_handle_write(int fd, struct comm_point* c)
 		iov[1].iov_base = sldns_buffer_begin(buffer);
 		iov[1].iov_len = sldns_buffer_limit(buffer);
 		log_assert(iov[0].iov_len > 0);
-		log_assert(iov[1].iov_len > 0);
 		r = writev(fd, iov, 2);
 #else /* HAVE_WRITEV */
 		r = send(fd, (void*)(((uint8_t*)&len)+c->tcp_byte_count),
