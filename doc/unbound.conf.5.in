@@ -1454,6 +1454,11 @@ This can make ordinary queries complete (if repeatedly queried for),
 and enter the cache, whilst also mitigating the traffic flow by the
 factor given.
 .TP 5
+.B outbound\-msg\-retry: \fI<number>
+The number of retries unbound will do in case of a non positive response is
+received. If a forward nameserver is used, this is the number of retries per
+forward nameserver in case of throwaway response.
+.TP 5
 .B fast\-server\-permil: \fI<number>
 Specify how many times out of 1000 to pick from the set of fastest servers.
 0 turns the feature off.  A value of 900 would pick from the fastest
