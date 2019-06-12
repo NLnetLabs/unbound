@@ -1,3 +1,6 @@
+12 June 2019: Moritz Schneider
+	- made outbound-msg-retry configurable
+
 6 June 2019: Wouter
 	- 1.9.2rc1 release candidate tag.
 
