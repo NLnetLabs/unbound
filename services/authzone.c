@@ -3698,6 +3698,7 @@ static void
 xfr_transfer_start_lookups(struct auth_xfer* xfr)
 {
 	/* delete all the looked up addresses in the list */
+	xfr->task_transfer->scan_addr = NULL;
 	xfr_masterlist_free_addrs(xfr->task_transfer->masters);
 
 	/* start lookup at the first master */
@@ -3728,6 +3729,7 @@ static void
 xfr_probe_start_lookups(struct auth_xfer* xfr)
 {
 	/* delete all the looked up addresses in the list */
+	xfr->task_probe->scan_addr = NULL;
 	xfr_masterlist_free_addrs(xfr->task_probe->masters);
 
 	/* start lookup at the first master */

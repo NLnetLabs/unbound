@@ -1,6 +1,8 @@
 17 June 2019: Wouter
 	- Master contains version 1.9.3 in development.
 	- Fix #39: In libunbound, leftover logfile is close()d unpredictably.
+	- Fix for #24: Fix abort due to scan of auth zone masters using old
+	  address from previous scan.
 
 12 June 2019: Wouter
 	- Fix another spoolbuf storage code point, in prefetch.
