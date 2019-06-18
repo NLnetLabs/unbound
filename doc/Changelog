@@ -6,6 +6,7 @@
 	- Fix to make unbound-control with ipset, remove unused variable,
 	  use unsigned type because of comparison, and assign null instead
 	  of compare with it.  Remade lex and yacc output.
+	- make depend
 
 17 June 2019: Wouter
 	- Master contains version 1.9.3 in development.
