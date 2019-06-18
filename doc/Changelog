@@ -8,6 +8,10 @@
 	  of compare with it.  Remade lex and yacc output.
 	- make depend
 	- Added documentation to the ipset files (for doxygen output).
+	- Merge PR #6: Python module: support multiple instances
+	- Merge PR #5: Python module: define constant MODULE_RESTART_NEXT
+	- Merge PR #4: Python module: assign something useful to the
+	  per-query data store 'qdata' 
 
 17 June 2019: Wouter
 	- Master contains version 1.9.3 in development.
