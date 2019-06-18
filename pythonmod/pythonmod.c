@@ -348,6 +348,7 @@ int pythonmod_init(struct module_env* env, int id)
    pe->module = PyImport_AddModule("__main__");
    pe->dict = PyModule_GetDict(pe->module);
    pe->data = PyDict_New();
+   Py_XINCREF(pe->data);
    PyModule_AddObject(pe->module, "mod_env", pe->data);
 
    /* TODO: deallocation of pe->... if an error occurs */

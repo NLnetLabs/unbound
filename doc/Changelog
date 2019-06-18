@@ -12,6 +12,7 @@
 	- Merge PR #5: Python module: define constant MODULE_RESTART_NEXT
 	- Merge PR #4: Python module: assign something useful to the
 	  per-query data store 'qdata' 
+	- Fix python dict reference and double free in config.
 
 17 June 2019: Wouter
 	- Master contains version 1.9.3 in development.
