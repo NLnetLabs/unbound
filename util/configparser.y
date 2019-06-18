@@ -2738,8 +2738,8 @@ content_py: py_script
 py_script: VAR_PYTHON_SCRIPT STRING_ARG
 	{
 		OUTYY(("P(python-script:%s)\n", $2));
-		free(cfg_parser->cfg->python_script);
-		cfg_parser->cfg->python_script = $2;
+		if(!cfg_strlist_append_ex(&cfg_parser->cfg->python_script, $2))
+			yyerror("out of memory");
 	}
 server_disable_dnssec_lame_check: VAR_DISABLE_DNSSEC_LAME_CHECK STRING_ARG
 	{

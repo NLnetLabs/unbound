@@ -609,7 +609,7 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	else S_STR("control-key-file:", control_key_file)
 	else S_STR("control-cert-file:", control_cert_file)
 	else S_STR("module-config:", module_conf)
-	else S_STR("python-script:", python_script)
+	else S_STRLIST("python-script:", python_script)
 	else S_YNO("disable-dnssec-lame-check:", disable_dnssec_lame_check)
 #ifdef CLIENT_SUBNET
 	/* Can't set max subnet prefix here, since that value is used when
@@ -1061,7 +1061,7 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_YNO(opt, "unblock-lan-zones", unblock_lan_zones)
 	else O_YNO(opt, "insecure-lan-zones", insecure_lan_zones)
 	else O_DEC(opt, "max-udp-size", max_udp_size)
-	else O_STR(opt, "python-script", python_script)
+	else O_LST(opt, "python-script", python_script)
 	else O_YNO(opt, "disable-dnssec-lame-check", disable_dnssec_lame_check)
 	else O_DEC(opt, "ip-ratelimit", ip_ratelimit)
 	else O_DEC(opt, "ratelimit", ratelimit)
@@ -1437,6 +1437,7 @@ config_delete(struct config_file* cfg)
 	free(cfg->dnstap_version);
 	config_deldblstrlist(cfg->ratelimit_for_domain);
 	config_deldblstrlist(cfg->ratelimit_below_domain);
+	config_delstrlist(cfg->python_script);
 #ifdef USE_IPSECMOD
 	free(cfg->ipsecmod_hook);
 	config_delstrlist(cfg->ipsecmod_whitelist);
@@ -1649,6 +1650,31 @@ cfg_strlist_insert(struct config_strlist** head, char* item)
 	s->next = *head;
 	*head = s;
 	return 1;
+}
+
+int
+cfg_strlist_append_ex(struct config_strlist** head, char* item)
+{
+	struct config_strlist *s;
+	if(!item || !head)
+		return 0;
+	s = (struct config_strlist*)calloc(1, sizeof(struct config_strlist));
+	if(!s)
+		return 0;
+	s->str = item;
+	s->next = NULL;
+	
+	if (*head==NULL) {
+		*head = s;
+	} else {
+		struct config_strlist *last = *head;
+		while (last->next!=NULL) {
+		    last = last->next;
+		}
+		last->next = s;
+	}
+	
+	return 1;  
 }
 
 int 
