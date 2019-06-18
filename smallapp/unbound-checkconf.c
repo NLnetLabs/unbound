@@ -574,6 +574,10 @@ morechecks(struct config_file* cfg)
 		&& strcmp(cfg->module_conf, "ipsecmod python validator iterator") != 0
 		&& strcmp(cfg->module_conf, "ipsecmod validator python iterator") != 0
 #endif
+#ifdef USE_IPSET
+		&& strcmp(cfg->module_conf, "validator ipset iterator") != 0
+		&& strcmp(cfg->module_conf, "ipset iterator") != 0
+#endif
 		) {
 		fatal_exit("module conf '%s' is not known to work",
 			cfg->module_conf);
