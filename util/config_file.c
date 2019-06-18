@@ -255,6 +255,9 @@ config_create(void)
 	cfg->neg_cache_size = 1 * 1024 * 1024;
 	cfg->local_zones = NULL;
 	cfg->local_zones_nodefault = NULL;
+#ifdef USE_IPSET
+	cfg->local_zones_ipset = NULL;
+#endif
 	cfg->local_zones_disable_default = 0;
 	cfg->local_data = NULL;
 	cfg->local_zone_overrides = NULL;
@@ -327,9 +330,13 @@ config_create(void)
 	cfg->cachedb_backend = NULL;
 	cfg->cachedb_secret = NULL;
 #endif
+#ifdef USE_IPSET
+	cfg->ipset_name_v4 = NULL;
+	cfg->ipset_name_v6 = NULL;
+#endif
 	return cfg;
 error_exit:
-	config_delete(cfg); 
+	config_delete(cfg);
 	return NULL;
 }
 
@@ -1092,6 +1099,10 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_STR(opt, "backend", cachedb_backend)
 	else O_STR(opt, "secret-seed", cachedb_secret)
 #endif
+#ifdef USE_IPSET
+	else O_STR(opt, "name-v4", ipset_name_v4)
+	else O_STR(opt, "name-v6", ipset_name_v6)
+#endif
 	/* not here:
 	 * outgoing-permit, outgoing-avoid - have list of ports
 	 * local-zone - zones and nodefault variables
@@ -1310,6 +1321,9 @@ config_delview(struct config_view* p)
 	free(p->name);
 	config_deldblstrlist(p->local_zones);
 	config_delstrlist(p->local_zones_nodefault);
+#ifdef USE_IPSET
+	config_delstrlist(p->local_zones_ipset);
+#endif
 	config_delstrlist(p->local_data);
 	free(p);
 }
@@ -1400,6 +1414,9 @@ config_delete(struct config_file* cfg)
 	free(cfg->val_nsec3_key_iterations);
 	config_deldblstrlist(cfg->local_zones);
 	config_delstrlist(cfg->local_zones_nodefault);
+#ifdef USE_IPSET
+	config_delstrlist(cfg->local_zones_ipset);
+#endif
 	config_delstrlist(cfg->local_data);
 	config_deltrplstrlist(cfg->local_zone_overrides);
 	config_del_strarray(cfg->tagname, cfg->num_tags);
@@ -1427,6 +1444,10 @@ config_delete(struct config_file* cfg)
 #ifdef USE_CACHEDB
 	free(cfg->cachedb_backend);
 	free(cfg->cachedb_secret);
+#endif
+#ifdef USE_IPSET
+	free(cfg->ipset_name_v4);
+	free(cfg->ipset_name_v6);
 #endif
 	free(cfg);
 }
@@ -2107,6 +2128,11 @@ cfg_parse_local_zone(struct config_file* cfg, const char* val)
 	if(strcmp(type, "nodefault")==0) {
 		return cfg_strlist_insert(&cfg->local_zones_nodefault, 
 			strdup(name));
+#ifdef USE_IPSET
+	} else if(strcmp(type, "ipset")==0) {
+		return cfg_strlist_insert(&cfg->local_zones_ipset, 
+			strdup(name));
+#endif
 	} else {
 		return cfg_str2list_insert(&cfg->local_zones, strdup(buf),
 			strdup(type));
@@ -2381,3 +2407,4 @@ int options_remote_is_address(struct config_file* cfg)
 	if(cfg->control_ifs.first->str[0] == 0) return 1;
 	return (cfg->control_ifs.first->str[0] != '/');
 }
+
