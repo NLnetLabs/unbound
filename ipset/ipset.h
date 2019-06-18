@@ -6,6 +6,29 @@
  */
 #ifndef IPSET_H
 #define IPSET_H
+/** \file
+ *
+ * This file implements the ipset module.  It can handle packets by putting
+ * the A and AAAA addresses that are configured in unbound.conf as type
+ * ipset (local-zone statements) into a firewall rule IPSet.  For firewall
+ * blacklist and whitelist usage.
+ *
+ * To use the IPset module, install the libmnl-dev (or libmnl-devel) package
+ * and configure with --enable-ipset.  And compile.  Then enable the ipset
+ * module in unbound.conf with module-config: "ipset validator iterator"
+ * then create it with ipset -N blacklist iphash and then add
+ * local-zone: "example.com." ipset
+ * statements for the zones where you want the addresses of the names
+ * looked up added to the set.
+ *
+ * Set the name of the set with
+ * ipset:
+ *   name-v4: "blacklist"
+ *   name-v6: "blacklist6"
+ * in unbound.conf.  The set can be used in this way:
+ *   iptables -A INPUT -m set --set blacklist src -j DROP
+ *   ip6tables -A INPUT -m set --set blacklist6 src -j DROP
+ */
 
 #include "util/module.h"
 

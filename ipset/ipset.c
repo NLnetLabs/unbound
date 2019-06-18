@@ -1,3 +1,10 @@
+/**
+ * \file
+ * This file implements the ipset module.  It can handle packets by putting
+ * the A and AAAA addresses that are configured in unbound.conf as type
+ * ipset (local-zone statements) into a firewall rule IPSet.  For firewall
+ * blacklist and whitelist usage.
+ */
 #include "config.h"
 #include "ipset/ipset.h"
 #include "util/regional.h"
