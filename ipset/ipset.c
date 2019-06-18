@@ -160,7 +160,8 @@ static int ipset_update(struct module_env *env, struct dns_msg *return_msg, stru
 
 					if (strncasecmp(p->str, s, plen) == 0) {
 						d = (struct packed_rrset_data*)rrset->entry.data;
-						for (j = 0; j < d->count + d->rrsig_count; j++) {
+						/* to d->count, not d->rrsig_count, because we do not want to add the RRSIGs, only the addresses */
+						for (j = 0; j < d->count; j++) {
 							rr_len = d->rr_len[j];
 							rr_data = d->rr_data[j];
 
