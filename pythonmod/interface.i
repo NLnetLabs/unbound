@@ -1011,7 +1011,7 @@ struct config_file {
    char* control_key_file;
    char* control_cert_file;
    int do_daemonize;
-   char* python_script;
+   struct config_strlist* python_script;
 };
 
 /* ************************************************************************************ *
@@ -1106,6 +1106,7 @@ struct delegpt {
 %rename ("MODULE_STATE_INITIAL") "module_state_initial";
 %rename ("MODULE_WAIT_REPLY") "module_wait_reply";
 %rename ("MODULE_WAIT_MODULE") "module_wait_module";
+%rename ("MODULE_RESTART_NEXT") "module_restart_next";
 %rename ("MODULE_WAIT_SUBQUERY") "module_wait_subquery";
 %rename ("MODULE_ERROR") "module_error";
 %rename ("MODULE_FINISHED") "module_finished";
@@ -1114,6 +1115,7 @@ enum module_ext_state {
    module_state_initial = 0,
    module_wait_reply,
    module_wait_module,
+   module_restart_next,
    module_wait_subquery,
    module_error,
    module_finished

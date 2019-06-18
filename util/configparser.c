@@ -5752,8 +5752,8 @@ yyreduce:
 #line 2739 "./util/configparser.y" /* yacc.c:1648  */
     {
 		OUTYY(("P(python-script:%s)\n", (yyvsp[0].str)));
-		free(cfg_parser->cfg->python_script);
-		cfg_parser->cfg->python_script = (yyvsp[0].str);
+		if(!cfg_strlist_append_ex(&cfg_parser->cfg->python_script, (yyvsp[0].str)))
+			yyerror("out of memory");
 	}
 #line 5759 "util/configparser.c" /* yacc.c:1648  */
     break;
