@@ -3,6 +3,9 @@
 	  the ipset that could add the domain's ip to a list easily.
 	  Needs libmnl, and --enable-ipset and config it, doc/README.ipset.md.
 	- Fix to omit RRSIGs from addition to the ipset.
+	- Fix to make unbound-control with ipset, remove unused variable,
+	  use unsigned type because of comparison, and assign null instead
+	  of compare with it.  Remade lex and yacc output.
 
 17 June 2019: Wouter
 	- Master contains version 1.9.3 in development.

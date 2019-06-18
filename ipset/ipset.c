@@ -94,7 +94,7 @@ static int ipset_update(struct module_env *env, struct dns_msg *return_msg, stru
 
 	struct mnl_socket *mnl;
 
-	int i, j;
+	size_t i, j;
 
 	const char *setname;
 
@@ -109,7 +109,6 @@ static int ipset_update(struct module_env *env, struct dns_msg *return_msg, stru
 
 	struct config_strlist *p;
 
-	uint16_t rrtype;
 	size_t rr_len, rd_len;
 
 	uint8_t *rr_data;
@@ -198,7 +197,7 @@ int ipset_init(struct module_env* env, int id) {
 
 	env->modinfo[id] = (void *)ipset_env;
 
-	ipset_env->mnl == NULL;
+	ipset_env->mnl = NULL;
 
 	ipset_env->name_v4 = env->cfg->ipset_name_v4;
 	ipset_env->name_v6 = env->cfg->ipset_name_v6;
