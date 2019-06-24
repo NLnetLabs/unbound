@@ -81,7 +81,7 @@ enum rpz_action {
 };
 
 /**
- * RPZ containing policies. Pointed to from corresponding authz-one. Part of a
+ * RPZ containing policies. Pointed to from corresponding auth-zone. Part of a
  * linked list to keep configuration order. Iterating or changing the linked
  * list requires the rpz_lock from struct auth_zones.
  */

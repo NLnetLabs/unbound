@@ -436,6 +436,48 @@ rpz_insert_qname_trigger(struct rpz* r, uint8_t* dname, size_t dnamelen,
 	return 1;
 }
 
+/** Insert RR into RPZ's ACL tree */
+static int
+rpz_insert_client_ip_trigger(struct rpz* r, uint8_t* dname, size_t dnamelen,
+	enum rpz_action a, uint16_t rrtype, uint16_t rrclass, uint32_t ttl,
+	uint8_t* rdata, size_t rdata_len, uint8_t* rr, size_t rr_len)
+{
+	/* TODO: remove void casts */
+	(void)r;
+	(void)dnamelen;
+	(void)rrtype;
+	(void)rrclass;
+	(void)ttl;
+	(void)rdata;
+	(void)rdata_len;
+	(void)rr;
+	(void)rr_len;
+
+	if(a == RPZ_DROP_ACTION) {
+		/* insert into r->acl tree */
+		struct sockaddr_storage addr;
+		char str[INET6_ADDRSTRLEN];
+		socklen_t addrlen;
+		int net, af;
+		if(!netblockdnametoaddr(dname, &addr, &addrlen, &net, &af))
+			return 0;
+		/* TODO insert into acl tree */
+#if 0
+		if((inet_ntop(af,
+			(af == AF_INET) ?
+				(void*)&((struct sockaddr_in*)&addr)->sin_addr :
+				(void*)&((struct sockaddr_in6*)&addr)->sin6_addr,
+			str, INET6_ADDRSTRLEN)))
+			log_info("rpz %s/%d\n", str, net);
+#endif
+	} else {
+		verbose(VERB_ALGO, "RPZ: skipping unsupported action: %s",
+			rpz_action_to_string(a));
+		return 0;
+	}
+	return 0;
+}
+
 void
 rpz_insert_rr(struct rpz* r, size_t aznamelen, uint8_t* dname,
 	size_t dnamelen, uint16_t rr_type, uint16_t rr_class, uint32_t rr_ttl,
@@ -456,6 +498,11 @@ rpz_insert_rr(struct rpz* r, size_t aznamelen, uint8_t* dname,
 	t = rpz_dname_to_trigger(policydname);
 	if(t == RPZ_QNAME_TRIGGER) {
 		rpz_insert_qname_trigger(r, policydname, policydnamelen,
+			a, rr_type, rr_class, rr_ttl, rdatawl, rdatalen, rr,
+			rr_len);
+	}
+	else if(t == RPZ_CLIENT_IP_TRIGGER) {
+		rpz_insert_client_ip_trigger(r, policydname, policydnamelen,
 			a, rr_type, rr_class, rr_ttl, rdatawl, rdatalen, rr,
 			rr_len);
 	}
