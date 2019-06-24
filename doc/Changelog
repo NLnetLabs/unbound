@@ -1,3 +1,6 @@
+24 June 2019: Wouter
+	- Fix memleak in unit test, reported from the clang 8.0 static analyzer.
+
 18 June 2019: Wouter
 	- PR #28: IPSet module, by Kevin Chou.  Created a module to support
 	  the ipset that could add the domain's ip to a list easily.
