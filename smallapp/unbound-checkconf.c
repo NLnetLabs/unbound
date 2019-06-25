@@ -146,7 +146,7 @@ check_mod(struct config_file* cfg, struct module_func_block* fb)
 	edns_known_options_delete(&env);
 }
 
-/** true is addr is a localhost address, 127.0.0.1 or ::1 (@port) */
+/** true if addr is a localhost address, 127.0.0.1 or ::1 (@port) */
 static int
 str_addr_is_localhost(const char* a)
 {
@@ -165,14 +165,16 @@ donotquerylocalhostcheck(struct config_file* cfg)
 		for(p=cfg->forwards; p; p=p->next) {
 			for(s=p->addrs; s; s=s->next) {
 				if(str_addr_is_localhost(s->str)) {
-					fprintf(stderr, "unbound-checkconf: warning: forward-addr: '%s' is specified for forward-zone: '%s', but do-not-query-localhost: yes means that the address will not be used for lookups.\n", s->str, p->name);
+					fprintf(stderr, "unbound-checkconf: warning: forward-addr: '%s' is specified for forward-zone: '%s', but do-not-query-localhost: yes means that the address will not be used for lookups.\n",
+						s->str, p->name);
 				}
 			}
 		}
 		for(p=cfg->stubs; p; p=p->next) {
 			for(s=p->addrs; s; s=s->next) {
 				if(str_addr_is_localhost(s->str)) {
-					fprintf(stderr, "unbound-checkconf: warning: stub-addr: '%s' is specified for stub-zone: '%s', but do-not-query-localhost: yes means that the address will not be used for lookups.\n", s->str, p->name);
+					fprintf(stderr, "unbound-checkconf: warning: stub-addr: '%s' is specified for stub-zone: '%s', but do-not-query-localhost: yes means that the address will not be used for lookups.\n",
+						s->str, p->name);
 				}
 			}
 		}
