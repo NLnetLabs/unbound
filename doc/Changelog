@@ -1,3 +1,9 @@
+25 June 2019: Wouter
+	- For #45, check that 127.0.0.1 and ::1 are not used in unbound.conf
+	  when do-not-query-localhost is turned on, or at default on,
+	  unbound-checkconf prints a warning if it is found in forward-addr or
+	  stub-addr statements.
+
 24 June 2019: Wouter
 	- Fix memleak in unit test, reported from the clang 8.0 static analyzer.
 
