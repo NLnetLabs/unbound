@@ -1,3 +1,7 @@
+5 July 2019: Ralph
+	- Fix for possible assertion failure when answering respip CNAME from
+	  cache.
+
 25 June 2019: Wouter
 	- For #45, check that 127.0.0.1 and ::1 are not used in unbound.conf
 	  when do-not-query-localhost is turned on, or at default on,

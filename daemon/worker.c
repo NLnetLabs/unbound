@@ -721,8 +721,6 @@ answer_from_cache(struct worker* worker, struct query_info* qinfo,
 	if(encode_rep != rep)
 		secure = 0; /* if rewritten, it can't be considered "secure" */
 	if(!encode_rep || *alias_rrset) {
-		sldns_buffer_clear(repinfo->c->buffer);
-		sldns_buffer_flip(repinfo->c->buffer);
 		if(!encode_rep)
 			*need_drop = 1;
 		else {
@@ -762,17 +760,14 @@ bail_out:
 	return 0;
 }
 
-/** Reply to client and perform prefetch to keep cache up to date.
- * If the buffer for the reply is empty, it indicates that only prefetch is
- * necessary and the reply should be suppressed (because it's dropped or
- * being deferred). */
+/** Reply to client and perform prefetch to keep cache up to date. */
 static void
 reply_and_prefetch(struct worker* worker, struct query_info* qinfo, 
-	uint16_t flags, struct comm_reply* repinfo, time_t leeway)
+	uint16_t flags, struct comm_reply* repinfo, time_t leeway, int noreply)
 {
 	/* first send answer to client to keep its latency 
 	 * as small as a cachereply */
-	if(sldns_buffer_limit(repinfo->c->buffer) != 0) {
+	if(!noreply) {
 		if(repinfo->c->tcp_req_info) {
 			sldns_buffer_copy(
 				repinfo->c->tcp_req_info->spool_buffer,
@@ -1484,7 +1479,8 @@ lookup_cache:
 					lock_rw_unlock(&e->lock);
 					reply_and_prefetch(worker, lookup_qinfo,
 						sldns_buffer_read_u16_at(c->buffer, 2),
-						repinfo, leeway);
+						repinfo, leeway,
+						(partial_rep || need_drop));
 					if(!partial_rep) {
 						rc = 0;
 						regional_free_all(worker->scratchpad);
