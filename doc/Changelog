@@ -1,3 +1,8 @@
+9 July 2019: Ralph
+	- Fix in respip addrtree selection. Absence of addr_tree_init_parents()
+	  call made it impossible to go up the tree when the matching netmask is
+	  too specific.
+
 5 July 2019: Ralph
 	- Fix for possible assertion failure when answering respip CNAME from
 	  cache.

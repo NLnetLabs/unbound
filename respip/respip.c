@@ -361,6 +361,7 @@ respip_set_apply_cfg(struct respip_set* set, char* const* tagname, int num_tags,
 		free(pd);
 		pd = np;
 	}
+	addr_tree_init_parents(&set->ip_tree);
 
 	return 1;
 }
