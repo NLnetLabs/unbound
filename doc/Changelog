@@ -1,3 +1,8 @@
+12 July 2019: Wouter
+	- Fix #48: Unbound returns additional records on NODATA response,
+	  if minimal-responses is enabled, also the additional for negative
+	  responses is removed.
+
 9 July 2019: Ralph
 	- Fix in respip addrtree selection. Absence of addr_tree_init_parents()
 	  call made it impossible to go up the tree when the matching netmask is
