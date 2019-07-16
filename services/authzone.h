@@ -472,7 +472,7 @@ struct auth_zones* auth_zones_create(void);
  * @return false on failure.
  */
 int auth_zones_apply_cfg(struct auth_zones* az, struct config_file* cfg,
-	int setup, int* iz_rpz);
+	int setup, int* is_rpz);
 
 /** initial pick up of worker timeouts, ties events to worker event loop
  * @param az: auth zones structure

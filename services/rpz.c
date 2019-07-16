@@ -556,7 +556,9 @@ rpz_insert_rr(struct rpz* r, size_t aznamelen, uint8_t* dname,
 /**
  * Find RPZ local-zone by qname.
  * @param r: rpz containing local-zone tree
- * @param qinfo: qinfo struct
+ * @param qname: qname
+ * @param qname_len: length of qname
+ * @param qclass: qclass
  * @param only_exact: if 1 only excact (non wildcard) matches are returned
  * @param wr: get write lock for local-zone if 1, read lock if 0
  * @return: NULL or local-zone holding rd or wr lock
@@ -680,6 +682,7 @@ rpz_data_delete_rr(struct local_zone* z, uint8_t* policydname,
 /**
  * Remove RR from RPZ's respip set
  * @param raddr: respip node
+ * @param rr_type: RR type of RR to remove
  * @param rdata: rdata of RR to remove
  * @param rdatalen: length of rdata
  * @param region: RPZ's repsip_set region
@@ -786,14 +789,18 @@ rpz_remove_rr(struct rpz* r, size_t aznamelen, uint8_t* dname, size_t dnamelen,
 	uint16_t rr_type, uint16_t rr_class, uint8_t* rdatawl, size_t rdatalen)
 {
 	size_t policydnamelen;
-	/* name is free'd in local_zone delete */
-	uint8_t* policydname = calloc(1, LDNS_MAX_DOMAINLEN + 1);
 	enum rpz_trigger t;
 	enum rpz_action a;
+	uint8_t* policydname;
+
+	if(!(policydname = calloc(1, LDNS_MAX_DOMAINLEN + 1)))
+		return;
 
 	a = rpz_rr_to_action(rr_type, rdatawl, rdatalen);
-	if(a == RPZ_INVALID_ACTION)
+	if(a == RPZ_INVALID_ACTION) {
+		free(policydname);
 		return;
+	}
 	if(!(policydnamelen = strip_dname_origin(dname, dnamelen, aznamelen,
 		policydname))) {
 		free(policydname);

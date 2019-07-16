@@ -469,6 +469,7 @@ void listen_sslctx_delete_ticket_keys(void);
  * @param dname: the dname containing RPZ format netblock
  * @param addr: where to store sockaddr.
  * @param addrlen: length of stored sockaddr is returned.
+ * @param net: where to store netmask
  * @param af: where to store address family.
  * @return 0 on error.
  */
