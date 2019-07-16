@@ -1542,9 +1542,9 @@ auth_zone_read_zonefile(struct auth_zone* z, struct config_file* cfg)
 	/* clear the data tree */
 	traverse_postorder(&z->data, auth_data_del, NULL);
 	rbtree_init(&z->data, &auth_data_cmp);
-	/* clear the RPZ local_zone tree */
+	/* clear the RPZ policies */
 	if(z->rpz)
-		rpz_clear_lz(z->rpz);
+		rpz_clear(z->rpz);
 
 	memset(&state, 0, sizeof(state));
 	/* default TTL to 3600 */
@@ -1564,6 +1564,9 @@ auth_zone_read_zonefile(struct auth_zone* z, struct config_file* cfg)
 		return 0;
 	}
 	fclose(in);
+
+	if(z->rpz)
+		rpz_finish_config(z->rpz);
 	return 1;
 }
 
@@ -1926,7 +1929,7 @@ az_delete_deleted_zones(struct auth_zones* az)
 }
 
 int auth_zones_apply_cfg(struct auth_zones* az, struct config_file* cfg,
-	int setup)
+	int setup, int* is_rpz)
 {
 	struct config_auth* p;
 	az_setall_deleted(az);
@@ -1935,6 +1938,7 @@ int auth_zones_apply_cfg(struct auth_zones* az, struct config_file* cfg,
 			log_warn("auth-zone without a name, skipped");
 			continue;
 		}
+		*is_rpz = (*is_rpz || p->isrpz);
 		if(!auth_zones_cfg(az, p)) {
 			log_err("cannot config auth zone %s", p->name);
 			return 0;
@@ -4654,9 +4658,9 @@ apply_axfr(struct auth_xfer* xfr, struct auth_zone* z,
 	/* clear the data tree */
 	traverse_postorder(&z->data, auth_data_del, NULL);
 	rbtree_init(&z->data, &auth_data_cmp);
-	/* clear the RPZ local_zone tree */
+	/* clear the RPZ policies */
 	if(z->rpz)
-		rpz_clear_lz(z->rpz);
+		rpz_clear(z->rpz);
 
 	xfr->have_zone = 0;
 	xfr->serial = 0;
@@ -4754,9 +4758,9 @@ apply_http(struct auth_xfer* xfr, struct auth_zone* z,
 	/* clear the data tree */
 	traverse_postorder(&z->data, auth_data_del, NULL);
 	rbtree_init(&z->data, &auth_data_cmp);
-	/* clear the RPZ local_zone tree */
+	/* clear the RPZ policies */
 	if(z->rpz)
-		rpz_clear_lz(z->rpz);
+		rpz_clear(z->rpz);
 
 	xfr->have_zone = 0;
 	xfr->serial = 0;
@@ -4936,6 +4940,9 @@ xfr_process_chunk_list(struct auth_xfer* xfr, struct module_env* env,
 	}
 	if(xfr->have_zone)
 		xfr->lease_time = *env->now;
+
+	if(z->rpz)
+		rpz_finish_config(z->rpz);
 
 	/* unlock */
 	lock_rw_unlock(&z->lock);

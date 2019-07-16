@@ -14,19 +14,37 @@
 
 #include "util/module.h"
 #include "services/localzone.h"
+#include "util/locks.h"
 
 /**
- * Set of response IP addresses with associated actions and tags. 
- * Forward declaration only here.  Actual definition is hidden within the
- * module.
+ * Conceptual set of IP addresses for response AAAA or A records that should
+ * trigger special actions.
  */
-struct respip_set;
+struct respip_set {
+	struct regional* region;
+	struct rbtree_type ip_tree;
+	lock_rw_type lock;	/* lock on the respip tree */
+	char* const* tagname;	/* shallow copy of tag names, for logging */
+	int num_tags;		/* number of tagname entries */
+};
 
-/**
- * Forward declaration for the structure that represents a node in the
- * respip_set address tree
- */
-struct resp_addr;
+
+/** An address span with response control information */
+struct resp_addr {
+	/** node in address tree */
+	struct addr_tree_node node;
+	/** lock on the node item */
+	lock_rw_type lock;
+	/** tag bitlist */
+	uint8_t* taglist;
+	/** length of the taglist (in bytes) */
+	size_t taglen;
+	/** action for this address span */
+	enum respip_action action;
+        /** "local data" for this node */
+	struct ub_packed_rrset_key* data;
+};
+
 
 /**
  * Forward declaration for the structure that represents a tree of view data.
@@ -124,12 +142,14 @@ int respip_views_apply_cfg(struct views* vs, struct config_file* cfg,
  * @param new_repp: pointer placeholder for the merged reply.  will be intact
  *   on error.
  * @param region: allocator to build *new_repp.
+ * @param az: auth zones containing RPZ information.
  * @return 1 on success, 0 on error.
  */
 int respip_merge_cname(struct reply_info* base_rep,
 	const struct query_info* qinfo, const struct reply_info* tgt_rep,
 	const struct respip_client_info* cinfo, int must_validate,
-	struct reply_info** new_repp, struct regional* region);
+	struct reply_info** new_repp, struct regional* region,
+	struct auth_zones* az);
 
 /**
  * See if any IP-based action should apply to any IP address of AAAA/A answer
@@ -148,6 +168,7 @@ int respip_merge_cname(struct reply_info* base_rep,
  * @param alias_rrset: must not be NULL.
  * @param search_only: if true, only check if an action would apply.  actionp
  *   will be set (or intact) accordingly but the modified reply won't be built.
+ * @param az: auth zones containing RPZ information.
  * @param region: allocator to build *new_repp.
  * @return 1 on success, 0 on error.
  */
@@ -156,7 +177,7 @@ int respip_rewrite_reply(const struct query_info* qinfo,
 	const struct reply_info *rep, struct reply_info** new_repp,
 	struct respip_action_info* actinfo,
 	struct ub_packed_rrset_key** alias_rrset,
-	int search_only, struct regional* region);
+	int search_only, struct regional* region, struct auth_zones* az);
 
 /**
  * Get the response-ip function block.
@@ -227,4 +248,44 @@ void respip_inform_print(struct respip_addr_info* respip_addr, uint8_t* qname,
 	uint16_t qtype, uint16_t qclass, struct local_rrset* local_alias,
 	struct comm_reply* repinfo);
 
+/**
+ * Find resp_addr in tree, create and add to tree if it does not exist.
+ * @param set: struct containing the tree and region to alloc new node on.
+ * 	should hold write lock.
+ * @param addr: address to look up.
+ * @param addrlen: length of addr.
+ * @param net: netblock to lookup.
+ * @param create: create node if it does not exist when 1.
+ * @param ipstr: human redable ip string, for logging.
+ * @return newly created of found node, not holding lock.
+ */
+struct resp_addr*
+respip_sockaddr_find_or_create(struct respip_set* set, struct sockaddr_storage* addr,
+		socklen_t addrlen, int net, int create, const char* ipstr);
+
+/**
+ * Add RR to resp_addr's RRset. Create RRset is not existing.
+ * @param region: region to alloc RR(set).
+ * @param raddr: resp_addr containing RRset. Must hold write lock.
+ * @param rrtype: RR type.
+ * @param rrclass: RR class.
+ * @param ttl: TTL.
+ * @param rdata: RDATA.
+ * @param rdata_len: length of rdata.
+ * @param rrstr: RR as string, for logging
+ * @param netblockstr: netblock as string, for logging
+ * @return 0 on error
+ */
+int
+respip_enter_rr(struct regional* region, struct resp_addr* raddr,
+	uint16_t rrtype, uint16_t rrclass, time_t ttl, uint8_t* rdata,
+	size_t rdata_len, const char* rrstr, const char* netblockstr);
+
+/**
+ * Delete resp_addr node from tree.
+ * @param set: struct containing tree. Must hold write lock.
+ * @param node: node to delete. Must hold write lock.
+ */
+void
+respip_sockaddr_delete(struct respip_set* set, struct resp_addr* node);
 #endif	/* RESPIP_RESPIP_H */

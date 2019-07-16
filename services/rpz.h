@@ -48,6 +48,7 @@
 #include "services/authzone.h"
 #include "sldns/sbuffer.h"
 #include "daemon/stats.h"
+#include "respip/respip.h"
 
 /**
  * RPZ triggers, only the QNAME trigger is currently supported in Unbound.
@@ -87,6 +88,7 @@ enum rpz_action {
  */
 struct rpz {
 	struct local_zones* local_zones;
+	struct respip_set* respip_set;
 	uint8_t* taglist;
 	size_t taglistlen;
 	enum rpz_action action_override;
@@ -157,10 +159,11 @@ int rpz_apply_qname_trigger(struct auth_zones* az, struct module_env* env,
 void rpz_delete(struct rpz* r);
 
 /**
- * Clear local-zones in RPZ, used after reloading file or AXFR/HTTP transfer.
+ * Clear local-zones and respip data in RPZ, used after reloading file or
+ * AXFR/HTTP transfer.
  * @param r: RPZ to use
  */
-int rpz_clear_lz(struct rpz* r);
+int rpz_clear(struct rpz* r);
 
 /**
  * Create RPZ. RPZ must be added to linked list after creation.
@@ -174,5 +177,11 @@ struct rpz* rpz_create(struct config_auth* p);
  * @return: string for RPZ action
  */
 const char* rpz_action_to_string(enum rpz_action a);
+
+/**
+ * Prepare RPZ after procesing feed content.
+ * @param r: RPZ to use
+ */
+void rpz_finish_config(struct rpz* r);
 
 #endif /* SERVICES_RPZ_H */

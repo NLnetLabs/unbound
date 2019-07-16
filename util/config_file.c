@@ -1900,7 +1900,7 @@ char* config_taglist2str(struct config_file* cfg, uint8_t* taglist,
 	return strdup(buf);
 }
 
-int taglist_intersect(uint8_t* list1, size_t list1len, uint8_t* list2,
+int taglist_intersect(uint8_t* list1, size_t list1len, const uint8_t* list2,
 	size_t list2len)
 {
 	size_t i;

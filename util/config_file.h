@@ -1036,7 +1036,7 @@ char* config_taglist2str(struct config_file* cfg, uint8_t* taglist,
  * @param list2len: length in bytes of second list.
  * @return true if there are tags in common, 0 if not.
  */
-int taglist_intersect(uint8_t* list1, size_t list1len, uint8_t* list2,
+int taglist_intersect(uint8_t* list1, size_t list1len, const uint8_t* list2,
 	size_t list2len);
 
 /**

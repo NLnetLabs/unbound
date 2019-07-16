@@ -555,6 +555,8 @@ enum respip_action {
 	respip_transparent = local_zone_transparent,
 	/** gives response data (if any), else nodata answer. */
 	respip_typetransparent = local_zone_typetransparent,
+	/** type invalid */
+	respip_invalid = local_zone_invalid,
 };
 
 int

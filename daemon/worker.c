@@ -572,7 +572,7 @@ static int
 apply_respip_action(struct worker* worker, const struct query_info* qinfo,
 	struct respip_client_info* cinfo, struct reply_info* rep,
 	struct comm_reply* repinfo, struct ub_packed_rrset_key** alias_rrset,
-	struct reply_info** encode_repp)
+	struct reply_info** encode_repp, struct auth_zones* az)
 {
 	struct respip_action_info actinfo = {respip_none, NULL};
 
@@ -582,7 +582,7 @@ apply_respip_action(struct worker* worker, const struct query_info* qinfo,
 		return 1;
 
 	if(!respip_rewrite_reply(qinfo, cinfo, rep, encode_repp, &actinfo,
-		alias_rrset, 0, worker->scratchpad))
+		alias_rrset, 0, worker->scratchpad, az))
 		return 0;
 
 	/* xxx_deny actions mean dropping the reply, unless the original reply
@@ -709,20 +709,20 @@ answer_from_cache(struct worker* worker, struct query_info* qinfo,
 		(int)(flags&LDNS_RCODE_MASK), edns, repinfo, worker->scratchpad))
 		goto bail_out;
 	*alias_rrset = NULL; /* avoid confusion if caller set it to non-NULL */
-	if(worker->daemon->use_response_ip && !partial_rep &&
-	   !apply_respip_action(worker, qinfo, cinfo, rep, repinfo, alias_rrset,
-			&encode_rep)) {
+	if((worker->daemon->use_response_ip || worker->daemon->use_rpz) &&
+		!partial_rep && !apply_respip_action(worker, qinfo, cinfo, rep,
+		repinfo, alias_rrset,
+		&encode_rep, worker->env.auth_zones)) {
 		goto bail_out;
 	} else if(partial_rep &&
 		!respip_merge_cname(partial_rep, qinfo, rep, cinfo,
-		must_validate, &encode_rep, worker->scratchpad)) {
+		must_validate, &encode_rep, worker->scratchpad,
+		worker->env.auth_zones)) {
 		goto bail_out;
 	}
 	if(encode_rep != rep)
 		secure = 0; /* if rewritten, it can't be considered "secure" */
 	if(!encode_rep || *alias_rrset) {
-		sldns_buffer_clear(repinfo->c->buffer);
-		sldns_buffer_flip(repinfo->c->buffer);
 		if(!encode_rep)
 			*need_drop = 1;
 		else {
@@ -768,12 +768,18 @@ bail_out:
  * being deferred). */
 static void
 reply_and_prefetch(struct worker* worker, struct query_info* qinfo, 
-	uint16_t flags, struct comm_reply* repinfo, time_t leeway)
+	uint16_t flags, struct comm_reply* repinfo, time_t leeway, int noreply)
 {
 	/* first send answer to client to keep its latency 
 	 * as small as a cachereply */
-	if(sldns_buffer_limit(repinfo->c->buffer) != 0)
+	if(!noreply) {
+		if(repinfo->c->tcp_req_info) {
+			sldns_buffer_copy(
+				repinfo->c->tcp_req_info->spool_buffer,
+				repinfo->c->buffer);
+		}
 		comm_point_send_reply(repinfo);
+	}
 	server_stats_prefetch(&worker->stats, worker);
 	
 	/* create the prefetch in the mesh as a normal lookup without
@@ -1445,7 +1451,7 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 	/* If we may apply IP-based actions to the answer, build the client
 	 * information.  As this can be expensive, skip it if there is
 	 * absolutely no possibility of it. */
-	if(worker->daemon->use_response_ip &&
+	if((worker->daemon->use_response_ip || worker->daemon->use_rpz) &&
 		(qinfo.qtype == LDNS_RR_TYPE_A ||
 		qinfo.qtype == LDNS_RR_TYPE_AAAA ||
 		qinfo.qtype == LDNS_RR_TYPE_ANY)) {
@@ -1490,7 +1496,8 @@ lookup_cache:
 					lock_rw_unlock(&e->lock);
 					reply_and_prefetch(worker, lookup_qinfo,
 						sldns_buffer_read_u16_at(c->buffer, 2),
-						repinfo, leeway);
+						repinfo, leeway,
+						(partial_rep || need_drop));
 					if(!partial_rep) {
 						rc = 0;
 						regional_free_all(worker->scratchpad);

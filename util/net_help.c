@@ -356,13 +356,12 @@ static int ipdnametoaddr(uint8_t* dname, struct sockaddr_storage* addr,
 int netblockdnametoaddr(uint8_t* dname, struct sockaddr_storage* addr,
 	socklen_t* addrlen, int* net, int* af)
 {
-	int e;
 	char buff[3 /* 3 digit netblock */ + 1];
 	if(*dname > 3)
 		/* netblock invalid */
 		return 0;
 	memcpy(buff, dname+1, *dname);
-	buff[(*dname)+1] = '\0';
+	buff[*dname] = '\0';
 	*net = atoi(buff);
 	dname += *dname;
 	dname++;

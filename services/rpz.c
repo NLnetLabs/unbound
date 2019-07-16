@@ -209,6 +209,24 @@ rpz_action_to_localzone_type(enum rpz_action a)
 	}
 }
 
+static enum respip_action
+rpz_action_to_respip_action(enum rpz_action a)
+{
+	switch(a) {
+	case RPZ_NXDOMAIN_ACTION:	return respip_always_nxdomain;
+	case RPZ_NODATA_ACTION:		return respip_always_nodata;
+	case RPZ_DROP_ACTION:		return respip_deny;
+	case RPZ_PASSTHRU_ACTION:	return respip_always_transparent;
+	case RPZ_LOCAL_DATA_ACTION:
+	case RPZ_CNAME_OVERRIDE_ACTION:
+					return respip_redirect;
+	case RPZ_INVALID_ACTION:
+	case RPZ_TCP_ONLY_ACTION:
+	default:
+		return respip_invalid;
+	}
+}
+
 static enum rpz_action
 localzone_type_to_rpz_action(enum localzone_type lzt)
 {
@@ -256,6 +274,7 @@ void rpz_delete(struct rpz* r)
 	if(!r)
 		return;
 	local_zones_delete(r->local_zones);
+	respip_set_delete(r->respip_set);
 	regional_destroy(r->region);
 	free(r->taglist);
 	free(r->log_name);
@@ -263,14 +282,26 @@ void rpz_delete(struct rpz* r)
 }
 
 int
-rpz_clear_lz(struct rpz* r)
+rpz_clear(struct rpz* r)
 {
 	/* must hold write lock on auth_zone */
 	local_zones_delete(r->local_zones);
+	respip_set_delete(r->respip_set);
 	if(!(r->local_zones = local_zones_create())){
 		return 0;
 	}
+	if(!(r->respip_set = respip_set_create())) {
+		return 0;
+	}
 	return 1;
+}
+
+void
+rpz_finish_config(struct rpz* r)
+{
+	lock_rw_wrlock(&r->respip_set->lock);
+	addr_tree_init_parents(&r->respip_set->ip_tree);
+	lock_rw_unlock(&r->respip_set->lock);
 }
 
 /** new rrset containing CNAME override, does not yet contain a dname */
@@ -323,17 +354,18 @@ rpz_create(struct config_auth* p)
 {
 	struct rpz* r = calloc(1, sizeof(*r));
 	if(!r)
-		return 0;
+		goto err;
 
 	r->region = regional_create_custom(sizeof(struct regional));
 	if(!r->region) {
-		free(r);
-		return 0;
+		goto err;
 	}
 
 	if(!(r->local_zones = local_zones_create())){
-		free(r);
-		return 0;
+		goto err;
+	}
+	if(!(r->respip_set = respip_set_create())) {
+		goto err;
 	}
 	r->taglistlen = p->rpz_taglistlen;
 	r->taglist = memdup(p->rpz_taglist, r->taglistlen);
@@ -350,26 +382,34 @@ rpz_create(struct config_auth* p)
 		if(!p->rpz_cname) {
 			log_err("RPZ override with cname action found, but not "
 				"rpz-cname-override configured");
-			free(r);
-			return 0;
+			goto err;
 		}
 
 		if(sldns_str2wire_dname_buf(p->rpz_cname, nm, &nmlen) != 0) {
 			log_err("cannot parse RPZ cname override: %s",
 				p->rpz_cname);
-			free(r);
-			return 0;
+			goto err;
 		}
 		r->cname_override = new_cname_override(r->region, nm, nmlen);
 		if(!r->cname_override) {
-			free(r);
-			return 0;
+			goto err;
 		}
 	}
 	r->log = p->rpz_log;
 	if(p->rpz_log_name)
 		r->log_name = strdup(p->rpz_log_name);
 	return r;
+err:
+	if(r) {
+		if(r->local_zones)
+			local_zones_delete(r->local_zones);
+		if(r->respip_set)
+			respip_set_delete(r->respip_set);
+		if(r->taglist)
+			free(r->taglist);
+		free(r);
+	}
+	return NULL;
 }
 
 /** Remove RPZ zone name from dname */
@@ -436,46 +476,46 @@ rpz_insert_qname_trigger(struct rpz* r, uint8_t* dname, size_t dnamelen,
 	return 1;
 }
 
-/** Insert RR into RPZ's ACL tree */
+/** Insert RR into RPZ's respip_set */
 static int
-rpz_insert_client_ip_trigger(struct rpz* r, uint8_t* dname, size_t dnamelen,
+rpz_insert_response_ip_trigger(struct rpz* r, uint8_t* dname,
 	enum rpz_action a, uint16_t rrtype, uint16_t rrclass, uint32_t ttl,
 	uint8_t* rdata, size_t rdata_len, uint8_t* rr, size_t rr_len)
 {
-	/* TODO: remove void casts */
-	(void)r;
-	(void)dnamelen;
-	(void)rrtype;
-	(void)rrclass;
-	(void)ttl;
-	(void)rdata;
-	(void)rdata_len;
-	(void)rr;
-	(void)rr_len;
+	struct resp_addr* node;
+	struct sockaddr_storage addr;
+	socklen_t addrlen;
+	int net, af;
+	char* rrstr = sldns_wire2str_rr(rr, rr_len);
+	enum respip_action respa = rpz_action_to_respip_action(a);
 
-	if(a == RPZ_DROP_ACTION) {
-		/* insert into r->acl tree */
-		struct sockaddr_storage addr;
-		char str[INET6_ADDRSTRLEN];
-		socklen_t addrlen;
-		int net, af;
-		if(!netblockdnametoaddr(dname, &addr, &addrlen, &net, &af))
-			return 0;
-		/* TODO insert into acl tree */
-#if 0
-		if((inet_ntop(af,
-			(af == AF_INET) ?
-				(void*)&((struct sockaddr_in*)&addr)->sin_addr :
-				(void*)&((struct sockaddr_in6*)&addr)->sin6_addr,
-			str, INET6_ADDRSTRLEN)))
-			log_info("rpz %s/%d\n", str, net);
-#endif
-	} else {
+	if(a == RPZ_TCP_ONLY_ACTION || a == RPZ_INVALID_ACTION ||
+		respa == respip_invalid) {
 		verbose(VERB_ALGO, "RPZ: skipping unsupported action: %s",
 			rpz_action_to_string(a));
 		return 0;
 	}
-	return 0;
+
+	if(!netblockdnametoaddr(dname, &addr, &addrlen, &net, &af))
+		return 0;
+
+	lock_rw_wrlock(&r->respip_set->lock);
+	if(!(node=respip_sockaddr_find_or_create(r->respip_set, &addr, addrlen,
+		net, 1, rrstr))) {
+		lock_rw_unlock(&r->respip_set->lock);
+		return 0;
+	}
+
+	lock_rw_wrlock(&node->lock);
+	lock_rw_unlock(&r->respip_set->lock);
+	node->action = respa;
+
+	if(a == RPZ_LOCAL_DATA_ACTION) {
+		respip_enter_rr(r->respip_set->region, node, rrtype,
+			rrclass, ttl, rdata, rdata_len, rrstr, "");
+	}
+	lock_rw_unlock(&node->lock);
+	return 1;
 }
 
 void
@@ -501,8 +541,8 @@ rpz_insert_rr(struct rpz* r, size_t aznamelen, uint8_t* dname,
 			a, rr_type, rr_class, rr_ttl, rdatawl, rdatalen, rr,
 			rr_len);
 	}
-	else if(t == RPZ_CLIENT_IP_TRIGGER) {
-		rpz_insert_client_ip_trigger(r, policydname, policydnamelen,
+	else if(t == RPZ_RESPONSE_IP_TRIGGER) {
+		rpz_insert_response_ip_trigger(r, policydname,
 			a, rr_type, rr_class, rr_ttl, rdatawl, rdatalen, rr,
 			rr_len);
 	}
@@ -637,46 +677,135 @@ rpz_data_delete_rr(struct local_zone* z, uint8_t* policydname,
 	return 1;
 }
 
-void
-rpz_remove_rr(struct rpz* r, size_t aznamelen, uint8_t* dname,
-	size_t dnamelen, uint16_t rr_type, uint16_t rr_class, uint8_t* rdatawl,
-	size_t rdatalen)
+/**
+ * Remove RR from RPZ's respip set
+ * @param raddr: respip node
+ * @param rdata: rdata of RR to remove
+ * @param rdatalen: length of rdata
+ * @param region: RPZ's repsip_set region
+ * @return: 1 if zone must be removed after RR deletion
+ */
+static int
+rpz_rrset_delete_rr(struct resp_addr* raddr, uint16_t rr_type, uint8_t* rdata,
+	size_t rdatalen, struct regional* region)
+{
+	size_t index;
+	struct packed_rrset_data* d;
+	if(!raddr->data)
+		return 1;
+	d = raddr->data->entry.data;
+	if(ntohs(raddr->data->rk.type) != rr_type) {
+		return 0;
+	}
+	if(packed_rrset_find_rr(d, rdata, rdatalen, &index)) {
+		if(d->count == 1) {
+			/* regional alloc'd */
+			raddr->data->entry.data = NULL; 
+			raddr->data = NULL;
+			return 1;
+		}
+		if(d->count > 1) {
+			struct packed_rrset_data* new;
+			new = packed_rrset_remove_rr(d, index, region);
+			if(!new)
+				return 0;
+			raddr->data->entry.data = new;	
+		}
+	}
+	return 0;
+
+}
+
+/** Remove RR from RPZ's local-zone */
+static void
+rpz_remove_qname_trigger(struct rpz* r, uint8_t* dname, size_t dnamelen,
+	enum rpz_action a, uint16_t rr_type, uint16_t rr_class,
+	uint8_t* rdatawl, size_t rdatalen)
 {
 	struct local_zone* z;
+	int delete_zone = 1;
+	z = rpz_find_zone(r, dname, dnamelen, rr_class,
+		1 /* only exact */, 1 /* wr lock */);
+	if(!z) {
+		verbose(VERB_ALGO, "RPZ: cannot remove RR from IXFR, "
+			"RPZ domain not found");
+		return;
+	}
+	if(a == RPZ_LOCAL_DATA_ACTION)
+		delete_zone = rpz_data_delete_rr(z, dname,
+			dnamelen, rr_type, rdatawl, rdatalen);
+	else if(a != localzone_type_to_rpz_action(z->type)) {
+		return;
+	}
+	lock_rw_unlock(&z->lock); 
+	if(delete_zone) {
+		local_zones_del_zone(r->local_zones, z);
+	}
+	return;
+}
+
+static void
+rpz_remove_response_ip_trigger(struct rpz* r, uint8_t* dname, enum rpz_action a,
+	uint16_t rr_type, uint8_t* rdatawl, size_t rdatalen)
+{
+	struct resp_addr* node;
+	struct sockaddr_storage addr;
+	socklen_t addrlen;
+	int net, af;
+	int delete_respip = 1;
+
+	if(!netblockdnametoaddr(dname, &addr, &addrlen, &net, &af))
+		return;
+
+	lock_rw_wrlock(&r->respip_set->lock);
+	if(!(node = (struct resp_addr*)addr_tree_find(
+		&r->respip_set->ip_tree, &addr, addrlen, net))) {
+		verbose(VERB_ALGO, "RPZ: cannot remove RR from IXFR, "
+			"RPZ domain not found");
+		lock_rw_unlock(&r->respip_set->lock);
+		return;
+	}
+
+	lock_rw_wrlock(&node->lock);
+	if(a == RPZ_LOCAL_DATA_ACTION) {
+		/* remove RR, signal whether RR can be removed */
+		delete_respip = rpz_rrset_delete_rr(node, rr_type, rdatawl, 
+			rdatalen, r->respip_set->region);
+	}
+	if(delete_respip) {
+		/* delete + reset parent pointers */	
+		respip_sockaddr_delete(r->respip_set, node);
+	} else {
+		lock_rw_unlock(&node->lock);
+	}
+	lock_rw_unlock(&r->respip_set->lock);
+}
+
+void
+rpz_remove_rr(struct rpz* r, size_t aznamelen, uint8_t* dname, size_t dnamelen,
+	uint16_t rr_type, uint16_t rr_class, uint8_t* rdatawl, size_t rdatalen)
+{
 	size_t policydnamelen;
 	/* name is free'd in local_zone delete */
 	uint8_t* policydname = calloc(1, LDNS_MAX_DOMAINLEN + 1);
 	enum rpz_trigger t;
 	enum rpz_action a;
-	int delete_zone = 1;
 
 	a = rpz_rr_to_action(rr_type, rdatawl, rdatalen);
+	if(a == RPZ_INVALID_ACTION)
+		return;
 	if(!(policydnamelen = strip_dname_origin(dname, dnamelen, aznamelen,
 		policydname))) {
 		free(policydname);
 		return;
 	}
 	t = rpz_dname_to_trigger(policydname);
-	if(a != RPZ_INVALID_ACTION && t == RPZ_QNAME_TRIGGER) {
-		z = rpz_find_zone(r, policydname, policydnamelen, rr_class,
-			1 /* only exact */, 1 /* wr lock */);
-		if(!z) {
-			verbose(VERB_ALGO, "RPZ: cannot remove RR from IXFR, "
-				"RPZ domain not found");
-			free(policydname);
-			return;
-		}
-		if(a == RPZ_LOCAL_DATA_ACTION)
-			delete_zone = rpz_data_delete_rr(z, policydname,
-				policydnamelen, rr_type, rdatawl, rdatalen);
-		else if(a != localzone_type_to_rpz_action(z->type)) {
-			free(policydname);
-			return;
-		}
-		lock_rw_unlock(&z->lock); 
-		if(delete_zone) {
-			local_zones_del_zone(r->local_zones, z);
-		}
+	if(t == RPZ_QNAME_TRIGGER) {
+		rpz_remove_qname_trigger(r, policydname, policydnamelen, a,
+			rr_type, rr_class, rdatawl, rdatalen);
+	} else if(t == RPZ_RESPONSE_IP_TRIGGER) {
+		rpz_remove_response_ip_trigger(r, policydname, a, rr_type,
+			rdatawl, rdatalen);
 	}
 	free(policydname);
 }

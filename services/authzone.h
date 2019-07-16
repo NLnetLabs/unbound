@@ -468,10 +468,11 @@ struct auth_zones* auth_zones_create(void);
  * @param az: auth zones structure
  * @param cfg: config to apply.
  * @param setup: if true, also sets up values in the auth zones structure
+ * @param is_rpz: set to 1 if at least one RPZ zone is configured.
  * @return false on failure.
  */
 int auth_zones_apply_cfg(struct auth_zones* az, struct config_file* cfg,
-	int setup);
+	int setup, int* iz_rpz);
 
 /** initial pick up of worker timeouts, ties events to worker event loop
  * @param az: auth zones structure
