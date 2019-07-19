@@ -498,7 +498,13 @@ setup_ctx(struct config_file* cfg)
 		ssl_err("could not set SSL_OP_NO_SSLv2");
 	if((SSL_CTX_set_options(ctx, SSL_OP_NO_SSLv3) & SSL_OP_NO_SSLv3)
 		!= SSL_OP_NO_SSLv3)
-		ssl_err("could not set SSL_OP_NO_SSLv3");
+		ssl_err("could not set SSL_O P_NO_SSLv3");
+#if defined(SSL_OP_NO_RENEGOTIATION)
+	/* disable client renegotiation */
+	if((SSL_CTX_set_options(ctx, SSL_OP_NO_RENEGOTIATION) &
+		SSL_OP_NO_RENEGOTIATION) != SSL_OP_NO_RENEGOTIATION)
+		ssl_err("could not set SSL_OP_NO_RENEGOTIATION");
+#endif
 	if(!SSL_CTX_use_certificate_chain_file(ctx,c_cert))
 		ssl_path_err("Error setting up SSL_CTX client cert", c_cert);
 	if (!SSL_CTX_use_PrivateKey_file(ctx,c_key,SSL_FILETYPE_PEM))

@@ -744,6 +744,14 @@ listen_sslctx_setup(void* ctxt)
 		return 0;
 	}
 #endif
+#if defined(SSL_OP_NO_RENEGOTIATION)
+	/* disable client renegotiation */
+	if((SSL_CTX_set_options(ctx, SSL_OP_NO_RENEGOTIATION) &
+		SSL_OP_NO_RENEGOTIATION) != SSL_OP_NO_RENEGOTIATION) {
+		log_crypto_err("could not set SSL_OP_NO_RENEGOTIATION");
+		return 0;
+	}
+#endif
 #if defined(SHA256_DIGEST_LENGTH) && defined(USE_ECDSA)
 	/* if we have sha256, set the cipher list to have no known vulns */
 	if(!SSL_CTX_set_cipher_list(ctx, "TLS13-CHACHA20-POLY1305-SHA256:TLS13-AES-256-GCM-SHA384:TLS13-AES-128-GCM-SHA256:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256"))
@@ -962,6 +970,14 @@ void* connect_sslctx_create(char* key, char* pem, char* verifypem, int wincert)
 		SSL_CTX_free(ctx);
 		return NULL;
 	}
+#if defined(SSL_OP_NO_RENEGOTIATION)
+	/* disable client renegotiation */
+	if((SSL_CTX_set_options(ctx, SSL_OP_NO_RENEGOTIATION) &
+		SSL_OP_NO_RENEGOTIATION) != SSL_OP_NO_RENEGOTIATION) {
+		log_crypto_err("could not set SSL_OP_NO_RENEGOTIATION");
+		return 0;
+	}
+#endif
 	if(key && key[0]) {
 		if(!SSL_CTX_use_certificate_chain_file(ctx, pem)) {
 			log_err("error in client certificate %s", pem);

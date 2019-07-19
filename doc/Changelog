@@ -1,3 +1,7 @@
+19 July 2019: Wouter
+	- Fix #49: Set no renegotiation on the SSL context to stop client
+	  session renegotiation.
+
 12 July 2019: Wouter
 	- Fix #48: Unbound returns additional records on NODATA response,
 	  if minimal-responses is enabled, also the additional for negative
