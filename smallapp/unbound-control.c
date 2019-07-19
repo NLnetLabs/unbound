@@ -498,7 +498,7 @@ setup_ctx(struct config_file* cfg)
 		ssl_err("could not set SSL_OP_NO_SSLv2");
 	if((SSL_CTX_set_options(ctx, SSL_OP_NO_SSLv3) & SSL_OP_NO_SSLv3)
 		!= SSL_OP_NO_SSLv3)
-		ssl_err("could not set SSL_O P_NO_SSLv3");
+		ssl_err("could not set SSL_OP_NO_SSLv3");
 #if defined(SSL_OP_NO_RENEGOTIATION)
 	/* disable client renegotiation */
 	if((SSL_CTX_set_options(ctx, SSL_OP_NO_RENEGOTIATION) &
