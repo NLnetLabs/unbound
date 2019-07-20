@@ -1123,6 +1123,7 @@ mesh_send_reply(struct mesh_state* m, int rcode, struct reply_info* rep,
 			LDNS_RCODE_NOERROR, &r->edns, NULL, m->s.region) ||
 			!apply_edns_options(&r->edns, &edns_bak,
 				m->s.env->cfg, r->query_reply.c,
+				&r->query_reply,
 				*m->s.env->now, m->s.region) ||
 			!reply_info_answer_encode(&m->s.qinfo, rep, r->qid, 
 			r->qflags, r_buffer, 0, 1, m->s.env->scratch,

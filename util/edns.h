@@ -47,16 +47,18 @@ struct edns_data;
 struct config_file;
 struct comm_point;
 struct regional;
+struct comm_reply;
 
 /**
  * Validate the EDNS Server cookie.
  *
  * @param cfg: configuration.
+ * @param repinfo: struct containing the address of the querier.
  * @param cookie_opt: comm channel.
  * @param now: current time.
  * @return 1 on a valid server cookie, otherwise 0.
  */
-int edns_cookie_validate(struct config_file* cfg,
+int edns_cookie_validate(struct config_file* cfg, struct comm_reply* repinfo,
                 struct edns_option* cookie_opt, time_t now) ;
 /**
  * Apply common EDNS options.
@@ -70,7 +72,7 @@ int edns_cookie_validate(struct config_file* cfg,
  * @return 1 on success, otherwise 0.
  */
 int apply_edns_options(struct edns_data* edns_out, struct edns_data* edns_in,
-	struct config_file* cfg, struct comm_point* c, time_t now,
-	struct regional* region);
+	struct config_file* cfg, struct comm_point* c,
+	struct comm_reply *repinfo, time_t now, struct regional* region);
 
 #endif

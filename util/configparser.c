@@ -4845,8 +4845,8 @@ case 553:
 
 		OUTYY(("P(server_cookie_secret:%s)\n", yystack.l_mark[0].str));
 		if (sldns_str2wire_hex_buf(yystack.l_mark[0].str, secret, &secret_len)
-		|| (  secret_len != 16 && secret_len != 24 && secret_len != 32))
-			yyerror("expected 128, 192 or 256 bit hex string");
+		|| (  secret_len != 16))
+			yyerror("expected 128 bit hex string");
 		else {
 			cfg_parser->cfg->cookie_secret_len = secret_len;
 			memcpy(cfg_parser->cfg->cookie_secret, secret,

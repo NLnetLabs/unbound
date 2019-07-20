@@ -81,55 +81,6 @@ static int edns_keepalive(struct edns_data* edns_out, struct edns_data* edns_in,
 int siphash(const uint8_t *in, const size_t inlen,
 		const uint8_t *k, uint8_t *out, const size_t outlen);
 
-static int aes_server_cookie(uint8_t *server_cookie_out,
-		const uint8_t *secret, size_t secret_len, const uint8_t *in)
-{
-#ifndef HAVE_SSL
-	(void)server_cookie_out;
-	(void)secret;
-	(void)secret_len;
-	(void)in;
-	return 0;
-#else
-# if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
-	EVP_CIPHER_CTX evp_ctx_spc;
-	EVP_CIPHER_CTX *evp_ctx = &evp_ctx_spc;
-# else
-	EVP_CIPHER_CTX *evp_ctx;
-# endif
-	const EVP_CIPHER *aes_ecb;
-	uint8_t out[16];
-	int out_len, success;
-
-	switch(secret_len) {
-	case 16: aes_ecb = EVP_aes_128_ecb(); break;
-	case 24: aes_ecb = EVP_aes_192_ecb(); break;
-	case 32: aes_ecb = EVP_aes_256_ecb(); break;
-	default: return 0;
-	}
-# if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
-	EVP_CIPHER_CTX_init(evp_ctx);
-# else
-	if (!(evp_ctx = EVP_CIPHER_CTX_new()))
-		return 0;
-# endif
-	if((success = EVP_EncryptInit(evp_ctx, aes_ecb, secret, NULL)
-	           && EVP_EncryptUpdate(evp_ctx, out, &out_len, in, 16)
-	           && out_len == 16)) {
-		size_t i;
-
-		for (i = 0; i < 8; i++)
-			server_cookie_out[i] = out[i] ^ out[i + 8];
-	}
-# if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
-	EVP_CIPHER_CTX_cleanup(evp_ctx);
-# else
-	EVP_CIPHER_CTX_free(evp_ctx);
-# endif
-	return success;
-#endif
-}
-
 /** RFC 1982 comparison, uses unsigned integers, and tries to avoid
  * compiler optimization (eg. by avoiding a-b<0 comparisons),
  * this routine matches compare_serial(), for SOA serial number checks */
@@ -169,10 +120,10 @@ subtract_1982(uint32_t a, uint32_t b)
 }
 
 
-int edns_cookie_validate(struct config_file* cfg,
+int edns_cookie_validate(struct config_file* cfg, struct comm_reply* repinfo,
 		struct edns_option* cookie_opt, time_t now)
 {
-	uint8_t server_cookie[8];
+	uint8_t hash[8], data2hash[40];
 	uint32_t cookie_time, now_uint32 = now;
 
 	/* We support only draft-sury-toorop-dns-cookies-algorithms
@@ -194,24 +145,25 @@ int edns_cookie_validate(struct config_file* cfg,
 		/* ignore cookies > 5 minutes in future */
 		return 0;
 
-	switch(cookie_opt->opt_data[9]) {
-	case 3:	if (aes_server_cookie(server_cookie, cfg->cookie_secret,
-				cfg->cookie_secret_len, cookie_opt->opt_data))
-			break;
-		else	return 0;
-	case 4:	if(cfg->cookie_secret_len != 16)
-			return 0;
-		siphash(cookie_opt->opt_data, 16,
-				cfg->cookie_secret, server_cookie, 8);
-		break;
-	default:
+	if (cfg->cookie_secret_len != 16)
 		return 0;
+
+	memcpy(data2hash, cookie_opt->opt_data, 16);
+	if (repinfo->addr.ss_family == AF_INET6) {
+		memcpy( data2hash + 16, &((struct sockaddr_in6 *)
+		                        &repinfo->addr)->sin6_addr, 16);
+		siphash(data2hash, 32, cfg->cookie_secret, hash, 8);
+	} else {
+		memcpy( data2hash + 16, &((struct sockaddr_in *)
+		                        &repinfo->addr)->sin_addr, 4);
+		siphash(data2hash, 20, cfg->cookie_secret, hash, 8);
 	}
-	return memcmp(cookie_opt->opt_data + 16, server_cookie, 8) == 0;
+	return memcmp(cookie_opt->opt_data + 16, hash, 8) == 0;
 }
 
 static int edns_cookie(struct edns_data* edns_out, struct edns_data* edns_in,
-	struct config_file* cfg, struct comm_point* c, time_t now,
+	struct config_file* cfg, struct comm_point* c,
+	struct comm_reply *repinfo, time_t now,
 	struct regional* region)
 {
 	struct edns_option *opt;
@@ -224,41 +176,42 @@ static int edns_cookie(struct edns_data* edns_out, struct edns_data* edns_in,
 
 	opt = edns_opt_list_find(edns_in->opt_list, LDNS_EDNS_COOKIE);
 	if (opt && opt->opt_len >= 8) {
-		uint8_t data_out[24];
+		uint8_t data_out[40], hash[8];
 
 		log_assert(cfg->cookie_secret_len >= 16);
 
 		(void)memcpy(data_out, opt->opt_data, 8);
 		data_out[ 8] = 1;   /* Version */
-		                    /* Algorithm, 3 = AES, 4 = SipHash2.4 */
-		data_out[ 9] = cfg->cookie_secret_len == 16 ? 4 : 3;
+		data_out[ 9] = 0;   /* Reserved */
 		data_out[10] = 0;   /* Reserved */
 		data_out[11] = 0;   /* Reserved */
 		sldns_write_uint32(data_out + 12, time(NULL));
-		if (data_out[9] == 4)
-			siphash(data_out, 16,
-				cfg->cookie_secret, data_out + 16, 8);
-
-		else if (!aes_server_cookie(data_out + 16, cfg->cookie_secret,
-				cfg->cookie_secret_len, data_out))
-			return 0;
-
+		if (repinfo->addr.ss_family == AF_INET6) {
+			memcpy( data_out + 16, &((struct sockaddr_in6 *)
+			                       &repinfo->addr)->sin6_addr, 16);
+			siphash(data_out, 32, cfg->cookie_secret, hash, 8);
+		} else {
+			memcpy( data_out + 16, &((struct sockaddr_in *)
+			                       &repinfo->addr)->sin_addr, 4);
+			siphash(data_out, 20, cfg->cookie_secret, hash, 8);
+		}
+		memcpy(data_out + 16, hash, 8);
 		if(!edns_opt_list_append(&edns_out->opt_list, LDNS_EDNS_COOKIE,
-				sizeof(data_out), data_out, region))
+				24, data_out, region))
 			return 0;
 	}
 	return 1;
 }
 
 int apply_edns_options(struct edns_data* edns_out, struct edns_data* edns_in,
-	struct config_file* cfg, struct comm_point* c, time_t now,
-	struct regional* region)
+	struct config_file* cfg, struct comm_point* c,
+	struct comm_reply *repinfo, time_t now, struct regional* region)
 {
 	if(cfg->do_tcp_keepalive &&
 		!edns_keepalive(edns_out, edns_in, c, region))
 		return 0;
 
-	if(!edns_cookie(edns_out, edns_in, cfg, c, now, region))
+	if(!edns_cookie(edns_out, edns_in, cfg, c, repinfo, now, region))
 		return 0;
 
 	return 1;
