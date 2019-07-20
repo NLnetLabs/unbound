@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# Build unbound distribution tar from the SVN repository.
+# Build unbound distribution tar from the git repository.
 # 
 # Copyright (c) 2007, NLnet Labs. All rights reserved.
 # 
@@ -42,7 +42,7 @@ cwd=`pwd`
 # Utility functions.
 usage () {
     cat >&2 <<EOF
-Usage $0: [-h] [-s] [-d SVN_root] [-w ...args...]
+Usage $0: [-h] [-s] [-u git_url] [-b git_branch] [-w ...args...]
 Generate a distribution tar file for unbound.
 
     -h           This usage information.
@@ -51,8 +51,10 @@ Generate a distribution tar file for unbound.
     -rc <nr>     Build a release candidate, the given string will be added
                  to the version number 
                  (which will then be unbound-<version>rc<number>)
-    -d SVN_root  Retrieve the unbound source from the specified repository.
-                 Detected from svn working copy if not specified.
+    -u git_url   Retrieve the source from the specified repository url.
+                 Detected from the working copy if not specified.
+    -b git_branch Retrieve the the specified branch or tag.
+                 Detected from the working copy if not specified.
     -wssl openssl.xx.tar.gz Also build openssl from tarball for windows dist.
     -wxp expat.xx.tar.gz Also build expat from tarball for windows dist.
     -w32	 32bit windows compile.
@@ -115,16 +117,20 @@ replace_version () {
     replace_text "$1" "VERSION_MICRO\],\[$v1" "VERSION_MICRO\],\[$v2"
 }
     
-check_svn_root () {
-    # Check if SVNROOT is specified.
-    if [ -z "$SVNROOT" ]; then
-	if svn info 2>&1 | grep "not a working copy" >/dev/null; then
-		if test -z "$SVNROOT"; then
-		    error "SVNROOT must be specified (using -d)"
-		fi
+check_git_repo () {
+    # Check if git repo and branch are specified.
+    if [ -z "$GITREPO" ]; then
+	if git status 2>&1 | grep "not a git repository" >/dev/null; then
+		error "specify repo (using -u) or use settings detected by starting from working copy directory"
 	else
-	     eval `svn info | grep 'URL:' | sed -e 's/URL: /url=/' | head -1`
-	     SVNROOT="$url"
+	     GITREPO="`git config --get remote.origin.url`"
+	fi
+    fi
+    if [ -z "$GITBRANCH" ]; then
+	if git status 2>&1 | grep "not a git repository" >/dev/null; then
+		error "specify branch (using -b) or use settings detected by starting from working copy directory"
+	else
+	     GITBRANCH="`git branch | grep '^\*' | sed -e 's/^\* //'`"
 	fi
     fi
 }
@@ -189,8 +195,12 @@ while [ "$1" ]; do
         "-h")
             usage
             ;;
-        "-d")
-            SVNROOT="$2"
+        "-u")
+            GITREPO="$2"
+            shift
+            ;;
+        "-b")
+            GITBRANCH="$2"
             shift
             ;;
         "-s")
@@ -242,7 +252,7 @@ if [ "$DOWIN" = "yes" ]; then
 	cross_flag=""
 	shared_cross_flag=""
 
-	check_svn_root
+	check_git_repo
 	create_temp_dir
 
 	# crosscompile openssl for windows.
@@ -301,10 +311,13 @@ if [ "$DOWIN" = "yes" ]; then
 		cd ..
 	fi
 
-        info "SVNROOT  is $SVNROOT"
-	info "Exporting source from SVN."
-	svn export "$SVNROOT" unbound || error_cleanup "SVN command failed"
-	cd unbound || error_cleanup "Unbound not exported correctly from SVN"
+        info "GITREPO   is $GITREPO"
+        info "GITBRANCH is $GITBRANCH"
+	info "Exporting source from git."
+	info "git clone --depth=1 --no-tags -b $GITBRANCH $GITREPO unbound"
+	git clone --depth=1 --no-tags -b $GITBRANCH $GITREPO unbound || error_cleanup "git clone failed"
+	cd unbound || error_cleanup "Unbound not exported correctly from git"
+	rm -rf .git || error_cleanup "Failed to remove .git tracking information"
 
 	# on a re-configure the cache may no longer be valid...
 	if test -f mingw32-config.cache; then rm mingw32-config.cache; fi
@@ -429,20 +442,24 @@ if [ "$DOWIN" = "yes" ]; then
     exit 0
 fi
 
-check_svn_root
+check_git_repo
 
 # Start the packaging process.
-info "SVNROOT  is $SVNROOT"
-info "SNAPSHOT is $SNAPSHOT"
+info "GITREPO   is $GITREPO"
+info "GITBRANCH is $GITBRANCH"
+info "SNAPSHOT  is $SNAPSHOT"
 
 #question "Do you wish to continue with these settings?" || error "User abort."
 
 create_temp_dir
 
-info "Exporting source from SVN."
-svn export "$SVNROOT" unbound || error_cleanup "SVN command failed"
+info "Exporting source from git."
+# --depth=1 and --no-tags reduce the download size.
+info "git clone --depth=1 --no-tags -b $GITBRANCH $GITREPO unbound"
+git clone --depth=1 --no-tags -b $GITBRANCH $GITREPO unbound || error_cleanup "git clone failed"
 
-cd unbound || error_cleanup "Unbound not exported correctly from SVN"
+cd unbound || error_cleanup "Unbound not exported correctly from git"
+rm -rf .git || error_cleanup "Failed to remove .git tracking information"
 
 info "Adding libtool utils (libtoolize)."
 libtoolize -c --install || libtoolize -c || error_cleanup "Libtoolize failed."

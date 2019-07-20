@@ -328,6 +328,8 @@ ub_ctx_delete(struct ub_ctx* ctx)
 	ub_randfree(ctx->seed_rnd);
 	alloc_clear(&ctx->superalloc);
 	traverse_postorder(&ctx->queries, delq, NULL);
+	if(ctx->logfile_override)
+		log_file(NULL);
 	free(ctx);
 #ifdef USE_WINSOCK
 	WSACleanup();

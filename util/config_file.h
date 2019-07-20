@@ -384,6 +384,10 @@ struct config_file {
 	struct config_str2list* local_zones;
 	/** local zones nodefault list */
 	struct config_strlist* local_zones_nodefault;
+#ifdef USE_IPSET
+	/** local zones ipset list */
+	struct config_strlist* local_zones_ipset;
+#endif
 	/** do not add any default local zone */
 	int local_zones_disable_default;
 	/** local data RRs configured */
@@ -433,7 +437,7 @@ struct config_file {
 	char* control_cert_file;
 
 	/** Python script file */
-	char* python_script;
+	struct config_strlist* python_script;
 
 	/** Use systemd socket activation. */
 	int use_systemd;
@@ -579,9 +583,15 @@ struct config_file {
 	/** do answer with server cookie when request contained cookie option */
 	int do_answer_cookie;
 	/** cookie secret */
-	uint8_t cookie_secret[32];
+	uint8_t cookie_secret[40];
 	/** cookie secret length */
 	size_t  cookie_secret_len;
+
+	/* ipset module */
+#ifdef USE_IPSET
+	char* ipset_name_v4;
+	char* ipset_name_v6;
+#endif
 };
 
 /** from cfg username, after daemonize setup performed */
@@ -654,6 +664,10 @@ struct config_view {
 	struct config_strlist* local_data;
 	/** local zones nodefault list */
 	struct config_strlist* local_zones_nodefault;
+#ifdef USE_IPSET
+	/** local zones ipset list */
+	struct config_strlist* local_zones_ipset;
+#endif
 	/** Fallback to global local_zones when there is no match in the view
 	 * view specific tree. 1 for yes, 0 for no */	
 	int isfirst;
@@ -826,6 +840,14 @@ char* config_collate_cat(struct config_strlist* list);
  * on fail the item is free()ed.
  */
 int cfg_strlist_append(struct config_strlist_head* list, char* item);
+
+/**
+ * Searches the end of a string list and appends the given text.
+ * @param head: pointer to strlist head variable.
+ * @param item: new item. malloced by caller. if NULL the insertion fails.
+ * @return true on success.
+ */
+int cfg_strlist_append_ex(struct config_strlist** head, char* item);
 
 /**
  * Find string in strlist.
@@ -1188,3 +1210,4 @@ void w_config_adjust_directory(struct config_file* cfg);
 extern int fake_dsa, fake_sha1;
 
 #endif /* UTIL_CONFIG_FILE_H */
+
