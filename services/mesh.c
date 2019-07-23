@@ -1340,14 +1340,15 @@ int mesh_state_add_reply(struct mesh_state* s, struct edns_data* edns,
 		log_assert(!qinfo->local_alias->next && dsrc->count == 1 &&
 			qinfo->local_alias->rrset->rk.type ==
 			htons(LDNS_RR_TYPE_CNAME));
-		/* Technically, we should make a local copy for the owner
-		 * name of the RRset, but in the case of the first (and
-		 * currently only) local alias RRset, the owner name should
-		 * point to the qname of the corresponding query, which should
-		 * be valid throughout the lifetime of this mesh_reply.  So
-		 * we can skip copying. */
-		log_assert(qinfo->local_alias->rrset->rk.dname ==
-			sldns_buffer_at(rep->c->buffer, LDNS_HEADER_SIZE));
+		/* we should make a local copy for the owner name of
+		 * the RRset */
+		r->local_alias->rrset->rk.dname_len =
+			qinfo->local_alias->rrset->rk.dname_len;
+		r->local_alias->rrset->rk.dname = regional_alloc_init(
+			s->s.region, qinfo->local_alias->rrset->rk.dname,
+			qinfo->local_alias->rrset->rk.dname_len);
+		if(!r->local_alias->rrset->rk.dname)
+			return 0;
 
 		/* the rrset is not packed, like in the cache, but it is
 		 * individualy allocated with an allocator from localzone. */

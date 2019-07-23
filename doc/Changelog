@@ -1,3 +1,6 @@
+23 July 2019: Wouter
+	- Fix question section mismatch in local zone redirect.
+
 19 July 2019: Wouter
 	- Fix #49: Set no renegotiation on the SSL context to stop client
 	  session renegotiation.
