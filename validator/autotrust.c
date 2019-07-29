@@ -1181,7 +1181,8 @@ void autr_write_file(struct module_env* env, struct trust_anchor* tp)
 		log_err("autr_write_file: Module environment is NULL.");
 		return;
 	}
-	/* unique name with pid number and thread number */
+	/* unique name with pid number, thread number, and struct pointer
+	 * (the pointer uniquifies for multiple libunbound contexts) */
 	snprintf(tempf, sizeof(tempf), "%s.%d-%d-%llx", fname, (int)getpid(),
 		env->worker?*(int*)env->worker:0, (long long int)tp);
 	verbose(VERB_ALGO, "autotrust: write to disk: %s", tempf);
