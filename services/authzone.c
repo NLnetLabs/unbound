@@ -4867,6 +4867,11 @@ xfr_write_after_update(struct auth_xfer* xfr, struct module_env* env)
 	if(cfg->chrootdir && cfg->chrootdir[0] && strncmp(zfilename,
 		cfg->chrootdir, strlen(cfg->chrootdir)) == 0)
 		zfilename += strlen(cfg->chrootdir);
+	if(verbosity >= VERB_ALGO) {
+		char nm[255+1];
+		dname_str(z->name, nm);
+		verbose(VERB_ALGO, "write zonefile %s for %s", zfilename, nm);
+	}
 
 	/* write to tempfile first */
 	if((size_t)strlen(zfilename) + 16 > sizeof(tmpfile)) {
