@@ -1,5 +1,7 @@
 29 July 2019: Wouter
 	- Add verbose log message when auth zone file is written, at level 4.
+	- Add hex print of trust anchor pointer to trust anchor file temp
+	  name to make it unique, for libunbound created multiple contexts.
 
 23 July 2019: Wouter
 	- Fix question section mismatch in local zone redirect.

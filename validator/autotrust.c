@@ -1182,8 +1182,8 @@ void autr_write_file(struct module_env* env, struct trust_anchor* tp)
 		return;
 	}
 	/* unique name with pid number and thread number */
-	snprintf(tempf, sizeof(tempf), "%s.%d-%d", fname, (int)getpid(),
-		env->worker?*(int*)env->worker:0);
+	snprintf(tempf, sizeof(tempf), "%s.%d-%d-%llx", fname, (int)getpid(),
+		env->worker?*(int*)env->worker:0, (long long int)tp);
 	verbose(VERB_ALGO, "autotrust: write to disk: %s", tempf);
 	out = fopen(tempf, "w");
 	if(!out) {
