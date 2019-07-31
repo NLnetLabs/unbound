@@ -102,10 +102,7 @@ log_init(const char* filename, int use_syslog, const char* chrootdir)
 		lock_quick_lock(&log_lock);
 	}
 	if(logfile && logfile != stderr) {
-		FILE* cl = logfile;
-		logfile = NULL; /* set to NULL before it is closed, so that
-			other threads have a valid logfile or NULL */
-		fclose(cl);
+		logfile = NULL; /* set to NULL to reflect the most recent logfile */
 	}
 #ifdef HAVE_SYSLOG_H
 	if(logging_to_syslog) {
