@@ -93,7 +93,8 @@ static struct ub_ctx* ub_ctx_create_nopipe(void)
 #endif
 	
 	checklock_start();
-	log_init(NULL, 0, NULL); /* logs to stderr */
+	if(!ctx_logfile_overridden)
+		log_init(NULL, 0, NULL); /* logs to stderr */
 	log_ident_set("libunbound");
 #ifdef USE_WINSOCK
 	if((r = WSAStartup(MAKEWORD(2,2), &wsa_data)) != 0) {
@@ -476,6 +477,7 @@ int ub_ctx_debugout(struct ub_ctx* ctx, void* out)
 {
 	lock_basic_lock(&ctx->cfglock);
 	log_file((FILE*)out);
+	ctx_logfile_overridden = 1;
 	ctx->logfile_override = 1;
 	ctx->log_out = out;
 	lock_basic_unlock(&ctx->cfglock);

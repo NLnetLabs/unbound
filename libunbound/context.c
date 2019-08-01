@@ -57,7 +57,7 @@ context_finalize(struct ub_ctx* ctx)
 {
 	struct config_file* cfg = ctx->env->cfg;
 	verbosity = cfg->verbosity;
-	if(ctx_logfile_overridden) {
+	if(ctx_logfile_overridden && !ctx->logfile_override) {
 		log_file(NULL); /* clear that override */
 		ctx_logfile_overridden = 0;
 	}

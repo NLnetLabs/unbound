@@ -1,5 +1,6 @@
 1 August 2019: Wouter
 	- For #52 #53, second context does not close logfile override.
+	- Fix #52 #53, fix for example fail program.
 
 29 July 2019: Wouter
 	- Add verbose log message when auth zone file is written, at level 4.
