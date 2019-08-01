@@ -79,6 +79,9 @@
 #include <iphlpapi.h>
 #endif /* UB_ON_WINDOWS */
 
+/** store that the logfile has a debug override */
+int ctx_logfile_overridden = 0;
+
 /** create context functionality, but no pipes */
 static struct ub_ctx* ub_ctx_create_nopipe(void)
 {
@@ -328,8 +331,10 @@ ub_ctx_delete(struct ub_ctx* ctx)
 	ub_randfree(ctx->seed_rnd);
 	alloc_clear(&ctx->superalloc);
 	traverse_postorder(&ctx->queries, delq, NULL);
-	if(ctx->logfile_override)
+	if(ctx_logfile_overridden) {
 		log_file(NULL);
+		ctx_logfile_overridden = 0;
+	}
 	free(ctx);
 #ifdef USE_WINSOCK
 	WSACleanup();

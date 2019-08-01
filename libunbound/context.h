@@ -52,6 +52,9 @@ struct tube;
 struct sldns_buffer;
 struct ub_event_base;
 
+/** store that the logfile has a debug override */
+extern int ctx_logfile_overridden;
+
 /**
  * The context structure
  *
