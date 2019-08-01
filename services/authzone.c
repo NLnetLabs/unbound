@@ -4887,6 +4887,7 @@ xfr_write_after_update(struct auth_xfer* xfr, struct module_env* env)
 		if(!auth_zone_write_chunks(xfr, tmpfile)) {
 			unlink(tmpfile);
 			lock_rw_unlock(&z->lock);
+			return;
 		}
 	} else if(!auth_zone_write_file(z, tmpfile)) {
 		unlink(tmpfile);
@@ -6568,7 +6569,7 @@ xfr_set_timeout(struct auth_xfer* xfr, struct module_env* env,
 		/* don't lookup_only, if lookup timeout is 0 anyway,
 		 * or if we don't have masters to lookup */
 		tv.tv_sec = 0;
-		if(xfr->task_probe && xfr->task_probe->worker == NULL)
+		if(xfr->task_probe->worker == NULL)
 			xfr->task_probe->only_lookup = 1;
 	}
 	if(verbosity >= VERB_ALGO) {
