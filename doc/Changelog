@@ -4,6 +4,7 @@
 	- Fix to return after failed auth zone http chunk write.
 	- Fix to remove unused test for task_probe existance.
 	- Fix to timeval_add for remaining second in microseconds.
+	- Check repinfo in worker_handle_request, if null, drop it.
 
 29 July 2019: Wouter
 	- Add verbose log message when auth zone file is written, at level 4.

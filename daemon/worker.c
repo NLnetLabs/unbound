@@ -1095,7 +1095,7 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 	struct respip_client_info* cinfo = NULL, cinfo_tmp;
 	memset(&qinfo, 0, sizeof(qinfo));
 
-	if(error != NETEVENT_NOERROR) {
+	if(error != NETEVENT_NOERROR || !repinfo) {
 		/* some bad tcp query DNS formats give these error calls */
 		verbose(VERB_ALGO, "handle request called with err=%d", error);
 		return 0;
