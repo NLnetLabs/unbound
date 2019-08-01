@@ -61,6 +61,7 @@
 #include "services/authzone.h"
 #include "services/mesh.h"
 #include "services/localzone.h"
+#include "services/rpz.h"
 #include "util/data/msgparse.h"
 #include "util/data/msgencode.h"
 #include "util/data/dname.h"
@@ -574,7 +575,8 @@ apply_respip_action(struct worker* worker, const struct query_info* qinfo,
 	struct comm_reply* repinfo, struct ub_packed_rrset_key** alias_rrset,
 	struct reply_info** encode_repp, struct auth_zones* az)
 {
-	struct respip_action_info actinfo = {respip_none, NULL};
+	struct respip_action_info actinfo = {0};
+	actinfo.action = respip_none;
 
 	if(qinfo->qtype != LDNS_RR_TYPE_A &&
 		qinfo->qtype != LDNS_RR_TYPE_AAAA &&
@@ -595,9 +597,18 @@ apply_respip_action(struct worker* worker, const struct query_info* qinfo,
 	/* If address info is returned, it means the action should be an
 	 * 'inform' variant and the information should be logged. */
 	if(actinfo.addrinfo) {
-		respip_inform_print(actinfo.addrinfo, qinfo->qname,
+		respip_inform_print(&actinfo, qinfo->qname,
 			qinfo->qtype, qinfo->qclass, qinfo->local_alias,
 			repinfo);
+
+		if(worker->stats.extended && actinfo.rpz_used) {
+			/* TODO: does not work for disabled (override) actions */
+			if(actinfo.rpz_cname_override)
+				worker->stats.rpz_action[RPZ_CNAME_OVERRIDE_ACTION]++;
+			else
+				worker->stats.rpz_action[
+					respip_action_to_rpz_action(actinfo.action)]++;
+		}
 	}
 
 	return 1;

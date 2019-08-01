@@ -49,6 +49,7 @@ struct resp_addr {
 /**
  * Forward declaration for the structure that represents a tree of view data.
  */
+
 struct views;
 
 struct respip_addr_info;
@@ -78,6 +79,10 @@ struct respip_client_info {
  */
 struct respip_action_info {
 	enum respip_action action;
+	int rpz_used;
+	int rpz_log;
+	char* log_name;
+	int rpz_cname_override;
 	struct respip_addr_info* addrinfo; /* set only for inform variants */
 };
 
@@ -234,7 +239,7 @@ int respip_set_is_empty(const struct respip_set* set);
 /**
  * print log information for a query subject to an inform or inform-deny
  * response-ip action.
- * @param respip_addr: response-ip information that causes the action
+ * @param respip_actinfo: response-ip information that causes the action
  * @param qname: query name in the context, will be ignored if local_alias is
  *   non-NULL.
  * @param qtype: query type, in host byte order.
@@ -244,9 +249,9 @@ int respip_set_is_empty(const struct respip_set* set);
  *  query name.
  * @param repinfo: reply info containing the client's source address and port.
  */
-void respip_inform_print(struct respip_addr_info* respip_addr, uint8_t* qname,
-	uint16_t qtype, uint16_t qclass, struct local_rrset* local_alias,
-	struct comm_reply* repinfo);
+void respip_inform_print(struct respip_action_info* respip_actinfo,
+	uint8_t* qname, uint16_t qtype, uint16_t qclass,
+	struct local_rrset* local_alias, struct comm_reply* repinfo);
 
 /**
  * Find resp_addr in tree, create and add to tree if it does not exist.

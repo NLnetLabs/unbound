@@ -178,10 +178,21 @@ struct rpz* rpz_create(struct config_auth* p);
  */
 const char* rpz_action_to_string(enum rpz_action a);
 
+enum rpz_action
+respip_action_to_rpz_action(enum respip_action a);
+
 /**
  * Prepare RPZ after procesing feed content.
  * @param r: RPZ to use
  */
 void rpz_finish_config(struct rpz* r);
+
+/**
+ * Classify respip action for RPZ action
+ * @param a: RPZ action
+ * @return: the respip action
+ */
+enum respip_action
+rpz_action_to_respip_action(enum rpz_action a);
 
 #endif /* SERVICES_RPZ_H */

@@ -656,6 +656,7 @@ make_new_reply_info(const struct reply_info* rep, struct regional* region,
  * the "no data" action in case of error.
  * @param raddr: address span that requires an action
  * @param action: action to apply
+ * @param data: RRset to use for override
  * @param qtype: original query type
  * @param rep: original reply message
  * @param rrset_id: the rrset ID in 'rep' to which the action should apply
@@ -671,13 +672,14 @@ make_new_reply_info(const struct reply_info* rep, struct regional* region,
  */
 static int
 respip_data_answer(const struct resp_addr* raddr, enum respip_action action,
+	struct ub_packed_rrset_key* data,
 	uint16_t qtype, const struct reply_info* rep,
 	size_t rrset_id, struct reply_info** new_repp, int tag,
 	struct config_strlist** tag_datas, size_t tag_datas_size,
 	char* const* tagname, int num_tags,
 	struct ub_packed_rrset_key** redirect_rrsetp, struct regional* region)
 {
-	struct ub_packed_rrset_key* rp = raddr->data;
+	struct ub_packed_rrset_key* rp = data;
 	struct reply_info* new_rep;
 	*redirect_rrsetp = NULL;
 
@@ -715,7 +717,7 @@ respip_data_answer(const struct resp_addr* raddr, enum respip_action action,
 	 * to replace the rrset's dname.  Note that, unlike local data, we
 	 * rename the dname for other actions than redirect.  This is because
 	 * response-ip-data isn't associated to any specific name. */
-	if(rp == raddr->data) {
+	if(rp == data) {
 		rp = copy_rrset(rp, region);
 		if(!rp)
 			return -1;
@@ -807,16 +809,22 @@ populate_action_info(struct respip_action_info* actinfo,
 	enum respip_action action, const struct resp_addr* raddr,
 	const struct ub_packed_rrset_key* ATTR_UNUSED(rrset),
 	int ATTR_UNUSED(tag), const struct respip_set* ATTR_UNUSED(ipset),
-	int ATTR_UNUSED(action_only), struct regional* region)
+	int ATTR_UNUSED(action_only), struct regional* region, int rpz_used,
+	int rpz_log, char* log_name, int rpz_cname_override)
 {
 	if(action == respip_none || !raddr)
 		return 1;
 	actinfo->action = action;
+	actinfo->rpz_used = 1;
+	actinfo->rpz_log = rpz_log;
+	actinfo->log_name = log_name;
+	actinfo->rpz_cname_override = rpz_cname_override;
 
 	/* for inform variants, make a copy of the matched address block for
 	 * later logging.  We make a copy to proactively avoid disruption if
 	 *  and when we allow a dynamic update to the respip tree. */
-	if(action == respip_inform || action == respip_inform_deny) {
+	if(action == respip_inform || action == respip_inform_deny ||
+		rpz_log) {
 		struct respip_addr_info* a =
 			regional_alloc_zero(region, sizeof(*a));
 		if(!a) {
@@ -829,6 +837,30 @@ populate_action_info(struct respip_action_info* actinfo,
 		actinfo->addrinfo = a;
 	}
 
+	return 1;
+}
+
+static int
+respip_use_rpz(struct resp_addr* raddr, struct rpz* r,
+	enum respip_action* action,
+	struct ub_packed_rrset_key** data, int* rpz_log, char** log_name,
+	int* rpz_cname_override, struct regional* region)
+{
+	if(r->action_override == RPZ_DISABLED_ACTION) {
+		return 0;
+	}
+	else if(r->action_override == RPZ_NO_OVERRIDE_ACTION)
+		*action = raddr->action;
+	else
+		*action = rpz_action_to_respip_action(r->action_override);
+	if(r->action_override == RPZ_CNAME_OVERRIDE_ACTION &&
+		r->cname_override) {
+		*data = r->cname_override;
+		*rpz_cname_override = 1;
+	}
+	*rpz_log = r->log;
+	if(r->log_name)
+		*log_name = regional_strdup(region, r->log_name);
 	return 1;
 }
 
@@ -854,6 +886,11 @@ respip_rewrite_reply(const struct query_info* qinfo,
 	int ret = 1;
 	struct ub_packed_rrset_key* redirect_rrset = NULL;
 	struct rpz* r;
+	struct ub_packed_rrset_key* data = NULL;
+	int rpz_used = 0;
+	int rpz_log = 0;
+	int rpz_cname_override = 0;
+	char* log_name = NULL;
 
 	if(!cinfo)
 		goto done;
@@ -903,7 +940,15 @@ respip_rewrite_reply(const struct query_info* qinfo,
 			r->taglistlen, ctaglist, ctaglen)) {
 			if((raddr = respip_addr_lookup(rep,
 				r->respip_set, &rrset_id))) {
-				action = raddr->action;
+			}
+			if(raddr) {
+				if(!respip_use_rpz(raddr, r, &action, &data,
+					&rpz_log, &log_name, &rpz_cname_override,
+					region)) {
+					lock_rw_unlock(&raddr->lock);
+					raddr = NULL;
+				}
+				rpz_used = 1;
 			}
 		}	
 	}
@@ -918,9 +963,10 @@ respip_rewrite_reply(const struct query_info* qinfo,
 			&& action != respip_always_nxdomain
 			&& action != respip_always_nodata
 			&& (result = respip_data_answer(raddr, action,
-			qinfo->qtype, rep, rrset_id, new_repp, tag, tag_datas,
-			tag_datas_size, ipset->tagname, ipset->num_tags,
-			&redirect_rrset, region)) < 0) {
+			(data) ? data : raddr->data, qinfo->qtype, rep,
+			rrset_id, new_repp, tag, tag_datas, tag_datas_size,
+			ipset->tagname, ipset->num_tags, &redirect_rrset,
+			region)) < 0) {
 			ret = 0;
 			goto done;
 		}
@@ -951,7 +997,8 @@ respip_rewrite_reply(const struct query_info* qinfo,
 			*alias_rrset = redirect_rrset;
 		/* on success, populate respip result structure */
 		ret = populate_action_info(actinfo, action, raddr,
-			redirect_rrset, tag, ipset, search_only, region);
+			redirect_rrset, tag, ipset, search_only, region,
+				rpz_used, rpz_log, log_name, rpz_cname_override);
 	}
 	if(raddr)
 		lock_rw_unlock(&raddr->lock);
@@ -1009,9 +1056,10 @@ respip_operate(struct module_qstate* qstate, enum module_ev event, int id,
 			qstate->qinfo.qtype == LDNS_RR_TYPE_AAAA ||
 			qstate->qinfo.qtype == LDNS_RR_TYPE_ANY) &&
 			qstate->return_msg && qstate->return_msg->rep) {
-			struct respip_action_info actinfo = {respip_none, NULL};
 			struct reply_info* new_rep = qstate->return_msg->rep;
 			struct ub_packed_rrset_key* alias_rrset = NULL;
+			struct respip_action_info actinfo = {0};
+			actinfo.action = respip_none;
 
 			if(!respip_rewrite_reply(&qstate->qinfo,
 				qstate->client_info, qstate->return_msg->rep,
@@ -1070,7 +1118,8 @@ respip_merge_cname(struct reply_info* base_rep,
 	struct ub_packed_rrset_key* alias_rrset = NULL; /* ditto */
 	uint16_t tgt_rcode;
 	size_t i, j;
-	struct respip_action_info actinfo = {respip_none, NULL};
+	struct respip_action_info actinfo = {0};
+	actinfo.action = respip_none;
 
 	/* If the query for the CNAME target would result in an unusual rcode,
 	 * we generally translate it as a failure for the base query
@@ -1201,12 +1250,15 @@ respip_set_is_empty(const struct respip_set* set)
 }
 
 void
-respip_inform_print(struct respip_addr_info* respip_addr, uint8_t* qname,
+respip_inform_print(struct respip_action_info* respip_actinfo, uint8_t* qname,
 	uint16_t qtype, uint16_t qclass, struct local_rrset* local_alias,
 	struct comm_reply* repinfo)
 {
 	char srcip[128], respip[128], txt[512];
 	unsigned port;
+	struct respip_addr_info* respip_addr = respip_actinfo->addrinfo;
+	size_t txtlen = 0;
+	char* actionstr = NULL;
 
 	if(local_alias)
 		qname = local_alias->rrset->rk.dname;
@@ -1216,7 +1268,25 @@ respip_inform_print(struct respip_addr_info* respip_addr, uint8_t* qname,
 	addr_to_str(&repinfo->addr, repinfo->addrlen, srcip, sizeof(srcip));
 	addr_to_str(&respip_addr->addr, respip_addr->addrlen,
 		respip, sizeof(respip));
-	snprintf(txt, sizeof(txt), "%s/%d inform %s@%u", respip,
-		respip_addr->net, srcip, port);
+	if(respip_actinfo->rpz_log) {
+		txtlen += snprintf(txt+txtlen, sizeof(txt)-txtlen, "%s",
+			"RPZ applied ");
+		if(respip_actinfo->rpz_cname_override)
+			actionstr = strdup(
+				rpz_action_to_string(RPZ_CNAME_OVERRIDE_ACTION));
+		else
+			actionstr = strdup(rpz_action_to_string(
+				respip_action_to_rpz_action(
+					respip_actinfo->action)));
+	}
+	if(respip_actinfo->log_name) {
+		txtlen += snprintf(txt+txtlen, sizeof(txt)-txtlen,
+			"[%s] ", respip_actinfo->log_name);
+	}
+	txtlen += snprintf(txt+txtlen, sizeof(txt)-txtlen,
+		"%s/%d %s %s@%u", respip, respip_addr->net,
+		(actionstr) ? actionstr : "inform", srcip, port);
+	if(actionstr)
+		free(actionstr);
 	log_nametypeclass(0, txt, qname, qtype, qclass);
 }

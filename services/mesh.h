@@ -51,6 +51,7 @@
 #include "util/data/msgparse.h"
 #include "util/module.h"
 #include "services/modstack.h"
+#include "services/rpz.h"
 struct sldns_buffer;
 struct mesh_state;
 struct mesh_reply;
@@ -124,6 +125,8 @@ struct mesh_area {
 	size_t ans_rcode[16];
 	/** (extended stats) rcode nodata in replies */
 	size_t ans_nodata;
+	/** (extended stats) type of applied RPZ action */
+	size_t rpz_action[10];
 
 	/** backup of query if other operations recurse and need the
 	 * network buffers */

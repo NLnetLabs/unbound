@@ -1180,10 +1180,19 @@ void mesh_query_done(struct mesh_state* mstate)
 		 *  information should be logged for each client. */
 		if(mstate->s.respip_action_info &&
 			mstate->s.respip_action_info->addrinfo) {
-			respip_inform_print(mstate->s.respip_action_info->addrinfo,
+			respip_inform_print(mstate->s.respip_action_info,
 				r->qname, mstate->s.qinfo.qtype,
 				mstate->s.qinfo.qclass, r->local_alias,
 				&r->query_reply);
+			if(mstate->s.env->cfg->stat_extended &&
+				mstate->s.respip_action_info->rpz_used) {
+				/* TODO: does not work for disabled (override) actions */
+				if(mstate->s.respip_action_info->rpz_cname_override)
+					mstate->s.env->mesh->rpz_action[RPZ_CNAME_OVERRIDE_ACTION]++;
+				else
+					mstate->s.env->mesh->rpz_action[respip_action_to_rpz_action(
+						mstate->s.respip_action_info->action)]++;
+			}
 		}
 
 		/* if this query is determined to be dropped during the
@@ -1580,6 +1589,7 @@ mesh_stats_clear(struct mesh_area* mesh)
 	mesh->ans_secure = 0;
 	mesh->ans_bogus = 0;
 	memset(&mesh->ans_rcode[0], 0, sizeof(size_t)*16);
+	memset(&mesh->rpz_action[0], 0, sizeof(size_t)*10);
 	mesh->ans_nodata = 0;
 }
 

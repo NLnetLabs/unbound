@@ -209,7 +209,7 @@ rpz_action_to_localzone_type(enum rpz_action a)
 	}
 }
 
-static enum respip_action
+enum respip_action
 rpz_action_to_respip_action(enum rpz_action a)
 {
 	switch(a) {
@@ -237,6 +237,21 @@ localzone_type_to_rpz_action(enum localzone_type lzt)
 	case local_zone_always_transparent:	return RPZ_PASSTHRU_ACTION;
 	case local_zone_redirect:		return RPZ_LOCAL_DATA_ACTION;
 	case local_zone_invalid:
+	default:
+		return RPZ_INVALID_ACTION;
+	}
+}
+
+enum rpz_action
+respip_action_to_rpz_action(enum respip_action a)
+{
+	switch(a) {
+	case respip_always_nxdomain:	return RPZ_NXDOMAIN_ACTION;
+	case respip_always_nodata:	return RPZ_NODATA_ACTION;
+	case respip_deny:		return RPZ_DROP_ACTION;
+	case respip_always_transparent:	return RPZ_PASSTHRU_ACTION;
+	case respip_redirect:		return RPZ_LOCAL_DATA_ACTION;
+	case respip_invalid:
 	default:
 		return RPZ_INVALID_ACTION;
 	}
@@ -861,6 +876,8 @@ rpz_apply_qname_trigger(struct auth_zones* az, struct module_env* env,
 					log_rpz_apply(z->name,
 						r->action_override,
 						qinfo, repinfo, r->log_name);
+				/* TODO only register stats when stats_extended?
+				 * */
 				stats->rpz_action[r->action_override]++;
 				lock_rw_unlock(&z->lock);
 				z = NULL;
