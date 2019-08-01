@@ -3,6 +3,7 @@
 	- Fix #52 #53, fix for example fail program.
 	- Fix to return after failed auth zone http chunk write.
 	- Fix to remove unused test for task_probe existance.
+	- Fix to timeval_add for remaining second in microseconds.
 
 29 July 2019: Wouter
 	- Add verbose log message when auth zone file is written, at level 4.
