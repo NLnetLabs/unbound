@@ -81,6 +81,7 @@ struct respip_action_info {
 	enum respip_action action;
 	int rpz_used;
 	int rpz_log;
+	int rpz_disabled;
 	char* log_name;
 	int rpz_cname_override;
 	struct respip_addr_info* addrinfo; /* set only for inform variants */

@@ -654,7 +654,6 @@ make_new_reply_info(const struct reply_info* rep, struct regional* region,
  * Note that this function distinguishes error conditions from "success but
  * not overridden".  This is because we want to avoid accidentally applying
  * the "no data" action in case of error.
- * @param raddr: address span that requires an action
  * @param action: action to apply
  * @param data: RRset to use for override
  * @param qtype: original query type
@@ -671,7 +670,7 @@ make_new_reply_info(const struct reply_info* rep, struct regional* region,
  * @return 1 if overridden, 0 if not overridden, -1 on error.
  */
 static int
-respip_data_answer(const struct resp_addr* raddr, enum respip_action action,
+respip_data_answer(enum respip_action action,
 	struct ub_packed_rrset_key* data,
 	uint16_t qtype, const struct reply_info* rep,
 	size_t rrset_id, struct reply_info** new_repp, int tag,
@@ -815,7 +814,7 @@ populate_action_info(struct respip_action_info* actinfo,
 	if(action == respip_none || !raddr)
 		return 1;
 	actinfo->action = action;
-	actinfo->rpz_used = 1;
+	actinfo->rpz_used = rpz_used;
 	actinfo->rpz_log = rpz_log;
 	actinfo->log_name = log_name;
 	actinfo->rpz_cname_override = rpz_cname_override;
@@ -824,7 +823,7 @@ populate_action_info(struct respip_action_info* actinfo,
 	 * later logging.  We make a copy to proactively avoid disruption if
 	 *  and when we allow a dynamic update to the respip tree. */
 	if(action == respip_inform || action == respip_inform_deny ||
-		rpz_log) {
+		rpz_used) {
 		struct respip_addr_info* a =
 			regional_alloc_zero(region, sizeof(*a));
 		if(!a) {
@@ -947,6 +946,7 @@ respip_rewrite_reply(const struct query_info* qinfo,
 					region)) {
 					lock_rw_unlock(&raddr->lock);
 					raddr = NULL;
+					actinfo->rpz_disabled++;
 				}
 				rpz_used = 1;
 			}
@@ -962,7 +962,7 @@ respip_rewrite_reply(const struct query_info* qinfo,
 			&& action != respip_always_transparent
 			&& action != respip_always_nxdomain
 			&& action != respip_always_nodata
-			&& (result = respip_data_answer(raddr, action,
+			&& (result = respip_data_answer(action,
 			(data) ? data : raddr->data, qinfo->qtype, rep,
 			rrset_id, new_repp, tag, tag_datas, tag_datas_size,
 			ipset->tagname, ipset->num_tags, &redirect_rrset,

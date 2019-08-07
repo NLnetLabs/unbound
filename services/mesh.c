@@ -1186,7 +1186,9 @@ void mesh_query_done(struct mesh_state* mstate)
 				&r->query_reply);
 			if(mstate->s.env->cfg->stat_extended &&
 				mstate->s.respip_action_info->rpz_used) {
-				/* TODO: does not work for disabled (override) actions */
+				if(mstate->s.respip_action_info->rpz_disabled)
+					mstate->s.env->mesh->rpz_action[RPZ_DISABLED_ACTION] +=
+						mstate->s.respip_action_info->rpz_disabled;
 				if(mstate->s.respip_action_info->rpz_cname_override)
 					mstate->s.env->mesh->rpz_action[RPZ_CNAME_OVERRIDE_ACTION]++;
 				else

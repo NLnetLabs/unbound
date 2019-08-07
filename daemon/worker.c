@@ -602,7 +602,9 @@ apply_respip_action(struct worker* worker, const struct query_info* qinfo,
 			repinfo);
 
 		if(worker->stats.extended && actinfo.rpz_used) {
-			/* TODO: does not work for disabled (override) actions */
+			if(actinfo.rpz_disabled)
+				worker->stats.rpz_action[RPZ_DISABLED_ACTION] +=
+					actinfo.rpz_disabled;
 			if(actinfo.rpz_cname_override)
 				worker->stats.rpz_action[RPZ_CNAME_OVERRIDE_ACTION]++;
 			else
