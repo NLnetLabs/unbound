@@ -2077,10 +2077,13 @@ This option defaults to 100 milliseconds.
 .LP
 Response Policy Zones are configured with \fBrpz:\fR, and each one must have a
 \fBname:\fR. There can be multiple ones, by listing multiple rpz clauses, each
-with a different name. RPZ clauses are applied in order of configuration.
+with a different name. RPZ clauses are applied in order of configuration. The
+\fBrespip\fR module needs to be added to the \fBmodule-config\fR, e.g.:
+\fBmodule-config: "respip validator itarator"\fR.
 .P
-Only the QNAME trigger is supported. The supported RPZ actions are: NXDOMAIN,
-NODATA, PASSTHRU, DROP and Local Data. RPZ QNAME triggers are applied after
+Only the QNAME and Response IP Address triggers are supported. The supported RPZ
+actions are: NXDOMAIN, NODATA, PASSTHRU, DROP and Local Data. RPZ QNAME triggers
+are applied after
 \fBlocal-zones\fR and before \fBauth-zones\fR.
 .TP
 .B name: \fI<zone name>

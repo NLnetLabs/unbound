@@ -993,9 +993,11 @@ remote-control:
 #     redis-timeout: 100
 
 # Response Policy Zones
-# RPZ policies. Applied in order of configuration. QNAME trigger is the only
-# supported trigger. Supported actions are: NXDOMAIN, NODATA, PASSTHRU, DROP and
-# Local Data. Policy can be loaded from file or using zone transfer.
+# RPZ policies. Applied in order of configuration. QNAME and Response IP
+# Address trigger are the only supported triggers. Supported actions are:
+# NXDOMAIN, NODATA, PASSTHRU, DROP and Local Data. Polices can be loaded from
+# file or using zone transfer. The respip module needs to be added to the
+# module-config, e.g.: module-config: "respip validator iterator".
 # rpz:
 #     name: "rpz.example.com"
 #     zonefile: "rpz.example.com"
