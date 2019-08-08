@@ -552,14 +552,16 @@ rpz_insert_rr(struct rpz* r, size_t aznamelen, uint8_t* dname,
 	}
 	t = rpz_dname_to_trigger(policydname);
 	if(t == RPZ_QNAME_TRIGGER) {
-		rpz_insert_qname_trigger(r, policydname, policydnamelen,
+		if(!rpz_insert_qname_trigger(r, policydname, policydnamelen,
 			a, rr_type, rr_class, rr_ttl, rdatawl, rdatalen, rr,
-			rr_len);
+			rr_len))
+			free(policydname);
 	}
 	else if(t == RPZ_RESPONSE_IP_TRIGGER) {
-		rpz_insert_response_ip_trigger(r, policydname,
+		if(!rpz_insert_response_ip_trigger(r, policydname,
 			a, rr_type, rr_class, rr_ttl, rdatawl, rdatalen, rr,
-			rr_len);
+			rr_len))
+			free(policydname);
 	}
 	else {
 		free(policydname);

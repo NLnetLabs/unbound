@@ -16,6 +16,7 @@ rpz	3600	IN	SOA	ns1.rpz.example.com. hostmaster.rpz.example.com. (
 	3600	IN	NS	ns2.rpz.example.com.
 $ORIGIN rpz.example.com.
 a	CNAME 	.
+a	CNAME 	*. ; duplicate CNAME here on purpose
 *.a	TXT	"wildcard local data"
 b.a	CNAME 	*.
 c.a	CNAME	rpz-passthru.
@@ -214,4 +215,12 @@ d.	IN	TXT
 SECTION ANSWER
 d.	IN	TXT	"local data 2nd zone"
 ENTRY_END
+
+; deny zone
+STEP 90 QUERY
+ENTRY_BEGIN
+SECTION QUESTION
+drop. IN TXT
+ENTRY_END
+; no answer is checked at exit of testbound.
 SCENARIO_END
