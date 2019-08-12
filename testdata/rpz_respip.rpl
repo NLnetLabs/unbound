@@ -2,7 +2,6 @@
 server:
 	module-config: "respip validator iterator"
 	target-fetch-policy: "0 0 0 0 0"
-	do-not-query-localhost: no
 	qname-minimisation: no
 
 
