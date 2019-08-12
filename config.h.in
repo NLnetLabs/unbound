@@ -15,6 +15,9 @@
 /* Do sha512 definitions in config.h */
 #undef COMPAT_SHA512
 
+/* Command line arguments used with configure */
+#undef CONFCMDLINE
+
 /* Pathname to the Unbound configuration file */
 #undef CONFIGFILE
 
