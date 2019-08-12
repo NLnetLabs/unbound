@@ -518,6 +518,7 @@ rpz_insert_response_ip_trigger(struct rpz* r, uint8_t* dname,
 	if(!(node=respip_sockaddr_find_or_create(r->respip_set, &addr, addrlen,
 		net, 1, rrstr))) {
 		lock_rw_unlock(&r->respip_set->lock);
+		free(rrstr);
 		return 0;
 	}
 
@@ -530,6 +531,7 @@ rpz_insert_response_ip_trigger(struct rpz* r, uint8_t* dname,
 			rrclass, ttl, rdata, rdata_len, rrstr, "");
 	}
 	lock_rw_unlock(&node->lock);
+	free(rrstr);
 	return 1;
 }
 
@@ -558,10 +560,10 @@ rpz_insert_rr(struct rpz* r, size_t aznamelen, uint8_t* dname,
 			free(policydname);
 	}
 	else if(t == RPZ_RESPONSE_IP_TRIGGER) {
-		if(!rpz_insert_response_ip_trigger(r, policydname,
+		rpz_insert_response_ip_trigger(r, policydname,
 			a, rr_type, rr_class, rr_ttl, rdatawl, rdatalen, rr,
-			rr_len))
-			free(policydname);
+			rr_len);
+		free(policydname);
 	}
 	else {
 		free(policydname);
