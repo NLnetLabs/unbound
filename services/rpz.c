@@ -444,7 +444,8 @@ strip_dname_origin(uint8_t* dname, size_t dnamelen, size_t originlen,
 static int
 rpz_insert_qname_trigger(struct rpz* r, uint8_t* dname, size_t dnamelen,
 	enum rpz_action a, uint16_t rrtype, uint16_t rrclass, uint32_t ttl,
-	uint8_t* rdata, size_t rdata_len, uint8_t* rr, size_t rr_len)
+	uint8_t* rdata, size_t rdata_len, uint8_t* rr, size_t rr_len,
+	int* newzone)
 {
 	struct local_zone* z;
 	enum localzone_type tp = local_zone_always_transparent;
@@ -473,6 +474,7 @@ rpz_insert_qname_trigger(struct rpz* r, uint8_t* dname, size_t dnamelen,
 		tp = rpz_action_to_localzone_type(a);
 		z = local_zones_add_zone(r->local_zones, dname, dnamelen,
 			dnamelabs, rrclass, tp);
+		*newzone = 1;
 	}
 	if(!z) {
 		log_warn("RPZ create failed");
@@ -501,7 +503,7 @@ rpz_insert_response_ip_trigger(struct rpz* r, uint8_t* dname,
 	struct sockaddr_storage addr;
 	socklen_t addrlen;
 	int net, af;
-	char* rrstr = sldns_wire2str_rr(rr, rr_len);
+	char* rrstr;
 	enum respip_action respa = rpz_action_to_respip_action(a);
 
 	if(a == RPZ_TCP_ONLY_ACTION || a == RPZ_INVALID_ACTION ||
@@ -515,6 +517,7 @@ rpz_insert_response_ip_trigger(struct rpz* r, uint8_t* dname,
 		return 0;
 
 	lock_rw_wrlock(&r->respip_set->lock);
+	rrstr = sldns_wire2str_rr(rr, rr_len);
 	if(!(node=respip_sockaddr_find_or_create(r->respip_set, &addr, addrlen,
 		net, 1, rrstr))) {
 		lock_rw_unlock(&r->respip_set->lock);
@@ -545,6 +548,7 @@ rpz_insert_rr(struct rpz* r, size_t aznamelen, uint8_t* dname,
 	uint8_t* policydname = calloc(1, LDNS_MAX_DOMAINLEN + 1);
 	enum rpz_trigger t;
 	enum rpz_action a;
+	int newzone = 0;
 	
 	a = rpz_rr_to_action(rr_type, rdatawl, rdatalen);
 	if(!(policydnamelen = strip_dname_origin(dname, dnamelen, aznamelen,
@@ -556,7 +560,7 @@ rpz_insert_rr(struct rpz* r, size_t aznamelen, uint8_t* dname,
 	if(t == RPZ_QNAME_TRIGGER) {
 		if(!rpz_insert_qname_trigger(r, policydname, policydnamelen,
 			a, rr_type, rr_class, rr_ttl, rdatawl, rdatalen, rr,
-			rr_len))
+			rr_len, &newzone) || !newzone)
 			free(policydname);
 	}
 	else if(t == RPZ_RESPONSE_IP_TRIGGER) {
