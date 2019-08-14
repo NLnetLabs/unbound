@@ -575,7 +575,9 @@ void
 daemon_fork(struct daemon* daemon)
 {
 	int have_view_respip_cfg = 0;
+#ifdef HAVE_SYSTEMD
 	int ret;
+#endif
 
 	log_assert(daemon);
 	if(!(daemon->views = views_create()))
