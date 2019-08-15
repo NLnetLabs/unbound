@@ -1,5 +1,6 @@
 15 August 2019: Wouter
 	- iana portlist updated.
+	- Fix autotrust temp file uniqueness windows compile.
 
 14 August 2019: George
 	- Fix #59, when compiled with systemd support check that we can properly

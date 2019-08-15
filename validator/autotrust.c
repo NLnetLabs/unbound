@@ -1183,8 +1183,13 @@ void autr_write_file(struct module_env* env, struct trust_anchor* tp)
 	}
 	/* unique name with pid number, thread number, and struct pointer
 	 * (the pointer uniquifies for multiple libunbound contexts) */
+#ifndef USE_WINSOCK
 	snprintf(tempf, sizeof(tempf), "%s.%d-%d-%llx", fname, (int)getpid(),
 		env->worker?*(int*)env->worker:0, (long long int)tp);
+#else
+	snprintf(tempf, sizeof(tempf), "%s.%d-%d-%I64x", fname, (int)getpid(),
+		env->worker?*(int*)env->worker:0, (long long int)tp);
+#endif
 	verbose(VERB_ALGO, "autotrust: write to disk: %s", tempf);
 	out = fopen(tempf, "w");
 	if(!out) {
