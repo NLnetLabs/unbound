@@ -1175,6 +1175,7 @@ void autr_write_file(struct module_env* env, struct trust_anchor* tp)
 {
 	FILE* out;
 	char* fname = tp->autr->file;
+	long long llvalue;
 	char tempf[2048];
 	log_assert(tp->autr);
 	if(!env) {
@@ -1183,12 +1184,18 @@ void autr_write_file(struct module_env* env, struct trust_anchor* tp)
 	}
 	/* unique name with pid number, thread number, and struct pointer
 	 * (the pointer uniquifies for multiple libunbound contexts) */
+#if defined(SIZE_MAX) && defined(UINT32_MAX) && (UINT32_MAX == SIZE_MAX || INT32_MAX == SIZE_MAX)
+	/* avoid warning about upcast on 32bit systems */
+	llvalue = (unsigned long)tp;
+#else
+	llvalue = (unsigned long long)tp;
+#endif
 #ifndef USE_WINSOCK
 	snprintf(tempf, sizeof(tempf), "%s.%d-%d-%llx", fname, (int)getpid(),
-		env->worker?*(int*)env->worker:0, (long long int)tp);
+		env->worker?*(int*)env->worker:0, llvalue);
 #else
 	snprintf(tempf, sizeof(tempf), "%s.%d-%d-%I64x", fname, (int)getpid(),
-		env->worker?*(int*)env->worker:0, (long long int)tp);
+		env->worker?*(int*)env->worker:0, llvalue);
 #endif
 	verbose(VERB_ALGO, "autotrust: write to disk: %s", tempf);
 	out = fopen(tempf, "w");
