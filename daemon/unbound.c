@@ -122,6 +122,9 @@ print_build_options(void)
 #ifdef USE_DNSCRYPT
 	printf("DNSCrypt feature available\n");
 #endif
+#ifdef USE_TCP_FASTOPEN
+	printf("TCP Fastopen feature available\n");
+#endif
 	ub_event_base_free(base);
 	printf("\nBSD licensed, see LICENSE in source package for details.\n");
 	printf("Report bugs to %s\n", PACKAGE_BUGREPORT);

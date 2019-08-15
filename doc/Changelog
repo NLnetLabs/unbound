@@ -5,6 +5,7 @@
 	- escape commandline contents for -V.
 	- Fix character buffer size in ub_ctx_hosts.
 	- 1.9.3rc1 release candidate tag.
+	- (for later release): -V prints if TCP fastopen is available.
 
 14 August 2019: George
 	- Fix #59, when compiled with systemd support check that we can properly
