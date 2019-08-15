@@ -2889,8 +2889,10 @@ LIBUNBOUND_AGE=1
 
 
 
+cmdln="`echo $@ | sed -e 's/\\\\/\\\\\\\\/g' | sed -e 's/"/\\\\"/'g`"
+
 cat >>confdefs.h <<_ACEOF
-#define CONFCMDLINE "$@"
+#define CONFCMDLINE "$cmdln"
 _ACEOF
 
 
