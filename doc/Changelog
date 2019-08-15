@@ -3,6 +3,7 @@
 	- Fix autotrust temp file uniqueness windows compile.
 	- avoid warning about upcast on 32bit systems for autotrust.
 	- escape commandline contents for -V.
+	- Fix character buffer size in ub_ctx_hosts.
 
 14 August 2019: George
 	- Fix #59, when compiled with systemd support check that we can properly

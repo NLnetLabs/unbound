@@ -1159,7 +1159,7 @@ int
 ub_ctx_hosts(struct ub_ctx* ctx, const char* fname)
 {
 	FILE* in;
-	char buf[1024], ldata[1024];
+	char buf[1024], ldata[2048];
 	char* parse, *addr, *name, *ins;
 	lock_basic_lock(&ctx->cfglock);
 	if(ctx->finalized) {
