@@ -187,7 +187,7 @@ rrinternal_get_owner(sldns_buffer* strbuf, uint8_t* rr, size_t* len,
 			sldns_buffer_position(strbuf));
 	}
 
-	if(strcmp(token, "@") == 0) {
+	if(token[0]=='@' && token[1]=='\0') {
 		uint8_t* tocopy;
 		if (origin) {
 			*dname_len = origin_len;

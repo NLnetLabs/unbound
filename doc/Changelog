@@ -1,3 +1,12 @@
+16 August 2019: Wouter
+	- Fix unittest valgrind false positive uninitialised value report,
+	  where if gcc 9.1.1 uses -O2 (but not -O1) then valgrind 3.15.0
+	  issues an uninitialised value for the token buffer at the str2wire.c
+	  rrinternal_get_owner() strcmp with the '@' value.  Rewritten to use
+	  straight character comparisons removes the false positive.  Also
+	  valgrinds --expensive-definedness-checks=yes can stop this false
+	  positive.
+
 15 August 2019: Wouter
 	- iana portlist updated.
 	- Fix autotrust temp file uniqueness windows compile.
