@@ -441,21 +441,22 @@ strip_dname_origin(uint8_t* dname, size_t dnamelen, size_t originlen,
 }
 
 /** Insert RR into RPZ's local-zone */
-static int
+static void
 rpz_insert_qname_trigger(struct rpz* r, uint8_t* dname, size_t dnamelen,
 	enum rpz_action a, uint16_t rrtype, uint16_t rrclass, uint32_t ttl,
-	uint8_t* rdata, size_t rdata_len, uint8_t* rr, size_t rr_len,
-	int* newzone)
+	uint8_t* rdata, size_t rdata_len, uint8_t* rr, size_t rr_len)
 {
 	struct local_zone* z;
 	enum localzone_type tp = local_zone_always_transparent;
 	int dnamelabs = dname_count_labels(dname);
 	char* rrstr;
+	int newzone = 0;
 
 	if(a == RPZ_TCP_ONLY_ACTION || a == RPZ_INVALID_ACTION) {
 		verbose(VERB_ALGO, "RPZ: skipping unsupported action: %s",
 			rpz_action_to_string(a));
-		return 0;
+		free(dname);
+		return;
 	}
 
 	lock_rw_wrlock(&r->local_zones->lock);
@@ -467,30 +468,31 @@ rpz_insert_qname_trigger(struct rpz* r, uint8_t* dname, size_t dnamelen,
 		verbose(VERB_ALGO, "RPZ: skipping duplicate record: '%s'",
 			rrstr);
 		free(rrstr);
+		free(dname);
 		lock_rw_unlock(&r->local_zones->lock);
-		return 0;
+		return;
 	}
 	if(!z) {
 		tp = rpz_action_to_localzone_type(a);
-		z = local_zones_add_zone(r->local_zones, dname, dnamelen,
-			dnamelabs, rrclass, tp);
-		*newzone = 1;
-	}
-	if(!z) {
-		log_warn("RPZ create failed");
-		lock_rw_unlock(&r->local_zones->lock);
-		return 0;
+		if(!(z = local_zones_add_zone(r->local_zones, dname, dnamelen,
+			dnamelabs, rrclass, tp))) {
+			log_warn("RPZ create failed");
+			lock_rw_unlock(&r->local_zones->lock);
+			/* dname will be free'd in failed local_zone_create() */
+			return;
+		}
+		newzone = 1;
 	}
 	if(a == RPZ_LOCAL_DATA_ACTION) {
 		rrstr = sldns_wire2str_rr(rr, rr_len);
-		/* TODO non region alloc so rrs can be free after IXFR deletion?
-		 * */
 		local_zone_enter_rr(z, dname, dnamelen, dnamelabs,
 			rrtype, rrclass, ttl, rdata, rdata_len, rrstr);
 		free(rrstr);
 	}
+	if(!newzone)
+		free(dname);
 	lock_rw_unlock(&r->local_zones->lock);
-	return 1;
+	return;
 }
 
 /** Insert RR into RPZ's respip_set */
@@ -548,7 +550,6 @@ rpz_insert_rr(struct rpz* r, size_t aznamelen, uint8_t* dname,
 	uint8_t* policydname = calloc(1, LDNS_MAX_DOMAINLEN + 1);
 	enum rpz_trigger t;
 	enum rpz_action a;
-	int newzone = 0;
 	
 	a = rpz_rr_to_action(rr_type, rdatawl, rdatalen);
 	if(!(policydnamelen = strip_dname_origin(dname, dnamelen, aznamelen,
@@ -558,10 +559,9 @@ rpz_insert_rr(struct rpz* r, size_t aznamelen, uint8_t* dname,
 	}
 	t = rpz_dname_to_trigger(policydname);
 	if(t == RPZ_QNAME_TRIGGER) {
-		if(!rpz_insert_qname_trigger(r, policydname, policydnamelen,
+		rpz_insert_qname_trigger(r, policydname, policydnamelen,
 			a, rr_type, rr_class, rr_ttl, rdatawl, rdatalen, rr,
-			rr_len, &newzone) || !newzone)
-			free(policydname);
+			rr_len);
 	}
 	else if(t == RPZ_RESPONSE_IP_TRIGGER) {
 		rpz_insert_response_ip_trigger(r, policydname,

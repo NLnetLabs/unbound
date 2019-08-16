@@ -642,7 +642,7 @@ check_hints(struct config_file* cfg)
 static void
 check_auth(struct config_file* cfg)
 {
-	int is_rpz;
+	int is_rpz = 0;
 	struct auth_zones* az = auth_zones_create();
 	if(!az || !auth_zones_apply_cfg(az, cfg, 0i, &is_rpz)) {
 		fatal_exit("Could not setup authority zones");
