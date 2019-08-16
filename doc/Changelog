@@ -8,6 +8,7 @@
 	  positive.
 	- Please doxygen's parser for "@" occurrence in doxygen comment.
 	- Fixup contrib/fastrpz.patch
+	- Remove warning about unknown cast-function-type warning pragma.
 
 15 August 2019: Wouter
 	- iana portlist updated.
