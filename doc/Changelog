@@ -6,6 +6,7 @@
 	  straight character comparisons removes the false positive.  Also
 	  valgrinds --expensive-definedness-checks=yes can stop this false
 	  positive.
+	- Please doxygen's parser for "@" occurrence in doxygen comment.
 
 15 August 2019: Wouter
 	- iana portlist updated.

@@ -146,7 +146,8 @@ check_mod(struct config_file* cfg, struct module_func_block* fb)
 	edns_known_options_delete(&env);
 }
 
-/** true if addr is a localhost address, 127.0.0.1 or ::1 (@port) */
+/** true if addr is a localhost address, 127.0.0.1 or ::1 (with maybe "@port"
+ * after it) */
 static int
 str_addr_is_localhost(const char* a)
 {
