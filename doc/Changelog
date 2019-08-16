@@ -7,6 +7,7 @@
 	  valgrinds --expensive-definedness-checks=yes can stop this false
 	  positive.
 	- Please doxygen's parser for "@" occurrence in doxygen comment.
+	- Fixup contrib/fastrpz.patch
 
 15 August 2019: Wouter
 	- iana portlist updated.
