@@ -629,7 +629,9 @@ In the last case the path is adjusted to remove the unused portion.
 The pidfile can be either a relative path to the working directory, or
 an absolute path relative to the original root. It is written just prior
 to chroot and dropping permissions. This allows the pidfile to be
-/var/run/unbound.pid and the chroot to be /var/unbound, for example.
+/var/run/unbound.pid and the chroot to be /var/unbound, for example. Note that
+Unbound is not able to remove the pidfile after termination when it is located
+outside of the chroot directory.
 .IP
 Additionally, unbound may need to access /dev/random (for entropy)
 from inside the chroot.
