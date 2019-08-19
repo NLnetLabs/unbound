@@ -615,7 +615,7 @@ int ub_ctx_data_add(struct ub_ctx* ctx, const char *data);
  */
 int ub_ctx_data_remove(struct ub_ctx* ctx, const char *data);
 
-void ub_ctx_cache_remove(struct ub_ctx* ctx, uint8_t* nm, size_t nmlen,
+int ub_ctx_cache_remove(struct ub_ctx* ctx, const char* name,
 	uint16_t t, uint16_t c);
 
 /**

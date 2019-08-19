@@ -1408,12 +1408,20 @@ ub_ctx_set_event(struct ub_ctx* ctx, struct event_base* base) {
 	return new_base ? UB_NOERROR : UB_INITFAIL;
 }
 
-void ub_ctx_cache_remove(struct ub_ctx* ctx, uint8_t* nm, size_t nmlen,
+int ub_ctx_cache_remove(struct ub_ctx* ctx, const char* name,
 	uint16_t t, uint16_t c)
 {
-    hashvalue_type h;
-    struct query_info k;
-    rrset_cache_remove(ctx->env->rrset_cache, nm, nmlen, t, c, 0);
+	hashvalue_type h;
+	struct query_info k;
+	uint8_t* nm;
+	size_t nmlen;
+	int nmlabs;
+
+	if(!parse_dname(name, &nm, &nmlen, &nmlabs)) {
+		return UB_SYNTAX;
+	}
+
+	rrset_cache_remove(ctx->env->rrset_cache, nm, nmlen, t, c, 0);
 	if(t == LDNS_RR_TYPE_SOA)
 		rrset_cache_remove(ctx->env->rrset_cache, nm, nmlen, t, c,
 			PACKED_RRSET_SOA_NEG);
@@ -1429,4 +1437,6 @@ void ub_ctx_cache_remove(struct ub_ctx* ctx, uint8_t* nm, size_t nmlen,
 		h = query_info_hash(&k, BIT_CD);
 		slabhash_remove(ctx->env->msg_cache, h, &k);
 	}
+
+	return 0;
 }
