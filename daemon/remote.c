@@ -60,6 +60,7 @@
 #include "daemon/stats.h"
 #include "daemon/cachedump.h"
 #include "util/log.h"
+#include "util/cache_help.h"
 #include "util/config_file.h"
 #include "util/net_help.h"
 #include "util/module.h"
@@ -1497,24 +1498,7 @@ static void
 do_cache_remove(struct worker* worker, uint8_t* nm, size_t nmlen,
 	uint16_t t, uint16_t c)
 {
-	hashvalue_type h;
-	struct query_info k;
-	rrset_cache_remove(worker->env.rrset_cache, nm, nmlen, t, c, 0);
-	if(t == LDNS_RR_TYPE_SOA)
-		rrset_cache_remove(worker->env.rrset_cache, nm, nmlen, t, c,
-			PACKED_RRSET_SOA_NEG);
-	k.qname = nm;
-	k.qname_len = nmlen;
-	k.qtype = t;
-	k.qclass = c;
-	k.local_alias = NULL;
-	h = query_info_hash(&k, 0);
-	slabhash_remove(worker->env.msg_cache, h, &k);
-	if(t == LDNS_RR_TYPE_AAAA) {
-		/* for AAAA also flush dns64 bit_cd packet */
-		h = query_info_hash(&k, BIT_CD);
-		slabhash_remove(worker->env.msg_cache, h, &k);
-	}
+	remove_rrset_from_env_cache(&(worker->env), nm, nmlen, t, c);
 }
 
 /** flush a type */

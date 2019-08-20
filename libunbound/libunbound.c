@@ -48,6 +48,7 @@
 #include <ctype.h>
 #include "libunbound/context.h"
 #include "libunbound/libworker.h"
+#include "util/cache_help.h"
 #include "util/locks.h"
 #include "util/config_file.h"
 #include "util/alloc.h"
@@ -1411,8 +1412,6 @@ ub_ctx_set_event(struct ub_ctx* ctx, struct event_base* base) {
 int ub_ctx_cache_remove(struct ub_ctx* ctx, const char* name,
 	uint16_t t, uint16_t c)
 {
-	hashvalue_type h;
-	struct query_info k;
 	uint8_t* nm;
 	size_t nmlen;
 	int nmlabs;
@@ -1421,22 +1420,7 @@ int ub_ctx_cache_remove(struct ub_ctx* ctx, const char* name,
 		return UB_SYNTAX;
 	}
 
-	rrset_cache_remove(ctx->env->rrset_cache, nm, nmlen, t, c, 0);
-	if(t == LDNS_RR_TYPE_SOA)
-		rrset_cache_remove(ctx->env->rrset_cache, nm, nmlen, t, c,
-			PACKED_RRSET_SOA_NEG);
-	k.qname = nm;
-	k.qname_len = nmlen;
-	k.qtype = t;
-	k.qclass = c;
-	k.local_alias = NULL;
-	h = query_info_hash(&k, 0);
-	slabhash_remove(ctx->env->msg_cache, h, &k);
-	if(t == LDNS_RR_TYPE_AAAA) {
-		/* for AAAA also flush dns64 bit_cd packet */
-		h = query_info_hash(&k, BIT_CD);
-		slabhash_remove(ctx->env->msg_cache, h, &k);
-	}
+	remove_rrset_from_env_cache(ctx->env, nm, nmlen, t, c);
 
 	return 0;
 }
