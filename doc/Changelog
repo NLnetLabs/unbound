@@ -1,3 +1,6 @@
+21 August 2019: Wouter
+	- Fix log_dns_msg to log irrespective of minimal responses config.
+
 19 August 2019: Ralph
 	- Document limitation of pidfile removal outside of chroot directory.
 
