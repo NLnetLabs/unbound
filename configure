@@ -667,12 +667,6 @@ WIN_DAEMON_SRC
 WINAPPS
 WINDRES
 CHECKLOCK_OBJ
-USE_SYSTEMD_FALSE
-USE_SYSTEMD_TRUE
-SYSTEMD_DAEMON_LIBS
-SYSTEMD_DAEMON_CFLAGS
-SYSTEMD_LIBS
-SYSTEMD_CFLAGS
 staticexe
 PC_LIBEVENT_DEPENDENCY
 UNBOUND_EVENT_UNINSTALL
@@ -708,6 +702,12 @@ PTHREAD_CFLAGS
 PTHREAD_LIBS
 PTHREAD_CC
 ax_pthread_config
+USE_SYSTEMD_FALSE
+USE_SYSTEMD_TRUE
+SYSTEMD_DAEMON_LIBS
+SYSTEMD_DAEMON_CFLAGS
+SYSTEMD_LIBS
+SYSTEMD_CFLAGS
 RUNTIME_PATH
 LIBOBJS
 PKG_CONFIG_LIBDIR
@@ -844,6 +844,7 @@ with_sysroot
 enable_libtool_lock
 enable_rpath
 enable_largefile
+enable_systemd
 enable_alloc_checks
 enable_alloc_lite
 enable_alloc_nonregional
@@ -870,7 +871,6 @@ with_libevent
 with_libexpat
 with_libhiredis
 enable_static_exe
-enable_systemd
 enable_lock_checks
 enable_allsymbols
 enable_dnstap
@@ -900,11 +900,11 @@ LT_SYS_LIBRARY_PATH
 PKG_CONFIG
 PKG_CONFIG_PATH
 PKG_CONFIG_LIBDIR
-PYTHON_VERSION
 SYSTEMD_CFLAGS
 SYSTEMD_LIBS
 SYSTEMD_DAEMON_CFLAGS
-SYSTEMD_DAEMON_LIBS'
+SYSTEMD_DAEMON_LIBS
+PYTHON_VERSION'
 
 
 # Initialize some variables set by options.
@@ -1532,6 +1532,7 @@ Optional Features:
   --disable-libtool-lock  avoid locking (might break parallel builds)
   --disable-rpath         disable hardcoded rpath (default=enabled)
   --disable-largefile     omit support for large files
+  --enable-systemd        compile with systemd support
   --enable-alloc-checks   enable to memory allocation statistics, for debug
                           purposes
   --enable-alloc-lite     enable for lightweight alloc assertions, for debug
@@ -1558,7 +1559,6 @@ Optional Features:
   --enable-tfo-server     Enable TCP Fast Open for server mode
   --enable-static-exe     enable to compile executables statically against
                           (event) libs, for debug purposes
-  --enable-systemd        compile with systemd support
   --enable-lock-checks    enable to check lock and unlock calls, for debug
                           purposes
   --enable-allsymbols     export all symbols from libunbound and link binaries
@@ -1650,10 +1650,6 @@ Some influential environment variables:
               directories to add to pkg-config's search path
   PKG_CONFIG_LIBDIR
               path overriding pkg-config's built-in search path
-  PYTHON_VERSION
-              The installed Python version to use, for example '2.3'. This
-              string will be appended to the Python interpreter canonical
-              name.
   SYSTEMD_CFLAGS
               C compiler flags for SYSTEMD, overriding pkg-config
   SYSTEMD_LIBS
@@ -1662,6 +1658,10 @@ Some influential environment variables:
               C compiler flags for SYSTEMD_DAEMON, overriding pkg-config
   SYSTEMD_DAEMON_LIBS
               linker flags for SYSTEMD_DAEMON, overriding pkg-config
+  PYTHON_VERSION
+              The installed Python version to use, for example '2.3'. This
+              string will be appended to the Python interpreter canonical
+              name.
 
 Use these variables to override the choices made by `configure' or to help
 it to find libraries and programs with nonstandard names/locations.
@@ -16119,6 +16119,197 @@ $as_echo "#define REUSEPORT_DEFAULT 0" >>confdefs.h
 
 fi
 
+# Include systemd.m4 - begin
+#   macros for configuring systemd
+#   Copyright 2015, Sami Kerola, CloudFlare.
+#   BSD licensed.
+# Check whether --enable-systemd was given.
+if test "${enable_systemd+set}" = set; then :
+  enableval=$enable_systemd;
+else
+  enable_systemd=no
+fi
+
+have_systemd=no
+if test "x$enable_systemd" != xno; then :
+
+
+
+pkg_failed=no
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for SYSTEMD" >&5
+$as_echo_n "checking for SYSTEMD... " >&6; }
+
+if test -n "$SYSTEMD_CFLAGS"; then
+    pkg_cv_SYSTEMD_CFLAGS="$SYSTEMD_CFLAGS"
+ elif test -n "$PKG_CONFIG"; then
+    if test -n "$PKG_CONFIG" && \
+    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"libsystemd\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "libsystemd") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; then
+  pkg_cv_SYSTEMD_CFLAGS=`$PKG_CONFIG --cflags "libsystemd" 2>/dev/null`
+		      test "x$?" != "x0" && pkg_failed=yes
+else
+  pkg_failed=yes
+fi
+ else
+    pkg_failed=untried
+fi
+if test -n "$SYSTEMD_LIBS"; then
+    pkg_cv_SYSTEMD_LIBS="$SYSTEMD_LIBS"
+ elif test -n "$PKG_CONFIG"; then
+    if test -n "$PKG_CONFIG" && \
+    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"libsystemd\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "libsystemd") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; then
+  pkg_cv_SYSTEMD_LIBS=`$PKG_CONFIG --libs "libsystemd" 2>/dev/null`
+		      test "x$?" != "x0" && pkg_failed=yes
+else
+  pkg_failed=yes
+fi
+ else
+    pkg_failed=untried
+fi
+
+
+
+if test $pkg_failed = yes; then
+   	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+
+if $PKG_CONFIG --atleast-pkgconfig-version 0.20; then
+        _pkg_short_errors_supported=yes
+else
+        _pkg_short_errors_supported=no
+fi
+        if test $_pkg_short_errors_supported = yes; then
+	        SYSTEMD_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors --cflags --libs "libsystemd" 2>&1`
+        else
+	        SYSTEMD_PKG_ERRORS=`$PKG_CONFIG --print-errors --cflags --libs "libsystemd" 2>&1`
+        fi
+	# Put the nasty error message in config.log where it belongs
+	echo "$SYSTEMD_PKG_ERRORS" >&5
+
+	have_systemd=no
+elif test $pkg_failed = untried; then
+     	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+	have_systemd=no
+else
+	SYSTEMD_CFLAGS=$pkg_cv_SYSTEMD_CFLAGS
+	SYSTEMD_LIBS=$pkg_cv_SYSTEMD_LIBS
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+	have_systemd=yes
+fi
+		if test "x$have_systemd" != "xyes"; then :
+
+
+pkg_failed=no
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for SYSTEMD_DAEMON" >&5
+$as_echo_n "checking for SYSTEMD_DAEMON... " >&6; }
+
+if test -n "$SYSTEMD_DAEMON_CFLAGS"; then
+    pkg_cv_SYSTEMD_DAEMON_CFLAGS="$SYSTEMD_DAEMON_CFLAGS"
+ elif test -n "$PKG_CONFIG"; then
+    if test -n "$PKG_CONFIG" && \
+    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"libsystemd-daemon\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "libsystemd-daemon") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; then
+  pkg_cv_SYSTEMD_DAEMON_CFLAGS=`$PKG_CONFIG --cflags "libsystemd-daemon" 2>/dev/null`
+		      test "x$?" != "x0" && pkg_failed=yes
+else
+  pkg_failed=yes
+fi
+ else
+    pkg_failed=untried
+fi
+if test -n "$SYSTEMD_DAEMON_LIBS"; then
+    pkg_cv_SYSTEMD_DAEMON_LIBS="$SYSTEMD_DAEMON_LIBS"
+ elif test -n "$PKG_CONFIG"; then
+    if test -n "$PKG_CONFIG" && \
+    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"libsystemd-daemon\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "libsystemd-daemon") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; then
+  pkg_cv_SYSTEMD_DAEMON_LIBS=`$PKG_CONFIG --libs "libsystemd-daemon" 2>/dev/null`
+		      test "x$?" != "x0" && pkg_failed=yes
+else
+  pkg_failed=yes
+fi
+ else
+    pkg_failed=untried
+fi
+
+
+
+if test $pkg_failed = yes; then
+   	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+
+if $PKG_CONFIG --atleast-pkgconfig-version 0.20; then
+        _pkg_short_errors_supported=yes
+else
+        _pkg_short_errors_supported=no
+fi
+        if test $_pkg_short_errors_supported = yes; then
+	        SYSTEMD_DAEMON_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors --cflags --libs "libsystemd-daemon" 2>&1`
+        else
+	        SYSTEMD_DAEMON_PKG_ERRORS=`$PKG_CONFIG --print-errors --cflags --libs "libsystemd-daemon" 2>&1`
+        fi
+	# Put the nasty error message in config.log where it belongs
+	echo "$SYSTEMD_DAEMON_PKG_ERRORS" >&5
+
+	have_systemd_daemon=no
+elif test $pkg_failed = untried; then
+     	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+	have_systemd_daemon=no
+else
+	SYSTEMD_DAEMON_CFLAGS=$pkg_cv_SYSTEMD_DAEMON_CFLAGS
+	SYSTEMD_DAEMON_LIBS=$pkg_cv_SYSTEMD_DAEMON_LIBS
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+	have_systemd_daemon=yes
+fi
+		if test "x$have_systemd_daemon" = "xyes"; then :
+  have_systemd=yes
+fi
+
+fi
+	case $enable_systemd:$have_systemd in #(
+  yes:no) :
+    as_fn_error $? "systemd enabled but libsystemd not found" "$LINENO" 5 ;; #(
+  *:yes) :
+
+$as_echo "#define HAVE_SYSTEMD 1" >>confdefs.h
+
+		LIBS="$LIBS $SYSTEMD_LIBS"
+
+	 ;; #(
+  *) :
+     ;;
+esac
+
+
+fi
+ if test "x$have_systemd" = xyes; then
+  USE_SYSTEMD_TRUE=
+  USE_SYSTEMD_FALSE='#'
+else
+  USE_SYSTEMD_TRUE='#'
+  USE_SYSTEMD_FALSE=
+fi
+
+
+# Include systemd.m4 - end
+
 # set memory allocation checking if requested
 # Check whether --enable-alloc-checks was given.
 if test "${enable_alloc_checks+set}" = set; then :
@@ -19209,197 +19400,6 @@ if test x_$enable_static_exe = x_yes; then
 		LIBS="$LIBS -lz"
 	fi
 fi
-
-# Include systemd.m4 - begin
-#   macros for configuring systemd
-#   Copyright 2015, Sami Kerola, CloudFlare.
-#   BSD licensed.
-# Check whether --enable-systemd was given.
-if test "${enable_systemd+set}" = set; then :
-  enableval=$enable_systemd;
-else
-  enable_systemd=no
-fi
-
-have_systemd=no
-if test "x$enable_systemd" != xno; then :
-
-
-
-pkg_failed=no
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for SYSTEMD" >&5
-$as_echo_n "checking for SYSTEMD... " >&6; }
-
-if test -n "$SYSTEMD_CFLAGS"; then
-    pkg_cv_SYSTEMD_CFLAGS="$SYSTEMD_CFLAGS"
- elif test -n "$PKG_CONFIG"; then
-    if test -n "$PKG_CONFIG" && \
-    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"libsystemd\""; } >&5
-  ($PKG_CONFIG --exists --print-errors "libsystemd") 2>&5
-  ac_status=$?
-  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
-  test $ac_status = 0; }; then
-  pkg_cv_SYSTEMD_CFLAGS=`$PKG_CONFIG --cflags "libsystemd" 2>/dev/null`
-		      test "x$?" != "x0" && pkg_failed=yes
-else
-  pkg_failed=yes
-fi
- else
-    pkg_failed=untried
-fi
-if test -n "$SYSTEMD_LIBS"; then
-    pkg_cv_SYSTEMD_LIBS="$SYSTEMD_LIBS"
- elif test -n "$PKG_CONFIG"; then
-    if test -n "$PKG_CONFIG" && \
-    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"libsystemd\""; } >&5
-  ($PKG_CONFIG --exists --print-errors "libsystemd") 2>&5
-  ac_status=$?
-  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
-  test $ac_status = 0; }; then
-  pkg_cv_SYSTEMD_LIBS=`$PKG_CONFIG --libs "libsystemd" 2>/dev/null`
-		      test "x$?" != "x0" && pkg_failed=yes
-else
-  pkg_failed=yes
-fi
- else
-    pkg_failed=untried
-fi
-
-
-
-if test $pkg_failed = yes; then
-   	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-
-if $PKG_CONFIG --atleast-pkgconfig-version 0.20; then
-        _pkg_short_errors_supported=yes
-else
-        _pkg_short_errors_supported=no
-fi
-        if test $_pkg_short_errors_supported = yes; then
-	        SYSTEMD_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors --cflags --libs "libsystemd" 2>&1`
-        else
-	        SYSTEMD_PKG_ERRORS=`$PKG_CONFIG --print-errors --cflags --libs "libsystemd" 2>&1`
-        fi
-	# Put the nasty error message in config.log where it belongs
-	echo "$SYSTEMD_PKG_ERRORS" >&5
-
-	have_systemd=no
-elif test $pkg_failed = untried; then
-     	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-	have_systemd=no
-else
-	SYSTEMD_CFLAGS=$pkg_cv_SYSTEMD_CFLAGS
-	SYSTEMD_LIBS=$pkg_cv_SYSTEMD_LIBS
-        { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-$as_echo "yes" >&6; }
-	have_systemd=yes
-fi
-		if test "x$have_systemd" != "xyes"; then :
-
-
-pkg_failed=no
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for SYSTEMD_DAEMON" >&5
-$as_echo_n "checking for SYSTEMD_DAEMON... " >&6; }
-
-if test -n "$SYSTEMD_DAEMON_CFLAGS"; then
-    pkg_cv_SYSTEMD_DAEMON_CFLAGS="$SYSTEMD_DAEMON_CFLAGS"
- elif test -n "$PKG_CONFIG"; then
-    if test -n "$PKG_CONFIG" && \
-    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"libsystemd-daemon\""; } >&5
-  ($PKG_CONFIG --exists --print-errors "libsystemd-daemon") 2>&5
-  ac_status=$?
-  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
-  test $ac_status = 0; }; then
-  pkg_cv_SYSTEMD_DAEMON_CFLAGS=`$PKG_CONFIG --cflags "libsystemd-daemon" 2>/dev/null`
-		      test "x$?" != "x0" && pkg_failed=yes
-else
-  pkg_failed=yes
-fi
- else
-    pkg_failed=untried
-fi
-if test -n "$SYSTEMD_DAEMON_LIBS"; then
-    pkg_cv_SYSTEMD_DAEMON_LIBS="$SYSTEMD_DAEMON_LIBS"
- elif test -n "$PKG_CONFIG"; then
-    if test -n "$PKG_CONFIG" && \
-    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"libsystemd-daemon\""; } >&5
-  ($PKG_CONFIG --exists --print-errors "libsystemd-daemon") 2>&5
-  ac_status=$?
-  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
-  test $ac_status = 0; }; then
-  pkg_cv_SYSTEMD_DAEMON_LIBS=`$PKG_CONFIG --libs "libsystemd-daemon" 2>/dev/null`
-		      test "x$?" != "x0" && pkg_failed=yes
-else
-  pkg_failed=yes
-fi
- else
-    pkg_failed=untried
-fi
-
-
-
-if test $pkg_failed = yes; then
-   	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-
-if $PKG_CONFIG --atleast-pkgconfig-version 0.20; then
-        _pkg_short_errors_supported=yes
-else
-        _pkg_short_errors_supported=no
-fi
-        if test $_pkg_short_errors_supported = yes; then
-	        SYSTEMD_DAEMON_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors --cflags --libs "libsystemd-daemon" 2>&1`
-        else
-	        SYSTEMD_DAEMON_PKG_ERRORS=`$PKG_CONFIG --print-errors --cflags --libs "libsystemd-daemon" 2>&1`
-        fi
-	# Put the nasty error message in config.log where it belongs
-	echo "$SYSTEMD_DAEMON_PKG_ERRORS" >&5
-
-	have_systemd_daemon=no
-elif test $pkg_failed = untried; then
-     	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-	have_systemd_daemon=no
-else
-	SYSTEMD_DAEMON_CFLAGS=$pkg_cv_SYSTEMD_DAEMON_CFLAGS
-	SYSTEMD_DAEMON_LIBS=$pkg_cv_SYSTEMD_DAEMON_LIBS
-        { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-$as_echo "yes" >&6; }
-	have_systemd_daemon=yes
-fi
-		if test "x$have_systemd_daemon" = "xyes"; then :
-  have_systemd=yes
-fi
-
-fi
-	case $enable_systemd:$have_systemd in #(
-  yes:no) :
-    as_fn_error $? "systemd enabled but libsystemd not found" "$LINENO" 5 ;; #(
-  *:yes) :
-
-$as_echo "#define HAVE_SYSTEMD 1" >>confdefs.h
-
-		LIBS="$LIBS $SYSTEMD_LIBS"
-
-	 ;; #(
-  *) :
-     ;;
-esac
-
-
-fi
- if test "x$have_systemd" = xyes; then
-  USE_SYSTEMD_TRUE=
-  USE_SYSTEMD_FALSE='#'
-else
-  USE_SYSTEMD_TRUE='#'
-  USE_SYSTEMD_FALSE=
-fi
-
-
-# Include systemd.m4 - end
 
 # set lock checking if requested
 # Check whether --enable-lock_checks was given.

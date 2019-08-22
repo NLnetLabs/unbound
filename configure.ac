@@ -480,6 +480,10 @@ else
 	AC_DEFINE(REUSEPORT_DEFAULT, 0, [if REUSEPORT is enabled by default])
 fi
 
+# Include systemd.m4 - begin
+sinclude(systemd.m4)
+# Include systemd.m4 - end
+
 # set memory allocation checking if requested
 AC_ARG_ENABLE(alloc-checks, AC_HELP_STRING([--enable-alloc-checks],
 	[ enable to memory allocation statistics, for debug purposes ]), 
@@ -1300,10 +1304,6 @@ if test x_$enable_static_exe = x_yes; then
 		LIBS="$LIBS -lz"
 	fi
 fi
-
-# Include systemd.m4 - begin
-sinclude(systemd.m4)
-# Include systemd.m4 - end
 
 # set lock checking if requested
 AC_ARG_ENABLE(lock_checks, AC_HELP_STRING([--enable-lock-checks],
