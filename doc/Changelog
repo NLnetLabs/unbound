@@ -1,5 +1,6 @@
 22 August 2019: Wouter
 	- Fix that pkg-config is setup before --enable-systemd needs it.
+	- 1.9.3rc2 release candidate tag.
 
 21 August 2019: Wouter
 	- Fix log_dns_msg to log irrespective of minimal responses config.
@@ -26,7 +27,7 @@
 	- escape commandline contents for -V.
 	- Fix character buffer size in ub_ctx_hosts.
 	- 1.9.3rc1 release candidate tag.
-	- (for later release): -V prints if TCP fastopen is available.
+	- Option -V prints if TCP fastopen is available.
 
 14 August 2019: George
 	- Fix #59, when compiled with systemd support check that we can properly
