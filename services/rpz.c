@@ -705,12 +705,11 @@ rpz_data_delete_rr(struct local_zone* z, uint8_t* policydname,
  * @param rr_type: RR type of RR to remove
  * @param rdata: rdata of RR to remove
  * @param rdatalen: length of rdata
- * @param region: RPZ's repsip_set region
  * @return: 1 if zone must be removed after RR deletion
  */
 static int
 rpz_rrset_delete_rr(struct resp_addr* raddr, uint16_t rr_type, uint8_t* rdata,
-	size_t rdatalen, struct regional* region)
+	size_t rdatalen)
 {
 	size_t index;
 	struct packed_rrset_data* d;
@@ -790,7 +789,7 @@ rpz_remove_response_ip_trigger(struct rpz* r, uint8_t* dname, enum rpz_action a,
 	if(a == RPZ_LOCAL_DATA_ACTION) {
 		/* remove RR, signal whether RR can be removed */
 		delete_respip = rpz_rrset_delete_rr(node, rr_type, rdatawl, 
-			rdatalen, r->respip_set->region);
+			rdatalen);
 	}
 	if(delete_respip) {
 		/* delete + reset parent pointers */	
