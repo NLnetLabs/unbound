@@ -3264,8 +3264,8 @@ index 10227a2f..a519fcc7 100644
 +
 +		OUTYY(("P(rpz_zone:%s)\n", $2));
 +		old_cstr = cfg_parser->cfg->rpz_cstr;
-+		(void)asprintf(&new_cstr, "%s\nzone %s", old_cstr?old_cstr:"", $2);
-+		if(!new_cstr)
++		if(asprintf(&new_cstr, "%s\nzone %s", old_cstr?old_cstr:"", $2) == -1) {new_cstr = NULL; yyerror("out of memory");}
++		else if(!new_cstr)
 +			yyerror("out of memory");
 +		free(old_cstr);
 +		cfg_parser->cfg->rpz_cstr = new_cstr;
@@ -3277,8 +3277,8 @@ index 10227a2f..a519fcc7 100644
 +
 +		OUTYY(("P(rpz_option:%s)\n", $2));
 +		old_cstr = cfg_parser->cfg->rpz_cstr;
-+		(void)asprintf(&new_cstr, "%s\n%s", old_cstr ? old_cstr : "", $2);
-+		if(!new_cstr)
++		if(asprintf(&new_cstr, "%s\n%s", old_cstr ? old_cstr : "", $2) == -1) {new_cstr = NULL; yyerror("out of memory");}
++		else if(!new_cstr)
 +			yyerror("out of memory");
 +		free(old_cstr);
 +		cfg_parser->cfg->rpz_cstr = new_cstr;

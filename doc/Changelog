@@ -1,3 +1,6 @@
+23 August 2019: Wouter
+	- Fix contrib/fastrpz.patch asprintf return value checks.
+
 22 August 2019: Wouter
 	- Fix that pkg-config is setup before --enable-systemd needs it.
 	- 1.9.3rc2 release candidate tag.
