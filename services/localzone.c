@@ -394,6 +394,27 @@ rrset_insert_rr(struct regional* region, struct packed_rrset_data* pd,
 	return 1;
 }
 
+/** Delete RR from local-zone RRset, wastes memory as the deleted RRs cannot be
+ * free'd (regionally alloc'd) */
+int
+local_rrset_remove_rr(struct packed_rrset_data* pd, size_t index)
+{
+	if(index >= pd->count) {
+		log_warn("Trying to remove RR with out of bound index");
+		return 0;
+	}
+	if(index - 1 < pd->count) {
+		/* not removing last element */
+		size_t nexti = index + 1;
+		size_t num = pd->count - nexti;
+		memcpy(pd->rr_len+index, pd->rr_len+nexti, sizeof(*pd->rr_len)*num);
+		memcpy(pd->rr_ttl+index, pd->rr_ttl+nexti, sizeof(*pd->rr_ttl)*num);
+		memcpy(pd->rr_data+index, pd->rr_data+nexti, sizeof(*pd->rr_data)*num);
+	}
+	pd->count--;
+	return 1;
+}
+
 struct local_data* 
 local_zone_find_data(struct local_zone* z, uint8_t* nm, size_t nmlen, int nmlabs)
 {
@@ -1447,7 +1468,9 @@ local_zones_zone_answer(struct local_zone* z, struct module_env* env,
 	struct comm_reply* repinfo, sldns_buffer* buf, struct regional* temp,
 	struct local_data* ld, enum localzone_type lz_type)
 {
-	if(lz_type == local_zone_deny || lz_type == local_zone_inform_deny) {
+	if(lz_type == local_zone_deny ||
+		lz_type == local_zone_always_deny ||
+		lz_type == local_zone_inform_deny) {
 		/** no reply at all, signal caller by clearing buffer. */
 		sldns_buffer_clear(buf);
 		sldns_buffer_flip(buf);
@@ -1655,6 +1678,7 @@ local_zones_answer(struct local_zones* zones, struct module_env* env,
 		&& lzt != local_zone_always_transparent
 		&& lzt != local_zone_always_nxdomain
 		&& lzt != local_zone_always_nodata
+		&& lzt != local_zone_always_deny
 		&& local_data_answer(z, env, qinfo, edns, repinfo, buf, temp, labs,
 			&ld, lzt, tag, tag_datas, tag_datas_size, tagname, num_tags)) {
 		lock_rw_unlock(&z->lock);
@@ -1685,6 +1709,7 @@ const char* local_zone_type2str(enum localzone_type t)
 		case local_zone_always_refuse: return "always_refuse";
 		case local_zone_always_nxdomain: return "always_nxdomain";
 		case local_zone_always_nodata: return "always_nodata";
+		case local_zone_always_deny: return "always_deny";
 		case local_zone_noview: return "noview";
 		case local_zone_invalid: return "invalid";
 	}
@@ -1719,6 +1744,8 @@ int local_zone_str2type(const char* type, enum localzone_type* t)
 		*t = local_zone_always_nxdomain;
 	else if(strcmp(type, "always_nodata") == 0)
 		*t = local_zone_always_nodata;
+	else if(strcmp(type, "always_deny") == 0)
+		*t = local_zone_always_deny;
 	else if(strcmp(type, "noview") == 0)
 		*t = local_zone_noview;
 	else if(strcmp(type, "nodefault") == 0)

@@ -94,6 +94,8 @@ enum localzone_type {
 	local_zone_always_nxdomain,
 	/** answer with noerror/nodata, even when there is local data */
 	local_zone_always_nodata,
+	/** drop query, even when there is local data */
+	local_zone_always_deny,
 	/** answer not from the view, but global or no-answer */
 	local_zone_noview,
 	/** Invalid type, cannot be used to generate answer */
@@ -514,6 +516,15 @@ int rrset_insert_rr(struct regional* region, struct packed_rrset_data* pd,
 	uint8_t* rdata, size_t rdata_len, time_t ttl, const char* rrstr);
 
 /**
+ * Remove RR from rrset that is created using localzone's rrset_insert_rr.
+ * @param pd: the RRset containing the RR to remove
+ * @param index: index of RR to remove
+ * @return: 1 on success; 0 otherwise.
+ */
+int
+local_rrset_remove_rr(struct packed_rrset_data* pd, size_t index);
+
+/**
   * Valid response ip actions for the IP-response-driven-action feature;
   * defined here instead of in the respip module to enable sharing of enum
   * values with the localzone_type enum.
@@ -543,6 +554,8 @@ enum respip_action {
 	respip_always_nxdomain = local_zone_always_nxdomain,
         /** answer with nodata response */
 	respip_always_nodata = local_zone_always_nodata,
+        /** answer with nodata response */
+	respip_always_deny = local_zone_always_deny,
 
 	/* The rest of the values are only possible as
 	 * access-control-tag-action */

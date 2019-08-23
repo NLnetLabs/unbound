@@ -64,6 +64,16 @@ $ORIGIN rpz6.example.com.
 32.6.113.0.203.rpz-ip A 192.0.2.6
 TEMPFILE_END
 
+rpz:
+	name: "rpz7.example.com."
+	rpz-action-override: drop
+	zonefile:
+TEMPFILE_NAME rpz7.example.com
+TEMPFILE_CONTENTS rpz7.example.com
+$ORIGIN rpz7.example.com.
+32.7.113.0.203.rpz-ip A 192.0.2.7
+TEMPFILE_END
+
 stub-zone:
 	name: "."
 	stub-addr: 10.20.30.40
@@ -144,6 +154,16 @@ SECTION QUESTION
 e. IN A
 SECTION ANSWER
 e. IN A 203.0.113.6
+ENTRY_END
+
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR NOERROR
+SECTION QUESTION
+f. IN A
+SECTION ANSWER
+f. IN A 203.0.113.7
 ENTRY_END
 
 RANGE_END
@@ -231,5 +251,15 @@ SECTION ANSWER
 e.	IN	CNAME ns.
 ns.	IN	A 10.20.30.40
 ENTRY_END
+
+STEP 11 QUERY
+ENTRY_BEGIN
+REPLY RD
+SECTION QUESTION
+f.	IN	A
+ENTRY_END
+; no answer is checked at exit of testbound.
+
+STEP 12 TIME_PASSES ELAPSE 10
 
 SCENARIO_END

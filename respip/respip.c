@@ -195,6 +195,8 @@ respip_action_cfg(struct respip_set* set, const char* ipstr,
                 action = respip_always_nxdomain;
         else if(strcmp(actnstr, "always_nodata") == 0)
                 action = respip_always_nodata;
+        else if(strcmp(actnstr, "always_deny") == 0)
+                action = respip_always_deny;
         else {
                 log_err("unknown response-ip action %s", actnstr);
                 return 0;
@@ -962,6 +964,7 @@ respip_rewrite_reply(const struct query_info* qinfo,
 			&& action != respip_always_transparent
 			&& action != respip_always_nxdomain
 			&& action != respip_always_nodata
+			&& action != respip_always_deny
 			&& (result = respip_data_answer(action,
 			(data) ? data : raddr->data, qinfo->qtype, rep,
 			rrset_id, new_repp, tag, tag_datas, tag_datas_size,
@@ -1080,9 +1083,11 @@ respip_operate(struct module_qstate* qstate, enum module_ev event, int id,
 			} else {
 				qstate->respip_action_info = NULL;
 			}
-			if (new_rep == qstate->return_msg->rep &&
+			if (actinfo.action == respip_always_deny ||
+				(new_rep == qstate->return_msg->rep &&
 				(actinfo.action == respip_deny ||
-				actinfo.action == respip_inform_deny)) {
+				actinfo.action == respip_deny ||
+				actinfo.action == respip_inform_deny))) {
 				/* for deny-variant actions (unless response-ip
 				 * data is applied), mark the query state so
 				 * the response will be dropped for all
@@ -1283,7 +1288,7 @@ respip_inform_print(struct respip_action_info* respip_actinfo, uint8_t* qname,
 		txtlen += snprintf(txt+txtlen, sizeof(txt)-txtlen,
 			"[%s] ", respip_actinfo->log_name);
 	}
-	txtlen += snprintf(txt+txtlen, sizeof(txt)-txtlen,
+	snprintf(txt+txtlen, sizeof(txt)-txtlen,
 		"%s/%d %s %s@%u", respip, respip_addr->net,
 		(actionstr) ? actionstr : "inform", srcip, port);
 	if(actionstr)

@@ -64,6 +64,16 @@ $ORIGIN rpz6.example.com.
 e	TXT "should be override by cname"
 TEMPFILE_END
 
+rpz:
+	name: "rpz7.example.com."
+	rpz-action-override: drop
+	zonefile:
+TEMPFILE_NAME rpz7.example.com
+TEMPFILE_CONTENTS rpz7.example.com
+$ORIGIN rpz7.example.com.
+f	TXT "should be override by drop policy"
+TEMPFILE_END
+
 stub-zone:
 	name: "d."
 	stub-addr: 10.20.30.40
@@ -174,5 +184,14 @@ SECTION ANSWER
 e. IN CNAME d.
 d. IN TXT "answer from upstream ns"
 ENTRY_END
+
+; check drop override, would be localdata without override
+STEP 60 QUERY
+ENTRY_BEGIN
+REPLY RD
+SECTION QUESTION
+f.	IN	TXT
+ENTRY_END
+; no answer is checked at exit of testbound.
 
 SCENARIO_END

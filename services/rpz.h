@@ -44,6 +44,7 @@
 
 #include "services/localzone.h"
 #include "util/locks.h"
+#include "util/log.h"
 #include "util/config_file.h"
 #include "services/authzone.h"
 #include "sldns/sbuffer.h"

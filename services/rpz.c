@@ -197,7 +197,7 @@ rpz_action_to_localzone_type(enum rpz_action a)
 	switch(a) {
 	case RPZ_NXDOMAIN_ACTION:	return local_zone_always_nxdomain;
 	case RPZ_NODATA_ACTION:		return local_zone_always_nodata;
-	case RPZ_DROP_ACTION:		return local_zone_deny;
+	case RPZ_DROP_ACTION:		return local_zone_always_deny;
 	case RPZ_PASSTHRU_ACTION:	return local_zone_always_transparent;
 	case RPZ_LOCAL_DATA_ACTION:
 	case RPZ_CNAME_OVERRIDE_ACTION:
@@ -215,7 +215,7 @@ rpz_action_to_respip_action(enum rpz_action a)
 	switch(a) {
 	case RPZ_NXDOMAIN_ACTION:	return respip_always_nxdomain;
 	case RPZ_NODATA_ACTION:		return respip_always_nodata;
-	case RPZ_DROP_ACTION:		return respip_deny;
+	case RPZ_DROP_ACTION:		return respip_always_deny;
 	case RPZ_PASSTHRU_ACTION:	return respip_always_transparent;
 	case RPZ_LOCAL_DATA_ACTION:
 	case RPZ_CNAME_OVERRIDE_ACTION:
@@ -233,7 +233,7 @@ localzone_type_to_rpz_action(enum localzone_type lzt)
 	switch(lzt) {
 	case local_zone_always_nxdomain:	return RPZ_NXDOMAIN_ACTION;
 	case local_zone_always_nodata:		return RPZ_NODATA_ACTION;
-	case local_zone_deny:			return RPZ_DROP_ACTION;
+	case local_zone_always_deny:		return RPZ_DROP_ACTION;
 	case local_zone_always_transparent:	return RPZ_PASSTHRU_ACTION;
 	case local_zone_redirect:		return RPZ_LOCAL_DATA_ACTION;
 	case local_zone_invalid:
@@ -248,7 +248,7 @@ respip_action_to_rpz_action(enum respip_action a)
 	switch(a) {
 	case respip_always_nxdomain:	return RPZ_NXDOMAIN_ACTION;
 	case respip_always_nodata:	return RPZ_NODATA_ACTION;
-	case respip_deny:		return RPZ_DROP_ACTION;
+	case respip_always_deny:	return RPZ_DROP_ACTION;
 	case respip_always_transparent:	return RPZ_PASSTHRU_ACTION;
 	case respip_redirect:		return RPZ_LOCAL_DATA_ACTION;
 	case respip_invalid:
@@ -689,11 +689,8 @@ rpz_data_delete_rr(struct local_zone* z, uint8_t* policydname,
 
 			}
 			if(d->count > 1) {
-				struct packed_rrset_data* new;
-				new = packed_rrset_remove_rr(d, index, z->region);
-				if(!new)
+				if(!local_rrset_remove_rr(d, index))
 					return 0;
-				p->rrset->entry.data = new;	
 			}
 		}
 	}
@@ -731,11 +728,8 @@ rpz_rrset_delete_rr(struct resp_addr* raddr, uint16_t rr_type, uint8_t* rdata,
 			return 1;
 		}
 		if(d->count > 1) {
-			struct packed_rrset_data* new;
-			new = packed_rrset_remove_rr(d, index, region);
-			if(!new)
+			if(!local_rrset_remove_rr(d, index))
 				return 0;
-			raddr->data->entry.data = new;	
 		}
 	}
 	return 0;
