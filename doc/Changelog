@@ -3,7 +3,8 @@
 
 22 August 2019: Wouter
 	- Fix that pkg-config is setup before --enable-systemd needs it.
-	- 1.9.3rc2 release candidate tag.
+	- 1.9.3rc2 release candidate tag.  And this became the 1.9.3 release.
+	  Master is 1.9.4 in development.
 
 21 August 2019: Wouter
 	- Fix log_dns_msg to log irrespective of minimal responses config.
@@ -102,7 +103,7 @@
 	- Merge PR #6: Python module: support multiple instances
 	- Merge PR #5: Python module: define constant MODULE_RESTART_NEXT
 	- Merge PR #4: Python module: assign something useful to the
-	  per-query data store 'qdata' 
+	  per-query data store 'qdata'
 	- Fix python dict reference and double free in config.
 
 17 June 2019: Wouter
