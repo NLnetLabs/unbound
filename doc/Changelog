@@ -1,3 +1,6 @@
+2 September 2019: Wouter
+	- ipset module #28: log that an address is added, when verbosity high.
+
 23 August 2019: Wouter
 	- Fix contrib/fastrpz.patch asprintf return value checks.
 

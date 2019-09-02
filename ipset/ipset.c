@@ -8,6 +8,7 @@
 #include "config.h"
 #include "ipset/ipset.h"
 #include "util/regional.h"
+#include "util/net_help.h"
 #include "util/config_file.h"
 
 #include "services/cache/dns.h"
@@ -172,7 +173,17 @@ static int ipset_update(struct module_env *env, struct dns_msg *return_msg, stru
 							rr_data = d->rr_data[j];
 
 							rd_len = sldns_read_uint16(rr_data);
+							if(af == AF_INET && rd_len != INET_SIZE)
+								continue;
+							if(af == AF_INET6 && rd_len != INET6_SIZE)
+								continue;
 							if (rr_len - 2 >= rd_len) {
+								if(verbosity >= VERB_QUERY) {
+									char ip[128];
+									if(inet_ntop(af, rr_data+2, ip, (socklen_t)sizeof(ip)) == 0)
+										snprintf(ip, sizeof(ip), "(inet_ntop_error)");
+									verbose(VERB_QUERY, "ipset: add %s to %s for %s", ip, setname, dname);
+								}
 								ret = add_to_ipset(mnl, setname, rr_data + 2, af);
 								if (ret < 0) {
 									log_err("ipset: could not add %s into %s", dname, setname);
