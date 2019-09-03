@@ -1,3 +1,9 @@
+3 September 2019: Wouter
+	- squelch DNS over TLS errors 'ssl handshake failed crypto error'
+	  on low verbosity, they show on verbosity 3 (query details), because
+	  there is a high volume and the operator cannot do anything for the
+	  remote failure.  Specifically filters the high volume errors.
+
 2 September 2019: Wouter
 	- ipset module #28: log that an address is added, when verbosity high.
 	- ipset: refactor long routine into three smaller ones.

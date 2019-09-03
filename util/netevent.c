@@ -1052,6 +1052,28 @@ log_cert(unsigned level, const char* str, X509* cert)
 }
 #endif /* HAVE_SSL */
 
+#ifdef HAVE_SSL
+/** true if the ssl handshake error has to be squelched from the logs */
+static int
+squelch_err_ssl_handshake(unsigned long err)
+{
+	if(verbosity >= VERB_QUERY)
+		return 0; /* only squelch on low verbosity */
+	/* this is very specific, we could filter on ERR_GET_REASON()
+	 * (the third element in ERR_PACK) */
+	if(err == ERR_PACK(ERR_LIB_SSL, SSL_F_SSL3_GET_RECORD, SSL_R_HTTPS_PROXY_REQUEST) ||
+		err == ERR_PACK(ERR_LIB_SSL, SSL_F_SSL3_GET_RECORD, SSL_R_HTTP_REQUEST) ||
+		err == ERR_PACK(ERR_LIB_SSL, SSL_F_SSL3_GET_RECORD, SSL_R_WRONG_VERSION_NUMBER) ||
+		err == ERR_PACK(ERR_LIB_SSL, SSL_F_SSL3_READ_BYTES, SSL_R_SSLV3_ALERT_BAD_CERTIFICATE) ||
+		err == ERR_PACK(ERR_LIB_SSL, SSL_F_TLS_POST_PROCESS_CLIENT_HELLO, SSL_R_NO_SHARED_CIPHER) ||
+		err == ERR_PACK(ERR_LIB_SSL, SSL_F_TLS_EARLY_POST_PROCESS_CLIENT_HELLO, SSL_R_UNKNOWN_PROTOCOL) ||
+		err == ERR_PACK(ERR_LIB_SSL, SSL_F_TLS_EARLY_POST_PROCESS_CLIENT_HELLO, SSL_R_UNSUPPORTED_PROTOCOL) ||
+		err == ERR_PACK(ERR_LIB_SSL, SSL_F_TLS_EARLY_POST_PROCESS_CLIENT_HELLO, SSL_R_VERSION_TOO_LOW))
+		return 1;
+	return 0;
+}
+#endif /* HAVE_SSL */
+
 /** continue ssl handshake */
 #ifdef HAVE_SSL
 static int
@@ -1096,9 +1118,12 @@ ssl_handshake(struct comm_point* c)
 					strerror(errno));
 			return 0;
 		} else {
-			log_crypto_err("ssl handshake failed");
-			log_addr(1, "ssl handshake failed", &c->repinfo.addr,
-				c->repinfo.addrlen);
+			unsigned long err = ERR_get_error();
+			if(!squelch_err_ssl_handshake(err)) {
+				log_crypto_err_code("ssl handshake failed", err);
+				log_addr(1, "ssl handshake failed", &c->repinfo.addr,
+					c->repinfo.addrlen);
+			}
 			return 0;
 		}
 	}
