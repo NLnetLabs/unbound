@@ -1,3 +1,6 @@
+4 September 2019: Wouter
+	- Fix #71: fix openssl error squelch commit compilation error.
+
 3 September 2019: Wouter
 	- squelch DNS over TLS errors 'ssl handshake failed crypto error'
 	  on low verbosity, they show on verbosity 3 (query details), because
