@@ -884,6 +884,7 @@ enable_ipsecmod
 enable_ipset
 with_libmnl
 with_libunbound_only
+with_syslog_facility
 '
       ac_precious_vars='build_alias
 host_alias
@@ -1604,6 +1605,8 @@ Optional Packages:
   --with-pthreads         use pthreads library, or --without-pthreads to
                           disable threading support.
   --with-solaris-threads  use solaris native thread library.
+  --with-syslog-facility=LOCAL0 - LOCAL7
+                          set SYSLOG_FACILITY, default DAEMON
   --with-pyunbound        build PyUnbound, or --without-pyunbound to skip it.
                           (default=no)
   --with-pythonmodule     build Python module, or --without-pythonmodule to
@@ -17098,6 +17101,23 @@ fi
 fi
 
 fi # end of non-mingw check of thread libraries
+
+# Check for SYSLOG_FACILITY
+if test "${with_syslog_facility+set}" = set; then :
+  withval=$with_syslog_facility; UNBOUND_SYSLOG_FACILITY="$withval"
+else
+  withval=""
+fi
+
+case "${UNBOUND_SYSLOG_FACILITY}" in
+
+  LOCAL[0-7]) UNBOUND_SYSLOG_FACILITY="LOG_${UNBOUND_SYSLOG_FACILITY}" ;;
+
+           *) UNBOUND_SYSLOG_FACILITY="LOG_DAEMON" ;;
+
+esac
+
+echo "#define UB_SYSLOG_FACILITY ${UNBOUND_SYSLOG_FACILITY}" >>confdefs.h
 
 # Check for PyUnbound
 
