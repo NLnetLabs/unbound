@@ -733,6 +733,9 @@
 /* default username */
 #undef UB_USERNAME
 
+/* SYSLOG_FACILITY */
+#undef UB_SYSLOG_FACILITY
+
 /* use to enable lightweight alloc assertions, for debug use */
 #undef UNBOUND_ALLOC_LITE
 
