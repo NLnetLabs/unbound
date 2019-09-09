@@ -730,6 +730,9 @@
 /* Use win32 resources and API */
 #undef UB_ON_WINDOWS
 
+/* the SYSLOG_FACILITY to use, default LOG_DAEMON */
+#undef UB_SYSLOG_FACILITY
+
 /* default username */
 #undef UB_USERNAME
 

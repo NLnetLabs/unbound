@@ -603,6 +603,18 @@ fi
 
 fi # end of non-mingw check of thread libraries
 
+# Check for SYSLOG_FACILITY
+AC_ARG_WITH(syslog-facility, AC_HELP_STRING([--with-syslog-facility=LOCAL0 - LOCAL7], [ set SYSLOG_FACILITY, default DAEMON ]),
+	[ UNBOUND_SYSLOG_FACILITY="$withval" ], [])
+case "${UNBOUND_SYSLOG_FACILITY}" in
+
+  LOCAL[[0-7]]) UNBOUND_SYSLOG_FACILITY="LOG_${UNBOUND_SYSLOG_FACILITY}" ;;
+
+           *) UNBOUND_SYSLOG_FACILITY="LOG_DAEMON" ;;
+
+esac
+AC_DEFINE_UNQUOTED(UB_SYSLOG_FACILITY,${UNBOUND_SYSLOG_FACILITY},[the SYSLOG_FACILITY to use, default LOG_DAEMON])
+
 # Check for PyUnbound
 AC_ARG_WITH(pyunbound,
    AC_HELP_STRING([--with-pyunbound],

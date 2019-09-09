@@ -1,3 +1,8 @@
+9 September 2019: Wouter
+	- Fix #72: configure --with-syslog-facility=LOCAL0-7 with default
+	  LOG_DAEMON (as before) can set the syslog facility that the server
+	  uses to log messages.
+
 4 September 2019: Wouter
 	- Fix #71: fix openssl error squelch commit compilation error.
 
