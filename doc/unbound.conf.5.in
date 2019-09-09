@@ -2080,6 +2080,59 @@ If this timeout expires Unbound closes the connection, treats it as
 if the Redis server does not have the requested data, and will try to
 re-establish a new connection later.
 This option defaults to 100 milliseconds.
+.SS Response Policy Zone Options
+.LP
+Response Policy Zones are configured with \fBrpz:\fR, and each one must have a
+\fBname:\fR. There can be multiple ones, by listing multiple rpz clauses, each
+with a different name. RPZ clauses are applied in order of configuration. The
+\fBrespip\fR module needs to be added to the \fBmodule-config\fR, e.g.:
+\fBmodule-config: "respip validator itarator"\fR.
+.P
+Only the QNAME and Response IP Address triggers are supported. The supported RPZ
+actions are: NXDOMAIN, NODATA, PASSTHRU, DROP and Local Data. RPZ QNAME triggers
+are applied after
+\fBlocal-zones\fR and before \fBauth-zones\fR.
+.TP
+.B name: \fI<zone name>
+Name of the authority zone.
+.TP
+.B master: \fI<IP address or host name>
+Where to download a copy of the zone from, with AXFR and IXFR.  Multiple
+masters can be specified.  They are all tried if one fails.
+.TP
+.B allow\-notify: \fI<IP address or host name or netblockIP/prefix>
+With allow\-notify you can specify additional sources of notifies.
+When notified, the server attempts to first probe and then zone transfer.
+If the notify is from a master, it first attempts that master.  Otherwise
+other masters are attempted.  If there are no masters, but only urls, the
+file is downloaded when notified.  The masters from master: statements are
+allowed notify by default.
+.TP
+.B zonefile: \fI<filename>
+The filename where the zone is stored.  If not given then no zonefile is used.
+If the file does not exist or is empty, unbound will attempt to fetch zone
+data (eg. from the master servers).
+.TP
+.B rpz\-action\-override: \fI<action>
+Always use this RPZ action for matching triggers from this zone. Possible action
+are: nxdomain, nodata, passthru, drop, disabled and cname.
+.TP
+.B rpz\-cname\-override: \fI<domain>
+The CNAME target domain to use if the cname action is configured for
+\fBrpz\-action\-override\fR.
+.TP
+.B rpz\-log: \fI<yes or no>
+Log all applied RPZ actions. Default is no.
+.TP
+.B rpz\-log\-name: \fI<name>
+Specify a string to be part of the log line, for easy referencing.
+.TP
+.B tags: \fI<list of tags>
+Limit the policies from this RPZ clause to clients with a matching tag. Tags
+need to be defined in \fBdefine\-tag\fR and can be assiged to client addresses
+using \fBaccess\-control\-tag\fR. Enclose list of tags in quotes ("") and put
+spaces between tags. If no tags are specified the policies from this clause will
+be applied for all clients.
 .SH "MEMORY CONTROL EXAMPLE"
 In the example config settings below memory usage is reduced. Some service
 levels are lower, notable very large data and a high TCP load are no longer

@@ -273,6 +273,8 @@ server_stats_compile(struct worker* worker, struct ub_stats_info* s, int reset)
 	s->svr.ans_rcode_nodata += (long long)worker->env.mesh->ans_nodata;
 	for(i=0; i<16; i++)
 		s->svr.ans_rcode[i] += (long long)worker->env.mesh->ans_rcode[i];
+	for(i=0; i<UB_STATS_RPZ_ACTION_NUM; i++)
+		s->svr.rpz_action[i] += (long long)worker->env.mesh->rpz_action[i];
 	timehist_export(worker->env.mesh->histogram, s->svr.hist, 
 		NUM_BUCKETS_HIST);
 	/* values from outside network */
@@ -446,6 +448,8 @@ void server_stats_add(struct ub_stats_info* total, struct ub_stats_info* a)
 			total->svr.ans_rcode[i] += a->svr.ans_rcode[i];
 		for(i=0; i<NUM_BUCKETS_HIST; i++)
 			total->svr.hist[i] += a->svr.hist[i];
+		for(i=0; i<UB_STATS_RPZ_ACTION_NUM; i++)
+			total->svr.rpz_action[i] += a->svr.rpz_action[i];
 	}
 
 	total->mesh_num_states += a->mesh_num_states;

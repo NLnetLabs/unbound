@@ -464,4 +464,15 @@ int tls_session_ticket_key_cb(void *s, unsigned char* key_name,unsigned char* iv
 /** Free memory used for TLS session ticket keys */
 void listen_sslctx_delete_ticket_keys(void);
 
+/**
+ * RPZ format netblock to network byte order address and netblock
+ * @param dname: the dname containing RPZ format netblock
+ * @param addr: where to store sockaddr.
+ * @param addrlen: length of stored sockaddr is returned.
+ * @param net: where to store netmask
+ * @param af: where to store address family.
+ * @return 0 on error.
+ */
+int netblockdnametoaddr(uint8_t* dname, struct sockaddr_storage* addr,
+	socklen_t* addrlen, int* net, int* af);
 #endif /* NET_HELP_H */

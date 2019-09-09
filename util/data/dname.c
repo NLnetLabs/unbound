@@ -546,6 +546,19 @@ dname_lab_startswith(uint8_t* label, char* prefix, char** endptr)
 	return 1;
 }
 
+int
+dname_has_label(uint8_t* dname, uint8_t* label)
+{
+	uint8_t lablen = *dname++;
+	while(lablen) {
+		if(*label == lablen && memcmp(dname, label+1, lablen) == 0)
+			return 1;
+		dname += lablen;
+		lablen = *dname++;
+	}
+	return 0;
+}
+
 int 
 dname_buffer_write(sldns_buffer* pkt, uint8_t* dname)
 {
@@ -584,7 +597,7 @@ void dname_str(uint8_t* dname, char* str)
 			return;
 		}
 		len += lablen+1;
-		if(len >= LDNS_MAX_DOMAINLEN-1) {
+		if(len >= LDNS_MAX_DOMAINLEN) {
 			*s++ = '&';
 			*s = 0;
 			return;
