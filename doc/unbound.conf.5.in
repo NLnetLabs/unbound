@@ -2086,7 +2086,7 @@ Response Policy Zones are configured with \fBrpz:\fR, and each one must have a
 \fBname:\fR. There can be multiple ones, by listing multiple rpz clauses, each
 with a different name. RPZ clauses are applied in order of configuration. The
 \fBrespip\fR module needs to be added to the \fBmodule-config\fR, e.g.:
-\fBmodule-config: "respip validator itarator"\fR.
+\fBmodule-config: "respip validator iterator"\fR.
 .P
 Only the QNAME and Response IP Address triggers are supported. The supported RPZ
 actions are: NXDOMAIN, NODATA, PASSTHRU, DROP and Local Data. RPZ QNAME triggers
