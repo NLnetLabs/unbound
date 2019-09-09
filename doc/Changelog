@@ -1,9 +1,29 @@
+9 September 2019: Wouter
+	- Fix #72: configure --with-syslog-facility=LOCAL0-7 with default
+	  LOG_DAEMON (as before) can set the syslog facility that the server
+	  uses to log messages.
+
+4 September 2019: Wouter
+	- Fix #71: fix openssl error squelch commit compilation error.
+
+3 September 2019: Wouter
+	- squelch DNS over TLS errors 'ssl handshake failed crypto error'
+	  on low verbosity, they show on verbosity 3 (query details), because
+	  there is a high volume and the operator cannot do anything for the
+	  remote failure.  Specifically filters the high volume errors.
+
+2 September 2019: Wouter
+	- ipset module #28: log that an address is added, when verbosity high.
+	- ipset: refactor long routine into three smaller ones.
+	- updated Makefile dependencies.
+
 23 August 2019: Wouter
 	- Fix contrib/fastrpz.patch asprintf return value checks.
 
 22 August 2019: Wouter
 	- Fix that pkg-config is setup before --enable-systemd needs it.
-	- 1.9.3rc2 release candidate tag.
+	- 1.9.3rc2 release candidate tag.  And this became the 1.9.3 release.
+	  Master is 1.9.4 in development.
 
 21 August 2019: Wouter
 	- Fix log_dns_msg to log irrespective of minimal responses config.
@@ -102,7 +122,7 @@
 	- Merge PR #6: Python module: support multiple instances
 	- Merge PR #5: Python module: define constant MODULE_RESTART_NEXT
 	- Merge PR #4: Python module: assign something useful to the
-	  per-query data store 'qdata' 
+	  per-query data store 'qdata'
 	- Fix python dict reference and double free in config.
 
 17 June 2019: Wouter

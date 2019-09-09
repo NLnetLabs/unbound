@@ -784,10 +784,19 @@ void
 log_crypto_err(const char* str)
 {
 #ifdef HAVE_SSL
+	log_crypto_err_code(str, ERR_get_error());
+#else
+	(void)str;
+#endif /* HAVE_SSL */
+}
+
+void log_crypto_err_code(const char* str, unsigned long err)
+{
+#ifdef HAVE_SSL
 	/* error:[error code]:[library name]:[function name]:[reason string] */
 	char buf[128];
 	unsigned long e;
-	ERR_error_string_n(ERR_get_error(), buf, sizeof(buf));
+	ERR_error_string_n(err, buf, sizeof(buf));
 	log_err("%s crypto %s", str, buf);
 	while( (e=ERR_get_error()) ) {
 		ERR_error_string_n(e, buf, sizeof(buf));
@@ -795,6 +804,7 @@ log_crypto_err(const char* str)
 	}
 #else
 	(void)str;
+	(void)err;
 #endif /* HAVE_SSL */
 }
 
