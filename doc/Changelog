@@ -1,3 +1,7 @@
+11 September 2019: Wouter
+	- Use explicit bzero for wiping clear buffer of hash in cachedb,
+	  reported by Eric Sesterhenn from X41 D-Sec.
+
 9 September 2019: Wouter
 	- Fix #72: configure --with-syslog-facility=LOCAL0-7 with default
 	  LOG_DAEMON (as before) can set the syslog facility that the server
