@@ -50,7 +50,7 @@ server:
 	username: unbound
 	# make sure unbound can access entropy from inside the chroot.
 	# e.g. on linux the use these commands (on BSD, devfs(8) is used):
-	#      mount \-\-bind \-n /dev/random /etc/unbound/dev/random
+	#      mount \-\-bind \-n /dev/urandom /etc/unbound/dev/urandom
 	# and  mount \-\-bind \-n /dev/log /etc/unbound/dev/log
 	chroot: "/etc/unbound"
 	# logfile: "/etc/unbound/unbound.log"  #uncomment to use logfile.
@@ -633,7 +633,7 @@ to chroot and dropping permissions. This allows the pidfile to be
 Unbound is not able to remove the pidfile after termination when it is located
 outside of the chroot directory.
 .IP
-Additionally, unbound may need to access /dev/random (for entropy)
+Additionally, unbound may need to access /dev/urandom (for entropy)
 from inside the chroot.
 .IP
 If given a chroot is done to the given directory. By default chroot is
