@@ -2,6 +2,7 @@
 	- Fix #78: Memory leak in outside_network.c.
 	- Merge pull request #76 from Maryse47: Improvements and fixes for
 	  systemd unbound.service.
+	- oss-fuzz badge on README.md.
 
 11 September 2019: Wouter
 	- Use explicit bzero for wiping clear buffer of hash in cachedb,
