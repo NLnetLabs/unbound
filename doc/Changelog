@@ -5,6 +5,8 @@
 	- oss-fuzz badge on README.md.
 	- Fix fix for #78 to also free service callback struct.
 	- Fix for oss-fuzz build warning.
+	- Fix wrong response ttl for prepended short CNAME ttls, this would
+	  create a wrong zero_ttl response count with serve-expired enabled.
 
 11 September 2019: Wouter
 	- Use explicit bzero for wiping clear buffer of hash in cachedb,
