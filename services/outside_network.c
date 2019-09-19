@@ -2135,12 +2135,14 @@ outnet_serviced_query(struct outside_network* outnet,
 			if(!serviced_udp_send(sq, buff)) {
 				(void)rbtree_delete(outnet->serviced, sq);
 				serviced_node_del(&sq->node, NULL);
+				free(cb);
 				return NULL;
 			}
 		} else {
 			if(!serviced_tcp_send(sq, buff)) {
 				(void)rbtree_delete(outnet->serviced, sq);
 				serviced_node_del(&sq->node, NULL);
+				free(cb);
 				return NULL;
 			}
 		}

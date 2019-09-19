@@ -3,6 +3,7 @@
 	- Merge pull request #76 from Maryse47: Improvements and fixes for
 	  systemd unbound.service.
 	- oss-fuzz badge on README.md.
+	- Fix fix for #78 to also free service callback struct.
 
 11 September 2019: Wouter
 	- Use explicit bzero for wiping clear buffer of hash in cachedb,
