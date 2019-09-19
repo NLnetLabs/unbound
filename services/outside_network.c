@@ -2134,19 +2134,13 @@ outnet_serviced_query(struct outside_network* outnet,
 		if(outnet->do_udp && !(tcp_upstream || ssl_upstream)) {
 			if(!serviced_udp_send(sq, buff)) {
 				(void)rbtree_delete(outnet->serviced, sq);
-				free(sq->qbuf);
-				free(sq->zone);
-				free(sq);
-				free(cb);
+				serviced_node_del(&sq->node, NULL);
 				return NULL;
 			}
 		} else {
 			if(!serviced_tcp_send(sq, buff)) {
 				(void)rbtree_delete(outnet->serviced, sq);
-				free(sq->qbuf);
-				free(sq->zone);
-				free(sq);
-				free(cb);
+				serviced_node_del(&sq->node, NULL);
 				return NULL;
 			}
 		}
