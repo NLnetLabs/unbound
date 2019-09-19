@@ -18198,16 +18198,6 @@ fi
 cat >>confdefs.h <<_ACEOF
 #define HAVE_DECL_ARC4RANDOM_UNIFORM $ac_have_decl
 _ACEOF
-ac_fn_c_check_decl "$LINENO" "reallocarray" "ac_cv_have_decl_reallocarray" "$ac_includes_default"
-if test "x$ac_cv_have_decl_reallocarray" = xyes; then :
-  ac_have_decl=1
-else
-  ac_have_decl=0
-fi
-
-cat >>confdefs.h <<_ACEOF
-#define HAVE_DECL_REALLOCARRAY $ac_have_decl
-_ACEOF
 
 else
 	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
@@ -20222,6 +20212,17 @@ esac
 fi
 rm -f core conftest.err conftest.$ac_objext \
     conftest$ac_exeext conftest.$ac_ext
+ac_fn_c_check_decl "$LINENO" "reallocarray" "ac_cv_have_decl_reallocarray" "$ac_includes_default"
+if test "x$ac_cv_have_decl_reallocarray" = xyes; then :
+  ac_have_decl=1
+else
+  ac_have_decl=0
+fi
+
+cat >>confdefs.h <<_ACEOF
+#define HAVE_DECL_REALLOCARRAY $ac_have_decl
+_ACEOF
+
 if test "$USE_NSS" = "no"; then
 	ac_fn_c_check_func "$LINENO" "arc4random" "ac_cv_func_arc4random"
 if test "x$ac_cv_func_arc4random" = xyes; then :

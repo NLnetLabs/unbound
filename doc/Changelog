@@ -4,6 +4,7 @@
 	  systemd unbound.service.
 	- oss-fuzz badge on README.md.
 	- Fix fix for #78 to also free service callback struct.
+	- Fix for oss-fuzz build warning.
 
 11 September 2019: Wouter
 	- Use explicit bzero for wiping clear buffer of hash in cachedb,
