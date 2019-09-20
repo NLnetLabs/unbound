@@ -1,3 +1,7 @@
+20 September 2019: Wouter
+	- Merge #82 from hardfalcon: Downgrade CAP_NET_ADMIN to CAP_NET_RAW
+	  in unbound.service.
+
 19 September 2019: Wouter
 	- Fix #78: Memory leak in outside_network.c.
 	- Merge pull request #76 from Maryse47: Improvements and fixes for
