@@ -3,6 +3,8 @@
 	  in unbound.service.
 	- Merge #81 from Maryse47: Consistently use /dev/urandom instead
 	  of /dev/random in scripts and docs.
+	- Merge #83 from Maryse47: contrib/unbound.service.in: do not fork
+	  into the background.
 
 19 September 2019: Wouter
 	- Fix #78: Memory leak in outside_network.c.
