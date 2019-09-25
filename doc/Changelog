@@ -1,3 +1,7 @@
+25 September 2019: Wouter
+	- The unbound.conf includes are sorted ascending, for include
+	  statements with a '*' from glob.
+
 23 September 2019: Wouter
 	- Merge #85 for #84 from sam-lunt: Add kill capability to systemd
 	  service file to fix that systemctl reload fails.
