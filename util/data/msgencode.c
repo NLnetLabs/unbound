@@ -664,7 +664,7 @@ negative_answer(struct reply_info* rep) {
 int
 reply_info_encode(struct query_info* qinfo, struct reply_info* rep,
 	uint16_t id, uint16_t flags, sldns_buffer* buffer, time_t timenow,
-	struct regional* region, uint16_t udpsize, int dnssec)
+	struct regional* region, uint16_t udpsize, int dnssec, int minimise)
 {
 	uint16_t ancount=0, nscount=0, arcount=0;
 	struct compress_tree_node* tree = 0;
@@ -744,7 +744,7 @@ reply_info_encode(struct query_info* qinfo, struct reply_info* rep,
 	sldns_buffer_write_u16_at(buffer, 6, ancount);
 
 	/* if response is positive answer, auth/add sections are not required */
-	if( ! (MINIMAL_RESPONSES && positive_answer(rep, qinfo->qtype)) ) {
+	if( ! (minimise && positive_answer(rep, qinfo->qtype)) ) {
 		/* insert auth section */
 		if((r=insert_section(rep, rep->ns_numrrsets, &nscount, buffer,
 			rep->an_numrrsets, timenow, region, &tree,
@@ -761,7 +761,7 @@ reply_info_encode(struct query_info* qinfo, struct reply_info* rep,
 		}
 		sldns_buffer_write_u16_at(buffer, 8, nscount);
 
-		if(! (MINIMAL_RESPONSES && negative_answer(rep))) {
+		if(! (minimise && negative_answer(rep))) {
 			/* insert add section */
 			if((r=insert_section(rep, rep->ar_numrrsets, &arcount, buffer,
 				rep->an_numrrsets + rep->ns_numrrsets, timenow, region,
@@ -874,7 +874,7 @@ reply_info_answer_encode(struct query_info* qinf, struct reply_info* rep,
 	}
 
 	if(!reply_info_encode(qinf, rep, id, flags, pkt, timenow, region,
-		udpsize, dnssec)) {
+		udpsize, dnssec, MINIMAL_RESPONSES)) {
 		log_err("reply encode: out of memory");
 		return 0;
 	}

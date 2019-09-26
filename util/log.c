@@ -115,7 +115,9 @@ log_init(const char* filename, int use_syslog, const char* chrootdir)
 	if(use_syslog) {
 		/* do not delay opening until first write, because we may
 		 * chroot and no longer be able to access dev/log and so on */
-		openlog(ident, LOG_NDELAY, LOG_DAEMON);
+		/* the facility is LOG_DAEMON by default, but
+		 * --with-syslog-facility=LOCAL[0-7] can override it */
+		openlog(ident, LOG_NDELAY, UB_SYSLOG_FACILITY);
 		logging_to_syslog = 1;
 		lock_quick_unlock(&log_lock);
 		return;

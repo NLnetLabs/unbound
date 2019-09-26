@@ -62,7 +62,7 @@ index 1bfe4426..0136421d 100644
 +/** turn on fastrpz response policy zones */
 +#undef ENABLE_FASTRPZ
 diff --git a/configure.ac b/configure.ac
-index 18030728..d6d6e1e7 100644
+index 811ad007..a8346f11 100644
 --- a/configure.ac
 +++ b/configure.ac
 @@ -6,6 +6,7 @@ sinclude(ax_pthread.m4)
@@ -267,10 +267,10 @@ index 263fcddf..e6bc84bd 100644
  			}
  			verbose(VERB_ALGO, "answer norec from cache -- "
 diff --git a/doc/unbound.conf.5.in b/doc/unbound.conf.5.in
-index 083a7c10..1812f2cf 100644
+index b1d8c790..10c0aa58 100644
 --- a/doc/unbound.conf.5.in
 +++ b/doc/unbound.conf.5.in
-@@ -1799,6 +1799,81 @@ List domain for which the AAAA records are ignored and the A record is
+@@ -1801,6 +1801,81 @@ List domain for which the AAAA records are ignored and the A record is
  used by dns64 processing instead.  Can be entered multiple times, list a
  new domain for which it applies, one per line.  Applies also to names
  underneath the name given.
@@ -3264,8 +3264,8 @@ index 10227a2f..a519fcc7 100644
 +
 +		OUTYY(("P(rpz_zone:%s)\n", $2));
 +		old_cstr = cfg_parser->cfg->rpz_cstr;
-+		(void)asprintf(&new_cstr, "%s\nzone %s", old_cstr?old_cstr:"", $2);
-+		if(!new_cstr)
++		if(asprintf(&new_cstr, "%s\nzone %s", old_cstr?old_cstr:"", $2) == -1) {new_cstr = NULL; yyerror("out of memory");}
++		else if(!new_cstr)
 +			yyerror("out of memory");
 +		free(old_cstr);
 +		cfg_parser->cfg->rpz_cstr = new_cstr;
@@ -3277,8 +3277,8 @@ index 10227a2f..a519fcc7 100644
 +
 +		OUTYY(("P(rpz_option:%s)\n", $2));
 +		old_cstr = cfg_parser->cfg->rpz_cstr;
-+		(void)asprintf(&new_cstr, "%s\n%s", old_cstr ? old_cstr : "", $2);
-+		if(!new_cstr)
++		if(asprintf(&new_cstr, "%s\n%s", old_cstr ? old_cstr : "", $2) == -1) {new_cstr = NULL; yyerror("out of memory");}
++		else if(!new_cstr)
 +			yyerror("out of memory");
 +		free(old_cstr);
 +		cfg_parser->cfg->rpz_cstr = new_cstr;
@@ -3288,7 +3288,7 @@ index 10227a2f..a519fcc7 100644
  	{ 
  		OUTYY(("\nP(python:)\n")); 
 diff --git a/util/data/msgencode.c b/util/data/msgencode.c
-index 0be99c04..4056706e 100644
+index a51a4b9b..475dfce9 100644
 --- a/util/data/msgencode.c
 +++ b/util/data/msgencode.c
 @@ -590,6 +590,35 @@ insert_section(struct reply_info* rep, size_t num_rrsets, uint16_t* num_rrs,

@@ -349,7 +349,11 @@ calc_hash(struct module_qstate* qstate, char* buf, size_t len)
 	
 	/* hash the buffer */
 	secalgo_hash_sha256(clear, clen, hash);
+#ifdef HAVE_EXPLICIT_BZERO
+	explicit_bzero(clear, clen);
+#else
 	memset(clear, 0, clen);
+#endif
 
 	/* hex encode output for portability (some online dbs need
 	 * no nulls, no control characters, and so on) */
