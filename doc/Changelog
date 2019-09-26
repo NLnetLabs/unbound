@@ -1,3 +1,7 @@
+26 September 2019: Wouter
+	- Merge #87 from hardfalcon: Fix contrib/unbound.service.in,
+	  Drop CAP_KILL, use + prefix for ExecReload= instead.
+
 25 September 2019: Wouter
 	- The unbound.conf includes are sorted ascending, for include
 	  statements with a '*' from glob.
