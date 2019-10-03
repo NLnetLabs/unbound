@@ -1,3 +1,6 @@
+3 October 2019: Wouter
+	- Merge #90 from vcunat: fix build with nettle-3.5.
+
 26 September 2019: Wouter
 	- Merge #87 from hardfalcon: Fix contrib/unbound.service.in,
 	  Drop CAP_KILL, use + prefix for ExecReload= instead.
