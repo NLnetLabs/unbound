@@ -190,6 +190,7 @@ usage(void)
 	printf("-x path		pathname to xml in url, default %s\n", XMLNAME);
 	printf("-s path		pathname to p7s in url, default %s\n", P7SNAME);
 	printf("-n name		signer's subject emailAddress, default %s\n", P7SIGNER);
+	printf("-b address	source address to bind to\n");
 	printf("-4		work using IPv4 only\n");
 	printf("-6		work using IPv6 only\n");
 	printf("-f resolv.conf	use given resolv.conf\n");
@@ -277,7 +278,7 @@ ub_ctx_error_exit(struct ub_ctx* ctx, const char* str, const char* str2)
  */
 static struct ub_ctx* 
 create_unbound_context(const char* res_conf, const char* root_hints,
-	const char* debugconf, int ip4only, int ip6only)
+	const char* debugconf, const char* srcaddr, int ip4only, int ip6only)
 {
 	int r;
 	struct ub_ctx* ctx = ub_ctx_create();
@@ -300,6 +301,10 @@ create_unbound_context(const char* res_conf, const char* root_hints,
 	if(root_hints) {
 		r = ub_ctx_set_option(ctx, "root-hints:", root_hints);
 		if(r) ub_ctx_error_exit(ctx, root_hints, ub_strerror(r));
+	}
+	if(srcaddr) {
+		r = ub_ctx_set_option(ctx, "outgoing-interface:", srcaddr);
+		if(r) ub_ctx_error_exit(ctx, srcaddr, ub_strerror(r));
 	}
 	if(ip4only) {
 		r = ub_ctx_set_option(ctx, "do-ip6:", "no");
@@ -627,7 +632,8 @@ parse_ip_addr(const char* str, int port)
  */
 static struct ip_list*
 resolve_name(const char* host, int port, const char* res_conf,
-	const char* root_hints, const char* debugconf, int ip4only, int ip6only)
+	const char* root_hints, const char* debugconf,
+	const char* srcaddr, int ip4only, int ip6only)
 {
 	struct ub_ctx* ctx;
 	struct ip_list* list = NULL;
@@ -638,7 +644,7 @@ resolve_name(const char* host, int port, const char* res_conf,
 	
 	/* create resolver context */
 	ctx = create_unbound_context(res_conf, root_hints, debugconf,
-        	ip4only, ip6only);
+        	srcaddr, ip4only, ip6only);
 
 	/* try resolution of A */
 	if(!ip6only) {
@@ -728,7 +734,7 @@ print_sock_err(const char* msg)
 
 /** connect to IP address */
 static int
-connect_to_ip(struct ip_list* ip)
+connect_to_ip(struct ip_list* ip, struct ip_list* src)
 {
 	int fd;
 	verb_addr("connect to", ip);
@@ -736,6 +742,11 @@ connect_to_ip(struct ip_list* ip)
 		AF_INET:AF_INET6, SOCK_STREAM, 0);
 	if(fd == -1) {
 		print_sock_err("socket");
+		return -1;
+	}
+	if(src && bind(fd, (struct sockaddr*)&src->addr, src->len) < 0) {
+		print_sock_err("bind");
+		fd_close(fd);
 		return -1;
 	}
 	if(connect(fd, (struct sockaddr*)&ip->addr, ip->len) < 0) {
@@ -1110,7 +1121,8 @@ read_http_result(SSL* ssl)
 
 /** https to an IP addr, return BIO with pathname or NULL */
 static BIO*
-https_to_ip(struct ip_list* ip, const char* pathname, const char* urlname)
+https_to_ip(struct ip_list* ip, const char* pathname, const char* urlname,
+	struct ip_list* src)
 {
 	int fd;
 	SSL* ssl;
@@ -1119,7 +1131,7 @@ https_to_ip(struct ip_list* ip, const char* pathname, const char* urlname)
 	if(!sslctx) {
 		return NULL;
 	}
-	fd = connect_to_ip(ip);
+	fd = connect_to_ip(ip, src);
 	if(fd == -1) {
 		SSL_CTX_free(sslctx);
 		return NULL;
@@ -1150,7 +1162,8 @@ https_to_ip(struct ip_list* ip, const char* pathname, const char* urlname)
  * @return a memory BIO with the file in it.
  */
 static BIO*
-https(struct ip_list* ip_list, const char* pathname, const char* urlname)
+https(struct ip_list* ip_list, const char* pathname, const char* urlname,
+	struct ip_list* src)
 {
 	struct ip_list* ip;
 	BIO* bio = NULL;
@@ -1158,7 +1171,7 @@ https(struct ip_list* ip_list, const char* pathname, const char* urlname)
 	wipe_ip_usage(ip_list);
 	while( (ip = pick_random_ip(ip_list)) ) {
 		ip->used = 1;
-		bio = https_to_ip(ip, pathname, urlname);
+		bio = https_to_ip(ip, pathname, urlname, src);
 		if(bio) break;
 	}
 	if(!bio) {
@@ -1913,18 +1926,27 @@ static int
 do_certupdate(const char* root_anchor_file, const char* root_cert_file,
 	const char* urlname, const char* xmlname, const char* p7sname,
 	const char* p7signer, const char* res_conf, const char* root_hints,
-	const char* debugconf, int ip4only, int ip6only, int port)
+	const char* debugconf, const char* srcaddr, int ip4only, int ip6only,
+	int port)
+
 {
 	STACK_OF(X509)* cert;
 	BIO *xml, *p7s;
 	struct ip_list* ip_list = NULL;
+	struct ip_list* src = NULL;
 
 	/* read pem file or provide builtin */
 	cert = read_cert_or_builtin(root_cert_file);
 
 	/* lookup A, AAAA for the urlname (or parse urlname if IP address) */
 	ip_list = resolve_name(urlname, port, res_conf, root_hints, debugconf,
-		ip4only, ip6only);
+	        srcaddr, ip4only, ip6only);
+	
+        if(srcaddr && !(src = parse_ip_addr(srcaddr, 0))) {
+               if(verb) printf("cannot parse source address: %s\n", srcaddr);
+	       exit(0);
+        }
+
 
 #ifdef USE_WINSOCK
 	if(1) { /* libunbound finished, startup WSA for the https connection */
@@ -1940,8 +1962,8 @@ do_certupdate(const char* root_anchor_file, const char* root_cert_file,
 #endif
 
 	/* fetch the necessary files over HTTPS */
-	xml = https(ip_list, xmlname, urlname);
-	p7s = https(ip_list, p7sname, urlname);
+	xml = https(ip_list, xmlname, urlname, src);
+	p7s = https(ip_list, p7sname, urlname, src);
 
 	/* verify and update the root anchor */
 	verify_and_update_anchor(root_anchor_file, xml, p7s, cert, p7signer);
@@ -2192,14 +2214,14 @@ probe_date_allows_certupdate(const char* root_anchor_file)
 
 static struct ub_result *
 fetch_root_key(const char* root_anchor_file, const char* res_conf,
-	const char* root_hints, const char* debugconf,
+	const char* root_hints, const char* debugconf, const char* srcaddr,
 	int ip4only, int ip6only)
 {
 	struct ub_ctx* ctx;
 	struct ub_result* dnskey;
 
 	ctx = create_unbound_context(res_conf, root_hints, debugconf,
-		ip4only, ip6only);
+		srcaddr, ip4only, ip6only);
 	add_5011_probe_root(ctx, root_anchor_file);
 	dnskey = prime_root_key(ctx);
 	ub_ctx_delete(ctx);
@@ -2211,8 +2233,8 @@ static int
 do_root_update_work(const char* root_anchor_file, const char* root_cert_file,
 	const char* urlname, const char* xmlname, const char* p7sname,
 	const char* p7signer, const char* res_conf, const char* root_hints,
-	const char* debugconf, int ip4only, int ip6only, int force,
-	int res_conf_fallback, int port)
+	const char* debugconf, const char* srcaddr, int ip4only, int ip6only, 
+	int force, int res_conf_fallback, int port)
 {
 	struct ub_result* dnskey;
 	int used_builtin = 0;
@@ -2226,7 +2248,7 @@ do_root_update_work(const char* root_anchor_file, const char* root_cert_file,
 	/* make unbound context with 5011-probe for root anchor,
 	 * and probe . DNSKEY */
 	dnskey = fetch_root_key(root_anchor_file, res_conf,
-		root_hints, debugconf, ip4only, ip6only);
+		root_hints, debugconf, srcaddr, ip4only, ip6only);
 	rcode = dnskey->rcode;
 
 	if (res_conf_fallback && res_conf && !dnskey->secure) {
@@ -2234,7 +2256,7 @@ do_root_update_work(const char* root_anchor_file, const char* root_cert_file,
 		ub_resolve_free(dnskey);
 		/* try direct query without res_conf */
 		dnskey = fetch_root_key(root_anchor_file, NULL,
-			root_hints, debugconf, ip4only, ip6only);
+			root_hints, debugconf, srcaddr, ip4only, ip6only);
 		if (rcode != 0 && dnskey->rcode == 0) {
 			res_conf = NULL;
 			rcode = 0;
@@ -2255,7 +2277,7 @@ do_root_update_work(const char* root_anchor_file, const char* root_cert_file,
 		probe_date_allows_certupdate(root_anchor_file)) || force) {
 		if(do_certupdate(root_anchor_file, root_cert_file, urlname,
 			xmlname, p7sname, p7signer, res_conf, root_hints,
-			debugconf, ip4only, ip6only, port))
+			debugconf, srcaddr, ip4only, ip6only, port))
 			return 1;
 		return used_builtin;
 	}
@@ -2281,10 +2303,11 @@ int main(int argc, char* argv[])
 	const char* res_conf = NULL;
 	const char* root_hints = NULL;
 	const char* debugconf = NULL;
+	const char* srcaddr = NULL;
 	int dolist=0, ip4only=0, ip6only=0, force=0, port = HTTPS_PORT;
 	int res_conf_fallback = 0;
 	/* parse the options */
-	while( (c=getopt(argc, argv, "46C:FRP:a:c:f:hln:r:s:u:vx:")) != -1) {
+	while( (c=getopt(argc, argv, "46C:FRP:a:b:c:f:hln:r:s:u:vx:")) != -1) {
 		switch(c) {
 		case 'l':
 			dolist = 1;
@@ -2297,6 +2320,9 @@ int main(int argc, char* argv[])
 			break;
 		case 'a':
 			root_anchor_file = optarg;
+			break;
+		case 'b':
+			srcaddr = optarg;
 			break;
 		case 'c':
 			root_cert_file = optarg;
@@ -2368,5 +2394,5 @@ int main(int argc, char* argv[])
 
 	return do_root_update_work(root_anchor_file, root_cert_file, urlname,
 		xmlname, p7sname, p7signer, res_conf, root_hints, debugconf,
-		ip4only, ip6only, force, res_conf_fallback, port);
+		srcaddr, ip4only, ip6only, force, res_conf_fallback, port);
 }
