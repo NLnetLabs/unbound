@@ -1725,7 +1725,7 @@ _verify_nettle_ecdsa(sldns_buffer* buf, unsigned int digest_size, unsigned char*
 		{
 			uint8_t digest[SHA256_DIGEST_SIZE];
 			mpz_t x, y;
-			nettle_ecc_point_init(&pubkey, &nettle_secp_256r1);
+			nettle_ecc_point_init(&pubkey, nettle_get_secp_256r1());
 			nettle_mpz_init_set_str_256_u(x, SHA256_DIGEST_SIZE, key);
 			nettle_mpz_init_set_str_256_u(y, SHA256_DIGEST_SIZE, key+SHA256_DIGEST_SIZE);
 			nettle_mpz_set_str_256_u(signature.r, SHA256_DIGEST_SIZE, sigblock);
@@ -1742,7 +1742,7 @@ _verify_nettle_ecdsa(sldns_buffer* buf, unsigned int digest_size, unsigned char*
 		{
 			uint8_t digest[SHA384_DIGEST_SIZE];
 			mpz_t x, y;
-			nettle_ecc_point_init(&pubkey, &nettle_secp_384r1);
+			nettle_ecc_point_init(&pubkey, nettle_get_secp_384r1());
 			nettle_mpz_init_set_str_256_u(x, SHA384_DIGEST_SIZE, key);
 			nettle_mpz_init_set_str_256_u(y, SHA384_DIGEST_SIZE, key+SHA384_DIGEST_SIZE);
 			nettle_mpz_set_str_256_u(signature.r, SHA384_DIGEST_SIZE, sigblock);
