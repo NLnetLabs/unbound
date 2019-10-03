@@ -1941,12 +1941,11 @@ do_certupdate(const char* root_anchor_file, const char* root_cert_file,
 	/* lookup A, AAAA for the urlname (or parse urlname if IP address) */
 	ip_list = resolve_name(urlname, port, res_conf, root_hints, debugconf,
 	        srcaddr, ip4only, ip6only);
-	
-        if(srcaddr && !(src = parse_ip_addr(srcaddr, 0))) {
-               if(verb) printf("cannot parse source address: %s\n", srcaddr);
-	       exit(0);
-        }
 
+	if(srcaddr && !(src = parse_ip_addr(srcaddr, 0))) {
+		if(verb) printf("cannot parse source address: %s\n", srcaddr);
+		exit(0);
+	}
 
 #ifdef USE_WINSOCK
 	if(1) { /* libunbound finished, startup WSA for the https connection */

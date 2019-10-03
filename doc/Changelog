@@ -2,6 +2,8 @@
 	- Merge #90 from vcunat: fix build with nettle-3.5.
 	- Merge 1.9.4 release with fix for vulnerability CVE-2019-16866.
 	- Continue with development of 1.9.5.
+	- Merge #86 from psquarejho: Added -b source address option to
+	  smallapp/unbound-anchor.c.
 
 26 September 2019: Wouter
 	- Merge #87 from hardfalcon: Fix contrib/unbound.service.in,
