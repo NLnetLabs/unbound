@@ -625,6 +625,7 @@ parse_ip_addr(const char* str, int port)
  * @param res_conf: resolv.conf (if any).
  * @param root_hints: root hints (if any).
  * @param debugconf: unbound.conf for debugging options.
+ * @param srcaddr: source address option (if any).
  * @param ip4only: use only ip4 for resolve and only lookup A
  * @param ip6only: use only ip6 for resolve and only lookup AAAA
  * 	default is to lookup A and AAAA using ip4 and ip6.
@@ -1159,6 +1160,7 @@ https_to_ip(struct ip_list* ip, const char* pathname, const char* urlname,
  * @param ip_list: list of IP addresses to use to fetch from.
  * @param pathname: pathname of file on server to GET.
  * @param urlname: name to pass as the virtual host for this request.
+ * @param src: if nonNULL, source address to bind to.
  * @return a memory BIO with the file in it.
  */
 static BIO*
