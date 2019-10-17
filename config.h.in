@@ -836,6 +836,9 @@
 /* Define if you want Python module. */
 #undef WITH_PYTHONMODULE
 
+/* Define if you want dynamic library module. */
+#undef WITH_DYNLIBMODULE
+
 /* Define if you want PyUnbound. */
 #undef WITH_PYUNBOUND
 

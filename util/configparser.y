@@ -168,6 +168,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_STREAM_WAIT_SIZE VAR_TLS_CIPHERS VAR_TLS_CIPHERSUITES
 %token VAR_TLS_SESSION_TICKET_KEYS
 %token VAR_IPSET VAR_IPSET_NAME_V4 VAR_IPSET_NAME_V6
+%token VAR_DYNLIB VAR_DYNLIB_FILE
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -175,7 +176,7 @@ toplevelvar: serverstart contents_server | stubstart contents_stub |
 	forwardstart contents_forward | pythonstart contents_py | 
 	rcstart contents_rc | dtstart contents_dt | viewstart contents_view |
 	dnscstart contents_dnsc | cachedbstart contents_cachedb |
-	ipsetstart contents_ipset | authstart contents_auth
+	ipsetstart contents_ipset | authstart contents_auth | dynlibstart contents_dl
 	;
 
 /* server: declaration */
@@ -2740,6 +2741,21 @@ py_script: VAR_PYTHON_SCRIPT STRING_ARG
 		OUTYY(("P(python-script:%s)\n", $2));
 		if(!cfg_strlist_append_ex(&cfg_parser->cfg->python_script, $2))
 			yyerror("out of memory");
+	}
+dynlibstart: VAR_DYNLIB
+	{ 
+		OUTYY(("\nP(dynlib:)\n")); 
+	}
+	;
+contents_dl: contents_dl content_dl
+	| ;
+content_dl: dl_file
+	;
+dl_file: VAR_DYNLIB_FILE STRING_ARG
+	{
+		OUTYY(("P(dynlib-file:%s)\n", $2));
+		free(cfg_parser->cfg->dynlib_file);
+		cfg_parser->cfg->dynlib_file = $2;
 	}
 server_disable_dnssec_lame_check: VAR_DISABLE_DNSSEC_LAME_CHECK STRING_ARG
 	{
