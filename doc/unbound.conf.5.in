@@ -940,7 +940,9 @@ EDNS client subnet support the default is "subnetcache validator iterator".
 Most modules that need to be listed here have to be listed at the beginning
 of the line.  The cachedb module has to be listed just before the iterator.
 The python module can be listed in different places, it then processes the
-output of the module it is just before.
+output of the module it is just before. The dynlib module can be listed pretty
+much anywhere, it is only a very thin wrapper that allows dynamic libraries to
+run in its place.
 .TP
 .B trust\-anchor\-file: \fI<filename>
 File with trusted keys for validation. Both DS and DNSKEY entries can appear
@@ -1782,6 +1784,22 @@ directory.
 .B python\-script: \fI<python file>\fR
 The script file to load. Repeat this option for every python module instance
 added to the \fBmodule\-config:\fR option.
+.SS "Dynamic Library Module Options"
+.LP
+The
+.B dynlib:
+clause gives the settings for the \fIdynlib\fR(1) module.  This module is only
+a very small wrapper that allows dynamic modules to be loaded on runtime
+instead of being compiled into the application. To enable the dynlib module it
+has to be compiled into the daemon, and the word "dynlib" has to be put in the
+\fBmodule\-config:\fR option.
+.LP
+The \fBdynlib\-file:\fR path should be specified as an absolute path relative
+to the new path set by \fBchroot:\fR option, or as a relative path to the
+working directory.
+.TP
+.B dynlib\-file: \fI<dynlib file>\fR
+The dynamic library file to load.
 .SS "DNS64 Module Options"
 .LP
 The dns64 module must be configured in the \fBmodule\-config:\fR "dns64

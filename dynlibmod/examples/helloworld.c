@@ -17,17 +17,15 @@
 #define EXPORT
 #endif
 
-EXPORT int init(int id, struct config_file* cfg) {
+EXPORT void init(struct module_env* env, int id) {
     log_info("Hello world from init");
-    return 1;
 }
 
-EXPORT int deinit(int id) {
+EXPORT void deinit(struct module_env* env, int id) {
     log_info("Hello world from deinit");
-    return 1;
 }
 
-EXPORT int operate(int id, enum module_ev event, struct module_qstate* qstate, void* data) {
+EXPORT void operate(struct module_qstate* qstate, enum module_ev event, int id, struct outbound_entry* entry) {
     log_info("Hello world from operate");
     if (event == module_event_new || event == module_event_pass) {
         qstate->ext_state[id] = module_wait_module;
@@ -36,10 +34,17 @@ EXPORT int operate(int id, enum module_ev event, struct module_qstate* qstate, v
     } else {
         qstate->ext_state[id] = module_error;
     }
-    return 1;
 }
 
-EXPORT int inform_super(int id, struct module_qstate* qstate, struct module_qstate* super, void* data) {
+EXPORT void inform_super(struct module_qstate* qstate, int id, struct module_qstate* super) {
     log_info("Hello world from inform_super");
-    return 1;
+}
+
+EXPORT void clear(struct module_qstate* qstate, int id) {
+    log_info("Hello world from clear");
+}
+
+EXPORT size_t get_mem(struct module_env* env, int id) {
+    log_info("Hello world from get_mem");
+    return 0;
 }

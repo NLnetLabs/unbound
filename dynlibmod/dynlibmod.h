@@ -1,8 +1,7 @@
 /*
  * dynlibmod.h: module header file
  * 
- * Copyright (c) 2009, Zdenek Vasicek (vasicek AT fit.vutbr.cz)
- *                     Marek Vavrusa  (xvavru00 AT stud.fit.vutbr.cz)
+ * Copyright (c) 2019, Peter Munch-Ellingsen (peterme AT peterme.net)
  *
  * This software is open source.
  * 

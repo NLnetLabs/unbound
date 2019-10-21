@@ -5,6 +5,7 @@
 
 #if HAVE_WINDOWS_H
 #include <windows.h>
+#define __DYNMOD HMODULE
 #define __DYNSYM FARPROC
 #define __LOADSYM GetProcAddress
 void log_dlerror() {
@@ -25,43 +26,39 @@ void log_dlerror() {
         ))
     {
         DWORD dwBytesWritten;
-
-        //
-        // Output message string on stderr.
-        //
-        log_info("dynlibmod: %s (%ld)", MessageBuffer, dwLastError);
-        //WriteFile(
-        //    GetStdHandle(STD_ERROR_HANDLE),
-        //    MessageBuffer,
-        //    dwBufferLength,
-        //    &dwBytesWritten,
-        //    NULL
-        //    );
-
-        //
-        // Free the buffer allocated by the system.
-        //
+        log_err("dynlibmod: %s (%ld)", MessageBuffer, dwLastError);
         LocalFree(MessageBuffer);
     }
 
 }
+HMODULE open_library(const char* fname) {
+    return LoadLibrary(fname);
+}
 #else
 #include <dlfcn.h>
+#define __DYNMOD void*
 #define __DYNSYM void*
 #define __LOADSYM dlsym
 void log_dlerror() {
     log_err("dynlibmod: %s", dlerror());
 }
+void* open_library(const char* fname) {
+    return dlopen(fname, RTLD_LAZY | RTLD_GLOBAL);
+}
 #endif
+
 
 /**
  * Global state for the module.
  */
 
-typedef int (*func_init_t)(int, struct config_file*);
-typedef int (*func_deinit_t)(int);
-typedef int (*func_operate_t)(int, enum module_ev event, struct module_qstate* qstate, void*);
-typedef int (*func_inform_t)(int, struct module_qstate* qstate, struct module_qstate* super, void*);
+typedef void (*func_init_t)(struct module_env*, int);
+typedef void (*func_deinit_t)(struct module_env*, int);
+typedef void (*func_operate_t)(struct module_qstate*, enum module_ev, int, struct outbound_entry*);
+typedef void (*func_inform_t)(struct module_qstate*, int, struct module_qstate*);
+typedef void (*func_clear_t)(struct module_qstate*, int);
+typedef size_t (*func_get_mem_t)(struct module_env*, int);
+
 struct dynlibmod_env {
 
 	/** Dynamic library filename. */
@@ -75,20 +72,19 @@ struct dynlibmod_env {
 	func_operate_t func_operate;
 	/** Module super_inform function */
 	func_inform_t func_inform;
+	/** Module clear function */
+	func_clear_t func_clear;
+	/** Module get_mem function */
+	func_get_mem_t func_get_mem;
 
 	/** Module qstate. */
 	struct module_qstate* qstate;
 };
 
-struct dynlibmod_qstate {
-
-	/** Module per query data. */
-	void* data;
-};
-
 /** dynlib module init */
 int dynlibmod_init(struct module_env* env, int id) {
     struct dynlibmod_env* de = (struct dynlibmod_env*)calloc(1, sizeof(struct dynlibmod_env));
+    __DYNMOD dynamic_library;
     if (!de)
     {
         log_err("dynlibmod: malloc failure");
@@ -102,59 +98,63 @@ int dynlibmod_init(struct module_env* env, int id) {
         log_err("dynlibmod: no dynamic library given.");
         return 0;
     }
-    log_info("Trying to load library %s", de->fname);
-#ifndef HAVE_WINDOWS_H
-    void* dynamic_library = dlopen(de->fname, RTLD_LAZY | RTLD_GLOBAL);
-#else
-    HMODULE dynamic_library = LoadLibrary(de->fname);
-#endif
+    verbose(VERB_ALGO, "dynlibmod: Trying to load library %s", de->fname);
+    dynamic_library = open_library(de->fname);
     if (dynamic_library == NULL) {
         log_dlerror();
-        log_err("dynlibmod: unable to load dynamic library.");
+        log_err("dynlibmod: unable to load dynamic library \"%s\".", de->fname);
         return 0;
     } else {
         __DYNSYM initializer = __LOADSYM(dynamic_library,"init");
         if (initializer == NULL) {
-            log_err("dynlibmod: unable to load init procedure from dynamic library.");
-#ifndef HAVE_WINDOWS_H
-            log_err("dynlibmod: %s", dlerror());
-#endif
+            log_dlerror();
+            log_err("dynlibmod: unable to load init procedure from dynamic library \"%s\".", de->fname);
             return 0;
         } else {
             de->func_init = (func_init_t) initializer;
         }
         __DYNSYM deinitializer = __LOADSYM(dynamic_library,"deinit");
         if (deinitializer == NULL) {
-            log_err("dynlibmod: unable to load deinit procedure from dynamic library.");
-#ifndef HAVE_WINDOWS_H
-            log_err("dynlibmod: %s", dlerror());
-#endif
+            log_dlerror();
+            log_err("dynlibmod: unable to load deinit procedure from dynamic library \"%s\".", de->fname);
             return 0;
         } else {
             de->func_deinit = (func_deinit_t) deinitializer;
         }
         __DYNSYM operate = __LOADSYM(dynamic_library,"operate");
         if (operate == NULL) {
-            log_err("dynlibmod: unable to load operate procedure from dynamic library.");
-#ifndef HAVE_WINDOWS_H
-            log_err("dynlibmod: %s", dlerror());
-#endif
+            log_dlerror();
+            log_err("dynlibmod: unable to load operate procedure from dynamic library \"%s\".", de->fname);
             return 0;
         } else {
             de->func_operate = (func_operate_t) operate;
         }
         __DYNSYM inform = __LOADSYM(dynamic_library,"inform_super");
         if (inform == NULL) {
-            log_err("dynlibmod: unable to load inform_super procedure from dynamic library.");
-#ifndef HAVE_WINDOWS_H
-            log_err("dynlibmod: %s", dlerror());
-#endif
+            log_dlerror();
+            log_err("dynlibmod: unable to load inform_super procedure from dynamic library \"%s\".", de->fname);
             return 0;
         } else {
             de->func_inform = (func_inform_t) inform;
         }
+        __DYNSYM clear = __LOADSYM(dynamic_library,"clear");
+        if (clear == NULL) {
+            log_dlerror();
+            log_err("dynlibmod: unable to load clear procedure from dynamic library \"%s\".", de->fname);
+            return 0;
+        } else {
+            de->func_clear = (func_clear_t) clear;
+        }
+        __DYNSYM get_mem = __LOADSYM(dynamic_library,"get_mem");
+        if (get_mem == NULL) {
+            log_dlerror();
+            log_err("dynlibmod: unable to load get_mem procedure from dynamic library \"%s\".", de->fname);
+            return 0;
+        } else {
+            de->func_get_mem = (func_get_mem_t) get_mem;
+        }
     }
-    de->func_init(id, env->cfg);
+    de->func_init(env, id);
     return 1;
 }
 
@@ -163,7 +163,7 @@ void dynlibmod_deinit(struct module_env* env, int id) {
     struct dynlibmod_env* de = env->modinfo[id];
     if(de == NULL)
         return;
-    de->func_deinit(id);
+    de->func_deinit(env, id);
     de->fname = NULL;
     free(de);
 }
@@ -172,44 +172,23 @@ void dynlibmod_deinit(struct module_env* env, int id) {
 void dynlibmod_operate(struct module_qstate* qstate, enum module_ev event,
     int id, struct outbound_entry* outbound) {
     struct dynlibmod_env* de = qstate->env->modinfo[id];
-    struct dynlibmod_qstate* dq = (struct dynlibmod_qstate*)qstate->minfo[id];
 
-    void * data = dq == NULL ? NULL : dq->data;
-    int ret = de->func_operate(id, event, qstate, data);
-    if (ret != 1) {
-        log_err("dynlibmod: dynamic library returned bad code from operate %d.", ret);
-        qstate->ext_state[id] = module_error;
-    }
+    de->func_operate(qstate, event, id, outbound);
 }
 
 /** dynlib module  */
 void dynlibmod_inform_super(struct module_qstate* qstate, int id,
     struct module_qstate* super) {
     struct dynlibmod_env* de = qstate->env->modinfo[id];
-    struct dynlibmod_qstate* dq = (struct dynlibmod_qstate*)qstate->minfo[id];
 
-    void * data = dq == NULL ? NULL : dq->data;
-    int ret = de->func_inform(id, qstate, super, data);
-    if (ret != 1) {
-        log_err("dynlibmod: dynamic library returned bad code from inform_super %d.", ret);
-        qstate->ext_state[id] = module_error;
-    }
+    de->func_inform(qstate, id, super);
 }
 
 /** dynlib module cleanup query state */
 void dynlibmod_clear(struct module_qstate* qstate, int id) {
-    struct dynlibmod_qstate* dq;
-    if (qstate == NULL)
-        return;
+    struct dynlibmod_env* de = qstate->env->modinfo[id];
 
-    dq = (struct dynlibmod_qstate*)qstate->minfo[id];
-    verbose(VERB_ALGO, "dynlibmod: clear, id: %d, dq:%p", id, dq);
-    if(dq != NULL) {
-        /* Free qstate */
-        free(dq);
-    }
-
-    qstate->minfo[id] = NULL;
+    de->func_clear(qstate, id);
 }
 
 /** dynlib module alloc size routine */
@@ -218,7 +197,9 @@ size_t dynlibmod_get_mem(struct module_env* env, int id) {
     verbose(VERB_ALGO, "dynlibmod: get_mem, id: %d, de:%p", id, de);
     if(!de)
         return 0;
-    return sizeof(*de);
+
+    size_t size = de->func_get_mem(env, id);
+    return size + sizeof(*de);
 }
 
 /**
