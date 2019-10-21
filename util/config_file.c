@@ -611,7 +611,7 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	else S_STR("control-cert-file:", control_cert_file)
 	else S_STR("module-config:", module_conf)
 	else S_STRLIST("python-script:", python_script)
-	else S_STR("dynlib-file:", dynlib_file)
+	else S_STRLIST("dynlib-file:", dynlib_file)
 	else S_YNO("disable-dnssec-lame-check:", disable_dnssec_lame_check)
 #ifdef CLIENT_SUBNET
 	/* Can't set max subnet prefix here, since that value is used when
@@ -1064,7 +1064,7 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_YNO(opt, "insecure-lan-zones", insecure_lan_zones)
 	else O_DEC(opt, "max-udp-size", max_udp_size)
 	else O_LST(opt, "python-script", python_script)
-	else O_STR(opt, "dynlib-file", dynlib_file)
+	else O_LST(opt, "dynlib-file", dynlib_file)
 	else O_YNO(opt, "disable-dnssec-lame-check", disable_dnssec_lame_check)
 	else O_DEC(opt, "ip-ratelimit", ip_ratelimit)
 	else O_DEC(opt, "ratelimit", ratelimit)
@@ -1401,7 +1401,6 @@ config_delete(struct config_file* cfg)
 	free(cfg->version);
 	free(cfg->module_conf);
 	free(cfg->outgoing_avail_ports);
-	free(cfg->dynlib_file);
 	config_delstrlist(cfg->caps_whitelist);
 	config_delstrlist(cfg->private_address);
 	config_delstrlist(cfg->private_domain);
@@ -1441,6 +1440,7 @@ config_delete(struct config_file* cfg)
 	config_deldblstrlist(cfg->ratelimit_for_domain);
 	config_deldblstrlist(cfg->ratelimit_below_domain);
 	config_delstrlist(cfg->python_script);
+	config_delstrlist(cfg->dynlib_file);
 #ifdef USE_IPSECMOD
 	free(cfg->ipsecmod_hook);
 	config_delstrlist(cfg->ipsecmod_whitelist);

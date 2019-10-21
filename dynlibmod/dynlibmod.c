@@ -81,34 +81,48 @@ struct dynlibmod_env {
 	struct module_qstate* qstate;
 };
 
+/**
+ * counter for dynamic library module instances
+ * incremeted by dynlibmod_init
+ */
+int dynlib_mod_count = 0;
+
 /** dynlib module init */
 int dynlibmod_init(struct module_env* env, int id) {
+    int dynlib_mod_idx = dynlib_mod_count++;
+    struct config_strlist* cfg_item = env->cfg->dynlib_file;
     struct dynlibmod_env* de = (struct dynlibmod_env*)calloc(1, sizeof(struct dynlibmod_env));
     __DYNMOD dynamic_library;
     if (!de)
     {
-        log_err("dynlibmod: malloc failure");
+        log_err("dynlibmod[%d]: malloc failure", dynlib_mod_idx);
         return 0;
     }
 
     env->modinfo[id] = (void*) de;
 
-    de->fname = env->cfg->dynlib_file;
-    if (de->fname == NULL || de->fname[0] == 0) {
-        log_err("dynlibmod: no dynamic library given.");
+    de->fname = NULL;
+    for(int i = dynlib_mod_idx;
+        i != 0 && cfg_item != NULL;
+        i--, cfg_item = cfg_item->next) {}
+
+    if (cfg_item == NULL || cfg_item->str == NULL || cfg_item->str[0] == 0) {
+        log_err("dynlibmod[%d]: no dynamic library given.", dynlib_mod_idx);
         return 0;
+    } else {
+        de->fname = cfg_item->str;
     }
-    verbose(VERB_ALGO, "dynlibmod: Trying to load library %s", de->fname);
+    verbose(VERB_ALGO, "dynlibmod[%d]: Trying to load library %s", dynlib_mod_idx, de->fname);
     dynamic_library = open_library(de->fname);
     if (dynamic_library == NULL) {
         log_dlerror();
-        log_err("dynlibmod: unable to load dynamic library \"%s\".", de->fname);
+        log_err("dynlibmod[%d]: unable to load dynamic library \"%s\".", dynlib_mod_idx, de->fname);
         return 0;
     } else {
         __DYNSYM initializer = __LOADSYM(dynamic_library,"init");
         if (initializer == NULL) {
             log_dlerror();
-            log_err("dynlibmod: unable to load init procedure from dynamic library \"%s\".", de->fname);
+            log_err("dynlibmod[%d]: unable to load init procedure from dynamic library \"%s\".", dynlib_mod_idx, de->fname);
             return 0;
         } else {
             de->func_init = (func_init_t) initializer;
@@ -116,7 +130,7 @@ int dynlibmod_init(struct module_env* env, int id) {
         __DYNSYM deinitializer = __LOADSYM(dynamic_library,"deinit");
         if (deinitializer == NULL) {
             log_dlerror();
-            log_err("dynlibmod: unable to load deinit procedure from dynamic library \"%s\".", de->fname);
+            log_err("dynlibmod[%d]: unable to load deinit procedure from dynamic library \"%s\".", dynlib_mod_idx, de->fname);
             return 0;
         } else {
             de->func_deinit = (func_deinit_t) deinitializer;
@@ -124,7 +138,7 @@ int dynlibmod_init(struct module_env* env, int id) {
         __DYNSYM operate = __LOADSYM(dynamic_library,"operate");
         if (operate == NULL) {
             log_dlerror();
-            log_err("dynlibmod: unable to load operate procedure from dynamic library \"%s\".", de->fname);
+            log_err("dynlibmod[%d]: unable to load operate procedure from dynamic library \"%s\".", dynlib_mod_idx, de->fname);
             return 0;
         } else {
             de->func_operate = (func_operate_t) operate;
@@ -132,7 +146,7 @@ int dynlibmod_init(struct module_env* env, int id) {
         __DYNSYM inform = __LOADSYM(dynamic_library,"inform_super");
         if (inform == NULL) {
             log_dlerror();
-            log_err("dynlibmod: unable to load inform_super procedure from dynamic library \"%s\".", de->fname);
+            log_err("dynlibmod[%d]: unable to load inform_super procedure from dynamic library \"%s\".", dynlib_mod_idx, de->fname);
             return 0;
         } else {
             de->func_inform = (func_inform_t) inform;
@@ -140,7 +154,7 @@ int dynlibmod_init(struct module_env* env, int id) {
         __DYNSYM clear = __LOADSYM(dynamic_library,"clear");
         if (clear == NULL) {
             log_dlerror();
-            log_err("dynlibmod: unable to load clear procedure from dynamic library \"%s\".", de->fname);
+            log_err("dynlibmod[%d]: unable to load clear procedure from dynamic library \"%s\".", dynlib_mod_idx, de->fname);
             return 0;
         } else {
             de->func_clear = (func_clear_t) clear;
@@ -148,7 +162,7 @@ int dynlibmod_init(struct module_env* env, int id) {
         __DYNSYM get_mem = __LOADSYM(dynamic_library,"get_mem");
         if (get_mem == NULL) {
             log_dlerror();
-            log_err("dynlibmod: unable to load get_mem procedure from dynamic library \"%s\".", de->fname);
+            log_err("dynlibmod[%d]: unable to load get_mem procedure from dynamic library \"%s\".", dynlib_mod_idx, de->fname);
             return 0;
         } else {
             de->func_get_mem = (func_get_mem_t) get_mem;

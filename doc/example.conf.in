@@ -842,7 +842,8 @@ python:
 # o list dynlib in the module-config string (above) to enable.
 #   It can be placed anywhere, the dynlib module is only a very thin wrapper
 #   to load modules dynamically.
-# o and give a dynlib-file to run.
+# o and give a dynlib-file to run. If more than one dynlib entry is listed in
+#   the module-config then you need one dynlib-file per instance.
 dynlib:
 	# Script file to load
 	# dynlib-file: "@UNBOUND_SHARE_DIR@/dynlib.so"

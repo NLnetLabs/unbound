@@ -1792,14 +1792,16 @@ clause gives the settings for the \fIdynlib\fR(1) module.  This module is only
 a very small wrapper that allows dynamic modules to be loaded on runtime
 instead of being compiled into the application. To enable the dynlib module it
 has to be compiled into the daemon, and the word "dynlib" has to be put in the
-\fBmodule\-config:\fR option.
+\fBmodule\-config:\fR option. Multiple instances of dynamic libraries are
+supported by adding the word "dynlib" more than once.
 .LP
 The \fBdynlib\-file:\fR path should be specified as an absolute path relative
 to the new path set by \fBchroot:\fR option, or as a relative path to the
 working directory.
 .TP
 .B dynlib\-file: \fI<dynlib file>\fR
-The dynamic library file to load.
+The dynamic library file to load. Repeat this option for every dynlib module
+instance added to the \fBmodule\-config:\fR option.
 .SS "DNS64 Module Options"
 .LP
 The dns64 module must be configured in the \fBmodule\-config:\fR "dns64

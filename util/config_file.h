@@ -440,7 +440,7 @@ struct config_file {
 	struct config_strlist* python_script;
 
 	/** Dynamic library file */
-	char* dynlib_file;
+	struct config_strlist* dynlib_file;
 
 	/** Use systemd socket activation. */
 	int use_systemd;

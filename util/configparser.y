@@ -2754,8 +2754,8 @@ content_dl: dl_file
 dl_file: VAR_DYNLIB_FILE STRING_ARG
 	{
 		OUTYY(("P(dynlib-file:%s)\n", $2));
-		free(cfg_parser->cfg->dynlib_file);
-		cfg_parser->cfg->dynlib_file = $2;
+		if(!cfg_strlist_append_ex(&cfg_parser->cfg->dynlib_file, $2))
+			yyerror("out of memory");
 	}
 server_disable_dnssec_lame_check: VAR_DISABLE_DNSSEC_LAME_CHECK STRING_ARG
 	{
