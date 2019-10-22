@@ -25,12 +25,12 @@ void log_dlerror() {
         NULL
         ))
     {
-        DWORD dwBytesWritten;
         log_err("dynlibmod: %s (%ld)", MessageBuffer, dwLastError);
         LocalFree(MessageBuffer);
     }
 
 }
+
 HMODULE open_library(const char* fname) {
     return LoadLibrary(fname);
 }
@@ -42,6 +42,7 @@ HMODULE open_library(const char* fname) {
 void log_dlerror() {
     log_err("dynlibmod: %s", dlerror());
 }
+
 void* open_library(const char* fname) {
     return dlopen(fname, RTLD_LAZY | RTLD_GLOBAL);
 }
@@ -60,10 +61,8 @@ typedef void (*func_clear_t)(struct module_qstate*, int);
 typedef size_t (*func_get_mem_t)(struct module_env*, int);
 
 struct dynlibmod_env {
-
 	/** Dynamic library filename. */
 	const char* fname;
-
 	/** Module init function */
 	func_init_t func_init;
 	/** Module deinit function */
@@ -76,19 +75,11 @@ struct dynlibmod_env {
 	func_clear_t func_clear;
 	/** Module get_mem function */
 	func_get_mem_t func_get_mem;
-
-	/** Module qstate. */
-	struct module_qstate* qstate;
 };
-
-/**
- * counter for dynamic library module instances
- * incremeted by dynlibmod_init
- */
-int dynlib_mod_count = 0;
 
 /** dynlib module init */
 int dynlibmod_init(struct module_env* env, int id) {
+    static int dynlib_mod_count;
     int dynlib_mod_idx = dynlib_mod_count++;
     struct config_strlist* cfg_item = env->cfg->dynlib_file;
     struct dynlibmod_env* de = (struct dynlibmod_env*)calloc(1, sizeof(struct dynlibmod_env));
