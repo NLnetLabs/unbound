@@ -1299,16 +1299,33 @@ if test x_$withval = x_yes -o x_$withval != x_no; then
     ])
 fi
 
-# set static linking if requested
+# set static linking for uninstalled libraries if requested
 AC_SUBST(staticexe)
 staticexe=""
 AC_ARG_ENABLE(static-exe, AC_HELP_STRING([--enable-static-exe],
-	[ enable to compile executables statically against (event) libs, for debug purposes ]), 
+	[ enable to compile executables statically against (event) uninstalled libs, for debug purposes ]),
 	, )
 if test x_$enable_static_exe = x_yes; then
 	staticexe="-static"
 	if test "$on_mingw" = yes; then
 		staticexe="-all-static"
+		# for static compile, include gdi32 and zlib here.
+		if echo $LIBS | grep 'lgdi32' >/dev/null; then
+			:
+		else
+			LIBS="$LIBS -lgdi32"
+		fi
+		LIBS="$LIBS -lz"
+	fi
+fi
+
+# set full static linking if requested
+AC_ARG_ENABLE(fully-static, AC_HELP_STRING([--enable-fully-static],
+	[ enable to compile fully static ]),
+	, )
+if test x_$enable_fully_static = x_yes; then
+	staticexe="-all-static"
+	if test "$on_mingw" = yes; then
 		# for static compile, include gdi32 and zlib here.
 		if echo $LIBS | grep 'lgdi32' >/dev/null; then
 			:

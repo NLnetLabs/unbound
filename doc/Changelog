@@ -1,3 +1,7 @@
+23 October 2019: George
+	- Add new configure option `--enable-fully-static` to enable full static
+	  build if requested; in relation to #91.
+
 23 October 2019: Wouter
 	- Merge #97: manpage: Add missing word on unbound.conf,
 	  from Erethon.
