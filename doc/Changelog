@@ -1,3 +1,7 @@
+23 October 2019: Wouter
+	- Merge #97: manpage: Add missing word on unbound.conf,
+	  from Erethon.
+
 22 October 2019: Wouter
 	- drop-tld.diff: adds option drop-tld: yesno that drops 2 label
 	  queries, to stop random floods.  Apply with
