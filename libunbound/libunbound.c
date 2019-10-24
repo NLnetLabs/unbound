@@ -226,6 +226,7 @@ ub_ctx_create_event(struct event_base* eb)
 		ub_ctx_delete(ctx);
 		return NULL;
 	}
+	ctx->event_base_malloced = 1;
 	return ctx;
 }
 	
@@ -336,6 +337,8 @@ ub_ctx_delete(struct ub_ctx* ctx)
 		log_file(NULL);
 		ctx_logfile_overridden = 0;
 	}
+	if(ctx->event_base_malloced)
+		free(ctx->event_base);
 	free(ctx);
 #ifdef USE_WINSOCK
 	WSACleanup();

@@ -119,6 +119,9 @@ struct ub_ctx {
 
 	/** event base for event oriented interface */
 	struct ub_event_base* event_base;
+	/** true if the event_base is a pluggable base that is malloced
+	 * with a user event base inside, if so, clean up the pluggable alloc*/
+	int event_base_malloced;
 	/** libworker for event based interface */
 	struct libworker* event_worker;
 
