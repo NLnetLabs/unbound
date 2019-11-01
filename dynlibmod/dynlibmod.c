@@ -48,35 +48,6 @@ void* open_library(const char* fname) {
 }
 #endif
 
-
-/**
- * Global state for the module.
- */
-
-typedef void (*func_init_t)(struct module_env*, int);
-typedef void (*func_deinit_t)(struct module_env*, int);
-typedef void (*func_operate_t)(struct module_qstate*, enum module_ev, int, struct outbound_entry*);
-typedef void (*func_inform_t)(struct module_qstate*, int, struct module_qstate*);
-typedef void (*func_clear_t)(struct module_qstate*, int);
-typedef size_t (*func_get_mem_t)(struct module_env*, int);
-
-struct dynlibmod_env {
-	/** Dynamic library filename. */
-	const char* fname;
-	/** Module init function */
-	func_init_t func_init;
-	/** Module deinit function */
-	func_deinit_t func_deinit;
-	/** Module operate function */
-	func_operate_t func_operate;
-	/** Module super_inform function */
-	func_inform_t func_inform;
-	/** Module clear function */
-	func_clear_t func_clear;
-	/** Module get_mem function */
-	func_get_mem_t func_get_mem;
-};
-
 /** dynlib module init */
 int dynlibmod_init(struct module_env* env, int id) {
     static int dynlib_mod_count;
@@ -159,6 +130,8 @@ int dynlibmod_init(struct module_env* env, int id) {
             de->func_get_mem = (func_get_mem_t) get_mem;
         }
     }
+    de->inplace_cb_delete_wrapped = &inplace_cb_delete_wrapped;
+    de->inplace_cb_register_wrapped = &inplace_cb_register_wrapped;
     de->func_init(env, id);
     return 1;
 }
@@ -206,6 +179,83 @@ size_t dynlibmod_get_mem(struct module_env* env, int id) {
     size_t size = de->func_get_mem(env, id);
     return size + sizeof(*de);
 }
+
+int dynlib_inplace_cb_reply_generic(struct query_info* qinfo,
+    struct module_qstate* qstate, struct reply_info* rep, int rcode,
+    struct edns_data* edns, struct edns_option** opt_list_out,
+    struct comm_reply* repinfo, struct regional* region, int id,
+    void* callback) {
+    struct cb_pair* cb_pair = (struct cb_pair*) callback;
+    ((inplace_cb_reply_func_type*) cb_pair->cb)(qinfo, qstate, rep, rcode, edns, opt_list_out, repinfo, region, id, cb_pair->cb_arg);
+}
+
+int dynlib_inplace_cb_query_generic(struct query_info* qinfo, uint16_t flags,
+    struct module_qstate* qstate, struct sockaddr_storage* addr,
+    socklen_t addrlen, uint8_t* zone, size_t zonelen, struct regional* region,
+    int id, void* callback) {
+    struct cb_pair* cb_pair = (struct cb_pair*) callback;
+    ((inplace_cb_query_func_type*) cb_pair->cb)(qinfo, flags, qstate, addr, addrlen, zone, zonelen, region, id, cb_pair->cb_arg);
+}
+
+int dynlib_inplace_cb_edns_back_parsed(struct module_qstate* qstate,
+    int id, void* cb_args) {
+    struct cb_pair* cb_pair = (struct cb_pair*) cb_args;
+    ((inplace_cb_edns_back_parsed_func_type*) cb_pair->cb)(qstate, id, cb_pair->cb_arg);
+}
+
+int dynlib_inplace_cb_query_response(struct module_qstate* qstate,
+    struct dns_msg* response, int id, void* cb_args) {
+    struct cb_pair* cb_pair = (struct cb_pair*) cb_args;
+    ((inplace_cb_query_response_func_type*) cb_pair->cb)(qstate, response, id, cb_pair->cb_arg);
+}
+
+int
+inplace_cb_register_wrapped(void* cb, enum inplace_cb_list_type type, void* cbarg,
+    struct module_env* env, int id) {
+    struct cb_pair* cb_pair = malloc(sizeof(struct cb_pair));
+    cb_pair->cb = cb;
+    cb_pair->cb_arg = cbarg;
+    if(type >= inplace_cb_reply && type <= inplace_cb_reply_servfail) {
+        return inplace_cb_register(&dynlib_inplace_cb_reply_generic, type, (void*) cb_pair, env, id);
+    } else if(type == inplace_cb_query) {
+        return inplace_cb_register(&dynlib_inplace_cb_query_generic, type, (void*) cb_pair, env, id);
+    } else if(type == inplace_cb_query_response) {
+        return inplace_cb_register(&dynlib_inplace_cb_query_response, type, (void*) cb_pair, env, id);
+    } else if(type == inplace_cb_edns_back_parsed) {
+        return inplace_cb_register(&dynlib_inplace_cb_edns_back_parsed, type, (void*) cb_pair, env, id);
+    } else {
+        return 0;
+    }
+}
+
+void
+inplace_cb_delete_wrapped(struct module_env* env, enum inplace_cb_list_type type,
+    int id) {
+    struct inplace_cb* temp = env->inplace_cb_lists[type];
+    struct inplace_cb* prev = NULL;
+
+    while(temp) {
+        if(temp->id == id) {
+            if(!prev) {
+                env->inplace_cb_lists[type] = temp->next;
+                free(temp->cb_arg);
+                free(temp);
+                temp = env->inplace_cb_lists[type];
+            }
+            else {
+                prev->next = temp->next;
+                free(temp->cb_arg);
+                free(temp);
+                temp = prev->next;
+            }
+        }
+        else {
+            prev = temp;
+            temp = temp->next;
+        }
+    }
+}
+
 
 /**
  * The module function block

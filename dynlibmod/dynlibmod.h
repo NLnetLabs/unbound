@@ -67,4 +67,71 @@ void dynlibmod_clear(struct module_qstate* qstate, int id);
 /** dynlib module alloc size routine */
 size_t dynlibmod_get_mem(struct module_env* env, int id);
 
+int dynlib_inplace_cb_reply_generic(struct query_info* qinfo,
+    struct module_qstate* qstate, struct reply_info* rep, int rcode,
+    struct edns_data* edns, struct edns_option** opt_list_out,
+    struct comm_reply* repinfo, struct regional* region, int id,
+    void* callback);
+
+int dynlib_inplace_cb_query_generic(struct query_info* qinfo, uint16_t flags,
+    struct module_qstate* qstate, struct sockaddr_storage* addr,
+    socklen_t addrlen, uint8_t* zone, size_t zonelen, struct regional* region,
+    int id, void* callback);
+
+int dynlib_inplace_cb_edns_back_parsed(struct module_qstate* qstate,
+    int id, void* cb_args);
+
+int dynlib_inplace_cb_query_response(struct module_qstate* qstate,
+    struct dns_msg* response, int id, void* cb_args);
+
+int
+inplace_cb_register_wrapped(void* cb, enum inplace_cb_list_type type, void* cbarg,
+  struct module_env* env, int id);
+
+void
+inplace_cb_delete_wrapped(struct module_env* env, enum inplace_cb_list_type type,
+  int id);
+
+struct cb_pair {
+    void *cb;
+    void *cb_arg;
+};
+
+/**
+ * Global state for the module.
+ */
+
+typedef void (*func_init_t)(struct module_env*, int);
+typedef void (*func_deinit_t)(struct module_env*, int);
+typedef void (*func_operate_t)(struct module_qstate*, enum module_ev, int, struct outbound_entry*);
+typedef void (*func_inform_t)(struct module_qstate*, int, struct module_qstate*);
+typedef void (*func_clear_t)(struct module_qstate*, int);
+typedef size_t (*func_get_mem_t)(struct module_env*, int);
+typedef void (*inplace_cb_delete_wrapped_t)(struct module_env*, enum inplace_cb_list_type, int);
+typedef int (*inplace_cb_register_wrapped_t)(void*, enum inplace_cb_list_type, void*, struct module_env*, int);
+
+
+struct dynlibmod_env {
+	/** Dynamic library filename. */
+	const char* fname;
+	/** Module init function */
+	func_init_t func_init;
+	/** Module deinit function */
+	func_deinit_t func_deinit;
+	/** Module operate function */
+	func_operate_t func_operate;
+	/** Module super_inform function */
+	func_inform_t func_inform;
+	/** Module clear function */
+	func_clear_t func_clear;
+	/** Module get_mem function */
+	func_get_mem_t func_get_mem;
+  /** Wrapped inplace callback functions to circumvent callback whitelisting */
+  inplace_cb_delete_wrapped_t inplace_cb_delete_wrapped;
+  inplace_cb_register_wrapped_t inplace_cb_register_wrapped;
+  /** Pointer to any data the dynamic library might want to keep */
+  void *dyn_env;
+};
+
+
 #endif /* DYNLIBMOD_H */

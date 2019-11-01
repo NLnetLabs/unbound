@@ -586,17 +586,29 @@ int fptr_whitelist_inplace_cb_reply_generic(inplace_cb_reply_func_type* fptr,
 #ifdef WITH_PYTHONMODULE
 		if(fptr == &python_inplace_cb_reply_generic) return 1;
 #endif
+#ifdef WITH_DYNLIBMODULE
+		if(fptr == &dynlib_inplace_cb_reply_generic) return 1;
+#endif
 	} else if(type == inplace_cb_reply_cache) {
 #ifdef WITH_PYTHONMODULE
 		if(fptr == &python_inplace_cb_reply_generic) return 1;
+#endif
+#ifdef WITH_DYNLIBMODULE
+		if(fptr == &dynlib_inplace_cb_reply_generic) return 1;
 #endif
 	} else if(type == inplace_cb_reply_local) {
 #ifdef WITH_PYTHONMODULE
 		if(fptr == &python_inplace_cb_reply_generic) return 1;
 #endif
+#ifdef WITH_DYNLIBMODULE
+		if(fptr == &dynlib_inplace_cb_reply_generic) return 1;
+#endif
 	} else if(type == inplace_cb_reply_servfail) {
 #ifdef WITH_PYTHONMODULE
 		if(fptr == &python_inplace_cb_reply_generic) return 1;
+#endif
+#ifdef WITH_DYNLIBMODULE
+		if(fptr == &dynlib_inplace_cb_reply_generic) return 1;
 #endif
 	}
 	return 0;
@@ -612,6 +624,10 @@ int fptr_whitelist_inplace_cb_query(inplace_cb_query_func_type* fptr)
         if(fptr == &python_inplace_cb_query_generic)
                 return 1;
 #endif
+#ifdef WITH_DYNLIBMODULE
+        if(fptr == &dynlib_inplace_cb_query_generic)
+                return 1;
+#endif
 	(void)fptr;
 	return 0;
 }
@@ -625,6 +641,10 @@ int fptr_whitelist_inplace_cb_edns_back_parsed(
 #else
 	(void)fptr;
 #endif
+#ifdef WITH_DYNLIBMODULE
+    if(fptr == &dynlib_inplace_cb_edns_back_parsed)
+            return 1;
+#endif
 	return 0;
 }
 
@@ -636,6 +656,10 @@ int fptr_whitelist_inplace_cb_query_response(
 		return 1;
 #else
 	(void)fptr;
+#endif
+#ifdef WITH_DYNLIBMODULE
+    if(fptr == &dynlib_inplace_cb_query_response)
+            return 1;
 #endif
 	return 0;
 }
