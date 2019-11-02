@@ -148,7 +148,7 @@ COMMON_OBJ_ALL_SYMBOLS=@COMMON_OBJ_ALL_SYMBOLS@
 COMPAT_SRC=compat/ctime_r.c compat/fake-rfc2553.c compat/gmtime_r.c \
 compat/inet_aton.c compat/inet_ntop.c compat/inet_pton.c compat/malloc.c \
 compat/memcmp.c compat/memmove.c compat/snprintf.c compat/strlcat.c \
-compat/strlcpy.c compat/strptime.c compat/getentropy_linux.c \
+compat/strlcpy.c compat/strptime.c compat/getentropy_freebsd.c compat/getentropy_linux.c \
 compat/getentropy_osx.c compat/getentropy_solaris.c compat/getentropy_win.c \
 compat/explicit_bzero.c compat/arc4random.c compat/arc4random_uniform.c \
 compat/arc4_lock.c compat/sha512.c compat/reallocarray.c compat/isblank.c \
@@ -1482,6 +1482,7 @@ snprintf.lo snprintf.o: $(srcdir)/compat/snprintf.c config.h
 strlcat.lo strlcat.o: $(srcdir)/compat/strlcat.c config.h
 strlcpy.lo strlcpy.o: $(srcdir)/compat/strlcpy.c config.h
 strptime.lo strptime.o: $(srcdir)/compat/strptime.c config.h
+getentropy_freebsd.lo getentropy_freebsd.o: $(srcdir)/compat/getentropy_freebsd.c config.h
 getentropy_linux.lo getentropy_linux.o: $(srcdir)/compat/getentropy_linux.c config.h \
  
 getentropy_osx.lo getentropy_osx.o: $(srcdir)/compat/getentropy_osx.c config.h
