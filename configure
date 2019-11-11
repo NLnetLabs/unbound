@@ -20412,6 +20412,14 @@ if test "$ac_res" != no; then :
 fi
 
 			;;
+			*freebsd*|*FreeBSD)
+				case " $LIBOBJS " in
+  *" getentropy_freebsd.$ac_objext "* ) ;;
+  *) LIBOBJS="$LIBOBJS getentropy_freebsd.$ac_objext"
+ ;;
+esac
+
+			;;
 			*linux*|Linux|*)
 				case " $LIBOBJS " in
   *" getentropy_linux.$ac_objext "* ) ;;
