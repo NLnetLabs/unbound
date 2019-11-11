@@ -690,6 +690,27 @@ remote_write(SSL* ssl, int fd, const char* buf, size_t len)
 	}
 }
 
+/** check args, to see if too many args. Because when a file is sent it
+ * would wait for the terminal, and we can check for too many arguments,
+ * eg. user put arguments on the commandline. */
+static void
+check_args_for_listcmd(int argc, char* argv[])
+{
+	if(argc >= 1 && (strcmp(argv[0], "local_zones") == 0 ||
+		strcmp(argv[0], "local_zones_remove") == 0 ||
+		strcmp(argv[0], "local_datas") == 0 ||
+		strcmp(argv[0], "local_datas_remove") == 0) &&
+		argc >= 2) {
+		fatal_exit("too many arguments for command '%s', "
+			"content is piped in from stdin", argv[0]);
+	}
+	if(argc >= 1 && strcmp(argv[0], "view_local_datas") == 0 &&
+		argc >= 3) {
+		fatal_exit("too many arguments for command '%s', "
+			"content is piped in from stdin", argv[0]);
+	}
+}
+
 /** send stdin to server */
 static void
 send_file(SSL* ssl, int fd, FILE* in, char* buf, size_t sz)
@@ -853,6 +874,7 @@ int main(int argc, char* argv[])
 		print_stats_shm(cfgfile);
 		return 0;
 	}
+	check_args_for_listcmd(argc, argv);
 
 #ifdef USE_WINSOCK
 	if((r = WSAStartup(MAKEWORD(2,2), &wsa_data)) != 0)
