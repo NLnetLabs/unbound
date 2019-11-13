@@ -1,3 +1,6 @@
+13 November 2019: Wouter
+	- iana portlist updated.
+
 11 November 2019: Wouter
 	- Fix #109: check number of arguments for stdin-pipes in
 	  unbound-control and fail if too many arguments.
