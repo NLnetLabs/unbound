@@ -1,5 +1,6 @@
 13 November 2019: Wouter
 	- iana portlist updated.
+	- contrib/fastrpz.patch updated to apply for current code.
 
 11 November 2019: Wouter
 	- Fix #109: check number of arguments for stdin-pipes in
