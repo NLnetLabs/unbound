@@ -326,8 +326,10 @@ setup_dsa_sig(unsigned char** sig, unsigned int* len)
 #ifdef HAVE_DSA_SIG_SET0
 	if(!DSA_SIG_set0(dsasig, R, S)) return 0;
 #else
+#  ifndef S_SPLINT_S
 	dsasig->r = R;
 	dsasig->s = S;
+#  endif /* S_SPLINT_S */
 #endif
 	*sig = NULL;
 	newlen = i2d_DSA_SIG(dsasig, sig);

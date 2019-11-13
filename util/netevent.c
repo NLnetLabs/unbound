@@ -1309,7 +1309,7 @@ ssl_handle_write(struct comm_point* c)
 			return 1;
 	}
 	/* ignore return, if fails we may simply block */
-	(void)SSL_set_mode(c->ssl, SSL_MODE_ENABLE_PARTIAL_WRITE);
+	(void)SSL_set_mode(c->ssl, (long)SSL_MODE_ENABLE_PARTIAL_WRITE);
 	if(c->tcp_byte_count < sizeof(uint16_t)) {
 		uint16_t len = htons(sldns_buffer_limit(c->buffer));
 		ERR_clear_error();

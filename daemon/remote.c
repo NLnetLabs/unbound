@@ -499,7 +499,7 @@ int remote_accept_callback(struct comm_point* c, void* arg, int err,
 			goto close_exit;
 		}
 		SSL_set_accept_state(n->ssl);
-		(void)SSL_set_mode(n->ssl, SSL_MODE_AUTO_RETRY);
+		(void)SSL_set_mode(n->ssl, (long)SSL_MODE_AUTO_RETRY);
 		if(!SSL_set_fd(n->ssl, newfd)) {
 			log_crypto_err("could not SSL_set_fd");
 			SSL_free(n->ssl);

@@ -1045,7 +1045,7 @@ void* incoming_ssl_fd(void* sslctx, int fd)
 		return NULL;
 	}
 	SSL_set_accept_state(ssl);
-	(void)SSL_set_mode(ssl, SSL_MODE_AUTO_RETRY);
+	(void)SSL_set_mode(ssl, (long)SSL_MODE_AUTO_RETRY);
 	if(!SSL_set_fd(ssl, fd)) {
 		log_crypto_err("could not SSL_set_fd");
 		SSL_free(ssl);
@@ -1067,7 +1067,7 @@ void* outgoing_ssl_fd(void* sslctx, int fd)
 		return NULL;
 	}
 	SSL_set_connect_state(ssl);
-	(void)SSL_set_mode(ssl, SSL_MODE_AUTO_RETRY);
+	(void)SSL_set_mode(ssl, (long)SSL_MODE_AUTO_RETRY);
 	if(!SSL_set_fd(ssl, fd)) {
 		log_crypto_err("could not SSL_set_fd");
 		SSL_free(ssl);

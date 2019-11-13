@@ -1,6 +1,7 @@
 13 November 2019: Wouter
 	- iana portlist updated.
 	- contrib/fastrpz.patch updated to apply for current code.
+	- fixes for splint cleanliness, long vs int in SSL set_mode.
 
 11 November 2019: Wouter
 	- Fix #109: check number of arguments for stdin-pipes in
