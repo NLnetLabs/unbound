@@ -108,6 +108,16 @@ struct acl_addr {
 };
 
 /**
+* An address span with TLS information
+*/
+struct tls_addr {
+	/** node in address tree */
+	struct addr_tree_node node;
+	/* TLS certificate CN to verify against */
+	char *auth_name;
+};
+
+/**
  * Create acl structure 
  * @return new structure or NULL on error.
  */
@@ -128,6 +138,20 @@ void acl_list_delete(struct acl_list* acl);
  */
 int acl_list_apply_cfg(struct acl_list* acl, struct config_file* cfg,
 	struct views* v);
+
+
+int tls_upstream_apply_cfg(struct acl_list* acl, struct config_file* cfg);
+
+/**
+ * Lookup address to see its acl structure
+ * @param acl: structure for address storage.
+ * @param addr: address to check
+ * @param addrlen: length of addr.
+ * @return: tls_addr structure from this address.
+ */
+struct tls_addr*
+tls_addr_lookup(struct acl_list* acl, struct sockaddr_storage* addr,
+        socklen_t addrlen);
 
 /**
  * Lookup access control status for acl structure.

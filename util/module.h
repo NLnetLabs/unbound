@@ -322,6 +322,8 @@ struct module_env {
 	struct infra_cache* infra_cache;
 	/** shared key cache */
 	struct key_cache* key_cache;
+	/** TLS upstream */
+	struct acl_list* tls_upstream;
 
 	/* --- services --- */
 	/** 

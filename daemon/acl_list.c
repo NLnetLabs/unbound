@@ -487,3 +487,73 @@ acl_list_get_mem(struct acl_list* acl)
 	if(!acl) return 0;
 	return sizeof(*acl) + regional_get_mem(acl->region);
 }
+
+
+/** insert new address into acl_list structure */
+static struct tls_addr*
+tls_upstream_list_insert(struct acl_list* acl, struct sockaddr_storage* addr,
+   socklen_t addrlen, int net, char *auth_name,
+   int complain_duplicates)
+{
+   struct tls_addr* node = regional_alloc_zero(acl->region,
+       sizeof(struct tls_addr));
+   if(!node)
+       return NULL;
+   node->auth_name = auth_name;
+   if(!addr_tree_insert(&acl->tree, &node->node, addr, addrlen, net)) {
+       if(complain_duplicates)
+           verbose(VERB_QUERY, "duplicate acl address ignored.");
+   }
+   return node;
+}
+
+/** apply acl_list string */
+static int
+tls_upstream_list_str_cfg(struct acl_list* acl, const char* str, const char* s2,
+   int complain_duplicates)
+{
+   struct sockaddr_storage addr;
+   int net;
+   socklen_t addrlen;
+
+   if(!netblockstrtoaddr(str, UNBOUND_DNS_PORT, &addr, &addrlen, &net)) {
+       log_err("cannot parse access control: %s %s", str, s2);
+       return 0;
+   }
+   if(!tls_upstream_list_insert(acl, &addr, addrlen, net, (char *)s2,
+       complain_duplicates)) {
+       log_err("out of memory");
+       return 0;
+   }
+   return 1;
+}
+
+/** read acl_list config */
+static int
+read_tls_upstream_list(struct acl_list* acl, struct config_file* cfg)
+{
+   struct config_str2list* p;
+   for(p = cfg->tls_auth_servers; p; p = p->next) {
+       log_assert(p->str && p->str2);
+       if(!tls_upstream_list_str_cfg(acl, p->str, p->str2, 1))
+           return 0;
+   }
+   return 1;
+}
+
+int tls_upstream_apply_cfg(struct acl_list* acl, struct config_file* cfg) {
+   regional_free_all(acl->region);
+   addr_tree_init(&acl->tree);
+   if(!read_tls_upstream_list(acl, cfg))
+       return 0;
+   addr_tree_init_parents(&acl->tree);
+   return 1;
+}
+
+struct tls_addr*
+tls_addr_lookup(struct acl_list* acl, struct sockaddr_storage* addr,
+        socklen_t addrlen)
+{
+   return (struct tls_addr*)addr_tree_lookup(&acl->tree,
+       addr, addrlen);
+}

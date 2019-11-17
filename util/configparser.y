@@ -141,6 +141,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_QNAME_MINIMISATION VAR_QNAME_MINIMISATION_STRICT VAR_IP_FREEBIND
 %token VAR_DEFINE_TAG VAR_LOCAL_ZONE_TAG VAR_ACCESS_CONTROL_TAG
 %token VAR_LOCAL_ZONE_OVERRIDE VAR_ACCESS_CONTROL_TAG_ACTION
+%token VAR_TLS_AUTH_SERVER
 %token VAR_ACCESS_CONTROL_TAG_DATA VAR_VIEW VAR_ACCESS_CONTROL_VIEW
 %token VAR_VIEW_FIRST VAR_SERVE_EXPIRED VAR_SERVE_EXPIRED_TTL
 %token VAR_SERVE_EXPIRED_TTL_RESET VAR_FAKE_DSA VAR_FAKE_SHA1
@@ -250,7 +251,7 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_permit_small_holddown | server_qname_minimisation |
 	server_ip_freebind | server_define_tag | server_local_zone_tag |
 	server_disable_dnssec_lame_check | server_access_control_tag |
-	server_local_zone_override | server_access_control_tag_action |
+	server_local_zone_override | server_tls_auth_server | server_access_control_tag_action |
 	server_access_control_tag_data | server_access_control_view |
 	server_qname_minimisation_strict | server_serve_expired |
 	server_serve_expired_ttl | server_serve_expired_ttl_reset |
@@ -1983,6 +1984,15 @@ server_local_zone_override: VAR_LOCAL_ZONE_OVERRIDE STRING_ARG STRING_ARG STRING
 			free($2);
 			free($3);
 			free($4);
+		}
+	}
+	;
+server_tls_auth_server: VAR_TLS_AUTH_SERVER STRING_ARG STRING_ARG
+	{
+		OUTYY(("P(server_tls_auth_server:%s %s)\n", $2, $3));
+		if(!cfg_str2list_insert(&cfg_parser->cfg->tls_auth_servers,
+			$2, $3)) {
+			yyerror("out of memory");
 		}
 	}
 	;

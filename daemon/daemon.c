@@ -292,6 +292,16 @@ daemon_init(void)
 		free(daemon);
 		return NULL;
 	}
+    daemon->env->tls_upstream = acl_list_create();
+    if(!daemon->env->tls_upstream) {
+        auth_zones_delete(daemon->env->auth_zones);
+        tcl_list_delete(daemon->tcl);
+        acl_list_delete(daemon->acl);
+        edns_known_options_delete(daemon->env);
+        free(daemon->env);
+        free(daemon);
+        return NULL;
+    }
 	return daemon;	
 }
 
@@ -603,6 +613,8 @@ daemon_fork(struct daemon* daemon)
 				   "dnscrypt support");
 #endif
 	}
+	if(!tls_upstream_apply_cfg(daemon->env->tls_upstream, daemon->cfg))
+		fatal_exit("Could not setup tls_upstream list");
 	/* create global local_zones */
 	if(!(daemon->local_zones = local_zones_create()))
 		fatal_exit("Could not create local zones: out of memory");
