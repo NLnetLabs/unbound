@@ -334,6 +334,7 @@ config_create(void)
 	cfg->ipset_name_v4 = NULL;
 	cfg->ipset_name_v6 = NULL;
 #endif
+    cfg->tls_auth_servers = NULL;
 	return cfg;
 error_exit:
 	config_delete(cfg);

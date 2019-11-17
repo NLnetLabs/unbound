@@ -585,6 +585,9 @@ struct config_file {
 	char* ipset_name_v4;
 	char* ipset_name_v6;
 #endif
+
+	/* List of TLS servers ip netblock/auth name */
+	struct config_str2list* tls_auth_servers;
 };
 
 /** from cfg username, after daemonize setup performed */

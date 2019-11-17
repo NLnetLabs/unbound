@@ -68,6 +68,7 @@
 #include "sldns/str2wire.h"
 #include "sldns/parseutil.h"
 #include "sldns/sbuffer.h"
+#include "daemon/acl_list.h"
 
 /* in msec */
 int UNKNOWN_SERVER_NICENESS = 376;
@@ -2112,6 +2113,9 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 	int auth_fallback = 0;
 	uint8_t* qout_orig = NULL;
 	size_t qout_orig_len = 0;
+	char *tls_auth_name = NULL;
+	int ssl_upstream = 0;
+	struct tls_addr *tls_auth_addr = NULL;
 
 	/* NOTE: a request will encounter this state for each target it 
 	 * needs to send a query to. That is, at least one per referral, 
@@ -2515,6 +2519,19 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 			iq->dnssec_lame_query?" but lame_query anyway": "");
 	}
 	fptr_ok(fptr_whitelist_modenv_send_query(qstate->env->send_query));
+	tls_auth_name = target->tls_auth_name;
+	ssl_upstream = (iq->dp->ssl_upstream || qstate->env->cfg->ssl_upstream);
+	if(qstate->env->tls_upstream != NULL) {
+		if((tls_auth_addr = tls_addr_lookup(qstate->env->tls_upstream, &target->addr, target->addrlen))) {
+			ssl_upstream = 1;
+			if(!tls_auth_addr->auth_name || strcmp(tls_auth_addr->auth_name, "") == 0){
+				tls_auth_name = NULL;
+			} else {
+				tls_auth_name = tls_auth_addr->auth_name;
+			}
+			((struct sockaddr_in*)&target->addr)->sin_port = htons(UNBOUND_DNS_OVER_TLS_PORT);
+		}
+	}
 	outq = (*qstate->env->send_query)(&iq->qinfo_out,
 		iq->chase_flags | (iq->chase_to_rd?BIT_RD:0), 
 		/* unset CD if to forwarder(RD set) and not dnssec retry
@@ -2526,8 +2543,8 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 		iq->dnssec_expected, iq->caps_fallback || is_caps_whitelisted(
 		ie, iq), &target->addr, target->addrlen,
 		iq->dp->name, iq->dp->namelen,
-		(iq->dp->ssl_upstream || qstate->env->cfg->ssl_upstream),
-		target->tls_auth_name, qstate);
+		ssl_upstream,
+		tls_auth_name, qstate);
 	if(!outq) {
 		log_addr(VERB_DETAIL, "error sending query to auth server", 
 			&target->addr, target->addrlen);
