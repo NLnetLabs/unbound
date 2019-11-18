@@ -476,7 +476,7 @@ ACX_MKDIR_ONE_ARG
 AC_CHECK_FUNCS([strptime],[AC_CHECK_STRPTIME_WORKS],[AC_LIBOBJ([strptime])])
 
 # check if we can use SO_REUSEPORT
-if echo "$host" | grep -i -e linux -e dragonfly >/dev/null; then
+if echo "$host" | $GREP -i -e linux -e dragonfly >/dev/null; then
 	AC_DEFINE(REUSEPORT_DEFAULT, 1, [if REUSEPORT is enabled by default])
 else
 	AC_DEFINE(REUSEPORT_DEFAULT, 0, [if REUSEPORT is enabled by default])
@@ -835,6 +835,42 @@ AC_INCLUDES_DEFAULT
 #include <openssl/ssl.h>
 #include <openssl/evp.h>
 ])
+
+if test "$ac_cv_func_HMAC_Init_ex" = "yes"; then
+# check function return type.
+AC_MSG_CHECKING(the return type of HMAC_Init_ex)
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([
+#ifdef HAVE_OPENSSL_ERR_H
+#include <openssl/err.h>
+#endif
+
+#ifdef HAVE_OPENSSL_RAND_H
+#include <openssl/rand.h>
+#endif
+
+#ifdef HAVE_OPENSSL_CONF_H
+#include <openssl/conf.h>
+#endif
+
+#ifdef HAVE_OPENSSL_ENGINE_H
+#include <openssl/engine.h>
+#endif
+#include <openssl/ssl.h>
+#include <openssl/evp.h>
+], [
+	HMAC_CTX* hmac_ctx = NULL;
+	void* hmac_key = NULL;
+	const EVP_MD* digest = NULL;
+	int x = HMAC_Init_ex(hmac_ctx, hmac_key, 32, digest, NULL);
+	(void)x;
+])], [
+	AC_MSG_RESULT(int)
+], [
+	AC_MSG_RESULT(void)
+	AC_DEFINE([HMAC_INIT_EX_RETURNS_VOID], 1, [If HMAC_Init_ex() returns void])
+])
+fi
+
 fi
 AC_SUBST(SSLLIB)
 

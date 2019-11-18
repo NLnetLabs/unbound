@@ -620,6 +620,9 @@
 /* Define to 1 if you have the `_beginthreadex' function. */
 #undef HAVE__BEGINTHREADEX
 
+/* If HMAC_Init_ex() returns void */
+#undef HMAC_INIT_EX_RETURNS_VOID
+
 /* if lex has yylex_destroy */
 #undef LEX_HAS_YYLEX_DESTROY
 

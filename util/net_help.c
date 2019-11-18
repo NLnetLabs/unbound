@@ -1223,10 +1223,14 @@ int tls_session_ticket_key_cb(void *ATTR_UNUSED(sslctx), unsigned char* key_name
 			verbose(VERB_CLIENT, "EVP_EncryptInit_ex failed");
 			return -1;
 		}
+#ifndef HMAC_INIT_EX_RETURNS_VOID
 		if (HMAC_Init_ex(hmac_ctx, ticket_keys->hmac_key, 32, digest, NULL) != 1) {
 			verbose(VERB_CLIENT, "HMAC_Init_ex failed");
 			return -1;
 		}
+#else
+		HMAC_Init_ex(hmac_ctx, ticket_keys->hmac_key, 32, digest, NULL);
+#endif
 		return 1;
 	} else if (enc == 0) {
 		/* decrypt */
@@ -1243,10 +1247,14 @@ int tls_session_ticket_key_cb(void *ATTR_UNUSED(sslctx), unsigned char* key_name
 			return 0;
 		}
 
+#ifndef HMAC_INIT_EX_RETURNS_VOID
 		if (HMAC_Init_ex(hmac_ctx, key->hmac_key, 32, digest, NULL) != 1) {
 			verbose(VERB_CLIENT, "HMAC_Init_ex failed");
 			return -1;
 		}
+#else
+		HMAC_Init_ex(hmac_ctx, key->hmac_key, 32, digest, NULL);
+#endif
 		if (EVP_DecryptInit_ex(evp_sctx, cipher, NULL, key->aes_key, iv) != 1) {
 			log_err("EVP_DecryptInit_ex failed");
 			return -1;

@@ -16116,7 +16116,7 @@ done
 
 
 # check if we can use SO_REUSEPORT
-if echo "$host" | grep -i -e linux -e dragonfly >/dev/null; then
+if echo "$host" | $GREP -i -e linux -e dragonfly >/dev/null; then
 
 $as_echo "#define REUSEPORT_DEFAULT 1" >>confdefs.h
 
@@ -18340,6 +18340,63 @@ fi
 cat >>confdefs.h <<_ACEOF
 #define HAVE_DECL_SSL_CTX_SET_ECDH_AUTO $ac_have_decl
 _ACEOF
+
+
+if test "$ac_cv_func_HMAC_Init_ex" = "yes"; then
+# check function return type.
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking the return type of HMAC_Init_ex" >&5
+$as_echo_n "checking the return type of HMAC_Init_ex... " >&6; }
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+#ifdef HAVE_OPENSSL_ERR_H
+#include <openssl/err.h>
+#endif
+
+#ifdef HAVE_OPENSSL_RAND_H
+#include <openssl/rand.h>
+#endif
+
+#ifdef HAVE_OPENSSL_CONF_H
+#include <openssl/conf.h>
+#endif
+
+#ifdef HAVE_OPENSSL_ENGINE_H
+#include <openssl/engine.h>
+#endif
+#include <openssl/ssl.h>
+#include <openssl/evp.h>
+
+int
+main ()
+{
+
+	HMAC_CTX* hmac_ctx = NULL;
+	void* hmac_key = NULL;
+	const EVP_MD* digest = NULL;
+	int x = HMAC_Init_ex(hmac_ctx, hmac_key, 32, digest, NULL);
+	(void)x;
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: int" >&5
+$as_echo "int" >&6; }
+
+else
+
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: void" >&5
+$as_echo "void" >&6; }
+
+$as_echo "#define HMAC_INIT_EX_RETURNS_VOID 1" >>confdefs.h
+
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+fi
 
 fi
 
