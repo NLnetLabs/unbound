@@ -5,6 +5,7 @@
 	- Provide a prototype for compat malloc to remove compile warning.
 	- Portable grep usage for reuseport configure test.
 	- Check return type of HMAC_Init_ex for openssl 0.9.8.
+	- gitignore .source tempfile used for compatible make.
 
 13 November 2019: Wouter
 	- iana portlist updated.
