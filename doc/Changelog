@@ -1,6 +1,7 @@
 18 November 2019: Wouter
 	- In unbound-host use separate variable for get_option to please
 	  code checkers.
+	- update to bison output of 3.4.1 in code repository.
 
 13 November 2019: Wouter
 	- iana portlist updated.
