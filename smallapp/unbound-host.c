@@ -426,6 +426,7 @@ int main(int argc, char* argv[])
 	int c;
 	char* qclass = NULL;
 	char* qtype = NULL;
+	char* use_syslog = NULL;
 	struct ub_ctx* ctx = NULL;
 	int debuglevel = 0;
 	
@@ -486,11 +487,11 @@ int main(int argc, char* argv[])
 	}
 	if(debuglevel != 0) /* set after possible -C options */
 		check_ub_res(ub_ctx_debuglevel(ctx, debuglevel));
-	if(ub_ctx_get_option(ctx, "use-syslog", &optarg) == 0) {
-		if(strcmp(optarg, "yes") == 0) /* disable use-syslog */
+	if(ub_ctx_get_option(ctx, "use-syslog", &use_syslog) == 0) {
+		if(strcmp(use_syslog, "yes") == 0) /* disable use-syslog */
 			check_ub_res(ub_ctx_set_option(ctx, 
 				"use-syslog:", "no"));
-		free(optarg);
+		free(use_syslog);
 	}
 	argc -= optind;
 	argv += optind;
