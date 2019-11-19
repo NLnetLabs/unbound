@@ -9,6 +9,8 @@
 	  and ipsecmod_new(), reported by X41 D-Sec.
 	- Fix Out-of-bounds Read in rr_comment_dnskey(),
 	  reported by X41 D-Sec.
+	- Fix Integer Overflows in Size Calculations,
+	  reported by X41 D-Sec.
 
 18 November 2019: Wouter
 	- In unbound-host use separate variable for get_option to please

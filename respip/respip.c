@@ -479,10 +479,16 @@ copy_rrset(const struct ub_packed_rrset_key* key, struct regional* region)
 	if(!ck->rk.dname)
 		return NULL;
 
+	if((unsigned)data->count >= 0xffff00U)
+		return NULL; /* guard against integer overflow in dsize */
 	dsize = sizeof(struct packed_rrset_data) + data->count *
 		(sizeof(size_t)+sizeof(uint8_t*)+sizeof(time_t));
-	for(i=0; i<data->count; i++)
+	for(i=0; i<data->count; i++) {
+		if((unsigned)dsize >= 0x0fffffffU ||
+			(unsigned)data->rr_len[i] >= 0x0fffffffU)
+			return NULL; /* guard against integer overflow */
 		dsize += data->rr_len[i];
+	}
 	d = regional_alloc(region, dsize);
 	if(!d)
 		return NULL;
