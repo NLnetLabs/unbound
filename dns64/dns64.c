@@ -941,6 +941,12 @@ dns64_inform_super(struct module_qstate* qstate, int id,
 	if(!super_dq) {
 		super_dq = (struct dns64_qstate*)regional_alloc(super->region,
 			sizeof(*super_dq));
+		if(!super_dq) {
+			log_err("out of memory");
+			super->return_rcode = LDNS_RCODE_SERVFAIL;
+			super->return_msg = NULL;
+			return;
+		}
 		super->minfo[id] = super_dq;
 		memset(super_dq, 0, sizeof(*super_dq));
 		super_dq->started_no_cache_store = super->no_cache_store;
