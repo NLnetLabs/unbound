@@ -715,6 +715,9 @@
 /* Shared data */
 #undef SHARE_DIR
 
+/* The size of `size_t', as computed by sizeof. */
+#undef SIZEOF_SIZE_T
+
 /* The size of `time_t', as computed by sizeof. */
 #undef SIZEOF_TIME_T
 

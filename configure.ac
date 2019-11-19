@@ -432,6 +432,7 @@ AC_INCLUDES_DEFAULT
 # endif
 #endif
 ])
+AC_CHECK_SIZEOF(size_t)
 
 # add option to disable the evil rpath
 ACX_ARG_RPATH
