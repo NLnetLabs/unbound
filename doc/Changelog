@@ -1,5 +1,6 @@
 19 November 2019: Wouter
 	- Fix CVE-2019-18934, shell execution in ipsecmod.
+	- 1.9.5 is 1.9.4 with bugfix, trunk is 1.9.6 in development.
 
 18 November 2019: Wouter
 	- In unbound-host use separate variable for get_option to please
