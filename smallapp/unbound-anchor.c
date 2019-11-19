@@ -355,7 +355,7 @@ read_cert_bio(BIO* bio)
 		exit(0);
 	}
 	while(!BIO_eof(bio)) {
-		X509* x = PEM_read_bio_X509(bio, NULL, 0, NULL);
+		X509* x = PEM_read_bio_X509(bio, NULL, NULL, NULL);
 		if(x == NULL) {
 			if(verb) {
 				printf("failed to read X509\n");
@@ -396,7 +396,7 @@ read_cert_file(const char* file)
 		return NULL;
 	}
 	while(!feof(in)) {
-		X509* x = PEM_read_X509(in, NULL, 0, NULL);
+		X509* x = PEM_read_X509(in, NULL, NULL, NULL);
 		if(x == NULL) {
 			if(verb) {
 				printf("failed to read X509 file\n");
@@ -943,7 +943,7 @@ read_data_chunk(SSL* ssl, size_t len)
 	size_t got = 0;
 	int r;
 	char* data;
-	if(len >= 0xfffffff0)
+	if(len >= (size_t)0xfffffff0)
 		return NULL; /* to protect against integer overflow in malloc*/
 	data = malloc(len+1);
 	if(!data) {

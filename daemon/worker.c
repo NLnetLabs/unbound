@@ -1562,7 +1562,8 @@ send_reply_rc:
 #endif
 	if(worker->env.cfg->log_replies)
 	{
-		struct timeval tv = {0, 0};
+		struct timeval tv;
+		memset(&tv, 0, sizeof(tv));
 		if(qinfo.local_alias && qinfo.local_alias->rrset &&
 			qinfo.local_alias->rrset->rk.dname) {
 			/* log original qname, before the local alias was
