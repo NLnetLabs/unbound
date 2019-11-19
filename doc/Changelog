@@ -15,6 +15,8 @@
 	  sldns_str2wire_dname_buf_origin(), reported by X41 D-Sec.
 	- Fix Out of Bounds Read in sldns_str2wire_dname(),
 	  reported by X41 D-Sec.
+	- Fix Out of Bounds Write in sldns_bget_token_par(),
+	  reported by X41 D-Sec.
 
 18 November 2019: Wouter
 	- In unbound-host use separate variable for get_option to please
