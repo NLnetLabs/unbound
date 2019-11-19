@@ -1,3 +1,6 @@
+19 November 2019: Wouter
+	- Fix CVE-2019-18934, shell execution in ipsecmod.
+
 18 November 2019: Wouter
 	- In unbound-host use separate variable for get_option to please
 	  code checkers.
