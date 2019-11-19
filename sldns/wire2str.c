@@ -585,6 +585,7 @@ static int rr_comment_dnskey(char** s, size_t* slen, uint8_t* rr,
 	if(rrlen < dname_off + 10) return 0;
 	rdlen = sldns_read_uint16(rr+dname_off+8);
 	if(rrlen < dname_off + 10 + rdlen) return 0;
+	if(rdlen < 2) return 0;
 	rdata = rr + dname_off + 10;
 	flags = (int)sldns_read_uint16(rdata);
 	w += sldns_str_print(s, slen, " ;{");

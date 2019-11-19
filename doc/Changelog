@@ -7,6 +7,8 @@
 	  reported by X41 D-Sec.
 	- Fix Unchecked NULL Pointer in dns64_inform_super()
 	  and ipsecmod_new(), reported by X41 D-Sec.
+	- Fix Out-of-bounds Read in rr_comment_dnskey(),
+	  reported by X41 D-Sec.
 
 18 November 2019: Wouter
 	- In unbound-host use separate variable for get_option to please
