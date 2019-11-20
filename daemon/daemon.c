@@ -250,8 +250,6 @@ daemon_init(void)
 	/* init timezone info while we are not chrooted yet */
 	tzset();
 #endif
-	/* open /dev/urandom if needed */
-	ub_systemseed((unsigned)time(NULL)^(unsigned)getpid()^0xe67);
 	daemon->need_to_exit = 0;
 	modstack_init(&daemon->mods);
 	if(!(daemon->env = (struct module_env*)calloc(1, 

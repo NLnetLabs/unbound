@@ -79,12 +79,6 @@
 #define MAX_VALUE 0x7fffffff
 
 #if defined(HAVE_SSL)
-void
-ub_systemseed(unsigned int ATTR_UNUSED(seed))
-{
-	/* arc4random_uniform does not need seeds, it gets kernel entropy */
-}
-
 struct ub_randstate* 
 ub_initstate(struct ub_randstate* ATTR_UNUSED(from))
 {
@@ -117,10 +111,6 @@ ub_random_max(struct ub_randstate* state, long int x)
 struct ub_randstate {
 	int ready;
 };
-
-void ub_systemseed(unsigned int ATTR_UNUSED(seed))
-{
-}
 
 struct ub_randstate* ub_initstate(struct ub_randstate* ATTR_UNUSED(from))
 {
@@ -156,15 +146,6 @@ struct ub_randstate {
 	struct yarrow256_ctx ctx;
 	int seeded;
 };
-
-void ub_systemseed(unsigned int ATTR_UNUSED(seed))
-{
-/**
- * We seed on init and not here, as we need the ctx to re-seed.
- * This also means that re-seeding is not supported.
- */
-	log_err("Re-seeding not supported, generator untouched");
-}
 
 struct ub_randstate* ub_initstate(struct ub_randstate* ATTR_UNUSED(from))
 {
