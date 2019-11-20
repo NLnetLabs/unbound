@@ -3191,7 +3191,7 @@ comm_point_drop_reply(struct comm_reply* repinfo)
 {
 	if(!repinfo)
 		return;
-	log_assert(repinfo && repinfo->c);
+	log_assert(repinfo->c);
 	log_assert(repinfo->c->type != comm_tcp_accept);
 	if(repinfo->c->type == comm_udp)
 		return;

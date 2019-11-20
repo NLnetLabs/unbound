@@ -2261,7 +2261,7 @@ autr_debug_print_ta(struct autr_ta* ta)
 		log_info("out of memory in debug_print_ta");
 		return;
 	}
-	if(str && str[0]) str[strlen(str)-1]=0; /* remove newline */
+	if(str[0]) str[strlen(str)-1]=0; /* remove newline */
 	ctime_r(&ta->last_change, buf);
 	if(buf[0]) buf[strlen(buf)-1]=0; /* remove newline */
 	log_info("[%s] %s ;;state:%d ;;pending_count:%d%s%s last:%s",
