@@ -1121,7 +1121,7 @@ local_zone_out(struct local_zone* z)
 	struct local_rrset* p;
 	RBTREE_FOR(d, struct local_data*, &z->data) {
 		for(p = d->rrsets; p; p = p->next) {
-			log_nametypeclass(NO_VERBOSE, "rrset", d->name, 
+			log_nametypeclass(NO_VERBOSE, "rrset", d->name,
 				ntohs(p->rrset->rk.type),
 				ntohs(p->rrset->rk.rrset_class));
 		}
