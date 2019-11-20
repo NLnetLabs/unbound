@@ -101,7 +101,7 @@ struct cb_pair {
  * Global state for the module.
  */
 
-typedef void (*func_init_t)(struct module_env*, int);
+typedef int (*func_init_t)(struct module_env*, int);
 typedef void (*func_deinit_t)(struct module_env*, int);
 typedef void (*func_operate_t)(struct module_qstate*, enum module_ev, int, struct outbound_entry*);
 typedef void (*func_inform_t)(struct module_qstate*, int, struct module_qstate*);

@@ -33,7 +33,7 @@ int reply_callback(struct query_info* qinfo,
 
 /* Init is called when the module is first loaded. It should be used to set up
  * the environment for this module and do any other initialisation required. */
-EXPORT void init(struct module_env* env, int id) {
+EXPORT int init(struct module_env* env, int id) {
     log_info("dynlib: hello world from init");
     struct dynlibmod_env* de = (struct dynlibmod_env*) env->modinfo[id];
     de->inplace_cb_register_wrapped(&reply_callback,
@@ -41,6 +41,7 @@ EXPORT void init(struct module_env* env, int id) {
                                     NULL, env, id);
     struct dynlibmod_env* local_env = env->modinfo[id];
     local_env->dyn_env = NULL;
+    return 1;
 }
 
 /* Deinit is run as the program is shutting down. It should be used to clean up

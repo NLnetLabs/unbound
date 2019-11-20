@@ -132,8 +132,7 @@ int dynlibmod_init(struct module_env* env, int id) {
     }
     de->inplace_cb_delete_wrapped = &inplace_cb_delete_wrapped;
     de->inplace_cb_register_wrapped = &inplace_cb_register_wrapped;
-    de->func_init(env, id);
-    return 1;
+    return de->func_init(env, id);
 }
 
 /** dynlib module deinit */
