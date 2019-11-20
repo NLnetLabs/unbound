@@ -22,6 +22,7 @@
 	- Synchronize compat/getentropy_win.c with version 1.5 from
 	  OpenBSD, no changes but makes the file, comments, identical.
 	- Upgrade compat/getentropy_solaris.c to version 1.13 from OpenBSD.
+	- Upgrade compat/getentropy_osx.c to version 1.12 from OpenBSD.
 
 19 November 2019: Wouter
 	- Fix CVE-2019-18934, shell execution in ipsecmod.
