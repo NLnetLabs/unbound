@@ -244,6 +244,8 @@ cachedb_init(struct module_env* env, int id)
 	env->modinfo[id] = (void*)cachedb_env;
 	if(!cachedb_apply_cfg(cachedb_env, env->cfg)) {
 		log_err("cachedb: could not apply configuration settings.");
+		free(cachedb_env);
+		env->modinfo[id] = NULL;
 		return 0;
 	}
 	/* see if a backend is selected */
@@ -252,6 +254,8 @@ cachedb_init(struct module_env* env, int id)
 	if(!(*cachedb_env->backend->init)(env, cachedb_env)) {
 		log_err("cachedb: could not init %s backend",
 			cachedb_env->backend->name);
+		free(cachedb_env);
+		env->modinfo[id] = NULL;
 		return 0;
 	}
 	cachedb_env->enabled = 1;
