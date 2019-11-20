@@ -191,6 +191,7 @@ uitoa(unsigned n, char* s)
  *
  * \param ipv6   IPv6 address represented as a 128-bit array in big-endian
  *               order.
+ * \param ipv6_len length of the ipv6 byte array.
  * \param offset Index of the MSB of the IPv4 address embedded in the IPv6
  *               address.
  */
@@ -216,6 +217,7 @@ extract_ipv4(const uint8_t ipv6[], size_t ipv6_len, const int offset)
  * \param ipv4 IPv4 address represented as an unsigned 32-bit number.
  * \param ptr  The result will be written here. Must be large enough, be
  *             careful!
+ * \param nm_len length of the ptr buffer.
  *
  * \return The number of characters written.
  */
@@ -246,6 +248,7 @@ ipv4_to_ptr(uint32_t ipv4, char ptr[], size_t nm_len)
  *
  * \param ptr  The domain name. (e.g. "\011[...]\010\012\016\012\03ip6\04arpa")
  * \param ipv6 The result will be written here, in network byte order.
+ * \param ipv6_len length of the ipv6 byte array.
  *
  * \return 1 on success, 0 on failure.
  */
@@ -281,9 +284,12 @@ ptr_to_ipv6(const char* ptr, uint8_t ipv6[], size_t ipv6_len)
  * Synthesize an IPv6 address based on an IPv4 address and the DNS64 prefix.
  *
  * \param prefix_addr DNS64 prefix address.
+ * \param prefix_addr_len length of the prefix_addr buffer.
  * \param prefix_net  CIDR length of the DNS64 prefix. Must be between 0 and 96.
  * \param a           IPv4 address.
+ * \param a_len       length of the a buffer.
  * \param aaaa        IPv6 address. The result will be written here.
+ * \param aaaa_len    length of the aaaa buffer.
  */
 static void
 synthesize_aaaa(const uint8_t prefix_addr[], size_t prefix_addr_len,
