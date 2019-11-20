@@ -86,7 +86,6 @@ void autr_global_delete(struct autr_global_data* global)
 	if(!global)
 		return;
 	/* elements deleted by parent */
-	memset(global, 0, sizeof(*global));
 	free(global);
 }
 
