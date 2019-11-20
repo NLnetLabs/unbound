@@ -121,7 +121,7 @@ int shm_main_init(struct daemon* daemon)
 		shmctl(daemon->shm_info->id_arr, IPC_RMID, NULL);
 
 	/* SHM: Create the segment */
-	daemon->shm_info->id_ctl = shmget(daemon->shm_info->key, sizeof(struct ub_shm_stat_info), IPC_CREAT | 0666);
+	daemon->shm_info->id_ctl = shmget(daemon->shm_info->key, sizeof(struct ub_shm_stat_info), IPC_CREAT | 0644);
 
 	if (daemon->shm_info->id_ctl < 0)
 	{
@@ -134,7 +134,7 @@ int shm_main_init(struct daemon* daemon)
 		return 0;
 	}
 
-	daemon->shm_info->id_arr = shmget(daemon->shm_info->key + 1, shm_size, IPC_CREAT | 0666);
+	daemon->shm_info->id_arr = shmget(daemon->shm_info->key + 1, shm_size, IPC_CREAT | 0644);
 
 	if (daemon->shm_info->id_arr < 0)
 	{

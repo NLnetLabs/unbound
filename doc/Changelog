@@ -3,6 +3,8 @@
 	  reported by X41 D-Sec.
 	- Fix Race Condition in autr_tp_create(),
 	  reported by X41 D-Sec.
+	- Fix Shared Memory World Writeable,
+	  reported by X41 D-Sec.
 
 19 November 2019: Wouter
 	- Fix CVE-2019-18934, shell execution in ipsecmod.
