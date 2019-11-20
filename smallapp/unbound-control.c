@@ -423,19 +423,19 @@ static void print_stats_shm(const char* cfgfile)
 	if(!config_read(cfg, cfgfile, NULL))
 		fatal_exit("could not read config file");
 	/* get shm segments */
-	id_ctl = shmget(cfg->shm_key, sizeof(int), SHM_R|SHM_W);
+	id_ctl = shmget(cfg->shm_key, sizeof(int), SHM_R);
 	if(id_ctl == -1) {
 		fatal_exit("shmget(%d): %s", cfg->shm_key, strerror(errno));
 	}
-	id_arr = shmget(cfg->shm_key+1, sizeof(int), SHM_R|SHM_W);
+	id_arr = shmget(cfg->shm_key+1, sizeof(int), SHM_R);
 	if(id_arr == -1) {
 		fatal_exit("shmget(%d): %s", cfg->shm_key+1, strerror(errno));
 	}
-	shm_stat = (struct ub_shm_stat_info*)shmat(id_ctl, NULL, 0);
+	shm_stat = (struct ub_shm_stat_info*)shmat(id_ctl, NULL, SHM_RDONLY);
 	if(shm_stat == (void*)-1) {
 		fatal_exit("shmat(%d): %s", id_ctl, strerror(errno));
 	}
-	stats = (struct ub_stats_info*)shmat(id_arr, NULL, 0);
+	stats = (struct ub_stats_info*)shmat(id_arr, NULL, SHM_RDONLY);
 	if(stats == (void*)-1) {
 		fatal_exit("shmat(%d): %s", id_arr, strerror(errno));
 	}
