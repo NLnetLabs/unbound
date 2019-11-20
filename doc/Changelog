@@ -10,6 +10,8 @@
 	  reported by X41 D-Sec.
 	- Fix Randomness Error not Handled Properly,
 	  reported by X41 D-Sec.
+	- Fix Out-of-Bounds Read in dname_valid(),
+	  reported by X41 D-Sec.
 
 19 November 2019: Wouter
 	- Fix CVE-2019-18934, shell execution in ipsecmod.

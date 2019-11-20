@@ -75,6 +75,8 @@ dname_valid(uint8_t* dname, size_t maxlen)
 {
 	size_t len = 0;
 	size_t labellen;
+	if(maxlen == 0)
+		return 0; /* too short, shortest is '0' root label */
 	labellen = *dname++;
 	while(labellen) {
 		if(labellen&0xc0)
