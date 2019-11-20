@@ -702,6 +702,8 @@ PTHREAD_CFLAGS
 PTHREAD_LIBS
 PTHREAD_CC
 ax_pthread_config
+ASYNCLOOK_ALLOCCHECK_EXTRA_OBJ
+SLDNS_ALLOCCHECK_EXTRA_OBJ
 USE_SYSTEMD_FALSE
 USE_SYSTEMD_TRUE
 SYSTEMD_DAEMON_LIBS
@@ -16375,6 +16377,10 @@ fi
 if test x_$enable_alloc_checks = x_yes; then
 
 $as_echo "#define UNBOUND_ALLOC_STATS 1" >>confdefs.h
+
+	SLDNS_ALLOCCHECK_EXTRA_OBJ="alloc.lo log.lo"
+
+	ASYNCLOOK_ALLOCCHECK_EXTRA_OBJ="alloc.lo"
 
 else
 	if test x_$enable_alloc_lite = x_yes; then

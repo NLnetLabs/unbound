@@ -503,6 +503,10 @@ if test x_$enable_alloc_nonregional = x_yes; then
 fi
 if test x_$enable_alloc_checks = x_yes; then
 	AC_DEFINE(UNBOUND_ALLOC_STATS, 1, [use statistics for allocs and frees, for debug use])
+	SLDNS_ALLOCCHECK_EXTRA_OBJ="alloc.lo log.lo"
+	AC_SUBST(SLDNS_ALLOCCHECK_EXTRA_OBJ)
+	ASYNCLOOK_ALLOCCHECK_EXTRA_OBJ="alloc.lo"
+	AC_SUBST(ASYNCLOOK_ALLOCCHECK_EXTRA_OBJ)
 else
 	if test x_$enable_alloc_lite = x_yes; then
 		AC_DEFINE(UNBOUND_ALLOC_LITE, 1, [use to enable lightweight alloc assertions, for debug use])

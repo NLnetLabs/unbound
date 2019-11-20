@@ -30,6 +30,7 @@
 	  ifdef stdint.h inclusion for older systems.
 	  ifdef sha2.h inclusion for older systems.
 	- Fixed Compat Code Diverging from Upstream, reported by X41 D-Sec.
+	- Fix compile with --enable-alloc-checks, reported by X41 D-Sec.
 
 19 November 2019: Wouter
 	- Fix CVE-2019-18934, shell execution in ipsecmod.
