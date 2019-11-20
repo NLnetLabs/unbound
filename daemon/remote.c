@@ -3125,7 +3125,7 @@ remote_handshake_later(struct daemon_remote* rc, struct rc_state* s,
 	} else {
 		if(r == 0)
 			log_err("remote control connection closed prematurely");
-		log_addr(1, "failed connection from",
+		log_addr(VERB_OPS, "failed connection from",
 			&s->c->repinfo.addr, s->c->repinfo.addrlen);
 		log_crypto_err("remote control failed ssl");
 		clean_point(rc, s);

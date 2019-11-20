@@ -1188,5 +1188,5 @@ respip_inform_print(struct respip_addr_info* respip_addr, uint8_t* qname,
 		respip, sizeof(respip));
 	snprintf(txt, sizeof(txt), "%s/%d inform %s@%u", respip,
 		respip_addr->net, srcip, port);
-	log_nametypeclass(0, txt, qname, qtype, qclass);
+	log_nametypeclass(NO_VERBOSE, txt, qname, qtype, qclass);
 }

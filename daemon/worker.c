@@ -1569,10 +1569,10 @@ send_reply_rc:
 			/* log original qname, before the local alias was
 			 * used to resolve that CNAME to something else */
 			qinfo.qname = qinfo.local_alias->rrset->rk.dname;
-			log_reply_info(0, &qinfo, &repinfo->addr, repinfo->addrlen,
+			log_reply_info(NO_VERBOSE, &qinfo, &repinfo->addr, repinfo->addrlen,
 				tv, 1, c->buffer);
 		} else {
-			log_reply_info(0, &qinfo, &repinfo->addr, repinfo->addrlen,
+			log_reply_info(NO_VERBOSE, &qinfo, &repinfo->addr, repinfo->addrlen,
 				tv, 1, c->buffer);
 		}
 	}

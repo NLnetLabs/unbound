@@ -1655,7 +1655,7 @@ auth_rr_to_string(uint8_t* nm, size_t nmlen, uint16_t tp, uint16_t cl,
 	w += sldns_str_print(&s, &slen, "\n");
 
 	if(w >= (int)buflen) {
-		log_nametypeclass(0, "RR too long to print", nm, tp, cl);
+		log_nametypeclass(NO_VERBOSE, "RR too long to print", nm, tp, cl);
 		return 0;
 	}
 	return 1;

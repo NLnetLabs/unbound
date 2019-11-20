@@ -61,7 +61,7 @@
 #endif
 
 /* default verbosity */
-enum verbosity_value verbosity = 0;
+enum verbosity_value verbosity = NO_VERBOSE;
 /** the file logged to. */
 static FILE* logfile = 0;
 /** if key has been created */

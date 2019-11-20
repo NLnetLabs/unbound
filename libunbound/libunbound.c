@@ -102,7 +102,7 @@ static struct ub_ctx* ub_ctx_create_nopipe(void)
 		return NULL;
 	}
 #endif
-	verbosity = 0; /* errors only */
+	verbosity = NO_VERBOSE; /* errors only */
 	checklock_start();
 	ctx = (struct ub_ctx*)calloc(1, sizeof(*ctx));
 	if(!ctx) {

@@ -2283,10 +2283,10 @@ autr_debug_print_tp(struct trust_anchor* tp)
 	log_info("assembled %d DS and %d DNSKEYs", 
 		(int)tp->numDS, (int)tp->numDNSKEY);
 	if(tp->ds_rrset) {
-		log_packed_rrset(0, "DS:", tp->ds_rrset);
+		log_packed_rrset(NO_VERBOSE, "DS:", tp->ds_rrset);
 	}
 	if(tp->dnskey_rrset) {
-		log_packed_rrset(0, "DNSKEY:", tp->dnskey_rrset);
+		log_packed_rrset(NO_VERBOSE, "DNSKEY:", tp->dnskey_rrset);
 	}
 	log_info("file %s", tp->autr->file);
 	ctime_r(&tp->autr->last_queried, buf);

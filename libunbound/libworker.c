@@ -526,7 +526,7 @@ libworker_fillup_fg(struct ctx_query* q, int rcode, sldns_buffer* buf,
 	}
 
 	q->res->rcode = LDNS_RCODE_SERVFAIL;
-	q->msg_security = 0;
+	q->msg_security = sec_status_unchecked;
 	q->msg = memdup(sldns_buffer_begin(buf), sldns_buffer_limit(buf));
 	q->msg_len = sldns_buffer_limit(buf);
 	if(!q->msg) {
