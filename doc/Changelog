@@ -18,6 +18,7 @@
 	  reported by X41 D-Sec.
 	- Fix Integer Underflow in Regional Allocator,
 	  reported by X41 D-Sec.
+	- Upgrade compat/getentropy_linux.c to version 1.46 from OpenBSD.
 
 19 November 2019: Wouter
 	- Fix CVE-2019-18934, shell execution in ipsecmod.
