@@ -751,9 +751,9 @@ dnsc_load_local_data(struct dnsc_env* dnscenv, struct config_file *cfg)
         for(j=0; j<sizeof(struct SignedCert); j++) {
 			int c = (int)*((const uint8_t *) cert + j);
             if (isprint(c) && c != '"' && c != '\\') {
-                snprintf(rr + strlen(rr), rrlen - 1 - strlen(rr), "%c", c);
+                snprintf(rr + strlen(rr), rrlen - strlen(rr), "%c", c);
             } else {
-                snprintf(rr + strlen(rr), rrlen - 1 - strlen(rr), "\\%03d", c);
+                snprintf(rr + strlen(rr), rrlen - strlen(rr), "\\%03d", c);
             }
         }
         verbose(VERB_OPS,
@@ -762,7 +762,7 @@ dnsc_load_local_data(struct dnsc_env* dnscenv, struct config_file *cfg)
 			" to local-data to config: %s",
 			serial, rr
 		);
-        snprintf(rr + strlen(rr), rrlen - 1 - strlen(rr), "\"");
+        snprintf(rr + strlen(rr), rrlen - strlen(rr), "\"");
         cfg_strlist_insert(&cfg->local_data, strdup(rr));
         free(rr);
     }
