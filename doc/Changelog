@@ -16,6 +16,8 @@
 	  reported by X41 D-Sec.
 	- Fix Local Memory Leak in cachedb_init(),
 	  reported by X41 D-Sec.
+	- Fix Integer Underflow in Regional Allocator,
+	  reported by X41 D-Sec.
 
 19 November 2019: Wouter
 	- Fix CVE-2019-18934, shell execution in ipsecmod.
