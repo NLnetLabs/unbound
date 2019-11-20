@@ -370,10 +370,10 @@ autr_tp_create(struct val_anchors* anchors, uint8_t* own, size_t own_len,
 		free(tp);
 		return NULL;
 	}
-	lock_basic_unlock(&anchors->lock);
 	lock_basic_init(&tp->lock);
 	lock_protect(&tp->lock, tp, sizeof(*tp));
 	lock_protect(&tp->lock, tp->autr, sizeof(*tp->autr));
+	lock_basic_unlock(&anchors->lock);
 	return tp;
 }
 
