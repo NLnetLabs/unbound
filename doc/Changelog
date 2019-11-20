@@ -8,6 +8,8 @@
 	- Adjust unbound-control to make stats_shm a read only operation.
 	- Fix Weak Entropy Used For Nettle,
 	  reported by X41 D-Sec.
+	- Fix Randomness Error not Handled Properly,
+	  reported by X41 D-Sec.
 
 19 November 2019: Wouter
 	- Fix CVE-2019-18934, shell execution in ipsecmod.

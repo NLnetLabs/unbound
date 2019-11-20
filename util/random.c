@@ -138,7 +138,9 @@ long int ub_random(struct ub_randstate* ATTR_UNUSED(state))
 	/* random 31 bit value. */
 	SECStatus s = PK11_GenerateRandom((unsigned char*)&x, (int)sizeof(x));
 	if(s != SECSuccess) {
-		log_err("PK11_GenerateRandom error: %s",
+		/* unbound needs secure randomness for randomized
+		 * ID bits and port numbers in packets to upstream servers */
+		fatal_exit("PK11_GenerateRandom error: %s",
 			PORT_ErrorToString(PORT_GetError()));
 	}
 	return x & MAX_VALUE;
