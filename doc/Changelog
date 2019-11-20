@@ -38,6 +38,7 @@
 	- Fix NULL Pointer Dereference via Control Port,
 	  reported by X41 D-Sec.
 	- Fix Bad Randomness in Seed, reported by X41 D-Sec.
+	- Fix python examples/calc.py for eval, reported by X41 D-Sec.
 
 19 November 2019: Wouter
 	- Fix CVE-2019-18934, shell execution in ipsecmod.
