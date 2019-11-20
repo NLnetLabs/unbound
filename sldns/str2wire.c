@@ -193,6 +193,9 @@ rrinternal_get_owner(sldns_buffer* strbuf, uint8_t* rr, size_t* len,
 			sldns_buffer_position(strbuf));
 	}
 
+	if(token_len < 2) /* make sure there is space to read "@" or "" */
+		return RET_ERR(LDNS_WIREPARSE_ERR_BUFFER_TOO_SMALL,
+			sldns_buffer_position(strbuf));
 	if(token[0]=='@' && token[1]=='\0') {
 		uint8_t* tocopy;
 		if (origin) {
