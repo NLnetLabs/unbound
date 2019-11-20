@@ -20,8 +20,11 @@
  * http://man.openbsd.org/getentropy.2
  */
 
+#include "config.h"
+/*
 #define	_POSIX_C_SOURCE	199309L
 #define	_GNU_SOURCE	1
+*/
 #include <sys/types.h>
 #include <sys/param.h>
 #include <sys/ioctl.h>
@@ -47,7 +50,15 @@
 #include <errno.h>
 #include <unistd.h>
 #include <time.h>
+#ifndef HAVE_NETTLE
 #include <openssl/sha.h>
+#else
+#include <nettle/sha.h>
+#define SHA512_CTX		struct sha512_ctx
+#define SHA512_Init(x)		sha512_init(x)
+#define SHA512_Update(x, b, s)	sha512_update(x, s, b)
+#define SHA512_Final(r, c)	sha512_digest(c, SHA512_DIGEST_SIZE, r)
+#endif
 
 #include <linux/types.h>
 #include <linux/random.h>
@@ -55,6 +66,9 @@
 #include <sys/auxv.h>
 #endif
 #include <sys/vfs.h>
+#ifndef MAP_ANON
+#define MAP_ANON MAP_ANONYMOUS
+#endif
 
 #define REPEAT 5
 #define min(a, b) (((a) < (b)) ? (a) : (b))

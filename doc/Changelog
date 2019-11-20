@@ -23,6 +23,12 @@
 	  OpenBSD, no changes but makes the file, comments, identical.
 	- Upgrade compat/getentropy_solaris.c to version 1.13 from OpenBSD.
 	- Upgrade compat/getentropy_osx.c to version 1.12 from OpenBSD.
+	- Changes to compat/getentropy files for,
+	  no link to openssl if using nettle, and hence config.h for
+	  HAVE_NETTLE variable.
+	  compat definition of MAP_ANON, for older systems.
+	  ifdef stdint.h inclusion for older systems.
+	  ifdef sha2.h inclusion for older systems.
 
 19 November 2019: Wouter
 	- Fix CVE-2019-18934, shell execution in ipsecmod.
