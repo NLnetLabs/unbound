@@ -429,9 +429,7 @@ daemon_create_workers(struct daemon* daemon)
 	int* shufport;
 	log_assert(daemon && daemon->cfg);
 	if(!daemon->rand) {
-		unsigned int seed = (unsigned int)time(NULL) ^ 
-			(unsigned int)getpid() ^ 0x438;
-		daemon->rand = ub_initstate(seed, NULL);
+		daemon->rand = ub_initstate(NULL);
 		if(!daemon->rand)
 			fatal_exit("could not init random generator");
 		hash_set_raninit((uint32_t)ub_random(daemon->rand));

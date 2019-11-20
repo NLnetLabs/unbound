@@ -86,8 +86,7 @@ ub_systemseed(unsigned int ATTR_UNUSED(seed))
 }
 
 struct ub_randstate* 
-ub_initstate(unsigned int ATTR_UNUSED(seed),
-	struct ub_randstate* ATTR_UNUSED(from))
+ub_initstate(struct ub_randstate* ATTR_UNUSED(from))
 {
 	struct ub_randstate* s = (struct ub_randstate*)malloc(1);
 	if(!s) {
@@ -123,8 +122,7 @@ void ub_systemseed(unsigned int ATTR_UNUSED(seed))
 {
 }
 
-struct ub_randstate* ub_initstate(unsigned int ATTR_UNUSED(seed), 
-	struct ub_randstate* ATTR_UNUSED(from))
+struct ub_randstate* ub_initstate(struct ub_randstate* ATTR_UNUSED(from))
 {
 	struct ub_randstate* s = (struct ub_randstate*)calloc(1, sizeof(*s));
 	if(!s) {
@@ -166,8 +164,7 @@ void ub_systemseed(unsigned int ATTR_UNUSED(seed))
 	log_err("Re-seeding not supported, generator untouched");
 }
 
-struct ub_randstate* ub_initstate(unsigned int seed,
-	struct ub_randstate* ATTR_UNUSED(from))
+struct ub_randstate* ub_initstate(struct ub_randstate* ATTR_UNUSED(from))
 {
 	struct ub_randstate* s = (struct ub_randstate*)calloc(1, sizeof(*s));
 	uint8_t buf[YARROW256_SEED_FILE_SIZE];
@@ -183,15 +180,10 @@ struct ub_randstate* ub_initstate(unsigned int seed,
 		yarrow256_seed(&s->ctx, YARROW256_SEED_FILE_SIZE, buf);
 		s->seeded = yarrow256_is_seeded(&s->ctx);
 	} else {
-		/* Stretch the uint32 input seed and feed it to Yarrow */
-		uint32_t v = seed;
-		size_t i;
-		for(i=0; i < (YARROW256_SEED_FILE_SIZE/sizeof(seed)); i++) {
-			memmove(buf+i*sizeof(seed), &v, sizeof(seed));
-			v = v*seed + (uint32_t)i;
-		}
-		yarrow256_seed(&s->ctx, YARROW256_SEED_FILE_SIZE, buf);
-		s->seeded = yarrow256_is_seeded(&s->ctx);
+		log_err("nettle random(yarrow) cannot initialize, "
+			"getentropy failed: %s", strerror(errno));
+		free(s);
+		return NULL;
 	}
 
 	return s;

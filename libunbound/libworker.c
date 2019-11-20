@@ -122,7 +122,6 @@ libworker_delete_event(struct libworker* w)
 static struct libworker*
 libworker_setup(struct ub_ctx* ctx, int is_bg, struct ub_event_base* eb)
 {
-	unsigned int seed;
 	struct libworker* w = (struct libworker*)calloc(1, sizeof(*w));
 	struct config_file* cfg = ctx->env->cfg;
 	int* ports;
@@ -177,17 +176,13 @@ libworker_setup(struct ub_ctx* ctx, int is_bg, struct ub_event_base* eb)
 	}
 	w->env->worker = (struct worker*)w;
 	w->env->probe_timer = NULL;
-	seed = (unsigned int)time(NULL) ^ (unsigned int)getpid() ^
-		(((unsigned int)w->thread_num)<<17);
-	seed ^= (unsigned int)w->env->alloc->next_id;
 	if(!w->is_bg || w->is_bg_thread) {
 		lock_basic_lock(&ctx->cfglock);
 	}
-	if(!(w->env->rnd = ub_initstate(seed, ctx->seed_rnd))) {
+	if(!(w->env->rnd = ub_initstate(ctx->seed_rnd))) {
 		if(!w->is_bg || w->is_bg_thread) {
 			lock_basic_unlock(&ctx->cfglock);
 		}
-		explicit_bzero(&seed, sizeof(seed));
 		libworker_delete(w);
 		return NULL;
 	}
@@ -207,7 +202,6 @@ libworker_setup(struct ub_ctx* ctx, int is_bg, struct ub_event_base* eb)
 			hash_set_raninit((uint32_t)ub_random(w->env->rnd));
 		}
 	}
-	explicit_bzero(&seed, sizeof(seed));
 
 	if(eb)
 		w->base = comm_base_create_event(eb);
