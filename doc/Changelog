@@ -3,6 +3,8 @@
 
 22 November 2019: Wouter
 	- Fix dname loop maximum, reported by Eric Sesterhenn from X41 D-Sec.
+	- Add make distclean that removes everything configure produced,
+	  and make maintainer-clean that removes bison and flex output.
 
 20 November 2019: Wouter
 	- Fix Out of Bounds Read in rrinternal_get_owner(),

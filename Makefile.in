@@ -456,13 +456,18 @@ clean:
 	rm -f _unbound.la libunbound/python/libunbound_wrap.c libunbound/python/unbound.py pythonmod/interface.h pythonmod/unboundmodule.py
 	rm -rf autom4te.cache .libs build doc/html doc/xml
 
-realclean: clean
-	rm -f config.status config.log config.h.in config.h
-	rm -f configure config.sub config.guess ltmain.sh aclocal.m4 libtool
-	rm -f util/configlexer.c util/configparser.c util/configparser.h
-	rm -f doc/example.conf doc/libunbound.3 doc/unbound-anchor.8 doc/unbound-checkconf.8 doc/unbound-control.8 doc/unbound.8 doc/unbound.conf.5
+distclean: clean
+	rm -f config.status config.log config.h
+	rm -f doc/example.conf doc/libunbound.3 doc/unbound-anchor.8 doc/unbound-checkconf.8 doc/unbound-control.8 doc/unbound.8 doc/unbound.conf.5 doc/unbound-host.1
+	rm -f smallapp/unbound-control-setup.sh dnstap/dnstap_config.h dnscrypt/dnscrypt_config.h contrib/libunbound.pc contrib/unbound.socket contrib/unbound.service
 	rm -f $(TEST_BIN)
 	rm -f Makefile 
+
+maintainer-clean: distclean
+	rm -f util/configlexer.c util/configparser.c util/configparser.h
+
+realclean: maintainer-clean
+	rm -f configure config.h.in config.sub config.guess ltmain.sh aclocal.m4 libtool
 
 .SUFFIXES: .lint
 .c.lint:
