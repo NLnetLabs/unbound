@@ -62,6 +62,7 @@
 #include "daemon/stats.h"
 #include "sldns/wire2str.h"
 #include "sldns/pkthdr.h"
+#include "services/rpz.h"
 
 #ifdef HAVE_SYS_IPC_H
 #include "sys/ipc.h"
@@ -372,6 +373,14 @@ static void print_extended(struct ub_stats_info* s)
 	PR_UL("rrset.cache.count", s->svr.rrset_cache_count);
 	PR_UL("infra.cache.count", s->svr.infra_cache_count);
 	PR_UL("key.cache.count", s->svr.key_cache_count);
+	/* applied RPZ actions */
+	for(i=0; i<UB_STATS_RPZ_ACTION_NUM; i++) {
+		if((enum rpz_action)s->svr.rpz_action[i] == RPZ_NO_OVERRIDE_ACTION)
+			continue;
+		if(inhibit_zero && s->svr.rpz_action[i] == 0)
+			continue;
+		PR_UL_SUB("num.rpz.action", rpz_action_to_string(i), s->svr.rpz_action[i]);
+	}
 #ifdef USE_DNSCRYPT
 	PR_UL("dnscrypt_shared_secret.cache.count",
 			 s->svr.shared_secret_cache_count);

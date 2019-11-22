@@ -1009,12 +1009,15 @@ remote-control:
 # Response Policy Zones
 # RPZ policies. Applied in order of configuration. QNAME and Response IP
 # Address trigger are the only supported triggers. Supported actions are:
-# NXDOMAIN, NODATA, PASSTHRU, DROP and Local Data. Polices can be loaded from
-# file or using zone transfer. The respip module needs to be added to the
-# module-config, e.g.: module-config: "respip validator iterator".
+# NXDOMAIN, NODATA, PASSTHRU, DROP and Local Data. Policies can be loaded from
+# file, using zone transfer, or using HTTP. The respip module needs to be added
+# to the module-config, e.g.: module-config: "respip validator iterator".
 # rpz:
 #     name: "rpz.example.com"
 #     zonefile: "rpz.example.com"
+#     master: 192.0.2.0
+#     allow-notify: 192.0.2.0/32
+#     url: http://www.example.com/rpz.example.org.zone
 #     rpz-action-override: cname
 #     rpz-cname-override: www.example.org
 #     rpz-log: yes

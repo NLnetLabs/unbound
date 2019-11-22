@@ -55,7 +55,7 @@
 int 
 context_finalize(struct ub_ctx* ctx)
 {
-	int is_rpz;
+	int is_rpz = 0;
 	struct config_file* cfg = ctx->env->cfg;
 	verbosity = cfg->verbosity;
 	if(ctx_logfile_overridden && !ctx->logfile_override) {

@@ -845,10 +845,11 @@ static int
 respip_use_rpz(struct resp_addr* raddr, struct rpz* r,
 	enum respip_action* action,
 	struct ub_packed_rrset_key** data, int* rpz_log, char** log_name,
-	int* rpz_cname_override, struct regional* region)
+	int* rpz_cname_override, struct regional* region, int* is_rpz)
 {
 	if(r->action_override == RPZ_DISABLED_ACTION) {
-		return 0;
+		*is_rpz = 0;
+		return 1;
 	}
 	else if(r->action_override == RPZ_NO_OVERRIDE_ACTION)
 		*action = raddr->action;
@@ -861,7 +862,9 @@ respip_use_rpz(struct resp_addr* raddr, struct rpz* r,
 	}
 	*rpz_log = r->log;
 	if(r->log_name)
-		*log_name = regional_strdup(region, r->log_name);
+		if(!(*log_name = regional_strdup(region, r->log_name)))
+			return 0;
+	*is_rpz = 1;
 	return 1;
 }
 
@@ -945,12 +948,16 @@ respip_rewrite_reply(const struct query_info* qinfo,
 			if(raddr) {
 				if(!respip_use_rpz(raddr, r, &action, &data,
 					&rpz_log, &log_name, &rpz_cname_override,
-					region)) {
+					region, &rpz_used)) {
+					log_err("out of memory");
+					lock_rw_unlock(&raddr->lock);
+					return 0;
+				}
+				if(!rpz_used) {
 					lock_rw_unlock(&raddr->lock);
 					raddr = NULL;
 					actinfo->rpz_disabled++;
 				}
-				rpz_used = 1;
 			}
 		}	
 	}
@@ -1263,7 +1270,7 @@ respip_inform_print(struct respip_action_info* respip_actinfo, uint8_t* qname,
 	unsigned port;
 	struct respip_addr_info* respip_addr = respip_actinfo->addrinfo;
 	size_t txtlen = 0;
-	char* actionstr = NULL;
+	const char* actionstr = NULL;
 
 	if(local_alias)
 		qname = local_alias->rrset->rk.dname;
@@ -1277,12 +1284,12 @@ respip_inform_print(struct respip_action_info* respip_actinfo, uint8_t* qname,
 		txtlen += snprintf(txt+txtlen, sizeof(txt)-txtlen, "%s",
 			"RPZ applied ");
 		if(respip_actinfo->rpz_cname_override)
-			actionstr = strdup(
-				rpz_action_to_string(RPZ_CNAME_OVERRIDE_ACTION));
+			actionstr = rpz_action_to_string(
+				RPZ_CNAME_OVERRIDE_ACTION);
 		else
-			actionstr = strdup(rpz_action_to_string(
+			actionstr = rpz_action_to_string(
 				respip_action_to_rpz_action(
-					respip_actinfo->action)));
+					respip_actinfo->action));
 	}
 	if(respip_actinfo->log_name) {
 		txtlen += snprintf(txt+txtlen, sizeof(txt)-txtlen,
@@ -1291,7 +1298,5 @@ respip_inform_print(struct respip_action_info* respip_actinfo, uint8_t* qname,
 	snprintf(txt+txtlen, sizeof(txt)-txtlen,
 		"%s/%d %s %s@%u", respip, respip_addr->net,
 		(actionstr) ? actionstr : "inform", srcip, port);
-	if(actionstr)
-		free(actionstr);
 	log_nametypeclass(0, txt, qname, qtype, qclass);
 }

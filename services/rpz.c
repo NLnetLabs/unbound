@@ -791,12 +791,9 @@ rpz_remove_response_ip_trigger(struct rpz* r, uint8_t* dname, enum rpz_action a,
 		delete_respip = rpz_rrset_delete_rr(node, rr_type, rdatawl, 
 			rdatalen);
 	}
-	if(delete_respip) {
-		/* delete + reset parent pointers */	
+	lock_rw_unlock(&node->lock);
+	if(delete_respip)
 		respip_sockaddr_delete(r->respip_set, node);
-	} else {
-		lock_rw_unlock(&node->lock);
-	}
 	lock_rw_unlock(&r->respip_set->lock);
 }
 

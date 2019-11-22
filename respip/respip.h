@@ -270,7 +270,7 @@ respip_sockaddr_find_or_create(struct respip_set* set, struct sockaddr_storage* 
 		socklen_t addrlen, int net, int create, const char* ipstr);
 
 /**
- * Add RR to resp_addr's RRset. Create RRset is not existing.
+ * Add RR to resp_addr's RRset. Create RRset if not existing.
  * @param region: region to alloc RR(set).
  * @param raddr: resp_addr containing RRset. Must hold write lock.
  * @param rrtype: RR type.
@@ -290,7 +290,7 @@ respip_enter_rr(struct regional* region, struct resp_addr* raddr,
 /**
  * Delete resp_addr node from tree.
  * @param set: struct containing tree. Must hold write lock.
- * @param node: node to delete. Must hold write lock.
+ * @param node: node to delete. Not locked.
  */
 void
 respip_sockaddr_delete(struct respip_set* set, struct resp_addr* node);
