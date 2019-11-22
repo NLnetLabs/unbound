@@ -464,6 +464,7 @@ packed_rrset_encode(struct ub_packed_rrset_key* key, sldns_buffer* pkt,
 	owner_labs = dname_count_labels(key->rk.dname);
 	owner_pos = sldns_buffer_position(pkt);
 
+	//TODO this is called from reply_info_answer_encode. Check if we need this in the flags to prevent ttl mangling here! respip does something, take a look
 	/* For an rrset with a fixed TTL, use the rrset's TTL as given */
 	if((key->rk.flags & PACKED_RRSET_FIXEDTTL) != 0)
 		timenow = 0;
@@ -480,7 +481,9 @@ packed_rrset_encode(struct ub_packed_rrset_key* key, sldns_buffer* pkt,
 			sldns_buffer_write(pkt, &key->rk.type, 2);
 			sldns_buffer_write(pkt, &key->rk.rrset_class, 2);
 			if(data->rr_ttl[j] < timenow)
-				sldns_buffer_write_u32(pkt, 0);
+				//TODO: Do we need this option on the signature?
+				//sldns_buffer_write_u32(pkt, 0);
+				sldns_buffer_write_u32(pkt, SERVE_EXPIRED_REPLY_TTL);
 			else 	sldns_buffer_write_u32(pkt, 
 					data->rr_ttl[j]-timenow);
 			if(c) {
@@ -517,7 +520,9 @@ packed_rrset_encode(struct ub_packed_rrset_key* key, sldns_buffer* pkt,
 			sldns_buffer_write_u16(pkt, LDNS_RR_TYPE_RRSIG);
 			sldns_buffer_write(pkt, &key->rk.rrset_class, 2);
 			if(data->rr_ttl[i] < timenow)
-				sldns_buffer_write_u32(pkt, 0);
+				//TODO: Do we need this option on the signature?
+				//sldns_buffer_write_u32(pkt, 0);
+				sldns_buffer_write_u32(pkt, SERVE_EXPIRED_REPLY_TTL);
 			else 	sldns_buffer_write_u32(pkt, 
 					data->rr_ttl[i]-timenow);
 			/* rrsig rdata cannot be compressed, perform 100+ byte

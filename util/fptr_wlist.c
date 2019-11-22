@@ -131,6 +131,7 @@ fptr_whitelist_comm_timer(void (*fptr)(void*))
 	else if(fptr == &auth_xfer_timer) return 1;
 	else if(fptr == &auth_xfer_probe_timer_callback) return 1;
 	else if(fptr == &auth_xfer_transfer_timer_callback) return 1;
+	else if(fptr == &mesh_serve_expired_callback) return 1;
 	return 0;
 }
 

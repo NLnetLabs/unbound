@@ -643,4 +643,10 @@ void mesh_list_remove(struct mesh_state* m, struct mesh_state** fp,
 void mesh_state_remove_reply(struct mesh_area* mesh, struct mesh_state* m,
 	struct comm_point* cp);
 
+/** Callback for when the serve expired client timer has run out.  Tries to
+ * find an expired answer in the cache and reply that to the client.
+ * @param arg: the argument passed to the callback.
+ */
+void mesh_serve_expired_callback(void* arg);
+
 #endif /* SERVICES_MESH_H */

@@ -63,6 +63,8 @@ time_t MIN_TTL = 0;
 time_t MAX_NEG_TTL = 3600; /* one hour */
 /** Time to serve records after expiration */
 time_t SERVE_EXPIRED_TTL = 0;
+/** TTL to use for expired records */
+time_t SERVE_EXPIRED_REPLY_TTL = 0;
 
 /** allocate qinfo, return 0 on error */
 static int

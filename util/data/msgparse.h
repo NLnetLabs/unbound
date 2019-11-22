@@ -81,6 +81,8 @@ extern time_t MIN_TTL;
 extern time_t MAX_NEG_TTL;
 /** Time to serve records after expiration */
 extern time_t SERVE_EXPIRED_TTL;
+/** TTL to use for expired records */
+extern time_t SERVE_EXPIRED_REPLY_TTL;
 /** Negative cache time (for entries without any RRs.) */
 #define NORR_TTL 5 /* seconds */
 

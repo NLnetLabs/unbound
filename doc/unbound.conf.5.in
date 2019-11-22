@@ -1075,14 +1075,27 @@ The actual resolution answer ends up in the cache later on.  Default is "no".
 .TP
 .B serve\-expired\-ttl: \fI<seconds>
 Limit serving of expired responses to configured seconds after expiration. 0
-disables the limit. This option only applies when \fBserve\-expired\fR is
-enabled. The default is 0.
+disables the limit.  This option only applies when \fBserve\-expired\fR is
+enabled.  A RECOMMENDED value per draft-ietf-dnsop-serve-stale-09 is between
+86400 (1 day) and 259200 (3 days).  The default is 0.
 .TP
 .B serve\-expired\-ttl\-reset: \fI<yes or no>
 Set the TTL of expired records to the \fBserve\-expired\-ttl\fR value after a
-failed attempt to retrieve the record from upstream. This makes sure that the
-expired records will be served as long as there are queries for it. Default is
+failed attempt to retrieve the record from upstream.  This makes sure that the
+expired records will be served as long as there are queries for it.  Default is
 "no".
+.TP
+.B serve\-expired\-reply\-ttl: \fI<seconds>
+TTL value to use when replying with expired data.  If
+\fBserve\-expired\-client\-timeout\fR is also used then it is RECOMMENDED to
+change that value to 30 (draft-ietf-dnsop-serve-stale-09).  The default is 0.
+.TP
+.B serve\-expired\-client\-timeout: \fI<msec>
+Time in milliseconds before replying to the client with expired data.  This
+essentially enables the serve-stale behavior as specified in
+draft-ietf-dnsop-serve-stale-09 that first tries to resolve before immediately
+responding with expired data.  Setting this to 0 will disable that behavior.
+Default is 0.
 .TP
 .B val\-nsec3\-keysize\-iterations: \fI<"list of values">
 List of keysize and iteration count values, separated by spaces, surrounded
