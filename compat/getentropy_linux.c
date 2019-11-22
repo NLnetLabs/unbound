@@ -202,7 +202,7 @@ getentropy_getrandom(void *buf, size_t len)
 		ret = syscall(SYS_getrandom, buf, len, GRND_NONBLOCK);
 	} while (ret == -1 && errno == EINTR);
 
-	if (ret != len)
+	if (ret != (int)len)
 		return (-1);
 	errno = pre_errno;
 	return (0);
@@ -321,7 +321,7 @@ static const int cl[] = {
 };
 
 static int
-getentropy_phdr(struct dl_phdr_info *info, size_t size, void *data)
+getentropy_phdr(struct dl_phdr_info *info, size_t ATTR_UNUSED(size), void *data)
 {
 	SHA512_CTX *ctx = data;
 
