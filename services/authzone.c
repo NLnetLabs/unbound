@@ -1636,7 +1636,7 @@ auth_rr_to_string(uint8_t* nm, size_t nmlen, uint16_t tp, uint16_t cl,
 	if(i >= data->count) tp = LDNS_RR_TYPE_RRSIG;
 	dat = nm;
 	datlen = nmlen;
-	w += sldns_wire2str_dname_scan(&dat, &datlen, &s, &slen, NULL, 0);
+	w += sldns_wire2str_dname_scan(&dat, &datlen, &s, &slen, NULL, 0, NULL);
 	w += sldns_str_print(&s, &slen, "\t");
 	w += sldns_str_print(&s, &slen, "%lu\t", (unsigned long)data->rr_ttl[i]);
 	w += sldns_wire2str_class_print(&s, &slen, cl);
@@ -1645,7 +1645,7 @@ auth_rr_to_string(uint8_t* nm, size_t nmlen, uint16_t tp, uint16_t cl,
 	w += sldns_str_print(&s, &slen, "\t");
 	datlen = data->rr_len[i]-2;
 	dat = data->rr_data[i]+2;
-	w += sldns_wire2str_rdata_scan(&dat, &datlen, &s, &slen, tp, NULL, 0);
+	w += sldns_wire2str_rdata_scan(&dat, &datlen, &s, &slen, tp, NULL, 0, NULL);
 
 	if(tp == LDNS_RR_TYPE_DNSKEY) {
 		w += sldns_str_print(&s, &slen, " ;{id = %u}",
