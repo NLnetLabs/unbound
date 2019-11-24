@@ -97,6 +97,7 @@ redis_connect(const struct redis_moddata* moddata)
 		}
 		freeReplyObject(rep);
 	}
+	verbose(VERB_OPS, "Connection to Redis established");
 	return ctx;
 
   fail:
