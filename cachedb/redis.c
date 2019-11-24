@@ -77,6 +77,7 @@ redis_connect(const struct redis_moddata* moddata)
 		log_err("failed to set redis timeout");
 		goto fail;
 	}
+	verbose(VERB_OPS, "Connection to Redis established");
 	return ctx;
 
   fail:
