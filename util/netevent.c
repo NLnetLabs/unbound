@@ -1001,7 +1001,7 @@ tcp_callback_writer(struct comm_point* c)
 		tcp_req_info_handle_writedone(c->tcp_req_info);
 	} else {
 		comm_point_stop_listening(c);
-		comm_point_start_listening(c, -1, -1);
+		comm_point_start_listening(c, -1, c->tcp_timeout_msec);
 	}
 }
 
