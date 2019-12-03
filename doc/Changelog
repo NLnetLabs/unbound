@@ -15,6 +15,8 @@
 	- Fix Out of Bounds Write in sldns_b64_pton(),
 	  fixed by check in sldns_str2wire_int16_data_buf(),
 	  reported by X41 D-Sec.
+	- Fix Insufficient Handling of Compressed Names in dname_pkt_copy(),
+	  reported by X41 D-Sec.
 
 2 December 2019: Wouter
 	- Merge pull request #122 from he32: In tcp_callback_writer(),
