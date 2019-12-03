@@ -2104,6 +2104,8 @@ int sldns_str2wire_int16_data_buf(const char* str, uint8_t* rd, size_t* len)
 	char* s;
 	int n;
 	n = strtol(str, &s, 10);
+	if(n < 0) /* negative number not allowed */
+		return LDNS_WIREPARSE_ERR_SYNTAX;
 	if(*len < ((size_t)n)+2)
 		return LDNS_WIREPARSE_ERR_BUFFER_TOO_SMALL;
 	if(n > 65535)
