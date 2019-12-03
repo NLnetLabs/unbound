@@ -3,6 +3,8 @@
 	  from 'quick' to 'basic' because this is an I/O lock.
 	- Fix text around serial arithmatic used for RRSIG times to refer
 	  to correct RFC number.
+	- Fix Assert Causing DoS in synth_cname(),
+	  reported by X41 D-Sec.
 
 2 December 2019: Wouter
 	- Merge pull request #122 from he32: In tcp_callback_writer(),
