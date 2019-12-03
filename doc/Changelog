@@ -10,6 +10,8 @@
 	  reported by X41 D-Sec.
 	- Fix OOB Read in sldns_wire2str_dname_scan(),
 	  reported by X41 D-Sec.
+	- Fix Out of Bounds Write in sldns_str2wire_str_buf(),
+	  reported by X41 D-Sec.
 
 2 December 2019: Wouter
 	- Merge pull request #122 from he32: In tcp_callback_writer(),
