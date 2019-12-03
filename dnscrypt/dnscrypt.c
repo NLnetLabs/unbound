@@ -316,15 +316,15 @@ dnscrypt_server_uncurve(struct dnsc_env* env,
 #else
             return -1;
 #endif
-    } else {
-        if (crypto_box_beforenm(nmkey,
-                                query_header->publickey,
-                                cert->keypair->crypt_secretkey) != 0) {
-            return -1;
-        }
-    }
-    // Cache the shared secret we just computed.
-    dnsc_shared_secret_cache_insert(env->shared_secrets_cache,
+	} else {
+	    if (crypto_box_beforenm(nmkey,
+				    query_header->publickey,
+				    cert->keypair->crypt_secretkey) != 0) {
+		return -1;
+	    }
+	}
+        // Cache the shared secret we just computed.
+        dnsc_shared_secret_cache_insert(env->shared_secrets_cache,
                                     key,
                                     hash,
                                     nmkey);

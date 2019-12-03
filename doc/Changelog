@@ -24,6 +24,8 @@
 	  This further lowers the max to 256.
 	- Fix snprintf() supports the n-specifier,
 	  reported by X41 D-Sec.
+	- Fix Bad Indentation, in dnscrypt.c,
+	  reported by X41 D-Sec.
 
 2 December 2019: Wouter
 	- Merge pull request #122 from he32: In tcp_callback_writer(),
