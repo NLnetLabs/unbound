@@ -8,6 +8,8 @@
 	- Fix similar code in auth_zone synth cname to add the extra checks.
 	- Fix Assert Causing DoS in dname_pkt_copy(),
 	  reported by X41 D-Sec.
+	- Fix OOB Read in sldns_wire2str_dname_scan(),
+	  reported by X41 D-Sec.
 
 2 December 2019: Wouter
 	- Merge pull request #122 from he32: In tcp_callback_writer(),

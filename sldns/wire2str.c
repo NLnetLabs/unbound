@@ -798,7 +798,7 @@ int sldns_wire2str_dname_scan(uint8_t** d, size_t* dlen, char** s, size_t* slen,
 		(*dlen)--;
 		return sldns_str_print(s, slen, ".");
 	}
-	while(*pos) {
+	while((!pkt || pos < pkt+pktlen) && *pos) {
 		/* read label length */
 		uint8_t labellen = *pos++;
 		if(in_buf) { (*d)++; (*dlen)--; }
