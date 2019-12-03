@@ -722,7 +722,7 @@ dnsc_load_local_data(struct dnsc_env* dnscenv, struct config_file *cfg)
 	if((unsigned)strlen(dnscenv->provider_name) >= (unsigned)0xffff0000) {
 		/* guard against integer overflow in rrlen calculation */
 		verbose(VERB_OPS, "cert #%" PRIu32 " is too long", serial);
-		continue
+		continue;
 	}
         rrlen = strlen(dnscenv->provider_name) +
                          strlen(ttl_class_type) +
