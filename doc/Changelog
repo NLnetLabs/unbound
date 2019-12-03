@@ -31,6 +31,7 @@
 	- Fix compile error in dnscrypt.
 	- Fix _vfixed not Used, removed from sbuffer code,
 	  reported by X41 D-Sec.
+	- Fix Hardcoded Constant, reported by X41 D-Sec.
 
 2 December 2019: Wouter
 	- Merge pull request #122 from he32: In tcp_callback_writer(),
