@@ -19,6 +19,8 @@
 	  reported by X41 D-Sec.
 	- Fix Out of Bound Write Compressed Names in rdata_copy(),
 	  reported by X41 D-Sec.
+	- Fix Hang in sldns_wire2str_pkt_scan(),
+	  reported by X41 D-Sec.
 
 2 December 2019: Wouter
 	- Merge pull request #122 from he32: In tcp_callback_writer(),

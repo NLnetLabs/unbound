@@ -784,7 +784,7 @@ int sldns_wire2str_dname_scan(uint8_t** d, size_t* dlen, char** s, size_t* slen,
 	/* spool labels onto the string, use compression if its there */
 	uint8_t* pos = *d;
 	unsigned i, counter=0;
-	unsigned maxcompr = 1000; /* loop detection, max compr ptrs */
+	unsigned maxcompr = 256; /* loop detection, max compr ptrs */
 	int in_buf = 1;
 	if(comprloop) {
 		if(*comprloop != 0)
