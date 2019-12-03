@@ -339,6 +339,10 @@ void dname_pkt_copy(sldns_buffer* pkt, uint8_t* to, uint8_t* dname)
 			lablen = *dname++;
 			continue;
 		}
+		if(lablen > LDNS_MAX_LABELLEN) {
+			*to = 0; /* end the result prematurely */
+			return;
+		}
 		log_assert(lablen <= LDNS_MAX_LABELLEN);
 		len += (size_t)lablen+1;
 		if(len >= LDNS_MAX_DOMAINLEN) {
