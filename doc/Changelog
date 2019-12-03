@@ -1,6 +1,8 @@
 3 December 2019: Wouter
 	- Merge pull request #124 from rmetrich: Changed log lock
 	  from 'quick' to 'basic' because this is an I/O lock.
+	- Fix text around serial arithmatic used for RRSIG times to refer
+	  to correct RFC number.
 
 2 December 2019: Wouter
 	- Merge pull request #122 from he32: In tcp_callback_writer(),
