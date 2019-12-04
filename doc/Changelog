@@ -2,6 +2,8 @@
 	- Fix lock type for memory purify log lock deletion.
 	- Fix testbound for alloccheck runs, memory purify and lock checks.
 	- update contrib/fastrpz.patch to apply more cleanly.
+	- Fix Make Test Fails when Configured With --enable-alloc-nonregional,
+	  reported by X41 D-Sec.
 
 3 December 2019: Wouter
 	- Merge pull request #124 from rmetrich: Changed log lock
