@@ -1,3 +1,6 @@
+4 December 2019: Wouter
+	- Fix lock type for memory purify log lock deletion.
+
 3 December 2019: Wouter
 	- Merge pull request #124 from rmetrich: Changed log lock
 	  from 'quick' to 'basic' because this is an I/O lock.

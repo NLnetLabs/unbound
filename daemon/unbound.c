@@ -787,7 +787,7 @@ main(int argc, char* argv[])
 	log_init(NULL, 0, NULL); /* close logfile */
 #ifndef unbound_testbound
 	if(log_get_lock()) {
-		lock_quick_destroy((lock_quick_type*)log_get_lock());
+		lock_basic_destroy((lock_basic_type*)log_get_lock());
 	}
 #endif
 	return 0;

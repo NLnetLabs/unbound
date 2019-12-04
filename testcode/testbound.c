@@ -358,7 +358,7 @@ main(int argc, char* argv[])
 			testbound_selftest();
 			checklock_stop();
 			if(log_get_lock()) {
-				lock_quick_destroy((lock_quick_type*)log_get_lock());
+				lock_basic_destroy((lock_basic_type*)log_get_lock());
 			}
 			exit(0);
 		case '1':
@@ -464,7 +464,7 @@ main(int argc, char* argv[])
 	if(res == 0) {
 		log_info("Testbound Exit Success\n");
 		if(log_get_lock()) {
-			lock_quick_destroy((lock_quick_type*)log_get_lock());
+			lock_basic_destroy((lock_basic_type*)log_get_lock());
 		}
 #ifdef HAVE_PTHREAD
 		/* dlopen frees its thread state (dlopen of gost engine) */
