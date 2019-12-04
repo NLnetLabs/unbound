@@ -1,6 +1,7 @@
 4 December 2019: Wouter
 	- Fix lock type for memory purify log lock deletion.
 	- Fix testbound for alloccheck runs, memory purify and lock checks.
+	- update contrib/fastrpz.patch to apply more cleanly.
 
 3 December 2019: Wouter
 	- Merge pull request #124 from rmetrich: Changed log lock
