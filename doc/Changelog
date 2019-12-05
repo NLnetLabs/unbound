@@ -3,6 +3,7 @@
 	  replacements for unbound-fuzzme.c that gets created after applying
 	  the contrib/unbound-fuzzme.patch.  They are contributed by
 	  Eric Sesterhenn from X41 D-Sec.
+	- tag for 1.9.6rc1.
 
 4 December 2019: Wouter
 	- Fix lock type for memory purify log lock deletion.
