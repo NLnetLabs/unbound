@@ -1,3 +1,9 @@
+5 December 2019: Wouter
+	- unbound-fuzzers.tar.bz2: three programs for fuzzing, that are 1:1
+	  replacements for unbound-fuzzme.c that gets created after applying
+	  the contrib/unbound-fuzzme.patch.  They are contributed by
+	  Eric Sesterhenn from X41 D-Sec.
+
 4 December 2019: Wouter
 	- Fix lock type for memory purify log lock deletion.
 	- Fix testbound for alloccheck runs, memory purify and lock checks.
