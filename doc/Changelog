@@ -1,5 +1,6 @@
 6 December 2019: Wouter
 	- Fix ipsecmod compile.
+	- Fix Makefile.in for ipset module compile, from Adi Prasaja.
 
 5 December 2019: Wouter
 	- unbound-fuzzers.tar.bz2: three programs for fuzzing, that are 1:1
