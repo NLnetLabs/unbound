@@ -337,7 +337,7 @@ call_hook(struct module_qstate* qstate, struct ipsecmod_qstate* iq,
 		/* Save the buffer pointers. */
 		tempstring = s; tempstring_len = slen;
 		w_temp = sldns_wire2str_ipseckey_scan(&tempdata, &tempdata_len, &s,
-			&slen, NULL, 0);
+			&slen, NULL, 0, NULL);
 		/* There was an error when parsing the IPSECKEY; reset the buffer
 		 * pointers to their previous values. */
 		if(w_temp == -1) {
