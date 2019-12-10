@@ -1,3 +1,7 @@
+10 December 2019: Wouter
+	- Fix to make auth zone IXFR to fallback to AXFR if a single
+	  response RR is received over TCP with the SOA in it.
+
 6 December 2019: Wouter
 	- Fix ipsecmod compile.
 	- Fix Makefile.in for ipset module compile, from Adi Prasaja.

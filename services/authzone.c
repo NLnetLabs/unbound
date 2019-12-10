@@ -5530,9 +5530,12 @@ check_xfer_packet(sldns_buffer* pkt, struct auth_xfer* xfr,
 				xfr->task_transfer->rr_scan_num == 0 &&
 				LDNS_ANCOUNT(wire)==1) {
 				verbose(VERB_ALGO, "xfr to %s ended, "
-					"IXFR reply that zone has serial %u",
+					"IXFR reply that zone has serial %u,"
+					" fallback from IXFR to AXFR",
 					xfr->task_transfer->master->host,
 					(unsigned)serial);
+				xfr->task_transfer->ixfr_fail = 1;
+				*gonextonfail = 0;
 				return 0;
 			}
 
