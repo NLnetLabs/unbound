@@ -18,7 +18,7 @@ AC_SUBST(UNBOUND_VERSION_MINOR, [VERSION_MINOR])
 AC_SUBST(UNBOUND_VERSION_MICRO, [VERSION_MICRO])
 
 LIBUNBOUND_CURRENT=9
-LIBUNBOUND_REVISION=6
+LIBUNBOUND_REVISION=7
 LIBUNBOUND_AGE=1
 # 1.0.0 had 0:12:0
 # 1.0.1 had 0:13:0
@@ -92,6 +92,7 @@ LIBUNBOUND_AGE=1
 # 1.9.4 had 9:4:1
 # 1.9.5 had 9:5:1
 # 1.9.6 had 9:6:1
+# 1.9.7 had 9:7:1
 
 #   Current  -- the number of the binary API that we're implementing
 #   Revision -- which iteration of the implementation of the binary
