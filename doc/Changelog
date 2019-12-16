@@ -1,7 +1,10 @@
+16 December 2019: George
+	- Update mailing list URL.
+
 12 December 2019: Ralph
 	- Master is 1.9.7 in development.
 	- Fix typo to let serve-expired-ttl work with ub_ctx_set_option(), by
-          Florian Obser
+	  Florian Obser
 
 10 December 2019: Wouter
 	- Fix to make auth zone IXFR to fallback to AXFR if a single
