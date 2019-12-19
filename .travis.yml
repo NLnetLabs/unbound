@@ -11,6 +11,7 @@ addons:
     - clang
 script:
   - ./configure --enable-debug --disable-flto
+  - echo test
   - make
   - make test
   - (cd testdata/clang-analysis.tdir; bash clang-analysis.test)
