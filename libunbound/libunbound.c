@@ -217,15 +217,22 @@ ub_ctx_create_event(struct event_base* eb)
 	ctx->created_bg = 0;
 	ctx->dothread = 1; /* the processing is in the same process,
 		makes ub_cancel and ub_ctx_delete do the right thing */
-	ctx->event_base = ub_libevent_event_base(eb);
+	if(eb) {
+		ctx->event_base = ub_libevent_event_base(eb);
+		ctx->event_base_malloced = 1;
+	} else {
+		ctx->event_base = ub_libevent_event_base(NULL);
+		ctx->event_base_malloced = 0;
+	}
+
 	if (!ctx->event_base) {
 		ub_ctx_delete(ctx);
 		return NULL;
 	}
-	ctx->event_base_malloced = 1;
+
 	return ctx;
 }
-	
+
 /** delete q */
 static void
 delq(rbnode_type* n, void* ATTR_UNUSED(arg))
