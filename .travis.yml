@@ -11,7 +11,7 @@ addons:
     - clang
 script:
   - ./configure --enable-debug --disable-flto
-  - echo test
   - make
   - make test
+  - ./testbound -p testdata/serve_expired_client_timeout.rpl
   - (cd testdata/clang-analysis.tdir; bash clang-analysis.test)
