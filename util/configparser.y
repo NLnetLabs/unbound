@@ -351,10 +351,9 @@ content_auth: auth_name | auth_zonefile | auth_master | auth_url |
 
 rpz_tag: VAR_TAGS STRING_ARG
 	{
-		size_t len;
 		uint8_t* bitlist;
+		size_t len = 0;
 		OUTYY(("P(server_local_zone_tag:%s)\n", $2));
-		len = 0;
 		bitlist = config_parse_taglist(cfg_parser->cfg, $2,
 			&len);
 		free($2);
@@ -376,7 +375,7 @@ rpz_action_override: VAR_RPZ_ACTION_OVERRIDE STRING_ARG
 		   strcmp($2, "passthru")!=0 && strcmp($2, "drop")!=0 &&
 		   strcmp($2, "cname")!=0 && strcmp($2, "disabled")!=0) {
 			yyerror("rpz-action-override action: expected nxdomain, "
-				"nodata, passthru, drop cname or disabled");
+				"nodata, passthru, drop, cname or disabled");
 			free($2);
 			cfg_parser->cfg->auths->rpz_action_override = NULL;
 		}

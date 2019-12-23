@@ -473,6 +473,9 @@ void listen_sslctx_delete_ticket_keys(void);
 
 /**
  * RPZ format netblock to network byte order address and netblock
+ * example RPZ netblock format dnames:
+ *  - 24.10.100.51.198.rpz-ip -> 198.51.100.10/24
+ *  - 32.10.zz.db8.2001.rpz-ip -> 2001:db8:0:0:0:0:0:10/32
  * @param dname: the dname containing RPZ format netblock
  * @param addr: where to store sockaddr.
  * @param addrlen: length of stored sockaddr is returned.

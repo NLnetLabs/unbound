@@ -28,7 +28,7 @@ rpz:
 TEMPFILE_NAME rpz2.example.com
 TEMPFILE_CONTENTS rpz2.example.com
 $ORIGIN example.com.
-rpz	3600	IN	SOA	ns1.rpz.example.com. hostmaster.rpz.example.com. (
+rpz2	3600	IN	SOA	ns1.rpz.example.com. hostmaster.rpz.example.com. (
 		1379078166 28800 7200 604800 7200 )
 	3600	IN	NS	ns1.rpz.example.com.
 	3600	IN	NS	ns2.rpz.example.com.

@@ -51,6 +51,7 @@
 #include "util/locks.h"
 #include "util/regional.h"
 
+/** string for RPZ action enum */
 const char*
 rpz_action_to_string(enum rpz_action a)
 {
@@ -69,6 +70,7 @@ rpz_action_to_string(enum rpz_action a)
 	return "unknown";
 }
 
+/** RPZ action enum for config string */
 static enum rpz_action
 rpz_config_to_action(char* a)
 {
@@ -106,19 +108,24 @@ rpz_trigger_to_string(enum rpz_trigger r)
 /**
  * Get the label that is just before the root label.
  * @param dname: dname to work on
- * @return: pointer to TLD label
+ * @param maxdnamelen: maximum length of the dname
+ * @return: pointer to TLD label, NULL if not found or invalid dname
  */
 static uint8_t*
-get_tld_label(uint8_t* dname)
+get_tld_label(uint8_t* dname, size_t maxdnamelen)
 {
 	uint8_t* prevlab = dname;
+	size_t dnamelen = 0;
 
 	/* only root label */
 	if(*dname == 0)
 		return NULL;
 
 	while(*dname) {
-		dname = dname+*dname+1;
+		dnamelen += ((size_t)*dname)+1;
+		if(dnamelen > maxdnamelen)
+			return NULL;
+		dname = dname+((size_t)*dname)+1;
 		if(*dname != 0)
 			prevlab = dname;
 	}
@@ -183,7 +190,7 @@ rpz_rr_to_action(uint16_t rr_type, uint8_t* rdatawl, size_t rdatalen)
 	}
 
 	/* all other TLDs starting with "rpz-" are invalid */
-	tldlab = get_tld_label(rdata);
+	tldlab = get_tld_label(rdata, rdatalen-2);
 	if(tldlab && dname_lab_startswith(tldlab, "rpz-", &endptr))
 		return RPZ_INVALID_ACTION;
 
@@ -199,13 +206,11 @@ rpz_action_to_localzone_type(enum rpz_action a)
 	case RPZ_NODATA_ACTION:		return local_zone_always_nodata;
 	case RPZ_DROP_ACTION:		return local_zone_always_deny;
 	case RPZ_PASSTHRU_ACTION:	return local_zone_always_transparent;
-	case RPZ_LOCAL_DATA_ACTION:
-	case RPZ_CNAME_OVERRIDE_ACTION:
-					return local_zone_redirect;
-	case RPZ_INVALID_ACTION:
-	case RPZ_TCP_ONLY_ACTION:
-	default:
-		return local_zone_invalid;
+	case RPZ_LOCAL_DATA_ACTION:	/* fallthrough */
+	case RPZ_CNAME_OVERRIDE_ACTION: return local_zone_redirect;
+	case RPZ_INVALID_ACTION: 	/* fallthrough */
+	case RPZ_TCP_ONLY_ACTION:	/* fallthrough */
+	default:			return local_zone_invalid;
 	}
 }
 
@@ -217,13 +222,11 @@ rpz_action_to_respip_action(enum rpz_action a)
 	case RPZ_NODATA_ACTION:		return respip_always_nodata;
 	case RPZ_DROP_ACTION:		return respip_always_deny;
 	case RPZ_PASSTHRU_ACTION:	return respip_always_transparent;
-	case RPZ_LOCAL_DATA_ACTION:
-	case RPZ_CNAME_OVERRIDE_ACTION:
-					return respip_redirect;
-	case RPZ_INVALID_ACTION:
-	case RPZ_TCP_ONLY_ACTION:
-	default:
-		return respip_invalid;
+	case RPZ_LOCAL_DATA_ACTION:	/* fallthrough */
+	case RPZ_CNAME_OVERRIDE_ACTION: return respip_redirect;
+	case RPZ_INVALID_ACTION:	/* fallthrough */
+	case RPZ_TCP_ONLY_ACTION:	/* fallthrough */
+	default:			return respip_invalid;
 	}
 }
 
@@ -260,14 +263,19 @@ respip_action_to_rpz_action(enum respip_action a)
 /**
  * Get RPZ trigger for dname
  * @param dname: dname containing RPZ trigger
+ * @param dname_len: length of the dname
  * @return: RPZ trigger enum
  */
 static enum rpz_trigger
-rpz_dname_to_trigger(uint8_t* dname)
+rpz_dname_to_trigger(uint8_t* dname, size_t dname_len)
 {
 	uint8_t* tldlab;
 	char* endptr;
-	tldlab = get_tld_label(dname);
+
+	if(dname_valid(dname, dname_len) != dname_len)
+		return RPZ_INVALID_TRIGGER;
+
+	tldlab = get_tld_label(dname, dname_len);
 	if(!tldlab || !dname_lab_startswith(tldlab, "rpz-", &endptr))
 		return RPZ_QNAME_TRIGGER;
 
@@ -350,20 +358,21 @@ new_cname_override(struct regional* region, uint8_t* ct, size_t ctlen)
 		return NULL;
 	}
 	pd->rr_len[0] = ctlen+2;
-	pd->rr_ttl[0] = 3600; /* TODO, what should this be? */
+	pd->rr_ttl[0] = 3600;
 	pd->rr_data[0] = regional_alloc_zero(region, 2 /* rdlength */ + ctlen);
 	if(!pd->rr_data[0]) {
 		log_err("out of memory");
 		return NULL;
 	}
-	memcpy(pd->rr_data[0], &rdlength, 2);
-	memcpy(pd->rr_data[0]+2, ct, ctlen);
+	memmove(pd->rr_data[0], &rdlength, 2);
+	memmove(pd->rr_data[0]+2, ct, ctlen);
 
 	rrset->entry.data = pd;
 	rrset->rk.type = htons(LDNS_RR_TYPE_CNAME);
 	rrset->rk.rrset_class = htons(LDNS_RR_CLASS_IN);
 	return rrset;
 }
+
 struct rpz*
 rpz_create(struct config_auth* p)
 {
@@ -395,7 +404,7 @@ rpz_create(struct config_auth* p)
 		size_t nmlen = sizeof(nm);
 
 		if(!p->rpz_cname) {
-			log_err("RPZ override with cname action found, but not "
+			log_err("RPZ override with cname action found, but no "
 				"rpz-cname-override configured");
 			goto err;
 		}
@@ -411,8 +420,11 @@ rpz_create(struct config_auth* p)
 		}
 	}
 	r->log = p->rpz_log;
-	if(p->rpz_log_name)
-		r->log_name = strdup(p->rpz_log_name);
+	if(p->rpz_log_name) {
+		if(!(r->log_name = strdup(p->rpz_log_name)))
+			log_err("malloc failure on RPZ log_name strdup");
+			goto err;
+	}
 	return r;
 err:
 	if(r) {
@@ -427,16 +439,22 @@ err:
 	return NULL;
 }
 
-/** Remove RPZ zone name from dname */
+/**
+ * Remove RPZ zone name from dname
+ * Copy dname to newdname, without the originlen number of trailing bytes
+ */
 static size_t
 strip_dname_origin(uint8_t* dname, size_t dnamelen, size_t originlen,
-	uint8_t* newdname)
+	uint8_t* newdname, size_t maxnewdnamelen)
 {
 	size_t newdnamelen;
 	if(dnamelen < originlen)
 		return 0;
 	newdnamelen = dnamelen - originlen;
+	if(newdnamelen+1 > maxnewdnamelen)
+		return 0;
 	memmove(newdname, dname, newdnamelen);
+	memset(newdname+newdnamelen, 0, 1);
 	return newdnamelen + 1;	/* + 1 for root label */
 }
 
@@ -465,6 +483,13 @@ rpz_insert_qname_trigger(struct rpz* r, uint8_t* dname, size_t dnamelen,
 		LDNS_RR_CLASS_IN);
 	if(z && a != RPZ_LOCAL_DATA_ACTION) {
 		rrstr = sldns_wire2str_rr(rr, rr_len);
+		if(!rrstr) {
+			log_err("malloc error while inserting RPZ qname "
+				"trigger");
+			free(dname);
+			lock_rw_unlock(&r->local_zones->lock);
+			return;
+		}
 		verbose(VERB_ALGO, "RPZ: skipping duplicate record: '%s'",
 			rrstr);
 		free(rrstr);
@@ -485,6 +510,13 @@ rpz_insert_qname_trigger(struct rpz* r, uint8_t* dname, size_t dnamelen,
 	}
 	if(a == RPZ_LOCAL_DATA_ACTION) {
 		rrstr = sldns_wire2str_rr(rr, rr_len);
+		if(!rrstr) {
+			log_err("malloc error while inserting RPZ qname "
+				"trigger");
+			free(dname);
+			lock_rw_unlock(&r->local_zones->lock);
+			return;
+		}
 		local_zone_enter_rr(z, dname, dnamelen, dnamelabs,
 			rrtype, rrclass, ttl, rdata, rdata_len, rrstr);
 		free(rrstr);
@@ -520,6 +552,11 @@ rpz_insert_response_ip_trigger(struct rpz* r, uint8_t* dname,
 
 	lock_rw_wrlock(&r->respip_set->lock);
 	rrstr = sldns_wire2str_rr(rr, rr_len);
+	if(!rrstr) {
+		log_err("malloc error while inserting RPZ respip trigger");
+		lock_rw_unlock(&r->respip_set->lock);
+		return 0;
+	}
 	if(!(node=respip_sockaddr_find_or_create(r->respip_set, &addr, addrlen,
 		net, 1, rrstr))) {
 		lock_rw_unlock(&r->respip_set->lock);
@@ -540,24 +577,35 @@ rpz_insert_response_ip_trigger(struct rpz* r, uint8_t* dname,
 	return 1;
 }
 
-void
+int
 rpz_insert_rr(struct rpz* r, size_t aznamelen, uint8_t* dname,
 	size_t dnamelen, uint16_t rr_type, uint16_t rr_class, uint32_t rr_ttl,
 	uint8_t* rdatawl, size_t rdatalen, uint8_t* rr, size_t rr_len)
 {
 	size_t policydnamelen;
 	/* name is free'd in local_zone delete */
-	uint8_t* policydname = calloc(1, LDNS_MAX_DOMAINLEN + 1);
 	enum rpz_trigger t;
 	enum rpz_action a;
-	
+	uint8_t* policydname;
+
+	log_assert(dnamelen >= aznamelen);
+	if(!(policydname = calloc(1, (dnamelen-aznamelen)+1)))
+		return 0;
+
 	a = rpz_rr_to_action(rr_type, rdatawl, rdatalen);
 	if(!(policydnamelen = strip_dname_origin(dname, dnamelen, aznamelen,
-		policydname))) {
+		policydname, (dnamelen-aznamelen)+1))) {
 		free(policydname);
-		return;
+		return 0;
 	}
-	t = rpz_dname_to_trigger(policydname);
+	t = rpz_dname_to_trigger(policydname, policydnamelen);
+	verbose(VERB_OPS, "RPZ: found trigger: %s",
+			rpz_trigger_to_string(t));
+	if(t == RPZ_INVALID_TRIGGER) {
+		free(policydname);
+		verbose(VERB_ALGO, "RPZ: skipping invalid trigger");
+		return 1;
+	}
 	if(t == RPZ_QNAME_TRIGGER) {
 		rpz_insert_qname_trigger(r, policydname, policydnamelen,
 			a, rr_type, rr_class, rr_ttl, rdatawl, rdatalen, rr,
@@ -574,6 +622,7 @@ rpz_insert_rr(struct rpz* r, size_t aznamelen, uint8_t* dname,
 		verbose(VERB_ALGO, "RPZ: skipping unusupported trigger: %s",
 			rpz_trigger_to_string(t));
 	}
+	return 1;
 }
 
 /**
@@ -595,10 +644,11 @@ rpz_find_zone(struct rpz* r, uint8_t* qname, size_t qname_len, uint16_t qclass,
 	uint8_t wc[LDNS_MAX_DOMAINLEN];
 	int exact;
 	struct local_zone* z = NULL;
-	if(wr)
+	if(wr) {
 		lock_rw_wrlock(&r->local_zones->lock);
-	else
+	} else {
 		lock_rw_rdlock(&r->local_zones->lock);
+	}
 	z = local_zones_find_le(r->local_zones, qname, qname_len,
 		dname_count_labels(qname),
 		LDNS_RR_CLASS_IN, &exact);
@@ -606,10 +656,11 @@ rpz_find_zone(struct rpz* r, uint8_t* qname, size_t qname_len, uint16_t qclass,
 		lock_rw_unlock(&r->local_zones->lock);
 		return NULL;
 	}
-	if(wr)
+	if(wr) {
 		lock_rw_wrlock(&z->lock);
-	else
+	} else {
 		lock_rw_rdlock(&z->lock);
+	}
 	lock_rw_unlock(&r->local_zones->lock);
 
 	if(exact)
@@ -634,20 +685,22 @@ rpz_find_zone(struct rpz* r, uint8_t* qname, size_t qname_len, uint16_t qclass,
 	memmove(wc+2, ce, ce_len);
 	lock_rw_unlock(&z->lock);
 
-	if(wr)
+	if(wr) {
 		lock_rw_wrlock(&r->local_zones->lock);
-	else
+	} else {
 		lock_rw_rdlock(&r->local_zones->lock);
+	}
 	z = local_zones_find_le(r->local_zones, wc,
 		ce_len+2, ce_labs+1, qclass, &exact);
 	if(!z || !exact) {
 		lock_rw_unlock(&r->local_zones->lock);
 		return NULL;
 	}
-	if(wr)
+	if(wr) {
 		lock_rw_wrlock(&z->lock);
-	else
+	} else {
 		lock_rw_rdlock(&z->lock);
+	}
 	lock_rw_unlock(&r->local_zones->lock);
 	return z;
 }
@@ -815,11 +868,11 @@ rpz_remove_rr(struct rpz* r, size_t aznamelen, uint8_t* dname, size_t dnamelen,
 		return;
 	}
 	if(!(policydnamelen = strip_dname_origin(dname, dnamelen, aznamelen,
-		policydname))) {
+		policydname, LDNS_MAX_DOMAINLEN + 1))) {
 		free(policydname);
 		return;
 	}
-	t = rpz_dname_to_trigger(policydname);
+	t = rpz_dname_to_trigger(policydname, policydnamelen);
 	if(t == RPZ_QNAME_TRIGGER) {
 		rpz_remove_qname_trigger(r, policydname, policydnamelen, a,
 			rr_type, rr_class, rdatawl, rdatalen);

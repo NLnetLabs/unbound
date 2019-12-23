@@ -61,6 +61,7 @@ enum rpz_trigger {
 	RPZ_RESPONSE_IP_TRIGGER, /* rpz-ip */
 	RPZ_NSDNAME_TRIGGER,	 /* rpz-nsdname */
 	RPZ_NSIP_TRIGGER,	 /* rpz-nsip */
+	RPZ_INVALID_TRIGGER, 	 /* dname does not contain valid trigger */
 };
 
 /**
@@ -114,8 +115,9 @@ struct rpz {
  * @param rdatalen: length if the RR, including the prepended rdata size
  * @param rr: the complete RR, for logging purposes
  * @param rr_len: the length of the complete RR
+ * @return: 0 on error
  */
-void rpz_insert_rr(struct rpz* r, size_t aznamelen, uint8_t* dname,
+int rpz_insert_rr(struct rpz* r, size_t aznamelen, uint8_t* dname,
 	size_t dnamelen, uint16_t rr_type, uint16_t rr_class, uint32_t rr_ttl,
 	uint8_t* rdatawl, size_t rdatalen, uint8_t* rr, size_t rr_len);
 

@@ -550,12 +550,8 @@ int
 dname_has_label(uint8_t* dname, uint8_t* label)
 {
 	uint8_t lablen = *dname++;
-	while(lablen) {
-		if(*label == lablen && memcmp(dname, label+1, lablen) == 0)
-			return 1;
-		dname += lablen;
-		lablen = *dname++;
-	}
+	if(memlowercmp(dname, label, lablen) == 0)
+		return 1;
 	return 0;
 }
 

@@ -399,17 +399,18 @@ rrset_insert_rr(struct regional* region, struct packed_rrset_data* pd,
 int
 local_rrset_remove_rr(struct packed_rrset_data* pd, size_t index)
 {
+	log_assert(pd->count > 0);
 	if(index >= pd->count) {
 		log_warn("Trying to remove RR with out of bound index");
 		return 0;
 	}
-	if(index - 1 < pd->count) {
+	if(index + 1 < pd->count) {
 		/* not removing last element */
 		size_t nexti = index + 1;
 		size_t num = pd->count - nexti;
-		memcpy(pd->rr_len+index, pd->rr_len+nexti, sizeof(*pd->rr_len)*num);
-		memcpy(pd->rr_ttl+index, pd->rr_ttl+nexti, sizeof(*pd->rr_ttl)*num);
-		memcpy(pd->rr_data+index, pd->rr_data+nexti, sizeof(*pd->rr_data)*num);
+		memmove(pd->rr_len+index, pd->rr_len+nexti, sizeof(*pd->rr_len)*num);
+		memmove(pd->rr_ttl+index, pd->rr_ttl+nexti, sizeof(*pd->rr_ttl)*num);
+		memmove(pd->rr_data+index, pd->rr_data+nexti, sizeof(*pd->rr_data)*num);
 	}
 	pd->count--;
 	return 1;
@@ -1354,7 +1355,6 @@ find_tag_datas(struct query_info* qinfo, struct config_strlist* list,
 	return result;
 }
 
-/** answer local data match */
 int
 local_data_answer(struct local_zone* z, struct module_env* env,
 	struct query_info* qinfo, struct edns_data* edns,

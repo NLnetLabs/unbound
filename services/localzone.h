@@ -572,6 +572,25 @@ enum respip_action {
 	respip_invalid = local_zone_invalid,
 };
 
+/**
+ * Get local data from local zone and encode answer.
+ * @param z: local zone to use
+ * @param env: module env
+ * @param qinfo: qinfo
+ * @param edns: edns data, for message encoding
+ * @param repinfo: reply info, for message encoding
+ * @param buf: commpoint buffer
+ * @param temp: scratchpad region
+ * @param labs: number of labels in qname
+ * @param ldp: where to store local data
+ * @param lzt: type of local zone
+ * @param tag: matching tag index
+ * @param tag_datas: alc specific tag data list
+ * @param tag_datas_size: size of tag_datas
+ * @param tagname: list of names of tags, for logging purpose
+ * @param num_tags: number of tags
+ * @return 1 on success
+ */
 int
 local_data_answer(struct local_zone* z, struct module_env* env,
 	struct query_info* qinfo, struct edns_data* edns,
@@ -580,6 +599,20 @@ local_data_answer(struct local_zone* z, struct module_env* env,
 	enum localzone_type lz_type, int tag, struct config_strlist** tag_datas,
 	size_t tag_datas_size, char** tagname, int num_tags);
 
+/**
+ * Add RR to local zone.
+ * @param z: local zone to add RR to
+ * @param nm: dname of RR
+ * @param nmlen: length of nm
+ * @param nmlabs: number of labels of nm
+ * @param rrtype: RR type
+ * @param rrclass: RR class
+ * @param ttl: TTL of RR to add
+ * @param rdata: RDATA of RR to add
+ * @param rdata_len: length of rdata
+ * @param rrstr: RR in string format, for logging
+ * @return: 1 on success
+ */
 int
 local_zone_enter_rr(struct local_zone* z, uint8_t* nm, size_t nmlen,
 	int nmlabs, uint16_t rrtype, uint16_t rrclass, time_t ttl,
