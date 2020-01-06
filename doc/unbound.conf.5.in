@@ -1680,6 +1680,12 @@ Name of the authority zone.
 Where to download a copy of the zone from, with AXFR and IXFR.  Multiple
 masters can be specified.  They are all tried if one fails.
 With the "ip#name" notation a AXFR over TLS can be used.
+If you point it at another Unbound instance, it would not work because
+that does not support AXFR/IXFR for the zone, but if you used \fBurl:\fR to download
+the zonefile as a text file from a webserver that would work.
+If you specify the hostname, you cannot use the domain from the zonefile,
+because it may not have that when retrieving that data, instead use a plain
+IP address to avoid a circular dependency on retrieving that IP address.
 .TP
 .B url: \fI<url to zonefile>
 Where to download a zonefile for the zone.  With http or https.  An example
@@ -1691,6 +1697,10 @@ see if the SOA serial number has changed, reducing the number of downloads.
 If none of the urls work, the masters are tried with IXFR and AXFR.
 For https, the \fBtls\-cert\-bundle\fR and the hostname from the url are used
 to authenticate the connection.
+If you specify a hostname in the URL, you cannot use the domain from the
+zonefile, because it may not have that when retrieving that data, instead
+use a plain IP address to avoid a circular dependency on retrieving that IP
+address.  Avoid dependencies on name lookups by using a notation like "http://192.0.2.1/unbound-master/example.com.zone", with an explicit IP address.
 .TP
 .B allow\-notify: \fI<IP address or host name or netblockIP/prefix>
 With allow\-notify you can specify additional sources of notifies.
