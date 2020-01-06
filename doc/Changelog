@@ -1,3 +1,7 @@
+6 January 2020: Wouter
+	- Merge #135 from Florian Obser: Use passed in neg and key cache
+	  if non-NULL.
+
 16 December 2019: George
 	- Update mailing list URL.
 
