@@ -2,6 +2,9 @@
 	- Downgrade compat/getentropy_solaris.c to version 1.4 from OpenBSD.
 	  The dl_iterate_phdr() function introduced in newer versions raises
 	  compilation errors on solaris 10.
+	- Changes to compat/getentropy_solaris.c for,
+	  ifdef stdint.h inclusion for older systems.
+	  ifdef sha2.h inclusion for older systems.
 
 6 January 2020: Wouter
 	- Merge #135 from Florian Obser: Use passed in neg and key cache
