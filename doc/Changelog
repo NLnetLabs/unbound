@@ -2,6 +2,8 @@
 	- Fix 'make test' to work for --disable-sha1 configure option.
 	- Fix out-of-bounds null-byte write in sldns_bget_token_par while
 	  parsing type WKS, reported by Luis Merino from X41 D-Sec.
+	- Updated sldns_bget_token_par fix for also space for the zero
+	  delimiter after the character.
 
 6 January 2020: George
 	- Downgrade compat/getentropy_solaris.c to version 1.4 from OpenBSD.
