@@ -1,3 +1,6 @@
+8 January 2020: Wouter
+	- Fix 'make test' to work for --disable-sha1 configure option.
+
 6 January 2020: George
 	- Downgrade compat/getentropy_solaris.c to version 1.4 from OpenBSD.
 	  The dl_iterate_phdr() function introduced in newer versions raises
