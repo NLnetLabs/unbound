@@ -1468,9 +1468,11 @@ lookup_cache:
 				 * Note that if there is more than one pass
 				 * its qname must be that used for cache
 				 * lookup. */
-				if((worker->env.cfg->prefetch || worker->env.cfg->serve_expired)
-					&& *worker->env.now >=
-					((struct reply_info*)e->data)->prefetch_ttl) {
+				if((worker->env.cfg->prefetch && *worker->env.now >=
+							((struct reply_info*)e->data)->prefetch_ttl) ||
+						(worker->env.cfg->serve_expired &&
+						*worker->env.now >= ((struct reply_info*)e->data)->ttl)) {
+
 					time_t leeway = ((struct reply_info*)e->
 						data)->ttl - *worker->env.now;
 					if(((struct reply_info*)e->data)->ttl
