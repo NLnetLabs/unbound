@@ -728,11 +728,13 @@ listen_sslctx_setup(void* ctxt)
 #ifdef HAVE_SSL
 	SSL_CTX* ctx = (SSL_CTX*)ctxt;
 	/* no SSLv2, SSLv3 because has defects */
+#if SSL_OP_NO_SSLv2 != 0
 	if((SSL_CTX_set_options(ctx, SSL_OP_NO_SSLv2) & SSL_OP_NO_SSLv2)
 		!= SSL_OP_NO_SSLv2){
 		log_crypto_err("could not set SSL_OP_NO_SSLv2");
 		return 0;
 	}
+#endif
 	if((SSL_CTX_set_options(ctx, SSL_OP_NO_SSLv3) & SSL_OP_NO_SSLv3)
 		!= SSL_OP_NO_SSLv3){
 		log_crypto_err("could not set SSL_OP_NO_SSLv3");
@@ -968,12 +970,14 @@ void* connect_sslctx_create(char* key, char* pem, char* verifypem, int wincert)
 		log_crypto_err("could not allocate SSL_CTX pointer");
 		return NULL;
 	}
+#if SSL_OP_NO_SSLv2 != 0
 	if((SSL_CTX_set_options(ctx, SSL_OP_NO_SSLv2) & SSL_OP_NO_SSLv2)
 		!= SSL_OP_NO_SSLv2) {
 		log_crypto_err("could not set SSL_OP_NO_SSLv2");
 		SSL_CTX_free(ctx);
 		return NULL;
 	}
+#endif
 	if((SSL_CTX_set_options(ctx, SSL_OP_NO_SSLv3) & SSL_OP_NO_SSLv3)
 		!= SSL_OP_NO_SSLv3) {
 		log_crypto_err("could not set SSL_OP_NO_SSLv3");

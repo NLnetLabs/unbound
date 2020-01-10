@@ -1,6 +1,7 @@
 10 January 2020: Wouter
 	- Fix the relationship between serve-expired and prefetch options,
 	  patch from Saksham Manchanda from Secure64.
+	- Fix unreachable code in ssl set options code.
 
 8 January 2020: Ralph
 	- Fix #138: stop binding pidfile inside chroot dir in systemd service
