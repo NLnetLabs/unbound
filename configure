@@ -890,6 +890,7 @@ enable_cachedb
 enable_ipsecmod
 enable_ipset
 with_libmnl
+enable_explicit_port_randomisation
 with_libunbound_only
 '
       ac_precious_vars='build_alias
@@ -1579,6 +1580,9 @@ Optional Features:
   --enable-ipsecmod       Enable ipsecmod module that facilitates
                           opportunistic IPsec
   --enable-ipset          enable ipset module
+  --disable-explicit-port-randomisation
+                          disable explicit source port randomisation and rely
+                          on the kernel to provide random source ports
 
 Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
@@ -21443,6 +21447,21 @@ $as_echo "found in $dir" >&6; }
     	# nothing
 		;;
 esac
+# Check whether --enable-explicit-port-randomisation was given.
+if test "${enable_explicit_port_randomisation+set}" = set; then :
+  enableval=$enable_explicit_port_randomisation;
+fi
+
+case "$enable_explicit_port_randomisation" in
+	no)
+
+$as_echo "#define DISABLE_EXPLICIT_PORT_RANDOMISATION 1" >>confdefs.h
+
+		;;
+	yes|*)
+		;;
+esac
+
 
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking if ${MAKE:-make} supports $< with implicit rule in scope" >&5
 $as_echo_n "checking if ${MAKE:-make} supports $< with implicit rule in scope... " >&6; }

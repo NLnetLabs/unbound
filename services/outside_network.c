@@ -514,7 +514,9 @@ portcomm_loweruse(struct outside_network* outnet, struct port_comm* pc)
 	comm_point_close(pc->cp);
 	pif = pc->pif;
 	log_assert(pif->inuse > 0);
+#ifndef DISABLE_EXPLICIT_PORT_RANDOMISATION
 	pif->avail_ports[pif->avail_total - pif->inuse] = pc->number;
+#endif
 	pif->inuse--;
 	pif->out[pc->index] = pif->out[pif->inuse];
 	pif->out[pc->index]->index = pc->index;
@@ -727,10 +729,12 @@ create_pending_tcp(struct outside_network* outnet, size_t bufsize)
 static int setup_if(struct port_if* pif, const char* addrstr, 
 	int* avail, int numavail, size_t numfd)
 {
+#ifndef DISABLE_EXPLICIT_PORT_RANDOMISATION
 	pif->avail_total = numavail;
 	pif->avail_ports = (int*)memdup(avail, (size_t)numavail*sizeof(int));
 	if(!pif->avail_ports)
 		return 0;
+#endif
 	if(!ipstrtoaddr(addrstr, UNBOUND_DNS_PORT, &pif->addr, &pif->addrlen) &&
 	   !netblockstrtoaddr(addrstr, UNBOUND_DNS_PORT,
 			      &pif->addr, &pif->addrlen, &pif->pfxlen))
@@ -957,7 +961,9 @@ outside_network_delete(struct outside_network* outnet)
 				comm_point_delete(pc->cp);
 				free(pc);
 			}
+#ifndef DISABLE_EXPLICIT_PORT_RANDOMISATION
 			free(outnet->ip4_ifs[i].avail_ports);
+#endif
 			free(outnet->ip4_ifs[i].out);
 		}
 		free(outnet->ip4_ifs);
@@ -971,7 +977,9 @@ outside_network_delete(struct outside_network* outnet)
 				comm_point_delete(pc->cp);
 				free(pc);
 			}
+#ifndef DISABLE_EXPLICIT_PORT_RANDOMISATION
 			free(outnet->ip6_ifs[i].avail_ports);
+#endif
 			free(outnet->ip6_ifs[i].out);
 		}
 		free(outnet->ip6_ifs);
@@ -1135,6 +1143,7 @@ select_ifport(struct outside_network* outnet, struct pending* pend,
 	while(1) {
 		my_if = ub_random_max(outnet->rnd, num_if);
 		pif = &ifs[my_if];
+#ifndef DISABLE_EXPLICIT_PORT_RANDOMISATION
 		my_port = ub_random_max(outnet->rnd, pif->avail_total);
 		if(my_port < pif->inuse) {
 			/* port already open */
@@ -1146,6 +1155,9 @@ select_ifport(struct outside_network* outnet, struct pending* pend,
 		/* try to open new port, if fails, loop to try again */
 		log_assert(pif->inuse < pif->maxout);
 		portno = pif->avail_ports[my_port - pif->inuse];
+#else
+		my_port = portno = 0;
+#endif
 		fd = udp_sockport(&pif->addr, pif->addrlen, pif->pfxlen,
 			portno, &inuse, outnet->rnd);
 		if(fd == -1 && !inuse) {
@@ -1169,8 +1181,10 @@ select_ifport(struct outside_network* outnet, struct pending* pend,
 
 			/* grab port in interface */
 			pif->out[pif->inuse] = pend->pc;
+#ifndef DISABLE_EXPLICIT_PORT_RANDOMISATION
 			pif->avail_ports[my_port - pif->inuse] =
 				pif->avail_ports[pif->avail_total-pif->inuse-1];
+#endif
 			pif->inuse++;
 			break;
 		}
@@ -2227,6 +2241,7 @@ fd_for_dest(struct outside_network* outnet, struct sockaddr_storage* to_addr,
 		}
 		addr = &pif->addr;
 		addrlen = pif->addrlen;
+#ifndef DISABLE_EXPLICIT_PORT_RANDOMISATION
 		pnum = ub_random_max(outnet->rnd, pif->avail_total);
 		if(pnum < pif->inuse) {
 			/* port already open */
@@ -2235,7 +2250,9 @@ fd_for_dest(struct outside_network* outnet, struct sockaddr_storage* to_addr,
 			/* unused ports in start part of array */
 			port = pif->avail_ports[pnum - pif->inuse];
 		}
-
+#else
+		pnum = port = 0;
+#endif
 		if(addr_is_ip6(to_addr, to_addrlen)) {
 			struct sockaddr_in6 sa = *(struct sockaddr_in6*)addr;
 			sa.sin6_port = (in_port_t)htons((uint16_t)port);
@@ -2459,7 +2476,10 @@ if_get_mem(struct port_if* pif)
 {
 	size_t s;
 	int i;
-	s = sizeof(*pif) + sizeof(int)*pif->avail_total +
+	s = sizeof(*pif) +
+#ifndef DISABLE_EXPLICIT_PORT_RANDOMISATION
+	    sizeof(int)*pif->avail_total +
+#endif
 		sizeof(struct port_comm*)*pif->maxout;
 	for(i=0; i<pif->inuse; i++)
 		s += sizeof(*pif->out[i]) + 
