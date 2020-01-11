@@ -223,7 +223,7 @@ static int ipset_update(struct module_env *env, struct dns_msg *return_msg, stru
 	return 0;
 }
 
-int ipset_init(struct module_env* env, int id) {
+int ipset_setup(struct module_env* env, int id) {
 	struct ipset_env *ipset_env;
 
 	ipset_env = (struct ipset_env *)calloc(1, sizeof(struct ipset_env));
@@ -250,7 +250,7 @@ int ipset_init(struct module_env* env, int id) {
 	return 1;
 }
 
-void ipset_deinit(struct module_env *env, int id) {
+void ipset_desetup(struct module_env *env, int id) {
 	struct mnl_socket *mnl;
 	struct ipset_env *ipset_env;
 
@@ -373,7 +373,7 @@ size_t ipset_get_mem(struct module_env *env, int id) {
  */
 static struct module_func_block ipset_block = {
 	"ipset",
-	&ipset_init, &ipset_deinit, &ipset_operate,
+	&module_dummy_init, &module_dummy_init, &ipset_setup, &ipset_desetup, &ipset_operate,
 	&ipset_inform_super, &ipset_clear, &ipset_get_mem
 };
 
