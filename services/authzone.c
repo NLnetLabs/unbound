@@ -2586,12 +2586,14 @@ az_nsec3_hash(uint8_t* buf, size_t buflen, uint8_t* nm, size_t nmlen,
 	/* hashfunc(name, salt) */
 	memmove(p, nm, nmlen);
 	query_dname_tolower(p);
-	memmove(p+nmlen, salt, saltlen);
+	if(salt && saltlen > 0)
+		memmove(p+nmlen, salt, saltlen);
 	(void)secalgo_nsec3_hash(algo, p, nmlen+saltlen, (unsigned char*)buf);
 	for(i=0; i<iter; i++) {
 		/* hashfunc(hash, salt) */
 		memmove(p, buf, hlen);
-		memmove(p+hlen, salt, saltlen);
+		if(salt && saltlen > 0)
+			memmove(p+hlen, salt, saltlen);
 		(void)secalgo_nsec3_hash(algo, p, hlen+saltlen,
 			(unsigned char*)buf);
 	}

@@ -7,6 +7,7 @@
 	  cache and neg cache structures.
 	- Fix for memory leak when edns subnet config options are read when
 	  compiled without edns subnet support.
+	- Fix auth zone support for NSEC3 records without salt.
 
 10 January 2020: Wouter
 	- Fix the relationship between serve-expired and prefetch options,
