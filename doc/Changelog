@@ -3,6 +3,8 @@
 	  because dnscrypt-proxy (2.0.36) does not support the test setup
 	  any more, and also the config file format does not seem to have
 	  the appropriate keys to recreate that setup.
+	- Fix crash after reload where a stats lookup could reference old key
+	  cache and neg cache structures.
 
 10 January 2020: Wouter
 	- Fix the relationship between serve-expired and prefetch options,

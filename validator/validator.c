@@ -200,7 +200,9 @@ val_deinit(struct module_env* env, int id)
 	anchors_delete(env->anchors);
 	env->anchors = NULL;
 	key_cache_delete(val_env->kcache);
+	env->key_cache = NULL;
 	neg_cache_delete(val_env->neg_cache);
+	env->neg_cache = NULL;
 	free(val_env->nsec3_keysize);
 	free(val_env->nsec3_maxiter);
 	free(val_env);
