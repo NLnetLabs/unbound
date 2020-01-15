@@ -285,19 +285,22 @@ int netblockstrtoaddr(const char* str, int port, struct sockaddr_storage* addr,
 }
 
 /* RPZ format address dname to network byte order address */
-static int ipdnametoaddr(uint8_t* dname, struct sockaddr_storage* addr,
-	socklen_t* addrlen, int* af)
+static int ipdnametoaddr(uint8_t* dname, size_t dnamelen,
+	struct sockaddr_storage* addr, socklen_t* addrlen, int* af)
 {
 	uint8_t* ia;
 	size_t dnamelabs = dname_count_labels(dname);
 	uint8_t lablen;
 	char* e = NULL;
 	int z = 0;
+	int len = 0;
 	int i;
 	*af = AF_INET;
-	if(dnamelabs > 6 || dname_has_label(dname, (uint8_t*)"\002zz")) {
+	if(dnamelabs > 6 ||
+		dname_has_label(dname, dnamelen, (uint8_t*)"\002zz")) {
 		*af = AF_INET6;
 	}
+	len = *dname;
 	lablen = *dname++;
 	i = (*af == AF_INET) ? 3 : 15;
 	if(*af == AF_INET6) {
@@ -313,21 +316,21 @@ static int ipdnametoaddr(uint8_t* dname, struct sockaddr_storage* addr,
 		sa->sin_family = AF_INET;
 		ia = (uint8_t*)&sa->sin_addr;
 	}
-	while(lablen && i >= 0) {
-		char buff[lablen+1];
+	while(lablen && i >= 0 && len <= dnamelen) {
+		char buff[LDNS_MAX_LABELLEN+1];
 		uint16_t chunk; /* big enough to not overflow on IPv6 hextet */
 		if((*af == AF_INET && (lablen > 3 || dnamelabs > 6)) ||
 			(*af == AF_INET6 && (lablen > 4 || dnamelabs > 10))) {
 			return 0;
 		}
 		if(memcmp(dname, "zz", 2) == 0 && *af == AF_INET6) {
-			/* add one or more 0 labels */
+			/* Add one or more 0 labels. Address is initialised at
+			 * 0, so just skip the zero part. */
 			int zl = 11 - dnamelabs;
 			if(z || zl < 0)
 				return 0;
 			z = 1;
 			i -= (zl*2);
-			memset(ia+(i+1), 0, zl*2);
 		} else {
 			memcpy(buff, dname, lablen);
 			buff[lablen] = '\0';
@@ -335,9 +338,11 @@ static int ipdnametoaddr(uint8_t* dname, struct sockaddr_storage* addr,
 			if(!e || *e != '\0' || (*af == AF_INET && chunk > 255))
 				return 0;
 			if(*af == AF_INET) {
+				log_assert(i < 4 && i >= 0);
 				ia[i] = (uint8_t)chunk;
 				i--;
 			} else {
+				log_assert(i < 15 && i >= 1);
 				/* ia in network byte order */
 				ia[i-1] = (uint8_t)(chunk >> 8);
 				ia[i] = (uint8_t)(chunk & 0x00FF);
@@ -346,6 +351,7 @@ static int ipdnametoaddr(uint8_t* dname, struct sockaddr_storage* addr,
 		}
 		dname += lablen;
 		lablen = *dname++;
+		len += lablen;
 	}
 	if(i != -1)
 		/* input too short */
@@ -353,8 +359,8 @@ static int ipdnametoaddr(uint8_t* dname, struct sockaddr_storage* addr,
 	return 1;
 }
 
-int netblockdnametoaddr(uint8_t* dname, struct sockaddr_storage* addr,
-	socklen_t* addrlen, int* net, int* af)
+int netblockdnametoaddr(uint8_t* dname, size_t dnamelen,
+	struct sockaddr_storage* addr, socklen_t* addrlen, int* net, int* af)
 {
 	char buff[3 /* 3 digit netblock */ + 1];
 	if(*dname > 3)
@@ -363,9 +369,13 @@ int netblockdnametoaddr(uint8_t* dname, struct sockaddr_storage* addr,
 	memcpy(buff, dname+1, *dname);
 	buff[*dname] = '\0';
 	*net = atoi(buff);
+	if(*net == 0 && strcmp(buff, "0") != 0)
+		return 0;
 	dname += *dname;
 	dname++;
-	if(!ipdnametoaddr(dname, addr, addrlen, af))
+	if(!ipdnametoaddr(dname, dnamelen, addr, addrlen, af))
+		return 0;
+	if((*af == AF_INET6 && *net > 128) || (*af == AF_INET && *net > 32))
 		return 0;
 	return 1;
 }

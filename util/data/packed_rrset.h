@@ -448,6 +448,7 @@ struct ub_packed_rrset_key* packed_rrset_copy_alloc(
 
 /**
  * Find RR index in packed rrset
+ * Raw comparison, does not canonicalize RDATA
  * @param d: packed rrset
  * @param rdata: RDATA of RR to find
  * @param len: length of rdata

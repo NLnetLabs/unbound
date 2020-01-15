@@ -529,7 +529,7 @@ rpz_insert_qname_trigger(struct rpz* r, uint8_t* dname, size_t dnamelen,
 
 /** Insert RR into RPZ's respip_set */
 static int
-rpz_insert_response_ip_trigger(struct rpz* r, uint8_t* dname,
+rpz_insert_response_ip_trigger(struct rpz* r, uint8_t* dname, size_t dnamelen,
 	enum rpz_action a, uint16_t rrtype, uint16_t rrclass, uint32_t ttl,
 	uint8_t* rdata, size_t rdata_len, uint8_t* rr, size_t rr_len)
 {
@@ -547,7 +547,7 @@ rpz_insert_response_ip_trigger(struct rpz* r, uint8_t* dname,
 		return 0;
 	}
 
-	if(!netblockdnametoaddr(dname, &addr, &addrlen, &net, &af))
+	if(!netblockdnametoaddr(dname, dnamelen, &addr, &addrlen, &net, &af))
 		return 0;
 
 	lock_rw_wrlock(&r->respip_set->lock);
@@ -599,8 +599,6 @@ rpz_insert_rr(struct rpz* r, size_t aznamelen, uint8_t* dname,
 		return 0;
 	}
 	t = rpz_dname_to_trigger(policydname, policydnamelen);
-	verbose(VERB_OPS, "RPZ: found trigger: %s",
-			rpz_trigger_to_string(t));
 	if(t == RPZ_INVALID_TRIGGER) {
 		free(policydname);
 		verbose(VERB_ALGO, "RPZ: skipping invalid trigger");
@@ -612,7 +610,7 @@ rpz_insert_rr(struct rpz* r, size_t aznamelen, uint8_t* dname,
 			rr_len);
 	}
 	else if(t == RPZ_RESPONSE_IP_TRIGGER) {
-		rpz_insert_response_ip_trigger(r, policydname,
+		rpz_insert_response_ip_trigger(r, policydname, policydnamelen,
 			a, rr_type, rr_class, rr_ttl, rdatawl, rdatalen, rr,
 			rr_len);
 		free(policydname);
@@ -633,11 +631,13 @@ rpz_insert_rr(struct rpz* r, size_t aznamelen, uint8_t* dname,
  * @param qclass: qclass
  * @param only_exact: if 1 only excact (non wildcard) matches are returned
  * @param wr: get write lock for local-zone if 1, read lock if 0
+ * @param zones_keep_lock: if set do not release the r->local_zones lock, this
+ * 	  makes the caller of this function responsible for releasing the lock.
  * @return: NULL or local-zone holding rd or wr lock
  */
 static struct local_zone*
 rpz_find_zone(struct rpz* r, uint8_t* qname, size_t qname_len, uint16_t qclass,
-	int only_exact, int wr)
+	int only_exact, int wr, int zones_keep_lock)
 {
 	uint8_t* ce;
 	size_t ce_len, ce_labs;
@@ -661,7 +661,9 @@ rpz_find_zone(struct rpz* r, uint8_t* qname, size_t qname_len, uint16_t qclass,
 	} else {
 		lock_rw_rdlock(&z->lock);
 	}
-	lock_rw_unlock(&r->local_zones->lock);
+	if(!zones_keep_lock) {
+		lock_rw_unlock(&r->local_zones->lock);
+	}
 
 	if(exact)
 		return z;
@@ -685,10 +687,12 @@ rpz_find_zone(struct rpz* r, uint8_t* qname, size_t qname_len, uint16_t qclass,
 	memmove(wc+2, ce, ce_len);
 	lock_rw_unlock(&z->lock);
 
-	if(wr) {
-		lock_rw_wrlock(&r->local_zones->lock);
-	} else {
-		lock_rw_rdlock(&r->local_zones->lock);
+	if(!zones_keep_lock) {
+		if(wr) {
+			lock_rw_wrlock(&r->local_zones->lock);
+		} else {
+			lock_rw_rdlock(&r->local_zones->lock);
+		}
 	}
 	z = local_zones_find_le(r->local_zones, wc,
 		ce_len+2, ce_labs+1, qclass, &exact);
@@ -701,7 +705,9 @@ rpz_find_zone(struct rpz* r, uint8_t* qname, size_t qname_len, uint16_t qclass,
 	} else {
 		lock_rw_rdlock(&z->lock);
 	}
-	lock_rw_unlock(&r->local_zones->lock);
+	if(!zones_keep_lock) {
+		lock_rw_unlock(&r->local_zones->lock);
+	}
 	return z;
 }
 
@@ -739,7 +745,6 @@ rpz_data_delete_rr(struct local_zone* z, uint8_t* policydname,
 				/* no memory recycling for zone deletions ... */
 				if(prev) prev->next = p->next;
 				else ld->rrsets = p->next;
-
 			}
 			if(d->count > 1) {
 				if(!local_rrset_remove_rr(d, index))
@@ -797,7 +802,7 @@ rpz_remove_qname_trigger(struct rpz* r, uint8_t* dname, size_t dnamelen,
 	struct local_zone* z;
 	int delete_zone = 1;
 	z = rpz_find_zone(r, dname, dnamelen, rr_class,
-		1 /* only exact */, 1 /* wr lock */);
+		1 /* only exact */, 1 /* wr lock */, 1 /* keep lock*/);
 	if(!z) {
 		verbose(VERB_ALGO, "RPZ: cannot remove RR from IXFR, "
 			"RPZ domain not found");
@@ -813,12 +818,13 @@ rpz_remove_qname_trigger(struct rpz* r, uint8_t* dname, size_t dnamelen,
 	if(delete_zone) {
 		local_zones_del_zone(r->local_zones, z);
 	}
+	lock_rw_unlock(&r->local_zones->lock); 
 	return;
 }
 
 static void
-rpz_remove_response_ip_trigger(struct rpz* r, uint8_t* dname, enum rpz_action a,
-	uint16_t rr_type, uint8_t* rdatawl, size_t rdatalen)
+rpz_remove_response_ip_trigger(struct rpz* r, uint8_t* dname, size_t dnamelen,
+	enum rpz_action a, uint16_t rr_type, uint8_t* rdatawl, size_t rdatalen)
 {
 	struct resp_addr* node;
 	struct sockaddr_storage addr;
@@ -826,7 +832,7 @@ rpz_remove_response_ip_trigger(struct rpz* r, uint8_t* dname, enum rpz_action a,
 	int net, af;
 	int delete_respip = 1;
 
-	if(!netblockdnametoaddr(dname, &addr, &addrlen, &net, &af))
+	if(!netblockdnametoaddr(dname, dnamelen, &addr, &addrlen, &net, &af))
 		return;
 
 	lock_rw_wrlock(&r->respip_set->lock);
@@ -877,8 +883,8 @@ rpz_remove_rr(struct rpz* r, size_t aznamelen, uint8_t* dname, size_t dnamelen,
 		rpz_remove_qname_trigger(r, policydname, policydnamelen, a,
 			rr_type, rr_class, rdatawl, rdatalen);
 	} else if(t == RPZ_RESPONSE_IP_TRIGGER) {
-		rpz_remove_response_ip_trigger(r, policydname, a, rr_type,
-			rdatawl, rdatalen);
+		rpz_remove_response_ip_trigger(r, policydname, policydnamelen,
+			a, rr_type, rdatawl, rdatalen);
 	}
 	free(policydname);
 }
@@ -921,7 +927,7 @@ rpz_apply_qname_trigger(struct auth_zones* az, struct module_env* env,
 		if(!r->taglist || taglist_intersect(r->taglist, 
 			r->taglistlen, taglist, taglen)) {
 			z = rpz_find_zone(r, qinfo->qname, qinfo->qname_len,
-				qinfo->qclass, 0, 0);
+				qinfo->qclass, 0, 0, 0);
 			if(z && r->action_override == RPZ_DISABLED_ACTION) {
 				if(r->log)
 					log_rpz_apply(z->name,

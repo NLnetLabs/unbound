@@ -199,10 +199,11 @@ int dname_lab_startswith(uint8_t* label, char* prefix, char** endptr);
 /**
  * Check if dname contains label
  * @param dname: dname
+ * @param dnamelen: length of dname
  * @param label: label to be checked for presence in dname
  * @return: 1 if dname has this label, 0 otherwise
  */
-int dname_has_label(uint8_t* dname, uint8_t* label);
+int dname_has_label(uint8_t* dname, size_t dnamelen, uint8_t* label);
 
 /**
  * See if domain name d1 is a strict subdomain of d2.

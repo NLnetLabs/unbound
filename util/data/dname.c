@@ -547,14 +547,14 @@ dname_lab_startswith(uint8_t* label, char* prefix, char** endptr)
 }
 
 int
-dname_has_label(uint8_t* dname, uint8_t* label)
+dname_has_label(uint8_t* dname, size_t dnamelen, uint8_t* label)
 {
-	uint8_t lablen = *dname;
-	while(lablen) {
-		if(lablen == *label && memlowercmp(dname, label, lablen) == 0)
+	int len = *dname;
+	while(*dname && len <= dnamelen) {
+		if(*dname == *label && memlowercmp(dname, label, *dname) == 0)
 			return 1;
-		dname += lablen;
-		lablen = *dname;
+		len += *dname;
+		dname += *dname;
 	}
 	return 0;
 }
