@@ -1407,17 +1407,70 @@ local_data_answer(struct local_zone* z, struct module_env* env,
 		lz_type == local_zone_inform_redirect) &&
 		qinfo->qtype != LDNS_RR_TYPE_CNAME &&
 		lr->rrset->rk.type == htons(LDNS_RR_TYPE_CNAME)) {
+		uint8_t* ctarget;
+		size_t ctargetlen = 0;
+
 		qinfo->local_alias =
 			regional_alloc_zero(temp, sizeof(struct local_rrset));
 		if(!qinfo->local_alias)
 			return 0; /* out of memory */
-		qinfo->local_alias->rrset =
-			regional_alloc_init(temp, lr->rrset, sizeof(*lr->rrset));
+		qinfo->local_alias->rrset = regional_alloc_init(
+			temp, lr->rrset, sizeof(*lr->rrset));
 		if(!qinfo->local_alias->rrset)
 			return 0; /* out of memory */
-		/* TODO local_alias->rrset change cnam etarget */
 		qinfo->local_alias->rrset->rk.dname = qinfo->qname;
 		qinfo->local_alias->rrset->rk.dname_len = qinfo->qname_len;
+		get_cname_target(lr->rrset, &ctarget, &ctargetlen);
+		if(!ctargetlen)
+			return 0; /* invalid cname */
+		if(dname_is_wild(ctarget)) {
+			/* synthesize cname target */
+			struct packed_rrset_data* d;
+			uint8_t newtarget[LDNS_MAX_DOMAINLEN];
+			/* -3 for wildcard label and root label from qname */
+			size_t newtargetlen = qinfo->qname_len + ctargetlen - 3;
+
+			log_assert(ctargetlen >= 3);
+			log_assert(qinfo->qname_len >= 1);
+
+			if(newtargetlen > LDNS_MAX_DOMAINLEN) {
+				qinfo->local_alias = NULL;
+				local_error_encode(qinfo, env, edns, repinfo,
+					buf, temp, LDNS_RCODE_YXDOMAIN,
+					(LDNS_RCODE_YXDOMAIN|BIT_AA));
+				return 1;
+			}
+			memset(&qinfo->local_alias->rrset->entry, 0,
+				sizeof(qinfo->local_alias->rrset->entry));
+			qinfo->local_alias->rrset->entry.key =
+				qinfo->local_alias->rrset;
+			qinfo->local_alias->rrset->entry.hash =
+				rrset_key_hash(&qinfo->local_alias->rrset->rk);
+			d = (struct packed_rrset_data*)regional_alloc_zero(temp,
+				sizeof(struct packed_rrset_data) + sizeof(size_t) +
+				sizeof(uint8_t*) + sizeof(time_t) + sizeof(uint16_t)
+				+ newtargetlen);
+			if(!d)
+				return 0; /* out of memory */
+			qinfo->local_alias->rrset->entry.data = d;
+			d->ttl = 0; /* 0 for synthesized CNAME TTL */
+			d->count = 1;
+			d->rrsig_count = 0;
+			d->trust = rrset_trust_ans_noAA;
+			d->rr_len = (size_t*)((uint8_t*)d +
+				sizeof(struct packed_rrset_data));
+			d->rr_len[0] = newtargetlen + sizeof(uint16_t);
+			packed_rrset_ptr_fixup(d);
+			d->rr_ttl[0] = d->ttl;
+			sldns_write_uint16(d->rr_data[0], newtargetlen);
+			/* write qname */
+			memmove(d->rr_data[0] + sizeof(uint16_t), qinfo->qname,
+				qinfo->qname_len - 1);
+			/* write cname target wilcard wildcard label */
+			memmove(d->rr_data[0] + sizeof(uint16_t) +
+				qinfo->qname_len - 1, ctarget + 2,
+				ctargetlen - 2);
+		}
 		return 1;
 	}
 	if(lz_type == local_zone_redirect ||
