@@ -342,7 +342,7 @@ static int ipdnametoaddr(uint8_t* dname, size_t dnamelen,
 				ia[i] = (uint8_t)chunk;
 				i--;
 			} else {
-				log_assert(i < 15 && i >= 1);
+				log_assert(i < 16 && i >= 1);
 				/* ia in network byte order */
 				ia[i-1] = (uint8_t)(chunk >> 8);
 				ia[i] = (uint8_t)(chunk & 0x00FF);
