@@ -243,10 +243,10 @@ rdata_copy(sldns_buffer* pkt, struct packed_rrset_data* data, uint8_t* to,
 				break;
 			}
 			if(len) {
+				log_assert(len <= pkt_len);
 				memmove(to, sldns_buffer_current(pkt), len);
 				to += len;
 				sldns_buffer_skip(pkt, (ssize_t)len);
-				log_assert(len <= pkt_len);
 				pkt_len -= len;
 			}
 			rdf++;

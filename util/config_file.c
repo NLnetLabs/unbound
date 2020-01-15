@@ -582,7 +582,7 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	else S_YNO("aggressive-nsec:", aggressive_nsec)
 	else S_YNO("ignore-cd-flag:", ignore_cd)
 	else S_YNO("serve-expired:", serve_expired)
-	else if(strcmp(opt, "serve_expired_ttl:") == 0)
+	else if(strcmp(opt, "serve-expired-ttl:") == 0)
 	{ IS_NUMBER_OR_ZERO; cfg->serve_expired_ttl = atoi(val); SERVE_EXPIRED_TTL=(time_t)cfg->serve_expired_ttl;}
 	else S_YNO("serve-expired-ttl-reset:", serve_expired_ttl_reset)
 	else S_STR("val-nsec3-keysize-iterations:", val_nsec3_key_iterations)

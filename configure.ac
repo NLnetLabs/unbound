@@ -11,14 +11,14 @@ sinclude(dnscrypt/dnscrypt.m4)
 # must be numbers. ac_defun because of later processing
 m4_define([VERSION_MAJOR],[1])
 m4_define([VERSION_MINOR],[9])
-m4_define([VERSION_MICRO],[4])
+m4_define([VERSION_MICRO],[7])
 AC_INIT(unbound, m4_defn([VERSION_MAJOR]).m4_defn([VERSION_MINOR]).m4_defn([VERSION_MICRO]), unbound-bugs@nlnetlabs.nl or https://github.com/NLnetLabs/unbound/issues, unbound)
 AC_SUBST(UNBOUND_VERSION_MAJOR, [VERSION_MAJOR])
 AC_SUBST(UNBOUND_VERSION_MINOR, [VERSION_MINOR])
 AC_SUBST(UNBOUND_VERSION_MICRO, [VERSION_MICRO])
 
 LIBUNBOUND_CURRENT=9
-LIBUNBOUND_REVISION=3
+LIBUNBOUND_REVISION=7
 LIBUNBOUND_AGE=1
 # 1.0.0 had 0:12:0
 # 1.0.1 had 0:13:0
@@ -90,6 +90,9 @@ LIBUNBOUND_AGE=1
 # 1.9.2 had 9:2:1
 # 1.9.3 had 9:3:1
 # 1.9.4 had 9:4:1
+# 1.9.5 had 9:5:1
+# 1.9.6 had 9:6:1
+# 1.9.7 had 9:7:1
 
 #   Current  -- the number of the binary API that we're implementing
 #   Revision -- which iteration of the implementation of the binary
@@ -430,6 +433,7 @@ AC_INCLUDES_DEFAULT
 # endif
 #endif
 ])
+AC_CHECK_SIZEOF(size_t)
 
 # add option to disable the evil rpath
 ACX_ARG_RPATH
@@ -475,7 +479,7 @@ ACX_MKDIR_ONE_ARG
 AC_CHECK_FUNCS([strptime],[AC_CHECK_STRPTIME_WORKS],[AC_LIBOBJ([strptime])])
 
 # check if we can use SO_REUSEPORT
-if echo "$host" | grep -i -e linux -e dragonfly >/dev/null; then
+if echo "$host" | $GREP -i -e linux -e dragonfly >/dev/null; then
 	AC_DEFINE(REUSEPORT_DEFAULT, 1, [if REUSEPORT is enabled by default])
 else
 	AC_DEFINE(REUSEPORT_DEFAULT, 0, [if REUSEPORT is enabled by default])
@@ -500,6 +504,10 @@ if test x_$enable_alloc_nonregional = x_yes; then
 fi
 if test x_$enable_alloc_checks = x_yes; then
 	AC_DEFINE(UNBOUND_ALLOC_STATS, 1, [use statistics for allocs and frees, for debug use])
+	SLDNS_ALLOCCHECK_EXTRA_OBJ="alloc.lo log.lo"
+	AC_SUBST(SLDNS_ALLOCCHECK_EXTRA_OBJ)
+	ASYNCLOOK_ALLOCCHECK_EXTRA_OBJ="alloc.lo"
+	AC_SUBST(ASYNCLOOK_ALLOCCHECK_EXTRA_OBJ)
 else
 	if test x_$enable_alloc_lite = x_yes; then
 		AC_DEFINE(UNBOUND_ALLOC_LITE, 1, [use to enable lightweight alloc assertions, for debug use])
@@ -801,7 +809,7 @@ if grep VERSION_TEXT $ssldir/include/openssl/opensslv.h | grep "LibreSSL" >/dev/
 	AC_DEFINE([HAVE_LIBRESSL], [1], [Define if we have LibreSSL])
 	# libressl provides these compat functions, but they may also be
 	# declared by the OS in libc.  See if they have been declared.
-	AC_CHECK_DECLS([strlcpy,strlcat,arc4random,arc4random_uniform,reallocarray])
+	AC_CHECK_DECLS([strlcpy,strlcat,arc4random,arc4random_uniform])
 else
 	AC_MSG_RESULT([no])
 fi
@@ -834,6 +842,42 @@ AC_INCLUDES_DEFAULT
 #include <openssl/ssl.h>
 #include <openssl/evp.h>
 ])
+
+if test "$ac_cv_func_HMAC_Init_ex" = "yes"; then
+# check function return type.
+AC_MSG_CHECKING(the return type of HMAC_Init_ex)
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([
+#ifdef HAVE_OPENSSL_ERR_H
+#include <openssl/err.h>
+#endif
+
+#ifdef HAVE_OPENSSL_RAND_H
+#include <openssl/rand.h>
+#endif
+
+#ifdef HAVE_OPENSSL_CONF_H
+#include <openssl/conf.h>
+#endif
+
+#ifdef HAVE_OPENSSL_ENGINE_H
+#include <openssl/engine.h>
+#endif
+#include <openssl/ssl.h>
+#include <openssl/evp.h>
+], [
+	HMAC_CTX* hmac_ctx = NULL;
+	void* hmac_key = NULL;
+	const EVP_MD* digest = NULL;
+	int x = HMAC_Init_ex(hmac_ctx, hmac_key, 32, digest, NULL);
+	(void)x;
+])], [
+	AC_MSG_RESULT(int)
+], [
+	AC_MSG_RESULT(void)
+	AC_DEFINE([HMAC_INIT_EX_RETURNS_VOID], 1, [If HMAC_Init_ex() returns void])
+])
+fi
+
 fi
 AC_SUBST(SSLLIB)
 
@@ -1298,16 +1342,33 @@ if test x_$withval = x_yes -o x_$withval != x_no; then
     ])
 fi
 
-# set static linking if requested
+# set static linking for uninstalled libraries if requested
 AC_SUBST(staticexe)
 staticexe=""
 AC_ARG_ENABLE(static-exe, AC_HELP_STRING([--enable-static-exe],
-	[ enable to compile executables statically against (event) libs, for debug purposes ]), 
+	[ enable to compile executables statically against (event) uninstalled libs, for debug purposes ]),
 	, )
 if test x_$enable_static_exe = x_yes; then
 	staticexe="-static"
 	if test "$on_mingw" = yes; then
 		staticexe="-all-static"
+		# for static compile, include gdi32 and zlib here.
+		if echo $LIBS | grep 'lgdi32' >/dev/null; then
+			:
+		else
+			LIBS="$LIBS -lgdi32"
+		fi
+		LIBS="$LIBS -lz"
+	fi
+fi
+
+# set full static linking if requested
+AC_ARG_ENABLE(fully-static, AC_HELP_STRING([--enable-fully-static],
+	[ enable to compile fully static ]),
+	, )
+if test x_$enable_fully_static = x_yes; then
+	staticexe="-all-static"
+	if test "$on_mingw" = yes; then
 		# for static compile, include gdi32 and zlib here.
 		if echo $LIBS | grep 'lgdi32' >/dev/null; then
 			:
@@ -1483,6 +1544,7 @@ int main(void) {
 	AC_MSG_RESULT(no)
 	AC_LIBOBJ(reallocarray)
 ])
+AC_CHECK_DECLS([reallocarray])
 if test "$USE_NSS" = "no"; then
 	AC_REPLACE_FUNCS(arc4random)
 	AC_REPLACE_FUNCS(arc4random_uniform)
@@ -1508,6 +1570,9 @@ if test "$USE_NSS" = "no"; then
 					LIBS="$LIBS -lmd"
 				fi
 				AC_SEARCH_LIBS([clock_gettime], [rt])
+			;;
+			*freebsd*|*FreeBSD)
+				AC_LIBOBJ(getentropy_freebsd)
 			;;
 			*linux*|Linux|*)
 				AC_LIBOBJ(getentropy_linux)
@@ -1877,6 +1942,10 @@ struct tm;
 char *strptime(const char *s, const char *format, struct tm *tm);
 #endif
 
+#if !HAVE_DECL_REALLOCARRAY
+void *reallocarray(void *ptr, size_t nmemb, size_t size);
+#endif
+
 #ifdef HAVE_LIBRESSL
 #  if !HAVE_DECL_STRLCPY
 size_t strlcpy(char *dst, const char *src, size_t siz);
@@ -1889,9 +1958,6 @@ uint32_t arc4random(void);
 #  endif
 #  if !HAVE_DECL_ARC4RANDOM_UNIFORM && defined(HAVE_ARC4RANDOM_UNIFORM)
 uint32_t arc4random_uniform(uint32_t upper_bound);
-#  endif
-#  if !HAVE_DECL_REALLOCARRAY
-void *reallocarray(void *ptr, size_t nmemb, size_t size);
 #  endif
 #endif /* HAVE_LIBRESSL */
 #ifndef HAVE_ARC4RANDOM

@@ -1649,7 +1649,7 @@ auth_rr_to_string(uint8_t* nm, size_t nmlen, uint16_t tp, uint16_t cl,
 	if(i >= data->count) tp = LDNS_RR_TYPE_RRSIG;
 	dat = nm;
 	datlen = nmlen;
-	w += sldns_wire2str_dname_scan(&dat, &datlen, &s, &slen, NULL, 0);
+	w += sldns_wire2str_dname_scan(&dat, &datlen, &s, &slen, NULL, 0, NULL);
 	w += sldns_str_print(&s, &slen, "\t");
 	w += sldns_str_print(&s, &slen, "%lu\t", (unsigned long)data->rr_ttl[i]);
 	w += sldns_wire2str_class_print(&s, &slen, cl);
@@ -1658,7 +1658,7 @@ auth_rr_to_string(uint8_t* nm, size_t nmlen, uint16_t tp, uint16_t cl,
 	w += sldns_str_print(&s, &slen, "\t");
 	datlen = data->rr_len[i]-2;
 	dat = data->rr_data[i]+2;
-	w += sldns_wire2str_rdata_scan(&dat, &datlen, &s, &slen, tp, NULL, 0);
+	w += sldns_wire2str_rdata_scan(&dat, &datlen, &s, &slen, tp, NULL, 0, NULL);
 
 	if(tp == LDNS_RR_TYPE_DNSKEY) {
 		w += sldns_str_print(&s, &slen, " ;{id = %u}",
@@ -1667,8 +1667,8 @@ auth_rr_to_string(uint8_t* nm, size_t nmlen, uint16_t tp, uint16_t cl,
 	}
 	w += sldns_str_print(&s, &slen, "\n");
 
-	if(w > (int)buflen) {
-		log_nametypeclass(0, "RR too long to print", nm, tp, cl);
+	if(w >= (int)buflen) {
+		log_nametypeclass(NO_VERBOSE, "RR too long to print", nm, tp, cl);
 		return 0;
 	}
 	return 1;
@@ -2406,6 +2406,10 @@ create_synth_cname(uint8_t* qname, size_t qname_len, struct regional* region,
 		return 0; /* rdatalen in DNAME rdata is malformed */
 	if(dname_valid(dtarg, dtarglen) != dtarglen)
 		return 0; /* DNAME RR has malformed rdata */
+	if(qname_len == 0)
+		return 0; /* too short */
+	if(qname_len <= node->namelen)
+		return 0; /* qname too short for dname removal */
 
 	/* synthesize a CNAME */
 	newlen = synth_cname_buf(qname, qname_len, node->namelen,
@@ -2608,12 +2612,14 @@ az_nsec3_hash(uint8_t* buf, size_t buflen, uint8_t* nm, size_t nmlen,
 	/* hashfunc(name, salt) */
 	memmove(p, nm, nmlen);
 	query_dname_tolower(p);
-	memmove(p+nmlen, salt, saltlen);
+	if(salt && saltlen > 0)
+		memmove(p+nmlen, salt, saltlen);
 	(void)secalgo_nsec3_hash(algo, p, nmlen+saltlen, (unsigned char*)buf);
 	for(i=0; i<iter; i++) {
 		/* hashfunc(hash, salt) */
 		memmove(p, buf, hlen);
-		memmove(p+hlen, salt, saltlen);
+		if(salt && saltlen > 0)
+			memmove(p+hlen, salt, saltlen);
 		(void)secalgo_nsec3_hash(algo, p, hlen+saltlen,
 			(unsigned char*)buf);
 	}
@@ -5563,9 +5569,12 @@ check_xfer_packet(sldns_buffer* pkt, struct auth_xfer* xfr,
 				xfr->task_transfer->rr_scan_num == 0 &&
 				LDNS_ANCOUNT(wire)==1) {
 				verbose(VERB_ALGO, "xfr to %s ended, "
-					"IXFR reply that zone has serial %u",
+					"IXFR reply that zone has serial %u,"
+					" fallback from IXFR to AXFR",
 					xfr->task_transfer->master->host,
 					(unsigned)serial);
+				xfr->task_transfer->ixfr_fail = 1;
+				*gonextonfail = 0;
 				return 0;
 			}
 
@@ -6008,15 +6017,15 @@ xfr_probe_send_probe(struct auth_xfer* xfr, struct module_env* env,
 		}
 		if (auth_name != NULL) {
 			if (addr.ss_family == AF_INET
-			&&  ntohs(((struct sockaddr_in *)&addr)->sin_port)
+			&&  (int)ntohs(((struct sockaddr_in *)&addr)->sin_port)
 		            == env->cfg->ssl_port)
 				((struct sockaddr_in *)&addr)->sin_port
-					= htons(env->cfg->port);
+					= htons((uint16_t)env->cfg->port);
 			else if (addr.ss_family == AF_INET6
-			&&  ntohs(((struct sockaddr_in6 *)&addr)->sin6_port)
+			&&  (int)ntohs(((struct sockaddr_in6 *)&addr)->sin6_port)
 		            == env->cfg->ssl_port)
                         	((struct sockaddr_in6 *)&addr)->sin6_port
-					= htons(env->cfg->port);
+					= htons((uint16_t)env->cfg->port);
 		}
 	}
 

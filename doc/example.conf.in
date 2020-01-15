@@ -286,7 +286,7 @@ server:
 	# The pid file can be absolute and outside of the chroot, it is
 	# written just prior to performing the chroot and dropping permissions.
 	#
-	# Additionally, unbound may need to access /dev/random (for entropy).
+	# Additionally, unbound may need to access /dev/urandom (for entropy).
 	# How to do this is specific to your OS.
 	#
 	# If you give "" no chroot is performed. The path must not end in a /.

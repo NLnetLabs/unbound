@@ -422,9 +422,10 @@ rpz_create(struct config_auth* p)
 	}
 	r->log = p->rpz_log;
 	if(p->rpz_log_name) {
-		if(!(r->log_name = strdup(p->rpz_log_name)))
+		if(!(r->log_name = strdup(p->rpz_log_name))) {
 			log_err("malloc failure on RPZ log_name strdup");
 			goto err;
+		}
 	}
 	return r;
 err:

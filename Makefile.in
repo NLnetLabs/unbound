@@ -149,7 +149,7 @@ COMMON_OBJ_ALL_SYMBOLS=@COMMON_OBJ_ALL_SYMBOLS@
 COMPAT_SRC=compat/ctime_r.c compat/fake-rfc2553.c compat/gmtime_r.c \
 compat/inet_aton.c compat/inet_ntop.c compat/inet_pton.c compat/malloc.c \
 compat/memcmp.c compat/memmove.c compat/snprintf.c compat/strlcat.c \
-compat/strlcpy.c compat/strptime.c compat/getentropy_linux.c \
+compat/strlcpy.c compat/strptime.c compat/getentropy_freebsd.c compat/getentropy_linux.c \
 compat/getentropy_osx.c compat/getentropy_solaris.c compat/getentropy_win.c \
 compat/explicit_bzero.c compat/arc4random.c compat/arc4random_uniform.c \
 compat/arc4_lock.c compat/sha512.c compat/reallocarray.c compat/isblank.c \
@@ -161,6 +161,7 @@ SLDNS_SRC=sldns/keyraw.c sldns/sbuffer.c sldns/wire2str.c sldns/parse.c \
 sldns/parseutil.c sldns/rrdef.c sldns/str2wire.c
 SLDNS_OBJ=keyraw.lo sbuffer.lo wire2str.lo parse.lo parseutil.lo rrdef.lo \
 str2wire.lo
+SLDNS_ALLOCCHECK_EXTRA_OBJ=@SLDNS_ALLOCCHECK_EXTRA_OBJ@
 UNITTEST_SRC=testcode/unitanchor.c testcode/unitdname.c \
 testcode/unitlruhash.c testcode/unitmain.c testcode/unitmsgparse.c \
 testcode/unitneg.c testcode/unitregional.c testcode/unitslabhash.c \
@@ -188,11 +189,11 @@ CONTROL_OBJ_LINK=$(CONTROL_OBJ) worker_cb.lo $(COMMON_OBJ_ALL_SYMBOLS) \
 $(SLDNS_OBJ) $(COMPAT_OBJ) @WIN_CONTROL_OBJ_LINK@
 HOST_SRC=smallapp/unbound-host.c
 HOST_OBJ=unbound-host.lo
-HOST_OBJ_LINK=$(HOST_OBJ) $(SLDNS_OBJ) $(COMPAT_OBJ_WITHOUT_CTIMEARC4) @WIN_HOST_OBJ_LINK@
+HOST_OBJ_LINK=$(HOST_OBJ) $(SLDNS_OBJ) $(COMPAT_OBJ_WITHOUT_CTIMEARC4) $(SLDNS_ALLOCCHECK_EXTRA_OBJ) @WIN_HOST_OBJ_LINK@
 UBANCHOR_SRC=smallapp/unbound-anchor.c
 UBANCHOR_OBJ=unbound-anchor.lo
 UBANCHOR_OBJ_LINK=$(UBANCHOR_OBJ) parseutil.lo \
-$(COMPAT_OBJ_WITHOUT_CTIME) @WIN_UBANCHOR_OBJ_LINK@
+$(COMPAT_OBJ_WITHOUT_CTIME) $(SLDNS_ALLOCCHECK_EXTRA_OBJ) @WIN_UBANCHOR_OBJ_LINK@
 TESTBOUND_SRC=testcode/testbound.c testcode/testpkts.c \
 daemon/worker.c daemon/acl_list.c \
 daemon/daemon.c daemon/stats.c \
@@ -218,7 +219,7 @@ MEMSTATS_OBJ_LINK=$(MEMSTATS_OBJ) worker_cb.lo $(COMMON_OBJ) $(COMPAT_OBJ) \
 $(SLDNS_OBJ)
 ASYNCLOOK_SRC=testcode/asynclook.c
 ASYNCLOOK_OBJ=asynclook.lo
-ASYNCLOOK_OBJ_LINK=$(ASYNCLOOK_OBJ) log.lo locks.lo $(COMPAT_OBJ)
+ASYNCLOOK_OBJ_LINK=$(ASYNCLOOK_OBJ) log.lo locks.lo $(COMPAT_OBJ) @ASYNCLOOK_ALLOCCHECK_EXTRA_OBJ@
 STREAMTCP_SRC=testcode/streamtcp.c
 STREAMTCP_OBJ=streamtcp.lo
 STREAMTCP_OBJ_LINK=$(STREAMTCP_OBJ) worker_cb.lo $(COMMON_OBJ) $(COMPAT_OBJ) \
@@ -456,13 +457,18 @@ clean:
 	rm -f _unbound.la libunbound/python/libunbound_wrap.c libunbound/python/unbound.py pythonmod/interface.h pythonmod/unboundmodule.py
 	rm -rf autom4te.cache .libs build doc/html doc/xml
 
-realclean: clean
-	rm -f config.status config.log config.h.in config.h
-	rm -f configure config.sub config.guess ltmain.sh aclocal.m4 libtool
-	rm -f util/configlexer.c util/configparser.c util/configparser.h
-	rm -f doc/example.conf doc/libunbound.3 doc/unbound-anchor.8 doc/unbound-checkconf.8 doc/unbound-control.8 doc/unbound.8 doc/unbound.conf.5
+distclean: clean
+	rm -f config.status config.log config.h
+	rm -f doc/example.conf doc/libunbound.3 doc/unbound-anchor.8 doc/unbound-checkconf.8 doc/unbound-control.8 doc/unbound.8 doc/unbound.conf.5 doc/unbound-host.1
+	rm -f smallapp/unbound-control-setup.sh dnstap/dnstap_config.h dnscrypt/dnscrypt_config.h contrib/libunbound.pc contrib/unbound.socket contrib/unbound.service
 	rm -f $(TEST_BIN)
 	rm -f Makefile 
+
+maintainer-clean: distclean
+	rm -f util/configlexer.c util/configparser.c util/configparser.h
+
+realclean: maintainer-clean
+	rm -f configure config.h.in config.sub config.guess ltmain.sh aclocal.m4 libtool
 
 .SUFFIXES: .lint
 .c.lint:
@@ -680,7 +686,10 @@ msgreply.lo msgreply.o: $(srcdir)/util/data/msgreply.c config.h $(srcdir)/util/d
  $(srcdir)/util/regional.h $(srcdir)/util/data/msgparse.h $(srcdir)/sldns/pkthdr.h $(srcdir)/sldns/rrdef.h \
  $(srcdir)/util/data/msgencode.h $(srcdir)/sldns/sbuffer.h $(srcdir)/sldns/wire2str.h $(srcdir)/util/module.h \
  $(srcdir)/util/fptr_wlist.h $(srcdir)/util/tube.h $(srcdir)/services/mesh.h $(srcdir)/util/rbtree.h \
- $(srcdir)/services/modstack.h
+ $(srcdir)/services/modstack.h $(srcdir)/services/rpz.h $(srcdir)/services/localzone.h \
+ $(srcdir)/util/storage/dnstree.h $(srcdir)/services/view.h $(srcdir)/util/config_file.h \
+ $(srcdir)/services/authzone.h $(srcdir)/daemon/stats.h $(srcdir)/util/timehist.h $(srcdir)/libunbound/unbound.h \
+ $(srcdir)/respip/respip.h
 packed_rrset.lo packed_rrset.o: $(srcdir)/util/data/packed_rrset.c config.h \
  $(srcdir)/util/data/packed_rrset.h $(srcdir)/util/storage/lruhash.h $(srcdir)/util/locks.h $(srcdir)/util/log.h \
  $(srcdir)/util/data/dname.h $(srcdir)/util/storage/lookup3.h $(srcdir)/util/alloc.h $(srcdir)/util/regional.h \
@@ -696,7 +705,8 @@ iterator.lo iterator.o: $(srcdir)/iterator/iterator.c config.h $(srcdir)/iterato
  $(srcdir)/util/rtt.h $(srcdir)/util/netevent.h $(srcdir)/dnscrypt/dnscrypt.h \
   $(srcdir)/services/authzone.h $(srcdir)/services/mesh.h \
  $(srcdir)/services/modstack.h $(srcdir)/services/rpz.h $(srcdir)/services/localzone.h $(srcdir)/services/view.h \
- $(srcdir)/sldns/sbuffer.h $(srcdir)/util/config_file.h $(srcdir)/util/net_help.h $(srcdir)/util/regional.h \
+ $(srcdir)/sldns/sbuffer.h $(srcdir)/util/config_file.h $(srcdir)/daemon/stats.h $(srcdir)/util/timehist.h \
+ $(srcdir)/libunbound/unbound.h $(srcdir)/respip/respip.h $(srcdir)/util/net_help.h $(srcdir)/util/regional.h \
  $(srcdir)/util/data/dname.h $(srcdir)/util/data/msgencode.h $(srcdir)/util/fptr_wlist.h $(srcdir)/util/tube.h \
  $(srcdir)/util/random.h $(srcdir)/sldns/wire2str.h $(srcdir)/sldns/str2wire.h $(srcdir)/sldns/parseutil.h
 iter_delegpt.lo iter_delegpt.o: $(srcdir)/iterator/iter_delegpt.c config.h $(srcdir)/iterator/iter_delegpt.h \
@@ -743,9 +753,11 @@ iter_utils.lo iter_utils.o: $(srcdir)/iterator/iter_utils.c config.h $(srcdir)/i
   $(srcdir)/services/cache/dns.h $(srcdir)/services/cache/rrset.h \
  $(srcdir)/util/storage/slabhash.h $(srcdir)/util/net_help.h $(srcdir)/util/config_file.h \
  $(srcdir)/util/regional.h $(srcdir)/util/data/dname.h $(srcdir)/util/random.h $(srcdir)/util/fptr_wlist.h \
- $(srcdir)/util/tube.h $(srcdir)/services/mesh.h $(srcdir)/services/modstack.h $(srcdir)/validator/val_anchor.h \
- $(srcdir)/validator/val_kcache.h $(srcdir)/validator/val_kentry.h $(srcdir)/validator/val_utils.h \
- $(srcdir)/validator/val_sigcrypt.h $(srcdir)/sldns/sbuffer.h $(srcdir)/sldns/str2wire.h
+ $(srcdir)/util/tube.h $(srcdir)/services/mesh.h $(srcdir)/services/modstack.h $(srcdir)/services/rpz.h \
+ $(srcdir)/services/localzone.h $(srcdir)/services/view.h $(srcdir)/sldns/sbuffer.h $(srcdir)/services/authzone.h \
+ $(srcdir)/daemon/stats.h $(srcdir)/util/timehist.h $(srcdir)/libunbound/unbound.h $(srcdir)/respip/respip.h \
+ $(srcdir)/validator/val_anchor.h $(srcdir)/validator/val_kcache.h $(srcdir)/validator/val_kentry.h \
+ $(srcdir)/validator/val_utils.h $(srcdir)/validator/val_sigcrypt.h $(srcdir)/sldns/str2wire.h
 listen_dnsport.lo listen_dnsport.o: $(srcdir)/services/listen_dnsport.c config.h \
  $(srcdir)/services/listen_dnsport.h $(srcdir)/util/netevent.h $(srcdir)/dnscrypt/dnscrypt.h \
   $(srcdir)/services/outside_network.h $(srcdir)/util/rbtree.h \
@@ -753,7 +765,10 @@ listen_dnsport.lo listen_dnsport.o: $(srcdir)/services/listen_dnsport.c config.h
  $(srcdir)/sldns/sbuffer.h $(srcdir)/services/mesh.h $(srcdir)/util/data/msgparse.h \
  $(srcdir)/util/storage/lruhash.h $(srcdir)/util/locks.h $(srcdir)/sldns/pkthdr.h $(srcdir)/sldns/rrdef.h \
  $(srcdir)/util/module.h $(srcdir)/util/data/msgreply.h $(srcdir)/util/data/packed_rrset.h \
- $(srcdir)/services/modstack.h $(srcdir)/util/fptr_wlist.h $(srcdir)/util/tube.h
+ $(srcdir)/services/modstack.h $(srcdir)/services/rpz.h $(srcdir)/services/localzone.h \
+ $(srcdir)/util/storage/dnstree.h $(srcdir)/services/view.h $(srcdir)/services/authzone.h \
+ $(srcdir)/daemon/stats.h $(srcdir)/util/timehist.h $(srcdir)/libunbound/unbound.h $(srcdir)/respip/respip.h \
+ $(srcdir)/util/fptr_wlist.h $(srcdir)/util/tube.h
 localzone.lo localzone.o: $(srcdir)/services/localzone.c config.h $(srcdir)/services/localzone.h \
  $(srcdir)/util/rbtree.h $(srcdir)/util/locks.h $(srcdir)/util/log.h $(srcdir)/util/storage/dnstree.h \
  $(srcdir)/util/module.h $(srcdir)/util/storage/lruhash.h $(srcdir)/util/data/msgreply.h \
@@ -766,25 +781,24 @@ mesh.lo mesh.o: $(srcdir)/services/mesh.c config.h $(srcdir)/services/mesh.h $(s
  $(srcdir)/util/netevent.h $(srcdir)/dnscrypt/dnscrypt.h  \
  $(srcdir)/util/data/msgparse.h $(srcdir)/util/storage/lruhash.h $(srcdir)/util/locks.h $(srcdir)/util/log.h \
  $(srcdir)/sldns/pkthdr.h $(srcdir)/sldns/rrdef.h $(srcdir)/util/module.h $(srcdir)/util/data/msgreply.h \
- $(srcdir)/util/data/packed_rrset.h $(srcdir)/services/modstack.h $(srcdir)/services/outbound_list.h \
- $(srcdir)/services/cache/dns.h $(srcdir)/util/net_help.h $(srcdir)/util/regional.h \
- $(srcdir)/util/data/msgencode.h $(srcdir)/util/timehist.h $(srcdir)/util/fptr_wlist.h $(srcdir)/util/tube.h \
- $(srcdir)/util/alloc.h $(srcdir)/util/config_file.h $(srcdir)/util/edns.h $(srcdir)/sldns/sbuffer.h \
- $(srcdir)/sldns/wire2str.h $(srcdir)/services/localzone.h $(srcdir)/util/storage/dnstree.h \
- $(srcdir)/services/view.h $(srcdir)/util/data/dname.h $(srcdir)/respip/respip.h \
+ $(srcdir)/util/data/packed_rrset.h $(srcdir)/services/modstack.h $(srcdir)/services/rpz.h \
+ $(srcdir)/services/localzone.h $(srcdir)/util/storage/dnstree.h $(srcdir)/services/view.h \
+ $(srcdir)/sldns/sbuffer.h $(srcdir)/util/config_file.h $(srcdir)/services/authzone.h $(srcdir)/daemon/stats.h \
+ $(srcdir)/util/timehist.h $(srcdir)/libunbound/unbound.h $(srcdir)/respip/respip.h \
+ $(srcdir)/services/outbound_list.h $(srcdir)/services/cache/dns.h $(srcdir)/util/net_help.h \
+ $(srcdir)/util/regional.h $(srcdir)/util/data/msgencode.h $(srcdir)/util/fptr_wlist.h $(srcdir)/util/tube.h \
+ $(srcdir)/util/alloc.h $(srcdir)/util/edns.h $(srcdir)/sldns/wire2str.h $(srcdir)/util/data/dname.h \
  $(srcdir)/services/listen_dnsport.h
 modstack.lo modstack.o: $(srcdir)/services/modstack.c config.h $(srcdir)/services/modstack.h \
  $(srcdir)/util/module.h $(srcdir)/util/storage/lruhash.h $(srcdir)/util/locks.h $(srcdir)/util/log.h \
  $(srcdir)/util/data/msgreply.h $(srcdir)/util/data/packed_rrset.h $(srcdir)/util/data/msgparse.h \
  $(srcdir)/sldns/pkthdr.h $(srcdir)/sldns/rrdef.h $(srcdir)/util/fptr_wlist.h $(srcdir)/util/netevent.h \
  $(srcdir)/dnscrypt/dnscrypt.h  $(srcdir)/util/tube.h \
- $(srcdir)/services/mesh.h $(srcdir)/util/rbtree.h $(srcdir)/dns64/dns64.h $(srcdir)/iterator/iterator.h \
- $(srcdir)/services/outbound_list.h $(srcdir)/validator/validator.h $(srcdir)/validator/val_utils.h \
- $(srcdir)/respip/respip.h $(srcdir)/services/localzone.h $(srcdir)/util/storage/dnstree.h \
- $(srcdir)/services/view.h $(PYTHONMOD_HEADER) $(srcdir)/ipsecmod/ipsecmod.h \
- $(srcdir)/edns-subnet/subnetmod.h $(srcdir)/util/alloc.h $(srcdir)/util/net_help.h \
- $(srcdir)/util/storage/slabhash.h $(srcdir)/edns-subnet/addrtree.h $(srcdir)/edns-subnet/edns-subnet.h \
- $(srcdir)/ipset/ipset.h $(srcdir)/sldns/sbuffer.h
+ $(srcdir)/services/mesh.h $(srcdir)/util/rbtree.h $(srcdir)/services/rpz.h $(srcdir)/services/localzone.h \
+ $(srcdir)/util/storage/dnstree.h $(srcdir)/services/view.h $(srcdir)/sldns/sbuffer.h \
+ $(srcdir)/util/config_file.h $(srcdir)/services/authzone.h $(srcdir)/daemon/stats.h $(srcdir)/util/timehist.h \
+ $(srcdir)/libunbound/unbound.h $(srcdir)/respip/respip.h $(srcdir)/dns64/dns64.h $(srcdir)/iterator/iterator.h \
+ $(srcdir)/services/outbound_list.h $(srcdir)/validator/validator.h $(srcdir)/validator/val_utils.h
 view.lo view.o: $(srcdir)/services/view.c config.h $(srcdir)/services/view.h $(srcdir)/util/rbtree.h \
  $(srcdir)/util/locks.h $(srcdir)/util/log.h $(srcdir)/services/localzone.h $(srcdir)/util/storage/dnstree.h \
  $(srcdir)/util/module.h $(srcdir)/util/storage/lruhash.h $(srcdir)/util/data/msgreply.h \
@@ -796,7 +810,8 @@ rpz.lo rpz.o: $(srcdir)/services/rpz.c config.h $(srcdir)/services/rpz.h $(srcdi
  $(srcdir)/util/data/packed_rrset.h $(srcdir)/util/data/msgparse.h $(srcdir)/sldns/pkthdr.h \
  $(srcdir)/sldns/rrdef.h $(srcdir)/services/view.h $(srcdir)/sldns/sbuffer.h $(srcdir)/util/config_file.h \
  $(srcdir)/services/authzone.h $(srcdir)/services/mesh.h $(srcdir)/util/netevent.h $(srcdir)/dnscrypt/dnscrypt.h \
-  $(srcdir)/services/modstack.h $(srcdir)/sldns/wire2str.h \
+  $(srcdir)/services/modstack.h $(srcdir)/libunbound/unbound.h \
+ $(srcdir)/daemon/stats.h $(srcdir)/util/timehist.h $(srcdir)/respip/respip.h $(srcdir)/sldns/wire2str.h \
  $(srcdir)/sldns/str2wire.h $(srcdir)/util/data/dname.h $(srcdir)/util/net_help.h $(srcdir)/util/regional.h
 outbound_list.lo outbound_list.o: $(srcdir)/services/outbound_list.c config.h \
  $(srcdir)/services/outbound_list.h $(srcdir)/services/outside_network.h $(srcdir)/util/rbtree.h \
@@ -811,13 +826,19 @@ outside_network.lo outside_network.o: $(srcdir)/services/outside_network.c confi
  $(srcdir)/services/outbound_list.h $(srcdir)/util/module.h $(srcdir)/util/data/msgparse.h \
  $(srcdir)/sldns/pkthdr.h $(srcdir)/sldns/rrdef.h $(srcdir)/util/data/msgencode.h $(srcdir)/util/data/dname.h \
  $(srcdir)/util/net_help.h $(srcdir)/util/random.h $(srcdir)/util/fptr_wlist.h $(srcdir)/util/tube.h \
- $(srcdir)/services/mesh.h $(srcdir)/services/modstack.h $(srcdir)/sldns/sbuffer.h $(srcdir)/dnstap/dnstap.h
+ $(srcdir)/services/mesh.h $(srcdir)/services/modstack.h $(srcdir)/services/rpz.h $(srcdir)/services/localzone.h \
+ $(srcdir)/services/view.h $(srcdir)/sldns/sbuffer.h $(srcdir)/util/config_file.h $(srcdir)/services/authzone.h \
+ $(srcdir)/daemon/stats.h $(srcdir)/util/timehist.h $(srcdir)/libunbound/unbound.h $(srcdir)/respip/respip.h \
+ $(srcdir)/dnstap/dnstap.h
 alloc.lo alloc.o: $(srcdir)/util/alloc.c config.h $(srcdir)/util/alloc.h $(srcdir)/util/locks.h $(srcdir)/util/log.h \
  $(srcdir)/util/regional.h $(srcdir)/util/data/packed_rrset.h $(srcdir)/util/storage/lruhash.h \
  $(srcdir)/util/fptr_wlist.h $(srcdir)/util/netevent.h $(srcdir)/dnscrypt/dnscrypt.h \
   $(srcdir)/util/module.h $(srcdir)/util/data/msgreply.h \
  $(srcdir)/util/data/msgparse.h $(srcdir)/sldns/pkthdr.h $(srcdir)/sldns/rrdef.h $(srcdir)/util/tube.h \
- $(srcdir)/services/mesh.h $(srcdir)/util/rbtree.h $(srcdir)/services/modstack.h
+ $(srcdir)/services/mesh.h $(srcdir)/util/rbtree.h $(srcdir)/services/modstack.h $(srcdir)/services/rpz.h \
+ $(srcdir)/services/localzone.h $(srcdir)/util/storage/dnstree.h $(srcdir)/services/view.h \
+ $(srcdir)/sldns/sbuffer.h $(srcdir)/util/config_file.h $(srcdir)/services/authzone.h $(srcdir)/daemon/stats.h \
+ $(srcdir)/util/timehist.h $(srcdir)/libunbound/unbound.h $(srcdir)/respip/respip.h
 config_file.lo config_file.o: $(srcdir)/util/config_file.c config.h $(srcdir)/util/log.h \
  $(srcdir)/util/configyyrename.h $(srcdir)/util/config_file.h util/configparser.h \
  $(srcdir)/util/net_help.h $(srcdir)/util/data/msgparse.h $(srcdir)/util/storage/lruhash.h $(srcdir)/util/locks.h \
@@ -825,10 +846,11 @@ config_file.lo config_file.o: $(srcdir)/util/config_file.c config.h $(srcdir)/ut
  $(srcdir)/util/data/packed_rrset.h $(srcdir)/util/regional.h $(srcdir)/util/fptr_wlist.h \
  $(srcdir)/util/netevent.h $(srcdir)/dnscrypt/dnscrypt.h  \
  $(srcdir)/util/tube.h $(srcdir)/services/mesh.h $(srcdir)/util/rbtree.h $(srcdir)/services/modstack.h \
- $(srcdir)/util/data/dname.h $(srcdir)/util/rtt.h $(srcdir)/services/cache/infra.h \
- $(srcdir)/util/storage/dnstree.h $(srcdir)/sldns/wire2str.h $(srcdir)/sldns/parseutil.h \
- $(srcdir)/iterator/iterator.h $(srcdir)/services/outbound_list.h $(srcdir)/edns-subnet/edns-subnet.h \
- $(srcdir)/util/iana_ports.inc
+ $(srcdir)/services/rpz.h $(srcdir)/services/localzone.h $(srcdir)/util/storage/dnstree.h \
+ $(srcdir)/services/view.h $(srcdir)/sldns/sbuffer.h $(srcdir)/services/authzone.h $(srcdir)/daemon/stats.h \
+ $(srcdir)/util/timehist.h $(srcdir)/libunbound/unbound.h $(srcdir)/respip/respip.h $(srcdir)/util/data/dname.h \
+ $(srcdir)/util/rtt.h $(srcdir)/services/cache/infra.h $(srcdir)/sldns/wire2str.h $(srcdir)/sldns/parseutil.h \
+ $(srcdir)/iterator/iterator.h $(srcdir)/services/outbound_list.h $(srcdir)/util/iana_ports.inc
 configlexer.lo configlexer.o: util/configlexer.c config.h $(srcdir)/util/configyyrename.h \
  $(srcdir)/util/config_file.h util/configparser.h
 configparser.lo configparser.o: util/configparser.c config.h $(srcdir)/util/configyyrename.h \
@@ -841,17 +863,19 @@ shm_main.lo shm_main.o: $(srcdir)/util/shm_side/shm_main.c config.h $(srcdir)/ut
  $(srcdir)/util/netevent.h $(srcdir)/dnscrypt/dnscrypt.h $(srcdir)/util/data/msgreply.h \
  $(srcdir)/util/data/msgparse.h $(srcdir)/sldns/pkthdr.h $(srcdir)/sldns/rrdef.h $(srcdir)/daemon/stats.h \
  $(srcdir)/util/timehist.h $(srcdir)/util/module.h $(srcdir)/dnstap/dnstap.h $(srcdir)/services/mesh.h \
- $(srcdir)/util/rbtree.h $(srcdir)/services/cache/rrset.h $(srcdir)/util/storage/slabhash.h \
- $(srcdir)/services/cache/infra.h $(srcdir)/util/storage/dnstree.h $(srcdir)/util/rtt.h \
- $(srcdir)/validator/validator.h $(srcdir)/validator/val_utils.h $(srcdir)/util/config_file.h \
- $(srcdir)/util/fptr_wlist.h $(srcdir)/util/tube.h
+ $(srcdir)/util/rbtree.h $(srcdir)/services/rpz.h $(srcdir)/services/localzone.h $(srcdir)/util/storage/dnstree.h \
+ $(srcdir)/services/view.h $(srcdir)/util/config_file.h $(srcdir)/services/authzone.h $(srcdir)/respip/respip.h \
+ $(srcdir)/services/cache/rrset.h $(srcdir)/util/storage/slabhash.h $(srcdir)/services/cache/infra.h \
+ $(srcdir)/util/rtt.h $(srcdir)/validator/validator.h $(srcdir)/validator/val_utils.h $(srcdir)/util/fptr_wlist.h \
+ $(srcdir)/util/tube.h
 authzone.lo authzone.o: $(srcdir)/services/authzone.c config.h $(srcdir)/services/authzone.h \
  $(srcdir)/util/rbtree.h $(srcdir)/util/locks.h $(srcdir)/util/log.h $(srcdir)/services/mesh.h $(srcdir)/util/netevent.h \
  $(srcdir)/dnscrypt/dnscrypt.h  $(srcdir)/util/data/msgparse.h \
  $(srcdir)/util/storage/lruhash.h $(srcdir)/sldns/pkthdr.h $(srcdir)/sldns/rrdef.h $(srcdir)/util/module.h \
  $(srcdir)/util/data/msgreply.h $(srcdir)/util/data/packed_rrset.h $(srcdir)/services/modstack.h \
  $(srcdir)/services/rpz.h $(srcdir)/services/localzone.h $(srcdir)/util/storage/dnstree.h \
- $(srcdir)/services/view.h $(srcdir)/sldns/sbuffer.h $(srcdir)/util/config_file.h $(srcdir)/util/data/dname.h \
+ $(srcdir)/services/view.h $(srcdir)/sldns/sbuffer.h $(srcdir)/util/config_file.h $(srcdir)/daemon/stats.h \
+ $(srcdir)/util/timehist.h $(srcdir)/libunbound/unbound.h $(srcdir)/respip/respip.h $(srcdir)/util/data/dname.h \
  $(srcdir)/util/data/msgencode.h $(srcdir)/util/regional.h $(srcdir)/util/net_help.h $(srcdir)/util/random.h \
  $(srcdir)/services/cache/dns.h $(srcdir)/services/outside_network.h  \
  $(srcdir)/services/listen_dnsport.h $(srcdir)/sldns/str2wire.h $(srcdir)/sldns/wire2str.h \
@@ -862,23 +886,29 @@ fptr_wlist.lo fptr_wlist.o: $(srcdir)/util/fptr_wlist.c config.h $(srcdir)/util/
  $(srcdir)/util/storage/lruhash.h $(srcdir)/util/locks.h $(srcdir)/util/log.h $(srcdir)/util/module.h \
  $(srcdir)/util/data/msgreply.h $(srcdir)/util/data/packed_rrset.h $(srcdir)/util/data/msgparse.h \
  $(srcdir)/sldns/pkthdr.h $(srcdir)/sldns/rrdef.h $(srcdir)/util/tube.h $(srcdir)/services/mesh.h $(srcdir)/util/rbtree.h \
- $(srcdir)/services/modstack.h $(srcdir)/util/mini_event.h $(srcdir)/util/rbtree.h \
- $(srcdir)/services/outside_network.h  $(srcdir)/services/localzone.h \
+ $(srcdir)/services/modstack.h $(srcdir)/services/rpz.h $(srcdir)/services/localzone.h \
  $(srcdir)/util/storage/dnstree.h $(srcdir)/services/view.h $(srcdir)/sldns/sbuffer.h \
- $(srcdir)/services/authzone.h $(srcdir)/services/rpz.h $(srcdir)/util/config_file.h \
- $(srcdir)/services/cache/infra.h $(srcdir)/util/rtt.h $(srcdir)/services/cache/rrset.h \
- $(srcdir)/util/storage/slabhash.h $(srcdir)/dns64/dns64.h $(srcdir)/iterator/iterator.h \
- $(srcdir)/services/outbound_list.h $(srcdir)/iterator/iter_fwd.h $(srcdir)/validator/validator.h \
- $(srcdir)/validator/val_utils.h $(srcdir)/validator/val_anchor.h $(srcdir)/validator/val_nsec3.h \
- $(srcdir)/validator/val_sigcrypt.h $(srcdir)/validator/val_kentry.h $(srcdir)/validator/val_neg.h \
- $(srcdir)/validator/autotrust.h $(srcdir)/libunbound/libworker.h $(srcdir)/libunbound/context.h \
- $(srcdir)/util/alloc.h $(srcdir)/libunbound/unbound.h $(srcdir)/libunbound/unbound-event.h \
- $(srcdir)/libunbound/worker.h $(srcdir)/respip/respip.h $(PYTHONMOD_HEADER) \
- $(srcdir)/ipsecmod/ipsecmod.h $(srcdir)/edns-subnet/subnetmod.h $(srcdir)/util/net_help.h \
- $(srcdir)/edns-subnet/addrtree.h $(srcdir)/edns-subnet/edns-subnet.h $(srcdir)/ipset/ipset.h
+ $(srcdir)/util/config_file.h $(srcdir)/services/authzone.h $(srcdir)/daemon/stats.h $(srcdir)/util/timehist.h \
+ $(srcdir)/libunbound/unbound.h $(srcdir)/respip/respip.h $(srcdir)/util/mini_event.h $(srcdir)/util/rbtree.h \
+ $(srcdir)/services/outside_network.h  $(srcdir)/services/cache/infra.h \
+ $(srcdir)/util/rtt.h $(srcdir)/services/cache/rrset.h $(srcdir)/util/storage/slabhash.h $(srcdir)/dns64/dns64.h \
+ $(srcdir)/iterator/iterator.h $(srcdir)/services/outbound_list.h $(srcdir)/iterator/iter_fwd.h \
+ $(srcdir)/validator/validator.h $(srcdir)/validator/val_utils.h $(srcdir)/validator/val_anchor.h \
+ $(srcdir)/validator/val_nsec3.h $(srcdir)/validator/val_sigcrypt.h $(srcdir)/validator/val_kentry.h \
+ $(srcdir)/validator/val_neg.h $(srcdir)/validator/autotrust.h $(srcdir)/libunbound/libworker.h \
+ $(srcdir)/libunbound/context.h $(srcdir)/util/alloc.h $(srcdir)/libunbound/unbound-event.h \
+ $(srcdir)/libunbound/worker.h
 locks.lo locks.o: $(srcdir)/util/locks.c config.h $(srcdir)/util/locks.h $(srcdir)/util/log.h
 log.lo log.o: $(srcdir)/util/log.c config.h $(srcdir)/util/log.h $(srcdir)/util/locks.h $(srcdir)/sldns/sbuffer.h
-mini_event.lo mini_event.o: $(srcdir)/util/mini_event.c config.h $(srcdir)/util/mini_event.h
+mini_event.lo mini_event.o: $(srcdir)/util/mini_event.c config.h $(srcdir)/util/mini_event.h $(srcdir)/util/rbtree.h \
+ $(srcdir)/util/fptr_wlist.h $(srcdir)/util/netevent.h $(srcdir)/dnscrypt/dnscrypt.h \
+  $(srcdir)/util/storage/lruhash.h $(srcdir)/util/locks.h \
+ $(srcdir)/util/log.h $(srcdir)/util/module.h $(srcdir)/util/data/msgreply.h $(srcdir)/util/data/packed_rrset.h \
+ $(srcdir)/util/data/msgparse.h $(srcdir)/sldns/pkthdr.h $(srcdir)/sldns/rrdef.h $(srcdir)/util/tube.h \
+ $(srcdir)/services/mesh.h $(srcdir)/util/rbtree.h $(srcdir)/services/modstack.h $(srcdir)/services/rpz.h \
+ $(srcdir)/services/localzone.h $(srcdir)/util/storage/dnstree.h $(srcdir)/services/view.h \
+ $(srcdir)/sldns/sbuffer.h $(srcdir)/util/config_file.h $(srcdir)/services/authzone.h $(srcdir)/daemon/stats.h \
+ $(srcdir)/util/timehist.h $(srcdir)/libunbound/unbound.h $(srcdir)/respip/respip.h
 module.lo module.o: $(srcdir)/util/module.c config.h $(srcdir)/util/module.h $(srcdir)/util/storage/lruhash.h \
  $(srcdir)/util/locks.h $(srcdir)/util/log.h $(srcdir)/util/data/msgreply.h $(srcdir)/util/data/packed_rrset.h \
  $(srcdir)/util/data/msgparse.h $(srcdir)/sldns/pkthdr.h $(srcdir)/sldns/rrdef.h $(srcdir)/sldns/wire2str.h
@@ -888,8 +918,10 @@ netevent.lo netevent.o: $(srcdir)/util/netevent.c config.h $(srcdir)/util/neteve
  $(srcdir)/util/fptr_wlist.h $(srcdir)/util/storage/lruhash.h $(srcdir)/util/module.h \
  $(srcdir)/util/data/msgreply.h $(srcdir)/util/data/packed_rrset.h $(srcdir)/util/data/msgparse.h \
  $(srcdir)/sldns/pkthdr.h $(srcdir)/sldns/rrdef.h $(srcdir)/util/tube.h $(srcdir)/services/mesh.h \
- $(srcdir)/services/modstack.h $(srcdir)/sldns/sbuffer.h $(srcdir)/sldns/str2wire.h $(srcdir)/dnstap/dnstap.h \
-  $(srcdir)/services/listen_dnsport.h
+ $(srcdir)/services/modstack.h $(srcdir)/services/rpz.h $(srcdir)/services/localzone.h $(srcdir)/services/view.h \
+ $(srcdir)/sldns/sbuffer.h $(srcdir)/util/config_file.h $(srcdir)/services/authzone.h $(srcdir)/daemon/stats.h \
+ $(srcdir)/util/timehist.h $(srcdir)/libunbound/unbound.h $(srcdir)/respip/respip.h $(srcdir)/sldns/str2wire.h \
+ $(srcdir)/dnstap/dnstap.h  $(srcdir)/services/listen_dnsport.h
 net_help.lo net_help.o: $(srcdir)/util/net_help.c config.h $(srcdir)/util/net_help.h $(srcdir)/util/log.h \
  $(srcdir)/util/data/dname.h $(srcdir)/util/storage/lruhash.h $(srcdir)/util/locks.h $(srcdir)/util/module.h \
  $(srcdir)/util/data/msgreply.h $(srcdir)/util/data/packed_rrset.h $(srcdir)/util/data/msgparse.h \
@@ -901,7 +933,10 @@ rbtree.lo rbtree.o: $(srcdir)/util/rbtree.c config.h $(srcdir)/util/log.h $(srcd
  $(srcdir)/util/storage/lruhash.h $(srcdir)/util/locks.h $(srcdir)/util/log.h $(srcdir)/util/module.h \
  $(srcdir)/util/data/msgreply.h $(srcdir)/util/data/packed_rrset.h $(srcdir)/util/data/msgparse.h \
  $(srcdir)/sldns/pkthdr.h $(srcdir)/sldns/rrdef.h $(srcdir)/util/tube.h $(srcdir)/services/mesh.h $(srcdir)/util/rbtree.h \
- $(srcdir)/services/modstack.h
+ $(srcdir)/services/modstack.h $(srcdir)/services/rpz.h $(srcdir)/services/localzone.h \
+ $(srcdir)/util/storage/dnstree.h $(srcdir)/services/view.h $(srcdir)/sldns/sbuffer.h \
+ $(srcdir)/util/config_file.h $(srcdir)/services/authzone.h $(srcdir)/daemon/stats.h $(srcdir)/util/timehist.h \
+ $(srcdir)/libunbound/unbound.h $(srcdir)/respip/respip.h
 regional.lo regional.o: $(srcdir)/util/regional.c config.h $(srcdir)/util/log.h $(srcdir)/util/regional.h
 rtt.lo rtt.o: $(srcdir)/util/rtt.c config.h $(srcdir)/util/rtt.h $(srcdir)/iterator/iterator.h \
  $(srcdir)/services/outbound_list.h $(srcdir)/util/data/msgreply.h $(srcdir)/util/storage/lruhash.h \
@@ -921,7 +956,10 @@ lruhash.lo lruhash.o: $(srcdir)/util/storage/lruhash.c config.h $(srcdir)/util/s
  $(srcdir)/dnscrypt/dnscrypt.h  $(srcdir)/util/module.h \
  $(srcdir)/util/data/msgreply.h $(srcdir)/util/data/packed_rrset.h $(srcdir)/util/data/msgparse.h \
  $(srcdir)/sldns/pkthdr.h $(srcdir)/sldns/rrdef.h $(srcdir)/util/tube.h $(srcdir)/services/mesh.h $(srcdir)/util/rbtree.h \
- $(srcdir)/services/modstack.h
+ $(srcdir)/services/modstack.h $(srcdir)/services/rpz.h $(srcdir)/services/localzone.h \
+ $(srcdir)/util/storage/dnstree.h $(srcdir)/services/view.h $(srcdir)/sldns/sbuffer.h \
+ $(srcdir)/util/config_file.h $(srcdir)/services/authzone.h $(srcdir)/daemon/stats.h $(srcdir)/util/timehist.h \
+ $(srcdir)/libunbound/unbound.h $(srcdir)/respip/respip.h
 slabhash.lo slabhash.o: $(srcdir)/util/storage/slabhash.c config.h $(srcdir)/util/storage/slabhash.h \
  $(srcdir)/util/storage/lruhash.h $(srcdir)/util/locks.h $(srcdir)/util/log.h
 tcp_conn_limit.lo tcp_conn_limit.o: $(srcdir)/util/tcp_conn_limit.c config.h $(srcdir)/util/regional.h \
@@ -936,19 +974,23 @@ tube.lo tube.o: $(srcdir)/util/tube.c config.h $(srcdir)/util/tube.h $(srcdir)/u
  $(srcdir)/util/fptr_wlist.h $(srcdir)/util/storage/lruhash.h $(srcdir)/util/locks.h $(srcdir)/util/module.h \
  $(srcdir)/util/data/msgreply.h $(srcdir)/util/data/packed_rrset.h $(srcdir)/util/data/msgparse.h \
  $(srcdir)/sldns/pkthdr.h $(srcdir)/sldns/rrdef.h $(srcdir)/services/mesh.h $(srcdir)/util/rbtree.h \
- $(srcdir)/services/modstack.h $(srcdir)/util/ub_event.h
+ $(srcdir)/services/modstack.h $(srcdir)/services/rpz.h $(srcdir)/services/localzone.h \
+ $(srcdir)/util/storage/dnstree.h $(srcdir)/services/view.h $(srcdir)/sldns/sbuffer.h \
+ $(srcdir)/util/config_file.h $(srcdir)/services/authzone.h $(srcdir)/daemon/stats.h $(srcdir)/util/timehist.h \
+ $(srcdir)/libunbound/unbound.h $(srcdir)/respip/respip.h $(srcdir)/util/ub_event.h
 ub_event.lo ub_event.o: $(srcdir)/util/ub_event.c config.h $(srcdir)/util/ub_event.h $(srcdir)/util/log.h \
  $(srcdir)/util/netevent.h $(srcdir)/dnscrypt/dnscrypt.h  \
- $(srcdir)/util/tube.h \
- 
+ $(srcdir)/util/tube.h $(srcdir)/util/mini_event.h $(srcdir)/util/rbtree.h
 ub_event_pluggable.lo ub_event_pluggable.o: $(srcdir)/util/ub_event_pluggable.c config.h $(srcdir)/util/ub_event.h \
  $(srcdir)/libunbound/unbound-event.h $(srcdir)/util/netevent.h $(srcdir)/dnscrypt/dnscrypt.h \
   $(srcdir)/util/log.h $(srcdir)/util/fptr_wlist.h \
  $(srcdir)/util/storage/lruhash.h $(srcdir)/util/locks.h $(srcdir)/util/module.h $(srcdir)/util/data/msgreply.h \
  $(srcdir)/util/data/packed_rrset.h $(srcdir)/util/data/msgparse.h $(srcdir)/sldns/pkthdr.h \
  $(srcdir)/sldns/rrdef.h $(srcdir)/util/tube.h $(srcdir)/services/mesh.h $(srcdir)/util/rbtree.h \
- $(srcdir)/services/modstack.h \
- 
+ $(srcdir)/services/modstack.h $(srcdir)/services/rpz.h $(srcdir)/services/localzone.h \
+ $(srcdir)/util/storage/dnstree.h $(srcdir)/services/view.h $(srcdir)/sldns/sbuffer.h \
+ $(srcdir)/util/config_file.h $(srcdir)/services/authzone.h $(srcdir)/daemon/stats.h $(srcdir)/util/timehist.h \
+ $(srcdir)/libunbound/unbound.h $(srcdir)/respip/respip.h $(srcdir)/util/mini_event.h $(srcdir)/util/rbtree.h
 winsock_event.lo winsock_event.o: $(srcdir)/util/winsock_event.c config.h
 autotrust.lo autotrust.o: $(srcdir)/validator/autotrust.c config.h $(srcdir)/validator/autotrust.h \
  $(srcdir)/util/rbtree.h $(srcdir)/util/data/packed_rrset.h $(srcdir)/util/storage/lruhash.h \
@@ -957,9 +999,11 @@ autotrust.lo autotrust.o: $(srcdir)/validator/autotrust.c config.h $(srcdir)/val
  $(srcdir)/util/data/msgreply.h $(srcdir)/util/data/msgparse.h $(srcdir)/sldns/rrdef.h $(srcdir)/util/net_help.h \
  $(srcdir)/util/config_file.h $(srcdir)/util/regional.h $(srcdir)/util/random.h $(srcdir)/services/mesh.h \
  $(srcdir)/util/netevent.h $(srcdir)/dnscrypt/dnscrypt.h  \
- $(srcdir)/services/modstack.h $(srcdir)/services/cache/rrset.h $(srcdir)/util/storage/slabhash.h \
- $(srcdir)/validator/val_kcache.h $(srcdir)/sldns/sbuffer.h $(srcdir)/sldns/wire2str.h $(srcdir)/sldns/str2wire.h \
- $(srcdir)/sldns/keyraw.h
+ $(srcdir)/services/modstack.h $(srcdir)/services/rpz.h $(srcdir)/services/localzone.h \
+ $(srcdir)/util/storage/dnstree.h $(srcdir)/services/view.h $(srcdir)/sldns/sbuffer.h \
+ $(srcdir)/services/authzone.h $(srcdir)/daemon/stats.h $(srcdir)/util/timehist.h $(srcdir)/libunbound/unbound.h \
+ $(srcdir)/respip/respip.h $(srcdir)/services/cache/rrset.h $(srcdir)/util/storage/slabhash.h \
+ $(srcdir)/validator/val_kcache.h $(srcdir)/sldns/wire2str.h $(srcdir)/sldns/str2wire.h $(srcdir)/sldns/keyraw.h
 val_anchor.lo val_anchor.o: $(srcdir)/validator/val_anchor.c config.h $(srcdir)/validator/val_anchor.h \
  $(srcdir)/util/rbtree.h $(srcdir)/util/locks.h $(srcdir)/util/log.h $(srcdir)/validator/val_sigcrypt.h \
  $(srcdir)/util/data/packed_rrset.h $(srcdir)/util/storage/lruhash.h $(srcdir)/sldns/pkthdr.h \
@@ -977,7 +1021,10 @@ validator.lo validator.o: $(srcdir)/validator/validator.c config.h $(srcdir)/val
  $(srcdir)/util/data/dname.h $(srcdir)/util/net_help.h $(srcdir)/util/regional.h $(srcdir)/util/config_file.h \
  $(srcdir)/util/fptr_wlist.h $(srcdir)/util/netevent.h $(srcdir)/dnscrypt/dnscrypt.h \
   $(srcdir)/util/tube.h $(srcdir)/services/mesh.h \
- $(srcdir)/services/modstack.h $(srcdir)/sldns/wire2str.h $(srcdir)/sldns/str2wire.h
+ $(srcdir)/services/modstack.h $(srcdir)/services/rpz.h $(srcdir)/services/localzone.h \
+ $(srcdir)/util/storage/dnstree.h $(srcdir)/services/view.h $(srcdir)/sldns/sbuffer.h \
+ $(srcdir)/services/authzone.h $(srcdir)/daemon/stats.h $(srcdir)/util/timehist.h $(srcdir)/libunbound/unbound.h \
+ $(srcdir)/respip/respip.h $(srcdir)/sldns/wire2str.h $(srcdir)/sldns/str2wire.h
 val_kcache.lo val_kcache.o: $(srcdir)/validator/val_kcache.c config.h $(srcdir)/validator/val_kcache.h \
  $(srcdir)/util/storage/slabhash.h $(srcdir)/util/storage/lruhash.h $(srcdir)/util/locks.h $(srcdir)/util/log.h \
  $(srcdir)/validator/val_kentry.h $(srcdir)/util/config_file.h $(srcdir)/util/data/dname.h \
@@ -1033,67 +1080,33 @@ dns64.lo dns64.o: $(srcdir)/dns64/dns64.c config.h $(srcdir)/dns64/dns64.h $(src
  $(srcdir)/util/storage/slabhash.h $(srcdir)/util/config_file.h $(srcdir)/util/fptr_wlist.h \
  $(srcdir)/util/netevent.h $(srcdir)/dnscrypt/dnscrypt.h  \
  $(srcdir)/util/tube.h $(srcdir)/services/mesh.h $(srcdir)/util/rbtree.h $(srcdir)/services/modstack.h \
- $(srcdir)/util/net_help.h $(srcdir)/util/regional.h $(srcdir)/util/storage/dnstree.h $(srcdir)/util/data/dname.h \
- $(srcdir)/sldns/str2wire.h
-edns-subnet.lo edns-subnet.o: $(srcdir)/edns-subnet/edns-subnet.c config.h \
- $(srcdir)/edns-subnet/edns-subnet.h $(srcdir)/util/net_help.h $(srcdir)/util/log.h
-subnetmod.lo subnetmod.o: $(srcdir)/edns-subnet/subnetmod.c config.h $(srcdir)/edns-subnet/subnetmod.h \
- $(srcdir)/util/module.h $(srcdir)/util/storage/lruhash.h $(srcdir)/util/locks.h $(srcdir)/util/log.h \
- $(srcdir)/util/data/msgreply.h $(srcdir)/util/data/packed_rrset.h $(srcdir)/util/data/msgparse.h \
- $(srcdir)/sldns/pkthdr.h $(srcdir)/sldns/rrdef.h $(srcdir)/services/outbound_list.h $(srcdir)/util/alloc.h \
- $(srcdir)/util/net_help.h $(srcdir)/util/storage/slabhash.h $(srcdir)/edns-subnet/addrtree.h \
- $(srcdir)/edns-subnet/edns-subnet.h $(srcdir)/edns-subnet/subnet-whitelist.h \
- $(srcdir)/util/storage/dnstree.h $(srcdir)/util/rbtree.h $(srcdir)/services/mesh.h $(srcdir)/util/netevent.h \
- $(srcdir)/dnscrypt/dnscrypt.h  $(srcdir)/services/modstack.h \
- $(srcdir)/services/cache/dns.h $(srcdir)/util/regional.h $(srcdir)/util/config_file.h $(srcdir)/sldns/sbuffer.h \
- $(srcdir)/iterator/iter_utils.h $(srcdir)/iterator/iter_resptype.h
+ $(srcdir)/services/rpz.h $(srcdir)/services/localzone.h $(srcdir)/util/storage/dnstree.h \
+ $(srcdir)/services/view.h $(srcdir)/sldns/sbuffer.h $(srcdir)/services/authzone.h $(srcdir)/daemon/stats.h \
+ $(srcdir)/util/timehist.h $(srcdir)/libunbound/unbound.h $(srcdir)/respip/respip.h $(srcdir)/util/net_help.h \
+ $(srcdir)/util/regional.h $(srcdir)/util/data/dname.h $(srcdir)/sldns/str2wire.h
+edns-subnet.lo edns-subnet.o: $(srcdir)/edns-subnet/edns-subnet.c config.h
+subnetmod.lo subnetmod.o: $(srcdir)/edns-subnet/subnetmod.c config.h
 addrtree.lo addrtree.o: $(srcdir)/edns-subnet/addrtree.c config.h $(srcdir)/util/log.h \
  $(srcdir)/util/data/msgreply.h $(srcdir)/util/storage/lruhash.h $(srcdir)/util/locks.h \
  $(srcdir)/util/data/packed_rrset.h $(srcdir)/util/module.h $(srcdir)/util/data/msgparse.h \
  $(srcdir)/sldns/pkthdr.h $(srcdir)/sldns/rrdef.h $(srcdir)/edns-subnet/addrtree.h
-subnet-whitelist.lo subnet-whitelist.o: $(srcdir)/edns-subnet/subnet-whitelist.c config.h \
- $(srcdir)/edns-subnet/edns-subnet.h $(srcdir)/util/net_help.h $(srcdir)/util/log.h \
- $(srcdir)/edns-subnet/subnet-whitelist.h $(srcdir)/util/storage/dnstree.h $(srcdir)/util/rbtree.h \
- $(srcdir)/util/regional.h $(srcdir)/util/config_file.h $(srcdir)/sldns/str2wire.h $(srcdir)/sldns/rrdef.h \
- $(srcdir)/util/data/dname.h $(srcdir)/util/storage/lruhash.h $(srcdir)/util/locks.h
+subnet-whitelist.lo subnet-whitelist.o: $(srcdir)/edns-subnet/subnet-whitelist.c config.h
 cachedb.lo cachedb.o: $(srcdir)/cachedb/cachedb.c config.h
 redis.lo redis.o: $(srcdir)/cachedb/redis.c config.h
 respip.lo respip.o: $(srcdir)/respip/respip.c config.h $(srcdir)/services/localzone.h $(srcdir)/util/rbtree.h \
  $(srcdir)/util/locks.h $(srcdir)/util/log.h $(srcdir)/util/storage/dnstree.h $(srcdir)/util/module.h \
  $(srcdir)/util/storage/lruhash.h $(srcdir)/util/data/msgreply.h $(srcdir)/util/data/packed_rrset.h \
  $(srcdir)/util/data/msgparse.h $(srcdir)/sldns/pkthdr.h $(srcdir)/sldns/rrdef.h $(srcdir)/services/view.h \
- $(srcdir)/sldns/sbuffer.h $(srcdir)/services/cache/dns.h $(srcdir)/sldns/str2wire.h $(srcdir)/util/config_file.h \
- $(srcdir)/util/fptr_wlist.h $(srcdir)/util/netevent.h $(srcdir)/dnscrypt/dnscrypt.h \
-  $(srcdir)/util/tube.h $(srcdir)/services/mesh.h \
- $(srcdir)/services/modstack.h $(srcdir)/util/net_help.h $(srcdir)/util/regional.h $(srcdir)/respip/respip.h
+ $(srcdir)/sldns/sbuffer.h $(srcdir)/services/authzone.h $(srcdir)/services/mesh.h $(srcdir)/util/netevent.h \
+ $(srcdir)/dnscrypt/dnscrypt.h  $(srcdir)/services/modstack.h \
+ $(srcdir)/services/rpz.h $(srcdir)/util/config_file.h $(srcdir)/daemon/stats.h $(srcdir)/util/timehist.h \
+ $(srcdir)/libunbound/unbound.h $(srcdir)/respip/respip.h $(srcdir)/services/cache/dns.h \
+ $(srcdir)/sldns/str2wire.h $(srcdir)/util/fptr_wlist.h $(srcdir)/util/tube.h $(srcdir)/util/net_help.h \
+ $(srcdir)/util/regional.h
 checklocks.lo checklocks.o: $(srcdir)/testcode/checklocks.c config.h $(srcdir)/util/locks.h $(srcdir)/util/log.h \
  $(srcdir)/testcode/checklocks.h
-dnstap.lo dnstap.o: $(srcdir)/dnstap/dnstap.c  config.h $(srcdir)/sldns/sbuffer.h \
- $(srcdir)/util/config_file.h $(srcdir)/util/net_help.h $(srcdir)/util/log.h $(srcdir)/util/netevent.h \
- $(srcdir)/dnscrypt/dnscrypt.h  \
- $(srcdir)/dnstap/dnstap.h \
- dnstap/dnstap.pb-c.h
-dnstap.pb-c.lo dnstap.pb-c.o: dnstap/dnstap.pb-c.c dnstap/dnstap.pb-c.h \
- 
-ipsecmod.lo ipsecmod.o: $(srcdir)/ipsecmod/ipsecmod.c config.h $(srcdir)/ipsecmod/ipsecmod.h \
- $(srcdir)/util/module.h $(srcdir)/util/storage/lruhash.h $(srcdir)/util/locks.h $(srcdir)/util/log.h \
- $(srcdir)/util/data/msgreply.h $(srcdir)/util/data/packed_rrset.h $(srcdir)/util/data/msgparse.h \
- $(srcdir)/sldns/pkthdr.h $(srcdir)/sldns/rrdef.h $(srcdir)/util/rbtree.h $(srcdir)/ipsecmod/ipsecmod-whitelist.h \
- $(srcdir)/util/storage/dnstree.h $(srcdir)/util/fptr_wlist.h $(srcdir)/util/netevent.h \
- $(srcdir)/dnscrypt/dnscrypt.h  $(srcdir)/util/tube.h \
- $(srcdir)/services/mesh.h $(srcdir)/services/modstack.h $(srcdir)/util/regional.h $(srcdir)/util/net_help.h \
- $(srcdir)/util/config_file.h $(srcdir)/services/cache/dns.h $(srcdir)/sldns/wire2str.h
-ipsecmod-whitelist.lo ipsecmod-whitelist.o: $(srcdir)/ipsecmod/ipsecmod-whitelist.c config.h \
- $(srcdir)/ipsecmod/ipsecmod.h $(srcdir)/util/module.h $(srcdir)/util/storage/lruhash.h $(srcdir)/util/locks.h \
- $(srcdir)/util/log.h $(srcdir)/util/data/msgreply.h $(srcdir)/util/data/packed_rrset.h \
- $(srcdir)/util/data/msgparse.h $(srcdir)/sldns/pkthdr.h $(srcdir)/sldns/rrdef.h $(srcdir)/util/rbtree.h \
- $(srcdir)/ipsecmod/ipsecmod-whitelist.h $(srcdir)/util/storage/dnstree.h $(srcdir)/util/regional.h \
- $(srcdir)/util/config_file.h $(srcdir)/util/data/dname.h $(srcdir)/sldns/str2wire.h
-ipset.lo ipset.o: $(srcdir)/ipset/ipset.c config.h $(srcdir)/ipset/ipset.h $(srcdir)/util/module.h \
- $(srcdir)/util/storage/lruhash.h $(srcdir)/util/locks.h $(srcdir)/util/log.h $(srcdir)/util/data/msgreply.h \
- $(srcdir)/util/data/packed_rrset.h $(srcdir)/util/data/msgparse.h $(srcdir)/sldns/pkthdr.h \
- $(srcdir)/sldns/rrdef.h $(srcdir)/util/regional.h $(srcdir)/util/net_help.h $(srcdir)/util/config_file.h \
- $(srcdir)/services/cache/dns.h $(srcdir)/sldns/sbuffer.h $(srcdir)/sldns/wire2str.h $(srcdir)/sldns/parseutil.h
+ipsecmod.lo ipsecmod.o: $(srcdir)/ipsecmod/ipsecmod.c config.h
+ipsecmod-whitelist.lo ipsecmod-whitelist.o: $(srcdir)/ipsecmod/ipsecmod-whitelist.c config.h
 unitanchor.lo unitanchor.o: $(srcdir)/testcode/unitanchor.c config.h $(srcdir)/util/log.h $(srcdir)/util/data/dname.h \
  $(srcdir)/util/storage/lruhash.h $(srcdir)/util/locks.h $(srcdir)/testcode/unitmain.h \
  $(srcdir)/validator/val_anchor.h $(srcdir)/util/rbtree.h $(srcdir)/sldns/sbuffer.h $(srcdir)/sldns/rrdef.h
@@ -1141,19 +1154,15 @@ testpkts.lo testpkts.o: $(srcdir)/testcode/testpkts.c config.h $(srcdir)/testcod
  $(srcdir)/sldns/str2wire.h $(srcdir)/sldns/wire2str.h
 unitldns.lo unitldns.o: $(srcdir)/testcode/unitldns.c config.h $(srcdir)/util/log.h $(srcdir)/testcode/unitmain.h \
  $(srcdir)/sldns/sbuffer.h $(srcdir)/sldns/str2wire.h $(srcdir)/sldns/rrdef.h $(srcdir)/sldns/wire2str.h
-unitecs.lo unitecs.o: $(srcdir)/testcode/unitecs.c config.h $(srcdir)/util/log.h $(srcdir)/util/module.h \
- $(srcdir)/util/storage/lruhash.h $(srcdir)/util/locks.h $(srcdir)/util/data/msgreply.h \
- $(srcdir)/util/data/packed_rrset.h $(srcdir)/util/data/msgparse.h $(srcdir)/sldns/pkthdr.h \
- $(srcdir)/sldns/rrdef.h $(srcdir)/testcode/unitmain.h $(srcdir)/edns-subnet/addrtree.h \
- $(srcdir)/edns-subnet/subnetmod.h $(srcdir)/services/outbound_list.h $(srcdir)/util/alloc.h \
- $(srcdir)/util/net_help.h $(srcdir)/util/storage/slabhash.h $(srcdir)/edns-subnet/edns-subnet.h
+unitecs.lo unitecs.o: $(srcdir)/testcode/unitecs.c config.h
 unitauth.lo unitauth.o: $(srcdir)/testcode/unitauth.c config.h $(srcdir)/services/authzone.h \
  $(srcdir)/util/rbtree.h $(srcdir)/util/locks.h $(srcdir)/util/log.h $(srcdir)/services/mesh.h $(srcdir)/util/netevent.h \
  $(srcdir)/dnscrypt/dnscrypt.h  $(srcdir)/util/data/msgparse.h \
  $(srcdir)/util/storage/lruhash.h $(srcdir)/sldns/pkthdr.h $(srcdir)/sldns/rrdef.h $(srcdir)/util/module.h \
  $(srcdir)/util/data/msgreply.h $(srcdir)/util/data/packed_rrset.h $(srcdir)/services/modstack.h \
  $(srcdir)/services/rpz.h $(srcdir)/services/localzone.h $(srcdir)/util/storage/dnstree.h \
- $(srcdir)/services/view.h $(srcdir)/sldns/sbuffer.h $(srcdir)/util/config_file.h $(srcdir)/testcode/unitmain.h \
+ $(srcdir)/services/view.h $(srcdir)/sldns/sbuffer.h $(srcdir)/util/config_file.h $(srcdir)/daemon/stats.h \
+ $(srcdir)/util/timehist.h $(srcdir)/libunbound/unbound.h $(srcdir)/respip/respip.h $(srcdir)/testcode/unitmain.h \
  $(srcdir)/util/regional.h $(srcdir)/util/net_help.h $(srcdir)/services/cache/dns.h $(srcdir)/sldns/str2wire.h \
  $(srcdir)/sldns/wire2str.h
 acl_list.lo acl_list.o: $(srcdir)/daemon/acl_list.c config.h $(srcdir)/daemon/acl_list.h \
@@ -1187,8 +1196,8 @@ daemon.lo daemon.o: $(srcdir)/daemon/daemon.c config.h $(srcdir)/daemon/daemon.h
  $(srcdir)/util/storage/lookup3.h $(srcdir)/util/storage/slabhash.h $(srcdir)/util/tcp_conn_limit.h \
  $(srcdir)/services/listen_dnsport.h $(srcdir)/services/cache/rrset.h $(srcdir)/services/cache/infra.h \
  $(srcdir)/util/rtt.h $(srcdir)/services/localzone.h $(srcdir)/services/authzone.h $(srcdir)/services/mesh.h \
- $(srcdir)/services/rpz.h $(srcdir)/util/random.h $(srcdir)/util/tube.h $(srcdir)/util/net_help.h $(srcdir)/sldns/keyraw.h \
- $(srcdir)/respip/respip.h
+ $(srcdir)/services/rpz.h $(srcdir)/respip/respip.h $(srcdir)/util/random.h $(srcdir)/util/tube.h $(srcdir)/util/net_help.h \
+ $(srcdir)/sldns/keyraw.h
 remote.lo remote.o: $(srcdir)/daemon/remote.c config.h $(srcdir)/daemon/remote.h $(srcdir)/daemon/worker.h \
  $(srcdir)/libunbound/worker.h $(srcdir)/sldns/sbuffer.h $(srcdir)/util/data/packed_rrset.h \
  $(srcdir)/util/storage/lruhash.h $(srcdir)/util/locks.h $(srcdir)/util/log.h $(srcdir)/util/netevent.h \
@@ -1199,9 +1208,9 @@ remote.lo remote.o: $(srcdir)/daemon/remote.c config.h $(srcdir)/daemon/remote.h
  $(srcdir)/services/modstack.h $(srcdir)/daemon/cachedump.h $(srcdir)/util/config_file.h \
  $(srcdir)/util/net_help.h $(srcdir)/services/listen_dnsport.h $(srcdir)/services/cache/rrset.h \
  $(srcdir)/util/storage/slabhash.h $(srcdir)/services/cache/infra.h $(srcdir)/util/storage/dnstree.h \
- $(srcdir)/util/rbtree.h $(srcdir)/util/rtt.h $(srcdir)/services/mesh.h $(srcdir)/services/localzone.h \
- $(srcdir)/services/view.h $(srcdir)/services/authzone.h $(srcdir)/services/rpz.h $(srcdir)/util/fptr_wlist.h \
- $(srcdir)/util/tube.h $(srcdir)/util/data/dname.h $(srcdir)/validator/validator.h \
+ $(srcdir)/util/rbtree.h $(srcdir)/util/rtt.h $(srcdir)/services/mesh.h $(srcdir)/services/rpz.h \
+ $(srcdir)/services/localzone.h $(srcdir)/services/view.h $(srcdir)/services/authzone.h $(srcdir)/respip/respip.h \
+ $(srcdir)/util/fptr_wlist.h $(srcdir)/util/tube.h $(srcdir)/util/data/dname.h $(srcdir)/validator/validator.h \
  $(srcdir)/validator/val_utils.h $(srcdir)/validator/val_kcache.h $(srcdir)/validator/val_kentry.h \
  $(srcdir)/validator/val_anchor.h $(srcdir)/iterator/iterator.h $(srcdir)/services/outbound_list.h \
  $(srcdir)/iterator/iter_fwd.h $(srcdir)/iterator/iter_hints.h $(srcdir)/iterator/iter_delegpt.h \
@@ -1214,14 +1223,13 @@ stats.lo stats.o: $(srcdir)/daemon/stats.c config.h $(srcdir)/daemon/stats.h $(s
  $(srcdir)/util/alloc.h $(srcdir)/util/data/msgreply.h $(srcdir)/util/data/msgparse.h $(srcdir)/sldns/pkthdr.h \
  $(srcdir)/sldns/rrdef.h $(srcdir)/util/module.h $(srcdir)/dnstap/dnstap.h  \
  $(srcdir)/daemon/daemon.h $(srcdir)/services/modstack.h $(srcdir)/services/mesh.h $(srcdir)/util/rbtree.h \
- $(srcdir)/services/outside_network.h $(srcdir)/services/listen_dnsport.h $(srcdir)/util/config_file.h \
- $(srcdir)/util/tube.h $(srcdir)/util/net_help.h $(srcdir)/validator/validator.h $(srcdir)/validator/val_utils.h \
+ $(srcdir)/services/rpz.h $(srcdir)/services/localzone.h $(srcdir)/util/storage/dnstree.h \
+ $(srcdir)/services/view.h $(srcdir)/util/config_file.h $(srcdir)/services/authzone.h $(srcdir)/respip/respip.h \
+ $(srcdir)/services/outside_network.h $(srcdir)/services/listen_dnsport.h $(srcdir)/util/tube.h \
+ $(srcdir)/util/net_help.h $(srcdir)/validator/validator.h $(srcdir)/validator/val_utils.h \
  $(srcdir)/iterator/iterator.h $(srcdir)/services/outbound_list.h $(srcdir)/services/cache/rrset.h \
- $(srcdir)/util/storage/slabhash.h $(srcdir)/services/cache/infra.h $(srcdir)/util/storage/dnstree.h \
- $(srcdir)/util/rtt.h $(srcdir)/services/authzone.h $(srcdir)/services/rpz.h $(srcdir)/services/localzone.h \
- $(srcdir)/services/view.h $(srcdir)/validator/val_kcache.h $(srcdir)/validator/val_neg.h
- $(srcdir)/edns-subnet/subnetmod.h $(srcdir)/edns-subnet/addrtree.h \
- $(srcdir)/edns-subnet/edns-subnet.h \
+ $(srcdir)/util/storage/slabhash.h $(srcdir)/services/cache/infra.h $(srcdir)/util/rtt.h \
+ $(srcdir)/validator/val_kcache.h $(srcdir)/validator/val_neg.h
 unbound.lo unbound.o: $(srcdir)/daemon/unbound.c config.h $(srcdir)/util/log.h $(srcdir)/daemon/daemon.h \
  $(srcdir)/util/locks.h $(srcdir)/util/alloc.h $(srcdir)/services/modstack.h  \
   $(srcdir)/daemon/remote.h $(srcdir)/util/config_file.h \
@@ -1230,7 +1238,10 @@ unbound.lo unbound.o: $(srcdir)/daemon/unbound.c config.h $(srcdir)/util/log.h $
  $(srcdir)/util/data/packed_rrset.h $(srcdir)/services/cache/infra.h $(srcdir)/util/storage/dnstree.h \
  $(srcdir)/util/rbtree.h $(srcdir)/util/rtt.h $(srcdir)/util/data/msgreply.h $(srcdir)/util/fptr_wlist.h \
  $(srcdir)/util/module.h $(srcdir)/util/data/msgparse.h $(srcdir)/sldns/pkthdr.h $(srcdir)/sldns/rrdef.h \
- $(srcdir)/util/tube.h $(srcdir)/services/mesh.h $(srcdir)/util/net_help.h $(srcdir)/util/ub_event.h
+ $(srcdir)/util/tube.h $(srcdir)/services/mesh.h $(srcdir)/services/rpz.h $(srcdir)/services/localzone.h \
+ $(srcdir)/services/view.h $(srcdir)/sldns/sbuffer.h $(srcdir)/services/authzone.h $(srcdir)/daemon/stats.h \
+ $(srcdir)/util/timehist.h $(srcdir)/libunbound/unbound.h $(srcdir)/respip/respip.h $(srcdir)/util/net_help.h \
+ $(srcdir)/util/ub_event.h
 worker.lo worker.o: $(srcdir)/daemon/worker.c config.h $(srcdir)/util/log.h $(srcdir)/util/net_help.h \
  $(srcdir)/util/random.h $(srcdir)/daemon/worker.h $(srcdir)/libunbound/worker.h $(srcdir)/sldns/sbuffer.h \
  $(srcdir)/util/data/packed_rrset.h $(srcdir)/util/storage/lruhash.h $(srcdir)/util/locks.h \
@@ -1244,10 +1255,10 @@ worker.lo worker.o: $(srcdir)/daemon/worker.c config.h $(srcdir)/util/log.h $(sr
  $(srcdir)/services/outside_network.h $(srcdir)/services/outbound_list.h \
  $(srcdir)/services/cache/rrset.h $(srcdir)/services/cache/infra.h $(srcdir)/util/rtt.h \
  $(srcdir)/services/cache/dns.h $(srcdir)/services/authzone.h $(srcdir)/services/mesh.h $(srcdir)/services/rpz.h \
- $(srcdir)/services/localzone.h $(srcdir)/util/data/msgencode.h $(srcdir)/util/data/dname.h \
- $(srcdir)/util/fptr_wlist.h $(srcdir)/util/tube.h $(srcdir)/util/edns.h $(srcdir)/iterator/iter_fwd.h \
- $(srcdir)/iterator/iter_hints.h $(srcdir)/validator/autotrust.h $(srcdir)/validator/val_anchor.h \
- $(srcdir)/respip/respip.h $(srcdir)/libunbound/context.h $(srcdir)/libunbound/unbound-event.h \
+ $(srcdir)/services/localzone.h $(srcdir)/respip/respip.h $(srcdir)/util/data/msgencode.h \
+ $(srcdir)/util/data/dname.h $(srcdir)/util/fptr_wlist.h $(srcdir)/util/tube.h $(srcdir)/util/edns.h \
+ $(srcdir)/iterator/iter_fwd.h $(srcdir)/iterator/iter_hints.h $(srcdir)/validator/autotrust.h \
+ $(srcdir)/validator/val_anchor.h $(srcdir)/libunbound/context.h $(srcdir)/libunbound/unbound-event.h \
  $(srcdir)/libunbound/libworker.h $(srcdir)/sldns/wire2str.h $(srcdir)/util/shm_side/shm_main.h
 testbound.lo testbound.o: $(srcdir)/testcode/testbound.c config.h $(srcdir)/testcode/testpkts.h \
  $(srcdir)/testcode/replay.h $(srcdir)/util/netevent.h $(srcdir)/dnscrypt/dnscrypt.h \
@@ -1259,7 +1270,9 @@ testbound.lo testbound.o: $(srcdir)/testcode/testbound.c config.h $(srcdir)/test
  $(srcdir)/util/data/packed_rrset.h $(srcdir)/services/cache/infra.h $(srcdir)/util/storage/dnstree.h \
  $(srcdir)/util/rtt.h $(srcdir)/util/data/msgreply.h $(srcdir)/util/fptr_wlist.h $(srcdir)/util/module.h \
  $(srcdir)/util/data/msgparse.h $(srcdir)/sldns/pkthdr.h $(srcdir)/sldns/rrdef.h $(srcdir)/util/tube.h \
- $(srcdir)/services/mesh.h $(srcdir)/util/net_help.h $(srcdir)/util/ub_event.h
+ $(srcdir)/services/mesh.h $(srcdir)/services/rpz.h $(srcdir)/services/localzone.h $(srcdir)/services/view.h \
+ $(srcdir)/sldns/sbuffer.h $(srcdir)/services/authzone.h $(srcdir)/daemon/stats.h $(srcdir)/util/timehist.h \
+ $(srcdir)/libunbound/unbound.h $(srcdir)/respip/respip.h $(srcdir)/util/net_help.h $(srcdir)/util/ub_event.h
 testpkts.lo testpkts.o: $(srcdir)/testcode/testpkts.c config.h $(srcdir)/testcode/testpkts.h \
  $(srcdir)/util/net_help.h $(srcdir)/util/log.h $(srcdir)/sldns/sbuffer.h $(srcdir)/sldns/rrdef.h $(srcdir)/sldns/pkthdr.h \
  $(srcdir)/sldns/str2wire.h $(srcdir)/sldns/wire2str.h
@@ -1276,10 +1289,10 @@ worker.lo worker.o: $(srcdir)/daemon/worker.c config.h $(srcdir)/util/log.h $(sr
  $(srcdir)/services/outside_network.h $(srcdir)/services/outbound_list.h \
  $(srcdir)/services/cache/rrset.h $(srcdir)/services/cache/infra.h $(srcdir)/util/rtt.h \
  $(srcdir)/services/cache/dns.h $(srcdir)/services/authzone.h $(srcdir)/services/mesh.h $(srcdir)/services/rpz.h \
- $(srcdir)/services/localzone.h $(srcdir)/util/data/msgencode.h $(srcdir)/util/data/dname.h \
- $(srcdir)/util/fptr_wlist.h $(srcdir)/util/tube.h $(srcdir)/util/edns.h $(srcdir)/iterator/iter_fwd.h \
- $(srcdir)/iterator/iter_hints.h $(srcdir)/validator/autotrust.h $(srcdir)/validator/val_anchor.h \
- $(srcdir)/respip/respip.h $(srcdir)/libunbound/context.h $(srcdir)/libunbound/unbound-event.h \
+ $(srcdir)/services/localzone.h $(srcdir)/respip/respip.h $(srcdir)/util/data/msgencode.h \
+ $(srcdir)/util/data/dname.h $(srcdir)/util/fptr_wlist.h $(srcdir)/util/tube.h $(srcdir)/util/edns.h \
+ $(srcdir)/iterator/iter_fwd.h $(srcdir)/iterator/iter_hints.h $(srcdir)/validator/autotrust.h \
+ $(srcdir)/validator/val_anchor.h $(srcdir)/libunbound/context.h $(srcdir)/libunbound/unbound-event.h \
  $(srcdir)/libunbound/libworker.h $(srcdir)/sldns/wire2str.h $(srcdir)/util/shm_side/shm_main.h
 acl_list.lo acl_list.o: $(srcdir)/daemon/acl_list.c config.h $(srcdir)/daemon/acl_list.h \
  $(srcdir)/util/storage/dnstree.h $(srcdir)/util/rbtree.h $(srcdir)/services/view.h $(srcdir)/util/locks.h \
@@ -1299,8 +1312,8 @@ daemon.lo daemon.o: $(srcdir)/daemon/daemon.c config.h $(srcdir)/daemon/daemon.h
  $(srcdir)/util/storage/lookup3.h $(srcdir)/util/storage/slabhash.h $(srcdir)/util/tcp_conn_limit.h \
  $(srcdir)/services/listen_dnsport.h $(srcdir)/services/cache/rrset.h $(srcdir)/services/cache/infra.h \
  $(srcdir)/util/rtt.h $(srcdir)/services/localzone.h $(srcdir)/services/authzone.h $(srcdir)/services/mesh.h \
- $(srcdir)/services/rpz.h $(srcdir)/util/random.h $(srcdir)/util/tube.h $(srcdir)/util/net_help.h $(srcdir)/sldns/keyraw.h \
- $(srcdir)/respip/respip.h
+ $(srcdir)/services/rpz.h $(srcdir)/respip/respip.h $(srcdir)/util/random.h $(srcdir)/util/tube.h $(srcdir)/util/net_help.h \
+ $(srcdir)/sldns/keyraw.h
 stats.lo stats.o: $(srcdir)/daemon/stats.c config.h $(srcdir)/daemon/stats.h $(srcdir)/util/timehist.h \
  $(srcdir)/libunbound/unbound.h $(srcdir)/daemon/worker.h $(srcdir)/libunbound/worker.h $(srcdir)/sldns/sbuffer.h \
  $(srcdir)/util/data/packed_rrset.h $(srcdir)/util/storage/lruhash.h $(srcdir)/util/locks.h $(srcdir)/util/log.h \
@@ -1308,14 +1321,13 @@ stats.lo stats.o: $(srcdir)/daemon/stats.c config.h $(srcdir)/daemon/stats.h $(s
  $(srcdir)/util/alloc.h $(srcdir)/util/data/msgreply.h $(srcdir)/util/data/msgparse.h $(srcdir)/sldns/pkthdr.h \
  $(srcdir)/sldns/rrdef.h $(srcdir)/util/module.h $(srcdir)/dnstap/dnstap.h  \
  $(srcdir)/daemon/daemon.h $(srcdir)/services/modstack.h $(srcdir)/services/mesh.h $(srcdir)/util/rbtree.h \
- $(srcdir)/services/outside_network.h $(srcdir)/services/listen_dnsport.h $(srcdir)/util/config_file.h \
- $(srcdir)/util/tube.h $(srcdir)/util/net_help.h $(srcdir)/validator/validator.h $(srcdir)/validator/val_utils.h \
+ $(srcdir)/services/rpz.h $(srcdir)/services/localzone.h $(srcdir)/util/storage/dnstree.h \
+ $(srcdir)/services/view.h $(srcdir)/util/config_file.h $(srcdir)/services/authzone.h $(srcdir)/respip/respip.h \
+ $(srcdir)/services/outside_network.h $(srcdir)/services/listen_dnsport.h $(srcdir)/util/tube.h \
+ $(srcdir)/util/net_help.h $(srcdir)/validator/validator.h $(srcdir)/validator/val_utils.h \
  $(srcdir)/iterator/iterator.h $(srcdir)/services/outbound_list.h $(srcdir)/services/cache/rrset.h \
- $(srcdir)/util/storage/slabhash.h $(srcdir)/services/cache/infra.h $(srcdir)/util/storage/dnstree.h \
- $(srcdir)/util/rtt.h $(srcdir)/services/authzone.h $(srcdir)/services/rpz.h $(srcdir)/services/localzone.h \
- $(srcdir)/services/view.h $(srcdir)/validator/val_kcache.h $(srcdir)/validator/val_neg.h \
- $(srcdir)/edns-subnet/subnetmod.h $(srcdir)/edns-subnet/addrtree.h \
- $(srcdir)/edns-subnet/edns-subnet.h
+ $(srcdir)/util/storage/slabhash.h $(srcdir)/services/cache/infra.h $(srcdir)/util/rtt.h \
+ $(srcdir)/validator/val_kcache.h $(srcdir)/validator/val_neg.h
 replay.lo replay.o: $(srcdir)/testcode/replay.c config.h $(srcdir)/util/log.h $(srcdir)/util/net_help.h \
  $(srcdir)/util/config_file.h $(srcdir)/testcode/replay.h $(srcdir)/util/netevent.h $(srcdir)/dnscrypt/dnscrypt.h \
   $(srcdir)/testcode/testpkts.h $(srcdir)/util/rbtree.h \
@@ -1329,13 +1341,18 @@ fake_event.lo fake_event.o: $(srcdir)/testcode/fake_event.c config.h $(srcdir)/t
  $(srcdir)/util/rbtree.h  $(srcdir)/services/cache/infra.h \
  $(srcdir)/util/storage/dnstree.h $(srcdir)/util/rtt.h $(srcdir)/testcode/replay.h $(srcdir)/testcode/testpkts.h \
  $(srcdir)/util/fptr_wlist.h $(srcdir)/util/module.h $(srcdir)/util/tube.h $(srcdir)/services/mesh.h \
- $(srcdir)/services/modstack.h $(srcdir)/sldns/sbuffer.h $(srcdir)/sldns/wire2str.h $(srcdir)/sldns/str2wire.h
+ $(srcdir)/services/modstack.h $(srcdir)/services/rpz.h $(srcdir)/services/localzone.h $(srcdir)/services/view.h \
+ $(srcdir)/sldns/sbuffer.h $(srcdir)/services/authzone.h $(srcdir)/daemon/stats.h $(srcdir)/util/timehist.h \
+ $(srcdir)/libunbound/unbound.h $(srcdir)/respip/respip.h $(srcdir)/sldns/wire2str.h $(srcdir)/sldns/str2wire.h
 lock_verify.lo lock_verify.o: $(srcdir)/testcode/lock_verify.c config.h $(srcdir)/util/log.h $(srcdir)/util/rbtree.h \
  $(srcdir)/util/locks.h $(srcdir)/util/fptr_wlist.h $(srcdir)/util/netevent.h $(srcdir)/dnscrypt/dnscrypt.h \
   $(srcdir)/util/storage/lruhash.h $(srcdir)/util/module.h \
  $(srcdir)/util/data/msgreply.h $(srcdir)/util/data/packed_rrset.h $(srcdir)/util/data/msgparse.h \
  $(srcdir)/sldns/pkthdr.h $(srcdir)/sldns/rrdef.h $(srcdir)/util/tube.h $(srcdir)/services/mesh.h \
- $(srcdir)/services/modstack.h
+ $(srcdir)/services/modstack.h $(srcdir)/services/rpz.h $(srcdir)/services/localzone.h \
+ $(srcdir)/util/storage/dnstree.h $(srcdir)/services/view.h $(srcdir)/sldns/sbuffer.h \
+ $(srcdir)/util/config_file.h $(srcdir)/services/authzone.h $(srcdir)/daemon/stats.h $(srcdir)/util/timehist.h \
+ $(srcdir)/libunbound/unbound.h $(srcdir)/respip/respip.h
 pktview.lo pktview.o: $(srcdir)/testcode/pktview.c config.h $(srcdir)/util/log.h $(srcdir)/util/data/dname.h \
  $(srcdir)/util/storage/lruhash.h $(srcdir)/util/locks.h $(srcdir)/util/data/msgparse.h $(srcdir)/sldns/pkthdr.h \
  $(srcdir)/sldns/rrdef.h $(srcdir)/testcode/unitmain.h $(srcdir)/testcode/readhex.h $(srcdir)/sldns/sbuffer.h \
@@ -1347,7 +1364,10 @@ memstats.lo memstats.o: $(srcdir)/testcode/memstats.c config.h $(srcdir)/util/lo
   $(srcdir)/util/storage/lruhash.h $(srcdir)/util/module.h \
  $(srcdir)/util/data/msgreply.h $(srcdir)/util/data/packed_rrset.h $(srcdir)/util/data/msgparse.h \
  $(srcdir)/sldns/pkthdr.h $(srcdir)/sldns/rrdef.h $(srcdir)/util/tube.h $(srcdir)/services/mesh.h \
- $(srcdir)/services/modstack.h
+ $(srcdir)/services/modstack.h $(srcdir)/services/rpz.h $(srcdir)/services/localzone.h \
+ $(srcdir)/util/storage/dnstree.h $(srcdir)/services/view.h $(srcdir)/sldns/sbuffer.h \
+ $(srcdir)/util/config_file.h $(srcdir)/services/authzone.h $(srcdir)/daemon/stats.h $(srcdir)/util/timehist.h \
+ $(srcdir)/libunbound/unbound.h $(srcdir)/respip/respip.h
 unbound-checkconf.lo unbound-checkconf.o: $(srcdir)/smallapp/unbound-checkconf.c config.h $(srcdir)/util/log.h \
  $(srcdir)/util/config_file.h $(srcdir)/util/module.h $(srcdir)/util/storage/lruhash.h $(srcdir)/util/locks.h \
  $(srcdir)/util/data/msgreply.h $(srcdir)/util/data/packed_rrset.h $(srcdir)/util/data/msgparse.h \
@@ -1357,9 +1377,8 @@ unbound-checkconf.lo unbound-checkconf.o: $(srcdir)/smallapp/unbound-checkconf.c
  $(srcdir)/validator/validator.h $(srcdir)/validator/val_utils.h $(srcdir)/services/localzone.h \
  $(srcdir)/services/view.h $(srcdir)/sldns/sbuffer.h $(srcdir)/services/authzone.h $(srcdir)/services/mesh.h \
  $(srcdir)/util/netevent.h $(srcdir)/dnscrypt/dnscrypt.h  \
- $(srcdir)/services/modstack.h $(srcdir)/services/rpz.h $(srcdir)/respip/respip.h \
- $(srcdir)/sldns/sbuffer.h $(PYTHONMOD_HEADER) \
- $(srcdir)/edns-subnet/subnet-whitelist.h
+ $(srcdir)/services/modstack.h $(srcdir)/services/rpz.h $(srcdir)/daemon/stats.h $(srcdir)/util/timehist.h \
+ $(srcdir)/libunbound/unbound.h $(srcdir)/respip/respip.h
 worker_cb.lo worker_cb.o: $(srcdir)/smallapp/worker_cb.c config.h $(srcdir)/libunbound/context.h \
  $(srcdir)/util/locks.h $(srcdir)/util/log.h $(srcdir)/util/alloc.h $(srcdir)/util/rbtree.h $(srcdir)/services/modstack.h \
  $(srcdir)/libunbound/unbound.h $(srcdir)/libunbound/unbound-event.h $(srcdir)/util/data/packed_rrset.h \
@@ -1367,7 +1386,9 @@ worker_cb.lo worker_cb.o: $(srcdir)/smallapp/worker_cb.c config.h $(srcdir)/libu
  $(srcdir)/util/fptr_wlist.h $(srcdir)/util/netevent.h $(srcdir)/dnscrypt/dnscrypt.h \
   $(srcdir)/util/module.h $(srcdir)/util/data/msgreply.h \
  $(srcdir)/util/data/msgparse.h $(srcdir)/sldns/pkthdr.h $(srcdir)/sldns/rrdef.h $(srcdir)/util/tube.h \
- $(srcdir)/services/mesh.h
+ $(srcdir)/services/mesh.h $(srcdir)/services/rpz.h $(srcdir)/services/localzone.h \
+ $(srcdir)/util/storage/dnstree.h $(srcdir)/services/view.h $(srcdir)/util/config_file.h \
+ $(srcdir)/services/authzone.h $(srcdir)/daemon/stats.h $(srcdir)/util/timehist.h $(srcdir)/respip/respip.h
 context.lo context.o: $(srcdir)/libunbound/context.c config.h $(srcdir)/libunbound/context.h \
  $(srcdir)/util/locks.h $(srcdir)/util/log.h $(srcdir)/util/alloc.h $(srcdir)/util/rbtree.h $(srcdir)/services/modstack.h \
  $(srcdir)/libunbound/unbound.h $(srcdir)/libunbound/unbound-event.h $(srcdir)/util/data/packed_rrset.h \
@@ -1377,7 +1398,8 @@ context.lo context.o: $(srcdir)/libunbound/context.c config.h $(srcdir)/libunbou
  $(srcdir)/services/view.h $(srcdir)/sldns/sbuffer.h $(srcdir)/services/cache/rrset.h \
  $(srcdir)/util/storage/slabhash.h $(srcdir)/services/cache/infra.h $(srcdir)/util/rtt.h \
  $(srcdir)/util/netevent.h $(srcdir)/dnscrypt/dnscrypt.h  \
- $(srcdir)/services/authzone.h $(srcdir)/services/mesh.h $(srcdir)/services/rpz.h
+ $(srcdir)/services/authzone.h $(srcdir)/services/mesh.h $(srcdir)/services/rpz.h $(srcdir)/daemon/stats.h \
+ $(srcdir)/util/timehist.h $(srcdir)/respip/respip.h
 libunbound.lo libunbound.o: $(srcdir)/libunbound/libunbound.c $(srcdir)/libunbound/unbound.h \
  $(srcdir)/libunbound/unbound-event.h config.h $(srcdir)/libunbound/context.h $(srcdir)/util/locks.h \
  $(srcdir)/util/log.h $(srcdir)/util/alloc.h $(srcdir)/util/rbtree.h $(srcdir)/services/modstack.h \
@@ -1389,7 +1411,7 @@ libunbound.lo libunbound.o: $(srcdir)/libunbound/libunbound.c $(srcdir)/libunbou
  $(srcdir)/sldns/sbuffer.h $(srcdir)/services/cache/infra.h $(srcdir)/util/rtt.h $(srcdir)/util/netevent.h \
  $(srcdir)/dnscrypt/dnscrypt.h  $(srcdir)/services/cache/rrset.h \
  $(srcdir)/util/storage/slabhash.h $(srcdir)/services/authzone.h $(srcdir)/services/mesh.h \
- $(srcdir)/services/rpz.h
+ $(srcdir)/services/rpz.h $(srcdir)/daemon/stats.h $(srcdir)/util/timehist.h $(srcdir)/respip/respip.h
 libworker.lo libworker.o: $(srcdir)/libunbound/libworker.c config.h $(srcdir)/libunbound/libworker.h \
  $(srcdir)/util/data/packed_rrset.h $(srcdir)/util/storage/lruhash.h $(srcdir)/util/locks.h $(srcdir)/util/log.h \
  $(srcdir)/libunbound/context.h $(srcdir)/util/alloc.h $(srcdir)/util/rbtree.h $(srcdir)/services/modstack.h \
@@ -1397,13 +1419,14 @@ libworker.lo libworker.o: $(srcdir)/libunbound/libworker.c config.h $(srcdir)/li
  $(srcdir)/sldns/sbuffer.h $(srcdir)/services/outside_network.h $(srcdir)/util/netevent.h \
  $(srcdir)/dnscrypt/dnscrypt.h   \
  $(srcdir)/services/mesh.h $(srcdir)/util/data/msgparse.h $(srcdir)/sldns/pkthdr.h $(srcdir)/sldns/rrdef.h \
- $(srcdir)/util/module.h $(srcdir)/util/data/msgreply.h $(srcdir)/services/localzone.h \
- $(srcdir)/util/storage/dnstree.h $(srcdir)/services/view.h $(srcdir)/services/cache/rrset.h \
- $(srcdir)/util/storage/slabhash.h $(srcdir)/services/outbound_list.h $(srcdir)/services/authzone.h \
- $(srcdir)/services/rpz.h $(srcdir)/util/config_file.h $(srcdir)/util/fptr_wlist.h $(srcdir)/util/tube.h \
- $(srcdir)/util/regional.h $(srcdir)/util/random.h $(srcdir)/util/storage/lookup3.h $(srcdir)/util/net_help.h \
- $(srcdir)/util/data/dname.h $(srcdir)/util/data/msgencode.h $(srcdir)/iterator/iter_fwd.h \
- $(srcdir)/iterator/iter_hints.h $(srcdir)/sldns/str2wire.h
+ $(srcdir)/util/module.h $(srcdir)/util/data/msgreply.h $(srcdir)/services/rpz.h $(srcdir)/services/localzone.h \
+ $(srcdir)/util/storage/dnstree.h $(srcdir)/services/view.h $(srcdir)/util/config_file.h \
+ $(srcdir)/services/authzone.h $(srcdir)/daemon/stats.h $(srcdir)/util/timehist.h $(srcdir)/respip/respip.h \
+ $(srcdir)/services/cache/rrset.h $(srcdir)/util/storage/slabhash.h $(srcdir)/services/outbound_list.h \
+ $(srcdir)/util/fptr_wlist.h $(srcdir)/util/tube.h $(srcdir)/util/regional.h $(srcdir)/util/random.h \
+ $(srcdir)/util/storage/lookup3.h $(srcdir)/util/net_help.h $(srcdir)/util/data/dname.h \
+ $(srcdir)/util/data/msgencode.h $(srcdir)/iterator/iter_fwd.h $(srcdir)/iterator/iter_hints.h \
+ $(srcdir)/sldns/str2wire.h
 unbound-host.lo unbound-host.o: $(srcdir)/smallapp/unbound-host.c config.h $(srcdir)/libunbound/unbound.h \
  $(srcdir)/sldns/rrdef.h $(srcdir)/sldns/wire2str.h
 asynclook.lo asynclook.o: $(srcdir)/testcode/asynclook.c config.h $(srcdir)/libunbound/unbound.h \
@@ -1424,7 +1447,12 @@ delayer.lo delayer.o: $(srcdir)/testcode/delayer.c config.h $(srcdir)/util/net_h
 unbound-control.lo unbound-control.o: $(srcdir)/smallapp/unbound-control.c config.h $(srcdir)/util/log.h \
  $(srcdir)/util/config_file.h $(srcdir)/util/locks.h $(srcdir)/util/net_help.h $(srcdir)/util/shm_side/shm_main.h \
  $(srcdir)/libunbound/unbound.h $(srcdir)/daemon/stats.h $(srcdir)/util/timehist.h $(srcdir)/sldns/wire2str.h \
- $(srcdir)/sldns/pkthdr.h
+ $(srcdir)/sldns/pkthdr.h $(srcdir)/services/rpz.h $(srcdir)/services/localzone.h $(srcdir)/util/rbtree.h \
+ $(srcdir)/util/storage/dnstree.h $(srcdir)/util/module.h $(srcdir)/util/storage/lruhash.h \
+ $(srcdir)/util/data/msgreply.h $(srcdir)/util/data/packed_rrset.h $(srcdir)/util/data/msgparse.h \
+ $(srcdir)/sldns/rrdef.h $(srcdir)/services/view.h $(srcdir)/sldns/sbuffer.h $(srcdir)/services/authzone.h \
+ $(srcdir)/services/mesh.h $(srcdir)/util/netevent.h $(srcdir)/dnscrypt/dnscrypt.h \
+  $(srcdir)/services/modstack.h $(srcdir)/respip/respip.h
 unbound-anchor.lo unbound-anchor.o: $(srcdir)/smallapp/unbound-anchor.c config.h $(srcdir)/libunbound/unbound.h \
  $(srcdir)/sldns/rrdef.h $(srcdir)/sldns/parseutil.h
 petal.lo petal.o: $(srcdir)/testcode/petal.c config.h
@@ -1455,7 +1483,8 @@ keyraw.lo keyraw.o: $(srcdir)/sldns/keyraw.c config.h $(srcdir)/sldns/keyraw.h $
 sbuffer.lo sbuffer.o: $(srcdir)/sldns/sbuffer.c config.h $(srcdir)/sldns/sbuffer.h
 wire2str.lo wire2str.o: $(srcdir)/sldns/wire2str.c config.h $(srcdir)/sldns/wire2str.h $(srcdir)/sldns/str2wire.h \
  $(srcdir)/sldns/rrdef.h $(srcdir)/sldns/pkthdr.h $(srcdir)/sldns/parseutil.h $(srcdir)/sldns/sbuffer.h \
- $(srcdir)/sldns/keyraw.h
+ $(srcdir)/sldns/keyraw.h $(srcdir)/util/data/dname.h $(srcdir)/util/storage/lruhash.h $(srcdir)/util/locks.h \
+ $(srcdir)/util/log.h
 parse.lo parse.o: $(srcdir)/sldns/parse.c config.h $(srcdir)/sldns/parse.h $(srcdir)/sldns/parseutil.h \
  $(srcdir)/sldns/sbuffer.h
 parseutil.lo parseutil.o: $(srcdir)/sldns/parseutil.c config.h $(srcdir)/sldns/parseutil.h
@@ -1476,7 +1505,7 @@ strlcat.lo strlcat.o: $(srcdir)/compat/strlcat.c config.h
 strlcpy.lo strlcpy.o: $(srcdir)/compat/strlcpy.c config.h
 strptime.lo strptime.o: $(srcdir)/compat/strptime.c config.h
 getentropy_linux.lo getentropy_linux.o: $(srcdir)/compat/getentropy_linux.c config.h
-getentropy_osx.lo getentropy_osx.o: $(srcdir)/compat/getentropy_osx.c config.h
+getentropy_osx.lo getentropy_osx.o: $(srcdir)/compat/getentropy_osx.c
 getentropy_solaris.lo getentropy_solaris.o: $(srcdir)/compat/getentropy_solaris.c config.h
 getentropy_win.lo getentropy_win.o: $(srcdir)/compat/getentropy_win.c
 explicit_bzero.lo explicit_bzero.o: $(srcdir)/compat/explicit_bzero.c config.h

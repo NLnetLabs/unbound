@@ -86,7 +86,6 @@ int ctx_logfile_overridden = 0;
 static struct ub_ctx* ub_ctx_create_nopipe(void)
 {
 	struct ub_ctx* ctx;
-	unsigned int seed;
 #ifdef USE_WINSOCK
 	int r;
 	WSADATA wsa_data;
@@ -103,7 +102,7 @@ static struct ub_ctx* ub_ctx_create_nopipe(void)
 		return NULL;
 	}
 #endif
-	verbosity = 0; /* errors only */
+	verbosity = NO_VERBOSE; /* errors only */
 	checklock_start();
 	ctx = (struct ub_ctx*)calloc(1, sizeof(*ctx));
 	if(!ctx) {
@@ -111,15 +110,12 @@ static struct ub_ctx* ub_ctx_create_nopipe(void)
 		return NULL;
 	}
 	alloc_init(&ctx->superalloc, NULL, 0);
-	seed = (unsigned int)time(NULL) ^ (unsigned int)getpid();
-	if(!(ctx->seed_rnd = ub_initstate(seed, NULL))) {
-		explicit_bzero(&seed, sizeof(seed));
+	if(!(ctx->seed_rnd = ub_initstate(NULL))) {
 		ub_randfree(ctx->seed_rnd);
 		free(ctx);
 		errno = ENOMEM;
 		return NULL;
 	}
-	explicit_bzero(&seed, sizeof(seed));
 	lock_basic_init(&ctx->qqpipe_lock);
 	lock_basic_init(&ctx->rrpipe_lock);
 	lock_basic_init(&ctx->cfglock);
@@ -226,6 +222,7 @@ ub_ctx_create_event(struct event_base* eb)
 		ub_ctx_delete(ctx);
 		return NULL;
 	}
+	ctx->event_base_malloced = 1;
 	return ctx;
 }
 	
@@ -336,6 +333,8 @@ ub_ctx_delete(struct ub_ctx* ctx)
 		log_file(NULL);
 		ctx_logfile_overridden = 0;
 	}
+	if(ctx->event_base_malloced)
+		free(ctx->event_base);
 	free(ctx);
 #ifdef USE_WINSOCK
 	WSACleanup();

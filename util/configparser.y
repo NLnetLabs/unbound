@@ -518,6 +518,7 @@ server_send_client_subnet: VAR_SEND_CLIENT_SUBNET STRING_ARG
 			fatal_exit("out of memory adding client-subnet");
 	#else
 		OUTYY(("P(Compiled without edns subnet option, ignoring)\n"));
+		free($2);
 	#endif
 	}
 	;
@@ -530,6 +531,7 @@ server_client_subnet_zone: VAR_CLIENT_SUBNET_ZONE STRING_ARG
 			fatal_exit("out of memory adding client-subnet-zone");
 	#else
 		OUTYY(("P(Compiled without edns subnet option, ignoring)\n"));
+		free($2);
 	#endif
 	}
 	;
