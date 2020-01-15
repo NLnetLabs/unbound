@@ -293,7 +293,7 @@ static int ipdnametoaddr(uint8_t* dname, size_t dnamelen,
 	uint8_t lablen;
 	char* e = NULL;
 	int z = 0;
-	int len = 0;
+	size_t len = 0;
 	int i;
 	*af = AF_INET;
 	if(dnamelabs > 6 ||

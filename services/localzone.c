@@ -1426,7 +1426,6 @@ local_data_answer(struct local_zone* z, struct module_env* env,
 		if(dname_is_wild(ctarget)) {
 			/* synthesize cname target */
 			struct packed_rrset_data* d;
-			uint8_t newtarget[LDNS_MAX_DOMAINLEN];
 			/* -3 for wildcard label and root label from qname */
 			size_t newtargetlen = qinfo->qname_len + ctargetlen - 3;
 

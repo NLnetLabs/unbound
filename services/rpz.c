@@ -101,6 +101,7 @@ rpz_trigger_to_string(enum rpz_trigger r)
 	case RPZ_RESPONSE_IP_TRIGGER:	return "response_ip";
 	case RPZ_NSDNAME_TRIGGER:	return "nsdname";
 	case RPZ_NSIP_TRIGGER:		return "nsip";
+	case RPZ_INVALID_TRIGGER:	return "invalid";
 	}
 	return "unknown";
 }
