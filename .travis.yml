@@ -9,9 +9,10 @@ addons:
     - libevent-dev
     - libexpat-dev
     - clang
+    - gdb
 script:
   - ./configure --enable-debug --disable-flto
   - make
   - make test
-  - ./testbound -p ./testdata/rpz_respip.rpl
+  - gdb -batch ./testbound -ex "r -p testdata/rpz_respip.rpl" -ex "bt"
   - (cd testdata/clang-analysis.tdir; bash clang-analysis.test)
