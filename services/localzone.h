@@ -583,7 +583,7 @@ enum respip_action {
  * @param temp: scratchpad region
  * @param labs: number of labels in qname
  * @param ldp: where to store local data
- * @param lzt: type of local zone
+ * @param lz_type: type of local zone
  * @param tag: matching tag index
  * @param tag_datas: alc specific tag data list
  * @param tag_datas_size: size of tag_datas
