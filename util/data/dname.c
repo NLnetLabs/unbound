@@ -563,10 +563,11 @@ dname_has_label(uint8_t* dname, size_t dnamelen, uint8_t* label)
 {
 	size_t len = *dname;
 	while(*dname && len <= dnamelen) {
-		if(*dname == *label && memlowercmp(dname, label, *dname) == 0)
+		if(*dname == *label && memlowercmp(dname+1, label+1, *dname) == 0)
 			return 1;
 		len += *dname;
 		dname += *dname;
+		dname++;
 	}
 	return 0;
 }
