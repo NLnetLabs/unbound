@@ -562,12 +562,20 @@ int
 dname_has_label(uint8_t* dname, size_t dnamelen, uint8_t* label)
 {
 	size_t len = *dname;
-	while(*dname && len <= dnamelen) {
-		if(*dname == *label && memlowercmp(dname+1, label+1, *dname) == 0)
+	while(len <= dnamelen) {
+		if(!(*dname)) {
+			if(*dname == *label)
+				return 1; /* empty label match */
+			/* termination label found, stop iterating */
+			return 0;
+		}
+		if(*dname == *label && *label &&
+			memlowercmp(dname+1, label+1, *dname) == 0)
 			return 1;
 		len += *dname;
 		dname += *dname;
 		dname++;
+		len++;
 	}
 	return 0;
 }
