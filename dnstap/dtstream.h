@@ -71,7 +71,7 @@ struct dt_msg_queue {
 	struct dt_msg_entry* first, *last;
 };
 
-/** 
+/**
  * An entry in the dt_msg_queue. contains one DNSTAP message.
  * It is malloced.
  */
@@ -130,8 +130,62 @@ struct dt_io_thread {
 
 /* Frame Streams data transfer protocol encode for DNSTAP messages.
  * The protocol looks to be specified in the libfstrm library.
+ *
+ * Quick writeup for DNSTAP usage, from reading fstrm/control.h eloquent
+ * comments and fstrm/control.c for some bytesize details (the content type
+ * length).
+ *
+ * The Frame Streams can be unidirectional or bi-directional.
+ * bi-directional streams use control frame types READY, ACCEPT and FINISH.
+ * uni-directional streams use control frame types START and STOP.
+ * unknown control frame types should be ignored by the receiver, they
+ * do not change the data frame encoding.
+ *
+ * bi-directional control frames implement a simple handshake protocol
+ * between sender and receiver.
+ *
+ * The uni-directional control frames have one start and one stop frame,
+ * before and after the data.  The start frame can have a content type.
+ * The start and stop frames are not optional.
+ *
+ * data frames are preceded by 4byte length, bigendian.
+ * zero length data frames are not possible, they are an escape that
+ * signals the presence of a control frame.
+ *
+ * a control frame consists of 0 value in 4byte bigendian, this is really
+ * the data frame length, with 0 the escape sequence that indicates one
+ * control frame follows.
+ * Then, 4byte bigendian, length of the control frame message.
+ * Then, the control frame payload (of that length). with in it:
+ *   4byte bigendian, control type (eg. START, STOP, READY, ACCEPT, FINISH).
+ *   perhaps nothing more (STOP, FINISH), but for other types maybe
+ *   content type fields
+ *      4byte bigendian, the control-field-type, currently only content-type.
+ *      4byte bigendian, length of the string for this option.
+ *      .. bytes of that string.
+ *
+ * The START type can have only one field.  Field max len 256.
+ * control frame max frame length 512 (excludes the 0-escape and control
+ * frame length bytes).
  */
-/* routine to send START message. */
+
+/** max length of Frame Streams content type field string */
+#define FSTRM_CONTENT_TYPE_LENGTH_MAX 256
+/** control frame value to denote the control frame ACCEPT */
+#define FSTRM_CONTROL_FRAME_ACCEPT 0x01
+/** control frame value to denote the control frame START */
+#define FSTRM_CONTROL_FRAME_START 0x02
+/** control frame value to denote the control frame STOP */
+#define FSTRM_CONTROL_FRAME_STOP 0x03
+/** control frame value to denote the control frame READY */
+#define FSTRM_CONTROL_FRAME_READY 0x04
+/** control frame value to denote the control frame FINISH */
+#define FSTRM_CONTROL_FRAME_FINISH 0x05
+/** the constant that denotes the control field type that is the
+ * string for the content type of the stream. */
+#define FSTRM_CONTROL_FIELD_TYPE_CONTENT_TYPE 0x01
+
+/* routine to send START message, with content type. */
 /* routine to send a frame. */
 /* routine to send STOP message. */
 
