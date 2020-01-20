@@ -178,6 +178,15 @@ struct dt_io_list_item {
  * The START type can have only one field.  Field max len 256.
  * control frame max frame length 512 (excludes the 0-escape and control
  * frame length bytes).
+ *
+ * the bidirectional type of transmission is like this:
+ * client sends READY (with content type included),
+ * client waits for ACCEPT (with content type included),
+ * client sends START (with matched content type from ACCEPT)
+ * .. data frames
+ * client sends STOP.
+ * client waits for FINISH frame.
+ *
  */
 
 /** max length of Frame Streams content type field string */
