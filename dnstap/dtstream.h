@@ -128,6 +128,17 @@ struct dt_io_thread {
 	char* client_cert_file;
 };
 
+/**
+ * IO thread list of queues list item
+ * lists a worker queue that should be looked at and sent to the log server.
+ */
+struct dt_io_list_item {
+	/** next in the list of buffers to inspect */
+	struct dt_io_list_item* next;
+	/** buffer of this worker */
+	struct dt_msg_queue* queue;
+};
+
 /* Frame Streams data transfer protocol encode for DNSTAP messages.
  * The protocol looks to be specified in the libfstrm library.
  *
@@ -159,7 +170,7 @@ struct dt_io_thread {
  * Then, the control frame payload (of that length). with in it:
  *   4byte bigendian, control type (eg. START, STOP, READY, ACCEPT, FINISH).
  *   perhaps nothing more (STOP, FINISH), but for other types maybe
- *   content type fields
+ *   control fields
  *      4byte bigendian, the control-field-type, currently only content-type.
  *      4byte bigendian, length of the string for this option.
  *      .. bytes of that string.
