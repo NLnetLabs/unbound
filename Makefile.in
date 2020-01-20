@@ -1059,6 +1059,7 @@ respip.lo respip.o: $(srcdir)/respip/respip.c config.h $(srcdir)/services/localz
  $(srcdir)/services/modstack.h $(srcdir)/util/net_help.h $(srcdir)/util/regional.h $(srcdir)/respip/respip.h
 checklocks.lo checklocks.o: $(srcdir)/testcode/checklocks.c config.h $(srcdir)/util/locks.h $(srcdir)/util/log.h \
  $(srcdir)/testcode/checklocks.h
+dtstream.lo dtstream.o: $(srcdir)/dnstap/dtstream.c config.h $(srcdir)/dnstap/dtstream.h
 dnstap.lo dnstap.o: $(srcdir)/dnstap/dnstap.c  config.h $(srcdir)/sldns/sbuffer.h \
  $(srcdir)/util/config_file.h $(srcdir)/util/net_help.h $(srcdir)/util/log.h $(srcdir)/util/netevent.h \
  $(srcdir)/dnscrypt/dnscrypt.h  $(srcdir)/dnscrypt/cert.h \

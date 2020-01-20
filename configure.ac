@@ -1637,8 +1637,8 @@ dt_DNSTAP([$UNBOUND_RUN_DIR/dnstap.sock],
         AC_DEFINE_UNQUOTED(DNSTAP_SOCKET_PATH,
             ["$hdr_dnstap_socket_path"], [default dnstap socket path])
 
-        AC_SUBST([DNSTAP_SRC], ["dnstap/dnstap.c dnstap/dnstap.pb-c.c"])
-        AC_SUBST([DNSTAP_OBJ], ["dnstap.lo dnstap.pb-c.lo"])
+        AC_SUBST([DNSTAP_SRC], ["dnstap/dnstap.c dnstap/dnstap.pb-c.c dnstap/dtstream.c"])
+        AC_SUBST([DNSTAP_OBJ], ["dnstap.lo dnstap.pb-c.lo dtstream.lo"])
     ],
     [
         AC_SUBST([ENABLE_DNSTAP], [0])
