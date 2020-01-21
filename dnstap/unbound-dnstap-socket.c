@@ -45,6 +45,7 @@
 #include <signal.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <ctype.h>
 #ifdef HAVE_SYS_UN_H
 #include <sys/un.h>
 #endif
@@ -214,6 +215,37 @@ static char* q_of_msg(ProtobufCBinaryData message)
 	return NULL;
 }
 
+/** convert possible string or hex data to string. malloced or NULL */
+static char* possible_str(ProtobufCBinaryData str)
+{
+	int is_str = 1;
+	size_t i;
+	for(i=0; i<str.len; i++) {
+		if(!isprint((unsigned char)str.data[i]))
+			is_str = 0;
+	}
+	if(is_str) {
+		char* res = malloc(str.len+1);
+		if(res) {
+			memmove(res, str.data, str.len);
+			res[str.len] = 0;
+			return res;
+		}
+	} else {
+		const char* hex = "0123456789ABCDEF";
+		char* res = malloc(str.len*2+1);
+		if(res) {
+			for(i=0; i<str.len; i++) {
+				res[i*2] = hex[(str.data[i]&0xf0)>>4];
+				res[i*2+1] = hex[str.data[i]&0x0f];
+			}
+			res[str.len*2] = 0;
+			return res;
+		}
+	}
+	return NULL;
+}
+
 /** log data frame contents */
 static void log_data_frame(uint8_t* pkt, size_t len)
 {
@@ -255,10 +287,18 @@ static void log_data_frame(uint8_t* pkt, size_t len)
 	free(qinf);
 
 	if(longformat) {
+		char* id=NULL, *vs=NULL;
 		if(d->has_identity) {
+			id=possible_str(d->identity);
 		}
 		if(d->has_version) {
+			vs=possible_str(d->version);
 		}
+		if(id || vs)
+			printf("identity: %s%s%s\n", (id?id:""),
+				(id&&vs?" ":""), (vs?vs:""));
+		free(id);
+		free(vs);
 	}
 	dnstap__dnstap__free_unpacked(d, NULL);
 }
