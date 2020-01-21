@@ -209,5 +209,31 @@ struct dt_io_list_item {
 /* routine to send a frame. */
 /* routine to send STOP message. */
 
+/**
+ * Create new (empty) worker message queue. Limit set to default on max.
+ * @return NULL on malloc failure or a new queue (not locked).
+ */
+struct dt_msg_queue* dt_msg_queue_create(void);
+
+/**
+ * Delete a worker message queue.  It has to be unlinked from access,
+ * so it can be deleted without lock worries.  The queue is emptied (deleted).
+ * @param mq: message queue.
+ */
+void dt_msg_queue_delete(struct dt_msg_queue* mq);
+
+/**
+ * Submit a message to the queue.  The queue is locked by the routine,
+ * the message is inserted, and then the queue is unlocked so the
+ * message can be picked up by the writer thread.
+ * @param mq: message queue.
+ * @param buf: buffer with message (dnstap contents).
+ * 	The buffer must have been malloced by caller.  It is linked in
+ * 	the queue, and is free()d after use.  If the routine fails
+ * 	the buffer is freed as well (and nothing happens, the item
+ * 	could not be logged).
+ * @param len: length of buffer.
+ */
+void dt_msg_queue_submit(struct dt_msg_queue* mq, void* buf, size_t len);
 
 #endif /* DTSTREAM_H */

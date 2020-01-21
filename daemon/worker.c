@@ -1924,6 +1924,9 @@ worker_delete(struct worker* worker)
 #endif /* UB_ON_WINDOWS */
 	}
 	comm_base_delete(worker->base);
+#ifdef USE_DNSTAP
+	dt_deinit(&worker->dtenv);
+#endif
 	ub_randfree(worker->rndstate);
 	alloc_clear(&worker->alloc);
 	regional_destroy(worker->env.scratch);

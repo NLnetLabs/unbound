@@ -43,6 +43,7 @@ struct config_file;
 struct fstrm_io;
 struct fstrm_queue;
 struct sldns_buffer;
+struct dt_msg_queue;
 
 struct dt_env {
 	/** dnstap I/O thread */
@@ -50,6 +51,9 @@ struct dt_env {
 
 	/** dnstap I/O thread input queue */
 	struct fstrm_iothr_queue *ioq;
+	/** valid in worker struct, not in daemon struct, the per-worker
+	 * message list */
+	struct dt_msg_queue* msgqueue;
 
 	/** dnstap "identity" field, NULL if disabled */
 	char *identity;
@@ -106,6 +110,11 @@ dt_apply_cfg(struct dt_env *env, struct config_file *cfg);
  */
 int
 dt_init(struct dt_env *env);
+
+/**
+ * Deletes the per-worker state created by dt_init
+ */
+void dt_deinit(struct dt_env *env);
 
 /**
  * Delete dnstap environment object. Closes dnstap I/O socket and deletes all

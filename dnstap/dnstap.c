@@ -53,6 +53,7 @@
 #include <protobuf-c/protobuf-c.h>
 
 #include "dnstap/dnstap.h"
+#include "dnstap/dtstream.h"
 #include "dnstap/dnstap.pb-c.h"
 
 #define DNSTAP_CONTENT_TYPE		"protobuf:dnstap.Dnstap"
@@ -90,13 +91,7 @@ dt_pack(const Dnstap__Dnstap *d, void **buf, size_t *sz)
 static void
 dt_send(const struct dt_env *env, void *buf, size_t len_buf)
 {
-	fstrm_res res;
-	if (!buf)
-		return;
-	res = fstrm_iothr_submit(env->iothr, env->ioq, buf, len_buf,
-				 fstrm_free_wrapper, NULL);
-	if (res != fstrm_res_success)
-		free(buf);
+	dt_msg_queue_submit(env->msgqueue, buf, len_buf);
 }
 
 static void
@@ -275,7 +270,18 @@ dt_init(struct dt_env *env)
 	env->ioq = fstrm_iothr_get_input_queue(env->iothr);
 	if (env->ioq == NULL)
 		return 0;
+	env->msgqueue = dt_msg_queue_create();
+	if(!env->msgqueue) {
+		log_err("malloc failure");
+		return 0;
+	}
 	return 1;
+}
+
+void
+dt_deinit(struct dt_env* env)
+{
+	dt_msg_queue_delete(env->msgqueue);
 }
 
 void
