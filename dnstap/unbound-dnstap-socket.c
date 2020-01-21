@@ -246,6 +246,23 @@ static char* possible_str(ProtobufCBinaryData str)
 	return NULL;
 }
 
+/** convert timeval to string, malloced or NULL */
+static char* tv_to_str(protobuf_c_boolean has_time_sec, uint64_t time_sec,
+	protobuf_c_boolean has_time_nsec, uint32_t time_nsec)
+{
+	char buf[64], buf2[256];
+	struct timeval tv;
+	memset(&tv, 0, sizeof(tv));
+	if(has_time_sec) tv.tv_sec = time_sec;
+	if(has_time_nsec) tv.tv_usec = time_nsec;
+
+	buf[0]=0;
+	(void)ctime_r(&tv.tv_sec, buf);
+	snprintf(buf2, sizeof(buf2), "%u.%9.9u %s",
+		(unsigned)time_sec, (unsigned)time_nsec, buf);
+	return strdup(buf2);
+}
+
 /** log data frame contents */
 static void log_data_frame(uint8_t* pkt, size_t len)
 {
@@ -299,6 +316,47 @@ static void log_data_frame(uint8_t* pkt, size_t len)
 				(id&&vs?" ":""), (vs?vs:""));
 		free(id);
 		free(vs);
+
+		if(d->message && d->message->has_query_message &&
+			d->message->query_message.data) {
+			char* qmsg = sldns_wire2str_pkt(
+				d->message->query_message.data,
+				d->message->query_message.len);
+			if(qmsg) {
+				printf("query_message:\n%s", qmsg);
+				free(qmsg);
+			}
+		}
+		if(d->message && d->message->has_query_time_sec) {
+			char* qtv = tv_to_str(d->message->has_query_time_sec,
+				d->message->query_time_sec,
+				d->message->has_query_time_nsec,
+				d->message->query_time_nsec);
+			if(qtv) {
+				printf("query_time: %s\n", qtv);
+				free(qtv);
+			}
+		}
+		if(d->message && d->message->has_response_message &&
+			d->message->response_message.data) {
+			char* rmsg = sldns_wire2str_pkt(
+				d->message->response_message.data,
+				d->message->response_message.len);
+			if(rmsg) {
+				printf("response_message:\n%s", rmsg);
+				free(rmsg);
+			}
+		}
+		if(d->message && d->message->has_response_time_sec) {
+			char* rtv = tv_to_str(d->message->has_response_time_sec,
+				d->message->response_time_sec,
+				d->message->has_response_time_nsec,
+				d->message->response_time_nsec);
+			if(rtv) {
+				printf("response_time: %s\n", rtv);
+				free(rtv);
+			}
+		}
 	}
 	dnstap__dnstap__free_unpacked(d, NULL);
 }
