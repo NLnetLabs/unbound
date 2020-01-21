@@ -358,6 +358,7 @@ static void log_data_frame(uint8_t* pkt, size_t len)
 			}
 		}
 	}
+	fflush(stdout);
 	dnstap__dnstap__free_unpacked(d, NULL);
 }
 
