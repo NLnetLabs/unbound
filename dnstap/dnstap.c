@@ -130,7 +130,7 @@ check_socket_file(const char* socket_path)
 }
 
 struct dt_env *
-dt_create(const char *socket_path, unsigned num_workers)
+dt_create(const char *socket_path, unsigned num_workers, struct config_file* cfg)
 {
 #ifdef UNBOUND_DEBUG
 	fstrm_res res;
@@ -180,6 +180,16 @@ dt_create(const char *socket_path, unsigned num_workers)
 	fstrm_unix_writer_options_destroy(&fuwopt);
 	fstrm_writer_options_destroy(&fwopt);
 
+	env->dtio = dt_io_thread_create();
+	if(!env->dtio) {
+		log_err("malloc failure");
+		fstrm_writer_destroy(&fw);
+		fstrm_iothr_destroy(&env->iothr);
+		free(env);
+		return NULL;
+	}
+	dt_io_thread_apply_cfg(env->dtio, cfg);
+	dt_apply_cfg(env, cfg);
 	return env;
 }
 
@@ -275,12 +285,17 @@ dt_init(struct dt_env *env)
 		log_err("malloc failure");
 		return 0;
 	}
+	if(!dt_io_thread_register_queue(env->dtio, env->msgqueue)) {
+		log_err("malloc failure");
+		return 0;
+	}
 	return 1;
 }
 
 void
 dt_deinit(struct dt_env* env)
 {
+	dt_io_thread_unregister_queue(env->dtio, env->msgqueue);
 	dt_msg_queue_delete(env->msgqueue);
 }
 
@@ -291,6 +306,7 @@ dt_delete(struct dt_env *env)
 		return;
 	verbose(VERB_OPS, "closing dnstap socket");
 	fstrm_iothr_destroy(&env->iothr);
+	dt_io_thread_delete(env->dtio);
 	free(env->identity);
 	free(env->version);
 	free(env);

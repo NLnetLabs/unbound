@@ -47,6 +47,7 @@
 #include "util/locks.h"
 struct dt_msg_entry;
 struct dt_io_list_item;
+struct config_file;
 
 /**
  * A message buffer with dnstap messages queued up.  It is per-worker.
@@ -92,16 +93,29 @@ struct dt_io_thread {
 	void* event_base;
 	/** list of queues that is registered to get written */
 	struct dt_io_list_item* io_list;
+	/** thread id, of the io thread */
+	ub_thread_type tid;
 	/** file descriptor that the thread writes to */
 	int fd;
 	/** event structure that the thread uses */
 	void* event;
+	/** the event is added */
+	int event_added;
+	/** the buffer that currently getting written, or NULL if no
+	 * (partial) message written now */
+	void* cur_msg;
+	/** length of the current message */
+	size_t cur_msg_len;
+	/** number of bytes written for the current message */
+	size_t cur_msg_done;
 
 	/** command pipe that stops the pipe if closed.  Used to quit
 	 * the program. [0] is read, [1] is written to. */
 	int commandpipe[2];
 	/** the event to listen to the commandpipe */
 	void* command_event;
+	/** the io thread wants to exit */
+	int want_to_exit;
 
 	/** If the log server is connected to over unix domain sockets,
 	 * eg. a file is named that is created to log onto. */
@@ -235,5 +249,57 @@ void dt_msg_queue_delete(struct dt_msg_queue* mq);
  * @param len: length of buffer.
  */
 void dt_msg_queue_submit(struct dt_msg_queue* mq, void* buf, size_t len);
+
+/**
+ * Create IO thread.
+ * @return new io thread object. not yet started. or NULL malloc failure.
+ */
+struct dt_io_thread* dt_io_thread_create(void);
+
+/**
+ * Delete the IO thread structure.
+ * @param dtio: the io thread that is deleted.  It must not be running.
+ */
+void dt_io_thread_delete(struct dt_io_thread* dtio);
+
+/**
+ * Apply config to the dtio thread
+ * @param dtio: io thread, not yet started.
+ * @param cfg: config file struct.
+ */
+void dt_io_thread_apply_cfg(struct dt_io_thread* dtio,
+	struct config_file *cfg);
+
+/**
+ * Register a msg queue to the io thread.  It will be polled to see if
+ * there are messages and those then get removed and sent, when the thread
+ * is running.
+ * @param dtio: the io thread.
+ * @param mq: message queue to register.
+ * @return false on failure (malloc failure).
+ */
+int dt_io_thread_register_queue(struct dt_io_thread* dtio,
+	struct dt_msg_queue* mq);
+
+/**
+ * Unregister queue from io thread.
+ * @param dtio: the io thread.
+ * @param mq: message queue.
+ */
+void dt_io_thread_unregister_queue(struct dt_io_thread* dtio,
+        struct dt_msg_queue* mq);
+
+/**
+ * Start the io thread
+ * @param dtio: the io thread.
+ * @return false on failure.
+ */
+int dt_io_thread_start(struct dt_io_thread* dtio);
+
+/** 
+ * Stop the io thread
+ * @param dtio: the io thread.
+ */
+void dt_io_thread_stop(struct dt_io_thread* dtio);
 
 #endif /* DTSTREAM_H */

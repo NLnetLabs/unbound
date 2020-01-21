@@ -452,10 +452,9 @@ daemon_create_workers(struct daemon* daemon)
 	if(daemon->cfg->dnstap) {
 #ifdef USE_DNSTAP
 		daemon->dtenv = dt_create(daemon->cfg->dnstap_socket_path,
-			(unsigned int)daemon->num);
+			(unsigned int)daemon->num, daemon->cfg);
 		if (!daemon->dtenv)
 			fatal_exit("dt_create failed");
-		dt_apply_cfg(daemon->dtenv, daemon->cfg);
 #else
 		fatal_exit("dnstap enabled in config but not built with dnstap support");
 #endif
