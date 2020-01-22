@@ -101,6 +101,8 @@ struct dt_io_thread {
 	void* event;
 	/** the event is added */
 	int event_added;
+	/** check for nonblocking connect errors on fd */
+	int check_nb_connect;
 	/** the buffer that currently getting written, or NULL if no
 	 * (partial) message written now */
 	void* cur_msg;

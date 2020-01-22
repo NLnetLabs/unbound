@@ -316,6 +316,49 @@ static void dtio_close_output(struct dt_io_thread* dtio)
 	dtio->fd = -1;
 }
 
+/** check for pending nonblocking connect errors,
+ * returns 1 if it is okay. -1 on error (close it), 0 to try later */
+static int dtio_check_nb_connect(struct dt_io_thread* dtio)
+{
+	int error = 0;
+	socklen_t len = (socklen_t)sizeof(error);
+	if(!dtio->check_nb_connect)
+		return 1; /* everything okay */
+	if(getsockopt(dtio->fd, SOL_SOCKET, SO_ERROR, (void*)&error,
+		&len) < 0) {
+#ifndef USE_WINSOCK
+		error = errno; /* on solaris errno is error */
+#else
+		error = WSAGetLastError();
+#endif
+	}
+#ifndef USE_WINSOCK
+#if defined(EINPROGRESS) && defined(EWOULDBLOCK)
+	if(error == EINPROGRESS || error == EWOULDBLOCK)
+		return 0; /* try again later */
+#endif
+#else
+	if(error == WSAEINPROGRESS) {
+		return 0; /* try again later */
+	} else if(error == WSAEWOULDBLOCK) {
+		ub_winsock_tcp_wouldblock(dtio->event, UB_EV_WRITE);
+		return 0; /* try again later */
+	}
+#endif
+	if(error != 0) {
+#ifndef USE_WINSOCK
+		log_err("dnstap io: failed to connect: %s", strerror(error));
+#else
+		log_err("dnstap io: failed to connect: %s",
+			wsa_strerror(error));
+#endif
+		return -1; /* error, close it */
+	}
+
+	dtio->check_nb_connect = 0;
+	return 1; /* everything okay */
+}
+
 /** write buffer to output.
  * returns number of bytes written, 0 if nothing happened,
  * try again later, or -1 if the channel is to be closed. */
@@ -325,6 +368,14 @@ static int dtio_write_buf(struct dt_io_thread* dtio, uint8_t* buf,
 	ssize_t ret;
 	if(dtio->fd == -1)
 		return -1;
+	if(dtio->check_nb_connect) {
+		int connect_err = dtio_check_nb_connect(dtio);
+		if(connect_err == -1) {
+			return -1;
+		} else if(connect_err == 0) {
+			return 0;
+		}
+	}
 	ret = send(dtio->fd, buf, len, 0);
 	if(ret == -1) {
 #ifndef USE_WINSOCK
@@ -354,6 +405,17 @@ static int dtio_write_with_writev(struct dt_io_thread* dtio)
 	uint32_t sendlen = htonl(dtio->cur_msg_len);
 	struct iovec iov[2];
 	ssize_t r;
+	if(dtio->check_nb_connect) {
+		int connect_err = dtio_check_nb_connect(dtio);
+		if(connect_err == -1) {
+			/* close the channel */
+			dtio_del_output_event(dtio);
+			dtio_close_output(dtio);
+			return 0;
+		} else if(connect_err == 0) {
+			return 0;
+		}
+	}
 	iov[0].iov_base = ((uint8_t*)&sendlen)+dtio->cur_msg_len_done;
 	iov[0].iov_len = sizeof(sendlen)-dtio->cur_msg_len_done;
 	iov[1].iov_base = dtio->cur_msg;
@@ -802,6 +864,7 @@ static void dtio_open_output(struct dt_io_thread* dtio)
 	s.sun_family = AF_LOCAL;
 	/* length is 92-108, 104 on FreeBSD */
         (void)strlcpy(s.sun_path, dtio->socket_path, sizeof(s.sun_path));
+	fd_set_nonblock(dtio->fd);
 	if(connect(dtio->fd, (struct sockaddr*)&s, (socklen_t)sizeof(s))
 		== -1) {
 #ifndef USE_WINSOCK
@@ -818,7 +881,7 @@ static void dtio_open_output(struct dt_io_thread* dtio)
 		dtio->fd = -1;
 		return;
 	}
-	fd_set_nonblock(dtio->fd);
+	dtio->check_nb_connect = 1;
 
 	/* the EV_READ is to catch channel close, write to write packets */
 	ev = ub_event_new(dtio->event_base, dtio->fd,
