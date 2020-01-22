@@ -50,6 +50,52 @@
 #include <sys/un.h>
 #endif
 
+void* fstrm_create_control_frame_start(char* contenttype, size_t* len)
+{
+	uint32_t* control;
+	size_t n;
+	/* start framestream message:
+	 * 4byte 0: control indicator.
+	 * 4byte bigendian: length of control frame
+	 * 4byte bigendian: type START
+	 * 4byte bigendian: frame option: content-type
+	 * 4byte bigendian: length of string
+	 * string of content type (dnstap)
+	 */
+	n = 4+4+4+4+4+strlen(contenttype);
+	control = malloc(n);
+	if(!control)
+		return NULL;
+	control[0] = 0;
+	control[1] = htonl(4+4+4+strlen(contenttype));
+	control[2] = htonl(FSTRM_CONTROL_FRAME_START);
+	control[3] = htonl(FSTRM_CONTROL_FIELD_TYPE_CONTENT_TYPE);
+	control[4] = htonl(strlen(contenttype));
+	memmove(&control[5], contenttype, strlen(contenttype));
+	*len = n;
+	return control;
+}
+
+void* fstrm_create_control_frame_stop(size_t* len)
+{
+	uint32_t* control;
+	size_t n;
+	/* stop framestream message:
+	 * 4byte 0: control indicator.
+	 * 4byte bigendian: length of control frame
+	 * 4byte bigendian: type STOP
+	 */
+	n = 4+4+4;
+	control = malloc(n);
+	if(!control)
+		return NULL;
+	control[0] = 0;
+	control[1] = htonl(4);
+	control[2] = htonl(FSTRM_CONTROL_FRAME_STOP);
+	*len = n;
+	return control;
+}
+
 struct dt_msg_queue*
 dt_msg_queue_create(void)
 {
@@ -196,8 +242,9 @@ void dt_io_thread_unregister_queue(struct dt_io_thread* dtio,
 	}
 }
 
-/** pick a message from the queue, lock and unlock, true if a message */
-static int pick_msg_from_queue(struct dt_msg_queue* mq, void** buf,
+/** pick a message from the queue, the routine locks and unlocks,
+ * returns true if there is a message */
+static int dt_msg_queue_pop(struct dt_msg_queue* mq, void** buf,
 	size_t* len)
 {
 	lock_basic_lock(&mq->lock);
@@ -223,10 +270,11 @@ static int dtio_find_in_queue(struct dt_io_thread* dtio,
 {
 	void* buf=NULL;
 	size_t len=0;
-	if(pick_msg_from_queue(mq, &buf, &len)) {
+	if(dt_msg_queue_pop(mq, &buf, &len)) {
 		dtio->cur_msg = buf;
 		dtio->cur_msg_len = len;
 		dtio->cur_msg_done = 0;
+		dtio->cur_msg_len_done = 0;
 		return 1;
 	}
 	return 0;
@@ -273,6 +321,7 @@ static void dtio_output_cb(int fd, short ATTR_UNUSED(bits), void* arg)
 	dtio->cur_msg = NULL;
 	dtio->cur_msg_len = 0;
 	dtio->cur_msg_done = 0;
+	dtio->cur_msg_len_done = 0;
 }
 
 /** callback for the dnstap commandpipe, to stop the dnstap IO */
@@ -361,6 +410,24 @@ static void dtio_desetup(struct dt_io_thread* dtio)
 	ub_event_base_free(dtio->event_base);
 }
 
+/** setup a start control message */
+static int dtio_control_start_send(struct dt_io_thread* dtio)
+{
+	log_assert(dtio->cur_msg == NULL && dtio->cur_msg_len == 0);
+	dtio->cur_msg = fstrm_create_control_frame_start(DNSTAP_CONTENT_TYPE,
+		&dtio->cur_msg_len);
+	if(!dtio->cur_msg) {
+		return 0;
+	}
+	/* setup to send the control message */
+	/* set that the buffer needs to be sent, but the length
+	 * of that buffer is already written, that way the buffer can
+	 * start with 0 length and then the length of the control frame in it*/
+	dtio->cur_msg_done = 0;
+	dtio->cur_msg_len_done = 4;
+	return 1;
+}
+
 /** open the output file descriptor */
 static void dtio_open_output(struct dt_io_thread* dtio)
 {
@@ -396,6 +463,10 @@ static void dtio_open_output(struct dt_io_thread* dtio)
 	}
 	dtio->event = ev;
 
+	/* setup protocol control message to start */
+	if(!dtio_control_start_send(dtio)) {
+		fatal_exit("dnstap io: out of memory");
+	}
 }
 
 /** add the output file descriptor event for listening */

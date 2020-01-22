@@ -108,6 +108,9 @@ struct dt_io_thread {
 	size_t cur_msg_len;
 	/** number of bytes written for the current message */
 	size_t cur_msg_done;
+	/** number of bytes of the length that have been written,
+	 * for the current message length that precedes the frame */
+	size_t cur_msg_len_done;
 
 	/** command pipe that stops the pipe if closed.  Used to quit
 	 * the program. [0] is read, [1] is written to. */
@@ -218,10 +221,35 @@ struct dt_io_list_item {
 /** the constant that denotes the control field type that is the
  * string for the content type of the stream. */
 #define FSTRM_CONTROL_FIELD_TYPE_CONTENT_TYPE 0x01
+/** the content type for DNSTAP frame streams */
+#define DNSTAP_CONTENT_TYPE             "protobuf:dnstap.Dnstap"
 
-/* routine to send START message, with content type. */
-/* routine to send a frame. */
-/* routine to send STOP message. */
+/**
+ * routine for START message, with content type.
+ * This creates an FSTRM control frame of type START.
+ * @param contenttype: a zero delimited string with the content type.
+ * 	eg. DNSTAP_CONTENT_TYPE, "protobuf:dnstap.Dnstap"
+ * @param len: if a buffer is returned this is the length of that buffer.
+ * @return NULL on malloc failure.  Returns a malloced buffer with the
+ * protocol message.  The buffer starts with the 4byte 0 that indicates
+ * a control frame.  The buffer should be sent without preceding it with
+ * the 'len' variable, but straight the 0 start zeroes, and then the
+ * length of the control frame itself is embedded next in the buffer,
+ * with the control frame after that in the buffer.
+ */
+void* fstrm_create_control_frame_start(char* contenttype, size_t* len);
+/**
+ * routine for STOP message.
+ * This creates an FSTRM control frame of type STOP.
+ * @param len: if a buffer is returned this is the length of that buffer.
+ * @return NULL on malloc failure.  Returns a malloced buffer with the
+ * protocol message.  The buffer starts with the 4byte 0 that indicates
+ * a control frame.  The buffer should be sent without preceding it with
+ * the 'len' variable, but straight the 0 start zeroes, and then the
+ * length of the control frame itself is embedded next in the buffer,
+ * with the control frame after that in the buffer.
+ */
+void* fstrm_create_control_frame_stop(size_t* len);
 
 /**
  * Create new (empty) worker message queue. Limit set to default on max.

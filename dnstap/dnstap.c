@@ -56,7 +56,6 @@
 #include "dnstap/dtstream.h"
 #include "dnstap/dnstap.pb-c.h"
 
-#define DNSTAP_CONTENT_TYPE		"protobuf:dnstap.Dnstap"
 #define DNSTAP_INITIAL_BUF_SIZE		256
 
 struct dt_msg {
