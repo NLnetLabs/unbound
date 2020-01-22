@@ -292,6 +292,15 @@ static int dtio_find_msg(struct dt_io_thread* dtio)
 	return 0;
 }
 
+/** del the output file descriptor event for listening */
+static void dtio_del_output_event(struct dt_io_thread* dtio)
+{
+	if(!dtio->event_added)
+		return;
+	ub_event_del(dtio->event);
+	dtio->event_added = 0;
+}
+
 /** close and stop the output file descriptor event */
 static void dtio_close_output(struct dt_io_thread* dtio)
 {
@@ -366,7 +375,10 @@ static int dtio_write_with_writev(struct dt_io_thread* dtio)
 		log_err("dnstap io: failed writev: %s",
 			wsa_strerror(WSAGetLastError()));
 #endif
-		return -1;
+		/* close the channel */
+		dtio_del_output_event(dtio);
+		dtio_close_output(dtio);
+		return 0;
 	}
 	/* written r bytes */
 	dtio->cur_msg_len_done += r;
@@ -401,6 +413,7 @@ static int dtio_write_more_of_len(struct dt_io_thread* dtio)
 		sizeof(sendlen)-dtio->cur_msg_len_done);
 	if(r == -1) {
 		/* close the channel */
+		dtio_del_output_event(dtio);
 		dtio_close_output(dtio);
 		return 0;
 	} else if(r == 0) {
@@ -426,6 +439,7 @@ static int dtio_write_more_of_data(struct dt_io_thread* dtio)
 		dtio->cur_msg_len - dtio->cur_msg_done);
 	if(r == -1) {
 		/* close the channel */
+		dtio_del_output_event(dtio);
 		dtio_close_output(dtio);
 		return 0;
 	} else if(r == 0) {
@@ -541,15 +555,6 @@ static void dtio_setup_cmd(struct dt_io_thread* dtio)
 	if(ub_event_add(cmdev, NULL) != 0) {
 		fatal_exit("dnstap io: out of memory (adding event)");
 	}
-}
-
-/** del the output file descriptor event for listening */
-static void dtio_del_output_event(struct dt_io_thread* dtio)
-{
-	if(!dtio->event_added)
-		return;
-	ub_event_del(dtio->event);
-	dtio->event_added = 0;
 }
 
 /**
