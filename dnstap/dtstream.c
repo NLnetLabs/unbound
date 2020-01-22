@@ -422,7 +422,8 @@ static int dtio_control_start_send(struct dt_io_thread* dtio)
 	/* setup to send the control message */
 	/* set that the buffer needs to be sent, but the length
 	 * of that buffer is already written, that way the buffer can
-	 * start with 0 length and then the length of the control frame in it*/
+	 * start with 0 length and then the length of the control frame
+	 * in it */
 	dtio->cur_msg_done = 0;
 	dtio->cur_msg_len_done = 4;
 	return 1;
@@ -450,6 +451,8 @@ static void dtio_open_output(struct dt_io_thread* dtio)
 	if(connect(dtio->fd, (struct sockaddr*)&s, (socklen_t)sizeof(s))
 		== -1) {
 		log_err("dnstap io: failed to connect: %s", strerror(errno));
+		close(dtio->fd);
+		dtio->fd = -1;
 		return;
 	}
 	fd_set_nonblock(dtio->fd);
@@ -459,21 +462,32 @@ static void dtio_open_output(struct dt_io_thread* dtio)
 		UB_EV_READ | UB_EV_WRITE | UB_EV_PERSIST, &dtio_output_cb,
 		dtio);
 	if(!ev) {
-		fatal_exit("dnstap io: out of memory");
+		close(dtio->fd);
+		dtio->fd = -1;
+		log_err("dnstap io: out of memory");
+		return;
 	}
 	dtio->event = ev;
 
 	/* setup protocol control message to start */
 	if(!dtio_control_start_send(dtio)) {
-		fatal_exit("dnstap io: out of memory");
+		ub_event_free(dtio->event);
+		dtio->event = NULL;
+		close(dtio->fd);
+		dtio->fd = -1;
+		log_err("dnstap io: out of memory");
+		return;
 	}
 }
 
 /** add the output file descriptor event for listening */
 static void dtio_add_output_event(struct dt_io_thread* dtio)
 {
+	if(!dtio->event)
+		return;
 	if(ub_event_add(dtio->event, NULL) != 0) {
-		fatal_exit("dnstap io: out of memory (adding event)");
+		log_err("dnstap io: out of memory (adding event)");
+		return;
 	}
 	dtio->event_added = 1;
 }
