@@ -221,6 +221,7 @@ int dt_io_thread_register_queue(struct dt_io_thread* dtio,
 	item->queue = mq;
 	item->next = dtio->io_list;
 	dtio->io_list = item;
+	dtio->io_list_iter = NULL;
 	return 1;
 }
 
@@ -235,6 +236,7 @@ void dt_io_thread_unregister_queue(struct dt_io_thread* dtio,
 			else dtio->io_list = item->next;
 			/* the queue itself only registered, not deleted */
 			free(item);
+			dtio->io_list_iter = NULL;
 			return;
 		}
 		prev = item;
@@ -283,7 +285,16 @@ static int dtio_find_in_queue(struct dt_io_thread* dtio,
 /** find a new message to write, search message queues, false if none */
 static int dtio_find_msg(struct dt_io_thread* dtio)
 {
-	struct dt_io_list_item* item = dtio->io_list;
+	struct dt_io_list_item* item;
+
+	if(dtio->io_list_iter)
+		item = dtio->io_list_iter;
+	else	item = dtio->io_list;
+	/* use the next queue for the next message lookup,
+	 * if we hit the end(NULL) the NULL restarts the iter at start. */
+	if(item)
+		dtio->io_list_iter = item->next;
+
 	while(item) {
 		if(dtio_find_in_queue(dtio, item->queue))
 			return 1;

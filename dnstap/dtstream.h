@@ -93,6 +93,10 @@ struct dt_io_thread {
 	void* event_base;
 	/** list of queues that is registered to get written */
 	struct dt_io_list_item* io_list;
+	/** iterator point in the io_list, to pick from them in a
+	 * round-robin fashion, instead of only from the first when busy.
+	 * if NULL it means start at the start of the list. */
+	struct dt_io_list_item* io_list_iter;
 	/** thread id, of the io thread */
 	ub_thread_type tid;
 	/** file descriptor that the thread writes to */
