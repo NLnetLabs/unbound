@@ -49,7 +49,6 @@
 #include "util/netevent.h"
 #include "util/log.h"
 
-#include <fstrm.h>
 #include <protobuf-c/protobuf-c.h>
 
 #include "dnstap/dnstap.h"
