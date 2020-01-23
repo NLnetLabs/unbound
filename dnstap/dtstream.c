@@ -50,6 +50,9 @@
 #include <sys/un.h>
 #endif
 
+/** number of messages to process in one output callback */
+#define DTIO_MESSAGES_PER_CALLBACK 100
+
 void* fstrm_create_control_frame_start(char* contenttype, size_t* len)
 {
 	uint32_t* control;
@@ -591,30 +594,40 @@ static int dtio_check_close(struct dt_io_thread* dtio)
 static void dtio_output_cb(int ATTR_UNUSED(fd), short bits, void* arg)
 {
 	struct dt_io_thread* dtio = (struct dt_io_thread*)arg;
+	int i;
 
 	if((bits&UB_EV_READ)) {
 		if(!dtio_check_close(dtio))
 			return;
 	}
 
-	/* see if there are messages that need writing */
-	if(!dtio->cur_msg) {
-		if(!dtio_find_msg(dtio))
-			return; /* nothing to do */
-	}
+	/* loop to process a number of messages.  This improves throughput,
+	 * because selecting on write-event if not needed for busy messages
+	 * (dnstap log) generation and if they need to all be written back.
+	 * The write event is usually not blocked up.  But not forever,
+	 * because the event loop needs to stay responsive for other events.
+	 * If there are no (more) messages, or if the output buffers get
+	 * full, it returns out of the loop. */
+	for(i=0; i<DTIO_MESSAGES_PER_CALLBACK; i++) {
+		/* see if there are messages that need writing */
+		if(!dtio->cur_msg) {
+			if(!dtio_find_msg(dtio))
+				return; /* nothing to do */
+		}
 
-	/* write it */
-	if(dtio->cur_msg_done < dtio->cur_msg_len) {
-		if(!dtio_write_more(dtio))
-			return;
-	}
+		/* write it */
+		if(dtio->cur_msg_done < dtio->cur_msg_len) {
+			if(!dtio_write_more(dtio))
+				return;
+		}
 
-	/* done with the current message */
-	free(dtio->cur_msg);
-	dtio->cur_msg = NULL;
-	dtio->cur_msg_len = 0;
-	dtio->cur_msg_done = 0;
-	dtio->cur_msg_len_done = 0;
+		/* done with the current message */
+		free(dtio->cur_msg);
+		dtio->cur_msg = NULL;
+		dtio->cur_msg_len = 0;
+		dtio->cur_msg_done = 0;
+		dtio->cur_msg_len_done = 0;
+	}
 }
 
 /** callback for the dnstap commandpipe, to stop the dnstap IO */
