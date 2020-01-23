@@ -9,8 +9,9 @@ Wants=nss-lookup.target
 WantedBy=multi-user.target
 
 [Service]
-ExecReload=+/bin/kill -HUP $MAINPID
 ExecStart=@UNBOUND_SBIN_DIR@/unbound -d
+ExecReload=+/bin/kill -HUP $MAINPID
+ExecStop=+/bin/kill -TERM $MAINPID
 NotifyAccess=main
 Type=notify
 CapabilityBoundingSet=CAP_IPC_LOCK CAP_NET_BIND_SERVICE CAP_SETGID CAP_SETUID CAP_SYS_CHROOT CAP_SYS_RESOURCE CAP_NET_RAW
@@ -22,12 +23,10 @@ ProtectHome=true
 ProtectControlGroups=true
 ProtectKernelModules=true
 ProtectSystem=strict
-ReadWritePaths=/run @UNBOUND_RUN_DIR@ @UNBOUND_CHROOT_DIR@
-TemporaryFileSystem=@UNBOUND_CHROOT_DIR@/dev:ro
-TemporaryFileSystem=@UNBOUND_CHROOT_DIR@/run:ro
-BindReadOnlyPaths=-/run/systemd/notify:@UNBOUND_CHROOT_DIR@/run/systemd/notify
-BindReadOnlyPaths=-/dev/urandom:@UNBOUND_CHROOT_DIR@/dev/urandom
-BindPaths=-/dev/log:@UNBOUND_CHROOT_DIR@/dev/log
+ConfigurationDirectory=unbound
+RuntimeDirectory=unbound
+BindReadOnlyPaths=/run/systemd/notify
+BindReadOnlyPaths=/dev/log /run/systemd/journal/socket /run/systemd/journal/stdout
 RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
 RestrictRealtime=true
 SystemCallArchitectures=native
