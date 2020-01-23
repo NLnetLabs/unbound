@@ -543,28 +543,30 @@ static int dtio_write_more(struct dt_io_thread* dtio)
 	return 1;
 }
 
-/** check if the output fd has been closed */
-static void dtio_check_close(struct dt_io_thread* dtio)
+/** check if the output fd has been closed,
+ * it returns false if the stream is closed. */
+static int dtio_check_close(struct dt_io_thread* dtio)
 {
 	/* we don't want to read any packets, but if there are we can
-	 * discard the input (ignore it), which is okay for a framestream,
-	 * and also, the read call can return that the stream has been
-	 * closed by the other side. */
+	 * discard the input (ignore it).  Ignore of unknown (control)
+	 * packets is okay for the framestream protocol.  And also, the
+	 * read call can return that the stream has been closed by the
+	 * other side. */
 	ssize_t r;
 	uint8_t buf[1024];
-	if(dtio->fd == -1) return;
+	if(dtio->fd == -1) return 0;
 	while(1) {
 		r = recv(dtio->fd, buf, sizeof(buf), 0);
 		if(r == -1) {
 #ifndef USE_WINSOCK
 			if(errno == EINTR || errno == EAGAIN)
-				return; /* try later */
+				return 1; /* try later */
 #else
 			if(WSAGetLastError() == WSAEINPROGRESS) {
-				return; /* try later */
+				return 1; /* try later */
 			} else if(WSAGetLastError() == WSAEWOULDBLOCK) {
 				ub_winsock_tcp_wouldblock(dtio->event, UB_EV_READ);
-				return; /* try later */
+				return 1; /* try later */
 			}
 #endif
 			log_err("dnstap io: output recv: %s", strerror(errno));
@@ -582,6 +584,7 @@ static void dtio_check_close(struct dt_io_thread* dtio)
 	/* close the channel */
 	dtio_del_output_event(dtio);
 	dtio_close_output(dtio);
+	return 0;
 }
 
 /** callback for the dnstap events, to write to the output */
@@ -590,10 +593,10 @@ static void dtio_output_cb(int ATTR_UNUSED(fd), short bits, void* arg)
 	struct dt_io_thread* dtio = (struct dt_io_thread*)arg;
 
 	if((bits&UB_EV_READ)) {
-		dtio_check_close(dtio);
-		return;
+		if(!dtio_check_close(dtio))
+			return;
 	}
-	
+
 	/* see if there are messages that need writing */
 	if(!dtio->cur_msg) {
 		if(!dtio_find_msg(dtio))
@@ -753,13 +756,14 @@ static void dtio_stop_ev_cb(int ATTR_UNUSED(fd), short bits, void* arg)
 	if(info->want_to_exit_flush)
 		return;
 	if((bits&UB_EV_READ)) {
-		dtio_check_close(dtio);
-		if(dtio->fd == -1) {
-			verbose(VERB_ALGO, "dnstap io: "
-				"stop flush: output closed");
-			dtio_stop_flush_exit(info);
+		if(!dtio_check_close(dtio)) {
+			if(dtio->fd == -1) {
+				verbose(VERB_ALGO, "dnstap io: "
+					"stop flush: output closed");
+				dtio_stop_flush_exit(info);
+			}
+			return;
 		}
-		return;
 	}
 	/* write remainder of last frame */
 	if(dtio->cur_msg) {
