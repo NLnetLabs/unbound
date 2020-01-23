@@ -674,6 +674,8 @@ static void dtio_add_output_event_read(struct dt_io_thread* dtio)
 	ub_event_del_bits(dtio->event, UB_EV_WRITE);
 	if(ub_event_add(dtio->event, NULL) != 0) {
 		log_err("dnstap io: out of memory (adding event)");
+		dtio->event_added = 0;
+		dtio->event_added_is_write = 0;
 		return;
 	}
 	dtio->event_added = 1;
@@ -693,6 +695,8 @@ static void dtio_add_output_event_write(struct dt_io_thread* dtio)
 	ub_event_add_bits(dtio->event, UB_EV_WRITE);
 	if(ub_event_add(dtio->event, NULL) != 0) {
 		log_err("dnstap io: out of memory (adding event)");
+		dtio->event_added = 0;
+		dtio->event_added_is_write = 0;
 		return;
 	}
 	dtio->event_added = 1;
