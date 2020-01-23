@@ -40,19 +40,13 @@
 #ifdef USE_DNSTAP
 
 struct config_file;
-struct fstrm_io;
-struct fstrm_queue;
 struct sldns_buffer;
 struct dt_msg_queue;
 
 struct dt_env {
-	/** dnstap I/O thread */
-	struct fstrm_iothr *iothr;
 	/** the io thread (made by the struct daemon) */
 	struct dt_io_thread* dtio;
 
-	/** dnstap I/O thread input queue */
-	struct fstrm_iothr_queue *ioq;
 	/** valid in worker struct, not in daemon struct, the per-worker
 	 * message list */
 	struct dt_msg_queue* msgqueue;

@@ -129,16 +129,10 @@ check_socket_file(const char* socket_path)
 }
 
 struct dt_env *
-dt_create(const char *socket_path, unsigned num_workers, struct config_file* cfg)
+dt_create(const char *socket_path, unsigned num_workers,
+	struct config_file* cfg)
 {
-#ifdef UNBOUND_DEBUG
-	fstrm_res res;
-#endif
 	struct dt_env *env;
-	struct fstrm_iothr_options *fopt;
-	struct fstrm_unix_writer_options *fuwopt;
-	struct fstrm_writer *fw;
-	struct fstrm_writer_options *fwopt;
 
 	verbose(VERB_OPS, "attempting to connect to dnstap socket %s",
 		socket_path);
@@ -150,40 +144,9 @@ dt_create(const char *socket_path, unsigned num_workers, struct config_file* cfg
 	if (!env)
 		return NULL;
 
-	fwopt = fstrm_writer_options_init();
-#ifdef UNBOUND_DEBUG
-	res = 
-#else
-	(void)
-#endif
-	    fstrm_writer_options_add_content_type(fwopt,
-		DNSTAP_CONTENT_TYPE, sizeof(DNSTAP_CONTENT_TYPE) - 1);
-	log_assert(res == fstrm_res_success);
-
-	fuwopt = fstrm_unix_writer_options_init();
-	fstrm_unix_writer_options_set_socket_path(fuwopt, socket_path);
-
-	fw = fstrm_unix_writer_init(fuwopt, fwopt);
-	log_assert(fw != NULL);
-
-	fopt = fstrm_iothr_options_init();
-	fstrm_iothr_options_set_num_input_queues(fopt, num_workers);
-	env->iothr = fstrm_iothr_init(fopt, &fw);
-	if (env->iothr == NULL) {
-		verbose(VERB_DETAIL, "dt_create: fstrm_iothr_init() failed");
-		fstrm_writer_destroy(&fw);
-		free(env);
-		env = NULL;
-	}
-	fstrm_iothr_options_destroy(&fopt);
-	fstrm_unix_writer_options_destroy(&fuwopt);
-	fstrm_writer_options_destroy(&fwopt);
-
 	env->dtio = dt_io_thread_create();
 	if(!env->dtio) {
 		log_err("malloc failure");
-		fstrm_writer_destroy(&fw);
-		fstrm_iothr_destroy(&env->iothr);
 		free(env);
 		return NULL;
 	}
@@ -276,9 +239,6 @@ dt_apply_cfg(struct dt_env *env, struct config_file *cfg)
 int
 dt_init(struct dt_env *env)
 {
-	env->ioq = fstrm_iothr_get_input_queue(env->iothr);
-	if (env->ioq == NULL)
-		return 0;
 	env->msgqueue = dt_msg_queue_create();
 	if(!env->msgqueue) {
 		log_err("malloc failure");
@@ -304,7 +264,6 @@ dt_delete(struct dt_env *env)
 	if (!env)
 		return;
 	verbose(VERB_OPS, "closing dnstap socket");
-	fstrm_iothr_destroy(&env->iothr);
 	dt_io_thread_delete(env->dtio);
 	free(env->identity);
 	free(env->version);
