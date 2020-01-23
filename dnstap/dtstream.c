@@ -506,7 +506,8 @@ static int dtio_check_nb_connect(struct dt_io_thread* dtio)
 	if(error == WSAEINPROGRESS) {
 		return 0; /* try again later */
 	} else if(error == WSAEWOULDBLOCK) {
-		ub_winsock_tcp_wouldblock((dtio->stop_flush_event?dtio->stop_flush_event:dtio->event), UB_EV_WRITE);
+		ub_winsock_tcp_wouldblock((dtio->stop_flush_event?
+			dtio->stop_flush_event:dtio->event), UB_EV_WRITE);
 		return 0; /* try again later */
 	}
 #endif
@@ -555,7 +556,9 @@ static int dtio_write_buf(struct dt_io_thread* dtio, uint8_t* buf,
 		if(WSAGetLastError() == WSAEINPROGRESS)
 			return 0;
 		if(WSAGetLastError() == WSAEWOULDBLOCK) {
-			ub_winsock_tcp_wouldblock((dtio->stop_flush_event?dtio->stop_flush_event:dtio->event), UB_EV_WRITE);
+			ub_winsock_tcp_wouldblock((dtio->stop_flush_event?
+				dtio->stop_flush_event:dtio->event),
+				UB_EV_WRITE);
 			return 0;
 		}
 		log_err("dnstap io: failed send: %s",
@@ -600,7 +603,9 @@ static int dtio_write_with_writev(struct dt_io_thread* dtio)
 		if(WSAGetLastError() == WSAEINPROGRESS)
 			return 0;
 		if(WSAGetLastError() == WSAEWOULDBLOCK) {
-			ub_winsock_tcp_wouldblock((dtio->stop_flush_event?dtio->stop_flush_event:dtio->event), UB_EV_WRITE);
+			ub_winsock_tcp_wouldblock((dtio->stop_flush_event?
+				dtio->stop_flush_event:dtio->event),
+				UB_EV_WRITE);
 			return 0;
 		}
 		log_err("dnstap io: failed writev: %s",
@@ -720,7 +725,10 @@ static int dtio_check_close(struct dt_io_thread* dtio)
 			if(WSAGetLastError() == WSAEINPROGRESS) {
 				return 1; /* try later */
 			} else if(WSAGetLastError() == WSAEWOULDBLOCK) {
-				ub_winsock_tcp_wouldblock((dtio->stop_flush_event?dtio->stop_flush_event:dtio->event), UB_EV_READ);
+				ub_winsock_tcp_wouldblock(
+					(dtio->stop_flush_event?
+					dtio->stop_flush_event:dtio->event),
+					UB_EV_READ);
 				return 1; /* try later */
 			}
 #endif
