@@ -102,6 +102,7 @@ struct dt_io_thread {
 	struct dt_io_list_item* io_list_iter;
 	/** thread id, of the io thread */
 	ub_thread_type tid;
+
 	/** file descriptor that the thread writes to */
 	int fd;
 	/** event structure that the thread uses */
@@ -112,6 +113,7 @@ struct dt_io_thread {
 	int event_added_is_write;
 	/** check for nonblocking connect errors on fd */
 	int check_nb_connect;
+
 	/** the buffer that currently getting written, or NULL if no
 	 * (partial) message written now */
 	void* cur_msg;
@@ -130,6 +132,14 @@ struct dt_io_thread {
 	void* command_event;
 	/** the io thread wants to exit */
 	int want_to_exit;
+
+	/** the timer event for connection retries */
+	void* reconnect_timer;
+	/** if the reconnect timer is added to the event base */
+	int reconnect_is_added;
+	/** the current reconnection timeout, it is increased with
+	 * exponential backoff, in msec */
+	int reconnect_timeout;
 
 	/** If the log server is connected to over unix domain sockets,
 	 * eg. a file is named that is created to log onto. */
