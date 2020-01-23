@@ -1070,7 +1070,7 @@ static void dtio_control_stop_flush(struct dt_io_thread* dtio)
 		UB_EV_WRITE | UB_EV_PERSIST, &dtio_stop_ev_cb, &info);
 	if(!stopev) {
 		log_err("dnstap io: malloc failure");
-		ub_event_del(timer);
+		ub_timer_del(timer);
 		ub_event_free(timer);
 		ub_event_base_free(info.base);
 		return;
@@ -1078,7 +1078,7 @@ static void dtio_control_stop_flush(struct dt_io_thread* dtio)
 	if(ub_event_add(stopev, NULL) != 0) {
 		log_err("dnstap io: cannot event_add");
 		ub_event_free(stopev);
-		ub_event_del(timer);
+		ub_timer_del(timer);
 		ub_event_free(timer);
 		ub_event_base_free(info.base);
 		return;
@@ -1089,7 +1089,7 @@ static void dtio_control_stop_flush(struct dt_io_thread* dtio)
 		log_err("dnstap io: malloc failure");
 		ub_event_del(stopev);
 		ub_event_free(stopev);
-		ub_event_del(timer);
+		ub_timer_del(timer);
 		ub_event_free(timer);
 		ub_event_base_free(info.base);
 		return;
@@ -1105,7 +1105,7 @@ static void dtio_control_stop_flush(struct dt_io_thread* dtio)
 	free(info.stop_frame);
 	ub_event_del(stopev);
 	ub_event_free(stopev);
-	ub_event_del(timer);
+	ub_timer_del(timer);
 	ub_event_free(timer);
 	ub_event_base_free(info.base);
 }
