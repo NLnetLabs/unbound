@@ -2918,9 +2918,6 @@ cachedb_backend_name: VAR_CACHEDB_BACKEND STRING_ARG
 	{
 	#ifdef USE_CACHEDB
 		OUTYY(("P(backend:%s)\n", $2));
-		if(cfg_parser->cfg->cachedb_backend)
-			yyerror("cachedb backend override, there must be one "
-				"backend");
 		free(cfg_parser->cfg->cachedb_backend);
 		cfg_parser->cfg->cachedb_backend = $2;
 	#else
@@ -2933,9 +2930,6 @@ cachedb_secret_seed: VAR_CACHEDB_SECRETSEED STRING_ARG
 	{
 	#ifdef USE_CACHEDB
 		OUTYY(("P(secret-seed:%s)\n", $2));
-		if(cfg_parser->cfg->cachedb_secret)
-			yyerror("cachedb secret-seed override, there must be "
-				"only one secret");
 		free(cfg_parser->cfg->cachedb_secret);
 		cfg_parser->cfg->cachedb_secret = $2;
 	#else

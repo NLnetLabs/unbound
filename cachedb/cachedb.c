@@ -218,10 +218,6 @@ static int
 cachedb_apply_cfg(struct cachedb_env* cachedb_env, struct config_file* cfg)
 {
 	const char* backend_str = cfg->cachedb_backend;
-
-	/* If unspecified we use the in-memory test DB. */
-	if(!backend_str)
-		backend_str = "testframe";
 	cachedb_env->backend = cachedb_find_backend(backend_str);
 	if(!cachedb_env->backend) {
 		log_err("cachedb: cannot find backend name '%s'", backend_str);
@@ -329,8 +325,7 @@ calc_hash(struct module_qstate* qstate, char* buf, size_t len)
 	size_t clen = 0;
 	uint8_t hash[CACHEDB_HASHSIZE/8];
 	const char* hex = "0123456789ABCDEF";
-	const char* secret = qstate->env->cfg->cachedb_secret ?
-		qstate->env->cfg->cachedb_secret : "default";
+	const char* secret = qstate->env->cfg->cachedb_secret;
 	size_t i;
 
 	/* copy the hash info into the clear buffer */

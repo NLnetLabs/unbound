@@ -329,9 +329,14 @@ config_create(void)
 	cfg->ipsecmod_strict = 0;
 #endif
 #ifdef USE_CACHEDB
-	cfg->cachedb_backend = NULL;
-	cfg->cachedb_secret = NULL;
-#endif
+	if(!(cfg->cachedb_backend = strdup("testframe"))) goto error_exit;
+	if(!(cfg->cachedb_secret = strdup("default"))) goto error_exit;
+#ifdef USE_REDIS
+	if(!(cfg->redis_server_host = strdup("127.0.0.1"))) goto error_exit;
+	cfg->redis_timeout = 100;
+	cfg->redis_server_port = 6379;
+#endif  /* USE_REDIS */
+#endif  /* USE_CACHEDB */
 #ifdef USE_IPSET
 	cfg->ipset_name_v4 = NULL;
 	cfg->ipset_name_v6 = NULL;
@@ -1105,7 +1110,12 @@ config_get_option(struct config_file* cfg, const char* opt,
 #ifdef USE_CACHEDB
 	else O_STR(opt, "backend", cachedb_backend)
 	else O_STR(opt, "secret-seed", cachedb_secret)
-#endif
+#ifdef USE_REDIS
+	else O_STR(opt, "redis-server-host", redis_server_host)
+	else O_DEC(opt, "redis-server-port", redis_server_port)
+	else O_DEC(opt, "redis-timeout", redis_timeout)
+#endif  /* USE_REDIS */
+#endif  /* USE_CACHEDB */
 #ifdef USE_IPSET
 	else O_STR(opt, "name-v4", ipset_name_v4)
 	else O_STR(opt, "name-v6", ipset_name_v6)
@@ -1451,7 +1461,10 @@ config_delete(struct config_file* cfg)
 #ifdef USE_CACHEDB
 	free(cfg->cachedb_backend);
 	free(cfg->cachedb_secret);
-#endif
+#ifdef USE_REDIS
+	free(cfg->redis_server_host);
+#endif  /* USE_REDIS */
+#endif  /* USE_CACHEDB */
 #ifdef USE_IPSET
 	free(cfg->ipset_name_v4);
 	free(cfg->ipset_name_v6);

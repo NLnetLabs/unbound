@@ -1071,8 +1071,8 @@ static const yytype_uint16 yyrline[] =
     2804,  2806,  2806,  2806,  2807,  2807,  2808,  2809,  2810,  2811,
     2812,  2814,  2824,  2833,  2840,  2849,  2856,  2865,  2873,  2886,
     2894,  2907,  2912,  2913,  2914,  2914,  2915,  2915,  2915,  2917,
-    2932,  2947,  2959,  2974,  2987,  2998,  3003,  3004,  3005,  3005,
-    3007,  3022
+    2929,  2941,  2953,  2968,  2981,  2992,  2997,  2998,  2999,  2999,
+    3001,  3016
 };
 #endif
 
@@ -5986,9 +5986,6 @@ yyreduce:
     {
 	#ifdef USE_CACHEDB
 		OUTYY(("P(backend:%s)\n", (yyvsp[0].str)));
-		if(cfg_parser->cfg->cachedb_backend)
-			yyerror("cachedb backend override, there must be one "
-				"backend");
 		free(cfg_parser->cfg->cachedb_backend);
 		cfg_parser->cfg->cachedb_backend = (yyvsp[0].str);
 	#else
@@ -5996,17 +5993,14 @@ yyreduce:
 		free((yyvsp[0].str));
 	#endif
 	}
-#line 6000 "util/configparser.c"
+#line 5997 "util/configparser.c"
     break;
 
   case 550:
-#line 2933 "./util/configparser.y"
+#line 2930 "./util/configparser.y"
     {
 	#ifdef USE_CACHEDB
 		OUTYY(("P(secret-seed:%s)\n", (yyvsp[0].str)));
-		if(cfg_parser->cfg->cachedb_secret)
-			yyerror("cachedb secret-seed override, there must be "
-				"only one secret");
 		free(cfg_parser->cfg->cachedb_secret);
 		cfg_parser->cfg->cachedb_secret = (yyvsp[0].str);
 	#else
@@ -6014,11 +6008,11 @@ yyreduce:
 		free((yyvsp[0].str));
 	#endif
 	}
-#line 6018 "util/configparser.c"
+#line 6012 "util/configparser.c"
     break;
 
   case 551:
-#line 2948 "./util/configparser.y"
+#line 2942 "./util/configparser.y"
     {
 	#if defined(USE_CACHEDB) && defined(USE_REDIS)
 		OUTYY(("P(redis_server_host:%s)\n", (yyvsp[0].str)));
@@ -6029,11 +6023,11 @@ yyreduce:
 		free((yyvsp[0].str));
 	#endif
 	}
-#line 6033 "util/configparser.c"
+#line 6027 "util/configparser.c"
     break;
 
   case 552:
-#line 2960 "./util/configparser.y"
+#line 2954 "./util/configparser.y"
     {
 	#if defined(USE_CACHEDB) && defined(USE_REDIS)
 		int port;
@@ -6047,11 +6041,11 @@ yyreduce:
 	#endif
 		free((yyvsp[0].str));
 	}
-#line 6051 "util/configparser.c"
+#line 6045 "util/configparser.c"
     break;
 
   case 553:
-#line 2975 "./util/configparser.y"
+#line 2969 "./util/configparser.y"
     {
 	#if defined(USE_CACHEDB) && defined(USE_REDIS)
 		OUTYY(("P(redis_timeout:%s)\n", (yyvsp[0].str)));
@@ -6063,11 +6057,11 @@ yyreduce:
 	#endif
 		free((yyvsp[0].str));
 	}
-#line 6067 "util/configparser.c"
+#line 6061 "util/configparser.c"
     break;
 
   case 554:
-#line 2988 "./util/configparser.y"
+#line 2982 "./util/configparser.y"
     {
 		OUTYY(("P(server_tcp_connection_limit:%s %s)\n", (yyvsp[-1].str), (yyvsp[0].str)));
 		if (atoi((yyvsp[0].str)) < 0)
@@ -6077,19 +6071,19 @@ yyreduce:
 				fatal_exit("out of memory adding tcp connection limit");
 		}
 	}
-#line 6081 "util/configparser.c"
+#line 6075 "util/configparser.c"
     break;
 
   case 555:
-#line 2999 "./util/configparser.y"
+#line 2993 "./util/configparser.y"
     {
 			OUTYY(("\nP(ipset:)\n"));
 		}
-#line 6089 "util/configparser.c"
+#line 6083 "util/configparser.c"
     break;
 
   case 560:
-#line 3008 "./util/configparser.y"
+#line 3002 "./util/configparser.y"
     {
 		#ifdef USE_IPSET
 			OUTYY(("P(name-v4:%s)\n", (yyvsp[0].str)));
@@ -6103,11 +6097,11 @@ yyreduce:
 			free((yyvsp[0].str));
 		#endif
 		}
-#line 6107 "util/configparser.c"
+#line 6101 "util/configparser.c"
     break;
 
   case 561:
-#line 3023 "./util/configparser.y"
+#line 3017 "./util/configparser.y"
     {
 		#ifdef USE_IPSET
 			OUTYY(("P(name-v6:%s)\n", (yyvsp[0].str)));
@@ -6121,11 +6115,11 @@ yyreduce:
 			free((yyvsp[0].str));
 		#endif
 		}
-#line 6125 "util/configparser.c"
+#line 6119 "util/configparser.c"
     break;
 
 
-#line 6129 "util/configparser.c"
+#line 6123 "util/configparser.c"
 
       default: break;
     }
@@ -6357,7 +6351,7 @@ yyreturn:
 #endif
   return yyresult;
 }
-#line 3037 "./util/configparser.y"
+#line 3031 "./util/configparser.y"
 
 
 /* parse helper routines could be here */
