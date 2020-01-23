@@ -306,6 +306,16 @@ static int dtio_find_msg(struct dt_io_thread* dtio)
 	return 0;
 }
 
+/** delete the current message in the dtio, and reset counters */
+static void dtio_cur_msg_free(struct dt_io_thread* dtio)
+{
+	free(dtio->cur_msg);
+	dtio->cur_msg = NULL;
+	dtio->cur_msg_len = 0;
+	dtio->cur_msg_done = 0;
+	dtio->cur_msg_len_done = 0;
+}
+
 /** del the output file descriptor event for listening */
 static void dtio_del_output_event(struct dt_io_thread* dtio)
 {
@@ -328,6 +338,13 @@ static void dtio_close_output(struct dt_io_thread* dtio)
 	closesocket(dtio->fd);
 #endif
 	dtio->fd = -1;
+
+	/* if there is a (partial) message, discard it
+	 * we cannot send (the remainder of) it, and a new
+	 * connection needs to start with a control frame. */
+	if(dtio->cur_msg) {
+		dtio_cur_msg_free(dtio);
+	}
 }
 
 /** check for pending nonblocking connect errors,
@@ -622,11 +639,7 @@ static void dtio_output_cb(int ATTR_UNUSED(fd), short bits, void* arg)
 		}
 
 		/* done with the current message */
-		free(dtio->cur_msg);
-		dtio->cur_msg = NULL;
-		dtio->cur_msg_len = 0;
-		dtio->cur_msg_done = 0;
-		dtio->cur_msg_len_done = 0;
+		dtio_cur_msg_free(dtio);
 	}
 }
 
@@ -792,11 +805,7 @@ static void dtio_stop_ev_cb(int ATTR_UNUSED(fd), short bits, void* arg)
 		}
 		verbose(VERB_ALGO, "dnstap io: stop flush completed "
 			"last frame");
-		free(dtio->cur_msg);
-		dtio->cur_msg = NULL;
-		dtio->cur_msg_len = 0;
-		dtio->cur_msg_done = 0;
-		dtio->cur_msg_len_done = 0;
+		dtio_cur_msg_free(dtio);
 	}
 	/* write stop frame */
 	if(info->stop_frame_done < info->stop_frame_len) {
@@ -908,8 +917,7 @@ static void dtio_desetup(struct dt_io_thread* dtio)
 	_close(dtio->commandpipe[0]);
 #endif
 	dtio->commandpipe[0] = -1;
-	free(dtio->cur_msg);
-	dtio->cur_msg = NULL;
+	dtio_cur_msg_free(dtio);
 	ub_event_base_free(dtio->event_base);
 }
 
