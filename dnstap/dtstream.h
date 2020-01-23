@@ -47,6 +47,7 @@
 #include "util/locks.h"
 struct dt_msg_entry;
 struct dt_io_list_item;
+struct dt_io_thread;
 struct config_file;
 
 /**
@@ -70,6 +71,8 @@ struct dt_msg_queue {
 	/** list of messages.  The messages are added to the back and taken
 	 * out from the front. */
 	struct dt_msg_entry* first, *last;
+	/** reference to the io thread to wakeup */
+	struct dt_io_thread* dtio;
 };
 
 /**
@@ -105,6 +108,8 @@ struct dt_io_thread {
 	void* event;
 	/** the event is added */
 	int event_added;
+	/** event added is a write event */
+	int event_added_is_write;
 	/** check for nonblocking connect errors on fd */
 	int check_nb_connect;
 	/** the buffer that currently getting written, or NULL if no
