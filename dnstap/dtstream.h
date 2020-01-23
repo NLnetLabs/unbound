@@ -133,6 +133,9 @@ struct dt_io_thread {
 	/** the io thread wants to exit */
 	int want_to_exit;
 
+	/** in stop flush, this is nonNULL and references the stop_ev */
+	void* stop_flush_event;
+
 	/** the timer event for connection retries */
 	void* reconnect_timer;
 	/** if the reconnect timer is added to the event base */

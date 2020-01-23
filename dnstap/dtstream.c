@@ -506,7 +506,7 @@ static int dtio_check_nb_connect(struct dt_io_thread* dtio)
 	if(error == WSAEINPROGRESS) {
 		return 0; /* try again later */
 	} else if(error == WSAEWOULDBLOCK) {
-		ub_winsock_tcp_wouldblock(dtio->event, UB_EV_WRITE);
+		ub_winsock_tcp_wouldblock((dtio->stop_flush_event?dtio->stop_flush_event:dtio->event), UB_EV_WRITE);
 		return 0; /* try again later */
 	}
 #endif
@@ -555,7 +555,7 @@ static int dtio_write_buf(struct dt_io_thread* dtio, uint8_t* buf,
 		if(WSAGetLastError() == WSAEINPROGRESS)
 			return 0;
 		if(WSAGetLastError() == WSAEWOULDBLOCK) {
-			ub_winsock_tcp_wouldblock(dtio->event, UB_EV_WRITE);
+			ub_winsock_tcp_wouldblock((dtio->stop_flush_event?dtio->stop_flush_event:dtio->event), UB_EV_WRITE);
 			return 0;
 		}
 		log_err("dnstap io: failed send: %s",
@@ -600,7 +600,7 @@ static int dtio_write_with_writev(struct dt_io_thread* dtio)
 		if(WSAGetLastError() == WSAEINPROGRESS)
 			return 0;
 		if(WSAGetLastError() == WSAEWOULDBLOCK) {
-			ub_winsock_tcp_wouldblock(dtio->event, UB_EV_WRITE);
+			ub_winsock_tcp_wouldblock((dtio->stop_flush_event?dtio->stop_flush_event:dtio->event), UB_EV_WRITE);
 			return 0;
 		}
 		log_err("dnstap io: failed writev: %s",
@@ -720,7 +720,7 @@ static int dtio_check_close(struct dt_io_thread* dtio)
 			if(WSAGetLastError() == WSAEINPROGRESS) {
 				return 1; /* try later */
 			} else if(WSAGetLastError() == WSAEWOULDBLOCK) {
-				ub_winsock_tcp_wouldblock(dtio->event, UB_EV_READ);
+				ub_winsock_tcp_wouldblock((dtio->stop_flush_event?dtio->stop_flush_event:dtio->event), UB_EV_READ);
 				return 1; /* try later */
 			}
 #endif
@@ -1098,6 +1098,7 @@ static void dtio_control_stop_flush(struct dt_io_thread* dtio)
 		ub_event_base_free(info.base);
 		return;
 	}
+	dtio->stop_flush_event = stopev;
 
 	/* wait briefly, or until finished */
 	verbose(VERB_ALGO, "dnstap io: stop flush started");
@@ -1107,6 +1108,7 @@ static void dtio_control_stop_flush(struct dt_io_thread* dtio)
 	}
 	verbose(VERB_ALGO, "dnstap io: stop flush ended");
 	free(info.stop_frame);
+	dtio->stop_flush_event = NULL;
 	ub_event_del(stopev);
 	ub_event_free(stopev);
 	ub_timer_del(timer);
