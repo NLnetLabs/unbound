@@ -346,15 +346,18 @@ static int dtio_check_nb_connect(struct dt_io_thread* dtio)
 	}
 #endif
 	if(error != 0) {
+		char* to = dtio->socket_path;
 #ifndef USE_WINSOCK
-		log_err("dnstap io: failed to connect: %s", strerror(error));
+		log_err("dnstap io: failed to connect to \"%s\": %s",
+			to, strerror(error));
 #else
-		log_err("dnstap io: failed to connect: %s",
-			wsa_strerror(error));
+		log_err("dnstap io: failed to connect to \"%s\": %s",
+			to, wsa_strerror(error));
 #endif
 		return -1; /* error, close it */
 	}
 
+	verbose(VERB_ALGO, "dnstap io: connected to \"%s\"", dtio->socket_path);
 	dtio->check_nb_connect = 0;
 	return 1; /* everything okay */
 }
@@ -735,8 +738,16 @@ static void dtio_control_stop_flush(struct dt_io_thread* dtio)
 	struct stop_flush_info info;
 	struct timeval tv;
 	struct ub_event* timer, *stopev;
+
+	if(dtio->fd == -1 || dtio->check_nb_connect) {
+		/* no connection or we have just connected, so nothing is
+		 * sent yet, so nothing to stop or flush */
+		return;
+	}
+
 	memset(&info, 0, sizeof(info));
 	memset(&now, 0, sizeof(now));
+	info.dtio = dtio;
 	info.base = ub_default_event_base(0, &secs, &now);
 	if(!info.base) {
 		log_err("dnstap io: malloc failure");
@@ -845,7 +856,7 @@ static void dtio_open_output(struct dt_io_thread* dtio)
 {
 	struct ub_event* ev;
 	struct sockaddr_un s;
-	dtio->fd = socket(AF_LOCAL, SOCK_STREAM, SOCK_CLOEXEC);
+	dtio->fd = socket(AF_LOCAL, SOCK_STREAM, 0);
 	if(dtio->fd == -1) {
 #ifndef USE_WINSOCK
 		log_err("dnstap io: failed to create socket: %s",
@@ -867,11 +878,13 @@ static void dtio_open_output(struct dt_io_thread* dtio)
 	fd_set_nonblock(dtio->fd);
 	if(connect(dtio->fd, (struct sockaddr*)&s, (socklen_t)sizeof(s))
 		== -1) {
+		char* to = dtio->socket_path;
 #ifndef USE_WINSOCK
-		log_err("dnstap io: failed to connect: %s", strerror(errno));
+		log_err("dnstap io: failed to connect to \"%s\": %s",
+			to, strerror(errno));
 #else
-		log_err("dnstap io: failed to connect: %s",
-			wsa_strerror(WSAGetLastError()));
+		log_err("dnstap io: failed to connect to \"%s\": %s",
+			to, wsa_strerror(WSAGetLastError()));
 #endif
 #ifndef USE_WINSOCK
 		close(dtio->fd);
