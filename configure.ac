@@ -2056,6 +2056,6 @@ dnl if this is a distro tarball, that was already done by makedist.sh
 AC_SUBST(version, [VERSION_MAJOR.VERSION_MINOR.VERSION_MICRO])
 AC_SUBST(date, [`date +'%b %e, %Y'`])
 
-AC_CONFIG_FILES([Makefile doc/example.conf doc/libunbound.3 doc/unbound.8 doc/unbound-anchor.8 doc/unbound-checkconf.8 doc/unbound.conf.5 doc/unbound-control.8 doc/unbound-host.1 smallapp/unbound-control-setup.sh dnstap/dnstap_config.h dnscrypt/dnscrypt_config.h contrib/libunbound.pc contrib/unbound.socket contrib/unbound.service contrib/unbound_nochroot.service])
+AC_CONFIG_FILES([Makefile doc/example.conf doc/libunbound.3 doc/unbound.8 doc/unbound-anchor.8 doc/unbound-checkconf.8 doc/unbound.conf.5 doc/unbound-control.8 doc/unbound-host.1 smallapp/unbound-control-setup.sh dnstap/dnstap_config.h dnscrypt/dnscrypt_config.h contrib/libunbound.pc contrib/unbound.socket contrib/unbound.service contrib/unbound_portable.service])
 AC_CONFIG_HEADER([config.h])
 AC_OUTPUT
