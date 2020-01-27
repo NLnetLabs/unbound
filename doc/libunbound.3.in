@@ -43,7 +43,8 @@
 .B ub_ctx_zone_add,
 .B ub_ctx_zone_remove,
 .B ub_ctx_data_add,
-.B ub_ctx_data_remove
+.B ub_ctx_data_remove,
+.B ub_ctx_cache_remove
 \- Unbound DNS validating resolver @version@ functions.
 .SH "SYNOPSIS"
 .B #include <unbound.h>
@@ -149,6 +150,9 @@
 .LP
 \fIint\fR
 \fBub_ctx_data_remove\fR(\fIstruct ub_ctx*\fR ctx, \fIchar*\fR data);
+.LP
+\fIint\fR
+\fBub_ctx_cache_remove\fR(\fIstruct ub_ctx*\fR ctx, \fIchar*\fR name, \fIint\fR rrtype, \fIint\fR rrclass);
 .SH "DESCRIPTION"
 .B Unbound 
 is an implementation of a DNS resolver, that does caching and 
@@ -382,6 +386,11 @@ Add resource record data to local authority info, like local\-data
 .TP
 .B ub_ctx_data_remove
 Delete local authority data from the name given.
+.TP
+.B ub_ctx_cache_remove
+Delete the results of a given query from the context's cache.
+This is useful if, e.g., you need to repeat a given query to see if
+a DNS change has propagated.
 .SH "RESULT DATA STRUCTURE"
 The result of the DNS resolution and validation is returned as 
 \fIstruct ub_result\fR. The result structure contains the following entries.

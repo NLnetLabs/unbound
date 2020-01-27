@@ -106,6 +106,9 @@ extern "C" {
 #define UNBOUND_VERSION_MINOR @UNBOUND_VERSION_MINOR@
 #define UNBOUND_VERSION_MICRO @UNBOUND_VERSION_MICRO@
 
+#include <stdint.h>
+#include <stddef.h>
+
 /**
  * The validation context is created to hold the resolver status,
  * validation keys and a small cache (containing messages, rrsets,
@@ -611,6 +614,9 @@ int ub_ctx_data_add(struct ub_ctx* ctx, const char *data);
  * @return 0 if OK, else error.
  */
 int ub_ctx_data_remove(struct ub_ctx* ctx, const char *data);
+
+int ub_ctx_cache_remove(struct ub_ctx* ctx, const char* name,
+	uint16_t t, uint16_t c);
 
 /**
  * Get a version string from the libunbound implementation.

@@ -48,6 +48,7 @@
 #include <ctype.h>
 #include "libunbound/context.h"
 #include "libunbound/libworker.h"
+#include "util/cache_help.h"
 #include "util/locks.h"
 #include "util/config_file.h"
 #include "util/alloc.h"
@@ -1405,4 +1406,20 @@ ub_ctx_set_event(struct ub_ctx* ctx, struct event_base* base) {
 	ctx->dothread = 1;
 	lock_basic_unlock(&ctx->cfglock);
 	return new_base ? UB_NOERROR : UB_INITFAIL;
+}
+
+int ub_ctx_cache_remove(struct ub_ctx* ctx, const char* name,
+	uint16_t t, uint16_t c)
+{
+	uint8_t* nm;
+	size_t nmlen;
+	int nmlabs;
+
+	if(!parse_dname(name, &nm, &nmlen, &nmlabs)) {
+		return UB_SYNTAX;
+	}
+
+	remove_rrset_from_env_cache(ctx->env, nm, nmlen, t, c);
+
+	return 0;
 }
