@@ -68,6 +68,7 @@
 #include "iterator/iter_utils.h"
 #include "validator/val_neg.h"
 #include "util/storage/slabhash.h"
+#include "daemon/worker.h"
 
 /** subtract timers and the values do not overflow or become negative */
 static void
@@ -1869,7 +1870,7 @@ mesh_serve_expired_callback(void* arg)
 	struct mesh_state* mstate = (struct mesh_state*) arg;
 	struct module_qstate* qstate = &mstate->s;
 	struct mesh_reply* r;
-	struct mesh_area* mesh = mstate->s.env->mesh;
+	struct mesh_area* mesh = qstate->env->mesh;
 	struct dns_msg* msg;
 	struct mesh_cb* c;
 	if(!qstate->serve_expired_data) return;
@@ -1907,6 +1908,9 @@ mesh_serve_expired_callback(void* arg)
 			tcp_req_info_remove_mesh_state(r->query_reply.c->tcp_req_info, mstate);
 		prev = r;
 		prev_buffer = r_buffer;
+
+		/* Account for each reply sent. */
+		qstate->env->worker->stats.expired_responses++;
 
 	}
 	log_info("```````````````````````` Cached answer, NULL replies and "

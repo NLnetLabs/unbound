@@ -97,7 +97,7 @@ ENTRY_BEGIN
 		ns.example.com. 123 A 1.2.3.4
 ENTRY_END
 
-; Give time for the pedning query to get answered
+; Give time for the pending query to get answered
 STEP 41 TRAFFIC
 
 SCENARIO_END

@@ -1557,8 +1557,7 @@ send_reply_rc:
 		return 0;
 	}
 	if(is_expired_answer) {
-		// TODO rename to expired_responses?
-		worker->stats.zero_ttl_responses++;
+		worker->stats.expired_responses++;
 	}
 	if(worker->stats.extended) {
 		if(is_secure_answer) worker->stats.ans_secure++;

@@ -430,7 +430,7 @@ void server_stats_add(struct ub_stats_info* total, struct ub_stats_info* a)
 		total->svr.qEDNS += a->svr.qEDNS;
 		total->svr.qEDNS_DO += a->svr.qEDNS_DO;
 		total->svr.ans_rcode_nodata += a->svr.ans_rcode_nodata;
-		total->svr.zero_ttl_responses += a->svr.zero_ttl_responses;
+		total->svr.expired_responses += a->svr.expired_responses;
 		total->svr.ans_secure += a->svr.ans_secure;
 		total->svr.ans_bogus += a->svr.ans_bogus;
 		total->svr.unwanted_replies += a->svr.unwanted_replies;
