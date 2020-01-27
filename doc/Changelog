@@ -1,3 +1,7 @@
+27 January 2020: Wouter
+	- Merge PR#155 from Rober Edmonds: contrib/libunbound.pc.in: Fixes
+	  to Libs/Requires for crypto library dependencies.
+
 23 January 2020: Wouter
 	- Merge PR#150 from Frzk: Systemd unit without chroot.  It add
 	  contrib/unbound_nochroot.service.in, a systemd file for use with
