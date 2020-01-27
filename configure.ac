@@ -761,6 +761,8 @@ AC_ARG_WITH([nss], AC_HELP_STRING([--with-nss=path],
 	fi
         LIBS="$LIBS -lnss3 -lnspr4"
 	SSLLIB=""
+	PC_CRYPTO_DEPENDENCY="nss nspr"
+	AC_SUBST(PC_CRYPTO_DEPENDENCY)
 	]
 )
 
@@ -781,6 +783,8 @@ AC_ARG_WITH([nettle], AC_HELP_STRING([--with-nettle=path],
 	fi
         LIBS="$LIBS -lhogweed -lnettle -lgmp"
 	SSLLIB=""
+	PC_CRYPTO_DEPENDENCY="hogweed nettle"
+	AC_SUBST(PC_CRYPTO_DEPENDENCY)
 	]
 )
 
@@ -789,6 +793,9 @@ if test $USE_NSS = "no" -a $USE_NETTLE = "no"; then
 ACX_WITH_SSL
 ACX_LIB_SSL
 SSLLIB="-lssl"
+
+PC_CRYPTO_DEPENDENCY="libcrypto libssl"
+AC_SUBST(PC_CRYPTO_DEPENDENCY)
 
 # check if -lcrypt32 is needed because CAPIENG needs that. (on windows)
 BAKLIBS="$LIBS"
