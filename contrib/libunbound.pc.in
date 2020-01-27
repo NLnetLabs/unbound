@@ -9,6 +9,6 @@ URL: http://www.unbound.net
 Version: @PACKAGE_VERSION@
 Requires: libcrypto libssl @PC_LIBEVENT_DEPENDENCY@
 Requires.private: @PC_PY_DEPENDENCY@
-Libs: -L${libdir} -lunbound -lssl -lcrypto
+Libs: -L${libdir} -lunbound
 Libs.private: @SSLLIB@ @LIBS@
-Cflags: -I${includedir} 
+Cflags: -I${includedir}
