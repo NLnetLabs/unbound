@@ -1,5 +1,9 @@
+27 January 2020: Ralph
+	- Merge PR#154; Allow use of libbsd functions with configure option
+	  --with-libbsd. By Robert Edmonds and Steven Chamberlain.
+
 27 January 2020: Wouter
-	- Merge PR#155 from Rober Edmonds: contrib/libunbound.pc.in: Fixes
+	- Merge PR#155 from Robert Edmonds: contrib/libunbound.pc.in: Fixes
 	  to Libs/Requires for crypto library dependencies.
 	- Fix #153: Disable validation for DSA algorithms.  RFC 8624
 	  compliance.
