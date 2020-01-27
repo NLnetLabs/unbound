@@ -1,6 +1,8 @@
 27 January 2020: Wouter
 	- Merge PR#155 from Rober Edmonds: contrib/libunbound.pc.in: Fixes
 	  to Libs/Requires for crypto library dependencies.
+	- Fix #153: Disable validation for DSA algorithms.  RFC 8624
+	  compliance.
 
 23 January 2020: Wouter
 	- Merge PR#150 from Frzk: Systemd unit without chroot.  It add

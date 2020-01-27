@@ -1072,9 +1072,7 @@ esac
 AC_ARG_ENABLE(dsa, AC_HELP_STRING([--disable-dsa], [Disable DSA support]))
 use_dsa="no"
 case "$enable_dsa" in
-    no)
-      ;;
-    *)
+    yes)
       # detect if DSA is supported, and turn it off if not.
       if test $USE_NSS = "no" -a $USE_NETTLE = "no"; then
       AC_CHECK_FUNC(DSA_SIG_new, [
@@ -1104,6 +1102,10 @@ AC_INCLUDES_DEFAULT
       else
       AC_DEFINE_UNQUOTED([USE_DSA], [1], [Define this to enable DSA support.])
       fi
+      ;;
+    *)
+      # disable dsa by default, RFC 8624 section 3.1, validators MUST NOT
+      # support DSA for DNSSEC Validation.
       ;;
 esac
 
