@@ -3,6 +3,8 @@
 
 28 January 2020: Wouter
 	- iana portlist updated.
+	- Fix to silence the tls handshake errors for broken pipe and reset
+	  by peer, unless verbosity is set to 2 or higher.
 
 27 January 2020: Ralph
 	- Merge PR#154; Allow use of libbsd functions with configure option
