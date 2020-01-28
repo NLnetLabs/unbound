@@ -49,6 +49,7 @@
 #ifdef HAVE_SYS_UN_H
 #include <sys/un.h>
 #endif
+#include <fcntl.h>
 
 /** number of messages to process in one output callback */
 #define DTIO_MESSAGES_PER_CALLBACK 100
@@ -549,7 +550,7 @@ static int dtio_write_buf(struct dt_io_thread* dtio, uint8_t* buf,
 			return 0;
 		}
 	}
-	ret = send(dtio->fd, buf, len, 0);
+	ret = send(dtio->fd, (void*)buf, len, 0);
 	if(ret == -1) {
 #ifndef USE_WINSOCK
 		if(errno == EINTR || errno == EAGAIN)
@@ -719,7 +720,7 @@ static int dtio_check_close(struct dt_io_thread* dtio)
 	uint8_t buf[1024];
 	if(dtio->fd == -1) return 0;
 	while(1) {
-		r = recv(dtio->fd, buf, sizeof(buf), 0);
+		r = recv(dtio->fd, (void*)buf, sizeof(buf), 0);
 		if(r == -1) {
 #ifndef USE_WINSOCK
 			if(errno == EINTR || errno == EAGAIN)
@@ -1169,6 +1170,7 @@ static int dtio_control_start_send(struct dt_io_thread* dtio)
 /** open the output file descriptor */
 static void dtio_open_output(struct dt_io_thread* dtio)
 {
+#ifdef HAVE_SYS_UN_H
 	struct ub_event* ev;
 	struct sockaddr_un s;
 	dtio->fd = socket(AF_LOCAL, SOCK_STREAM, 0);
@@ -1243,6 +1245,7 @@ static void dtio_open_output(struct dt_io_thread* dtio)
 		dtio_reconnect_enable(dtio);
 		return;
 	}
+#endif /* HAVE_SYS_UN_H */
 }
 
 /** the IO thread function for the DNSTAP IO */
