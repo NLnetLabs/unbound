@@ -262,7 +262,6 @@ dt_delete(struct dt_env *env)
 {
 	if (!env)
 		return;
-	verbose(VERB_OPS, "closing dnstap socket");
 	dt_io_thread_delete(env->dtio);
 	free(env->identity);
 	free(env->version);

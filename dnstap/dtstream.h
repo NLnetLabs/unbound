@@ -102,6 +102,8 @@ struct dt_io_thread {
 	struct dt_io_list_item* io_list_iter;
 	/** thread id, of the io thread */
 	ub_thread_type tid;
+	/** if the io processing has started */
+	int started;
 
 	/** file descriptor that the thread writes to */
 	int fd;

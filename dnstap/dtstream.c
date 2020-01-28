@@ -162,7 +162,7 @@ static void dtio_wakeup(struct dt_io_thread* dtio)
 {
 	uint8_t cmd = DTIO_COMMAND_WAKEUP;
 	if(!dtio) return;
-	if(!dtio->event_base) return; /* not started */
+	if(!dtio->started) return;
 
 	while(1) {
 		ssize_t r = write(dtio->commandpipe[1], &cmd, sizeof(cmd));
@@ -1292,6 +1292,7 @@ int dt_io_thread_start(struct dt_io_thread* dtio)
 #endif
 
 	/* start the thread */
+	dtio->started = 1;
 	ub_thread_create(&dtio->tid, dnstap_io, dtio);
 	return 1;
 }
@@ -1300,7 +1301,8 @@ void dt_io_thread_stop(struct dt_io_thread* dtio)
 {
 	uint8_t cmd = DTIO_COMMAND_STOP;
 	if(!dtio) return;
-	if(!dtio->event_base) return; /* not started */
+	if(!dtio->started) return;
+	verbose(VERB_ALGO, "dnstap io: send stop cmd");
 
 	while(1) {
 		ssize_t r = write(dtio->commandpipe[1], &cmd, sizeof(cmd));
@@ -1321,6 +1323,7 @@ void dt_io_thread_stop(struct dt_io_thread* dtio)
 		}
 		break;
 	}
+	dtio->started = 0;
 
 #ifndef USE_WINSOCK
 	close(dtio->commandpipe[1]);
