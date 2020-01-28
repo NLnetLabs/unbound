@@ -1883,7 +1883,8 @@ worker_init(struct worker* worker, struct config_file *cfg,
 		&& worker->thread_num == 0
 #endif
 		) {
-		if(!dt_io_thread_start(dtenv->dtio)) {
+		if(!dt_io_thread_start(dtenv->dtio, comm_base_internal(
+			worker->base))) {
 			log_err("could not start dnstap io thread");
 			worker_delete(worker);
 			return 0;
@@ -1937,7 +1938,6 @@ worker_delete(struct worker* worker)
 		wsvc_desetup_worker(worker);
 #endif /* UB_ON_WINDOWS */
 	}
-	comm_base_delete(worker->base);
 #ifdef USE_DNSTAP
 	if(worker->daemon->cfg->dnstap
 #ifndef THREADS_DISABLED
@@ -1948,6 +1948,7 @@ worker_delete(struct worker* worker)
 	}
 	dt_deinit(&worker->dtenv);
 #endif /* USE_DNSTAP */
+	comm_base_delete(worker->base);
 	ub_randfree(worker->rndstate);
 	alloc_clear(&worker->alloc);
 	regional_destroy(worker->env.scratch);

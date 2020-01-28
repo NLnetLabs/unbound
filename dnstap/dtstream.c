@@ -398,6 +398,7 @@ static void dtio_reconnect_enable(struct dt_io_thread* dtio)
 {
 	struct timeval tv;
 	int msec;
+	if(dtio->want_to_exit) return;
 	if(dtio->reconnect_is_added)
 		return; /* already done */
 
@@ -892,6 +893,7 @@ static void dtio_cmd_cb(int fd, short ATTR_UNUSED(bits), void* arg)
 	}
 }
 
+#ifndef THREADS_DISABLED
 /** setup the event base for the dnstap io thread */
 static void dtio_setup_base(struct dt_io_thread* dtio, time_t* secs,
 	struct timeval* now)
@@ -902,6 +904,7 @@ static void dtio_setup_base(struct dt_io_thread* dtio, time_t* secs,
 		fatal_exit("dnstap io: could not create event_base");
 	}
 }
+#endif /* THREADS_DISABLED */
 
 /** setup the cmd event for dnstap io */
 static void dtio_setup_cmd(struct dt_io_thread* dtio)
@@ -1145,7 +1148,9 @@ static void dtio_desetup(struct dt_io_thread* dtio)
 	dtio_reconnect_del(dtio);
 	ub_event_free(dtio->reconnect_timer);
 	dtio_cur_msg_free(dtio);
+#ifndef THREADS_DISABLED
 	ub_event_base_free(dtio->event_base);
+#endif
 }
 
 /** setup a start control message */
@@ -1248,6 +1253,7 @@ static void dtio_open_output(struct dt_io_thread* dtio)
 #endif /* HAVE_SYS_UN_H */
 }
 
+#ifndef THREADS_DISABLED
 /** the IO thread function for the DNSTAP IO */
 static void* dnstap_io(void* arg)
 {
@@ -1274,8 +1280,9 @@ static void* dnstap_io(void* arg)
 	dtio_desetup(dtio);
 	return NULL;
 }
+#endif /* THREADS_DISABLED */
 
-int dt_io_thread_start(struct dt_io_thread* dtio)
+int dt_io_thread_start(struct dt_io_thread* dtio, void* event_base_nothr)
 {
 	/* set up the thread, can fail */
 #ifndef USE_WINSOCK
@@ -1293,17 +1300,28 @@ int dt_io_thread_start(struct dt_io_thread* dtio)
 
 	/* start the thread */
 	dtio->started = 1;
+#ifndef THREADS_DISABLED
 	ub_thread_create(&dtio->tid, dnstap_io, dtio);
+#else
+	dtio->event_base = event_base_nothr;
+	dtio_setup_cmd(dtio);
+	dtio_setup_reconnect(dtio);
+	dtio_open_output(dtio);
+	dtio_add_output_event_write(dtio);
+#endif
 	return 1;
 }
 
 void dt_io_thread_stop(struct dt_io_thread* dtio)
 {
+#ifndef THREADS_DISABLED
 	uint8_t cmd = DTIO_COMMAND_STOP;
+#endif
 	if(!dtio) return;
 	if(!dtio->started) return;
 	verbose(VERB_ALGO, "dnstap io: send stop cmd");
 
+#ifndef THREADS_DISABLED
 	while(1) {
 		ssize_t r = write(dtio->commandpipe[1], &cmd, sizeof(cmd));
 		if(r == -1) {
@@ -1324,6 +1342,7 @@ void dt_io_thread_stop(struct dt_io_thread* dtio)
 		break;
 	}
 	dtio->started = 0;
+#endif /* THREADS_DISABLED */
 
 #ifndef USE_WINSOCK
 	close(dtio->commandpipe[1]);
@@ -1331,5 +1350,10 @@ void dt_io_thread_stop(struct dt_io_thread* dtio)
 	_close(dtio->commandpipe[1]);
 #endif
 	dtio->commandpipe[1] = -1;
+#ifndef THREADS_DISABLED
 	ub_thread_join(dtio->tid);
+#else
+	dtio->want_to_exit = 1;
+	dtio_desetup(dtio);
+#endif
 }

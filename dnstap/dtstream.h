@@ -345,9 +345,12 @@ void dt_io_thread_unregister_queue(struct dt_io_thread* dtio,
 /**
  * Start the io thread
  * @param dtio: the io thread.
+ * @param event_base_nothr: the event base to attach the events to, in case
+ * 	we are running without threads.  With threads, this is ignored
+ * 	and a thread is started to process the dnstap log messages.
  * @return false on failure.
  */
-int dt_io_thread_start(struct dt_io_thread* dtio);
+int dt_io_thread_start(struct dt_io_thread* dtio, void* event_base_nothr);
 
 /** 
  * Stop the io thread
