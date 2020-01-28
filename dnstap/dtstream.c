@@ -286,7 +286,9 @@ int dt_io_thread_register_queue(struct dt_io_thread* dtio,
 void dt_io_thread_unregister_queue(struct dt_io_thread* dtio,
         struct dt_msg_queue* mq)
 {
-	struct dt_io_list_item* item=dtio->io_list, *prev=NULL;
+	struct dt_io_list_item* item, *prev=NULL;
+	if(!dtio) return;
+	item = dtio->io_list;
 	while(item) {
 		if(item->queue == mq) {
 			/* found it */
