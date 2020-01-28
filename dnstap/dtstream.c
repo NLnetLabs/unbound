@@ -227,6 +227,7 @@ dt_msg_queue_submit(struct dt_msg_queue* mq, void* buf, size_t len)
 		/* drop */
 		lock_basic_unlock(&mq->lock);
 		free(buf);
+		free(entry);
 		return;
 	}
 	mq->cursize += len;
