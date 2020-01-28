@@ -11,14 +11,14 @@ sinclude(dnscrypt/dnscrypt.m4)
 # must be numbers. ac_defun because of later processing
 m4_define([VERSION_MAJOR],[1])
 m4_define([VERSION_MINOR],[9])
-m4_define([VERSION_MICRO],[5])
+m4_define([VERSION_MICRO],[7])
 AC_INIT(unbound, m4_defn([VERSION_MAJOR]).m4_defn([VERSION_MINOR]).m4_defn([VERSION_MICRO]), unbound-bugs@nlnetlabs.nl or https://github.com/NLnetLabs/unbound/issues, unbound)
 AC_SUBST(UNBOUND_VERSION_MAJOR, [VERSION_MAJOR])
 AC_SUBST(UNBOUND_VERSION_MINOR, [VERSION_MINOR])
 AC_SUBST(UNBOUND_VERSION_MICRO, [VERSION_MICRO])
 
 LIBUNBOUND_CURRENT=9
-LIBUNBOUND_REVISION=5
+LIBUNBOUND_REVISION=7
 LIBUNBOUND_AGE=1
 # 1.0.0 had 0:12:0
 # 1.0.1 had 0:13:0
@@ -91,6 +91,8 @@ LIBUNBOUND_AGE=1
 # 1.9.3 had 9:3:1
 # 1.9.4 had 9:4:1
 # 1.9.5 had 9:5:1
+# 1.9.6 had 9:6:1
+# 1.9.7 had 9:7:1
 
 #   Current  -- the number of the binary API that we're implementing
 #   Revision -- which iteration of the implementation of the binary
@@ -431,6 +433,7 @@ AC_INCLUDES_DEFAULT
 # endif
 #endif
 ])
+AC_CHECK_SIZEOF(size_t)
 
 # add option to disable the evil rpath
 ACX_ARG_RPATH
@@ -476,7 +479,7 @@ ACX_MKDIR_ONE_ARG
 AC_CHECK_FUNCS([strptime],[AC_CHECK_STRPTIME_WORKS],[AC_LIBOBJ([strptime])])
 
 # check if we can use SO_REUSEPORT
-if echo "$host" | grep -i -e linux -e dragonfly >/dev/null; then
+if echo "$host" | $GREP -i -e linux -e dragonfly >/dev/null; then
 	AC_DEFINE(REUSEPORT_DEFAULT, 1, [if REUSEPORT is enabled by default])
 else
 	AC_DEFINE(REUSEPORT_DEFAULT, 0, [if REUSEPORT is enabled by default])
@@ -501,6 +504,10 @@ if test x_$enable_alloc_nonregional = x_yes; then
 fi
 if test x_$enable_alloc_checks = x_yes; then
 	AC_DEFINE(UNBOUND_ALLOC_STATS, 1, [use statistics for allocs and frees, for debug use])
+	SLDNS_ALLOCCHECK_EXTRA_OBJ="alloc.lo log.lo"
+	AC_SUBST(SLDNS_ALLOCCHECK_EXTRA_OBJ)
+	ASYNCLOOK_ALLOCCHECK_EXTRA_OBJ="alloc.lo"
+	AC_SUBST(ASYNCLOOK_ALLOCCHECK_EXTRA_OBJ)
 else
 	if test x_$enable_alloc_lite = x_yes; then
 		AC_DEFINE(UNBOUND_ALLOC_LITE, 1, [use to enable lightweight alloc assertions, for debug use])
@@ -776,6 +783,8 @@ AC_ARG_WITH([nss], AC_HELP_STRING([--with-nss=path],
 	fi
         LIBS="$LIBS -lnss3 -lnspr4"
 	SSLLIB=""
+	PC_CRYPTO_DEPENDENCY="nss nspr"
+	AC_SUBST(PC_CRYPTO_DEPENDENCY)
 	]
 )
 
@@ -796,6 +805,8 @@ AC_ARG_WITH([nettle], AC_HELP_STRING([--with-nettle=path],
 	fi
         LIBS="$LIBS -lhogweed -lnettle -lgmp"
 	SSLLIB=""
+	PC_CRYPTO_DEPENDENCY="hogweed nettle"
+	AC_SUBST(PC_CRYPTO_DEPENDENCY)
 	]
 )
 
@@ -804,6 +815,9 @@ if test $USE_NSS = "no" -a $USE_NETTLE = "no"; then
 ACX_WITH_SSL
 ACX_LIB_SSL
 SSLLIB="-lssl"
+
+PC_CRYPTO_DEPENDENCY="libcrypto libssl"
+AC_SUBST(PC_CRYPTO_DEPENDENCY)
 
 # check if -lcrypt32 is needed because CAPIENG needs that. (on windows)
 BAKLIBS="$LIBS"
@@ -857,9 +871,58 @@ AC_INCLUDES_DEFAULT
 #include <openssl/ssl.h>
 #include <openssl/evp.h>
 ])
+
+if test "$ac_cv_func_HMAC_Init_ex" = "yes"; then
+# check function return type.
+AC_MSG_CHECKING(the return type of HMAC_Init_ex)
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([
+#ifdef HAVE_OPENSSL_ERR_H
+#include <openssl/err.h>
+#endif
+
+#ifdef HAVE_OPENSSL_RAND_H
+#include <openssl/rand.h>
+#endif
+
+#ifdef HAVE_OPENSSL_CONF_H
+#include <openssl/conf.h>
+#endif
+
+#ifdef HAVE_OPENSSL_ENGINE_H
+#include <openssl/engine.h>
+#endif
+#include <openssl/ssl.h>
+#include <openssl/evp.h>
+], [
+	HMAC_CTX* hmac_ctx = NULL;
+	void* hmac_key = NULL;
+	const EVP_MD* digest = NULL;
+	int x = HMAC_Init_ex(hmac_ctx, hmac_key, 32, digest, NULL);
+	(void)x;
+])], [
+	AC_MSG_RESULT(int)
+], [
+	AC_MSG_RESULT(void)
+	AC_DEFINE([HMAC_INIT_EX_RETURNS_VOID], 1, [If HMAC_Init_ex() returns void])
+])
+fi
+
 fi
 AC_SUBST(SSLLIB)
 
+# libbsd
+AC_ARG_WITH([libbsd], AC_HELP_STRING([--with-libbsd], [Use portable libbsd functions]), [
+	AC_CHECK_HEADERS([bsd/string.h bsd/stdlib.h],,, [AC_INCLUDES_DEFAULT])
+	if test "x$ac_cv_header_bsd_string_h" = xyes -a "x$ac_cv_header_bsd_stdlib_h" = xyes; then
+		for func in strlcpy strlcat arc4random arc4random_uniform reallocarray; do
+			AC_SEARCH_LIBS([$func], [bsd], [
+				AC_DEFINE(HAVE_LIBBSD, 1, [Use portable libbsd functions])
+				PC_LIBBSD_DEPENDENCY=libbsd
+				AC_SUBST(PC_LIBBSD_DEPENDENCY)
+			])
+		done
+	fi
+])
 
 AC_ARG_ENABLE(sha1, AC_HELP_STRING([--disable-sha1], [Disable SHA1 RRSIG support, does not disable nsec3 support]))
 case "$enable_sha1" in
@@ -1044,9 +1107,7 @@ esac
 AC_ARG_ENABLE(dsa, AC_HELP_STRING([--disable-dsa], [Disable DSA support]))
 use_dsa="no"
 case "$enable_dsa" in
-    no)
-      ;;
-    *)
+    yes)
       # detect if DSA is supported, and turn it off if not.
       if test $USE_NSS = "no" -a $USE_NETTLE = "no"; then
       AC_CHECK_FUNC(DSA_SIG_new, [
@@ -1076,6 +1137,10 @@ AC_INCLUDES_DEFAULT
       else
       AC_DEFINE_UNQUOTED([USE_DSA], [1], [Define this to enable DSA support.])
       fi
+      ;;
+    *)
+      # disable dsa by default, RFC 8624 section 3.1, validators MUST NOT
+      # support DSA for DNSSEC Validation.
       ;;
 esac
 
@@ -1321,16 +1386,33 @@ if test x_$withval = x_yes -o x_$withval != x_no; then
     ])
 fi
 
-# set static linking if requested
+# set static linking for uninstalled libraries if requested
 AC_SUBST(staticexe)
 staticexe=""
 AC_ARG_ENABLE(static-exe, AC_HELP_STRING([--enable-static-exe],
-	[ enable to compile executables statically against (event) libs, for debug purposes ]), 
+	[ enable to compile executables statically against (event) uninstalled libs, for debug purposes ]),
 	, )
 if test x_$enable_static_exe = x_yes; then
 	staticexe="-static"
 	if test "$on_mingw" = yes; then
 		staticexe="-all-static"
+		# for static compile, include gdi32 and zlib here.
+		if echo $LIBS | grep 'lgdi32' >/dev/null; then
+			:
+		else
+			LIBS="$LIBS -lgdi32"
+		fi
+		LIBS="$LIBS -lz"
+	fi
+fi
+
+# set full static linking if requested
+AC_ARG_ENABLE(fully-static, AC_HELP_STRING([--enable-fully-static],
+	[ enable to compile fully static ]),
+	, )
+if test x_$enable_fully_static = x_yes; then
+	staticexe="-all-static"
+	if test "$on_mingw" = yes; then
 		# for static compile, include gdi32 and zlib here.
 		if echo $LIBS | grep 'lgdi32' >/dev/null; then
 			:
@@ -1532,6 +1614,9 @@ if test "$USE_NSS" = "no"; then
 					LIBS="$LIBS -lmd"
 				fi
 				AC_SEARCH_LIBS([clock_gettime], [rt])
+			;;
+			*freebsd*|*FreeBSD)
+				AC_LIBOBJ(getentropy_freebsd)
 			;;
 			*linux*|Linux|*)
 				AC_LIBOBJ(getentropy_linux)
@@ -1905,6 +1990,11 @@ char *strptime(const char *s, const char *format, struct tm *tm);
 void *reallocarray(void *ptr, size_t nmemb, size_t size);
 #endif
 
+#ifdef HAVE_LIBBSD
+#include <bsd/string.h>
+#include <bsd/stdlib.h>
+#endif
+
 #ifdef HAVE_LIBRESSL
 #  if !HAVE_DECL_STRLCPY
 size_t strlcpy(char *dst, const char *src, size_t siz);
@@ -2006,6 +2096,6 @@ dnl if this is a distro tarball, that was already done by makedist.sh
 AC_SUBST(version, [VERSION_MAJOR.VERSION_MINOR.VERSION_MICRO])
 AC_SUBST(date, [`date +'%b %e, %Y'`])
 
-AC_CONFIG_FILES([Makefile doc/example.conf doc/libunbound.3 doc/unbound.8 doc/unbound-anchor.8 doc/unbound-checkconf.8 doc/unbound.conf.5 doc/unbound-control.8 doc/unbound-host.1 smallapp/unbound-control-setup.sh dnstap/dnstap_config.h dnscrypt/dnscrypt_config.h contrib/libunbound.pc contrib/unbound.socket contrib/unbound.service])
+AC_CONFIG_FILES([Makefile doc/example.conf doc/libunbound.3 doc/unbound.8 doc/unbound-anchor.8 doc/unbound-checkconf.8 doc/unbound.conf.5 doc/unbound-control.8 doc/unbound-host.1 smallapp/unbound-control-setup.sh dnstap/dnstap_config.h dnscrypt/dnscrypt_config.h contrib/libunbound.pc contrib/unbound.socket contrib/unbound.service contrib/unbound_nochroot.service])
 AC_CONFIG_HEADER([config.h])
 AC_OUTPUT

@@ -1157,7 +1157,7 @@ mesh_send_reply(struct mesh_state* m, int rcode, struct reply_info* rep,
 	}
 	/* Log reply sent */
 	if(m->s.env->cfg->log_replies) {
-		log_reply_info(0, &m->s.qinfo, &r->query_reply.addr,
+		log_reply_info(NO_VERBOSE, &m->s.qinfo, &r->query_reply.addr,
 			r->query_reply.addrlen, duration, 0, r_buffer);
 	}
 }
@@ -1411,7 +1411,7 @@ mesh_continue(struct mesh_area* mesh, struct mesh_state* mstate,
 		/* module is looping. Stop it. */
 		log_err("internal error: looping module (%s) stopped",
 			mesh->mods.mod[mstate->s.curmod]->name);
-		log_query_info(0, "pass error for qstate",
+		log_query_info(NO_VERBOSE, "pass error for qstate",
 			&mstate->s.qinfo);
 		s = module_error;
 	}

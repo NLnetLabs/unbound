@@ -63,6 +63,12 @@
 /* Whether the C compiler accepts the "weak" attribute */
 #undef HAVE_ATTR_WEAK
 
+/* Define to 1 if you have the <bsd/stdlib.h> header file. */
+#undef HAVE_BSD_STDLIB_H
+
+/* Define to 1 if you have the <bsd/string.h> header file. */
+#undef HAVE_BSD_STRING_H
+
 /* Define to 1 if you have the `chown' function. */
 #undef HAVE_CHOWN
 
@@ -310,6 +316,9 @@
 
 /* Define to 1 if you have the `kill' function. */
 #undef HAVE_KILL
+
+/* Use portable libbsd functions */
+#undef HAVE_LIBBSD
 
 /* Define to 1 if you have the <libkern/OSByteOrder.h> header file. */
 #undef HAVE_LIBKERN_OSBYTEORDER_H
@@ -620,6 +629,9 @@
 /* Define to 1 if you have the `_beginthreadex' function. */
 #undef HAVE__BEGINTHREADEX
 
+/* If HMAC_Init_ex() returns void */
+#undef HMAC_INIT_EX_RETURNS_VOID
+
 /* if lex has yylex_destroy */
 #undef LEX_HAS_YYLEX_DESTROY
 
@@ -711,6 +723,9 @@
 
 /* Shared data */
 #undef SHARE_DIR
+
+/* The size of `size_t', as computed by sizeof. */
+#undef SIZEOF_SIZE_T
 
 /* The size of `time_t', as computed by sizeof. */
 #undef SIZEOF_TIME_T
@@ -1226,6 +1241,11 @@ char *strptime(const char *s, const char *format, struct tm *tm);
 
 #if !HAVE_DECL_REALLOCARRAY
 void *reallocarray(void *ptr, size_t nmemb, size_t size);
+#endif
+
+#ifdef HAVE_LIBBSD
+#include <bsd/string.h>
+#include <bsd/stdlib.h>
 #endif
 
 #ifdef HAVE_LIBRESSL

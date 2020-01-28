@@ -355,7 +355,7 @@ read_cert_bio(BIO* bio)
 		exit(0);
 	}
 	while(!BIO_eof(bio)) {
-		X509* x = PEM_read_bio_X509(bio, NULL, 0, NULL);
+		X509* x = PEM_read_bio_X509(bio, NULL, NULL, NULL);
 		if(x == NULL) {
 			if(verb) {
 				printf("failed to read X509\n");
@@ -396,7 +396,7 @@ read_cert_file(const char* file)
 		return NULL;
 	}
 	while(!feof(in)) {
-		X509* x = PEM_read_X509(in, NULL, 0, NULL);
+		X509* x = PEM_read_X509(in, NULL, NULL, NULL);
 		if(x == NULL) {
 			if(verb) {
 				printf("failed to read X509 file\n");
@@ -782,7 +782,7 @@ TLS_initiate(SSL_CTX* sslctx, int fd)
 		return NULL;
 	}
 	SSL_set_connect_state(ssl);
-	(void)SSL_set_mode(ssl, SSL_MODE_AUTO_RETRY);
+	(void)SSL_set_mode(ssl, (long)SSL_MODE_AUTO_RETRY);
 	if(!SSL_set_fd(ssl, fd)) {
 		if(verb) printf("SSL_set_fd error\n");
 		SSL_free(ssl);
@@ -943,7 +943,7 @@ read_data_chunk(SSL* ssl, size_t len)
 	size_t got = 0;
 	int r;
 	char* data;
-	if(len >= 0xfffffff0)
+	if((unsigned)len >= (unsigned)0xfffffff0)
 		return NULL; /* to protect against integer overflow in malloc*/
 	data = malloc(len+1);
 	if(!data) {
@@ -2379,7 +2379,9 @@ int main(int argc, char* argv[])
 	ERR_load_SSL_strings();
 #endif
 #if OPENSSL_VERSION_NUMBER < 0x10100000 || !defined(HAVE_OPENSSL_INIT_CRYPTO)
+#  ifndef S_SPLINT_S
 	OpenSSL_add_all_algorithms();
+#  endif
 #else
 	OPENSSL_init_crypto(OPENSSL_INIT_ADD_ALL_CIPHERS
 		| OPENSSL_INIT_ADD_ALL_DIGESTS

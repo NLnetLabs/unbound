@@ -1042,7 +1042,7 @@ service(const char* bind_str, int bindport, const char* serv_str,
 	}
 	i=0;
 	if(bindport == 0) {
-		bindport = 1024 + arc4random()%64000;
+		bindport = 1024 + ((int)arc4random())%64000;
 		i = 100;
 	}
 	while(1) {
@@ -1058,7 +1058,7 @@ service(const char* bind_str, int bindport, const char* serv_str,
 #endif
 			if(i--==0)
 				fatal_exit("cannot bind any port");
-			bindport = 1024 + arc4random()%64000;
+			bindport = 1024 + ((int)arc4random())%64000;
 		} else break;
 	}
 	fd_set_nonblock(s);

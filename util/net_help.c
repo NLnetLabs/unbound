@@ -728,11 +728,13 @@ listen_sslctx_setup(void* ctxt)
 #ifdef HAVE_SSL
 	SSL_CTX* ctx = (SSL_CTX*)ctxt;
 	/* no SSLv2, SSLv3 because has defects */
+#if SSL_OP_NO_SSLv2 != 0
 	if((SSL_CTX_set_options(ctx, SSL_OP_NO_SSLv2) & SSL_OP_NO_SSLv2)
 		!= SSL_OP_NO_SSLv2){
 		log_crypto_err("could not set SSL_OP_NO_SSLv2");
 		return 0;
 	}
+#endif
 	if((SSL_CTX_set_options(ctx, SSL_OP_NO_SSLv3) & SSL_OP_NO_SSLv3)
 		!= SSL_OP_NO_SSLv3){
 		log_crypto_err("could not set SSL_OP_NO_SSLv3");
@@ -968,12 +970,14 @@ void* connect_sslctx_create(char* key, char* pem, char* verifypem, int wincert)
 		log_crypto_err("could not allocate SSL_CTX pointer");
 		return NULL;
 	}
+#if SSL_OP_NO_SSLv2 != 0
 	if((SSL_CTX_set_options(ctx, SSL_OP_NO_SSLv2) & SSL_OP_NO_SSLv2)
 		!= SSL_OP_NO_SSLv2) {
 		log_crypto_err("could not set SSL_OP_NO_SSLv2");
 		SSL_CTX_free(ctx);
 		return NULL;
 	}
+#endif
 	if((SSL_CTX_set_options(ctx, SSL_OP_NO_SSLv3) & SSL_OP_NO_SSLv3)
 		!= SSL_OP_NO_SSLv3) {
 		log_crypto_err("could not set SSL_OP_NO_SSLv3");
@@ -1045,7 +1049,7 @@ void* incoming_ssl_fd(void* sslctx, int fd)
 		return NULL;
 	}
 	SSL_set_accept_state(ssl);
-	(void)SSL_set_mode(ssl, SSL_MODE_AUTO_RETRY);
+	(void)SSL_set_mode(ssl, (long)SSL_MODE_AUTO_RETRY);
 	if(!SSL_set_fd(ssl, fd)) {
 		log_crypto_err("could not SSL_set_fd");
 		SSL_free(ssl);
@@ -1067,7 +1071,7 @@ void* outgoing_ssl_fd(void* sslctx, int fd)
 		return NULL;
 	}
 	SSL_set_connect_state(ssl);
-	(void)SSL_set_mode(ssl, SSL_MODE_AUTO_RETRY);
+	(void)SSL_set_mode(ssl, (long)SSL_MODE_AUTO_RETRY);
 	if(!SSL_set_fd(ssl, fd)) {
 		log_crypto_err("could not SSL_set_fd");
 		SSL_free(ssl);
@@ -1223,10 +1227,14 @@ int tls_session_ticket_key_cb(void *ATTR_UNUSED(sslctx), unsigned char* key_name
 			verbose(VERB_CLIENT, "EVP_EncryptInit_ex failed");
 			return -1;
 		}
+#ifndef HMAC_INIT_EX_RETURNS_VOID
 		if (HMAC_Init_ex(hmac_ctx, ticket_keys->hmac_key, 32, digest, NULL) != 1) {
 			verbose(VERB_CLIENT, "HMAC_Init_ex failed");
 			return -1;
 		}
+#else
+		HMAC_Init_ex(hmac_ctx, ticket_keys->hmac_key, 32, digest, NULL);
+#endif
 		return 1;
 	} else if (enc == 0) {
 		/* decrypt */
@@ -1243,10 +1251,14 @@ int tls_session_ticket_key_cb(void *ATTR_UNUSED(sslctx), unsigned char* key_name
 			return 0;
 		}
 
+#ifndef HMAC_INIT_EX_RETURNS_VOID
 		if (HMAC_Init_ex(hmac_ctx, key->hmac_key, 32, digest, NULL) != 1) {
 			verbose(VERB_CLIENT, "HMAC_Init_ex failed");
 			return -1;
 		}
+#else
+		HMAC_Init_ex(hmac_ctx, key->hmac_key, 32, digest, NULL);
+#endif
 		if (EVP_DecryptInit_ex(evp_sctx, cipher, NULL, key->aes_key, iv) != 1) {
 			log_err("EVP_DecryptInit_ex failed");
 			return -1;

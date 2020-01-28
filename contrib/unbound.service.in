@@ -26,7 +26,6 @@ ReadWritePaths=/run @UNBOUND_RUN_DIR@ @UNBOUND_CHROOT_DIR@
 TemporaryFileSystem=@UNBOUND_CHROOT_DIR@/dev:ro
 TemporaryFileSystem=@UNBOUND_CHROOT_DIR@/run:ro
 BindReadOnlyPaths=-/run/systemd/notify:@UNBOUND_CHROOT_DIR@/run/systemd/notify
-BindPaths=-@UNBOUND_PIDFILE@:@UNBOUND_CHROOT_DIR@@UNBOUND_PIDFILE@
 BindReadOnlyPaths=-/dev/urandom:@UNBOUND_CHROOT_DIR@/dev/urandom
 BindPaths=-/dev/log:@UNBOUND_CHROOT_DIR@/dev/log
 RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
