@@ -1,3 +1,6 @@
+28 January 2020: Wouter
+	- iana portlist updated.
+
 27 January 2020: Ralph
 	- Merge PR#154; Allow use of libbsd functions with configure option
 	  --with-libbsd. By Robert Edmonds and Steven Chamberlain.
