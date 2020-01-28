@@ -456,7 +456,7 @@ strip_dname_origin(uint8_t* dname, size_t dnamelen, size_t originlen,
 	if(newdnamelen+1 > maxnewdnamelen)
 		return 0;
 	memmove(newdname, dname, newdnamelen);
-	memset(newdname+newdnamelen, 0, 1);
+	newdname[newdnamelen] = 0;
 	return newdnamelen + 1;	/* + 1 for root label */
 }
 
@@ -619,7 +619,7 @@ rpz_insert_rr(struct rpz* r, size_t aznamelen, uint8_t* dname,
 	}
 	else {
 		free(policydname);
-		verbose(VERB_ALGO, "RPZ: skipping unusupported trigger: %s",
+		verbose(VERB_ALGO, "RPZ: skipping unsupported trigger: %s",
 			rpz_trigger_to_string(t));
 	}
 	return 1;
