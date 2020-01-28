@@ -4,13 +4,11 @@
 ; To use this unit file, please make sure you either compile unbound with the
 ; following options:
 ;
-;  - --with-pidfile=/run/unbound/unbound.pid
 ;  - --with-chroot-dir=""
 ;
 ; Or put the following options in your unbound configuration file:
 ;
 ;  - chroot: ""
-;  - pidfile: /run/unbound/unbound.pid
 ;
 ;
 [Unit]
@@ -25,10 +23,10 @@ WantedBy=multi-user.target
 
 [Service]
 ExecReload=+/bin/kill -HUP $MAINPID
-ExecStart=@UNBOUND_SBIN_DIR@/unbound -d
+ExecStart=@UNBOUND_SBIN_DIR@/unbound -d -p
 NotifyAccess=main
 Type=notify
-CapabilityBoundingSet=CAP_NET_BIND_SERVICE CAP_SETGID CAP_SETUID CAP_SYS_CHROOT CAP_SYS_RESOURCE CAP_NET_RAW CAP_CHOWN
+CapabilityBoundingSet=CAP_NET_BIND_SERVICE CAP_SETGID CAP_SETUID CAP_SYS_CHROOT CAP_SYS_RESOURCE CAP_NET_RAW
 MemoryDenyWriteExecute=true
 NoNewPrivileges=true
 PrivateDevices=true

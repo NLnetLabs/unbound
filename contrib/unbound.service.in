@@ -51,10 +51,10 @@ WantedBy=multi-user.target
 
 [Service]
 ExecReload=+/bin/kill -HUP $MAINPID
-ExecStart=@UNBOUND_SBIN_DIR@/unbound -d
+ExecStart=@UNBOUND_SBIN_DIR@/unbound -d -p
 NotifyAccess=main
 Type=notify
-CapabilityBoundingSet=CAP_NET_BIND_SERVICE CAP_SETGID CAP_SETUID CAP_SYS_CHROOT CAP_SYS_RESOURCE CAP_NET_RAW CAP_CHOWN
+CapabilityBoundingSet=CAP_NET_BIND_SERVICE CAP_SETGID CAP_SETUID CAP_SYS_CHROOT CAP_SYS_RESOURCE CAP_NET_RAW
 MemoryDenyWriteExecute=true
 NoNewPrivileges=true
 PrivateDevices=true
@@ -74,11 +74,6 @@ RestrictNamespaces=yes
 LockPersonality=yes
 RestrictSUIDSGID=yes
 ReadWritePaths=@UNBOUND_RUN_DIR@ @UNBOUND_CHROOT_DIR@
-
-# Below is needed when pidfile is stored directly under /run like /run/unbound.pid.
-# If pidfile is stored under subdirectory like /run/unbound/unbound.pid instead
-# then it may be safely removed.
-ReadWritePaths=/run
 
 # Below rules are needed when chroot is enabled (usually it's enabled by default).
 # If chroot is disabled like chrooot: "" then they may be safely removed.
