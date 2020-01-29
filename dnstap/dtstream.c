@@ -1302,6 +1302,7 @@ int dt_io_thread_start(struct dt_io_thread* dtio, void* event_base_nothr)
 	dtio->started = 1;
 #ifndef THREADS_DISABLED
 	ub_thread_create(&dtio->tid, dnstap_io, dtio);
+	(void)event_base_nothr;
 #else
 	dtio->event_base = event_base_nothr;
 	dtio_setup_cmd(dtio);
