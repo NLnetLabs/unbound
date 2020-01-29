@@ -1,3 +1,6 @@
+29 January 2020: Wouter
+	- Fix #157: undefined reference to `htobe64'.
+
 28 January 2020: Ralph
 	- Merge PR#147; change rfc reference for reserved top level dns names.
 
