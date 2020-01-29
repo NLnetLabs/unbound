@@ -157,6 +157,8 @@ usage(void)
 	printf("  view_local_datas view 		add list of local-data to view\n");
 	printf("  					one entry per line read from stdin\n");
 	printf("  view_local_data_remove view name  	remove local-data in view\n");
+	printf("  view_local_datas_remove view 		remove list of local-data from view\n");
+	printf("  					one entry per line read from stdin\n");
 	printf("Version %s\n", PACKAGE_VERSION);
 	printf("BSD licensed, see LICENSE in source package for details.\n");
 	printf("Report bugs to %s\n", PACKAGE_BUGREPORT);
@@ -706,7 +708,8 @@ check_args_for_listcmd(int argc, char* argv[])
 		fatal_exit("too many arguments for command '%s', "
 			"content is piped in from stdin", argv[0]);
 	}
-	if(argc >= 1 && strcmp(argv[0], "view_local_datas") == 0 &&
+	if(argc >= 1 && (strcmp(argv[0], "view_local_datas") == 0 ||
+		strcmp(argv[0], "view_local_datas_remove") == 0) &&
 		argc >= 3) {
 		fatal_exit("too many arguments for command '%s', "
 			"content is piped in from stdin", argv[0]);
@@ -755,7 +758,8 @@ go_cmd(SSL* ssl, int fd, int quiet, int argc, char* argv[])
 		strcmp(argv[0], "local_zones_remove") == 0 ||
 		strcmp(argv[0], "local_datas") == 0 ||
 		strcmp(argv[0], "view_local_datas") == 0 ||
-		strcmp(argv[0], "local_datas_remove") == 0)) {
+		strcmp(argv[0], "local_datas_remove") == 0) ||
+		strcmp(argv[0], "view_local_datas_remove") == 0) {
 		send_file(ssl, fd, stdin, buf, sizeof(buf));
 		send_eof(ssl, fd);
 	}
