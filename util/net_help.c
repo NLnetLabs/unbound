@@ -296,6 +296,11 @@ static int ipdnametoaddr(uint8_t* dname, size_t dnamelen,
 	size_t len = 0;
 	int i;
 	*af = AF_INET;
+
+	/* need 1 byte for label length */
+	if(dnamelen < 1)
+		return 0;
+
 	if(dnamelabs > 6 ||
 		dname_has_label(dname, dnamelen, (uint8_t*)"\002zz")) {
 		*af = AF_INET6;
@@ -363,17 +368,23 @@ int netblockdnametoaddr(uint8_t* dname, size_t dnamelen,
 	struct sockaddr_storage* addr, socklen_t* addrlen, int* net, int* af)
 {
 	char buff[3 /* 3 digit netblock */ + 1];
-	if(*dname > 3)
+	size_t nlablen;
+	if(dnamelen < 1 || *dname > 3)
 		/* netblock invalid */
 		return 0;
-	memcpy(buff, dname+1, *dname);
-	buff[*dname] = '\0';
+	nlablen = *dname;
+
+	if(dnamelen < 1 + nlablen)
+		return 0;
+
+	memcpy(buff, dname+1, nlablen);
+	buff[nlablen] = '\0';
 	*net = atoi(buff);
 	if(*net == 0 && strcmp(buff, "0") != 0)
 		return 0;
-	dname += *dname;
+	dname += nlablen;
 	dname++;
-	if(!ipdnametoaddr(dname, dnamelen, addr, addrlen, af))
+	if(!ipdnametoaddr(dname, dnamelen-1-nlablen, addr, addrlen, af))
 		return 0;
 	if((*af == AF_INET6 && *net > 128) || (*af == AF_INET && *net > 32))
 		return 0;
