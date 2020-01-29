@@ -1253,6 +1253,15 @@ static void dtio_open_output(struct dt_io_thread* dtio)
 #endif /* HAVE_SYS_UN_H */
 }
 
+/** perform the setup of the writer thread on the established event_base */
+static void dtio_setup_on_base(struct dt_io_thread* dtio)
+{
+	dtio_setup_cmd(dtio);
+	dtio_setup_reconnect(dtio);
+	dtio_open_output(dtio);
+	dtio_add_output_event_write(dtio);
+}
+
 #ifndef THREADS_DISABLED
 /** the IO thread function for the DNSTAP IO */
 static void* dnstap_io(void* arg)
@@ -1264,10 +1273,7 @@ static void* dnstap_io(void* arg)
 	/* setup */
 	verbose(VERB_ALGO, "start dnstap io thread");
 	dtio_setup_base(dtio, &secs, &now);
-	dtio_setup_cmd(dtio);
-	dtio_setup_reconnect(dtio);
-	dtio_open_output(dtio);
-	dtio_add_output_event_write(dtio);
+	dtio_setup_on_base(dtio);
 
 	/* run */
 	if(ub_event_base_dispatch(dtio->event_base) < 0) {
@@ -1305,10 +1311,7 @@ int dt_io_thread_start(struct dt_io_thread* dtio, void* event_base_nothr)
 	(void)event_base_nothr;
 #else
 	dtio->event_base = event_base_nothr;
-	dtio_setup_cmd(dtio);
-	dtio_setup_reconnect(dtio);
-	dtio_open_output(dtio);
-	dtio_add_output_event_write(dtio);
+	dtio_setup_on_base(dtio);
 #endif
 	return 1;
 }
