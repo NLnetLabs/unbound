@@ -647,7 +647,7 @@ rpz_find_zone(struct rpz* r, uint8_t* qname, size_t qname_len, uint16_t qclass,
 {
 	uint8_t* ce;
 	size_t ce_len, ce_labs;
-	uint8_t wc[LDNS_MAX_DOMAINLEN];
+	uint8_t wc[LDNS_MAX_DOMAINLEN+1];
 	int exact;
 	struct local_zone* z = NULL;
 	if(wr) {
