@@ -63,6 +63,9 @@
 /* Whether the C compiler accepts the "weak" attribute */
 #undef HAVE_ATTR_WEAK
 
+/* If we have be64toh */
+#undef HAVE_BE64TOH
+
 /* Define to 1 if you have the <bsd/stdlib.h> header file. */
 #undef HAVE_BSD_STDLIB_H
 
@@ -289,6 +292,9 @@
 
 /* If you have HMAC_Update */
 #undef HAVE_HMAC_UPDATE
+
+/* If we have htobe64 */
+#undef HAVE_HTOBE64
 
 /* Define to 1 if you have the `inet_aton' function. */
 #undef HAVE_INET_ATON
