@@ -118,13 +118,17 @@ get_tld_label(uint8_t* dname, size_t maxdnamelen)
 	uint8_t* prevlab = dname;
 	size_t dnamelen = 0;
 
+	/* one byte needed for label length */
+	if(dnamelen+1 > maxdnamelen)
+		return NULL;
+
 	/* only root label */
 	if(*dname == 0)
 		return NULL;
 
 	while(*dname) {
 		dnamelen += ((size_t)*dname)+1;
-		if(dnamelen > maxdnamelen)
+		if(dnamelen+1 > maxdnamelen)
 			return NULL;
 		dname = dname+((size_t)*dname)+1;
 		if(*dname != 0)
