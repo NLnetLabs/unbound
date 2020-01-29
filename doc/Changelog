@@ -1,3 +1,7 @@
+29 January 2020: Ralph
+	- Merge PR#156 from Alexander Berkes; Added unbound-control
+  	  view_local_datas_remove command.
+
 29 January 2020: Wouter
 	- Fix #157: undefined reference to `htobe64'.
 
