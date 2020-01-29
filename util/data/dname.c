@@ -561,7 +561,13 @@ dname_lab_startswith(uint8_t* label, char* prefix, char** endptr)
 int
 dname_has_label(uint8_t* dname, size_t dnamelen, uint8_t* label)
 {
-	size_t len = *dname;
+	size_t len;
+
+	/* 1 byte needed for the label length */
+	if(dnamelen < 1)
+		return 0;
+
+	len = *dname;
 	while(len <= dnamelen) {
 		if(!(*dname)) {
 			if(*dname == *label)

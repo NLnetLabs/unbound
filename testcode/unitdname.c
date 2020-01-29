@@ -806,6 +806,7 @@ dname_test_has_label(void)
 	/* buffer too short */
 	unit_assert(dname_has_label((uint8_t*)"\02ab\01c\0", 5, (uint8_t*)"\0") == 0);
 	unit_assert(dname_has_label((uint8_t*)"\1a\0", 2, (uint8_t*)"\0") == 0);
+	unit_assert(dname_has_label((uint8_t*)"\0", 0, (uint8_t*)"\0") == 0);
 	unit_assert(dname_has_label((uint8_t*)"\02ab\01c", 4, (uint8_t*)"\01c") == 0);
 	unit_assert(dname_has_label((uint8_t*)"\02ab\03qwe\06oqieur\03def\01c\0", 19, (uint8_t*)"\01c") == 0);
 
