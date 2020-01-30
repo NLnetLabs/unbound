@@ -2530,6 +2530,7 @@ do_auth_zone_transfer(RES* ssl, struct worker* worker, char* arg)
 		free(nm);
 		return;
 	}
+	free(nm);
 	send_ok(ssl);
 }
 	
