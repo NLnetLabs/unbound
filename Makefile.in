@@ -1507,6 +1507,7 @@ snprintf.lo snprintf.o: $(srcdir)/compat/snprintf.c config.h
 strlcat.lo strlcat.o: $(srcdir)/compat/strlcat.c config.h
 strlcpy.lo strlcpy.o: $(srcdir)/compat/strlcpy.c config.h
 strptime.lo strptime.o: $(srcdir)/compat/strptime.c config.h
+getentropy_freebsd.lo getentropy_freebsd.o: $(srcdir)/compat/getentropy_freebsd.c
 getentropy_linux.lo getentropy_linux.o: $(srcdir)/compat/getentropy_linux.c config.h
 getentropy_osx.lo getentropy_osx.o: $(srcdir)/compat/getentropy_osx.c
 getentropy_solaris.lo getentropy_solaris.o: $(srcdir)/compat/getentropy_solaris.c config.h
