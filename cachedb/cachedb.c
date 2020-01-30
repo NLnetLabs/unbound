@@ -442,7 +442,7 @@ good_expiry_and_qinfo(struct module_qstate* qstate, struct sldns_buffer* buf)
 }
 
 /* Adjust the TTL of the given RRset by 'subtract'.  If 'subtract' is
- * negative, set the TTL to the configured SERVE_EXPIRED_REPLY_TTL value. */
+ * negative, set the TTL to 0. */
 static void
 packed_rrset_ttl_subtract(struct packed_rrset_data* data, time_t subtract)
 {
@@ -450,16 +450,16 @@ packed_rrset_ttl_subtract(struct packed_rrset_data* data, time_t subtract)
 	size_t total = data->count + data->rrsig_count;
 	if(subtract >= 0 && data->ttl > subtract)
 		data->ttl -= subtract;
-	else	data->ttl = SERVE_EXPIRED_REPLY_TTL;
+	else	data->ttl = 0;
 	for(i=0; i<total; i++) {
 		if(subtract >= 0 && data->rr_ttl[i] > subtract)
 			data->rr_ttl[i] -= subtract;
-		else	data->rr_ttl[i] = SERVE_EXPIRED_REPLY_TTL;
+		else	data->rr_ttl[i] = 0;
 	}
 }
 
 /* Adjust the TTL of a DNS message and its RRs by 'adjust'.  If 'adjust' is
- * negative, set the TTL to the configured SERVE_EXPIRED_REPLY_TTL value. */
+ * negative, set the TTL to 0. */
 static void
 adjust_msg_ttl(struct dns_msg* msg, time_t adjust)
 {
@@ -467,7 +467,7 @@ adjust_msg_ttl(struct dns_msg* msg, time_t adjust)
 	if(adjust >= 0 && msg->rep->ttl > adjust) {
 		msg->rep->ttl -= adjust;
 	} else {
-		msg->rep->ttl = SERVE_EXPIRED_REPLY_TTL;
+		msg->rep->ttl = 0;
 	}
 	msg->rep->prefetch_ttl = PREFETCH_TTL_CALC(msg->rep->ttl);
 	msg->rep->serve_expired_ttl = msg->rep->ttl + SERVE_EXPIRED_TTL;
@@ -532,7 +532,7 @@ parse_data(struct module_qstate* qstate, struct sldns_buffer* buf)
 	if(qstate->return_msg->rep->ttl < adjust) {
 		verbose(VERB_ALGO, "cachedb msg expired");
 		/* If serve-expired is enabled, we still use an expired message
-		 * setting the TTL to the configured SERVE_EXPIRED_REPLY_TTL value. */
+		 * setting the TTL to 0. */
 		if(qstate->env->cfg->serve_expired)
 			adjust = -1;
 		else
