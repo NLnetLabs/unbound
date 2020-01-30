@@ -1,6 +1,7 @@
 30 January 2020: Ralph
 	- Fix memory leak in error condition remote.c
 	- Fix double free in error condition view.c
+	- Fix memory leak in do_auth_zone_transfer on success
 
 30 January 2020: Wouter
 	- Fix subnet tests for disabled DSA algorithm by default.
