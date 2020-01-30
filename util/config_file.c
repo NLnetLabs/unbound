@@ -1279,6 +1279,10 @@ config_delauth(struct config_auth* p)
 	config_delstrlist(p->urls);
 	config_delstrlist(p->allow_notify);
 	free(p->zonefile);
+	free(p->rpz_taglist);
+	free(p->rpz_action_override);
+	free(p->rpz_cname);
+	free(p->rpz_log_name);
 	free(p);
 }
 
@@ -1942,7 +1946,7 @@ char* config_taglist2str(struct config_file* cfg, uint8_t* taglist,
 	return strdup(buf);
 }
 
-int taglist_intersect(uint8_t* list1, size_t list1len, uint8_t* list2,
+int taglist_intersect(uint8_t* list1, size_t list1len, const uint8_t* list2,
 	size_t list2len)
 {
 	size_t i;
