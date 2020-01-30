@@ -1,3 +1,7 @@
+30 January 2020: Wouter
+	- Fix subnet tests for disabled DSA algorithm by default.
+	- Update contrib/fastrpz.patch for clean diff with current code.
+
 29 January 2020: Ralph
 	- Merge PR#156 from Alexander Berkes; Added unbound-control
   	  view_local_datas_remove command.
