@@ -1,6 +1,5 @@
 *.lo
 *.o
-cscope.out
 /.libs/
 /.source
 /Makefile
