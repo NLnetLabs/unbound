@@ -31,6 +31,8 @@ distribution but may be helpful.
   Contributed by Yuri Voinov.
 * unbound.socket and unbound.service: systemd files for unbound, install them
   in /usr/lib/systemd/system.  Contributed by Sami Kerola and Pavel Odintsov.
+* unbound_portable.service.in: systemd file for use unbound as portable service,
+  see comments in the file. Contributed by Frzk.
 * redirect-bogus.patch: Return configured address for bogus A and AAAA answers,
   instead of SERVFAIL. Contributed by SIDN.
 * fastrpz.patch: fastrpz support from Farsight Security.

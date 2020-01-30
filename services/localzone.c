@@ -853,12 +853,12 @@ int local_zone_enter_defaults(struct local_zones* zones, struct config_file* cfg
 		log_err("out of memory adding default zone");
 		return 0;
 	}
-	/* test. zone (RFC 7686) */
+	/* test. zone (RFC 6761) */
 	if(!add_empty_default(zones, cfg, "test.")) {
 		log_err("out of memory adding default zone");
 		return 0;
 	}
-	/* invalid. zone (RFC 7686) */
+	/* invalid. zone (RFC 6761) */
 	if(!add_empty_default(zones, cfg, "invalid.")) {
 		log_err("out of memory adding default zone");
 		return 0;

@@ -673,8 +673,10 @@ UNBOUND_EVENT_UNINSTALL
 UNBOUND_EVENT_INSTALL
 SUBNET_HEADER
 SUBNET_OBJ
+PC_LIBBSD_DEPENDENCY
 SSLLIB
 HAVE_SSL
+PC_CRYPTO_DEPENDENCY
 CONFIG_DATE
 NETBSD_LINTFLAGS
 PYUNBOUND_UNINSTALL
@@ -859,6 +861,7 @@ enable_swig_version_check
 with_nss
 with_nettle
 with_ssl
+with_libbsd
 enable_sha1
 enable_sha2
 enable_subnet
@@ -1620,6 +1623,7 @@ Optional Packages:
   --with-ssl=pathname     enable SSL (will check /usr/local/ssl /usr/lib/ssl
                           /usr/ssl /usr/pkg /usr/local /opt/local /usr/sfw
                           /usr)
+  --with-libbsd           Use portable libbsd functions
   --with-libevent=pathname
                           use libevent (will check /usr/local /opt/local
                           /usr/lib /usr/pkg /usr/sfw /usr or you can specify
@@ -17759,6 +17763,8 @@ $as_echo "#define HAVE_NSS 1" >>confdefs.h
 	fi
         LIBS="$LIBS -lnss3 -lnspr4"
 	SSLLIB=""
+	PC_CRYPTO_DEPENDENCY="nss nspr"
+
 
 
 fi
@@ -17802,6 +17808,8 @@ done
 	fi
         LIBS="$LIBS -lhogweed -lnettle -lgmp"
 	SSLLIB=""
+	PC_CRYPTO_DEPENDENCY="hogweed nettle"
+
 
 
 fi
@@ -18152,6 +18160,9 @@ rm -f core conftest.err conftest.$ac_objext \
     conftest$ac_exeext conftest.$ac_ext
 SSLLIB="-lssl"
 
+PC_CRYPTO_DEPENDENCY="libcrypto libssl"
+
+
 # check if -lcrypt32 is needed because CAPIENG needs that. (on windows)
 BAKLIBS="$LIBS"
 LIBS="-lssl $LIBS"
@@ -18441,6 +18452,96 @@ fi
 
 fi
 
+
+# libbsd
+
+# Check whether --with-libbsd was given.
+if test "${with_libbsd+set}" = set; then :
+  withval=$with_libbsd;
+	for ac_header in bsd/string.h bsd/stdlib.h
+do :
+  as_ac_Header=`$as_echo "ac_cv_header_$ac_header" | $as_tr_sh`
+ac_fn_c_check_header_compile "$LINENO" "$ac_header" "$as_ac_Header" "$ac_includes_default
+"
+if eval test \"x\$"$as_ac_Header"\" = x"yes"; then :
+  cat >>confdefs.h <<_ACEOF
+#define `$as_echo "HAVE_$ac_header" | $as_tr_cpp` 1
+_ACEOF
+
+fi
+
+done
+
+	if test "x$ac_cv_header_bsd_string_h" = xyes -a "x$ac_cv_header_bsd_stdlib_h" = xyes; then
+		for func in strlcpy strlcat arc4random arc4random_uniform reallocarray; do
+			as_ac_Search=`$as_echo "ac_cv_search_$func" | $as_tr_sh`
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing $func" >&5
+$as_echo_n "checking for library containing $func... " >&6; }
+if eval \${$as_ac_Search+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_func_search_save_LIBS=$LIBS
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char $func ();
+int
+main ()
+{
+return $func ();
+  ;
+  return 0;
+}
+_ACEOF
+for ac_lib in '' bsd; do
+  if test -z "$ac_lib"; then
+    ac_res="none required"
+  else
+    ac_res=-l$ac_lib
+    LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
+  fi
+  if ac_fn_c_try_link "$LINENO"; then :
+  eval "$as_ac_Search=\$ac_res"
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext
+  if eval \${$as_ac_Search+:} false; then :
+  break
+fi
+done
+if eval \${$as_ac_Search+:} false; then :
+
+else
+  eval "$as_ac_Search=no"
+fi
+rm conftest.$ac_ext
+LIBS=$ac_func_search_save_LIBS
+fi
+eval ac_res=\$$as_ac_Search
+	       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
+$as_echo "$ac_res" >&6; }
+eval ac_res=\$$as_ac_Search
+if test "$ac_res" != no; then :
+  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
+
+
+$as_echo "#define HAVE_LIBBSD 1" >>confdefs.h
+
+				PC_LIBBSD_DEPENDENCY=libbsd
+
+
+fi
+
+		done
+	fi
+
+fi
 
 
 # Check whether --enable-sha1 was given.
@@ -18745,9 +18846,7 @@ fi
 
 use_dsa="no"
 case "$enable_dsa" in
-    no)
-      ;;
-    *)
+    yes)
       # detect if DSA is supported, and turn it off if not.
       if test $USE_NSS = "no" -a $USE_NETTLE = "no"; then
       ac_fn_c_check_func "$LINENO" "DSA_SIG_new" "ac_cv_func_DSA_SIG_new"
@@ -18799,6 +18898,10 @@ cat >>confdefs.h <<_ACEOF
 _ACEOF
 
       fi
+      ;;
+    *)
+      # disable dsa by default, RFC 8624 section 3.1, validators MUST NOT
+      # support DSA for DNSSEC Validation.
       ;;
 esac
 
@@ -19923,6 +20026,75 @@ _ACEOF
 
 
 fi
+
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for htobe64" >&5
+$as_echo_n "checking for htobe64... " >&6; }
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+#include <stdio.h>
+#ifdef HAVE_ENDIAN_H
+#  include <endian.h>
+#endif
+#ifdef HAVE_SYS_ENDIAN_H
+#  include <sys/endian.h>
+#endif
+
+int
+main ()
+{
+unsigned long long x = htobe64(0); printf("%u", (unsigned)x);
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+
+$as_echo "#define HAVE_HTOBE64 1" >>confdefs.h
+
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for be64toh" >&5
+$as_echo_n "checking for be64toh... " >&6; }
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+#include <stdio.h>
+#ifdef HAVE_ENDIAN_H
+#  include <endian.h>
+#endif
+#ifdef HAVE_SYS_ENDIAN_H
+#  include <sys/endian.h>
+#endif
+
+int
+main ()
+{
+unsigned long long x = be64toh(0); printf("%u", (unsigned)x);
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+
+$as_echo "#define HAVE_BE64TOH 1" >>confdefs.h
+
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
 
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing setusercontext" >&5
 $as_echo_n "checking for library containing setusercontext... " >&6; }
@@ -21431,7 +21603,7 @@ version=1.9.7
 date=`date +'%b %e, %Y'`
 
 
-ac_config_files="$ac_config_files Makefile doc/example.conf doc/libunbound.3 doc/unbound.8 doc/unbound-anchor.8 doc/unbound-checkconf.8 doc/unbound.conf.5 doc/unbound-control.8 doc/unbound-host.1 smallapp/unbound-control-setup.sh dnstap/dnstap_config.h dnscrypt/dnscrypt_config.h contrib/libunbound.pc contrib/unbound.socket contrib/unbound.service"
+ac_config_files="$ac_config_files Makefile doc/example.conf doc/libunbound.3 doc/unbound.8 doc/unbound-anchor.8 doc/unbound-checkconf.8 doc/unbound.conf.5 doc/unbound-control.8 doc/unbound-host.1 smallapp/unbound-control-setup.sh dnstap/dnstap_config.h dnscrypt/dnscrypt_config.h contrib/libunbound.pc contrib/unbound.socket contrib/unbound.service contrib/unbound_portable.service"
 
 ac_config_headers="$ac_config_headers config.h"
 
@@ -22437,6 +22609,7 @@ do
     "contrib/libunbound.pc") CONFIG_FILES="$CONFIG_FILES contrib/libunbound.pc" ;;
     "contrib/unbound.socket") CONFIG_FILES="$CONFIG_FILES contrib/unbound.socket" ;;
     "contrib/unbound.service") CONFIG_FILES="$CONFIG_FILES contrib/unbound.service" ;;
+    "contrib/unbound_portable.service") CONFIG_FILES="$CONFIG_FILES contrib/unbound_portable.service" ;;
     "config.h") CONFIG_HEADERS="$CONFIG_HEADERS config.h" ;;
 
   *) as_fn_error $? "invalid argument: \`$ac_config_target'" "$LINENO" 5;;
