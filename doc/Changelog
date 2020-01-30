@@ -2,6 +2,14 @@
 	- Fix memory leak in error condition remote.c
 	- Fix double free in error condition view.c
 
+30 January 2020: Wouter
+	- Fix subnet tests for disabled DSA algorithm by default.
+	- Update contrib/fastrpz.patch for clean diff with current code.
+	- Merge PR#151: Fixes for systemd units, by Maryse47, Edmonds
+	  and Frzk.  Updates the unbound.service systemd file and adds
+	  a portable systemd service file.
+	- updated .gitignore for added contrib file.
+
 29 January 2020: Ralph
 	- Merge PR#156 from Alexander Berkes; Added unbound-control
 	  view_local_datas_remove command.
