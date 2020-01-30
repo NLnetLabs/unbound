@@ -681,11 +681,17 @@ rpz_find_zone(struct rpz* r, uint8_t* qname, size_t qname_len, uint16_t qclass,
 	ce = dname_get_shared_topdomain(z->name, qname);
 	if(!ce /* should not happen */ || !*ce /* root */) {
 		lock_rw_unlock(&z->lock);
+		if(zones_keep_lock) {
+			lock_rw_unlock(&r->local_zones->lock);
+		}
 		return NULL;
 	}
 	ce_labs = dname_count_size_labels(ce, &ce_len);
 	if(ce_len+2 > sizeof(wc)) {
 		lock_rw_unlock(&z->lock);
+		if(zones_keep_lock) {
+			lock_rw_unlock(&r->local_zones->lock);
+		}
 		return NULL;
 	}
 	wc[0] = 1; /* length of wildcard label */

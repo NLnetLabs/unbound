@@ -957,6 +957,7 @@ respip_rewrite_reply(const struct query_info* qinfo,
 					region, &rpz_used)) {
 					log_err("out of memory");
 					lock_rw_unlock(&raddr->lock);
+					lock_rw_unlock(&az->rpz_lock);
 					return 0;
 				}
 				if(!rpz_used) {
@@ -1099,7 +1100,6 @@ respip_operate(struct module_qstate* qstate, enum module_ev event, int id,
 			if (actinfo.action == respip_always_deny ||
 				(new_rep == qstate->return_msg->rep &&
 				(actinfo.action == respip_deny ||
-				actinfo.action == respip_deny ||
 				actinfo.action == respip_inform_deny))) {
 				/* for deny-variant actions (unless response-ip
 				 * data is applied), mark the query state so
