@@ -588,7 +588,9 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	else S_YNO("val-permissive-mode:", val_permissive_mode)
 	else S_YNO("aggressive-nsec:", aggressive_nsec)
 	else S_YNO("ignore-cd-flag:", ignore_cd)
-	else S_YNO("serve-expired:", serve_expired)
+	else if(strcmp(opt, "serve-expired:") == 0)
+	{ IS_YES_OR_NO; cfg->serve_expired = (strcmp(val, "yes") == 0);
+	  SERVE_EXPIRED = cfg->serve_expired; }
 	else if(strcmp(opt, "serve_expired_ttl:") == 0)
 	{ IS_NUMBER_OR_ZERO; cfg->serve_expired_ttl = atoi(val); SERVE_EXPIRED_TTL=(time_t)cfg->serve_expired_ttl;}
 	else S_YNO("serve-expired-ttl-reset:", serve_expired_ttl_reset)
@@ -1980,6 +1982,7 @@ config_apply(struct config_file* config)
 {
 	MAX_TTL = (time_t)config->max_ttl;
 	MIN_TTL = (time_t)config->min_ttl;
+	SERVE_EXPIRED = config->serve_expired;
 	SERVE_EXPIRED_TTL = (time_t)config->serve_expired_ttl;
 	SERVE_EXPIRED_REPLY_TTL = (time_t)config->serve_expired_reply_ttl;
 	MAX_NEG_TTL = (time_t)config->max_negative_ttl;
