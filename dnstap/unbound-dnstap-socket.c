@@ -70,7 +70,7 @@ static void usage(char* argv[])
 	printf("usage: %s [options]\n", argv[0]);
 	printf(" 	Listen to dnstap messages\n");
 	printf("stdout has dnstap log, stderr has verbose server log\n");
-	printf("-u <socketpath> use unix socket with this file name\n");
+	printf("-u <socketpath> listen to unix socket with this file name\n");
 	printf("-l 		long format for DNS printout\n");
 	printf("-v 		more verbose log output\n");
 	printf("-h 		this help text\n");
