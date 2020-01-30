@@ -21039,9 +21039,9 @@ cat >>confdefs.h <<_ACEOF
 _ACEOF
 
 
-        DNSTAP_SRC="dnstap/dnstap.c dnstap/dnstap.pb-c.c dnstap/dtstream.c"
+        DNSTAP_SRC="dnstap/dnstap.c dnstap/dnstap.pb-c.c dnstap/dnstap_fstrm.c dnstap/dtstream.c"
 
-        DNSTAP_OBJ="dnstap.lo dnstap.pb-c.lo dtstream.lo"
+        DNSTAP_OBJ="dnstap.lo dnstap.pb-c.lo dnstap_fstrm.lo dtstream.lo"
 
 
   else

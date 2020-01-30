@@ -53,6 +53,7 @@
 #include <openssl/rand.h>
 #include <openssl/err.h>
 #include "dnstap/dtstream.h"
+#include "dnstap/dnstap_fstrm.h"
 #include "util/log.h"
 #include "util/ub_event.h"
 #include "util/net_help.h"

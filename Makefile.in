@@ -410,6 +410,7 @@ unbound-dnstap-socket$(EXEEXT):	$(DNSTAP_SOCKET_OBJ_LINK)
 
 dnstap.pb-c.lo dnstap.pb-c.o: dnstap/dnstap.pb-c.c dnstap/dnstap.pb-c.h
 dtstream.lo dtstream.o: $(srcdir)/dnstap/dtstream.c config.h $(srcdir)/dnstap/dtstream.h
+dnstap_fstrm.lo dnstap_fstrm.o: $(srcdir)/dnstap/dnstap_fstrm.c config.h $(srcdir)/dnstap/dnstap_fstrm.h
 unbound-dnstap-socket.lo unbound-dnstap-socket.o: $(srcdir)/dnstap/unbound-dnstap-socket.c config.h $(srcdir)/dnstap/dtstream.h
 
 # dnscrypt

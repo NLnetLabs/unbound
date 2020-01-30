@@ -43,6 +43,7 @@
 
 #include "config.h"
 #include "dnstap/dtstream.h"
+#include "dnstap/dnstap_fstrm.h"
 #include "util/config_file.h"
 #include "util/ub_event.h"
 #include "util/net_help.h"
@@ -72,52 +73,6 @@ static void dtio_open_output(struct dt_io_thread* dtio);
 static void dtio_add_output_event_write(struct dt_io_thread* dtio);
 /** start reconnection attempts */
 static void dtio_reconnect_enable(struct dt_io_thread* dtio);
-
-void* fstrm_create_control_frame_start(char* contenttype, size_t* len)
-{
-	uint32_t* control;
-	size_t n;
-	/* start framestream message:
-	 * 4byte 0: control indicator.
-	 * 4byte bigendian: length of control frame
-	 * 4byte bigendian: type START
-	 * 4byte bigendian: frame option: content-type
-	 * 4byte bigendian: length of string
-	 * string of content type (dnstap)
-	 */
-	n = 4+4+4+4+4+strlen(contenttype);
-	control = malloc(n);
-	if(!control)
-		return NULL;
-	control[0] = 0;
-	control[1] = htonl(4+4+4+strlen(contenttype));
-	control[2] = htonl(FSTRM_CONTROL_FRAME_START);
-	control[3] = htonl(FSTRM_CONTROL_FIELD_TYPE_CONTENT_TYPE);
-	control[4] = htonl(strlen(contenttype));
-	memmove(&control[5], contenttype, strlen(contenttype));
-	*len = n;
-	return control;
-}
-
-void* fstrm_create_control_frame_stop(size_t* len)
-{
-	uint32_t* control;
-	size_t n;
-	/* stop framestream message:
-	 * 4byte 0: control indicator.
-	 * 4byte bigendian: length of control frame
-	 * 4byte bigendian: type STOP
-	 */
-	n = 4+4+4;
-	control = malloc(n);
-	if(!control)
-		return NULL;
-	control[0] = 0;
-	control[1] = htonl(4);
-	control[2] = htonl(FSTRM_CONTROL_FRAME_STOP);
-	*len = n;
-	return control;
-}
 
 struct dt_msg_queue*
 dt_msg_queue_create(void)
