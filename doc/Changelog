@@ -4,6 +4,7 @@
 	- Merge PR#151: Fixes for systemd units, by Maryse47, Edmonds
 	  and Frzk.  Updates the unbound.service systemd file and adds
 	  a portable systemd service file.
+	- updated .gitignore for added contrib file.
 
 29 January 2020: Ralph
 	- Merge PR#156 from Alexander Berkes; Added unbound-control
