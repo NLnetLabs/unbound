@@ -69,6 +69,7 @@
 #include "services/mesh.h"
 #include "services/localzone.h"
 #include "services/authzone.h"
+#include "services/rpz.h"
 #include "util/storage/slabhash.h"
 #include "util/fptr_wlist.h"
 #include "util/data/dname.h"
@@ -1045,6 +1046,16 @@ print_ext(RES* ssl, struct ub_stats_info* s)
 		(unsigned)s->svr.infra_cache_count)) return 0;
 	if(!ssl_printf(ssl, "key.cache.count"SQ"%u\n",
 		(unsigned)s->svr.key_cache_count)) return 0;
+	/* applied RPZ actions */
+	for(i=0; i<UB_STATS_RPZ_ACTION_NUM; i++) {
+		if(i == RPZ_NO_OVERRIDE_ACTION)
+			continue;
+		if(inhibit_zero && s->svr.rpz_action[i] == 0)
+			continue;
+		if(!ssl_printf(ssl, "num.rpz.action.%s"SQ"%lu\n",
+			rpz_action_to_string(i),
+			(unsigned long)s->svr.rpz_action[i])) return 0;
+	}
 #ifdef USE_DNSCRYPT
 	if(!ssl_printf(ssl, "dnscrypt_shared_secret.cache.count"SQ"%u\n",
 		(unsigned)s->svr.shared_secret_cache_count)) return 0;
