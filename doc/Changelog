@@ -12,6 +12,7 @@
 	  and Frzk.  Updates the unbound.service systemd file and adds
 	  a portable systemd service file.
 	- updated .gitignore for added contrib file.
+	- Add build rule for ipset to Makefile
 
 29 January 2020: Ralph
 	- Merge PR#156 from Alexander Berkes; Added unbound-control

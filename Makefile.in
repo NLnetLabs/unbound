@@ -643,6 +643,9 @@ depend:
 	fi
 	rm -f $(DEPEND_TMP) $(DEPEND_TMP2)
 
+# build rules
+ipset.lo ipset.o: $(srcdir)/ipset/ipset.c
+
 # Dependencies
 dns.lo dns.o: $(srcdir)/services/cache/dns.c config.h $(srcdir)/iterator/iter_delegpt.h $(srcdir)/util/log.h \
  $(srcdir)/iterator/iter_utils.h $(srcdir)/iterator/iter_resptype.h $(srcdir)/validator/val_nsec.h \
