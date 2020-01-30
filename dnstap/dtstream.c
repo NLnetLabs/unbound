@@ -277,7 +277,9 @@ int dt_io_thread_register_queue(struct dt_io_thread* dtio,
 {
 	struct dt_io_list_item* item = malloc(sizeof(*item));
 	if(!item) return 0;
+	lock_basic_lock(&mq->lock);
 	mq->dtio = dtio;
+	lock_basic_unlock(&mq->lock);
 	item->queue = mq;
 	item->next = dtio->io_list;
 	dtio->io_list = item;
@@ -297,7 +299,9 @@ void dt_io_thread_unregister_queue(struct dt_io_thread* dtio,
 			if(prev) prev->next = item->next;
 			else dtio->io_list = item->next;
 			/* the queue itself only registered, not deleted */
+			lock_basic_lock(&item->queue->lock);
 			item->queue->dtio = NULL;
+			lock_basic_unlock(&item->queue->lock);
 			free(item);
 			dtio->io_list_iter = NULL;
 			return;
@@ -1269,6 +1273,7 @@ static void* dnstap_io(void* arg)
 	struct dt_io_thread* dtio = (struct dt_io_thread*)arg;
 	time_t secs = 0;
 	struct timeval now;
+	log_thread_set(&dtio->threadnum);
 
 	/* setup */
 	verbose(VERB_ALGO, "start dnstap io thread");
@@ -1288,7 +1293,8 @@ static void* dnstap_io(void* arg)
 }
 #endif /* THREADS_DISABLED */
 
-int dt_io_thread_start(struct dt_io_thread* dtio, void* event_base_nothr)
+int dt_io_thread_start(struct dt_io_thread* dtio, void* event_base_nothr,
+	int numworkers)
 {
 	/* set up the thread, can fail */
 #ifndef USE_WINSOCK
@@ -1305,6 +1311,7 @@ int dt_io_thread_start(struct dt_io_thread* dtio, void* event_base_nothr)
 #endif
 
 	/* start the thread */
+	dtio->threadnum = numworkers+1;
 	dtio->started = 1;
 #ifndef THREADS_DISABLED
 	ub_thread_create(&dtio->tid, dnstap_io, dtio);

@@ -1884,7 +1884,7 @@ worker_init(struct worker* worker, struct config_file *cfg,
 #endif
 		) {
 		if(!dt_io_thread_start(dtenv->dtio, comm_base_internal(
-			worker->base))) {
+			worker->base), worker->daemon->num)) {
 			log_err("could not start dnstap io thread");
 			worker_delete(worker);
 			return 0;

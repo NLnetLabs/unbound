@@ -92,6 +92,9 @@ struct dt_msg_entry {
  * IO thread that reads from the queues and writes them.
  */
 struct dt_io_thread {
+	/** the thread number for the dtio thread,
+	 * must be first to cast thread arg to int* in checklock code. */
+	int threadnum;
 	/** event base, for event handling */
 	void* event_base;
 	/** list of queues that is registered to get written */
@@ -348,9 +351,12 @@ void dt_io_thread_unregister_queue(struct dt_io_thread* dtio,
  * @param event_base_nothr: the event base to attach the events to, in case
  * 	we are running without threads.  With threads, this is ignored
  * 	and a thread is started to process the dnstap log messages.
+ * @param numworkers: number of worker threads.  The dnstap io thread is
+ * 	that number +1 as the threadnumber (in logs).
  * @return false on failure.
  */
-int dt_io_thread_start(struct dt_io_thread* dtio, void* event_base_nothr);
+int dt_io_thread_start(struct dt_io_thread* dtio, void* event_base_nothr,
+	int numworkers);
 
 /** 
  * Stop the io thread
