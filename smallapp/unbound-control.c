@@ -375,7 +375,7 @@ static void print_extended(struct ub_stats_info* s)
 	PR_UL("key.cache.count", s->svr.key_cache_count);
 	/* applied RPZ actions */
 	for(i=0; i<UB_STATS_RPZ_ACTION_NUM; i++) {
-		if((enum rpz_action)s->svr.rpz_action[i] == RPZ_NO_OVERRIDE_ACTION)
+		if(i == RPZ_NO_OVERRIDE_ACTION)
 			continue;
 		if(inhibit_zero && s->svr.rpz_action[i] == 0)
 			continue;
