@@ -386,3 +386,19 @@ packed_rrset_copy_alloc(struct ub_packed_rrset_key* key,
 	packed_rrset_ttl_add(dd, now);
 	return dk;
 }
+
+int
+packed_rrset_find_rr(struct packed_rrset_data* d, uint8_t* rdata, size_t len,
+	size_t* index)
+{
+	size_t i;
+	for(i=0; i<d->count; i++) {
+		if(d->rr_len[i] != len)
+			continue;
+		if(memcmp(d->rr_data[i], rdata, len) == 0) {
+			*index = i;
+			return 1;
+		}
+	}
+	return 0;
+}

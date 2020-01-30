@@ -663,6 +663,11 @@ Number of queries that got an answer that contained EDNS client subnet data.
 Number of queries answered from the edns client subnet cache.  These are
 counted as cachemiss by the main counters, but hit the client subnet
 specific cache, after getting processed by the edns client subnet module.
+.TP
+.I num.rpz.action.<rpz_action>
+Number of queries answered using configured RPZ policy, per RPZ action type.
+Possible actions are: nxdomain, nodata, passthru, drop, local_data, disabled,
+and cname_override.
 .SH "FILES"
 .TP
 .I @ub_conf_file@

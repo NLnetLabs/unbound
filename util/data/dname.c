@@ -558,6 +558,34 @@ dname_lab_startswith(uint8_t* label, char* prefix, char** endptr)
 	return 1;
 }
 
+int
+dname_has_label(uint8_t* dname, size_t dnamelen, uint8_t* label)
+{
+	size_t len;
+
+	/* 1 byte needed for the label length */
+	if(dnamelen < 1)
+		return 0;
+
+	len = *dname;
+	while(len <= dnamelen) {
+		if(!(*dname)) {
+			if(*dname == *label)
+				return 1; /* empty label match */
+			/* termination label found, stop iterating */
+			return 0;
+		}
+		if(*dname == *label && *label &&
+			memlowercmp(dname+1, label+1, *dname) == 0)
+			return 1;
+		len += *dname;
+		dname += *dname;
+		dname++;
+		len++;
+	}
+	return 0;
+}
+
 int 
 dname_buffer_write(sldns_buffer* pkt, uint8_t* dname)
 {

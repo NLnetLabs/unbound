@@ -2,6 +2,8 @@
 	- Fix memory leak in error condition remote.c
 	- Fix double free in error condition view.c
 	- Fix memory leak in do_auth_zone_transfer on success
+	- Merge RPZ support into master. Only QNAME and Response IP triggers are
+	  supported.
 
 30 January 2020: Wouter
 	- Fix subnet tests for disabled DSA algorithm by default.
@@ -10,6 +12,8 @@
 	  and Frzk.  Updates the unbound.service systemd file and adds
 	  a portable systemd service file.
 	- updated .gitignore for added contrib file.
+	- Add build rule for ipset to Makefile
+	- Add getentropy_freebsd.o to Makefile dependencies.
 
 29 January 2020: Ralph
 	- Merge PR#156 from Alexander Berkes; Added unbound-control
