@@ -2,6 +2,8 @@
 	- Fix memory leak in error condition remote.c
 	- Fix double free in error condition view.c
 	- Fix memory leak in do_auth_zone_transfer on success
+	- Merge RPZ support into master. Only QNAME and Response IP triggers are
+	  supported.
 
 30 January 2020: Wouter
 	- Fix subnet tests for disabled DSA algorithm by default.
