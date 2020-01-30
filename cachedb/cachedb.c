@@ -428,39 +428,47 @@ good_expiry_and_qinfo(struct module_qstate* qstate, struct sldns_buffer* buf)
 		&expiry, sizeof(expiry));
 	expiry = be64toh(expiry);
 
+	/* Check if we are allowed to return expired entries:
+	 * - serve_expired needs to be set
+	 * - if SERVE_EXPIRED_TTL is set make sure that the record is not older
+	 *   than that. */
 	if((time_t)expiry < *qstate->env->now &&
-		!qstate->env->cfg->serve_expired)
+		(!qstate->env->cfg->serve_expired ||
+			(SERVE_EXPIRED_TTL &&
+			*qstate->env->now - (time_t)expiry > SERVE_EXPIRED_TTL)))
 		return 0;
 
 	return 1;
 }
 
 /* Adjust the TTL of the given RRset by 'subtract'.  If 'subtract' is
- * negative, set the TTL to 0. */
+ * negative, set the TTL to the configured SERVE_EXPIRED_REPLY_TTL value. */
 static void
 packed_rrset_ttl_subtract(struct packed_rrset_data* data, time_t subtract)
 {
-        size_t i;
-        size_t total = data->count + data->rrsig_count;
+	size_t i;
+	size_t total = data->count + data->rrsig_count;
 	if(subtract >= 0 && data->ttl > subtract)
 		data->ttl -= subtract;
-	else	data->ttl = 0;
-        for(i=0; i<total; i++) {
+	else	data->ttl = SERVE_EXPIRED_REPLY_TTL;
+	for(i=0; i<total; i++) {
 		if(subtract >= 0 && data->rr_ttl[i] > subtract)
-                	data->rr_ttl[i] -= subtract;
-                else	data->rr_ttl[i] = 0;
+			data->rr_ttl[i] -= subtract;
+		else	data->rr_ttl[i] = SERVE_EXPIRED_REPLY_TTL;
 	}
 }
 
 /* Adjust the TTL of a DNS message and its RRs by 'adjust'.  If 'adjust' is
- * negative, set the TTLs to 0. */
+ * negative, set the TTL to the configured SERVE_EXPIRED_REPLY_TTL value. */
 static void
 adjust_msg_ttl(struct dns_msg* msg, time_t adjust)
 {
 	size_t i;
-	if(adjust >= 0 && msg->rep->ttl > adjust)
+	if(adjust >= 0 && msg->rep->ttl > adjust) {
 		msg->rep->ttl -= adjust;
-	else	msg->rep->ttl = 0;
+	} else {
+		msg->rep->ttl = SERVE_EXPIRED_REPLY_TTL;
+	}
 	msg->rep->prefetch_ttl = PREFETCH_TTL_CALC(msg->rep->ttl);
 	msg->rep->serve_expired_ttl = msg->rep->ttl + SERVE_EXPIRED_TTL;
 
@@ -524,7 +532,7 @@ parse_data(struct module_qstate* qstate, struct sldns_buffer* buf)
 	if(qstate->return_msg->rep->ttl < adjust) {
 		verbose(VERB_ALGO, "cachedb msg expired");
 		/* If serve-expired is enabled, we still use an expired message
-		 * setting the TTL to 0. */
+		 * setting the TTL to the configured SERVE_EXPIRED_REPLY_TTL value. */
 		if(qstate->env->cfg->serve_expired)
 			adjust = -1;
 		else
@@ -668,7 +676,8 @@ cachedb_handle_query(struct module_qstate* qstate,
 		return;
 	}
 
-	/* lookup inside unbound's internal cache */
+	/* lookup inside unbound's internal cache.
+	 * This does not look for expired entries. */
 	if(cachedb_intcache_lookup(qstate)) {
 		if(verbosity >= VERB_ALGO) {
 			if(qstate->return_msg->rep)
@@ -686,12 +695,25 @@ cachedb_handle_query(struct module_qstate* qstate,
 
 	/* ask backend cache to see if we have data */
 	if(cachedb_extcache_lookup(qstate, ie)) {
+		log_err("``````````````````````````` found external");
 		if(verbosity >= VERB_ALGO)
 			log_dns_msg(ie->backend->name,
 				&qstate->return_msg->qinfo,
 				qstate->return_msg->rep);
 		/* store this result in internal cache */
 		cachedb_intcache_store(qstate);
+		log_err("``````````````````````````` stored internal");
+		/* In case we have expired data but there is a client timer for expired
+		 * answers pass execution to next module in order to try updating the
+		 * data first. */
+		if(qstate->need_refetch && qstate->serve_expired_data &&
+			qstate->serve_expired_data->timer) {
+				log_err("``````````````````````````` passing");
+				qstate->return_msg = NULL;
+				qstate->ext_state[id] = module_wait_module;
+				return;
+		}
+		log_err("``````````````````````````` replying");
 		/* we are done with the query */
 		qstate->ext_state[id] = module_finished;
 		return;
