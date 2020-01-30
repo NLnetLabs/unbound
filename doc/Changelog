@@ -1,3 +1,8 @@
+30 January 2020: Ralph
+	- Fix memory leak in error condition remote.c
+	- Fix double free in error condition view.c
+	- Fix memory leak in do_auth_zone_transfer on success
+
 30 January 2020: Wouter
 	- Fix subnet tests for disabled DSA algorithm by default.
 	- Update contrib/fastrpz.patch for clean diff with current code.
@@ -8,7 +13,7 @@
 
 29 January 2020: Ralph
 	- Merge PR#156 from Alexander Berkes; Added unbound-control
-  	  view_local_datas_remove command.
+	  view_local_datas_remove command.
 
 29 January 2020: Wouter
 	- Fix #157: undefined reference to `htobe64'.

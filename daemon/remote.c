@@ -2527,8 +2527,10 @@ do_auth_zone_transfer(RES* ssl, struct worker* worker, char* arg)
 	if(!az || !auth_zones_startprobesequence(az, &worker->env, nm, nmlen,
 		LDNS_RR_CLASS_IN)) {
 		(void)ssl_printf(ssl, "error zone xfr task not found %s\n", arg);
+		free(nm);
 		return;
 	}
+	free(nm);
 	send_ok(ssl);
 }
 	
