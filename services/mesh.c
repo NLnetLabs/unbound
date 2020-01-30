@@ -361,9 +361,6 @@ int mesh_make_new_space(struct mesh_area* mesh, sldns_buffer* qbuf)
 static struct dns_msg*
 mesh_serve_expired_lookup(struct module_qstate* qstate)
 {
-	//int is_expired_answer = 0;
-	//int is_secure_answer = 0;
-	//int should_prefetch = 0;  Based on that we can set need_refetch. It will be called when the mesh query is done XXX we don't need prefetch! The query is already running!
 	hashvalue_type h;
 	struct lruhash_entry* e;
 	struct dns_msg* msg;
@@ -373,8 +370,8 @@ mesh_serve_expired_lookup(struct module_qstate* qstate)
 		|| qstate->env->cfg->ignore_cd) && qstate->env->need_to_validate;
 	log_info("```````````````````````` Called mesh_serve_expired_lookup");
 	/* Lookup cache */
-	/* dns_cache_lookup or msg_cache_lookup ? */
-	/* probably neither as they assume stuff about TTLs */
+	// dns_cache_lookup or msg_cache_lookup ?
+	// probably neither as they assume stuff about TTLs
 	h = query_info_hash(&qstate->qinfo, qstate->query_flags);
 	e = slabhash_lookup(qstate->env->msg_cache, h, &qstate->qinfo, 0);
 	if(!e) return NULL;
@@ -389,7 +386,6 @@ mesh_serve_expired_lookup(struct module_qstate* qstate)
 				goto bail_out;
 			if(!rrset_array_lock(rep->ref, rep->rrset_count, 0))
 				goto bail_out;
-			//is_expired_answer = 1;
 		} else {
 			/* the rrsets may have been updated in the meantime.
 			 * we will refetch the message format from the
@@ -401,19 +397,14 @@ mesh_serve_expired_lookup(struct module_qstate* qstate)
 		if(!rrset_array_lock(rep->ref, rep->rrset_count, timenow))
 			goto bail_out;
 	}
-	/* check CNAME chain (if any) */
-	// XXX this is part of tomsg
-	//if(rep->an_numrrsets > 0 && (rep->rrsets[0]->rk.type ==
-	//	htons(LDNS_RR_TYPE_CNAME) || rep->rrsets[0]->rk.type ==
-	//	htons(LDNS_RR_TYPE_DNAME))) {
-	//	if(!reply_check_cname_chain(&qstate->qinfo, rep)) {
-	//		/* cname chain invalid, redo iterator steps */
-	//		verbose(VERB_ALGO, "Serve expired: cname chain broken");
-	//		goto bail_out_rrset;
-	//	}
-	//}
-	/* check security status of the cached answer */
-	// XXX this is also kind of part of tomsg
+
+	/* Check CNAME chain (if any)
+	 * This is part of tomsg further down; no need to check now. */
+
+	/* Check security status of the cached answer.
+	 * tomsg further down has a subset of these checks, so we are leaving
+	 * these as is.
+	 * In case of bogus or revalidation we don't care to reply here. */
 	if(must_validate && (rep->security == sec_status_bogus ||
 		rep->security == sec_status_secure_sentinel_fail)) {
 		verbose(VERB_ALGO, "Serve expired: bogus answer found in cache");
@@ -422,24 +413,16 @@ mesh_serve_expired_lookup(struct module_qstate* qstate)
 		verbose(VERB_ALGO, "Serve expired: unchecked entry needs "
 			"validation");
 		goto bail_out_rrset; /* need to validate cache entry first */
-	} else if(rep->security == sec_status_secure) {
-		if(reply_all_rrsets_secure(rep)) {
-			// is_secure_answer = 1;
-		} else {
-			if(must_validate) {
-				verbose(VERB_ALGO, "Serve expired: secure entry"
-					" changed status");
-				goto bail_out_rrset; /* rrset changed, re-verify */
-			}
-			// is_secure_answer = 0;
-		}
-	} else {
-		// is_secure_answer = 0;
+	} else if(rep->security == sec_status_secure &&
+		!reply_all_rrsets_secure(rep) && must_validate) {
+			verbose(VERB_ALGO, "Serve expired: secure entry"
+				" changed status");
+			goto bail_out_rrset; /* rrset changed, re-verify */
 	}
 
-	/* Respip action (could be after this function) */
-	/* Respip merge cname (could be after this function) */
-	/* Partial reply? Lookup once more */
+	// Respip action (could be after this function)
+	// Respip merge cname (could be after this function)
+	// Partial reply? Lookup once more
 
 	struct msgreply_entry* key = (struct msgreply_entry*)e->key;
 	struct reply_info* data = (struct reply_info*)e->data;
@@ -1300,6 +1283,7 @@ mesh_send_reply(struct mesh_state* m, int rcode, struct reply_info* rep,
 		r->edns.bits &= EDNS_DO;
 		m->s.qinfo.qname = r->qname;
 		m->s.qinfo.local_alias = r->local_alias;
+		log_err("`````````````````````` REPLYIIIIIING");
 		if(!inplace_cb_reply_call(m->s.env, &m->s.qinfo, &m->s, rep,
 			LDNS_RCODE_NOERROR, &r->edns, NULL, m->s.region) ||
 			!apply_edns_options(&r->edns, &edns_bak,
@@ -1866,13 +1850,14 @@ void mesh_state_remove_reply(struct mesh_area* mesh, struct mesh_state* m,
 void
 mesh_serve_expired_callback(void* arg)
 {
-	// TODO: Acount for replies.
 	struct mesh_state* mstate = (struct mesh_state*) arg;
 	struct module_qstate* qstate = &mstate->s;
 	struct mesh_reply* r;
 	struct mesh_area* mesh = qstate->env->mesh;
 	struct dns_msg* msg;
 	struct mesh_cb* c;
+	struct mesh_reply* prev = NULL;
+	struct sldns_buffer* prev_buffer = NULL;
 	if(!qstate->serve_expired_data) return;
 	log_info("```````````````````````` Test timer popped!");
 	comm_timer_delete(qstate->serve_expired_data->timer);
@@ -1886,9 +1871,11 @@ mesh_serve_expired_callback(void* arg)
 	if(!msg)
 		return;
 	log_info("```````````````````````` Reply to replies");
-	struct mesh_reply* prev = NULL;
-	struct sldns_buffer* prev_buffer = NULL;
-	for(r = mstate->reply_list; r; r = r->next) {
+	r = mstate->reply_list;
+	mstate->reply_list = NULL;
+	for(; r; r = r->next) {
+		// XXX We don't have the below as this is done in respip after we have the
+		// reply.
 		///* if a response-ip address block has been stored the
 		// *  information should be logged for each client. */
 		//if(qstate->respip_action_info &&
@@ -1910,13 +1897,11 @@ mesh_serve_expired_callback(void* arg)
 		prev_buffer = r_buffer;
 
 		/* Account for each reply sent. */
+		// TODO: Is this OK or do we need mesh->expired_responses++ ?
 		qstate->env->worker->stats.expired_responses++;
 
 	}
-	log_info("```````````````````````` Cached answer, NULL replies and "
-			"callbacks to avoid double answering due to events");
-	mstate->reply_list = NULL;
-	//mstate->replies_sent = 1;  // We don't want this in case more replies are attached later. Putting this here will prevent cleaning those up later on in the mest_state_cleanup.
+	//mstate->replies_sent = 1;  // We don't want this in case more replies are attached later. Putting this here will prevent cleaning those up later on in the mesh_state_cleanup.
 	log_info("```````````````````````` Reply to callbacks");
 	while((c = mstate->cb_list) != NULL) {
 		/* take this cb off the list; so that the list can be
@@ -1927,9 +1912,9 @@ mesh_serve_expired_callback(void* arg)
 			qstate->env->mesh->num_reply_states--;
 		}
 		mstate->cb_list = c->next;
-		//if(!mstate->reply_list && !mstate->cb_list &&
-		//	mstate->super_set.count == 0)
-		//	qstate->env->mesh->num_detached_states++;
+		if(!mstate->reply_list && !mstate->cb_list &&
+			mstate->super_set.count == 0)
+			qstate->env->mesh->num_detached_states++;
 		mesh_do_callback(mstate, LDNS_RCODE_NOERROR, msg->rep, c);
 	}
 	if(!mstate->reply_list && !mstate->cb_list) {

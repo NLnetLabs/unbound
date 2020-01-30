@@ -555,9 +555,7 @@ tomsg(struct module_env* env, struct query_info* q, struct reply_info* r,
 		}
 		/* Change the current time so we can pass the below TTL checks when
 		 * serving expired data. */
-		now_control = env->cfg->serve_expired_reply_ttl
-			?r->ttl - env->cfg->serve_expired_reply_ttl
-			:r->ttl;
+		now_control = r->ttl - env->cfg->serve_expired_reply_ttl;
 		is_expired = 1;
 	}
 
