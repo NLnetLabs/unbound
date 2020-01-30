@@ -12,4 +12,5 @@ kill_pid $DNSTAP_SOCKET_PID
 kill_pid $FWD_PID
 kill $UNBOUND_PID
 kill $UNBOUND_PID >/dev/null 2>&1
+cat unbound.log
 exit 0
