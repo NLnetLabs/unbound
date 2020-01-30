@@ -21534,7 +21534,7 @@ version=1.9.7
 date=`date +'%b %e, %Y'`
 
 
-ac_config_files="$ac_config_files Makefile doc/example.conf doc/libunbound.3 doc/unbound.8 doc/unbound-anchor.8 doc/unbound-checkconf.8 doc/unbound.conf.5 doc/unbound-control.8 doc/unbound-host.1 smallapp/unbound-control-setup.sh dnstap/dnstap_config.h dnscrypt/dnscrypt_config.h contrib/libunbound.pc contrib/unbound.socket contrib/unbound.service contrib/unbound_nochroot.service"
+ac_config_files="$ac_config_files Makefile doc/example.conf doc/libunbound.3 doc/unbound.8 doc/unbound-anchor.8 doc/unbound-checkconf.8 doc/unbound.conf.5 doc/unbound-control.8 doc/unbound-host.1 smallapp/unbound-control-setup.sh dnstap/dnstap_config.h dnscrypt/dnscrypt_config.h contrib/libunbound.pc contrib/unbound.socket contrib/unbound.service contrib/unbound_portable.service"
 
 ac_config_headers="$ac_config_headers config.h"
 
@@ -22540,7 +22540,7 @@ do
     "contrib/libunbound.pc") CONFIG_FILES="$CONFIG_FILES contrib/libunbound.pc" ;;
     "contrib/unbound.socket") CONFIG_FILES="$CONFIG_FILES contrib/unbound.socket" ;;
     "contrib/unbound.service") CONFIG_FILES="$CONFIG_FILES contrib/unbound.service" ;;
-    "contrib/unbound_nochroot.service") CONFIG_FILES="$CONFIG_FILES contrib/unbound_nochroot.service" ;;
+    "contrib/unbound_portable.service") CONFIG_FILES="$CONFIG_FILES contrib/unbound_portable.service" ;;
     "config.h") CONFIG_HEADERS="$CONFIG_HEADERS config.h" ;;
 
   *) as_fn_error $? "invalid argument: \`$ac_config_target'" "$LINENO" 5;;

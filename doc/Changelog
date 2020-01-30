@@ -1,6 +1,9 @@
 30 January 2020: Wouter
 	- Fix subnet tests for disabled DSA algorithm by default.
 	- Update contrib/fastrpz.patch for clean diff with current code.
+	- Merge PR#151: Fixes for systemd units, by Maryse47, Edmonds
+	  and Frzk.  Updates the unbound.service systemd file and adds
+	  a portable systemd service file.
 
 29 January 2020: Ralph
 	- Merge PR#156 from Alexander Berkes; Added unbound-control
