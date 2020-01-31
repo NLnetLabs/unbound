@@ -45,6 +45,7 @@
 #include <signal.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <signal.h>
 #include <ctype.h>
 #ifdef HAVE_SYS_UN_H
 #include <sys/un.h>
@@ -62,8 +63,10 @@
 #include "sldns/wire2str.h"
 #include <protobuf-c/protobuf-c.h>
 #include "dnstap/dnstap.pb-c.h"
+#include "util/config_file.h"
 
 #define DNSTAP_CONTENT_TYPE             "protobuf:dnstap.Dnstap"
+#define LISTEN_BACKLOG 16
 
 /** usage information for streamtcp */
 static void usage(char* argv[])
@@ -72,6 +75,7 @@ static void usage(char* argv[])
 	printf(" 	Listen to dnstap messages\n");
 	printf("stdout has dnstap log, stderr has verbose server log\n");
 	printf("-u <socketpath> listen to unix socket with this file name\n");
+	printf("-s <serverip[@port]> listen on the IP and port\n");
 	printf("-l 		long format for DNS printout\n");
 	printf("-v 		more verbose log output\n");
 	printf("-h 		this help text\n");
@@ -81,12 +85,14 @@ static void usage(char* argv[])
 /** long format option, for multiline printout per message */
 static int longformat = 0;
 
+struct tap_socket_list;
+struct tap_socket;
 /** main tap callback data */
 struct main_tap_data {
 	/** the event base (to loopexit) */
 	struct ub_event_base* base;
-	/** the event (that is accept()ed) */
-	struct ub_event* ev;
+	/** the list of accept sockets */
+	struct tap_socket_list* acceptlist;
 };
 
 /** tap callback variables */
@@ -108,6 +114,265 @@ struct tap_data {
 	/** length of this frame */
 	size_t len;
 };
+
+/** list of sockets */
+struct tap_socket_list {
+	/** next in list */
+	struct tap_socket_list* next;
+	/** the socket */
+	struct tap_socket* s;
+};
+
+/** tap socket */
+struct tap_socket {
+	/** fd of socket */
+	int fd;
+	/** the event for it */
+	struct ub_event *ev;
+	/** has the event been added */
+	int ev_added;
+	/** the callback, for the event, ev_cb(fd, bits, arg) */
+	void (*ev_cb)(int, short, void*);
+	/** data element, (arg for the tap_socket struct) */
+	void* data;
+	/** socketpath, if this is an AF_LOCAL socket */
+	char* socketpath;
+	/** IP, if this is a TCP socket */
+	char* ip;
+};
+
+/** del the tap event */
+static void tap_socket_delev(struct tap_socket* s)
+{
+	if(!s) return;
+	if(!s->ev) return;
+	if(!s->ev_added) return;
+	ub_event_del(s->ev);
+	s->ev_added = 0;
+}
+
+/** close the tap socket */
+static void tap_socket_close(struct tap_socket* s)
+{
+	if(!s) return;
+	if(s->fd == -1) return;
+	close(s->fd);
+	s->fd = -1;
+}
+
+/** delete tap socket */
+static void tap_socket_delete(struct tap_socket* s)
+{
+	if(!s) return;
+	ub_event_free(s->ev);
+	free(s->socketpath);
+	free(s->ip);
+	free(s);
+}
+
+/** create new socket (unconnected, not base-added), or NULL malloc fail */
+static struct tap_socket* tap_socket_new_local(char* socketpath,
+	void (*ev_cb)(int, short, void*), void* data)
+{
+	struct tap_socket* s = calloc(1, sizeof(*s));
+	if(!s) {
+		log_err("malloc failure");
+		return NULL;
+	}
+	s->socketpath = strdup(socketpath);
+	if(!s->socketpath) {
+		free(s);
+		log_err("malloc failure");
+		return NULL;
+	}
+	s->fd = -1;
+	s->ev_cb = ev_cb;
+	s->data = data;
+	return s;
+}
+
+/** create new socket (unconnected, not base-added), or NULL malloc fail */
+static struct tap_socket* tap_socket_new_tcpaccept(char* ip,
+	void (*ev_cb)(int, short, void*), void* data)
+{
+	struct tap_socket* s = calloc(1, sizeof(*s));
+	if(!s) {
+		log_err("malloc failure");
+		return NULL;
+	}
+	s->ip = strdup(ip);
+	if(!s->ip) {
+		free(s);
+		log_err("malloc failure");
+		return NULL;
+	}
+	s->fd = -1;
+	s->ev_cb = ev_cb;
+	s->data = data;
+	return s;
+}
+
+/** setup tcp accept socket on IP string */
+static int make_tcp_accept(char* ip)
+{
+#ifdef SO_REUSEADDR
+	int on = 1;
+#endif
+	struct sockaddr_storage addr;
+	socklen_t len;
+	int s;
+
+	memset(&addr, 0, sizeof(addr));
+	len = (socklen_t)sizeof(addr);
+	if(!extstrtoaddr(ip, &addr, &len)) {
+		log_err("could not parse IP '%s'", ip);
+		return -1;
+	}
+
+	if((s = socket(addr.ss_family, SOCK_STREAM, 0)) == -1) {
+#ifndef USE_WINSOCK
+		log_err("can't create socket: %s", strerror(errno));
+#else
+		log_err("can't create socket: %s", 
+			wsa_strerror(WSAGetLastError()));
+#endif
+		return -1;
+	}
+#ifdef SO_REUSEADDR
+	if(setsockopt(s, SOL_SOCKET, SO_REUSEADDR, (void*)&on, 
+		(socklen_t)sizeof(on)) < 0) {
+#ifndef USE_WINSOCK
+		log_err("setsockopt(.. SO_REUSEADDR ..) failed: %s",
+			strerror(errno));
+		close(s);
+#else
+		log_err("setsockopt(.. SO_REUSEADDR ..) failed: %s",
+			wsa_strerror(WSAGetLastError()));
+		closesocket(s);
+#endif
+		return -1;
+	}
+#endif /* SO_REUSEADDR */
+	if(bind(s, (struct sockaddr*)&addr, len) != 0) {
+#ifndef USE_WINSOCK
+		log_err_addr("can't bind socket", strerror(errno),
+			&addr, len);
+		close(s);
+#else
+		log_err_addr("can't bind socket", 
+			wsa_strerror(WSAGetLastError()), &addr, len);
+		closesocket(s);
+#endif
+		return -1;
+	}
+	if(!fd_set_nonblock(s)) {
+#ifndef USE_WINSOCK
+		close(s);
+#else
+		closesocket(s);
+#endif
+		return -1;
+	}
+	if(listen(s, LISTEN_BACKLOG) == -1) {
+#ifndef USE_WINSOCK
+		log_err("can't listen: %s", strerror(errno));
+		close(s);
+#else
+		log_err("can't listen: %s", wsa_strerror(WSAGetLastError()));
+		closesocket(s);
+#endif
+		return -1;
+	}
+	return s;
+}
+
+/** setup socket on event base */
+static int tap_socket_setup(struct tap_socket* s, struct ub_event_base* base)
+{
+	if(s->socketpath) {
+		/* AF_LOCAL accept socket */
+		s->fd = create_local_accept_sock(s->socketpath, NULL, 0);
+		if(s->fd == -1) {
+			log_err("could not create local socket");
+			return 0;
+		}
+		s->ev = ub_event_new(base, s->fd, UB_EV_READ | UB_EV_PERSIST,
+			s->ev_cb, s);
+		if(!s->ev) {
+			log_err("could not ub_event_new");
+			return 0;
+		}
+		if(ub_event_add(s->ev, NULL) != 0) {
+			log_err("could not ub_event_add");
+			return 0;
+		}
+		s->ev_added = 1;
+		return 1;
+	}
+	if(s->ip) {
+		/* TCP accept socket */
+		s->fd = make_tcp_accept(s->ip);
+		if(s->fd == -1) {
+			log_err("could not create tcp socket");
+			return 0;
+		}
+		s->ev = ub_event_new(base, s->fd, UB_EV_READ | UB_EV_PERSIST,
+			s->ev_cb, s);
+		if(!s->ev) {
+			log_err("could not ub_event_new");
+			return 0;
+		}
+		if(ub_event_add(s->ev, NULL) != 0) {
+			log_err("could not ub_event_add");
+			return 0;
+		}
+		s->ev_added = 1;
+		return 1;
+	}
+	return 0;
+}
+
+/** add tap socket to list */
+static int tap_socket_list_insert(struct tap_socket_list** liststart,
+	struct tap_socket* s)
+{
+	struct tap_socket_list* entry = (struct tap_socket_list*)
+		malloc(sizeof(*entry));
+	if(!entry)
+		return 0;
+	entry->next = *liststart;
+	entry->s = s;
+	*liststart = entry;
+	return 1;
+}
+
+/** delete the list */
+static void tap_socket_list_delete(struct tap_socket_list* list)
+{
+	struct tap_socket_list* e = list, *next;
+	while(e) {
+		next = e->next;
+		tap_socket_delev(e->s);
+		tap_socket_close(e->s);
+		tap_socket_delete(e->s);
+		free(e);
+		e = next;
+	}
+}
+
+/** setup accept events */
+static int tap_socket_list_addevs(struct tap_socket_list* list,
+	struct ub_event_base* base)
+{
+	struct tap_socket_list* entry;
+	for(entry = list; entry; entry = entry->next) {
+		if(!tap_socket_setup(entry->s, base)) {
+			log_err("could not setup socket");
+			return 0;
+		}
+	}
+	return 1;
+}
 
 /** log control frame contents */
 static void log_control_frame(uint8_t* pkt, size_t len)
@@ -588,7 +853,9 @@ static void tap_callback(int fd, short ATTR_UNUSED(bits), void* arg)
 /** callback for main listening file descriptor */
 void mainfdcallback(int fd, short ATTR_UNUSED(bits), void* arg)
 {
-	struct main_tap_data* maindata = (struct main_tap_data*)arg;
+	struct tap_socket* tap_sock = (struct tap_socket*)arg;
+	struct main_tap_data* maindata = (struct main_tap_data*)
+		tap_sock->data;
 	struct tap_data* data;
 	struct sockaddr_storage addr;
 	socklen_t addrlen = (socklen_t)sizeof(addr);
@@ -653,24 +920,59 @@ void mainfdcallback(int fd, short ATTR_UNUSED(bits), void* arg)
 	if(ub_event_add(data->ev, NULL) != 0) fatal_exit("could not ub_event_add");
 }
 
-/** create file descriptor to listen on */
-static int
-setup_fd(char* socketpath)
+/** setup local accept sockets */
+static void setup_local_list(struct main_tap_data* maindata,
+	struct config_strlist_head* local_list)
 {
-	return create_local_accept_sock(socketpath, NULL, 0);
+	struct config_strlist* item;
+	for(item = local_list->first; item; item = item->next) {
+		struct tap_socket* s;
+		s = tap_socket_new_local(item->str, &mainfdcallback,
+			maindata);
+		if(!s) fatal_exit("out of memory");
+		if(!tap_socket_list_insert(&maindata->acceptlist, s))
+			fatal_exit("out of memory");
+	}
+}
+
+/** setup tcp accept sockets */
+static void setup_tcp_list(struct main_tap_data* maindata,
+	struct config_strlist_head* tcp_list)
+{
+	struct config_strlist* item;
+	for(item = tcp_list->first; item; item = item->next) {
+		struct tap_socket* s;
+		s = tap_socket_new_tcpaccept(item->str, &mainfdcallback,
+			maindata);
+		if(!s) fatal_exit("out of memory");
+		if(!tap_socket_list_insert(&maindata->acceptlist, s))
+			fatal_exit("out of memory");
+	}
+}
+
+/** signal variable */
+static struct ub_event_base* sig_base = NULL;
+/** do we have to quit */
+int sig_quit = 0;
+/** signal handler for user quit */
+static RETSIGTYPE main_sigh(int sig)
+{
+	if(!sig_base) return;
+	verbose(VERB_ALGO, "exit on signal %d\n", sig);
+	ub_event_base_loopexit(sig_base);
+	sig_quit = 1;
 }
 
 /** setup and run the server to listen to DNSTAP messages */
 static void
-setup_and_run(char* socketpath)
+setup_and_run(struct config_strlist_head* local_list,
+	struct config_strlist_head* tcp_list)
 {
-	int fd;
 	time_t secs = 0;
 	struct timeval now;
 	struct main_tap_data* maindata;
 	struct ub_event_base* base;
 	const char *evnm="event", *evsys="", *evmethod="";
-	struct ub_event *ev;
 
 	maindata = calloc(1, sizeof(*maindata));
 	if(!maindata) fatal_exit("out of memory");
@@ -678,21 +980,24 @@ setup_and_run(char* socketpath)
 	base = ub_default_event_base(1, &secs, &now);
 	if(!base) fatal_exit("could not create ub_event base");
 	maindata->base = base;
-	fd = setup_fd(socketpath);
+	sig_base = base;
+	if(sig_quit) {
+		ub_event_base_free(base);
+		free(maindata);
+		return;
+	}
 	ub_get_event_sys(base, &evnm, &evsys, &evmethod);
 	if(verbosity) log_info("%s %s uses %s method", evnm, evsys, evmethod);
-	ev = ub_event_new(base, fd, UB_EV_READ | UB_EV_PERSIST,
-		&mainfdcallback, maindata);
-	if(!ev) fatal_exit("could not ub_event_new");
-	if(ub_event_add(ev, NULL) != 0) fatal_exit("could not ub_event_add");
-	maindata->ev = ev;
+
+	setup_local_list(maindata, local_list);
+	setup_tcp_list(maindata, tcp_list);
+	if(!tap_socket_list_addevs(maindata->acceptlist, base))
+		fatal_exit("could not setup accept events");
 
 	ub_event_base_dispatch(base);
 
-	ub_event_del(ev);
-	ub_event_free(ev);
+	tap_socket_list_delete(maindata->acceptlist);
 	ub_event_base_free(base);
-	close(fd);
 	free(maindata);
 }
 
@@ -706,7 +1011,8 @@ int main(int argc, char** argv)
 {
 	int c;
 	int usessl = 0;
-	char* socketpath = NULL;
+	struct config_strlist_head local_list;
+	struct config_strlist_head tcp_list;
 #ifdef USE_WINSOCK
 	WSADATA wsa_data;
 	if(WSAStartup(MAKEWORD(2,2), &wsa_data) != 0) {
@@ -714,6 +1020,20 @@ int main(int argc, char** argv)
 		return 1;
 	}
 #endif
+	if(signal(SIGINT, main_sigh) == SIG_ERR ||
+#ifdef SIGQUIT
+		signal(SIGQUIT, main_sigh) == SIG_ERR ||
+#endif
+#ifdef SIGHUP
+		signal(SIGHUP, main_sigh) == SIG_ERR ||
+#endif
+#ifdef SIGBREAK
+		signal(SIGBREAK, main_sigh) == SIG_ERR ||
+#endif
+		signal(SIGTERM, main_sigh) == SIG_ERR)
+		fatal_exit("could not bind to signal");
+	memset(&local_list, 0, sizeof(local_list));
+	memset(&tcp_list, 0, sizeof(tcp_list));
 
 	/* lock debug start (if any) */
 	log_ident_set("unbound-dnstap-socket");
@@ -728,10 +1048,17 @@ int main(int argc, char** argv)
 #endif
 
 	/* command line options */
-	while( (c=getopt(argc, argv, "hlu:v")) != -1) {
+	while( (c=getopt(argc, argv, "hls:u:v")) != -1) {
 		switch(c) {
 			case 'u':
-				socketpath = optarg;
+				if(!cfg_strlist_append(&local_list,
+					strdup(optarg)))
+					fatal_exit("out of memory");
+				break;
+			case 's':
+				if(!cfg_strlist_append(&tcp_list,
+					strdup(optarg)))
+					fatal_exit("out of memory");
 				break;
 			case 'l':
 				longformat = 1;
@@ -767,7 +1094,10 @@ int main(int argc, char** argv)
 		(void)OPENSSL_init_ssl(OPENSSL_INIT_LOAD_SSL_STRINGS, NULL);
 #endif
 	}
-	setup_and_run(socketpath);
+	setup_and_run(&local_list, &tcp_list);
+	config_delstrlist(local_list.first);
+	config_delstrlist(tcp_list.first);
+
 	checklock_stop();
 #ifdef USE_WINSOCK
 	WSACleanup();
