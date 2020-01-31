@@ -1116,7 +1116,7 @@ int main(int argc, char** argv)
 #endif
 
 	/* command line options */
-	while( (c=getopt(argc, argv, "hls:u:vx:y:z:")) != -1) {
+	while( (c=getopt(argc, argv, "hls:t:u:vx:y:z:")) != -1) {
 		switch(c) {
 			case 'u':
 				if(!cfg_strlist_append(&local_list,
@@ -1127,6 +1127,12 @@ int main(int argc, char** argv)
 				if(!cfg_strlist_append(&tcp_list,
 					strdup(optarg)))
 					fatal_exit("out of memory");
+				break;
+			case 't':
+				if(!cfg_strlist_append(&tls_list,
+					strdup(optarg)))
+					fatal_exit("out of memory");
+				usessl = 1;
 				break;
 			case 'x':
 				server_key = optarg;
