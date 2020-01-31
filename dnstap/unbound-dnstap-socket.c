@@ -107,6 +107,8 @@ struct tap_data {
 	struct ub_event* ev;
 	/** the SSL for TLS streams */
 	SSL* ssl;
+	/** string that identifies the socket (or NULL), like IP address */
+	char* id;
 	/** have we read the length, and how many bytes of it */
 	int len_done;
 	/** have we read the data, and how many bytes of it */
@@ -664,12 +666,13 @@ static void log_data_frame(uint8_t* pkt, size_t len)
 
 /** receive bytes from fd, prints errors if bad,
  * returns 0: closed/error, -1: continue, >0 number of bytes */
-static ssize_t receive_bytes(int fd, void* buf, size_t len, struct ub_event* ev)
+static ssize_t receive_bytes(struct tap_data* data, int fd, void* buf, size_t len, struct ub_event* ev)
 {
 	ssize_t ret = recv(fd, buf, len, 0);
 	if(ret == 0) {
 		/* closed */
-		if(verbosity) log_info("dnstap client stream closed");
+		if(verbosity) log_info("dnstap client stream closed from %s",
+			(data->id?data->id:""));
 		return 0;
 	} else if(ret == -1) {
 		/* error */
@@ -688,7 +691,8 @@ static ssize_t receive_bytes(int fd, void* buf, size_t len, struct ub_event* ev)
 		log_err("could not recv: %s",
 			wsa_strerror(WSAGetLastError()));
 #endif
-		if(verbosity) log_info("dnstap client stream closed");
+		if(verbosity) log_info("dnstap client stream closed from %s",
+			(data->id?data->id:""));
 		return 0;
 	}
 	return ret;
@@ -701,6 +705,7 @@ void tap_data_free(struct tap_data* data)
 	ub_event_free(data->ev);
 	SSL_free(data->ssl);
 	close(data->fd);
+	free(data->id);
 	free(data->frame);
 	free(data);
 }
@@ -791,7 +796,7 @@ static void tap_callback(int fd, short ATTR_UNUSED(bits), void* arg)
 	if(verbosity>=3) log_info("tap callback");
 	while(data->len_done < 4) {
 		uint32_t l = (uint32_t)data->len;
-		ssize_t ret = receive_bytes(fd,
+		ssize_t ret = receive_bytes(data, fd,
 			((uint8_t*)&l)+data->len_done, 4-data->len_done,
 			data->ev);
 		if(verbosity>=4) log_info("s recv %d", (int)ret);
@@ -827,7 +832,7 @@ static void tap_callback(int fd, short ATTR_UNUSED(bits), void* arg)
 
 	/* we want to read the full length now */
 	if(data->data_done < data->len) {
-		ssize_t r = receive_bytes(fd, data->frame + data->data_done,
+		ssize_t r = receive_bytes(data, fd, data->frame + data->data_done,
 			data->len - data->data_done, data->ev);
 		if(verbosity>=4) log_info("f recv %d", (int)r);
 		if(r == 0) {
@@ -897,6 +902,7 @@ void mainfdcallback(int fd, short ATTR_UNUSED(bits), void* arg)
 	struct main_tap_data* maindata = (struct main_tap_data*)
 		tap_sock->data;
 	struct tap_data* data;
+	char* id = NULL;
 	struct sockaddr_storage addr;
 	socklen_t addrlen = (socklen_t)sizeof(addr);
 	int s = accept(fd, (struct sockaddr*)&addr, &addrlen);
@@ -938,6 +944,7 @@ void mainfdcallback(int fd, short ATTR_UNUSED(bits), void* arg)
 				socklen_t ulen = sizeof(struct sockaddr_un);
 				if(getsockname(fd, (struct sockaddr*)usock, &ulen) != -1) {
 					log_info("accepted new dnstap client from %s", usock->sun_path);
+					id = strdup(usock->sun_path);
 				} else {
 					log_info("accepted new dnstap client");
 				}
@@ -946,6 +953,12 @@ void mainfdcallback(int fd, short ATTR_UNUSED(bits), void* arg)
 				log_info("accepted new dnstap client");
 			}
 #endif /* HAVE_SYS_UN_H */
+		} else if(addr.ss_family == AF_INET ||
+			addr.ss_family == AF_INET6) {
+			char ip[256];
+			addr_to_str(&addr, addrlen, ip, sizeof(ip));
+			log_info("accepted new dnstap client from %s", ip);
+			id = strdup(ip);
 		} else {
 			log_info("accepted new dnstap client");
 		}
@@ -954,6 +967,7 @@ void mainfdcallback(int fd, short ATTR_UNUSED(bits), void* arg)
 	data = calloc(1, sizeof(*data));
 	if(!data) fatal_exit("out of memory");
 	data->fd = s;
+	data->id = id;
 	if(tap_sock->sslctx) {
 		data->ssl = setup_ssl(data->fd, tap_sock->sslctx);
 		if(!data->ssl) fatal_exit("could not SSL_new");
