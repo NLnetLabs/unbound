@@ -149,7 +149,10 @@ dt_create(const char *socket_path, unsigned num_workers,
 		free(env);
 		return NULL;
 	}
-	dt_io_thread_apply_cfg(env->dtio, cfg);
+	if(!dt_io_thread_apply_cfg(env->dtio, cfg)) {
+		free(env);
+		return NULL;
+	}
 	dt_apply_cfg(env, cfg);
 	return env;
 }

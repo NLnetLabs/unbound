@@ -47,6 +47,7 @@
 #include "util/config_file.h"
 #include "util/ub_event.h"
 #include "util/net_help.h"
+#include "services/outside_network.h"
 #ifdef HAVE_SYS_UN_H
 #include <sys/un.h>
 #endif
@@ -218,13 +219,25 @@ void dt_io_thread_delete(struct dt_io_thread* dtio)
 		item = nextitem;
 	}
 	free(dtio->socket_path);
+	free(dtio->ip_str);
 	free(dtio);
 }
 
-void dt_io_thread_apply_cfg(struct dt_io_thread* dtio, struct config_file *cfg)
+int dt_io_thread_apply_cfg(struct dt_io_thread* dtio, struct config_file *cfg)
 {
-	dtio->upstream_is_unix = 1;
-	dtio->socket_path = strdup(cfg->dnstap_socket_path);
+	/*
+	dtio->upstream_is_tcp = 1;
+	dtio->ip_str = strdup("127.0.0.1@1234");
+	*/
+	if(cfg->dnstap_socket_path && cfg->dnstap_socket_path[0]) {
+		dtio->socket_path = strdup(cfg->dnstap_socket_path);
+		if(!dtio->socket_path) {
+			log_err("malloc failure");
+			return 0;
+		}
+		dtio->upstream_is_unix = 1;
+	}
+	return 1;
 }
 
 int dt_io_thread_register_queue(struct dt_io_thread* dtio,
@@ -477,6 +490,8 @@ static int dtio_check_nb_connect(struct dt_io_thread* dtio)
 #endif
 	if(error != 0) {
 		char* to = dtio->socket_path;
+		if(!to) to = dtio->ip_str;
+		if(!to) to = "";
 #ifndef USE_WINSOCK
 		log_err("dnstap io: failed to connect to \"%s\": %s",
 			to, strerror(error));
@@ -487,7 +502,12 @@ static int dtio_check_nb_connect(struct dt_io_thread* dtio)
 		return -1; /* error, close it */
 	}
 
-	verbose(VERB_ALGO, "dnstap io: connected to \"%s\"", dtio->socket_path);
+	if(dtio->ip_str)
+		verbose(VERB_DETAIL, "dnstap io: connected to %s",
+			dtio->ip_str);
+	else if(dtio->socket_path)
+		verbose(VERB_DETAIL, "dnstap io: connected to \"%s\"",
+			dtio->socket_path);
 	dtio_reconnect_clear(dtio);
 	dtio->check_nb_connect = 0;
 	return 1; /* everything okay */
@@ -682,6 +702,9 @@ static int dtio_check_close(struct dt_io_thread* dtio)
 	while(1) {
 		r = recv(dtio->fd, (void*)buf, sizeof(buf), 0);
 		if(r == -1) {
+			char* to = dtio->socket_path;
+			if(!to) to = dtio->ip_str;
+			if(!to) to = "";
 #ifndef USE_WINSOCK
 			if(errno == EINTR || errno == EAGAIN)
 				return 1; /* try later */
@@ -696,12 +719,17 @@ static int dtio_check_close(struct dt_io_thread* dtio)
 				return 1; /* try later */
 			}
 #endif
-			log_err("dnstap io: output recv: %s", strerror(errno));
+			if(dtio->reconnect_timeout > DTIO_RECONNECT_TIMEOUT_MIN && verbosity < 4)
+				break; /* no log retries on low verbosity */
+			log_err("dnstap io: output closed, recv %s: %s", to,
+				strerror(errno));
 			/* and close below */
 			break;
 		}
 		if(r == 0) {
-			verbose(VERB_ALGO, "dnstap io: output closed by the other side");
+			if(dtio->reconnect_timeout > DTIO_RECONNECT_TIMEOUT_MIN && verbosity < 4)
+				break; /* no log retries on low verbosity */
+			verbose(VERB_DETAIL, "dnstap io: output closed by the other side");
 			/* and close below */
 			break;
 		}
@@ -1131,11 +1159,10 @@ static int dtio_control_start_send(struct dt_io_thread* dtio)
 	return 1;
 }
 
-/** open the output file descriptor */
-static void dtio_open_output(struct dt_io_thread* dtio)
+/** open the output file descriptor for af_local */
+static int dtio_open_output_local(struct dt_io_thread* dtio)
 {
 #ifdef HAVE_SYS_UN_H
-	struct ub_event* ev;
 	struct sockaddr_un s;
 	dtio->fd = socket(AF_LOCAL, SOCK_STREAM, 0);
 	if(dtio->fd == -1) {
@@ -1146,7 +1173,7 @@ static void dtio_open_output(struct dt_io_thread* dtio)
 		log_err("dnstap io: failed to create socket: %s",
 			wsa_strerror(WSAGetLastError()));
 #endif
-		return;
+		return 0;
 	}
 	memset(&s, 0, sizeof(s));
 #ifdef HAVE_STRUCT_SOCKADDR_UN_SUN_LEN
@@ -1173,8 +1200,83 @@ static void dtio_open_output(struct dt_io_thread* dtio)
 		closesocket(dtio->fd);
 #endif
 		dtio->fd = -1;
-		dtio_reconnect_enable(dtio);
-		return;
+		return 0;
+	}
+	return 1;
+#else
+	log_err("cannot create af_local socket");
+	return 0;
+#endif /* HAVE_SYS_UN_H */
+}
+
+/** open the output file descriptor for af_inet and af_inet6 */
+static int dtio_open_output_tcp(struct dt_io_thread* dtio)
+{
+	struct sockaddr_storage addr;
+	socklen_t addrlen;
+	memset(&addr, 0, sizeof(addr));
+	addrlen = (socklen_t)sizeof(addr);
+
+	if(!extstrtoaddr(dtio->ip_str, &addr, &addrlen)) {
+		log_err("could not parse IP '%s'", dtio->ip_str);
+		return 0;
+	}
+	dtio->fd = socket(addr.ss_family, SOCK_STREAM, 0);
+	if(dtio->fd == -1) {
+#ifndef USE_WINSOCK
+		log_err("can't create socket: %s", strerror(errno));
+#else
+		log_err("can't create socket: %s",
+			wsa_strerror(WSAGetLastError()));
+#endif
+		return 0;
+	}
+	fd_set_nonblock(dtio->fd);
+	if(connect(dtio->fd, (struct sockaddr*)&addr, addrlen) == -1) {
+		if(errno == EINPROGRESS)
+			return 1; /* wait until connect done*/
+#ifndef USE_WINSOCK
+		if(tcp_connect_errno_needs_log(
+			(struct sockaddr *)&addr, addrlen)) {
+			log_err("dnstap io: failed to connect to %s: %s",
+				dtio->ip_str, strerror(errno));
+		}
+#else
+		if(WSAGetLastError() == WSAEINPROGRESS ||
+			WSAGetLastError() == WSAEWOULDBLOCK)
+			return 1; /* wait until connect done*/
+		if(tcp_connect_errno_needs_log(
+			(struct sockaddr *)&addr, addrlen)) {
+			log_err("dnstap io: failed to connect to %s: %s",
+				dtio->ip_str, wsa_strerror(WSAGetLastError()));
+		}
+#endif
+
+#ifndef USE_WINSOCK
+		close(dtio->fd);
+#else
+		closesocket(dtio->fd);
+#endif
+		dtio->fd = -1;
+		return 0;
+	}
+	return 1;
+}
+
+/** open the output file descriptor */
+static void dtio_open_output(struct dt_io_thread* dtio)
+{
+	struct ub_event* ev;
+	if(dtio->upstream_is_unix) {
+		if(!dtio_open_output_local(dtio)) {
+			dtio_reconnect_enable(dtio);
+			return;
+		}
+	} else if(dtio->upstream_is_tcp || dtio->upstream_is_tls) {
+		if(!dtio_open_output_tcp(dtio)) {
+			dtio_reconnect_enable(dtio);
+			return;
+		}
 	}
 	dtio->check_nb_connect = 1;
 
@@ -1209,7 +1311,6 @@ static void dtio_open_output(struct dt_io_thread* dtio)
 		dtio_reconnect_enable(dtio);
 		return;
 	}
-#endif /* HAVE_SYS_UN_H */
 }
 
 /** perform the setup of the writer thread on the established event_base */

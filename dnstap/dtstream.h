@@ -228,8 +228,9 @@ void dt_io_thread_delete(struct dt_io_thread* dtio);
  * Apply config to the dtio thread
  * @param dtio: io thread, not yet started.
  * @param cfg: config file struct.
+ * @return false on malloc failure.
  */
-void dt_io_thread_apply_cfg(struct dt_io_thread* dtio,
+int dt_io_thread_apply_cfg(struct dt_io_thread* dtio,
 	struct config_file *cfg);
 
 /**
