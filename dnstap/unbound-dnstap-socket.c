@@ -65,7 +65,7 @@
 #include "dnstap/dnstap.pb-c.h"
 #include "util/config_file.h"
 
-#define DNSTAP_CONTENT_TYPE             "protobuf:dnstap.Dnstap"
+/** listen backlog on TCP connections for dnstap logs */
 #define LISTEN_BACKLOG 16
 
 /** usage information for streamtcp */
