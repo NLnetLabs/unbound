@@ -400,6 +400,7 @@ void server_stats_add(struct ub_stats_info* total, struct ub_stats_info* a)
 	total->svr.num_queries_missed_cache += a->svr.num_queries_missed_cache;
 	total->svr.num_queries_prefetch += a->svr.num_queries_prefetch;
 	total->svr.sum_query_list_size += a->svr.sum_query_list_size;
+	total->svr.ans_expired += a->svr.ans_expired;
 #ifdef USE_DNSCRYPT
 	total->svr.num_query_dnscrypt_crypted += a->svr.num_query_dnscrypt_crypted;
 	total->svr.num_query_dnscrypt_cert += a->svr.num_query_dnscrypt_cert;
@@ -432,7 +433,6 @@ void server_stats_add(struct ub_stats_info* total, struct ub_stats_info* a)
 		total->svr.qEDNS += a->svr.qEDNS;
 		total->svr.qEDNS_DO += a->svr.qEDNS_DO;
 		total->svr.ans_rcode_nodata += a->svr.ans_rcode_nodata;
-		total->svr.expired_responses += a->svr.expired_responses;
 		total->svr.ans_secure += a->svr.ans_secure;
 		total->svr.ans_bogus += a->svr.ans_bogus;
 		total->svr.unwanted_replies += a->svr.unwanted_replies;

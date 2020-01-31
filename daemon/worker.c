@@ -1586,7 +1586,7 @@ send_reply_rc:
 		return 0;
 	}
 	if(is_expired_answer) {
-		worker->stats.expired_responses++;
+		worker->stats.ans_expired++;
 	}
 	if(worker->stats.extended) {
 		if(is_secure_answer) worker->stats.ans_secure++;
@@ -1867,6 +1867,10 @@ worker_init(struct worker* worker, struct config_file *cfg,
 		return 0;
 	}
 	worker->env.mesh = mesh_create(&worker->daemon->mods, &worker->env);
+	/* Pass on daemon variables that we would need in the mesh area */
+	worker->env.mesh->use_response_ip = worker->daemon->use_response_ip;
+	worker->env.mesh->use_rpz = worker->daemon->use_rpz;
+
 	worker->env.detach_subs = &mesh_detach_subs;
 	worker->env.attach_sub = &mesh_attach_sub;
 	worker->env.add_sub = &mesh_add_sub;

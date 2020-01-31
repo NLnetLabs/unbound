@@ -309,12 +309,13 @@ typedef int inplace_cb_query_response_func_type(struct module_qstate* qstate,
 /**
  * Function called when looking for (expired) cached answers during the serve
  * expired logic.
- * Called as func(qstate)
+ * Called as func(qstate, lookup_qinfo)
  * Where:
  *	qstate: the query state.
+ *	lookup_qinfo: the qinfo to lookup for.
  */
 typedef struct dns_msg* serve_expired_lookup_func_type(
-	struct module_qstate* qstate);
+	struct module_qstate* qstate, struct query_info* lookup_qinfo);
 
 /**
  * Module environment.

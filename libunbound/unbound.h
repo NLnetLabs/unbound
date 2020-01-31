@@ -735,8 +735,8 @@ struct ub_server_stats {
 	long long unwanted_queries;
 	/** usage of tcp accept list */
 	long long tcp_accept_usage;
-	/** answers served from expired cache */
-	long long expired_responses;
+	/** expired answers served from cache */
+	long long ans_expired;
 	/** histogram data exported to array 
 	 * if the array is the same size, no data is lost, and
 	 * if all histograms are same size (is so by default) then

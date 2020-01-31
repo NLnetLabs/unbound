@@ -112,6 +112,8 @@ struct mesh_area {
 	size_t stats_jostled;
 	/** stats, cumulative number of incoming client msgs dropped */
 	size_t stats_dropped;
+	/** stats, number of expired replies sent */
+	size_t ans_expired;
 	/** number of replies sent */
 	size_t replies_sent;
 	/** sum of waiting times for the replies */
@@ -146,6 +148,11 @@ struct mesh_area {
 	struct mesh_state* jostle_last;
 	/** timeout for jostling. if age is lower, it does not get jostled. */
 	struct timeval jostle_max;
+
+	/** If we need to use response ip (value passed from daemon)*/
+	int use_response_ip;
+	/** If we need to use RPZ (value passed from daemon) */
+	int use_rpz;
 };
 
 /**

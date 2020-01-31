@@ -721,7 +721,7 @@ print_stats(RES* ssl, const char* nm, struct ub_stats_info* s)
 	if(!ssl_printf(ssl, "%s.num.prefetch"SQ"%lu\n", nm, 
 		(unsigned long)s->svr.num_queries_prefetch)) return 0;
 	if(!ssl_printf(ssl, "%s.num.expired"SQ"%lu\n", nm,
-		(unsigned long)s->svr.expired_responses)) return 0;
+		(unsigned long)s->svr.ans_expired)) return 0;
 	if(!ssl_printf(ssl, "%s.num.recursivereplies"SQ"%lu\n", nm, 
 		(unsigned long)s->mesh_replies_sent)) return 0;
 #ifdef USE_DNSCRYPT

@@ -68,7 +68,6 @@
 #include "iterator/iter_utils.h"
 #include "validator/val_neg.h"
 #include "util/storage/slabhash.h"
-#include "daemon/worker.h"
 
 /** subtract timers and the values do not overflow or become negative */
 static void
@@ -257,6 +256,7 @@ mesh_create(struct module_stack* stack, struct module_env* env)
 	mesh->num_forever_states = 0;
 	mesh->stats_jostled = 0;
 	mesh->stats_dropped = 0;
+	mesh->ans_expired = 0;
 	mesh->max_reply_states = env->cfg->num_queries_per_thread;
 	mesh->max_forever_states = (mesh->max_reply_states+1)/2;
 #ifndef S_SPLINT_S
@@ -359,7 +359,8 @@ int mesh_make_new_space(struct mesh_area* mesh, sldns_buffer* qbuf)
  * the same behavior as when replying from cache.
  */
 static struct dns_msg*
-mesh_serve_expired_lookup(struct module_qstate* qstate)
+mesh_serve_expired_lookup(struct module_qstate* qstate,
+	struct query_info* lookup_qinfo)
 {
 	hashvalue_type h;
 	struct lruhash_entry* e;
@@ -373,8 +374,8 @@ mesh_serve_expired_lookup(struct module_qstate* qstate)
 	/* Lookup cache */
 	// dns_cache_lookup or msg_cache_lookup ?
 	// probably neither as they assume stuff about TTLs
-	h = query_info_hash(&qstate->qinfo, qstate->query_flags);
-	e = slabhash_lookup(qstate->env->msg_cache, h, &qstate->qinfo, 0);
+	h = query_info_hash(lookup_qinfo, qstate->query_flags);
+	e = slabhash_lookup(qstate->env->msg_cache, h, lookup_qinfo, 0);
 	if(!e) return NULL;
 	log_info("```````````````````````` Found slabhash");
 	rep = (struct reply_info*)e->data;
@@ -1766,6 +1767,7 @@ mesh_stats_clear(struct mesh_area* mesh)
 	timehist_clear(mesh->histogram);
 	mesh->ans_secure = 0;
 	mesh->ans_bogus = 0;
+	mesh->ans_expired = 0;
 	memset(&mesh->ans_rcode[0], 0, sizeof(size_t)*UB_STATS_RCODE_NUM);
 	memset(&mesh->rpz_action[0], 0, sizeof(size_t)*UB_STATS_RPZ_ACTION_NUM);
 	mesh->ans_nodata = 0;
@@ -1856,6 +1858,32 @@ void mesh_state_remove_reply(struct mesh_area* mesh, struct mesh_state* m,
 }
 
 
+static int
+apply_respip_action(struct module_qstate* qstate,
+	const struct query_info* qinfo, struct respip_client_info* cinfo,
+	struct respip_action_info* actinfo, struct reply_info* rep,
+	struct ub_packed_rrset_key** alias_rrset,
+	struct reply_info** encode_repp, struct auth_zones* az)
+{
+	if(qinfo->qtype != LDNS_RR_TYPE_A &&
+		qinfo->qtype != LDNS_RR_TYPE_AAAA &&
+		qinfo->qtype != LDNS_RR_TYPE_ANY)
+		return 1;
+
+	if(!respip_rewrite_reply(qinfo, cinfo, rep, encode_repp, actinfo,
+		alias_rrset, 0, qstate->region, az))
+		return 0;
+
+	/* xxx_deny actions mean dropping the reply, unless the original reply
+	 * was redirected to response-ip data. */
+	if((actinfo->action == respip_deny ||
+		actinfo->action == respip_inform_deny) &&
+		*encode_repp == rep)
+		*encode_repp = NULL;
+
+	return 1;
+}
+
 void
 mesh_serve_expired_callback(void* arg)
 {
@@ -1867,6 +1895,14 @@ mesh_serve_expired_callback(void* arg)
 	struct mesh_cb* c;
 	struct mesh_reply* prev = NULL;
 	struct sldns_buffer* prev_buffer = NULL;
+	struct reply_info* partial_rep = NULL;
+	struct ub_packed_rrset_key* alias_rrset = NULL;
+	struct reply_info* encode_rep = NULL;
+	struct respip_action_info actinfo;
+	struct query_info* lookup_qinfo = &qstate->qinfo;
+	struct query_info qinfo_tmp;
+	int must_validate = (!(qstate->query_flags&BIT_CD)
+		|| qstate->env->cfg->ignore_cd) && qstate->env->need_to_validate;
 	if(!qstate->serve_expired_data) return;
 	log_info("```````````````````````` Test timer popped!");
 	comm_timer_delete(qstate->serve_expired_data->timer);
@@ -1876,13 +1912,57 @@ mesh_serve_expired_callback(void* arg)
 		return;
 	}
 	log_info("```````````````````````` Trying to find stale");
+	/* The following while is used instead of the `goto lookup_cache`
+	 * like in the worker. */
 	while(1) {
-		msg = qstate->serve_expired_data->get_cached_answer(qstate);
+		msg = qstate->serve_expired_data->get_cached_answer(qstate,
+			lookup_qinfo);
 		if(!msg)
 			return;
-		// Respip action (could be after this function)
-		// Respip merge cname (could be after this function)
-		// Partial reply? Lookup once more
+		/* Reset these in case we pass a second time from here. */
+		encode_rep = msg->rep;
+		memset(&actinfo, 0, sizeof(actinfo));
+		actinfo.action = respip_none;
+		alias_rrset = NULL;
+		if((mesh->use_response_ip || mesh->use_rpz) &&
+			!partial_rep && !apply_respip_action(qstate, &qstate->qinfo,
+			qstate->client_info, &actinfo, msg->rep, &alias_rrset, &encode_rep,
+			qstate->env->auth_zones)) {
+			return;
+		} else if(partial_rep &&
+			!respip_merge_cname(partial_rep, &qstate->qinfo, msg->rep,
+			qstate->client_info, must_validate, &encode_rep, qstate->region,
+			qstate->env->auth_zones)) {
+			return;
+		}
+		if(!encode_rep || alias_rrset) {
+			if(!encode_rep) {
+				/* Needs drop */
+				return;
+			} else {
+				/* A partial CNAME chain is found. */
+				partial_rep = encode_rep;
+			}
+		}
+		/* We've found a partial reply ending with an
+		* alias.  Replace the lookup qinfo for the
+		* alias target and lookup the cache again to
+		* (possibly) complete the reply.  As we're
+		* passing the "base" reply, there will be no
+		* more alias chasing. */
+		if(partial_rep) {
+			memset(&qinfo_tmp, 0, sizeof(qinfo_tmp));
+			get_cname_target(alias_rrset, &qinfo_tmp.qname,
+				&qinfo_tmp.qname_len);
+			if(!qinfo_tmp.qname) {
+				log_err("unexpected: invalid answer alias");
+				return;
+			}
+			qinfo_tmp.qtype = qstate->qinfo.qtype;
+			qinfo_tmp.qclass = qstate->qinfo.qclass;
+			lookup_qinfo = &qinfo_tmp;
+			continue;
+		}
 		break;
 	}
 
@@ -1890,17 +1970,24 @@ mesh_serve_expired_callback(void* arg)
 	r = mstate->reply_list;
 	mstate->reply_list = NULL;
 	for(; r; r = r->next) {
-		// XXX We don't have the below as this is done in respip after we have the
-		// reply.
-		///* if a response-ip address block has been stored the
-		// *  information should be logged for each client. */
-		//if(qstate->respip_action_info &&
-		//	qstate->respip_action_info->addrinfo) {
-		//	respip_inform_print(qstate->respip_action_info->addrinfo,
-		//		r->qname, qstate->qinfo.qtype,
-		//		qstate->qinfo.qclass, r->local_alias,
-		//		&r->query_reply);
-		//}
+		/* If address info is returned, it means the action should be an
+		* 'inform' variant and the information should be logged. */
+		if(actinfo.addrinfo) {
+			respip_inform_print(&actinfo, r->qname,
+				qstate->qinfo.qtype, qstate->qinfo.qclass,
+				r->local_alias, &r->query_reply);
+
+			if(qstate->env->cfg->stat_extended && actinfo.rpz_used) {
+				if(actinfo.rpz_disabled)
+					qstate->env->mesh->rpz_action[RPZ_DISABLED_ACTION] +=
+						actinfo.rpz_disabled;
+				if(actinfo.rpz_cname_override)
+					qstate->env->mesh->rpz_action[RPZ_CNAME_OVERRIDE_ACTION]++;
+				else
+					qstate->env->mesh->rpz_action[
+						respip_action_to_rpz_action(actinfo.action)]++;
+			}
+		}
 
 		struct sldns_buffer* r_buffer = r->query_reply.c->buffer;
 		if(r->query_reply.c->tcp_req_info)
@@ -1913,8 +2000,7 @@ mesh_serve_expired_callback(void* arg)
 		prev_buffer = r_buffer;
 
 		/* Account for each reply sent. */
-		// TODO: Is this OK or do we need mesh->expired_responses++ ?
-		qstate->env->worker->stats.expired_responses++;
+		mesh->ans_expired++;
 
 	}
 	//mstate->replies_sent = 1;  // We don't want this in case more replies are attached later. Putting this here will prevent cleaning those up later on in the mesh_state_cleanup.
