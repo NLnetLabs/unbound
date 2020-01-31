@@ -64,26 +64,26 @@
 #ifdef HAVE_SYS_ENDIAN_H
 #  include <sys/endian.h>
 #endif
-#ifdef HAVE_LIBKERN_OSBYTEORDER_H
-/* In practice this is specific to MacOS X.  We assume it doesn't have
-* htobe64/be64toh but has alternatives with a different name. */
-#  include <libkern/OSByteOrder.h>
-#  define htobe64(x) OSSwapHostToBigInt64(x)
-#  define be64toh(x) OSSwapBigToHostInt64(x)
-#endif
 
-/* Some compilers do not define __BYTE_ORDER__, like IBM XLC on AIX */
-#ifndef be64toh
-#if defined(__sun) || defined(_AIX)
-#  if __BIG_ENDIAN__
-#    define be64toh(n) (n)
-#    define htobe64(n) (n)
+#ifndef HAVE_HTOBE64
+#  ifdef HAVE_LIBKERN_OSBYTEORDER_H
+     /* In practice this is specific to MacOS X.  We assume it doesn't have
+      * htobe64/be64toh but has alternatives with a different name. */
+#    include <libkern/OSByteOrder.h>
+#    define htobe64(x) OSSwapHostToBigInt64(x)
+#    define be64toh(x) OSSwapBigToHostInt64(x)
 #  else
-#    define be64toh(n) (((uint64_t)htonl((n) & 0xFFFFFFFF) << 32) | htonl((n) >> 32))
-#    define htobe64(n) (((uint64_t)htonl((n) & 0xFFFFFFFF) << 32) | htonl((n) >> 32))
-#  endif
-#endif
-#endif /* be64toh */
+     /* not OSX */
+     /* Some compilers do not define __BYTE_ORDER__, like IBM XLC on AIX */
+#    if __BIG_ENDIAN__
+#      define be64toh(n) (n)
+#      define htobe64(n) (n)
+#    else
+#      define be64toh(n) (((uint64_t)htonl((n) & 0xFFFFFFFF) << 32) | htonl((n) >> 32))
+#      define htobe64(n) (((uint64_t)htonl((n) & 0xFFFFFFFF) << 32) | htonl((n) >> 32))
+#    endif /* _ENDIAN */
+#  endif /* HAVE_LIBKERN_OSBYTEORDER_H */
+#endif /* HAVE_BE64TOH */
 
 /** the unit test testframe for cachedb, its module state contains
  * a cache for a couple queries (in memory). */

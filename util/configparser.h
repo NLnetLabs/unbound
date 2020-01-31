@@ -314,10 +314,16 @@ extern int yydebug;
     VAR_STREAM_WAIT_SIZE = 520,
     VAR_TLS_CIPHERS = 521,
     VAR_TLS_CIPHERSUITES = 522,
-    VAR_TLS_SESSION_TICKET_KEYS = 523,
-    VAR_IPSET = 524,
-    VAR_IPSET_NAME_V4 = 525,
-    VAR_IPSET_NAME_V6 = 526
+    VAR_IPSET = 523,
+    VAR_IPSET_NAME_V4 = 524,
+    VAR_IPSET_NAME_V6 = 525,
+    VAR_TLS_SESSION_TICKET_KEYS = 526,
+    VAR_RPZ = 527,
+    VAR_TAGS = 528,
+    VAR_RPZ_ACTION_OVERRIDE = 529,
+    VAR_RPZ_CNAME_OVERRIDE = 530,
+    VAR_RPZ_LOG = 531,
+    VAR_RPZ_LOG_NAME = 532
   };
 #endif
 /* Tokens.  */
@@ -586,10 +592,16 @@ extern int yydebug;
 #define VAR_STREAM_WAIT_SIZE 520
 #define VAR_TLS_CIPHERS 521
 #define VAR_TLS_CIPHERSUITES 522
-#define VAR_TLS_SESSION_TICKET_KEYS 523
-#define VAR_IPSET 524
-#define VAR_IPSET_NAME_V4 525
-#define VAR_IPSET_NAME_V6 526
+#define VAR_IPSET 523
+#define VAR_IPSET_NAME_V4 524
+#define VAR_IPSET_NAME_V6 525
+#define VAR_TLS_SESSION_TICKET_KEYS 526
+#define VAR_RPZ 527
+#define VAR_TAGS 528
+#define VAR_RPZ_ACTION_OVERRIDE 529
+#define VAR_RPZ_CNAME_OVERRIDE 530
+#define VAR_RPZ_LOG 531
+#define VAR_RPZ_LOG_NAME 532
 
 /* Value type.  */
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
@@ -599,7 +611,7 @@ union YYSTYPE
 
 	char*	str;
 
-#line 603 "util/configparser.h"
+#line 615 "util/configparser.h"
 
 };
 typedef union YYSTYPE YYSTYPE;

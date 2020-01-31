@@ -316,15 +316,15 @@ dnscrypt_server_uncurve(struct dnsc_env* env,
 #else
             return -1;
 #endif
-    } else {
-        if (crypto_box_beforenm(nmkey,
-                                query_header->publickey,
-                                cert->keypair->crypt_secretkey) != 0) {
-            return -1;
-        }
-    }
-    // Cache the shared secret we just computed.
-    dnsc_shared_secret_cache_insert(env->shared_secrets_cache,
+	} else {
+	    if (crypto_box_beforenm(nmkey,
+				    query_header->publickey,
+				    cert->keypair->crypt_secretkey) != 0) {
+		return -1;
+	    }
+	}
+        // Cache the shared secret we just computed.
+        dnsc_shared_secret_cache_insert(env->shared_secrets_cache,
                                     key,
                                     hash,
                                     nmkey);
@@ -442,20 +442,7 @@ dnscrypt_hrtime(void)
 static void
 add_server_nonce(uint8_t *nonce)
 {
-    uint64_t ts;
-    uint64_t tsn;
-    uint32_t suffix;
-    ts = dnscrypt_hrtime();
-    // TODO? dnscrypt-wrapper does some logic with context->nonce_ts_last
-    // unclear if we really need it, so skipping it for now.
-    tsn = (ts << 10) | (randombytes_random() & 0x3ff);
-#if (BYTE_ORDER == LITTLE_ENDIAN)
-    tsn =
-        (((uint64_t)htonl((uint32_t)tsn)) << 32) | htonl((uint32_t)(tsn >> 32));
-#endif
-    memcpy(nonce + crypto_box_HALF_NONCEBYTES, &tsn, 8);
-    suffix = randombytes_random();
-    memcpy(nonce + crypto_box_HALF_NONCEBYTES + 8, &suffix, 4);
+    randombytes_buf(nonce + crypto_box_HALF_NONCEBYTES, 8/*tsn*/+4/*suffix*/);
 }
 
 /**
@@ -735,7 +722,7 @@ dnsc_load_local_data(struct dnsc_env* dnscenv, struct config_file *cfg)
 	if((unsigned)strlen(dnscenv->provider_name) >= (unsigned)0xffff0000) {
 		/* guard against integer overflow in rrlen calculation */
 		verbose(VERB_OPS, "cert #%" PRIu32 " is too long", serial);
-		continue
+		continue;
 	}
         rrlen = strlen(dnscenv->provider_name) +
                          strlen(ttl_class_type) +

@@ -1001,7 +1001,7 @@ tcp_callback_writer(struct comm_point* c)
 		tcp_req_info_handle_writedone(c->tcp_req_info);
 	} else {
 		comm_point_stop_listening(c);
-		comm_point_start_listening(c, -1, -1);
+		comm_point_start_listening(c, -1, c->tcp_timeout_msec);
 	}
 }
 
@@ -1120,6 +1120,14 @@ ssl_handshake(struct comm_point* c)
 			return 0; /* closed */
 		} else if(want == SSL_ERROR_SYSCALL) {
 			/* SYSCALL and errno==0 means closed uncleanly */
+#ifdef EPIPE
+			if(errno == EPIPE && verbosity < 2)
+				return 0; /* silence 'broken pipe' */
+#endif
+#ifdef ECONNRESET
+			if(errno == ECONNRESET && verbosity < 2)
+				return 0; /* silence reset by peer */
+#endif
 			if(errno != 0)
 				log_err("SSL_handshake syscall: %s",
 					strerror(errno));

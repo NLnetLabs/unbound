@@ -654,6 +654,8 @@ struct ub_shm_stat_info {
 #define UB_STATS_OPCODE_NUM 16
 /** number of histogram buckets */
 #define UB_STATS_BUCKET_NUM 40
+/** number of RPZ actions */
+#define UB_STATS_RPZ_ACTION_NUM 10
 
 /** per worker statistics. */
 struct ub_server_stats {
@@ -785,6 +787,8 @@ struct ub_server_stats {
 	long long mem_stream_wait;
 	/** number of TLS connection resume */
 	long long qtls_resume;
+	/** RPZ action stats */
+	long long rpz_action[UB_STATS_RPZ_ACTION_NUM];
 };
 
 /** 

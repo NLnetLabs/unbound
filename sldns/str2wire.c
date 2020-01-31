@@ -80,7 +80,7 @@ static int sldns_str2wire_dname_buf_rel(const char* str, uint8_t* buf,
 	for (s = str; *s; s++, q++) {
 		if (q >= buf + *olen)
 			return RET_ERR(LDNS_WIREPARSE_ERR_BUFFER_TOO_SMALL, q-buf);
-		if (q > buf + LDNS_MAX_DOMAINLEN)
+		if (q >= buf + LDNS_MAX_DOMAINLEN)
 			return RET_ERR(LDNS_WIREPARSE_ERR_DOMAINNAME_OVERFLOW, q-buf);
 		switch (*s) {
 		case '.':
@@ -117,7 +117,7 @@ static int sldns_str2wire_dname_buf_rel(const char* str, uint8_t* buf,
 		if(rel) *rel = 1;
 		if (q >= buf + *olen)
 			return RET_ERR(LDNS_WIREPARSE_ERR_BUFFER_TOO_SMALL, q-buf);
-		if (q > buf + LDNS_MAX_DOMAINLEN) {
+		if (q >= buf + LDNS_MAX_DOMAINLEN) {
 			return RET_ERR(LDNS_WIREPARSE_ERR_DOMAINNAME_OVERFLOW, q-buf);
 		}
                 if (label_len > LDNS_MAX_LABELLEN) {
@@ -1103,7 +1103,7 @@ int sldns_str2wire_str_buf(const char* str, uint8_t* rd, size_t* len)
 	while(sldns_parse_char(&ch, &s)) {
 		if(sl >= 255)
 			return RET_ERR(LDNS_WIREPARSE_ERR_INVALID_STR, s-str);
-		if(*len < sl+1)
+		if(*len < sl+2)
 			return RET_ERR(LDNS_WIREPARSE_ERR_BUFFER_TOO_SMALL,
 				s-str);
 		rd[++sl] = ch;
@@ -2104,6 +2104,8 @@ int sldns_str2wire_int16_data_buf(const char* str, uint8_t* rd, size_t* len)
 	char* s;
 	int n;
 	n = strtol(str, &s, 10);
+	if(n < 0) /* negative number not allowed */
+		return LDNS_WIREPARSE_ERR_SYNTAX;
 	if(*len < ((size_t)n)+2)
 		return LDNS_WIREPARSE_ERR_BUFFER_TOO_SMALL;
 	if(n > 65535)

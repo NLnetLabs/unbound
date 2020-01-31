@@ -2,7 +2,7 @@ Description: based on the included patch contrib/fastrpz.patch
 Author: fastrpz@farsightsecurity.com
 ---
 diff --git a/Makefile.in b/Makefile.in
-index 9660c49a..8b078201 100644
+index 1a2e2c54..028b6cf3 100644
 --- a/Makefile.in
 +++ b/Makefile.in
 @@ -23,6 +23,8 @@ CHECKLOCK_SRC=testcode/checklocks.c
@@ -32,7 +32,7 @@ index 9660c49a..8b078201 100644
  COMMON_OBJ_WITHOUT_UB_EVENT=$(COMMON_OBJ_WITHOUT_NETCALL) netevent.lo listen_dnsport.lo \
  outside_network.lo
  COMMON_OBJ=$(COMMON_OBJ_WITHOUT_UB_EVENT) ub_event.lo
-@@ -408,6 +410,11 @@ dnscrypt.lo dnscrypt.o: $(srcdir)/dnscrypt/dnscrypt.c config.h \
+@@ -409,6 +411,11 @@ dnscrypt.lo dnscrypt.o: $(srcdir)/dnscrypt/dnscrypt.c config.h \
  	$(srcdir)/util/config_file.h $(srcdir)/util/log.h \
  	$(srcdir)/util/netevent.h
  
@@ -45,10 +45,10 @@ index 9660c49a..8b078201 100644
  pythonmod.lo pythonmod.o: $(srcdir)/pythonmod/pythonmod.c config.h \
  	pythonmod/interface.h \
 diff --git a/config.h.in b/config.h.in
-index d8ec50a6..bf6dc973 100644
+index 78d47fed..e33073e4 100644
 --- a/config.h.in
 +++ b/config.h.in
-@@ -1319,4 +1319,11 @@ void *unbound_stat_realloc_log(void *ptr, size_t size, const char* file,
+@@ -1345,4 +1345,11 @@ void *unbound_stat_realloc_log(void *ptr, size_t size, const char* file,
  /** the version of unbound-control that this software implements */
  #define UNBOUND_CONTROL_VERSION 1
  
@@ -62,7 +62,7 @@ index d8ec50a6..bf6dc973 100644
 +/** turn on fastrpz response policy zones */
 +#undef ENABLE_FASTRPZ
 diff --git a/configure.ac b/configure.ac
-index d8a1ac95..4f1106a0 100644
+index 9a32c577..cc4344ff 100644
 --- a/configure.ac
 +++ b/configure.ac
 @@ -6,6 +6,7 @@ sinclude(ax_pthread.m4)
@@ -73,7 +73,7 @@ index d8a1ac95..4f1106a0 100644
  sinclude(dnscrypt/dnscrypt.m4)
  
  # must be numbers. ac_defun because of later processing
-@@ -1684,6 +1685,9 @@ case "$enable_ipset" in
+@@ -1778,6 +1779,9 @@ case "$enable_ipset" in
  		;;
  esac
  
@@ -84,7 +84,7 @@ index d8a1ac95..4f1106a0 100644
  # on openBSD, the implicit rule make $< work.
  # on Solaris, it does not work ($? is changed sources, $^ lists dependencies).
 diff --git a/daemon/daemon.c b/daemon/daemon.c
-index e09138cb..efad0532 100644
+index 0b1200a2..5857c18b 100644
 --- a/daemon/daemon.c
 +++ b/daemon/daemon.c
 @@ -91,6 +91,9 @@
@@ -97,7 +97,7 @@ index e09138cb..efad0532 100644
  
  #ifdef HAVE_SYSTEMD
  #include <systemd/sd-daemon.h>
-@@ -460,6 +463,14 @@ daemon_create_workers(struct daemon* daemon)
+@@ -458,6 +461,14 @@ daemon_create_workers(struct daemon* daemon)
  		dt_apply_cfg(daemon->dtenv, daemon->cfg);
  #else
  		fatal_exit("dnstap enabled in config but not built with dnstap support");
@@ -112,7 +112,7 @@ index e09138cb..efad0532 100644
  #endif
  	}
  	for(i=0; i<daemon->num; i++) {
-@@ -726,6 +737,9 @@ daemon_cleanup(struct daemon* daemon)
+@@ -724,6 +735,9 @@ daemon_cleanup(struct daemon* daemon)
  #ifdef USE_DNSCRYPT
  	dnsc_delete(daemon->dnscenv);
  	daemon->dnscenv = NULL;
@@ -139,7 +139,7 @@ index 5749dbef..64ce230f 100644
  
  /**
 diff --git a/daemon/worker.c b/daemon/worker.c
-index 263fcddf..e6bc84bd 100644
+index aa16650e..c7c05828 100644
 --- a/daemon/worker.c
 +++ b/daemon/worker.c
 @@ -75,6 +75,9 @@
@@ -244,7 +244,7 @@ index 263fcddf..e6bc84bd 100644
  				/* prefetch it if the prefetch TTL expired.
  				 * Note that if there is more than one pass
  				 * its qname must be that used for cache
-@@ -1518,11 +1575,19 @@ lookup_cache:
+@@ -1520,11 +1577,19 @@ lookup_cache:
  			lock_rw_unlock(&e->lock);
  		}
  		if(!LDNS_RD_WIRE(sldns_buffer_begin(c->buffer))) {
@@ -267,10 +267,10 @@ index 263fcddf..e6bc84bd 100644
  			}
  			verbose(VERB_ALGO, "answer norec from cache -- "
 diff --git a/doc/unbound.conf.5.in b/doc/unbound.conf.5.in
-index 4bdfcd56..69e70627 100644
+index 6292f0d4..7e91a91f 100644
 --- a/doc/unbound.conf.5.in
 +++ b/doc/unbound.conf.5.in
-@@ -1801,6 +1801,81 @@ List domain for which the AAAA records are ignored and the A record is
+@@ -1811,6 +1811,81 @@ List domain for which the AAAA records are ignored and the A record is
  used by dns64 processing instead.  Can be entered multiple times, list a
  new domain for which it applies, one per line.  Applies also to names
  underneath the name given.
@@ -3125,7 +3125,7 @@ index aa4efec7..5dd3412e 100644
  	rep = reply_info_copy(msgrep, env->alloc, NULL);
  	if(!rep)
 diff --git a/services/mesh.c b/services/mesh.c
-index 27f91940..f1bd4e90 100644
+index d4f814d5..624a9d95 100644
 --- a/services/mesh.c
 +++ b/services/mesh.c
 @@ -60,6 +60,9 @@
@@ -3172,7 +3172,7 @@ index 27f91940..f1bd4e90 100644
  	if(edns->opt_list) {
  		r->edns.opt_list = edns_opt_copy_region(edns->opt_list,
 diff --git a/util/config_file.c b/util/config_file.c
-index 119b2223..ce43a234 100644
+index 104c3f83..a5015594 100644
 --- a/util/config_file.c
 +++ b/util/config_file.c
 @@ -1434,6 +1434,8 @@ config_delete(struct config_file* cfg)
@@ -3216,7 +3216,7 @@ index a86ddf55..b56bcfb4 100644
  ip-ratelimit{COLON}		{ YDVAR(1, VAR_IP_RATELIMIT) }
  ratelimit{COLON}		{ YDVAR(1, VAR_RATELIMIT) }
 diff --git a/util/configparser.y b/util/configparser.y
-index 10227a2f..cdbcf7cd 100644
+index 8be6bd3e..74d885ad 100644
 --- a/util/configparser.y
 +++ b/util/configparser.y
 @@ -125,6 +125,7 @@ extern struct config_parser_state* cfg_parser;
@@ -3236,7 +3236,7 @@ index 10227a2f..cdbcf7cd 100644
  	forwardstart contents_forward | pythonstart contents_py | 
  	rcstart contents_rc | dtstart contents_dt | viewstart contents_view |
  	dnscstart contents_dnsc | cachedbstart contents_cachedb |
-@@ -2726,6 +2727,50 @@ dt_dnstap_log_forwarder_response_messages: VAR_DNSTAP_LOG_FORWARDER_RESPONSE_MES
+@@ -2728,6 +2729,50 @@ dt_dnstap_log_forwarder_response_messages: VAR_DNSTAP_LOG_FORWARDER_RESPONSE_MES
  		free($2);
  	}
  	;
@@ -3384,7 +3384,7 @@ index 3a5335dd..20113217 100644
  
  /**
 diff --git a/util/netevent.c b/util/netevent.c
-index c54c570f..c45699d5 100644
+index 9fe5da2d..037e70d1 100644
 --- a/util/netevent.c
 +++ b/util/netevent.c
 @@ -57,6 +57,9 @@
@@ -3427,7 +3427,7 @@ index c54c570f..c45699d5 100644
  		if(!rep.c || rep.c->fd != fd) /* commpoint closed to -1 or reused for
  		another UDP port. Note rep.c cannot be reused with TCP fd. */
  			break;
-@@ -3184,6 +3196,9 @@ comm_point_send_reply(struct comm_reply *repinfo)
+@@ -3192,6 +3204,9 @@ comm_point_send_reply(struct comm_reply *repinfo)
  				repinfo->c->tcp_timeout_msec);
  		}
  	}
@@ -3437,9 +3437,9 @@ index c54c570f..c45699d5 100644
  }
  
  void 
-@@ -3193,6 +3208,9 @@ comm_point_drop_reply(struct comm_reply* repinfo)
+@@ -3201,6 +3216,9 @@ comm_point_drop_reply(struct comm_reply* repinfo)
  		return;
- 	log_assert(repinfo && repinfo->c);
+ 	log_assert(repinfo->c);
  	log_assert(repinfo->c->type != comm_tcp_accept);
 +#ifdef ENABLE_FASTRPZ
 +	rpz_end(repinfo);
@@ -3447,7 +3447,7 @@ index c54c570f..c45699d5 100644
  	if(repinfo->c->type == comm_udp)
  		return;
  	if(repinfo->c->tcp_req_info)
-@@ -3214,6 +3232,9 @@ comm_point_start_listening(struct comm_point* c, int newfd, int msec)
+@@ -3222,6 +3240,9 @@ comm_point_start_listening(struct comm_point* c, int newfd, int msec)
  {
  	verbose(VERB_ALGO, "comm point start listening %d (%d msec)", 
  		c->fd==-1?newfd:c->fd, msec);
@@ -3473,10 +3473,10 @@ index d80c72b3..0233292f 100644
  	uint8_t client_nonce[crypto_box_HALF_NONCEBYTES];
  	uint8_t nmkey[crypto_box_BEFORENMBYTES];
 diff --git a/validator/validator.c b/validator/validator.c
-index fa8d5419..5628ef0b 100644
+index c3ca0a27..15251988 100644
 --- a/validator/validator.c
 +++ b/validator/validator.c
-@@ -2755,6 +2755,12 @@ ds_response_to_ke(struct module_qstate* qstate, struct val_qstate* vq,
+@@ -2761,6 +2761,12 @@ ds_response_to_ke(struct module_qstate* qstate, struct val_qstate* vq,
  			default:
  				/* NSEC proof did not work, try next */
  				break;
@@ -3489,7 +3489,7 @@ index fa8d5419..5628ef0b 100644
  		}
  
  		sec = nsec3_prove_nods(qstate->env, ve, 
-@@ -2788,6 +2794,12 @@ ds_response_to_ke(struct module_qstate* qstate, struct val_qstate* vq,
+@@ -2794,6 +2800,12 @@ ds_response_to_ke(struct module_qstate* qstate, struct val_qstate* vq,
  			default:
  				/* NSEC3 proof did not work */
  				break;

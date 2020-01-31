@@ -22,6 +22,7 @@
 #include "sldns/parseutil.h"
 #include "sldns/sbuffer.h"
 #include "sldns/keyraw.h"
+#include "util/data/dname.h"
 #ifdef HAVE_TIME_H
 #include <time.h>
 #endif
@@ -784,7 +785,7 @@ int sldns_wire2str_dname_scan(uint8_t** d, size_t* dlen, char** s, size_t* slen,
 	/* spool labels onto the string, use compression if its there */
 	uint8_t* pos = *d;
 	unsigned i, counter=0;
-	unsigned maxcompr = 1000; /* loop detection, max compr ptrs */
+	unsigned maxcompr = MAX_COMPRESS_PTRS; /* loop detection, max compr ptrs */
 	int in_buf = 1;
 	if(comprloop) {
 		if(*comprloop != 0)
@@ -798,7 +799,7 @@ int sldns_wire2str_dname_scan(uint8_t** d, size_t* dlen, char** s, size_t* slen,
 		(*dlen)--;
 		return sldns_str_print(s, slen, ".");
 	}
-	while(*pos) {
+	while((!pkt || pos < pkt+pktlen) && *pos) {
 		/* read label length */
 		uint8_t labellen = *pos++;
 		if(in_buf) { (*d)++; (*dlen)--; }

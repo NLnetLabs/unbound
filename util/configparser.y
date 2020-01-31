@@ -167,8 +167,9 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_FORWARD_NO_CACHE VAR_STUB_NO_CACHE VAR_LOG_SERVFAIL VAR_DENY_ANY
 %token VAR_UNKNOWN_SERVER_TIME_LIMIT VAR_LOG_TAG_QUERYREPLY
 %token VAR_STREAM_WAIT_SIZE VAR_TLS_CIPHERS VAR_TLS_CIPHERSUITES
-%token VAR_TLS_SESSION_TICKET_KEYS
 %token VAR_IPSET VAR_IPSET_NAME_V4 VAR_IPSET_NAME_V6
+%token VAR_TLS_SESSION_TICKET_KEYS VAR_RPZ VAR_TAGS VAR_RPZ_ACTION_OVERRIDE
+%token VAR_RPZ_CNAME_OVERRIDE VAR_RPZ_LOG VAR_RPZ_LOG_NAME
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -176,7 +177,8 @@ toplevelvar: serverstart contents_server | stubstart contents_stub |
 	forwardstart contents_forward | pythonstart contents_py | 
 	rcstart contents_rc | dtstart contents_dt | viewstart contents_view |
 	dnscstart contents_dnsc | cachedbstart contents_cachedb |
-	ipsetstart contents_ipset | authstart contents_auth
+	ipsetstart contents_ipset | authstart contents_auth |
+	rpzstart contents_rpz
 	;
 
 /* server: declaration */
@@ -337,6 +339,7 @@ authstart: VAR_AUTH_ZONE
 			s->for_downstream = 1;
 			s->for_upstream = 1;
 			s->fallback_enabled = 0;
+			s->isrpz = 0;
 		} else 
 			yyerror("out of memory");
 	}
@@ -346,6 +349,92 @@ contents_auth: contents_auth content_auth
 content_auth: auth_name | auth_zonefile | auth_master | auth_url |
 	auth_for_downstream | auth_for_upstream | auth_fallback_enabled |
 	auth_allow_notify
+	;
+
+rpz_tag: VAR_TAGS STRING_ARG
+	{
+		uint8_t* bitlist;
+		size_t len = 0;
+		OUTYY(("P(server_local_zone_tag:%s)\n", $2));
+		bitlist = config_parse_taglist(cfg_parser->cfg, $2,
+			&len);
+		free($2);
+		if(!bitlist) {
+			yyerror("could not parse tags, (define-tag them first)");
+		}
+		if(bitlist) {
+			cfg_parser->cfg->auths->rpz_taglist = bitlist;
+			cfg_parser->cfg->auths->rpz_taglistlen = len;
+
+		}
+	}
+	;
+
+rpz_action_override: VAR_RPZ_ACTION_OVERRIDE STRING_ARG
+	{
+		OUTYY(("P(rpz_action_override:%s)\n", $2));
+		if(strcmp($2, "nxdomain")!=0 && strcmp($2, "nodata")!=0 &&
+		   strcmp($2, "passthru")!=0 && strcmp($2, "drop")!=0 &&
+		   strcmp($2, "cname")!=0 && strcmp($2, "disabled")!=0) {
+			yyerror("rpz-action-override action: expected nxdomain, "
+				"nodata, passthru, drop, cname or disabled");
+			free($2);
+			cfg_parser->cfg->auths->rpz_action_override = NULL;
+		}
+		else {
+			cfg_parser->cfg->auths->rpz_action_override = $2;
+		}
+	}
+	;
+
+rpz_cname_override: VAR_RPZ_CNAME_OVERRIDE STRING_ARG
+	{
+		OUTYY(("P(rpz_cname_override:%s)\n", $2));
+		free(cfg_parser->cfg->auths->rpz_cname);
+		cfg_parser->cfg->auths->rpz_cname = $2;
+	}
+	;
+
+rpz_log: VAR_RPZ_LOG STRING_ARG
+	{
+		OUTYY(("P(rpz_log:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else cfg_parser->cfg->auths->rpz_log = (strcmp($2, "yes")==0);
+		free($2);
+	}
+	;
+
+rpz_log_name: VAR_RPZ_LOG_NAME STRING_ARG
+	{
+		OUTYY(("P(rpz_log_name:%s)\n", $2));
+		free(cfg_parser->cfg->auths->rpz_log_name);
+		cfg_parser->cfg->auths->rpz_log_name = $2;
+	}
+	;
+
+rpzstart: VAR_RPZ
+	{
+		struct config_auth* s;
+		OUTYY(("\nP(rpz:)\n")); 
+		s = (struct config_auth*)calloc(1, sizeof(struct config_auth));
+		if(s) {
+			s->next = cfg_parser->cfg->auths;
+			cfg_parser->cfg->auths = s;
+			/* defaults for RPZ auth zone */
+			s->for_downstream = 0;
+			s->for_upstream = 0;
+			s->fallback_enabled = 0;
+			s->isrpz = 1;
+		} else 
+			yyerror("out of memory");
+	}
+	;
+contents_rpz: contents_rpz content_rpz 
+	| ;
+content_rpz: auth_name | auth_zonefile | rpz_tag | auth_master | auth_url |
+	   auth_allow_notify | rpz_action_override | rpz_cname_override |
+	   rpz_log | rpz_log_name
 	;
 server_num_threads: VAR_NUM_THREADS STRING_ARG 
 	{ 
@@ -431,6 +520,7 @@ server_send_client_subnet: VAR_SEND_CLIENT_SUBNET STRING_ARG
 			fatal_exit("out of memory adding client-subnet");
 	#else
 		OUTYY(("P(Compiled without edns subnet option, ignoring)\n"));
+		free($2);
 	#endif
 	}
 	;
@@ -443,6 +533,7 @@ server_client_subnet_zone: VAR_CLIENT_SUBNET_ZONE STRING_ARG
 			fatal_exit("out of memory adding client-subnet-zone");
 	#else
 		OUTYY(("P(Compiled without edns subnet option, ignoring)\n"));
+		free($2);
 	#endif
 	}
 	;

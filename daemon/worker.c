@@ -61,6 +61,7 @@
 #include "services/authzone.h"
 #include "services/mesh.h"
 #include "services/localzone.h"
+#include "services/rpz.h"
 #include "util/data/msgparse.h"
 #include "util/data/msgencode.h"
 #include "util/data/dname.h"
@@ -572,9 +573,10 @@ static int
 apply_respip_action(struct worker* worker, const struct query_info* qinfo,
 	struct respip_client_info* cinfo, struct reply_info* rep,
 	struct comm_reply* repinfo, struct ub_packed_rrset_key** alias_rrset,
-	struct reply_info** encode_repp)
+	struct reply_info** encode_repp, struct auth_zones* az)
 {
-	struct respip_action_info actinfo = {respip_none, NULL};
+	struct respip_action_info actinfo = {0};
+	actinfo.action = respip_none;
 
 	if(qinfo->qtype != LDNS_RR_TYPE_A &&
 		qinfo->qtype != LDNS_RR_TYPE_AAAA &&
@@ -582,7 +584,7 @@ apply_respip_action(struct worker* worker, const struct query_info* qinfo,
 		return 1;
 
 	if(!respip_rewrite_reply(qinfo, cinfo, rep, encode_repp, &actinfo,
-		alias_rrset, 0, worker->scratchpad))
+		alias_rrset, 0, worker->scratchpad, az))
 		return 0;
 
 	/* xxx_deny actions mean dropping the reply, unless the original reply
@@ -595,9 +597,20 @@ apply_respip_action(struct worker* worker, const struct query_info* qinfo,
 	/* If address info is returned, it means the action should be an
 	 * 'inform' variant and the information should be logged. */
 	if(actinfo.addrinfo) {
-		respip_inform_print(actinfo.addrinfo, qinfo->qname,
+		respip_inform_print(&actinfo, qinfo->qname,
 			qinfo->qtype, qinfo->qclass, qinfo->local_alias,
 			repinfo);
+
+		if(worker->stats.extended && actinfo.rpz_used) {
+			if(actinfo.rpz_disabled)
+				worker->stats.rpz_action[RPZ_DISABLED_ACTION] +=
+					actinfo.rpz_disabled;
+			if(actinfo.rpz_cname_override)
+				worker->stats.rpz_action[RPZ_CNAME_OVERRIDE_ACTION]++;
+			else
+				worker->stats.rpz_action[
+					respip_action_to_rpz_action(actinfo.action)]++;
+		}
 	}
 
 	return 1;
@@ -708,13 +721,15 @@ answer_from_cache(struct worker* worker, struct query_info* qinfo,
 		(int)(flags&LDNS_RCODE_MASK), edns, repinfo, worker->scratchpad))
 		goto bail_out;
 	*alias_rrset = NULL; /* avoid confusion if caller set it to non-NULL */
-	if(worker->daemon->use_response_ip && !partial_rep &&
-	   !apply_respip_action(worker, qinfo, cinfo, rep, repinfo, alias_rrset,
-			&encode_rep)) {
+	if((worker->daemon->use_response_ip || worker->daemon->use_rpz) &&
+		!partial_rep && !apply_respip_action(worker, qinfo, cinfo, rep,
+		repinfo, alias_rrset,
+		&encode_rep, worker->env.auth_zones)) {
 		goto bail_out;
 	} else if(partial_rep &&
 		!respip_merge_cname(partial_rep, qinfo, rep, cinfo,
-		must_validate, &encode_rep, worker->scratchpad)) {
+		must_validate, &encode_rep, worker->scratchpad,
+		worker->env.auth_zones)) {
 		goto bail_out;
 	}
 	if(encode_rep != rep) {
@@ -1364,6 +1379,18 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 		goto send_reply;
 	}
 	if(worker->env.auth_zones &&
+		rpz_apply_qname_trigger(worker->env.auth_zones,
+		&worker->env, &qinfo, &edns, c->buffer, worker->scratchpad,
+		repinfo, acladdr->taglist, acladdr->taglen, &worker->stats)) {
+		regional_free_all(worker->scratchpad);
+		if(sldns_buffer_limit(c->buffer) == 0) {
+			comm_point_drop_reply(repinfo);
+			return 0;
+		}
+		server_stats_insrcode(&worker->stats, c->buffer);
+		goto send_reply;
+	}
+	if(worker->env.auth_zones &&
 		auth_zones_answer(worker->env.auth_zones, &worker->env,
 		&qinfo, &edns, repinfo, c->buffer, worker->scratchpad)) {
 		regional_free_all(worker->scratchpad);
@@ -1433,7 +1460,7 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 	/* If we may apply IP-based actions to the answer, build the client
 	 * information.  As this can be expensive, skip it if there is
 	 * absolutely no possibility of it. */
-	if(worker->daemon->use_response_ip &&
+	if((worker->daemon->use_response_ip || worker->daemon->use_rpz) &&
 		(qinfo.qtype == LDNS_RR_TYPE_A ||
 		qinfo.qtype == LDNS_RR_TYPE_AAAA ||
 		qinfo.qtype == LDNS_RR_TYPE_ANY)) {
@@ -1469,9 +1496,11 @@ lookup_cache:
 				 * Note that if there is more than one pass
 				 * its qname must be that used for cache
 				 * lookup. */
-				if((worker->env.cfg->prefetch || worker->env.cfg->serve_expired)
-					&& *worker->env.now >=
-					((struct reply_info*)e->data)->prefetch_ttl) {
+				if((worker->env.cfg->prefetch && *worker->env.now >=
+							((struct reply_info*)e->data)->prefetch_ttl) ||
+						(worker->env.cfg->serve_expired &&
+						*worker->env.now >= ((struct reply_info*)e->data)->ttl)) {
+
 					time_t leeway = ((struct reply_info*)e->
 						data)->ttl - *worker->env.now;
 					if(((struct reply_info*)e->data)->ttl
