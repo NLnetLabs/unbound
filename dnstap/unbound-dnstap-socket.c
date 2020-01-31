@@ -75,7 +75,11 @@ static void usage(char* argv[])
 	printf(" 	Listen to dnstap messages\n");
 	printf("stdout has dnstap log, stderr has verbose server log\n");
 	printf("-u <socketpath> listen to unix socket with this file name\n");
-	printf("-s <serverip[@port]> listen on the IP and port\n");
+	printf("-s <serverip[@port]> listen for TCP on the IP and port\n");
+	printf("-t <serverip[@port]> listen for TLS on IP and port\n");
+	printf("-x <server.key> server key file for TLS service\n");
+	printf("-y <server.pem> server cert file for TLS service\n");
+	printf("-z <verify.pem> cert file to verify client connections\n");
 	printf("-l 		long format for DNS printout\n");
 	printf("-v 		more verbose log output\n");
 	printf("-h 		this help text\n");
@@ -101,6 +105,8 @@ struct tap_data {
 	int fd;
 	/** the ub event */
 	struct ub_event* ev;
+	/** the SSL for TLS streams */
+	SSL* ssl;
 	/** have we read the length, and how many bytes of it */
 	int len_done;
 	/** have we read the data, and how many bytes of it */
@@ -139,6 +145,8 @@ struct tap_socket {
 	char* socketpath;
 	/** IP, if this is a TCP socket */
 	char* ip;
+	/** for a TLS socket, the tls context */
+	SSL_CTX* sslctx;
 };
 
 /** del the tap event */
@@ -164,6 +172,7 @@ static void tap_socket_close(struct tap_socket* s)
 static void tap_socket_delete(struct tap_socket* s)
 {
 	if(!s) return;
+	SSL_CTX_free(s->sslctx);
 	ub_event_free(s->ev);
 	free(s->socketpath);
 	free(s->ip);
@@ -209,6 +218,29 @@ static struct tap_socket* tap_socket_new_tcpaccept(char* ip,
 	s->fd = -1;
 	s->ev_cb = ev_cb;
 	s->data = data;
+	return s;
+}
+
+/** create new socket (unconnected, not base-added), or NULL malloc fail */
+static struct tap_socket* tap_socket_new_tlsaccept(char* ip,
+	void (*ev_cb)(int, short, void*), void* data, char* server_key,
+	char* server_cert, char* verifypem)
+{
+	struct tap_socket* s = calloc(1, sizeof(*s));
+	if(!s) {
+		log_err("malloc failure");
+		return NULL;
+	}
+	s->ip = strdup(ip);
+	if(!s->ip) {
+		free(s);
+		log_err("malloc failure");
+		return NULL;
+	}
+	s->fd = -1;
+	s->ev_cb = ev_cb;
+	s->data = data;
+	s->sslctx = listen_sslctx_create(server_key, server_cert, verifypem);
 	return s;
 }
 
@@ -296,40 +328,26 @@ static int tap_socket_setup(struct tap_socket* s, struct ub_event_base* base)
 			log_err("could not create local socket");
 			return 0;
 		}
-		s->ev = ub_event_new(base, s->fd, UB_EV_READ | UB_EV_PERSIST,
-			s->ev_cb, s);
-		if(!s->ev) {
-			log_err("could not ub_event_new");
-			return 0;
-		}
-		if(ub_event_add(s->ev, NULL) != 0) {
-			log_err("could not ub_event_add");
-			return 0;
-		}
-		s->ev_added = 1;
-		return 1;
-	}
-	if(s->ip) {
+	} else if(s->ip || s->sslctx) {
 		/* TCP accept socket */
 		s->fd = make_tcp_accept(s->ip);
 		if(s->fd == -1) {
 			log_err("could not create tcp socket");
 			return 0;
 		}
-		s->ev = ub_event_new(base, s->fd, UB_EV_READ | UB_EV_PERSIST,
-			s->ev_cb, s);
-		if(!s->ev) {
-			log_err("could not ub_event_new");
-			return 0;
-		}
-		if(ub_event_add(s->ev, NULL) != 0) {
-			log_err("could not ub_event_add");
-			return 0;
-		}
-		s->ev_added = 1;
-		return 1;
 	}
-	return 0;
+	s->ev = ub_event_new(base, s->fd, UB_EV_READ | UB_EV_PERSIST,
+		s->ev_cb, s);
+	if(!s->ev) {
+		log_err("could not ub_event_new");
+		return 0;
+	}
+	if(ub_event_add(s->ev, NULL) != 0) {
+		log_err("could not ub_event_add");
+		return 0;
+	}
+	s->ev_added = 1;
+	return 1;
 }
 
 /** add tap socket to list */
@@ -675,6 +693,7 @@ void tap_data_free(struct tap_data* data)
 {
 	ub_event_del(data->ev);
 	ub_event_free(data->ev);
+	SSL_free(data->ssl);
 	close(data->fd);
 	free(data->frame);
 	free(data);
@@ -850,6 +869,21 @@ static void tap_callback(int fd, short ATTR_UNUSED(bits), void* arg)
 
 }
 
+/** setup SSL connection to the client */
+static SSL*
+setup_ssl(int s, SSL_CTX* ctx)
+{
+	SSL* ssl = SSL_new(ctx);
+	if(!ssl) return NULL;
+	SSL_set_accept_state(ssl);
+	(void)SSL_set_mode(ssl, (long)SSL_MODE_AUTO_RETRY);
+	if(!SSL_set_fd(ssl, s)) {
+		SSL_free(ssl);
+		return NULL;
+	}
+	return ssl;
+}
+
 /** callback for main listening file descriptor */
 void mainfdcallback(int fd, short ATTR_UNUSED(bits), void* arg)
 {
@@ -914,6 +948,10 @@ void mainfdcallback(int fd, short ATTR_UNUSED(bits), void* arg)
 	data = calloc(1, sizeof(*data));
 	if(!data) fatal_exit("out of memory");
 	data->fd = s;
+	if(tap_sock->sslctx) {
+		data->ssl = setup_ssl(data->fd, tap_sock->sslctx);
+		if(!data->ssl) fatal_exit("could not SSL_new");
+	}
 	data->ev = ub_event_new(maindata->base, s, UB_EV_READ | UB_EV_PERSIST,
 		&tap_callback, data);
 	if(!data->ev) fatal_exit("could not ub_event_new");
@@ -950,6 +988,22 @@ static void setup_tcp_list(struct main_tap_data* maindata,
 	}
 }
 
+/** setup tls accept sockets */
+static void setup_tls_list(struct main_tap_data* maindata,
+	struct config_strlist_head* tls_list, char* server_key,
+	char* server_cert, char* verifypem)
+{
+	struct config_strlist* item;
+	for(item = tls_list->first; item; item = item->next) {
+		struct tap_socket* s;
+		s = tap_socket_new_tlsaccept(item->str, &mainfdcallback,
+			maindata, server_key, server_cert, verifypem);
+		if(!s) fatal_exit("out of memory");
+		if(!tap_socket_list_insert(&maindata->acceptlist, s))
+			fatal_exit("out of memory");
+	}
+}
+
 /** signal variable */
 static struct ub_event_base* sig_base = NULL;
 /** do we have to quit */
@@ -966,7 +1020,9 @@ static RETSIGTYPE main_sigh(int sig)
 /** setup and run the server to listen to DNSTAP messages */
 static void
 setup_and_run(struct config_strlist_head* local_list,
-	struct config_strlist_head* tcp_list)
+	struct config_strlist_head* tcp_list,
+	struct config_strlist_head* tls_list, char* server_key,
+	char* server_cert, char* verifypem)
 {
 	time_t secs = 0;
 	struct timeval now;
@@ -991,6 +1047,8 @@ setup_and_run(struct config_strlist_head* local_list,
 
 	setup_local_list(maindata, local_list);
 	setup_tcp_list(maindata, tcp_list);
+	setup_tls_list(maindata, tls_list, server_key, server_cert,
+		verifypem);
 	if(!tap_socket_list_addevs(maindata->acceptlist, base))
 		fatal_exit("could not setup accept events");
 
@@ -1014,6 +1072,8 @@ int main(int argc, char** argv)
 	int usessl = 0;
 	struct config_strlist_head local_list;
 	struct config_strlist_head tcp_list;
+	struct config_strlist_head tls_list;
+	char* server_key = NULL, *server_cert = NULL, *verifypem = NULL;
 #ifdef USE_WINSOCK
 	WSADATA wsa_data;
 	if(WSAStartup(MAKEWORD(2,2), &wsa_data) != 0) {
@@ -1035,6 +1095,7 @@ int main(int argc, char** argv)
 		fatal_exit("could not bind to signal");
 	memset(&local_list, 0, sizeof(local_list));
 	memset(&tcp_list, 0, sizeof(tcp_list));
+	memset(&tls_list, 0, sizeof(tls_list));
 
 	/* lock debug start (if any) */
 	log_ident_set("unbound-dnstap-socket");
@@ -1049,7 +1110,7 @@ int main(int argc, char** argv)
 #endif
 
 	/* command line options */
-	while( (c=getopt(argc, argv, "hls:u:v")) != -1) {
+	while( (c=getopt(argc, argv, "hls:u:vx:y:z:")) != -1) {
 		switch(c) {
 			case 'u':
 				if(!cfg_strlist_append(&local_list,
@@ -1060,6 +1121,18 @@ int main(int argc, char** argv)
 				if(!cfg_strlist_append(&tcp_list,
 					strdup(optarg)))
 					fatal_exit("out of memory");
+				break;
+			case 'x':
+				server_key = optarg;
+				usessl = 1;
+				break;
+			case 'y':
+				server_cert = optarg;
+				usessl = 1;
+				break;
+			case 'z':
+				verifypem = optarg;
+				usessl = 1;
 				break;
 			case 'l':
 				longformat = 1;
@@ -1095,9 +1168,11 @@ int main(int argc, char** argv)
 		(void)OPENSSL_init_ssl(OPENSSL_INIT_LOAD_SSL_STRINGS, NULL);
 #endif
 	}
-	setup_and_run(&local_list, &tcp_list);
+	setup_and_run(&local_list, &tcp_list, &tls_list, server_key,
+		server_cert, verifypem);
 	config_delstrlist(local_list.first);
 	config_delstrlist(tcp_list.first);
+	config_delstrlist(tls_list.first);
 
 	checklock_stop();
 #ifdef USE_WINSOCK
