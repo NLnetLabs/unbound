@@ -233,13 +233,13 @@ static int make_tcp_accept(char* ip)
 #ifndef USE_WINSOCK
 		log_err("can't create socket: %s", strerror(errno));
 #else
-		log_err("can't create socket: %s", 
+		log_err("can't create socket: %s",
 			wsa_strerror(WSAGetLastError()));
 #endif
 		return -1;
 	}
 #ifdef SO_REUSEADDR
-	if(setsockopt(s, SOL_SOCKET, SO_REUSEADDR, (void*)&on, 
+	if(setsockopt(s, SOL_SOCKET, SO_REUSEADDR, (void*)&on,
 		(socklen_t)sizeof(on)) < 0) {
 #ifndef USE_WINSOCK
 		log_err("setsockopt(.. SO_REUSEADDR ..) failed: %s",
@@ -259,7 +259,7 @@ static int make_tcp_accept(char* ip)
 			&addr, len);
 		close(s);
 #else
-		log_err_addr("can't bind socket", 
+		log_err_addr("can't bind socket",
 			wsa_strerror(WSAGetLastError()), &addr, len);
 		closesocket(s);
 #endif
@@ -957,9 +957,9 @@ int sig_quit = 0;
 /** signal handler for user quit */
 static RETSIGTYPE main_sigh(int sig)
 {
-	if(!sig_base) return;
 	verbose(VERB_ALGO, "exit on signal %d\n", sig);
-	ub_event_base_loopexit(sig_base);
+	if(sig_base)
+		ub_event_base_loopexit(sig_base);
 	sig_quit = 1;
 }
 
@@ -996,6 +996,7 @@ setup_and_run(struct config_strlist_head* local_list,
 
 	ub_event_base_dispatch(base);
 
+	sig_base = NULL;
 	tap_socket_list_delete(maindata->acceptlist);
 	ub_event_base_free(base);
 	free(maindata);
