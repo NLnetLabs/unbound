@@ -1,3 +1,6 @@
+31 January 2020: Wouter
+	- Fix fclose on error in TLS session ticket code.
+
 30 January 2020: Ralph
 	- Fix memory leak in error condition remote.c
 	- Fix double free in error condition view.c
