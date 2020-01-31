@@ -753,9 +753,13 @@ static ssize_t ssl_read_bytes(struct tap_data* data, void* buf, size_t len)
 			if(errno != 0)
 				log_err("SSL_read syscall: %s",
 					strerror(errno));
+			if(verbosity) log_info("dnstap client stream closed from %s",
+				(data->id?data->id:""));
 			return 0;
 		}
 		log_crypto_err("could not SSL_read");
+		if(verbosity) log_info("dnstap client stream closed from %s",
+			(data->id?data->id:""));
 		return 0;
 	}
 	return r;
@@ -861,7 +865,7 @@ static int reply_with_finish(int fd)
 	return 1;
 }
 
-/** perform SSL handshake, return 0 to wait for events, 1 to continue */
+/** perform SSL handshake, return 0 to wait for events, 1 if done */
 static int tap_handshake(struct tap_data* data)
 {
 	int r;
@@ -927,7 +931,7 @@ static void tap_callback(int fd, short ATTR_UNUSED(bits), void* arg)
 	}
 	while(data->len_done < 4) {
 		uint32_t l = (uint32_t)data->len;
-		ssize_t ret = tap_receive(data, 
+		ssize_t ret = tap_receive(data,
 			((uint8_t*)&l)+data->len_done, 4-data->len_done);
 		if(verbosity>=4) log_info("s recv %d", (int)ret);
 		if(ret == 0) {
