@@ -107,6 +107,10 @@ struct tap_data {
 	struct ub_event* ev;
 	/** the SSL for TLS streams */
 	SSL* ssl;
+	/** is the ssl handshake done */
+	int ssl_handshake_done;
+	/** we are briefly waiting to write (in the struct event) */
+	int ssl_brief_write;
 	/** string that identifies the socket (or NULL), like IP address */
 	char* id;
 	/** have we read the length, and how many bytes of it */
@@ -666,7 +670,8 @@ static void log_data_frame(uint8_t* pkt, size_t len)
 
 /** receive bytes from fd, prints errors if bad,
  * returns 0: closed/error, -1: continue, >0 number of bytes */
-static ssize_t receive_bytes(struct tap_data* data, int fd, void* buf, size_t len, struct ub_event* ev)
+static ssize_t receive_bytes(struct tap_data* data, int fd, void* buf,
+	size_t len)
 {
 	ssize_t ret = recv(fd, buf, len, 0);
 	if(ret == 0) {
@@ -677,7 +682,6 @@ static ssize_t receive_bytes(struct tap_data* data, int fd, void* buf, size_t le
 	} else if(ret == -1) {
 		/* error */
 #ifndef USE_WINSOCK
-		(void)ev;
 		if(errno == EINTR || errno == EAGAIN)
 			return -1;
 		log_err("could not recv: %s", strerror(errno));
@@ -685,7 +689,7 @@ static ssize_t receive_bytes(struct tap_data* data, int fd, void* buf, size_t le
 		if(WSAGetLastError() == WSAEINPROGRESS)
 			return -1;
 		if(WSAGetLastError() == WSAEWOULDBLOCK) {
-			ub_winsock_tcp_wouldblock(ev, UB_EV_READ);
+			ub_winsock_tcp_wouldblock(data->ev, UB_EV_READ);
 			return -1;
 		}
 		log_err("could not recv: %s",
@@ -696,6 +700,74 @@ static ssize_t receive_bytes(struct tap_data* data, int fd, void* buf, size_t le
 		return 0;
 	}
 	return ret;
+}
+
+/** set to wait briefly for a write event, for one event call */
+static void tap_enable_brief_write(struct tap_data* data)
+{
+	ub_event_del(data->ev);
+	ub_event_del_bits(data->ev, UB_EV_READ);
+	ub_event_add_bits(data->ev, UB_EV_WRITE);
+	if(ub_event_add(data->ev, NULL) != 0)
+		log_err("could not ub_event_add in tap_enable_brief_write");
+	data->ssl_brief_write = 1;
+}
+
+/** stop the brief wait for a write event. back to reading. */
+static void tap_disable_brief_write(struct tap_data* data)
+{
+	ub_event_del(data->ev);
+	ub_event_del_bits(data->ev, UB_EV_WRITE);
+	ub_event_add_bits(data->ev, UB_EV_READ);
+	if(ub_event_add(data->ev, NULL) != 0)
+		log_err("could not ub_event_add in tap_disable_brief_write");
+	data->ssl_brief_write = 0;
+}
+
+/** receive bytes over ssl stream, prints errors if bad,
+ * returns 0: closed/error, -1: continue, >0 number of bytes */
+static ssize_t ssl_read_bytes(struct tap_data* data, void* buf, size_t len)
+{
+	int r;
+	ERR_clear_error();
+	r = SSL_read(data->ssl, buf, len);
+	if(r <= 0) {
+		int want = SSL_get_error(data->ssl, r);
+		if(want == SSL_ERROR_ZERO_RETURN) {
+			/* closed */
+			if(verbosity) log_info("dnstap client stream closed from %s",
+				(data->id?data->id:""));
+			return 0;
+		} else if(want == SSL_ERROR_WANT_READ) {
+			/* continue later */
+			return -1;
+		} else if(want == SSL_ERROR_WANT_WRITE) {
+			/* set to briefly write */
+			tap_enable_brief_write(data);
+			return -1;
+		} else if(want == SSL_ERROR_SYSCALL) {
+#ifdef ECONNRESET
+			if(errno == ECONNRESET && verbosity < 2)
+				return 0; /* silence reset by peer */
+#endif
+			if(errno != 0)
+				log_err("SSL_read syscall: %s",
+					strerror(errno));
+			return 0;
+		}
+		log_crypto_err("could not SSL_read");
+		return 0;
+	}
+	return r;
+}
+
+/** receive bytes on the tap connection, prints errors if bad,
+ * returns 0: closed/error, -1: continue, >0 number of bytes */
+static ssize_t tap_receive(struct tap_data* data, void* buf, size_t len)
+{
+	if(data->ssl)
+		return ssl_read_bytes(data, buf, len);
+	return receive_bytes(data, data->fd, buf, len);
 }
 
 /** delete the tap structure */
@@ -789,16 +861,74 @@ static int reply_with_finish(int fd)
 	return 1;
 }
 
+/** perform SSL handshake, return 0 to wait for events, 1 to continue */
+static int tap_handshake(struct tap_data* data)
+{
+	int r;
+	if(data->ssl_brief_write) {
+		/* write condition has been satisfied, back to reading */
+		tap_disable_brief_write(data);
+	}
+	if(data->ssl_handshake_done)
+		return 1;
+
+	ERR_clear_error();
+	r = SSL_do_handshake(data->ssl);
+	if(r != 1) {
+		int want = SSL_get_error(data->ssl, r);
+		if(want == SSL_ERROR_WANT_READ) {
+			return 0;
+		} else if(want == SSL_ERROR_WANT_WRITE) {
+			tap_enable_brief_write(data);
+			return 0;
+		} else if(r == 0) {
+			/* closed */
+			tap_data_free(data);
+			return 0;
+		} else if(want == SSL_ERROR_SYSCALL) {
+			/* SYSCALL and errno==0 means closed uncleanly */
+#ifdef EPIPE
+			if(errno == EPIPE && verbosity < 2)
+				return 0; /* silence 'broken pipe' */
+#endif
+#ifdef ECONNRESET
+			if(errno == ECONNRESET && verbosity < 2)
+				return 0; /* silence reset by peer */
+#endif
+			if(errno != 0)
+				log_err("SSL_handshake syscall: %s",
+					strerror(errno));
+			tap_data_free(data);
+			return 0;
+		} else {
+			unsigned long err = ERR_get_error();
+			if(!squelch_err_ssl_handshake(err)) {
+				log_crypto_err_code("ssl handshake failed",
+					err);
+				verbose(VERB_OPS, "ssl handshake failed "
+					"from %s", data->id);
+			}
+		}
+	}
+	/* check peer verification */
+	data->ssl_handshake_done = 1;
+	return 1;
+}
+
 /** callback for dnstap listener */
 static void tap_callback(int fd, short ATTR_UNUSED(bits), void* arg)
 {
 	struct tap_data* data = (struct tap_data*)arg;
 	if(verbosity>=3) log_info("tap callback");
+	if(data->ssl && (!data->ssl_handshake_done ||
+		data->ssl_brief_write)) {
+		if(!tap_handshake(data))
+			return;
+	}
 	while(data->len_done < 4) {
 		uint32_t l = (uint32_t)data->len;
-		ssize_t ret = receive_bytes(data, fd,
-			((uint8_t*)&l)+data->len_done, 4-data->len_done,
-			data->ev);
+		ssize_t ret = tap_receive(data, 
+			((uint8_t*)&l)+data->len_done, 4-data->len_done);
 		if(verbosity>=4) log_info("s recv %d", (int)ret);
 		if(ret == 0) {
 			/* closed or error */
@@ -832,8 +962,8 @@ static void tap_callback(int fd, short ATTR_UNUSED(bits), void* arg)
 
 	/* we want to read the full length now */
 	if(data->data_done < data->len) {
-		ssize_t r = receive_bytes(data, fd, data->frame + data->data_done,
-			data->len - data->data_done, data->ev);
+		ssize_t r = tap_receive(data, data->frame + data->data_done,
+			data->len - data->data_done);
 		if(verbosity>=4) log_info("f recv %d", (int)r);
 		if(r == 0) {
 			/* closed or error */
@@ -880,21 +1010,6 @@ static void tap_callback(int fd, short ATTR_UNUSED(bits), void* arg)
 
 }
 
-/** setup SSL connection to the client */
-static SSL*
-setup_ssl(int s, SSL_CTX* ctx)
-{
-	SSL* ssl = SSL_new(ctx);
-	if(!ssl) return NULL;
-	SSL_set_accept_state(ssl);
-	(void)SSL_set_mode(ssl, (long)SSL_MODE_AUTO_RETRY);
-	if(!SSL_set_fd(ssl, s)) {
-		SSL_free(ssl);
-		return NULL;
-	}
-	return ssl;
-}
-
 /** callback for main listening file descriptor */
 void mainfdcallback(int fd, short ATTR_UNUSED(bits), void* arg)
 {
@@ -908,32 +1023,32 @@ void mainfdcallback(int fd, short ATTR_UNUSED(bits), void* arg)
 	int s = accept(fd, (struct sockaddr*)&addr, &addrlen);
 	if(s == -1) {
 #ifndef USE_WINSOCK
-                /* EINTR is signal interrupt. others are closed connection. */
-                if(     errno == EINTR || errno == EAGAIN
+		/* EINTR is signal interrupt. others are closed connection. */
+		if(     errno == EINTR || errno == EAGAIN
 #ifdef EWOULDBLOCK
-                        || errno == EWOULDBLOCK
+			|| errno == EWOULDBLOCK
 #endif
 #ifdef ECONNABORTED
-                        || errno == ECONNABORTED
+			|| errno == ECONNABORTED
 #endif
 #ifdef EPROTO
-                        || errno == EPROTO
+			|| errno == EPROTO
 #endif /* EPROTO */
-                        )
-                        return;
+			)
+			return;
 		log_err_addr("accept failed", strerror(errno), &addr, addrlen);
 #else /* USE_WINSOCK */
-                if(WSAGetLastError() == WSAEINPROGRESS ||
-                        WSAGetLastError() == WSAECONNRESET)
-                        return;
-                if(WSAGetLastError() == WSAEWOULDBLOCK) {
-                        ub_winsock_tcp_wouldblock(maindata->ev, UB_EV_READ);
-                        return;
-                }
-                log_err_addr("accept failed", wsa_strerror(WSAGetLastError()),
-                        &addr, addrlen);
+		if(WSAGetLastError() == WSAEINPROGRESS ||
+			WSAGetLastError() == WSAECONNRESET)
+			return;
+		if(WSAGetLastError() == WSAEWOULDBLOCK) {
+			ub_winsock_tcp_wouldblock(maindata->ev, UB_EV_READ);
+			return;
+		}
+		log_err_addr("accept failed", wsa_strerror(WSAGetLastError()),
+			&addr, addrlen);
 #endif
-                return;
+		return;
 	}
 	fd_set_nonblock(s);
 	if(verbosity) {
@@ -969,7 +1084,7 @@ void mainfdcallback(int fd, short ATTR_UNUSED(bits), void* arg)
 	data->fd = s;
 	data->id = id;
 	if(tap_sock->sslctx) {
-		data->ssl = setup_ssl(data->fd, tap_sock->sslctx);
+		data->ssl = incoming_ssl_fd(tap_sock->sslctx, data->fd);
 		if(!data->ssl) fatal_exit("could not SSL_new");
 	}
 	data->ev = ub_event_new(maindata->base, s, UB_EV_READ | UB_EV_PERSIST,

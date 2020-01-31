@@ -1054,7 +1054,7 @@ log_cert(unsigned level, const char* str, X509* cert)
 
 #ifdef HAVE_SSL
 /** true if the ssl handshake error has to be squelched from the logs */
-static int
+int
 squelch_err_ssl_handshake(unsigned long err)
 {
 	if(verbosity >= VERB_QUERY)
