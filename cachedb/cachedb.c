@@ -459,7 +459,7 @@ packed_rrset_ttl_subtract(struct packed_rrset_data* data, time_t subtract)
 }
 
 /* Adjust the TTL of a DNS message and its RRs by 'adjust'.  If 'adjust' is
- * negative, set the TTL to 0. */
+ * negative, set the TTLs to 0. */
 static void
 adjust_msg_ttl(struct dns_msg* msg, time_t adjust)
 {
@@ -685,8 +685,9 @@ cachedb_handle_query(struct module_qstate* qstate,
 					&qstate->return_msg->qinfo,
 					qstate->return_msg->rep);
 			else log_info("cachedb internal cache lookup: rcode %s",
-				sldns_lookup_by_id(sldns_rcodes, qstate->return_rcode)?
-				sldns_lookup_by_id(sldns_rcodes, qstate->return_rcode)->name:"??");
+				sldns_lookup_by_id(sldns_rcodes, qstate->return_rcode)
+				?sldns_lookup_by_id(sldns_rcodes, qstate->return_rcode)->name
+				:"??");
 		}
 		/* we are done with the query */
 		qstate->ext_state[id] = module_finished;
@@ -704,8 +705,10 @@ cachedb_handle_query(struct module_qstate* qstate,
 		cachedb_intcache_store(qstate);
 		log_err("``````````````````````````` stored internal");
 		/* In case we have expired data but there is a client timer for expired
-		 * answers pass execution to next module in order to try updating the
+		 * answers, pass execution to next module in order to try updating the
 		 * data first. */
+		// XXX this needs revisit. The expired data stored from cachedb has
+		// 0 TTL which is picked up by iterator later when looking in the cache.
 		if(qstate->need_refetch && qstate->serve_expired_data &&
 			qstate->serve_expired_data->timer) {
 				log_err("``````````````````````````` passing");

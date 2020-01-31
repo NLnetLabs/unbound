@@ -364,7 +364,8 @@ mesh_serve_expired_lookup(struct module_qstate* qstate)
 	hashvalue_type h;
 	struct lruhash_entry* e;
 	struct dns_msg* msg;
-	struct reply_info* rep;
+	struct reply_info* rep, *data;
+	struct msgreply_entry* key;
 	time_t timenow = *qstate->env->now;
 	int must_validate = (!(qstate->query_flags&BIT_CD)
 		|| qstate->env->cfg->ignore_cd) && qstate->env->need_to_validate;
@@ -420,12 +421,8 @@ mesh_serve_expired_lookup(struct module_qstate* qstate)
 			goto bail_out_rrset; /* rrset changed, re-verify */
 	}
 
-	// Respip action (could be after this function)
-	// Respip merge cname (could be after this function)
-	// Partial reply? Lookup once more
-
-	struct msgreply_entry* key = (struct msgreply_entry*)e->key;
-	struct reply_info* data = (struct reply_info*)e->data;
+	key = (struct msgreply_entry*)e->key;
+	data = (struct reply_info*)e->data;
 	msg = tomsg(qstate->env, &key->key, data, qstate->region, timenow,
 		qstate->env->cfg->serve_expired, qstate->env->scratch);
 	log_info("```````````````````` tomsg(%p)", msg);
@@ -1867,9 +1864,16 @@ mesh_serve_expired_callback(void* arg)
 		return;
 	}
 	log_info("```````````````````````` Trying to find stale");
-	msg = qstate->serve_expired_data->get_cached_answer(qstate);
-	if(!msg)
-		return;
+	while(1) {
+		msg = qstate->serve_expired_data->get_cached_answer(qstate);
+		if(!msg)
+			return;
+		// Respip action (could be after this function)
+		// Respip merge cname (could be after this function)
+		// Partial reply? Lookup once more
+		break;
+	}
+
 	log_info("```````````````````````` Reply to replies");
 	r = mstate->reply_list;
 	mstate->reply_list = NULL;

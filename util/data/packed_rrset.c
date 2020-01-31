@@ -352,11 +352,11 @@ packed_rrset_copy_region(struct ub_packed_rrset_key* key,
 	/* make TTLs relative - once per rrset */
 	for(i=0; i<d->count + d->rrsig_count; i++) {
 		if(d->rr_ttl[i] < now)
-			d->rr_ttl[i] = SERVE_EXPIRED_REPLY_TTL;
+			d->rr_ttl[i] = SERVE_EXPIRED?SERVE_EXPIRED_REPLY_TTL:0;
 		else	d->rr_ttl[i] -= now;
 	}
 	if(d->ttl < now)
-		d->ttl = SERVE_EXPIRED_REPLY_TTL;
+		d->ttl = SERVE_EXPIRED?SERVE_EXPIRED_REPLY_TTL:0;
 	else	d->ttl -= now;
 	return ck;
 }

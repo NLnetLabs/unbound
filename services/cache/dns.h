@@ -143,7 +143,7 @@ struct delegpt* dns_cache_find_delegation(struct module_env* env,
  * @param r: reply info that, together with qname, will make up the dns message.
  * @param region: where to allocate dns message.
  * @param now: the time now, for check if TTL on cache entry is ok.
- * @param allow_expired: if true, and serve-expired is enabled it will allow
+ * @param allow_expired: if true and serve-expired is enabled, it will allow
  *	for expired dns_msg to be generated based on the configured serve-expired
  *	logic.
  * @param scratch: where to allocate temporary data.
