@@ -64,11 +64,6 @@
 #include "respip/respip.h"
 #include "services/listen_dnsport.h"
 
-
-#include "iterator/iter_utils.h"
-#include "validator/val_neg.h"
-#include "util/storage/slabhash.h"
-
 /** subtract timers and the values do not overflow or become negative */
 static void
 timeval_subtract(struct timeval* d, const struct timeval* end, const struct timeval* start)
@@ -372,8 +367,6 @@ mesh_serve_expired_lookup(struct module_qstate* qstate,
 		|| qstate->env->cfg->ignore_cd) && qstate->env->need_to_validate;
 	log_info("```````````````````````` Called mesh_serve_expired_lookup");
 	/* Lookup cache */
-	// dns_cache_lookup or msg_cache_lookup ?
-	// probably neither as they assume stuff about TTLs
 	h = query_info_hash(lookup_qinfo, qstate->query_flags);
 	e = slabhash_lookup(qstate->env->msg_cache, h, lookup_qinfo, 0);
 	if(!e) return NULL;
@@ -489,12 +482,12 @@ void mesh_new_client(struct mesh_area* mesh, struct query_info* qinfo,
 	int was_detached = 0;
 	int was_noreply = 0;
 	int added = 0;
+	int timeout = mesh->env->cfg->serve_expired?
+		mesh->env->cfg->serve_expired_client_timeout:0;
 	struct sldns_buffer* r_buffer = rep->c->buffer;
 	if(rep->c->tcp_req_info) {
 		r_buffer = rep->c->tcp_req_info->spool_buffer;
 	}
-	int timeout = mesh->env->cfg->serve_expired?
-		mesh->env->cfg->serve_expired_client_timeout:0;
 	if(!unique)
 		s = mesh_area_find(mesh, cinfo, qinfo, qflags&(BIT_RD|BIT_CD), 0, 0);
 	/* does this create a new reply state? */
@@ -607,9 +600,8 @@ void mesh_new_client(struct mesh_area* mesh, struct query_info* qinfo,
 			s->list_select = mesh_jostle_list;
 		}
 	}
-	if(added) {
+	if(added)
 		mesh_run(mesh, s, module_event_new, NULL);
-	}
 	return;
 
 servfail_mem:
@@ -696,9 +688,8 @@ mesh_new_callback(struct mesh_area* mesh, struct query_info* qinfo,
 		mesh->num_reply_states ++;
 	}
 	mesh->num_reply_addrs++;
-	if(added) {
+	if(added)
 		mesh_run(mesh, s, module_event_new, NULL);
-	}
 	return 1;
 }
 
@@ -1895,6 +1886,7 @@ mesh_serve_expired_callback(void* arg)
 	struct mesh_cb* c;
 	struct mesh_reply* prev = NULL;
 	struct sldns_buffer* prev_buffer = NULL;
+	struct sldns_buffer* r_buffer = NULL;
 	struct reply_info* partial_rep = NULL;
 	struct ub_packed_rrset_key* alias_rrset = NULL;
 	struct reply_info* encode_rep = NULL;
@@ -1966,6 +1958,13 @@ mesh_serve_expired_callback(void* arg)
 		break;
 	}
 
+	// XXX Maybe here we need to take another decision for this qstate
+	// because logic may interfere while replying in this callback and the
+	// (still running) qstate maybe wants to also start replying or even
+	// delete itself.
+	// We could make this state unique and the resolving could move to another
+	// new (copied over) qstate.
+
 	log_info("```````````````````````` Reply to replies");
 	r = mstate->reply_list;
 	mstate->reply_list = NULL;
@@ -1989,7 +1988,7 @@ mesh_serve_expired_callback(void* arg)
 			}
 		}
 
-		struct sldns_buffer* r_buffer = r->query_reply.c->buffer;
+		r_buffer = r->query_reply.c->buffer;
 		if(r->query_reply.c->tcp_req_info)
 			r_buffer = r->query_reply.c->tcp_req_info->spool_buffer;
 		mesh_send_reply(mstate, LDNS_RCODE_NOERROR, msg->rep,
@@ -2003,7 +2002,9 @@ mesh_serve_expired_callback(void* arg)
 		mesh->ans_expired++;
 
 	}
-	//mstate->replies_sent = 1;  // We don't want this in case more replies are attached later. Putting this here will prevent cleaning those up later on in the mesh_state_cleanup.
+	//mstate->replies_sent = 1;  // XXX We don't want this in case more replies
+	// are attached later. Putting this here will prevent cleaning those up
+	// later on in the mesh_state_cleanup.
 	log_info("```````````````````````` Reply to callbacks");
 	while((c = mstate->cb_list) != NULL) {
 		/* take this cb off the list; so that the list can be

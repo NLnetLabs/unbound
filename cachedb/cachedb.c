@@ -464,11 +464,10 @@ static void
 adjust_msg_ttl(struct dns_msg* msg, time_t adjust)
 {
 	size_t i;
-	if(adjust >= 0 && msg->rep->ttl > adjust) {
+	if(adjust >= 0 && msg->rep->ttl > adjust)
 		msg->rep->ttl -= adjust;
-	} else {
+	else
 		msg->rep->ttl = 0;
-	}
 	msg->rep->prefetch_ttl = PREFETCH_TTL_CALC(msg->rep->ttl);
 	msg->rep->serve_expired_ttl = msg->rep->ttl + SERVE_EXPIRED_TTL;
 
@@ -709,6 +708,8 @@ cachedb_handle_query(struct module_qstate* qstate,
 		 * data first. */
 		// XXX this needs revisit. The expired data stored from cachedb has
 		// 0 TTL which is picked up by iterator later when looking in the cache.
+		// Document that ext cachedb does not work properly with
+		// serve_stale_reply_ttl yet.
 		if(qstate->need_refetch && qstate->serve_expired_data &&
 			qstate->serve_expired_data->timer) {
 				log_err("``````````````````````````` passing");

@@ -465,10 +465,8 @@ packed_rrset_encode(struct ub_packed_rrset_key* key, sldns_buffer* pkt,
 	owner_pos = sldns_buffer_position(pkt);
 
 	/* For an rrset with a fixed TTL, use the rrset's TTL as given */
-	if((key->rk.flags & PACKED_RRSET_FIXEDTTL) != 0) {
-		//log_err("```````````````````` TIME 0");
+	if((key->rk.flags & PACKED_RRSET_FIXEDTTL) != 0)
 		timenow = 0;
-	}
 
 	if(do_data) {
 		const sldns_rr_descriptor* c = type_rdata_compressable(key);
@@ -481,7 +479,6 @@ packed_rrset_encode(struct ub_packed_rrset_key* key, sldns_buffer* pkt,
 				return r;
 			sldns_buffer_write(pkt, &key->rk.type, 2);
 			sldns_buffer_write(pkt, &key->rk.rrset_class, 2);
-			//log_err("``````````````````` ttl: %ld, timenow: %ld, SERVE_EXPIRED: %d, SERVE_EXPIRED_REPLY_TTL: %ld", data->rr_ttl[j], timenow, SERVE_EXPIRED, SERVE_EXPIRED_REPLY_TTL);
 			if(data->rr_ttl[j] < timenow)
 				sldns_buffer_write_u32(pkt,
 					SERVE_EXPIRED?SERVE_EXPIRED_REPLY_TTL:0);
