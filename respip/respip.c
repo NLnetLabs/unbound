@@ -950,8 +950,6 @@ respip_rewrite_reply(const struct query_info* qinfo,
 			r->taglistlen, ctaglist, ctaglen)) {
 			if((raddr = respip_addr_lookup(rep,
 				r->respip_set, &rrset_id))) {
-			}
-			if(raddr) {
 				if(!respip_use_rpz(raddr, r, &action, &data,
 					&rpz_log, &log_name, &rpz_cname_override,
 					region, &rpz_used)) {
