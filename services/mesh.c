@@ -1977,8 +1977,7 @@ mesh_serve_expired_callback(void* arg)
 
 			if(qstate->env->cfg->stat_extended && actinfo.rpz_used) {
 				if(actinfo.rpz_disabled)
-					qstate->env->mesh->rpz_action[RPZ_DISABLED_ACTION] +=
-						actinfo.rpz_disabled;
+					qstate->env->mesh->rpz_action[RPZ_DISABLED_ACTION]++;
 				if(actinfo.rpz_cname_override)
 					qstate->env->mesh->rpz_action[RPZ_CNAME_OVERRIDE_ACTION]++;
 				else
