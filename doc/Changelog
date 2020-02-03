@@ -1,3 +1,6 @@
+-3 February 2020: Ralph
+	- Add assertion to please static analyzer
+
 31 January 2020: Wouter
 	- Fix fclose on error in TLS session ticket code.
 
