@@ -913,6 +913,8 @@ respip_rewrite_reply(const struct query_info* qinfo,
 	view = cinfo->view;
 	ipset = cinfo->respip_set;
 
+	log_assert(ipset);
+
 	/** Try to use response-ip config from the view first; use
 	  * global response-ip config if we don't have the view or we don't
 	  * have the matching per-view config (and the view allows the use
@@ -936,7 +938,7 @@ respip_rewrite_reply(const struct query_info* qinfo,
 		if(!raddr && !view->isfirst)
 			goto done;
 	}
-	if(!raddr && ipset && (raddr = respip_addr_lookup(rep, ipset,
+	if(!raddr && (raddr = respip_addr_lookup(rep, ipset,
 		&rrset_id))) {
 		action = (enum respip_action)local_data_find_tag_action(
 			raddr->taglist, raddr->taglen, ctaglist, ctaglen,
@@ -950,8 +952,6 @@ respip_rewrite_reply(const struct query_info* qinfo,
 			r->taglistlen, ctaglist, ctaglen)) {
 			if((raddr = respip_addr_lookup(rep,
 				r->respip_set, &rrset_id))) {
-			}
-			if(raddr) {
 				if(!respip_use_rpz(raddr, r, &action, &data,
 					&rpz_log, &log_name, &rpz_cname_override,
 					region, &rpz_used)) {
