@@ -576,6 +576,7 @@ void mesh_new_client(struct mesh_area* mesh, struct query_info* qinfo,
 	}
 	/* add serve expired timer if required and not already there */
 	if(timeout && !mesh_serve_expired_init(s, timeout)) {
+		log_err("mesh_new_client: out of memory initializing serve expired");
 		goto servfail_mem;
 	}
 	/* update statistics */
