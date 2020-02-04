@@ -365,7 +365,7 @@ struct config_file {
 	/** TTL for the serve expired replies */
 	int serve_expired_reply_ttl;
 	/** serve expired entries only after trying to update the entries and this
-	 *  timeout is reached */
+	 *  timeout (in milliseconds) is reached */
 	int serve_expired_client_timeout;
 	/** nsec3 maximum iterations per key size, string */
 	char* val_nsec3_key_iterations;

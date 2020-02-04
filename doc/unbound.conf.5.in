@@ -1070,13 +1070,14 @@ The default value is "no".
 .TP
 .B serve\-expired: \fI<yes or no>
 If enabled, unbound attempts to serve old responses from cache with a
-TTL of 0 in the response without waiting for the actual resolution to finish.
-The actual resolution answer ends up in the cache later on.  Default is "no".
+TTL of \fBserve\-expired\-reply\-ttl\fR in the response without waiting for the
+actual resolution to finish.  The actual resolution answer ends up in the cache
+later on.  Default is "no".
 .TP
 .B serve\-expired\-ttl: \fI<seconds>
 Limit serving of expired responses to configured seconds after expiration. 0
 disables the limit.  This option only applies when \fBserve\-expired\fR is
-enabled.  A RECOMMENDED value per draft-ietf-dnsop-serve-stale-10 is between
+enabled.  A suggested value per draft-ietf-dnsop-serve-stale-10 is between
 86400 (1 day) and 259200 (3 days).  The default is 0.
 .TP
 .B serve\-expired\-ttl\-reset: \fI<yes or no>
@@ -1094,8 +1095,9 @@ use 30 as the value (draft-ietf-dnsop-serve-stale-10).  The default is 30.
 Time in milliseconds before replying to the client with expired data.  This
 essentially enables the serve-stale behavior as specified in
 draft-ietf-dnsop-serve-stale-10 that first tries to resolve before immediately
-responding with expired data.  Setting this to 0 will disable that behavior.
-Default is 0.
+responding with expired data.  A recommended value per
+draft-ietf-dnsop-serve-stale-10 is 1800.  Setting this to 0 will disable this
+behavior.  Default is 0.
 .TP
 .B val\-nsec3\-keysize\-iterations: \fI<"list of values">
 List of keysize and iteration count values, separated by spaces, surrounded
