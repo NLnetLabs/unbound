@@ -310,7 +310,8 @@ rsrc_unbound_checkconf.o:	$(srcdir)/winrc/rsrc_unbound_checkconf.rc config.h
 TEST_BIN=asynclook$(EXEEXT) delayer$(EXEEXT) \
 	lock-verify$(EXEEXT) memstats$(EXEEXT) perf$(EXEEXT) \
 	petal$(EXEEXT) pktview$(EXEEXT) streamtcp$(EXEEXT) \
-	testbound$(EXEEXT) unittest$(EXEEXT) unbound-dnstap-socket$(EXEEXT)
+	unbound-dnstap-socket$(EXEEXT) \
+	testbound$(EXEEXT) unittest$(EXEEXT)
 tests:	all $(TEST_BIN)
 
 check: test
