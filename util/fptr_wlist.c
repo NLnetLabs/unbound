@@ -620,3 +620,9 @@ int fptr_whitelist_inplace_cb_query_response(
 	return 0;
 }
 
+int fptr_whitelist_serve_expired_lookup(serve_expired_lookup_func_type* fptr)
+{
+	if(fptr == &mesh_serve_expired_lookup)
+		return 1;
+	return 0;
+}

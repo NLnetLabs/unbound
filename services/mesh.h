@@ -660,4 +660,16 @@ void mesh_state_remove_reply(struct mesh_area* mesh, struct mesh_state* m,
  */
 void mesh_serve_expired_callback(void* arg);
 
+/**
+ * Try to get a (expired) cached answer.
+ * This needs to behave like the worker's answer_from_cache() in order to have
+ * the same behavior as when replying from cache.
+ * @param qstate: the module qstate.
+ * @param lookup_qinfo: the query info to look for in the cache.
+ * @return dns_msg if a cached answer was found, otherwise NULL.
+ */
+struct dns_msg*
+mesh_serve_expired_lookup(struct module_qstate* qstate,
+	struct query_info* lookup_qinfo);
+
 #endif /* SERVICES_MESH_H */

@@ -353,7 +353,7 @@ int mesh_make_new_space(struct mesh_area* mesh, sldns_buffer* qbuf)
  * This needs to behave like the worker's answer_from_cache() in order to have
  * the same behavior as when replying from cache.
  */
-static struct dns_msg*
+struct dns_msg*
 mesh_serve_expired_lookup(struct module_qstate* qstate,
 	struct query_info* lookup_qinfo)
 {
@@ -1907,6 +1907,8 @@ mesh_serve_expired_callback(void* arg)
 	/* The following while is used instead of the `goto lookup_cache`
 	 * like in the worker. */
 	while(1) {
+		fptr_ok(fptr_whitelist_serve_expired_lookup(
+			qstate->serve_expired_data->get_cached_answer));
 		msg = qstate->serve_expired_data->get_cached_answer(qstate,
 			lookup_qinfo);
 		if(!msg)
