@@ -1088,7 +1088,7 @@ expired records will be served as long as there are queries for it.  Default is
 .B serve\-expired\-reply\-ttl: \fI<seconds>
 TTL value to use when replying with expired data.  If
 \fBserve\-expired\-client\-timeout\fR is also used then it is RECOMMENDED to
-change that value to 30 (draft-ietf-dnsop-serve-stale-09).  The default is 0.
+use 30 as the value (draft-ietf-dnsop-serve-stale-09).  The default is 30.
 .TP
 .B serve\-expired\-client\-timeout: \fI<msec>
 Time in milliseconds before replying to the client with expired data.  This

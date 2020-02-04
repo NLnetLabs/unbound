@@ -246,7 +246,7 @@ config_create(void)
 	cfg->serve_expired = 0;
 	cfg->serve_expired_ttl = 0;
 	cfg->serve_expired_ttl_reset = 0;
-	cfg->serve_expired_reply_ttl = 0;
+	cfg->serve_expired_reply_ttl = 30;
 	cfg->serve_expired_client_timeout = 0;
 	cfg->add_holddown = 30*24*3600;
 	cfg->del_holddown = 30*24*3600;

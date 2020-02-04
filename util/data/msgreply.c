@@ -66,7 +66,7 @@ int SERVE_EXPIRED = 0;
 /** Time to serve records after expiration */
 time_t SERVE_EXPIRED_TTL = 0;
 /** TTL to use for expired records */
-time_t SERVE_EXPIRED_REPLY_TTL = 0;
+time_t SERVE_EXPIRED_REPLY_TTL = 30;
 
 /** allocate qinfo, return 0 on error */
 static int
