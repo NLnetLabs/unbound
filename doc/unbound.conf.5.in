@@ -2039,6 +2039,13 @@ to the query without performing iterative DNS resolution.
 If Unbound cannot even find an answer in the backend, it resolves the
 query as usual, and stores the answer in the backend.
 .P
+This module interacts with the \fBserve\-expired\-*\fR options and will reply
+with expired data if unbound is configured for that.  Currently the use
+of \fBserve\-expired\-client\-timeout:\fR and
+\fBserve\-expired\-reply\-ttl:\fR is not consistent for data originating from
+the external cache as these will result in a reply with 0 TTL without trying to
+update the data first, ignoring the configured values.
+.P
 If Unbound was built with
 \fB\-\-with\-libhiredis\fR
 on a system that has installed the hiredis C client library of Redis,
