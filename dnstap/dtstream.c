@@ -52,6 +52,12 @@
 #include <sys/un.h>
 #endif
 #include <fcntl.h>
+#ifdef HAVE_OPENSSL_SSL_H
+#include <openssl/ssl.h>
+#endif
+#ifdef HAVE_OPENSSL_ERR_H
+#include <openssl/err.h>
+#endif
 
 /** number of messages to process in one output callback */
 #define DTIO_MESSAGES_PER_CALLBACK 100
@@ -220,6 +226,14 @@ void dt_io_thread_delete(struct dt_io_thread* dtio)
 	}
 	free(dtio->socket_path);
 	free(dtio->ip_str);
+	free(dtio->tls_server_name);
+	free(dtio->client_key_file);
+	free(dtio->client_cert_file);
+	if(dtio->ssl_ctx) {
+#ifdef HAVE_SSL
+		SSL_CTX_free(dtio->ssl_ctx);
+#endif
+	}
 	free(dtio);
 }
 
@@ -229,6 +243,30 @@ int dt_io_thread_apply_cfg(struct dt_io_thread* dtio, struct config_file *cfg)
 	dtio->upstream_is_tcp = 1;
 	dtio->ip_str = strdup("127.0.0.1@1234");
 	*/
+#ifdef HAVE_SSL
+	dtio->upstream_is_tls = 1;
+	dtio->ip_str = strdup("127.0.0.1@1234");
+	//dtio->tls_server_name;
+	dtio->use_client_certs = 0;
+	if(dtio->use_client_certs) {
+		//dtio->client_key_file = NULL;
+		//dtio->client_cert_file = NULL;
+	} else {
+		free(dtio->client_key_file);
+		dtio->client_key_file = NULL;
+		free(dtio->client_cert_file);
+		dtio->client_cert_file = NULL;
+	}
+	dtio->ssl_ctx = connect_sslctx_create(dtio->client_key_file,
+		dtio->client_cert_file, cfg->tls_cert_bundle,
+		cfg->tls_win_cert);
+	if(!dtio->ssl_ctx) {
+		log_err("could not setup SSL CTX");
+		return 0;
+	}
+	/* DEBUG */
+	return 1;
+#endif
 	if(cfg->dnstap_socket_path && cfg->dnstap_socket_path[0]) {
 		dtio->socket_path = strdup(cfg->dnstap_socket_path);
 		if(!dtio->socket_path) {
@@ -442,6 +480,13 @@ static void dtio_close_output(struct dt_io_thread* dtio)
 		return;
 	ub_event_free(dtio->event);
 	dtio->event = NULL;
+	if(dtio->ssl) {
+#ifdef HAVE_SSL
+		SSL_shutdown(dtio->ssl);
+		SSL_free(dtio->ssl);
+		dtio->ssl = NULL;
+#endif
+	}
 #ifndef USE_WINSOCK
 	close(dtio->fd);
 #else
@@ -1263,6 +1308,14 @@ static int dtio_open_output_tcp(struct dt_io_thread* dtio)
 	return 1;
 }
 
+/** setup the SSL structure for new connection */
+static int dtio_setup_ssl(struct dt_io_thread* dtio)
+{
+	dtio->ssl = outgoing_ssl_fd(dtio->ssl_ctx, dtio->fd);
+	if(!dtio->ssl) return 0;
+	return 1;
+}
+
 /** open the output file descriptor */
 static void dtio_open_output(struct dt_io_thread* dtio)
 {
@@ -1278,6 +1331,18 @@ static void dtio_open_output(struct dt_io_thread* dtio)
 			return;
 		}
 	}
+	if(dtio->upstream_is_tls) {
+		if(!dtio_setup_ssl(dtio)) {
+#ifndef USE_WINSOCK
+			close(dtio->fd);
+#else
+			closesocket(dtio->fd);
+#endif
+			dtio->fd = -1;
+			dtio_reconnect_enable(dtio);
+			return;
+		}
+	}
 	dtio->check_nb_connect = 1;
 
 	/* the EV_READ is to catch channel close, write to write packets */
@@ -1286,6 +1351,12 @@ static void dtio_open_output(struct dt_io_thread* dtio)
 		dtio);
 	if(!ev) {
 		log_err("dnstap io: out of memory");
+		if(dtio->ssl) {
+#ifdef HAVE_SSL
+			SSL_free(dtio->ssl);
+			dtio->ssl = NULL;
+#endif
+		}
 #ifndef USE_WINSOCK
 		close(dtio->fd);
 #else
@@ -1302,6 +1373,12 @@ static void dtio_open_output(struct dt_io_thread* dtio)
 		log_err("dnstap io: out of memory");
 		ub_event_free(dtio->event);
 		dtio->event = NULL;
+		if(dtio->ssl) {
+#ifdef HAVE_SSL
+			SSL_free(dtio->ssl);
+			dtio->ssl = NULL;
+#endif
+		}
 #ifndef USE_WINSOCK
 		close(dtio->fd);
 #else

@@ -107,6 +107,8 @@ struct dt_io_thread {
 	ub_thread_type tid;
 	/** if the io processing has started */
 	int started;
+	/** ssl context for the io thread, for tls connections. type SSL_CTX* */
+	void* ssl_ctx;
 
 	/** file descriptor that the thread writes to */
 	int fd;
@@ -118,6 +120,8 @@ struct dt_io_thread {
 	int event_added_is_write;
 	/** check for nonblocking connect errors on fd */
 	int check_nb_connect;
+	/** ssl for current connection, type SSL* */
+	void* ssl;
 
 	/** the buffer that currently getting written, or NULL if no
 	 * (partial) message written now */
