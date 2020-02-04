@@ -546,11 +546,9 @@ tomsg(struct module_env* env, struct query_info* q, struct reply_info* r,
 		if(allow_expired) {
 			if(env->cfg->serve_expired_ttl &&
 				r->serve_expired_ttl < now) {
-				log_info("```````````````````` failed stale TTL");
 				return NULL;
 			}
 		} else {
-			log_info("```````````````````` stale not allowed");
 			return NULL;
 		}
 		/* Change the current time so we can pass the below TTL checks when
@@ -578,7 +576,6 @@ tomsg(struct module_env* env, struct query_info* q, struct reply_info* r,
 	msg->rep->rrset_count = r->rrset_count;
 	msg->rep->authoritative = r->authoritative;
 	if(!rrset_array_lock(r->ref, r->rrset_count, now_control)) {
-		log_info("```````````````````` no lock");
 		return NULL;
 	}
 	if(r->an_numrrsets > 0 && (r->rrsets[0]->rk.type == htons(
@@ -586,13 +583,11 @@ tomsg(struct module_env* env, struct query_info* q, struct reply_info* r,
 		LDNS_RR_TYPE_DNAME)) && !reply_check_cname_chain(q, r)) {
 		/* cname chain is now invalid, reconstruct msg */
 		rrset_array_unlock(r->ref, r->rrset_count);
-		log_info("```````````````````` no cname");
 		return NULL;
 	}
 	if(r->security == sec_status_secure && !reply_all_rrsets_secure(r)) {
 		/* message rrsets have changed status, revalidate */
 		rrset_array_unlock(r->ref, r->rrset_count);
-		log_info("```````````````````` no security");
 		return NULL;
 	}
 	for(i=0; i<msg->rep->rrset_count; i++) {
@@ -600,7 +595,6 @@ tomsg(struct module_env* env, struct query_info* q, struct reply_info* r,
 			region, now);
 		if(!msg->rep->rrsets[i]) {
 			rrset_array_unlock(r->ref, r->rrset_count);
-			log_info("```````````````````` no copy");
 			return NULL;
 		}
 	}

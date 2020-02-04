@@ -695,29 +695,25 @@ cachedb_handle_query(struct module_qstate* qstate,
 
 	/* ask backend cache to see if we have data */
 	if(cachedb_extcache_lookup(qstate, ie)) {
-		log_err("``````````````````````````` found external");
 		if(verbosity >= VERB_ALGO)
 			log_dns_msg(ie->backend->name,
 				&qstate->return_msg->qinfo,
 				qstate->return_msg->rep);
 		/* store this result in internal cache */
 		cachedb_intcache_store(qstate);
-		log_err("``````````````````````````` stored internal");
 		/* In case we have expired data but there is a client timer for expired
 		 * answers, pass execution to next module in order to try updating the
-		 * data first. */
-		// XXX this needs revisit. The expired data stored from cachedb has
-		// 0 TTL which is picked up by iterator later when looking in the cache.
-		// Document that ext cachedb does not work properly with
-		// serve_stale_reply_ttl yet.
+		 * data first.
+		 * TODO: this needs revisit. The expired data stored from cachedb has
+		 * 0 TTL which is picked up by iterator later when looking in the cache.
+		 * Document that ext cachedb does not work properly with
+		 * serve_stale_reply_ttl yet. */
 		if(qstate->need_refetch && qstate->serve_expired_data &&
 			qstate->serve_expired_data->timer) {
-				log_err("``````````````````````````` passing");
 				qstate->return_msg = NULL;
 				qstate->ext_state[id] = module_wait_module;
 				return;
 		}
-		log_err("``````````````````````````` replying");
 		/* we are done with the query */
 		qstate->ext_state[id] = module_finished;
 		return;

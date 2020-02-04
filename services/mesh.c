@@ -347,12 +347,6 @@ int mesh_make_new_space(struct mesh_area* mesh, sldns_buffer* qbuf)
 	return 0;
 }
 
-
-/**
- * Try to get a (expired) cached answer.
- * This needs to behave like the worker's answer_from_cache() in order to have
- * the same behavior as when replying from cache.
- */
 struct dns_msg*
 mesh_serve_expired_lookup(struct module_qstate* qstate,
 	struct query_info* lookup_qinfo)
@@ -365,12 +359,10 @@ mesh_serve_expired_lookup(struct module_qstate* qstate,
 	time_t timenow = *qstate->env->now;
 	int must_validate = (!(qstate->query_flags&BIT_CD)
 		|| qstate->env->cfg->ignore_cd) && qstate->env->need_to_validate;
-	log_info("```````````````````````` Called mesh_serve_expired_lookup");
 	/* Lookup cache */
 	h = query_info_hash(lookup_qinfo, qstate->query_flags);
 	e = slabhash_lookup(qstate->env->msg_cache, h, lookup_qinfo, 0);
 	if(!e) return NULL;
-	log_info("```````````````````````` Found slabhash");
 	rep = (struct reply_info*)e->data;
 	/* Check TTL */
 	if(rep->ttl < timenow) {
@@ -419,18 +411,15 @@ mesh_serve_expired_lookup(struct module_qstate* qstate,
 	data = (struct reply_info*)e->data;
 	msg = tomsg(qstate->env, &key->key, data, qstate->region, timenow,
 		qstate->env->cfg->serve_expired, qstate->env->scratch);
-	log_info("```````````````````` tomsg(%p)", msg);
 	rrset_array_unlock_touch(qstate->env->rrset_cache,
 		qstate->region, rep->ref, rep->rrset_count);
 	lock_rw_unlock(&e->lock);
 	return msg;
 
 bail_out_rrset:
-	log_info("```````````````````````` Bail out RRSET");
 	rrset_array_unlock_touch(qstate->env->rrset_cache,
 		qstate->region, rep->ref, rep->rrset_count);
 bail_out:
-	log_info("```````````````````````` Bail out");
 	lock_rw_unlock(&e->lock);
 	return NULL;
 }
@@ -442,7 +431,6 @@ mesh_serve_expired_init(struct mesh_state* mstate, int timeout)
 {
 	struct timeval t;
 
-	log_info("`````````````````````````````` INIT TIMER");
 	/* Create serve_expired_data if not there yet */
 	if(!mstate->s.serve_expired_data) {
 		mstate->s.serve_expired_data = (struct serve_expired_data*)
@@ -1273,7 +1261,6 @@ mesh_send_reply(struct mesh_state* m, int rcode, struct reply_info* rep,
 		r->edns.bits &= EDNS_DO;
 		m->s.qinfo.qname = r->qname;
 		m->s.qinfo.local_alias = r->local_alias;
-		log_err("`````````````````````` REPLYIIIIIING");
 		if(!inplace_cb_reply_call(m->s.env, &m->s.qinfo, &m->s, rep,
 			LDNS_RCODE_NOERROR, &r->edns, NULL, m->s.region) ||
 			!apply_edns_options(&r->edns, &edns_bak,
@@ -1328,7 +1315,6 @@ void mesh_query_done(struct mesh_state* mstate)
 		mstate->s.return_msg->rep:NULL);
 	/* No need for the serve expired timer anymore; we are going to reply. */
 	if(mstate->s.serve_expired_data) {
-		log_info("````````````````````````````` DELETING TIMER");
 		comm_timer_delete(mstate->s.serve_expired_data->timer);
 		mstate->s.serve_expired_data->timer = NULL;
 	}
@@ -1896,14 +1882,14 @@ mesh_serve_expired_callback(void* arg)
 	int must_validate = (!(qstate->query_flags&BIT_CD)
 		|| qstate->env->cfg->ignore_cd) && qstate->env->need_to_validate;
 	if(!qstate->serve_expired_data) return;
-	log_info("```````````````````````` Test timer popped!");
+	verbose(VERB_ALGO, "Serve expired: Trying to reply with expired data");
 	comm_timer_delete(qstate->serve_expired_data->timer);
 	qstate->serve_expired_data->timer = NULL;
 	if(qstate->blacklist || qstate->no_cache_lookup || qstate->is_drop) {
-		log_info("```````````````````````` Can't look into cache for stale!");
+		verbose(VERB_ALGO,
+			"Serve expired: Not allowed to look into cache for stale");
 		return;
 	}
-	log_info("```````````````````````` Trying to find stale");
 	/* The following while is used instead of the `goto lookup_cache`
 	 * like in the worker. */
 	while(1) {
@@ -1949,7 +1935,7 @@ mesh_serve_expired_callback(void* arg)
 			get_cname_target(alias_rrset, &qinfo_tmp.qname,
 				&qinfo_tmp.qname_len);
 			if(!qinfo_tmp.qname) {
-				log_err("unexpected: invalid answer alias");
+				log_err("Serve expired: unexpected: invalid answer alias");
 				return;
 			}
 			qinfo_tmp.qtype = qstate->qinfo.qtype;
@@ -1960,14 +1946,9 @@ mesh_serve_expired_callback(void* arg)
 		break;
 	}
 
-	// XXX Maybe here we need to take another decision for this qstate
-	// because logic may interfere while replying in this callback and the
-	// (still running) qstate maybe wants to also start replying or even
-	// delete itself.
-	// We could make this state unique and the resolving could move to another
-	// new (copied over) qstate.
+	if(verbosity >= VERB_ALGO)
+		log_dns_msg("Serve expired lookup", &qstate->qinfo, msg->rep);
 
-	log_info("```````````````````````` Reply to replies");
 	r = mstate->reply_list;
 	mstate->reply_list = NULL;
 	for(; r; r = r->next) {
@@ -2003,10 +1984,6 @@ mesh_serve_expired_callback(void* arg)
 		mesh->ans_expired++;
 
 	}
-	//mstate->replies_sent = 1;  // XXX We don't want this in case more replies
-	// are attached later. Putting this here will prevent cleaning those up
-	// later on in the mesh_state_cleanup.
-	log_info("```````````````````````` Reply to callbacks");
 	while((c = mstate->cb_list) != NULL) {
 		/* take this cb off the list; so that the list can be
 		 * changed, eg. by adds from the callback routine */
