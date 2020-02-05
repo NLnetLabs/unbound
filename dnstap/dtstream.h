@@ -122,6 +122,12 @@ struct dt_io_thread {
 	int check_nb_connect;
 	/** ssl for current connection, type SSL* */
 	void* ssl;
+	/** true if the handshake for SSL is done, 0 if not */
+	int ssl_handshake_done;
+	/** true if briefly the SSL wants a read event, 0 if not.
+	 * This happens during negotiation, we then do not want to write,
+	 * but wait for a read event. */
+	int ssl_brief_read;
 
 	/** the buffer that currently getting written, or NULL if no
 	 * (partial) message written now */

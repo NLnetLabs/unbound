@@ -582,3 +582,8 @@ int tcp_connect_errno_needs_log(struct sockaddr* ATTR_UNUSED(addr),
 {
 	return 1;
 }
+
+int squelch_err_ssl_handshake(unsigned long ATTR_UNUSED(err))
+{
+	return 0;
+}

@@ -891,15 +891,18 @@ static int tap_handshake(struct tap_data* data)
 			return 0;
 		} else if(want == SSL_ERROR_SYSCALL) {
 			/* SYSCALL and errno==0 means closed uncleanly */
+			int silent = 0;
 #ifdef EPIPE
 			if(errno == EPIPE && verbosity < 2)
-				return 0; /* silence 'broken pipe' */
+				silent = 1; /* silence 'broken pipe' */
 #endif
 #ifdef ECONNRESET
 			if(errno == ECONNRESET && verbosity < 2)
-				return 0; /* silence reset by peer */
+				silent = 1; /* silence reset by peer */
 #endif
-			if(errno != 0)
+			if(errno == 0)
+				silent = 1;
+			if(!silent)
 				log_err("SSL_handshake syscall: %s",
 					strerror(errno));
 			tap_data_free(data);
@@ -912,6 +915,8 @@ static int tap_handshake(struct tap_data* data)
 				verbose(VERB_OPS, "ssl handshake failed "
 					"from %s", data->id);
 			}
+			tap_data_free(data);
+			return 0;
 		}
 	}
 	/* check peer verification */
