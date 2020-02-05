@@ -362,6 +362,11 @@ struct config_file {
 	int serve_expired_ttl;
 	/** reset serve expired TTL after failed update attempt */
 	int serve_expired_ttl_reset;
+	/** TTL for the serve expired replies */
+	int serve_expired_reply_ttl;
+	/** serve expired entries only after trying to update the entries and this
+	 *  timeout (in milliseconds) is reached */
+	int serve_expired_client_timeout;
 	/** nsec3 maximum iterations per key size, string */
 	char* val_nsec3_key_iterations;
 	/** autotrust add holddown time, in seconds */
