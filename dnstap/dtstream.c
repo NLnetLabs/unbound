@@ -83,6 +83,8 @@ static int dtio_add_output_event_write(struct dt_io_thread* dtio);
 static void dtio_reconnect_enable(struct dt_io_thread* dtio);
 /** stop from stop_flush event loop */
 static void dtio_stop_flush_exit(struct stop_flush_info* info);
+/** enable briefly waiting for a read event, for SSL negotiation */
+static int dtio_enable_brief_read(struct dt_io_thread* dtio);
 
 struct dt_msg_queue*
 dt_msg_queue_create(void)
@@ -568,6 +570,48 @@ static int dtio_check_nb_connect(struct dt_io_thread* dtio)
 	return 1; /* everything okay */
 }
 
+/** write to ssl output
+ * returns number of bytes written, 0 if nothing happened,
+ * try again later, or -1 if the channel is to be closed. */
+static int dtio_write_ssl(struct dt_io_thread* dtio, uint8_t* buf,
+	size_t len)
+{
+	int r;
+	ERR_clear_error();
+	r = SSL_write(dtio->ssl, buf, len);
+	if(r <= 0) {
+		int want = SSL_get_error(dtio->ssl, r);
+		if(want == SSL_ERROR_ZERO_RETURN) {
+			/* closed */
+			return -1;
+		} else if(want == SSL_ERROR_WANT_READ) {
+			/* we want a brief read event */
+			dtio_enable_brief_read(dtio);
+			return 0;
+		} else if(want == SSL_ERROR_WANT_WRITE) {
+			/* write again later */
+			return 0;
+		} else if(want == SSL_ERROR_SYSCALL) {
+#ifdef EPIPE
+			if(errno == EPIPE && verbosity < 2)
+				return -1; /* silence 'broken pipe' */
+#endif
+#ifdef ECONNRESET
+			if(errno == ECONNRESET && verbosity < 2)
+				return -1; /* silence reset by peer */
+#endif
+			if(errno != 0) {
+				log_err("dnstap io, SSL_write syscall: %s",
+					strerror(errno));
+			}
+			return -1;
+		}
+		log_crypto_err("dnstap io, could not SSL_write");
+		return -1;
+	}
+	return r;
+}
+
 /** write buffer to output.
  * returns number of bytes written, 0 if nothing happened,
  * try again later, or -1 if the channel is to be closed. */
@@ -577,6 +621,8 @@ static int dtio_write_buf(struct dt_io_thread* dtio, uint8_t* buf,
 	ssize_t ret;
 	if(dtio->fd == -1)
 		return -1;
+	if(dtio->ssl)
+		return dtio_write_ssl(dtio, buf, len);
 	ret = send(dtio->fd, (void*)buf, len, 0);
 	if(ret == -1) {
 #ifndef USE_WINSOCK
@@ -654,16 +700,17 @@ static int dtio_write_with_writev(struct dt_io_thread* dtio)
  * return true if message is done, false if incomplete. */
 static int dtio_write_more_of_len(struct dt_io_thread* dtio)
 {
-#ifndef HAVE_WRITEV
-	uint32_t sendlen = htonl(dtio->cur_msg_len);
+	uint32_t sendlen;
 	int r;
-#endif
 	if(dtio->cur_msg_len_done >= 4)
 		return 1;
 #ifdef HAVE_WRITEV
-	/* we try writev for everything.*/
-	return dtio_write_with_writev(dtio);
-#else
+	if(!dtio->ssl) {
+		/* we try writev for everything.*/
+		return dtio_write_with_writev(dtio);
+	}
+#endif /* HAVE_WRITEV */
+	sendlen = htonl(dtio->cur_msg_len);
 	r = dtio_write_buf(dtio,
 		((uint8_t*)&sendlen)+dtio->cur_msg_len_done,
 		sizeof(sendlen)-dtio->cur_msg_len_done);
@@ -680,7 +727,6 @@ static int dtio_write_more_of_len(struct dt_io_thread* dtio)
 	if(dtio->cur_msg_len_done < 4)
 		return 0;
 	return 1;
-#endif /* HAVE_WRITEV */
 }
 
 /** write more of the data frame.
