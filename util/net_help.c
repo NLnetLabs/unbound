@@ -1191,6 +1191,40 @@ void* outgoing_ssl_fd(void* sslctx, int fd)
 #endif
 }
 
+/** set the authname on an SSL structure, SSL* ssl */
+int set_auth_name_on_ssl(void* ssl, char* auth_name)
+{
+	if(!auth_name) return 1;
+#ifdef HAVE_SSL
+	(void)SSL_set_tlsext_host_name(ssl, auth_name);
+#endif
+#ifdef HAVE_SSL_SET1_HOST
+	SSL_set_verify(ssl, SSL_VERIFY_PEER, NULL);
+	/* setting the hostname makes openssl verify the
+	 * host name in the x509 certificate in the
+	 * SSL connection*/
+	if(!SSL_set1_host(ssl, auth_name)) {
+		log_err("SSL_set1_host failed");
+		return 0;
+	}
+#elif defined(HAVE_X509_VERIFY_PARAM_SET1_HOST)
+	/* openssl 1.0.2 has this function that can be used for
+	 * set1_host like verification */
+	if(auth_name) {
+		X509_VERIFY_PARAM* param = SSL_get0_param(ssl);
+		X509_VERIFY_PARAM_set_hostflags(param, X509_CHECK_FLAG_NO_PARTIAL_WILDCARDS);
+		if(!X509_VERIFY_PARAM_set1_host(param, auth_name, strlen(auth_name))) {
+			log_err("X509_VERIFY_PARAM_set1_host failed");
+			return 0;
+		}
+		SSL_set_verify(ssl, SSL_VERIFY_PEER, NULL);
+	}
+#else
+	verbose(VERB_ALGO, "the query has an auth_name, but libssl has no call to perform TLS authentication");
+#endif /* HAVE_SSL_SET1_HOST */
+	return 1;
+}
+
 #if defined(HAVE_SSL) && defined(OPENSSL_THREADS) && !defined(THREADS_DISABLED) && defined(CRYPTO_LOCK) && OPENSSL_VERSION_NUMBER < 0x10100000L
 /** global lock list for openssl locks */
 static lock_basic_type *ub_openssl_locks = NULL;

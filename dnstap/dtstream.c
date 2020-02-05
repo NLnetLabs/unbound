@@ -1500,6 +1500,10 @@ static int dtio_setup_ssl(struct dt_io_thread* dtio)
 	if(!dtio->ssl) return 0;
 	dtio->ssl_handshake_done = 0;
 	dtio->ssl_brief_read = 0;
+
+	if(!set_auth_name_on_ssl(dtio->ssl, dtio->tls_server_name)) {
+		return 0;
+	}
 	return 1;
 }
 

@@ -435,6 +435,14 @@ void* incoming_ssl_fd(void* sslctx, int fd);
 void* outgoing_ssl_fd(void* sslctx, int fd);
 
 /**
+ * set auth name on SSL for verification
+ * @param ssl: SSL* to set
+ * @param auth_name: if NULL nothing happens, otherwise the name to check.
+ * @return 1 on success or NULL auth_name, 0 on failure.
+ */
+int set_auth_name_on_ssl(void* ssl, char* auth_name);
+
+/**
  * Initialize openssl locking for thread safety
  * @return false on failure (alloc failure).
  */
