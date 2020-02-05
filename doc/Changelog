@@ -8,6 +8,9 @@
 	- Fixed stats when replying with cached, cname-aliased records.
 	- Added missing default values for redis cachedb backend.
 
+3 February 2020: Ralph
+	- Add assertion to please static analyzer
+
 31 January 2020: Wouter
 	- Fix fclose on error in TLS session ticket code.
 
