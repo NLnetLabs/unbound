@@ -383,7 +383,7 @@ Not part of the recursivereplies (or the histogram thereof) or cachemiss,
 as a cache response was sent.
 .TP
 .I threadX.num.expired
-number of replies with ttl zero, because they served an expired cache entry.
+number of replies that served an expired cache entry.
 .TP
 .I threadX.num.recursivereplies
 The number of replies sent to queries that needed recursive processing. Could be smaller than threadX.num.cachemiss if due to timeouts no replies were sent for some queries.
