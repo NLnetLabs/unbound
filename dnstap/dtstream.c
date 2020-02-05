@@ -473,6 +473,17 @@ static void dtio_del_output_event(struct dt_io_thread* dtio)
 	dtio->event_added_is_write = 0;
 }
 
+/** close dtio socket and set it to -1 */
+static void dtio_close_fd(struct dt_io_thread* dtio)
+{
+#ifndef USE_WINSOCK
+	close(dtio->fd);
+#else
+	closesocket(dtio->fd);
+#endif
+	dtio->fd = -1;
+}
+
 /** close and stop the output file descriptor event */
 static void dtio_close_output(struct dt_io_thread* dtio)
 {
@@ -487,12 +498,7 @@ static void dtio_close_output(struct dt_io_thread* dtio)
 		dtio->ssl = NULL;
 #endif
 	}
-#ifndef USE_WINSOCK
-	close(dtio->fd);
-#else
-	closesocket(dtio->fd);
-#endif
-	dtio->fd = -1;
+	dtio_close_fd(dtio);
 
 	/* if there is a (partial) message, discard it
 	 * we cannot send (the remainder of) it, and a new
@@ -1239,12 +1245,7 @@ static int dtio_open_output_local(struct dt_io_thread* dtio)
 		log_err("dnstap io: failed to connect to \"%s\": %s",
 			to, wsa_strerror(WSAGetLastError()));
 #endif
-#ifndef USE_WINSOCK
-		close(dtio->fd);
-#else
-		closesocket(dtio->fd);
-#endif
-		dtio->fd = -1;
+		dtio_close_fd(dtio);
 		return 0;
 	}
 	return 1;
@@ -1296,13 +1297,7 @@ static int dtio_open_output_tcp(struct dt_io_thread* dtio)
 				dtio->ip_str, wsa_strerror(WSAGetLastError()));
 		}
 #endif
-
-#ifndef USE_WINSOCK
-		close(dtio->fd);
-#else
-		closesocket(dtio->fd);
-#endif
-		dtio->fd = -1;
+		dtio_close_fd(dtio);
 		return 0;
 	}
 	return 1;
@@ -1333,12 +1328,7 @@ static void dtio_open_output(struct dt_io_thread* dtio)
 	}
 	if(dtio->upstream_is_tls) {
 		if(!dtio_setup_ssl(dtio)) {
-#ifndef USE_WINSOCK
-			close(dtio->fd);
-#else
-			closesocket(dtio->fd);
-#endif
-			dtio->fd = -1;
+			dtio_close_fd(dtio);
 			dtio_reconnect_enable(dtio);
 			return;
 		}
@@ -1357,12 +1347,7 @@ static void dtio_open_output(struct dt_io_thread* dtio)
 			dtio->ssl = NULL;
 #endif
 		}
-#ifndef USE_WINSOCK
-		close(dtio->fd);
-#else
-		closesocket(dtio->fd);
-#endif
-		dtio->fd = -1;
+		dtio_close_fd(dtio);
 		dtio_reconnect_enable(dtio);
 		return;
 	}
@@ -1379,12 +1364,7 @@ static void dtio_open_output(struct dt_io_thread* dtio)
 			dtio->ssl = NULL;
 #endif
 		}
-#ifndef USE_WINSOCK
-		close(dtio->fd);
-#else
-		closesocket(dtio->fd);
-#endif
-		dtio->fd = -1;
+		dtio_close_fd(dtio);
 		dtio_reconnect_enable(dtio);
 		return;
 	}
