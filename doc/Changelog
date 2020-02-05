@@ -1,4 +1,14 @@
--3 February 2020: Ralph
+5 February 2020: George
+	- Added serve-stale functionality as described in
+	  draft-ietf-dnsop-serve-stale-10. `serve-expired-*` options can be used
+	  to configure the behavior.
+	- Updated cachedb to honor `serve-expired-ttl`; Fixes #107.
+	- Renamed statistic `num.zero_ttl` to `num.expired` as expired replies
+	  come with a configurable TTL value (`serve-expired-reply-ttl`).
+	- Fixed stats when replying with cached, cname-aliased records.
+	- Added missing default values for redis cachedb backend.
+
+3 February 2020: Ralph
 	- Add assertion to please static analyzer
 
 31 January 2020: Wouter
