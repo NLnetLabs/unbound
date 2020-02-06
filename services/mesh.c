@@ -1307,7 +1307,7 @@ mesh_send_reply(struct mesh_state* m, int rcode, struct reply_info* rep,
 
 void mesh_query_done(struct mesh_state* mstate)
 {
-	struct mesh_reply* r;
+	struct mesh_reply* r, *reply_list = NULL;
 	struct mesh_reply* prev = NULL;
 	struct sldns_buffer* prev_buffer = NULL;
 	struct mesh_cb* c;
@@ -1331,7 +1331,27 @@ void mesh_query_done(struct mesh_state* mstate)
 			free(err);
 		}
 	}
-	for(r = mstate->reply_list; r; r = r->next) {
+	if(mstate->reply_list) {
+		/* set the reply_list to NULL during the mesh_query_done
+		 * processing, so that calls back into the mesh from
+		 * tcp_req_info (deciding to drop the reply and thus
+		 * unregister the mesh_reply from the mstate) are stopped
+		 * because the list is empty.
+		 * The mstate is then likely not a reply_state, and maybe
+		 * also a detached_state.
+		 */
+		reply_list = mstate->reply_list;
+		mstate->reply_list = NULL;
+		if(!mstate->reply_list && !mstate->cb_list) {
+			/* was a reply state, not anymore */
+			log_assert(mstate->s.env->mesh->num_reply_states > 0);
+			mstate->s.env->mesh->num_reply_states--;
+		}
+		if(!mstate->reply_list && !mstate->cb_list &&
+			mstate->super_set.count == 0)
+			mstate->s.env->mesh->num_detached_states++;
+	}
+	for(r = reply_list; r; r = r->next) {
 		/* if a response-ip address block has been stored the
 		 *  information should be logged for each client. */
 		if(mstate->s.respip_action_info &&

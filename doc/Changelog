@@ -1,3 +1,7 @@
+6 February 2020: Wouter
+	- Fix num_reply_addr counting in mesh and tcp drop due to size
+	  after serve_stale commit.
+
 5 February 2020: George
 	- Added serve-stale functionality as described in
 	  draft-ietf-dnsop-serve-stale-10. `serve-expired-*` options can be used
