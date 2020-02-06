@@ -1017,8 +1017,9 @@ respip_rewrite_reply(const struct query_info* qinfo,
 			redirect_rrset, tag, ipset, search_only, region,
 				rpz_used, rpz_log, log_name, rpz_cname_override);
 	}
-	if(raddr)
+	if(raddr) {
 		lock_rw_unlock(&raddr->lock);
+	}
 	return ret;
 }
 
