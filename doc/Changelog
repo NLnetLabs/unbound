@@ -1,3 +1,7 @@
+6 February 2020: George
+	- Fix num_reply_states and num_detached_states counting with
+	  serve_expired_callback.
+
 6 February 2020: Wouter
 	- Fix num_reply_addr counting in mesh and tcp drop due to size
 	  after serve_stale commit.

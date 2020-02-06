@@ -1971,6 +1971,13 @@ mesh_serve_expired_callback(void* arg)
 
 	r = mstate->reply_list;
 	mstate->reply_list = NULL;
+	if(!mstate->reply_list && !mstate->cb_list) {
+		log_assert(mesh->num_reply_states > 0);
+		mesh->num_reply_states--;
+		if(mstate->super_set.count == 0) {
+			mesh->num_detached_states++;
+		}
+	}
 	for(; r; r = r->next) {
 		/* If address info is returned, it means the action should be an
 		* 'inform' variant and the information should be logged. */
@@ -2017,12 +2024,5 @@ mesh_serve_expired_callback(void* arg)
 			mstate->super_set.count == 0)
 			qstate->env->mesh->num_detached_states++;
 		mesh_do_callback(mstate, LDNS_RCODE_NOERROR, msg->rep, c);
-	}
-	if(!mstate->reply_list && !mstate->cb_list) {
-		log_assert(mesh->num_reply_states > 0);
-		mesh->num_reply_states--;
-		if(mstate->super_set.count == 0) {
-			mesh->num_detached_states++;
-		}
 	}
 }
