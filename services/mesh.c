@@ -354,62 +354,45 @@ mesh_serve_expired_lookup(struct module_qstate* qstate,
 	hashvalue_type h;
 	struct lruhash_entry* e;
 	struct dns_msg* msg;
-	struct reply_info* rep, *data;
+	struct reply_info* data;
 	struct msgreply_entry* key;
 	time_t timenow = *qstate->env->now;
-	time_t time_control = timenow;
 	int must_validate = (!(qstate->query_flags&BIT_CD)
 		|| qstate->env->cfg->ignore_cd) && qstate->env->need_to_validate;
 	/* Lookup cache */
 	h = query_info_hash(lookup_qinfo, qstate->query_flags);
 	e = slabhash_lookup(qstate->env->msg_cache, h, lookup_qinfo, 0);
 	if(!e) return NULL;
-	rep = (struct reply_info*)e->data;
-	/* Check TTL */
-	if(rep->ttl < timenow) {
-		/* Check if we need to serve expired now */
-		if(qstate->env->cfg->serve_expired) {
-			if(qstate->env->cfg->serve_expired_ttl &&
-				rep->serve_expired_ttl < timenow)
-				goto bail_out;
-			time_control = timenow;
-		} else {
-			/* the rrsets may have been updated in the meantime.
-			 * we will refetch the message format from the
-			 * authoritative server
-			 */
-			goto bail_out;
-		}
-	} else {
-		time_control = timenow;
-	}
+
+	key = (struct msgreply_entry*)e->key;
+	data = (struct reply_info*)e->data;
+	msg = tomsg(qstate->env, &key->key, data, qstate->region, timenow,
+		qstate->env->cfg->serve_expired, qstate->env->scratch);
+	if(!msg)
+		goto bail_out;
 
 	/* Check CNAME chain (if any)
-	 * This is part of tomsg further down; no need to check now. */
+	 * This is part of tomsg above; no need to check now. */
 
 	/* Check security status of the cached answer.
-	 * tomsg further down has a subset of these checks, so we are leaving
+	 * tomsg above has a subset of these checks, so we are leaving
 	 * these as is.
 	 * In case of bogus or revalidation we don't care to reply here. */
-	if(must_validate && (rep->security == sec_status_bogus ||
-		rep->security == sec_status_secure_sentinel_fail)) {
+	if(must_validate && (msg->rep->security == sec_status_bogus ||
+		msg->rep->security == sec_status_secure_sentinel_fail)) {
 		verbose(VERB_ALGO, "Serve expired: bogus answer found in cache");
 		goto bail_out;
-	} else if(rep->security == sec_status_unchecked && must_validate) {
+	} else if(msg->rep->security == sec_status_unchecked && must_validate) {
 		verbose(VERB_ALGO, "Serve expired: unchecked entry needs "
 			"validation");
 		goto bail_out; /* need to validate cache entry first */
-	} else if(rep->security == sec_status_secure &&
-		!reply_all_rrsets_secure(rep) && must_validate) {
+	} else if(msg->rep->security == sec_status_secure &&
+		!reply_all_rrsets_secure(msg->rep) && must_validate) {
 			verbose(VERB_ALGO, "Serve expired: secure entry"
 				" changed status");
 			goto bail_out; /* rrset changed, re-verify */
 	}
 
-	key = (struct msgreply_entry*)e->key;
-	data = (struct reply_info*)e->data;
-	msg = tomsg(qstate->env, &key->key, data, qstate->region, time_control,
-		qstate->env->cfg->serve_expired, qstate->env->scratch);
 	lock_rw_unlock(&e->lock);
 	return msg;
 
