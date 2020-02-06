@@ -2,6 +2,8 @@
 	- Fix num_reply_states and num_detached_states counting with
 	  serve_expired_callback.
 	- Cleaner code in mesh_serve_expired_lookup.
+	- Document in unbound.conf manpage that configuration clauses can be
+	  repeated in the configuration file.
 
 6 February 2020: Wouter
 	- Fix num_reply_addr counting in mesh and tcp drop due to size
