@@ -112,6 +112,8 @@ struct mesh_area {
 	size_t stats_jostled;
 	/** stats, cumulative number of incoming client msgs dropped */
 	size_t stats_dropped;
+	/** stats, number of expired replies sent */
+	size_t ans_expired;
 	/** number of replies sent */
 	size_t replies_sent;
 	/** sum of waiting times for the replies */
@@ -146,6 +148,11 @@ struct mesh_area {
 	struct mesh_state* jostle_last;
 	/** timeout for jostling. if age is lower, it does not get jostled. */
 	struct timeval jostle_max;
+
+	/** If we need to use response ip (value passed from daemon)*/
+	int use_response_ip;
+	/** If we need to use RPZ (value passed from daemon) */
+	int use_rpz;
 };
 
 /**
@@ -646,5 +653,23 @@ void mesh_list_remove(struct mesh_state* m, struct mesh_state** fp,
  */
 void mesh_state_remove_reply(struct mesh_area* mesh, struct mesh_state* m,
 	struct comm_point* cp);
+
+/** Callback for when the serve expired client timer has run out.  Tries to
+ * find an expired answer in the cache and reply that to the client.
+ * @param arg: the argument passed to the callback.
+ */
+void mesh_serve_expired_callback(void* arg);
+
+/**
+ * Try to get a (expired) cached answer.
+ * This needs to behave like the worker's answer_from_cache() in order to have
+ * the same behavior as when replying from cache.
+ * @param qstate: the module qstate.
+ * @param lookup_qinfo: the query info to look for in the cache.
+ * @return dns_msg if a cached answer was found, otherwise NULL.
+ */
+struct dns_msg*
+mesh_serve_expired_lookup(struct module_qstate* qstate,
+	struct query_info* lookup_qinfo);
 
 #endif /* SERVICES_MESH_H */

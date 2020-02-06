@@ -1271,13 +1271,21 @@ int listen_sslctx_setup_ticket_keys(void* sslctx, struct config_strlist* tls_ses
 		s++;
 	}
 	keys = calloc(s, sizeof(struct tls_session_ticket_key));
+	if(!keys)
+		return 0;
 	memset(keys, 0, s*sizeof(*keys));
 	ticket_keys = keys;
 
 	for(p = tls_session_ticket_keys; p; p = p->next) {
 		size_t n;
-		unsigned char *data = (unsigned char *)malloc(80);
-		FILE *f = fopen(p->str, "r");
+		unsigned char *data;
+		FILE *f;
+
+		data = (unsigned char *)malloc(80);
+		if(!data)
+			return 0;
+
+		f = fopen(p->str, "r");
 		if(!f) {
 			log_err("could not read tls-session-ticket-key %s: %s", p->str, strerror(errno));
 			free(data);

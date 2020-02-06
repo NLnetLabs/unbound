@@ -335,6 +335,9 @@ outnet_tcp_take_into_use(struct waiting_tcp* w, uint8_t* pkt, size_t pkt_len)
 	/* open socket */
 	s = outnet_get_tcp_fd(&w->addr, w->addrlen, w->outnet->tcp_mss);
 
+	if(s == -1)
+		return 0;
+
 	if(!pick_outgoing_tcp(w, s))
 		return 0;
 
