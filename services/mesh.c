@@ -357,6 +357,7 @@ mesh_serve_expired_lookup(struct module_qstate* qstate,
 	struct reply_info* rep, *data;
 	struct msgreply_entry* key;
 	time_t timenow = *qstate->env->now;
+	time_t time_control = timenow;
 	int must_validate = (!(qstate->query_flags&BIT_CD)
 		|| qstate->env->cfg->ignore_cd) && qstate->env->need_to_validate;
 	/* Lookup cache */
@@ -371,8 +372,7 @@ mesh_serve_expired_lookup(struct module_qstate* qstate,
 			if(qstate->env->cfg->serve_expired_ttl &&
 				rep->serve_expired_ttl < timenow)
 				goto bail_out;
-			if(!rrset_array_lock(rep->ref, rep->rrset_count, 0))
-				goto bail_out;
+			time_control = timenow;
 		} else {
 			/* the rrsets may have been updated in the meantime.
 			 * we will refetch the message format from the
@@ -381,8 +381,7 @@ mesh_serve_expired_lookup(struct module_qstate* qstate,
 			goto bail_out;
 		}
 	} else {
-		if(!rrset_array_lock(rep->ref, rep->rrset_count, timenow))
-			goto bail_out;
+		time_control = timenow;
 	}
 
 	/* Check CNAME chain (if any)
@@ -395,30 +394,25 @@ mesh_serve_expired_lookup(struct module_qstate* qstate,
 	if(must_validate && (rep->security == sec_status_bogus ||
 		rep->security == sec_status_secure_sentinel_fail)) {
 		verbose(VERB_ALGO, "Serve expired: bogus answer found in cache");
-		goto bail_out_rrset;
+		goto bail_out;
 	} else if(rep->security == sec_status_unchecked && must_validate) {
 		verbose(VERB_ALGO, "Serve expired: unchecked entry needs "
 			"validation");
-		goto bail_out_rrset; /* need to validate cache entry first */
+		goto bail_out; /* need to validate cache entry first */
 	} else if(rep->security == sec_status_secure &&
 		!reply_all_rrsets_secure(rep) && must_validate) {
 			verbose(VERB_ALGO, "Serve expired: secure entry"
 				" changed status");
-			goto bail_out_rrset; /* rrset changed, re-verify */
+			goto bail_out; /* rrset changed, re-verify */
 	}
 
 	key = (struct msgreply_entry*)e->key;
 	data = (struct reply_info*)e->data;
-	msg = tomsg(qstate->env, &key->key, data, qstate->region, timenow,
+	msg = tomsg(qstate->env, &key->key, data, qstate->region, time_control,
 		qstate->env->cfg->serve_expired, qstate->env->scratch);
-	rrset_array_unlock_touch(qstate->env->rrset_cache,
-		qstate->region, rep->ref, rep->rrset_count);
 	lock_rw_unlock(&e->lock);
 	return msg;
 
-bail_out_rrset:
-	rrset_array_unlock_touch(qstate->env->rrset_cache,
-		qstate->region, rep->ref, rep->rrset_count);
 bail_out:
 	lock_rw_unlock(&e->lock);
 	return NULL;

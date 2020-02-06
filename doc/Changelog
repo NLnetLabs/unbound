@@ -7,6 +7,7 @@
 	  after serve_stale commit.
 	- Fix to create and destroy rpz_lock in auth_zones structure.
 	- Fix to lock zone before adding rpz qname trigger.
+	- Fix to lock and release once in mesh_serve_expired_lookup.
 
 5 February 2020: George
 	- Added serve-stale functionality as described in
