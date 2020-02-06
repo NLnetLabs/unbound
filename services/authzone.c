@@ -299,6 +299,8 @@ struct auth_zones* auth_zones_create(void)
 	lock_protect(&az->lock, &az->ztree, sizeof(az->ztree));
 	lock_protect(&az->lock, &az->xtree, sizeof(az->xtree));
 	/* also lock protects the rbnode's in struct auth_zone, auth_xfer */
+	lock_rw_init(&az->rpz_lock);
+	lock_protect(&az->rpz_lock, &az->rpz_first, sizeof(az->rpz_first));
 	return az;
 }
 
@@ -2104,6 +2106,7 @@ void auth_zones_delete(struct auth_zones* az)
 {
 	if(!az) return;
 	lock_rw_destroy(&az->lock);
+	lock_rw_destroy(&az->rpz_lock);
 	traverse_postorder(&az->ztree, auth_zone_del, NULL);
 	traverse_postorder(&az->xtree, auth_xfer_del, NULL);
 	free(az);

@@ -5,6 +5,7 @@
 6 February 2020: Wouter
 	- Fix num_reply_addr counting in mesh and tcp drop due to size
 	  after serve_stale commit.
+	- Fix to create and destroy rpz_lock in auth_zones structure.
 
 5 February 2020: George
 	- Added serve-stale functionality as described in
