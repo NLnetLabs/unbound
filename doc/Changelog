@@ -1,3 +1,6 @@
+10 February 2020: George
+	- Document 'ub_result.was_ratelimited' in libunbound.
+
 6 February 2020: George
 	- Fix num_reply_states and num_detached_states counting with
 	  serve_expired_callback.

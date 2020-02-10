@@ -204,8 +204,9 @@ struct ub_result {
 	char* why_bogus;
 
 	/**
-	 * If the query or one of its subqueries was ratelimited. Useful if
-	 * ratelimiting is enabled and answer is SERVFAIL.
+	 * If the query or one of its subqueries was ratelimited.  Useful if
+	 * ratelimiting is enabled and answer to the client is SERVFAIL as a
+	 * result.
 	 */
 	int was_ratelimited;
 
