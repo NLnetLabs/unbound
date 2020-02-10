@@ -193,10 +193,8 @@ void log_ident_revert_to_default()
 }
 
 void log_ident_set_or_default(const char* identity)
-	//const char* default_identity)
 {
 	if(identity == NULL || identity[0] == 0)
-		//log_ident_set(default_identity);
 		log_ident_set(default_ident);
 	else
 		log_ident_set(identity);
