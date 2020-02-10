@@ -1404,7 +1404,10 @@ config_delete(struct config_file* cfg)
 	config_delstrlist(cfg->tls_session_ticket_keys.first);
 	free(cfg->tls_ciphers);
 	free(cfg->tls_ciphersuites);
-	free(cfg->log_identity);
+	if(cfg->log_identity) {
+		log_ident_revert_to_default();
+		free(cfg->log_identity);
+	}
 	config_del_strarray(cfg->ifs, cfg->num_ifs);
 	config_del_strarray(cfg->out_ifs, cfg->num_out_ifs);
 	config_delstubs(cfg->stubs);

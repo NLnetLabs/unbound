@@ -1,5 +1,6 @@
 10 February 2020: George
 	- Document 'ub_result.was_ratelimited' in libunbound.
+	- Fix use after free on log-identity after a reload; Fixes #163.
 
 6 February 2020: George
 	- Fix num_reply_states and num_detached_states counting with
