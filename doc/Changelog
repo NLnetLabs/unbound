@@ -3,6 +3,7 @@
 	- Fix contrib/fastrpz.patch to apply cleanly.  Fix for serve-stale
 	  fixes, but it does not compile, conflicts with new rpz code.
 	- Fix to clean memory leak of respip_addr.lock when ip_tree deleted.
+	- Fix compile warning when threads disabled.
 
 10 February 2020: George
 	- Document 'ub_result.was_ratelimited' in libunbound.

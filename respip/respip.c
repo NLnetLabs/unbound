@@ -75,6 +75,9 @@ resp_addr_del(rbnode_type* n, void* ATTR_UNUSED(arg))
 {
 	struct resp_addr* r = (struct resp_addr*)n->key;
 	lock_rw_destroy(&r->lock);
+#ifdef THREADS_DISABLED
+	(void)r;
+#endif
 }
 
 void
