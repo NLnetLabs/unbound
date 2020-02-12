@@ -912,6 +912,57 @@ static int dtio_disable_brief_read(struct dt_io_thread* dtio)
 	return dtio_add_output_event_write(dtio);
 }
 
+/** check peer verification after ssl handshake connection, false if closed*/
+static int dtio_ssl_check_peer(struct dt_io_thread* dtio)
+{
+	if((SSL_get_verify_mode(dtio->ssl)&SSL_VERIFY_PEER)) {
+		/* verification */
+		if(SSL_get_verify_result(dtio->ssl) == X509_V_OK) {
+			X509* x = SSL_get_peer_certificate(dtio->ssl);
+			if(!x) {
+				verbose(VERB_ALGO, "dnstap io, %s, SSL "
+					"connection failed no certificate",
+					dtio->ip_str);
+				return 0;
+			}
+			log_cert(VERB_ALGO, "dnstap io, peer certificate",
+				x);
+#ifdef HAVE_SSL_GET0_PEERNAME
+			if(SSL_get0_peername(dtio->ssl)) {
+				verbose(VERB_ALGO, "dnstap io, %s, SSL "
+					"connection to %s authenticated",
+					dtio->ip_str,
+					SSL_get0_peername(dtio->ssl));
+			} else {
+#endif
+				verbose(VERB_ALGO, "dnstap io, %s, SSL "
+					"connection authenticated",
+					dtio->ip_str);
+#ifdef HAVE_SSL_GET0_PEERNAME
+			}
+#endif
+			X509_free(x);
+		} else {
+			X509* x = SSL_get_peer_certificate(dtio->ssl);
+			if(x) {
+				log_cert(VERB_ALGO, "dnstap io, peer "
+					"certificate", x);
+				X509_free(x);
+			}
+			verbose(VERB_ALGO, "dnstap io, %s, SSL connection "
+				"failed: failed to authenticate",
+				dtio->ip_str);
+			return 0;
+		}
+	} else {
+		/* unauthenticated, the verify peer flag was not set
+		 * in ssl when the ssl object was created from ssl_ctx */
+		verbose(VERB_ALGO, "dnstap io, %s, SSL connection",
+			dtio->ip_str);
+	}
+	return 1;
+}
+
 /** perform ssl handshake, returns 1 if okay, 0 to stop */
 static int dtio_ssl_handshake(struct dt_io_thread* dtio,
 	struct stop_flush_info* info)
@@ -988,58 +1039,12 @@ static int dtio_ssl_handshake(struct dt_io_thread* dtio,
 	/* check peer verification */
 	dtio->ssl_handshake_done = 1;
 
-        if((SSL_get_verify_mode(dtio->ssl)&SSL_VERIFY_PEER)) {
-		/* verification */
-		if(SSL_get_verify_result(dtio->ssl) == X509_V_OK) {
-			X509* x = SSL_get_peer_certificate(dtio->ssl);
-			if(!x) {
-				verbose(VERB_ALGO, "dnstap io, %s, SSL "
-					"connection failed no certificate",
-					dtio->ip_str);
-				/* closed */
-				if(info) dtio_stop_flush_exit(info);
-				dtio_del_output_event(dtio);
-				dtio_close_output(dtio);
-				return 0;
-			}
-			log_cert(VERB_ALGO, "dnstap io, peer certificate",
-				x);
-#ifdef HAVE_SSL_GET0_PEERNAME
-			if(SSL_get0_peername(dtio->ssl)) {
-				verbose(VERB_ALGO, "dnstap io, %s, SSL "
-					"connection to %s authenticated",
-					dtio->ip_str,
-					SSL_get0_peername(dtio->ssl));
-			} else {
-#endif
-				verbose(VERB_ALGO, "dnstap io, %s, SSL "
-					"connection authenticated",
-					dtio->ip_str);
-#ifdef HAVE_SSL_GET0_PEERNAME
-			}
-#endif
-			X509_free(x);
-		} else {
-			X509* x = SSL_get_peer_certificate(dtio->ssl);
-			if(x) {
-				log_cert(VERB_ALGO, "dnstap io, peer "
-					"certificate", x);
-				X509_free(x);
-			}
-			verbose(VERB_ALGO, "dnstap io, %s, SSL connection "
-				"failed: failed to authenticate",
-				dtio->ip_str);
-			/* closed */
-			if(info) dtio_stop_flush_exit(info);
-			dtio_del_output_event(dtio);
-			dtio_close_output(dtio);
-			return 0;
-		}
-	} else {
-		/* unauthenticated, the verify peer flag was not set
-		 * in ssl when the ssl object was created from ssl_ctx */
-		verbose(VERB_ALGO, "dnstap io, %s, SSL connection",
-			dtio->ip_str);
+	if(!dtio_ssl_check_peer(dtio)) {
+		/* closed */
+		if(info) dtio_stop_flush_exit(info);
+		dtio_del_output_event(dtio);
+		dtio_close_output(dtio);
+		return 0;
 	}
 	return 1;
 }
