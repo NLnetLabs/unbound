@@ -865,6 +865,52 @@ static int reply_with_finish(int fd)
 	return 1;
 }
 
+/** check SSL peer certificate, return 0 on fail */
+static int tap_check_peer(struct tap_data* data)
+{
+	if((SSL_get_verify_mode(data->ssl)&SSL_VERIFY_PEER)) {
+		/* verification */
+		if(SSL_get_verify_result(data->ssl) == X509_V_OK) {
+			X509* x = SSL_get_peer_certificate(data->ssl);
+			if(!x) {
+				if(verbosity) log_info("SSL connection %s"
+					" failed no certificate", data->id);
+				return 0;
+			}
+			if(verbosity)
+				log_cert(VERB_ALGO, "peer certificate", x);
+#ifdef HAVE_SSL_GET0_PEERNAME
+			if(SSL_get0_peername(data->ssl)) {
+				if(verbosity) log_info("SSL connection %s "
+					"to %s authenticated", data->id,
+					SSL_get0_peername(data->ssl));
+			} else {
+#endif
+				if(verbosity) log_info("SSL connection %s "
+					"authenticated", data->id);
+#ifdef HAVE_SSL_GET0_PEERNAME
+			}
+#endif
+			X509_free(x);
+		} else {
+			X509* x = SSL_get_peer_certificate(data->ssl);
+			if(x) {
+				if(verbosity)
+					log_cert(VERB_ALGO, "peer certificate", x);
+				X509_free(x);
+			}
+			if(verbosity) log_info("SSL connection %s failed: "
+				"failed to authenticate", data->id);
+			return 0;
+		}
+	} else {
+		/* unauthenticated, the verify peer flag was not set
+		 * in ssl when the ssl object was created from ssl_ctx */
+		if(verbosity) log_info("SSL connection %s", data->id);
+	}
+	return 1;
+}
+
 /** perform SSL handshake, return 0 to wait for events, 1 if done */
 static int tap_handshake(struct tap_data* data)
 {
@@ -921,6 +967,11 @@ static int tap_handshake(struct tap_data* data)
 	}
 	/* check peer verification */
 	data->ssl_handshake_done = 1;
+	if(!tap_check_peer(data)) {
+		/* closed */
+		tap_data_free(data);
+		return 0;
+	}
 	return 1;
 }
 
