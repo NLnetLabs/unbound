@@ -69,12 +69,21 @@ respip_set_create(void)
 	return set;
 }
 
+/** helper traverse to delete resp_addr nodes */
+static void
+resp_addr_del(rbnode_type* n, void* ATTR_UNUSED(arg))
+{
+	struct resp_addr* r = (struct resp_addr*)n->key;
+	lock_rw_destroy(&r->lock);
+}
+
 void
 respip_set_delete(struct respip_set* set)
 {
 	if(!set)
 		return;
 	lock_rw_destroy(&set->lock);
+	traverse_postorder(&set->ip_tree, resp_addr_del, NULL);
 	regional_destroy(set->region);
 	free(set);
 }
