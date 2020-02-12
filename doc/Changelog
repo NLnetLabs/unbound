@@ -1,3 +1,29 @@
+12 February 2020: Wouter
+	- Fix with libnettle make test with dsa disabled.
+	- Fix contrib/fastrpz.patch to apply cleanly.  Fix for serve-stale
+	  fixes, but it does not compile, conflicts with new rpz code.
+	- Fix to clean memory leak of respip_addr.lock when ip_tree deleted.
+	- Fix compile warning when threads disabled.
+
+10 February 2020: George
+	- Document 'ub_result.was_ratelimited' in libunbound.
+	- Fix use after free on log-identity after a reload; Fixes #163.
+
+6 February 2020: George
+	- Fix num_reply_states and num_detached_states counting with
+	  serve_expired_callback.
+	- Cleaner code in mesh_serve_expired_lookup.
+	- Document in unbound.conf manpage that configuration clauses can be
+	  repeated in the configuration file.
+
+6 February 2020: Wouter
+	- Fix num_reply_addr counting in mesh and tcp drop due to size
+	  after serve_stale commit.
+	- Fix to create and destroy rpz_lock in auth_zones structure.
+	- Fix to lock zone before adding rpz qname trigger.
+	- Fix to lock and release once in mesh_serve_expired_lookup.
+	- Fix to put braces around empty if body when threading is disabled.
+
 5 February 2020: George
 	- Added serve-stale functionality as described in
 	  draft-ietf-dnsop-serve-stale-10. `serve-expired-*` options can be used

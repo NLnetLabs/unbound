@@ -354,7 +354,7 @@ mesh_serve_expired_lookup(struct module_qstate* qstate,
 	hashvalue_type h;
 	struct lruhash_entry* e;
 	struct dns_msg* msg;
-	struct reply_info* rep, *data;
+	struct reply_info* data;
 	struct msgreply_entry* key;
 	time_t timenow = *qstate->env->now;
 	int must_validate = (!(qstate->query_flags&BIT_CD)
@@ -363,62 +363,39 @@ mesh_serve_expired_lookup(struct module_qstate* qstate,
 	h = query_info_hash(lookup_qinfo, qstate->query_flags);
 	e = slabhash_lookup(qstate->env->msg_cache, h, lookup_qinfo, 0);
 	if(!e) return NULL;
-	rep = (struct reply_info*)e->data;
-	/* Check TTL */
-	if(rep->ttl < timenow) {
-		/* Check if we need to serve expired now */
-		if(qstate->env->cfg->serve_expired) {
-			if(qstate->env->cfg->serve_expired_ttl &&
-				rep->serve_expired_ttl < timenow)
-				goto bail_out;
-			if(!rrset_array_lock(rep->ref, rep->rrset_count, 0))
-				goto bail_out;
-		} else {
-			/* the rrsets may have been updated in the meantime.
-			 * we will refetch the message format from the
-			 * authoritative server
-			 */
-			goto bail_out;
-		}
-	} else {
-		if(!rrset_array_lock(rep->ref, rep->rrset_count, timenow))
-			goto bail_out;
-	}
-
-	/* Check CNAME chain (if any)
-	 * This is part of tomsg further down; no need to check now. */
-
-	/* Check security status of the cached answer.
-	 * tomsg further down has a subset of these checks, so we are leaving
-	 * these as is.
-	 * In case of bogus or revalidation we don't care to reply here. */
-	if(must_validate && (rep->security == sec_status_bogus ||
-		rep->security == sec_status_secure_sentinel_fail)) {
-		verbose(VERB_ALGO, "Serve expired: bogus answer found in cache");
-		goto bail_out_rrset;
-	} else if(rep->security == sec_status_unchecked && must_validate) {
-		verbose(VERB_ALGO, "Serve expired: unchecked entry needs "
-			"validation");
-		goto bail_out_rrset; /* need to validate cache entry first */
-	} else if(rep->security == sec_status_secure &&
-		!reply_all_rrsets_secure(rep) && must_validate) {
-			verbose(VERB_ALGO, "Serve expired: secure entry"
-				" changed status");
-			goto bail_out_rrset; /* rrset changed, re-verify */
-	}
 
 	key = (struct msgreply_entry*)e->key;
 	data = (struct reply_info*)e->data;
 	msg = tomsg(qstate->env, &key->key, data, qstate->region, timenow,
 		qstate->env->cfg->serve_expired, qstate->env->scratch);
-	rrset_array_unlock_touch(qstate->env->rrset_cache,
-		qstate->region, rep->ref, rep->rrset_count);
+	if(!msg)
+		goto bail_out;
+
+	/* Check CNAME chain (if any)
+	 * This is part of tomsg above; no need to check now. */
+
+	/* Check security status of the cached answer.
+	 * tomsg above has a subset of these checks, so we are leaving
+	 * these as is.
+	 * In case of bogus or revalidation we don't care to reply here. */
+	if(must_validate && (msg->rep->security == sec_status_bogus ||
+		msg->rep->security == sec_status_secure_sentinel_fail)) {
+		verbose(VERB_ALGO, "Serve expired: bogus answer found in cache");
+		goto bail_out;
+	} else if(msg->rep->security == sec_status_unchecked && must_validate) {
+		verbose(VERB_ALGO, "Serve expired: unchecked entry needs "
+			"validation");
+		goto bail_out; /* need to validate cache entry first */
+	} else if(msg->rep->security == sec_status_secure &&
+		!reply_all_rrsets_secure(msg->rep) && must_validate) {
+			verbose(VERB_ALGO, "Serve expired: secure entry"
+				" changed status");
+			goto bail_out; /* rrset changed, re-verify */
+	}
+
 	lock_rw_unlock(&e->lock);
 	return msg;
 
-bail_out_rrset:
-	rrset_array_unlock_touch(qstate->env->rrset_cache,
-		qstate->region, rep->ref, rep->rrset_count);
 bail_out:
 	lock_rw_unlock(&e->lock);
 	return NULL;
@@ -1307,7 +1284,7 @@ mesh_send_reply(struct mesh_state* m, int rcode, struct reply_info* rep,
 
 void mesh_query_done(struct mesh_state* mstate)
 {
-	struct mesh_reply* r;
+	struct mesh_reply* r, *reply_list = NULL;
 	struct mesh_reply* prev = NULL;
 	struct sldns_buffer* prev_buffer = NULL;
 	struct mesh_cb* c;
@@ -1331,7 +1308,27 @@ void mesh_query_done(struct mesh_state* mstate)
 			free(err);
 		}
 	}
-	for(r = mstate->reply_list; r; r = r->next) {
+	if(mstate->reply_list) {
+		/* set the reply_list to NULL during the mesh_query_done
+		 * processing, so that calls back into the mesh from
+		 * tcp_req_info (deciding to drop the reply and thus
+		 * unregister the mesh_reply from the mstate) are stopped
+		 * because the list is empty.
+		 * The mstate is then likely not a reply_state, and maybe
+		 * also a detached_state.
+		 */
+		reply_list = mstate->reply_list;
+		mstate->reply_list = NULL;
+		if(!mstate->reply_list && !mstate->cb_list) {
+			/* was a reply state, not anymore */
+			log_assert(mstate->s.env->mesh->num_reply_states > 0);
+			mstate->s.env->mesh->num_reply_states--;
+		}
+		if(!mstate->reply_list && !mstate->cb_list &&
+			mstate->super_set.count == 0)
+			mstate->s.env->mesh->num_detached_states++;
+	}
+	for(r = reply_list; r; r = r->next) {
 		/* if a response-ip address block has been stored the
 		 *  information should be logged for each client. */
 		if(mstate->s.respip_action_info &&
@@ -1951,6 +1948,13 @@ mesh_serve_expired_callback(void* arg)
 
 	r = mstate->reply_list;
 	mstate->reply_list = NULL;
+	if(!mstate->reply_list && !mstate->cb_list) {
+		log_assert(mesh->num_reply_states > 0);
+		mesh->num_reply_states--;
+		if(mstate->super_set.count == 0) {
+			mesh->num_detached_states++;
+		}
+	}
 	for(; r; r = r->next) {
 		/* If address info is returned, it means the action should be an
 		* 'inform' variant and the information should be logged. */
@@ -1997,12 +2001,5 @@ mesh_serve_expired_callback(void* arg)
 			mstate->super_set.count == 0)
 			qstate->env->mesh->num_detached_states++;
 		mesh_do_callback(mstate, LDNS_RCODE_NOERROR, msg->rep, c);
-	}
-	if(!mstate->reply_list && !mstate->cb_list) {
-		log_assert(mesh->num_reply_states > 0);
-		mesh->num_reply_states--;
-		if(mstate->super_set.count == 0) {
-			mesh->num_detached_states++;
-		}
 	}
 }

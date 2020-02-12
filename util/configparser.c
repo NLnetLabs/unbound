@@ -4582,7 +4582,7 @@ yyreduce:
 		OUTYY(("P(server_fake_dsa:%s)\n", (yyvsp[0].str)));
 		if(strcmp((yyvsp[0].str), "yes") != 0 && strcmp((yyvsp[0].str), "no") != 0)
 			yyerror("expected yes or no.");
-#ifdef HAVE_SSL
+#if defined(HAVE_SSL) || defined(HAVE_NETTLE)
 		else fake_dsa = (strcmp((yyvsp[0].str), "yes")==0);
 		if(fake_dsa)
 			log_warn("test option fake_dsa is enabled");
@@ -4598,7 +4598,7 @@ yyreduce:
 		OUTYY(("P(server_fake_sha1:%s)\n", (yyvsp[0].str)));
 		if(strcmp((yyvsp[0].str), "yes") != 0 && strcmp((yyvsp[0].str), "no") != 0)
 			yyerror("expected yes or no.");
-#ifdef HAVE_SSL
+#if defined(HAVE_SSL) || defined(HAVE_NETTLE)
 		else fake_sha1 = (strcmp((yyvsp[0].str), "yes")==0);
 		if(fake_sha1)
 			log_warn("test option fake_sha1 is enabled");

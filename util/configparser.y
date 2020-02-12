@@ -1782,7 +1782,7 @@ server_fake_dsa: VAR_FAKE_DSA STRING_ARG
 		OUTYY(("P(server_fake_dsa:%s)\n", $2));
 		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
 			yyerror("expected yes or no.");
-#ifdef HAVE_SSL
+#if defined(HAVE_SSL) || defined(HAVE_NETTLE)
 		else fake_dsa = (strcmp($2, "yes")==0);
 		if(fake_dsa)
 			log_warn("test option fake_dsa is enabled");
@@ -1795,7 +1795,7 @@ server_fake_sha1: VAR_FAKE_SHA1 STRING_ARG
 		OUTYY(("P(server_fake_sha1:%s)\n", $2));
 		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
 			yyerror("expected yes or no.");
-#ifdef HAVE_SSL
+#if defined(HAVE_SSL) || defined(HAVE_NETTLE)
 		else fake_sha1 = (strcmp($2, "yes")==0);
 		if(fake_sha1)
 			log_warn("test option fake_sha1 is enabled");

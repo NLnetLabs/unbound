@@ -63,8 +63,10 @@ server:
 	access\-control: 2001:DB8::/64 allow
 .fi
 .SH "FILE FORMAT"
-There must be whitespace between keywords. Attribute keywords end with a colon ':'.
-An attribute is followed by its containing attributes, or a value.
+There must be whitespace between keywords.  Attribute keywords end with a
+colon ':'.  An attribute is followed by a value, or its containing attributes
+in which case it is refered to as a clause.  Clauses can be repeated throughout
+the file (or included files) to group attributes under the same clause.
 .P
 Files can be included using the
 .B include:

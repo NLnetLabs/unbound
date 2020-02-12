@@ -523,8 +523,10 @@ rpz_insert_qname_trigger(struct rpz* r, uint8_t* dname, size_t dnamelen,
 			lock_rw_unlock(&r->local_zones->lock);
 			return;
 		}
+		lock_rw_wrlock(&z->lock);
 		local_zone_enter_rr(z, dname, dnamelen, dnamelabs,
 			rrtype, rrclass, ttl, rdata, rdata_len, rrstr);
+		lock_rw_unlock(&z->lock);
 		free(rrstr);
 	}
 	if(!newzone)
