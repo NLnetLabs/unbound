@@ -469,6 +469,7 @@ check_modules_exist(const char* module_conf)
 static void
 morechecks(struct config_file* cfg)
 {
+	struct config_auth* auth;
 	warn_hosts("stub-host", cfg->stubs);
 	warn_hosts("forward-host", cfg->forwards);
 	interfacechecks(cfg);
@@ -534,6 +535,12 @@ morechecks(struct config_file* cfg)
 		cfg->trusted_keys_file_list, cfg->chrootdir, cfg);
 	check_chroot_string("dlv-anchor-file", &cfg->dlv_anchor_file,
 		cfg->chrootdir, cfg);
+	for(auth = cfg->auths; auth; auth = auth->next) {
+		char* az = (auth->isrpz) ? "rpz zonefile" :
+			"auth-zone zonefile";
+		check_chroot_string(az, &auth->zonefile,
+			cfg->chrootdir, cfg);
+	}
 #ifdef USE_IPSECMOD
 	if(cfg->ipsecmod_enabled && strstr(cfg->module_conf, "ipsecmod")) {
 		/* only check hook if enabled */
@@ -676,8 +683,9 @@ check_hints(struct config_file* cfg)
 static void
 check_auth(struct config_file* cfg)
 {
+	int is_rpz = 0;
 	struct auth_zones* az = auth_zones_create();
-	if(!az || !auth_zones_apply_cfg(az, cfg, 0)) {
+	if(!az || !auth_zones_apply_cfg(az, cfg, 0i, &is_rpz)) {
 		fatal_exit("Could not setup authority zones");
 	}
 	auth_zones_delete(az);
