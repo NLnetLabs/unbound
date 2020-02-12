@@ -1,5 +1,6 @@
 12 February 2020: Wouter
 	- Fix with libnettle make test with dsa disabled.
+	- Fix contrib/fastrpz.patch to apply cleanly.
 
 10 February 2020: George
 	- Document 'ub_result.was_ratelimited' in libunbound.
