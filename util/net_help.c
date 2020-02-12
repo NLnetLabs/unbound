@@ -829,6 +829,32 @@ void log_crypto_err_code(const char* str, unsigned long err)
 #endif /* HAVE_SSL */
 }
 
+#ifdef HAVE_SSL
+/** log certificate details */
+void
+log_cert(unsigned level, const char* str, void* cert)
+{
+	BIO* bio;
+	char nul = 0;
+	char* pp = NULL;
+	long len;
+	if(verbosity < level) return;
+	bio = BIO_new(BIO_s_mem());
+	if(!bio) return;
+	X509_print_ex(bio, (X509*)cert, 0, (unsigned long)-1
+		^(X509_FLAG_NO_SUBJECT
+                        |X509_FLAG_NO_ISSUER|X509_FLAG_NO_VALIDITY
+			|X509_FLAG_NO_EXTENSIONS|X509_FLAG_NO_AUX
+			|X509_FLAG_NO_ATTRIBUTES));
+	BIO_write(bio, &nul, (int)sizeof(nul));
+	len = BIO_get_mem_data(bio, &pp);
+	if(len != 0 && pp) {
+		verbose(level, "%s: \n%s", str, pp);
+	}
+	BIO_free(bio);
+}
+#endif /* HAVE_SSL */
+
 int
 listen_sslctx_setup(void* ctxt)
 {

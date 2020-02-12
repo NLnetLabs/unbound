@@ -386,6 +386,14 @@ void log_crypto_err(const char* str);
 void log_crypto_err_code(const char* str, unsigned long err);
 
 /**
+ * Log certificate details verbosity, string, of X509 cert
+ * @param level: verbosity level
+ * @param str: string to prefix on output
+ * @param cert: X509* structure.
+ */
+void log_cert(unsigned level, const char* str, void* cert);
+
+/**
  * Set SSL_OP_NOxxx options on SSL context to disable bad crypto
  * @param ctxt: SSL_CTX*
  * @return false on failure.
