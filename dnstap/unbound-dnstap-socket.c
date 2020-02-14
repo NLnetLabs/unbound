@@ -178,7 +178,9 @@ static void tap_socket_close(struct tap_socket* s)
 static void tap_socket_delete(struct tap_socket* s)
 {
 	if(!s) return;
+#ifdef HAVE_SSL
 	SSL_CTX_free(s->sslctx);
+#endif
 	ub_event_free(s->ev);
 	free(s->socketpath);
 	free(s->ip);
@@ -702,6 +704,8 @@ static ssize_t receive_bytes(struct tap_data* data, int fd, void* buf,
 	return ret;
 }
 
+/* define routine for have_ssl only to avoid unused function warning */
+#ifdef HAVE_SSL
 /** set to wait briefly for a write event, for one event call */
 static void tap_enable_brief_write(struct tap_data* data)
 {
@@ -712,7 +716,10 @@ static void tap_enable_brief_write(struct tap_data* data)
 		log_err("could not ub_event_add in tap_enable_brief_write");
 	data->ssl_brief_write = 1;
 }
+#endif /* HAVE_SSL */
 
+/* define routine for have_ssl only to avoid unused function warning */
+#ifdef HAVE_SSL
 /** stop the brief wait for a write event. back to reading. */
 static void tap_disable_brief_write(struct tap_data* data)
 {
@@ -723,7 +730,9 @@ static void tap_disable_brief_write(struct tap_data* data)
 		log_err("could not ub_event_add in tap_disable_brief_write");
 	data->ssl_brief_write = 0;
 }
+#endif /* HAVE_SSL */
 
+#ifdef HAVE_SSL
 /** receive bytes over ssl stream, prints errors if bad,
  * returns 0: closed/error, -1: continue, >0 number of bytes */
 static ssize_t ssl_read_bytes(struct tap_data* data, void* buf, size_t len)
@@ -764,13 +773,16 @@ static ssize_t ssl_read_bytes(struct tap_data* data, void* buf, size_t len)
 	}
 	return r;
 }
+#endif /* HAVE_SSL */
 
 /** receive bytes on the tap connection, prints errors if bad,
  * returns 0: closed/error, -1: continue, >0 number of bytes */
 static ssize_t tap_receive(struct tap_data* data, void* buf, size_t len)
 {
+#ifdef HAVE_SSL
 	if(data->ssl)
 		return ssl_read_bytes(data, buf, len);
+#endif
 	return receive_bytes(data, data->fd, buf, len);
 }
 
@@ -779,7 +791,9 @@ void tap_data_free(struct tap_data* data)
 {
 	ub_event_del(data->ev);
 	ub_event_free(data->ev);
+#ifdef HAVE_SSL
 	SSL_free(data->ssl);
+#endif
 	close(data->fd);
 	free(data->id);
 	free(data->frame);
@@ -865,6 +879,7 @@ static int reply_with_finish(int fd)
 	return 1;
 }
 
+#ifdef HAVE_SSL
 /** check SSL peer certificate, return 0 on fail */
 static int tap_check_peer(struct tap_data* data)
 {
@@ -910,7 +925,9 @@ static int tap_check_peer(struct tap_data* data)
 	}
 	return 1;
 }
+#endif /* HAVE_SSL */
 
+#ifdef HAVE_SSL
 /** perform SSL handshake, return 0 to wait for events, 1 if done */
 static int tap_handshake(struct tap_data* data)
 {
@@ -974,17 +991,20 @@ static int tap_handshake(struct tap_data* data)
 	}
 	return 1;
 }
+#endif /* HAVE_SSL */
 
 /** callback for dnstap listener */
 static void tap_callback(int fd, short ATTR_UNUSED(bits), void* arg)
 {
 	struct tap_data* data = (struct tap_data*)arg;
 	if(verbosity>=3) log_info("tap callback");
+#ifdef HAVE_SSL
 	if(data->ssl && (!data->ssl_handshake_done ||
 		data->ssl_brief_write)) {
 		if(!tap_handshake(data))
 			return;
 	}
+#endif
 	while(data->len_done < 4) {
 		uint32_t l = (uint32_t)data->len;
 		ssize_t ret = tap_receive(data,
@@ -1351,6 +1371,7 @@ int main(int argc, char** argv)
 	argv += optind;
 
 	if(usessl) {
+#ifdef HAVE_SSL
 #if OPENSSL_VERSION_NUMBER < 0x10100000 || !defined(HAVE_OPENSSL_INIT_SSL)
 		ERR_load_SSL_strings();
 #endif
@@ -1368,6 +1389,7 @@ int main(int argc, char** argv)
 #else
 		(void)OPENSSL_init_ssl(OPENSSL_INIT_LOAD_SSL_STRINGS, NULL);
 #endif
+#endif /* HAVE_SSL */
 	}
 	setup_and_run(&local_list, &tcp_list, &tls_list, server_key,
 		server_cert, verifypem);

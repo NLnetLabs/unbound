@@ -375,7 +375,9 @@ outnet_tcp_take_into_use(struct waiting_tcp* w, uint8_t* pkt, size_t pkt_len)
 		pend->c->ssl_shake_state = comm_ssl_shake_write;
 		if(!set_auth_name_on_ssl(pend->c->ssl, w->tls_auth_name)) {
 			pend->c->fd = s;
+#ifdef HAVE_SSL
 			SSL_free(pend->c->ssl);
+#endif
 			pend->c->ssl = NULL;
 			comm_point_close(pend->c);
 			return 0;

@@ -1223,6 +1223,8 @@ int set_auth_name_on_ssl(void* ssl, char* auth_name)
 	if(!auth_name) return 1;
 #ifdef HAVE_SSL
 	(void)SSL_set_tlsext_host_name(ssl, auth_name);
+#else
+	(void)ssl;
 #endif
 #ifdef HAVE_SSL_SET1_HOST
 	SSL_set_verify(ssl, SSL_VERIFY_PEER, NULL);

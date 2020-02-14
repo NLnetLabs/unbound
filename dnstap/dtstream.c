@@ -83,8 +83,10 @@ static int dtio_add_output_event_write(struct dt_io_thread* dtio);
 static void dtio_reconnect_enable(struct dt_io_thread* dtio);
 /** stop from stop_flush event loop */
 static void dtio_stop_flush_exit(struct stop_flush_info* info);
+#ifdef HAVE_SSL
 /** enable briefly waiting for a read event, for SSL negotiation */
 static int dtio_enable_brief_read(struct dt_io_thread* dtio);
+#endif
 
 struct dt_msg_queue*
 dt_msg_queue_create(void)
@@ -638,6 +640,7 @@ static int dtio_check_nb_connect(struct dt_io_thread* dtio)
 	return 1; /* everything okay */
 }
 
+#ifdef HAVE_SSL
 /** write to ssl output
  * returns number of bytes written, 0 if nothing happened,
  * try again later, or -1 if the channel is to be closed. */
@@ -679,6 +682,7 @@ static int dtio_write_ssl(struct dt_io_thread* dtio, uint8_t* buf,
 	}
 	return r;
 }
+#endif /* HAVE_SSL */
 
 /** write buffer to output.
  * returns number of bytes written, 0 if nothing happened,
@@ -689,8 +693,10 @@ static int dtio_write_buf(struct dt_io_thread* dtio, uint8_t* buf,
 	ssize_t ret;
 	if(dtio->fd == -1)
 		return -1;
+#ifdef HAVE_SSL
 	if(dtio->ssl)
 		return dtio_write_ssl(dtio, buf, len);
+#endif
 	ret = send(dtio->fd, (void*)buf, len, 0);
 	if(ret == -1) {
 #ifndef USE_WINSOCK
@@ -948,6 +954,7 @@ static void dtio_sleep(struct dt_io_thread* dtio)
 	(void)dtio_add_output_event_read(dtio);
 }
 
+#ifdef HAVE_SSL
 /** enable the brief read condition */
 static int dtio_enable_brief_read(struct dt_io_thread* dtio)
 {
@@ -963,7 +970,9 @@ static int dtio_enable_brief_read(struct dt_io_thread* dtio)
 	}
 	return dtio_add_output_event_read(dtio);
 }
+#endif /* HAVE_SSL */
 
+#ifdef HAVE_SSL
 /** disable the brief read condition */
 static int dtio_disable_brief_read(struct dt_io_thread* dtio)
 {
@@ -979,7 +988,9 @@ static int dtio_disable_brief_read(struct dt_io_thread* dtio)
 	}
 	return dtio_add_output_event_write(dtio);
 }
+#endif /* HAVE_SSL */
 
+#ifdef HAVE_SSL
 /** check peer verification after ssl handshake connection, false if closed*/
 static int dtio_ssl_check_peer(struct dt_io_thread* dtio)
 {
@@ -1030,7 +1041,9 @@ static int dtio_ssl_check_peer(struct dt_io_thread* dtio)
 	}
 	return 1;
 }
+#endif /* HAVE_SSL */
 
+#ifdef HAVE_SSL
 /** perform ssl handshake, returns 1 if okay, 0 to stop */
 static int dtio_ssl_handshake(struct dt_io_thread* dtio,
 	struct stop_flush_info* info)
@@ -1116,6 +1129,7 @@ static int dtio_ssl_handshake(struct dt_io_thread* dtio,
 	}
 	return 1;
 }
+#endif /* HAVE_SSL */
 
 /** callback for the dnstap events, to write to the output */
 static void dtio_output_cb(int ATTR_UNUSED(fd), short bits, void* arg)
@@ -1137,11 +1151,13 @@ static void dtio_output_cb(int ATTR_UNUSED(fd), short bits, void* arg)
 		/* nonblocking connect check passed, continue */
 	}
 
+#ifdef HAVE_SSL
 	if(dtio->ssl &&
 		(!dtio->ssl_handshake_done || dtio->ssl_brief_read)) {
 		if(!dtio_ssl_handshake(dtio, NULL))
 			return;
 	}
+#endif
 
 	if((bits&UB_EV_READ)) {
 		if(!dtio_check_close(dtio))
@@ -1352,11 +1368,13 @@ static void dtio_stop_ev_cb(int ATTR_UNUSED(fd), short bits, void* arg)
 		}
 		/* nonblocking connect check passed, continue */
 	}
+#ifdef HAVE_SSL
 	if(dtio->ssl &&
 		(!dtio->ssl_handshake_done || dtio->ssl_brief_read)) {
 		if(!dtio_ssl_handshake(dtio, info))
 			return;
 	}
+#endif
 
 	if((bits&UB_EV_READ)) {
 		if(!dtio_check_close(dtio)) {
