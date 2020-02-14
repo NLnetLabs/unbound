@@ -275,6 +275,10 @@ int dt_io_thread_apply_cfg(struct dt_io_thread* dtio, struct config_file *cfg)
 	}
 
 	if(dtio->upstream_is_tcp || dtio->upstream_is_tls) {
+		if(!cfg->dnstap_ip || cfg->dnstap_ip[0] == 0) {
+			log_err("dnstap setup: no dnstap-ip for TCP connect");
+			return 0;
+		}
 		free(dtio->ip_str);
 		dtio->ip_str = strdup(cfg->dnstap_ip);
 		if(!dtio->ip_str) {
