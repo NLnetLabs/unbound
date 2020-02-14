@@ -65,6 +65,8 @@
 #define DTIO_RECONNECT_TIMEOUT_MIN 10
 /** the msec to wait for reconnect max after backoff */
 #define DTIO_RECONNECT_TIMEOUT_MAX 1000
+/** the msec to wait for reconnect slow, to stop busy spinning on reconnect */
+#define DTIO_RECONNECT_TIMEOUT_SLOW 1000
 
 struct stop_flush_info;
 /** DTIO command channel commands */
@@ -527,6 +529,14 @@ static void dtio_reconnect_clear(struct dt_io_thread* dtio)
 {
 	dtio->reconnect_timeout = 0;
 	dtio_reconnect_del(dtio);
+}
+
+/** reconnect slowly, because we already know we have to wait for a bit */
+static void dtio_reconnect_slow(struct dt_io_thread* dtio, int msec)
+{
+	dtio_reconnect_del(dtio);
+	dtio->reconnect_timeout = msec;
+	dtio_reconnect_enable(dtio);
 }
 
 /** delete the current message in the dtio, and reset counters */
@@ -1078,6 +1088,7 @@ static int dtio_ssl_handshake(struct dt_io_thread* dtio,
 			/* closed */
 			if(info) dtio_stop_flush_exit(info);
 			dtio_del_output_event(dtio);
+			dtio_reconnect_slow(dtio, DTIO_RECONNECT_TIMEOUT_SLOW);
 			dtio_close_output(dtio);
 			return 0;
 		} else if(want == SSL_ERROR_SYSCALL) {
@@ -1099,6 +1110,7 @@ static int dtio_ssl_handshake(struct dt_io_thread* dtio,
 			/* closed */
 			if(info) dtio_stop_flush_exit(info);
 			dtio_del_output_event(dtio);
+			dtio_reconnect_slow(dtio, DTIO_RECONNECT_TIMEOUT_SLOW);
 			dtio_close_output(dtio);
 			return 0;
 		} else {
@@ -1112,6 +1124,7 @@ static int dtio_ssl_handshake(struct dt_io_thread* dtio,
 			/* closed */
 			if(info) dtio_stop_flush_exit(info);
 			dtio_del_output_event(dtio);
+			dtio_reconnect_slow(dtio, DTIO_RECONNECT_TIMEOUT_SLOW);
 			dtio_close_output(dtio);
 			return 0;
 		}
@@ -1124,6 +1137,7 @@ static int dtio_ssl_handshake(struct dt_io_thread* dtio,
 		/* closed */
 		if(info) dtio_stop_flush_exit(info);
 		dtio_del_output_event(dtio);
+		dtio_reconnect_slow(dtio, DTIO_RECONNECT_TIMEOUT_SLOW);
 		dtio_close_output(dtio);
 		return 0;
 	}
