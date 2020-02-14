@@ -244,41 +244,105 @@ void dt_io_thread_delete(struct dt_io_thread* dtio)
 
 int dt_io_thread_apply_cfg(struct dt_io_thread* dtio, struct config_file *cfg)
 {
-	/*
-	dtio->upstream_is_tcp = 1;
-	dtio->ip_str = strdup("127.0.0.1@1234");
-	*/
-#ifdef HAVE_SSL
-	dtio->upstream_is_tls = 1;
-	dtio->ip_str = strdup("127.0.0.1@1234");
-	//dtio->tls_server_name;
-	dtio->use_client_certs = 0;
-	if(dtio->use_client_certs) {
-		//dtio->client_key_file = NULL;
-		//dtio->client_cert_file = NULL;
-	} else {
-		free(dtio->client_key_file);
-		dtio->client_key_file = NULL;
-		free(dtio->client_cert_file);
-		dtio->client_cert_file = NULL;
-	}
-	dtio->ssl_ctx = connect_sslctx_create(dtio->client_key_file,
-		dtio->client_cert_file, cfg->tls_cert_bundle,
-		cfg->tls_win_cert);
-	if(!dtio->ssl_ctx) {
-		log_err("could not setup SSL CTX");
+	if(!cfg->dnstap) {
+		log_warn("cannot setup dnstap because dnstap-enable is no");
 		return 0;
 	}
-	/* DEBUG */
-	return 1;
-#endif
-	if(cfg->dnstap_socket_path && cfg->dnstap_socket_path[0]) {
-		dtio->socket_path = strdup(cfg->dnstap_socket_path);
-		if(!dtio->socket_path) {
-			log_err("malloc failure");
+
+	/* what type of connectivity do we have */
+	if(cfg->dnstap_ip && cfg->dnstap_ip[0]) {
+		if(cfg->dnstap_tls)
+			dtio->upstream_is_tls = 1;
+		else	dtio->upstream_is_tcp = 1;
+	} else {
+		dtio->upstream_is_unix = 1;
+	}
+
+	if(dtio->upstream_is_unix) {
+		if(!cfg->dnstap_socket_path ||
+			cfg->dnstap_socket_path[0]==0) {
+			log_err("dnstap setup failed, because dnstap is "
+				"enabled, but no dnstap-ip and no "
+				"dnstap-socket-path are given");
 			return 0;
 		}
-		dtio->upstream_is_unix = 1;
+		free(dtio->socket_path);
+		dtio->socket_path = strdup(cfg->dnstap_socket_path);
+		if(!dtio->socket_path) {
+			log_err("dnstap setup: malloc failure");
+			return 0;
+		}
+	}
+
+	if(dtio->upstream_is_tcp || dtio->upstream_is_tls) {
+		free(dtio->ip_str);
+		dtio->ip_str = strdup(cfg->dnstap_ip);
+		if(!dtio->ip_str) {
+			log_err("dnstap setup: malloc failure");
+			return 0;
+		}
+	}
+
+	if(dtio->upstream_is_tls) {
+#ifdef HAVE_SSL
+		if(cfg->dnstap_tls_server_name &&
+			cfg->dnstap_tls_server_name[0]) {
+			free(dtio->tls_server_name);
+			dtio->tls_server_name = strdup(
+				cfg->dnstap_tls_server_name);
+			if(!dtio->tls_server_name) {
+				log_err("dnstap setup: malloc failure");
+				return 0;
+			}
+		}
+		if(cfg->dnstap_tls_client_key_file &&
+			cfg->dnstap_tls_client_key_file[0]) {
+			dtio->use_client_certs = 1;
+			free(dtio->client_key_file);
+			dtio->client_key_file = strdup(
+				cfg->dnstap_tls_client_key_file);
+			if(!dtio->client_key_file) {
+				log_err("dnstap setup: malloc failure");
+				return 0;
+			}
+			if(!cfg->dnstap_tls_client_cert_file ||
+				cfg->dnstap_tls_client_cert_file[0]==0) {
+				log_err("dnstap setup: client key "
+					"authentication enabled with "
+					"dnstap-tls-client-key-file, but "
+					"no dnstap-tls-client-cert-file "
+					"is given");
+				return 0;
+			}
+			free(dtio->client_cert_file);
+			dtio->client_cert_file = strdup(
+				cfg->dnstap_tls_client_cert_file);
+			if(!dtio->client_cert_file) {
+				log_err("dnstap setup: malloc failure");
+				return 0;
+			}
+		} else {
+			dtio->use_client_certs = 0;
+			dtio->client_key_file = NULL;
+			dtio->client_cert_file = NULL;
+		}
+
+		if(cfg->dnstap_tls_cert_bundle) {
+			dtio->ssl_ctx = connect_sslctx_create(
+				dtio->client_key_file,
+				dtio->client_cert_file,
+				cfg->dnstap_tls_cert_bundle, 0);
+		} else {
+			dtio->ssl_ctx = connect_sslctx_create(
+				dtio->client_key_file,
+				dtio->client_cert_file,
+				cfg->tls_cert_bundle, cfg->tls_win_cert);
+		}
+		if(!dtio->ssl_ctx) {
+			log_err("could not setup SSL CTX");
+			return 0;
+		}
+#endif /* HAVE_SSL */
 	}
 	return 1;
 }

@@ -649,6 +649,7 @@ ENABLE_DNSCRYPT
 ENABLE_DNSCRYPT_XCHACHA20
 DNSTAP_OBJ
 DNSTAP_SRC
+DNSTAP_SOCKET_PATH
 opt_dnstap_socket_path
 ENABLE_DNSTAP
 PROTOC_C
@@ -21037,6 +21038,8 @@ $as_echo "#define USE_DNSTAP 1" >>confdefs.h
 cat >>confdefs.h <<_ACEOF
 #define DNSTAP_SOCKET_PATH "$hdr_dnstap_socket_path"
 _ACEOF
+
+	DNSTAP_SOCKET_PATH="$hdr_dnstap_socket_path"
 
 
         DNSTAP_SRC="dnstap/dnstap.c dnstap/dnstap.pb-c.c dnstap/dnstap_fstrm.c dnstap/dtstream.c"
