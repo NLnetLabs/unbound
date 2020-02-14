@@ -116,7 +116,9 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_UNBLOCK_LAN_ZONES VAR_INSECURE_LAN_ZONES
 %token VAR_INFRA_CACHE_MIN_RTT
 %token VAR_DNS64_PREFIX VAR_DNS64_SYNTHALL VAR_DNS64_IGNORE_AAAA
-%token VAR_DNSTAP VAR_DNSTAP_ENABLE VAR_DNSTAP_SOCKET_PATH
+%token VAR_DNSTAP VAR_DNSTAP_ENABLE VAR_DNSTAP_SOCKET_PATH VAR_DNSTAP_IP
+%token VAR_DNSTAP_TLS VAR_DNSTAP_TLS_SERVER_NAME VAR_DNSTAP_TLS_CERT_BUNDLE
+%token VAR_DNSTAP_TLS_CLIENT_KEY_FILE VAR_DNSTAP_TLS_CLIENT_CERT_FILE
 %token VAR_DNSTAP_SEND_IDENTITY VAR_DNSTAP_SEND_VERSION
 %token VAR_DNSTAP_IDENTITY VAR_DNSTAP_VERSION
 %token VAR_DNSTAP_LOG_RESOLVER_QUERY_MESSAGES
@@ -2720,6 +2722,9 @@ dtstart: VAR_DNSTAP
 contents_dt: contents_dt content_dt
 	| ;
 content_dt: dt_dnstap_enable | dt_dnstap_socket_path |
+	dt_dnstap_ip | dt_dnstap_tls | dt_dnstap_tls_server_name |
+	dt_dnstap_tls_cert_bundle |
+	dt_dnstap_tls_client_key_file | dt_dnstap_tls_client_cert_file |
 	dt_dnstap_send_identity | dt_dnstap_send_version |
 	dt_dnstap_identity | dt_dnstap_version |
 	dt_dnstap_log_resolver_query_messages |
@@ -2743,6 +2748,50 @@ dt_dnstap_socket_path: VAR_DNSTAP_SOCKET_PATH STRING_ARG
 		OUTYY(("P(dt_dnstap_socket_path:%s)\n", $2));
 		free(cfg_parser->cfg->dnstap_socket_path);
 		cfg_parser->cfg->dnstap_socket_path = $2;
+	}
+	;
+dt_dnstap_ip: VAR_DNSTAP_IP STRING_ARG
+	{
+		OUTYY(("P(dt_dnstap_ip:%s)\n", $2));
+		free(cfg_parser->cfg->dnstap_ip);
+		cfg_parser->cfg->dnstap_ip = $2;
+	}
+	;
+dt_dnstap_tls: VAR_DNSTAP_TLS STRING_ARG
+	{
+		OUTYY(("P(dt_dnstap_tls:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else cfg_parser->cfg->dnstap_tls = (strcmp($2, "yes")==0);
+		free($2);
+	}
+	;
+dt_dnstap_tls_server_name: VAR_DNSTAP_TLS_SERVER_NAME STRING_ARG
+	{
+		OUTYY(("P(dt_dnstap_tls_server_name:%s)\n", $2));
+		free(cfg_parser->cfg->dnstap_tls_server_name);
+		cfg_parser->cfg->dnstap_tls_server_name = $2;
+	}
+	;
+dt_dnstap_tls_cert_bundle: VAR_DNSTAP_TLS_CERT_BUNDLE STRING_ARG
+	{
+		OUTYY(("P(dt_dnstap_tls_cert_bundle:%s)\n", $2));
+		free(cfg_parser->cfg->dnstap_tls_cert_bundle);
+		cfg_parser->cfg->dnstap_tls_cert_bundle = $2;
+	}
+	;
+dt_dnstap_tls_client_key_file: VAR_DNSTAP_TLS_CLIENT_KEY_FILE STRING_ARG
+	{
+		OUTYY(("P(dt_dnstap_tls_client_key_file:%s)\n", $2));
+		free(cfg_parser->cfg->dnstap_tls_client_key_file);
+		cfg_parser->cfg->dnstap_tls_client_key_file = $2;
+	}
+	;
+dt_dnstap_tls_client_cert_file: VAR_DNSTAP_TLS_CLIENT_CERT_FILE STRING_ARG
+	{
+		OUTYY(("P(dt_dnstap_tls_client_cert_file:%s)\n", $2));
+		free(cfg_parser->cfg->dnstap_tls_client_cert_file);
+		cfg_parser->cfg->dnstap_tls_client_cert_file = $2;
 	}
 	;
 dt_dnstap_send_identity: VAR_DNSTAP_SEND_IDENTITY STRING_ARG
