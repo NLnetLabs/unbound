@@ -52,7 +52,7 @@ void* fstrm_create_control_frame_start(char* contenttype, size_t* len)
 	 * 4byte 0: control indicator.
 	 * 4byte bigendian: length of control frame
 	 * 4byte bigendian: type START
-	 * 4byte bigendian: frame option: content-type
+	 * 4byte bigendian: option: content-type
 	 * 4byte bigendian: length of string
 	 * string of content type (dnstap)
 	 */
