@@ -1,3 +1,9 @@
+14 February 2020: Wouter
+	- Fix spelling in unbound.conf.5.in.
+
+13 February 2020: Wouter
+	- tag for 1.10.0rc1 release.
+
 12 February 2020: Wouter
 	- Fix with libnettle make test with dsa disabled.
 	- Fix contrib/fastrpz.patch to apply cleanly.  Fix for serve-stale
