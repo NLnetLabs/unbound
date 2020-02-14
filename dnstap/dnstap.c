@@ -128,16 +128,16 @@ check_socket_file(const char* socket_path)
 }
 
 struct dt_env *
-dt_create(const char *socket_path, unsigned num_workers,
-	struct config_file* cfg)
+dt_create(struct config_file* cfg)
 {
 	struct dt_env *env;
 
-	verbose(VERB_OPS, "attempting to connect to dnstap socket %s",
-		socket_path);
-	log_assert(socket_path != NULL);
-	log_assert(num_workers > 0);
-	check_socket_file(socket_path);
+	if(cfg->dnstap && cfg->dnstap_socket_path && cfg->dnstap_socket_path[0] &&
+		(cfg->dnstap_ip==NULL || cfg->dnstap_ip[0]==0)) {
+		verbose(VERB_OPS, "attempting to connect to dnstap socket %s",
+			cfg->dnstap_socket_path);
+		check_socket_file(cfg->dnstap_socket_path);
+	}
 
 	env = (struct dt_env *) calloc(1, sizeof(struct dt_env));
 	if (!env)

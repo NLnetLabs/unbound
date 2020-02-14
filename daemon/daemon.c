@@ -451,8 +451,7 @@ daemon_create_workers(struct daemon* daemon)
 		fatal_exit("out of memory during daemon init");
 	if(daemon->cfg->dnstap) {
 #ifdef USE_DNSTAP
-		daemon->dtenv = dt_create(daemon->cfg->dnstap_socket_path,
-			(unsigned int)daemon->num, daemon->cfg);
+		daemon->dtenv = dt_create(daemon->cfg);
 		if (!daemon->dtenv)
 			fatal_exit("dt_create failed");
 #else

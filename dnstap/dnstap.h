@@ -84,13 +84,11 @@ struct dt_env {
  * of the structure) to ensure lock-free access to its own per-worker circular
  * queue.  Duplicate the environment object if more than one worker needs to
  * share access to the dnstap I/O socket.
- * @param socket_path: path to dnstap logging socket, must be non-NULL.
- * @param num_workers: number of worker threads, must be > 0.
  * @param cfg: with config settings.
  * @return dt_env object, NULL on failure.
  */
 struct dt_env *
-dt_create(const char *socket_path, unsigned num_workers, struct config_file* cfg);
+dt_create(struct config_file* cfg);
 
 /**
  * Apply config settings.
