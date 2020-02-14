@@ -1,5 +1,7 @@
 14 February 2020: Wouter
 	- Fix spelling in unbound.conf.5.in.
+	- Stop unbound-checkconf from insisting that auth-zone and rpz
+	  zonefiles have to exist.  They can not exist, and download later.
 
 13 February 2020: Wouter
 	- tag for 1.10.0rc1 release.
