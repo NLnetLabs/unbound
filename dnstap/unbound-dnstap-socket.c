@@ -1266,9 +1266,11 @@ setup_and_run(struct config_strlist_head* local_list,
 		verifypem);
 	if(!tap_socket_list_addevs(maindata->acceptlist, base))
 		fatal_exit("could not setup accept events");
+	if(verbosity) log_info("start of service");
 
 	ub_event_base_dispatch(base);
 
+	if(verbosity) log_info("end of service");
 	sig_base = NULL;
 	tap_socket_list_delete(maindata->acceptlist);
 	ub_event_base_free(base);
