@@ -1026,7 +1026,7 @@ remote-control:
 # 	# set it to "IPaddress[@port]" of the destination.
 # 	dnstap-ip: ""
 # 	# if set to yes if you want to use TLS to dnstap-ip, no for TCP.
-# 	dnstap-tls: no
+# 	dnstap-tls: yes
 # 	# name for authenticating the upstream server. or "" disabled.
 # 	dnstap-tls-server-name: ""
 # 	# if "", it uses the cert bundle from the main unbound config.
