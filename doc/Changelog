@@ -1,3 +1,7 @@
+17 February 2020: Wouter
+	- drop2rpz: perl script that converts the Spamhaus DROP-List in
+	  RPZ-Format, contributed by Andreas Schulze.
+
 14 February 2020: Wouter
 	- Fix spelling in unbound.conf.5.in.
 	- Stop unbound-checkconf from insisting that auth-zone and rpz
