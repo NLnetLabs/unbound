@@ -1,3 +1,6 @@
+17 February 2020: Ralph
+	- Add respip to supported module-config options in unbound-checkconf.
+
 17 February 2020: George
 	- Remove unused variable.
 
