@@ -1,3 +1,6 @@
+17 February 2020: George
+	- Remove unused variable.
+
 17 February 2020: Wouter
 	- contrib/drop2rpz: perl script that converts the Spamhaus DROP-List
 	  in RPZ-Format, contributed by Andreas Schulze.
