@@ -65,7 +65,7 @@ server:
 .SH "FILE FORMAT"
 There must be whitespace between keywords.  Attribute keywords end with a
 colon ':'.  An attribute is followed by a value, or its containing attributes
-in which case it is refered to as a clause.  Clauses can be repeated throughout
+in which case it is referred to as a clause.  Clauses can be repeated throughout
 the file (or included files) to group attributes under the same clause.
 .P
 Files can be included using the
@@ -2246,7 +2246,7 @@ Specify a string to be part of the log line, for easy referencing.
 .TP
 .B tags: \fI<list of tags>
 Limit the policies from this RPZ clause to clients with a matching tag. Tags
-need to be defined in \fBdefine\-tag\fR and can be assiged to client addresses
+need to be defined in \fBdefine\-tag\fR and can be assigned to client addresses
 using \fBaccess\-control\-tag\fR. Enclose list of tags in quotes ("") and put
 spaces between tags. If no tags are specified the policies from this clause will
 be applied for all clients.
