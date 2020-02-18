@@ -409,54 +409,15 @@ static int tap_socket_list_addevs(struct tap_socket_list* list,
 /** log control frame contents */
 static void log_control_frame(uint8_t* pkt, size_t len)
 {
-	uint32_t frametype = 0;
-	char buf[256];
-	size_t at = 0, remain;
-	uint8_t* pos;
+	char* desc;
 	if(verbosity == 0) return;
-	if(len < 4) {
-		log_err("malformed control frame, too short, len=%d", (int)len);
+	desc = fstrm_describe_control(pkt, len);
+	if(!desc) {
+		log_err("out of memory");
 		return;
 	}
-	buf[0]=0;
-	frametype = sldns_read_uint32(pkt);
-	if(frametype == FSTRM_CONTROL_FRAME_ACCEPT) {
-		at+=snprintf(buf+at, sizeof(buf)-at, "accept");
-	} else if(frametype == FSTRM_CONTROL_FRAME_START) {
-		at+=snprintf(buf+at, sizeof(buf)-at, "start");
-	} else if(frametype == FSTRM_CONTROL_FRAME_STOP) {
-		at+=snprintf(buf+at, sizeof(buf)-at, "stop");
-	} else if(frametype == FSTRM_CONTROL_FRAME_READY) {
-		at+=snprintf(buf+at, sizeof(buf)-at, "ready");
-	} else if(frametype == FSTRM_CONTROL_FRAME_FINISH) {
-		at+=snprintf(buf+at, sizeof(buf)-at, "finish");
-	} else {
-		at+=snprintf(buf+at, sizeof(buf)-at, "type%d",
-			(int)frametype);
-	}
-
-	/* show the content type options */
-	pos = pkt + 4;
-	remain = len - 4;
-	while(remain >= 8) {
-		uint32_t field_type = sldns_read_uint32(pos);
-		uint32_t field_len = sldns_read_uint32(pos+4);
-		if(remain < field_len) {
-			at+=snprintf(buf+at, sizeof(buf)-at, "malformed_field");
-			break;
-		}
-		if(field_type == FSTRM_CONTROL_FIELD_TYPE_CONTENT_TYPE) {
-			at+=snprintf(buf+at, sizeof(buf)-at, " content-type(");
-			if(at+field_len < sizeof(buf)) {
-				memmove(buf+at, pos+8, field_len);
-				at += field_len;
-			}
-			at+=snprintf(buf+at, sizeof(buf)-at, ")");
-		}
-		pos += 8 + field_len;
-		remain -= (8 + field_len);
-	}
-	log_info("control frame %s", buf);
+	log_info("control frame %s", desc);
+	free(desc);
 }
 
 /** convert mtype to string */
@@ -804,32 +765,17 @@ void tap_data_free(struct tap_data* data)
  * returns 0 on error */
 static int reply_with_accept(int fd)
 {
-	/* control frame on reply:
-	 * 4 bytes 0 escape
-	 * 4 bytes bigendian length of frame
-	 * 4 bytes bigendian type ACCEPT
-	 * 4 bytes bigendian frame option content type
-	 * 4 bytes bigendian length of string
-	 * string of content type.
-	 */
-	uint32_t* acceptframe;
 	/* len includes the escape and framelength */
-	size_t len = 4+4+4+4+4+strlen(DNSTAP_CONTENT_TYPE);
-	acceptframe = calloc(1, len);
+	size_t len = 0;
+	void* acceptframe = fstrm_create_control_frame_accept(
+		DNSTAP_CONTENT_TYPE, &len);
 	if(!acceptframe) {
 		log_err("out of memory");
 		return 0;
 	}
-	acceptframe[0] = 0;
-	acceptframe[1] = htonl(4+4+4+strlen(DNSTAP_CONTENT_TYPE));
-	acceptframe[2] = htonl(FSTRM_CONTROL_FRAME_ACCEPT);
-	acceptframe[3] = htonl(FSTRM_CONTROL_FIELD_TYPE_CONTENT_TYPE);
-	acceptframe[4] = htonl(strlen(DNSTAP_CONTENT_TYPE));
-	memmove(&acceptframe[5], DNSTAP_CONTENT_TYPE,
-		strlen(DNSTAP_CONTENT_TYPE));
 
 	fd_set_block(fd);
-	if(send(fd, (void*)acceptframe, len, 0) == -1) {
+	if(send(fd, acceptframe, len, 0) == -1) {
 #ifndef USE_WINSOCK
 		log_err("send failed: %s", strerror(errno));
 #else
@@ -851,31 +797,28 @@ static int reply_with_accept(int fd)
  * returns 0 on error */
 static int reply_with_finish(int fd)
 {
-	/* control frame on reply:
-	 * 4 bytes 0 escape
-	 * 4 bytes bigendian length of frame
-	 * 4 bytes bigendian type FINISH
-	 */
-	uint32_t finishframe[3];
-	/* len includes the escape and framelength */
-	size_t len = 4+4+4;
-	finishframe[0] = 0;
-	finishframe[1] = htonl(4);
-	finishframe[2] = htonl(FSTRM_CONTROL_FRAME_FINISH);
+	size_t len = 0;
+	void* finishframe = fstrm_create_control_frame_finish(&len);
+	if(!finishframe) {
+		log_err("out of memory");
+		return 0;
+	}
 
 	fd_set_block(fd);
-	if(send(fd, (void*)finishframe, len, 0) == -1) {
+	if(send(fd, finishframe, len, 0) == -1) {
 #ifndef USE_WINSOCK
 		log_err("send failed: %s", strerror(errno));
 #else
 		log_err("send failed: %s", wsa_strerror(WSAGetLastError()));
 #endif
 		fd_set_nonblock(fd);
+		free(finishframe);
 		return 0;
 	}
 	if(verbosity) log_info("sent control frame(finish)");
 
 	fd_set_nonblock(fd);
+	free(finishframe);
 	return 1;
 }
 

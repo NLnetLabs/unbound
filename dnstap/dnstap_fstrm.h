@@ -139,4 +139,41 @@ void* fstrm_create_control_frame_start(char* contenttype, size_t* len);
  */
 void* fstrm_create_control_frame_stop(size_t* len);
 
+/**
+ * This creates an FSTRM control frame of type ACCEPT.
+ * @param contenttype: a zero delimited string with the content type.
+ * 	for dnstap streams use DNSTAP_CONTENT_TYPE.
+ * @param len: if a buffer is returned this is the length of that buffer.
+ * @return NULL on malloc failure.  Returns a malloced buffer with the
+ * protocol message.  The buffer starts with the 4 bytes of 0 that indicate
+ * a control frame.  The buffer should be sent without preceding it with
+ * the 'len' variable (like data frames are), but straight the content of the
+ * buffer, because the lengths are included in the buffer.  This is so that
+ * the zero control indicator can be included before the control frame length.
+ */
+void* fstrm_create_control_frame_accept(char* contenttype, size_t* len);
+
+/**
+ * This creates an FSTRM control frame of type FINISH.
+ * @param len: if a buffer is returned this is the length of that buffer.
+ * @return NULL on malloc failure.  Returns a malloced buffer with the
+ * protocol message.  The buffer starts with the 4 bytes of 0 that indicate
+ * a control frame.  The buffer should be sent without preceding it with
+ * the 'len' variable (like data frames are), but straight the content of the
+ * buffer, because the lengths are included in the buffer.  This is so that
+ * the zero control indicator can be included before the control frame length.
+ */
+void* fstrm_create_control_frame_finish(size_t* len);
+
+/**
+ * Return string that describes a control packet.  For debug, logs.
+ * Like 'start content-type(protobuf:dnstap.Dnstap)' or 'stop'.
+ * @param pkt: the packet data, that is the data after the 4 zero start
+ * bytes and 4 length bytes.
+ * @param len: the length of the control packet data, in pkt.  This is the
+ * ntohl of the 4 bytes length preceding the data.
+ * @return zero delimited string, malloced.  Or NULL on malloc failure.
+ */
+char* fstrm_describe_control(void* pkt, size_t len);
+
 #endif /* DNSTAP_FSTRM_H */
