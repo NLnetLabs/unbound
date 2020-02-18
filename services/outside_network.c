@@ -398,7 +398,9 @@ outnet_tcp_take_into_use(struct waiting_tcp* w, uint8_t* pkt, size_t pkt_len)
 		 * set1_host like verification */
 		if(w->tls_auth_name) {
 			X509_VERIFY_PARAM* param = SSL_get0_param(pend->c->ssl);
+#  ifdef X509_CHECK_FLAG_NO_PARTIAL_WILDCARDS
 			X509_VERIFY_PARAM_set_hostflags(param, X509_CHECK_FLAG_NO_PARTIAL_WILDCARDS);
+#  endif
 			if(!X509_VERIFY_PARAM_set1_host(param, w->tls_auth_name, strlen(w->tls_auth_name))) {
 				log_err("X509_VERIFY_PARAM_set1_host failed");
 				pend->c->fd = s;
@@ -2316,7 +2318,9 @@ setup_comm_ssl(struct comm_point* cp, struct outside_network* outnet,
 	 * set1_host like verification */
 	if((SSL_CTX_get_verify_mode(outnet->sslctx)&SSL_VERIFY_PEER)) {
 		X509_VERIFY_PARAM* param = SSL_get0_param(cp->ssl);
+#  ifdef X509_CHECK_FLAG_NO_PARTIAL_WILDCARDS
 		X509_VERIFY_PARAM_set_hostflags(param, X509_CHECK_FLAG_NO_PARTIAL_WILDCARDS);
+#  endif
 		if(!X509_VERIFY_PARAM_set1_host(param, host, strlen(host))) {
 			log_err("X509_VERIFY_PARAM_set1_host failed");
 			return 0;
