@@ -1,3 +1,7 @@
+18 February 2020: Wouter
+	- protect X509_CHECK_FLAG_NO_PARTIAL_WILDCARDS with ifdef for
+	  different openssl versions.
+
 17 February 2020: Wouter
 	- changelog point where the tag for 1.10.0rc2 release is.
 

@@ -2286,7 +2286,9 @@ setup_comm_ssl(struct comm_point* cp, struct outside_network* outnet,
 	 * set1_host like verification */
 	if((SSL_CTX_get_verify_mode(outnet->sslctx)&SSL_VERIFY_PEER)) {
 		X509_VERIFY_PARAM* param = SSL_get0_param(cp->ssl);
+#  ifdef X509_CHECK_FLAG_NO_PARTIAL_WILDCARDS
 		X509_VERIFY_PARAM_set_hostflags(param, X509_CHECK_FLAG_NO_PARTIAL_WILDCARDS);
+#  endif
 		if(!X509_VERIFY_PARAM_set1_host(param, host, strlen(host))) {
 			log_err("X509_VERIFY_PARAM_set1_host failed");
 			return 0;

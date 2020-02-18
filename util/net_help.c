@@ -1240,7 +1240,9 @@ int set_auth_name_on_ssl(void* ssl, char* auth_name)
 	 * set1_host like verification */
 	if(auth_name) {
 		X509_VERIFY_PARAM* param = SSL_get0_param(ssl);
+#  ifdef X509_CHECK_FLAG_NO_PARTIAL_WILDCARDS
 		X509_VERIFY_PARAM_set_hostflags(param, X509_CHECK_FLAG_NO_PARTIAL_WILDCARDS);
+#  endif
 		if(!X509_VERIFY_PARAM_set1_host(param, auth_name, strlen(auth_name))) {
 			log_err("X509_VERIFY_PARAM_set1_host failed");
 			return 0;
