@@ -197,7 +197,7 @@ char* fstrm_describe_control(void* pkt, size_t len)
 		remain -= (8 + field_len);
 	}
 	if(remain > 0)
-		at+=snprintf(buf+at, sizeof(buf)-at, " trailing-bytes"
+		snprintf(buf+at, sizeof(buf)-at, " trailing-bytes"
 			"(length %u)", (unsigned int)remain);
 	return strdup(buf);
 }
