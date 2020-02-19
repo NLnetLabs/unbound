@@ -150,6 +150,7 @@ dt_create(struct config_file* cfg)
 		return NULL;
 	}
 	if(!dt_io_thread_apply_cfg(env->dtio, cfg)) {
+		dt_io_thread_delete(env->dtio);
 		free(env);
 		return NULL;
 	}
