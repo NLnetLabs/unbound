@@ -1,3 +1,7 @@
+20 February 2020: Wouter
+	- Updated contrib/unbound_smf23.tar.gz with Solaris SMF service for
+	  Unbound from Yuri Voinov.
+
 17 February 2020: Ralph
 	- Add respip to supported module-config options in unbound-checkconf.
 
