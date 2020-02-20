@@ -1,6 +1,7 @@
 20 February 2020: Wouter
 	- Updated contrib/unbound_smf23.tar.gz with Solaris SMF service for
 	  Unbound from Yuri Voinov.
+	- master branch has 1.10.1 version.
 
 18 February 2020: Wouter
 	- protect X509_CHECK_FLAG_NO_PARTIAL_WILDCARDS with ifdef for
