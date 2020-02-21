@@ -480,7 +480,8 @@ packed_rrset_encode(struct ub_packed_rrset_key* key, sldns_buffer* pkt,
 			sldns_buffer_write(pkt, &key->rk.type, 2);
 			sldns_buffer_write(pkt, &key->rk.rrset_class, 2);
 			if(data->rr_ttl[j] < timenow)
-				sldns_buffer_write_u32(pkt, 0);
+				sldns_buffer_write_u32(pkt,
+					SERVE_EXPIRED?SERVE_EXPIRED_REPLY_TTL:0);
 			else 	sldns_buffer_write_u32(pkt, 
 					data->rr_ttl[j]-timenow);
 			if(c) {
@@ -517,7 +518,8 @@ packed_rrset_encode(struct ub_packed_rrset_key* key, sldns_buffer* pkt,
 			sldns_buffer_write_u16(pkt, LDNS_RR_TYPE_RRSIG);
 			sldns_buffer_write(pkt, &key->rk.rrset_class, 2);
 			if(data->rr_ttl[i] < timenow)
-				sldns_buffer_write_u32(pkt, 0);
+				sldns_buffer_write_u32(pkt,
+					SERVE_EXPIRED?SERVE_EXPIRED_REPLY_TTL:0);
 			else 	sldns_buffer_write_u32(pkt, 
 					data->rr_ttl[i]-timenow);
 			/* rrsig rdata cannot be compressed, perform 100+ byte
@@ -664,7 +666,7 @@ negative_answer(struct reply_info* rep) {
 int
 reply_info_encode(struct query_info* qinfo, struct reply_info* rep,
 	uint16_t id, uint16_t flags, sldns_buffer* buffer, time_t timenow,
-	struct regional* region, uint16_t udpsize, int dnssec)
+	struct regional* region, uint16_t udpsize, int dnssec, int minimise)
 {
 	uint16_t ancount=0, nscount=0, arcount=0;
 	struct compress_tree_node* tree = 0;
@@ -744,7 +746,7 @@ reply_info_encode(struct query_info* qinfo, struct reply_info* rep,
 	sldns_buffer_write_u16_at(buffer, 6, ancount);
 
 	/* if response is positive answer, auth/add sections are not required */
-	if( ! (MINIMAL_RESPONSES && positive_answer(rep, qinfo->qtype)) ) {
+	if( ! (minimise && positive_answer(rep, qinfo->qtype)) ) {
 		/* insert auth section */
 		if((r=insert_section(rep, rep->ns_numrrsets, &nscount, buffer,
 			rep->an_numrrsets, timenow, region, &tree,
@@ -761,7 +763,7 @@ reply_info_encode(struct query_info* qinfo, struct reply_info* rep,
 		}
 		sldns_buffer_write_u16_at(buffer, 8, nscount);
 
-		if(! (MINIMAL_RESPONSES && negative_answer(rep))) {
+		if(! (minimise && negative_answer(rep))) {
 			/* insert add section */
 			if((r=insert_section(rep, rep->ar_numrrsets, &arcount, buffer,
 				rep->an_numrrsets + rep->ns_numrrsets, timenow, region,
@@ -874,7 +876,7 @@ reply_info_answer_encode(struct query_info* qinf, struct reply_info* rep,
 	}
 
 	if(!reply_info_encode(qinf, rep, id, flags, pkt, timenow, region,
-		udpsize, dnssec)) {
+		udpsize, dnssec, MINIMAL_RESPONSES)) {
 		log_err("reply encode: out of memory");
 		return 0;
 	}

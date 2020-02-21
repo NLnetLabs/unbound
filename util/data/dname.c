@@ -75,6 +75,8 @@ dname_valid(uint8_t* dname, size_t maxlen)
 {
 	size_t len = 0;
 	size_t labellen;
+	if(maxlen == 0)
+		return 0; /* too short, shortest is '0' root label */
 	labellen = *dname++;
 	while(labellen) {
 		if(labellen&0xc0)
@@ -327,15 +329,25 @@ dname_pkt_hash(sldns_buffer* pkt, uint8_t* dname, hashvalue_type h)
 void dname_pkt_copy(sldns_buffer* pkt, uint8_t* to, uint8_t* dname)
 {
 	/* copy over the dname and decompress it at the same time */
+	size_t comprcount = 0;
 	size_t len = 0;
 	uint8_t lablen;
 	lablen = *dname++;
 	while(lablen) {
 		if(LABEL_IS_PTR(lablen)) {
+			if(comprcount++ > MAX_COMPRESS_PTRS) {
+				/* too many compression pointers */
+				*to = 0; /* end the result prematurely */
+				return;
+			}
 			/* follow pointer */
 			dname = sldns_buffer_at(pkt, PTR_OFFSET(lablen, *dname));
 			lablen = *dname++;
 			continue;
+		}
+		if(lablen > LDNS_MAX_LABELLEN) {
+			*to = 0; /* end the result prematurely */
+			return;
 		}
 		log_assert(lablen <= LDNS_MAX_LABELLEN);
 		len += (size_t)lablen+1;
@@ -544,6 +556,34 @@ dname_lab_startswith(uint8_t* label, char* prefix, char** endptr)
 		/* prefix length == label length */
 		*endptr = NULL;
 	return 1;
+}
+
+int
+dname_has_label(uint8_t* dname, size_t dnamelen, uint8_t* label)
+{
+	size_t len;
+
+	/* 1 byte needed for the label length */
+	if(dnamelen < 1)
+		return 0;
+
+	len = *dname;
+	while(len <= dnamelen) {
+		if(!(*dname)) {
+			if(*dname == *label)
+				return 1; /* empty label match */
+			/* termination label found, stop iterating */
+			return 0;
+		}
+		if(*dname == *label && *label &&
+			memlowercmp(dname+1, label+1, *dname) == 0)
+			return 1;
+		len += *dname;
+		dname += *dname;
+		dname++;
+		len++;
+	}
+	return 0;
 }
 
 int 

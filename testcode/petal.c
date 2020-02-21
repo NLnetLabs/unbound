@@ -234,7 +234,9 @@ setup_ctx(char* key, char* cert)
 {
 	SSL_CTX* ctx = SSL_CTX_new(SSLv23_server_method());
 	if(!ctx) print_exit("out of memory");
+#if SSL_OP_NO_SSLv2 != 0
 	(void)SSL_CTX_set_options(ctx, SSL_OP_NO_SSLv2);
+#endif
 	(void)SSL_CTX_set_options(ctx, SSL_OP_NO_SSLv3);
 	if(!SSL_CTX_use_certificate_chain_file(ctx, cert))
 		print_exit("cannot read cert");
@@ -301,7 +303,7 @@ setup_ssl(int s, SSL_CTX* ctx)
 	SSL* ssl = SSL_new(ctx);
 	if(!ssl) return NULL;
 	SSL_set_accept_state(ssl);
-	(void)SSL_set_mode(ssl, SSL_MODE_AUTO_RETRY);
+	(void)SSL_set_mode(ssl, (long)SSL_MODE_AUTO_RETRY);
 	if(!SSL_set_fd(ssl, s)) {
 		SSL_free(ssl);
 		return NULL;
@@ -657,7 +659,9 @@ int main(int argc, char* argv[])
 	ERR_load_SSL_strings();
 #endif
 #if OPENSSL_VERSION_NUMBER < 0x10100000 || !defined(HAVE_OPENSSL_INIT_CRYPTO)
+#  ifndef S_SPLINT_S
 	OpenSSL_add_all_algorithms();
+#  endif
 #else
 	OPENSSL_init_crypto(OPENSSL_INIT_ADD_ALL_CIPHERS
 		| OPENSSL_INIT_ADD_ALL_DIGESTS

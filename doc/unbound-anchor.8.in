@@ -69,6 +69,10 @@ The server name, it connects to https://name.  Specify without https:// prefix.
 The default is "data.iana.org".  It connects to the port specified with \-P.
 You can pass an IPv4 address or IPv6 address (no brackets) if you want.
 .TP
+.B \-b \fIaddress
+The source address to bind to for domain resolution and contacting the server
+on https.  May be either an IPv4 address or IPv6 address (no brackets).
+.TP
 .B \-x \fIpath
 The pathname to the root\-anchors.xml file on the server. (forms URL with \-u).
 The default is /root\-anchors/root\-anchors.xml.

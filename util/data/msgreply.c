@@ -61,8 +61,12 @@ time_t MAX_TTL = 3600 * 24 * 10; /* ten days */
 time_t MIN_TTL = 0;
 /** MAX Negative TTL, for SOA records in authority section */
 time_t MAX_NEG_TTL = 3600; /* one hour */
+/** If we serve expired entries and prefetch them */
+int SERVE_EXPIRED = 0;
 /** Time to serve records after expiration */
 time_t SERVE_EXPIRED_TTL = 0;
+/** TTL to use for expired records */
+time_t SERVE_EXPIRED_REPLY_TTL = 30;
 
 /** allocate qinfo, return 0 on error */
 static int
@@ -243,10 +247,10 @@ rdata_copy(sldns_buffer* pkt, struct packed_rrset_data* data, uint8_t* to,
 				break;
 			}
 			if(len) {
+				log_assert(len <= pkt_len);
 				memmove(to, sldns_buffer_current(pkt), len);
 				to += len;
 				sldns_buffer_skip(pkt, (ssize_t)len);
-				log_assert(len <= pkt_len);
 				pkt_len -= len;
 			}
 			rdf++;
@@ -819,7 +823,7 @@ log_dns_msg(const char* str, struct query_info* qinfo, struct reply_info* rep)
 	sldns_buffer* buf = sldns_buffer_new(65535);
 	struct regional* region = regional_create();
 	if(!reply_info_encode(qinfo, rep, 0, rep->flags, buf, 0, 
-		region, 65535, 1)) {
+		region, 65535, 1, 0)) {
 		log_info("%s: log_dns_msg: out of memory", str);
 	} else {
 		char* s = sldns_wire2str_pkt(sldns_buffer_begin(buf),

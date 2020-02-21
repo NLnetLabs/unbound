@@ -293,6 +293,9 @@ outnet_tcp_take_into_use(struct waiting_tcp* w, uint8_t* pkt, size_t pkt_len)
 	/* open socket */
 	s = outnet_get_tcp_fd(&w->addr, w->addrlen, w->outnet->tcp_mss);
 
+	if(s == -1)
+		return 0;
+
 	if(!pick_outgoing_tcp(w, s))
 		return 0;
 
@@ -395,7 +398,9 @@ outnet_tcp_take_into_use(struct waiting_tcp* w, uint8_t* pkt, size_t pkt_len)
 		 * set1_host like verification */
 		if(w->tls_auth_name) {
 			X509_VERIFY_PARAM* param = SSL_get0_param(pend->c->ssl);
+#  ifdef X509_CHECK_FLAG_NO_PARTIAL_WILDCARDS
 			X509_VERIFY_PARAM_set_hostflags(param, X509_CHECK_FLAG_NO_PARTIAL_WILDCARDS);
+#  endif
 			if(!X509_VERIFY_PARAM_set1_host(param, w->tls_auth_name, strlen(w->tls_auth_name))) {
 				log_err("X509_VERIFY_PARAM_set1_host failed");
 				pend->c->fd = s;
@@ -1971,7 +1976,6 @@ serviced_udp_callback(struct comm_point* c, void* arg, int error,
 
 	sq->pending = NULL; /* removed after callback */
 	if(error == NETEVENT_TIMEOUT) {
-		int rto = 0;
 		if(sq->status == serviced_query_UDP_EDNS && sq->last_rtt < 5000) {
 			/* fallback to 1480/1280 */
 			sq->status = serviced_query_UDP_EDNS_FRAG;
@@ -1987,9 +1991,9 @@ serviced_udp_callback(struct comm_point* c, void* arg, int error,
 			sq->status = serviced_query_UDP_EDNS;
 		}
 		sq->retry++;
-		if(!(rto=infra_rtt_update(outnet->infra, &sq->addr, sq->addrlen,
+		if(!infra_rtt_update(outnet->infra, &sq->addr, sq->addrlen,
 			sq->zone, sq->zonelen, sq->qtype, -1, sq->last_rtt,
-			(time_t)now.tv_sec)))
+			(time_t)now.tv_sec))
 			log_err("out of memory in UDP exponential backoff");
 		if(sq->retry < OUTBOUND_UDP_RETRY) {
 			log_name_addr(VERB_ALGO, "retry query", sq->qbuf+10,
@@ -2134,18 +2138,14 @@ outnet_serviced_query(struct outside_network* outnet,
 		if(outnet->do_udp && !(tcp_upstream || ssl_upstream)) {
 			if(!serviced_udp_send(sq, buff)) {
 				(void)rbtree_delete(outnet->serviced, sq);
-				free(sq->qbuf);
-				free(sq->zone);
-				free(sq);
+				serviced_node_del(&sq->node, NULL);
 				free(cb);
 				return NULL;
 			}
 		} else {
 			if(!serviced_tcp_send(sq, buff)) {
 				(void)rbtree_delete(outnet->serviced, sq);
-				free(sq->qbuf);
-				free(sq->zone);
-				free(sq);
+				serviced_node_del(&sq->node, NULL);
 				free(cb);
 				return NULL;
 			}
@@ -2318,7 +2318,9 @@ setup_comm_ssl(struct comm_point* cp, struct outside_network* outnet,
 	 * set1_host like verification */
 	if((SSL_CTX_get_verify_mode(outnet->sslctx)&SSL_VERIFY_PEER)) {
 		X509_VERIFY_PARAM* param = SSL_get0_param(cp->ssl);
+#  ifdef X509_CHECK_FLAG_NO_PARTIAL_WILDCARDS
 		X509_VERIFY_PARAM_set_hostflags(param, X509_CHECK_FLAG_NO_PARTIAL_WILDCARDS);
+#  endif
 		if(!X509_VERIFY_PARAM_set1_host(param, host, strlen(host))) {
 			log_err("X509_VERIFY_PARAM_set1_host failed");
 			return 0;
