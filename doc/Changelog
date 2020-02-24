@@ -1,3 +1,6 @@
+24 February 2020: George
+	- Merge PR #166: Fix typo in unbound.service.in, by glitsj16.
+
 20 February 2020: Wouter
 	- Updated contrib/unbound_smf23.tar.gz with Solaris SMF service for
 	  Unbound from Yuri Voinov.
