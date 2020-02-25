@@ -381,6 +381,13 @@ IPv6 to the internet nameservers.  With this option you can disable the
 ipv6 transport for sending DNS traffic, it does not impact the contents of
 the DNS traffic, which may have ip4 and ip6 addresses in it.
 .TP
+.B prefer\-ip4: \fI<yes or no>
+If enabled, prefer IPv4 transport for sending DNS queries to internet
+nameservers. Default is no.  Useful if the IPv6 netblock the server has,
+the entire /64 of that is not owned by one operator and the reputation of
+the netblock /64 is an issue, using IPv4 then uses the IPv4 filters that
+the upstream servers have.
+.TP
 .B prefer\-ip6: \fI<yes or no>
 If enabled, prefer IPv6 transport for sending DNS queries to internet
 nameservers. Default is no.
