@@ -1,3 +1,8 @@
+25 February 2020: Wouter
+	- Fix #165: Add prefer-ip4: yesno config option to prefer ipv4 for
+	  using ipv4 filters, because the hosts ip6 netblock /64 is not owned
+	  by one operator, and thus reputation is shared.
+
 24 February 2020: George
 	- Merge PR #166: Fix typo in unbound.service.in, by glitsj16.
 

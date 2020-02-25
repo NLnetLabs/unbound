@@ -85,6 +85,8 @@ struct config_file {
 	int do_ip4;
 	/** do ip6 query support. */
 	int do_ip6;
+	/** prefer ip4 upstream queries. */
+	int prefer_ip4;
 	/** prefer ip6 upstream queries. */
 	int prefer_ip6;
 	/** do udp query support. */
