@@ -1,5 +1,5 @@
 /*
- * dnstap/dtstream.h - Frame Streams thread for unbound DNSTAP
+ * dnstap/dtstream.c - Frame Streams thread for unbound DNSTAP
  *
  * Copyright (c) 2020, NLnet Labs. All rights reserved.
  *
