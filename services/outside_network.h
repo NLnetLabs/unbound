@@ -138,6 +138,8 @@ struct outside_network {
 #endif
 	/** maximum segment size of tcp socket */
 	int tcp_mss;
+	/** IP_TOS socket option requested on the sockets */
+	int ip_dscp;
 
 	/**
 	 * Array of tcp pending used for outgoing TCP connections.
@@ -419,7 +421,7 @@ struct serviced_query {
  */
 struct outside_network* outside_network_create(struct comm_base* base,
 	size_t bufsize, size_t num_ports, char** ifs, int num_ifs,
-	int do_ip4, int do_ip6, size_t num_tcp, struct infra_cache* infra, 
+	int do_ip4, int do_ip6, size_t num_tcp, int dscp, struct infra_cache* infra, 
 	struct ub_randstate* rnd, int use_caps_for_id, int* availports, 
 	int numavailports, size_t unwanted_threshold, int tcp_mss,
 	void (*unwanted_action)(void*), void* unwanted_param, int do_udp,
@@ -542,7 +544,7 @@ size_t serviced_get_mem(struct serviced_query* sq);
 
 /** get TCP file descriptor for address, returns -1 on failure,
  * tcp_mss is 0 or maxseg size to set for TCP packets. */
-int outnet_get_tcp_fd(struct sockaddr_storage* addr, socklen_t addrlen, int tcp_mss);
+int outnet_get_tcp_fd(struct sockaddr_storage* addr, socklen_t addrlen, int tcp_mss, int dscp);
 
 /**
  * Create udp commpoint suitable for sending packets to the destination.
