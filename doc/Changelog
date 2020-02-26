@@ -1,3 +1,6 @@
+26 February 2020: Wouter
+	- iana portlist updated.
+
 25 February 2020: Wouter
 	- Fix #165: Add prefer-ip4: yesno config option to prefer ipv4 for
 	  using ipv4 filters, because the hosts ip6 netblock /64 is not owned
