@@ -463,7 +463,7 @@ static int dtio_find_msg(struct dt_io_thread* dtio)
 }
 
 /** callback for the dnstap reconnect, to start reconnecting to output */
-static void dtio_reconnect_timeout_cb(int ATTR_UNUSED(fd),
+void dtio_reconnect_timeout_cb(int ATTR_UNUSED(fd),
 	short ATTR_UNUSED(bits), void* arg)
 {
 	struct dt_io_thread* dtio = (struct dt_io_thread*)arg;
@@ -1146,7 +1146,7 @@ static int dtio_ssl_handshake(struct dt_io_thread* dtio,
 #endif /* HAVE_SSL */
 
 /** callback for the dnstap events, to write to the output */
-static void dtio_output_cb(int ATTR_UNUSED(fd), short bits, void* arg)
+void dtio_output_cb(int ATTR_UNUSED(fd), short bits, void* arg)
 {
 	struct dt_io_thread* dtio = (struct dt_io_thread*)arg;
 	int i;
@@ -1210,7 +1210,7 @@ static void dtio_output_cb(int ATTR_UNUSED(fd), short bits, void* arg)
 }
 
 /** callback for the dnstap commandpipe, to stop the dnstap IO */
-static void dtio_cmd_cb(int fd, short ATTR_UNUSED(bits), void* arg)
+void dtio_cmd_cb(int fd, short ATTR_UNUSED(bits), void* arg)
 {
 	struct dt_io_thread* dtio = (struct dt_io_thread*)arg;
 	uint8_t cmd;
@@ -1349,7 +1349,7 @@ static int dtio_control_stop_send(struct stop_flush_info* info)
 	return 1;
 }
 
-static void dtio_stop_timer_cb(int ATTR_UNUSED(fd), short ATTR_UNUSED(bits),
+void dtio_stop_timer_cb(int ATTR_UNUSED(fd), short ATTR_UNUSED(bits),
 	void* arg)
 {
 	struct stop_flush_info* info = (struct stop_flush_info*)arg;
@@ -1360,7 +1360,7 @@ static void dtio_stop_timer_cb(int ATTR_UNUSED(fd), short ATTR_UNUSED(bits),
 	dtio_stop_flush_exit(info);
 }
 
-static void dtio_stop_ev_cb(int ATTR_UNUSED(fd), short bits, void* arg)
+void dtio_stop_ev_cb(int ATTR_UNUSED(fd), short bits, void* arg)
 {
 	struct stop_flush_info* info = (struct stop_flush_info*)arg;
 	struct dt_io_thread* dtio = info->dtio;

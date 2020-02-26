@@ -93,6 +93,9 @@
 #ifdef USE_IPSET
 #include "ipset/ipset.h"
 #endif
+#ifdef USE_DNSTAP
+#include "dnstap/dtstream.h"
+#endif
 
 int 
 fptr_whitelist_comm_point(comm_point_callback_type *fptr)
@@ -168,6 +171,13 @@ fptr_whitelist_event(void (*fptr)(int, short, void *))
 	else if(fptr == &tube_handle_signal) return 1;
 	else if(fptr == &comm_base_handle_slow_accept) return 1;
 	else if(fptr == &comm_point_http_handle_callback) return 1;
+#ifdef USE_DNSTAP
+	else if(fptr == &dtio_output_cb) return 1;
+	else if(fptr == &dtio_cmd_cb) return 1;
+	else if(fptr == &dtio_reconnect_timeout_cb) return 1;
+	else if(fptr == &dtio_stop_timer_cb) return 1;
+	else if(fptr == &dtio_stop_ev_cb) return 1;
+#endif
 #ifdef UB_ON_WINDOWS
 	else if(fptr == &worker_win_stop_cb) return 1;
 #endif

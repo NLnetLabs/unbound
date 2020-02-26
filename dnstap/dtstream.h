@@ -281,4 +281,19 @@ int dt_io_thread_start(struct dt_io_thread* dtio, void* event_base_nothr,
  */
 void dt_io_thread_stop(struct dt_io_thread* dtio);
 
+/** callback for the dnstap reconnect, to start reconnecting to output */
+void dtio_reconnect_timeout_cb(int fd, short bits, void* arg);
+
+/** callback for the dnstap events, to write to the output */
+void dtio_output_cb(int fd, short bits, void* arg);
+
+/** callback for the dnstap commandpipe, to stop the dnstap IO */
+void dtio_cmd_cb(int fd, short bits, void* arg);
+
+/** callback for the timer when the thread stops and wants to finish up */
+void dtio_stop_timer_cb(int fd, short bits, void* arg);
+
+/** callback for the output when the thread stops and wants to finish up */
+void dtio_stop_ev_cb(int fd, short bits, void* arg);
+
 #endif /* DTSTREAM_H */
