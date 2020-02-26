@@ -226,6 +226,7 @@ libworker_setup(struct ub_ctx* ctx, int is_bg, struct ub_event_base* eb)
 		(size_t)cfg->outgoing_num_ports, cfg->out_ifs,
 		cfg->num_out_ifs, cfg->do_ip4, cfg->do_ip6, 
 		cfg->do_tcp?cfg->outgoing_num_tcp:0,
+		cfg->ip_dscp,
 		w->env->infra_cache, w->env->rnd, cfg->use_caps_bits_for_id,
 		ports, numports, cfg->unwanted_threshold,
 		cfg->outgoing_tcp_mss, &libworker_alloc_cleanup, w,

@@ -236,6 +236,16 @@ outnet_get_tcp_fd(struct sockaddr_storage* addr, socklen_t addrlen, int tcp_mss)
 	}
 #endif
 
+	int ds;
+	char* err;
+
+	ds = 0;
+	err = set_ip_dscp(s, ds);
+	if(err != NULL) {
+		verbose(VERB_ALGO, "outgoing tcp:"
+			"error setting IP DiffServ codepoint on socket");
+	}
+
 	if(tcp_mss > 0) {
 #if defined(IPPROTO_TCP) && defined(TCP_MAXSEG)
 		if(setsockopt(s, IPPROTO_TCP, TCP_MAXSEG,
@@ -715,7 +725,7 @@ static int setup_if(struct port_if* pif, const char* addrstr,
 struct outside_network* 
 outside_network_create(struct comm_base *base, size_t bufsize, 
 	size_t num_ports, char** ifs, int num_ifs, int do_ip4, 
-	int do_ip6, size_t num_tcp, struct infra_cache* infra,
+	int do_ip6, size_t num_tcp, int dscp, struct infra_cache* infra,
 	struct ub_randstate* rnd, int use_caps_for_id, int* availports, 
 	int numavailports, size_t unwanted_threshold, int tcp_mss,
 	void (*unwanted_action)(void*), void* unwanted_param, int do_udp,
@@ -1033,7 +1043,7 @@ sai6_putrandom(struct sockaddr_in6 *sa, int pfxlen, struct ub_randstate *rnd)
  */
 static int
 udp_sockport(struct sockaddr_storage* addr, socklen_t addrlen, int pfxlen,
-	int port, int* inuse, struct ub_randstate* rnd)
+	int port, int* inuse, struct ub_randstate* rnd, int dscp)
 {
 	int fd, noproto;
 	if(addr_is_ip6(addr, addrlen)) {
@@ -1048,13 +1058,13 @@ udp_sockport(struct sockaddr_storage* addr, socklen_t addrlen, int pfxlen,
 		}
 		fd = create_udp_sock(AF_INET6, SOCK_DGRAM, 
 			(struct sockaddr*)&sa, addrlen, 1, inuse, &noproto,
-			0, 0, 0, NULL, 0, freebind, 0);
+			0, 0, 0, NULL, 0, freebind, 0, dscp);
 	} else {
 		struct sockaddr_in* sa = (struct sockaddr_in*)addr;
 		sa->sin_port = (in_port_t)htons((uint16_t)port);
 		fd = create_udp_sock(AF_INET, SOCK_DGRAM, 
 			(struct sockaddr*)addr, addrlen, 1, inuse, &noproto,
-			0, 0, 0, NULL, 0, 0, 0);
+			0, 0, 0, NULL, 0, 0, 0, dscp);
 	}
 	return fd;
 }
@@ -1115,7 +1125,7 @@ select_ifport(struct outside_network* outnet, struct pending* pend,
 		log_assert(pif->inuse < pif->maxout);
 		portno = pif->avail_ports[my_port - pif->inuse];
 		fd = udp_sockport(&pif->addr, pif->addrlen, pif->pfxlen,
-			portno, &inuse, outnet->rnd);
+			portno, &inuse, outnet->rnd, outnet->ip_dscp);
 		if(fd == -1 && !inuse) {
 			/* nonrecoverable error making socket */
 			return 0;
@@ -2162,10 +2172,11 @@ fd_for_dest(struct outside_network* outnet, struct sockaddr_storage* to_addr,
 {
 	struct sockaddr_storage* addr;
 	socklen_t addrlen;
-	int i, try, pnum;
+	int i, try, pnum, dscp;
 	struct port_if* pif;
 
 	/* create fd */
+	dscp = outnet->ip_dscp;
 	for(try = 0; try<1000; try++) {
 		int port = 0;
 		int freebind = 0;
@@ -2209,13 +2220,13 @@ fd_for_dest(struct outside_network* outnet, struct sockaddr_storage* to_addr,
 			sa.sin6_port = (in_port_t)htons((uint16_t)port);
 			fd = create_udp_sock(AF_INET6, SOCK_DGRAM,
 				(struct sockaddr*)&sa, addrlen, 1, &inuse, &noproto,
-				0, 0, 0, NULL, 0, freebind, 0);
+				0, 0, 0, NULL, 0, freebind, 0, dscp);
 		} else {
 			struct sockaddr_in* sa = (struct sockaddr_in*)addr;
 			sa->sin_port = (in_port_t)htons((uint16_t)port);
 			fd = create_udp_sock(AF_INET, SOCK_DGRAM, 
 				(struct sockaddr*)addr, addrlen, 1, &inuse, &noproto,
-				0, 0, 0, NULL, 0, freebind, 0);
+				0, 0, 0, NULL, 0, freebind, 0, dscp);
 		}
 		if(fd != -1) {
 			return fd;
