@@ -2116,6 +2116,10 @@ re-establish a new connection later.
 This option defaults to 100 milliseconds.
 .SS DNSTAP Logging Options
 DNSTAP support, when compiled in, is enabled in the \fBdnstap:\fR section.
+This starts an extra thread (when compiled with threading) that writes
+the log information to the destination.  If unbound is compiled without
+threading it does not spawn a thread, but connects per-process to the
+destination.
 .TP
 .B dnstap-enable: \fI<yes or no>
 If dnstap is enabled.  Default no.  If yes, it connects to the dnstap server
