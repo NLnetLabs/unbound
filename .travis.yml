@@ -22,6 +22,10 @@ jobs:
       name: Clang on Linux, Amd64
       compiler: clang
       arch: amd64
+    - os: osx
+      name: Clang on OS X, Amd64
+      compiler: clang
+      arch: amd64
     - os: linux
       name: UBsan, GCC on Linux, Amd64
       compiler: gcc
@@ -46,10 +50,6 @@ jobs:
       arch: amd64
       dist: bionic
       env: TEST_ASAN=yes
-    - os: osx
-      name: Clang on OS X, Amd64
-      compiler: clang
-      arch: amd64
     - os: linux
       name: GCC on Linux, Aarch64
       compiler: gcc
@@ -70,6 +70,13 @@ jobs:
       compiler: clang
       arch: ppc64le
       dist: bionic
+
+before_install:
+  - |
+    if [ "$TRAVIS_OS_NAME" = "osx" ]; then
+        brew update
+        brew install openssl
+    fi
 
 script:
   - |
