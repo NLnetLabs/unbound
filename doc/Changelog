@@ -1,6 +1,8 @@
 27 February 2020: Wouter
 	- Fix #169: Fix warning for daemon/remote.c output may be truncated
 	  from snprintf.
+	- Fix #170: Fix gcc undefined sanitizer signed integer overflow
+	  warning in signature expiry RFC1982 serial number arithmetic.
 
 26 February 2020: Wouter
 	- iana portlist updated.
