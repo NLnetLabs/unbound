@@ -1,7 +1,9 @@
-sudo: false
 language: c
-compiler:
-  - gcc
+sudo: false
+
+git:
+  depth: 5
+
 addons:
   apt:
     packages:
@@ -9,8 +11,79 @@ addons:
     - libevent-dev
     - libexpat-dev
     - clang
+
+jobs:
+  include:
+    - os: linux
+      name: GCC on Linux, Amd64
+      compiler: gcc
+      arch: amd64
+    - os: linux
+      name: Clang on Linux, Amd64
+      compiler: clang
+      arch: amd64
+    - os: osx
+      name: Clang on OS X, Amd64
+      compiler: clang
+      arch: amd64
+    - os: linux
+      name: UBsan, GCC on Linux, Amd64
+      compiler: gcc
+      arch: amd64
+      dist: bionic
+      env: TEST_UBSAN=yes
+    - os: linux
+      name: UBsan, Clang on Linux, Amd64
+      compiler: clang
+      arch: amd64
+      dist: bionic
+      env: TEST_UBSAN=yes
+    - os: linux
+      name: Asan, GCC on Linux, Amd64
+      compiler: gcc
+      arch: amd64
+      dist: bionic
+      env: TEST_ASAN=yes
+    - os: linux
+      name: Asan, Clang on Linux, Amd64
+      compiler: clang
+      arch: amd64
+      dist: bionic
+      env: TEST_ASAN=yes
+    - os: linux
+      name: GCC on Linux, Aarch64
+      compiler: gcc
+      arch: arm64
+      dist: bionic
+    - os: linux
+      name: Clang on Linux, Aarch64
+      compiler: clang
+      arch: arm64
+      dist: bionic
+    - os: linux
+      name: GCC on Linux, PowerPC64
+      compiler: gcc
+      arch: ppc64le
+      dist: bionic
+    - os: linux
+      name: Clang on Linux, PowerPC64
+      compiler: clang
+      arch: ppc64le
+      dist: bionic
+
 script:
-  - ./configure --enable-debug --disable-flto
-  - make
+  - |
+    if [ "$TEST_UBSAN" = "yes"  ]; then
+      export CFLAGS="-DNDEBUG -g2 -O3 -fsanitize=undefined -fno-sanitize-recover"
+      ./configure
+    elif [ "$TEST_ASAN" = "yes" ]; then
+      export CFLAGS="-DNDEBUG -g2 -O3 -fsanitize=address"
+      ./configure
+    elif [ "$TRAVIS_OS_NAME" = "osx" ]; then
+      ./configure --enable-debug --disable-flto --with-ssl=/usr/local/opt/openssl/
+    else
+      ./configure --enable-debug --disable-flto
+    fi
+  - make -j 2
   - make test
   - (cd testdata/clang-analysis.tdir; bash clang-analysis.test)
