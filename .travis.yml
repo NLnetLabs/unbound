@@ -71,13 +71,6 @@ jobs:
       arch: ppc64le
       dist: bionic
 
-before_install:
-  - |
-    if [ "$TRAVIS_OS_NAME" = "osx" ]; then
-        brew update
-        brew install openssl
-    fi
-
 script:
   - |
     if [ "$TEST_UBSAN" = "yes"  ]; then
@@ -86,6 +79,8 @@ script:
     elif [ "$TEST_ASAN" = "yes" ]; then
       export CFLAGS="-DNDEBUG -g2 -O3 -fsanitize=address"
       ./configure
+    elif [ "$TRAVIS_OS_NAME" = "osx" ]; then
+      ./configure --enable-debug --disable-flto --with-ssl=/usr/local/opt/openssl/
     else
       ./configure --enable-debug --disable-flto
     fi
