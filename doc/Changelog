@@ -3,6 +3,8 @@
 	  from snprintf.
 	- Fix #170: Fix gcc undefined sanitizer signed integer overflow
 	  warning in signature expiry RFC1982 serial number arithmetic.
+	- Fix more undefined sanitizer issues, in respip copy_rrset null
+	  dname, and in the client_info_compare routine for null memcmp.
 
 26 February 2020: Wouter
 	- iana portlist updated.
