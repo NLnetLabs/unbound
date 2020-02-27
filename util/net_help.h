@@ -443,6 +443,13 @@ void* incoming_ssl_fd(void* sslctx, int fd);
 void* outgoing_ssl_fd(void* sslctx, int fd);
 
 /**
+ * check if authname SSL functionality is available, false if not
+ * @param auth_name: the name for the remote server, used for error print.
+ * @return false if SSL functionality to check the SSL name is not available.
+ */
+int check_auth_name_for_ssl(char* auth_name);
+
+/**
  * set auth name on SSL for verification
  * @param ssl: SSL* to set
  * @param auth_name: if NULL nothing happens, otherwise the name to check.

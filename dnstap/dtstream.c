@@ -302,6 +302,8 @@ int dt_io_thread_apply_cfg(struct dt_io_thread* dtio, struct config_file *cfg)
 				log_err("dnstap setup: malloc failure");
 				return 0;
 			}
+			if(!check_auth_name_for_ssl(dtio->tls_server_name))
+				return 0;
 		}
 		if(cfg->dnstap_tls_client_key_file &&
 			cfg->dnstap_tls_client_key_file[0]) {
