@@ -249,6 +249,8 @@ dt_init(struct dt_env *env)
 	}
 	if(!dt_io_thread_register_queue(env->dtio, env->msgqueue)) {
 		log_err("malloc failure");
+		dt_msg_queue_delete(env->msgqueue);
+		env->msgqueue = NULL;
 		return 0;
 	}
 	return 1;
