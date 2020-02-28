@@ -1220,14 +1220,14 @@ void* outgoing_ssl_fd(void* sslctx, int fd)
 int check_auth_name_for_ssl(char* auth_name)
 {
 	if(!auth_name) return 1;
-#ifdef HAVE_SSL
-#if !defined(HAVE_SSL_SET1_HOST) && !defined(HAVE_X509_VERIFY_PARAM_SET1_HOST)
+#if defined(HAVE_SSL) && !defined(HAVE_SSL_SET1_HOST) && !defined(HAVE_X509_VERIFY_PARAM_SET1_HOST)
 	log_err("the query has an auth_name %s, but libssl has no call to "
 		"perform TLS authentication.  Remove that name from config "
 		"or upgrade the ssl crypto library.", auth_name);
-#endif
-#endif
+	return 0;
+#else
 	return 1;
+#endif
 }
 
 /** set the authname on an SSL structure, SSL* ssl */
