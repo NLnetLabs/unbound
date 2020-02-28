@@ -70,10 +70,20 @@ jobs:
       compiler: clang
       arch: ppc64le
       dist: bionic
+    - os: linux
+      name: GCC on Linux, s390x
+      compiler: gcc
+      arch: s390x
+      dist: bionic
+    - os: linux
+      name: Clang on Linux, s390x
+      compiler: clang
+      arch: s390x
+      dist: bionic
 
 script:
   - |
-    if [ "$TEST_UBSAN" = "yes"  ]; then
+    if [ "$TEST_UBSAN" = "yes" ]; then
       export CFLAGS="-DNDEBUG -g2 -O3 -fsanitize=undefined -fno-sanitize-recover"
       ./configure
     elif [ "$TEST_ASAN" = "yes" ]; then
