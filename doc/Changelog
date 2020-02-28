@@ -1,3 +1,6 @@
+28 February 2020: Ralph
+	- Merge PR #172: Add IBM s390x arch for testing, by noloader.
+
 28 February 2020: Wouter
 	- Merge PR #173: updated makedist.sh for config.guess and
 	  config.sub and sha256 digest for gpg, by noloader.
