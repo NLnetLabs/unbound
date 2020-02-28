@@ -70,6 +70,9 @@ server:
 	# Set this to yes to prefer ipv6 upstream servers over ipv4.
 	# prefer-ip6: no
 
+	# Prefer ipv4 upstream servers, even if ipv6 is available.
+	# prefer-ip4: no
+
 	# number of ports to allocate per thread, determines the size of the
 	# port range that can be open simultaneously.  About double the
 	# num-queries-per-thread, or, use as many as the OS will allow you.

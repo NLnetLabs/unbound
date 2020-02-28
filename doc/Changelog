@@ -1,9 +1,45 @@
+28 February 2020: Ralph
+	- Merge PR #172: Add IBM s390x arch for testing, by noloader.
+
+28 February 2020: Wouter
+	- Merge PR #173: updated makedist.sh for config.guess and
+	  config.sub and sha256 digest for gpg, by noloader.
+
+27 February 2020: George
+	- Merge PR #171: Add additional compilers and platforms to Travis
+	  testing, by noloader.
+
+27 February 2020: Wouter
+	- Fix #169: Fix warning for daemon/remote.c output may be truncated
+	  from snprintf.
+	- Fix #170: Fix gcc undefined sanitizer signed integer overflow
+	  warning in signature expiry RFC1982 serial number arithmetic.
+	- Fix more undefined sanitizer issues, in respip copy_rrset null
+	  dname, and in the client_info_compare routine for null memcmp.
+
+26 February 2020: Wouter
+	- iana portlist updated.
+
+25 February 2020: Wouter
+	- Fix #165: Add prefer-ip4: yesno config option to prefer ipv4 for
+	  using ipv4 filters, because the hosts ip6 netblock /64 is not owned
+	  by one operator, and thus reputation is shared.
+
+24 February 2020: George
+	- Merge PR #166: Fix typo in unbound.service.in, by glitsj16.
+
+20 February 2020: Wouter
+	- Updated contrib/unbound_smf23.tar.gz with Solaris SMF service for
+	  Unbound from Yuri Voinov.
+	- master branch has 1.10.1 version.
+
 18 February 2020: Wouter
 	- protect X509_CHECK_FLAG_NO_PARTIAL_WILDCARDS with ifdef for
 	  different openssl versions.
 
 17 February 2020: Wouter
-	- changelog point where the tag for 1.10.0rc2 release is.
+	- changelog point where the tag for 1.10.0rc2 release is.  And with
+	  the unbound_smf23 commit added to it, that is the 1.10.0 release.
 
 17 February 2020: Ralph
 	- Add respip to supported module-config options in unbound-checkconf.
