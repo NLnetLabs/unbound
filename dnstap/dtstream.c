@@ -1681,12 +1681,12 @@ static void dtio_open_output(struct dt_io_thread* dtio)
 			dtio_reconnect_enable(dtio);
 			return;
 		}
-	}
-	if(dtio->upstream_is_tls) {
-		if(!dtio_setup_ssl(dtio)) {
-			dtio_close_fd(dtio);
-			dtio_reconnect_enable(dtio);
-			return;
+		if(dtio->upstream_is_tls) {
+			if(!dtio_setup_ssl(dtio)) {
+				dtio_close_fd(dtio);
+				dtio_reconnect_enable(dtio);
+				return;
+			}
 		}
 	}
 	dtio->check_nb_connect = 1;
