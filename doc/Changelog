@@ -4,6 +4,29 @@
 28 February 2020: Wouter
 	- Merge PR #173: updated makedist.sh for config.guess and
 	  config.sub and sha256 digest for gpg, by noloader.
+	- Merge PR #164: Framestreams, this branch implements dnstap
+	  unidirectional connectivity in unbound. This has a number of
+	  new features.
+
+	  The dependency on libfstrm is removed. The fstrm protocol code
+	  resides in dnstap/dnstap_fstrm.h and dnstap/dnstap_fstrm.c. This
+	  contains a brief definition of what unbound needs.
+
+	  The make unbound-dnstap-socket builds a debug tool,
+	  unbound-dnstap-socket. It can listen, accept multiple DNSTAP
+	  streams and print information. Commandline options control it.
+
+	  Unbound can reconnect if the unix domain socket file socket is
+	  closed. This uses exponential backoff after which it uses a
+	  one second timer to throttle cpu down. There is also support
+	  to use TCP and TLS for connecting to the log server. There
+	  are new config options to turn them on, in the dnstap section
+	  in the man page and example config file. dnstap-ip with IP
+	  address of server for TCP or TLS use. dnstap-tls to turn
+	  on TLS. And dnstap-tls-server-name, dnstap-tls-cert-bundle,
+	  dnstap-tls-client-key-file and dnstap-tls-client-cert-file
+	  to configure the certificates for server authentication and
+	  client authentication, or leave at "" to not use that.
 
 27 February 2020: George
 	- Merge PR #171: Add additional compilers and platforms to Travis
