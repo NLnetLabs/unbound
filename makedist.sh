@@ -464,6 +464,20 @@ rm -rf .git || error_cleanup "Failed to remove .git tracking information"
 info "Adding libtool utils (libtoolize)."
 libtoolize -c --install || libtoolize -c || error_cleanup "Libtoolize failed."
 
+# https://www.gnu.org/software/gettext/manual/html_node/config_002eguess.html
+info "Updating config.guess and config.sub"
+wget -O config.guess 'https://git.savannah.gnu.org/gitweb/?p=config.git;a=blob_plain;f=config.guess;hb=HEAD'
+wget -O config.sub 'https://git.savannah.gnu.org/gitweb/?p=config.git;a=blob_plain;f=config.sub;hb=HEAD'
+chmod a+x config.guess config.sub
+
+# Remove quarantine bit on Apple platforms
+if [ `uname -s | grep -i -c darwin` -ne 0 ]; then
+    if [ -n `command -v xattr` ]; then
+        xattr -d com.apple.quarantine config.guess
+        xattr -d com.apple.quarantine config.sub
+    fi
+fi
+
 info "Building configure script (autoreconf)."
 autoreconf || error_cleanup "Autoconf failed."
 
@@ -542,9 +556,8 @@ cleanup
 
 storehash unbound-$version.tar.gz
 echo "create unbound-$version.tar.gz.asc with:"
-echo "  gpg --armor --detach-sign unbound-$version.tar.gz"
-echo "  gpg --armor --detach-sign unbound-$version.zip"
-echo "  gpg --armor --detach-sign unbound_setup_$version.exe"
+echo "  gpg --armor --detach-sign --digest-algo SHA256 unbound-$version.tar.gz"
+echo "  gpg --armor --detach-sign --digest-algo SHA256 unbound-$version.zip"
+echo "  gpg --armor --detach-sign --digest-algo SHA256 unbound_setup_$version.exe"
 
 info "Unbound distribution created successfully."
-
