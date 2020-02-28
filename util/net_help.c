@@ -996,7 +996,7 @@ void* listen_sslctx_create(char* key, char* pem, char* verifypem)
 		}
 		SSL_CTX_set_client_CA_list(ctx, SSL_load_client_CA_file(
 			verifypem));
-		SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER, NULL);
+		SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER|SSL_VERIFY_FAIL_IF_NO_PEER_CERT, NULL);
 	}
 	return ctx;
 #else
