@@ -177,6 +177,8 @@ fptr_whitelist_event(void (*fptr)(int, short, void *))
 	else if(fptr == &dtio_reconnect_timeout_cb) return 1;
 	else if(fptr == &dtio_stop_timer_cb) return 1;
 	else if(fptr == &dtio_stop_ev_cb) return 1;
+	else if(fptr == &dtio_tap_callback) return 1;
+	else if(fptr == &dtio_mainfdcallback) return 1;
 #endif
 #ifdef UB_ON_WINDOWS
 	else if(fptr == &worker_win_stop_cb) return 1;

@@ -235,7 +235,7 @@ IPSET_SRC=@IPSET_SRC@
 IPSET_OBJ=@IPSET_OBJ@
 DNSTAP_SOCKET_SRC=dnstap/unbound-dnstap-socket.c
 DNSTAP_SOCKET_OBJ=unbound-dnstap-socket.lo
-DNSTAP_SOCKET_OBJ_LINK=$(DNSTAP_SOCKET_OBJ) worker_cb.lo $(COMMON_OBJ) \
+DNSTAP_SOCKET_OBJ_LINK=$(DNSTAP_SOCKET_OBJ) $(COMMON_OBJ) \
 $(COMPAT_OBJ) $(SLDNS_OBJ)
 LIBUNBOUND_SRC=libunbound/context.c libunbound/libunbound.c \
 libunbound/libworker.c

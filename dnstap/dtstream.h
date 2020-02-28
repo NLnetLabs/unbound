@@ -296,4 +296,10 @@ void dtio_stop_timer_cb(int fd, short bits, void* arg);
 /** callback for the output when the thread stops and wants to finish up */
 void dtio_stop_ev_cb(int fd, short bits, void* arg);
 
+/** callback for unbound-dnstap-socket */
+void dtio_tap_callback(int fd, short bits, void* arg);
+
+/** callback for unbound-dnstap-socket */
+void dtio_mainfdcallback(int fd, short bits, void* arg);
+
 #endif /* DTSTREAM_H */
