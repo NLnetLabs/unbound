@@ -474,8 +474,11 @@ static char* q_of_msg(ProtobufCBinaryData message)
 	if(sldns_wire2str_rrquestion_buf(message.data+12, message.len-12,
 		buf, sizeof(buf)) != 0) {
 		/* remove trailing newline, tabs to spaces */
+		/* remove the newline: */
 		if(buf[0] != 0) buf[strlen(buf)-1]=0;
+		/* remove first tab (before type) */
 		if(strrchr(buf, '\t')) *strrchr(buf, '\t')=' ';
+		/* remove second tab (before class) */
 		if(strrchr(buf, '\t')) *strrchr(buf, '\t')=' ';
 		return strdup(buf);
 	}
