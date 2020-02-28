@@ -158,17 +158,17 @@ char* fstrm_describe_control(void* pkt, size_t len)
 	}
 	frametype = sldns_read_uint32(pkt);
 	if(frametype == FSTRM_CONTROL_FRAME_ACCEPT) {
-		sldns_str_print(&str, &slen, "accept");
+		(void)sldns_str_print(&str, &slen, "accept");
 	} else if(frametype == FSTRM_CONTROL_FRAME_START) {
-		sldns_str_print(&str, &slen, "start");
+		(void)sldns_str_print(&str, &slen, "start");
 	} else if(frametype == FSTRM_CONTROL_FRAME_STOP) {
-		sldns_str_print(&str, &slen, "stop");
+		(void)sldns_str_print(&str, &slen, "stop");
 	} else if(frametype == FSTRM_CONTROL_FRAME_READY) {
-		sldns_str_print(&str, &slen, "ready");
+		(void)sldns_str_print(&str, &slen, "ready");
 	} else if(frametype == FSTRM_CONTROL_FRAME_FINISH) {
-		sldns_str_print(&str, &slen, "finish");
+		(void)sldns_str_print(&str, &slen, "finish");
 	} else {
-		sldns_str_print(&str, &slen, "type%d", (int)frametype);
+		(void)sldns_str_print(&str, &slen, "type%d", (int)frametype);
 	}
 
 	/* show the content type options */
@@ -178,22 +178,22 @@ char* fstrm_describe_control(void* pkt, size_t len)
 		uint32_t field_type = sldns_read_uint32(pos);
 		uint32_t field_len = sldns_read_uint32(pos+4);
 		if(remain < field_len) {
-			sldns_str_print(&str, &slen, "malformed_field");
+			(void)sldns_str_print(&str, &slen, "malformed_field");
 			break;
 		}
 		if(field_type == FSTRM_CONTROL_FIELD_TYPE_CONTENT_TYPE) {
 			char tempf[512];
-			sldns_str_print(&str, &slen, " content-type(");
+			(void)sldns_str_print(&str, &slen, " content-type(");
 			if(field_len < sizeof(tempf)-1) {
 				memmove(tempf, pos+8, field_len);
 				tempf[field_len] = 0;
-				sldns_str_print(&str, &slen, "%s", tempf);
+				(void)sldns_str_print(&str, &slen, "%s", tempf);
 			} else {
-				sldns_str_print(&str, &slen, "<error-too-long>");
+				(void)sldns_str_print(&str, &slen, "<error-too-long>");
 			}
-			sldns_str_print(&str, &slen, ")");
+			(void)sldns_str_print(&str, &slen, ")");
 		} else {
-			sldns_str_print(&str, &slen,
+			(void)sldns_str_print(&str, &slen,
 				" field(type %u, length %u)",
 				(unsigned int)field_type,
 				(unsigned int)field_len);
@@ -202,7 +202,7 @@ char* fstrm_describe_control(void* pkt, size_t len)
 		remain -= (8 + field_len);
 	}
 	if(remain > 0)
-		sldns_str_print(&str, &slen, " trailing-bytes"
+		(void)sldns_str_print(&str, &slen, " trailing-bytes"
 			"(length %u)", (unsigned int)remain);
 	return strdup(buf);
 }
