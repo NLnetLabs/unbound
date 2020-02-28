@@ -44,6 +44,7 @@
 #include "config.h"
 #include "dnstap/dnstap_fstrm.h"
 #include "sldns/sbuffer.h"
+#include "sldns/wire2str.h"
 
 void* fstrm_create_control_frame_start(char* contenttype, size_t* len)
 {
@@ -145,7 +146,8 @@ char* fstrm_describe_control(void* pkt, size_t len)
 {
 	uint32_t frametype = 0;
 	char buf[512];
-	size_t at = 0, remain;
+	char* str = buf;
+	size_t remain, slen = sizeof(buf);
 	uint8_t* pos;
 
 	buf[0]=0;
@@ -156,18 +158,17 @@ char* fstrm_describe_control(void* pkt, size_t len)
 	}
 	frametype = sldns_read_uint32(pkt);
 	if(frametype == FSTRM_CONTROL_FRAME_ACCEPT) {
-		at+=snprintf(buf+at, sizeof(buf)-at, "accept");
+		sldns_str_print(&str, &slen, "accept");
 	} else if(frametype == FSTRM_CONTROL_FRAME_START) {
-		at+=snprintf(buf+at, sizeof(buf)-at, "start");
+		sldns_str_print(&str, &slen, "start");
 	} else if(frametype == FSTRM_CONTROL_FRAME_STOP) {
-		at+=snprintf(buf+at, sizeof(buf)-at, "stop");
+		sldns_str_print(&str, &slen, "stop");
 	} else if(frametype == FSTRM_CONTROL_FRAME_READY) {
-		at+=snprintf(buf+at, sizeof(buf)-at, "ready");
+		sldns_str_print(&str, &slen, "ready");
 	} else if(frametype == FSTRM_CONTROL_FRAME_FINISH) {
-		at+=snprintf(buf+at, sizeof(buf)-at, "finish");
+		sldns_str_print(&str, &slen, "finish");
 	} else {
-		at+=snprintf(buf+at, sizeof(buf)-at, "type%d",
-			(int)frametype);
+		sldns_str_print(&str, &slen, "type%d", (int)frametype);
 	}
 
 	/* show the content type options */
@@ -177,18 +178,22 @@ char* fstrm_describe_control(void* pkt, size_t len)
 		uint32_t field_type = sldns_read_uint32(pos);
 		uint32_t field_len = sldns_read_uint32(pos+4);
 		if(remain < field_len) {
-			at+=snprintf(buf+at, sizeof(buf)-at, "malformed_field");
+			sldns_str_print(&str, &slen, "malformed_field");
 			break;
 		}
 		if(field_type == FSTRM_CONTROL_FIELD_TYPE_CONTENT_TYPE) {
-			at+=snprintf(buf+at, sizeof(buf)-at, " content-type(");
-			if(at+field_len < sizeof(buf)) {
-				memmove(buf+at, pos+8, field_len);
-				at += field_len;
+			char tempf[512];
+			sldns_str_print(&str, &slen, " content-type(");
+			if(field_len < sizeof(tempf)-1) {
+				memmove(tempf, pos+8, field_len);
+				tempf[field_len] = 0;
+				sldns_str_print(&str, &slen, "%s", tempf);
+			} else {
+				sldns_str_print(&str, &slen, "<error-too-long>");
 			}
-			at+=snprintf(buf+at, sizeof(buf)-at, ")");
+			sldns_str_print(&str, &slen, ")");
 		} else {
-			at+=snprintf(buf+at, sizeof(buf)-at,
+			sldns_str_print(&str, &slen,
 				" field(type %u, length %u)",
 				(unsigned int)field_type,
 				(unsigned int)field_len);
@@ -197,7 +202,7 @@ char* fstrm_describe_control(void* pkt, size_t len)
 		remain -= (8 + field_len);
 	}
 	if(remain > 0)
-		snprintf(buf+at, sizeof(buf)-at, " trailing-bytes"
+		sldns_str_print(&str, &slen, " trailing-bytes"
 			"(length %u)", (unsigned int)remain);
 	return strdup(buf);
 }
