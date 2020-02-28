@@ -295,6 +295,7 @@ config_create(void)
 	if(!(cfg->dnstap_socket_path = strdup(DNSTAP_SOCKET_PATH)))
 		goto error_exit;
 #endif
+	cfg->dnstap_tls = 1;
 	cfg->disable_dnssec_lame_check = 0;
 	cfg->ip_ratelimit = 0;
 	cfg->ratelimit = 0;
@@ -632,6 +633,13 @@ int config_set_option(struct config_file* cfg, const char* opt,
 #ifdef USE_DNSTAP
 	else S_YNO("dnstap-enable:", dnstap)
 	else S_STR("dnstap-socket-path:", dnstap_socket_path)
+	else S_STR("dnstap-ip:", dnstap_ip)
+	else S_YNO("dnstap-tls:", dnstap_tls)
+	else S_STR("dnstap-tls-server-name:", dnstap_tls_server_name)
+	else S_STR("dnstap-tls-cert-bundle:", dnstap_tls_cert_bundle)
+	else S_STR("dnstap-tls-client-key-file:", dnstap_tls_client_key_file)
+	else S_STR("dnstap-tls-client-cert-file:",
+		dnstap_tls_client_cert_file)
 	else S_YNO("dnstap-send-identity:", dnstap_send_identity)
 	else S_YNO("dnstap-send-version:", dnstap_send_version)
 	else S_STR("dnstap-identity:", dnstap_identity)
@@ -1039,6 +1047,14 @@ config_get_option(struct config_file* cfg, const char* opt,
 #ifdef USE_DNSTAP
 	else O_YNO(opt, "dnstap-enable", dnstap)
 	else O_STR(opt, "dnstap-socket-path", dnstap_socket_path)
+	else O_STR(opt, "dnstap-ip", dnstap_ip)
+	else O_YNO(opt, "dnstap-tls", dnstap_tls)
+	else O_STR(opt, "dnstap-tls-server-name", dnstap_tls_server_name)
+	else O_STR(opt, "dnstap-tls-cert-bundle", dnstap_tls_cert_bundle)
+	else O_STR(opt, "dnstap-tls-client-key-file",
+		dnstap_tls_client_key_file)
+	else O_STR(opt, "dnstap-tls-client-cert-file",
+		dnstap_tls_client_cert_file)
 	else O_YNO(opt, "dnstap-send-identity", dnstap_send_identity)
 	else O_YNO(opt, "dnstap-send-version", dnstap_send_version)
 	else O_STR(opt, "dnstap-identity", dnstap_identity)
@@ -1458,6 +1474,11 @@ config_delete(struct config_file* cfg)
 	free(cfg->dns64_prefix);
 	config_delstrlist(cfg->dns64_ignore_aaaa);
 	free(cfg->dnstap_socket_path);
+	free(cfg->dnstap_ip);
+	free(cfg->dnstap_tls_server_name);
+	free(cfg->dnstap_tls_cert_bundle);
+	free(cfg->dnstap_tls_client_key_file);
+	free(cfg->dnstap_tls_client_cert_file);
 	free(cfg->dnstap_identity);
 	free(cfg->dnstap_version);
 	config_deldblstrlist(cfg->ratelimit_for_domain);

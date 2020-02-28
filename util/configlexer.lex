@@ -431,6 +431,14 @@ local-zone-override{COLON}	{ YDVAR(3, VAR_LOCAL_ZONE_OVERRIDE) }
 dnstap{COLON}			{ YDVAR(0, VAR_DNSTAP) }
 dnstap-enable{COLON}		{ YDVAR(1, VAR_DNSTAP_ENABLE) }
 dnstap-socket-path{COLON}	{ YDVAR(1, VAR_DNSTAP_SOCKET_PATH) }
+dnstap-ip{COLON}		{ YDVAR(1, VAR_DNSTAP_IP) }
+dnstap-tls{COLON}		{ YDVAR(1, VAR_DNSTAP_TLS) }
+dnstap-tls-server-name{COLON}	{ YDVAR(1, VAR_DNSTAP_TLS_SERVER_NAME) }
+dnstap-tls-cert-bundle{COLON}	{ YDVAR(1, VAR_DNSTAP_TLS_CERT_BUNDLE) }
+dnstap-tls-client-key-file{COLON}	{
+		YDVAR(1, VAR_DNSTAP_TLS_CLIENT_KEY_FILE) }
+dnstap-tls-client-cert-file{COLON}	{
+		YDVAR(1, VAR_DNSTAP_TLS_CLIENT_CERT_FILE) }
 dnstap-send-identity{COLON}	{ YDVAR(1, VAR_DNSTAP_SEND_IDENTITY) }
 dnstap-send-version{COLON}	{ YDVAR(1, VAR_DNSTAP_SEND_VERSION) }
 dnstap-identity{COLON}		{ YDVAR(1, VAR_DNSTAP_IDENTITY) }

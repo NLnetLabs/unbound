@@ -829,6 +829,32 @@ void log_crypto_err_code(const char* str, unsigned long err)
 #endif /* HAVE_SSL */
 }
 
+#ifdef HAVE_SSL
+/** log certificate details */
+void
+log_cert(unsigned level, const char* str, void* cert)
+{
+	BIO* bio;
+	char nul = 0;
+	char* pp = NULL;
+	long len;
+	if(verbosity < level) return;
+	bio = BIO_new(BIO_s_mem());
+	if(!bio) return;
+	X509_print_ex(bio, (X509*)cert, 0, (unsigned long)-1
+		^(X509_FLAG_NO_SUBJECT
+                        |X509_FLAG_NO_ISSUER|X509_FLAG_NO_VALIDITY
+			|X509_FLAG_NO_EXTENSIONS|X509_FLAG_NO_AUX
+			|X509_FLAG_NO_ATTRIBUTES));
+	BIO_write(bio, &nul, (int)sizeof(nul));
+	len = BIO_get_mem_data(bio, &pp);
+	if(len != 0 && pp) {
+		verbose(level, "%s: \n%s", str, pp);
+	}
+	BIO_free(bio);
+}
+#endif /* HAVE_SSL */
+
 int
 listen_sslctx_setup(void* ctxt)
 {
@@ -970,7 +996,7 @@ void* listen_sslctx_create(char* key, char* pem, char* verifypem)
 		}
 		SSL_CTX_set_client_CA_list(ctx, SSL_load_client_CA_file(
 			verifypem));
-		SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER, NULL);
+		SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER|SSL_VERIFY_FAIL_IF_NO_PEER_CERT, NULL);
 	}
 	return ctx;
 #else
@@ -1189,6 +1215,57 @@ void* outgoing_ssl_fd(void* sslctx, int fd)
 	(void)sslctx; (void)fd;
 	return NULL;
 #endif
+}
+
+int check_auth_name_for_ssl(char* auth_name)
+{
+	if(!auth_name) return 1;
+#if defined(HAVE_SSL) && !defined(HAVE_SSL_SET1_HOST) && !defined(HAVE_X509_VERIFY_PARAM_SET1_HOST)
+	log_err("the query has an auth_name %s, but libssl has no call to "
+		"perform TLS authentication.  Remove that name from config "
+		"or upgrade the ssl crypto library.", auth_name);
+	return 0;
+#else
+	return 1;
+#endif
+}
+
+/** set the authname on an SSL structure, SSL* ssl */
+int set_auth_name_on_ssl(void* ssl, char* auth_name)
+{
+	if(!auth_name) return 1;
+#ifdef HAVE_SSL
+	(void)SSL_set_tlsext_host_name(ssl, auth_name);
+#else
+	(void)ssl;
+#endif
+#ifdef HAVE_SSL_SET1_HOST
+	SSL_set_verify(ssl, SSL_VERIFY_PEER, NULL);
+	/* setting the hostname makes openssl verify the
+	 * host name in the x509 certificate in the
+	 * SSL connection*/
+	if(!SSL_set1_host(ssl, auth_name)) {
+		log_err("SSL_set1_host failed");
+		return 0;
+	}
+#elif defined(HAVE_X509_VERIFY_PARAM_SET1_HOST)
+	/* openssl 1.0.2 has this function that can be used for
+	 * set1_host like verification */
+	if(auth_name) {
+		X509_VERIFY_PARAM* param = SSL_get0_param(ssl);
+#  ifdef X509_CHECK_FLAG_NO_PARTIAL_WILDCARDS
+		X509_VERIFY_PARAM_set_hostflags(param, X509_CHECK_FLAG_NO_PARTIAL_WILDCARDS);
+#  endif
+		if(!X509_VERIFY_PARAM_set1_host(param, auth_name, strlen(auth_name))) {
+			log_err("X509_VERIFY_PARAM_set1_host failed");
+			return 0;
+		}
+		SSL_set_verify(ssl, SSL_VERIFY_PEER, NULL);
+	}
+#else
+	verbose(VERB_ALGO, "the query has an auth_name, but libssl has no call to perform TLS authentication");
+#endif /* HAVE_SSL_SET1_HOST */
+	return 1;
 }
 
 #if defined(HAVE_SSL) && defined(OPENSSL_THREADS) && !defined(THREADS_DISABLED) && defined(CRYPTO_LOCK) && OPENSSL_VERSION_NUMBER < 0x10100000L

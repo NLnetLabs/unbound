@@ -79,6 +79,7 @@
 #include "sldns/wire2str.h"
 #include "util/shm_side/shm_main.h"
 #include "dnscrypt/dnscrypt.h"
+#include "dnstap/dtstream.h"
 
 #ifdef HAVE_SYS_TYPES_H
 #  include <sys/types.h>
@@ -1914,6 +1915,20 @@ worker_init(struct worker* worker, struct config_file *cfg,
 		) {
 		auth_xfer_pickup_initial(worker->env.auth_zones, &worker->env);
 	}
+#ifdef USE_DNSTAP
+	if(worker->daemon->cfg->dnstap
+#ifndef THREADS_DISABLED
+		&& worker->thread_num == 0
+#endif
+		) {
+		if(!dt_io_thread_start(dtenv->dtio, comm_base_internal(
+			worker->base), worker->daemon->num)) {
+			log_err("could not start dnstap io thread");
+			worker_delete(worker);
+			return 0;
+		}
+	}
+#endif /* USE_DNSTAP */
 	if(!worker->env.mesh || !worker->env.scratch_buffer) {
 		worker_delete(worker);
 		return 0;
@@ -1961,6 +1976,16 @@ worker_delete(struct worker* worker)
 		wsvc_desetup_worker(worker);
 #endif /* UB_ON_WINDOWS */
 	}
+#ifdef USE_DNSTAP
+	if(worker->daemon->cfg->dnstap
+#ifndef THREADS_DISABLED
+		&& worker->thread_num == 0
+#endif
+		) {
+		dt_io_thread_stop(worker->dtenv.dtio);
+	}
+	dt_deinit(&worker->dtenv);
+#endif /* USE_DNSTAP */
 	comm_base_delete(worker->base);
 	ub_randfree(worker->rndstate);
 	alloc_clear(&worker->alloc);
@@ -2099,3 +2124,18 @@ int codeline_cmp(const void* ATTR_UNUSED(a), const void* ATTR_UNUSED(b))
 	return 0;
 }
 
+#ifdef USE_DNSTAP
+void dtio_tap_callback(int ATTR_UNUSED(fd), short ATTR_UNUSED(ev),
+	void* ATTR_UNUSED(arg))
+{
+	log_assert(0);
+}
+#endif
+
+#ifdef USE_DNSTAP
+void dtio_mainfdcallback(int ATTR_UNUSED(fd), short ATTR_UNUSED(ev),
+	void* ATTR_UNUSED(arg))
+{
+	log_assert(0);
+}
+#endif

@@ -1019,6 +1019,38 @@ remote-control:
 #     name-v6: "list-v6"
 #
 
+# Dnstap logging support, if compiled in.  To enable, set the dnstap-enable
+# to yes and also some of dnstap-log-..-messages to yes.  And select an
+# upstream log destination, by socket path, TCP or TLS destination.
+# dnstap:
+# 	dnstap-enable: no
+# 	dnstap-socket-path: "@DNSTAP_SOCKET_PATH@"
+# 	# if "" use the unix socket in dnstap-socket-path, otherwise,
+# 	# set it to "IPaddress[@port]" of the destination.
+# 	dnstap-ip: ""
+# 	# if set to yes if you want to use TLS to dnstap-ip, no for TCP.
+# 	dnstap-tls: yes
+# 	# name for authenticating the upstream server. or "" disabled.
+# 	dnstap-tls-server-name: ""
+# 	# if "", it uses the cert bundle from the main unbound config.
+# 	dnstap-tls-cert-bundle: ""
+# 	# key file for client authentication, or "" disabled.
+# 	dnstap-tls-client-key-file: ""
+# 	# cert file for client authentication, or "" disabled.
+# 	dnstap-tls-client-cert-file: ""
+# 	dnstap-send-identity: no
+# 	dnstap-send-version: no
+# 	# if "" it uses the hostname.
+# 	dnstap-identity: ""
+# 	# if "" it uses the package version.
+# 	dnstap-version: ""
+# 	dnstap-log-resolver-query-messages: no
+# 	dnstap-log-resolver-response-messages: no
+# 	dnstap-log-client-query-messages: no
+# 	dnstap-log-client-response-messages: no
+# 	dnstap-log-forwarder-query-messages: no
+# 	dnstap-log-forwarder-response-messages: no
+
 # Response Policy Zones
 # RPZ policies. Applied in order of configuration. QNAME and Response IP
 # Address trigger are the only supported triggers. Supported actions are:

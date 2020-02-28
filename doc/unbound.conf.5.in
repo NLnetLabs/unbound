@@ -2121,6 +2121,82 @@ If this timeout expires Unbound closes the connection, treats it as
 if the Redis server does not have the requested data, and will try to
 re-establish a new connection later.
 This option defaults to 100 milliseconds.
+.SS DNSTAP Logging Options
+DNSTAP support, when compiled in, is enabled in the \fBdnstap:\fR section.
+This starts an extra thread (when compiled with threading) that writes
+the log information to the destination.  If unbound is compiled without
+threading it does not spawn a thread, but connects per-process to the
+destination.
+.TP
+.B dnstap-enable: \fI<yes or no>
+If dnstap is enabled.  Default no.  If yes, it connects to the dnstap server
+and if any of the dnstap-log-..-messages options is enabled it sends logs
+for those messages to the server.
+.TP
+.B dnstap-socket-path: \fI<file name>
+Sets the unix socket file name for connecting to the server that is
+listening on that socket.  Default is "@DNSTAP_SOCKET_PATH@".
+.TP
+.B dnstap-ip: \fI<IPaddress[@port]>
+If "", the unix socket is used, if set with an IP address (IPv4 or IPv6)
+that address is used to connect to the server.
+.TP
+.B dnstap-tls: \fI<yes or no>
+Set this to use TLS to connect to the server specified in \fBdnstap-ip\fR.
+The default is yes.  If set to no, TCP is used to connect to the server.
+.TP
+.B dnstap-tls-server-name: \fI<name of TLS authentication>
+The TLS server name to authenticate the server with.  Used when \fBdnstap-tls\fR is enabled.  If "" it is ignored, default "".
+.TP
+.B dnstap-tls-cert-bundle: \fI<file name of cert bundle>
+The pem file with certs to verify the TLS server certificate. If "" the
+server default cert bundle is used, or the windows cert bundle on windows.
+Default is "".
+.TP
+.B dnstap-tls-client-key-file: \fI<file name>
+The client key file for TLS client authentication. If "" client
+authentication is not used.  Default is "".
+.TP
+.B dnstap-tls-client-cert-file: \fI<file name>
+The client cert file for TLS client authentication.  Default is "".
+.TP
+.B dnstap-send-identity: \fI<yes or no>
+If enabled, the server identity is included in the log messages.
+Default is no.
+.TP
+.B dnstap-send-version: \fI<yes or no>
+If enabled, the server version if included in the log messages.
+Default is no.
+.TP
+.B dnstap-identity: \fI<string>
+The identity to send with messages, if "" the hostname is used.
+Default is "".
+.TP
+.B dnstap-version: \fI<string>
+The version to send with messages, if "" the package version is used.
+Default is "".
+.TP
+.B dnstap-log-resolver-query-messages: \fI<yes or no>
+Enable to log resolver query messages.  Default is no.
+These are messages from unbound to upstream servers.
+.TP
+.B dnstap-log-resolver-response-messages: \fI<yes or no>
+Enable to log resolver response messages.  Default is no.
+These are replies from upstream servers to unbound.
+.TP
+.B dnstap-log-client-query-messages: \fI<yes or no>
+Enable to log client query messages.  Default is no.
+These are client queries to unbound.
+.TP
+.B dnstap-log-client-response-messages: \fI<yes or no>
+Enable to log client response messages.  Default is no.
+These are responses from unbound to clients.
+.TP
+.B dnstap-log-forwarder-query-messages: \fI<yes or no>
+Enable to log forwarder query messages.  Default is no.
+.TP
+.B dnstap-log-forwarder-response-messages: \fI<yes or no>
+Enable to log forwarder response messages.  Default is no.
 .SS Response Policy Zone Options
 .LP
 Response Policy Zones are configured with \fBrpz:\fR, and each one must have a

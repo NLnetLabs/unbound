@@ -373,47 +373,15 @@ outnet_tcp_take_into_use(struct waiting_tcp* w, uint8_t* pkt, size_t pkt_len)
 		comm_point_tcp_win_bio_cb(pend->c, pend->c->ssl);
 #endif
 		pend->c->ssl_shake_state = comm_ssl_shake_write;
-		if(w->tls_auth_name) {
+		if(!set_auth_name_on_ssl(pend->c->ssl, w->tls_auth_name)) {
+			pend->c->fd = s;
 #ifdef HAVE_SSL
-			(void)SSL_set_tlsext_host_name(pend->c->ssl, w->tls_auth_name);
+			SSL_free(pend->c->ssl);
 #endif
+			pend->c->ssl = NULL;
+			comm_point_close(pend->c);
+			return 0;
 		}
-#ifdef HAVE_SSL_SET1_HOST
-		if(w->tls_auth_name) {
-			SSL_set_verify(pend->c->ssl, SSL_VERIFY_PEER, NULL);
-			/* setting the hostname makes openssl verify the
-                         * host name in the x509 certificate in the
-                         * SSL connection*/
-                        if(!SSL_set1_host(pend->c->ssl, w->tls_auth_name)) {
-                                log_err("SSL_set1_host failed");
-				pend->c->fd = s;
-				SSL_free(pend->c->ssl);
-				pend->c->ssl = NULL;
-				comm_point_close(pend->c);
-				return 0;
-			}
-		}
-#elif defined(HAVE_X509_VERIFY_PARAM_SET1_HOST)
-		/* openssl 1.0.2 has this function that can be used for
-		 * set1_host like verification */
-		if(w->tls_auth_name) {
-			X509_VERIFY_PARAM* param = SSL_get0_param(pend->c->ssl);
-#  ifdef X509_CHECK_FLAG_NO_PARTIAL_WILDCARDS
-			X509_VERIFY_PARAM_set_hostflags(param, X509_CHECK_FLAG_NO_PARTIAL_WILDCARDS);
-#  endif
-			if(!X509_VERIFY_PARAM_set1_host(param, w->tls_auth_name, strlen(w->tls_auth_name))) {
-				log_err("X509_VERIFY_PARAM_set1_host failed");
-				pend->c->fd = s;
-				SSL_free(pend->c->ssl);
-				pend->c->ssl = NULL;
-				comm_point_close(pend->c);
-				return 0;
-			}
-			SSL_set_verify(pend->c->ssl, SSL_VERIFY_PEER, NULL);
-		}
-#else
-		verbose(VERB_ALGO, "the query has an auth_name, but libssl has no call to perform TLS authentication");
-#endif /* HAVE_SSL_SET1_HOST */
 	}
 	w->pkt = NULL;
 	w->next_waiting = (void*)pend;
