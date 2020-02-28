@@ -265,9 +265,8 @@ int dt_io_thread_apply_cfg(struct dt_io_thread* dtio, struct config_file *cfg)
 	if(dtio->upstream_is_unix) {
 		if(!cfg->dnstap_socket_path ||
 			cfg->dnstap_socket_path[0]==0) {
-			log_err("dnstap setup failed, because dnstap is "
-				"enabled, but no dnstap-ip and no "
-				"dnstap-socket-path are given");
+			log_err("dnstap setup: no dnstap-socket-path for "
+				"socket connect");
 			return 0;
 		}
 		free(dtio->socket_path);
