@@ -133,6 +133,20 @@ jobs:
         - ANDROID_SDK_ROOT="$HOME/android-sdk"
         - ANDROID_NDK_ROOT="$HOME/android-ndk"
 
+  allow_failures:
+    - os: linux
+      arch: amd64
+      name: Android armv7a, Linux, Amd64
+    - os: linux
+      arch: amd64
+      name: Android aarch64, Linux, Amd64
+    - os: linux
+      arch: amd64
+      name: Android x86, Linux, Amd64
+    - os: linux
+      arch: amd64
+      name: Android x86_64, Linux, Amd64
+
 script:
   - |
     if [ "$TEST_UBSAN" = "yes" ]; then
@@ -143,19 +157,19 @@ script:
       ./configure
     elif [ "$TEST_ANDROID" = "yes" ]; then
       export AUTOTOOLS_BUILD="$(./config.guess)"
-      if ! ./android/install_ndk.sh ; then
+      if ! ./contrib/android/install_ndk.sh ; then
         echo "Failed to install Android SDK and NDK"
         exit 1
       fi
-      if ! source ./android/setenv_android.sh "$ANDROID_CPU"; then
+      if ! source ./contrib/android/setenv_android.sh "$ANDROID_CPU"; then
         echo "Failed to set Android environment"
         exit 1
       fi
-      if ! ./android/install_openssl.sh; then
+      if ! ./contrib/android/install_openssl.sh; then
         echo "Failed to build and install OpenSSL"
         exit 1
       fi
-      if ! ./android/install_expat.sh; then
+      if ! ./contrib/android/install_expat.sh; then
         echo "Failed to build and install Expat"
         exit 1
       fi

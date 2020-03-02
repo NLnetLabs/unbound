@@ -71,11 +71,11 @@ export ANDROID_SDK_ROOT="$HOME/android-sdk"
 export ANDROID_NDK_ROOT="$HOME/android-ndk"
 ```
 
-The second step installs the NDK and SDK. This step is handled in by the script `android/install_ndk.sh`. The script uses `ANDROID_NDK_ROOT` and `ANDROID_SDK_ROOT` to place the NDK and SDK in the `$HOME` directory.
+The second step installs the NDK and SDK. This step is handled in by the script `contrib/android/install_ndk.sh`. The script uses `ANDROID_NDK_ROOT` and `ANDROID_SDK_ROOT` to place the NDK and SDK in the `$HOME` directory.
 
-The third step sets the cross-compile environment using the script `android/setenv_android.sh`. The script is `sourced` so the variables set in the script are available to the calling shell. The script sets variables like `CC`, `CXX`, `AS` and `AR`; sets `CFLAGS` and `CXXFLAGS`; sets a `sysroot` so Android headers and libraries are found; and adds the path to the toolchain to `PATH`.
+The third step sets the cross-compile environment using the script `contrib/android/setenv_android.sh`. The script is `sourced` so the variables set in the script are available to the calling shell. The script sets variables like `CC`, `CXX`, `AS` and `AR`; sets `CFLAGS` and `CXXFLAGS`; sets a `sysroot` so Android headers and libraries are found; and adds the path to the toolchain to `PATH`.
 
-`setenv_android.sh` knows which toolchain and architecture to select by inspecting environmental variables set by Travis for the job. In particular, the variables `ANDROID_CPU` and `ANDROID_API` tell `setenv_android.sh` what tools and libraries to select. For example, below is part of the Aarch64 recipe.
+`contrib/android/setenv_android.sh` knows which toolchain and architecture to select by inspecting environmental variables set by Travis for the job. In particular, the variables `ANDROID_CPU` and `ANDROID_API` tell `contrib/android/setenv_android.sh` what tools and libraries to select. For example, below is part of the Aarch64 recipe.
 
 ```
 - os: linux
@@ -91,7 +91,7 @@ The third step sets the cross-compile environment using the script `android/sete
     - ANDROID_API=23
 ```
 
-The `setenv_android.sh` script specifies the tools in a `case` statement like the following. There is a case for each of the architectures armv7a, aarch64, x86 and x86_64.
+The `contrib/android/setenv_android.sh` script specifies the tools in a `case` statement like the following. There is a case for each of the architectures armv7a, aarch64, x86 and x86_64.
 
 ```
 armv8a|aarch64|arm64|arm64-v8a)
@@ -113,19 +113,19 @@ Finally, once all the variables are set the Travis script cross-compiles OpenSSL
 elif [ "$TEST_ANDROID" = "yes" ]; then
   # AUTOTOOLS_HOST is set in the job
   export AUTOTOOLS_BUILD="$(./config.guess)"
-  if ! ./android/install_ndk.sh ; then
+  if ! ./contrib/android/install_ndk.sh ; then
       echo "Failed to install Android SDK and NDK"
       exit 1
   fi
-  if ! source ./android/setenv_android.sh "$ANDROID_CPU"; then
+  if ! source ./contrib/android/setenv_android.sh "$ANDROID_CPU"; then
       echo "Failed to set Android environment"
       exit 1
   fi
-  if ! ./android/install_openssl.sh; then
+  if ! ./contrib/android/install_openssl.sh; then
       echo "Failed to build and install OpenSSL"
       exit 1
   fi
-  if ! ./android/install_expat.sh; then
+  if ! ./contrib/android/install_expat.sh; then
       echo "Failed to build and install Expat"
       exit 1
   fi
@@ -150,7 +150,7 @@ Note the `--prefix="$ANDROID_SYSROOT"` used by OpenSSL, Expat and Unbound. This 
 
 ## Android flags
 
-`android/setenv_android.sh` uses specific flags for `CFLAGS` and `CXXFLAGS`. The flags are not arbitrary; they are taken from the `ndk-build` tool. It is important to use the same flags across projects to avoid subtle problems due to mixing and matching different flags.
+`contrib/android/setenv_android.sh` uses specific flags for `CFLAGS` and `CXXFLAGS`. The flags are not arbitrary; they are taken from the `ndk-build` tool. It is important to use the same flags across projects to avoid subtle problems due to mixing and matching different flags.
 
 `CXXFLAGS` includes `-fexceptions` because exceptions are disabled by default. `CFLAGS` include `-funwind-tables` and `-fexceptions` to ensure C++ exceptions pass through C code, if needed. Also see `docs/CPLUSPLUS—SUPPORT.html` in the NDK docs.
 

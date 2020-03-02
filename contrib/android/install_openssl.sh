@@ -22,7 +22,7 @@ fi
 cd openssl-1.1.1d || exit 1
 
 # Damn OpenSSL devs... They just make the shit up as they go...
-if ! cp ../android/15-android.conf Configurations/; then
+if ! cp ../contrib/android/15-android.conf Configurations/; then
     echo "Failed to copy OpenSSL Android config"
     exit 1
 fi
