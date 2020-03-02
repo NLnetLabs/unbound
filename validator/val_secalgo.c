@@ -1746,6 +1746,7 @@ _verify_nettle_ecdsa(sldns_buffer* buf, unsigned int digest_size, unsigned char*
 			res &= nettle_ecdsa_verify (&pubkey, SHA256_DIGEST_SIZE, digest, &signature);
 			mpz_clear(x);
 			mpz_clear(y);
+			nettle_ecc_point_clear(&pubkey);
 			break;
 		}
 		case SHA384_DIGEST_SIZE:
