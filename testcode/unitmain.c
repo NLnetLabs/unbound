@@ -917,7 +917,7 @@ main(int argc, char* argv[])
 #  ifdef HAVE_EVP_CLEANUP
 	EVP_cleanup();
 #  endif
-#  ifdef HAVE_ENGINE_CLEANUP
+#  if (OPENSSL_VERSION_NUMBER < 0x10100000) && !defined(OPENSSL_NO_ENGINE) && defined(HAVE_ENGINE_CLEANUP)
 	ENGINE_cleanup();
 #  endif
 	CONF_modules_free();

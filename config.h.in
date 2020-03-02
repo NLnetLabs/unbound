@@ -176,6 +176,9 @@
 /* Define to 1 if you have the `endservent' function. */
 #undef HAVE_ENDSERVENT
 
+/* Define to 1 if you have the `ENGINE_cleanup' function. */
+#undef HAVE_ENGINE_CLEANUP
+
 /* Define to 1 if you have the `ERR_free_strings' function. */
 #undef HAVE_ERR_FREE_STRINGS
 
