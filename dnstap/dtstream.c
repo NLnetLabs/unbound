@@ -1579,7 +1579,7 @@ static int dtio_open_output_local(struct dt_io_thread* dtio)
 	memset(&s, 0, sizeof(s));
 #ifdef HAVE_STRUCT_SOCKADDR_UN_SUN_LEN
         /* this member exists on BSDs, not Linux */
-        s.sun_len = (unsigned)sizeof(usock);
+        s.sun_len = (unsigned)sizeof(s);
 #endif
 	s.sun_family = AF_LOCAL;
 	/* length is 92-108, 104 on FreeBSD */

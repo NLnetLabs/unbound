@@ -1,6 +1,9 @@
 2 March 2020: George
 	- Fix compiler warning in dns64/dns64.c
 
+2 March 2020: Wouter
+	- Fix #177: dnstap does not build on macOS.
+
 28 February 2020: Ralph
 	- Merge PR #172: Add IBM s390x arch for testing, by noloader.
 
