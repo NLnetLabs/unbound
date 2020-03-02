@@ -917,7 +917,9 @@ main(int argc, char* argv[])
 #  ifdef HAVE_EVP_CLEANUP
 	EVP_cleanup();
 #  endif
+#  ifdef HAVE_ENGINE_CLEANUP
 	ENGINE_cleanup();
+#  endif
 	CONF_modules_free();
 #  endif
 #  ifdef HAVE_CRYPTO_CLEANUP_ALL_EX_DATA
