@@ -4,6 +4,8 @@
 
 2 March 2020: George
 	- Fix compiler warning in dns64/dns64.c
+	- Merge PR #174: Add Android to Travis testing, by noloader.
+	- Move android build scripts to contrib/ and allow android tests to fail.
 
 2 March 2020: Wouter
 	- Fix #177: dnstap does not build on macOS.
