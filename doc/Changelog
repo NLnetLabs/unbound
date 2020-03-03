@@ -1,3 +1,6 @@
+3 March 2020: George
+	- Upgrade config.guess(2020-01-01) and config.sub(2020-01-01).
+
 2 March 2020: Ralph
 	- Fix #175, Merge PR #176: fix link error when OpenSSL is configured
  	  with no-engine, thanks noloader.
