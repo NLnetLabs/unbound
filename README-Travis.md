@@ -1,8 +1,8 @@
 # Travis Testing
 
-Unbound 1.11 and above leverage Travis CI to increase coverage of compilers and platforms. Compilers include Clang and GCC; while platforms include Android, Linux, and OS X on AMD64, Aarch64, PowerPC and s390x hardware.
+Unbound 1.10 and above leverage Travis CI to increase coverage of compilers and platforms. Compilers include Clang and GCC; while platforms include Android, Linux, and OS X on AMD64, Aarch64, PowerPC and s390x hardware.
 
-Android is tested on armv7a, aarch64, x86 and x86_64. Mips and Mips64 is no longer supported under current NDKs. The Android recipes build and install OpenSSL and Expat, and then builds Unbound. The testing is tailored for Android NDK-r19 and above, and includes NDK-r20 and NDK-r21. Due to Android NDK directory structure, the switch from GCC to Clang, and the tool names, the script will only work with NDK-r19 and above. And in the future it will likely break when the Android NDK team changes the directory structure and tools again (it happens every 2 or 3 years).
+Android is tested on armv7a, aarch64, x86 and x86_64. Mips and Mips64 is no longer supported under current NDKs. The Android recipes build and install OpenSSL and Expat, and then builds Unbound. The testing is tailored for Android NDK-r19 and above, and includes NDK-r20 and NDK-r21.
 
 The Unbound Travis configuration file `.travis.yml` does not use top-level keys like `os:` and `compiler:` so there is no matrix expansion. Instead Unbound specifies the exact job to run under the `jobs:` and `include:` keys.
 
@@ -60,7 +60,9 @@ elif [ "$TEST_ASAN" = "yes" ]; then
 
 ## Android builds
 
-Android builds test compiles under armv7a, aarch64, x86 and x86_64. The builds are trickier than other builds for several reasons. The testing requires installation of the Android NDK and SDK, it requires a cross-compile, and requires OpenSSL and Expat prerequisites. The Android cross-compiles also require care to set the Autotools triplet, the OpenSSL triplet, the toolchain path, the tool variables, and the sysroot. The steps below detail the pieces of the Android recipes.
+Travis tests Android builds for the armv7a, aarch64, x86 and x86_64 architectures. The builds are trickier than other builds for several reasons. The testing requires installation of the Android NDK and SDK, it requires a cross-compile, and requires OpenSSL and Expat prerequisites. The Android cross-compiles also require care to set the Autotools triplet, the OpenSSL triplet, the toolchain path, the tool variables, and the sysroot. The steps below detail the pieces of the Android recipes.
+
+### ANDROID_NDK_ROOT
 
 The first step for Android is to set the environmental variables `ANDROID_NDK_ROOT` and `ANDROID_SDK_ROOT`. This is an important step because the NDK and SDK use the variables internally to locate their own tools. Also see [Recommended NDK Directory?](https://groups.google.com/forum/#!topic/android-ndk/qZjhOaynHXc) on the android-ndk mailing list. (Many folks botch this step, and use incorrect variables like `ANDROID_NDK_HOME` or `ANDROID_SDK_HOME`).
 
@@ -71,9 +73,15 @@ export ANDROID_SDK_ROOT="$HOME/android-sdk"
 export ANDROID_NDK_ROOT="$HOME/android-ndk"
 ```
 
+### NDK installation
+
 The second step installs the NDK and SDK. This step is handled in by the script `contrib/android/install_ndk.sh`. The script uses `ANDROID_NDK_ROOT` and `ANDROID_SDK_ROOT` to place the NDK and SDK in the `$HOME` directory.
 
-The third step sets the cross-compile environment using the script `contrib/android/setenv_android.sh`. The script is `sourced` so the variables set in the script are available to the calling shell. The script sets variables like `CC`, `CXX`, `AS` and `AR`; sets `CFLAGS` and `CXXFLAGS`; sets a `sysroot` so Android headers and libraries are found; and adds the path to the toolchain to `PATH`.
+If you are working from a developer machine you probably already have a NDK and SDK installed.
+
+### Android environment
+
+The third step sets the Android cross-compile environment using the script `contrib/android/setenv_android.sh`. The script is `sourced` so the variables in the script are available to the calling shell. The script sets variables like `CC`, `CXX`, `AS` and `AR`; sets `CFLAGS` and `CXXFLAGS`; sets a `sysroot` so Android headers and libraries are found; and adds the path to the toolchain to `PATH`.
 
 `contrib/android/setenv_android.sh` knows which toolchain and architecture to select by inspecting environmental variables set by Travis for the job. In particular, the variables `ANDROID_CPU` and `ANDROID_API` tell `contrib/android/setenv_android.sh` what tools and libraries to select. For example, below is part of the Aarch64 recipe.
 
@@ -86,8 +94,8 @@ The third step sets the cross-compile environment using the script `contrib/andr
   env:
     - TEST_ANDROID=yes
     - AUTOTOOLS_HOST=aarch64-linux-android
-    - OPENSSL_CPU=arm64
-    - ANDROID_CPU=arm64-v8a
+    - OPENSSL_HOST=android-arm64
+    - ANDROID_CPU=aarch64
     - ANDROID_API=23
 ```
 
@@ -107,51 +115,52 @@ armv8a|aarch64|arm64|arm64-v8a)
   CXXFLAGS="-funwind-tables -fexceptions -frtti"
 ```
 
-Finally, once all the variables are set the Travis script cross-compiles OpenSSL and Expat, and then configures and builds Unbound. The recipe looks as follows.
+### OpenSSL and Expat
+
+OpenSSL and Expat are built for Android using the scripts `contrib/android/install_openssl.sh` and `contrib/android/install_expat.sh`. The scripts download, configure and install the latest release version of the libraries. The libraries are configured with `--prefix="$ANDROID_SYSROOT"` so the output artifacts are placed in the sysroot `$ANDROID_SYSROOT/usr/lib` directory. (Also see *Developer Workstation* section below).
+
+OpenSSL also uses a custom configuration file called `15-android.conf`. It is a copy of the OpenSSL's project file and located at `contrib/android/15-android.conf`. The Unbound version is copied to the OpenSSL source files after unpacking the OpenSSL distribution. The Unbound version has legacy NDK support removed and some other fixes, like `ANDROID_NDK_ROOT` awareness. The changes mean Unbound's `15-android.conf` will only work with Unbound and with NDK-r19 and above.
+
+OpenSSL is configured with `no-engine`. If you want to include OpenSSL engines then edit `contrib/android/install_openssl.sh` and remove the config option.
+
+### Android build
+
+Once all the variables are set and OpenSSL and Expat are built, then the Travis script configures and builds Unbound. The recipe looks as follows.
 
 ```
 elif [ "$TEST_ANDROID" = "yes" ]; then
-  # AUTOTOOLS_HOST is set in the job
   export AUTOTOOLS_BUILD="$(./config.guess)"
-  if ! ./contrib/android/install_ndk.sh ; then
-      echo "Failed to install Android SDK and NDK"
-      exit 1
-  fi
-  if ! source ./contrib/android/setenv_android.sh "$ANDROID_CPU"; then
-      echo "Failed to set Android environment"
-      exit 1
-  fi
-  if ! ./contrib/android/install_openssl.sh; then
-      echo "Failed to build and install OpenSSL"
-      exit 1
-  fi
-  if ! ./contrib/android/install_expat.sh; then
-      echo "Failed to build and install Expat"
-      exit 1
-  fi
-  if ! ./configure \
-      --build="$AUTOTOOLS_BUILD" --host="$AUTOTOOLS_HOST" \
-      --prefix="$ANDROID_SYSROOT" \
-      --with-ssl="$ANDROID_SYSROOT" --disable-gost \
-      --with-libexpat="$ANDROID_SYSROOT";
-  then
-      echo "Failed to configure Unbound"
-      exit 1
-  fi
-  if ! make -j 2; then
-      echo "Failed to build Unbound"
-      exit 1
-  fi
+  ./contrib/android/install_ndk.sh
+  source ./contrib/android/setenv_android.sh "$ANDROID_CPU"
+  ./contrib/android/install_openssl.sh
+  ./contrib/android/install_expat.sh
+  ./configure \
+    --build="$AUTOTOOLS_BUILD" --host="$AUTOTOOLS_HOST" \
+    --prefix="$ANDROID_SYSROOT" \
+    --with-ssl="$ANDROID_SYSROOT" --disable-gost \
+    --with-libexpat="$ANDROID_SYSROOT";
+  make -j 2
 ```
 
-Unbound only smoke tests a build using a compile and link. The self tests are not run. TODO: figure out how to fire up an emulator, push the tests to the device and run them.
+Travis only smoke tests an Android build using a compile and link. The self tests are not run. TODO: figure out how to fire up an emulator, push the tests to the device and run them.
 
-Note the `--prefix="$ANDROID_SYSROOT"` used by OpenSSL, Expat and Unbound. This makes it easy to find libraries and headers because `CFLAGS` and `CXXFLAGS` already use `--sysroot="$ANDROID_SYSROOT"`. By performing a `make install` and installing into `$ANDROID_SYSROOT`, all the libraries needed by Unbound are present without extra flags or searching.
+Note the `--prefix="$ANDROID_SYSROOT"` used by OpenSSL, Expat and Unbound. This is a hack that makes it easy to find libraries and headers because `CFLAGS` and `CXXFLAGS` already use `--sysroot="$ANDROID_SYSROOT"`. By performing a `make install` and installing into `$ANDROID_SYSROOT`, all the libraries needed by Unbound are present without extra flags or searching. (Also see *Developer Workstation* section below).
 
-## Android flags
+### Android flags
 
-`contrib/android/setenv_android.sh` uses specific flags for `CFLAGS` and `CXXFLAGS`. The flags are not arbitrary; they are taken from the `ndk-build` tool. It is important to use the same flags across projects to avoid subtle problems due to mixing and matching different flags.
+`contrib/android/setenv_android.sh` uses specific flags for `CFLAGS` and `CXXFLAGS`. The flags are not arbitrary, and they are taken from the `ndk-build` tool. It is important to use the same flags across projects to avoid subtle problems due to mixing and matching different flags.
 
-`CXXFLAGS` includes `-fexceptions` because exceptions are disabled by default. `CFLAGS` include `-funwind-tables` and `-fexceptions` to ensure C++ exceptions pass through C code, if needed. Also see `docs/CPLUSPLUS—SUPPORT.html` in the NDK docs.
+`CXXFLAGS` includes `-fexceptions` and `-frtti` because exceptions and runtime type info are disabled by default. `CFLAGS` include `-funwind-tables` and `-fexceptions` to ensure C++ exceptions pass through C code, if needed. Also see `docs/CPLUSPLUS—SUPPORT.html` in the NDK docs.
 
-To inspect the flags used by `ndk-build` for a platform clone ASOP's [ndk-samples](https://github.com/android/ndk-samples/tree/master/hello-jni) and build the `hello-jni` project. Use the `V=1` flag to see the full compiler output.
+To inspect the flags used by `ndk-build` for a platform clone ASOP's [ndk-samples](https://github.com/android/ndk-samples/tree/master/hello-jni) and build the `hello-jni` project. Use the `V=1` flag to see the full compiler output from `ndk-build`.
+
+### Developer workstation
+
+If you are setting up a developer workstation then `--prefix="$ANDROID_SYSROOT"` trick will not work. It will not work on a workstation because a previous install gets overwritten by the next install in `$ANDROID_SYSROOT/usr/lib`. In practice OpenSSL and Expat need to be installed in an architecture specific location. The sysroot-based locations are listed below.
+
+* `$ANDROID_SYSROOT/usr/lib/aarch64-linux-android/`
+* `$ANDROID_SYSROOT/usr/lib/arm-linux-androideabi/`
+* `$ANDROID_SYSROOT/usr/lib/i686-linux-android/`
+* `$ANDROID_SYSROOT/usr/lib/x86_64-linux-android/`
+
+A second concern is the OpenSSL header files. At least two different defines are used in the OpenSSL headers based on the architecture. The first pair of defines are `RC4_CHAR` and `RC4_INT`. The second pair of defines are `SIXTY_FOUR_BIT_LONG` and `BN_LLONG`. As with libraries, a previous install gets overwritten by the next install in `$ANDROID_SYSROOT/usr/include`. To work around the problem see [Build Multiarch OpenSSL on OS X](https://stackoverflow.com/q/25530429) on Stack Overflow. Though it is a MacOS question, the same applies to Android in this situation.
