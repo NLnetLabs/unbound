@@ -186,6 +186,7 @@ config_create(void)
 	cfg->so_reuseport = REUSEPORT_DEFAULT;
 	cfg->ip_transparent = 0;
 	cfg->ip_freebind = 0;
+	cfg->ip_dscp = 0;
 	cfg->num_ifs = 0;
 	cfg->ifs = NULL;
 	cfg->num_out_ifs = 0;
@@ -923,6 +924,7 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_YNO(opt, "so-reuseport", so_reuseport)
 	else O_YNO(opt, "ip-transparent", ip_transparent)
 	else O_YNO(opt, "ip-freebind", ip_freebind)
+	else O_DEC(opt, "ip-dscp", ip_dscp)
 	else O_MEM(opt, "rrset-cache-size", rrset_cache_size)
 	else O_DEC(opt, "rrset-cache-slabs", rrset_cache_slabs)
 	else O_YNO(opt, "prefetch-key", prefetch_key)
