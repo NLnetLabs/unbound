@@ -1,5 +1,8 @@
+4 March 2020: George
+	- Merge PR #181 from noloader: Fix OpenSSL -pie warning on Android.
+
 4 March 2020: Wouter
-	- Merge PR#180 from noloader: Avoid calling exit in Travis script.
+	- Merge PR #180 from noloader: Avoid calling exit in Travis script.
 
 3 March 2020: George
 	- Upgrade config.guess(2020-01-01) and config.sub(2020-01-01).
