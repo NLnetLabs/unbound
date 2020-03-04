@@ -17,9 +17,14 @@ fi
 
 cd expat-2.2.9 || exit 1
 
+export PKG_CONFIG_PATH="$IOS_PREFIX/lib/pkgconfig"
+
 echo "Configuring Expat"
-if ! ./configure --build="$AUTOTOOLS_BUILD" --host="$AUTOTOOLS_HOST" --prefix="$ANDROID_PREFIX"; then
+if ! ./configure \
+       --build="$AUTOTOOLS_BUILD" --host="$AUTOTOOLS_HOST" \
+       --prefix="$IOS_PREFIX" ; then
     echo "Error: Failed to configure Expat"
+    cat config.log
     exit 1
 fi
 

@@ -48,14 +48,10 @@ fi
 
 #####################################################################
 
-if [ "$#" -lt 1 ]; then
-    AOSP_ARCH=armeabi-v7a
-else
-    AOSP_ARCH=$(tr '[:upper:]' '[:upper:]' <<< "$1")
-fi
+AOSP_CPU=$(tr '[:upper:]' '[:lower:]' <<< "$ANDROID_CPU")
 
 # https://developer.android.com/ndk/guides/abis.html
-case "$AOSP_ARCH" in
+case "$AOSP_CPU" in
   armeabi|armv7a|armv7-a|armeabi-v7a)
     CC="armv7a-linux-androideabi$ANDROID_API-clang"
     CXX="armv7a-linux-androideabi$ANDROID_API-clang++"
@@ -109,7 +105,7 @@ case "$AOSP_ARCH" in
     ;;
 
   *)
-    echo "ERROR: Unknown architecture $1"
+    echo "ERROR: Unknown architecture $ANDROID_CPU"
     [ "$0" = "${BASH_SOURCE[0]}" ] && exit 1 || return 1
     ;;
 
@@ -155,14 +151,10 @@ fi
 
 #####################################################################
 
-# Only modify/export PATH if AOSP_TOOLCHAIN_PATH good
-if [ -d "$AOSP_TOOLCHAIN_PATH" ]; then
-    # And only modify PATH if AOSP_TOOLCHAIN_PATH is not present
-    LEN=${#AOSP_TOOLCHAIN_PATH}
-    SUBSTR=${PATH:0:$LEN}
-    if [ "$SUBSTR" != "$AOSP_TOOLCHAIN_PATH" ]; then
-        export PATH="$AOSP_TOOLCHAIN_PATH:$PATH"
-    fi
+LENGTH=${#AOSP_TOOLCHAIN_PATH}
+SUBSTR=${PATH:0:$LENGTH}
+if [ "$SUBSTR" != "$AOSP_TOOLCHAIN_PATH" ]; then
+    export PATH="$AOSP_TOOLCHAIN_PATH:$PATH"
 fi
 
 #####################################################################
@@ -176,11 +168,11 @@ export CXXFLAGS="-D__ANDROID_API__=$ANDROID_API $CXXFLAGS --sysroot=$AOSP_SYSROO
 
 echo "AOSP_TOOLCHAIN_PATH: $AOSP_TOOLCHAIN_PATH"
 
-echo "CC: $CC"
-echo "CXX: $CXX"
-echo "LD: $LD"
-echo "AS: $AS"
-echo "AR: $AR"
+echo "CC: $(command -v "$CC")"
+echo "CXX: $(command -v "$CXX")"
+echo "LD: $(command -v "$LD")"
+echo "AS: $(command -v "$AS")"
+echo "AR: $(command -v "$AR")"
 
 echo "ANDROID_SYSROOT: $ANDROID_SYSROOT"
 

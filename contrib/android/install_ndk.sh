@@ -1,9 +1,5 @@
 #!/usr/bin/env bash
 
-# install android deps
-sudo apt-get -qq update
-sudo apt-get -qq install --no-install-recommends curl openjdk-8-jdk zip unzip
-
 if [ -z "$ANDROID_SDK_ROOT" ]; then
     echo "ERROR: ANDROID_SDK_ROOT is not a valid path. Please set it."
     echo "SDK root is $ANDROID_SDK_ROOT"
