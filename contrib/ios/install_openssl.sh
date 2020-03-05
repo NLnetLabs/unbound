@@ -17,14 +17,14 @@ fi
 
 cd openssl-1.1.1d || exit 1
 
-if ! cp ../contrib/android/15-android.conf Configurations/; then
-    echo "Failed to copy OpenSSL Android config"
+if ! cp ../contrib/ios/15-ios.conf Configurations/; then
+    echo "Failed to copy OpenSSL ios config"
     exit 1
 fi
 
 echo "Configuring OpenSSL"
-if ! ./Configure "$OPENSSL_HOST" no-comp no-asm no-hw no-engine shared \
-     "$CFLAGS" --prefix="$ANDROID_PREFIX" --openssldir="$ANDROID_PREFIX"; then
+if ! ./Configure "$OPENSSL_HOST" no-comp no-asm no-hw no-engine \
+     "$CFLAGS" --prefix="$IOS_PREFIX" --openssldir="$IOS_PREFIX"; then
     echo "Failed to configure OpenSSL"
     exit 1
 fi
