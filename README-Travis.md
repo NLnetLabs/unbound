@@ -131,7 +131,7 @@ If you are working from a developer machine you probably already have the necess
 
 The fifth step builds OpenSSL and Expat. OpenSSL and Expat are built for Android using the scripts `contrib/android/install_openssl.sh` and `contrib/android/install_expat.sh`. The scripts download, configure and install the latest release version of the libraries. The libraries are configured with `--prefix="$ANDROID_PREFIX"` so the headers are placed in `$ANDROID_PREFIX/include` directory, and the libraries are placed in the `$ANDROID_PREFIX/lib` directory.
 
-`ANDROID_PREFIX` is the value `$HOME/android$ANDROID_API-$ANDROID_CPU`. The libraries will be installed in `$HOME/android23-armv7a`, `$HOME/android23-aarch64`, etc. For Autotools projects, the appropriate `PKG_CONFIG_PATH` is exported. A typical `PKG_CONFIG_PATH` is `$HOME/android23-armv7a/lib/pkgconfig`.
+`ANDROID_PREFIX` is the value `$HOME/android$ANDROID_API-$ANDROID_CPU`. The libraries will be installed in `$HOME/android23-armv7a`, `$HOME/android23-aarch64`, etc. For Autotools projects, the appropriate `PKG_CONFIG_PATH` is exported. `PKG_CONFIG_PATH` is the userland equivalent to sysroot, and allows Autotools to find non-system library's headers and libraries for an architecture. Typical `PKG_CONFIG_PATH` are `$HOME/android23-armv7a/lib/pkgconfig` and `$HOME/android23-aarch64/lib/pkgconfig`.
 
 OpenSSL also uses a custom configuration file called `15-android.conf`. It is a copy of the OpenSSL's project file and located at `contrib/android/15-android.conf`. The Unbound version is copied to the OpenSSL source files after unpacking the OpenSSL distribution. The Unbound version has legacy NDK support removed and some other fixes, like `ANDROID_NDK_ROOT` awareness. The changes mean Unbound's `15-android.conf` will only work with Unbound, with NDK-r19 and above, and a properly set environment.
 
@@ -171,7 +171,7 @@ To inspect the flags used by `ndk-build` for a platform clone ASOP's [ndk-sample
 
 ## iOS builds
 
-Travis tests iOS builds for the armv7a. armv7s and aarch64 architectures for iPhoneOS, iPhoneOS, AppleTV and WatchOS.iPhone OS is tested using both 32-bit builds (iPhones) and 64-bit builds (iPads). The builds are trickier than other builds for several reasons. The testing requires a cross-compile, and requires OpenSSL and Expat prerequisites. The iOS cross-compiles also require care to set the Autotools triplet, the OpenSSL triplet, the toolchain path, the tool variables, and the sysroot. The discussion below detail the steps of the iOS recipes.
+Travis tests iOS builds for the armv7a, armv7s and aarch64 architectures for iPhoneOS, AppleTVOS and WatchOS. iPhoneOS is tested using both 32-bit builds (iPhones) and 64-bit builds (iPads). The builds are trickier than other builds for several reasons. The testing requires a cross-compile, and requires OpenSSL and Expat prerequisites. The iOS cross-compiles also require care to set the Autotools triplet, the OpenSSL triplet, the toolchain path, the tool variables, and the sysroot. The discussion below detail the steps of the iOS recipes.
 
 ### iOS environment
 
@@ -222,11 +222,11 @@ If you are working from a developer machine you probably already have the necess
 
 The third step builds OpenSSL and Expat. OpenSSL and Expat are built for iOS using the scripts `contrib/ios/install_openssl.sh` and `contrib/ios/install_expat.sh`. The scripts download, configure and install the latest release version of the libraries. The libraries are configured with `--prefix="$IOS_PREFIX"` so the headers are placed in `$IOS_PREFIX/include` directory, and the libraries are placed in the `$IOS_PREFIX/lib` directory.
 
-`IOS_PREFIX` is the value `$HOME/iPhoneOS-$IOS_CPU`, `$HOME/AppleTVOS` or `$HOME/WatchOS`. So the libraries will be installed in `$HOME/iPhoneOS-armv7s`, `$HOME/iPhoneOS-arm64`, etc. For Autotools projects, the appropriate `PKG_CONFIG_PATH` is exported. A typical `PKG_CONFIG_PATH` is `$HOME/iPhoneOS-armv7s/lib/pkgconfig`.
+`IOS_PREFIX` is the value `$HOME/iPhoneOS-$IOS_CPU`, `$HOME/AppleTVOS` or `$HOME/WatchOS`. The libraries will be installed in `$HOME/iPhoneOS-armv7s`, `$HOME/iPhoneOS-arm64`, etc. For Autotools projects, the appropriate `PKG_CONFIG_PATH` is exported. `PKG_CONFIG_PATH` is the userland equivalent to sysroot, and allows Autotools to find non-system library's headers and libraries for an architecture. Typical `PKG_CONFIG_PATH` are `$HOME/iPhoneOS-armv7s/lib/pkgconfig` and `$HOME/iPhoneOS-arm64/lib/pkgconfig`.
 
 OpenSSL also uses a custom configuration file called `15-ios.conf`. It is a copy of the OpenSSL's project file and located at `contrib/ios/15-ios.conf`. The Unbound version is copied to the OpenSSL source files after unpacking the OpenSSL distribution. The changes mean Unbound's `15-ios.conf` will only work with Unbound and a properly set environment.
 
-OpenSSL is configured with `no-engine`. Engines require dynamic loading so engines are disabled permanently in the script.
+OpenSSL is configured with `no-engine`. Engines require dynamic loading so engines are disabled permanently in `15-ios.conf`.
 
 ### iOS build
 
