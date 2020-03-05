@@ -1,5 +1,5 @@
 5 March 2020: Wouter
-	- Fix PR #184 from noloader: Add iOS testing to Travis.
+	- Fix PR #182 from noloader: Add iOS testing to Travis.
 
 4 March 2020: Ralph
 	- Update README-Travis.md (from PR #179), by Jeffrey Walton.
