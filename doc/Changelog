@@ -1,3 +1,7 @@
+6 March 2020: George
+	- Merge PR #186, fix #183: Fix unrecognized 'echo -n' option on OS X, by
+	  noloader
+
 5 March 2020: Wouter
 	- Fix PR #182 from noloader: Add iOS testing to Travis.
 
