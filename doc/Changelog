@@ -1,3 +1,8 @@
+11 March 2020: George
+	- Fix #189: mini_event.h:142:17: error: field 'ev_timeout' has incomplete
+	  type, by noloader.
+	- Changelog entry for (Fix #189, Merge PR #190).
+
 11 March 2020: Wouter
 	- Fix #188: unbound-control.c:882:6: error: 'execlp' is
 	  unavailable: not available on tvOS.
