@@ -74,6 +74,10 @@
 #include <sys/un.h>
 #endif
 
+#ifdef HAVE_TARGETCONDITIONAL_H
+#include <TargetConditional.h>
+#endif
+
 static void usage(void) ATTR_NORETURN;
 static void ssl_err(const char* s) ATTR_NORETURN;
 static void ssl_path_err(const char* s, const char *path) ATTR_NORETURN;
@@ -879,11 +883,16 @@ int main(int argc, char* argv[])
 	if(argc == 0)
 		usage();
 	if(argc >= 1 && strcmp(argv[0], "start")==0) {
+#if defined(TARGET_OS_TV) || defined(TARGET_OS_WATCH)
+			fatal_exit("could not exec unbound: %s",
+				strerror(ENOSYS));
+#else
 		if(execlp("unbound", "unbound", "-c", cfgfile, 
 			(char*)NULL) < 0) {
 			fatal_exit("could not exec unbound: %s",
 				strerror(errno));
 		}
+#endif
 	}
 	if(argc >= 1 && strcmp(argv[0], "stats_shm")==0) {
 		print_stats_shm(cfgfile);
