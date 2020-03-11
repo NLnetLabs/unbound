@@ -1,3 +1,7 @@
+11 March 2020: Wouter
+	- Fix #188: unbound-control.c:882:6: error: 'execlp' is
+	  unavailable: not available on tvOS.
+
 6 March 2020: George
 	- Merge PR #186, fix #183: Fix unrecognized 'echo -n' option on OS X, by
 	  noloader
