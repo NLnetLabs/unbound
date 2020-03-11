@@ -1,3 +1,7 @@
+11 March 2020: Ralph
+	- Add check to make sure RPZ records are subdomains of configured
+	  zone origin.
+
 11 March 2020: George
 	- Fix #189: mini_event.h:142:17: error: field 'ev_timeout' has incomplete
 	  type, by noloader.

@@ -105,6 +105,7 @@ struct rpz {
 /**
  * Create policy from RR and add to this RPZ.
  * @param r: the rpz to add the policy to.
+ * @param azname: dname of the auth-zone
  * @param aznamelen: the length of the auth-zone name
  * @param dname: dname of the RR
  * @param dnamelen: length of the dname
@@ -117,7 +118,7 @@ struct rpz {
  * @param rr_len: the length of the complete RR
  * @return: 0 on error
  */
-int rpz_insert_rr(struct rpz* r, size_t aznamelen, uint8_t* dname,
+int rpz_insert_rr(struct rpz* r, uint8_t* azname, size_t aznamelen, uint8_t* dname,
 	size_t dnamelen, uint16_t rr_type, uint16_t rr_class, uint32_t rr_ttl,
 	uint8_t* rdatawl, size_t rdatalen, uint8_t* rr, size_t rr_len);
 
