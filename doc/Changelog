@@ -1,3 +1,6 @@
+12 March 2020: Wouter
+	- Fix compile of test tools without protobuf.
+
 11 March 2020: Ralph
 	- Add check to make sure RPZ records are subdomains of configured
 	  zone origin.

@@ -61,8 +61,10 @@
 #include "services/listen_dnsport.h"
 #include "sldns/sbuffer.h"
 #include "sldns/wire2str.h"
+#ifdef USE_DNSTAP
 #include <protobuf-c/protobuf-c.h>
 #include "dnstap/dnstap.pb-c.h"
+#endif /* USE_DNSTAP */
 #include "util/config_file.h"
 
 /** listen backlog on TCP connections for dnstap logs */
@@ -406,6 +408,7 @@ static int tap_socket_list_addevs(struct tap_socket_list* list,
 	return 1;
 }
 
+#ifdef USE_DNSTAP
 /** log control frame contents */
 static void log_control_frame(uint8_t* pkt, size_t len)
 {
@@ -633,6 +636,7 @@ static void log_data_frame(uint8_t* pkt, size_t len)
 	fflush(stdout);
 	dnstap__dnstap__free_unpacked(d, NULL);
 }
+#endif /* USE_DNSTAP */
 
 /** receive bytes from fd, prints errors if bad,
  * returns 0: closed/error, -1: continue, >0 number of bytes */
@@ -768,6 +772,7 @@ void tap_data_free(struct tap_data* data)
  * returns 0 on error */
 static int reply_with_accept(int fd)
 {
+#ifdef USE_DNSTAP
 	/* len includes the escape and framelength */
 	size_t len = 0;
 	void* acceptframe = fstrm_create_control_frame_accept(
@@ -794,12 +799,18 @@ static int reply_with_accept(int fd)
 	fd_set_nonblock(fd);
 	free(acceptframe);
 	return 1;
+#else
+	log_err("no dnstap compiled, no reply");
+	(void)fd;
+	return 0;
+#endif
 }
 
 /** reply with FINISH control frame to bidirectional client,
  * returns 0 on error */
 static int reply_with_finish(int fd)
 {
+#ifdef USE_DNSTAP
 	size_t len = 0;
 	void* finishframe = fstrm_create_control_frame_finish(&len);
 	if(!finishframe) {
@@ -823,6 +834,11 @@ static int reply_with_finish(int fd)
 	fd_set_nonblock(fd);
 	free(finishframe);
 	return 1;
+#else
+	log_err("no dnstap compiled, no reply");
+	(void)fd;
+	return 0;
+#endif
 }
 
 #ifdef HAVE_SSL
@@ -1007,9 +1023,11 @@ void dtio_tap_callback(int fd, short ATTR_UNUSED(bits), void* arg)
 	/* we are done with a frame */
 	if(verbosity>=3) log_info("received %sframe len %d",
 		(data->control_frame?"control ":""), (int)data->len);
+#ifdef USE_DNSTAP
 	if(data->control_frame)
 		log_control_frame(data->frame, data->len);
 	else	log_data_frame(data->frame, data->len);
+#endif
 
 	if(data->len >= 4 && sldns_read_uint32(data->frame) ==
 		FSTRM_CONTROL_FRAME_READY) {
