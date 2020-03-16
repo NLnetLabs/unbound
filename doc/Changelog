@@ -1,3 +1,8 @@
+16 March 2020: Wouter
+	- Fix #192: In the unbound-checkconf tool, the module config of
+	  dns64 subnetcache respip validator iterator is whitelisted, it was
+	  reported it seems to work.
+
 12 March 2020: Wouter
 	- Fix compile of test tools without protobuf.
 

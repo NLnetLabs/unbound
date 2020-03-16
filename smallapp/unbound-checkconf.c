@@ -600,6 +600,8 @@ morechecks(struct config_file* cfg)
 		&& strcmp(cfg->module_conf, "respip subnetcache validator iterator") != 0
 		&& strcmp(cfg->module_conf, "dns64 subnetcache iterator") != 0
 		&& strcmp(cfg->module_conf, "dns64 subnetcache validator iterator") != 0
+		&& strcmp(cfg->module_conf, "dns64 subnetcache respip iterator") != 0
+		&& strcmp(cfg->module_conf, "dns64 subnetcache respip validator iterator") != 0
 #endif
 #if defined(WITH_PYTHONMODULE) && defined(CLIENT_SUBNET)
 		&& strcmp(cfg->module_conf, "python subnetcache iterator") != 0
