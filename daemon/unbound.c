@@ -88,6 +88,14 @@
 #  include "nss.h"
 #endif
 
+#ifdef HAVE_TARGETCONDITIONALS_H
+#include <TargetConditionals.h>
+#endif
+
+#if defined(TARGET_OS_TV) || defined(TARGET_OS_WATCH)
+#undef HAVE_FORK
+#endif
+
 /** print build options. */
 static void
 print_build_options(void)

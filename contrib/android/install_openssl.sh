@@ -24,7 +24,7 @@ fi
 
 echo "Configuring OpenSSL"
 if ! ./Configure "$OPENSSL_HOST" no-comp no-asm no-hw no-engine shared \
-     "$CFLAGS" --prefix="$ANDROID_PREFIX" --openssldir="$ANDROID_PREFIX"; then
+       --prefix="$ANDROID_PREFIX" --openssldir="$ANDROID_PREFIX"; then
     echo "Failed to configure OpenSSL"
     exit 1
 fi
