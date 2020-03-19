@@ -22,9 +22,17 @@ if ! cp ../contrib/ios/15-ios.conf Configurations/; then
     exit 1
 fi
 
+# OpenSSL 1.1.1d patch. OK to remove once OpenSSL version is bumped.
+# ocsp.c:947:23: error: 'fork' is unavailable: not available on tvOS and watchOS.
+# Also see https://github.com/openssl/openssl/issues/7607.
+if ! patch -u -p0 < ../contrib/ios/openssl.patch; then
+    echo "Failed to patch OpenSSL"
+    exit 1
+fi
+
 echo "Configuring OpenSSL"
-if ! ./Configure "$OPENSSL_HOST" no-comp no-asm no-hw no-engine \
-     "$CFLAGS" --prefix="$IOS_PREFIX" --openssldir="$IOS_PREFIX"; then
+if ! ./Configure "$OPENSSL_HOST" -DNO_FORK no-comp no-asm no-hw no-engine no-tests no-unit-test \
+       --prefix="$IOS_PREFIX" --openssldir="$IOS_PREFIX"; then
     echo "Failed to configure OpenSSL"
     exit 1
 fi

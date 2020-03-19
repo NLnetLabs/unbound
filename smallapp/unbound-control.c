@@ -74,8 +74,8 @@
 #include <sys/un.h>
 #endif
 
-#ifdef HAVE_TARGETCONDITIONAL_H
-#include <TargetConditional.h>
+#ifdef HAVE_TARGETCONDITIONALS_H
+#include <TargetConditionals.h>
 #endif
 
 static void usage(void) ATTR_NORETURN;
@@ -884,8 +884,8 @@ int main(int argc, char* argv[])
 		usage();
 	if(argc >= 1 && strcmp(argv[0], "start")==0) {
 #if defined(TARGET_OS_TV) || defined(TARGET_OS_WATCH)
-			fatal_exit("could not exec unbound: %s",
-				strerror(ENOSYS));
+		fatal_exit("could not exec unbound: %s",
+			strerror(ENOSYS));
 #else
 		if(execlp("unbound", "unbound", "-c", cfgfile, 
 			(char*)NULL) < 0) {

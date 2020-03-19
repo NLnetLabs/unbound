@@ -4,4 +4,4 @@
 echo "Updating tools"
 brew update 1>/dev/null
 echo "Installing tools"
-brew install autoconf automake libtool pkgconfig curl perl 1>/dev/null
+brew install autoconf automake libtool pkg-config curl perl 1>/dev/null
