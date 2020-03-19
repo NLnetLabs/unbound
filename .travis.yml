@@ -49,12 +49,14 @@ jobs:
       name: Libevent, Clang on Linux, Amd64
       compiler: clang
       arch: amd64
+      env:
         - TEST_LIBEVENT=yes
         - CONFIG_OPTS="--with-libevent"
     - os: osx
       name: Libevent, Clang on OS X, Amd64
       compiler: clang
       arch: amd64
+      env:
         - TEST_OSX=yes
         - TEST_LIBEVENT=yes
         - CONFIG_OPTS="--with-ssl=/usr/local/opt/openssl/ --with-libevent=/usr/local/opt/libevent/"
