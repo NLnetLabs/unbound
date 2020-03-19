@@ -867,7 +867,11 @@ main(int argc, char* argv[])
 		printf("\tperforms unit tests.\n");
 		return 1;
 	}
+#ifdef USE_LIBEVENT
+	printf("Start of %s+libevent unit test.\n", PACKAGE_STRING);
+#else
 	printf("Start of %s unit test.\n", PACKAGE_STRING);
+#endif
 #ifdef HAVE_SSL
 #  ifdef HAVE_ERR_LOAD_CRYPTO_STRINGS
 	ERR_load_crypto_strings();

@@ -1218,28 +1218,29 @@ esac
 # check for libevent
 AC_ARG_WITH(libevent, AC_HELP_STRING([--with-libevent=pathname],
     [use libevent (will check /usr/local /opt/local /usr/lib /usr/pkg /usr/sfw /usr  or you can specify an explicit path). Slower, but allows use of large outgoing port ranges.]),
-    [ ],[ withval="no" ])
-if test x_$withval = x_yes -o x_$withval != x_no; then
+    [ ],[ with_libevent="no" ])
+if test "x_$with_libevent" != x_no; then
+        AC_DEFINE([USE_LIBEVENT], [1], [Define if you enable libevent])
         AC_MSG_CHECKING(for libevent)
-        if test x_$withval = x_ -o x_$withval = x_yes; then
-            withval="/usr/local /opt/local /usr/lib /usr/pkg /usr/sfw /usr"
+        if test "x_$with_libevent" = x_ -o "x_$with_libevent" = x_yes; then
+            with_libevent="/usr/local /opt/local /usr/lib /usr/pkg /usr/sfw /usr"
         fi
-        for dir in $withval; do
+        for dir in $with_libevent; do
             thedir="$dir"
             if test -f "$dir/include/event.h" -o -f "$dir/include/event2/event.h"; then
                 found_libevent="yes"
-		dnl assume /usr is in default path.
-		if test "$thedir" != "/usr"; then
-                    CPPFLAGS="$CPPFLAGS -I$thedir/include"
-		fi
-                break;
-            fi
+				dnl assume /usr is in default path.
+				if test "$thedir" != "/usr"; then
+				    CPPFLAGS="$CPPFLAGS -I$thedir/include"
+				fi
+				break;
+		    fi
         done
         if test x_$found_libevent != x_yes; then
 		if test -f "$dir/event.h" -a \( -f "$dir/libevent.la" -o -f "$dir/libev.la" \) ; then
 			# libevent source directory
-            		AC_MSG_RESULT(found in $thedir)
-                	CPPFLAGS="$CPPFLAGS -I$thedir -I$thedir/include"
+			AC_MSG_RESULT(found in $thedir)
+			CPPFLAGS="$CPPFLAGS -I$thedir -I$thedir/include"
 			BAK_LDFLAGS_SET="1"
 			BAK_LDFLAGS="$LDFLAGS"
 			# remove evdns from linking
@@ -1252,10 +1253,10 @@ if test x_$withval = x_yes -o x_$withval != x_no; then
 			cp $ev_files_o build/libevent
 			cp $ev_files_lo build/libevent
 			cp $ev_files_libso build/libevent/.libs
-            		LATE_LDFLAGS="build/libevent/*.lo -lm"
+			LATE_LDFLAGS="build/libevent/*.lo -lm"
 			LDFLAGS="build/libevent/*.o $LDFLAGS -lm"
 		else
-            		AC_MSG_ERROR([Cannot find the libevent library in $withval
+            AC_MSG_ERROR([Cannot find the libevent library in $with_libevent
 You can restart ./configure --with-libevent=no to use a builtin alternative.
 Please note that this alternative is not as capable as libevent when using
 large outgoing port ranges.  ])
