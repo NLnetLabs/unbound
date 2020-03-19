@@ -1,3 +1,6 @@
+19 March 2020: Ralph
+	- Merge PR#191: Update iOS testing on Travis, by Jeffrey Walton.
+
 16 March 2020: Wouter
 	- Fix #192: In the unbound-checkconf tool, the module config of
 	  dns64 subnetcache respip validator iterator is whitelisted, it was
