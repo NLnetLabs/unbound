@@ -1782,6 +1782,15 @@ case "$enable_ipset" in
     	# nothing
 		;;
 esac
+AC_ARG_ENABLE(explicit-port-randomisation, AC_HELP_STRING([--disable-explicit-port-randomisation], [disable explicit source port randomisation and rely on the kernel to provide random source ports]))
+case "$enable_explicit_port_randomisation" in
+	no)
+		AC_DEFINE([DISABLE_EXPLICIT_PORT_RANDOMISATION], [1], [Define this to enable kernel based UDP source port randomization.])
+		;;
+	yes|*)
+		;;
+esac
+
 
 AC_MSG_CHECKING([if ${MAKE:-make} supports $< with implicit rule in scope])
 # on openBSD, the implicit rule make $< work.

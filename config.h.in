@@ -811,6 +811,10 @@
 /* Define to 1 to use ipset support */
 #undef USE_IPSET
 
+/* Define to 1 to disable explict UDP source port randomisation and rely on the
+   kernel to provide random source ports */
+#undef DISABLE_EXPLICIT_PORT_RANDOMISATION
+
 /* Define if you want to use internal select based events */
 #undef USE_MINI_EVENT
 
