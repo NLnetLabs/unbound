@@ -6,6 +6,7 @@
 	  Florian Obser.
 	- Log warning when using outgoing-port-permit and outgoing-port-avoid
 	  while explicit port randomisation is disabled.
+	- Merge PR#194: Add libevent testing to Travis, by Jeffrey Walton.
 
 16 March 2020: Wouter
 	- Fix #192: In the unbound-checkconf tool, the module config of
