@@ -2,6 +2,10 @@
 	- Merge PR#191: Update iOS testing on Travis, by Jeffrey Walton.
 	- Fix #158: open tls-session-ticket-keys as binary, for Windows. By
 	  Daisuke HIGASHI.
+	- Merge PR#134, Allow the kernel to provide random source ports. By
+	  Florian Obser.
+	- Log warning when using outgoing-port-permit and outgoing-port-avoid
+	  while explicit port randomisation is disabled.
 
 16 March 2020: Wouter
 	- Fix #192: In the unbound-checkconf tool, the module config of

@@ -1530,6 +1530,11 @@ int
 cfg_mark_ports(const char* str, int allow, int* avail, int num)
 {
 	char* mid = strchr(str, '-');
+#ifdef DISABLE_EXPLICIT_PORT_RANDOMISATION
+	log_warn("Explicit port randomisation disabled, ignoring "
+		"outgoing-port-permit and outgoing-port-avoid configuration "
+		"options");
+#endif
 	if(!mid) {
 		int port = atoi(str);
 		if(port == 0 && strcmp(str, "0") != 0) {

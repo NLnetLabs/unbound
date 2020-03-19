@@ -172,11 +172,13 @@ struct port_if {
 	 * if 0, no randomisation. */
 	int pfxlen;
 
+#ifndef DISABLE_EXPLICIT_PORT_RANDOMISATION
 	/** the available ports array. These are unused.
 	 * Only the first total-inuse part is filled. */
 	int* avail_ports;
 	/** the total number of available ports (size of the array) */
 	int avail_total;
+#endif
 
 	/** array of the commpoints currently in use. 
 	 * allocated for max number of fds, first part in use. */
