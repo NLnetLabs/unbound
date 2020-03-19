@@ -1362,7 +1362,7 @@ int listen_sslctx_setup_ticket_keys(void* sslctx, struct config_strlist* tls_ses
 		if(!data)
 			return 0;
 
-		f = fopen(p->str, "r");
+		f = fopen(p->str, "rb");
 		if(!f) {
 			log_err("could not read tls-session-ticket-key %s: %s", p->str, strerror(errno));
 			free(data);
