@@ -1,3 +1,7 @@
+20 March 2020: Wouter
+	- Merge PR #197 from fobser: Make log_ident_revert_to_default() a
+	  proper prototype.
+
 19 March 2020: Ralph
 	- Merge PR#191: Update iOS testing on Travis, by Jeffrey Walton.
 	- Fix #158: open tls-session-ticket-keys as binary, for Windows. By
