@@ -481,6 +481,8 @@ morechecks(struct config_file* cfg)
 		fatal_exit("num_threads value weird");
 	if(!cfg->do_ip4 && !cfg->do_ip6)
 		fatal_exit("ip4 and ip6 are both disabled, pointless");
+	if(!cfg->do_ip4 && cfg->prefer_ip4)
+		fatal_exit("cannot prefer and disable ip4, pointless");
 	if(!cfg->do_ip6 && cfg->prefer_ip6)
 		fatal_exit("cannot prefer and disable ip6, pointless");
 	if(!cfg->do_udp && !cfg->do_tcp)
@@ -598,6 +600,8 @@ morechecks(struct config_file* cfg)
 		&& strcmp(cfg->module_conf, "respip subnetcache validator iterator") != 0
 		&& strcmp(cfg->module_conf, "dns64 subnetcache iterator") != 0
 		&& strcmp(cfg->module_conf, "dns64 subnetcache validator iterator") != 0
+		&& strcmp(cfg->module_conf, "dns64 subnetcache respip iterator") != 0
+		&& strcmp(cfg->module_conf, "dns64 subnetcache respip validator iterator") != 0
 #endif
 #if defined(WITH_PYTHONMODULE) && defined(CLIENT_SUBNET)
 		&& strcmp(cfg->module_conf, "python subnetcache iterator") != 0

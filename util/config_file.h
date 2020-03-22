@@ -85,6 +85,8 @@ struct config_file {
 	int do_ip4;
 	/** do ip6 query support. */
 	int do_ip6;
+	/** prefer ip4 upstream queries. */
+	int prefer_ip4;
 	/** prefer ip6 upstream queries. */
 	int prefer_ip6;
 	/** do udp query support. */
@@ -474,6 +476,18 @@ struct config_file {
 	int dnstap;
 	/** dnstap socket path */
 	char* dnstap_socket_path;
+	/** dnstap IP */
+	char* dnstap_ip;
+	/** dnstap TLS enable */
+	int dnstap_tls;
+	/** dnstap tls server authentication name */
+	char* dnstap_tls_server_name;
+	/** dnstap server cert bundle */
+	char* dnstap_tls_cert_bundle;
+	/** dnstap client key for client authentication */
+	char* dnstap_tls_client_key_file;
+	/** dnstap client cert for client authentication */
+	char* dnstap_tls_client_cert_file;
 	/** true to send "identity" via dnstap */
 	int dnstap_send_identity;
 	/** true to send "version" via dnstap */

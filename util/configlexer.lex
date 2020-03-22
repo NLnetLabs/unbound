@@ -220,6 +220,7 @@ outgoing-num-tcp{COLON}		{ YDVAR(1, VAR_OUTGOING_NUM_TCP) }
 incoming-num-tcp{COLON}		{ YDVAR(1, VAR_INCOMING_NUM_TCP) }
 do-ip4{COLON}			{ YDVAR(1, VAR_DO_IP4) }
 do-ip6{COLON}			{ YDVAR(1, VAR_DO_IP6) }
+prefer-ip4{COLON}		{ YDVAR(1, VAR_PREFER_IP4) }
 prefer-ip6{COLON}		{ YDVAR(1, VAR_PREFER_IP6) }
 do-udp{COLON}			{ YDVAR(1, VAR_DO_UDP) }
 do-tcp{COLON}			{ YDVAR(1, VAR_DO_TCP) }
@@ -430,6 +431,14 @@ local-zone-override{COLON}	{ YDVAR(3, VAR_LOCAL_ZONE_OVERRIDE) }
 dnstap{COLON}			{ YDVAR(0, VAR_DNSTAP) }
 dnstap-enable{COLON}		{ YDVAR(1, VAR_DNSTAP_ENABLE) }
 dnstap-socket-path{COLON}	{ YDVAR(1, VAR_DNSTAP_SOCKET_PATH) }
+dnstap-ip{COLON}		{ YDVAR(1, VAR_DNSTAP_IP) }
+dnstap-tls{COLON}		{ YDVAR(1, VAR_DNSTAP_TLS) }
+dnstap-tls-server-name{COLON}	{ YDVAR(1, VAR_DNSTAP_TLS_SERVER_NAME) }
+dnstap-tls-cert-bundle{COLON}	{ YDVAR(1, VAR_DNSTAP_TLS_CERT_BUNDLE) }
+dnstap-tls-client-key-file{COLON}	{
+		YDVAR(1, VAR_DNSTAP_TLS_CLIENT_KEY_FILE) }
+dnstap-tls-client-cert-file{COLON}	{
+		YDVAR(1, VAR_DNSTAP_TLS_CLIENT_CERT_FILE) }
 dnstap-send-identity{COLON}	{ YDVAR(1, VAR_DNSTAP_SEND_IDENTITY) }
 dnstap-send-version{COLON}	{ YDVAR(1, VAR_DNSTAP_SEND_VERSION) }
 dnstap-identity{COLON}		{ YDVAR(1, VAR_DNSTAP_IDENTITY) }

@@ -586,7 +586,7 @@ rpz_insert_response_ip_trigger(struct rpz* r, uint8_t* dname, size_t dnamelen,
 }
 
 int
-rpz_insert_rr(struct rpz* r, size_t aznamelen, uint8_t* dname,
+rpz_insert_rr(struct rpz* r, uint8_t* azname, size_t aznamelen, uint8_t* dname,
 	size_t dnamelen, uint16_t rr_type, uint16_t rr_class, uint32_t rr_ttl,
 	uint8_t* rdatawl, size_t rdatalen, uint8_t* rr, size_t rr_len)
 {
@@ -596,9 +596,17 @@ rpz_insert_rr(struct rpz* r, size_t aznamelen, uint8_t* dname,
 	enum rpz_action a;
 	uint8_t* policydname;
 
-	log_assert(dnamelen >= aznamelen);
-	if(!(policydname = calloc(1, (dnamelen-aznamelen)+1)))
+	if(!dname_subdomain_c(dname, azname)) {
+		log_err("RPZ: name of record to insert into RPZ is not a "
+			"subdomain of the configured name of the RPZ zone");
 		return 0;
+	}
+
+	log_assert(dnamelen >= aznamelen);
+	if(!(policydname = calloc(1, (dnamelen-aznamelen)+1))) {
+		log_err("malloc error while inserting RPZ RR");
+		return 0;
+	}
 
 	a = rpz_rr_to_action(rr_type, rdatawl, rdatalen);
 	if(!(policydnamelen = strip_dname_origin(dname, dnamelen, aznamelen,

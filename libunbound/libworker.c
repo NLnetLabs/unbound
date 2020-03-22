@@ -74,6 +74,14 @@
 #include "sldns/sbuffer.h"
 #include "sldns/str2wire.h"
 
+#ifdef HAVE_TARGETCONDITIONALS_H
+#include <TargetConditionals.h>
+#endif
+
+#if defined(TARGET_OS_TV) || defined(TARGET_OS_WATCH)
+#undef HAVE_FORK
+#endif
+
 /** handle new query command for bg worker */
 static void handle_newq(struct libworker* w, uint8_t* buf, uint32_t len);
 
@@ -1047,3 +1055,19 @@ wsvc_cron_cb(void* ATTR_UNUSED(arg))
         log_assert(0);
 }
 #endif /* UB_ON_WINDOWS */
+
+#ifdef USE_DNSTAP
+void dtio_tap_callback(int ATTR_UNUSED(fd), short ATTR_UNUSED(ev),
+	void* ATTR_UNUSED(arg))
+{
+	log_assert(0);
+}
+#endif
+
+#ifdef USE_DNSTAP
+void dtio_mainfdcallback(int ATTR_UNUSED(fd), short ATTR_UNUSED(ev),
+	void* ATTR_UNUSED(arg))
+{
+	log_assert(0);
+}
+#endif

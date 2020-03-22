@@ -1,3 +1,127 @@
+20 March 2020: George
+	- Merge PR #198 from fobser: Declare lz_enter_rr_into_zone() static, it's
+	  only used in this file.
+
+20 March 2020: Wouter
+	- Merge PR #197 from fobser: Make log_ident_revert_to_default() a
+	  proper prototype.
+
+19 March 2020: Ralph
+	- Merge PR#191: Update iOS testing on Travis, by Jeffrey Walton.
+	- Fix #158: open tls-session-ticket-keys as binary, for Windows. By
+	  Daisuke HIGASHI.
+	- Merge PR#134, Allow the kernel to provide random source ports. By
+	  Florian Obser.
+	- Log warning when using outgoing-port-permit and outgoing-port-avoid
+	  while explicit port randomisation is disabled.
+	- Merge PR#194: Add libevent testing to Travis, by Jeffrey Walton.
+	- Fix .travis.yml error, missing 'env' option.
+
+16 March 2020: Wouter
+	- Fix #192: In the unbound-checkconf tool, the module config of
+	  dns64 subnetcache respip validator iterator is whitelisted, it was
+	  reported it seems to work.
+
+12 March 2020: Wouter
+	- Fix compile of test tools without protobuf.
+
+11 March 2020: Ralph
+	- Add check to make sure RPZ records are subdomains of configured
+	  zone origin.
+
+11 March 2020: George
+	- Fix #189: mini_event.h:142:17: error: field 'ev_timeout' has incomplete
+	  type, by noloader.
+	- Changelog entry for (Fix #189, Merge PR #190).
+
+11 March 2020: Wouter
+	- Fix #188: unbound-control.c:882:6: error: 'execlp' is
+	  unavailable: not available on tvOS.
+
+6 March 2020: George
+	- Merge PR #186, fix #183: Fix unrecognized 'echo -n' option on OS X, by
+	  noloader
+
+5 March 2020: Wouter
+	- Fix PR #182 from noloader: Add iOS testing to Travis.
+
+4 March 2020: Ralph
+	- Update README-Travis.md (from PR #179), by Jeffrey Walton.
+
+4 March 2020: George
+	- Merge PR #181 from noloader: Fix OpenSSL -pie warning on Android.
+
+4 March 2020: Wouter
+	- Merge PR #180 from noloader: Avoid calling exit in Travis script.
+
+3 March 2020: George
+	- Upgrade config.guess(2020-01-01) and config.sub(2020-01-01).
+
+2 March 2020: Ralph
+	- Fix #175, Merge PR #176: fix link error when OpenSSL is configured
+ 	  with no-engine, thanks noloader.
+
+2 March 2020: George
+	- Fix compiler warning in dns64/dns64.c
+	- Merge PR #174: Add Android to Travis testing, by noloader.
+	- Move android build scripts to contrib/ and allow android tests to fail.
+
+2 March 2020: Wouter
+	- Fix #177: dnstap does not build on macOS.
+
+28 February 2020: Ralph
+	- Merge PR #172: Add IBM s390x arch for testing, by noloader.
+
+28 February 2020: Wouter
+	- Merge PR #173: updated makedist.sh for config.guess and
+	  config.sub and sha256 digest for gpg, by noloader.
+	- Merge PR #164: Framestreams, this branch implements dnstap
+	  unidirectional connectivity in unbound. This has a number of
+	  new features.
+
+	  The dependency on libfstrm is removed. The fstrm protocol code
+	  resides in dnstap/dnstap_fstrm.h and dnstap/dnstap_fstrm.c. This
+	  contains a brief definition of what unbound needs.
+
+	  The make unbound-dnstap-socket builds a debug tool,
+	  unbound-dnstap-socket. It can listen, accept multiple DNSTAP
+	  streams and print information. Commandline options control it.
+
+	  Unbound can reconnect if the unix domain socket file socket is
+	  closed. This uses exponential backoff after which it uses a
+	  one second timer to throttle cpu down. There is also support
+	  to use TCP and TLS for connecting to the log server. There
+	  are new config options to turn them on, in the dnstap section
+	  in the man page and example config file. dnstap-ip with IP
+	  address of server for TCP or TLS use. dnstap-tls to turn
+	  on TLS. And dnstap-tls-server-name, dnstap-tls-cert-bundle,
+	  dnstap-tls-client-key-file and dnstap-tls-client-cert-file
+	  to configure the certificates for server authentication and
+	  client authentication, or leave at "" to not use that.
+
+27 February 2020: George
+	- Merge PR #171: Add additional compilers and platforms to Travis
+	  testing, by noloader.
+
+27 February 2020: Wouter
+	- Fix #169: Fix warning for daemon/remote.c output may be truncated
+	  from snprintf.
+	- Fix #170: Fix gcc undefined sanitizer signed integer overflow
+	  warning in signature expiry RFC1982 serial number arithmetic.
+	- Fix more undefined sanitizer issues, in respip copy_rrset null
+	  dname, and in the client_info_compare routine for null memcmp.
+
+26 February 2020: Wouter
+	- iana portlist updated.
+
+25 February 2020: Wouter
+	- Fix #165: Add prefer-ip4: yesno config option to prefer ipv4 for
+	  using ipv4 filters, because the hosts ip6 netblock /64 is not owned
+	  by one operator, and thus reputation is shared.
+
+24 February 2020: George
+	- Merge PR #166: Fix typo in unbound.service.in, by glitsj16.
+
 20 February 2020: Wouter
 	- Updated contrib/unbound_smf23.tar.gz with Solaris SMF service for
 	  Unbound from Yuri Voinov.

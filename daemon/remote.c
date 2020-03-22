@@ -907,7 +907,7 @@ static int
 print_ext(RES* ssl, struct ub_stats_info* s)
 {
 	int i;
-	char nm[16];
+	char nm[32];
 	const sldns_rr_descriptor* desc;
 	const sldns_lookup_table* lt;
 	/* TYPE */

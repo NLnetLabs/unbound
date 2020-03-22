@@ -1178,9 +1178,9 @@ az_insert_rr(struct auth_zone* z, uint8_t* rr, size_t rr_len,
 		return 0;
 	}
 	if(z->rpz) {
-		if(!(rpz_insert_rr(z->rpz, z->namelen, dname, dname_len, 
-			rr_type, rr_class, rr_ttl, rdata, rdatalen, rr,
-			rr_len)))
+		if(!(rpz_insert_rr(z->rpz, z->name, z->namelen, dname,
+			dname_len, rr_type, rr_class, rr_ttl, rdata, rdatalen,
+			rr, rr_len)))
 			return 0;
 	}
 	return 1;

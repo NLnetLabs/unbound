@@ -649,6 +649,7 @@ ENABLE_DNSCRYPT
 ENABLE_DNSCRYPT_XCHACHA20
 DNSTAP_OBJ
 DNSTAP_SRC
+DNSTAP_SOCKET_PATH
 opt_dnstap_socket_path
 ENABLE_DNSTAP
 PROTOC_C
@@ -884,13 +885,13 @@ enable_allsymbols
 enable_dnstap
 with_dnstap_socket_path
 with_protobuf_c
-with_libfstrm
 enable_dnscrypt
 with_libsodium
 enable_cachedb
 enable_ipsecmod
 enable_ipset
 with_libmnl
+enable_explicit_port_randomisation
 with_libunbound_only
 '
       ac_precious_vars='build_alias
@@ -1584,13 +1585,16 @@ Optional Features:
   --enable-allsymbols     export all symbols from libunbound and link binaries
                           to it, smaller install size but libunbound export
                           table is polluted by internal symbols
-  --enable-dnstap         Enable dnstap support (requires fstrm, protobuf-c)
+  --enable-dnstap         Enable dnstap support (requires protobuf-c)
   --enable-dnscrypt       Enable dnscrypt support (requires libsodium)
   --enable-cachedb        enable cachedb module that can use external cache
                           storage
   --enable-ipsecmod       Enable ipsecmod module that facilitates
                           opportunistic IPsec
   --enable-ipset          enable ipset module
+  --disable-explicit-port-randomisation
+                          disable explicit source port randomisation and rely
+                          on the kernel to provide random source ports
 
 Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
@@ -1646,7 +1650,6 @@ Optional Packages:
   --with-dnstap-socket-path=pathname
                           set default dnstap socket path
   --with-protobuf-c=path  Path where protobuf-c is installed, for dnstap
-  --with-libfstrm=path    Path where libfstrm is installed, for dnstap
   --with-libsodium=path   Path where libsodium is installed, for dnscrypt
   --with-libmnl=path      specify explicit path for libmnl.
   --with-libunbound-only  do not build daemon and tool programs
@@ -14757,6 +14760,20 @@ fi
 done
 
 
+# Check for Apple header. This uncovers TARGET_OS_IPHONE, TARGET_OS_TV or TARGET_OS_WATCH
+for ac_header in TargetConditionals.h
+do :
+  ac_fn_c_check_header_mongrel "$LINENO" "TargetConditionals.h" "ac_cv_header_TargetConditionals_h" "$ac_includes_default"
+if test "x$ac_cv_header_TargetConditionals_h" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_TARGETCONDITIONALS_H 1
+_ACEOF
+
+fi
+
+done
+
+
 # check for types.
 # Using own tests for int64* because autoconf builtin only give 32bit.
 ac_fn_c_check_type "$LINENO" "int8_t" "ac_cv_type_int8_t" "$ac_includes_default"
@@ -18301,7 +18318,7 @@ fi
 
 done
 
-for ac_func in OPENSSL_config EVP_sha1 EVP_sha256 EVP_sha512 FIPS_mode EVP_MD_CTX_new OpenSSL_add_all_digests OPENSSL_init_crypto EVP_cleanup ERR_load_crypto_strings CRYPTO_cleanup_all_ex_data ERR_free_strings RAND_cleanup DSA_SIG_set0 EVP_dss1 EVP_DigestVerify SSL_CTX_set_tlsext_ticket_key_cb EVP_aes_256_cbc EVP_EncryptInit_ex HMAC_Init_ex CRYPTO_THREADID_set_callback
+for ac_func in OPENSSL_config EVP_sha1 EVP_sha256 EVP_sha512 FIPS_mode EVP_MD_CTX_new OpenSSL_add_all_digests OPENSSL_init_crypto EVP_cleanup ENGINE_cleanup ERR_load_crypto_strings CRYPTO_cleanup_all_ex_data ERR_free_strings RAND_cleanup DSA_SIG_set0 EVP_dss1 EVP_DigestVerify SSL_CTX_set_tlsext_ticket_key_cb EVP_aes_256_cbc EVP_EncryptInit_ex HMAC_Init_ex CRYPTO_THREADID_set_callback
 do :
   as_ac_var=`$as_echo "ac_cv_func_$ac_func" | $as_tr_sh`
 ac_fn_c_check_func "$LINENO" "$ac_func" "$as_ac_var"
@@ -20996,73 +21013,6 @@ else
 
 fi
 
-
-# Check whether --with-libfstrm was given.
-if test "${with_libfstrm+set}" = set; then :
-  withval=$with_libfstrm;
-	CFLAGS="$CFLAGS -I$withval/include"
-	LDFLAGS="$LDFLAGS -L$withval/lib"
-
-fi
-
-    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing fstrm_iothr_init" >&5
-$as_echo_n "checking for library containing fstrm_iothr_init... " >&6; }
-if ${ac_cv_search_fstrm_iothr_init+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  ac_func_search_save_LIBS=$LIBS
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char fstrm_iothr_init ();
-int
-main ()
-{
-return fstrm_iothr_init ();
-  ;
-  return 0;
-}
-_ACEOF
-for ac_lib in '' fstrm; do
-  if test -z "$ac_lib"; then
-    ac_res="none required"
-  else
-    ac_res=-l$ac_lib
-    LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
-  fi
-  if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_search_fstrm_iothr_init=$ac_res
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext
-  if ${ac_cv_search_fstrm_iothr_init+:} false; then :
-  break
-fi
-done
-if ${ac_cv_search_fstrm_iothr_init+:} false; then :
-
-else
-  ac_cv_search_fstrm_iothr_init=no
-fi
-rm conftest.$ac_ext
-LIBS=$ac_func_search_save_LIBS
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_fstrm_iothr_init" >&5
-$as_echo "$ac_cv_search_fstrm_iothr_init" >&6; }
-ac_res=$ac_cv_search_fstrm_iothr_init
-if test "$ac_res" != no; then :
-  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
-
-else
-  as_fn_error $? "The fstrm library was not found. Please install fstrm!" "$LINENO" 5
-fi
-
     { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing protobuf_c_message_pack" >&5
 $as_echo_n "checking for library containing protobuf_c_message_pack... " >&6; }
 if ${ac_cv_search_protobuf_c_message_pack+:} false; then :
@@ -21136,10 +21086,12 @@ cat >>confdefs.h <<_ACEOF
 #define DNSTAP_SOCKET_PATH "$hdr_dnstap_socket_path"
 _ACEOF
 
+	DNSTAP_SOCKET_PATH="$hdr_dnstap_socket_path"
 
-        DNSTAP_SRC="dnstap/dnstap.c dnstap/dnstap.pb-c.c"
 
-        DNSTAP_OBJ="dnstap.lo dnstap.pb-c.lo"
+        DNSTAP_SRC="dnstap/dnstap.c dnstap/dnstap.pb-c.c dnstap/dnstap_fstrm.c dnstap/dtstream.c"
+
+        DNSTAP_OBJ="dnstap.lo dnstap.pb-c.lo dnstap_fstrm.lo dtstream.lo"
 
 
   else
@@ -21471,6 +21423,21 @@ $as_echo "found in $dir" >&6; }
     	# nothing
 		;;
 esac
+# Check whether --enable-explicit-port-randomisation was given.
+if test "${enable_explicit_port_randomisation+set}" = set; then :
+  enableval=$enable_explicit_port_randomisation;
+fi
+
+case "$enable_explicit_port_randomisation" in
+	no)
+
+$as_echo "#define DISABLE_EXPLICIT_PORT_RANDOMISATION 1" >>confdefs.h
+
+		;;
+	yes|*)
+		;;
+esac
+
 
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking if ${MAKE:-make} supports $< with implicit rule in scope" >&5
 $as_echo_n "checking if ${MAKE:-make} supports $< with implicit rule in scope... " >&6; }

@@ -502,10 +502,16 @@ copy_rrset(const struct ub_packed_rrset_key* key, struct regional* region)
 	ck->entry.hash = key->entry.hash;
 	ck->entry.key = ck;
 	ck->rk = key->rk;
-	ck->rk.dname = regional_alloc_init(region, key->rk.dname,
-		key->rk.dname_len);
-	if(!ck->rk.dname)
-		return NULL;
+	if(key->rk.dname) {
+		ck->rk.dname = regional_alloc_init(region, key->rk.dname,
+			key->rk.dname_len);
+		if(!ck->rk.dname)
+			return NULL;
+		ck->rk.dname_len = key->rk.dname_len;
+	} else {
+		ck->rk.dname = NULL;
+		ck->rk.dname_len = 0;
+	}
 
 	if((unsigned)data->count >= 0xffff00U)
 		return NULL; /* guard against integer overflow in dsize */

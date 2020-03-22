@@ -77,7 +77,7 @@ LINT=splint
 LINTFLAGS=+quiet -weak -warnposix -unrecog -Din_addr_t=uint32_t -Du_int=unsigned -Du_char=uint8_t -preproc -Drlimit=rlimit64 -D__gnuc_va_list=va_list -formatcode
 #-Dglob64=glob -Dglobfree64=globfree
 # compat with openssl linux edition.
-LINTFLAGS+="-DBN_ULONG=unsigned long" -Dkrb5_int32=int "-Dkrb5_ui_4=unsigned int" -DPQ_64BIT=uint64_t -DRC4_INT=unsigned -fixedformalarray -D"ENGINE=unsigned" -D"RSA=unsigned" -D"DSA=unsigned" -D"EVP_PKEY=unsigned" -D"EVP_MD=unsigned" -D"SSL=unsigned" -D"SSL_CTX=unsigned" -D"X509=unsigned" -D"RC4_KEY=unsigned" -D"EVP_MD_CTX=unsigned" -D"ECDSA_SIG=DSA_SIG" -Dfstrm_res=int
+LINTFLAGS+="-DBN_ULONG=unsigned long" -Dkrb5_int32=int "-Dkrb5_ui_4=unsigned int" -DPQ_64BIT=uint64_t -DRC4_INT=unsigned -fixedformalarray -D"ENGINE=unsigned" -D"RSA=unsigned" -D"DSA=unsigned" -D"EVP_PKEY=unsigned" -D"EVP_MD=unsigned" -D"SSL=unsigned" -D"SSL_CTX=unsigned" -D"X509=unsigned" -D"RC4_KEY=unsigned" -D"EVP_MD_CTX=unsigned" -D"ECDSA_SIG=DSA_SIG"
 # compat with NetBSD
 LINTFLAGS+=@NETBSD_LINTFLAGS@
 # compat with OpenBSD
@@ -219,7 +219,7 @@ MEMSTATS_OBJ_LINK=$(MEMSTATS_OBJ) worker_cb.lo $(COMMON_OBJ) $(COMPAT_OBJ) \
 $(SLDNS_OBJ)
 ASYNCLOOK_SRC=testcode/asynclook.c
 ASYNCLOOK_OBJ=asynclook.lo
-ASYNCLOOK_OBJ_LINK=$(ASYNCLOOK_OBJ) log.lo locks.lo $(COMPAT_OBJ) @ASYNCLOOK_ALLOCCHECK_EXTRA_OBJ@
+ASYNCLOOK_OBJ_LINK=$(ASYNCLOOK_OBJ) log.lo locks.lo $(CHECKLOCK_OBJ) $(COMPAT_OBJ) @ASYNCLOOK_ALLOCCHECK_EXTRA_OBJ@
 STREAMTCP_SRC=testcode/streamtcp.c
 STREAMTCP_OBJ=streamtcp.lo
 STREAMTCP_OBJ_LINK=$(STREAMTCP_OBJ) worker_cb.lo $(COMMON_OBJ) $(COMPAT_OBJ) \
@@ -233,6 +233,10 @@ DELAYER_OBJ_LINK=$(DELAYER_OBJ) worker_cb.lo $(COMMON_OBJ) $(COMPAT_OBJ) \
 $(SLDNS_OBJ)
 IPSET_SRC=@IPSET_SRC@
 IPSET_OBJ=@IPSET_OBJ@
+DNSTAP_SOCKET_SRC=dnstap/unbound-dnstap-socket.c
+DNSTAP_SOCKET_OBJ=unbound-dnstap-socket.lo
+DNSTAP_SOCKET_OBJ_LINK=$(DNSTAP_SOCKET_OBJ) $(COMMON_OBJ) \
+$(COMPAT_OBJ) $(SLDNS_OBJ)
 LIBUNBOUND_SRC=libunbound/context.c libunbound/libunbound.c \
 libunbound/libworker.c
 LIBUNBOUND_OBJ=context.lo libunbound.lo libworker.lo ub_event_pluggable.lo
@@ -259,7 +263,7 @@ ALL_SRC=$(COMMON_SRC) $(UNITTEST_SRC) $(DAEMON_SRC) \
 	$(TESTBOUND_SRC) $(LOCKVERIFY_SRC) $(PKTVIEW_SRC) \
 	$(MEMSTATS_SRC) $(CHECKCONF_SRC) $(LIBUNBOUND_SRC) $(HOST_SRC) \
 	$(ASYNCLOOK_SRC) $(STREAMTCP_SRC) $(PERF_SRC) $(DELAYER_SRC) \
-	$(CONTROL_SRC) $(UBANCHOR_SRC) $(PETAL_SRC) \
+	$(CONTROL_SRC) $(UBANCHOR_SRC) $(PETAL_SRC) $(DNSTAP_SOCKET_SRC)\
 	$(PYTHONMOD_SRC) $(PYUNBOUND_SRC) $(WIN_DAEMON_THE_SRC) \
 	$(SVCINST_SRC) $(SVCUNINST_SRC) $(ANCHORUPD_SRC) $(SLDNS_SRC)
 
@@ -267,7 +271,7 @@ ALL_OBJ=$(COMMON_OBJ) $(UNITTEST_OBJ) $(DAEMON_OBJ) \
 	$(TESTBOUND_OBJ) $(LOCKVERIFY_OBJ) $(PKTVIEW_OBJ) \
 	$(MEMSTATS_OBJ) $(CHECKCONF_OBJ) $(LIBUNBOUND_OBJ) $(HOST_OBJ) \
 	$(ASYNCLOOK_OBJ) $(STREAMTCP_OBJ) $(PERF_OBJ) $(DELAYER_OBJ) \
-	$(CONTROL_OBJ) $(UBANCHOR_OBJ) $(PETAL_OBJ) \
+	$(CONTROL_OBJ) $(UBANCHOR_OBJ) $(PETAL_OBJ) $(DNSTAP_SOCKET_OBJ)\
 	$(COMPAT_OBJ) $(PYUNBOUND_OBJ) \
 	$(SVCINST_OBJ) $(SVCUNINST_OBJ) $(ANCHORUPD_OBJ) $(SLDNS_OBJ)
 
@@ -306,6 +310,7 @@ rsrc_unbound_checkconf.o:	$(srcdir)/winrc/rsrc_unbound_checkconf.rc config.h
 TEST_BIN=asynclook$(EXEEXT) delayer$(EXEEXT) \
 	lock-verify$(EXEEXT) memstats$(EXEEXT) perf$(EXEEXT) \
 	petal$(EXEEXT) pktview$(EXEEXT) streamtcp$(EXEEXT) \
+	unbound-dnstap-socket$(EXEEXT) \
 	testbound$(EXEEXT) unittest$(EXEEXT)
 tests:	all $(TEST_BIN)
 
@@ -315,7 +320,7 @@ longcheck: longtest
 test:	unittest$(EXEEXT) testbound$(EXEEXT)
 	./unittest$(EXEEXT)
 	./testbound$(EXEEXT) -s
-	for x in $(srcdir)/testdata/*.rpl; do echo -n "$$x "; if ./testbound$(EXEEXT) -p $$x >/dev/null 2>&1; then echo OK; else echo failed; exit 1; fi done
+	for x in $(srcdir)/testdata/*.rpl; do printf "%s" "$$x "; if ./testbound$(EXEEXT) -p $$x >/dev/null 2>&1; then echo OK; else echo failed; exit 1; fi done
 	@echo test OK
 
 longtest:	tests
@@ -401,7 +406,13 @@ dnstap/dnstap.pb-c.c dnstap/dnstap.pb-c.h: $(srcdir)/dnstap/dnstap.proto
 	@-if test ! -d dnstap; then $(INSTALL) -d dnstap; fi
 	$(PROTOC_C) --c_out=. --proto_path=$(srcdir) $(srcdir)/dnstap/dnstap.proto
 
+unbound-dnstap-socket$(EXEEXT):	$(DNSTAP_SOCKET_OBJ_LINK)
+	$(LINK) -o $@ $(DNSTAP_SOCKET_OBJ_LINK) $(SSLLIB) $(LIBS)
+
 dnstap.pb-c.lo dnstap.pb-c.o: dnstap/dnstap.pb-c.c dnstap/dnstap.pb-c.h
+dtstream.lo dtstream.o: $(srcdir)/dnstap/dtstream.c config.h $(srcdir)/dnstap/dtstream.h
+dnstap_fstrm.lo dnstap_fstrm.o: $(srcdir)/dnstap/dnstap_fstrm.c config.h $(srcdir)/dnstap/dnstap_fstrm.h
+unbound-dnstap-socket.lo unbound-dnstap-socket.o: $(srcdir)/dnstap/unbound-dnstap-socket.c config.h $(srcdir)/dnstap/dtstream.h
 
 # dnscrypt
 dnscrypt.lo dnscrypt.o: $(srcdir)/dnscrypt/dnscrypt.c config.h \

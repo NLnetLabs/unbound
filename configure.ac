@@ -399,6 +399,9 @@ PKG_PROG_PKG_CONFIG
 # Checks for header files.
 AC_CHECK_HEADERS([stdarg.h stdbool.h netinet/in.h netinet/tcp.h sys/param.h sys/socket.h sys/un.h sys/uio.h sys/resource.h arpa/inet.h syslog.h netdb.h sys/wait.h pwd.h glob.h grp.h login_cap.h winsock2.h ws2tcpip.h endian.h sys/endian.h libkern/OSByteOrder.h sys/ipc.h sys/shm.h],,, [AC_INCLUDES_DEFAULT])
 
+# Check for Apple header. This uncovers TARGET_OS_IPHONE, TARGET_OS_TV or TARGET_OS_WATCH
+AC_CHECK_HEADERS([TargetConditionals.h])
+
 # check for types.  
 # Using own tests for int64* because autoconf builtin only give 32bit.
 AC_CHECK_TYPE(int8_t, signed char)
@@ -822,7 +825,7 @@ else
 	AC_MSG_RESULT([no])
 fi
 AC_CHECK_HEADERS([openssl/conf.h openssl/engine.h openssl/bn.h openssl/dh.h openssl/dsa.h openssl/rsa.h],,, [AC_INCLUDES_DEFAULT])
-AC_CHECK_FUNCS([OPENSSL_config EVP_sha1 EVP_sha256 EVP_sha512 FIPS_mode EVP_MD_CTX_new OpenSSL_add_all_digests OPENSSL_init_crypto EVP_cleanup ERR_load_crypto_strings CRYPTO_cleanup_all_ex_data ERR_free_strings RAND_cleanup DSA_SIG_set0 EVP_dss1 EVP_DigestVerify SSL_CTX_set_tlsext_ticket_key_cb EVP_aes_256_cbc EVP_EncryptInit_ex HMAC_Init_ex CRYPTO_THREADID_set_callback])
+AC_CHECK_FUNCS([OPENSSL_config EVP_sha1 EVP_sha256 EVP_sha512 FIPS_mode EVP_MD_CTX_new OpenSSL_add_all_digests OPENSSL_init_crypto EVP_cleanup ENGINE_cleanup ERR_load_crypto_strings CRYPTO_cleanup_all_ex_data ERR_free_strings RAND_cleanup DSA_SIG_set0 EVP_dss1 EVP_DigestVerify SSL_CTX_set_tlsext_ticket_key_cb EVP_aes_256_cbc EVP_EncryptInit_ex HMAC_Init_ex CRYPTO_THREADID_set_callback])
 
 # these check_funcs need -lssl
 BAKLIBS="$LIBS"
@@ -1215,28 +1218,29 @@ esac
 # check for libevent
 AC_ARG_WITH(libevent, AC_HELP_STRING([--with-libevent=pathname],
     [use libevent (will check /usr/local /opt/local /usr/lib /usr/pkg /usr/sfw /usr  or you can specify an explicit path). Slower, but allows use of large outgoing port ranges.]),
-    [ ],[ withval="no" ])
-if test x_$withval = x_yes -o x_$withval != x_no; then
+    [ ],[ with_libevent="no" ])
+if test "x_$with_libevent" != x_no; then
+        AC_DEFINE([USE_LIBEVENT], [1], [Define if you enable libevent])
         AC_MSG_CHECKING(for libevent)
-        if test x_$withval = x_ -o x_$withval = x_yes; then
-            withval="/usr/local /opt/local /usr/lib /usr/pkg /usr/sfw /usr"
+        if test "x_$with_libevent" = x_ -o "x_$with_libevent" = x_yes; then
+            with_libevent="/usr/local /opt/local /usr/lib /usr/pkg /usr/sfw /usr"
         fi
-        for dir in $withval; do
+        for dir in $with_libevent; do
             thedir="$dir"
             if test -f "$dir/include/event.h" -o -f "$dir/include/event2/event.h"; then
                 found_libevent="yes"
-		dnl assume /usr is in default path.
-		if test "$thedir" != "/usr"; then
-                    CPPFLAGS="$CPPFLAGS -I$thedir/include"
-		fi
-                break;
-            fi
+				dnl assume /usr is in default path.
+				if test "$thedir" != "/usr"; then
+				    CPPFLAGS="$CPPFLAGS -I$thedir/include"
+				fi
+				break;
+		    fi
         done
         if test x_$found_libevent != x_yes; then
 		if test -f "$dir/event.h" -a \( -f "$dir/libevent.la" -o -f "$dir/libev.la" \) ; then
 			# libevent source directory
-            		AC_MSG_RESULT(found in $thedir)
-                	CPPFLAGS="$CPPFLAGS -I$thedir -I$thedir/include"
+			AC_MSG_RESULT(found in $thedir)
+			CPPFLAGS="$CPPFLAGS -I$thedir -I$thedir/include"
 			BAK_LDFLAGS_SET="1"
 			BAK_LDFLAGS="$LDFLAGS"
 			# remove evdns from linking
@@ -1249,10 +1253,10 @@ if test x_$withval = x_yes -o x_$withval != x_no; then
 			cp $ev_files_o build/libevent
 			cp $ev_files_lo build/libevent
 			cp $ev_files_libso build/libevent/.libs
-            		LATE_LDFLAGS="build/libevent/*.lo -lm"
+			LATE_LDFLAGS="build/libevent/*.lo -lm"
 			LDFLAGS="build/libevent/*.o $LDFLAGS -lm"
 		else
-            		AC_MSG_ERROR([Cannot find the libevent library in $withval
+            AC_MSG_ERROR([Cannot find the libevent library in $with_libevent
 You can restart ./configure --with-libevent=no to use a builtin alternative.
 Please note that this alternative is not as capable as libevent when using
 large outgoing port ranges.  ])
@@ -1688,9 +1692,10 @@ dt_DNSTAP([$UNBOUND_RUN_DIR/dnstap.sock],
         ACX_ESCAPE_BACKSLASH($opt_dnstap_socket_path, hdr_dnstap_socket_path)
         AC_DEFINE_UNQUOTED(DNSTAP_SOCKET_PATH,
             ["$hdr_dnstap_socket_path"], [default dnstap socket path])
+	AC_SUBST(DNSTAP_SOCKET_PATH,["$hdr_dnstap_socket_path"])
 
-        AC_SUBST([DNSTAP_SRC], ["dnstap/dnstap.c dnstap/dnstap.pb-c.c"])
-        AC_SUBST([DNSTAP_OBJ], ["dnstap.lo dnstap.pb-c.lo"])
+        AC_SUBST([DNSTAP_SRC], ["dnstap/dnstap.c dnstap/dnstap.pb-c.c dnstap/dnstap_fstrm.c dnstap/dtstream.c"])
+        AC_SUBST([DNSTAP_OBJ], ["dnstap.lo dnstap.pb-c.lo dnstap_fstrm.lo dtstream.lo"])
     ],
     [
         AC_SUBST([ENABLE_DNSTAP], [0])
@@ -1778,6 +1783,15 @@ case "$enable_ipset" in
     	# nothing
 		;;
 esac
+AC_ARG_ENABLE(explicit-port-randomisation, AC_HELP_STRING([--disable-explicit-port-randomisation], [disable explicit source port randomisation and rely on the kernel to provide random source ports]))
+case "$enable_explicit_port_randomisation" in
+	no)
+		AC_DEFINE([DISABLE_EXPLICIT_PORT_RANDOMISATION], [1], [Define this to enable kernel based UDP source port randomization.])
+		;;
+	yes|*)
+		;;
+esac
+
 
 AC_MSG_CHECKING([if ${MAKE:-make} supports $< with implicit rule in scope])
 # on openBSD, the implicit rule make $< work.
