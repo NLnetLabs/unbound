@@ -798,12 +798,13 @@ calc_edns_field_size(struct edns_data* edns)
 	return 1 + 2 + 2 + 4 + 2 + rdatalen;
 }
 
-void
-attach_edns_record(sldns_buffer* pkt, struct edns_data* edns)
+static void
+attach_edns_record_(sldns_buffer* pkt, struct edns_data* edns, uint16_t udpsize)
 {
 	size_t len;
 	size_t rdatapos;
 	struct edns_option* opt;
+	struct edns_option* padding_opt = NULL;
 	if(!edns || !edns->edns_present)
 		return;
 	/* inc additional count */
@@ -823,15 +824,40 @@ attach_edns_record(sldns_buffer* pkt, struct edns_data* edns)
 	sldns_buffer_write_u16(pkt, 0); /* rdatalen */
 	/* write rdata */
 	for(opt=edns->opt_list; opt; opt=opt->next) {
+		if (opt->opt_code == LDNS_EDNS_PADDING) {
+			padding_opt = opt;
+			continue;
+		}
 		sldns_buffer_write_u16(pkt, opt->opt_code);
 		sldns_buffer_write_u16(pkt, opt->opt_len);
 		if(opt->opt_len != 0)
 			sldns_buffer_write(pkt, opt->opt_data, opt->opt_len);
 	}
+	if (padding_opt) {
+		size_t pad_pos = sldns_buffer_position(pkt);
+		size_t max_sz = pad_pos + 4 - len + udpsize;
+		size_t msg_sz = ((pad_pos + 3) / 468 + 1) * 468;
+		size_t pad_sz = msg_sz - pad_pos - 4;
+
+		sldns_buffer_write_u16(pkt, LDNS_EDNS_PADDING);
+		sldns_buffer_write_u16(pkt, pad_sz);
+		if (pad_sz) {
+			(void) memset(sldns_buffer_current(pkt), 0, pad_sz);
+			sldns_buffer_skip(pkt, pad_sz);
+		}
+	}
 	if(edns->opt_list)
 		sldns_buffer_write_u16_at(pkt, rdatapos, 
 			sldns_buffer_position(pkt)-rdatapos-2);
 	sldns_buffer_flip(pkt);
+}
+
+void
+attach_edns_record(sldns_buffer* pkt, struct edns_data* edns)
+{
+	if(!edns || !edns->edns_present)
+		return;
+	attach_edns_record_(pkt, edns, edns->udp_size - calc_edns_field_size(edns));
 }
 
 int 
@@ -882,7 +908,7 @@ reply_info_answer_encode(struct query_info* qinf, struct reply_info* rep,
 	}
 	if(attach_edns && sldns_buffer_capacity(pkt) >=
 		sldns_buffer_limit(pkt)+attach_edns)
-		attach_edns_record(pkt, edns);
+		attach_edns_record_(pkt, edns, udpsize);
 	return 1;
 }
 
@@ -939,13 +965,13 @@ error_encode(sldns_buffer* buf, int r, struct query_info* qinfo,
 	sldns_buffer_flip(buf);
 	if(edns) {
 		struct edns_data es = *edns;
+		size_t edns_field_size = calc_edns_field_size(&es);
 		es.edns_version = EDNS_ADVERTISED_VERSION;
 		es.udp_size = EDNS_ADVERTISED_SIZE;
 		es.ext_rcode = 0;
 		es.bits &= EDNS_DO;
-		if(sldns_buffer_limit(buf) + calc_edns_field_size(&es) >
-			edns->udp_size)
+		if(sldns_buffer_limit(buf) + edns_field_size > edns->udp_size)
 			return;
-		attach_edns_record(buf, &es);
+		attach_edns_record_(buf, &es, edns->udp_size - edns_field_size);
 	}
 }

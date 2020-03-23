@@ -203,6 +203,20 @@ static int edns_cookie(struct edns_data* edns_out, struct edns_data* edns_in,
 	return 1;
 }
 
+static int edns_padding(struct edns_data* edns_out, struct edns_data* edns_in,
+		struct comm_point* c, struct regional* region)
+{
+	if(c->type == comm_udp)
+		return 1;
+
+	if(edns_opt_list_find(edns_in->opt_list, LDNS_EDNS_PADDING)) {
+		if(!edns_opt_list_append(&edns_out->opt_list,
+					LDNS_EDNS_PADDING, 0, NULL, region))
+			return 0;
+	}
+	return 1;
+}
+
 int apply_edns_options(struct edns_data* edns_out, struct edns_data* edns_in,
 	struct config_file* cfg, struct comm_point* c,
 	struct comm_reply *repinfo, time_t now, struct regional* region)
@@ -212,6 +226,9 @@ int apply_edns_options(struct edns_data* edns_out, struct edns_data* edns_in,
 		return 0;
 
 	if(!edns_cookie(edns_out, edns_in, cfg, c, repinfo, now, region))
+		return 0;
+
+	if(!edns_padding(edns_out, edns_in, c, region))
 		return 0;
 
 	return 1;
