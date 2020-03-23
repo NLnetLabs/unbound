@@ -1,3 +1,6 @@
+23 March 2020: Wouter
+	- Fix compile on Solaris for unbound-checkconf.
+
 20 March 2020: George
 	- Merge PR #198 from fobser: Declare lz_enter_rr_into_zone() static, it's
 	  only used in this file.
