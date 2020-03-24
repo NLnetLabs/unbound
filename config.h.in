@@ -28,6 +28,9 @@
 /* Whether daemon is deprecated */
 #undef DEPRECATED_DAEMON
 
+/* Define this to enable kernel based UDP source port randomization. */
+#undef DISABLE_EXPLICIT_PORT_RANDOMISATION
+
 /* default dnstap socket path */
 #undef DNSTAP_SOCKET_PATH
 
@@ -811,9 +814,8 @@
 /* Define to 1 to use ipset support */
 #undef USE_IPSET
 
-/* Define to 1 to disable explict UDP source port randomisation and rely on the
-   kernel to provide random source ports */
-#undef DISABLE_EXPLICIT_PORT_RANDOMISATION
+/* Define if you enable libevent */
+#undef USE_LIBEVENT
 
 /* Define if you want to use internal select based events */
 #undef USE_MINI_EVENT

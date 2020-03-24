@@ -875,7 +875,8 @@ create_tcp_accept_sock(struct addrinfo *addr, int v6only, int* noproto,
 }
 
 char*
-set_ip_dscp(int socket, int addrfamily, int dscp) {
+set_ip_dscp(int socket, int addrfamily, int dscp)
+{
 	int ds;
 
 	if(dscp == 0)
@@ -885,32 +886,38 @@ set_ip_dscp(int socket, int addrfamily, int dscp) {
 	case AF_INET6:
 		if(setsockopt(socket, IPPROTO_IPV6, IPV6_TCLASS, &ds, sizeof(ds)) < 0)
 			return sock_strerror(errno);
+		break;
 	default:
 		if(setsockopt(socket, IPPROTO_IP, IP_TOS, &ds, sizeof(ds)) < 0)
 			return sock_strerror(errno);
+		break;
 	}
 	return NULL;
 }
 
 #  ifndef USE_WINSOCK
 char*
-sock_strerror(int errn){
-	return strerror(errno);
+sock_strerror(int errn)
+{
+	return strerror(errn);
 }
 
 void
-sock_close(int socket) {
+sock_close(int socket)
+{
 	close(socket);
 }
 
 #  else
 char*
-sock_strerror(int errn){
-	return wsa_strerror(WSAGetLastError()))
+sock_strerror(int ATTR_UNUSED(errn))
+{
+	return wsa_strerror(WSAGetLastError());
 }
 
 void
-sock_close(int socket) {
+sock_close(int socket)
+{
 	closesocket(socket);
 }
 

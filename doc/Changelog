@@ -1,6 +1,7 @@
 24 March 2020: Wouter
 	- Merge PR #200 from yarikk: add ip-dscp option to specify the DSCP
 	  tag for outgoing packets.
+	- Fixes on #200.
 
 23 March 2020: Wouter
 	- Fix compile on Solaris for unbound-checkconf.
