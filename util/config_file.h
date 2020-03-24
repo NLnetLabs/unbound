@@ -188,6 +188,8 @@ struct config_file {
 	int ip_transparent;
 	/** IP_FREEBIND socket option request on port 53 sockets */
 	int ip_freebind;
+	/** IP_TOS socket option requested on port 53 sockets */
+	int ip_dscp;
 
 	/** number of interfaces to open. If 0 default all interfaces. */
 	int num_ifs;

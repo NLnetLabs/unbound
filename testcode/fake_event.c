@@ -1031,6 +1031,7 @@ outside_network_create(struct comm_base* base, size_t bufsize,
 	size_t ATTR_UNUSED(num_ports), char** ATTR_UNUSED(ifs), 
 	int ATTR_UNUSED(num_ifs), int ATTR_UNUSED(do_ip4), 
 	int ATTR_UNUSED(do_ip6), size_t ATTR_UNUSED(num_tcp), 
+	int ATTR_UNUSED(dscp),
 	struct infra_cache* infra,
 	struct ub_randstate* ATTR_UNUSED(rnd), 
 	int ATTR_UNUSED(use_caps_for_id), int* ATTR_UNUSED(availports),
@@ -1583,7 +1584,7 @@ int create_udp_sock(int ATTR_UNUSED(family), int ATTR_UNUSED(socktype),
 	int* ATTR_UNUSED(noproto), int ATTR_UNUSED(rcv), int ATTR_UNUSED(snd),
 	int ATTR_UNUSED(listen), int* ATTR_UNUSED(reuseport),
 	int ATTR_UNUSED(transparent), int ATTR_UNUSED(freebind),
-	int ATTR_UNUSED(use_systemd))
+	int ATTR_UNUSED(use_systemd), int ATTR_UNUSED(dscp))
 {
 	/* if you actually print to this, it'll be stdout during test */
 	return 1;
@@ -1790,7 +1791,7 @@ int comm_point_send_udp_msg(struct comm_point *c, sldns_buffer* packet,
 }
 
 int outnet_get_tcp_fd(struct sockaddr_storage* ATTR_UNUSED(addr),
-	socklen_t ATTR_UNUSED(addrlen), int ATTR_UNUSED(tcp_mss))
+	socklen_t ATTR_UNUSED(addrlen), int ATTR_UNUSED(tcp_mss), int ATTR_UNUSED(dscp))
 {
 	log_assert(0);
 	return -1;

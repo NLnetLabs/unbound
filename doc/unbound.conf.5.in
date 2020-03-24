@@ -323,6 +323,12 @@ IP addresses that are nonlocal or do not exist, like when the network
 interface or IP address is down.  Exists only on Linux, where the similar
 ip\-transparent option is also available.
 .TP
+.B ip-dscp: \fI<number>
+The value of the Differentiated Services Codepoint (DSCP) in the
+differentiated services field (DS) of the outgoing IP packet headers.
+The field replaces the outdated IPv4 Type-Of-Service field and the
+IPV6 traffic class field.
+.TP
 .B rrset\-cache\-size: \fI<number>
 Number of bytes size of the RRset cache. Default is 4 megabytes.
 A plain number is in bytes, append 'k', 'm' or 'g' for kilobytes, megabytes
