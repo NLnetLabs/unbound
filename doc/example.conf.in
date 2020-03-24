@@ -119,6 +119,11 @@ server:
 	# Linux only.  On Linux you also have ip-transparent that is similar.
 	# ip-freebind: no
 
+	# the value of the Differentiated Services Codepoint (DSCP)
+	# in the differentiated services field (DS) of the outgoing
+	# IP packets
+	# ip-dscp: 0
+
 	# EDNS reassembly buffer to advertise to UDP peers (the actual buffer
 	# is set with msg-buffer-size). 1472 can solve fragmentation (timeouts)
 	# edns-buffer-size: 4096

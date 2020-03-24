@@ -525,6 +525,7 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	else S_YNO("so-reuseport:", so_reuseport)
 	else S_YNO("ip-transparent:", ip_transparent)
 	else S_YNO("ip-freebind:", ip_freebind)
+	else S_NUMBER_OR_ZERO("ip-dscp:", ip_dscp)
 	else S_MEMSIZE("rrset-cache-size:", rrset_cache_size)
 	else S_POW2("rrset-cache-slabs:", rrset_cache_slabs)
 	else S_YNO("prefetch:", prefetch)
