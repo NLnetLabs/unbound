@@ -2,6 +2,7 @@
 	- Merge PR #200 from yarikk: add ip-dscp option to specify the DSCP
 	  tag for outgoing packets.
 	- Fixes on #200.
+	- Travis fix for ios by omitting tools from install.
 
 23 March 2020: Wouter
 	- Fix compile on Solaris for unbound-checkconf.
