@@ -1,3 +1,6 @@
+26 March 2020: Ralph
+	- Fix RPZ concurrency issue when using auth_zone_reload.
+
 25 March 2020: George
 	- Merge PR #201 from noloader: Fix OpenSSL cross-compaile warnings.
 	- Fix on #201.

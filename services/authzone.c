@@ -392,12 +392,12 @@ auth_zone_delete(struct auth_zone* z, struct auth_zones* az)
 	if(az && z->rpz) {
 		/* keep RPZ linked list intact */
 		lock_rw_wrlock(&az->rpz_lock);
-		if(z->rpz->prev)
-			z->rpz->prev->next = z->rpz->next;
+		if(z->rpz_az_prev)
+			z->rpz_az_prev->rpz_az_next = z->rpz_az_next;
 		else
-			az->rpz_first = z->rpz->next;
-		if(z->rpz->next)
-			z->rpz->next->prev = z->rpz->prev;
+			az->rpz_first = z->rpz_az_next;
+		if(z->rpz_az_next)
+			z->rpz_az_next->rpz_az_prev = z->rpz_az_prev;
 		lock_rw_unlock(&az->rpz_lock);
 	}
 	if(z->rpz)
@@ -426,9 +426,11 @@ auth_zone_create(struct auth_zones* az, uint8_t* nm, size_t nmlen,
 	}
 	rbtree_init(&z->data, &auth_data_cmp);
 	lock_rw_init(&z->lock);
-	lock_protect(&z->lock, &z->name, sizeof(*z)-sizeof(rbnode_type));
+	lock_protect(&z->lock, &z->name, sizeof(*z)-sizeof(rbnode_type)-
+			sizeof(&z->rpz_az_next)-sizeof(&z->rpz_az_prev));
 	lock_rw_wrlock(&z->lock);
-	/* z lock protects all, except rbtree itself, which is az->lock */
+	/* z lock protects all, except rbtree itself and the rpz linked list
+	 * pointers, which are protected using az->lock */
 	if(!rbtree_insert(&az->ztree, &z->node)) {
 		lock_rw_unlock(&z->lock);
 		auth_zone_delete(z, NULL);
@@ -1897,11 +1899,12 @@ auth_zones_cfg(struct auth_zones* az, struct config_auth* c)
 			fatal_exit("Could not setup RPZ zones");
 			return 0;
 		}
+		lock_protect(&z->lock, &z->rpz->local_zones, sizeof(*z->rpz));
 		lock_rw_wrlock(&az->rpz_lock);
-		z->rpz->next = az->rpz_first;
+		z->rpz_az_next = az->rpz_first;
 		if(az->rpz_first)
-			az->rpz_first->prev = z->rpz;
-		az->rpz_first = z->rpz;
+			az->rpz_first->rpz_az_prev = z;
+		az->rpz_first = z;
 		lock_rw_unlock(&az->rpz_lock);
 	}
 
