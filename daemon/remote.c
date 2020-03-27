@@ -1124,6 +1124,10 @@ parse_arg_name(RES* ssl, char* str, uint8_t** res, size_t* len, int* labs)
 	*res = NULL;
 	*len = 0;
 	*labs = 0;
+	if(str[0] == '\0') {
+		ssl_printf(ssl, "error: this option requires a domain name\n");
+		return 0;
+	}
 	status = sldns_str2wire_dname_buf(str, nm, &nmlen);
 	if(status != 0) {
 		ssl_printf(ssl, "error cannot parse name %s at %d: %s\n", str,
