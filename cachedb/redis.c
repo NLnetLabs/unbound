@@ -249,16 +249,32 @@ redis_lookup(struct module_env* env, struct cachedb_env* cachedb_env,
 
 static void
 redis_store(struct module_env* env, struct cachedb_env* cachedb_env,
-	char* key, uint8_t* data, size_t data_len)
+	char* key, uint8_t* data, size_t data_len, uint64_t ttl)
 {
 	redisReply* rep;
-	char cmdbuf[4+(CACHEDB_HASHSIZE/8)*2+3+1]; /* "SET " + key + " %b" */
 	int n;
+	int size;
 
-	verbose(VERB_ALGO, "redis_store %s (%d bytes)", key, (int)data_len);
+	if (env->cfg->serve_expired) {
+		size = 4+(CACHEDB_HASHSIZE/8)*2+3+1;
+	}
+	else {
+		size = 4+(CACHEDB_HASHSIZE/8)*2+3+4+sizeof(uint64_t)+1;
+	}
 
-	/* build command to set to a binary safe string */
-	n = snprintf(cmdbuf, sizeof(cmdbuf), "SET %s %%b", key);
+	char cmdbuf[size]; /* "SET " + key + " %b EX " + ttl */
+
+	if (env->cfg->serve_expired) {
+		verbose(VERB_ALGO, "redis_store %s (%d bytes)", key, (int)data_len);
+		/* build command to set to a binary safe string */
+		n = snprintf(cmdbuf, sizeof(cmdbuf), "SET %s %%b EX %d", key, ttl);
+	}
+	else {
+		verbose(VERB_ALGO, "redis_store %s (%d bytes) with ttl %d", key, (int)data_len, ttl);
+		/* build command to set to a binary safe string */
+		n = snprintf(cmdbuf, sizeof(cmdbuf), "SET %s %%b EX %d", key, ttl);
+	}
+
 	if(n < 0 || n >= (int)sizeof(cmdbuf)) {
 		log_err("redis_store: unexpected failure to build command");
 		return;
