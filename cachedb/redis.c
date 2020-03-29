@@ -47,6 +47,7 @@
 #include "util/alloc.h"
 #include "util/config_file.h"
 #include "sldns/sbuffer.h"
+#include <stdbool.h>
 
 #ifdef USE_REDIS
 #include "hiredis/hiredis.h"
@@ -254,8 +255,13 @@ redis_store(struct module_env* env, struct cachedb_env* cachedb_env,
 	redisReply* rep;
 	int n;
 	int size;
+	bool set_ttl = !env->cfg->serve_expired || env->cfg->serve_expired_ttl > 0;
 
-	if (env->cfg->serve_expired) {
+        if (env->cfg->serve_expired_ttl > 0) {
+		ttl += env->cfg->serve_expired_ttl;
+	}
+
+	if (!set_ttl) {
 		size = 4+(CACHEDB_HASHSIZE/8)*2+3+1;
 	}
 	else {
@@ -264,10 +270,10 @@ redis_store(struct module_env* env, struct cachedb_env* cachedb_env,
 
 	char cmdbuf[size]; /* "SET " + key + " %b EX " + ttl */
 
-	if (env->cfg->serve_expired) {
+	if (!set_ttl) {
 		verbose(VERB_ALGO, "redis_store %s (%d bytes)", key, (int)data_len);
 		/* build command to set to a binary safe string */
-		n = snprintf(cmdbuf, sizeof(cmdbuf), "SET %s %%b EX %d", key, ttl);
+		n = snprintf(cmdbuf, sizeof(cmdbuf), "SET %s %%b", key);
 	}
 	else {
 		verbose(VERB_ALGO, "redis_store %s (%d bytes) with ttl %d", key, (int)data_len, ttl);
