@@ -126,9 +126,12 @@ interface and port number), if not specified the default port (from
 Same as interface: (for ease of compatibility with nsd.conf).
 .TP
 .B interface\-automatic: \fI<yes or no>
-Detect source interface on UDP queries and copy them to replies.  This
-feature is experimental, and needs support in your OS for particular socket
-options.  Default value is no.
+Listen on all addresses on all (current and future) interfaces, detect the
+source interface on UDP queries and copy them to replies.  This is a lot like
+ip-transparent, but this option services all interfaces whilst with
+ip-transparent you can select which (future) interfaces unbound provides
+service on.  This feature is experimental, and needs support in your OS for
+particular socket options.  Default value is no.
 .TP
 .B outgoing\-interface: \fI<ip address or ip6 netblock>
 Interface to use to connect to the network. This interface is used to send
