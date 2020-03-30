@@ -3153,18 +3153,21 @@ comm_point_send_reply(struct comm_reply *repinfo)
 			&repinfo->addr, repinfo->c->type, repinfo->c->buffer);
 #endif
 	} else {
+#ifdef USE_DNSTAP
+		if(repinfo->c->tcp_parent->dtenv != NULL &&
+		   repinfo->c->tcp_parent->dtenv->log_client_response_messages)
+			dt_msg_send_client_response(repinfo->c->tcp_parent->dtenv,
+			&repinfo->addr, repinfo->c->type,
+			( repinfo->c->tcp_req_info
+			? repinfo->c->tcp_req_info->spool_buffer
+			: repinfo->c->buffer ));
+#endif
 		if(repinfo->c->tcp_req_info) {
 			tcp_req_info_send_reply(repinfo->c->tcp_req_info);
 		} else {
 			comm_point_start_listening(repinfo->c, -1,
 				repinfo->c->tcp_timeout_msec);
 		}
-#ifdef USE_DNSTAP
-		if(repinfo->c->tcp_parent->dtenv != NULL &&
-		   repinfo->c->tcp_parent->dtenv->log_client_response_messages)
-			dt_msg_send_client_response(repinfo->c->tcp_parent->dtenv,
-			&repinfo->addr, repinfo->c->type, repinfo->c->buffer);
-#endif
 	}
 }
 
