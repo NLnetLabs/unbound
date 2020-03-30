@@ -128,8 +128,8 @@ Same as interface: (for ease of compatibility with nsd.conf).
 .B interface\-automatic: \fI<yes or no>
 Listen on all addresses on all (current and future) interfaces, detect the
 source interface on UDP queries and copy them to replies.  This is a lot like
-ip-transparent, but this option services all interfaces whilst with
-ip-transparent you can select which (future) interfaces unbound provides
+ip\-transparent, but this option services all interfaces whilst with
+ip\-transparent you can select which (future) interfaces unbound provides
 service on.  This feature is experimental, and needs support in your OS for
 particular socket options.  Default value is no.
 .TP
