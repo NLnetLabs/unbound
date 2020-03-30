@@ -1,5 +1,7 @@
 30 March 2020: Wouter
 	- Merge PR #207: Clarify if-automatic listens on 0.0.0.0 and ::
+	- Merge PR #208: Fix uncached CLIENT_RESPONSE'es on stateful
+	  transports.
 
 27 March 2020: Wouter
 	- Merge PR #203 from noloader: Update README-Travis.md with current
