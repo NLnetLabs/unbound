@@ -1,3 +1,6 @@
+30 March 2020: Wouter
+	- Merge PR #207: Clarify if-automatic listens on 0.0.0.0 and ::
+
 27 March 2020: Wouter
 	- Merge PR #203 from noloader: Update README-Travis.md with current
 	  procedures.
