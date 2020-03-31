@@ -598,6 +598,8 @@ struct config_file {
 	int redis_server_port;
 	/** timeout (in ms) for communication with the redis server */
 	int redis_timeout;
+	/** set redis ttl value based on dns response ttl */
+	int redis_set_ttl;
 #endif
 #endif
 

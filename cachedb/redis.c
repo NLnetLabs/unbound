@@ -47,7 +47,6 @@
 #include "util/alloc.h"
 #include "util/config_file.h"
 #include "sldns/sbuffer.h"
-#include <stdbool.h>
 
 #ifdef USE_REDIS
 #include "hiredis/hiredis.h"
@@ -59,6 +58,9 @@ struct redis_moddata {
 	int server_port;	 /* server's TCP port */
 	struct timeval timeout;	 /* timeout for connection setup and commands */
 };
+
+static redisReply* redis_command(struct module_env*, struct cachedb_env*,
+	const char*, const uint8_t*, size_t);
 
 static redisContext*
 redis_connect(const struct redis_moddata* moddata)
@@ -91,6 +93,7 @@ redis_init(struct module_env* env, struct cachedb_env* cachedb_env)
 {
 	int i;
 	struct redis_moddata* moddata = NULL;
+	redisReply* rep;
 
 	verbose(VERB_ALGO, "redis_init");
 
@@ -115,6 +118,24 @@ redis_init(struct module_env* env, struct cachedb_env* cachedb_env)
 	for(i = 0; i < moddata->numctxs; i++)
 		moddata->ctxs[i] = redis_connect(moddata);
 	cachedb_env->backend_data = moddata;
+
+	if (env->cfg->redis_set_ttl) {
+		/** check if setex command is supported */
+		rep = redis_command(env, cachedb_env, "SETEX __UNBOUND_REDIS_CHECK__ 1 none", NULL, 0);
+		if(!rep)
+			/** init failed, no response from redis server*/
+			log_err("redis_init: failed to init redis, could not connect to server");
+			return 0;
+		switch (rep->type) {
+		case REDIS_REPLY_ERROR:
+			/** init failed, setex command not supported */
+			log_err("redis_init: failed to init redis, setex command not supported?");
+			return 0;
+		default:
+			break;
+		}
+	}
+
 	return 1;
 }
 
@@ -250,25 +271,12 @@ redis_lookup(struct module_env* env, struct cachedb_env* cachedb_env,
 
 static void
 redis_store(struct module_env* env, struct cachedb_env* cachedb_env,
-	char* key, uint8_t* data, size_t data_len, uint64_t ttl)
+	char* key, uint8_t* data, size_t data_len, time_t ttl)
 {
 	redisReply* rep;
 	int n;
-	int size;
-	bool set_ttl = !env->cfg->serve_expired || env->cfg->serve_expired_ttl > 0;
-
-        if (env->cfg->serve_expired_ttl > 0) {
-		ttl += env->cfg->serve_expired_ttl;
-	}
-
-	if (!set_ttl) {
-		size = 4+(CACHEDB_HASHSIZE/8)*2+3+1;
-	}
-	else {
-		size = 4+(CACHEDB_HASHSIZE/8)*2+3+4+sizeof(uint64_t)+1;
-	}
-
-	char cmdbuf[size]; /* "SET " + key + " %b EX " + ttl */
+	int set_ttl = (int)(env->cfg->redis_set_ttl && (!env->cfg->serve_expired || env->cfg->serve_expired_ttl > 0));
+	char cmdbuf[4+(CACHEDB_HASHSIZE/8)*2+3+((2+11)*set_ttl)+1]; /* "SETEX " + key + " " + ttl + " %b" */ 
 
 	if (!set_ttl) {
 		verbose(VERB_ALGO, "redis_store %s (%d bytes)", key, (int)data_len);
@@ -276,10 +284,13 @@ redis_store(struct module_env* env, struct cachedb_env* cachedb_env,
 		n = snprintf(cmdbuf, sizeof(cmdbuf), "SET %s %%b", key);
 	}
 	else {
-		verbose(VERB_ALGO, "redis_store %s (%d bytes) with ttl %d", key, (int)data_len, ttl);
+		/* add expired ttl time to redis ttl to avoid premature eviction of key */
+		ttl += env->cfg->serve_expired_ttl;
+		verbose(VERB_ALGO, "redis_store %s (%d bytes) with ttl %u", key, (int)data_len, (uint32_t)ttl);
 		/* build command to set to a binary safe string */
-		n = snprintf(cmdbuf, sizeof(cmdbuf), "SET %s %%b EX %d", key, ttl);
+		n = snprintf(cmdbuf, sizeof(cmdbuf), "SETEX %s %u %%b", key, (uint32_t)ttl);
 	}
+
 
 	if(n < 0 || n >= (int)sizeof(cmdbuf)) {
 		log_err("redis_store: unexpected failure to build command");
