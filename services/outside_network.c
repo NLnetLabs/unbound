@@ -1577,6 +1577,7 @@ serviced_encode(struct serviced_query* sq, sldns_buffer* buff, int with_edns)
 	if(with_edns) {
 		/* add edns section */
 		struct edns_data edns;
+		struct edns_option padding_option;
 		edns.edns_present = 1;
 		edns.ext_rcode = 0;
 		edns.edns_version = EDNS_ADVERTISED_VERSION;
@@ -1599,6 +1600,15 @@ serviced_encode(struct serviced_query* sq, sldns_buffer* buff, int with_edns)
 			edns.bits = EDNS_DO;
 		if(sq->dnssec & BIT_CD)
 			LDNS_CD_SET(sldns_buffer_begin(buff));
+		if (sq->ssl_upstream) {
+			padding_option.opt_code = LDNS_EDNS_PADDING;
+			padding_option.opt_len = 0;
+			padding_option.opt_data = NULL;
+			padding_option.next = edns.opt_list;
+			edns.opt_list = &padding_option;
+			fprintf(stderr, "add padding, pos: %d, limit: %d\n",
+			    (int)sldns_buffer_position(buff), (int)sldns_buffer_limit(buff));
+		}
 		attach_edns_record(buff, &edns);
 	}
 }

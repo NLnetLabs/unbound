@@ -834,9 +834,12 @@ attach_edns_record_(sldns_buffer* pkt, struct edns_data* edns, uint16_t udpsize)
 			sldns_buffer_write(pkt, opt->opt_data, opt->opt_len);
 	}
 	if (padding_opt) {
+		size_t block_sz = LDNS_QR_WIRE(sldns_buffer_begin(pkt))
+		                ? EDNS_PADDING_RESPONSE_BLOCK_SIZE
+				: EDNS_PADDING_QUERY_BLOCK_SIZE;
 		size_t pad_pos = sldns_buffer_position(pkt);
 		size_t max_sz = pad_pos + 4 - len + udpsize;
-		size_t msg_sz = ((pad_pos + 3) / 468 + 1) * 468;
+		size_t msg_sz = ((pad_pos + 3) / block_sz + 1) * block_sz;
 		size_t pad_sz = msg_sz - pad_pos - 4;
 
 		sldns_buffer_write_u16(pkt, LDNS_EDNS_PADDING);
