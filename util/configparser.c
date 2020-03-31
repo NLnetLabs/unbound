@@ -381,7 +381,7 @@ extern int yydebug;
     VAR_CACHEDB_REDISHOST = 503,
     VAR_CACHEDB_REDISPORT = 504,
     VAR_CACHEDB_REDISTIMEOUT = 505,
-    VAR_CACHEDB_REDISSETTTL = 506,
+    VAR_CACHEDB_REDISEXPIRERECORDS = 506,
     VAR_UDP_UPSTREAM_WITHOUT_DOWNSTREAM = 507,
     VAR_FOR_UPSTREAM = 508,
     VAR_AUTH_ZONE = 509,
@@ -668,7 +668,7 @@ extern int yydebug;
 #define VAR_CACHEDB_REDISHOST 503
 #define VAR_CACHEDB_REDISPORT 504
 #define VAR_CACHEDB_REDISTIMEOUT 505
-#define VAR_CACHEDB_REDISSETTTL 506
+#define VAR_CACHEDB_REDISEXPIRERECORDS 506
 #define VAR_UDP_UPSTREAM_WITHOUT_DOWNSTREAM 507
 #define VAR_FOR_UPSTREAM 508
 #define VAR_AUTH_ZONE 509
@@ -1207,7 +1207,7 @@ static const char *const yytname[] =
   "VAR_IPSECMOD_MAX_TTL", "VAR_IPSECMOD_WHITELIST", "VAR_IPSECMOD_STRICT",
   "VAR_CACHEDB", "VAR_CACHEDB_BACKEND", "VAR_CACHEDB_SECRETSEED",
   "VAR_CACHEDB_REDISHOST", "VAR_CACHEDB_REDISPORT",
-  "VAR_CACHEDB_REDISTIMEOUT", "VAR_CACHEDB_REDISSETTTL",
+  "VAR_CACHEDB_REDISTIMEOUT", "VAR_CACHEDB_REDISEXPIRERECORDS",
   "VAR_UDP_UPSTREAM_WITHOUT_DOWNSTREAM", "VAR_FOR_UPSTREAM",
   "VAR_AUTH_ZONE", "VAR_ZONEFILE", "VAR_MASTER", "VAR_URL",
   "VAR_FOR_DOWNSTREAM", "VAR_FALLBACK_ENABLED", "VAR_TLS_ADDITIONAL_PORT",
@@ -1342,7 +1342,7 @@ static const char *const yytname[] =
   "dnsc_dnscrypt_nonce_cache_size", "dnsc_dnscrypt_nonce_cache_slabs",
   "cachedbstart", "contents_cachedb", "content_cachedb",
   "cachedb_backend_name", "cachedb_secret_seed", "redis_server_host",
-  "redis_server_port", "redis_timeout", "redis_set_ttl",
+  "redis_server_port", "redis_timeout", "redis_expire_records",
   "server_tcp_connection_limit", "ipsetstart", "contents_ipset",
   "content_ipset", "ipset_name_v4", "ipset_name_v6", YY_NULLPTR
 };
@@ -6331,10 +6331,10 @@ yyreduce:
 #line 3147 "./util/configparser.y" /* yacc.c:1652  */
     {
 	#if defined(USE_CACHEDB) && defined(USE_REDIS)
-		OUTYY(("P(redis_set_ttl:%s)\n", (yyvsp[0].str)));
+		OUTYY(("P(redis_expire_records:%s)\n", (yyvsp[0].str)));
 		if(strcmp((yyvsp[0].str), "yes") != 0 && strcmp((yyvsp[0].str), "no") != 0)
 			yyerror("expected yes or no.");
-		else cfg_parser->cfg->redis_set_ttl = (strcmp((yyvsp[0].str), "yes")==0);
+		else cfg_parser->cfg->redis_expire_records = (strcmp((yyvsp[0].str), "yes")==0);
 	#else
 		OUTYY(("P(Compiled without cachedb or redis, ignoring)\n"));
 	#endif

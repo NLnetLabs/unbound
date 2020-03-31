@@ -599,7 +599,7 @@ struct config_file {
 	/** timeout (in ms) for communication with the redis server */
 	int redis_timeout;
 	/** set redis ttl value based on dns response ttl */
-	int redis_set_ttl;
+	int redis_expire_records;
 #endif
 #endif
 
