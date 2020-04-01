@@ -130,12 +130,12 @@ redis_init(struct module_env* env, struct cachedb_env* cachedb_env)
 		redis_reply_type = rep->type;
 		freeReplyObject(rep);
 		switch (redis_reply_type) {
-		case REDIS_REPLY_ERROR:
+		case REDIS_REPLY_STATUS:
+			break;
+		default:
 			/** init failed, setex command not supported */
 			log_err("redis_init: failed to init redis, the redis-expire-records option requires the SETEX command (redis >= 2.0.0)");
 			return 0;
-		default:
-			break;
 		}
 	}
 
