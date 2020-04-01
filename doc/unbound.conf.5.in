@@ -2130,6 +2130,14 @@ If this timeout expires Unbound closes the connection, treats it as
 if the Redis server does not have the requested data, and will try to
 re-establish a new connection later.
 This option defaults to 100 milliseconds.
+.TP
+.B redis-expire-records: \fI<yes or no>
+If redis record expiration is enabled. If yes, unbound sets ttl for redis 
+records so that redis can evict keys that have expired automatically. If 
+unbound is configured to serve expired entries and there is no expired ttl 
+set, this option is internally reverted to "no". Redis SETEX support required
+(redis >= 2.0.0).
+This option defaults to no.
 .SS DNSTAP Logging Options
 DNSTAP support, when compiled in, is enabled in the \fBdnstap:\fR section.
 This starts an extra thread (when compiled with threading) that writes
