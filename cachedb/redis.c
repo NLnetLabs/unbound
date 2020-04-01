@@ -93,8 +93,6 @@ redis_init(struct module_env* env, struct cachedb_env* cachedb_env)
 {
 	int i;
 	struct redis_moddata* moddata = NULL;
-	redisReply* rep;
-	int redis_reply_type = 0;
 
 	verbose(VERB_ALGO, "redis_init");
 
@@ -119,22 +117,29 @@ redis_init(struct module_env* env, struct cachedb_env* cachedb_env)
 	for(i = 0; i < moddata->numctxs; i++)
 		moddata->ctxs[i] = redis_connect(moddata);
 	cachedb_env->backend_data = moddata;
-	if (env->cfg->redis_expire_records) {
+	if(env->cfg->redis_expire_records) {
+		redisReply* rep = NULL;
+		int redis_reply_type = 0;
 		/** check if setex command is supported */
-		rep = redis_command(env, cachedb_env, "SETEX __UNBOUND_REDIS_CHECK__ 1 none", NULL, 0);
+		rep = redis_command(env, cachedb_env,
+			"SETEX __UNBOUND_REDIS_CHECK__ 1 none", NULL, 0);
 		if(!rep) {
 			/** init failed, no response from redis server*/
-			log_err("redis_init: failed to init redis, the redis-expire-records option requires the SETEX command (redis >= 2.0.0)");
+			log_err("redis_init: failed to init redis, the "
+				"redis-expire-records option requires the SETEX command "
+				"(redis >= 2.0.0)");
 			return 0;
 		}
 		redis_reply_type = rep->type;
 		freeReplyObject(rep);
-		switch (redis_reply_type) {
+		switch(redis_reply_type) {
 		case REDIS_REPLY_STATUS:
 			break;
 		default:
 			/** init failed, setex command not supported */
-			log_err("redis_init: failed to init redis, the redis-expire-records option requires the SETEX command (redis >= 2.0.0)");
+			log_err("redis_init: failed to init redis, the "
+				"redis-expire-records option requires the SETEX command "
+				"(redis >= 2.0.0)");
 			return 0;
 		}
 	}
@@ -244,7 +249,7 @@ redis_lookup(struct module_env* env, struct cachedb_env* cachedb_env,
 	rep = redis_command(env, cachedb_env, cmdbuf, NULL, 0);
 	if(!rep)
 		return 0;
-	switch (rep->type) {
+	switch(rep->type) {
 	case REDIS_REPLY_NIL:
 		verbose(VERB_ALGO, "redis_lookup: no data cached");
 		break;
@@ -278,8 +283,13 @@ redis_store(struct module_env* env, struct cachedb_env* cachedb_env,
 {
 	redisReply* rep;
 	int n;
-	int set_ttl = (int)(env->cfg->redis_expire_records && (!env->cfg->serve_expired || env->cfg->serve_expired_ttl > 0));
-	char cmdbuf[6+(CACHEDB_HASHSIZE/8)*2+11+3+1]; /* "SETEX " + key + " " + ttl + " %b" or "SET " + key + " %b"*/ 
+	int set_ttl = (env->cfg->redis_expire_records &&
+		(!env->cfg->serve_expired || env->cfg->serve_expired_ttl > 0));
+	/* Supported commands:
+	 * - "SET " + key + " %b"
+	 * - "SETEX " + key + " " + ttl + " %b"
+	 */
+	char cmdbuf[6+(CACHEDB_HASHSIZE/8)*2+11+3+1];
 
 	if (!set_ttl) {
 		verbose(VERB_ALGO, "redis_store %s (%d bytes)", key, (int)data_len);
@@ -288,9 +298,11 @@ redis_store(struct module_env* env, struct cachedb_env* cachedb_env,
 	} else {
 		/* add expired ttl time to redis ttl to avoid premature eviction of key */
 		ttl += env->cfg->serve_expired_ttl;
-		verbose(VERB_ALGO, "redis_store %s (%d bytes) with ttl %u", key, (int)data_len, (uint32_t)ttl);
+		verbose(VERB_ALGO, "redis_store %s (%d bytes) with ttl %u",
+			key, (int)data_len, (uint32_t)ttl);
 		/* build command to set to a binary safe string */
-		n = snprintf(cmdbuf, sizeof(cmdbuf), "SETEX %s %u %%b", key, (uint32_t)ttl);
+		n = snprintf(cmdbuf, sizeof(cmdbuf), "SETEX %s %u %%b", key,
+			(uint32_t)ttl);
 	}
 
 
