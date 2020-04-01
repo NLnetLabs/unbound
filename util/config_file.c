@@ -337,6 +337,7 @@ config_create(void)
 	if(!(cfg->redis_server_host = strdup("127.0.0.1"))) goto error_exit;
 	cfg->redis_timeout = 100;
 	cfg->redis_server_port = 6379;
+	cfg->redis_expire_records = 0;
 #endif  /* USE_REDIS */
 #endif  /* USE_CACHEDB */
 #ifdef USE_IPSET
@@ -1135,6 +1136,7 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_STR(opt, "redis-server-host", redis_server_host)
 	else O_DEC(opt, "redis-server-port", redis_server_port)
 	else O_DEC(opt, "redis-timeout", redis_timeout)
+	else O_YNO(opt, "redis-expire-records", redis_expire_records)
 #endif  /* USE_REDIS */
 #endif  /* USE_CACHEDB */
 #ifdef USE_IPSET
