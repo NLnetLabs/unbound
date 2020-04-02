@@ -609,6 +609,8 @@ struct config_file {
 	int redis_server_port;
 	/** timeout (in ms) for communication with the redis server */
 	int redis_timeout;
+	/** set timeout on redis records based on DNS response ttl */
+	int redis_expire_records;
 #endif
 #endif
 
