@@ -546,6 +546,26 @@ and that is the default.
 Set the list of ciphersuites to allow when serving TLS.  This is for newer
 TLS 1.3 connections.  Use "" for defaults, and that is the default.
 .TP
+.B pad\-responses: \fI<yes or no>
+If enabled, TLS serviced queries that contained an EDNS Padding option will
+cause responses padded to the closest multiple of the size specified in
+\fBpad\-responses\-block\-size\fR.
+Default is yes.
+.TP
+.B pad\-responses\-block\-size: \fI<number>
+The block size with which to pad responses serviced over TLS. Only responses
+to padded queries will be padded.
+Default is 468.
+.TP
+.B pad\-queries: \fI<yes or no>
+If enabled, all queries sent over TLS upstreams will be padded to the closest
+multiple of the size specified in \fBpad\-queries\-block\-size\fR.
+Default is no.
+.TP
+.B pad\-queries\-block\-size: \fI<number>
+The block size with which to pad queries sent over TLS upstreams.
+Default is 128.
+.TP
 .B use\-systemd: \fI<yes or no>
 Enable or disable systemd socket activation.
 Default is no.

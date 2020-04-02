@@ -158,6 +158,8 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_DNSCRYPT_SHARED_SECRET_CACHE_SLABS
 %token VAR_DNSCRYPT_NONCE_CACHE_SIZE
 %token VAR_DNSCRYPT_NONCE_CACHE_SLABS
+%token VAR_PAD_RESPONSES VAR_PAD_RESPONSES_BLOCK_SIZE
+%token VAR_PAD_QUERIES VAR_PAD_QUERIES_BLOCK_SIZE
 %token VAR_IPSECMOD_ENABLED VAR_IPSECMOD_HOOK VAR_IPSECMOD_IGNORE_BOGUS
 %token VAR_IPSECMOD_MAX_TTL VAR_IPSECMOD_WHITELIST VAR_IPSECMOD_STRICT
 %token VAR_CACHEDB VAR_CACHEDB_BACKEND VAR_CACHEDB_SECRETSEED
@@ -2304,6 +2306,44 @@ server_qname_minimisation_strict: VAR_QNAME_MINIMISATION_STRICT STRING_ARG
 			yyerror("expected yes or no.");
 		else cfg_parser->cfg->qname_minimisation_strict = 
 			(strcmp($2, "yes")==0);
+		free($2);
+	}
+	;
+server_pad_responses: VAR_PAD_RESPONSES STRING_ARG
+	{
+		OUTYY(("P(server_pad_responses:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else cfg_parser->cfg->pad_responses = 
+			(strcmp($2, "yes")==0);
+		free($2);
+	}
+	;
+server_pad_responses_block_size: VAR_PAD_RESPONSES_BLOCK_SIZE STRING_ARG
+	{
+		OUTYY(("P(server_pad_responses_block_size:%s)\n", $2));
+		if(atoi($2) == 0)
+			yyerror("number expected");
+		else cfg_parser->cfg->pad_responses_block_size = atoi($2);
+		free($2);
+	}
+	;
+server_pad_queries: VAR_PAD_QUERIES STRING_ARG
+	{
+		OUTYY(("P(server_pad_queries:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else cfg_parser->cfg->pad_queries = 
+			(strcmp($2, "yes")==0);
+		free($2);
+	}
+	;
+server_pad_queries_block_size: VAR_PAD_QUERIES_BLOCK_SIZE STRING_ARG
+	{
+		OUTYY(("P(server_pad_queries_block_size:%s)\n", $2));
+		if(atoi($2) == 0)
+			yyerror("number expected");
+		else cfg_parser->cfg->pad_queries_block_size = atoi($2);
 		free($2);
 	}
 	;

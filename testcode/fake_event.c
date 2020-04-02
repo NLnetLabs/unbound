@@ -1222,6 +1222,7 @@ struct serviced_query* outnet_serviced_query(struct outside_network* outnet,
 		edns.opt_list = qstate->edns_opts_back_out;
 		if(dnssec)
 			edns.bits = EDNS_DO;
+		edns.padding_block_size = 0;
 		attach_edns_record(pend->buffer, &edns);
 	}
 	memcpy(&pend->addr, addr, addrlen);

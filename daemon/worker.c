@@ -1286,6 +1286,7 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 			edns.udp_size = EDNS_ADVERTISED_SIZE;
 			edns.bits &= EDNS_DO;
 			edns.opt_list = NULL;
+			edns.padding_block_size = 0;
 			verbose(VERB_ALGO, "query with bad edns version.");
 			log_addr(VERB_CLIENT,"from",&repinfo->addr, repinfo->addrlen);
 			error_encode(c->buffer, EDNS_RCODE_BADVERS&0xf, &qinfo,
