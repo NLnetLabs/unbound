@@ -1,3 +1,6 @@
+6 April 2020: George
+	- More documentation for redis-expire-records option.
+
 1 April 2020: George
 	- Merge PR #206: Redis TTL, by Talkabout.
 

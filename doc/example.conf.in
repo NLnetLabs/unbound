@@ -1013,10 +1013,12 @@ remote-control:
 #     redis-server-port: 6379
 #     # timeout (in ms) for communication with the redis server
 #     redis-timeout: 100
+#     # set timeout on redis records based on DNS response TTL
+#     redis-expire-records: no
 
 # IPSet
 # Add specify domain into set via ipset.
-# Note: To enable ipset needs run unbound as root user.
+# Note: To enable ipset unbound needs to run as root user.
 # ipset:
 #     # set name for ip v4 addresses
 #     name-v4: "list-v4"
