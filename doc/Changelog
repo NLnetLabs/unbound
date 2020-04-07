@@ -1,3 +1,8 @@
+7 April 2020: Wouter
+	- Merge PR #214 from gearnode: unbound-control-setup recreate
+	  certificates.  With the -r option the certificates are created
+	  again, without it, only the files that do not exist are created.
+
 6 April 2020: Ralph
 	- Keep track of number of timeouts. Use this counter to determine if
 	  capsforid fallback should be started.
