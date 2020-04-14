@@ -560,7 +560,7 @@ Default is 468.
 .B pad\-queries: \fI<yes or no>
 If enabled, all queries sent over TLS upstreams will be padded to the closest
 multiple of the size specified in \fBpad\-queries\-block\-size\fR.
-Default is no.
+Default is yes.
 .TP
 .B pad\-queries\-block\-size: \fI<number>
 The block size with which to pad queries sent over TLS upstreams.

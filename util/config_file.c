@@ -324,7 +324,7 @@ config_create(void)
 	cfg->dnscrypt_nonce_cache_slabs = 4;
 	cfg->pad_responses = 1;
 	cfg->pad_responses_block_size = 468; /* from RFC8467 */
-	cfg->pad_queries = 0;
+	cfg->pad_queries = 1;
 	cfg->pad_queries_block_size = 128; /* from RFC8467 */
 #ifdef USE_IPSECMOD
 	cfg->ipsecmod_enabled = 1;

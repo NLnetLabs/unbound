@@ -843,8 +843,7 @@ attach_edns_record_max_msg_sz(sldns_buffer* pkt, struct edns_data* edns,
 
 		/* By use of calc_edns_field_size, calling functions should
 		 * have made sure that there is enough space for at least a
-		 * zero sized padding option, but it cannot harm to leave it
-		 * out if there isn't.
+		 * zero sized padding option.
 		 */
 		log_assert(pad_pos + 4 <= msg_sz);
 

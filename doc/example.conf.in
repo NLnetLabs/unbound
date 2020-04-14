@@ -771,7 +771,7 @@ server:
 	# tls-win-cert: no
 
 	# Pad queries over TLS upstreams
-	# pad-queries: no
+	# pad-queries: yes
 
 	# Padded queries will be padded to the closest multiple of this size.
 	# pad-queries-block-size: 128
