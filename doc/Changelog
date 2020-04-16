@@ -1,6 +1,7 @@
 16 April 2020: Wouter
 	- Fix help return code in unbound-control-setup script.
 	- Fix for posix shell syntax for trap in nsd-control-setup.
+	- Fix for posix shell syntax for trap in run_msg.sh test script.
 
 15 April 2020: George
 	- Fix #220: auth-zone section in config may lead to segfault.
