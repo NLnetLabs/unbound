@@ -1203,6 +1203,7 @@ if_is_ssl(const char* ifname, const char* port, int ssl_port,
  * @param freebind: set IP_FREEBIND socket option.
  * @param use_systemd: if true, fetch sockets from systemd.
  * @param dnscrypt_port: dnscrypt service port number
+ * @param dscp: DSCP to use.
  * @return: returns false on error.
  */
 static int

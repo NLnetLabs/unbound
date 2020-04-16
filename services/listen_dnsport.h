@@ -205,6 +205,7 @@ void listen_start_accept(struct listen_dnsport* listen);
  * @param transparent: set IP_TRANSPARENT socket option.
  * @param freebind: set IP_FREEBIND socket option.
  * @param use_systemd: if true, fetch sockets from systemd.
+ * @param dscp: DSCP to use.
  * @return: the socket. -1 on error.
  */
 int create_udp_sock(int family, int socktype, struct sockaddr* addr, 
@@ -222,6 +223,7 @@ int create_udp_sock(int family, int socktype, struct sockaddr* addr,
  * @param mss: maximum segment size of the socket. if zero, leaves the default. 
  * @param freebind: set IP_FREEBIND socket option.
  * @param use_systemd: if true, fetch sockets from systemd.
+ * @param dscp: DSCP to use.
  * @return: the socket. -1 on error.
  */
 int create_tcp_accept_sock(struct addrinfo *addr, int v6only, int* noproto,

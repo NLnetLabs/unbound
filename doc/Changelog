@@ -1,3 +1,6 @@
+16 April 2020: George
+	- Add doxygen documentation for DSCP.
+
 16 April 2020: Wouter
 	- Fix help return code in unbound-control-setup script.
 	- Fix for posix shell syntax for trap in nsd-control-setup.

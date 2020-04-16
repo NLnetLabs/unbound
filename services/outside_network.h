@@ -403,6 +403,7 @@ struct serviced_query {
  * @param do_ip4: service IP4.
  * @param do_ip6: service IP6.
  * @param num_tcp: number of outgoing tcp buffers to preallocate.
+ * @param dscp: DSCP to use.
  * @param infra: pointer to infra cached used for serviced queries.
  * @param rnd: stored to create random numbers for serviced queries.
  * @param use_caps_for_id: enable to use 0x20 bits to encode id randomness.

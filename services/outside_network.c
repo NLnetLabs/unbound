@@ -1051,6 +1051,7 @@ sai6_putrandom(struct sockaddr_in6 *sa, int pfxlen, struct ub_randstate *rnd)
  * @param port: port override for addr.
  * @param inuse: if -1 is returned, this bool means the port was in use.
  * @param rnd: random state (for address randomisation).
+ * @param dscp: DSCP to use.
  * @return fd or -1
  */
 static int
