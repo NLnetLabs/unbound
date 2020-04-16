@@ -323,16 +323,17 @@ extern int yydebug;
     VAR_STREAM_WAIT_SIZE = 529,
     VAR_TLS_CIPHERS = 530,
     VAR_TLS_CIPHERSUITES = 531,
-    VAR_IPSET = 532,
-    VAR_IPSET_NAME_V4 = 533,
-    VAR_IPSET_NAME_V6 = 534,
-    VAR_TLS_SESSION_TICKET_KEYS = 535,
-    VAR_RPZ = 536,
-    VAR_TAGS = 537,
-    VAR_RPZ_ACTION_OVERRIDE = 538,
-    VAR_RPZ_CNAME_OVERRIDE = 539,
-    VAR_RPZ_LOG = 540,
-    VAR_RPZ_LOG_NAME = 541
+    VAR_TLS_USE_SNI = 532,
+    VAR_IPSET = 533,
+    VAR_IPSET_NAME_V4 = 534,
+    VAR_IPSET_NAME_V6 = 535,
+    VAR_TLS_SESSION_TICKET_KEYS = 536,
+    VAR_RPZ = 537,
+    VAR_TAGS = 538,
+    VAR_RPZ_ACTION_OVERRIDE = 539,
+    VAR_RPZ_CNAME_OVERRIDE = 540,
+    VAR_RPZ_LOG = 541,
+    VAR_RPZ_LOG_NAME = 542
   };
 #endif
 /* Tokens.  */
@@ -610,16 +611,17 @@ extern int yydebug;
 #define VAR_STREAM_WAIT_SIZE 529
 #define VAR_TLS_CIPHERS 530
 #define VAR_TLS_CIPHERSUITES 531
-#define VAR_IPSET 532
-#define VAR_IPSET_NAME_V4 533
-#define VAR_IPSET_NAME_V6 534
-#define VAR_TLS_SESSION_TICKET_KEYS 535
-#define VAR_RPZ 536
-#define VAR_TAGS 537
-#define VAR_RPZ_ACTION_OVERRIDE 538
-#define VAR_RPZ_CNAME_OVERRIDE 539
-#define VAR_RPZ_LOG 540
-#define VAR_RPZ_LOG_NAME 541
+#define VAR_TLS_USE_SNI 532
+#define VAR_IPSET 533
+#define VAR_IPSET_NAME_V4 534
+#define VAR_IPSET_NAME_V6 535
+#define VAR_TLS_SESSION_TICKET_KEYS 536
+#define VAR_RPZ 537
+#define VAR_TAGS 538
+#define VAR_RPZ_ACTION_OVERRIDE 539
+#define VAR_RPZ_CNAME_OVERRIDE 540
+#define VAR_RPZ_LOG 541
+#define VAR_RPZ_LOG_NAME 542
 
 /* Value type.  */
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
@@ -629,7 +631,7 @@ union YYSTYPE
 
 	char*	str;
 
-#line 633 "util/configparser.h"
+#line 635 "util/configparser.h"
 
 };
 typedef union YYSTYPE YYSTYPE;

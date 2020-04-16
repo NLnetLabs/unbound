@@ -1039,7 +1039,8 @@ outside_network_create(struct comm_base* base, size_t bufsize,
 	int ATTR_UNUSED(outgoing_tcp_mss),
 	void (*unwanted_action)(void*), void* ATTR_UNUSED(unwanted_param),
 	int ATTR_UNUSED(do_udp), void* ATTR_UNUSED(sslctx),
-	int ATTR_UNUSED(delayclose), struct dt_env* ATTR_UNUSED(dtenv))
+	int ATTR_UNUSED(delayclose), int ATTR_UNUSED(tls_use_sni),
+	struct dt_env* ATTR_UNUSED(dtenv))
 {
 	struct replay_runtime* runtime = (struct replay_runtime*)base;
 	struct outside_network* outnet =  calloc(1, 

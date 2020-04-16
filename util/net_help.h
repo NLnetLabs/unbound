@@ -453,9 +453,10 @@ int check_auth_name_for_ssl(char* auth_name);
  * set auth name on SSL for verification
  * @param ssl: SSL* to set
  * @param auth_name: if NULL nothing happens, otherwise the name to check.
+ * @param use_sni: if SNI will be used.
  * @return 1 on success or NULL auth_name, 0 on failure.
  */
-int set_auth_name_on_ssl(void* ssl, char* auth_name);
+int set_auth_name_on_ssl(void* ssl, char* auth_name, int use_sni);
 
 /**
  * Initialize openssl locking for thread safety

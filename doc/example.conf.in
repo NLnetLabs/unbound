@@ -746,6 +746,10 @@ server:
 	# cipher setting for TLSv1.3
 	# tls-ciphersuites: "TLS_AES_128_GCM_SHA256:TLS_AES_128_CCM_8_SHA256:TLS_AES_128_CCM_SHA256:TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256"
 
+	# Use the SNI extension for TLS connections.  Default is yes.
+	# Changing the value requires a reload.
+	# tls-use-sni: yes
+
 	# Add the secret file for TLS Session Ticket.
 	# Secret file must be 80 bytes of random data.
 	# First key use to encrypt and decrypt TLS session tickets.

@@ -386,7 +386,8 @@ outnet_tcp_take_into_use(struct waiting_tcp* w, uint8_t* pkt, size_t pkt_len)
 		comm_point_tcp_win_bio_cb(pend->c, pend->c->ssl);
 #endif
 		pend->c->ssl_shake_state = comm_ssl_shake_write;
-		if(!set_auth_name_on_ssl(pend->c->ssl, w->tls_auth_name)) {
+		if(!set_auth_name_on_ssl(pend->c->ssl, w->tls_auth_name,
+			w->outnet->tls_use_sni)) {
 			pend->c->fd = s;
 #ifdef HAVE_SSL
 			SSL_free(pend->c->ssl);
@@ -736,7 +737,7 @@ outside_network_create(struct comm_base *base, size_t bufsize,
 	struct ub_randstate* rnd, int use_caps_for_id, int* availports, 
 	int numavailports, size_t unwanted_threshold, int tcp_mss,
 	void (*unwanted_action)(void*), void* unwanted_param, int do_udp,
-	void* sslctx, int delayclose, struct dt_env* dtenv)
+	void* sslctx, int delayclose, int tls_use_sni, struct dt_env* dtenv)
 {
 	struct outside_network* outnet = (struct outside_network*)
 		calloc(1, sizeof(struct outside_network));
@@ -752,6 +753,7 @@ outside_network_create(struct comm_base *base, size_t bufsize,
 	outnet->infra = infra;
 	outnet->rnd = rnd;
 	outnet->sslctx = sslctx;
+	outnet->tls_use_sni = tls_use_sni;
 #ifdef USE_DNSTAP
 	outnet->dtenv = dtenv;
 #else
@@ -2296,6 +2298,11 @@ setup_comm_ssl(struct comm_point* cp, struct outside_network* outnet,
 #endif
 	cp->ssl_shake_state = comm_ssl_shake_write;
 	/* https verification */
+#ifdef HAVE_SSL
+	if(outnet->tls_use_sni) {
+		(void)SSL_set_tlsext_host_name(cp->ssl, host);
+	}
+#endif
 #ifdef HAVE_SSL_SET1_HOST
 	if((SSL_CTX_get_verify_mode(outnet->sslctx)&SSL_VERIFY_PEER)) {
 		/* because we set SSL_VERIFY_PEER, in netevent in
