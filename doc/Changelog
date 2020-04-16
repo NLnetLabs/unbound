@@ -1,3 +1,6 @@
+16 April 2020: Wouter
+	- Fix help return code in unbound-control-setup script.
+
 7 April 2020: Wouter
 	- Merge PR #214 from gearnode: unbound-control-setup recreate
 	  certificates.  With the -r option the certificates are created

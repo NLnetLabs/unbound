@@ -97,7 +97,7 @@ OPTIND=1
 while getopts 'd:hr' arg; do
     case "$arg" in
       d) DESTDIR="$OPTARG" ;;
-      h) usage; exit 0 ;;
+      h) usage; exit 1 ;;
       r) RECREATE=1 ;;
       ?) fatal "'$arg' unknown option" ;;
     esac
