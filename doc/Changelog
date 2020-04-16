@@ -1,6 +1,9 @@
 16 April 2020: Wouter
 	- Fix help return code in unbound-control-setup script.
 
+15 April 2020: George
+	- Fix #220: auth-zone section in config may lead to segfault.
+
 7 April 2020: Wouter
 	- Merge PR #214 from gearnode: unbound-control-setup recreate
 	  certificates.  With the -r option the certificates are created

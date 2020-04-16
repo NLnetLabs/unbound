@@ -5334,7 +5334,7 @@ void auth_xfer_transfer_lookup_callback(void* arg, int rcode, sldns_buffer* buf,
 	log_assert(xfr->task_transfer);
 	lock_basic_lock(&xfr->lock);
 	env = xfr->task_transfer->env;
-	if(env->outnet->want_to_quit) {
+	if(!env || env->outnet->want_to_quit) {
 		lock_basic_unlock(&xfr->lock);
 		return; /* stop on quit */
 	}
@@ -5773,7 +5773,7 @@ auth_xfer_transfer_timer_callback(void* arg)
 	log_assert(xfr->task_transfer);
 	lock_basic_lock(&xfr->lock);
 	env = xfr->task_transfer->env;
-	if(env->outnet->want_to_quit) {
+	if(!env || env->outnet->want_to_quit) {
 		lock_basic_unlock(&xfr->lock);
 		return; /* stop on quit */
 	}
@@ -5815,7 +5815,7 @@ auth_xfer_transfer_tcp_callback(struct comm_point* c, void* arg, int err,
 	log_assert(xfr->task_transfer);
 	lock_basic_lock(&xfr->lock);
 	env = xfr->task_transfer->env;
-	if(env->outnet->want_to_quit) {
+	if(!env || env->outnet->want_to_quit) {
 		lock_basic_unlock(&xfr->lock);
 		return 0; /* stop on quit */
 	}
@@ -5896,7 +5896,7 @@ auth_xfer_transfer_http_callback(struct comm_point* c, void* arg, int err,
 	log_assert(xfr->task_transfer);
 	lock_basic_lock(&xfr->lock);
 	env = xfr->task_transfer->env;
-	if(env->outnet->want_to_quit) {
+	if(!env || env->outnet->want_to_quit) {
 		lock_basic_unlock(&xfr->lock);
 		return 0; /* stop on quit */
 	}
@@ -6110,7 +6110,7 @@ auth_xfer_probe_timer_callback(void* arg)
 	log_assert(xfr->task_probe);
 	lock_basic_lock(&xfr->lock);
 	env = xfr->task_probe->env;
-	if(env->outnet->want_to_quit) {
+	if(!env || env->outnet->want_to_quit) {
 		lock_basic_unlock(&xfr->lock);
 		return; /* stop on quit */
 	}
@@ -6146,7 +6146,7 @@ auth_xfer_probe_udp_callback(struct comm_point* c, void* arg, int err,
 	log_assert(xfr->task_probe);
 	lock_basic_lock(&xfr->lock);
 	env = xfr->task_probe->env;
-	if(env->outnet->want_to_quit) {
+	if(!env || env->outnet->want_to_quit) {
 		lock_basic_unlock(&xfr->lock);
 		return 0; /* stop on quit */
 	}
@@ -6391,7 +6391,7 @@ void auth_xfer_probe_lookup_callback(void* arg, int rcode, sldns_buffer* buf,
 	log_assert(xfr->task_probe);
 	lock_basic_lock(&xfr->lock);
 	env = xfr->task_probe->env;
-	if(env->outnet->want_to_quit) {
+	if(!env || env->outnet->want_to_quit) {
 		lock_basic_unlock(&xfr->lock);
 		return; /* stop on quit */
 	}
@@ -6468,7 +6468,7 @@ auth_xfer_timer(void* arg)
 	log_assert(xfr->task_nextprobe);
 	lock_basic_lock(&xfr->lock);
 	env = xfr->task_nextprobe->env;
-	if(env->outnet->want_to_quit) {
+	if(!env || env->outnet->want_to_quit) {
 		lock_basic_unlock(&xfr->lock);
 		return; /* stop on quit */
 	}
