@@ -108,7 +108,7 @@ shift $((OPTIND - 1))
 echo "setup in directory $DESTDIR"
 cd "$DESTDIR"
 
-trap cleanup SIGINT
+trap cleanup INT
 
 # ===
 # Generate server certificate
