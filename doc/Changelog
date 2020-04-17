@@ -1,3 +1,7 @@
+17 April 2020: George
+	- Add SNI support on more TLS connections (fixes #193).
+	- Add SNI support to unbound-anchor.
+
 16 April 2020: George
 	- Add doxygen documentation for DSCP.
 
