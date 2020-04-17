@@ -187,7 +187,7 @@ usage(void)
 	printf("-c file		cert file, default %s\n", ROOT_CERT_FILE);
 	printf("-l		list builtin key and cert on stdout\n");
 	printf("-u name		server in https url, default %s\n", URLNAME);
-	printf("-S		use SNI for the https connection\n");
+	printf("-S		do not use SNI for the https connection\n");
 	printf("-x path		pathname to xml in url, default %s\n", XMLNAME);
 	printf("-s path		pathname to p7s in url, default %s\n", P7SNAME);
 	printf("-n name		signer's subject emailAddress, default %s\n", P7SIGNER);
@@ -2312,7 +2312,7 @@ int main(int argc, char* argv[])
 	const char* srcaddr = NULL;
 	int dolist=0, ip4only=0, ip6only=0, force=0, port = HTTPS_PORT;
 	int res_conf_fallback = 0;
-	int use_sni = 0;
+	int use_sni = 1;
 	/* parse the options */
 	while( (c=getopt(argc, argv, "46C:FRSP:a:b:c:f:hln:r:s:u:vx:")) != -1) {
 		switch(c) {
@@ -2338,7 +2338,7 @@ int main(int argc, char* argv[])
 			urlname = optarg;
 			break;
 		case 'S':
-			use_sni = 1;
+			use_sni = 0;
 			break;
 		case 'x':
 			xmlname = optarg;
