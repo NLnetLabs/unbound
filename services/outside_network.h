@@ -132,6 +132,8 @@ struct outside_network {
 	struct ub_randstate* rnd;
 	/** ssl context to create ssl wrapped TCP with DNS connections */
 	void* sslctx;
+	/** if SNI will be used for TLS connections */
+	int tls_use_sni;
 #ifdef USE_DNSTAP
 	/** dnstap environment */
 	struct dt_env* dtenv;
@@ -417,6 +419,7 @@ struct serviced_query {
  * @param sslctx: context to create outgoing connections with (if enabled).
  * @param delayclose: if not 0, udp sockets are delayed before timeout closure.
  * 	msec to wait on timeouted udp sockets.
+ * @param tls_use_sni: if SNI is used for TLS connections.
  * @param dtenv: environment to send dnstap events with (if enabled).
  * @return: the new structure (with no pending answers) or NULL on error.
  */
@@ -426,7 +429,7 @@ struct outside_network* outside_network_create(struct comm_base* base,
 	struct ub_randstate* rnd, int use_caps_for_id, int* availports, 
 	int numavailports, size_t unwanted_threshold, int tcp_mss,
 	void (*unwanted_action)(void*), void* unwanted_param, int do_udp,
-	void* sslctx, int delayclose, struct dt_env *dtenv);
+	void* sslctx, int delayclose, int tls_use_sni, struct dt_env *dtenv);
 
 /**
  * Delete outside_network structure.

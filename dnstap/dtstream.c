@@ -351,6 +351,7 @@ int dt_io_thread_apply_cfg(struct dt_io_thread* dtio, struct config_file *cfg)
 			log_err("could not setup SSL CTX");
 			return 0;
 		}
+		dtio->tls_use_sni = cfg->tls_use_sni;
 #endif /* HAVE_SSL */
 	}
 	return 1;
@@ -1661,7 +1662,8 @@ static int dtio_setup_ssl(struct dt_io_thread* dtio)
 	dtio->ssl_handshake_done = 0;
 	dtio->ssl_brief_read = 0;
 
-	if(!set_auth_name_on_ssl(dtio->ssl, dtio->tls_server_name)) {
+	if(!set_auth_name_on_ssl(dtio->ssl, dtio->tls_server_name,
+		dtio->tls_use_sni)) {
 		return 0;
 	}
 	return 1;

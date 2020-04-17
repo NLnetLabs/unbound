@@ -128,6 +128,8 @@ struct config_file {
 	char* tls_ciphers;
 	/** TLS chiphersuites (TLSv1.3) */
 	char* tls_ciphersuites;
+	/** if SNI is to be used */
+	int tls_use_sni;
 
 	/** outgoing port range number of ports (per thread) */
 	int outgoing_num_ports;

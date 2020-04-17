@@ -1231,11 +1231,13 @@ int check_auth_name_for_ssl(char* auth_name)
 }
 
 /** set the authname on an SSL structure, SSL* ssl */
-int set_auth_name_on_ssl(void* ssl, char* auth_name)
+int set_auth_name_on_ssl(void* ssl, char* auth_name, int use_sni)
 {
 	if(!auth_name) return 1;
 #ifdef HAVE_SSL
-	(void)SSL_set_tlsext_host_name(ssl, auth_name);
+	if(use_sni) {
+		(void)SSL_set_tlsext_host_name(ssl, auth_name);
+	}
 #else
 	(void)ssl;
 #endif
