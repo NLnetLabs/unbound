@@ -1,3 +1,6 @@
+20 April 2020: Wouter
+	- Fix #222: --with-rpath, fails to rpath python lib.
+
 17 April 2020: George
 	- Add SNI support on more TLS connections (fixes #193).
 	- Add SNI support to unbound-anchor.

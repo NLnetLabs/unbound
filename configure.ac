@@ -678,6 +678,9 @@ if test x_$ub_test_python != x_no; then
       else
         CPPFLAGS="$PYTHON_CPPFLAGS"
       fi
+      if test "$PYTHON_LIBDIR" != "/usr/lib" -a "$PYTHON_LIBDIR" != "" -a "$PYTHON_LIBDIR" != "/usr/lib64"; then
+        ACX_RUNTIME_PATH_ADD([$PYTHON_LIBDIR])
+      fi
       ub_have_python=yes
       PKG_CHECK_EXISTS(["python${PY_MAJOR_VERSION}"],
                        [PC_PY_DEPENDENCY="python${PY_MAJOR_VERSION}"],

@@ -17329,6 +17329,11 @@ $as_echo_n "checking for Python library path... " >&6; }
 $as_echo "$PYTHON_LDFLAGS" >&6; }
 
 
+        if test -z "$PYTHON_LIBDIR"; then
+                PYTHON_LIBDIR=`$PYTHON -c "from distutils.sysconfig import *; \
+                        print(get_config_var('LIBDIR'));"`
+        fi
+
         #
         # Check for site packages
         #
@@ -17433,6 +17438,15 @@ $as_echo "#define HAVE_PYTHON 1" >>confdefs.h
         CPPFLAGS="$CPPFLAGS $PYTHON_CPPFLAGS"
       else
         CPPFLAGS="$PYTHON_CPPFLAGS"
+      fi
+      if test "$PYTHON_LIBDIR" != "/usr/lib" -a "$PYTHON_LIBDIR" != "" -a "$PYTHON_LIBDIR" != "/usr/lib64"; then
+
+	if test "x$enable_rpath" = xyes; then
+		if echo "$PYTHON_LIBDIR" | grep "^/" >/dev/null; then
+			RUNTIME_PATH="$RUNTIME_PATH -R$PYTHON_LIBDIR"
+		fi
+	fi
+
       fi
       ub_have_python=yes
       if test -n "$PKG_CONFIG" && \
