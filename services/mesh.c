@@ -1810,6 +1810,7 @@ void mesh_list_remove(struct mesh_state* m, struct mesh_state** fp,
 void mesh_state_remove_reply(struct mesh_area* mesh, struct mesh_state* m,
 	struct comm_point* cp)
 {
+	int was_mesh_reply = 0;
 	struct mesh_reply* n, *prev = NULL;
 	n = m->reply_list;
 	/* when in mesh_cleanup, it sets the reply_list to NULL, so that
@@ -1823,6 +1824,7 @@ void mesh_state_remove_reply(struct mesh_area* mesh, struct mesh_state* m,
 			/* delete it, but allocated in m region */
 			log_assert(mesh->num_reply_addrs > 0);
 			mesh->num_reply_addrs--;
+			was_mesh_reply = 1;
 
 			/* prev = prev; */
 			n = n->next;
@@ -1837,7 +1839,7 @@ void mesh_state_remove_reply(struct mesh_area* mesh, struct mesh_state* m,
 		mesh->num_detached_states++;
 	}
 	/* if not replies any more in mstate, it is no longer a reply_state */
-	if(!m->reply_list && !m->cb_list) {
+	if(!m->reply_list && !m->cb_list && was_mesh_reply) {
 		log_assert(mesh->num_reply_states > 0);
 		mesh->num_reply_states--;
 	}
@@ -1960,7 +1962,7 @@ mesh_serve_expired_callback(void* arg)
 
 	r = mstate->reply_list;
 	mstate->reply_list = NULL;
-	if(!mstate->reply_list && !mstate->cb_list) {
+	if(!mstate->reply_list && !mstate->cb_list && r) {
 		log_assert(mesh->num_reply_states > 0);
 		mesh->num_reply_states--;
 		if(mstate->super_set.count == 0) {

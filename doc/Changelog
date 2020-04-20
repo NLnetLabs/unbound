@@ -1,5 +1,6 @@
 20 April 2020: Wouter
 	- Fix #222: --enable-rpath, fails to rpath python lib.
+	- Fix for count of reply states in the mesh.
 
 17 April 2020: George
 	- Add SNI support on more TLS connections (fixes #193).
