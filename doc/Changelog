@@ -6,6 +6,7 @@
 
 21 April 2020: George
 	- Change default value for 'rrset-roundrobin' to yes.
+	- Fix tests for new rrset-roundrobin default.
 
 20 April 2020: Wouter
 	- Fix #222: --enable-rpath, fails to rpath python lib.
