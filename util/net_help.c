@@ -67,8 +67,8 @@ uint16_t EDNS_ADVERTISED_SIZE = 4096;
 /** minimal responses when positive answer: default is no */
 int MINIMAL_RESPONSES = 0;
 
-/** rrset order roundrobin: default is no */
-int RRSET_ROUNDROBIN = 0;
+/** rrset order roundrobin: default is yes */
+int RRSET_ROUNDROBIN = 1;
 
 /** log tag queries with name instead of 'info' for filtering */
 int LOG_TAG_QUERYREPLY = 0;

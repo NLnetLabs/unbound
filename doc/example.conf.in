@@ -473,7 +473,7 @@ server:
 	# deny-any: no
 
 	# if yes, Unbound rotates RRSet order in response.
-	# rrset-roundrobin: no
+	# rrset-roundrobin: yes
 
 	# if yes, Unbound doesn't insert authority/additional sections
 	# into response messages when those sections are not required.

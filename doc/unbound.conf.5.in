@@ -932,7 +932,7 @@ are none.
 .TP
 .B rrset\-roundrobin: \fI<yes or no>
 If yes, Unbound rotates RRSet order in response (the random number is taken
-from the query ID, for speed and thread safety).  Default is no.
+from the query ID, for speed and thread safety).  Default is yes.
 .TP
 .B minimal-responses: \fI<yes or no>
 If yes, Unbound doesn't insert authority/additional sections into response

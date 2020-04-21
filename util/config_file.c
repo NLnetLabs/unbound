@@ -274,7 +274,7 @@ config_create(void)
 	cfg->control_port = UNBOUND_CONTROL_PORT;
 	cfg->control_use_cert = 1;
 	cfg->minimal_responses = 1;
-	cfg->rrset_roundrobin = 0;
+	cfg->rrset_roundrobin = 1;
 	cfg->unknown_server_time_limit = 376;
 	cfg->max_udp_size = 4096;
 	if(!(cfg->server_key_file = strdup(RUN_DIR"/unbound_server.key"))) 
