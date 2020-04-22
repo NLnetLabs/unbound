@@ -1,3 +1,6 @@
+22 April 2020: George
+	- Explicitly use 'rrset-roundrobin: no' for test cases.
+
 21 April 2020: Wouter
 	- Merge #225 from akhait: KSK-2010 has been revoked. It removes the
 	  KSK-2010 from the default list in unbound-anchor, now that the
