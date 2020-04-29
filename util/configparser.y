@@ -69,6 +69,7 @@ extern struct config_parser_state* cfg_parser;
 
 %token SPACE LETTER NEWLINE COMMENT COLON ANY ZONESTR
 %token <str> STRING_ARG
+%token VAR_FORCE_TOPLEVEL
 %token VAR_SERVER VAR_VERBOSITY VAR_NUM_THREADS VAR_PORT
 %token VAR_OUTGOING_RANGE VAR_INTERFACE VAR_PREFER_IP4
 %token VAR_DO_IP4 VAR_DO_IP6 VAR_PREFER_IP6 VAR_DO_UDP VAR_DO_TCP
@@ -182,16 +183,20 @@ toplevelvar: serverstart contents_server | stubstart contents_stub |
 	rcstart contents_rc | dtstart contents_dt | viewstart contents_view |
 	dnscstart contents_dnsc | cachedbstart contents_cachedb |
 	ipsetstart contents_ipset | authstart contents_auth |
-	rpzstart contents_rpz
+	rpzstart contents_rpz |
+	force_toplevel
 	;
-
+force_toplevel: VAR_FORCE_TOPLEVEL
+	{
+		OUTYY(("\nP(force-toplevel)\n"));
+	}
 /* server: declaration */
 serverstart: VAR_SERVER
 	{ 
-		OUTYY(("\nP(server:)\n")); 
+		OUTYY(("\nP(server:)\n"));
 	}
 	;
-contents_server: contents_server content_server 
+contents_server: contents_server content_server
 	| ;
 content_server: server_num_threads | server_verbosity | server_port |
 	server_outgoing_range | server_do_ip4 |
