@@ -210,11 +210,12 @@ void listen_start_accept(struct listen_dnsport* listen);
  * @param transparent: set IP_TRANSPARENT socket option.
  * @param freebind: set IP_FREEBIND socket option.
  * @param use_systemd: if true, fetch sockets from systemd.
+ * @param dscp: DSCP to use.
  * @return: the socket. -1 on error.
  */
 int create_udp_sock(int family, int socktype, struct sockaddr* addr, 
 	socklen_t addrlen, int v6only, int* inuse, int* noproto, int rcv,
-	int snd, int listen, int* reuseport, int transparent, int freebind, int use_systemd);
+	int snd, int listen, int* reuseport, int transparent, int freebind, int use_systemd, int dscp);
 
 /**
  * Create and bind TCP listening socket
@@ -228,11 +229,12 @@ int create_udp_sock(int family, int socktype, struct sockaddr* addr,
  * @param nodelay: if true set TCP_NODELAY and TCP_QUICKACK socket options.
  * @param freebind: set IP_FREEBIND socket option.
  * @param use_systemd: if true, fetch sockets from systemd.
+ * @param dscp: DSCP to use.
  * @return: the socket. -1 on error.
  */
 int create_tcp_accept_sock(struct addrinfo *addr, int v6only, int* noproto,
 	int* reuseport, int transparent, int mss, int nodelay, int freebind,
-	int use_systemd);
+	int use_systemd, int dscp);
 
 /**
  * Create and bind local listening socket
@@ -393,5 +395,8 @@ int http2_submit_dns_response(struct http2_session* h2_session);
 #else
 int http2_submit_dns_response(void* v);
 #endif /* HAVE_NGHTTP2 */
+
+char* set_ip_dscp(int socket, int addrfamily, int ds);
+char* sock_strerror(int errn);
 
 #endif /* LISTEN_DNSPORT_H */

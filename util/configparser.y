@@ -130,6 +130,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_DNSTAP_LOG_FORWARDER_RESPONSE_MESSAGES
 %token VAR_RESPONSE_IP_TAG VAR_RESPONSE_IP VAR_RESPONSE_IP_DATA
 %token VAR_HARDEN_ALGO_DOWNGRADE VAR_IP_TRANSPARENT
+%token VAR_IP_DSCP
 %token VAR_DISABLE_DNSSEC_LAME_CHECK
 %token VAR_IP_RATELIMIT VAR_IP_RATELIMIT_SLABS VAR_IP_RATELIMIT_SIZE
 %token VAR_RATELIMIT VAR_RATELIMIT_SLABS VAR_RATELIMIT_SIZE
@@ -162,6 +163,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_IPSECMOD_MAX_TTL VAR_IPSECMOD_WHITELIST VAR_IPSECMOD_STRICT
 %token VAR_CACHEDB VAR_CACHEDB_BACKEND VAR_CACHEDB_SECRETSEED
 %token VAR_CACHEDB_REDISHOST VAR_CACHEDB_REDISPORT VAR_CACHEDB_REDISTIMEOUT
+%token VAR_CACHEDB_REDISEXPIRERECORDS
 %token VAR_UDP_UPSTREAM_WITHOUT_DOWNSTREAM VAR_FOR_UPSTREAM
 %token VAR_AUTH_ZONE VAR_ZONEFILE VAR_MASTER VAR_URL VAR_FOR_DOWNSTREAM
 %token VAR_FALLBACK_ENABLED VAR_TLS_ADDITIONAL_PORT VAR_LOW_RTT VAR_LOW_RTT_PERMIL
@@ -169,7 +171,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_ALLOW_NOTIFY VAR_TLS_WIN_CERT VAR_TCP_CONNECTION_LIMIT
 %token VAR_FORWARD_NO_CACHE VAR_STUB_NO_CACHE VAR_LOG_SERVFAIL VAR_DENY_ANY
 %token VAR_UNKNOWN_SERVER_TIME_LIMIT VAR_LOG_TAG_QUERYREPLY
-%token VAR_STREAM_WAIT_SIZE VAR_TLS_CIPHERS VAR_TLS_CIPHERSUITES
+%token VAR_STREAM_WAIT_SIZE VAR_TLS_CIPHERS VAR_TLS_CIPHERSUITES VAR_TLS_USE_SNI
 %token VAR_IPSET VAR_IPSET_NAME_V4 VAR_IPSET_NAME_V6
 %token VAR_TLS_SESSION_TICKET_KEYS VAR_RPZ VAR_TAGS VAR_RPZ_ACTION_OVERRIDE
 %token VAR_RPZ_CNAME_OVERRIDE VAR_RPZ_LOG VAR_RPZ_LOG_NAME
@@ -243,6 +245,7 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_dns64_prefix | server_dns64_synthall | server_dns64_ignore_aaaa |
 	server_infra_cache_min_rtt | server_harden_algo_downgrade |
 	server_ip_transparent | server_ip_ratelimit | server_ratelimit |
+	server_ip_dscp |
 	server_ip_ratelimit_slabs | server_ratelimit_slabs |
 	server_ip_ratelimit_size | server_ratelimit_size |
 	server_ratelimit_for_domain |
@@ -276,7 +279,8 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_tcp_connection_limit | server_log_servfail | server_deny_any |
 	server_unknown_server_time_limit | server_log_tag_queryreply |
 	server_stream_wait_size | server_tls_ciphers |
-	server_tls_ciphersuites | server_tls_session_ticket_keys
+	server_tls_ciphersuites | server_tls_session_ticket_keys |
+	server_tls_use_sni
 	;
 stubstart: VAR_STUB_ZONE
 	{
@@ -957,6 +961,13 @@ server_https_port: VAR_HTTPS_PORT STRING_ARG
 		if(atoi($2) == 0)
 			yyerror("port number expected");
 		else cfg_parser->cfg->https_port = atoi($2);
+	};
+server_tls_use_sni: VAR_TLS_USE_SNI STRING_ARG
+	{
+		OUTYY(("P(server_tls_use_sni:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else cfg_parser->cfg->tls_use_sni = (strcmp($2, "yes")==0);
 		free($2);
 	}
 	;
@@ -1269,6 +1280,20 @@ server_ip_freebind: VAR_IP_FREEBIND STRING_ARG
         free($2);
     }
     ;
+server_ip_dscp: VAR_IP_DSCP STRING_ARG
+	{
+		OUTYY(("P(server_ip_dscp:%s)\n", $2));
+		if(atoi($2) == 0 && strcmp($2, "0") != 0)
+			yyerror("number expected");
+		else if (atoi($2) > 63)
+			yyerror("value too large (max 63)");
+		else if (atoi($2) < 0)
+			yyerror("value too small (min 0)");
+		else
+			cfg_parser->cfg->ip_dscp = atoi($2);
+		free($2);
+	}
+	;
 server_stream_wait_size: VAR_STREAM_WAIT_SIZE STRING_ARG
 	{
 		OUTYY(("P(server_stream_wait_size:%s)\n", $2));
@@ -3072,7 +3097,8 @@ cachedbstart: VAR_CACHEDB
 contents_cachedb: contents_cachedb content_cachedb
 	| ;
 content_cachedb: cachedb_backend_name | cachedb_secret_seed |
-	redis_server_host | redis_server_port | redis_timeout
+	redis_server_host | redis_server_port | redis_timeout |
+	redis_expire_records
 	;
 cachedb_backend_name: VAR_CACHEDB_BACKEND STRING_ARG
 	{
@@ -3132,6 +3158,19 @@ redis_timeout: VAR_CACHEDB_REDISTIMEOUT STRING_ARG
 		if(atoi($2) == 0)
 			yyerror("redis timeout value expected");
 		else cfg_parser->cfg->redis_timeout = atoi($2);
+	#else
+		OUTYY(("P(Compiled without cachedb or redis, ignoring)\n"));
+	#endif
+		free($2);
+	}
+	;
+redis_expire_records: VAR_CACHEDB_REDISEXPIRERECORDS STRING_ARG
+	{
+	#if defined(USE_CACHEDB) && defined(USE_REDIS)
+		OUTYY(("P(redis_expire_records:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else cfg_parser->cfg->redis_expire_records = (strcmp($2, "yes")==0);
 	#else
 		OUTYY(("P(Compiled without cachedb or redis, ignoring)\n"));
 	#endif

@@ -130,6 +130,8 @@ struct config_file {
 	char* tls_ciphersuites;
 	/** port on which to provide DNS over HTTPS service */
 	int https_port;
+	/** if SNI is to be used */
+	int tls_use_sni;
 
 	/** outgoing port range number of ports (per thread) */
 	int outgoing_num_ports;
@@ -190,6 +192,8 @@ struct config_file {
 	int ip_transparent;
 	/** IP_FREEBIND socket option request on port 53 sockets */
 	int ip_freebind;
+	/** IP_TOS socket option requested on port 53 sockets */
+	int ip_dscp;
 
 	/** number of interfaces to open. If 0 default all interfaces. */
 	int num_ifs;
@@ -598,6 +602,8 @@ struct config_file {
 	int redis_server_port;
 	/** timeout (in ms) for communication with the redis server */
 	int redis_timeout;
+	/** set timeout on redis records based on DNS response ttl */
+	int redis_expire_records;
 #endif
 #endif
 

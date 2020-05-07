@@ -1,3 +1,80 @@
+22 April 2020: George
+	- Explicitly use 'rrset-roundrobin: no' for test cases.
+
+21 April 2020: Wouter
+	- Merge #225 from akhait: KSK-2010 has been revoked. It removes the
+	  KSK-2010 from the default list in unbound-anchor, now that the
+	  revocation period is over.  KSK-2017 is the only trust anchor in
+	  the shipped default now.
+
+21 April 2020: George
+	- Change default value for 'rrset-roundrobin' to yes.
+	- Fix tests for new rrset-roundrobin default.
+
+20 April 2020: Wouter
+	- Fix #222: --enable-rpath, fails to rpath python lib.
+	- Fix for count of reply states in the mesh.
+	- Remove unneeded was_mesh_reply check.
+
+17 April 2020: George
+	- Add SNI support on more TLS connections (fixes #193).
+	- Add SNI support to unbound-anchor.
+
+16 April 2020: George
+	- Add doxygen documentation for DSCP.
+
+16 April 2020: Wouter
+	- Fix help return code in unbound-control-setup script.
+	- Fix for posix shell syntax for trap in nsd-control-setup.
+	- Fix for posix shell syntax for trap in run_msg.sh test script.
+
+15 April 2020: George
+	- Fix #220: auth-zone section in config may lead to segfault.
+
+7 April 2020: Wouter
+	- Merge PR #214 from gearnode: unbound-control-setup recreate
+	  certificates.  With the -r option the certificates are created
+	  again, without it, only the files that do not exist are created.
+
+6 April 2020: Ralph
+	- Keep track of number of timeouts. Use this counter to determine if
+	  capsforid fallback should be started.
+
+6 April 2020: George
+	- More documentation for redis-expire-records option.
+
+1 April 2020: George
+	- Merge PR #206: Redis TTL, by Talkabout.
+
+30 March 2020: Wouter
+	- Merge PR #207: Clarify if-automatic listens on 0.0.0.0 and ::
+	- Merge PR #208: Fix uncached CLIENT_RESPONSE'es on stateful
+	  transports.
+
+27 March 2020: Wouter
+	- Merge PR #203 from noloader: Update README-Travis.md with current
+	  procedures.
+
+27 March 2020: Ralph
+	- Make unbound-control error returned on missing domain name more user
+	  friendly.
+
+26 March 2020: Ralph
+	- Fix RPZ concurrency issue when using auth_zone_reload.
+
+25 March 2020: George
+	- Merge PR #201 from noloader: Fix OpenSSL cross-compaile warnings.
+	- Fix on #201.
+
+24 March 2020: Wouter
+	- Merge PR #200 from yarikk: add ip-dscp option to specify the DSCP
+	  tag for outgoing packets.
+	- Fixes on #200.
+	- Travis fix for ios by omitting tools from install.
+
+23 March 2020: Wouter
+	- Fix compile on Solaris for unbound-checkconf.
+
 20 March 2020: George
 	- Merge PR #198 from fobser: Declare lz_enter_rr_into_zone() static, it's
 	  only used in this file.

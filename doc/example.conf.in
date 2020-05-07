@@ -119,6 +119,11 @@ server:
 	# Linux only.  On Linux you also have ip-transparent that is similar.
 	# ip-freebind: no
 
+	# the value of the Differentiated Services Codepoint (DSCP)
+	# in the differentiated services field (DS) of the outgoing
+	# IP packets
+	# ip-dscp: 0
+
 	# EDNS reassembly buffer to advertise to UDP peers (the actual buffer
 	# is set with msg-buffer-size). 1472 can solve fragmentation (timeouts)
 	# edns-buffer-size: 4096
@@ -468,7 +473,7 @@ server:
 	# deny-any: no
 
 	# if yes, Unbound rotates RRSet order in response.
-	# rrset-roundrobin: no
+	# rrset-roundrobin: yes
 
 	# if yes, Unbound doesn't insert authority/additional sections
 	# into response messages when those sections are not required.
@@ -743,6 +748,10 @@ server:
 	# cipher setting for TLSv1.3
 	# tls-ciphersuites: "TLS_AES_128_GCM_SHA256:TLS_AES_128_CCM_8_SHA256:TLS_AES_128_CCM_SHA256:TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256"
 
+	# Use the SNI extension for TLS connections.  Default is yes.
+	# Changing the value requires a reload.
+	# tls-use-sni: yes
+
 	# Add the secret file for TLS Session Ticket.
 	# Secret file must be 80 bytes of random data.
 	# First key use to encrypt and decrypt TLS session tickets.
@@ -1010,10 +1019,12 @@ remote-control:
 #     redis-server-port: 6379
 #     # timeout (in ms) for communication with the redis server
 #     redis-timeout: 100
+#     # set timeout on redis records based on DNS response TTL
+#     redis-expire-records: no
 
 # IPSet
 # Add specify domain into set via ipset.
-# Note: To enable ipset needs run unbound as root user.
+# Note: To enable ipset unbound needs to run as root user.
 # ipset:
 #     # set name for ip v4 addresses
 #     name-v4: "list-v4"

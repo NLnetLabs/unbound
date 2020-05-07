@@ -69,6 +69,9 @@ The server name, it connects to https://name.  Specify without https:// prefix.
 The default is "data.iana.org".  It connects to the port specified with \-P.
 You can pass an IPv4 address or IPv6 address (no brackets) if you want.
 .TP
+.B \-S
+Do not use SNI for the HTTPS connection.  Default is to use SNI.
+.TP
 .B \-b \fIaddress
 The source address to bind to for domain resolution and contacting the server
 on https.  May be either an IPv4 address or IPv6 address (no brackets).

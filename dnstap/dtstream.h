@@ -109,6 +109,8 @@ struct dt_io_thread {
 	int started;
 	/** ssl context for the io thread, for tls connections. type SSL_CTX* */
 	void* ssl_ctx;
+	/** if SNI will be used for TLS connections. */
+	int tls_use_sni;
 
 	/** file descriptor that the thread writes to */
 	int fd;

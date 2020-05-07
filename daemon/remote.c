@@ -329,7 +329,8 @@ add_open(const char* ip, int nr, struct listen_port** list, int noproto_is_err,
 
 		/* open fd */
 		fd = create_tcp_accept_sock(res, 1, &noproto, 0,
-			cfg->ip_transparent, 0, 0, cfg->ip_freebind, cfg->use_systemd);
+			cfg->ip_transparent, 0, 0, cfg->ip_freebind,
+			cfg->use_systemd, cfg->ip_dscp);
 		freeaddrinfo(res);
 	}
 
@@ -1124,6 +1125,10 @@ parse_arg_name(RES* ssl, char* str, uint8_t** res, size_t* len, int* labs)
 	*res = NULL;
 	*len = 0;
 	*labs = 0;
+	if(str[0] == '\0') {
+		ssl_printf(ssl, "error: this option requires a domain name\n");
+		return 0;
+	}
 	status = sldns_str2wire_dname_buf(str, nm, &nmlen);
 	if(status != 0) {
 		ssl_printf(ssl, "error cannot parse name %s at %d: %s\n", str,

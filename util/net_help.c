@@ -70,8 +70,8 @@ uint16_t EDNS_ADVERTISED_SIZE = 4096;
 /** minimal responses when positive answer: default is no */
 int MINIMAL_RESPONSES = 0;
 
-/** rrset order roundrobin: default is no */
-int RRSET_ROUNDROBIN = 0;
+/** rrset order roundrobin: default is yes */
+int RRSET_ROUNDROBIN = 1;
 
 /** log tag queries with name instead of 'info' for filtering */
 int LOG_TAG_QUERYREPLY = 0;
@@ -1252,11 +1252,13 @@ int check_auth_name_for_ssl(char* auth_name)
 }
 
 /** set the authname on an SSL structure, SSL* ssl */
-int set_auth_name_on_ssl(void* ssl, char* auth_name)
+int set_auth_name_on_ssl(void* ssl, char* auth_name, int use_sni)
 {
 	if(!auth_name) return 1;
 #ifdef HAVE_SSL
-	(void)SSL_set_tlsext_host_name(ssl, auth_name);
+	if(use_sni) {
+		(void)SSL_set_tlsext_host_name(ssl, auth_name);
+	}
 #else
 	(void)ssl;
 #endif
