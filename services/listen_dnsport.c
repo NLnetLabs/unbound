@@ -53,6 +53,7 @@
 #include "util/config_file.h"
 #include "util/net_help.h"
 #include "sldns/sbuffer.h"
+#include "sldns/parseutil.h"
 #include "services/mesh.h"
 #include "util/fptr_wlist.h"
 #include "util/locks.h"
@@ -638,7 +639,8 @@ create_udp_sock(int family, int socktype, struct sockaddr* addr,
 
 int
 create_tcp_accept_sock(struct addrinfo *addr, int v6only, int* noproto,
-	int* reuseport, int transparent, int mss, int freebind, int use_systemd)
+	int* reuseport, int transparent, int mss, int nodelay, int freebind,
+	int use_systemd)
 {
 	int s;
 #if defined(SO_REUSEADDR) || defined(SO_REUSEPORT) || defined(IPV6_V6ONLY) || defined(IP_TRANSPARENT) || defined(IP_BINDANY) || defined(IP_FREEBIND) || defined(SO_BINDANY)
@@ -684,6 +686,36 @@ create_tcp_accept_sock(struct addrinfo *addr, int v6only, int* noproto,
 			wsa_strerror(WSAGetLastError()));
 #endif
 		return -1;
+	}
+	if(nodelay) {
+#if defined(IPPROTO_TCP) && defined(TCP_NODELAY)
+		if(setsockopt(s, IPPROTO_TCP, TCP_NODELAY, (void*)&on,
+			(socklen_t)sizeof(on)) < 0) {
+			#ifndef USE_WINSOCK
+			log_err(" setsockopt(.. TCP_NODELAY ..) failed: %s",
+				strerror(errno));
+			#else
+			log_err(" setsockopt(.. TCP_NODELAY ..) failed: %s",
+				wsa_strerror(WSAGetLastError()));
+			#endif
+		}
+#else
+		log_warn(" setsockopt(TCP_NODELAY) unsupported");
+#endif /* defined(IPPROTO_TCP) && defined(TCP_NODELAY) */
+#if defined(IPPROTO_TCP) && defined(TCP_QUICKACK)
+		if(setsockopt(s, IPPROTO_TCP, TCP_QUICKACK, (void*)&on,
+			(socklen_t)sizeof(on)) < 0) {
+			#ifndef USE_WINSOCK
+			log_err(" setsockopt(.. TCP_QUICKACK ..) failed: %s",
+				strerror(errno));
+			#else
+			log_err(" setsockopt(.. TCP_QUICKACK ..) failed: %s",
+				wsa_strerror(WSAGetLastError()));
+			#endif
+		}
+#else
+		log_warn(" setsockopt(TCP_QUICKACK) unsupported");
+#endif /* defined(IPPROTO_TCP) && defined(TCP_QUICKACK) */
 	}
 	if (mss > 0) {
 #if defined(IPPROTO_TCP) && defined(TCP_MAXSEG)
@@ -952,7 +984,8 @@ err:
 static int
 make_sock(int stype, const char* ifname, const char* port, 
 	struct addrinfo *hints, int v6only, int* noip6, size_t rcv, size_t snd,
-	int* reuseport, int transparent, int tcp_mss, int freebind, int use_systemd)
+	int* reuseport, int transparent, int tcp_mss, int nodelay, int freebind,
+	int use_systemd)
 {
 	struct addrinfo *res = NULL;
 	int r, s, inuse, noproto;
@@ -988,7 +1021,7 @@ make_sock(int stype, const char* ifname, const char* port,
 		}
 	} else	{
 		s = create_tcp_accept_sock(res, v6only, &noproto, reuseport,
-			transparent, tcp_mss, freebind, use_systemd);
+			transparent, tcp_mss, nodelay, freebind, use_systemd);
 		if(s == -1 && noproto && hints->ai_family == AF_INET6){
 			*noip6 = 1;
 		}
@@ -1001,7 +1034,8 @@ make_sock(int stype, const char* ifname, const char* port,
 static int
 make_sock_port(int stype, const char* ifname, const char* port, 
 	struct addrinfo *hints, int v6only, int* noip6, size_t rcv, size_t snd,
-	int* reuseport, int transparent, int tcp_mss, int freebind, int use_systemd)
+	int* reuseport, int transparent, int tcp_mss, int nodelay, int freebind,
+	int use_systemd)
 {
 	char* s = strchr(ifname, '@');
 	if(s) {
@@ -1023,10 +1057,11 @@ make_sock_port(int stype, const char* ifname, const char* port,
 		(void)strlcpy(p, s+1, sizeof(p));
 		p[strlen(s+1)]=0;
 		return make_sock(stype, newif, p, hints, v6only, noip6,
-			rcv, snd, reuseport, transparent, tcp_mss, freebind, use_systemd);
+			rcv, snd, reuseport, transparent, tcp_mss, nodelay,
+			freebind, use_systemd);
 	}
 	return make_sock(stype, ifname, port, hints, v6only, noip6, rcv, snd,
-		reuseport, transparent, tcp_mss, freebind, use_systemd);
+		reuseport, transparent, tcp_mss, nodelay, freebind, use_systemd);
 }
 
 /**
@@ -1125,6 +1160,18 @@ if_is_ssl(const char* ifname, const char* port, int ssl_port,
 	return 0;
 }
 
+/** see if interface is https, its port number == the https port number */
+static int
+if_is_https(const char* ifname, const char* port, int https_port)
+{
+	char* p = strchr(ifname, '@');
+	if(!p && atoi(port) == https_port)
+		return 1;
+	if(p && atoi(p+1) == https_port)
+		return 1;
+	return 0;
+}
+
 /**
  * Helper for ports_open. Creates one interface (or NULL for default).
  * @param ifname: The interface ip address.
@@ -1139,6 +1186,7 @@ if_is_ssl(const char* ifname, const char* port, int ssl_port,
  * @param snd: send buffer size for UDP
  * @param ssl_port: ssl service port number
  * @param tls_additional_port: list of additional ssl service port numbers.
+ * @param https_port: DoH service port number
  * @param reuseport: try to set SO_REUSEPORT if nonNULL and true.
  * 	set to false on exit if reuseport failed due to no kernel support.
  * @param transparent: set IP_TRANSPARENT socket option.
@@ -1152,11 +1200,13 @@ static int
 ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp, 
 	struct addrinfo *hints, const char* port, struct listen_port** list,
 	size_t rcv, size_t snd, int ssl_port,
-	struct config_strlist* tls_additional_port, int* reuseport,
-	int transparent, int tcp_mss, int freebind, int use_systemd,
-	int dnscrypt_port)
+	struct config_strlist* tls_additional_port, int https_port,
+	int* reuseport, int transparent, int tcp_mss, int freebind,
+	int use_systemd, int dnscrypt_port)
 {
 	int s, noip6=0;
+	int is_https = if_is_https(ifname, port, https_port);
+	int nodelay = is_https; /* TODO make config option */
 #ifdef USE_DNSCRYPT
 	int is_dnscrypt = ((strchr(ifname, '@') && 
 			atoi(strchr(ifname, '@')+1) == dnscrypt_port) ||
@@ -1171,7 +1221,7 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 	if(do_auto) {
 		if((s = make_sock_port(SOCK_DGRAM, ifname, port, hints, 1, 
 			&noip6, rcv, snd, reuseport, transparent,
-			tcp_mss, freebind, use_systemd)) == -1) {
+			tcp_mss, nodelay, freebind, use_systemd)) == -1) {
 			if(noip6) {
 				log_warn("IPv6 protocol not available");
 				return 1;
@@ -1200,7 +1250,7 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 		/* regular udp socket */
 		if((s = make_sock_port(SOCK_DGRAM, ifname, port, hints, 1, 
 			&noip6, rcv, snd, reuseport, transparent,
-			tcp_mss, freebind, use_systemd)) == -1) {
+			tcp_mss, nodelay, freebind, use_systemd)) == -1) {
 			if(noip6) {
 				log_warn("IPv6 protocol not available");
 				return 1;
@@ -1220,8 +1270,17 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 	if(do_tcp) {
 		int is_ssl = if_is_ssl(ifname, port, ssl_port,
 			tls_additional_port);
+		enum listen_type port_type;
+		if(is_ssl)
+			port_type = listen_type_ssl;
+		else if(is_https)
+			port_type = listen_type_http;
+		else if(is_dnscrypt)
+			port_type = listen_type_tcp_dnscrypt;
+		else
+			port_type = listen_type_tcp;
 		if((s = make_sock_port(SOCK_STREAM, ifname, port, hints, 1, 
-			&noip6, 0, 0, reuseport, transparent, tcp_mss,
+			&noip6, 0, 0, reuseport, transparent, tcp_mss, nodelay,
 			freebind, use_systemd)) == -1) {
 			if(noip6) {
 				/*log_warn("IPv6 protocol not available");*/
@@ -1231,8 +1290,7 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 		}
 		if(is_ssl)
 			verbose(VERB_ALGO, "setup TCP for SSL service");
-		if(!port_insert(list, s, is_ssl?listen_type_ssl:
-			(is_dnscrypt?listen_type_tcp_dnscrypt:listen_type_tcp))) {
+		if(!port_insert(list, s, port_type)) {
 #ifndef USE_WINSOCK
 			close(s);
 #else
@@ -1266,7 +1324,7 @@ listen_cp_insert(struct comm_point* c, struct listen_dnsport* front)
 struct listen_dnsport* 
 listen_create(struct comm_base* base, struct listen_port* ports,
 	size_t bufsize, int tcp_accept_count, int tcp_idle_timeout,
-	struct tcl_list* tcp_conn_limit, void* sslctx,
+	int harden_large_queries, struct tcl_list* tcp_conn_limit, void* sslctx,
 	struct dt_env* dtenv, comm_point_callback_type* cb, void *cb_arg)
 {
 	struct listen_dnsport* front = (struct listen_dnsport*)
@@ -1298,14 +1356,35 @@ listen_create(struct comm_base* base, struct listen_port* ports,
 				ports->ftype == listen_type_tcp_dnscrypt)
 			cp = comm_point_create_tcp(base, ports->fd, 
 				tcp_accept_count, tcp_idle_timeout,
+				harden_large_queries,
 				tcp_conn_limit, bufsize, front->udp_buff,
-				cb, cb_arg);
-		else if(ports->ftype == listen_type_ssl) {
+				ports->ftype, cb, cb_arg);
+		else if(ports->ftype == listen_type_ssl ||
+			ports->ftype == listen_type_http) {
 			cp = comm_point_create_tcp(base, ports->fd, 
 				tcp_accept_count, tcp_idle_timeout,
+				harden_large_queries,
 				tcp_conn_limit, bufsize, front->udp_buff,
-				cb, cb_arg);
+				ports->ftype, cb, cb_arg);
 			cp->ssl = sslctx;
+			if(ports->ftype == listen_type_http) {
+				if(!sslctx) {
+				log_warn("HTTPS port configured, but no TLS "
+					"tls-service-key or tls-service-pem "
+					"set");
+				}
+#ifndef HAVE_SSL_CTX_SET_ALPN_SELECT_CB
+				log_warn("Unbound is not compiled with an "
+					"OpenSSL version supporting ALPN "
+					" (OpenSSL >= 1.0.2). This is required "
+					"to use DNS-over-HTTPS");
+#endif
+#ifndef HAVE_NGHTTP2_NGHTTP2_H
+				log_warn("Unbound is not compiled with "
+					"nghttp2. This is required to use "
+					"DNS-over-HTTPS.");
+#endif
+			}
 		} else if(ports->ftype == listen_type_udpancil ||
 				  ports->ftype == listen_type_udpancil_dnscrypt)
 			cp = comm_point_create_udp_ancil(base, ports->fd, 
@@ -1419,6 +1498,7 @@ listening_ports_open(struct config_file* cfg, int* reuseport)
 				&hints, portbuf, &list,
 				cfg->so_rcvbuf, cfg->so_sndbuf,
 				cfg->ssl_port, cfg->tls_additional_port,
+				cfg->https_port,
 				reuseport, cfg->ip_transparent,
 				cfg->tcp_mss, cfg->ip_freebind, cfg->use_systemd,
 				cfg->dnscrypt_port)) {
@@ -1433,6 +1513,7 @@ listening_ports_open(struct config_file* cfg, int* reuseport)
 				&hints, portbuf, &list,
 				cfg->so_rcvbuf, cfg->so_sndbuf,
 				cfg->ssl_port, cfg->tls_additional_port,
+				cfg->https_port,
 				reuseport, cfg->ip_transparent,
 				cfg->tcp_mss, cfg->ip_freebind, cfg->use_systemd,
 				cfg->dnscrypt_port)) {
@@ -1449,6 +1530,7 @@ listening_ports_open(struct config_file* cfg, int* reuseport)
 				do_tcp, &hints, portbuf, &list, 
 				cfg->so_rcvbuf, cfg->so_sndbuf,
 				cfg->ssl_port, cfg->tls_additional_port,
+				cfg->https_port,
 				reuseport, cfg->ip_transparent,
 				cfg->tcp_mss, cfg->ip_freebind, cfg->use_systemd,
 				cfg->dnscrypt_port)) {
@@ -1463,6 +1545,7 @@ listening_ports_open(struct config_file* cfg, int* reuseport)
 				do_tcp, &hints, portbuf, &list, 
 				cfg->so_rcvbuf, cfg->so_sndbuf,
 				cfg->ssl_port, cfg->tls_additional_port,
+				cfg->https_port,
 				reuseport, cfg->ip_transparent,
 				cfg->tcp_mss, cfg->ip_freebind, cfg->use_systemd,
 				cfg->dnscrypt_port)) {
@@ -1906,3 +1989,624 @@ size_t tcp_req_info_get_stream_buffer_size(void)
 	lock_basic_unlock(&stream_wait_count_lock);
 	return s;
 }
+
+#ifdef HAVE_NGHTTP2
+/** nghttp2 callback. Used to copy response from rbuffer to nghttp2 session */
+static ssize_t http2_submit_response_read_callback(
+	nghttp2_session* ATTR_UNUSED(session),
+	int32_t stream_id, uint8_t* buf, size_t length, uint32_t* data_flags,
+	nghttp2_data_source* source, void* ATTR_UNUSED(cb_arg))
+{
+	struct http2_stream* h2_stream;
+	struct http2_session* h2_session = source->ptr;
+	size_t copylen = length;
+	if(!(h2_stream = nghttp2_session_get_stream_user_data(
+		h2_session->session, stream_id))) {
+		verbose(VERB_QUERY, "http2: cannot get stream data, closing "
+			"stream");
+		return NGHTTP2_ERR_TEMPORAL_CALLBACK_FAILURE;
+	}
+	if(!h2_stream->rbuffer ||
+		sldns_buffer_remaining(h2_stream->rbuffer) == 0) {
+		verbose(VERB_QUERY, "http2: cannot submit buffer. No data "
+			"available in rbuffer");
+		sldns_buffer_free(h2_stream->rbuffer);
+		h2_stream->rbuffer = NULL;
+		return NGHTTP2_ERR_TEMPORAL_CALLBACK_FAILURE;
+	}
+
+	if(copylen > sldns_buffer_remaining(h2_stream->rbuffer))
+		copylen = sldns_buffer_remaining(h2_stream->rbuffer);
+	if(copylen > SSIZE_MAX)
+		copylen = SSIZE_MAX; /* will probably never happen */
+
+	memcpy(buf, sldns_buffer_current(h2_stream->rbuffer), copylen);
+	sldns_buffer_skip(h2_stream->rbuffer, copylen);
+
+	if(sldns_buffer_remaining(h2_stream->rbuffer) == 0) {
+		*data_flags |= NGHTTP2_DATA_FLAG_EOF;
+		sldns_buffer_free(h2_stream->rbuffer);
+		h2_stream->rbuffer = NULL;
+	}
+
+	return copylen;
+}
+
+/**
+ * DNS response ready to be submitted to nghttp2, to be prepared for sending
+ * out. Response is stored in c->buffer. Copy to rbuffer because the c->buffer
+ * might be used before this will bne send out.
+ * @param h2_session: http2 session, containing c->buffer which contains answer
+ * @return 0 on error, 1 otherwise
+ */
+int http2_submit_dns_response(struct http2_session* h2_session)
+{
+	int ret;
+	nghttp2_data_provider data_prd;
+	char status[4];
+	nghttp2_nv headers[2];
+	struct http2_stream* h2_stream = h2_session->c->h2_stream;
+
+	if(h2_stream->rbuffer) {
+		log_err("http2 submit response error: rbuffer already "
+			"exists");
+		return 0;
+	}
+	if(sldns_buffer_remaining(h2_session->c->buffer) == 0) {
+		log_err("http2 submit response error: c->buffer not complete");
+		return 0;
+	}
+
+	if(!(h2_stream->rbuffer = sldns_buffer_new(
+		sldns_buffer_remaining(h2_session->c->buffer)))) {
+		log_err("http2 submit response error: malloc failure");
+		return 0;
+	}
+
+	if(snprintf(status, 4, "%d", h2_stream->status) != 3) {
+		verbose(VERB_QUERY, "http2: submit response error: "
+			"invalid status");
+		return 0;
+	}
+	headers[0].name = (uint8_t*)":status";
+	headers[0].namelen = 7;
+	headers[0].value = (uint8_t*)status;
+	headers[0].valuelen = 3;
+	headers[0].flags = NGHTTP2_NV_FLAG_NONE;
+
+	headers[1].name = (uint8_t*)"content-type";
+	headers[1].namelen = 12;
+	headers[1].value = (uint8_t*)"application/dns-message";
+	headers[1].valuelen = 23;
+	headers[1].flags = NGHTTP2_NV_FLAG_NONE;
+
+	/*TODO be nice and add the content-length header
+	headers[2].name = (uint8_t*)"content-length";
+	headers[2].namelen = 14;
+	headers[2].value = 
+	headers[2].valuelen = 
+	headers[2].flags = NGHTTP2_NV_FLAG_NONE;
+	*/
+
+	sldns_buffer_write(h2_stream->rbuffer,
+		sldns_buffer_current(h2_session->c->buffer),
+		sldns_buffer_remaining(h2_stream->rbuffer));
+	sldns_buffer_flip(h2_stream->rbuffer);
+
+	data_prd.source.ptr = h2_session;
+	data_prd.read_callback = http2_submit_response_read_callback;
+	ret = nghttp2_submit_response(h2_session->session, h2_stream->stream_id,
+		headers, 2, &data_prd);
+	if(ret) {
+		verbose(VERB_QUERY, "http2: set_stream_user_data failed, "
+			"error: %s", nghttp2_strerror(ret));
+		return 0;
+	}
+	return 1;
+}
+#else
+int http2_submit_dns_response(void* ATTR_UNUSED(v))
+{
+	return 0;
+}
+#endif
+
+#ifdef HAVE_NGHTTP2
+/** HTTP status to descriptive string */
+static char* http_status_to_str(enum http_status s)
+{
+	switch(s) {
+		case HTTP_STATUS_OK:
+			return "OK";
+		case HTTP_STATUS_BAD_REQUEST:
+			return "Bad Request";
+		case HTTP_STATUS_NOT_FOUND:
+			return "Not Found";
+		case HTTP_STATUS_PAYLOAD_TOO_LARGE:
+			return "Payload Too Large";
+		case HTTP_STATUS_URI_TOO_LONG:
+			return "URI Too Long";
+		case HTTP_STATUS_UNSUPPORTED_MEDIA_TYPE:
+			return "Unsupported Media Type";
+		case HTTP_STATUS_NOT_IMPLEMENTED:
+			return "Not Implemented";
+	}
+	return "Status Unknown";
+}
+
+/** nghttp2 callback. Used to copy error message to nghttp2 session */
+static ssize_t http2_submit_error_read_callback(
+	nghttp2_session* ATTR_UNUSED(session),
+	int32_t stream_id, uint8_t* buf, size_t length, uint32_t* data_flags,
+	nghttp2_data_source* source, void* ATTR_UNUSED(cb_arg))
+{
+	struct http2_stream* h2_stream;
+	struct http2_session* h2_session = source->ptr;
+	char* msg;
+	if(!(h2_stream = nghttp2_session_get_stream_user_data(
+		h2_session->session, stream_id))) {
+		verbose(VERB_QUERY, "http2: cannot get stream data, closing "
+			"stream");
+		return NGHTTP2_ERR_TEMPORAL_CALLBACK_FAILURE;
+	}
+	*data_flags |= NGHTTP2_DATA_FLAG_EOF;
+	msg = http_status_to_str(h2_stream->status);
+	if(length < strlen(msg))
+		return 0; /* not worth trying over multiple frames */
+	memcpy(buf, msg, strlen(msg));
+	return strlen(msg);
+
+}
+
+/**
+ * HTTP error response ready to be submitted to nghttp2, to be prepared for
+ * sending out. Message body will contain descriptive string for HTTP status.
+ * @param h2_session: http2 session to submit to
+ * @param h2_stream: http2 stream containing HTTP status to use for error
+ * @return 0 on error, 1 otherwise
+ */
+static int http2_submit_error(struct http2_session* h2_session,
+	struct http2_stream* h2_stream)
+{
+	int ret;
+	char status[4];
+	nghttp2_data_provider data_prd;
+	nghttp2_nv headers[1]; /* will be copied by nghttp */
+	if(snprintf(status, 4, "%d", h2_stream->status) != 3) {
+		verbose(VERB_QUERY, "http2: submit error failed, "
+			"invalid status");
+		return 0;
+	}
+	headers[0].name = (uint8_t*)":status";
+	headers[0].namelen = 7;
+	headers[0].value = (uint8_t*)status;
+	headers[0].valuelen = 3;
+	headers[0].flags = NGHTTP2_NV_FLAG_NONE;
+
+	data_prd.source.ptr = h2_session;
+	data_prd.read_callback = http2_submit_error_read_callback;
+
+	ret = nghttp2_submit_response(h2_session->session, h2_stream->stream_id,
+		headers, 1, &data_prd);
+	if(ret) {
+		verbose(VERB_QUERY, "http2: submit error failed, "
+			"error: %s", nghttp2_strerror(ret));
+		return 0;
+	}
+	return 1;
+}
+
+/**
+ * Start query handling. Query is stored in the stream, and will be free'd here.
+ * @param h2_session: http2 session, containing comm point
+ * @param h2_stream: stream containing buffered query
+ * @return: -1 on error, 1 if answer is stored in c->buffer, 0 if there is no
+ * reply available (yet).
+ */
+static int http2_query_read_done(struct http2_session* h2_session,
+	struct http2_stream* h2_stream)
+{
+	log_assert(h2_stream->qbuffer);
+
+	if(h2_session->c->h2_stream) {
+		verbose(VERB_ALGO, "http2_query_read_done failure: shared "
+			"buffer already assigned to stream");
+		return -1;
+	}
+	if(sldns_buffer_remaining(h2_session->c->buffer) <
+		sldns_buffer_remaining(h2_stream->qbuffer)) {
+		sldns_buffer_free(h2_stream->qbuffer);
+		h2_stream->qbuffer = NULL;
+		sldns_buffer_clear(h2_session->c->buffer);
+		verbose(VERB_ALGO, "http2_query_read_done failure: can't fit "
+			"qbuffer in c->buffer");
+		return -1;
+	}
+
+	sldns_buffer_write(h2_session->c->buffer,
+		sldns_buffer_current(h2_stream->qbuffer),
+		sldns_buffer_remaining(h2_stream->qbuffer));
+
+	sldns_buffer_free(h2_stream->qbuffer);
+	h2_stream->qbuffer = NULL;
+
+	sldns_buffer_flip(h2_session->c->buffer);
+	h2_session->c->h2_stream = h2_stream;
+	fptr_ok(fptr_whitelist_comm_point(h2_session->c->callback));
+	if((*h2_session->c->callback)(h2_session->c, h2_session->c->cb_arg,
+		NETEVENT_NOERROR, &h2_session->c->repinfo)) {
+		return 1; /* answer in c->buffer */
+	}
+	sldns_buffer_clear(h2_session->c->buffer);
+	h2_session->c->h2_stream = NULL;
+	return 0; /* mesh state added, or dropped */
+}
+
+/** nghttp2 callback. Used to check if the received frame indicates the end of a
+ * stream. Gather collected request data and start query handling. */
+static int http2_req_frame_recv_cb(nghttp2_session* session,
+	const nghttp2_frame* frame, void* cb_arg)
+{
+	struct http2_session* h2_session = (struct http2_session*)cb_arg;
+	struct http2_stream* h2_stream;
+	int query_read_done;
+
+	if((frame->hd.type != NGHTTP2_DATA &&
+		frame->hd.type != NGHTTP2_HEADERS) ||
+		!(frame->hd.flags & NGHTTP2_FLAG_END_STREAM)) {
+			return 0;
+	}
+
+	if(!(h2_stream = nghttp2_session_get_stream_user_data(
+		session, frame->hd.stream_id)))
+		return 0;
+
+	if(h2_stream->invalid_endpoint) {
+		h2_stream->status = HTTP_STATUS_NOT_FOUND;
+		goto submit_http_error;
+	}
+
+	if(h2_stream->invalid_content_type) {
+		h2_stream->status = HTTP_STATUS_UNSUPPORTED_MEDIA_TYPE;
+		goto submit_http_error;
+	}
+
+	if(h2_stream->http_method != HTTP_METHOD_GET &&
+		h2_stream->http_method != HTTP_METHOD_POST) {
+		h2_stream->status = HTTP_STATUS_NOT_IMPLEMENTED;
+		goto submit_http_error;
+	}
+
+	if(h2_stream->query_too_large) {
+		if(h2_stream->http_method == HTTP_METHOD_POST)
+			h2_stream->status = HTTP_STATUS_PAYLOAD_TOO_LARGE;
+		else
+			h2_stream->status = HTTP_STATUS_URI_TOO_LONG;
+		goto submit_http_error;
+	}
+
+	if(!h2_stream->qbuffer) {
+		h2_stream->status = HTTP_STATUS_BAD_REQUEST;
+		goto submit_http_error;
+	}
+
+	if(h2_stream->status) {
+submit_http_error:
+		verbose(VERB_QUERY, "http2 request invalid, returning :status="
+			"%d", h2_stream->status);
+		if(!http2_submit_error(h2_session, h2_stream)) {
+			return NGHTTP2_ERR_CALLBACK_FAILURE;
+		}
+		return 0;
+	}
+	h2_stream->status = HTTP_STATUS_OK;
+
+	sldns_buffer_flip(h2_stream->qbuffer);
+	h2_session->postpone_drop = 1;
+	query_read_done = http2_query_read_done(h2_session, h2_stream);
+	if(query_read_done < 0)
+		return NGHTTP2_ERR_CALLBACK_FAILURE;
+	else if(!query_read_done) {
+		if(h2_session->is_drop) {
+			/* connection needs to be closed. Return failure to make
+			 * sure no other action are taken anymore on comm point.
+			 * failure will result in reclaiming (and closing)
+			 * of comm point. */
+			verbose(VERB_QUERY, "http2 query dropped in worker cb");
+			h2_session->postpone_drop = 0;
+			return NGHTTP2_ERR_CALLBACK_FAILURE;
+		}
+		/* nothing to submit right now, query added to mesh. */
+		h2_session->postpone_drop = 0;
+		return 0;
+	}
+	if(!http2_submit_dns_response(h2_session)) {
+		sldns_buffer_clear(h2_session->c->buffer);
+		h2_session->c->h2_stream = NULL;
+		return NGHTTP2_ERR_CALLBACK_FAILURE;
+	}
+	verbose(VERB_QUERY, "http2 query submitted to session");
+	sldns_buffer_clear(h2_session->c->buffer);
+	h2_session->c->h2_stream = NULL;
+	return 0;
+}
+
+/** nghttp2 callback. Used to detect start of new streams. */
+static int http2_req_begin_headers_cb(nghttp2_session* session,
+	const nghttp2_frame* frame, void* cb_arg)
+{
+	struct http2_session* h2_session = (struct http2_session*)cb_arg;
+	struct http2_stream* h2_stream;
+	int ret;
+	if(frame->hd.type != NGHTTP2_HEADERS ||
+		frame->headers.cat != NGHTTP2_HCAT_REQUEST) {
+		/* only interrested in request headers */
+		return 0;
+	}
+	if(!(h2_stream = http2_stream_create(frame->hd.stream_id))) {
+		log_err("malloc failure while creating http2 stream");
+		return NGHTTP2_ERR_CALLBACK_FAILURE;
+	}
+	http2_session_add_stream(h2_session, h2_stream);
+	ret = nghttp2_session_set_stream_user_data(session,
+		frame->hd.stream_id, h2_stream);
+	if(ret) {
+		/* stream does not exist */
+		verbose(VERB_QUERY, "http2: set_stream_user_data failed, "
+			"error: %s", nghttp2_strerror(ret));
+		return NGHTTP2_ERR_CALLBACK_FAILURE;
+	}
+
+	return 0;
+}
+
+/**
+ * base64url decode, store in qbuffer
+ * @param h2_session: http2 session
+ * @param h2_stream: http2 stream
+ * @param start: start of the base64 string
+ * @param length: length of the base64 string
+ * @return: 0 on error, 1 otherwise. query will be stored in h2_stram->qbuffer,
+ * buffer will be NULL is unparseble.
+ */
+static int http2_buffer_uri_query(struct http2_session* h2_session,
+	struct http2_stream* h2_stream, const uint8_t* start, size_t length)
+{
+	size_t expectb64len;
+	int b64len;
+	if(h2_stream->http_method == HTTP_METHOD_POST)
+		return 1;
+	if(length == 0)
+		return 1;
+	if(h2_stream->qbuffer) {
+		verbose(VERB_ALGO, "http2_req_header fail, "
+			"qbuffer already set");
+		return 0;
+	}
+
+	/* calculate size, might be a bit bigger than the real
+	 * decoded buffer size */
+	expectb64len = sldns_b64_pton_calculate_size(length);
+	log_assert(expectb64len > 0);
+	if(expectb64len >
+		h2_session->c->http2_max_qbuffer_size) {
+		h2_stream->query_too_large = 1;
+		return 1;
+	}
+
+	if(!(h2_stream->qbuffer = sldns_buffer_new(expectb64len))) {
+		log_err("http2_req_header fail, qbuffer "
+			"malloc failure");
+		return 0;
+	}
+
+	if(!(b64len = sldns_b64url_pton(
+		(char const *)start, length,
+		sldns_buffer_current(h2_stream->qbuffer),
+		expectb64len)) || b64len < 0) {
+		sldns_buffer_free(h2_stream->qbuffer);
+		h2_stream->qbuffer = NULL;
+		/* return without error, method can be an
+		 * unknown POST */
+		return 1;
+	}
+	sldns_buffer_skip(h2_stream->qbuffer, (size_t)b64len);
+	return 1;
+}
+
+/** nghttp2 callback. Used to parse headers from HEADER frames. */
+static int http2_req_header_cb(nghttp2_session* session,
+	const nghttp2_frame* frame, const uint8_t* name, size_t namelen,
+	const uint8_t* value, size_t valuelen, uint8_t ATTR_UNUSED(flags),
+	void* cb_arg)
+{
+	struct http2_stream* h2_stream = NULL;
+	struct http2_session* h2_session = (struct http2_session*)cb_arg;
+	/* nghttp2 deals with CONTINUATION frames and provides them as part of
+	 * the HEADER */
+	if(frame->hd.type != NGHTTP2_HEADERS ||
+		frame->headers.cat != NGHTTP2_HCAT_REQUEST) {
+		/* only interrested in request headers */
+		return 0;
+	}
+	if(!(h2_stream = nghttp2_session_get_stream_user_data(session,
+		frame->hd.stream_id)))
+		return 0;
+
+	/* earlier checks already indicate we can stop handling this query */
+	if(h2_stream->http_method == HTTP_METHOD_UNSUPPORTED ||
+		h2_stream->invalid_content_type ||
+		h2_stream->invalid_endpoint)
+		return 0;
+
+
+	/* nghttp2 performs some sanity checks in the headers, including:
+	 * name and value are guaranteed to be null terminated
+	 * name is guaranteed to be lowercase
+	 * content-length value is guaranteed to contain digits
+	 */
+
+	if(!h2_stream->http_method && namelen  == 7 &&
+		memcmp(":method", name, namelen) == 0) {
+		/* Case insensitive check on :method value to be on the safe
+		 * side. I failed to find text about case sentitivity in specs.
+		 */
+		if(valuelen == 3 && strcasecmp("GET", (const char*)value) == 0)
+			h2_stream->http_method = HTTP_METHOD_GET;
+		else if(valuelen == 4 &&
+			strcasecmp("POST", (const char*)value) == 0) {
+			h2_stream->http_method = HTTP_METHOD_POST;
+			if(h2_stream->qbuffer) {
+				/* POST method uses query from DATA frames */
+				sldns_buffer_free(h2_stream->qbuffer);
+				h2_stream->qbuffer = NULL;
+			}
+		} else
+			h2_stream->http_method = HTTP_METHOD_UNSUPPORTED;
+		return 0;
+	}
+	if(namelen == 5 && memcmp(":path", name, namelen) == 0) {
+		/* Hard coded /dns-query endpoint, might be nice to make
+		 * configurable.
+		 * :path may contain DNS query, depending on method. Method might
+		 * not be known yet here, so check after finishing receiving
+		 * stream. */
+#define HTTP_ENDPOINT "/dns-query"
+#define	HTTP_QUERY_PARAM "?dns="
+		size_t el = sizeof(HTTP_ENDPOINT) - 1;
+		size_t qpl = sizeof(HTTP_QUERY_PARAM) - 1;
+
+		if(valuelen < el || memcmp(HTTP_ENDPOINT, value, el) != 0) {
+			h2_stream->invalid_endpoint = 1;
+			return 0;
+		}
+		/* larger than endpoint only allowed if it is for the query
+		 * parameter */
+		if(valuelen <= el+qpl ||
+			memcmp(HTTP_QUERY_PARAM, value+el, qpl) != 0) {
+			if(valuelen != el)
+				h2_stream->invalid_endpoint = 1;
+			return 0;
+		}
+
+		if(!http2_buffer_uri_query(h2_session, h2_stream,
+			value+(el+qpl), valuelen-(el+qpl))) {
+			return NGHTTP2_ERR_CALLBACK_FAILURE;
+		}
+		return 0;
+	}
+	/* Content type is a SHOULD (rfc7231#section-3.1.1.5) when using POST,
+	 * and not needed when using GET. Don't enfore.
+	 * If set only allow lowercase "application/dns-message".
+	 *
+	 * Clients SHOULD (rfc8484#section-4.1) set an accept header, but MUST
+	 * be able to handle "application/dns-message". Since that is the only
+	 * content-type supported we can ignore the accept header.
+	 */
+	if((namelen == 12 && memcmp("content-type", name, namelen) == 0)) {
+		if(valuelen != 23 || memcmp("application/dns-message", value,
+			valuelen) != 0) {
+			h2_stream->invalid_content_type = 1;
+		}
+	}
+
+	/* Only interested in content-lentg for POST (on not yet known) method.
+	 */
+	if((!h2_stream->http_method ||
+		h2_stream->http_method == HTTP_METHOD_POST) &&
+		!h2_stream->content_length && namelen  == 14 &&
+		memcmp("content-length", name, namelen) == 0) {
+		if(valuelen > 5) {
+			h2_stream->query_too_large = 1;
+			return 0;
+		}
+		/* guaranteed to only contian digits and be null terminated */
+		h2_stream->content_length = atoi((const char*)value);
+		if(h2_stream->content_length >
+			h2_session->c->http2_max_qbuffer_size) {
+			h2_stream->query_too_large = 1;
+			return 0;
+		}
+	}
+	return 0;
+}
+
+/** nghttp2 callback. Used to get data from DATA frames, which can contain
+ * queries in POST requests. */
+static int http2_req_data_chunk_recv_cb(nghttp2_session* ATTR_UNUSED(session),
+	uint8_t ATTR_UNUSED(flags), int32_t stream_id, const uint8_t* data,
+	size_t len, void* cb_arg)
+{
+	struct http2_session* h2_session = (struct http2_session*)cb_arg;
+	struct http2_stream* h2_stream;
+
+	if(!(h2_stream = nghttp2_session_get_stream_user_data(
+		h2_session->session, stream_id))) {
+		return 0;
+	}
+
+	if(h2_stream->query_too_large)
+		return 0;
+
+	if(!h2_stream->qbuffer) {
+		if(h2_stream->content_length) {
+			if(h2_stream->content_length < len)
+				/* getting more data in DATA frame than
+				 * advertised in content-length header. */
+				return NGHTTP2_ERR_CALLBACK_FAILURE;
+			h2_stream->qbuffer = sldns_buffer_new(
+				h2_stream->content_length);
+		} else if(len <= h2_session->c->http2_max_qbuffer_size) {
+			/* setting this to msg-buffer-size can result in a lot
+			 * of memory consuption. Most queries should fit in a
+			 * single DATA frame, and most POST queries will
+			 * containt content-length which does not impose this
+			 * limit. */
+			h2_stream->qbuffer = sldns_buffer_new(len);
+		}
+	}
+
+	if(!h2_stream->qbuffer ||
+		sldns_buffer_remaining(h2_stream->qbuffer) < len) {
+		verbose(VERB_ALGO, "http2 data_chunck_recv failed. Not enough "
+			"buffer space for POST query. Can happen on multi "
+			"frame requests without content-length header");
+		h2_stream->query_too_large = 1;
+		return 0;
+	}
+
+	sldns_buffer_write(h2_stream->qbuffer, data, len);
+
+	return 0;
+}
+
+nghttp2_session_callbacks* http2_req_callbacks_create()
+{
+	nghttp2_session_callbacks *callbacks;
+	if(nghttp2_session_callbacks_new(&callbacks) == NGHTTP2_ERR_NOMEM) {
+		log_err("failed to initialize nghttp2 callback");
+		return NULL;
+	}
+	/* reception of header block started, used to create h2_stream */
+	nghttp2_session_callbacks_set_on_begin_headers_callback(callbacks,
+		http2_req_begin_headers_cb);
+	/* complete frame received, used to get data from stream if frame
+	 * has end stream flag, and start processing query */
+	nghttp2_session_callbacks_set_on_frame_recv_callback(callbacks,
+		http2_req_frame_recv_cb);
+	/* get request info from headers */
+	nghttp2_session_callbacks_set_on_header_callback(callbacks,
+		http2_req_header_cb);
+	/* get data from DATA frames, containing POST query */
+	nghttp2_session_callbacks_set_on_data_chunk_recv_callback(callbacks,
+		http2_req_data_chunk_recv_cb);
+
+	/* generic HTTP2 callbacks */
+	nghttp2_session_callbacks_set_recv_callback(callbacks, http2_recv_cb);
+	nghttp2_session_callbacks_set_send_callback(callbacks, http2_send_cb);
+	nghttp2_session_callbacks_set_on_stream_close_callback(callbacks,
+		http2_stream_close_cb);
+
+	return callbacks;
+}
+#endif /* HAVE_NGHTTP2 */

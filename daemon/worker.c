@@ -1109,7 +1109,7 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 	struct respip_client_info* cinfo = NULL, cinfo_tmp;
 	memset(&qinfo, 0, sizeof(qinfo));
 
-	if(error != NETEVENT_NOERROR || !repinfo) {
+	if((error != NETEVENT_NOERROR && error != NETEVENT_DONE)|| !repinfo) {
 		/* some bad tcp query DNS formats give these error calls */
 		verbose(VERB_ALGO, "handle request called with err=%d", error);
 		return 0;
@@ -1797,7 +1797,8 @@ worker_init(struct worker* worker, struct config_file *cfg,
 		cfg->do_tcp_keepalive
 			? cfg->tcp_keepalive_timeout
 			: cfg->tcp_idle_timeout,
-			worker->daemon->tcl,
+		cfg->harden_large_queries,
+		worker->daemon->tcl,
 		worker->daemon->listen_sslctx,
 		dtenv, worker_handle_request, worker);
 	if(!worker->front) {

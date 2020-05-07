@@ -128,6 +128,8 @@ struct config_file {
 	char* tls_ciphers;
 	/** TLS chiphersuites (TLSv1.3) */
 	char* tls_ciphersuites;
+	/** port on which to provide DNS over HTTPS service */
+	int https_port;
 
 	/** outgoing port range number of ports (per thread) */
 	int outgoing_num_ports;

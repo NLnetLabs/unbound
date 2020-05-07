@@ -111,6 +111,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_TCP_UPSTREAM VAR_SSL_UPSTREAM
 %token VAR_SSL_SERVICE_KEY VAR_SSL_SERVICE_PEM VAR_SSL_PORT VAR_FORWARD_FIRST
 %token VAR_STUB_SSL_UPSTREAM VAR_FORWARD_SSL_UPSTREAM VAR_TLS_CERT_BUNDLE
+%token VAR_HTTPS_PORT
 %token VAR_STUB_FIRST VAR_MINIMAL_RESPONSES VAR_RRSET_ROUNDROBIN
 %token VAR_MAX_UDP_SIZE VAR_DELAY_CLOSE
 %token VAR_UNBLOCK_LAN_ZONES VAR_INSECURE_LAN_ZONES
@@ -235,6 +236,7 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_log_queries | server_log_replies | server_tcp_upstream | server_ssl_upstream |
 	server_log_local_actions |
 	server_ssl_service_key | server_ssl_service_pem | server_ssl_port |
+	server_https_port |
 	server_minimal_responses | server_rrset_roundrobin | server_max_udp_size |
 	server_so_reuseport | server_delay_close |
 	server_unblock_lan_zones | server_insecure_lan_zones |
@@ -947,6 +949,15 @@ server_tls_session_ticket_keys: VAR_TLS_SESSION_TICKET_KEYS STRING_ARG
 		if(!cfg_strlist_append(&cfg_parser->cfg->tls_session_ticket_keys,
 			$2))
 			yyerror("out of memory");
+	}
+	;
+server_https_port: VAR_HTTPS_PORT STRING_ARG
+	{
+		OUTYY(("P(server_https_port:%s)\n", $2));
+		if(atoi($2) == 0)
+			yyerror("port number expected");
+		else cfg_parser->cfg->https_port = atoi($2);
+		free($2);
 	}
 	;
 server_use_systemd: VAR_USE_SYSTEMD STRING_ARG

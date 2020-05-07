@@ -43,6 +43,9 @@
 #define LISTEN_DNSPORT_H
 
 #include "util/netevent.h"
+#ifdef HAVE_NGHTTP2_NGHTTP2_H
+#include <nghttp2/nghttp2.h>
+#endif
 struct listen_list;
 struct config_file;
 struct addrinfo;
@@ -94,8 +97,9 @@ enum listen_type {
 	/** tcp type + dnscrypt */
 	listen_type_tcp_dnscrypt,
 	/** udp ipv6 (v4mapped) for use with ancillary data + dnscrypt*/
-	listen_type_udpancil_dnscrypt
-
+	listen_type_udpancil_dnscrypt,
+	/** HTTP(2) over TLS over TCP */
+	listen_type_http
 };
 
 /**
@@ -139,6 +143,7 @@ void listening_ports_free(struct listen_port* list);
  * @param tcp_accept_count: max number of simultaneous TCP connections 
  * 	from clients.
  * @param tcp_idle_timeout: idle timeout for TCP connections in msec.
+ * @param harden_large_queries: whether query size should be limited.
  * @param tcp_conn_limit: TCP connection limit info.
  * @param sslctx: nonNULL if ssl context.
  * @param dtenv: nonNULL if dnstap enabled.
@@ -149,7 +154,7 @@ void listening_ports_free(struct listen_port* list);
  */
 struct listen_dnsport* listen_create(struct comm_base* base,
 	struct listen_port* ports, size_t bufsize,
-	int tcp_accept_count, int tcp_idle_timeout,
+	int tcp_accept_count, int tcp_idle_timeout, int harden_large_queries,
 	struct tcl_list* tcp_conn_limit, void* sslctx,
 	struct dt_env *dtenv, comm_point_callback_type* cb, void* cb_arg);
 
@@ -220,12 +225,14 @@ int create_udp_sock(int family, int socktype, struct sockaddr* addr,
  * 	listening UDP port.  Set to false on return if it failed to do so.
  * @param transparent: set IP_TRANSPARENT socket option.
  * @param mss: maximum segment size of the socket. if zero, leaves the default. 
+ * @param nodelay: if true set TCP_NODELAY and TCP_QUICKACK socket options.
  * @param freebind: set IP_FREEBIND socket option.
  * @param use_systemd: if true, fetch sockets from systemd.
  * @return: the socket. -1 on error.
  */
 int create_tcp_accept_sock(struct addrinfo *addr, int v6only, int* noproto,
-	int* reuseport, int transparent, int mss, int freebind, int use_systemd);
+	int* reuseport, int transparent, int mss, int nodelay, int freebind,
+	int use_systemd);
 
 /**
  * Create and bind local listening socket
@@ -366,5 +373,25 @@ int tcp_req_info_handle_read_close(struct tcp_req_info* req);
 
 /** get the size of currently used tcp stream wait buffers (in bytes) */
 size_t tcp_req_info_get_stream_buffer_size(void);
+
+#ifdef HAVE_NGHTTP2
+/** 
+ * Create nghttp2 callbacks to handle HTTP2 requests.
+ * @return malloc'ed struct, NULL on failure
+ */
+nghttp2_session_callbacks* http2_req_callbacks_create();
+
+/**
+ * DNS response ready to be submitted to nghttp2, to be prepared for sending
+ * out. Response is stored in c->buffer. Copy to rbuffer because the c->buffer
+ * might be used before this will be send out.
+ * @param h2_session: http2 session, containing c->buffer which contains answer
+ * @param h2_stream: http2 stream, containing buffer to store answer in
+ * @return 0 on error, 1 otherwise
+ */
+int http2_submit_dns_response(struct http2_session* h2_session);
+#else
+int http2_submit_dns_response(void* v);
+#endif /* HAVE_NGHTTP2 */
 
 #endif /* LISTEN_DNSPORT_H */

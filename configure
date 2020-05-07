@@ -804,6 +804,7 @@ infodir
 docdir
 oldincludedir
 includedir
+runstatedir
 localstatedir
 sharedstatedir
 sysconfdir
@@ -877,6 +878,7 @@ enable_tfo_server
 with_libevent
 with_libexpat
 with_libhiredis
+with_libnghttp2
 enable_static_exe
 enable_fully_static
 enable_lock_checks
@@ -951,6 +953,7 @@ datadir='${datarootdir}'
 sysconfdir='${prefix}/etc'
 sharedstatedir='${prefix}/com'
 localstatedir='${prefix}/var'
+runstatedir='${localstatedir}/run'
 includedir='${prefix}/include'
 oldincludedir='/usr/include'
 docdir='${datarootdir}/doc/${PACKAGE_TARNAME}'
@@ -1203,6 +1206,15 @@ do
   | -silent | --silent | --silen | --sile | --sil)
     silent=yes ;;
 
+  -runstatedir | --runstatedir | --runstatedi | --runstated \
+  | --runstate | --runstat | --runsta | --runst | --runs \
+  | --run | --ru | --r)
+    ac_prev=runstatedir ;;
+  -runstatedir=* | --runstatedir=* | --runstatedi=* | --runstated=* \
+  | --runstate=* | --runstat=* | --runsta=* | --runst=* | --runs=* \
+  | --run=* | --ru=* | --r=*)
+    runstatedir=$ac_optarg ;;
+
   -sbindir | --sbindir | --sbindi | --sbind | --sbin | --sbi | --sb)
     ac_prev=sbindir ;;
   -sbindir=* | --sbindir=* | --sbindi=* | --sbind=* | --sbin=* \
@@ -1340,7 +1352,7 @@ fi
 for ac_var in	exec_prefix prefix bindir sbindir libexecdir datarootdir \
 		datadir sysconfdir sharedstatedir localstatedir includedir \
 		oldincludedir docdir infodir htmldir dvidir pdfdir psdir \
-		libdir localedir mandir
+		libdir localedir mandir runstatedir
 do
   eval ac_val=\$$ac_var
   # Remove trailing slashes.
@@ -1493,6 +1505,7 @@ Fine tuning of the installation directories:
   --sysconfdir=DIR        read-only single-machine data [PREFIX/etc]
   --sharedstatedir=DIR    modifiable architecture-independent data [PREFIX/com]
   --localstatedir=DIR     modifiable single-machine data [PREFIX/var]
+  --runstatedir=DIR       modifiable per-process data [LOCALSTATEDIR/run]
   --libdir=DIR            object code libraries [EPREFIX/lib]
   --includedir=DIR        C header files [PREFIX/include]
   --oldincludedir=DIR     C header files for non-gcc [/usr/include]
@@ -1635,6 +1648,7 @@ Optional Packages:
                           outgoing port ranges.
   --with-libexpat=path    specify explicit path for libexpat.
   --with-libhiredis=path  specify explicit path for libhiredis.
+  --with-libnghttp2=path  specify explicit path for libnghttp2.
   --with-dnstap-socket-path=pathname
                           set default dnstap socket path
   --with-protobuf-c=path  Path where protobuf-c is installed, for dnstap
@@ -15666,7 +15680,7 @@ else
     We can't simply define LARGE_OFF_T to be 9223372036854775807,
     since some C++ compilers masquerading as C compilers
     incorrectly reject 9223372036854775807.  */
-#define LARGE_OFF_T (((off_t) 1 << 62) - 1 + ((off_t) 1 << 62))
+#define LARGE_OFF_T ((((off_t) 1 << 31) << 31) - 1 + (((off_t) 1 << 31) << 31))
   int off_t_is_large[(LARGE_OFF_T % 2147483629 == 721
 		       && LARGE_OFF_T % 2147483647 == 1)
 		      ? 1 : -1];
@@ -15712,7 +15726,7 @@ else
     We can't simply define LARGE_OFF_T to be 9223372036854775807,
     since some C++ compilers masquerading as C compilers
     incorrectly reject 9223372036854775807.  */
-#define LARGE_OFF_T (((off_t) 1 << 62) - 1 + ((off_t) 1 << 62))
+#define LARGE_OFF_T ((((off_t) 1 << 31) << 31) - 1 + (((off_t) 1 << 31) << 31))
   int off_t_is_large[(LARGE_OFF_T % 2147483629 == 721
 		       && LARGE_OFF_T % 2147483647 == 1)
 		      ? 1 : -1];
@@ -15736,7 +15750,7 @@ rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
     We can't simply define LARGE_OFF_T to be 9223372036854775807,
     since some C++ compilers masquerading as C compilers
     incorrectly reject 9223372036854775807.  */
-#define LARGE_OFF_T (((off_t) 1 << 62) - 1 + ((off_t) 1 << 62))
+#define LARGE_OFF_T ((((off_t) 1 << 31) << 31) - 1 + (((off_t) 1 << 31) << 31))
   int off_t_is_large[(LARGE_OFF_T % 2147483629 == 721
 		       && LARGE_OFF_T % 2147483647 == 1)
 		      ? 1 : -1];
@@ -15781,7 +15795,7 @@ else
     We can't simply define LARGE_OFF_T to be 9223372036854775807,
     since some C++ compilers masquerading as C compilers
     incorrectly reject 9223372036854775807.  */
-#define LARGE_OFF_T (((off_t) 1 << 62) - 1 + ((off_t) 1 << 62))
+#define LARGE_OFF_T ((((off_t) 1 << 31) << 31) - 1 + (((off_t) 1 << 31) << 31))
   int off_t_is_large[(LARGE_OFF_T % 2147483629 == 721
 		       && LARGE_OFF_T % 2147483647 == 1)
 		      ? 1 : -1];
@@ -15805,7 +15819,7 @@ rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
     We can't simply define LARGE_OFF_T to be 9223372036854775807,
     since some C++ compilers masquerading as C compilers
     incorrectly reject 9223372036854775807.  */
-#define LARGE_OFF_T (((off_t) 1 << 62) - 1 + ((off_t) 1 << 62))
+#define LARGE_OFF_T ((((off_t) 1 << 31) << 31) - 1 + (((off_t) 1 << 31) << 31))
   int off_t_is_large[(LARGE_OFF_T % 2147483629 == 721
 		       && LARGE_OFF_T % 2147483647 == 1)
 		      ? 1 : -1];
@@ -18306,7 +18320,7 @@ done
 # these check_funcs need -lssl
 BAKLIBS="$LIBS"
 LIBS="-lssl $LIBS"
-for ac_func in OPENSSL_init_ssl SSL_CTX_set_security_level SSL_set1_host SSL_get0_peername X509_VERIFY_PARAM_set1_host SSL_CTX_set_ciphersuites
+for ac_func in OPENSSL_init_ssl SSL_CTX_set_security_level SSL_set1_host SSL_get0_peername X509_VERIFY_PARAM_set1_host SSL_CTX_set_ciphersuites SSL_CTX_set_alpn_select_cb
 do :
   as_ac_var=`$as_echo "ac_cv_func_$ac_func" | $as_tr_sh`
 ac_fn_c_check_func "$LINENO" "$ac_func" "$as_ac_var"
@@ -19124,31 +19138,34 @@ esac
 if test "${with_libevent+set}" = set; then :
   withval=$with_libevent;
 else
-   withval="no"
+   with_libevent="no"
 fi
 
-if test x_$withval = x_yes -o x_$withval != x_no; then
+if test "x_$with_libevent" != x_no; then
+
+$as_echo "#define USE_LIBEVENT 1" >>confdefs.h
+
         { $as_echo "$as_me:${as_lineno-$LINENO}: checking for libevent" >&5
 $as_echo_n "checking for libevent... " >&6; }
-        if test x_$withval = x_ -o x_$withval = x_yes; then
-            withval="/usr/local /opt/local /usr/lib /usr/pkg /usr/sfw /usr"
+        if test "x_$with_libevent" = x_ -o "x_$with_libevent" = x_yes; then
+            with_libevent="/usr/local /opt/local /usr/lib /usr/pkg /usr/sfw /usr"
         fi
-        for dir in $withval; do
+        for dir in $with_libevent; do
             thedir="$dir"
             if test -f "$dir/include/event.h" -o -f "$dir/include/event2/event.h"; then
                 found_libevent="yes"
-				if test "$thedir" != "/usr"; then
-                    CPPFLAGS="$CPPFLAGS -I$thedir/include"
-		fi
-                break;
-            fi
+								if test "$thedir" != "/usr"; then
+				    CPPFLAGS="$CPPFLAGS -I$thedir/include"
+				fi
+				break;
+		    fi
         done
         if test x_$found_libevent != x_yes; then
 		if test -f "$dir/event.h" -a \( -f "$dir/libevent.la" -o -f "$dir/libev.la" \) ; then
 			# libevent source directory
-            		{ $as_echo "$as_me:${as_lineno-$LINENO}: result: found in $thedir" >&5
+			{ $as_echo "$as_me:${as_lineno-$LINENO}: result: found in $thedir" >&5
 $as_echo "found in $thedir" >&6; }
-                	CPPFLAGS="$CPPFLAGS -I$thedir -I$thedir/include"
+			CPPFLAGS="$CPPFLAGS -I$thedir -I$thedir/include"
 			BAK_LDFLAGS_SET="1"
 			BAK_LDFLAGS="$LDFLAGS"
 			# remove evdns from linking
@@ -19161,10 +19178,10 @@ $as_echo "found in $thedir" >&6; }
 			cp $ev_files_o build/libevent
 			cp $ev_files_lo build/libevent
 			cp $ev_files_libso build/libevent/.libs
-            		LATE_LDFLAGS="build/libevent/*.lo -lm"
+			LATE_LDFLAGS="build/libevent/*.lo -lm"
 			LDFLAGS="build/libevent/*.o $LDFLAGS -lm"
 		else
-            		as_fn_error $? "Cannot find the libevent library in $withval
+            as_fn_error $? "Cannot find the libevent library in $with_libevent
 You can restart ./configure --with-libevent=no to use a builtin alternative.
 Please note that this alternative is not as capable as libevent when using
 large outgoing port ranges.  " "$LINENO" 5
@@ -19611,6 +19628,70 @@ fi
 
 cat >>confdefs.h <<_ACEOF
 #define HAVE_DECL_REDISCONNECT $ac_have_decl
+_ACEOF
+
+fi
+
+# nghttp2
+
+# Check whether --with-libnghttp2 was given.
+if test "${with_libnghttp2+set}" = set; then :
+  withval=$with_libnghttp2;
+else
+   withval="no"
+fi
+
+found_libnghttp2="no"
+if test x_$withval = x_yes -o x_$withval != x_no; then
+   { $as_echo "$as_me:${as_lineno-$LINENO}: checking for libnghttp2" >&5
+$as_echo_n "checking for libnghttp2... " >&6; }
+   if test x_$withval = x_ -o x_$withval = x_yes; then
+            withval="/usr/local /opt/local /usr/lib /usr/pkg /usr/sfw /usr"
+   fi
+   for dir in $withval ; do
+            if test -f "$dir/include/nghttp2/nghttp2.h"; then
+		found_libnghttp2="yes"
+				if test "$dir" != "/usr"; then
+                    CPPFLAGS="$CPPFLAGS -I$dir/include"
+		    LDFLAGS="$LDFLAGS -L$dir/lib"
+		fi
+		{ $as_echo "$as_me:${as_lineno-$LINENO}: result: found in $dir" >&5
+$as_echo "found in $dir" >&6; }
+
+$as_echo "#define HAVE_NGHTTP2 1" >>confdefs.h
+
+		LIBS="$LIBS -lnghttp2"
+                break;
+            fi
+    done
+    if test x_$found_libnghttp2 != x_yes; then
+	as_fn_error $? "Could not find libnghttp2, nghttp2.h" "$LINENO" 5
+    fi
+    for ac_header in nghttp2/nghttp2.h
+do :
+  ac_fn_c_check_header_compile "$LINENO" "nghttp2/nghttp2.h" "ac_cv_header_nghttp2_nghttp2_h" "$ac_includes_default
+"
+if test "x$ac_cv_header_nghttp2_nghttp2_h" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_NGHTTP2_NGHTTP2_H 1
+_ACEOF
+
+fi
+
+done
+
+    ac_fn_c_check_decl "$LINENO" "nghttp2_session_server_new" "ac_cv_have_decl_nghttp2_session_server_new" "$ac_includes_default
+    #include <nghttp2/nghttp2.h>
+
+"
+if test "x$ac_cv_have_decl_nghttp2_session_server_new" = xyes; then :
+  ac_have_decl=1
+else
+  ac_have_decl=0
+fi
+
+cat >>confdefs.h <<_ACEOF
+#define HAVE_DECL_NGHTTP2_SESSION_SERVER_NEW $ac_have_decl
 _ACEOF
 
 fi

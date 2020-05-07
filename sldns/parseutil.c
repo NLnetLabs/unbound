@@ -674,14 +674,17 @@ size_t sldns_b64_pton_calculate_size(size_t srcsize)
 	return (((((srcsize + 3) / 4) * 3)) + 1);
 }
 
-int sldns_b64_pton(char const *src, uint8_t *target, size_t targsize)
+/* padding not required if srcsize is set */
+static int sldns_b64_pton_base(char const *src, size_t srcsize, uint8_t *target,
+	size_t targsize, int base64url)
 {
 	const uint8_t pad64 = 64; /* is 64th in the b64 array */
 	const char* s = src;
 	uint8_t in[4];
 	size_t o = 0, incount = 0;
+	int check_padding = (srcsize) ? 0 : 1;
 
-	while(*s) {
+	while(*s && (check_padding || srcsize)) {
 		/* skip any character that is not base64 */
 		/* conceptually we do:
 		const char* b64 =      pad'=' is appended to array
@@ -690,30 +693,40 @@ int sldns_b64_pton(char const *src, uint8_t *target, size_t targsize)
 		and use d-b64;
 		*/
 		char d = *s++;
+		srcsize--;
 		if(d <= 'Z' && d >= 'A')
 			d -= 'A';
 		else if(d <= 'z' && d >= 'a')
 			d = d - 'a' + 26;
 		else if(d <= '9' && d >= '0')
 			d = d - '0' + 52;
-		else if(d == '+')
+		else if(!base64url && d == '+')
 			d = 62;
-		else if(d == '/')
+		else if(base64url && d == '-')
+			d = 62;
+		else if(!base64url && d == '/')
 			d = 63;
-		else if(d == '=')
+		else if(base64url && d == '_')
+			d = 63;
+		else if(!base64url && d == '=')
 			d = 64;
 		else	continue;
 		in[incount++] = (uint8_t)d;
-		if(incount != 4)
+		/* work on block of 4, unless padding is not used and there are
+		 * less than 4 chars left */
+		if(incount != 4 && (check_padding || srcsize))
 			continue;
+		assert(!check_padding || incount==4);
 		/* process whole block of 4 characters into 3 output bytes */
-		if(in[3] == pad64 && in[2] == pad64) { /* A B = = */
+		if((incount == 2 ||
+			(incount == 4 && in[3] == pad64 && in[2] == pad64))) { /* A B = = */
 			if(o+1 > targsize)
 				return -1;
 			target[o] = (in[0]<<2) | ((in[1]&0x30)>>4);
 			o += 1;
 			break; /* we are done */
-		} else if(in[3] == pad64) { /* A B C = */
+		} else if(incount == 3 ||
+			(incount == 4 && in[3] == pad64)) { /* A B C = */
 			if(o+2 > targsize)
 				return -1;
 			target[o] = (in[0]<<2) | ((in[1]&0x30)>>4);
@@ -721,7 +734,7 @@ int sldns_b64_pton(char const *src, uint8_t *target, size_t targsize)
 			o += 2;
 			break; /* we are done */
 		} else {
-			if(o+3 > targsize)
+			if(incount != 4 || o+3 > targsize)
 				return -1;
 			/* write xxxxxxyy yyyyzzzz zzwwwwww */
 			target[o] = (in[0]<<2) | ((in[1]&0x30)>>4);
@@ -732,4 +745,18 @@ int sldns_b64_pton(char const *src, uint8_t *target, size_t targsize)
 		incount = 0;
 	}
 	return (int)o;
+}
+
+int sldns_b64_pton(char const *src, uint8_t *target, size_t targsize)
+{
+	return sldns_b64_pton_base(src, 0, target, targsize, 0);
+}
+
+int sldns_b64url_pton(char const *src, size_t srcsize, uint8_t *target,
+	size_t targsize)
+{
+	if(!srcsize) {
+		return 0;
+	}
+	return sldns_b64_pton_base(src, srcsize, target, targsize, 1);
 }

@@ -116,6 +116,7 @@ config_create(void)
 	cfg->ssl_upstream = 0;
 	cfg->tls_cert_bundle = NULL;
 	cfg->tls_win_cert = 0;
+	cfg->https_port = UNBOUND_DNS_OVER_HTTPS_PORT;
 	cfg->use_syslog = 1;
 	cfg->log_identity = NULL; /* changed later with argv[0] */
 	cfg->log_time_ascii = 0;
@@ -505,6 +506,7 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	else S_STRLIST_APPEND("tls-session-ticket-keys:", tls_session_ticket_keys)
 	else S_STR("tls-ciphers:", tls_ciphers)
 	else S_STR("tls-ciphersuites:", tls_ciphersuites)
+	else S_NUMBER_NONZERO("https-port:", https_port)
 	else S_YNO("interface-automatic:", if_automatic)
 	else S_YNO("use-systemd:", use_systemd)
 	else S_YNO("do-daemonize:", do_daemonize)
@@ -957,6 +959,7 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_LST(opt, "tls-session-ticket-keys", tls_session_ticket_keys.first)
 	else O_STR(opt, "tls-ciphers", tls_ciphers)
 	else O_STR(opt, "tls-ciphersuites", tls_ciphersuites)
+	else O_DEC(opt, "https-port", https_port)
 	else O_YNO(opt, "use-systemd", use_systemd)
 	else O_YNO(opt, "do-daemonize", do_daemonize)
 	else O_STR(opt, "chroot", chrootdir)

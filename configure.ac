@@ -830,7 +830,7 @@ AC_CHECK_FUNCS([OPENSSL_config EVP_sha1 EVP_sha256 EVP_sha512 FIPS_mode EVP_MD_C
 # these check_funcs need -lssl
 BAKLIBS="$LIBS"
 LIBS="-lssl $LIBS"
-AC_CHECK_FUNCS([OPENSSL_init_ssl SSL_CTX_set_security_level SSL_set1_host SSL_get0_peername X509_VERIFY_PARAM_set1_host SSL_CTX_set_ciphersuites])
+AC_CHECK_FUNCS([OPENSSL_init_ssl SSL_CTX_set_security_level SSL_set1_host SSL_get0_peername X509_VERIFY_PARAM_set1_host SSL_CTX_set_ciphersuites SSL_CTX_set_alpn_select_cb])
 LIBS="$BAKLIBS"
 
 AC_CHECK_DECLS([SSL_COMP_get_compression_methods,sk_SSL_COMP_pop_free,SSL_CTX_set_ecdh_auto], [], [], [
@@ -1366,6 +1366,39 @@ if test x_$withval = x_yes -o x_$withval != x_no; then
     AC_CHECK_HEADERS([hiredis/hiredis.h],,, [AC_INCLUDES_DEFAULT])
     AC_CHECK_DECLS([redisConnect], [], [], [AC_INCLUDES_DEFAULT
     #include <hiredis/hiredis.h>
+    ])
+fi
+
+# nghttp2
+AC_ARG_WITH(libnghttp2, AC_HELP_STRING([--with-libnghttp2=path],
+    [specify explicit path for libnghttp2.]),
+    [ ],[ withval="no" ])
+found_libnghttp2="no"
+if test x_$withval = x_yes -o x_$withval != x_no; then
+   AC_MSG_CHECKING(for libnghttp2)
+   if test x_$withval = x_ -o x_$withval = x_yes; then
+            withval="/usr/local /opt/local /usr/lib /usr/pkg /usr/sfw /usr"
+   fi
+   for dir in $withval ; do
+            if test -f "$dir/include/nghttp2/nghttp2.h"; then
+		found_libnghttp2="yes"
+		dnl assume /usr is in default path.
+		if test "$dir" != "/usr"; then
+                    CPPFLAGS="$CPPFLAGS -I$dir/include"
+		    LDFLAGS="$LDFLAGS -L$dir/lib"
+		fi
+		AC_MSG_RESULT(found in $dir)
+		AC_DEFINE([HAVE_NGHTTP2], [1], [Define this to use nghttp2 client.])
+		LIBS="$LIBS -lnghttp2"
+                break;
+            fi
+    done
+    if test x_$found_libnghttp2 != x_yes; then
+	AC_ERROR([Could not find libnghttp2, nghttp2.h])
+    fi
+    AC_CHECK_HEADERS([nghttp2/nghttp2.h],,, [AC_INCLUDES_DEFAULT])
+    AC_CHECK_DECLS([nghttp2_session_server_new], [], [], [AC_INCLUDES_DEFAULT
+    #include <nghttp2/nghttp2.h>
     ])
 fi
 
@@ -2105,6 +2138,8 @@ void *unbound_stat_realloc_log(void *ptr, size_t size, const char* file,
 #define UNBOUND_DNS_PORT 53
 /** default port for DNS over TLS traffic. */
 #define UNBOUND_DNS_OVER_TLS_PORT 853
+/** default port for DNS over HTTPS traffic. */
+#define UNBOUND_DNS_OVER_HTTPS_PORT 443
 /** default port for unbound control traffic, registered port with IANA,
     ub-dns-control  8953/tcp    unbound dns nameserver control */
 #define UNBOUND_CONTROL_PORT 8953

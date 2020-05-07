@@ -469,15 +469,16 @@ Alternate syntax for \fBtls\-upstream\fR.  If both are present in the config
 file the last is used.
 .TP
 .B tls\-service\-key: \fI<file>
-If enabled, the server provides TLS service on the TCP ports marked
-implicitly or explicitly for TLS service with tls\-port.  The file must
-contain the private key for the TLS session, the public certificate is in
-the tls\-service\-pem file and it must also be specified if tls\-service\-key
-is specified.  The default is "", turned off.  Enabling or disabling
-this service requires a restart (a reload is not enough), because the
-key is read while root permissions are held and before chroot (if any).
-The ports enabled implicitly or explicitly via \fBtls\-port:\fR do not provide
-normal DNS TCP service.
+If enabled, the server provides DNS-over-TLS or DNS-over-HTTPS service on the
+TCP ports marked implicitly or explicitly for these services with tls\-port or
+https\-port. The file must contain the private key for the TLS session, the
+public certificate is in the tls\-service\-pem file and it must also be
+specified if tls\-service\-key is specified.  The default is "", turned off.
+Enabling or disabling this service requires a restart (a reload is not enough),
+because the key is read while root permissions are held and before chroot (if any).
+The ports enabled implicitly or explicitly via \fBtls\-port:\fR and
+\fBhttps\-port:\fR do not provide normal DNS TCP service. Unbound needs to be
+compiled with libnghttp2 in order to provide DNS-over-HTTPS.
 .TP
 .B ssl\-service\-key: \fI<file>
 Alternate syntax for \fBtls\-service\-key\fR.
@@ -492,6 +493,10 @@ Alternate syntax for \fBtls\-service\-pem\fR.
 .B tls\-port: \fI<number>
 The port number on which to provide TCP TLS service, default 853, only
 interfaces configured with that port number as @number get the TLS service.
+.TP
+.B https\-port: \fI<number>
+The port number on which to provide DNS-over-HTTPS service, default 443, only
+interfaces configured with that port number as @number get the HTTPS service.
 .TP
 .B ssl\-port: \fI<number>
 Alternate syntax for \fBtls\-port\fR.

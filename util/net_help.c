@@ -58,6 +58,9 @@
 #ifdef USE_WINSOCK
 #include <wincrypt.h>
 #endif
+#ifdef HAVE_NGHTTP2_NGHTTP2_H
+#include <nghttp2/nghttp2.h>
+#endif
 
 /** max length of an IP address (the address portion) that we allow */
 #define MAX_ADDR_STRLEN 128 /* characters */
@@ -855,6 +858,21 @@ log_cert(unsigned level, const char* str, void* cert)
 }
 #endif /* HAVE_SSL */
 
+#if defined(HAVE_SSL) && defined(HAVE_NGHTTP2)
+static int alpn_select_cb(SSL* ATTR_UNUSED(ssl), const unsigned char** out,
+	unsigned char* outlen, const unsigned char* in, unsigned int inlen,
+	void* ATTR_UNUSED(arg))
+{
+	int rv = nghttp2_select_next_protocol((unsigned char **)out, outlen, in,
+		inlen);
+	if(rv == -1) {
+		return SSL_TLSEXT_ERR_NOACK;
+	}
+	/* either http/1.1 or h2 selected */
+	return SSL_TLSEXT_ERR_OK;
+}
+#endif
+
 int
 listen_sslctx_setup(void* ctxt)
 {
@@ -912,6 +930,9 @@ listen_sslctx_setup(void* ctxt)
 
 #ifdef HAVE_SSL_CTX_SET_SECURITY_LEVEL
 	SSL_CTX_set_security_level(ctx, 0);
+#endif
+#if defined(HAVE_SSL_CTX_SET_ALPN_SELECT_CB) && defined(HAVE_NGHTTP2)
+	SSL_CTX_set_alpn_select_cb(ctx, alpn_select_cb, NULL);
 #endif
 #else
 	(void)ctxt;
