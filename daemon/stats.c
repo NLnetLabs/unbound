@@ -421,6 +421,7 @@ void server_stats_add(struct ub_stats_info* total, struct ub_stats_info* a)
 		total->svr.qtcp_outgoing += a->svr.qtcp_outgoing;
 		total->svr.qtls += a->svr.qtls;
 		total->svr.qtls_resume += a->svr.qtls_resume;
+		total->svr.qhttps += a->svr.qhttps;
 		total->svr.qipv6 += a->svr.qipv6;
 		total->svr.qbit_QR += a->svr.qbit_QR;
 		total->svr.qbit_AA += a->svr.qbit_AA;
@@ -484,6 +485,8 @@ void server_stats_insquery(struct ub_server_stats* stats, struct comm_point* c,
 			if(SSL_session_reused(c->ssl)) 
 				stats->qtls_resume++;
 #endif
+			if(c->type == comm_http)
+				stats->qhttps++;
 		}
 	}
 	if(repinfo && addr_is_ip6(&repinfo->addr, repinfo->addrlen))

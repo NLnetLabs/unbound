@@ -696,6 +696,8 @@ struct ub_server_stats {
 	long long qtcp_outgoing;
 	/** number of queries over (DNS over) TLS */
 	long long qtls;
+	/** number of queries over (DNS over) HTTPS */
+	long long qhttps;
 	/** number of queries over IPv6 */
 	long long qipv6;
 	/** number of queries with QR bit */

@@ -979,6 +979,8 @@ print_ext(RES* ssl, struct ub_stats_info* s)
 		(unsigned long)s->svr.qtls_resume)) return 0;
 	if(!ssl_printf(ssl, "num.query.ipv6"SQ"%lu\n", 
 		(unsigned long)s->svr.qipv6)) return 0;
+	if(!ssl_printf(ssl, "num.query.https"SQ"%lu\n",
+		(unsigned long)s->svr.qhttps)) return 0;
 	/* flags */
 	if(!ssl_printf(ssl, "num.query.flags.QR"SQ"%lu\n", 
 		(unsigned long)s->svr.qbit_QR)) return 0;

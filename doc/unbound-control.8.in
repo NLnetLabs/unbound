@@ -545,6 +545,11 @@ These are also counted in num.query.tcp, because TLS uses TCP.
 Number of TLS session resumptions, these are queries over TLS towards
 the unbound server where the client negotiated a TLS session resumption key.
 .TP
+.I num.query.https
+Number of queries that were made using HTTPS towards the unbound server.
+These are also counted in num.query.tcp and num.query.tls, because HTTPS
+uses TLS and TCP.
+.TP
 .I num.query.ipv6
 Number of queries that were made using IPv6 towards the unbound server.
 .TP
