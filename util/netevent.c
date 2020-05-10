@@ -447,7 +447,10 @@ comm_point_send_udp_msg_if(struct comm_point *c, sldns_buffer* packet,
 	ssize_t sent;
 	struct msghdr msg;
 	struct iovec iov[1];
-	char control[256];
+	union {
+		struct cmsghdr hdr;
+		char buf[256];
+	} control;
 #ifndef S_SPLINT_S
 	struct cmsghdr *cmsg;
 #endif /* S_SPLINT_S */
@@ -465,9 +468,9 @@ comm_point_send_udp_msg_if(struct comm_point *c, sldns_buffer* packet,
 	iov[0].iov_len = sldns_buffer_remaining(packet);
 	msg.msg_iov = iov;
 	msg.msg_iovlen = 1;
-	msg.msg_control = control;
+	msg.msg_control = control.buf;
 #ifndef S_SPLINT_S
-	msg.msg_controllen = sizeof(control);
+	msg.msg_controllen = sizeof(control.buf);
 #endif /* S_SPLINT_S */
 	msg.msg_flags = 0;
 
@@ -584,7 +587,10 @@ comm_point_udp_ancil_callback(int fd, short event, void* arg)
 	struct msghdr msg;
 	struct iovec iov[1];
 	ssize_t rcv;
-	char ancil[256];
+	union {
+		struct cmsghdr hdr;
+		char buf[256];
+	} ancil;
 	int i;
 #ifndef S_SPLINT_S
 	struct cmsghdr* cmsg;
@@ -608,9 +614,9 @@ comm_point_udp_ancil_callback(int fd, short event, void* arg)
 		iov[0].iov_len = sldns_buffer_remaining(rep.c->buffer);
 		msg.msg_iov = iov;
 		msg.msg_iovlen = 1;
-		msg.msg_control = ancil;
+		msg.msg_control = ancil.buf;
 #ifndef S_SPLINT_S
-		msg.msg_controllen = sizeof(ancil);
+		msg.msg_controllen = sizeof(ancil.buf);
 #endif /* S_SPLINT_S */
 		msg.msg_flags = 0;
 		rcv = recvmsg(fd, &msg, 0);
