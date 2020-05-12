@@ -275,6 +275,8 @@ static void print_mem(struct ub_shm_stat_info* shm_stat,
 		shm_stat->mem.dnscrypt_nonce);
 #endif
 	PR_LL("mem.streamwait", s->svr.mem_stream_wait);
+	PR_LL("mem.http.query_buffer", s->svr.mem_http2_query_buffer);
+	PR_LL("mem.http.response_buffer", s->svr.mem_http2_response_buffer);
 }
 
 /** print histogram */

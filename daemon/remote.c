@@ -853,6 +853,12 @@ print_mem(RES* ssl, struct worker* worker, struct daemon* daemon,
 	if(!print_longnum(ssl, "mem.streamwait"SQ,
 		(size_t)s->svr.mem_stream_wait))
 		return 0;
+	if(!print_longnum(ssl, "mem.http.query_buffer"SQ,
+		(size_t)s->svr.mem_http2_query_buffer))
+		return 0;
+	if(!print_longnum(ssl, "mem.http.response_buffer"SQ,
+		(size_t)s->svr.mem_http2_response_buffer))
+		return 0;
 	return 1;
 }
 

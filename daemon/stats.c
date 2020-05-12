@@ -335,6 +335,10 @@ server_stats_compile(struct worker* worker, struct ub_stats_info* s, int reset)
 	}
 	s->svr.mem_stream_wait =
 		(long long)tcp_req_info_get_stream_buffer_size();
+	s->svr.mem_http2_query_buffer =
+		(long long)http2_get_query_buffer_size();
+	s->svr.mem_http2_response_buffer =
+		(long long)http2_get_response_buffer_size();
 
 	/* Set neg cache usage numbers */
 	set_neg_cache_stats(worker, &s->svr, reset);

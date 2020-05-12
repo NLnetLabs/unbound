@@ -111,7 +111,9 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_TCP_UPSTREAM VAR_SSL_UPSTREAM
 %token VAR_SSL_SERVICE_KEY VAR_SSL_SERVICE_PEM VAR_SSL_PORT VAR_FORWARD_FIRST
 %token VAR_STUB_SSL_UPSTREAM VAR_FORWARD_SSL_UPSTREAM VAR_TLS_CERT_BUNDLE
-%token VAR_HTTPS_PORT
+%token VAR_HTTPS_PORT VAR_HTTP_ENDPOINT VAR_HTTP_MAX_STREAMS
+%token VAR_HTTP_QUERY_BUFFER_SIZE VAR_HTTP_RESPONSE_BUFFER_SIZE
+%token VAR_HTTP_NODELAY
 %token VAR_STUB_FIRST VAR_MINIMAL_RESPONSES VAR_RRSET_ROUNDROBIN
 %token VAR_MAX_UDP_SIZE VAR_DELAY_CLOSE
 %token VAR_UNBLOCK_LAN_ZONES VAR_INSECURE_LAN_ZONES
@@ -238,7 +240,9 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_log_queries | server_log_replies | server_tcp_upstream | server_ssl_upstream |
 	server_log_local_actions |
 	server_ssl_service_key | server_ssl_service_pem | server_ssl_port |
-	server_https_port |
+	server_https_port | server_http_endpoint | server_http_max_streams |
+	server_http_query_buffer_size | server_http_response_buffer_size |
+	server_http_nodelay |
 	server_minimal_responses | server_rrset_roundrobin | server_max_udp_size |
 	server_so_reuseport | server_delay_close |
 	server_unblock_lan_zones | server_insecure_lan_zones |
@@ -955,13 +959,6 @@ server_tls_session_ticket_keys: VAR_TLS_SESSION_TICKET_KEYS STRING_ARG
 			yyerror("out of memory");
 	}
 	;
-server_https_port: VAR_HTTPS_PORT STRING_ARG
-	{
-		OUTYY(("P(server_https_port:%s)\n", $2));
-		if(atoi($2) == 0)
-			yyerror("port number expected");
-		else cfg_parser->cfg->https_port = atoi($2);
-	};
 server_tls_use_sni: VAR_TLS_USE_SNI STRING_ARG
 	{
 		OUTYY(("P(server_tls_use_sni:%s)\n", $2));
@@ -971,6 +968,59 @@ server_tls_use_sni: VAR_TLS_USE_SNI STRING_ARG
 		free($2);
 	}
 	;
+server_https_port: VAR_HTTPS_PORT STRING_ARG
+	{
+		OUTYY(("P(server_https_port:%s)\n", $2));
+		if(atoi($2) == 0)
+			yyerror("port number expected");
+		else cfg_parser->cfg->https_port = atoi($2);
+	};
+server_http_endpoint: VAR_HTTP_ENDPOINT STRING_ARG
+	{
+		OUTYY(("P(server_http_endpoint:%s)\n", $2));
+		free(cfg_parser->cfg->http_endpoint);
+		if($2 && $2[0] != '/') {
+			cfg_parser->cfg->http_endpoint = malloc(strlen($2)+2);
+			cfg_parser->cfg->http_endpoint[0] = '/';
+			memcpy(cfg_parser->cfg->http_endpoint+1, $2,
+				strlen($2)+1);
+			free($2);
+		} else {
+			cfg_parser->cfg->http_endpoint = $2;
+		}
+	};
+server_http_max_streams: VAR_HTTP_MAX_STREAMS STRING_ARG
+	{
+		OUTYY(("P(server_http_max_streams:%s)\n", $2));
+		if(atoi($2) == 0 && strcmp($2, "0") != 0)
+			yyerror("number expected");
+		else cfg_parser->cfg->http_max_streams = atoi($2);
+		free($2);
+	};
+server_http_query_buffer_size: VAR_HTTP_QUERY_BUFFER_SIZE STRING_ARG
+	{
+		OUTYY(("P(server_http_query_buffer_size:%s)\n", $2));
+		if(!cfg_parse_memsize($2,
+			&cfg_parser->cfg->http_query_buffer_size))
+			yyerror("memory size expected");
+		free($2);
+	};
+server_http_response_buffer_size: VAR_HTTP_RESPONSE_BUFFER_SIZE STRING_ARG
+	{
+		OUTYY(("P(server_http_response_buffer_size:%s)\n", $2));
+		if(!cfg_parse_memsize($2,
+			&cfg_parser->cfg->http_response_buffer_size))
+			yyerror("memory size expected");
+		free($2);
+	};
+server_http_nodelay: VAR_HTTP_NODELAY STRING_ARG
+	{
+		OUTYY(("P(server_http_nodelay:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else cfg_parser->cfg->http_nodelay = (strcmp($2, "yes")==0);
+		free($2);
+	};
 server_use_systemd: VAR_USE_SYSTEMD STRING_ARG
 	{
 		OUTYY(("P(server_use_systemd:%s)\n", $2));

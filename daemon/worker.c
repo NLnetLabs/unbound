@@ -1797,8 +1797,8 @@ worker_init(struct worker* worker, struct config_file *cfg,
 		cfg->do_tcp_keepalive
 			? cfg->tcp_keepalive_timeout
 			: cfg->tcp_idle_timeout,
-		cfg->harden_large_queries,
-		worker->daemon->tcl,
+		cfg->harden_large_queries, cfg->http_max_streams,
+		cfg->http_endpoint, worker->daemon->tcl,
 		worker->daemon->listen_sslctx,
 		dtenv, worker_handle_request, worker);
 	if(!worker->front) {

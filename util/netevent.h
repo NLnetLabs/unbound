@@ -219,6 +219,8 @@ struct comm_point {
 		http_version_none = 0,
 		http_version_2 = 2
 	} http_min_version;
+	/** http endpoint */
+	char* http_endpoint;
 	/* -------- HTTP/1.1 ------- */
 	/** Currently reading in http headers */
 	int http_in_headers;
@@ -236,10 +238,13 @@ struct comm_point {
 	struct http2_session* h2_session;
 	/** set to 1 if h2 is negatiated using alpn */
 	int alpn_h2;
-	/** maximum allowed query buffer size */
-	size_t http2_max_qbuffer_size;
 	/** stream currently being handled */
 	struct http2_stream* h2_stream;
+	/** maximum allowed query buffer size, per stream */
+	size_t http2_stream_max_qbuffer_size;
+	/** maximum number of HTTP/2 streams per connection. Send in HTTP/2
+	 * SETTINGS frame. */
+	uint32_t http2_max_streams;
 
 	/* -------- dnstap ------- */
 	/** the dnstap environment */
@@ -481,6 +486,8 @@ struct comm_point* comm_point_create_udp_ancil(struct comm_base* base,
  *	many tcp handler commpoints.
  * @param idle_timeout: TCP idle timeout in ms.
  * @param harden_large_queries: whether query size should be limited.
+ * @param http_max_streams: maximum number of HTTP/2 streams per connection.
+ * @param http_endpoint: HTTP endpoint to service queries on
  * @param tcp_conn_limit: TCP connection limit info.
  * @param bufsize: size of buffer to create for handlers.
  * @param spoolbuf: shared spool buffer for tcp_req_info structures.
@@ -496,6 +503,7 @@ struct comm_point* comm_point_create_udp_ancil(struct comm_base* base,
  */
 struct comm_point* comm_point_create_tcp(struct comm_base* base,
 	int fd, int num, int idle_timeout, int harden_large_queries,
+	uint32_t http_max_streams, char* http_endpoint,
 	struct tcl_list* tcp_conn_limit,
 	size_t bufsize, struct sldns_buffer* spoolbuf,
 	enum listen_type port_type,

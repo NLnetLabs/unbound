@@ -80,11 +80,23 @@
 #ifndef THREADS_DISABLED
 /** lock on the counter of stream buffer memory */
 static lock_basic_type stream_wait_count_lock;
+/** lock on the counter of HTTP2 query buffer memory */
+static lock_basic_type http2_query_buffer_count_lock;
+/** lock on the counter of HTTP2 response buffer memory */
+static lock_basic_type http2_response_buffer_count_lock;
 #endif
 /** size (in bytes) of stream wait buffers */
 static size_t stream_wait_count = 0;
 /** is the lock initialised for stream wait buffers */
 static int stream_wait_lock_inited = 0;
+/** size (in bytes) of HTTP2 query buffers */
+static size_t http2_query_buffer_count = 0;
+/** is the lock initialised for HTTP2 query buffers */
+static int http2_query_buffer_lock_inited = 0;
+/** size (in bytes) of HTTP2 response buffers */
+static size_t http2_response_buffer_count = 0;
+/** is the lock initialised for HTTP2 response buffers */
+static int http2_response_buffer_lock_inited = 0;
 
 /**
  * Debug print of the getaddrinfo returned address.
@@ -707,20 +719,6 @@ create_tcp_accept_sock(struct addrinfo *addr, int v6only, int* noproto,
 #else
 		log_warn(" setsockopt(TCP_NODELAY) unsupported");
 #endif /* defined(IPPROTO_TCP) && defined(TCP_NODELAY) */
-#if defined(IPPROTO_TCP) && defined(TCP_QUICKACK)
-		if(setsockopt(s, IPPROTO_TCP, TCP_QUICKACK, (void*)&on,
-			(socklen_t)sizeof(on)) < 0) {
-			#ifndef USE_WINSOCK
-			log_err(" setsockopt(.. TCP_QUICKACK ..) failed: %s",
-				strerror(errno));
-			#else
-			log_err(" setsockopt(.. TCP_QUICKACK ..) failed: %s",
-				wsa_strerror(WSAGetLastError()));
-			#endif
-		}
-#else
-		log_warn(" setsockopt(TCP_QUICKACK) unsupported");
-#endif /* defined(IPPROTO_TCP) && defined(TCP_QUICKACK) */
 	}
 	if (mss > 0) {
 #if defined(IPPROTO_TCP) && defined(TCP_MAXSEG)
@@ -1251,6 +1249,7 @@ if_is_https(const char* ifname, const char* port, int https_port)
  * @param transparent: set IP_TRANSPARENT socket option.
  * @param tcp_mss: maximum segment size of tcp socket. default if zero.
  * @param freebind: set IP_FREEBIND socket option.
+ * @param http2_nodelay: set TCP_NODELAY on HTTP/2 connection
  * @param use_systemd: if true, fetch sockets from systemd.
  * @param dnscrypt_port: dnscrypt service port number
  * @param dscp: DSCP to use.
@@ -1262,11 +1261,11 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 	size_t rcv, size_t snd, int ssl_port,
 	struct config_strlist* tls_additional_port, int https_port,
 	int* reuseport, int transparent, int tcp_mss, int freebind,
-	int use_systemd, int dnscrypt_port, int dscp)
+	int http2_nodelay, int use_systemd, int dnscrypt_port, int dscp)
 {
 	int s, noip6=0;
 	int is_https = if_is_https(ifname, port, https_port);
-	int nodelay = is_https; /* TODO make config option */
+	int nodelay = is_https && http2_nodelay;
 #ifdef USE_DNSCRYPT
 	int is_dnscrypt = ((strchr(ifname, '@') && 
 			atoi(strchr(ifname, '@')+1) == dnscrypt_port) ||
@@ -1384,7 +1383,8 @@ listen_cp_insert(struct comm_point* c, struct listen_dnsport* front)
 struct listen_dnsport* 
 listen_create(struct comm_base* base, struct listen_port* ports,
 	size_t bufsize, int tcp_accept_count, int tcp_idle_timeout,
-	int harden_large_queries, struct tcl_list* tcp_conn_limit, void* sslctx,
+	int harden_large_queries, uint32_t http_max_streams,
+	char* http_endpoint, struct tcl_list* tcp_conn_limit, void* sslctx,
 	struct dt_env* dtenv, comm_point_callback_type* cb, void *cb_arg)
 {
 	struct listen_dnsport* front = (struct listen_dnsport*)
@@ -1404,6 +1404,14 @@ listen_create(struct comm_base* base, struct listen_port* ports,
 		lock_basic_init(&stream_wait_count_lock);
 		stream_wait_lock_inited = 1;
 	}
+	if(!http2_query_buffer_lock_inited) {
+		lock_basic_init(&http2_query_buffer_count_lock);
+		http2_query_buffer_lock_inited = 1;
+	}
+	if(!http2_response_buffer_lock_inited) {
+		lock_basic_init(&http2_response_buffer_count_lock);
+		http2_response_buffer_lock_inited = 1;
+	}
 
 	/* create comm points as needed */
 	while(ports) {
@@ -1416,7 +1424,7 @@ listen_create(struct comm_base* base, struct listen_port* ports,
 				ports->ftype == listen_type_tcp_dnscrypt)
 			cp = comm_point_create_tcp(base, ports->fd, 
 				tcp_accept_count, tcp_idle_timeout,
-				harden_large_queries,
+				harden_large_queries, 0, NULL,
 				tcp_conn_limit, bufsize, front->udp_buff,
 				ports->ftype, cb, cb_arg);
 		else if(ports->ftype == listen_type_ssl ||
@@ -1424,6 +1432,7 @@ listen_create(struct comm_base* base, struct listen_port* ports,
 			cp = comm_point_create_tcp(base, ports->fd, 
 				tcp_accept_count, tcp_idle_timeout,
 				harden_large_queries,
+				http_max_streams, http_endpoint,
 				tcp_conn_limit, bufsize, front->udp_buff,
 				ports->ftype, cb, cb_arg);
 			cp->ssl = sslctx;
@@ -1518,6 +1527,14 @@ listen_delete(struct listen_dnsport* front)
 		stream_wait_lock_inited = 0;
 		lock_basic_destroy(&stream_wait_count_lock);
 	}
+	if(http2_query_buffer_lock_inited) {
+		http2_query_buffer_lock_inited = 0;
+		lock_basic_destroy(&http2_query_buffer_count_lock);
+	}
+	if(http2_response_buffer_lock_inited) {
+		http2_response_buffer_lock_inited = 0;
+		lock_basic_destroy(&http2_response_buffer_count_lock);
+	}
 }
 
 struct listen_port* 
@@ -1558,9 +1575,9 @@ listening_ports_open(struct config_file* cfg, int* reuseport)
 				&hints, portbuf, &list,
 				cfg->so_rcvbuf, cfg->so_sndbuf,
 				cfg->ssl_port, cfg->tls_additional_port,
-				cfg->https_port,
-				reuseport, cfg->ip_transparent,
-				cfg->tcp_mss, cfg->ip_freebind, cfg->use_systemd,
+				cfg->https_port, reuseport, cfg->ip_transparent,
+				cfg->tcp_mss, cfg->ip_freebind,
+				cfg->http_nodelay, cfg->use_systemd,
 				cfg->dnscrypt_port, cfg->ip_dscp)) {
 				listening_ports_free(list);
 				return NULL;
@@ -1573,9 +1590,9 @@ listening_ports_open(struct config_file* cfg, int* reuseport)
 				&hints, portbuf, &list,
 				cfg->so_rcvbuf, cfg->so_sndbuf,
 				cfg->ssl_port, cfg->tls_additional_port,
-				cfg->https_port,
-				reuseport, cfg->ip_transparent,
-				cfg->tcp_mss, cfg->ip_freebind, cfg->use_systemd,
+				cfg->https_port, reuseport, cfg->ip_transparent,
+				cfg->tcp_mss, cfg->ip_freebind,
+				cfg->http_nodelay, cfg->use_systemd,
 				cfg->dnscrypt_port, cfg->ip_dscp)) {
 				listening_ports_free(list);
 				return NULL;
@@ -1590,9 +1607,9 @@ listening_ports_open(struct config_file* cfg, int* reuseport)
 				do_tcp, &hints, portbuf, &list, 
 				cfg->so_rcvbuf, cfg->so_sndbuf,
 				cfg->ssl_port, cfg->tls_additional_port,
-				cfg->https_port,
-				reuseport, cfg->ip_transparent,
-				cfg->tcp_mss, cfg->ip_freebind, cfg->use_systemd,
+				cfg->https_port, reuseport, cfg->ip_transparent,
+				cfg->tcp_mss, cfg->ip_freebind,
+				cfg->http_nodelay, cfg->use_systemd,
 				cfg->dnscrypt_port, cfg->ip_dscp)) {
 				listening_ports_free(list);
 				return NULL;
@@ -1605,9 +1622,9 @@ listening_ports_open(struct config_file* cfg, int* reuseport)
 				do_tcp, &hints, portbuf, &list, 
 				cfg->so_rcvbuf, cfg->so_sndbuf,
 				cfg->ssl_port, cfg->tls_additional_port,
-				cfg->https_port,
-				reuseport, cfg->ip_transparent,
-				cfg->tcp_mss, cfg->ip_freebind, cfg->use_systemd,
+				cfg->https_port, reuseport, cfg->ip_transparent,
+				cfg->tcp_mss, cfg->ip_freebind,
+				cfg->http_nodelay, cfg->use_systemd,
 				cfg->dnscrypt_port, cfg->ip_dscp)) {
 				listening_ports_free(list);
 				return NULL;
@@ -2050,6 +2067,28 @@ size_t tcp_req_info_get_stream_buffer_size(void)
 	return s;
 }
 
+size_t http2_get_query_buffer_size(void)
+{
+	size_t s;
+	if(!http2_query_buffer_lock_inited)
+		return http2_query_buffer_count;
+	lock_basic_lock(&http2_query_buffer_count_lock);
+	s = http2_query_buffer_count;
+	lock_basic_unlock(&http2_query_buffer_count_lock);
+	return s;
+}
+
+size_t http2_get_response_buffer_size(void)
+{
+	size_t s;
+	if(!http2_response_buffer_lock_inited)
+		return http2_response_buffer_count;
+	lock_basic_lock(&http2_response_buffer_count_lock);
+	s = http2_response_buffer_count;
+	lock_basic_unlock(&http2_response_buffer_count_lock);
+	return s;
+}
+
 #ifdef HAVE_NGHTTP2
 /** nghttp2 callback. Used to copy response from rbuffer to nghttp2 session */
 static ssize_t http2_submit_response_read_callback(
@@ -2070,8 +2109,7 @@ static ssize_t http2_submit_response_read_callback(
 		sldns_buffer_remaining(h2_stream->rbuffer) == 0) {
 		verbose(VERB_QUERY, "http2: cannot submit buffer. No data "
 			"available in rbuffer");
-		sldns_buffer_free(h2_stream->rbuffer);
-		h2_stream->rbuffer = NULL;
+		/* rbuffer will be free'd in frame close cb */
 		return NGHTTP2_ERR_TEMPORAL_CALLBACK_FAILURE;
 	}
 
@@ -2085,11 +2123,35 @@ static ssize_t http2_submit_response_read_callback(
 
 	if(sldns_buffer_remaining(h2_stream->rbuffer) == 0) {
 		*data_flags |= NGHTTP2_DATA_FLAG_EOF;
+		lock_basic_lock(&http2_response_buffer_count_lock);
+		http2_response_buffer_count -=
+			sldns_buffer_capacity(h2_stream->rbuffer);
+		lock_basic_unlock(&http2_response_buffer_count_lock);
 		sldns_buffer_free(h2_stream->rbuffer);
 		h2_stream->rbuffer = NULL;
 	}
 
 	return copylen;
+}
+
+/**
+ * Send RST_STREAM frame for stream.
+ * @param h2_session: http2 session to submit frame to
+ * @param h2_stream: http2 stream containing frame ID to use in RST_STREAM
+ * @return 0 on error, 1 otherwise
+ */
+static int http2_submit_rst_stream(struct http2_session* h2_session,
+		struct http2_stream* h2_stream)
+{
+	int ret = nghttp2_submit_rst_stream(h2_session->session,
+		NGHTTP2_FLAG_NONE, h2_stream->stream_id,
+		NGHTTP2_INTERNAL_ERROR);
+	if(ret) {
+		verbose(VERB_QUERY, "http2: nghttp2_submit_rst_stream failed, "
+			"error: %s", nghttp2_strerror(ret));
+		return 0;
+	}
+	return 1;
 }
 
 /**
@@ -2106,6 +2168,7 @@ int http2_submit_dns_response(struct http2_session* h2_session)
 	char status[4];
 	nghttp2_nv headers[2];
 	struct http2_stream* h2_stream = h2_session->c->h2_stream;
+	size_t rlen;
 
 	if(h2_stream->rbuffer) {
 		log_err("http2 submit response error: rbuffer already "
@@ -2117,17 +2180,28 @@ int http2_submit_dns_response(struct http2_session* h2_session)
 		return 0;
 	}
 
-	if(!(h2_stream->rbuffer = sldns_buffer_new(
-		sldns_buffer_remaining(h2_session->c->buffer)))) {
-		log_err("http2 submit response error: malloc failure");
-		return 0;
-	}
-
 	if(snprintf(status, 4, "%d", h2_stream->status) != 3) {
 		verbose(VERB_QUERY, "http2: submit response error: "
 			"invalid status");
 		return 0;
 	}
+
+	rlen = sldns_buffer_remaining(h2_session->c->buffer);
+	lock_basic_lock(&http2_response_buffer_count_lock);
+	if(http2_response_buffer_count + rlen > http2_response_buffer_max) {
+		lock_basic_unlock(&http2_response_buffer_count_lock);
+		verbose(VERB_ALGO, "reset HTTP2 stream, no space left, "
+			"in https-response-buffer-size");
+		return http2_submit_rst_stream(h2_session, h2_stream);
+	}
+	if(!(h2_stream->rbuffer = sldns_buffer_new(rlen))) {
+		lock_basic_unlock(&http2_response_buffer_count_lock);
+		log_err("http2 submit response error: malloc failure");
+		return 0;
+	}
+	http2_response_buffer_count += rlen;
+	lock_basic_unlock(&http2_response_buffer_count_lock);
+
 	headers[0].name = (uint8_t*)":status";
 	headers[0].namelen = 7;
 	headers[0].value = (uint8_t*)status;
@@ -2275,8 +2349,7 @@ static int http2_query_read_done(struct http2_session* h2_session,
 	}
 	if(sldns_buffer_remaining(h2_session->c->buffer) <
 		sldns_buffer_remaining(h2_stream->qbuffer)) {
-		sldns_buffer_free(h2_stream->qbuffer);
-		h2_stream->qbuffer = NULL;
+		/* qbuffer will be free'd in frame close cb */
 		sldns_buffer_clear(h2_session->c->buffer);
 		verbose(VERB_ALGO, "http2_query_read_done failure: can't fit "
 			"qbuffer in c->buffer");
@@ -2287,6 +2360,9 @@ static int http2_query_read_done(struct http2_session* h2_session,
 		sldns_buffer_current(h2_stream->qbuffer),
 		sldns_buffer_remaining(h2_stream->qbuffer));
 
+	lock_basic_lock(&http2_query_buffer_count_lock);
+	http2_query_buffer_count -= sldns_buffer_capacity(h2_stream->qbuffer);
+	lock_basic_unlock(&http2_query_buffer_count_lock);
 	sldns_buffer_free(h2_stream->qbuffer);
 	h2_stream->qbuffer = NULL;
 
@@ -2449,21 +2525,34 @@ static int http2_buffer_uri_query(struct http2_session* h2_session,
 	expectb64len = sldns_b64_pton_calculate_size(length);
 	log_assert(expectb64len > 0);
 	if(expectb64len >
-		h2_session->c->http2_max_qbuffer_size) {
+		h2_session->c->http2_stream_max_qbuffer_size) {
 		h2_stream->query_too_large = 1;
 		return 1;
 	}
 
+	lock_basic_lock(&http2_query_buffer_count_lock);
+	if(http2_query_buffer_count + expectb64len > http2_query_buffer_max) {
+		lock_basic_unlock(&http2_query_buffer_count_lock);
+		verbose(VERB_ALGO, "reset HTTP2 stream, no space left, "
+			"in http2-query-buffer-size");
+		return http2_submit_rst_stream(h2_session, h2_stream);
+	}
 	if(!(h2_stream->qbuffer = sldns_buffer_new(expectb64len))) {
+		lock_basic_unlock(&http2_query_buffer_count_lock);
 		log_err("http2_req_header fail, qbuffer "
 			"malloc failure");
 		return 0;
 	}
+	http2_query_buffer_count += expectb64len;
+	lock_basic_unlock(&http2_query_buffer_count_lock);
 
 	if(!(b64len = sldns_b64url_pton(
 		(char const *)start, length,
 		sldns_buffer_current(h2_stream->qbuffer),
 		expectb64len)) || b64len < 0) {
+		lock_basic_lock(&http2_query_buffer_count_lock);
+		http2_query_buffer_count -= expectb64len;
+		lock_basic_unlock(&http2_query_buffer_count_lock);
 		sldns_buffer_free(h2_stream->qbuffer);
 		h2_stream->qbuffer = NULL;
 		/* return without error, method can be an
@@ -2518,6 +2607,10 @@ static int http2_req_header_cb(nghttp2_session* session,
 			h2_stream->http_method = HTTP_METHOD_POST;
 			if(h2_stream->qbuffer) {
 				/* POST method uses query from DATA frames */
+				lock_basic_lock(&http2_query_buffer_count_lock);
+				http2_query_buffer_count -=
+					sldns_buffer_capacity(h2_stream->qbuffer);
+				lock_basic_unlock(&http2_query_buffer_count_lock);
 				sldns_buffer_free(h2_stream->qbuffer);
 				h2_stream->qbuffer = NULL;
 			}
@@ -2526,17 +2619,15 @@ static int http2_req_header_cb(nghttp2_session* session,
 		return 0;
 	}
 	if(namelen == 5 && memcmp(":path", name, namelen) == 0) {
-		/* Hard coded /dns-query endpoint, might be nice to make
-		 * configurable.
-		 * :path may contain DNS query, depending on method. Method might
+		/* :path may contain DNS query, depending on method. Method might
 		 * not be known yet here, so check after finishing receiving
 		 * stream. */
-#define HTTP_ENDPOINT "/dns-query"
 #define	HTTP_QUERY_PARAM "?dns="
-		size_t el = sizeof(HTTP_ENDPOINT) - 1;
+		size_t el = strlen(h2_session->c->http_endpoint);
 		size_t qpl = sizeof(HTTP_QUERY_PARAM) - 1;
 
-		if(valuelen < el || memcmp(HTTP_ENDPOINT, value, el) != 0) {
+		if(valuelen < el || memcmp(h2_session->c->http_endpoint,
+			value, el) != 0) {
 			h2_stream->invalid_endpoint = 1;
 			return 0;
 		}
@@ -2583,7 +2674,7 @@ static int http2_req_header_cb(nghttp2_session* session,
 		/* guaranteed to only contian digits and be null terminated */
 		h2_stream->content_length = atoi((const char*)value);
 		if(h2_stream->content_length >
-			h2_session->c->http2_max_qbuffer_size) {
+			h2_session->c->http2_stream_max_qbuffer_size) {
 			h2_stream->query_too_large = 1;
 			return 0;
 		}
@@ -2599,6 +2690,7 @@ static int http2_req_data_chunk_recv_cb(nghttp2_session* ATTR_UNUSED(session),
 {
 	struct http2_session* h2_session = (struct http2_session*)cb_arg;
 	struct http2_stream* h2_stream;
+	size_t qlen = 0;
 
 	if(!(h2_stream = nghttp2_session_get_stream_user_data(
 		h2_session->session, stream_id))) {
@@ -2614,16 +2706,27 @@ static int http2_req_data_chunk_recv_cb(nghttp2_session* ATTR_UNUSED(session),
 				/* getting more data in DATA frame than
 				 * advertised in content-length header. */
 				return NGHTTP2_ERR_CALLBACK_FAILURE;
-			h2_stream->qbuffer = sldns_buffer_new(
-				h2_stream->content_length);
-		} else if(len <= h2_session->c->http2_max_qbuffer_size) {
+			qlen = h2_stream->content_length;
+		} else if(len <= h2_session->c->http2_stream_max_qbuffer_size) {
 			/* setting this to msg-buffer-size can result in a lot
 			 * of memory consuption. Most queries should fit in a
 			 * single DATA frame, and most POST queries will
 			 * containt content-length which does not impose this
 			 * limit. */
-			h2_stream->qbuffer = sldns_buffer_new(len);
+			qlen = len;
 		}
+	}
+	if(!h2_stream->qbuffer && qlen) {
+		lock_basic_lock(&http2_query_buffer_count_lock);
+		if(http2_query_buffer_count + qlen > http2_query_buffer_max) {
+			lock_basic_unlock(&http2_query_buffer_count_lock);
+			verbose(VERB_ALGO, "reset HTTP2 stream, no space left, "
+				"in http2-query-buffer-size");
+			return http2_submit_rst_stream(h2_session, h2_stream);
+		}
+		if((h2_stream->qbuffer = sldns_buffer_new(qlen)))
+			http2_query_buffer_count += qlen;
+		lock_basic_unlock(&http2_query_buffer_count_lock);
 	}
 
 	if(!h2_stream->qbuffer ||
@@ -2638,6 +2741,26 @@ static int http2_req_data_chunk_recv_cb(nghttp2_session* ATTR_UNUSED(session),
 	sldns_buffer_write(h2_stream->qbuffer, data, len);
 
 	return 0;
+}
+
+void http2_req_stream_clear(struct http2_stream* h2_stream)
+{
+	if(h2_stream->qbuffer) {
+		lock_basic_lock(&http2_query_buffer_count_lock);
+		http2_query_buffer_count -=
+			sldns_buffer_capacity(h2_stream->qbuffer);
+		lock_basic_unlock(&http2_query_buffer_count_lock);
+		sldns_buffer_free(h2_stream->qbuffer);
+		h2_stream->qbuffer = NULL;
+	}
+	if(h2_stream->rbuffer) {
+		lock_basic_lock(&http2_response_buffer_count_lock);
+		http2_response_buffer_count -=
+			sldns_buffer_capacity(h2_stream->rbuffer);
+		lock_basic_unlock(&http2_response_buffer_count_lock);
+		sldns_buffer_free(h2_stream->rbuffer);
+		h2_stream->rbuffer = NULL;
+	}
 }
 
 nghttp2_session_callbacks* http2_req_callbacks_create()

@@ -929,7 +929,8 @@ static int http2_submit_settings(struct http2_session* h2_session)
 {
 	int ret;
 	nghttp2_settings_entry settings[1] = {
-		{NGHTTP2_SETTINGS_MAX_CONCURRENT_STREAMS, 100}};
+		{NGHTTP2_SETTINGS_MAX_CONCURRENT_STREAMS,
+		 h2_session->c->http2_max_streams}};
 
 	ret = nghttp2_submit_settings(h2_session->session, NGHTTP2_FLAG_NONE,
 		settings, 1);
@@ -965,27 +966,27 @@ comm_point_tcp_accept_callback(int fd, short event, void* arg)
 	 * correct event base for the event structure for libevent */
 	ub_event_free(c_hdl->ev->ev);
 
+	if(c_hdl->type == comm_http) {
 #ifdef HAVE_NGHTTP2
-	if(c_hdl->type == comm_http && c_hdl->h2_session) {
-		if(!http2_session_server_create(c_hdl->h2_session)) {
+		if(!c_hdl->h2_session ||
+			!http2_session_server_create(c_hdl->h2_session)) {
 			log_warn("failed to create nghttp2");
 			return;
 		}
-		if(!http2_submit_settings(c_hdl->h2_session)) {
+		if(!c_hdl->h2_session ||
+			!http2_submit_settings(c_hdl->h2_session)) {
 			log_warn("failed to submit http2 settings");
 			return;
 		}
+#endif
 		c_hdl->ev->ev = ub_event_new(c_hdl->ev->base->eb->base, -1,
 			UB_EV_PERSIST | UB_EV_READ | UB_EV_TIMEOUT,
 			comm_point_http_handle_callback, c_hdl);
 	} else {
-#endif
 		c_hdl->ev->ev = ub_event_new(c_hdl->ev->base->eb->base, -1,
 			UB_EV_PERSIST | UB_EV_READ | UB_EV_TIMEOUT,
 			comm_point_tcp_handle_callback, c_hdl);
-#ifdef HAVE_NGHTTP2
 	}
-#endif
 	if(!c_hdl->ev->ev) {
 		log_warn("could not ub_event_new, dropped tcp");
 		return;
@@ -2295,10 +2296,7 @@ void http2_stream_delete(struct http2_session* h2_session,
 		mesh_state_remove_reply(h2_stream->mesh, h2_stream->mesh_state,
 			h2_session->c);
 	}
-	if(h2_stream->qbuffer)
-		sldns_buffer_free(h2_stream->qbuffer);
-	if(h2_stream->rbuffer)
-		sldns_buffer_free(h2_stream->rbuffer);
+	http2_req_stream_clear(h2_stream);
 	free(h2_stream);
 }
 #endif
@@ -3091,6 +3089,7 @@ comm_point_create_tcp_handler(struct comm_base *base,
 static struct comm_point* 
 comm_point_create_http_handler(struct comm_base *base, 
 	struct comm_point* parent, size_t bufsize, int harden_large_queries,
+	uint32_t http_max_streams, char* http_endpoint,
 	comm_point_callback_type* callback, void* callback_arg)
 {
 	struct comm_point* c = (struct comm_point*)calloc(1,
@@ -3147,9 +3146,11 @@ comm_point_create_http_handler(struct comm_base *base,
 	c->cb_arg = callback_arg;
 
 	c->http_min_version = http_version_2;
-	c->http2_max_qbuffer_size = bufsize;
+	c->http2_stream_max_qbuffer_size = bufsize;
 	if(harden_large_queries && bufsize > 512)
-		c->http2_max_qbuffer_size = 512;
+		c->http2_stream_max_qbuffer_size = 512;
+	c->http2_max_streams = http_max_streams;
+	c->http_endpoint = strdup(http_endpoint);
 	c->alpn_h2 = 0;
 #ifdef HAVE_NGHTTP2
 	if(!(c->h2_session = http2_session_create(c))) {
@@ -3195,6 +3196,7 @@ comm_point_create_http_handler(struct comm_base *base,
 struct comm_point* 
 comm_point_create_tcp(struct comm_base *base, int fd, int num,
 	int idle_timeout, int harden_large_queries,
+	uint32_t http_max_streams, char* http_endpoint,
 	struct tcl_list* tcp_conn_limit, size_t bufsize,
 	struct sldns_buffer* spoolbuf, enum listen_type port_type,
 	comm_point_callback_type* callback, void* callback_arg)
@@ -3271,6 +3273,7 @@ comm_point_create_tcp(struct comm_base *base, int fd, int num,
 		} else if(port_type == listen_type_http) {
 			c->tcp_handlers[i] = comm_point_create_http_handler(
 				base, c, bufsize, harden_large_queries,
+				http_max_streams, http_endpoint,
 				callback, callback_arg);
 		}
 		else {
@@ -3591,6 +3594,10 @@ comm_point_delete(struct comm_point* c)
 		SSL_shutdown(c->ssl);
 		SSL_free(c->ssl);
 #endif
+	}
+	if(c->type == comm_http && c->http_endpoint) {
+		free(c->http_endpoint);
+		c->http_endpoint = NULL;
 	}
 	comm_point_close(c);
 	if(c->tcp_handlers) {
