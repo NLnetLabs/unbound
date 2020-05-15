@@ -1,3 +1,6 @@
+15 May 2020: Ralph
+	- Cache ECS answers with longest scope of CNAME chain.
+
 22 April 2020: George
 	- Explicitly use 'rrset-roundrobin: no' for test cases.
 
