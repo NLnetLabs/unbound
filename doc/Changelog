@@ -1,6 +1,7 @@
 15 May 2020: Wouter
 	- Merge PR #93: Add dynamic library support.
 	- Fixed conflicts for PR #93 and make configure, yacc, lex.
+	- For PR #93: Fix warnings for dynlibmodule.
 
 15 May 2020: Ralph
 	- Cache ECS answers with longest scope of CNAME chain.

@@ -81,7 +81,13 @@ int dynlibmod_init(struct module_env* env, int id) {
         log_err("dynlibmod[%d]: unable to load dynamic library \"%s\".", dynlib_mod_idx, de->fname);
         return 0;
     } else {
-        __DYNSYM initializer = __LOADSYM(dynamic_library,"init");
+	__DYNSYM initializer;
+	__DYNSYM deinitializer;
+	__DYNSYM operate;
+	__DYNSYM inform;
+	__DYNSYM clear;
+	__DYNSYM get_mem;
+        initializer = __LOADSYM(dynamic_library,"init");
         if (initializer == NULL) {
             log_dlerror();
             log_err("dynlibmod[%d]: unable to load init procedure from dynamic library \"%s\".", dynlib_mod_idx, de->fname);
@@ -89,7 +95,7 @@ int dynlibmod_init(struct module_env* env, int id) {
         } else {
             de->func_init = (func_init_t) initializer;
         }
-        __DYNSYM deinitializer = __LOADSYM(dynamic_library,"deinit");
+        deinitializer = __LOADSYM(dynamic_library,"deinit");
         if (deinitializer == NULL) {
             log_dlerror();
             log_err("dynlibmod[%d]: unable to load deinit procedure from dynamic library \"%s\".", dynlib_mod_idx, de->fname);
@@ -97,7 +103,7 @@ int dynlibmod_init(struct module_env* env, int id) {
         } else {
             de->func_deinit = (func_deinit_t) deinitializer;
         }
-        __DYNSYM operate = __LOADSYM(dynamic_library,"operate");
+        operate = __LOADSYM(dynamic_library,"operate");
         if (operate == NULL) {
             log_dlerror();
             log_err("dynlibmod[%d]: unable to load operate procedure from dynamic library \"%s\".", dynlib_mod_idx, de->fname);
@@ -105,7 +111,7 @@ int dynlibmod_init(struct module_env* env, int id) {
         } else {
             de->func_operate = (func_operate_t) operate;
         }
-        __DYNSYM inform = __LOADSYM(dynamic_library,"inform_super");
+        inform = __LOADSYM(dynamic_library,"inform_super");
         if (inform == NULL) {
             log_dlerror();
             log_err("dynlibmod[%d]: unable to load inform_super procedure from dynamic library \"%s\".", dynlib_mod_idx, de->fname);
@@ -113,7 +119,7 @@ int dynlibmod_init(struct module_env* env, int id) {
         } else {
             de->func_inform = (func_inform_t) inform;
         }
-        __DYNSYM clear = __LOADSYM(dynamic_library,"clear");
+        clear = __LOADSYM(dynamic_library,"clear");
         if (clear == NULL) {
             log_dlerror();
             log_err("dynlibmod[%d]: unable to load clear procedure from dynamic library \"%s\".", dynlib_mod_idx, de->fname);
@@ -121,7 +127,7 @@ int dynlibmod_init(struct module_env* env, int id) {
         } else {
             de->func_clear = (func_clear_t) clear;
         }
-        __DYNSYM get_mem = __LOADSYM(dynamic_library,"get_mem");
+        get_mem = __LOADSYM(dynamic_library,"get_mem");
         if (get_mem == NULL) {
             log_dlerror();
             log_err("dynlibmod[%d]: unable to load get_mem procedure from dynamic library \"%s\".", dynlib_mod_idx, de->fname);
@@ -171,11 +177,12 @@ void dynlibmod_clear(struct module_qstate* qstate, int id) {
 /** dynlib module alloc size routine */
 size_t dynlibmod_get_mem(struct module_env* env, int id) {
     struct dynlibmod_env* de = (struct dynlibmod_env*)env->modinfo[id];
+    size_t size;
     verbose(VERB_ALGO, "dynlibmod: get_mem, id: %d, de:%p", id, de);
     if(!de)
         return 0;
 
-    size_t size = de->func_get_mem(env, id);
+    size = de->func_get_mem(env, id);
     return size + sizeof(*de);
 }
 
@@ -185,7 +192,7 @@ int dynlib_inplace_cb_reply_generic(struct query_info* qinfo,
     struct comm_reply* repinfo, struct regional* region, int id,
     void* callback) {
     struct cb_pair* cb_pair = (struct cb_pair*) callback;
-    ((inplace_cb_reply_func_type*) cb_pair->cb)(qinfo, qstate, rep, rcode, edns, opt_list_out, repinfo, region, id, cb_pair->cb_arg);
+    return ((inplace_cb_reply_func_type*) cb_pair->cb)(qinfo, qstate, rep, rcode, edns, opt_list_out, repinfo, region, id, cb_pair->cb_arg);
 }
 
 int dynlib_inplace_cb_query_generic(struct query_info* qinfo, uint16_t flags,
@@ -193,19 +200,19 @@ int dynlib_inplace_cb_query_generic(struct query_info* qinfo, uint16_t flags,
     socklen_t addrlen, uint8_t* zone, size_t zonelen, struct regional* region,
     int id, void* callback) {
     struct cb_pair* cb_pair = (struct cb_pair*) callback;
-    ((inplace_cb_query_func_type*) cb_pair->cb)(qinfo, flags, qstate, addr, addrlen, zone, zonelen, region, id, cb_pair->cb_arg);
+    return ((inplace_cb_query_func_type*) cb_pair->cb)(qinfo, flags, qstate, addr, addrlen, zone, zonelen, region, id, cb_pair->cb_arg);
 }
 
 int dynlib_inplace_cb_edns_back_parsed(struct module_qstate* qstate,
     int id, void* cb_args) {
     struct cb_pair* cb_pair = (struct cb_pair*) cb_args;
-    ((inplace_cb_edns_back_parsed_func_type*) cb_pair->cb)(qstate, id, cb_pair->cb_arg);
+    return ((inplace_cb_edns_back_parsed_func_type*) cb_pair->cb)(qstate, id, cb_pair->cb_arg);
 }
 
 int dynlib_inplace_cb_query_response(struct module_qstate* qstate,
     struct dns_msg* response, int id, void* cb_args) {
     struct cb_pair* cb_pair = (struct cb_pair*) cb_args;
-    ((inplace_cb_query_response_func_type*) cb_pair->cb)(qstate, response, id, cb_pair->cb_arg);
+    return ((inplace_cb_query_response_func_type*) cb_pair->cb)(qstate, response, id, cb_pair->cb_arg);
 }
 
 int
