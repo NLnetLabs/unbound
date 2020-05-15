@@ -268,6 +268,9 @@ static void print_mem(struct ub_shm_stat_info* shm_stat,
 #ifdef USE_IPSECMOD
 	PR_LL("mem.mod.ipsecmod", shm_stat->mem.ipsecmod);
 #endif
+#ifdef WITH_DYNLIBMODULE
+	PR_LL("mem.mod.dynlib", shm_stat->mem.dynlib);
+#endif
 #ifdef USE_DNSCRYPT
 	PR_LL("mem.cache.dnscrypt_shared_secret",
 		shm_stat->mem.dnscrypt_shared_secret);
