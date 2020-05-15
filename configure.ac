@@ -627,6 +627,28 @@ case "${UNBOUND_SYSLOG_FACILITY}" in
 esac
 AC_DEFINE_UNQUOTED(UB_SYSLOG_FACILITY,${UNBOUND_SYSLOG_FACILITY},[the SYSLOG_FACILITY to use, default LOG_DAEMON])
 
+# Check for dynamic library module
+AC_ARG_WITH(dynlibmodule,
+   AC_HELP_STRING([--with-dynlibmodule],
+   [build dynamic library module, or --without-dynlibmodule to disable it. (default=no)]),
+   [], [ withval="no" ])
+
+if test x_$withval != x_no; then
+  AC_DEFINE(WITH_DYNLIBMODULE, 1, [Define if you want dynlib module.])
+  WITH_DYNLIBMODULE=yes
+  AC_SUBST(WITH_DYNLIBMODULE)
+  DYNLIBMOD_OBJ="dynlibmod.lo"
+  AC_SUBST(DYNLIBMOD_OBJ)
+  DYNLIBMOD_HEADER='$(srcdir)/dynlibmod/dynlibmod.h'
+  AC_SUBST(DYNLIBMOD_HEADER)
+  if test $on_mingw = "no"; then
+    DYNLIBMOD_EXTRALIBS="-ldl -export-dynamic"
+  else
+    DYNLIBMOD_EXTRALIBS="-Wl,--export-all-symbols,--out-implib,libunbound.a"
+  fi
+  AC_SUBST(DYNLIBMOD_EXTRALIBS)
+fi
+
 # Check for PyUnbound
 AC_ARG_WITH(pyunbound,
    AC_HELP_STRING([--with-pyunbound],

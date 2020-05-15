@@ -450,6 +450,9 @@ struct config_file {
 	/** Python script file */
 	struct config_strlist* python_script;
 
+	/** Dynamic library file */
+	struct config_strlist* dynlib_file;
+
 	/** Use systemd socket activation. */
 	int use_systemd;
 

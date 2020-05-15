@@ -700,6 +700,10 @@ PYTHON_LDFLAGS
 PYTHON_CPPFLAGS
 PYTHON
 PYTHON_VERSION
+DYNLIBMOD_EXTRALIBS
+DYNLIBMOD_HEADER
+DYNLIBMOD_OBJ
+WITH_DYNLIBMODULE
 PTHREAD_CFLAGS_ONLY
 PTHREAD_CFLAGS
 PTHREAD_LIBS
@@ -856,6 +860,7 @@ enable_alloc_nonregional
 with_pthreads
 with_solaris_threads
 with_syslog_facility
+with_dynlibmodule
 with_pyunbound
 with_pythonmodule
 enable_swig_version_check
@@ -1618,6 +1623,8 @@ Optional Packages:
   --with-solaris-threads  use solaris native thread library.
   --with-syslog-facility=LOCAL0 - LOCAL7
                           set SYSLOG_FACILITY, default DAEMON
+  --with-dynlibmodule     build dynamic library module, or
+                          --without-dynlibmodule to disable it. (default=no)
   --with-pyunbound        build PyUnbound, or --without-pyunbound to skip it.
                           (default=no)
   --with-pythonmodule     build Python module, or --without-pythonmodule to
@@ -17187,6 +17194,34 @@ cat >>confdefs.h <<_ACEOF
 #define UB_SYSLOG_FACILITY ${UNBOUND_SYSLOG_FACILITY}
 _ACEOF
 
+
+# Check for dynamic library module
+
+# Check whether --with-dynlibmodule was given.
+if test "${with_dynlibmodule+set}" = set; then :
+  withval=$with_dynlibmodule;
+else
+   withval="no"
+fi
+
+
+if test x_$withval != x_no; then
+
+$as_echo "#define WITH_DYNLIBMODULE 1" >>confdefs.h
+
+  WITH_DYNLIBMODULE=yes
+
+  DYNLIBMOD_OBJ="dynlibmod.lo"
+
+  DYNLIBMOD_HEADER='$(srcdir)/dynlibmod/dynlibmod.h'
+
+  if test $on_mingw = "no"; then
+    DYNLIBMOD_EXTRALIBS="-ldl -export-dynamic"
+  else
+    DYNLIBMOD_EXTRALIBS="-Wl,--export-all-symbols,--out-implib,libunbound.a"
+  fi
+
+fi
 
 # Check for PyUnbound
 
