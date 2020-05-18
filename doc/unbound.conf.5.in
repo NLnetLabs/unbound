@@ -1836,7 +1836,7 @@ added to the \fBmodule\-config:\fR option.
 .LP
 The
 .B dynlib:
-clause gives the settings for the \fIdynlib\fR(1) module.  This module is only
+clause gives the settings for the \fIdynlib\fR module.  This module is only
 a very small wrapper that allows dynamic modules to be loaded on runtime
 instead of being compiled into the application. To enable the dynlib module it
 has to be compiled into the daemon, and the word "dynlib" has to be put in the
