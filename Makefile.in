@@ -343,10 +343,10 @@ unbound$(EXEEXT):	$(DAEMON_OBJ_LINK) libunbound.la
 	$(LINK) -o $@ $(DAEMON_OBJ_LINK) $(EXTRALINK) $(SSLLIB) $(LIBS) $(DYNLIBMOD_EXTRALIBS)
 
 unbound-checkconf$(EXEEXT):	$(CHECKCONF_OBJ_LINK) libunbound.la
-	$(LINK) -o $@ $(CHECKCONF_OBJ_LINK) $(EXTRALINK) $(SSLLIB) $(LIBS)
+	$(LINK) -o $@ $(CHECKCONF_OBJ_LINK) $(EXTRALINK) $(SSLLIB) $(LIBS) $(DYNLIBMOD_EXTRALIBS)
 
 unbound-control$(EXEEXT):	$(CONTROL_OBJ_LINK) libunbound.la
-	$(LINK) -o $@ $(CONTROL_OBJ_LINK) $(EXTRALINK) $(SSLLIB) $(LIBS)
+	$(LINK) -o $@ $(CONTROL_OBJ_LINK) $(EXTRALINK) $(SSLLIB) $(LIBS) $(DYNLIBMOD_EXTRALIBS)
 
 unbound-host$(EXEEXT):	$(HOST_OBJ_LINK) libunbound.la
 	$(LINK) -o $@ $(HOST_OBJ_LINK) -L. -L.libs -lunbound $(SSLLIB) $(LIBS)
@@ -364,34 +364,34 @@ anchor-update$(EXEEXT):  $(ANCHORUPD_OBJ_LINK) libunbound.la
 	$(LINK) -o $@ $(ANCHORUPD_OBJ_LINK) -L. -L.libs -lunbound $(LIBS)
 
 unittest$(EXEEXT):	$(UNITTEST_OBJ_LINK)
-	$(LINK) -o $@ $(UNITTEST_OBJ_LINK) $(SSLLIB) $(LIBS)
+	$(LINK) -o $@ $(UNITTEST_OBJ_LINK) $(SSLLIB) $(LIBS) $(DYNLIBMOD_EXTRALIBS)
 
 testbound$(EXEEXT):	$(TESTBOUND_OBJ_LINK)
-	$(LINK) -o $@ $(TESTBOUND_OBJ_LINK) $(SSLLIB) $(LIBS)
+	$(LINK) -o $@ $(TESTBOUND_OBJ_LINK) $(SSLLIB) $(LIBS) $(DYNLIBMOD_EXTRALIBS)
 
 lock-verify$(EXEEXT):	$(LOCKVERIFY_OBJ_LINK)
-	$(LINK) -o $@ $(LOCKVERIFY_OBJ_LINK) $(SSLLIB) $(LIBS)
+	$(LINK) -o $@ $(LOCKVERIFY_OBJ_LINK) $(SSLLIB) $(LIBS) $(DYNLIBMOD_EXTRALIBS)
 
 petal$(EXEEXT):	$(PETAL_OBJ_LINK)
 	$(LINK) -o $@ $(PETAL_OBJ_LINK) $(SSLLIB) $(LIBS)
 
 pktview$(EXEEXT):	$(PKTVIEW_OBJ_LINK)
-	$(LINK) -o $@ $(PKTVIEW_OBJ_LINK) $(SSLLIB) $(LIBS)
+	$(LINK) -o $@ $(PKTVIEW_OBJ_LINK) $(SSLLIB) $(LIBS) $(DYNLIBMOD_EXTRALIBS)
 
 memstats$(EXEEXT):	$(MEMSTATS_OBJ_LINK)
-	$(LINK) -o $@ $(MEMSTATS_OBJ_LINK) $(SSLLIB) $(LIBS)
+	$(LINK) -o $@ $(MEMSTATS_OBJ_LINK) $(SSLLIB) $(LIBS) $(DYNLIBMOD_EXTRALIBS)
 
 asynclook$(EXEEXT):	$(ASYNCLOOK_OBJ_LINK) libunbound.la
 	$(LINK) -o $@ $(ASYNCLOOK_OBJ_LINK) -L. -L.libs -lunbound $(SSLLIB) $(LIBS)
 
 streamtcp$(EXEEXT):	$(STREAMTCP_OBJ_LINK)
-	$(LINK) -o $@ $(STREAMTCP_OBJ_LINK) $(SSLLIB) $(LIBS)
+	$(LINK) -o $@ $(STREAMTCP_OBJ_LINK) $(SSLLIB) $(LIBS) $(DYNLIBMOD_EXTRALIBS)
 
 perf$(EXEEXT):	$(PERF_OBJ_LINK)
-	$(LINK) -o $@ $(PERF_OBJ_LINK) $(SSLLIB) $(LIBS)
+	$(LINK) -o $@ $(PERF_OBJ_LINK) $(SSLLIB) $(LIBS) $(DYNLIBMOD_EXTRALIBS)
 
 delayer$(EXEEXT):	$(DELAYER_OBJ_LINK)
-	$(LINK) -o $@ $(DELAYER_OBJ_LINK) $(SSLLIB) $(LIBS)
+	$(LINK) -o $@ $(DELAYER_OBJ_LINK) $(SSLLIB) $(LIBS) $(DYNLIBMOD_EXTRALIBS)
 
 signit$(EXEEXT):	testcode/signit.c
 	$(CC) $(CPPFLAGS) $(CFLAGS) @PTHREAD_CFLAGS_ONLY@ -o $@ testcode/signit.c $(LDFLAGS) -lldns $(SSLLIB) $(LIBS)
@@ -414,7 +414,7 @@ dnstap/dnstap.pb-c.c dnstap/dnstap.pb-c.h: $(srcdir)/dnstap/dnstap.proto
 	$(PROTOC_C) --c_out=. --proto_path=$(srcdir) $(srcdir)/dnstap/dnstap.proto
 
 unbound-dnstap-socket$(EXEEXT):	$(DNSTAP_SOCKET_OBJ_LINK)
-	$(LINK) -o $@ $(DNSTAP_SOCKET_OBJ_LINK) $(SSLLIB) $(LIBS)
+	$(LINK) -o $@ $(DNSTAP_SOCKET_OBJ_LINK) $(SSLLIB) $(LIBS) $(DYNLIBMOD_EXTRALIBS)
 
 dnstap.pb-c.lo dnstap.pb-c.o: dnstap/dnstap.pb-c.c dnstap/dnstap.pb-c.h
 dtstream.lo dtstream.o: $(srcdir)/dnstap/dtstream.c config.h $(srcdir)/dnstap/dtstream.h

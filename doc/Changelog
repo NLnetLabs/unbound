@@ -8,6 +8,7 @@
 	- For PR #93: checkconf allows python dynlib in module-config, for
 	  a couple cases.
 	- For PR #93: man page spelling reference fix.
+	- For PR #93: fix link of other executables for dynlibmod dependency.
 
 15 May 2020: Wouter
 	- Merge PR #93: Add dynamic library support.
