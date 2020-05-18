@@ -34,6 +34,11 @@ void log_dlerror() {
 HMODULE open_library(const char* fname) {
     return LoadLibrary(fname);
 }
+
+void close_library(const char* fname, __DYNMOD handle) {
+	(void)fname;
+	(void)handle;
+}
 #else
 #include <dlfcn.h>
 #define __DYNMOD void*
@@ -46,11 +51,20 @@ void log_dlerror() {
 void* open_library(const char* fname) {
     return dlopen(fname, RTLD_LAZY | RTLD_GLOBAL);
 }
+
+void close_library(const char* fname, __DYNMOD handle) {
+	if(!handle) return;
+	if(dlclose(handle) != 0) {
+		log_err("dlclose %s: %s", fname, strerror(errno));
+	}
+}
 #endif
+
+/** module counter for multiple dynlib modules */
+static int dynlib_mod_count = 0;
 
 /** dynlib module init */
 int dynlibmod_init(struct module_env* env, int id) {
-    static int dynlib_mod_count;
     int dynlib_mod_idx = dynlib_mod_count++;
     struct config_strlist* cfg_item = env->cfg->dynlib_file;
     struct dynlibmod_env* de = (struct dynlibmod_env*)calloc(1, sizeof(struct dynlibmod_env));
@@ -76,6 +90,7 @@ int dynlibmod_init(struct module_env* env, int id) {
     }
     verbose(VERB_ALGO, "dynlibmod[%d]: Trying to load library %s", dynlib_mod_idx, de->fname);
     dynamic_library = open_library(de->fname);
+    de->dynamic_library = (void*)dynamic_library;
     if (dynamic_library == NULL) {
         log_dlerror();
         log_err("dynlibmod[%d]: unable to load dynamic library \"%s\".", dynlib_mod_idx, de->fname);
@@ -147,6 +162,8 @@ void dynlibmod_deinit(struct module_env* env, int id) {
     if(de == NULL)
         return;
     de->func_deinit(env, id);
+    close_library(de->fname, (__DYNMOD)de->dynamic_library);
+    dynlib_mod_count--;
     de->fname = NULL;
     free(de);
 }

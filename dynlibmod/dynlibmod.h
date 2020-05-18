@@ -114,6 +114,8 @@ typedef int (*inplace_cb_register_wrapped_t)(void*, enum inplace_cb_list_type, v
 struct dynlibmod_env {
 	/** Dynamic library filename. */
 	const char* fname;
+	/** dynamic library handle */
+	void* dynamic_library;
 	/** Module init function */
 	func_init_t func_init;
 	/** Module deinit function */
