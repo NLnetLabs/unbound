@@ -571,8 +571,12 @@ morechecks(struct config_file* cfg)
 #endif
 #ifdef WITH_DYNLIBMODULE
 		&& strcmp(cfg->module_conf, "dynlib iterator") != 0
+		&& strcmp(cfg->module_conf, "dynlib dynlib iterator") != 0
+		&& strcmp(cfg->module_conf, "dynlib dynlib dynlib iterator") != 0
 		&& strcmp(cfg->module_conf, "dynlib respip iterator") != 0
 		&& strcmp(cfg->module_conf, "dynlib validator iterator") != 0
+		&& strcmp(cfg->module_conf, "dynlib dynlib validator iterator") != 0
+		&& strcmp(cfg->module_conf, "dynlib dynlib dynlib validator iterator") != 0
 		&& strcmp(cfg->module_conf, "dynlib respip validator iterator") != 0
 		&& strcmp(cfg->module_conf, "validator dynlib iterator") != 0
 		&& strcmp(cfg->module_conf, "dns64 dynlib iterator") != 0

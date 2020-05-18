@@ -3,6 +3,8 @@
 	  with dlclose and dlopen of the library again.  Also for multiple
 	  modules.  Fix memory leak by not closing dlopened content.  Fix
 	  to allow one dynlibmod instance by unbound-checkconf.
+	- For PR #93: checkconf allow multiple dynlib in module-config, for
+	  a couple cases.
 
 15 May 2020: Wouter
 	- Merge PR #93: Add dynamic library support.
