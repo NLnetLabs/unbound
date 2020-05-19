@@ -8,6 +8,7 @@
 	  version 1.10.2 version number in it.
 	- For PR #93: windows compile warnings removal
 	- windows compile warnings removal for ip dscp option code.
+	- For PR #93: unit test for dynlib module.
 
 18 May 2020: Wouter
 	- For PR #93: dynlibmod can handle reloads and deinit and inits again,
