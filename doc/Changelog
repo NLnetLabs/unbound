@@ -1,3 +1,9 @@
+19 May 2020: Wouter
+	- CVE-2020-12662 Unbound can be tricked into amplifying an incoming
+	  query into a large number of queries directed to a target.
+	- CVE-2020-12663 Malformed answers from upstream name servers can be
+	  used to make Unbound unresponsive.
+
 18 May 2020: Wouter
 	- For PR #93: dynlibmod can handle reloads and deinit and inits again,
 	  with dlclose and dlopen of the library again.  Also for multiple
