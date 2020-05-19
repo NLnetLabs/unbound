@@ -884,11 +884,11 @@ set_ip_dscp(int socket, int addrfamily, int dscp)
 	ds = dscp << 2;
 	switch(addrfamily) {
 	case AF_INET6:
-		if(setsockopt(socket, IPPROTO_IPV6, IPV6_TCLASS, &ds, sizeof(ds)) < 0)
+		if(setsockopt(socket, IPPROTO_IPV6, IPV6_TCLASS, (void*)&ds, sizeof(ds)) < 0)
 			return sock_strerror(errno);
 		break;
 	default:
-		if(setsockopt(socket, IPPROTO_IP, IP_TOS, &ds, sizeof(ds)) < 0)
+		if(setsockopt(socket, IPPROTO_IP, IP_TOS, (void*)&ds, sizeof(ds)) < 0)
 			return sock_strerror(errno);
 		break;
 	}
