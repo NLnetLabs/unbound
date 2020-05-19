@@ -3,6 +3,9 @@
 	  query into a large number of queries directed to a target.
 	- CVE-2020-12663 Malformed answers from upstream name servers can be
 	  used to make Unbound unresponsive.
+	- Release 1.10.1 is 1.10.0 with fixes, code repository continues,
+	  including those fixes, towards the next release.  Configure has
+	  version 1.10.2 version number in it.
 
 18 May 2020: Wouter
 	- For PR #93: dynlibmod can handle reloads and deinit and inits again,
