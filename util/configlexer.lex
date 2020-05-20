@@ -220,6 +220,7 @@ outgoing-num-tcp{COLON}		{ YDVAR(1, VAR_OUTGOING_NUM_TCP) }
 incoming-num-tcp{COLON}		{ YDVAR(1, VAR_INCOMING_NUM_TCP) }
 do-ip4{COLON}			{ YDVAR(1, VAR_DO_IP4) }
 do-ip6{COLON}			{ YDVAR(1, VAR_DO_IP6) }
+prefer-ip4{COLON}		{ YDVAR(1, VAR_PREFER_IP4) }
 prefer-ip6{COLON}		{ YDVAR(1, VAR_PREFER_IP6) }
 do-udp{COLON}			{ YDVAR(1, VAR_DO_UDP) }
 do-tcp{COLON}			{ YDVAR(1, VAR_DO_TCP) }
@@ -247,6 +248,7 @@ tls-additional-port{COLON}	{ YDVAR(1, VAR_TLS_ADDITIONAL_PORT) }
 tls-session-ticket-keys{COLON}	{ YDVAR(1, VAR_TLS_SESSION_TICKET_KEYS) }
 tls-ciphers{COLON}		{ YDVAR(1, VAR_TLS_CIPHERS) }
 tls-ciphersuites{COLON}		{ YDVAR(1, VAR_TLS_CIPHERSUITES) }
+tls-use-sni{COLON}		{ YDVAR(1, VAR_TLS_USE_SNI) }
 use-systemd{COLON}		{ YDVAR(1, VAR_USE_SYSTEMD) }
 do-daemonize{COLON}		{ YDVAR(1, VAR_DO_DAEMONIZE) }
 interface{COLON}		{ YDVAR(1, VAR_INTERFACE) }
@@ -258,6 +260,7 @@ so-sndbuf{COLON}		{ YDVAR(1, VAR_SO_SNDBUF) }
 so-reuseport{COLON}		{ YDVAR(1, VAR_SO_REUSEPORT) }
 ip-transparent{COLON}		{ YDVAR(1, VAR_IP_TRANSPARENT) }
 ip-freebind{COLON}		{ YDVAR(1, VAR_IP_FREEBIND) }
+ip-dscp{COLON}		{ YDVAR(1, VAR_IP_DSCP) }
 chroot{COLON}			{ YDVAR(1, VAR_CHROOT) }
 username{COLON}			{ YDVAR(1, VAR_USERNAME) }
 directory{COLON}		{ YDVAR(1, VAR_DIRECTORY) }
@@ -412,6 +415,8 @@ control-key-file{COLON}		{ YDVAR(1, VAR_CONTROL_KEY_FILE) }
 control-cert-file{COLON}	{ YDVAR(1, VAR_CONTROL_CERT_FILE) }
 python-script{COLON}		{ YDVAR(1, VAR_PYTHON_SCRIPT) }
 python{COLON}			{ YDVAR(0, VAR_PYTHON) }
+dynlib-file{COLON}		{ YDVAR(1, VAR_DYNLIB_FILE) }
+dynlib{COLON}			{ YDVAR(0, VAR_DYNLIB) }
 domain-insecure{COLON}		{ YDVAR(1, VAR_DOMAIN_INSECURE) }
 minimal-responses{COLON}	{ YDVAR(1, VAR_MINIMAL_RESPONSES) }
 rrset-roundrobin{COLON}		{ YDVAR(1, VAR_RRSET_ROUNDROBIN) }
@@ -430,6 +435,14 @@ local-zone-override{COLON}	{ YDVAR(3, VAR_LOCAL_ZONE_OVERRIDE) }
 dnstap{COLON}			{ YDVAR(0, VAR_DNSTAP) }
 dnstap-enable{COLON}		{ YDVAR(1, VAR_DNSTAP_ENABLE) }
 dnstap-socket-path{COLON}	{ YDVAR(1, VAR_DNSTAP_SOCKET_PATH) }
+dnstap-ip{COLON}		{ YDVAR(1, VAR_DNSTAP_IP) }
+dnstap-tls{COLON}		{ YDVAR(1, VAR_DNSTAP_TLS) }
+dnstap-tls-server-name{COLON}	{ YDVAR(1, VAR_DNSTAP_TLS_SERVER_NAME) }
+dnstap-tls-cert-bundle{COLON}	{ YDVAR(1, VAR_DNSTAP_TLS_CERT_BUNDLE) }
+dnstap-tls-client-key-file{COLON}	{
+		YDVAR(1, VAR_DNSTAP_TLS_CLIENT_KEY_FILE) }
+dnstap-tls-client-cert-file{COLON}	{
+		YDVAR(1, VAR_DNSTAP_TLS_CLIENT_CERT_FILE) }
 dnstap-send-identity{COLON}	{ YDVAR(1, VAR_DNSTAP_SEND_IDENTITY) }
 dnstap-send-version{COLON}	{ YDVAR(1, VAR_DNSTAP_SEND_VERSION) }
 dnstap-identity{COLON}		{ YDVAR(1, VAR_DNSTAP_IDENTITY) }
@@ -490,6 +503,7 @@ secret-seed{COLON}		{ YDVAR(1, VAR_CACHEDB_SECRETSEED) }
 redis-server-host{COLON}	{ YDVAR(1, VAR_CACHEDB_REDISHOST) }
 redis-server-port{COLON}	{ YDVAR(1, VAR_CACHEDB_REDISPORT) }
 redis-timeout{COLON}		{ YDVAR(1, VAR_CACHEDB_REDISTIMEOUT) }
+redis-expire-records{COLON}	{ YDVAR(1, VAR_CACHEDB_REDISEXPIRERECORDS) }
 ipset{COLON}			{ YDVAR(0, VAR_IPSET) }
 name-v4{COLON}			{ YDVAR(1, VAR_IPSET_NAME_V4) }
 name-v6{COLON}			{ YDVAR(1, VAR_IPSET_NAME_V6) }

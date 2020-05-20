@@ -386,6 +386,14 @@ void log_crypto_err(const char* str);
 void log_crypto_err_code(const char* str, unsigned long err);
 
 /**
+ * Log certificate details verbosity, string, of X509 cert
+ * @param level: verbosity level
+ * @param str: string to prefix on output
+ * @param cert: X509* structure.
+ */
+void log_cert(unsigned level, const char* str, void* cert);
+
+/**
  * Set SSL_OP_NOxxx options on SSL context to disable bad crypto
  * @param ctxt: SSL_CTX*
  * @return false on failure.
@@ -433,6 +441,22 @@ void* incoming_ssl_fd(void* sslctx, int fd);
  * @return SSL or NULL on alloc failure
  */
 void* outgoing_ssl_fd(void* sslctx, int fd);
+
+/**
+ * check if authname SSL functionality is available, false if not
+ * @param auth_name: the name for the remote server, used for error print.
+ * @return false if SSL functionality to check the SSL name is not available.
+ */
+int check_auth_name_for_ssl(char* auth_name);
+
+/**
+ * set auth name on SSL for verification
+ * @param ssl: SSL* to set
+ * @param auth_name: if NULL nothing happens, otherwise the name to check.
+ * @param use_sni: if SNI will be used.
+ * @return 1 on success or NULL auth_name, 0 on failure.
+ */
+int set_auth_name_on_ssl(void* ssl, char* auth_name, int use_sni);
 
 /**
  * Initialize openssl locking for thread safety

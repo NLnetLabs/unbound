@@ -484,6 +484,63 @@ iter_filter_order(struct iter_env* iter_env, struct module_env* env,
 			got_num = num4ok;
 			*selected_rtt = num4_lowrtt;
 		}
+	} else if (env->cfg->prefer_ip4) {
+		int got_num4 = 0;
+		int low_rtt4 = 0;
+		int i;
+		int attempt = -1; /* filter to make sure addresses have
+		  less attempts on them than the first, to force round
+		  robin when all the IPv4 addresses fail */
+		int num6ok = 0; /* number ip6 at low attempt count */
+		int num6_lowrtt = 0;
+		prev = NULL;
+		a = dp->result_list;
+		for(i = 0; i < got_num; i++) {
+			swap_to_front = 0;
+			if(a->addr.ss_family != AF_INET && attempt == -1) {
+				/* if we only have ip6 at low attempt count,
+				 * then ip4 is failing, and we need to
+				 * select one of the remaining IPv6 addrs */
+				attempt = a->attempts;
+				num6ok++;
+				num6_lowrtt = a->sel_rtt;
+			} else if(a->addr.ss_family != AF_INET && attempt == a->attempts) {
+				num6ok++;
+				if(num6_lowrtt == 0 || a->sel_rtt < num6_lowrtt) {
+					num6_lowrtt = a->sel_rtt;
+				}
+			}
+			if(a->addr.ss_family == AF_INET) {
+				if(attempt == -1) {
+					attempt = a->attempts;
+				} else if(a->attempts > attempt) {
+					break;
+				}
+				got_num4++;
+				swap_to_front = 1;
+				if(low_rtt4 == 0 || a->sel_rtt < low_rtt4) {
+					low_rtt4 = a->sel_rtt;
+				}
+			}
+			/* swap to front if IPv4, or move to next result */
+			if(swap_to_front && prev) {
+				n = a->next_result;
+				prev->next_result = n;
+				a->next_result = dp->result_list;
+				dp->result_list = a;
+				a = n;
+			} else {
+				prev = a;
+				a = a->next_result;
+			}
+		}
+		if(got_num4 > 0) {
+			got_num = got_num4;
+			*selected_rtt = low_rtt4;
+		} else if(num6ok > 0) {
+			got_num = num6ok;
+			*selected_rtt = num6_lowrtt;
+		}
 	}
 	return got_num;
 }
@@ -1142,7 +1199,7 @@ int iter_lookup_parent_glue_from_cache(struct module_env* env,
 			log_rrset_key(VERB_ALGO, "found parent-side", akey);
 			ns->done_pside4 = 1;
 			/* a negative-cache-element has no addresses it adds */
-			if(!delegpt_add_rrset_A(dp, region, akey, 1))
+			if(!delegpt_add_rrset_A(dp, region, akey, 1, NULL))
 				log_err("malloc failure in lookup_parent_glue");
 			lock_rw_unlock(&akey->entry.lock);
 		}
@@ -1154,7 +1211,7 @@ int iter_lookup_parent_glue_from_cache(struct module_env* env,
 			log_rrset_key(VERB_ALGO, "found parent-side", akey);
 			ns->done_pside6 = 1;
 			/* a negative-cache-element has no addresses it adds */
-			if(!delegpt_add_rrset_AAAA(dp, region, akey, 1))
+			if(!delegpt_add_rrset_AAAA(dp, region, akey, 1, NULL))
 				log_err("malloc failure in lookup_parent_glue");
 			lock_rw_unlock(&akey->entry.lock);
 		}

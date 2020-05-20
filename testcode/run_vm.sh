@@ -34,7 +34,7 @@ cleanup() {
 	if test -f "$t.bak"; then mv "$t.bak" "$t"; fi
 	exit 0
 }
-trap cleanup SIGINT
+trap cleanup INT
 
 for t in $RUNLIST
 do

@@ -469,7 +469,6 @@ check_modules_exist(const char* module_conf)
 static void
 morechecks(struct config_file* cfg)
 {
-	struct config_auth* auth;
 	warn_hosts("stub-host", cfg->stubs);
 	warn_hosts("forward-host", cfg->forwards);
 	interfacechecks(cfg);
@@ -482,6 +481,8 @@ morechecks(struct config_file* cfg)
 		fatal_exit("num_threads value weird");
 	if(!cfg->do_ip4 && !cfg->do_ip6)
 		fatal_exit("ip4 and ip6 are both disabled, pointless");
+	if(!cfg->do_ip4 && cfg->prefer_ip4)
+		fatal_exit("cannot prefer and disable ip4, pointless");
 	if(!cfg->do_ip6 && cfg->prefer_ip6)
 		fatal_exit("cannot prefer and disable ip6, pointless");
 	if(!cfg->do_udp && !cfg->do_tcp)
@@ -535,12 +536,6 @@ morechecks(struct config_file* cfg)
 		cfg->trusted_keys_file_list, cfg->chrootdir, cfg);
 	check_chroot_string("dlv-anchor-file", &cfg->dlv_anchor_file,
 		cfg->chrootdir, cfg);
-	for(auth = cfg->auths; auth; auth = auth->next) {
-		char* az = (auth->isrpz) ? "rpz zonefile" :
-			"auth-zone zonefile";
-		check_chroot_string(az, &auth->zonefile,
-			cfg->chrootdir, cfg);
-	}
 #ifdef USE_IPSECMOD
 	if(cfg->ipsecmod_enabled && strstr(cfg->module_conf, "ipsecmod")) {
 		/* only check hook if enabled */
@@ -555,10 +550,7 @@ morechecks(struct config_file* cfg)
 	/* check that the modules listed in module_conf exist */
 	check_modules_exist(cfg->module_conf);
 
-	/* There should be no reason for 'respip' module not to work with
-	 * dns64, but it's not explicitly confirmed,  so the combination is
-	 * excluded below.   It's simply unknown yet for the combination of
-	 * respip and other modules. */
+	/* Respip is known to *not* work with dns64. */
 	if(strcmp(cfg->module_conf, "iterator") != 0
 		&& strcmp(cfg->module_conf, "validator iterator") != 0
 		&& strcmp(cfg->module_conf, "dns64 validator iterator") != 0
@@ -567,7 +559,9 @@ morechecks(struct config_file* cfg)
 		&& strcmp(cfg->module_conf, "respip validator iterator") != 0
 #ifdef WITH_PYTHONMODULE
 		&& strcmp(cfg->module_conf, "python iterator") != 0
+		&& strcmp(cfg->module_conf, "python respip iterator") != 0
 		&& strcmp(cfg->module_conf, "python validator iterator") != 0
+		&& strcmp(cfg->module_conf, "python respip validator iterator") != 0
 		&& strcmp(cfg->module_conf, "validator python iterator") != 0
 		&& strcmp(cfg->module_conf, "dns64 python iterator") != 0
 		&& strcmp(cfg->module_conf, "dns64 python validator iterator") != 0
@@ -575,9 +569,69 @@ morechecks(struct config_file* cfg)
 		&& strcmp(cfg->module_conf, "python dns64 iterator") != 0
 		&& strcmp(cfg->module_conf, "python dns64 validator iterator") != 0
 #endif
+#ifdef WITH_DYNLIBMODULE
+		&& strcmp(cfg->module_conf, "dynlib iterator") != 0
+		&& strcmp(cfg->module_conf, "dynlib dynlib iterator") != 0
+		&& strcmp(cfg->module_conf, "dynlib dynlib dynlib iterator") != 0
+		&& strcmp(cfg->module_conf, "python dynlib iterator") != 0
+		&& strcmp(cfg->module_conf, "python dynlib dynlib iterator") != 0
+		&& strcmp(cfg->module_conf, "python dynlib dynlib dynlib iterator") != 0
+		&& strcmp(cfg->module_conf, "dynlib respip iterator") != 0
+		&& strcmp(cfg->module_conf, "dynlib validator iterator") != 0
+		&& strcmp(cfg->module_conf, "dynlib dynlib validator iterator") != 0
+		&& strcmp(cfg->module_conf, "dynlib dynlib dynlib validator iterator") != 0
+		&& strcmp(cfg->module_conf, "python dynlib validator iterator") != 0
+		&& strcmp(cfg->module_conf, "python dynlib dynlib validator iterator") != 0
+		&& strcmp(cfg->module_conf, "python dynlib dynlib dynlib validator iterator") != 0
+		&& strcmp(cfg->module_conf, "dynlib respip validator iterator") != 0
+		&& strcmp(cfg->module_conf, "validator dynlib iterator") != 0
+		&& strcmp(cfg->module_conf, "dns64 dynlib iterator") != 0
+		&& strcmp(cfg->module_conf, "dns64 dynlib validator iterator") != 0
+		&& strcmp(cfg->module_conf, "dns64 validator dynlib iterator") != 0
+		&& strcmp(cfg->module_conf, "dynlib dns64 iterator") != 0
+		&& strcmp(cfg->module_conf, "dynlib dns64 validator iterator") != 0
+		&& strcmp(cfg->module_conf, "dynlib dns64 cachedb iterator") != 0
+		&& strcmp(cfg->module_conf, "dynlib dns64 validator cachedb iterator") != 0
+		&& strcmp(cfg->module_conf, "dns64 dynlib cachedb iterator") != 0
+		&& strcmp(cfg->module_conf, "dns64 dynlib validator cachedb iterator") != 0
+		&& strcmp(cfg->module_conf, "dynlib cachedb iterator") != 0
+		&& strcmp(cfg->module_conf, "dynlib respip cachedb iterator") != 0
+		&& strcmp(cfg->module_conf, "dynlib validator cachedb iterator") != 0
+		&& strcmp(cfg->module_conf, "dynlib respip validator cachedb iterator") != 0
+		&& strcmp(cfg->module_conf, "cachedb dynlib iterator") != 0
+		&& strcmp(cfg->module_conf, "respip cachedb dynlib iterator") != 0
+		&& strcmp(cfg->module_conf, "validator cachedb dynlib iterator") != 0
+		&& strcmp(cfg->module_conf, "respip validator cachedb dynlib iterator") != 0
+		&& strcmp(cfg->module_conf, "validator dynlib cachedb iterator") != 0
+		&& strcmp(cfg->module_conf, "respip validator dynlib cachedb iterator") != 0
+		&& strcmp(cfg->module_conf, "dynlib subnetcache iterator") != 0
+		&& strcmp(cfg->module_conf, "dynlib respip subnetcache iterator") != 0
+		&& strcmp(cfg->module_conf, "subnetcache dynlib iterator") != 0
+		&& strcmp(cfg->module_conf, "respip subnetcache dynlib iterator") != 0
+		&& strcmp(cfg->module_conf, "dynlib subnetcache validator iterator") != 0
+		&& strcmp(cfg->module_conf, "dynlib respip subnetcache validator iterator") != 0
+		&& strcmp(cfg->module_conf, "subnetcache dynlib validator iterator") != 0
+		&& strcmp(cfg->module_conf, "respip subnetcache dynlib validator iterator") != 0
+		&& strcmp(cfg->module_conf, "subnetcache validator dynlib iterator") != 0
+		&& strcmp(cfg->module_conf, "respip subnetcache validator dynlib iterator") != 0
+		&& strcmp(cfg->module_conf, "dynlib ipsecmod iterator") != 0
+		&& strcmp(cfg->module_conf, "dynlib ipsecmod respip iterator") != 0
+		&& strcmp(cfg->module_conf, "ipsecmod dynlib iterator") != 0
+		&& strcmp(cfg->module_conf, "ipsecmod dynlib respip iterator") != 0
+		&& strcmp(cfg->module_conf, "ipsecmod validator iterator") != 0
+		&& strcmp(cfg->module_conf, "ipsecmod respip validator iterator") != 0
+		&& strcmp(cfg->module_conf, "dynlib ipsecmod validator iterator") != 0
+		&& strcmp(cfg->module_conf, "dynlib ipsecmod respip validator iterator") != 0
+		&& strcmp(cfg->module_conf, "ipsecmod dynlib validator iterator") != 0
+		&& strcmp(cfg->module_conf, "ipsecmod dynlib respip validator iterator") != 0
+		&& strcmp(cfg->module_conf, "ipsecmod validator dynlib iterator") != 0
+		&& strcmp(cfg->module_conf, "ipsecmod respip validator dynlib iterator") != 0
+#endif
 #ifdef USE_CACHEDB
 		&& strcmp(cfg->module_conf, "validator cachedb iterator") != 0
+		&& strcmp(cfg->module_conf, "respip validator cachedb iterator") != 0
 		&& strcmp(cfg->module_conf, "cachedb iterator") != 0
+		&& strcmp(cfg->module_conf, "respip cachedb iterator") != 0
 		&& strcmp(cfg->module_conf, "dns64 validator cachedb iterator") != 0
 		&& strcmp(cfg->module_conf, "dns64 cachedb iterator") != 0
 #endif
@@ -587,39 +641,63 @@ morechecks(struct config_file* cfg)
 		&& strcmp(cfg->module_conf, "dns64 python cachedb iterator") != 0
 		&& strcmp(cfg->module_conf, "dns64 python validator cachedb iterator") != 0
 		&& strcmp(cfg->module_conf, "python cachedb iterator") != 0
+		&& strcmp(cfg->module_conf, "python respip cachedb iterator") != 0
 		&& strcmp(cfg->module_conf, "python validator cachedb iterator") != 0
+		&& strcmp(cfg->module_conf, "python respip validator cachedb iterator") != 0
 		&& strcmp(cfg->module_conf, "cachedb python iterator") != 0
+		&& strcmp(cfg->module_conf, "respip cachedb python iterator") != 0
 		&& strcmp(cfg->module_conf, "validator cachedb python iterator") != 0
+		&& strcmp(cfg->module_conf, "respip validator cachedb python iterator") != 0
 		&& strcmp(cfg->module_conf, "validator python cachedb iterator") != 0
+		&& strcmp(cfg->module_conf, "respip validator python cachedb iterator") != 0
 #endif
 #ifdef CLIENT_SUBNET
 		&& strcmp(cfg->module_conf, "subnetcache iterator") != 0
+		&& strcmp(cfg->module_conf, "respip subnetcache iterator") != 0
 		&& strcmp(cfg->module_conf, "subnetcache validator iterator") != 0
+		&& strcmp(cfg->module_conf, "respip subnetcache validator iterator") != 0
 		&& strcmp(cfg->module_conf, "dns64 subnetcache iterator") != 0
 		&& strcmp(cfg->module_conf, "dns64 subnetcache validator iterator") != 0
+		&& strcmp(cfg->module_conf, "dns64 subnetcache respip iterator") != 0
+		&& strcmp(cfg->module_conf, "dns64 subnetcache respip validator iterator") != 0
 #endif
 #if defined(WITH_PYTHONMODULE) && defined(CLIENT_SUBNET)
 		&& strcmp(cfg->module_conf, "python subnetcache iterator") != 0
+		&& strcmp(cfg->module_conf, "python respip subnetcache iterator") != 0
 		&& strcmp(cfg->module_conf, "subnetcache python iterator") != 0
+		&& strcmp(cfg->module_conf, "respip subnetcache python iterator") != 0
 		&& strcmp(cfg->module_conf, "python subnetcache validator iterator") != 0
+		&& strcmp(cfg->module_conf, "python respip subnetcache validator iterator") != 0
 		&& strcmp(cfg->module_conf, "subnetcache python validator iterator") != 0
+		&& strcmp(cfg->module_conf, "respip subnetcache python validator iterator") != 0
 		&& strcmp(cfg->module_conf, "subnetcache validator python iterator") != 0
+		&& strcmp(cfg->module_conf, "respip subnetcache validator python iterator") != 0
 #endif
 #ifdef USE_IPSECMOD
 		&& strcmp(cfg->module_conf, "ipsecmod iterator") != 0
+		&& strcmp(cfg->module_conf, "ipsecmod respip iterator") != 0
 		&& strcmp(cfg->module_conf, "ipsecmod validator iterator") != 0
+		&& strcmp(cfg->module_conf, "ipsecmod respip validator iterator") != 0
 #endif
 #if defined(WITH_PYTHONMODULE) && defined(USE_IPSECMOD)
 		&& strcmp(cfg->module_conf, "python ipsecmod iterator") != 0
+		&& strcmp(cfg->module_conf, "python ipsecmod respip iterator") != 0
 		&& strcmp(cfg->module_conf, "ipsecmod python iterator") != 0
+		&& strcmp(cfg->module_conf, "ipsecmod python respip iterator") != 0
 		&& strcmp(cfg->module_conf, "ipsecmod validator iterator") != 0
+		&& strcmp(cfg->module_conf, "ipsecmod respip validator iterator") != 0
 		&& strcmp(cfg->module_conf, "python ipsecmod validator iterator") != 0
+		&& strcmp(cfg->module_conf, "python ipsecmod respip validator iterator") != 0
 		&& strcmp(cfg->module_conf, "ipsecmod python validator iterator") != 0
+		&& strcmp(cfg->module_conf, "ipsecmod python respip validator iterator") != 0
 		&& strcmp(cfg->module_conf, "ipsecmod validator python iterator") != 0
+		&& strcmp(cfg->module_conf, "ipsecmod respip validator python iterator") != 0
 #endif
 #ifdef USE_IPSET
 		&& strcmp(cfg->module_conf, "validator ipset iterator") != 0
+		&& strcmp(cfg->module_conf, "validator ipset respip iterator") != 0
 		&& strcmp(cfg->module_conf, "ipset iterator") != 0
+		&& strcmp(cfg->module_conf, "ipset respip iterator") != 0
 #endif
 		) {
 		fatal_exit("module conf '%s' is not known to work",
@@ -685,7 +763,7 @@ check_auth(struct config_file* cfg)
 {
 	int is_rpz = 0;
 	struct auth_zones* az = auth_zones_create();
-	if(!az || !auth_zones_apply_cfg(az, cfg, 0i, &is_rpz)) {
+	if(!az || !auth_zones_apply_cfg(az, cfg, 0, &is_rpz)) {
 		fatal_exit("Could not setup authority zones");
 	}
 	auth_zones_delete(az);

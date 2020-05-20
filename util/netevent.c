@@ -1027,34 +1027,8 @@ tcp_callback_reader(struct comm_point* c)
 }
 
 #ifdef HAVE_SSL
-/** log certificate details */
-static void
-log_cert(unsigned level, const char* str, X509* cert)
-{
-	BIO* bio;
-	char nul = 0;
-	char* pp = NULL;
-	long len;
-	if(verbosity < level) return;
-	bio = BIO_new(BIO_s_mem());
-	if(!bio) return;
-	X509_print_ex(bio, cert, 0, (unsigned long)-1
-		^(X509_FLAG_NO_SUBJECT
-                        |X509_FLAG_NO_ISSUER|X509_FLAG_NO_VALIDITY
-			|X509_FLAG_NO_EXTENSIONS|X509_FLAG_NO_AUX
-			|X509_FLAG_NO_ATTRIBUTES));
-	BIO_write(bio, &nul, (int)sizeof(nul));
-	len = BIO_get_mem_data(bio, &pp);
-	if(len != 0 && pp) {
-		verbose(level, "%s: \n%s", str, pp);
-	}
-	BIO_free(bio);
-}
-#endif /* HAVE_SSL */
-
-#ifdef HAVE_SSL
 /** true if the ssl handshake error has to be squelched from the logs */
-static int
+int
 squelch_err_ssl_handshake(unsigned long err)
 {
 	if(verbosity >= VERB_QUERY)
@@ -3183,7 +3157,10 @@ comm_point_send_reply(struct comm_reply *repinfo)
 		if(repinfo->c->tcp_parent->dtenv != NULL &&
 		   repinfo->c->tcp_parent->dtenv->log_client_response_messages)
 			dt_msg_send_client_response(repinfo->c->tcp_parent->dtenv,
-			&repinfo->addr, repinfo->c->type, repinfo->c->buffer);
+			&repinfo->addr, repinfo->c->type,
+			( repinfo->c->tcp_req_info
+			? repinfo->c->tcp_req_info->spool_buffer
+			: repinfo->c->buffer ));
 #endif
 		if(repinfo->c->tcp_req_info) {
 			tcp_req_info_send_reply(repinfo->c->tcp_req_info);

@@ -159,16 +159,28 @@ client_info_compare(const struct respip_client_info* ci_a,
 		return 1;
 	if(ci_a->taglen != ci_b->taglen)
 		return (ci_a->taglen < ci_b->taglen) ? -1 : 1;
-	cmp = memcmp(ci_a->taglist, ci_b->taglist, ci_a->taglen);
-	if(cmp != 0)
-		return cmp;
+	if(ci_a->taglist && !ci_b->taglist)
+		return -1;
+	if(!ci_a->taglist && ci_b->taglist)
+		return 1;
+	if(ci_a->taglist && ci_b->taglist) {
+		cmp = memcmp(ci_a->taglist, ci_b->taglist, ci_a->taglen);
+		if(cmp != 0)
+			return cmp;
+	}
 	if(ci_a->tag_actions_size != ci_b->tag_actions_size)
 		return (ci_a->tag_actions_size < ci_b->tag_actions_size) ?
 			-1 : 1;
-	cmp = memcmp(ci_a->tag_actions, ci_b->tag_actions,
-		ci_a->tag_actions_size);
-	if(cmp != 0)
-		return cmp;
+	if(ci_a->tag_actions && !ci_b->tag_actions)
+		return -1;
+	if(!ci_a->tag_actions && ci_b->tag_actions)
+		return 1;
+	if(ci_a->tag_actions && ci_b->tag_actions) {
+		cmp = memcmp(ci_a->tag_actions, ci_b->tag_actions,
+			ci_a->tag_actions_size);
+		if(cmp != 0)
+			return cmp;
+	}
 	if(ci_a->tag_datas != ci_b->tag_datas)
 		return ci_a->tag_datas < ci_b->tag_datas ? -1 : 1;
 	if(ci_a->view != ci_b->view)
@@ -1948,7 +1960,7 @@ mesh_serve_expired_callback(void* arg)
 
 	r = mstate->reply_list;
 	mstate->reply_list = NULL;
-	if(!mstate->reply_list && !mstate->cb_list) {
+	if(!mstate->reply_list && !mstate->cb_list && r) {
 		log_assert(mesh->num_reply_states > 0);
 		mesh->num_reply_states--;
 		if(mstate->super_set.count == 0) {
