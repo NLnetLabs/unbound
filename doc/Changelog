@@ -1,3 +1,6 @@
+21 May 2020: George
+	- Fix for integer overflow when printing RDF_TYPE_TIME.
+
 19 May 2020: Wouter
 	- CVE-2020-12662 Unbound can be tricked into amplifying an incoming
 	  query into a large number of queries directed to a target.
