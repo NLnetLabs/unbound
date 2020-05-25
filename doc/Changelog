@@ -1,3 +1,7 @@
+25 May 2020: George
+	- Update contrib/aaaa-filter-iterator.patch for the recent
+	  generate_sub_request() change and to apply cleanly.
+
 21 May 2020: George
 	- Fix for integer overflow when printing RDF_TYPE_TIME.
 
