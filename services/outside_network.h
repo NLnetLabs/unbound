@@ -232,8 +232,15 @@ struct port_comm {
  */
 struct reuse_tcp {
 	/** rbtree node with links in tcp_reuse tree. key is NULL when not
-	 * in tree. Both active and empty connections are in the tree. */
+	 * in tree. Both active and empty connections are in the tree.
+	 * key is this structure, the sockaddr and then ptr value for
+	 * several times same address in tree */
 	rbnode_type node;
+	/** the key for the tcp_reuse tree. address of peer, ip4 or ip6,
+	 * and port number of peer */
+	struct sockaddr_storage addr;
+	/** length of addr */
+	socklen_t addrlen;
 	/** lru chain, so that the oldest can be removed to get a new
 	 * connection when all are in (re)use. oldest is last in list.
 	 * The lru only contains empty connections waiting for reuse,
