@@ -244,6 +244,8 @@ struct reuse_tcp {
 	 * TODO
 	 */
 	struct reuse_tcp* next, *prev;
+	/** true if the reuse_tcp item is on the lru list with empty items */
+	int item_on_lru_list;
 	/** the connection to reuse, the fd is non-1 and is open.
 	 * the addr and port determine where the connection is going,
 	 * and is key to the rbtree.  The SSL ptr determines if it is
