@@ -484,25 +484,23 @@ reuse_tcp_remove_tree_list(struct outside_network* outnet,
 	}
 	/* delete from reuse list */
 	if(reuse->pending) {
-		if(reuse->prev) {
+		if(reuse->lru_prev) {
 			/* assert that members of the lru list are waiting
 			 * and thus have a pending pointer to the struct */
-			log_assert(reuse->prev->pending);
-			reuse->prev->next = reuse->next;
+			log_assert(reuse->lru_prev->pending);
+			reuse->lru_prev->lru_next = reuse->lru_next;
 		} else {
-			log_assert(!reuse->next || reuse->next->pending);
-			outnet->tcp_reuse_first =
-				(reuse->next?reuse->next->pending:NULL);
+			log_assert(!reuse->lru_next || reuse->lru_next->pending);
+			outnet->tcp_reuse_first = reuse->lru_next;
 		}
-		if(reuse->next) {
+		if(reuse->lru_next) {
 			/* assert that members of the lru list are waiting
 			 * and thus have a pending pointer to the struct */
-			log_assert(reuse->next->pending);
-			reuse->next->prev = reuse->prev;
+			log_assert(reuse->lru_next->pending);
+			reuse->lru_next->lru_prev = reuse->lru_prev;
 		} else {
-			log_assert(!reuse->prev || reuse->prev->pending);
-			outnet->tcp_reuse_last =
-				(reuse->prev?reuse->prev->pending:NULL);
+			log_assert(!reuse->lru_prev || reuse->lru_prev->pending);
+			outnet->tcp_reuse_last = reuse->lru_prev;
 		}
 		reuse->pending = NULL;
 	}
@@ -544,15 +542,15 @@ reuse_tcp_insert(struct outside_network* outnet, struct pending_tcp* pend_tcp)
 		return 0;
 	}
 	/* insert into LRU, first is newest */
-	pend_tcp->reuse.prev = NULL;
+	pend_tcp->reuse.lru_prev = NULL;
 	if(outnet->tcp_reuse_first) {
-		pend_tcp->reuse.next = &outnet->tcp_reuse_first->reuse;
-		outnet->tcp_reuse_first->reuse.prev = &pend_tcp->reuse;
+		pend_tcp->reuse.lru_next = outnet->tcp_reuse_first;
+		outnet->tcp_reuse_first->lru_prev = &pend_tcp->reuse;
 	} else {
-		pend_tcp->reuse.next = NULL;
-		outnet->tcp_reuse_last = pend_tcp;
+		pend_tcp->reuse.lru_next = NULL;
+		outnet->tcp_reuse_last = &pend_tcp->reuse;
 	}
-	outnet->tcp_reuse_first = pend_tcp;
+	outnet->tcp_reuse_first = &pend_tcp->reuse;
 	return 1;
 }
 
@@ -1452,14 +1450,13 @@ reuse_tcp_close_oldest(struct outside_network* outnet)
 {
 	struct pending_tcp* pend;
 	if(!outnet->tcp_reuse_last) return;
-	pend = outnet->tcp_reuse_last;
+	pend = outnet->tcp_reuse_last->pending;
 
 	/* snip off of LRU */
-	log_assert(pend->reuse.next == NULL);
-	if(pend->reuse.prev) {
-		log_assert(pend->reuse.prev->pending);
-		outnet->tcp_reuse_last = pend->reuse.prev->pending;
-		pend->reuse.prev->next = NULL;
+	log_assert(pend->reuse.lru_next == NULL);
+	if(pend->reuse.lru_prev) {
+		outnet->tcp_reuse_last = pend->reuse.lru_prev;
+		pend->reuse.lru_prev->lru_next = NULL;
 	} else {
 		outnet->tcp_reuse_last = NULL;
 		outnet->tcp_reuse_first = NULL;

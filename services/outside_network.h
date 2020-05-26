@@ -169,7 +169,7 @@ struct outside_network {
 	 * the oldest can be closed to get a new free pending_tcp if needed
 	 * The list contains empty connections, that wait for timeout or
 	 * a new query that can use the existing connection. */
-	struct pending_tcp* tcp_reuse_first, *tcp_reuse_last;
+	struct reuse_tcp* tcp_reuse_first, *tcp_reuse_last;
 	/** list of tcp comm points that are free for use */
 	struct pending_tcp* tcp_free;
 	/** list of tcp queries waiting for a buffer */
@@ -240,10 +240,8 @@ struct reuse_tcp {
 	 * the ones with active queries are not on the list because they
 	 * do not need to be closed to make space for others.  They already
 	 * service a query so the close for another query does not help
-	 * service a larger number of queries.
-	 * TODO
-	 */
-	struct reuse_tcp* next, *prev;
+	 * service a larger number of queries. */
+	struct reuse_tcp* lru_next, *lru_prev;
 	/** true if the reuse_tcp item is on the lru list with empty items */
 	int item_on_lru_list;
 	/** the connection to reuse, the fd is non-1 and is open.
@@ -251,18 +249,17 @@ struct reuse_tcp {
 	 * and is key to the rbtree.  The SSL ptr determines if it is
 	 * a TLS connection or a plain TCP connection there.  And TLS
 	 * or not is also part of the key to the rbtree.
-	 * There is a timeout and read event on the fd, to close it.
-	 */
+	 * There is a timeout and read event on the fd, to close it. */
 	struct pending_tcp* pending;
 	/** rbtree with other queries waiting on the connection, by ID number,
 	 * of type struct waiting_tcp. It is for looking up received
 	 * answers to the structure for callback.  And also to see if ID
-	 * numbers are unused and can be used for a new query. TODO */
+	 * numbers are unused and can be used for a new query. */
 	rbtree_type tree_by_id;
 	/** list of queries waiting to be written on the channel,
 	 * if NULL no queries are waiting to be written and the pending->query
 	 * is the query currently serviced.  The first is the next in line.
-	 * Once written, a query moves to the tree_by_id. TODO */
+	 * Once written, a query moves to the tree_by_id. */
 	struct waiting_tcp* write_wait_first, *write_wait_last;
 };
 
