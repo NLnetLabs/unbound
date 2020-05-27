@@ -1,3 +1,7 @@
+27 May 2020: George
+	- Merge PR #241 by Robert Edmonds: contrib/libunbound.pc.in: Do not use
+	  "Requires:".
+
 25 May 2020: George
 	- Update contrib/aaaa-filter-iterator.patch for the recent
 	  generate_sub_request() change and to apply cleanly.
