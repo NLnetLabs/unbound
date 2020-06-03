@@ -1584,72 +1584,67 @@ tree_by_id_get_id(rbnode_type* node)
 static uint16_t
 reuse_tcp_select_id(struct reuse_tcp* reuse, struct outside_network* outnet)
 {
-	uint16_t id = 0;
+	uint16_t id = 0, curid, nextid;
 	const int try_random = 2000;
 	int i;
-	rbnode_type* pos, *node;
+	unsigned select, count, space;
+	rbnode_type* node;
 	for(i = 0; i<try_random; i++) {
 		id = ((unsigned)ub_random(outnet->rnd)>>8) & 0xffff;
 		if(!reuse_tcp_by_id_find(reuse, id)) {
 			return id;
 		}
 	}
-	/** cannot probe a random element from the list, we pick one from
-	 * the list that is unused */
-	pos = (rbnode_type*)reuse_tcp_by_id_find(reuse, id);
-	if(!pos)
+
+	/* make really sure the tree is not empty */
+	if(reuse->tree_by_id.count == 0) {
+		id = ((unsigned)ub_random(outnet->rnd)>>8) & 0xffff;
 		return id;
-	/* search for first available id number after the random position */
-	/* pick a random position, find the first unused range and pick
-	 * a random number from that range */
-	node = pos;
+	}
+
+	/* equally pick a random unused element from the tree that is
+	 * not in use.  Pick a the n-th index of an ununused number,
+	 * then loop over the empty spaces in the tree and find it */
+	log_assert(reuse->tree_by_id.count < 0xffff);
+	select = ub_random_max(outnet->rnd, 0xffff - reuse->tree_by_id.count);
+	/* select value now in 0 .. num free - 1 */
+
+	count = 0; /* number of free spaces passed by */
+	node = rbtree_first(&reuse->tree_by_id);
+	log_assert(node && node != RBTREE_NULL); /* tree not empty */
+	/* see if select is before first node */
+	if(select < tree_by_id_get_id(node))
+		return select;
+	count += tree_by_id_get_id(node);
+	/* perhaps select is between nodes */
 	while(node && node != RBTREE_NULL) {
 		rbnode_type* next = rbtree_next(node);
 		if(next && next != RBTREE_NULL) {
-			/* next value, is there a value in between? */
-			uint16_t curid = tree_by_id_get_id(node);
-			uint16_t nextid = tree_by_id_get_id(next);
+			curid = tree_by_id_get_id(node);
+			nextid = tree_by_id_get_id(next);
 			if(curid != 0xffff && curid + 1 < nextid) {
-				if(curid + 2 == nextid)
-					return curid + 1;
-				/* pick random value between this and next */
-				return curid + 1 + ub_random_max(outnet->rnd,
-					nextid - curid - 1);
+				/* space between nodes */
+				space = nextid - curid - 1;
+				if(select < count + space) {
+					/* here it is */
+					return curid + 1 + ub_random_max(
+						outnet->rnd, space);
+				}
+				count += space;
 			}
-		} else {
-			/* no next, but are there larger ID numbers? */
-			uint16_t curid = tree_by_id_get_id(node);
-			if(curid < 0xffff) {
-				if(curid + 1 == 0xffff)
-					return 0xffff;
-				return curid + 1 + ub_random_max(outnet->rnd,
-					0xffff - curid - 1);
-			}
+		}
+		node = next;
+	}
 
-		}
-		node = next;
-	}
-	/* search before pos */
-	node = rbtree_first(&reuse->tree_by_id);
-	while(node != pos && node && node != RBTREE_NULL) {
-		rbnode_type* next = rbtree_next(node);
-		if(next && next != RBTREE_NULL) {
-			/* next value, is there a value in between? */
-			uint16_t curid = tree_by_id_get_id(node);
-			uint16_t nextid = tree_by_id_get_id(next);
-			if(curid != 0xffff && curid + 1 < nextid) {
-				if(curid + 2 == nextid)
-					return curid + 1;
-				/* pick random value between this and next */
-				return curid + 1 + ub_random_max(outnet->rnd,
-					nextid - curid - 1);
-			}
-		}
-		node = next;
-	}
-	/* not possible, we have less than max elements */
-	log_assert(reuse->tree_by_id.count < 0xffff);
-	return 0;
+	/* select is after the last node */
+	/* count is the number of free positions before the nodes in the
+	 * tree */
+	node = rbtree_last(&reuse->tree_by_id);
+	log_assert(node && node != RBTREE_NULL); /* tree not empty */
+	curid = tree_by_id_get_id(node);
+	space = 0xffff - curid;
+	log_assert(select < count + space);
+	return curid + 1 + ub_random_max(outnet->rnd, space);
 }
 
 struct waiting_tcp*
