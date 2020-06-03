@@ -233,8 +233,8 @@ struct port_comm {
 struct reuse_tcp {
 	/** rbtree node with links in tcp_reuse tree. key is NULL when not
 	 * in tree. Both active and empty connections are in the tree.
-	 * key is this structure, the sockaddr and then ptr value for
-	 * several times same address in tree */
+	 * key is this structure, the sockaddr and and then is-ssl bool,
+	 * and then ptr value for several times same address in tree */
 	rbnode_type node;
 	/** the key for the tcp_reuse tree. address of peer, ip4 or ip6,
 	 * and port number of peer */
@@ -261,14 +261,20 @@ struct reuse_tcp {
 	/** rbtree with other queries waiting on the connection, by ID number,
 	 * of type struct waiting_tcp. It is for looking up received
 	 * answers to the structure for callback.  And also to see if ID
-	 * numbers are unused and can be used for a new query. */
+	 * numbers are unused and can be used for a new query.
+	 * The write_wait elements are also in the tree, so that ID numbers
+	 * can be looked up also for them.  They are bool write_wait_queued. */
 	rbtree_type tree_by_id;
 	/** list of queries waiting to be written on the channel,
 	 * if NULL no queries are waiting to be written and the pending->query
 	 * is the query currently serviced.  The first is the next in line.
-	 * Once written, a query moves to the tree_by_id. */
+	 * They are also in the tree_by_id. Once written, the are removed
+	 * from this list, but stay in the tree. */
 	struct waiting_tcp* write_wait_first, *write_wait_last;
 };
+
+/** max number of queries on a reuse connection */
+#define MAX_REUSE_TCP_QUERIES 65000
 
 /**
  * A query that has an answer pending for it.

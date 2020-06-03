@@ -131,20 +131,14 @@ serviced_cmp(const void* key1, const void* key2)
 	return sockaddr_cmp(&q1->addr, q1->addrlen, &q2->addr, q2->addrlen);
 }
 
-int
-reuse_cmp(const void* key1, const void* key2)
+/** compare if the reuse element has the same address, port and same ssl-is
+ * used-for-it characteristic */
+static int
+reuse_cmp_addrportssl(const void* key1, const void* key2)
 {
 	struct reuse_tcp* r1 = (struct reuse_tcp*)key1;
 	struct reuse_tcp* r2 = (struct reuse_tcp*)key2;
 	int r;
-	/* make sure the entries are in use (have a waiting_tcp entry) */
-	if(!r1->pending->query && !r2->pending->query)
-		return 0;
-	if(r1->pending->query && !r2->pending->query)
-		return 1;
-	if(!r1->pending->query && r2->pending->query)
-		return -1;
-
 	/* compare address and port */
 	r = sockaddr_cmp(&r1->pending->query->addr, r1->pending->query->addrlen,
 		&r2->pending->query->addr, r2->pending->query->addrlen);
@@ -156,6 +150,22 @@ reuse_cmp(const void* key1, const void* key2)
 		return 1;
 	if(!r1->pending->c->ssl && r2->pending->c->ssl)
 		return -1;
+	return 0;
+}
+
+int
+reuse_cmp(const void* key1, const void* key2)
+{
+	struct reuse_tcp* r1 = (struct reuse_tcp*)key1;
+	struct reuse_tcp* r2 = (struct reuse_tcp*)key2;
+	int r;
+	r = reuse_cmp_addrportssl(key1, key2);
+	if(r != 0)
+		return r;
+
+	/* compare ptr value */
+	if(r1 < r2) return -1;
+	if(r1 > r2) return 1;
 	return 0;
 }
 
@@ -531,11 +541,24 @@ decommission_pending_tcp(struct outside_network* outnet,
 	pend->query = NULL;
 }
 
+/** log reuse item addr and ptr with message */
+static void
+log_reuse_tcp(enum verbosity_value v, const char* msg, struct reuse_tcp* reuse)
+{
+	uint16_t port;
+	char addrbuf[128];
+	if(verbosity < v) return;
+	addr_to_str(&reuse->addr, reuse->addrlen, addrbuf, sizeof(addrbuf));
+	port = ntohs(((struct sockaddr_in*)&reuse->addr)->sin_port);
+	verbose(v, "%s %s %u %lx", msg, addrbuf, (unsigned)port,
+		(unsigned long)reuse);
+}
+
 /** insert into reuse tcp tree and LRU, false on failure (duplicate) */
 static int
 reuse_tcp_insert(struct outside_network* outnet, struct pending_tcp* pend_tcp)
 {
-	verbose(5, "reuse_tcp_insert");
+	log_reuse_tcp(5, "reuse_tcp_insert", &pend_tcp->reuse);
 	pend_tcp->reuse.node.key = &pend_tcp->reuse;
 	pend_tcp->reuse.pending = pend_tcp;
 	if(!rbtree_insert(&outnet->tcp_reuse, &pend_tcp->reuse.node)) {
@@ -1482,6 +1505,7 @@ reuse_tcp_find(struct outside_network* outnet, struct serviced_query* sq)
 	struct waiting_tcp key_w;
 	struct pending_tcp key_p;
 	struct comm_point c;
+	rbnode_type* result = NULL, *prev;
 	verbose(5, "reuse_tcp_find");
 	memset(&key_w, 0, sizeof(key_w));
 	memset(&key_p, 0, sizeof(key_p));
@@ -1497,8 +1521,135 @@ reuse_tcp_find(struct outside_network* outnet, struct serviced_query* sq)
 	memmove(&key_w.addr, &sq->addr, sq->addrlen);
 	key_w.addrlen = sq->addrlen;
 
-	return (struct reuse_tcp*)rbtree_search(&outnet->tcp_reuse,
-		&key_p.reuse.node);
+	if(rbtree_find_less_equal(&outnet->tcp_reuse, &key_p.reuse.node,
+		&result)) {
+		/* exact match */
+		/* but the key is on stack, and ptr is compared, impossible */
+		log_assert(&key_p.reuse != (struct reuse_tcp*)result);
+		log_assert(&key_p != ((struct reuse_tcp*)result)->pending);
+	}
+	/* not found, return null */
+	if(!result || result == RBTREE_NULL)
+		return NULL;
+	/* inexact match, find one of possibly several connections to the
+	 * same destination address, with the correct port, ssl, and
+	 * also less than max number of open queries, or else, fail to open
+	 * a new one */
+	/* rewind to start of sequence of same address,port,ssl */
+	prev = rbtree_previous(result);
+	while(prev && prev != RBTREE_NULL &&
+		reuse_cmp_addrportssl(prev->key, &key_p.reuse) == 0) {
+		result = prev;
+		prev = rbtree_previous(result);
+	}
+
+	/* loop to find first one that has correct characteristics */
+	while(result && result != RBTREE_NULL &&
+		reuse_cmp_addrportssl(result->key, &key_p.reuse) == 0) {
+		if(((struct reuse_tcp*)result)->tree_by_id.count <
+			MAX_REUSE_TCP_QUERIES) {
+			/* same address, port, ssl-yes-or-no, and has
+			 * space for another query */
+			return (struct reuse_tcp*)result;
+		}
+		result = rbtree_next(result);
+	}
+	return NULL;
+}
+
+/** find element in tree by id */
+static struct waiting_tcp*
+reuse_tcp_by_id_find(struct reuse_tcp* reuse, uint16_t id)
+{
+	struct waiting_tcp key_w;
+	struct pending_tcp key_p;
+	memset(&key_w, 0, sizeof(key_w));
+	memset(&key_p, 0, sizeof(key_p));
+	key_w.next_waiting = (void*)&key_p;
+	key_w.id_node.key = &key_w;
+	key_p.id = id;
+	return (struct waiting_tcp*)rbtree_search(&reuse->tree_by_id, &key_w);
+}
+
+/** return ID value of rbnode in tree_by_id */
+static uint16_t
+tree_by_id_get_id(rbnode_type* node)
+{
+	struct waiting_tcp* w = (struct waiting_tcp*)node->key;
+	return ((struct pending_tcp*)w->next_waiting)->id;
+}
+
+/** find spare ID value for reuse tcp stream.  That is random and also does
+ * not collide with an existing query ID that is in use or waiting */
+static uint16_t
+reuse_tcp_select_id(struct reuse_tcp* reuse, struct outside_network* outnet)
+{
+	uint16_t id = 0;
+	const int try_random = 2000;
+	int i;
+	rbnode_type* pos, *node;
+	for(i = 0; i<try_random; i++) {
+		id = ((unsigned)ub_random(outnet->rnd)>>8) & 0xffff;
+		if(!reuse_tcp_by_id_find(reuse, id)) {
+			return id;
+		}
+	}
+	/** cannot probe a random element from the list, we pick one from
+	 * the list that is unused */
+	pos = (rbnode_type*)reuse_tcp_by_id_find(reuse, id);
+	if(!pos)
+		return id;
+	/* search for first available id number after the random position */
+	/* pick a random position, find the first unused range and pick
+	 * a random number from that range */
+	node = pos;
+	while(node && node != RBTREE_NULL) {
+		rbnode_type* next = rbtree_next(node);
+		if(next && next != RBTREE_NULL) {
+			/* next value, is there a value in between? */
+			uint16_t curid = tree_by_id_get_id(node);
+			uint16_t nextid = tree_by_id_get_id(next);
+			if(curid != 0xffff && curid + 1 < nextid) {
+				if(curid + 2 == nextid)
+					return curid + 1;
+				/* pick random value between this and next */
+				return curid + 1 + ub_random_max(outnet->rnd,
+					nextid - curid - 1);
+			}
+		} else {
+			/* no next, but are there larger ID numbers? */
+			uint16_t curid = tree_by_id_get_id(node);
+			if(curid < 0xffff) {
+				if(curid + 1 == 0xffff)
+					return 0xffff;
+				return curid + 1 + ub_random_max(outnet->rnd,
+					0xffff - curid - 1);
+			}
+
+		}
+		node = next;
+	}
+	/* search before pos */
+	node = rbtree_first(&reuse->tree_by_id);
+	while(node != pos && node && node != RBTREE_NULL) {
+		rbnode_type* next = rbtree_next(node);
+		if(next && next != RBTREE_NULL) {
+			/* next value, is there a value in between? */
+			uint16_t curid = tree_by_id_get_id(node);
+			uint16_t nextid = tree_by_id_get_id(next);
+			if(curid != 0xffff && curid + 1 < nextid) {
+				if(curid + 2 == nextid)
+					return curid + 1;
+				/* pick random value between this and next */
+				return curid + 1 + ub_random_max(outnet->rnd,
+					nextid - curid - 1);
+			}
+		}
+		node = next;
+	}
+	/* not possible, we have less than max elements */
+	log_assert(reuse->tree_by_id.count < 0xffff);
+	return 0;
 }
 
 struct waiting_tcp*
@@ -1516,7 +1667,7 @@ pending_tcp_query(struct serviced_query* sq, sldns_buffer* packet,
 	/* if so, take it into use */
 	reuse = reuse_tcp_find(sq->outnet, sq);
 	if(reuse) {
-		verbose(5, "pending_tcp_query: found reuse");
+		log_reuse_tcp(5, "pending_tcp_query: found reuse", reuse);
 		log_assert(reuse->pending);
 		pend = reuse->pending;
 	}
@@ -1544,7 +1695,9 @@ pending_tcp_query(struct serviced_query* sq, sldns_buffer* packet,
 	}
 	w->pkt = NULL;
 	w->pkt_len = 0;
-	id = ((unsigned)ub_random(sq->outnet->rnd)>>8) & 0xffff;
+	if(reuse)
+		id = reuse_tcp_select_id(reuse, sq->outnet);
+	else	id = ((unsigned)ub_random(sq->outnet->rnd)>>8) & 0xffff;
 	LDNS_ID_SET(sldns_buffer_begin(packet), id);
 	memcpy(&w->addr, &sq->addr, sq->addrlen);
 	w->addrlen = sq->addrlen;
@@ -1564,6 +1717,7 @@ pending_tcp_query(struct serviced_query* sq, sldns_buffer* packet,
 			verbose(5, "pending_tcp_query: reuse, store");
 			/* if cannot write now, store query and put it
 			 * in the waiting list for this stream TODO */
+			/* and insert in tree_by_id */
 			/* and also delete it from waitlst if query gone,
 			 * eg. sq is deleted TODO */
 			/* and also servfail all waiting queries if
@@ -1576,6 +1730,8 @@ pending_tcp_query(struct serviced_query* sq, sldns_buffer* packet,
 			verbose(5, "pending_tcp_query: new fd, connect");
 			/* create new fd and connect to addr, setup to
 			 * write query */
+			memcpy(&pend->reuse.addr, &sq->addr, sq->addrlen);
+			pend->reuse.addrlen = sq->addrlen;
 			if(!outnet_tcp_take_into_use(w,
 				sldns_buffer_begin(packet),
 				sldns_buffer_limit(packet))) {
