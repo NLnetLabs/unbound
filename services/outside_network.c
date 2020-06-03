@@ -1589,17 +1589,19 @@ reuse_tcp_select_id(struct reuse_tcp* reuse, struct outside_network* outnet)
 	int i;
 	unsigned select, count, space;
 	rbnode_type* node;
-	for(i = 0; i<try_random; i++) {
-		id = ((unsigned)ub_random(outnet->rnd)>>8) & 0xffff;
-		if(!reuse_tcp_by_id_find(reuse, id)) {
-			return id;
-		}
-	}
 
 	/* make really sure the tree is not empty */
 	if(reuse->tree_by_id.count == 0) {
 		id = ((unsigned)ub_random(outnet->rnd)>>8) & 0xffff;
 		return id;
+	}
+
+	/* try to find random empty spots by picking them */
+	for(i = 0; i<try_random; i++) {
+		id = ((unsigned)ub_random(outnet->rnd)>>8) & 0xffff;
+		if(!reuse_tcp_by_id_find(reuse, id)) {
+			return id;
+		}
 	}
 
 	/* equally pick a random unused element from the tree that is
@@ -1627,8 +1629,7 @@ reuse_tcp_select_id(struct reuse_tcp* reuse, struct outside_network* outnet)
 				space = nextid - curid - 1;
 				if(select < count + space) {
 					/* here it is */
-					return curid + 1 + ub_random_max(
-						outnet->rnd, space);
+					return curid + 1 + (select - count);
 				}
 				count += space;
 			}
@@ -1642,9 +1643,7 @@ reuse_tcp_select_id(struct reuse_tcp* reuse, struct outside_network* outnet)
 	node = rbtree_last(&reuse->tree_by_id);
 	log_assert(node && node != RBTREE_NULL); /* tree not empty */
 	curid = tree_by_id_get_id(node);
-	space = 0xffff - curid;
-	log_assert(select < count + space);
-	return curid + 1 + ub_random_max(outnet->rnd, space);
+	return curid + 1 + (select - count);
 }
 
 struct waiting_tcp*
