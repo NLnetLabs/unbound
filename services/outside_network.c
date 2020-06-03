@@ -494,7 +494,7 @@ reuse_tcp_remove_tree_list(struct outside_network* outnet,
 		reuse->node.key = NULL;
 	}
 	/* delete from reuse list */
-	if(reuse->pending) {
+	if(reuse->item_on_lru_list) {
 		if(reuse->lru_prev) {
 			/* assert that members of the lru list are waiting
 			 * and thus have a pending pointer to the struct */
@@ -513,7 +513,7 @@ reuse_tcp_remove_tree_list(struct outside_network* outnet,
 			log_assert(!reuse->lru_prev || reuse->lru_prev->pending);
 			outnet->tcp_reuse_last = reuse->lru_prev;
 		}
-		reuse->pending = NULL;
+		reuse->item_on_lru_list = 0;
 	}
 }
 
@@ -559,13 +559,14 @@ static int
 reuse_tcp_insert(struct outside_network* outnet, struct pending_tcp* pend_tcp)
 {
 	log_reuse_tcp(5, "reuse_tcp_insert", &pend_tcp->reuse);
+	if(pend_tcp->reuse.item_on_lru_list)
+		return 1;
 	pend_tcp->reuse.node.key = &pend_tcp->reuse;
 	pend_tcp->reuse.pending = pend_tcp;
 	if(!rbtree_insert(&outnet->tcp_reuse, &pend_tcp->reuse.node)) {
 		/* this is a duplicate connection, close this one */
 		verbose(5, "reuse_tcp_insert: duplicate connection");
 		pend_tcp->reuse.node.key = NULL;
-		pend_tcp->reuse.pending = NULL;
 		return 0;
 	}
 	/* insert into LRU, first is newest */
@@ -578,6 +579,7 @@ reuse_tcp_insert(struct outside_network* outnet, struct pending_tcp* pend_tcp)
 		outnet->tcp_reuse_last = &pend_tcp->reuse;
 	}
 	outnet->tcp_reuse_first = &pend_tcp->reuse;
+	pend_tcp->reuse.item_on_lru_list = 1;
 	return 1;
 }
 
@@ -605,15 +607,21 @@ outnet_tcp_cb(struct comm_point* c, void* arg, int error,
 		/* add to reuse tree so it can be reused, if not a failure.
 		 * This is possible if the state machine wants to make a tcp
 		 * query again to the same destination. */
-		(void)reuse_tcp_insert(outnet, pend);
+		if(outnet->tcp_reuse.count < outnet->tcp_reuse_max) {
+			(void)reuse_tcp_insert(outnet, pend);
+		}
 	}
 	fptr_ok(fptr_whitelist_pending_tcp(pend->query->cb));
 	(void)(*pend->query->cb)(c, pend->query->cb_arg, error, reply_info);
-	/* if reused, it should not be decommissioned, TODO */
-	/* or if another query wants to write, write that and read for more
-	 * or more outstanding queries on the stream.  TODO */
-	/* TODO also write multiple queries over the stream, even if no
-	 * replies have returned yet */
+	verbose(5, "outnet_tcp_cb reuse after cb");
+	if(pend->reuse.node.key) {
+		verbose(5, "outnet_tcp_cb reuse after cb: keep it");
+		/* it is in the reuse_tcp tree, with other queries, or
+		 * on the empty list. do not decommission it */
+		return 0;
+	}
+	verbose(5, "outnet_tcp_cb reuse after cb: decommission it");
+	/* no queries on it, no space to keep it. Close it */
 	decommission_pending_tcp(outnet, pend);
 	use_free_buffer(outnet);
 	return 0;
@@ -1491,9 +1499,6 @@ reuse_tcp_close_oldest(struct outside_network* outnet)
 		outnet->tcp_reuse_first = NULL;
 	}
 
-	/* TODO should only close unused in tree, not ones that are in use,
-	 * for which we need also a tree to find in-use streams for multiple
-	 * queries on them */
 	/* free up */
 	decommission_pending_tcp(outnet, pend);
 }
@@ -1521,6 +1526,8 @@ reuse_tcp_find(struct outside_network* outnet, struct serviced_query* sq)
 	memmove(&key_w.addr, &sq->addr, sq->addrlen);
 	key_w.addrlen = sq->addrlen;
 
+	verbose(5, "reuse_tcp_find: num reuse streams %u",
+		(unsigned)outnet->tcp_reuse.count);
 	if(rbtree_find_less_equal(&outnet->tcp_reuse, &key_p.reuse.node,
 		&result)) {
 		/* exact match */
@@ -1531,6 +1538,7 @@ reuse_tcp_find(struct outside_network* outnet, struct serviced_query* sq)
 	/* not found, return null */
 	if(!result || result == RBTREE_NULL)
 		return NULL;
+	verbose(5, "reuse_tcp_find check inexact match");
 	/* inexact match, find one of possibly several connections to the
 	 * same destination address, with the correct port, ssl, and
 	 * also less than max number of open queries, or else, fail to open
@@ -1717,6 +1725,8 @@ pending_tcp_query(struct serviced_query* sq, sldns_buffer* packet,
 			/* and also servfail all waiting queries if
 			 * stream closes TODO */
 			/* reuse existing fd, write query and continue */
+			w->next_waiting = (void*)pend;
+			pend->query = w;
 			outnet_tcp_take_query_setup(pend->c->fd, pend,
 				sldns_buffer_begin(packet),
 				sldns_buffer_limit(packet));

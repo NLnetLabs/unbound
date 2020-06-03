@@ -3066,6 +3066,7 @@ comm_point_close(struct comm_point* c)
 	if(!c)
 		return;
 	if(c->fd != -1) {
+		verbose(5, "comm_point_close of %d: event_del", c->fd);
 		if(ub_event_del(c->ev->ev) != 0) {
 			log_err("could not event_del on close");
 		}
@@ -3225,7 +3226,8 @@ comm_point_start_listening(struct comm_point* c, int newfd, int msec)
 		else	ub_event_add_bits(c->ev->ev, UB_EV_WRITE);
 	}
 	if(newfd != -1) {
-		if(c->fd != -1) {
+		if(c->fd != -1 && c->fd != newfd) {
+			verbose(5, "cpsl close of fd %d for %d", c->fd, newfd);
 #ifndef USE_WINSOCK
 			close(c->fd);
 #else
