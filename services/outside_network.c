@@ -477,6 +477,7 @@ static void
 reuse_tcp_remove_tree_list(struct outside_network* outnet,
 	struct reuse_tcp* reuse)
 {
+	verbose(5, "reuse_tcp_remove_tree_list");
 	if(reuse->node.key) {
 		/* delete it from reuse tree */
 		(void)rbtree_delete(&outnet->tcp_reuse, &reuse->node);
@@ -511,6 +512,7 @@ static void
 decommission_pending_tcp(struct outside_network* outnet, 
 	struct pending_tcp* pend)
 {
+	verbose(5, "decommision_pending_tcp");
 	if(pend->c->ssl) {
 #ifdef HAVE_SSL
 		SSL_shutdown(pend->c->ssl);
@@ -533,10 +535,12 @@ decommission_pending_tcp(struct outside_network* outnet,
 static int
 reuse_tcp_insert(struct outside_network* outnet, struct pending_tcp* pend_tcp)
 {
+	verbose(5, "reuse_tcp_insert");
 	pend_tcp->reuse.node.key = &pend_tcp->reuse;
 	pend_tcp->reuse.pending = pend_tcp;
 	if(!rbtree_insert(&outnet->tcp_reuse, &pend_tcp->reuse.node)) {
 		/* this is a duplicate connection, close this one */
+		verbose(5, "reuse_tcp_insert: duplicate connection");
 		pend_tcp->reuse.node.key = NULL;
 		pend_tcp->reuse.pending = NULL;
 		return 0;
@@ -1406,6 +1410,7 @@ outnet_tcptimer(void* arg)
 	struct waiting_tcp* w = (struct waiting_tcp*)arg;
 	struct outside_network* outnet = w->outnet;
 	int do_callback = 1;
+	verbose(5, "outnet_tcptimer");
 	if(w->pkt) {
 		/* it is on the waiting list */
 		waiting_list_remove(outnet, w);
@@ -1449,6 +1454,7 @@ static void
 reuse_tcp_close_oldest(struct outside_network* outnet)
 {
 	struct pending_tcp* pend;
+	verbose(5, "reuse_tcp_close_oldest");
 	if(!outnet->tcp_reuse_last) return;
 	pend = outnet->tcp_reuse_last->pending;
 
@@ -1476,6 +1482,7 @@ reuse_tcp_find(struct outside_network* outnet, struct serviced_query* sq)
 	struct waiting_tcp key_w;
 	struct pending_tcp key_p;
 	struct comm_point c;
+	verbose(5, "reuse_tcp_find");
 	memset(&key_w, 0, sizeof(key_w));
 	memset(&key_p, 0, sizeof(key_p));
 	memset(&c, 0, sizeof(c));
@@ -1504,10 +1511,12 @@ pending_tcp_query(struct serviced_query* sq, sldns_buffer* packet,
 	struct timeval tv;
 	uint16_t id;
 
+	verbose(5, "pending_tcp_query");
 	/* find out if a reused stream to the target exists */
 	/* if so, take it into use */
 	reuse = reuse_tcp_find(sq->outnet, sq);
 	if(reuse) {
+		verbose(5, "pending_tcp_query: found reuse");
 		log_assert(reuse->pending);
 		pend = reuse->pending;
 	}
@@ -1552,6 +1561,7 @@ pending_tcp_query(struct serviced_query* sq, sldns_buffer* packet,
 	if(pend) {
 		/* we have a buffer available right now */
 		if(reuse) {
+			verbose(5, "pending_tcp_query: reuse, store");
 			/* if cannot write now, store query and put it
 			 * in the waiting list for this stream TODO */
 			/* and also delete it from waitlst if query gone,
@@ -1563,6 +1573,7 @@ pending_tcp_query(struct serviced_query* sq, sldns_buffer* packet,
 				sldns_buffer_begin(packet),
 				sldns_buffer_limit(packet));
 		} else {
+			verbose(5, "pending_tcp_query: new fd, connect");
 			/* create new fd and connect to addr, setup to
 			 * write query */
 			if(!outnet_tcp_take_into_use(w,
@@ -1581,6 +1592,7 @@ pending_tcp_query(struct serviced_query* sq, sldns_buffer* packet,
 #endif
 	} else {
 		/* queue up */
+		verbose(5, "pending_tcp_query: queue to wait");
 		w->pkt = (uint8_t*)w + sizeof(struct waiting_tcp);
 		w->pkt_len = sldns_buffer_limit(packet);
 		memmove(w->pkt, sldns_buffer_begin(packet), w->pkt_len);
@@ -1729,13 +1741,16 @@ reuse_tcp_remove_serviced_keep(struct waiting_tcp* w,
 	struct serviced_query* sq)
 {
 	struct pending_tcp* pend_tcp = (struct pending_tcp*)w->next_waiting;
+	verbose(5, "reuse_tcp_remove_serviced_keep");
 	/* see if can be entered in reuse tree
 	 * for that the FD has to be non-1 */
 	if(pend_tcp->c->fd == -1) {
+		verbose(5, "reuse_tcp_remove_serviced_keep: -1 fd");
 		return 0;
 	}
 	/* if in tree and used by other queries */
 	if(pend_tcp->reuse.node.key) {
+		verbose(5, "reuse_tcp_remove_serviced_keep: in use by other queries");
 		/* note less use of stream */
 		/* remove id value used by this svcd. */
 		/* do not reset the keepalive timer, for that
@@ -1747,6 +1762,7 @@ reuse_tcp_remove_serviced_keep(struct waiting_tcp* w,
 	/* if still open and want to keep it open */
 	if(pend_tcp->c->fd != -1 && sq->outnet->tcp_reuse.count <
 		sq->outnet->tcp_reuse_max) {
+		verbose(5, "reuse_tcp_remove_serviced_keep: keep open");
 		/* note less use of stream */
 		/* remove id value used by this svcd. */
 		/* set a keepalive timer on it */
@@ -1762,6 +1778,7 @@ reuse_tcp_remove_serviced_keep(struct waiting_tcp* w,
 static void
 serviced_delete(struct serviced_query* sq)
 {
+	verbose(5, "serviced_delete");
 	if(sq->pending) {
 		/* clear up the pending query */
 		if(sq->status == serviced_query_UDP_EDNS ||
@@ -1769,6 +1786,7 @@ serviced_delete(struct serviced_query* sq)
 			sq->status == serviced_query_UDP_EDNS_FRAG ||
 			sq->status == serviced_query_UDP_EDNS_fallback) {
 			struct pending* p = (struct pending*)sq->pending;
+			verbose(5, "serviced_delete: UDP");
 			if(p->pc)
 				portcomm_loweruse(sq->outnet, p->pc);
 			pending_delete(sq->outnet, p);
@@ -1778,15 +1796,18 @@ serviced_delete(struct serviced_query* sq)
 		} else {
 			struct waiting_tcp* p = (struct waiting_tcp*)
 				sq->pending;
+			verbose(5, "serviced_delete: TCP");
 			/* TODO: if on stream-write-waiting list then
 			 * remove from waiting list and waiting_tcp_delete */
 			if(p->pkt == NULL) {
+				verbose(5, "serviced_delete: tcpreusekeep");
 				if(!reuse_tcp_remove_serviced_keep(p, sq)) {
 					decommission_pending_tcp(sq->outnet,
 					  (struct pending_tcp*)p->next_waiting);
 					use_free_buffer(sq->outnet);
 				}
 			} else {
+				verbose(5, "serviced_delete: tcpwait");
 				waiting_list_remove(sq->outnet, p);
 				waiting_tcp_delete(p);
 			}
