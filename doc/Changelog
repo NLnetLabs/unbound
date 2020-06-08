@@ -1,3 +1,7 @@
+8 June 2020: Wouter
+	- Mention tls name possible when tls is enabled for stub-addr in the
+	  man page.
+
 27 May 2020: George
 	- Merge PR #241 by Robert Edmonds: contrib/libunbound.pc.in: Do not use
 	  "Requires:".
