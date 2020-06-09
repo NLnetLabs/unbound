@@ -457,6 +457,7 @@ outnet_tcp_take_into_use(struct waiting_tcp* w, uint8_t* pkt, size_t pkt_len)
 	pend->query = w;
 	pend->c->repinfo.addrlen = w->addrlen;
 	memcpy(&pend->c->repinfo.addr, &w->addr, w->addrlen);
+	pend->reuse.pending = pend;
 	outnet_tcp_take_query_setup(s, pend, pkt, pkt_len);
 	return 1;
 }
@@ -550,8 +551,8 @@ log_reuse_tcp(enum verbosity_value v, const char* msg, struct reuse_tcp* reuse)
 	if(verbosity < v) return;
 	addr_to_str(&reuse->addr, reuse->addrlen, addrbuf, sizeof(addrbuf));
 	port = ntohs(((struct sockaddr_in*)&reuse->addr)->sin_port);
-	verbose(v, "%s %s %u %lx", msg, addrbuf, (unsigned)port,
-		(unsigned long)reuse);
+	verbose(v, "%s %s#%u 0x%llx fd %d", msg, addrbuf, (unsigned)port,
+		(unsigned long long)reuse, reuse->pending->c->fd);
 }
 
 /** insert into reuse tcp tree and LRU, false on failure (duplicate) */
@@ -1734,6 +1735,7 @@ pending_tcp_query(struct serviced_query* sq, sldns_buffer* packet,
 			verbose(5, "pending_tcp_query: new fd, connect");
 			/* create new fd and connect to addr, setup to
 			 * write query */
+			pend->reuse.pending = pend;
 			memcpy(&pend->reuse.addr, &sq->addr, sq->addrlen);
 			pend->reuse.addrlen = sq->addrlen;
 			if(!outnet_tcp_take_into_use(w,

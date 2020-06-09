@@ -6,7 +6,7 @@
 #
 # do your teardown here
 . ../common.sh
-kill_pid $UPSTREAM_PID
+kill_pid `cat unbound2.pid`
 if test -f unbound2.log; then
 	echo ">>> upstream log"
 	cat unbound2.log
