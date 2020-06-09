@@ -247,6 +247,13 @@ struct comm_point {
 	    and after read/write completes. No callback is done. */
 	int tcp_do_close;
 
+	/** flag that indicates the stream is both written and read from. */
+	int tcp_write_and_read;
+
+	/** byte count for written length over write channel, for when
+	 * tcp_write_and_read is enabled */
+	size_t tcp_write_byte_count;
+
 	/** if set, read/write completes:
 		read/write state of tcp is toggled.
 		buffer reset/bytecount reset.

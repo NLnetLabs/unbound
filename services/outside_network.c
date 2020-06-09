@@ -341,8 +341,8 @@ outnet_tcp_take_query_setup(int s, struct pending_tcp* pend, uint8_t* pkt,
 	sldns_buffer_clear(pend->c->buffer);
 	sldns_buffer_write(pend->c->buffer, pkt, pkt_len);
 	sldns_buffer_flip(pend->c->buffer);
-	pend->c->tcp_is_reading = 0;
-	pend->c->tcp_byte_count = 0;
+	pend->c->tcp_write_and_read = 1;
+	pend->c->tcp_write_byte_count = 0;
 	comm_point_start_listening(pend->c, s, -1);
 }
 
@@ -584,6 +584,17 @@ reuse_tcp_insert(struct outside_network* outnet, struct pending_tcp* pend_tcp)
 	return 1;
 }
 
+/** set timeout on tcp fd and setup read event to catch incoming dns msgs */
+static void
+reuse_tcp_setup_readtimeout(struct pending_tcp* pend_tcp)
+{
+	log_reuse_tcp(5, "reuse_tcp_setup_readtimeout", &pend_tcp->reuse);
+	sldns_buffer_clear(pend_tcp->c->buffer);
+	pend_tcp->c->tcp_is_reading = 1;
+	pend_tcp->c->tcp_byte_count = 0;
+	comm_point_start_listening(pend_tcp->c, -1, REUSE_TIMEOUT);
+}
+
 int 
 outnet_tcp_cb(struct comm_point* c, void* arg, int error,
 	struct comm_reply *reply_info)
@@ -610,6 +621,7 @@ outnet_tcp_cb(struct comm_point* c, void* arg, int error,
 		 * query again to the same destination. */
 		if(outnet->tcp_reuse.count < outnet->tcp_reuse_max) {
 			(void)reuse_tcp_insert(outnet, pend);
+			reuse_tcp_setup_readtimeout(pend);
 		}
 	}
 	fptr_ok(fptr_whitelist_pending_tcp(pend->query->cb));
@@ -1931,6 +1943,7 @@ reuse_tcp_remove_serviced_keep(struct waiting_tcp* w,
 		if(!reuse_tcp_insert(sq->outnet, pend_tcp)) {
 			return 0;
 		}
+		reuse_tcp_setup_readtimeout(pend_tcp);
 		return 1;
 	}
 	return 0;
