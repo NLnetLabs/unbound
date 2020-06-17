@@ -1,3 +1,6 @@
+17 June 2020: Wouter
+	- Fix default explanation in man page for qname-minimisation-strict.
+
 8 June 2020: Wouter
 	- Mention tls name possible when tls is enabled for stub-addr in the
 	  man page.
