@@ -1717,6 +1717,7 @@ pending_tcp_query(struct serviced_query* sq, sldns_buffer* packet,
 	memcpy(&w->addr, &sq->addr, sq->addrlen);
 	w->addrlen = sq->addrlen;
 	w->outnet = sq->outnet;
+	w->on_tcp_waiting_list = 0;
 	w->cb = callback;
 	w->cb_arg = callback_arg;
 	w->ssl_upstream = sq->ssl_upstream;
