@@ -274,7 +274,7 @@ struct reuse_tcp {
 };
 
 /** max number of queries on a reuse connection */
-#define MAX_REUSE_TCP_QUERIES 65000
+#define MAX_REUSE_TCP_QUERIES 200
 /** timeout for REUSE entries in milliseconds. */
 #define REUSE_TIMEOUT 30000
 
@@ -344,6 +344,10 @@ struct waiting_tcp {
 	 * if pkt==0, this points to the pending_tcp structure.
 	 */
 	struct waiting_tcp* next_waiting;
+	/** if true the item is on the tcp waiting list and next_waiting
+	 * is used for that.  If false, the next_waiting points to the
+	 * pending_tcp */
+	int on_tcp_waiting_list;
 	/** next and prev in query waiting list for stream connection */
 	struct waiting_tcp* write_wait_prev, *write_wait_next;
 	/** true if the waiting_tcp structure is on the write_wait queue */
