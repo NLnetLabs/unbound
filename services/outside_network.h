@@ -341,7 +341,7 @@ struct pending_tcp {
 struct waiting_tcp {
 	/** 
 	 * next in waiting list.
-	 * if pkt==0, this points to the pending_tcp structure.
+	 * if on_tcp_waiting_list==0, this points to the pending_tcp structure.
 	 */
 	struct waiting_tcp* next_waiting;
 	/** if true the item is on the tcp waiting list and next_waiting
@@ -367,8 +367,6 @@ struct waiting_tcp {
 	/** 
 	 * The query itself, the query packet to send.
 	 * allocated after the waiting_tcp structure.
-	 * set to NULL when the query is serviced and it part of pending_tcp.
-	 * if this is NULL, the next_waiting points to the pending_tcp.
 	 */
 	uint8_t* pkt;
 	/** length of query packet. */
