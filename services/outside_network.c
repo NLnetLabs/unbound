@@ -1488,7 +1488,8 @@ outnet_tcptimer(void* arg)
 		fptr_ok(fptr_whitelist_pending_tcp(cb));
 		(void)(*cb)(NULL, cb_arg, NETEVENT_TIMEOUT, NULL);
 	} else {
-		waiting_tcp_delete(w);
+		/* waiting_tcp_delete(w); -- should be deleted if entire
+		 * stream with reuse elements is gone. TODO remove this? */
 	}
 	use_free_buffer(outnet);
 }
@@ -1718,6 +1719,7 @@ pending_tcp_query(struct serviced_query* sq, sldns_buffer* packet,
 	w->addrlen = sq->addrlen;
 	w->outnet = sq->outnet;
 	w->on_tcp_waiting_list = 0;
+	w->next_waiting = NULL;
 	w->cb = callback;
 	w->cb_arg = callback_arg;
 	w->ssl_upstream = sq->ssl_upstream;
