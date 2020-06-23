@@ -1490,7 +1490,7 @@ static void reuse_cb_curquery_for_failure(struct pending_tcp* pend, int err)
 	}
 }
 
-/** helper function that deletes and element from the tree of readwait
+/** helper function that deletes an element from the tree of readwait
  * elements in tcp reuse structure */
 static void reuse_del_readwait_elem(rbnode_type* node, void* ATTR_UNUSED(arg))
 {
