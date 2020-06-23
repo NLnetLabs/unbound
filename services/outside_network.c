@@ -1449,26 +1449,95 @@ pending_udp_query(struct serviced_query* sq, struct sldns_buffer* packet,
 	return pend;
 }
 
+/** perform failure callbacks for waiting queries in reuse write list */
+static void reuse_cb_writewait_for_failure(struct pending_tcp* pend, int err)
+{
+	struct waiting_tcp* w;
+	w = pend->reuse.write_wait_first;
+	while(w) {
+		comm_point_callback_type* cb = w->cb;
+		void* cb_arg = w->cb_arg;
+		fptr_ok(fptr_whitelist_pending_tcp(cb));
+		(void)(*cb)(NULL, cb_arg, err, NULL);
+		w = w->write_wait_next;
+	}
+}
+
+/** perform failure callbacks for waiting queries in reuse read rbtree */
+static void reuse_cb_readwait_for_failure(struct pending_tcp* pend, int err)
+{
+	rbnode_type* node;
+	node = rbtree_first(&pend->reuse.tree_by_id);
+	while(node && node != RBTREE_NULL) {
+		struct waiting_tcp* w = (struct waiting_tcp*)node->key;
+		comm_point_callback_type* cb = w->cb;
+		void* cb_arg = w->cb_arg;
+		fptr_ok(fptr_whitelist_pending_tcp(cb));
+		(void)(*cb)(NULL, cb_arg, err, NULL);
+		node = rbtree_next(node);
+	}
+}
+
+/** perform failure callbacks for current written query in reuse struct */
+static void reuse_cb_curquery_for_failure(struct pending_tcp* pend, int err)
+{
+	struct waiting_tcp* w = pend->query;
+	if(w) {
+		comm_point_callback_type* cb = w->cb;
+		void* cb_arg = w->cb_arg;
+		fptr_ok(fptr_whitelist_pending_tcp(cb));
+		(void)(*cb)(NULL, cb_arg, err, NULL);
+	}
+}
+
+/** helper function that deletes and element from the tree of readwait
+ * elements in tcp reuse structure */
+static void reuse_del_readwait_elem(rbnode_type* node, void* ATTR_UNUSED(arg))
+{
+	struct waiting_tcp* w = (struct waiting_tcp*)node->key;
+	waiting_tcp_delete(w);
+}
+
+/** delete readwait waiting_tcp elements, deletes the elements in the list */
+static void reuse_del_readwait(struct pending_tcp* pend)
+{
+	traverse_postorder(&pend->reuse.tree_by_id, &reuse_del_readwait_elem,
+		NULL);
+}
+
+/** delete writewait waiting_tcp elements, deletes the elements in the list */
+static void reuse_del_writewait(struct pending_tcp* pend)
+{
+	struct waiting_tcp* w, *n;
+	w = pend->reuse.write_wait_first;
+	while(w) {
+		n = w->write_wait_next;
+		waiting_tcp_delete(w);
+		w = n;
+	}
+}
+
 void
 outnet_tcptimer(void* arg)
 {
 	struct waiting_tcp* w = (struct waiting_tcp*)arg;
 	struct outside_network* outnet = w->outnet;
-	int do_callback = 1;
 	verbose(5, "outnet_tcptimer");
 	if(w->on_tcp_waiting_list) {
 		/* it is on the waiting list */
+		comm_point_callback_type* cb = w->cb;
+		void* cb_arg = w->cb_arg;
 		waiting_list_remove(outnet, w);
+		waiting_tcp_delete(w);
+		fptr_ok(fptr_whitelist_pending_tcp(cb));
+		(void)(*cb)(NULL, cb_arg, NETEVENT_TIMEOUT, NULL);
 	} else {
 		/* it was in use */
 		struct pending_tcp* pend=(struct pending_tcp*)w->next_waiting;
 		/* see if it needs unlink from reuse tree */
 		if(pend->reuse.pending) {
 			reuse_tcp_remove_tree_list(outnet, &pend->reuse);
-			do_callback = 0;
 		}
-		/* do failure callbacks for all the queries in the
-		 * wait for write list and in the id-tree TODO */
 		if(pend->c->ssl) {
 #ifdef HAVE_SSL
 			SSL_shutdown(pend->c->ssl);
@@ -1477,19 +1546,19 @@ outnet_tcptimer(void* arg)
 #endif
 		}
 		comm_point_close(pend->c);
+		/* do failure callbacks for all the queries in the
+		 * wait for write list and in the id-tree */
+		/* callback for 'w' arg already in list of curquery,
+		 * readwait list, writewait list */
+		reuse_cb_curquery_for_failure(pend, NETEVENT_TIMEOUT);
+		reuse_cb_readwait_for_failure(pend, NETEVENT_TIMEOUT);
+		reuse_cb_writewait_for_failure(pend, NETEVENT_TIMEOUT);
+		waiting_tcp_delete(pend->query); /* del curquery */
+		reuse_del_readwait(pend);
+		reuse_del_writewait(pend);
 		pend->query = NULL;
 		pend->next_free = outnet->tcp_free;
 		outnet->tcp_free = pend;
-	}
-	if(do_callback) {
-		comm_point_callback_type* cb = w->cb;
-		void* cb_arg = w->cb_arg;
-		waiting_tcp_delete(w);
-		fptr_ok(fptr_whitelist_pending_tcp(cb));
-		(void)(*cb)(NULL, cb_arg, NETEVENT_TIMEOUT, NULL);
-	} else {
-		/* waiting_tcp_delete(w); -- should be deleted if entire
-		 * stream with reuse elements is gone. TODO remove this? */
 	}
 	use_free_buffer(outnet);
 }
