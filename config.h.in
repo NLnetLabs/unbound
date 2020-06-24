@@ -866,6 +866,9 @@
 /* the version of the windows API enabled */
 #undef WINVER
 
+/* Define if you want dynlib module. */
+#undef WITH_DYNLIBMODULE
+
 /* Define if you want Python module. */
 #undef WITH_PYTHONMODULE
 

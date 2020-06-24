@@ -334,7 +334,9 @@ extern int yydebug;
     VAR_RPZ_ACTION_OVERRIDE = 540,
     VAR_RPZ_CNAME_OVERRIDE = 541,
     VAR_RPZ_LOG = 542,
-    VAR_RPZ_LOG_NAME = 543
+    VAR_RPZ_LOG_NAME = 543,
+    VAR_DYNLIB = 544,
+    VAR_DYNLIB_FILE = 545
   };
 #endif
 /* Tokens.  */
@@ -624,6 +626,8 @@ extern int yydebug;
 #define VAR_RPZ_CNAME_OVERRIDE 541
 #define VAR_RPZ_LOG 542
 #define VAR_RPZ_LOG_NAME 543
+#define VAR_DYNLIB 544
+#define VAR_DYNLIB_FILE 545
 
 /* Value type.  */
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
@@ -633,7 +637,7 @@ union YYSTYPE
 
 	char*	str;
 
-#line 637 "util/configparser.h"
+#line 641 "util/configparser.h"
 
 };
 typedef union YYSTYPE YYSTYPE;

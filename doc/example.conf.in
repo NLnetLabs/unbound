@@ -862,6 +862,17 @@ python:
 	# Script file to load
 	# python-script: "@UNBOUND_SHARE_DIR@/ubmodule-tst.py"
 
+# Dynamic library config section. To enable:
+# o use --with-dynlibmodule to configure before compiling.
+# o list dynlib in the module-config string (above) to enable.
+#   It can be placed anywhere, the dynlib module is only a very thin wrapper
+#   to load modules dynamically.
+# o and give a dynlib-file to run. If more than one dynlib entry is listed in
+#   the module-config then you need one dynlib-file per instance.
+dynlib:
+	# Script file to load
+	# dynlib-file: "@UNBOUND_SHARE_DIR@/dynlib.so"
+
 # Remote control config section.
 remote-control:
 	# Enable remote control with unbound-control(8) here.

@@ -1,3 +1,57 @@
+17 June 2020: Wouter
+	- Fix default explanation in man page for qname-minimisation-strict.
+	- Fix display of event loop method with libev.
+
+8 June 2020: Wouter
+	- Mention tls name possible when tls is enabled for stub-addr in the
+	  man page.
+
+27 May 2020: George
+	- Merge PR #241 by Robert Edmonds: contrib/libunbound.pc.in: Do not use
+	  "Requires:".
+
+25 May 2020: George
+	- Update contrib/aaaa-filter-iterator.patch for the recent
+	  generate_sub_request() change and to apply cleanly.
+
+21 May 2020: George
+	- Fix for integer overflow when printing RDF_TYPE_TIME.
+
+19 May 2020: Wouter
+	- CVE-2020-12662 Unbound can be tricked into amplifying an incoming
+	  query into a large number of queries directed to a target.
+	- CVE-2020-12663 Malformed answers from upstream name servers can be
+	  used to make Unbound unresponsive.
+	- Release 1.10.1 is 1.10.0 with fixes, code repository continues,
+	  including those fixes, towards the next release.  Configure has
+	  version 1.10.2 version number in it.
+	- For PR #93: windows compile warnings removal
+	- windows compile warnings removal for ip dscp option code.
+	- For PR #93: unit test for dynlib module.
+
+18 May 2020: Wouter
+	- For PR #93: dynlibmod can handle reloads and deinit and inits again,
+	  with dlclose and dlopen of the library again.  Also for multiple
+	  modules.  Fix memory leak by not closing dlopened content.  Fix
+	  to allow one dynlibmod instance by unbound-checkconf.
+	- For PR #93: checkconf allows multiple dynlib in module-config, for
+	  a couple cases.
+	- For PR #93: checkconf allows python dynlib in module-config, for
+	  a couple cases.
+	- For PR #93: man page spelling reference fix.
+	- For PR #93: fix link of other executables for dynlibmod dependency.
+
+15 May 2020: Wouter
+	- Merge PR #93: Add dynamic library support.
+	- Fixed conflicts for PR #93 and make configure, yacc, lex.
+	- For PR #93: Fix warnings for dynlibmodule.
+
+15 May 2020: Ralph
+	- Cache ECS answers with longest scope of CNAME chain.
+
+22 April 2020: George
+	- Explicitly use 'rrset-roundrobin: no' for test cases.
+
 21 April 2020: Wouter
 	- Merge #225 from akhait: KSK-2010 has been revoked. It removes the
 	  KSK-2010 from the default list in unbound-anchor, now that the
