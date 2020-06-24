@@ -1,3 +1,22 @@
+17 June 2020: Wouter
+	- Fix default explanation in man page for qname-minimisation-strict.
+	- Fix display of event loop method with libev.
+
+8 June 2020: Wouter
+	- Mention tls name possible when tls is enabled for stub-addr in the
+	  man page.
+
+27 May 2020: George
+	- Merge PR #241 by Robert Edmonds: contrib/libunbound.pc.in: Do not use
+	  "Requires:".
+
+25 May 2020: George
+	- Update contrib/aaaa-filter-iterator.patch for the recent
+	  generate_sub_request() change and to apply cleanly.
+
+21 May 2020: George
+	- Fix for integer overflow when printing RDF_TYPE_TIME.
+
 19 May 2020: Wouter
 	- CVE-2020-12662 Unbound can be tricked into amplifying an incoming
 	  query into a large number of queries directed to a target.

@@ -864,7 +864,7 @@ NXDOMAIN from a DNSSEC signed zone. Default is yes.
 QNAME minimisation in strict mode. Do not fall-back to sending full QNAME to
 potentially broken nameservers. A lot of domains will not be resolvable when
 this option in enabled. Only use if you know what you are doing.
-This option only has effect when qname-minimisation is enabled. Default is off.
+This option only has effect when qname-minimisation is enabled. Default is no.
 .TP
 .B aggressive\-nsec: \fI<yes or no>
 Aggressive NSEC uses the DNSSEC NSEC chain to synthesize NXDOMAIN
@@ -1614,6 +1614,9 @@ Name of stub zone nameserver. Is itself resolved before it is used.
 .B stub\-addr: \fI<IP address>
 IP address of stub zone nameserver. Can be IP 4 or IP 6.
 To use a nondefault port for DNS communication append '@' with the port number.
+If tls is enabled, then you can append a '#' and a name, then it'll check
+the tls authentication certificates with that name.  If you combine
+the '@' and '#', the '@' comes first.
 .TP
 .B stub\-prime: \fI<yes or no>
 This option is by default no.  If enabled it performs NS set priming,
