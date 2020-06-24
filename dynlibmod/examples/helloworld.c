@@ -1,4 +1,6 @@
-/*
+/**
+ * \file
+ *
  * This is an example to show how dynamic libraries can be made to work with
  * unbound. To build a .so file simply run:
  *   gcc -I../.. -shared -Wall -Werror -fpic  -o helloworld.so helloworld.c
