@@ -1,3 +1,9 @@
+/**
+ * \file
+ * This file contains the dynamic library module for Unbound.
+ * This loads a dynamic library (.dll, .so) and calls that for the
+ * module actions.
+ */
 #include "config.h"
 #include "util/module.h"
 #include "util/config_file.h"
