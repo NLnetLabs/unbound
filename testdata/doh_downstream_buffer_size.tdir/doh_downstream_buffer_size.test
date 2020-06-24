@@ -11,7 +11,7 @@ get_make
 
 
 echo "> query www.example.net. endpoint /dns-query"
-$PRE/dohclient -s 127.0.0.1 -p $UNBOUND_PORT www.example.net. A IN >outfile 2>&1
+$PRE/dohclient -s 127.0.0.1 -p $UNBOUND_PORT 1.example.net. A IN 2.example.net. A IN 3.example.net. A IN 4.example.net. A IN 5.example.net. A IN 6.example.net. A IN 7.example.net. A IN 8.example.net. A IN 9.example.net. A IN 10.example.net. A IN  >outfile 2>&1
 cat outfile
 if test "$?" -ne 0; then
 	echo "exit status not OK"
@@ -21,7 +21,9 @@ if test "$?" -ne 0; then
 	echo "Not OK"
 	exit 1
 fi
-if grep "status 404" outfile; then
+num=$(grep "ANSWER SEC" outfile | wc -l)
+# 58 byte answers, 500 byte max response buffer -> 8 answers
+if [ $num -eq 8 ]; then
 	echo "content OK"
 else
 	echo "result contents not OK"
@@ -33,26 +35,4 @@ else
 fi
 echo "OK"
 
-echo "> query www.example.net. endpoint /dns-query"
-$PRE/dohclient -e /abc -s 127.0.0.1 -p $UNBOUND_PORT www.example.net. A IN >outfile 2>&1
-cat outfile
-if test "$?" -ne 0; then
-	echo "exit status not OK"
-	echo "> cat logfiles"
-	cat outfile
-	cat unbound.log
-	echo "Not OK"
-	exit 1
-fi
-if grep ":status 200" outfile; then
-	echo "content OK"
-else
-	echo "result contents not OK"
-	echo "> cat logfiles"
-	cat outfile
-	cat unbound.log
-	echo "result contents not OK"
-	exit 1
-fi
-echo "OK"
 exit 0
