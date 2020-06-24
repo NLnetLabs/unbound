@@ -894,7 +894,7 @@ NXDOMAIN from a DNSSEC signed zone. Default is yes.
 QNAME minimisation in strict mode. Do not fall-back to sending full QNAME to
 potentially broken nameservers. A lot of domains will not be resolvable when
 this option in enabled. Only use if you know what you are doing.
-This option only has effect when qname-minimisation is enabled. Default is off.
+This option only has effect when qname-minimisation is enabled. Default is no.
 .TP
 .B aggressive\-nsec: \fI<yes or no>
 Aggressive NSEC uses the DNSSEC NSEC chain to synthesize NXDOMAIN
@@ -993,7 +993,9 @@ EDNS client subnet support the default is "subnetcache validator iterator".
 Most modules that need to be listed here have to be listed at the beginning
 of the line.  The cachedb module has to be listed just before the iterator.
 The python module can be listed in different places, it then processes the
-output of the module it is just before.
+output of the module it is just before. The dynlib module can be listed pretty
+much anywhere, it is only a very thin wrapper that allows dynamic libraries to
+run in its place.
 .TP
 .B trust\-anchor\-file: \fI<filename>
 File with trusted keys for validation. Both DS and DNSKEY entries can appear
@@ -1642,6 +1644,9 @@ Name of stub zone nameserver. Is itself resolved before it is used.
 .B stub\-addr: \fI<IP address>
 IP address of stub zone nameserver. Can be IP 4 or IP 6.
 To use a nondefault port for DNS communication append '@' with the port number.
+If tls is enabled, then you can append a '#' and a name, then it'll check
+the tls authentication certificates with that name.  If you combine
+the '@' and '#', the '@' comes first.
 .TP
 .B stub\-prime: \fI<yes or no>
 This option is by default no.  If enabled it performs NS set priming,
@@ -1860,6 +1865,24 @@ directory.
 .B python\-script: \fI<python file>\fR
 The script file to load. Repeat this option for every python module instance
 added to the \fBmodule\-config:\fR option.
+.SS "Dynamic Library Module Options"
+.LP
+The
+.B dynlib:
+clause gives the settings for the \fIdynlib\fR module.  This module is only
+a very small wrapper that allows dynamic modules to be loaded on runtime
+instead of being compiled into the application. To enable the dynlib module it
+has to be compiled into the daemon, and the word "dynlib" has to be put in the
+\fBmodule\-config:\fR option. Multiple instances of dynamic libraries are
+supported by adding the word "dynlib" more than once.
+.LP
+The \fBdynlib\-file:\fR path should be specified as an absolute path relative
+to the new path set by \fBchroot:\fR option, or as a relative path to the
+working directory.
+.TP
+.B dynlib\-file: \fI<dynlib file>\fR
+The dynamic library file to load. Repeat this option for every dynlib module
+instance added to the \fBmodule\-config:\fR option.
 .SS "DNS64 Module Options"
 .LP
 The dns64 module must be configured in the \fBmodule\-config:\fR "dns64

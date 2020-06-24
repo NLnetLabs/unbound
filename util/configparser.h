@@ -1,8 +1,9 @@
-/* A Bison parser, made by GNU Bison 3.0.4.  */
+/* A Bison parser, made by GNU Bison 3.5.1.  */
 
 /* Bison interface for Yacc-like parsers in C
 
-   Copyright (C) 1984, 1989-1990, 2000-2015 Free Software Foundation, Inc.
+   Copyright (C) 1984, 1989-1990, 2000-2015, 2018-2020 Free Software Foundation,
+   Inc.
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -29,6 +30,9 @@
 
    This special exception was added by the Free Software Foundation in
    version 2.2 of Bison.  */
+
+/* Undocumented macros, especially those whose name start with YY_,
+   are private implementation details.  Do not rely on them.  */
 
 #ifndef YY_YY_UTIL_CONFIGPARSER_H_INCLUDED
 # define YY_YY_UTIL_CONFIGPARSER_H_INCLUDED
@@ -335,7 +339,9 @@ extern int yydebug;
     VAR_RPZ_ACTION_OVERRIDE = 545,
     VAR_RPZ_CNAME_OVERRIDE = 546,
     VAR_RPZ_LOG = 547,
-    VAR_RPZ_LOG_NAME = 548
+    VAR_RPZ_LOG_NAME = 548,
+    VAR_DYNLIB = 549,
+    VAR_DYNLIB_FILE = 550
   };
 #endif
 /* Tokens.  */
@@ -630,19 +636,20 @@ extern int yydebug;
 #define VAR_RPZ_CNAME_OVERRIDE 546
 #define VAR_RPZ_LOG 547
 #define VAR_RPZ_LOG_NAME 548
+#define VAR_DYNLIB 549
+#define VAR_DYNLIB_FILE 550
 
 /* Value type.  */
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
-
 union YYSTYPE
 {
-#line 66 "./util/configparser.y" /* yacc.c:1909  */
+#line 66 "./util/configparser.y"
 
 	char*	str;
 
-#line 644 "util/configparser.h" /* yacc.c:1909  */
-};
+#line 651 "util/configparser.h"
 
+};
 typedef union YYSTYPE YYSTYPE;
 # define YYSTYPE_IS_TRIVIAL 1
 # define YYSTYPE_IS_DECLARED 1

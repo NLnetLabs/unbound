@@ -805,6 +805,9 @@ print_mem(RES* ssl, struct worker* worker, struct daemon* daemon,
 	size_t dnscrypt_shared_secret = 0;
 	size_t dnscrypt_nonce = 0;
 #endif /* USE_DNSCRYPT */
+#ifdef WITH_DYNLIBMODULE
+    size_t dynlib = 0;
+#endif /* WITH_DYNLIBMODULE */
 	msg = slabhash_get_mem(daemon->env->msg_cache);
 	rrset = slabhash_get_mem(&daemon->env->rrset_cache->table);
 	val = mod_get_mem(&worker->env, "validator");
@@ -823,6 +826,9 @@ print_mem(RES* ssl, struct worker* worker, struct daemon* daemon,
 		dnscrypt_nonce = slabhash_get_mem(daemon->dnscenv->nonces_cache);
 	}
 #endif /* USE_DNSCRYPT */
+#ifdef WITH_DYNLIBMODULE
+    dynlib = mod_get_mem(&worker->env, "dynlib");
+#endif /* WITH_DYNLIBMODULE */
 
 	if(!print_longnum(ssl, "mem.cache.rrset"SQ, rrset))
 		return 0;
@@ -850,6 +856,10 @@ print_mem(RES* ssl, struct worker* worker, struct daemon* daemon,
 			dnscrypt_nonce))
 		return 0;
 #endif /* USE_DNSCRYPT */
+#ifdef WITH_DYNLIBMODULE
+	if(!print_longnum(ssl, "mem.mod.dynlibmod"SQ, dynlib))
+		return 0;
+#endif /* WITH_DYNLIBMODULE */
 	if(!print_longnum(ssl, "mem.streamwait"SQ,
 		(size_t)s->svr.mem_stream_wait))
 		return 0;
