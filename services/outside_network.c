@@ -1615,10 +1615,10 @@ reuse_tcp_find(struct outside_network* outnet, struct serviced_query* sq)
 	key_p.reuse.node.key = &key_p.reuse;
 	if(sq->ssl_upstream) /* something nonNULL for comparisons in tree */
 		key_p.c->ssl = (void*)1;
-	if(sq->addrlen > sizeof(key_w.addr))
+	if(sq->addrlen > sizeof(key_p.reuse.addr))
 		return NULL;
-	memmove(&key_w.addr, &sq->addr, sq->addrlen);
-	key_w.addrlen = sq->addrlen;
+	memmove(&key_p.reuse.addr, &sq->addr, sq->addrlen);
+	key_p.reuse.addrlen = sq->addrlen;
 
 	verbose(5, "reuse_tcp_find: num reuse streams %u",
 		(unsigned)outnet->tcp_reuse.count);
