@@ -140,8 +140,7 @@ reuse_cmp_addrportssl(const void* key1, const void* key2)
 	struct reuse_tcp* r2 = (struct reuse_tcp*)key2;
 	int r;
 	/* compare address and port */
-	r = sockaddr_cmp(&r1->pending->query->addr, r1->pending->query->addrlen,
-		&r2->pending->query->addr, r2->pending->query->addrlen);
+	r = sockaddr_cmp(&r1->addr, r1->addrlen, &r2->addr, r2->addrlen);
 	if(r != 0)
 		return r;
 
@@ -455,6 +454,7 @@ outnet_tcp_take_into_use(struct waiting_tcp* w)
 	w->outnet->tcp_free = pend->next_free;
 	pend->next_free = NULL;
 	pend->query = w;
+	pend->reuse.outnet = w->outnet;
 	pend->c->repinfo.addrlen = w->addrlen;
 	memcpy(&pend->c->repinfo.addr, &w->addr, w->addrlen);
 	pend->reuse.pending = pend;
@@ -535,7 +535,7 @@ decommission_pending_tcp(struct outside_network* outnet,
 	comm_point_close(pend->c);
 	pend->next_free = outnet->tcp_free;
 	outnet->tcp_free = pend;
-	if(pend->reuse.pending) {
+	if(pend->reuse.node.key) {
 		/* needs unlink from the reuse tree to get deleted */
 		reuse_tcp_remove_tree_list(outnet, &pend->reuse);
 	}
@@ -601,7 +601,7 @@ outnet_tcp_cb(struct comm_point* c, void* arg, int error,
 	struct comm_reply *reply_info)
 {
 	struct pending_tcp* pend = (struct pending_tcp*)arg;
-	struct outside_network* outnet = pend->query->outnet;
+	struct outside_network* outnet = pend->reuse.outnet;
 	verbose(VERB_ALGO, "outnettcp cb");
 	if(error != NETEVENT_NOERROR) {
 		verbose(VERB_QUERY, "outnettcp got tcp error %d", error);
@@ -612,7 +612,7 @@ outnet_tcp_cb(struct comm_point* c, void* arg, int error,
 			LDNS_ID_WIRE(sldns_buffer_begin(c->buffer))!=pend->id) {
 			log_addr(VERB_QUERY, 
 				"outnettcp: bad ID in reply, from:",
-				&pend->query->addr, pend->query->addrlen);
+				&pend->reuse.addr, pend->reuse.addrlen);
 			error = NETEVENT_CLOSED;
 		}
 	}
@@ -625,8 +625,12 @@ outnet_tcp_cb(struct comm_point* c, void* arg, int error,
 			reuse_tcp_setup_readtimeout(pend);
 		}
 	}
-	fptr_ok(fptr_whitelist_pending_tcp(pend->query->cb));
-	(void)(*pend->query->cb)(c, pend->query->cb_arg, error, reply_info);
+	if(pend->query) {
+		fptr_ok(fptr_whitelist_pending_tcp(pend->query->cb));
+		(void)(*pend->query->cb)(c, pend->query->cb_arg, error, reply_info);
+		waiting_tcp_delete(pend->query);
+		pend->query = NULL;
+	}
 	verbose(5, "outnet_tcp_cb reuse after cb");
 	if(pend->reuse.node.key) {
 		verbose(5, "outnet_tcp_cb reuse after cb: keep it");
@@ -1467,6 +1471,9 @@ static void reuse_cb_writewait_for_failure(struct pending_tcp* pend, int err)
 static void reuse_cb_readwait_for_failure(struct pending_tcp* pend, int err)
 {
 	rbnode_type* node;
+	if(pend->reuse.tree_by_id.root == NULL ||
+		pend->reuse.tree_by_id.root == RBTREE_NULL)
+		return;
 	node = rbtree_first(&pend->reuse.tree_by_id);
 	while(node && node != RBTREE_NULL) {
 		struct waiting_tcp* w = (struct waiting_tcp*)node->key;
@@ -1501,6 +1508,9 @@ static void reuse_del_readwait_elem(rbnode_type* node, void* ATTR_UNUSED(arg))
 /** delete readwait waiting_tcp elements, deletes the elements in the list */
 static void reuse_del_readwait(struct pending_tcp* pend)
 {
+	if(pend->reuse.tree_by_id.root == NULL ||
+		pend->reuse.tree_by_id.root == RBTREE_NULL)
+		return;
 	traverse_postorder(&pend->reuse.tree_by_id, &reuse_del_readwait_elem,
 		NULL);
 }
@@ -1535,7 +1545,7 @@ outnet_tcptimer(void* arg)
 		/* it was in use */
 		struct pending_tcp* pend=(struct pending_tcp*)w->next_waiting;
 		/* see if it needs unlink from reuse tree */
-		if(pend->reuse.pending) {
+		if(pend->reuse.node.key) {
 			reuse_tcp_remove_tree_list(outnet, &pend->reuse);
 		}
 		if(pend->c->ssl) {
@@ -1612,6 +1622,9 @@ reuse_tcp_find(struct outside_network* outnet, struct serviced_query* sq)
 
 	verbose(5, "reuse_tcp_find: num reuse streams %u",
 		(unsigned)outnet->tcp_reuse.count);
+	if(outnet->tcp_reuse.root == NULL ||
+		outnet->tcp_reuse.root == RBTREE_NULL)
+		return NULL;
 	if(rbtree_find_less_equal(&outnet->tcp_reuse, &key_p.reuse.node,
 		&result)) {
 		/* exact match */

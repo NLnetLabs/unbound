@@ -271,6 +271,8 @@ struct reuse_tcp {
 	 * They are also in the tree_by_id. Once written, the are removed
 	 * from this list, but stay in the tree. */
 	struct waiting_tcp* write_wait_first, *write_wait_last;
+	/** the outside network it is part of */
+	struct outside_network* outnet;
 };
 
 /** max number of queries on a reuse connection */
