@@ -227,6 +227,7 @@ make_query(char* qname, char* qtype, char* qclass)
 	qinfo.local_alias = NULL;
 
 	qinfo_query_encode(buf, &qinfo); /* flips buffer */
+	free(qinfo.qname);
 	sldns_buffer_write_u16_at(buf, 0, 0x0000);
 	sldns_buffer_write_u16_at(buf, 2, BIT_RD);
 	memset(&edns, 0, sizeof(edns));
@@ -401,6 +402,7 @@ http2_session_create()
 	nghttp2_session_callbacks_set_on_header_callback(callbacks,
 		http2_header_cb);
 	nghttp2_session_client_new(&h2_session->session, callbacks, h2_session);
+	nghttp2_session_callbacks_del(callbacks);
 	return h2_session;
 }
 
