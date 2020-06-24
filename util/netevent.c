@@ -2289,12 +2289,13 @@ struct http2_stream* http2_stream_create(int32_t stream_id)
 }
 
 /** Delete http2 stream. After session delete or stream close callback */
-void http2_stream_delete(struct http2_session* h2_session,
+static void http2_stream_delete(struct http2_session* h2_session,
 	struct http2_stream* h2_stream)
 {
 	if(h2_stream->mesh_state) {
 		mesh_state_remove_reply(h2_stream->mesh, h2_stream->mesh_state,
 			h2_session->c);
+		h2_stream->mesh_state = NULL;
 	}
 	http2_req_stream_clear(h2_stream);
 	free(h2_stream);
@@ -2426,7 +2427,8 @@ comm_point_http2_handle_read(int ATTR_UNUSED(fd), struct comm_point* c)
 	/* reading until recv cb returns NGHTTP2_ERR_WOULDBLOCK */
 	ret = nghttp2_session_recv(c->h2_session->session);
 	if(ret) {
-		if(ret != NGHTTP2_ERR_EOF) {
+		if(ret != NGHTTP2_ERR_EOF &&
+			ret != NGHTTP2_ERR_CALLBACK_FAILURE) {
 			verbose(VERB_QUERY, "http2: session_recv failed, "
 				"error: %s", nghttp2_strerror(ret));
 		}

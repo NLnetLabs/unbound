@@ -1212,6 +1212,10 @@ mesh_send_reply(struct mesh_state* m, int rcode, struct reply_info* rep,
 		rcode = LDNS_RCODE_SERVFAIL;
 	if(r->query_reply.c->alpn_h2) {
 		r->query_reply.c->h2_stream = r->h2_stream;
+		/* Mesh reply won't exist for long anymore. Make it impossible
+		 * for HTTP/2 stream to refer to mesh state, in case
+		 * connection gets cleanup before HTTP/2 stream close. */
+		r->h2_stream->mesh_state = NULL;
 	}
 	/* send the reply */
 	/* We don't reuse the encoded answer if either the previous or current

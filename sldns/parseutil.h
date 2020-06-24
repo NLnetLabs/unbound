@@ -92,6 +92,8 @@ size_t sldns_b64_ntop_calculate_size(size_t srcsize);
 
 int sldns_b64_ntop(uint8_t const *src, size_t srclength,
 	char *target, size_t targsize);
+int sldns_b64url_ntop(uint8_t const *src, size_t srclength, char *target,
+	size_t targsize);
 
 /**
  * calculates the size needed to store the result of sldns_b64_pton
