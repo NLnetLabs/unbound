@@ -726,7 +726,10 @@ int pending_cmp(const void* key1, const void* key2);
 /** compare function of serviced query rbtree */
 int serviced_cmp(const void* key1, const void* key2);
 
-/** compare function of reuse_tcp rbtree */
+/** compare function of reuse_tcp rbtree in outside_network struct */
 int reuse_cmp(const void* key1, const void* key2);
+
+/** compare function of reuse_tcp tree_by_id rbtree */
+int reuse_id_cmp(const void* key1, const void* key2);
 
 #endif /* OUTSIDE_NETWORK_H */

@@ -168,6 +168,19 @@ reuse_cmp(const void* key1, const void* key2)
 	return 0;
 }
 
+int reuse_id_cmp(const void* key1, const void* key2)
+{
+	struct waiting_tcp* w1 = (struct waiting_tcp*)key1;
+	struct waiting_tcp* w2 = (struct waiting_tcp*)key2;
+	struct pending_tcp* p1 = (struct pending_tcp*)w1->next_waiting;
+	struct pending_tcp* p2 = (struct pending_tcp*)w2->next_waiting;
+	if(p1->id < p2->id)
+		return -1;
+	if(p1->id > p2->id)
+		return 1;
+	return 0;
+}
+
 /** delete waiting_tcp entry. Does not unlink from waiting list. 
  * @param w: to delete.
  */
@@ -519,6 +532,39 @@ reuse_tcp_remove_tree_list(struct outside_network* outnet,
 	}
 }
 
+/** helper function that deletes an element from the tree of readwait
+ * elements in tcp reuse structure */
+static void reuse_del_readwait_elem(rbnode_type* node, void* ATTR_UNUSED(arg))
+{
+	struct waiting_tcp* w = (struct waiting_tcp*)node->key;
+	waiting_tcp_delete(w);
+}
+
+/** delete readwait waiting_tcp elements, deletes the elements in the list */
+static void reuse_del_readwait(struct pending_tcp* pend)
+{
+	if(pend->reuse.tree_by_id.root == NULL ||
+		pend->reuse.tree_by_id.root == RBTREE_NULL)
+		return;
+	traverse_postorder(&pend->reuse.tree_by_id, &reuse_del_readwait_elem,
+		NULL);
+	rbtree_init(&pend->reuse.tree_by_id, reuse_id_cmp);
+}
+
+/** delete writewait waiting_tcp elements, deletes the elements in the list */
+static void reuse_del_writewait(struct pending_tcp* pend)
+{
+	struct waiting_tcp* w, *n;
+	w = pend->reuse.write_wait_first;
+	while(w) {
+		n = w->write_wait_next;
+		waiting_tcp_delete(w);
+		w = n;
+	}
+	pend->reuse.write_wait_first = NULL;
+	pend->reuse.write_wait_last = NULL;
+}
+
 /** decommission a tcp buffer, closes commpoint and frees waiting_tcp entry */
 static void
 decommission_pending_tcp(struct outside_network* outnet, 
@@ -541,6 +587,8 @@ decommission_pending_tcp(struct outside_network* outnet,
 	}
 	waiting_tcp_delete(pend->query);
 	pend->query = NULL;
+	reuse_del_readwait(pend);
+	reuse_del_writewait(pend);
 }
 
 /** log reuse item addr and ptr with message */
@@ -1497,36 +1545,6 @@ static void reuse_cb_curquery_for_failure(struct pending_tcp* pend, int err)
 	}
 }
 
-/** helper function that deletes an element from the tree of readwait
- * elements in tcp reuse structure */
-static void reuse_del_readwait_elem(rbnode_type* node, void* ATTR_UNUSED(arg))
-{
-	struct waiting_tcp* w = (struct waiting_tcp*)node->key;
-	waiting_tcp_delete(w);
-}
-
-/** delete readwait waiting_tcp elements, deletes the elements in the list */
-static void reuse_del_readwait(struct pending_tcp* pend)
-{
-	if(pend->reuse.tree_by_id.root == NULL ||
-		pend->reuse.tree_by_id.root == RBTREE_NULL)
-		return;
-	traverse_postorder(&pend->reuse.tree_by_id, &reuse_del_readwait_elem,
-		NULL);
-}
-
-/** delete writewait waiting_tcp elements, deletes the elements in the list */
-static void reuse_del_writewait(struct pending_tcp* pend)
-{
-	struct waiting_tcp* w, *n;
-	w = pend->reuse.write_wait_first;
-	while(w) {
-		n = w->write_wait_next;
-		waiting_tcp_delete(w);
-		w = n;
-	}
-}
-
 void
 outnet_tcptimer(void* arg)
 {
@@ -1594,6 +1612,9 @@ reuse_tcp_close_oldest(struct outside_network* outnet)
 	}
 
 	/* free up */
+	reuse_cb_curquery_for_failure(pend, NETEVENT_CLOSED);
+	reuse_cb_readwait_for_failure(pend, NETEVENT_CLOSED);
+	reuse_cb_writewait_for_failure(pend, NETEVENT_CLOSED);
 	decommission_pending_tcp(outnet, pend);
 }
 
@@ -1831,6 +1852,7 @@ pending_tcp_query(struct serviced_query* sq, sldns_buffer* packet,
 			verbose(5, "pending_tcp_query: new fd, connect");
 			/* create new fd and connect to addr, setup to
 			 * write query */
+			rbtree_init(&pend->reuse.tree_by_id, reuse_id_cmp);
 			pend->reuse.pending = pend;
 			memcpy(&pend->reuse.addr, &sq->addr, sq->addrlen);
 			pend->reuse.addrlen = sq->addrlen;
@@ -2058,6 +2080,15 @@ serviced_delete(struct serviced_query* sq)
 			if(!p->on_tcp_waiting_list) {
 				verbose(5, "serviced_delete: tcpreusekeep");
 				if(!reuse_tcp_remove_serviced_keep(p, sq)) {
+					reuse_cb_curquery_for_failure(
+						(struct pending_tcp*)p->
+						next_waiting, NETEVENT_CLOSED);
+					reuse_cb_readwait_for_failure(
+						(struct pending_tcp*)p->
+						next_waiting, NETEVENT_CLOSED);
+					reuse_cb_writewait_for_failure(
+						(struct pending_tcp*)p->
+						next_waiting, NETEVENT_CLOSED);
 					decommission_pending_tcp(sq->outnet,
 					  (struct pending_tcp*)p->next_waiting);
 					use_free_buffer(sq->outnet);
