@@ -1957,9 +1957,9 @@ pending_tcp_query(struct serviced_query* sq, sldns_buffer* packet,
 	if(pend) {
 		/* we have a buffer available right now */
 		if(reuse) {
-			verbose(5, "pending_tcp_query: reuse, store");
 			/* reuse existing fd, write query and continue */
 			/* store query in tree by id */
+			verbose(5, "pending_tcp_query: reuse, store");
 			w->next_waiting = (void*)pend;
 			reuse_tree_by_id_insert(&pend->reuse, w);
 			/* can we write right now? */
@@ -1974,9 +1974,9 @@ pending_tcp_query(struct serviced_query* sq, sldns_buffer* packet,
 				reuse_write_wait_push_back(&pend->reuse, w);
 			}
 		} else {
-			verbose(5, "pending_tcp_query: new fd, connect");
 			/* create new fd and connect to addr, setup to
 			 * write query */
+			verbose(5, "pending_tcp_query: new fd, connect");
 			rbtree_init(&pend->reuse.tree_by_id, reuse_id_cmp);
 			pend->reuse.pending = pend;
 			memcpy(&pend->reuse.addr, &sq->addr, sq->addrlen);
@@ -1987,8 +1987,10 @@ pending_tcp_query(struct serviced_query* sq, sldns_buffer* packet,
 			}
 		}
 	} else {
-		struct timeval tv;
 		/* queue up */
+		/* waiting for a buffer on the outside network buffer wait
+		 * list */
+		struct timeval tv;
 		verbose(5, "pending_tcp_query: queue to wait");
 		w->next_waiting = NULL;
 		if(sq->outnet->tcp_wait_last)
