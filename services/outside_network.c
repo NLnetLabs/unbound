@@ -626,12 +626,18 @@ use_free_buffer(struct outside_network* outnet)
 		if(reuse) {
 			log_reuse_tcp(5, "use free buffer for waiting tcp: "
 				"found reuse", reuse);
+			comm_timer_disable(w->timer);
+			w->next_waiting = (void*)reuse->pending;
+			reuse_tree_by_id_insert(reuse, w);
 			if(reuse->pending->query) {
 				/* on the write wait list */
-				comm_timer_disable(w->timer);
-				w->next_waiting = (void*)reuse->pending;
-				reuse_tree_by_id_insert(reuse, w);
 				reuse_write_wait_push_back(reuse, w);
+			} else {
+				/* write straight away */
+				reuse->pending->query = w;
+				outnet_tcp_take_query_setup(
+					reuse->pending->c->fd, reuse->pending,
+					w);
 			}
 		} else {
 			if(!outnet_tcp_take_into_use(w)) {
