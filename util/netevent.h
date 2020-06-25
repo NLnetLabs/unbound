@@ -87,6 +87,9 @@ typedef int comm_point_callback_type(struct comm_point*, void*, int,
 #define NETEVENT_CAPSFAIL -3
 /** to pass done transfer to callback function; http file is complete */
 #define NETEVENT_DONE -4
+/** to pass write of the write packet is done to callback function
+ * used when tcp_write_and_read is enabled */
+#define NETEVENT_PKT_WRITTEN -5
 
 /** timeout to slow accept calls when not possible, in msec. */
 #define NETEVENT_SLOW_ACCEPT_TIME 2000
@@ -253,6 +256,12 @@ struct comm_point {
 	/** byte count for written length over write channel, for when
 	 * tcp_write_and_read is enabled */
 	size_t tcp_write_byte_count;
+
+	/** packet to write currently over the write channel. for when
+	 * tcp_write_and_read is enabled */
+	uint8_t* tcp_write_pkt;
+	/** length of tcp_write_pkt in bytes */
+	size_t tcp_write_pkt_len;
 
 	/** if set, read/write completes:
 		read/write state of tcp is toggled.
