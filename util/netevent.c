@@ -3221,7 +3221,9 @@ comm_point_start_listening(struct comm_point* c, int newfd, int msec)
 	}
 	if(c->type == comm_tcp || c->type == comm_http) {
 		ub_event_del_bits(c->ev->ev, UB_EV_READ|UB_EV_WRITE);
-		if(c->tcp_is_reading)
+		if(c->tcp_write_and_read)
+			ub_event_add_bits(c->ev->ev, UB_EV_READ|UB_EV_WRITE);
+		else if(c->tcp_is_reading)
 			ub_event_add_bits(c->ev->ev, UB_EV_READ);
 		else	ub_event_add_bits(c->ev->ev, UB_EV_WRITE);
 	}

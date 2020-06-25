@@ -360,6 +360,8 @@ struct waiting_tcp {
 	/** timeout event; timer keeps running whether the query is
 	 * waiting for a buffer or the tcp reply is pending */
 	struct comm_timer* timer;
+	/** timeout in msec */
+	int timeout;
 	/** the outside network it is part of */
 	struct outside_network* outnet;
 	/** remote address. */
