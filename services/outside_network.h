@@ -375,7 +375,10 @@ struct waiting_tcp {
 	uint8_t* pkt;
 	/** length of query packet. */
 	size_t pkt_len;
-	/** callback for the timeout, error or reply to the message */
+	/** callback for the timeout, error or reply to the message,
+	 * or NULL if no user is waiting. the entry uses an ID number.
+	 * a query that was written is no longer needed, but the ID number
+	 * and a reply will come back and can be ignored if NULL */
 	comm_point_callback_type* cb;
 	/** callback user argument */
 	void* cb_arg;
