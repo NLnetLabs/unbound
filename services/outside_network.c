@@ -867,6 +867,7 @@ outnet_tcp_cb(struct comm_point* c, void* arg, int error,
 		pend->c->tcp_write_pkt = NULL;
 		pend->c->tcp_write_pkt_len = 0;
 		/* the pend.query is already in tree_by_id */
+		log_assert(pend->query->id_node.key);
 		pend->query = NULL;
 		/* setup to write next packet or setup read timeout */
 		if(pend->reuse.write_wait_first) {
@@ -876,6 +877,7 @@ outnet_tcp_cb(struct comm_point* c, void* arg, int error,
 		} else {
 			reuse_tcp_setup_readtimeout(pend);
 		}
+		return 0;
 	} else if(error != NETEVENT_NOERROR) {
 		verbose(VERB_QUERY, "outnettcp got tcp error %d", error);
 		/* pass error below and exit */
