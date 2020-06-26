@@ -254,11 +254,16 @@ struct comm_point {
 	int tcp_write_and_read;
 
 	/** byte count for written length over write channel, for when
-	 * tcp_write_and_read is enabled */
+	 * tcp_write_and_read is enabled.  When tcp_write_and_read is enabled,
+	 * this is the counter for writing, the one for reading is in the
+	 * commpoint.buffer sldns buffer.  The counter counts from 0 to
+	 * 2+tcp_write_pkt_len, and includes the tcp length bytes. */
 	size_t tcp_write_byte_count;
 
 	/** packet to write currently over the write channel. for when
-	 * tcp_write_and_read is enabled */
+	 * tcp_write_and_read is enabled.  When tcp_write_and_read is enabled,
+	 * this is the buffer for the written packet, the commpoint.buffer
+	 * sldns buffer is the buffer for the received packet. */
 	uint8_t* tcp_write_pkt;
 	/** length of tcp_write_pkt in bytes */
 	size_t tcp_write_pkt_len;
