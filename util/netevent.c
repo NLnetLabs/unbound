@@ -995,13 +995,23 @@ tcp_callback_writer(struct comm_point* c)
 	sldns_buffer_clear(c->buffer);
 	if(c->tcp_do_toggle_rw)
 		c->tcp_is_reading = 1;
-	c->tcp_byte_count = 0;
+	if(!c->tcp_write_and_read)
+		c->tcp_byte_count = 0;
 	/* switch from listening(write) to listening(read) */
 	if(c->tcp_req_info) {
 		tcp_req_info_handle_writedone(c->tcp_req_info);
 	} else {
 		comm_point_stop_listening(c);
-		comm_point_start_listening(c, -1, c->tcp_timeout_msec);
+		if(c->tcp_write_and_read) {
+			fptr_ok(fptr_whitelist_comm_point(c->callback));
+			if( (*c->callback)(c, c->cb_arg, NETEVENT_PKT_WRITTEN,
+				&c->repinfo) ) {
+				comm_point_start_listening(c, -1,
+					c->tcp_timeout_msec);
+			}
+		} else {
+			comm_point_start_listening(c, -1, c->tcp_timeout_msec);
+		}
 	}
 }
 

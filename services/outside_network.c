@@ -516,6 +516,8 @@ outnet_tcp_take_into_use(struct waiting_tcp* w)
 	log_assert(w->pkt);
 	log_assert(w->pkt_len > 0);
 	log_assert(w->addrlen > 0);
+	pend->c->tcp_do_toggle_rw = 0;
+	pend->c->tcp_do_close = 0;
 	/* open socket */
 	s = outnet_get_tcp_fd(&w->addr, w->addrlen, w->outnet->tcp_mss, w->outnet->ip_dscp);
 
