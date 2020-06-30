@@ -1320,26 +1320,7 @@ void mesh_query_done(struct mesh_state* mstate)
 			free(err);
 		}
 	}
-	if(mstate->reply_list) {
-		/* set the reply_list to NULL during the mesh_query_done
-		 * processing, so that calls back into the mesh from
-		 * tcp_req_info (deciding to drop the reply and thus
-		 * unregister the mesh_reply from the mstate) are stopped
-		 * because the list is empty.
-		 * The mstate is then likely not a reply_state, and maybe
-		 * also a detached_state.
-		 */
-		reply_list = mstate->reply_list;
-		mstate->reply_list = NULL;
-		if(!mstate->reply_list && !mstate->cb_list) {
-			/* was a reply state, not anymore */
-			log_assert(mstate->s.env->mesh->num_reply_states > 0);
-			mstate->s.env->mesh->num_reply_states--;
-		}
-		if(!mstate->reply_list && !mstate->cb_list &&
-			mstate->super_set.count == 0)
-			mstate->s.env->mesh->num_detached_states++;
-	}
+	reply_list = mstate->reply_list;
 	for(r = reply_list; r; r = r->next) {
 		/* if a response-ip address block has been stored the
 		 *  information should be logged for each client. */
@@ -1380,6 +1361,17 @@ void mesh_query_done(struct mesh_state* mstate)
 			prev = r;
 			prev_buffer = r_buffer;
 		}
+	}
+	if(mstate->reply_list) {
+		mstate->reply_list = NULL;
+		if(!mstate->reply_list && !mstate->cb_list) {
+			/* was a reply state, not anymore */
+			log_assert(mstate->s.env->mesh->num_reply_states > 0);
+			mstate->s.env->mesh->num_reply_states--;
+		}
+		if(!mstate->reply_list && !mstate->cb_list &&
+			mstate->super_set.count == 0)
+			mstate->s.env->mesh->num_detached_states++;
 	}
 	mstate->replies_sent = 1;
 	while((c = mstate->cb_list) != NULL) {
@@ -1992,12 +1984,14 @@ mesh_serve_expired_callback(void* arg)
 		mesh->ans_expired++;
 
 	}
-	mstate->reply_list = NULL;
-	if(!mstate->reply_list && !mstate->cb_list && r) {
-		log_assert(mesh->num_reply_states > 0);
-		mesh->num_reply_states--;
-		if(mstate->super_set.count == 0) {
-			mesh->num_detached_states++;
+	if(mstate->reply_list) {
+		mstate->reply_list = NULL;
+		if(!mstate->reply_list && !mstate->cb_list && r) {
+			log_assert(mesh->num_reply_states > 0);
+			mesh->num_reply_states--;
+			if(mstate->super_set.count == 0) {
+				mesh->num_detached_states++;
+			}
 		}
 	}
 	while((c = mstate->cb_list) != NULL) {

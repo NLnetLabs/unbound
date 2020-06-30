@@ -1,6 +1,10 @@
 29 June 2020: Wouter
 	- Move reply list clean for serve expired mesh callback to after
 	  the reply is sent, so that script callbacks have reply_info.
+	- Also move reply list clean for mesh callbacks to the scrip callback
+	  can see the reply_info.
+	- Fix for mesh accounting if the reply list already empty to begin
+	  with.
 
 24 June 2020: Wouter
 	- iana portlist updated.
