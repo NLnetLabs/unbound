@@ -1296,7 +1296,7 @@ mesh_send_reply(struct mesh_state* m, int rcode, struct reply_info* rep,
 
 void mesh_query_done(struct mesh_state* mstate)
 {
-	struct mesh_reply* r, *reply_list = NULL;
+	struct mesh_reply* r;
 	struct mesh_reply* prev = NULL;
 	struct sldns_buffer* prev_buffer = NULL;
 	struct mesh_cb* c;
@@ -1320,8 +1320,7 @@ void mesh_query_done(struct mesh_state* mstate)
 			free(err);
 		}
 	}
-	reply_list = mstate->reply_list;
-	for(r = reply_list; r; r = r->next) {
+	for(r = mstate->reply_list; r; r = r->next) {
 		/* if a response-ip address block has been stored the
 		 *  information should be logged for each client. */
 		if(mstate->s.respip_action_info &&
@@ -1345,7 +1344,15 @@ void mesh_query_done(struct mesh_state* mstate)
 		/* if this query is determined to be dropped during the
 		 * mesh processing, this is the point to take that action. */
 		if(mstate->s.is_drop) {
+			/* briefly set the reply_list to NULL, so that the
+			 * tcp req info cleanup routine that calls the mesh
+			 * to deregister the meshstate for it is not done
+			 * because the list is NULL and also accounting is not
+			 * done there, but instead we do that here. */
+			struct mesh_reply* reply_list = mstate->reply_list;
+			mstate->reply_list = NULL;
 			comm_point_drop_reply(&r->query_reply);
+			mstate->reply_list = reply_list;
 		} else {
 			struct sldns_buffer* r_buffer = r->query_reply.c->buffer;
 			if(r->query_reply.c->tcp_req_info) {
@@ -1950,8 +1957,7 @@ mesh_serve_expired_callback(void* arg)
 	if(verbosity >= VERB_ALGO)
 		log_dns_msg("Serve expired lookup", &qstate->qinfo, msg->rep);
 
-	r = mstate->reply_list;
-	for(; r; r = r->next) {
+	for(r = mstate->reply_list; r; r = r->next) {
 		/* If address info is returned, it means the action should be an
 		* 'inform' variant and the information should be logged. */
 		if(actinfo.addrinfo) {

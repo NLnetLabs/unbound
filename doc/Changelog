@@ -5,6 +5,8 @@
 	  can see the reply_info.
 	- Fix for mesh accounting if the reply list already empty to begin
 	  with.
+	- Fix for mesh accounting when rpz decides to drop a reply with a
+	  tcp stream waiting for it.
 
 24 June 2020: Wouter
 	- iana portlist updated.
