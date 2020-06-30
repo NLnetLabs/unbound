@@ -1,3 +1,7 @@
+29 June 2020: Wouter
+	- Move reply list clean for serve expired mesh callback to after
+	  the reply is sent, so that script callbacks have reply_info.
+
 24 June 2020: Wouter
 	- iana portlist updated.
 	- doxygen file comments for dynlibmodule.

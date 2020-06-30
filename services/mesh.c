@@ -1959,14 +1959,6 @@ mesh_serve_expired_callback(void* arg)
 		log_dns_msg("Serve expired lookup", &qstate->qinfo, msg->rep);
 
 	r = mstate->reply_list;
-	mstate->reply_list = NULL;
-	if(!mstate->reply_list && !mstate->cb_list && r) {
-		log_assert(mesh->num_reply_states > 0);
-		mesh->num_reply_states--;
-		if(mstate->super_set.count == 0) {
-			mesh->num_detached_states++;
-		}
-	}
 	for(; r; r = r->next) {
 		/* If address info is returned, it means the action should be an
 		* 'inform' variant and the information should be logged. */
@@ -1999,6 +1991,14 @@ mesh_serve_expired_callback(void* arg)
 		/* Account for each reply sent. */
 		mesh->ans_expired++;
 
+	}
+	mstate->reply_list = NULL;
+	if(!mstate->reply_list && !mstate->cb_list && r) {
+		log_assert(mesh->num_reply_states > 0);
+		mesh->num_reply_states--;
+		if(mstate->super_set.count == 0) {
+			mesh->num_detached_states++;
+		}
 	}
 	while((c = mstate->cb_list) != NULL) {
 		/* take this cb off the list; so that the list can be
