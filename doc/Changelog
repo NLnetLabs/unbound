@@ -7,6 +7,8 @@
 	  with.
 	- Fix for mesh accounting when rpz decides to drop a reply with a
 	  tcp stream waiting for it.
+	- Review fix for number of detached states due to use of variable
+	  after end of loop.
 
 24 June 2020: Wouter
 	- iana portlist updated.

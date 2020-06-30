@@ -1992,7 +1992,7 @@ mesh_serve_expired_callback(void* arg)
 	}
 	if(mstate->reply_list) {
 		mstate->reply_list = NULL;
-		if(!mstate->reply_list && !mstate->cb_list && r) {
+		if(!mstate->reply_list && !mstate->cb_list) {
 			log_assert(mesh->num_reply_states > 0);
 			mesh->num_reply_states--;
 			if(mstate->super_set.count == 0) {
