@@ -1355,12 +1355,20 @@ void mesh_query_done(struct mesh_state* mstate)
 			mstate->reply_list = reply_list;
 		} else {
 			struct sldns_buffer* r_buffer = r->query_reply.c->buffer;
+			struct mesh_reply* rlist = mstate->reply_list;
 			if(r->query_reply.c->tcp_req_info) {
 				r_buffer = r->query_reply.c->tcp_req_info->spool_buffer;
 				prev_buffer = NULL;
 			}
+			/* briefly set the replylist to null in case the
+			 * meshsendreply calls tcpreqinfo sendreply that
+			 * comm_point_drops because of size, and then the
+			 * null stops the mesh state remove and thus
+			 * reply_list modification and accounting */
+			mstate->reply_list = NULL;
 			mesh_send_reply(mstate, mstate->s.return_rcode, rep,
 				r, r_buffer, prev, prev_buffer);
+			mstate->reply_list = rlist;
 			if(r->query_reply.c->tcp_req_info) {
 				tcp_req_info_remove_mesh_state(r->query_reply.c->tcp_req_info, mstate);
 				r_buffer = NULL;
@@ -1874,7 +1882,7 @@ mesh_serve_expired_callback(void* arg)
 {
 	struct mesh_state* mstate = (struct mesh_state*) arg;
 	struct module_qstate* qstate = &mstate->s;
-	struct mesh_reply* r;
+	struct mesh_reply* r, *rlist;
 	struct mesh_area* mesh = qstate->env->mesh;
 	struct dns_msg* msg;
 	struct mesh_cb* c;
@@ -1979,8 +1987,15 @@ mesh_serve_expired_callback(void* arg)
 		r_buffer = r->query_reply.c->buffer;
 		if(r->query_reply.c->tcp_req_info)
 			r_buffer = r->query_reply.c->tcp_req_info->spool_buffer;
+		/* briefly set the replylist to null in case the meshsendreply
+		 * calls tcpreqinfo sendreply that comm_point_drops because
+		 * of size, and then the null stops the mesh state remove and
+		 * thus reply_list modification and accounting */
+		rlist = mstate->reply_list;
+		mstate->reply_list = NULL;
 		mesh_send_reply(mstate, LDNS_RCODE_NOERROR, msg->rep,
 			r, r_buffer, prev, prev_buffer);
+		mstate->reply_list = rlist;
 		if(r->query_reply.c->tcp_req_info)
 			tcp_req_info_remove_mesh_state(r->query_reply.c->tcp_req_info, mstate);
 		prev = r;

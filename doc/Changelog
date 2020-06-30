@@ -9,6 +9,8 @@
 	  tcp stream waiting for it.
 	- Review fix for number of detached states due to use of variable
 	  after end of loop.
+	- Fix tcp req info drop due to size call into mesh accounting
+	  removal of mesh state during mesh send reply.
 
 24 June 2020: Wouter
 	- iana portlist updated.
