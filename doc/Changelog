@@ -1,3 +1,6 @@
+6 July 2020: Wouter
+	- run_vm cleanup better and removes trailing slash on single argument.
+
 29 June 2020: Wouter
 	- Move reply list clean for serve expired mesh callback to after
 	  the reply is sent, so that script callbacks have reply_info.
