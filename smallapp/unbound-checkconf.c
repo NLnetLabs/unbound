@@ -197,7 +197,7 @@ localzonechecks(struct config_file* cfg)
 
 /** checks for acl and views */
 static void
-acl_view_checks(struct config_file* cfg, struct views* views)
+acl_view_tag_checks(struct config_file* cfg, struct views* views)
 {
 	int d;
 	struct sockaddr_storage a;
@@ -205,10 +205,10 @@ acl_view_checks(struct config_file* cfg, struct views* views)
 	struct config_str2list* acl;
 	struct config_str3list* s3;
 	struct config_strbytelist* sb;
-	struct view* v;
 
 	/* acl_view */
 	for(acl=cfg->acl_view; acl; acl = acl->next) {
+		struct view* v;
 		if(!netblockstrtoaddr(acl->str, UNBOUND_DNS_PORT, &a, &alen,
 			&d)) {
 			fatal_exit("cannot parse access-control-view "
@@ -300,7 +300,7 @@ view_and_respipchecks(struct config_file* cfg)
 		fatal_exit("Could not setup respip set");
 	if(!respip_views_apply_cfg(views, cfg, &ignored))
 		fatal_exit("Could not setup per-view respip sets");
-	acl_view_checks(cfg, views);
+	acl_view_tag_checks(cfg, views);
 	views_delete(views);
 	respip_set_delete(respip);
 }
