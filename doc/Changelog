@@ -1,3 +1,9 @@
+7 July 2020: Wouter
+	- Fix #259: Fix unbound-checkconf does not check view existence.
+	  unbound-checkconf checks access-control-view, access-control-tags,
+	  access-control-tag-actions and access-control-tag-datas.
+	- Fix offset of error printout for access-control-tag-datas.
+
 6 July 2020: Wouter
 	- run_vm cleanup better and removes trailing slash on single argument.
 
