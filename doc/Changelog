@@ -1,6 +1,9 @@
 8 July 2020: Wouter
 	- Fix add missing DSA header, for compilation without deprecated
 	  OpenSSL APIs.
+	- Fix to use SSL_CTX_set_tlsext_ticket_key_evp_cb in OpenSSL
+	  3.0.0-alpha4.
+	- Longer keys for the test set, this avoids weak crypto errors.
 
 7 July 2020: Wouter
 	- Fix #259: Fix unbound-checkconf does not check view existence.

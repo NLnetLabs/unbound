@@ -386,6 +386,9 @@
 /* Define to 1 if you have the <openssl/conf.h> header file. */
 #undef HAVE_OPENSSL_CONF_H
 
+/* Define to 1 if you have the <openssl/core_names.h> header file. */
+#undef HAVE_OPENSSL_CORE_NAMES_H
+
 /* Define to 1 if you have the <openssl/dh.h> header file. */
 #undef HAVE_OPENSSL_DH_H
 
@@ -500,8 +503,9 @@
 /* Define to 1 if you have the `SSL_CTX_set_security_level' function. */
 #undef HAVE_SSL_CTX_SET_SECURITY_LEVEL
 
-/* Define to 1 if you have the `SSL_CTX_set_tlsext_ticket_key_cb' function. */
-#undef HAVE_SSL_CTX_SET_TLSEXT_TICKET_KEY_CB
+/* Define to 1 if you have the `SSL_CTX_set_tlsext_ticket_key_evp_cb'
+   function. */
+#undef HAVE_SSL_CTX_SET_TLSEXT_TICKET_KEY_EVP_CB
 
 /* Define to 1 if you have the `SSL_get0_peername' function. */
 #undef HAVE_SSL_GET0_PEERNAME
