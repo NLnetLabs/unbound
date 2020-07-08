@@ -77,6 +77,10 @@ int fake_sha1 = 0;
 #include <openssl/engine.h>
 #endif
 
+#if defined(HAVE_OPENSSL_DSA_H) && defined(USE_DSA)
+#include <openssl/dsa.h>
+#endif
+
 /**
  * Output a libcrypto openssl error to the logfile.
  * @param str: string to add to it.
