@@ -415,6 +415,28 @@ reuse_tree_by_id_insert(struct reuse_tcp* reuse, struct waiting_tcp* w)
 	rbtree_insert(&reuse->tree_by_id, &w->id_node);
 }
 
+/** find element in tree by id */
+static struct waiting_tcp*
+reuse_tcp_by_id_find(struct reuse_tcp* reuse, uint16_t id)
+{
+	struct waiting_tcp key_w;
+	struct pending_tcp key_p;
+	memset(&key_w, 0, sizeof(key_w));
+	memset(&key_p, 0, sizeof(key_p));
+	key_w.next_waiting = (void*)&key_p;
+	key_w.id_node.key = &key_w;
+	key_p.id = id;
+	return (struct waiting_tcp*)rbtree_search(&reuse->tree_by_id, &key_w);
+}
+
+/** return ID value of rbnode in tree_by_id */
+static uint16_t
+tree_by_id_get_id(rbnode_type* node)
+{
+	struct waiting_tcp* w = (struct waiting_tcp*)node->key;
+	return ((struct pending_tcp*)w->next_waiting)->id;
+}
+
 /** find reuse tcp stream to destination for query, or NULL if none */
 static struct reuse_tcp*
 reuse_tcp_find(struct outside_network* outnet, struct sockaddr_storage* addr,
@@ -870,6 +892,7 @@ outnet_tcp_cb(struct comm_point* c, void* arg, int error,
 {
 	struct pending_tcp* pend = (struct pending_tcp*)arg;
 	struct outside_network* outnet = pend->reuse.outnet;
+	struct waiting_tcp* w = NULL;
 	verbose(VERB_ALGO, "outnettcp cb");
 	if(error == NETEVENT_TIMEOUT) {
 		if(pend->c->tcp_write_and_read)
@@ -914,13 +937,23 @@ outnet_tcp_cb(struct comm_point* c, void* arg, int error,
 		/* pass error below and exit */
 	} else {
 		/* check ID */
-		if(sldns_buffer_limit(c->buffer) < sizeof(uint16_t) ||
-			LDNS_ID_WIRE(sldns_buffer_begin(c->buffer))!=pend->id) {
+		if(sldns_buffer_limit(c->buffer) < sizeof(uint16_t)) {
 			log_addr(VERB_QUERY, 
-				"outnettcp: bad ID in reply, from:",
+				"outnettcp: bad ID in reply, too short, from:",
 				&pend->reuse.addr, pend->reuse.addrlen);
 			error = NETEVENT_CLOSED;
+		} else {
+			uint16_t id = LDNS_ID_WIRE(sldns_buffer_begin(
+				c->buffer));
+			/* find the query the reply is for */
+			w = reuse_tcp_by_id_find(&pend->reuse, id);
 		}
+	}
+	if(!w) {
+		/* no struct waiting found in tree, no reply to call */
+		log_addr(VERB_QUERY, "outnettcp: bad ID in reply, from:",
+			&pend->reuse.addr, pend->reuse.addrlen);
+		error = NETEVENT_CLOSED;
 	}
 	if(error == NETEVENT_NOERROR) {
 		/* add to reuse tree so it can be reused, if not a failure.
@@ -930,11 +963,10 @@ outnet_tcp_cb(struct comm_point* c, void* arg, int error,
 			(void)reuse_tcp_insert(outnet, pend);
 		}
 	}
-	if(pend->query) {
-		struct waiting_tcp* w = pend->query;
-		pend->query = NULL;
+	if(w) {
 		reuse_tree_by_id_delete(&pend->reuse, w);
-		verbose(5, "outnet tcp callback query err %d buflen %d", error, (int)sldns_buffer_limit(c->buffer));
+		verbose(5, "outnet tcp callback query err %d buflen %d",
+			error, (int)sldns_buffer_limit(c->buffer));
 		waiting_tcp_callback(w, c, error, reply_info);
 		waiting_tcp_delete(w);
 	}
@@ -1849,28 +1881,6 @@ reuse_tcp_close_oldest(struct outside_network* outnet)
 	reuse_cb_readwait_for_failure(pend, NETEVENT_CLOSED);
 	reuse_cb_writewait_for_failure(pend, NETEVENT_CLOSED);
 	decommission_pending_tcp(outnet, pend);
-}
-
-/** find element in tree by id */
-static struct waiting_tcp*
-reuse_tcp_by_id_find(struct reuse_tcp* reuse, uint16_t id)
-{
-	struct waiting_tcp key_w;
-	struct pending_tcp key_p;
-	memset(&key_w, 0, sizeof(key_w));
-	memset(&key_p, 0, sizeof(key_p));
-	key_w.next_waiting = (void*)&key_p;
-	key_w.id_node.key = &key_w;
-	key_p.id = id;
-	return (struct waiting_tcp*)rbtree_search(&reuse->tree_by_id, &key_w);
-}
-
-/** return ID value of rbnode in tree_by_id */
-static uint16_t
-tree_by_id_get_id(rbnode_type* node)
-{
-	struct waiting_tcp* w = (struct waiting_tcp*)node->key;
-	return ((struct pending_tcp*)w->next_waiting)->id;
 }
 
 /** find spare ID value for reuse tcp stream.  That is random and also does
