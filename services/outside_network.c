@@ -743,14 +743,13 @@ static void reuse_del_readwait_elem(rbnode_type* node, void* ATTR_UNUSED(arg))
 }
 
 /** delete readwait waiting_tcp elements, deletes the elements in the list */
-static void reuse_del_readwait(struct pending_tcp* pend)
+static void reuse_del_readwait(rbtree_type* tree_by_id)
 {
-	if(pend->reuse.tree_by_id.root == NULL ||
-		pend->reuse.tree_by_id.root == RBTREE_NULL)
+	if(tree_by_id->root == NULL ||
+		tree_by_id->root == RBTREE_NULL)
 		return;
-	traverse_postorder(&pend->reuse.tree_by_id, &reuse_del_readwait_elem,
-		NULL);
-	rbtree_init(&pend->reuse.tree_by_id, reuse_id_cmp);
+	traverse_postorder(tree_by_id, &reuse_del_readwait_elem, NULL);
+	rbtree_init(tree_by_id, reuse_id_cmp);
 }
 
 /** decommission a tcp buffer, closes commpoint and frees waiting_tcp entry */
@@ -778,7 +777,7 @@ decommission_pending_tcp(struct outside_network* outnet,
 	pend->query = NULL;
 	pend->reuse.write_wait_first = NULL;
 	pend->reuse.write_wait_last = NULL;
-	reuse_del_readwait(pend);
+	reuse_del_readwait(&pend->reuse.tree_by_id);
 }
 
 /** insert into reuse tcp tree and LRU, false on failure (duplicate) */
@@ -811,13 +810,13 @@ reuse_tcp_insert(struct outside_network* outnet, struct pending_tcp* pend_tcp)
 }
 
 /** perform failure callbacks for waiting queries in reuse read rbtree */
-static void reuse_cb_readwait_for_failure(struct pending_tcp* pend, int err)
+static void reuse_cb_readwait_for_failure(rbtree_type* tree_by_id, int err)
 {
 	rbnode_type* node;
-	if(pend->reuse.tree_by_id.root == NULL ||
-		pend->reuse.tree_by_id.root == RBTREE_NULL)
+	if(tree_by_id->root == NULL ||
+		tree_by_id->root == RBTREE_NULL)
 		return;
-	node = rbtree_first(&pend->reuse.tree_by_id);
+	node = rbtree_first(tree_by_id);
 	while(node && node != RBTREE_NULL) {
 		struct waiting_tcp* w = (struct waiting_tcp*)node->key;
 		waiting_tcp_callback(w, NULL, err, NULL);
@@ -833,8 +832,8 @@ static void reuse_cb_readwait_for_failure(struct pending_tcp* pend, int err)
 static void reuse_cb_and_decommission(struct outside_network* outnet,
 	struct pending_tcp* pend, int error)
 {
-	struct pending_tcp store;
-	store = *pend;
+	rbtree_type store;
+	store = pend->reuse.tree_by_id;
 	pend->query = NULL;
 	rbtree_init(&pend->reuse.tree_by_id, reuse_id_cmp);
 	pend->reuse.write_wait_first = NULL;
@@ -1796,40 +1795,7 @@ outnet_tcptimer(void* arg)
 	} else {
 		/* it was in use */
 		struct pending_tcp* pend=(struct pending_tcp*)w->next_waiting;
-		struct pending_tcp pickup;
-		/* see if it needs unlink from reuse tree */
-		if(pend->reuse.node.key) {
-			reuse_tcp_remove_tree_list(outnet, &pend->reuse);
-		}
-		if(pend->c->ssl) {
-#ifdef HAVE_SSL
-			SSL_shutdown(pend->c->ssl);
-			SSL_free(pend->c->ssl);
-			pend->c->ssl = NULL;
-#endif
-		}
-		comm_point_close(pend->c);
-		/* pickup the callback items and call them after we have
-		 * removed the current pending. so that the callbacks
-		 * to the state machine happen after the query has timeouted
-		 * and been deleted and it works from that clean state,
-		 * because it may call the outside network routines to make
-		 * new queries. */
-		pickup = *pend;
-		/* unlink them from pend, delete from pickup calls later */
-		pend->query = NULL;
-		rbtree_init(&pend->reuse.tree_by_id, reuse_id_cmp);
-		pend->reuse.write_wait_first = NULL;
-		pend->reuse.write_wait_last = NULL;
-		/* pend is clear for reuse in the tcp_free list */
-		pend->next_free = outnet->tcp_free;
-		outnet->tcp_free = pend;
-
-		/* do failure callbacks for all the queries in the
-		 * id-tree, that includes the pend.query and write list */
-		reuse_cb_readwait_for_failure(&pickup, NETEVENT_TIMEOUT);
-		/* delete the stored callback structures */
-		reuse_del_readwait(&pickup);
+		reuse_cb_and_decommission(outnet, pend, NETEVENT_TIMEOUT);
 	}
 	use_free_buffer(outnet);
 }
