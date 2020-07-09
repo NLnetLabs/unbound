@@ -825,6 +825,23 @@ static void reuse_cb_readwait_for_failure(struct pending_tcp* pend, int err)
 	}
 }
 
+/** perform callbacks for failure and also decommission pending tcp.
+ * the callbacks remove references in sq->pending to the waiting_tcp
+ * members of the tree_by_id in the pending tcp. */
+static void reuse_cb_and_decommission(struct outside_network* outnet,
+	struct pending_tcp* pend, int error)
+{
+	struct pending_tcp store;
+	store = *pend;
+	pend->query = NULL;
+	rbtree_init(&pend->reuse.tree_by_id, reuse_id_cmp);
+	pend->reuse.write_wait_first = NULL;
+	pend->reuse.write_wait_last = NULL;
+	decommission_pending_tcp(outnet, pend);
+	reuse_cb_readwait_for_failure(&store, error);
+	reuse_del_readwait(&store);
+}
+
 /** delete element from tree by id */
 static void
 reuse_tree_by_id_delete(struct reuse_tcp* reuse, struct waiting_tcp* w)
@@ -949,9 +966,8 @@ outnet_tcp_cb(struct comm_point* c, void* arg, int error,
 	verbose(5, "outnet_tcp_cb reuse after cb: decommission it");
 	/* no queries on it, no space to keep it. or timeout or closed due
 	 * to error.  Close it */
-	reuse_cb_readwait_for_failure(pend, (error==NETEVENT_TIMEOUT?
+	reuse_cb_and_decommission(outnet, pend, (error==NETEVENT_TIMEOUT?
 		NETEVENT_TIMEOUT:NETEVENT_CLOSED));
-	decommission_pending_tcp(outnet, pend);
 	use_free_buffer(outnet);
 	return 0;
 }
@@ -1837,8 +1853,7 @@ reuse_tcp_close_oldest(struct outside_network* outnet)
 	}
 
 	/* free up */
-	reuse_cb_readwait_for_failure(pend, NETEVENT_CLOSED);
-	decommission_pending_tcp(outnet, pend);
+	reuse_cb_and_decommission(outnet, pend, NETEVENT_CLOSED);
 }
 
 /** find spare ID value for reuse tcp stream.  That is random and also does
@@ -2243,10 +2258,8 @@ serviced_delete(struct serviced_query* sq)
 					(struct pending_tcp*)w->next_waiting;
 				verbose(5, "serviced_delete: tcpreusekeep");
 				if(!reuse_tcp_remove_serviced_keep(w, sq)) {
-					reuse_cb_readwait_for_failure(
+					reuse_cb_and_decommission(sq->outnet,
 						pend, NETEVENT_CLOSED);
-					decommission_pending_tcp(sq->outnet,
-						pend);
 					use_free_buffer(sq->outnet);
 				}
 				sq->pending = NULL;
