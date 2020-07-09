@@ -324,8 +324,6 @@ struct pending {
 struct pending_tcp {
 	/** next in list of free tcp comm points, or NULL. */
 	struct pending_tcp* next_free;
-	/** the ID for the query; checked in reply */
-	uint16_t id;
 	/** tcp comm point it was sent on (and reply must come back on). */
 	struct comm_point* c;
 	/** the query being serviced, NULL if the pending_tcp is unused. */
@@ -355,8 +353,10 @@ struct waiting_tcp {
 	/** true if the waiting_tcp structure is on the write_wait queue */
 	int write_wait_queued;
 	/** entry in reuse.tree_by_id, if key is NULL, not in tree, otherwise,
-	 * this struct is key and sorted by ID from pending_tcp->id. */
+	 * this struct is key and sorted by ID (from waiting_tcp.id). */
 	rbnode_type id_node;
+	/** the ID for the query; checked in reply */
+	uint16_t id;
 	/** timeout event; timer keeps running whether the query is
 	 * waiting for a buffer or the tcp reply is pending */
 	struct comm_timer* timer;

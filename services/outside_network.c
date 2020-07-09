@@ -172,11 +172,9 @@ int reuse_id_cmp(const void* key1, const void* key2)
 {
 	struct waiting_tcp* w1 = (struct waiting_tcp*)key1;
 	struct waiting_tcp* w2 = (struct waiting_tcp*)key2;
-	struct pending_tcp* p1 = (struct pending_tcp*)w1->next_waiting;
-	struct pending_tcp* p2 = (struct pending_tcp*)w2->next_waiting;
-	if(p1->id < p2->id)
+	if(w1->id < w2->id)
 		return -1;
-	if(p1->id > p2->id)
+	if(w1->id > w2->id)
 		return 1;
 	return 0;
 }
@@ -420,12 +418,9 @@ static struct waiting_tcp*
 reuse_tcp_by_id_find(struct reuse_tcp* reuse, uint16_t id)
 {
 	struct waiting_tcp key_w;
-	struct pending_tcp key_p;
 	memset(&key_w, 0, sizeof(key_w));
-	memset(&key_p, 0, sizeof(key_p));
-	key_w.next_waiting = (void*)&key_p;
 	key_w.id_node.key = &key_w;
-	key_p.id = id;
+	key_w.id = id;
 	return (struct waiting_tcp*)rbtree_search(&reuse->tree_by_id, &key_w);
 }
 
@@ -434,7 +429,7 @@ static uint16_t
 tree_by_id_get_id(rbnode_type* node)
 {
 	struct waiting_tcp* w = (struct waiting_tcp*)node->key;
-	return ((struct pending_tcp*)w->next_waiting)->id;
+	return w->id;
 }
 
 /** find reuse tcp stream to destination for query, or NULL if none */
@@ -509,7 +504,7 @@ outnet_tcp_take_query_setup(int s, struct pending_tcp* pend,
 	struct waiting_tcp* w)
 {
 	struct timeval tv;
-	pend->id = LDNS_ID_WIRE(w->pkt);
+	w->id = LDNS_ID_WIRE(w->pkt);
 	pend->c->tcp_write_pkt = w->pkt;
 	pend->c->tcp_write_pkt_len = w->pkt_len;
 	pend->c->tcp_write_and_read = 1;
