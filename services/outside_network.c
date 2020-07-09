@@ -827,7 +827,9 @@ static void reuse_cb_readwait_for_failure(struct pending_tcp* pend, int err)
 
 /** perform callbacks for failure and also decommission pending tcp.
  * the callbacks remove references in sq->pending to the waiting_tcp
- * members of the tree_by_id in the pending tcp. */
+ * members of the tree_by_id in the pending tcp.  The pending_tcp is
+ * removed before the callbacks, so that the callbacks do not modify
+ * the pending_tcp due to its reference in the outside_network reuse tree */
 static void reuse_cb_and_decommission(struct outside_network* outnet,
 	struct pending_tcp* pend, int error)
 {
