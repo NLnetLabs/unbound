@@ -887,6 +887,7 @@ outnet_tcp_cb(struct comm_point* c, void* arg, int error,
 		reuse_tcp_remove_tree_list(outnet, &pend->reuse);
 	} else if(error == NETEVENT_PKT_WRITTEN) {
 		/* the packet we want to write has been written. */
+		verbose(VERB_ALGO, "outnet tcp pkt was written event");
 		log_assert(c == pend->c);
 		log_assert(pend->query->pkt == pend->c->tcp_write_pkt);
 		log_assert(pend->query->pkt_len == pend->c->tcp_write_pkt_len);
@@ -897,10 +898,14 @@ outnet_tcp_cb(struct comm_point* c, void* arg, int error,
 		pend->query = NULL;
 		/* setup to write next packet or setup read timeout */
 		if(pend->reuse.write_wait_first) {
+			verbose(VERB_ALGO, "outnet tcp setup next pkt");
 			pend->query = reuse_write_wait_pop(&pend->reuse);
 			outnet_tcp_take_query_setup(pend->c->fd, pend,
 				pend->query);
 		} else {
+			verbose(VERB_ALGO, "outnet tcp writes done, wait");
+			pend->c->tcp_write_and_read = 0;
+			pend->c->tcp_is_reading = 1;
 			reuse_tcp_setup_timeout(pend);
 		}
 		return 0;
@@ -926,10 +931,12 @@ outnet_tcp_cb(struct comm_point* c, void* arg, int error,
 		}
 	}
 	if(pend->query) {
-		reuse_tree_by_id_delete(&pend->reuse, pend->query);
-		waiting_tcp_callback(pend->query, c, error, reply_info);
-		waiting_tcp_delete(pend->query);
+		struct waiting_tcp* w = pend->query;
 		pend->query = NULL;
+		reuse_tree_by_id_delete(&pend->reuse, w);
+		verbose(5, "outnet tcp callback query err %d buflen %d", error, (int)sldns_buffer_limit(c->buffer));
+		waiting_tcp_callback(w, c, error, reply_info);
+		waiting_tcp_delete(w);
 	}
 	verbose(5, "outnet_tcp_cb reuse after cb");
 	if(pend->reuse.node.key) {

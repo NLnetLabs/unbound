@@ -3307,11 +3307,16 @@ comm_point_start_listening(struct comm_point* c, int newfd, int msec)
 	}
 	if(c->type == comm_tcp || c->type == comm_http) {
 		ub_event_del_bits(c->ev->ev, UB_EV_READ|UB_EV_WRITE);
-		if(c->tcp_write_and_read)
+		if(c->tcp_write_and_read) {
+			log_info("startlistening %d mode rw", (newfd==-1?c->fd:newfd));
 			ub_event_add_bits(c->ev->ev, UB_EV_READ|UB_EV_WRITE);
-		else if(c->tcp_is_reading)
+		} else if(c->tcp_is_reading) {
+			log_info("startlistening %d mode r", (newfd==-1?c->fd:newfd));
 			ub_event_add_bits(c->ev->ev, UB_EV_READ);
-		else	ub_event_add_bits(c->ev->ev, UB_EV_WRITE);
+		} else	{
+			log_info("startlistening %d mode w", (newfd==-1?c->fd:newfd));
+			ub_event_add_bits(c->ev->ev, UB_EV_WRITE);
+		}
 	}
 	if(newfd != -1) {
 		if(c->fd != -1 && c->fd != newfd) {
