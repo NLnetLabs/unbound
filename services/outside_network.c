@@ -1773,6 +1773,7 @@ outnet_tcptimer(void* arg)
 	} else {
 		/* it was in use */
 		struct pending_tcp* pend=(struct pending_tcp*)w->next_waiting;
+		struct pending_tcp pickup;
 		/* see if it needs unlink from reuse tree */
 		if(pend->reuse.node.key) {
 			reuse_tcp_remove_tree_list(outnet, &pend->reuse);
@@ -1785,19 +1786,33 @@ outnet_tcptimer(void* arg)
 #endif
 		}
 		comm_point_close(pend->c);
+		/* pickup the callback items and call them after we have
+		 * removed the current pending. so that the callbacks
+		 * to the state machine happen after the query has timeouted
+		 * and been deleted and it works from that clean state,
+		 * because it may call the outside network routines to make
+		 * new queries. */
+		pickup = *pend;
+		/* unlink them from pend, delete from pickup calls later */
+		pend->query = NULL;
+		rbtree_init(&pend->reuse.tree_by_id, reuse_id_cmp);
+		pend->reuse.write_wait_first = NULL;
+		pend->reuse.write_wait_last = NULL;
+		/* pend is clear for reuse in the tcp_free list */
+		pend->next_free = outnet->tcp_free;
+		outnet->tcp_free = pend;
+
 		/* do failure callbacks for all the queries in the
 		 * wait for write list and in the id-tree */
 		/* callback for 'w' arg already in list of curquery,
 		 * readwait list, writewait list */
-		reuse_cb_curquery_for_failure(pend, NETEVENT_TIMEOUT);
-		reuse_cb_readwait_for_failure(pend, NETEVENT_TIMEOUT);
-		reuse_cb_writewait_for_failure(pend, NETEVENT_TIMEOUT);
-		waiting_tcp_delete(pend->query); /* del curquery */
-		reuse_del_readwait(pend);
-		reuse_del_writewait(pend);
-		pend->query = NULL;
-		pend->next_free = outnet->tcp_free;
-		outnet->tcp_free = pend;
+		reuse_cb_curquery_for_failure(&pickup, NETEVENT_TIMEOUT);
+		reuse_cb_readwait_for_failure(&pickup, NETEVENT_TIMEOUT);
+		reuse_cb_writewait_for_failure(&pickup, NETEVENT_TIMEOUT);
+		/* delete the stored callback structures */
+		waiting_tcp_delete(pickup.query);
+		reuse_del_readwait(&pickup);
+		reuse_del_writewait(&pickup);
 	}
 	use_free_buffer(outnet);
 }
