@@ -1962,6 +1962,11 @@ pending_tcp_query(struct serviced_query* sq, sldns_buffer* packet,
 	struct waiting_tcp* w;
 
 	verbose(5, "pending_tcp_query");
+	if(sldns_buffer_limit(packet) < sizeof(uint16_t)) {
+		verbose(4, "pending tcp query with too short buffer < 2");
+		return NULL;
+	}
+
 	/* find out if a reused stream to the target exists */
 	/* if so, take it into use */
 	reuse = reuse_tcp_find(sq->outnet, &sq->addr, sq->addrlen,
@@ -1997,7 +2002,7 @@ pending_tcp_query(struct serviced_query* sq, sldns_buffer* packet,
 	if(reuse)
 		w->id = reuse_tcp_select_id(reuse, sq->outnet);
 	else	w->id = ((unsigned)ub_random(sq->outnet->rnd)>>8) & 0xffff;
-	LDNS_ID_SET(sldns_buffer_begin(packet), w->id);
+	LDNS_ID_SET(w->pkt, w->id);
 	memcpy(&w->addr, &sq->addr, sq->addrlen);
 	w->addrlen = sq->addrlen;
 	w->outnet = sq->outnet;
