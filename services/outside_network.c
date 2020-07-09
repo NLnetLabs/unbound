@@ -507,7 +507,6 @@ outnet_tcp_take_query_setup(int s, struct pending_tcp* pend,
 	struct waiting_tcp* w)
 {
 	struct timeval tv;
-	w->id = LDNS_ID_WIRE(w->pkt);
 	pend->c->tcp_write_pkt = w->pkt;
 	pend->c->tcp_write_pkt_len = w->pkt_len;
 	pend->c->tcp_write_and_read = 1;
@@ -683,6 +682,8 @@ use_free_buffer(struct outside_network* outnet)
 				reuse_write_wait_push_back(reuse, w);
 			} else {
 				/* write straight away */
+				/* stop the timer on read of the fd */
+				comm_point_stop_listening(reuse->pending->c);
 				reuse->pending->query = w;
 				outnet_tcp_take_query_setup(
 					reuse->pending->c->fd, reuse->pending,
@@ -786,7 +787,8 @@ decommission_pending_tcp(struct outside_network* outnet,
 		/* needs unlink from the reuse tree to get deleted */
 		reuse_tcp_remove_tree_list(outnet, &pend->reuse);
 	}
-	waiting_tcp_delete(pend->query);
+	if(pend->query && !rbtree_search(&pend->reuse.tree_by_id, pend->query))
+		waiting_tcp_delete(pend->query);
 	pend->query = NULL;
 	reuse_del_readwait(pend);
 	reuse_del_writewait(pend);
@@ -881,6 +883,7 @@ reuse_tcp_setup_read_and_timeout(struct pending_tcp* pend_tcp)
 	sldns_buffer_clear(pend_tcp->c->buffer);
 	pend_tcp->c->tcp_is_reading = 1;
 	pend_tcp->c->tcp_byte_count = 0;
+	comm_point_stop_listening(pend_tcp->c);
 	comm_point_start_listening(pend_tcp->c, -1, REUSE_TIMEOUT);
 }
 
@@ -969,7 +972,7 @@ outnet_tcp_cb(struct comm_point* c, void* arg, int error,
 		waiting_tcp_delete(w);
 	}
 	verbose(5, "outnet_tcp_cb reuse after cb");
-	if(pend->reuse.node.key) {
+	if(error == NETEVENT_NOERROR && pend->reuse.node.key) {
 		verbose(5, "outnet_tcp_cb reuse after cb: keep it");
 		/* it is in the reuse_tcp tree, with other queries, or
 		 * on the empty list. do not decommission it */
@@ -1847,7 +1850,9 @@ outnet_tcptimer(void* arg)
 		reuse_cb_readwait_for_failure(&pickup, NETEVENT_TIMEOUT);
 		reuse_cb_writewait_for_failure(&pickup, NETEVENT_TIMEOUT);
 		/* delete the stored callback structures */
-		waiting_tcp_delete(pickup.query);
+		if(pickup.query &&
+			!rbtree_search(&pickup.reuse.tree_by_id, pickup.query))
+			waiting_tcp_delete(pickup.query);
 		reuse_del_readwait(&pickup);
 		reuse_del_writewait(&pickup);
 	}
@@ -1955,7 +1960,6 @@ pending_tcp_query(struct serviced_query* sq, sldns_buffer* packet,
 	struct pending_tcp* pend = sq->outnet->tcp_free;
 	struct reuse_tcp* reuse = NULL;
 	struct waiting_tcp* w;
-	uint16_t id;
 
 	verbose(5, "pending_tcp_query");
 	/* find out if a reused stream to the target exists */
@@ -1991,9 +1995,9 @@ pending_tcp_query(struct serviced_query* sq, sldns_buffer* packet,
 	w->pkt_len = sldns_buffer_limit(packet);
 	memmove(w->pkt, sldns_buffer_begin(packet), w->pkt_len);
 	if(reuse)
-		id = reuse_tcp_select_id(reuse, sq->outnet);
-	else	id = ((unsigned)ub_random(sq->outnet->rnd)>>8) & 0xffff;
-	LDNS_ID_SET(sldns_buffer_begin(packet), id);
+		w->id = reuse_tcp_select_id(reuse, sq->outnet);
+	else	w->id = ((unsigned)ub_random(sq->outnet->rnd)>>8) & 0xffff;
+	LDNS_ID_SET(sldns_buffer_begin(packet), w->id);
 	memcpy(&w->addr, &sq->addr, sq->addrlen);
 	w->addrlen = sq->addrlen;
 	w->outnet = sq->outnet;
@@ -2019,6 +2023,8 @@ pending_tcp_query(struct serviced_query* sq, sldns_buffer* packet,
 			/* can we write right now? */
 			if(pend->query == NULL) {
 				/* write straight away */
+				/* stop the timer on read of the fd */
+				comm_point_stop_listening(pend->c);
 				pend->query = w;
 				outnet_tcp_take_query_setup(pend->c->fd, pend,
 					w);
