@@ -418,10 +418,13 @@ static struct waiting_tcp*
 reuse_tcp_by_id_find(struct reuse_tcp* reuse, uint16_t id)
 {
 	struct waiting_tcp key_w;
+	rbnode_type* n;
 	memset(&key_w, 0, sizeof(key_w));
 	key_w.id_node.key = &key_w;
 	key_w.id = id;
-	return (struct waiting_tcp*)rbtree_search(&reuse->tree_by_id, &key_w);
+	n = rbtree_search(&reuse->tree_by_id, &key_w);
+	if(!n) return NULL;
+	return (struct waiting_tcp*)n->key;
 }
 
 /** return ID value of rbnode in tree_by_id */
