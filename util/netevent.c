@@ -1460,7 +1460,6 @@ comm_point_tcp_handle_read(int fd, struct comm_point* c, int short_ok)
 {
 	ssize_t r;
 	log_assert(c->type == comm_tcp || c->type == comm_local);
-	verbose(5, "comm point tcp handle read fd %d", fd);
 	if(c->ssl)
 		return ssl_handle_it(c, 0);
 	if(!c->tcp_is_reading && !c->tcp_write_and_read)
@@ -1572,10 +1571,8 @@ comm_point_tcp_handle_write(int fd, struct comm_point* c)
 #else
 	buffer = c->buffer;
 #endif
-	verbose(5, "comm point tcp handle write fd %d", fd);
 	if(c->tcp_is_reading && !c->ssl && !c->tcp_write_and_read)
 		return 0;
-	verbose(5, "comm point tcp handle write fd %d, part2", fd);
 	log_assert(fd != -1);
 	if(((!c->tcp_write_and_read && c->tcp_byte_count == 0) || (c->tcp_write_and_read && c->tcp_write_byte_count == 0)) && c->tcp_check_nb_connect) {
 		/* check for pending error from nonblocking connect */
@@ -1617,10 +1614,8 @@ comm_point_tcp_handle_write(int fd, struct comm_point* c)
 			return 0;
 		}
 	}
-	verbose(5, "comm point tcp handle write fd %d, part3", fd);
 	if(c->ssl)
 		return ssl_handle_it(c, 1);
-	verbose(5, "comm point tcp handle write fd %d, part4", fd);
 
 #ifdef USE_MSG_FASTOPEN
 	/* Only try this on first use of a connection that uses tfo, 
@@ -1709,7 +1704,6 @@ comm_point_tcp_handle_write(int fd, struct comm_point* c)
 	}
 #endif /* USE_MSG_FASTOPEN */
 
-	verbose(5, "comm point tcp handle write fd %d: before write", fd);
 	if((c->tcp_write_and_read?c->tcp_write_byte_count:c->tcp_byte_count) < sizeof(uint16_t)) {
 		uint16_t len = htons(c->tcp_write_and_read?c->tcp_write_pkt_len:sldns_buffer_limit(buffer));
 #ifdef HAVE_WRITEV
@@ -1736,7 +1730,6 @@ comm_point_tcp_handle_write(int fd, struct comm_point* c)
 				sizeof(uint16_t)-c->tcp_byte_count, 0);
 		}
 #endif /* HAVE_WRITEV */
-		verbose(5, "comm point tcp handle write fd %d: write res %d", fd, (int)r);
 		if(r == -1) {
 #ifndef USE_WINSOCK
 #  ifdef EPIPE
@@ -1792,7 +1785,6 @@ comm_point_tcp_handle_write(int fd, struct comm_point* c)
 	}
 	log_assert(c->tcp_write_and_read || sldns_buffer_remaining(buffer) > 0);
 	log_assert(!c->tcp_write_and_read || c->tcp_write_byte_count < c->tcp_write_pkt_len + 2);
-	verbose(5, "comm point tcp handle write fd %d: before write remain", fd);
 	if(c->tcp_write_and_read) {
 		r = send(fd, (void*)c->tcp_write_pkt + c->tcp_write_byte_count - 2,
 			c->tcp_write_pkt_len + 2 - c->tcp_write_byte_count, 0);
@@ -1800,7 +1792,6 @@ comm_point_tcp_handle_write(int fd, struct comm_point* c)
 		r = send(fd, (void*)sldns_buffer_current(buffer),
 			sldns_buffer_remaining(buffer), 0);
 	}
-	verbose(5, "comm point tcp handle write fd %d: write remain res %d", fd, (int)r);
 	if(r == -1) {
 #ifndef USE_WINSOCK
 		if(errno == EINTR || errno == EAGAIN)
