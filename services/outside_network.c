@@ -507,6 +507,9 @@ outnet_tcp_take_query_setup(int s, struct pending_tcp* pend,
 	struct waiting_tcp* w)
 {
 	struct timeval tv;
+	verbose(5, "outnet_tcp_take_query_setup: setup packet to write "
+		"len %d timeout %d msec",
+		(int)w->pkt_len, w->timeout);
 	pend->c->tcp_write_pkt = w->pkt;
 	pend->c->tcp_write_pkt_len = w->pkt_len;
 	pend->c->tcp_write_and_read = 1;
