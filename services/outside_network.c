@@ -935,7 +935,7 @@ outnet_tcp_cb(struct comm_point* c, void* arg, int error,
 			w = reuse_tcp_by_id_find(&pend->reuse, id);
 		}
 	}
-	if(!w) {
+	if(error == NETEVENT_NOERROR && !w) {
 		/* no struct waiting found in tree, no reply to call */
 		log_addr(VERB_QUERY, "outnettcp: bad ID in reply, from:",
 			&pend->reuse.addr, pend->reuse.addrlen);
