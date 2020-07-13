@@ -1046,6 +1046,8 @@ remote-control:
 # upstream log destination, by socket path, TCP or TLS destination.
 # dnstap:
 # 	dnstap-enable: no
+# 	# if set to yes frame streams will be used in bidirectional mode
+# 	dnstap-bidirectional: yes
 # 	dnstap-socket-path: "@DNSTAP_SOCKET_PATH@"
 # 	# if "" use the unix socket in dnstap-socket-path, otherwise,
 # 	# set it to "IPaddress[@port]" of the destination.

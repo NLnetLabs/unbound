@@ -298,6 +298,7 @@ config_create(void)
 	if(!(cfg->dnstap_socket_path = strdup(DNSTAP_SOCKET_PATH)))
 		goto error_exit;
 #endif
+	cfg->dnstap_bidirectional = 1;
 	cfg->dnstap_tls = 1;
 	cfg->disable_dnssec_lame_check = 0;
 	cfg->ip_ratelimit = 0;
@@ -639,6 +640,7 @@ int config_set_option(struct config_file* cfg, const char* opt,
 #endif
 #ifdef USE_DNSTAP
 	else S_YNO("dnstap-enable:", dnstap)
+	else S_YNO("dnstap-bidirectional:", dnstap_bidirectional)
 	else S_STR("dnstap-socket-path:", dnstap_socket_path)
 	else S_STR("dnstap-ip:", dnstap_ip)
 	else S_YNO("dnstap-tls:", dnstap_tls)
@@ -1055,6 +1057,7 @@ config_get_option(struct config_file* cfg, const char* opt,
 #endif
 #ifdef USE_DNSTAP
 	else O_YNO(opt, "dnstap-enable", dnstap)
+	else O_YNO(opt, "dnstap-bidirectional", dnstap_bidirectional)
 	else O_STR(opt, "dnstap-socket-path", dnstap_socket_path)
 	else O_STR(opt, "dnstap-ip", dnstap_ip)
 	else O_YNO(opt, "dnstap-tls", dnstap_tls)
