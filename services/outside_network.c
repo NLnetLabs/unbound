@@ -648,6 +648,31 @@ outnet_tcp_take_into_use(struct waiting_tcp* w)
 	return 1;
 }
 
+/** Touch the lru of a reuse_tcp element, it is in use.
+ * This moves it to the front of the list, where it is not likely to
+ * be closed.  Items at the back of the list are closed to make space. */
+static void
+reuse_tcp_lru_touch(struct outside_network* outnet, struct reuse_tcp* reuse)
+{
+	if(!reuse->item_on_lru_list)
+		return; /* not on the list, no lru to modify */
+	if(!reuse->lru_prev)
+		return; /* already first in the list */
+	/* remove at current position */
+	/* since it is not first, there is a previous element */
+	reuse->lru_prev->lru_next = reuse->lru_next;
+	if(reuse->lru_next)
+		reuse->lru_next->lru_prev = reuse->lru_prev;
+	else	outnet->tcp_reuse_last = reuse->lru_prev;
+	/* insert at the front */
+	reuse->lru_prev = NULL;
+	reuse->lru_next = outnet->tcp_reuse_first;
+	/* since it is not first, it is not the only element and
+	 * lru_next is thus not NULL and thus reuse is now not the last in
+	 * the list, so outnet->tcp_reuse_last does not need to be modified */
+	outnet->tcp_reuse_first = reuse;
+}
+
 /** call callback on waiting_tcp, if not NULL */
 static void
 waiting_tcp_callback(struct waiting_tcp* w, struct comm_point* c, int error,
@@ -677,6 +702,7 @@ use_free_buffer(struct outside_network* outnet)
 		if(reuse) {
 			log_reuse_tcp(5, "use free buffer for waiting tcp: "
 				"found reuse", reuse);
+			reuse_tcp_lru_touch(outnet, reuse);
 			comm_timer_disable(w->timer);
 			w->next_waiting = (void*)reuse->pending;
 			reuse_tree_by_id_insert(reuse, w);
@@ -1929,6 +1955,7 @@ pending_tcp_query(struct serviced_query* sq, sldns_buffer* packet,
 		log_reuse_tcp(5, "pending_tcp_query: found reuse", reuse);
 		log_assert(reuse->pending);
 		pend = reuse->pending;
+		reuse_tcp_lru_touch(sq->outnet, reuse);
 	}
 
 	/* if !pend but we have reuse streams, close a reuse stream
