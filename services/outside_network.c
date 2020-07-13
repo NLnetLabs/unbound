@@ -911,12 +911,19 @@ outnet_tcp_cb(struct comm_point* c, void* arg, int error,
 		/* setup to write next packet or setup read timeout */
 		if(pend->reuse.write_wait_first) {
 			verbose(VERB_ALGO, "outnet tcp setup next pkt");
+			/* we can write it straight away perhaps, set flag
+			 * because this callback called after a tcp write
+			 * succeeded and likely more buffer space is available
+			 * and we can write some more. */
+			pend->c->tcp_more_write_again = 1;
 			pend->query = reuse_write_wait_pop(&pend->reuse);
 			outnet_tcp_take_query_setup(pend->c->fd, pend,
 				pend->query);
 		} else {
 			verbose(VERB_ALGO, "outnet tcp writes done, wait");
 			pend->c->tcp_write_and_read = 0;
+			pend->c->tcp_more_read_again = 0;
+			pend->c->tcp_more_write_again = 0;
 			pend->c->tcp_is_reading = 1;
 			reuse_tcp_setup_timeout(pend);
 		}
@@ -964,6 +971,12 @@ outnet_tcp_cb(struct comm_point* c, void* arg, int error,
 		verbose(5, "outnet_tcp_cb reuse after cb: keep it");
 		/* it is in the reuse_tcp tree, with other queries, or
 		 * on the empty list. do not decommission it */
+		/* if there are more outstanding queries, we could try to
+		 * read again, to see if it is on the input,
+		 * because this callback called after a successful read
+		 * and there could be more bytes to read on the input */
+		if(pend->reuse.tree_by_id.count != 0)
+			pend->c->tcp_more_read_again = 1;
 		reuse_tcp_setup_read_and_timeout(pend);
 		return 0;
 	}

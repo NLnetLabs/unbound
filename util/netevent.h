@@ -268,6 +268,16 @@ struct comm_point {
 	/** length of tcp_write_pkt in bytes */
 	size_t tcp_write_pkt_len;
 
+	/** if set try to read another packet again (over connection with
+	 * multiple packets), once set, tries once, then zero again,
+	 * so set it in the packet complete section. */
+	int tcp_more_read_again;
+
+	/** if set try to write another packet (over connection with
+	 * multiple packets), once set, tries once, then zero again,
+	 * so set it in the packet complete section. */
+	int tcp_more_write_again;
+
 	/** if set, read/write completes:
 		read/write state of tcp is toggled.
 		buffer reset/bytecount reset.

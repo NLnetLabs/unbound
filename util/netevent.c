@@ -985,6 +985,8 @@ reclaim_tcp_handler(struct comm_point* c)
 			comm_point_start_listening(c->tcp_parent, -1, -1);
 		}
 	}
+	c->tcp_more_read_again = 0;
+	c->tcp_more_write_again = 0;
 }
 
 /** do the callback when writing is done */
@@ -1852,6 +1854,52 @@ tcp_req_info_read_again(int fd, struct comm_point* c)
 	}
 }
 
+/** read again to drain buffers when there could be more to read */
+static void
+tcp_more_read_again(int fd, struct comm_point* c)
+{
+	/* if the packet is done, but another one could be waiting on
+	 * the connection, the callback signals this, and we try again */
+	/* this continues until the read routines get EAGAIN or so,
+	 * and thus does not call the callback, and the bool is 0 */
+	while(c->tcp_more_read_again) {
+		c->tcp_more_read_again = 0;
+		if(!comm_point_tcp_handle_read(fd, c, 0)) {
+			reclaim_tcp_handler(c);
+			if(!c->tcp_do_close) {
+				fptr_ok(fptr_whitelist_comm_point(
+					c->callback));
+				(void)(*c->callback)(c, c->cb_arg, 
+					NETEVENT_CLOSED, NULL);
+			}
+			return;
+		}
+	}
+}
+
+/** write again to fill up when there could be more to write */
+static void
+tcp_more_write_again(int fd, struct comm_point* c)
+{
+	/* if the packet is done, but another is waiting to be written,
+	 * the callback signals it and we try again. */
+	/* this continues until the write routines get EAGAIN or so,
+	 * and thus does not call the callback, and the bool is 0 */
+	while(c->tcp_more_write_again) {
+		c->tcp_more_write_again = 0;
+		if(!comm_point_tcp_handle_write(fd, c)) {
+			reclaim_tcp_handler(c);
+			if(!c->tcp_do_close) {
+				fptr_ok(fptr_whitelist_comm_point(
+					c->callback));
+				(void)(*c->callback)(c, c->cb_arg, 
+					NETEVENT_CLOSED, NULL);
+			}
+			return;
+		}
+	}
+}
+
 void 
 comm_point_tcp_handle_callback(int fd, short event, void* arg)
 {
@@ -1903,6 +1951,8 @@ comm_point_tcp_handle_callback(int fd, short event, void* arg)
 		}
 		if(has_tcpq && c->tcp_req_info && c->tcp_req_info->read_again)
 			tcp_req_info_read_again(fd, c);
+		if(c->tcp_more_read_again)
+			tcp_more_read_again(fd, c);
 		return;
 	}
 	if(event&UB_EV_WRITE) {
@@ -1918,6 +1968,8 @@ comm_point_tcp_handle_callback(int fd, short event, void* arg)
 		}
 		if(has_tcpq && c->tcp_req_info && c->tcp_req_info->read_again)
 			tcp_req_info_read_again(fd, c);
+		if(c->tcp_more_write_again)
+			tcp_more_write_again(fd, c);
 		return;
 	}
 	log_err("Ignored event %d for tcphdl.", event);
