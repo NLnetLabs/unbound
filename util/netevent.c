@@ -1869,7 +1869,7 @@ tcp_more_read_again(int fd, struct comm_point* c)
 			if(!c->tcp_do_close) {
 				fptr_ok(fptr_whitelist_comm_point(
 					c->callback));
-				(void)(*c->callback)(c, c->cb_arg, 
+				(void)(*c->callback)(c, c->cb_arg,
 					NETEVENT_CLOSED, NULL);
 			}
 			return;
@@ -1892,7 +1892,7 @@ tcp_more_write_again(int fd, struct comm_point* c)
 			if(!c->tcp_do_close) {
 				fptr_ok(fptr_whitelist_comm_point(
 					c->callback));
-				(void)(*c->callback)(c, c->cb_arg, 
+				(void)(*c->callback)(c, c->cb_arg,
 					NETEVENT_CLOSED, NULL);
 			}
 			return;
@@ -1920,7 +1920,7 @@ comm_point_tcp_handle_callback(int fd, short event, void* arg)
 			if(!c->tcp_do_close) {
 				fptr_ok(fptr_whitelist_comm_point(
 					c->callback));
-				(void)(*c->callback)(c, c->cb_arg, 
+				(void)(*c->callback)(c, c->cb_arg,
 					NETEVENT_CLOSED, NULL);
 			}
 			return;
@@ -1945,7 +1945,7 @@ comm_point_tcp_handle_callback(int fd, short event, void* arg)
 			if(!c->tcp_do_close) {
 				fptr_ok(fptr_whitelist_comm_point(
 					c->callback));
-				(void)(*c->callback)(c, c->cb_arg, 
+				(void)(*c->callback)(c, c->cb_arg,
 					NETEVENT_CLOSED, NULL);
 			}
 		}
@@ -1962,7 +1962,7 @@ comm_point_tcp_handle_callback(int fd, short event, void* arg)
 			if(!c->tcp_do_close) {
 				fptr_ok(fptr_whitelist_comm_point(
 					c->callback));
-				(void)(*c->callback)(c, c->cb_arg, 
+				(void)(*c->callback)(c, c->cb_arg,
 					NETEVENT_CLOSED, NULL);
 			}
 		}
@@ -2600,7 +2600,7 @@ comm_point_http_handle_callback(int fd, short event, void* arg)
 			if(!c->tcp_do_close) {
 				fptr_ok(fptr_whitelist_comm_point(
 					c->callback));
-				(void)(*c->callback)(c, c->cb_arg, 
+				(void)(*c->callback)(c, c->cb_arg,
 					NETEVENT_CLOSED, NULL);
 			}
 		}
@@ -2612,7 +2612,7 @@ comm_point_http_handle_callback(int fd, short event, void* arg)
 			if(!c->tcp_do_close) {
 				fptr_ok(fptr_whitelist_comm_point(
 					c->callback));
-				(void)(*c->callback)(c, c->cb_arg, 
+				(void)(*c->callback)(c, c->cb_arg,
 					NETEVENT_CLOSED, NULL);
 			}
 		}
