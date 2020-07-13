@@ -1,3 +1,20 @@
+8 July 2020: Wouter
+	- Fix add missing DSA header, for compilation without deprecated
+	  OpenSSL APIs.
+	- Fix to use SSL_CTX_set_tlsext_ticket_key_evp_cb in OpenSSL
+	  3.0.0-alpha4.
+	- Longer keys for the test set, this avoids weak crypto errors.
+
+7 July 2020: Wouter
+	- Fix #259: Fix unbound-checkconf does not check view existence.
+	  unbound-checkconf checks access-control-view, access-control-tags,
+	  access-control-tag-actions and access-control-tag-datas.
+	- Fix offset of error printout for access-control-tag-datas.
+	- Review fixes for checkconf #259 change.
+
+6 July 2020: Wouter
+	- run_vm cleanup better and removes trailing slash on single argument.
+
 29 June 2020: Wouter
 	- Move reply list clean for serve expired mesh callback to after
 	  the reply is sent, so that script callbacks have reply_info.
