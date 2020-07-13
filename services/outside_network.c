@@ -435,6 +435,35 @@ tree_by_id_get_id(rbnode_type* node)
 	return w->id;
 }
 
+/** insert into reuse tcp tree and LRU, false on failure (duplicate) */
+static int
+reuse_tcp_insert(struct outside_network* outnet, struct pending_tcp* pend_tcp)
+{
+	log_reuse_tcp(5, "reuse_tcp_insert", &pend_tcp->reuse);
+	if(pend_tcp->reuse.item_on_lru_list)
+		return 1;
+	pend_tcp->reuse.node.key = &pend_tcp->reuse;
+	pend_tcp->reuse.pending = pend_tcp;
+	if(!rbtree_insert(&outnet->tcp_reuse, &pend_tcp->reuse.node)) {
+		/* this is a duplicate connection, close this one */
+		verbose(5, "reuse_tcp_insert: duplicate connection");
+		pend_tcp->reuse.node.key = NULL;
+		return 0;
+	}
+	/* insert into LRU, first is newest */
+	pend_tcp->reuse.lru_prev = NULL;
+	if(outnet->tcp_reuse_first) {
+		pend_tcp->reuse.lru_next = outnet->tcp_reuse_first;
+		outnet->tcp_reuse_first->lru_prev = &pend_tcp->reuse;
+	} else {
+		pend_tcp->reuse.lru_next = NULL;
+		outnet->tcp_reuse_last = &pend_tcp->reuse;
+	}
+	outnet->tcp_reuse_first = &pend_tcp->reuse;
+	pend_tcp->reuse.item_on_lru_list = 1;
+	return 1;
+}
+
 /** find reuse tcp stream to destination for query, or NULL if none */
 static struct reuse_tcp*
 reuse_tcp_find(struct outside_network* outnet, struct sockaddr_storage* addr,
@@ -643,6 +672,8 @@ outnet_tcp_take_into_use(struct waiting_tcp* w)
 	pend->c->repinfo.addrlen = w->addrlen;
 	memcpy(&pend->c->repinfo.addr, &w->addr, w->addrlen);
 	pend->reuse.pending = pend;
+	/* insert in reuse by address tree if not already inserted there */
+	(void)reuse_tcp_insert(w->outnet, pend);
 	reuse_tree_by_id_insert(&pend->reuse, w);
 	outnet_tcp_take_query_setup(s, pend, w);
 	return 1;
@@ -807,35 +838,6 @@ decommission_pending_tcp(struct outside_network* outnet,
 	pend->reuse.write_wait_first = NULL;
 	pend->reuse.write_wait_last = NULL;
 	reuse_del_readwait(&pend->reuse.tree_by_id);
-}
-
-/** insert into reuse tcp tree and LRU, false on failure (duplicate) */
-static int
-reuse_tcp_insert(struct outside_network* outnet, struct pending_tcp* pend_tcp)
-{
-	log_reuse_tcp(5, "reuse_tcp_insert", &pend_tcp->reuse);
-	if(pend_tcp->reuse.item_on_lru_list)
-		return 1;
-	pend_tcp->reuse.node.key = &pend_tcp->reuse;
-	pend_tcp->reuse.pending = pend_tcp;
-	if(!rbtree_insert(&outnet->tcp_reuse, &pend_tcp->reuse.node)) {
-		/* this is a duplicate connection, close this one */
-		verbose(5, "reuse_tcp_insert: duplicate connection");
-		pend_tcp->reuse.node.key = NULL;
-		return 0;
-	}
-	/* insert into LRU, first is newest */
-	pend_tcp->reuse.lru_prev = NULL;
-	if(outnet->tcp_reuse_first) {
-		pend_tcp->reuse.lru_next = outnet->tcp_reuse_first;
-		outnet->tcp_reuse_first->lru_prev = &pend_tcp->reuse;
-	} else {
-		pend_tcp->reuse.lru_next = NULL;
-		outnet->tcp_reuse_last = &pend_tcp->reuse;
-	}
-	outnet->tcp_reuse_first = &pend_tcp->reuse;
-	pend_tcp->reuse.item_on_lru_list = 1;
-	return 1;
 }
 
 /** perform failure callbacks for waiting queries in reuse read rbtree */
