@@ -69,6 +69,9 @@
 /** the msec to wait for reconnect slow, to stop busy spinning on reconnect */
 #define DTIO_RECONNECT_TIMEOUT_SLOW 1000
 
+/** maximum length of received frame */
+#define DTIO_RECV_FRAME_MAX_LEN 1000
+
 struct stop_flush_info;
 /** DTIO command channel commands */
 enum {
@@ -1031,6 +1034,12 @@ static int dtio_read_accept_frame(struct dt_io_thread* dtio)
 			continue;
 		}
 		dtio->read_frame.frame_len = ntohl(dtio->read_frame.frame_len);
+		if(dtio->read_frame.frame_len > DTIO_RECV_FRAME_MAX_LEN) {
+			verbose(VERB_OPS, "dnstap: received frame exceeds max "
+				"length, capped to %d bytes",
+				DTIO_RECV_FRAME_MAX_LEN);
+			dtio->read_frame.frame_len = DTIO_RECV_FRAME_MAX_LEN;
+		}
 		dtio->read_frame.buf = calloc(1, dtio->read_frame.frame_len);
 		dtio->read_frame.buf_cap = dtio->read_frame.frame_len;
 		if(!dtio->read_frame.buf) {
