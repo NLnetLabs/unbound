@@ -151,6 +151,9 @@ struct dt_io_thread {
 	 * This happens during negotiation, we then do not want to write,
 	 * but wait for a read event. */
 	int ssl_brief_read;
+	/** true if SSL_read is waiting for a write event. Set back to 0 after
+	 * single write event is handled. */
+	int ssl_brief_write;
 
 	/** the buffer that currently getting written, or NULL if no
 	 * (partial) message written now */

@@ -94,6 +94,8 @@ static int dtio_control_start_send(struct dt_io_thread* dtio);
 #ifdef HAVE_SSL
 /** enable briefly waiting for a read event, for SSL negotiation */
 static int dtio_enable_brief_read(struct dt_io_thread* dtio);
+/** enable briefly waiting for a write event, for SSL negotiation */
+static int dtio_enable_brief_write(struct dt_io_thread* dtio);
 #endif
 
 struct dt_msg_queue*
@@ -945,7 +947,7 @@ static int ssl_read_bytes(struct dt_io_thread* dtio, void* buf, size_t len)
 			/* continue later */
 			return -1;
 		} else if(want == SSL_ERROR_WANT_WRITE) {
-			(void)dtio_add_output_event_write(dtio);
+			(void)dtio_enable_brief_write(dtio);
 			return -1;
 		} else if(want == SSL_ERROR_SYSCALL) {
 #ifdef ECONNRESET
@@ -1036,9 +1038,9 @@ static int dtio_read_accept_frame(struct dt_io_thread* dtio)
 		dtio->read_frame.frame_len = ntohl(dtio->read_frame.frame_len);
 		if(dtio->read_frame.frame_len > DTIO_RECV_FRAME_MAX_LEN) {
 			verbose(VERB_OPS, "dnstap: received frame exceeds max "
-				"length, capped to %d bytes",
+				"length of %d bytes, closing connection",
 				DTIO_RECV_FRAME_MAX_LEN);
-			dtio->read_frame.frame_len = DTIO_RECV_FRAME_MAX_LEN;
+			goto close_connection;
 		}
 		dtio->read_frame.buf = calloc(1, dtio->read_frame.frame_len);
 		dtio->read_frame.buf_cap = dtio->read_frame.frame_len;
@@ -1204,6 +1206,24 @@ static int dtio_disable_brief_read(struct dt_io_thread* dtio)
 		return 1;
 	}
 	return dtio_add_output_event_write(dtio);
+}
+#endif /* HAVE_SSL */
+
+#ifdef HAVE_SSL
+/** enable the brief write condition */
+static int dtio_enable_brief_write(struct dt_io_thread* dtio)
+{
+	dtio->ssl_brief_write = 1;
+	return dtio_add_output_event_write(dtio);
+}
+#endif /* HAVE_SSL */
+
+#ifdef HAVE_SSL
+/** disable the brief write condition */
+static int dtio_disable_brief_write(struct dt_io_thread* dtio)
+{
+	dtio->ssl_brief_write = 0;
+	return dtio_add_output_event_read(dtio);
 }
 #endif /* HAVE_SSL */
 
@@ -1380,7 +1400,9 @@ void dtio_output_cb(int ATTR_UNUSED(fd), short bits, void* arg)
 	}
 #endif
 
-	if((bits&UB_EV_READ)) {
+	if((bits&UB_EV_READ || dtio->ssl_brief_write)) {
+		if(dtio->ssl_brief_write)
+			(void)dtio_disable_brief_write(dtio);
 		if(dtio->ready_frame_sent && !dtio->accept_frame_received) {
 			if(dtio_read_accept_frame(dtio) <= 0)
 				return;
