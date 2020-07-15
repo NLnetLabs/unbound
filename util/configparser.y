@@ -175,6 +175,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_IPSET VAR_IPSET_NAME_V4 VAR_IPSET_NAME_V6
 %token VAR_TLS_SESSION_TICKET_KEYS VAR_RPZ VAR_TAGS VAR_RPZ_ACTION_OVERRIDE
 %token VAR_RPZ_CNAME_OVERRIDE VAR_RPZ_LOG VAR_RPZ_LOG_NAME
+%token VAR_DYNLIB VAR_DYNLIB_FILE
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -183,7 +184,7 @@ toplevelvar: serverstart contents_server | stubstart contents_stub |
 	rcstart contents_rc | dtstart contents_dt | viewstart contents_view |
 	dnscstart contents_dnsc | cachedbstart contents_cachedb |
 	ipsetstart contents_ipset | authstart contents_auth |
-	rpzstart contents_rpz |
+	rpzstart contents_rpz | dynlibstart contents_dl
 	force_toplevel
 	;
 force_toplevel: VAR_FORCE_TOPLEVEL
@@ -2940,6 +2941,21 @@ py_script: VAR_PYTHON_SCRIPT STRING_ARG
 	{
 		OUTYY(("P(python-script:%s)\n", $2));
 		if(!cfg_strlist_append_ex(&cfg_parser->cfg->python_script, $2))
+			yyerror("out of memory");
+	}
+dynlibstart: VAR_DYNLIB
+	{ 
+		OUTYY(("\nP(dynlib:)\n")); 
+	}
+	;
+contents_dl: contents_dl content_dl
+	| ;
+content_dl: dl_file
+	;
+dl_file: VAR_DYNLIB_FILE STRING_ARG
+	{
+		OUTYY(("P(dynlib-file:%s)\n", $2));
+		if(!cfg_strlist_append_ex(&cfg_parser->cfg->dynlib_file, $2))
 			yyerror("out of memory");
 	}
 server_disable_dnssec_lame_check: VAR_DISABLE_DNSSEC_LAME_CHECK STRING_ARG
