@@ -1120,6 +1120,9 @@ static int dtio_read_accept_frame(struct dt_io_thread* dtio)
 				return 1;
 			} else {
 				/* unknow content type */
+				verbose(VERB_ALGO, "dnstap: ACCEPT frames "
+					"contains unknown content type, "
+					"closing connection");
 				goto close_connection;
 			}
 		}
