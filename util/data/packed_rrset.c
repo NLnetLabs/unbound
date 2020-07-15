@@ -220,6 +220,7 @@ packed_rrset_ttl_add(struct packed_rrset_data* data, time_t add)
 {
 	size_t i;
 	size_t total = data->count + data->rrsig_count;
+	data->ttl_add = add;
 	data->ttl += add;
 	for(i=0; i<total; i++)
 		data->rr_ttl[i] += add;
@@ -286,7 +287,7 @@ int packed_rr_to_string(struct ub_packed_rrset_key* rrset, size_t i,
 	else	sldns_write_uint16(rr+rrset->rk.dname_len, LDNS_RR_TYPE_RRSIG);
 	memmove(rr+rrset->rk.dname_len+2, &rrset->rk.rrset_class, 2);
 	sldns_write_uint32(rr+rrset->rk.dname_len+4,
-		(uint32_t)(d->rr_ttl[i]-now));
+		(uint32_t)(d->rr_ttl[i]-(SERVE_ORIGINAL_TTL ? d->ttl_add : now)));
 	memmove(rr+rrset->rk.dname_len+8, d->rr_data[i], d->rr_len[i]);
 	if(sldns_wire2str_rr_buf(rr, rlen, dest, dest_len) == -1) {
 		log_info("rrbuf failure %d %s", (int)d->rr_len[i], dest);
@@ -353,11 +354,12 @@ packed_rrset_copy_region(struct ub_packed_rrset_key* key,
 	for(i=0; i<d->count + d->rrsig_count; i++) {
 		if(d->rr_ttl[i] < now)
 			d->rr_ttl[i] = SERVE_EXPIRED?SERVE_EXPIRED_REPLY_TTL:0;
-		else	d->rr_ttl[i] -= now;
+		else	d->rr_ttl[i] -= SERVE_ORIGINAL_TTL ? data->ttl_add : now;
 	}
 	if(d->ttl < now)
 		d->ttl = SERVE_EXPIRED?SERVE_EXPIRED_REPLY_TTL:0;
-	else	d->ttl -= now;
+	else	d->ttl -= SERVE_ORIGINAL_TTL ? data->ttl_add : now;
+	d->ttl_add = 0; /* TTLs have been made relative */
 	return ck;
 }
 

@@ -1124,6 +1124,18 @@ responding with expired data.  A recommended value per
 draft-ietf-dnsop-serve-stale-10 is 1800.  Setting this to 0 will disable this
 behavior.  Default is 0.
 .TP
+.B serve\-original\-ttl: \fI<yes or no>
+If enabled, unbound will always return the original TTL as received from
+the upstream authoritative name server rather than the decrementing TTL as
+stored in the cache.  This feature may be useful if unbound serves as a 
+front-end to a hidden authoritative name server. Enabling this feature does 
+not impact cache expiry, it only changes the TTL unbound embeds in responses to 
+queries. Note that the returned TTL is still subject to the
+configured maximum TTL as set using \fBcache\-max\-ttl\fR (defaults to
+86400 seconds). If you wish to return higher original TTL values, you may
+need to explicitly adjust the setting for \fBcache\-max\-ttl\fR. 
+Default is "no".
+.TP
 .B val\-nsec3\-keysize\-iterations: \fI<"list of values">
 List of keysize and iteration count values, separated by spaces, surrounded
 by quotes. Default is "1024 150 2048 500 4096 2500". This determines the

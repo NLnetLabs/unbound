@@ -87,6 +87,8 @@ extern time_t SERVE_EXPIRED_TTL;
 extern time_t SERVE_EXPIRED_REPLY_TTL;
 /** Negative cache time (for entries without any RRs.) */
 #define NORR_TTL 5 /* seconds */
+/** If we serve the original TTL or decrementing TTLs */
+extern int SERVE_ORIGINAL_TTL;
 
 /**
  * Data stored in scratch pad memory during parsing.

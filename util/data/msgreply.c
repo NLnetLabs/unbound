@@ -67,6 +67,8 @@ int SERVE_EXPIRED = 0;
 time_t SERVE_EXPIRED_TTL = 0;
 /** TTL to use for expired records */
 time_t SERVE_EXPIRED_REPLY_TTL = 30;
+/** If we serve the original TTL or decrementing TTLs */
+int SERVE_ORIGINAL_TTL = 0;
 
 /** allocate qinfo, return 0 on error */
 static int
@@ -526,6 +528,7 @@ reply_info_set_ttls(struct reply_info* rep, time_t timenow)
 		for(j=0; j<data->count + data->rrsig_count; j++) {
 			data->rr_ttl[j] += timenow;
 		}
+		data->ttl_add = timenow;
 	}
 }
 
