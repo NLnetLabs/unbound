@@ -71,6 +71,8 @@
 
 /** maximum length of received frame */
 #define DTIO_RECV_FRAME_MAX_LEN 1000
+/** lentgh of the ACCEPT frame with DNSTAP content type */
+#define DNSTAP_ACCEPT_FRAME_LEN 4+4+4+strlen(DNSTAP_CONTENT_TYPE)
 
 struct stop_flush_info;
 /** DTIO command channel commands */
@@ -1004,6 +1006,7 @@ static int dtio_check_close(struct dt_io_thread* dtio)
 static int dtio_read_accept_frame(struct dt_io_thread* dtio)
 {
 	int r;
+	size_t read_frame_done;
 	while(dtio->read_frame.frame_len_done < 4) {
 #ifdef HAVE_SSL
 		if(dtio->ssl) {
@@ -1092,23 +1095,38 @@ static int dtio_read_accept_frame(struct dt_io_thread* dtio)
 		dtio_read_frame_free(&dtio->read_frame);
 		return -1;
 	}
+	read_frame_done = 4; /* control frame type */
 
-	if(dtio->read_frame.frame_len != 4+4+4+strlen(DNSTAP_CONTENT_TYPE) ||
-		memcmp(dtio->read_frame.buf+4+4+4, DNSTAP_CONTENT_TYPE,
-			strlen(DNSTAP_CONTENT_TYPE)) != 0) {
-		verbose(VERB_OPS, "dnstap: invalid content type on ACCEPT "
-			"frame");
-		goto close_connection;
+	/* Iteratate over control fields, ignore unknown types.
+	 * Need to be able to read at least 2 bytes (control field type +
+	 * length). */
+	while(read_frame_done+8 < dtio->read_frame.frame_len) {
+		uint32_t type = sldns_read_uint32(dtio->read_frame.buf +
+			read_frame_done);
+		uint32_t len = sldns_read_uint32(dtio->read_frame.buf +
+			read_frame_done + 4);
+		if(type == FSTRM_CONTROL_FIELD_TYPE_CONTENT_TYPE) {
+			if(len == strlen(DNSTAP_CONTENT_TYPE) &&
+				read_frame_done+8+len <=
+				dtio->read_frame.frame_len &&
+				memcmp(dtio->read_frame.buf + read_frame_done +
+					+ 8, DNSTAP_CONTENT_TYPE, len) == 0) {
+				if(!dtio_control_start_send(dtio)) {
+					verbose(VERB_OPS, "dnstap io: out of "
+					 "memory while sending START frame");
+					goto close_connection;
+				}
+				dtio->accept_frame_received = 1;
+				return 1;
+			} else {
+				/* unknow content type */
+				goto close_connection;
+			}
+		}
+		/* unknown option, try next */
+		read_frame_done += 8+len;
 	}
 
-	if(!dtio_control_start_send(dtio)) {
-		verbose(VERB_OPS, "dnstap io: out of memory while sending "
-			"START frame");
-		goto close_connection;
-	}
-
-	dtio->accept_frame_received = 1;
-	return 1;
 
 close_connection:
 	dtio_del_output_event(dtio);
