@@ -71,8 +71,6 @@
 
 /** maximum length of received frame */
 #define DTIO_RECV_FRAME_MAX_LEN 1000
-/** lentgh of the ACCEPT frame with DNSTAP content type */
-#define DNSTAP_ACCEPT_FRAME_LEN 4+4+4+strlen(DNSTAP_CONTENT_TYPE)
 
 struct stop_flush_info;
 /** DTIO command channel commands */
@@ -1097,7 +1095,7 @@ static int dtio_read_accept_frame(struct dt_io_thread* dtio)
 	}
 	read_frame_done = 4; /* control frame type */
 
-	/* Iteratate over control fields, ignore unknown types.
+	/* Iterate over control fields, ignore unknown types.
 	 * Need to be able to read at least 2 bytes (control field type +
 	 * length). */
 	while(read_frame_done+8 < dtio->read_frame.frame_len) {
