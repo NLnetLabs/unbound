@@ -48,6 +48,7 @@
 #include "util/ub_event.h"
 #include "util/net_help.h"
 #include "services/outside_network.h"
+#include "sldns/sbuffer.h"
 #ifdef HAVE_SYS_UN_H
 #include <sys/un.h>
 #endif
@@ -68,6 +69,9 @@
 /** the msec to wait for reconnect slow, to stop busy spinning on reconnect */
 #define DTIO_RECONNECT_TIMEOUT_SLOW 1000
 
+/** maximum length of received frame */
+#define DTIO_RECV_FRAME_MAX_LEN 1000
+
 struct stop_flush_info;
 /** DTIO command channel commands */
 enum {
@@ -85,9 +89,13 @@ static int dtio_add_output_event_write(struct dt_io_thread* dtio);
 static void dtio_reconnect_enable(struct dt_io_thread* dtio);
 /** stop from stop_flush event loop */
 static void dtio_stop_flush_exit(struct stop_flush_info* info);
+/** setup a start control message */
+static int dtio_control_start_send(struct dt_io_thread* dtio);
 #ifdef HAVE_SSL
 /** enable briefly waiting for a read event, for SSL negotiation */
 static int dtio_enable_brief_read(struct dt_io_thread* dtio);
+/** enable briefly waiting for a write event, for SSL negotiation */
+static int dtio_enable_brief_write(struct dt_io_thread* dtio);
 #endif
 
 struct dt_msg_queue*
@@ -261,6 +269,7 @@ int dt_io_thread_apply_cfg(struct dt_io_thread* dtio, struct config_file *cfg)
 	} else {
 		dtio->upstream_is_unix = 1;
 	}
+	dtio->is_bidirectional = cfg->dnstap_bidirectional;
 
 	if(dtio->upstream_is_unix) {
 		if(!cfg->dnstap_socket_path ||
@@ -551,6 +560,20 @@ static void dtio_cur_msg_free(struct dt_io_thread* dtio)
 	dtio->cur_msg_len_done = 0;
 }
 
+/** delete the buffer and counters used to read frame */
+static void dtio_read_frame_free(struct dt_frame_read_buf* rb)
+{
+	if(rb->buf) {
+		free(rb->buf);
+		rb->buf = NULL;
+	}
+	rb->buf_count = 0;
+	rb->buf_cap = 0;
+	rb->frame_len = 0;
+	rb->frame_len_done = 0;
+	rb->control_frame = 0;
+}
+
 /** del the output file descriptor event for listening */
 static void dtio_del_output_event(struct dt_io_thread* dtio)
 {
@@ -594,6 +617,11 @@ static void dtio_close_output(struct dt_io_thread* dtio)
 	if(dtio->cur_msg) {
 		dtio_cur_msg_free(dtio);
 	}
+
+	dtio->ready_frame_sent = 0;
+	dtio->accept_frame_received = 0;
+	dtio_read_frame_free(&dtio->read_frame);
+
 	dtio_reconnect_enable(dtio);
 }
 
@@ -855,6 +883,94 @@ static int dtio_write_more(struct dt_io_thread* dtio)
 	return 1;
 }
 
+/** Receive bytes from dtio->fd, store in buffer. Returns 0: closed,
+ * -1: continue, >0: number of bytes read into buffer */
+static ssize_t receive_bytes(struct dt_io_thread* dtio, void* buf, size_t len) {
+	ssize_t r;
+	r = recv(dtio->fd, (void*)buf, len, 0);
+	if(r == -1) {
+		char* to = dtio->socket_path;
+		if(!to) to = dtio->ip_str;
+		if(!to) to = "";
+#ifndef USE_WINSOCK
+		if(errno == EINTR || errno == EAGAIN)
+			return -1; /* try later */
+#else
+		if(WSAGetLastError() == WSAEINPROGRESS) {
+			return -1; /* try later */
+		} else if(WSAGetLastError() == WSAEWOULDBLOCK) {
+			ub_winsock_tcp_wouldblock(
+				(dtio->stop_flush_event?
+				dtio->stop_flush_event:dtio->event),
+				UB_EV_READ);
+			return -1; /* try later */
+		}
+#endif
+		if(dtio->reconnect_timeout > DTIO_RECONNECT_TIMEOUT_MIN &&
+			verbosity < 4)
+			return 0; /* no log retries on low verbosity */
+		log_err("dnstap io: output closed, recv %s: %s", to,
+			strerror(errno));
+		/* and close below */
+		return 0;
+	}
+	if(r == 0) {
+		if(dtio->reconnect_timeout > DTIO_RECONNECT_TIMEOUT_MIN &&
+			verbosity < 4)
+			return 0; /* no log retries on low verbosity */
+		verbose(VERB_DETAIL, "dnstap io: output closed by the other side");
+		/* and close below */
+		return 0;
+	}
+	/* something was received */
+	return r;
+}
+
+#ifdef HAVE_SSL
+/** Receive bytes over TLS from dtio->fd, store in buffer. Returns 0: closed,
+ * -1: continue, >0: number of bytes read into buffer */
+static int ssl_read_bytes(struct dt_io_thread* dtio, void* buf, size_t len)
+{
+	int r;
+	ERR_clear_error();
+	r = SSL_read(dtio->ssl, buf, len);
+	if(r <= 0) {
+		int want = SSL_get_error(dtio->ssl, r);
+		if(want == SSL_ERROR_ZERO_RETURN) {
+			if(dtio->reconnect_timeout > DTIO_RECONNECT_TIMEOUT_MIN &&
+				verbosity < 4)
+				return 0; /* no log retries on low verbosity */
+			verbose(VERB_DETAIL, "dnstap io: output closed by the "
+				"other side");
+			return 0;
+		} else if(want == SSL_ERROR_WANT_READ) {
+			/* continue later */
+			return -1;
+		} else if(want == SSL_ERROR_WANT_WRITE) {
+			(void)dtio_enable_brief_write(dtio);
+			return -1;
+		} else if(want == SSL_ERROR_SYSCALL) {
+#ifdef ECONNRESET
+			if(dtio->reconnect_timeout > DTIO_RECONNECT_TIMEOUT_MIN &&
+				errno == ECONNRESET && verbosity < 4)
+				return 0; /* silence reset by peer */
+#endif
+			if(errno != 0)
+				log_err("SSL_read syscall: %s",
+					strerror(errno));
+			verbose(VERB_DETAIL, "dnstap io: output closed by the "
+				"other side");
+			return 0;
+		}
+		log_crypto_err("could not SSL_read");
+		verbose(VERB_DETAIL, "dnstap io: output closed by the "
+				"other side");
+		return 0;
+	}
+	return r;
+}
+#endif /* HAVE_SSL */
+
 /** check if the output fd has been closed,
  * it returns false if the stream is closed. */
 static int dtio_check_close(struct dt_io_thread* dtio)
@@ -864,48 +980,158 @@ static int dtio_check_close(struct dt_io_thread* dtio)
 	 * packets is okay for the framestream protocol.  And also, the
 	 * read call can return that the stream has been closed by the
 	 * other side. */
-	ssize_t r;
 	uint8_t buf[1024];
+	int r = -1;
+
+
 	if(dtio->fd == -1) return 0;
-	while(1) {
-		r = recv(dtio->fd, (void*)buf, sizeof(buf), 0);
-		if(r == -1) {
-			char* to = dtio->socket_path;
-			if(!to) to = dtio->ip_str;
-			if(!to) to = "";
-#ifndef USE_WINSOCK
-			if(errno == EINTR || errno == EAGAIN)
-				return 1; /* try later */
-#else
-			if(WSAGetLastError() == WSAEINPROGRESS) {
-				return 1; /* try later */
-			} else if(WSAGetLastError() == WSAEWOULDBLOCK) {
-				ub_winsock_tcp_wouldblock(
-					(dtio->stop_flush_event?
-					dtio->stop_flush_event:dtio->event),
-					UB_EV_READ);
-				return 1; /* try later */
-			}
-#endif
-			if(dtio->reconnect_timeout > DTIO_RECONNECT_TIMEOUT_MIN && verbosity < 4)
-				break; /* no log retries on low verbosity */
-			log_err("dnstap io: output closed, recv %s: %s", to,
-				strerror(errno));
-			/* and close below */
-			break;
-		}
-		if(r == 0) {
-			if(dtio->reconnect_timeout > DTIO_RECONNECT_TIMEOUT_MIN && verbosity < 4)
-				break; /* no log retries on low verbosity */
-			verbose(VERB_DETAIL, "dnstap io: output closed by the other side");
-			/* and close below */
-			break;
-		}
-		/* something was received, ignore it */
+
+	while(r != 0) {
+		/* not interested in buffer content, overwrite */
+		r = receive_bytes(dtio, (void*)buf, sizeof(buf));
+		if(r == -1)
+			return 1;
 	}
 	/* the other end has been closed */
 	/* close the channel */
 	dtio_del_output_event(dtio);
+	dtio_close_output(dtio);
+	return 0;
+}
+
+/** Read accept frame. Returns -1: continue reading, 0: closed,
+ * 1: valid accept received. */
+static int dtio_read_accept_frame(struct dt_io_thread* dtio)
+{
+	int r;
+	size_t read_frame_done;
+	while(dtio->read_frame.frame_len_done < 4) {
+#ifdef HAVE_SSL
+		if(dtio->ssl) {
+			r = ssl_read_bytes(dtio,
+				(uint8_t*)&dtio->read_frame.frame_len+
+				dtio->read_frame.frame_len_done,
+				4-dtio->read_frame.frame_len_done);
+		} else {
+#endif
+			r = receive_bytes(dtio,
+				(uint8_t*)&dtio->read_frame.frame_len+
+				dtio->read_frame.frame_len_done,
+				4-dtio->read_frame.frame_len_done);
+#ifdef HAVE_SSL
+		}
+#endif
+		if(r == -1)
+			return -1; /* continue reading */
+		if(r == 0) {
+			 /* connection closed */
+			goto close_connection;
+		}
+		dtio->read_frame.frame_len_done += r;
+		if(dtio->read_frame.frame_len_done < 4)
+			return -1; /* continue reading */
+
+		if(dtio->read_frame.frame_len == 0) {
+			dtio->read_frame.frame_len_done = 0;
+			dtio->read_frame.control_frame = 1;
+			continue;
+		}
+		dtio->read_frame.frame_len = ntohl(dtio->read_frame.frame_len);
+		if(dtio->read_frame.frame_len > DTIO_RECV_FRAME_MAX_LEN) {
+			verbose(VERB_OPS, "dnstap: received frame exceeds max "
+				"length of %d bytes, closing connection",
+				DTIO_RECV_FRAME_MAX_LEN);
+			goto close_connection;
+		}
+		dtio->read_frame.buf = calloc(1, dtio->read_frame.frame_len);
+		dtio->read_frame.buf_cap = dtio->read_frame.frame_len;
+		if(!dtio->read_frame.buf) {
+			log_err("dnstap io: out of memory (creating read "
+				"buffer)");
+			goto close_connection;
+		}
+	}
+	if(dtio->read_frame.buf_count < dtio->read_frame.frame_len) {
+#ifdef HAVE_SSL
+		if(dtio->ssl) {
+			r = ssl_read_bytes(dtio, dtio->read_frame.buf+
+				dtio->read_frame.buf_count,
+				dtio->read_frame.buf_cap-
+				dtio->read_frame.buf_count);
+		} else {
+#endif
+			r = receive_bytes(dtio, dtio->read_frame.buf+
+				dtio->read_frame.buf_count,
+				dtio->read_frame.buf_cap-
+				dtio->read_frame.buf_count);
+#ifdef HAVE_SSL
+		}
+#endif
+		if(r == -1)
+			return -1; /* continue reading */
+		if(r == 0) {
+			 /* connection closed */
+			goto close_connection;
+		}
+		dtio->read_frame.buf_count += r;
+		if(dtio->read_frame.buf_count < dtio->read_frame.frame_len)
+			return -1; /* continue reading */
+	}
+
+	/* Complete frame received, check if this is a valid ACCEPT control
+	 * frame. */
+	if(dtio->read_frame.frame_len < 4) {
+		verbose(VERB_OPS, "dnstap: invalid data received");
+		goto close_connection;
+	}
+	if(sldns_read_uint32(dtio->read_frame.buf) !=
+		FSTRM_CONTROL_FRAME_ACCEPT) {
+		verbose(VERB_ALGO, "dnstap: invalid control type received, "
+			"ignored");
+		dtio->ready_frame_sent = 0;
+		dtio->accept_frame_received = 0;
+		dtio_read_frame_free(&dtio->read_frame);
+		return -1;
+	}
+	read_frame_done = 4; /* control frame type */
+
+	/* Iterate over control fields, ignore unknown types.
+	 * Need to be able to read at least 8 bytes (control field type +
+	 * length). */
+	while(read_frame_done+8 < dtio->read_frame.frame_len) {
+		uint32_t type = sldns_read_uint32(dtio->read_frame.buf +
+			read_frame_done);
+		uint32_t len = sldns_read_uint32(dtio->read_frame.buf +
+			read_frame_done + 4);
+		if(type == FSTRM_CONTROL_FIELD_TYPE_CONTENT_TYPE) {
+			if(len == strlen(DNSTAP_CONTENT_TYPE) &&
+				read_frame_done+8+len <=
+				dtio->read_frame.frame_len &&
+				memcmp(dtio->read_frame.buf + read_frame_done +
+					+ 8, DNSTAP_CONTENT_TYPE, len) == 0) {
+				if(!dtio_control_start_send(dtio)) {
+					verbose(VERB_OPS, "dnstap io: out of "
+					 "memory while sending START frame");
+					goto close_connection;
+				}
+				dtio->accept_frame_received = 1;
+				return 1;
+			} else {
+				/* unknow content type */
+				verbose(VERB_ALGO, "dnstap: ACCEPT frame "
+					"contains unknown content type, "
+					"closing connection");
+				goto close_connection;
+			}
+		}
+		/* unknown option, try next */
+		read_frame_done += 8+len;
+	}
+
+
+close_connection:
+	dtio_del_output_event(dtio);
+	dtio_reconnect_slow(dtio, DTIO_RECONNECT_TIMEOUT_SLOW);
 	dtio_close_output(dtio);
 	return 0;
 }
@@ -999,6 +1225,24 @@ static int dtio_disable_brief_read(struct dt_io_thread* dtio)
 		return 1;
 	}
 	return dtio_add_output_event_write(dtio);
+}
+#endif /* HAVE_SSL */
+
+#ifdef HAVE_SSL
+/** enable the brief write condition */
+static int dtio_enable_brief_write(struct dt_io_thread* dtio)
+{
+	dtio->ssl_brief_write = 1;
+	return dtio_add_output_event_write(dtio);
+}
+#endif /* HAVE_SSL */
+
+#ifdef HAVE_SSL
+/** disable the brief write condition */
+static int dtio_disable_brief_write(struct dt_io_thread* dtio)
+{
+	dtio->ssl_brief_write = 0;
+	return dtio_add_output_event_read(dtio);
 }
 #endif /* HAVE_SSL */
 
@@ -1175,8 +1419,13 @@ void dtio_output_cb(int ATTR_UNUSED(fd), short bits, void* arg)
 	}
 #endif
 
-	if((bits&UB_EV_READ)) {
-		if(!dtio_check_close(dtio))
+	if((bits&UB_EV_READ || dtio->ssl_brief_write)) {
+		if(dtio->ssl_brief_write)
+			(void)dtio_disable_brief_write(dtio);
+		if(dtio->ready_frame_sent && !dtio->accept_frame_received) {
+			if(dtio_read_accept_frame(dtio) <= 0)
+				return;
+		} else if(!dtio_check_close(dtio))
 			return;
 	}
 
@@ -1208,6 +1457,15 @@ void dtio_output_cb(int ATTR_UNUSED(fd), short bits, void* arg)
 
 		/* done with the current message */
 		dtio_cur_msg_free(dtio);
+
+		/* If this is a bidirectional stream the first message will be
+		 * the READY control frame. We can only continue writing after
+		 * receiving an ACCEPT control frame. */
+		if(dtio->is_bidirectional && !dtio->ready_frame_sent) {
+			dtio->ready_frame_sent = 1;
+			(void)dtio_add_output_event_read(dtio);
+			break;
+		}
 	}
 }
 
@@ -1240,6 +1498,13 @@ void dtio_cmd_cb(int fd, short ATTR_UNUSED(bits), void* arg)
 		verbose(VERB_ALGO, "dnstap io: cmd channel cmd quit");
 	} else if(r == 1 && cmd == DTIO_COMMAND_WAKEUP) {
 		verbose(VERB_ALGO, "dnstap io: cmd channel cmd wakeup");
+
+		if(dtio->is_bidirectional && !dtio->accept_frame_received) {
+			verbose(VERB_ALGO, "dnstap io: cmd wakeup ignored, "
+				"waiting for ACCEPT control frame");
+			return;
+		}
+
 		/* reregister event */
 		if(!dtio_add_output_event_write(dtio))
 			return;
@@ -1561,6 +1826,25 @@ static int dtio_control_start_send(struct dt_io_thread* dtio)
 	return 1;
 }
 
+/** setup a ready control message */
+static int dtio_control_ready_send(struct dt_io_thread* dtio)
+{
+	log_assert(dtio->cur_msg == NULL && dtio->cur_msg_len == 0);
+	dtio->cur_msg = fstrm_create_control_frame_ready(DNSTAP_CONTENT_TYPE,
+		&dtio->cur_msg_len);
+	if(!dtio->cur_msg) {
+		return 0;
+	}
+	/* setup to send the control message */
+	/* set that the buffer needs to be sent, but the length
+	 * of that buffer is already written, that way the buffer can
+	 * start with 0 length and then the length of the control frame
+	 * in it */
+	dtio->cur_msg_done = 0;
+	dtio->cur_msg_len_done = 4;
+	return 1;
+}
+
 /** open the output file descriptor for af_local */
 static int dtio_open_output_local(struct dt_io_thread* dtio)
 {
@@ -1693,7 +1977,8 @@ static void dtio_open_output(struct dt_io_thread* dtio)
 	}
 	dtio->check_nb_connect = 1;
 
-	/* the EV_READ is to catch channel close, write to write packets */
+	/* the EV_READ is to read ACCEPT control messages, and catch channel
+	 * close. EV_WRITE is to write packets */
 	ev = ub_event_new(dtio->event_base, dtio->fd,
 		UB_EV_READ | UB_EV_WRITE | UB_EV_PERSIST, &dtio_output_cb,
 		dtio);
@@ -1712,7 +1997,8 @@ static void dtio_open_output(struct dt_io_thread* dtio)
 	dtio->event = ev;
 
 	/* setup protocol control message to start */
-	if(!dtio_control_start_send(dtio)) {
+	if((!dtio->is_bidirectional && !dtio_control_start_send(dtio)) ||
+		(dtio->is_bidirectional && !dtio_control_ready_send(dtio)) ) {
 		log_err("dnstap io: out of memory");
 		ub_event_free(dtio->event);
 		dtio->event = NULL;

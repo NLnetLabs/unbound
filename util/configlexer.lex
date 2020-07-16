@@ -441,6 +441,7 @@ access-control-view{COLON}	{ YDVAR(2, VAR_ACCESS_CONTROL_VIEW) }
 local-zone-override{COLON}	{ YDVAR(3, VAR_LOCAL_ZONE_OVERRIDE) }
 dnstap{COLON}			{ YDVAR(0, VAR_DNSTAP) }
 dnstap-enable{COLON}		{ YDVAR(1, VAR_DNSTAP_ENABLE) }
+dnstap-bidirectional{COLON}	{ YDVAR(1, VAR_DNSTAP_BIDIRECTIONAL) }
 dnstap-socket-path{COLON}	{ YDVAR(1, VAR_DNSTAP_SOCKET_PATH) }
 dnstap-ip{COLON}		{ YDVAR(1, VAR_DNSTAP_IP) }
 dnstap-tls{COLON}		{ YDVAR(1, VAR_DNSTAP_TLS) }

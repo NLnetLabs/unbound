@@ -128,6 +128,21 @@
 void* fstrm_create_control_frame_start(char* contenttype, size_t* len);
 
 /**
+ * This creates an FSTRM control frame of type READY.
+ * @param contenttype: a zero delimited string with the content type.
+ * 	eg. use the constant DNSTAP_CONTENT_TYPE, which is defined as
+ * 	"protobuf:dnstap.Dnstap", for a dnstap frame stream.
+ * @param len: if a buffer is returned this is the length of that buffer.
+ * @return NULL on malloc failure.  Returns a malloced buffer with the
+ * protocol message.  The buffer starts with the 4 bytes of 0 that indicate
+ * a control frame.  The buffer should be sent without preceding it with
+ * the 'len' variable (like data frames are), but straight the content of the
+ * buffer, because the lengths are included in the buffer.  This is so that
+ * the zero control indicator can be included before the control frame length.
+ */
+void* fstrm_create_control_frame_ready(char* contenttype, size_t* len);
+
+/**
  * This creates an FSTRM control frame of type STOP.
  * @param len: if a buffer is returned this is the length of that buffer.
  * @return NULL on malloc failure.  Returns a malloced buffer with the
