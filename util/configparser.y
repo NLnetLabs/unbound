@@ -69,6 +69,7 @@ extern struct config_parser_state* cfg_parser;
 
 %token SPACE LETTER NEWLINE COMMENT COLON ANY ZONESTR
 %token <str> STRING_ARG
+%token VAR_FORCE_TOPLEVEL
 %token VAR_SERVER VAR_VERBOSITY VAR_NUM_THREADS VAR_PORT
 %token VAR_OUTGOING_RANGE VAR_INTERFACE VAR_PREFER_IP4
 %token VAR_DO_IP4 VAR_DO_IP6 VAR_PREFER_IP6 VAR_DO_UDP VAR_DO_TCP
@@ -119,7 +120,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_DNSTAP VAR_DNSTAP_ENABLE VAR_DNSTAP_SOCKET_PATH VAR_DNSTAP_IP
 %token VAR_DNSTAP_TLS VAR_DNSTAP_TLS_SERVER_NAME VAR_DNSTAP_TLS_CERT_BUNDLE
 %token VAR_DNSTAP_TLS_CLIENT_KEY_FILE VAR_DNSTAP_TLS_CLIENT_CERT_FILE
-%token VAR_DNSTAP_SEND_IDENTITY VAR_DNSTAP_SEND_VERSION
+%token VAR_DNSTAP_SEND_IDENTITY VAR_DNSTAP_SEND_VERSION VAR_DNSTAP_BIDIRECTIONAL
 %token VAR_DNSTAP_IDENTITY VAR_DNSTAP_VERSION
 %token VAR_DNSTAP_LOG_RESOLVER_QUERY_MESSAGES
 %token VAR_DNSTAP_LOG_RESOLVER_RESPONSE_MESSAGES
@@ -183,16 +184,21 @@ toplevelvar: serverstart contents_server | stubstart contents_stub |
 	rcstart contents_rc | dtstart contents_dt | viewstart contents_view |
 	dnscstart contents_dnsc | cachedbstart contents_cachedb |
 	ipsetstart contents_ipset | authstart contents_auth |
-	rpzstart contents_rpz | dynlibstart contents_dl
+	rpzstart contents_rpz | dynlibstart contents_dl |
+	force_toplevel
 	;
-
+force_toplevel: VAR_FORCE_TOPLEVEL
+	{
+		OUTYY(("\nP(force-toplevel)\n"));
+	}
+	;
 /* server: declaration */
 serverstart: VAR_SERVER
 	{ 
-		OUTYY(("\nP(server:)\n")); 
+		OUTYY(("\nP(server:)\n"));
 	}
 	;
-contents_server: contents_server content_server 
+contents_server: contents_server content_server
 	| ;
 content_server: server_num_threads | server_verbosity | server_port |
 	server_outgoing_range | server_do_ip4 |
@@ -2758,7 +2764,7 @@ dtstart: VAR_DNSTAP
 	;
 contents_dt: contents_dt content_dt
 	| ;
-content_dt: dt_dnstap_enable | dt_dnstap_socket_path |
+content_dt: dt_dnstap_enable | dt_dnstap_socket_path | dt_dnstap_bidirectional |
 	dt_dnstap_ip | dt_dnstap_tls | dt_dnstap_tls_server_name |
 	dt_dnstap_tls_cert_bundle |
 	dt_dnstap_tls_client_key_file | dt_dnstap_tls_client_cert_file |
@@ -2777,6 +2783,16 @@ dt_dnstap_enable: VAR_DNSTAP_ENABLE STRING_ARG
 		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
 			yyerror("expected yes or no.");
 		else cfg_parser->cfg->dnstap = (strcmp($2, "yes")==0);
+		free($2);
+	}
+	;
+dt_dnstap_bidirectional: VAR_DNSTAP_BIDIRECTIONAL STRING_ARG
+	{
+		OUTYY(("P(dt_dnstap_bidirectional:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else cfg_parser->cfg->dnstap_bidirectional =
+			(strcmp($2, "yes")==0);
 		free($2);
 	}
 	;

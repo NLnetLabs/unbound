@@ -1,3 +1,9 @@
+16 July 2020: George
+	- Introduce 'include-toplevel:' configuration option.
+
+16 July 2020: Ralph
+	- Add bidirectional frame streams support.
+
 8 July 2020: Wouter
 	- Fix add missing DSA header, for compilation without deprecated
 	  OpenSSL APIs.

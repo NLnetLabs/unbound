@@ -481,6 +481,8 @@ struct config_file {
 
 	/** true to enable dnstap support */
 	int dnstap;
+	/** using bidirectional frame streams if true */
+	int dnstap_bidirectional;
 	/** dnstap socket path */
 	char* dnstap_socket_path;
 	/** dnstap IP */
