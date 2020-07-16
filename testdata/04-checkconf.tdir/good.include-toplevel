@@ -10,3 +10,7 @@ server: identity: "top 2"
 include-toplevel: include.includetop.withclauses.*
 include-toplevel: include.include.withclauses.*
 include-toplevel: include.include.withclauses.*
+server:
+	chroot: ""
+	directory: ""
+	username: ""
