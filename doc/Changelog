@@ -1,3 +1,6 @@
+16 July 2020: George
+	- Introduce 'include-toplevel:' configuration option.
+
 16 July 2020: Ralph
 	- Add bidirectional frame streams support.
 
