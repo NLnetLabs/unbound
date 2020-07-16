@@ -1,5 +1,6 @@
 16 July 2020: Wouter
 	- Fix check conf test for referencing installation paths.
+	- Fix unused variable warning for clang analyzer.
 
 16 July 2020: George
 	- Introduce 'include-toplevel:' configuration option.
