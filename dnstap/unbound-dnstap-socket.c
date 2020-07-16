@@ -815,7 +815,7 @@ static int reply_with_accept(struct tap_data* data)
 	return 1;
 #else
 	log_err("no dnstap compiled, no reply");
-	(void)fd;
+	(void)data;
 	return 0;
 #endif
 }
