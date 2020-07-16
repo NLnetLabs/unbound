@@ -5,8 +5,12 @@
 #
 # this is a comment.
 
-#Use this to include other text into the file.
+# Use this anywhere in the file to include other text into this file.
 #include: "otherfile.conf"
+
+# Use this anywhere in the file to include other text, that explicitly starts a
+# clause, into this file. Text after this directive needs to start a clause.
+#include-toplevel: "otherfile.conf"
 
 # The server clause sets the main parameters.
 server:
@@ -1049,6 +1053,8 @@ remote-control:
 # upstream log destination, by socket path, TCP or TLS destination.
 # dnstap:
 # 	dnstap-enable: no
+# 	# if set to yes frame streams will be used in bidirectional mode
+# 	dnstap-bidirectional: yes
 # 	dnstap-socket-path: "@DNSTAP_SOCKET_PATH@"
 # 	# if "" use the unix socket in dnstap-socket-path, otherwise,
 # 	# set it to "IPaddress[@port]" of the destination.

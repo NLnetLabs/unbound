@@ -77,6 +77,12 @@ for the included files works, relative pathnames for the included names work
 if the directory where the daemon is started equals its chroot/working
 directory or is specified before the include statement with directory: dir.
 Wildcards can be used to include multiple files, see \fIglob\fR(7).
+.P
+For a more structural include option, the
+.B include\-toplevel:
+directive can be used.  This closes whatever clause is currently active (if any)
+and forces the use of clauses in the included files and right after this
+directive.
 .SS "Server Options"
 These options are part of the
 .B server:
@@ -2188,6 +2194,10 @@ destination.
 If dnstap is enabled.  Default no.  If yes, it connects to the dnstap server
 and if any of the dnstap-log-..-messages options is enabled it sends logs
 for those messages to the server.
+.TP
+.B dnstap-bidirectional: \fI<yes or no>
+Use frame streams in bidirectional mode to transfer DNSTAP messages. Default is
+yes.
 .TP
 .B dnstap-socket-path: \fI<file name>
 Sets the unix socket file name for connecting to the server that is
