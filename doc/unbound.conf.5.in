@@ -2183,6 +2183,10 @@ If dnstap is enabled.  Default no.  If yes, it connects to the dnstap server
 and if any of the dnstap-log-..-messages options is enabled it sends logs
 for those messages to the server.
 .TP
+.B dnstap-bidirectional: \fI<yes or no>
+Use frame streams in bidirectional mode to transfer DNSTAP messages. Default is
+yes.
+.TP
 .B dnstap-socket-path: \fI<file name>
 Sets the unix socket file name for connecting to the server that is
 listening on that socket.  Default is "@DNSTAP_SOCKET_PATH@".
