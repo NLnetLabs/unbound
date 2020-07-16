@@ -1096,7 +1096,7 @@ static int dtio_read_accept_frame(struct dt_io_thread* dtio)
 	read_frame_done = 4; /* control frame type */
 
 	/* Iterate over control fields, ignore unknown types.
-	 * Need to be able to read at least 2 bytes (control field type +
+	 * Need to be able to read at least 8 bytes (control field type +
 	 * length). */
 	while(read_frame_done+8 < dtio->read_frame.frame_len) {
 		uint32_t type = sldns_read_uint32(dtio->read_frame.buf +
