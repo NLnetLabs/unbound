@@ -1,3 +1,7 @@
+17 July 2020: Wouter
+	- Fix libnettle compile for session ticket key callback function
+	  changes.
+
 17 July 2020: Ralph
 	- Merge PR #234 - Ensure proper alignment of cmsg buffers by Jérémie
 	  Courrèges-Anglas.

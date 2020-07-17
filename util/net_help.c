@@ -97,6 +97,7 @@ static struct tls_session_ticket_key {
  * @return 0 on no ticket, 1 for okay, and 2 for okay but renew the ticket
  * 	(the ticket is decrypt only). and <0 for failures.
  */
+#ifdef HAVE_SSL
 int tls_session_ticket_key_cb(SSL *s, unsigned char* key_name,
 	unsigned char* iv, EVP_CIPHER_CTX *evp_ctx,
 #ifdef HAVE_SSL_CTX_SET_TLSEXT_TICKET_KEY_EVP_CB
@@ -105,6 +106,7 @@ int tls_session_ticket_key_cb(SSL *s, unsigned char* key_name,
 	HMAC_CTX* hmac_ctx,
 #endif
 	int enc);
+#endif /* HAVE_SSL */
 
 /* returns true is string addr is an ip6 specced address */
 int
@@ -1267,6 +1269,7 @@ int set_auth_name_on_ssl(void* ssl, char* auth_name, int use_sni)
 	}
 #else
 	(void)ssl;
+	(void)use_sni;
 #endif
 #ifdef HAVE_SSL_SET1_HOST
 	SSL_set_verify(ssl, SSL_VERIFY_PEER, NULL);
@@ -1434,6 +1437,7 @@ int listen_sslctx_setup_ticket_keys(void* sslctx, struct config_strlist* tls_ses
 
 }
 
+#ifdef HAVE_SSL
 int tls_session_ticket_key_cb(SSL *ATTR_UNUSED(sslctx), unsigned char* key_name,
 	unsigned char* iv, EVP_CIPHER_CTX *evp_sctx,
 #ifdef HAVE_SSL_CTX_SET_TLSEXT_TICKET_KEY_EVP_CB
@@ -1531,6 +1535,7 @@ int tls_session_ticket_key_cb(SSL *ATTR_UNUSED(sslctx), unsigned char* key_name,
 	return 0;
 #endif
 }
+#endif /* HAVE_SSL */
 
 void
 listen_sslctx_delete_ticket_keys(void)
