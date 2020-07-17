@@ -1866,15 +1866,26 @@ auth_zones_cfg(struct auth_zones* az, struct config_auth* c)
 	struct auth_xfer* x = NULL;
 
 	/* create zone */
+	if(c->isrpz) {
+		/* if the rpz lock is needed, grab it before the other
+		 * locks to avoid a lock dependency cycle */
+		lock_rw_wrlock(&az->rpz_lock);
+	}
 	lock_rw_wrlock(&az->lock);
 	if(!(z=auth_zones_find_or_add_zone(az, c->name))) {
 		lock_rw_unlock(&az->lock);
+		if(c->isrpz) {
+			lock_rw_unlock(&az->rpz_lock);
+		}
 		return 0;
 	}
 	if(c->masters || c->urls) {
 		if(!(x=auth_zones_find_or_add_xfer(az, z))) {
 			lock_rw_unlock(&az->lock);
 			lock_rw_unlock(&z->lock);
+			if(c->isrpz) {
+				lock_rw_unlock(&az->rpz_lock);
+			}
 			return 0;
 		}
 	}
@@ -1889,6 +1900,9 @@ auth_zones_cfg(struct auth_zones* az, struct config_auth* c)
 			lock_basic_unlock(&x->lock);
 		}
 		lock_rw_unlock(&z->lock);
+		if(c->isrpz) {
+			lock_rw_unlock(&az->rpz_lock);
+		}
 		return 0;
 	}
 	z->for_downstream = c->for_downstream;
@@ -1900,11 +1914,13 @@ auth_zones_cfg(struct auth_zones* az, struct config_auth* c)
 			return 0;
 		}
 		lock_protect(&z->lock, &z->rpz->local_zones, sizeof(*z->rpz));
-		lock_rw_wrlock(&az->rpz_lock);
+		/* the az->rpz_lock is locked above */
 		z->rpz_az_next = az->rpz_first;
 		if(az->rpz_first)
 			az->rpz_first->rpz_az_prev = z;
 		az->rpz_first = z;
+	}
+	if(c->isrpz) {
 		lock_rw_unlock(&az->rpz_lock);
 	}
 
