@@ -1,3 +1,8 @@
+17 July 2020: Ralph
+	- Merge PR #234 - Ensure proper alignment of cmsg buffers by Jérémie
+	  Courrèges-Anglas.
+	- Fix PR #234 log_assert sizeof to use union buffer.
+
 16 July 2020: Wouter
 	- Fix check conf test for referencing installation paths.
 	- Fix unused variable warning for clang analyzer.
