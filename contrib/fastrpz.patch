@@ -27,8 +27,8 @@ index a20058cc..495779cc 100644
  validator.lo val_kcache.lo val_kentry.lo val_neg.lo val_nsec3.lo val_nsec.lo \
  val_secalgo.lo val_sigcrypt.lo val_utils.lo dns64.lo cachedb.lo redis.lo authzone.lo \
  $(SUBNET_OBJ) $(PYTHONMOD_OBJ) $(CHECKLOCK_OBJ) $(DNSTAP_OBJ) $(DNSCRYPT_OBJ) \
--$(IPSECMOD_OBJ) $(IPSET_OBJ) respip.lo
-+$(FASTRPZ_OBJ) $(IPSECMOD_OBJ) $(IPSET_OBJ) respip.lo
+-$(IPSECMOD_OBJ) $(IPSET_OBJ) $(DYNLIBMOD_OBJ) respip.lo
++$(FASTRPZ_OBJ) $(IPSECMOD_OBJ) $(IPSET_OBJ) $(DYNLIBMOD_OBJ) respip.lo
  COMMON_OBJ_WITHOUT_UB_EVENT=$(COMMON_OBJ_WITHOUT_NETCALL) netevent.lo listen_dnsport.lo \
  outside_network.lo
  COMMON_OBJ=$(COMMON_OBJ_WITHOUT_UB_EVENT) ub_event.lo
