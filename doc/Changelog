@@ -1,7 +1,9 @@
 20 July 2020: Wouter
 	- Fix streamtcp to print packet data to stdout.  This makes the
 	  stdout and stderr not mix together lines, when parsing its output.
-	- Fix contrib/fastrpz.patch to apply cleanly.
+	- Fix contrib/fastrpz.patch to apply cleanly.  It fixes for changes
+	  due to added libdynmod, but it does not compile, it conflicts with
+	  new rpz code.
 
 17 July 2020: Wouter
 	- Fix libnettle compile for session ticket key callback function
