@@ -4,6 +4,7 @@
 	- Fix contrib/fastrpz.patch to apply cleanly.  It fixes for changes
 	  due to added libdynmod, but it does not compile, it conflicts with
 	  new rpz code.
+	- branch now named 1.11.0 and 1.11.0rc1 tag.
 
 17 July 2020: Wouter
 	- Fix libnettle compile for session ticket key callback function
