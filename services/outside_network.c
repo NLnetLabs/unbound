@@ -1509,10 +1509,18 @@ outside_network_delete(struct outside_network* outnet)
 		size_t i;
 		for(i=0; i<outnet->num_tcp; i++)
 			if(outnet->tcp_conns[i]) {
+				if(!outnet->tcp_conns[i]->query->
+					on_tcp_waiting_list) {
+					/* delete waiting_tcp elements that
+					 * the tcp conn is working on */
+					struct pending_tcp* pend =
+						(struct pending_tcp*)outnet->
+						tcp_conns[i]->query->
+						next_waiting;
+					decommission_pending_tcp(outnet, pend);
+				}
 				comm_point_delete(outnet->tcp_conns[i]->c);
 				waiting_tcp_delete(outnet->tcp_conns[i]->query);
-				/* TODO: loop over tcpwrite wait list and
-				 * delete waiting_tcp_delete them */
 				free(outnet->tcp_conns[i]);
 			}
 		free(outnet->tcp_conns);
