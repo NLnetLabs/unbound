@@ -22,6 +22,11 @@ server:
 	local-data: "www2.example.com  A 10.20.30.42"
 	local-data: "www3.example.com  A 10.20.30.43"
 	local-data: "www4.example.com  A 10.20.30.44"
+	local-data: "www5.example.com  A 10.20.30.45"
+	local-data: "www6.example.com  A 10.20.30.46"
+
+	local-zone: "drop.net" deny
+	local-zone: "refuse.net" refuse
 
 # if queries escape, send them to localhost
 forward-zone:
