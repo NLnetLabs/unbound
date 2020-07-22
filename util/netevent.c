@@ -447,7 +447,10 @@ comm_point_send_udp_msg_if(struct comm_point *c, sldns_buffer* packet,
 	ssize_t sent;
 	struct msghdr msg;
 	struct iovec iov[1];
-	char control[256];
+	union {
+		struct cmsghdr hdr;
+		char buf[256];
+	} control;
 #ifndef S_SPLINT_S
 	struct cmsghdr *cmsg;
 #endif /* S_SPLINT_S */
@@ -465,9 +468,9 @@ comm_point_send_udp_msg_if(struct comm_point *c, sldns_buffer* packet,
 	iov[0].iov_len = sldns_buffer_remaining(packet);
 	msg.msg_iov = iov;
 	msg.msg_iovlen = 1;
-	msg.msg_control = control;
+	msg.msg_control = control.buf;
 #ifndef S_SPLINT_S
-	msg.msg_controllen = sizeof(control);
+	msg.msg_controllen = sizeof(control.buf);
 #endif /* S_SPLINT_S */
 	msg.msg_flags = 0;
 
@@ -477,7 +480,7 @@ comm_point_send_udp_msg_if(struct comm_point *c, sldns_buffer* packet,
 #ifdef IP_PKTINFO
 		void* cmsg_data;
 		msg.msg_controllen = CMSG_SPACE(sizeof(struct in_pktinfo));
-		log_assert(msg.msg_controllen <= sizeof(control));
+		log_assert(msg.msg_controllen <= sizeof(control.buf));
 		cmsg->cmsg_level = IPPROTO_IP;
 		cmsg->cmsg_type = IP_PKTINFO;
 		memmove(CMSG_DATA(cmsg), &r->pktinfo.v4info,
@@ -488,7 +491,7 @@ comm_point_send_udp_msg_if(struct comm_point *c, sldns_buffer* packet,
 		cmsg->cmsg_len = CMSG_LEN(sizeof(struct in_pktinfo));
 #elif defined(IP_SENDSRCADDR)
 		msg.msg_controllen = CMSG_SPACE(sizeof(struct in_addr));
-		log_assert(msg.msg_controllen <= sizeof(control));
+		log_assert(msg.msg_controllen <= sizeof(control.buf));
 		cmsg->cmsg_level = IPPROTO_IP;
 		cmsg->cmsg_type = IP_SENDSRCADDR;
 		memmove(CMSG_DATA(cmsg), &r->pktinfo.v4addr,
@@ -501,7 +504,7 @@ comm_point_send_udp_msg_if(struct comm_point *c, sldns_buffer* packet,
 	} else if(r->srctype == 6) {
 		void* cmsg_data;
 		msg.msg_controllen = CMSG_SPACE(sizeof(struct in6_pktinfo));
-		log_assert(msg.msg_controllen <= sizeof(control));
+		log_assert(msg.msg_controllen <= sizeof(control.buf));
 		cmsg->cmsg_level = IPPROTO_IPV6;
 		cmsg->cmsg_type = IPV6_PKTINFO;
 		memmove(CMSG_DATA(cmsg), &r->pktinfo.v6info,
@@ -513,7 +516,7 @@ comm_point_send_udp_msg_if(struct comm_point *c, sldns_buffer* packet,
 	} else {
 		/* try to pass all 0 to use default route */
 		msg.msg_controllen = CMSG_SPACE(sizeof(struct in6_pktinfo));
-		log_assert(msg.msg_controllen <= sizeof(control));
+		log_assert(msg.msg_controllen <= sizeof(control.buf));
 		cmsg->cmsg_level = IPPROTO_IPV6;
 		cmsg->cmsg_type = IPV6_PKTINFO;
 		memset(CMSG_DATA(cmsg), 0, sizeof(struct in6_pktinfo));
@@ -584,7 +587,10 @@ comm_point_udp_ancil_callback(int fd, short event, void* arg)
 	struct msghdr msg;
 	struct iovec iov[1];
 	ssize_t rcv;
-	char ancil[256];
+	union {
+		struct cmsghdr hdr;
+		char buf[256];
+	} ancil;
 	int i;
 #ifndef S_SPLINT_S
 	struct cmsghdr* cmsg;
@@ -608,9 +614,9 @@ comm_point_udp_ancil_callback(int fd, short event, void* arg)
 		iov[0].iov_len = sldns_buffer_remaining(rep.c->buffer);
 		msg.msg_iov = iov;
 		msg.msg_iovlen = 1;
-		msg.msg_control = ancil;
+		msg.msg_control = ancil.buf;
 #ifndef S_SPLINT_S
-		msg.msg_controllen = sizeof(ancil);
+		msg.msg_controllen = sizeof(ancil.buf);
 #endif /* S_SPLINT_S */
 		msg.msg_flags = 0;
 		rcv = recvmsg(fd, &msg, 0);
