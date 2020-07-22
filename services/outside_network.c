@@ -1509,7 +1509,8 @@ outside_network_delete(struct outside_network* outnet)
 		size_t i;
 		for(i=0; i<outnet->num_tcp; i++)
 			if(outnet->tcp_conns[i]) {
-				if(!outnet->tcp_conns[i]->query->
+				if(outnet->tcp_conns[i]->query &&
+					!outnet->tcp_conns[i]->query->
 					on_tcp_waiting_list) {
 					/* delete waiting_tcp elements that
 					 * the tcp conn is working on */
