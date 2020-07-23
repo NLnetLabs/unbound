@@ -77,6 +77,7 @@
 #include "util/storage/lookup3.h"
 #include "util/storage/slabhash.h"
 #include "util/tcp_conn_limit.h"
+#include "util/edns.h"
 #include "services/listen_dnsport.h"
 #include "services/cache/rrset.h"
 #include "services/cache/infra.h"
@@ -283,6 +284,15 @@ daemon_init(void)
 		log_err("gettimeofday: %s", strerror(errno));
 	daemon->time_last_stat = daemon->time_boot;
 	if((daemon->env->auth_zones = auth_zones_create()) == 0) {
+		acl_list_delete(daemon->acl);
+		tcl_list_delete(daemon->tcl);
+		edns_known_options_delete(daemon->env);
+		free(daemon->env);
+		free(daemon);
+		return NULL;
+	}
+	if(!(daemon->env->edns_tags = edns_tags_create())) {
+		auth_zones_delete(daemon->env->auth_zones);
 		acl_list_delete(daemon->acl);
 		tcl_list_delete(daemon->tcl);
 		edns_known_options_delete(daemon->env);
@@ -619,6 +629,10 @@ daemon_fork(struct daemon* daemon)
 		&daemon->use_rpz))
 		fatal_exit("auth_zones could not be setup");
 
+	/* Set-up EDNS tags */
+	if(!edns_tags_apply_cfg(daemon->env->edns_tags, daemon->cfg))
+		fatal_exit("Could not set up EDNS tags");
+
 	/* setup modules */
 	daemon_setup_modules(daemon);
 
@@ -750,6 +764,7 @@ daemon_delete(struct daemon* daemon)
 		rrset_cache_delete(daemon->env->rrset_cache);
 		infra_delete(daemon->env->infra_cache);
 		edns_known_options_delete(daemon->env);
+		edns_tags_delete(daemon->env->edns_tags);
 		auth_zones_delete(daemon->env->auth_zones);
 	}
 	ub_randfree(daemon->rand);

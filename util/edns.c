@@ -47,6 +47,44 @@
 #include "util/data/msgparse.h"
 #include "util/data/msgreply.h"
 
+struct edns_tags* edns_tags_create(void)
+{
+	struct edns_tags* edns_tags = calloc(1, sizeof(struct edns_tags));
+	if(!edns_tags)
+		return NULL;
+	if(!(edns_tags->region = regional_create())) {
+		edns_tags_delete(edns_tags);
+		return NULL;
+	}
+	return edns_tags;
+}
+
+void edns_tags_delete(struct edns_tags* edns_tags)
+{
+	if(!edns_tags)
+		return;
+	regional_destroy(edns_tags->region);
+	free(edns_tags);
+}
+
+int edns_tags_apply_cfg(struct edns_tags* edns_tags,
+	struct config_file* config)
+{
+	regional_free_all(edns_tags->region);
+	addr_tree_init(&edns_tags->client_tags);
+
+	/* TODO walk over config, create and insert node. */
+
+	return 1;
+}
+
+struct edns_tag_addr*
+edns_tag_addr_lookup(rbtree_type tree, struct sockaddr_storage* addr,
+	socklen_t addrlen)
+{
+	return (struct edns_tag_addr*)addr_tree_lookup(&tree, addr, addrlen);
+}
+
 static int edns_keepalive(struct edns_data* edns_out, struct edns_data* edns_in,
 		struct comm_point* c, struct regional* region)
 {

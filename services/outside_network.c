@@ -58,6 +58,7 @@
 #include "util/net_help.h"
 #include "util/random.h"
 #include "util/fptr_wlist.h"
+#include "util/edns.h"
 #include "sldns/sbuffer.h"
 #include "dnstap/dnstap.h"
 #ifdef HAVE_OPENSSL_SSL_H
@@ -2111,9 +2112,20 @@ outnet_serviced_query(struct outside_network* outnet,
 {
 	struct serviced_query* sq;
 	struct service_callback* cb;
+	struct edns_tag_addr* client_tag_addr;
+
 	if(!inplace_cb_query_call(env, qinfo, flags, addr, addrlen, zone, zonelen,
 		qstate, qstate->region))
 			return NULL;
+
+	if((client_tag_addr = edns_tag_addr_lookup(env->edns_tags->client_tags,
+		addr, addrlen))) {
+		uint16_t client_tag = htons(client_tag_addr->tag_data);
+		edns_opt_list_append(&qstate->edns_opts_back_out,
+			LDNS_EDNS_CLIENT_TAG, 2,
+			(uint8_t*)&client_tag, qstate->region);
+	}
+
 	serviced_gen_query(buff, qinfo->qname, qinfo->qname_len, qinfo->qtype,
 		qinfo->qclass, flags);
 	sq = lookup_serviced(outnet, buff, dnssec, addr, addrlen,
