@@ -213,6 +213,24 @@ for x in a1.more.net a2.more.net a3.more.net a4.more.net a5.more.net; do
 	fi
 done
 
+# dropconn.drop.net make the server drop the connection.
+echo "> query a11.more.net a12.more.net dropconn.drop.net a14.more.net a15.more.net"
+$PRE/streamtcp -a -f 127.0.0.1@$UNBOUND_PORT a11.more.net A IN a12.more.net A IN dropconn.drop.net A IN a14.more.net A IN a15.more.net A IN >outfile 2>&1
+if test "$?" -ne 0; then
+	echo "exit status not OK"
+	echo "> cat logfiles"
+	cat outfile
+	cat unbound2.log
+	cat unbound.log
+	echo "Not OK"
+	exit 1
+fi
+cat outfile
+# cannot really check outfile, because it may or may not have answers depending
+# on how fast the other server responds or the drop happens, but there are
+# a bunch of connection drops, whilst resolving the other queries.
+
+
 # timeouts at the end. (so that the server is not marked as failed for
 # the other tests).
 echo "> query q1.drop.net."
