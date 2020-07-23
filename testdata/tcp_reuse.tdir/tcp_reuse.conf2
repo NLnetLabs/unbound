@@ -28,6 +28,9 @@ server:
 	local-zone: "drop.net" deny
 	local-zone: "refuse.net" refuse
 
+	local-zone: "more.net" redirect
+	local-data: "more.net A 10.20.30.40"
+
 # if queries escape, send them to localhost
 forward-zone:
 	name: "."
