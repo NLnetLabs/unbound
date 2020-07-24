@@ -2118,7 +2118,7 @@ outnet_serviced_query(struct outside_network* outnet,
 		qstate, qstate->region))
 			return NULL;
 
-	if((client_tag_addr = edns_tag_addr_lookup(env->edns_tags->client_tags,
+	if((client_tag_addr = edns_tag_addr_lookup(&env->edns_tags->client_tags,
 		addr, addrlen))) {
 		uint16_t client_tag = htons(client_tag_addr->tag_data);
 		edns_opt_list_append(&qstate->edns_opts_back_out,

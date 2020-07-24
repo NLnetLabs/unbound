@@ -99,7 +99,7 @@ int edns_tags_apply_cfg(struct edns_tags* edns_tags,
  * @return: matching tree node, NULL otherwise
  */
 struct edns_tag_addr*
-edns_tag_addr_lookup(rbtree_type tree, struct sockaddr_storage* addr,
+edns_tag_addr_lookup(rbtree_type* tree, struct sockaddr_storage* addr,
 	socklen_t addrlen);
 
 /**
