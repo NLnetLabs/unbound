@@ -75,6 +75,7 @@ int edns_tags_apply_cfg(struct edns_tags* edns_tags,
 
 	/* TODO walk over config, create and insert node. */
 
+	addr_tree_init_parents(&edns_tags->client_tags);
 	return 1;
 }
 

@@ -553,6 +553,9 @@ struct config_file {
 	/** SHM data - key for the shm */
 	int shm_key;
 
+	/** list of EDNS client tag entries, linked list */
+	struct config_str2list* edns_client_tags;
+
 	/** DNSCrypt */
 	/** true to enable dnscrypt */
 	int dnscrypt;
