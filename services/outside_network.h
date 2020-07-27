@@ -386,6 +386,8 @@ struct waiting_tcp {
 	int ssl_upstream;
 	/** ref to the tls_auth_name from the serviced_query */
 	char* tls_auth_name;
+	/** the packet was involved in an error, to stop looping errors */
+	int error_count;
 };
 
 /**
