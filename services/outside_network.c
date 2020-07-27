@@ -764,6 +764,8 @@ static void
 outnet_add_tcp_waiting(struct outside_network* outnet, struct waiting_tcp* w)
 {
 	struct timeval tv;
+	if(w->on_tcp_waiting_list)
+		return;
 	w->next_waiting = NULL;
 	if(outnet->tcp_wait_last)
 		outnet->tcp_wait_last->next_waiting = w;
@@ -786,7 +788,7 @@ reuse_tree_by_id_delete(struct reuse_tcp* reuse, struct waiting_tcp* w)
 	w->id_node.key = NULL;
 }
 
-/** more writewait list to go for another connection. */
+/** move writewait list to go for another connection. */
 static void
 reuse_move_writewait_away(struct outside_network* outnet,
 	struct pending_tcp* pend)
@@ -803,8 +805,13 @@ reuse_move_writewait_away(struct outside_network* outnet,
 		pend->c->tcp_write_pkt_len == pend->query->pkt_len) {
 		/* since the current query is not written, it can also
 		 * move to a free buffer */
-		verbose(5, "reuse_move_writewait_away current %d done",
-			(int)pend->c->tcp_write_byte_count);
+		if(verbosity >= 5 && pend->query->pkt_len > 12+2+2 &&
+			dname_valid(pend->query->pkt+12, pend->query->pkt_len-12)) {
+			char buf[LDNS_MAX_DOMAINLEN+1];
+			dname_str(pend->query->pkt+12, buf);
+			verbose(5, "reuse_move_writewait_away current %s %d bytes were written",
+				buf, (int)pend->c->tcp_write_byte_count);
+		}
 		pend->c->tcp_write_pkt = NULL;
 		pend->c->tcp_write_pkt_len = 0;
 		pend->c->tcp_write_and_read = 0;
@@ -822,7 +829,12 @@ reuse_move_writewait_away(struct outside_network* outnet,
 		outnet_add_tcp_waiting(outnet, w);
 	}
 	while((w = reuse_write_wait_pop(&pend->reuse)) != NULL) {
-		verbose(5, "reuse_move_writewait_away item");
+		if(verbosity >= 5 && w->pkt_len > 12+2+2 &&
+			dname_valid(w->pkt+12, w->pkt_len-12)) {
+			char buf[LDNS_MAX_DOMAINLEN+1];
+			dname_str(w->pkt+12, buf);
+			verbose(5, "reuse_move_writewait_away item %s", buf);
+		}
 		reuse_tree_by_id_delete(&pend->reuse, w);
 		outnet_add_tcp_waiting(outnet, w);
 	}
