@@ -1,3 +1,7 @@
+27 July 2020: George
+	- Merge PR #268, draft-ietf-dnsop-serve-stale-10 has become RFC 8767 on
+	  March 2020, by and0x000.
+
 27 July 2020: Ralph
 	- Merge PR #269, Fix python module len() implementations, by Torbjörn
 	  Lönnemark
