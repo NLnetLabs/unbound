@@ -4,6 +4,7 @@
 
 27 July 2020: Wouter
 	- branch now named 1.11.1.  1.11.0rc1 became the 1.11.0 release.
+	- Merge PR #270 from cgzones: munin plugin: always exit 0 in autoconf
 
 20 July 2020: Wouter
 	- Fix streamtcp to print packet data to stdout.  This makes the
