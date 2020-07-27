@@ -1,3 +1,7 @@
+27 July 2020: Ralph
+	- Merge PR #269, Fix python module len() implementations, by Torbjörn
+	  Lönnemark
+
 27 July 2020: Wouter
 	- branch now named 1.11.1.  1.11.0rc1 became the 1.11.0 release.
 
