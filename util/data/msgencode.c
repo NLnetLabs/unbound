@@ -486,7 +486,7 @@ packed_rrset_encode(struct ub_packed_rrset_key* key, sldns_buffer* pkt,
 			if(data->rr_ttl[j] < adjust)
 				sldns_buffer_write_u32(pkt,
 					SERVE_EXPIRED?SERVE_EXPIRED_REPLY_TTL:0);
-			else 	sldns_buffer_write_u32(pkt, data->rr_ttl[j]-adjust);
+			else	sldns_buffer_write_u32(pkt, data->rr_ttl[j]-adjust);
 			if(c) {
 				if((r=compress_rdata(pkt, data->rr_data[j],
 					data->rr_len[j], region, tree, c))
@@ -523,7 +523,7 @@ packed_rrset_encode(struct ub_packed_rrset_key* key, sldns_buffer* pkt,
 			if(data->rr_ttl[i] < adjust)
 				sldns_buffer_write_u32(pkt,
 					SERVE_EXPIRED?SERVE_EXPIRED_REPLY_TTL:0);
-			else 	sldns_buffer_write_u32(pkt, data->rr_ttl[i]-adjust);
+			else	sldns_buffer_write_u32(pkt, data->rr_ttl[i]-adjust);
 			/* rrsig rdata cannot be compressed, perform 100+ byte
 			 * memcopy. */
 			sldns_buffer_write(pkt, data->rr_data[i],

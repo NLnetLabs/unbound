@@ -323,8 +323,8 @@ parse_create_rrset(sldns_buffer* pkt, struct rrset_parse* pset,
 		(sizeof(size_t)+sizeof(uint8_t*)+sizeof(time_t)) + 
 		pset->size;
 	if(region)
-		*data = regional_alloc(region, s);
-	else	*data = malloc(s);
+		*data = regional_alloc_zero(region, s);
+	else	*data = calloc(1, s);
 	if(!*data)
 		return 0;
 	/* copy & decompress */

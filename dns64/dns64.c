@@ -722,7 +722,7 @@ dns64_synth_aaaa_data(const struct ub_packed_rrset_key* fk,
 		*dd_out = NULL;
 		return; /* integer overflow protection in alloc */
 	}
-	if (!(dd = *dd_out = regional_alloc(region,
+	if (!(dd = *dd_out = regional_alloc_zero(region,
 		  sizeof(struct packed_rrset_data)
 		  + fd->count * (sizeof(size_t) + sizeof(time_t) +
 			     sizeof(uint8_t*) + 2 + 16)))) {
