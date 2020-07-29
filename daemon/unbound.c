@@ -534,6 +534,8 @@ perform_setup(struct daemon* daemon, struct config_file* cfg, int debug_mode,
 			LOGIN_SETALL & ~LOGIN_SETUSER & ~LOGIN_SETGROUP) != 0)
 			log_warn("unable to setusercontext %s: %s",
 				cfg->username, strerror(errno));
+#else
+		(void)pwd;
 #endif /* HAVE_SETUSERCONTEXT */
 	}
 #endif /* HAVE_GETPWNAM */

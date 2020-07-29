@@ -770,10 +770,11 @@ void tap_data_free(struct tap_data* data)
 
 /** reply with ACCEPT control frame to bidirectional client,
  * returns 0 on error */
-static int reply_with_accept(int fd)
+static int reply_with_accept(struct tap_data* data)
 {
 #ifdef USE_DNSTAP
 	/* len includes the escape and framelength */
+	int r;
 	size_t len = 0;
 	void* acceptframe = fstrm_create_control_frame_accept(
 		DNSTAP_CONTENT_TYPE, &len);
@@ -782,26 +783,39 @@ static int reply_with_accept(int fd)
 		return 0;
 	}
 
-	fd_set_block(fd);
-	if(send(fd, acceptframe, len, 0) == -1) {
+	fd_set_block(data->fd);
+	if(data->ssl) {
+		if((r=SSL_write(data->ssl, acceptframe, len)) <= 0) {
+			if(SSL_get_error(data->ssl, r) == SSL_ERROR_ZERO_RETURN)
+				log_err("SSL_write, peer closed connection");
+			else
+				log_err("could not SSL_write");
+			fd_set_nonblock(data->fd);
+			free(acceptframe);
+			return 0;
+		}
+	} else {
+		if(send(data->fd, acceptframe, len, 0) == -1) {
 #ifndef USE_WINSOCK
-		log_err("send failed: %s", strerror(errno));
+			log_err("send failed: %s", strerror(errno));
 #else
-		log_err("send failed: %s", wsa_strerror(WSAGetLastError()));
+			log_err("send failed: %s",
+				wsa_strerror(WSAGetLastError()));
 #endif
-		fd_set_nonblock(fd);
-		free(acceptframe);
-		return 0;
+			fd_set_nonblock(data->fd);
+			free(acceptframe);
+			return 0;
+		}
 	}
 	if(verbosity) log_info("sent control frame(accept) content-type:(%s)",
 			DNSTAP_CONTENT_TYPE);
 
-	fd_set_nonblock(fd);
+	fd_set_nonblock(data->fd);
 	free(acceptframe);
 	return 1;
 #else
 	log_err("no dnstap compiled, no reply");
-	(void)fd;
+	(void)data;
 	return 0;
 #endif
 }
@@ -1033,7 +1047,7 @@ void dtio_tap_callback(int fd, short ATTR_UNUSED(bits), void* arg)
 		FSTRM_CONTROL_FRAME_READY) {
 		data->is_bidirectional = 1;
 		if(verbosity) log_info("bidirectional stream");
-		if(!reply_with_accept(fd)) {
+		if(!reply_with_accept(data)) {
 			tap_data_free(data);
 		}
 	} else if(data->len >= 4 && sldns_read_uint32(data->frame) ==

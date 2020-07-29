@@ -1,3 +1,43 @@
+27 July 2020: George
+	- Merge PR #268, draft-ietf-dnsop-serve-stale-10 has become RFC 8767 on
+	  March 2020, by and0x000.
+
+27 July 2020: Ralph
+	- Merge PR #269, Fix python module len() implementations, by Torbjörn
+	  Lönnemark
+
+27 July 2020: Wouter
+	- branch now named 1.11.1.  1.11.0rc1 became the 1.11.0 release.
+	- Merge PR #270 from cgzones: munin plugin: always exit 0 in autoconf
+
+20 July 2020: Wouter
+	- Fix streamtcp to print packet data to stdout.  This makes the
+	  stdout and stderr not mix together lines, when parsing its output.
+	- Fix contrib/fastrpz.patch to apply cleanly.  It fixes for changes
+	  due to added libdynmod, but it does not compile, it conflicts with
+	  new rpz code.
+	- branch now named 1.11.0 and 1.11.0rc1 tag.
+
+17 July 2020: Wouter
+	- Fix libnettle compile for session ticket key callback function
+	  changes.
+	- Fix lock dependency cycle in rpz zone config setup.
+
+17 July 2020: Ralph
+	- Merge PR #234 - Ensure proper alignment of cmsg buffers by Jérémie
+	  Courrèges-Anglas.
+	- Fix PR #234 log_assert sizeof to use union buffer.
+
+16 July 2020: Wouter
+	- Fix check conf test for referencing installation paths.
+	- Fix unused variable warning for clang analyzer.
+
+16 July 2020: George
+	- Introduce 'include-toplevel:' configuration option.
+
+16 July 2020: Ralph
+	- Add bidirectional frame streams support.
+
 8 July 2020: Wouter
 	- Fix add missing DSA header, for compilation without deprecated
 	  OpenSSL APIs.

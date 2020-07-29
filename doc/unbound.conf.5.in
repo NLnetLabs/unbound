@@ -77,6 +77,12 @@ for the included files works, relative pathnames for the included names work
 if the directory where the daemon is started equals its chroot/working
 directory or is specified before the include statement with directory: dir.
 Wildcards can be used to include multiple files, see \fIglob\fR(7).
+.P
+For a more structural include option, the
+.B include\-toplevel:
+directive can be used.  This closes whatever clause is currently active (if any)
+and forces the use of clauses in the included files and right after this
+directive.
 .SS "Server Options"
 These options are part of the
 .B server:
@@ -1102,7 +1108,7 @@ later on.  Default is "no".
 .B serve\-expired\-ttl: \fI<seconds>
 Limit serving of expired responses to configured seconds after expiration. 0
 disables the limit.  This option only applies when \fBserve\-expired\fR is
-enabled.  A suggested value per draft-ietf-dnsop-serve-stale-10 is between
+enabled.  A suggested value per RFC 8767 is between
 86400 (1 day) and 259200 (3 days).  The default is 0.
 .TP
 .B serve\-expired\-ttl\-reset: \fI<yes or no>
@@ -1114,14 +1120,14 @@ expired records will be served as long as there are queries for it.  Default is
 .B serve\-expired\-reply\-ttl: \fI<seconds>
 TTL value to use when replying with expired data.  If
 \fBserve\-expired\-client\-timeout\fR is also used then it is RECOMMENDED to
-use 30 as the value (draft-ietf-dnsop-serve-stale-10).  The default is 30.
+use 30 as the value (RFC 8767).  The default is 30.
 .TP
 .B serve\-expired\-client\-timeout: \fI<msec>
 Time in milliseconds before replying to the client with expired data.  This
 essentially enables the serve-stale behavior as specified in
-draft-ietf-dnsop-serve-stale-10 that first tries to resolve before immediately
+RFC 8767 that first tries to resolve before immediately
 responding with expired data.  A recommended value per
-draft-ietf-dnsop-serve-stale-10 is 1800.  Setting this to 0 will disable this
+RFC 8767 is 1800.  Setting this to 0 will disable this
 behavior.  Default is 0.
 .TP
 .B serve\-original\-ttl: \fI<yes or no>
@@ -2195,6 +2201,10 @@ destination.
 If dnstap is enabled.  Default no.  If yes, it connects to the dnstap server
 and if any of the dnstap-log-..-messages options is enabled it sends logs
 for those messages to the server.
+.TP
+.B dnstap-bidirectional: \fI<yes or no>
+Use frame streams in bidirectional mode to transfer DNSTAP messages. Default is
+yes.
 .TP
 .B dnstap-socket-path: \fI<file name>
 Sets the unix socket file name for connecting to the server that is
