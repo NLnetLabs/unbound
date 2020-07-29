@@ -1126,14 +1126,15 @@ behavior.  Default is 0.
 .TP
 .B serve\-original\-ttl: \fI<yes or no>
 If enabled, unbound will always return the original TTL as received from
-the upstream authoritative name server rather than the decrementing TTL as
+the upstream name server rather than the decrementing TTL as
 stored in the cache.  This feature may be useful if unbound serves as a 
 front-end to a hidden authoritative name server. Enabling this feature does 
 not impact cache expiry, it only changes the TTL unbound embeds in responses to 
-queries. Note that the returned TTL is still subject to the
-configured maximum TTL as set using \fBcache\-max\-ttl\fR (defaults to
-86400 seconds). If you wish to return higher original TTL values, you may
-need to explicitly adjust the setting for \fBcache\-max\-ttl\fR. 
+queries. Note that enabling this feature implicitly disables enforcement of
+the configured minimum and maximum TTL, as it is assumed users who enable this 
+feature do not want unbound to change the TTL obtained from an upstream server. 
+Thus, the values set using \fBcache\-min\-ttl\fR and \fBcache\-max\-ttl\fR are
+ignored.
 Default is "no".
 .TP
 .B val\-nsec3\-keysize\-iterations: \fI<"list of values">
