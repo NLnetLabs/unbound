@@ -25,7 +25,7 @@ wait_unbound_up unbound.log
 sed -e 's/@PORT\@/'$UPSTREAM_PORT'/' -e 's/@TOPORT\@/'$UPSTREAM_PORT'/' < tcp_reuse.conf2 > ub2.conf
 # start upstream unbound in the background
 #$PRE/unbound -d -c ub2.conf >unbound2.log 2>&1 &
-valgrind $PRE/unbound -d -c ub2.conf 2>&1 | tee unbound2.log &
+$PRE/unbound -d -c ub2.conf 2>&1 | tee unbound2.log &
 UPSTREAM_PID=$!
 echo "UPSTREAM_PID=$UPSTREAM_PID" >> .tpkg.var.test
 wait_unbound_up unbound2.log
