@@ -543,6 +543,7 @@ outnet_tcp_take_query_setup(int s, struct pending_tcp* pend,
 	pend->c->tcp_write_pkt_len = w->pkt_len;
 	pend->c->tcp_write_and_read = 1;
 	pend->c->tcp_write_byte_count = 0;
+	pend->c->tcp_is_reading = 0;
 	comm_point_start_listening(pend->c, s, -1);
 	/* set timer on the waiting_tcp entry, this is the write timeout
 	 * for the written packet.  The timer on pend->c is the timer
