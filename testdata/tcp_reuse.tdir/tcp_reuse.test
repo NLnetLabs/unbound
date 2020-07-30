@@ -213,6 +213,36 @@ for x in a1.more.net a2.more.net a3.more.net a4.more.net a5.more.net; do
 	fi
 done
 
+# make the server timeout to drop the upstream connection
+echo "> sleep 20"
+sleep 15
+# see if we are still up.
+echo "> query a7.more.net"
+$PRE/streamtcp -a -f 127.0.0.1@$UNBOUND_PORT a7.more.net A IN >outfile 2>&1
+if test "$?" -ne 0; then
+	echo "exit status not OK"
+	echo "> cat logfiles"
+	cat outfile
+	cat unbound2.log
+	cat unbound.log
+	echo "Not OK"
+	exit 1
+fi
+cat outfile
+for x in a7.more.net; do
+	if grep "$x" outfile | grep "10.20.30.40"; then
+		echo "content OK for $x"
+	else
+		echo "result contents not OK, for $x"
+		echo "> cat logfiles"
+		cat outfile
+		cat unbound2.log
+		cat unbound.log
+		echo "result contents not OK, for $x"
+		exit 1
+	fi
+done
+
 # dropconn.drop.net make the server drop the connection.
 echo "> query a11.more.net a12.more.net dropconn.drop.net a14.more.net a15.more.net"
 $PRE/streamtcp -a -f 127.0.0.1@$UNBOUND_PORT a11.more.net A IN a12.more.net A IN dropconn.drop.net A IN a14.more.net A IN a15.more.net A IN >outfile 2>&1

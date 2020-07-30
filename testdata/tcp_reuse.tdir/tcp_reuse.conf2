@@ -10,6 +10,7 @@ server:
 	chroot: ""
 	username: ""
 	do-not-query-localhost: no
+	tcp-idle-timeout: 10000
 
 	log-queries: yes
 	log-replies: yes
@@ -24,6 +25,7 @@ server:
 	local-data: "www4.example.com  A 10.20.30.44"
 	local-data: "www5.example.com  A 10.20.30.45"
 	local-data: "www6.example.com  A 10.20.30.46"
+	local-data: "www7.example.com  A 10.20.30.47"
 
 	local-zone: "drop.net" deny
 	local-zone: "refuse.net" refuse
