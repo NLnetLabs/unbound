@@ -82,6 +82,7 @@ static struct tls_session_ticket_key {
 	unsigned char *hmac_key;
 } *ticket_keys;
 
+#ifdef HAVE_SSL
 /**
  * callback TLS session ticket encrypt and decrypt
  * For use with SSL_CTX_set_tlsext_ticket_key_cb or
@@ -97,7 +98,6 @@ static struct tls_session_ticket_key {
  * @return 0 on no ticket, 1 for okay, and 2 for okay but renew the ticket
  * 	(the ticket is decrypt only). and <0 for failures.
  */
-#ifdef HAVE_SSL
 int tls_session_ticket_key_cb(SSL *s, unsigned char* key_name,
 	unsigned char* iv, EVP_CIPHER_CTX *evp_ctx,
 #ifdef HAVE_SSL_CTX_SET_TLSEXT_TICKET_KEY_EVP_CB
