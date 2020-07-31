@@ -61,30 +61,6 @@ else
 	exit 1
 fi
 
-echo "> query drop.net."
-$PRE/streamtcp -f 127.0.0.1@$UNBOUND_PORT drop.net. A IN >outfile 2>&1
-cat outfile
-if test "$?" -ne 0; then
-	echo "exit status not OK"
-	echo "> cat logfiles"
-	cat outfile
-	cat unbound2.log
-	cat unbound.log
-	echo "Not OK"
-	exit 1
-fi
-if grep "rcode: SERVFAIL" outfile; then
-	echo "content OK"
-else
-	echo "result contents not OK, for drop.net"
-	echo "> cat logfiles"
-	cat outfile
-	cat unbound2.log
-	cat unbound.log
-	echo "result contents not OK, for drop.net"
-	exit 1
-fi
-
 echo "> query refuse.net."
 $PRE/streamtcp -f 127.0.0.1@$UNBOUND_PORT refuse.net. A IN >outfile 2>&1
 cat outfile
@@ -259,6 +235,30 @@ cat outfile
 # cannot really check outfile, because it may or may not have answers depending
 # on how fast the other server responds or the drop happens, but there are
 # a bunch of connection drops, whilst resolving the other queries.
+
+echo "> query drop.net."
+$PRE/streamtcp -f 127.0.0.1@$UNBOUND_PORT drop.net. A IN >outfile 2>&1
+cat outfile
+if test "$?" -ne 0; then
+	echo "exit status not OK"
+	echo "> cat logfiles"
+	cat outfile
+	cat unbound2.log
+	cat unbound.log
+	echo "Not OK"
+	exit 1
+fi
+if grep "rcode: SERVFAIL" outfile; then
+	echo "content OK"
+else
+	echo "result contents not OK, for drop.net"
+	echo "> cat logfiles"
+	cat outfile
+	cat unbound2.log
+	cat unbound.log
+	echo "result contents not OK, for drop.net"
+	exit 1
+fi
 
 
 # timeouts at the end. (so that the server is not marked as failed for
