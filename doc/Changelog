@@ -1,3 +1,6 @@
+4 August 2020: George
+	- Improve error log message when inserting rpz RR.
+
 4 August 2020: Wouter
 	- Fix mini_event.h on OpenBSD cannot find fd_set.
 
