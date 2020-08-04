@@ -1,3 +1,6 @@
+4 August 2020: Wouter
+	- Fix mini_event.h on OpenBSD cannot find fd_set.
+
 31 July 2020: Wouter
 	- Fix doxygen comment for no ssl for tls session ticket key callback
 	  routine.
