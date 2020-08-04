@@ -886,7 +886,7 @@ int main(int argc, char* argv[])
 	if(argc == 0)
 		usage();
 	if(argc >= 1 && strcmp(argv[0], "start")==0) {
-#if defined(TARGET_OS_TV) || defined(TARGET_OS_WATCH)
+#if (defined(TARGET_OS_TV) && TARGET_OS_TV) || (defined(TARGET_OS_WATCH) && TARGET_OS_WATCH)
 		fatal_exit("could not exec unbound: %s",
 			strerror(ENOSYS));
 #else

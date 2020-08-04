@@ -1,5 +1,7 @@
 4 August 2020: George
 	- Improve error log message when inserting rpz RR.
+	- Merge PR #280, Make tvOS & watchOS checks verify truthiness as well as
+	  definedness, by Felipe Gasper.
 
 4 August 2020: Wouter
 	- Fix mini_event.h on OpenBSD cannot find fd_set.
