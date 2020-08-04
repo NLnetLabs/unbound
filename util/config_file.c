@@ -233,8 +233,6 @@ config_create(void)
 	cfg->trusted_keys_file_list = NULL;
 	cfg->trust_anchor_signaling = 1;
 	cfg->root_key_sentinel = 1;
-	cfg->dlv_anchor_file = NULL;
-	cfg->dlv_anchor_list = NULL;
 	cfg->domain_insecure = NULL;
 	cfg->val_date_override = 0;
 	cfg->val_sig_skew_min = 3600; /* at least daylight savings trouble */
@@ -581,8 +579,6 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	else S_STRLIST("trusted-keys-file:", trusted_keys_file_list)
 	else S_YNO("trust-anchor-signaling:", trust_anchor_signaling)
 	else S_YNO("root-key-sentinel:", root_key_sentinel)
-	else S_STR("dlv-anchor-file:", dlv_anchor_file)
-	else S_STRLIST("dlv-anchor:", dlv_anchor_list)
 	else S_STRLIST("domain-insecure:", domain_insecure)
 	else S_NUMBER_OR_ZERO("val-bogus-ttl:", bogus_ttl)
 	else S_YNO("val-clean-additional:", val_clean_additional)
@@ -998,7 +994,6 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_DEC(opt, "unwanted-reply-threshold", unwanted_threshold)
 	else O_YNO(opt, "do-not-query-localhost", donotquery_localhost)
 	else O_STR(opt, "module-config", module_conf)
-	else O_STR(opt, "dlv-anchor-file", dlv_anchor_file)
 	else O_DEC(opt, "val-bogus-ttl", bogus_ttl)
 	else O_YNO(opt, "val-clean-additional", val_clean_additional)
 	else O_DEC(opt, "val-log-level", val_log_level)
@@ -1036,7 +1031,6 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_LST(opt, "trusted-keys-file", trusted_keys_file_list)
 	else O_YNO(opt, "trust-anchor-signaling", trust_anchor_signaling)
 	else O_YNO(opt, "root-key-sentinel", root_key_sentinel)
-	else O_LST(opt, "dlv-anchor", dlv_anchor_list)
 	else O_LST(opt, "control-interface", control_ifs.first)
 	else O_LST(opt, "domain-insecure", domain_insecure)
 	else O_UNS(opt, "val-override-date", val_date_override)
@@ -1462,8 +1456,6 @@ config_delete(struct config_file* cfg)
 	config_delstrlist(cfg->trusted_keys_file_list);
 	config_delstrlist(cfg->trust_anchor_list);
 	config_delstrlist(cfg->domain_insecure);
-	free(cfg->dlv_anchor_file);
-	config_delstrlist(cfg->dlv_anchor_list);
 	config_deldblstrlist(cfg->acls);
 	config_deldblstrlist(cfg->tcp_connection_limits);
 	free(cfg->val_nsec3_key_iterations);
