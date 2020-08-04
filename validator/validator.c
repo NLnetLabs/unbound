@@ -390,10 +390,8 @@ generate_request(struct module_qstate* qstate, int id, uint8_t* name,
 	ask.local_alias = NULL;
 	log_query_info(VERB_ALGO, "generate request", &ask);
 	/* enable valrec flag to avoid recursion to the same validation
-	 * routine, this lookup is simply a lookup. DLVs need validation */
-	if(qtype == LDNS_RR_TYPE_DLV)
-		valrec = 0;
-	else valrec = 1;
+	 * routine, this lookup is simply a lookup. */
+	valrec = 1;
 
 	fptr_ok(fptr_whitelist_modenv_detect_cycle(qstate->env->detect_cycle));
 	if((*qstate->env->detect_cycle)(qstate, &ask,
@@ -1585,7 +1583,7 @@ processInit(struct module_qstate* qstate, struct val_qstate* vq,
 	vq->key_entry = key_cache_obtain(ve->kcache, lookup_name, lookup_len,
 		vq->qchase.qclass, qstate->region, *qstate->env->now);
 
-	/* there is no key(from DLV) and no trust anchor */
+	/* there is no key and no trust anchor */
 	if(vq->key_entry == NULL && anchor == NULL) {
 		/*response isn't under a trust anchor, so we cannot validate.*/
 		vq->chase_reply->security = sec_status_indeterminate;
@@ -1678,9 +1676,8 @@ processFindKey(struct module_qstate* qstate, struct val_qstate* vq, int id)
 	/* We know that state.key_entry is not 0 or bad key -- if it were,
 	 * then previous processing should have directed this event to 
 	 * a different state. 
-	 * It could be an isnull key, which signals that a DLV was just
-	 * done and the DNSKEY after the DLV failed with dnssec-retry state
-	 * and the DNSKEY has to be performed again. */
+	 * It could be an isnull key, which signals the DNSKEY failed
+	 * with retry and has to be looked up again. */
 	log_assert(vq->key_entry && !key_entry_isbad(vq->key_entry));
 	if(key_entry_isnull(vq->key_entry)) {
 		if(!generate_request(qstate, id, vq->ds_rrset->rk.dname, 
