@@ -622,7 +622,7 @@ server:
 	# more slabs reduce lock contention, but fragment memory usage.
 	# key-cache-slabs: 4
 
-	# the amount of memory to use for the negative cache (used for DLV).
+	# the amount of memory to use for the negative cache.
 	# plain value in bytes or you can append k, m or G. default is "1Mb".
 	# neg-cache-size: 1m
 

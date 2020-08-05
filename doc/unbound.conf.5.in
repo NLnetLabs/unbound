@@ -1014,7 +1014,7 @@ Root key trust anchor sentinel. Default is yes.
 Sets domain name to be insecure, DNSSEC chain of trust is ignored towards
 the domain name.  So a trust anchor above the domain name can not make the
 domain secure with a DS record, such a DS record is then ignored.
-Also keys from DLV are ignored for the domain.  Can be given multiple times
+Can be given multiple times
 to specify multiple domains that are treated as if unsigned.  If you set
 trust anchors for the domain they override this setting (and the domain
 is secured).
