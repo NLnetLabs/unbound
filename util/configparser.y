@@ -175,7 +175,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_IPSET VAR_IPSET_NAME_V4 VAR_IPSET_NAME_V6
 %token VAR_TLS_SESSION_TICKET_KEYS VAR_RPZ VAR_TAGS VAR_RPZ_ACTION_OVERRIDE
 %token VAR_RPZ_CNAME_OVERRIDE VAR_RPZ_LOG VAR_RPZ_LOG_NAME
-%token VAR_DYNLIB VAR_DYNLIB_FILE
+%token VAR_DYNLIB VAR_DYNLIB_FILE VAR_EDNS_CLIENT_TAG
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -285,7 +285,7 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_unknown_server_time_limit | server_log_tag_queryreply |
 	server_stream_wait_size | server_tls_ciphers |
 	server_tls_ciphersuites | server_tls_session_ticket_keys |
-	server_tls_use_sni
+	server_tls_use_sni | server_edns_client_tag
 	;
 stubstart: VAR_STUB_ZONE
 	{
@@ -2401,6 +2401,21 @@ server_ipsecmod_strict: VAR_IPSECMOD_STRICT STRING_ARG
 		OUTYY(("P(Compiled without IPsec module, ignoring)\n"));
 		free($2);
 	#endif
+	}
+	;
+server_edns_client_tag: VAR_EDNS_CLIENT_TAG STRING_ARG STRING_ARG
+	{
+		int tag_data;
+		OUTYY(("P(server_edns_client_tag:%s %s)\n", $2, $3));
+		tag_data = atoi($3);
+		if(tag_data > 65535 || tag_data < 0 ||
+			(tag_data == 0 && (strlen($3) != 1 || $3[0] != '0')))
+			yyerror("edns-client-tag data invalid, needs to be a "
+				"number from 0 to 65535");
+		if(!cfg_str2list_insert(
+			&cfg_parser->cfg->edns_client_tags, $2, $3))
+			fatal_exit("out of memory adding "
+				"edns-client-tag");
 	}
 	;
 stub_name: VAR_NAME STRING_ARG
