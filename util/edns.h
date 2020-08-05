@@ -77,7 +77,7 @@ struct edns_tag_addr {
  */
 struct edns_tags* edns_tags_create(void);
 
-/** Delete ENDS tags structure
+/** Delete EDNS tags structure
  * @param edns_tags: struct to delete
  */
 void edns_tags_delete(struct edns_tags* edns_tags);
