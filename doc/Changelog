@@ -1,3 +1,6 @@
+5 August 2020: Ralph
+	- Merge PR #272: Add EDNS client tag functionality.
+
 4 August 2020: George
 	- Improve error log message when inserting rpz RR.
 	- Merge PR #280, Make tvOS & watchOS checks verify truthiness as well as
