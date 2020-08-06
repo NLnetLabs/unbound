@@ -1,7 +1,7 @@
 #include "config.h"
 #include "util/configyyrename.h"
 
-#line 3 "<stdout>"
+#line 2 "<stdout>"
 
 #define  YY_INT_ALIGNED short int
 
@@ -3032,7 +3032,7 @@ static void config_end_include(void)
         }
 #endif
 
-#line 3034 "<stdout>"
+#line 3033 "<stdout>"
 #define YY_NO_INPUT 1
 #line 191 "./util/configlexer.lex"
 #ifndef YY_NO_UNPUT
@@ -3041,9 +3041,9 @@ static void config_end_include(void)
 #ifndef YY_NO_INPUT
 #define YY_NO_INPUT 1
 #endif
-#line 3043 "<stdout>"
+#line 3042 "<stdout>"
 
-#line 3045 "<stdout>"
+#line 3044 "<stdout>"
 
 #define INITIAL 0
 #define quotedstring 1
@@ -3267,7 +3267,7 @@ YY_DECL
 	{
 #line 211 "./util/configlexer.lex"
 
-#line 3269 "<stdout>"
+#line 3268 "<stdout>"
 
 	while ( /*CONSTCOND*/1 )		/* loops until end-of-file is reached */
 		{
@@ -5088,7 +5088,7 @@ YY_RULE_SETUP
 #line 652 "./util/configlexer.lex"
 ECHO;
 	YY_BREAK
-#line 5090 "<stdout>"
+#line 5089 "<stdout>"
 
 	case YY_END_OF_BUFFER:
 		{
