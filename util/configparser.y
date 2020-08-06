@@ -1121,12 +1121,14 @@ server_dlv_anchor_file: VAR_DLV_ANCHOR_FILE STRING_ARG
 	{
 		OUTYY(("P(server_dlv_anchor_file:%s)\n", $2));
 		log_warn("option dlv-anchor-file ignored: DLV is decommissioned");
+		free($2);
 	}
 	;
 server_dlv_anchor: VAR_DLV_ANCHOR STRING_ARG
 	{
 		OUTYY(("P(server_dlv_anchor:%s)\n", $2));
 		log_warn("option dlv-anchor ignored: DLV is decommissioned");
+		free($2);
 	}
 	;
 server_auto_trust_anchor_file: VAR_AUTO_TRUST_ANCHOR_FILE STRING_ARG
