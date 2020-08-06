@@ -337,7 +337,8 @@ extern int yydebug;
     VAR_RPZ_LOG = 543,
     VAR_RPZ_LOG_NAME = 544,
     VAR_DYNLIB = 545,
-    VAR_DYNLIB_FILE = 546
+    VAR_DYNLIB_FILE = 546,
+    VAR_EDNS_CLIENT_TAG = 547
   };
 #endif
 /* Tokens.  */
@@ -630,6 +631,7 @@ extern int yydebug;
 #define VAR_RPZ_LOG_NAME 544
 #define VAR_DYNLIB 545
 #define VAR_DYNLIB_FILE 546
+#define VAR_EDNS_CLIENT_TAG 547
 
 /* Value type.  */
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
@@ -639,7 +641,7 @@ union YYSTYPE
 
 	char*	str;
 
-#line 643 "util/configparser.h"
+#line 645 "util/configparser.h"
 
 };
 typedef union YYSTYPE YYSTYPE;

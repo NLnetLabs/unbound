@@ -1,3 +1,15 @@
+5 August 2020: Wouter
+	- contrib/aaaa-filter-iterator.patch file renewed diff content to
+	  apply cleanly to the current coderepo for the current code version.
+
+5 August 2020: Ralph
+	- Merge PR #272: Add EDNS client tag functionality.
+
+4 August 2020: George
+	- Improve error log message when inserting rpz RR.
+	- Merge PR #280, Make tvOS & watchOS checks verify truthiness as well as
+	  definedness, by Felipe Gasper.
+
 4 August 2020: Wouter
 	- Fix mini_event.h on OpenBSD cannot find fd_set.
 
