@@ -1,3 +1,7 @@
+10 August 2020: Ralph
+	- Merge (modified) PR #277, use EVP_MAC_CTX_set_params if available,
+	  by Vítězslav Čížek.
+
 10 August 2020: Wouter
 	- Fix #287: doc typo: "Additionaly".
 
