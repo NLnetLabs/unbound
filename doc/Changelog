@@ -1,3 +1,6 @@
+10 August 2020: Wouter
+	- Fix #287: doc typo: "Additionaly".
+
 6 August 2020: Wouter
 	- Merge PR #284 and Fix #246: Remove DLV entirely from Unbound.
 	  The DLV has been decommisioned and in unbound 1.5.4, in 2015, there

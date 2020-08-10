@@ -2101,7 +2101,7 @@ even if some data have expired in terms of DNS TTL or the Redis server has
 cached too much data;
 if necessary the Redis server must be configured to limit the cache size,
 preferably with some kind of least-recently-used eviction policy.
-Additionaly, the \fBredis\-expire\-records\fR option can be used in order to
+Additionally, the \fBredis\-expire\-records\fR option can be used in order to
 set the relative DNS TTL of the message as timeout to the Redis records; keep
 in mind that some additional memory is used per key and that the expire
 information is stored as absolute Unix timestamps in Redis (computer time must
