@@ -221,6 +221,9 @@
 /* Define to 1 if you have the `EVP_EncryptInit_ex' function. */
 #undef HAVE_EVP_ENCRYPTINIT_EX
 
+/* Define to 1 if you have the `EVP_MAC_CTX_set_params' function. */
+#undef HAVE_EVP_MAC_CTX_SET_PARAMS
+
 /* Define to 1 if you have the `EVP_MD_CTX_new' function. */
 #undef HAVE_EVP_MD_CTX_NEW
 
@@ -506,9 +509,6 @@
 /* Define to 1 if you have the `SSL_CTX_set_tlsext_ticket_key_evp_cb'
    function. */
 #undef HAVE_SSL_CTX_SET_TLSEXT_TICKET_KEY_EVP_CB
-
-/* Define to 1 if you have the `EVP_MAC_CTX_set_params` function. */
-#undef HAVE_EVP_MAC_CTX_SET_PARAMS
 
 /* Define to 1 if you have the `SSL_get0_peername' function. */
 #undef HAVE_SSL_GET0_PEERNAME
