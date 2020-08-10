@@ -1,3 +1,16 @@
+10 August 2020: Wouter
+	- Fix #287: doc typo: "Additionaly".
+
+6 August 2020: Wouter
+	- Merge PR #284 and Fix #246: Remove DLV entirely from Unbound.
+	  The DLV has been decommisioned and in unbound 1.5.4, in 2015, there
+	  was advise to stop using it.  The current code base does not contain
+	  DLV code any more.  The use of dlv options displays a warning.
+
+5 August 2020: Wouter
+	- contrib/aaaa-filter-iterator.patch file renewed diff content to
+	  apply cleanly to the current coderepo for the current code version.
+
 5 August 2020: Ralph
 	- Merge PR #272: Add EDNS client tag functionality.
 
