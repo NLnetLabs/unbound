@@ -507,6 +507,9 @@
    function. */
 #undef HAVE_SSL_CTX_SET_TLSEXT_TICKET_KEY_EVP_CB
 
+/* Define to 1 if you have the `EVP_MAC_CTX_set_params` function. */
+#undef HAVE_EVP_MAC_CTX_SET_PARAMS
+
 /* Define to 1 if you have the `SSL_get0_peername' function. */
 #undef HAVE_SSL_GET0_PEERNAME
 
