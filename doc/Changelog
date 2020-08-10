@@ -4,6 +4,7 @@
 
 10 August 2020: Wouter
 	- Fix #287: doc typo: "Additionaly".
+	- Rerun autoconf
 
 6 August 2020: Wouter
 	- Merge PR #284 and Fix #246: Remove DLV entirely from Unbound.
