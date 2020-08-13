@@ -1,3 +1,6 @@
+13 August 2020: Ralph
+	- Create and init edns tags data for libunbound.
+
 10 August 2020: Ralph
 	- Merge (modified) PR #277, use EVP_MAC_CTX_set_params if available,
 	  by Vítězslav Čížek.

@@ -58,6 +58,7 @@
 #include "util/net_help.h"
 #include "util/tube.h"
 #include "util/ub_event.h"
+#include "util/edns.h"
 #include "services/modstack.h"
 #include "services/localzone.h"
 #include "services/cache/infra.h"
@@ -153,6 +154,18 @@ static struct ub_ctx* ub_ctx_create_nopipe(void)
 		errno = ENOMEM;
 		return NULL;
 	}
+	ctx->env->edns_tags = edns_tags_create();
+	if(!ctx->env->edns_tags) {
+		auth_zones_delete(ctx->env->auth_zones);
+		edns_known_options_delete(ctx->env);
+		config_delete(ctx->env->cfg);
+		free(ctx->env);
+		ub_randfree(ctx->seed_rnd);
+		free(ctx);
+		errno = ENOMEM;
+		return NULL;
+	}
+
 	ctx->env->alloc = &ctx->superalloc;
 	ctx->env->worker = NULL;
 	ctx->env->need_to_validate = 0;
