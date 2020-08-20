@@ -1219,7 +1219,6 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 		LDNS_QR_SET(sldns_buffer_begin(c->buffer));
 		LDNS_RCODE_SET(sldns_buffer_begin(c->buffer), 
 			LDNS_RCODE_FORMERR);
-		server_stats_insrcode(&worker->stats, c->buffer);
 		goto send_reply;
 	}
 	if(worker->env.cfg->log_queries) {
@@ -1237,7 +1236,6 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 			LDNS_RCODE_REFUSED);
 		if(worker->stats.extended) {
 			worker->stats.qtype[qinfo.qtype]++;
-			server_stats_insrcode(&worker->stats, c->buffer);
 		}
 		goto send_reply;
 	}
@@ -1259,7 +1257,6 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 			LDNS_RCODE_FORMERR);
 		if(worker->stats.extended) {
 			worker->stats.qtype[qinfo.qtype]++;
-			server_stats_insrcode(&worker->stats, c->buffer);
 		}
 		goto send_reply;
 	}
@@ -1275,7 +1272,6 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 			*(uint16_t*)(void *)sldns_buffer_begin(c->buffer),
 			sldns_buffer_read_u16_at(c->buffer, 2), &reply_edns);
 		regional_free_all(worker->scratchpad);
-		server_stats_insrcode(&worker->stats, c->buffer);
 		goto send_reply;
 	}
 	if(edns.edns_present) {
@@ -1354,7 +1350,6 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 		edns.udp_size = 65535; /* max size for TCP replies */
 	if(qinfo.qclass == LDNS_RR_CLASS_CH && answer_chaos(worker, &qinfo,
 		&edns, repinfo, c->buffer)) {
-		server_stats_insrcode(&worker->stats, c->buffer);
 		regional_free_all(worker->scratchpad);
 		goto send_reply;
 	}
@@ -1375,7 +1370,6 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 			comm_point_drop_reply(repinfo);
 			return 0;
 		}
-		server_stats_insrcode(&worker->stats, c->buffer);
 		goto send_reply;
 	}
 	if(worker->env.auth_zones &&
@@ -1387,7 +1381,6 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 			comm_point_drop_reply(repinfo);
 			return 0;
 		}
-		server_stats_insrcode(&worker->stats, c->buffer);
 		goto send_reply;
 	}
 	if(worker->env.auth_zones &&
@@ -1403,7 +1396,6 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 		if(LDNS_RD_WIRE(sldns_buffer_begin(c->buffer)) &&
 		   acl != acl_deny_non_local && acl != acl_refuse_non_local)
 			LDNS_RA_SET(sldns_buffer_begin(c->buffer));
-		server_stats_insrcode(&worker->stats, c->buffer);
 		goto send_reply;
 	}
 
@@ -1432,7 +1424,6 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 			*(uint16_t*)(void *)sldns_buffer_begin(c->buffer),
 			sldns_buffer_read_u16_at(c->buffer, 2), NULL);
 		regional_free_all(worker->scratchpad);
-		server_stats_insrcode(&worker->stats, c->buffer);
 		log_addr(VERB_ALGO, "refused nonrec (cache snoop) query from",
 			&repinfo->addr, repinfo->addrlen);
 		goto send_reply;
@@ -1588,9 +1579,9 @@ send_reply_rc:
 	if(is_expired_answer) {
 		worker->stats.ans_expired++;
 	}
+	server_stats_insrcode(&worker->stats, c->buffer);
 	if(worker->stats.extended) {
 		if(is_secure_answer) worker->stats.ans_secure++;
-		server_stats_insrcode(&worker->stats, repinfo->c->buffer);
 	}
 #ifdef USE_DNSTAP
 	if(worker->dtenv.log_client_response_messages)

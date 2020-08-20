@@ -1,3 +1,6 @@
+20 August 2020: Ralph
+	- Fix stats double count issue (#289).
+
 13 August 2020: Ralph
 	- Create and init edns tags data for libunbound.
 
