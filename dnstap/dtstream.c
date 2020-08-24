@@ -1873,6 +1873,11 @@ static int dtio_open_output_local(struct dt_io_thread* dtio)
 	if(connect(dtio->fd, (struct sockaddr*)&s, (socklen_t)sizeof(s))
 		== -1) {
 		char* to = dtio->socket_path;
+		if(dtio->reconnect_timeout > DTIO_RECONNECT_TIMEOUT_MIN &&
+			verbosity < 4) {
+			dtio_close_fd(dtio);
+			return 0; /* no log retries on low verbosity */
+		}
 #ifndef USE_WINSOCK
 		log_err("dnstap io: failed to connect to \"%s\": %s",
 			to, strerror(errno));
@@ -1916,6 +1921,11 @@ static int dtio_open_output_tcp(struct dt_io_thread* dtio)
 	if(connect(dtio->fd, (struct sockaddr*)&addr, addrlen) == -1) {
 		if(errno == EINPROGRESS)
 			return 1; /* wait until connect done*/
+		if(dtio->reconnect_timeout > DTIO_RECONNECT_TIMEOUT_MIN &&
+			verbosity < 4) {
+			dtio_close_fd(dtio);
+			return 0; /* no log retries on low verbosity */
+		}
 #ifndef USE_WINSOCK
 		if(tcp_connect_errno_needs_log(
 			(struct sockaddr *)&addr, addrlen)) {
