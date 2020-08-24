@@ -299,9 +299,6 @@
 /* Define to 1 if you have the `HMAC_Init_ex' function. */
 #undef HAVE_HMAC_INIT_EX
 
-/* If you have HMAC_Update */
-#undef HAVE_HMAC_UPDATE
-
 /* If we have htobe64 */
 #undef HAVE_HTOBE64
 

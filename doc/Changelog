@@ -3,6 +3,8 @@
 	  attempts.  Attempts on the timer are only logged on high verbosity,
 	  if they produce a connection failure error.
 	- Fix to apply chroot to dnstap-socket-path, if chroot is enabled.
+	- Change configure to use EVP_sha256 instead of HMAC_Update for
+	  openssl-3.0.0.
 
 20 August 2020: Ralph
 	- Fix stats double count issue (#289).
