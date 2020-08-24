@@ -279,7 +279,8 @@ int dt_io_thread_apply_cfg(struct dt_io_thread* dtio, struct config_file *cfg)
 			return 0;
 		}
 		free(dtio->socket_path);
-		dtio->socket_path = strdup(cfg->dnstap_socket_path);
+		dtio->socket_path = fname_after_chroot(cfg->dnstap_socket_path,
+			cfg, 1);
 		if(!dtio->socket_path) {
 			log_err("dnstap setup: malloc failure");
 			return 0;
