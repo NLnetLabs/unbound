@@ -155,16 +155,14 @@ reuse_cmp_addrportssl(const void* key1, const void* key2)
 int
 reuse_cmp(const void* key1, const void* key2)
 {
-	struct reuse_tcp* r1 = (struct reuse_tcp*)key1;
-	struct reuse_tcp* r2 = (struct reuse_tcp*)key2;
 	int r;
 	r = reuse_cmp_addrportssl(key1, key2);
 	if(r != 0)
 		return r;
 
 	/* compare ptr value */
-	if(r1 < r2) return -1;
-	if(r1 > r2) return 1;
+	if(key1 < key2) return -1;
+	if(key1 > key2) return 1;
 	return 0;
 }
 
