@@ -805,6 +805,7 @@ reuse_move_writewait_away(struct outside_network* outnet,
 		/* since the current query is not written, it can also
 		 * move to a free buffer */
 		if(verbosity >= 5 && pend->query->pkt_len > 12+2+2 &&
+			LDNS_QDCOUNT(pend->query->pkt) > 0 &&
 			dname_valid(pend->query->pkt+12, pend->query->pkt_len-12)) {
 			char buf[LDNS_MAX_DOMAINLEN+1];
 			dname_str(pend->query->pkt+12, buf);
@@ -829,6 +830,7 @@ reuse_move_writewait_away(struct outside_network* outnet,
 	}
 	while((w = reuse_write_wait_pop(&pend->reuse)) != NULL) {
 		if(verbosity >= 5 && w->pkt_len > 12+2+2 &&
+			LDNS_QDCOUNT(w->pkt) > 0 &&
 			dname_valid(w->pkt+12, w->pkt_len-12)) {
 			char buf[LDNS_MAX_DOMAINLEN+1];
 			dname_str(w->pkt+12, buf);
