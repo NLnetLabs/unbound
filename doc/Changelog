@@ -1,3 +1,6 @@
+26 August 2020: George
+	- Update documentation in python example code.
+
 24 August 2020: Wouter
 	- Fix that dnstap reconnects do not spam the log with the repeated
 	  attempts.  Attempts on the timer are only logged on high verbosity,
