@@ -272,6 +272,9 @@
 /* Define to 1 if you have the `getentropy' function. */
 #undef HAVE_GETENTROPY
 
+/* Define to 1 if you have the `getifaddrs' function. */
+#undef HAVE_GETIFADDRS
+
 /* Define to 1 if you have the <getopt.h> header file. */
 #undef HAVE_GETOPT_H
 
@@ -301,6 +304,9 @@
 
 /* If we have htobe64 */
 #undef HAVE_HTOBE64
+
+/* Define to 1 if you have the <ifaddrs.h> header file. */
+#undef HAVE_IFADDRS_H
 
 /* Define to 1 if you have the `inet_aton' function. */
 #undef HAVE_INET_ATON
@@ -370,6 +376,9 @@
 
 /* Define to 1 if you have the <nettle/eddsa.h> header file. */
 #undef HAVE_NETTLE_EDDSA_H
+
+/* Define to 1 if you have the <net/if.h> header file. */
+#undef HAVE_NET_IF_H
 
 /* Use libnss for crypto */
 #undef HAVE_NSS

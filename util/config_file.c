@@ -1387,8 +1387,8 @@ config_delviews(struct config_view* p)
 		p = np;
 	}
 }
-/** delete string array */
-static void
+
+void
 config_del_strarray(char** array, int num)
 {
 	int i;

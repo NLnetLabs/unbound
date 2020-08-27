@@ -117,18 +117,31 @@ struct listen_port {
  * interfaces for IP4 and/or IP6, for UDP and/or TCP.
  * On the given port number. It creates the sockets.
  * @param cfg: settings on what ports to open.
+ * @param ifs: interfaces to open, array of IP addresses, ip[@port].
+ * @param num_ifs: length of ifs.
  * @param reuseport: set to true if you want reuseport, or NULL to not have it,
  *   set to false on exit if reuseport failed to apply (because of no
  *   kernel support).
  * @return: linked list of ports or NULL on error.
  */
 struct listen_port* listening_ports_open(struct config_file* cfg,
-	int* reuseport);
+	char** ifs, int num_ifs, int* reuseport);
 
 /**
  * Close and delete the (list of) listening ports.
  */
 void listening_ports_free(struct listen_port* list);
+
+/**
+ * Resolve interface names in config and store result IP addresses
+ * @param cfg: config
+ * @param resif: string array (malloced array of malloced strings) with
+ * 	result.  NULL if cfg has none.
+ * @param num_resif: length of resif.  Zero if cfg has zero num_ifs.
+ * @return 0 on failure.
+ */
+int resolve_interface_names(struct config_file* cfg, char*** resif,
+	int* num_resif);
 
 /**
  * Create commpoints with for this thread for the shared ports.

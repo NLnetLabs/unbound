@@ -969,6 +969,9 @@ void config_deldblstrlist(struct config_str2list* list);
  */
 void config_deltrplstrlist(struct config_str3list* list);
 
+/** delete string array */
+void config_del_strarray(char** array, int num);
+
 /** delete stringbytelist */
 void config_del_strbytelist(struct config_strbytelist* list);
 

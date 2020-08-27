@@ -308,6 +308,8 @@ daemon_open_shared_ports(struct daemon* daemon)
 {
 	log_assert(daemon);
 	if(daemon->cfg->port != daemon->listening_port) {
+		char** resif = NULL;
+		int num_resif = 0;
 		size_t i;
 		struct listen_port* p0;
 		daemon->reuseport = 0;
@@ -318,15 +320,18 @@ daemon_open_shared_ports(struct daemon* daemon)
 			free(daemon->ports);
 			daemon->ports = NULL;
 		}
+		if(!resolve_interface_names(daemon->cfg, &resif, &num_resif))
+			return 0;
 		/* see if we want to reuseport */
 #ifdef SO_REUSEPORT
 		if(daemon->cfg->so_reuseport && daemon->cfg->num_threads > 0)
 			daemon->reuseport = 1;
 #endif
 		/* try to use reuseport */
-		p0 = listening_ports_open(daemon->cfg, &daemon->reuseport);
+		p0 = listening_ports_open(daemon->cfg, resif, num_resif, &daemon->reuseport);
 		if(!p0) {
 			listening_ports_free(p0);
+			config_del_strarray(resif, num_resif);
 			return 0;
 		}
 		if(daemon->reuseport) {
@@ -340,6 +345,7 @@ daemon_open_shared_ports(struct daemon* daemon)
 		if(!(daemon->ports = (struct listen_port**)calloc(
 			daemon->num_ports, sizeof(*daemon->ports)))) {
 			listening_ports_free(p0);
+			config_del_strarray(resif, num_resif);
 			return 0;
 		}
 		daemon->ports[0] = p0;
@@ -348,16 +354,19 @@ daemon_open_shared_ports(struct daemon* daemon)
 			for(i=1; i<daemon->num_ports; i++) {
 				if(!(daemon->ports[i]=
 					listening_ports_open(daemon->cfg,
+						resif, num_resif,
 						&daemon->reuseport))
 					|| !daemon->reuseport ) {
 					for(i=0; i<daemon->num_ports; i++)
 						listening_ports_free(daemon->ports[i]);
 					free(daemon->ports);
 					daemon->ports = NULL;
+					config_del_strarray(resif, num_resif);
 					return 0;
 				}
 			}
 		}
+		config_del_strarray(resif, num_resif);
 		daemon->listening_port = daemon->cfg->port;
 	}
 	if(!daemon->cfg->remote_control_enable && daemon->rc_port) {

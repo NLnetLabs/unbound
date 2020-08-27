@@ -70,6 +70,13 @@
 #include <systemd/sd-daemon.h>
 #endif
 
+#ifdef HAVE_IFADDRS_H
+#include <ifaddrs.h>
+#endif
+#ifdef HAVE_NET_IF_H
+#include <net/if.h>
+#endif
+
 /** number of queued TCP connections for listen() */
 #define TCP_BACKLOG 256 
 
@@ -1439,8 +1446,163 @@ listen_delete(struct listen_dnsport* front)
 	}
 }
 
+#ifdef HAVE_GETIFADDRS
+static int
+resolve_ifa_name(struct ifaddrs *ifas, const char *search_ifa, char ***ip_addresses, int *ip_addresses_size)
+{
+	struct ifaddrs *ifa;
+	int last_ip_addresses_size = *ip_addresses_size;
+
+	for(ifa = ifas; ifa != NULL; ifa = ifa->ifa_next) {
+		sa_family_t family;
+		const char* atsign;
+#ifdef INET6      /* |   address ip    | % |  ifa name  | @ |  port  | nul */
+		char addr_buf[INET6_ADDRSTRLEN + 1 + IF_NAMESIZE + 1 + 16 + 1];
+#else
+		char addr_buf[INET_ADDRSTRLEN + 1 + 16 + 1];
+#endif
+
+		if((atsign=strrchr(search_ifa, '@')) != NULL) {
+			if(strlen(ifa->ifa_name) != (size_t)(atsign-search_ifa)
+			   || strncmp(ifa->ifa_name, search_ifa,
+			   atsign-search_ifa) != 0)
+				continue;
+		} else {
+			if(strcmp(ifa->ifa_name, search_ifa) != 0)
+				continue;
+			atsign = "";
+		}
+
+		if(ifa->ifa_addr == NULL)
+			continue;
+
+		family = ifa->ifa_addr->sa_family;
+		if(family == AF_INET) {
+			char a4[INET_ADDRSTRLEN + 1];
+			struct sockaddr_in *in4 = (struct sockaddr_in *)
+				ifa->ifa_addr;
+			if(!inet_ntop(family, &in4->sin_addr, a4, sizeof(a4))) {
+				log_err("inet_ntop failed");
+				return 0;
+			}
+			snprintf(addr_buf, sizeof(addr_buf), "%s%s",
+				a4, atsign);
+		}
+#ifdef INET6
+		else if(family == AF_INET6) {
+			struct sockaddr_in6 *in6 = (struct sockaddr_in6 *)
+				ifa->ifa_addr;
+			char a6[INET6_ADDRSTRLEN + 1];
+			char if_index_name[IF_NAMESIZE + 1];
+			if_index_name[0] = 0;
+			if(!inet_ntop(family, &in6->sin6_addr, a6, sizeof(a6))) {
+				log_err("inet_ntop failed");
+				return 0;
+			}
+			if_indextoname(in6->sin6_scope_id,
+				(char *)if_index_name);
+			if (strlen(if_index_name) != 0) {
+				snprintf(addr_buf, sizeof(addr_buf),
+					"%s%%%s%s", a6, if_index_name, atsign);
+			} else {
+				snprintf(addr_buf, sizeof(addr_buf), "%s%s",
+					a6, atsign);
+			}
+		}
+#endif
+		else {
+			continue;
+		}
+		verbose(4, "interface %s has address %s", search_ifa, addr_buf);
+
+		*ip_addresses = realloc(*ip_addresses, sizeof(char *) * (*ip_addresses_size + 1));
+		if(!*ip_addresses) {
+			log_err("realloc failed: out of memory");
+			return 0;
+		}
+		(*ip_addresses)[*ip_addresses_size] = strdup(addr_buf);
+		if(!(*ip_addresses)[*ip_addresses_size]) {
+			log_err("strdup failed: out of memory");
+			return 0;
+		}
+		(*ip_addresses_size)++;
+	}
+
+	if (*ip_addresses_size == last_ip_addresses_size) {
+		*ip_addresses = realloc(*ip_addresses, sizeof(char *) * (*ip_addresses_size + 1));
+		if(!*ip_addresses) {
+			log_err("realloc failed: out of memory");
+			return 0;
+		}
+		(*ip_addresses)[*ip_addresses_size] = strdup(search_ifa);
+		if(!(*ip_addresses)[*ip_addresses_size]) {
+			log_err("strdup failed: out of memory");
+			return 0;
+		}
+		(*ip_addresses_size)++;
+	}
+	return 1;
+}
+#endif /* HAVE_GETIFADDRS */
+
+int resolve_interface_names(struct config_file* cfg, char*** resif,
+	int* num_resif)
+{
+#ifdef HAVE_GETIFADDRS
+	int i;
+	struct ifaddrs *addrs;
+	if(cfg->num_ifs == 0) {
+		*resif = NULL;
+		*num_resif = 0;
+		return 1;
+	}
+	if(getifaddrs(&addrs) == -1) {
+		log_err("failed to list interfaces: getifaddrs: %s",
+			strerror(errno));
+		freeifaddrs(addrs);
+		return 0;
+	}
+	for(i=0; i<cfg->num_ifs; i++) {
+		if(!resolve_ifa_name(addrs, cfg->ifs[i], resif, num_resif)) {
+			freeifaddrs(addrs);
+			config_del_strarray(*resif, *num_resif);
+			*resif = NULL;
+			*num_resif = 0;
+			return 0;
+		}
+	}
+	freeifaddrs(addrs);
+	return 1;
+#else
+	int i;
+	if(cfg->num_ifs == 0) {
+		*resif = NULL;
+		*num_resif = 0;
+		return 1;
+	}
+	*num_resif = cfg->num_ifs;
+	*resif = calloc(*num_resif, sizeof(**resif));
+	if(!*resif) {
+		log_err("out of memory");
+		return 0;
+	}
+	for(i=0; i<*num_resif; i++) {
+		(*resif)[i] = strdup(cfg->ifs[i]);
+		if(!((*resif)[i])) {
+			log_err("out of memory");
+			config_del_strarray(*resif, *num_resif);
+			*resif = NULL;
+			*num_resif = 0;
+			return 0;
+		}
+	}
+	return 1;
+#endif /* HAVE_GETIFADDRS */
+}
+
 struct listen_port* 
-listening_ports_open(struct config_file* cfg, int* reuseport)
+listening_ports_open(struct config_file* cfg, char** ifs, int num_ifs,
+	int* reuseport)
 {
 	struct listen_port* list = NULL;
 	struct addrinfo hints;
@@ -1459,7 +1621,7 @@ listening_ports_open(struct config_file* cfg, int* reuseport)
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_flags = AI_PASSIVE;
 	/* no name lookups on our listening ports */
-	if(cfg->num_ifs > 0)
+	if(num_ifs > 0)
 		hints.ai_flags |= AI_NUMERICHOST;
 	hints.ai_family = AF_UNSPEC;
 #ifndef INET6
@@ -1469,7 +1631,7 @@ listening_ports_open(struct config_file* cfg, int* reuseport)
 		return NULL;
 	}
 	/* create ip4 and ip6 ports so that return addresses are nice. */
-	if(do_auto || cfg->num_ifs == 0) {
+	if(do_auto || num_ifs == 0) {
 		if(do_ip6) {
 			hints.ai_family = AF_INET6;
 			if(!ports_create_if(do_auto?"::0":"::1", 
@@ -1498,12 +1660,12 @@ listening_ports_open(struct config_file* cfg, int* reuseport)
 				return NULL;
 			}
 		}
-	} else for(i = 0; i<cfg->num_ifs; i++) {
-		if(str_is_ip6(cfg->ifs[i])) {
+	} else for(i = 0; i<num_ifs; i++) {
+		if(str_is_ip6(ifs[i])) {
 			if(!do_ip6)
 				continue;
 			hints.ai_family = AF_INET6;
-			if(!ports_create_if(cfg->ifs[i], 0, cfg->do_udp, 
+			if(!ports_create_if(ifs[i], 0, cfg->do_udp,
 				do_tcp, &hints, portbuf, &list, 
 				cfg->so_rcvbuf, cfg->so_sndbuf,
 				cfg->ssl_port, cfg->tls_additional_port,
@@ -1517,7 +1679,7 @@ listening_ports_open(struct config_file* cfg, int* reuseport)
 			if(!do_ip4)
 				continue;
 			hints.ai_family = AF_INET;
-			if(!ports_create_if(cfg->ifs[i], 0, cfg->do_udp, 
+			if(!ports_create_if(ifs[i], 0, cfg->do_udp,
 				do_tcp, &hints, portbuf, &list, 
 				cfg->so_rcvbuf, cfg->so_sndbuf,
 				cfg->ssl_port, cfg->tls_additional_port,
