@@ -1550,7 +1550,7 @@ int resolve_interface_names(struct config_file* cfg, char*** resif,
 {
 #ifdef HAVE_GETIFADDRS
 	int i;
-	struct ifaddrs *addrs;
+	struct ifaddrs *addrs = NULL;
 	if(cfg->num_ifs == 0) {
 		*resif = NULL;
 		*num_resif = 0;

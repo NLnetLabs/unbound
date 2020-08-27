@@ -2,6 +2,7 @@
 	- Similar to NSD PR#113, implement that interface names can be used,
 	  eg. something like interface: eth0 is resolved at server start and
 	  uses the IP addresses for that named interface.
+	- Review fix, doxygen and assign null in case of error free.
 
 26 August 2020: George
 	- Update documentation in python example code.
