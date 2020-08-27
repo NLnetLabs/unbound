@@ -2157,7 +2157,7 @@ static int http2_submit_rst_stream(struct http2_session* h2_session,
 /**
  * DNS response ready to be submitted to nghttp2, to be prepared for sending
  * out. Response is stored in c->buffer. Copy to rbuffer because the c->buffer
- * might be used before this will bne send out.
+ * might be used before this will be sent out.
  * @param h2_session: http2 session, containing c->buffer which contains answer
  * @return 0 on error, 1 otherwise
  */
@@ -2194,13 +2194,16 @@ int http2_submit_dns_response(struct http2_session* h2_session)
 			"in https-response-buffer-size");
 		return http2_submit_rst_stream(h2_session, h2_stream);
 	}
+	http2_response_buffer_count += rlen;
+	lock_basic_unlock(&http2_response_buffer_count_lock);
+
 	if(!(h2_stream->rbuffer = sldns_buffer_new(rlen))) {
+		lock_basic_lock(&http2_response_buffer_count_lock);
+		http2_response_buffer_count -= rlen;
 		lock_basic_unlock(&http2_response_buffer_count_lock);
 		log_err("http2 submit response error: malloc failure");
 		return 0;
 	}
-	http2_response_buffer_count += rlen;
-	lock_basic_unlock(&http2_response_buffer_count_lock);
 
 	headers[0].name = (uint8_t*)":status";
 	headers[0].namelen = 7;
@@ -2502,7 +2505,7 @@ static int http2_req_begin_headers_cb(nghttp2_session* session,
  * @param h2_stream: http2 stream
  * @param start: start of the base64 string
  * @param length: length of the base64 string
- * @return: 0 on error, 1 otherwise. query will be stored in h2_stram->qbuffer,
+ * @return: 0 on error, 1 otherwise. query will be stored in h2_stream->qbuffer,
  * buffer will be NULL is unparseble.
  */
 static int http2_buffer_uri_query(struct http2_session* h2_session,
@@ -2595,10 +2598,10 @@ static int http2_req_header_cb(nghttp2_session* session,
 	 * content-length value is guaranteed to contain digits
 	 */
 
-	if(!h2_stream->http_method && namelen  == 7 &&
+	if(!h2_stream->http_method && namelen == 7 &&
 		memcmp(":method", name, namelen) == 0) {
 		/* Case insensitive check on :method value to be on the safe
-		 * side. I failed to find text about case sentitivity in specs.
+		 * side. I failed to find text about case sensitivity in specs.
 		 */
 		if(valuelen == 3 && strcasecmp("GET", (const char*)value) == 0)
 			h2_stream->http_method = HTTP_METHOD_GET;

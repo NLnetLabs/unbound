@@ -343,8 +343,8 @@ static void print_extended(struct ub_stats_info* s)
 	PR_UL("num.query.tcpout", s->svr.qtcp_outgoing);
 	PR_UL("num.query.tls", s->svr.qtls);
 	PR_UL("num.query.tls_resume", s->svr.qtls_resume);
-	PR_UL("num.query.https", s->svr.qhttps);
 	PR_UL("num.query.ipv6", s->svr.qipv6);
+	PR_UL("num.query.https", s->svr.qhttps);
 
 	/* flags */
 	PR_UL("num.query.flags.QR", s->svr.qbit_QR);
