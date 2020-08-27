@@ -117,7 +117,7 @@ struct listen_port {
  * interfaces for IP4 and/or IP6, for UDP and/or TCP.
  * On the given port number. It creates the sockets.
  * @param cfg: settings on what ports to open.
- * @param ifs: interfaces to open, array of IP addresses, ip[@port].
+ * @param ifs: interfaces to open, array of IP addresses, "ip[@port]".
  * @param num_ifs: length of ifs.
  * @param reuseport: set to true if you want reuseport, or NULL to not have it,
  *   set to false on exit if reuseport failed to apply (because of no
