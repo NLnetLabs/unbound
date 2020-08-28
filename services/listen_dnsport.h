@@ -384,5 +384,6 @@ size_t tcp_req_info_get_stream_buffer_size(void);
 
 char* set_ip_dscp(int socket, int addrfamily, int ds);
 char* sock_strerror(int errn);
+void sock_close(int socket);
 
 #endif /* LISTEN_DNSPORT_H */
