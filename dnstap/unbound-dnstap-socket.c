@@ -278,36 +278,21 @@ static int make_tcp_accept(char* ip)
 	}
 
 	if((s = socket(addr.ss_family, SOCK_STREAM, 0)) == -1) {
-#ifndef USE_WINSOCK
-		log_err("can't create socket: %s", strerror(errno));
-#else
-		log_err("can't create socket: %s",
-			wsa_strerror(WSAGetLastError()));
-#endif
+		log_err("can't create socket: %s", sock_strerror(errno));
 		return -1;
 	}
 #ifdef SO_REUSEADDR
 	if(setsockopt(s, SOL_SOCKET, SO_REUSEADDR, (void*)&on,
 		(socklen_t)sizeof(on)) < 0) {
-#ifndef USE_WINSOCK
 		log_err("setsockopt(.. SO_REUSEADDR ..) failed: %s",
-			strerror(errno));
-#else
-		log_err("setsockopt(.. SO_REUSEADDR ..) failed: %s",
-			wsa_strerror(WSAGetLastError()));
-#endif
+			sock_strerror(errno));
 		sock_close(s);
 		return -1;
 	}
 #endif /* SO_REUSEADDR */
 	if(bind(s, (struct sockaddr*)&addr, len) != 0) {
-#ifndef USE_WINSOCK
-		log_err_addr("can't bind socket", strerror(errno),
+		log_err_addr("can't bind socket", sock_strerror(errno),
 			&addr, len);
-#else
-		log_err_addr("can't bind socket",
-			wsa_strerror(WSAGetLastError()), &addr, len);
-#endif
 		sock_close(s);
 		return -1;
 	}
@@ -316,11 +301,7 @@ static int make_tcp_accept(char* ip)
 		return -1;
 	}
 	if(listen(s, LISTEN_BACKLOG) == -1) {
-#ifndef USE_WINSOCK
-		log_err("can't listen: %s", strerror(errno));
-#else
-		log_err("can't listen: %s", wsa_strerror(WSAGetLastError()));
-#endif
+		log_err("can't listen: %s", sock_strerror(errno));
 		sock_close(s);
 		return -1;
 	}
@@ -647,7 +628,6 @@ static ssize_t receive_bytes(struct tap_data* data, int fd, void* buf,
 #ifndef USE_WINSOCK
 		if(errno == EINTR || errno == EAGAIN)
 			return -1;
-		log_err("could not recv: %s", strerror(errno));
 #else /* USE_WINSOCK */
 		if(WSAGetLastError() == WSAEINPROGRESS)
 			return -1;
@@ -655,9 +635,8 @@ static ssize_t receive_bytes(struct tap_data* data, int fd, void* buf,
 			ub_winsock_tcp_wouldblock(data->ev, UB_EV_READ);
 			return -1;
 		}
-		log_err("could not recv: %s",
-			wsa_strerror(WSAGetLastError()));
 #endif
+		log_err("could not recv: %s", sock_strerror(errno));
 		if(verbosity) log_info("dnstap client stream closed from %s",
 			(data->id?data->id:""));
 		return 0;
@@ -789,12 +768,7 @@ static int reply_with_accept(struct tap_data* data)
 		}
 	} else {
 		if(send(data->fd, acceptframe, len, 0) == -1) {
-#ifndef USE_WINSOCK
-			log_err("send failed: %s", strerror(errno));
-#else
-			log_err("send failed: %s",
-				wsa_strerror(WSAGetLastError()));
-#endif
+			log_err("send failed: %s", sock_strerror(errno));
 			fd_set_nonblock(data->fd);
 			free(acceptframe);
 			return 0;
@@ -827,11 +801,7 @@ static int reply_with_finish(int fd)
 
 	fd_set_block(fd);
 	if(send(fd, finishframe, len, 0) == -1) {
-#ifndef USE_WINSOCK
-		log_err("send failed: %s", strerror(errno));
-#else
-		log_err("send failed: %s", wsa_strerror(WSAGetLastError()));
-#endif
+		log_err("send failed: %s", sock_strerror(errno));
 		fd_set_nonblock(fd);
 		free(finishframe);
 		return 0;
@@ -1087,7 +1057,6 @@ void dtio_mainfdcallback(int fd, short ATTR_UNUSED(bits), void* arg)
 #endif /* EPROTO */
 			)
 			return;
-		log_err_addr("accept failed", strerror(errno), &addr, addrlen);
 #else /* USE_WINSOCK */
 		if(WSAGetLastError() == WSAEINPROGRESS ||
 			WSAGetLastError() == WSAECONNRESET)
@@ -1096,9 +1065,9 @@ void dtio_mainfdcallback(int fd, short ATTR_UNUSED(bits), void* arg)
 			ub_winsock_tcp_wouldblock(maindata->ev, UB_EV_READ);
 			return;
 		}
-		log_err_addr("accept failed", wsa_strerror(WSAGetLastError()),
-			&addr, addrlen);
 #endif
+		log_err_addr("accept failed", sock_strerror(errno), &addr,
+			addrlen);
 		return;
 	}
 	fd_set_nonblock(s);

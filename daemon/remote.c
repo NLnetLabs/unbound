@@ -566,11 +566,8 @@ ssl_print_text(RES* res, const char* text)
 			if(r == -1) {
 				if(errno == EAGAIN || errno == EINTR)
 					continue;
-#ifndef USE_WINSOCK
-				log_err("could not send: %s", strerror(errno));
-#else
-				log_err("could not send: %s", wsa_strerror(WSAGetLastError()));
-#endif
+				log_err("could not send: %s",
+					sock_strerror(errno));
 				return 0;
 			}
 			at += r;
@@ -627,11 +624,8 @@ ssl_read_line(RES* res, char* buf, size_t max)
 					}
 					if(errno == EINTR || errno == EAGAIN)
 						continue;
-#ifndef USE_WINSOCK
-					log_err("could not recv: %s", strerror(errno));
-#else
-					log_err("could not recv: %s", wsa_strerror(WSAGetLastError()));
-#endif
+					log_err("could not recv: %s",
+						sock_strerror(errno));
 					return 0;
 				}
 				break;
@@ -3108,11 +3102,7 @@ handle_req(struct daemon_remote* rc, struct rc_state* s, RES* res)
 				if(rr == 0) return;
 				if(errno == EINTR || errno == EAGAIN)
 					continue;
-#ifndef USE_WINSOCK
-				log_err("could not recv: %s", strerror(errno));
-#else
-				log_err("could not recv: %s", wsa_strerror(WSAGetLastError()));
-#endif
+				log_err("could not recv: %s", sock_strerror(errno));
 				return;
 			}
 			r = (int)rr;

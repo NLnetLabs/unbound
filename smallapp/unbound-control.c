@@ -593,11 +593,7 @@ contact_server(const char* svr, struct config_file* cfg, int statuscmd)
 		addrfamily = addr_is_ip6(&addr, addrlen)?PF_INET6:PF_INET;
 	fd = socket(addrfamily, SOCK_STREAM, proto);
 	if(fd == -1) {
-#ifndef USE_WINSOCK
-		fatal_exit("socket: %s", strerror(errno));
-#else
-		fatal_exit("socket: %s", wsa_strerror(WSAGetLastError()));
-#endif
+		fatal_exit("socket: %s", sock_strerror(errno));
 	}
 	if(connect(fd, (struct sockaddr*)&addr, addrlen) < 0) {
 #ifndef USE_WINSOCK
@@ -681,11 +677,7 @@ remote_read(SSL* ssl, int fd, char* buf, size_t len)
 				/* EOF */
 				return 0;
 			}
-#ifndef USE_WINSOCK
-			fatal_exit("could not recv: %s", strerror(errno));
-#else
-			fatal_exit("could not recv: %s", wsa_strerror(WSAGetLastError()));
-#endif
+			fatal_exit("could not recv: %s", sock_strerror(errno));
 		}
 		buf[rr] = 0;
 	}
@@ -701,11 +693,7 @@ remote_write(SSL* ssl, int fd, const char* buf, size_t len)
 			ssl_err("could not SSL_write");
 	} else {
 		if(send(fd, buf, len, 0) < (ssize_t)len) {
-#ifndef USE_WINSOCK
-			fatal_exit("could not send: %s", strerror(errno));
-#else
-			fatal_exit("could not send: %s", wsa_strerror(WSAGetLastError()));
-#endif
+			fatal_exit("could not send: %s", sock_strerror(errno));
 		}
 	}
 }

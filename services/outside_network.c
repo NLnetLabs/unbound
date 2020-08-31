@@ -185,12 +185,7 @@ pick_outgoing_tcp(struct waiting_tcp* w, int s)
 		((struct sockaddr_in6*)&pi->addr)->sin6_port = 0;
 	else	((struct sockaddr_in*)&pi->addr)->sin_port = 0;
 	if(bind(s, (struct sockaddr*)&pi->addr, pi->addrlen) != 0) {
-#ifndef USE_WINSOCK
-		log_err("outgoing tcp: bind: %s", strerror(errno));
-#else
-		log_err("outgoing tcp: bind: %s", 
-			wsa_strerror(WSAGetLastError()));
-#endif
+		log_err("outgoing tcp: bind: %s", sock_strerror(errno));
 		sock_close(s);
 		return 0;
 	}
@@ -221,13 +216,8 @@ outnet_get_tcp_fd(struct sockaddr_storage* addr, socklen_t addrlen, int tcp_mss,
 		s = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
 	}
 	if(s == -1) {
-#ifndef USE_WINSOCK
-		log_err_addr("outgoing tcp: socket", strerror(errno),
+		log_err_addr("outgoing tcp: socket", sock_strerror(errno),
 			addr, addrlen);
-#else
-		log_err_addr("outgoing tcp: socket", 
-			wsa_strerror(WSAGetLastError()), addr, addrlen);
-#endif
 		return -1;
 	}
 
