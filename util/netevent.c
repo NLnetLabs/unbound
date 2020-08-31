@@ -3087,11 +3087,7 @@ comm_point_close(struct comm_point* c)
 			ub_winsock_tcp_wouldblock(c->ev->ev, UB_EV_WRITE);
 		}
 		verbose(VERB_ALGO, "close fd %d", c->fd);
-#ifndef USE_WINSOCK
-		close(c->fd);
-#else
-		closesocket(c->fd);
-#endif
+		sock_close(c->fd);
 	}
 	c->fd = -1;
 }
@@ -3232,11 +3228,7 @@ comm_point_start_listening(struct comm_point* c, int newfd, int msec)
 	}
 	if(newfd != -1) {
 		if(c->fd != -1) {
-#ifndef USE_WINSOCK
-			close(c->fd);
-#else
-			closesocket(c->fd);
-#endif
+			sock_close(c->fd);
 		}
 		c->fd = newfd;
 		ub_event_set_fd(c->ev->ev, c->fd);

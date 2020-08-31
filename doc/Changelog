@@ -1,3 +1,7 @@
+31 August 2020: Wouter
+	- Merge PR #293: Add missing prototype.  Also refactor to use the new
+	  shorthand function to clean up the code.
+
 27 August 2020: Wouter
 	- Similar to NSD PR#113, implement that interface names can be used,
 	  eg. something like interface: eth0 is resolved at server start and

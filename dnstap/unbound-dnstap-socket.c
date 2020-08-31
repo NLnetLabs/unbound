@@ -292,12 +292,11 @@ static int make_tcp_accept(char* ip)
 #ifndef USE_WINSOCK
 		log_err("setsockopt(.. SO_REUSEADDR ..) failed: %s",
 			strerror(errno));
-		close(s);
 #else
 		log_err("setsockopt(.. SO_REUSEADDR ..) failed: %s",
 			wsa_strerror(WSAGetLastError()));
-		closesocket(s);
 #endif
+		sock_close(s);
 		return -1;
 	}
 #endif /* SO_REUSEADDR */
@@ -305,30 +304,24 @@ static int make_tcp_accept(char* ip)
 #ifndef USE_WINSOCK
 		log_err_addr("can't bind socket", strerror(errno),
 			&addr, len);
-		close(s);
 #else
 		log_err_addr("can't bind socket",
 			wsa_strerror(WSAGetLastError()), &addr, len);
-		closesocket(s);
 #endif
+		sock_close(s);
 		return -1;
 	}
 	if(!fd_set_nonblock(s)) {
-#ifndef USE_WINSOCK
-		close(s);
-#else
-		closesocket(s);
-#endif
+		sock_close(s);
 		return -1;
 	}
 	if(listen(s, LISTEN_BACKLOG) == -1) {
 #ifndef USE_WINSOCK
 		log_err("can't listen: %s", strerror(errno));
-		close(s);
 #else
 		log_err("can't listen: %s", wsa_strerror(WSAGetLastError()));
-		closesocket(s);
 #endif
+		sock_close(s);
 		return -1;
 	}
 	return s;

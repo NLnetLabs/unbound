@@ -356,13 +356,12 @@ create_udp_sock(int family, int socktype, struct sockaddr* addr,
 #    ifndef USE_WINSOCK
 				log_err("setsockopt(..., SO_RCVBUFFORCE, "
 					"...) failed: %s", strerror(errno));
-				close(s);
 #    else
 				log_err("setsockopt(..., SO_RCVBUFFORCE, "
 					"...) failed: %s", 
 					wsa_strerror(WSAGetLastError()));
-				closesocket(s);
 #    endif
+				sock_close(s);
 				*noproto = 0;
 				*inuse = 0;
 				return -1;
@@ -373,13 +372,12 @@ create_udp_sock(int family, int socktype, struct sockaddr* addr,
 #  ifndef USE_WINSOCK
 				log_err("setsockopt(..., SO_RCVBUF, "
 					"...) failed: %s", strerror(errno));
-				close(s);
 #  else
 				log_err("setsockopt(..., SO_RCVBUF, "
 					"...) failed: %s", 
 					wsa_strerror(WSAGetLastError()));
-				closesocket(s);
 #  endif
+				sock_close(s);
 				*noproto = 0;
 				*inuse = 0;
 				return -1;
@@ -415,13 +413,12 @@ create_udp_sock(int family, int socktype, struct sockaddr* addr,
 #    ifndef USE_WINSOCK
 				log_err("setsockopt(..., SO_SNDBUFFORCE, "
 					"...) failed: %s", strerror(errno));
-				close(s);
 #    else
 				log_err("setsockopt(..., SO_SNDBUFFORCE, "
 					"...) failed: %s", 
 					wsa_strerror(WSAGetLastError()));
-				closesocket(s);
 #    endif
+				sock_close(s);
 				*noproto = 0;
 				*inuse = 0;
 				return -1;
@@ -432,13 +429,12 @@ create_udp_sock(int family, int socktype, struct sockaddr* addr,
 #  ifndef USE_WINSOCK
 				log_err("setsockopt(..., SO_SNDBUF, "
 					"...) failed: %s", strerror(errno));
-				close(s);
 #  else
 				log_err("setsockopt(..., SO_SNDBUF, "
 					"...) failed: %s", 
 					wsa_strerror(WSAGetLastError()));
-				closesocket(s);
 #  endif
+				sock_close(s);
 				*noproto = 0;
 				*inuse = 0;
 				return -1;
@@ -471,13 +467,12 @@ create_udp_sock(int family, int socktype, struct sockaddr* addr,
 #ifndef USE_WINSOCK
 				log_err("setsockopt(..., IPV6_V6ONLY"
 					", ...) failed: %s", strerror(errno));
-				close(s);
 #else
 				log_err("setsockopt(..., IPV6_V6ONLY"
 					", ...) failed: %s", 
 					wsa_strerror(WSAGetLastError()));
-				closesocket(s);
 #endif
+				sock_close(s);
 				*noproto = 0;
 				*inuse = 0;
 				return -1;
@@ -498,13 +493,12 @@ create_udp_sock(int family, int socktype, struct sockaddr* addr,
 #  ifndef USE_WINSOCK
 			log_err("setsockopt(..., IPV6_USE_MIN_MTU, "
 				"...) failed: %s", strerror(errno));
-			close(s);
 #  else
 			log_err("setsockopt(..., IPV6_USE_MIN_MTU, "
 				"...) failed: %s", 
 				wsa_strerror(WSAGetLastError()));
-			closesocket(s);
 #  endif
+			sock_close(s);
 			*noproto = 0;
 			*inuse = 0;
 			return -1;
@@ -520,12 +514,11 @@ create_udp_sock(int family, int socktype, struct sockaddr* addr,
 #  ifndef USE_WINSOCK
 			log_err("setsockopt(..., IPV6_MTU, ...) failed: %s", 
 				strerror(errno));
-			close(s);
 #  else
 			log_err("setsockopt(..., IPV6_MTU, ...) failed: %s", 
 				wsa_strerror(WSAGetLastError()));
-			closesocket(s);
 #  endif
+			sock_close(s);
 			*noproto = 0;
 			*inuse = 0;
 			return -1;
@@ -549,12 +542,7 @@ create_udp_sock(int family, int socktype, struct sockaddr* addr,
 			if (errno != EINVAL) {
 				log_err("setsockopt(..., IP_MTU_DISCOVER, IP_PMTUDISC_OMIT...) failed: %s",
 					strerror(errno));
-
-#    ifndef USE_WINSOCK
-				close(s);
-#    else
-				closesocket(s);
-#    endif
+				sock_close(s);
 				*noproto = 0;
 				*inuse = 0;
 				return -1;
@@ -571,11 +559,7 @@ create_udp_sock(int family, int socktype, struct sockaddr* addr,
 				&action, (socklen_t)sizeof(action)) < 0) {
 				log_err("setsockopt(..., IP_MTU_DISCOVER, IP_PMTUDISC_DONT...) failed: %s",
 					strerror(errno));
-#    ifndef USE_WINSOCK
-				close(s);
-#    else
-				closesocket(s);
-#    endif
+				sock_close(s);
 				*noproto = 0;
 				*inuse = 0;
 				return -1;
@@ -587,11 +571,7 @@ create_udp_sock(int family, int socktype, struct sockaddr* addr,
 			&off, (socklen_t)sizeof(off)) < 0) {
 			log_err("setsockopt(..., IP_DONTFRAG, ...) failed: %s",
 				strerror(errno));
-#    ifndef USE_WINSOCK
-			close(s);
-#    else
-			closesocket(s);
-#    endif
+			sock_close(s);
 			*noproto = 0;
 			*inuse = 0;
 			return -1;
@@ -621,7 +601,6 @@ create_udp_sock(int family, int socktype, struct sockaddr* addr,
 				(struct sockaddr_storage*)addr, addrlen);
 		}
 #endif /* EADDRINUSE */
-		close(s);
 #else /* USE_WINSOCK */
 		if(WSAGetLastError() != WSAEADDRINUSE &&
 			WSAGetLastError() != WSAEADDRNOTAVAIL &&
@@ -630,18 +609,14 @@ create_udp_sock(int family, int socktype, struct sockaddr* addr,
 				wsa_strerror(WSAGetLastError()),
 				(struct sockaddr_storage*)addr, addrlen);
 		}
-		closesocket(s);
 #endif /* USE_WINSOCK */
+		sock_close(s);
 		return -1;
 	}
 	if(!fd_set_nonblock(s)) {
 		*noproto = 0;
 		*inuse = 0;
-#ifndef USE_WINSOCK
-		close(s);
-#else
-		closesocket(s);
-#endif
+		sock_close(s);
 		return -1;
 	}
 	return s;
@@ -727,12 +702,11 @@ create_tcp_accept_sock(struct addrinfo *addr, int v6only, int* noproto,
 #ifndef USE_WINSOCK
 		log_err("setsockopt(.. SO_REUSEADDR ..) failed: %s",
 			strerror(errno));
-		close(s);
 #else
 		log_err("setsockopt(.. SO_REUSEADDR ..) failed: %s",
 			wsa_strerror(WSAGetLastError()));
-		closesocket(s);
 #endif
+		sock_close(s);
 		return -1;
 	}
 #endif /* SO_REUSEADDR */
@@ -770,12 +744,11 @@ create_tcp_accept_sock(struct addrinfo *addr, int v6only, int* noproto,
 #ifndef USE_WINSOCK
 			log_err("setsockopt(..., IPV6_V6ONLY, ...) failed: %s",
 				strerror(errno));
-			close(s);
 #else
 			log_err("setsockopt(..., IPV6_V6ONLY, ...) failed: %s",
 				wsa_strerror(WSAGetLastError()));
-			closesocket(s);
 #endif
+			sock_close(s);
 			return -1;
 		}
 	}
@@ -822,32 +795,26 @@ create_tcp_accept_sock(struct addrinfo *addr, int v6only, int* noproto,
 				(struct sockaddr_storage*)addr->ai_addr,
 				addr->ai_addrlen);
 		}
-		close(s);
 #else
 		log_err_addr("can't bind socket", 
 			wsa_strerror(WSAGetLastError()),
 			(struct sockaddr_storage*)addr->ai_addr,
 			addr->ai_addrlen);
-		closesocket(s);
 #endif
+		sock_close(s);
 		return -1;
 	}
 	if(!fd_set_nonblock(s)) {
-#ifndef USE_WINSOCK
-		close(s);
-#else
-		closesocket(s);
-#endif
+		sock_close(s);
 		return -1;
 	}
 	if(listen(s, TCP_BACKLOG) == -1) {
 #ifndef USE_WINSOCK
 		log_err("can't listen: %s", strerror(errno));
-		close(s);
 #else
 		log_err("can't listen: %s", wsa_strerror(WSAGetLastError()));
-		closesocket(s);
 #endif
+		sock_close(s);
 		return -1;
 	}
 #ifdef USE_TCP_FASTOPEN
@@ -901,34 +868,6 @@ set_ip_dscp(int socket, int addrfamily, int dscp)
 	}
 	return NULL;
 }
-
-#  ifndef USE_WINSOCK
-char*
-sock_strerror(int errn)
-{
-	return strerror(errn);
-}
-
-void
-sock_close(int socket)
-{
-	close(socket);
-}
-
-#  else
-char*
-sock_strerror(int ATTR_UNUSED(errn))
-{
-	return wsa_strerror(WSAGetLastError());
-}
-
-void
-sock_close(int socket)
-{
-	closesocket(socket);
-}
-
-#  endif /* USE_WINSOCK */
 
 int
 create_local_accept_sock(const char *path, int* noproto, int use_systemd)
@@ -990,11 +929,7 @@ create_local_accept_sock(const char *path, int* noproto, int use_systemd)
 	return s;
 
 err:
-#ifndef USE_WINSOCK
-	close(s);
-#else
-	closesocket(s);
-#endif
+	sock_close(s);
 	return -1;
 
 #ifdef HAVE_SYSTEMD
@@ -1245,20 +1180,12 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 		}
 		/* getting source addr packet info is highly non-portable */
 		if(!set_recvpktinfo(s, hints->ai_family)) {
-#ifndef USE_WINSOCK
-			close(s);
-#else
-			closesocket(s);
-#endif
+			sock_close(s);
 			return 0;
 		}
 		if(!port_insert(list, s,
 		   is_dnscrypt?listen_type_udpancil_dnscrypt:listen_type_udpancil)) {
-#ifndef USE_WINSOCK
-			close(s);
-#else
-			closesocket(s);
-#endif
+			sock_close(s);
 			return 0;
 		}
 	} else if(do_udp) {
@@ -1274,11 +1201,7 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 		}
 		if(!port_insert(list, s,
 		   is_dnscrypt?listen_type_udp_dnscrypt:listen_type_udp)) {
-#ifndef USE_WINSOCK
-			close(s);
-#else
-			closesocket(s);
-#endif
+			sock_close(s);
 			return 0;
 		}
 	}
@@ -1298,11 +1221,7 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 			verbose(VERB_ALGO, "setup TCP for SSL service");
 		if(!port_insert(list, s, is_ssl?listen_type_ssl:
 			(is_dnscrypt?listen_type_tcp_dnscrypt:listen_type_tcp))) {
-#ifndef USE_WINSOCK
-			close(s);
-#else
-			closesocket(s);
-#endif
+			sock_close(s);
 			return 0;
 		}
 	}
@@ -1700,11 +1619,7 @@ void listening_ports_free(struct listen_port* list)
 	while(list) {
 		nx = list->next;
 		if(list->fd != -1) {
-#ifndef USE_WINSOCK
-			close(list->fd);
-#else
-			closesocket(list->fd);
-#endif
+			sock_close(list->fd);
 		}
 		free(list);
 		list = nx;

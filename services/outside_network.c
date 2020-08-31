@@ -166,11 +166,7 @@ pick_outgoing_tcp(struct waiting_tcp* w, int s)
 	if(num == 0) {
 		log_err("no TCP outgoing interfaces of family");
 		log_addr(VERB_OPS, "for addr", &w->addr, w->addrlen);
-#ifndef USE_WINSOCK
-		close(s);
-#else
-		closesocket(s);
-#endif
+		sock_close(s);
 		return 0;
 	}
 #ifdef INET6
@@ -191,12 +187,11 @@ pick_outgoing_tcp(struct waiting_tcp* w, int s)
 	if(bind(s, (struct sockaddr*)&pi->addr, pi->addrlen) != 0) {
 #ifndef USE_WINSOCK
 		log_err("outgoing tcp: bind: %s", strerror(errno));
-		close(s);
 #else
 		log_err("outgoing tcp: bind: %s", 
 			wsa_strerror(WSAGetLastError()));
-		closesocket(s);
 #endif
+		sock_close(s);
 		return 0;
 	}
 	log_addr(VERB_ALGO, "tcp bound to src", &pi->addr, pi->addrlen);

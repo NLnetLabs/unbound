@@ -348,11 +348,7 @@ add_open(const char* ip, int nr, struct listen_port** list, int noproto_is_err,
 	/* alloc */
 	n = (struct listen_port*)calloc(1, sizeof(*n));
 	if(!n) {
-#ifndef USE_WINSOCK
-		close(fd);
-#else
-		closesocket(fd);
-#endif
+		sock_close(fd);
 		log_err("out of memory");
 		return 0;
 	}
@@ -461,11 +457,7 @@ int remote_accept_callback(struct comm_point* c, void* arg, int err,
 	if(rc->active >= rc->max_active) {
 		log_warn("drop incoming remote control: too many connections");
 	close_exit:
-#ifndef USE_WINSOCK
-		close(newfd);
-#else
-		closesocket(newfd);
-#endif
+		sock_close(newfd);
 		return 0;
 	}
 

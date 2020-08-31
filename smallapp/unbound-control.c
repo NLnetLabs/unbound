@@ -824,11 +824,7 @@ go(const char* cfgfile, char* svr, int quiet, int argc, char* argv[])
 	ret = go_cmd(ssl, fd, quiet, argc, argv);
 
 	if(ssl) SSL_free(ssl);
-#ifndef USE_WINSOCK
-	close(fd);
-#else
-	closesocket(fd);
-#endif
+	sock_close(fd);
 	if(ctx) SSL_CTX_free(ctx);
 	config_delete(cfg);
 	return ret;

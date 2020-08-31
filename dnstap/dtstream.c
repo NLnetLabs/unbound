@@ -588,11 +588,7 @@ static void dtio_del_output_event(struct dt_io_thread* dtio)
 /** close dtio socket and set it to -1 */
 static void dtio_close_fd(struct dt_io_thread* dtio)
 {
-#ifndef USE_WINSOCK
-	close(dtio->fd);
-#else
-	closesocket(dtio->fd);
-#endif
+	sock_close(dtio->fd);
 	dtio->fd = -1;
 }
 
