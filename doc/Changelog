@@ -1,3 +1,6 @@
+9 September 2020: Wouter
+	- Fix num.expired statistics output.
+
 31 August 2020: Wouter
 	- Merge PR #293: Add missing prototype.  Also refactor to use the new
 	  shorthand function to clean up the code.
