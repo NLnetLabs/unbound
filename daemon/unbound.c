@@ -507,16 +507,6 @@ perform_setup(struct daemon* daemon, struct config_file* cfg, int debug_mode,
 #ifdef HAVE_KILL
 	if(cfg->pidfile && cfg->pidfile[0] && need_pidfile) {
 		writepid(daemon->pidfile, getpid());
-		if(cfg->username && cfg->username[0] && cfg_uid != (uid_t)-1 &&
-			pidinchroot) {
-#  ifdef HAVE_CHOWN
-			if(chown(daemon->pidfile, cfg_uid, cfg_gid) == -1) {
-				verbose(VERB_QUERY, "cannot chown %u.%u %s: %s",
-					(unsigned)cfg_uid, (unsigned)cfg_gid,
-					daemon->pidfile, strerror(errno));
-			}
-#  endif /* HAVE_CHOWN */
-		}
 	}
 #else
 	(void)daemon;
