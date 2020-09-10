@@ -3152,11 +3152,19 @@ comm_point_create_http_handler(struct comm_base *base,
 	if(harden_large_queries && bufsize > 512)
 		c->http2_stream_max_qbuffer_size = 512;
 	c->http2_max_streams = http_max_streams;
-	c->http_endpoint = strdup(http_endpoint);
+	if(!(c->http_endpoint = strdup(http_endpoint))) {
+		log_err("could not strdup http_endpoint");
+		sldns_buffer_free(c->buffer);
+		free(c->timeout);
+		free(c->ev);
+		free(c);
+		return NULL;
+	}
 	c->alpn_h2 = 0;
 #ifdef HAVE_NGHTTP2
 	if(!(c->h2_session = http2_session_create(c))) {
 		log_err("could not create http2 session");
+		free(c->http_endpoint);
 		sldns_buffer_free(c->buffer);
 		free(c->timeout);
 		free(c->ev);
@@ -3166,6 +3174,7 @@ comm_point_create_http_handler(struct comm_base *base,
 	if(!(c->h2_session->callbacks = http2_req_callbacks_create())) {
 		log_err("could not create http2 callbacks");
 		http2_session_delete(c->h2_session);
+		free(c->http_endpoint);
 		sldns_buffer_free(c->buffer);
 		free(c->timeout);
 		free(c->ev);
