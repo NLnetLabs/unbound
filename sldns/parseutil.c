@@ -735,9 +735,12 @@ static int sldns_b64_pton_base(char const *src, size_t srcsize, uint8_t *target,
 			d = 63;
 		else if(base64url && d == '_')
 			d = 63;
-		else if(!base64url && d == '=')
+		else if(d == '=') {
+			if(!check_padding)
+				continue;
 			d = 64;
-		else	continue;
+		} else	continue;
+
 		in[incount++] = (uint8_t)d;
 		/* work on block of 4, unless padding is not used and there are
 		 * less than 4 chars left */
