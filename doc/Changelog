@@ -1,3 +1,6 @@
+11 September 2020: Wouter
+	- Remove x file mode on ipset/ipset.c and h files.
+
 9 September 2020: Wouter
 	- Fix num.expired statistics output.
 
