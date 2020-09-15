@@ -113,7 +113,9 @@ Default is off, because keeping track of more statistics takes time.  The
 counters are listed in \fIunbound\-control\fR(8).
 .TP
 .B num\-threads: \fI<number>
-The number of threads to create to serve clients. Use 1 for no threading.
+The number of threads to create to serve clients.
+Use 1 for no threading.
+The default value is 1.
 .TP
 .B port: \fI<port number>
 The port number, default 53, on which the server responds to queries.
@@ -194,14 +196,19 @@ By default only ports above 1024 that have not been assigned by IANA are used.
 Give a port number or a range of the form "low\-high", without spaces.
 .TP
 .B outgoing\-num\-tcp: \fI<number>
-Number of outgoing TCP buffers to allocate per thread. Default is 10. If
-set to 0, or if do\-tcp is "no", no TCP queries to authoritative servers
-are done.  For larger installations increasing this value is a good idea.
+Number of outgoing TCP file descriptors to allocate per thread.
+The default is 10.
+If set to 0, or if \fBdo\-tcp\fR is "no", no TCP queries to
+authoritative servers are done.
+For larger installations increasing this value is a good idea.
 .TP
 .B incoming\-num\-tcp: \fI<number>
-Number of incoming TCP buffers to allocate per thread. Default is
-10. If set to 0, or if do\-tcp is "no", no TCP queries from clients are
-accepted. For larger installations increasing this value is a good idea.
+Number of incoming TCP file descriptors to allocate per thread.
+The default is 10.
+If set to 0, or if \fBdo\-tcp\fR is "no", no TCP queries from clients are
+accepted.
+For larger installations or for TCP-heavy workloads (e.g. DNS-over-TLS),
+increasing this value is a good idea.
 .TP
 .B edns\-buffer\-size: \fI<number>
 Number of bytes size to advertise as the EDNS reassembly buffer size.
@@ -434,13 +441,14 @@ negotiation between Unbound and other servers.
 The period Unbound will wait for a query on a TCP connection.
 If this timeout expires Unbound closes the connection.
 This option defaults to 30000 milliseconds.
-When the number of free incoming TCP buffers falls below 50% of the
+When the number of free incoming TCP file descriptors falls below 50% of the
 total number configured, the option value used is progressively
 reduced, first to 1% of the configured value, then to 0.2% of the
-configured value if the number of free buffers falls below 35% of the
-total number configured, and finally to 0 if the number of free buffers
-falls below 20% of the total number configured. A minimum timeout of
-200 milliseconds is observed regardless of the option value used.
+configured value if the number of free file descriptors falls below 35% of the
+total number configured, and finally to 0 if the number of free file
+descriptors falls below 20% of the total number configured.
+A minimum timeout of 200 milliseconds is observed regardless of the
+option value used.
 .TP
 .B edns-tcp-keepalive: \fI<yes or no>\fR
 Enable or disable EDNS TCP Keepalive. Default is no.
@@ -452,11 +460,11 @@ the connection. If the client supports the EDNS TCP Keepalive option,
 Unbound sends the timeout value to the client to encourage it to
 close the connection before the server times out.
 This option defaults to 120000 milliseconds.
-When the number of free incoming TCP buffers falls below 50% of
+When the number of free incoming TCP file descriptors falls below 50% of
 the total number configured, the advertised timeout is progressively
 reduced to 1% of the configured value, then to 0.2% of the configured
-value if the number of free buffers falls below 35% of the total number
-configured, and finally to 0 if the number of free buffers falls below
+value if the number of free file descriptors falls below 35% of the total number
+configured, and finally to 0 if the number of free file descriptors falls below
 20% of the total number configured.
 A minimum actual timeout of 200 milliseconds is observed regardless of the
 advertised timeout.
@@ -489,11 +497,18 @@ If enabled, the server provides TLS service on the TCP ports marked
 implicitly or explicitly for TLS service with tls\-port.  The file must
 contain the private key for the TLS session, the public certificate is in
 the tls\-service\-pem file and it must also be specified if tls\-service\-key
-is specified.  The default is "", turned off.  Enabling or disabling
-this service requires a restart (a reload is not enough), because the
-key is read while root permissions are held and before chroot (if any).
-The ports enabled implicitly or explicitly via \fBtls\-port:\fR do not provide
-normal DNS TCP service.
+is specified.
+The default is "", turned off.
+.IP
+Enabling or disabling this service requires a restart (a reload is
+not enough), because the key is read while root permissions are held
+and before chroot (if any).
+The ports enabled implicitly or explicitly via \fBtls\-port:\fR do not
+provide normal DNS TCP service.
+.IP
+When enabling this service, note that it is usually a good idea to ensure
+that \fBincoming\-num\-tcp\fR has a sufficiently high value; the default
+value is most probably insufficient.
 .TP
 .B ssl\-service\-key: \fI<file>
 Alternate syntax for \fBtls\-service\-key\fR.
@@ -2326,7 +2341,7 @@ which on BSD\-32bit tops out at 30\-40 Mb after heavy usage.
 # example settings that reduce memory usage
 server:
 	num\-threads: 1
-	outgoing\-num\-tcp: 1	# this limits TCP service, uses less buffers.
+	outgoing\-num\-tcp: 1	# this limits TCP service, uses less FDs.
 	incoming\-num\-tcp: 1
 	outgoing\-range: 60	# uses less memory, but less performance.
 	msg\-buffer\-size: 8192   # note this limits service, 'no huge stuff'.
