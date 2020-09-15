@@ -1,6 +1,9 @@
 15 September 2020: George
 	- Introduce test for statistics.
 
+15 September 2020: Wouter
+	- Spelling fix.
+
 11 September 2020: Wouter
 	- Remove x file mode on ipset/ipset.c and h files.
 

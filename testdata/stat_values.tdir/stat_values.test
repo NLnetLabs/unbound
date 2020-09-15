@@ -3,7 +3,7 @@
 [ -f ../.tpkg.var.master ] && source ../.tpkg.var.master
 # use .tpkg.var.test for in test variable passing
 [ -f .tpkg.var.test ] && source .tpkg.var.test
-# We need kill_pid for the serve-expired-client-timeour test
+# We need kill_pid for the serve-expired-client-timeout test
 . ../common.sh
 
 PRE="../.."
