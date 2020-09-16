@@ -2227,7 +2227,7 @@ int http2_submit_dns_response(struct http2_session* h2_session)
 
 	sldns_buffer_write(h2_stream->rbuffer,
 		sldns_buffer_current(h2_session->c->buffer),
-		sldns_buffer_remaining(h2_stream->rbuffer));
+		sldns_buffer_remaining(h2_session->c->buffer));
 	sldns_buffer_flip(h2_stream->rbuffer);
 
 	data_prd.source.ptr = h2_session;
@@ -2540,14 +2540,16 @@ static int http2_buffer_uri_query(struct http2_session* h2_session,
 			"in http2-query-buffer-size");
 		return http2_submit_rst_stream(h2_session, h2_stream);
 	}
+	http2_query_buffer_count += expectb64len;
+	lock_basic_unlock(&http2_query_buffer_count_lock);
 	if(!(h2_stream->qbuffer = sldns_buffer_new(expectb64len))) {
+		lock_basic_lock(&http2_query_buffer_count_lock);
+		http2_query_buffer_count -= expectb64len;
 		lock_basic_unlock(&http2_query_buffer_count_lock);
 		log_err("http2_req_header fail, qbuffer "
 			"malloc failure");
 		return 0;
 	}
-	http2_query_buffer_count += expectb64len;
-	lock_basic_unlock(&http2_query_buffer_count_lock);
 
 	if(!(b64len = sldns_b64url_pton(
 		(char const *)start, length,
@@ -2627,7 +2629,7 @@ static int http2_req_header_cb(nghttp2_session* session,
 		 * stream. */
 #define	HTTP_QUERY_PARAM "?dns="
 		size_t el = strlen(h2_session->c->http_endpoint);
-		size_t qpl = sizeof(HTTP_QUERY_PARAM) - 1;
+		size_t qpl = strlen(HTTP_QUERY_PARAM);
 
 		if(valuelen < el || memcmp(h2_session->c->http_endpoint,
 			value, el) != 0) {
@@ -2727,9 +2729,13 @@ static int http2_req_data_chunk_recv_cb(nghttp2_session* ATTR_UNUSED(session),
 				"in http2-query-buffer-size");
 			return http2_submit_rst_stream(h2_session, h2_stream);
 		}
-		if((h2_stream->qbuffer = sldns_buffer_new(qlen)))
-			http2_query_buffer_count += qlen;
+		http2_query_buffer_count += qlen;
 		lock_basic_unlock(&http2_query_buffer_count_lock);
+		if(!(h2_stream->qbuffer = sldns_buffer_new(qlen))) {
+			lock_basic_lock(&http2_query_buffer_count_lock);
+			http2_query_buffer_count -= qlen;
+			lock_basic_unlock(&http2_query_buffer_count_lock);
+		}
 	}
 
 	if(!h2_stream->qbuffer ||

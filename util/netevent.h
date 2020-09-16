@@ -236,8 +236,8 @@ struct comm_point {
 	/* -------- HTTP/2 ------- */
 	/** http2 session */
 	struct http2_session* h2_session;
-	/** set to 1 if h2 is negatiated using alpn */
-	int alpn_h2;
+	/** set to 1 if h2 is negotiated to be used (using alpn) */
+	int use_h2;
 	/** stream currently being handled */
 	struct http2_stream* h2_stream;
 	/** maximum allowed query buffer size, per stream */

@@ -323,17 +323,13 @@ if test "$?" -ne 0; then
 	echo "Not OK"
 	exit 1
 fi
-grep "a.example.com.	IN	A" outfile
 
-echo ""
-echo "> query www5.example.net. www3.example.net. www.drop.net."
-$PRE/dohclient -P -s 127.0.0.1 -p $UNBOUND_PORT www5.example.com. A IN www3.example.net A IN www.drop.net A IN >outfile 2>&1
-cat outfile
-if test "$?" -ne 0; then
-	echo "exit status not OK"
+num_ans=$(grep -B 3 "a.example.com.	IN	A" outfile | grep "rcode: NOERROR" | wc -l )
+if test "$num_ans" -ne 90; then
+	echo "number of answers not OK"
 	echo "> cat logfiles"
 	cat outfile
-	cat fwd.log 
+	cat fwd.log
 	cat unbound.log
 	echo "Not OK"
 	exit 1

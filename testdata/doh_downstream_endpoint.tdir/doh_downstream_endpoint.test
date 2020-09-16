@@ -33,7 +33,7 @@ else
 fi
 echo "OK"
 
-echo "> query www.example.net. endpoint /dns-query"
+echo "> query www.example.net. endpoint /abc"
 $PRE/dohclient -e /abc -s 127.0.0.1 -p $UNBOUND_PORT www.example.net. A IN >outfile 2>&1
 cat outfile
 if test "$?" -ne 0; then

@@ -1228,7 +1228,7 @@ ssl_handshake(struct comm_point* c)
 		if(alpnlen == 2 && memcmp("h2", alpn, 2) == 0) {
 			/* connection upgraded to HTTP2 */
 			c->tcp_do_toggle_rw = 0;
-			c->alpn_h2 = 1;
+			c->use_h2 = 1;
 		}
 	}
 
@@ -2472,7 +2472,7 @@ comm_point_http_handle_read(int fd, struct comm_point* c)
 	if(!c->tcp_is_reading)
 		return 1;
 
-	if(c->alpn_h2) {
+	if(c->use_h2) {
 		return comm_point_http2_handle_read(fd, c);
 	}
 
@@ -2766,7 +2766,7 @@ comm_point_http_handle_write(int fd, struct comm_point* c)
 	if(c->tcp_is_reading)
 		return 1;
 
-	if(c->alpn_h2) {
+	if(c->use_h2) {
 		return comm_point_http2_handle_write(fd, c);
 	}
 
@@ -3160,7 +3160,7 @@ comm_point_create_http_handler(struct comm_base *base,
 		free(c);
 		return NULL;
 	}
-	c->alpn_h2 = 0;
+	c->use_h2 = 0;
 #ifdef HAVE_NGHTTP2
 	if(!(c->h2_session = http2_session_create(c))) {
 		log_err("could not create http2 session");
@@ -3676,7 +3676,7 @@ comm_point_send_reply(struct comm_reply *repinfo)
 #endif
 		if(repinfo->c->tcp_req_info) {
 			tcp_req_info_send_reply(repinfo->c->tcp_req_info);
-		} else if(repinfo->c->alpn_h2) {
+		} else if(repinfo->c->use_h2) {
 			if(!http2_submit_dns_response(repinfo->c->h2_session)) {
 				comm_point_drop_reply(repinfo);
 				return;

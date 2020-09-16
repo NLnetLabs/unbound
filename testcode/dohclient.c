@@ -171,8 +171,9 @@ submit_query(struct http2_session* h2_session, struct sldns_buffer* buf)
 		h2_stream->path = malloc(strlen(
 			h2_session->endpoint)+strlen("?dns=")+qb64_size+1);
 		if(!h2_stream->path) fatal_exit("out of memory");
-		sprintf(h2_stream->path, "%s?dns=%s", h2_session->endpoint,
-			qb64);
+		snprintf(h2_stream->path, strlen(h2_session->endpoint)+
+			strlen("?dns=")+qb64_size+1, "%s?dns=%s",
+			h2_session->endpoint, qb64);
 		free(qb64);
 	}
 
@@ -326,6 +327,11 @@ static int http2_data_chunk_recv_cb(nghttp2_session* ATTR_UNUSED(session),
 	if(!(h2_stream = nghttp2_session_get_stream_user_data(
 		h2_session->session, stream_id))) {
 		return 0;
+	}
+
+	if(sldns_buffer_remaining(h2_stream->buf) < len) {
+		log_err("received data chunck does not fit into buffer");
+		return NGHTTP2_ERR_CALLBACK_FAILURE;
 	}
 
 	sldns_buffer_write(h2_stream->buf, data, len);
@@ -575,5 +581,6 @@ int main(int argc, char** argv)
 int main(int ATTR_UNUSED(argc), char** ATTR_UNUSED(argv))
 {
 	printf("Compiled without nghttp2, cannot run test.\n");
+	return 1;
 }
 #endif /*  HAVE_NGHTTP2 */

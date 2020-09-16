@@ -551,7 +551,7 @@ void mesh_new_client(struct mesh_area* mesh, struct query_info* qinfo,
 			goto servfail_mem;
 		}
 	}
-	if(rep->c->alpn_h2) {
+	if(rep->c->use_h2) {
 		http2_stream_add_meshstate(rep->c->h2_stream, mesh, s);
 	}
 	/* add serve expired timer if required and not already there */
@@ -1210,7 +1210,7 @@ mesh_send_reply(struct mesh_state* m, int rcode, struct reply_info* rep,
 	else	secure = 0;
 	if(!rep && rcode == LDNS_RCODE_NOERROR)
 		rcode = LDNS_RCODE_SERVFAIL;
-	if(r->query_reply.c->alpn_h2) {
+	if(r->query_reply.c->use_h2) {
 		r->query_reply.c->h2_stream = r->h2_stream;
 		/* Mesh reply won't exist for long anymore. Make it impossible
 		 * for HTTP/2 stream to refer to mesh state, in case
@@ -1498,7 +1498,7 @@ int mesh_state_add_reply(struct mesh_state* s, struct edns_data* edns,
 		s->s.qinfo.qname_len);
 	if(!r->qname)
 		return 0;
-	if(rep->c->alpn_h2)
+	if(rep->c->use_h2)
 		r->h2_stream = rep->c->h2_stream;
 
 	/* Data related to local alias stored in 'qinfo' (if any) is ephemeral
