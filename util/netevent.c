@@ -373,12 +373,7 @@ comm_point_send_udp_msg(struct comm_point *c, sldns_buffer* packet,
 	if(sent == -1) {
 		if(!udp_send_errno_needs_log(addr, addrlen))
 			return 0;
-#ifndef USE_WINSOCK
-		verbose(VERB_OPS, "sendto failed: %s", strerror(errno));
-#else
-		verbose(VERB_OPS, "sendto failed: %s", 
-			wsa_strerror(WSAGetLastError()));
-#endif
+		verbose(VERB_OPS, "sendto failed: %s", sock_strerror(errno));
 		log_addr(VERB_OPS, "remote address is", 
 			(struct sockaddr_storage*)addr, addrlen);
 		return 0;
@@ -447,7 +442,10 @@ comm_point_send_udp_msg_if(struct comm_point *c, sldns_buffer* packet,
 	ssize_t sent;
 	struct msghdr msg;
 	struct iovec iov[1];
-	char control[256];
+	union {
+		struct cmsghdr hdr;
+		char buf[256];
+	} control;
 #ifndef S_SPLINT_S
 	struct cmsghdr *cmsg;
 #endif /* S_SPLINT_S */
@@ -465,9 +463,9 @@ comm_point_send_udp_msg_if(struct comm_point *c, sldns_buffer* packet,
 	iov[0].iov_len = sldns_buffer_remaining(packet);
 	msg.msg_iov = iov;
 	msg.msg_iovlen = 1;
-	msg.msg_control = control;
+	msg.msg_control = control.buf;
 #ifndef S_SPLINT_S
-	msg.msg_controllen = sizeof(control);
+	msg.msg_controllen = sizeof(control.buf);
 #endif /* S_SPLINT_S */
 	msg.msg_flags = 0;
 
@@ -477,7 +475,7 @@ comm_point_send_udp_msg_if(struct comm_point *c, sldns_buffer* packet,
 #ifdef IP_PKTINFO
 		void* cmsg_data;
 		msg.msg_controllen = CMSG_SPACE(sizeof(struct in_pktinfo));
-		log_assert(msg.msg_controllen <= sizeof(control));
+		log_assert(msg.msg_controllen <= sizeof(control.buf));
 		cmsg->cmsg_level = IPPROTO_IP;
 		cmsg->cmsg_type = IP_PKTINFO;
 		memmove(CMSG_DATA(cmsg), &r->pktinfo.v4info,
@@ -488,7 +486,7 @@ comm_point_send_udp_msg_if(struct comm_point *c, sldns_buffer* packet,
 		cmsg->cmsg_len = CMSG_LEN(sizeof(struct in_pktinfo));
 #elif defined(IP_SENDSRCADDR)
 		msg.msg_controllen = CMSG_SPACE(sizeof(struct in_addr));
-		log_assert(msg.msg_controllen <= sizeof(control));
+		log_assert(msg.msg_controllen <= sizeof(control.buf));
 		cmsg->cmsg_level = IPPROTO_IP;
 		cmsg->cmsg_type = IP_SENDSRCADDR;
 		memmove(CMSG_DATA(cmsg), &r->pktinfo.v4addr,
@@ -501,7 +499,7 @@ comm_point_send_udp_msg_if(struct comm_point *c, sldns_buffer* packet,
 	} else if(r->srctype == 6) {
 		void* cmsg_data;
 		msg.msg_controllen = CMSG_SPACE(sizeof(struct in6_pktinfo));
-		log_assert(msg.msg_controllen <= sizeof(control));
+		log_assert(msg.msg_controllen <= sizeof(control.buf));
 		cmsg->cmsg_level = IPPROTO_IPV6;
 		cmsg->cmsg_type = IPV6_PKTINFO;
 		memmove(CMSG_DATA(cmsg), &r->pktinfo.v6info,
@@ -513,7 +511,7 @@ comm_point_send_udp_msg_if(struct comm_point *c, sldns_buffer* packet,
 	} else {
 		/* try to pass all 0 to use default route */
 		msg.msg_controllen = CMSG_SPACE(sizeof(struct in6_pktinfo));
-		log_assert(msg.msg_controllen <= sizeof(control));
+		log_assert(msg.msg_controllen <= sizeof(control.buf));
 		cmsg->cmsg_level = IPPROTO_IPV6;
 		cmsg->cmsg_type = IPV6_PKTINFO;
 		memset(CMSG_DATA(cmsg), 0, sizeof(struct in6_pktinfo));
@@ -584,7 +582,10 @@ comm_point_udp_ancil_callback(int fd, short event, void* arg)
 	struct msghdr msg;
 	struct iovec iov[1];
 	ssize_t rcv;
-	char ancil[256];
+	union {
+		struct cmsghdr hdr;
+		char buf[256];
+	} ancil;
 	int i;
 #ifndef S_SPLINT_S
 	struct cmsghdr* cmsg;
@@ -608,9 +609,9 @@ comm_point_udp_ancil_callback(int fd, short event, void* arg)
 		iov[0].iov_len = sldns_buffer_remaining(rep.c->buffer);
 		msg.msg_iov = iov;
 		msg.msg_iovlen = 1;
-		msg.msg_control = ancil;
+		msg.msg_control = ancil.buf;
 #ifndef S_SPLINT_S
-		msg.msg_controllen = sizeof(ancil);
+		msg.msg_controllen = sizeof(ancil.buf);
 #endif /* S_SPLINT_S */
 		msg.msg_flags = 0;
 		rcv = recvmsg(fd, &msg, 0);
@@ -839,7 +840,6 @@ int comm_point_perform_accept(struct comm_point* c,
 			return -1;
 		}
 #endif
-		log_err_addr("accept failed", strerror(errno), addr, *addrlen);
 #else /* USE_WINSOCK */
 		if(WSAGetLastError() == WSAEINPROGRESS ||
 			WSAGetLastError() == WSAECONNRESET)
@@ -848,9 +848,9 @@ int comm_point_perform_accept(struct comm_point* c,
 			ub_winsock_tcp_wouldblock(c->ev->ev, UB_EV_READ);
 			return -1;
 		}
-		log_err_addr("accept failed", wsa_strerror(WSAGetLastError()),
-			addr, *addrlen);
 #endif
+		log_err_addr("accept failed", sock_strerror(errno), addr,
+			*addrlen);
 		return -1;
 	}
 	if(c->tcp_conn_limit && c->type == comm_tcp_accept) {
@@ -1498,8 +1498,6 @@ comm_point_tcp_handle_read(int fd, struct comm_point* c, int short_ok)
 			if(errno == ECONNRESET && verbosity < 2)
 				return 0; /* silence reset by peer */
 #endif
-			log_err_addr("read (in tcp s)", strerror(errno),
-				&c->repinfo.addr, c->repinfo.addrlen);
 #else /* USE_WINSOCK */
 			if(WSAGetLastError() == WSAECONNRESET)
 				return 0;
@@ -1510,10 +1508,9 @@ comm_point_tcp_handle_read(int fd, struct comm_point* c, int short_ok)
 					UB_EV_READ);
 				return 1;
 			}
-			log_err_addr("read (in tcp s)", 
-				wsa_strerror(WSAGetLastError()),
-				&c->repinfo.addr, c->repinfo.addrlen);
 #endif
+			log_err_addr("read (in tcp s)", sock_strerror(errno),
+				&c->repinfo.addr, c->repinfo.addrlen);
 			return 0;
 		} 
 		c->tcp_byte_count += r;
@@ -1546,8 +1543,6 @@ comm_point_tcp_handle_read(int fd, struct comm_point* c, int short_ok)
 #ifndef USE_WINSOCK
 		if(errno == EINTR || errno == EAGAIN)
 			return 1;
-		log_err_addr("read (in tcp r)", strerror(errno),
-			&c->repinfo.addr, c->repinfo.addrlen);
 #else /* USE_WINSOCK */
 		if(WSAGetLastError() == WSAECONNRESET)
 			return 0;
@@ -1557,10 +1552,9 @@ comm_point_tcp_handle_read(int fd, struct comm_point* c, int short_ok)
 			ub_winsock_tcp_wouldblock(c->ev->ev, UB_EV_READ);
 			return 1;
 		}
-		log_err_addr("read (in tcp r)",
-			wsa_strerror(WSAGetLastError()),
-			&c->repinfo.addr, c->repinfo.addrlen);
 #endif
+		log_err_addr("read (in tcp r)", sock_strerror(errno),
+			&c->repinfo.addr, c->repinfo.addrlen);
 		return 0;
 	}
 	sldns_buffer_skip(c->buffer, r);
@@ -1779,8 +1773,6 @@ comm_point_tcp_handle_write(int fd, struct comm_point* c)
 		if(errno == ECONNRESET && verbosity < 2)
 			return 0; /* silence reset by peer */
 #endif
-		log_err_addr("tcp send r", strerror(errno),
-			&c->repinfo.addr, c->repinfo.addrlen);
 #else
 		if(WSAGetLastError() == WSAEINPROGRESS)
 			return 1;
@@ -1790,9 +1782,9 @@ comm_point_tcp_handle_write(int fd, struct comm_point* c)
 		}
 		if(WSAGetLastError() == WSAECONNRESET && verbosity < 2)
 			return 0; /* silence reset by peer */
-		log_err_addr("tcp send r", wsa_strerror(WSAGetLastError()),
-			&c->repinfo.addr, c->repinfo.addrlen);
 #endif
+		log_err_addr("tcp send r", sock_strerror(errno),
+			&c->repinfo.addr, c->repinfo.addrlen);
 		return 0;
 	}
 	sldns_buffer_skip(buffer, r);
@@ -1977,8 +1969,6 @@ http_read_more(int fd, struct comm_point* c)
 #ifndef USE_WINSOCK
 		if(errno == EINTR || errno == EAGAIN)
 			return 1;
-		log_err_addr("read (in http r)", strerror(errno),
-			&c->repinfo.addr, c->repinfo.addrlen);
 #else /* USE_WINSOCK */
 		if(WSAGetLastError() == WSAECONNRESET)
 			return 0;
@@ -1988,10 +1978,9 @@ http_read_more(int fd, struct comm_point* c)
 			ub_winsock_tcp_wouldblock(c->ev->ev, UB_EV_READ);
 			return 1;
 		}
-		log_err_addr("read (in http r)",
-			wsa_strerror(WSAGetLastError()),
-			&c->repinfo.addr, c->repinfo.addrlen);
 #endif
+		log_err_addr("read (in http r)", sock_strerror(errno),
+			&c->repinfo.addr, c->repinfo.addrlen);
 		return 0;
 	}
 	sldns_buffer_skip(c->buffer, r);
@@ -2639,8 +2628,6 @@ http_write_more(int fd, struct comm_point* c)
 #ifndef USE_WINSOCK
 		if(errno == EINTR || errno == EAGAIN)
 			return 1;
-		log_err_addr("http send r", strerror(errno),
-			&c->repinfo.addr, c->repinfo.addrlen);
 #else
 		if(WSAGetLastError() == WSAEINPROGRESS)
 			return 1;
@@ -2648,9 +2635,9 @@ http_write_more(int fd, struct comm_point* c)
 			ub_winsock_tcp_wouldblock(c->ev->ev, UB_EV_WRITE);
 			return 1; 
 		}
-		log_err_addr("http send r", wsa_strerror(WSAGetLastError()),
-			&c->repinfo.addr, c->repinfo.addrlen);
 #endif
+		log_err_addr("http send r", sock_strerror(errno),
+			&c->repinfo.addr, c->repinfo.addrlen);
 		return 0;
 	}
 	sldns_buffer_skip(c->buffer, r);
@@ -3586,11 +3573,7 @@ comm_point_close(struct comm_point* c)
 			ub_winsock_tcp_wouldblock(c->ev->ev, UB_EV_WRITE);
 		}
 		verbose(VERB_ALGO, "close fd %d", c->fd);
-#ifndef USE_WINSOCK
-		close(c->fd);
-#else
-		closesocket(c->fd);
-#endif
+		sock_close(c->fd);
 	}
 	c->fd = -1;
 }
@@ -3759,11 +3742,7 @@ comm_point_start_listening(struct comm_point* c, int newfd, int msec)
 	}
 	if(newfd != -1) {
 		if(c->fd != -1) {
-#ifndef USE_WINSOCK
-			close(c->fd);
-#else
-			closesocket(c->fd);
-#endif
+			sock_close(c->fd);
 		}
 		c->fd = newfd;
 		ub_event_set_fd(c->ev->ev, c->fd);

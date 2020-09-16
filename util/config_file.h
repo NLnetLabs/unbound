@@ -344,10 +344,6 @@ struct config_file {
 	struct config_strlist* auto_trust_anchor_file_list;
 	/** files with trusted DNSKEYs in named.conf format, list */
 	struct config_strlist* trusted_keys_file_list;
-	/** DLV anchor file */
-	char* dlv_anchor_file;
-	/** DLV anchor inline */
-	struct config_strlist* dlv_anchor_list;
 	/** insecure domain list */
 	struct config_strlist* domain_insecure;
 	/** send key tag query */
@@ -494,6 +490,8 @@ struct config_file {
 
 	/** true to enable dnstap support */
 	int dnstap;
+	/** using bidirectional frame streams if true */
+	int dnstap_bidirectional;
 	/** dnstap socket path */
 	char* dnstap_socket_path;
 	/** dnstap IP */
@@ -563,6 +561,9 @@ struct config_file {
 	int shm_enable;
 	/** SHM data - key for the shm */
 	int shm_key;
+
+	/** list of EDNS client tag entries, linked list */
+	struct config_str2list* edns_client_tags;
 
 	/** DNSCrypt */
 	/** true to enable dnscrypt */
@@ -984,6 +985,9 @@ void config_deldblstrlist(struct config_str2list* list);
  * @param list: list.
  */
 void config_deltrplstrlist(struct config_str3list* list);
+
+/** delete string array */
+void config_del_strarray(char** array, int num);
 
 /** delete stringbytelist */
 void config_del_strbytelist(struct config_strbytelist* list);

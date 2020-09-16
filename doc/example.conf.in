@@ -5,8 +5,12 @@
 #
 # this is a comment.
 
-#Use this to include other text into the file.
+# Use this anywhere in the file to include other text into this file.
 #include: "otherfile.conf"
+
+# Use this anywhere in the file to include other text, that explicitly starts a
+# clause, into this file. Text after this directive needs to start a clause.
+#include-toplevel: "otherfile.conf"
 
 # The server clause sets the main parameters.
 server:
@@ -505,11 +509,6 @@ server:
 	# Root key trust anchor sentinel (draft-ietf-dnsop-kskroll-sentinel)
 	# root-key-sentinel: yes
 
-	# File with DLV trusted keys. Same format as trust-anchor-file.
-	# There can be only one DLV configured, it is trusted from root down.
-	# DLV is going to be decommissioned.  Please do not use it any more.
-	# dlv-anchor-file: "dlv.isc.org.key"
-
 	# File with trusted keys for validation. Specify more than one file
 	# with several entries, one file per entry.
 	# Zone file format, with DS and DNSKEY entries.
@@ -585,7 +584,7 @@ server:
 	#
 	# Time in milliseconds before replying to the client with expired data.
 	# This essentially enables the serve-stale behavior as specified in
-	# draft-ietf-dnsop-serve-stale-10 that first tries to resolve before
+	# RFC 8767 that first tries to resolve before
 	# immediately responding with expired data.  0 disables this behavior.
 	# A recommended value is 1800.
 	# serve-expired-client-timeout: 0
@@ -623,7 +622,7 @@ server:
 	# more slabs reduce lock contention, but fragment memory usage.
 	# key-cache-slabs: 4
 
-	# the amount of memory to use for the negative cache (used for DLV).
+	# the amount of memory to use for the negative cache.
 	# plain value in bytes or you can append k, m or G. default is "1Mb".
 	# neg-cache-size: 1m
 
@@ -1064,6 +1063,8 @@ remote-control:
 # upstream log destination, by socket path, TCP or TLS destination.
 # dnstap:
 # 	dnstap-enable: no
+# 	# if set to yes frame streams will be used in bidirectional mode
+# 	dnstap-bidirectional: yes
 # 	dnstap-socket-path: "@DNSTAP_SOCKET_PATH@"
 # 	# if "" use the unix socket in dnstap-socket-path, otherwise,
 # 	# set it to "IPaddress[@port]" of the destination.

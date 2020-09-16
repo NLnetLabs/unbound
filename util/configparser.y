@@ -69,6 +69,7 @@ extern struct config_parser_state* cfg_parser;
 
 %token SPACE LETTER NEWLINE COMMENT COLON ANY ZONESTR
 %token <str> STRING_ARG
+%token VAR_FORCE_TOPLEVEL
 %token VAR_SERVER VAR_VERBOSITY VAR_NUM_THREADS VAR_PORT
 %token VAR_OUTGOING_RANGE VAR_INTERFACE VAR_PREFER_IP4
 %token VAR_DO_IP4 VAR_DO_IP6 VAR_PREFER_IP6 VAR_DO_UDP VAR_DO_TCP
@@ -122,7 +123,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_DNSTAP VAR_DNSTAP_ENABLE VAR_DNSTAP_SOCKET_PATH VAR_DNSTAP_IP
 %token VAR_DNSTAP_TLS VAR_DNSTAP_TLS_SERVER_NAME VAR_DNSTAP_TLS_CERT_BUNDLE
 %token VAR_DNSTAP_TLS_CLIENT_KEY_FILE VAR_DNSTAP_TLS_CLIENT_CERT_FILE
-%token VAR_DNSTAP_SEND_IDENTITY VAR_DNSTAP_SEND_VERSION
+%token VAR_DNSTAP_SEND_IDENTITY VAR_DNSTAP_SEND_VERSION VAR_DNSTAP_BIDIRECTIONAL
 %token VAR_DNSTAP_IDENTITY VAR_DNSTAP_VERSION
 %token VAR_DNSTAP_LOG_RESOLVER_QUERY_MESSAGES
 %token VAR_DNSTAP_LOG_RESOLVER_RESPONSE_MESSAGES
@@ -177,7 +178,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_IPSET VAR_IPSET_NAME_V4 VAR_IPSET_NAME_V6
 %token VAR_TLS_SESSION_TICKET_KEYS VAR_RPZ VAR_TAGS VAR_RPZ_ACTION_OVERRIDE
 %token VAR_RPZ_CNAME_OVERRIDE VAR_RPZ_LOG VAR_RPZ_LOG_NAME
-%token VAR_DYNLIB VAR_DYNLIB_FILE
+%token VAR_DYNLIB VAR_DYNLIB_FILE VAR_EDNS_CLIENT_TAG
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -186,16 +187,21 @@ toplevelvar: serverstart contents_server | stubstart contents_stub |
 	rcstart contents_rc | dtstart contents_dt | viewstart contents_view |
 	dnscstart contents_dnsc | cachedbstart contents_cachedb |
 	ipsetstart contents_ipset | authstart contents_auth |
-	rpzstart contents_rpz | dynlibstart contents_dl
+	rpzstart contents_rpz | dynlibstart contents_dl |
+	force_toplevel
 	;
-
+force_toplevel: VAR_FORCE_TOPLEVEL
+	{
+		OUTYY(("\nP(force-toplevel)\n"));
+	}
+	;
 /* server: declaration */
 serverstart: VAR_SERVER
 	{ 
-		OUTYY(("\nP(server:)\n")); 
+		OUTYY(("\nP(server:)\n"));
 	}
 	;
-contents_server: contents_server content_server 
+contents_server: contents_server content_server
 	| ;
 content_server: server_num_threads | server_verbosity | server_port |
 	server_outgoing_range | server_do_ip4 |
@@ -285,7 +291,7 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_unknown_server_time_limit | server_log_tag_queryreply |
 	server_stream_wait_size | server_tls_ciphers |
 	server_tls_ciphersuites | server_tls_session_ticket_keys |
-	server_tls_use_sni
+	server_tls_use_sni | server_edns_client_tag
 	;
 stubstart: VAR_STUB_ZONE
 	{
@@ -1175,15 +1181,15 @@ server_root_hints: VAR_ROOT_HINTS STRING_ARG
 server_dlv_anchor_file: VAR_DLV_ANCHOR_FILE STRING_ARG
 	{
 		OUTYY(("P(server_dlv_anchor_file:%s)\n", $2));
-		free(cfg_parser->cfg->dlv_anchor_file);
-		cfg_parser->cfg->dlv_anchor_file = $2;
+		log_warn("option dlv-anchor-file ignored: DLV is decommissioned");
+		free($2);
 	}
 	;
 server_dlv_anchor: VAR_DLV_ANCHOR STRING_ARG
 	{
 		OUTYY(("P(server_dlv_anchor:%s)\n", $2));
-		if(!cfg_strlist_insert(&cfg_parser->cfg->dlv_anchor_list, $2))
-			yyerror("out of memory");
+		log_warn("option dlv-anchor ignored: DLV is decommissioned");
+		free($2);
 	}
 	;
 server_auto_trust_anchor_file: VAR_AUTO_TRUST_ANCHOR_FILE STRING_ARG
@@ -2458,6 +2464,21 @@ server_ipsecmod_strict: VAR_IPSECMOD_STRICT STRING_ARG
 	#endif
 	}
 	;
+server_edns_client_tag: VAR_EDNS_CLIENT_TAG STRING_ARG STRING_ARG
+	{
+		int tag_data;
+		OUTYY(("P(server_edns_client_tag:%s %s)\n", $2, $3));
+		tag_data = atoi($3);
+		if(tag_data > 65535 || tag_data < 0 ||
+			(tag_data == 0 && (strlen($3) != 1 || $3[0] != '0')))
+			yyerror("edns-client-tag data invalid, needs to be a "
+				"number from 0 to 65535");
+		if(!cfg_str2list_insert(
+			&cfg_parser->cfg->edns_client_tags, $2, $3))
+			fatal_exit("out of memory adding "
+				"edns-client-tag");
+	}
+	;
 stub_name: VAR_NAME STRING_ARG
 	{
 		OUTYY(("P(name:%s)\n", $2));
@@ -2819,7 +2840,7 @@ dtstart: VAR_DNSTAP
 	;
 contents_dt: contents_dt content_dt
 	| ;
-content_dt: dt_dnstap_enable | dt_dnstap_socket_path |
+content_dt: dt_dnstap_enable | dt_dnstap_socket_path | dt_dnstap_bidirectional |
 	dt_dnstap_ip | dt_dnstap_tls | dt_dnstap_tls_server_name |
 	dt_dnstap_tls_cert_bundle |
 	dt_dnstap_tls_client_key_file | dt_dnstap_tls_client_cert_file |
@@ -2838,6 +2859,16 @@ dt_dnstap_enable: VAR_DNSTAP_ENABLE STRING_ARG
 		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
 			yyerror("expected yes or no.");
 		else cfg_parser->cfg->dnstap = (strcmp($2, "yes")==0);
+		free($2);
+	}
+	;
+dt_dnstap_bidirectional: VAR_DNSTAP_BIDIRECTIONAL STRING_ARG
+	{
+		OUTYY(("P(dt_dnstap_bidirectional:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else cfg_parser->cfg->dnstap_bidirectional =
+			(strcmp($2, "yes")==0);
 		free($2);
 	}
 	;

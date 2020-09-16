@@ -52,6 +52,7 @@
 #include "util/data/msgreply.h"
 #include "util/data/msgencode.h"
 #include "util/data/dname.h"
+#include "util/edns.h"
 #include "util/config_file.h"
 #include "services/listen_dnsport.h"
 #include "services/outside_network.h"
@@ -1183,7 +1184,7 @@ struct serviced_query* outnet_serviced_query(struct outside_network* outnet,
 	socklen_t addrlen, uint8_t* zone, size_t zonelen,
 	struct module_qstate* qstate, comm_point_callback_type* callback,
 	void* callback_arg, sldns_buffer* ATTR_UNUSED(buff),
-	struct module_env* ATTR_UNUSED(env))
+	struct module_env* env)
 {
 	struct replay_runtime* runtime = (struct replay_runtime*)outnet->base;
 	struct fake_pending* pend = (struct fake_pending*)calloc(1,
@@ -1212,6 +1213,7 @@ struct serviced_query* outnet_serviced_query(struct outside_network* outnet,
 	sldns_buffer_flip(pend->buffer);
 	if(1) {
 		struct edns_data edns;
+		struct edns_tag_addr* client_tag_addr;
 		if(!inplace_cb_query_call(env, qinfo, flags, addr, addrlen,
 			zone, zonelen, qstate, qstate->region)) {
 			free(pend);
@@ -1223,9 +1225,17 @@ struct serviced_query* outnet_serviced_query(struct outside_network* outnet,
 		edns.edns_version = EDNS_ADVERTISED_VERSION;
 		edns.udp_size = EDNS_ADVERTISED_SIZE;
 		edns.bits = 0;
-		edns.opt_list = qstate->edns_opts_back_out;
 		if(dnssec)
 			edns.bits = EDNS_DO;
+		if((client_tag_addr = edns_tag_addr_lookup(
+			&env->edns_tags->client_tags,
+			addr, addrlen))) {
+			uint16_t client_tag = htons(client_tag_addr->tag_data);
+			edns_opt_list_append(&qstate->edns_opts_back_out,
+				LDNS_EDNS_CLIENT_TAG, 2,
+				(uint8_t*)&client_tag, qstate->region);
+		}
+		edns.opt_list = qstate->edns_opts_back_out;
 		attach_edns_record(pend->buffer, &edns);
 	}
 	memcpy(&pend->addr, addr, addrlen);
@@ -1293,7 +1303,14 @@ void outnet_serviced_query_stop(struct serviced_query* sq, void* cb_arg)
 	log_info("double delete of pending serviced query");
 }
 
+int resolve_interface_names(struct config_file* ATTR_UNUSED(cfg),
+	char*** ATTR_UNUSED(resif), int* ATTR_UNUSED(num_resif))
+{
+	return 1;
+}
+
 struct listen_port* listening_ports_open(struct config_file* ATTR_UNUSED(cfg),
+	char** ATTR_UNUSED(ifs), int ATTR_UNUSED(num_ifs),
 	int* ATTR_UNUSED(reuseport))
 {
 	return calloc(1, 1);

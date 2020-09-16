@@ -55,6 +55,9 @@
 #ifdef HAVE_OPENSSL_ERR_H
 #include <openssl/err.h>
 #endif
+#ifdef HAVE_OPENSSL_CORE_NAMES_H
+#include <openssl/core_names.h>
+#endif
 #ifdef USE_WINSOCK
 #include <wincrypt.h>
 #endif
@@ -81,6 +84,32 @@ static struct tls_session_ticket_key {
 	unsigned char *aes_key;
 	unsigned char *hmac_key;
 } *ticket_keys;
+
+#ifdef HAVE_SSL
+/**
+ * callback TLS session ticket encrypt and decrypt
+ * For use with SSL_CTX_set_tlsext_ticket_key_cb or
+ * SSL_CTX_set_tlsext_ticket_key_evp_cb
+ * @param s: the SSL_CTX to use (from connect_sslctx_create())
+ * @param key_name: secret name, 16 bytes
+ * @param iv: up to EVP_MAX_IV_LENGTH.
+ * @param evp_ctx: the evp cipher context, function sets this.
+ * @param hmac_ctx: the hmac context, function sets this.
+ * 	with ..key_cb it is of type HMAC_CTX*
+ * 	with ..key_evp_cb it is of type EVP_MAC_CTX*
+ * @param enc: 1 is encrypt, 0 is decrypt
+ * @return 0 on no ticket, 1 for okay, and 2 for okay but renew the ticket
+ * 	(the ticket is decrypt only). and <0 for failures.
+ */
+int tls_session_ticket_key_cb(SSL *s, unsigned char* key_name,
+	unsigned char* iv, EVP_CIPHER_CTX *evp_ctx,
+#ifdef HAVE_SSL_CTX_SET_TLSEXT_TICKET_KEY_EVP_CB
+	EVP_MAC_CTX *hmac_ctx,
+#else
+	HMAC_CTX* hmac_ctx,
+#endif
+	int enc);
+#endif /* HAVE_SSL */
 
 /* returns true is string addr is an ip6 specced address */
 int
@@ -1261,6 +1290,7 @@ int set_auth_name_on_ssl(void* ssl, char* auth_name, int use_sni)
 	}
 #else
 	(void)ssl;
+	(void)use_sni;
 #endif
 #ifdef HAVE_SSL_SET1_HOST
 	SSL_set_verify(ssl, SSL_VERIFY_PEER, NULL);
@@ -1408,10 +1438,17 @@ int listen_sslctx_setup_ticket_keys(void* sslctx, struct config_strlist* tls_ses
 	}
 	/* terminate array with NULL key name entry */
 	keys->key_name = NULL;
+#  ifdef HAVE_SSL_CTX_SET_TLSEXT_TICKET_KEY_EVP_CB
+	if(SSL_CTX_set_tlsext_ticket_key_evp_cb(sslctx, tls_session_ticket_key_cb) == 0) {
+		log_err("no support for TLS session ticket");
+		return 0;
+	}
+#  else
 	if(SSL_CTX_set_tlsext_ticket_key_cb(sslctx, tls_session_ticket_key_cb) == 0) {
 		log_err("no support for TLS session ticket");
 		return 0;
 	}
+#  endif
 	return 1;
 #else
 	(void)sslctx;
@@ -1421,13 +1458,27 @@ int listen_sslctx_setup_ticket_keys(void* sslctx, struct config_strlist* tls_ses
 
 }
 
-int tls_session_ticket_key_cb(void *ATTR_UNUSED(sslctx), unsigned char* key_name, unsigned char* iv, void *evp_sctx, void *hmac_ctx, int enc)
+#ifdef HAVE_SSL
+int tls_session_ticket_key_cb(SSL *ATTR_UNUSED(sslctx), unsigned char* key_name,
+	unsigned char* iv, EVP_CIPHER_CTX *evp_sctx,
+#ifdef HAVE_SSL_CTX_SET_TLSEXT_TICKET_KEY_EVP_CB
+	EVP_MAC_CTX *hmac_ctx,
+#else
+	HMAC_CTX* hmac_ctx,
+#endif
+	int enc)
 {
 #ifdef HAVE_SSL
+#  ifdef HAVE_SSL_CTX_SET_TLSEXT_TICKET_KEY_EVP_CB
+	OSSL_PARAM params[3];
+#  else
 	const EVP_MD *digest;
+#  endif
 	const EVP_CIPHER *cipher;
 	int evp_cipher_length;
+#  ifndef HAVE_SSL_CTX_SET_TLSEXT_TICKET_KEY_EVP_CB
 	digest = EVP_sha256();
+#  endif
 	cipher = EVP_aes_256_cbc();
 	evp_cipher_length = EVP_CIPHER_iv_length(cipher);
 	if( enc == 1 ) {
@@ -1442,7 +1493,18 @@ int tls_session_ticket_key_cb(void *ATTR_UNUSED(sslctx), unsigned char* key_name
 			verbose(VERB_CLIENT, "EVP_EncryptInit_ex failed");
 			return -1;
 		}
-#ifndef HMAC_INIT_EX_RETURNS_VOID
+#ifdef HAVE_SSL_CTX_SET_TLSEXT_TICKET_KEY_EVP_CB
+		params[0] = OSSL_PARAM_construct_octet_string(OSSL_MAC_PARAM_KEY,
+			ticket_keys->hmac_key, 32);
+		params[1] = OSSL_PARAM_construct_utf8_string(OSSL_MAC_PARAM_DIGEST,
+			"sha256", 0);
+		params[2] = OSSL_PARAM_construct_end();
+#ifdef HAVE_EVP_MAC_CTX_SET_PARAMS
+		EVP_MAC_CTX_set_params(hmac_ctx, params);
+#else
+		EVP_MAC_set_ctx_params(hmac_ctx, params);
+#endif
+#elif !defined(HMAC_INIT_EX_RETURNS_VOID)
 		if (HMAC_Init_ex(hmac_ctx, ticket_keys->hmac_key, 32, digest, NULL) != 1) {
 			verbose(VERB_CLIENT, "HMAC_Init_ex failed");
 			return -1;
@@ -1466,7 +1528,18 @@ int tls_session_ticket_key_cb(void *ATTR_UNUSED(sslctx), unsigned char* key_name
 			return 0;
 		}
 
-#ifndef HMAC_INIT_EX_RETURNS_VOID
+#ifdef HAVE_SSL_CTX_SET_TLSEXT_TICKET_KEY_EVP_CB
+		params[0] = OSSL_PARAM_construct_octet_string(OSSL_KDF_PARAM_KEY,
+			key->hmac_key, 32);
+		params[1] = OSSL_PARAM_construct_utf8_string(OSSL_MAC_PARAM_DIGEST,
+			"sha256", 0);
+		params[2] = OSSL_PARAM_construct_end();
+#ifdef HAVE_EVP_MAC_CTX_SET_PARAMS
+		EVP_MAC_CTX_set_params(hmac_ctx, params);
+#else
+		EVP_MAC_set_ctx_params(hmac_ctx, params);
+#endif
+#elif !defined(HMAC_INIT_EX_RETURNS_VOID)
 		if (HMAC_Init_ex(hmac_ctx, key->hmac_key, 32, digest, NULL) != 1) {
 			verbose(VERB_CLIENT, "HMAC_Init_ex failed");
 			return -1;
@@ -1491,6 +1564,7 @@ int tls_session_ticket_key_cb(void *ATTR_UNUSED(sslctx), unsigned char* key_name
 	return 0;
 #endif
 }
+#endif /* HAVE_SSL */
 
 void
 listen_sslctx_delete_ticket_keys(void)
@@ -1509,3 +1583,31 @@ listen_sslctx_delete_ticket_keys(void)
 	free(ticket_keys);
 	ticket_keys = NULL;
 }
+
+#  ifndef USE_WINSOCK
+char*
+sock_strerror(int errn)
+{
+	return strerror(errn);
+}
+
+void
+sock_close(int socket)
+{
+	close(socket);
+}
+
+#  else
+char*
+sock_strerror(int ATTR_UNUSED(errn))
+{
+	return wsa_strerror(WSAGetLastError());
+}
+
+void
+sock_close(int socket)
+{
+	closesocket(socket);
+}
+
+#  endif /* USE_WINSOCK */

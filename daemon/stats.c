@@ -271,6 +271,7 @@ server_stats_compile(struct worker* worker, struct ub_stats_info* s, int reset)
 	s->svr.ans_secure += (long long)worker->env.mesh->ans_secure;
 	s->svr.ans_bogus += (long long)worker->env.mesh->ans_bogus;
 	s->svr.ans_rcode_nodata += (long long)worker->env.mesh->ans_nodata;
+	s->svr.ans_expired += (long long)worker->env.mesh->ans_expired;
 	for(i=0; i<UB_STATS_RCODE_NUM; i++)
 		s->svr.ans_rcode[i] += (long long)worker->env.mesh->ans_rcode[i];
 	for(i=0; i<UB_STATS_RPZ_ACTION_NUM; i++)

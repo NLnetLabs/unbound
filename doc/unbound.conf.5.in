@@ -77,6 +77,12 @@ for the included files works, relative pathnames for the included names work
 if the directory where the daemon is started equals its chroot/working
 directory or is specified before the include statement with directory: dir.
 Wildcards can be used to include multiple files, see \fIglob\fR(7).
+.P
+For a more structural include option, the
+.B include\-toplevel:
+directive can be used.  This closes whatever clause is currently active (if any)
+and forces the use of clauses in the included files and right after this
+directive.
 .SS "Server Options"
 These options are part of the
 .B server:
@@ -116,7 +122,8 @@ The port number, default 53, on which the server responds to queries.
 Interface to use to connect to the network. This interface is listened to
 for queries from clients, and answers to clients are given from it.
 Can be given multiple times to work on several interfaces. If none are
-given the default is to listen to localhost.
+given the default is to listen to localhost.  If an interface name is used
+instead of an ip address, the list of ip addresses on that interface are used.
 The interfaces are not changed on a reload (kill \-HUP) but only on restart.
 A port number can be specified with @port (without spaces between
 interface and port number), if not specified the default port (from
@@ -1034,26 +1041,11 @@ Send RFC8145 key tag query after trust anchor priming. Default is yes.
 .B root\-key\-sentinel: \fI<yes or no>
 Root key trust anchor sentinel. Default is yes.
 .TP
-.B dlv\-anchor\-file: \fI<filename>
-This option was used during early days DNSSEC deployment when no parent-side
-DS record registrations were easily available.  Nowadays, it is best to have
-DS records registered with the parent zone (many top level zones are signed).
-File with trusted keys for DLV (DNSSEC Lookaside Validation). Both DS and
-DNSKEY entries can be used in the file, in the same format as for
-\fItrust\-anchor\-file:\fR statements. Only one DLV can be configured, more
-would be slow. The DLV configured is used as a root trusted DLV, this
-means that it is a lookaside for the root. Default is "", or no dlv anchor
-file. DLV is going to be decommissioned.  Please do not use it any more.
-.TP
-.B dlv\-anchor: \fI<"Resource Record">
-Much like trust\-anchor, this is a DLV anchor with the DS or DNSKEY inline.
-DLV is going to be decommissioned.  Please do not use it any more.
-.TP
 .B domain\-insecure: \fI<domain name>
 Sets domain name to be insecure, DNSSEC chain of trust is ignored towards
 the domain name.  So a trust anchor above the domain name can not make the
 domain secure with a DS record, such a DS record is then ignored.
-Also keys from DLV are ignored for the domain.  Can be given multiple times
+Can be given multiple times
 to specify multiple domains that are treated as if unsigned.  If you set
 trust anchors for the domain they override this setting (and the domain
 is secured).
@@ -1132,7 +1124,7 @@ later on.  Default is "no".
 .B serve\-expired\-ttl: \fI<seconds>
 Limit serving of expired responses to configured seconds after expiration. 0
 disables the limit.  This option only applies when \fBserve\-expired\fR is
-enabled.  A suggested value per draft-ietf-dnsop-serve-stale-10 is between
+enabled.  A suggested value per RFC 8767 is between
 86400 (1 day) and 259200 (3 days).  The default is 0.
 .TP
 .B serve\-expired\-ttl\-reset: \fI<yes or no>
@@ -1144,14 +1136,14 @@ expired records will be served as long as there are queries for it.  Default is
 .B serve\-expired\-reply\-ttl: \fI<seconds>
 TTL value to use when replying with expired data.  If
 \fBserve\-expired\-client\-timeout\fR is also used then it is RECOMMENDED to
-use 30 as the value (draft-ietf-dnsop-serve-stale-10).  The default is 30.
+use 30 as the value (RFC 8767).  The default is 30.
 .TP
 .B serve\-expired\-client\-timeout: \fI<msec>
 Time in milliseconds before replying to the client with expired data.  This
 essentially enables the serve-stale behavior as specified in
-draft-ietf-dnsop-serve-stale-10 that first tries to resolve before immediately
+RFC 8767 that first tries to resolve before immediately
 responding with expired data.  A recommended value per
-draft-ietf-dnsop-serve-stale-10 is 1800.  Setting this to 0 will disable this
+RFC 8767 is 1800.  Setting this to 0 will disable this
 behavior.  Default is 0.
 .TP
 .B val\-nsec3\-keysize\-iterations: \fI<"list of values">
@@ -1540,6 +1532,12 @@ servers set. The default for fast\-server\-permil is 0.
 Set the number of servers that should be used for fast server selection. Only
 use the fastest specified number of servers with the fast\-server\-permil
 option, that turns this on or off. The default is to use the fastest 3 servers.
+.TP 5
+.B edns\-client\-tag: \fI<IP netblock> <tag data>
+Include an edns-client-tag option in queries with destination address matching
+the configured IP netblock. This configuration option can be used multiple
+times. The most specific match will be used. The tag data is configured in
+decimal format, from 0 to 65535.
 .SS "Remote Control Options"
 In the
 .B remote\-control:
@@ -2134,7 +2132,7 @@ even if some data have expired in terms of DNS TTL or the Redis server has
 cached too much data;
 if necessary the Redis server must be configured to limit the cache size,
 preferably with some kind of least-recently-used eviction policy.
-Additionaly, the \fBredis\-expire\-records\fR option can be used in order to
+Additionally, the \fBredis\-expire\-records\fR option can be used in order to
 set the relative DNS TTL of the message as timeout to the Redis records; keep
 in mind that some additional memory is used per key and that the expire
 information is stored as absolute Unix timestamps in Redis (computer time must
@@ -2212,6 +2210,10 @@ destination.
 If dnstap is enabled.  Default no.  If yes, it connects to the dnstap server
 and if any of the dnstap-log-..-messages options is enabled it sends logs
 for those messages to the server.
+.TP
+.B dnstap-bidirectional: \fI<yes or no>
+Use frame streams in bidirectional mode to transfer DNSTAP messages. Default is
+yes.
 .TP
 .B dnstap-socket-path: \fI<file name>
 Sets the unix socket file name for connecting to the server that is

@@ -241,8 +241,6 @@ config_create(void)
 	cfg->trusted_keys_file_list = NULL;
 	cfg->trust_anchor_signaling = 1;
 	cfg->root_key_sentinel = 1;
-	cfg->dlv_anchor_file = NULL;
-	cfg->dlv_anchor_list = NULL;
 	cfg->domain_insecure = NULL;
 	cfg->val_date_override = 0;
 	cfg->val_sig_skew_min = 3600; /* at least daylight savings trouble */
@@ -306,6 +304,7 @@ config_create(void)
 	if(!(cfg->dnstap_socket_path = strdup(DNSTAP_SOCKET_PATH)))
 		goto error_exit;
 #endif
+	cfg->dnstap_bidirectional = 1;
 	cfg->dnstap_tls = 1;
 	cfg->disable_dnssec_lame_check = 0;
 	cfg->ip_ratelimit = 0;
@@ -322,6 +321,7 @@ config_create(void)
 	cfg->qname_minimisation_strict = 0;
 	cfg->shm_enable = 0;
 	cfg->shm_key = 11777;
+	cfg->edns_client_tags = NULL;
 	cfg->dnscrypt = 0;
 	cfg->dnscrypt_port = 0;
 	cfg->dnscrypt_provider = NULL;
@@ -594,8 +594,6 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	else S_STRLIST("trusted-keys-file:", trusted_keys_file_list)
 	else S_YNO("trust-anchor-signaling:", trust_anchor_signaling)
 	else S_YNO("root-key-sentinel:", root_key_sentinel)
-	else S_STR("dlv-anchor-file:", dlv_anchor_file)
-	else S_STRLIST("dlv-anchor:", dlv_anchor_list)
 	else S_STRLIST("domain-insecure:", domain_insecure)
 	else S_NUMBER_OR_ZERO("val-bogus-ttl:", bogus_ttl)
 	else S_YNO("val-clean-additional:", val_clean_additional)
@@ -653,6 +651,7 @@ int config_set_option(struct config_file* cfg, const char* opt,
 #endif
 #ifdef USE_DNSTAP
 	else S_YNO("dnstap-enable:", dnstap)
+	else S_YNO("dnstap-bidirectional:", dnstap_bidirectional)
 	else S_STR("dnstap-socket-path:", dnstap_socket_path)
 	else S_STR("dnstap-ip:", dnstap_ip)
 	else S_YNO("dnstap-tls:", dnstap_tls)
@@ -1016,7 +1015,6 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_DEC(opt, "unwanted-reply-threshold", unwanted_threshold)
 	else O_YNO(opt, "do-not-query-localhost", donotquery_localhost)
 	else O_STR(opt, "module-config", module_conf)
-	else O_STR(opt, "dlv-anchor-file", dlv_anchor_file)
 	else O_DEC(opt, "val-bogus-ttl", bogus_ttl)
 	else O_YNO(opt, "val-clean-additional", val_clean_additional)
 	else O_DEC(opt, "val-log-level", val_log_level)
@@ -1054,7 +1052,6 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_LST(opt, "trusted-keys-file", trusted_keys_file_list)
 	else O_YNO(opt, "trust-anchor-signaling", trust_anchor_signaling)
 	else O_YNO(opt, "root-key-sentinel", root_key_sentinel)
-	else O_LST(opt, "dlv-anchor", dlv_anchor_list)
 	else O_LST(opt, "control-interface", control_ifs.first)
 	else O_LST(opt, "domain-insecure", domain_insecure)
 	else O_UNS(opt, "val-override-date", val_date_override)
@@ -1075,6 +1072,7 @@ config_get_option(struct config_file* cfg, const char* opt,
 #endif
 #ifdef USE_DNSTAP
 	else O_YNO(opt, "dnstap-enable", dnstap)
+	else O_YNO(opt, "dnstap-bidirectional", dnstap_bidirectional)
 	else O_STR(opt, "dnstap-socket-path", dnstap_socket_path)
 	else O_STR(opt, "dnstap-ip", dnstap_ip)
 	else O_YNO(opt, "dnstap-tls", dnstap_tls)
@@ -1147,6 +1145,7 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_LS3(opt, "access-control-tag-action", acl_tag_actions)
 	else O_LS3(opt, "access-control-tag-data", acl_tag_datas)
 	else O_LS2(opt, "access-control-view", acl_view)
+	else O_LS2(opt, "edns_client_tags", edns_client_tags)
 #ifdef USE_IPSECMOD
 	else O_YNO(opt, "ipsecmod-enabled", ipsecmod_enabled)
 	else O_YNO(opt, "ipsecmod-ignore-bogus", ipsecmod_ignore_bogus)
@@ -1408,8 +1407,8 @@ config_delviews(struct config_view* p)
 		p = np;
 	}
 }
-/** delete string array */
-static void
+
+void
 config_del_strarray(char** array, int num)
 {
 	int i;
@@ -1480,8 +1479,6 @@ config_delete(struct config_file* cfg)
 	config_delstrlist(cfg->trusted_keys_file_list);
 	config_delstrlist(cfg->trust_anchor_list);
 	config_delstrlist(cfg->domain_insecure);
-	free(cfg->dlv_anchor_file);
-	config_delstrlist(cfg->dlv_anchor_list);
 	config_deldblstrlist(cfg->acls);
 	config_deldblstrlist(cfg->tcp_connection_limits);
 	free(cfg->val_nsec3_key_iterations);
@@ -1517,6 +1514,7 @@ config_delete(struct config_file* cfg)
 	config_deldblstrlist(cfg->ratelimit_below_domain);
 	config_delstrlist(cfg->python_script);
 	config_delstrlist(cfg->dynlib_file);
+	config_deldblstrlist(cfg->edns_client_tags);
 #ifdef USE_IPSECMOD
 	free(cfg->ipsecmod_hook);
 	config_delstrlist(cfg->ipsecmod_whitelist);

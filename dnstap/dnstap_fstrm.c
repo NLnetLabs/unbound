@@ -92,6 +92,34 @@ void* fstrm_create_control_frame_stop(size_t* len)
 	return control;
 }
 
+void* fstrm_create_control_frame_ready(char* contenttype, size_t* len)
+{
+	uint32_t* control;
+	size_t n;
+	/* start bidirectional stream:
+	 * 4 bytes 0 escape
+	 * 4 bytes bigendian length of frame
+	 * 4 bytes bigendian type READY
+	 * 4 bytes bigendian frame option content type
+	 * 4 bytes bigendian length of string
+	 * string of content type.
+	 */
+	/* len includes the escape and framelength */
+	n = 4+4+4+4+4+strlen(contenttype);
+	control = malloc(n);
+	if(!control) {
+		return NULL;
+	}
+	control[0] = 0;
+	control[1] = htonl(4+4+4+strlen(contenttype));
+	control[2] = htonl(FSTRM_CONTROL_FRAME_READY);
+	control[3] = htonl(FSTRM_CONTROL_FIELD_TYPE_CONTENT_TYPE);
+	control[4] = htonl(strlen(contenttype));
+	memmove(&control[5], contenttype, strlen(contenttype));
+	*len = n;
+	return control;
+}
+
 void* fstrm_create_control_frame_accept(char* contenttype, size_t* len)
 {
 	uint32_t* control;

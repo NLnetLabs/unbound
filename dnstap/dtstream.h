@@ -89,6 +89,27 @@ struct dt_msg_entry {
 };
 
 /**
+ * Containing buffer and counter for reading DNSTAP frames.
+ */
+struct dt_frame_read_buf {
+	/** Buffer containing frame, except length counter(s). */
+	void* buf;
+	/** Number of bytes written to buffer. */
+	size_t buf_count;
+	/** Capacity of the buffer. */
+	size_t buf_cap;
+
+	/** Frame length field. Will contain the 2nd length field for control
+	 * frames. */
+	uint32_t frame_len;
+	/** Number of bytes that have been written to the frame_length field. */
+	size_t frame_len_done;
+
+	/** Set to 1 if this is a control frame, 0 otherwise (ie data frame). */
+	int control_frame;
+};
+
+/**
  * IO thread that reads from the queues and writes them.
  */
 struct dt_io_thread {
@@ -130,6 +151,9 @@ struct dt_io_thread {
 	 * This happens during negotiation, we then do not want to write,
 	 * but wait for a read event. */
 	int ssl_brief_read;
+	/** true if SSL_read is waiting for a write event. Set back to 0 after
+	 * single write event is handled. */
+	int ssl_brief_write;
 
 	/** the buffer that currently getting written, or NULL if no
 	 * (partial) message written now */
@@ -170,6 +194,16 @@ struct dt_io_thread {
 	/** if the log server is connected to over TLS.  ip address, port,
 	 * and client certificates can be used for authentication. */
 	int upstream_is_tls;
+
+	/** Perform bidirectional Frame Streams handshake before sending
+	 * messages. */
+	int is_bidirectional;
+	/** Set if the READY control frame has been sent. */
+	int ready_frame_sent;
+	/** Set if valid ACCEPT frame is received. */
+	int accept_frame_received;
+	/** (partially) read frame */
+	struct dt_frame_read_buf read_frame;
 
 	/** the file path for unix socket (or NULL) */
 	char* socket_path;

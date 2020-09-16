@@ -200,6 +200,7 @@ write_q(int fd, int udp, SSL* ssl, sldns_buffer* buf, uint16_t id,
 static void
 recv_one(int fd, int udp, SSL* ssl, sldns_buffer* buf)
 {
+	size_t i;
 	char* pktstr;
 	uint16_t len;
 	if(!udp) {
@@ -270,7 +271,13 @@ recv_one(int fd, int udp, SSL* ssl, sldns_buffer* buf)
 		len = (size_t)l;
 	}
 	printf("\nnext received packet\n");
-	log_buf(0, "data", buf);
+	printf("data[%d] ", (int)sldns_buffer_limit(buf));
+	for(i=0; i<sldns_buffer_limit(buf); i++) {
+		const char* hex = "0123456789ABCDEF";
+		printf("%c%c", hex[(sldns_buffer_read_u8_at(buf, i)&0xf0)>>4],
+                        hex[sldns_buffer_read_u8_at(buf, i)&0x0f]);
+	}
+	printf("\n");
 
 	pktstr = sldns_wire2str_pkt(sldns_buffer_begin(buf), len);
 	printf("%s", pktstr);
@@ -381,11 +388,7 @@ send_em(const char* svr, int udp, int usessl, int noanswer, int onarrival,
 		SSL_free(ssl);
 		SSL_CTX_free(ctx);
 	}
-#ifndef USE_WINSOCK
-	close(fd);
-#else
-	closesocket(fd);
-#endif
+	sock_close(fd);
 	sldns_buffer_free(buf);
 	printf("orderly exit\n");
 }

@@ -71,6 +71,13 @@
 #include <systemd/sd-daemon.h>
 #endif
 
+#ifdef HAVE_IFADDRS_H
+#include <ifaddrs.h>
+#endif
+#ifdef HAVE_NET_IF_H
+#include <net/if.h>
+#endif
+
 /** number of queued TCP connections for listen() */
 #define TCP_BACKLOG 256 
 
@@ -234,16 +241,14 @@ create_udp_sock(int family, int socktype, struct sockaddr* addr,
 			*noproto = 1;
 			return -1;
 		}
-		log_err("can't create socket: %s", strerror(errno));
 #else
 		if(WSAGetLastError() == WSAEAFNOSUPPORT || 
 			WSAGetLastError() == WSAEPROTONOSUPPORT) {
 			*noproto = 1;
 			return -1;
 		}
-		log_err("can't create socket: %s", 
-			wsa_strerror(WSAGetLastError()));
 #endif
+		log_err("can't create socket: %s", sock_strerror(errno));
 		*noproto = 0;
 		return -1;
 	}
@@ -256,9 +261,9 @@ create_udp_sock(int family, int socktype, struct sockaddr* addr,
 #ifdef SO_REUSEADDR
 		if(setsockopt(s, SOL_SOCKET, SO_REUSEADDR, (void*)&on, 
 			(socklen_t)sizeof(on)) < 0) {
-#ifndef USE_WINSOCK
 			log_err("setsockopt(.. SO_REUSEADDR ..) failed: %s",
-				strerror(errno));
+				sock_strerror(errno));
+#ifndef USE_WINSOCK
 			if(errno != ENOSYS) {
 				close(s);
 				*noproto = 0;
@@ -266,8 +271,6 @@ create_udp_sock(int family, int socktype, struct sockaddr* addr,
 				return -1;
 			}
 #else
-			log_err("setsockopt(.. SO_REUSEADDR ..) failed: %s",
-				wsa_strerror(WSAGetLastError()));
 			closesocket(s);
 			*noproto = 0;
 			*inuse = 0;
@@ -359,16 +362,9 @@ create_udp_sock(int family, int socktype, struct sockaddr* addr,
 		if(setsockopt(s, SOL_SOCKET, SO_RCVBUFFORCE, (void*)&rcv, 
 			(socklen_t)sizeof(rcv)) < 0) {
 			if(errno != EPERM) {
-#    ifndef USE_WINSOCK
 				log_err("setsockopt(..., SO_RCVBUFFORCE, "
-					"...) failed: %s", strerror(errno));
-				close(s);
-#    else
-				log_err("setsockopt(..., SO_RCVBUFFORCE, "
-					"...) failed: %s", 
-					wsa_strerror(WSAGetLastError()));
-				closesocket(s);
-#    endif
+					"...) failed: %s", sock_strerror(errno));
+				sock_close(s);
 				*noproto = 0;
 				*inuse = 0;
 				return -1;
@@ -376,16 +372,9 @@ create_udp_sock(int family, int socktype, struct sockaddr* addr,
 #  endif /* SO_RCVBUFFORCE */
 			if(setsockopt(s, SOL_SOCKET, SO_RCVBUF, (void*)&rcv, 
 				(socklen_t)sizeof(rcv)) < 0) {
-#  ifndef USE_WINSOCK
 				log_err("setsockopt(..., SO_RCVBUF, "
-					"...) failed: %s", strerror(errno));
-				close(s);
-#  else
-				log_err("setsockopt(..., SO_RCVBUF, "
-					"...) failed: %s", 
-					wsa_strerror(WSAGetLastError()));
-				closesocket(s);
-#  endif
+					"...) failed: %s", sock_strerror(errno));
+				sock_close(s);
 				*noproto = 0;
 				*inuse = 0;
 				return -1;
@@ -418,16 +407,9 @@ create_udp_sock(int family, int socktype, struct sockaddr* addr,
 		if(setsockopt(s, SOL_SOCKET, SO_SNDBUFFORCE, (void*)&snd, 
 			(socklen_t)sizeof(snd)) < 0) {
 			if(errno != EPERM) {
-#    ifndef USE_WINSOCK
 				log_err("setsockopt(..., SO_SNDBUFFORCE, "
-					"...) failed: %s", strerror(errno));
-				close(s);
-#    else
-				log_err("setsockopt(..., SO_SNDBUFFORCE, "
-					"...) failed: %s", 
-					wsa_strerror(WSAGetLastError()));
-				closesocket(s);
-#    endif
+					"...) failed: %s", sock_strerror(errno));
+				sock_close(s);
 				*noproto = 0;
 				*inuse = 0;
 				return -1;
@@ -435,16 +417,9 @@ create_udp_sock(int family, int socktype, struct sockaddr* addr,
 #  endif /* SO_SNDBUFFORCE */
 			if(setsockopt(s, SOL_SOCKET, SO_SNDBUF, (void*)&snd, 
 				(socklen_t)sizeof(snd)) < 0) {
-#  ifndef USE_WINSOCK
 				log_err("setsockopt(..., SO_SNDBUF, "
-					"...) failed: %s", strerror(errno));
-				close(s);
-#  else
-				log_err("setsockopt(..., SO_SNDBUF, "
-					"...) failed: %s", 
-					wsa_strerror(WSAGetLastError()));
-				closesocket(s);
-#  endif
+					"...) failed: %s", sock_strerror(errno));
+				sock_close(s);
 				*noproto = 0;
 				*inuse = 0;
 				return -1;
@@ -474,16 +449,9 @@ create_udp_sock(int family, int socktype, struct sockaddr* addr,
 			int val=(v6only==2)?0:1;
 			if (setsockopt(s, IPPROTO_IPV6, IPV6_V6ONLY, 
 				(void*)&val, (socklen_t)sizeof(val)) < 0) {
-#ifndef USE_WINSOCK
 				log_err("setsockopt(..., IPV6_V6ONLY"
-					", ...) failed: %s", strerror(errno));
-				close(s);
-#else
-				log_err("setsockopt(..., IPV6_V6ONLY"
-					", ...) failed: %s", 
-					wsa_strerror(WSAGetLastError()));
-				closesocket(s);
-#endif
+					", ...) failed: %s", sock_strerror(errno));
+				sock_close(s);
 				*noproto = 0;
 				*inuse = 0;
 				return -1;
@@ -501,16 +469,9 @@ create_udp_sock(int family, int socktype, struct sockaddr* addr,
 		 */
 		if (setsockopt(s, IPPROTO_IPV6, IPV6_USE_MIN_MTU,
 			(void*)&on, (socklen_t)sizeof(on)) < 0) {
-#  ifndef USE_WINSOCK
 			log_err("setsockopt(..., IPV6_USE_MIN_MTU, "
-				"...) failed: %s", strerror(errno));
-			close(s);
-#  else
-			log_err("setsockopt(..., IPV6_USE_MIN_MTU, "
-				"...) failed: %s", 
-				wsa_strerror(WSAGetLastError()));
-			closesocket(s);
-#  endif
+				"...) failed: %s", sock_strerror(errno));
+			sock_close(s);
 			*noproto = 0;
 			*inuse = 0;
 			return -1;
@@ -523,15 +484,9 @@ create_udp_sock(int family, int socktype, struct sockaddr* addr,
 		 */
 		if (setsockopt(s, IPPROTO_IPV6, IPV6_MTU,
 			(void*)&mtu, (socklen_t)sizeof(mtu)) < 0) {
-#  ifndef USE_WINSOCK
 			log_err("setsockopt(..., IPV6_MTU, ...) failed: %s", 
-				strerror(errno));
-			close(s);
-#  else
-			log_err("setsockopt(..., IPV6_MTU, ...) failed: %s", 
-				wsa_strerror(WSAGetLastError()));
-			closesocket(s);
-#  endif
+				sock_strerror(errno));
+			sock_close(s);
 			*noproto = 0;
 			*inuse = 0;
 			return -1;
@@ -555,12 +510,7 @@ create_udp_sock(int family, int socktype, struct sockaddr* addr,
 			if (errno != EINVAL) {
 				log_err("setsockopt(..., IP_MTU_DISCOVER, IP_PMTUDISC_OMIT...) failed: %s",
 					strerror(errno));
-
-#    ifndef USE_WINSOCK
-				close(s);
-#    else
-				closesocket(s);
-#    endif
+				sock_close(s);
 				*noproto = 0;
 				*inuse = 0;
 				return -1;
@@ -577,11 +527,7 @@ create_udp_sock(int family, int socktype, struct sockaddr* addr,
 				&action, (socklen_t)sizeof(action)) < 0) {
 				log_err("setsockopt(..., IP_MTU_DISCOVER, IP_PMTUDISC_DONT...) failed: %s",
 					strerror(errno));
-#    ifndef USE_WINSOCK
-				close(s);
-#    else
-				closesocket(s);
-#    endif
+				sock_close(s);
 				*noproto = 0;
 				*inuse = 0;
 				return -1;
@@ -593,11 +539,7 @@ create_udp_sock(int family, int socktype, struct sockaddr* addr,
 			&off, (socklen_t)sizeof(off)) < 0) {
 			log_err("setsockopt(..., IP_DONTFRAG, ...) failed: %s",
 				strerror(errno));
-#    ifndef USE_WINSOCK
-			close(s);
-#    else
-			closesocket(s);
-#    endif
+			sock_close(s);
 			*noproto = 0;
 			*inuse = 0;
 			return -1;
@@ -627,7 +569,6 @@ create_udp_sock(int family, int socktype, struct sockaddr* addr,
 				(struct sockaddr_storage*)addr, addrlen);
 		}
 #endif /* EADDRINUSE */
-		close(s);
 #else /* USE_WINSOCK */
 		if(WSAGetLastError() != WSAEADDRINUSE &&
 			WSAGetLastError() != WSAEADDRNOTAVAIL &&
@@ -636,18 +577,14 @@ create_udp_sock(int family, int socktype, struct sockaddr* addr,
 				wsa_strerror(WSAGetLastError()),
 				(struct sockaddr_storage*)addr, addrlen);
 		}
-		closesocket(s);
 #endif /* USE_WINSOCK */
+		sock_close(s);
 		return -1;
 	}
 	if(!fd_set_nonblock(s)) {
 		*noproto = 0;
 		*inuse = 0;
-#ifndef USE_WINSOCK
-		close(s);
-#else
-		closesocket(s);
-#endif
+		sock_close(s);
 		return -1;
 	}
 	return s;
@@ -692,16 +629,14 @@ create_tcp_accept_sock(struct addrinfo *addr, int v6only, int* noproto,
 			*noproto = 1;
 			return -1;
 		}
-		log_err("can't create socket: %s", strerror(errno));
 #else
 		if(WSAGetLastError() == WSAEAFNOSUPPORT ||
 			WSAGetLastError() == WSAEPROTONOSUPPORT) {
 			*noproto = 1;
 			return -1;
 		}
-		log_err("can't create socket: %s", 
-			wsa_strerror(WSAGetLastError()));
 #endif
+		log_err("can't create socket: %s", sock_strerror(errno));
 		return -1;
 	}
 	if(nodelay) {
@@ -724,13 +659,8 @@ create_tcp_accept_sock(struct addrinfo *addr, int v6only, int* noproto,
 #if defined(IPPROTO_TCP) && defined(TCP_MAXSEG)
 		if(setsockopt(s, IPPROTO_TCP, TCP_MAXSEG, (void*)&mss,
 			(socklen_t)sizeof(mss)) < 0) {
-			#ifndef USE_WINSOCK
 			log_err(" setsockopt(.. TCP_MAXSEG ..) failed: %s",
-				strerror(errno));
-			#else
-			log_err(" setsockopt(.. TCP_MAXSEG ..) failed: %s",
-				wsa_strerror(WSAGetLastError()));
-			#endif
+				sock_strerror(errno));
 		} else {
 			verbose(VERB_ALGO,
 				" tcp socket mss set to %d", mss);
@@ -747,15 +677,9 @@ create_tcp_accept_sock(struct addrinfo *addr, int v6only, int* noproto,
 #ifdef SO_REUSEADDR
 	if(setsockopt(s, SOL_SOCKET, SO_REUSEADDR, (void*)&on, 
 		(socklen_t)sizeof(on)) < 0) {
-#ifndef USE_WINSOCK
 		log_err("setsockopt(.. SO_REUSEADDR ..) failed: %s",
-			strerror(errno));
-		close(s);
-#else
-		log_err("setsockopt(.. SO_REUSEADDR ..) failed: %s",
-			wsa_strerror(WSAGetLastError()));
-		closesocket(s);
-#endif
+			sock_strerror(errno));
+		sock_close(s);
 		return -1;
 	}
 #endif /* SO_REUSEADDR */
@@ -790,15 +714,9 @@ create_tcp_accept_sock(struct addrinfo *addr, int v6only, int* noproto,
 	if(addr->ai_family == AF_INET6 && v6only) {
 		if(setsockopt(s, IPPROTO_IPV6, IPV6_V6ONLY, 
 			(void*)&on, (socklen_t)sizeof(on)) < 0) {
-#ifndef USE_WINSOCK
 			log_err("setsockopt(..., IPV6_V6ONLY, ...) failed: %s",
-				strerror(errno));
-			close(s);
-#else
-			log_err("setsockopt(..., IPV6_V6ONLY, ...) failed: %s",
-				wsa_strerror(WSAGetLastError()));
-			closesocket(s);
-#endif
+				sock_strerror(errno));
+			sock_close(s);
 			return -1;
 		}
 	}
@@ -845,32 +763,22 @@ create_tcp_accept_sock(struct addrinfo *addr, int v6only, int* noproto,
 				(struct sockaddr_storage*)addr->ai_addr,
 				addr->ai_addrlen);
 		}
-		close(s);
 #else
 		log_err_addr("can't bind socket", 
 			wsa_strerror(WSAGetLastError()),
 			(struct sockaddr_storage*)addr->ai_addr,
 			addr->ai_addrlen);
-		closesocket(s);
 #endif
+		sock_close(s);
 		return -1;
 	}
 	if(!fd_set_nonblock(s)) {
-#ifndef USE_WINSOCK
-		close(s);
-#else
-		closesocket(s);
-#endif
+		sock_close(s);
 		return -1;
 	}
 	if(listen(s, TCP_BACKLOG) == -1) {
-#ifndef USE_WINSOCK
-		log_err("can't listen: %s", strerror(errno));
-		close(s);
-#else
-		log_err("can't listen: %s", wsa_strerror(WSAGetLastError()));
-		closesocket(s);
-#endif
+		log_err("can't listen: %s", sock_strerror(errno));
+		sock_close(s);
 		return -1;
 	}
 #ifdef USE_TCP_FASTOPEN
@@ -924,34 +832,6 @@ set_ip_dscp(int socket, int addrfamily, int dscp)
 	}
 	return NULL;
 }
-
-#  ifndef USE_WINSOCK
-char*
-sock_strerror(int errn)
-{
-	return strerror(errn);
-}
-
-void
-sock_close(int socket)
-{
-	close(socket);
-}
-
-#  else
-char*
-sock_strerror(int ATTR_UNUSED(errn))
-{
-	return wsa_strerror(WSAGetLastError());
-}
-
-void
-sock_close(int socket)
-{
-	closesocket(socket);
-}
-
-#  endif /* USE_WINSOCK */
 
 int
 create_local_accept_sock(const char *path, int* noproto, int use_systemd)
@@ -1013,11 +893,7 @@ create_local_accept_sock(const char *path, int* noproto, int use_systemd)
 	return s;
 
 err:
-#ifndef USE_WINSOCK
-	close(s);
-#else
-	closesocket(s);
-#endif
+	sock_close(s);
 	return -1;
 
 #ifdef HAVE_SYSTEMD
@@ -1289,20 +1165,12 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 		}
 		/* getting source addr packet info is highly non-portable */
 		if(!set_recvpktinfo(s, hints->ai_family)) {
-#ifndef USE_WINSOCK
-			close(s);
-#else
-			closesocket(s);
-#endif
+			sock_close(s);
 			return 0;
 		}
 		if(!port_insert(list, s,
 		   is_dnscrypt?listen_type_udpancil_dnscrypt:listen_type_udpancil)) {
-#ifndef USE_WINSOCK
-			close(s);
-#else
-			closesocket(s);
-#endif
+			sock_close(s);
 			return 0;
 		}
 	} else if(do_udp) {
@@ -1318,11 +1186,7 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 		}
 		if(!port_insert(list, s,
 		   is_dnscrypt?listen_type_udp_dnscrypt:listen_type_udp)) {
-#ifndef USE_WINSOCK
-			close(s);
-#else
-			closesocket(s);
-#endif
+			sock_close(s);
 			return 0;
 		}
 	}
@@ -1350,11 +1214,7 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 		if(is_ssl)
 			verbose(VERB_ALGO, "setup TCP for SSL service");
 		if(!port_insert(list, s, port_type)) {
-#ifndef USE_WINSOCK
-			close(s);
-#else
-			closesocket(s);
-#endif
+			sock_close(s);
 			return 0;
 		}
 	}
@@ -1537,8 +1397,163 @@ listen_delete(struct listen_dnsport* front)
 	}
 }
 
+#ifdef HAVE_GETIFADDRS
+static int
+resolve_ifa_name(struct ifaddrs *ifas, const char *search_ifa, char ***ip_addresses, int *ip_addresses_size)
+{
+	struct ifaddrs *ifa;
+	int last_ip_addresses_size = *ip_addresses_size;
+
+	for(ifa = ifas; ifa != NULL; ifa = ifa->ifa_next) {
+		sa_family_t family;
+		const char* atsign;
+#ifdef INET6      /* |   address ip    | % |  ifa name  | @ |  port  | nul */
+		char addr_buf[INET6_ADDRSTRLEN + 1 + IF_NAMESIZE + 1 + 16 + 1];
+#else
+		char addr_buf[INET_ADDRSTRLEN + 1 + 16 + 1];
+#endif
+
+		if((atsign=strrchr(search_ifa, '@')) != NULL) {
+			if(strlen(ifa->ifa_name) != (size_t)(atsign-search_ifa)
+			   || strncmp(ifa->ifa_name, search_ifa,
+			   atsign-search_ifa) != 0)
+				continue;
+		} else {
+			if(strcmp(ifa->ifa_name, search_ifa) != 0)
+				continue;
+			atsign = "";
+		}
+
+		if(ifa->ifa_addr == NULL)
+			continue;
+
+		family = ifa->ifa_addr->sa_family;
+		if(family == AF_INET) {
+			char a4[INET_ADDRSTRLEN + 1];
+			struct sockaddr_in *in4 = (struct sockaddr_in *)
+				ifa->ifa_addr;
+			if(!inet_ntop(family, &in4->sin_addr, a4, sizeof(a4))) {
+				log_err("inet_ntop failed");
+				return 0;
+			}
+			snprintf(addr_buf, sizeof(addr_buf), "%s%s",
+				a4, atsign);
+		}
+#ifdef INET6
+		else if(family == AF_INET6) {
+			struct sockaddr_in6 *in6 = (struct sockaddr_in6 *)
+				ifa->ifa_addr;
+			char a6[INET6_ADDRSTRLEN + 1];
+			char if_index_name[IF_NAMESIZE + 1];
+			if_index_name[0] = 0;
+			if(!inet_ntop(family, &in6->sin6_addr, a6, sizeof(a6))) {
+				log_err("inet_ntop failed");
+				return 0;
+			}
+			if_indextoname(in6->sin6_scope_id,
+				(char *)if_index_name);
+			if (strlen(if_index_name) != 0) {
+				snprintf(addr_buf, sizeof(addr_buf),
+					"%s%%%s%s", a6, if_index_name, atsign);
+			} else {
+				snprintf(addr_buf, sizeof(addr_buf), "%s%s",
+					a6, atsign);
+			}
+		}
+#endif
+		else {
+			continue;
+		}
+		verbose(4, "interface %s has address %s", search_ifa, addr_buf);
+
+		*ip_addresses = realloc(*ip_addresses, sizeof(char *) * (*ip_addresses_size + 1));
+		if(!*ip_addresses) {
+			log_err("realloc failed: out of memory");
+			return 0;
+		}
+		(*ip_addresses)[*ip_addresses_size] = strdup(addr_buf);
+		if(!(*ip_addresses)[*ip_addresses_size]) {
+			log_err("strdup failed: out of memory");
+			return 0;
+		}
+		(*ip_addresses_size)++;
+	}
+
+	if (*ip_addresses_size == last_ip_addresses_size) {
+		*ip_addresses = realloc(*ip_addresses, sizeof(char *) * (*ip_addresses_size + 1));
+		if(!*ip_addresses) {
+			log_err("realloc failed: out of memory");
+			return 0;
+		}
+		(*ip_addresses)[*ip_addresses_size] = strdup(search_ifa);
+		if(!(*ip_addresses)[*ip_addresses_size]) {
+			log_err("strdup failed: out of memory");
+			return 0;
+		}
+		(*ip_addresses_size)++;
+	}
+	return 1;
+}
+#endif /* HAVE_GETIFADDRS */
+
+int resolve_interface_names(struct config_file* cfg, char*** resif,
+	int* num_resif)
+{
+#ifdef HAVE_GETIFADDRS
+	int i;
+	struct ifaddrs *addrs = NULL;
+	if(cfg->num_ifs == 0) {
+		*resif = NULL;
+		*num_resif = 0;
+		return 1;
+	}
+	if(getifaddrs(&addrs) == -1) {
+		log_err("failed to list interfaces: getifaddrs: %s",
+			strerror(errno));
+		freeifaddrs(addrs);
+		return 0;
+	}
+	for(i=0; i<cfg->num_ifs; i++) {
+		if(!resolve_ifa_name(addrs, cfg->ifs[i], resif, num_resif)) {
+			freeifaddrs(addrs);
+			config_del_strarray(*resif, *num_resif);
+			*resif = NULL;
+			*num_resif = 0;
+			return 0;
+		}
+	}
+	freeifaddrs(addrs);
+	return 1;
+#else
+	int i;
+	if(cfg->num_ifs == 0) {
+		*resif = NULL;
+		*num_resif = 0;
+		return 1;
+	}
+	*num_resif = cfg->num_ifs;
+	*resif = calloc(*num_resif, sizeof(**resif));
+	if(!*resif) {
+		log_err("out of memory");
+		return 0;
+	}
+	for(i=0; i<*num_resif; i++) {
+		(*resif)[i] = strdup(cfg->ifs[i]);
+		if(!((*resif)[i])) {
+			log_err("out of memory");
+			config_del_strarray(*resif, *num_resif);
+			*resif = NULL;
+			*num_resif = 0;
+			return 0;
+		}
+	}
+	return 1;
+#endif /* HAVE_GETIFADDRS */
+}
+
 struct listen_port* 
-listening_ports_open(struct config_file* cfg, int* reuseport)
+listening_ports_open(struct config_file* cfg, char** ifs, int num_ifs,
+	int* reuseport)
 {
 	struct listen_port* list = NULL;
 	struct addrinfo hints;
@@ -1557,7 +1572,7 @@ listening_ports_open(struct config_file* cfg, int* reuseport)
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_flags = AI_PASSIVE;
 	/* no name lookups on our listening ports */
-	if(cfg->num_ifs > 0)
+	if(num_ifs > 0)
 		hints.ai_flags |= AI_NUMERICHOST;
 	hints.ai_family = AF_UNSPEC;
 #ifndef INET6
@@ -1567,7 +1582,7 @@ listening_ports_open(struct config_file* cfg, int* reuseport)
 		return NULL;
 	}
 	/* create ip4 and ip6 ports so that return addresses are nice. */
-	if(do_auto || cfg->num_ifs == 0) {
+	if(do_auto || num_ifs == 0) {
 		if(do_ip6) {
 			hints.ai_family = AF_INET6;
 			if(!ports_create_if(do_auto?"::0":"::1", 
@@ -1598,12 +1613,12 @@ listening_ports_open(struct config_file* cfg, int* reuseport)
 				return NULL;
 			}
 		}
-	} else for(i = 0; i<cfg->num_ifs; i++) {
-		if(str_is_ip6(cfg->ifs[i])) {
+	} else for(i = 0; i<num_ifs; i++) {
+		if(str_is_ip6(ifs[i])) {
 			if(!do_ip6)
 				continue;
 			hints.ai_family = AF_INET6;
-			if(!ports_create_if(cfg->ifs[i], 0, cfg->do_udp, 
+			if(!ports_create_if(ifs[i], 0, cfg->do_udp,
 				do_tcp, &hints, portbuf, &list, 
 				cfg->so_rcvbuf, cfg->so_sndbuf,
 				cfg->ssl_port, cfg->tls_additional_port,
@@ -1618,7 +1633,7 @@ listening_ports_open(struct config_file* cfg, int* reuseport)
 			if(!do_ip4)
 				continue;
 			hints.ai_family = AF_INET;
-			if(!ports_create_if(cfg->ifs[i], 0, cfg->do_udp, 
+			if(!ports_create_if(ifs[i], 0, cfg->do_udp,
 				do_tcp, &hints, portbuf, &list, 
 				cfg->so_rcvbuf, cfg->so_sndbuf,
 				cfg->ssl_port, cfg->tls_additional_port,
@@ -1640,11 +1655,7 @@ void listening_ports_free(struct listen_port* list)
 	while(list) {
 		nx = list->next;
 		if(list->fd != -1) {
-#ifndef USE_WINSOCK
-			close(list->fd);
-#else
-			closesocket(list->fd);
-#endif
+			sock_close(list->fd);
 		}
 		free(list);
 		list = nx;
