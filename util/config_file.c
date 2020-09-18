@@ -489,6 +489,8 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	else S_YNO("do-ip6:", do_ip6)
 	else S_YNO("do-udp:", do_udp)
 	else S_YNO("do-tcp:", do_tcp)
+	else S_YNO("prefer-ip4:", prefer_ip4)
+	else S_YNO("prefer-ip6:", prefer_ip6)
 	else S_YNO("tcp-upstream:", tcp_upstream)
 	else S_YNO("udp-upstream-without-downstream:",
 		udp_upstream_without_downstream)
@@ -947,6 +949,8 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_YNO(opt, "do-ip6", do_ip6)
 	else O_YNO(opt, "do-udp", do_udp)
 	else O_YNO(opt, "do-tcp", do_tcp)
+	else O_YNO(opt, "prefer-ip4", prefer_ip4)
+	else O_YNO(opt, "prefer-ip6", prefer_ip6)
 	else O_YNO(opt, "tcp-upstream", tcp_upstream)
 	else O_YNO(opt, "udp-upstream-without-downstream", udp_upstream_without_downstream)
 	else O_DEC(opt, "tcp-mss", tcp_mss)
