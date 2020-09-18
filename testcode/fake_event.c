@@ -869,9 +869,12 @@ struct listen_dnsport*
 listen_create(struct comm_base* base, struct listen_port* ATTR_UNUSED(ports),
 	size_t bufsize, int ATTR_UNUSED(tcp_accept_count),
 	int ATTR_UNUSED(tcp_idle_timeout),
+	int ATTR_UNUSED(harden_large_queries),
+	uint32_t ATTR_UNUSED(http_max_streams),
+	char* ATTR_UNUSED(http_endpoint),
 	struct tcl_list* ATTR_UNUSED(tcp_conn_limit),
 	void* ATTR_UNUSED(sslctx), struct dt_env* ATTR_UNUSED(dtenv),
-	comm_point_callback_type* cb, void* cb_arg)
+	comm_point_callback_type* cb, void *cb_arg)
 {
 	struct replay_runtime* runtime = (struct replay_runtime*)base;
 	struct listen_dnsport* l= calloc(1, sizeof(struct listen_dnsport));
@@ -1840,6 +1843,23 @@ size_t
 tcp_req_info_get_stream_buffer_size(void)
 {
 	return 0;
+}
+
+size_t
+http2_get_query_buffer_size(void)
+{
+	return 0;
+}
+
+size_t
+http2_get_response_buffer_size(void)
+{
+	return 0;
+}
+
+void http2_stream_add_meshstate(struct http2_stream* ATTR_UNUSED(h2_stream),
+	struct mesh_area* ATTR_UNUSED(mesh), struct mesh_state* ATTR_UNUSED(m))
+{
 }
 
 /*********** End of Dummy routines ***********/

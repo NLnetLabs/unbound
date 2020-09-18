@@ -131,6 +131,19 @@ struct config_file {
 	/** if SNI is to be used */
 	int tls_use_sni;
 
+	/** port on which to provide DNS over HTTPS service */
+	int https_port;
+	/** endpoint for HTTP service */
+	char* http_endpoint;
+	/** MAX_CONCURRENT_STREAMS HTTP/2 setting */
+	uint32_t http_max_streams;
+	/** maximum size of all HTTP2 query buffers combined. */
+	size_t http_query_buffer_size;
+	/** maximum size of all HTTP2 response buffers combined. */
+	size_t http_response_buffer_size;
+	/** set TCP_NODELAY option for http sockets */
+	int http_nodelay;
+
 	/** outgoing port range number of ports (per thread) */
 	int outgoing_num_ports;
 	/** number of outgoing tcp buffers per (per thread) */
@@ -624,6 +637,10 @@ extern gid_t cfg_gid;
 extern int autr_permit_small_holddown;
 /** size (in bytes) of stream wait buffers max */
 extern size_t stream_wait_max;
+/** size (in bytes) of all total HTTP2 query buffers max */
+extern size_t http2_query_buffer_max;
+/** size (in bytes) of all total HTTP2 response buffers max */
+extern size_t http2_response_buffer_max;
 
 /**
  * Stub config options

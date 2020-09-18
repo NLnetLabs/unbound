@@ -485,15 +485,16 @@ Alternate syntax for \fBtls\-upstream\fR.  If both are present in the config
 file the last is used.
 .TP
 .B tls\-service\-key: \fI<file>
-If enabled, the server provides TLS service on the TCP ports marked
-implicitly or explicitly for TLS service with tls\-port.  The file must
-contain the private key for the TLS session, the public certificate is in
-the tls\-service\-pem file and it must also be specified if tls\-service\-key
-is specified.  The default is "", turned off.  Enabling or disabling
-this service requires a restart (a reload is not enough), because the
-key is read while root permissions are held and before chroot (if any).
-The ports enabled implicitly or explicitly via \fBtls\-port:\fR do not provide
-normal DNS TCP service.
+If enabled, the server provides DNS-over-TLS or DNS-over-HTTPS service on the
+TCP ports marked implicitly or explicitly for these services with tls\-port or
+https\-port. The file must contain the private key for the TLS session, the
+public certificate is in the tls\-service\-pem file and it must also be
+specified if tls\-service\-key is specified.  The default is "", turned off.
+Enabling or disabling this service requires a restart (a reload is not enough),
+because the key is read while root permissions are held and before chroot (if any).
+The ports enabled implicitly or explicitly via \fBtls\-port:\fR and
+\fBhttps\-port:\fR do not provide normal DNS TCP service. Unbound needs to be
+compiled with libnghttp2 in order to provide DNS-over-HTTPS.
 .TP
 .B ssl\-service\-key: \fI<file>
 Alternate syntax for \fBtls\-service\-key\fR.
@@ -557,6 +558,35 @@ TLS 1.3 connections.  Use "" for defaults, and that is the default.
 Enable or disable sending the SNI extension on TLS connections.
 Default is yes.
 Changing the value requires a reload.
+.TP
+.B https\-port: \fI<number>
+The port number on which to provide DNS-over-HTTPS service, default 443, only
+interfaces configured with that port number as @number get the HTTPS service.
+.TP
+.B http\-endpoint: \fI<endpoint string>
+The HTTP endpoint to provide DNS-over-HTTPS service on. Default "/dns-query".
+.TP
+.B http\-max\-streams: \fI<number of streams>
+Number used in the SETTINGS_MAX_CONCURRENT_STREAMS parameter in the HTTP/2
+SETTINGS frame for DNS-over-HTTPS connections. Default 100.
+.TP
+.B http\-query\-buffer\-size: \fI<size in bytes>
+Maximum number of bytes used for all HTTP/2 query buffers combined. These
+buffers contain (partial) DNS queries waiting for request stream completion.
+An RST_STREAM frame will be send to streams exceeding this limit. Default is 4
+megabytes. A plain number is in bytes, append 'k', 'm' or 'g' for kilobytes,
+megabytes or gigabytes (1024*1024 bytes in a megabyte).
+.TP
+.B http\-response\-buffer\-size: \fI<size in bytes>
+Maximum number of bytes used for all HTTP/2 response buffers combined. These
+buffers contain DNS responses waiting to be written back to the clients.
+An RST_STREAM frame will be send to streams exceeding this limit. Default is 4
+megabytes. A plain number is in bytes, append 'k', 'm' or 'g' for kilobytes,
+megabytes or gigabytes (1024*1024 bytes in a megabyte).
+.TP
+.B http\-nodelay: \fI<yes or no>
+Set TCP_NODELAY socket option on sockets used to provide DNS-over-HTTPS service.
+Ignored if the option is not available. Default is yes.
 .TP
 .B use\-systemd: \fI<yes or no>
 Enable or disable systemd socket activation.

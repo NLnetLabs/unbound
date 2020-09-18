@@ -278,6 +278,8 @@ static void print_mem(struct ub_shm_stat_info* shm_stat,
 		shm_stat->mem.dnscrypt_nonce);
 #endif
 	PR_LL("mem.streamwait", s->svr.mem_stream_wait);
+	PR_LL("mem.http.query_buffer", s->svr.mem_http2_query_buffer);
+	PR_LL("mem.http.response_buffer", s->svr.mem_http2_response_buffer);
 }
 
 /** print histogram */
@@ -342,6 +344,7 @@ static void print_extended(struct ub_stats_info* s)
 	PR_UL("num.query.tls", s->svr.qtls);
 	PR_UL("num.query.tls_resume", s->svr.qtls_resume);
 	PR_UL("num.query.ipv6", s->svr.qipv6);
+	PR_UL("num.query.https", s->svr.qhttps);
 
 	/* flags */
 	PR_UL("num.query.flags.QR", s->svr.qbit_QR);

@@ -733,12 +733,14 @@ server:
 	# add a netblock specific override to a localzone, with zone type
 	# local-zone-override: "example.com" 192.0.2.0/24 refuse
 
-	# service clients over TLS (on the TCP sockets), with plain DNS inside
-	# the TLS stream.  Give the certificate to use and private key.
+	# service clients over TLS (on the TCP sockets) with plain DNS inside
+	# the TLS stream, and over HTTPS using HTTP/2 as specified in RFC8484.
+	# Give the certificate to use and private key.
 	# default is "" (disabled).  requires restart to take effect.
 	# tls-service-key: "path/to/privatekeyfile.key"
 	# tls-service-pem: "path/to/publiccertfile.pem"
 	# tls-port: 853
+	# https-port: 443
 
 	# cipher setting for TLSv1.2
 	# tls-ciphers: "DHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-SHA256:DHE-RSA-AES128-SHA256:ECDHE-RSA-AES256-SHA384:ECDHE-RSA-AES128-SHA256"
@@ -769,6 +771,22 @@ server:
 
 	# Also serve tls on these port numbers (eg. 443, ...), by listing
 	# tls-additional-port: portno for each of the port numbers.
+
+	# HTTP endpoint to provide DNS-over-HTTPS service on.
+	# http-endpoint: "/dns-query"
+
+	# HTTP/2 SETTINGS_MAX_CONCURRENT_STREAMS value to use.
+	# http-max-streams: 100
+
+	# Maximum number of bytes used for all HTTP/2 query buffers.
+	# http-query-buffer-size: 4m
+
+	# Maximum number of bytes used for all HTTP/2 response buffers.
+	# http-response-buffer-size: 4m
+
+	# Set TCP_NODELAY socket option on sockets used for DNS-over-HTTPS
+	# service.
+	# http-nodelay: yes
 
 	# DNS64 prefix. Must be specified when DNS64 is use.
 	# Enable dns64 in module-config.  Used to synthesize IPv6 from IPv4.
