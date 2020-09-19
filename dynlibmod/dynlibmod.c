@@ -255,6 +255,7 @@ inplace_cb_register_wrapped(void* cb, enum inplace_cb_list_type type, void* cbar
     } else if(type == inplace_cb_edns_back_parsed) {
         return inplace_cb_register(&dynlib_inplace_cb_edns_back_parsed, type, (void*) cb_pair, env, id);
     } else {
+        free(cb_pair);
         return 0;
     }
 }
