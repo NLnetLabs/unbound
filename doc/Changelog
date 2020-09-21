@@ -1,3 +1,6 @@
+21 September 2020: Ralph
+	- Fix #304: dnstap logging not recovering after dnstap process restarts
+
 21 September 2020: Wouter
 	- Merge PR #311 by luismerino: Dynlibmod leak.
 	- Error message is logged for dynlibmod malloc failures.

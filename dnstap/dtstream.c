@@ -1102,6 +1102,8 @@ static int dtio_read_accept_frame(struct dt_io_thread* dtio)
 					goto close_connection;
 				}
 				dtio->accept_frame_received = 1;
+				if(!dtio_add_output_event_write(dtio))
+					goto close_connection;
 				return 1;
 			} else {
 				/* unknow content type */
