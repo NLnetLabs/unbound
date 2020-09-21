@@ -1,5 +1,6 @@
 21 September 2020: Wouter
 	- Merge PR #311 by luismerino: Dynlibmod leak.
+	- Error message is logged for dynlibmod malloc failures.
 
 18 September 2020: Wouter
 	- Fix that prefer-ip4 and prefer-ip6 can be get and set with

@@ -242,8 +242,10 @@ int
 inplace_cb_register_wrapped(void* cb, enum inplace_cb_list_type type, void* cbarg,
     struct module_env* env, int id) {
     struct cb_pair* cb_pair = malloc(sizeof(struct cb_pair));
-    if(cb_pair == NULL)
+    if(cb_pair == NULL) {
+	log_err("dynlibmod[%d]: malloc failure", id);
         return 0;
+    }
     cb_pair->cb = cb;
     cb_pair->cb_arg = cbarg;
     if(type >= inplace_cb_reply && type <= inplace_cb_reply_servfail) {
