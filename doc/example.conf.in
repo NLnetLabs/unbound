@@ -431,8 +431,8 @@ server:
 
 	# Domains (and domains in them) without support for dns-0x20 and
 	# the fallback fails because they keep sending different answers.
-	# caps-whitelist: "licdn.com"
-	# caps-whitelist: "senderbase.org"
+	# caps-exempt: "licdn.com"
+	# caps-exempt: "senderbase.org"
 
 	# Enforce privacy of these addresses. Strips them away from answers.
 	# It may cause DNSSEC validation to additionally mark it as bogus.
@@ -861,9 +861,9 @@ server:
 	# ipsecmod-ignore-bogus: no
 	#
 	# Domains for which ipsecmod will be triggered. If not defined (default)
-	# all domains are treated as being whitelisted.
-	# ipsecmod-whitelist: "example.com"
-	# ipsecmod-whitelist: "nlnetlabs.nl"
+	# all domains are treated as being allowed.
+	# ipsecmod-allow: "example.com"
+	# ipsecmod-allow: "nlnetlabs.nl"
 
 
 # Python config section. To enable:
@@ -961,27 +961,27 @@ remote-control:
 # upstream (which saves a lookup to the upstream).  The first example
 # has a copy of the root for local usage.  The second serves example.org
 # authoritatively.  zonefile: reads from file (and writes to it if you also
-# download it), master: fetches with AXFR and IXFR, or url to zonefile.
-# With allow-notify: you can give additional (apart from masters) sources of
+# download it), primary: fetches with AXFR and IXFR, or url to zonefile.
+# With allow-notify: you can give additional (apart from primaries) sources of
 # notifies.
 # auth-zone:
 #	name: "."
-#	master: 199.9.14.201         # b.root-servers.net
-#	master: 192.33.4.12          # c.root-servers.net
-#	master: 199.7.91.13          # d.root-servers.net
-#	master: 192.5.5.241          # f.root-servers.net
-#	master: 192.112.36.4         # g.root-servers.net
-#	master: 193.0.14.129         # k.root-servers.net
-#	master: 192.0.47.132         # xfr.cjr.dns.icann.org
-#	master: 192.0.32.132         # xfr.lax.dns.icann.org
-#	master: 2001:500:200::b      # b.root-servers.net
-#	master: 2001:500:2::c        # c.root-servers.net
-#	master: 2001:500:2d::d       # d.root-servers.net
-#	master: 2001:500:2f::f       # f.root-servers.net
-#	master: 2001:500:12::d0d     # g.root-servers.net
-#	master: 2001:7fd::1          # k.root-servers.net
-#	master: 2620:0:2830:202::132 # xfr.cjr.dns.icann.org
-#	master: 2620:0:2d0:202::132  # xfr.lax.dns.icann.org
+#	primary: 199.9.14.201         # b.root-servers.net
+#	primary: 192.33.4.12          # c.root-servers.net
+#	primary: 199.7.91.13          # d.root-servers.net
+#	primary: 192.5.5.241          # f.root-servers.net
+#	primary: 192.112.36.4         # g.root-servers.net
+#	primary: 193.0.14.129         # k.root-servers.net
+#	primary: 192.0.47.132         # xfr.cjr.dns.icann.org
+#	primary: 192.0.32.132         # xfr.lax.dns.icann.org
+#	primary: 2001:500:200::b      # b.root-servers.net
+#	primary: 2001:500:2::c        # c.root-servers.net
+#	primary: 2001:500:2d::d       # d.root-servers.net
+#	primary: 2001:500:2f::f       # f.root-servers.net
+#	primary: 2001:500:12::d0d     # g.root-servers.net
+#	primary: 2001:7fd::1          # k.root-servers.net
+#	primary: 2620:0:2830:202::132 # xfr.cjr.dns.icann.org
+#	primary: 2620:0:2d0:202::132  # xfr.lax.dns.icann.org
 #	fallback-enabled: yes
 #	for-downstream: no
 #	for-upstream: yes
@@ -1101,7 +1101,7 @@ remote-control:
 # rpz:
 #     name: "rpz.example.com"
 #     zonefile: "rpz.example.com"
-#     master: 192.0.2.0
+#     primary: 192.0.2.0
 #     allow-notify: 192.0.2.0/32
 #     url: http://www.example.com/rpz.example.org.zone
 #     rpz-action-override: cname
