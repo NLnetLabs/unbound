@@ -1149,7 +1149,7 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_LS3(opt, "access-control-tag-action", acl_tag_actions)
 	else O_LS3(opt, "access-control-tag-data", acl_tag_datas)
 	else O_LS2(opt, "access-control-view", acl_view)
-	else O_LS2(opt, "edns_client_tags", edns_client_tags)
+	else O_LS2(opt, "edns-client-tags", edns_client_tags)
 #ifdef USE_IPSECMOD
 	else O_YNO(opt, "ipsecmod-enabled", ipsecmod_enabled)
 	else O_YNO(opt, "ipsecmod-ignore-bogus", ipsecmod_ignore_bogus)
