@@ -1,6 +1,7 @@
 23 September 2020: Wouter
 	- Fix #305: dnstap logging significantly affects unbound performance
 	  (regression in 1.11).
+	- Fix #305: only wake up thread when threshold reached.
 
 23 September 2020: Ralph
 	- Fix edns-client-tags get_option typo

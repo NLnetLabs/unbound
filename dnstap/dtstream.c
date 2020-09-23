@@ -258,8 +258,9 @@ dt_msg_queue_submit(struct dt_msg_queue* mq, void* buf, size_t len)
 		wakeupstarttimer = 1;
 	/* if list contains more than wakeupnum elements, wakeup now,
 	 * or if list is (going to be) almost full */
-	if(mq->msgcount+1 > DTIO_MSG_FOR_WAKEUP ||
-		mq->cursize+len >= mq->maxsize * 9 / 10)
+	if(mq->msgcount == DTIO_MSG_FOR_WAKEUP ||
+		(mq->cursize < mq->maxsize * 9 / 10 &&
+		mq->cursize+len >= mq->maxsize * 9 / 10))
 		wakeupnow = 1;
 	/* see if it is going to fit */
 	if(mq->cursize + len > mq->maxsize) {
