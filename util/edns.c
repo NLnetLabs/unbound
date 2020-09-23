@@ -112,6 +112,7 @@ int edns_tags_apply_cfg(struct edns_tags* edns_tags,
 			return 0;
 		}
 	}
+	edns_tags->client_tag_opcode = config->edns_client_tag_opcode;
 
 	addr_tree_init_parents(&edns_tags->client_tags);
 	return 1;

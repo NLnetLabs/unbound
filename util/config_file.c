@@ -322,6 +322,7 @@ config_create(void)
 	cfg->shm_enable = 0;
 	cfg->shm_key = 11777;
 	cfg->edns_client_tags = NULL;
+	cfg->edns_client_tag_opcode = LDNS_EDNS_CLIENT_TAG;
 	cfg->dnscrypt = 0;
 	cfg->dnscrypt_port = 0;
 	cfg->dnscrypt_provider = NULL;

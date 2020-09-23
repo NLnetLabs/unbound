@@ -1232,7 +1232,7 @@ struct serviced_query* outnet_serviced_query(struct outside_network* outnet,
 			addr, addrlen))) {
 			uint16_t client_tag = htons(client_tag_addr->tag_data);
 			edns_opt_list_append(&qstate->edns_opts_back_out,
-				LDNS_EDNS_CLIENT_TAG, 2,
+				env->edns_tags->client_tag_opcode, 2,
 				(uint8_t*)&client_tag, qstate->region);
 		}
 		edns.opt_list = qstate->edns_opts_back_out;

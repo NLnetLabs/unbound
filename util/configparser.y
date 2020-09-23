@@ -178,7 +178,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_IPSET VAR_IPSET_NAME_V4 VAR_IPSET_NAME_V6
 %token VAR_TLS_SESSION_TICKET_KEYS VAR_RPZ VAR_TAGS VAR_RPZ_ACTION_OVERRIDE
 %token VAR_RPZ_CNAME_OVERRIDE VAR_RPZ_LOG VAR_RPZ_LOG_NAME
-%token VAR_DYNLIB VAR_DYNLIB_FILE VAR_EDNS_CLIENT_TAG
+%token VAR_DYNLIB VAR_DYNLIB_FILE VAR_EDNS_CLIENT_TAG VAR_EDNS_CLIENT_TAG_OPCODE
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -291,7 +291,8 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_unknown_server_time_limit | server_log_tag_queryreply |
 	server_stream_wait_size | server_tls_ciphers |
 	server_tls_ciphersuites | server_tls_session_ticket_keys |
-	server_tls_use_sni | server_edns_client_tag
+	server_tls_use_sni | server_edns_client_tag |
+	server_edns_client_tag_opcode
 	;
 stubstart: VAR_STUB_ZONE
 	{
@@ -2477,6 +2478,17 @@ server_edns_client_tag: VAR_EDNS_CLIENT_TAG STRING_ARG STRING_ARG
 			&cfg_parser->cfg->edns_client_tags, $2, $3))
 			fatal_exit("out of memory adding "
 				"edns-client-tag");
+	}
+	;
+server_edns_client_tag_opcode: VAR_EDNS_CLIENT_TAG_OPCODE STRING_ARG
+	{
+		OUTYY(("P(edns_client_tag_opcode:%s)\n", $2));
+		if(atoi($2) == 0 && strcmp($2, "0") != 0)
+			yyerror("option code expected");
+		else if(atoi($2) > 65535 || atoi($2) < 0)
+			yyerror("option code must be in interval [0, 65535]");
+		else cfg_parser->cfg->edns_client_tag_opcode = atoi($2);
+
 	}
 	;
 stub_name: VAR_NAME STRING_ARG

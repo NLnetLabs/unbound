@@ -564,6 +564,8 @@ struct config_file {
 
 	/** list of EDNS client tag entries, linked list */
 	struct config_str2list* edns_client_tags;
+	/** EDNS opcode to use for EDNS client tags */
+	uint16_t edns_client_tag_opcode;
 
 	/** DNSCrypt */
 	/** true to enable dnscrypt */

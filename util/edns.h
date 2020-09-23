@@ -56,6 +56,8 @@ struct edns_tags {
 	/** Tree of EDNS client tags to use in upstream queries, per address
 	 * prefix. Contains nodes of type edns_tag_addr. */
 	rbtree_type client_tags;
+	/** EDNS opcode to use for client tags */
+	uint16_t client_tag_opcode;
 	/** region to allocate tree nodes in */
 	struct regional* region;
 };

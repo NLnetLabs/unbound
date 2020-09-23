@@ -1538,6 +1538,10 @@ Include an edns-client-tag option in queries with destination address matching
 the configured IP netblock. This configuration option can be used multiple
 times. The most specific match will be used. The tag data is configured in
 decimal format, from 0 to 65535.
+.TP 5
+.B edns\-client\-tag\-opcode: \fI<opcode>
+EDNS0 option code for the edns-client-tag option, from 0 to 65535. Default is
+16, as assigned by IANA.
 .SS "Remote Control Options"
 In the
 .B remote\-control:
