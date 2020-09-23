@@ -1,3 +1,7 @@
+23 September 2020: Wouter
+	- Fix #305: dnstap logging significantly affects unbound performance
+	  (regression in 1.11).
+
 21 September 2020: Ralph
 	- Fix #304: dnstap logging not recovering after dnstap process restarts
 

@@ -1717,14 +1717,6 @@ worker_create(struct daemon* daemon, int id, int* ports, int n)
 		return NULL;
 	}
 	explicit_bzero(&seed, sizeof(seed));
-#ifdef USE_DNSTAP
-	if(daemon->cfg->dnstap) {
-		log_assert(daemon->dtenv != NULL);
-		memcpy(&worker->dtenv, daemon->dtenv, sizeof(struct dt_env));
-		if(!dt_init(&worker->dtenv))
-			fatal_exit("dt_init failed");
-	}
-#endif
 	return worker;
 }
 
@@ -1783,6 +1775,14 @@ worker_init(struct worker* worker, struct config_file *cfg,
 	} else { /* !do_sigs */
 		worker->comsig = NULL;
 	}
+#ifdef USE_DNSTAP
+	if(cfg->dnstap) {
+		log_assert(worker->daemon->dtenv != NULL);
+		memcpy(&worker->dtenv, worker->daemon->dtenv, sizeof(struct dt_env));
+		if(!dt_init(&worker->dtenv, worker->base))
+			fatal_exit("dt_init failed");
+	}
+#endif
 	worker->front = listen_create(worker->base, ports,
 		cfg->msg_buffer_size, (int)cfg->incoming_num_tcp,
 		cfg->do_tcp_keepalive
