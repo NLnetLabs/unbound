@@ -1,3 +1,6 @@
+28 September 2020: Wouter
+	- Fix unit test for dnstap changes, so that it waits for the timer.
+
 23 September 2020: Wouter
 	- Fix #305: dnstap logging significantly affects unbound performance
 	  (regression in 1.11).
