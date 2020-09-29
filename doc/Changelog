@@ -1,3 +1,6 @@
+29 September 2020: Ralph
+	- DNS Flag Day 2020: change edns-buffer-size default to 1232.
+
 28 September 2020: Wouter
 	- Fix unit test for dnstap changes, so that it waits for the timer.
 

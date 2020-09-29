@@ -207,12 +207,11 @@ accepted. For larger installations increasing this value is a good idea.
 Number of bytes size to advertise as the EDNS reassembly buffer size.
 This is the value put into datagrams over UDP towards peers.  The actual
 buffer size is determined by msg\-buffer\-size (both for TCP and UDP).  Do
-not set higher than that value.  Default is 4096 which is RFC recommended.
-If you have fragmentation reassembly problems, usually seen as timeouts,
-then a value of 1472 can fix it.  Setting to 512 bypasses even the most
-stringent path MTU problems, but is seen as extreme, since the amount
-of TCP fallback generated is excessive (probably also for this resolver,
-consider tuning the outgoing tcp number).
+not set higher than that value.  Default is 1232 which is the DNS Flag Day 2020
+recommendation. Setting to 512 bypasses even the most stringent path MTU
+problems, but is seen as extreme, since the amount of TCP fallback generated is
+excessive (probably also for this resolver, consider tuning the outgoing tcp
+number).
 .TP
 .B max\-udp\-size: \fI<number>
 Maximum UDP response size (not applied to TCP response).  65536 disables the

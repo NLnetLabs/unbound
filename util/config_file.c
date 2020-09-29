@@ -152,7 +152,7 @@ config_create(void)
 	cfg->incoming_num_tcp = 2; 
 #endif
 	cfg->stream_wait_size = 4 * 1024 * 1024;
-	cfg->edns_buffer_size = 4096; /* 4k from rfc recommendation */
+	cfg->edns_buffer_size = 1232; /* from DNS flagday recommendation */
 	cfg->msg_buffer_size = 65552; /* 64 k + a small margin */
 	cfg->msg_cache_size = 4 * 1024 * 1024;
 	cfg->msg_cache_slabs = 4;
