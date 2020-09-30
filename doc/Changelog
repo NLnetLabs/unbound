@@ -4,6 +4,7 @@
 	- Fix stream_ssl, ssl_req_order and ssl_req_timeout tests for
 	  alloc check debug output.
 	- Easier kill of unbound-dnstap-socket tool in test.
+	- Fix memory leak of edns tags at libunbound context delete.
 
 29 September 2020: Ralph
 	- DNS Flag Day 2020: change edns-buffer-size default to 1232.
