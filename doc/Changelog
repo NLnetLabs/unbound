@@ -1,3 +1,6 @@
+30 September 2020: Wouter
+	- Fix doh tests when not compiled in.
+
 29 September 2020: Ralph
 	- DNS Flag Day 2020: change edns-buffer-size default to 1232.
 
