@@ -1209,9 +1209,9 @@ setup_and_run(struct config_strlist_head* local_list,
 	if(verbosity) log_info("start of service");
 
 	ub_event_base_dispatch(base);
+	sig_base = NULL;
 
 	if(verbosity) log_info("end of service");
-	sig_base = NULL;
 	tap_socket_list_delete(maindata->acceptlist);
 	ub_event_base_free(base);
 	free(maindata);
