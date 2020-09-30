@@ -344,8 +344,8 @@ extern int yydebug;
     VAR_RPZ_LOG_NAME = 550,
     VAR_DYNLIB = 551,
     VAR_DYNLIB_FILE = 552,
-    VAR_EDNS_CLIENT_TAG = 553,
-    VAR_EDNS_CLIENT_TAG_OPCODE = 554
+    VAR_EDNS_CLIENT_STRING = 553,
+    VAR_EDNS_CLIENT_STRING_OPCODE = 554
   };
 #endif
 /* Tokens.  */
@@ -644,8 +644,8 @@ extern int yydebug;
 #define VAR_RPZ_LOG_NAME 550
 #define VAR_DYNLIB 551
 #define VAR_DYNLIB_FILE 552
-#define VAR_EDNS_CLIENT_TAG 553
-#define VAR_EDNS_CLIENT_TAG_OPCODE 554
+#define VAR_EDNS_CLIENT_STRING 553
+#define VAR_EDNS_CLIENT_STRING_OPCODE 554
 
 /* Value type.  */
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED

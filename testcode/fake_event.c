@@ -1213,7 +1213,7 @@ struct serviced_query* outnet_serviced_query(struct outside_network* outnet,
 	sldns_buffer_flip(pend->buffer);
 	if(1) {
 		struct edns_data edns;
-		struct edns_tag_addr* client_tag_addr;
+		struct edns_string_addr* client_string_addr;
 		if(!inplace_cb_query_call(env, qinfo, flags, addr, addrlen,
 			zone, zonelen, qstate, qstate->region)) {
 			free(pend);
@@ -1227,13 +1227,13 @@ struct serviced_query* outnet_serviced_query(struct outside_network* outnet,
 		edns.bits = 0;
 		if(dnssec)
 			edns.bits = EDNS_DO;
-		if((client_tag_addr = edns_tag_addr_lookup(
-			&env->edns_tags->client_tags,
+		if((client_string_addr = edns_string_addr_lookup(
+			&env->edns_strings->client_strings,
 			addr, addrlen))) {
-			uint16_t client_tag = htons(client_tag_addr->tag_data);
 			edns_opt_list_append(&qstate->edns_opts_back_out,
-				env->edns_tags->client_tag_opcode, 2,
-				(uint8_t*)&client_tag, qstate->region);
+				env->edns_strings->client_string_opcode,
+				client_string_addr->string_len,
+				client_string_addr->string, qstate->region);
 		}
 		edns.opt_list = qstate->edns_opts_back_out;
 		attach_edns_record(pend->buffer, &edns);

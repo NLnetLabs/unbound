@@ -1535,15 +1535,14 @@ Set the number of servers that should be used for fast server selection. Only
 use the fastest specified number of servers with the fast\-server\-permil
 option, that turns this on or off. The default is to use the fastest 3 servers.
 .TP 5
-.B edns\-client\-tag: \fI<IP netblock> <tag data>
-Include an edns-client-tag option in queries with destination address matching
-the configured IP netblock. This configuration option can be used multiple
-times. The most specific match will be used. The tag data is configured in
-decimal format, from 0 to 65535.
+.B edns\-client\-string: \fI<IP netblock> <string>
+Include an EDNS0 option containing configured ascii string in queries with
+destination address matching the configured IP netblock. This configuration
+option can be used multiple times. The most specific match will be used.
 .TP 5
-.B edns\-client\-tag\-opcode: \fI<opcode>
-EDNS0 option code for the edns-client-tag option, from 0 to 65535. Default is
-16, as assigned by IANA.
+.B edns\-client\-string\-opcode: \fI<opcode>
+EDNS0 option code for the edns-client-string option, from 0 to 65535. Default is
+65001.
 .SS "Remote Control Options"
 In the
 .B remote\-control:
