@@ -839,6 +839,52 @@ static void respip_test(void)
 	respip_conf_actions_test();
 }
 
+#include "services/authzone.h"
+#include "util/data/dname.h"
+#include "util/regional.h"
+/** Add zone from file for testing */
+struct auth_zone* authtest_addzone(struct auth_zones* az, const char* name,
+	char* fname);
+/** zonemd unit tests */
+static void zonemd_test(void)
+{
+	uint8_t zonemd_hash[512];
+	struct auth_zones* az;
+	struct auth_zone* z;
+	int scheme = 1, hashalgo = 2;
+	size_t hashlen = 0;
+	int result;
+	char* reason = NULL;
+	struct regional* region = NULL;
+	struct sldns_buffer* buf = NULL;
+	unit_show_feature("zonemd");
+	region = regional_create();
+	unit_assert(region);
+	buf = sldns_buffer_new(65535);
+	unit_assert(buf);
+	az = auth_zones_create();
+	unit_assert(az);
+	z = authtest_addzone(az, "example.org", "testdata/zonemd.example1.zone");
+	unit_assert(z);
+
+	/* zonemd test on zone */
+	result = auth_zone_generate_zonemd_hash(z, scheme, hashalgo,
+		zonemd_hash, sizeof(zonemd_hash), &hashlen, region, buf,
+		&reason);
+	if(reason) printf("zonemd failure reason: %s\n", reason);
+	unit_assert(result);
+	if(1) {
+		char zname[255+1];
+		dname_str(z->name, zname);
+		printf("zonemd generated for %s in %s with scheme=%d, hashalgo=%d\n", zname, z->zonefile, scheme, hashalgo);
+		log_hex("digest", zonemd_hash, hashlen);
+	}
+
+	auth_zones_delete(az);
+	regional_destroy(region);
+	sldns_buffer_free(buf);
+}
+
 void unit_show_func(const char* file, const char* func)
 {
 	printf("test %s:%s\n", file, func);
@@ -889,6 +935,7 @@ main(int argc, char* argv[])
 		fatal_exit("could not init NSS");
 #endif /* HAVE_SSL or HAVE_NSS*/
 	checklock_start();
+	zonemd_test();
 	authzone_test();
 	neg_test();
 	rnd_test();

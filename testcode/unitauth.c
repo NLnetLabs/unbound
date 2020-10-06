@@ -517,8 +517,8 @@ del_tmp_file(char* fname)
 }
 
 /** Add zone from file for testing */
-static struct auth_zone*
-addzone(struct auth_zones* az, const char* name, char* fname)
+struct auth_zone*
+authtest_addzone(struct auth_zones* az, const char* name, char* fname)
 {
 	struct auth_zone* z;
 	size_t nmlen;
@@ -593,7 +593,7 @@ check_read_exact(const char* name, const char* zone)
 
 	az = auth_zones_create();
 	unit_assert(az);
-	z = addzone(az, name, fname);
+	z = authtest_addzone(az, name, fname);
 	unit_assert(z);
 	outf = create_tmp_file(NULL);
 	if(!auth_zone_write_file(z, outf)) {
@@ -844,7 +844,7 @@ check_queries(const char* name, const char* zone, struct q_ans* queries)
 	fname = create_tmp_file(zone);
 	az = auth_zones_create();
 	if(!az) fatal_exit("out of memory");
-	z = addzone(az, name, fname);
+	z = authtest_addzone(az, name, fname);
 	if(!z) fatal_exit("could not read zone for queries test");
 	del_tmp_file(fname);
 

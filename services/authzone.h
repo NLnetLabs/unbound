@@ -685,4 +685,39 @@ void auth_xfer_transfer_lookup_callback(void* arg, int rcode,
  */
 int compare_serial(uint32_t a, uint32_t b);
 
+/**
+ * Generate ZONEMD digest for the auth zone.
+ * @param z: the auth zone to digest.
+ * 	omits zonemd at apex and its RRSIG from the digest.
+ * @param scheme: the collation scheme to use.  Numbers as defined for ZONEMD.
+ * @param hashalgo: the hash algo, from the registry defined for ZONEMD type.
+ * @param hash: the result buffer.
+ * @param buflen: size of the result buffer, must be large enough. or the
+ * 	routine fails.
+ * @param resultlen: size of the hash in the result buffer of the result.
+ * @param region: temp region for allocs during canonicalisation.
+ * @param buf: temp buffer during canonicalisation.
+ * @param reason: failure reason, returns a string, NULL on success.
+ * @return false on failure.
+ */
+int auth_zone_generate_zonemd_hash(struct auth_zone* z, int scheme,
+	int hashalgo, uint8_t* hash, size_t buflen, size_t* resultlen,
+	struct regional* region, struct sldns_buffer* buf, char** reason);
+
+/**
+ * Check ZONEMD digest for the auth zone.
+ * @param z: auth zone to digest.
+ * @param scheme: zonemd scheme.
+ * @param hashalgo: zonemd hash algorithm.
+ * @param hash: the hash to check.
+ * @param buflen: length of hash buffer.
+ * @param region: temp region for allocs during canonicalisation.
+ * @param buf: temp buffer during canonicalisation.
+ * @param reason: string returned with failure reason.
+ * @return false on failure.
+ */
+int auth_zone_generate_zonemd_check(struct auth_zone* z, int scheme,
+	int hashalgo, uint8_t* hash, size_t hashlen, struct regional* region,
+	struct sldns_buffer* buf, char** reason);
+
 #endif /* SERVICES_AUTHZONE_H */

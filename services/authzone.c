@@ -68,6 +68,7 @@
 #include "sldns/keyraw.h"
 #include "validator/val_nsec3.h"
 #include "validator/val_secalgo.h"
+#include "validator/val_sigcrypt.h"
 #include <ctype.h>
 
 /** bytes to use for NSEC3 hash buffer. 20 for sha1 */
@@ -6964,4 +6965,367 @@ compare_serial(uint32_t a, uint32_t b)
 	} else {
 		return 1;
 	}
+}
+
+/** returns true if a zonemd hash algo is supported */
+static int zonemd_hashalgo_supported(int hashalgo)
+{
+	if(hashalgo == 1) return 1;
+	if(hashalgo == 2) return 1;
+	return 0;
+}
+
+/** returns true if a zonemd scheme is supported */
+static int zonemd_scheme_supported(int scheme)
+{
+	if(scheme == 1) return 1;
+	return 0;
+}
+
+/** initialize hash for hashing with zonemd hash algo */
+static void* zonemd_digest_init(int hashalgo)
+{
+	if(hashalgo == 1) {
+		/* sha384 */
+		//return secalgo_digest_start_sha384();
+	} else if(hashalgo == 2) {
+		/* sha512 */
+		//return secalgo_digest_start_sha512();
+	}
+	/* unknown hash algo */
+	return NULL;
+}
+
+/** add rrsets from node to the list */
+static size_t authdata_rrsets_to_list(struct auth_rrset** array,
+	size_t arraysize, struct auth_rrset* first)
+{
+	struct auth_rrset* rrset = first;
+	size_t num = 0;
+	while(rrset) {
+		if(num+1 >= arraysize)
+			return num;
+		array[num] = rrset;
+		num++;
+		rrset = rrset->next;
+	}
+	return num;
+}
+
+/** compare rr list entries */
+static int rrlist_compare(const void* arg1, const void* arg2)
+{
+	struct auth_rrset* r1 = *(struct auth_rrset**)arg1;
+	struct auth_rrset* r2 = *(struct auth_rrset**)arg2;
+	uint16_t t1, t2;
+	if(r1 == NULL) t1 = LDNS_RR_TYPE_RRSIG;
+	else t1 = r1->type;
+	if(r2 == NULL) t2 = LDNS_RR_TYPE_RRSIG;
+	else t2 = r2->type;
+	if(t1 < t2)
+		return -1;
+	if(t1 > t2)
+		return 1;
+	return 0;
+}
+
+/** add type RRSIG to rr list if not one there already,
+ * this is to perform RRSIG collate processing at that point. */
+static void addrrsigtype_if_needed(struct auth_rrset** array,
+	size_t arraysize, size_t* rrnum, struct auth_data* node)
+{
+	if(az_domain_rrset(node, LDNS_RR_TYPE_RRSIG))
+		return; /* already one there */
+	if((*rrnum)+1 >= arraysize)
+		return; /* array too small? */
+	array[*rrnum] = NULL; /* nothing there, but need entry in list */
+	(*rrnum)++;
+}
+
+/** collate the RRs in an RRset using the simple scheme */
+static int zonemd_simple_rrset(struct auth_zone* z, void* hash,
+	struct auth_data* node,	struct auth_rrset* rrset,
+	struct regional* region, struct sldns_buffer* buf, char** reason)
+{
+	/* canonicalize */
+	struct ub_packed_rrset_key key;
+	memset(&key, 0, sizeof(key));
+	key.entry.key = &key;
+	key.entry.data = rrset->data;
+	key.rk.dname = node->name;
+	key.rk.dname_len = node->namelen;
+	key.rk.type = htons(rrset->type);
+	key.rk.rrset_class = htons(z->dclass);
+	if(!rrset_canonicalize_to_buffer(region, buf, &key)) {
+		*reason = "out of memory";
+		return 0;
+	}
+	regional_free_all(region);
+
+	/* hash */
+	return 1;
+}
+
+/** count number of RRSIGs in a domain name rrset list */
+static size_t zonemd_simple_count_rrsig(struct auth_rrset* rrset,
+	struct auth_rrset** rrlist, size_t rrnum,
+	struct auth_zone* z, struct auth_data* node)
+{
+	size_t i, count = 0;
+	if(rrset) {
+		size_t j;
+		for(j = 0; j<rrset->data->count; j++) {
+			if(rrsig_rdata_get_type_covered(rrset->data->
+				rr_data[j], rrset->data->rr_len[j]) ==
+				LDNS_RR_TYPE_ZONEMD &&
+				query_dname_compare(z->name, node->name)==0) {
+				/* omit RRSIGs over type ZONEMD at apex */
+				continue;
+			}
+			count++;
+		}
+	}
+	for(i=0; i<rrnum; i++) {
+		if(rrlist[i] && rrlist[i]->type == LDNS_RR_TYPE_ZONEMD &&
+			query_dname_compare(z->name, node->name)==0) {
+			/* omit RRSIGs over type ZONEMD at apex */
+			continue;
+		}
+		count += (rrlist[i]?rrlist[i]->data->rrsig_count:0);
+	}
+	return count;
+}
+
+/** allocate sparse rrset data for the number of entries in tepm region */
+static int zonemd_simple_rrsig_allocs(struct regional* region,
+	struct packed_rrset_data* data, size_t count)
+{
+	data->rr_len = regional_alloc(region, sizeof(*data->rr_len) * count);
+	if(!data->rr_len) {
+		return 0;
+	}
+	data->rr_ttl = regional_alloc(region, sizeof(*data->rr_ttl) * count);
+	if(!data->rr_ttl) {
+		return 0;
+	}
+	data->rr_data = regional_alloc(region, sizeof(*data->rr_data) * count);
+	if(!data->rr_data) {
+		return 0;
+	}
+	return 1;
+}
+
+/** add the RRSIGs from the rrs in the domain into the data */
+static void add_rrlist_rrsigs_into_data(struct packed_rrset_data* data,
+	size_t* done, struct auth_rrset** rrlist, size_t rrnum,
+	struct auth_zone* z, struct auth_data* node)
+{
+	size_t i;
+	for(i=0; i<rrnum; i++) {
+		size_t j;
+		if(!rrlist[i])
+			continue;
+		if(rrlist[i] && rrlist[i]->type == LDNS_RR_TYPE_ZONEMD &&
+			query_dname_compare(z->name, node->name)==0) {
+			/* omit RRSIGs over type ZONEMD at apex */
+			continue;
+		}
+		for(j = 0; j<rrlist[i]->data->rrsig_count; j++) {
+			data->rr_len[*done] = rrlist[i]->data->rr_len[rrlist[i]->data->count + j];
+			data->rr_ttl[*done] = rrlist[i]->data->rr_ttl[rrlist[i]->data->count + j];
+			/* reference the rdata in the rrset, no need to
+			 * copy it, it is no longer need at the end of
+			 * the routine */
+			data->rr_data[*done] = rrlist[i]->data->rr_data[rrlist[i]->data->count + j];
+			(*done)++;
+		}
+	}
+}
+
+static void add_rrset_into_data(struct packed_rrset_data* data,
+	size_t* done, struct auth_rrset* rrset,
+	struct auth_zone* z, struct auth_data* node)
+{
+	if(rrset) {
+		size_t j;
+		for(j = 0; j<rrset->data->count; j++) {
+			if(rrsig_rdata_get_type_covered(rrset->data->
+				rr_data[j], rrset->data->rr_len[j]) ==
+				LDNS_RR_TYPE_ZONEMD &&
+				query_dname_compare(z->name, node->name)==0) {
+				/* omit RRSIGs over type ZONEMD at apex */
+				continue;
+			}
+			data->rr_len[*done] = rrset->data->rr_len[j];
+			data->rr_ttl[*done] = rrset->data->rr_ttl[j];
+			/* reference the rdata in the rrset, no need to
+			 * copy it, it is no longer need at the end of
+			 * the routine */
+			data->rr_data[*done] = rrset->data->rr_data[j];
+			(*done)++;
+		}
+	}
+}
+
+/** collate the RRSIGs using the simple scheme */
+static int zonemd_simple_rrsig(struct auth_zone* z, void* hash,
+	struct auth_data* node,	struct auth_rrset* rrset,
+	struct auth_rrset** rrlist, size_t rrnum, struct regional* region,
+	struct sldns_buffer* buf, char** reason)
+{
+	/* the rrset pointer can be NULL, this means it is type RRSIG and
+	 * there is no ordinary type RRSIG there.  The RRSIGs are stored
+	 * with the RRsets in their data.
+	 *
+	 * The RRset pointer can be nonNULL. This happens if there is
+	 * no RR that is covered by the RRSIG for the domain.  Then this
+	 * RRSIG RR is stored in an rrset of type RRSIG. The other RRSIGs
+	 * are stored in the rrset entries for the RRs in the rr list for
+	 * the domain node.  We need to collate the rrset's data, if any, and
+	 * the rrlist's rrsigs */
+	/* if this is the apex, omit RRSIGs that cover type ZONEMD */
+	/* build rrsig rrset */
+	size_t done = 0;
+	struct ub_packed_rrset_key key;
+	struct packed_rrset_data data;
+	memset(&key, 0, sizeof(key));
+	memset(&data, 0, sizeof(data));
+	key.entry.key = &key;
+	key.entry.data = &data;
+	key.rk.dname = node->name;
+	key.rk.dname_len = node->namelen;
+	key.rk.type = htons(rrset->type);
+	key.rk.rrset_class = htons(z->dclass);
+	data.count = zonemd_simple_count_rrsig(rrset, rrlist, rrnum, z, node);
+	if(!zonemd_simple_rrsig_allocs(region, &data, data.count)) {
+		*reason = "out of memory";
+		regional_free_all(region);
+		return 0;
+	}
+	/* all the RRSIGs stored in the other rrsets for this domain node */
+	add_rrlist_rrsigs_into_data(&data, &done, rrlist, rrnum, z, node);
+	/* plus the RRSIGs stored in an rrset of type RRSIG for this node */
+	add_rrset_into_data(&data, &done, rrset, z, node);
+
+	/* canonicalize */
+	if(!rrset_canonicalize_to_buffer(region, buf, &key)) {
+		*reason = "out of memory";
+		regional_free_all(region);
+		return 0;
+	}
+	regional_free_all(region);
+
+	/* hash */
+	return 1;
+}
+
+/** collate a domain's rrsets using the simple scheme */
+static int zonemd_simple_domain(struct auth_zone* z, void* hash,
+	struct auth_data* node, struct regional* region,
+	struct sldns_buffer* buf, char** reason)
+{
+	const size_t rrlistsize = 65536;
+	struct auth_rrset* rrlist[rrlistsize];
+	size_t i, rrnum = 0;
+	/* see if the domain is out of scope, the zone origin,
+	 * that would be omitted */
+	if(!dname_subdomain_c(node->name, z->name))
+		return 1; /* continue */
+	/* loop over the rrsets in ascending order. */
+	rrnum = authdata_rrsets_to_list(rrlist, rrlistsize, node->rrsets);
+	addrrsigtype_if_needed(rrlist, rrlistsize, &rrnum, node);
+	qsort(rrlist, rrnum, sizeof(*rrlist), rrlist_compare);
+	for(i=0; i<rrnum; i++) {
+		if(rrlist[i] && rrlist[i]->type == LDNS_RR_TYPE_ZONEMD &&
+			query_dname_compare(z->name, node->name) == 0) {
+			/* omit type ZONEMD at apex */
+			continue;
+		}
+		if(rrlist[i] == NULL || rrlist[i]->type ==
+			LDNS_RR_TYPE_RRSIG) {
+			if(!zonemd_simple_rrsig(z, hash, node, rrlist[i],
+				rrlist, rrnum, region, buf, reason))
+				return 0;
+		} else if(!zonemd_simple_rrset(z, hash, node, rrlist[i],
+			region, buf, reason)) {
+			return 0;
+		}
+	}
+	return 1;
+}
+
+/** collate the zone using the simple scheme */
+static int zonemd_simple_collate(struct auth_zone* z, void* hash,
+	struct regional* region, struct sldns_buffer* buf, char** reason)
+{
+	/* our tree is sorted in canonical order, so we can just loop over
+	 * the tree */
+	struct auth_data* n;
+	RBTREE_FOR(n, struct auth_data*, &z->data) {
+		if(!zonemd_simple_domain(z, hash, n, region, buf, reason))
+			return 0;
+	}
+	return 1;
+}
+
+int auth_zone_generate_zonemd_hash(struct auth_zone* z, int scheme,
+        int hashalgo, uint8_t* hash, size_t hashlen, size_t* resultlen,
+	struct regional* region, struct sldns_buffer* buf, char** reason)
+{
+	void* h = zonemd_digest_init(hashalgo);
+	if(!h) {
+		*reason = "digest init fail";
+		return 0;
+	}
+	if(scheme == 1) {
+		if(!zonemd_simple_collate(z, h, region, buf, reason)) {
+			if(!*reason) *reason = "scheme simple collate fail";
+			return 0;
+		}
+	}
+	/*
+	if(!zonemd_digest_finish(hashalgo, hash, hashlen, resultlen)) {
+		*reason = "digest finish fail";
+		return 0;
+	}
+	*/
+	return 1;
+}
+
+int auth_zone_generate_zonemd_check(struct auth_zone* z, int scheme,
+	int hashalgo, uint8_t* hash, size_t hashlen, struct regional* region,
+	struct sldns_buffer* buf, char** reason)
+{
+	uint8_t gen[512];
+	size_t genlen = 0;
+	if(!zonemd_hashalgo_supported(hashalgo)) {
+		*reason = "unsupported algorithm";
+		return 0;
+	}
+	if(!zonemd_scheme_supported(scheme)) {
+		*reason = "unsupported scheme";
+		return 0;
+	}
+	if(hashlen < 12) {
+		/* the ZONEMD draft requires digests to fail if too small */
+		*reason = "digest length too small, less than 12";
+		return 0;
+	}
+	/* generate digest */
+	if(!auth_zone_generate_zonemd_hash(z, scheme, hashalgo, gen,
+		sizeof(gen), &genlen, region, buf, reason)) {
+		/* reason filled in by zonemd hash routine */
+		return 0;
+	}
+	/* check digest length */
+	if(hashlen != genlen) {
+		*reason = "incorrect digest length";
+		return 0;
+	}
+	/* check digest */
+	if(memcmp(hash, gen, genlen) != 0) {
+		*reason = "incorrect digest";
+		return 0;
+	}
+	return 1;
 }
