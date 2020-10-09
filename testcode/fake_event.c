@@ -52,6 +52,7 @@
 #include "util/data/msgreply.h"
 #include "util/data/msgencode.h"
 #include "util/data/dname.h"
+#include "util/edns.h"
 #include "util/config_file.h"
 #include "services/listen_dnsport.h"
 #include "services/outside_network.h"
@@ -868,9 +869,12 @@ struct listen_dnsport*
 listen_create(struct comm_base* base, struct listen_port* ATTR_UNUSED(ports),
 	size_t bufsize, int ATTR_UNUSED(tcp_accept_count),
 	int ATTR_UNUSED(tcp_idle_timeout),
+	int ATTR_UNUSED(harden_large_queries),
+	uint32_t ATTR_UNUSED(http_max_streams),
+	char* ATTR_UNUSED(http_endpoint),
 	struct tcl_list* ATTR_UNUSED(tcp_conn_limit),
 	void* ATTR_UNUSED(sslctx), struct dt_env* ATTR_UNUSED(dtenv),
-	comm_point_callback_type* cb, void* cb_arg)
+	comm_point_callback_type* cb, void *cb_arg)
 {
 	struct replay_runtime* runtime = (struct replay_runtime*)base;
 	struct listen_dnsport* l= calloc(1, sizeof(struct listen_dnsport));
@@ -1031,6 +1035,7 @@ outside_network_create(struct comm_base* base, size_t bufsize,
 	size_t ATTR_UNUSED(num_ports), char** ATTR_UNUSED(ifs), 
 	int ATTR_UNUSED(num_ifs), int ATTR_UNUSED(do_ip4), 
 	int ATTR_UNUSED(do_ip6), size_t ATTR_UNUSED(num_tcp), 
+	int ATTR_UNUSED(dscp),
 	struct infra_cache* infra,
 	struct ub_randstate* ATTR_UNUSED(rnd), 
 	int ATTR_UNUSED(use_caps_for_id), int* ATTR_UNUSED(availports),
@@ -1038,7 +1043,8 @@ outside_network_create(struct comm_base* base, size_t bufsize,
 	int ATTR_UNUSED(outgoing_tcp_mss),
 	void (*unwanted_action)(void*), void* ATTR_UNUSED(unwanted_param),
 	int ATTR_UNUSED(do_udp), void* ATTR_UNUSED(sslctx),
-	int ATTR_UNUSED(delayclose), struct dt_env* ATTR_UNUSED(dtenv))
+	int ATTR_UNUSED(delayclose), int ATTR_UNUSED(tls_use_sni),
+	struct dt_env* ATTR_UNUSED(dtenv))
 {
 	struct replay_runtime* runtime = (struct replay_runtime*)base;
 	struct outside_network* outnet =  calloc(1, 
@@ -1178,7 +1184,7 @@ struct serviced_query* outnet_serviced_query(struct outside_network* outnet,
 	socklen_t addrlen, uint8_t* zone, size_t zonelen,
 	struct module_qstate* qstate, comm_point_callback_type* callback,
 	void* callback_arg, sldns_buffer* ATTR_UNUSED(buff),
-	struct module_env* ATTR_UNUSED(env))
+	struct module_env* env)
 {
 	struct replay_runtime* runtime = (struct replay_runtime*)outnet->base;
 	struct fake_pending* pend = (struct fake_pending*)calloc(1,
@@ -1207,6 +1213,7 @@ struct serviced_query* outnet_serviced_query(struct outside_network* outnet,
 	sldns_buffer_flip(pend->buffer);
 	if(1) {
 		struct edns_data edns;
+		struct edns_tag_addr* client_tag_addr;
 		if(!inplace_cb_query_call(env, qinfo, flags, addr, addrlen,
 			zone, zonelen, qstate, qstate->region)) {
 			free(pend);
@@ -1218,9 +1225,17 @@ struct serviced_query* outnet_serviced_query(struct outside_network* outnet,
 		edns.edns_version = EDNS_ADVERTISED_VERSION;
 		edns.udp_size = EDNS_ADVERTISED_SIZE;
 		edns.bits = 0;
-		edns.opt_list = qstate->edns_opts_back_out;
 		if(dnssec)
 			edns.bits = EDNS_DO;
+		if((client_tag_addr = edns_tag_addr_lookup(
+			&env->edns_tags->client_tags,
+			addr, addrlen))) {
+			uint16_t client_tag = htons(client_tag_addr->tag_data);
+			edns_opt_list_append(&qstate->edns_opts_back_out,
+				env->edns_tags->client_tag_opcode, 2,
+				(uint8_t*)&client_tag, qstate->region);
+		}
+		edns.opt_list = qstate->edns_opts_back_out;
 		attach_edns_record(pend->buffer, &edns);
 	}
 	memcpy(&pend->addr, addr, addrlen);
@@ -1288,7 +1303,14 @@ void outnet_serviced_query_stop(struct serviced_query* sq, void* cb_arg)
 	log_info("double delete of pending serviced query");
 }
 
+int resolve_interface_names(struct config_file* ATTR_UNUSED(cfg),
+	char*** ATTR_UNUSED(resif), int* ATTR_UNUSED(num_resif))
+{
+	return 1;
+}
+
 struct listen_port* listening_ports_open(struct config_file* ATTR_UNUSED(cfg),
+	char** ATTR_UNUSED(ifs), int ATTR_UNUSED(num_ifs),
 	int* ATTR_UNUSED(reuseport))
 {
 	return calloc(1, 1);
@@ -1583,7 +1605,7 @@ int create_udp_sock(int ATTR_UNUSED(family), int ATTR_UNUSED(socktype),
 	int* ATTR_UNUSED(noproto), int ATTR_UNUSED(rcv), int ATTR_UNUSED(snd),
 	int ATTR_UNUSED(listen), int* ATTR_UNUSED(reuseport),
 	int ATTR_UNUSED(transparent), int ATTR_UNUSED(freebind),
-	int ATTR_UNUSED(use_systemd))
+	int ATTR_UNUSED(use_systemd), int ATTR_UNUSED(dscp))
 {
 	/* if you actually print to this, it'll be stdout during test */
 	return 1;
@@ -1790,7 +1812,7 @@ int comm_point_send_udp_msg(struct comm_point *c, sldns_buffer* packet,
 }
 
 int outnet_get_tcp_fd(struct sockaddr_storage* ATTR_UNUSED(addr),
-	socklen_t ATTR_UNUSED(addrlen), int ATTR_UNUSED(tcp_mss))
+	socklen_t ATTR_UNUSED(addrlen), int ATTR_UNUSED(tcp_mss), int ATTR_UNUSED(dscp))
 {
 	log_assert(0);
 	return -1;
@@ -1821,6 +1843,23 @@ size_t
 tcp_req_info_get_stream_buffer_size(void)
 {
 	return 0;
+}
+
+size_t
+http2_get_query_buffer_size(void)
+{
+	return 0;
+}
+
+size_t
+http2_get_response_buffer_size(void)
+{
+	return 0;
+}
+
+void http2_stream_add_meshstate(struct http2_stream* ATTR_UNUSED(h2_stream),
+	struct mesh_area* ATTR_UNUSED(mesh), struct mesh_state* ATTR_UNUSED(m))
+{
 }
 
 /*********** End of Dummy routines ***********/

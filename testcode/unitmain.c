@@ -867,6 +867,8 @@ main(int argc, char* argv[])
 		printf("\tperforms unit tests.\n");
 		return 1;
 	}
+	/* Disable roundrobin for the unit tests */
+	RRSET_ROUNDROBIN = 0;
 #ifdef USE_LIBEVENT
 	printf("Start of %s+libevent unit test.\n", PACKAGE_STRING);
 #else

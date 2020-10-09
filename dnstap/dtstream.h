@@ -49,6 +49,7 @@ struct dt_msg_entry;
 struct dt_io_list_item;
 struct dt_io_thread;
 struct config_file;
+struct comm_base;
 
 /**
  * A message buffer with dnstap messages queued up.  It is per-worker.
@@ -68,11 +69,15 @@ struct dt_msg_queue {
 	/** current size of the buffer, in bytes.  data bytes of messages.
 	 * If a new message make it more than maxsize, the buffer is full */
 	size_t cursize;
+	/** number of messages in the queue */
+	int msgcount;
 	/** list of messages.  The messages are added to the back and taken
 	 * out from the front. */
 	struct dt_msg_entry* first, *last;
 	/** reference to the io thread to wakeup */
 	struct dt_io_thread* dtio;
+	/** the wakeup timer for dtio, on worker event base */
+	struct comm_timer* wakeup_timer;
 };
 
 /**
@@ -86,6 +91,27 @@ struct dt_msg_entry {
 	void* buf;
 	/** the length to send. */
 	size_t len;
+};
+
+/**
+ * Containing buffer and counter for reading DNSTAP frames.
+ */
+struct dt_frame_read_buf {
+	/** Buffer containing frame, except length counter(s). */
+	void* buf;
+	/** Number of bytes written to buffer. */
+	size_t buf_count;
+	/** Capacity of the buffer. */
+	size_t buf_cap;
+
+	/** Frame length field. Will contain the 2nd length field for control
+	 * frames. */
+	uint32_t frame_len;
+	/** Number of bytes that have been written to the frame_length field. */
+	size_t frame_len_done;
+
+	/** Set to 1 if this is a control frame, 0 otherwise (ie data frame). */
+	int control_frame;
 };
 
 /**
@@ -109,6 +135,8 @@ struct dt_io_thread {
 	int started;
 	/** ssl context for the io thread, for tls connections. type SSL_CTX* */
 	void* ssl_ctx;
+	/** if SNI will be used for TLS connections. */
+	int tls_use_sni;
 
 	/** file descriptor that the thread writes to */
 	int fd;
@@ -128,6 +156,9 @@ struct dt_io_thread {
 	 * This happens during negotiation, we then do not want to write,
 	 * but wait for a read event. */
 	int ssl_brief_read;
+	/** true if SSL_read is waiting for a write event. Set back to 0 after
+	 * single write event is handled. */
+	int ssl_brief_write;
 
 	/** the buffer that currently getting written, or NULL if no
 	 * (partial) message written now */
@@ -140,6 +171,10 @@ struct dt_io_thread {
 	 * for the current message length that precedes the frame */
 	size_t cur_msg_len_done;
 
+	/** lock on wakeup_timer_enabled */
+	lock_basic_type wakeup_timer_lock;
+	/** if wakeup timer is enabled in some thread */
+	int wakeup_timer_enabled;
 	/** command pipe that stops the pipe if closed.  Used to quit
 	 * the program. [0] is read, [1] is written to. */
 	int commandpipe[2];
@@ -169,6 +204,16 @@ struct dt_io_thread {
 	 * and client certificates can be used for authentication. */
 	int upstream_is_tls;
 
+	/** Perform bidirectional Frame Streams handshake before sending
+	 * messages. */
+	int is_bidirectional;
+	/** Set if the READY control frame has been sent. */
+	int ready_frame_sent;
+	/** Set if valid ACCEPT frame is received. */
+	int accept_frame_received;
+	/** (partially) read frame */
+	struct dt_frame_read_buf read_frame;
+
 	/** the file path for unix socket (or NULL) */
 	char* socket_path;
 	/** the ip address and port number (or NULL) */
@@ -197,9 +242,10 @@ struct dt_io_list_item {
 
 /**
  * Create new (empty) worker message queue. Limit set to default on max.
+ * @param base: event base for wakeup timer.
  * @return NULL on malloc failure or a new queue (not locked).
  */
-struct dt_msg_queue* dt_msg_queue_create(void);
+struct dt_msg_queue* dt_msg_queue_create(struct comm_base* base);
 
 /**
  * Delete a worker message queue.  It has to be unlinked from access,
@@ -221,6 +267,9 @@ void dt_msg_queue_delete(struct dt_msg_queue* mq);
  * @param len: length of buffer.
  */
 void dt_msg_queue_submit(struct dt_msg_queue* mq, void* buf, size_t len);
+
+/** timer callback to wakeup dtio thread to process messages */
+void mq_wakeup_cb(void* arg);
 
 /**
  * Create IO thread.

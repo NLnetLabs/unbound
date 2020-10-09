@@ -551,6 +551,9 @@ void mesh_new_client(struct mesh_area* mesh, struct query_info* qinfo,
 			goto servfail_mem;
 		}
 	}
+	if(rep->c->use_h2) {
+		http2_stream_add_meshstate(rep->c->h2_stream, mesh, s);
+	}
 	/* add serve expired timer if required and not already there */
 	if(timeout && !mesh_serve_expired_init(s, timeout)) {
 		log_err("mesh_new_client: out of memory initializing serve expired");
@@ -1207,6 +1210,13 @@ mesh_send_reply(struct mesh_state* m, int rcode, struct reply_info* rep,
 	else	secure = 0;
 	if(!rep && rcode == LDNS_RCODE_NOERROR)
 		rcode = LDNS_RCODE_SERVFAIL;
+	if(r->query_reply.c->use_h2) {
+		r->query_reply.c->h2_stream = r->h2_stream;
+		/* Mesh reply won't exist for long anymore. Make it impossible
+		 * for HTTP/2 stream to refer to mesh state, in case
+		 * connection gets cleanup before HTTP/2 stream close. */
+		r->h2_stream->mesh_state = NULL;
+	}
 	/* send the reply */
 	/* We don't reuse the encoded answer if either the previous or current
 	 * response has a local alias.  We could compare the alias records
@@ -1297,7 +1307,7 @@ mesh_send_reply(struct mesh_state* m, int rcode, struct reply_info* rep,
 
 void mesh_query_done(struct mesh_state* mstate)
 {
-	struct mesh_reply* r, *reply_list = NULL;
+	struct mesh_reply* r;
 	struct mesh_reply* prev = NULL;
 	struct sldns_buffer* prev_buffer = NULL;
 	struct mesh_cb* c;
@@ -1321,27 +1331,7 @@ void mesh_query_done(struct mesh_state* mstate)
 			free(err);
 		}
 	}
-	if(mstate->reply_list) {
-		/* set the reply_list to NULL during the mesh_query_done
-		 * processing, so that calls back into the mesh from
-		 * tcp_req_info (deciding to drop the reply and thus
-		 * unregister the mesh_reply from the mstate) are stopped
-		 * because the list is empty.
-		 * The mstate is then likely not a reply_state, and maybe
-		 * also a detached_state.
-		 */
-		reply_list = mstate->reply_list;
-		mstate->reply_list = NULL;
-		if(!mstate->reply_list && !mstate->cb_list) {
-			/* was a reply state, not anymore */
-			log_assert(mstate->s.env->mesh->num_reply_states > 0);
-			mstate->s.env->mesh->num_reply_states--;
-		}
-		if(!mstate->reply_list && !mstate->cb_list &&
-			mstate->super_set.count == 0)
-			mstate->s.env->mesh->num_detached_states++;
-	}
-	for(r = reply_list; r; r = r->next) {
+	for(r = mstate->reply_list; r; r = r->next) {
 		/* if a response-ip address block has been stored the
 		 *  information should be logged for each client. */
 		if(mstate->s.respip_action_info &&
@@ -1365,15 +1355,31 @@ void mesh_query_done(struct mesh_state* mstate)
 		/* if this query is determined to be dropped during the
 		 * mesh processing, this is the point to take that action. */
 		if(mstate->s.is_drop) {
+			/* briefly set the reply_list to NULL, so that the
+			 * tcp req info cleanup routine that calls the mesh
+			 * to deregister the meshstate for it is not done
+			 * because the list is NULL and also accounting is not
+			 * done there, but instead we do that here. */
+			struct mesh_reply* reply_list = mstate->reply_list;
+			mstate->reply_list = NULL;
 			comm_point_drop_reply(&r->query_reply);
+			mstate->reply_list = reply_list;
 		} else {
 			struct sldns_buffer* r_buffer = r->query_reply.c->buffer;
+			struct mesh_reply* rlist = mstate->reply_list;
 			if(r->query_reply.c->tcp_req_info) {
 				r_buffer = r->query_reply.c->tcp_req_info->spool_buffer;
 				prev_buffer = NULL;
 			}
+			/* briefly set the replylist to null in case the
+			 * meshsendreply calls tcpreqinfo sendreply that
+			 * comm_point_drops because of size, and then the
+			 * null stops the mesh state remove and thus
+			 * reply_list modification and accounting */
+			mstate->reply_list = NULL;
 			mesh_send_reply(mstate, mstate->s.return_rcode, rep,
 				r, r_buffer, prev, prev_buffer);
+			mstate->reply_list = rlist;
 			if(r->query_reply.c->tcp_req_info) {
 				tcp_req_info_remove_mesh_state(r->query_reply.c->tcp_req_info, mstate);
 				r_buffer = NULL;
@@ -1381,6 +1387,17 @@ void mesh_query_done(struct mesh_state* mstate)
 			prev = r;
 			prev_buffer = r_buffer;
 		}
+	}
+	if(mstate->reply_list) {
+		mstate->reply_list = NULL;
+		if(!mstate->reply_list && !mstate->cb_list) {
+			/* was a reply state, not anymore */
+			log_assert(mstate->s.env->mesh->num_reply_states > 0);
+			mstate->s.env->mesh->num_reply_states--;
+		}
+		if(!mstate->reply_list && !mstate->cb_list &&
+			mstate->super_set.count == 0)
+			mstate->s.env->mesh->num_detached_states++;
 	}
 	mstate->replies_sent = 1;
 	while((c = mstate->cb_list) != NULL) {
@@ -1489,6 +1506,8 @@ int mesh_state_add_reply(struct mesh_state* s, struct edns_data* edns,
 		s->s.qinfo.qname_len);
 	if(!r->qname)
 		return 0;
+	if(rep->c->use_h2)
+		r->h2_stream = rep->c->h2_stream;
 
 	/* Data related to local alias stored in 'qinfo' (if any) is ephemeral
 	 * and can be different for different original queries (even if the
@@ -1876,7 +1895,7 @@ mesh_serve_expired_callback(void* arg)
 {
 	struct mesh_state* mstate = (struct mesh_state*) arg;
 	struct module_qstate* qstate = &mstate->s;
-	struct mesh_reply* r;
+	struct mesh_reply* r, *rlist;
 	struct mesh_area* mesh = qstate->env->mesh;
 	struct dns_msg* msg;
 	struct mesh_cb* c;
@@ -1959,16 +1978,7 @@ mesh_serve_expired_callback(void* arg)
 	if(verbosity >= VERB_ALGO)
 		log_dns_msg("Serve expired lookup", &qstate->qinfo, msg->rep);
 
-	r = mstate->reply_list;
-	mstate->reply_list = NULL;
-	if(!mstate->reply_list && !mstate->cb_list) {
-		log_assert(mesh->num_reply_states > 0);
-		mesh->num_reply_states--;
-		if(mstate->super_set.count == 0) {
-			mesh->num_detached_states++;
-		}
-	}
-	for(; r; r = r->next) {
+	for(r = mstate->reply_list; r; r = r->next) {
 		/* If address info is returned, it means the action should be an
 		* 'inform' variant and the information should be logged. */
 		if(actinfo.addrinfo) {
@@ -1990,8 +2000,15 @@ mesh_serve_expired_callback(void* arg)
 		r_buffer = r->query_reply.c->buffer;
 		if(r->query_reply.c->tcp_req_info)
 			r_buffer = r->query_reply.c->tcp_req_info->spool_buffer;
+		/* briefly set the replylist to null in case the meshsendreply
+		 * calls tcpreqinfo sendreply that comm_point_drops because
+		 * of size, and then the null stops the mesh state remove and
+		 * thus reply_list modification and accounting */
+		rlist = mstate->reply_list;
+		mstate->reply_list = NULL;
 		mesh_send_reply(mstate, LDNS_RCODE_NOERROR, msg->rep,
 			r, r_buffer, prev, prev_buffer);
+		mstate->reply_list = rlist;
 		if(r->query_reply.c->tcp_req_info)
 			tcp_req_info_remove_mesh_state(r->query_reply.c->tcp_req_info, mstate);
 		prev = r;
@@ -2000,6 +2017,16 @@ mesh_serve_expired_callback(void* arg)
 		/* Account for each reply sent. */
 		mesh->ans_expired++;
 
+	}
+	if(mstate->reply_list) {
+		mstate->reply_list = NULL;
+		if(!mstate->reply_list && !mstate->cb_list) {
+			log_assert(mesh->num_reply_states > 0);
+			mesh->num_reply_states--;
+			if(mstate->super_set.count == 0) {
+				mesh->num_detached_states++;
+			}
+		}
 	}
 	while((c = mstate->cb_list) != NULL) {
 		/* take this cb off the list; so that the list can be

@@ -440,6 +440,8 @@ err:
 			respip_set_delete(r->respip_set);
 		if(r->taglist)
 			free(r->taglist);
+		if(r->region)
+			regional_destroy(r->region);
 		free(r);
 	}
 	return NULL;
@@ -597,8 +599,18 @@ rpz_insert_rr(struct rpz* r, uint8_t* azname, size_t aznamelen, uint8_t* dname,
 	uint8_t* policydname;
 
 	if(!dname_subdomain_c(dname, azname)) {
-		log_err("RPZ: name of record to insert into RPZ is not a "
-			"subdomain of the configured name of the RPZ zone");
+		char* dname_str = sldns_wire2str_dname(dname, dnamelen);
+		char* azname_str = sldns_wire2str_dname(azname, aznamelen);
+		if(dname_str && azname_str) {
+			log_err("RPZ: name of record (%s) to insert into RPZ is not a "
+				"subdomain of the configured name of the RPZ zone (%s)",
+				dname_str, azname_str);
+		} else {
+			log_err("RPZ: name of record to insert into RPZ is not a "
+				"subdomain of the configured name of the RPZ zone");
+		}
+		free(dname_str);
+		free(azname_str);
 		return 0;
 	}
 
@@ -834,6 +846,8 @@ rpz_remove_qname_trigger(struct rpz* r, uint8_t* dname, size_t dnamelen,
 		delete_zone = rpz_data_delete_rr(z, dname,
 			dnamelen, rr_type, rdatawl, rdatalen);
 	else if(a != localzone_type_to_rpz_action(z->type)) {
+		lock_rw_unlock(&z->lock);
+		lock_rw_unlock(&r->local_zones->lock);
 		return;
 	}
 	lock_rw_unlock(&z->lock); 
@@ -939,13 +953,16 @@ rpz_apply_qname_trigger(struct auth_zones* az, struct module_env* env,
 	struct regional* temp, struct comm_reply* repinfo,
 	uint8_t* taglist, size_t taglen, struct ub_server_stats* stats)
 {
-	struct rpz* r;
+	struct rpz* r = NULL;
+	struct auth_zone* a;
 	int ret;
 	enum localzone_type lzt;
 	struct local_zone* z = NULL;
 	struct local_data* ld = NULL;
 	lock_rw_rdlock(&az->rpz_lock);
-	for(r = az->rpz_first; r; r = r->next) {
+	for(a = az->rpz_first; a; a = a->rpz_az_next) {
+		lock_rw_rdlock(&a->lock);
+		r = a->rpz;
 		if(!r->taglist || taglist_intersect(r->taglist, 
 			r->taglistlen, taglist, taglen)) {
 			z = rpz_find_zone(r, qinfo->qname, qinfo->qname_len,
@@ -963,13 +980,14 @@ rpz_apply_qname_trigger(struct auth_zones* az, struct module_env* env,
 			}
 			if(z)
 				break;
-		}	
+		}
+		lock_rw_unlock(&a->lock); /* not found in this auth_zone */
 	}
 	lock_rw_unlock(&az->rpz_lock);
 	if(!z)
-		return 0;
+		return 0; /* not holding auth_zone.lock anymore */
 
-	
+	log_assert(r);
 	if(r->action_override == RPZ_NO_OVERRIDE_ACTION)
 		lzt = z->type;
 	else
@@ -980,6 +998,7 @@ rpz_apply_qname_trigger(struct auth_zones* az, struct module_env* env,
 			regional_alloc_zero(temp, sizeof(struct local_rrset));
 		if(!qinfo->local_alias) {
 			lock_rw_unlock(&z->lock);
+			lock_rw_unlock(&a->lock);
 			return 0; /* out of memory */
 		}
 		qinfo->local_alias->rrset =
@@ -987,6 +1006,7 @@ rpz_apply_qname_trigger(struct auth_zones* az, struct module_env* env,
 				sizeof(*r->cname_override));
 		if(!qinfo->local_alias->rrset) {
 			lock_rw_unlock(&z->lock);
+			lock_rw_unlock(&a->lock);
 			return 0; /* out of memory */
 		}
 		qinfo->local_alias->rrset->rk.dname = qinfo->qname;
@@ -996,6 +1016,7 @@ rpz_apply_qname_trigger(struct auth_zones* az, struct module_env* env,
 				qinfo, repinfo, r->log_name);
 		stats->rpz_action[RPZ_CNAME_OVERRIDE_ACTION]++;
 		lock_rw_unlock(&z->lock);
+		lock_rw_unlock(&a->lock);
 		return 0;
 	}
 
@@ -1008,6 +1029,7 @@ rpz_apply_qname_trigger(struct auth_zones* az, struct module_env* env,
 				repinfo, r->log_name);
 		stats->rpz_action[localzone_type_to_rpz_action(lzt)]++;
 		lock_rw_unlock(&z->lock);
+		lock_rw_unlock(&a->lock);
 		return !qinfo->local_alias;
 	}
 
@@ -1018,6 +1040,7 @@ rpz_apply_qname_trigger(struct auth_zones* az, struct module_env* env,
 			qinfo, repinfo, r->log_name);
 	stats->rpz_action[localzone_type_to_rpz_action(lzt)]++;
 	lock_rw_unlock(&z->lock);
+	lock_rw_unlock(&a->lock);
 
 	return ret;
 }

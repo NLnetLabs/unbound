@@ -86,7 +86,8 @@ enum rpz_action {
 /**
  * RPZ containing policies. Pointed to from corresponding auth-zone. Part of a
  * linked list to keep configuration order. Iterating or changing the linked
- * list requires the rpz_lock from struct auth_zones.
+ * list requires the rpz_lock from struct auth_zones. Changing items in this
+ * struct require the lock from struct auth_zone.
  */
 struct rpz {
 	struct local_zones* local_zones;
@@ -97,8 +98,6 @@ struct rpz {
 	struct ub_packed_rrset_key* cname_override;
 	int log;
 	char* log_name;
-	struct rpz* next;
-	struct rpz* prev;
 	struct regional* region;
 };
 
