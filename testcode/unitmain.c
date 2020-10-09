@@ -921,16 +921,34 @@ static void zonemd_generate_tests(void)
 {
 	zonemd_generate_test("example.org", "testdata/zonemd.example1.zone",
 		1, 2, "20564D10F50A0CEBEC856C64032B7DFB53D3C449A421A5BC7A21F7627B4ACEA4DF29F2C6FE82ED9C23ADF6F4D420D5DD63EF6E6349D60FDAB910B65DF8D481B7");
+
+	/* https://tools.ietf.org/html/draft-ietf-dnsop-dns-zone-digest-12
+	 * from section A.1 */
 	zonemd_generate_test("example", "testdata/zonemd.example_a1.zone",
 		1, 1, "c68090d90a7aed716bc459f9340e3d7c1370d4d24b7e2fc3a1ddc0b9a87153b9a9713b3c9ae5cc27777f98b8e730044c");
+
+	/* https://tools.ietf.org/html/draft-ietf-dnsop-dns-zone-digest-12
+	 * from section A.2 */
 	zonemd_generate_test("example", "testdata/zonemd.example_a2.zone",
 		1, 1, "31cefb03814f5062ad12fa951ba0ef5f8da6ae354a415767246f7dc932ceb1e742a2108f529db6a33a11c01493de358d");
+
+	/* https://tools.ietf.org/html/draft-ietf-dnsop-dns-zone-digest-12
+	 * from section A.3 SHA384 digest */
 	zonemd_generate_test("example", "testdata/zonemd.example_a3.zone",
 		1, 1, "62e6cf51b02e54b9b5f967d547ce43136792901f9f88e637493daaf401c92c279dd10f0edb1c56f8080211f8480ee306");
+
+	/* https://tools.ietf.org/html/draft-ietf-dnsop-dns-zone-digest-12
+	 * from section A.3 SHA512 digest*/
 	zonemd_generate_test("example", "testdata/zonemd.example_a3.zone",
 		1, 2, "08cfa1115c7b948c4163a901270395ea226a930cd2cbcf2fa9a5e6eb85f37c8a4e114d884e66f176eab121cb02db7d652e0cc4827e7a3204f166b47e5613fd27");
+
+	/* https://tools.ietf.org/html/draft-ietf-dnsop-dns-zone-digest-12
+	 * from section A.4 */
 	zonemd_generate_test("uri.arpa", "testdata/zonemd.example_a4.zone",
 		1, 1, "1291b78ddf7669b1a39d014d87626b709b55774c5d7d58fadc556439889a10eaf6f11d615900a4f996bd46279514e473");
+
+	/* https://tools.ietf.org/html/draft-ietf-dnsop-dns-zone-digest-12
+	 * from section A.5 */
 	zonemd_generate_test("root-servers.net", "testdata/zonemd.example_a5.zone",
 		1, 1, "f1ca0ccd91bd5573d9f431c00ee0101b2545c97602be0a978a3b11dbfc1c776d5b3e86ae3d973d6b5349ba7f04340f79");
 }
