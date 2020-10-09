@@ -716,7 +716,7 @@ int zonemd_scheme_supported(int scheme);
  * @param scheme: zonemd scheme.
  * @param hashalgo: zonemd hash algorithm.
  * @param hash: the hash to check.
- * @param buflen: length of hash buffer.
+ * @param hashlen: length of hash buffer.
  * @param region: temp region for allocs during canonicalisation.
  * @param buf: temp buffer during canonicalisation.
  * @param reason: string returned with failure reason.
