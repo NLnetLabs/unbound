@@ -1783,7 +1783,7 @@ static int zonemd_fetch_parameters(struct auth_rrset* zonemd_rrset, size_t i,
 	else	*hash = rdata+8;
 	return 1;
 }
-	
+
 /**
  * Check ZONEMDs if present for the auth zone.  Depending on config
  * it can warn or fail on that.  Checks the hash of the ZONEMD.
