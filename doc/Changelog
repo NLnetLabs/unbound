@@ -1,3 +1,12 @@
+9 October 2020: Wouter
+	- Fix dnstap socket and the chroot not applied properly to the dnstap
+	  socket path.
+
+8 October 2020: Wouter
+	- Tag for 1.12.0 release.
+	- Current repo is version 1.12.1 in development.
+	- Fix #319: potential memory leak on config failure, in rpz config.
+
 1 October 2020: Wouter
 	- Current repo is version 1.12.0 for release.  Tag for 1.12.0rc1.
 
