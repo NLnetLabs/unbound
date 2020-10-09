@@ -886,6 +886,64 @@ secalgo_hash_sha256(unsigned char* buf, size_t len, unsigned char* res)
 	(void)HASH_HashBuf(HASH_AlgSHA256, res, buf, (unsigned long)len);
 }
 
+/** the secalgo hash structure */
+struct secalgo_hash {
+	/** hash context */
+	HASHContext* ctx;
+};
+
+/** create hash struct of type */
+static struct secalgo_hash* secalgo_hash_create_type(HASH_HashType tp)
+{
+	struct secalgo_hash* h = calloc(1, sizeof(*h));
+	if(!h)
+		return NULL;
+	h->ctx = HASH_Create(tp);
+	if(!h->ctx) {
+		free(h);
+		return NULL;
+	}
+	return h;
+}
+
+struct secalgo_hash* secalgo_hash_create_sha384(void)
+{
+	return secalgo_hash_create_type(HASH_AlgSHA384);
+}
+
+struct secalgo_hash* secalgo_hash_create_sha512(void)
+{
+	return secalgo_hash_create_type(HASH_AlgSHA512);
+}
+
+int secalgo_hash_update(struct secalgo_hash* hash, uint8_t* data, size_t len)
+{
+	HASH_Update(hash->ctx, (unsigned char*)data, (unsigned int)len);
+	return 1;
+}
+
+int secalgo_hash_final(struct secalgo_hash* hash, uint8_t* result,
+        size_t maxlen, size_t* resultlen)
+{
+	unsigned int reslen = 0;
+	if(HASH_ResultLenContext(hash->ctx) > (unsigned int)maxlen) {
+		*resultlen = 0;
+		log_err("secalgo_hash_final: hash buffer too small");
+		return 0;
+	}
+	HASH_End(hash->ctx, (unsigned char*)result, &reslen,
+		(unsigned int)maxlen);
+	*resultlen = (size_t)reslen;
+	return 1;
+}
+
+void secalgo_hash_delete(struct secalgo_hash* hash)
+{
+	if(!hash) return;
+	HASH_Destroy(hash->ctx);
+	free(hash);
+}
+
 size_t
 ds_digest_size_supported(int algo)
 {
@@ -1510,6 +1568,81 @@ void
 secalgo_hash_sha256(unsigned char* buf, size_t len, unsigned char* res)
 {
 	_digest_nettle(SHA256_DIGEST_SIZE, (uint8_t*)buf, len, res);
+}
+
+/** secalgo hash structure */
+struct secalgo_hash {
+	/** if it is 384 or 512 */
+	int active;
+	/** context for sha384 */
+	struct sha384_ctx ctx384;
+	/** context for sha512 */
+	struct sha512_ctx ctx512;
+};
+
+struct secalgo_hash* secalgo_hash_create_sha384(void)
+{
+	struct secalgo_hash* h = calloc(1, sizeof(*h));
+	if(!h)
+		return NULL;
+	h->active = 384;
+	sha384_init(&h->ctx384);
+	return h;
+}
+
+struct secalgo_hash* secalgo_hash_create_sha512(void)
+{
+	struct secalgo_hash* h = calloc(1, sizeof(*h));
+	if(!h)
+		return NULL;
+	h->active = 512;
+	sha512_init(&h->ctx512);
+	return h;
+}
+
+int secalgo_hash_update(struct secalgo_hash* hash, uint8_t* data, size_t len)
+{
+	if(hash->active == 384) {
+		sha384_update(&hash->ctx384, len, data);
+	} else if(hash->active == 512) {
+		sha512_update(&hash->ctx512, len, data);
+	} else {
+		return 0;
+	}
+	return 1;
+}
+
+int secalgo_hash_final(struct secalgo_hash* hash, uint8_t* result,
+        size_t maxlen, size_t* resultlen)
+{
+	if(hash->active == 384) {
+		if(SHA384_DIGEST_SIZE > maxlen) {
+			*resultlen = 0;
+			log_err("secalgo_hash_final: hash buffer too small");
+			return 0;
+		}
+		*resultlen = SHA384_DIGEST_SIZE;
+		sha384_digest(&hash->ctx384, SHA384_DIGEST_SIZE,
+			(unsigned char*)result);
+	} else if(hash->active == 512) {
+		if(SHA512_DIGEST_SIZE > maxlen) {
+			*resultlen = 0;
+			log_err("secalgo_hash_final: hash buffer too small");
+			return 0;
+		}
+		*resultlen = SHA512_DIGEST_SIZE;
+		sha512_digest(&hash->ctx512, SHA512_DIGEST_SIZE,
+			(unsigned char*)result);
+	} else {
+		return 0;
+	}
+	return 1;
+}
+
+void secalgo_hash_delete(struct secalgo_hash* hash)
+{
+	if(!hash) return;
+	free(hash);
 }
 
 /**
