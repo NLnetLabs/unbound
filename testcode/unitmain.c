@@ -1079,7 +1079,6 @@ main(int argc, char* argv[])
 		fatal_exit("could not init NSS");
 #endif /* HAVE_SSL or HAVE_NSS*/
 	checklock_start();
-	zonemd_test();
 	authzone_test();
 	neg_test();
 	rnd_test();
@@ -1097,6 +1096,7 @@ main(int argc, char* argv[])
 	slabhash_test();
 	infra_test();
 	ldns_test();
+	zonemd_test();
 	msgparse_test();
 #ifdef CLIENT_SUBNET
 	ecs_test();
