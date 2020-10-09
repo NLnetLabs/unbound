@@ -1761,6 +1761,115 @@ auth_zones_read_zones(struct auth_zones* az, struct config_file* cfg)
 	return 1;
 }
 
+/** fetch the content of a ZONEMD RR from the rdata */
+static int zonemd_fetch_parameters(struct auth_rrset* zonemd_rrset, size_t i,
+	uint32_t* serial, int* scheme, int* hashalgo, uint8_t** hash,
+	size_t* hashlen)
+{
+	size_t rr_len;
+	uint8_t* rdata;
+	if(i >= zonemd_rrset->data->count)
+		return 0;
+	rr_len = zonemd_rrset->data->rr_len[i];
+	if(rr_len < 2+4+1+1)
+		return 0; /* too short, for rdlen+serial+scheme+algo */
+	rdata = zonemd_rrset->data->rr_data[i];
+	*serial = sldns_read_uint32(rdata+2);
+	*scheme = rdata[6];
+	*hashalgo = rdata[7];
+	*hashlen = rr_len - 8;
+	if(*hashlen == 0)
+		*hash = NULL;
+	else	*hash = rdata+8;
+	return 1;
+}
+	
+/**
+ * Check ZONEMDs if present for the auth zone.  Depending on config
+ * it can warn or fail on that.  Checks the hash of the ZONEMD.
+ * @param z: auth zone to check for.
+ * 	caller must hold lock on zone.
+ * @param cfg: config file options
+ */
+void auth_zone_zonemd_check_hash(struct auth_zone* z /*, struct config_file* cfg*/)
+{
+	/* loop over ZONEMDs and see which one is valid. if not print
+	 * failure (depending on config) */
+	struct auth_data* apex;
+	struct auth_rrset* zonemd_rrset;
+	size_t i;
+	char* reason = NULL;
+	struct regional* region = NULL;
+	struct sldns_buffer* buf = NULL;
+	char zstr[255+1];
+	uint32_t soa_serial = 0;
+	region = regional_create();
+	if(!region) {
+		return;
+	}
+	buf = sldns_buffer_new(65535);
+	if(!buf) {
+		regional_destroy(region);
+		return;
+	}
+	if(!auth_zone_get_serial(z, &soa_serial)) {
+		regional_destroy(region);
+		sldns_buffer_free(buf);
+		return;
+	}
+
+	apex = az_find_name(z, z->name, z->namelen);
+	if(!apex) {
+		regional_destroy(region);
+		sldns_buffer_free(buf);
+		return;
+	}
+	zonemd_rrset = az_domain_rrset(apex, LDNS_RR_TYPE_ZONEMD);
+	if(!zonemd_rrset || zonemd_rrset->data->count==0) {
+		regional_destroy(region);
+		sldns_buffer_free(buf);
+		return; /* no RRset or no RRs in rrset */
+	}
+
+	/* we have a ZONEMD, check if it is correct */
+	for(i=0; i<zonemd_rrset->data->count; i++) {
+		uint32_t serial = 0;
+		int scheme = 0, hashalgo = 0;
+		uint8_t* hash = NULL;
+		size_t hashlen = 0;
+		if(!zonemd_fetch_parameters(zonemd_rrset, i, &serial, &scheme,
+			&hashalgo, &hash, &hashlen)) {
+			/* malformed RR */
+			reason = "ZONEMD rdata malformed";
+			continue;
+		}
+		if(serial != soa_serial) {
+			reason = "ZONEMD serial is wrong";
+			continue;
+		}
+		if(auth_zone_generate_zonemd_check(z, scheme, hashalgo,
+			hash, hashlen, region, buf, &reason)) {
+			/* success */
+			if(verbosity >= VERB_ALGO) {
+				dname_str(z->name, zstr);
+				verbose(VERB_ALGO, "auth-zone %s ZONEMD hash is correct", zstr);
+			}
+			regional_destroy(region);
+			sldns_buffer_free(buf);
+			return;
+		}
+		/* try next one */
+	}
+	/* fail, we may have reason */
+	if(!reason)
+		reason = "no ZONEMD records found";
+	dname_str(z->name, zstr);
+	log_warn("auth-zone %s ZONEMD failed: %s", zstr, reason);
+
+	regional_destroy(region);
+	sldns_buffer_free(buf);
+}
+
 /** find serial number of zone or false if none */
 int
 auth_zone_get_serial(struct auth_zone* z, uint32_t* serial)
