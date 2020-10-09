@@ -141,6 +141,69 @@ secalgo_hash_sha256(unsigned char* buf, size_t len, unsigned char* res)
 #endif
 }
 
+/** hash structure for keeping track of running hashes */
+struct secalgo_hash {
+	/** the openssl message digest context */
+	EVP_MD_CTX* ctx;
+};
+
+/** create secalgo hash with hash type */
+static struct secalgo_hash* secalgo_hash_create_md(const EVP_MD* md)
+{
+	struct secalgo_hash* h;
+	if(!md)
+		return NULL;
+	h = calloc(1, sizeof(*h));
+	if(!h)
+		return NULL;
+	h->ctx = EVP_MD_CTX_create();
+	if(!h->ctx) {
+		free(h);
+		return NULL;
+	}
+	if(!EVP_DigestInit_ex(h->ctx, md, NULL)) {
+		EVP_MD_CTX_destroy(h->ctx);
+		free(h);
+		return NULL;
+	}
+	return h;
+}
+
+struct secalgo_hash* secalgo_hash_create_sha384(void)
+{
+	return secalgo_hash_create_md(EVP_sha384());
+}
+
+struct secalgo_hash* secalgo_hash_create_sha512(void)
+{
+	return secalgo_hash_create_md(EVP_sha512());
+}
+
+int secalgo_hash_update(struct secalgo_hash* hash, uint8_t* data, size_t len)
+{
+	return EVP_DigestUpdate(hash->ctx, (unsigned char*)data,
+		(unsigned int)len);
+}
+
+int secalgo_hash_final(struct secalgo_hash* hash, uint8_t* result,
+        size_t maxlen, size_t* resultlen)
+{
+	if(EVP_MD_CTX_size(hash->ctx) > (int)maxlen) {
+		*resultlen = 0;
+		log_err("secalgo_hash_final: hash buffer too small");
+		return 0;
+	}
+	*resultlen = EVP_MD_CTX_size(hash->ctx);
+	return EVP_DigestFinal_ex(hash->ctx, result, NULL);
+}
+
+void secalgo_hash_delete(struct secalgo_hash* hash)
+{
+	if(!hash) return;
+	EVP_MD_CTX_destroy(hash->ctx);
+	free(hash);
+}
+
 /**
  * Return size of DS digest according to its hash algorithm.
  * @param algo: DS digest algo.

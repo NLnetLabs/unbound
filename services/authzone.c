@@ -6983,17 +6983,77 @@ static int zonemd_scheme_supported(int scheme)
 }
 
 /** initialize hash for hashing with zonemd hash algo */
-static void* zonemd_digest_init(int hashalgo)
+static struct secalgo_hash* zonemd_digest_init(int hashalgo, char** reason)
 {
+	struct secalgo_hash *h;
 	if(hashalgo == 1) {
 		/* sha384 */
-		//return secalgo_digest_start_sha384();
+		h = secalgo_hash_create_sha384();
+		if(!h)
+			*reason = "digest sha384 could not be created";
+		return h;
 	} else if(hashalgo == 2) {
 		/* sha512 */
-		//return secalgo_digest_start_sha512();
+		h = secalgo_hash_create_sha512();
+		if(!h)
+			*reason = "digest sha512 could not be created";
+		return h;
 	}
 	/* unknown hash algo */
+	*reason = "unsupported algorithm";
 	return NULL;
+}
+
+/** update the hash for zonemd */
+static int zonemd_digest_update(int hashalgo, struct secalgo_hash* h,
+	uint8_t* data, size_t len, char** reason)
+{
+	if(hashalgo == 1) {
+		if(!secalgo_hash_update(h, data, len)) {
+			*reason = "digest sha384 failed";
+			return 0;
+		}
+		return 1;
+	} else if(hashalgo == 2) {
+		if(!secalgo_hash_update(h, data, len)) {
+			*reason = "digest sha512 failed";
+			return 0;
+		}
+		return 1;
+	}
+	/* unknown hash algo */
+	*reason = "unsupported algorithm";
+	return 0;
+}
+
+/** finish the hash for zonemd */
+static int zonemd_digest_finish(int hashalgo, struct secalgo_hash* h,
+	uint8_t* result, size_t hashlen, size_t* resultlen, char** reason)
+{
+	if(hashalgo == 1) {
+		if(hashlen < 384/8) {
+			*reason = "digest buffer too small for sha384";
+			return 0;
+		}
+		if(!secalgo_hash_final(h, result, hashlen, resultlen)) {
+			*reason = "digest sha384 finish failed";
+			return 0;
+		}
+		return 1;
+	} else if(hashalgo == 2) {
+		if(hashlen < 512/8) {
+			*reason = "digest buffer too small for sha512";
+			return 0;
+		}
+		if(!secalgo_hash_final(h, result, hashlen, resultlen)) {
+			*reason = "digest sha512 finish failed";
+			return 0;
+		}
+		return 1;
+	}
+	/* unknown algo */
+	*reason = "unsupported algorithm";
+	return 0;
 }
 
 /** add rrsets from node to the list */
@@ -7043,9 +7103,10 @@ static void addrrsigtype_if_needed(struct auth_rrset** array,
 }
 
 /** collate the RRs in an RRset using the simple scheme */
-static int zonemd_simple_rrset(struct auth_zone* z, void* hash,
-	struct auth_data* node,	struct auth_rrset* rrset,
-	struct regional* region, struct sldns_buffer* buf, char** reason)
+static int zonemd_simple_rrset(struct auth_zone* z, int hashalgo,
+	struct secalgo_hash* h, struct auth_data* node,
+	struct auth_rrset* rrset, struct regional* region,
+	struct sldns_buffer* buf, char** reason)
 {
 	/* canonicalize */
 	struct ub_packed_rrset_key key;
@@ -7063,6 +7124,10 @@ static int zonemd_simple_rrset(struct auth_zone* z, void* hash,
 	regional_free_all(region);
 
 	/* hash */
+	if(!zonemd_digest_update(hashalgo, h, sldns_buffer_begin(buf),
+		sldns_buffer_limit(buf), reason)) {
+		return 0;
+	}
 	return 1;
 }
 
@@ -7168,10 +7233,10 @@ static void add_rrset_into_data(struct packed_rrset_data* data,
 }
 
 /** collate the RRSIGs using the simple scheme */
-static int zonemd_simple_rrsig(struct auth_zone* z, void* hash,
-	struct auth_data* node,	struct auth_rrset* rrset,
-	struct auth_rrset** rrlist, size_t rrnum, struct regional* region,
-	struct sldns_buffer* buf, char** reason)
+static int zonemd_simple_rrsig(struct auth_zone* z, int hashalgo,
+	struct secalgo_hash* h, struct auth_data* node,
+	struct auth_rrset* rrset, struct auth_rrset** rrlist, size_t rrnum,
+	struct regional* region, struct sldns_buffer* buf, char** reason)
 {
 	/* the rrset pointer can be NULL, this means it is type RRSIG and
 	 * there is no ordinary type RRSIG there.  The RRSIGs are stored
@@ -7194,7 +7259,7 @@ static int zonemd_simple_rrsig(struct auth_zone* z, void* hash,
 	key.entry.data = &data;
 	key.rk.dname = node->name;
 	key.rk.dname_len = node->namelen;
-	key.rk.type = htons(rrset->type);
+	key.rk.type = htons(LDNS_RR_TYPE_RRSIG);
 	key.rk.rrset_class = htons(z->dclass);
 	data.count = zonemd_simple_count_rrsig(rrset, rrlist, rrnum, z, node);
 	if(!zonemd_simple_rrsig_allocs(region, &data, data.count)) {
@@ -7216,13 +7281,17 @@ static int zonemd_simple_rrsig(struct auth_zone* z, void* hash,
 	regional_free_all(region);
 
 	/* hash */
+	if(!zonemd_digest_update(hashalgo, h, sldns_buffer_begin(buf),
+		sldns_buffer_limit(buf), reason)) {
+		return 0;
+	}
 	return 1;
 }
 
 /** collate a domain's rrsets using the simple scheme */
-static int zonemd_simple_domain(struct auth_zone* z, void* hash,
-	struct auth_data* node, struct regional* region,
-	struct sldns_buffer* buf, char** reason)
+static int zonemd_simple_domain(struct auth_zone* z, int hashalgo,
+	struct secalgo_hash* h, struct auth_data* node,
+	struct regional* region, struct sldns_buffer* buf, char** reason)
 {
 	const size_t rrlistsize = 65536;
 	struct auth_rrset* rrlist[rrlistsize];
@@ -7243,11 +7312,11 @@ static int zonemd_simple_domain(struct auth_zone* z, void* hash,
 		}
 		if(rrlist[i] == NULL || rrlist[i]->type ==
 			LDNS_RR_TYPE_RRSIG) {
-			if(!zonemd_simple_rrsig(z, hash, node, rrlist[i],
-				rrlist, rrnum, region, buf, reason))
+			if(!zonemd_simple_rrsig(z, hashalgo, h, node,
+				rrlist[i], rrlist, rrnum, region, buf, reason))
 				return 0;
-		} else if(!zonemd_simple_rrset(z, hash, node, rrlist[i],
-			region, buf, reason)) {
+		} else if(!zonemd_simple_rrset(z, hashalgo, h, node,
+			rrlist[i], region, buf, reason)) {
 			return 0;
 		}
 	}
@@ -7255,14 +7324,16 @@ static int zonemd_simple_domain(struct auth_zone* z, void* hash,
 }
 
 /** collate the zone using the simple scheme */
-static int zonemd_simple_collate(struct auth_zone* z, void* hash,
-	struct regional* region, struct sldns_buffer* buf, char** reason)
+static int zonemd_simple_collate(struct auth_zone* z, int hashalgo,
+	struct secalgo_hash* h, struct regional* region,
+	struct sldns_buffer* buf, char** reason)
 {
 	/* our tree is sorted in canonical order, so we can just loop over
 	 * the tree */
 	struct auth_data* n;
 	RBTREE_FOR(n, struct auth_data*, &z->data) {
-		if(!zonemd_simple_domain(z, hash, n, region, buf, reason))
+		if(!zonemd_simple_domain(z, hashalgo, h, n, region, buf,
+			reason))
 			return 0;
 	}
 	return 1;
@@ -7272,23 +7343,26 @@ int auth_zone_generate_zonemd_hash(struct auth_zone* z, int scheme,
         int hashalgo, uint8_t* hash, size_t hashlen, size_t* resultlen,
 	struct regional* region, struct sldns_buffer* buf, char** reason)
 {
-	void* h = zonemd_digest_init(hashalgo);
+	struct secalgo_hash* h = zonemd_digest_init(hashalgo, reason);
 	if(!h) {
-		*reason = "digest init fail";
+		if(!*reason)
+			*reason = "digest init fail";
 		return 0;
 	}
 	if(scheme == 1) {
-		if(!zonemd_simple_collate(z, h, region, buf, reason)) {
+		if(!zonemd_simple_collate(z, hashalgo, h, region, buf, reason)) {
 			if(!*reason) *reason = "scheme simple collate fail";
+			secalgo_hash_delete(h);
 			return 0;
 		}
 	}
-	/*
-	if(!zonemd_digest_finish(hashalgo, hash, hashlen, resultlen)) {
+	if(!zonemd_digest_finish(hashalgo, h, hash, hashlen, resultlen,
+		reason)) {
+		secalgo_hash_delete(h);
 		*reason = "digest finish fail";
 		return 0;
 	}
-	*/
+	secalgo_hash_delete(h);
 	return 1;
 }
 
