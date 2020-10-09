@@ -840,6 +840,7 @@ static void respip_test(void)
 }
 
 #include <ctype.h>
+#include "sldns/str2wire.h"
 #include "services/authzone.h"
 #include "util/data/dname.h"
 #include "util/regional.h"
@@ -858,9 +859,9 @@ static void zonemd_generate_test(const char* zname, char* zfile,
 	struct auth_zones* az;
 	struct auth_zone* z;
 	int result;
-	char* reason = NULL;
 	struct regional* region = NULL;
 	struct sldns_buffer* buf = NULL;
+	char* reason = NULL;
 	char* digestdup;
 
 	if(!zonemd_hashalgo_supported(hashalgo))
@@ -953,11 +954,79 @@ static void zonemd_generate_tests(void)
 		1, 1, "f1ca0ccd91bd5573d9f431c00ee0101b2545c97602be0a978a3b11dbfc1c776d5b3e86ae3d973d6b5349ba7f04340f79");
 }
 
+/** test the zonemd check routine */
+static void zonemd_check_test(void)
+{
+	const char* zname = "example.org";
+	char* zfile = "testdata/zonemd.example1.zone";
+	int scheme = 1;
+	int hashalgo = 2;
+	const char* digest = "20564D10F50A0CEBEC856C64032B7DFB53D3C449A421A5BC7A21F7627B4ACEA4DF29F2C6FE82ED9C23ADF6F4D420D5DD63EF6E6349D60FDAB910B65DF8D481B7";
+	const char* digestwrong = "20564D10F50A0CEBEC856C64032B7DFB53D3C449A421A5BC7A21F7627B4ACEA4DF29F2C6FE82ED9C23ADF6F4D420D5DD63EF6E6349D60FDAB910B65DF8D48100";
+	uint8_t hash[512], hashwrong[512];
+	size_t hashlen = 0, hashwronglen = 0;
+	struct auth_zones* az;
+	struct auth_zone* z;
+	int result;
+	struct regional* region = NULL;
+	struct sldns_buffer* buf = NULL;
+	char* reason = NULL;
+
+	if(!zonemd_hashalgo_supported(hashalgo))
+		return; /* cannot test unsupported algo */
+
+	/* setup environment */
+	az = auth_zones_create();
+	unit_assert(az);
+	region = regional_create();
+	unit_assert(region);
+	buf = sldns_buffer_new(65535);
+	unit_assert(buf);
+
+	/* read file */
+	z = authtest_addzone(az, zname, zfile);
+	unit_assert(z);
+	hashlen = sizeof(hash);
+	if(sldns_str2wire_hex_buf(digest, hash, &hashlen) != 0) {
+		unit_assert(0); /* parse failure */
+	}
+	hashwronglen = sizeof(hashwrong);
+	if(sldns_str2wire_hex_buf(digestwrong, hashwrong, &hashwronglen) != 0) {
+		unit_assert(0); /* parse failure */
+	}
+
+	/* check return values of the check routine */
+	result = auth_zone_generate_zonemd_check(z, scheme, hashalgo,
+		hash, hashlen, region, buf, &reason);
+	unit_assert(result && reason == NULL);
+	result = auth_zone_generate_zonemd_check(z, 241, hashalgo,
+		hash, hashlen, region, buf, &reason);
+	unit_assert(!result && strcmp(reason, "unsupported scheme")==0);
+	result = auth_zone_generate_zonemd_check(z, scheme, 242,
+		hash, hashlen, region, buf, &reason);
+	unit_assert(!result && strcmp(reason, "unsupported algorithm")==0);
+	result = auth_zone_generate_zonemd_check(z, scheme, hashalgo,
+		hash, 2, region, buf, &reason);
+	unit_assert(!result && strcmp(reason, "digest length too small, less than 12")==0);
+	result = auth_zone_generate_zonemd_check(z, scheme, hashalgo,
+		hashwrong, hashwronglen, region, buf, &reason);
+	unit_assert(!result && strcmp(reason, "incorrect digest")==0);
+	result = auth_zone_generate_zonemd_check(z, scheme, hashalgo,
+		hashwrong, hashwronglen-3, region, buf, &reason);
+	unit_assert(!result && strcmp(reason, "incorrect digest length")==0);
+
+	/* delete environment */
+	auth_zones_delete(az);
+	regional_destroy(region);
+	sldns_buffer_free(buf);
+}
+
 /** zonemd unit tests */
 static void zonemd_test(void)
 {
 	unit_show_feature("zonemd");
 	zonemd_generate_tests();
+	zonemd_check_test();
 }
 
 void unit_show_func(const char* file, const char* func)
