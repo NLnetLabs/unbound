@@ -6969,14 +6969,14 @@ compare_serial(uint32_t a, uint32_t b)
 
 int zonemd_hashalgo_supported(int hashalgo)
 {
-	if(hashalgo == 1) return 1;
-	if(hashalgo == 2) return 1;
+	if(hashalgo == ZONEMD_ALGO_SHA384) return 1;
+	if(hashalgo == ZONEMD_ALGO_SHA512) return 1;
 	return 0;
 }
 
 int zonemd_scheme_supported(int scheme)
 {
-	if(scheme == 1) return 1;
+	if(scheme == ZONEMD_SCHEME_SIMPLE) return 1;
 	return 0;
 }
 
@@ -6984,13 +6984,13 @@ int zonemd_scheme_supported(int scheme)
 static struct secalgo_hash* zonemd_digest_init(int hashalgo, char** reason)
 {
 	struct secalgo_hash *h;
-	if(hashalgo == 1) {
+	if(hashalgo == ZONEMD_ALGO_SHA384) {
 		/* sha384 */
 		h = secalgo_hash_create_sha384();
 		if(!h)
 			*reason = "digest sha384 could not be created";
 		return h;
-	} else if(hashalgo == 2) {
+	} else if(hashalgo == ZONEMD_ALGO_SHA512) {
 		/* sha512 */
 		h = secalgo_hash_create_sha512();
 		if(!h)
@@ -7006,13 +7006,13 @@ static struct secalgo_hash* zonemd_digest_init(int hashalgo, char** reason)
 static int zonemd_digest_update(int hashalgo, struct secalgo_hash* h,
 	uint8_t* data, size_t len, char** reason)
 {
-	if(hashalgo == 1) {
+	if(hashalgo == ZONEMD_ALGO_SHA384) {
 		if(!secalgo_hash_update(h, data, len)) {
 			*reason = "digest sha384 failed";
 			return 0;
 		}
 		return 1;
-	} else if(hashalgo == 2) {
+	} else if(hashalgo == ZONEMD_ALGO_SHA512) {
 		if(!secalgo_hash_update(h, data, len)) {
 			*reason = "digest sha512 failed";
 			return 0;
@@ -7028,7 +7028,7 @@ static int zonemd_digest_update(int hashalgo, struct secalgo_hash* h,
 static int zonemd_digest_finish(int hashalgo, struct secalgo_hash* h,
 	uint8_t* result, size_t hashlen, size_t* resultlen, char** reason)
 {
-	if(hashalgo == 1) {
+	if(hashalgo == ZONEMD_ALGO_SHA384) {
 		if(hashlen < 384/8) {
 			*reason = "digest buffer too small for sha384";
 			return 0;
@@ -7038,7 +7038,7 @@ static int zonemd_digest_finish(int hashalgo, struct secalgo_hash* h,
 			return 0;
 		}
 		return 1;
-	} else if(hashalgo == 2) {
+	} else if(hashalgo == ZONEMD_ALGO_SHA512) {
 		if(hashlen < 512/8) {
 			*reason = "digest buffer too small for sha512";
 			return 0;
@@ -7347,7 +7347,7 @@ int auth_zone_generate_zonemd_hash(struct auth_zone* z, int scheme,
 			*reason = "digest init fail";
 		return 0;
 	}
-	if(scheme == 1) {
+	if(scheme == ZONEMD_SCHEME_SIMPLE) {
 		if(!zonemd_simple_collate(z, hashalgo, h, region, buf, reason)) {
 			if(!*reason) *reason = "scheme simple collate fail";
 			secalgo_hash_delete(h);

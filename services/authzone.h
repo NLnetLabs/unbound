@@ -704,6 +704,13 @@ int auth_zone_generate_zonemd_hash(struct auth_zone* z, int scheme,
 	int hashalgo, uint8_t* hash, size_t buflen, size_t* resultlen,
 	struct regional* region, struct sldns_buffer* buf, char** reason);
 
+/** ZONEMD scheme definitions */
+#define ZONEMD_SCHEME_SIMPLE 1
+
+/** ZONEMD hash algorithm definition for SHA384 */
+#define ZONEMD_ALGO_SHA384 1
+/** ZONEMD hash algorithm definition for SHA512 */
+#define ZONEMD_ALGO_SHA512 2
 
 /** returns true if a zonemd hash algo is supported */
 int zonemd_hashalgo_supported(int hashalgo);
