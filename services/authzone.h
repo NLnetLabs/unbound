@@ -704,6 +704,12 @@ int auth_zone_generate_zonemd_hash(struct auth_zone* z, int scheme,
 	int hashalgo, uint8_t* hash, size_t buflen, size_t* resultlen,
 	struct regional* region, struct sldns_buffer* buf, char** reason);
 
+
+/** returns true if a zonemd hash algo is supported */
+int zonemd_hashalgo_supported(int hashalgo);
+/** returns true if a zonemd scheme is supported */
+int zonemd_scheme_supported(int scheme);
+
 /**
  * Check ZONEMD digest for the auth zone.
  * @param z: auth zone to digest.

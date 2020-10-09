@@ -6967,16 +6967,14 @@ compare_serial(uint32_t a, uint32_t b)
 	}
 }
 
-/** returns true if a zonemd hash algo is supported */
-static int zonemd_hashalgo_supported(int hashalgo)
+int zonemd_hashalgo_supported(int hashalgo)
 {
 	if(hashalgo == 1) return 1;
 	if(hashalgo == 2) return 1;
 	return 0;
 }
 
-/** returns true if a zonemd scheme is supported */
-static int zonemd_scheme_supported(int scheme)
+int zonemd_scheme_supported(int scheme)
 {
 	if(scheme == 1) return 1;
 	return 0;

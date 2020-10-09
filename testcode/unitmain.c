@@ -839,50 +839,107 @@ static void respip_test(void)
 	respip_conf_actions_test();
 }
 
+#include <ctype.h>
 #include "services/authzone.h"
 #include "util/data/dname.h"
 #include "util/regional.h"
 /** Add zone from file for testing */
 struct auth_zone* authtest_addzone(struct auth_zones* az, const char* name,
 	char* fname);
-/** zonemd unit tests */
-static void zonemd_test(void)
+
+/** zonemd unit test, generate a zonemd digest and check if correct */
+static void zonemd_generate_test(const char* zname, char* zfile,
+	int scheme, int hashalgo, const char* digest)
 {
 	uint8_t zonemd_hash[512];
+	size_t hashlen = 0;
+	char output[1024+1];
+	size_t i;
 	struct auth_zones* az;
 	struct auth_zone* z;
-	int scheme = 1, hashalgo = 2;
-	size_t hashlen = 0;
 	int result;
 	char* reason = NULL;
 	struct regional* region = NULL;
 	struct sldns_buffer* buf = NULL;
-	unit_show_feature("zonemd");
+	char* digestdup;
+
+	if(!zonemd_hashalgo_supported(hashalgo))
+		return; /* cannot test unsupported algo */
+
+	/* setup environment */
+	az = auth_zones_create();
+	unit_assert(az);
 	region = regional_create();
 	unit_assert(region);
 	buf = sldns_buffer_new(65535);
 	unit_assert(buf);
-	az = auth_zones_create();
-	unit_assert(az);
-	z = authtest_addzone(az, "example.org", "testdata/zonemd.example1.zone");
+
+	/* read file */
+	z = authtest_addzone(az, zname, zfile);
 	unit_assert(z);
 
-	/* zonemd test on zone */
+	/* create zonemd digest */
 	result = auth_zone_generate_zonemd_hash(z, scheme, hashalgo,
 		zonemd_hash, sizeof(zonemd_hash), &hashlen, region, buf,
 		&reason);
 	if(reason) printf("zonemd failure reason: %s\n", reason);
 	unit_assert(result);
-	if(1) {
+
+	/* check digest */
+	unit_assert(hashlen*2+1 <= sizeof(output));
+	for(i=0; i<hashlen; i++) {
+		const char* hexl = "0123456789ABCDEF";
+		output[i*2] = hexl[(zonemd_hash[i]&0xf0)>>4];
+		output[i*2+1] = hexl[zonemd_hash[i]&0xf];
+	}
+	output[hashlen*2] = 0;
+	digestdup = strdup(digest);
+	unit_assert(digestdup);
+	for(i=0; i<strlen(digestdup); i++) {
+		digestdup[i] = toupper(digestdup[i]);
+	}
+	if(0) {
 		char zname[255+1];
 		dname_str(z->name, zname);
-		printf("zonemd generated for %s in %s with scheme=%d, hashalgo=%d\n", zname, z->zonefile, scheme, hashalgo);
-		log_hex("digest", zonemd_hash, hashlen);
+		printf("zonemd generated for %s in %s with "
+			"scheme=%d hashalgo=%d\n", zname, z->zonefile,
+			scheme, hashalgo);
+		printf("digest %s\n", output);
+		printf("wanted %s\n", digestdup);
 	}
+	unit_assert(strcmp(output, digestdup) == 0);
 
+	/* delete environment */
+	free(digestdup);
 	auth_zones_delete(az);
 	regional_destroy(region);
 	sldns_buffer_free(buf);
+}
+
+/** loop over files and test generated zonemd digest */
+static void zonemd_generate_tests(void)
+{
+	zonemd_generate_test("example.org", "testdata/zonemd.example1.zone",
+		1, 2, "20564D10F50A0CEBEC856C64032B7DFB53D3C449A421A5BC7A21F7627B4ACEA4DF29F2C6FE82ED9C23ADF6F4D420D5DD63EF6E6349D60FDAB910B65DF8D481B7");
+	zonemd_generate_test("example", "testdata/zonemd.example_a1.zone",
+		1, 1, "c68090d90a7aed716bc459f9340e3d7c1370d4d24b7e2fc3a1ddc0b9a87153b9a9713b3c9ae5cc27777f98b8e730044c");
+	zonemd_generate_test("example", "testdata/zonemd.example_a2.zone",
+		1, 1, "31cefb03814f5062ad12fa951ba0ef5f8da6ae354a415767246f7dc932ceb1e742a2108f529db6a33a11c01493de358d");
+	zonemd_generate_test("example", "testdata/zonemd.example_a3.zone",
+		1, 1, "62e6cf51b02e54b9b5f967d547ce43136792901f9f88e637493daaf401c92c279dd10f0edb1c56f8080211f8480ee306");
+	zonemd_generate_test("example", "testdata/zonemd.example_a3.zone",
+		1, 2, "08cfa1115c7b948c4163a901270395ea226a930cd2cbcf2fa9a5e6eb85f37c8a4e114d884e66f176eab121cb02db7d652e0cc4827e7a3204f166b47e5613fd27");
+	zonemd_generate_test("uri.arpa", "testdata/zonemd.example_a4.zone",
+		1, 1, "1291b78ddf7669b1a39d014d87626b709b55774c5d7d58fadc556439889a10eaf6f11d615900a4f996bd46279514e473");
+	zonemd_generate_test("root-servers.net", "testdata/zonemd.example_a5.zone",
+		1, 1, "f1ca0ccd91bd5573d9f431c00ee0101b2545c97602be0a978a3b11dbfc1c776d5b3e86ae3d973d6b5349ba7f04340f79");
+}
+
+/** zonemd unit tests */
+static void zonemd_test(void)
+{
+	unit_show_feature("zonemd");
+	zonemd_generate_tests();
 }
 
 void unit_show_func(const char* file, const char* func)
