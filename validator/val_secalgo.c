@@ -1636,6 +1636,7 @@ int secalgo_hash_final(struct secalgo_hash* hash, uint8_t* result,
 		sha512_digest(&hash->ctx512, SHA512_DIGEST_SIZE,
 			(unsigned char*)result);
 	} else {
+		*resultlen = 0;
 		return 0;
 	}
 	return 1;
