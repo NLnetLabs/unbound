@@ -1,3 +1,7 @@
+13 October 2020: Wouter
+	- Fix #323: unbound testsuite fails on mock build in systemd-nspawn
+	  if systemd support is build.
+
 9 October 2020: Wouter
 	- Fix dnstap socket and the chroot not applied properly to the dnstap
 	  socket path.
