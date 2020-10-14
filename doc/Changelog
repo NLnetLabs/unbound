@@ -4,6 +4,7 @@
 	  not drop it and attempt to modify the reply list during reply.
 	- Fix that if there are on reply callbacks, those are called per
 	  reply and a new message created if that was modified by the call.
+	- Free up auth zone parse region after use for lookup of host
 
 13 October 2020: Wouter
 	- Fix #323: unbound testsuite fails on mock build in systemd-nspawn
