@@ -7575,11 +7575,11 @@ static int zonemd_dnssec_verify_rrset(struct auth_zone* z,
 static int nsec3_of_param_has_type(struct auth_rrset* nsec3, int algo,
 	size_t iter, uint8_t* salt, size_t saltlen, uint16_t rrtype)
 {
-	size_t i;
+	int i, count = (int)nsec3->data->count;
 	struct ub_packed_rrset_key pk;
 	memset(&pk, 0, sizeof(pk));
 	pk.entry.data = nsec3->data;
-	for(i=0; i<nsec3->data->count; i++) {
+	for(i=0; i<count; i++) {
 		int rralgo;
 		size_t rriter, rrsaltlen;
 		uint8_t* rrsalt;
