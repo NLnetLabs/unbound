@@ -1187,7 +1187,7 @@ rrset_canonical(struct regional* region, sldns_buffer* buf,
 	 * section, to prevent that a wildcard synthesized NSEC can be used in
 	 * the non-existence proves. */
 	if(ntohs(k->rk.type) == LDNS_RR_TYPE_NSEC &&
-		section == LDNS_SECTION_AUTHORITY) {
+		section == LDNS_SECTION_AUTHORITY && qstate) {
 		k->rk.dname = regional_alloc_init(qstate->region, can_owner,
 			can_owner_len);
 		if(!k->rk.dname)

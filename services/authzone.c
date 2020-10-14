@@ -67,6 +67,7 @@
 #include "sldns/parseutil.h"
 #include "sldns/keyraw.h"
 #include "validator/val_nsec3.h"
+#include "validator/val_nsec.h"
 #include "validator/val_secalgo.h"
 #include "validator/val_sigcrypt.h"
 #include "validator/val_anchor.h"
@@ -7516,8 +7517,10 @@ int auth_zone_generate_zonemd_check(struct auth_zone* z, int scheme,
 }
 
 /** log auth zone message with zone name in front. */
-static void auth_zone_log(uint8_t* name, enum verbosity_value level, const char* format, ...) ATTR_FORMAT(printf, 3, 4);
-static void auth_zone_log(uint8_t* name, enum verbosity_value level, const char* format, ...)
+static void auth_zone_log(uint8_t* name, enum verbosity_value level,
+	const char* format, ...) ATTR_FORMAT(printf, 3, 4);
+static void auth_zone_log(uint8_t* name, enum verbosity_value level,
+	const char* format, ...)
 {
 	va_list args;
 	va_start(args, format);
@@ -7532,8 +7535,9 @@ static void auth_zone_log(uint8_t* name, enum verbosity_value level, const char*
 }
 
 /** ZONEMD, dnssec verify the rrset with the dnskey */
-static int zonemd_dnssec_verify(struct auth_zone* z, struct module_env* env,
-	struct ub_packed_rrset_key* dnskey, struct auth_rrset* rrset)
+static int zonemd_dnssec_verify_rrset(struct auth_zone* z,
+	struct module_env* env, struct ub_packed_rrset_key* dnskey,
+	struct auth_data* node, struct auth_rrset* rrset)
 {
 	struct ub_packed_rrset_key pk;
 	enum sec_status sec;
@@ -7543,7 +7547,7 @@ static int zonemd_dnssec_verify(struct auth_zone* z, struct module_env* env,
 	m = modstack_find(&env->mesh->mods, "validator");
 	if(m == -1) {
 		auth_zone_log(z->name, VERB_ALGO, "zonemd dnssec verify: have "
-			"trust anchor, but no validator module");
+			"DNSKEY chain of trust, but no validator module");
 		return 0;
 	}
 	ve = (struct val_env*)env->modinfo[m];
@@ -7551,22 +7555,43 @@ static int zonemd_dnssec_verify(struct auth_zone* z, struct module_env* env,
 	memset(&pk, 0, sizeof(pk));
 	pk.entry.key = &pk;
 	pk.entry.data = rrset->data;
-	pk.rk.dname = z->name;
-	pk.rk.dname_len = z->namelen;
+	pk.rk.dname = node->name;
+	pk.rk.dname_len = node->namelen;
 	pk.rk.type = htons(rrset->type);
 	pk.rk.rrset_class = htons(z->dclass);
 	auth_zone_log(z->name, VERB_ALGO,
 		"zonemd: verify RRset with DNSKEY");
-	/* pass NULL for qstate, it is only used for qtype NSEC to realloc
-	 * a new name in the qstate region */
 	sec = dnskeyset_verify_rrset(env, ve, &pk, dnskey, NULL, &why_bogus,
 		LDNS_SECTION_ANSWER, NULL);
-	regional_free_all(env->scratch);
 	if(sec == sec_status_secure) {
 		return 1;
 	}
 	if(why_bogus)
 		auth_zone_log(z->name, VERB_ALGO, "DNSSEC verify was bogus: %s", why_bogus);
+	return 0;
+}
+
+/** check for nsec3, the RR with params equal, if bitmap has the type */
+static int nsec3_of_param_has_type(struct auth_rrset* nsec3, int algo,
+	size_t iter, uint8_t* salt, size_t saltlen, uint16_t rrtype)
+{
+	size_t i;
+	struct ub_packed_rrset_key pk;
+	memset(&pk, 0, sizeof(pk));
+	pk.entry.data = nsec3->data;
+	for(i=0; i<nsec3->data->count; i++) {
+		int rralgo;
+		size_t rriter, rrsaltlen;
+		uint8_t* rrsalt;
+		if(!nsec3_get_params(&pk, i, &rralgo, &rriter, &rrsalt,
+			&rrsaltlen))
+			continue; /* no parameters, malformed */
+		if(rralgo != algo || rriter != iter || rrsaltlen != saltlen ||
+			memcmp(rrsalt, salt, saltlen) != 0)
+			continue; /* different parameters */
+		if(nsec3_has_type(&pk, i, rrtype))
+			return 1;
+	}
 	return 0;
 }
 
@@ -7583,12 +7608,19 @@ static int zonemd_check_dnssec_absence(struct auth_zone* z,
 	}
 	nsec = az_domain_rrset(apex, LDNS_RR_TYPE_NSEC);
 	if(nsec) {
+		struct ub_packed_rrset_key pk;
 		/* dnssec verify the NSEC */
-		if(!zonemd_dnssec_verify(z, env, dnskey, nsec)) {
+		if(!zonemd_dnssec_verify_rrset(z, env, dnskey, apex, nsec)) {
 			*reason = "DNSSEC verify failed for NSEC RRset";
 			return 0;
 		}
 		/* check type bitmap */
+		memset(&pk, 0, sizeof(pk));
+		pk.entry.data = nsec->data;
+		if(nsec_has_type(&pk, LDNS_RR_TYPE_ZONEMD)) {
+			*reason = "DNSSEC NSEC bitmap says type ZONEMD exists";
+			return 0;
+		}
 	} else {
 		/* NSEC3 perhaps ? */
 		int algo;
@@ -7619,11 +7651,16 @@ static int zonemd_check_dnssec_absence(struct auth_zone* z,
 			return 0;
 		}
 		/* dnssec verify the NSEC3 */
-		if(!zonemd_dnssec_verify(z, env, dnskey, nsec3)) {
+		if(!zonemd_dnssec_verify_rrset(z, env, dnskey, match, nsec3)) {
 			*reason = "DNSSEC verify failed for NSEC3 RRset";
 			return 0;
 		}
 		/* check type bitmap */
+		if(nsec3_of_param_has_type(nsec3, algo, iter, salt, saltlen,
+			LDNS_RR_TYPE_ZONEMD)) {
+			*reason = "DNSSEC NSEC3 bitmap says type ZONEMD exists";
+			return 0;
+		}
 	}
 
 	return 1;
@@ -7646,11 +7683,11 @@ static int zonemd_check_dnssec_soazonemd(struct auth_zone* z,
 		*reason = "zone has no SOA RRset";
 		return 0;
 	}
-	if(!zonemd_dnssec_verify(z, env, dnskey, soa)) {
+	if(!zonemd_dnssec_verify_rrset(z, env, dnskey, apex, soa)) {
 		*reason = "DNSSEC verify failed for SOA RRset";
 		return 0;
 	}
-	if(!zonemd_dnssec_verify(z, env, dnskey, zonemd_rrset)) {
+	if(!zonemd_dnssec_verify_rrset(z, env, dnskey, apex, zonemd_rrset)) {
 		*reason = "DNSSEC verify failed for ZONEMD RRset";
 		return 0;
 	}
@@ -7797,8 +7834,6 @@ zonemd_get_dnskey_from_anchor(struct auth_zone* z, struct module_env* env,
 	keystorage->rk.rrset_class = htons(z->dclass);
 	auth_zone_log(z->name, VERB_QUERY,
 		"zonemd: verify DNSKEY RRset with trust anchor");
-	/* pass NULL for qstate, it is only used when type NSEC needs a
-	 * name reallocated to get the qstate region for that */
 	sec = val_verify_DNSKEY_with_TA(env, ve, keystorage, anchor->ds_rrset,
 		anchor->dnskey_rrset, NULL, reason, NULL);
 	regional_free_all(env->scratch);
@@ -7842,7 +7877,7 @@ void auth_zonemd_dnskey_lookup_callback(void* arg, int rcode, sldns_buffer* buf,
 		if(!reason)
 			reason = "lookup of DNSKEY was bogus";
 		auth_zone_log(z->name, VERB_ALGO,
-			"zonemd lookup of DNSKEY was bogus: %s", why_bogus);
+			"zonemd lookup of DNSKEY was bogus: %s", reason);
 	} else if(rcode == LDNS_RCODE_NOERROR) {
 		uint16_t wanted_qtype = LDNS_RR_TYPE_DNSKEY;
 		struct regional* temp = env->scratch;
@@ -7894,6 +7929,7 @@ void auth_zonemd_dnskey_lookup_callback(void* arg, int rcode, sldns_buffer* buf,
 	}
 
 	auth_zone_verify_zonemd_with_key(z, env, dnskey, is_insecure);
+	regional_free_all(env->scratch);
 	lock_rw_unlock(&z->lock);
 }
 
@@ -7998,4 +8034,5 @@ void auth_zone_verify_zonemd(struct auth_zone* z, struct module_env* env)
 	}
 
 	auth_zone_verify_zonemd_with_key(z, env, dnskey, is_insecure);
+	regional_free_all(env->scratch);
 }
