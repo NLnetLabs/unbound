@@ -2,6 +2,8 @@
 	- Fix for python reply callback to see mesh state reply_list member,
 	  it only removes it briefly for the commpoint call so that it does
 	  not drop it and attempt to modify the reply list during reply.
+	- Fix that if there are on reply callbacks, those are called per
+	  reply and a new message created if that was modified by the call.
 
 13 October 2020: Wouter
 	- Fix #323: unbound testsuite fails on mock build in systemd-nspawn
