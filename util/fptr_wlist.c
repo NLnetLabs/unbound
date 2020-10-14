@@ -581,6 +581,7 @@ int fptr_whitelist_mesh_cb(mesh_cb_func_type fptr)
 	else if(fptr == &probe_answer_cb) return 1;
 	else if(fptr == &auth_xfer_probe_lookup_callback) return 1;
 	else if(fptr == &auth_xfer_transfer_lookup_callback) return 1;
+	else if(fptr == &auth_zonemd_dnskey_lookup_callback) return 1;
 	return 0;
 }
 

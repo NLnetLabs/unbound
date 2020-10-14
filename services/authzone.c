@@ -69,6 +69,8 @@
 #include "validator/val_nsec3.h"
 #include "validator/val_secalgo.h"
 #include "validator/val_sigcrypt.h"
+#include "validator/val_anchor.h"
+#include "validator/val_utils.h"
 #include <ctype.h>
 
 /** bytes to use for NSEC3 hash buffer. 20 for sha1 */
@@ -1789,46 +1791,39 @@ static int zonemd_fetch_parameters(struct auth_rrset* zonemd_rrset, size_t i,
  * it can warn or fail on that.  Checks the hash of the ZONEMD.
  * @param z: auth zone to check for.
  * 	caller must hold lock on zone.
- * @param cfg: config file options
+ * @param env: module env for temp buffers.
+ * @param reason: returned on failure.
+ * @return false on failure, true if hash checks out.
  */
-void auth_zone_zonemd_check_hash(struct auth_zone* z /*, struct config_file* cfg*/)
+static int auth_zone_zonemd_check_hash(struct auth_zone* z,
+	struct module_env* env, char** reason)
 {
 	/* loop over ZONEMDs and see which one is valid. if not print
 	 * failure (depending on config) */
 	struct auth_data* apex;
 	struct auth_rrset* zonemd_rrset;
 	size_t i;
-	char* reason = NULL;
 	struct regional* region = NULL;
 	struct sldns_buffer* buf = NULL;
 	char zstr[255+1];
 	uint32_t soa_serial = 0;
-	region = regional_create();
-	if(!region) {
-		return;
-	}
-	buf = sldns_buffer_new(65535);
-	if(!buf) {
-		regional_destroy(region);
-		return;
-	}
+	region = env->scratch;
+	regional_free_all(region);
+	buf = env->scratch_buffer;
 	if(!auth_zone_get_serial(z, &soa_serial)) {
-		regional_destroy(region);
-		sldns_buffer_free(buf);
-		return;
+		*reason = "zone has no SOA serial";
+		return 0;
 	}
 
 	apex = az_find_name(z, z->name, z->namelen);
 	if(!apex) {
-		regional_destroy(region);
-		sldns_buffer_free(buf);
-		return;
+		*reason = "zone has no apex";
+		return 0;
 	}
 	zonemd_rrset = az_domain_rrset(apex, LDNS_RR_TYPE_ZONEMD);
 	if(!zonemd_rrset || zonemd_rrset->data->count==0) {
-		regional_destroy(region);
-		sldns_buffer_free(buf);
-		return; /* no RRset or no RRs in rrset */
+		*reason = "zone has no ZONEMD";
+		return 0; /* no RRset or no RRs in rrset */
 	}
 
 	/* we have a ZONEMD, check if it is correct */
@@ -1840,34 +1835,31 @@ void auth_zone_zonemd_check_hash(struct auth_zone* z /*, struct config_file* cfg
 		if(!zonemd_fetch_parameters(zonemd_rrset, i, &serial, &scheme,
 			&hashalgo, &hash, &hashlen)) {
 			/* malformed RR */
-			reason = "ZONEMD rdata malformed";
+			*reason = "ZONEMD rdata malformed";
 			continue;
 		}
+		regional_free_all(region);
 		if(serial != soa_serial) {
-			reason = "ZONEMD serial is wrong";
+			*reason = "ZONEMD serial is wrong";
 			continue;
 		}
 		if(auth_zone_generate_zonemd_check(z, scheme, hashalgo,
-			hash, hashlen, region, buf, &reason)) {
+			hash, hashlen, region, buf, reason)) {
 			/* success */
 			if(verbosity >= VERB_ALGO) {
 				dname_str(z->name, zstr);
 				verbose(VERB_ALGO, "auth-zone %s ZONEMD hash is correct", zstr);
 			}
-			regional_destroy(region);
-			sldns_buffer_free(buf);
-			return;
+			return 1;
 		}
 		/* try next one */
 	}
 	/* fail, we may have reason */
-	if(!reason)
-		reason = "no ZONEMD records found";
+	if(!*reason)
+		*reason = "no ZONEMD records found";
 	dname_str(z->name, zstr);
-	log_warn("auth-zone %s ZONEMD failed: %s", zstr, reason);
-
-	regional_destroy(region);
-	sldns_buffer_free(buf);
+	log_warn("auth-zone %s ZONEMD failed: %s", zstr, *reason);
+	return 0;
 }
 
 /** find serial number of zone or false if none */
@@ -7501,12 +7493,509 @@ int auth_zone_generate_zonemd_check(struct auth_zone* z, int scheme,
 	/* check digest length */
 	if(hashlen != genlen) {
 		*reason = "incorrect digest length";
+		if(verbosity >= VERB_ALGO) {
+			verbose(VERB_ALGO, "zonemd scheme=%d hashalgo=%d",
+				scheme, hashalgo);
+			log_hex("ZONEMD should be  ", gen, genlen);
+			log_hex("ZONEMD to check is", hash, hashlen);
+		}
 		return 0;
 	}
 	/* check digest */
 	if(memcmp(hash, gen, genlen) != 0) {
 		*reason = "incorrect digest";
+		if(verbosity >= VERB_ALGO) {
+			verbose(VERB_ALGO, "zonemd scheme=%d hashalgo=%d",
+				scheme, hashalgo);
+			log_hex("ZONEMD should be  ", gen, genlen);
+			log_hex("ZONEMD to check is", hash, hashlen);
+		}
 		return 0;
 	}
 	return 1;
+}
+
+/** log auth zone message with zone name in front. */
+static void auth_zone_log(uint8_t* name, enum verbosity_value level, const char* format, ...) ATTR_FORMAT(printf, 3, 4);
+static void auth_zone_log(uint8_t* name, enum verbosity_value level, const char* format, ...)
+{
+	va_list args;
+	va_start(args, format);
+	if(verbosity >= level) {
+		char str[255+1];
+		char msg[MAXSYSLOGMSGLEN];
+		dname_str(name, str);
+		vsnprintf(msg, sizeof(msg), format, args);
+		verbose(level, "auth zone %s %s", str, msg);
+	}
+	va_end(args);
+}
+
+/** ZONEMD, dnssec verify the rrset with the dnskey */
+static int zonemd_dnssec_verify(struct auth_zone* z, struct module_env* env,
+	struct ub_packed_rrset_key* dnskey, struct auth_rrset* rrset)
+{
+	struct ub_packed_rrset_key pk;
+	enum sec_status sec;
+	struct val_env* ve;
+	int m;
+	char* why_bogus = NULL;
+	m = modstack_find(&env->mesh->mods, "validator");
+	if(m == -1) {
+		auth_zone_log(z->name, VERB_ALGO, "zonemd dnssec verify: have "
+			"trust anchor, but no validator module");
+		return 0;
+	}
+	ve = (struct val_env*)env->modinfo[m];
+
+	memset(&pk, 0, sizeof(pk));
+	pk.entry.key = &pk;
+	pk.entry.data = rrset->data;
+	pk.rk.dname = z->name;
+	pk.rk.dname_len = z->namelen;
+	pk.rk.type = htons(rrset->type);
+	pk.rk.rrset_class = htons(z->dclass);
+	auth_zone_log(z->name, VERB_ALGO,
+		"zonemd: verify RRset with DNSKEY");
+	/* pass NULL for qstate, it is only used for qtype NSEC to realloc
+	 * a new name in the qstate region */
+	sec = dnskeyset_verify_rrset(env, ve, &pk, dnskey, NULL, &why_bogus,
+		LDNS_SECTION_ANSWER, NULL);
+	regional_free_all(env->scratch);
+	if(sec == sec_status_secure) {
+		return 1;
+	}
+	if(why_bogus)
+		auth_zone_log(z->name, VERB_ALGO, "DNSSEC verify was bogus: %s", why_bogus);
+	return 0;
+}
+
+/** Verify the absence of ZONEMD with DNSSEC by checking NSEC, NSEC3 type flag.
+ * return false on failure, reason contains description of failure. */
+static int zonemd_check_dnssec_absence(struct auth_zone* z,
+	struct module_env* env, struct ub_packed_rrset_key* dnskey,
+	struct auth_data* apex, char** reason)
+{
+	struct auth_rrset* nsec = NULL;
+	if(!apex) {
+		*reason = "zone has no apex domain but ZONEMD missing";
+		return 0;
+	}
+	nsec = az_domain_rrset(apex, LDNS_RR_TYPE_NSEC);
+	if(nsec) {
+		/* dnssec verify the NSEC */
+		if(!zonemd_dnssec_verify(z, env, dnskey, nsec)) {
+			*reason = "DNSSEC verify failed for NSEC RRset";
+			return 0;
+		}
+		/* check type bitmap */
+	} else {
+		/* NSEC3 perhaps ? */
+		int algo;
+		size_t iter, saltlen;
+		uint8_t* salt;
+		struct auth_rrset* nsec3param = az_domain_rrset(apex,
+			LDNS_RR_TYPE_NSEC3PARAM);
+		struct auth_data* match;
+		struct auth_rrset* nsec3;
+		if(!nsec3param) {
+			*reason = "zone has no NSEC information but ZONEMD missing";
+			return 0;
+		}
+		if(!az_nsec3_param(z, &algo, &iter, &salt, &saltlen)) {
+			*reason = "zone has no NSEC information but ZONEMD missing";
+			return 0;
+		}
+		/* find the NSEC3 record */
+		match = az_nsec3_find_exact(z, z->name, z->namelen, algo,
+			iter, salt, saltlen);
+		if(!match) {
+			*reason = "zone has no NSEC3 domain for the apex but ZONEMD missing";
+			return 0;
+		}
+		nsec3 = az_domain_rrset(match, LDNS_RR_TYPE_NSEC3);
+		if(!nsec3) {
+			*reason = "zone has no NSEC3 RRset for the apex but ZONEMD missing";
+			return 0;
+		}
+		/* dnssec verify the NSEC3 */
+		if(!zonemd_dnssec_verify(z, env, dnskey, nsec3)) {
+			*reason = "DNSSEC verify failed for NSEC3 RRset";
+			return 0;
+		}
+		/* check type bitmap */
+	}
+
+	return 1;
+}
+
+/** Verify the SOA and ZONEMD DNSSEC signatures.
+ * return false on failure, reason contains description of failure. */
+static int zonemd_check_dnssec_soazonemd(struct auth_zone* z,
+	struct module_env* env, struct ub_packed_rrset_key* dnskey,
+	struct auth_data* apex, struct auth_rrset* zonemd_rrset,
+	char** reason)
+{
+	struct auth_rrset* soa;
+	if(!apex) {
+		*reason = "zone has no apex domain";
+		return 0;
+	}
+	soa = az_domain_rrset(apex, LDNS_RR_TYPE_SOA);
+	if(!soa) {
+		*reason = "zone has no SOA RRset";
+		return 0;
+	}
+	if(!zonemd_dnssec_verify(z, env, dnskey, soa)) {
+		*reason = "DNSSEC verify failed for SOA RRset";
+		return 0;
+	}
+	if(!zonemd_dnssec_verify(z, env, dnskey, zonemd_rrset)) {
+		*reason = "DNSSEC verify failed for ZONEMD RRset";
+		return 0;
+	}
+	auth_zone_log(z->name, VERB_ALGO, "zonemd DNSSEC verification of SOA and ZONEMD RRsets secure");
+	return 1;
+}
+
+/**
+ * Fail the ZONEMD verification.
+ * @param z: auth zone that fails.
+ * @param env: environment with config, to ignore failure or not.
+ * @param reason: failure string description.
+ */
+static void auth_zone_zonemd_fail(struct auth_zone* z, struct module_env* env,
+	char* reason)
+{
+	char zstr[255+1];
+	/* if fail: log reason, and depending on config also take action
+	 * and drop the zone, eg. it is gone from memory, set zone_expired */
+	dname_str(z->name, zstr);
+	if(!reason) reason = "verification failed";
+	log_warn("auth zone %s: ZONEMD verification failed: %s", zstr, reason);
+
+	/* expired means the zone gives servfail and is not used by
+	 * lookup if fallback_enabled*/
+	z->zone_expired = 1;
+}
+
+/**
+ * Verify the zonemd with DNSSEC and hash check, with given key.
+ * @param z: auth zone.
+ * @param env: environment with config and temp buffers.
+ * @param dnskey: dnskey that we can use, or NULL.  If nonnull, the key
+ * 	has been verified and is the start of the chain of trust.
+ * @param is_insecure: if true, the dnskey is not used, the zone is insecure.
+ * 	And dnssec is not used.  It is DNSSEC secure insecure or not under
+ * 	a trust anchor.
+ */
+static void
+auth_zone_verify_zonemd_with_key(struct auth_zone* z, struct module_env* env,
+	struct ub_packed_rrset_key* dnskey, int is_insecure)
+{
+	char* reason = NULL;
+	struct auth_data* apex = NULL;
+	struct auth_rrset* zonemd_rrset = NULL;
+	int zonemd_absent = 0;
+
+	/* see if ZONEMD is present or absent. */
+	apex = az_find_name(z, z->name, z->namelen);
+	if(!apex) {
+		zonemd_absent = 1;
+	} else {
+		zonemd_rrset = az_domain_rrset(apex, LDNS_RR_TYPE_ZONEMD);
+		if(!zonemd_rrset || zonemd_rrset->data->count==0) {
+			zonemd_absent = 1;
+			zonemd_rrset = NULL;
+		}
+	}
+
+	/* if no ZONEMD, and no DNSSEC, done. */
+	/* if no ZONEMD, and DNSSEC, use DNSKEY to verify NSEC or NSEC3 for
+	 * zone apex.  Check ZONEMD bit is turned off or else fail */
+	/* if ZONEMD, and DNSSEC, check DNSSEC signature on SOA and ZONEMD,
+	 * or else fail */
+	if(!zonemd_rrset && is_insecure) {
+		/* success, zonemd is absent */
+	} else if(!zonemd_rrset) {
+		/* fetch, DNSSEC verify, and check NSEC/NSEC3 */
+		if(!zonemd_check_dnssec_absence(z, env, dnskey, apex,
+			&reason)) {
+			auth_zone_zonemd_fail(z, env, reason);
+			return;
+		}
+	} else if(zonemd_rrset && dnskey) {
+		/* check DNSSEC verify of SOA and ZONEMD */
+		if(!zonemd_check_dnssec_soazonemd(z, env, dnskey, apex,
+			zonemd_rrset, &reason)) {
+			auth_zone_zonemd_fail(z, env, reason);
+			return;
+		}
+	}
+
+	/* check ZONEMD checksum and report or else fail. */
+	if(!auth_zone_zonemd_check_hash(z, env, &reason)) {
+		auth_zone_zonemd_fail(z, env, reason);
+		return;
+	}
+
+	if(zonemd_absent)
+		auth_zone_zonemd_fail(z, env, "ZONEMD absent and that is not allowed by config");
+	/* success! log the success */
+	auth_zone_log(z->name, VERB_ALGO, "ZONEMD verification successful");
+}
+
+/**
+ * verify the zone DNSKEY rrset from the trust anchor
+ * This is possible because the anchor is for the zone itself, and can
+ * thus apply straight to the zone DNSKEY set.
+ * @param z: the auth zone.
+ * @param env: environment with time and temp buffers.
+ * @param anchor: trust anchor to use
+ * @param is_insecure: returned, true if the zone is securely insecure.
+ * @param reason: if the routine fails, returns the failure reason.
+ * @param keystorage: where to store the ub_packed_rrset_key that is created
+ * 	on success. A pointer to it is returned on success.
+ * @return the dnskey RRset, reference to zone data and keystorage, or
+ * 	NULL on failure.
+ */
+static struct ub_packed_rrset_key*
+zonemd_get_dnskey_from_anchor(struct auth_zone* z, struct module_env* env,
+	struct trust_anchor* anchor, int* is_insecure, char** reason,
+	struct ub_packed_rrset_key* keystorage)
+{
+	struct auth_data* apex;
+	struct auth_rrset* dnskey_rrset;
+	enum sec_status sec;
+	struct val_env* ve;
+	int m;
+
+	apex = az_find_name(z, z->name, z->namelen);
+	if(!apex) {
+		*reason = "have trust anchor, but zone has no apex domain for DNSKEY";
+		return 0;
+	}
+	dnskey_rrset = az_domain_rrset(apex, LDNS_RR_TYPE_DNSKEY);
+	if(!dnskey_rrset || dnskey_rrset->data->count==0) {
+		*reason = "have trust anchor, but zone has no DNSKEY";
+		return 0;
+	}
+
+	m = modstack_find(&env->mesh->mods, "validator");
+	if(m == -1) {
+		*reason = "have trust anchor, but no validator module";
+		return 0;
+	}
+	ve = (struct val_env*)env->modinfo[m];
+
+	memset(keystorage, 0, sizeof(*keystorage));
+	keystorage->entry.key = keystorage;
+	keystorage->entry.data = dnskey_rrset->data;
+	keystorage->rk.dname = apex->name;
+	keystorage->rk.dname_len = apex->namelen;
+	keystorage->rk.type = htons(LDNS_RR_TYPE_DNSKEY);
+	keystorage->rk.rrset_class = htons(z->dclass);
+	auth_zone_log(z->name, VERB_QUERY,
+		"zonemd: verify DNSKEY RRset with trust anchor");
+	/* pass NULL for qstate, it is only used when type NSEC needs a
+	 * name reallocated to get the qstate region for that */
+	sec = val_verify_DNSKEY_with_TA(env, ve, keystorage, anchor->ds_rrset,
+		anchor->dnskey_rrset, NULL, reason, NULL);
+	regional_free_all(env->scratch);
+	if(sec == sec_status_secure) {
+		/* success */
+		*is_insecure = 0;
+		return keystorage;
+	} else if(sec == sec_status_insecure) {
+		/* insecure */
+		*is_insecure = 1;
+	} else {
+		/* bogus */
+		*is_insecure = 0;
+	}
+	return NULL;
+}
+
+/** callback for ZONEMD lookup of DNSKEY */
+void auth_zonemd_dnskey_lookup_callback(void* arg, int rcode, sldns_buffer* buf,
+	enum sec_status sec, char* why_bogus, int ATTR_UNUSED(was_ratelimited))
+{
+	struct auth_zone* z = (struct auth_zone*)arg;
+	struct module_env* env;
+	char* reason = NULL;
+	struct ub_packed_rrset_key* dnskey = NULL;
+	int is_insecure = 0;
+
+	lock_rw_wrlock(&z->lock);
+	env = z->zonemd_callback_env;
+	/* release the env variable so another worker can pick up the
+	 * ZONEMD verification task if it wants to */
+	z->zonemd_callback_env = NULL;
+	if(!env || env->outnet->want_to_quit) {
+		lock_rw_unlock(&z->lock);
+		return; /* stop on quit */
+	}
+
+	/* process result */
+	if(sec == sec_status_bogus) {
+		reason = why_bogus;
+		if(!reason)
+			reason = "lookup of DNSKEY was bogus";
+		auth_zone_log(z->name, VERB_ALGO,
+			"zonemd lookup of DNSKEY was bogus: %s", why_bogus);
+	} else if(rcode == LDNS_RCODE_NOERROR) {
+		uint16_t wanted_qtype = LDNS_RR_TYPE_DNSKEY;
+		struct regional* temp = env->scratch;
+		struct query_info rq;
+		struct reply_info* rep;
+		memset(&rq, 0, sizeof(rq));
+		rep = parse_reply_in_temp_region(buf, temp, &rq);
+		if(rep && rq.qtype == wanted_qtype &&
+			FLAGS_GET_RCODE(rep->flags) == LDNS_RCODE_NOERROR) {
+			/* parsed successfully */
+			struct ub_packed_rrset_key* answer =
+				reply_find_answer_rrset(&rq, rep);
+			if(answer && sec == sec_status_secure) {
+				dnskey = answer;
+				auth_zone_log(z->name, VERB_ALGO,
+					"zonemd lookup of DNSKEY was secure");
+			} else if(sec == sec_status_secure && !answer) {
+				is_insecure = 1;
+				auth_zone_log(z->name, VERB_ALGO,
+					"zonemd lookup of DNSKEY has no content, but is secure, treat as insecure");
+			} else if(sec == sec_status_insecure) {
+				is_insecure = 1;
+				auth_zone_log(z->name, VERB_ALGO,
+					"zonemd lookup of DNSKEY was insecure");
+			} else if(sec == sec_status_indeterminate) {
+				is_insecure = 1;
+				auth_zone_log(z->name, VERB_ALGO,
+					"zonemd lookup of DNSKEY was indeterminate, treat as insecure");
+			} else {
+				auth_zone_log(z->name, VERB_ALGO,
+					"zonemd lookup of DNSKEY has nodata");
+				reason = "lookup of DNSKEY has nodata";
+			}
+		} else {
+			auth_zone_log(z->name, VERB_ALGO,
+				"zonemd lookup of DNSKEY has no answer");
+			reason = "lookup of DNSKEY has no answer";
+		}
+	} else {
+		auth_zone_log(z->name, VERB_ALGO,
+			"zonemd lookup of DNSKEY failed");
+		reason = "lookup of DNSKEY failed";
+	}
+
+	if(reason) {
+		auth_zone_zonemd_fail(z, env, reason);
+		lock_rw_unlock(&z->lock);
+		return;
+	}
+
+	auth_zone_verify_zonemd_with_key(z, env, dnskey, is_insecure);
+	lock_rw_unlock(&z->lock);
+}
+
+/** lookup DNSKEY for ZONEMD verification */
+static int
+zonemd_lookup_dnskey(struct auth_zone* z, struct module_env* env)
+{
+	struct query_info qinfo;
+	uint16_t qflags = BIT_RD;
+	struct edns_data edns;
+	sldns_buffer* buf = env->scratch_buffer;
+
+	if(z->zonemd_callback_env) {
+		/* another worker is already working on the callback
+		 * for the DNSKEY lookup for ZONEMD verification.
+		 * We do not also have to do ZONEMD verification, let that
+		 * worker do it */
+		auth_zone_log(z->name, VERB_ALGO,
+			"zonemd needs lookup of DNSKEY and that already worked on by another worker");
+		return 1;
+	}
+
+	/* use mesh_new_callback to lookup the DNSKEY,
+	 * and then wait for them to be looked up (in cache, or query) */
+	qinfo.qname_len = z->namelen;
+	qinfo.qname = z->name;
+	qinfo.qclass = z->dclass;
+	qinfo.qtype = LDNS_RR_TYPE_DNSKEY;
+	qinfo.local_alias = NULL;
+	if(verbosity >= VERB_ALGO) {
+		char buf1[512];
+		char buf2[LDNS_MAX_DOMAINLEN+1];
+		dname_str(z->name, buf2);
+		snprintf(buf1, sizeof(buf1), "auth zone %s: lookup DNSKEY "
+			"for zonemd verification", buf2);
+		log_query_info(VERB_ALGO, buf1, &qinfo);
+	}
+	edns.edns_present = 1;
+	edns.ext_rcode = 0;
+	edns.edns_version = 0;
+	edns.bits = EDNS_DO;
+	edns.opt_list = NULL;
+	if(sldns_buffer_capacity(buf) < 65535)
+		edns.udp_size = (uint16_t)sldns_buffer_capacity(buf);
+	else	edns.udp_size = 65535;
+
+	/* store the worker-specific module env for the callback.
+	 * We can then reference this when the callback executes */
+	z->zonemd_callback_env = env;
+	/* the callback can be called straight away */
+	lock_rw_unlock(&z->lock);
+	if(!mesh_new_callback(env->mesh, &qinfo, qflags, &edns, buf, 0,
+		&auth_zonemd_dnskey_lookup_callback, z)) {
+		lock_rw_wrlock(&z->lock);
+		log_err("out of memory lookup up dnskey for zonemd");
+		return 0;
+	}
+	lock_rw_wrlock(&z->lock);
+	return 1;
+}
+
+void auth_zone_verify_zonemd(struct auth_zone* z, struct module_env* env)
+{
+	char* reason = NULL;
+	struct trust_anchor* anchor = NULL;
+	struct ub_packed_rrset_key* dnskey = NULL;
+	struct ub_packed_rrset_key keystorage;
+	int is_insecure = 0;
+	/* verify the ZONEMD if present.
+	 * If not present check if absence is allowed by DNSSEC */
+
+	/* if zone is under a trustanchor */
+	/* is it equal to trustanchor - get dnskey's verified */
+	/* else, find chain of trust by fetching DNSKEYs lookup for zone */
+	/* result if that, if insecure, means no DNSSEC for the ZONEMD,
+	 * otherwise we have the zone DNSKEY for the DNSSEC verification. */
+	anchor = anchors_lookup(env->anchors, z->name, z->namelen, z->dclass);
+	if(anchor && query_dname_compare(z->name, anchor->name) == 0) {
+		/* equal to trustanchor, no need for online lookups */
+		dnskey = zonemd_get_dnskey_from_anchor(z, env, anchor,
+			&is_insecure, &reason, &keystorage);
+		if(!dnskey && !reason) {
+			reason = "dnskey verify with anchor failed";
+		}
+	} else if(anchor) {
+		/* perform online lookups */
+		/* setup online lookups, and wait for them */
+		if(zonemd_lookup_dnskey(z, env)) {
+			/* wait for the lookup */
+			return;
+		}
+		reason = "could not lookup DNSKEY for chain of trust";
+	} else {
+		/* the zone is not under a trust anchor */
+		dnskey = NULL;
+		is_insecure = 1;
+	}
+
+	if(reason) {
+		auth_zone_zonemd_fail(z, env, reason);
+		return;
+	}
+
+	auth_zone_verify_zonemd_with_key(z, env, dnskey, is_insecure);
 }

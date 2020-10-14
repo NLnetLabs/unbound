@@ -134,6 +134,11 @@ struct auth_zone {
 	int for_upstream;
 	/** RPZ zones */
 	struct rpz* rpz;
+	/** store the env (worker thread specific) for the zonemd callbacks
+	 * from the mesh with the results of the lookup, if nonNULL, some
+	 * worker has already picked up the zonemd verification task and
+	 * this worked does not have to do it as well. */
+	struct module_env* zonemd_callback_env;
 	/** zone has been deleted */
 	int zone_deleted;
 	/** deletelist pointer, unused normally except during delete */
@@ -732,5 +737,18 @@ int zonemd_scheme_supported(int scheme);
 int auth_zone_generate_zonemd_check(struct auth_zone* z, int scheme,
 	int hashalgo, uint8_t* hash, size_t hashlen, struct regional* region,
 	struct sldns_buffer* buf, char** reason);
+
+/**
+ * Perform ZONEMD checks and verification for the auth zone.
+ * This includes DNSSEC verification if applicable.
+ * @param z: auth zone to check.  Caller holds lock. wrlock.
+ * @param env: with temp region, buffer and config.
+ */
+void auth_zone_verify_zonemd(struct auth_zone* z, struct module_env* env);
+
+/** mesh callback for zonemd on lookup of dnskey */
+void auth_zonemd_dnskey_lookup_callback(void* arg, int rcode,
+	struct sldns_buffer* buf, enum sec_status sec, char* why_bogus,
+	int was_ratelimited);
 
 #endif /* SERVICES_AUTHZONE_H */
