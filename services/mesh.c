@@ -1235,7 +1235,7 @@ mesh_send_reply(struct mesh_state* m, int rcode, struct reply_info* rep,
 		prev->edns.bits == r->edns.bits && 
 		prev->edns.udp_size == r->edns.udp_size &&
 		edns_opt_list_compare(prev->edns.opt_list, r->edns.opt_list)
-		== 0 && !env->inplace_cb_lists[inplace_cb_reply]) {
+		== 0 && !m->s.env->inplace_cb_lists[inplace_cb_reply]) {
 		/* if the previous reply is identical to this one, fix ID */
 		if(prev_buffer != r_buffer)
 			sldns_buffer_copy(r_buffer, prev_buffer);
