@@ -1,3 +1,10 @@
+15 October 2020: George
+	- Fix that if there are reply callbacks for the given rcode, those
+	  are called per reply and a new message created if that was modified
+	  by the call.
+	- Pass the comm_reply information to the inplace_cb_reply* functions
+	  during the mesh state and update the documentation on that.
+
 15 October 2020: Wouter
 	- Merge PR #326 from netblue30: DoH: implement content-length
 	  header field
