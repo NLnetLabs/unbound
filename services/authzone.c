@@ -8013,10 +8013,12 @@ void auth_zone_verify_zonemd(struct auth_zone* z, struct module_env* env)
 		/* equal to trustanchor, no need for online lookups */
 		dnskey = zonemd_get_dnskey_from_anchor(z, env, anchor,
 			&is_insecure, &reason, &keystorage);
+		lock_basic_unlock(&anchor->lock);
 		if(!dnskey && !reason) {
 			reason = "dnskey verify with anchor failed";
 		}
 	} else if(anchor) {
+		lock_basic_unlock(&anchor->lock);
 		/* perform online lookups */
 		/* setup online lookups, and wait for them */
 		if(zonemd_lookup_dnskey(z, env)) {

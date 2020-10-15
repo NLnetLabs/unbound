@@ -844,6 +844,7 @@ static void respip_test(void)
 #include "services/authzone.h"
 #include "util/data/dname.h"
 #include "util/regional.h"
+#include "validator/val_anchor.h"
 /** Add zone from file for testing */
 struct auth_zone* authtest_addzone(struct auth_zones* az, const char* name,
 	char* fname);
@@ -920,6 +921,7 @@ static void zonemd_generate_test(const char* zname, char* zfile,
 /** loop over files and test generated zonemd digest */
 static void zonemd_generate_tests(void)
 {
+	unit_show_func("services/authzone.c", "auth_zone_generate_zonemd_hash");
 	zonemd_generate_test("example.org", "testdata/zonemd.example1.zone",
 		1, 2, "20564D10F50A0CEBEC856C64032B7DFB53D3C449A421A5BC7A21F7627B4ACEA4DF29F2C6FE82ED9C23ADF6F4D420D5DD63EF6E6349D60FDAB910B65DF8D481B7");
 
@@ -974,6 +976,7 @@ static void zonemd_check_test(void)
 
 	if(!zonemd_hashalgo_supported(hashalgo))
 		return; /* cannot test unsupported algo */
+	unit_show_func("services/authzone.c", "auth_zone_generate_zonemd_check");
 
 	/* setup environment */
 	az = auth_zones_create();
@@ -1021,12 +1024,75 @@ static void zonemd_check_test(void)
 	sldns_buffer_free(buf);
 }
 
+/** zonemd test verify */
+static void zonemd_verify_test(void)
+{
+	struct module_stack mods;
+	struct module_env env;
+	char* tastr = "example.org. IN DS 55566 8 2 9c148338951ce1c3b5cd3da532f3d90dfcf92595148022f2c2fd98e5deee90af";
+	char* zname = "example.org";
+	char* zfile = "testdata/zonemd.example1.zone";
+	char* date_override = "20180302005009";
+	struct auth_zone* z;
+	unit_show_func("services/authzone.c", "auth_zone_verify_zonemd");
+
+	/* setup test harness */
+	memset(&mods, 0, sizeof(mods));
+	memset(&env, 0, sizeof(env));
+	env.scratch = regional_create();
+	if(!env.scratch)
+		fatal_exit("out of memory");
+	env.scratch_buffer = sldns_buffer_new(65553);
+	if(!env.scratch_buffer)
+		fatal_exit("out of memory");
+	env.cfg = config_create();
+	if(!env.cfg)
+		fatal_exit("out of memory");
+	env.cfg->val_date_override = cfg_convert_timeval(date_override);
+	if(!env.cfg->val_date_override)
+		fatal_exit("could not parse datetime %s", date_override);
+	env.anchors = anchors_create();
+	if(!env.anchors)
+		fatal_exit("out of memory");
+	env.auth_zones = auth_zones_create();
+	if(!env.auth_zones)
+		fatal_exit("out of memory");
+	modstack_init(&mods);
+	if(!modstack_config(&mods, "validator iterator"))
+		fatal_exit("could not init modules");
+	env.mesh = mesh_create(&mods, &env);
+	if(!env.mesh)
+		fatal_exit("out of memory");
+
+	/* load data */
+	if(!anchor_store_str(env.anchors, env.scratch_buffer, tastr))
+		fatal_exit("could not store anchor: %s", tastr);
+	z = authtest_addzone(env.auth_zones, zname, zfile);
+	if(!z)
+		fatal_exit("could not addzone %s %s", zname, zfile);
+
+	/* test */
+	lock_rw_wrlock(&z->lock);
+	auth_zone_verify_zonemd(z, &env);
+	lock_rw_unlock(&z->lock);
+
+	/* desetup test harness */
+	mesh_delete(env.mesh);
+	modstack_desetup(&mods, &env);
+	auth_zones_delete(env.auth_zones);
+	anchors_delete(env.anchors);
+	config_delete(env.cfg);
+	regional_destroy(env.scratch);
+	sldns_buffer_free(env.scratch_buffer);
+}
+
 /** zonemd unit tests */
 static void zonemd_test(void)
 {
 	unit_show_feature("zonemd");
 	zonemd_generate_tests();
 	zonemd_check_test();
+	zonemd_verify_test();
 }
 
 void unit_show_func(const char* file, const char* func)
