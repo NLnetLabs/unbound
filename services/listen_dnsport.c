@@ -2177,9 +2177,10 @@ int http2_submit_dns_response(struct http2_session* h2_session)
 	int ret;
 	nghttp2_data_provider data_prd;
 	char status[4];
-	nghttp2_nv headers[2];
+	nghttp2_nv headers[3];
 	struct http2_stream* h2_stream = h2_session->c->h2_stream;
 	size_t rlen;
+	char rlen_str[32];
 
 	if(h2_stream->rbuffer) {
 		log_err("http2 submit response error: rbuffer already "
@@ -2198,6 +2199,8 @@ int http2_submit_dns_response(struct http2_session* h2_session)
 	}
 
 	rlen = sldns_buffer_remaining(h2_session->c->buffer);
+	snprintf(rlen_str, sizeof(rlen_str), "%u", rlen);
+
 	lock_basic_lock(&http2_response_buffer_count_lock);
 	if(http2_response_buffer_count + rlen > http2_response_buffer_max) {
 		lock_basic_unlock(&http2_response_buffer_count_lock);
@@ -2228,13 +2231,11 @@ int http2_submit_dns_response(struct http2_session* h2_session)
 	headers[1].valuelen = 23;
 	headers[1].flags = NGHTTP2_NV_FLAG_NONE;
 
-	/*TODO be nice and add the content-length header
 	headers[2].name = (uint8_t*)"content-length";
 	headers[2].namelen = 14;
-	headers[2].value = 
-	headers[2].valuelen = 
+	headers[2].value = (uint8_t*)rlen_str;
+	headers[2].valuelen = strlen(rlen_str);
 	headers[2].flags = NGHTTP2_NV_FLAG_NONE;
-	*/
 
 	sldns_buffer_write(h2_stream->rbuffer,
 		sldns_buffer_current(h2_session->c->buffer),
@@ -2244,7 +2245,7 @@ int http2_submit_dns_response(struct http2_session* h2_session)
 	data_prd.source.ptr = h2_session;
 	data_prd.read_callback = http2_submit_response_read_callback;
 	ret = nghttp2_submit_response(h2_session->session, h2_stream->stream_id,
-		headers, 2, &data_prd);
+		headers, 3, &data_prd);
 	if(ret) {
 		verbose(VERB_QUERY, "http2: set_stream_user_data failed, "
 			"error: %s", nghttp2_strerror(ret));
