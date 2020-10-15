@@ -743,8 +743,10 @@ int auth_zone_generate_zonemd_check(struct auth_zone* z, int scheme,
  * This includes DNSSEC verification if applicable.
  * @param z: auth zone to check.  Caller holds lock. wrlock.
  * @param env: with temp region, buffer and config.
+ * @param result: if not NULL, result string strdupped in here.
  */
-void auth_zone_verify_zonemd(struct auth_zone* z, struct module_env* env);
+void auth_zone_verify_zonemd(struct auth_zone* z, struct module_env* env,
+	char** result);
 
 /** mesh callback for zonemd on lookup of dnskey */
 void auth_zonemd_dnskey_lookup_callback(void* arg, int rcode,

@@ -7702,16 +7702,22 @@ static int zonemd_check_dnssec_soazonemd(struct auth_zone* z,
  * @param z: auth zone that fails.
  * @param env: environment with config, to ignore failure or not.
  * @param reason: failure string description.
+ * @param result: strdup result in here if not NULL.
  */
 static void auth_zone_zonemd_fail(struct auth_zone* z, struct module_env* env,
-	char* reason)
+	char* reason, char** result)
 {
 	char zstr[255+1];
 	/* if fail: log reason, and depending on config also take action
 	 * and drop the zone, eg. it is gone from memory, set zone_expired */
 	dname_str(z->name, zstr);
 	if(!reason) reason = "verification failed";
-	log_warn("auth zone %s: ZONEMD verification failed: %s", zstr, reason);
+	if(result) {
+		*result = strdup(reason);
+		if(!*result) log_err("out of memory");
+	} else {
+		log_warn("auth zone %s: ZONEMD verification failed: %s", zstr, reason);
+	}
 
 	/* expired means the zone gives servfail and is not used by
 	 * lookup if fallback_enabled*/
@@ -7727,10 +7733,11 @@ static void auth_zone_zonemd_fail(struct auth_zone* z, struct module_env* env,
  * @param is_insecure: if true, the dnskey is not used, the zone is insecure.
  * 	And dnssec is not used.  It is DNSSEC secure insecure or not under
  * 	a trust anchor.
+ * @param result: if not NULL result reason copied here.
  */
 static void
 auth_zone_verify_zonemd_with_key(struct auth_zone* z, struct module_env* env,
-	struct ub_packed_rrset_key* dnskey, int is_insecure)
+	struct ub_packed_rrset_key* dnskey, int is_insecure, char** result)
 {
 	char* reason = NULL;
 	struct auth_data* apex = NULL;
@@ -7760,28 +7767,32 @@ auth_zone_verify_zonemd_with_key(struct auth_zone* z, struct module_env* env,
 		/* fetch, DNSSEC verify, and check NSEC/NSEC3 */
 		if(!zonemd_check_dnssec_absence(z, env, dnskey, apex,
 			&reason)) {
-			auth_zone_zonemd_fail(z, env, reason);
+			auth_zone_zonemd_fail(z, env, reason, result);
 			return;
 		}
 	} else if(zonemd_rrset && dnskey) {
 		/* check DNSSEC verify of SOA and ZONEMD */
 		if(!zonemd_check_dnssec_soazonemd(z, env, dnskey, apex,
 			zonemd_rrset, &reason)) {
-			auth_zone_zonemd_fail(z, env, reason);
+			auth_zone_zonemd_fail(z, env, reason, result);
 			return;
 		}
 	}
 
 	/* check ZONEMD checksum and report or else fail. */
 	if(!auth_zone_zonemd_check_hash(z, env, &reason)) {
-		auth_zone_zonemd_fail(z, env, reason);
+		auth_zone_zonemd_fail(z, env, reason, result);
 		return;
 	}
 
 	if(zonemd_absent)
-		auth_zone_zonemd_fail(z, env, "ZONEMD absent and that is not allowed by config");
+		auth_zone_zonemd_fail(z, env, "ZONEMD absent and that is not allowed by config", result);
 	/* success! log the success */
 	auth_zone_log(z->name, VERB_ALGO, "ZONEMD verification successful");
+	if(result) {
+		*result = strdup("ZONEMD verification successful");
+		if(!*result) log_err("out of memory");
+	}
 }
 
 /**
@@ -7925,12 +7936,12 @@ void auth_zonemd_dnskey_lookup_callback(void* arg, int rcode, sldns_buffer* buf,
 	}
 
 	if(reason) {
-		auth_zone_zonemd_fail(z, env, reason);
+		auth_zone_zonemd_fail(z, env, reason, NULL);
 		lock_rw_unlock(&z->lock);
 		return;
 	}
 
-	auth_zone_verify_zonemd_with_key(z, env, dnskey, is_insecure);
+	auth_zone_verify_zonemd_with_key(z, env, dnskey, is_insecure, NULL);
 	regional_free_all(env->scratch);
 	lock_rw_unlock(&z->lock);
 }
@@ -7993,7 +8004,8 @@ zonemd_lookup_dnskey(struct auth_zone* z, struct module_env* env)
 	return 1;
 }
 
-void auth_zone_verify_zonemd(struct auth_zone* z, struct module_env* env)
+void auth_zone_verify_zonemd(struct auth_zone* z, struct module_env* env,
+	char** result)
 {
 	char* reason = NULL;
 	struct trust_anchor* anchor = NULL;
@@ -8033,10 +8045,10 @@ void auth_zone_verify_zonemd(struct auth_zone* z, struct module_env* env)
 	}
 
 	if(reason) {
-		auth_zone_zonemd_fail(z, env, reason);
+		auth_zone_zonemd_fail(z, env, reason, result);
 		return;
 	}
 
-	auth_zone_verify_zonemd_with_key(z, env, dnskey, is_insecure);
+	auth_zone_verify_zonemd_with_key(z, env, dnskey, is_insecure, result);
 	regional_free_all(env->scratch);
 }

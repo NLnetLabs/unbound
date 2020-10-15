@@ -1033,6 +1033,8 @@ static void zonemd_verify_test(void)
 	char* zname = "example.org";
 	char* zfile = "testdata/zonemd.example1.zone";
 	char* date_override = "20180302005009";
+	char* result = NULL;
+	char* result_wanted = "have trust anchor, but zone has no DNSKEY";
 	struct auth_zone* z;
 	unit_show_func("services/authzone.c", "auth_zone_verify_zonemd");
 
@@ -1073,8 +1075,26 @@ static void zonemd_verify_test(void)
 
 	/* test */
 	lock_rw_wrlock(&z->lock);
-	auth_zone_verify_zonemd(z, &env);
+	auth_zone_verify_zonemd(z, &env, &result);
 	lock_rw_unlock(&z->lock);
+	if(1) {
+		printf("auth zone %s: ZONEMD verification %s: %s\n", zname,
+			(strcmp(result, "ZONEMD verification successful")==0?"successful":"failed"),
+			result);
+	}
+	if(!result)
+		fatal_exit("out of memory");
+	unit_assert(strcmp(result, result_wanted) == 0);
+	free(result);
+	if(strcmp(result, "ZONEMD verification successful") == 0) {
+		lock_rw_rdlock(&z->lock);
+		unit_assert(!z->zone_expired);
+		lock_rw_unlock(&z->lock);
+	} else {
+		lock_rw_rdlock(&z->lock);
+		unit_assert(z->zone_expired);
+		lock_rw_unlock(&z->lock);
+	}
 
 	/* desetup test harness */
 	mesh_delete(env.mesh);
