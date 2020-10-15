@@ -2180,7 +2180,7 @@ int http2_submit_dns_response(struct http2_session* h2_session)
 	nghttp2_nv headers[3];
 	struct http2_stream* h2_stream = h2_session->c->h2_stream;
 	size_t rlen;
-	char rlen_str[6]; // big enough to hold a uint16_t number
+	char rlen_str[32];
 
 	if(h2_stream->rbuffer) {
 		log_err("http2 submit response error: rbuffer already "
@@ -2199,12 +2199,7 @@ int http2_submit_dns_response(struct http2_session* h2_session)
 	}
 
 	rlen = sldns_buffer_remaining(h2_session->c->buffer);
-	int rv = snprintf(rlen_str, sizeof(rlen_str), "%u", rlen);
-	if (rv <= 0 || rv >= sizeof(rlen_str)) {
-		verbose(VERB_QUERY, "http2: submit response error: "
-			"data buffer too large");
-		return 0;
-	}
+	snprintf(rlen_str, sizeof(rlen_str), "%u", rlen);
 
 	lock_basic_lock(&http2_response_buffer_count_lock);
 	if(http2_response_buffer_count + rlen > http2_response_buffer_max) {
@@ -2238,7 +2233,7 @@ int http2_submit_dns_response(struct http2_session* h2_session)
 
 	headers[2].name = (uint8_t*)"content-length";
 	headers[2].namelen = 14;
-	headers[2].value = rlen_str;
+	headers[2].value = (uint8_t*)rlen_str;
 	headers[2].valuelen = strlen(rlen_str);
 	headers[2].flags = NGHTTP2_NV_FLAG_NONE;
 

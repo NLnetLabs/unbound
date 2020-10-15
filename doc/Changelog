@@ -1,3 +1,9 @@
+15 October 2020: Wouter
+	- Merge PR #326 from netblue30: DoH: implement content-length
+	  header field
+	- DoH content length, simplify code, remove declaration after
+	  statement and fix cast warning.
+
 14 October 2020: Wouter
 	- Fix for python reply callback to see mesh state reply_list member,
 	  it only removes it briefly for the commpoint call so that it does
