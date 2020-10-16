@@ -1072,7 +1072,7 @@ static void zonemd_verify_test(char* zname, char* zfile, char* tastr,
 	lock_rw_wrlock(&z->lock);
 	auth_zone_verify_zonemd(z, &env, &result);
 	lock_rw_unlock(&z->lock);
-	if(1) {
+	if(0) {
 		printf("auth zone %s: ZONEMD verification %s: %s\n", zname,
 			(strcmp(result, "ZONEMD verification successful")==0?"successful":"failed"),
 			result);
@@ -1105,7 +1105,6 @@ static void zonemd_verify_test(char* zname, char* zfile, char* tastr,
 static void zonemd_verify_tests(void)
 {
 	unit_show_func("services/authzone.c", "auth_zone_verify_zonemd");
-	verbosity=4; /* DEBUG */
 	zonemd_verify_test("example.org",
 		"testdata/zonemd.example1.zone",
 		"example.org. IN DS 55566 8 2 9c148338951ce1c3b5cd3da532f3d90dfcf92595148022f2c2fd98e5deee90af",
