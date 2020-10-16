@@ -1,3 +1,7 @@
+16 October 2020: Wouter
+	- Fix that the out of order TCP processing does not limit the
+	  number of outstanding queries over a connection.
+
 15 October 2020: George
 	- Fix that if there are reply callbacks for the given rcode, those
 	  are called per reply and a new message created if that was modified
