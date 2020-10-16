@@ -1025,18 +1025,13 @@ static void zonemd_check_test(void)
 }
 
 /** zonemd test verify */
-static void zonemd_verify_test(void)
+static void zonemd_verify_test(char* zname, char* zfile, char* tastr,
+	char* date_override, char* result_wanted)
 {
 	struct module_stack mods;
 	struct module_env env;
-	char* tastr = "example.org. IN DS 55566 8 2 9c148338951ce1c3b5cd3da532f3d90dfcf92595148022f2c2fd98e5deee90af";
-	char* zname = "example.org";
-	char* zfile = "testdata/zonemd.example1.zone";
-	char* date_override = "20180302005009";
 	char* result = NULL;
-	char* result_wanted = "have trust anchor, but zone has no DNSKEY";
 	struct auth_zone* z;
-	unit_show_func("services/authzone.c", "auth_zone_verify_zonemd");
 
 	/* setup test harness */
 	memset(&mods, 0, sizeof(mods));
@@ -1067,7 +1062,7 @@ static void zonemd_verify_test(void)
 		fatal_exit("out of memory");
 
 	/* load data */
-	if(!anchor_store_str(env.anchors, env.scratch_buffer, tastr))
+	if(tastr && !anchor_store_str(env.anchors, env.scratch_buffer, tastr))
 		fatal_exit("could not store anchor: %s", tastr);
 	z = authtest_addzone(env.auth_zones, zname, zfile);
 	if(!z)
@@ -1085,7 +1080,6 @@ static void zonemd_verify_test(void)
 	if(!result)
 		fatal_exit("out of memory");
 	unit_assert(strcmp(result, result_wanted) == 0);
-	free(result);
 	if(strcmp(result, "ZONEMD verification successful") == 0) {
 		lock_rw_rdlock(&z->lock);
 		unit_assert(!z->zone_expired);
@@ -1095,6 +1089,7 @@ static void zonemd_verify_test(void)
 		unit_assert(z->zone_expired);
 		lock_rw_unlock(&z->lock);
 	}
+	free(result);
 
 	/* desetup test harness */
 	mesh_delete(env.mesh);
@@ -1106,13 +1101,42 @@ static void zonemd_verify_test(void)
 	sldns_buffer_free(env.scratch_buffer);
 }
 
+/** zonemd test verify suite */
+static void zonemd_verify_tests(void)
+{
+	unit_show_func("services/authzone.c", "auth_zone_verify_zonemd");
+	verbosity=4; /* DEBUG */
+	zonemd_verify_test("example.org",
+		"testdata/zonemd.example1.zone",
+		"example.org. IN DS 55566 8 2 9c148338951ce1c3b5cd3da532f3d90dfcf92595148022f2c2fd98e5deee90af",
+		"20180302005009",
+		"have trust anchor, but zone has no DNSKEY");
+	zonemd_verify_test("example.org",
+		"testdata/zonemd.example1.zone",
+		NULL,
+		"20180302005009",
+		"zone has no ZONEMD");
+	/* no trust anchor, so it succeeds */
+	zonemd_verify_test("example.com",
+		"testdata/zonemd.example2.zone",
+		NULL,
+		"20180302005009",
+		"ZONEMD verification successful");
+	/* trust anchor for another zone, so it is indeterminate */
+	zonemd_verify_test("example.com",
+		"testdata/zonemd.example2.zone",
+		"example.org. IN DS 55566 8 2 9c148338951ce1c3b5cd3da532f3d90dfcf92595148022f2c2fd98e5deee90af",
+		"20180302005009",
+		"ZONEMD verification successful");
+}
+
 /** zonemd unit tests */
 static void zonemd_test(void)
 {
 	unit_show_feature("zonemd");
 	zonemd_generate_tests();
 	zonemd_check_test();
-	zonemd_verify_test();
+	zonemd_verify_tests();
 }
 
 void unit_show_func(const char* file, const char* func)
