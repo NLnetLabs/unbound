@@ -1,3 +1,9 @@
+19 October 2020: George
+	- Merge PR #324 from James Renken: Add modern X.509v3 extensions to
+	  unbound-control TLS certificates.
+	- Fix for PR #324 to attach the x509v3 extensions to the client
+	  certificate.
+
 19 October 2020: Ralph
 	- local-zone regional allocations outside of chunk
 
