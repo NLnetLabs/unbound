@@ -120,6 +120,7 @@ if [ ! -f "$SVR_BASE.key" ]; then
 fi
 
 cat >server.cnf <<EOF
+[req]
 default_bits=$BITS
 default_md=$HASH
 prompt=no
@@ -189,6 +190,8 @@ if [ ! -f "$CTL_BASE.pem" -o $RECREATE -eq 1 ]; then
                   -CAkey "$SVR_BASE.key" \
                   -CAcreateserial \
                   -$HASH \
+                  -extfile client.cnf \
+                  -extensions v3_req \
                   -out "$CTL_BASE.pem"
 
     [ ! -f "CTL_BASE.pem" ] || fatal "cannot create signed client certificate"
