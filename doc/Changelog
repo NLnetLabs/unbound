@@ -1,3 +1,8 @@
+19 October 2020: Wouter
+	- Fix that http settings have colon in set_option, for
+	  http-endpoint, http-max-streams, http-query-buffer-size,
+	  http-response-buffer-size, and http-nodelay.
+
 16 October 2020: Wouter
 	- Fix that the out of order TCP processing does not limit the
 	  number of outstanding queries over a connection.
