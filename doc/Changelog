@@ -1,3 +1,6 @@
+19 October 2020: Ralph
+	- local-zone regional allocations outside of chunk
+
 19 October 2020: Wouter
 	- Fix that http settings have colon in set_option, for
 	  http-endpoint, http-max-streams, http-query-buffer-size,
