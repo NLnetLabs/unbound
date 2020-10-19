@@ -82,7 +82,7 @@
 #define TCP_BACKLOG 256 
 
 /** number of simultaneous requests a client can have */
-#define TCP_MAX_REQ_SIMULTANEOUS 32
+/* #define TCP_MAX_REQ_SIMULTANEOUS 32 */
 
 #ifndef THREADS_DISABLED
 /** lock on the counter of stream buffer memory */
@@ -1244,8 +1244,9 @@ struct listen_dnsport*
 listen_create(struct comm_base* base, struct listen_port* ports,
 	size_t bufsize, int tcp_accept_count, int tcp_idle_timeout,
 	int harden_large_queries, uint32_t http_max_streams,
-	char* http_endpoint, struct tcl_list* tcp_conn_limit, void* sslctx,
-	struct dt_env* dtenv, comm_point_callback_type* cb, void *cb_arg)
+	char* http_endpoint, int http_notls, struct tcl_list* tcp_conn_limit,
+	void* sslctx, struct dt_env* dtenv, comm_point_callback_type* cb,
+	void *cb_arg)
 {
 	struct listen_dnsport* front = (struct listen_dnsport*)
 		malloc(sizeof(struct listen_dnsport));
@@ -1295,15 +1296,19 @@ listen_create(struct comm_base* base, struct listen_port* ports,
 				http_max_streams, http_endpoint,
 				tcp_conn_limit, bufsize, front->udp_buff,
 				ports->ftype, cb, cb_arg);
-			cp->ssl = sslctx;
+			if(http_notls && ports->ftype == listen_type_http)
+				cp->ssl = NULL;
+			else
+				cp->ssl = sslctx;
 			if(ports->ftype == listen_type_http) {
-				if(!sslctx) {
-				log_warn("HTTPS port configured, but no TLS "
+				if(!sslctx && !http_notls) {
+				  log_warn("HTTPS port configured, but no TLS "
 					"tls-service-key or tls-service-pem "
 					"set");
 				}
 #ifndef HAVE_SSL_CTX_SET_ALPN_SELECT_CB
-				log_warn("Unbound is not compiled with an "
+				if(!http_notls)
+				  log_warn("Unbound is not compiled with an "
 					"OpenSSL version supporting ALPN "
 					" (OpenSSL >= 1.0.2). This is required "
 					"to use DNS-over-HTTPS");
@@ -1804,7 +1809,7 @@ tcp_req_info_setup_listen(struct tcp_req_info* req)
 
 	if(!req->cp->tcp_is_reading)
 		wr = 1;
-	if(req->num_open_req + req->num_done_req < TCP_MAX_REQ_SIMULTANEOUS &&
+	if(/*req->num_open_req + req->num_done_req < TCP_MAX_REQ_SIMULTANEOUS &&*/
 		!req->read_is_closed)
 		rd = 1;
 	

@@ -1224,18 +1224,24 @@ mesh_send_reply(struct mesh_state* m, int rcode, struct reply_info* rep,
 		r->h2_stream->mesh_state = NULL;
 	}
 	/* send the reply */
-	/* We don't reuse the encoded answer if either the previous or current
-	 * response has a local alias.  We could compare the alias records
-	 * and still reuse the previous answer if they are the same, but that
-	 * would be complicated and error prone for the relatively minor case.
-	 * So we err on the side of safety. */
-	if(prev && prev_buffer && prev->qflags == r->qflags && 
+	/* We don't reuse the encoded answer if:
+	 * - either the previous or current response has a local alias.  We could
+	 *   compare the alias records and still reuse the previous answer if they
+	 *   are the same, but that would be complicated and error prone for the
+	 *   relatively minor case. So we err on the side of safety.
+	 * - there are registered callback functions for the given rcode, as these
+	 *   need to be called for each reply. */
+	if(((rcode != LDNS_RCODE_SERVFAIL &&
+			!m->s.env->inplace_cb_lists[inplace_cb_reply]) ||
+		(rcode == LDNS_RCODE_SERVFAIL &&
+			!m->s.env->inplace_cb_lists[inplace_cb_reply_servfail])) &&
+		prev && prev_buffer && prev->qflags == r->qflags &&
 		!prev->local_alias && !r->local_alias &&
-		prev->edns.edns_present == r->edns.edns_present && 
-		prev->edns.bits == r->edns.bits && 
+		prev->edns.edns_present == r->edns.edns_present &&
+		prev->edns.bits == r->edns.bits &&
 		prev->edns.udp_size == r->edns.udp_size &&
 		edns_opt_list_compare(prev->edns.opt_list, r->edns.opt_list)
-		== 0 && !m->s.env->inplace_cb_lists[inplace_cb_reply]) {
+		== 0) {
 		/* if the previous reply is identical to this one, fix ID */
 		if(prev_buffer != r_buffer)
 			sldns_buffer_copy(r_buffer, prev_buffer);
@@ -1250,11 +1256,11 @@ mesh_send_reply(struct mesh_state* m, int rcode, struct reply_info* rep,
 		m->s.qinfo.local_alias = r->local_alias;
 		if(rcode == LDNS_RCODE_SERVFAIL) {
 			if(!inplace_cb_reply_servfail_call(m->s.env, &m->s.qinfo, &m->s,
-				rep, rcode, &r->edns, NULL, m->s.region))
+				rep, rcode, &r->edns, &r->query_reply, m->s.region))
 					r->edns.opt_list = NULL;
 		} else { 
 			if(!inplace_cb_reply_call(m->s.env, &m->s.qinfo, &m->s, rep, rcode,
-				&r->edns, NULL, m->s.region))
+				&r->edns, &r->query_reply, m->s.region))
 					r->edns.opt_list = NULL;
 		}
 		error_encode(r_buffer, rcode, &m->s.qinfo, r->qid,
@@ -1271,7 +1277,7 @@ mesh_send_reply(struct mesh_state* m, int rcode, struct reply_info* rep,
 		m->s.qinfo.qname = r->qname;
 		m->s.qinfo.local_alias = r->local_alias;
 		if(!inplace_cb_reply_call(m->s.env, &m->s.qinfo, &m->s, rep,
-			LDNS_RCODE_NOERROR, &r->edns, NULL, m->s.region) ||
+			LDNS_RCODE_NOERROR, &r->edns, &r->query_reply, m->s.region) ||
 			!apply_edns_options(&r->edns, &edns_bak,
 				m->s.env->cfg, r->query_reply.c,
 				m->s.region) ||
@@ -1281,7 +1287,7 @@ mesh_send_reply(struct mesh_state* m, int rcode, struct reply_info* rep,
 			secure)) 
 		{
 			if(!inplace_cb_reply_servfail_call(m->s.env, &m->s.qinfo, &m->s,
-			rep, LDNS_RCODE_SERVFAIL, &r->edns, NULL, m->s.region))
+			rep, LDNS_RCODE_SERVFAIL, &r->edns, &r->query_reply, m->s.region))
 				r->edns.opt_list = NULL;
 			error_encode(r_buffer, LDNS_RCODE_SERVFAIL,
 				&m->s.qinfo, r->qid, r->qflags, &r->edns);

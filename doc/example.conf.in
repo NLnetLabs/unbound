@@ -788,6 +788,9 @@ server:
 	# service.
 	# http-nodelay: yes
 
+	# Disable TLS for DNS-over-HTTP downstream service.
+	# http-notls-downstream: no
+
 	# DNS64 prefix. Must be specified when DNS64 is use.
 	# Enable dns64 in module-config.  Used to synthesize IPv6 from IPv4.
 	# dns64-prefix: 64:ff9b::0/96

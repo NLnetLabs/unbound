@@ -587,6 +587,10 @@ megabytes or gigabytes (1024*1024 bytes in a megabyte).
 Set TCP_NODELAY socket option on sockets used to provide DNS-over-HTTPS service.
 Ignored if the option is not available. Default is yes.
 .TP
+.B http\-notls\-downstream: \fI<yes or no>
+Disable use of TLS for the downstream DNS-over-HTTP connections.  Useful for
+local back end servers.  Default is no.
+.TP
 .B use\-systemd: \fI<yes or no>
 Enable or disable systemd socket activation.
 Default is no.
