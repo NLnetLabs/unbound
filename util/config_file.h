@@ -143,6 +143,8 @@ struct config_file {
 	size_t http_response_buffer_size;
 	/** set TCP_NODELAY option for http sockets */
 	int http_nodelay;
+	/** Disable TLS for http sockets downstream */
+	int http_notls_downstream;
 
 	/** outgoing port range number of ports (per thread) */
 	int outgoing_num_ports;

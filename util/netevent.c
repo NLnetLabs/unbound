@@ -965,6 +965,10 @@ comm_point_tcp_accept_callback(int fd, short event, void* arg)
 	/* clear leftover flags from previous use, and then set the
 	 * correct event base for the event structure for libevent */
 	ub_event_free(c_hdl->ev->ev);
+	if((c_hdl->type == comm_tcp && c_hdl->tcp_req_info) ||
+		c_hdl->type == comm_local || c_hdl->type == comm_raw)
+		c_hdl->tcp_do_toggle_rw = 0;
+	else	c_hdl->tcp_do_toggle_rw = 1;
 
 	if(c_hdl->type == comm_http) {
 #ifdef HAVE_NGHTTP2
@@ -977,6 +981,10 @@ comm_point_tcp_accept_callback(int fd, short event, void* arg)
 			!http2_submit_settings(c_hdl->h2_session)) {
 			log_warn("failed to submit http2 settings");
 			return;
+		}
+		if(!c->ssl) {
+			c_hdl->tcp_do_toggle_rw = 0;
+			c_hdl->use_h2 = 1;
 		}
 #endif
 		c_hdl->ev->ev = ub_event_new(c_hdl->ev->base->eb->base, -1,
@@ -2359,48 +2367,76 @@ int http2_stream_close_cb(nghttp2_session* ATTR_UNUSED(session),
 ssize_t http2_recv_cb(nghttp2_session* ATTR_UNUSED(session), uint8_t* buf,
 	size_t len, int ATTR_UNUSED(flags), void* cb_arg)
 {
-#ifdef HAVE_SSL
 	struct http2_session* h2_session = (struct http2_session*)cb_arg;
-	int r;
+	ssize_t ret;
 
 	log_assert(h2_session->c->type == comm_http);
 	log_assert(h2_session->c->h2_session);
 
-	if(!h2_session->c->ssl)
-		return 0;
-
-	ERR_clear_error();
-	r = SSL_read(h2_session->c->ssl, buf, len);
-	if(r <= 0) {
-		int want = SSL_get_error(h2_session->c->ssl, r);
-		if(want == SSL_ERROR_ZERO_RETURN) {
-			return NGHTTP2_ERR_EOF;
-		} else if(want == SSL_ERROR_WANT_READ) {
-			return NGHTTP2_ERR_WOULDBLOCK;
-		} else if(want == SSL_ERROR_WANT_WRITE) {
-			h2_session->c->ssl_shake_state = comm_ssl_shake_hs_write;
-			comm_point_listen_for_rw(h2_session->c, 0, 1);
-			return NGHTTP2_ERR_WOULDBLOCK;
-		} else if(want == SSL_ERROR_SYSCALL) {
+#ifdef HAVE_SSL
+	if(h2_session->c->ssl) {
+		int r;
+		ERR_clear_error();
+		r = SSL_read(h2_session->c->ssl, buf, len);
+		if(r <= 0) {
+			int want = SSL_get_error(h2_session->c->ssl, r);
+			if(want == SSL_ERROR_ZERO_RETURN) {
+				return NGHTTP2_ERR_EOF;
+			} else if(want == SSL_ERROR_WANT_READ) {
+				return NGHTTP2_ERR_WOULDBLOCK;
+			} else if(want == SSL_ERROR_WANT_WRITE) {
+				h2_session->c->ssl_shake_state = comm_ssl_shake_hs_write;
+				comm_point_listen_for_rw(h2_session->c, 0, 1);
+				return NGHTTP2_ERR_WOULDBLOCK;
+			} else if(want == SSL_ERROR_SYSCALL) {
 #ifdef ECONNRESET
-			if(errno == ECONNRESET && verbosity < 2)
-				return NGHTTP2_ERR_CALLBACK_FAILURE;
+				if(errno == ECONNRESET && verbosity < 2)
+					return NGHTTP2_ERR_CALLBACK_FAILURE;
 #endif
-			if(errno != 0)
-				log_err("SSL_read syscall: %s",
-					strerror(errno));
+				if(errno != 0)
+					log_err("SSL_read syscall: %s",
+						strerror(errno));
+				return NGHTTP2_ERR_CALLBACK_FAILURE;
+			}
+			log_crypto_err("could not SSL_read");
 			return NGHTTP2_ERR_CALLBACK_FAILURE;
 		}
-		log_crypto_err("could not SSL_read");
+		return r;
+	}
+#endif /* HAVE_SSL */
+
+	ret = recv(h2_session->c->fd, buf, len, 0);
+	if(ret == 0) {
+		return NGHTTP2_ERR_EOF;
+	} else if(ret < 0) {
+#ifndef USE_WINSOCK
+		if(errno == EINTR || errno == EAGAIN)
+			return NGHTTP2_ERR_WOULDBLOCK;
+#ifdef ECONNRESET
+		if(errno == ECONNRESET && verbosity < 2)
+			return NGHTTP2_ERR_CALLBACK_FAILURE;
+#endif
+		log_err_addr("could not http2 recv: %s", strerror(errno),
+			&h2_session->c->repinfo.addr,
+			h2_session->c->repinfo.addrlen);
+#else /* USE_WINSOCK */
+		if(WSAGetLastError() == WSAECONNRESET)
+			return NGHTTP2_ERR_CALLBACK_FAILURE;
+		if(WSAGetLastError() == WSAEINPROGRESS)
+			return NGHTTP2_ERR_WOULDBLOCK;
+		if(WSAGetLastError() == WSAEWOULDBLOCK) {
+			ub_winsock_tcp_wouldblock(h2_session->c->ev->ev,
+				UB_EV_READ);
+			return NGHTTP2_ERR_WOULDBLOCK;
+		}
+		log_err_addr("could not http2 recv: %s",
+			wsa_strerror(WSAGetLastError()),
+			&h2_session->c->repinfo.addr,
+			h2_session->c->repinfo.addrlen);
+#endif
 		return NGHTTP2_ERR_CALLBACK_FAILURE;
 	}
-	return r;
-#else
-	(void)buf;
-	(void)len;
-	(void)cb_arg;
-	return -1;
-#endif
+	return ret;
 }
 #endif /* HAVE_NGHTTP2 */
 
@@ -2411,15 +2447,17 @@ comm_point_http2_handle_read(int ATTR_UNUSED(fd), struct comm_point* c)
 #ifdef HAVE_NGHTTP2
 	int ret;
 	log_assert(c->h2_session);
-	log_assert(c->ssl);
 
 	/* reading until recv cb returns NGHTTP2_ERR_WOULDBLOCK */
 	ret = nghttp2_session_recv(c->h2_session->session);
 	if(ret) {
 		if(ret != NGHTTP2_ERR_EOF &&
 			ret != NGHTTP2_ERR_CALLBACK_FAILURE) {
-			verbose(VERB_QUERY, "http2: session_recv failed, "
-				"error: %s", nghttp2_strerror(ret));
+			char a[256];
+			addr_to_str(&c->repinfo.addr, c->repinfo.addrlen,
+				a, sizeof(a));
+			verbose(VERB_QUERY, "http2: session_recv from %s failed, "
+				"error: %s", a, nghttp2_strerror(ret));
 		}
 		return 0;
 	}
@@ -2648,47 +2686,81 @@ http_write_more(int fd, struct comm_point* c)
 ssize_t http2_send_cb(nghttp2_session* ATTR_UNUSED(session), const uint8_t* buf,
 	size_t len, int ATTR_UNUSED(flags), void* cb_arg)
 {
-#ifdef HAVE_SSL
-	int r;
+	ssize_t ret;
 	struct http2_session* h2_session = (struct http2_session*)cb_arg;
 	log_assert(h2_session->c->type == comm_http);
 	log_assert(h2_session->c->h2_session);
 
-	if(!h2_session->c->ssl)
-		return 0;
-
-	ERR_clear_error();
-	r = SSL_write(h2_session->c->ssl, buf, len);
-	if(r <= 0) {
-		int want = SSL_get_error(h2_session->c->ssl, r);
-		if(want == SSL_ERROR_ZERO_RETURN) {
-			return NGHTTP2_ERR_CALLBACK_FAILURE;
-		} else if(want == SSL_ERROR_WANT_READ) {
-			h2_session->c->ssl_shake_state = comm_ssl_shake_hs_read;
-			comm_point_listen_for_rw(h2_session->c, 1, 0);
-			return NGHTTP2_ERR_WOULDBLOCK;
-		} else if(want == SSL_ERROR_WANT_WRITE) {
-			return NGHTTP2_ERR_WOULDBLOCK;
-		} else if(want == SSL_ERROR_SYSCALL) {
-#ifdef EPIPE
-			if(errno == EPIPE && verbosity < 2)
+#ifdef HAVE_SSL
+	if(h2_session->c->ssl) {
+		int r;
+		ERR_clear_error();
+		r = SSL_write(h2_session->c->ssl, buf, len);
+		if(r <= 0) {
+			int want = SSL_get_error(h2_session->c->ssl, r);
+			if(want == SSL_ERROR_ZERO_RETURN) {
 				return NGHTTP2_ERR_CALLBACK_FAILURE;
+			} else if(want == SSL_ERROR_WANT_READ) {
+				h2_session->c->ssl_shake_state = comm_ssl_shake_hs_read;
+				comm_point_listen_for_rw(h2_session->c, 1, 0);
+				return NGHTTP2_ERR_WOULDBLOCK;
+			} else if(want == SSL_ERROR_WANT_WRITE) {
+				return NGHTTP2_ERR_WOULDBLOCK;
+			} else if(want == SSL_ERROR_SYSCALL) {
+#ifdef EPIPE
+				if(errno == EPIPE && verbosity < 2)
+					return NGHTTP2_ERR_CALLBACK_FAILURE;
 #endif
-			if(errno != 0)
-				log_err("SSL_write syscall: %s",
-					strerror(errno));
+				if(errno != 0)
+					log_err("SSL_write syscall: %s",
+						strerror(errno));
+				return NGHTTP2_ERR_CALLBACK_FAILURE;
+			}
+			log_crypto_err("could not SSL_write");
 			return NGHTTP2_ERR_CALLBACK_FAILURE;
 		}
-		log_crypto_err("could not SSL_write");
+		return r;
+	}
+#endif /* HAVE_SSL */
+
+	ret = send(h2_session->c->fd, buf, len, 0);
+	if(ret == 0) {
+		return NGHTTP2_ERR_CALLBACK_FAILURE;
+	} else if(ret < 0) {
+#ifndef USE_WINSOCK
+		if(errno == EINTR || errno == EAGAIN)
+			return NGHTTP2_ERR_WOULDBLOCK;
+#ifdef EPIPE
+		if(errno == EPIPE && verbosity < 2)
+			return NGHTTP2_ERR_CALLBACK_FAILURE;
+#endif
+#ifdef ECONNRESET
+		if(errno == ECONNRESET && verbosity < 2)
+			return NGHTTP2_ERR_CALLBACK_FAILURE;
+#endif
+		log_err_addr("could not http2 write: %s", strerror(errno),
+			&h2_session->c->repinfo.addr,
+			h2_session->c->repinfo.addrlen);
+#else /* USE_WINSOCK */
+		if(WSAGetLastError() == WSAENOTCONN)
+			return NGHTTP2_ERR_WOULDBLOCK;
+		if(WSAGetLastError() == WSAEINPROGRESS)
+			return NGHTTP2_ERR_WOULDBLOCK;
+		if(WSAGetLastError() == WSAEWOULDBLOCK) {
+			ub_winsock_tcp_wouldblock(h2_session->c->ev->ev,
+				UB_EV_WRITE);
+			return NGHTTP2_ERR_WOULDBLOCK;
+		}
+		if(WSAGetLastError() == WSAECONNRESET && verbosity < 2)
+			return NGHTTP2_ERR_CALLBACK_FAILURE;
+		log_err_addr("could not http2 write: %s",
+			wsa_strerror(WSAGetLastError()),
+			&h2_session->c->repinfo.addr,
+			h2_session->c->repinfo.addrlen);
+#endif
 		return NGHTTP2_ERR_CALLBACK_FAILURE;
 	}
-	return r;
-#else
-	(void)buf;
-	(void)len;
-	(void)cb_arg;
-	return -1;
-#endif
+	return ret;
 }
 #endif /* HAVE_NGHTTP2 */
 
@@ -2699,7 +2771,6 @@ comm_point_http2_handle_write(int ATTR_UNUSED(fd), struct comm_point* c)
 #ifdef HAVE_NGHTTP2
 	int ret;
 	log_assert(c->h2_session);
-	log_assert(c->ssl);
 
 	ret = nghttp2_session_send(c->h2_session->session);
 	if(ret) {
