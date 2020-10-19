@@ -872,6 +872,7 @@ listen_create(struct comm_base* base, struct listen_port* ATTR_UNUSED(ports),
 	int ATTR_UNUSED(harden_large_queries),
 	uint32_t ATTR_UNUSED(http_max_streams),
 	char* ATTR_UNUSED(http_endpoint),
+	int ATTR_UNUSED(http_notls),
 	struct tcl_list* ATTR_UNUSED(tcp_conn_limit),
 	void* ATTR_UNUSED(sslctx), struct dt_env* ATTR_UNUSED(dtenv),
 	comm_point_callback_type* cb, void *cb_arg)

@@ -3,6 +3,9 @@
 	  http-endpoint, http-max-streams, http-query-buffer-size,
 	  http-response-buffer-size, and http-nodelay.
 	- Fix memory leak of https port string when reading config.
+	- Fix #330: [Feature request] Add unencrypted DNS over HTTPS support.
+	  This adds the option http-notls-downstream: yesno to change that,
+	  and the dohclient test code has the -n option.
 
 16 October 2020: Wouter
 	- Fix that the out of order TCP processing does not limit the
