@@ -982,6 +982,7 @@ server_https_port: VAR_HTTPS_PORT STRING_ARG
 		if(atoi($2) == 0)
 			yyerror("port number expected");
 		else cfg_parser->cfg->https_port = atoi($2);
+		free($2);
 	};
 server_http_endpoint: VAR_HTTP_ENDPOINT STRING_ARG
 	{
