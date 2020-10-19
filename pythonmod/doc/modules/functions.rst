@@ -103,7 +103,7 @@ Inplace callbacks
     :param opt_list_out: :class:`edns_option`. EDNS option list to append options to.
     :param region: :class:`regional`
     :param \*\*kwargs: Dictionary that may contain parameters added in a future
-                     release. Current parameters:
+        release. Current parameters:
         ``repinfo``: :class:`comm_reply`. Reply information for a communication point.
 
 .. function:: inplace_cb_query(qinfo, flags, qstate, addr, zone, region)

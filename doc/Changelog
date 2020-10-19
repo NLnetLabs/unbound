@@ -6,6 +6,7 @@
 	- Fix #330: [Feature request] Add unencrypted DNS over HTTPS support.
 	  This adds the option http-notls-downstream: yesno to change that,
 	  and the dohclient test code has the -n option.
+	- Fix python documentation warning on functions.rst inplace_cb_reply.
 
 16 October 2020: Wouter
 	- Fix that the out of order TCP processing does not limit the
