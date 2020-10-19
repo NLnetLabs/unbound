@@ -1127,6 +1127,46 @@ static void zonemd_verify_tests(void)
 		"example.org. IN DS 55566 8 2 9c148338951ce1c3b5cd3da532f3d90dfcf92595148022f2c2fd98e5deee90af",
 		"20180302005009",
 		"ZONEMD verification successful");
+
+	/* load a DNSSEC signed zone, but no trust anchor */
+	zonemd_verify_test("example.com",
+		"testdata/zonemd.example3.zone",
+		NULL,
+		"20180302005009",
+		"incorrect digest");
+	/* load a DNSSEC zone with NSEC3, but no trust anchor */
+	zonemd_verify_test("example.com",
+		"testdata/zonemd.example4.zone",
+		NULL,
+		"20180302005009",
+		"incorrect digest");
+	/* valid zonemd, in dnssec signed zone, no trust anchor*/
+	zonemd_verify_test("example.com",
+		"testdata/zonemd.example5.zone",
+		NULL,
+		"20180302005009",
+		"ZONEMD verification successful");
+	/* valid zonemd, in dnssec NSEC3 zone, no trust anchor*/
+	zonemd_verify_test("example.com",
+		"testdata/zonemd.example6.zone",
+		NULL,
+		"20180302005009",
+		"ZONEMD verification successful");
+
+#if 0
+	/* load a DNSSEC signed zone with a trust anchor, valid ZONEMD */
+	zonemd_verify_test("example.com",
+		"testdata/zonemd.example5.zone",
+		"example.com. IN DS 55566 8 2 9c148338951ce1c3b5cd3da532f3d90dfcf92595148022f2c2fd98e5deee90af",
+		"20201020135527",
+		"ZONEMD verification successful");
+	/* load a DNSSEC NSEC3 signed zone with a trust anchor, valid ZONEMD */
+	zonemd_verify_test("example.com",
+		"testdata/zonemd.example6.zone",
+		"example.com. IN DS 55566 8 2 9c148338951ce1c3b5cd3da532f3d90dfcf92595148022f2c2fd98e5deee90af",
+		"20201020135527",
+		"ZONEMD verification successful");
+#endif
 }
 
 /** zonemd unit tests */
