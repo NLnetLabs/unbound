@@ -2449,8 +2449,11 @@ comm_point_http2_handle_read(int ATTR_UNUSED(fd), struct comm_point* c)
 	if(ret) {
 		if(ret != NGHTTP2_ERR_EOF &&
 			ret != NGHTTP2_ERR_CALLBACK_FAILURE) {
-			verbose(VERB_QUERY, "http2: session_recv failed, "
-				"error: %s", nghttp2_strerror(ret));
+			char a[256];
+			addr_to_str(&c->repinfo.addr, c->repinfo.addrlen,
+				a, sizeof(a));
+			verbose(VERB_QUERY, "http2: session_recv from %s failed, "
+				"error: %s", a, nghttp2_strerror(ret));
 		}
 		return 0;
 	}

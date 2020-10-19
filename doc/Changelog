@@ -8,6 +8,7 @@
 	  and the dohclient test code has the -n option.
 	- Fix python documentation warning on functions.rst inplace_cb_reply.
 	- Fix dnstap test to wait for log timer to see if queries are logged.
+	- Log ip address when http session recv fails, eg. due to tls fail.
 
 16 October 2020: Wouter
 	- Fix that the out of order TCP processing does not limit the
