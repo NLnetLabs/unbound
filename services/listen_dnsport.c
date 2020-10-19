@@ -81,9 +81,6 @@
 /** number of queued TCP connections for listen() */
 #define TCP_BACKLOG 256 
 
-/** number of simultaneous requests a client can have */
-/* #define TCP_MAX_REQ_SIMULTANEOUS 32 */
-
 #ifndef THREADS_DISABLED
 /** lock on the counter of stream buffer memory */
 static lock_basic_type stream_wait_count_lock;
@@ -1809,8 +1806,7 @@ tcp_req_info_setup_listen(struct tcp_req_info* req)
 
 	if(!req->cp->tcp_is_reading)
 		wr = 1;
-	if(/*req->num_open_req + req->num_done_req < TCP_MAX_REQ_SIMULTANEOUS &&*/
-		!req->read_is_closed)
+	if(!req->read_is_closed)
 		rd = 1;
 	
 	if(wr) {

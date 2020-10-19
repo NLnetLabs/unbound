@@ -14,6 +14,8 @@
 	- Log ip address when http session recv fails, eg. due to tls fail.
 	- Fix to set the tcp handler event toggle flag back to default when
 	  the handler structure is reused.
+	- Clean the fix for out of order TCP processing limits on number
+	  of queries.  It was tested to work.
 
 16 October 2020: Wouter
 	- Fix that the out of order TCP processing does not limit the
