@@ -1859,7 +1859,7 @@ static int auth_zone_zonemd_check_hash(struct auth_zone* z,
 	if(!*reason)
 		*reason = "no ZONEMD records found";
 	dname_str(z->name, zstr);
-	log_warn("auth-zone %s ZONEMD failed: %s", zstr, *reason);
+	verbose(VERB_ALGO, "auth-zone %s ZONEMD failed: %s", zstr, *reason);
 	return 0;
 }
 
@@ -7561,8 +7561,13 @@ static int zonemd_dnssec_verify_rrset(struct auth_zone* z,
 	pk.rk.dname_len = node->namelen;
 	pk.rk.type = htons(rrset->type);
 	pk.rk.rrset_class = htons(z->dclass);
-	auth_zone_log(z->name, VERB_ALGO,
-		"zonemd: verify RRset with DNSKEY");
+	if(verbosity >= VERB_ALGO) {
+		char typestr[32];
+		typestr[0]=0;
+		sldns_wire2str_type_buf(rrset->type, typestr, sizeof(typestr));
+		auth_zone_log(z->name, VERB_ALGO,
+			"zonemd: verify %s RRset with DNSKEY", typestr);
+	}
 	sec = dnskeyset_verify_rrset(env, ve, &pk, dnskey, NULL, &why_bogus,
 		LDNS_SECTION_ANSWER, NULL);
 	if(sec == sec_status_secure) {

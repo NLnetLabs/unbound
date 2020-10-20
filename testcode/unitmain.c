@@ -900,7 +900,7 @@ static void zonemd_generate_test(const char* zname, char* zfile,
 	for(i=0; i<strlen(digestdup); i++) {
 		digestdup[i] = toupper(digestdup[i]);
 	}
-	if(0) {
+	if(verbosity >= VERB_ALGO) {
 		char zname[255+1];
 		dname_str(z->name, zname);
 		printf("zonemd generated for %s in %s with "
@@ -916,6 +916,10 @@ static void zonemd_generate_test(const char* zname, char* zfile,
 	auth_zones_delete(az);
 	regional_destroy(region);
 	sldns_buffer_free(buf);
+
+	if(verbosity >= VERB_ALGO) {
+		printf("\n");
+	}
 }
 
 /** loop over files and test generated zonemd digest */
@@ -1022,12 +1026,17 @@ static void zonemd_check_test(void)
 	auth_zones_delete(az);
 	regional_destroy(region);
 	sldns_buffer_free(buf);
+
+	if(verbosity >= VERB_ALGO) {
+		printf("\n");
+	}
 }
 
 /** zonemd test verify */
 static void zonemd_verify_test(char* zname, char* zfile, char* tastr,
 	char* date_override, char* result_wanted)
 {
+	time_t now = 0;
 	struct module_stack mods;
 	struct module_env env;
 	char* result = NULL;
@@ -1045,9 +1054,20 @@ static void zonemd_verify_test(char* zname, char* zfile, char* tastr,
 	env.cfg = config_create();
 	if(!env.cfg)
 		fatal_exit("out of memory");
+	env.now = &now;
 	env.cfg->val_date_override = cfg_convert_timeval(date_override);
 	if(!env.cfg->val_date_override)
 		fatal_exit("could not parse datetime %s", date_override);
+	if(env.cfg->module_conf)
+		free(env.cfg->module_conf);
+	env.cfg->module_conf = strdup("validator iterator");
+	if(!env.cfg->module_conf)
+		fatal_exit("out of memory");
+	if(tastr) {
+		if(!cfg_strlist_insert(&env.cfg->trust_anchor_list,
+			strdup(tastr)))
+			fatal_exit("out of memory");
+	}
 	env.anchors = anchors_create();
 	if(!env.anchors)
 		fatal_exit("out of memory");
@@ -1055,15 +1075,13 @@ static void zonemd_verify_test(char* zname, char* zfile, char* tastr,
 	if(!env.auth_zones)
 		fatal_exit("out of memory");
 	modstack_init(&mods);
-	if(!modstack_config(&mods, "validator iterator"))
-		fatal_exit("could not init modules");
+	if(!modstack_setup(&mods, env.cfg->module_conf, &env))
+		fatal_exit("could not modstack_setup");
 	env.mesh = mesh_create(&mods, &env);
 	if(!env.mesh)
 		fatal_exit("out of memory");
 
 	/* load data */
-	if(tastr && !anchor_store_str(env.anchors, env.scratch_buffer, tastr))
-		fatal_exit("could not store anchor: %s", tastr);
 	z = authtest_addzone(env.auth_zones, zname, zfile);
 	if(!z)
 		fatal_exit("could not addzone %s %s", zname, zfile);
@@ -1072,7 +1090,7 @@ static void zonemd_verify_test(char* zname, char* zfile, char* tastr,
 	lock_rw_wrlock(&z->lock);
 	auth_zone_verify_zonemd(z, &env, &result);
 	lock_rw_unlock(&z->lock);
-	if(0) {
+	if(verbosity >= VERB_ALGO) {
 		printf("auth zone %s: ZONEMD verification %s: %s\n", zname,
 			(strcmp(result, "ZONEMD verification successful")==0?"successful":"failed"),
 			result);
@@ -1099,6 +1117,10 @@ static void zonemd_verify_test(char* zname, char* zfile, char* tastr,
 	config_delete(env.cfg);
 	regional_destroy(env.scratch);
 	sldns_buffer_free(env.scratch_buffer);
+
+	if(verbosity >= VERB_ALGO) {
+		printf("\n");
+	}
 }
 
 /** zonemd test verify suite */
@@ -1153,7 +1175,6 @@ static void zonemd_verify_tests(void)
 		"20180302005009",
 		"ZONEMD verification successful");
 
-#if 0
 	/* load a DNSSEC signed zone with a trust anchor, valid ZONEMD */
 	zonemd_verify_test("example.com",
 		"testdata/zonemd.example5.zone",
@@ -1166,7 +1187,6 @@ static void zonemd_verify_tests(void)
 		"example.com. IN DS 55566 8 2 9c148338951ce1c3b5cd3da532f3d90dfcf92595148022f2c2fd98e5deee90af",
 		"20201020135527",
 		"ZONEMD verification successful");
-#endif
 }
 
 /** zonemd unit tests */
