@@ -7792,9 +7792,17 @@ auth_zone_verify_zonemd_with_key(struct auth_zone* z, struct module_env* env,
 		return;
 	}
 	if(zonemd_absent && zonemd_absence_dnssecok) {
-		auth_zone_log(z->name, VERB_ALGO, "ZONEMD successful, DNSSEC verified nonexistence of ZONEMD");
+		auth_zone_log(z->name, VERB_ALGO, "DNSSEC verified nonexistence of ZONEMD");
 		if(result) {
-			*result = strdup("ZONEMD successful, DNSSEC verified nonexistence of ZONEMD");
+			*result = strdup("DNSSEC verified nonexistence of ZONEMD");
+			if(!*result) log_err("out of memory");
+		}
+		return;
+	}
+	if(zonemd_absent) {
+		auth_zone_log(z->name, VERB_ALGO, "no ZONEMD present");
+		if(result) {
+			*result = strdup("no ZONEMD present");
 			if(!*result) log_err("out of memory");
 		}
 		return;
