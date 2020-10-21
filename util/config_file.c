@@ -170,6 +170,7 @@ config_create(void)
 	cfg->infra_cache_slabs = 4;
 	cfg->infra_cache_numhosts = 10000;
 	cfg->infra_cache_min_rtt = 50;
+	cfg->infra_keep_probing = 0;
 	cfg->delay_close = 0;
 	if(!(cfg->outgoing_avail_ports = (int*)calloc(65536, sizeof(int))))
 		goto error_exit;
@@ -563,6 +564,7 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	    IS_NUMBER_OR_ZERO; cfg->infra_cache_min_rtt = atoi(val);
 	    RTT_MIN_TIMEOUT=cfg->infra_cache_min_rtt;
 	}
+	else S_YNO("infra-keep-probing:", infra_keep_probing)
 	else S_NUMBER_OR_ZERO("infra-host-ttl:", host_ttl)
 	else S_POW2("infra-cache-slabs:", infra_cache_slabs)
 	else S_SIZET_NONZERO("infra-cache-numhosts:", infra_cache_numhosts)
@@ -959,6 +961,7 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_DEC(opt, "infra-host-ttl", host_ttl)
 	else O_DEC(opt, "infra-cache-slabs", infra_cache_slabs)
 	else O_DEC(opt, "infra-cache-min-rtt", infra_cache_min_rtt)
+	else O_YNO(opt, "infra-keep-probing", infra_keep_probing)
 	else O_MEM(opt, "infra-cache-numhosts", infra_cache_numhosts)
 	else O_UNS(opt, "delay-close", delay_close)
 	else O_YNO(opt, "do-ip4", do_ip4)
