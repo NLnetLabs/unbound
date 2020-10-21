@@ -403,7 +403,7 @@ static void reuse_write_wait_push_back(struct reuse_tcp* reuse,
 }
 
 /** insert element in tree by id */
-static void
+void
 reuse_tree_by_id_insert(struct reuse_tcp* reuse, struct waiting_tcp* w)
 {
 	log_assert(w->id_node.key == NULL);
@@ -412,7 +412,7 @@ reuse_tree_by_id_insert(struct reuse_tcp* reuse, struct waiting_tcp* w)
 }
 
 /** find element in tree by id */
-static struct waiting_tcp*
+struct waiting_tcp*
 reuse_tcp_by_id_find(struct reuse_tcp* reuse, uint16_t id)
 {
 	struct waiting_tcp key_w;
@@ -885,7 +885,7 @@ static void reuse_del_readwait_elem(rbnode_type* node, void* ATTR_UNUSED(arg))
 }
 
 /** delete readwait waiting_tcp elements, deletes the elements in the list */
-static void reuse_del_readwait(rbtree_type* tree_by_id)
+void reuse_del_readwait(rbtree_type* tree_by_id)
 {
 	if(tree_by_id->root == NULL ||
 		tree_by_id->root == RBTREE_NULL)
@@ -1946,6 +1946,7 @@ reuse_tcp_close_oldest(struct outside_network* outnet)
 		outnet->tcp_reuse_last = NULL;
 		outnet->tcp_reuse_first = NULL;
 	}
+	pend->reuse.item_on_lru_list = 0;
 
 	/* free up */
 	reuse_cb_and_decommission(outnet, pend, NETEVENT_CLOSED);
@@ -1953,7 +1954,7 @@ reuse_tcp_close_oldest(struct outside_network* outnet)
 
 /** find spare ID value for reuse tcp stream.  That is random and also does
  * not collide with an existing query ID that is in use or waiting */
-static uint16_t
+uint16_t
 reuse_tcp_select_id(struct reuse_tcp* reuse, struct outside_network* outnet)
 {
 	uint16_t id = 0, curid, nextid;
@@ -1996,9 +1997,11 @@ reuse_tcp_select_id(struct reuse_tcp* reuse, struct outside_network* outnet)
 		if(next && next != RBTREE_NULL) {
 			curid = tree_by_id_get_id(node);
 			nextid = tree_by_id_get_id(next);
+			log_assert(curid < nextid);
 			if(curid != 0xffff && curid + 1 < nextid) {
 				/* space between nodes */
 				space = nextid - curid - 1;
+				log_assert(select >= count);
 				if(select < count + space) {
 					/* here it is */
 					return curid + 1 + (select - count);
@@ -2015,6 +2018,7 @@ reuse_tcp_select_id(struct reuse_tcp* reuse, struct outside_network* outnet)
 	node = rbtree_last(&reuse->tree_by_id);
 	log_assert(node && node != RBTREE_NULL); /* tree not empty */
 	curid = tree_by_id_get_id(node);
+	log_assert(count + (0xffff-curid) + reuse->tree_by_id.count == 0xffff);
 	return curid + 1 + (select - count);
 }
 
@@ -2277,7 +2281,9 @@ reuse_tcp_remove_serviced_keep(struct waiting_tcp* w,
 	 * the stream itself.  also keep it as an entry in the tree_by_id,
 	 * in case the answer returns (that we no longer want), but we cannot
 	 * pick the same ID number meanwhile */
-	pend_tcp->query->cb = NULL;
+	if(pend_tcp->query) {
+		pend_tcp->query->cb = NULL;
+	}
 	/* see if can be entered in reuse tree
 	 * for that the FD has to be non-1 */
 	if(pend_tcp->c->fd == -1) {

@@ -636,6 +636,19 @@ size_t outnet_get_mem(struct outside_network* outnet);
  */
 size_t serviced_get_mem(struct serviced_query* sq);
 
+/** Pick random ID value for a tcp stream, avoids existing IDs. */
+uint16_t reuse_tcp_select_id(struct reuse_tcp* reuse,
+	struct outside_network* outnet);
+
+/** find element in tree by id */
+struct waiting_tcp* reuse_tcp_by_id_find(struct reuse_tcp* reuse, uint16_t id);
+
+/** insert element in tree by id */
+void reuse_tree_by_id_insert(struct reuse_tcp* reuse, struct waiting_tcp* w);
+
+/** delete readwait waiting_tcp elements, deletes the elements in the list */
+void reuse_del_readwait(rbtree_type* tree_by_id);
+
 /** get TCP file descriptor for address, returns -1 on failure,
  * tcp_mss is 0 or maxseg size to set for TCP packets. */
 int outnet_get_tcp_fd(struct sockaddr_storage* addr, socklen_t addrlen, int tcp_mss, int dscp);
