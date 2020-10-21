@@ -1,3 +1,13 @@
+21 October 2020: Wouter
+	- Merge PR #228 : infra-keep-probing option to probe hosts that are
+	  down.  Add infra-keep-probing: yes option. Hosts that are down are
+	  probed more frequently.
+	  With the option turned on, it probes about every 120 seconds,
+	  eventually after exponential backoff, and that keeps that way. If
+	  traffic keeps up for the domain. It probes with one at a time, eg.
+	  one query is allowed to probe, other queries within that 120 second
+	  interval are turned away.
+
 19 October 2020: George
 	- Merge PR #324 from James Renken: Add modern X.509v3 extensions to
 	  unbound-control TLS certificates.
