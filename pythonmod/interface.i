@@ -992,8 +992,6 @@ struct config_file {
    struct config_strlist* trust_anchor_file_list;
    struct config_strlist* trust_anchor_list;
    struct config_strlist* trusted_keys_file_list;
-   char* dlv_anchor_file;
-   struct config_strlist* dlv_anchor_list;
    int max_ttl;
    int32_t val_date_override;
    int bogus_ttl;
