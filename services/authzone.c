@@ -7628,6 +7628,7 @@ static int zonemd_check_dnssec_absence(struct auth_zone* z,
 			*reason = "DNSSEC NSEC bitmap says type ZONEMD exists";
 			return 0;
 		}
+		auth_zone_log(z->name, VERB_ALGO, "zonemd DNSSEC NSEC verification of absence of ZONEMD secure");
 	} else {
 		/* NSEC3 perhaps ? */
 		int algo;
@@ -7668,6 +7669,7 @@ static int zonemd_check_dnssec_absence(struct auth_zone* z,
 			*reason = "DNSSEC NSEC3 bitmap says type ZONEMD exists";
 			return 0;
 		}
+		auth_zone_log(z->name, VERB_ALGO, "zonemd DNSSEC NSEC3 verification of absence of ZONEMD secure");
 	}
 
 	return 1;
@@ -7747,7 +7749,7 @@ auth_zone_verify_zonemd_with_key(struct auth_zone* z, struct module_env* env,
 	char* reason = NULL;
 	struct auth_data* apex = NULL;
 	struct auth_rrset* zonemd_rrset = NULL;
-	int zonemd_absent = 0;
+	int zonemd_absent = 0, zonemd_absence_dnssecok = 0;
 
 	/* see if ZONEMD is present or absent. */
 	apex = az_find_name(z, z->name, z->namelen);
@@ -7775,6 +7777,7 @@ auth_zone_verify_zonemd_with_key(struct auth_zone* z, struct module_env* env,
 			auth_zone_zonemd_fail(z, env, reason, result);
 			return;
 		}
+		zonemd_absence_dnssecok = 1;
 	} else if(zonemd_rrset && dnskey) {
 		/* check DNSSEC verify of SOA and ZONEMD */
 		if(!zonemd_check_dnssec_soazonemd(z, env, dnskey, apex,
@@ -7784,14 +7787,25 @@ auth_zone_verify_zonemd_with_key(struct auth_zone* z, struct module_env* env,
 		}
 	}
 
+	if(zonemd_absent && 0) {
+		auth_zone_zonemd_fail(z, env, "ZONEMD absent and that is not allowed by config", result);
+		return;
+	}
+	if(zonemd_absent && zonemd_absence_dnssecok) {
+		auth_zone_log(z->name, VERB_ALGO, "ZONEMD successful, DNSSEC verified nonexistence of ZONEMD");
+		if(result) {
+			*result = strdup("ZONEMD successful, DNSSEC verified nonexistence of ZONEMD");
+			if(!*result) log_err("out of memory");
+		}
+		return;
+	}
+
 	/* check ZONEMD checksum and report or else fail. */
 	if(!auth_zone_zonemd_check_hash(z, env, &reason)) {
 		auth_zone_zonemd_fail(z, env, reason, result);
 		return;
 	}
 
-	if(zonemd_absent)
-		auth_zone_zonemd_fail(z, env, "ZONEMD absent and that is not allowed by config", result);
 	/* success! log the success */
 	auth_zone_log(z->name, VERB_ALGO, "ZONEMD verification successful");
 	if(result) {

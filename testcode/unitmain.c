@@ -1098,7 +1098,8 @@ static void zonemd_verify_test(char* zname, char* zfile, char* tastr,
 	if(!result)
 		fatal_exit("out of memory");
 	unit_assert(strcmp(result, result_wanted) == 0);
-	if(strcmp(result, "ZONEMD verification successful") == 0) {
+	if(strcmp(result, "ZONEMD verification successful") == 0 ||
+		strcmp(result, "ZONEMD successful, DNSSEC verified nonexistence of ZONEMD") == 0) {
 		lock_rw_rdlock(&z->lock);
 		unit_assert(!z->zone_expired);
 		lock_rw_unlock(&z->lock);
@@ -1187,6 +1188,19 @@ static void zonemd_verify_tests(void)
 		"example.com. IN DS 55566 8 2 9c148338951ce1c3b5cd3da532f3d90dfcf92595148022f2c2fd98e5deee90af",
 		"20201020135527",
 		"ZONEMD verification successful");
+
+	/* load a DNSSEC NSEC zone without ZONEMD */
+	zonemd_verify_test("example.com",
+		"testdata/zonemd.example7.zone",
+		"example.com. IN DS 55566 8 2 9c148338951ce1c3b5cd3da532f3d90dfcf92595148022f2c2fd98e5deee90af",
+		"20201020135527",
+		"ZONEMD successful, DNSSEC verified nonexistence of ZONEMD");
+	/* load a DNSSEC NSEC3 zone without ZONEMD */
+	zonemd_verify_test("example.com",
+		"testdata/zonemd.example8.zone",
+		"example.com. IN DS 55566 8 2 9c148338951ce1c3b5cd3da532f3d90dfcf92595148022f2c2fd98e5deee90af",
+		"20201020135527",
+		"ZONEMD successful, DNSSEC verified nonexistence of ZONEMD");
 }
 
 /** zonemd unit tests */
