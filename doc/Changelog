@@ -1,3 +1,178 @@
+19 October 2020: George
+	- Merge PR #324 from James Renken: Add modern X.509v3 extensions to
+	  unbound-control TLS certificates.
+	- Fix for PR #324 to attach the x509v3 extensions to the client
+	  certificate.
+
+19 October 2020: Ralph
+	- local-zone regional allocations outside of chunk
+
+19 October 2020: Wouter
+	- Fix that http settings have colon in set_option, for
+	  http-endpoint, http-max-streams, http-query-buffer-size,
+	  http-response-buffer-size, and http-nodelay.
+	- Fix memory leak of https port string when reading config.
+	- Fix #330: [Feature request] Add unencrypted DNS over HTTPS support.
+	  This adds the option http-notls-downstream: yesno to change that,
+	  and the dohclient test code has the -n option.
+	- Fix python documentation warning on functions.rst inplace_cb_reply.
+	- Fix dnstap test to wait for log timer to see if queries are logged.
+	- Log ip address when http session recv fails, eg. due to tls fail.
+	- Fix to set the tcp handler event toggle flag back to default when
+	  the handler structure is reused.
+	- Clean the fix for out of order TCP processing limits on number
+	  of queries.  It was tested to work.
+
+16 October 2020: Wouter
+	- Fix that the out of order TCP processing does not limit the
+	  number of outstanding queries over a connection.
+
+15 October 2020: George
+	- Fix that if there are reply callbacks for the given rcode, those
+	  are called per reply and a new message created if that was modified
+	  by the call.
+	- Pass the comm_reply information to the inplace_cb_reply* functions
+	  during the mesh state and update the documentation on that.
+
+15 October 2020: Wouter
+	- Merge PR #326 from netblue30: DoH: implement content-length
+	  header field
+	- DoH content length, simplify code, remove declaration after
+	  statement and fix cast warning.
+
+14 October 2020: Wouter
+	- Fix for python reply callback to see mesh state reply_list member,
+	  it only removes it briefly for the commpoint call so that it does
+	  not drop it and attempt to modify the reply list during reply.
+	- Fix that if there are on reply callbacks, those are called per
+	  reply and a new message created if that was modified by the call.
+	- Free up auth zone parse region after use for lookup of host
+
+13 October 2020: Wouter
+	- Fix #323: unbound testsuite fails on mock build in systemd-nspawn
+	  if systemd support is build.
+
+9 October 2020: Wouter
+	- Fix dnstap socket and the chroot not applied properly to the dnstap
+	  socket path.
+	- Fix warning in libnss compile, nss_buf2dsa is not used without DSA.
+
+8 October 2020: Wouter
+	- Tag for 1.12.0 release.
+	- Current repo is version 1.12.1 in development.
+	- Fix #319: potential memory leak on config failure, in rpz config.
+
+1 October 2020: Wouter
+	- Current repo is version 1.12.0 for release.  Tag for 1.12.0rc1.
+
+30 September 2020: Wouter
+	- Fix doh tests when not compiled in.
+	- Add dohclient test executable to gitignore.
+	- Fix stream_ssl, ssl_req_order and ssl_req_timeout tests for
+	  alloc check debug output.
+	- Easier kill of unbound-dnstap-socket tool in test.
+	- Fix memory leak of edns tags at libunbound context delete.
+	- Fix double loopexit for unbound-dnstap-socket after sigterm.
+
+29 September 2020: Ralph
+	- DNS Flag Day 2020: change edns-buffer-size default to 1232.
+
+28 September 2020: Wouter
+	- Fix unit test for dnstap changes, so that it waits for the timer.
+
+23 September 2020: Wouter
+	- Fix #305: dnstap logging significantly affects unbound performance
+	  (regression in 1.11).
+	- Fix #305: only wake up thread when threshold reached.
+	- Fix to ifdef fptr wlist item for dnstap.
+
+23 September 2020: Ralph
+	- Fix edns-client-tags get_option typo
+	- Add edns-client-tag-opcode option
+	- Use inclusive language in configuration
+
+21 September 2020: Ralph
+	- Fix #304: dnstap logging not recovering after dnstap process restarts
+
+21 September 2020: Wouter
+	- Merge PR #311 by luismerino: Dynlibmod leak.
+	- Error message is logged for dynlibmod malloc failures.
+	- iana portlist updated.
+
+18 September 2020: Wouter
+	- Fix that prefer-ip4 and prefer-ip6 can be get and set with
+	  unbound-control, with libunbound and the unbound-checkconf option
+	  output function.
+	- iana portlist updated.
+
+15 September 2020: George
+	- Introduce test for statistics.
+
+15 September 2020: Wouter
+	- Spelling fix.
+
+11 September 2020: Wouter
+	- Remove x file mode on ipset/ipset.c and h files.
+
+9 September 2020: Wouter
+	- Fix num.expired statistics output.
+
+31 August 2020: Wouter
+	- Merge PR #293: Add missing prototype.  Also refactor to use the new
+	  shorthand function to clean up the code.
+	- Refactor to use sock_strerr shorthand function.
+	- Fix #296: systemd nss-lookup.target is reached before unbound can
+	  successfully answer queries. Changed contrib/unbound.service.in.
+
+27 August 2020: Wouter
+	- Similar to NSD PR#113, implement that interface names can be used,
+	  eg. something like interface: eth0 is resolved at server start and
+	  uses the IP addresses for that named interface.
+	- Review fix, doxygen and assign null in case of error free.
+
+26 August 2020: George
+	- Update documentation in python example code.
+
+24 August 2020: Wouter
+	- Fix that dnstap reconnects do not spam the log with the repeated
+	  attempts.  Attempts on the timer are only logged on high verbosity,
+	  if they produce a connection failure error.
+	- Fix to apply chroot to dnstap-socket-path, if chroot is enabled.
+	- Change configure to use EVP_sha256 instead of HMAC_Update for
+	  openssl-3.0.0.
+
+20 August 2020: Ralph
+	- Fix stats double count issue (#289).
+
+13 August 2020: Ralph
+	- Create and init edns tags data for libunbound.
+
+10 August 2020: Ralph
+	- Merge (modified) PR #277, use EVP_MAC_CTX_set_params if available,
+	  by Vítězslav Čížek.
+
+10 August 2020: Wouter
+	- Fix #287: doc typo: "Additionaly".
+	- Rerun autoconf
+
+6 August 2020: Wouter
+	- Merge PR #284 and Fix #246: Remove DLV entirely from Unbound.
+	  The DLV has been decommisioned and in unbound 1.5.4, in 2015, there
+	  was advise to stop using it.  The current code base does not contain
+	  DLV code any more.  The use of dlv options displays a warning.
+
+5 August 2020: Wouter
+	- contrib/aaaa-filter-iterator.patch file renewed diff content to
+	  apply cleanly to the current coderepo for the current code version.
+
+5 August 2020: Ralph
+	- Merge PR #272: Add EDNS client tag functionality.
+
+4 August 2020: George
+	- Improve error log message when inserting rpz RR.
+	- Merge PR #280, Make tvOS & watchOS checks verify truthiness as well as
+	  definedness, by Felipe Gasper.
+
 4 August 2020: Wouter
 	- Fix mini_event.h on OpenBSD cannot find fd_set.
 
