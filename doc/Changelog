@@ -1,6 +1,8 @@
 21 October 2020: George
 	- Fix #327: net/if.h check fails on some darwin versions; contribution by
 	  Joshua Root.
+	- Fix #320: potential memory corruption due to size miscomputation upton
+	  custom region alloc init.
 
 21 October 2020: Wouter
 	- Merge PR #228 : infra-keep-probing option to probe hosts that are
