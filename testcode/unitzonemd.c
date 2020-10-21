@@ -336,7 +336,7 @@ static void zonemd_verify_tests(void)
 		"testdata/zonemd.example1.zone",
 		"example.org. IN DS 55566 8 2 9c148338951ce1c3b5cd3da532f3d90dfcf92595148022f2c2fd98e5deee90af",
 		"20180302005009",
-		"have trust anchor, but zone has no DNSKEY");
+		"verify DNSKEY RRset with trust anchor failed: have trust anchor, but zone has no DNSKEY");
 	zonemd_verify_test("example.org",
 		"testdata/zonemd.example1.zone",
 		NULL,
@@ -411,13 +411,13 @@ static void zonemd_verify_tests(void)
 		"testdata/zonemd.example9.zone",
 		"example.com. IN DS 55566 8 2 9c148338951ce1c3b5cd3da532f3d90dfcf92595148022f2c2fd98e5deee90af",
 		"20201020135527",
-		"DNSSEC verify failed for ZONEMD RRset");
+		"DNSSEC verify failed for ZONEMD RRset: signature crypto failed");
 	/* load DNSSEC zone but RRSIG on SOA is wrong */
 	zonemd_verify_test("example.com",
 		"testdata/zonemd.example10.zone",
 		"example.com. IN DS 55566 8 2 9c148338951ce1c3b5cd3da532f3d90dfcf92595148022f2c2fd98e5deee90af",
 		"20201020135527",
-		"DNSSEC verify failed for SOA RRset");
+		"DNSSEC verify failed for SOA RRset: signature crypto failed");
 
 	/* load DNSSEC zone without ZONEMD, but NSEC bitmap says it exists */
 	zonemd_verify_test("example.com",
@@ -437,20 +437,20 @@ static void zonemd_verify_tests(void)
 		"testdata/zonemd.example13.zone",
 		"example.com. IN DS 55566 8 2 9c148338951ce1c3b5cd3da532f3d90dfcf92595148022f2c2fd98e5deee90af",
 		"20201020135527",
-		"DNSSEC verify failed for NSEC RRset");
+		"DNSSEC verify failed for NSEC RRset: signature crypto failed");
 	/* load DNSSEC zone without ZONEMD, but RRSIG on NSEC3 not okay */
 	zonemd_verify_test("example.com",
 		"testdata/zonemd.example14.zone",
 		"example.com. IN DS 55566 8 2 9c148338951ce1c3b5cd3da532f3d90dfcf92595148022f2c2fd98e5deee90af",
 		"20201020135527",
-		"DNSSEC verify failed for NSEC3 RRset");
+		"DNSSEC verify failed for NSEC3 RRset: signature crypto failed");
 
 	/* load DNSSEC zone, with ZONEMD, but DNSKEY RRSIG is not okay. */
 	zonemd_verify_test("example.com",
 		"testdata/zonemd.example15.zone",
 		"example.com. IN DS 55566 8 2 9c148338951ce1c3b5cd3da532f3d90dfcf92595148022f2c2fd98e5deee90af",
 		"20201020135527",
-		"signature crypto failed");
+		"verify DNSKEY RRset with trust anchor failed: signature crypto failed");
 	/* load DNSSEC zone, but trust anchor mismatches DNSKEY */
 	zonemd_verify_test("example.com",
 		"testdata/zonemd.example5.zone",
@@ -458,7 +458,7 @@ static void zonemd_verify_tests(void)
 		"example.com. IN DS 55566 8 2 9c148338951ce1c3b5cd3da532f3d90dfcf92595148022f2c2fd98e5deee90af", */
 		"example.com. IN DS 55566 8 2 0000000000111111222223333444444dfcf92595148022f2c2fd98e5deee90af",
 		"20201020135527",
-		"DS hash mismatches key");
+		"verify DNSKEY RRset with trust anchor failed: DS hash mismatches key");
 	/* load DNSSEC zone, but trust anchor fails because the zone
 	 * has expired signatures.  We set the date for it */
 	zonemd_verify_test("example.com",
@@ -466,7 +466,7 @@ static void zonemd_verify_tests(void)
 		"example.com. IN DS 55566 8 2 9c148338951ce1c3b5cd3da532f3d90dfcf92595148022f2c2fd98e5deee90af",
 		/* okay date: "20201020135527", */
 		"20221020135527",
-		"signature expired");
+		"verify DNSKEY RRset with trust anchor failed: signature expired");
 }
 
 /** zonemd unit tests */
