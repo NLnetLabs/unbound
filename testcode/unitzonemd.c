@@ -405,6 +405,19 @@ static void zonemd_verify_tests(void)
 		"example.com. IN DS 55566 8 2 9c148338951ce1c3b5cd3da532f3d90dfcf92595148022f2c2fd98e5deee90af",
 		"20201020135527",
 		"DNSSEC verified nonexistence of ZONEMD");
+
+	/* load DNSSEC zone but RRSIG on ZONEMD is wrong */
+	zonemd_verify_test("example.com",
+		"testdata/zonemd.example9.zone",
+		"example.com. IN DS 55566 8 2 9c148338951ce1c3b5cd3da532f3d90dfcf92595148022f2c2fd98e5deee90af",
+		"20201020135527",
+		"DNSSEC verify failed for ZONEMD RRset");
+	/* load DNSSEC zone but RRSIG on SOA is wrong */
+	zonemd_verify_test("example.com",
+		"testdata/zonemd.example10.zone",
+		"example.com. IN DS 55566 8 2 9c148338951ce1c3b5cd3da532f3d90dfcf92595148022f2c2fd98e5deee90af",
+		"20201020135527",
+		"DNSSEC verify failed for SOA RRset");
 }
 
 /** zonemd unit tests */
