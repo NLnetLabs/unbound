@@ -382,6 +382,12 @@ Lower limit for dynamic retransmit timeout calculation in infrastructure
 cache. Default is 50 milliseconds. Increase this value if using forwarders
 needing more time to do recursive name resolution.
 .TP
+.B infra\-keep\-probing: \fI<yes or no>
+If enabled the server keeps probing hosts that are down, in the one probe
+at a time regime.  Default is no.  Hosts that are down, eg. they did
+not respond during the one probe at a time period, are marked as down and
+it may take \fBinfra\-host\-ttl\fR time to get probed again.
+.TP
 .B define\-tag: \fI<"list of tags">
 Define the tags that can be used with local\-zone and access\-control.
 Enclose the list between quotes ("") and put spaces between tags.

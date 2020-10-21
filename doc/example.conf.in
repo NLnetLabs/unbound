@@ -192,6 +192,9 @@ server:
 	# minimum wait time for responses, increase if uplink is long. In msec.
 	# infra-cache-min-rtt: 50
 
+	# enable to make server probe down hosts more frequently.
+	# infra-keep-probing: no
+
 	# the number of slabs to use for the Infrastructure cache.
 	# the number of slabs must be a power of 2.
 	# more slabs reduce lock contention, but fragment memory usage.
