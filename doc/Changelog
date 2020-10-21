@@ -1,3 +1,7 @@
+21 October 2020: George
+	- Fix #327: net/if.h check fails on some darwin versions; contribution by
+	  Joshua Root.
+
 21 October 2020: Wouter
 	- Merge PR #228 : infra-keep-probing option to probe hosts that are
 	  down.  Add infra-keep-probing: yes option. Hosts that are down are
