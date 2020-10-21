@@ -1,3 +1,19 @@
+21 October 2020: Wouter
+	- Merge PR #228 : infra-keep-probing option to probe hosts that are
+	  down.  Add infra-keep-probing: yes option. Hosts that are down are
+	  probed more frequently.
+	  With the option turned on, it probes about every 120 seconds,
+	  eventually after exponential backoff, and that keeps that way. If
+	  traffic keeps up for the domain. It probes with one at a time, eg.
+	  one query is allowed to probe, other queries within that 120 second
+	  interval are turned away.
+
+19 October 2020: George
+	- Merge PR #324 from James Renken: Add modern X.509v3 extensions to
+	  unbound-control TLS certificates.
+	- Fix for PR #324 to attach the x509v3 extensions to the client
+	  certificate.
+
 19 October 2020: Ralph
 	- local-zone regional allocations outside of chunk
 
@@ -12,6 +28,10 @@
 	- Fix python documentation warning on functions.rst inplace_cb_reply.
 	- Fix dnstap test to wait for log timer to see if queries are logged.
 	- Log ip address when http session recv fails, eg. due to tls fail.
+	- Fix to set the tcp handler event toggle flag back to default when
+	  the handler structure is reused.
+	- Clean the fix for out of order TCP processing limits on number
+	  of queries.  It was tested to work.
 
 16 October 2020: Wouter
 	- Fix that the out of order TCP processing does not limit the

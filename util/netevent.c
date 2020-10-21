@@ -965,6 +965,10 @@ comm_point_tcp_accept_callback(int fd, short event, void* arg)
 	/* clear leftover flags from previous use, and then set the
 	 * correct event base for the event structure for libevent */
 	ub_event_free(c_hdl->ev->ev);
+	if((c_hdl->type == comm_tcp && c_hdl->tcp_req_info) ||
+		c_hdl->type == comm_local || c_hdl->type == comm_raw)
+		c_hdl->tcp_do_toggle_rw = 0;
+	else	c_hdl->tcp_do_toggle_rw = 1;
 
 	if(c_hdl->type == comm_http) {
 #ifdef HAVE_NGHTTP2
