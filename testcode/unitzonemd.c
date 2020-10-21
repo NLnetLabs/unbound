@@ -445,7 +445,6 @@ static void zonemd_verify_tests(void)
 		"20201020135527",
 		"DNSSEC verify failed for NSEC3 RRset");
 
-	verbosity=4;
 	/* load DNSSEC zone, with ZONEMD, but DNSKEY RRSIG is not okay. */
 	zonemd_verify_test("example.com",
 		"testdata/zonemd.example15.zone",
