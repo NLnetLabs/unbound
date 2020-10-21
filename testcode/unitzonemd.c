@@ -444,6 +444,30 @@ static void zonemd_verify_tests(void)
 		"example.com. IN DS 55566 8 2 9c148338951ce1c3b5cd3da532f3d90dfcf92595148022f2c2fd98e5deee90af",
 		"20201020135527",
 		"DNSSEC verify failed for NSEC3 RRset");
+
+	verbosity=4;
+	/* load DNSSEC zone, with ZONEMD, but DNSKEY RRSIG is not okay. */
+	zonemd_verify_test("example.com",
+		"testdata/zonemd.example15.zone",
+		"example.com. IN DS 55566 8 2 9c148338951ce1c3b5cd3da532f3d90dfcf92595148022f2c2fd98e5deee90af",
+		"20201020135527",
+		"signature crypto failed");
+	/* load DNSSEC zone, but trust anchor mismatches DNSKEY */
+	zonemd_verify_test("example.com",
+		"testdata/zonemd.example5.zone",
+		/* okay anchor is
+		"example.com. IN DS 55566 8 2 9c148338951ce1c3b5cd3da532f3d90dfcf92595148022f2c2fd98e5deee90af", */
+		"example.com. IN DS 55566 8 2 0000000000111111222223333444444dfcf92595148022f2c2fd98e5deee90af",
+		"20201020135527",
+		"DS hash mismatches key");
+	/* load DNSSEC zone, but trust anchor fails because the zone
+	 * has expired signatures.  We set the date for it */
+	zonemd_verify_test("example.com",
+		"testdata/zonemd.example5.zone",
+		"example.com. IN DS 55566 8 2 9c148338951ce1c3b5cd3da532f3d90dfcf92595148022f2c2fd98e5deee90af",
+		/* okay date: "20201020135527", */
+		"20221020135527",
+		"signature expired");
 }
 
 /** zonemd unit tests */

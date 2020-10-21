@@ -7887,6 +7887,8 @@ zonemd_get_dnskey_from_anchor(struct auth_zone* z, struct module_env* env,
 	} else {
 		/* bogus */
 		*is_insecure = 0;
+		auth_zone_log(z->name, VERB_ALGO,
+			"zonemd: verify DNSKEY RRset with trust anchor failed: %s", *reason);
 	}
 	return NULL;
 }
