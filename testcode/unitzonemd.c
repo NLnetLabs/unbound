@@ -418,6 +418,19 @@ static void zonemd_verify_tests(void)
 		"example.com. IN DS 55566 8 2 9c148338951ce1c3b5cd3da532f3d90dfcf92595148022f2c2fd98e5deee90af",
 		"20201020135527",
 		"DNSSEC verify failed for SOA RRset");
+
+	/* load DNSSEC zone without ZONEMD, but NSEC bitmap says it exists */
+	zonemd_verify_test("example.com",
+		"testdata/zonemd.example11.zone",
+		"example.com. IN DS 55566 8 2 9c148338951ce1c3b5cd3da532f3d90dfcf92595148022f2c2fd98e5deee90af",
+		"20201020135527",
+		"DNSSEC NSEC bitmap says type ZONEMD exists");
+	/* load DNSSEC zone without ZONEMD, but NSEC3 bitmap says it exists */
+	zonemd_verify_test("example.com",
+		"testdata/zonemd.example12.zone",
+		"example.com. IN DS 55566 8 2 9c148338951ce1c3b5cd3da532f3d90dfcf92595148022f2c2fd98e5deee90af",
+		"20201020135527",
+		"DNSSEC NSEC3 bitmap says type ZONEMD exists");
 }
 
 /** zonemd unit tests */
