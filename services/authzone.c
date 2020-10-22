@@ -8171,6 +8171,8 @@ void auth_zones_pickup_zonemd_verify(struct auth_zones* az,
 		key.namelen = savezname_len;
 		key.name = savezname;
 		z = (struct auth_zone*)rbtree_search(&az->ztree, &key);
+		if(!z)
+			break;
 	}
 	lock_rw_unlock(&az->lock);
 }
