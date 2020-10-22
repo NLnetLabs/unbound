@@ -632,18 +632,18 @@ daemon_fork(struct daemon* daemon)
 		fatal_exit("Could not set up per-view response IP sets");
 	daemon->use_response_ip = !respip_set_is_empty(daemon->respip_set) ||
 		have_view_respip_cfg;
-	
+
+	/* setup modules */
+	daemon_setup_modules(daemon);
+
 	/* read auth zonefiles */
 	if(!auth_zones_apply_cfg(daemon->env->auth_zones, daemon->cfg, 1,
-		&daemon->use_rpz))
+		&daemon->use_rpz, daemon->env, &daemon->mods))
 		fatal_exit("auth_zones could not be setup");
 
 	/* Set-up EDNS tags */
 	if(!edns_tags_apply_cfg(daemon->env->edns_tags, daemon->cfg))
 		fatal_exit("Could not set up EDNS tags");
-
-	/* setup modules */
-	daemon_setup_modules(daemon);
 
 	/* response-ip-xxx options don't work as expected without the respip
 	 * module.  To avoid run-time operational surprise we reject such

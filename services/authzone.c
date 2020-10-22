@@ -1745,9 +1745,47 @@ int auth_zone_write_file(struct auth_zone* z, const char* fname)
 	return 1;
 }
 
+/** offline verify for zonemd, while reading a zone file to immediately
+ * spot bad hashes in zonefile as they are read.
+ * Creates temp buffers, but uses anchors and validation environment
+ * from the module_env. */
+static void
+zonemd_offline_verify(struct auth_zone* z, struct module_env* env_for_val,
+	struct module_stack* mods)
+{
+	struct module_env env;
+	struct mesh_area mesh;
+	time_t now = 0;
+	env = *env_for_val;
+	env.scratch_buffer = sldns_buffer_new(env.cfg->msg_buffer_size);
+	if(!env.scratch_buffer) {
+		log_err("out of memory");
+		goto clean_exit;
+	}
+	env.scratch = regional_create();
+	memset(&mesh, 0, sizeof(mesh));
+	mesh.mods = *mods;
+	env.mesh = &mesh;
+	if(!env.now) {
+		env.now = &now;
+		now = time(NULL);
+	}
+	if(!env.scratch) {
+		log_err("out of memory");
+		goto clean_exit;
+	}
+	auth_zone_verify_zonemd(z, &env, NULL, 1, 0);
+
+clean_exit:
+	/* clean up and exit */
+	sldns_buffer_free(env.scratch_buffer);
+	regional_destroy(env.scratch);
+}
+
 /** read all auth zones from file (if they have) */
 static int
-auth_zones_read_zones(struct auth_zones* az, struct config_file* cfg)
+auth_zones_read_zones(struct auth_zones* az, struct config_file* cfg,
+	struct module_env* env, struct module_stack* mods)
 {
 	struct auth_zone* z;
 	lock_rw_wrlock(&az->lock);
@@ -1758,6 +1796,8 @@ auth_zones_read_zones(struct auth_zones* az, struct config_file* cfg)
 			lock_rw_unlock(&az->lock);
 			return 0;
 		}
+		if(z->zonefile && z->zonefile[0]!=0 && env)
+			zonemd_offline_verify(z, env, mods);
 		lock_rw_unlock(&z->lock);
 	}
 	lock_rw_unlock(&az->lock);
@@ -2103,7 +2143,8 @@ az_delete_deleted_zones(struct auth_zones* az)
 }
 
 int auth_zones_apply_cfg(struct auth_zones* az, struct config_file* cfg,
-	int setup, int* is_rpz)
+	int setup, int* is_rpz, struct module_env* env,
+	struct module_stack* mods)
 {
 	struct config_auth* p;
 	az_setall_deleted(az);
@@ -2119,7 +2160,7 @@ int auth_zones_apply_cfg(struct auth_zones* az, struct config_file* cfg,
 		}
 	}
 	az_delete_deleted_zones(az);
-	if(!auth_zones_read_zones(az, cfg))
+	if(!auth_zones_read_zones(az, cfg, env, mods))
 		return 0;
 	if(setup) {
 		if(!auth_zones_setup_zones(az))
@@ -8044,7 +8085,7 @@ zonemd_lookup_dnskey(struct auth_zone* z, struct module_env* env)
 }
 
 void auth_zone_verify_zonemd(struct auth_zone* z, struct module_env* env,
-	char** result)
+	char** result, int offline, int only_online)
 {
 	char* reason = NULL, *why_bogus = NULL;
 	struct trust_anchor* anchor = NULL;
@@ -8061,6 +8102,10 @@ void auth_zone_verify_zonemd(struct auth_zone* z, struct module_env* env,
 	 * otherwise we have the zone DNSKEY for the DNSSEC verification. */
 	anchor = anchors_lookup(env->anchors, z->name, z->namelen, z->dclass);
 	if(anchor && query_dname_compare(z->name, anchor->name) == 0) {
+		if(only_online) {
+			lock_basic_unlock(&anchor->lock);
+			return;
+		}
 		/* equal to trustanchor, no need for online lookups */
 		dnskey = zonemd_get_dnskey_from_anchor(z, env, anchor,
 			&is_insecure, &why_bogus, &keystorage);
@@ -8071,6 +8116,8 @@ void auth_zone_verify_zonemd(struct auth_zone* z, struct module_env* env,
 	} else if(anchor) {
 		lock_basic_unlock(&anchor->lock);
 		/* perform online lookups */
+		if(offline)
+			return;
 		/* setup online lookups, and wait for them */
 		if(zonemd_lookup_dnskey(z, env)) {
 			/* wait for the lookup */
@@ -8079,6 +8126,8 @@ void auth_zone_verify_zonemd(struct auth_zone* z, struct module_env* env,
 		reason = "could not lookup DNSKEY for chain of trust";
 	} else {
 		/* the zone is not under a trust anchor */
+		if(only_online)
+			return;
 		dnskey = NULL;
 		is_insecure = 1;
 	}
@@ -8090,4 +8139,38 @@ void auth_zone_verify_zonemd(struct auth_zone* z, struct module_env* env,
 
 	auth_zone_verify_zonemd_with_key(z, env, dnskey, is_insecure, result);
 	regional_free_all(env->scratch);
+}
+
+void auth_zones_pickup_zonemd_verify(struct auth_zones* az,
+	struct module_env* env)
+{
+	struct auth_zone key;
+	uint8_t savezname[255+1];
+	size_t savezname_len;
+	struct auth_zone* z;
+	key.node.key = &key;
+	lock_rw_rdlock(&az->lock);
+	RBTREE_FOR(z, struct auth_zone*, &az->ztree) {
+		lock_rw_wrlock(&z->lock);
+		key.dclass = z->dclass;
+		key.namelabs = z->namelabs;
+		if(z->namelen > sizeof(savezname)) {
+			lock_rw_unlock(&z->lock);
+			log_err("auth_zones_pickup_zonemd_verify: zone name too long");
+			continue;
+		}
+		savezname_len = z->namelen;
+		memmove(savezname, z->name, z->namelen);
+		lock_rw_unlock(&az->lock);
+		auth_zone_verify_zonemd(z, env, NULL, 0, 1);
+		lock_rw_unlock(&z->lock);
+		lock_rw_rdlock(&az->lock);
+		/* find the zone we had before, it is not deleted,
+		 * because we have a flag for that that is processed at
+		 * apply_cfg time */
+		key.namelen = savezname_len;
+		key.name = savezname;
+		z = (struct auth_zone*)rbtree_search(&az->ztree, &key);
+	}
+	lock_rw_unlock(&az->lock);
 }

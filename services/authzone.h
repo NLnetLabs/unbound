@@ -479,10 +479,13 @@ struct auth_zones* auth_zones_create(void);
  * @param cfg: config to apply.
  * @param setup: if true, also sets up values in the auth zones structure
  * @param is_rpz: set to 1 if at least one RPZ zone is configured.
+ * @param env: environment for offline verification.
+ * @param mods: modules in environment.
  * @return false on failure.
  */
 int auth_zones_apply_cfg(struct auth_zones* az, struct config_file* cfg,
-	int setup, int* is_rpz);
+	int setup, int* is_rpz, struct module_env* env,
+	struct module_stack* mods);
 
 /** initial pick up of worker timeouts, ties events to worker event loop
  * @param az: auth zones structure
@@ -744,13 +747,27 @@ int auth_zone_generate_zonemd_check(struct auth_zone* z, int scheme,
  * @param z: auth zone to check.  Caller holds lock. wrlock.
  * @param env: with temp region, buffer and config.
  * @param result: if not NULL, result string strdupped in here.
+ * @param offline: if true, there is no spawned lookup when online is needed.
+ * 	Those zones are skipped for ZONEMD checking.
+ * @param only_online: if true, only for ZONEMD that need online lookup
+ * 	of DNSKEY chain of trust are processed.
  */
 void auth_zone_verify_zonemd(struct auth_zone* z, struct module_env* env,
-	char** result);
+	char** result, int offline, int only_online);
 
 /** mesh callback for zonemd on lookup of dnskey */
 void auth_zonemd_dnskey_lookup_callback(void* arg, int rcode,
 	struct sldns_buffer* buf, enum sec_status sec, char* why_bogus,
 	int was_ratelimited);
+
+/**
+ * Check the ZONEMD records that need online DNSSEC chain lookups,
+ * for them spawn the lookup process to get it checked out.
+ * Attaches the lookup process to the worker event base and mesh state.
+ * @param az: auth zones, every zones is checked.
+ * @param env: env of the worker where the task is attached.
+ */
+void auth_zones_pickup_zonemd_verify(struct auth_zones* az,
+	struct module_env* env);
 
 #endif /* SERVICES_AUTHZONE_H */
