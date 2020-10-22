@@ -746,6 +746,7 @@ int auth_zone_generate_zonemd_check(struct auth_zone* z, int scheme,
  * This includes DNSSEC verification if applicable.
  * @param z: auth zone to check.  Caller holds lock. wrlock.
  * @param env: with temp region, buffer and config.
+ * @param mods: module stack for validator env.
  * @param result: if not NULL, result string strdupped in here.
  * @param offline: if true, there is no spawned lookup when online is needed.
  * 	Those zones are skipped for ZONEMD checking.
@@ -753,7 +754,8 @@ int auth_zone_generate_zonemd_check(struct auth_zone* z, int scheme,
  * 	of DNSKEY chain of trust are processed.
  */
 void auth_zone_verify_zonemd(struct auth_zone* z, struct module_env* env,
-	char** result, int offline, int only_online);
+	struct module_stack* mods, char** result, int offline,
+	int only_online);
 
 /** mesh callback for zonemd on lookup of dnskey */
 void auth_zonemd_dnskey_lookup_callback(void* arg, int rcode,

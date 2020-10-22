@@ -1754,7 +1754,6 @@ zonemd_offline_verify(struct auth_zone* z, struct module_env* env_for_val,
 	struct module_stack* mods)
 {
 	struct module_env env;
-	struct mesh_area mesh;
 	time_t now = 0;
 	env = *env_for_val;
 	env.scratch_buffer = sldns_buffer_new(env.cfg->msg_buffer_size);
@@ -1763,9 +1762,6 @@ zonemd_offline_verify(struct auth_zone* z, struct module_env* env_for_val,
 		goto clean_exit;
 	}
 	env.scratch = regional_create();
-	memset(&mesh, 0, sizeof(mesh));
-	mesh.mods = *mods;
-	env.mesh = &mesh;
 	if(!env.now) {
 		env.now = &now;
 		now = time(NULL);
@@ -1774,7 +1770,7 @@ zonemd_offline_verify(struct auth_zone* z, struct module_env* env_for_val,
 		log_err("out of memory");
 		goto clean_exit;
 	}
-	auth_zone_verify_zonemd(z, &env, NULL, 1, 0);
+	auth_zone_verify_zonemd(z, &env, mods, NULL, 1, 0);
 
 clean_exit:
 	/* clean up and exit */
@@ -7579,14 +7575,15 @@ static void auth_zone_log(uint8_t* name, enum verbosity_value level,
 
 /** ZONEMD, dnssec verify the rrset with the dnskey */
 static int zonemd_dnssec_verify_rrset(struct auth_zone* z,
-	struct module_env* env, struct ub_packed_rrset_key* dnskey,
-	struct auth_data* node, struct auth_rrset* rrset, char** why_bogus)
+	struct module_env* env, struct module_stack* mods,
+	struct ub_packed_rrset_key* dnskey, struct auth_data* node,
+	struct auth_rrset* rrset, char** why_bogus)
 {
 	struct ub_packed_rrset_key pk;
 	enum sec_status sec;
 	struct val_env* ve;
 	int m;
-	m = modstack_find(&env->mesh->mods, "validator");
+	m = modstack_find(mods, "validator");
 	if(m == -1) {
 		auth_zone_log(z->name, VERB_ALGO, "zonemd dnssec verify: have "
 			"DNSKEY chain of trust, but no validator module");
@@ -7645,8 +7642,9 @@ static int nsec3_of_param_has_type(struct auth_rrset* nsec3, int algo,
 /** Verify the absence of ZONEMD with DNSSEC by checking NSEC, NSEC3 type flag.
  * return false on failure, reason contains description of failure. */
 static int zonemd_check_dnssec_absence(struct auth_zone* z,
-	struct module_env* env, struct ub_packed_rrset_key* dnskey,
-	struct auth_data* apex, char** reason, char** why_bogus)
+	struct module_env* env, struct module_stack* mods,
+	struct ub_packed_rrset_key* dnskey, struct auth_data* apex,
+	char** reason, char** why_bogus)
 {
 	struct auth_rrset* nsec = NULL;
 	if(!apex) {
@@ -7657,8 +7655,8 @@ static int zonemd_check_dnssec_absence(struct auth_zone* z,
 	if(nsec) {
 		struct ub_packed_rrset_key pk;
 		/* dnssec verify the NSEC */
-		if(!zonemd_dnssec_verify_rrset(z, env, dnskey, apex, nsec,
-			why_bogus)) {
+		if(!zonemd_dnssec_verify_rrset(z, env, mods, dnskey, apex,
+			nsec, why_bogus)) {
 			*reason = "DNSSEC verify failed for NSEC RRset";
 			return 0;
 		}
@@ -7700,8 +7698,8 @@ static int zonemd_check_dnssec_absence(struct auth_zone* z,
 			return 0;
 		}
 		/* dnssec verify the NSEC3 */
-		if(!zonemd_dnssec_verify_rrset(z, env, dnskey, match, nsec3,
-			why_bogus)) {
+		if(!zonemd_dnssec_verify_rrset(z, env, mods, dnskey, match,
+			nsec3, why_bogus)) {
 			*reason = "DNSSEC verify failed for NSEC3 RRset";
 			return 0;
 		}
@@ -7720,9 +7718,9 @@ static int zonemd_check_dnssec_absence(struct auth_zone* z,
 /** Verify the SOA and ZONEMD DNSSEC signatures.
  * return false on failure, reason contains description of failure. */
 static int zonemd_check_dnssec_soazonemd(struct auth_zone* z,
-	struct module_env* env, struct ub_packed_rrset_key* dnskey,
-	struct auth_data* apex, struct auth_rrset* zonemd_rrset,
-	char** reason, char** why_bogus)
+	struct module_env* env, struct module_stack* mods,
+	struct ub_packed_rrset_key* dnskey, struct auth_data* apex,
+	struct auth_rrset* zonemd_rrset, char** reason, char** why_bogus)
 {
 	struct auth_rrset* soa;
 	if(!apex) {
@@ -7734,12 +7732,13 @@ static int zonemd_check_dnssec_soazonemd(struct auth_zone* z,
 		*reason = "zone has no SOA RRset";
 		return 0;
 	}
-	if(!zonemd_dnssec_verify_rrset(z, env, dnskey, apex, soa, why_bogus)) {
+	if(!zonemd_dnssec_verify_rrset(z, env, mods, dnskey, apex, soa,
+		why_bogus)) {
 		*reason = "DNSSEC verify failed for SOA RRset";
 		return 0;
 	}
-	if(!zonemd_dnssec_verify_rrset(z, env, dnskey, apex, zonemd_rrset,
-		why_bogus)) {
+	if(!zonemd_dnssec_verify_rrset(z, env, mods, dnskey, apex,
+		zonemd_rrset, why_bogus)) {
 		*reason = "DNSSEC verify failed for ZONEMD RRset";
 		return 0;
 	}
@@ -7786,6 +7785,7 @@ static void auth_zone_zonemd_fail(struct auth_zone* z, struct module_env* env,
  * Verify the zonemd with DNSSEC and hash check, with given key.
  * @param z: auth zone.
  * @param env: environment with config and temp buffers.
+ * @param mods: module stack with validator env for verification.
  * @param dnskey: dnskey that we can use, or NULL.  If nonnull, the key
  * 	has been verified and is the start of the chain of trust.
  * @param is_insecure: if true, the dnskey is not used, the zone is insecure.
@@ -7795,7 +7795,8 @@ static void auth_zone_zonemd_fail(struct auth_zone* z, struct module_env* env,
  */
 static void
 auth_zone_verify_zonemd_with_key(struct auth_zone* z, struct module_env* env,
-	struct ub_packed_rrset_key* dnskey, int is_insecure, char** result)
+	struct module_stack* mods, struct ub_packed_rrset_key* dnskey,
+	int is_insecure, char** result)
 {
 	char* reason = NULL, *why_bogus = NULL;
 	struct auth_data* apex = NULL;
@@ -7823,7 +7824,7 @@ auth_zone_verify_zonemd_with_key(struct auth_zone* z, struct module_env* env,
 		/* success, zonemd is absent */
 	} else if(!zonemd_rrset) {
 		/* fetch, DNSSEC verify, and check NSEC/NSEC3 */
-		if(!zonemd_check_dnssec_absence(z, env, dnskey, apex,
+		if(!zonemd_check_dnssec_absence(z, env, mods, dnskey, apex,
 			&reason, &why_bogus)) {
 			auth_zone_zonemd_fail(z, env, reason, why_bogus, result);
 			return;
@@ -7831,7 +7832,7 @@ auth_zone_verify_zonemd_with_key(struct auth_zone* z, struct module_env* env,
 		zonemd_absence_dnssecok = 1;
 	} else if(zonemd_rrset && dnskey) {
 		/* check DNSSEC verify of SOA and ZONEMD */
-		if(!zonemd_check_dnssec_soazonemd(z, env, dnskey, apex,
+		if(!zonemd_check_dnssec_soazonemd(z, env, mods, dnskey, apex,
 			zonemd_rrset, &reason, &why_bogus)) {
 			auth_zone_zonemd_fail(z, env, reason, why_bogus, result);
 			return;
@@ -7889,7 +7890,8 @@ auth_zone_verify_zonemd_with_key(struct auth_zone* z, struct module_env* env,
  */
 static struct ub_packed_rrset_key*
 zonemd_get_dnskey_from_anchor(struct auth_zone* z, struct module_env* env,
-	struct trust_anchor* anchor, int* is_insecure, char** why_bogus,
+	struct module_stack* mods, struct trust_anchor* anchor,
+	int* is_insecure, char** why_bogus,
 	struct ub_packed_rrset_key* keystorage)
 {
 	struct auth_data* apex;
@@ -7909,7 +7911,7 @@ zonemd_get_dnskey_from_anchor(struct auth_zone* z, struct module_env* env,
 		return 0;
 	}
 
-	m = modstack_find(&env->mesh->mods, "validator");
+	m = modstack_find(mods, "validator");
 	if(m == -1) {
 		*why_bogus = "have trust anchor, but no validator module";
 		return 0;
@@ -8021,7 +8023,8 @@ void auth_zonemd_dnskey_lookup_callback(void* arg, int rcode, sldns_buffer* buf,
 		return;
 	}
 
-	auth_zone_verify_zonemd_with_key(z, env, dnskey, is_insecure, NULL);
+	auth_zone_verify_zonemd_with_key(z, env, &env->mesh->mods, dnskey,
+		is_insecure, NULL);
 	regional_free_all(env->scratch);
 	lock_rw_unlock(&z->lock);
 }
@@ -8085,7 +8088,7 @@ zonemd_lookup_dnskey(struct auth_zone* z, struct module_env* env)
 }
 
 void auth_zone_verify_zonemd(struct auth_zone* z, struct module_env* env,
-	char** result, int offline, int only_online)
+	struct module_stack* mods, char** result, int offline, int only_online)
 {
 	char* reason = NULL, *why_bogus = NULL;
 	struct trust_anchor* anchor = NULL;
@@ -8107,7 +8110,7 @@ void auth_zone_verify_zonemd(struct auth_zone* z, struct module_env* env,
 			return;
 		}
 		/* equal to trustanchor, no need for online lookups */
-		dnskey = zonemd_get_dnskey_from_anchor(z, env, anchor,
+		dnskey = zonemd_get_dnskey_from_anchor(z, env, mods, anchor,
 			&is_insecure, &why_bogus, &keystorage);
 		lock_basic_unlock(&anchor->lock);
 		if(!dnskey && !reason) {
@@ -8137,7 +8140,8 @@ void auth_zone_verify_zonemd(struct auth_zone* z, struct module_env* env,
 		return;
 	}
 
-	auth_zone_verify_zonemd_with_key(z, env, dnskey, is_insecure, result);
+	auth_zone_verify_zonemd_with_key(z, env, mods, dnskey, is_insecure,
+		result);
 	regional_free_all(env->scratch);
 }
 
@@ -8162,7 +8166,7 @@ void auth_zones_pickup_zonemd_verify(struct auth_zones* az,
 		savezname_len = z->namelen;
 		memmove(savezname, z->name, z->namelen);
 		lock_rw_unlock(&az->lock);
-		auth_zone_verify_zonemd(z, env, NULL, 0, 1);
+		auth_zone_verify_zonemd(z, env, &env->mesh->mods, NULL, 0, 1);
 		lock_rw_unlock(&z->lock);
 		lock_rw_rdlock(&az->lock);
 		/* find the zone we had before, it is not deleted,

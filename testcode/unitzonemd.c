@@ -291,7 +291,7 @@ static void zonemd_verify_test(char* zname, char* zfile, char* tastr,
 
 	/* test */
 	lock_rw_wrlock(&z->lock);
-	auth_zone_verify_zonemd(z, &env, &result, 1, 0);
+	auth_zone_verify_zonemd(z, &env, &mods, &result, 1, 0);
 	lock_rw_unlock(&z->lock);
 	if(verbosity >= VERB_ALGO) {
 		printf("auth zone %s: ZONEMD verification %s: %s\n", zname,
