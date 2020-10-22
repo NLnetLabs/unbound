@@ -1,6 +1,8 @@
 22 October 2020: Wouter
 	- Fix #333: Unbound Segmentation Fault w/ log_info Functions From
 	  Python Mod.
+	- Fix that minimal-responses does not remove addresses from a priming
+	  query response.
 
 21 October 2020: George
 	- Fix #327: net/if.h check fails on some darwin versions; contribution by
