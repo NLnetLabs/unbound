@@ -1,3 +1,15 @@
+22 October 2020: Wouter
+	- Fix #333: Unbound Segmentation Fault w/ log_info Functions From
+	  Python Mod.
+	- Fix that minimal-responses does not remove addresses from a priming
+	  query response.
+
+21 October 2020: George
+	- Fix #327: net/if.h check fails on some darwin versions; contribution by
+	  Joshua Root.
+	- Fix #320: potential memory corruption due to size miscomputation upton
+	  custom region alloc init.
+
 21 October 2020: Wouter
 	- Merge PR #228 : infra-keep-probing option to probe hosts that are
 	  down.  Add infra-keep-probing: yes option. Hosts that are down are

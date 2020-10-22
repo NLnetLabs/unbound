@@ -14745,7 +14745,7 @@ $as_echo "no" >&6; }
 fi
 
 # Checks for header files.
-for ac_header in stdarg.h stdbool.h netinet/in.h netinet/tcp.h sys/param.h sys/select.h sys/socket.h sys/un.h sys/uio.h sys/resource.h arpa/inet.h syslog.h netdb.h sys/wait.h pwd.h glob.h grp.h login_cap.h winsock2.h ws2tcpip.h endian.h sys/endian.h libkern/OSByteOrder.h sys/ipc.h sys/shm.h ifaddrs.h net/if.h
+for ac_header in stdarg.h stdbool.h netinet/in.h netinet/tcp.h sys/param.h sys/select.h sys/socket.h sys/un.h sys/uio.h sys/resource.h arpa/inet.h syslog.h netdb.h sys/wait.h pwd.h glob.h grp.h login_cap.h winsock2.h ws2tcpip.h endian.h sys/endian.h libkern/OSByteOrder.h sys/ipc.h sys/shm.h ifaddrs.h
 do :
   as_ac_Header=`$as_echo "ac_cv_header_$ac_header" | $as_tr_sh`
 ac_fn_c_check_header_compile "$LINENO" "$ac_header" "$as_ac_Header" "$ac_includes_default
@@ -14753,6 +14753,34 @@ ac_fn_c_check_header_compile "$LINENO" "$ac_header" "$as_ac_Header" "$ac_include
 if eval test \"x\$"$as_ac_Header"\" = x"yes"; then :
   cat >>confdefs.h <<_ACEOF
 #define `$as_echo "HAVE_$ac_header" | $as_tr_cpp` 1
+_ACEOF
+
+fi
+
+done
+
+# net/if.h portability for Darwin see:
+# https://www.gnu.org/software/autoconf/manual/autoconf-2.69/html_node/Header-Portability.html
+for ac_header in net/if.h
+do :
+  ac_fn_c_check_header_compile "$LINENO" "net/if.h" "ac_cv_header_net_if_h" "
+#include <stdio.h>
+#ifdef STDC_HEADERS
+# include <stdlib.h>
+# include <stddef.h>
+#else
+# ifdef HAVE_STDLIB_H
+#  include <stdlib.h>
+# endif
+#endif
+#ifdef HAVE_SYS_SOCKET_H
+# include <sys/socket.h>
+#endif
+
+"
+if test "x$ac_cv_header_net_if_h" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_NET_IF_H 1
 _ACEOF
 
 fi
