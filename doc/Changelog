@@ -1,3 +1,7 @@
+22 October 2020: Wouter
+	- Fix #333: Unbound Segmentation Fault w/ log_info Functions From
+	  Python Mod.
+
 21 October 2020: George
 	- Fix #327: net/if.h check fails on some darwin versions; contribution by
 	  Joshua Root.
