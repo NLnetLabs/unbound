@@ -2566,14 +2566,17 @@ do_auth_zone_reload(RES* ssl, struct worker* worker, char* arg)
 	auth_zone_verify_zonemd(z, &worker->env, &worker->env.mesh->mods,
 		&reason, 0, 0);
 	if(reason && z->zone_expired) {
+		lock_rw_unlock(&z->lock);
 		(void)ssl_printf(ssl, "error zonemd for %s failed: %s\n",
 			arg, reason);
+		free(reason);
+		return;
 	} else if(reason && strcmp(reason, "ZONEMD verification successful")
 		==0) {
 		(void)ssl_printf(ssl, "%s: %s\n", arg, reason);
 	}
-	free(reason);
 	lock_rw_unlock(&z->lock);
+	free(reason);
 	send_ok(ssl);
 }
 
