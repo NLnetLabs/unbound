@@ -7818,6 +7818,12 @@ static void auth_zone_zonemd_fail(struct auth_zone* z, struct module_env* env,
 		log_warn("auth zone %s: ZONEMD verification failed: %s", zstr, reason);
 	}
 
+	if(env->cfg->zonemd_permissive_mode) {
+		verbose(VERB_ALGO, "zonemd-permissive-mode enabled, "
+			"not blocking zone %s", zstr);
+		return;
+	}
+
 	/* expired means the zone gives servfail and is not used by
 	 * lookup if fallback_enabled*/
 	z->zone_expired = 1;

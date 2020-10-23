@@ -1167,6 +1167,12 @@ be in ascending order and have at least one entry. If you set it to
 "1024 65535" there is no restriction to NSEC3 iteration values.
 This table must be kept short; a very long list could cause slower operation.
 .TP
+.B zonemd\-permissive\-mode: \fI<yes or no>
+If enabled the ZONEMD verification failures are only logged and do not cause
+the zone to be blocked and only return servfail.  Useful for testing out
+if it works, or if the operator only wants to be notified of a problem without
+disrupting service.  Default is no.
+.TP
 .B add\-holddown: \fI<seconds>
 Instruct the \fBauto\-trust\-anchor\-file\fR probe mechanism for RFC5011
 autotrust updates to add new trust anchors only after they have been

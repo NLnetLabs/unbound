@@ -179,6 +179,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_TLS_SESSION_TICKET_KEYS VAR_RPZ VAR_TAGS VAR_RPZ_ACTION_OVERRIDE
 %token VAR_RPZ_CNAME_OVERRIDE VAR_RPZ_LOG VAR_RPZ_LOG_NAME
 %token VAR_DYNLIB VAR_DYNLIB_FILE VAR_EDNS_CLIENT_TAG VAR_EDNS_CLIENT_TAG_OPCODE
+%token VAR_ZONEMD_PERMISSIVE_MODE
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -292,7 +293,7 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_stream_wait_size | server_tls_ciphers |
 	server_tls_ciphersuites | server_tls_session_ticket_keys |
 	server_tls_use_sni | server_edns_client_tag |
-	server_edns_client_tag_opcode
+	server_edns_client_tag_opcode | server_zonemd_permissive_mode
 	;
 stubstart: VAR_STUB_ZONE
 	{
@@ -1943,6 +1944,15 @@ server_val_nsec3_keysize_iterations: VAR_VAL_NSEC3_KEYSIZE_ITERATIONS STRING_ARG
 		OUTYY(("P(server_val_nsec3_keysize_iterations:%s)\n", $2));
 		free(cfg_parser->cfg->val_nsec3_key_iterations);
 		cfg_parser->cfg->val_nsec3_key_iterations = $2;
+	}
+	;
+server_zonemd_permissive_mode: VAR_ZONEMD_PERMISSIVE_MODE STRING_ARG
+	{
+		OUTYY(("P(server_zonemd_permissive_mode:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else	cfg_parser->cfg->zonemd_permissive_mode = (strcmp($2, "yes")==0);
+		free($2);
 	}
 	;
 server_add_holddown: VAR_ADD_HOLDDOWN STRING_ARG

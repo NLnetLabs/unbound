@@ -388,6 +388,8 @@ struct config_file {
 	int serve_expired_client_timeout;
 	/** nsec3 maximum iterations per key size, string */
 	char* val_nsec3_key_iterations;
+	/** if zonemd failures are permitted, only logged */
+	int zonemd_permissive_mode;
 	/** autotrust add holddown time, in seconds */
 	unsigned int add_holddown;
 	/** autotrust del holddown time, in seconds */

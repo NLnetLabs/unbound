@@ -602,6 +602,9 @@ server:
 	# List in ascending order the keysize and count values.
 	# val-nsec3-keysize-iterations: "1024 150 2048 500 4096 2500"
 
+	# if enabled, ZONEMD verification failures do not block the zone.
+	# zonemd-permissive-mode: no
+
 	# instruct the auto-trust-anchor-file probing to add anchors after ttl.
 	# add-holddown: 2592000 # 30 days
 

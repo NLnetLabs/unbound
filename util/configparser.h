@@ -347,7 +347,8 @@ extern int yydebug;
     VAR_DYNLIB = 553,
     VAR_DYNLIB_FILE = 554,
     VAR_EDNS_CLIENT_TAG = 555,
-    VAR_EDNS_CLIENT_TAG_OPCODE = 556
+    VAR_EDNS_CLIENT_TAG_OPCODE = 556,
+    VAR_ZONEMD_PERMISSIVE_MODE = 557
   };
 #endif
 /* Tokens.  */
@@ -650,6 +651,7 @@ extern int yydebug;
 #define VAR_DYNLIB_FILE 554
 #define VAR_EDNS_CLIENT_TAG 555
 #define VAR_EDNS_CLIENT_TAG_OPCODE 556
+#define VAR_ZONEMD_PERMISSIVE_MODE 557
 
 /* Value type.  */
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
@@ -659,7 +661,7 @@ union YYSTYPE
 
 	char*	str;
 
-#line 663 "util/configparser.h"
+#line 665 "util/configparser.h"
 
 };
 typedef union YYSTYPE YYSTYPE;
