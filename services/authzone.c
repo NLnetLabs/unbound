@@ -5106,6 +5106,28 @@ xfr_write_after_update(struct auth_xfer* xfr, struct module_env* env)
 	lock_rw_unlock(&z->lock);
 }
 
+/** reacquire locks and structures. Starts with no locks, ends
+ * with xfr and z locks, if fail, no z lock */
+static int xfr_process_reacquire_locks(struct auth_xfer* xfr,
+	struct module_env* env, struct auth_zone** z)
+{
+	/* release xfr lock, then, while holding az->lock grab both
+	 * z->lock and xfr->lock */
+	lock_rw_rdlock(&env->auth_zones->lock);
+	*z = auth_zone_find(env->auth_zones, xfr->name, xfr->namelen,
+		xfr->dclass);
+	if(!*z) {
+		lock_rw_unlock(&env->auth_zones->lock);
+		lock_basic_lock(&xfr->lock);
+		*z = NULL;
+		return 0;
+	}
+	lock_rw_wrlock(&(*z)->lock);
+	lock_basic_lock(&xfr->lock);
+	lock_rw_unlock(&env->auth_zones->lock);
+	return 1;
+}
+
 /** process chunk list and update zone in memory,
  * return false if it did not work */
 static int
@@ -5115,21 +5137,12 @@ xfr_process_chunk_list(struct auth_xfer* xfr, struct module_env* env,
 	struct auth_zone* z;
 
 	/* obtain locks and structures */
-	/* release xfr lock, then, while holding az->lock grab both
-	 * z->lock and xfr->lock */
 	lock_basic_unlock(&xfr->lock);
-	lock_rw_rdlock(&env->auth_zones->lock);
-	z = auth_zone_find(env->auth_zones, xfr->name, xfr->namelen,
-		xfr->dclass);
-	if(!z) {
-		lock_rw_unlock(&env->auth_zones->lock);
+	if(!xfr_process_reacquire_locks(xfr, env, &z)) {
 		/* the zone is gone, ignore xfr results */
-		lock_basic_lock(&xfr->lock);
 		return 0;
 	}
-	lock_rw_wrlock(&z->lock);
-	lock_basic_lock(&xfr->lock);
-	lock_rw_unlock(&env->auth_zones->lock);
+	/* holding xfr and z locks */
 
 	/* apply data */
 	if(xfr->task_transfer->master->http) {
@@ -5164,16 +5177,35 @@ xfr_process_chunk_list(struct auth_xfer* xfr, struct module_env* env,
 			" (or malformed RR)", xfr->task_transfer->master->host);
 		return 0;
 	}
+
+	/* release xfr lock while verifying zonemd because it may have
+	 * to spawn lookups in the state machines */
+	lock_basic_unlock(&xfr->lock);
+	/* holding z lock */
 	auth_zone_verify_zonemd(z, env, &env->mesh->mods, NULL, 0, 0);
 	if(z->zone_expired) {
 		char zname[256];
-		dname_str(xfr->name, zname);
 		/* ZONEMD must have failed */
+		/* reacquire locks, so we hold xfr lock on exit of routine,
+		 * and both xfr and z again after releasing xfr for potential
+		 * state machine mesh callbacks */
+		lock_rw_unlock(&z->lock);
+		if(!xfr_process_reacquire_locks(xfr, env, &z))
+			return 0;
+		dname_str(xfr->name, zname);
 		verbose(VERB_ALGO, "xfr from %s: ZONEMD failed for %s, transfer is failed", xfr->task_transfer->master->host, zname);
 		xfr->zone_expired = 1;
 		lock_rw_unlock(&z->lock);
 		return 0;
 	}
+	/* reacquire locks, so we hold xfr lock on exit of routine,
+	 * and both xfr and z again after releasing xfr for potential
+	 * state machine mesh callbacks */
+	lock_rw_unlock(&z->lock);
+	if(!xfr_process_reacquire_locks(xfr, env, &z))
+		return 0;
+	/* holding xfr and z locks */
+
 	if(xfr->have_zone)
 		xfr->lease_time = *env->now;
 
