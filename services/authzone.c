@@ -5164,6 +5164,16 @@ xfr_process_chunk_list(struct auth_xfer* xfr, struct module_env* env,
 			" (or malformed RR)", xfr->task_transfer->master->host);
 		return 0;
 	}
+	auth_zone_verify_zonemd(z, env, &env->mesh->mods, NULL, 0, 0);
+	if(z->zone_expired) {
+		char zname[256];
+		dname_str(xfr->name, zname);
+		/* ZONEMD must have failed */
+		verbose(VERB_ALGO, "xfr from %s: ZONEMD failed for %s, transfer is failed", xfr->task_transfer->master->host, zname);
+		xfr->zone_expired = 1;
+		lock_rw_unlock(&z->lock);
+		return 0;
+	}
 	if(xfr->have_zone)
 		xfr->lease_time = *env->now;
 
