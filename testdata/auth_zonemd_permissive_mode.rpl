@@ -47,7 +47,7 @@ stub-zone:
 	stub-addr: 193.0.14.129 	# K.ROOT-SERVERS.NET.
 CONFIG_END
 
-SCENARIO_BEGIN Test authority zone with ZONEMD failure from zonefile
+SCENARIO_BEGIN Test zonemd permissive mode
 
 ; K.ROOT-SERVERS.NET.
 RANGE_BEGIN 0 100
