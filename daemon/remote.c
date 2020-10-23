@@ -2510,8 +2510,8 @@ do_auth_zone_reload(RES* ssl, struct worker* worker, char* arg)
 	uint8_t* nm = NULL;
 	struct auth_zones* az = worker->env.auth_zones;
 	struct auth_zone* z = NULL;
+	struct auth_xfer* xfr = NULL;
 	char* reason = NULL;
-	int oldexpired = 0;
 	if(!parse_arg_name(ssl, arg, &nm, &nmlen, &nmlabs))
 		return;
 	if(az) {
@@ -2520,22 +2520,52 @@ do_auth_zone_reload(RES* ssl, struct worker* worker, char* arg)
 		if(z) {
 			lock_rw_wrlock(&z->lock);
 		}
+		xfr = auth_xfer_find(az, nm, nmlen, LDNS_RR_CLASS_IN);
+		if(xfr) {
+			lock_basic_lock(&xfr->lock);
+		}
 		lock_rw_unlock(&az->lock);
 	}
 	free(nm);
 	if(!z) {
+		if(xfr) {
+			lock_basic_unlock(&xfr->lock);
+		}
 		(void)ssl_printf(ssl, "error no auth-zone %s\n", arg);
 		return;
 	}
 	if(!auth_zone_read_zonefile(z, worker->env.cfg)) {
 		lock_rw_unlock(&z->lock);
+		if(xfr) {
+			lock_basic_unlock(&xfr->lock);
+		}
 		(void)ssl_printf(ssl, "error failed to read %s\n", arg);
 		return;
 	}
-	oldexpired = z->zone_expired;
+
+	z->zone_expired = 0;
+	if(xfr) {
+		xfr->zone_expired = 0;
+		if(!xfr_find_soa(z, xfr)) {
+			if(z->data.count == 0) {
+				lock_rw_unlock(&z->lock);
+				lock_basic_unlock(&xfr->lock);
+				(void)ssl_printf(ssl, "zone %s has no contents\n", arg);
+				return;
+			}
+			lock_rw_unlock(&z->lock);
+			lock_basic_unlock(&xfr->lock);
+			(void)ssl_printf(ssl, "error: no SOA in zone after read %s\n", arg);
+			return;
+		}
+		if(xfr->have_zone)
+			xfr->lease_time = *worker->env.now;
+		lock_basic_unlock(&xfr->lock);
+	}
+
 	auth_zone_verify_zonemd(z, &worker->env, &worker->env.mesh->mods,
 		&reason, 0, 0);
-	if(reason && !oldexpired && z->zone_expired) {
+	if(reason && z->zone_expired) {
 		(void)ssl_printf(ssl, "error zonemd for %s failed: %s\n",
 			arg, reason);
 	} else if(reason && strcmp(reason, "ZONEMD verification successful")

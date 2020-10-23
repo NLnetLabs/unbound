@@ -1918,7 +1918,7 @@ auth_zone_get_serial(struct auth_zone* z, uint32_t* serial)
 }
 
 /** Find auth_zone SOA and populate the values in xfr(soa values). */
-static int
+int
 xfr_find_soa(struct auth_zone* z, struct auth_xfer* xfr)
 {
 	struct auth_data* apex;

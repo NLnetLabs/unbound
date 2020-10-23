@@ -633,6 +633,9 @@ int auth_zone_read_zonefile(struct auth_zone* z, struct config_file* cfg);
 /** find serial number of zone or false if none (no SOA record) */
 int auth_zone_get_serial(struct auth_zone* z, uint32_t* serial);
 
+/** Find auth_zone SOA and populate the values in xfr(soa values). */
+int xfr_find_soa(struct auth_zone* z, struct auth_xfer* xfr);
+
 /** compare auth_zones for sorted rbtree */
 int auth_zone_cmp(const void* z1, const void* z2);
 
