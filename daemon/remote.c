@@ -2510,6 +2510,8 @@ do_auth_zone_reload(RES* ssl, struct worker* worker, char* arg)
 	uint8_t* nm = NULL;
 	struct auth_zones* az = worker->env.auth_zones;
 	struct auth_zone* z = NULL;
+	char* reason = NULL;
+	int oldexpired = 0;
 	if(!parse_arg_name(ssl, arg, &nm, &nmlen, &nmlabs))
 		return;
 	if(az) {
@@ -2530,6 +2532,17 @@ do_auth_zone_reload(RES* ssl, struct worker* worker, char* arg)
 		(void)ssl_printf(ssl, "error failed to read %s\n", arg);
 		return;
 	}
+	oldexpired = z->zone_expired;
+	auth_zone_verify_zonemd(z, &worker->env, &worker->env.mesh->mods,
+		&reason, 0, 0);
+	if(reason && !oldexpired && z->zone_expired) {
+		(void)ssl_printf(ssl, "error zonemd for %s failed: %s\n",
+			arg, reason);
+	} else if(reason && strcmp(reason, "ZONEMD verification successful")
+		==0) {
+		(void)ssl_printf(ssl, "%s: %s\n", arg, reason);
+	}
+	free(reason);
 	lock_rw_unlock(&z->lock);
 	send_ok(ssl);
 }
