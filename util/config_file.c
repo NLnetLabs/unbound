@@ -1039,7 +1039,7 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_DEC(opt, "serve-expired-reply-ttl", serve_expired_reply_ttl)
 	else O_DEC(opt, "serve-expired-client-timeout", serve_expired_client_timeout)
 	else O_STR(opt, "val-nsec3-keysize-iterations",val_nsec3_key_iterations)
-	else O_YNO(opt, "zonemd_permissive_mode", zonemd_permissive_mode)
+	else O_YNO(opt, "zonemd-permissive-mode", zonemd_permissive_mode)
 	else O_UNS(opt, "add-holddown", add_holddown)
 	else O_UNS(opt, "del-holddown", del_holddown)
 	else O_UNS(opt, "keep-missing", keep_missing)
