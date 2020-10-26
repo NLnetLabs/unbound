@@ -2047,6 +2047,7 @@ auth_zones_cfg(struct auth_zones* az, struct config_auth* c)
 	z->for_downstream = c->for_downstream;
 	z->for_upstream = c->for_upstream;
 	z->fallback_enabled = c->fallback_enabled;
+	z->zonemd_reject_absence = c->zonemd_reject_absence;
 	if(c->isrpz && !z->rpz){
 		if(!(z->rpz = rpz_create(c))){
 			fatal_exit("Could not setup RPZ zones");
@@ -7887,7 +7888,7 @@ auth_zone_verify_zonemd_with_key(struct auth_zone* z, struct module_env* env,
 		}
 	}
 
-	if(zonemd_absent && 0) {
+	if(zonemd_absent && z->zonemd_reject_absence) {
 		auth_zone_zonemd_fail(z, env, "ZONEMD absent and that is not allowed by config", NULL, result);
 		return;
 	}

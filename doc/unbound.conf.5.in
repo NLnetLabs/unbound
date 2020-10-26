@@ -1829,6 +1829,19 @@ to the authority servers for this zone, it'll fetch the data directly from
 the zone data.  Turn it on when you want unbound to provide recursion for
 downstream clients, and use the zone data as a local copy to speed up lookups.
 .TP
+.B zonemd\-reject\-absence: \fI<yes or no>
+Enable this option to reject the absence of the ZONEMD record.  Without it,
+when zonemd is not there it is not checked.  It is useful to enable for a
+nonDNSSEC signed zone where the operator wants to require the verification
+of a ZONEMD, hence a missing ZONEMD is a failure.  The action upon
+failure is controlled by the \fBzonemd\-permissive\-mode\fR option, for
+log only or also block the zone.  The default is no.
+.IP
+Without the option absence of a ZONEMD is only a failure when the zone is
+DNSSEC signed, and we have a trust anchor, and the DNSSEC verification of
+the absence of the ZONEMD fails.  With the option enabled, the absence of
+a ZONEMD is always a failure, also for nonDNSSEC signed zones.
+.TP
 .B zonefile: \fI<filename>
 The filename where the zone is stored.  If not given then no zonefile is used.
 If the file does not exist or is empty, unbound will attempt to fetch zone

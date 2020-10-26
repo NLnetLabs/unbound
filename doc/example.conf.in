@@ -998,6 +998,7 @@ remote-control:
 #	name: "example.org"
 #	for-downstream: yes
 #	for-upstream: yes
+#	zonemd-reject-absence: no
 #	zonefile: "example.org.zone"
 
 # Views

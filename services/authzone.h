@@ -132,6 +132,8 @@ struct auth_zone {
 	/** for upstream: this zone answers queries that unbound intends to
 	 * send upstream. */
 	int for_upstream;
+	/** reject absence of ZONEMD records */
+	int zonemd_reject_absence;
 	/** RPZ zones */
 	struct rpz* rpz;
 	/** store the env (worker thread specific) for the zonemd callbacks

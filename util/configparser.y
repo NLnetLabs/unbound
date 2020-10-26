@@ -179,7 +179,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_TLS_SESSION_TICKET_KEYS VAR_RPZ VAR_TAGS VAR_RPZ_ACTION_OVERRIDE
 %token VAR_RPZ_CNAME_OVERRIDE VAR_RPZ_LOG VAR_RPZ_LOG_NAME
 %token VAR_DYNLIB VAR_DYNLIB_FILE VAR_EDNS_CLIENT_TAG VAR_EDNS_CLIENT_TAG_OPCODE
-%token VAR_ZONEMD_PERMISSIVE_MODE
+%token VAR_ZONEMD_PERMISSIVE_MODE VAR_ZONEMD_REJECT_ABSENCE
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -360,6 +360,7 @@ authstart: VAR_AUTH_ZONE
 			s->for_downstream = 1;
 			s->for_upstream = 1;
 			s->fallback_enabled = 0;
+			s->zonemd_reject_absence = 0;
 			s->isrpz = 0;
 		} else 
 			yyerror("out of memory");
@@ -369,7 +370,7 @@ contents_auth: contents_auth content_auth
 	| ;
 content_auth: auth_name | auth_zonefile | auth_master | auth_url |
 	auth_for_downstream | auth_for_upstream | auth_fallback_enabled |
-	auth_allow_notify
+	auth_allow_notify | auth_zonemd_reject_absence
 	;
 
 rpz_tag: VAR_TAGS STRING_ARG
@@ -2671,6 +2672,16 @@ auth_allow_notify: VAR_ALLOW_NOTIFY STRING_ARG
 		if(!cfg_strlist_insert(&cfg_parser->cfg->auths->allow_notify,
 			$2))
 			yyerror("out of memory");
+	}
+	;
+auth_zonemd_reject_absence: VAR_ZONEMD_REJECT_ABSENCE STRING_ARG
+	{
+		OUTYY(("P(zonemd-reject-absence:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else cfg_parser->cfg->auths->zonemd_reject_absence =
+			(strcmp($2, "yes")==0);
+		free($2);
 	}
 	;
 auth_for_downstream: VAR_FOR_DOWNSTREAM STRING_ARG
