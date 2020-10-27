@@ -1,3 +1,7 @@
+27 October 2020: Wouter
+	- In man page note that tls-cert-bundle is read before permission
+	  drop and chroot.
+
 22 October 2020: Wouter
 	- Fix #333: Unbound Segmentation Fault w/ log_info Functions From
 	  Python Mod.
