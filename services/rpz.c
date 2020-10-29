@@ -213,8 +213,8 @@ rpz_action_to_localzone_type(enum rpz_action a)
 	case RPZ_PASSTHRU_ACTION:	return local_zone_always_transparent;
 	case RPZ_LOCAL_DATA_ACTION:	/* fallthrough */
 	case RPZ_CNAME_OVERRIDE_ACTION: return local_zone_redirect;
+	case RPZ_TCP_ONLY_ACTION:	return local_zone_truncate;
 	case RPZ_INVALID_ACTION: 	/* fallthrough */
-	case RPZ_TCP_ONLY_ACTION:	/* fallthrough */
 	default:			return local_zone_invalid;
 	}
 }
@@ -223,15 +223,15 @@ enum respip_action
 rpz_action_to_respip_action(enum rpz_action a)
 {
 	switch(a) {
-	case RPZ_NXDOMAIN_ACTION:	return respip_always_nxdomain;
-	case RPZ_NODATA_ACTION:		return respip_always_nodata;
-	case RPZ_DROP_ACTION:		return respip_always_deny;
-	case RPZ_PASSTHRU_ACTION:	return respip_always_transparent;
-	case RPZ_LOCAL_DATA_ACTION:	/* fallthrough */
+	case RPZ_NXDOMAIN_ACTION:       return respip_always_nxdomain;
+	case RPZ_NODATA_ACTION:         return respip_always_nodata;
+	case RPZ_DROP_ACTION:           return respip_always_deny;
+	case RPZ_PASSTHRU_ACTION:       return respip_always_transparent;
+	case RPZ_LOCAL_DATA_ACTION:     /* fallthrough */
 	case RPZ_CNAME_OVERRIDE_ACTION: return respip_redirect;
-	case RPZ_INVALID_ACTION:	/* fallthrough */
-	case RPZ_TCP_ONLY_ACTION:	/* fallthrough */
-	default:			return respip_invalid;
+	case RPZ_TCP_ONLY_ACTION:       return respip_truncate;
+	case RPZ_INVALID_ACTION:        /* fallthrough */
+	default:                        return respip_invalid;
 	}
 }
 
@@ -244,6 +244,7 @@ localzone_type_to_rpz_action(enum localzone_type lzt)
 	case local_zone_always_deny:		return RPZ_DROP_ACTION;
 	case local_zone_always_transparent:	return RPZ_PASSTHRU_ACTION;
 	case local_zone_redirect:		return RPZ_LOCAL_DATA_ACTION;
+	case local_zone_truncate:		return RPZ_TCP_ONLY_ACTION;
 	case local_zone_invalid:
 	default:
 		return RPZ_INVALID_ACTION;
@@ -259,6 +260,7 @@ respip_action_to_rpz_action(enum respip_action a)
 	case respip_always_deny:	return RPZ_DROP_ACTION;
 	case respip_always_transparent:	return RPZ_PASSTHRU_ACTION;
 	case respip_redirect:		return RPZ_LOCAL_DATA_ACTION;
+	case respip_truncate:		return RPZ_TCP_ONLY_ACTION;
 	case respip_invalid:
 	default:
 		return RPZ_INVALID_ACTION;
@@ -478,11 +480,15 @@ rpz_insert_qname_trigger(struct rpz* r, uint8_t* dname, size_t dnamelen,
 	char* rrstr;
 	int newzone = 0;
 
-	if(a == RPZ_TCP_ONLY_ACTION || a == RPZ_INVALID_ACTION) {
+	if(a == RPZ_INVALID_ACTION) {
 		verbose(VERB_ALGO, "RPZ: skipping unsupported action: %s",
 			rpz_action_to_string(a));
 		free(dname);
 		return;
+	}
+
+	if(a == RPZ_TCP_ONLY_ACTION) {
+		verbose(VERB_ALGO, "RPZ: insert qname trigger: tcp-only");
 	}
 
 	lock_rw_wrlock(&r->local_zones->lock);
@@ -550,11 +556,14 @@ rpz_insert_response_ip_trigger(struct rpz* r, uint8_t* dname, size_t dnamelen,
 	char* rrstr;
 	enum respip_action respa = rpz_action_to_respip_action(a);
 
-	if(a == RPZ_TCP_ONLY_ACTION || a == RPZ_INVALID_ACTION ||
-		respa == respip_invalid) {
+	if(a == RPZ_INVALID_ACTION || respa == respip_invalid) {
 		verbose(VERB_ALGO, "RPZ: skipping unsupported action: %s",
 			rpz_action_to_string(a));
 		return 0;
+	}
+
+	if(a == RPZ_TCP_ONLY_ACTION) {
+		verbose(VERB_ALGO, "RPZ: insert respip trigger: tcp-only");
 	}
 
 	if(!netblockdnametoaddr(dname, dnamelen, &addr, &addrlen, &net, &af))
@@ -984,6 +993,7 @@ rpz_apply_qname_trigger(struct auth_zones* az, struct module_env* env,
 		lock_rw_unlock(&a->lock); /* not found in this auth_zone */
 	}
 	lock_rw_unlock(&az->rpz_lock);
+
 	if(!z)
 		return 0; /* not holding auth_zone.lock anymore */
 
@@ -1032,7 +1042,7 @@ rpz_apply_qname_trigger(struct auth_zones* az, struct module_env* env,
 		lock_rw_unlock(&a->lock);
 		return !qinfo->local_alias;
 	}
-
+verbose(VERB_ALGO, "xxxxxx repinfo=%p is_udp=%d", repinfo, repinfo->c->type == comm_udp);
 	ret = local_zones_zone_answer(z, env, qinfo, edns, repinfo, buf, temp,
 		0 /* no local data used */, lzt);
 	if(r->log)

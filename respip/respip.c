@@ -807,7 +807,6 @@ respip_nodata_answer(uint16_t qtype, enum respip_action action,
 		 * is explicitly specified. */
 		int rcode = (action == respip_always_nxdomain)?
 			LDNS_RCODE_NXDOMAIN:LDNS_RCODE_NOERROR;
-
 		/* We should empty the answer section except for any preceding
 		 * CNAMEs (in that case rrset_id > 0).  Type-ANY case is
 		 * special as noted in respip_data_answer(). */
