@@ -7673,9 +7673,14 @@ static int nsec3_of_param_has_type(struct auth_rrset* nsec3, int algo,
 		if(!nsec3_get_params(&pk, i, &rralgo, &rriter, &rrsalt,
 			&rrsaltlen))
 			continue; /* no parameters, malformed */
-		if(rralgo != algo || rriter != iter || rrsaltlen != saltlen ||
-			memcmp(rrsalt, salt, saltlen) != 0)
+		if(rralgo != algo || rriter != iter || rrsaltlen != saltlen)
 			continue; /* different parameters */
+		if(saltlen != 0) {
+			if(rrsalt == NULL || salt == NULL)
+				continue;
+			if(memcmp(rrsalt, salt, saltlen) != 0)
+				continue; /* different salt parameters */
+		}
 		if(nsec3_has_type(&pk, i, rrtype))
 			return 1;
 	}
@@ -7929,6 +7934,7 @@ auth_zone_verify_zonemd_with_key(struct auth_zone* z, struct module_env* env,
  * thus apply straight to the zone DNSKEY set.
  * @param z: the auth zone.
  * @param env: environment with time and temp buffers.
+ * @param mods: module stack for validator environment for dnssec validation.
  * @param anchor: trust anchor to use
  * @param is_insecure: returned, true if the zone is securely insecure.
  * @param why_bogus: if the routine fails, returns the failure reason.
