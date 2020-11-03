@@ -1209,10 +1209,6 @@ mesh_send_reply(struct mesh_state* m, int rcode, struct reply_info* rep,
 	struct timeval end_time;
 	struct timeval duration;
 	int secure;
-
-	rcode = mesh_is_udp(r) && mesh_is_rpz_respip_tcponly_action(m)
-			? (rcode|BIT_TC) : rcode;
-
 	/* Copy the client's EDNS for later restore, to make sure the edns
 	 * compare is with the correct edns options. */
 	struct edns_data edns_bak = r->edns;
@@ -1222,6 +1218,11 @@ mesh_send_reply(struct mesh_state* m, int rcode, struct reply_info* rep,
 	 * null stops the mesh state remove and thus
 	 * reply_list modification and accounting */
 	struct mesh_reply* rlist = m->reply_list;
+
+	/* RPZ: apply actions */
+	rcode = mesh_is_udp(r) && mesh_is_rpz_respip_tcponly_action(m)
+			? (rcode|BIT_TC) : rcode;
+
 	/* examine security status */
 	if(m->s.env->need_to_validate && (!(r->qflags&BIT_CD) ||
 		m->s.env->cfg->ignore_cd) && rep && 
