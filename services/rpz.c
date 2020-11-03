@@ -480,15 +480,13 @@ rpz_insert_qname_trigger(struct rpz* r, uint8_t* dname, size_t dnamelen,
 	char* rrstr;
 	int newzone = 0;
 
+	verbose(VERB_ALGO, "RPZ: insert qname trigger: %s", rpz_action_to_string(a));
+
 	if(a == RPZ_INVALID_ACTION) {
 		verbose(VERB_ALGO, "RPZ: skipping unsupported action: %s",
 			rpz_action_to_string(a));
 		free(dname);
 		return;
-	}
-
-	if(a == RPZ_TCP_ONLY_ACTION) {
-		verbose(VERB_ALGO, "RPZ: insert qname trigger: tcp-only");
 	}
 
 	lock_rw_wrlock(&r->local_zones->lock);
