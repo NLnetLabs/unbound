@@ -92,6 +92,7 @@ enum rpz_action {
 struct rpz {
 	struct local_zones* local_zones;
 	struct respip_set* respip_set;
+	struct respip_set* client_set;
 	uint8_t* taglist;
 	size_t taglistlen;
 	enum rpz_action action_override;

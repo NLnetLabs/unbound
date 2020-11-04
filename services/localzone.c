@@ -1561,7 +1561,7 @@ local_zones_zone_answer(struct local_zone* z, struct module_env* env,
 			lz_type == local_zone_truncate)?
 			LDNS_RCODE_NOERROR:LDNS_RCODE_NXDOMAIN;
 		rcode = lz_type == local_zone_truncate ? (rcode|BIT_TC) : rcode;
-		if(z->soa)
+		if(z != NULL && z->soa)
 			return local_encode(qinfo, env, edns, repinfo, buf, temp,
 				z->soa, 0, rcode);
 		local_error_encode(qinfo, env, edns, repinfo, buf, temp, rcode,
@@ -1578,7 +1578,7 @@ local_zones_zone_answer(struct local_zone* z, struct module_env* env,
 	 * does not, then we should make this noerror/nodata */
 	if(ld && ld->rrsets) {
 		int rcode = LDNS_RCODE_NOERROR;
-		if(z->soa)
+		if(z != NULL && z->soa)
 			return local_encode(qinfo, env, edns, repinfo, buf, temp,
 				z->soa, 0, rcode);
 		local_error_encode(qinfo, env, edns, repinfo, buf, temp, rcode,
