@@ -50,6 +50,7 @@
 #include "util/data/dname.h"
 #include "util/locks.h"
 #include "util/regional.h"
+#include "util/data/msgencode.h"
 
 typedef struct resp_addr rpz_aclnode_type;
 
@@ -1096,27 +1097,7 @@ rpz_resolve_final_localzone_action(struct rpz* r, struct local_zone* z, enum rpz
 {
 	enum localzone_type lzt;
 	if(r->action_override == RPZ_NO_OVERRIDE_ACTION) {
-		switch (client_action) {
-		case RPZ_NODATA_ACTION:
-		case RPZ_NXDOMAIN_ACTION:
-		case RPZ_DROP_ACTION:
-		case RPZ_TCP_ONLY_ACTION:
-		case RPZ_PASSTHRU_ACTION:
-			lzt = rpz_action_to_localzone_type(client_action);
-			break;
-		case RPZ_LOCAL_DATA_ACTION:
-			verbose(VERB_ALGO,
-				"RPZ: client ip trigger with local-data unimplemented:"
-				" defaulting to rpz-passthru");
-			lzt = rpz_action_to_localzone_type(RPZ_PASSTHRU_ACTION);
-			break;
-		case RPZ_INVALID_ACTION:
-			lzt = z->type;
-			break;
-		default:
-			lzt = z->type;
-			break;
-		}
+		lzt = z->type;
 	} else {
 		lzt = rpz_action_to_localzone_type(r->action_override);
 	}
@@ -1130,6 +1111,88 @@ rpz_is_udp_query(struct comm_reply* repinfo) {
 				? repinfo->c->type == comm_udp
 				: 0)
 			: 0;
+}
+
+/** encode answer consisting of 1 rrset */
+static int
+rpz_local_encode(struct query_info* qinfo, struct module_env* env,
+	struct edns_data* edns, struct comm_reply* repinfo, sldns_buffer* buf,
+	struct regional* temp, struct ub_packed_rrset_key* rrset, int ansec,
+	int rcode)
+{
+	struct reply_info rep;
+	uint16_t udpsize;
+	/* make answer with time=0 for fixed TTL values */
+	memset(&rep, 0, sizeof(rep));
+	rep.flags = (uint16_t)((BIT_QR | BIT_AA | BIT_RA) | rcode);
+	rep.qdcount = 1;
+	if(ansec)
+		rep.an_numrrsets = 1;
+	else	rep.ns_numrrsets = 1;
+	rep.rrset_count = 1;
+	rep.rrsets = &rrset;
+
+	udpsize = edns->udp_size;
+	edns->edns_version = EDNS_ADVERTISED_VERSION;
+	edns->udp_size = EDNS_ADVERTISED_SIZE;
+	edns->ext_rcode = 0;
+	edns->bits &= EDNS_DO;
+	//!inplace_cb_reply_local_call(env, qinfo, NULL, &rep, rcode, edns,repinfo, temp) ||
+	if(!inplace_cb_reply_local_call(env, qinfo, NULL, &rep, rcode, edns,repinfo, temp) ||!reply_info_answer_encode(qinfo, &rep,
+		*(uint16_t*)sldns_buffer_begin(buf), sldns_buffer_read_u16_at(buf, 2),
+		buf, 0, 0, temp, udpsize, edns, (int)(edns->bits&EDNS_DO), 0)) {
+		error_encode(buf, (LDNS_RCODE_SERVFAIL|BIT_AA), qinfo,
+			*(uint16_t*)sldns_buffer_begin(buf),
+			sldns_buffer_read_u16_at(buf, 2), edns);
+	}
+	return 1;
+}
+
+static void
+rpz_apply_clientip_localdata_action(struct rpz* r, struct module_env* env,
+	struct query_info* qinfo, struct edns_data* edns, struct comm_reply* repinfo,
+	sldns_buffer* buf, struct regional* temp)
+{
+	struct resp_addr* raddr = NULL;
+	enum rpz_action action = RPZ_INVALID_ACTION;
+	struct sockaddr_storage* addr = &repinfo->addr;
+	socklen_t addrlen = repinfo->addrlen;
+	struct ub_packed_rrset_key* rp = NULL;
+	int rcode = LDNS_RCODE_NOERROR|BIT_AA;
+
+	verbose(VERB_ALGO, "RPZ: apply client ip trigger: found=%d action=%s",
+		raddr != NULL, rpz_action_to_string(action));
+
+	lock_rw_rdlock(&r->client_set->lock);
+
+	raddr = (struct resp_addr*)addr_tree_lookup(&r->client_set->ip_tree,
+			addr, addrlen);
+	if(raddr == NULL) {
+		lock_rw_unlock(&r->client_set->lock);
+		return;
+	}
+
+	/* prepare synthesized answer for the matching client */
+
+	action = respip_action_to_rpz_action(raddr->action);
+	if(action != RPZ_LOCAL_DATA_ACTION && raddr->data == NULL ) {
+		verbose(VERB_ALGO, "RPZ: bug: local-data action and no local data");
+		goto done;
+	}
+	rp = respip_copy_rrset(raddr->data, temp);
+	if(!rp) {
+		verbose(VERB_ALGO, "RPZ: local-data action: out of memory");
+		goto done;
+	}
+	rp->rk.flags |= PACKED_RRSET_FIXEDTTL;
+	rp->rk.dname = qinfo->qname;
+	rp->rk.dname_len = qinfo->qname_len;
+	rpz_local_encode(qinfo, env, edns, repinfo, buf, temp, rp, 1, rcode);
+
+done:
+	lock_rw_unlock(&raddr->lock);
+	lock_rw_unlock(&r->client_set->lock);
+
 }
 
 int
@@ -1152,7 +1215,8 @@ rpz_apply_qname_trigger(struct auth_zones* az, struct module_env* env,
 	verbose(VERB_ALGO, "RPZ: qname trigger: client action=%s",
 		rpz_action_to_string(client_action));
 
-	if(!z) {
+	if(z == NULL || (client_action != RPZ_INVALID_ACTION &&
+			 client_action != RPZ_PASSTHRU_ACTION)) {
 		verbose(VERB_ALGO, "RPZ: client action without zone");
 		if(client_action == RPZ_PASSTHRU_ACTION
 			|| client_action == RPZ_INVALID_ACTION
@@ -1160,11 +1224,16 @@ rpz_apply_qname_trigger(struct auth_zones* az, struct module_env* env,
 				&& !rpz_is_udp_query(repinfo))) {
 			return 0;
 		}
-		// XXX: log_rpz_apply not possbile because no zone
 		stats->rpz_action[client_action]++;
-		local_zones_zone_answer(NULL /*no zone*/, env, qinfo, edns,
-					repinfo, buf, temp, 0 /* no local data used */,
-					rpz_action_to_localzone_type(client_action));
+		if(client_action == RPZ_LOCAL_DATA_ACTION) {
+			rpz_apply_clientip_localdata_action(r, env, qinfo, edns,
+				repinfo, buf, temp);
+		} else {
+			// XXX: log_rpz_apply not possbile because no zone
+			local_zones_zone_answer(NULL /*no zone*/, env, qinfo, edns,
+				repinfo, buf, temp, 0 /* no local data used */,
+				rpz_action_to_localzone_type(client_action));
+		}
 		return 1;
 	}
 

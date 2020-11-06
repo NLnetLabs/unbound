@@ -483,8 +483,8 @@ respip_views_apply_cfg(struct views* vs, struct config_file* cfg,
  * This function returns the copied rrset key on success, and NULL on memory
  * allocation failure.
  */
-static struct ub_packed_rrset_key*
-copy_rrset(const struct ub_packed_rrset_key* key, struct regional* region)
+struct ub_packed_rrset_key*
+respip_copy_rrset(const struct ub_packed_rrset_key* key, struct regional* region)
 {
 	struct ub_packed_rrset_key* ck = regional_alloc(region,
 		sizeof(struct ub_packed_rrset_key));
@@ -730,7 +730,7 @@ respip_data_answer(enum respip_action action,
 				"response-ip redirect with tag data [%d] %s",
 				tag, (tag<num_tags?tagname[tag]:"null"));
 			/* use copy_rrset() to 'normalize' memory layout */
-			rp = copy_rrset(&r, region);
+			rp = respip_copy_rrset(&r, region);
 			if(!rp)
 				return -1;
 		}
@@ -743,7 +743,7 @@ respip_data_answer(enum respip_action action,
 	 * rename the dname for other actions than redirect.  This is because
 	 * response-ip-data isn't associated to any specific name. */
 	if(rp == data) {
-		rp = copy_rrset(rp, region);
+		rp = respip_copy_rrset(rp, region);
 		if(!rp)
 			return -1;
 		rp->rk.dname = rep->rrsets[rrset_id]->rk.dname;
@@ -1208,7 +1208,7 @@ respip_merge_cname(struct reply_info* base_rep,
 	if(!new_rep)
 		return 0;
 	for(i=0,j=base_rep->an_numrrsets; i<tgt_rep->an_numrrsets; i++,j++) {
-		new_rep->rrsets[j] = copy_rrset(tgt_rep->rrsets[i], region);
+		new_rep->rrsets[j] = respip_copy_rrset(tgt_rep->rrsets[i], region);
 		if(!new_rep->rrsets[j])
 			return 0;
 	}

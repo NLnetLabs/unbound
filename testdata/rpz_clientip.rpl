@@ -21,6 +21,7 @@ $ORIGIN rpz.example.com.
 24.0.2.0.192.rpz-client-ip CNAME rpz-drop.
 24.0.3.0.192.rpz-client-ip CNAME rpz-passthru.
 24.0.4.0.192.rpz-client-ip CNAME rpz-tcp-only.
+24.0.5.0.192.rpz-client-ip A 127.0.0.1
 TEMPFILE_END
 
 stub-zone:
@@ -166,6 +167,25 @@ SECTION QUESTION
 a.a.  IN TXT
 SECTION ANSWER
 a.a.  IN TXT "upstream txt rr a.a."
+ENTRY_END
+
+; should be synthesized
+
+STEP 60 QUERY ADDRESS 192.0.5.1
+ENTRY_BEGIN
+REPLY RD
+SECTION QUESTION
+a.a.  IN TXT
+ENTRY_END
+
+STEP 61 CHECK_ANSWER
+ENTRY_BEGIN
+MATCH all
+REPLY QR AA RD RA NOERROR
+SECTION QUESTION
+a.a.  IN A
+SECTION ANSWER
+a.a.  IN A 127.0.0.1
 ENTRY_END
 
 ; should be DROPPED
