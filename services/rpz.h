@@ -83,6 +83,27 @@ enum rpz_action {
 	RPZ_CNAME_OVERRIDE_ACTION, /* RPZ CNAME action override*/
 };
 
+struct clientip_synthesized_rrset{
+	struct regional* region;
+	struct rbtree_type entries;
+	lock_rw_type lock;	/* lock on the respip tree */
+};
+
+struct clientip_synthesized_rr {
+	/** node in address tree */
+	struct addr_tree_node node;
+	/** lock on the node item */
+	lock_rw_type lock;
+	/** tag bitlist */
+	uint8_t* taglist;
+	/** length of the taglist (in bytes) */
+	size_t taglen;
+	/** action for this address span */
+	enum rpz_action action;
+	/** "local data" for this node */
+	struct local_rrset* data;
+};
+
 /**
  * RPZ containing policies. Pointed to from corresponding auth-zone. Part of a
  * linked list to keep configuration order. Iterating or changing the linked
@@ -92,7 +113,7 @@ enum rpz_action {
 struct rpz {
 	struct local_zones* local_zones;
 	struct respip_set* respip_set;
-	struct respip_set* client_set;
+	struct clientip_synthesized_rrset* client_set;
 	uint8_t* taglist;
 	size_t taglistlen;
 	enum rpz_action action_override;
