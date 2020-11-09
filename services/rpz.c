@@ -574,7 +574,7 @@ rpz_insert_ipaddr_based_trigger(struct respip_set* set, struct sockaddr_storage*
 	lock_rw_wrlock(&set->lock);
 	rrstr = sldns_wire2str_rr(rr, rr_len);
 	if(!rrstr) {
-		log_err("malloc error while inserting RPZ respip trigger");
+		log_err("malloc error while inserting RPZ ipaddr based trigger");
 		lock_rw_unlock(&set->lock);
 		return 0;
 	}
@@ -1110,7 +1110,7 @@ rpz_local_encode(struct query_info* qinfo, struct module_env* env,
 {
 	struct reply_info rep;
 	uint16_t udpsize;
-	/* make answer with time=0 for fixed TTL values */
+
 	memset(&rep, 0, sizeof(rep));
 	rep.flags = (uint16_t)((BIT_QR | BIT_AA | BIT_RA) | rcode);
 	rep.qdcount = 1;
@@ -1119,6 +1119,7 @@ rpz_local_encode(struct query_info* qinfo, struct module_env* env,
 	else	rep.ns_numrrsets = 1;
 	rep.rrset_count = 1;
 	rep.rrsets = &rrset;
+	rep.ttl = ((struct packed_rrset_data*)rrset->entry.data)->rr_ttl[0];
 
 	udpsize = edns->udp_size;
 	edns->edns_version = EDNS_ADVERTISED_VERSION;
@@ -1167,11 +1168,17 @@ rpz_apply_clientip_localdata_action(struct rpz* r, struct module_env* env,
 		verbose(VERB_ALGO, "RPZ: bug: local-data action and no local data");
 		goto done;
 	}
+
 	rp = respip_copy_rrset(raddr->data, temp);
 	if(!rp) {
 		verbose(VERB_ALGO, "RPZ: local-data action: out of memory");
 		goto done;
 	}
+
+	//struct packed_rrset_data* pd = raddr->data->entry.data;
+	//struct packed_rrset_data* pd2 = rp->entry.data;
+	//verbose(VERB_ALGO, "ttl=%ld ttl=%ld", pd->rr_ttl[0],  pd2->rr_ttl[0]);
+
 	rp->rk.flags |= PACKED_RRSET_FIXEDTTL;
 	rp->rk.dname = qinfo->qname;
 	rp->rk.dname_len = qinfo->qname_len;
