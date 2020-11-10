@@ -1404,7 +1404,7 @@ static int
 resolve_ifa_name(struct ifaddrs *ifas, const char *search_ifa, char ***ip_addresses, int *ip_addresses_size)
 {
 	struct ifaddrs *ifa;
-	void * tmpbuf;
+	void *tmpbuf;
 	int last_ip_addresses_size = *ip_addresses_size;
 
 	for(ifa = ifas; ifa != NULL; ifa = ifa->ifa_next) {
