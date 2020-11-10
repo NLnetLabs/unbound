@@ -1404,6 +1404,7 @@ static int
 resolve_ifa_name(struct ifaddrs *ifas, const char *search_ifa, char ***ip_addresses, int *ip_addresses_size)
 {
 	struct ifaddrs *ifa;
+	void *tmpbuf;
 	int last_ip_addresses_size = *ip_addresses_size;
 
 	for(ifa = ifas; ifa != NULL; ifa = ifa->ifa_next) {
@@ -1468,10 +1469,13 @@ resolve_ifa_name(struct ifaddrs *ifas, const char *search_ifa, char ***ip_addres
 		}
 		verbose(4, "interface %s has address %s", search_ifa, addr_buf);
 
-		*ip_addresses = realloc(*ip_addresses, sizeof(char *) * (*ip_addresses_size + 1));
-		if(!*ip_addresses) {
+		tmpbuf = realloc(*ip_addresses, sizeof(char *) * (*ip_addresses_size + 1));
+		if(!tmpbuf) {
+			free(*ip_addresses);
 			log_err("realloc failed: out of memory");
 			return 0;
+		} else {
+			*ip_addresses = tmpbuf;
 		}
 		(*ip_addresses)[*ip_addresses_size] = strdup(addr_buf);
 		if(!(*ip_addresses)[*ip_addresses_size]) {
@@ -1482,10 +1486,13 @@ resolve_ifa_name(struct ifaddrs *ifas, const char *search_ifa, char ***ip_addres
 	}
 
 	if (*ip_addresses_size == last_ip_addresses_size) {
-		*ip_addresses = realloc(*ip_addresses, sizeof(char *) * (*ip_addresses_size + 1));
-		if(!*ip_addresses) {
+		tmpbuf = realloc(*ip_addresses, sizeof(char *) * (*ip_addresses_size + 1));
+		if(!tmpbuf) {
+			free(*ip_addresses);
 			log_err("realloc failed: out of memory");
 			return 0;
+		} else {
+			*ip_addresses = tmpbuf;
 		}
 		(*ip_addresses)[*ip_addresses_size] = strdup(search_ifa);
 		if(!(*ip_addresses)[*ip_addresses_size]) {
