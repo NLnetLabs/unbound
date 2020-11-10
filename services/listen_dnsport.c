@@ -1471,7 +1471,6 @@ resolve_ifa_name(struct ifaddrs *ifas, const char *search_ifa, char ***ip_addres
 
 		tmpbuf = realloc(*ip_addresses, sizeof(char *) * (*ip_addresses_size + 1));
 		if(!tmpbuf) {
-			free(*ip_addresses);
 			log_err("realloc failed: out of memory");
 			return 0;
 		} else {
@@ -1488,7 +1487,6 @@ resolve_ifa_name(struct ifaddrs *ifas, const char *search_ifa, char ***ip_addres
 	if (*ip_addresses_size == last_ip_addresses_size) {
 		tmpbuf = realloc(*ip_addresses, sizeof(char *) * (*ip_addresses_size + 1));
 		if(!tmpbuf) {
-			free(*ip_addresses);
 			log_err("realloc failed: out of memory");
 			return 0;
 		} else {

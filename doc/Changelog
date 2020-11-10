@@ -1,5 +1,6 @@
 10 November 2020: Wouter
 	- Fix #341: fixing a possible memory leak.
+	- Fix memory leak after fix for possible memory leak failure.
 
 27 October 2020: Wouter
 	- In man page note that tls-cert-bundle is read before permission
