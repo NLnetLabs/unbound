@@ -43,6 +43,7 @@
 #  include <sys/types.h>
 #endif
 #include <sys/time.h>
+#include <limits.h>
 #ifdef USE_TCP_FASTOPEN
 #include <netinet/tcp.h>
 #endif
