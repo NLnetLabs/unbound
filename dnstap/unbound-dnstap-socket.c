@@ -1167,8 +1167,10 @@ int sig_quit = 0;
 static RETSIGTYPE main_sigh(int sig)
 {
 	verbose(VERB_ALGO, "exit on signal %d\n", sig);
-	if(sig_base)
+	if(sig_base) {
 		ub_event_base_loopexit(sig_base);
+		sig_base = NULL;
+	}
 	sig_quit = 1;
 }
 

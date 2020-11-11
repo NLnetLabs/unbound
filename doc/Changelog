@@ -1,3 +1,96 @@
+27 October 2020: Wouter
+	- In man page note that tls-cert-bundle is read before permission
+	  drop and chroot.
+
+22 October 2020: Wouter
+	- Fix #333: Unbound Segmentation Fault w/ log_info Functions From
+	  Python Mod.
+	- Fix that minimal-responses does not remove addresses from a priming
+	  query response.
+
+21 October 2020: George
+	- Fix #327: net/if.h check fails on some darwin versions; contribution by
+	  Joshua Root.
+	- Fix #320: potential memory corruption due to size miscomputation upton
+	  custom region alloc init.
+
+21 October 2020: Wouter
+	- Merge PR #228 : infra-keep-probing option to probe hosts that are
+	  down.  Add infra-keep-probing: yes option. Hosts that are down are
+	  probed more frequently.
+	  With the option turned on, it probes about every 120 seconds,
+	  eventually after exponential backoff, and that keeps that way. If
+	  traffic keeps up for the domain. It probes with one at a time, eg.
+	  one query is allowed to probe, other queries within that 120 second
+	  interval are turned away.
+
+19 October 2020: George
+	- Merge PR #324 from James Renken: Add modern X.509v3 extensions to
+	  unbound-control TLS certificates.
+	- Fix for PR #324 to attach the x509v3 extensions to the client
+	  certificate.
+
+19 October 2020: Ralph
+	- local-zone regional allocations outside of chunk
+
+19 October 2020: Wouter
+	- Fix that http settings have colon in set_option, for
+	  http-endpoint, http-max-streams, http-query-buffer-size,
+	  http-response-buffer-size, and http-nodelay.
+	- Fix memory leak of https port string when reading config.
+	- Fix #330: [Feature request] Add unencrypted DNS over HTTPS support.
+	  This adds the option http-notls-downstream: yesno to change that,
+	  and the dohclient test code has the -n option.
+	- Fix python documentation warning on functions.rst inplace_cb_reply.
+	- Fix dnstap test to wait for log timer to see if queries are logged.
+	- Log ip address when http session recv fails, eg. due to tls fail.
+	- Fix to set the tcp handler event toggle flag back to default when
+	  the handler structure is reused.
+	- Clean the fix for out of order TCP processing limits on number
+	  of queries.  It was tested to work.
+
+16 October 2020: Wouter
+	- Fix that the out of order TCP processing does not limit the
+	  number of outstanding queries over a connection.
+
+15 October 2020: George
+	- Fix that if there are reply callbacks for the given rcode, those
+	  are called per reply and a new message created if that was modified
+	  by the call.
+	- Pass the comm_reply information to the inplace_cb_reply* functions
+	  during the mesh state and update the documentation on that.
+
+15 October 2020: Wouter
+	- Merge PR #326 from netblue30: DoH: implement content-length
+	  header field
+	- DoH content length, simplify code, remove declaration after
+	  statement and fix cast warning.
+
+14 October 2020: Wouter
+	- Fix for python reply callback to see mesh state reply_list member,
+	  it only removes it briefly for the commpoint call so that it does
+	  not drop it and attempt to modify the reply list during reply.
+	- Fix that if there are on reply callbacks, those are called per
+	  reply and a new message created if that was modified by the call.
+	- Free up auth zone parse region after use for lookup of host
+
+13 October 2020: Wouter
+	- Fix #323: unbound testsuite fails on mock build in systemd-nspawn
+	  if systemd support is build.
+
+9 October 2020: Wouter
+	- Fix dnstap socket and the chroot not applied properly to the dnstap
+	  socket path.
+	- Fix warning in libnss compile, nss_buf2dsa is not used without DSA.
+
+8 October 2020: Wouter
+	- Tag for 1.12.0 release.
+	- Current repo is version 1.12.1 in development.
+	- Fix #319: potential memory leak on config failure, in rpz config.
+
+1 October 2020: Wouter
+	- Current repo is version 1.12.0 for release.  Tag for 1.12.0rc1.
+
 30 September 2020: Wouter
 	- Fix doh tests when not compiled in.
 	- Add dohclient test executable to gitignore.
@@ -5,6 +98,7 @@
 	  alloc check debug output.
 	- Easier kill of unbound-dnstap-socket tool in test.
 	- Fix memory leak of edns tags at libunbound context delete.
+	- Fix double loopexit for unbound-dnstap-socket after sigterm.
 
 29 September 2020: Ralph
 	- DNS Flag Day 2020: change edns-buffer-size default to 1232.

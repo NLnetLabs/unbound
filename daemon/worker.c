@@ -1789,8 +1789,8 @@ worker_init(struct worker* worker, struct config_file *cfg,
 			? cfg->tcp_keepalive_timeout
 			: cfg->tcp_idle_timeout,
 		cfg->harden_large_queries, cfg->http_max_streams,
-		cfg->http_endpoint, worker->daemon->tcl,
-		worker->daemon->listen_sslctx,
+		cfg->http_endpoint, cfg->http_notls_downstream,
+		worker->daemon->tcl, worker->daemon->listen_sslctx,
 		dtenv, worker_handle_request, worker);
 	if(!worker->front) {
 		log_err("could not create listening sockets");

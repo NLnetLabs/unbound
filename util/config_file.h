@@ -143,6 +143,8 @@ struct config_file {
 	size_t http_response_buffer_size;
 	/** set TCP_NODELAY option for http sockets */
 	int http_nodelay;
+	/** Disable TLS for http sockets downstream */
+	int http_notls_downstream;
 
 	/** outgoing port range number of ports (per thread) */
 	int outgoing_num_ports;
@@ -179,6 +181,8 @@ struct config_file {
 	size_t infra_cache_numhosts;
 	/** min value for infra cache rtt */
 	int infra_cache_min_rtt;
+	/** keep probing hosts that are down */
+	int infra_keep_probing;
 	/** delay close of udp-timeouted ports, if 0 no delayclose. in msec */
 	int delay_close;
 

@@ -192,6 +192,9 @@ server:
 	# minimum wait time for responses, increase if uplink is long. In msec.
 	# infra-cache-min-rtt: 50
 
+	# enable to make server probe down hosts more frequently.
+	# infra-keep-probing: no
+
 	# the number of slabs to use for the Infrastructure cache.
 	# the number of slabs must be a power of 2.
 	# more slabs reduce lock contention, but fragment memory usage.
@@ -787,6 +790,9 @@ server:
 	# Set TCP_NODELAY socket option on sockets used for DNS-over-HTTPS
 	# service.
 	# http-nodelay: yes
+
+	# Disable TLS for DNS-over-HTTP downstream service.
+	# http-notls-downstream: no
 
 	# DNS64 prefix. Must be specified when DNS64 is use.
 	# Enable dns64 in module-config.  Used to synthesize IPv6 from IPv4.

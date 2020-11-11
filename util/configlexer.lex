@@ -262,6 +262,7 @@ http-max-streams{COLON}		{ YDVAR(1, VAR_HTTP_MAX_STREAMS) }
 http-query-buffer-size{COLON}	{ YDVAR(1, VAR_HTTP_QUERY_BUFFER_SIZE) }
 http-response-buffer-size{COLON} { YDVAR(1, VAR_HTTP_RESPONSE_BUFFER_SIZE) }
 http-nodelay{COLON}		{ YDVAR(1, VAR_HTTP_NODELAY) }
+http-notls-downstream{COLON}	{ YDVAR(1, VAR_HTTP_NOTLS_DOWNSTREAM) }
 use-systemd{COLON}		{ YDVAR(1, VAR_USE_SYSTEMD) }
 do-daemonize{COLON}		{ YDVAR(1, VAR_DO_DAEMONIZE) }
 interface{COLON}		{ YDVAR(1, VAR_INTERFACE) }
@@ -296,6 +297,7 @@ infra-cache-slabs{COLON}	{ YDVAR(1, VAR_INFRA_CACHE_SLABS) }
 infra-cache-numhosts{COLON}	{ YDVAR(1, VAR_INFRA_CACHE_NUMHOSTS) }
 infra-cache-lame-size{COLON}	{ YDVAR(1, VAR_INFRA_CACHE_LAME_SIZE) }
 infra-cache-min-rtt{COLON}	{ YDVAR(1, VAR_INFRA_CACHE_MIN_RTT) }
+infra-keep-probing{COLON}	{ YDVAR(1, VAR_INFRA_KEEP_PROBING) }
 num-queries-per-thread{COLON}	{ YDVAR(1, VAR_NUM_QUERIES_PER_THREAD) }
 jostle-timeout{COLON}		{ YDVAR(1, VAR_JOSTLE_TIMEOUT) }
 delay-close{COLON}		{ YDVAR(1, VAR_DELAY_CLOSE) }

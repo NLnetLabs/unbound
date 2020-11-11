@@ -170,6 +170,7 @@ config_create(void)
 	cfg->infra_cache_slabs = 4;
 	cfg->infra_cache_numhosts = 10000;
 	cfg->infra_cache_min_rtt = 50;
+	cfg->infra_keep_probing = 0;
 	cfg->delay_close = 0;
 	if(!(cfg->outgoing_avail_ports = (int*)calloc(65536, sizeof(int))))
 		goto error_exit;
@@ -522,11 +523,12 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	else S_STR("tls-ciphersuites:", tls_ciphersuites)
 	else S_YNO("tls-use-sni:", tls_use_sni)
 	else S_NUMBER_NONZERO("https-port:", https_port)
-	else S_STR("http-endpoint", http_endpoint)
-	else S_NUMBER_NONZERO("http-max-streams", http_max_streams)
-	else S_MEMSIZE("http-query-buffer-size", http_query_buffer_size)
-	else S_MEMSIZE("http-response-buffer-size", http_response_buffer_size)
-	else S_YNO("http-nodelay", http_nodelay)
+	else S_STR("http-endpoint:", http_endpoint)
+	else S_NUMBER_NONZERO("http-max-streams:", http_max_streams)
+	else S_MEMSIZE("http-query-buffer-size:", http_query_buffer_size)
+	else S_MEMSIZE("http-response-buffer-size:", http_response_buffer_size)
+	else S_YNO("http-nodelay:", http_nodelay)
+	else S_YNO("http-notls-downstream:", http_notls_downstream)
 	else S_YNO("interface-automatic:", if_automatic)
 	else S_YNO("use-systemd:", use_systemd)
 	else S_YNO("do-daemonize:", do_daemonize)
@@ -562,6 +564,7 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	    IS_NUMBER_OR_ZERO; cfg->infra_cache_min_rtt = atoi(val);
 	    RTT_MIN_TIMEOUT=cfg->infra_cache_min_rtt;
 	}
+	else S_YNO("infra-keep-probing:", infra_keep_probing)
 	else S_NUMBER_OR_ZERO("infra-host-ttl:", host_ttl)
 	else S_POW2("infra-cache-slabs:", infra_cache_slabs)
 	else S_SIZET_NONZERO("infra-cache-numhosts:", infra_cache_numhosts)
@@ -958,6 +961,7 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_DEC(opt, "infra-host-ttl", host_ttl)
 	else O_DEC(opt, "infra-cache-slabs", infra_cache_slabs)
 	else O_DEC(opt, "infra-cache-min-rtt", infra_cache_min_rtt)
+	else O_YNO(opt, "infra-keep-probing", infra_keep_probing)
 	else O_MEM(opt, "infra-cache-numhosts", infra_cache_numhosts)
 	else O_UNS(opt, "delay-close", delay_close)
 	else O_YNO(opt, "do-ip4", do_ip4)
@@ -990,6 +994,7 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_MEM(opt, "http-query-buffer-size", http_query_buffer_size)
 	else O_MEM(opt, "http-response-buffer-size", http_response_buffer_size)
 	else O_YNO(opt, "http-nodelay", http_nodelay)
+	else O_YNO(opt, "http-notls-downstream", http_notls_downstream)
 	else O_YNO(opt, "use-systemd", use_systemd)
 	else O_YNO(opt, "do-daemonize", do_daemonize)
 	else O_STR(opt, "chroot", chrootdir)

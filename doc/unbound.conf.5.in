@@ -382,6 +382,12 @@ Lower limit for dynamic retransmit timeout calculation in infrastructure
 cache. Default is 50 milliseconds. Increase this value if using forwarders
 needing more time to do recursive name resolution.
 .TP
+.B infra\-keep\-probing: \fI<yes or no>
+If enabled the server keeps probing hosts that are down, in the one probe
+at a time regime.  Default is no.  Hosts that are down, eg. they did
+not respond during the one probe at a time period, are marked as down and
+it may take \fBinfra\-host\-ttl\fR time to get probed again.
+.TP
 .B define\-tag: \fI<"list of tags">
 Define the tags that can be used with local\-zone and access\-control.
 Enclose the list between quotes ("") and put spaces between tags.
@@ -516,7 +522,8 @@ Alternate syntax for \fBtls\-port\fR.
 If null or "", no file is used.  Set it to the certificate bundle file,
 for example "/etc/pki/tls/certs/ca\-bundle.crt".  These certificates are used
 for authenticating connections made to outside peers.  For example auth\-zone
-urls, and also DNS over TLS connections.
+urls, and also DNS over TLS connections.  It is read at start up before
+permission drop and chroot.
 .TP
 .B ssl\-cert\-bundle: \fI<file>
 Alternate syntax for \fBtls\-cert\-bundle\fR.
@@ -586,6 +593,10 @@ megabytes or gigabytes (1024*1024 bytes in a megabyte).
 .B http\-nodelay: \fI<yes or no>
 Set TCP_NODELAY socket option on sockets used to provide DNS-over-HTTPS service.
 Ignored if the option is not available. Default is yes.
+.TP
+.B http\-notls\-downstream: \fI<yes or no>
+Disable use of TLS for the downstream DNS-over-HTTP connections.  Useful for
+local back end servers.  Default is no.
 .TP
 .B use\-systemd: \fI<yes or no>
 Enable or disable systemd socket activation.
