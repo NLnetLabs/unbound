@@ -1118,6 +1118,9 @@ select_ifport(struct outside_network* outnet, struct pending* pend,
 		if(1) {
 			/* if we connect() we cannot reuse fds for a port */
 			if(pif->inuse >= pif->avail_total) {
+				tries++;
+				if(tries < MAX_PORT_RETRY)
+					continue;
 				log_err("failed to find an open port, drop msg");
 				return 0;
 			}
