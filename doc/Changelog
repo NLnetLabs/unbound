@@ -1,3 +1,7 @@
+12 November 2020: Wouter
+	- Fix to connect() to UDP destinations, default turned on,
+	  this lowers vulnerability to ICMP side channels.
+
 10 November 2020: Wouter
 	- Fix #341: fixing a possible memory leak.
 	- Fix memory leak after fix for possible memory leak failure.
