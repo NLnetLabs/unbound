@@ -51,6 +51,8 @@
 #include "util/locks.h"
 #include "util/regional.h"
 #include "util/data/msgencode.h"
+#include "services/cache/dns.h"
+#include "iterator/iterator.h"
 
 typedef struct resp_addr rpz_aclnode_type;
 
@@ -349,6 +351,7 @@ rpz_delete(struct rpz* r)
 	local_zones_delete(r->local_zones);
 	respip_set_delete(r->respip_set);
 	rpz_clientip_synthesized_set_delete(r->client_set);
+	rpz_clientip_synthesized_set_delete(r->ns_set);
 	regional_destroy(r->region);
 	free(r->taglist);
 	free(r->log_name);
@@ -362,6 +365,7 @@ rpz_clear(struct rpz* r)
 	local_zones_delete(r->local_zones);
 	respip_set_delete(r->respip_set);
 	rpz_clientip_synthesized_set_delete(r->client_set);
+	rpz_clientip_synthesized_set_delete(r->ns_set);
 	if(!(r->local_zones = local_zones_create())){
 		return 0;
 	}
@@ -369,6 +373,9 @@ rpz_clear(struct rpz* r)
 		return 0;
 	}
 	if(!(r->client_set = rpz_clientip_synthesized_set_create())) {
+		return 0;
+	}
+	if(!(r->ns_set = rpz_clientip_synthesized_set_create())) {
 		return 0;
 	}
 	return 1;
@@ -384,6 +391,10 @@ rpz_finish_config(struct rpz* r)
 	lock_rw_wrlock(&r->client_set->lock);
 	addr_tree_init_parents(&r->client_set->entries);
 	lock_rw_unlock(&r->client_set->lock);
+
+	lock_rw_wrlock(&r->ns_set->lock);
+	addr_tree_init_parents(&r->ns_set->entries);
+	lock_rw_unlock(&r->ns_set->lock);
 }
 
 /** new rrset containing CNAME override, does not yet contain a dname */
@@ -456,6 +467,11 @@ rpz_create(struct config_auth* p)
 		goto err;
 	}
 
+	r->ns_set = rpz_clientip_synthesized_set_create();
+	if(r->ns_set == NULL) {
+		goto err;
+	}
+
 	r->taglistlen = p->rpz_taglistlen;
 	r->taglist = memdup(p->rpz_taglist, r->taglistlen);
 	if(p->rpz_action_override) {
@@ -500,6 +516,8 @@ err:
 			respip_set_delete(r->respip_set);
 		if(r->client_set != NULL)
 			rpz_clientip_synthesized_set_delete(r->client_set);
+		if(r->ns_set != NULL)
+			rpz_clientip_synthesized_set_delete(r->ns_set);
 		if(r->taglist)
 			free(r->taglist);
 		if(r->region)
@@ -540,10 +558,10 @@ rpz_insert_qname_trigger(struct rpz* r, uint8_t* dname, size_t dnamelen,
 	char* rrstr;
 	int newzone = 0;
 
-	verbose(VERB_ALGO, "RPZ: insert qname trigger: %s", rpz_action_to_string(a));
+	verbose(VERB_ALGO, "rpz: insert qname trigger: %s", rpz_action_to_string(a));
 
 	if(a == RPZ_INVALID_ACTION) {
-		verbose(VERB_ALGO, "RPZ: skipping unsupported action: %s",
+		verbose(VERB_ALGO, "rpz: skipping unsupported action: %s",
 			rpz_action_to_string(a));
 		free(dname);
 		return;
@@ -562,7 +580,7 @@ rpz_insert_qname_trigger(struct rpz* r, uint8_t* dname, size_t dnamelen,
 			lock_rw_unlock(&r->local_zones->lock);
 			return;
 		}
-		verbose(VERB_ALGO, "RPZ: skipping duplicate record: '%s'",
+		verbose(VERB_ALGO, "rpz: skipping duplicate record: '%s'",
 			rrstr);
 		free(rrstr);
 		free(dname);
@@ -573,7 +591,7 @@ rpz_insert_qname_trigger(struct rpz* r, uint8_t* dname, size_t dnamelen,
 		tp = rpz_action_to_localzone_type(a);
 		if(!(z = local_zones_add_zone(r->local_zones, dname, dnamelen,
 			dnamelabs, rrclass, tp))) {
-			log_warn("RPZ create failed");
+			log_warn("rpz: create failed");
 			lock_rw_unlock(&r->local_zones->lock);
 			/* dname will be free'd in failed local_zone_create() */
 			return;
@@ -661,7 +679,7 @@ rpz_clientip_ensure_entry(struct clientip_synthesized_rrset* set,
 	insert_ok = addr_tree_insert(&set->entries, &node->node,
 				     addr, addrlen, net);
 	if (!insert_ok) {
-		log_warn("RPZ: unexpected: unable to insert clientip address node");
+		log_warn("rpz: unexpected: unable to insert clientip address node");
 		/* we can not free the just allocated node.
 		 * theoretically a memleak */
 		return NULL;
@@ -677,7 +695,7 @@ rpz_report_rrset_error(const char* msg, uint8_t* rr, size_t rr_len) {
 		log_err("malloc error while inserting RPZ clientip based record");
 		return;
 	}
-	log_err("RPZ: unexpected: unable to insert %s: %s", msg, rrstr);
+	log_err("rpz: unexpected: unable to insert %s: %s", msg, rrstr);
 	free(rrstr);
 }
 
@@ -767,7 +785,7 @@ rpz_clientip_insert_trigger_rr(struct clientip_synthesized_rrset* set, struct so
 	if(a == RPZ_LOCAL_DATA_ACTION) {
 		if(!rpz_clientip_enter_rr(set->region, node, rrtype,
 			rrclass, ttl, rdata, rdata_len)) {
-			verbose(VERB_ALGO, "RPZ: unable to insert clientip rr");
+			verbose(VERB_ALGO, "rpz: unable to insert clientip rr");
 			lock_rw_unlock(&node->lock);
 			return 0;
 		}
@@ -787,18 +805,14 @@ rpz_insert_clientip_trigger(struct rpz* r, uint8_t* dname, size_t dnamelen,
 	struct sockaddr_storage addr;
 	socklen_t addrlen;
 	int net, af;
-	enum respip_action respa = rpz_action_to_respip_action(a);
 
-	verbose(VERB_ALGO, "RPZ: insert clientip trigger: %s", rpz_action_to_string(a));
-
-	if(a == RPZ_INVALID_ACTION || respa == respip_invalid) {
-		verbose(VERB_ALGO, "RPZ: skipping unsupported action: %s",
-			rpz_action_to_string(a));
+	verbose(VERB_ALGO, "rpz: insert clientip trigger: %s", rpz_action_to_string(a));
+	if(a == RPZ_INVALID_ACTION) {
 		return 0;
 	}
 
 	if(!netblockdnametoaddr(dname, dnamelen, &addr, &addrlen, &net, &af)) {
-		verbose(VERB_ALGO, "RPZ: unable to parse client ip");
+		verbose(VERB_ALGO, "rpz: unable to parse client ip");
 		return 0;
 	}
 
@@ -806,7 +820,28 @@ rpz_insert_clientip_trigger(struct rpz* r, uint8_t* dname, size_t dnamelen,
 			a, rrtype, rrclass, ttl, rdata, rdata_len, rr, rr_len);
 }
 
+static int
+rpz_insert_nsip_trigger(struct rpz* r, uint8_t* dname, size_t dnamelen,
+	enum rpz_action a, uint16_t rrtype, uint16_t rrclass, uint32_t ttl,
+	uint8_t* rdata, size_t rdata_len, uint8_t* rr, size_t rr_len)
+{
+	struct sockaddr_storage addr;
+	socklen_t addrlen;
+	int net, af;
 
+	verbose(VERB_ALGO, "rpz: insert nsip trigger: %s", rpz_action_to_string(a));
+	if(a == RPZ_INVALID_ACTION) {
+		return 0;
+	}
+
+	if(!netblockdnametoaddr(dname, dnamelen, &addr, &addrlen, &net, &af)) {
+		verbose(VERB_ALGO, "rpz: unable to parse ns ip");
+		return 0;
+	}
+
+	return rpz_clientip_insert_trigger_rr(r->ns_set, &addr, addrlen, net,
+			a, rrtype, rrclass, ttl, rdata, rdata_len, rr, rr_len);
+}
 
 /** Insert RR into RPZ's respip_set */
 static int
@@ -817,18 +852,14 @@ rpz_insert_response_ip_trigger(struct rpz* r, uint8_t* dname, size_t dnamelen,
 	struct sockaddr_storage addr;
 	socklen_t addrlen;
 	int net, af;
-	enum respip_action respa = rpz_action_to_respip_action(a);
 
-	verbose(VERB_ALGO, "RPZ: insert response ip trigger: %s", rpz_action_to_string(a));
-
-	if(a == RPZ_INVALID_ACTION || respa == respip_invalid) {
-		verbose(VERB_ALGO, "RPZ: skipping unsupported action: %s",
-			rpz_action_to_string(a));
+	verbose(VERB_ALGO, "rpz: insert response ip trigger: %s", rpz_action_to_string(a));
+	if(a == RPZ_INVALID_ACTION) {
 		return 0;
 	}
 
 	if(!netblockdnametoaddr(dname, dnamelen, &addr, &addrlen, &net, &af)) {
-		verbose(VERB_ALGO, "RPZ: unable to parse response ip");
+		verbose(VERB_ALGO, "rpz: unable to parse response ip");
 		return 0;
 	}
 
@@ -851,11 +882,11 @@ rpz_insert_rr(struct rpz* r, uint8_t* azname, size_t aznamelen, uint8_t* dname,
 		char* dname_str = sldns_wire2str_dname(dname, dnamelen);
 		char* azname_str = sldns_wire2str_dname(azname, aznamelen);
 		if(dname_str && azname_str) {
-			log_err("RPZ: name of record (%s) to insert into RPZ is not a "
+			log_err("rpz: name of record (%s) to insert into RPZ is not a "
 				"subdomain of the configured name of the RPZ zone (%s)",
 				dname_str, azname_str);
 		} else {
-			log_err("RPZ: name of record to insert into RPZ is not a "
+			log_err("rpz: name of record to insert into RPZ is not a "
 				"subdomain of the configured name of the RPZ zone");
 		}
 		free(dname_str);
@@ -878,7 +909,7 @@ rpz_insert_rr(struct rpz* r, uint8_t* azname, size_t aznamelen, uint8_t* dname,
 	t = rpz_dname_to_trigger(policydname, policydnamelen);
 	if(t == RPZ_INVALID_TRIGGER) {
 		free(policydname);
-		verbose(VERB_ALGO, "RPZ: skipping invalid trigger");
+		verbose(VERB_ALGO, "rpz: skipping invalid trigger");
 		return 1;
 	}
 	if(t == RPZ_QNAME_TRIGGER) {
@@ -895,9 +926,14 @@ rpz_insert_rr(struct rpz* r, uint8_t* azname, size_t aznamelen, uint8_t* dname,
 			a, rr_type, rr_class, rr_ttl, rdatawl, rdatalen, rr,
 			rr_len);
 		free(policydname);
+	} else if(t == RPZ_NSIP_TRIGGER) {
+		rpz_insert_nsip_trigger(r, policydname, policydnamelen,
+			a, rr_type, rr_class, rr_ttl, rdatawl, rdatalen, rr,
+			rr_len);
+		free(policydname);
 	} else {
 		free(policydname);
-		verbose(VERB_ALGO, "RPZ: skipping unsupported trigger: %s",
+		verbose(VERB_ALGO, "rpz: skipping unsupported trigger: %s",
 			rpz_trigger_to_string(t));
 	}
 	return 1;
@@ -1090,7 +1126,7 @@ rpz_remove_qname_trigger(struct rpz* r, uint8_t* dname, size_t dnamelen,
 	z = rpz_find_zone(r, dname, dnamelen, rr_class,
 		1 /* only exact */, 1 /* wr lock */, 1 /* keep lock*/);
 	if(!z) {
-		verbose(VERB_ALGO, "RPZ: cannot remove RR from IXFR, "
+		verbose(VERB_ALGO, "rpz: cannot remove RR from IXFR, "
 			"RPZ domain not found");
 		return;
 	}
@@ -1126,7 +1162,7 @@ rpz_remove_response_ip_trigger(struct rpz* r, uint8_t* dname, size_t dnamelen,
 	lock_rw_wrlock(&r->respip_set->lock);
 	if(!(node = (struct resp_addr*)addr_tree_find(
 		&r->respip_set->ip_tree, &addr, addrlen, net))) {
-		verbose(VERB_ALGO, "RPZ: cannot remove RR from IXFR, "
+		verbose(VERB_ALGO, "rpz: cannot remove RR from IXFR, "
 			"RPZ domain not found");
 		lock_rw_unlock(&r->respip_set->lock);
 		return;
@@ -1199,43 +1235,41 @@ log_rpz_apply(uint8_t* dname, enum rpz_action a, struct query_info* qinfo,
 	log_nametypeclass(0, txt, qinfo->qname, qinfo->qtype, qinfo->qclass);
 }
 
-static enum rpz_action
-rpz_apply_client_ip_trigger(struct rpz* r, struct comm_reply* repinfo)
+static struct clientip_synthesized_rr*
+rpz_ipbased_trigger_lookup(struct clientip_synthesized_rrset* set, struct sockaddr_storage* addr, socklen_t addrlen)
 {
 	struct clientip_synthesized_rr* raddr = NULL;
 	enum rpz_action action = RPZ_INVALID_ACTION;
-	struct sockaddr_storage* addr = &repinfo->addr;
-	socklen_t addrlen = repinfo->addrlen;
 
-	lock_rw_rdlock(&r->client_set->lock);
+	lock_rw_rdlock(&set->lock);
 
-	raddr = (struct clientip_synthesized_rr*)addr_tree_lookup(&r->client_set->entries,
+	raddr = (struct clientip_synthesized_rr*)addr_tree_lookup(&set->entries,
 			addr, addrlen);
 	if(raddr != NULL) {
 		action = raddr->action;
 		lock_rw_unlock(&raddr->lock);
 	}
 
-	verbose(VERB_ALGO, "RPZ: apply client ip trigger: found=%d action=%s",
+	verbose(VERB_ALGO, "rpz: ipbased trigger lookup: found=%d action=%s",
 		raddr != NULL, rpz_action_to_string(action));
 
-	lock_rw_unlock(&r->client_set->lock);
+	lock_rw_unlock(&set->lock);
 
-	return action;
+	return raddr;
 }
 
 static inline
-enum rpz_action
+struct clientip_synthesized_rr*
 rpz_resolve_client_action_and_zone(struct auth_zones* az, struct query_info* qinfo,
 	struct comm_reply* repinfo, uint8_t* taglist, size_t taglen,
 	struct ub_server_stats* stats,
 	/* output parameters */
 	struct local_zone** z_out, struct auth_zone** a_out, struct rpz** r_out )
 {
+	struct clientip_synthesized_rr* node = NULL;
 	struct auth_zone* a = NULL;
 	struct rpz* r = NULL;
 	struct local_zone* z = NULL;
-	enum rpz_action action = RPZ_PASSTHRU_ACTION;
 
 	lock_rw_rdlock(&az->rpz_lock);
 
@@ -1249,7 +1283,7 @@ rpz_resolve_client_action_and_zone(struct auth_zones* az, struct query_info* qin
 		}
 		z = rpz_find_zone(r, qinfo->qname, qinfo->qname_len,
 			qinfo->qclass, 0, 0, 0);
-		action = rpz_apply_client_ip_trigger(r, repinfo);
+		node = rpz_ipbased_trigger_lookup(r->client_set, &repinfo->addr, repinfo->addrlen);
 		if(z && r->action_override == RPZ_DISABLED_ACTION) {
 			if(r->log)
 				log_rpz_apply(z->name,
@@ -1262,6 +1296,11 @@ rpz_resolve_client_action_and_zone(struct auth_zones* az, struct query_info* qin
 		}
 		if(z) {
 			break;
+		} else {
+			if(node != NULL) {
+				lock_rw_unlock(&node->lock);
+				node = NULL;
+			}
 		}
 		/* not found in this auth_zone */
 		lock_rw_unlock(&a->lock);
@@ -1273,7 +1312,7 @@ rpz_resolve_client_action_and_zone(struct auth_zones* az, struct query_info* qin
 	*a_out = a;
 	*z_out = z;
 
-	return action;
+	return node;
 }
 
 static inline int
@@ -1335,52 +1374,40 @@ rpz_clientip_find_rrset(struct query_info* qinfo, struct clientip_synthesized_rr
 }
 
 static void
-rpz_apply_clientip_localdata_action(struct rpz* r, struct module_env* env,
-	struct query_info* qinfo, struct edns_data* edns, struct comm_reply* repinfo,
-	sldns_buffer* buf, struct regional* temp)
+rpz_apply_clientip_localdata_action(struct rpz* r, struct clientip_synthesized_rr* raddr,
+	struct module_env* env,	struct query_info* qinfo, struct edns_data* edns,
+	struct comm_reply* repinfo, sldns_buffer* buf, struct regional* temp)
 {
-	struct clientip_synthesized_rr* raddr = NULL;
 	struct local_rrset* rrset;
 	enum rpz_action action = RPZ_INVALID_ACTION;
-	struct sockaddr_storage* addr = &repinfo->addr;
-	socklen_t addrlen = repinfo->addrlen;
 	struct ub_packed_rrset_key* rp = NULL;
 	int rcode = LDNS_RCODE_NOERROR|BIT_AA;
 	int rrset_count = 1;
 
-	verbose(VERB_ALGO, "RPZ: apply client ip trigger: found=%d action=%s",
+	verbose(VERB_ALGO, "rpz: apply client ip trigger: found=%d action=%s",
 		raddr != NULL, rpz_action_to_string(action));
-
-	lock_rw_rdlock(&r->client_set->lock);
-
-	raddr = (struct clientip_synthesized_rr*)addr_tree_lookup(
-			&r->client_set->entries, addr, addrlen);
-	if(raddr == NULL) {
-		lock_rw_unlock(&r->client_set->lock);
-		return;
-	}
 
 	/* prepare synthesized answer for client */
 
 	action = raddr->action;
-	if(action != RPZ_LOCAL_DATA_ACTION && raddr->data == NULL ) {
-		verbose(VERB_ALGO, "RPZ: bug: local-data action and no local data");
-		goto done;
+	if(action == RPZ_LOCAL_DATA_ACTION && raddr->data == NULL ) {
+		verbose(VERB_ALGO, "rpz: bug: local-data action but no local data");
+		return;
 	}
 
 	/* check query type / rr type */
 
 	rrset = rpz_clientip_find_rrset(qinfo, raddr);
 	if(rrset == NULL) {
-		verbose(VERB_ALGO, "RPZ: unable to find local-data for query");
+		verbose(VERB_ALGO, "rpz: unable to find local-data for query");
 		rrset_count = 0;
 		goto nodata;
 	}
 
 	rp = respip_copy_rrset(rrset->rrset, temp);
 	if(!rp) {
-		verbose(VERB_ALGO, "RPZ: local-data action: out of memory");
-		goto done;
+		verbose(VERB_ALGO, "rpz: local-data action: out of memory");
+		return;
 	}
 
 	//struct packed_rrset_data* pd = raddr->data->entry.data;
@@ -1391,10 +1418,88 @@ rpz_apply_clientip_localdata_action(struct rpz* r, struct module_env* env,
 	rp->rk.dname_len = qinfo->qname_len;
 nodata:
 	rpz_local_encode(qinfo, env, edns, repinfo, buf, temp, rp, rrset_count, rcode);
+}
+
+int
+rpz_iterator_module_callback(struct module_qstate* ms, struct iter_qstate* is)
+{
+	struct auth_zones* az = ms->env->auth_zones;
+	struct auth_zone* a;
+	struct clientip_synthesized_rr* raddr;
+	struct local_rrset* rrset;
+	enum rpz_action action = RPZ_INVALID_ACTION;
+	struct sockaddr_storage* addr = &ms->reply->addr;
+	socklen_t addrlen = ms->reply->addrlen;
+	struct ub_packed_rrset_key* rp = NULL;
+	int rcode = LDNS_RCODE_NOERROR|BIT_AA;
+	int rrset_count = 1;
+	struct rpz* r;
+	int ret = 0;
+
+	verbose(VERB_ALGO, "rpz: iterator module callback: have_rpz=%d", az->rpz_first != NULL);
+
+	lock_rw_rdlock(&az->rpz_lock);
+
+	raddr = NULL;
+	for(a = az->rpz_first; a != NULL; a = a->rpz_az_next) {
+		lock_rw_rdlock(&a->lock);
+		r = a->rpz;
+		raddr = rpz_ipbased_trigger_lookup(r->ns_set, &ms->reply->addr, ms->reply->addrlen);
+		if(raddr != NULL) {
+			lock_rw_unlock(&a->lock);
+			break;
+		}
+		lock_rw_unlock(&a->lock);
+	}
+
+	if(raddr == NULL) { return 0; }
+
+	verbose(VERB_ALGO, "rpz: iterator callback: nsip: apply action=%s",
+		rpz_action_to_string(raddr->action));
+
+	action = raddr->action;
+	if(action == RPZ_LOCAL_DATA_ACTION && raddr->data == NULL ) {
+		verbose(VERB_ALGO, "rpz: bug: local-data action but no local data");
+		ret = -1;
+		goto done;
+	}
+
+	switch(action) {
+	case RPZ_NXDOMAIN_ACTION:
+		FLAGS_SET_RCODE(is->response->rep->flags, LDNS_RCODE_NXDOMAIN);
+		is->response->rep->an_numrrsets = 0;
+		is->response->rep->ns_numrrsets = 0;
+		is->response->rep->ar_numrrsets = 0;
+		is->response->rep->authoritative = 1;
+		is->response->rep->qdcount = 1;
+		ret = 1;
+		break;
+	case RPZ_NODATA_ACTION:
+		FLAGS_SET_RCODE(is->response->rep->flags, LDNS_RCODE_NOERROR);
+		is->response->rep->an_numrrsets = 0;
+		is->response->rep->ns_numrrsets = 0;
+		is->response->rep->ar_numrrsets = 0;
+		is->response->rep->authoritative = 1;
+		is->response->rep->qdcount = 1;
+		ret = 1;
+		break;
+	case RPZ_PASSTHRU_ACTION:
+		ret = 0;
+		break;
+	default:
+		ret = 0;
+	}
+
+	//rrset = rpz_clientip_find_rrset(qinfo, raddr);
+	//if(rrset == NULL) {
+	//	verbose(VERB_ALGO, "rpz: unable to find local-data for query");
+	//	rrset_count = 0;
+	//	goto nodata;
+	//}
 
 done:
 	lock_rw_unlock(&raddr->lock);
-	lock_rw_unlock(&r->client_set->lock);
+	return ret;
 }
 
 static int
@@ -1405,35 +1510,45 @@ rpz_maybe_apply_clientip_trigger(struct auth_zones* az, struct module_env* env,
 	/* output parameters */
 	struct local_zone** z_out, struct auth_zone** a_out, struct rpz** r_out)
 {
+	int ret = 0;
 	enum rpz_action client_action;
-	client_action = rpz_resolve_client_action_and_zone(
+	struct clientip_synthesized_rr* node = rpz_resolve_client_action_and_zone(
 		az, qinfo, repinfo, taglist, taglen, stats, z_out, a_out, r_out);
 
-	verbose(VERB_ALGO, "RPZ: qname trigger: client action=%s",
+	client_action = node == NULL ? RPZ_INVALID_ACTION : node->action;
+
+	verbose(VERB_ALGO, "rpz: qname trigger: client action=%s",
 		rpz_action_to_string(client_action));
 
 	if(*z_out == NULL || (client_action != RPZ_INVALID_ACTION &&
 			      client_action != RPZ_PASSTHRU_ACTION)) {
-		verbose(VERB_ALGO, "RPZ: client action without zone");
+		verbose(VERB_ALGO, "rpz: client action without zone");
 		if(client_action == RPZ_PASSTHRU_ACTION
 			|| client_action == RPZ_INVALID_ACTION
 			|| (client_action == RPZ_TCP_ONLY_ACTION
 				&& !rpz_is_udp_query(repinfo))) {
-			return 0;
+			ret = 0;
+			goto done;
 		}
 		stats->rpz_action[client_action]++;
 		if(client_action == RPZ_LOCAL_DATA_ACTION) {
-			rpz_apply_clientip_localdata_action(*r_out, env, qinfo,
-				edns, repinfo, buf, temp);
+			rpz_apply_clientip_localdata_action(*r_out, node, env,
+				qinfo, edns, repinfo, buf, temp);
 		} else {
 			// XXX: log_rpz_apply not possbile because no zone
 			local_zones_zone_answer(NULL /*no zone*/, env, qinfo, edns,
 				repinfo, buf, temp, 0 /* no local data used */,
 				rpz_action_to_localzone_type(client_action));
 		}
-		return 1;
+		ret = 1;
+		goto done;
 	}
-	return -1;
+	ret = -1;
+done:
+	if(node != NULL) {
+		lock_rw_unlock(&node->lock);
+	}
+	return ret;
 }
 
 int
@@ -1465,7 +1580,7 @@ rpz_apply_qname_trigger(struct auth_zones* az, struct module_env* env,
 		lzt = rpz_action_to_localzone_type(r->action_override);
 	}
 
-	verbose(VERB_ALGO, "RPZ: final client action=%s",
+	verbose(VERB_ALGO, "rpz: final client action=%s",
 		rpz_action_to_string(localzone_type_to_rpz_action(lzt)));
 
 	if(r->action_override == RPZ_CNAME_OVERRIDE_ACTION) {

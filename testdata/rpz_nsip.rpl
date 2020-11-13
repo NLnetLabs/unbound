@@ -32,7 +32,7 @@ CONFIG_END
 
 SCENARIO_BEGIN Test RPZ nsip triggers
 
-; .
+; . --------------------------------------------------------------------------
 RANGE_BEGIN 0 100
 	ADDRESS 1.1.1.1
 ENTRY_BEGIN
@@ -121,7 +121,7 @@ ENTRY_END
 
 RANGE_END
 
-; com.
+; com. -----------------------------------------------------------------------
 RANGE_BEGIN 0 100
 	ADDRESS 8.8.8.8
 
@@ -151,7 +151,37 @@ ENTRY_END
 
 RANGE_END
 
-; ns1.gotham.com.
+; aa. ------------------------------------------------------------------------
+RANGE_BEGIN 0 100
+	ADDRESS 8.8.0.8
+
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR NOERROR
+SECTION QUESTION
+aa. IN NS
+SECTION ANSWER
+aa. IN NS ns1.aa.
+SECTION ADDITIONAL
+ns1.aa. IN A 8.8.0.8
+ENTRY_END
+
+ENTRY_BEGIN
+MATCH opcode subdomain
+ADJUST copy_id copy_query
+REPLY QR NOERROR
+SECTION QUESTION
+gotham.aa. IN A
+SECTION AUTHORITY
+gotham.aa.	IN NS	ns1.gotham.aa.
+SECTION ADDITIONAL
+ns1.gotham.aa. IN A 192.0.0.1
+ENTRY_END
+
+RANGE_END
+
+; ns1.gotham.com. ------------------------------------------------------------
 RANGE_BEGIN 0 100
 	ADDRESS 192.0.6.1
 
@@ -163,6 +193,22 @@ SECTION QUESTION
 gotham.com. IN A
 SECTION ANSWER
 gotham.com. IN A 192.0.6.2
+ENTRY_END
+
+RANGE_END
+
+; ns1.gotham.aa. -------------------------------------------------------------
+RANGE_BEGIN 0 100
+	ADDRESS 192.0.0.1
+
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR NOERROR
+SECTION QUESTION
+gotham.aa. IN A
+SECTION ANSWER
+gotham.aa. IN A 192.0.0.2
 ENTRY_END
 
 RANGE_END
@@ -182,6 +228,22 @@ SECTION QUESTION
 gotham.com. IN A
 SECTION ANSWER
 gotham.com. IN A 192.0.6.2
+ENTRY_END
+
+STEP 10 QUERY
+ENTRY_BEGIN
+REPLY RD
+SECTION QUESTION
+gotham.aa. IN A
+ENTRY_END
+
+STEP 11 CHECK_ANSWER
+ENTRY_BEGIN
+MATCH all
+REPLY QR AA RD RA NXDOMAIN
+SECTION QUESTION
+gotham.aa. IN A
+SECTION ANSWER
 ENTRY_END
 
 SCENARIO_END
