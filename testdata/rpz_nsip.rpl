@@ -181,6 +181,36 @@ ENTRY_END
 
 RANGE_END
 
+; bb. ------------------------------------------------------------------------
+RANGE_BEGIN 0 100
+	ADDRESS 8.8.1.8
+
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR NOERROR
+SECTION QUESTION
+bb. IN NS
+SECTION ANSWER
+bb. IN NS ns1.aa.
+SECTION ADDITIONAL
+ns1.bb. IN A 8.8.1.8
+ENTRY_END
+
+ENTRY_BEGIN
+MATCH opcode subdomain
+ADJUST copy_id copy_query
+REPLY QR NOERROR
+SECTION QUESTION
+gotham.bb. IN A
+SECTION AUTHORITY
+gotham.bb.	IN NS	ns1.gotham.bb.
+SECTION ADDITIONAL
+ns1.gotham.bb. IN A 192.0.1.1
+ENTRY_END
+
+RANGE_END
+
 ; ns1.gotham.com. ------------------------------------------------------------
 RANGE_BEGIN 0 100
 	ADDRESS 192.0.6.1
@@ -213,6 +243,22 @@ ENTRY_END
 
 RANGE_END
 
+; ns1.gotham.bb. -------------------------------------------------------------
+RANGE_BEGIN 0 100
+	ADDRESS 192.0.1.1
+
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR NOERROR
+SECTION QUESTION
+gotham.bb. IN A
+SECTION ANSWER
+gotham.bb. IN A 192.0.1.2
+ENTRY_END
+
+RANGE_END
+
 STEP 1 QUERY
 ENTRY_BEGIN
 REPLY RD
@@ -240,9 +286,25 @@ ENTRY_END
 STEP 11 CHECK_ANSWER
 ENTRY_BEGIN
 MATCH all
-REPLY QR AA RD RA NXDOMAIN
+REPLY QR RD RA NXDOMAIN
 SECTION QUESTION
 gotham.aa. IN A
+SECTION ANSWER
+ENTRY_END
+
+STEP 20 QUERY
+ENTRY_BEGIN
+REPLY RD
+SECTION QUESTION
+gotham.bb. IN A
+ENTRY_END
+
+STEP 21 CHECK_ANSWER
+ENTRY_BEGIN
+MATCH all
+REPLY QR RD RA NOERROR
+SECTION QUESTION
+gotham.bb. IN A
 SECTION ANSWER
 ENTRY_END
 

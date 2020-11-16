@@ -1458,7 +1458,7 @@ rpz_iterator_module_callback(struct module_qstate* ms, struct iter_qstate* is)
 		rpz_action_to_string(raddr->action));
 
 	action = raddr->action;
-	if(action == RPZ_LOCAL_DATA_ACTION && raddr->data == NULL ) {
+	if(action == RPZ_LOCAL_DATA_ACTION && raddr->data == NULL) {
 		verbose(VERB_ALGO, "rpz: bug: local-data action but no local data");
 		ret = -1;
 		goto done;
@@ -1467,6 +1467,7 @@ rpz_iterator_module_callback(struct module_qstate* ms, struct iter_qstate* is)
 	switch(action) {
 	case RPZ_NXDOMAIN_ACTION:
 		FLAGS_SET_RCODE(is->response->rep->flags, LDNS_RCODE_NXDOMAIN);
+		is->response->rep->flags |= BIT_QR | BIT_AA | BIT_RA;
 		is->response->rep->an_numrrsets = 0;
 		is->response->rep->ns_numrrsets = 0;
 		is->response->rep->ar_numrrsets = 0;
@@ -1476,6 +1477,7 @@ rpz_iterator_module_callback(struct module_qstate* ms, struct iter_qstate* is)
 		break;
 	case RPZ_NODATA_ACTION:
 		FLAGS_SET_RCODE(is->response->rep->flags, LDNS_RCODE_NOERROR);
+		is->response->rep->flags |= BIT_QR | BIT_AA | BIT_RA;
 		is->response->rep->an_numrrsets = 0;
 		is->response->rep->ns_numrrsets = 0;
 		is->response->rep->ar_numrrsets = 0;
