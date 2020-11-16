@@ -119,6 +119,18 @@ SECTION ADDITIONAL
 ns1.ee. IN A 8.8.5.8
 ENTRY_END
 
+ENTRY_BEGIN
+MATCH opcode subdomain
+ADJUST copy_id copy_query
+REPLY QR NOERROR
+SECTION QUESTION
+ff. IN A
+SECTION AUTHORITY
+ff. IN NS ns1.ff.
+SECTION ADDITIONAL
+ns1.ff. IN A 8.8.6.8
+ENTRY_END
+
 RANGE_END
 
 ; com. -----------------------------------------------------------------------
@@ -192,7 +204,7 @@ REPLY QR NOERROR
 SECTION QUESTION
 bb. IN NS
 SECTION ANSWER
-bb. IN NS ns1.aa.
+bb. IN NS ns1.bb.
 SECTION ADDITIONAL
 ns1.bb. IN A 8.8.1.8
 ENTRY_END
@@ -207,6 +219,36 @@ SECTION AUTHORITY
 gotham.bb.	IN NS	ns1.gotham.bb.
 SECTION ADDITIONAL
 ns1.gotham.bb. IN A 192.0.1.1
+ENTRY_END
+
+RANGE_END
+
+; ff. ------------------------------------------------------------------------
+RANGE_BEGIN 0 100
+	ADDRESS 8.8.6.8
+
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR NOERROR
+SECTION QUESTION
+ff. IN NS
+SECTION ANSWER
+ff. IN NS ns1.ff.
+SECTION ADDITIONAL
+ns1.ff. IN A 8.8.6.8
+ENTRY_END
+
+ENTRY_BEGIN
+MATCH opcode subdomain
+ADJUST copy_id copy_query
+REPLY QR NOERROR
+SECTION QUESTION
+gotham.ff. IN A
+SECTION AUTHORITY
+gotham.ff. IN NS ns1.gotham.ff.
+SECTION ADDITIONAL
+ns1.gotham.ff. IN A 192.0.5.1
 ENTRY_END
 
 RANGE_END
@@ -259,6 +301,24 @@ ENTRY_END
 
 RANGE_END
 
+; ns1.gotham.ff. -------------------------------------------------------------
+RANGE_BEGIN 0 100
+	ADDRESS 192.0.5.1
+
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR NOERROR
+SECTION QUESTION
+gotham.ff. IN A
+SECTION ANSWER
+gotham.ff. IN A 192.0.5.2
+ENTRY_END
+
+RANGE_END
+
+; ----------------------------------------------------------------------------
+
 STEP 1 QUERY
 ENTRY_BEGIN
 REPLY RD
@@ -306,6 +366,23 @@ REPLY QR RD RA NOERROR
 SECTION QUESTION
 gotham.bb. IN A
 SECTION ANSWER
+ENTRY_END
+
+STEP 30 QUERY
+ENTRY_BEGIN
+REPLY RD
+SECTION QUESTION
+gotham.ff. IN A
+ENTRY_END
+
+STEP 31 CHECK_ANSWER
+ENTRY_BEGIN
+MATCH all
+REPLY QR RD RA NOERROR
+SECTION QUESTION
+gotham.ff. IN A
+SECTION ANSWER
+gotham.ff. IN A 127.0.0.1
 ENTRY_END
 
 SCENARIO_END

@@ -1361,11 +1361,11 @@ rpz_local_encode(struct query_info* qinfo, struct module_env* env,
 }
 
 static struct local_rrset*
-rpz_clientip_find_rrset(struct query_info* qinfo, struct clientip_synthesized_rr* data) {
+rpz_find_synthesized_rrset(int qtype, struct clientip_synthesized_rr* data) {
 	struct local_rrset* cursor = data->data;
 	while( cursor != NULL) {
 		struct packed_rrset_key* packed_rrset = &cursor->rrset->rk;
-		if(htons(qinfo->qtype) == packed_rrset->type) {
+		if(htons(qtype) == packed_rrset->type) {
 			return cursor;
 		}
 		cursor = cursor->next;
@@ -1397,7 +1397,7 @@ rpz_apply_clientip_localdata_action(struct rpz* r, struct clientip_synthesized_r
 
 	/* check query type / rr type */
 
-	rrset = rpz_clientip_find_rrset(qinfo, raddr);
+	rrset = rpz_find_synthesized_rrset(qinfo->qtype, raddr);
 	if(rrset == NULL) {
 		verbose(VERB_ALGO, "rpz: unable to find local-data for query");
 		rrset_count = 0;
@@ -1420,19 +1420,82 @@ nodata:
 	rpz_local_encode(qinfo, env, edns, repinfo, buf, temp, rp, rrset_count, rcode);
 }
 
+static inline void
+rpz_patch_nodata(struct reply_info* ri)
+{
+	FLAGS_SET_RCODE(ri->flags, LDNS_RCODE_NOERROR);
+	ri->flags |= BIT_QR | BIT_AA | BIT_RA;
+	ri->an_numrrsets = 0;
+	ri->ns_numrrsets = 0;
+	ri->ar_numrrsets = 0;
+	ri->authoritative = 0;
+	ri->rrset_count = 1;
+	ri->qdcount = 1;
+}
+
+static inline void
+rpz_patch_nxdomain(struct reply_info* ri)
+{
+	FLAGS_SET_RCODE(ri->flags, LDNS_RCODE_NXDOMAIN);
+	ri->flags |= BIT_QR | BIT_AA | BIT_RA;
+	ri->an_numrrsets = 0;
+	ri->ns_numrrsets = 0;
+	ri->ar_numrrsets = 0;
+	ri->authoritative = 0;
+	ri->rrset_count = 1;
+	ri->qdcount = 1;
+}
+
+static inline int
+rpz_patch_localdata(struct dns_msg* response, struct clientip_synthesized_rr* data,
+	struct regional* region)
+{
+	struct query_info* qi = &response->qinfo;
+	struct ub_packed_rrset_key* rp;
+	struct local_rrset* rrset;
+	struct reply_info* new_reply_info;
+	struct reply_info* ri = response->rep;
+
+	rrset = rpz_find_synthesized_rrset(qi->qtype, data);
+	if(rrset == NULL) {
+		verbose(VERB_ALGO, "rpz: nsip: no matching synthesized data found; resorting to nodata");
+		rpz_patch_nodata(ri);
+		return 1;
+	}
+	new_reply_info = make_new_reply_info(ri, region, 0, 0);
+	if(new_reply_info == NULL) {
+		log_err("out of memory");
+		rpz_patch_nodata(ri);
+		return 1;
+	}
+	rp = respip_copy_rrset(rrset->rrset, region);
+	if(rp == NULL) {
+		log_err("out of memory");
+		rpz_patch_nodata(ri);
+		return 1;
+	}
+	new_reply_info->rrsets = regional_alloc(region, sizeof(*new_reply_info->rrsets));
+	if(new_reply_info->rrsets == NULL) {
+		log_err("out of memory");
+		rpz_patch_nodata(ri);
+		return 1;
+	}
+	rp->rk.dname = qi->qname;
+	rp->rk.dname_len = qi->qname_len;
+	new_reply_info->rrset_count = 1;
+	new_reply_info->an_numrrsets = 1;
+	new_reply_info->rrsets[0] = rp;
+	response->rep = new_reply_info;
+	return 1;
+}
+
 int
 rpz_iterator_module_callback(struct module_qstate* ms, struct iter_qstate* is)
 {
 	struct auth_zones* az = ms->env->auth_zones;
 	struct auth_zone* a;
 	struct clientip_synthesized_rr* raddr;
-	struct local_rrset* rrset;
 	enum rpz_action action = RPZ_INVALID_ACTION;
-	struct sockaddr_storage* addr = &ms->reply->addr;
-	socklen_t addrlen = ms->reply->addrlen;
-	struct ub_packed_rrset_key* rp = NULL;
-	int rcode = LDNS_RCODE_NOERROR|BIT_AA;
-	int rrset_count = 1;
 	struct rpz* r;
 	int ret = 0;
 
@@ -1466,38 +1529,28 @@ rpz_iterator_module_callback(struct module_qstate* ms, struct iter_qstate* is)
 
 	switch(action) {
 	case RPZ_NXDOMAIN_ACTION:
-		FLAGS_SET_RCODE(is->response->rep->flags, LDNS_RCODE_NXDOMAIN);
-		is->response->rep->flags |= BIT_QR | BIT_AA | BIT_RA;
-		is->response->rep->an_numrrsets = 0;
-		is->response->rep->ns_numrrsets = 0;
-		is->response->rep->ar_numrrsets = 0;
-		is->response->rep->authoritative = 1;
-		is->response->rep->qdcount = 1;
+		rpz_patch_nxdomain(is->response->rep);
 		ret = 1;
 		break;
 	case RPZ_NODATA_ACTION:
-		FLAGS_SET_RCODE(is->response->rep->flags, LDNS_RCODE_NOERROR);
-		is->response->rep->flags |= BIT_QR | BIT_AA | BIT_RA;
-		is->response->rep->an_numrrsets = 0;
-		is->response->rep->ns_numrrsets = 0;
-		is->response->rep->ar_numrrsets = 0;
-		is->response->rep->authoritative = 1;
-		is->response->rep->qdcount = 1;
+		rpz_patch_nodata(is->response->rep);
 		ret = 1;
+		break;
+	case RPZ_TCP_ONLY_ACTION:
+		log_err("rpz: nsip: tcp-only trigger unimplemented; resorting to passthru");
+		ret = 0;
 		break;
 	case RPZ_PASSTHRU_ACTION:
 		ret = 0;
 		break;
+	case RPZ_LOCAL_DATA_ACTION:
+		ret = rpz_patch_localdata(is->response, raddr, ms->region);
+		break;
 	default:
+		verbose(VERB_ALGO, "rpz: nsip: bug: unhandled or invalid action: '%s'",
+			rpz_action_to_string(action));
 		ret = 0;
 	}
-
-	//rrset = rpz_clientip_find_rrset(qinfo, raddr);
-	//if(rrset == NULL) {
-	//	verbose(VERB_ALGO, "rpz: unable to find local-data for query");
-	//	rrset_count = 0;
-	//	goto nodata;
-	//}
 
 done:
 	lock_rw_unlock(&raddr->lock);
