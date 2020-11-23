@@ -365,6 +365,11 @@ writepid (const char* pidfile, pid_t pid)
 				pidfile, strerror(errno));
 			close(fd);
 			return 0;
+		} else if(r == 0) {
+			log_err("cannot write any bytes to pidfile %s: "
+				"write returns 0 bytes written", pidfile);
+			close(fd);
+			return 0;
 		}
 		count += r;
 	}

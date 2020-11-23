@@ -8,6 +8,7 @@
 	- Option to toggle udp-connect, default is enabled.
 	- Fix for #303 CVE-2020-28935 : Fix that symlink does not interfere
 	  with chown of pidfile.
+	- Further fix for it and retvalue 0 fix for it.
 
 12 November 2020: Wouter
 	- Fix to connect() to UDP destinations, default turned on,
