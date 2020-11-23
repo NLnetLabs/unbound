@@ -1548,12 +1548,13 @@ option, that turns this on or off. The default is to use the fastest 3 servers.
 .TP 5
 .B edns\-client\-string: \fI<IP netblock> <string>
 Include an EDNS0 option containing configured ascii string in queries with
-destination address matching the configured IP netblock. This configuration
+destination address matching the configured IP netblock.  This configuration
 option can be used multiple times. The most specific match will be used.
 .TP 5
 .B edns\-client\-string\-opcode: \fI<opcode>
-EDNS0 option code for the edns-client-string option, from 0 to 65535. Default is
-65001.
+EDNS0 option code for the \fIedns\-client\-string\fR option, from 0 to 65535.
+A value from the `Reserved for Local/Experimental` range (65001-65534) should
+be used.  Default is 65001.
 .SS "Remote Control Options"
 In the
 .B remote\-control:
