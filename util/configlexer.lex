@@ -301,6 +301,7 @@ infra-keep-probing{COLON}	{ YDVAR(1, VAR_INFRA_KEEP_PROBING) }
 num-queries-per-thread{COLON}	{ YDVAR(1, VAR_NUM_QUERIES_PER_THREAD) }
 jostle-timeout{COLON}		{ YDVAR(1, VAR_JOSTLE_TIMEOUT) }
 delay-close{COLON}		{ YDVAR(1, VAR_DELAY_CLOSE) }
+udp-connect{COLON}		{ YDVAR(1, VAR_UDP_CONNECT) }
 target-fetch-policy{COLON}	{ YDVAR(1, VAR_TARGET_FETCH_POLICY) }
 harden-short-bufsize{COLON}	{ YDVAR(1, VAR_HARDEN_SHORT_BUFSIZE) }
 harden-large-queries{COLON}	{ YDVAR(1, VAR_HARDEN_LARGE_QUERIES) }

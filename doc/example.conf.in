@@ -161,6 +161,9 @@ server:
 	# msec to wait before close of port on timeout UDP. 0 disables.
 	# delay-close: 0
 
+	# perform connect for UDP sockets to mitigate ICMP side channel.
+	# udp-connect: yes
+
 	# msec for waiting for an unknown server to reply.  Increase if you
 	# are behind a slow satellite link, to eg. 1128.
 	# unknown-server-time-limit: 376

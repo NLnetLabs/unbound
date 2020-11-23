@@ -106,6 +106,9 @@ struct outside_network {
 	int delayclose;
 	/** timeout for delayclose */
 	struct timeval delay_tv;
+	/** if we perform udp-connect, connect() for UDP socket to mitigate
+	 * ICMP side channel leakage */
+	int udp_connect;
 
 	/** array of outgoing IP4 interfaces */
 	struct port_if* ip4_ifs;
@@ -421,6 +424,7 @@ struct serviced_query {
  * 	msec to wait on timeouted udp sockets.
  * @param tls_use_sni: if SNI is used for TLS connections.
  * @param dtenv: environment to send dnstap events with (if enabled).
+ * @param udp_connect: if the udp_connect option is enabled.
  * @return: the new structure (with no pending answers) or NULL on error.
  */
 struct outside_network* outside_network_create(struct comm_base* base,
@@ -429,7 +433,8 @@ struct outside_network* outside_network_create(struct comm_base* base,
 	struct ub_randstate* rnd, int use_caps_for_id, int* availports, 
 	int numavailports, size_t unwanted_threshold, int tcp_mss,
 	void (*unwanted_action)(void*), void* unwanted_param, int do_udp,
-	void* sslctx, int delayclose, int tls_use_sni, struct dt_env *dtenv);
+	void* sslctx, int delayclose, int tls_use_sni, struct dt_env *dtenv,
+	int udp_connect);
 
 /**
  * Delete outside_network structure.
