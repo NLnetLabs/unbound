@@ -531,7 +531,9 @@ create_udp_sock(int family, int socktype, struct sockaddr* addr,
 				return -1;
 			}
 		}
-#  elif defined(IP_DONTFRAG)
+#  elif defined(IP_DONTFRAG) && !defined(__APPLE__)
+		/* the IP_DONTFRAG option if defined in the 11.0 OSX headers,
+		 * but does not work on that version, so we exclude it */
 		int off = 0;
 		if (setsockopt(s, IPPROTO_IP, IP_DONTFRAG, 
 			&off, (socklen_t)sizeof(off)) < 0) {
