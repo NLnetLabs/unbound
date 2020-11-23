@@ -233,8 +233,11 @@ struct port_comm {
 struct reuse_tcp {
 	/** rbtree node with links in tcp_reuse tree. key is NULL when not
 	 * in tree. Both active and empty connections are in the tree.
-	 * key is this structure, the sockaddr and and then is-ssl bool,
-	 * and then ptr value for several times same address in tree */
+	 * key is a pointer to this structure, the members used to compare
+	 * are the sockaddr and and then is-ssl bool, and then ptr value is
+	 * used in case the same address exists several times in the tree
+	 * when there are multiple connections to the same destination to
+	 * make the rbtree items unique. */
 	rbnode_type node;
 	/** the key for the tcp_reuse tree. address of peer, ip4 or ip6,
 	 * and port number of peer */
