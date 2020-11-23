@@ -1,4 +1,4 @@
-# #-- ssl_reuse.pre--#
+# #-- tls_reuse.pre--#
 # source the master var file when it's there
 [ -f ../.tpkg.var.master ] && source ../.tpkg.var.master
 # use .tpkg.var.test for in test variable passing
@@ -13,7 +13,7 @@ echo "UNBOUND_PORT=$UNBOUND_PORT" >> .tpkg.var.test
 echo "UPSTREAM_PORT=$UPSTREAM_PORT" >> .tpkg.var.test
 
 # make config file
-sed -e 's/@PORT\@/'$UNBOUND_PORT'/' -e 's/@TOPORT\@/'$UPSTREAM_PORT'/' < ssl_reuse.conf > ub.conf
+sed -e 's/@PORT\@/'$UNBOUND_PORT'/' -e 's/@TOPORT\@/'$UPSTREAM_PORT'/' < tls_reuse.conf > ub.conf
 # start unbound in the background
 #$PRE/unbound -d -c ub.conf >unbound.log 2>&1 &
 valgrind $PRE/unbound -d -c ub.conf 2>&1 | tee unbound.log &
@@ -22,7 +22,7 @@ echo "UNBOUND_PID=$UNBOUND_PID" >> .tpkg.var.test
 wait_unbound_up unbound.log
 
 # make upstream config file
-sed -e 's/@PORT\@/'$UPSTREAM_PORT'/' -e 's/@TOPORT\@/'$UPSTREAM_PORT'/' < ssl_reuse.conf2 > ub2.conf
+sed -e 's/@PORT\@/'$UPSTREAM_PORT'/' -e 's/@TOPORT\@/'$UPSTREAM_PORT'/' < tls_reuse.conf2 > ub2.conf
 # start upstream unbound in the background
 #$PRE/unbound -d -c ub2.conf >unbound2.log 2>&1 &
 $PRE/unbound -d -c ub2.conf 2>&1 | tee unbound2.log &
