@@ -1742,13 +1742,26 @@ select_ifport(struct outside_network* outnet, struct pending* pend,
 		my_if = ub_random_max(outnet->rnd, num_if);
 		pif = &ifs[my_if];
 #ifndef DISABLE_EXPLICIT_PORT_RANDOMISATION
-		my_port = ub_random_max(outnet->rnd, pif->avail_total);
-		if(my_port < pif->inuse) {
-			/* port already open */
-			pend->pc = pif->out[my_port];
-			verbose(VERB_ALGO, "using UDP if=%d port=%d", 
-				my_if, pend->pc->number);
-			break;
+		if(1) {
+			/* if we connect() we cannot reuse fds for a port */
+			if(pif->inuse >= pif->avail_total) {
+				tries++;
+				if(tries < MAX_PORT_RETRY)
+					continue;
+				log_err("failed to find an open port, drop msg");
+				return 0;
+			}
+			my_port = pif->inuse + ub_random_max(outnet->rnd,
+				pif->avail_total - pif->inuse);
+		} else  {
+			my_port = ub_random_max(outnet->rnd, pif->avail_total);
+			if(my_port < pif->inuse) {
+				/* port already open */
+				pend->pc = pif->out[my_port];
+				verbose(VERB_ALGO, "using UDP if=%d port=%d",
+					my_if, pend->pc->number);
+				break;
+			}
 		}
 		/* try to open new port, if fails, loop to try again */
 		log_assert(pif->inuse < pif->maxout);
@@ -1765,6 +1778,17 @@ select_ifport(struct outside_network* outnet, struct pending* pend,
 		if(fd != -1) {
 			verbose(VERB_ALGO, "opened UDP if=%d port=%d", 
 				my_if, portno);
+			if(1) {
+				/* connect() to the destination */
+				if(connect(fd, (struct sockaddr*)&pend->addr,
+					pend->addrlen) < 0) {
+					log_err_addr("udp connect failed",
+						strerror(errno), &pend->addr,
+						pend->addrlen);
+					sock_close(fd);
+					return 0;
+				}
+			}
 			/* grab fd */
 			pend->pc = outnet->unused_fds;
 			outnet->unused_fds = pend->pc->next;

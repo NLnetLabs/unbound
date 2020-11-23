@@ -522,7 +522,8 @@ Alternate syntax for \fBtls\-port\fR.
 If null or "", no file is used.  Set it to the certificate bundle file,
 for example "/etc/pki/tls/certs/ca\-bundle.crt".  These certificates are used
 for authenticating connections made to outside peers.  For example auth\-zone
-urls, and also DNS over TLS connections.
+urls, and also DNS over TLS connections.  It is read at start up before
+permission drop and chroot.
 .TP
 .B ssl\-cert\-bundle: \fI<file>
 Alternate syntax for \fBtls\-cert\-bundle\fR.

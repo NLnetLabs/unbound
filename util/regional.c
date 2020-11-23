@@ -89,8 +89,9 @@ regional_init(struct regional* r)
 static struct regional*
 regional_create_custom_large_object(size_t size, size_t large_object_size)
 {
-	struct regional* r = (struct regional*)malloc(size);
+	struct regional* r;
 	size = ALIGN_UP(size, ALIGNMENT);
+	r = (struct regional*)malloc(size);
 	log_assert(sizeof(struct regional) <= size);
 	if(!r) return NULL;
 	r->first_size = size;
