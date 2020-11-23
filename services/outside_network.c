@@ -971,16 +971,17 @@ outnet_tcp_cb(struct comm_point* c, void* arg, int error,
 	struct waiting_tcp* w = NULL;
 	verbose(VERB_ALGO, "outnettcp cb");
 	if(error == NETEVENT_TIMEOUT) {
-		if(pend->c->tcp_write_and_read)
+		if(pend->c->tcp_write_and_read) {
 			verbose(VERB_QUERY, "outnettcp got tcp timeout "
 				"for read, ignored because write underway");
-		else verbose(VERB_QUERY, "outnettcp got tcp timeout %s",
-			(pend->reuse.tree_by_id.count?"for reading pkt":
-			"for keepalive for reuse"));
-		/* if we are writing, ignore readtimer, wait for write timer
-		 * or write is done */
-		if(pend->c->tcp_write_and_read)
+			/* if we are writing, ignore readtimer, wait for write timer
+			 * or write is done */
 			return 0;
+		} else {
+			verbose(VERB_QUERY, "outnettcp got tcp timeout %s",
+				(pend->reuse.tree_by_id.count?"for reading pkt":
+				"for keepalive for reuse"));
+		}
 		/* must be timeout for reading or keepalive reuse,
 		 * close it. */
 		reuse_tcp_remove_tree_list(outnet, &pend->reuse);
