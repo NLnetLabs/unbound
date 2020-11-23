@@ -568,10 +568,10 @@ struct config_file {
 	/** SHM data - key for the shm */
 	int shm_key;
 
-	/** list of EDNS client tag entries, linked list */
-	struct config_str2list* edns_client_tags;
-	/** EDNS opcode to use for EDNS client tags */
-	uint16_t edns_client_tag_opcode;
+	/** list of EDNS client string entries, linked list */
+	struct config_str2list* edns_client_strings;
+	/** EDNS opcode to use for EDNS client strings */
+	uint16_t edns_client_string_opcode;
 
 	/** DNSCrypt */
 	/** true to enable dnscrypt */

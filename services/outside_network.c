@@ -2125,18 +2125,18 @@ outnet_serviced_query(struct outside_network* outnet,
 {
 	struct serviced_query* sq;
 	struct service_callback* cb;
-	struct edns_tag_addr* client_tag_addr;
+	struct edns_string_addr* client_string_addr;
 
 	if(!inplace_cb_query_call(env, qinfo, flags, addr, addrlen, zone, zonelen,
 		qstate, qstate->region))
 			return NULL;
 
-	if((client_tag_addr = edns_tag_addr_lookup(&env->edns_tags->client_tags,
-		addr, addrlen))) {
-		uint16_t client_tag = htons(client_tag_addr->tag_data);
+	if((client_string_addr = edns_string_addr_lookup(
+		&env->edns_strings->client_strings, addr, addrlen))) {
 		edns_opt_list_append(&qstate->edns_opts_back_out,
-			env->edns_tags->client_tag_opcode, 2,
-			(uint8_t*)&client_tag, qstate->region);
+			env->edns_strings->client_string_opcode,
+			client_string_addr->string_len,
+			client_string_addr->string, qstate->region);
 	}
 
 	serviced_gen_query(buff, qinfo->qname, qinfo->qname_len, qinfo->qtype,
