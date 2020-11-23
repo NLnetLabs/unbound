@@ -423,14 +423,14 @@ tree_by_id_get_id(rbnode_type* node)
 static int
 reuse_tcp_insert(struct outside_network* outnet, struct pending_tcp* pend_tcp)
 {
-	log_reuse_tcp(5, "reuse_tcp_insert", &pend_tcp->reuse);
+	log_reuse_tcp(VERB_CLIENT, "reuse_tcp_insert", &pend_tcp->reuse);
 	if(pend_tcp->reuse.item_on_lru_list)
 		return 1;
 	pend_tcp->reuse.node.key = &pend_tcp->reuse;
 	pend_tcp->reuse.pending = pend_tcp;
 	if(!rbtree_insert(&outnet->tcp_reuse, &pend_tcp->reuse.node)) {
 		/* this is a duplicate connection, close this one */
-		verbose(5, "reuse_tcp_insert: duplicate connection");
+		verbose(VERB_CLIENT, "reuse_tcp_insert: duplicate connection");
 		pend_tcp->reuse.node.key = NULL;
 		return 0;
 	}
@@ -457,7 +457,7 @@ reuse_tcp_find(struct outside_network* outnet, struct sockaddr_storage* addr,
 	struct pending_tcp key_p;
 	struct comm_point c;
 	rbnode_type* result = NULL, *prev;
-	verbose(5, "reuse_tcp_find");
+	verbose(VERB_CLIENT, "reuse_tcp_find");
 	memset(&key_w, 0, sizeof(key_w));
 	memset(&key_p, 0, sizeof(key_p));
 	memset(&c, 0, sizeof(c));
@@ -472,7 +472,7 @@ reuse_tcp_find(struct outside_network* outnet, struct sockaddr_storage* addr,
 	memmove(&key_p.reuse.addr, addr, addrlen);
 	key_p.reuse.addrlen = addrlen;
 
-	verbose(5, "reuse_tcp_find: num reuse streams %u",
+	verbose(VERB_CLIENT, "reuse_tcp_find: num reuse streams %u",
 		(unsigned)outnet->tcp_reuse.count);
 	if(outnet->tcp_reuse.root == NULL ||
 		outnet->tcp_reuse.root == RBTREE_NULL)
@@ -487,7 +487,7 @@ reuse_tcp_find(struct outside_network* outnet, struct sockaddr_storage* addr,
 	/* not found, return null */
 	if(!result || result == RBTREE_NULL)
 		return NULL;
-	verbose(5, "reuse_tcp_find check inexact match");
+	verbose(VERB_CLIENT, "reuse_tcp_find check inexact match");
 	/* inexact match, find one of possibly several connections to the
 	 * same destination address, with the correct port, ssl, and
 	 * also less than max number of open queries, or else, fail to open
@@ -520,7 +520,7 @@ outnet_tcp_take_query_setup(int s, struct pending_tcp* pend,
 	struct waiting_tcp* w)
 {
 	struct timeval tv;
-	verbose(5, "outnet_tcp_take_query_setup: setup packet to write "
+	verbose(VERB_CLIENT, "outnet_tcp_take_query_setup: setup packet to write "
 		"len %d timeout %d msec",
 		(int)w->pkt_len, w->timeout);
 	pend->c->tcp_write_pkt = w->pkt;
@@ -716,7 +716,7 @@ use_free_buffer(struct outside_network* outnet)
 		reuse = reuse_tcp_find(outnet, &w->addr, w->addrlen,
 			w->ssl_upstream);
 		if(reuse) {
-			log_reuse_tcp(5, "use free buffer for waiting tcp: "
+			log_reuse_tcp(VERB_CLIENT, "use free buffer for waiting tcp: "
 				"found reuse", reuse);
 			reuse_tcp_lru_touch(outnet, reuse);
 			comm_timer_disable(w->timer);
@@ -795,7 +795,7 @@ reuse_move_writewait_away(struct outside_network* outnet,
 			dname_valid(pend->query->pkt+12, pend->query->pkt_len-12)) {
 			char buf[LDNS_MAX_DOMAINLEN+1];
 			dname_str(pend->query->pkt+12, buf);
-			verbose(5, "reuse_move_writewait_away current %s %d bytes were written",
+			verbose(VERB_CLIENT, "reuse_move_writewait_away current %s %d bytes were written",
 				buf, (int)pend->c->tcp_write_byte_count);
 		}
 		pend->c->tcp_write_pkt = NULL;
@@ -820,7 +820,7 @@ reuse_move_writewait_away(struct outside_network* outnet,
 			dname_valid(w->pkt+12, w->pkt_len-12)) {
 			char buf[LDNS_MAX_DOMAINLEN+1];
 			dname_str(w->pkt+12, buf);
-			verbose(5, "reuse_move_writewait_away item %s", buf);
+			verbose(VERB_CLIENT, "reuse_move_writewait_away item %s", buf);
 		}
 		reuse_tree_by_id_delete(&pend->reuse, w);
 		outnet_add_tcp_waiting(outnet, w);
@@ -832,7 +832,7 @@ static void
 reuse_tcp_remove_tree_list(struct outside_network* outnet,
 	struct reuse_tcp* reuse)
 {
-	verbose(5, "reuse_tcp_remove_tree_list");
+	verbose(VERB_CLIENT, "reuse_tcp_remove_tree_list");
 	if(reuse->node.key) {
 		/* delete it from reuse tree */
 		(void)rbtree_delete(&outnet->tcp_reuse, &reuse->node);
@@ -885,7 +885,7 @@ static void
 decommission_pending_tcp(struct outside_network* outnet, 
 	struct pending_tcp* pend)
 {
-	verbose(5, "decommission_pending_tcp");
+	verbose(VERB_CLIENT, "decommission_pending_tcp");
 	if(pend->c->ssl) {
 #ifdef HAVE_SSL
 		SSL_shutdown(pend->c->ssl);
@@ -946,7 +946,7 @@ static void reuse_cb_and_decommission(struct outside_network* outnet,
 static void
 reuse_tcp_setup_timeout(struct pending_tcp* pend_tcp)
 {
-	log_reuse_tcp(5, "reuse_tcp_setup_timeout", &pend_tcp->reuse);
+	log_reuse_tcp(VERB_CLIENT, "reuse_tcp_setup_timeout", &pend_tcp->reuse);
 	comm_point_start_listening(pend_tcp->c, -1, REUSE_TIMEOUT);
 }
 
@@ -954,7 +954,7 @@ reuse_tcp_setup_timeout(struct pending_tcp* pend_tcp)
 static void
 reuse_tcp_setup_read_and_timeout(struct pending_tcp* pend_tcp)
 {
-	log_reuse_tcp(5, "reuse_tcp_setup_readtimeout", &pend_tcp->reuse);
+	log_reuse_tcp(VERB_CLIENT, "reuse_tcp_setup_readtimeout", &pend_tcp->reuse);
 	sldns_buffer_clear(pend_tcp->c->buffer);
 	pend_tcp->c->tcp_is_reading = 1;
 	pend_tcp->c->tcp_byte_count = 0;
@@ -1049,14 +1049,14 @@ outnet_tcp_cb(struct comm_point* c, void* arg, int error,
 	}
 	if(w) {
 		reuse_tree_by_id_delete(&pend->reuse, w);
-		verbose(5, "outnet tcp callback query err %d buflen %d",
+		verbose(VERB_CLIENT, "outnet tcp callback query err %d buflen %d",
 			error, (int)sldns_buffer_limit(c->buffer));
 		waiting_tcp_callback(w, c, error, reply_info);
 		waiting_tcp_delete(w);
 	}
-	verbose(5, "outnet_tcp_cb reuse after cb");
+	verbose(VERB_CLIENT, "outnet_tcp_cb reuse after cb");
 	if(error == NETEVENT_NOERROR && pend->reuse.node.key) {
-		verbose(5, "outnet_tcp_cb reuse after cb: keep it");
+		verbose(VERB_CLIENT, "outnet_tcp_cb reuse after cb: keep it");
 		/* it is in the reuse_tcp tree, with other queries, or
 		 * on the empty list. do not decommission it */
 		/* if there are more outstanding queries, we could try to
@@ -1068,7 +1068,7 @@ outnet_tcp_cb(struct comm_point* c, void* arg, int error,
 		reuse_tcp_setup_read_and_timeout(pend);
 		return 0;
 	}
-	verbose(5, "outnet_tcp_cb reuse after cb: decommission it");
+	verbose(VERB_CLIENT, "outnet_tcp_cb reuse after cb: decommission it");
 	/* no queries on it, no space to keep it. or timeout or closed due
 	 * to error.  Close it */
 	reuse_cb_and_decommission(outnet, pend, (error==NETEVENT_TIMEOUT?
@@ -1899,7 +1899,7 @@ outnet_tcptimer(void* arg)
 {
 	struct waiting_tcp* w = (struct waiting_tcp*)arg;
 	struct outside_network* outnet = w->outnet;
-	verbose(5, "outnet_tcptimer");
+	verbose(VERB_CLIENT, "outnet_tcptimer");
 	if(w->on_tcp_waiting_list) {
 		/* it is on the waiting list */
 		waiting_list_remove(outnet, w);
@@ -1919,7 +1919,7 @@ static void
 reuse_tcp_close_oldest(struct outside_network* outnet)
 {
 	struct pending_tcp* pend;
-	verbose(5, "reuse_tcp_close_oldest");
+	verbose(VERB_CLIENT, "reuse_tcp_close_oldest");
 	if(!outnet->tcp_reuse_last) return;
 	pend = outnet->tcp_reuse_last->pending;
 
@@ -2016,9 +2016,9 @@ pending_tcp_query(struct serviced_query* sq, sldns_buffer* packet,
 	struct reuse_tcp* reuse = NULL;
 	struct waiting_tcp* w;
 
-	verbose(5, "pending_tcp_query");
+	verbose(VERB_CLIENT, "pending_tcp_query");
 	if(sldns_buffer_limit(packet) < sizeof(uint16_t)) {
-		verbose(4, "pending tcp query with too short buffer < 2");
+		verbose(VERB_ALGO, "pending tcp query with too short buffer < 2");
 		return NULL;
 	}
 
@@ -2027,7 +2027,7 @@ pending_tcp_query(struct serviced_query* sq, sldns_buffer* packet,
 	reuse = reuse_tcp_find(sq->outnet, &sq->addr, sq->addrlen,
 		sq->ssl_upstream);
 	if(reuse) {
-		log_reuse_tcp(5, "pending_tcp_query: found reuse", reuse);
+		log_reuse_tcp(VERB_CLIENT, "pending_tcp_query: found reuse", reuse);
 		log_assert(reuse->pending);
 		pend = reuse->pending;
 		reuse_tcp_lru_touch(sq->outnet, reuse);
@@ -2079,7 +2079,7 @@ pending_tcp_query(struct serviced_query* sq, sldns_buffer* packet,
 		if(reuse) {
 			/* reuse existing fd, write query and continue */
 			/* store query in tree by id */
-			verbose(5, "pending_tcp_query: reuse, store");
+			verbose(VERB_CLIENT, "pending_tcp_query: reuse, store");
 			w->next_waiting = (void*)pend;
 			reuse_tree_by_id_insert(&pend->reuse, w);
 			/* can we write right now? */
@@ -2098,7 +2098,7 @@ pending_tcp_query(struct serviced_query* sq, sldns_buffer* packet,
 		} else {
 			/* create new fd and connect to addr, setup to
 			 * write query */
-			verbose(5, "pending_tcp_query: new fd, connect");
+			verbose(VERB_CLIENT, "pending_tcp_query: new fd, connect");
 			rbtree_init(&pend->reuse.tree_by_id, reuse_id_cmp);
 			pend->reuse.pending = pend;
 			memcpy(&pend->reuse.addr, &sq->addr, sq->addrlen);
@@ -2112,7 +2112,7 @@ pending_tcp_query(struct serviced_query* sq, sldns_buffer* packet,
 		/* queue up */
 		/* waiting for a buffer on the outside network buffer wait
 		 * list */
-		verbose(5, "pending_tcp_query: queue to wait");
+		verbose(VERB_CLIENT, "pending_tcp_query: queue to wait");
 		outnet_add_tcp_waiting(sq->outnet, w);
 	}
 #ifdef USE_DNSTAP
@@ -2262,7 +2262,7 @@ reuse_tcp_remove_serviced_keep(struct waiting_tcp* w,
 	struct serviced_query* sq)
 {
 	struct pending_tcp* pend_tcp = (struct pending_tcp*)w->next_waiting;
-	verbose(5, "reuse_tcp_remove_serviced_keep");
+	verbose(VERB_CLIENT, "reuse_tcp_remove_serviced_keep");
 	/* remove the callback. let query continue to write to not cancel
 	 * the stream itself.  also keep it as an entry in the tree_by_id,
 	 * in case the answer returns (that we no longer want), but we cannot
@@ -2273,12 +2273,12 @@ reuse_tcp_remove_serviced_keep(struct waiting_tcp* w,
 	/* see if can be entered in reuse tree
 	 * for that the FD has to be non-1 */
 	if(pend_tcp->c->fd == -1) {
-		verbose(5, "reuse_tcp_remove_serviced_keep: -1 fd");
+		verbose(VERB_CLIENT, "reuse_tcp_remove_serviced_keep: -1 fd");
 		return 0;
 	}
 	/* if in tree and used by other queries */
 	if(pend_tcp->reuse.node.key) {
-		verbose(5, "reuse_tcp_remove_serviced_keep: in use by other queries");
+		verbose(VERB_CLIENT, "reuse_tcp_remove_serviced_keep: in use by other queries");
 		/* do not reset the keepalive timer, for that
 		 * we'd need traffic, and this is where the serviced is
 		 * removed due to state machine internal reasons,
@@ -2288,7 +2288,7 @@ reuse_tcp_remove_serviced_keep(struct waiting_tcp* w,
 	/* if still open and want to keep it open */
 	if(pend_tcp->c->fd != -1 && sq->outnet->tcp_reuse.count <
 		sq->outnet->tcp_reuse_max) {
-		verbose(5, "reuse_tcp_remove_serviced_keep: keep open");
+		verbose(VERB_CLIENT, "reuse_tcp_remove_serviced_keep: keep open");
 		/* set a keepalive timer on it */
 		if(!reuse_tcp_insert(sq->outnet, pend_tcp)) {
 			return 0;
@@ -2303,7 +2303,7 @@ reuse_tcp_remove_serviced_keep(struct waiting_tcp* w,
 static void
 serviced_delete(struct serviced_query* sq)
 {
-	verbose(5, "serviced_delete");
+	verbose(VERB_CLIENT, "serviced_delete");
 	if(sq->pending) {
 		/* clear up the pending query */
 		if(sq->status == serviced_query_UDP_EDNS ||
@@ -2311,7 +2311,7 @@ serviced_delete(struct serviced_query* sq)
 			sq->status == serviced_query_UDP_EDNS_FRAG ||
 			sq->status == serviced_query_UDP_EDNS_fallback) {
 			struct pending* p = (struct pending*)sq->pending;
-			verbose(5, "serviced_delete: UDP");
+			verbose(VERB_CLIENT, "serviced_delete: UDP");
 			if(p->pc)
 				portcomm_loweruse(sq->outnet, p->pc);
 			pending_delete(sq->outnet, p);
@@ -2321,20 +2321,20 @@ serviced_delete(struct serviced_query* sq)
 		} else {
 			struct waiting_tcp* w = (struct waiting_tcp*)
 				sq->pending;
-			verbose(5, "serviced_delete: TCP");
+			verbose(VERB_CLIENT, "serviced_delete: TCP");
 			/* if on stream-write-waiting list then
 			 * remove from waiting list and waiting_tcp_delete */
 			if(w->write_wait_queued) {
 				struct pending_tcp* pend =
 					(struct pending_tcp*)w->next_waiting;
-				verbose(5, "serviced_delete: writewait");
+				verbose(VERB_CLIENT, "serviced_delete: writewait");
 				reuse_tree_by_id_delete(&pend->reuse, w);
 				reuse_write_wait_remove(&pend->reuse, w);
 				waiting_tcp_delete(w);
 			} else if(!w->on_tcp_waiting_list) {
 				struct pending_tcp* pend =
 					(struct pending_tcp*)w->next_waiting;
-				verbose(5, "serviced_delete: tcpreusekeep");
+				verbose(VERB_CLIENT, "serviced_delete: tcpreusekeep");
 				if(!reuse_tcp_remove_serviced_keep(w, sq)) {
 					reuse_cb_and_decommission(sq->outnet,
 						pend, NETEVENT_CLOSED);
@@ -2342,7 +2342,7 @@ serviced_delete(struct serviced_query* sq)
 				}
 				sq->pending = NULL;
 			} else {
-				verbose(5, "serviced_delete: tcpwait");
+				verbose(VERB_CLIENT, "serviced_delete: tcpwait");
 				waiting_list_remove(sq->outnet, w);
 				waiting_tcp_delete(w);
 			}
