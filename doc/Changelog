@@ -1,3 +1,10 @@
+23 November 2020: Wouter
+	- Merge #351 from dvzrv: Add AF_NETLINK to set of allowed socket
+	  address families.
+	- Fix #350: with the AF_NETLINK permission, to fix 1.12.0 error:
+	  failed to list interfaces: getifaddrs: Address family not
+	  supported by protocol.
+
 12 November 2020: Wouter
 	- Fix to connect() to UDP destinations, default turned on,
 	  this lowers vulnerability to ICMP side channels.
