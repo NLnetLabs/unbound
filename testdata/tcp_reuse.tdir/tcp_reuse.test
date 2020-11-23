@@ -190,7 +190,7 @@ for x in a1.more.net a2.more.net a3.more.net a4.more.net a5.more.net; do
 done
 
 # make the server timeout to drop the upstream connection
-echo "> sleep 20"
+echo "> sleep 15"
 sleep 15
 # see if we are still up.
 echo "> query a7.more.net"
