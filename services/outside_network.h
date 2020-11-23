@@ -281,7 +281,7 @@ struct reuse_tcp {
 /** max number of queries on a reuse connection */
 #define MAX_REUSE_TCP_QUERIES 200
 /** timeout for REUSE entries in milliseconds. */
-#define REUSE_TIMEOUT 30000
+#define REUSE_TIMEOUT 60000
 
 /**
  * A query that has an answer pending for it.
