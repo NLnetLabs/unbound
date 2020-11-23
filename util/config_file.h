@@ -185,6 +185,8 @@ struct config_file {
 	int infra_keep_probing;
 	/** delay close of udp-timeouted ports, if 0 no delayclose. in msec */
 	int delay_close;
+	/** udp_connect enable uses UDP connect to mitigate ICMP side channel */
+	int udp_connect;
 
 	/** the target fetch policy for the iterator */
 	char* target_fetch_policy;

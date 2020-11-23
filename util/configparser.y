@@ -116,7 +116,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_HTTP_QUERY_BUFFER_SIZE VAR_HTTP_RESPONSE_BUFFER_SIZE
 %token VAR_HTTP_NODELAY VAR_HTTP_NOTLS_DOWNSTREAM
 %token VAR_STUB_FIRST VAR_MINIMAL_RESPONSES VAR_RRSET_ROUNDROBIN
-%token VAR_MAX_UDP_SIZE VAR_DELAY_CLOSE
+%token VAR_MAX_UDP_SIZE VAR_DELAY_CLOSE VAR_UDP_CONNECT
 %token VAR_UNBLOCK_LAN_ZONES VAR_INSECURE_LAN_ZONES
 %token VAR_INFRA_CACHE_MIN_RTT VAR_INFRA_KEEP_PROBING
 %token VAR_DNS64_PREFIX VAR_DNS64_SYNTHALL VAR_DNS64_IGNORE_AAAA
@@ -252,7 +252,7 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_http_query_buffer_size | server_http_response_buffer_size |
 	server_http_nodelay | server_http_notls_downstream |
 	server_minimal_responses | server_rrset_roundrobin | server_max_udp_size |
-	server_so_reuseport | server_delay_close |
+	server_so_reuseport | server_delay_close | server_udp_connect |
 	server_unblock_lan_zones | server_insecure_lan_zones |
 	server_dns64_prefix | server_dns64_synthall | server_dns64_ignore_aaaa |
 	server_infra_cache_min_rtt | server_harden_algo_downgrade |
@@ -1441,6 +1441,15 @@ server_delay_close: VAR_DELAY_CLOSE STRING_ARG
 		if(atoi($2) == 0 && strcmp($2, "0") != 0)
 			yyerror("number expected");
 		else cfg_parser->cfg->delay_close = atoi($2);
+		free($2);
+	}
+	;
+server_udp_connect: VAR_UDP_CONNECT STRING_ARG
+	{
+		OUTYY(("P(server_udp_connect:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else cfg_parser->cfg->udp_connect = (strcmp($2, "yes")==0);
 		free($2);
 	}
 	;

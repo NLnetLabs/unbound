@@ -723,7 +723,8 @@ outside_network_create(struct comm_base *base, size_t bufsize,
 	struct ub_randstate* rnd, int use_caps_for_id, int* availports, 
 	int numavailports, size_t unwanted_threshold, int tcp_mss,
 	void (*unwanted_action)(void*), void* unwanted_param, int do_udp,
-	void* sslctx, int delayclose, int tls_use_sni, struct dt_env* dtenv)
+	void* sslctx, int delayclose, int tls_use_sni, struct dt_env* dtenv,
+	int udp_connect)
 {
 	struct outside_network* outnet = (struct outside_network*)
 		calloc(1, sizeof(struct outside_network));
@@ -761,6 +762,9 @@ outside_network_create(struct comm_base *base, size_t bufsize,
 		outnet->delay_tv.tv_usec = (delayclose%1000)*1000;
 	}
 #endif
+	if(udp_connect) {
+		outnet->udp_connect = 1;
+	}
 	if(numavailports == 0 || num_ports == 0) {
 		log_err("no outgoing ports available");
 		outside_network_delete(outnet);
@@ -1115,7 +1119,7 @@ select_ifport(struct outside_network* outnet, struct pending* pend,
 		my_if = ub_random_max(outnet->rnd, num_if);
 		pif = &ifs[my_if];
 #ifndef DISABLE_EXPLICIT_PORT_RANDOMISATION
-		if(1) {
+		if(outnet->udp_connect) {
 			/* if we connect() we cannot reuse fds for a port */
 			if(pif->inuse >= pif->avail_total) {
 				tries++;
@@ -1151,7 +1155,7 @@ select_ifport(struct outside_network* outnet, struct pending* pend,
 		if(fd != -1) {
 			verbose(VERB_ALGO, "opened UDP if=%d port=%d", 
 				my_if, portno);
-			if(1) {
+			if(outnet->udp_connect) {
 				/* connect() to the destination */
 				if(connect(fd, (struct sockaddr*)&pend->addr,
 					pend->addrlen) < 0) {

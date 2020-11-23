@@ -274,6 +274,10 @@ eg. 1500 msec.  When timeouts happen you need extra sockets, it checks
 the ID and remote IP of packets, and unwanted packets are added to the
 unwanted packet counter.
 .TP
+.B udp\-connect: \fI<yes or no>
+Perform connect for UDP sockets that mitigates ICMP side channel leakage.
+Default is yes.
+.TP
 .B unknown\-server\-time\-limit: \fI<msec>
 The wait time in msec for waiting for an unknown server to reply.
 Increase this if you are behind a slow satellite link, to eg. 1128.
