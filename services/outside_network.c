@@ -886,6 +886,14 @@ decommission_pending_tcp(struct outside_network* outnet,
 	struct pending_tcp* pend)
 {
 	verbose(VERB_CLIENT, "decommission_pending_tcp");
+	pend->next_free = outnet->tcp_free;
+	outnet->tcp_free = pend;
+	if(pend->reuse.node.key) {
+		/* needs unlink from the reuse tree to get deleted */
+		reuse_tcp_remove_tree_list(outnet, &pend->reuse);
+	}
+	/* free SSL structure after remove from outnet tcp reuse tree,
+	 * because the c->ssl null or not is used for sorting in the tree */
 	if(pend->c->ssl) {
 #ifdef HAVE_SSL
 		SSL_shutdown(pend->c->ssl);
@@ -894,12 +902,6 @@ decommission_pending_tcp(struct outside_network* outnet,
 #endif
 	}
 	comm_point_close(pend->c);
-	pend->next_free = outnet->tcp_free;
-	outnet->tcp_free = pend;
-	if(pend->reuse.node.key) {
-		/* needs unlink from the reuse tree to get deleted */
-		reuse_tcp_remove_tree_list(outnet, &pend->reuse);
-	}
 	/* unlink the query and writewait list, it is part of the tree
 	 * nodes and is deleted */
 	pend->query = NULL;

@@ -6,6 +6,8 @@
 	- iana portlist updated.
 	- Fix one port unit test for udp-connect.
 	- tag for the 1.13.0rc1 release.
+	- Fix crash when TLS connection is closed prematurely, when
+	  reuse tree comparison is not properly identical to insertion.
 
 23 November 2020: George
 	- Merge PR #313 from Ralph Dolmans: Replace edns-client-tag with
