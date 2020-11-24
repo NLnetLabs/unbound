@@ -1,3 +1,8 @@
+24 November 2020: Wouter
+	- Merge PR #283 : Stream reuse.  This implements upstream stream
+	  reuse for performing several queries over the same TCP or TLS
+	  channel.
+
 23 November 2020: George
 	- Merge PR #313 from Ralph Dolmans: Replace edns-client-tag with
 	  edns-client-string option.
