@@ -1440,7 +1440,7 @@ rpz_patch_nodata(struct rpz* r, struct module_qstate* ms)
 	if(msg == NULL) { return msg; }
 	msg->qinfo = ms->qinfo;
 	msg->rep = construct_reply_info_base(ms->region,
-					     LDNS_RCODE_NOERROR|BIT_QR|BIT_AA|BIT_RA,
+					     BIT_RD|BIT_QR|BIT_AA|BIT_RA,
 					     1, //qd
 					     0, //ttl
 					     0, //prettl
@@ -1450,6 +1450,7 @@ rpz_patch_nodata(struct rpz* r, struct module_qstate* ms)
 					     0, //ar
 					     0, //total
 					     sec_status_secure);
+	FLAGS_SET_RCODE(msg->rep->flags, LDNS_RCODE_NOERROR);
 	return msg;
 }
 
@@ -1460,7 +1461,7 @@ rpz_patch_nxdomain(struct rpz* r, struct module_qstate* ms)
 	if(msg == NULL) { return msg; }
 	msg->qinfo = ms->qinfo;
 	msg->rep = construct_reply_info_base(ms->region,
-					     LDNS_RCODE_NXDOMAIN|BIT_QR|BIT_AA|BIT_RA,
+					     BIT_RD|BIT_QR|BIT_AA|BIT_RA,
 					     1, //qd
 					     0, //ttl
 					     0, //prettl
@@ -1470,6 +1471,7 @@ rpz_patch_nxdomain(struct rpz* r, struct module_qstate* ms)
 					     0, //ar
 					     0, //total
 					     sec_status_secure);
+	FLAGS_SET_RCODE(msg->rep->flags, LDNS_RCODE_NXDOMAIN);
 	return msg;
 }
 

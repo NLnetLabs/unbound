@@ -2474,9 +2474,10 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 	{ /* apply rpz triggers at query time */
 		struct dns_msg* forged_response = rpz_iterator_module_callback(qstate, iq);
 		if(forged_response != NULL) {
-			iq->response = forged_response;
-			next_state(iq, FINISHED_STATE);
 			qstate->ext_state[id] = module_finished;
+			qstate->return_rcode = forged_response->rep->flags;
+			qstate->return_msg = forged_response;
+			next_state(iq, FINISHED_STATE);
 			return 0;
 		}
 	}
