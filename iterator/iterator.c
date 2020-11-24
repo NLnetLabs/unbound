@@ -2471,6 +2471,8 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 	/* Add the current set of unused targets to our queue. */
 	delegpt_add_unused_targets(iq->dp);
 
+	rpz_iterator_module_callback(qstate, iq);
+
 	/* Select the next usable target, filtering out unsuitable targets. */
 	target = iter_server_selection(ie, qstate->env, iq->dp, 
 		iq->dp->name, iq->dp->namelen, iq->qchase.qtype,
@@ -2660,15 +2662,15 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 {
 	int dnsseclame = 0;
 	enum response_type type;
-	int rpz_filter_result;
+	//int rpz_filter_result;
 
 	iq->num_current_queries--;
 
 	if(!inplace_cb_query_response_call(qstate->env, qstate, iq->response))
 		log_err("unable to call query_response callback");
 
-	rpz_filter_result = rpz_iterator_module_callback(qstate, iq);
-	if(rpz_filter_result > 0) { next_state(iq, FINISHED_STATE); }
+	//rpz_filter_result = rpz_iterator_module_callback(qstate, iq);
+	//if(rpz_filter_result > 0) { next_state(iq, FINISHED_STATE); }
 
 	if(iq->response == NULL) {
 		/* Don't increment qname when QNAME minimisation is enabled */

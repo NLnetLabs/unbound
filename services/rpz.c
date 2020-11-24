@@ -53,6 +53,7 @@
 #include "util/data/msgencode.h"
 #include "services/cache/dns.h"
 #include "iterator/iterator.h"
+#include "iterator/iter_delegpt.h"
 
 typedef struct resp_addr rpz_aclnode_type;
 
@@ -1489,15 +1490,34 @@ rpz_patch_localdata(struct dns_msg* response, struct clientip_synthesized_rr* da
 	return 1;
 }
 
+struct clientip_synthesized_rr*
+rpz_delegation_point_ipbased_trigger_lookup(struct rpz* rpz,
+					    struct iter_qstate* is)
+{
+	struct delegpt_addr* cursor;
+	struct clientip_synthesized_rr* action = NULL;
+	if(is->dp == NULL) { return NULL; }
+	for(cursor = is->dp->target_list; cursor != NULL; cursor = cursor->next_target) {
+		if(cursor->bogus) { continue; }
+		action = rpz_ipbased_trigger_lookup(rpz->ns_set, &cursor->addr, cursor->addrlen);
+		if(action != NULL) { return action; }
+	}
+	return NULL;
+}
+
 int
 rpz_iterator_module_callback(struct module_qstate* ms, struct iter_qstate* is)
 {
-	struct auth_zones* az = ms->env->auth_zones;
+	struct auth_zones* az;
 	struct auth_zone* a;
 	struct clientip_synthesized_rr* raddr;
 	enum rpz_action action = RPZ_INVALID_ACTION;
 	struct rpz* r;
 	int ret = 0;
+
+	if(ms->env == NULL || ms->env->auth_zones == NULL) { return 0; }
+
+	az = ms->env->auth_zones;
 
 	verbose(VERB_ALGO, "rpz: iterator module callback: have_rpz=%d", az->rpz_first != NULL);
 
@@ -1507,13 +1527,15 @@ rpz_iterator_module_callback(struct module_qstate* ms, struct iter_qstate* is)
 	for(a = az->rpz_first; a != NULL; a = a->rpz_az_next) {
 		lock_rw_rdlock(&a->lock);
 		r = a->rpz;
-		raddr = rpz_ipbased_trigger_lookup(r->ns_set, &ms->reply->addr, ms->reply->addrlen);
+		raddr = rpz_delegation_point_ipbased_trigger_lookup(r, is);
 		if(raddr != NULL) {
 			lock_rw_unlock(&a->lock);
 			break;
 		}
 		lock_rw_unlock(&a->lock);
 	}
+
+	lock_rw_unlock(&az->rpz_lock);
 
 	if(raddr == NULL) { return 0; }
 
