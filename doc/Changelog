@@ -2,6 +2,7 @@
 	- Merge PR #283 : Stream reuse.  This implements upstream stream
 	  reuse for performing several queries over the same TCP or TLS
 	  channel.
+	- set version of main branch to 1.13.0 for upcoming release.
 
 23 November 2020: George
 	- Merge PR #313 from Ralph Dolmans: Replace edns-client-tag with
