@@ -4,6 +4,7 @@
 	  channel.
 	- set version of main branch to 1.13.0 for upcoming release.
 	- iana portlist updated.
+	- Fix one port unit test for udp-connect.
 
 23 November 2020: George
 	- Merge PR #313 from Ralph Dolmans: Replace edns-client-tag with
