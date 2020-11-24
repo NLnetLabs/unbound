@@ -1511,6 +1511,18 @@ int serviced_cmp(const void* ATTR_UNUSED(a), const void* ATTR_UNUSED(b))
 	return 0;
 }
 
+int reuse_cmp(const void* ATTR_UNUSED(a), const void* ATTR_UNUSED(b))
+{
+	log_assert(0);
+	return 0;
+}
+
+int reuse_id_cmp(const void* ATTR_UNUSED(a), const void* ATTR_UNUSED(b))
+{
+	log_assert(0);
+	return 0;
+}
+
 /* timers in testbound for autotrust. statistics tested in tdir. */
 struct comm_timer* comm_timer_create(struct comm_base* base, 
 	void (*cb)(void*), void* cb_arg)
