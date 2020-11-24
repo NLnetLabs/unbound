@@ -1448,7 +1448,7 @@ rpz_patch_nodata(struct rpz* r, struct module_qstate* ms)
 					     0, //an
 					     0, //ns
 					     0, //ar
-					     1, //total
+					     0, //total
 					     sec_status_secure);
 	return msg;
 }
@@ -1468,7 +1468,7 @@ rpz_patch_nxdomain(struct rpz* r, struct module_qstate* ms)
 					     0, //an
 					     0, //ns
 					     0, //ar
-					     1, //total
+					     0, //total
 					     sec_status_secure);
 	return msg;
 }

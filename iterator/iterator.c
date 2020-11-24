@@ -2476,6 +2476,7 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 		if(forged_response != NULL) {
 			iq->response = forged_response;
 			next_state(iq, FINISHED_STATE);
+			qstate->ext_state[id] = module_finished;
 			return 0;
 		}
 	}
