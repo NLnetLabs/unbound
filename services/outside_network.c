@@ -1333,7 +1333,8 @@ outside_network_create(struct comm_base *base, size_t bufsize,
 	struct ub_randstate* rnd, int use_caps_for_id, int* availports, 
 	int numavailports, size_t unwanted_threshold, int tcp_mss,
 	void (*unwanted_action)(void*), void* unwanted_param, int do_udp,
-	void* sslctx, int delayclose, int tls_use_sni, struct dt_env* dtenv)
+	void* sslctx, int delayclose, int tls_use_sni, struct dt_env* dtenv,
+	int udp_connect)
 {
 	struct outside_network* outnet = (struct outside_network*)
 		calloc(1, sizeof(struct outside_network));
@@ -1371,6 +1372,9 @@ outside_network_create(struct comm_base *base, size_t bufsize,
 		outnet->delay_tv.tv_usec = (delayclose%1000)*1000;
 	}
 #endif
+	if(udp_connect) {
+		outnet->udp_connect = 1;
+	}
 	if(numavailports == 0 || num_ports == 0) {
 		log_err("no outgoing ports available");
 		outside_network_delete(outnet);
@@ -1742,7 +1746,7 @@ select_ifport(struct outside_network* outnet, struct pending* pend,
 		my_if = ub_random_max(outnet->rnd, num_if);
 		pif = &ifs[my_if];
 #ifndef DISABLE_EXPLICIT_PORT_RANDOMISATION
-		if(1) {
+		if(outnet->udp_connect) {
 			/* if we connect() we cannot reuse fds for a port */
 			if(pif->inuse >= pif->avail_total) {
 				tries++;
@@ -1778,7 +1782,7 @@ select_ifport(struct outside_network* outnet, struct pending* pend,
 		if(fd != -1) {
 			verbose(VERB_ALGO, "opened UDP if=%d port=%d", 
 				my_if, portno);
-			if(1) {
+			if(outnet->udp_connect) {
 				/* connect() to the destination */
 				if(connect(fd, (struct sockaddr*)&pend->addr,
 					pend->addrlen) < 0) {
@@ -2949,18 +2953,18 @@ outnet_serviced_query(struct outside_network* outnet,
 {
 	struct serviced_query* sq;
 	struct service_callback* cb;
-	struct edns_tag_addr* client_tag_addr;
+	struct edns_string_addr* client_string_addr;
 
 	if(!inplace_cb_query_call(env, qinfo, flags, addr, addrlen, zone, zonelen,
 		qstate, qstate->region))
 			return NULL;
 
-	if((client_tag_addr = edns_tag_addr_lookup(&env->edns_tags->client_tags,
-		addr, addrlen))) {
-		uint16_t client_tag = htons(client_tag_addr->tag_data);
+	if((client_string_addr = edns_string_addr_lookup(
+		&env->edns_strings->client_strings, addr, addrlen))) {
 		edns_opt_list_append(&qstate->edns_opts_back_out,
-			env->edns_tags->client_tag_opcode, 2,
-			(uint8_t*)&client_tag, qstate->region);
+			env->edns_strings->client_string_opcode,
+			client_string_addr->string_len,
+			client_string_addr->string, qstate->region);
 	}
 
 	serviced_gen_query(buff, qinfo->qname, qinfo->qname_len, qinfo->qtype,

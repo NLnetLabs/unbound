@@ -185,6 +185,8 @@ struct config_file {
 	int infra_keep_probing;
 	/** delay close of udp-timeouted ports, if 0 no delayclose. in msec */
 	int delay_close;
+	/** udp_connect enable uses UDP connect to mitigate ICMP side channel */
+	int udp_connect;
 
 	/** the target fetch policy for the iterator */
 	char* target_fetch_policy;
@@ -566,10 +568,10 @@ struct config_file {
 	/** SHM data - key for the shm */
 	int shm_key;
 
-	/** list of EDNS client tag entries, linked list */
-	struct config_str2list* edns_client_tags;
-	/** EDNS opcode to use for EDNS client tags */
-	uint16_t edns_client_tag_opcode;
+	/** list of EDNS client string entries, linked list */
+	struct config_str2list* edns_client_strings;
+	/** EDNS opcode to use for EDNS client strings */
+	uint16_t edns_client_string_opcode;
 
 	/** DNSCrypt */
 	/** true to enable dnscrypt */
