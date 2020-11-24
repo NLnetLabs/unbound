@@ -76,6 +76,9 @@ struct regional
 	char* data;
 	/** threshold for outside of chunk allocations */
 	size_t large_object_size;
+	/** padding for sizeof8 alignment of sizeof(struct regional)
+	 * for 32bit systems */
+	size_t padding;
 };
 
 /**

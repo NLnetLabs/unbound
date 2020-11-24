@@ -8,6 +8,7 @@
 	- tag for the 1.13.0rc1 release.
 	- Fix crash when TLS connection is closed prematurely, when
 	  reuse tree comparison is not properly identical to insertion.
+	- Fix padding of struct regional for 32bit systems.
 
 23 November 2020: George
 	- Merge PR #313 from Ralph Dolmans: Replace edns-client-tag with
