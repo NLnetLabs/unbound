@@ -1440,7 +1440,7 @@ rpz_patch_nodata(struct rpz* r, struct module_qstate* ms)
 	if(msg == NULL) { return msg; }
 	msg->qinfo = ms->qinfo;
 	msg->rep = construct_reply_info_base(ms->region,
-					     BIT_RD|BIT_QR|BIT_AA|BIT_RA,
+					     BIT_RD | BIT_QR | BIT_AA | BIT_RA,
 					     1, //qd
 					     0, //ttl
 					     0, //prettl
@@ -1461,7 +1461,7 @@ rpz_patch_nxdomain(struct rpz* r, struct module_qstate* ms)
 	if(msg == NULL) { return msg; }
 	msg->qinfo = ms->qinfo;
 	msg->rep = construct_reply_info_base(ms->region,
-					     BIT_RD|BIT_QR|BIT_AA|BIT_RA,
+					     BIT_RD | BIT_QR | BIT_AA | BIT_RA,
 					     1, //qd
 					     0, //ttl
 					     0, //prettl
@@ -1481,22 +1481,32 @@ rpz_patch_localdata(struct rpz* r,
 		    struct clientip_synthesized_rr* data)
 {
 	struct dns_msg* msg = NULL;
-	struct query_info* qi = &msg->qinfo;
+	struct query_info* qi = &ms->qinfo;
 	struct ub_packed_rrset_key* rp;
 	struct local_rrset* rrset;
 	struct reply_info* new_reply_info;
-	struct reply_info* ri = msg->rep;
 
 	rrset = rpz_find_synthesized_rrset(qi->qtype, data);
 	if(rrset == NULL) {
 		verbose(VERB_ALGO, "rpz: nsip: no matching synthesized data found; resorting to nodata");
 		return rpz_patch_nodata(r, ms);
 	}
+
 	msg = rpz_dns_msg_new(ms->region);
 	if(msg == NULL) { return NULL; }
 
 	// XXX: use ttl etc from rpz zone?
-	new_reply_info = make_new_reply_info(ri, ms->region, 0, 0);
+        new_reply_info = construct_reply_info_base(ms->region,
+                                                   LDNS_RCODE_NOERROR | BIT_RD | BIT_QR | BIT_AA | BIT_RA,
+                                                   1, //qd
+                                                   0, //ttl
+                                                   0, //prettl
+                                                   0, //expttl
+                                                   1, //an
+                                                   0, //ns
+                                                   0, //ar
+                                                   1, //total
+                                                   sec_status_secure);
 	if(new_reply_info == NULL) {
 		log_err("out of memory");
 		return NULL;
@@ -1506,15 +1516,13 @@ rpz_patch_localdata(struct rpz* r,
 		log_err("out of memory");
 		return NULL;
 	}
-	new_reply_info->rrsets = regional_alloc(ms->region, sizeof(*new_reply_info->rrsets));
-	if(new_reply_info->rrsets == NULL) {
-		log_err("out of memory");
-		return NULL;
-	}
+	//new_reply_info->rrsets = regional_alloc(ms->region, sizeof(*new_reply_info->rrsets));
+	//if(new_reply_info->rrsets == NULL) {
+	//	log_err("out of memory");
+	//	return NULL;
+	//}
 	rp->rk.dname = qi->qname;
 	rp->rk.dname_len = qi->qname_len;
-	new_reply_info->rrset_count = 1;
-	new_reply_info->an_numrrsets = 1;
 	new_reply_info->rrsets[0] = rp;
 	msg->rep = new_reply_info;
 	return msg;
@@ -1590,11 +1598,15 @@ rpz_iterator_module_callback(struct module_qstate* ms, struct iter_qstate* is)
 		verbose(VERB_ALGO, "rpz: nsip: tcp-only trigger ignored");
 		ret = NULL;
 		break;
-	case RPZ_PASSTHRU_ACTION:
-		ret = NULL;
+	case RPZ_DROP_ACTION:
+		ret = rpz_patch_nodata(r, ms);
+		ms->is_drop = 1;
 		break;
 	case RPZ_LOCAL_DATA_ACTION:
 		ret = rpz_patch_localdata(r, ms, raddr);
+		break;
+	case RPZ_PASSTHRU_ACTION:
+		ret = NULL;
 		break;
 	default:
 		verbose(VERB_ALGO, "rpz: nsip: bug: unhandled or invalid action: '%s'",
