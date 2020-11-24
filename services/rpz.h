@@ -179,7 +179,7 @@ int rpz_apply_qname_trigger(struct auth_zones* az, struct module_env* env,
 	uint8_t* taglist, size_t taglen, struct ub_server_stats* stats);
 
 struct iter_qstate;
-int rpz_iterator_module_callback(struct module_qstate*, struct iter_qstate*);
+struct dns_msg* rpz_iterator_module_callback(struct module_qstate*, struct iter_qstate*);
 
 /**
  * Delete RPZ
