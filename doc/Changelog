@@ -1,6 +1,8 @@
 25 November 2020: Wouter
 	- with udp-connect ignore connection refused with UDP timeouts.
 	- Fix udp-connect on FreeBSD, do send calls on connected UDP socket.
+	- Better fix for reuse tree comparison for is-tls sockets.  Where
+	  the tree key identity is preserved after cleanup of the TLS state.
 
 24 November 2020: Wouter
 	- Merge PR #283 : Stream reuse.  This implements upstream stream

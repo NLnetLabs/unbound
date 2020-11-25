@@ -146,9 +146,9 @@ reuse_cmp_addrportssl(const void* key1, const void* key2)
 		return r;
 
 	/* compare if SSL-enabled */
-	if(r1->pending->c->ssl && !r2->pending->c->ssl)
+	if(r1->is_ssl && !r2->is_ssl)
 		return 1;
-	if(!r1->pending->c->ssl && r2->pending->c->ssl)
+	if(!r1->is_ssl && r2->is_ssl)
 		return -1;
 	return 0;
 }
@@ -465,8 +465,8 @@ reuse_tcp_find(struct outside_network* outnet, struct sockaddr_storage* addr,
 	key_p.c = &c;
 	key_p.reuse.pending = &key_p;
 	key_p.reuse.node.key = &key_p.reuse;
-	if(use_ssl) /* something nonNULL for comparisons in tree */
-		key_p.c->ssl = (void*)1;
+	if(use_ssl)
+		key_p.reuse.is_ssl = 1;
 	if(addrlen > sizeof(key_p.reuse.addr))
 		return NULL;
 	memmove(&key_p.reuse.addr, addr, addrlen);
@@ -657,6 +657,9 @@ outnet_tcp_take_into_use(struct waiting_tcp* w)
 	pend->c->repinfo.addrlen = w->addrlen;
 	memcpy(&pend->c->repinfo.addr, &w->addr, w->addrlen);
 	pend->reuse.pending = pend;
+	if(pend->c->ssl)
+		pend->reuse.is_ssl = 1;
+	else	pend->reuse.is_ssl = 0;
 	/* insert in reuse by address tree if not already inserted there */
 	(void)reuse_tcp_insert(w->outnet, pend);
 	reuse_tree_by_id_insert(&pend->reuse, w);

@@ -247,6 +247,8 @@ struct reuse_tcp {
 	struct sockaddr_storage addr;
 	/** length of addr */
 	socklen_t addrlen;
+	/** also key for tcp_reuse tree, if ssl is used */
+	int is_ssl;
 	/** lru chain, so that the oldest can be removed to get a new
 	 * connection when all are in (re)use. oldest is last in list.
 	 * The lru only contains empty connections waiting for reuse,
