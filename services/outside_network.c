@@ -1010,6 +1010,7 @@ outnet_tcp_cb(struct comm_point* c, void* arg, int error,
 			 * and we can write some more. */
 			pend->c->tcp_more_write_again = 1;
 			pend->query = reuse_write_wait_pop(&pend->reuse);
+			comm_point_stop_listening(pend->c);
 			outnet_tcp_take_query_setup(pend->c->fd, pend,
 				pend->query);
 		} else {
@@ -1018,6 +1019,7 @@ outnet_tcp_cb(struct comm_point* c, void* arg, int error,
 			pend->c->tcp_more_read_again = 0;
 			pend->c->tcp_more_write_again = 0;
 			pend->c->tcp_is_reading = 1;
+			comm_point_stop_listening(pend->c);
 			reuse_tcp_setup_timeout(pend);
 		}
 		return 0;
