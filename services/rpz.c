@@ -1237,7 +1237,8 @@ log_rpz_apply(uint8_t* dname, enum rpz_action a, struct query_info* qinfo,
 }
 
 static struct clientip_synthesized_rr*
-rpz_ipbased_trigger_lookup(struct clientip_synthesized_rrset* set, struct sockaddr_storage* addr, socklen_t addrlen)
+rpz_ipbased_trigger_lookup(struct clientip_synthesized_rrset* set,
+			   struct sockaddr_storage* addr, socklen_t addrlen)
 {
 	struct clientip_synthesized_rr* raddr = NULL;
 	enum rpz_action action = RPZ_INVALID_ACTION;
@@ -1261,11 +1262,15 @@ rpz_ipbased_trigger_lookup(struct clientip_synthesized_rrset* set, struct sockad
 
 static inline
 struct clientip_synthesized_rr*
-rpz_resolve_client_action_and_zone(struct auth_zones* az, struct query_info* qinfo,
-	struct comm_reply* repinfo, uint8_t* taglist, size_t taglen,
-	struct ub_server_stats* stats,
-	/* output parameters */
-	struct local_zone** z_out, struct auth_zone** a_out, struct rpz** r_out )
+rpz_resolve_client_action_and_zone(struct auth_zones* az,
+				   struct query_info* qinfo,
+				   struct comm_reply* repinfo,
+				   uint8_t* taglist, size_t taglen,
+				   struct ub_server_stats* stats,
+				   /* output parameters */
+				   struct local_zone** z_out,
+				   struct auth_zone** a_out,
+				   struct rpz** r_out )
 {
 	struct clientip_synthesized_rr* node = NULL;
 	struct auth_zone* a = NULL;
@@ -1327,10 +1332,15 @@ rpz_is_udp_query(struct comm_reply* repinfo) {
 
 /** encode answer consisting of 1 rrset */
 static int
-rpz_local_encode(struct query_info* qinfo, struct module_env* env,
-	struct edns_data* edns, struct comm_reply* repinfo, sldns_buffer* buf,
-	struct regional* temp, struct ub_packed_rrset_key* rrset, int ansec,
-	int rcode)
+rpz_local_encode(struct query_info* qinfo,
+		 struct module_env* env,
+		 struct edns_data* edns,
+		 struct comm_reply* repinfo,
+		 sldns_buffer* buf,
+		 struct regional* temp,
+		 struct ub_packed_rrset_key* rrset,
+		 int ansec,
+		 int rcode)
 {
 	struct reply_info rep;
 	uint16_t udpsize;
@@ -1375,9 +1385,14 @@ rpz_find_synthesized_rrset(int qtype, struct clientip_synthesized_rr* data) {
 }
 
 static void
-rpz_apply_clientip_localdata_action(struct rpz* r, struct clientip_synthesized_rr* raddr,
-	struct module_env* env,	struct query_info* qinfo, struct edns_data* edns,
-	struct comm_reply* repinfo, sldns_buffer* buf, struct regional* temp)
+rpz_apply_clientip_localdata_action(struct rpz* r,
+				    struct clientip_synthesized_rr* raddr,
+				    struct module_env* env,
+				    struct query_info* qinfo,
+				    struct edns_data* edns,
+				    struct comm_reply* repinfo,
+				    sldns_buffer* buf,
+				    struct regional* temp)
 {
 	struct local_rrset* rrset;
 	enum rpz_action action = RPZ_INVALID_ACTION;
@@ -1411,9 +1426,6 @@ rpz_apply_clientip_localdata_action(struct rpz* r, struct clientip_synthesized_r
 		return;
 	}
 
-	//struct packed_rrset_data* pd = raddr->data->entry.data;
-	//struct packed_rrset_data* pd2 = rp->entry.data;
-	//verbose(VERB_ALGO, "ttl=%ld ttl=%ld", pd->rr_ttl[0],  pd2->rr_ttl[0]);
 	rp->rk.flags |= PACKED_RRSET_FIXEDTTL;
 	rp->rk.dname = qinfo->qname;
 	rp->rk.dname_len = qinfo->qname_len;
@@ -1434,13 +1446,13 @@ rpz_dns_msg_new(struct regional* region)
 }
 
 static inline struct dns_msg*
-rpz_patch_nodata(struct rpz* r, struct module_qstate* ms)
+rpz_forge_nodata(struct rpz* r, struct module_qstate* ms)
 {
 	struct dns_msg* msg = rpz_dns_msg_new(ms->region);
 	if(msg == NULL) { return msg; }
 	msg->qinfo = ms->qinfo;
 	msg->rep = construct_reply_info_base(ms->region,
-					     BIT_RD | BIT_QR | BIT_AA | BIT_RA,
+					     LDNS_RCODE_NOERROR | BIT_RD | BIT_QR | BIT_AA | BIT_RA,
 					     1, //qd
 					     0, //ttl
 					     0, //prettl
@@ -1450,18 +1462,17 @@ rpz_patch_nodata(struct rpz* r, struct module_qstate* ms)
 					     0, //ar
 					     0, //total
 					     sec_status_secure);
-	FLAGS_SET_RCODE(msg->rep->flags, LDNS_RCODE_NOERROR);
 	return msg;
 }
 
 static inline struct dns_msg*
-rpz_patch_nxdomain(struct rpz* r, struct module_qstate* ms)
+rpz_forge_nxdomain(struct rpz* r, struct module_qstate* ms)
 {
 	struct dns_msg* msg = rpz_dns_msg_new(ms->region);
 	if(msg == NULL) { return msg; }
 	msg->qinfo = ms->qinfo;
 	msg->rep = construct_reply_info_base(ms->region,
-					     BIT_RD | BIT_QR | BIT_AA | BIT_RA,
+					     LDNS_RCODE_NXDOMAIN | BIT_RD | BIT_QR | BIT_AA | BIT_RA,
 					     1, //qd
 					     0, //ttl
 					     0, //prettl
@@ -1471,12 +1482,11 @@ rpz_patch_nxdomain(struct rpz* r, struct module_qstate* ms)
 					     0, //ar
 					     0, //total
 					     sec_status_secure);
-	FLAGS_SET_RCODE(msg->rep->flags, LDNS_RCODE_NXDOMAIN);
 	return msg;
 }
 
 static inline struct dns_msg*
-rpz_patch_localdata(struct rpz* r,
+rpz_forge_localdata(struct rpz* r,
 		    struct module_qstate* ms,
 		    struct clientip_synthesized_rr* data)
 {
@@ -1489,7 +1499,7 @@ rpz_patch_localdata(struct rpz* r,
 	rrset = rpz_find_synthesized_rrset(qi->qtype, data);
 	if(rrset == NULL) {
 		verbose(VERB_ALGO, "rpz: nsip: no matching synthesized data found; resorting to nodata");
-		return rpz_patch_nodata(r, ms);
+		return rpz_forge_nodata(r, ms);
 	}
 
 	msg = rpz_dns_msg_new(ms->region);
@@ -1516,11 +1526,6 @@ rpz_patch_localdata(struct rpz* r,
 		log_err("out of memory");
 		return NULL;
 	}
-	//new_reply_info->rrsets = regional_alloc(ms->region, sizeof(*new_reply_info->rrsets));
-	//if(new_reply_info->rrsets == NULL) {
-	//	log_err("out of memory");
-	//	return NULL;
-	//}
 	rp->rk.dname = qi->qname;
 	rp->rk.dname_len = qi->qname_len;
 	new_reply_info->rrsets[0] = rp;
@@ -1583,27 +1588,27 @@ rpz_iterator_module_callback(struct module_qstate* ms, struct iter_qstate* is)
 	action = raddr->action;
 	if(action == RPZ_LOCAL_DATA_ACTION && raddr->data == NULL) {
 		verbose(VERB_ALGO, "rpz: bug: local-data action but no local data");
-		ret = rpz_patch_nodata(r, ms);
+		ret = rpz_forge_nodata(r, ms);
 		goto done;
 	}
 
 	switch(action) {
 	case RPZ_NXDOMAIN_ACTION:
-		ret = rpz_patch_nxdomain(r, ms);
+		ret = rpz_forge_nxdomain(r, ms);
 		break;
 	case RPZ_NODATA_ACTION:
-		ret = rpz_patch_nodata(r, ms);
+		ret = rpz_forge_nodata(r, ms);
 		break;
 	case RPZ_TCP_ONLY_ACTION:
 		verbose(VERB_ALGO, "rpz: nsip: tcp-only trigger ignored");
 		ret = NULL;
 		break;
 	case RPZ_DROP_ACTION:
-		ret = rpz_patch_nodata(r, ms);
+		ret = rpz_forge_nodata(r, ms);
 		ms->is_drop = 1;
 		break;
 	case RPZ_LOCAL_DATA_ACTION:
-		ret = rpz_patch_localdata(r, ms, raddr);
+		ret = rpz_forge_localdata(r, ms, raddr);
 		break;
 	case RPZ_PASSTHRU_ACTION:
 		ret = NULL;
@@ -1620,12 +1625,19 @@ done:
 }
 
 static int
-rpz_maybe_apply_clientip_trigger(struct auth_zones* az, struct module_env* env,
-	struct query_info* qinfo, struct edns_data* edns,
-	struct comm_reply* repinfo, uint8_t* taglist, size_t taglen,
-	struct ub_server_stats* stats,sldns_buffer* buf, struct regional* temp,
-	/* output parameters */
-	struct local_zone** z_out, struct auth_zone** a_out, struct rpz** r_out)
+rpz_maybe_apply_clientip_trigger(struct auth_zones* az,
+				 struct module_env* env,
+				 struct query_info* qinfo,
+				 struct edns_data* edns,
+				 struct comm_reply* repinfo,
+				 uint8_t* taglist, size_t taglen,
+				 struct ub_server_stats* stats,
+				 sldns_buffer* buf,
+				 struct regional* temp,
+				 /* output parameters */
+				 struct local_zone** z_out,
+				 struct auth_zone** a_out,
+				 struct rpz** r_out)
 {
 	int ret = 0;
 	enum rpz_action client_action;
@@ -1669,10 +1681,16 @@ done:
 }
 
 int
-rpz_apply_qname_trigger(struct auth_zones* az, struct module_env* env,
-	struct query_info* qinfo, struct edns_data* edns, sldns_buffer* buf,
-	struct regional* temp, struct comm_reply* repinfo,
-	uint8_t* taglist, size_t taglen, struct ub_server_stats* stats)
+rpz_apply_qname_trigger(struct auth_zones* az,
+			struct module_env* env,
+			struct query_info* qinfo,
+			struct edns_data* edns,
+			sldns_buffer* buf,
+			struct regional* temp,
+			struct comm_reply* repinfo,
+			uint8_t* taglist,
+			size_t taglen,
+			struct ub_server_stats* stats)
 {
 	struct rpz* r = NULL;
 	struct auth_zone* a = NULL;
