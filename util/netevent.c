@@ -341,10 +341,15 @@ comm_point_send_udp_msg(struct comm_point *c, sldns_buffer* packet,
 	if(sldns_buffer_remaining(packet) == 0)
 		log_err("error: send empty UDP packet");
 #endif
-	log_assert(addr && addrlen > 0);
-	sent = sendto(c->fd, (void*)sldns_buffer_begin(packet), 
-		sldns_buffer_remaining(packet), 0,
-		addr, addrlen);
+	if(addr) {
+		log_assert(addr && addrlen > 0);
+		sent = sendto(c->fd, (void*)sldns_buffer_begin(packet),
+			sldns_buffer_remaining(packet), 0,
+			addr, addrlen);
+	} else {
+		sent = send(c->fd, (void*)sldns_buffer_begin(packet),
+			sldns_buffer_remaining(packet), 0);
+	}
 	if(sent == -1) {
 		/* try again and block, waiting for IO to complete,
 		 * we want to send the answer, and we will wait for

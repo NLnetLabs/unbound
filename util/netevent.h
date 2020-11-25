@@ -620,7 +620,8 @@ void comm_point_drop_reply(struct comm_reply* repinfo);
  * Send an udp message over a commpoint.
  * @param c: commpoint to send it from.
  * @param packet: what to send.
- * @param addr: where to send it to.
+ * @param addr: where to send it to.   If NULL, send is performed,
+ * 	for connected sockets, to the connected address.
  * @param addrlen: length of addr.
  * @return: false on a failure.
  */
