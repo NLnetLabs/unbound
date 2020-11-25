@@ -2511,6 +2511,7 @@ server_edns_client_string_opcode: VAR_EDNS_CLIENT_STRING_OPCODE STRING_ARG
 		else if(atoi($2) > 65535 || atoi($2) < 0)
 			yyerror("option code must be in interval [0, 65535]");
 		else cfg_parser->cfg->edns_client_string_opcode = atoi($2);
+		free($2);
 
 	}
 	;

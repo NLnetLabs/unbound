@@ -4,6 +4,7 @@
 	- Better fix for reuse tree comparison for is-tls sockets.  Where
 	  the tree key identity is preserved after cleanup of the TLS state.
 	- Remove debug commands from reuse tests.
+	- Fix memory leak for edns client tag opcode config element.
 
 24 November 2020: Wouter
 	- Merge PR #283 : Stream reuse.  This implements upstream stream
