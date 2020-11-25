@@ -16,7 +16,7 @@ echo "UPSTREAM_PORT=$UPSTREAM_PORT" >> .tpkg.var.test
 sed -e 's/@PORT\@/'$UNBOUND_PORT'/' -e 's/@TOPORT\@/'$UPSTREAM_PORT'/' < tcp_reuse.conf > ub.conf
 # start unbound in the background
 #$PRE/unbound -d -c ub.conf >unbound.log 2>&1 &
-valgrind $PRE/unbound -d -c ub.conf 2>&1 | tee unbound.log &
+$PRE/unbound -d -c ub.conf 2>&1 | tee unbound.log &
 UNBOUND_PID=$!
 echo "UNBOUND_PID=$UNBOUND_PID" >> .tpkg.var.test
 wait_unbound_up unbound.log
