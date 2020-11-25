@@ -655,6 +655,10 @@ outnet_tcp_take_into_use(struct waiting_tcp* w)
 	pend->query = w;
 	pend->reuse.outnet = w->outnet;
 	pend->c->repinfo.addrlen = w->addrlen;
+	pend->c->tcp_more_read_again = &pend->reuse.cp_more_read_again;
+	pend->c->tcp_more_write_again = &pend->reuse.cp_more_write_again;
+	pend->reuse.cp_more_read_again = 0;
+	pend->reuse.cp_more_write_again = 0;
 	memcpy(&pend->c->repinfo.addr, &w->addr, w->addrlen);
 	pend->reuse.pending = pend;
 	if(pend->c->ssl)
@@ -804,8 +808,8 @@ reuse_move_writewait_away(struct outside_network* outnet,
 		pend->c->tcp_write_pkt = NULL;
 		pend->c->tcp_write_pkt_len = 0;
 		pend->c->tcp_write_and_read = 0;
-		pend->c->tcp_more_read_again = 0;
-		pend->c->tcp_more_write_again = 0;
+		pend->reuse.cp_more_read_again = 0;
+		pend->reuse.cp_more_write_again = 0;
 		pend->c->tcp_is_reading = 1;
 		w = pend->query;
 		pend->query = NULL;
@@ -1008,7 +1012,7 @@ outnet_tcp_cb(struct comm_point* c, void* arg, int error,
 			 * because this callback called after a tcp write
 			 * succeeded and likely more buffer space is available
 			 * and we can write some more. */
-			pend->c->tcp_more_write_again = 1;
+			pend->reuse.cp_more_write_again = 1;
 			pend->query = reuse_write_wait_pop(&pend->reuse);
 			comm_point_stop_listening(pend->c);
 			outnet_tcp_take_query_setup(pend->c->fd, pend,
@@ -1016,8 +1020,8 @@ outnet_tcp_cb(struct comm_point* c, void* arg, int error,
 		} else {
 			verbose(VERB_ALGO, "outnet tcp writes done, wait");
 			pend->c->tcp_write_and_read = 0;
-			pend->c->tcp_more_read_again = 0;
-			pend->c->tcp_more_write_again = 0;
+			pend->reuse.cp_more_read_again = 0;
+			pend->reuse.cp_more_write_again = 0;
 			pend->c->tcp_is_reading = 1;
 			comm_point_stop_listening(pend->c);
 			reuse_tcp_setup_timeout(pend);
@@ -1072,7 +1076,7 @@ outnet_tcp_cb(struct comm_point* c, void* arg, int error,
 		 * because this callback called after a successful read
 		 * and there could be more bytes to read on the input */
 		if(pend->reuse.tree_by_id.count != 0)
-			pend->c->tcp_more_read_again = 1;
+			pend->reuse.cp_more_read_again = 1;
 		reuse_tcp_setup_read_and_timeout(pend);
 		return 0;
 	}

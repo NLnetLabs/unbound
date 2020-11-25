@@ -7,6 +7,8 @@
 	- Fix memory leak for edns client tag opcode config element.
 	- Attempt fix for libevent state in tcp reuse cases after a packet
 	  is written.
+	- Fix readagain and writeagain callback functions for comm point
+	  cleanup.
 
 24 November 2020: Wouter
 	- Merge PR #283 : Stream reuse.  This implements upstream stream

@@ -299,13 +299,23 @@ struct comm_point {
 
 	/** if set try to read another packet again (over connection with
 	 * multiple packets), once set, tries once, then zero again,
-	 * so set it in the packet complete section. */
-	int tcp_more_read_again;
+	 * so set it in the packet complete section.
+	 * The pointer itself has to be set before the callback is invoked,
+	 * when you set things up, and continue to exist also after the
+	 * commpoint is closed and deleted in your callback.  So that after
+	 * the callback cleans up netevent can see what it has to do.
+	 * Or leave NULL if it is not used at all. */
+	int* tcp_more_read_again;
 
 	/** if set try to write another packet (over connection with
 	 * multiple packets), once set, tries once, then zero again,
-	 * so set it in the packet complete section. */
-	int tcp_more_write_again;
+	 * so set it in the packet complete section.
+	 * The pointer itself has to be set before the callback is invoked,
+	 * when you set things up, and continue to exist also after the
+	 * commpoint is closed and deleted in your callback.  So that after
+	 * the callback cleans up netevent can see what it has to do.
+	 * Or leave NULL if it is not used at all. */
+	int* tcp_more_write_again;
 
 	/** if set, read/write completes:
 		read/write state of tcp is toggled.

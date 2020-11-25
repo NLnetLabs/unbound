@@ -1056,8 +1056,8 @@ reclaim_tcp_handler(struct comm_point* c)
 			comm_point_start_listening(c->tcp_parent, -1, -1);
 		}
 	}
-	c->tcp_more_read_again = 0;
-	c->tcp_more_write_again = 0;
+	c->tcp_more_read_again = NULL;
+	c->tcp_more_write_again = NULL;
 }
 
 /** do the callback when writing is done */
@@ -1937,8 +1937,9 @@ tcp_more_read_again(int fd, struct comm_point* c)
 	 * the connection, the callback signals this, and we try again */
 	/* this continues until the read routines get EAGAIN or so,
 	 * and thus does not call the callback, and the bool is 0 */
-	while(c->tcp_more_read_again) {
-		c->tcp_more_read_again = 0;
+	int* moreread = c->tcp_more_read_again;
+	while(moreread && *moreread) {
+		*moreread = 0;
 		if(!comm_point_tcp_handle_read(fd, c, 0)) {
 			reclaim_tcp_handler(c);
 			if(!c->tcp_do_close) {
@@ -1960,8 +1961,9 @@ tcp_more_write_again(int fd, struct comm_point* c)
 	 * the callback signals it and we try again. */
 	/* this continues until the write routines get EAGAIN or so,
 	 * and thus does not call the callback, and the bool is 0 */
-	while(c->tcp_more_write_again) {
-		c->tcp_more_write_again = 0;
+	int* morewrite = c->tcp_more_write_again;
+	while(morewrite && *morewrite) {
+		*morewrite = 0;
 		if(!comm_point_tcp_handle_write(fd, c)) {
 			reclaim_tcp_handler(c);
 			if(!c->tcp_do_close) {
@@ -2015,6 +2017,7 @@ comm_point_tcp_handle_callback(int fd, short event, void* arg)
 	}
 	if(event&UB_EV_READ) {
 		int has_tcpq = (c->tcp_req_info != NULL);
+		int* moreread = c->tcp_more_read_again;
 		if(!comm_point_tcp_handle_read(fd, c, 0)) {
 			reclaim_tcp_handler(c);
 			if(!c->tcp_do_close) {
@@ -2026,12 +2029,13 @@ comm_point_tcp_handle_callback(int fd, short event, void* arg)
 		}
 		if(has_tcpq && c->tcp_req_info && c->tcp_req_info->read_again)
 			tcp_req_info_read_again(fd, c);
-		if(c->tcp_more_read_again)
+		if(moreread && *moreread)
 			tcp_more_read_again(fd, c);
 		return;
 	}
 	if(event&UB_EV_WRITE) {
 		int has_tcpq = (c->tcp_req_info != NULL);
+		int* morewrite = c->tcp_more_write_again;
 		if(!comm_point_tcp_handle_write(fd, c)) {
 			reclaim_tcp_handler(c);
 			if(!c->tcp_do_close) {
@@ -2043,7 +2047,7 @@ comm_point_tcp_handle_callback(int fd, short event, void* arg)
 		}
 		if(has_tcpq && c->tcp_req_info && c->tcp_req_info->read_again)
 			tcp_req_info_read_again(fd, c);
-		if(c->tcp_more_write_again)
+		if(morewrite && *morewrite)
 			tcp_more_write_again(fd, c);
 		return;
 	}

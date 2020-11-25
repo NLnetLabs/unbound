@@ -266,6 +266,18 @@ struct reuse_tcp {
 	 * or not is also part of the key to the rbtree.
 	 * There is a timeout and read event on the fd, to close it. */
 	struct pending_tcp* pending;
+	/**
+	 * The more read again value pointed to by the commpoint
+	 * tcp_more_read_again pointer, so that it exists after commpoint
+	 * delete
+	 */
+	int cp_more_read_again;
+	/**
+	 * The more write again value pointed to by the commpoint
+	 * tcp_more_write_again pointer, so that it exists after commpoint
+	 * delete
+	 */
+	int cp_more_write_again;
 	/** rbtree with other queries waiting on the connection, by ID number,
 	 * of type struct waiting_tcp. It is for looking up received
 	 * answers to the structure for callback.  And also to see if ID
