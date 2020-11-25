@@ -9,6 +9,7 @@
 	  is written.
 	- Fix readagain and writeagain callback functions for comm point
 	  cleanup.
+	- tag for the 1.13.0rc2 release.
 
 24 November 2020: Wouter
 	- Merge PR #283 : Stream reuse.  This implements upstream stream
