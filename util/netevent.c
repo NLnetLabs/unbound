@@ -697,7 +697,8 @@ comm_point_udp_callback(int fd, short event, void* arg)
 			(struct sockaddr*)&rep.addr, &rep.addrlen);
 		if(rcv == -1) {
 #ifndef USE_WINSOCK
-			if(errno != EAGAIN && errno != EINTR)
+			if(errno != EAGAIN && errno != EINTR
+				&& errno != ECONNREFUSED)
 				log_err("recvfrom %d failed: %s", 
 					fd, strerror(errno));
 #else

@@ -1,3 +1,6 @@
+25 November 2020: Wouter
+	- with udp-connect ignore connection refused with UDP timeouts.
+
 24 November 2020: Wouter
 	- Merge PR #283 : Stream reuse.  This implements upstream stream
 	  reuse for performing several queries over the same TCP or TLS
