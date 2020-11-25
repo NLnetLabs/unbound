@@ -255,9 +255,9 @@ get_builtin_ds(void)
 
 /** print hex data */
 static void
-print_data(const char* msg, const char* data, int len)
+print_data(const char* msg, const char* data, size_t len)
 {
-	int i;
+	size_t i;
 	printf("%s: ", msg);
 	for(i=0; i<len; i++) {
 		printf(" %2.2x", (unsigned char)data[i]);
@@ -1113,7 +1113,7 @@ read_http_result(SSL* ssl)
 		data = read_data_chunk(ssl, len);
 	}
 	if(!data) return NULL;
-	if(verb >= 4) print_data("read data", data, (int)len);
+	if(verb >= 4) print_data("read data", data, len);
 	m = BIO_new(BIO_s_mem());
 	if(!m) {
 		if(verb) printf("out of memory\n");
