@@ -622,13 +622,23 @@ rpz_insert_local_zones_trigger(struct local_zones* lz, uint8_t* dname,
 	lock_rw_unlock(&lz->lock);
 }
 
-/** Insert RR into RPZ's local-zone */
+static void
+rpz_log_dname(char const* msg, uint8_t* dname, size_t dname_len)
+{
+	char buf[LDNS_MAX_DOMAINLEN+1];
+	(void)dname_len;
+	dname_str(dname, buf);
+	verbose(VERB_ALGO, "rpz: %s: <%s>", msg, buf);
+}
+
 static void
 rpz_insert_qname_trigger(struct rpz* r, uint8_t* dname, size_t dnamelen,
 	enum rpz_action a, uint16_t rrtype, uint16_t rrclass, uint32_t ttl,
 	uint8_t* rdata, size_t rdata_len, uint8_t* rr, size_t rr_len)
 {
 	verbose(VERB_ALGO, "rpz: insert qname trigger: %s", rpz_action_to_string(a));
+
+	rpz_log_dname("insert qname trigger", dname, dnamelen);
 
 	if(a == RPZ_INVALID_ACTION) {
 		verbose(VERB_ALGO, "rpz: skipping invalid action");
@@ -641,11 +651,23 @@ rpz_insert_qname_trigger(struct rpz* r, uint8_t* dname, size_t dnamelen,
 }
 
 static void
+rpz_strip_nsdname_suffix(uint8_t* dname, size_t maxdnamelen)
+{
+	uint8_t* stripped = get_tld_label(dname, maxdnamelen);
+	if(stripped == NULL) { return; }
+	*stripped = 0;
+}
+
+static void
 rpz_insert_nsdname_trigger(struct rpz* r, uint8_t* dname, size_t dnamelen,
 	enum rpz_action a, uint16_t rrtype, uint16_t rrclass, uint32_t ttl,
 	uint8_t* rdata, size_t rdata_len, uint8_t* rr, size_t rr_len)
 {
 	verbose(VERB_ALGO, "rpz: insert nsdname trigger: %s", rpz_action_to_string(a));
+
+	rpz_log_dname("insert nsdname trigger", dname, dnamelen);
+	rpz_strip_nsdname_suffix(dname, dnamelen);
+	rpz_log_dname("insert nsdname trigger (stripped)", dname, dnamelen);
 
 	if(a == RPZ_INVALID_ACTION) {
 		verbose(VERB_ALGO, "rpz: skipping invalid action");
@@ -1653,12 +1675,14 @@ rpz_delegation_point_zone_lookup(struct delegpt* dp, struct local_zones* zones, 
 	struct delegpt_ns* nameserver;
 	struct local_zone* z = NULL;
 
+	rpz_log_dname("delegation point", dp->name, dp->namelen);
 	z = rpz_find_zone(zones, dp->name, dp->namelen, qclass, 0, 0, 0);
 
 	if(z == NULL) {
 		for(nameserver = dp->nslist;
 		    nameserver != NULL;
 		    nameserver = nameserver->next) {
+			rpz_log_dname("delegation point", nameserver->name, nameserver->namelen);
 			z = rpz_find_zone(zones, nameserver->name, nameserver->namelen,
 					  qclass, 0, 0, 0);
 			if(z != NULL) { break; }
