@@ -579,6 +579,32 @@ comm_point_send_udp_msg_if(struct comm_point *c, sldns_buffer* packet,
 #endif /* AF_INET6 && IPV6_PKTINFO && HAVE_SENDMSG */
 }
 
+/** return true is UDP receive error needs to be logged */
+static int udp_recv_needs_log(int err)
+{
+	switch(err) {
+	case ECONNREFUSED:
+#  ifdef ENETUNREACH
+	case ENETUNREACH:
+#  endif
+#  ifdef EHOSTDOWN
+	case EHOSTDOWN:
+#  endif
+#  ifdef EHOSTUNREACH
+	case EHOSTUNREACH:
+#  endif
+#  ifdef ENETDOWN
+	case ENETDOWN:
+#  endif
+		if(verbosity >= VERB_ALGO)
+			return 1;
+		return 0;
+	default:
+		break;
+	}
+	return 1;
+}
+
 void 
 comm_point_udp_ancil_callback(int fd, short event, void* arg)
 {
@@ -621,7 +647,8 @@ comm_point_udp_ancil_callback(int fd, short event, void* arg)
 		msg.msg_flags = 0;
 		rcv = recvmsg(fd, &msg, 0);
 		if(rcv == -1) {
-			if(errno != EAGAIN && errno != EINTR) {
+			if(errno != EAGAIN && errno != EINTR
+				&& udp_recv_needs_log(errno)) {
 				log_err("recvmsg failed: %s", strerror(errno));
 			}
 			return;
@@ -703,7 +730,7 @@ comm_point_udp_callback(int fd, short event, void* arg)
 		if(rcv == -1) {
 #ifndef USE_WINSOCK
 			if(errno != EAGAIN && errno != EINTR
-				&& errno != ECONNREFUSED)
+				&& udp_recv_needs_log(errno))
 				log_err("recvfrom %d failed: %s", 
 					fd, strerror(errno));
 #else

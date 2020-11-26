@@ -1,3 +1,7 @@
+26 November 2020: Wouter
+	- Fix to omit UDP receive errors from log, if verbosity low.
+	  These happen because of udp-connect.
+
 25 November 2020: Wouter
 	- with udp-connect ignore connection refused with UDP timeouts.
 	- Fix udp-connect on FreeBSD, do send calls on connected UDP socket.
