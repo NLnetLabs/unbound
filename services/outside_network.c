@@ -909,6 +909,8 @@ decommission_pending_tcp(struct outside_network* outnet,
 #endif
 	}
 	comm_point_close(pend->c);
+	pend->reuse.cp_more_read_again = 0;
+	pend->reuse.cp_more_write_again = 0;
 	/* unlink the query and writewait list, it is part of the tree
 	 * nodes and is deleted */
 	pend->query = NULL;

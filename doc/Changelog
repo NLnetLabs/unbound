@@ -3,6 +3,7 @@
 	  These happen because of udp-connect.
 	- For #352: contrib/metrics.awk for Prometheus style metrics output.
 	- Fix that after failed read, the readagain cannot activate.
+	- Clear readagain upon decommission of pending tcp structure.
 
 25 November 2020: Wouter
 	- with udp-connect ignore connection refused with UDP timeouts.
