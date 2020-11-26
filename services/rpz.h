@@ -115,6 +115,7 @@ struct rpz {
 	struct respip_set* respip_set;
 	struct clientip_synthesized_rrset* client_set;
 	struct clientip_synthesized_rrset* ns_set;
+	struct local_zones* nsdname_zones;
 	uint8_t* taglist;
 	size_t taglistlen;
 	enum rpz_action action_override;
@@ -173,13 +174,13 @@ void rpz_remove_rr(struct rpz* r, size_t aznamelen, uint8_t* dname,
  * @param stats: worker stats struct
  * @return: 1 if client answer is ready, 0 to continue resolving
  */
-int rpz_apply_qname_trigger(struct auth_zones* az, struct module_env* env,
+int rpz_callback_from_worker_request(struct auth_zones* az, struct module_env* env,
 	struct query_info* qinfo, struct edns_data* edns, sldns_buffer* buf,
 	struct regional* temp, struct comm_reply* repinfo,
 	uint8_t* taglist, size_t taglen, struct ub_server_stats* stats);
 
 struct iter_qstate;
-struct dns_msg* rpz_iterator_module_callback(struct module_qstate*, struct iter_qstate*);
+struct dns_msg* rpz_callback_from_iterator_module(struct module_qstate*, struct iter_qstate*);
 
 /**
  * Delete RPZ

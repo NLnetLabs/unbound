@@ -2472,7 +2472,7 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 	delegpt_add_unused_targets(iq->dp);
 
 	{ /* apply rpz triggers at query time */
-		struct dns_msg* forged_response = rpz_iterator_module_callback(qstate, iq);
+		struct dns_msg* forged_response = rpz_callback_from_iterator_module(qstate, iq);
 		if(forged_response != NULL) {
 			qstate->ext_state[id] = module_finished;
 			qstate->return_rcode = FLAGS_GET_RCODE(forged_response->rep->flags);
