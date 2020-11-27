@@ -1219,7 +1219,7 @@ mesh_send_reply(struct mesh_state* m, int rcode, struct reply_info* rep,
 	 * reply_list modification and accounting */
 	struct mesh_reply* rlist = m->reply_list;
 
-	/* RPZ: apply actions */
+	/* rpz: apply actions */
 	rcode = mesh_is_udp(r) && mesh_is_rpz_respip_tcponly_action(m)
 			? (rcode|BIT_TC) : rcode;
 
