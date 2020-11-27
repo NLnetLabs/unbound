@@ -21,7 +21,7 @@ gotham.bb.rpz-nsdname CNAME *.
 gotham.cc.rpz-nsdname CNAME rpz-drop.
 gotham.com.rpz-nsdname CNAME rpz-passthru.
 gotham.dd.rpz-nsdname CNAME rpz-tcp-only.
-gotham.ee.rpz-nsdname A 127.0.0.1
+gotham.ff.rpz-nsdname A 127.0.0.1
 gotham.ff.rpz-nsdname TXT "42"
 TEMPFILE_END
 

@@ -57,6 +57,11 @@
 
 typedef struct resp_addr rpz_aclnode_type;
 
+struct matched_delegation_point {
+	uint8_t* dname;
+	size_t dname_len;
+};
+
 /** string for RPZ action enum */
 const char*
 rpz_action_to_string(enum rpz_action a)
@@ -1468,7 +1473,7 @@ rpz_apply_clientip_localdata_action(struct clientip_synthesized_rr* raddr,
 
 	rp = respip_copy_rrset(rrset->rrset, temp);
 	if(!rp) {
-		verbose(VERB_ALGO, "rpz: local-data action: out of memory");
+		verbose(VERB_ALGO, "rpz: local data action: out of memory");
 		return;
 	}
 
@@ -1588,13 +1593,14 @@ rpz_synthesize_nsip_localdata(struct rpz* r, struct module_qstate* ms,
 	return rpz_synthesize_localdata_from_rrset(r, ms, rrset);
 }
 
-// copy'n'pase from localzone.c
+// copy'n'paste from localzone.c
 static struct local_rrset*
 local_data_find_type(struct local_data* data, uint16_t type, int alias_ok)
 {
 	struct local_rrset* p;
 	type = htons(type);
 	for(p = data->rrsets; p; p = p->next) {
+		verbose(VERB_ALGO, "type=%d (%d)", type, p->rrset->rk.type);
 		if(p->rrset->rk.type == type)
 			return p;
 		if(alias_ok && p->rrset->rk.type == htons(LDNS_RR_TYPE_CNAME))
@@ -1603,20 +1609,31 @@ local_data_find_type(struct local_data* data, uint16_t type, int alias_ok)
 	return NULL;
 }
 
+// based on localzone.c:local_data_answer()
 static inline struct dns_msg*
-rpz_synthesize_nsdname_localdata(struct rpz* r, struct module_qstate* ms, struct local_zone* z) {
-	struct query_info* qi = &ms->qinfo;
+rpz_synthesize_nsdname_localdata(struct rpz* r, struct module_qstate* ms,
+	struct local_zone* z, struct matched_delegation_point const* match)
+{
 	struct local_data key;
 	struct local_data* ld;
 	struct local_rrset* rrset;
 
+	if(match->dname == NULL) { return NULL; }
+
+	key.node.key = &key;
+	key.name = match->dname;
+	key.namelen = match->dname_len;
+	key.namelabs = dname_count_labels(match->dname);
+
+	rpz_log_dname("nsdname local data", key.name, key.namelen);
+
 	ld = (struct local_data*)rbtree_search(&z->data, &key.node);
 	if(ld == NULL) {
-		verbose(VERB_ALGO, "rpz: impossible: dname not found");
+		verbose(VERB_ALGO, "rpz: nsdname: impossible: qname not found");
 		return NULL;
 	}
 
-	rrset = local_data_find_type(ld, qi->qtype, 1);
+	rrset = local_data_find_type(ld, ms->qinfo.qtype, 1);
 	if(rrset == NULL) {
 		verbose(VERB_ALGO, "rpz: nsdname: no matching local data found");
 		return NULL;
@@ -1750,7 +1767,8 @@ done:
 }
 
 struct dns_msg*
-rpz_apply_nsdname_trigger(struct module_qstate* ms, struct rpz* r, struct local_zone* z)
+rpz_apply_nsdname_trigger(struct module_qstate* ms, struct rpz* r,
+	struct local_zone* z, struct matched_delegation_point const* match)
 {
 	struct dns_msg* ret = NULL;
 	enum rpz_action action = localzone_type_to_rpz_action(z->type);
@@ -1781,7 +1799,7 @@ rpz_apply_nsdname_trigger(struct module_qstate* ms, struct rpz* r, struct local_
 		ms->is_drop = 1;
 		break;
 	case RPZ_LOCAL_DATA_ACTION:
-		ret = rpz_synthesize_nsdname_localdata(r, ms, z);
+		ret = rpz_synthesize_nsdname_localdata(r, ms, z, match);
 		if(ret == NULL) { ret = rpz_synthesize_nodata(r, ms); }
 		break;
 	case RPZ_PASSTHRU_ACTION:
@@ -1797,7 +1815,10 @@ rpz_apply_nsdname_trigger(struct module_qstate* ms, struct rpz* r, struct local_
 }
 
 static struct local_zone*
-rpz_delegation_point_zone_lookup(struct delegpt* dp, struct local_zones* zones, uint16_t qclass)
+rpz_delegation_point_zone_lookup(struct delegpt* dp, struct local_zones* zones,
+	uint16_t qclass,
+	/* output parameter */
+	struct matched_delegation_point* match)
 {
 	struct delegpt_ns* nameserver;
 	struct local_zone* z = NULL;
@@ -1805,15 +1826,21 @@ rpz_delegation_point_zone_lookup(struct delegpt* dp, struct local_zones* zones, 
 	rpz_log_dname("delegation point", dp->name, dp->namelen);
 	// XXX: do we want this?
 	z = rpz_find_zone(zones, dp->name, dp->namelen, qclass, 0, 0, 0);
-
-	if(z == NULL) {
+	if(z != NULL) {
+		match->dname = dp->name;
+		match->dname_len = dp->namelen;
+	} else if(z == NULL) {
 		for(nameserver = dp->nslist;
 		    nameserver != NULL;
 		    nameserver = nameserver->next) {
 			rpz_log_dname("delegation point", nameserver->name, nameserver->namelen);
 			z = rpz_find_zone(zones, nameserver->name, nameserver->namelen,
 					  qclass, 0, 0, 0);
-			if(z != NULL) { break; }
+			if(z != NULL) {
+				match->dname = nameserver->name;
+				match->dname_len = nameserver->namelen;
+				break;
+			}
 		}
 	}
 
@@ -1830,6 +1857,7 @@ rpz_callback_from_iterator_module(struct module_qstate* ms, struct iter_qstate* 
 	struct clientip_synthesized_rr* raddr = NULL;
 	struct rpz* r;
 	struct local_zone* z = NULL;
+	struct matched_delegation_point match = {0};
 
 	if(ms->env == NULL || ms->env->auth_zones == NULL) { return 0; }
 
@@ -1852,7 +1880,7 @@ rpz_callback_from_iterator_module(struct module_qstate* ms, struct iter_qstate* 
 		}
 
 		z = rpz_delegation_point_zone_lookup(is->dp, r->nsdname_zones,
-						     ms->qinfo.qclass);
+						     ms->qinfo.qclass, &match);
 		if(z != NULL) {
 			lock_rw_unlock(&a->lock);
 			break;
@@ -1864,7 +1892,7 @@ rpz_callback_from_iterator_module(struct module_qstate* ms, struct iter_qstate* 
 
 	if(raddr == NULL && z == NULL) { return NULL; }
 	else if(raddr != NULL) { return rpz_apply_nsip_trigger(ms, r, raddr); }
-	else if(z != NULL) { return rpz_apply_nsdname_trigger(ms, r, z); }
+	else if(z != NULL) { return rpz_apply_nsdname_trigger(ms, r, z, &match); }
 	else { return NULL; }
 }
 
