@@ -7,7 +7,7 @@
 #	remote-control: control-enable: yes
 # Can use it like unbound-control stats | awk -f "metrics.awk"
 
-BEGINFILE {
+BEGIN {
 	FS="=";
 }
 # everything like total.num.queries=value is put in val["total.num.queries"]
@@ -15,10 +15,7 @@ BEGINFILE {
 	val[$1]=$2;
 }
 # print the output metrics
-ENDFILE {
-	# sort array by index
-	asorti(val, sorted); 
-
+END {
 	print "# HELP unbound_hits_queries Unbound DNS traffic and cache hits"
 	print "# TYPE unbound_hits_queries gauge"
 	print "unbound_hits_queries{type=\"total.num.queries\"} " val["total.num.queries"];
@@ -73,8 +70,7 @@ ENDFILE {
 
 	print "# HELP unbound_by_type_queries Unbound DNS queries by type"
 	print "# TYPE unbound_by_type_queries gauge"
-	for(s in sorted) {
-		x = sorted[s];
+	for(x in val) {
 		if(x ~ /^num.query.type./) {
 			if(val[x] != "") {
 				split(x, a, ".");
@@ -86,8 +82,7 @@ ENDFILE {
 
 	print "# HELP unbound_by_class_queries Unbound DNS queries by class"
 	print "# TYPE unbound_by_class_queries gauge"
-	for(s in sorted) {
-		x = sorted[s];
+	for(x in val) {
 		if(x ~ /^num.query.class./) {
 			if(val[x] != "") {
 				split(x, a, ".");
@@ -99,8 +94,7 @@ ENDFILE {
 
 	print "# HELP unbound_by_opcode_queries Unbound DNS queries by opcode"
 	print "# TYPE unbound_by_opcode_queries gauge"
-	for(s in sorted) {
-		x = sorted[s];
+	for(x in val) {
 		if(x ~ /^num.query.opcode./) {
 			if(val[x] != "") {
 				split(x, a, ".");
@@ -112,8 +106,7 @@ ENDFILE {
 
 	print "# HELP unbound_by_rcode_queries Unbound DNS answers by rcode"
 	print "# TYPE unbound_by_rcode_queries gauge"
-	for(s in sorted) {
-		x = sorted[s];
+	for(x in val) {
 		if(x ~ /^num.answer.rcode./) {
 			if(val[x] != "") {
 				split(x, a, ".");
@@ -125,8 +118,7 @@ ENDFILE {
 
 	print "# HELP unbound_by_flags_queries Unbound DNS queries by flags"
 	print "# TYPE unbound_by_flags_queries gauge"
-	for(s in sorted) {
-		x = sorted[s];
+	for(x in val) {
 		if(x ~ /^num.query.flags./) {
 			if(val[x] != "") {
 				split(x, a, ".");

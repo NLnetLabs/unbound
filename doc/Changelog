@@ -3,6 +3,7 @@
 	- Fix when use free buffer to initialize rbtree for stream reuse.
 	- Fix compile warnings for windows.
 	- Fix compile warnings in rpz initialization.
+	- Fix contrib/metrics.awk for FreeBSD awk compatibility.
 
 26 November 2020: Wouter
 	- Fix to omit UDP receive errors from log, if verbosity low.
