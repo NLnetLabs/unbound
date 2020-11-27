@@ -335,8 +335,8 @@ log_reuse_tcp(enum verbosity_value v, const char* msg, struct reuse_tcp* reuse)
 	if(verbosity < v) return;
 	addr_to_str(&reuse->addr, reuse->addrlen, addrbuf, sizeof(addrbuf));
 	port = ntohs(((struct sockaddr_in*)&reuse->addr)->sin_port);
-	verbose(v, "%s %s#%u 0x%llx fd %d", msg, addrbuf, (unsigned)port,
-		(unsigned long long)reuse, reuse->pending->c->fd);
+	verbose(v, "%s %s#%u fd %d", msg, addrbuf, (unsigned)port,
+		reuse->pending->c->fd);
 }
 
 /** pop the first element from the writewait list */
@@ -467,7 +467,7 @@ reuse_tcp_find(struct outside_network* outnet, struct sockaddr_storage* addr,
 	key_p.reuse.node.key = &key_p.reuse;
 	if(use_ssl)
 		key_p.reuse.is_ssl = 1;
-	if(addrlen > sizeof(key_p.reuse.addr))
+	if(addrlen > (socklen_t)sizeof(key_p.reuse.addr))
 		return NULL;
 	memmove(&key_p.reuse.addr, addr, addrlen);
 	key_p.reuse.addrlen = addrlen;
