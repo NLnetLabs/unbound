@@ -2208,7 +2208,7 @@ int http2_submit_dns_response(struct http2_session* h2_session)
 	}
 
 	rlen = sldns_buffer_remaining(h2_session->c->buffer);
-	snprintf(rlen_str, sizeof(rlen_str), "%u", rlen);
+	snprintf(rlen_str, sizeof(rlen_str), "%u", (unsigned)rlen);
 
 	lock_basic_lock(&http2_response_buffer_count_lock);
 	if(http2_response_buffer_count + rlen > http2_response_buffer_max) {
