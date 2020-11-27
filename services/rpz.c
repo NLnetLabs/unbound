@@ -1573,7 +1573,7 @@ rpz_synthesize_localdata_from_rrset(struct rpz* ATTR_UNUSED(r), struct module_qs
 }
 
 static inline struct dns_msg*
-rpz_synthesize_localdata(struct rpz* r, struct module_qstate* ms,
+rpz_synthesize_nsip_localdata(struct rpz* r, struct module_qstate* ms,
 	struct clientip_synthesized_rr* data)
 {
 	struct query_info* qi = &ms->qinfo;
@@ -1581,8 +1581,8 @@ rpz_synthesize_localdata(struct rpz* r, struct module_qstate* ms,
 
 	rrset = rpz_find_synthesized_rrset(qi->qtype, data);
 	if(rrset == NULL) {
-		verbose(VERB_ALGO, "rpz: nsip: no matching synthesized data found; resorting to nodata");
-		return rpz_synthesize_nodata(r, ms);
+		verbose(VERB_ALGO, "rpz: nsip: no matching local data found");
+		return NULL;
 	}
 
 	return rpz_synthesize_localdata_from_rrset(r, ms, rrset);
@@ -1618,7 +1618,7 @@ rpz_synthesize_nsdname_localdata(struct rpz* r, struct module_qstate* ms, struct
 
 	rrset = local_data_find_type(ld, qi->qtype, 1);
 	if(rrset == NULL) {
-		verbose(VERB_ALGO, "rpz: no matching localdata found");
+		verbose(VERB_ALGO, "rpz: nsdname: no matching local data found");
 		return NULL;
 	}
 
@@ -1709,7 +1709,7 @@ rpz_apply_nsip_trigger(struct module_qstate* ms, struct rpz* r,
 		rpz_action_to_string(raddr->action));
 
 	if(action == RPZ_LOCAL_DATA_ACTION && raddr->data == NULL) {
-		verbose(VERB_ALGO, "rpz: bug: nsip local-data action but no local data");
+		verbose(VERB_ALGO, "rpz: bug: nsip local data action but no local data");
 		ret = rpz_synthesize_nodata(r, ms);
 		goto done;
 	}
@@ -1732,7 +1732,7 @@ rpz_apply_nsip_trigger(struct module_qstate* ms, struct rpz* r,
 		ms->is_drop = 1;
 		break;
 	case RPZ_LOCAL_DATA_ACTION:
-		ret = rpz_synthesize_localdata(r, ms, raddr);
+		ret = rpz_synthesize_nsip_localdata(r, ms, raddr);
 		if(ret == NULL) { ret = rpz_synthesize_nodata(r, ms); }
 		break;
 	case RPZ_PASSTHRU_ACTION:
