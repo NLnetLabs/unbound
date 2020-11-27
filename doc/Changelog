@@ -1,5 +1,6 @@
 27 November 2020: Wouter
 	- Fix compile warning for type cast in http2_submit_dns_response.
+	- Fix when use free buffer to initialize rbtree for stream reuse.
 
 26 November 2020: Wouter
 	- Fix to omit UDP receive errors from log, if verbosity low.

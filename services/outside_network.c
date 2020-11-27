@@ -742,6 +742,11 @@ use_free_buffer(struct outside_network* outnet)
 					w);
 			}
 		} else {
+			struct pending_tcp* pend = w->outnet->tcp_free;
+			rbtree_init(&pend->reuse.tree_by_id, reuse_id_cmp);
+			pend->reuse.pending = pend;
+			memcpy(&pend->reuse.addr, &w->addr, w->addrlen);
+			pend->reuse.addrlen = w->addrlen;
 			if(!outnet_tcp_take_into_use(w)) {
 				waiting_tcp_callback(w, NULL, NETEVENT_CLOSED,
 					NULL);
