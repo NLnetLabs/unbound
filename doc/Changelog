@@ -1,3 +1,8 @@
+30 November 2020: Wouter
+	- Fix assertion failure on double callback when iterator loses
+	  interest in query at head of line that then has the tcp stream
+	  not kept for reuse.
+
 27 November 2020: Wouter
 	- Fix compile warning for type cast in http2_submit_dns_response.
 	- Fix when use free buffer to initialize rbtree for stream reuse.

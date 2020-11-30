@@ -2321,9 +2321,7 @@ reuse_tcp_remove_serviced_keep(struct waiting_tcp* w,
 	 * the stream itself.  also keep it as an entry in the tree_by_id,
 	 * in case the answer returns (that we no longer want), but we cannot
 	 * pick the same ID number meanwhile */
-	if(pend_tcp->query) {
-		pend_tcp->query->cb = NULL;
-	}
+	w->cb = NULL;
 	/* see if can be entered in reuse tree
 	 * for that the FD has to be non-1 */
 	if(pend_tcp->c->fd == -1) {
