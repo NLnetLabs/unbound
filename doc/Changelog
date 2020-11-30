@@ -2,6 +2,7 @@
 	- Fix assertion failure on double callback when iterator loses
 	  interest in query at head of line that then has the tcp stream
 	  not kept for reuse.
+	- tag for the 1.13.0rc4 release.
 
 27 November 2020: Wouter
 	- Fix compile warning for type cast in http2_submit_dns_response.
@@ -9,6 +10,7 @@
 	- Fix compile warnings for windows.
 	- Fix compile warnings in rpz initialization.
 	- Fix contrib/metrics.awk for FreeBSD awk compatibility.
+	- tag for the 1.13.0rc3 release.
 
 26 November 2020: Wouter
 	- Fix to omit UDP receive errors from log, if verbosity low.
