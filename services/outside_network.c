@@ -1745,6 +1745,33 @@ select_id(struct outside_network* outnet, struct pending* pend,
 	return 1;
 }
 
+/** return true is UDP connect error needs to be logged */
+static int udp_connect_needs_log(int err)
+{
+	switch(err) {
+	case ECONNREFUSED:
+#  ifdef ENETUNREACH
+	case ENETUNREACH:
+#  endif
+#  ifdef EHOSTDOWN
+	case EHOSTDOWN:
+#  endif
+#  ifdef EHOSTUNREACH
+	case EHOSTUNREACH:
+#  endif
+#  ifdef ENETDOWN
+	case ENETDOWN:
+#  endif
+		if(verbosity >= VERB_ALGO)
+			return 1;
+		return 0;
+	default:
+		break;
+	}
+	return 1;
+}
+
+
 /** Select random interface and port */
 static int
 select_ifport(struct outside_network* outnet, struct pending* pend,
@@ -1804,9 +1831,11 @@ select_ifport(struct outside_network* outnet, struct pending* pend,
 				/* connect() to the destination */
 				if(connect(fd, (struct sockaddr*)&pend->addr,
 					pend->addrlen) < 0) {
-					log_err_addr("udp connect failed",
-						strerror(errno), &pend->addr,
-						pend->addrlen);
+					if(udp_connect_needs_log(errno)) {
+						log_err_addr("udp connect failed",
+							strerror(errno), &pend->addr,
+							pend->addrlen);
+					}
 					sock_close(fd);
 					return 0;
 				}

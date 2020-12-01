@@ -1,3 +1,7 @@
+1 December 2020: Wouter
+	- Fix #358: Squelch udp connect 'no route to host' errors on low
+	  verbosity.
+
 30 November 2020: Wouter
 	- Fix assertion failure on double callback when iterator loses
 	  interest in query at head of line that then has the tcp stream
