@@ -1594,6 +1594,13 @@ comm_point_tcp_handle_read(int fd, struct comm_point* c, int short_ok)
 			if(errno == ECONNRESET && verbosity < 2)
 				return 0; /* silence reset by peer */
 #endif
+#ifdef ENOTCONN
+			if(errno == ENOTCONN) {
+				log_err_addr("read (in tcp s) failed and this could be because TCP Fast Open is enabled [--disable-tfo-client --disable-tfo-server] but does not work", sock_strerror(errno),
+					&c->repinfo.addr, c->repinfo.addrlen);
+				return 0;
+			}
+#endif
 #else /* USE_WINSOCK */
 			if(WSAGetLastError() == WSAECONNRESET)
 				return 0;
