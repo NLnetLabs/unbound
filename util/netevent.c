@@ -762,6 +762,13 @@ comm_point_udp_callback(int fd, short event, void* arg)
 	}
 }
 
+int adjusted_tcp_timeout(struct comm_point* c)
+{
+	if(c->tcp_timeout_msec < TCP_QUERY_TIMEOUT_MINIMUM)
+		return TCP_QUERY_TIMEOUT_MINIMUM;
+	return c->tcp_timeout_msec;
+}
+
 /** Use a new tcp handler for new query fd, set to read query */
 static void
 setup_tcp_handler(struct comm_point* c, int fd, int cur, int max) 
@@ -795,10 +802,7 @@ setup_tcp_handler(struct comm_point* c, int fd, int cur, int max)
 		c->tcp_timeout_msec /= 500;
 	else if (handler_usage > 80)
 		c->tcp_timeout_msec = 0;
-	comm_point_start_listening(c, fd,
-		c->tcp_timeout_msec < TCP_QUERY_TIMEOUT_MINIMUM
-			? TCP_QUERY_TIMEOUT_MINIMUM
-			: c->tcp_timeout_msec);
+	comm_point_start_listening(c, fd, adjusted_tcp_timeout(c));
 }
 
 void comm_base_handle_slow_accept(int ATTR_UNUSED(fd),
@@ -1108,10 +1112,11 @@ tcp_callback_writer(struct comm_point* c)
 			if( (*c->callback)(c, c->cb_arg, NETEVENT_PKT_WRITTEN,
 				&c->repinfo) ) {
 				comm_point_start_listening(c, -1,
-					c->tcp_timeout_msec);
+					adjusted_tcp_timeout(c));
 			}
 		} else {
-			comm_point_start_listening(c, -1, c->tcp_timeout_msec);
+			comm_point_start_listening(c, -1,
+					adjusted_tcp_timeout(c));
 		}
 	}
 }
@@ -1132,7 +1137,8 @@ tcp_callback_reader(struct comm_point* c)
 			comm_point_stop_listening(c);
 		fptr_ok(fptr_whitelist_comm_point(c->callback));
 		if( (*c->callback)(c, c->cb_arg, NETEVENT_NOERROR, &c->repinfo) ) {
-			comm_point_start_listening(c, -1, c->tcp_timeout_msec);
+			comm_point_start_listening(c, -1,
+					adjusted_tcp_timeout(c));
 		}
 	}
 }
@@ -1593,6 +1599,13 @@ comm_point_tcp_handle_read(int fd, struct comm_point* c, int short_ok)
 #ifdef ECONNRESET
 			if(errno == ECONNRESET && verbosity < 2)
 				return 0; /* silence reset by peer */
+#endif
+#ifdef ENOTCONN
+			if(errno == ENOTCONN) {
+				log_err_addr("read (in tcp s) failed and this could be because TCP Fast Open is enabled [--disable-tfo-client --disable-tfo-server] but does not work", sock_strerror(errno),
+					&c->repinfo.addr, c->repinfo.addrlen);
+				return 0;
+			}
 #endif
 #else /* USE_WINSOCK */
 			if(WSAGetLastError() == WSAECONNRESET)
@@ -2649,7 +2662,7 @@ comm_point_http2_handle_read(int ATTR_UNUSED(fd), struct comm_point* c)
 	if(nghttp2_session_want_write(c->h2_session->session)) {
 		c->tcp_is_reading = 0;
 		comm_point_stop_listening(c);
-		comm_point_start_listening(c, -1, c->tcp_timeout_msec);
+		comm_point_start_listening(c, -1, adjusted_tcp_timeout(c));
 	} else if(!nghttp2_session_want_read(c->h2_session->session))
 		return 0; /* connection can be closed */
 	return 1;
@@ -2967,7 +2980,7 @@ comm_point_http2_handle_write(int ATTR_UNUSED(fd), struct comm_point* c)
 	if(nghttp2_session_want_read(c->h2_session->session)) {
 		c->tcp_is_reading = 1;
 		comm_point_stop_listening(c);
-		comm_point_start_listening(c, -1, c->tcp_timeout_msec);
+		comm_point_start_listening(c, -1, adjusted_tcp_timeout(c));
 	} else if(!nghttp2_session_want_write(c->h2_session->session))
 		return 0; /* connection can be closed */
 	return 1;
@@ -3925,11 +3938,11 @@ comm_point_send_reply(struct comm_reply *repinfo)
 			repinfo->c->tcp_is_reading = 0;
 			comm_point_stop_listening(repinfo->c);
 			comm_point_start_listening(repinfo->c, -1,
-				repinfo->c->tcp_timeout_msec);
+				adjusted_tcp_timeout(repinfo->c));
 			return;
 		} else {
 			comm_point_start_listening(repinfo->c, -1,
-				repinfo->c->tcp_timeout_msec);
+				adjusted_tcp_timeout(repinfo->c));
 		}
 	}
 }
