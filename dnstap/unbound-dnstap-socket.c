@@ -1166,7 +1166,8 @@ int sig_quit = 0;
 /** signal handler for user quit */
 static RETSIGTYPE main_sigh(int sig)
 {
-	verbose(VERB_ALGO, "exit on signal %d\n", sig);
+	if(!sig_quit)
+		fprintf(stderr, "exit on signal %d\n", sig);
 	if(sig_base) {
 		ub_event_base_loopexit(sig_base);
 		sig_base = NULL;
