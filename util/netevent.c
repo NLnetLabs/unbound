@@ -583,6 +583,7 @@ comm_point_send_udp_msg_if(struct comm_point *c, sldns_buffer* packet,
 static int udp_recv_needs_log(int err)
 {
 	switch(err) {
+#ifndef USE_WINSOCK
 	case ECONNREFUSED:
 #  ifdef ENETUNREACH
 	case ENETUNREACH:
@@ -596,6 +597,13 @@ static int udp_recv_needs_log(int err)
 #  ifdef ENETDOWN
 	case ENETDOWN:
 #  endif
+#else /* USE_WINSOCK */
+	case WSAECONNREFUSED:
+	case WSAENETUNREACH:
+	case WSAEHOSTDOWN:
+	case WSAEHOSTUNREACH:
+	case WSAENETDOWN:
+#endif
 		if(verbosity >= VERB_ALGO)
 			return 1;
 		return 0;
@@ -736,7 +744,8 @@ comm_point_udp_callback(int fd, short event, void* arg)
 #else
 			if(WSAGetLastError() != WSAEINPROGRESS &&
 				WSAGetLastError() != WSAECONNRESET &&
-				WSAGetLastError()!= WSAEWOULDBLOCK)
+				WSAGetLastError()!= WSAEWOULDBLOCK &&
+				udp_recv_needs_log(WSAGetLastError()))
 				log_err("recvfrom failed: %s",
 					wsa_strerror(WSAGetLastError()));
 #endif
