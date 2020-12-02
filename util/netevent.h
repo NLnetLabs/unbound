@@ -662,6 +662,16 @@ void comm_point_start_listening(struct comm_point* c, int newfd, int msec);
 void comm_point_listen_for_rw(struct comm_point* c, int rd, int wr);
 
 /**
+ * For TCP handlers that use c->tcp_timeout_msec, this routine adjusts
+ * it with the minimum.  Otherwise, a 0 value advertised without the
+ * minimum applied moves to a 0 in comm_point_start_listening and that
+ * routine treats it as no timeout, listen forever, which is not wanted.
+ * @param c: comm point to use the tcp_timeout_msec of.
+ * @return adjusted tcp_timeout_msec value with the minimum if smaller.
+ */
+int adjusted_tcp_timeout(struct comm_point* c);
+
+/**
  * Get size of memory used by comm point.
  * For TCP handlers this includes subhandlers.
  * For UDP handlers, this does not include the (shared) UDP buffer.

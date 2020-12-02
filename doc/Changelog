@@ -2,6 +2,7 @@
 	- Fix #360: for the additionally reported TCP Fast Open makes TCP
 	  connections fail, in that case we print a hint that this is
 	  happening with the error in the logs.
+	- Fix #356: deadlock when listening tcp.
 
 1 December 2020: Wouter
 	- Fix #358: Squelch udp connect 'no route to host' errors on low
