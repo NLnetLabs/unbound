@@ -2066,7 +2066,7 @@ comm_point_tcp_handle_callback(int fd, short event, void* arg)
 	}
 	if(event&UB_EV_READ
 #ifdef USE_MSG_FASTOPEN
-		&& !c->tcp_do_fastopen
+		&& !(c->tcp_do_fastopen && (event&UB_EV_WRITE))
 #endif
 		) {
 		int has_tcpq = (c->tcp_req_info != NULL);
