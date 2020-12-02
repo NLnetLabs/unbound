@@ -819,6 +819,11 @@ If enabled version.server and version.bind queries are refused.
 Set the version to report. If set to "", the default, then the package
 version is returned.
 .TP
+.B nsid:\fR <string>
+Add the specified nsid to the EDNS section of the answer when queried
+with an NSID EDNS enabled packet.  As a sequence of hex characters or
+with ascii_ prefix and then an ascii string.
+.TP
 .B hide\-trustanchor: \fI<yes or no>
 If enabled trustanchor.unbound queries are refused.
 .TP
