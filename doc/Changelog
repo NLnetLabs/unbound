@@ -1,3 +1,6 @@
+3 December 2020: Wouter
+	- make depend.
+
 2 December 2020: Wouter
 	- Fix #360: for the additionally reported TCP Fast Open makes TCP
 	  connections fail, in that case we print a hint that this is
@@ -18,8 +21,9 @@
 	  interest in query at head of line that then has the tcp stream
 	  not kept for reuse.
 	- tag for the 1.13.0rc4 release.  This also became the 1.13.0
-	  release version with the streamreuse and fastopen fix from
-	  2 dec 2020.  The code repo continues for 1.13.1 in development.
+	  release version on 3 dec 2020 with the streamreuse and fastopen
+	  fix from 2 dec 2020.  The code repo continues for 1.13.1 in
+	  development.
 
 27 November 2020: Wouter
 	- Fix compile warning for type cast in http2_submit_dns_response.
