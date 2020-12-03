@@ -17,7 +17,9 @@
 	- Fix assertion failure on double callback when iterator loses
 	  interest in query at head of line that then has the tcp stream
 	  not kept for reuse.
-	- tag for the 1.13.0rc4 release.
+	- tag for the 1.13.0rc4 release.  This also became the 1.13.0
+	  release version with the streamreuse and fastopen fix from
+	  2 dec 2020.  The code repo continues for 1.13.1 in development.
 
 27 November 2020: Wouter
 	- Fix compile warning for type cast in http2_submit_dns_response.
