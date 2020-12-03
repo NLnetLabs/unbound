@@ -2042,7 +2042,11 @@ comm_point_tcp_handle_callback(int fd, short event, void* arg)
 		}
 		return;
 	}
-	if(event&UB_EV_READ) {
+	if(event&UB_EV_READ
+#ifdef USE_MSG_FASTOPEN
+		&& !(c->tcp_do_fastopen && (event&UB_EV_WRITE))
+#endif
+		) {
 		int has_tcpq = (c->tcp_req_info != NULL);
 		int* moreread = c->tcp_more_read_again;
 		if(!comm_point_tcp_handle_read(fd, c, 0)) {
