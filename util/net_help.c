@@ -1632,7 +1632,9 @@ mk_local_addr(void* addr, u_short port, u_char family)
 		struct in6_addr* v6addr = (struct in6_addr*)addr;
 		struct sockaddr_in6 sin6;
 		memset(&sin6, 0, sizeof(sin6));
-		/* sin6.sin6_len = sizeof(sin6); */
+#ifdef HAVE_STRUCT_SOCKADDR_IN6_SIN6_LEN
+		sin6.sin6_len = sizeof(sin6);
+#endif
 		sin6.sin6_family = AF_INET6;
 		sin6.sin6_addr = *v6addr;
 		sin6.sin6_port = port;
