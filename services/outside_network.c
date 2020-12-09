@@ -2712,6 +2712,11 @@ serviced_tcp_callback(struct comm_point* c, void* arg, int error,
 {
 	struct serviced_query* sq = (struct serviced_query*)arg;
 	struct comm_reply r2;
+#ifdef USE_DNSTAP
+	struct waiting_tcp* w = (struct waiting_tcp*)sq->pending;
+	struct pending_tcp* pend_tcp = (struct pending_tcp*)w->next_waiting;
+	struct port_if* pi = pend_tcp->pi;
+#endif
 	sq->pending = NULL; /* removed after this callback */
 	if(error != NETEVENT_NOERROR)
 		log_addr(VERB_QUERY, "tcp error for address", 
@@ -2726,19 +2731,12 @@ serviced_tcp_callback(struct comm_point* c, void* arg, int error,
 	if(error==NETEVENT_NOERROR && sq->outnet->dtenv &&
 	   (sq->outnet->dtenv->log_resolver_response_messages ||
 	    sq->outnet->dtenv->log_forwarder_response_messages)) {
-		if(addr_is_ip6(&sq->addr, sq->addrlen)) {
-			log_addr(VERB_ALGO, "response from upstream", &sq->addr, sq->addrlen);
-			log_addr(VERB_ALGO, "to local addr", &sq->outnet->ip6_ifs->addr, sq->outnet->ip6_ifs->addrlen);
-			dt_msg_send_outside_response(sq->outnet->dtenv, &sq->addr, &sq->outnet->ip6_ifs->addr,
-			  c->type, sq->zone, sq->zonelen, sq->qbuf, sq->qbuflen,
-			  &sq->last_sent_time, sq->outnet->now_tv, c->buffer);
-		} else {
-			log_addr(VERB_ALGO, "response from upstream", &sq->addr, sq->addrlen);
-			log_addr(VERB_ALGO, "to local addr", &sq->outnet->ip4_ifs->addr, sq->outnet->ip4_ifs->addrlen);
-			dt_msg_send_outside_response(sq->outnet->dtenv, &sq->addr, &sq->outnet->ip4_ifs->addr,
-			  c->type, sq->zone, sq->zonelen, sq->qbuf, sq->qbuflen,
-			  &sq->last_sent_time, sq->outnet->now_tv, c->buffer);
-		}
+		log_addr(VERB_ALGO, "response from upstream", &sq->addr, sq->addrlen);
+		log_addr(VERB_ALGO, "to local addr", &pi->addr, pi->addrlen);
+		dt_msg_send_outside_response(sq->outnet->dtenv, &sq->addr,
+			&pi->addr, c->type, sq->zone, sq->zonelen, sq->qbuf,
+			sq->qbuflen, &sq->last_sent_time, sq->outnet->now_tv,
+			c->buffer);
 	}
 #endif
 	if(error==NETEVENT_NOERROR && sq->status == serviced_query_TCP_EDNS &&
