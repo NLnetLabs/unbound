@@ -717,6 +717,9 @@ use_free_buffer(struct outside_network* outnet)
 	struct waiting_tcp* w;
 	while(outnet->tcp_free && outnet->tcp_wait_first 
 		&& !outnet->want_to_quit) {
+#ifdef USE_DNSTAP
+		struct pending_tcp* pend_tcp = NULL;
+#endif
 		struct reuse_tcp* reuse = NULL;
 		w = outnet->tcp_wait_first;
 		outnet->tcp_wait_first = w->next_waiting;
@@ -728,6 +731,9 @@ use_free_buffer(struct outside_network* outnet)
 		if(reuse) {
 			log_reuse_tcp(VERB_CLIENT, "use free buffer for waiting tcp: "
 				"found reuse", reuse);
+#ifdef USE_DNSTAP
+			pend_tcp = reuse->pending;
+#endif
 			reuse_tcp_lru_touch(outnet, reuse);
 			comm_timer_disable(w->timer);
 			w->next_waiting = (void*)reuse->pending;
@@ -755,7 +761,21 @@ use_free_buffer(struct outside_network* outnet)
 					NULL);
 				waiting_tcp_delete(w);
 			}
+#ifdef USE_DNSTAP
+			pend_tcp = pend;
+#endif
 		}
+#ifdef USE_DNSTAP
+		if(outnet->dtenv && pend_tcp && w->sq &&
+		   (outnet->dtenv->log_resolver_query_messages ||
+		    outnet->dtenv->log_forwarder_query_messages)) {
+			sldns_buffer tmp;
+			sldns_buffer_init_frm_data(&tmp, w->pkt, w->pkt_len);
+			dt_msg_send_outside_query(outnet->dtenv, &w->sq->addr,
+				&pend_tcp->pi->addr, comm_tcp, w->sq->zone,
+				w->sq->zonelen, &tmp);
+		}
+#endif
 	}
 }
 
@@ -2169,6 +2189,9 @@ pending_tcp_query(struct serviced_query* sq, sldns_buffer* packet,
 	w->write_wait_next = NULL;
 	w->write_wait_queued = 0;
 	w->error_count = 0;
+#ifdef USE_DNSTAP
+	w->sq = NULL;
+#endif
 	if(pend) {
 		/* we have a buffer available right now */
 		if(reuse) {
@@ -2203,21 +2226,24 @@ pending_tcp_query(struct serviced_query* sq, sldns_buffer* packet,
 				return NULL;
 			}
 		}
+#ifdef USE_DNSTAP
+		if(sq->outnet->dtenv &&
+		   (sq->outnet->dtenv->log_resolver_query_messages ||
+		    sq->outnet->dtenv->log_forwarder_query_messages))
+			dt_msg_send_outside_query(sq->outnet->dtenv, &sq->addr,
+				&pend->pi->addr, comm_tcp, sq->zone,
+				sq->zonelen, packet);
+#endif
 	} else {
 		/* queue up */
 		/* waiting for a buffer on the outside network buffer wait
 		 * list */
 		verbose(VERB_CLIENT, "pending_tcp_query: queue to wait");
+#ifdef USE_DNSTAP
+		w->sq = sq;
+#endif
 		outnet_add_tcp_waiting(sq->outnet, w);
 	}
-#ifdef USE_DNSTAP
-	if(sq->outnet->dtenv &&
-	   (sq->outnet->dtenv->log_resolver_query_messages ||
-	    sq->outnet->dtenv->log_forwarder_query_messages))
-		dt_msg_send_outside_query(sq->outnet->dtenv, &sq->addr,
-			(pend?&pend->pi->addr:NULL), comm_tcp, sq->zone,
-			sq->zonelen, packet);
-#endif
 	return w;
 }
 

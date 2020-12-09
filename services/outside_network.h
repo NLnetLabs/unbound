@@ -410,6 +410,10 @@ struct waiting_tcp {
 	char* tls_auth_name;
 	/** the packet was involved in an error, to stop looping errors */
 	int error_count;
+#ifdef USE_DNSTAP
+	/** serviced query pointer for dnstap to get logging info, if nonNULL*/
+	struct serviced_query* sq;
+#endif
 };
 
 /**
