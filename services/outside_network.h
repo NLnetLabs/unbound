@@ -344,6 +344,8 @@ struct pending {
 struct pending_tcp {
 	/** next in list of free tcp comm points, or NULL. */
 	struct pending_tcp* next_free;
+	/** port for of the outgoing interface that is used */
+	struct port_if* pi;
 	/** tcp comm point it was sent on (and reply must come back on). */
 	struct comm_point* c;
 	/** the query being serviced, NULL if the pending_tcp is unused. */

@@ -194,15 +194,17 @@ waiting_tcp_delete(struct waiting_tcp* w)
  * Pick random outgoing-interface of that family, and bind it.
  * port set to 0 so OS picks a port number for us.
  * if it is the ANY address, do not bind.
+ * @param pend: pending tcp structure, for storing the local address choice.
  * @param w: tcp structure with destination address.
  * @param s: socket fd.
  * @return false on error, socket closed.
  */
 static int
-pick_outgoing_tcp(struct waiting_tcp* w, int s)
+pick_outgoing_tcp(struct pending_tcp* pend, struct waiting_tcp* w, int s)
 {
 	struct port_if* pi = NULL;
 	int num;
+	pend->pi = NULL;
 #ifdef INET6
 	if(addr_is_ip6(&w->addr, w->addrlen))
 		num = w->outnet->num_ip6;
@@ -222,6 +224,7 @@ pick_outgoing_tcp(struct waiting_tcp* w, int s)
 #endif
 		pi = &w->outnet->ip4_ifs[ub_random_max(w->outnet->rnd, num)];
 	log_assert(pi);
+	pend->pi = pi;
 	if(addr_is_any(&pi->addr, pi->addrlen)) {
 		/* binding to the ANY interface is for listening sockets */
 		return 1;
@@ -560,7 +563,7 @@ outnet_tcp_take_into_use(struct waiting_tcp* w)
 	if(s == -1)
 		return 0;
 
-	if(!pick_outgoing_tcp(w, s))
+	if(!pick_outgoing_tcp(pend, w, s))
 		return 0;
 
 	fd_set_nonblock(s);
@@ -2211,8 +2214,9 @@ pending_tcp_query(struct serviced_query* sq, sldns_buffer* packet,
 	if(sq->outnet->dtenv &&
 	   (sq->outnet->dtenv->log_resolver_query_messages ||
 	    sq->outnet->dtenv->log_forwarder_query_messages))
-		dt_msg_send_outside_query(sq->outnet->dtenv, &sq->addr, NULL,
-			comm_tcp, sq->zone, sq->zonelen, packet);
+		dt_msg_send_outside_query(sq->outnet->dtenv, &sq->addr,
+			&pend->pi->addr, comm_tcp, sq->zone, sq->zonelen,
+			packet);
 #endif
 	return w;
 }
