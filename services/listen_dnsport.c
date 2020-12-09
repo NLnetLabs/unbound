@@ -1215,12 +1215,12 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 		}
 	}
 	if(do_tcp) {
-		ub_sock = malloc(sizeof(struct unbound_socket));
-		if(!ub_sock)
-			return 0;
 		int is_ssl = if_is_ssl(ifname, port, ssl_port,
 			tls_additional_port);
 		enum listen_type port_type;
+		ub_sock = malloc(sizeof(struct unbound_socket));
+		if(!ub_sock)
+			return 0;
 		if(is_ssl)
 			port_type = listen_type_ssl;
 		else if(is_https)

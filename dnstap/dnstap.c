@@ -345,7 +345,7 @@ dt_msg_fill_net(struct dt_msg *dm,
 
 	/*
 	 * This block is to fill second set of fields in DNSTAP-message defined as request_/response_ names.
-	 * Additional responsive structure is: struct sockaddr_storage *rs 
+	 * Additional responsive structure is: struct sockaddr_storage *rs
 	 */
         if (rs->ss_family == AF_INET6) {
                 struct sockaddr_in6 *r = (struct sockaddr_in6 *) rs;

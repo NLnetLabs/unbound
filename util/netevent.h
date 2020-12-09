@@ -554,7 +554,7 @@ struct comm_point* comm_point_create_tcp(struct comm_base* base,
 	struct tcl_list* tcp_conn_limit,
 	size_t bufsize, struct sldns_buffer* spoolbuf,
 	enum listen_type port_type,
-	comm_point_callback_type* callback, void* callback_arg);
+	comm_point_callback_type* callback, void* callback_arg, struct unbound_socket* socket);
 
 /**
  * Create an outgoing TCP commpoint. No file descriptor is opened, left at -1.

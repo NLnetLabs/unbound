@@ -411,13 +411,13 @@ static void p_ancil(const char* str, struct comm_reply* r)
 
 	if(r->srctype == 6) {
 #ifdef IPV6_PKTINFO
- 		char buf[1024];
- 		if(inet_ntop(AF_INET6, &r->pktinfo.v6info.ipi6_addr, 
- 			buf, (socklen_t)sizeof(buf)) == 0) {
- 			(void)strlcpy(buf, "(inet_ntop error)", sizeof(buf));
- 		}
- 		buf[sizeof(buf)-1]=0;
- 		log_info("%s: %s %d", str, buf, r->pktinfo.v6info.ipi6_ifindex);
+		char buf[1024];
+		if(inet_ntop(AF_INET6, &r->pktinfo.v6info.ipi6_addr, 
+			buf, (socklen_t)sizeof(buf)) == 0) {
+			(void)strlcpy(buf, "(inet_ntop error)", sizeof(buf));
+		}
+		buf[sizeof(buf)-1]=0;
+		log_info("%s: %s %d", str, buf, r->pktinfo.v6info.ipi6_ifindex);
 #endif
 	} else if(r->srctype == 4) {
 #ifdef IP_PKTINFO
@@ -3971,7 +3971,7 @@ comm_point_send_reply(struct comm_reply *repinfo)
 				dst_addr = mk_local_addr(&((struct sockaddr_in6*)repinfo->c->socket->addr->ai_addr)->sin6_addr, ((struct sockaddr_in*)repinfo->c->socket->addr->ai_addr)->sin_port, repinfo->addr.ss_family);
 			log_addr(VERB_ALGO, "from local addr", dst_addr, sizeof(dst_addr));
 			log_addr(VERB_ALGO, "response to client", &repinfo->addr, repinfo->addrlen);
-			dt_msg_send_client_response(repinfo->c->tcp_parent->dtenv, &repinfo->addr, dst_addr, repinfo->c->type, 
+			dt_msg_send_client_response(repinfo->c->tcp_parent->dtenv, &repinfo->addr, dst_addr, repinfo->c->type,
 				( repinfo->c->tcp_req_info? repinfo->c->tcp_req_info->spool_buffer: repinfo->c->buffer ));
 			if(dst_addr)
 				free(dst_addr);

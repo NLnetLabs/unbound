@@ -1923,7 +1923,7 @@ randomize_and_send_udp(struct pending* pend, sldns_buffer* packet, int timeout)
 #ifdef USE_DNSTAP
 	/*
 	 * sending src (local service)/dst (upstream) addresses over DNSTAP
-	 * TODO: right now there are no chances to get the src (local service) addr. So we will pass 0.0.0.0 (::) 
+	 * TODO: right now there are no chances to get the src (local service) addr. So we will pass 0.0.0.0 (::)
 	 * to argument for dt_msg_send_outside_query()/dt_msg_send_outside_response() calls.
 	 * For the both UDP and TCP.
 	 */
@@ -1933,12 +1933,12 @@ randomize_and_send_udp(struct pending* pend, sldns_buffer* packet, int timeout)
 		    if(addr_is_ip6(&sq->addr, sq->addrlen)) {
 			log_addr(VERB_ALGO, "from local addr", &sq->outnet->ip6_ifs->addr, sq->outnet->ip6_ifs->addrlen);
 			log_addr(VERB_ALGO, "request to upstream", &sq->addr, sq->addrlen);
-			dt_msg_send_outside_query(sq->outnet->dtenv, &sq->addr, &sq->outnet->ip6_ifs->addr, 
+			dt_msg_send_outside_query(sq->outnet->dtenv, &sq->addr, &sq->outnet->ip6_ifs->addr,
 				comm_tcp, sq->zone, sq->zonelen, packet);
 		    } else {
 			log_addr(VERB_ALGO, "from local addr", &sq->outnet->ip4_ifs->addr, sq->outnet->ip4_ifs->addrlen);
 			log_addr(VERB_ALGO, "request to upstream", &sq->addr, sq->addrlen);
-			dt_msg_send_outside_query(sq->outnet->dtenv, &sq->addr, &sq->outnet->ip4_ifs->addr, 
+			dt_msg_send_outside_query(sq->outnet->dtenv, &sq->addr, &sq->outnet->ip4_ifs->addr,
 				comm_tcp, sq->zone, sq->zonelen, packet);
 		    }
 	}
@@ -2732,13 +2732,13 @@ serviced_tcp_callback(struct comm_point* c, void* arg, int error,
 		if(addr_is_ip6(&sq->addr, sq->addrlen)) {
 			log_addr(VERB_ALGO, "response from upstream", &sq->addr, sq->addrlen);
 			log_addr(VERB_ALGO, "to local addr", &sq->outnet->ip6_ifs->addr, sq->outnet->ip6_ifs->addrlen);
-			dt_msg_send_outside_response(sq->outnet->dtenv, &sq->addr, &sq->outnet->ip6_ifs->addr, 
+			dt_msg_send_outside_response(sq->outnet->dtenv, &sq->addr, &sq->outnet->ip6_ifs->addr,
 			  c->type, sq->zone, sq->zonelen, sq->qbuf, sq->qbuflen,
 			  &sq->last_sent_time, sq->outnet->now_tv, c->buffer);
 		} else {
 			log_addr(VERB_ALGO, "response from upstream", &sq->addr, sq->addrlen);
 			log_addr(VERB_ALGO, "to local addr", &sq->outnet->ip4_ifs->addr, sq->outnet->ip4_ifs->addrlen);
-			dt_msg_send_outside_response(sq->outnet->dtenv, &sq->addr, &sq->outnet->ip4_ifs->addr, 
+			dt_msg_send_outside_response(sq->outnet->dtenv, &sq->addr, &sq->outnet->ip4_ifs->addr,
 			  c->type, sq->zone, sq->zonelen, sq->qbuf, sq->qbuflen,
 			  &sq->last_sent_time, sq->outnet->now_tv, c->buffer);
 		}

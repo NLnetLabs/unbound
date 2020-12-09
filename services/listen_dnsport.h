@@ -112,7 +112,7 @@ struct unbound_socket {
         int                     s;
 	/** address family (AF_INET/IF_INET6) */
         int                     fam;
-        /** descriptor returned by accept() syscall for further usage. TODO: actually it might be useless here unlike in NSD where we have no comm_points mechanism with callback pointers for every created communication point */   
+        /** descriptor returned by accept() syscall for further usage. TODO: actually it might be useless here unlike in NSD where we have no comm_points mechanism with callback pointers for every created communication point */
         int                     tcp_read_fd;
 };
 
