@@ -1929,18 +1929,11 @@ randomize_and_send_udp(struct pending* pend, sldns_buffer* packet, int timeout)
 	 */
 	if(outnet->dtenv &&
 	   (outnet->dtenv->log_resolver_query_messages ||
-		sq->outnet->dtenv->log_forwarder_query_messages)) {
-		    if(addr_is_ip6(&sq->addr, sq->addrlen)) {
-			log_addr(VERB_ALGO, "from local addr", &sq->outnet->ip6_ifs->addr, sq->outnet->ip6_ifs->addrlen);
-			log_addr(VERB_ALGO, "request to upstream", &sq->addr, sq->addrlen);
-			dt_msg_send_outside_query(sq->outnet->dtenv, &sq->addr, &sq->outnet->ip6_ifs->addr,
-				comm_tcp, sq->zone, sq->zonelen, packet);
-		    } else {
-			log_addr(VERB_ALGO, "from local addr", &sq->outnet->ip4_ifs->addr, sq->outnet->ip4_ifs->addrlen);
-			log_addr(VERB_ALGO, "request to upstream", &sq->addr, sq->addrlen);
-			dt_msg_send_outside_query(sq->outnet->dtenv, &sq->addr, &sq->outnet->ip4_ifs->addr,
-				comm_tcp, sq->zone, sq->zonelen, packet);
-		    }
+		outnet->dtenv->log_forwarder_query_messages)) {
+			log_addr(VERB_ALGO, "from local addr", &pend->pc->pif->addr, pend->pc->pif->addrlen);
+			log_addr(VERB_ALGO, "request to upstream", &pend->addr, pend->addrlen);
+			dt_msg_send_outside_query(outnet->dtenv, &pend->addr, &pend->pc->pif->addr, comm_udp,
+				pend->sq->zone, pend->sq->zonelen, packet);
 	}
 #endif
 	return 1;
@@ -2218,7 +2211,7 @@ pending_tcp_query(struct serviced_query* sq, sldns_buffer* packet,
 	if(sq->outnet->dtenv &&
 	   (sq->outnet->dtenv->log_resolver_query_messages ||
 	    sq->outnet->dtenv->log_forwarder_query_messages))
-		dt_msg_send_outside_query(sq->outnet->dtenv, &sq->addr,
+		dt_msg_send_outside_query(sq->outnet->dtenv, &sq->addr, NULL,
 			comm_tcp, sq->zone, sq->zonelen, packet);
 #endif
 	return w;
