@@ -3948,16 +3948,9 @@ comm_point_send_reply(struct comm_reply *repinfo)
 		 * sending src (client)/dst (local service) addresses over DNSTAP from udp callback
 		 */
 		if(repinfo->c->dtenv != NULL && repinfo->c->dtenv->log_client_response_messages) {
-			struct sockaddr_storage* dst_addr;
-			if(repinfo->addr.ss_family == AF_INET)
-				dst_addr = mk_local_addr(&((struct sockaddr_in*)repinfo->c->socket->addr->ai_addr)->sin_addr, ((struct sockaddr_in*)repinfo->c->socket->addr->ai_addr)->sin_port, repinfo->addr.ss_family);
-			else
-				dst_addr = mk_local_addr(&((struct sockaddr_in6*)repinfo->c->socket->addr->ai_addr)->sin6_addr, ((struct sockaddr_in*)repinfo->c->socket->addr->ai_addr)->sin_port, repinfo->addr.ss_family);
-			log_addr(VERB_ALGO, "from local addr", dst_addr, sizeof(dst_addr));
+			log_addr(VERB_ALGO, "from local addr", (void*)repinfo->c->socket->addr->ai_addr, repinfo->c->socket->addr->ai_addrlen);
 			log_addr(VERB_ALGO, "response to client", &repinfo->addr, repinfo->addrlen);
-			dt_msg_send_client_response(repinfo->c->dtenv, &repinfo->addr, dst_addr, repinfo->c->type, repinfo->c->buffer);
-			if(dst_addr)
-				free(dst_addr);
+			dt_msg_send_client_response(repinfo->c->dtenv, &repinfo->addr, (void*)repinfo->c->socket->addr->ai_addr, repinfo->c->type, repinfo->c->buffer);
 		}
 #endif
 	} else {
@@ -3966,17 +3959,10 @@ comm_point_send_reply(struct comm_reply *repinfo)
 		 * sending src (client)/dst (local service) addresses over DNSTAP from TCP callback
 		 */
 		if(repinfo->c->tcp_parent->dtenv != NULL && repinfo->c->tcp_parent->dtenv->log_client_response_messages) {
-			struct sockaddr_storage* dst_addr;
-			if(repinfo->addr.ss_family == AF_INET)
-				dst_addr = mk_local_addr(&((struct sockaddr_in*)repinfo->c->socket->addr->ai_addr)->sin_addr, ((struct sockaddr_in*)repinfo->c->socket->addr->ai_addr)->sin_port, repinfo->addr.ss_family);
-			else
-				dst_addr = mk_local_addr(&((struct sockaddr_in6*)repinfo->c->socket->addr->ai_addr)->sin6_addr, ((struct sockaddr_in*)repinfo->c->socket->addr->ai_addr)->sin_port, repinfo->addr.ss_family);
-			log_addr(VERB_ALGO, "from local addr", dst_addr, sizeof(dst_addr));
+			log_addr(VERB_ALGO, "from local addr", (void*)repinfo->c->socket->addr->ai_addr, repinfo->c->socket->addr->ai_addrlen);
 			log_addr(VERB_ALGO, "response to client", &repinfo->addr, repinfo->addrlen);
-			dt_msg_send_client_response(repinfo->c->tcp_parent->dtenv, &repinfo->addr, dst_addr, repinfo->c->type,
+			dt_msg_send_client_response(repinfo->c->tcp_parent->dtenv, &repinfo->addr, (void*)repinfo->c->socket->addr->ai_addr, repinfo->c->type,
 				( repinfo->c->tcp_req_info? repinfo->c->tcp_req_info->spool_buffer: repinfo->c->buffer ));
-			if(dst_addr)
-				free(dst_addr);
 		}
 #endif
 		if(repinfo->c->tcp_req_info) {
