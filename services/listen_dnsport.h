@@ -439,7 +439,7 @@ int http2_submit_dns_response(void* v);
 char* set_ip_dscp(int socket, int addrfamily, int ds);
 
 /** for debug and profiling purposes only
- * @param unbound_socket: the structure containing created socket info we want to print or log for
+ * @param ub_sock: the structure containing created socket info we want to print or log for
  */
 void verbose_print_unbound_socket(struct unbound_socket* ub_sock);
 

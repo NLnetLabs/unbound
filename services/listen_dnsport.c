@@ -1016,6 +1016,7 @@ make_sock_port(int stype, const char* ifname, const char* port,
  * @param list: list head. changed.
  * @param s: fd.
  * @param ftype: if fd is UDP.
+ * @param ub_sock: socket with address.
  * @return false on failure. list in unchanged then.
  */
 static int
