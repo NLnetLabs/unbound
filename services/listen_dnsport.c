@@ -139,7 +139,7 @@ verbose_print_unbound_socket(struct unbound_socket* ub_sock)
 	if(verbosity >= VERB_ALGO) {
 		log_info("listing of unbound_socket structure:");
 		verbose_print_addr(ub_sock->addr);
-		log_info("s is: %d, fam is: %s, tcp_read_fd is: %d", ub_sock->s, ub_sock->fam == AF_INET?"AF_INET":"AF_INET6", ub_sock->tcp_read_fd);
+		log_info("s is: %d, fam is: %s", ub_sock->s, ub_sock->fam == AF_INET?"AF_INET":"AF_INET6");
 	}
 }
 
@@ -972,7 +972,6 @@ make_sock(int stype, const char* ifname, const char* port,
 	(*ub_sock)->addr = res;
 	(*ub_sock)->s = s;
 	(*ub_sock)->fam = hints->ai_family;
-	(*ub_sock)->tcp_read_fd = -1;
 
 	return s;
 }
