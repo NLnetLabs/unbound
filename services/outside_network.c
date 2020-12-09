@@ -760,13 +760,16 @@ use_free_buffer(struct outside_network* outnet)
 				waiting_tcp_callback(w, NULL, NETEVENT_CLOSED,
 					NULL);
 				waiting_tcp_delete(w);
+#ifdef USE_DNSTAP
+				w = NULL;
+#endif
 			}
 #ifdef USE_DNSTAP
 			pend_tcp = pend;
 #endif
 		}
 #ifdef USE_DNSTAP
-		if(outnet->dtenv && pend_tcp && w->sq &&
+		if(outnet->dtenv && pend_tcp && w && w->sq &&
 		   (outnet->dtenv->log_resolver_query_messages ||
 		    outnet->dtenv->log_forwarder_query_messages)) {
 			sldns_buffer tmp;
