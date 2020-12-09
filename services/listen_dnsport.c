@@ -1171,7 +1171,7 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 		return 0;
 
 	if(do_auto) {
-		ub_sock = malloc(sizeof(struct unbound_socket));
+		ub_sock = calloc(1, sizeof(struct unbound_socket));
 		if(!ub_sock)
 			return 0;
 		if((s = make_sock_port(SOCK_DGRAM, ifname, port, hints, 1, 
@@ -1194,7 +1194,7 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 			return 0;
 		}
 	} else if(do_udp) {
-		ub_sock = malloc(sizeof(struct unbound_socket));
+		ub_sock = calloc(1, sizeof(struct unbound_socket));
 		if(!ub_sock)
 			return 0;
 		/* regular udp socket */
@@ -1217,7 +1217,7 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 		int is_ssl = if_is_ssl(ifname, port, ssl_port,
 			tls_additional_port);
 		enum listen_type port_type;
-		ub_sock = malloc(sizeof(struct unbound_socket));
+		ub_sock = calloc(1, sizeof(struct unbound_socket));
 		if(!ub_sock)
 			return 0;
 		if(is_ssl)
@@ -1694,7 +1694,7 @@ void listening_ports_free(struct listen_port* list)
 		if(list->fd != -1) {
 			sock_close(list->fd);
 		}
-		free(list->socket->addr);
+		freeaddrinfo(list->socket->addr);
 		free(list->socket);
 		free(list);
 		list = nx;
