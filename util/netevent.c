@@ -3377,7 +3377,8 @@ static struct comm_point*
 comm_point_create_http_handler(struct comm_base *base, 
 	struct comm_point* parent, size_t bufsize, int harden_large_queries,
 	uint32_t http_max_streams, char* http_endpoint,
-	comm_point_callback_type* callback, void* callback_arg)
+	comm_point_callback_type* callback, void* callback_arg,
+	struct unbound_socket* socket)
 {
 	struct comm_point* c = (struct comm_point*)calloc(1,
 		sizeof(struct comm_point));
@@ -3431,6 +3432,7 @@ comm_point_create_http_handler(struct comm_base *base,
 	c->repinfo.c = c;
 	c->callback = callback;
 	c->cb_arg = callback_arg;
+	c->socket = socket;
 
 	c->http_min_version = http_version_2;
 	c->http2_stream_max_qbuffer_size = bufsize;
@@ -3571,7 +3573,7 @@ comm_point_create_tcp(struct comm_base *base, int fd, int num,
 			c->tcp_handlers[i] = comm_point_create_http_handler(
 				base, c, bufsize, harden_large_queries,
 				http_max_streams, http_endpoint,
-				callback, callback_arg);
+				callback, callback_arg, socket);
 		}
 		else {
 			log_err("could not create tcp handler, unknown listen "
