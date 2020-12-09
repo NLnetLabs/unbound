@@ -133,6 +133,16 @@ verbose_print_addr(struct addrinfo *addr)
 	}
 }
 
+void
+verbose_print_unbound_socket(struct unbound_socket* ub_sock)
+{
+	if(verbosity >= VERB_ALGO) {
+		log_info("listing of unbound_socket structure:");
+		verbose_print_addr(ub_sock->addr);
+		log_info("s is: %d, fam is: %s, tcp_read_fd is: %d", ub_sock->s, ub_sock->fam == AF_INET?"AF_INET":"AF_INET6", ub_sock->tcp_read_fd);
+	}
+}
+
 #ifdef HAVE_SYSTEMD
 static int
 systemd_get_activated(int family, int socktype, int listen,
@@ -916,7 +926,7 @@ static int
 make_sock(int stype, const char* ifname, const char* port, 
 	struct addrinfo *hints, int v6only, int* noip6, size_t rcv, size_t snd,
 	int* reuseport, int transparent, int tcp_mss, int nodelay, int freebind,
-	int use_systemd, int dscp)
+	int use_systemd, int dscp, struct unbound_socket** ub_sock)
 {
 	struct addrinfo *res = NULL;
 	int r, s, inuse, noproto;
@@ -958,7 +968,12 @@ make_sock(int stype, const char* ifname, const char* port,
 			*noip6 = 1;
 		}
 	}
-	freeaddrinfo(res);
+
+	(*ub_sock)->addr = res;
+	(*ub_sock)->s = s;
+	(*ub_sock)->fam = hints->ai_family;
+	(*ub_sock)->tcp_read_fd = -1;
+
 	return s;
 }
 
@@ -967,7 +982,7 @@ static int
 make_sock_port(int stype, const char* ifname, const char* port, 
 	struct addrinfo *hints, int v6only, int* noip6, size_t rcv, size_t snd,
 	int* reuseport, int transparent, int tcp_mss, int nodelay, int freebind,
-	int use_systemd, int dscp)
+	int use_systemd, int dscp, struct unbound_socket** ub_sock)
 {
 	char* s = strchr(ifname, '@');
 	if(s) {
@@ -990,11 +1005,11 @@ make_sock_port(int stype, const char* ifname, const char* port,
 		p[strlen(s+1)]=0;
 		return make_sock(stype, newif, p, hints, v6only, noip6, rcv,
 			snd, reuseport, transparent, tcp_mss, nodelay, freebind,
-			use_systemd, dscp);
+			use_systemd, dscp, ub_sock);
 	}
 	return make_sock(stype, ifname, port, hints, v6only, noip6, rcv, snd,
 		reuseport, transparent, tcp_mss, nodelay, freebind, use_systemd,
-		dscp);
+		dscp, ub_sock);
 }
 
 /**
@@ -1005,7 +1020,7 @@ make_sock_port(int stype, const char* ifname, const char* port,
  * @return false on failure. list in unchanged then.
  */
 static int
-port_insert(struct listen_port** list, int s, enum listen_type ftype)
+port_insert(struct listen_port** list, int s, enum listen_type ftype, struct unbound_socket* ub_sock)
 {
 	struct listen_port* item = (struct listen_port*)malloc(
 		sizeof(struct listen_port));
@@ -1014,6 +1029,7 @@ port_insert(struct listen_port** list, int s, enum listen_type ftype)
 	item->next = *list;
 	item->fd = s;
 	item->ftype = ftype;
+	item->socket = ub_sock;
 	*list = item;
 	return 1;
 }
@@ -1043,7 +1059,7 @@ set_recvpktinfo(int s, int family)
 			return 0;
 		}
 #           else
-		log_err("no IPV6_RECVPKTINFO and no IPV6_PKTINFO option, please "
+		log_err("no IPV6_RECVPKTINFO and IPV6_PKTINFO options, please "
 			"disable interface-automatic or do-ip6 in config");
 		return 0;
 #           endif /* defined IPV6_RECVPKTINFO */
@@ -1142,6 +1158,7 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 	int s, noip6=0;
 	int is_https = if_is_https(ifname, port, https_port);
 	int nodelay = is_https && http2_nodelay;
+	struct unbound_socket* ub_sock;
 #ifdef USE_DNSCRYPT
 	int is_dnscrypt = ((strchr(ifname, '@') && 
 			atoi(strchr(ifname, '@')+1) == dnscrypt_port) ||
@@ -1153,10 +1170,14 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 
 	if(!do_udp && !do_tcp)
 		return 0;
+
 	if(do_auto) {
+		ub_sock = malloc(sizeof(struct unbound_socket));
+		if(!ub_sock)
+			return 0;
 		if((s = make_sock_port(SOCK_DGRAM, ifname, port, hints, 1, 
 			&noip6, rcv, snd, reuseport, transparent,
-			tcp_mss, nodelay, freebind, use_systemd, dscp)) == -1) {
+			tcp_mss, nodelay, freebind, use_systemd, dscp, &ub_sock)) == -1) {
 			if(noip6) {
 				log_warn("IPv6 protocol not available");
 				return 1;
@@ -1169,15 +1190,18 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 			return 0;
 		}
 		if(!port_insert(list, s,
-		   is_dnscrypt?listen_type_udpancil_dnscrypt:listen_type_udpancil)) {
+		   is_dnscrypt?listen_type_udpancil_dnscrypt:listen_type_udpancil, ub_sock)) {
 			sock_close(s);
 			return 0;
 		}
 	} else if(do_udp) {
+		ub_sock = malloc(sizeof(struct unbound_socket));
+		if(!ub_sock)
+			return 0;
 		/* regular udp socket */
 		if((s = make_sock_port(SOCK_DGRAM, ifname, port, hints, 1, 
 			&noip6, rcv, snd, reuseport, transparent,
-			tcp_mss, nodelay, freebind, use_systemd, dscp)) == -1) {
+			tcp_mss, nodelay, freebind, use_systemd, dscp, &ub_sock)) == -1) {
 			if(noip6) {
 				log_warn("IPv6 protocol not available");
 				return 1;
@@ -1185,12 +1209,15 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 			return 0;
 		}
 		if(!port_insert(list, s,
-		   is_dnscrypt?listen_type_udp_dnscrypt:listen_type_udp)) {
+		   is_dnscrypt?listen_type_udp_dnscrypt:listen_type_udp, ub_sock)) {
 			sock_close(s);
 			return 0;
 		}
 	}
 	if(do_tcp) {
+		ub_sock = malloc(sizeof(struct unbound_socket));
+		if(!ub_sock)
+			return 0;
 		int is_ssl = if_is_ssl(ifname, port, ssl_port,
 			tls_additional_port);
 		enum listen_type port_type;
@@ -1204,7 +1231,7 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 			port_type = listen_type_tcp;
 		if((s = make_sock_port(SOCK_STREAM, ifname, port, hints, 1, 
 			&noip6, 0, 0, reuseport, transparent, tcp_mss, nodelay,
-			freebind, use_systemd, dscp)) == -1) {
+			freebind, use_systemd, dscp, &ub_sock)) == -1) {
 			if(noip6) {
 				/*log_warn("IPv6 protocol not available");*/
 				return 1;
@@ -1213,7 +1240,7 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 		}
 		if(is_ssl)
 			verbose(VERB_ALGO, "setup TCP for SSL service");
-		if(!port_insert(list, s, port_type)) {
+		if(!port_insert(list, s, port_type, ub_sock)) {
 			sock_close(s);
 			return 0;
 		}
@@ -1280,14 +1307,14 @@ listen_create(struct comm_base* base, struct listen_port* ports,
 		if(ports->ftype == listen_type_udp ||
 		   ports->ftype == listen_type_udp_dnscrypt)
 			cp = comm_point_create_udp(base, ports->fd, 
-				front->udp_buff, cb, cb_arg);
+				front->udp_buff, cb, cb_arg, ports->socket);
 		else if(ports->ftype == listen_type_tcp ||
 				ports->ftype == listen_type_tcp_dnscrypt)
 			cp = comm_point_create_tcp(base, ports->fd, 
 				tcp_accept_count, tcp_idle_timeout,
 				harden_large_queries, 0, NULL,
 				tcp_conn_limit, bufsize, front->udp_buff,
-				ports->ftype, cb, cb_arg);
+				ports->ftype, cb, cb_arg, ports->socket);
 		else if(ports->ftype == listen_type_ssl ||
 			ports->ftype == listen_type_http) {
 			cp = comm_point_create_tcp(base, ports->fd, 
@@ -1295,7 +1322,7 @@ listen_create(struct comm_base* base, struct listen_port* ports,
 				harden_large_queries,
 				http_max_streams, http_endpoint,
 				tcp_conn_limit, bufsize, front->udp_buff,
-				ports->ftype, cb, cb_arg);
+				ports->ftype, cb, cb_arg, ports->socket);
 			if(http_notls && ports->ftype == listen_type_http)
 				cp->ssl = NULL;
 			else
@@ -1322,7 +1349,7 @@ listen_create(struct comm_base* base, struct listen_port* ports,
 		} else if(ports->ftype == listen_type_udpancil ||
 				  ports->ftype == listen_type_udpancil_dnscrypt)
 			cp = comm_point_create_udp_ancil(base, ports->fd, 
-				front->udp_buff, cb, cb_arg);
+				front->udp_buff, cb, cb_arg, ports->socket);
 		if(!cp) {
 			log_err("can't create commpoint");	
 			listen_delete(front);
@@ -1656,6 +1683,7 @@ listening_ports_open(struct config_file* cfg, char** ifs, int num_ifs,
 			}
 		}
 	}
+
 	return list;
 }
 
@@ -1667,6 +1695,8 @@ void listening_ports_free(struct listen_port* list)
 		if(list->fd != -1) {
 			sock_close(list->fd);
 		}
+		free(list->socket->addr);
+		free(list->socket);
 		free(list);
 		list = nx;
 	}

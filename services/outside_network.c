@@ -1440,7 +1440,7 @@ outside_network_create(struct comm_base *base, size_t bufsize,
 			return NULL;
 		}
 		pc->cp = comm_point_create_udp(outnet->base, -1, 
-			outnet->udp_buff, outnet_udp_cb, outnet);
+			outnet->udp_buff, outnet_udp_cb, outnet, NULL);
 		if(!pc->cp) {
 			log_err("malloc failed");
 			free(pc);
@@ -1921,11 +1921,27 @@ randomize_and_send_udp(struct pending* pend, sldns_buffer* packet, int timeout)
 	comm_timer_set(pend->timer, &tv);
 
 #ifdef USE_DNSTAP
+	/*
+	 * sending src (local service)/dst (upstream) addresses over DNSTAP
+	 * TODO: right now there are no chances to get the src (local service) addr. So we will pass 0.0.0.0 (::) 
+	 * to argument for dt_msg_send_outside_query()/dt_msg_send_outside_response() calls.
+	 * For the both UDP and TCP.
+	 */
 	if(outnet->dtenv &&
 	   (outnet->dtenv->log_resolver_query_messages ||
-	    outnet->dtenv->log_forwarder_query_messages))
-		dt_msg_send_outside_query(outnet->dtenv, &pend->addr, comm_udp,
-		pend->sq->zone, pend->sq->zonelen, packet);
+		sq->outnet->dtenv->log_forwarder_query_messages)) {
+		    if(addr_is_ip6(&sq->addr, sq->addrlen)) {
+			log_addr(VERB_ALGO, "from local addr", &sq->outnet->ip6_ifs->addr, sq->outnet->ip6_ifs->addrlen);
+			log_addr(VERB_ALGO, "request to upstream", &sq->addr, sq->addrlen);
+			dt_msg_send_outside_query(sq->outnet->dtenv, &sq->addr, &sq->outnet->ip6_ifs->addr, 
+				comm_tcp, sq->zone, sq->zonelen, packet);
+		    } else {
+			log_addr(VERB_ALGO, "from local addr", &sq->outnet->ip4_ifs->addr, sq->outnet->ip4_ifs->addrlen);
+			log_addr(VERB_ALGO, "request to upstream", &sq->addr, sq->addrlen);
+			dt_msg_send_outside_query(sq->outnet->dtenv, &sq->addr, &sq->outnet->ip4_ifs->addr, 
+				comm_tcp, sq->zone, sq->zonelen, packet);
+		    }
+	}
 #endif
 	return 1;
 }
@@ -2707,12 +2723,26 @@ serviced_tcp_callback(struct comm_point* c, void* arg, int error,
 		infra_update_tcp_works(sq->outnet->infra, &sq->addr,
 			sq->addrlen, sq->zone, sq->zonelen);
 #ifdef USE_DNSTAP
+	/*
+	 * sending src (local service)/dst (upstream) addresses over DNSTAP
+	 */
 	if(error==NETEVENT_NOERROR && sq->outnet->dtenv &&
 	   (sq->outnet->dtenv->log_resolver_response_messages ||
-	    sq->outnet->dtenv->log_forwarder_response_messages))
-		dt_msg_send_outside_response(sq->outnet->dtenv, &sq->addr,
-		c->type, sq->zone, sq->zonelen, sq->qbuf, sq->qbuflen,
-		&sq->last_sent_time, sq->outnet->now_tv, c->buffer);
+	    sq->outnet->dtenv->log_forwarder_response_messages)) {
+		if(addr_is_ip6(&sq->addr, sq->addrlen)) {
+			log_addr(VERB_ALGO, "response from upstream", &sq->addr, sq->addrlen);
+			log_addr(VERB_ALGO, "to local addr", &sq->outnet->ip6_ifs->addr, sq->outnet->ip6_ifs->addrlen);
+			dt_msg_send_outside_response(sq->outnet->dtenv, &sq->addr, &sq->outnet->ip6_ifs->addr, 
+			  c->type, sq->zone, sq->zonelen, sq->qbuf, sq->qbuflen,
+			  &sq->last_sent_time, sq->outnet->now_tv, c->buffer);
+		} else {
+			log_addr(VERB_ALGO, "response from upstream", &sq->addr, sq->addrlen);
+			log_addr(VERB_ALGO, "to local addr", &sq->outnet->ip4_ifs->addr, sq->outnet->ip4_ifs->addrlen);
+			dt_msg_send_outside_response(sq->outnet->dtenv, &sq->addr, &sq->outnet->ip4_ifs->addr, 
+			  c->type, sq->zone, sq->zonelen, sq->qbuf, sq->qbuflen,
+			  &sq->last_sent_time, sq->outnet->now_tv, c->buffer);
+		}
+	}
 #endif
 	if(error==NETEVENT_NOERROR && sq->status == serviced_query_TCP_EDNS &&
 		(LDNS_RCODE_WIRE(sldns_buffer_begin(c->buffer)) == 
@@ -2903,12 +2933,26 @@ serviced_udp_callback(struct comm_point* c, void* arg, int error,
 		return 0;
 	}
 #ifdef USE_DNSTAP
+	/*
+	 * sending src (local service)/dst (upstream) addresses over DNSTAP
+	 */
 	if(error == NETEVENT_NOERROR && outnet->dtenv &&
 	   (outnet->dtenv->log_resolver_response_messages ||
-	    outnet->dtenv->log_forwarder_response_messages))
-		dt_msg_send_outside_response(outnet->dtenv, &sq->addr, c->type,
-		sq->zone, sq->zonelen, sq->qbuf, sq->qbuflen,
-		&sq->last_sent_time, sq->outnet->now_tv, c->buffer);
+	    outnet->dtenv->log_forwarder_response_messages)) {
+		if(addr_is_ip6(&sq->addr, sq->addrlen)) {
+			log_addr(VERB_ALGO, "response from upstream", &sq->addr, sq->addrlen);
+			log_addr(VERB_ALGO, "to local addr", &sq->outnet->ip6_ifs->addr, sq->outnet->ip6_ifs->addrlen);
+			dt_msg_send_outside_response(outnet->dtenv, &sq->addr, &sq->outnet->ip6_ifs->addr, c->type,
+			  sq->zone, sq->zonelen, sq->qbuf, sq->qbuflen,
+			  &sq->last_sent_time, sq->outnet->now_tv, c->buffer);
+		} else {
+			log_addr(VERB_ALGO, "response from upstream", &sq->addr, sq->addrlen);
+			log_addr(VERB_ALGO, "to addr", &sq->outnet->ip4_ifs->addr, sq->outnet->ip4_ifs->addrlen);
+			dt_msg_send_outside_response(outnet->dtenv, &sq->addr, &sq->outnet->ip4_ifs->addr, c->type,
+			  sq->zone, sq->zonelen, sq->qbuf, sq->qbuflen,
+			  &sq->last_sent_time, sq->outnet->now_tv, c->buffer);
+		}
+	}
 #endif
 	if( (sq->status == serviced_query_UDP_EDNS 
 		||sq->status == serviced_query_UDP_EDNS_FRAG)
@@ -3180,7 +3224,7 @@ outnet_comm_point_for_udp(struct outside_network* outnet,
 		return NULL;
 	}
 	cp = comm_point_create_udp(outnet->base, fd, outnet->udp_buff,
-		cb, cb_arg);
+		cb, cb_arg, NULL);
 	if(!cp) {
 		log_err("malloc failure");
 		close(fd);

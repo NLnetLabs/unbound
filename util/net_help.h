@@ -502,4 +502,14 @@ char* sock_strerror(int errn);
 /** close the socket with close, or wsa closesocket */
 void sock_close(int socket);
 
+/**
+ * Make and fill a stucture of sockaddr_storage* (malloced) type
+ * Note: currently it needed to form local address used by dnstap functions only
+ * @param addr: this is in_addr or in6_addr internet address structure
+ * @param port: TCP/UDP port
+ * @param family: Internet address family
+ * @return: pointer to created sockaddr_storage structure or NULL on error
+ */
+struct sockaddr_storage* mk_local_addr(void* addr, u_short port, u_char family);
+
 #endif /* NET_HELP_H */

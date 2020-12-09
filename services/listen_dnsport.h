@@ -102,6 +102,20 @@ enum listen_type {
 	listen_type_http
 };
 
+/*
+ * socket properties (just like NSD nsd_socket structure definition)
+ */
+struct unbound_socket {
+	/** socket-address structure */
+        struct addrinfo *       addr;
+	/** socket descriptor returned by socket() syscall */
+        int                     s;
+	/** address family (AF_INET/IF_INET6) */
+        int                     fam;
+        /** descriptor returned by accept() syscall for further usage. TODO: actually it might be useless here unlike in NSD where we have no comm_points mechanism with callback pointers for every created communication point */   
+        int                     tcp_read_fd;
+};
+
 /**
  * Single linked list to store shared ports that have been 
  * opened for use by all threads.
@@ -113,6 +127,8 @@ struct listen_port {
 	int fd;
 	/** type of file descriptor, udp or tcp */
 	enum listen_type ftype;
+	/** fill in unbpound_socket structure for every opened socket at Unbound startup */
+	struct unbound_socket* socket;
 };
 
 /**
@@ -423,5 +439,10 @@ int http2_submit_dns_response(void* v);
 #endif /* HAVE_NGHTTP2 */
 
 char* set_ip_dscp(int socket, int addrfamily, int ds);
+
+/** for debug and profiling purposes only
+ * @param unbound_socket: the structure containing created socket info we want to print or log for
+ */
+void verbose_print_unbound_socket(struct unbound_socket* ub_sock);
 
 #endif /* LISTEN_DNSPORT_H */

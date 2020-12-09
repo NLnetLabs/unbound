@@ -70,6 +70,7 @@ struct comm_point;
 struct comm_reply;
 struct tcl_list;
 struct ub_event_base;
+struct unbound_socket;
 
 struct mesh_state;
 struct mesh_area;
@@ -166,6 +167,8 @@ struct comm_reply {
 struct comm_point {
 	/** behind the scenes structure, with say libevent info. alloced. */
 	struct internal_event* ev;
+
+	struct unbound_socket* socket;
 
 	/** file descriptor for communication point */
 	int fd;
@@ -493,12 +496,13 @@ struct ub_event_base* comm_base_internal(struct comm_base* b);
  * @param buffer: shared buffer by UDP sockets from this thread.
  * @param callback: callback function pointer.
  * @param callback_arg: will be passed to your callback function.
+ * @param unbound_socket: and opened socket properties will be passed to your callback function.
  * @return: returns the allocated communication point. NULL on error.
  * Sets timeout to NULL. Turns off TCP options.
  */
 struct comm_point* comm_point_create_udp(struct comm_base* base,
 	int fd, struct sldns_buffer* buffer, 
-	comm_point_callback_type* callback, void* callback_arg);
+	comm_point_callback_type* callback, void* callback_arg, struct unbound_socket* socket);
 
 /**
  * Create an UDP with ancillary data comm point. Calls malloc.
@@ -509,12 +513,13 @@ struct comm_point* comm_point_create_udp(struct comm_base* base,
  * @param buffer: shared buffer by UDP sockets from this thread.
  * @param callback: callback function pointer.
  * @param callback_arg: will be passed to your callback function.
+ * @param unbound_socket: and opened socket properties will be passed to your callback function.
  * @return: returns the allocated communication point. NULL on error.
  * Sets timeout to NULL. Turns off TCP options.
  */
 struct comm_point* comm_point_create_udp_ancil(struct comm_base* base,
 	int fd, struct sldns_buffer* buffer, 
-	comm_point_callback_type* callback, void* callback_arg);
+	comm_point_callback_type* callback, void* callback_arg, struct unbound_socket* socket);
 
 /**
  * Create a TCP listener comm point. Calls malloc.
@@ -537,6 +542,7 @@ struct comm_point* comm_point_create_udp_ancil(struct comm_base* base,
  * 	to select handler type to use.
  * @param callback: callback function pointer for TCP handlers.
  * @param callback_arg: will be passed to your callback function.
+ * @param unbound_socket: and opened socket properties will be passed to your callback function.
  * @return: returns the TCP listener commpoint. You can find the
  *  	TCP handlers in the array inside the listener commpoint.
  *	returns NULL on error.
