@@ -1177,6 +1177,7 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 		if((s = make_sock_port(SOCK_DGRAM, ifname, port, hints, 1, 
 			&noip6, rcv, snd, reuseport, transparent,
 			tcp_mss, nodelay, freebind, use_systemd, dscp, &ub_sock)) == -1) {
+			free(ub_sock);
 			if(noip6) {
 				log_warn("IPv6 protocol not available");
 				return 1;
@@ -1186,11 +1187,13 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 		/* getting source addr packet info is highly non-portable */
 		if(!set_recvpktinfo(s, hints->ai_family)) {
 			sock_close(s);
+			free(ub_sock);
 			return 0;
 		}
 		if(!port_insert(list, s,
 		   is_dnscrypt?listen_type_udpancil_dnscrypt:listen_type_udpancil, ub_sock)) {
 			sock_close(s);
+			free(ub_sock);
 			return 0;
 		}
 	} else if(do_udp) {
@@ -1201,6 +1204,7 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 		if((s = make_sock_port(SOCK_DGRAM, ifname, port, hints, 1, 
 			&noip6, rcv, snd, reuseport, transparent,
 			tcp_mss, nodelay, freebind, use_systemd, dscp, &ub_sock)) == -1) {
+			free(ub_sock);
 			if(noip6) {
 				log_warn("IPv6 protocol not available");
 				return 1;
@@ -1210,6 +1214,7 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 		if(!port_insert(list, s,
 		   is_dnscrypt?listen_type_udp_dnscrypt:listen_type_udp, ub_sock)) {
 			sock_close(s);
+			free(ub_sock);
 			return 0;
 		}
 	}
@@ -1231,6 +1236,7 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 		if((s = make_sock_port(SOCK_STREAM, ifname, port, hints, 1, 
 			&noip6, 0, 0, reuseport, transparent, tcp_mss, nodelay,
 			freebind, use_systemd, dscp, &ub_sock)) == -1) {
+			free(ub_sock);
 			if(noip6) {
 				/*log_warn("IPv6 protocol not available");*/
 				return 1;
@@ -1241,6 +1247,7 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 			verbose(VERB_ALGO, "setup TCP for SSL service");
 		if(!port_insert(list, s, port_type, ub_sock)) {
 			sock_close(s);
+			free(ub_sock);
 			return 0;
 		}
 	}
