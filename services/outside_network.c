@@ -2232,10 +2232,14 @@ pending_tcp_query(struct serviced_query* sq, sldns_buffer* packet,
 #ifdef USE_DNSTAP
 		if(sq->outnet->dtenv &&
 		   (sq->outnet->dtenv->log_resolver_query_messages ||
-		    sq->outnet->dtenv->log_forwarder_query_messages))
+		    sq->outnet->dtenv->log_forwarder_query_messages)) {
+			/* use w->pkt, because it has the ID value */
+			sldns_buffer tmp;
+			sldns_buffer_init_frm_data(&tmp, w->pkt, w->pkt_len);
 			dt_msg_send_outside_query(sq->outnet->dtenv, &sq->addr,
 				&pend->pi->addr, comm_tcp, sq->zone,
-				sq->zonelen, packet);
+				sq->zonelen, &tmp);
+		}
 #endif
 	} else {
 		/* queue up */
