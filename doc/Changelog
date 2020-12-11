@@ -6,6 +6,7 @@
 	  missing prototype warnings.
 	- Merge PR #373 from fobser: Warning: arithmetic on a pointer to void
 	  is a GNU extension.
+	- Fix missing prototypes in the code.
 
 3 December 2020: Wouter
 	- make depend.

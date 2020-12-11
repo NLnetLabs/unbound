@@ -64,6 +64,7 @@
 #include "sldns/sbuffer.h"
 #include "sldns/wire2str.h"
 #include "sldns/str2wire.h"
+#include "daemon/remote.h"
 #include <signal.h>
 struct worker;
 struct daemon_remote;

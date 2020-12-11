@@ -5,16 +5,16 @@
  * module actions.
  */
 #include "config.h"
+#include "dynlibmod/dynlibmod.h"
 #include "util/module.h"
 #include "util/config_file.h"
-#include "dynlibmod/dynlibmod.h"
 
 #if HAVE_WINDOWS_H
 #include <windows.h>
 #define __DYNMOD HMODULE
 #define __DYNSYM FARPROC
 #define __LOADSYM GetProcAddress
-void log_dlerror() {
+static void log_dlerror() {
     DWORD dwLastError = GetLastError();
     LPSTR MessageBuffer;
     DWORD dwBufferLength;
@@ -37,11 +37,11 @@ void log_dlerror() {
 
 }
 
-HMODULE open_library(const char* fname) {
+static HMODULE open_library(const char* fname) {
     return LoadLibrary(fname);
 }
 
-void close_library(const char* fname, __DYNMOD handle) {
+static void close_library(const char* fname, __DYNMOD handle) {
 	(void)fname;
 	(void)handle;
 }
@@ -50,15 +50,15 @@ void close_library(const char* fname, __DYNMOD handle) {
 #define __DYNMOD void*
 #define __DYNSYM void*
 #define __LOADSYM dlsym
-void log_dlerror() {
+static void log_dlerror() {
     log_err("dynlibmod: %s", dlerror());
 }
 
-void* open_library(const char* fname) {
+static void* open_library(const char* fname) {
     return dlopen(fname, RTLD_LAZY | RTLD_GLOBAL);
 }
 
-void close_library(const char* fname, __DYNMOD handle) {
+static void close_library(const char* fname, __DYNMOD handle) {
 	if(!handle) return;
 	if(dlclose(handle) != 0) {
 		log_err("dlclose %s: %s", fname, strerror(errno));
