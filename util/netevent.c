@@ -2480,7 +2480,7 @@ http_chunked_segment(struct comm_point* c)
 
 #ifdef HAVE_NGHTTP2
 /** Create new http2 session. Called when creating handling comm point. */
-struct http2_session* http2_session_create(struct comm_point* c)
+static struct http2_session* http2_session_create(struct comm_point* c)
 {
 	struct http2_session* session = calloc(1, sizeof(*session));
 	if(!session) {
@@ -2494,7 +2494,7 @@ struct http2_session* http2_session_create(struct comm_point* c)
 #endif
 
 /** Delete http2 session. After closing connection or on error */
-void http2_session_delete(struct http2_session* h2_session)
+static void http2_session_delete(struct http2_session* h2_session)
 {
 #ifdef HAVE_NGHTTP2
 	if(h2_session->callbacks)
@@ -2570,7 +2570,7 @@ void http2_session_add_stream(struct http2_session* h2_session,
 
 /** remove stream from session linked list. After stream close callback or
  * closing connection */
-void http2_session_remove_stream(struct http2_session* h2_session,
+static void http2_session_remove_stream(struct http2_session* h2_session,
 	struct http2_stream* h2_stream)
 {
 	if(h2_stream->prev)
