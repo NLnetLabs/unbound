@@ -1935,7 +1935,7 @@ comm_point_tcp_handle_write(int fd, struct comm_point* c)
 	log_assert(c->tcp_write_and_read || sldns_buffer_remaining(buffer) > 0);
 	log_assert(!c->tcp_write_and_read || c->tcp_write_byte_count < c->tcp_write_pkt_len + 2);
 	if(c->tcp_write_and_read) {
-		r = send(fd, (void*)c->tcp_write_pkt + c->tcp_write_byte_count - 2,
+		r = send(fd, (void*)(c->tcp_write_pkt + c->tcp_write_byte_count - 2),
 			c->tcp_write_pkt_len + 2 - c->tcp_write_byte_count, 0);
 	} else {
 		r = send(fd, (void*)sldns_buffer_current(buffer),
