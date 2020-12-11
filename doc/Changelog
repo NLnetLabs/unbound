@@ -2,6 +2,8 @@
 	- Fix #371: unbound-control timeout when Unbound is not running.
 	- Fix to squelch permission denied and other errors from remote host,
 	  they are logged at higher verbosity but not on low verbosity.
+	- Merge PR #335 from fobser: Sprinkle in some static to prevent
+	  missing prototype warnings.
 
 3 December 2020: Wouter
 	- make depend.
