@@ -1,3 +1,6 @@
+11 December 2020: Wouter
+	- Fix #371: unbound-control timeout when Unbound is not running.
+
 3 December 2020: Wouter
 	- make depend.
 	- iana portlist updated.
