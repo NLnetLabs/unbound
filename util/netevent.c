@@ -583,6 +583,7 @@ comm_point_send_udp_msg_if(struct comm_point *c, sldns_buffer* packet,
 static int udp_recv_needs_log(int err)
 {
 	switch(err) {
+	case EACCES: /* some hosts send ICMP 'Permission Denied' */
 #ifndef USE_WINSOCK
 	case ECONNREFUSED:
 #  ifdef ENETUNREACH
@@ -1608,6 +1609,26 @@ comm_point_tcp_handle_read(int fd, struct comm_point* c, int short_ok)
 #ifdef ECONNRESET
 			if(errno == ECONNRESET && verbosity < 2)
 				return 0; /* silence reset by peer */
+#endif
+#ifdef ENETUNREACH
+			if(errno == ENETUNREACH && verbosity < 2)
+				return 0; /* silence it */
+#endif
+#ifdef EHOSTDOWN
+			if(errno == EHOSTDOWN && verbosity < 2)
+				return 0; /* silence it */
+#endif
+#ifdef EHOSTUNREACH
+			if(errno == EHOSTUNREACH && verbosity < 2)
+				return 0; /* silence it */
+#endif
+#ifdef ENETDOWN
+			if(errno == ENETDOWN && verbosity < 2)
+				return 0; /* silence it */
+#endif
+#ifdef EACCES
+			if(errno == EACCES && verbosity < 2)
+				return 0; /* silence it */
 #endif
 #ifdef ENOTCONN
 			if(errno == ENOTCONN) {
