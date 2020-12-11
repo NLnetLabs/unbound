@@ -4,6 +4,8 @@
 	  they are logged at higher verbosity but not on low verbosity.
 	- Merge PR #335 from fobser: Sprinkle in some static to prevent
 	  missing prototype warnings.
+	- Merge PR #373 from fobser: Warning: arithmetic on a pointer to void
+	  is a GNU extension.
 
 3 December 2020: Wouter
 	- make depend.
