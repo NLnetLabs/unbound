@@ -1,3 +1,7 @@
+16 December 2020: George
+	- Fix error cases when udp-connect is set and send() returns an error
+	  (modified patch from Xin Li @delphij).
+
 11 December 2020: Wouter
 	- Fix #371: unbound-control timeout when Unbound is not running.
 	- Fix to squelch permission denied and other errors from remote host,
