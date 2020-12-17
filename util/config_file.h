@@ -1276,3 +1276,7 @@ extern int fake_dsa, fake_sha1;
 
 #endif /* UTIL_CONFIG_FILE_H */
 
+#ifndef UB_ON_WINDOWS
+#define IP_LOCAL_PORT_RANGE_PATH "/proc/sys/net/ipv4/ip_local_port_range"
+#endif
+

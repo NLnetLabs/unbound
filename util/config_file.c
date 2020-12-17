@@ -1568,6 +1568,27 @@ init_outgoing_availports(int* a, int num)
 		if(iana_assigned[i] < num)
 			a[iana_assigned[i]] = 0;
 	}
+
+#ifndef UB_ON_WINDOWS
+	/* exclude ports not in ip_local_port_range */
+	FILE* range_fd;
+	if (range_fd = fopen(IP_LOCAL_PORT_RANGE_PATH, "r")) {
+		int min_port = 0
+		int max_port = num - 1;
+		if (fscanf(range_fd, "%d %d", &min_port, &max_port) != 2) {
+			log_err("unexpected port range in %s", IP_LOCAL_PORT_RANGE_PATH);
+			return 0;
+		}
+		for(i=0; i<min_port; i++) {
+			a[i] = 0;
+		}
+		for(i=max_port+1; i<num; i++) {
+			a[i] = 0;
+		}
+	} else {
+		log_warn("file %s is not present in the system", IP_LOCAL_PORT_RANGE_PATH)
+	}
+#endif
 }
 
 int 
