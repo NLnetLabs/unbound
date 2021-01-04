@@ -3230,6 +3230,7 @@ comm_point_create_udp(struct comm_base *base, int fd, sldns_buffer* buffer,
 		comm_point_delete(c);
 		return NULL;
 	}
+	c->event_added = 1;
 	return c;
 }
 
@@ -3289,6 +3290,7 @@ comm_point_create_udp_ancil(struct comm_base *base, int fd,
 		comm_point_delete(c);
 		return NULL;
 	}
+	c->event_added = 1;
 	return c;
 }
 
@@ -3573,6 +3575,7 @@ comm_point_create_tcp(struct comm_base *base, int fd, int num,
 		comm_point_delete(c);
 		return NULL;
 	}
+	c->event_added = 1;
 	/* now prealloc the handlers */
 	for(i=0; i<num; i++) {
 		if(port_type == listen_type_tcp ||
@@ -3796,6 +3799,7 @@ comm_point_create_local(struct comm_base *base, int fd, size_t bufsize,
 		free(c);
 		return NULL;
 	}
+	c->event_added = 1;
 	return c;
 }
 
@@ -3858,6 +3862,7 @@ comm_point_create_raw(struct comm_base* base, int fd, int writing,
 		free(c);
 		return NULL;
 	}
+	c->event_added = 1;
 	return c;
 }
 
@@ -3868,8 +3873,11 @@ comm_point_close(struct comm_point* c)
 		return;
 	if(c->fd != -1) {
 		verbose(5, "comm_point_close of %d: event_del", c->fd);
-		if(ub_event_del(c->ev->ev) != 0) {
-			log_err("could not event_del on close");
+		if(c->event_added) {
+			if(ub_event_del(c->ev->ev) != 0) {
+				log_err("could not event_del on close");
+			}
+			c->event_added = 0;
 		}
 	}
 	tcl_close_connection(c->tcl_addr);
@@ -4018,8 +4026,11 @@ void
 comm_point_stop_listening(struct comm_point* c)
 {
 	verbose(VERB_ALGO, "comm point stop listening %d", c->fd);
-	if(ub_event_del(c->ev->ev) != 0) {
-		log_err("event_del error to stoplisten");
+	if(c->event_added) {
+		if(ub_event_del(c->ev->ev) != 0) {
+			log_err("event_del error to stoplisten");
+		}
+		c->event_added = 0;
 	}
 }
 
@@ -4031,6 +4042,12 @@ comm_point_start_listening(struct comm_point* c, int newfd, int msec)
 	if(c->type == comm_tcp_accept && !c->tcp_free) {
 		/* no use to start listening no free slots. */
 		return;
+	}
+	if(c->event_added) {
+		if(ub_event_del(c->ev->ev) != 0) {
+			log_err("event_del error to startlisten");
+		}
+		c->event_added = 0;
 	}
 	if(msec != -1 && msec != 0) {
 		if(!c->timeout) {
@@ -4071,13 +4088,17 @@ comm_point_start_listening(struct comm_point* c, int newfd, int msec)
 	if(ub_event_add(c->ev->ev, msec==0?NULL:c->timeout) != 0) {
 		log_err("event_add failed. in cpsl.");
 	}
+	c->event_added = 1;
 }
 
 void comm_point_listen_for_rw(struct comm_point* c, int rd, int wr)
 {
 	verbose(VERB_ALGO, "comm point listen_for_rw %d %d", c->fd, wr);
-	if(ub_event_del(c->ev->ev) != 0) {
-		log_err("event_del error to cplf");
+	if(c->event_added) {
+		if(ub_event_del(c->ev->ev) != 0) {
+			log_err("event_del error to cplf");
+		}
+		c->event_added = 0;
 	}
 	ub_event_del_bits(c->ev->ev, UB_EV_READ|UB_EV_WRITE);
 	if(rd) ub_event_add_bits(c->ev->ev, UB_EV_READ);
@@ -4085,6 +4106,7 @@ void comm_point_listen_for_rw(struct comm_point* c, int rd, int wr)
 	if(ub_event_add(c->ev->ev, c->timeout) != 0) {
 		log_err("event_add failed. in cplf.");
 	}
+	c->event_added = 1;
 }
 
 size_t comm_point_get_mem(struct comm_point* c)

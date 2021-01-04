@@ -1,3 +1,7 @@
+4 January 2021: Wouter
+	- For #376: Fix that comm point event is not double removed or double
+	  added to event map.
+
 16 December 2020: George
 	- Fix error cases when udp-connect is set and send() returns an error
 	  (modified patch from Xin Li @delphij).

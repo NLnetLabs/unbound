@@ -166,6 +166,8 @@ struct comm_reply {
 struct comm_point {
 	/** behind the scenes structure, with say libevent info. alloced. */
 	struct internal_event* ev;
+	/** if the event is added or not */
+	int event_added;
 
 	/** file descriptor for communication point */
 	int fd;
