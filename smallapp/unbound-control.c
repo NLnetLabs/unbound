@@ -167,6 +167,9 @@ usage(void)
 	printf("  view_local_data_remove view name  	remove local-data in view\n");
 	printf("  view_local_datas_remove view 		remove list of local-data from view\n");
 	printf("  					one entry per line read from stdin\n");
+	printf("  rpz_enable zone		Enable the RPZ zone if it had previously\n");
+	printf("  				been disabled\n");
+	printf("  rpz_disable zone		Disable the RPZ zone\n");
 	printf("Version %s\n", PACKAGE_VERSION);
 	printf("BSD licensed, see LICENSE in source package for details.\n");
 	printf("Report bugs to %s\n", PACKAGE_BUGREPORT);

@@ -1,5 +1,7 @@
 5 January 2021: Wouter
 	- Fix #385: autoconf 2.70 impacts unbound build
+	- Merge PR #375 by fhriley: Add rpz_enable and rpz_disable commands
+	  to unbound-control.
 
 4 January 2021: Wouter
 	- For #376: Fix that comm point event is not double removed or double
