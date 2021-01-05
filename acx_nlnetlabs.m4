@@ -2,7 +2,8 @@
 # Copyright 2009, Wouter Wijngaards, NLnet Labs.   
 # BSD licensed.
 #
-# Version 36
+# Version 37
+# 2021-01-05 fix defun for aclocal
 # 2021-01-05 autoconf 2.70 autoupdate and fixes, no AC_TRY_COMPILE
 # 2020-08-24 Use EVP_sha256 instead of HMAC_Update (for openssl-3.0.0).
 # 2016-03-21 Check -ldl -pthread for libcrypto for ldns and openssl 1.1.0.
@@ -519,8 +520,8 @@ AC_DEFUN([AC_PROG_CXX], [:])
 AC_DEFUN([AC_PROG_CXXCPP], [:])
 AC_DEFUN([AC_PROG_OBJC], [:])
 AC_DEFUN([AC_PROG_OBJCCPP], [:])
-AC_DEFUN([LT_LANG([C++])], [:])
-AC_DEFUN([LT_LANG([Fortran 77])], [:])
+AC_DEFUN([AC_LIBTOOL_CXX], [:])
+AC_DEFUN([AC_LIBTOOL_F77], [:])
 # always use ./libtool unless override from commandline (libtool=mylibtool)
 if test -z "$libtool"; then
 	libtool="./libtool"
