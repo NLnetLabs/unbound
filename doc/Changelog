@@ -1,3 +1,6 @@
+5 January 2021: Wouter
+	- Fix #385: autoconf 2.70 impacts unbound build
+
 4 January 2021: Wouter
 	- For #376: Fix that comm point event is not double removed or double
 	  added to event map.
