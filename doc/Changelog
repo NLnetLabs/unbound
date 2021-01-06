@@ -1,5 +1,6 @@
 6 January 2021: Wouter
 	- Fix #379: zone loading over HTTP appears to have buffer issues.
+	- Merge PR #395 from mptre: add missing null check.
 
 5 January 2021: Wouter
 	- Fix #385: autoconf 2.70 impacts unbound build
