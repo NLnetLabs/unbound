@@ -2412,7 +2412,7 @@ http_nonchunk_segment(struct comm_point* c)
 	return 1;
 }
 
-/** handle nonchunked data segment, return 0=fail, 1=wait, 2=process more */
+/** handle chunked data segment, return 0=fail, 1=wait, 2=process more */
 static int
 http_chunked_segment(struct comm_point* c)
 {
@@ -2422,6 +2422,7 @@ http_chunked_segment(struct comm_point* c)
 	 */
 	size_t remainbufferlen;
 	size_t got_now = sldns_buffer_limit(c->buffer) - c->http_stored;
+	verbose(VERB_ALGO, "http_chunked_segment: got now %d, tcpbytcount %d, http_stored %d, buffer pos %d, buffer limit %d", (int)got_now, (int)c->tcp_byte_count, (int)c->http_stored, (int)sldns_buffer_position(c->buffer), (int)sldns_buffer_limit(c->buffer));
 	if(c->tcp_byte_count <= got_now) {
 		/* the chunk has completed (with perhaps some extra data
 		 * from next chunk header and next chunk) */
@@ -2761,6 +2762,11 @@ comm_point_http_handle_read(int fd, struct comm_point* c)
 	}
 
 	sldns_buffer_flip(c->buffer);
+	/* if we are partway in a segment of data, position us at the point
+	 * where we left off previously */
+	if(c->http_stored < sldns_buffer_limit(c->buffer))
+		sldns_buffer_set_position(c->buffer, c->http_stored);
+	else	sldns_buffer_set_position(c->buffer, sldns_buffer_limit(c->buffer));
 
 	while(sldns_buffer_remaining(c->buffer) > 0) {
 		/* Handle HTTP/1.x data */
