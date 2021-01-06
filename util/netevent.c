@@ -388,8 +388,9 @@ comm_point_send_udp_msg(struct comm_point *c, sldns_buffer* packet,
 		} else {
 			verbose(VERB_OPS, "send failed: %s", sock_strerror(errno));
 		}
-		log_addr(VERB_OPS, "remote address is",
-			(struct sockaddr_storage*)addr, addrlen);
+		if(addr)
+			log_addr(VERB_OPS, "remote address is",
+				(struct sockaddr_storage*)addr, addrlen);
 		return 0;
 	} else if((size_t)sent != sldns_buffer_remaining(packet)) {
 		log_err("sent %d in place of %d bytes", 
