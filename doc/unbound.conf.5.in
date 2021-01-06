@@ -2033,7 +2033,8 @@ Specify whether the ECS address check (configured using
 query contains an ECS record, or only for queries for which the ECS record is
 generated using the querier address (and therefore did not contain ECS data in
 the client query). If enabled, the address check is skipped when the client
-query contains an ECS record. Default is no.
+query contains an ECS record. And the lookup in the regular cache is skipped.
+Default is no.
 .TP
 .B max\-client\-subnet\-ipv6: \fI<number>\fR
 Specifies the maximum prefix length of the client source address we are willing
