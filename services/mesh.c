@@ -1112,6 +1112,8 @@ int mesh_state_attachment(struct mesh_state* super, struct mesh_state* sub)
  * @param rcode: if not 0, error code.
  * @param rep: reply to send (or NULL if rcode is set).
  * @param r: callback entry
+ * @param start_time: the time to pass to callback functions, it is 0 or
+ * 	a value from one of the packets if the mesh state had packets.
  */
 static void
 mesh_do_callback(struct mesh_state* m, int rcode, struct reply_info* rep,

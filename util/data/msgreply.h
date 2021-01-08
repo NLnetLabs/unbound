@@ -554,6 +554,8 @@ struct edns_option* edns_opt_list_find(struct edns_option* list, uint16_t code);
  * @param edns: edns data of the reply.
  * @param repinfo: comm_reply. Reply information for a communication point.
  * @param region: region to store data.
+ * @param start_time: the start time of recursion, when the packet arrived,
+ * 	or the current time for cache responses.
  * @return false on failure (a callback function returned an error).
  */
 int inplace_cb_reply_call(struct module_env* env, struct query_info* qinfo,
@@ -572,6 +574,8 @@ int inplace_cb_reply_call(struct module_env* env, struct query_info* qinfo,
  * @param edns: edns data of the reply. Edns input can be found here.
  * @param repinfo: comm_reply. Reply information for a communication point.
  * @param region: region to store data.
+ * @param start_time: the start time of recursion, when the packet arrived,
+ * 	or the current time for cache responses.
  * @return false on failure (a callback function returned an error).
  */
 int inplace_cb_reply_cache_call(struct module_env* env,
@@ -591,6 +595,8 @@ int inplace_cb_reply_cache_call(struct module_env* env,
  * @param edns: edns data of the reply. Edns input can be found here.
  * @param repinfo: comm_reply. Reply information for a communication point.
  * @param region: region to store data.
+ * @param start_time: the start time of recursion, when the packet arrived,
+ * 	or the current time for cache responses.
  * @return false on failure (a callback function returned an error).
  */
 int inplace_cb_reply_local_call(struct module_env* env,
@@ -611,6 +617,8 @@ int inplace_cb_reply_local_call(struct module_env* env,
  *	is NULL.
  * @param repinfo: comm_reply. Reply information for a communication point.
  * @param region: region to store data.
+ * @param start_time: the start time of recursion, when the packet arrived,
+ * 	or the current time for cache responses.
  * @return false on failure (a callback function returned an error).
  */
 int inplace_cb_reply_servfail_call(struct module_env* env,
