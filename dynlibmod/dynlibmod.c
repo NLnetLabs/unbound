@@ -213,7 +213,7 @@ int dynlib_inplace_cb_reply_generic(struct query_info* qinfo,
     struct module_qstate* qstate, struct reply_info* rep, int rcode,
     struct edns_data* edns, struct edns_option** opt_list_out,
     struct comm_reply* repinfo, struct regional* region,
-    struct timeval start_time, int id, void* callback) {
+    struct timeval* start_time, int id, void* callback) {
     struct cb_pair* cb_pair = (struct cb_pair*) callback;
     return ((inplace_cb_reply_func_type*) cb_pair->cb)(qinfo, qstate, rep, rcode, edns, opt_list_out, repinfo, region, start_time, id, cb_pair->cb_arg);
 }

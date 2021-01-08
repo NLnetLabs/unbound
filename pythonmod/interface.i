@@ -1542,13 +1542,13 @@ int edns_opt_list_append(struct edns_option** list, uint16_t code, size_t len,
         struct module_qstate* qstate, struct reply_info* rep, int rcode,
         struct edns_data* edns, struct edns_option** opt_list_out,
         struct comm_reply* repinfo, struct regional* region,
-        struct timeval start_time, int id, void* python_callback)
+        struct timeval* start_time, int id, void* python_callback)
     {
         PyObject *func, *py_edns, *py_qstate, *py_opt_list_out, *py_qinfo;
         PyObject *py_rep, *py_repinfo, *py_region;
         PyObject *py_args, *py_kwargs, *result;
         int res = 0;
-        double py_start_time = start_time.tv_sec + start_time.tv_usec / 1e6;
+        double py_start_time = start_time->tv_sec + start_time->tv_usec / 1e6;
 
         PyGILState_STATE gstate = PyGILState_Ensure();
         func = (PyObject *) python_callback;

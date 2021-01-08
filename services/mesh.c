@@ -498,7 +498,7 @@ void mesh_new_client(struct mesh_area* mesh, struct query_info* qinfo,
 		if(!s) {
 			log_err("mesh_state_create: out of memory; SERVFAIL");
 			if(!inplace_cb_reply_servfail_call(mesh->env, qinfo, NULL, NULL,
-				LDNS_RCODE_SERVFAIL, edns, rep, mesh->env->scratch, *s->s.env->now_tv))
+				LDNS_RCODE_SERVFAIL, edns, rep, mesh->env->scratch, s->s.env->now_tv))
 					edns->opt_list = NULL;
 			error_encode(r_buffer, LDNS_RCODE_SERVFAIL,
 				qinfo, qid, qflags, edns);
@@ -514,7 +514,7 @@ void mesh_new_client(struct mesh_area* mesh, struct query_info* qinfo,
 			if(!s->s.edns_opts_front_in) {
 				log_err("mesh_state_create: out of memory; SERVFAIL");
 				if(!inplace_cb_reply_servfail_call(mesh->env, qinfo, NULL,
-					NULL, LDNS_RCODE_SERVFAIL, edns, rep, mesh->env->scratch, *s->s.env->now_tv))
+					NULL, LDNS_RCODE_SERVFAIL, edns, rep, mesh->env->scratch, s->s.env->now_tv))
 						edns->opt_list = NULL;
 				error_encode(r_buffer, LDNS_RCODE_SERVFAIL,
 					qinfo, qid, qflags, edns);
@@ -587,7 +587,7 @@ void mesh_new_client(struct mesh_area* mesh, struct query_info* qinfo,
 
 servfail_mem:
 	if(!inplace_cb_reply_servfail_call(mesh->env, qinfo, &s->s,
-		NULL, LDNS_RCODE_SERVFAIL, edns, rep, mesh->env->scratch, *s->s.env->now_tv))
+		NULL, LDNS_RCODE_SERVFAIL, edns, rep, mesh->env->scratch, s->s.env->now_tv))
 			edns->opt_list = NULL;
 	error_encode(r_buffer, LDNS_RCODE_SERVFAIL,
 		qinfo, qid, qflags, edns);
@@ -1115,7 +1115,7 @@ int mesh_state_attachment(struct mesh_state* super, struct mesh_state* sub)
  */
 static void
 mesh_do_callback(struct mesh_state* m, int rcode, struct reply_info* rep,
-	struct mesh_cb* r, struct timeval start_time)
+	struct mesh_cb* r, struct timeval* start_time)
 {
 	int secure;
 	char* reason = NULL;
@@ -1256,11 +1256,11 @@ mesh_send_reply(struct mesh_state* m, int rcode, struct reply_info* rep,
 		m->s.qinfo.local_alias = r->local_alias;
 		if(rcode == LDNS_RCODE_SERVFAIL) {
 			if(!inplace_cb_reply_servfail_call(m->s.env, &m->s.qinfo, &m->s,
-				rep, rcode, &r->edns, &r->query_reply, m->s.region, r->start_time))
+				rep, rcode, &r->edns, &r->query_reply, m->s.region, &r->start_time))
 					r->edns.opt_list = NULL;
 		} else { 
 			if(!inplace_cb_reply_call(m->s.env, &m->s.qinfo, &m->s, rep, rcode,
-				&r->edns, &r->query_reply, m->s.region, r->start_time))
+				&r->edns, &r->query_reply, m->s.region, &r->start_time))
 					r->edns.opt_list = NULL;
 		}
 		error_encode(r_buffer, rcode, &m->s.qinfo, r->qid,
@@ -1277,7 +1277,7 @@ mesh_send_reply(struct mesh_state* m, int rcode, struct reply_info* rep,
 		m->s.qinfo.qname = r->qname;
 		m->s.qinfo.local_alias = r->local_alias;
 		if(!inplace_cb_reply_call(m->s.env, &m->s.qinfo, &m->s, rep,
-			LDNS_RCODE_NOERROR, &r->edns, &r->query_reply, m->s.region, r->start_time) ||
+			LDNS_RCODE_NOERROR, &r->edns, &r->query_reply, m->s.region, &r->start_time) ||
 			!apply_edns_options(&r->edns, &edns_bak,
 				m->s.env->cfg, r->query_reply.c,
 				m->s.region) ||
@@ -1287,7 +1287,7 @@ mesh_send_reply(struct mesh_state* m, int rcode, struct reply_info* rep,
 			secure)) 
 		{
 			if(!inplace_cb_reply_servfail_call(m->s.env, &m->s.qinfo, &m->s,
-			rep, LDNS_RCODE_SERVFAIL, &r->edns, &r->query_reply, m->s.region, r->start_time))
+			rep, LDNS_RCODE_SERVFAIL, &r->edns, &r->query_reply, m->s.region, &r->start_time))
 				r->edns.opt_list = NULL;
 			error_encode(r_buffer, LDNS_RCODE_SERVFAIL,
 				&m->s.qinfo, r->qid, r->qflags, &r->edns);
@@ -1424,7 +1424,7 @@ void mesh_query_done(struct mesh_state* mstate)
 		if(!mstate->reply_list && !mstate->cb_list &&
 			mstate->super_set.count == 0)
 			mstate->s.env->mesh->num_detached_states++;
-		mesh_do_callback(mstate, mstate->s.return_rcode, rep, c, tv);
+		mesh_do_callback(mstate, mstate->s.return_rcode, rep, c, &tv);
 	}
 }
 
@@ -2048,6 +2048,6 @@ mesh_serve_expired_callback(void* arg)
 		if(!mstate->reply_list && !mstate->cb_list &&
 			mstate->super_set.count == 0)
 			qstate->env->mesh->num_detached_states++;
-		mesh_do_callback(mstate, LDNS_RCODE_NOERROR, msg->rep, c, tv);
+		mesh_do_callback(mstate, LDNS_RCODE_NOERROR, msg->rep, c, &tv);
 	}
 }
