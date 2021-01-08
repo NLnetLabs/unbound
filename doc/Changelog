@@ -2,6 +2,7 @@
 	- Merge PR #391 from fhriley: Add start_time to reply callbacks so
 	  modules can compute the response time.
 	- For #391: use struct timeval* start_time for callback information.
+	- For #391: fix indentation.
 
 6 January 2021: Wouter
 	- Fix #379: zone loading over HTTP appears to have buffer issues.

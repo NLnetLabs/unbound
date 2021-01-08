@@ -1036,7 +1036,7 @@ static int inplace_cb_reply_call_generic(
 	struct query_info* qinfo, struct module_qstate* qstate,
 	struct reply_info* rep, int rcode, struct edns_data* edns,
 	struct comm_reply* repinfo, struct regional* region,
-    struct timeval* start_time)
+	struct timeval* start_time)
 {
 	struct inplace_cb* cb;
 	struct edns_option* opt_list_out = NULL;
@@ -1058,7 +1058,7 @@ static int inplace_cb_reply_call_generic(
 int inplace_cb_reply_call(struct module_env* env, struct query_info* qinfo,
 	struct module_qstate* qstate, struct reply_info* rep, int rcode,
 	struct edns_data* edns, struct comm_reply* repinfo, struct regional* region,
-    struct timeval* start_time)
+	struct timeval* start_time)
 {
 	return inplace_cb_reply_call_generic(
 		env->inplace_cb_lists[inplace_cb_reply], inplace_cb_reply, qinfo,
@@ -1069,7 +1069,7 @@ int inplace_cb_reply_cache_call(struct module_env* env,
 	struct query_info* qinfo, struct module_qstate* qstate,
 	struct reply_info* rep, int rcode, struct edns_data* edns,
 	struct comm_reply* repinfo, struct regional* region,
-    struct timeval* start_time)
+	struct timeval* start_time)
 {
 	return inplace_cb_reply_call_generic(
 		env->inplace_cb_lists[inplace_cb_reply_cache], inplace_cb_reply_cache,
@@ -1080,7 +1080,7 @@ int inplace_cb_reply_local_call(struct module_env* env,
 	struct query_info* qinfo, struct module_qstate* qstate,
 	struct reply_info* rep, int rcode, struct edns_data* edns,
 	struct comm_reply* repinfo, struct regional* region,
-    struct timeval* start_time)
+	struct timeval* start_time)
 {
 	return inplace_cb_reply_call_generic(
 		env->inplace_cb_lists[inplace_cb_reply_local], inplace_cb_reply_local,
@@ -1091,7 +1091,7 @@ int inplace_cb_reply_servfail_call(struct module_env* env,
 	struct query_info* qinfo, struct module_qstate* qstate,
 	struct reply_info* rep, int rcode, struct edns_data* edns,
 	struct comm_reply* repinfo, struct regional* region,
-    struct timeval* start_time)
+	struct timeval* start_time)
 {
 	/* We are going to servfail. Remove any potential edns options. */
 	if(qstate)

@@ -1350,7 +1350,7 @@ void mesh_query_done(struct mesh_state* mstate)
 		}
 	}
 	for(r = mstate->reply_list; r; r = r->next) {
-	    tv = r->start_time;
+		tv = r->start_time;
 
 		/* if a response-ip address block has been stored the
 		 *  information should be logged for each client. */
@@ -1992,7 +1992,7 @@ mesh_serve_expired_callback(void* arg)
 		log_dns_msg("Serve expired lookup", &qstate->qinfo, msg->rep);
 
 	for(r = mstate->reply_list; r; r = r->next) {
-	    tv = r->start_time;
+		tv = r->start_time;
 
 		/* If address info is returned, it means the action should be an
 		* 'inform' variant and the information should be logged. */
