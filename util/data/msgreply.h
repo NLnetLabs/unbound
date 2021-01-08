@@ -558,7 +558,8 @@ struct edns_option* edns_opt_list_find(struct edns_option* list, uint16_t code);
  */
 int inplace_cb_reply_call(struct module_env* env, struct query_info* qinfo,
 	struct module_qstate* qstate, struct reply_info* rep, int rcode,
-	struct edns_data* edns, struct comm_reply* repinfo, struct regional* region);
+	struct edns_data* edns, struct comm_reply* repinfo, struct regional* region,
+    struct timeval start_time);
 
 /**
  * Call the registered functions in the inplace_cb_reply_cache linked list.
@@ -576,7 +577,8 @@ int inplace_cb_reply_call(struct module_env* env, struct query_info* qinfo,
 int inplace_cb_reply_cache_call(struct module_env* env,
 	struct query_info* qinfo, struct module_qstate* qstate,
 	struct reply_info* rep, int rcode, struct edns_data* edns,
-	struct comm_reply* repinfo, struct regional* region);
+	struct comm_reply* repinfo, struct regional* region,
+    struct timeval start_time);
 
 /**
  * Call the registered functions in the inplace_cb_reply_local linked list.
@@ -594,7 +596,8 @@ int inplace_cb_reply_cache_call(struct module_env* env,
 int inplace_cb_reply_local_call(struct module_env* env,
 	struct query_info* qinfo, struct module_qstate* qstate,
 	struct reply_info* rep, int rcode, struct edns_data* edns,
-	struct comm_reply* repinfo, struct regional* region);
+	struct comm_reply* repinfo, struct regional* region,
+    struct timeval start_time);
 
 /**
  * Call the registered functions in the inplace_cb_reply linked list.
@@ -613,7 +616,8 @@ int inplace_cb_reply_local_call(struct module_env* env,
 int inplace_cb_reply_servfail_call(struct module_env* env,
 	struct query_info* qinfo, struct module_qstate* qstate,
 	struct reply_info* rep, int rcode, struct edns_data* edns,
-	struct comm_reply* repinfo, struct regional* region);
+	struct comm_reply* repinfo, struct regional* region,
+    struct timeval start_time);
 
 /**
  * Call the registered functions in the inplace_cb_query linked list.
