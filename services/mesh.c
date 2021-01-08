@@ -498,7 +498,7 @@ void mesh_new_client(struct mesh_area* mesh, struct query_info* qinfo,
 		if(!s) {
 			log_err("mesh_state_create: out of memory; SERVFAIL");
 			if(!inplace_cb_reply_servfail_call(mesh->env, qinfo, NULL, NULL,
-				LDNS_RCODE_SERVFAIL, edns, rep, mesh->env->scratch, s->s.env->now_tv))
+				LDNS_RCODE_SERVFAIL, edns, rep, mesh->env->scratch, mesh->env->now_tv))
 					edns->opt_list = NULL;
 			error_encode(r_buffer, LDNS_RCODE_SERVFAIL,
 				qinfo, qid, qflags, edns);
@@ -514,7 +514,7 @@ void mesh_new_client(struct mesh_area* mesh, struct query_info* qinfo,
 			if(!s->s.edns_opts_front_in) {
 				log_err("mesh_state_create: out of memory; SERVFAIL");
 				if(!inplace_cb_reply_servfail_call(mesh->env, qinfo, NULL,
-					NULL, LDNS_RCODE_SERVFAIL, edns, rep, mesh->env->scratch, s->s.env->now_tv))
+					NULL, LDNS_RCODE_SERVFAIL, edns, rep, mesh->env->scratch, mesh->env->now_tv))
 						edns->opt_list = NULL;
 				error_encode(r_buffer, LDNS_RCODE_SERVFAIL,
 					qinfo, qid, qflags, edns);
@@ -587,7 +587,7 @@ void mesh_new_client(struct mesh_area* mesh, struct query_info* qinfo,
 
 servfail_mem:
 	if(!inplace_cb_reply_servfail_call(mesh->env, qinfo, &s->s,
-		NULL, LDNS_RCODE_SERVFAIL, edns, rep, mesh->env->scratch, s->s.env->now_tv))
+		NULL, LDNS_RCODE_SERVFAIL, edns, rep, mesh->env->scratch, mesh->env->now_tv))
 			edns->opt_list = NULL;
 	error_encode(r_buffer, LDNS_RCODE_SERVFAIL,
 		qinfo, qid, qflags, edns);

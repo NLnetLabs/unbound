@@ -5,6 +5,7 @@
 	- For #391: fix indentation.
 	- For #391: more double casts in python start time calculation.
 	- Add comment documentation.
+	- Fix clang analysis warning.
 
 6 January 2021: Wouter
 	- Fix #379: zone loading over HTTP appears to have buffer issues.
