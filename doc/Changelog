@@ -1,3 +1,7 @@
+8 January 2021: Wouter
+	- Merge PR #391 from fhriley: Add start_time to reply callbacks so
+	  modules can compute the response time.
+
 6 January 2021: Wouter
 	- Fix #379: zone loading over HTTP appears to have buffer issues.
 	- Merge PR #395 from mptre: add missing null check.
