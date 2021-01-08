@@ -1548,7 +1548,7 @@ int edns_opt_list_append(struct edns_option** list, uint16_t code, size_t len,
         PyObject *py_rep, *py_repinfo, *py_region;
         PyObject *py_args, *py_kwargs, *result;
         int res = 0;
-        double py_start_time = start_time->tv_sec + start_time->tv_usec / 1e6;
+        double py_start_time = ((double)start_time->tv_sec) + ((double)start_time->tv_usec) / 1.0e6;
 
         PyGILState_STATE gstate = PyGILState_Ensure();
         func = (PyObject *) python_callback;
