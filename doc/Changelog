@@ -1,6 +1,8 @@
 12 January 2021: Wouter
 	- Fix #397: [Feature request] add new type always_null to local-zone
 	  similar to always_nxdomain.
+	- Fix so local zone types always_nodata and always_deny can be used
+	  from the config file.
 
 8 January 2021: Wouter
 	- Merge PR #391 from fhriley: Add start_time to reply callbacks so
