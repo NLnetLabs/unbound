@@ -1305,6 +1305,12 @@ Like refuse, but ignores local data and refuses the query.
 \h'5'\fIalways_nxdomain\fR
 Like static, but ignores local data and returns nxdomain for the query.
 .TP 10
+\h'5'\fIalways_nodata\fR
+Like static, but ignores local data and returns nodata for the query.
+.TP 10
+\h'5'\fIalways_deny\fR
+Like deny, but ignores local data and drops the query.
+.TP 10
 \h'5'\fIalways_null\fR
 Always returns 0.0.0.0 or ::0 for every name in the zone.  Like redirect
 with zero data for A and AAAA.  Ignores local data in the zone.  Used for
