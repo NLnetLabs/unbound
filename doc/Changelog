@@ -1,3 +1,7 @@
+12 January 2021: Wouter
+	- Fix #397: [Feature request] add new type always_null to local-zone
+	  similar to always_nxdomain.
+
 8 January 2021: Wouter
 	- Merge PR #391 from fhriley: Add start_time to reply callbacks so
 	  modules can compute the response time.
