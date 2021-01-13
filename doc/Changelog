@@ -1,6 +1,7 @@
 13 January 2021: Wouter
 	- Merge #399 from xiangbao227: The lock of lruhash table should
 	  unlocked after markdel entry.
+	- Fix for #93: dynlibmodule link fix for Windows.
 
 12 January 2021: Wouter
 	- Fix #397: [Feature request] add new type always_null to local-zone
