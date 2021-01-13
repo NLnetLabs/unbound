@@ -1,7 +1,6 @@
 13 January 2021: Wouter
-	- Merge #399 from xiangbao227: The function rrset_cache_touch can
-	  touch an entry to the lru while markdelling the entry in
-	  lruhash_remove.
+	- Merge #399 from xiangbao227: The lock of lruhash table should
+	  unlocked after markdel entry.
 
 12 January 2021: Wouter
 	- Fix #397: [Feature request] add new type always_null to local-zone
