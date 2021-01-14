@@ -198,14 +198,17 @@ uitoa(unsigned n, char* s)
 static uint32_t
 extract_ipv4(const uint8_t ipv6[], size_t ipv6_len, const int offset)
 {
-    uint32_t ipv4;
+    uint32_t ipv4 = 0;
+    int i, pos;
     log_assert(ipv6_len == 16); (void)ipv6_len;
-    ipv4 = (uint32_t)ipv6[offset/8+0] << (24 + (offset%8))
-         | (uint32_t)ipv6[offset/8+1] << (16 + (offset%8))
-         | (uint32_t)ipv6[offset/8+2] << ( 8 + (offset%8))
-         | (uint32_t)ipv6[offset/8+3] << ( 0 + (offset%8));
-    if (offset/8+4 < 16)
-        ipv4 |= (uint32_t)ipv6[offset/8+4] >> (8 - offset%8);
+    log_assert(offset == 32 || offset == 40 || offset == 48 || offset == 56 ||
+        offset == 64 || offset == 96);
+    for(i = 0, pos = offset / 8; i < 4; i++, pos++) {
+        if (pos == 8)
+            pos++;
+        ipv4 = ipv4 << 8;
+        ipv4 |= ipv6[pos];
+    }
     return ipv4;
 }
 
@@ -297,17 +300,16 @@ synthesize_aaaa(const uint8_t prefix_addr[], size_t prefix_addr_len,
 	size_t aaaa_len)
 {
     log_assert(prefix_addr_len == 16 && a_len == 4 && aaaa_len == 16);
+    log_assert(prefix_net == 32 || prefix_net == 40 || prefix_net == 48 ||
+        prefix_net == 56 || prefix_net == 64 || prefix_net == 96);
+    int i, pos;
     (void)prefix_addr_len; (void)a_len; (void)aaaa_len;
     memcpy(aaaa, prefix_addr, 16);
-    aaaa[prefix_net/8+0] |= a[0] >> (0+prefix_net%8);
-    aaaa[prefix_net/8+1] |= a[0] << (8-prefix_net%8);
-    aaaa[prefix_net/8+1] |= a[1] >> (0+prefix_net%8);
-    aaaa[prefix_net/8+2] |= a[1] << (8-prefix_net%8);
-    aaaa[prefix_net/8+2] |= a[2] >> (0+prefix_net%8);
-    aaaa[prefix_net/8+3] |= a[2] << (8-prefix_net%8);
-    aaaa[prefix_net/8+3] |= a[3] >> (0+prefix_net%8);
-    if (prefix_net/8+4 < 16)  /* <-- my beautiful symmetry is destroyed! */
-    aaaa[prefix_net/8+4] |= a[3] << (8-prefix_net%8);
+    for(i = 0, pos = prefix_net / 8; i < a_len; i++, pos++) {
+        if(pos == 8)
+            aaaa[pos++] = 0;
+        aaaa[pos] = a[i];
+    }
 }
 
 
@@ -374,8 +376,10 @@ dns64_apply_cfg(struct dns64_env* dns64_env, struct config_file* cfg)
         log_err("dns64_prefix is not IPv6: %s", cfg->dns64_prefix);
         return 0;
     }
-    if (dns64_env->prefix_net < 0 || dns64_env->prefix_net > 96) {
-        log_err("dns64-prefix length it not between 0 and 96: %s",
+    if (dns64_env->prefix_net != 32 && dns64_env->prefix_net != 40 &&
+            dns64_env->prefix_net != 48 && dns64_env->prefix_net != 56 &&
+            dns64_env->prefix_net != 64 && dns64_env->prefix_net != 96 ) {
+        log_err("dns64-prefix length it not 32, 40, 48, 56, 64 or 96: %s",
                 cfg->dns64_prefix);
         return 0;
     }
