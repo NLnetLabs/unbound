@@ -644,7 +644,7 @@ if test x_$withval != x_no; then
   if test $on_mingw = "no"; then
     DYNLIBMOD_EXTRALIBS="-ldl -export-dynamic"
   else
-    DYNLIBMOD_EXTRALIBS="-Wl,--export-all-symbols,--out-implib,libunbound.a"
+    DYNLIBMOD_EXTRALIBS="-Wl,--export-all-symbols,--out-implib,libunbound.dll.a"
   fi
   AC_SUBST(DYNLIBMOD_EXTRALIBS)
 fi

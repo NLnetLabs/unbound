@@ -17237,7 +17237,7 @@ $as_echo "#define WITH_DYNLIBMODULE 1" >>confdefs.h
   if test $on_mingw = "no"; then
     DYNLIBMOD_EXTRALIBS="-ldl -export-dynamic"
   else
-    DYNLIBMOD_EXTRALIBS="-Wl,--export-all-symbols,--out-implib,libunbound.a"
+    DYNLIBMOD_EXTRALIBS="-Wl,--export-all-symbols,--out-implib,libunbound.dll.a"
   fi
 
 fi

@@ -7,8 +7,10 @@
  * And to build for windows, first make unbound with the --with-dynlibmod
  * switch, then use this command:
  *   x86_64-w64-mingw32-gcc -m64 -I../.. -shared -Wall -Werror -fpic
- *      -o helloworld.dll helloworld.c -L../.. -l:libunbound.a
- * to cross-compile a 64-bit Windows DLL.
+ *      -o helloworld.dll helloworld.c -L../.. -l:libunbound.dll.a
+ * to cross-compile a 64-bit Windows DLL.  The libunbound.dll.a is produced
+ * by the compile step that makes unbound.exe and allows the dynlib dll to
+ * access definitions in unbound.exe.
  */
 
 #include "../../config.h"

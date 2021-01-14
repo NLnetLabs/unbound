@@ -1,3 +1,6 @@
+14 January 2021: Wouter
+	- Fix for #93: dynlibmodule import library is named libunbound.dll.a.
+
 13 January 2021: Wouter
 	- Merge #399 from xiangbao227: The lock of lruhash table should
 	  unlocked after markdel entry.
