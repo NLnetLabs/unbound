@@ -1365,6 +1365,10 @@ rpz_resolve_client_action_and_zone(struct auth_zones* az, struct query_info* qin
 			stats->rpz_action[r->action_override]++;
 			lock_rw_unlock(&z->lock);
 			z = NULL;
+			if(node != NULL) {
+				lock_rw_unlock(&node->lock);
+				node = NULL;
+			}
 		}
 		if(z || node) {
 			break;
