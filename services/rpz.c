@@ -1356,7 +1356,7 @@ rpz_resolve_client_action_and_zone(struct auth_zones* az, struct query_info* qin
 		z = rpz_find_zone(r->local_zones, qinfo->qname, qinfo->qname_len,
 			qinfo->qclass, 0, 0, 0);
 		node = rpz_ipbased_trigger_lookup(r->client_set, &repinfo->addr, repinfo->addrlen);
-		if(z && r->action_override == RPZ_DISABLED_ACTION) {
+		if((z || node) && r->action_override == RPZ_DISABLED_ACTION) {
 			if(r->log)
 				log_rpz_apply(z->name,
 					r->action_override,
@@ -1366,7 +1366,7 @@ rpz_resolve_client_action_and_zone(struct auth_zones* az, struct query_info* qin
 			lock_rw_unlock(&z->lock);
 			z = NULL;
 		}
-		if(z) {
+		if(z || node) {
 			break;
 		} else {
 			if(node != NULL) {
@@ -1913,7 +1913,7 @@ rpz_apply_maybe_clientip_trigger(struct auth_zones* az, struct module_env* env,
 	struct clientip_synthesized_rr* node = rpz_resolve_client_action_and_zone(
 		az, qinfo, repinfo, taglist, taglen, stats, z_out, a_out, r_out);
 
-	client_action = node == NULL ? RPZ_INVALID_ACTION : node->action;
+	client_action = ((node == NULL) ? RPZ_INVALID_ACTION : node->action);
 
 	verbose(VERB_ALGO, "rpz: qname trigger: client action=%s",
 		rpz_action_to_string(client_action));
