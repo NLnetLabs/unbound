@@ -1,3 +1,7 @@
+15 January 2021: Wouter
+	- Merge #402 from fobser: Implement IPv4-Embedded addresses according
+	  to RFC6052.
+
 14 January 2021: Wouter
 	- Fix for #93: dynlibmodule import library is named libunbound.dll.a.
 
