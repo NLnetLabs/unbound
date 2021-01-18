@@ -1,5 +1,7 @@
 18 January 2021: Wouter
 	- Fix #404: DNS query with small edns bufsize fail.
+	- Fix declaration before statement and signed comparison warning in
+	  dns64.
 
 15 January 2021: Wouter
 	- Merge #402 from fobser: Implement IPv4-Embedded addresses according

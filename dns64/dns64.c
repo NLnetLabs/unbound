@@ -299,10 +299,11 @@ synthesize_aaaa(const uint8_t prefix_addr[], size_t prefix_addr_len,
 	int prefix_net, const uint8_t a[], size_t a_len, uint8_t aaaa[],
 	size_t aaaa_len)
 {
+    size_t i;
+    int pos;
     log_assert(prefix_addr_len == 16 && a_len == 4 && aaaa_len == 16);
     log_assert(prefix_net == 32 || prefix_net == 40 || prefix_net == 48 ||
         prefix_net == 56 || prefix_net == 64 || prefix_net == 96);
-    int i, pos;
     (void)prefix_addr_len; (void)a_len; (void)aaaa_len;
     memcpy(aaaa, prefix_addr, 16);
     for(i = 0, pos = prefix_net / 8; i < a_len; i++, pos++) {
