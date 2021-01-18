@@ -388,7 +388,7 @@ server:
 	# target-fetch-policy: "3 2 1 0 0"
 
 	# Harden against very small EDNS buffer sizes.
-	# harden-short-bufsize: no
+	# harden-short-bufsize: yes
 
 	# Harden against unseemly large queries.
 	# harden-large-queries: no

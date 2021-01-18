@@ -1,3 +1,6 @@
+18 January 2021: Wouter
+	- Fix #404: DNS query with small edns bufsize fail.
+
 15 January 2021: Wouter
 	- Merge #402 from fobser: Implement IPv4-Embedded addresses according
 	  to RFC6052.
