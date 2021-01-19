@@ -160,5 +160,10 @@ int apply_edns_options(struct edns_data* edns_out, struct edns_data* edns_in,
 		!edns_keepalive(edns_out, edns_in, c, region))
 		return 0;
 
+	if (cfg->nsid && edns_opt_list_find(edns_in->opt_list, LDNS_EDNS_NSID)
+	&& !edns_opt_list_append(&edns_out->opt_list,
+			LDNS_EDNS_NSID, cfg->nsid_len, cfg->nsid, region))
+		return 0;
+
 	return 1;
 }

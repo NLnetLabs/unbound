@@ -531,6 +531,7 @@ udp-upstream-without-downstream{COLON} { YDVAR(1, VAR_UDP_UPSTREAM_WITHOUT_DOWNS
 tcp-connection-limit{COLON}	{ YDVAR(2, VAR_TCP_CONNECTION_LIMIT) }
 edns-client-string{COLON}	{ YDVAR(2, VAR_EDNS_CLIENT_STRING) }
 edns-client-string-opcode{COLON} { YDVAR(1, VAR_EDNS_CLIENT_STRING_OPCODE) }
+nsid{COLON}			{ YDVAR(1, VAR_NSID ) }
 <INITIAL,val>{NEWLINE}		{ LEXOUT(("NL\n")); cfg_parser->line++; }
 
 	/* Quoted strings. Strip leading and ending quotes */

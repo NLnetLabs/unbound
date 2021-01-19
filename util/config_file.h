@@ -338,6 +338,10 @@ struct config_file {
 	char* identity;
 	/** version, package version returned if "". */
 	char* version;
+	/** nsid */
+	char *nsid_cfg_str;
+	uint8_t *nsid;
+	uint16_t nsid_len;
 
 	/** the module configuration string */
 	char* module_conf;
@@ -1069,6 +1073,16 @@ int cfg_count_numbers(const char* str);
  * is logged).
  */
 int cfg_parse_memsize(const char* str, size_t* res);
+
+/**
+ * Parse nsid from string into binary nsid. nsid is either a hexidecimal
+ * string or an ascii string prepended with ascii_ in which case the
+ * characters after ascii_ are simply copied.
+ * @param str: the string to parse.
+ * @param nsid_len: returns length of nsid in bytes.
+ * @return malloced bytes or NULL on parse error or malloc failure.
+ */
+uint8_t* cfg_parse_nsid(const char* str, uint16_t* nsid_len);
 
 /**
  * Add a tag name to the config.  It is added at the end with a new ID value.

@@ -377,6 +377,9 @@ server:
 	# the version to report. Leave "" or default to return package version.
 	# version: ""
 
+	# NSID identity (hex string, or "ascii_somestring"). default disabled.
+	# nsid: "aabbccdd"
+
 	# the target fetch policy.
 	# series of integers describing the policy per dependency depth.
 	# The number of values in the list determines the maximum dependency

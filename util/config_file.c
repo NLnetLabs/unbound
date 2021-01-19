@@ -237,6 +237,9 @@ config_create(void)
 	cfg->hide_trustanchor = 0;
 	cfg->identity = NULL;
 	cfg->version = NULL;
+	cfg->nsid_cfg_str = NULL;
+	cfg->nsid = NULL;
+	cfg->nsid_len = 0;
 	cfg->auto_trust_anchor_file_list = NULL;
 	cfg->trust_anchor_file_list = NULL;
 	cfg->trust_anchor_list = NULL;
@@ -581,6 +584,20 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	else S_YNO("hide-trustanchor:", hide_trustanchor)
 	else S_STR("identity:", identity)
 	else S_STR("version:", version)
+	else if(strcmp(opt, "nsid:") == 0) {
+		free(cfg->nsid_cfg_str);
+		if (!(cfg->nsid_cfg_str = strdup(val)))
+			return 0;
+		/* Empty string is just validly unsetting nsid */
+		if (*val == 0) {
+			free(cfg->nsid);
+			cfg->nsid = NULL;
+			cfg->nsid_len = 0;
+			return 1;
+		}
+		cfg->nsid = cfg_parse_nsid(val, &cfg->nsid_len);
+		return cfg->nsid != NULL;
+	}
 	else S_STRLIST("root-hints:", root_hints)
 	else S_STR("target-fetch-policy:", target_fetch_policy)
 	else S_YNO("harden-glue:", harden_glue)
@@ -1016,6 +1033,7 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_YNO(opt, "hide-trustanchor", hide_trustanchor)
 	else O_STR(opt, "identity", identity)
 	else O_STR(opt, "version", version)
+	else O_STR(opt, "nsid", nsid_cfg_str)
 	else O_STR(opt, "target-fetch-policy", target_fetch_policy)
 	else O_YNO(opt, "harden-short-bufsize", harden_short_bufsize)
 	else O_YNO(opt, "harden-large-queries", harden_large_queries)
@@ -1483,6 +1501,8 @@ config_delete(struct config_file* cfg)
 #endif
 	free(cfg->identity);
 	free(cfg->version);
+	free(cfg->nsid_cfg_str);
+	free(cfg->nsid);
 	free(cfg->module_conf);
 	free(cfg->outgoing_avail_ports);
 	config_delstrlist(cfg->caps_whitelist);
@@ -2020,6 +2040,37 @@ uint8_t* config_parse_taglist(struct config_file* cfg, char* str,
 	*listlen = len;
 	return taglist;
 }
+
+uint8_t* cfg_parse_nsid(const char* str, uint16_t* nsid_len)
+{
+	uint8_t* nsid = NULL;
+
+	if (strncasecmp(str, "ascii_", 6) == 0) {
+		if ((nsid = (uint8_t *)strdup(str + 6)))
+			*nsid_len = strlen(str + 6);
+
+	} else if (strlen(str) % 2) 
+		; /* hex string has even number of characters */
+
+	else if (*str && (nsid = calloc(1, strlen(str) / 2))) {
+		const char *ch;
+		uint8_t *dp;
+
+		for ( ch = str, dp = nsid
+		    ; isxdigit(ch[0]) && isxdigit(ch[1])
+		    ; ch += 2, dp++) {
+			*dp  = (uint8_t)sldns_hexdigit_to_int(ch[0]) * 16;
+			*dp += (uint8_t)sldns_hexdigit_to_int(ch[1]);
+		}
+		if (*ch) {
+			free(nsid);
+			nsid = NULL;
+		} else
+			*nsid_len = strlen(str) / 2;
+	}
+	return nsid;
+}
+
 
 char* config_taglist2str(struct config_file* cfg, uint8_t* taglist,
         size_t taglen)
