@@ -494,12 +494,12 @@ lz_mark_soa_for_zone(struct local_zone* z, struct ub_packed_rrset_key* soa_rrset
 	if(!rrset_insert_rr(z->region, pd, rdata, rdata_len, ttl, rrstr))
 		return 0;
 	/* last 4 bytes are minimum ttl in network format */
-	if(pd->count == 0 || pd->rr_len[0] < 2+4) {
+	if(pd->count == 0 || pd->rr_len[0] < 2+4)
 		return 0;
-	}
 	minimum = (time_t)sldns_read_uint32(pd->rr_data[0]+(pd->rr_len[0]-4));
-	pd->ttl = ttl<minimum?ttl:minimum;
-	pd->rr_ttl[0] = pd->ttl;
+	minimum = ttl<minimum?ttl:minimum;
+	pd->ttl = minimum;
+	pd->rr_ttl[0] = minimum;
 
 	z->soa_negative = rrset_negative;
 	return 1;
