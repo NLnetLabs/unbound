@@ -844,9 +844,8 @@ closer to that of BIND 9, while setting "\-1 \-1 \-1 \-1 \-1" gives behaviour
 rumoured to be closer to that of BIND 8.
 .TP
 .B harden\-short\-bufsize: \fI<yes or no>
-Very small EDNS buffer sizes from queries are ignored. Default is off, since
-it is legal protocol wise to send these, and unbound tries to give very
-small answers to these queries, where possible.
+Very small EDNS buffer sizes from queries are ignored. Default is on, as
+described in the standard.
 .TP
 .B harden\-large\-queries: \fI<yes or no>
 Very large queries are ignored. Default is off, since it is legal protocol
@@ -1236,7 +1235,7 @@ address space are not validated.  This is usually required whenever
 Configure a local zone. The type determines the answer to give if
 there is no match from local\-data. The types are deny, refuse, static,
 transparent, redirect, nodefault, typetransparent, inform, inform_deny,
-inform_redirect, always_transparent, always_refuse, always_nxdomain, noview,
+inform_redirect, always_transparent, always_refuse, always_nxdomain, always_null, noview,
 and are explained below. After that the default settings are listed. Use
 local\-data: to enter data into the local zone. Answers for local zones
 are authoritative DNS answers. By default the zones are class IN.
@@ -1309,6 +1308,17 @@ Like refuse, but ignores local data and refuses the query.
 .TP 10
 \h'5'\fIalways_nxdomain\fR
 Like static, but ignores local data and returns nxdomain for the query.
+.TP 10
+\h'5'\fIalways_nodata\fR
+Like static, but ignores local data and returns nodata for the query.
+.TP 10
+\h'5'\fIalways_deny\fR
+Like deny, but ignores local data and drops the query.
+.TP 10
+\h'5'\fIalways_null\fR
+Always returns 0.0.0.0 or ::0 for every name in the zone.  Like redirect
+with zero data for A and AAAA.  Ignores local data in the zone.  Used for
+some block lists.
 .TP 10
 \h'5'\fInoview\fR
 Breaks out of that view and moves towards the global local zones for answer
@@ -2038,7 +2048,8 @@ Specify whether the ECS address check (configured using
 query contains an ECS record, or only for queries for which the ECS record is
 generated using the querier address (and therefore did not contain ECS data in
 the client query). If enabled, the address check is skipped when the client
-query contains an ECS record. Default is no.
+query contains an ECS record. And the lookup in the regular cache is skipped.
+Default is no.
 .TP
 .B max\-client\-subnet\-ipv6: \fI<number>\fR
 Specifies the maximum prefix length of the client source address we are willing

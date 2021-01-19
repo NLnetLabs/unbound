@@ -73,6 +73,9 @@
 #include "iterator/iter_hints.h"
 #include "sldns/sbuffer.h"
 #include "sldns/str2wire.h"
+#ifdef USE_DNSTAP
+#include "dnstap/dtstream.h"
+#endif
 
 #ifdef HAVE_TARGETCONDITIONALS_H
 #include <TargetConditionals.h>

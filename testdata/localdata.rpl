@@ -35,6 +35,9 @@ server:
 	local-zone: "redirect.top." redirect
 	local-data: "redirect.top. A 20.30.40.54"
 
+	; null zone
+	local-zone: "null.top." always_null
+
 	; create implicit data in the IN domain as well
 	local-data: "a.a.implicit. A 20.30.41.50"
 	local-data: "b.a.implicit. A 20.30.42.50"
@@ -353,6 +356,38 @@ SECTION QUESTION
 www.redirect.top. IN A
 SECTION ANSWER
 www.redirect.top. IN A 20.30.40.54
+ENTRY_END
+
+; always_null zone
+STEP 60 QUERY
+ENTRY_BEGIN
+SECTION QUESTION
+null.top. IN A
+ENTRY_END
+STEP 61 CHECK_ANSWER
+ENTRY_BEGIN
+MATCH all
+REPLY QR RA AA NOERROR
+SECTION QUESTION
+null.top. IN A
+SECTION ANSWER
+null.top. IN A 0.0.0.0
+ENTRY_END
+
+; always_null zone AAAA
+STEP 62 QUERY
+ENTRY_BEGIN
+SECTION QUESTION
+foo.null.top. IN AAAA
+ENTRY_END
+STEP 63 CHECK_ANSWER
+ENTRY_BEGIN
+MATCH all
+REPLY QR RA AA NOERROR
+SECTION QUESTION
+foo.null.top. IN AAAA
+SECTION ANSWER
+foo.null.top. IN AAAA ::0
 ENTRY_END
 
 SCENARIO_END

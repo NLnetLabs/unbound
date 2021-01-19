@@ -220,7 +220,7 @@ config_create(void)
 	cfg->views = NULL;
 	cfg->acls = NULL;
 	cfg->tcp_connection_limits = NULL;
-	cfg->harden_short_bufsize = 0;
+	cfg->harden_short_bufsize = 1;
 	cfg->harden_large_queries = 0;
 	cfg->harden_glue = 1;
 	cfg->harden_dnssec_stripped = 1;
@@ -391,6 +391,7 @@ struct config_file* config_create_forlib(void)
 	cfg->val_log_level = 2; /* to fill why_bogus with */
 	cfg->val_log_squelch = 1;
 	cfg->minimal_responses = 0;
+	cfg->harden_short_bufsize = 1;
 	return cfg;
 }
 

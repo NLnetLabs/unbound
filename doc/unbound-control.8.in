@@ -305,6 +305,12 @@ Transfer the auth zone from master.  The auth zone probe sequence is started,
 where the masters are probed to see if they have an updated zone (with the SOA
 serial check).  And then the zone is transferred for a newer zone version.
 .TP
+.B rpz_enable \fIzone\fR
+Enable the RPZ zone if it had previously been disabled.
+.TP
+.B rpz_enable \fIzone\fR
+Disable the RPZ zone.
+.TP
 .B view_list_local_zones \fIview\fR
 \fIlist_local_zones\fR for given view.
 .TP
