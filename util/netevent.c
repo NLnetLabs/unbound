@@ -3994,6 +3994,7 @@ comm_point_send_reply(struct comm_reply *repinfo)
 			}
 			repinfo->c->h2_stream = NULL;
 			repinfo->c->tcp_is_reading = 0;
+			sldns_buffer_clear(repinfo->c->buffer);
 			comm_point_stop_listening(repinfo->c);
 			comm_point_start_listening(repinfo->c, -1,
 				adjusted_tcp_timeout(repinfo->c));
