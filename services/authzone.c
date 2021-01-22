@@ -1824,6 +1824,43 @@ static int zonemd_fetch_parameters(struct auth_rrset* zonemd_rrset, size_t i,
 }
 
 /**
+ * See if the ZONEMD scheme, hash occurs more than once.
+ * @param zonemd_rrset: the zonemd rrset to check with the RRs in it.
+ * @param index: index of the original, this is allowed to have that
+ * 	scheme and hashalgo, but other RRs should not have it.
+ * @param scheme: the scheme to check for.
+ * @param hashalgo: the hash algorithm to check for.
+ * @return true if it occurs more than once.
+ */
+static int zonemd_is_duplicate_scheme_hash(struct auth_rrset* zonemd_rrset,
+	size_t index, int scheme, int hashalgo)
+{
+	size_t j;
+	for(j=0; j<zonemd_rrset->data->count; j++) {
+		uint32_t serial2 = 0;
+		int scheme2 = 0, hashalgo2 = 0;
+		uint8_t* hash2 = NULL;
+		size_t hashlen2 = 0;
+		if(index == j) {
+			/* this is the original */
+			continue;
+		}
+		if(!zonemd_fetch_parameters(zonemd_rrset, j, &serial2,
+			&scheme2, &hashalgo2, &hash2, &hashlen2)) {
+			/* malformed, skip it */
+			continue;
+		}
+		if(scheme == scheme2 && hashalgo == hashalgo2) {
+			/* duplicate scheme, hash */
+			verbose(VERB_ALGO, "zonemd duplicate for scheme %d "
+				"and hash %d", scheme, hashalgo);
+			return 1;
+		}
+	}
+	return 0;
+}
+
+/**
  * Check ZONEMDs if present for the auth zone.  Depending on config
  * it can warn or fail on that.  Checks the hash of the ZONEMD.
  * @param z: auth zone to check for.
@@ -1873,6 +1910,15 @@ static int auth_zone_zonemd_check_hash(struct auth_zone* z,
 			&hashalgo, &hash, &hashlen)) {
 			/* malformed RR */
 			*reason = "ZONEMD rdata malformed";
+			continue;
+		}
+		/* check for duplicates */
+		if(zonemd_is_duplicate_scheme_hash(zonemd_rrset, i, scheme,
+			hashalgo)) {
+			/* duplicate hash of the same scheme,hash
+			 * is not allowed. */
+			*reason = "ZONEMD RRSet contains more than one RR "
+				"with the same scheme and hash algorithm";
 			continue;
 		}
 		regional_free_all(region);
@@ -7381,7 +7427,7 @@ static void add_rrlist_rrsigs_into_data(struct packed_rrset_data* data,
 			data->rr_len[*done] = rrlist[i]->data->rr_len[rrlist[i]->data->count + j];
 			data->rr_ttl[*done] = rrlist[i]->data->rr_ttl[rrlist[i]->data->count + j];
 			/* reference the rdata in the rrset, no need to
-			 * copy it, it is no longer need at the end of
+			 * copy it, it is no longer needed at the end of
 			 * the routine */
 			data->rr_data[*done] = rrlist[i]->data->rr_data[rrlist[i]->data->count + j];
 			(*done)++;

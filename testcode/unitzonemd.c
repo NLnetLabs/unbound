@@ -467,6 +467,13 @@ static void zonemd_verify_tests(void)
 		/* okay date: "20201020135527", */
 		"20221020135527",
 		"verify DNSKEY RRset with trust anchor failed: signature expired");
+
+	/* duplicate zonemd with same scheme and algorithm */
+	zonemd_verify_test("example.com",
+		"testdata/zonemd.example16.zone",
+		NULL,
+		"20180302005009",
+		"ZONEMD RRSet contains more than one RR with the same scheme and hash algorithm");
 }
 
 /** zonemd unit tests */
