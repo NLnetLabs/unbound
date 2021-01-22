@@ -2331,7 +2331,8 @@ static int
 az_add_negative_soa(struct auth_zone* z, struct regional* region,
 	struct dns_msg* msg)
 {
-	uint32_t minimum;
+	time_t minimum;
+	size_t i;
 	struct packed_rrset_data* d;
 	struct auth_rrset* soa;
 	struct auth_data* apex = az_find_name(z, z->name, z->namelen);
@@ -2348,9 +2349,11 @@ az_add_negative_soa(struct auth_zone* z, struct regional* region,
 	/* last 4 bytes are minimum ttl in network format */
 	if(d->count == 0) return 0;
 	if(d->rr_len[0] < 2+4) return 0;
-	minimum = sldns_read_uint32(d->rr_data[0]+(d->rr_len[0]-4));
-	d->ttl = (time_t)minimum;
-	d->rr_ttl[0] = (time_t)minimum;
+	minimum = (time_t)sldns_read_uint32(d->rr_data[0]+(d->rr_len[0]-4));
+	minimum = d->ttl<minimum?d->ttl:minimum;
+	d->ttl = minimum;
+	for(i=0; i < d->count + d->rrsig_count; i++)
+		d->rr_ttl[i] = minimum;
 	msg->rep->ttl = get_rrset_ttl(msg->rep->rrsets[0]);
 	msg->rep->prefetch_ttl = PREFETCH_TTL_CALC(msg->rep->ttl);
 	msg->rep->serve_expired_ttl = msg->rep->ttl + SERVE_EXPIRED_TTL;

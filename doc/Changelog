@@ -1,3 +1,11 @@
+22 January 2021: George
+	- Fix TTL of SOA record for negative answers (localzone and
+	  authzone data) to be the minimum of the SOA TTL and the SOA.MINIMUM.
+
+19 January 2021: Willem
+	- Support for RFC5001: DNS Name Server Identifier (NSID) Option
+	  with the nsid: option in unbound.conf
+
 18 January 2021: Wouter
 	- Fix #404: DNS query with small edns bufsize fail.
 	- Fix declaration before statement and signed comparison warning in
@@ -74,10 +82,6 @@
 	- Fix on windows to ignore connection failure on UDP, unless verbose.
 	- Fix for #283: fix stream reuse and tcp fast open.
 	- Fix update, with write event check with streamreuse and fastopen.
-
-2 December 2020: Willem
-	- Support for RFC5001: DNS Name Server Identifier (NSID) Option
-	  with the nsid: option in unbound.conf
 
 1 December 2020: Wouter
 	- Fix #358: Squelch udp connect 'no route to host' errors on low

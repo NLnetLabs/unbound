@@ -88,12 +88,12 @@ local. IN A
 ENTRY_END
 STEP 6 CHECK_ANSWER
 ENTRY_BEGIN
-MATCH all
+MATCH all ttl
 REPLY QR RA AA
 SECTION QUESTION
 local. IN A
 SECTION AUTHORITY
-local. 3600 IN SOA nobody nobody 1 2 3 4 5
+local. 5 IN SOA nobody nobody 1 2 3 4 5
 ENTRY_END
 
 ; positive SOA
@@ -104,7 +104,7 @@ local. IN SOA
 ENTRY_END
 STEP 8 CHECK_ANSWER
 ENTRY_BEGIN
-MATCH all
+MATCH all ttl
 REPLY QR RA AA
 SECTION QUESTION
 local. IN SOA
@@ -136,12 +136,12 @@ serv.local. IN MX
 ENTRY_END
 STEP 12 CHECK_ANSWER
 ENTRY_BEGIN
-MATCH all
+MATCH all ttl
 REPLY QR RA AA
 SECTION QUESTION
 serv.local. IN MX
 SECTION AUTHORITY
-local. 3600 IN SOA nobody nobody 1 2 3 4 5
+local. 5 IN SOA nobody nobody 1 2 3 4 5
 ENTRY_END
 
 ; no such type, empty nonterminal
@@ -152,12 +152,12 @@ bla.local. IN MX
 ENTRY_END
 STEP 14 CHECK_ANSWER
 ENTRY_BEGIN
-MATCH all
+MATCH all ttl
 REPLY QR RA AA
 SECTION QUESTION
 bla.local. IN MX
 SECTION AUTHORITY
-local. 3600 IN SOA nobody nobody 1 2 3 4 5
+local. 5 IN SOA nobody nobody 1 2 3 4 5
 ENTRY_END
 
 ; nxdomain with SOA
@@ -168,12 +168,12 @@ doing.local. IN MX
 ENTRY_END
 STEP 16 CHECK_ANSWER
 ENTRY_BEGIN
-MATCH all
+MATCH all ttl
 REPLY QR RA AA NXDOMAIN
 SECTION QUESTION
 doing.local. IN MX
 SECTION AUTHORITY
-local. 3600 IN SOA nobody nobody 1 2 3 4 5
+local. 5 IN SOA nobody nobody 1 2 3 4 5
 ENTRY_END
 
 ; nxdomain without SOA
