@@ -81,6 +81,9 @@
 #ifdef WITH_PYTHONMODULE
 #include "pythonmod/pythonmod.h"
 #endif
+#ifdef WITH_DYNLIBMODULE
+#include "dynlibmod/dynlibmod.h"
+#endif
 #ifdef USE_CACHEDB
 #include "cachedb/cachedb.h"
 #endif
@@ -135,6 +138,9 @@ fptr_whitelist_comm_timer(void (*fptr)(void*))
 	else if(fptr == &auth_xfer_probe_timer_callback) return 1;
 	else if(fptr == &auth_xfer_transfer_timer_callback) return 1;
 	else if(fptr == &mesh_serve_expired_callback) return 1;
+#ifdef USE_DNSTAP
+	else if(fptr == &mq_wakeup_cb) return 1;
+#endif
 	return 0;
 }
 
@@ -223,6 +229,8 @@ fptr_whitelist_rbtree_cmp(int (*fptr) (const void *, const void *))
 	else if(fptr == &fwd_cmp) return 1;
 	else if(fptr == &pending_cmp) return 1;
 	else if(fptr == &serviced_cmp) return 1;
+	else if(fptr == &reuse_cmp) return 1;
+	else if(fptr == &reuse_id_cmp) return 1;
 	else if(fptr == &name_tree_compare) return 1;
 	else if(fptr == &order_lock_cmp) return 1;
 	else if(fptr == &codeline_cmp) return 1;
@@ -392,6 +400,9 @@ fptr_whitelist_mod_init(int (*fptr)(struct module_env* env, int id))
 #ifdef WITH_PYTHONMODULE
 	else if(fptr == &pythonmod_init) return 1;
 #endif
+#ifdef WITH_DYNLIBMODULE
+	else if(fptr == &dynlibmod_init) return 1;
+#endif
 #ifdef USE_CACHEDB
 	else if(fptr == &cachedb_init) return 1;
 #endif
@@ -416,6 +427,9 @@ fptr_whitelist_mod_deinit(void (*fptr)(struct module_env* env, int id))
 	else if(fptr == &respip_deinit) return 1;
 #ifdef WITH_PYTHONMODULE
 	else if(fptr == &pythonmod_deinit) return 1;
+#endif
+#ifdef WITH_DYNLIBMODULE
+	else if(fptr == &dynlibmod_deinit) return 1;
 #endif
 #ifdef USE_CACHEDB
 	else if(fptr == &cachedb_deinit) return 1;
@@ -443,6 +457,9 @@ fptr_whitelist_mod_operate(void (*fptr)(struct module_qstate* qstate,
 #ifdef WITH_PYTHONMODULE
 	else if(fptr == &pythonmod_operate) return 1;
 #endif
+#ifdef WITH_DYNLIBMODULE
+	else if(fptr == &dynlibmod_operate) return 1;
+#endif
 #ifdef USE_CACHEDB
 	else if(fptr == &cachedb_operate) return 1;
 #endif
@@ -468,6 +485,9 @@ fptr_whitelist_mod_inform_super(void (*fptr)(
 	else if(fptr == &respip_inform_super) return 1;
 #ifdef WITH_PYTHONMODULE
 	else if(fptr == &pythonmod_inform_super) return 1;
+#endif
+#ifdef WITH_DYNLIBMODULE
+	else if(fptr == &dynlibmod_inform_super) return 1;
 #endif
 #ifdef USE_CACHEDB
 	else if(fptr == &cachedb_inform_super) return 1;
@@ -495,6 +515,9 @@ fptr_whitelist_mod_clear(void (*fptr)(struct module_qstate* qstate,
 #ifdef WITH_PYTHONMODULE
 	else if(fptr == &pythonmod_clear) return 1;
 #endif
+#ifdef WITH_DYNLIBMODULE
+	else if(fptr == &dynlibmod_clear) return 1;
+#endif
 #ifdef USE_CACHEDB
 	else if(fptr == &cachedb_clear) return 1;
 #endif
@@ -519,6 +542,9 @@ fptr_whitelist_mod_get_mem(size_t (*fptr)(struct module_env* env, int id))
 	else if(fptr == &respip_get_mem) return 1;
 #ifdef WITH_PYTHONMODULE
 	else if(fptr == &pythonmod_get_mem) return 1;
+#endif
+#ifdef WITH_DYNLIBMODULE
+	else if(fptr == &dynlibmod_get_mem) return 1;
 #endif
 #ifdef USE_CACHEDB
 	else if(fptr == &cachedb_get_mem) return 1;
@@ -578,17 +604,29 @@ int fptr_whitelist_inplace_cb_reply_generic(inplace_cb_reply_func_type* fptr,
 #ifdef WITH_PYTHONMODULE
 		if(fptr == &python_inplace_cb_reply_generic) return 1;
 #endif
+#ifdef WITH_DYNLIBMODULE
+		if(fptr == &dynlib_inplace_cb_reply_generic) return 1;
+#endif
 	} else if(type == inplace_cb_reply_cache) {
 #ifdef WITH_PYTHONMODULE
 		if(fptr == &python_inplace_cb_reply_generic) return 1;
+#endif
+#ifdef WITH_DYNLIBMODULE
+		if(fptr == &dynlib_inplace_cb_reply_generic) return 1;
 #endif
 	} else if(type == inplace_cb_reply_local) {
 #ifdef WITH_PYTHONMODULE
 		if(fptr == &python_inplace_cb_reply_generic) return 1;
 #endif
+#ifdef WITH_DYNLIBMODULE
+		if(fptr == &dynlib_inplace_cb_reply_generic) return 1;
+#endif
 	} else if(type == inplace_cb_reply_servfail) {
 #ifdef WITH_PYTHONMODULE
 		if(fptr == &python_inplace_cb_reply_generic) return 1;
+#endif
+#ifdef WITH_DYNLIBMODULE
+		if(fptr == &dynlib_inplace_cb_reply_generic) return 1;
 #endif
 	}
 	return 0;
@@ -604,6 +642,10 @@ int fptr_whitelist_inplace_cb_query(inplace_cb_query_func_type* fptr)
         if(fptr == &python_inplace_cb_query_generic)
                 return 1;
 #endif
+#ifdef WITH_DYNLIBMODULE
+        if(fptr == &dynlib_inplace_cb_query_generic)
+                return 1;
+#endif
 	(void)fptr;
 	return 0;
 }
@@ -617,6 +659,10 @@ int fptr_whitelist_inplace_cb_edns_back_parsed(
 #else
 	(void)fptr;
 #endif
+#ifdef WITH_DYNLIBMODULE
+    if(fptr == &dynlib_inplace_cb_edns_back_parsed)
+            return 1;
+#endif
 	return 0;
 }
 
@@ -628,6 +674,10 @@ int fptr_whitelist_inplace_cb_query_response(
 		return 1;
 #else
 	(void)fptr;
+#endif
+#ifdef WITH_DYNLIBMODULE
+    if(fptr == &dynlib_inplace_cb_query_response)
+            return 1;
 #endif
 	return 0;
 }

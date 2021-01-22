@@ -45,11 +45,13 @@ struct inc_state {
 	int line;
 	YY_BUFFER_STATE buffer;
 	struct inc_state* next;
+	int inc_toplevel;
 };
 static struct inc_state* config_include_stack = NULL;
 static int inc_depth = 0;
 static int inc_prev = 0;
 static int num_args = 0;
+static int inc_toplevel = 0;
 
 void init_cfg_parse(void)
 {
@@ -57,14 +59,15 @@ void init_cfg_parse(void)
 	inc_depth = 0;
 	inc_prev = 0;
 	num_args = 0;
+	inc_toplevel = 0;
 }
 
-static void config_start_include(const char* filename)
+static void config_start_include(const char* filename, int toplevel)
 {
 	FILE *input;
 	struct inc_state* s;
 	char* nm;
-	if(inc_depth++ > 100000) {
+	if(inc_depth+1 > 100000) {
 		ub_c_error_msg("too many include files");
 		return;
 	}
@@ -96,17 +99,20 @@ static void config_start_include(const char* filename)
 		return;
 	}
 	LEXOUT(("switch_to_include_file(%s)\n", filename));
+	inc_depth++;
 	s->filename = cfg_parser->filename;
 	s->line = cfg_parser->line;
 	s->buffer = YY_CURRENT_BUFFER;
+	s->inc_toplevel = inc_toplevel;
 	s->next = config_include_stack;
 	config_include_stack = s;
 	cfg_parser->filename = nm;
 	cfg_parser->line = 1;
+	inc_toplevel = toplevel;
 	yy_switch_to_buffer(yy_create_buffer(input, YY_BUF_SIZE));
 }
 
-static void config_start_include_glob(const char* filename)
+static void config_start_include_glob(const char* filename, int toplevel)
 {
 
 	/* check for wildcards */
@@ -139,19 +145,19 @@ static void config_start_include_glob(const char* filename)
 			globfree(&g);
 			if(r == GLOB_NOMATCH)
 				return; /* no matches for pattern */
-			config_start_include(filename); /* let original deal with it */
+			config_start_include(filename, toplevel); /* let original deal with it */
 			return;
 		}
 		/* process files found, if any */
 		for(i=(int)g.gl_pathc-1; i>=0; i--) {
-			config_start_include(g.gl_pathv[i]);
+			config_start_include(g.gl_pathv[i], toplevel);
 		}
 		globfree(&g);
 		return;
 	}
 #endif /* HAVE_GLOB */
 
-	config_start_include(filename);
+	config_start_include(filename, toplevel);
 }
 
 static void config_end_include(void)
@@ -165,6 +171,7 @@ static void config_end_include(void)
 	yy_delete_buffer(YY_CURRENT_BUFFER);
 	yy_switch_to_buffer(s->buffer);
 	config_include_stack = s->next;
+	inc_toplevel = s->inc_toplevel;
 	free(s);
 }
 
@@ -199,7 +206,7 @@ COLON 	\:
 DQANY     [^\"\n\r\\]|\\.
 SQANY     [^\'\n\r\\]|\\.
 
-%x	quotedstring singlequotedstr include include_quoted val
+%x	quotedstring singlequotedstr include include_quoted val include_toplevel include_toplevel_quoted
 
 %%
 <INITIAL,val>{SPACE}*	{ 
@@ -248,6 +255,14 @@ tls-additional-port{COLON}	{ YDVAR(1, VAR_TLS_ADDITIONAL_PORT) }
 tls-session-ticket-keys{COLON}	{ YDVAR(1, VAR_TLS_SESSION_TICKET_KEYS) }
 tls-ciphers{COLON}		{ YDVAR(1, VAR_TLS_CIPHERS) }
 tls-ciphersuites{COLON}		{ YDVAR(1, VAR_TLS_CIPHERSUITES) }
+tls-use-sni{COLON}		{ YDVAR(1, VAR_TLS_USE_SNI) }
+https-port{COLON}		{ YDVAR(1, VAR_HTTPS_PORT) }
+http-endpoint{COLON}		{ YDVAR(1, VAR_HTTP_ENDPOINT) }
+http-max-streams{COLON}		{ YDVAR(1, VAR_HTTP_MAX_STREAMS) }
+http-query-buffer-size{COLON}	{ YDVAR(1, VAR_HTTP_QUERY_BUFFER_SIZE) }
+http-response-buffer-size{COLON} { YDVAR(1, VAR_HTTP_RESPONSE_BUFFER_SIZE) }
+http-nodelay{COLON}		{ YDVAR(1, VAR_HTTP_NODELAY) }
+http-notls-downstream{COLON}	{ YDVAR(1, VAR_HTTP_NOTLS_DOWNSTREAM) }
 use-systemd{COLON}		{ YDVAR(1, VAR_USE_SYSTEMD) }
 do-daemonize{COLON}		{ YDVAR(1, VAR_DO_DAEMONIZE) }
 interface{COLON}		{ YDVAR(1, VAR_INTERFACE) }
@@ -282,9 +297,11 @@ infra-cache-slabs{COLON}	{ YDVAR(1, VAR_INFRA_CACHE_SLABS) }
 infra-cache-numhosts{COLON}	{ YDVAR(1, VAR_INFRA_CACHE_NUMHOSTS) }
 infra-cache-lame-size{COLON}	{ YDVAR(1, VAR_INFRA_CACHE_LAME_SIZE) }
 infra-cache-min-rtt{COLON}	{ YDVAR(1, VAR_INFRA_CACHE_MIN_RTT) }
+infra-keep-probing{COLON}	{ YDVAR(1, VAR_INFRA_KEEP_PROBING) }
 num-queries-per-thread{COLON}	{ YDVAR(1, VAR_NUM_QUERIES_PER_THREAD) }
 jostle-timeout{COLON}		{ YDVAR(1, VAR_JOSTLE_TIMEOUT) }
 delay-close{COLON}		{ YDVAR(1, VAR_DELAY_CLOSE) }
+udp-connect{COLON}		{ YDVAR(1, VAR_UDP_CONNECT) }
 target-fetch-policy{COLON}	{ YDVAR(1, VAR_TARGET_FETCH_POLICY) }
 harden-short-bufsize{COLON}	{ YDVAR(1, VAR_HARDEN_SHORT_BUFSIZE) }
 harden-large-queries{COLON}	{ YDVAR(1, VAR_HARDEN_LARGE_QUERIES) }
@@ -295,6 +312,7 @@ harden-referral-path{COLON}	{ YDVAR(1, VAR_HARDEN_REFERRAL_PATH) }
 harden-algo-downgrade{COLON}	{ YDVAR(1, VAR_HARDEN_ALGO_DOWNGRADE) }
 use-caps-for-id{COLON}		{ YDVAR(1, VAR_USE_CAPS_FOR_ID) }
 caps-whitelist{COLON}		{ YDVAR(1, VAR_CAPS_WHITELIST) }
+caps-exempt{COLON}		{ YDVAR(1, VAR_CAPS_WHITELIST) }
 unwanted-reply-threshold{COLON}	{ YDVAR(1, VAR_UNWANTED_REPLY_THRESHOLD) }
 private-address{COLON}		{ YDVAR(1, VAR_PRIVATE_ADDRESS) }
 private-domain{COLON}		{ YDVAR(1, VAR_PRIVATE_DOMAIN) }
@@ -326,6 +344,7 @@ rpz-log{COLON}			{ YDVAR(1, VAR_RPZ_LOG) }
 rpz-log-name{COLON}		{ YDVAR(1, VAR_RPZ_LOG_NAME) }
 zonefile{COLON}			{ YDVAR(1, VAR_ZONEFILE) }
 master{COLON}			{ YDVAR(1, VAR_MASTER) }
+primary{COLON}			{ YDVAR(1, VAR_MASTER) }
 url{COLON}			{ YDVAR(1, VAR_URL) }
 allow-notify{COLON}		{ YDVAR(1, VAR_ALLOW_NOTIFY) }
 for-downstream{COLON}		{ YDVAR(1, VAR_FOR_DOWNSTREAM) }
@@ -414,6 +433,8 @@ control-key-file{COLON}		{ YDVAR(1, VAR_CONTROL_KEY_FILE) }
 control-cert-file{COLON}	{ YDVAR(1, VAR_CONTROL_CERT_FILE) }
 python-script{COLON}		{ YDVAR(1, VAR_PYTHON_SCRIPT) }
 python{COLON}			{ YDVAR(0, VAR_PYTHON) }
+dynlib-file{COLON}		{ YDVAR(1, VAR_DYNLIB_FILE) }
+dynlib{COLON}			{ YDVAR(0, VAR_DYNLIB) }
 domain-insecure{COLON}		{ YDVAR(1, VAR_DOMAIN_INSECURE) }
 minimal-responses{COLON}	{ YDVAR(1, VAR_MINIMAL_RESPONSES) }
 rrset-roundrobin{COLON}		{ YDVAR(1, VAR_RRSET_ROUNDROBIN) }
@@ -431,6 +452,7 @@ access-control-view{COLON}	{ YDVAR(2, VAR_ACCESS_CONTROL_VIEW) }
 local-zone-override{COLON}	{ YDVAR(3, VAR_LOCAL_ZONE_OVERRIDE) }
 dnstap{COLON}			{ YDVAR(0, VAR_DNSTAP) }
 dnstap-enable{COLON}		{ YDVAR(1, VAR_DNSTAP_ENABLE) }
+dnstap-bidirectional{COLON}	{ YDVAR(1, VAR_DNSTAP_BIDIRECTIONAL) }
 dnstap-socket-path{COLON}	{ YDVAR(1, VAR_DNSTAP_SOCKET_PATH) }
 dnstap-ip{COLON}		{ YDVAR(1, VAR_DNSTAP_IP) }
 dnstap-tls{COLON}		{ YDVAR(1, VAR_DNSTAP_TLS) }
@@ -497,6 +519,7 @@ ipsecmod-ignore-bogus{COLON}	{ YDVAR(1, VAR_IPSECMOD_IGNORE_BOGUS) }
 ipsecmod-hook{COLON}		{ YDVAR(1, VAR_IPSECMOD_HOOK) }
 ipsecmod-max-ttl{COLON}		{ YDVAR(1, VAR_IPSECMOD_MAX_TTL) }
 ipsecmod-whitelist{COLON}	{ YDVAR(1, VAR_IPSECMOD_WHITELIST) }
+ipsecmod-allow{COLON}		{ YDVAR(1, VAR_IPSECMOD_WHITELIST) }
 ipsecmod-strict{COLON}		{ YDVAR(1, VAR_IPSECMOD_STRICT) }
 cachedb{COLON}			{ YDVAR(0, VAR_CACHEDB) }
 backend{COLON}			{ YDVAR(1, VAR_CACHEDB_BACKEND) }
@@ -510,6 +533,9 @@ name-v4{COLON}			{ YDVAR(1, VAR_IPSET_NAME_V4) }
 name-v6{COLON}			{ YDVAR(1, VAR_IPSET_NAME_V6) }
 udp-upstream-without-downstream{COLON} { YDVAR(1, VAR_UDP_UPSTREAM_WITHOUT_DOWNSTREAM) }
 tcp-connection-limit{COLON}	{ YDVAR(2, VAR_TCP_CONNECTION_LIMIT) }
+edns-client-string{COLON}	{ YDVAR(2, VAR_EDNS_CLIENT_STRING) }
+edns-client-string-opcode{COLON} { YDVAR(1, VAR_EDNS_CLIENT_STRING_OPCODE) }
+nsid{COLON}			{ YDVAR(1, VAR_NSID ) }
 <INITIAL,val>{NEWLINE}		{ LEXOUT(("NL\n")); cfg_parser->line++; }
 
 	/* Quoted strings. Strip leading and ending quotes */
@@ -566,7 +592,7 @@ tcp-connection-limit{COLON}	{ YDVAR(2, VAR_TCP_CONNECTION_LIMIT) }
 <include>\"		{ LEXOUT(("IQS ")); BEGIN(include_quoted); }
 <include>{UNQUOTEDLETTER}*	{
 	LEXOUT(("Iunquotedstr(%s) ", yytext));
-	config_start_include_glob(yytext);
+	config_start_include_glob(yytext, 0);
 	BEGIN(inc_prev);
 }
 <include_quoted><<EOF>>	{
@@ -579,7 +605,7 @@ tcp-connection-limit{COLON}	{ YDVAR(2, VAR_TCP_CONNECTION_LIMIT) }
 <include_quoted>\"	{
 	LEXOUT(("IQE "));
 	yytext[yyleng - 1] = '\0';
-	config_start_include_glob(yytext);
+	config_start_include_glob(yytext, 0);
 	BEGIN(inc_prev);
 }
 <INITIAL,val><<EOF>>	{
@@ -588,9 +614,45 @@ tcp-connection-limit{COLON}	{ YDVAR(2, VAR_TCP_CONNECTION_LIMIT) }
 	if (!config_include_stack) {
 		yyterminate();
 	} else {
+		int prev_toplevel = inc_toplevel;
 		fclose(yyin);
 		config_end_include();
+		if(prev_toplevel) return (VAR_FORCE_TOPLEVEL);
 	}
+}
+
+	/* include-toplevel: directive */
+<INITIAL,val>include-toplevel{COLON} {
+	LEXOUT(("v(%s) ", yytext)); inc_prev = YYSTATE; BEGIN(include_toplevel);
+}
+<include_toplevel><<EOF>> {
+	yyerror("EOF inside include_toplevel directive");
+	BEGIN(inc_prev);
+}
+<include_toplevel>{SPACE}* { LEXOUT(("ITSP ")); /* ignore */ }
+<include_toplevel>{NEWLINE} { LEXOUT(("NL\n")); cfg_parser->line++; }
+<include_toplevel>\" { LEXOUT(("ITQS ")); BEGIN(include_toplevel_quoted); }
+<include_toplevel>{UNQUOTEDLETTER}* {
+	LEXOUT(("ITunquotedstr(%s) ", yytext));
+	config_start_include_glob(yytext, 1);
+	BEGIN(inc_prev);
+	return (VAR_FORCE_TOPLEVEL);
+}
+<include_toplevel_quoted><<EOF>> {
+	yyerror("EOF inside quoted string");
+	BEGIN(inc_prev);
+}
+<include_toplevel_quoted>{DQANY}* { LEXOUT(("ITSTR(%s) ", yytext)); yymore(); }
+<include_toplevel_quoted>{NEWLINE} {
+	yyerror("newline before \" in include name");
+	cfg_parser->line++; BEGIN(inc_prev);
+}
+<include_toplevel_quoted>\" {
+	LEXOUT(("ITQE "));
+	yytext[yyleng - 1] = '\0';
+	config_start_include_glob(yytext, 1);
+	BEGIN(inc_prev);
+	return (VAR_FORCE_TOPLEVEL);
 }
 
 <val>{UNQUOTEDLETTER}*	{ LEXOUT(("unquotedstr(%s) ", yytext)); 

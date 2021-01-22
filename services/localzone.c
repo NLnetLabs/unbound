@@ -157,7 +157,7 @@ local_zone_create(uint8_t* nm, size_t len, int labs,
 	z->namelen = len;
 	z->namelabs = labs;
 	lock_rw_init(&z->lock);
-	z->region = regional_create_custom(sizeof(struct regional));
+	z->region = regional_create_nochunk(sizeof(struct regional));
 	if(!z->region) {
 		free(z);
 		return NULL;
@@ -1215,7 +1215,7 @@ local_encode(struct query_info* qinfo, struct module_env* env,
 	edns->ext_rcode = 0;
 	edns->bits &= EDNS_DO;
 	if(!inplace_cb_reply_local_call(env, qinfo, NULL, &rep, rcode, edns,
-		repinfo, temp) || !reply_info_answer_encode(qinfo, &rep,
+		repinfo, temp, env->now_tv) || !reply_info_answer_encode(qinfo, &rep,
 		*(uint16_t*)sldns_buffer_begin(buf), sldns_buffer_read_u16_at(buf, 2),
 		buf, 0, 0, temp, udpsize, edns, (int)(edns->bits&EDNS_DO), 0)) {
 		error_encode(buf, (LDNS_RCODE_SERVFAIL|BIT_AA), qinfo,
@@ -1237,7 +1237,7 @@ local_error_encode(struct query_info* qinfo, struct module_env* env,
 	edns->bits &= EDNS_DO;
 
 	if(!inplace_cb_reply_local_call(env, qinfo, NULL, NULL,
-		rcode, edns, repinfo, temp))
+		rcode, edns, repinfo, temp, env->now_tv))
 		edns->opt_list = NULL;
 	error_encode(buf, r, qinfo, *(uint16_t*)sldns_buffer_begin(buf),
 		sldns_buffer_read_u16_at(buf, 2), edns);
@@ -1558,6 +1558,46 @@ local_zones_zone_answer(struct local_zone* z, struct module_env* env,
 		|| lz_type == local_zone_always_transparent) {
 		/* no NODATA or NXDOMAINS for this zone type */
 		return 0;
+	} else if(lz_type == local_zone_always_null) {
+		/* 0.0.0.0 or ::0 or noerror/nodata for this zone type,
+		 * used for blocklists. */
+		if(qinfo->qtype == LDNS_RR_TYPE_A ||
+			qinfo->qtype == LDNS_RR_TYPE_AAAA) {
+			struct ub_packed_rrset_key lrr;
+			struct packed_rrset_data d;
+			time_t rr_ttl = 3600;
+			size_t rr_len = 0;
+			uint8_t rr_data[2+16] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+			uint8_t* rr_datas = rr_data;
+			memset(&lrr, 0, sizeof(lrr));
+			memset(&d, 0, sizeof(d));
+			lrr.entry.data = &d;
+			lrr.rk.dname = qinfo->qname;
+			lrr.rk.dname_len = qinfo->qname_len;
+			lrr.rk.type = htons(qinfo->qtype);
+			lrr.rk.rrset_class = htons(qinfo->qclass);
+			if(qinfo->qtype == LDNS_RR_TYPE_A) {
+				rr_len = 4;
+				sldns_write_uint16(rr_data, rr_len);
+				rr_len += 2;
+			} else {
+				rr_len = 16;
+				sldns_write_uint16(rr_data, rr_len);
+				rr_len += 2;
+			}
+			d.ttl = rr_ttl;
+			d.count = 1;
+			d.rr_len = &rr_len;
+			d.rr_data = &rr_datas;
+			d.rr_ttl = &rr_ttl;
+			return local_encode(qinfo, env, edns, repinfo, buf, temp,
+				&lrr, 1, LDNS_RCODE_NOERROR);
+		} else {
+			local_error_encode(qinfo, env, edns, repinfo, buf,
+				temp, LDNS_RCODE_NOERROR,
+				(LDNS_RCODE_NOERROR|BIT_AA));
+		}
+		return 1;
 	}
 	/* else lz_type == local_zone_transparent */
 
@@ -1762,6 +1802,7 @@ const char* local_zone_type2str(enum localzone_type t)
 		case local_zone_always_nxdomain: return "always_nxdomain";
 		case local_zone_always_nodata: return "always_nodata";
 		case local_zone_always_deny: return "always_deny";
+		case local_zone_always_null: return "always_null";
 		case local_zone_noview: return "noview";
 		case local_zone_invalid: return "invalid";
 	}
@@ -1798,6 +1839,8 @@ int local_zone_str2type(const char* type, enum localzone_type* t)
 		*t = local_zone_always_nodata;
 	else if(strcmp(type, "always_deny") == 0)
 		*t = local_zone_always_deny;
+	else if(strcmp(type, "always_null") == 0)
+		*t = local_zone_always_null;
 	else if(strcmp(type, "noview") == 0)
 		*t = local_zone_noview;
 	else if(strcmp(type, "nodefault") == 0)

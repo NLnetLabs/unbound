@@ -58,6 +58,11 @@ $ac_distutils_result])
         AC_MSG_RESULT([$PYTHON_LDFLAGS])
         AC_SUBST([PYTHON_LDFLAGS])
 
+        if test -z "$PYTHON_LIBDIR"; then
+                PYTHON_LIBDIR=`$PYTHON -c "from distutils.sysconfig import *; \
+                        print(get_config_var('LIBDIR'));"`
+        fi
+
         #
         # Check for site packages
         #
@@ -80,11 +85,11 @@ $ac_distutils_result])
 
         LIBS="$LIBS $PYTHON_LDFLAGS"
         CPPFLAGS="$CPPFLAGS $PYTHON_CPPFLAGS"
-        AC_TRY_LINK([
+        AC_LINK_IFELSE([AC_LANG_PROGRAM([[
                 #include <Python.h>
-        ],[
+        ]],[[
                 Py_Initialize();
-        ],[pythonexists=yes],[pythonexists=no])
+        ]])],[pythonexists=yes],[pythonexists=no])
 
         AC_MSG_RESULT([$pythonexists])
 

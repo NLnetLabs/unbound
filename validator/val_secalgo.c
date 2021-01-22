@@ -77,6 +77,10 @@ int fake_sha1 = 0;
 #include <openssl/engine.h>
 #endif
 
+#if defined(HAVE_OPENSSL_DSA_H) && defined(USE_DSA)
+#include <openssl/dsa.h>
+#endif
+
 /**
  * Output a libcrypto openssl error to the logfile.
  * @param str: string to add to it.
@@ -986,6 +990,7 @@ static SECKEYPublicKey* nss_buf2ecdsa(unsigned char* key, size_t len, int algo)
 	return pk;
 }
 
+#if defined(USE_DSA) && defined(USE_SHA1)
 static SECKEYPublicKey* nss_buf2dsa(unsigned char* key, size_t len)
 {
 	SECKEYPublicKey* pk;
@@ -1046,6 +1051,7 @@ static SECKEYPublicKey* nss_buf2dsa(unsigned char* key, size_t len)
 	}
 	return pk;
 }
+#endif /* USE_DSA && USE_SHA1 */
 
 static SECKEYPublicKey* nss_buf2rsa(unsigned char* key, size_t len)
 {
