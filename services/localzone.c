@@ -2087,9 +2087,10 @@ void local_zones_del_data(struct local_zones* zones,
 		/* no memory recycling for zone deletions ... */
 		d->rrsets = NULL;
 		/* did we delete the soa record ? */
-		if(query_dname_compare(d->name, z->name) == 0)
+		if(query_dname_compare(d->name, z->name) == 0) {
 			z->soa = NULL;
 			z->soa_negative = NULL;
+		}
 
 		/* cleanup the empty nonterminals for this name */
 		del_empty_term(z, d, name, len, labs);
