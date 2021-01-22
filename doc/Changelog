@@ -1,3 +1,7 @@
+22 January 2021: George
+	- Fix TTL of SOA record for negative answers (localzone and
+	  authzone data) to be the minimum of the SOA TTL and the SOA.MINIMUM.
+
 18 January 2021: Wouter
 	- Fix #404: DNS query with small edns bufsize fail.
 	- Fix declaration before statement and signed comparison warning in
