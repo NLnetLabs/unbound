@@ -474,6 +474,13 @@ static void zonemd_verify_tests(void)
 		NULL,
 		"20180302005009",
 		"ZONEMD RRSet contains more than one RR with the same scheme and hash algorithm");
+	/* different capitalisation of ns name and owner names, should
+	 * be canonicalized. */
+	zonemd_verify_test("example.com",
+		"testdata/zonemd.example17.zone",
+		NULL,
+		"20180302005009",
+		"ZONEMD verification successful");
 }
 
 /** zonemd unit tests */
