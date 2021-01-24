@@ -1,0 +1,109 @@
+echo There we go...
+
+# #-- padding.test --#
+# source the master var file when it's there
+[ -f ../.tpkg.var.master ] && source ../.tpkg.var.master
+# use .tpkg.var.test for in test variable passing
+[ -f .tpkg.var.test ] && source .tpkg.var.test
+
+PRE="../.."
+. ../common.sh
+if grep "define USE_DNSTAP 1" $PRE/config.h; then echo test enabled; else echo test skipped; exit 0; fi
+
+echo "> query www.example.com."
+dig @127.0.0.1 -p $UNBOUND_PORT www.example.com. | tee outfile
+echo "> check answer"
+if grep "10.20.30.40" outfile; then
+        echo "OK"
+else
+        echo "> cat logfiles"
+        cat tap.log
+        cat tap.errlog
+        cat fwd.log
+	cat unbound2.log 
+        cat unbound.log
+        echo "Not OK"
+        exit 1
+fi
+
+echo "> wait for log to happen on timer"
+sleep 3
+echo "> check tap.log for dnstap info"
+# see if it logged the information in tap.log
+# wait for a moment for filesystem to catch up.
+if grep "www.example.com" tap.log >/dev/null; then :; else sleep 1; fi
+if grep "www.example.com" tap.log >/dev/null; then :; else sleep 1; fi
+if grep "www.example.com" tap.log >/dev/null; then :; else sleep 1; fi
+if grep "www.example.com" tap.log >/dev/null; then :; else sleep 1; fi
+if grep "www.example.com" tap.log >/dev/null; then :; else sleep 1; fi
+if grep "www.example.com" tap.log >/dev/null; then :; else sleep 10; fi
+if grep "www.example.com" tap.log; then echo "yes it is in tap.log";
+else
+        echo "information not in tap.log"
+        echo "failed"
+        echo "> cat logfiles"
+        cat tap.log
+        cat tap.errlog
+        cat fwd.log
+        cat unbound.log
+        echo "Not OK"
+        exit 1
+fi
+
+echo "> query txt.example.com."
+dig @127.0.0.1 -p $UNBOUND_PORT txt.example.com. TXT | tee outfile
+echo "> check answer"
+if grep "Lorem ipsum" outfile; then
+        echo "OK"
+else
+        echo "> cat logfiles"
+        cat tap.log
+        cat tap.errlog
+        cat fwd.log
+	cat unbound2.log 
+        cat unbound.log
+        echo "Not OK"
+        exit 1
+fi
+echo "> wait for log to happen on timer"
+sleep 3
+echo "> check tap.log for dnstap info"
+# see if it logged the information in tap.log
+# wait for a moment for filesystem to catch up.
+if grep "txt.example.com" tap.log >/dev/null; then :; else sleep 1; fi
+if grep "txt.example.com" tap.log >/dev/null; then :; else sleep 1; fi
+if grep "txt.example.com" tap.log >/dev/null; then :; else sleep 1; fi
+if grep "txt.example.com" tap.log >/dev/null; then :; else sleep 1; fi
+if grep "txt.example.com" tap.log >/dev/null; then :; else sleep 1; fi
+if grep "txt.example.com" tap.log >/dev/null; then :; else sleep 10; fi
+if grep "txt.example.com" tap.log; then echo "yes it is in tap.log";
+else
+        echo "information not in tap.log"
+        echo "failed"
+        echo "> cat logfiles"
+        cat tap.log
+        cat tap.errlog
+        cat fwd.log
+        cat unbound.log
+        echo "Not OK"
+        exit 1
+fi
+
+echo "> wait for message to be fully written to log"
+sleep 1
+grep '^;; MSG SIZE  rcvd: ' tap.log > message.sizes
+if diff message.sizes padding.msgsizes
+then
+	echo "OK"
+	exit 0
+else
+        echo "unexpected message sizes"
+        echo "failed"
+        echo "> cat logfiles"
+        cat tap.log
+        cat tap.errlog
+        cat fwd.log
+        cat unbound.log
+        echo "Not OK"
+        exit 1
+fi
