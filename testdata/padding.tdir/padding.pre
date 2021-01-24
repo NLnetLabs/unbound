@@ -8,13 +8,17 @@ PRE="../.."
 . ../common.sh
 if grep "define USE_DNSTAP 1" $PRE/config.h; then echo test enabled; else echo test skipped; exit 0; fi
 
-get_random_port 3 
+get_random_port 5
 UNBOUND_PORT=$RND_PORT
 UPSTREAM_PORT=$(($RND_PORT + 1))
 FWD_PORT=$(($RND_PORT + 2))
+CONTROL_PORT=$(($RND_PORT + 3))
+CONTROL_PORT2=$(($RND_PORT + 4))
 echo "UNBOUND_PORT=$UNBOUND_PORT" >> .tpkg.var.test
 echo "UPSTREAM_PORT=$UPSTREAM_PORT" >> .tpkg.var.test
 echo "FWD_PORT=$FWD_PORT" >> .tpkg.var.test
+echo "CONTROL_PORT=$CONTROL_PORT" >> .tpkg.var.test
+echo "CONTROL_PORT2=$CONTROL_PORT2" >> .tpkg.var.test
 
 # start ldns-testnd
 get_ldns_testns
@@ -42,7 +46,7 @@ if test ! -S dnstap.socket; then
 fi
 
 # make config file
-sed -e 's/@PORT\@/'$UNBOUND_PORT'/' -e 's/@TOPORT\@/'$UPSTREAM_PORT'/' < padding.conf > ub.conf
+sed -e 's/@PORT\@/'$UNBOUND_PORT'/' -e 's/@TOPORT\@/'$UPSTREAM_PORT'/' -e 's/@CONTROL_PORT\@/'$CONTROL_PORT'/' < padding.conf > ub.conf
 # start unbound in the background
 $PRE/unbound -d -c ub.conf >unbound.log 2>&1 &
 #$PRE/unbound -d -c ub.conf 2>&1 | tee unbound.log &
@@ -50,7 +54,7 @@ UNBOUND_PID=$!
 echo "UNBOUND_PID=$UNBOUND_PID" >> .tpkg.var.test
 
 # make upstream config file
-sed -e 's/@PORT\@/'$UPSTREAM_PORT'/' -e 's/@TOPORT\@/'$FWD_PORT'/' < padding.conf2 > ub2.conf
+sed -e 's/@PORT\@/'$UPSTREAM_PORT'/' -e 's/@TOPORT\@/'$FWD_PORT'/' -e 's/@CONTROL_PORT2\@/'$CONTROL_PORT2'/' < padding.conf2 > ub2.conf
 # start upstream unbound in the background
 $PRE/unbound -d -c ub2.conf >unbound2.log 2>&1 &
 #$PRE/unbound -d -c ub2.conf 2>&1 | tee unbound2.log &
