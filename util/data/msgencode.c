@@ -984,6 +984,6 @@ error_encode(sldns_buffer* buf, int r, struct query_info* qinfo,
 		es.bits &= EDNS_DO;
 		if(sldns_buffer_limit(buf) + edns_field_size > edns->udp_size)
 			return;
-		attach_edns_record_(buf, &es, edns->udp_size - edns_field_size);
+		attach_edns_record(buf, &es);
 	}
 }

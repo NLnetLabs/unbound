@@ -44,6 +44,7 @@
 
 #include "util/storage/dnstree.h"
 
+struct edns_option;
 struct edns_data;
 struct config_file;
 struct comm_point;
