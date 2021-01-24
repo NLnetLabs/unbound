@@ -510,6 +510,10 @@ dnscrypt-shared-secret-cache-slabs{COLON}	{
 		YDVAR(1, VAR_DNSCRYPT_SHARED_SECRET_CACHE_SLABS) }
 dnscrypt-nonce-cache-size{COLON}	{ YDVAR(1, VAR_DNSCRYPT_NONCE_CACHE_SIZE) }
 dnscrypt-nonce-cache-slabs{COLON}	{ YDVAR(1, VAR_DNSCRYPT_NONCE_CACHE_SLABS) }
+pad-responses{COLON}		{ YDVAR(1, VAR_PAD_RESPONSES) }
+pad-responses-block-size{COLON}	{ YDVAR(1, VAR_PAD_RESPONSES_BLOCK_SIZE) }
+pad-queries{COLON}		{ YDVAR(1, VAR_PAD_QUERIES) }
+pad-queries-block-size{COLON}	{ YDVAR(1, VAR_PAD_QUERIES_BLOCK_SIZE) }
 ipsecmod-enabled{COLON}		{ YDVAR(1, VAR_IPSECMOD_ENABLED) }
 ipsecmod-ignore-bogus{COLON}	{ YDVAR(1, VAR_IPSECMOD_IGNORE_BOGUS) }
 ipsecmod-hook{COLON}		{ YDVAR(1, VAR_IPSECMOD_HOOK) }
@@ -533,6 +537,7 @@ answer-cookie{COLON}		{ YDVAR(1, VAR_ANSWER_COOKIE ) }
 cookie-secret{COLON}		{ YDVAR(1, VAR_COOKIE_SECRET) }
 edns-client-string{COLON}	{ YDVAR(2, VAR_EDNS_CLIENT_STRING) }
 edns-client-string-opcode{COLON} { YDVAR(1, VAR_EDNS_CLIENT_STRING_OPCODE) }
+nsid{COLON}			{ YDVAR(1, VAR_NSID ) }
 <INITIAL,val>{NEWLINE}		{ LEXOUT(("NL\n")); cfg_parser->line++; }
 
 	/* Quoted strings. Strip leading and ending quotes */

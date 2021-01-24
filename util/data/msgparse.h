@@ -225,6 +225,8 @@ struct edns_data {
 	uint16_t udp_size;
 	/** rdata element list, or NULL if none */
 	struct edns_option* opt_list;
+	/** block size to pad */
+	uint16_t padding_block_size;
 };
 
 /**

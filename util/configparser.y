@@ -164,6 +164,8 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_DNSCRYPT_SHARED_SECRET_CACHE_SLABS
 %token VAR_DNSCRYPT_NONCE_CACHE_SIZE
 %token VAR_DNSCRYPT_NONCE_CACHE_SLABS
+%token VAR_PAD_RESPONSES VAR_PAD_RESPONSES_BLOCK_SIZE
+%token VAR_PAD_QUERIES VAR_PAD_QUERIES_BLOCK_SIZE
 %token VAR_IPSECMOD_ENABLED VAR_IPSECMOD_HOOK VAR_IPSECMOD_IGNORE_BOGUS
 %token VAR_IPSECMOD_MAX_TTL VAR_IPSECMOD_WHITELIST VAR_IPSECMOD_STRICT
 %token VAR_CACHEDB VAR_CACHEDB_BACKEND VAR_CACHEDB_SECRETSEED
@@ -182,7 +184,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_TLS_SESSION_TICKET_KEYS VAR_RPZ VAR_TAGS VAR_RPZ_ACTION_OVERRIDE
 %token VAR_RPZ_CNAME_OVERRIDE VAR_RPZ_LOG VAR_RPZ_LOG_NAME
 %token VAR_DYNLIB VAR_DYNLIB_FILE VAR_EDNS_CLIENT_STRING
-%token VAR_EDNS_CLIENT_STRING_OPCODE
+%token VAR_EDNS_CLIENT_STRING_OPCODE VAR_NSID
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -277,7 +279,10 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_disable_dnssec_lame_check | server_access_control_tag |
 	server_local_zone_override | server_access_control_tag_action |
 	server_access_control_tag_data | server_access_control_view |
-	server_qname_minimisation_strict | server_serve_expired |
+	server_qname_minimisation_strict |
+	server_pad_responses | server_pad_responses_block_size |
+	server_pad_queries | server_pad_queries_block_size |
+	server_serve_expired |
 	server_serve_expired_ttl | server_serve_expired_ttl_reset |
 	server_serve_expired_reply_ttl | server_serve_expired_client_timeout |
 	server_fake_dsa | server_log_identity | server_use_systemd |
@@ -297,7 +302,7 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_tls_ciphersuites | server_tls_session_ticket_keys |
 	server_answer_cookie | server_cookie_secret |
 	server_tls_use_sni | server_edns_client_string |
-	server_edns_client_string_opcode
+	server_edns_client_string_opcode | server_nsid
 	;
 stubstart: VAR_STUB_ZONE
 	{
@@ -1308,6 +1313,22 @@ server_version: VAR_VERSION STRING_ARG
 		cfg_parser->cfg->version = $2;
 	}
 	;
+server_nsid: VAR_NSID STRING_ARG
+	{
+		OUTYY(("P(server_nsid:%s)\n", $2));
+		free(cfg_parser->cfg->nsid_cfg_str);
+		cfg_parser->cfg->nsid_cfg_str = $2;
+		free(cfg_parser->cfg->nsid);
+		cfg_parser->cfg->nsid = NULL;
+		cfg_parser->cfg->nsid_len = 0;
+		if (*$2 == 0)
+			; /* pass; empty string is not setting nsid */
+		else if (!(cfg_parser->cfg->nsid = cfg_parse_nsid(
+					$2, &cfg_parser->cfg->nsid_len)))
+			yyerror("the NSID must be either a hex string or an "
+			    "ascii character string prepended with ascii_.");
+	}
+	;
 server_so_rcvbuf: VAR_SO_RCVBUF STRING_ARG
 	{
 		OUTYY(("P(server_so_rcvbuf:%s)\n", $2));
@@ -2036,6 +2057,9 @@ server_local_zone: VAR_LOCAL_ZONE STRING_ARG STRING_ARG
 		   && strcmp($3, "always_transparent")!=0
 		   && strcmp($3, "always_refuse")!=0
 		   && strcmp($3, "always_nxdomain")!=0
+		   && strcmp($3, "always_nodata")!=0
+		   && strcmp($3, "always_deny")!=0
+		   && strcmp($3, "always_null")!=0
 		   && strcmp($3, "noview")!=0
 		   && strcmp($3, "inform")!=0 && strcmp($3, "inform_deny")!=0
 		   && strcmp($3, "inform_redirect") != 0
@@ -2044,8 +2068,9 @@ server_local_zone: VAR_LOCAL_ZONE STRING_ARG STRING_ARG
 				"refuse, redirect, transparent, "
 				"typetransparent, inform, inform_deny, "
 				"inform_redirect, always_transparent, "
-				"always_refuse, always_nxdomain, noview "
-				", nodefault or ipset");
+				"always_refuse, always_nxdomain, "
+				"always_nodata, always_deny, always_null, "
+				"noview, nodefault or ipset");
 			free($2);
 			free($3);
 		} else if(strcmp($3, "nodefault")==0) {
@@ -2419,6 +2444,44 @@ server_qname_minimisation_strict: VAR_QNAME_MINIMISATION_STRICT STRING_ARG
 			yyerror("expected yes or no.");
 		else cfg_parser->cfg->qname_minimisation_strict = 
 			(strcmp($2, "yes")==0);
+		free($2);
+	}
+	;
+server_pad_responses: VAR_PAD_RESPONSES STRING_ARG
+	{
+		OUTYY(("P(server_pad_responses:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else cfg_parser->cfg->pad_responses = 
+			(strcmp($2, "yes")==0);
+		free($2);
+	}
+	;
+server_pad_responses_block_size: VAR_PAD_RESPONSES_BLOCK_SIZE STRING_ARG
+	{
+		OUTYY(("P(server_pad_responses_block_size:%s)\n", $2));
+		if(atoi($2) == 0)
+			yyerror("number expected");
+		else cfg_parser->cfg->pad_responses_block_size = atoi($2);
+		free($2);
+	}
+	;
+server_pad_queries: VAR_PAD_QUERIES STRING_ARG
+	{
+		OUTYY(("P(server_pad_queries:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else cfg_parser->cfg->pad_queries = 
+			(strcmp($2, "yes")==0);
+		free($2);
+	}
+	;
+server_pad_queries_block_size: VAR_PAD_QUERIES_BLOCK_SIZE STRING_ARG
+	{
+		OUTYY(("P(server_pad_queries_block_size:%s)\n", $2));
+		if(atoi($2) == 0)
+			yyerror("number expected");
+		else cfg_parser->cfg->pad_queries_block_size = atoi($2);
 		free($2);
 	}
 	;

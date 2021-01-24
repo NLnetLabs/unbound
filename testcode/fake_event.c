@@ -64,6 +64,7 @@
 #include "sldns/sbuffer.h"
 #include "sldns/wire2str.h"
 #include "sldns/str2wire.h"
+#include "daemon/remote.h"
 #include <signal.h>
 struct worker;
 struct daemon_remote;
@@ -1228,6 +1229,7 @@ struct serviced_query* outnet_serviced_query(struct outside_network* outnet,
 		edns.bits = 0;
 		if(dnssec)
 			edns.bits = EDNS_DO;
+		edns.padding_block_size = 0;
 		if((client_string_addr = edns_string_addr_lookup(
 			&env->edns_strings->client_strings,
 			addr, addrlen))) {
@@ -1765,7 +1767,7 @@ struct comm_point* outnet_comm_point_for_http(struct outside_network* outnet,
 }
 
 int comm_point_send_udp_msg(struct comm_point *c, sldns_buffer* packet,
-	struct sockaddr* addr, socklen_t addrlen) 
+	struct sockaddr* addr, socklen_t addrlen, int ATTR_UNUSED(is_connected))
 {
 	struct fake_commpoint* fc = (struct fake_commpoint*)c;
 	struct replay_runtime* runtime = fc->runtime;

@@ -166,6 +166,8 @@ struct comm_reply {
 struct comm_point {
 	/** behind the scenes structure, with say libevent info. alloced. */
 	struct internal_event* ev;
+	/** if the event is added or not */
+	int event_added;
 
 	/** file descriptor for communication point */
 	int fd;
@@ -633,10 +635,11 @@ void comm_point_drop_reply(struct comm_reply* repinfo);
  * @param addr: where to send it to.   If NULL, send is performed,
  * 	for connected sockets, to the connected address.
  * @param addrlen: length of addr.
+ * @param is_connected: if the UDP socket is connect()ed.
  * @return: false on a failure.
  */
 int comm_point_send_udp_msg(struct comm_point* c, struct sldns_buffer* packet,
-	struct sockaddr* addr, socklen_t addrlen);
+	struct sockaddr* addr, socklen_t addrlen,int is_connected);
 
 /**
  * Stop listening for input on the commpoint. No callbacks will happen.
@@ -660,6 +663,16 @@ void comm_point_start_listening(struct comm_point* c, int newfd, int msec);
  * @param wr: if true, listens for writing.
  */
 void comm_point_listen_for_rw(struct comm_point* c, int rd, int wr);
+
+/**
+ * For TCP handlers that use c->tcp_timeout_msec, this routine adjusts
+ * it with the minimum.  Otherwise, a 0 value advertised without the
+ * minimum applied moves to a 0 in comm_point_start_listening and that
+ * routine treats it as no timeout, listen forever, which is not wanted.
+ * @param c: comm point to use the tcp_timeout_msec of.
+ * @return adjusted tcp_timeout_msec value with the minimum if smaller.
+ */
+int adjusted_tcp_timeout(struct comm_point* c);
 
 /**
  * Get size of memory used by comm point.

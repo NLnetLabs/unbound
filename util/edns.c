@@ -309,8 +309,20 @@ int apply_edns_options(struct edns_data* edns_out, struct edns_data* edns_in,
 	if(!edns_cookie(edns_out, edns_in, cfg, c, repinfo, now, region))
 		return 0;
 
-	if(!edns_padding(edns_out, edns_in, c, region))
+	if (cfg->nsid && edns_opt_list_find(edns_in->opt_list, LDNS_EDNS_NSID)
+	&& !edns_opt_list_append(&edns_out->opt_list,
+			LDNS_EDNS_NSID, cfg->nsid_len, cfg->nsid, region))
 		return 0;
+
+	if(!cfg->pad_responses || c->type != comm_tcp || !c->ssl
+	|| !edns_opt_list_find(edns_in->opt_list, LDNS_EDNS_PADDING))
+	       ; /* pass */
+
+	else if(!edns_opt_list_append(&edns_out->opt_list, LDNS_EDNS_PADDING
+	                                                 , 0, NULL, region))
+		return 0;
+	else
+		edns_out->padding_block_size = cfg->pad_responses_block_size;
 
 	return 1;
 }

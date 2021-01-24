@@ -1899,17 +1899,10 @@ randomize_and_send_udp(struct pending* pend, sldns_buffer* packet, int timeout)
 	log_assert(pend->pc && pend->pc->cp);
 
 	/* send it over the commlink */
-	if(outnet->udp_connect) {
-		if(!comm_point_send_udp_msg(pend->pc->cp, packet, NULL, 0)) {
-			portcomm_loweruse(outnet, pend->pc);
-			return 0;
-		}
-	} else {
-		if(!comm_point_send_udp_msg(pend->pc->cp, packet,
-			(struct sockaddr*)&pend->addr, pend->addrlen)) {
-			portcomm_loweruse(outnet, pend->pc);
-			return 0;
-		}
+	if(!comm_point_send_udp_msg(pend->pc->cp, packet,
+		(struct sockaddr*)&pend->addr, pend->addrlen, outnet->udp_connect)) {
+		portcomm_loweruse(outnet, pend->pc);
+		return 0;
 	}
 
 	/* system calls to set timeout after sending UDP to make roundtrip
@@ -2249,7 +2242,8 @@ static struct serviced_query*
 serviced_create(struct outside_network* outnet, sldns_buffer* buff, int dnssec,
 	int want_dnssec, int nocaps, int tcp_upstream, int ssl_upstream,
 	char* tls_auth_name, struct sockaddr_storage* addr, socklen_t addrlen,
-	uint8_t* zone, size_t zonelen, int qtype, struct edns_option* opt_list)
+	uint8_t* zone, size_t zonelen, int qtype, struct edns_option* opt_list,
+	size_t pad_queries_block_size)
 {
 	struct serviced_query* sq = (struct serviced_query*)malloc(sizeof(*sq));
 #ifdef UNBOUND_DEBUG
@@ -2307,6 +2301,7 @@ serviced_create(struct outside_network* outnet, sldns_buffer* buff, int dnssec,
 	sq->status = serviced_initial;
 	sq->retry = 0;
 	sq->to_be_deleted = 0;
+	sq->padding_block_size = pad_queries_block_size;
 #ifdef UNBOUND_DEBUG
 	ins = 
 #else
@@ -2511,14 +2506,13 @@ serviced_encode(struct serviced_query* sq, sldns_buffer* buff, int with_edns)
 			edns.bits = EDNS_DO;
 		if(sq->dnssec & BIT_CD)
 			LDNS_CD_SET(sldns_buffer_begin(buff));
-		if (sq->ssl_upstream) {
+		if (sq->ssl_upstream && sq->padding_block_size) {
 			padding_option.opt_code = LDNS_EDNS_PADDING;
 			padding_option.opt_len = 0;
 			padding_option.opt_data = NULL;
 			padding_option.next = edns.opt_list;
 			edns.opt_list = &padding_option;
-			fprintf(stderr, "add padding, pos: %d, limit: %d\n",
-			    (int)sldns_buffer_position(buff), (int)sldns_buffer_limit(buff));
+			edns.padding_block_size = sq->padding_block_size;
 		}
 		attach_edns_record(buff, &edns);
 	}
@@ -3043,7 +3037,9 @@ outnet_serviced_query(struct outside_network* outnet,
 		sq = serviced_create(outnet, buff, dnssec, want_dnssec, nocaps,
 			tcp_upstream, ssl_upstream, tls_auth_name, addr,
 			addrlen, zone, zonelen, (int)qinfo->qtype,
-			qstate->edns_opts_back_out);
+			qstate->edns_opts_back_out,
+			( ssl_upstream && env->cfg->pad_queries
+			? env->cfg->pad_queries_block_size : 0));
 		if(!sq) {
 			free(cb);
 			return NULL;
