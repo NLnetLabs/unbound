@@ -19,15 +19,7 @@ ADJUST copy_id
 SECTION QUESTION
 txt	IN	TXT
 SECTION ANSWER
-txt	IN	TXT	"Lorem ipsum dolor sit amet, consectetur adipiscing "
-txt	IN	TXT	"elit, sed do eiusmod tempor incididunt ut labore et "
-txt	IN	TXT	"dolore magna aliqua. Ut enim ad minim veniam, quis "
-txt	IN	TXT	"nostrud exercitation ullamco laboris nisi ut aliquip "
-txt	IN	TXT	"ex ea commodo consequat. Duis aute irure dolor in "
-txt	IN	TXT	"reprehenderit in voluptate velit esse cillum dolore "
-txt	IN	TXT	"eu fugiat nulla pariatur. Excepteur sint occaecat "
-txt	IN	TXT	"cupidatat non proident, sunt in culpa qui officia "
-txt	IN	TXT	"deserunt mollit anim id est laborum."
+txt	IN	TXT	"Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua." "Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat." "Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur." "Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum."
 ENTRY_END
 
 
