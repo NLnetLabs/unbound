@@ -162,6 +162,8 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_DNSCRYPT_SHARED_SECRET_CACHE_SLABS
 %token VAR_DNSCRYPT_NONCE_CACHE_SIZE
 %token VAR_DNSCRYPT_NONCE_CACHE_SLABS
+%token VAR_PAD_RESPONSES VAR_PAD_RESPONSES_BLOCK_SIZE
+%token VAR_PAD_QUERIES VAR_PAD_QUERIES_BLOCK_SIZE
 %token VAR_IPSECMOD_ENABLED VAR_IPSECMOD_HOOK VAR_IPSECMOD_IGNORE_BOGUS
 %token VAR_IPSECMOD_MAX_TTL VAR_IPSECMOD_WHITELIST VAR_IPSECMOD_STRICT
 %token VAR_CACHEDB VAR_CACHEDB_BACKEND VAR_CACHEDB_SECRETSEED
@@ -274,7 +276,10 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_disable_dnssec_lame_check | server_access_control_tag |
 	server_local_zone_override | server_access_control_tag_action |
 	server_access_control_tag_data | server_access_control_view |
-	server_qname_minimisation_strict | server_serve_expired |
+	server_qname_minimisation_strict |
+	server_pad_responses | server_pad_responses_block_size |
+	server_pad_queries | server_pad_queries_block_size |
+	server_serve_expired |
 	server_serve_expired_ttl | server_serve_expired_ttl_reset |
 	server_serve_expired_reply_ttl | server_serve_expired_client_timeout |
 	server_fake_dsa | server_log_identity | server_use_systemd |
@@ -2433,6 +2438,44 @@ server_qname_minimisation_strict: VAR_QNAME_MINIMISATION_STRICT STRING_ARG
 			yyerror("expected yes or no.");
 		else cfg_parser->cfg->qname_minimisation_strict = 
 			(strcmp($2, "yes")==0);
+		free($2);
+	}
+	;
+server_pad_responses: VAR_PAD_RESPONSES STRING_ARG
+	{
+		OUTYY(("P(server_pad_responses:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else cfg_parser->cfg->pad_responses = 
+			(strcmp($2, "yes")==0);
+		free($2);
+	}
+	;
+server_pad_responses_block_size: VAR_PAD_RESPONSES_BLOCK_SIZE STRING_ARG
+	{
+		OUTYY(("P(server_pad_responses_block_size:%s)\n", $2));
+		if(atoi($2) == 0)
+			yyerror("number expected");
+		else cfg_parser->cfg->pad_responses_block_size = atoi($2);
+		free($2);
+	}
+	;
+server_pad_queries: VAR_PAD_QUERIES STRING_ARG
+	{
+		OUTYY(("P(server_pad_queries:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else cfg_parser->cfg->pad_queries = 
+			(strcmp($2, "yes")==0);
+		free($2);
+	}
+	;
+server_pad_queries_block_size: VAR_PAD_QUERIES_BLOCK_SIZE STRING_ARG
+	{
+		OUTYY(("P(server_pad_queries_block_size:%s)\n", $2));
+		if(atoi($2) == 0)
+			yyerror("number expected");
+		else cfg_parser->cfg->pad_queries_block_size = atoi($2);
 		free($2);
 	}
 	;

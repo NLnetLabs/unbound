@@ -1,3 +1,7 @@
+22 January 2022: Willem
+	- Padding of queries and responses with DNS over TLS as specified in
+	  RFC7830 and RFC8467.
+
 22 January 2021: George
 	- Fix TTL of SOA record for negative answers (localzone and
 	  authzone data) to be the minimum of the SOA TTL and the SOA.MINIMUM.

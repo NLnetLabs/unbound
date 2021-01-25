@@ -758,6 +758,12 @@ server:
 	# cipher setting for TLSv1.3
 	# tls-ciphersuites: "TLS_AES_128_GCM_SHA256:TLS_AES_128_CCM_8_SHA256:TLS_AES_128_CCM_SHA256:TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256"
 
+	# Pad responses to padded queries received over TLS
+	# pad-responses: yes
+
+	# Padded responses will be padded to the closest multiple of this size.
+	# pad-responses-block-size: 468
+
 	# Use the SNI extension for TLS connections.  Default is yes.
 	# Changing the value requires a reload.
 	# tls-use-sni: yes
@@ -779,6 +785,12 @@ server:
 
 	# Add system certs to the cert bundle, from the Windows Cert Store
 	# tls-win-cert: no
+
+	# Pad queries over TLS upstreams
+	# pad-queries: yes
+
+	# Padded queries will be padded to the closest multiple of this size.
+	# pad-queries-block-size: 128
 
 	# Also serve tls on these port numbers (eg. 443, ...), by listing
 	# tls-additional-port: portno for each of the port numbers.

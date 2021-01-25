@@ -338,6 +338,10 @@ config_create(void)
 	cfg->dnscrypt_shared_secret_cache_slabs = 4;
 	cfg->dnscrypt_nonce_cache_size = 4*1024*1024;
 	cfg->dnscrypt_nonce_cache_slabs = 4;
+	cfg->pad_responses = 1;
+	cfg->pad_responses_block_size = 468; /* from RFC8467 */
+	cfg->pad_queries = 1;
+	cfg->pad_queries_block_size = 128; /* from RFC8467 */
 #ifdef USE_IPSECMOD
 	cfg->ipsecmod_enabled = 1;
 	cfg->ipsecmod_ignore_bogus = 0;
@@ -737,6 +741,10 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	else S_NUMBER_OR_ZERO("fast-server-permil:", fast_server_permil)
 	else S_YNO("qname-minimisation:", qname_minimisation)
 	else S_YNO("qname-minimisation-strict:", qname_minimisation_strict)
+	else S_YNO("pad-responses:", pad_responses)
+	else S_SIZET_NONZERO("pad-responses-block-size:", pad_responses_block_size)
+	else S_YNO("pad-queries:", pad_queries)
+	else S_SIZET_NONZERO("pad-queries-block-size:", pad_queries_block_size)
 #ifdef USE_IPSECMOD
 	else S_YNO("ipsecmod-enabled:", ipsecmod_enabled)
 	else S_YNO("ipsecmod-ignore-bogus:", ipsecmod_ignore_bogus)
@@ -1177,6 +1185,10 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_LS3(opt, "access-control-tag-action", acl_tag_actions)
 	else O_LS3(opt, "access-control-tag-data", acl_tag_datas)
 	else O_LS2(opt, "access-control-view", acl_view)
+	else O_YNO(opt, "pad-responses", pad_responses)
+	else O_DEC(opt, "pad-responses-block-size", pad_responses_block_size)
+	else O_YNO(opt, "pad-queries", pad_queries)
+	else O_DEC(opt, "pad-queries-block-size", pad_queries_block_size)
 	else O_LS2(opt, "edns-client-strings", edns_client_strings)
 #ifdef USE_IPSECMOD
 	else O_YNO(opt, "ipsecmod-enabled", ipsecmod_enabled)

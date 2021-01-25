@@ -801,14 +801,14 @@ calc_edns_field_size(struct edns_data* edns)
 	return 1 + 2 + 2 + 4 + 2 + rdatalen;
 }
 
-void
-attach_edns_record(sldns_buffer* pkt, struct edns_data* edns)
+static void
+attach_edns_record_max_msg_sz(sldns_buffer* pkt, struct edns_data* edns,
+	uint16_t max_msg_sz)
 {
 	size_t len;
 	size_t rdatapos;
 	struct edns_option* opt;
-	if(!edns || !edns->edns_present)
-		return;
+	struct edns_option* padding_option = NULL;
 	/* inc additional count */
 	sldns_buffer_write_u16_at(pkt, 10,
 		sldns_buffer_read_u16_at(pkt, 10) + 1);
@@ -826,15 +826,50 @@ attach_edns_record(sldns_buffer* pkt, struct edns_data* edns)
 	sldns_buffer_write_u16(pkt, 0); /* rdatalen */
 	/* write rdata */
 	for(opt=edns->opt_list; opt; opt=opt->next) {
+		if (opt->opt_code == LDNS_EDNS_PADDING) {
+			padding_option = opt;
+			continue;
+		}
 		sldns_buffer_write_u16(pkt, opt->opt_code);
 		sldns_buffer_write_u16(pkt, opt->opt_len);
 		if(opt->opt_len != 0)
 			sldns_buffer_write(pkt, opt->opt_data, opt->opt_len);
 	}
+	if (padding_option && edns->padding_block_size ) {
+		size_t pad_pos = sldns_buffer_position(pkt);
+		size_t msg_sz = ((pad_pos + 3) / edns->padding_block_size + 1)
+		                               * edns->padding_block_size;
+		size_t pad_sz;
+		
+		if (msg_sz > max_msg_sz)
+			msg_sz = max_msg_sz;
+
+		/* By use of calc_edns_field_size, calling functions should
+		 * have made sure that there is enough space for at least a
+		 * zero sized padding option.
+		 */
+		log_assert(pad_pos + 4 <= msg_sz);
+
+		pad_sz = msg_sz - pad_pos - 4;
+		sldns_buffer_write_u16(pkt, LDNS_EDNS_PADDING);
+		sldns_buffer_write_u16(pkt, pad_sz);
+		if (pad_sz) {
+			memset(sldns_buffer_current(pkt), 0, pad_sz);
+			sldns_buffer_skip(pkt, pad_sz);
+		}
+	}
 	if(edns->opt_list)
 		sldns_buffer_write_u16_at(pkt, rdatapos, 
 			sldns_buffer_position(pkt)-rdatapos-2);
 	sldns_buffer_flip(pkt);
+}
+
+void
+attach_edns_record(sldns_buffer* pkt, struct edns_data* edns)
+{
+	if(!edns || !edns->edns_present)
+		return;
+	attach_edns_record_max_msg_sz(pkt, edns, edns->udp_size);
 }
 
 int 
@@ -885,7 +920,7 @@ reply_info_answer_encode(struct query_info* qinf, struct reply_info* rep,
 	}
 	if(attach_edns && sldns_buffer_capacity(pkt) >=
 		sldns_buffer_limit(pkt)+attach_edns)
-		attach_edns_record(pkt, edns);
+		attach_edns_record_max_msg_sz(pkt, edns, udpsize+attach_edns);
 	return 1;
 }
 
