@@ -598,6 +598,13 @@ server:
 	# A recommended value is 1800.
 	# serve-expired-client-timeout: 0
 
+	# Return the original TTL as received from the upstream name server rather
+	# than the decrementing TTL as stored in the cache.  Enabling this feature
+	# does not impact cache expiry, it only changes the TTL unbound embeds in
+	# responses to queries. Note that enabling this feature implicitly disables
+	# enforcement of the configured minimum and maximum TTL.
+	# serve-original-ttl: no
+
 	# Have the validator log failed validations for your diagnosis.
 	# 0: off. 1: A line per failed user query. 2: With reason and bad IP.
 	# val-log-level: 0
