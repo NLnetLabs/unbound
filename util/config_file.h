@@ -601,12 +601,12 @@ struct config_file {
 	/** number of slabs for dnscrypt nonces cache */
 	size_t dnscrypt_nonce_cache_slabs;
 
-	/** EDNS padding according to FC7830 and RFC8467 */
+	/** EDNS padding according to RFC7830 and RFC8467 */
 	/** true to enable padding of responses (default: on) */
 	int pad_responses;
 	/** block size with which to pad encrypted responses (default: 468) */
 	size_t pad_responses_block_size;
-	/** true to enable padding of queries (default: off) */
+	/** true to enable padding of queries (default: on) */
 	int pad_queries;
 	/** block size with which to pad encrypted queries (default: 128) */
 	size_t pad_queries_block_size;
