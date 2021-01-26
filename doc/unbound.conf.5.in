@@ -1194,6 +1194,19 @@ responding with expired data.  A recommended value per
 RFC 8767 is 1800.  Setting this to 0 will disable this
 behavior.  Default is 0.
 .TP
+.B serve\-original\-ttl: \fI<yes or no>
+If enabled, unbound will always return the original TTL as received from
+the upstream name server rather than the decrementing TTL as
+stored in the cache.  This feature may be useful if unbound serves as a 
+front-end to a hidden authoritative name server. Enabling this feature does 
+not impact cache expiry, it only changes the TTL unbound embeds in responses to 
+queries. Note that enabling this feature implicitly disables enforcement of
+the configured minimum and maximum TTL, as it is assumed users who enable this 
+feature do not want unbound to change the TTL obtained from an upstream server. 
+Thus, the values set using \fBcache\-min\-ttl\fR and \fBcache\-max\-ttl\fR are
+ignored.
+Default is "no".
+.TP
 .B val\-nsec3\-keysize\-iterations: \fI<"list of values">
 List of keysize and iteration count values, separated by spaces, surrounded
 by quotes. Default is "1024 150 2048 500 4096 2500". This determines the

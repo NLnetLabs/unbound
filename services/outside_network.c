@@ -3039,7 +3039,7 @@ outnet_serviced_query(struct outside_network* outnet,
 			addrlen, zone, zonelen, (int)qinfo->qtype,
 			qstate->edns_opts_back_out,
 			( ssl_upstream && env->cfg->pad_queries
-			? env->cfg->pad_queries_block_size : 0));
+			? env->cfg->pad_queries_block_size : 0 ));
 		if(!sq) {
 			free(cb);
 			return NULL;

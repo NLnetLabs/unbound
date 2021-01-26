@@ -454,6 +454,7 @@ packed_rrset_encode(struct ub_packed_rrset_key* key, sldns_buffer* pkt,
 	size_t i, j, owner_pos;
 	int r, owner_labs;
 	uint16_t owner_ptr = 0;
+	time_t adjust = 0;
 	struct packed_rrset_data* data = (struct packed_rrset_data*)
 		key->entry.data;
 	
@@ -464,9 +465,12 @@ packed_rrset_encode(struct ub_packed_rrset_key* key, sldns_buffer* pkt,
 	owner_labs = dname_count_labels(key->rk.dname);
 	owner_pos = sldns_buffer_position(pkt);
 
-	/* For an rrset with a fixed TTL, use the rrset's TTL as given */
+	/** Determine relative time adjustment for TTL values.
+	 * For an rrset with a fixed TTL, use the rrset's TTL as given. */
 	if((key->rk.flags & PACKED_RRSET_FIXEDTTL) != 0)
-		timenow = 0;
+		adjust = 0;
+	else
+		adjust = SERVE_ORIGINAL_TTL ? data->ttl_add : timenow;
 
 	if(do_data) {
 		const sldns_rr_descriptor* c = type_rdata_compressable(key);
@@ -479,11 +483,10 @@ packed_rrset_encode(struct ub_packed_rrset_key* key, sldns_buffer* pkt,
 				return r;
 			sldns_buffer_write(pkt, &key->rk.type, 2);
 			sldns_buffer_write(pkt, &key->rk.rrset_class, 2);
-			if(data->rr_ttl[j] < timenow)
+			if(data->rr_ttl[j] < adjust)
 				sldns_buffer_write_u32(pkt,
 					SERVE_EXPIRED?SERVE_EXPIRED_REPLY_TTL:0);
-			else 	sldns_buffer_write_u32(pkt, 
-					data->rr_ttl[j]-timenow);
+			else	sldns_buffer_write_u32(pkt, data->rr_ttl[j]-adjust);
 			if(c) {
 				if((r=compress_rdata(pkt, data->rr_data[j],
 					data->rr_len[j], region, tree, c))
@@ -517,11 +520,10 @@ packed_rrset_encode(struct ub_packed_rrset_key* key, sldns_buffer* pkt,
 			}
 			sldns_buffer_write_u16(pkt, LDNS_RR_TYPE_RRSIG);
 			sldns_buffer_write(pkt, &key->rk.rrset_class, 2);
-			if(data->rr_ttl[i] < timenow)
+			if(data->rr_ttl[i] < adjust)
 				sldns_buffer_write_u32(pkt,
 					SERVE_EXPIRED?SERVE_EXPIRED_REPLY_TTL:0);
-			else 	sldns_buffer_write_u32(pkt, 
-					data->rr_ttl[i]-timenow);
+			else	sldns_buffer_write_u32(pkt, data->rr_ttl[i]-adjust);
 			/* rrsig rdata cannot be compressed, perform 100+ byte
 			 * memcopy. */
 			sldns_buffer_write(pkt, data->rr_data[i],

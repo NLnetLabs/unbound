@@ -1,3 +1,8 @@
+26 January 2022: George
+	- Merge PR #408 from fobser: Prevent a few more yacc clashes.
+	- Merge PR #275 from Roland van Rijswijk-Deij: Add feature to return the
+	  original instead of a decrementing TTL ('serve-original-ttl')
+
 22 January 2022: Willem
 	- Padding of queries and responses with DNS over TLS as specified in
 	  RFC7830 and RFC8467.
