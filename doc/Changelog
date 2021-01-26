@@ -7,6 +7,9 @@
 	- Ignore cache blacklisting when trying to reply with expired data from
 	  cache (#394).
 
+26 January 2022: Wouter
+	- Fix compile of unbound-dnstap-socket without dnstap installed.
+
 22 January 2022: Willem
 	- Padding of queries and responses with DNS over TLS as specified in
 	  RFC7830 and RFC8467.
