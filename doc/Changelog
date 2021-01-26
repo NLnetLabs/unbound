@@ -4,6 +4,8 @@
 	  original instead of a decrementing TTL ('serve-original-ttl')
 	- Merge PR #355 from noloader: Make ICANN Update CA and DS Trust Anchor
 	  static data.
+	- Ignore cache blacklisting when trying to reply with expired data from
+	  cache (#394).
 
 22 January 2022: Willem
 	- Padding of queries and responses with DNS over TLS as specified in

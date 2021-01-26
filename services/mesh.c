@@ -1929,7 +1929,9 @@ mesh_serve_expired_callback(void* arg)
 	verbose(VERB_ALGO, "Serve expired: Trying to reply with expired data");
 	comm_timer_delete(qstate->serve_expired_data->timer);
 	qstate->serve_expired_data->timer = NULL;
-	if(qstate->blacklist || qstate->no_cache_lookup || qstate->is_drop) {
+	/* If is_drop or no_cache_lookup (modules that handle their own cache e.g.,
+	 * subnetmod) ignore stale data from the main cache. */
+	if(qstate->no_cache_lookup || qstate->is_drop) {
 		verbose(VERB_ALGO,
 			"Serve expired: Not allowed to look into cache for stale");
 		return;
