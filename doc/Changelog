@@ -4,6 +4,7 @@
 	- Fix empty clause warning in config_file nsid parse.
 	- Fix to use correct type for label count in ipdnametoaddr rpz routine.
 	- Fix empty clause warning in edns pass for padding.
+	- Fix fwd ancil test post script when not supported.
 
 26 January 2022: George
 	- Merge PR #408 from fobser: Prevent a few more yacc clashes.
