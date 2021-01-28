@@ -1,5 +1,6 @@
 28 January 2022: Wouter
 	- Annotate that we ignore the return value of if_indextoname.
+	- Fix to use correct type for label count in rpz routine.
 
 26 January 2022: George
 	- Merge PR #408 from fobser: Prevent a few more yacc clashes.
