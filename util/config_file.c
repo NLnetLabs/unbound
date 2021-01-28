@@ -2064,8 +2064,9 @@ uint8_t* cfg_parse_nsid(const char* str, uint16_t* nsid_len)
 		if ((nsid = (uint8_t *)strdup(str + 6)))
 			*nsid_len = strlen(str + 6);
 
-	} else if (strlen(str) % 2) 
+	} else if (strlen(str) % 2) {
 		; /* hex string has even number of characters */
+	}
 
 	else if (*str && (nsid = calloc(1, strlen(str) / 2))) {
 		const char *ch;
