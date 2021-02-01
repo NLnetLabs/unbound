@@ -649,6 +649,7 @@ ENABLE_DNSCRYPT
 ENABLE_DNSCRYPT_XCHACHA20
 DNSTAP_OBJ
 DNSTAP_SRC
+DNSTAP_SOCKET_TESTBIN
 DNSTAP_SOCKET_PATH
 opt_dnstap_socket_path
 ENABLE_DNSTAP
@@ -21191,6 +21192,7 @@ _ACEOF
 
 	DNSTAP_SOCKET_PATH="$hdr_dnstap_socket_path"
 
+	DNSTAP_SOCKET_TESTBIN='unbound-dnstap-socket$(EXEEXT)'
 
         DNSTAP_SRC="dnstap/dnstap.c dnstap/dnstap.pb-c.c dnstap/dnstap_fstrm.c dnstap/dtstream.c"
 

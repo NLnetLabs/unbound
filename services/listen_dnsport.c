@@ -1456,7 +1456,7 @@ resolve_ifa_name(struct ifaddrs *ifas, const char *search_ifa, char ***ip_addres
 				log_err("inet_ntop failed");
 				return 0;
 			}
-			if_indextoname(in6->sin6_scope_id,
+			(void)if_indextoname(in6->sin6_scope_id,
 				(char *)if_index_name);
 			if (strlen(if_index_name) != 0) {
 				snprintf(addr_buf, sizeof(addr_buf),

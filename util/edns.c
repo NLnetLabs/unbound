@@ -166,8 +166,9 @@ int apply_edns_options(struct edns_data* edns_out, struct edns_data* edns_in,
 		return 0;
 
 	if(!cfg->pad_responses || c->type != comm_tcp || !c->ssl
-	|| !edns_opt_list_find(edns_in->opt_list, LDNS_EDNS_PADDING))
+	|| !edns_opt_list_find(edns_in->opt_list, LDNS_EDNS_PADDING)) {
 	       ; /* pass */
+	}
 
 	else if(!edns_opt_list_append(&edns_out->opt_list, LDNS_EDNS_PADDING
 	                                                 , 0, NULL, region))

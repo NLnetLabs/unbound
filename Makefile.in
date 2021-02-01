@@ -248,6 +248,7 @@ DNSTAP_SOCKET_SRC=dnstap/unbound-dnstap-socket.c
 DNSTAP_SOCKET_OBJ=unbound-dnstap-socket.lo
 DNSTAP_SOCKET_OBJ_LINK=$(DNSTAP_SOCKET_OBJ) $(COMMON_OBJ) \
 $(COMPAT_OBJ) $(SLDNS_OBJ)
+DNSTAP_SOCKET_TESTBIN=@DNSTAP_SOCKET_TESTBIN@
 LIBUNBOUND_SRC=libunbound/context.c libunbound/libunbound.c \
 libunbound/libworker.c
 LIBUNBOUND_OBJ=context.lo libunbound.lo libworker.lo ub_event_pluggable.lo
@@ -323,7 +324,7 @@ rsrc_unbound_checkconf.o:	$(srcdir)/winrc/rsrc_unbound_checkconf.rc config.h
 TEST_BIN=asynclook$(EXEEXT) delayer$(EXEEXT) \
 	lock-verify$(EXEEXT) memstats$(EXEEXT) perf$(EXEEXT) \
 	petal$(EXEEXT) pktview$(EXEEXT) streamtcp$(EXEEXT) \
-	unbound-dnstap-socket$(EXEEXT) dohclient$(EXEEXT) \
+	$(DNSTAP_SOCKET_TESTBIN) dohclient$(EXEEXT) \
 	testbound$(EXEEXT) unittest$(EXEEXT)
 tests:	all $(TEST_BIN)
 
