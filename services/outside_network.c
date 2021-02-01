@@ -90,6 +90,10 @@ static int randomize_and_send_udp(struct pending* pend, sldns_buffer* packet,
 static void waiting_list_remove(struct outside_network* outnet,
 	struct waiting_tcp* w);
 
+/** remove reused element from tree and lru list */
+static void reuse_tcp_remove_tree_list(struct outside_network* outnet,
+	struct reuse_tcp* reuse);
+
 int 
 pending_cmp(const void* key1, const void* key2)
 {
@@ -424,8 +428,11 @@ static int
 reuse_tcp_insert(struct outside_network* outnet, struct pending_tcp* pend_tcp)
 {
 	log_reuse_tcp(VERB_CLIENT, "reuse_tcp_insert", &pend_tcp->reuse);
-	if(pend_tcp->reuse.item_on_lru_list)
+	if(pend_tcp->reuse.item_on_lru_list) {
+		if(!pend_tcp->reuse.node.key)
+			log_err("internal error: reuse_tcp_insert: on lru list without key");
 		return 1;
+	}
 	pend_tcp->reuse.node.key = &pend_tcp->reuse;
 	pend_tcp->reuse.pending = pend_tcp;
 	if(!rbtree_insert(&outnet->tcp_reuse, &pend_tcp->reuse.node)) {
@@ -477,7 +484,7 @@ reuse_tcp_find(struct outside_network* outnet, struct sockaddr_storage* addr,
 	if(outnet->tcp_reuse.root == NULL ||
 		outnet->tcp_reuse.root == RBTREE_NULL)
 		return NULL;
-	if(rbtree_find_less_equal(&outnet->tcp_reuse, &key_p.reuse.node,
+	if(rbtree_find_less_equal(&outnet->tcp_reuse, &key_p.reuse,
 		&result)) {
 		/* exact match */
 		/* but the key is on stack, and ptr is compared, impossible */
@@ -661,6 +668,14 @@ outnet_tcp_take_into_use(struct waiting_tcp* w)
 	pend->reuse.cp_more_write_again = 0;
 	memcpy(&pend->c->repinfo.addr, &w->addr, w->addrlen);
 	pend->reuse.pending = pend;
+
+	/* Remove from tree in case the is_ssl will be different and causes the
+	 * identity of the reuse_tcp to change; could result in nodes not being
+	 * deleted from the tree (because the new identity does not match the
+	 * previous node) but their ->key would be changed to NULL. */
+	if(pend->reuse.node.key)
+		reuse_tcp_remove_tree_list(w->outnet, &pend->reuse);
+
 	if(pend->c->ssl)
 		pend->reuse.is_ssl = 1;
 	else	pend->reuse.is_ssl = 0;
@@ -677,8 +692,10 @@ outnet_tcp_take_into_use(struct waiting_tcp* w)
 static void
 reuse_tcp_lru_touch(struct outside_network* outnet, struct reuse_tcp* reuse)
 {
-	if(!reuse->item_on_lru_list)
+	if(!reuse->item_on_lru_list) {
+		log_err("internal error: we need to touch the lru_list but item not in list");
 		return; /* not on the list, no lru to modify */
+	}
 	if(!reuse->lru_prev)
 		return; /* already first in the list */
 	/* remove at current position */
@@ -847,7 +864,7 @@ reuse_tcp_remove_tree_list(struct outside_network* outnet,
 	verbose(VERB_CLIENT, "reuse_tcp_remove_tree_list");
 	if(reuse->node.key) {
 		/* delete it from reuse tree */
-		(void)rbtree_delete(&outnet->tcp_reuse, &reuse->node);
+		(void)rbtree_delete(&outnet->tcp_reuse, reuse);
 		reuse->node.key = NULL;
 	}
 	/* delete from reuse list */
