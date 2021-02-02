@@ -1,3 +1,6 @@
+2 February 2021: Wouter
+	- branch-1.13.1 is created, with release-1.13.1rc1 tag.
+
 1 February 2021: George
 	- Attempt to fix NULL keys in the reuse_tcp tree; relates to #411.
 
