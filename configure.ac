@@ -1442,7 +1442,7 @@ if test x_$enable_static_exe = x_yes; then
 			LIBS="$LIBS -lgdi32"
 		fi
 		LIBS="$LIBS -lz"
-		staticexe="$staticexe -l:libssp.a"
+		LIBS="$LIBS -l:libssp.a"
 	fi
 fi
 
@@ -1459,7 +1459,7 @@ if test x_$enable_fully_static = x_yes; then
 			LIBS="$LIBS -lgdi32"
 		fi
 		LIBS="$LIBS -lz"
-		staticexe="$staticexe -l:libssp.a"
+		LIBS="$LIBS -l:libssp.a"
 	fi
 fi
 
