@@ -642,7 +642,11 @@ if test x_$withval != x_no; then
   DYNLIBMOD_HEADER='$(srcdir)/dynlibmod/dynlibmod.h'
   AC_SUBST(DYNLIBMOD_HEADER)
   if test $on_mingw = "no"; then
-    DYNLIBMOD_EXTRALIBS="-ldl -export-dynamic"
+    # link with -ldl if not already there, for all executables because
+    # dlopen call is in the dynlib module.  For unbound executable, also
+    # export symbols.
+    AC_SEARCH_LIBS([dlopen], [dl])
+    DYNLIBMOD_EXTRALIBS="-export-dynamic"
   else
     DYNLIBMOD_EXTRALIBS="-Wl,--export-all-symbols,--out-implib,libunbound.dll.a"
   fi
