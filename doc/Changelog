@@ -3,6 +3,7 @@
 	- Fix dynlibmod link on rhel8 for -ldl inclusion.
 	- Fix windows dependency on libssp.dll because of default stack
 	  protector in mingw.
+	- Fix indentation of root anchor for use by windows install script.
 
 1 February 2021: George
 	- Attempt to fix NULL keys in the reuse_tcp tree; relates to #411.

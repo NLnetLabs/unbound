@@ -183,7 +183,7 @@ static const char DS_TRUST_ANCHOR[] =
 	/* The anchors must start on a new line with ". IN DS and end with \n"[;]
 	 * because the makedist script greps on the source here */
 	/* anchor 20326 is from 2017 */
-	". IN DS 20326 8 2 E06D44B80B8F1D39A95C0B0D7C65D08458E880409BBC683457104237C7F8EC8D\n";
+". IN DS 20326 8 2 E06D44B80B8F1D39A95C0B0D7C65D08458E880409BBC683457104237C7F8EC8D\n";
 
 /** verbosity for this application */
 static int verb = 0;
