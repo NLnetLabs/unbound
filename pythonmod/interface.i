@@ -20,6 +20,7 @@
  * called to perform operations on queries.
  */
    #include <sys/types.h>
+   #include <time.h>
    #ifdef HAVE_SYS_SOCKET_H
    #include <sys/socket.h>
    #endif
@@ -314,16 +315,16 @@ struct packed_rrset_data {
     class RRSetData_RRLen:
         def __init__(self, obj): self.obj = obj
         def __getitem__(self, index): return _unboundmodule._get_data_rr_len(self.obj, index)
-        def __len__(self): return obj.count + obj.rrsig_count
+        def __len__(self): return self.obj.count + self.obj.rrsig_count
     class RRSetData_RRTTL:
         def __init__(self, obj): self.obj = obj
         def __getitem__(self, index): return _unboundmodule._get_data_rr_ttl(self.obj, index)
         def __setitem__(self, index, value): _unboundmodule._set_data_rr_ttl(self.obj, index, value)
-        def __len__(self): return obj.count + obj.rrsig_count
+        def __len__(self): return self.obj.count + self.obj.rrsig_count
     class RRSetData_RRData:
         def __init__(self, obj): self.obj = obj
         def __getitem__(self, index): return _unboundmodule._get_data_rr_data(self.obj, index)
-        def __len__(self): return obj.count + obj.rrsig_count
+        def __len__(self): return self.obj.count + self.obj.rrsig_count
 %}
 
 %inline %{
@@ -404,12 +405,12 @@ struct dns_msg {
     class ReplyInfo_RRSet:
         def __init__(self, obj): self.obj = obj
         def __getitem__(self, index): return _unboundmodule._rrset_rrsets_get(self.obj, index)
-        def __len__(self): return obj.rrset_count
+        def __len__(self): return self.obj.rrset_count
 
     class ReplyInfo_Ref:
         def __init__(self, obj): self.obj = obj
         def __getitem__(self, index): return _unboundmodule._rrset_ref_get(self.obj, index)
-        def __len__(self): return obj.rrset_count
+        def __len__(self): return self.obj.rrset_count
 %}
 
 %inline %{
@@ -696,6 +697,8 @@ struct edns_data {
 /* ************************************************************************************ *
    Structure module_env
  * ************************************************************************************ */
+%rename(_now) module_env::now;
+%rename(_now_tv) module_env::now_tv;
 struct module_env {
     struct config_file* cfg;
     struct slabhash* msg_cache;
@@ -738,6 +741,19 @@ struct module_env {
     struct edns_known_option* edns_known_options;
     size_t edns_known_options_num;
 };
+
+%inline %{
+    PyObject* _module_env_now_get(struct module_env* env) {
+        double ts = env->now_tv->tv_sec + env->now_tv->tv_usec / 1e6;
+        return PyFloat_FromDouble(ts);
+    }
+%}
+%extend module_env {
+    %pythoncode %{
+        def _now_get(self): return _module_env_now_get(self)
+        now = property(_now_get)
+    %}
+}
 
 /* ************************************************************************************ *
    Structure module_qstate
@@ -992,8 +1008,6 @@ struct config_file {
    struct config_strlist* trust_anchor_file_list;
    struct config_strlist* trust_anchor_list;
    struct config_strlist* trusted_keys_file_list;
-   char* dlv_anchor_file;
-   struct config_strlist* dlv_anchor_list;
    int max_ttl;
    int32_t val_date_override;
    int bogus_ttl;
@@ -1415,6 +1429,19 @@ struct delegpt* find_delegation(struct module_qstate* qstate, char *nm, size_t n
 /******************************
  * Various debugging functions *
  ******************************/
+
+/* rename the variadic functions because python does the formatting already*/
+%rename (unbound_log_info) log_info;
+%rename (unbound_log_err) log_err;
+%rename (unbound_log_warn) log_warn;
+%rename (unbound_verbose) verbose;
+/* provide functions that take one string as argument, so python can cook
+the string */
+%rename (log_info) pymod_log_info;
+%rename (log_warn) pymod_log_warn;
+%rename (log_err) pymod_log_err;
+%rename (verbose) pymod_verbose;
+
 void verbose(enum verbosity_value level, const char* format, ...);
 void log_info(const char* format, ...);
 void log_err(const char* format, ...);
@@ -1423,6 +1450,19 @@ void log_hex(const char* msg, void* data, size_t length);
 void log_dns_msg(const char* str, struct query_info* qinfo, struct reply_info* rep);
 void log_query_info(enum verbosity_value v, const char* str, struct query_info* qinf);
 void regional_log_stats(struct regional *r);
+
+/* the one argument string log functions */
+void pymod_log_info(const char* str);
+void pymod_log_err(const char* str);
+void pymod_log_warn(const char* str);
+void pymod_verbose(enum verbosity_value level, const char* str);
+%{
+void pymod_log_info(const char* str) { log_info("%s", str); }
+void pymod_log_err(const char* str) { log_err("%s", str); }
+void pymod_log_warn(const char* str) { log_warn("%s", str); }
+void pymod_verbose(enum verbosity_value level, const char* str) {
+        verbose(level, "%s", str); }
+%}
 
 /***************************************************************************
  * Free allocated memory from marked sources returning corresponding types *
@@ -1501,13 +1541,14 @@ int edns_opt_list_append(struct edns_option** list, uint16_t code, size_t len,
     int python_inplace_cb_reply_generic(struct query_info* qinfo,
         struct module_qstate* qstate, struct reply_info* rep, int rcode,
         struct edns_data* edns, struct edns_option** opt_list_out,
-        struct comm_reply* repinfo, struct regional* region, int id,
-        void* python_callback)
+        struct comm_reply* repinfo, struct regional* region,
+        struct timeval* start_time, int id, void* python_callback)
     {
         PyObject *func, *py_edns, *py_qstate, *py_opt_list_out, *py_qinfo;
         PyObject *py_rep, *py_repinfo, *py_region;
         PyObject *py_args, *py_kwargs, *result;
         int res = 0;
+        double py_start_time = ((double)start_time->tv_sec) + ((double)start_time->tv_usec) / 1.0e6;
 
         PyGILState_STATE gstate = PyGILState_Ensure();
         func = (PyObject *) python_callback;
@@ -1522,7 +1563,8 @@ int edns_opt_list_append(struct edns_option** list, uint16_t code, size_t len,
         py_region = SWIG_NewPointerObj((void*) region, SWIGTYPE_p_regional, 0);
         py_args = Py_BuildValue("(OOOiOOO)", py_qinfo, py_qstate, py_rep,
             rcode, py_edns, py_opt_list_out, py_region);
-        py_kwargs = Py_BuildValue("{s:O}", "repinfo", py_repinfo);
+        py_kwargs = Py_BuildValue("{s:O,s:d}", "repinfo", py_repinfo, "start_time",
+                                  py_start_time);
         result = PyObject_Call(func, py_args, py_kwargs);
         Py_XDECREF(py_edns);
         Py_XDECREF(py_qstate);

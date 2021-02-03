@@ -1866,15 +1866,26 @@ auth_zones_cfg(struct auth_zones* az, struct config_auth* c)
 	struct auth_xfer* x = NULL;
 
 	/* create zone */
+	if(c->isrpz) {
+		/* if the rpz lock is needed, grab it before the other
+		 * locks to avoid a lock dependency cycle */
+		lock_rw_wrlock(&az->rpz_lock);
+	}
 	lock_rw_wrlock(&az->lock);
 	if(!(z=auth_zones_find_or_add_zone(az, c->name))) {
 		lock_rw_unlock(&az->lock);
+		if(c->isrpz) {
+			lock_rw_unlock(&az->rpz_lock);
+		}
 		return 0;
 	}
 	if(c->masters || c->urls) {
 		if(!(x=auth_zones_find_or_add_xfer(az, z))) {
 			lock_rw_unlock(&az->lock);
 			lock_rw_unlock(&z->lock);
+			if(c->isrpz) {
+				lock_rw_unlock(&az->rpz_lock);
+			}
 			return 0;
 		}
 	}
@@ -1889,6 +1900,9 @@ auth_zones_cfg(struct auth_zones* az, struct config_auth* c)
 			lock_basic_unlock(&x->lock);
 		}
 		lock_rw_unlock(&z->lock);
+		if(c->isrpz) {
+			lock_rw_unlock(&az->rpz_lock);
+		}
 		return 0;
 	}
 	z->for_downstream = c->for_downstream;
@@ -1900,11 +1914,13 @@ auth_zones_cfg(struct auth_zones* az, struct config_auth* c)
 			return 0;
 		}
 		lock_protect(&z->lock, &z->rpz->local_zones, sizeof(*z->rpz));
-		lock_rw_wrlock(&az->rpz_lock);
+		/* the az->rpz_lock is locked above */
 		z->rpz_az_next = az->rpz_first;
 		if(az->rpz_first)
 			az->rpz_first->rpz_az_prev = z;
 		az->rpz_first = z;
+	}
+	if(c->isrpz) {
 		lock_rw_unlock(&az->rpz_lock);
 	}
 
@@ -2315,7 +2331,8 @@ static int
 az_add_negative_soa(struct auth_zone* z, struct regional* region,
 	struct dns_msg* msg)
 {
-	uint32_t minimum;
+	time_t minimum;
+	size_t i;
 	struct packed_rrset_data* d;
 	struct auth_rrset* soa;
 	struct auth_data* apex = az_find_name(z, z->name, z->namelen);
@@ -2332,9 +2349,11 @@ az_add_negative_soa(struct auth_zone* z, struct regional* region,
 	/* last 4 bytes are minimum ttl in network format */
 	if(d->count == 0) return 0;
 	if(d->rr_len[0] < 2+4) return 0;
-	minimum = sldns_read_uint32(d->rr_data[0]+(d->rr_len[0]-4));
-	d->ttl = (time_t)minimum;
-	d->rr_ttl[0] = (time_t)minimum;
+	minimum = (time_t)sldns_read_uint32(d->rr_data[0]+(d->rr_len[0]-4));
+	minimum = d->ttl<minimum?d->ttl:minimum;
+	d->ttl = minimum;
+	for(i=0; i < d->count + d->rrsig_count; i++)
+		d->rr_ttl[i] = minimum;
 	msg->rep->ttl = get_rrset_ttl(msg->rep->rrsets[0]);
 	msg->rep->prefetch_ttl = PREFETCH_TTL_CALC(msg->rep->ttl);
 	msg->rep->serve_expired_ttl = msg->rep->ttl + SERVE_EXPIRED_TTL;
@@ -3270,7 +3289,7 @@ auth_answer_encode(struct query_info* qinfo, struct module_env* env,
 	edns->bits &= EDNS_DO;
 
 	if(!inplace_cb_reply_local_call(env, qinfo, NULL, msg->rep,
-		(int)FLAGS_GET_RCODE(msg->rep->flags), edns, repinfo, temp)
+		(int)FLAGS_GET_RCODE(msg->rep->flags), edns, repinfo, temp, env->now_tv)
 		|| !reply_info_answer_encode(qinfo, msg->rep,
 		*(uint16_t*)sldns_buffer_begin(buf),
 		sldns_buffer_read_u16_at(buf, 2),
@@ -3294,7 +3313,7 @@ auth_error_encode(struct query_info* qinfo, struct module_env* env,
 	edns->bits &= EDNS_DO;
 
 	if(!inplace_cb_reply_local_call(env, qinfo, NULL, NULL,
-		rcode, edns, repinfo, temp))
+		rcode, edns, repinfo, temp, env->now_tv))
 		edns->opt_list = NULL;
 	error_encode(buf, rcode|BIT_AA, qinfo,
 		*(uint16_t*)sldns_buffer_begin(buf),
@@ -5091,6 +5110,7 @@ xfr_transfer_lookup_host(struct auth_xfer* xfr, struct module_env* env)
 	edns.edns_version = 0;
 	edns.bits = EDNS_DO;
 	edns.opt_list = NULL;
+	edns.padding_block_size = 0;
 	if(sldns_buffer_capacity(buf) < 65535)
 		edns.udp_size = (uint16_t)sldns_buffer_capacity(buf);
 	else	edns.udp_size = 65535;
@@ -5371,6 +5391,7 @@ void auth_xfer_transfer_lookup_callback(void* arg, int rcode, sldns_buffer* buf,
 				verbose(VERB_ALGO, "auth zone %s host %s type %s transfer lookup has no answer", zname, xfr->task_transfer->lookup_target->host, (xfr->task_transfer->lookup_aaaa?"AAAA":"A"));
 			}
 		}
+		regional_free_all(temp);
 	} else {
 		if(verbosity >= VERB_ALGO) {
 			char zname[255+1];
@@ -6076,7 +6097,7 @@ xfr_probe_send_probe(struct auth_xfer* xfr, struct module_env* env,
 
 	/* send udp packet */
 	if(!comm_point_send_udp_msg(xfr->task_probe->cp, env->scratch_buffer,
-		(struct sockaddr*)&addr, addrlen)) {
+		(struct sockaddr*)&addr, addrlen, 0)) {
 		char zname[255+1], as[256];
 		dname_str(xfr->name, zname);
 		addr_to_str(&addr, addrlen, as, sizeof(as));
@@ -6278,6 +6299,7 @@ xfr_probe_lookup_host(struct auth_xfer* xfr, struct module_env* env)
 	edns.edns_version = 0;
 	edns.bits = EDNS_DO;
 	edns.opt_list = NULL;
+	edns.padding_block_size = 0;
 	if(sldns_buffer_capacity(buf) < 65535)
 		edns.udp_size = (uint16_t)sldns_buffer_capacity(buf);
 	else	edns.udp_size = 65535;
@@ -6428,6 +6450,7 @@ void auth_xfer_probe_lookup_callback(void* arg, int rcode, sldns_buffer* buf,
 				verbose(VERB_ALGO, "auth zone %s host %s type %s probe lookup has no address", zname, xfr->task_probe->lookup_target->host, (xfr->task_probe->lookup_aaaa?"AAAA":"A"));
 			}
 		}
+		regional_free_all(temp);
 	} else {
 		if(verbosity >= VERB_ALGO) {
 			char zname[255+1];
