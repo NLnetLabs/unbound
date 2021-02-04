@@ -43,6 +43,7 @@
 #  include <sys/types.h>
 #endif
 #include <sys/time.h>
+#include <limits.h>
 #ifdef USE_TCP_FASTOPEN
 #include <netinet/tcp.h>
 #endif
@@ -530,7 +531,9 @@ create_udp_sock(int family, int socktype, struct sockaddr* addr,
 				return -1;
 			}
 		}
-#  elif defined(IP_DONTFRAG)
+#  elif defined(IP_DONTFRAG) && !defined(__APPLE__)
+		/* the IP_DONTFRAG option if defined in the 11.0 OSX headers,
+		 * but does not work on that version, so we exclude it */
 		int off = 0;
 		if (setsockopt(s, IPPROTO_IP, IP_DONTFRAG, 
 			&off, (socklen_t)sizeof(off)) < 0) {
@@ -1453,7 +1456,7 @@ resolve_ifa_name(struct ifaddrs *ifas, const char *search_ifa, char ***ip_addres
 				log_err("inet_ntop failed");
 				return 0;
 			}
-			if_indextoname(in6->sin6_scope_id,
+			(void)if_indextoname(in6->sin6_scope_id,
 				(char *)if_index_name);
 			if (strlen(if_index_name) != 0) {
 				snprintf(addr_buf, sizeof(addr_buf),
@@ -1471,7 +1474,6 @@ resolve_ifa_name(struct ifaddrs *ifas, const char *search_ifa, char ***ip_addres
 
 		tmpbuf = realloc(*ip_addresses, sizeof(char *) * (*ip_addresses_size + 1));
 		if(!tmpbuf) {
-			free(*ip_addresses);
 			log_err("realloc failed: out of memory");
 			return 0;
 		} else {
@@ -1488,7 +1490,6 @@ resolve_ifa_name(struct ifaddrs *ifas, const char *search_ifa, char ***ip_addres
 	if (*ip_addresses_size == last_ip_addresses_size) {
 		tmpbuf = realloc(*ip_addresses, sizeof(char *) * (*ip_addresses_size + 1));
 		if(!tmpbuf) {
-			free(*ip_addresses);
 			log_err("realloc failed: out of memory");
 			return 0;
 		} else {
@@ -1820,12 +1821,12 @@ tcp_req_info_setup_listen(struct tcp_req_info* req)
 		req->cp->tcp_is_reading = 0;
 		comm_point_stop_listening(req->cp);
 		comm_point_start_listening(req->cp, -1,
-			req->cp->tcp_timeout_msec);
+			adjusted_tcp_timeout(req->cp));
 	} else if(rd) {
 		req->cp->tcp_is_reading = 1;
 		comm_point_stop_listening(req->cp);
 		comm_point_start_listening(req->cp, -1,
-			req->cp->tcp_timeout_msec);
+			adjusted_tcp_timeout(req->cp));
 		/* and also read it (from SSL stack buffers), so
 		 * no event read event is expected since the remainder of
 		 * the TLS frame is sitting in the buffers. */
@@ -1833,7 +1834,7 @@ tcp_req_info_setup_listen(struct tcp_req_info* req)
 	} else {
 		comm_point_stop_listening(req->cp);
 		comm_point_start_listening(req->cp, -1,
-			req->cp->tcp_timeout_msec);
+			adjusted_tcp_timeout(req->cp));
 		comm_point_listen_for_rw(req->cp, 0, 0);
 	}
 }
@@ -1946,7 +1947,7 @@ tcp_req_info_handle_readdone(struct tcp_req_info* req)
 	send_it:
 		c->tcp_is_reading = 0;
 		comm_point_stop_listening(c);
-		comm_point_start_listening(c, -1, c->tcp_timeout_msec);
+		comm_point_start_listening(c, -1, adjusted_tcp_timeout(c));
 		return;
 	}
 	req->in_worker_handle = 0;
@@ -2064,7 +2065,7 @@ tcp_req_info_send_reply(struct tcp_req_info* req)
 		/* switch to listen to write events */
 		comm_point_stop_listening(req->cp);
 		comm_point_start_listening(req->cp, -1,
-			req->cp->tcp_timeout_msec);
+			adjusted_tcp_timeout(req->cp));
 		return;
 	}
 	/* queue up the answer behind the others already pending */
@@ -2207,7 +2208,7 @@ int http2_submit_dns_response(struct http2_session* h2_session)
 	}
 
 	rlen = sldns_buffer_remaining(h2_session->c->buffer);
-	snprintf(rlen_str, sizeof(rlen_str), "%u", rlen);
+	snprintf(rlen_str, sizeof(rlen_str), "%u", (unsigned)rlen);
 
 	lock_basic_lock(&http2_response_buffer_count_lock);
 	if(http2_response_buffer_count + rlen > http2_response_buffer_max) {
@@ -2792,7 +2793,7 @@ void http2_req_stream_clear(struct http2_stream* h2_stream)
 	}
 }
 
-nghttp2_session_callbacks* http2_req_callbacks_create()
+nghttp2_session_callbacks* http2_req_callbacks_create(void)
 {
 	nghttp2_session_callbacks *callbacks;
 	if(nghttp2_session_callbacks_new(&callbacks) == NGHTTP2_ERR_NOMEM) {
