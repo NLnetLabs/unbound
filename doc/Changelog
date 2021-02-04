@@ -1,3 +1,6 @@
+4 February 2021: Wouter
+	- release 1.13.1rc2 tag on branch-1.13.1 with added changes of 2 feb.
+
 2 February 2021: Wouter
 	- branch-1.13.1 is created, with release-1.13.1rc1 tag.
 	- Fix dynlibmod link on rhel8 for -ldl inclusion.
