@@ -1,5 +1,7 @@
 4 February 2021: Wouter
 	- release 1.13.1rc2 tag on branch-1.13.1 with added changes of 2 feb.
+	  This became 1.13.1 release tag on 9 feb.  The main branch is set
+	  to version 1.13.2.
 
 2 February 2021: Wouter
 	- branch-1.13.1 is created, with release-1.13.1rc1 tag.
