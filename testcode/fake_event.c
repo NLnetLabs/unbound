@@ -1229,6 +1229,7 @@ struct serviced_query* outnet_serviced_query(struct outside_network* outnet,
 		edns.bits = 0;
 		if(dnssec)
 			edns.bits = EDNS_DO;
+		edns.padding_block_size = 0;
 		if((client_string_addr = edns_string_addr_lookup(
 			&env->edns_strings->client_strings,
 			addr, addrlen))) {

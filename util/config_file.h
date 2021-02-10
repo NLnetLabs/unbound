@@ -392,6 +392,8 @@ struct config_file {
 	/** serve expired entries only after trying to update the entries and this
 	 *  timeout (in milliseconds) is reached */
 	int serve_expired_client_timeout;
+	/** serve original TTLs rather than decrementing ones */
+	int serve_original_ttl;
 	/** nsec3 maximum iterations per key size, string */
 	char* val_nsec3_key_iterations;
 	/** autotrust add holddown time, in seconds */
@@ -600,6 +602,17 @@ struct config_file {
 	size_t dnscrypt_nonce_cache_size;
 	/** number of slabs for dnscrypt nonces cache */
 	size_t dnscrypt_nonce_cache_slabs;
+
+	/** EDNS padding according to RFC7830 and RFC8467 */
+	/** true to enable padding of responses (default: on) */
+	int pad_responses;
+	/** block size with which to pad encrypted responses (default: 468) */
+	size_t pad_responses_block_size;
+	/** true to enable padding of queries (default: on) */
+	int pad_queries;
+	/** block size with which to pad encrypted queries (default: 128) */
+	size_t pad_queries_block_size;
+
 	/** IPsec module */
 #ifdef USE_IPSECMOD
 	/** false to bypass the IPsec module */

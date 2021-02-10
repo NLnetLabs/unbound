@@ -412,6 +412,11 @@ if [ "$DOWIN" = "yes" ]; then
     cp ../unbound.exe ../unbound-anchor.exe ../unbound-host.exe ../unbound-control.exe ../unbound-checkconf.exe ../unbound-service-install.exe ../unbound-service-remove.exe ../LICENSE ../winrc/unbound-control-setup.cmd ../winrc/unbound-website.url ../winrc/service.conf ../winrc/README.txt ../contrib/create_unbound_ad_servers.cmd ../contrib/warmup.cmd ../contrib/unbound_cache.cmd .
     mkdir libunbound
     cp ../../unbound_shared/unbound.h ../../unbound_shared/.libs/libunbound*.dll ../../unbound_shared/.libs/libunbound.dll.a ../../unbound_shared/.libs/libunbound.a ../../unbound_shared/.libs/libunbound*.def ../../sslsharedinstall/lib/libcrypto.dll.a ../../sslsharedinstall/lib/libssl.dll.a ../../sslsharedinstall/bin/libcrypto*.dll ../../sslsharedinstall/bin/libssl*.dll ../../wxpinstall/bin/libexpat*.dll ../../wxpinstall/lib/libexpat.dll.a libunbound/.
+    if test "$W64" = "no"; then
+	    cp /usr/i686-w64-mingw32/sys-root/mingw/bin/libssp-0.dll libunbound/.
+    else
+	    cp /usr/x86_64-w64-mingw32/sys-root/mingw/bin/libssp-0.dll libunbound/.
+    fi
     # zipfile
     zip -r ../$file LICENSE README.txt unbound.exe unbound-anchor.exe unbound-host.exe unbound-control.exe unbound-checkconf.exe unbound-service-install.exe unbound-service-remove.exe unbound-control-setup.cmd example.conf service.conf root.key unbound-website.url create_unbound_ad_servers.cmd warmup.cmd unbound_cache.cmd Changelog libunbound
     info "Testing $file"

@@ -67,6 +67,8 @@ int SERVE_EXPIRED = 0;
 time_t SERVE_EXPIRED_TTL = 0;
 /** TTL to use for expired records */
 time_t SERVE_EXPIRED_REPLY_TTL = 30;
+/** If we serve the original TTL or decrementing TTLs */
+int SERVE_ORIGINAL_TTL = 0;
 
 /** allocate qinfo, return 0 on error */
 static int
@@ -197,9 +199,9 @@ rdata_copy(sldns_buffer* pkt, struct packed_rrset_data* data, uint8_t* to,
 		if(*rr_ttl > MAX_NEG_TTL)
 			*rr_ttl = MAX_NEG_TTL;
 	}
-	if(*rr_ttl < MIN_TTL)
+	if(!SERVE_ORIGINAL_TTL && (*rr_ttl < MIN_TTL))
 		*rr_ttl = MIN_TTL;
-	if(*rr_ttl > MAX_TTL)
+	if(!SERVE_ORIGINAL_TTL && (*rr_ttl > MAX_TTL))
 		*rr_ttl = MAX_TTL;
 	if(*rr_ttl < data->ttl)
 		data->ttl = *rr_ttl;
@@ -321,8 +323,8 @@ parse_create_rrset(sldns_buffer* pkt, struct rrset_parse* pset,
 		(sizeof(size_t)+sizeof(uint8_t*)+sizeof(time_t)) + 
 		pset->size;
 	if(region)
-		*data = regional_alloc(region, s);
-	else	*data = malloc(s);
+		*data = regional_alloc_zero(region, s);
+	else	*data = calloc(1, s);
 	if(!*data)
 		return 0;
 	/* copy & decompress */
@@ -526,6 +528,7 @@ reply_info_set_ttls(struct reply_info* rep, time_t timenow)
 		for(j=0; j<data->count + data->rrsig_count; j++) {
 			data->rr_ttl[j] += timenow;
 		}
+		data->ttl_add = timenow;
 	}
 }
 

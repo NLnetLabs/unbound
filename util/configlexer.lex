@@ -392,6 +392,7 @@ serve-expired-ttl{COLON}	{ YDVAR(1, VAR_SERVE_EXPIRED_TTL) }
 serve-expired-ttl-reset{COLON}	{ YDVAR(1, VAR_SERVE_EXPIRED_TTL_RESET) }
 serve-expired-reply-ttl{COLON}	{ YDVAR(1, VAR_SERVE_EXPIRED_REPLY_TTL) }
 serve-expired-client-timeout{COLON}	{ YDVAR(1, VAR_SERVE_EXPIRED_CLIENT_TIMEOUT) }
+serve-original-ttl{COLON}	{ YDVAR(1, VAR_SERVE_ORIGINAL_TTL) }
 fake-dsa{COLON}			{ YDVAR(1, VAR_FAKE_DSA) }
 fake-sha1{COLON}		{ YDVAR(1, VAR_FAKE_SHA1) }
 val-log-level{COLON}		{ YDVAR(1, VAR_VAL_LOG_LEVEL) }
@@ -510,6 +511,10 @@ dnscrypt-shared-secret-cache-slabs{COLON}	{
 		YDVAR(1, VAR_DNSCRYPT_SHARED_SECRET_CACHE_SLABS) }
 dnscrypt-nonce-cache-size{COLON}	{ YDVAR(1, VAR_DNSCRYPT_NONCE_CACHE_SIZE) }
 dnscrypt-nonce-cache-slabs{COLON}	{ YDVAR(1, VAR_DNSCRYPT_NONCE_CACHE_SLABS) }
+pad-responses{COLON}		{ YDVAR(1, VAR_PAD_RESPONSES) }
+pad-responses-block-size{COLON}	{ YDVAR(1, VAR_PAD_RESPONSES_BLOCK_SIZE) }
+pad-queries{COLON}		{ YDVAR(1, VAR_PAD_QUERIES) }
+pad-queries-block-size{COLON}	{ YDVAR(1, VAR_PAD_QUERIES_BLOCK_SIZE) }
 ipsecmod-enabled{COLON}		{ YDVAR(1, VAR_IPSECMOD_ENABLED) }
 ipsecmod-ignore-bogus{COLON}	{ YDVAR(1, VAR_IPSECMOD_IGNORE_BOGUS) }
 ipsecmod-hook{COLON}		{ YDVAR(1, VAR_IPSECMOD_HOOK) }
