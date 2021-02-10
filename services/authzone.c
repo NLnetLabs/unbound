@@ -7299,7 +7299,7 @@ static size_t authdata_rrsets_to_list(struct auth_rrset** array,
 	struct auth_rrset* rrset = first;
 	size_t num = 0;
 	while(rrset) {
-		if(num+1 >= arraysize)
+		if(num >= arraysize)
 			return num;
 		array[num] = rrset;
 		num++;
