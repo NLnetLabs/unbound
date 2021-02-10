@@ -7332,7 +7332,7 @@ static void addrrsigtype_if_needed(struct auth_rrset** array,
 {
 	if(az_domain_rrset(node, LDNS_RR_TYPE_RRSIG))
 		return; /* already one there */
-	if((*rrnum)+1 >= arraysize)
+	if((*rrnum) >= arraysize)
 		return; /* array too small? */
 	array[*rrnum] = NULL; /* nothing there, but need entry in list */
 	(*rrnum)++;
