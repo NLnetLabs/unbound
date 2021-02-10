@@ -1879,7 +1879,6 @@ static int auth_zone_zonemd_check_hash(struct auth_zone* z,
 	size_t i;
 	struct regional* region = NULL;
 	struct sldns_buffer* buf = NULL;
-	char zstr[255+1];
 	uint32_t soa_serial = 0;
 	region = env->scratch;
 	regional_free_all(region);
@@ -1930,6 +1929,7 @@ static int auth_zone_zonemd_check_hash(struct auth_zone* z,
 			hash, hashlen, region, buf, reason)) {
 			/* success */
 			if(verbosity >= VERB_ALGO) {
+				char zstr[255+1];
 				dname_str(z->name, zstr);
 				verbose(VERB_ALGO, "auth-zone %s ZONEMD hash is correct", zstr);
 			}
@@ -1940,8 +1940,11 @@ static int auth_zone_zonemd_check_hash(struct auth_zone* z,
 	/* fail, we may have reason */
 	if(!*reason)
 		*reason = "no ZONEMD records found";
-	dname_str(z->name, zstr);
-	verbose(VERB_ALGO, "auth-zone %s ZONEMD failed: %s", zstr, *reason);
+	if(verbosity >= VERB_ALGO) {
+		char zstr[255+1];
+		dname_str(z->name, zstr);
+		verbose(VERB_ALGO, "auth-zone %s ZONEMD failed: %s", zstr, *reason);
+	}
 	return 0;
 }
 
