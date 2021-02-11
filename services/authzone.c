@@ -7576,7 +7576,7 @@ static int zonemd_simple_collate(struct auth_zone* z, int hashalgo,
 }
 
 int auth_zone_generate_zonemd_hash(struct auth_zone* z, int scheme,
-        int hashalgo, uint8_t* hash, size_t hashlen, size_t* resultlen,
+	int hashalgo, uint8_t* hash, size_t hashlen, size_t* resultlen,
 	struct regional* region, struct sldns_buffer* buf, char** reason)
 {
 	struct secalgo_hash* h = zonemd_digest_init(hashalgo, reason);
