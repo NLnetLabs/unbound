@@ -8090,6 +8090,7 @@ void auth_zonemd_dnskey_lookup_callback(void* arg, int rcode, sldns_buffer* buf,
 		memset(&rq, 0, sizeof(rq));
 		rep = parse_reply_in_temp_region(buf, temp, &rq);
 		if(rep && rq.qtype == wanted_qtype &&
+			query_dname_compare(z->name, rq.qname) == 0 &&
 			FLAGS_GET_RCODE(rep->flags) == LDNS_RCODE_NOERROR) {
 			/* parsed successfully */
 			struct ub_packed_rrset_key* answer =
