@@ -8070,7 +8070,7 @@ void auth_zonemd_dnskey_lookup_callback(void* arg, int rcode, sldns_buffer* buf,
 	/* release the env variable so another worker can pick up the
 	 * ZONEMD verification task if it wants to */
 	z->zonemd_callback_env = NULL;
-	if(!env || env->outnet->want_to_quit) {
+	if(!env || env->outnet->want_to_quit || z->zone_deleted) {
 		lock_rw_unlock(&z->lock);
 		return; /* stop on quit */
 	}
