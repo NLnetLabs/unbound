@@ -139,7 +139,7 @@ struct auth_zone {
 	/** store the env (worker thread specific) for the zonemd callbacks
 	 * from the mesh with the results of the lookup, if nonNULL, some
 	 * worker has already picked up the zonemd verification task and
-	 * this worked does not have to do it as well. */
+	 * this worker does not have to do it as well. */
 	struct module_env* zonemd_callback_env;
 	/** zone has been deleted */
 	int zone_deleted;
