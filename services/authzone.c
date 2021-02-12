@@ -7923,14 +7923,15 @@ auth_zone_verify_zonemd_with_key(struct auth_zone* z, struct module_env* env,
 		}
 	}
 
-	/* if no ZONEMD, and no DNSSEC, done. */
+	/* if no DNSSEC, done. */
 	/* if no ZONEMD, and DNSSEC, use DNSKEY to verify NSEC or NSEC3 for
 	 * zone apex.  Check ZONEMD bit is turned off or else fail */
 	/* if ZONEMD, and DNSSEC, check DNSSEC signature on SOA and ZONEMD,
 	 * or else fail */
-	if(!zonemd_rrset && is_insecure) {
-		/* success, zonemd is absent */
-	} else if(!zonemd_rrset) {
+	if(!dnskey && !is_insecure) {
+		auth_zone_zonemd_fail(z, env, "DNSKEY missing", NULL, result);
+		return;
+	} else if(!zonemd_rrset && dnskey && !is_insecure) {
 		/* fetch, DNSSEC verify, and check NSEC/NSEC3 */
 		if(!zonemd_check_dnssec_absence(z, env, mods, dnskey, apex,
 			&reason, &why_bogus)) {
@@ -7938,7 +7939,7 @@ auth_zone_verify_zonemd_with_key(struct auth_zone* z, struct module_env* env,
 			return;
 		}
 		zonemd_absence_dnssecok = 1;
-	} else if(zonemd_rrset && dnskey) {
+	} else if(zonemd_rrset && dnskey && !is_insecure) {
 		/* check DNSSEC verify of SOA and ZONEMD */
 		if(!zonemd_check_dnssec_soazonemd(z, env, mods, dnskey, apex,
 			zonemd_rrset, &reason, &why_bogus)) {
