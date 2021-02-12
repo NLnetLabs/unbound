@@ -8214,7 +8214,9 @@ void auth_zone_verify_zonemd(struct auth_zone* z, struct module_env* env,
 	/* else, find chain of trust by fetching DNSKEYs lookup for zone */
 	/* result if that, if insecure, means no DNSSEC for the ZONEMD,
 	 * otherwise we have the zone DNSKEY for the DNSSEC verification. */
-	anchor = anchors_lookup(env->anchors, z->name, z->namelen, z->dclass);
+	if(env->anchors)
+		anchor = anchors_lookup(env->anchors, z->name, z->namelen,
+			z->dclass);
 	if(anchor && query_dname_compare(z->name, anchor->name) == 0) {
 		if(only_online) {
 			lock_basic_unlock(&anchor->lock);
