@@ -299,7 +299,10 @@ int pythonmod_init(struct module_env* env, int id)
       PyImport_AppendInittab(SWIG_name, (void*)SWIG_init);
 #endif
       Py_Initialize();
+#if PY_MAJOR_VERSION <= 2 || (PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION <= 6)
+      /* initthreads only for python 3.6 and older */
       PyEval_InitThreads();
+#endif
       SWIG_init();
       mainthr = PyEval_SaveThread();
    }
@@ -354,6 +357,8 @@ int pythonmod_init(struct module_env* env, int id)
    /* TODO: deallocation of pe->... if an error occurs */
 
    if (PyRun_SimpleFile(script_py, pe->fname) < 0) {
+#if PY_MAJOR_VERSION <= 2 || (PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION < 9)
+      /* for python before 3.9 */
       log_err("pythonmod: can't parse Python script %s", pe->fname);
       /* print the error to logs too, run it again */
       fseek(script_py, 0, SEEK_SET);
@@ -369,9 +374,45 @@ int pythonmod_init(struct module_env* env, int id)
       /* ignore the NULL return of _node, it is NULL due to the parse failure
        * that we are expecting */
       (void)PyParser_SimpleParseFile(script_py, pe->fname, Py_file_input);
+#else
+      /* for python 3.9 and newer */
+      char* fstr = NULL;
+      size_t flen = 0;
+      log_err("pythonmod: can't parse Python script %s", pe->fname);
+      /* print the error to logs too, run it again */
+      fseek(script_py, 0, SEEK_END);
+      flen = (size_t)ftell(script_py);
+      fstr = malloc(flen+1);
+      if(!fstr) {
+	      log_err("malloc failure to print parse error");
+	      PyGILState_Release(gil);
+	      fclose(script_py);
+	      return 0;
+      }
+      fseek(script_py, 0, SEEK_SET);
+      if(fread(fstr, flen, 1, script_py) < 1) {
+	      log_err("file read failed to print parse error: %s: %s",
+		pe->fname, strerror(errno));
+	      PyGILState_Release(gil);
+	      fclose(script_py);
+	      free(fstr);
+	      return 0;
+      }
+      fstr[flen] = 0;
+      /* we compile the string, but do not run it, to stop side-effects */
+      /* ignore the NULL return of _node, it is NULL due to the parse failure
+       * that we are expecting */
+      (void)Py_CompileString(fstr, pe->fname, Py_file_input);
+#endif
       log_py_err();
       PyGILState_Release(gil);
       fclose(script_py);
+#if PY_MAJOR_VERSION <= 2 || (PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION < 9)
+      /* no cleanup needed for python before 3.9 */
+#else
+      /* cleanup for python 3.9 and newer */
+      free(fstr);
+#endif
       return 0;
    }
 #if PY_MAJOR_VERSION < 3

@@ -1,5 +1,16 @@
+10 February 2021: Wouter
+	- Merge PR #420 from dyunwei: DOH not responsing with
+	  "http2_query_read_done failure" logged.
+
+9 February 2021: Wouter
+	- Fix for Python 3.9, no longer use deprecated functions of
+	  PyEval_CallObject (now PyObject_Call), PyEval_InitThreads (now
+	  none), PyParser_SimpleParseFile (now Py_CompileString).
+
 4 February 2021: Wouter
 	- release 1.13.1rc2 tag on branch-1.13.1 with added changes of 2 feb.
+	  This became 1.13.1 release tag on 9 feb.  The main branch is set
+	  to version 1.13.2.
 
 2 February 2021: Wouter
 	- branch-1.13.1 is created, with release-1.13.1rc1 tag.
