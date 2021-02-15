@@ -59,6 +59,8 @@ struct reply_info;
 struct module_qstate;
 struct sock_list;
 struct ub_packed_rrset_key;
+struct module_stack;
+struct outside_network;
 
 /**
  * Process config options and set iterator module state.
@@ -384,5 +386,17 @@ int iter_dp_cangodown(struct query_info* qinfo, struct delegpt* dp);
  */
 int iter_stub_fwd_no_cache(struct module_qstate *qstate,
 	struct query_info *qinf);
+
+/**
+ * Set support for IP4 and IP6 depending on outgoing interfaces
+ * in the outside network.  If none, no support, so no use to lookup
+ * the AAAA and then attempt to use it if there is no outgoing-interface
+ * for it.
+ * @param mods: modstack to find iterator module in.
+ * @param env: module env, find iterator module (if one) in there.
+ * @param outnet: outside network structure.
+ */
+void iterator_set_ip46_support(struct module_stack* mods,
+	struct module_env* env, struct outside_network* outnet);
 
 #endif /* ITERATOR_ITER_UTILS_H */

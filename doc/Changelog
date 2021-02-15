@@ -1,3 +1,7 @@
+15 February 2021: Wouter
+	- Fix #422: IPv6 fallback issues when IPv6 is not properly
+	  enabled/configured.
+
 10 February 2021: Wouter
 	- Merge PR #420 from dyunwei: DOH not responsing with
 	  "http2_query_read_done failure" logged.
