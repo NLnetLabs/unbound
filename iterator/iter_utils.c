@@ -1445,6 +1445,8 @@ void iterator_set_ip46_support(struct module_stack* mods,
 	if(m == -1)
 		return;
 	ie = (struct iter_env*)env->modinfo[m];
+	if(outnet->pending == NULL)
+		return; /* we are in testbound, no rbtree for UDP */
 	if(outnet->num_ip4 == 0)
 		ie->supports_ipv4 = 0;
 	if(outnet->num_ip6 == 0)
