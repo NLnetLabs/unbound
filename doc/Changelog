@@ -2,6 +2,7 @@
 	- Fix #422: IPv6 fallback issues when IPv6 is not properly
 	  enabled/configured.
 	- Fix to make tests work with support indicators set for iterator.
+	- Fix build on Python 3.10.
 
 10 February 2021: Wouter
 	- Merge PR #420 from dyunwei: DOH not responsing with
