@@ -338,7 +338,7 @@ int pythonmod_init(struct module_env* env, int id)
    PyFileObject = PyFile_FromString((char*)pe->fname, "r");
    script_py = PyFile_AsFile(PyFileObject);
 #else
-   script_py = _Py_fopen(pe->fname, "r");
+   script_py = fopen(pe->fname, "r");
 #endif
    if (script_py == NULL)
    {
