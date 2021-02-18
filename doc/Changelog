@@ -5,6 +5,7 @@
 	  zonemd-permissive-mode that makes it log but not fail wrong zones.
 	  With zonemd-reject-absence for an auth-zone the presence of a
 	  zonemd can be mandated for specific zones.
+	- Fix doxygen and pydoc warnings.
 
 15 February 2021: Wouter
 	- Fix #422: IPv6 fallback issues when IPv6 is not properly

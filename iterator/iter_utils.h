@@ -132,7 +132,7 @@ struct dns_msg* dns_copy_msg(struct dns_msg* from, struct regional* regional);
  * 	can be prefetch-updates.
  * @param region: to copy modified (cache is better) rrs back to.
  * @param flags: with BIT_CD for dns64 AAAA translated queries.
- * @return void, because we are not interested in alloc errors,
+ * return void, because we are not interested in alloc errors,
  * 	the iterator and validator can operate on the results in their
  * 	scratch space (the qstate.region) and are not dependent on the cache.
  * 	It is useful to log the alloc failure (for the server operator),
