@@ -1,3 +1,11 @@
+18 February 2021: Wouter
+	- Merge PR #317: ZONEMD Zone Verification, with RFC 8976 support.
+	  ZONEMD records are checked for zones loaded as auth-zone,
+	  with DNSSEC if available.  There is an added option
+	  zonemd-permissive-mode that makes it log but not fail wrong zones.
+	  With zonemd-reject-absence for an auth-zone the presence of a
+	  zonemd can be mandated for specific zones.
+
 15 February 2021: Wouter
 	- Fix #422: IPv6 fallback issues when IPv6 is not properly
 	  enabled/configured.
