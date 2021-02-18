@@ -334,4 +334,16 @@ int canonical_tree_compare(const void* k1, const void* k2);
 int rrset_canonical_equal(struct regional* region,
 	struct ub_packed_rrset_key* k1, struct ub_packed_rrset_key* k2);
 
+/**
+ * Canonicalize an rrset into the buffer.  For an auth zone record, so
+ * this does not use a signature, or the RRSIG TTL or the wildcard label
+ * count from the RRSIG.
+ * @param region: temporary region.
+ * @param buf: the buffer to use.
+ * @param k: the rrset to insert.
+ * @return false on alloc error.
+ */
+int rrset_canonicalize_to_buffer(struct regional* region,
+	struct sldns_buffer* buf, struct ub_packed_rrset_key* k);
+
 #endif /* VALIDATOR_VAL_SIGCRYPT_H */

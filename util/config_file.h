@@ -396,6 +396,8 @@ struct config_file {
 	int serve_original_ttl;
 	/** nsec3 maximum iterations per key size, string */
 	char* val_nsec3_key_iterations;
+	/** if zonemd failures are permitted, only logged */
+	int zonemd_permissive_mode;
 	/** autotrust add holddown time, in seconds */
 	unsigned int add_holddown;
 	/** autotrust del holddown time, in seconds */
@@ -727,6 +729,8 @@ struct config_auth {
 	/** Always reply with this CNAME target if the cname override action is
 	 * used */
 	char* rpz_cname;
+	/** Reject absence of ZONEMD records, zone must have one */
+	int zonemd_reject_absence;
 };
 
 /**

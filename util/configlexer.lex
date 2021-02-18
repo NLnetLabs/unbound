@@ -401,6 +401,8 @@ key-cache-slabs{COLON}		{ YDVAR(1, VAR_KEY_CACHE_SLABS) }
 neg-cache-size{COLON}		{ YDVAR(1, VAR_NEG_CACHE_SIZE) }
 val-nsec3-keysize-iterations{COLON}	{ 
 				  YDVAR(1, VAR_VAL_NSEC3_KEYSIZE_ITERATIONS) }
+zonemd-permissive-mode{COLON}	{ YDVAR(1, VAR_ZONEMD_PERMISSIVE_MODE) }
+zonemd-reject-absence{COLON}	{ YDVAR(1, VAR_ZONEMD_REJECT_ABSENCE) }
 add-holddown{COLON}		{ YDVAR(1, VAR_ADD_HOLDDOWN) }
 del-holddown{COLON}		{ YDVAR(1, VAR_DEL_HOLDDOWN) }
 keep-missing{COLON}		{ YDVAR(1, VAR_KEEP_MISSING) }

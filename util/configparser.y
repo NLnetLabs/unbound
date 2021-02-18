@@ -182,6 +182,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_RPZ_CNAME_OVERRIDE VAR_RPZ_LOG VAR_RPZ_LOG_NAME
 %token VAR_DYNLIB VAR_DYNLIB_FILE VAR_EDNS_CLIENT_STRING
 %token VAR_EDNS_CLIENT_STRING_OPCODE VAR_NSID
+%token VAR_ZONEMD_PERMISSIVE_MODE VAR_ZONEMD_REJECT_ABSENCE
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -299,7 +300,8 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_stream_wait_size | server_tls_ciphers |
 	server_tls_ciphersuites | server_tls_session_ticket_keys |
 	server_tls_use_sni | server_edns_client_string |
-	server_edns_client_string_opcode | server_nsid
+	server_edns_client_string_opcode | server_nsid |
+	server_zonemd_permissive_mode
 	;
 stubstart: VAR_STUB_ZONE
 	{
@@ -366,6 +368,7 @@ authstart: VAR_AUTH_ZONE
 			s->for_downstream = 1;
 			s->for_upstream = 1;
 			s->fallback_enabled = 0;
+			s->zonemd_reject_absence = 0;
 			s->isrpz = 0;
 		} else 
 			yyerror("out of memory");
@@ -375,7 +378,7 @@ contents_auth: contents_auth content_auth
 	| ;
 content_auth: auth_name | auth_zonefile | auth_master | auth_url |
 	auth_for_downstream | auth_for_upstream | auth_fallback_enabled |
-	auth_allow_notify
+	auth_allow_notify | auth_zonemd_reject_absence
 	;
 
 rpz_tag: VAR_TAGS STRING_ARG
@@ -1986,6 +1989,15 @@ server_val_nsec3_keysize_iterations: VAR_VAL_NSEC3_KEYSIZE_ITERATIONS STRING_ARG
 		cfg_parser->cfg->val_nsec3_key_iterations = $2;
 	}
 	;
+server_zonemd_permissive_mode: VAR_ZONEMD_PERMISSIVE_MODE STRING_ARG
+	{
+		OUTYY(("P(server_zonemd_permissive_mode:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else	cfg_parser->cfg->zonemd_permissive_mode = (strcmp($2, "yes")==0);
+		free($2);
+	}
+	;
 server_add_holddown: VAR_ADD_HOLDDOWN STRING_ARG
 	{
 		OUTYY(("P(server_add_holddown:%s)\n", $2));
@@ -2739,6 +2751,16 @@ auth_allow_notify: VAR_ALLOW_NOTIFY STRING_ARG
 		if(!cfg_strlist_insert(&cfg_parser->cfg->auths->allow_notify,
 			$2))
 			yyerror("out of memory");
+	}
+	;
+auth_zonemd_reject_absence: VAR_ZONEMD_REJECT_ABSENCE STRING_ARG
+	{
+		OUTYY(("P(zonemd-reject-absence:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else cfg_parser->cfg->auths->zonemd_reject_absence =
+			(strcmp($2, "yes")==0);
+		free($2);
 	}
 	;
 auth_for_downstream: VAR_FOR_DOWNSTREAM STRING_ARG

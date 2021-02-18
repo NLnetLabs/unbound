@@ -1917,6 +1917,8 @@ worker_init(struct worker* worker, struct config_file *cfg,
 #endif
 		) {
 		auth_xfer_pickup_initial(worker->env.auth_zones, &worker->env);
+		auth_zones_pickup_zonemd_verify(worker->env.auth_zones,
+			&worker->env);
 	}
 #ifdef USE_DNSTAP
 	if(worker->daemon->cfg->dnstap

@@ -1208,6 +1208,12 @@ be in ascending order and have at least one entry. If you set it to
 "1024 65535" there is no restriction to NSEC3 iteration values.
 This table must be kept short; a very long list could cause slower operation.
 .TP
+.B zonemd\-permissive\-mode: \fI<yes or no>
+If enabled the ZONEMD verification failures are only logged and do not cause
+the zone to be blocked and only return servfail.  Useful for testing out
+if it works, or if the operator only wants to be notified of a problem without
+disrupting service.  Default is no.
+.TP
 .B add\-holddown: \fI<seconds>
 Instruct the \fBauto\-trust\-anchor\-file\fR probe mechanism for RFC5011
 autotrust updates to add new trust anchors only after they have been
@@ -1874,6 +1880,19 @@ for answering recursion queries.  Instead of sending queries over the internet
 to the authority servers for this zone, it'll fetch the data directly from
 the zone data.  Turn it on when you want unbound to provide recursion for
 downstream clients, and use the zone data as a local copy to speed up lookups.
+.TP
+.B zonemd\-reject\-absence: \fI<yes or no>
+Enable this option to reject the absence of the ZONEMD record.  Without it,
+when zonemd is not there it is not checked.  It is useful to enable for a
+nonDNSSEC signed zone where the operator wants to require the verification
+of a ZONEMD, hence a missing ZONEMD is a failure.  The action upon
+failure is controlled by the \fBzonemd\-permissive\-mode\fR option, for
+log only or also block the zone.  The default is no.
+.IP
+Without the option absence of a ZONEMD is only a failure when the zone is
+DNSSEC signed, and we have a trust anchor, and the DNSSEC verification of
+the absence of the ZONEMD fails.  With the option enabled, the absence of
+a ZONEMD is always a failure, also for nonDNSSEC signed zones.
 .TP
 .B zonefile: \fI<filename>
 The filename where the zone is stored.  If not given then no zonefile is used.

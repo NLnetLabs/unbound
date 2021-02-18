@@ -262,6 +262,7 @@ config_create(void)
 	cfg->serve_expired_reply_ttl = 30;
 	cfg->serve_expired_client_timeout = 0;
 	cfg->serve_original_ttl = 0;
+	cfg->zonemd_permissive_mode = 0;
 	cfg->add_holddown = 30*24*3600;
 	cfg->del_holddown = 30*24*3600;
 	cfg->keep_missing = 366*24*3600; /* one year plus a little leeway */
@@ -649,6 +650,7 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	else S_NUMBER_OR_ZERO("serve-expired-client-timeout:", serve_expired_client_timeout)
 	else S_YNO("serve-original-ttl:", serve_original_ttl)
 	else S_STR("val-nsec3-keysize-iterations:", val_nsec3_key_iterations)
+	else S_YNO("zonemd-permissive-mode:", zonemd_permissive_mode)
 	else S_UNSIGNED_OR_ZERO("add-holddown:", add_holddown)
 	else S_UNSIGNED_OR_ZERO("del-holddown:", del_holddown)
 	else S_UNSIGNED_OR_ZERO("keep-missing:", keep_missing)
@@ -1070,6 +1072,7 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_DEC(opt, "serve-expired-client-timeout", serve_expired_client_timeout)
 	else O_YNO(opt, "serve-original-ttl", serve_original_ttl)
 	else O_STR(opt, "val-nsec3-keysize-iterations",val_nsec3_key_iterations)
+	else O_YNO(opt, "zonemd-permissive-mode", zonemd_permissive_mode)
 	else O_UNS(opt, "add-holddown", add_holddown)
 	else O_UNS(opt, "del-holddown", del_holddown)
 	else O_UNS(opt, "keep-missing", keep_missing)

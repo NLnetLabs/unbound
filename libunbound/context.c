@@ -78,7 +78,8 @@ context_finalize(struct ub_ctx* ctx)
 		return UB_NOMEM;
 	if(!local_zones_apply_cfg(ctx->local_zones, cfg))
 		return UB_INITFAIL;
-	if(!auth_zones_apply_cfg(ctx->env->auth_zones, cfg, 1, &is_rpz))
+	if(!auth_zones_apply_cfg(ctx->env->auth_zones, cfg, 1, &is_rpz,
+		ctx->env, &ctx->mods))
 		return UB_INITFAIL;
 	if(!edns_strings_apply_cfg(ctx->env->edns_strings, cfg))
 		return UB_INITFAIL;
