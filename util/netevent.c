@@ -343,7 +343,7 @@ int tcp_connect_errno_needs_log(struct sockaddr* addr, socklen_t addrlen)
 /* send a UDP reply */
 int
 comm_point_send_udp_msg(struct comm_point *c, sldns_buffer* packet,
-	struct sockaddr* addr, socklen_t addrlen) 
+	struct sockaddr* addr, socklen_t addrlen, int is_connected)
 {
 	ssize_t sent;
 	log_assert(c->fd != -1);
@@ -351,8 +351,8 @@ comm_point_send_udp_msg(struct comm_point *c, sldns_buffer* packet,
 	if(sldns_buffer_remaining(packet) == 0)
 		log_err("error: send empty UDP packet");
 #endif
-	if(addr) {
-		log_assert(addr && addrlen > 0);
+	log_assert(addr && addrlen > 0);
+	if(!is_connected) {
 		sent = sendto(c->fd, (void*)sldns_buffer_begin(packet),
 			sldns_buffer_remaining(packet), 0,
 			addr, addrlen);
@@ -377,9 +377,14 @@ comm_point_send_udp_msg(struct comm_point *c, sldns_buffer* packet,
 #endif
 			int e;
 			fd_set_block(c->fd);
-			sent = sendto(c->fd, (void*)sldns_buffer_begin(packet), 
-				sldns_buffer_remaining(packet), 0,
-				addr, addrlen);
+			if (!is_connected) {
+				sent = sendto(c->fd, (void*)sldns_buffer_begin(packet),
+					sldns_buffer_remaining(packet), 0,
+					addr, addrlen);
+			} else {
+				sent = send(c->fd, (void*)sldns_buffer_begin(packet),
+					sldns_buffer_remaining(packet), 0);
+			}
 			e = errno;
 			fd_set_nonblock(c->fd);
 			errno = e;
@@ -388,9 +393,14 @@ comm_point_send_udp_msg(struct comm_point *c, sldns_buffer* packet,
 	if(sent == -1) {
 		if(!udp_send_errno_needs_log(addr, addrlen))
 			return 0;
-		verbose(VERB_OPS, "sendto failed: %s", sock_strerror(errno));
-		log_addr(VERB_OPS, "remote address is", 
-			(struct sockaddr_storage*)addr, addrlen);
+		if (!is_connected) {
+			verbose(VERB_OPS, "sendto failed: %s", sock_strerror(errno));
+		} else {
+			verbose(VERB_OPS, "send failed: %s", sock_strerror(errno));
+		}
+		if(addr)
+			log_addr(VERB_OPS, "remote address is",
+				(struct sockaddr_storage*)addr, addrlen);
 		return 0;
 	} else if((size_t)sent != sldns_buffer_remaining(packet)) {
 		log_err("sent %d in place of %d bytes", 
@@ -596,6 +606,7 @@ comm_point_send_udp_msg_if(struct comm_point *c, sldns_buffer* packet,
 static int udp_recv_needs_log(int err)
 {
 	switch(err) {
+	case EACCES: /* some hosts send ICMP 'Permission Denied' */
 #ifndef USE_WINSOCK
 	case ECONNREFUSED:
 #  ifdef ENETUNREACH
@@ -776,7 +787,7 @@ comm_point_udp_callback(int fd, short event, void* arg)
 			buffer = rep.c->buffer;
 #endif
 			(void)comm_point_send_udp_msg(rep.c, buffer,
-				(struct sockaddr*)&rep.addr, rep.addrlen);
+				(struct sockaddr*)&rep.addr, rep.addrlen, 0);
 		}
 		if(!rep.c || rep.c->fd != fd) /* commpoint closed to -1 or reused for
 		another UDP port. Note rep.c cannot be reused with TCP fd. */
@@ -1622,6 +1633,26 @@ comm_point_tcp_handle_read(int fd, struct comm_point* c, int short_ok)
 			if(errno == ECONNRESET && verbosity < 2)
 				return 0; /* silence reset by peer */
 #endif
+#ifdef ENETUNREACH
+			if(errno == ENETUNREACH && verbosity < 2)
+				return 0; /* silence it */
+#endif
+#ifdef EHOSTDOWN
+			if(errno == EHOSTDOWN && verbosity < 2)
+				return 0; /* silence it */
+#endif
+#ifdef EHOSTUNREACH
+			if(errno == EHOSTUNREACH && verbosity < 2)
+				return 0; /* silence it */
+#endif
+#ifdef ENETDOWN
+			if(errno == ENETDOWN && verbosity < 2)
+				return 0; /* silence it */
+#endif
+#ifdef EACCES
+			if(errno == EACCES && verbosity < 2)
+				return 0; /* silence it */
+#endif
 #ifdef ENOTCONN
 			if(errno == ENOTCONN) {
 				log_err_addr("read (in tcp s) failed and this could be because TCP Fast Open is enabled [--disable-tfo-client --disable-tfo-server] but does not work", sock_strerror(errno),
@@ -1927,7 +1958,7 @@ comm_point_tcp_handle_write(int fd, struct comm_point* c)
 	log_assert(c->tcp_write_and_read || sldns_buffer_remaining(buffer) > 0);
 	log_assert(!c->tcp_write_and_read || c->tcp_write_byte_count < c->tcp_write_pkt_len + 2);
 	if(c->tcp_write_and_read) {
-		r = send(fd, (void*)c->tcp_write_pkt + c->tcp_write_byte_count - 2,
+		r = send(fd, (void*)(c->tcp_write_pkt + c->tcp_write_byte_count - 2),
 			c->tcp_write_pkt_len + 2 - c->tcp_write_byte_count, 0);
 	} else {
 		r = send(fd, (void*)sldns_buffer_current(buffer),
@@ -2395,7 +2426,7 @@ http_nonchunk_segment(struct comm_point* c)
 	return 1;
 }
 
-/** handle nonchunked data segment, return 0=fail, 1=wait, 2=process more */
+/** handle chunked data segment, return 0=fail, 1=wait, 2=process more */
 static int
 http_chunked_segment(struct comm_point* c)
 {
@@ -2405,6 +2436,7 @@ http_chunked_segment(struct comm_point* c)
 	 */
 	size_t remainbufferlen;
 	size_t got_now = sldns_buffer_limit(c->buffer) - c->http_stored;
+	verbose(VERB_ALGO, "http_chunked_segment: got now %d, tcpbytcount %d, http_stored %d, buffer pos %d, buffer limit %d", (int)got_now, (int)c->tcp_byte_count, (int)c->http_stored, (int)sldns_buffer_position(c->buffer), (int)sldns_buffer_limit(c->buffer));
 	if(c->tcp_byte_count <= got_now) {
 		/* the chunk has completed (with perhaps some extra data
 		 * from next chunk header and next chunk) */
@@ -2472,7 +2504,7 @@ http_chunked_segment(struct comm_point* c)
 
 #ifdef HAVE_NGHTTP2
 /** Create new http2 session. Called when creating handling comm point. */
-struct http2_session* http2_session_create(struct comm_point* c)
+static struct http2_session* http2_session_create(struct comm_point* c)
 {
 	struct http2_session* session = calloc(1, sizeof(*session));
 	if(!session) {
@@ -2486,7 +2518,7 @@ struct http2_session* http2_session_create(struct comm_point* c)
 #endif
 
 /** Delete http2 session. After closing connection or on error */
-void http2_session_delete(struct http2_session* h2_session)
+static void http2_session_delete(struct http2_session* h2_session)
 {
 #ifdef HAVE_NGHTTP2
 	if(h2_session->callbacks)
@@ -2562,7 +2594,7 @@ void http2_session_add_stream(struct http2_session* h2_session,
 
 /** remove stream from session linked list. After stream close callback or
  * closing connection */
-void http2_session_remove_stream(struct http2_session* h2_session,
+static void http2_session_remove_stream(struct http2_session* h2_session,
 	struct http2_stream* h2_stream)
 {
 	if(h2_stream->prev)
@@ -2744,6 +2776,11 @@ comm_point_http_handle_read(int fd, struct comm_point* c)
 	}
 
 	sldns_buffer_flip(c->buffer);
+	/* if we are partway in a segment of data, position us at the point
+	 * where we left off previously */
+	if(c->http_stored < sldns_buffer_limit(c->buffer))
+		sldns_buffer_set_position(c->buffer, c->http_stored);
+	else	sldns_buffer_set_position(c->buffer, sldns_buffer_limit(c->buffer));
 
 	while(sldns_buffer_remaining(c->buffer) > 0) {
 		/* Handle HTTP/1.x data */
@@ -3214,6 +3251,7 @@ comm_point_create_udp(struct comm_base *base, int fd, sldns_buffer* buffer,
 		comm_point_delete(c);
 		return NULL;
 	}
+	c->event_added = 1;
 	return c;
 }
 
@@ -3274,6 +3312,7 @@ comm_point_create_udp_ancil(struct comm_base *base, int fd,
 		comm_point_delete(c);
 		return NULL;
 	}
+	c->event_added = 1;
 	return c;
 }
 
@@ -3562,6 +3601,7 @@ comm_point_create_tcp(struct comm_base *base, int fd, int num,
 		comm_point_delete(c);
 		return NULL;
 	}
+	c->event_added = 1;
 	/* now prealloc the handlers */
 	for(i=0; i<num; i++) {
 		if(port_type == listen_type_tcp ||
@@ -3785,6 +3825,7 @@ comm_point_create_local(struct comm_base *base, int fd, size_t bufsize,
 		free(c);
 		return NULL;
 	}
+	c->event_added = 1;
 	return c;
 }
 
@@ -3847,6 +3888,7 @@ comm_point_create_raw(struct comm_base* base, int fd, int writing,
 		free(c);
 		return NULL;
 	}
+	c->event_added = 1;
 	return c;
 }
 
@@ -3857,8 +3899,11 @@ comm_point_close(struct comm_point* c)
 		return;
 	if(c->fd != -1) {
 		verbose(5, "comm_point_close of %d: event_del", c->fd);
-		if(ub_event_del(c->ev->ev) != 0) {
-			log_err("could not event_del on close");
+		if(c->event_added) {
+			if(ub_event_del(c->ev->ev) != 0) {
+				log_err("could not event_del on close");
+			}
+			c->event_added = 0;
 		}
 	}
 	tcl_close_connection(c->tcl_addr);
@@ -3942,7 +3987,7 @@ comm_point_send_reply(struct comm_reply *repinfo)
 			repinfo->addrlen, repinfo);
 		else
 			comm_point_send_udp_msg(repinfo->c, buffer,
-			(struct sockaddr*)&repinfo->addr, repinfo->addrlen);
+			(struct sockaddr*)&repinfo->addr, repinfo->addrlen, 0);
 #ifdef USE_DNSTAP
 		/*
 		 * sending src (client)/dst (local service) addresses over DNSTAP from udp callback
@@ -4013,8 +4058,11 @@ void
 comm_point_stop_listening(struct comm_point* c)
 {
 	verbose(VERB_ALGO, "comm point stop listening %d", c->fd);
-	if(ub_event_del(c->ev->ev) != 0) {
-		log_err("event_del error to stoplisten");
+	if(c->event_added) {
+		if(ub_event_del(c->ev->ev) != 0) {
+			log_err("event_del error to stoplisten");
+		}
+		c->event_added = 0;
 	}
 }
 
@@ -4026,6 +4074,12 @@ comm_point_start_listening(struct comm_point* c, int newfd, int msec)
 	if(c->type == comm_tcp_accept && !c->tcp_free) {
 		/* no use to start listening no free slots. */
 		return;
+	}
+	if(c->event_added) {
+		if(ub_event_del(c->ev->ev) != 0) {
+			log_err("event_del error to startlisten");
+		}
+		c->event_added = 0;
 	}
 	if(msec != -1 && msec != 0) {
 		if(!c->timeout) {
@@ -4066,13 +4120,17 @@ comm_point_start_listening(struct comm_point* c, int newfd, int msec)
 	if(ub_event_add(c->ev->ev, msec==0?NULL:c->timeout) != 0) {
 		log_err("event_add failed. in cpsl.");
 	}
+	c->event_added = 1;
 }
 
 void comm_point_listen_for_rw(struct comm_point* c, int rd, int wr)
 {
 	verbose(VERB_ALGO, "comm point listen_for_rw %d %d", c->fd, wr);
-	if(ub_event_del(c->ev->ev) != 0) {
-		log_err("event_del error to cplf");
+	if(c->event_added) {
+		if(ub_event_del(c->ev->ev) != 0) {
+			log_err("event_del error to cplf");
+		}
+		c->event_added = 0;
 	}
 	ub_event_del_bits(c->ev->ev, UB_EV_READ|UB_EV_WRITE);
 	if(rd) ub_event_add_bits(c->ev->ev, UB_EV_READ);
@@ -4080,6 +4138,7 @@ void comm_point_listen_for_rw(struct comm_point* c, int rd, int wr)
 	if(ub_event_add(c->ev->ev, c->timeout) != 0) {
 		log_err("event_add failed. in cplf.");
 	}
+	c->event_added = 1;
 }
 
 size_t comm_point_get_mem(struct comm_point* c)

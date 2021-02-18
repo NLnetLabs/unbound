@@ -2830,7 +2830,7 @@ void http2_req_stream_clear(struct http2_stream* h2_stream)
 	}
 }
 
-nghttp2_session_callbacks* http2_req_callbacks_create()
+nghttp2_session_callbacks* http2_req_callbacks_create(void)
 {
 	nghttp2_session_callbacks *callbacks;
 	if(nghttp2_session_callbacks_new(&callbacks) == NGHTTP2_ERR_NOMEM) {
