@@ -70,6 +70,7 @@
 #include "util/edns.h"
 #include "iterator/iter_fwd.h"
 #include "iterator/iter_hints.h"
+#include "iterator/iter_utils.h"
 #include "validator/autotrust.h"
 #include "validator/val_anchor.h"
 #include "respip/respip.h"
@@ -1821,6 +1822,8 @@ worker_init(struct worker* worker, struct config_file *cfg,
 		worker_delete(worker);
 		return 0;
 	}
+	iterator_set_ip46_support(&worker->daemon->mods, worker->daemon->env,
+		worker->back);
 	/* start listening to commands */
 	if(!tube_setup_bg_listen(worker->cmd, worker->base,
 		&worker_handle_control_cmd, worker)) {
