@@ -2197,6 +2197,8 @@ ssl_http_read_more(struct comm_point* c)
 		log_crypto_err("could not SSL_read");
 		return 0;
 	}
+	verbose(VERB_ALGO, "ssl http read more skip to %d + %d",
+		(int)sldns_buffer_position(c->buffer), (int)r);
 	sldns_buffer_skip(c->buffer, (ssize_t)r);
 	return 1;
 #else
@@ -2233,6 +2235,8 @@ http_read_more(int fd, struct comm_point* c)
 			&c->repinfo.addr, c->repinfo.addrlen);
 		return 0;
 	}
+	verbose(VERB_ALGO, "http read more skip to %d + %d",
+		(int)sldns_buffer_position(c->buffer), (int)r);
 	sldns_buffer_skip(c->buffer, r);
 	return 1;
 }
@@ -2393,8 +2397,8 @@ http_nonchunk_segment(struct comm_point* c)
 	 * read more data collected into the buffer */
 	remainbufferlen = sldns_buffer_capacity(c->buffer) -
 		sldns_buffer_limit(c->buffer);
-	if(remainbufferlen >= c->tcp_byte_count ||
-		remainbufferlen >= 2048) {
+	if(remainbufferlen+got_now >= c->tcp_byte_count ||
+		remainbufferlen >= (c->ssl?16384:2048)) {
 		size_t total = sldns_buffer_limit(c->buffer);
 		sldns_buffer_clear(c->buffer);
 		sldns_buffer_set_position(c->buffer, total);
@@ -2762,6 +2766,11 @@ comm_point_http_handle_read(int fd, struct comm_point* c)
 			return 0;
 	}
 
+	if(c->http_stored >= sldns_buffer_position(c->buffer)) {
+		/* read did not work but we wanted more data, there is
+		 * no bytes to process now. */
+		return 1;
+	}
 	sldns_buffer_flip(c->buffer);
 	/* if we are partway in a segment of data, position us at the point
 	 * where we left off previously */
