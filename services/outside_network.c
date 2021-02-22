@@ -1779,6 +1779,7 @@ static int udp_connect_needs_log(int err)
 #  ifdef ENETDOWN
 	case ENETDOWN:
 #  endif
+	case EPERM:
 		if(verbosity >= VERB_ALGO)
 			return 1;
 		return 0;

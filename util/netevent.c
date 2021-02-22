@@ -302,7 +302,7 @@ udp_send_errno_needs_log(struct sockaddr* addr, socklen_t addrlen)
 		/* 'Cannot assign requested address' also when disconnected */
 		|| (errno == EADDRNOTAVAIL)
 #  endif
-		) && verbosity < VERB_DETAIL)
+		) && verbosity < VERB_ALGO)
 		return 0;
 #  ifdef EADDRINUSE
 	/* If SO_REUSEADDR is set, we could try to connect to the same server
