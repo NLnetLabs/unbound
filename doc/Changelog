@@ -1,6 +1,8 @@
 22 February 2021: Wouter
 	- Fix #431: Squelch permission denied errors for tcp connect
 	  and udp connect from the logs, unless at high verbosity.
+	- Fix for zonemd, that nxdomain for the chain of trust is allowed
+	  for island zones, it is treates as an insecure zone for verification.
 
 18 February 2021: Wouter
 	- Merge PR #317: ZONEMD Zone Verification, with RFC 8976 support.

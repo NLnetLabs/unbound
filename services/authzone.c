@@ -8117,6 +8117,32 @@ void auth_zonemd_dnskey_lookup_callback(void* arg, int rcode, sldns_buffer* buf,
 					"zonemd lookup of DNSKEY has nodata");
 				reason = "lookup of DNSKEY has nodata";
 			}
+		} else if(rep && rq.qtype == wanted_qtype &&
+			query_dname_compare(z->name, rq.qname) == 0 &&
+			FLAGS_GET_RCODE(rep->flags) == LDNS_RCODE_NXDOMAIN &&
+			sec == sec_status_secure) {
+			/* secure nxdomain, so the zone is like some RPZ zone
+			 * that does not exist in the wider internet, with
+			 * a secure nxdomain answer outside of it. So we
+			 * treat the zonemd zone without a dnssec chain of
+			 * trust, as insecure. */
+			is_insecure = 1;
+			auth_zone_log(z->name, VERB_ALGO,
+				"zonemd lookup of DNSKEY was secure NXDOMAIN, treat as insecure");
+		} else if(rep && rq.qtype == wanted_qtype &&
+			query_dname_compare(z->name, rq.qname) == 0 &&
+			FLAGS_GET_RCODE(rep->flags) == LDNS_RCODE_NXDOMAIN &&
+			sec == sec_status_insecure) {
+			is_insecure = 1;
+			auth_zone_log(z->name, VERB_ALGO,
+				"zonemd lookup of DNSKEY was insecure NXDOMAIN, treat as insecure");
+		} else if(rep && rq.qtype == wanted_qtype &&
+			query_dname_compare(z->name, rq.qname) == 0 &&
+			FLAGS_GET_RCODE(rep->flags) == LDNS_RCODE_NXDOMAIN &&
+			sec == sec_status_indeterminate) {
+			is_insecure = 1;
+			auth_zone_log(z->name, VERB_ALGO,
+				"zonemd lookup of DNSKEY was indeterminate NXDOMAIN, treat as insecure");
 		} else {
 			auth_zone_log(z->name, VERB_ALGO,
 				"zonemd lookup of DNSKEY has no answer");
