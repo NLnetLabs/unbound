@@ -8243,7 +8243,14 @@ void auth_zone_verify_zonemd(struct auth_zone* z, struct module_env* env,
 	if(env->anchors)
 		anchor = anchors_lookup(env->anchors, z->name, z->namelen,
 			z->dclass);
-	if(anchor && query_dname_compare(z->name, anchor->name) == 0) {
+	if(anchor && anchor->numDS == 0 && anchor->numDNSKEY == 0) {
+		/* domain-insecure trust anchor for unsigned zones */
+		lock_basic_unlock(&anchor->lock);
+		if(only_online)
+			return;
+		dnskey = NULL;
+		is_insecure = 1;
+	} else if(anchor && query_dname_compare(z->name, anchor->name) == 0) {
 		if(only_online) {
 			lock_basic_unlock(&anchor->lock);
 			return;

@@ -1,3 +1,6 @@
+23 February 2021: Wouter
+	- Fix for zonemd, that domain-insecure zones work without dnssec.
+
 22 February 2021: Wouter
 	- Fix #431: Squelch permission denied errors for tcp connect
 	  and udp connect from the logs, unless at high verbosity.
