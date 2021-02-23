@@ -8259,7 +8259,7 @@ void auth_zone_verify_zonemd(struct auth_zone* z, struct module_env* env,
 		dnskey = zonemd_get_dnskey_from_anchor(z, env, mods, anchor,
 			&is_insecure, &why_bogus, &keystorage);
 		lock_basic_unlock(&anchor->lock);
-		if(!dnskey && !reason) {
+		if(!dnskey && !reason && !is_insecure) {
 			reason = "verify DNSKEY RRset with trust anchor failed";
 		}
 	} else if(anchor) {

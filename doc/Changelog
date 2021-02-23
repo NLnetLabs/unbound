@@ -1,5 +1,7 @@
 23 February 2021: Wouter
 	- Fix for zonemd, that domain-insecure zones work without dnssec.
+	- Fix for zonemd, do not reject insecure result from trust anchor
+	  validation step in dnssec chain of trust.
 
 22 February 2021: Wouter
 	- Fix #431: Squelch permission denied errors for tcp connect
