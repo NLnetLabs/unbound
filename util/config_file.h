@@ -1309,7 +1309,7 @@ extern int fake_dsa, fake_sha1;
 int if_is_https(const char* ifname, const char* port, int https_port);
 
 /**
- * Return true if the config contains settinsg that enable https.
+ * Return true if the config contains settings that enable https.
  * @param cfg: config information.
  * @return true if https ports are used for server.
  */
