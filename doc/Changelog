@@ -1,6 +1,8 @@
 24 February 2021: George
 	- Fix #384: (1) A minor request to improve the log (2) A minor bug in one
 	  log message.
+	- ipsecmod: Better logging for detecting a cycle when attaching the
+	  A/AAAA subquery.
 
 23 February 2021: Wouter
 	- Fix for zonemd, that domain-insecure zones work without dnssec.
