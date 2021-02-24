@@ -1105,6 +1105,19 @@ if_is_https(const char* ifname, const char* port, int https_port)
 	return 0;
 }
 
+/** see if config contains https turned on */
+int cfg_has_https(struct config_file* cfg)
+{
+	int i;
+	char portbuf[32];
+	snprintf(portbuf, sizeof(portbuf), "%d", cfg->port);
+	for(i = 0; i<cfg->num_ifs; i++) {
+		if(if_is_https(cfg->ifs[i], portbuf, cfg->https_port))
+			return 1;
+	}
+	return 0;
+}
+
 /**
  * Helper for ports_open. Creates one interface (or NULL for default).
  * @param ifname: The interface ip address.
