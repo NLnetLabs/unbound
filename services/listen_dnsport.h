@@ -148,13 +148,6 @@ int resolve_interface_names(struct config_file* cfg, char*** resif,
 	int* num_resif);
 
 /**
- * Return true if the config contains settinsg that enable https.
- * @param cfg: config information.
- * @return true if https ports are used for server.
- */
-int cfg_has_https(struct config_file* cfg);
-
-/**
  * Create commpoints with for this thread for the shared ports.
  * @param base: the comm_base that provides event functionality.
  *	for default all ifs.

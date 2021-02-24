@@ -8,6 +8,7 @@
 	- On startup of unbound it checks if rlimits on memory size look
 	  sufficient for the configured cache size, and logs warning if not.
 	- Fix function documentation.
+	- Fix unit test for added ulimit checks.
 
 23 February 2021: Wouter
 	- Fix for zonemd, that domain-insecure zones work without dnssec.

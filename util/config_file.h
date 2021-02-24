@@ -1305,5 +1305,15 @@ void w_config_adjust_directory(struct config_file* cfg);
 /** debug option for unit tests. */
 extern int fake_dsa, fake_sha1;
 
+/** see if interface is https, its port number == the https port number */
+int if_is_https(const char* ifname, const char* port, int https_port);
+
+/**
+ * Return true if the config contains settinsg that enable https.
+ * @param cfg: config information.
+ * @return true if https ports are used for server.
+ */
+int cfg_has_https(struct config_file* cfg);
+
 #endif /* UTIL_CONFIG_FILE_H */
 

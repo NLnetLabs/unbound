@@ -2608,3 +2608,27 @@ int options_remote_is_address(struct config_file* cfg)
 	return (cfg->control_ifs.first->str[0] != '/');
 }
 
+/** see if interface is https, its port number == the https port number */
+int
+if_is_https(const char* ifname, const char* port, int https_port)
+{
+	char* p = strchr(ifname, '@');
+	if(!p && atoi(port) == https_port)
+		return 1;
+	if(p && atoi(p+1) == https_port)
+		return 1;
+	return 0;
+}
+
+/** see if config contains https turned on */
+int cfg_has_https(struct config_file* cfg)
+{
+	int i;
+	char portbuf[32];
+	snprintf(portbuf, sizeof(portbuf), "%d", cfg->port);
+	for(i = 0; i<cfg->num_ifs; i++) {
+		if(if_is_https(cfg->ifs[i], portbuf, cfg->https_port))
+			return 1;
+	}
+	return 0;
+}
