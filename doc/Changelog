@@ -1,3 +1,7 @@
+24 February 2021: George
+	- Fix #384: (1) A minor request to improve the log (2) A minor bug in one
+	  log message.
+
 23 February 2021: Wouter
 	- Fix for zonemd, that domain-insecure zones work without dnssec.
 	- Fix for zonemd, do not reject insecure result from trust anchor
