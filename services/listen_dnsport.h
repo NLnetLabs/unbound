@@ -149,6 +149,7 @@ int resolve_interface_names(struct config_file* cfg, char*** resif,
 
 /**
  * Return true if the config contains settinsg that enable https.
+ * @param cfg: config information.
  * @return true if https ports are used for server.
  */
 int cfg_has_https(struct config_file* cfg);
