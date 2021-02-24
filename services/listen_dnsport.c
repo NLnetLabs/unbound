@@ -926,7 +926,7 @@ static int
 make_sock(int stype, const char* ifname, const char* port, 
 	struct addrinfo *hints, int v6only, int* noip6, size_t rcv, size_t snd,
 	int* reuseport, int transparent, int tcp_mss, int nodelay, int freebind,
-	int use_systemd, int dscp, struct unbound_socket** ub_sock)
+	int use_systemd, int dscp, struct unbound_socket* ub_sock)
 {
 	struct addrinfo *res = NULL;
 	int r, s, inuse, noproto;
@@ -969,9 +969,9 @@ make_sock(int stype, const char* ifname, const char* port,
 		}
 	}
 
-	(*ub_sock)->addr = res;
-	(*ub_sock)->s = s;
-	(*ub_sock)->fam = hints->ai_family;
+	ub_sock->addr = res;
+	ub_sock->s = s;
+	ub_sock->fam = hints->ai_family;
 
 	return s;
 }
@@ -981,7 +981,7 @@ static int
 make_sock_port(int stype, const char* ifname, const char* port, 
 	struct addrinfo *hints, int v6only, int* noip6, size_t rcv, size_t snd,
 	int* reuseport, int transparent, int tcp_mss, int nodelay, int freebind,
-	int use_systemd, int dscp, struct unbound_socket** ub_sock)
+	int use_systemd, int dscp, struct unbound_socket* ub_sock)
 {
 	char* s = strchr(ifname, '@');
 	if(s) {
@@ -1177,7 +1177,7 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 			return 0;
 		if((s = make_sock_port(SOCK_DGRAM, ifname, port, hints, 1, 
 			&noip6, rcv, snd, reuseport, transparent,
-			tcp_mss, nodelay, freebind, use_systemd, dscp, &ub_sock)) == -1) {
+			tcp_mss, nodelay, freebind, use_systemd, dscp, ub_sock)) == -1) {
 			free(ub_sock);
 			if(noip6) {
 				log_warn("IPv6 protocol not available");
@@ -1204,7 +1204,7 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 		/* regular udp socket */
 		if((s = make_sock_port(SOCK_DGRAM, ifname, port, hints, 1, 
 			&noip6, rcv, snd, reuseport, transparent,
-			tcp_mss, nodelay, freebind, use_systemd, dscp, &ub_sock)) == -1) {
+			tcp_mss, nodelay, freebind, use_systemd, dscp, ub_sock)) == -1) {
 			free(ub_sock);
 			if(noip6) {
 				log_warn("IPv6 protocol not available");
@@ -1236,7 +1236,7 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 			port_type = listen_type_tcp;
 		if((s = make_sock_port(SOCK_STREAM, ifname, port, hints, 1, 
 			&noip6, 0, 0, reuseport, transparent, tcp_mss, nodelay,
-			freebind, use_systemd, dscp, &ub_sock)) == -1) {
+			freebind, use_systemd, dscp, ub_sock)) == -1) {
 			free(ub_sock);
 			if(noip6) {
 				/*log_warn("IPv6 protocol not available");*/
