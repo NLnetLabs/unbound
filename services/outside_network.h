@@ -344,6 +344,8 @@ struct pending {
 struct pending_tcp {
 	/** next in list of free tcp comm points, or NULL. */
 	struct pending_tcp* next_free;
+	/** port for of the outgoing interface that is used */
+	struct port_if* pi;
 	/** tcp comm point it was sent on (and reply must come back on). */
 	struct comm_point* c;
 	/** the query being serviced, NULL if the pending_tcp is unused. */
@@ -408,6 +410,10 @@ struct waiting_tcp {
 	char* tls_auth_name;
 	/** the packet was involved in an error, to stop looping errors */
 	int error_count;
+#ifdef USE_DNSTAP
+	/** serviced query pointer for dnstap to get logging info, if nonNULL*/
+	struct serviced_query* sq;
+#endif
 };
 
 /**

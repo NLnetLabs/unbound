@@ -1609,5 +1609,4 @@ sock_close(int socket)
 {
 	closesocket(socket);
 }
-
 #  endif /* USE_WINSOCK */

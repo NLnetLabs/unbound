@@ -1167,9 +1167,14 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 	}
 #endif
 #ifdef USE_DNSTAP
-	if(worker->dtenv.log_client_query_messages)
-		dt_msg_send_client_query(&worker->dtenv, &repinfo->addr, c->type,
-			c->buffer);
+	/*
+	 * sending src (client)/dst (local service) addresses over DNSTAP from incoming request handler
+	 */
+	if(worker->dtenv.log_client_query_messages) {
+		log_addr(VERB_ALGO, "request from client", &repinfo->addr, repinfo->addrlen);
+		log_addr(VERB_ALGO, "to local addr", (void*)repinfo->c->socket->addr->ai_addr, repinfo->c->socket->addr->ai_addrlen);
+		dt_msg_send_client_query(&worker->dtenv, &repinfo->addr, (void*)repinfo->c->socket->addr->ai_addr, c->type, c->buffer);
+	}
 #endif
 	acladdr = acl_addr_lookup(worker->daemon->acl, &repinfo->addr, 
 		repinfo->addrlen);
@@ -1593,9 +1598,14 @@ send_reply_rc:
 		if(is_secure_answer) worker->stats.ans_secure++;
 	}
 #ifdef USE_DNSTAP
-	if(worker->dtenv.log_client_response_messages)
-		dt_msg_send_client_response(&worker->dtenv, &repinfo->addr,
-			c->type, c->buffer);
+	/*
+	 * sending src (client)/dst (local service) addresses over DNSTAP from send_reply code label (when we serviced local zone for ex.)
+	 */
+	if(worker->dtenv.log_client_response_messages) {
+		log_addr(VERB_ALGO, "from local addr", (void*)repinfo->c->socket->addr->ai_addr, repinfo->c->socket->addr->ai_addrlen);
+                log_addr(VERB_ALGO, "response to client", &repinfo->addr, repinfo->addrlen);
+		dt_msg_send_client_response(&worker->dtenv, &repinfo->addr, (void*)repinfo->c->socket->addr->ai_addr, c->type, c->buffer);
+	}
 #endif
 	if(worker->env.cfg->log_replies)
 	{
