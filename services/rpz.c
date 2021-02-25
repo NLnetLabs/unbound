@@ -716,7 +716,7 @@ rpz_find_zone(struct rpz* r, uint8_t* qname, size_t qname_len, uint16_t qclass,
 	 * zone match, append '*' to that and do another lookup. */
 
 	ce = dname_get_shared_topdomain(z->name, qname);
-	if(!ce /* should not happen */ || !*ce /* root */) {
+	if(!ce /* should not happen */) {
 		lock_rw_unlock(&z->lock);
 		if(zones_keep_lock) {
 			lock_rw_unlock(&r->local_zones->lock);
