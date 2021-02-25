@@ -1,3 +1,8 @@
+25 February 2021: Wouter
+	- Merge PR #367 : DNSTAP log local address.  With code from PR #365
+	  and fixes #368 : dnstap does not log the DNS message ID for
+	  FORWARDER_QUERY.
+
 24 February 2021: George
 	- Fix #384: (1) A minor request to improve the log (2) A minor bug in one
 	  log message.
