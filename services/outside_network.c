@@ -1942,9 +1942,10 @@ randomize_and_send_udp(struct pending* pend, sldns_buffer* packet, int timeout)
 #ifdef USE_DNSTAP
 	/*
 	 * sending src (local service)/dst (upstream) addresses over DNSTAP
-	 * TODO: right now there are no chances to get the src (local service) addr. So we will pass 0.0.0.0 (::)
-	 * to argument for dt_msg_send_outside_query()/dt_msg_send_outside_response() calls.
-	 * For the both UDP and TCP.
+	 * There are no chances to get the src (local service) addr if unbound
+	 * is not configured with specific outgoing IP-addresses. So we will
+	 * pass 0.0.0.0 (::) to argument for
+	 * dt_msg_send_outside_query()/dt_msg_send_outside_response() calls.
 	 */
 	if(outnet->dtenv &&
 	   (outnet->dtenv->log_resolver_query_messages ||
