@@ -1690,8 +1690,11 @@ void listening_ports_free(struct listen_port* list)
 		if(list->fd != -1) {
 			sock_close(list->fd);
 		}
-		freeaddrinfo(list->socket->addr);
-		free(list->socket);
+		/* rc_ports don't have ub_socket */
+		if(list->socket) {
+			freeaddrinfo(list->socket->addr);
+			free(list->socket);
+		}
 		free(list);
 		list = nx;
 	}

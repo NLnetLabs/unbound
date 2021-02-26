@@ -1,3 +1,6 @@
+26 February 2021: George
+	- Fix for #367: rc_ports don't have ub_sock; skip cleaning up.
+
 25 February 2021: Wouter
 	- Merge PR #367 : DNSTAP log local address.  With code from PR #365
 	  and fixes #368 : dnstap does not log the DNS message ID for
