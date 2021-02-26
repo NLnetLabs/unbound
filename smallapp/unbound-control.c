@@ -63,6 +63,7 @@
 #include "sldns/wire2str.h"
 #include "sldns/pkthdr.h"
 #include "services/rpz.h"
+#include "services/listen_dnsport.h"
 
 #ifdef HAVE_SYS_IPC_H
 #include "sys/ipc.h"
@@ -583,10 +584,27 @@ contact_server(const char* svr, struct config_file* cfg, int statuscmd)
 	socklen_t addrlen;
 	int addrfamily = 0, proto = IPPROTO_TCP;
 	int fd, useport = 1;
+	char** rcif = NULL;
+	int num_rcif = 0;
 	/* use svr or the first config entry */
 	if(!svr) {
 		if(cfg->control_ifs.first) {
-			svr = cfg->control_ifs.first->str;
+			struct sockaddr_storage addr2;
+			socklen_t addrlen2;
+			if(extstrtoaddr(cfg->control_ifs.first->str, &addr2,
+				&addrlen2)) {
+				svr = cfg->control_ifs.first->str;
+			} else {
+				if(!resolve_interface_names(NULL, 0,
+					cfg->control_ifs.first, &rcif,
+					&num_rcif)) {
+					fatal_exit("could not resolve interface names");
+				}
+				if(rcif == NULL || num_rcif == 0) {
+					fatal_exit("no control interfaces");
+				}
+				svr = rcif[0];
+			}
 		} else if(cfg->do_ip4) {
 			svr = "127.0.0.1";
 		} else {
@@ -697,6 +715,7 @@ contact_server(const char* svr, struct config_file* cfg, int statuscmd)
 		break;
 	}
 	fd_set_block(fd);
+	config_del_strarray(rcif, num_rcif);
 	return fd;
 }
 

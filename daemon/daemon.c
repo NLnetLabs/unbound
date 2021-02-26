@@ -320,7 +320,8 @@ daemon_open_shared_ports(struct daemon* daemon)
 			free(daemon->ports);
 			daemon->ports = NULL;
 		}
-		if(!resolve_interface_names(daemon->cfg, &resif, &num_resif))
+		if(!resolve_interface_names(daemon->cfg->ifs,
+			daemon->cfg->num_ifs, NULL, &resif, &num_resif))
 			return 0;
 		/* see if we want to reuseport */
 #ifdef SO_REUSEPORT

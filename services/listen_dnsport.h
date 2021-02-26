@@ -150,16 +150,19 @@ struct listen_port* listening_ports_open(struct config_file* cfg,
  */
 void listening_ports_free(struct listen_port* list);
 
+struct config_strlist;
 /**
  * Resolve interface names in config and store result IP addresses
- * @param cfg: config
+ * @param ifs: array of interfaces.  The list of interface names, if not NULL.
+ * @param num_ifs: length of ifs array.
+ * @param list: if not NULL, this is used as the list of interface names.
  * @param resif: string array (malloced array of malloced strings) with
  * 	result.  NULL if cfg has none.
  * @param num_resif: length of resif.  Zero if cfg has zero num_ifs.
  * @return 0 on failure.
  */
-int resolve_interface_names(struct config_file* cfg, char*** resif,
-	int* num_resif);
+int resolve_interface_names(char** ifs, int num_ifs,
+	struct config_strlist* list, char*** resif, int* num_resif);
 
 /**
  * Create commpoints with for this thread for the shared ports.

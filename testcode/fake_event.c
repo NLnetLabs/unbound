@@ -1306,8 +1306,9 @@ void outnet_serviced_query_stop(struct serviced_query* sq, void* cb_arg)
 	log_info("double delete of pending serviced query");
 }
 
-int resolve_interface_names(struct config_file* ATTR_UNUSED(cfg),
-	char*** ATTR_UNUSED(resif), int* ATTR_UNUSED(num_resif))
+int resolve_interface_names(char** ATTR_UNUSED(ifs), int ATTR_UNUSED(num_ifs),
+	struct config_strlist* ATTR_UNUSED(list), char*** ATTR_UNUSED(resif),
+	int* ATTR_UNUSED(num_resif))
 {
 	return 1;
 }

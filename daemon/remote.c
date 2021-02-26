@@ -364,13 +364,20 @@ struct listen_port* daemon_remote_open_ports(struct config_file* cfg)
 	struct listen_port* l = NULL;
 	log_assert(cfg->remote_control_enable && cfg->control_port);
 	if(cfg->control_ifs.first) {
-		struct config_strlist* p;
-		for(p = cfg->control_ifs.first; p; p = p->next) {
-			if(!add_open(p->str, cfg->control_port, &l, 1, cfg)) {
+		char** rcif = NULL;
+		int i, num_rcif = 0;
+		if(!resolve_interface_names(NULL, 0, cfg->control_ifs.first,
+			&rcif, &num_rcif)) {
+			return NULL;
+		}
+		for(i=0; i<num_rcif; i++) {
+			if(!add_open(rcif[i], cfg->control_port, &l, 1, cfg)) {
 				listening_ports_free(l);
+				config_del_strarray(rcif, num_rcif);
 				return NULL;
 			}
 		}
+		config_del_strarray(rcif, num_rcif);
 	} else {
 		/* defaults */
 		if(cfg->do_ip6 &&

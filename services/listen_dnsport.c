@@ -1528,13 +1528,12 @@ resolve_ifa_name(struct ifaddrs *ifas, const char *search_ifa, char ***ip_addres
 }
 #endif /* HAVE_GETIFADDRS */
 
-int resolve_interface_names(struct config_file* cfg, char*** resif,
-	int* num_resif)
+int resolve_interface_names(char** ifs, int num_ifs,
+	struct config_strlist* list, char*** resif, int* num_resif)
 {
 #ifdef HAVE_GETIFADDRS
-	int i;
 	struct ifaddrs *addrs = NULL;
-	if(cfg->num_ifs == 0) {
+	if(num_ifs == 0 && list == NULL) {
 		*resif = NULL;
 		*num_resif = 0;
 		return 1;
@@ -1545,38 +1544,71 @@ int resolve_interface_names(struct config_file* cfg, char*** resif,
 		freeifaddrs(addrs);
 		return 0;
 	}
-	for(i=0; i<cfg->num_ifs; i++) {
-		if(!resolve_ifa_name(addrs, cfg->ifs[i], resif, num_resif)) {
-			freeifaddrs(addrs);
-			config_del_strarray(*resif, *num_resif);
-			*resif = NULL;
-			*num_resif = 0;
-			return 0;
+	if(ifs) {
+		int i;
+		for(i=0; i<num_ifs; i++) {
+			if(!resolve_ifa_name(addrs, ifs[i], resif, num_resif)) {
+				freeifaddrs(addrs);
+				config_del_strarray(*resif, *num_resif);
+				*resif = NULL;
+				*num_resif = 0;
+				return 0;
+			}
 		}
+	}
+	if(list) {
+		struct config_strlist* p;
+		for(p = list; p; p = p->next) {
+			if(!resolve_ifa_name(addrs, p->str, resif, num_resif)) {
+				freeifaddrs(addrs);
+				config_del_strarray(*resif, *num_resif);
+				*resif = NULL;
+				*num_resif = 0;
+				return 0;
+			}
+}
 	}
 	freeifaddrs(addrs);
 	return 1;
 #else
-	int i;
-	if(cfg->num_ifs == 0) {
+	struct config_strlist* p;
+	if(num_ifs == 0 && list == NULL) {
 		*resif = NULL;
 		*num_resif = 0;
 		return 1;
 	}
-	*num_resif = cfg->num_ifs;
+	*num_resif = num_ifs;
+	for(p = list; p; p = p->next) {
+		*num_resif ++;
+	}
 	*resif = calloc(*num_resif, sizeof(**resif));
 	if(!*resif) {
 		log_err("out of memory");
 		return 0;
 	}
-	for(i=0; i<*num_resif; i++) {
-		(*resif)[i] = strdup(cfg->ifs[i]);
-		if(!((*resif)[i])) {
-			log_err("out of memory");
-			config_del_strarray(*resif, *num_resif);
-			*resif = NULL;
-			*num_resif = 0;
-			return 0;
+	if(ifs) {
+		int i;
+		for(i=0; i<num_ifs; i++) {
+			(*resif)[i] = strdup(ifs[i]);
+			if(!((*resif)[i])) {
+				log_err("out of memory");
+				config_del_strarray(*resif, *num_resif);
+				*resif = NULL;
+				*num_resif = 0;
+				return 0;
+			}
+		}
+	}
+	if(list) {
+		for(p = list; p; p = p->next) {
+			(*resif)[i] = strdup(p->str);
+			if(!((*resif)[i])) {
+				log_err("out of memory");
+				config_del_strarray(*resif, *num_resif);
+				*resif = NULL;
+				*num_resif = 0;
+				return 0;
+			}
 		}
 	}
 	return 1;
