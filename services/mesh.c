@@ -1813,8 +1813,7 @@ mesh_detect_cycle(struct module_qstate* qstate, struct query_info* qinfo,
 {
 	struct mesh_area* mesh = qstate->env->mesh;
 	struct mesh_state* dep_m = NULL;
-	if(!mesh_state_is_unique(qstate->mesh_info))
-		dep_m = mesh_area_find(mesh, NULL, qinfo, flags, prime, valrec);
+	dep_m = mesh_area_find(mesh, NULL, qinfo, flags, prime, valrec);
 	return mesh_detect_cycle_found(qstate, dep_m);
 }
 

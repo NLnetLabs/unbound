@@ -1,5 +1,8 @@
 4 March 2021: Wouter
 	- iana portlist update.
+	- Fix spurious errors about "Could not generate request: out of
+	  memory".  The mesh detect cycle routine no longer wrongly stops
+	  the check when the calling mesh state is unique.
 
 26 February 2021: George
 	- Fix for #367: rc_ports don't have ub_sock; skip cleaning up.
