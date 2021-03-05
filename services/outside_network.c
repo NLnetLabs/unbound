@@ -892,6 +892,9 @@ reuse_tcp_remove_tree_list(struct outside_network* outnet,
 		/* delete it from reuse tree */
 		(void)rbtree_delete(&outnet->tcp_reuse, reuse);
 		reuse->node.key = NULL;
+		/* defend against loops on broken tree by zeroing the
+		 * rbnode structure */
+		memset(&reuse->node, 0, sizeof(reuse->node));
 	}
 	/* delete from reuse list */
 	if(reuse->item_on_lru_list) {
