@@ -890,7 +890,13 @@ reuse_tcp_remove_tree_list(struct outside_network* outnet,
 	verbose(VERB_CLIENT, "reuse_tcp_remove_tree_list");
 	if(reuse->node.key) {
 		/* delete it from reuse tree */
-		(void)rbtree_delete(&outnet->tcp_reuse, reuse);
+		if(!rbtree_delete(&outnet->tcp_reuse, reuse)) {
+			/* should not be possible, it should be there */
+			char buf[256];
+			addr_to_str(&reuse->addr, reuse->addrlen, buf,
+				sizeof(buf));
+			log_err("reuse tcp delete: node not present, internal error, %s ssl %d lru %d", buf, reuse->is_ssl, reuse->item_on_lru_list);
+		}
 		reuse->node.key = NULL;
 		/* defend against loops on broken tree by zeroing the
 		 * rbnode structure */

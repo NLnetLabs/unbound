@@ -1,5 +1,6 @@
 5 March 2021: Wouter
 	- Workaround for #439: prevent loops in the reuse rbtree.
+	- Debug output for #411 and #439: printout internal error and details.
 
 4 March 2021: Wouter
 	- iana portlist update.
