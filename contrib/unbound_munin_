@@ -14,7 +14,6 @@
 # Run the command unbound-control-setup to generate the key files.
 #
 # Environment variables for this script
-#	statefile	- where to put temporary statefile.
 #	unbound_conf	- where the unbound.conf file is located.
 #	unbound_control	- where to find unbound-control executable.
 #	spoof_warn	- what level to warn about spoofing
@@ -24,7 +23,6 @@
 # with:
 # [unbound*]
 # user root
-# env.statefile /usr/local/var/munin/plugin-state/unbound-state
 # env.unbound_conf /usr/local/etc/unbound/unbound.conf
 # env.unbound_control /usr/local/sbin/unbound-control
 # env.spoof_warn 1000
@@ -66,7 +64,6 @@ System with unbound daemon.
 
   [unbound*]
   user root
-  env.statefile /usr/local/var/munin/plugin-state/unbound-state
   env.unbound_conf /usr/local/etc/unbound/unbound.conf
   env.unbound_control /usr/local/sbin/unbound-control
   env.spoof_warn 1000
@@ -98,7 +95,8 @@ BSD
 
 =cut
 
-state=${statefile:-/usr/local/var/munin/plugin-state/unbound-state}
+. ${MUNIN_LIBDIR}/plugins/plugin.sh
+state="${MUNIN_PLUGSTATE}/unbound.state"
 conf=${unbound_conf:-/usr/local/etc/unbound/unbound.conf}
 ctrl=${unbound_control:-/usr/local/sbin/unbound-control}
 warn=${spoof_warn:-1000}
