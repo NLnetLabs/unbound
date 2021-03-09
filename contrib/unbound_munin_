@@ -244,7 +244,7 @@ if test "$1" = "config" ; then
 		echo "graph_args --base 1000 -l 0"
 		echo "graph_vlabel queries / \${graph_period}"
 		echo "graph_scale no"
-		echo "graph_category DNS"
+		echo "graph_category dns"
 		for x in `grep "^thread[0-9][0-9]*\.num\.queries=" $state |
 			sed -e 's/=.*//'`; do
 			exist_config $x "queries handled by `basename $x .num.queries`"
@@ -268,7 +268,7 @@ if test "$1" = "config" ; then
 		echo "graph_args --base 1000 -l 0"
 		echo "graph_vlabel number of queries"
 		echo "graph_scale no"
-		echo "graph_category DNS"
+		echo "graph_category dns"
 		p_config "total.requestlist.avg" "Average size of queue on insert" "GAUGE"
 		p_config "total.requestlist.max" "Max size of queue (in 5 min)" "GAUGE"
 		p_config "total.requestlist.overwritten" "Number of queries replaced by new ones" "GAUGE"
@@ -279,7 +279,7 @@ if test "$1" = "config" ; then
 		echo "graph_title Unbound memory usage"
 		echo "graph_args --base 1024 -l 0"
 		echo "graph_vlabel memory used in bytes"
-		echo "graph_category DNS"
+		echo "graph_category dns"
 		p_config "mem.cache.rrset" "RRset cache memory" "GAUGE"
 		p_config "mem.cache.message" "Message cache memory" "GAUGE"
 		p_config "mem.mod.iterator" "Iterator module memory" "GAUGE"
@@ -295,7 +295,7 @@ if test "$1" = "config" ; then
 		echo "graph_args --base 1000 -l 0"
 		echo "graph_vlabel queries / \${graph_period}"
 		echo "graph_scale no"
-		echo "graph_category DNS"
+		echo "graph_category dns"
 		for nm in `grep "^num.query.type" $seentags`; do
 			tp=`echo $nm | sed -e s/num.query.type.//`
 			p_config "$nm" "$tp" "ABSOLUTE"
@@ -307,7 +307,7 @@ if test "$1" = "config" ; then
 		echo "graph_args --base 1000 -l 0"
 		echo "graph_vlabel queries / \${graph_period}"
 		echo "graph_scale no"
-		echo "graph_category DNS"
+		echo "graph_category dns"
 		for nm in `grep "^num.query.class" $seentags`; do
 			tp=`echo $nm | sed -e s/num.query.class.//`
 			p_config "$nm" "$tp" "ABSOLUTE"
@@ -319,7 +319,7 @@ if test "$1" = "config" ; then
 		echo "graph_args --base 1000 -l 0"
 		echo "graph_vlabel queries / \${graph_period}"
 		echo "graph_scale no"
-		echo "graph_category DNS"
+		echo "graph_category dns"
 		for nm in `grep "^num.query.opcode" $seentags`; do
 			tp=`echo $nm | sed -e s/num.query.opcode.//`
 			p_config "$nm" "$tp" "ABSOLUTE"
@@ -331,7 +331,7 @@ if test "$1" = "config" ; then
 		echo "graph_args --base 1000 -l 0"
 		echo "graph_vlabel answer packets / \${graph_period}"
 		echo "graph_scale no"
-		echo "graph_category DNS"
+		echo "graph_category dns"
 		for nm in `grep "^num.answer.rcode" $seentags`; do
 			tp=`echo $nm | sed -e s/num.answer.rcode.//`
 			p_config "$nm" "$tp" "ABSOLUTE"
@@ -346,7 +346,7 @@ if test "$1" = "config" ; then
 		echo "graph_args --base 1000 -l 0"
 		echo "graph_vlabel queries / \${graph_period}"
 		echo "graph_scale no"
-		echo "graph_category DNS"
+		echo "graph_category dns"
 		p_config "num.query.flags.QR" "QR (query reply) flag" "ABSOLUTE"
 		p_config "num.query.flags.AA" "AA (auth answer) flag" "ABSOLUTE"
 		p_config "num.query.flags.TC" "TC (truncated) flag" "ABSOLUTE"
@@ -364,7 +364,7 @@ if test "$1" = "config" ; then
 		echo "graph_args --base 1000 -l 0"
 		echo "graph_vlabel queries / \${graph_period}"
 		echo "graph_scale no"
-		echo "graph_category DNS"
+		echo "graph_category dns"
 		echo hcache.label "cache hits"
 		echo hcache.min 0
 		echo hcache.type ABSOLUTE
