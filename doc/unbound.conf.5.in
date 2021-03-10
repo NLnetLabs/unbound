@@ -583,6 +583,7 @@ Default is yes.
 .B pad\-queries\-block\-size: \fI<number>
 The block size with which to pad queries sent over TLS upstreams.
 Default is 128.
+.TP
 .B tls\-use\-sni: \fI<yes or no>
 Enable or disable sending the SNI extension on TLS connections.
 Default is yes.
