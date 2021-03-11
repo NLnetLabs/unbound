@@ -1,3 +1,6 @@
+11 March 2021: Wouter
+	- Fix parse of LOC RR type for decimetres.
+
 5 March 2021: Wouter
 	- Workaround for #439: prevent loops in the reuse rbtree.
 	- Debug output for #411 and #439: printout internal error and details.
