@@ -77,7 +77,7 @@ rpz_action_to_string(enum rpz_action a)
 	case RPZ_DISABLED_ACTION: return "rpz-disabled";
 	case RPZ_CNAME_OVERRIDE_ACTION: return "rpz-cname-override";
 	case RPZ_NO_OVERRIDE_ACTION: return "rpz-no-override";
-	default: return "rpz-unkown-action";
+	default: return "rpz-unknown-action";
 	}
 }
 
