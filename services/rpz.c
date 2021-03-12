@@ -569,7 +569,7 @@ rpz_insert_local_zones_trigger(struct local_zones* lz, uint8_t* dname,
 	int dnamelabs = dname_count_labels(dname);
 	int newzone = 0;
 
-	if(a == RPZ_TCP_ONLY_ACTION || a == RPZ_INVALID_ACTION) {
+	if(a == RPZ_INVALID_ACTION) {
 		char str[255+1];
 		if(rrtype == LDNS_RR_TYPE_SOA || rrtype == LDNS_RR_TYPE_NS ||
 			rrtype == LDNS_RR_TYPE_DNAME ||
@@ -940,7 +940,7 @@ rpz_insert_response_ip_trigger(struct rpz* r, uint8_t* dname, size_t dnamelen,
 		return 0;
 	}
 
-	if(a == RPZ_TCP_ONLY_ACTION || a == RPZ_INVALID_ACTION ||
+	if(a == RPZ_INVALID_ACTION ||
 		rpz_action_to_respip_action(a) == respip_invalid) {
 		char str[255+1];
 		dname_str(dname, str);
