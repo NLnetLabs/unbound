@@ -664,12 +664,34 @@ rpz_insert_qname_trigger(struct rpz* r, uint8_t* dname, size_t dnamelen,
 				       rrclass, ttl, rdata, rdata_len, rr, rr_len);
 }
 
-static void
-rpz_strip_nsdname_suffix(uint8_t* dname, size_t maxdnamelen)
+static int
+rpz_strip_nsdname_suffix(uint8_t* dname, size_t maxdnamelen,
+	uint8_t** stripdname, size_t* stripdnamelen)
 {
 	uint8_t* stripped = get_tld_label(dname, maxdnamelen);
-	if(stripped == NULL) { return; }
+	uint8_t swap;
+	if(stripped == NULL) {
+		*stripdname = memdup(dname, maxdnamelen);
+		if(!*stripdname) {
+			log_err("malloc failure for rpz strip suffix");
+			return 0;
+		}
+		*stripdnamelen = maxdnamelen;
+		return 1;
+	}
+	/* shorten the domain name briefly,
+	 * then we allocate a new name with the correct length */
+	swap = *stripped;
 	*stripped = 0;
+	(void)dname_count_size_labels(dname, stripdnamelen);
+	*stripdname = memdup(dname, *stripdnamelen);
+	*stripped = swap;
+	if(!*stripdname) {
+		*stripdnamelen = 0;
+		log_err("malloc failure for rpz strip suffix");
+		return 0;
+	}
+	return 1;
 }
 
 static void
@@ -677,20 +699,26 @@ rpz_insert_nsdname_trigger(struct rpz* r, uint8_t* dname, size_t dnamelen,
 	enum rpz_action a, uint16_t rrtype, uint16_t rrclass, uint32_t ttl,
 	uint8_t* rdata, size_t rdata_len, uint8_t* rr, size_t rr_len)
 {
+	uint8_t* dname_stripped = NULL;
+	size_t dnamelen_stripped = 0;
 	verbose(VERB_ALGO, "rpz: insert nsdname trigger: %s", rpz_action_to_string(a));
 
 	rpz_log_dname("insert nsdname trigger", dname, dnamelen);
-	rpz_strip_nsdname_suffix(dname, dnamelen);
-	rpz_log_dname("insert nsdname trigger (stripped)", dname, dnamelen);
+	rpz_strip_nsdname_suffix(dname, dnamelen, &dname_stripped,
+		&dnamelen_stripped);
+	rpz_log_dname("insert nsdname trigger (stripped)", dname_stripped, dnamelen_stripped);
 
 	if(a == RPZ_INVALID_ACTION) {
 		verbose(VERB_ALGO, "rpz: skipping invalid action");
+		free(dname_stripped);
 		free(dname);
 		return;
 	}
 
-	rpz_insert_local_zones_trigger(r->nsdname_zones, dname, dnamelen, a, rrtype,
-				       rrclass, ttl, rdata, rdata_len, rr, rr_len);
+	rpz_insert_local_zones_trigger(r->nsdname_zones, dname_stripped,
+		dnamelen_stripped, a, rrtype, rrclass, ttl, rdata, rdata_len,
+		rr, rr_len);
+	free(dname);
 }
 
 static int
