@@ -2329,10 +2329,10 @@ with a different name. RPZ clauses are applied in order of configuration. The
 \fBrespip\fR module needs to be added to the \fBmodule-config\fR, e.g.:
 \fBmodule-config: "respip validator iterator"\fR.
 .P
-Only the QNAME and Response IP Address triggers are supported. The supported RPZ
-actions are: NXDOMAIN, NODATA, PASSTHRU, DROP and Local Data. RPZ QNAME triggers
-are applied after
-\fBlocal-zones\fR and before \fBauth-zones\fR.
+QNAME, Response IP Address, nsdname, nsip and clientip triggers are supported.
+Supported actions are: NXDOMAIN, NODATA, PASSTHRU, DROP, Local Data, tcp\-only
+and drop.  RPZ QNAME triggers are applied after \fBlocal\-zones\fR and
+before \fBauth\-zones\fR.
 .TP
 .B name: \fI<zone name>
 Name of the authority zone.
