@@ -1388,7 +1388,6 @@ rpz_resolve_client_action_and_zone(struct auth_zones* az, struct query_info* qin
 				log_rpz_apply(z->name,
 					r->action_override,
 					qinfo, repinfo, r->log_name);
-			/* TODO only register stats when stats_extended? */
 			stats->rpz_action[r->action_override]++;
 			lock_rw_unlock(&z->lock);
 			z = NULL;
