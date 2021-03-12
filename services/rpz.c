@@ -711,14 +711,13 @@ rpz_insert_nsdname_trigger(struct rpz* r, uint8_t* dname, size_t dnamelen,
 	if(a == RPZ_INVALID_ACTION) {
 		verbose(VERB_ALGO, "rpz: skipping invalid action");
 		free(dname_stripped);
-		free(dname);
 		return;
 	}
 
+	/* dname_stripped is consumed or freed by the insert routine */
 	rpz_insert_local_zones_trigger(r->nsdname_zones, dname_stripped,
 		dnamelen_stripped, a, rrtype, rrclass, ttl, rdata, rdata_len,
 		rr, rr_len);
-	free(dname);
 }
 
 static int
@@ -1047,10 +1046,10 @@ rpz_insert_rr(struct rpz* r, uint8_t* azname, size_t aznamelen, uint8_t* dname,
 			rr_len);
 		free(policydname);
 	} else if(t == RPZ_NSDNAME_TRIGGER) {
-		// policydname will be consumed, no free
 		rpz_insert_nsdname_trigger(r, policydname, policydnamelen,
 			a, rr_type, rr_class, rr_ttl, rdatawl, rdatalen, rr,
 			rr_len);
+		free(policydname);
 	} else {
 		free(policydname);
 		verbose(VERB_ALGO, "rpz: skipping unsupported trigger: %s",
