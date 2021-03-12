@@ -2411,7 +2411,7 @@ The triggers are encoded in the name on the left
 	netblock.rpz-nsip             nameserver IP address
 .fi
 The netblock is written as <netblocklen>.<ip address in reverse>.
-For IPv6 use 'zz' for '::'.  Specify indiviual addresses with scope length
+For IPv6 use 'zz' for '::'.  Specify individual addresses with scope length
 of 32 or 128.  For example, 24.10.100.51.198.rpz-ip is 198.51.100.10/24 and
 32.10.zz.db8.2001.rpz-ip is 2001:db8:0:0:0:0:0:10/32.
 .P

@@ -1604,7 +1604,7 @@ local_zones_zone_answer(struct local_zone* z, struct module_env* env,
 			lz_type == local_zone_always_nodata ||
 			lz_type == local_zone_truncate)?
 			LDNS_RCODE_NOERROR:LDNS_RCODE_NXDOMAIN;
-		rcode = lz_type == local_zone_truncate ? (rcode|BIT_TC) : rcode;
+		rcode = (lz_type == local_zone_truncate ? (rcode|BIT_TC) : rcode);
 		if(z != NULL && z->soa && z->soa_negative)
 			return local_encode(qinfo, env, edns, repinfo, buf, temp,
 				z->soa_negative, 0, rcode);
