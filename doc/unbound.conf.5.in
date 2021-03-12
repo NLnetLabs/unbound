@@ -2394,7 +2394,8 @@ The rpz zone is formatted with a SOA start record as usual.  The items in
 the zone are entries, that specify what to act on (the trigger) and what to
 do (the action).  The trigger to act on is recorded in the name, the action
 to do is recorded as the resource record.  The names all end in the zone
-name, so you could type them without a trailing dot in the zonefile.
+name, so you could type the trigger names without a trailing dot in the
+zonefile.
 .P
 An example RPZ record, that answers example.com with NXDOMAIN
 .nf
@@ -2404,10 +2405,10 @@ An example RPZ record, that answers example.com with NXDOMAIN
 The triggers are encoded in the name on the left
 .nf
 	name                          query name
-	netblock.rpz-client-ip.       client IP address
-	netblock.rpz-ip.              response IP address in the answer
-	name.rpz-nsdname.             nameserver name
-	netblock.rpz-nsip.            nameserver IP address
+	netblock.rpz-client-ip        client IP address
+	netblock.rpz-ip               response IP address in the answer
+	name.rpz-nsdname              nameserver name
+	netblock.rpz-nsip             nameserver IP address
 .fi
 The netblock is written as <netblocklen>.<ip address in reverse>.
 For IPv6 use 'zz' for '::'.  Specify indiviual addresses with scope length
