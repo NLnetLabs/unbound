@@ -1834,8 +1834,7 @@ mesh_detect_cycle(struct module_qstate* qstate, struct query_info* qinfo,
 {
 	struct mesh_area* mesh = qstate->env->mesh;
 	struct mesh_state* dep_m = NULL;
-	if(!mesh_state_is_unique(qstate->mesh_info))
-		dep_m = mesh_area_find(mesh, NULL, qinfo, flags, prime, valrec);
+	dep_m = mesh_area_find(mesh, NULL, qinfo, flags, prime, valrec);
 	return mesh_detect_cycle_found(qstate, dep_m);
 }
 
@@ -1950,7 +1949,9 @@ mesh_serve_expired_callback(void* arg)
 	verbose(VERB_ALGO, "Serve expired: Trying to reply with expired data");
 	comm_timer_delete(qstate->serve_expired_data->timer);
 	qstate->serve_expired_data->timer = NULL;
-	if(qstate->blacklist || qstate->no_cache_lookup || qstate->is_drop) {
+	/* If is_drop or no_cache_lookup (modules that handle their own cache e.g.,
+	 * subnetmod) ignore stale data from the main cache. */
+	if(qstate->no_cache_lookup || qstate->is_drop) {
 		verbose(VERB_ALGO,
 			"Serve expired: Not allowed to look into cache for stale");
 		return;

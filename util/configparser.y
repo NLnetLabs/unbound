@@ -151,7 +151,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_ACCESS_CONTROL_TAG_DATA VAR_VIEW VAR_ACCESS_CONTROL_VIEW
 %token VAR_VIEW_FIRST VAR_SERVE_EXPIRED VAR_SERVE_EXPIRED_TTL
 %token VAR_SERVE_EXPIRED_TTL_RESET VAR_SERVE_EXPIRED_REPLY_TTL
-%token VAR_SERVE_EXPIRED_CLIENT_TIMEOUT VAR_FAKE_DSA
+%token VAR_SERVE_EXPIRED_CLIENT_TIMEOUT VAR_SERVE_ORIGINAL_TTL VAR_FAKE_DSA
 %token VAR_FAKE_SHA1 VAR_LOG_IDENTITY VAR_HIDE_TRUSTANCHOR
 %token VAR_TRUST_ANCHOR_SIGNALING VAR_AGGRESSIVE_NSEC VAR_USE_SYSTEMD
 %token VAR_SHM_ENABLE VAR_SHM_KEY VAR_ROOT_KEY_SENTINEL
@@ -162,6 +162,8 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_DNSCRYPT_SHARED_SECRET_CACHE_SLABS
 %token VAR_DNSCRYPT_NONCE_CACHE_SIZE
 %token VAR_DNSCRYPT_NONCE_CACHE_SLABS
+%token VAR_PAD_RESPONSES VAR_PAD_RESPONSES_BLOCK_SIZE
+%token VAR_PAD_QUERIES VAR_PAD_QUERIES_BLOCK_SIZE
 %token VAR_IPSECMOD_ENABLED VAR_IPSECMOD_HOOK VAR_IPSECMOD_IGNORE_BOGUS
 %token VAR_IPSECMOD_MAX_TTL VAR_IPSECMOD_WHITELIST VAR_IPSECMOD_STRICT
 %token VAR_CACHEDB VAR_CACHEDB_BACKEND VAR_CACHEDB_SECRETSEED
@@ -179,7 +181,8 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_TLS_SESSION_TICKET_KEYS VAR_RPZ VAR_TAGS VAR_RPZ_ACTION_OVERRIDE
 %token VAR_RPZ_CNAME_OVERRIDE VAR_RPZ_LOG VAR_RPZ_LOG_NAME
 %token VAR_DYNLIB VAR_DYNLIB_FILE VAR_EDNS_CLIENT_STRING
-%token VAR_EDNS_CLIENT_STRING_OPCODE
+%token VAR_EDNS_CLIENT_STRING_OPCODE VAR_NSID
+%token VAR_ZONEMD_PERMISSIVE_MODE VAR_ZONEMD_REJECT_ABSENCE
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -274,10 +277,14 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_disable_dnssec_lame_check | server_access_control_tag |
 	server_local_zone_override | server_access_control_tag_action |
 	server_access_control_tag_data | server_access_control_view |
-	server_qname_minimisation_strict | server_serve_expired |
+	server_qname_minimisation_strict |
+	server_pad_responses | server_pad_responses_block_size |
+	server_pad_queries | server_pad_queries_block_size |
+	server_serve_expired |
 	server_serve_expired_ttl | server_serve_expired_ttl_reset |
 	server_serve_expired_reply_ttl | server_serve_expired_client_timeout |
-	server_fake_dsa | server_log_identity | server_use_systemd |
+	server_serve_original_ttl | server_fake_dsa | 
+	server_log_identity | server_use_systemd |
 	server_response_ip_tag | server_response_ip | server_response_ip_data |
 	server_shm_enable | server_shm_key | server_fake_sha1 |
 	server_hide_trustanchor | server_trust_anchor_signaling |
@@ -293,7 +300,8 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_stream_wait_size | server_tls_ciphers |
 	server_tls_ciphersuites | server_tls_session_ticket_keys |
 	server_tls_use_sni | server_edns_client_string |
-	server_edns_client_string_opcode
+	server_edns_client_string_opcode | server_nsid |
+	server_zonemd_permissive_mode
 	;
 stubstart: VAR_STUB_ZONE
 	{
@@ -360,6 +368,7 @@ authstart: VAR_AUTH_ZONE
 			s->for_downstream = 1;
 			s->for_upstream = 1;
 			s->fallback_enabled = 0;
+			s->zonemd_reject_absence = 0;
 			s->isrpz = 0;
 		} else 
 			yyerror("out of memory");
@@ -369,7 +378,7 @@ contents_auth: contents_auth content_auth
 	| ;
 content_auth: auth_name | auth_zonefile | auth_master | auth_url |
 	auth_for_downstream | auth_for_upstream | auth_fallback_enabled |
-	auth_allow_notify
+	auth_allow_notify | auth_zonemd_reject_absence
 	;
 
 rpz_tag: VAR_TAGS STRING_ARG
@@ -1304,6 +1313,22 @@ server_version: VAR_VERSION STRING_ARG
 		cfg_parser->cfg->version = $2;
 	}
 	;
+server_nsid: VAR_NSID STRING_ARG
+	{
+		OUTYY(("P(server_nsid:%s)\n", $2));
+		free(cfg_parser->cfg->nsid_cfg_str);
+		cfg_parser->cfg->nsid_cfg_str = $2;
+		free(cfg_parser->cfg->nsid);
+		cfg_parser->cfg->nsid = NULL;
+		cfg_parser->cfg->nsid_len = 0;
+		if (*$2 == 0)
+			; /* pass; empty string is not setting nsid */
+		else if (!(cfg_parser->cfg->nsid = cfg_parse_nsid(
+					$2, &cfg_parser->cfg->nsid_len)))
+			yyerror("the NSID must be either a hex string or an "
+			    "ascii character string prepended with ascii_.");
+	}
+	;
 server_so_rcvbuf: VAR_SO_RCVBUF STRING_ARG
 	{
 		OUTYY(("P(server_so_rcvbuf:%s)\n", $2));
@@ -1913,6 +1938,15 @@ server_serve_expired_client_timeout: VAR_SERVE_EXPIRED_CLIENT_TIMEOUT STRING_ARG
 		free($2);
 	}
 	;
+server_serve_original_ttl: VAR_SERVE_ORIGINAL_TTL STRING_ARG
+	{
+		OUTYY(("P(server_serve_original_ttl:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else cfg_parser->cfg->serve_original_ttl = (strcmp($2, "yes")==0);
+		free($2);
+	}
+	;
 server_fake_dsa: VAR_FAKE_DSA STRING_ARG
 	{
 		OUTYY(("P(server_fake_dsa:%s)\n", $2));
@@ -1953,6 +1987,15 @@ server_val_nsec3_keysize_iterations: VAR_VAL_NSEC3_KEYSIZE_ITERATIONS STRING_ARG
 		OUTYY(("P(server_val_nsec3_keysize_iterations:%s)\n", $2));
 		free(cfg_parser->cfg->val_nsec3_key_iterations);
 		cfg_parser->cfg->val_nsec3_key_iterations = $2;
+	}
+	;
+server_zonemd_permissive_mode: VAR_ZONEMD_PERMISSIVE_MODE STRING_ARG
+	{
+		OUTYY(("P(server_zonemd_permissive_mode:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else	cfg_parser->cfg->zonemd_permissive_mode = (strcmp($2, "yes")==0);
+		free($2);
 	}
 	;
 server_add_holddown: VAR_ADD_HOLDDOWN STRING_ARG
@@ -2420,6 +2463,44 @@ server_qname_minimisation_strict: VAR_QNAME_MINIMISATION_STRICT STRING_ARG
 		free($2);
 	}
 	;
+server_pad_responses: VAR_PAD_RESPONSES STRING_ARG
+	{
+		OUTYY(("P(server_pad_responses:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else cfg_parser->cfg->pad_responses = 
+			(strcmp($2, "yes")==0);
+		free($2);
+	}
+	;
+server_pad_responses_block_size: VAR_PAD_RESPONSES_BLOCK_SIZE STRING_ARG
+	{
+		OUTYY(("P(server_pad_responses_block_size:%s)\n", $2));
+		if(atoi($2) == 0)
+			yyerror("number expected");
+		else cfg_parser->cfg->pad_responses_block_size = atoi($2);
+		free($2);
+	}
+	;
+server_pad_queries: VAR_PAD_QUERIES STRING_ARG
+	{
+		OUTYY(("P(server_pad_queries:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else cfg_parser->cfg->pad_queries = 
+			(strcmp($2, "yes")==0);
+		free($2);
+	}
+	;
+server_pad_queries_block_size: VAR_PAD_QUERIES_BLOCK_SIZE STRING_ARG
+	{
+		OUTYY(("P(server_pad_queries_block_size:%s)\n", $2));
+		if(atoi($2) == 0)
+			yyerror("number expected");
+		else cfg_parser->cfg->pad_queries_block_size = atoi($2);
+		free($2);
+	}
+	;
 server_ipsecmod_enabled: VAR_IPSECMOD_ENABLED STRING_ARG
 	{
 	#ifdef USE_IPSECMOD
@@ -2670,6 +2751,16 @@ auth_allow_notify: VAR_ALLOW_NOTIFY STRING_ARG
 		if(!cfg_strlist_insert(&cfg_parser->cfg->auths->allow_notify,
 			$2))
 			yyerror("out of memory");
+	}
+	;
+auth_zonemd_reject_absence: VAR_ZONEMD_REJECT_ABSENCE STRING_ARG
+	{
+		OUTYY(("P(zonemd-reject-absence:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else cfg_parser->cfg->auths->zonemd_reject_absence =
+			(strcmp($2, "yes")==0);
+		free($2);
 	}
 	;
 auth_for_downstream: VAR_FOR_DOWNSTREAM STRING_ARG

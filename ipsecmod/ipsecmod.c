@@ -151,6 +151,17 @@ generate_request(struct module_qstate* qstate, int id, uint8_t* name,
 	ask.qclass = qclass;
 	ask.local_alias = NULL;
 	log_query_info(VERB_ALGO, "ipsecmod: generate request", &ask);
+
+	/* Explicitly check for cycle before trying to attach. Will result in
+	 * cleaner error message. The attach_sub code also checks for cycle but the
+	 * message will be out of memory in both cases then. */
+	fptr_ok(fptr_whitelist_modenv_detect_cycle(qstate->env->detect_cycle));
+	if((*qstate->env->detect_cycle)(qstate, &ask,
+		(uint16_t)(BIT_RD|flags), 0, 0)) {
+		verbose(VERB_ALGO, "Could not generate request: cycle detected");
+		return 0;
+	}
+
 	fptr_ok(fptr_whitelist_modenv_attach_sub(qstate->env->attach_sub));
 	if(!(*qstate->env->attach_sub)(qstate, &ask,
 		(uint16_t)(BIT_RD|flags), 0, 0, &newq)){

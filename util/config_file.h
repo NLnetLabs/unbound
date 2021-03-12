@@ -338,6 +338,10 @@ struct config_file {
 	char* identity;
 	/** version, package version returned if "". */
 	char* version;
+	/** nsid */
+	char *nsid_cfg_str;
+	uint8_t *nsid;
+	uint16_t nsid_len;
 
 	/** the module configuration string */
 	char* module_conf;
@@ -388,8 +392,12 @@ struct config_file {
 	/** serve expired entries only after trying to update the entries and this
 	 *  timeout (in milliseconds) is reached */
 	int serve_expired_client_timeout;
+	/** serve original TTLs rather than decrementing ones */
+	int serve_original_ttl;
 	/** nsec3 maximum iterations per key size, string */
 	char* val_nsec3_key_iterations;
+	/** if zonemd failures are permitted, only logged */
+	int zonemd_permissive_mode;
 	/** autotrust add holddown time, in seconds */
 	unsigned int add_holddown;
 	/** autotrust del holddown time, in seconds */
@@ -596,6 +604,17 @@ struct config_file {
 	size_t dnscrypt_nonce_cache_size;
 	/** number of slabs for dnscrypt nonces cache */
 	size_t dnscrypt_nonce_cache_slabs;
+
+	/** EDNS padding according to RFC7830 and RFC8467 */
+	/** true to enable padding of responses (default: on) */
+	int pad_responses;
+	/** block size with which to pad encrypted responses (default: 468) */
+	size_t pad_responses_block_size;
+	/** true to enable padding of queries (default: on) */
+	int pad_queries;
+	/** block size with which to pad encrypted queries (default: 128) */
+	size_t pad_queries_block_size;
+
 	/** IPsec module */
 #ifdef USE_IPSECMOD
 	/** false to bypass the IPsec module */
@@ -710,6 +729,8 @@ struct config_auth {
 	/** Always reply with this CNAME target if the cname override action is
 	 * used */
 	char* rpz_cname;
+	/** Reject absence of ZONEMD records, zone must have one */
+	int zonemd_reject_absence;
 };
 
 /**
@@ -1071,6 +1092,16 @@ int cfg_count_numbers(const char* str);
 int cfg_parse_memsize(const char* str, size_t* res);
 
 /**
+ * Parse nsid from string into binary nsid. nsid is either a hexidecimal
+ * string or an ascii string prepended with ascii_ in which case the
+ * characters after ascii_ are simply copied.
+ * @param str: the string to parse.
+ * @param nsid_len: returns length of nsid in bytes.
+ * @return malloced bytes or NULL on parse error or malloc failure.
+ */
+uint8_t* cfg_parse_nsid(const char* str, uint16_t* nsid_len);
+
+/**
  * Add a tag name to the config.  It is added at the end with a new ID value.
  * @param cfg: the config structure.
  * @param tag: string (which is copied) with the name.
@@ -1273,6 +1304,16 @@ void w_config_adjust_directory(struct config_file* cfg);
 
 /** debug option for unit tests. */
 extern int fake_dsa, fake_sha1;
+
+/** see if interface is https, its port number == the https port number */
+int if_is_https(const char* ifname, const char* port, int https_port);
+
+/**
+ * Return true if the config contains settings that enable https.
+ * @param cfg: config information.
+ * @return true if https ports are used for server.
+ */
+int cfg_has_https(struct config_file* cfg);
 
 #endif /* UTIL_CONFIG_FILE_H */
 

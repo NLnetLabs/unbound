@@ -952,6 +952,7 @@ main(int argc, char* argv[])
 	slabhash_test();
 	infra_test();
 	ldns_test();
+	zonemd_test();
 	msgparse_test();
 	tcpid_test();
 #ifdef CLIENT_SUBNET

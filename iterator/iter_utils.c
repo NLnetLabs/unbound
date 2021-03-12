@@ -50,6 +50,7 @@
 #include "services/cache/infra.h"
 #include "services/cache/dns.h"
 #include "services/cache/rrset.h"
+#include "services/outside_network.h"
 #include "util/net_help.h"
 #include "util/module.h"
 #include "util/log.h"
@@ -1434,4 +1435,20 @@ iter_stub_fwd_no_cache(struct module_qstate *qstate, struct query_info *qinf)
 		return (dp->no_cache);
 	}
 	return 0;
+}
+
+void iterator_set_ip46_support(struct module_stack* mods,
+	struct module_env* env, struct outside_network* outnet)
+{
+	int m = modstack_find(mods, "iterator");
+	struct iter_env* ie = NULL;
+	if(m == -1)
+		return;
+	ie = (struct iter_env*)env->modinfo[m];
+	if(outnet->pending == NULL)
+		return; /* we are in testbound, no rbtree for UDP */
+	if(outnet->num_ip4 == 0)
+		ie->supports_ipv4 = 0;
+	if(outnet->num_ip6 == 0)
+		ie->supports_ipv6 = 0;
 }

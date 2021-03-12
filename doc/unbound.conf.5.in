@@ -564,6 +564,26 @@ and that is the default.
 Set the list of ciphersuites to allow when serving TLS.  This is for newer
 TLS 1.3 connections.  Use "" for defaults, and that is the default.
 .TP
+.B pad\-responses: \fI<yes or no>
+If enabled, TLS serviced queries that contained an EDNS Padding option will
+cause responses padded to the closest multiple of the size specified in
+\fBpad\-responses\-block\-size\fR.
+Default is yes.
+.TP
+.B pad\-responses\-block\-size: \fI<number>
+The block size with which to pad responses serviced over TLS. Only responses
+to padded queries will be padded.
+Default is 468.
+.TP
+.B pad\-queries: \fI<yes or no>
+If enabled, all queries sent over TLS upstreams will be padded to the closest
+multiple of the size specified in \fBpad\-queries\-block\-size\fR.
+Default is yes.
+.TP
+.B pad\-queries\-block\-size: \fI<number>
+The block size with which to pad queries sent over TLS upstreams.
+Default is 128.
+.TP
 .B tls\-use\-sni: \fI<yes or no>
 Enable or disable sending the SNI extension on TLS connections.
 Default is yes.
@@ -819,6 +839,11 @@ If enabled version.server and version.bind queries are refused.
 Set the version to report. If set to "", the default, then the package
 version is returned.
 .TP
+.B nsid:\fR <string>
+Add the specified nsid to the EDNS section of the answer when queried
+with an NSID EDNS enabled packet.  As a sequence of hex characters or
+with ascii_ prefix and then an ascii string.
+.TP
 .B hide\-trustanchor: \fI<yes or no>
 If enabled trustanchor.unbound queries are refused.
 .TP
@@ -839,9 +864,8 @@ closer to that of BIND 9, while setting "\-1 \-1 \-1 \-1 \-1" gives behaviour
 rumoured to be closer to that of BIND 8.
 .TP
 .B harden\-short\-bufsize: \fI<yes or no>
-Very small EDNS buffer sizes from queries are ignored. Default is off, since
-it is legal protocol wise to send these, and unbound tries to give very
-small answers to these queries, where possible.
+Very small EDNS buffer sizes from queries are ignored. Default is on, as
+described in the standard.
 .TP
 .B harden\-large\-queries: \fI<yes or no>
 Very large queries are ignored. Default is off, since it is legal protocol
@@ -1163,6 +1187,19 @@ responding with expired data.  A recommended value per
 RFC 8767 is 1800.  Setting this to 0 will disable this
 behavior.  Default is 0.
 .TP
+.B serve\-original\-ttl: \fI<yes or no>
+If enabled, unbound will always return the original TTL as received from
+the upstream name server rather than the decrementing TTL as
+stored in the cache.  This feature may be useful if unbound serves as a 
+front-end to a hidden authoritative name server. Enabling this feature does 
+not impact cache expiry, it only changes the TTL unbound embeds in responses to 
+queries. Note that enabling this feature implicitly disables enforcement of
+the configured minimum and maximum TTL, as it is assumed users who enable this 
+feature do not want unbound to change the TTL obtained from an upstream server. 
+Thus, the values set using \fBcache\-min\-ttl\fR and \fBcache\-max\-ttl\fR are
+ignored.
+Default is "no".
+.TP
 .B val\-nsec3\-keysize\-iterations: \fI<"list of values">
 List of keysize and iteration count values, separated by spaces, surrounded
 by quotes. Default is "1024 150 2048 500 4096 2500". This determines the
@@ -1171,6 +1208,12 @@ insecure instead of performing the many hashing iterations. The list must
 be in ascending order and have at least one entry. If you set it to
 "1024 65535" there is no restriction to NSEC3 iteration values.
 This table must be kept short; a very long list could cause slower operation.
+.TP
+.B zonemd\-permissive\-mode: \fI<yes or no>
+If enabled the ZONEMD verification failures are only logged and do not cause
+the zone to be blocked and only return servfail.  Useful for testing out
+if it works, or if the operator only wants to be notified of a problem without
+disrupting service.  Default is no.
 .TP
 .B add\-holddown: \fI<seconds>
 Instruct the \fBauto\-trust\-anchor\-file\fR probe mechanism for RFC5011
@@ -1838,6 +1881,19 @@ for answering recursion queries.  Instead of sending queries over the internet
 to the authority servers for this zone, it'll fetch the data directly from
 the zone data.  Turn it on when you want unbound to provide recursion for
 downstream clients, and use the zone data as a local copy to speed up lookups.
+.TP
+.B zonemd\-reject\-absence: \fI<yes or no>
+Enable this option to reject the absence of the ZONEMD record.  Without it,
+when zonemd is not there it is not checked.  It is useful to enable for a
+nonDNSSEC signed zone where the operator wants to require the verification
+of a ZONEMD, hence a missing ZONEMD is a failure.  The action upon
+failure is controlled by the \fBzonemd\-permissive\-mode\fR option, for
+log only or also block the zone.  The default is no.
+.IP
+Without the option absence of a ZONEMD is only a failure when the zone is
+DNSSEC signed, and we have a trust anchor, and the DNSSEC verification of
+the absence of the ZONEMD fails.  With the option enabled, the absence of
+a ZONEMD is always a failure, also for nonDNSSEC signed zones.
 .TP
 .B zonefile: \fI<filename>
 The filename where the zone is stored.  If not given then no zonefile is used.

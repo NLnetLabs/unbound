@@ -90,6 +90,10 @@ static int randomize_and_send_udp(struct pending* pend, sldns_buffer* packet,
 static void waiting_list_remove(struct outside_network* outnet,
 	struct waiting_tcp* w);
 
+/** remove reused element from tree and lru list */
+static void reuse_tcp_remove_tree_list(struct outside_network* outnet,
+	struct reuse_tcp* reuse);
+
 int 
 pending_cmp(const void* key1, const void* key2)
 {
@@ -194,15 +198,17 @@ waiting_tcp_delete(struct waiting_tcp* w)
  * Pick random outgoing-interface of that family, and bind it.
  * port set to 0 so OS picks a port number for us.
  * if it is the ANY address, do not bind.
+ * @param pend: pending tcp structure, for storing the local address choice.
  * @param w: tcp structure with destination address.
  * @param s: socket fd.
  * @return false on error, socket closed.
  */
 static int
-pick_outgoing_tcp(struct waiting_tcp* w, int s)
+pick_outgoing_tcp(struct pending_tcp* pend, struct waiting_tcp* w, int s)
 {
 	struct port_if* pi = NULL;
 	int num;
+	pend->pi = NULL;
 #ifdef INET6
 	if(addr_is_ip6(&w->addr, w->addrlen))
 		num = w->outnet->num_ip6;
@@ -222,6 +228,7 @@ pick_outgoing_tcp(struct waiting_tcp* w, int s)
 #endif
 		pi = &w->outnet->ip4_ifs[ub_random_max(w->outnet->rnd, num)];
 	log_assert(pi);
+	pend->pi = pi;
 	if(addr_is_any(&pi->addr, pi->addrlen)) {
 		/* binding to the ANY interface is for listening sockets */
 		return 1;
@@ -424,8 +431,11 @@ static int
 reuse_tcp_insert(struct outside_network* outnet, struct pending_tcp* pend_tcp)
 {
 	log_reuse_tcp(VERB_CLIENT, "reuse_tcp_insert", &pend_tcp->reuse);
-	if(pend_tcp->reuse.item_on_lru_list)
+	if(pend_tcp->reuse.item_on_lru_list) {
+		if(!pend_tcp->reuse.node.key)
+			log_err("internal error: reuse_tcp_insert: on lru list without key");
 		return 1;
+	}
 	pend_tcp->reuse.node.key = &pend_tcp->reuse;
 	pend_tcp->reuse.pending = pend_tcp;
 	if(!rbtree_insert(&outnet->tcp_reuse, &pend_tcp->reuse.node)) {
@@ -477,7 +487,7 @@ reuse_tcp_find(struct outside_network* outnet, struct sockaddr_storage* addr,
 	if(outnet->tcp_reuse.root == NULL ||
 		outnet->tcp_reuse.root == RBTREE_NULL)
 		return NULL;
-	if(rbtree_find_less_equal(&outnet->tcp_reuse, &key_p.reuse.node,
+	if(rbtree_find_less_equal(&outnet->tcp_reuse, &key_p.reuse,
 		&result)) {
 		/* exact match */
 		/* but the key is on stack, and ptr is compared, impossible */
@@ -560,7 +570,7 @@ outnet_tcp_take_into_use(struct waiting_tcp* w)
 	if(s == -1)
 		return 0;
 
-	if(!pick_outgoing_tcp(w, s))
+	if(!pick_outgoing_tcp(pend, w, s))
 		return 0;
 
 	fd_set_nonblock(s);
@@ -661,6 +671,14 @@ outnet_tcp_take_into_use(struct waiting_tcp* w)
 	pend->reuse.cp_more_write_again = 0;
 	memcpy(&pend->c->repinfo.addr, &w->addr, w->addrlen);
 	pend->reuse.pending = pend;
+
+	/* Remove from tree in case the is_ssl will be different and causes the
+	 * identity of the reuse_tcp to change; could result in nodes not being
+	 * deleted from the tree (because the new identity does not match the
+	 * previous node) but their ->key would be changed to NULL. */
+	if(pend->reuse.node.key)
+		reuse_tcp_remove_tree_list(w->outnet, &pend->reuse);
+
 	if(pend->c->ssl)
 		pend->reuse.is_ssl = 1;
 	else	pend->reuse.is_ssl = 0;
@@ -677,8 +695,10 @@ outnet_tcp_take_into_use(struct waiting_tcp* w)
 static void
 reuse_tcp_lru_touch(struct outside_network* outnet, struct reuse_tcp* reuse)
 {
-	if(!reuse->item_on_lru_list)
+	if(!reuse->item_on_lru_list) {
+		log_err("internal error: we need to touch the lru_list but item not in list");
 		return; /* not on the list, no lru to modify */
+	}
 	if(!reuse->lru_prev)
 		return; /* already first in the list */
 	/* remove at current position */
@@ -714,6 +734,9 @@ use_free_buffer(struct outside_network* outnet)
 	struct waiting_tcp* w;
 	while(outnet->tcp_free && outnet->tcp_wait_first 
 		&& !outnet->want_to_quit) {
+#ifdef USE_DNSTAP
+		struct pending_tcp* pend_tcp = NULL;
+#endif
 		struct reuse_tcp* reuse = NULL;
 		w = outnet->tcp_wait_first;
 		outnet->tcp_wait_first = w->next_waiting;
@@ -725,6 +748,9 @@ use_free_buffer(struct outside_network* outnet)
 		if(reuse) {
 			log_reuse_tcp(VERB_CLIENT, "use free buffer for waiting tcp: "
 				"found reuse", reuse);
+#ifdef USE_DNSTAP
+			pend_tcp = reuse->pending;
+#endif
 			reuse_tcp_lru_touch(outnet, reuse);
 			comm_timer_disable(w->timer);
 			w->next_waiting = (void*)reuse->pending;
@@ -751,8 +777,25 @@ use_free_buffer(struct outside_network* outnet)
 				waiting_tcp_callback(w, NULL, NETEVENT_CLOSED,
 					NULL);
 				waiting_tcp_delete(w);
+#ifdef USE_DNSTAP
+				w = NULL;
+#endif
 			}
+#ifdef USE_DNSTAP
+			pend_tcp = pend;
+#endif
 		}
+#ifdef USE_DNSTAP
+		if(outnet->dtenv && pend_tcp && w && w->sq &&
+		   (outnet->dtenv->log_resolver_query_messages ||
+		    outnet->dtenv->log_forwarder_query_messages)) {
+			sldns_buffer tmp;
+			sldns_buffer_init_frm_data(&tmp, w->pkt, w->pkt_len);
+			dt_msg_send_outside_query(outnet->dtenv, &w->sq->addr,
+				&pend_tcp->pi->addr, comm_tcp, w->sq->zone,
+				w->sq->zonelen, &tmp);
+		}
+#endif
 	}
 }
 
@@ -847,8 +890,17 @@ reuse_tcp_remove_tree_list(struct outside_network* outnet,
 	verbose(VERB_CLIENT, "reuse_tcp_remove_tree_list");
 	if(reuse->node.key) {
 		/* delete it from reuse tree */
-		(void)rbtree_delete(&outnet->tcp_reuse, &reuse->node);
+		if(!rbtree_delete(&outnet->tcp_reuse, reuse)) {
+			/* should not be possible, it should be there */
+			char buf[256];
+			addr_to_str(&reuse->addr, reuse->addrlen, buf,
+				sizeof(buf));
+			log_err("reuse tcp delete: node not present, internal error, %s ssl %d lru %d", buf, reuse->is_ssl, reuse->item_on_lru_list);
+		}
 		reuse->node.key = NULL;
+		/* defend against loops on broken tree by zeroing the
+		 * rbnode structure */
+		memset(&reuse->node, 0, sizeof(reuse->node));
 	}
 	/* delete from reuse list */
 	if(reuse->item_on_lru_list) {
@@ -1440,7 +1492,7 @@ outside_network_create(struct comm_base *base, size_t bufsize,
 			return NULL;
 		}
 		pc->cp = comm_point_create_udp(outnet->base, -1, 
-			outnet->udp_buff, outnet_udp_cb, outnet);
+			outnet->udp_buff, outnet_udp_cb, outnet, NULL);
 		if(!pc->cp) {
 			log_err("malloc failed");
 			free(pc);
@@ -1762,6 +1814,7 @@ static int udp_connect_needs_log(int err)
 #  ifdef ENETDOWN
 	case ENETDOWN:
 #  endif
+	case EPERM:
 		if(verbosity >= VERB_ALGO)
 			return 1;
 		return 0;
@@ -1914,11 +1967,21 @@ randomize_and_send_udp(struct pending* pend, sldns_buffer* packet, int timeout)
 	comm_timer_set(pend->timer, &tv);
 
 #ifdef USE_DNSTAP
+	/*
+	 * sending src (local service)/dst (upstream) addresses over DNSTAP
+	 * There are no chances to get the src (local service) addr if unbound
+	 * is not configured with specific outgoing IP-addresses. So we will
+	 * pass 0.0.0.0 (::) to argument for
+	 * dt_msg_send_outside_query()/dt_msg_send_outside_response() calls.
+	 */
 	if(outnet->dtenv &&
 	   (outnet->dtenv->log_resolver_query_messages ||
-	    outnet->dtenv->log_forwarder_query_messages))
-		dt_msg_send_outside_query(outnet->dtenv, &pend->addr, comm_udp,
-		pend->sq->zone, pend->sq->zonelen, packet);
+		outnet->dtenv->log_forwarder_query_messages)) {
+			log_addr(VERB_ALGO, "from local addr", &pend->pc->pif->addr, pend->pc->pif->addrlen);
+			log_addr(VERB_ALGO, "request to upstream", &pend->addr, pend->addrlen);
+			dt_msg_send_outside_query(outnet->dtenv, &pend->addr, &pend->pc->pif->addr, comm_udp,
+				pend->sq->zone, pend->sq->zonelen, packet);
+	}
 #endif
 	return 1;
 }
@@ -2150,6 +2213,9 @@ pending_tcp_query(struct serviced_query* sq, sldns_buffer* packet,
 	w->write_wait_next = NULL;
 	w->write_wait_queued = 0;
 	w->error_count = 0;
+#ifdef USE_DNSTAP
+	w->sq = NULL;
+#endif
 	if(pend) {
 		/* we have a buffer available right now */
 		if(reuse) {
@@ -2184,20 +2250,28 @@ pending_tcp_query(struct serviced_query* sq, sldns_buffer* packet,
 				return NULL;
 			}
 		}
+#ifdef USE_DNSTAP
+		if(sq->outnet->dtenv &&
+		   (sq->outnet->dtenv->log_resolver_query_messages ||
+		    sq->outnet->dtenv->log_forwarder_query_messages)) {
+			/* use w->pkt, because it has the ID value */
+			sldns_buffer tmp;
+			sldns_buffer_init_frm_data(&tmp, w->pkt, w->pkt_len);
+			dt_msg_send_outside_query(sq->outnet->dtenv, &sq->addr,
+				&pend->pi->addr, comm_tcp, sq->zone,
+				sq->zonelen, &tmp);
+		}
+#endif
 	} else {
 		/* queue up */
 		/* waiting for a buffer on the outside network buffer wait
 		 * list */
 		verbose(VERB_CLIENT, "pending_tcp_query: queue to wait");
+#ifdef USE_DNSTAP
+		w->sq = sq;
+#endif
 		outnet_add_tcp_waiting(sq->outnet, w);
 	}
-#ifdef USE_DNSTAP
-	if(sq->outnet->dtenv &&
-	   (sq->outnet->dtenv->log_resolver_query_messages ||
-	    sq->outnet->dtenv->log_forwarder_query_messages))
-		dt_msg_send_outside_query(sq->outnet->dtenv, &sq->addr,
-			comm_tcp, sq->zone, sq->zonelen, packet);
-#endif
 	return w;
 }
 
@@ -2242,7 +2316,8 @@ static struct serviced_query*
 serviced_create(struct outside_network* outnet, sldns_buffer* buff, int dnssec,
 	int want_dnssec, int nocaps, int tcp_upstream, int ssl_upstream,
 	char* tls_auth_name, struct sockaddr_storage* addr, socklen_t addrlen,
-	uint8_t* zone, size_t zonelen, int qtype, struct edns_option* opt_list)
+	uint8_t* zone, size_t zonelen, int qtype, struct edns_option* opt_list,
+	size_t pad_queries_block_size)
 {
 	struct serviced_query* sq = (struct serviced_query*)malloc(sizeof(*sq));
 #ifdef UNBOUND_DEBUG
@@ -2300,6 +2375,7 @@ serviced_create(struct outside_network* outnet, sldns_buffer* buff, int dnssec,
 	sq->status = serviced_initial;
 	sq->retry = 0;
 	sq->to_be_deleted = 0;
+	sq->padding_block_size = pad_queries_block_size;
 #ifdef UNBOUND_DEBUG
 	ins = 
 #else
@@ -2481,6 +2557,7 @@ serviced_encode(struct serviced_query* sq, sldns_buffer* buff, int with_edns)
 	if(with_edns) {
 		/* add edns section */
 		struct edns_data edns;
+		struct edns_option padding_option;
 		edns.edns_present = 1;
 		edns.ext_rcode = 0;
 		edns.edns_version = EDNS_ADVERTISED_VERSION;
@@ -2503,6 +2580,14 @@ serviced_encode(struct serviced_query* sq, sldns_buffer* buff, int with_edns)
 			edns.bits = EDNS_DO;
 		if(sq->dnssec & BIT_CD)
 			LDNS_CD_SET(sldns_buffer_begin(buff));
+		if (sq->ssl_upstream && sq->padding_block_size) {
+			padding_option.opt_code = LDNS_EDNS_PADDING;
+			padding_option.opt_len = 0;
+			padding_option.opt_data = NULL;
+			padding_option.next = edns.opt_list;
+			edns.opt_list = &padding_option;
+			edns.padding_block_size = sq->padding_block_size;
+		}
 		attach_edns_record(buff, &edns);
 	}
 }
@@ -2692,6 +2777,11 @@ serviced_tcp_callback(struct comm_point* c, void* arg, int error,
 {
 	struct serviced_query* sq = (struct serviced_query*)arg;
 	struct comm_reply r2;
+#ifdef USE_DNSTAP
+	struct waiting_tcp* w = (struct waiting_tcp*)sq->pending;
+	struct pending_tcp* pend_tcp = (struct pending_tcp*)w->next_waiting;
+	struct port_if* pi = pend_tcp->pi;
+#endif
 	sq->pending = NULL; /* removed after this callback */
 	if(error != NETEVENT_NOERROR)
 		log_addr(VERB_QUERY, "tcp error for address", 
@@ -2700,12 +2790,19 @@ serviced_tcp_callback(struct comm_point* c, void* arg, int error,
 		infra_update_tcp_works(sq->outnet->infra, &sq->addr,
 			sq->addrlen, sq->zone, sq->zonelen);
 #ifdef USE_DNSTAP
+	/*
+	 * sending src (local service)/dst (upstream) addresses over DNSTAP
+	 */
 	if(error==NETEVENT_NOERROR && sq->outnet->dtenv &&
 	   (sq->outnet->dtenv->log_resolver_response_messages ||
-	    sq->outnet->dtenv->log_forwarder_response_messages))
+	    sq->outnet->dtenv->log_forwarder_response_messages)) {
+		log_addr(VERB_ALGO, "response from upstream", &sq->addr, sq->addrlen);
+		log_addr(VERB_ALGO, "to local addr", &pi->addr, pi->addrlen);
 		dt_msg_send_outside_response(sq->outnet->dtenv, &sq->addr,
-		c->type, sq->zone, sq->zonelen, sq->qbuf, sq->qbuflen,
-		&sq->last_sent_time, sq->outnet->now_tv, c->buffer);
+			&pi->addr, c->type, sq->zone, sq->zonelen, sq->qbuf,
+			sq->qbuflen, &sq->last_sent_time, sq->outnet->now_tv,
+			c->buffer);
+	}
 #endif
 	if(error==NETEVENT_NOERROR && sq->status == serviced_query_TCP_EDNS &&
 		(LDNS_RCODE_WIRE(sldns_buffer_begin(c->buffer)) == 
@@ -2859,6 +2956,10 @@ serviced_udp_callback(struct comm_point* c, void* arg, int error,
 	struct serviced_query* sq = (struct serviced_query*)arg;
 	struct outside_network* outnet = sq->outnet;
 	struct timeval now = *sq->outnet->now_tv;
+#ifdef USE_DNSTAP
+	struct pending* p = (struct pending*)sq->pending;
+	struct port_if* pi = p->pc->pif;
+#endif
 
 	sq->pending = NULL; /* removed after callback */
 	if(error == NETEVENT_TIMEOUT) {
@@ -2896,12 +2997,18 @@ serviced_udp_callback(struct comm_point* c, void* arg, int error,
 		return 0;
 	}
 #ifdef USE_DNSTAP
+	/*
+	 * sending src (local service)/dst (upstream) addresses over DNSTAP
+	 */
 	if(error == NETEVENT_NOERROR && outnet->dtenv &&
 	   (outnet->dtenv->log_resolver_response_messages ||
-	    outnet->dtenv->log_forwarder_response_messages))
-		dt_msg_send_outside_response(outnet->dtenv, &sq->addr, c->type,
-		sq->zone, sq->zonelen, sq->qbuf, sq->qbuflen,
-		&sq->last_sent_time, sq->outnet->now_tv, c->buffer);
+	    outnet->dtenv->log_forwarder_response_messages)) {
+		log_addr(VERB_ALGO, "response from upstream", &sq->addr, sq->addrlen);
+		log_addr(VERB_ALGO, "to local addr", &pi->addr, pi->addrlen);
+		dt_msg_send_outside_response(outnet->dtenv, &sq->addr, &pi->addr, c->type,
+		  sq->zone, sq->zonelen, sq->qbuf, sq->qbuflen,
+		  &sq->last_sent_time, sq->outnet->now_tv, c->buffer);
+	}
 #endif
 	if( (sq->status == serviced_query_UDP_EDNS 
 		||sq->status == serviced_query_UDP_EDNS_FRAG)
@@ -3026,7 +3133,9 @@ outnet_serviced_query(struct outside_network* outnet,
 		sq = serviced_create(outnet, buff, dnssec, want_dnssec, nocaps,
 			tcp_upstream, ssl_upstream, tls_auth_name, addr,
 			addrlen, zone, zonelen, (int)qinfo->qtype,
-			qstate->edns_opts_back_out);
+			qstate->edns_opts_back_out,
+			( ssl_upstream && env->cfg->pad_queries
+			? env->cfg->pad_queries_block_size : 0 ));
 		if(!sq) {
 			free(cb);
 			return NULL;
@@ -3173,7 +3282,7 @@ outnet_comm_point_for_udp(struct outside_network* outnet,
 		return NULL;
 	}
 	cp = comm_point_create_udp(outnet->base, fd, outnet->udp_buff,
-		cb, cb_arg);
+		cb, cb_arg, NULL);
 	if(!cp) {
 		log_err("malloc failure");
 		close(fd);

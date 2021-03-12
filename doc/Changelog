@@ -1,3 +1,140 @@
+11 March 2021: Wouter
+	- Fix parse of LOC RR type for decimetres.
+
+5 March 2021: Wouter
+	- Workaround for #439: prevent loops in the reuse rbtree.
+	- Debug output for #411 and #439: printout internal error and details.
+
+4 March 2021: Wouter
+	- iana portlist update.
+	- Fix spurious errors about "Could not generate request: out of
+	  memory".  The mesh detect cycle routine no longer wrongly stops
+	  the check when the calling mesh state is unique.
+
+26 February 2021: George
+	- Fix for #367: rc_ports don't have ub_sock; skip cleaning up.
+
+26 February 2021: Wouter
+	- Fix: Resolve interface names on control-interface too.
+
+25 February 2021: Wouter
+	- Merge PR #367 : DNSTAP log local address.  With code from PR #365
+	  and fixes #368 : dnstap does not log the DNS message ID for
+	  FORWARDER_QUERY.
+	- Fix to allow rpz with wildcard that applies to all TLDs at once.
+
+24 February 2021: George
+	- Fix #384: (1) A minor request to improve the log (2) A minor bug in one
+	  log message.
+	- ipsecmod: Better logging for detecting a cycle when attaching the
+	  A/AAAA subquery.
+
+24 February 2021: Wouter
+	- On startup of unbound it checks if rlimits on memory size look
+	  sufficient for the configured cache size, and logs warning if not.
+	- Fix function documentation.
+	- Fix unit test for added ulimit checks.
+	- spelling fix in header.
+
+23 February 2021: Wouter
+	- Fix for zonemd, that domain-insecure zones work without dnssec.
+	- Fix for zonemd, do not reject insecure result from trust anchor
+	  validation step in dnssec chain of trust.
+
+22 February 2021: Wouter
+	- Fix #431: Squelch permission denied errors for tcp connect
+	  and udp connect from the logs, unless at high verbosity.
+	- Fix for zonemd, that nxdomain for the chain of trust is allowed
+	  for island zones, it is treated as an insecure zone for verification.
+
+18 February 2021: Wouter
+	- Merge PR #317: ZONEMD Zone Verification, with RFC 8976 support.
+	  ZONEMD records are checked for zones loaded as auth-zone,
+	  with DNSSEC if available.  There is an added option
+	  zonemd-permissive-mode that makes it log but not fail wrong zones.
+	  With zonemd-reject-absence for an auth-zone the presence of a
+	  zonemd can be mandated for specific zones.
+	- Fix doxygen and pydoc warnings.
+	- Fix #429: rpz: url: with https: broken (regression in 1.13.1).
+	- rpz skip nsec3param records, and nicer log for unsupported actions.
+
+15 February 2021: Wouter
+	- Fix #422: IPv6 fallback issues when IPv6 is not properly
+	  enabled/configured.
+	- Fix to make tests work with support indicators set for iterator.
+	- Fix build on Python 3.10.
+
+10 February 2021: Wouter
+	- Merge PR #420 from dyunwei: DOH not responsing with
+	  "http2_query_read_done failure" logged.
+
+9 February 2021: Wouter
+	- Fix for Python 3.9, no longer use deprecated functions of
+	  PyEval_CallObject (now PyObject_Call), PyEval_InitThreads (now
+	  none), PyParser_SimpleParseFile (now Py_CompileString).
+
+4 February 2021: Wouter
+	- release 1.13.1rc2 tag on branch-1.13.1 with added changes of 2 feb.
+	  This became 1.13.1 release tag on 9 feb.  The main branch is set
+	  to version 1.13.2.
+
+2 February 2021: Wouter
+	- branch-1.13.1 is created, with release-1.13.1rc1 tag.
+	- Fix dynlibmod link on rhel8 for -ldl inclusion.
+	- Fix windows dependency on libssp.dll because of default stack
+	  protector in mingw.
+	- Fix indentation of root anchor for use by windows install script.
+
+1 February 2021: George
+	- Attempt to fix NULL keys in the reuse_tcp tree; relates to #411.
+
+29 January 2021: Wouter
+	- Fix for doxygen 1.8.20 compatibility.
+
+28 January 2021: Wouter
+	- Annotate that we ignore the return value of if_indextoname.
+	- Fix to use correct type for label count in rpz routine.
+	- Fix empty clause warning in config_file nsid parse.
+	- Fix to use correct type for label count in ipdnametoaddr rpz routine.
+	- Fix empty clause warning in edns pass for padding.
+	- Fix fwd ancil test post script when not supported.
+
+26 January 2021: George
+	- Merge PR #408 from fobser: Prevent a few more yacc clashes.
+	- Merge PR #275 from Roland van Rijswijk-Deij: Add feature to return the
+	  original instead of a decrementing TTL ('serve-original-ttl')
+	- Merge PR #355 from noloader: Make ICANN Update CA and DS Trust Anchor
+	  static data.
+	- Ignore cache blacklisting when trying to reply with expired data from
+	  cache (#394).
+
+26 January 2021: Wouter
+	- Fix compile of unbound-dnstap-socket without dnstap installed.
+
+22 January 2021: Willem
+	- Padding of queries and responses with DNS over TLS as specified in
+	  RFC7830 and RFC8467.
+
+22 January 2021: George
+	- Fix TTL of SOA record for negative answers (localzone and
+	  authzone data) to be the minimum of the SOA TTL and the SOA.MINIMUM.
+
+19 January 2021: Willem
+	- Support for RFC5001: DNS Name Server Identifier (NSID) Option
+	  with the nsid: option in unbound.conf
+
+18 January 2021: Wouter
+	- Fix #404: DNS query with small edns bufsize fail.
+	- Fix declaration before statement and signed comparison warning in
+	  dns64.
+
+15 January 2021: Wouter
+	- Merge #402 from fobser: Implement IPv4-Embedded addresses according
+	  to RFC6052.
+
+14 January 2021: Wouter
+	- Fix for #93: dynlibmodule import library is named libunbound.dll.a.
+
 13 January 2021: Wouter
 	- Merge #399 from xiangbao227: The lock of lruhash table should
 	  unlocked after markdel entry.

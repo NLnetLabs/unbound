@@ -80,5 +80,7 @@ void ecs_test(void);
 void ldns_test(void);
 /** unit test for auth zone functions */
 void authzone_test(void);
+/** unit test for zonemd functions */
+void zonemd_test(void);
 
 #endif /* TESTCODE_UNITMAIN_H */

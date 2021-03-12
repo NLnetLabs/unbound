@@ -1491,13 +1491,17 @@ static int
 loc_parse_cm(char* my_str, char** endstr, uint8_t* m, uint8_t* e)
 {
 	uint32_t meters = 0, cm = 0, val;
+	char* cm_endstr;
 	while (isblank((unsigned char)*my_str)) {
 		my_str++;
 	}
 	meters = (uint32_t)strtol(my_str, &my_str, 10);
 	if (*my_str == '.') {
 		my_str++;
-		cm = (uint32_t)strtol(my_str, &my_str, 10);
+		cm = (uint32_t)strtol(my_str, &cm_endstr, 10);
+		if(cm_endstr == my_str + 1)
+			cm *= 10;
+		my_str = cm_endstr;
 	}
 	if (meters >= 1) {
 		*e = 2;

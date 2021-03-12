@@ -51,6 +51,16 @@
 #include "dnstap/dnstap.h"
 #include "dnscrypt/dnscrypt.h"
 #include "services/listen_dnsport.h"
+#ifdef HAVE_SYS_TYPES_H
+#include <sys/types.h>
+#endif
+#ifdef HAVE_SYS_SOCKET_H
+#include <sys/socket.h>
+#endif
+#ifdef HAVE_NETDB_H
+#include <netdb.h>
+#endif
+
 #ifdef HAVE_OPENSSL_SSL_H
 #include <openssl/ssl.h>
 #endif
@@ -152,7 +162,7 @@ struct internal_signal {
 static struct comm_point* comm_point_create_tcp_handler(
 	struct comm_base *base, struct comm_point* parent, size_t bufsize,
 	struct sldns_buffer* spoolbuf, comm_point_callback_type* callback,
-	void* callback_arg);
+	void* callback_arg, struct unbound_socket* socket);
 
 /* -------- End of local definitions -------- */
 
@@ -302,7 +312,7 @@ udp_send_errno_needs_log(struct sockaddr* addr, socklen_t addrlen)
 		/* 'Cannot assign requested address' also when disconnected */
 		|| (errno == EADDRNOTAVAIL)
 #  endif
-		) && verbosity < VERB_DETAIL)
+		) && verbosity < VERB_ALGO)
 		return 0;
 #  ifdef EADDRINUSE
 	/* If SO_REUSEADDR is set, we could try to connect to the same server
@@ -408,7 +418,9 @@ static void p_ancil(const char* str, struct comm_reply* r)
 		log_info("%s: unknown srctype %d", str, r->srctype);
 		return;
 	}
+
 	if(r->srctype == 6) {
+#ifdef IPV6_PKTINFO
 		char buf[1024];
 		if(inet_ntop(AF_INET6, &r->pktinfo.v6info.ipi6_addr, 
 			buf, (socklen_t)sizeof(buf)) == 0) {
@@ -416,6 +428,7 @@ static void p_ancil(const char* str, struct comm_reply* r)
 		}
 		buf[sizeof(buf)-1]=0;
 		log_info("%s: %s %d", str, buf, r->pktinfo.v6info.ipi6_ifindex);
+#endif
 	} else if(r->srctype == 4) {
 #ifdef IP_PKTINFO
 		char buf1[1024], buf2[1024];
@@ -2197,6 +2210,8 @@ ssl_http_read_more(struct comm_point* c)
 		log_crypto_err("could not SSL_read");
 		return 0;
 	}
+	verbose(VERB_ALGO, "ssl http read more skip to %d + %d",
+		(int)sldns_buffer_position(c->buffer), (int)r);
 	sldns_buffer_skip(c->buffer, (ssize_t)r);
 	return 1;
 #else
@@ -2233,6 +2248,8 @@ http_read_more(int fd, struct comm_point* c)
 			&c->repinfo.addr, c->repinfo.addrlen);
 		return 0;
 	}
+	verbose(VERB_ALGO, "http read more skip to %d + %d",
+		(int)sldns_buffer_position(c->buffer), (int)r);
 	sldns_buffer_skip(c->buffer, r);
 	return 1;
 }
@@ -2393,8 +2410,8 @@ http_nonchunk_segment(struct comm_point* c)
 	 * read more data collected into the buffer */
 	remainbufferlen = sldns_buffer_capacity(c->buffer) -
 		sldns_buffer_limit(c->buffer);
-	if(remainbufferlen >= c->tcp_byte_count ||
-		remainbufferlen >= 2048) {
+	if(remainbufferlen+got_now >= c->tcp_byte_count ||
+		remainbufferlen >= (c->ssl?16384:2048)) {
 		size_t total = sldns_buffer_limit(c->buffer);
 		sldns_buffer_clear(c->buffer);
 		sldns_buffer_set_position(c->buffer, total);
@@ -2762,6 +2779,11 @@ comm_point_http_handle_read(int fd, struct comm_point* c)
 			return 0;
 	}
 
+	if(c->http_stored >= sldns_buffer_position(c->buffer)) {
+		/* read did not work but we wanted more data, there is
+		 * no bytes to process now. */
+		return 1;
+	}
 	sldns_buffer_flip(c->buffer);
 	/* if we are partway in a segment of data, position us at the point
 	 * where we left off previously */
@@ -3184,7 +3206,7 @@ void comm_point_raw_handle_callback(int ATTR_UNUSED(fd),
 
 struct comm_point* 
 comm_point_create_udp(struct comm_base *base, int fd, sldns_buffer* buffer,
-	comm_point_callback_type* callback, void* callback_arg)
+	comm_point_callback_type* callback, void* callback_arg, struct unbound_socket* socket)
 {
 	struct comm_point* c = (struct comm_point*)calloc(1,
 		sizeof(struct comm_point));
@@ -3223,6 +3245,7 @@ comm_point_create_udp(struct comm_base *base, int fd, sldns_buffer* buffer,
 	c->inuse = 0;
 	c->callback = callback;
 	c->cb_arg = callback_arg;
+	c->socket = socket;
 	evbits = UB_EV_READ | UB_EV_PERSIST;
 	/* ub_event stuff */
 	c->ev->ev = ub_event_new(base->eb->base, c->fd, evbits,
@@ -3244,7 +3267,7 @@ comm_point_create_udp(struct comm_base *base, int fd, sldns_buffer* buffer,
 struct comm_point* 
 comm_point_create_udp_ancil(struct comm_base *base, int fd, 
 	sldns_buffer* buffer, 
-	comm_point_callback_type* callback, void* callback_arg)
+	comm_point_callback_type* callback, void* callback_arg, struct unbound_socket* socket)
 {
 	struct comm_point* c = (struct comm_point*)calloc(1,
 		sizeof(struct comm_point));
@@ -3283,6 +3306,7 @@ comm_point_create_udp_ancil(struct comm_base *base, int fd,
 #endif
 	c->callback = callback;
 	c->cb_arg = callback_arg;
+	c->socket = socket;
 	evbits = UB_EV_READ | UB_EV_PERSIST;
 	/* ub_event stuff */
 	c->ev->ev = ub_event_new(base->eb->base, c->fd, evbits,
@@ -3305,7 +3329,7 @@ static struct comm_point*
 comm_point_create_tcp_handler(struct comm_base *base, 
 	struct comm_point* parent, size_t bufsize,
 	struct sldns_buffer* spoolbuf, comm_point_callback_type* callback,
-	void* callback_arg)
+	void* callback_arg, struct unbound_socket* socket)
 {
 	struct comm_point* c = (struct comm_point*)calloc(1,
 		sizeof(struct comm_point));
@@ -3361,6 +3385,7 @@ comm_point_create_tcp_handler(struct comm_base *base,
 	c->repinfo.c = c;
 	c->callback = callback;
 	c->cb_arg = callback_arg;
+	c->socket = socket;
 	if(spoolbuf) {
 		c->tcp_req_info = tcp_req_info_create(spoolbuf);
 		if(!c->tcp_req_info) {
@@ -3400,7 +3425,8 @@ static struct comm_point*
 comm_point_create_http_handler(struct comm_base *base, 
 	struct comm_point* parent, size_t bufsize, int harden_large_queries,
 	uint32_t http_max_streams, char* http_endpoint,
-	comm_point_callback_type* callback, void* callback_arg)
+	comm_point_callback_type* callback, void* callback_arg,
+	struct unbound_socket* socket)
 {
 	struct comm_point* c = (struct comm_point*)calloc(1,
 		sizeof(struct comm_point));
@@ -3454,6 +3480,7 @@ comm_point_create_http_handler(struct comm_base *base,
 	c->repinfo.c = c;
 	c->callback = callback;
 	c->cb_arg = callback_arg;
+	c->socket = socket;
 
 	c->http_min_version = http_version_2;
 	c->http2_stream_max_qbuffer_size = bufsize;
@@ -3518,7 +3545,7 @@ comm_point_create_tcp(struct comm_base *base, int fd, int num,
 	uint32_t http_max_streams, char* http_endpoint,
 	struct tcl_list* tcp_conn_limit, size_t bufsize,
 	struct sldns_buffer* spoolbuf, enum listen_type port_type,
-	comm_point_callback_type* callback, void* callback_arg)
+	comm_point_callback_type* callback, void* callback_arg, struct unbound_socket* socket)
 {
 	struct comm_point* c = (struct comm_point*)calloc(1,
 		sizeof(struct comm_point));
@@ -3568,6 +3595,7 @@ comm_point_create_tcp(struct comm_base *base, int fd, int num,
 #endif
 	c->callback = NULL;
 	c->cb_arg = NULL;
+	c->socket = socket;
 	evbits = UB_EV_READ | UB_EV_PERSIST;
 	/* ub_event stuff */
 	c->ev->ev = ub_event_new(base->eb->base, c->fd, evbits,
@@ -3589,12 +3617,12 @@ comm_point_create_tcp(struct comm_base *base, int fd, int num,
 			port_type == listen_type_ssl ||
 			port_type == listen_type_tcp_dnscrypt) {
 			c->tcp_handlers[i] = comm_point_create_tcp_handler(base,
-				c, bufsize, spoolbuf, callback, callback_arg);
+				c, bufsize, spoolbuf, callback, callback_arg, socket);
 		} else if(port_type == listen_type_http) {
 			c->tcp_handlers[i] = comm_point_create_http_handler(
 				base, c, bufsize, harden_large_queries,
 				http_max_streams, http_endpoint,
-				callback, callback_arg);
+				callback, callback_arg, socket);
 		}
 		else {
 			log_err("could not create tcp handler, unknown listen "
@@ -3970,20 +3998,26 @@ comm_point_send_reply(struct comm_reply *repinfo)
 			comm_point_send_udp_msg(repinfo->c, buffer,
 			(struct sockaddr*)&repinfo->addr, repinfo->addrlen, 0);
 #ifdef USE_DNSTAP
-		if(repinfo->c->dtenv != NULL &&
-		   repinfo->c->dtenv->log_client_response_messages)
-			dt_msg_send_client_response(repinfo->c->dtenv,
-			&repinfo->addr, repinfo->c->type, repinfo->c->buffer);
+		/*
+		 * sending src (client)/dst (local service) addresses over DNSTAP from udp callback
+		 */
+		if(repinfo->c->dtenv != NULL && repinfo->c->dtenv->log_client_response_messages) {
+			log_addr(VERB_ALGO, "from local addr", (void*)repinfo->c->socket->addr->ai_addr, repinfo->c->socket->addr->ai_addrlen);
+			log_addr(VERB_ALGO, "response to client", &repinfo->addr, repinfo->addrlen);
+			dt_msg_send_client_response(repinfo->c->dtenv, &repinfo->addr, (void*)repinfo->c->socket->addr->ai_addr, repinfo->c->type, repinfo->c->buffer);
+		}
 #endif
 	} else {
 #ifdef USE_DNSTAP
-		if(repinfo->c->tcp_parent->dtenv != NULL &&
-		   repinfo->c->tcp_parent->dtenv->log_client_response_messages)
-			dt_msg_send_client_response(repinfo->c->tcp_parent->dtenv,
-			&repinfo->addr, repinfo->c->type,
-			( repinfo->c->tcp_req_info
-			? repinfo->c->tcp_req_info->spool_buffer
-			: repinfo->c->buffer ));
+		/*
+		 * sending src (client)/dst (local service) addresses over DNSTAP from TCP callback
+		 */
+		if(repinfo->c->tcp_parent->dtenv != NULL && repinfo->c->tcp_parent->dtenv->log_client_response_messages) {
+			log_addr(VERB_ALGO, "from local addr", (void*)repinfo->c->socket->addr->ai_addr, repinfo->c->socket->addr->ai_addrlen);
+			log_addr(VERB_ALGO, "response to client", &repinfo->addr, repinfo->addrlen);
+			dt_msg_send_client_response(repinfo->c->tcp_parent->dtenv, &repinfo->addr, (void*)repinfo->c->socket->addr->ai_addr, repinfo->c->type,
+				( repinfo->c->tcp_req_info? repinfo->c->tcp_req_info->spool_buffer: repinfo->c->buffer ));
+		}
 #endif
 		if(repinfo->c->tcp_req_info) {
 			tcp_req_info_send_reply(repinfo->c->tcp_req_info);
@@ -3994,6 +4028,7 @@ comm_point_send_reply(struct comm_reply *repinfo)
 			}
 			repinfo->c->h2_stream = NULL;
 			repinfo->c->tcp_is_reading = 0;
+			sldns_buffer_clear(repinfo->c->buffer);
 			comm_point_stop_listening(repinfo->c);
 			comm_point_start_listening(repinfo->c, -1,
 				adjusted_tcp_timeout(repinfo->c));

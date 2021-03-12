@@ -173,10 +173,10 @@ UNITTEST_SRC=testcode/unitanchor.c testcode/unitdname.c \
 testcode/unitlruhash.c testcode/unitmain.c testcode/unitmsgparse.c \
 testcode/unitneg.c testcode/unitregional.c testcode/unitslabhash.c \
 testcode/unitverify.c testcode/readhex.c testcode/testpkts.c testcode/unitldns.c \
-testcode/unitecs.c testcode/unitauth.c
+testcode/unitecs.c testcode/unitauth.c testcode/unitzonemd.c
 UNITTEST_OBJ=unitanchor.lo unitdname.lo unitlruhash.lo unitmain.lo \
 unitmsgparse.lo unitneg.lo unitregional.lo unitslabhash.lo unitverify.lo \
-readhex.lo testpkts.lo unitldns.lo unitecs.lo unitauth.lo
+readhex.lo testpkts.lo unitldns.lo unitecs.lo unitauth.lo unitzonemd.lo
 UNITTEST_OBJ_LINK=$(UNITTEST_OBJ) worker_cb.lo $(COMMON_OBJ) $(SLDNS_OBJ) \
 $(COMPAT_OBJ)
 DAEMON_SRC=daemon/acl_list.c daemon/cachedump.c daemon/daemon.c \
@@ -248,6 +248,7 @@ DNSTAP_SOCKET_SRC=dnstap/unbound-dnstap-socket.c
 DNSTAP_SOCKET_OBJ=unbound-dnstap-socket.lo
 DNSTAP_SOCKET_OBJ_LINK=$(DNSTAP_SOCKET_OBJ) $(COMMON_OBJ) \
 $(COMPAT_OBJ) $(SLDNS_OBJ)
+DNSTAP_SOCKET_TESTBIN=@DNSTAP_SOCKET_TESTBIN@
 LIBUNBOUND_SRC=libunbound/context.c libunbound/libunbound.c \
 libunbound/libworker.c
 LIBUNBOUND_OBJ=context.lo libunbound.lo libworker.lo ub_event_pluggable.lo
@@ -323,7 +324,7 @@ rsrc_unbound_checkconf.o:	$(srcdir)/winrc/rsrc_unbound_checkconf.rc config.h
 TEST_BIN=asynclook$(EXEEXT) delayer$(EXEEXT) \
 	lock-verify$(EXEEXT) memstats$(EXEEXT) perf$(EXEEXT) \
 	petal$(EXEEXT) pktview$(EXEEXT) streamtcp$(EXEEXT) \
-	unbound-dnstap-socket$(EXEEXT) dohclient$(EXEEXT) \
+	$(DNSTAP_SOCKET_TESTBIN) dohclient$(EXEEXT) \
 	testbound$(EXEEXT) unittest$(EXEEXT)
 tests:	all $(TEST_BIN)
 
@@ -1263,6 +1264,7 @@ testpkts.lo testpkts.o: $(srcdir)/testcode/testpkts.c config.h $(srcdir)/testcod
 unitldns.lo unitldns.o: $(srcdir)/testcode/unitldns.c config.h $(srcdir)/util/log.h $(srcdir)/testcode/unitmain.h \
  $(srcdir)/sldns/sbuffer.h $(srcdir)/sldns/str2wire.h $(srcdir)/sldns/rrdef.h $(srcdir)/sldns/wire2str.h \
  $(srcdir)/sldns/parseutil.h
+unitzonemd.lo unitzonemd.o: $(srcdir)/testcode/unitzonemd.c config.h $(srcdir)/services/authzone.h
 unitecs.lo unitecs.o: $(srcdir)/testcode/unitecs.c config.h $(srcdir)/util/log.h $(srcdir)/util/module.h \
  $(srcdir)/util/storage/lruhash.h $(srcdir)/util/locks.h $(srcdir)/util/data/msgreply.h \
  $(srcdir)/util/data/packed_rrset.h $(srcdir)/util/data/msgparse.h $(srcdir)/sldns/pkthdr.h \

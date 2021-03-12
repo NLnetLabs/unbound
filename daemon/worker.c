@@ -70,6 +70,7 @@
 #include "util/edns.h"
 #include "iterator/iter_fwd.h"
 #include "iterator/iter_hints.h"
+#include "iterator/iter_utils.h"
 #include "validator/autotrust.h"
 #include "validator/val_anchor.h"
 #include "respip/respip.h"
@@ -1166,9 +1167,14 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 	}
 #endif
 #ifdef USE_DNSTAP
-	if(worker->dtenv.log_client_query_messages)
-		dt_msg_send_client_query(&worker->dtenv, &repinfo->addr, c->type,
-			c->buffer);
+	/*
+	 * sending src (client)/dst (local service) addresses over DNSTAP from incoming request handler
+	 */
+	if(worker->dtenv.log_client_query_messages) {
+		log_addr(VERB_ALGO, "request from client", &repinfo->addr, repinfo->addrlen);
+		log_addr(VERB_ALGO, "to local addr", (void*)repinfo->c->socket->addr->ai_addr, repinfo->c->socket->addr->ai_addrlen);
+		dt_msg_send_client_query(&worker->dtenv, &repinfo->addr, (void*)repinfo->c->socket->addr->ai_addr, c->type, c->buffer);
+	}
 #endif
 	acladdr = acl_addr_lookup(worker->daemon->acl, &repinfo->addr, 
 		repinfo->addrlen);
@@ -1289,6 +1295,7 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 			edns.udp_size = EDNS_ADVERTISED_SIZE;
 			edns.bits &= EDNS_DO;
 			edns.opt_list = NULL;
+			edns.padding_block_size = 0;
 			verbose(VERB_ALGO, "query with bad edns version.");
 			log_addr(VERB_CLIENT,"from",&repinfo->addr, repinfo->addrlen);
 			error_encode(c->buffer, EDNS_RCODE_BADVERS&0xf, &qinfo,
@@ -1591,9 +1598,14 @@ send_reply_rc:
 		if(is_secure_answer) worker->stats.ans_secure++;
 	}
 #ifdef USE_DNSTAP
-	if(worker->dtenv.log_client_response_messages)
-		dt_msg_send_client_response(&worker->dtenv, &repinfo->addr,
-			c->type, c->buffer);
+	/*
+	 * sending src (client)/dst (local service) addresses over DNSTAP from send_reply code label (when we serviced local zone for ex.)
+	 */
+	if(worker->dtenv.log_client_response_messages) {
+		log_addr(VERB_ALGO, "from local addr", (void*)repinfo->c->socket->addr->ai_addr, repinfo->c->socket->addr->ai_addrlen);
+                log_addr(VERB_ALGO, "response to client", &repinfo->addr, repinfo->addrlen);
+		dt_msg_send_client_response(&worker->dtenv, &repinfo->addr, (void*)repinfo->c->socket->addr->ai_addr, c->type, c->buffer);
+	}
 #endif
 	if(worker->env.cfg->log_replies)
 	{
@@ -1820,6 +1832,8 @@ worker_init(struct worker* worker, struct config_file *cfg,
 		worker_delete(worker);
 		return 0;
 	}
+	iterator_set_ip46_support(&worker->daemon->mods, worker->daemon->env,
+		worker->back);
 	/* start listening to commands */
 	if(!tube_setup_bg_listen(worker->cmd, worker->base,
 		&worker_handle_control_cmd, worker)) {
@@ -1913,6 +1927,8 @@ worker_init(struct worker* worker, struct config_file *cfg,
 #endif
 		) {
 		auth_xfer_pickup_initial(worker->env.auth_zones, &worker->env);
+		auth_zones_pickup_zonemd_verify(worker->env.auth_zones,
+			&worker->env);
 	}
 #ifdef USE_DNSTAP
 	if(worker->daemon->cfg->dnstap

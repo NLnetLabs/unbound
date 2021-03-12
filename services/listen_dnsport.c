@@ -133,6 +133,16 @@ verbose_print_addr(struct addrinfo *addr)
 	}
 }
 
+void
+verbose_print_unbound_socket(struct unbound_socket* ub_sock)
+{
+	if(verbosity >= VERB_ALGO) {
+		log_info("listing of unbound_socket structure:");
+		verbose_print_addr(ub_sock->addr);
+		log_info("s is: %d, fam is: %s", ub_sock->s, ub_sock->fam == AF_INET?"AF_INET":"AF_INET6");
+	}
+}
+
 #ifdef HAVE_SYSTEMD
 static int
 systemd_get_activated(int family, int socktype, int listen,
@@ -916,7 +926,7 @@ static int
 make_sock(int stype, const char* ifname, const char* port, 
 	struct addrinfo *hints, int v6only, int* noip6, size_t rcv, size_t snd,
 	int* reuseport, int transparent, int tcp_mss, int nodelay, int freebind,
-	int use_systemd, int dscp)
+	int use_systemd, int dscp, struct unbound_socket* ub_sock)
 {
 	struct addrinfo *res = NULL;
 	int r, s, inuse, noproto;
@@ -958,7 +968,11 @@ make_sock(int stype, const char* ifname, const char* port,
 			*noip6 = 1;
 		}
 	}
-	freeaddrinfo(res);
+
+	ub_sock->addr = res;
+	ub_sock->s = s;
+	ub_sock->fam = hints->ai_family;
+
 	return s;
 }
 
@@ -967,7 +981,7 @@ static int
 make_sock_port(int stype, const char* ifname, const char* port, 
 	struct addrinfo *hints, int v6only, int* noip6, size_t rcv, size_t snd,
 	int* reuseport, int transparent, int tcp_mss, int nodelay, int freebind,
-	int use_systemd, int dscp)
+	int use_systemd, int dscp, struct unbound_socket* ub_sock)
 {
 	char* s = strchr(ifname, '@');
 	if(s) {
@@ -990,11 +1004,11 @@ make_sock_port(int stype, const char* ifname, const char* port,
 		p[strlen(s+1)]=0;
 		return make_sock(stype, newif, p, hints, v6only, noip6, rcv,
 			snd, reuseport, transparent, tcp_mss, nodelay, freebind,
-			use_systemd, dscp);
+			use_systemd, dscp, ub_sock);
 	}
 	return make_sock(stype, ifname, port, hints, v6only, noip6, rcv, snd,
 		reuseport, transparent, tcp_mss, nodelay, freebind, use_systemd,
-		dscp);
+		dscp, ub_sock);
 }
 
 /**
@@ -1002,10 +1016,11 @@ make_sock_port(int stype, const char* ifname, const char* port,
  * @param list: list head. changed.
  * @param s: fd.
  * @param ftype: if fd is UDP.
+ * @param ub_sock: socket with address.
  * @return false on failure. list in unchanged then.
  */
 static int
-port_insert(struct listen_port** list, int s, enum listen_type ftype)
+port_insert(struct listen_port** list, int s, enum listen_type ftype, struct unbound_socket* ub_sock)
 {
 	struct listen_port* item = (struct listen_port*)malloc(
 		sizeof(struct listen_port));
@@ -1014,6 +1029,7 @@ port_insert(struct listen_port** list, int s, enum listen_type ftype)
 	item->next = *list;
 	item->fd = s;
 	item->ftype = ftype;
+	item->socket = ub_sock;
 	*list = item;
 	return 1;
 }
@@ -1043,7 +1059,7 @@ set_recvpktinfo(int s, int family)
 			return 0;
 		}
 #           else
-		log_err("no IPV6_RECVPKTINFO and no IPV6_PKTINFO option, please "
+		log_err("no IPV6_RECVPKTINFO and IPV6_PKTINFO options, please "
 			"disable interface-automatic or do-ip6 in config");
 		return 0;
 #           endif /* defined IPV6_RECVPKTINFO */
@@ -1093,18 +1109,6 @@ if_is_ssl(const char* ifname, const char* port, int ssl_port,
 	return 0;
 }
 
-/** see if interface is https, its port number == the https port number */
-static int
-if_is_https(const char* ifname, const char* port, int https_port)
-{
-	char* p = strchr(ifname, '@');
-	if(!p && atoi(port) == https_port)
-		return 1;
-	if(p && atoi(p+1) == https_port)
-		return 1;
-	return 0;
-}
-
 /**
  * Helper for ports_open. Creates one interface (or NULL for default).
  * @param ifname: The interface ip address.
@@ -1142,6 +1146,7 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 	int s, noip6=0;
 	int is_https = if_is_https(ifname, port, https_port);
 	int nodelay = is_https && http2_nodelay;
+	struct unbound_socket* ub_sock;
 #ifdef USE_DNSCRYPT
 	int is_dnscrypt = ((strchr(ifname, '@') && 
 			atoi(strchr(ifname, '@')+1) == dnscrypt_port) ||
@@ -1153,10 +1158,15 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 
 	if(!do_udp && !do_tcp)
 		return 0;
+
 	if(do_auto) {
+		ub_sock = calloc(1, sizeof(struct unbound_socket));
+		if(!ub_sock)
+			return 0;
 		if((s = make_sock_port(SOCK_DGRAM, ifname, port, hints, 1, 
 			&noip6, rcv, snd, reuseport, transparent,
-			tcp_mss, nodelay, freebind, use_systemd, dscp)) == -1) {
+			tcp_mss, nodelay, freebind, use_systemd, dscp, ub_sock)) == -1) {
+			free(ub_sock);
 			if(noip6) {
 				log_warn("IPv6 protocol not available");
 				return 1;
@@ -1166,18 +1176,24 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 		/* getting source addr packet info is highly non-portable */
 		if(!set_recvpktinfo(s, hints->ai_family)) {
 			sock_close(s);
+			free(ub_sock);
 			return 0;
 		}
 		if(!port_insert(list, s,
-		   is_dnscrypt?listen_type_udpancil_dnscrypt:listen_type_udpancil)) {
+		   is_dnscrypt?listen_type_udpancil_dnscrypt:listen_type_udpancil, ub_sock)) {
 			sock_close(s);
+			free(ub_sock);
 			return 0;
 		}
 	} else if(do_udp) {
+		ub_sock = calloc(1, sizeof(struct unbound_socket));
+		if(!ub_sock)
+			return 0;
 		/* regular udp socket */
 		if((s = make_sock_port(SOCK_DGRAM, ifname, port, hints, 1, 
 			&noip6, rcv, snd, reuseport, transparent,
-			tcp_mss, nodelay, freebind, use_systemd, dscp)) == -1) {
+			tcp_mss, nodelay, freebind, use_systemd, dscp, ub_sock)) == -1) {
+			free(ub_sock);
 			if(noip6) {
 				log_warn("IPv6 protocol not available");
 				return 1;
@@ -1185,8 +1201,9 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 			return 0;
 		}
 		if(!port_insert(list, s,
-		   is_dnscrypt?listen_type_udp_dnscrypt:listen_type_udp)) {
+		   is_dnscrypt?listen_type_udp_dnscrypt:listen_type_udp, ub_sock)) {
 			sock_close(s);
+			free(ub_sock);
 			return 0;
 		}
 	}
@@ -1194,6 +1211,9 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 		int is_ssl = if_is_ssl(ifname, port, ssl_port,
 			tls_additional_port);
 		enum listen_type port_type;
+		ub_sock = calloc(1, sizeof(struct unbound_socket));
+		if(!ub_sock)
+			return 0;
 		if(is_ssl)
 			port_type = listen_type_ssl;
 		else if(is_https)
@@ -1204,7 +1224,8 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 			port_type = listen_type_tcp;
 		if((s = make_sock_port(SOCK_STREAM, ifname, port, hints, 1, 
 			&noip6, 0, 0, reuseport, transparent, tcp_mss, nodelay,
-			freebind, use_systemd, dscp)) == -1) {
+			freebind, use_systemd, dscp, ub_sock)) == -1) {
+			free(ub_sock);
 			if(noip6) {
 				/*log_warn("IPv6 protocol not available");*/
 				return 1;
@@ -1213,8 +1234,9 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 		}
 		if(is_ssl)
 			verbose(VERB_ALGO, "setup TCP for SSL service");
-		if(!port_insert(list, s, port_type)) {
+		if(!port_insert(list, s, port_type, ub_sock)) {
 			sock_close(s);
+			free(ub_sock);
 			return 0;
 		}
 	}
@@ -1280,14 +1302,14 @@ listen_create(struct comm_base* base, struct listen_port* ports,
 		if(ports->ftype == listen_type_udp ||
 		   ports->ftype == listen_type_udp_dnscrypt)
 			cp = comm_point_create_udp(base, ports->fd, 
-				front->udp_buff, cb, cb_arg);
+				front->udp_buff, cb, cb_arg, ports->socket);
 		else if(ports->ftype == listen_type_tcp ||
 				ports->ftype == listen_type_tcp_dnscrypt)
 			cp = comm_point_create_tcp(base, ports->fd, 
 				tcp_accept_count, tcp_idle_timeout,
 				harden_large_queries, 0, NULL,
 				tcp_conn_limit, bufsize, front->udp_buff,
-				ports->ftype, cb, cb_arg);
+				ports->ftype, cb, cb_arg, ports->socket);
 		else if(ports->ftype == listen_type_ssl ||
 			ports->ftype == listen_type_http) {
 			cp = comm_point_create_tcp(base, ports->fd, 
@@ -1295,7 +1317,7 @@ listen_create(struct comm_base* base, struct listen_port* ports,
 				harden_large_queries,
 				http_max_streams, http_endpoint,
 				tcp_conn_limit, bufsize, front->udp_buff,
-				ports->ftype, cb, cb_arg);
+				ports->ftype, cb, cb_arg, ports->socket);
 			if(http_notls && ports->ftype == listen_type_http)
 				cp->ssl = NULL;
 			else
@@ -1322,7 +1344,7 @@ listen_create(struct comm_base* base, struct listen_port* ports,
 		} else if(ports->ftype == listen_type_udpancil ||
 				  ports->ftype == listen_type_udpancil_dnscrypt)
 			cp = comm_point_create_udp_ancil(base, ports->fd, 
-				front->udp_buff, cb, cb_arg);
+				front->udp_buff, cb, cb_arg, ports->socket);
 		if(!cp) {
 			log_err("can't create commpoint");	
 			listen_delete(front);
@@ -1456,7 +1478,7 @@ resolve_ifa_name(struct ifaddrs *ifas, const char *search_ifa, char ***ip_addres
 				log_err("inet_ntop failed");
 				return 0;
 			}
-			if_indextoname(in6->sin6_scope_id,
+			(void)if_indextoname(in6->sin6_scope_id,
 				(char *)if_index_name);
 			if (strlen(if_index_name) != 0) {
 				snprintf(addr_buf, sizeof(addr_buf),
@@ -1506,13 +1528,12 @@ resolve_ifa_name(struct ifaddrs *ifas, const char *search_ifa, char ***ip_addres
 }
 #endif /* HAVE_GETIFADDRS */
 
-int resolve_interface_names(struct config_file* cfg, char*** resif,
-	int* num_resif)
+int resolve_interface_names(char** ifs, int num_ifs,
+	struct config_strlist* list, char*** resif, int* num_resif)
 {
 #ifdef HAVE_GETIFADDRS
-	int i;
 	struct ifaddrs *addrs = NULL;
-	if(cfg->num_ifs == 0) {
+	if(num_ifs == 0 && list == NULL) {
 		*resif = NULL;
 		*num_resif = 0;
 		return 1;
@@ -1523,38 +1544,71 @@ int resolve_interface_names(struct config_file* cfg, char*** resif,
 		freeifaddrs(addrs);
 		return 0;
 	}
-	for(i=0; i<cfg->num_ifs; i++) {
-		if(!resolve_ifa_name(addrs, cfg->ifs[i], resif, num_resif)) {
-			freeifaddrs(addrs);
-			config_del_strarray(*resif, *num_resif);
-			*resif = NULL;
-			*num_resif = 0;
-			return 0;
+	if(ifs) {
+		int i;
+		for(i=0; i<num_ifs; i++) {
+			if(!resolve_ifa_name(addrs, ifs[i], resif, num_resif)) {
+				freeifaddrs(addrs);
+				config_del_strarray(*resif, *num_resif);
+				*resif = NULL;
+				*num_resif = 0;
+				return 0;
+			}
 		}
+	}
+	if(list) {
+		struct config_strlist* p;
+		for(p = list; p; p = p->next) {
+			if(!resolve_ifa_name(addrs, p->str, resif, num_resif)) {
+				freeifaddrs(addrs);
+				config_del_strarray(*resif, *num_resif);
+				*resif = NULL;
+				*num_resif = 0;
+				return 0;
+			}
+}
 	}
 	freeifaddrs(addrs);
 	return 1;
 #else
-	int i;
-	if(cfg->num_ifs == 0) {
+	struct config_strlist* p;
+	if(num_ifs == 0 && list == NULL) {
 		*resif = NULL;
 		*num_resif = 0;
 		return 1;
 	}
-	*num_resif = cfg->num_ifs;
+	*num_resif = num_ifs;
+	for(p = list; p; p = p->next) {
+		*num_resif ++;
+	}
 	*resif = calloc(*num_resif, sizeof(**resif));
 	if(!*resif) {
 		log_err("out of memory");
 		return 0;
 	}
-	for(i=0; i<*num_resif; i++) {
-		(*resif)[i] = strdup(cfg->ifs[i]);
-		if(!((*resif)[i])) {
-			log_err("out of memory");
-			config_del_strarray(*resif, *num_resif);
-			*resif = NULL;
-			*num_resif = 0;
-			return 0;
+	if(ifs) {
+		int i;
+		for(i=0; i<num_ifs; i++) {
+			(*resif)[i] = strdup(ifs[i]);
+			if(!((*resif)[i])) {
+				log_err("out of memory");
+				config_del_strarray(*resif, *num_resif);
+				*resif = NULL;
+				*num_resif = 0;
+				return 0;
+			}
+		}
+	}
+	if(list) {
+		for(p = list; p; p = p->next) {
+			(*resif)[i] = strdup(p->str);
+			if(!((*resif)[i])) {
+				log_err("out of memory");
+				config_del_strarray(*resif, *num_resif);
+				*resif = NULL;
+				*num_resif = 0;
+				return 0;
+			}
 		}
 	}
 	return 1;
@@ -1656,6 +1710,7 @@ listening_ports_open(struct config_file* cfg, char** ifs, int num_ifs,
 			}
 		}
 	}
+
 	return list;
 }
 
@@ -1666,6 +1721,11 @@ void listening_ports_free(struct listen_port* list)
 		nx = list->next;
 		if(list->fd != -1) {
 			sock_close(list->fd);
+		}
+		/* rc_ports don't have ub_socket */
+		if(list->socket) {
+			freeaddrinfo(list->socket->addr);
+			free(list->socket);
 		}
 		free(list);
 		list = nx;

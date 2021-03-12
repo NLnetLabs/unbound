@@ -1229,6 +1229,7 @@ struct serviced_query* outnet_serviced_query(struct outside_network* outnet,
 		edns.bits = 0;
 		if(dnssec)
 			edns.bits = EDNS_DO;
+		edns.padding_block_size = 0;
 		if((client_string_addr = edns_string_addr_lookup(
 			&env->edns_strings->client_strings,
 			addr, addrlen))) {
@@ -1305,8 +1306,9 @@ void outnet_serviced_query_stop(struct serviced_query* sq, void* cb_arg)
 	log_info("double delete of pending serviced query");
 }
 
-int resolve_interface_names(struct config_file* ATTR_UNUSED(cfg),
-	char*** ATTR_UNUSED(resif), int* ATTR_UNUSED(num_resif))
+int resolve_interface_names(char** ATTR_UNUSED(ifs), int ATTR_UNUSED(num_ifs),
+	struct config_strlist* ATTR_UNUSED(list), char*** ATTR_UNUSED(resif),
+	int* ATTR_UNUSED(num_resif))
 {
 	return 1;
 }
@@ -1628,7 +1630,8 @@ int create_udp_sock(int ATTR_UNUSED(family), int ATTR_UNUSED(socktype),
 struct comm_point* comm_point_create_udp(struct comm_base *ATTR_UNUSED(base),
 	int ATTR_UNUSED(fd), sldns_buffer* ATTR_UNUSED(buffer),
 	comm_point_callback_type* ATTR_UNUSED(callback),
-	void* ATTR_UNUSED(callback_arg))
+	void* ATTR_UNUSED(callback_arg),
+	struct unbound_socket* ATTR_UNUSED(socket))
 {
 	log_assert(0);
 	return NULL;

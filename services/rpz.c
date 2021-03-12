@@ -166,6 +166,7 @@ rpz_rr_to_action(uint16_t rr_type, uint8_t* rdatawl, size_t rdatalen)
 		case LDNS_RR_TYPE_RRSIG:
 		case LDNS_RR_TYPE_NSEC:
 		case LDNS_RR_TYPE_NSEC3:
+		case LDNS_RR_TYPE_NSEC3PARAM:
 			return RPZ_INVALID_ACTION;
 		case LDNS_RR_TYPE_CNAME:
 			break;
@@ -566,8 +567,25 @@ rpz_insert_local_zones_trigger(struct local_zones* lz, uint8_t* dname,
 	struct local_zone* z;
 	enum localzone_type tp = local_zone_always_transparent;
 	int dnamelabs = dname_count_labels(dname);
-
 	int newzone = 0;
+
+	if(a == RPZ_TCP_ONLY_ACTION || a == RPZ_INVALID_ACTION) {
+		char str[255+1];
+		if(rrtype == LDNS_RR_TYPE_SOA || rrtype == LDNS_RR_TYPE_NS ||
+			rrtype == LDNS_RR_TYPE_DNAME ||
+			rrtype == LDNS_RR_TYPE_DNSKEY ||
+			rrtype == LDNS_RR_TYPE_RRSIG ||
+			rrtype == LDNS_RR_TYPE_NSEC ||
+			rrtype == LDNS_RR_TYPE_NSEC3PARAM ||
+			rrtype == LDNS_RR_TYPE_NSEC3 ||
+			rrtype == LDNS_RR_TYPE_DS)
+			return; /* no need to log these types as unsupported */
+		dname_str(dname, str);
+		verbose(VERB_ALGO, "RPZ: qname trigger, %s skipping unsupported action: %s",
+			str, rpz_action_to_string(a));
+		free(dname);
+		return;
+	}
 
 	lock_rw_wrlock(&lz->lock);
 	/* exact match */
@@ -686,6 +704,14 @@ rpz_insert_ipaddr_based_trigger(struct respip_set* set, struct sockaddr_storage*
 	enum respip_action respa = rpz_action_to_respip_action(a);
 
 	lock_rw_wrlock(&set->lock);
+	if(a == RPZ_TCP_ONLY_ACTION || a == RPZ_INVALID_ACTION ||
+		respa == respip_invalid) {
+		char str[255+1];
+		dname_str(dname, str);
+		verbose(VERB_ALGO, "RPZ: respip trigger, %s skipping unsupported action: %s",
+			str, rpz_action_to_string(a));
+		return 0;
+	}
 
 	rrstr = sldns_wire2str_rr(rr, rr_len);
 	if(rrstr == NULL) {
@@ -1022,7 +1048,8 @@ rpz_find_zone(struct local_zones* zones, uint8_t* qname, size_t qname_len, uint1
 	int only_exact, int wr, int zones_keep_lock)
 {
 	uint8_t* ce;
-	size_t ce_len, ce_labs;
+	size_t ce_len;
+	int ce_labs;
 	uint8_t wc[LDNS_MAX_DOMAINLEN+1];
 	int exact;
 	struct local_zone* z = NULL;
@@ -1056,7 +1083,7 @@ rpz_find_zone(struct local_zones* zones, uint8_t* qname, size_t qname_len, uint1
 	 * zone match, append '*' to that and do another lookup. */
 
 	ce = dname_get_shared_topdomain(z->name, qname);
-	if(!ce /* should not happen */ || !*ce /* root */) {
+	if(!ce /* should not happen */) {
 		lock_rw_unlock(&z->lock);
 		if(zones_keep_lock) {
 			lock_rw_unlock(&zones->lock);
