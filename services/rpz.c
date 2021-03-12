@@ -704,15 +704,6 @@ rpz_insert_ipaddr_based_trigger(struct respip_set* set, struct sockaddr_storage*
 	enum respip_action respa = rpz_action_to_respip_action(a);
 
 	lock_rw_wrlock(&set->lock);
-	if(a == RPZ_TCP_ONLY_ACTION || a == RPZ_INVALID_ACTION ||
-		respa == respip_invalid) {
-		char str[255+1];
-		dname_str(dname, str);
-		verbose(VERB_ALGO, "RPZ: respip trigger, %s skipping unsupported action: %s",
-			str, rpz_action_to_string(a));
-		return 0;
-	}
-
 	rrstr = sldns_wire2str_rr(rr, rr_len);
 	if(rrstr == NULL) {
 		log_err("malloc error while inserting rpz ipaddr based trigger");
@@ -946,6 +937,15 @@ rpz_insert_response_ip_trigger(struct rpz* r, uint8_t* dname, size_t dnamelen,
 
 	if(!netblockdnametoaddr(dname, dnamelen, &addr, &addrlen, &net, &af)) {
 		verbose(VERB_ALGO, "rpz: unable to parse response ip");
+		return 0;
+	}
+
+	if(a == RPZ_TCP_ONLY_ACTION || a == RPZ_INVALID_ACTION ||
+		rpz_action_to_respip_action(a) == respip_invalid) {
+		char str[255+1];
+		dname_str(dname, str);
+		verbose(VERB_ALGO, "RPZ: respip trigger, %s skipping unsupported action: %s",
+			str, rpz_action_to_string(a));
 		return 0;
 	}
 
