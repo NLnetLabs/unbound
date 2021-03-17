@@ -1,3 +1,6 @@
+17 March 2021: Wouter
+	- Fix #441: Minimal NSEC range not accepted for top level domains.
+
 11 March 2021: Wouter
 	- Fix parse of LOC RR type for decimetres.
 
