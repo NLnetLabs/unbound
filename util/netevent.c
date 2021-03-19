@@ -1633,6 +1633,10 @@ comm_point_tcp_handle_read(int fd, struct comm_point* c, int short_ok)
 			if(errno == ECONNRESET && verbosity < 2)
 				return 0; /* silence reset by peer */
 #endif
+#ifdef ECONNREFUSED
+			if(errno == ECONNREFUSED && verbosity < 2)
+				return 0; /* silence reset by peer */
+#endif
 #ifdef ENETUNREACH
 			if(errno == ENETUNREACH && verbosity < 2)
 				return 0; /* silence it */
@@ -1661,6 +1665,16 @@ comm_point_tcp_handle_read(int fd, struct comm_point* c, int short_ok)
 			}
 #endif
 #else /* USE_WINSOCK */
+			if(WSAGetLastError() == WSAECONNREFUSED && verbosity < 2)
+				return 0;
+			if(WSAGetLastError() == WSAEHOSTDOWN && verbosity < 2)
+				return 0;
+			if(WSAGetLastError() == WSAEHOSTUNREACH && verbosity < 2)
+				return 0;
+			if(WSAGetLastError() == WSAENETDOWN && verbosity < 2)
+				return 0;
+			if(WSAGetLastError() == WSAENETUNREACH && verbosity < 2)
+				return 0;
 			if(WSAGetLastError() == WSAECONNRESET)
 				return 0;
 			if(WSAGetLastError() == WSAEINPROGRESS)

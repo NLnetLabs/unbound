@@ -1,3 +1,7 @@
+19 March 2021: Wouter
+	- Fix for #447: squelch connection refused tcp connection failures
+	  from the log, unless verbosity is high.
+
 17 March 2021: Wouter
 	- Fix #441: Minimal NSEC range not accepted for top level domains.
 
