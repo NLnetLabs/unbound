@@ -126,6 +126,16 @@ SECTION ANSWER
 something.e.b.example. IN TXT "*.b.example. answer from upstream ns"
 ENTRY_END
 
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR NOERROR
+SECTION QUESTION
+f.example. IN TXT
+SECTION ANSWER
+f.example. IN CNAME d.
+ENTRY_END
+
 RANGE_END
 
 ; tcp.
@@ -365,6 +375,25 @@ SECTION QUESTION
 tcp.  IN TXT
 SECTION ANSWER
 tcp. IN TXT "tcp. answer from upstream ns"
+ENTRY_END
+
+; check if the name after the CNAME has the qname trigger applied to it.
+STEP 100 QUERY
+ENTRY_BEGIN
+REPLY RD
+SECTION QUESTION
+f.example.  IN TXT
+ENTRY_END
+
+STEP 101 CHECK_ANSWER
+ENTRY_BEGIN
+MATCH all
+REPLY QR RD RA NOERROR
+SECTION QUESTION
+f.example.	IN	TXT
+SECTION ANSWER
+f.example.	IN	CNAME	d.
+d.		IN	TXT	"local data 2nd zone"
 ENTRY_END
 
 ; no answer is checked at exit of testbound.

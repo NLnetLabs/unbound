@@ -3013,6 +3013,38 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 		/* set the current request's qname to the new value. */
 		iq->qchase.qname = sname;
 		iq->qchase.qname_len = snamelen;
+		if(qstate->env->auth_zones) {
+			/* apply rpz qname triggers after cname */
+			struct dns_msg* forged_response =
+				rpz_callback_from_iterator_cname(qstate, iq);
+			while(forged_response && reply_find_rrset_section_an(
+				forged_response->rep, iq->qchase.qname,
+				iq->qchase.qname_len, LDNS_RR_TYPE_CNAME,
+				iq->qchase.qclass)) {
+				/* another cname to follow */
+				if(!handle_cname_response(qstate, iq, forged_response,
+					&sname, &snamelen)) {
+					errinf(qstate, "malloc failure, CNAME info");
+					return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
+				}
+				iq->qchase.qname = sname;
+				iq->qchase.qname_len = snamelen;
+				forged_response =
+					rpz_callback_from_iterator_cname(qstate, iq);
+			}
+			if(forged_response != NULL) {
+				qstate->ext_state[id] = module_finished;
+				qstate->return_rcode = FLAGS_GET_RCODE(forged_response->rep->flags);
+				qstate->return_msg = forged_response;
+				next_state(iq, FINISHED_STATE);
+				if(!iter_prepend(iq, qstate->return_msg, qstate->region)) {
+					log_err("rpz, prepend rrsets: out of memory");
+					return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
+				}
+				qstate->return_msg->qinfo = qstate->qinfo;
+				return 0;
+			}
+		}
 		/* Clear the query state, since this is a query restart. */
 		iq->deleg_msg = NULL;
 		iq->dp = NULL;

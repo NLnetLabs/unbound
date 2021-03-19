@@ -183,6 +183,8 @@ int rpz_callback_from_worker_request(struct auth_zones* az, struct module_env* e
 struct iter_qstate;
 struct dns_msg* rpz_callback_from_iterator_module(struct module_qstate*, struct iter_qstate*);
 
+struct dns_msg* rpz_callback_from_iterator_cname(struct module_qstate*, struct iter_qstate*);
+
 /**
  * Delete RPZ
  * @param r: RPZ struct to delete
