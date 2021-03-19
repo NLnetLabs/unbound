@@ -1566,11 +1566,12 @@ rpz_dns_msg_new(struct regional* region)
 }
 
 static inline struct dns_msg*
-rpz_synthesize_nodata(struct rpz* ATTR_UNUSED(r), struct module_qstate* ms)
+rpz_synthesize_nodata(struct rpz* ATTR_UNUSED(r), struct module_qstate* ms,
+	struct query_info* qinfo)
 {
 	struct dns_msg* msg = rpz_dns_msg_new(ms->region);
 	if(msg == NULL) { return msg; }
-	msg->qinfo = ms->qinfo;
+	msg->qinfo = *qinfo;
 	msg->rep = construct_reply_info_base(ms->region,
 					     LDNS_RCODE_NOERROR | BIT_RD | BIT_QR | BIT_AA | BIT_RA,
 					     1, //qd
@@ -1586,11 +1587,12 @@ rpz_synthesize_nodata(struct rpz* ATTR_UNUSED(r), struct module_qstate* ms)
 }
 
 static inline struct dns_msg*
-rpz_synthesize_nxdomain(struct rpz* ATTR_UNUSED(r), struct module_qstate* ms)
+rpz_synthesize_nxdomain(struct rpz* ATTR_UNUSED(r), struct module_qstate* ms,
+	struct query_info* qinfo)
 {
 	struct dns_msg* msg = rpz_dns_msg_new(ms->region);
 	if(msg == NULL) { return msg; }
-	msg->qinfo = ms->qinfo;
+	msg->qinfo = *qinfo;
 	msg->rep = construct_reply_info_base(ms->region,
 					     LDNS_RCODE_NXDOMAIN | BIT_RD | BIT_QR | BIT_AA | BIT_RA,
 					     1, //qd
@@ -1820,16 +1822,16 @@ rpz_apply_nsip_trigger(struct module_qstate* ms, struct rpz* r,
 
 	if(action == RPZ_LOCAL_DATA_ACTION && raddr->data == NULL) {
 		verbose(VERB_ALGO, "rpz: bug: nsip local data action but no local data");
-		ret = rpz_synthesize_nodata(r, ms);
+		ret = rpz_synthesize_nodata(r, ms, &ms->qinfo);
 		goto done;
 	}
 
 	switch(action) {
 	case RPZ_NXDOMAIN_ACTION:
-		ret = rpz_synthesize_nxdomain(r, ms);
+		ret = rpz_synthesize_nxdomain(r, ms, &ms->qinfo);
 		break;
 	case RPZ_NODATA_ACTION:
-		ret = rpz_synthesize_nodata(r, ms);
+		ret = rpz_synthesize_nodata(r, ms, &ms->qinfo);
 		break;
 	case RPZ_TCP_ONLY_ACTION:
 		// basically a passthru here but the tcp-only will be
@@ -1838,12 +1840,12 @@ rpz_apply_nsip_trigger(struct module_qstate* ms, struct rpz* r,
 		ret = NULL;
 		break;
 	case RPZ_DROP_ACTION:
-		ret = rpz_synthesize_nodata(r, ms);
+		ret = rpz_synthesize_nodata(r, ms, &ms->qinfo);
 		ms->is_drop = 1;
 		break;
 	case RPZ_LOCAL_DATA_ACTION:
 		ret = rpz_synthesize_nsip_localdata(r, ms, raddr);
-		if(ret == NULL) { ret = rpz_synthesize_nodata(r, ms); }
+		if(ret == NULL) { ret = rpz_synthesize_nodata(r, ms, &ms->qinfo); }
 		break;
 	case RPZ_PASSTHRU_ACTION:
 		ret = NULL;
@@ -1876,10 +1878,10 @@ rpz_apply_nsdname_trigger(struct module_qstate* ms, struct rpz* r,
 
 	switch(action) {
 	case RPZ_NXDOMAIN_ACTION:
-		ret = rpz_synthesize_nxdomain(r, ms);
+		ret = rpz_synthesize_nxdomain(r, ms, &ms->qinfo);
 		break;
 	case RPZ_NODATA_ACTION:
-		ret = rpz_synthesize_nodata(r, ms);
+		ret = rpz_synthesize_nodata(r, ms, &ms->qinfo);
 		break;
 	case RPZ_TCP_ONLY_ACTION:
 		// basically a passthru here but the tcp-only will be
@@ -1888,12 +1890,12 @@ rpz_apply_nsdname_trigger(struct module_qstate* ms, struct rpz* r,
 		ret = NULL;
 		break;
 	case RPZ_DROP_ACTION:
-		ret = rpz_synthesize_nodata(r, ms);
+		ret = rpz_synthesize_nodata(r, ms, &ms->qinfo);
 		ms->is_drop = 1;
 		break;
 	case RPZ_LOCAL_DATA_ACTION:
 		ret = rpz_synthesize_nsdname_localdata(r, ms, z, match);
-		if(ret == NULL) { ret = rpz_synthesize_nodata(r, ms); }
+		if(ret == NULL) { ret = rpz_synthesize_nodata(r, ms, &ms->qinfo); }
 		break;
 	case RPZ_PASSTHRU_ACTION:
 		ret = NULL;
@@ -2037,10 +2039,10 @@ struct dns_msg* rpz_callback_from_iterator_cname(struct module_qstate* ms,
 		rpz_action_to_string(localzone_type_to_rpz_action(lzt)));
 	switch(localzone_type_to_rpz_action(lzt)) {
 	case RPZ_NXDOMAIN_ACTION:
-		ret = rpz_synthesize_nxdomain(r, ms);
+		ret = rpz_synthesize_nxdomain(r, ms, &is->qchase);
 		break;
 	case RPZ_NODATA_ACTION:
-		ret = rpz_synthesize_nodata(r, ms);
+		ret = rpz_synthesize_nodata(r, ms, &is->qchase);
 		break;
 	case RPZ_TCP_ONLY_ACTION:
 		/* basically a passthru here but the tcp-only will be
@@ -2049,12 +2051,12 @@ struct dns_msg* rpz_callback_from_iterator_cname(struct module_qstate* ms,
 		ret = NULL;
 		break;
 	case RPZ_DROP_ACTION:
-		ret = rpz_synthesize_nodata(r, ms);
+		ret = rpz_synthesize_nodata(r, ms, &is->qchase);
 		ms->is_drop = 1;
 		break;
 	case RPZ_LOCAL_DATA_ACTION:
 		ret = rpz_synthesize_qname_localdata_msg(r, ms, &is->qchase, z);
-		if(ret == NULL) { ret = rpz_synthesize_nodata(r, ms); }
+		if(ret == NULL) { ret = rpz_synthesize_nodata(r, ms, &is->qchase); }
 		break;
 	case RPZ_PASSTHRU_ACTION:
 		ret = NULL;
