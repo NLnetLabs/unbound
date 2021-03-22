@@ -83,7 +83,6 @@ jobs:
       dist: bionic
       env:
         - TEST_ASAN=yes
-        - TEST_ENABLED=yes
     - os: linux
       name: Asan, Clang on Linux, Amd64
       compiler: clang
@@ -91,7 +90,6 @@ jobs:
       dist: bionic
       env:
         - TEST_ASAN=yes
-        - TEST_ENABLED=yes
     - os: linux
       name: GCC on Linux, Aarch64
       compiler: gcc
