@@ -1,3 +1,6 @@
+22 March 2021: Wouter
+	- Merge #449 from orbea: build: Add missing linker flags.
+
 19 March 2021: Wouter
 	- Fix for #447: squelch connection refused tcp connection failures
 	  from the log, unless verbosity is high.
