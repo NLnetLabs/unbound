@@ -2471,7 +2471,8 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 	/* Add the current set of unused targets to our queue. */
 	delegpt_add_unused_targets(iq->dp);
 
-	{ /* apply rpz triggers at query time */
+	if(qstate->env->auth_zones) {
+		/* apply rpz triggers at query time */
 		struct dns_msg* forged_response = rpz_callback_from_iterator_module(qstate, iq);
 		if(forged_response != NULL) {
 			qstate->ext_state[id] = module_finished;
