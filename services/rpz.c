@@ -857,8 +857,6 @@ rpz_clientip_enter_rr(struct regional* region, struct clientip_synthesized_rr* r
 	size_t rdata_len)
 {
 	struct local_rrset* rrset;
-	struct sockaddr* sa;
-	sa = (struct sockaddr*)&raddr->node.addr;
 	if (rrtype == LDNS_RR_TYPE_CNAME && raddr->data != NULL) {
 		log_err("CNAME response-ip data can not co-exist with other "
 			"client-ip data");
