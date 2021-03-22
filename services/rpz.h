@@ -50,6 +50,7 @@
 #include "sldns/sbuffer.h"
 #include "daemon/stats.h"
 #include "respip/respip.h"
+struct iter_qstate;
 
 /**
  * RPZ triggers, only the QNAME trigger is currently supported in Unbound.
@@ -180,10 +181,28 @@ int rpz_callback_from_worker_request(struct auth_zones* az, struct module_env* e
 	struct regional* temp, struct comm_reply* repinfo,
 	uint8_t* taglist, size_t taglen, struct ub_server_stats* stats);
 
-struct iter_qstate;
-struct dns_msg* rpz_callback_from_iterator_module(struct module_qstate*, struct iter_qstate*);
+/**
+ * Callback to process when the iterator module is about to send queries.
+ * Checks for nsip and nsdname triggers.
+ * @param qstate: the query state.
+ * @param iq: iterator module query state.
+ * @return NULL if nothing is done. Or a new message with the contents from
+ * 	the rpz, based on the delegation point. It is allocated in the
+ * 	qstate region.
+ */
+struct dns_msg* rpz_callback_from_iterator_module(struct module_qstate* qstate,
+	struct iter_qstate* iq);
 
-struct dns_msg* rpz_callback_from_iterator_cname(struct module_qstate*, struct iter_qstate*);
+/**
+ * Callback to process when the iterator module has followed a cname.
+ * There can be a qname trigger for the new query name.
+ * @param qstate: the query state.
+ * @param iq: iterator module query state.
+ * @return NULL if nothing is done. Or a new message with the contents from
+ * 	the rpz, based on the iq.qchase. It is allocated in the qstate region.
+ */
+struct dns_msg* rpz_callback_from_iterator_cname(struct module_qstate* qstate,
+	struct iter_qstate* iq);
 
 /**
  * Delete RPZ

@@ -1068,7 +1068,7 @@ rpz_insert_rr(struct rpz* r, uint8_t* azname, size_t aznamelen, uint8_t* dname,
 
 /**
  * Find RPZ local-zone by qname.
- * @param r: rpz containing local-zone tree
+ * @param zones: local-zone tree
  * @param qname: qname
  * @param qname_len: length of qname
  * @param qclass: qclass
