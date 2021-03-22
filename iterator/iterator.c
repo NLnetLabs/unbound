@@ -2479,6 +2479,10 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 			qstate->return_rcode = FLAGS_GET_RCODE(forged_response->rep->flags);
 			qstate->return_msg = forged_response;
 			next_state(iq, FINISHED_STATE);
+			if(!iter_prepend(iq, qstate->return_msg, qstate->region)) {
+				log_err("rpz, prepend rrsets: out of memory");
+				return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
+			}
 			return 0;
 		}
 	}
@@ -3039,7 +3043,7 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 				qstate->return_msg = forged_response;
 				next_state(iq, FINISHED_STATE);
 				if(!iter_prepend(iq, qstate->return_msg, qstate->region)) {
-					log_err("rpz, prepend rrsets: out of memory");
+					log_err("rpz after cname, prepend rrsets: out of memory");
 					return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
 				}
 				qstate->return_msg->qinfo = qstate->qinfo;
