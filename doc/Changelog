@@ -1,5 +1,6 @@
 22 March 2021: George
 	- Fix unused-function warning when compiling with --enable-dnscrypt.
+	- Fix for #367: fix memory leak when cannot bind to listening port.
 
 22 March 2021: Wouter
 	- Merge #449 from orbea: build: Add missing linker flags.
