@@ -15,7 +15,7 @@ addons:
       - openssl
       - libevent
       - expat
-    update: true
+    #update: true
 
 jobs:
   include:
@@ -25,19 +25,21 @@ jobs:
       arch: amd64
       env:
         - CONFIG_OPTS="--enable-debug --disable-flto"
+        - TEST_ENABLED=yes
     - os: linux
       name: Clang on Linux, Amd64
       compiler: clang
       arch: amd64
       env:
         - CONFIG_OPTS="--enable-debug --disable-flto"
-#    - os: osx
-#      name: Clang on OS X, Amd64
-#      compiler: clang
-#      arch: amd64
-#      env:
-#        - TEST_OSX=yes
-#        - CONFIG_OPTS="--enable-debug --disable-flto --with-ssl=/usr/local/opt/openssl/"
+    - os: osx
+      name: Clang on OS X, Amd64
+      compiler: clang
+      arch: amd64
+      env:
+        - TEST_OSX=yes
+        - CONFIG_OPTS="--enable-debug --disable-flto --with-ssl=/usr/local/opt/openssl/"
+        - TEST_ENABLED=yes
     - os: linux
       name: Libevent, GCC on Linux, Amd64
       compiler: gcc
@@ -81,6 +83,7 @@ jobs:
       dist: bionic
       env:
         - TEST_ASAN=yes
+        - TEST_ENABLED=yes
     - os: linux
       name: Asan, Clang on Linux, Amd64
       compiler: clang
@@ -88,6 +91,7 @@ jobs:
       dist: bionic
       env:
         - TEST_ASAN=yes
+        - TEST_ENABLED=yes
     - os: linux
       name: GCC on Linux, Aarch64
       compiler: gcc
@@ -294,6 +298,7 @@ before_script:
 # https://docs.travis-ci.com/user/job-lifecycle/ in the Travis docs.
 script:
   - |
+    if [ "$TEST_ENABLED" = "yes" ]; then
     if [ "$TEST_UBSAN" = "yes" ]; then
       export CFLAGS="-DNDEBUG -g2 -O3 -fsanitize=undefined -fno-sanitize-recover"
       ./configure
@@ -341,4 +346,5 @@ script:
       make -j 2
       make test
       (cd testdata/clang-analysis.tdir; bash clang-analysis.test)
+    fi
     fi
