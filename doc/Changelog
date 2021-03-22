@@ -5,6 +5,7 @@
 	- Merge #449 from orbea: build: Add missing linker flags.
 	- iana portlist update.
 	- Comment out nonworking OSX and IOS travis tests, vm fails to start.
+	- Fix compile error in listen_dnsport on Android.
 
 19 March 2021: Wouter
 	- Fix for #447: squelch connection refused tcp connection failures

@@ -1579,7 +1579,7 @@ int resolve_interface_names(char** ifs, int num_ifs,
 	}
 	*num_resif = num_ifs;
 	for(p = list; p; p = p->next) {
-		*num_resif ++;
+		(*num_resif)++;
 	}
 	*resif = calloc(*num_resif, sizeof(**resif));
 	if(!*resif) {
@@ -1600,15 +1600,17 @@ int resolve_interface_names(char** ifs, int num_ifs,
 		}
 	}
 	if(list) {
+		int idx = num_ifs;
 		for(p = list; p; p = p->next) {
-			(*resif)[i] = strdup(p->str);
-			if(!((*resif)[i])) {
+			(*resif)[idx] = strdup(p->str);
+			if(!((*resif)[idx])) {
 				log_err("out of memory");
 				config_del_strarray(*resif, *num_resif);
 				*resif = NULL;
 				*num_resif = 0;
 				return 0;
 			}
+			idx++;
 		}
 	}
 	return 1;
