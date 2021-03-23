@@ -192,10 +192,11 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_EDNS_CLIENT_STRING_OPCODE VAR_NSID
 
 %%
+all:	toplevelvars
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
 toplevelvar: serverstart contents_server | stubstart contents_stub |
 	forwardstart contents_forward | pythonstart contents_py |
-	rcstart contents_rc | dtstart contents_dt | viewstart contents_view |
+	rcstart contents_rc | dtstart contents_dt | view_block |
 	dnscstart contents_dnsc | cachedbstart contents_cachedb |
 	ipsetstart contents_ipset | authstart contents_auth |
 	rpzstart contents_rpz | dynlibstart contents_dl |
@@ -425,24 +426,67 @@ contents_forward: contents_forward content_forward
 content_forward: forward_name | forward_host | forward_addr | forward_first |
 	forward_no_cache | forward_ssl_upstream
 	;
-viewstart: VAR_VIEW
+view_block: VAR_VIEW
 	{
-		struct config_view* s;
 		OUTYY(("\nP(view:)\n"));
-		s = (struct config_view*)calloc(1, sizeof(struct config_view));
-		if(s) {
-			s->next = cfg_parser->cfg->views;
-			if(s->next && !s->next->name)
-				yyerror("view without name");
-			cfg_parser->cfg->views = s;
-		} else
+
+		struct config_view* view;
+
+		if ((view = config_view_create(cfg_parser->cfg)) != NULL) {
+			// Future configuration values will go here until the view ends
+
+			cfg_parser->cfg = &view->cfg_view;
+			cfg_parser->view_cfg = view;
+		} else {
 			yyerror("out of memory");
+		}
+	}
+		contents_view
+	{
+		struct config_view *view   = cfg_parser->view_cfg;
+		struct config_file *server = cfg_parser->server_cfg;
+
+		// Successfully parsed the view - link in the new view and restore
+		// the server configuration to the active position
+
+		if (view == NULL) {
+			yyerror("empty view");
+		} else if (config_view_validate(view) != 0) {
+			yyerror("view: invalid configuration");
+		} else {
+			cfg_parser->view_cfg = NULL;
+			view->next           = server->views;
+			server->views        = view;
+			cfg_parser->cfg      = server;
+		}
 	}
 	;
 contents_view: contents_view content_view
 	| ;
-content_view: view_name | view_local_zone | view_local_data | view_first |
-		view_response_ip | view_response_ip_data | view_local_data_ptr
+content_view: view_name |
+	view_first |
+	server_local_zone |
+	server_local_data |
+	server_response_ip |
+	server_response_ip_data |
+	server_local_data_ptr
+	;
+view_name: VAR_NAME STRING_ARG
+	{
+		OUTYY(("P(name:%s)\n", $2));
+		if(cfg_parser->view_cfg->name != NULL) {
+			yyerror("view name override, there must be one "
+				"name for one view");
+			free(cfg_parser->view_cfg->name);
+		}
+		cfg_parser->view_cfg->name = $2;
+	}
+	;
+view_first: VAR_VIEW_FIRST yes_or_no
+	{
+		OUTYY(("P(view-first:%u)\n", $2));
+		cfg_parser->view_cfg->isfirst = $2;
+	}
 	;
 authstart: VAR_AUTH_ZONE
 	{
@@ -2360,102 +2404,6 @@ auth_fallback_enabled: VAR_FALLBACK_ENABLED yes_or_no
 	{
 		OUTYY(("P(fallback-enabled:%u)\n", $2));
 		cfg_parser->cfg->auths->fallback_enabled = $2;
-	}
-	;
-view_name: VAR_NAME STRING_ARG
-	{
-		OUTYY(("P(name:%s)\n", $2));
-		if(cfg_parser->cfg->views->name)
-			yyerror("view name override, there must be one "
-				"name for one view");
-		free(cfg_parser->cfg->views->name);
-		cfg_parser->cfg->views->name = $2;
-	}
-	;
-view_local_zone: VAR_LOCAL_ZONE STRING_ARG STRING_ARG
-	{
-		OUTYY(("P(view_local_zone:%s %s)\n", $2, $3));
-		if(strcmp($3, "static")!=0 && strcmp($3, "deny")!=0 &&
-		   strcmp($3, "refuse")!=0 && strcmp($3, "redirect")!=0 &&
-		   strcmp($3, "transparent")!=0 && strcmp($3, "nodefault")!=0
-		   && strcmp($3, "typetransparent")!=0
-		   && strcmp($3, "always_transparent")!=0
-		   && strcmp($3, "always_refuse")!=0
-		   && strcmp($3, "always_nxdomain")!=0
-		   && strcmp($3, "noview")!=0
-		   && strcmp($3, "inform")!=0 && strcmp($3, "inform_deny")!=0) {
-			yyerror("local-zone type: expected static, deny, "
-				"refuse, redirect, transparent, "
-				"typetransparent, inform, inform_deny, "
-				"always_transparent, always_refuse, "
-				"always_nxdomain, noview or nodefault");
-			free($2);
-			free($3);
-		} else if(strcmp($3, "nodefault")==0) {
-			if(!cfg_strlist_insert(&cfg_parser->cfg->views->
-				local_zones_nodefault, $2))
-				fatal_exit("out of memory adding local-zone");
-			free($3);
-#ifdef USE_IPSET
-		} else if(strcmp($3, "ipset")==0) {
-			if(!cfg_strlist_insert(&cfg_parser->cfg->views->
-				local_zones_ipset, $2))
-				fatal_exit("out of memory adding local-zone");
-			free($3);
-#endif
-		} else {
-			if(!cfg_str2list_insert(
-				&cfg_parser->cfg->views->local_zones,
-				$2, $3))
-				fatal_exit("out of memory adding local-zone");
-		}
-	}
-	;
-view_response_ip: VAR_RESPONSE_IP STRING_ARG STRING_ARG
-	{
-		OUTYY(("P(view_response_ip:%s %s)\n", $2, $3));
-		validate_respip_action($3);
-		if(!cfg_str2list_insert(
-			&cfg_parser->cfg->views->respip_actions, $2, $3))
-			fatal_exit("out of memory adding per-view "
-				"response-ip action");
-	}
-	;
-view_response_ip_data: VAR_RESPONSE_IP_DATA STRING_ARG STRING_ARG
-	{
-		OUTYY(("P(view_response_ip_data:%s)\n", $2));
-		if(!cfg_str2list_insert(
-			&cfg_parser->cfg->views->respip_data, $2, $3))
-			fatal_exit("out of memory adding response-ip-data");
-	}
-	;
-view_local_data: VAR_LOCAL_DATA STRING_ARG
-	{
-		OUTYY(("P(view_local_data:%s)\n", $2));
-		if(!cfg_strlist_insert(&cfg_parser->cfg->views->local_data, $2)) {
-			fatal_exit("out of memory adding local-data");
-		}
-	}
-	;
-view_local_data_ptr: VAR_LOCAL_DATA_PTR STRING_ARG
-	{
-		char* ptr;
-		OUTYY(("P(view_local_data_ptr:%s)\n", $2));
-		ptr = cfg_ptr_reverse($2);
-		free($2);
-		if(ptr) {
-			if(!cfg_strlist_insert(&cfg_parser->cfg->views->
-				local_data, ptr))
-				fatal_exit("out of memory adding local-data");
-		} else {
-			yyerror("local-data-ptr could not be reversed");
-		}
-	}
-	;
-view_first: VAR_VIEW_FIRST yes_or_no
-	{
-		OUTYY(("P(view-first:%u)\n", $2));
-		cfg_parser->cfg->views->isfirst = $2;
 	}
 	;
 rcstart: VAR_REMOTE_CONTROL

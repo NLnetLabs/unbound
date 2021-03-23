@@ -428,7 +428,7 @@ respip_views_apply_cfg(struct views* vs, struct config_file* cfg,
 		  * with respip action, we're checking for both here because
 		  * we want to catch the case where the respip action is missing
 		  * while the data is present */
-		if(!cv->respip_actions && !cv->respip_data)
+		if(!cv->cfg_view.respip_actions && !cv->cfg_view.respip_data)
 			continue;
 
 		if(!(v = views_find_view(vs, cv->name, 1))) {
@@ -444,7 +444,7 @@ respip_views_apply_cfg(struct views* vs, struct config_file* cfg,
 			}
 		}
 		ret = respip_set_apply_cfg(v->respip_set, NULL, 0, NULL,
-			cv->respip_actions, cv->respip_data);
+			cv->cfg_view.respip_actions, cv->cfg_view.respip_data);
 		lock_rw_unlock(&v->lock);
 		if(!ret) {
 			log_err("Error while applying respip configuration "
@@ -453,8 +453,8 @@ respip_views_apply_cfg(struct views* vs, struct config_file* cfg,
 		}
 		*have_view_respip_cfg = (*have_view_respip_cfg ||
 			v->respip_set->ip_tree.count);
-		cv->respip_actions = NULL;
-		cv->respip_data = NULL;
+		cv->cfg_view.respip_actions = NULL;
+		cv->cfg_view.respip_data = NULL;
 	}
 	return 1;
 }

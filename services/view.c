@@ -157,16 +157,16 @@ views_apply_cfg(struct views* vs, struct config_file* cfg)
 		if(!(v = views_enter_view_name(vs, cv->name)))
 			return 0;
 		v->isfirst = cv->isfirst;
-		if(cv->local_zones || cv->local_data) {
+		if(cv->cfg_view.local_zones || cv->cfg_view.local_data) {
 			if(!(v->local_zones = local_zones_create())){
 				lock_rw_unlock(&v->lock);
 				return 0;
 			}
 			memset(&lz_cfg, 0, sizeof(lz_cfg));
-			lz_cfg.local_zones = cv->local_zones;
-			lz_cfg.local_data = cv->local_data;
+			lz_cfg.local_zones = cv->cfg_view.local_zones;
+			lz_cfg.local_data = cv->cfg_view.local_data;
 			lz_cfg.local_zones_nodefault =
-				cv->local_zones_nodefault;
+				cv->cfg_view.local_zones_nodefault;
 			if(v->isfirst) {
 				/* Do not add defaults to view-specific
 				 * local-zone when global local zone will be
@@ -176,7 +176,7 @@ views_apply_cfg(struct views* vs, struct config_file* cfg)
 				/* Add nodefault zones to list of zones to add,
 				 * so they will be used as if they are
 				 * configured as type transparent */
-				for(nd = cv->local_zones_nodefault; nd;
+				for(nd = cv->cfg_view.local_zones_nodefault; nd;
 					nd = nd->next) {
 					char* nd_str, *nd_type;
 					nd_str = strdup(nd->str);
@@ -210,9 +210,9 @@ views_apply_cfg(struct views* vs, struct config_file* cfg)
 			/* local_zones, local_zones_nodefault and local_data 
 			 * are free'd from config_view by local_zones_apply_cfg.
 			 * Set pointers to NULL. */
-			cv->local_zones = NULL;
-			cv->local_data = NULL;
-			cv->local_zones_nodefault = NULL;
+			cv->cfg_view.local_zones = NULL;
+			cv->cfg_view.local_data = NULL;
+			cv->cfg_view.local_zones_nodefault = NULL;
 		}
 		lock_rw_unlock(&v->lock);
 	}

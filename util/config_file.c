@@ -371,6 +371,59 @@ error_exit:
 	return NULL;
 }
 
+struct config_view*
+config_view_create(struct config_file* server)
+{
+	struct config_view* view;
+
+	if ((view = calloc(1, sizeof(*view))) != NULL) {
+		// Copy over values from the server configuration that may be set
+		// in the view clause but should be inherited, e.g., prefetch. Other
+		// view configuration values are set to zero (NULL) to indicate they
+		// weren't set in the view declaration.
+
+		view->cfg_view.prefetch = server->prefetch;
+	}
+
+	return (view);
+}
+
+static void
+config_reverse_strlist(struct config_strlist** listp)
+{
+	struct config_strlist* lp = *listp;
+
+	// Don't bother reversing if the list is empty or only has one element
+
+	if (lp != NULL && lp->next != NULL) {
+		struct config_strlist* rp = NULL;
+		struct config_strlist* np;
+
+		do {
+			np = lp->next;
+			lp->next = rp;
+			rp = lp;
+		} while ((lp = np) != NULL);
+
+		*listp = rp;
+	}
+}
+
+int
+config_view_validate(struct config_view* view)
+{
+	if (view == NULL || view->name == NULL) {
+		return (-1);
+	}
+
+	// String lists in the parser are built in reverse order - fix than
+	// now
+
+	config_reverse_strlist(&view->match_clients);
+	config_reverse_strlist(&view->match_destinations);
+	return (0);
+}
+
 struct config_file* config_create_forlib(void)
 {
 	struct config_file* cfg = config_create();
@@ -1232,11 +1285,14 @@ static void
 create_cfg_parser(struct config_file* cfg, char* filename, const char* chroot)
 {
 	static struct config_parser_state st;
+
 	cfg_parser = &st;
 	cfg_parser->filename = filename;
 	cfg_parser->line = 1;
 	cfg_parser->errors = 0;
 	cfg_parser->cfg = cfg;
+	cfg_parser->server_cfg = cfg;
+	cfg_parser->view_cfg = NULL;
 	cfg_parser->chroot = chroot;
 	init_cfg_parse();
 }
@@ -1435,12 +1491,12 @@ config_delview(struct config_view* p)
 {
 	if(!p) return;
 	free(p->name);
-	config_deldblstrlist(p->local_zones);
-	config_delstrlist(p->local_zones_nodefault);
+	config_deldblstrlist(p->cfg_view.local_zones);
+	config_delstrlist(p->cfg_view.local_zones_nodefault);
 #ifdef USE_IPSET
-	config_delstrlist(p->local_zones_ipset);
+	config_delstrlist(p->cfg_view.local_zones_ipset);
 #endif
-	config_delstrlist(p->local_data);
+	config_delstrlist(p->cfg_view.local_data);
 	free(p);
 }
 

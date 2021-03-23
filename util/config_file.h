@@ -737,23 +737,15 @@ struct config_view {
 	struct config_view* next;
 	/** view name */
 	char* name;
-	/** local zones */
-	struct config_str2list* local_zones;
-	/** local data RRs */
-	struct config_strlist* local_data;
-	/** local zones nodefault list */
-	struct config_strlist* local_zones_nodefault;
-#ifdef USE_IPSET
-	/** local zones ipset list */
-	struct config_strlist* local_zones_ipset;
-#endif
+	/** List of specifcations to match on clients */
+	struct config_strlist* match_clients;
+	/** List of specifcations to match on destination */
+	struct config_strlist* match_destinations;
 	/** Fallback to global local_zones when there is no match in the view
 	 * view specific tree. 1 for yes, 0 for no */	
 	int isfirst;
-	/** predefined actions for particular IP address responses */
-	struct config_str2list* respip_actions;
-	/** data complementing the 'redirect' response IP actions */
-	struct config_str2list* respip_data;
+	/** Underlying configuration file */
+	struct config_file cfg_view;
 };
 
 /**
@@ -811,6 +803,18 @@ struct config_strbytelist {
  * @return: the new structure or NULL on memory error.
  */
 struct config_file* config_create(void);
+
+/**
+ * Create a configuration view structure based on the specified configuration.
+ * @return: the new structure or NULL on memory error.
+ */
+struct config_view* config_view_create(struct config_file *svr_cfg);
+
+/**
+ * Validate a configuration view structure.
+ * @return: the new structure or NULL on memory error.
+ */
+int config_view_validate(struct config_view *view);
 
 /**
  * Create config file structure for library use. Filled with default values.
@@ -1263,6 +1267,10 @@ struct config_parser_state {
 	struct config_file* cfg;
 	/** the current chroot dir (or NULL if none) */
 	const char* chroot;
+	/** the server-level configuration */
+	struct config_file* server_cfg;
+	/** the current view clause being parsed */
+	struct config_view* view_cfg;
 };
 
 /** global config parser object used during config parsing */
