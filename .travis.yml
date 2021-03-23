@@ -15,8 +15,7 @@ addons:
       - openssl
       - libevent
       - expat
-    #homebrew hangs when updates are enabled. So it is kept off.
-    #update: true
+    update: true
 
 jobs:
   include:
@@ -155,7 +154,6 @@ jobs:
         - IOS_SDK=iPhoneOS
         - IOS_CPU=arm64
         - IOS_PREFIX="$HOME/$IOS_SDK-$IOS_CPU"
-        - HOMEBREW_NO_AUTO_UPDATE=1
 #    - os: osx
 #      osx_image: xcode10
 #      name: Apple TV on iOS, arm64
