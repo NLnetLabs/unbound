@@ -65,7 +65,7 @@ jobs:
       env:
         - TEST_OSX=yes
         - TEST_LIBEVENT=yes
-        - CONFIG_OPTS="--with-ssl=/usr/local/opt/openssl --with-libevent=/usr/local/opt/libevent --with-libexpat=/usr/local/opt/expat"
+        - CONFIG_OPTS="--disable-flto --with-ssl=/usr/local/opt/openssl --with-libevent=/usr/local/opt/libevent --with-libexpat=/usr/local/opt/expat"
         - HOMEBREW_NO_AUTO_UPDATE=1
     - os: linux
       name: UBsan, GCC on Linux, Amd64
@@ -363,7 +363,7 @@ script:
       make -j 2
       make install
     elif [ "$TEST_OSX" = "yes" ]; then
-      ./configure --enable-debug --disable-flto --with-ssl=/usr/local/opt/openssl
+      ./configure ${CONFIG_OPTS}
       make -j 2
       make test
       if [ "$TEST_ANALYZER" = "yes" ]; then
