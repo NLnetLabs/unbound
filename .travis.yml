@@ -15,7 +15,8 @@ addons:
       - openssl
       - libevent
       - expat
-    update: true
+    # homebrew update takes 20min or hangs, so disable update
+    #update: true
 
 jobs:
   include:
@@ -33,6 +34,7 @@ jobs:
         - CONFIG_OPTS="--enable-debug --disable-flto"
         - TEST_ANALYZER=yes
     - os: osx
+      osx_image: xcode12.2
       name: Clang on OS X, Amd64, clang-analysis
       compiler: clang
       arch: amd64
@@ -40,6 +42,7 @@ jobs:
         - TEST_OSX=yes
         - CONFIG_OPTS="--enable-debug --disable-flto --with-ssl=/usr/local/opt/openssl"
         - TEST_ANALYZER=yes
+        - HOMEBREW_NO_AUTO_UPDATE=1
     - os: linux
       name: Libevent, GCC on Linux, Amd64
       compiler: gcc
@@ -55,6 +58,7 @@ jobs:
         - TEST_LIBEVENT=yes
         - CONFIG_OPTS="--with-libevent"
     - os: osx
+      osx_image: xcode12.2
       name: Libevent, Clang on OS X, Amd64
       compiler: clang
       arch: amd64
@@ -62,6 +66,7 @@ jobs:
         - TEST_OSX=yes
         - TEST_LIBEVENT=yes
         - CONFIG_OPTS="--with-ssl=/usr/local/opt/openssl --with-libevent=/usr/local/opt/libevent"
+        - HOMEBREW_NO_AUTO_UPDATE=1
     - os: linux
       name: UBsan, GCC on Linux, Amd64
       compiler: gcc
@@ -143,6 +148,7 @@ jobs:
 #        - IOS_SDK=iPhoneOS
 #        - IOS_CPU=armv7s
 #        - IOS_PREFIX="$HOME/$IOS_SDK-$IOS_CPU"
+#        - HOMEBREW_NO_AUTO_UPDATE=1
     - os: osx
       osx_image: xcode12.2
       name: Apple iPhone on iOS, arm64
@@ -154,6 +160,7 @@ jobs:
         - IOS_SDK=iPhoneOS
         - IOS_CPU=arm64
         - IOS_PREFIX="$HOME/$IOS_SDK-$IOS_CPU"
+        - HOMEBREW_NO_AUTO_UPDATE=1
 #    - os: osx
 #      osx_image: xcode10
 #      name: Apple TV on iOS, arm64
@@ -165,6 +172,7 @@ jobs:
 #        - IOS_SDK=AppleTVOS
 #        - IOS_CPU=arm64
 #        - IOS_PREFIX="$HOME/$IOS_SDK-$IOS_CPU"
+#        - HOMEBREW_NO_AUTO_UPDATE=1
 #    - os: osx
 #      osx_image: xcode10
 #      name: Apple Watch on iOS, armv7
@@ -176,6 +184,7 @@ jobs:
 #        - IOS_SDK=WatchOS
 #        - IOS_CPU=armv7k
 #        - IOS_PREFIX="$HOME/$IOS_SDK-$IOS_CPU"
+#        - HOMEBREW_NO_AUTO_UPDATE=1
 #    - os: osx
 #      osx_image: xcode10
 #      name: iPhoneSimulator on OS X, i386
@@ -186,6 +195,7 @@ jobs:
 #        - IOS_CPU=i386
 #        - IOS_SDK=iPhoneSimulator
 #        - IOS_PREFIX="$HOME/$IOS_SDK-$IOS_CPU"
+#        - HOMEBREW_NO_AUTO_UPDATE=1
 #    - os: osx
 #      osx_image: xcode10
 #      name: iPhoneSimulator on OS X, x86_64
@@ -196,6 +206,7 @@ jobs:
 #        - IOS_CPU=x86_64
 #        - IOS_SDK=iPhoneSimulator
 #        - IOS_PREFIX="$HOME/$IOS_SDK-$IOS_CPU"
+#        - HOMEBREW_NO_AUTO_UPDATE=1
 #    - os: osx
 #      osx_image: xcode10
 #      name: AppleTVSimulator on OS X, x86_64
@@ -206,6 +217,7 @@ jobs:
 #        - IOS_CPU=x86_64
 #        - IOS_SDK=AppleTVSimulator
 #        - IOS_PREFIX="$HOME/$IOS_SDK-$IOS_CPU"
+#        - HOMEBREW_NO_AUTO_UPDATE=1
 #    - os: osx
 #      osx_image: xcode10
 #      name: WatchSimulator on OS X, i386
@@ -216,6 +228,7 @@ jobs:
 #        - IOS_CPU=i386
 #        - IOS_SDK=WatchSimulator
 #        - IOS_PREFIX="$HOME/$IOS_SDK-$IOS_CPU"
+#        - HOMEBREW_NO_AUTO_UPDATE=1
     - os: linux
       name: Android armv7a, Linux, Amd64
       compiler: clang
