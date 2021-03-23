@@ -49,13 +49,12 @@ jobs:
         - TEST_LIBEVENT=yes
         - CONFIG_OPTS="--with-libevent"
     - os: linux
-      name: Libevent, Clang on Linux, Amd64, clang-analysis
+      name: Libevent, Clang on Linux, Amd64
       compiler: clang
       arch: amd64
       env:
         - TEST_LIBEVENT=yes
         - CONFIG_OPTS="--with-libevent"
-        - TEST_ANALYZER=yes
     - os: osx
       name: Libevent, Clang on OS X, Amd64
       compiler: clang
@@ -134,19 +133,19 @@ jobs:
       dist: bionic
       env:
         - CONFIG_OPTS="--enable-debug --disable-flto"
+#    - os: osx
+#      osx_image: xcode10
+#      name: Apple iPhone on iOS, armv7
+#      compiler: clang
+#      env:
+#        - TEST_IOS=yes
+#        - AUTOTOOLS_HOST=armv7-apple-ios
+#        - OPENSSL_HOST=ios-cross
+#        - IOS_SDK=iPhoneOS
+#        - IOS_CPU=armv7s
+#        - IOS_PREFIX="$HOME/$IOS_SDK-$IOS_CPU"
     - os: osx
-      osx_image: xcode10
-      name: Apple iPhone on iOS, armv7
-      compiler: clang
-      env:
-        - TEST_IOS=yes
-        - AUTOTOOLS_HOST=armv7-apple-ios
-        - OPENSSL_HOST=ios-cross
-        - IOS_SDK=iPhoneOS
-        - IOS_CPU=armv7s
-        - IOS_PREFIX="$HOME/$IOS_SDK-$IOS_CPU"
-    - os: osx
-      osx_image: xcode10
+      osx_image: xcode12.2
       name: Apple iPhone on iOS, arm64
       compiler: clang
       env:
@@ -156,68 +155,68 @@ jobs:
         - IOS_SDK=iPhoneOS
         - IOS_CPU=arm64
         - IOS_PREFIX="$HOME/$IOS_SDK-$IOS_CPU"
-    - os: osx
-      osx_image: xcode10
-      name: Apple TV on iOS, arm64
-      compiler: clang
-      env:
-        - TEST_IOS=yes
-        - AUTOTOOLS_HOST=aarch64-apple-ios
-        - OPENSSL_HOST=ios64-cross
-        - IOS_SDK=AppleTVOS
-        - IOS_CPU=arm64
-        - IOS_PREFIX="$HOME/$IOS_SDK-$IOS_CPU"
-    - os: osx
-      osx_image: xcode10
-      name: Apple Watch on iOS, armv7
-      compiler: clang
-      env:
-        - TEST_IOS=yes
-        - AUTOTOOLS_HOST=armv7-apple-ios
-        - OPENSSL_HOST=ios-cross
-        - IOS_SDK=WatchOS
-        - IOS_CPU=armv7k
-        - IOS_PREFIX="$HOME/$IOS_SDK-$IOS_CPU"
-    - os: osx
-      osx_image: xcode10
-      name: iPhoneSimulator on OS X, i386
-      env:
-        - TEST_IOS=yes
-        - AUTOTOOLS_HOST=i386-apple-ios
-        - OPENSSL_HOST=iphoneos-cross
-        - IOS_CPU=i386
-        - IOS_SDK=iPhoneSimulator
-        - IOS_PREFIX="$HOME/$IOS_SDK-$IOS_CPU"
-    - os: osx
-      osx_image: xcode10
-      name: iPhoneSimulator on OS X, x86_64
-      env:
-        - TEST_IOS=yes
-        - AUTOTOOLS_HOST=x86_64-apple-ios
-        - OPENSSL_HOST=iphoneos-cross
-        - IOS_CPU=x86_64
-        - IOS_SDK=iPhoneSimulator
-        - IOS_PREFIX="$HOME/$IOS_SDK-$IOS_CPU"
-    - os: osx
-      osx_image: xcode10
-      name: AppleTVSimulator on OS X, x86_64
-      env:
-        - TEST_IOS=yes
-        - AUTOTOOLS_HOST=x86_64-apple-ios
-        - OPENSSL_HOST=iphoneos-cross
-        - IOS_CPU=x86_64
-        - IOS_SDK=AppleTVSimulator
-        - IOS_PREFIX="$HOME/$IOS_SDK-$IOS_CPU"
-    - os: osx
-      osx_image: xcode10
-      name: WatchSimulator on OS X, i386
-      env:
-        - TEST_IOS=yes
-        - AUTOTOOLS_HOST=i386-apple-ios
-        - OPENSSL_HOST=iphoneos-cross
-        - IOS_CPU=i386
-        - IOS_SDK=WatchSimulator
-        - IOS_PREFIX="$HOME/$IOS_SDK-$IOS_CPU"
+#    - os: osx
+#      osx_image: xcode10
+#      name: Apple TV on iOS, arm64
+#      compiler: clang
+#      env:
+#        - TEST_IOS=yes
+#        - AUTOTOOLS_HOST=aarch64-apple-ios
+#        - OPENSSL_HOST=ios64-cross
+#        - IOS_SDK=AppleTVOS
+#        - IOS_CPU=arm64
+#        - IOS_PREFIX="$HOME/$IOS_SDK-$IOS_CPU"
+#    - os: osx
+#      osx_image: xcode10
+#      name: Apple Watch on iOS, armv7
+#      compiler: clang
+#      env:
+#        - TEST_IOS=yes
+#        - AUTOTOOLS_HOST=armv7-apple-ios
+#        - OPENSSL_HOST=ios-cross
+#        - IOS_SDK=WatchOS
+#        - IOS_CPU=armv7k
+#        - IOS_PREFIX="$HOME/$IOS_SDK-$IOS_CPU"
+#    - os: osx
+#      osx_image: xcode10
+#      name: iPhoneSimulator on OS X, i386
+#      env:
+#        - TEST_IOS=yes
+#        - AUTOTOOLS_HOST=i386-apple-ios
+#        - OPENSSL_HOST=iphoneos-cross
+#        - IOS_CPU=i386
+#        - IOS_SDK=iPhoneSimulator
+#        - IOS_PREFIX="$HOME/$IOS_SDK-$IOS_CPU"
+#    - os: osx
+#      osx_image: xcode10
+#      name: iPhoneSimulator on OS X, x86_64
+#      env:
+#        - TEST_IOS=yes
+#        - AUTOTOOLS_HOST=x86_64-apple-ios
+#        - OPENSSL_HOST=iphoneos-cross
+#        - IOS_CPU=x86_64
+#        - IOS_SDK=iPhoneSimulator
+#        - IOS_PREFIX="$HOME/$IOS_SDK-$IOS_CPU"
+#    - os: osx
+#      osx_image: xcode10
+#      name: AppleTVSimulator on OS X, x86_64
+#      env:
+#        - TEST_IOS=yes
+#        - AUTOTOOLS_HOST=x86_64-apple-ios
+#        - OPENSSL_HOST=iphoneos-cross
+#        - IOS_CPU=x86_64
+#        - IOS_SDK=AppleTVSimulator
+#        - IOS_PREFIX="$HOME/$IOS_SDK-$IOS_CPU"
+#    - os: osx
+#      osx_image: xcode10
+#      name: WatchSimulator on OS X, i386
+#      env:
+#        - TEST_IOS=yes
+#        - AUTOTOOLS_HOST=i386-apple-ios
+#        - OPENSSL_HOST=iphoneos-cross
+#        - IOS_CPU=i386
+#        - IOS_SDK=WatchSimulator
+#        - IOS_PREFIX="$HOME/$IOS_SDK-$IOS_CPU"
     - os: linux
       name: Android armv7a, Linux, Amd64
       compiler: clang
@@ -276,22 +275,22 @@ jobs:
         - ANDROID_NDK_ROOT="$HOME/android-ndk"
 
   allow_failures:
-    - os: osx
-      name: Apple iPhone on iOS, armv7
+#    - os: osx
+#      name: Apple iPhone on iOS, armv7
     - os: osx
       name: Apple iPhone on iOS, arm64
-    - os: osx
-      name: Apple TV on iOS, arm64
-    - os: osx
-      name: Apple Watch on iOS, armv7
-    - os: osx
-      name: iPhoneSimulator on OS X, i386
-    - os: osx
-      name: iPhoneSimulator on OS X, x86_64
-    - os: osx
-      name: AppleTVSimulator on OS X, x86_64
-    - os: osx
-      name: WatchSimulator on OS X, i386
+#    - os: osx
+#      name: Apple TV on iOS, arm64
+#    - os: osx
+#      name: Apple Watch on iOS, armv7
+#    - os: osx
+#      name: iPhoneSimulator on OS X, i386
+#    - os: osx
+#      name: iPhoneSimulator on OS X, x86_64
+#    - os: osx
+#      name: AppleTVSimulator on OS X, x86_64
+#    - os: osx
+#      name: WatchSimulator on OS X, i386
     - os: linux
       name: Android armv7a, Linux, Amd64
     - os: linux
