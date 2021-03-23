@@ -27,14 +27,14 @@ jobs:
       env:
         - CONFIG_OPTS="--enable-debug --disable-flto"
     - os: linux
-      name: Clang on Linux, Amd64
+      name: Clang on Linux, Amd64, clang-analysis
       compiler: clang
       arch: amd64
       env:
         - CONFIG_OPTS="--enable-debug --disable-flto"
         - TEST_ANALYZER=yes
     - os: osx
-      name: Clang on OS X, Amd64
+      name: Clang on OS X, Amd64, clang-analysis
       compiler: clang
       arch: amd64
       env:
@@ -49,7 +49,7 @@ jobs:
         - TEST_LIBEVENT=yes
         - CONFIG_OPTS="--with-libevent"
     - os: linux
-      name: Libevent, Clang on Linux, Amd64
+      name: Libevent, Clang on Linux, Amd64, clang-analysis
       compiler: clang
       arch: amd64
       env:

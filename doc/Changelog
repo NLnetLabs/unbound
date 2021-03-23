@@ -1,3 +1,9 @@
+23 March 2021: Wouter
+	- Travis enable all tests again. Clang analyzer only a couple times,
+	  when there is a difference. homebrew updates disabled, so it does
+	  not hang. removed trailing slashes from configure paths. Moved iOS
+	  tests to allow-failure.
+
 22 March 2021: George
 	- Fix unused-function warning when compiling with --enable-dnscrypt.
 	- Fix for #367: fix memory leak when cannot bind to listening port.
