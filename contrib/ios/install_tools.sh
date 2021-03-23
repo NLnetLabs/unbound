@@ -6,4 +6,5 @@
 #brew update 1>/dev/null
 echo "Installing tools"
 # already installed are: autoconf automake libtool pkg-config
-brew install curl perl 1>/dev/null
+#brew install curl perl 1>/dev/null
+HOMEBREW_NO_AUTO_UPDATE=1 brew install curl perl 1>/dev/null

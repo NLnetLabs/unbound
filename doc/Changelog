@@ -3,6 +3,9 @@
 	  when there is a difference. homebrew updates disabled, so it does
 	  not hang. removed trailing slashes from configure paths. Moved iOS
 	  tests to allow-failure.
+	- travis, analyzer disabled on test without debug, that does not
+	  run anway.  Turn off failing tests except one.  Update iOS test
+	  to xcode image 12.2.
 
 22 March 2021: George
 	- Fix unused-function warning when compiling with --enable-dnscrypt.
