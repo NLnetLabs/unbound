@@ -331,20 +331,22 @@ script:
     elif [ "$TEST_ASAN" = "yes" ]; then
       export CFLAGS="-DNDEBUG -g2 -O3 -fsanitize=address"
     fi
+  - |
     if [ "$TEST_IOS" = "yes" ]; then
       export AUTOTOOLS_BUILD="$(./config.guess)"
       export PKG_CONFIG_PATH="$IOS_PREFIX/lib/pkgconfig"
       source ./contrib/ios/setenv_ios.sh
       ./contrib/ios/install_openssl.sh
       ./contrib/ios/install_expat.sh
-      export CFLAGS="\
+      export CONFIG_OPTS="\
         --build=\"$AUTOTOOLS_BUILD\" --host=\"$AUTOTOOLS_HOST\" \
         --prefix=\"$IOS_PREFIX\" \
         --with-ssl=\"$IOS_PREFIX\" --disable-gost \
         --with-libexpat=\"$IOS_PREFIX\" "
-      MAKE_TEST=no
-      TEST_INSTALL=yes
+      export MAKE_TEST=no
+      export TEST_INSTALL=yes
     fi
+  - |
     if [ "$TEST_ANDROID" = "yes" ]; then
       export AUTOTOOLS_BUILD="$(./config.guess)"
       export PKG_CONFIG_PATH="$ANDROID_PREFIX/lib/pkgconfig"
@@ -352,22 +354,25 @@ script:
       source ./contrib/android/setenv_android.sh
       ./contrib/android/install_openssl.sh
       ./contrib/android/install_expat.sh
-      export CFLAGS="\
+      export CONFIG_OPTS="\
         --build=\"$AUTOTOOLS_BUILD\" --host=\"$AUTOTOOLS_HOST\" \
         --prefix=\"$ANDROID_PREFIX\" \
         --with-ssl=\"$ANDROID_PREFIX\" --disable-gost \
         --with-libexpat=\"$ANDROID_PREFIX\" "
-      MAKE_TEST=no
-      TEST_INSTALL=yes
+      export MAKE_TEST=no
+      export TEST_INSTALL=yes
     fi
-    ./configure ${CONFIG_OPTS}
-    make -j 2
+  - ./configure ${CONFIG_OPTS}
+  - make -j 2
+  - |
     if [ "$MAKE_TEST" = "yes" ]; then
       make test
     fi
+  - |
     if [ "$TEST_INSTALL" = "yes" ]; then
       make install
     fi
+  - |
     if [ "$TEST_ANALYZER" = "yes" ]; then
       (cd testdata/clang-analysis.tdir; bash clang-analysis.test)
     fi
