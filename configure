@@ -17232,7 +17232,7 @@ $as_echo "#define WITH_DYNLIBMODULE 1" >>confdefs.h
 
   WITH_DYNLIBMODULE=yes
 
-  DYNLIBMOD_OBJ="dynlibmod.lo"
+  DYNLIBMOD_OBJ="dynlibmod.lo dnsmessage.lo"
 
   DYNLIBMOD_HEADER='$(srcdir)/dynlibmod/dynlibmod.h'
 
