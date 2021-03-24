@@ -407,7 +407,7 @@ AC_CHECK_HEADERS([net/if.h],,, [
 ])
 
 # Check for Apple header. This uncovers TARGET_OS_IPHONE, TARGET_OS_TV or TARGET_OS_WATCH
-AC_CHECK_HEADERS([TargetConditionals.h])
+AC_CHECK_HEADERS([TargetConditionals.h],,, [AC_INCLUDES_DEFAULT])
 
 # check for types.  
 # Using own tests for int64* because autoconf builtin only give 32bit.

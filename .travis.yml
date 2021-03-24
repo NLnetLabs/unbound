@@ -327,7 +327,7 @@ script:
   - |
     export MAKE_TEST="yes"
     if [ "$TEST_UBSAN" = "yes" ]; then
-      export CFLAGS="-DNDEBUG -g2 -O3 -fsanitize=undefined -fno-sanitize-recover"
+      export CFLAGS="-DNDEBUG -g2 -O3 -fsanitize=undefined -fno-sanitize-recover=all"
     elif [ "$TEST_ASAN" = "yes" ]; then
       export CFLAGS="-DNDEBUG -g2 -O3 -fsanitize=address"
     fi

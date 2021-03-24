@@ -2,6 +2,8 @@
 	- Fix deprecation test to work for iOS TVOS and WatchOS, it uses
 	  CFLAGS and CPPFLAGS and also checks if the item is unavailable.
 	- Travis, fix script to fail when tasks fail.
+	- Travis, fix warning in ubsan compile.
+	- Fix configure Targetconfiditionals.h header check, to use compile.
 
 23 March 2021: Wouter
 	- Travis enable all tests again. Clang analyzer only a couple times,

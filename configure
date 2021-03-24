@@ -14793,7 +14793,8 @@ done
 # Check for Apple header. This uncovers TARGET_OS_IPHONE, TARGET_OS_TV or TARGET_OS_WATCH
 for ac_header in TargetConditionals.h
 do :
-  ac_fn_c_check_header_mongrel "$LINENO" "TargetConditionals.h" "ac_cv_header_TargetConditionals_h" "$ac_includes_default"
+  ac_fn_c_check_header_compile "$LINENO" "TargetConditionals.h" "ac_cv_header_TargetConditionals_h" "$ac_includes_default
+"
 if test "x$ac_cv_header_TargetConditionals_h" = xyes; then :
   cat >>confdefs.h <<_ACEOF
 #define HAVE_TARGETCONDITIONALS_H 1
