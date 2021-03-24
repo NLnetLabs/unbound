@@ -20152,10 +20152,10 @@ echo '
 ' >conftest.c
 echo 'void f(){ (void)daemon(0, 0); }' >>conftest.c
 echo "deprecation test for daemon results in"
-echo "`$CC -c conftest.c 2>&1 `"
+echo "`$CC $CPPFLAGS $CFLAGS -c conftest.c 2>&1 `"
 echo "and from the commandline"
-$CC -c conftest.c
-if test -z "`$CC -c conftest.c 2>&1 | grep deprecated`"; then
+$CC $CPPFLAGS $CFLAGS -c conftest.c
+if test -z "`$CC $CPPFLAGS $CFLAGS -c conftest.c 2>&1 | grep deprecated`"; then
 eval "cv_cc_deprecated_$cache=no"
 else
 eval "cv_cc_deprecated_$cache=yes"
