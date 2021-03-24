@@ -343,6 +343,7 @@ script:
         --prefix=\"$IOS_PREFIX\" \
         --with-ssl=\"$IOS_PREFIX\" --disable-gost \
         --with-libexpat=\"$IOS_PREFIX\" "
+      echo CONFIG_OPTS ${CONFIG_OPTS}
       export MAKE_TEST=no
       export TEST_INSTALL=yes
     fi
@@ -359,6 +360,7 @@ script:
         --prefix=\"$ANDROID_PREFIX\" \
         --with-ssl=\"$ANDROID_PREFIX\" --disable-gost \
         --with-libexpat=\"$ANDROID_PREFIX\" "
+      echo CONFIG_OPTS ${CONFIG_OPTS}
       export MAKE_TEST=no
       export TEST_INSTALL=yes
     fi
