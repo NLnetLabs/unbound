@@ -1780,6 +1780,8 @@ if test "$found_libhiredis" = "yes"; then enable_cachedb="yes"; fi
 case "$enable_cachedb" in
     yes)
     	AC_DEFINE([USE_CACHEDB], [1], [Define to 1 to use cachedb support])
+	AC_SUBST([CACHEDB_SRC], ["cachedb/cachedb.c cachedb/redis.c"])
+	AC_SUBST([CACHEDB_OBJ], ["cachedb.lo redis.lo"])
     	;;
     no|*)
     	# nothing

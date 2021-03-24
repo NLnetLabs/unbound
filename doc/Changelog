@@ -4,6 +4,7 @@
 	- Travis, fix script to fail when tasks fail.
 	- Travis, fix warning in ubsan compile.
 	- Fix configure Targetconfiditionals.h header check, to use compile.
+	- Fix that cachedb does not produce empty object files when disabled.
 
 23 March 2021: Wouter
 	- Travis enable all tests again. Clang analyzer only a couple times,

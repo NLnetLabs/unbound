@@ -643,6 +643,8 @@ IPSET_OBJ
 IPSET_SRC
 IPSECMOD_HEADER
 IPSECMOD_OBJ
+CACHEDB_OBJ
+CACHEDB_SRC
 DNSCRYPT_OBJ
 DNSCRYPT_SRC
 ENABLE_DNSCRYPT
@@ -21512,6 +21514,10 @@ case "$enable_cachedb" in
     yes)
 
 $as_echo "#define USE_CACHEDB 1" >>confdefs.h
+
+	CACHEDB_SRC="cachedb/cachedb.c cachedb/redis.c"
+
+	CACHEDB_OBJ="cachedb.lo redis.lo"
 
     	;;
     no|*)
