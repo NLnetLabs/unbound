@@ -2,7 +2,8 @@
 # Copyright 2009, Wouter Wijngaards, NLnet Labs.   
 # BSD licensed.
 #
-# Version 37
+# Version 38
+# 2021-03-24 fix ACX_FUNC_DEPRECATED to use CPPFLAGS and CFLAGS.
 # 2021-01-05 fix defun for aclocal
 # 2021-01-05 autoconf 2.70 autoupdate and fixes, no AC_TRY_COMPILE
 # 2020-08-24 Use EVP_sha256 instead of HMAC_Update (for openssl-3.0.0).
@@ -888,10 +889,6 @@ AC_CACHE_VAL(cv_cc_deprecated_$cache,
 [
 echo '$3' >conftest.c
 echo 'void f(){ $2 }' >>conftest.c
-echo "deprecation test for $1 results in"
-echo "`$CC $CPPFLAGS $CFLAGS -c conftest.c 2>&1 `"
-echo "and from the commandline"
-$CC $CPPFLAGS $CFLAGS -c conftest.c
 if test -z "`$CC $CPPFLAGS $CFLAGS -c conftest.c 2>&1 | grep -e deprecated -e unavailable`"; then
 eval "cv_cc_deprecated_$cache=no"
 else
