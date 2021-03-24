@@ -325,55 +325,49 @@ before_script:
 # https://docs.travis-ci.com/user/job-lifecycle/ in the Travis docs.
 script:
   - |
+    export MAKE_TEST="yes"
     if [ "$TEST_UBSAN" = "yes" ]; then
       export CFLAGS="-DNDEBUG -g2 -O3 -fsanitize=undefined -fno-sanitize-recover"
-      ./configure
-      make -j 2
-      make test
     elif [ "$TEST_ASAN" = "yes" ]; then
       export CFLAGS="-DNDEBUG -g2 -O3 -fsanitize=address"
-      ./configure
-      make -j 2
-      make test
-    elif [ "$TEST_IOS" = "yes" ]; then
+    fi
+    if [ "$TEST_IOS" = "yes" ]; then
       export AUTOTOOLS_BUILD="$(./config.guess)"
       export PKG_CONFIG_PATH="$IOS_PREFIX/lib/pkgconfig"
       source ./contrib/ios/setenv_ios.sh
       ./contrib/ios/install_openssl.sh
       ./contrib/ios/install_expat.sh
-      ./configure \
-        --build="$AUTOTOOLS_BUILD" --host="$AUTOTOOLS_HOST" \
-        --prefix="$IOS_PREFIX" \
-        --with-ssl="$IOS_PREFIX" --disable-gost \
-        --with-libexpat="$IOS_PREFIX";
-      make -j 2
-      make install
-    elif [ "$TEST_ANDROID" = "yes" ]; then
+      export CFLAGS="\
+        --build=\"$AUTOTOOLS_BUILD\" --host=\"$AUTOTOOLS_HOST\" \
+        --prefix=\"$IOS_PREFIX\" \
+        --with-ssl=\"$IOS_PREFIX\" --disable-gost \
+        --with-libexpat=\"$IOS_PREFIX\" "
+      MAKE_TEST=no
+      TEST_INSTALL=yes
+    fi
+    if [ "$TEST_ANDROID" = "yes" ]; then
       export AUTOTOOLS_BUILD="$(./config.guess)"
       export PKG_CONFIG_PATH="$ANDROID_PREFIX/lib/pkgconfig"
       ./contrib/android/install_ndk.sh
       source ./contrib/android/setenv_android.sh
       ./contrib/android/install_openssl.sh
       ./contrib/android/install_expat.sh
-      ./configure \
-        --build="$AUTOTOOLS_BUILD" --host="$AUTOTOOLS_HOST" \
-        --prefix="$ANDROID_PREFIX" \
-        --with-ssl="$ANDROID_PREFIX" --disable-gost \
-        --with-libexpat="$ANDROID_PREFIX";
-      make -j 2
+      export CFLAGS="\
+        --build=\"$AUTOTOOLS_BUILD\" --host=\"$AUTOTOOLS_HOST\" \
+        --prefix=\"$ANDROID_PREFIX\" \
+        --with-ssl=\"$ANDROID_PREFIX\" --disable-gost \
+        --with-libexpat=\"$ANDROID_PREFIX\" "
+      MAKE_TEST=no
+      TEST_INSTALL=yes
+    fi
+    ./configure ${CONFIG_OPTS}
+    make -j 2
+    if [ "$MAKE_TEST" = "yes" ]; then
+      make test
+    fi
+    if [ "$TEST_INSTALL" = "yes" ]; then
       make install
-    elif [ "$TEST_OSX" = "yes" ]; then
-      ./configure ${CONFIG_OPTS}
-      make -j 2
-      make test
-      if [ "$TEST_ANALYZER" = "yes" ]; then
-        (cd testdata/clang-analysis.tdir; bash clang-analysis.test)
-      fi
-    else
-      ./configure ${CONFIG_OPTS}
-      make -j 2
-      make test
-      if [ "$TEST_ANALYZER" = "yes" ]; then
-        (cd testdata/clang-analysis.tdir; bash clang-analysis.test)
-      fi
+    fi
+    if [ "$TEST_ANALYZER" = "yes" ]; then
+      (cd testdata/clang-analysis.tdir; bash clang-analysis.test)
     fi
