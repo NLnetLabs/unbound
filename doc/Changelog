@@ -1,6 +1,7 @@
 24 March 2021: Wouter
 	- Fix deprecation test to work for iOS TVOS and WatchOS, it uses
 	  CFLAGS and CPPFLAGS and also checks if the item is unavailable.
+	- Travis, fix script to fail when tasks fail.
 
 23 March 2021: Wouter
 	- Travis enable all tests again. Clang analyzer only a couple times,

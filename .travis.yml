@@ -26,129 +26,129 @@ jobs:
       arch: amd64
       env:
         - CONFIG_OPTS="--enable-debug --disable-flto"
-#    - os: linux
-#      name: Clang on Linux, Amd64, clang-analysis
-#      compiler: clang
-#      arch: amd64
-#      env:
-#        - CONFIG_OPTS="--enable-debug --disable-flto"
-#        - TEST_ANALYZER=yes
-#    - os: osx
-#      osx_image: xcode12.2
-#      name: Clang on OS X, Amd64, clang-analysis
-#      compiler: clang
-#      arch: amd64
-#      env:
-#        - TEST_OSX=yes
-#        - CONFIG_OPTS="--enable-debug --disable-flto --with-ssl=/usr/local/opt/openssl --with-libexpat=/usr/local/opt/expat"
-#        - TEST_ANALYZER=yes
-#        - HOMEBREW_NO_AUTO_UPDATE=1
-#    - os: linux
-#      name: Libevent, GCC on Linux, Amd64
-#      compiler: gcc
-#      arch: amd64
-#      env:
-#        - TEST_LIBEVENT=yes
-#        - CONFIG_OPTS="--with-libevent"
-#    - os: linux
-#      name: Libevent, Clang on Linux, Amd64
-#      compiler: clang
-#      arch: amd64
-#      env:
-#        - TEST_LIBEVENT=yes
-#        - CONFIG_OPTS="--with-libevent"
-#    - os: osx
-#      osx_image: xcode12.2
-#      name: Libevent, Clang on OS X, Amd64
-#      compiler: clang
-#      arch: amd64
-#      env:
-#        - TEST_OSX=yes
-#        - TEST_LIBEVENT=yes
-#        - CONFIG_OPTS="--disable-flto --with-ssl=/usr/local/opt/openssl --with-libevent=/usr/local/opt/libevent --with-libexpat=/usr/local/opt/expat"
-#        - HOMEBREW_NO_AUTO_UPDATE=1
-#    - os: linux
-#      name: UBsan, GCC on Linux, Amd64
-#      compiler: gcc
-#      arch: amd64
-#      dist: bionic
-#      env:
-#        - TEST_UBSAN=yes
-#    - os: linux
-#      name: UBsan, Clang on Linux, Amd64
-#      compiler: clang
-#      arch: amd64
-#      dist: bionic
-#      env:
-#        - TEST_UBSAN=yes
-#    - os: linux
-#      name: Asan, GCC on Linux, Amd64
-#      compiler: gcc
-#      arch: amd64
-#      dist: bionic
-#      env:
-#        - TEST_ASAN=yes
-#    - os: linux
-#      name: Asan, Clang on Linux, Amd64
-#      compiler: clang
-#      arch: amd64
-#      dist: bionic
-#      env:
-#        - TEST_ASAN=yes
-#    - os: linux
-#      name: GCC on Linux, Aarch64
-#      compiler: gcc
-#      arch: arm64
-#      dist: bionic
-#      env:
-#        - CONFIG_OPTS="--enable-debug --disable-flto"
-#    - os: linux
-#      name: Clang on Linux, Aarch64
-#      compiler: clang
-#      arch: arm64
-#      dist: bionic
-#      env:
-#        - CONFIG_OPTS="--enable-debug --disable-flto"
-#    - os: linux
-#      name: GCC on Linux, PowerPC64
-#      compiler: gcc
-#      arch: ppc64le
-#      dist: bionic
-#      env:
-#        - CONFIG_OPTS="--enable-debug --disable-flto"
-#    - os: linux
-#      name: Clang on Linux, PowerPC64
-#      compiler: clang
-#      arch: ppc64le
-#      dist: bionic
-#      env:
-#        - CONFIG_OPTS="--enable-debug --disable-flto"
-#    - os: linux
-#      name: GCC on Linux, s390x
-#      compiler: gcc
-#      arch: s390x
-#      dist: bionic
-#      env:
-#        - CONFIG_OPTS="--enable-debug --disable-flto"
-#    - os: linux
-#      name: Clang on Linux, s390x
-#      compiler: clang
-#      arch: s390x
-#      dist: bionic
-#      env:
-#        - CONFIG_OPTS="--enable-debug --disable-flto"
-#    - os: osx
-#      osx_image: xcode12.2
-#      name: Apple iPhone on iOS, armv7
-#      compiler: clang
-#      env:
-#        - TEST_IOS=yes
-#        - AUTOTOOLS_HOST=armv7-apple-ios
-#        - OPENSSL_HOST=ios-cross
-#        - IOS_SDK=iPhoneOS
-#        - IOS_CPU=armv7s
-#        - IOS_PREFIX="$HOME/$IOS_SDK-$IOS_CPU"
-#        - HOMEBREW_NO_AUTO_UPDATE=1
+    - os: linux
+      name: Clang on Linux, Amd64, clang-analysis
+      compiler: clang
+      arch: amd64
+      env:
+        - CONFIG_OPTS="--enable-debug --disable-flto"
+        - TEST_ANALYZER=yes
+    - os: osx
+      osx_image: xcode12.2
+      name: Clang on OS X, Amd64, clang-analysis
+      compiler: clang
+      arch: amd64
+      env:
+        - TEST_OSX=yes
+        - CONFIG_OPTS="--enable-debug --disable-flto --with-ssl=/usr/local/opt/openssl --with-libexpat=/usr/local/opt/expat"
+        - TEST_ANALYZER=yes
+        - HOMEBREW_NO_AUTO_UPDATE=1
+    - os: linux
+      name: Libevent, GCC on Linux, Amd64
+      compiler: gcc
+      arch: amd64
+      env:
+        - TEST_LIBEVENT=yes
+        - CONFIG_OPTS="--with-libevent"
+    - os: linux
+      name: Libevent, Clang on Linux, Amd64
+      compiler: clang
+      arch: amd64
+      env:
+        - TEST_LIBEVENT=yes
+        - CONFIG_OPTS="--with-libevent"
+    - os: osx
+      osx_image: xcode12.2
+      name: Libevent, Clang on OS X, Amd64
+      compiler: clang
+      arch: amd64
+      env:
+        - TEST_OSX=yes
+        - TEST_LIBEVENT=yes
+        - CONFIG_OPTS="--disable-flto --with-ssl=/usr/local/opt/openssl --with-libevent=/usr/local/opt/libevent --with-libexpat=/usr/local/opt/expat"
+        - HOMEBREW_NO_AUTO_UPDATE=1
+    - os: linux
+      name: UBsan, GCC on Linux, Amd64
+      compiler: gcc
+      arch: amd64
+      dist: bionic
+      env:
+        - TEST_UBSAN=yes
+    - os: linux
+      name: UBsan, Clang on Linux, Amd64
+      compiler: clang
+      arch: amd64
+      dist: bionic
+      env:
+        - TEST_UBSAN=yes
+    - os: linux
+      name: Asan, GCC on Linux, Amd64
+      compiler: gcc
+      arch: amd64
+      dist: bionic
+      env:
+        - TEST_ASAN=yes
+    - os: linux
+      name: Asan, Clang on Linux, Amd64
+      compiler: clang
+      arch: amd64
+      dist: bionic
+      env:
+        - TEST_ASAN=yes
+    - os: linux
+      name: GCC on Linux, Aarch64
+      compiler: gcc
+      arch: arm64
+      dist: bionic
+      env:
+        - CONFIG_OPTS="--enable-debug --disable-flto"
+    - os: linux
+      name: Clang on Linux, Aarch64
+      compiler: clang
+      arch: arm64
+      dist: bionic
+      env:
+        - CONFIG_OPTS="--enable-debug --disable-flto"
+    - os: linux
+      name: GCC on Linux, PowerPC64
+      compiler: gcc
+      arch: ppc64le
+      dist: bionic
+      env:
+        - CONFIG_OPTS="--enable-debug --disable-flto"
+    - os: linux
+      name: Clang on Linux, PowerPC64
+      compiler: clang
+      arch: ppc64le
+      dist: bionic
+      env:
+        - CONFIG_OPTS="--enable-debug --disable-flto"
+    - os: linux
+      name: GCC on Linux, s390x
+      compiler: gcc
+      arch: s390x
+      dist: bionic
+      env:
+        - CONFIG_OPTS="--enable-debug --disable-flto"
+    - os: linux
+      name: Clang on Linux, s390x
+      compiler: clang
+      arch: s390x
+      dist: bionic
+      env:
+        - CONFIG_OPTS="--enable-debug --disable-flto"
+    - os: osx
+      osx_image: xcode12.2
+      name: Apple iPhone on iOS, armv7
+      compiler: clang
+      env:
+        - TEST_IOS=yes
+        - AUTOTOOLS_HOST=armv7-apple-ios
+        - OPENSSL_HOST=ios-cross
+        - IOS_SDK=iPhoneOS
+        - IOS_CPU=armv7s
+        - IOS_PREFIX="$HOME/$IOS_SDK-$IOS_CPU"
+        - HOMEBREW_NO_AUTO_UPDATE=1
     - os: osx
       osx_image: xcode12.2
       name: Apple iPhone on iOS, arm64
@@ -173,144 +173,144 @@ jobs:
         - IOS_CPU=arm64
         - IOS_PREFIX="$HOME/$IOS_SDK-$IOS_CPU"
         - HOMEBREW_NO_AUTO_UPDATE=1
-#    - os: osx
-#      osx_image: xcode12.2
-#      name: Apple Watch on iOS, armv7
-#      compiler: clang
-#      env:
-#        - TEST_IOS=yes
-#        - AUTOTOOLS_HOST=armv7-apple-ios
-#        - OPENSSL_HOST=ios-cross
-#        - IOS_SDK=WatchOS
-#        - IOS_CPU=armv7k
-#        - IOS_PREFIX="$HOME/$IOS_SDK-$IOS_CPU"
-#        - HOMEBREW_NO_AUTO_UPDATE=1
-#    - os: osx
-#      osx_image: xcode12.2
-#      name: iPhoneSimulator on OS X, i386
-#      env:
-#        - TEST_IOS=yes
-#        - AUTOTOOLS_HOST=i386-apple-ios
-#        - OPENSSL_HOST=iphoneos-cross
-#        - IOS_CPU=i386
-#        - IOS_SDK=iPhoneSimulator
-#        - IOS_PREFIX="$HOME/$IOS_SDK-$IOS_CPU"
-#        - HOMEBREW_NO_AUTO_UPDATE=1
-#    - os: osx
-#      osx_image: xcode12.2
-#      name: iPhoneSimulator on OS X, x86_64
-#      env:
-#        - TEST_IOS=yes
-#        - AUTOTOOLS_HOST=x86_64-apple-ios
-#        - OPENSSL_HOST=iphoneos-cross
-#        - IOS_CPU=x86_64
-#        - IOS_SDK=iPhoneSimulator
-#        - IOS_PREFIX="$HOME/$IOS_SDK-$IOS_CPU"
-#        - HOMEBREW_NO_AUTO_UPDATE=1
-#    - os: osx
-#      osx_image: xcode12.2
-#      name: AppleTVSimulator on OS X, x86_64
-#      env:
-#        - TEST_IOS=yes
-#        - AUTOTOOLS_HOST=x86_64-apple-ios
-#        - OPENSSL_HOST=iphoneos-cross
-#        - IOS_CPU=x86_64
-#        - IOS_SDK=AppleTVSimulator
-#        - IOS_PREFIX="$HOME/$IOS_SDK-$IOS_CPU"
-#        - HOMEBREW_NO_AUTO_UPDATE=1
-#    - os: osx
-#      osx_image: xcode12.2
-#      name: WatchSimulator on OS X, i386
-#      env:
-#        - TEST_IOS=yes
-#        - AUTOTOOLS_HOST=i386-apple-ios
-#        - OPENSSL_HOST=iphoneos-cross
-#        - IOS_CPU=i386
-#        - IOS_SDK=WatchSimulator
-#        - IOS_PREFIX="$HOME/$IOS_SDK-$IOS_CPU"
-#        - HOMEBREW_NO_AUTO_UPDATE=1
-#    - os: linux
-#      name: Android armv7a, Linux, Amd64
-#      compiler: clang
-#      arch: amd64
-#      dist: bionic
-#      env:
-#        - TEST_ANDROID=yes
-#        - AUTOTOOLS_HOST=armv7a-linux-androideabi
-#        - OPENSSL_HOST=android-arm
-#        - ANDROID_CPU=armv7a
-#        - ANDROID_API=23
-#        - ANDROID_PREFIX="$HOME/android$ANDROID_API-$ANDROID_CPU"
-#        - ANDROID_SDK_ROOT="$HOME/android-sdk"
-#        - ANDROID_NDK_ROOT="$HOME/android-ndk"
-#    - os: linux
-#      name: Android aarch64, Linux, Amd64
-#      compiler: clang
-#      arch: amd64
-#      dist: bionic
-#      env:
-#        - TEST_ANDROID=yes
-#        - AUTOTOOLS_HOST=aarch64-linux-android
-#        - OPENSSL_HOST=android-arm64
-#        - ANDROID_CPU=aarch64
-#        - ANDROID_API=23
-#        - ANDROID_PREFIX="$HOME/android$ANDROID_API-$ANDROID_CPU"
-#        - ANDROID_SDK_ROOT="$HOME/android-sdk"
-#        - ANDROID_NDK_ROOT="$HOME/android-ndk"
-#    - os: linux
-#      name: Android x86, Linux, Amd64
-#      compiler: clang
-#      arch: amd64
-#      dist: bionic
-#      env:
-#        - TEST_ANDROID=yes
-#        - AUTOTOOLS_HOST=i686-linux-android
-#        - OPENSSL_HOST=android-x86
-#        - ANDROID_CPU=x86
-#        - ANDROID_API=23
-#        - ANDROID_PREFIX="$HOME/android$ANDROID_API-$ANDROID_CPU"
-#        - ANDROID_SDK_ROOT="$HOME/android-sdk"
-#        - ANDROID_NDK_ROOT="$HOME/android-ndk"
-#    - os: linux
-#      name: Android x86_64, Linux, Amd64
-#      compiler: clang
-#      arch: amd64
-#      dist: bionic
-#      env:
-#        - TEST_ANDROID=yes
-#        - AUTOTOOLS_HOST=x86_64-linux-android
-#        - OPENSSL_HOST=android-x86_64
-#        - ANDROID_CPU=x86_64
-#        - ANDROID_API=23
-#        - ANDROID_PREFIX="$HOME/android$ANDROID_API-$ANDROID_CPU"
-#        - ANDROID_SDK_ROOT="$HOME/android-sdk"
-#        - ANDROID_NDK_ROOT="$HOME/android-ndk"
+    - os: osx
+      osx_image: xcode12.2
+      name: Apple Watch on iOS, armv7
+      compiler: clang
+      env:
+        - TEST_IOS=yes
+        - AUTOTOOLS_HOST=armv7-apple-ios
+        - OPENSSL_HOST=ios-cross
+        - IOS_SDK=WatchOS
+        - IOS_CPU=armv7k
+        - IOS_PREFIX="$HOME/$IOS_SDK-$IOS_CPU"
+        - HOMEBREW_NO_AUTO_UPDATE=1
+    - os: osx
+      osx_image: xcode12.2
+      name: iPhoneSimulator on OS X, i386
+      env:
+        - TEST_IOS=yes
+        - AUTOTOOLS_HOST=i386-apple-ios
+        - OPENSSL_HOST=iphoneos-cross
+        - IOS_CPU=i386
+        - IOS_SDK=iPhoneSimulator
+        - IOS_PREFIX="$HOME/$IOS_SDK-$IOS_CPU"
+        - HOMEBREW_NO_AUTO_UPDATE=1
+    - os: osx
+      osx_image: xcode12.2
+      name: iPhoneSimulator on OS X, x86_64
+      env:
+        - TEST_IOS=yes
+        - AUTOTOOLS_HOST=x86_64-apple-ios
+        - OPENSSL_HOST=iphoneos-cross
+        - IOS_CPU=x86_64
+        - IOS_SDK=iPhoneSimulator
+        - IOS_PREFIX="$HOME/$IOS_SDK-$IOS_CPU"
+        - HOMEBREW_NO_AUTO_UPDATE=1
+    - os: osx
+      osx_image: xcode12.2
+      name: AppleTVSimulator on OS X, x86_64
+      env:
+        - TEST_IOS=yes
+        - AUTOTOOLS_HOST=x86_64-apple-ios
+        - OPENSSL_HOST=iphoneos-cross
+        - IOS_CPU=x86_64
+        - IOS_SDK=AppleTVSimulator
+        - IOS_PREFIX="$HOME/$IOS_SDK-$IOS_CPU"
+        - HOMEBREW_NO_AUTO_UPDATE=1
+    - os: osx
+      osx_image: xcode12.2
+      name: WatchSimulator on OS X, i386
+      env:
+        - TEST_IOS=yes
+        - AUTOTOOLS_HOST=i386-apple-ios
+        - OPENSSL_HOST=iphoneos-cross
+        - IOS_CPU=i386
+        - IOS_SDK=WatchSimulator
+        - IOS_PREFIX="$HOME/$IOS_SDK-$IOS_CPU"
+        - HOMEBREW_NO_AUTO_UPDATE=1
+    - os: linux
+      name: Android armv7a, Linux, Amd64
+      compiler: clang
+      arch: amd64
+      dist: bionic
+      env:
+        - TEST_ANDROID=yes
+        - AUTOTOOLS_HOST=armv7a-linux-androideabi
+        - OPENSSL_HOST=android-arm
+        - ANDROID_CPU=armv7a
+        - ANDROID_API=23
+        - ANDROID_PREFIX="$HOME/android$ANDROID_API-$ANDROID_CPU"
+        - ANDROID_SDK_ROOT="$HOME/android-sdk"
+        - ANDROID_NDK_ROOT="$HOME/android-ndk"
+    - os: linux
+      name: Android aarch64, Linux, Amd64
+      compiler: clang
+      arch: amd64
+      dist: bionic
+      env:
+        - TEST_ANDROID=yes
+        - AUTOTOOLS_HOST=aarch64-linux-android
+        - OPENSSL_HOST=android-arm64
+        - ANDROID_CPU=aarch64
+        - ANDROID_API=23
+        - ANDROID_PREFIX="$HOME/android$ANDROID_API-$ANDROID_CPU"
+        - ANDROID_SDK_ROOT="$HOME/android-sdk"
+        - ANDROID_NDK_ROOT="$HOME/android-ndk"
+    - os: linux
+      name: Android x86, Linux, Amd64
+      compiler: clang
+      arch: amd64
+      dist: bionic
+      env:
+        - TEST_ANDROID=yes
+        - AUTOTOOLS_HOST=i686-linux-android
+        - OPENSSL_HOST=android-x86
+        - ANDROID_CPU=x86
+        - ANDROID_API=23
+        - ANDROID_PREFIX="$HOME/android$ANDROID_API-$ANDROID_CPU"
+        - ANDROID_SDK_ROOT="$HOME/android-sdk"
+        - ANDROID_NDK_ROOT="$HOME/android-ndk"
+    - os: linux
+      name: Android x86_64, Linux, Amd64
+      compiler: clang
+      arch: amd64
+      dist: bionic
+      env:
+        - TEST_ANDROID=yes
+        - AUTOTOOLS_HOST=x86_64-linux-android
+        - OPENSSL_HOST=android-x86_64
+        - ANDROID_CPU=x86_64
+        - ANDROID_API=23
+        - ANDROID_PREFIX="$HOME/android$ANDROID_API-$ANDROID_CPU"
+        - ANDROID_SDK_ROOT="$HOME/android-sdk"
+        - ANDROID_NDK_ROOT="$HOME/android-ndk"
 
   allow_failures:
-#    - os: osx
-#      name: Apple iPhone on iOS, armv7
+    - os: osx
+      name: Apple iPhone on iOS, armv7
     - os: osx
       name: Apple iPhone on iOS, arm64
     - os: osx
       name: Apple TV on iOS, arm64
-#    - os: osx
-#      name: Apple Watch on iOS, armv7
-#    - os: osx
-#      name: iPhoneSimulator on OS X, i386
-#    - os: osx
-#      name: iPhoneSimulator on OS X, x86_64
-#    - os: osx
-#      name: AppleTVSimulator on OS X, x86_64
-#    - os: osx
-#      name: WatchSimulator on OS X, i386
-#    - os: linux
-#      name: Android armv7a, Linux, Amd64
-#    - os: linux
-#      name: Android aarch64, Linux, Amd64
-#    - os: linux
-#      name: Android x86, Linux, Amd64
-#    - os: linux
-#      name: Android x86_64, Linux, Amd64
+    - os: osx
+      name: Apple Watch on iOS, armv7
+    - os: osx
+      name: iPhoneSimulator on OS X, i386
+    - os: osx
+      name: iPhoneSimulator on OS X, x86_64
+    - os: osx
+      name: AppleTVSimulator on OS X, x86_64
+    - os: osx
+      name: WatchSimulator on OS X, i386
+    - os: linux
+      name: Android armv7a, Linux, Amd64
+    - os: linux
+      name: Android aarch64, Linux, Amd64
+    - os: linux
+      name: Android x86, Linux, Amd64
+    - os: linux
+      name: Android x86_64, Linux, Amd64
 
 before_script:
   - |
