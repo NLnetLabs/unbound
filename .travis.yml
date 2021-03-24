@@ -339,10 +339,10 @@ script:
       ./contrib/ios/install_openssl.sh
       ./contrib/ios/install_expat.sh
       export CONFIG_OPTS="\
-        --build=\"$AUTOTOOLS_BUILD\" --host=\"$AUTOTOOLS_HOST\" \
-        --prefix=\"$IOS_PREFIX\" \
-        --with-ssl=\"$IOS_PREFIX\" --disable-gost \
-        --with-libexpat=\"$IOS_PREFIX\" "
+        --build=$AUTOTOOLS_BUILD --host=$AUTOTOOLS_HOST \
+        --prefix=$IOS_PREFIX \
+        --with-ssl=$IOS_PREFIX --disable-gost \
+        --with-libexpat=$IOS_PREFIX "
       echo CONFIG_OPTS ${CONFIG_OPTS}
       export MAKE_TEST=no
       export TEST_INSTALL=yes
@@ -356,10 +356,10 @@ script:
       ./contrib/android/install_openssl.sh
       ./contrib/android/install_expat.sh
       export CONFIG_OPTS="\
-        --build=\"$AUTOTOOLS_BUILD\" --host=\"$AUTOTOOLS_HOST\" \
-        --prefix=\"$ANDROID_PREFIX\" \
-        --with-ssl=\"$ANDROID_PREFIX\" --disable-gost \
-        --with-libexpat=\"$ANDROID_PREFIX\" "
+        --build=$AUTOTOOLS_BUILD --host=$AUTOTOOLS_HOST \
+        --prefix=$ANDROID_PREFIX \
+        --with-ssl=$ANDROID_PREFIX --disable-gost \
+        --with-libexpat=$ANDROID_PREFIX "
       echo CONFIG_OPTS ${CONFIG_OPTS}
       export MAKE_TEST=no
       export TEST_INSTALL=yes
