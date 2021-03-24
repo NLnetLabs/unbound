@@ -892,7 +892,7 @@ echo "deprecation test for $1 results in"
 echo "`$CC $CPPFLAGS $CFLAGS -c conftest.c 2>&1 `"
 echo "and from the commandline"
 $CC $CPPFLAGS $CFLAGS -c conftest.c
-if test -z "`$CC $CPPFLAGS $CFLAGS -c conftest.c 2>&1 | grep deprecated`"; then
+if test -z "`$CC $CPPFLAGS $CFLAGS -c conftest.c 2>&1 | grep -e deprecated -e unavailable`"; then
 eval "cv_cc_deprecated_$cache=no"
 else
 eval "cv_cc_deprecated_$cache=yes"
