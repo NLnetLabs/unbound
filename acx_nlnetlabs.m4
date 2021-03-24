@@ -888,6 +888,10 @@ AC_CACHE_VAL(cv_cc_deprecated_$cache,
 [
 echo '$3' >conftest.c
 echo 'void f(){ $2 }' >>conftest.c
+echo "deprecation test for $1 results in"
+echo "`$CC -c conftest.c 2>&1 `"
+echo "and from the commandline"
+$CC -c conftest.c
 if test -z "`$CC -c conftest.c 2>&1 | grep deprecated`"; then
 eval "cv_cc_deprecated_$cache=no"
 else
