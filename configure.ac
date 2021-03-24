@@ -1509,6 +1509,7 @@ AC_CHECK_FUNCS([daemon])
 if test $ac_cv_func_daemon = yes; then
 	ACX_FUNC_DEPRECATED([daemon], [(void)daemon(0, 0);], [
 #include <stdlib.h>
+#include <unistd.h>
 ])
 fi
 

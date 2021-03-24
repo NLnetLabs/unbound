@@ -20149,6 +20149,7 @@ else
 
 echo '
 #include <stdlib.h>
+#include <unistd.h>
 ' >conftest.c
 echo 'void f(){ (void)daemon(0, 0); }' >>conftest.c
 echo "deprecation test for daemon results in"
