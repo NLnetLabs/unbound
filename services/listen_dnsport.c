@@ -1166,6 +1166,7 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 		if((s = make_sock_port(SOCK_DGRAM, ifname, port, hints, 1, 
 			&noip6, rcv, snd, reuseport, transparent,
 			tcp_mss, nodelay, freebind, use_systemd, dscp, ub_sock)) == -1) {
+			freeaddrinfo(ub_sock->addr);
 			free(ub_sock);
 			if(noip6) {
 				log_warn("IPv6 protocol not available");
@@ -1176,12 +1177,14 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 		/* getting source addr packet info is highly non-portable */
 		if(!set_recvpktinfo(s, hints->ai_family)) {
 			sock_close(s);
+			freeaddrinfo(ub_sock->addr);
 			free(ub_sock);
 			return 0;
 		}
 		if(!port_insert(list, s,
 		   is_dnscrypt?listen_type_udpancil_dnscrypt:listen_type_udpancil, ub_sock)) {
 			sock_close(s);
+			freeaddrinfo(ub_sock->addr);
 			free(ub_sock);
 			return 0;
 		}
@@ -1193,6 +1196,7 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 		if((s = make_sock_port(SOCK_DGRAM, ifname, port, hints, 1, 
 			&noip6, rcv, snd, reuseport, transparent,
 			tcp_mss, nodelay, freebind, use_systemd, dscp, ub_sock)) == -1) {
+			freeaddrinfo(ub_sock->addr);
 			free(ub_sock);
 			if(noip6) {
 				log_warn("IPv6 protocol not available");
@@ -1203,6 +1207,7 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 		if(!port_insert(list, s,
 		   is_dnscrypt?listen_type_udp_dnscrypt:listen_type_udp, ub_sock)) {
 			sock_close(s);
+			freeaddrinfo(ub_sock->addr);
 			free(ub_sock);
 			return 0;
 		}
@@ -1225,6 +1230,7 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 		if((s = make_sock_port(SOCK_STREAM, ifname, port, hints, 1, 
 			&noip6, 0, 0, reuseport, transparent, tcp_mss, nodelay,
 			freebind, use_systemd, dscp, ub_sock)) == -1) {
+			freeaddrinfo(ub_sock->addr);
 			free(ub_sock);
 			if(noip6) {
 				/*log_warn("IPv6 protocol not available");*/
@@ -1236,6 +1242,7 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 			verbose(VERB_ALGO, "setup TCP for SSL service");
 		if(!port_insert(list, s, port_type, ub_sock)) {
 			sock_close(s);
+			freeaddrinfo(ub_sock->addr);
 			free(ub_sock);
 			return 0;
 		}
@@ -1579,7 +1586,7 @@ int resolve_interface_names(char** ifs, int num_ifs,
 	}
 	*num_resif = num_ifs;
 	for(p = list; p; p = p->next) {
-		*num_resif ++;
+		(*num_resif)++;
 	}
 	*resif = calloc(*num_resif, sizeof(**resif));
 	if(!*resif) {
@@ -1600,15 +1607,17 @@ int resolve_interface_names(char** ifs, int num_ifs,
 		}
 	}
 	if(list) {
+		int idx = num_ifs;
 		for(p = list; p; p = p->next) {
-			(*resif)[i] = strdup(p->str);
-			if(!((*resif)[i])) {
+			(*resif)[idx] = strdup(p->str);
+			if(!((*resif)[idx])) {
 				log_err("out of memory");
 				config_del_strarray(*resif, *num_resif);
 				*resif = NULL;
 				*num_resif = 0;
 				return 0;
 			}
+			idx++;
 		}
 	}
 	return 1;

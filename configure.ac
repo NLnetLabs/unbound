@@ -407,7 +407,7 @@ AC_CHECK_HEADERS([net/if.h],,, [
 ])
 
 # Check for Apple header. This uncovers TARGET_OS_IPHONE, TARGET_OS_TV or TARGET_OS_WATCH
-AC_CHECK_HEADERS([TargetConditionals.h])
+AC_CHECK_HEADERS([TargetConditionals.h],,, [AC_INCLUDES_DEFAULT])
 
 # check for types.  
 # Using own tests for int64* because autoconf builtin only give 32bit.
@@ -1509,6 +1509,7 @@ AC_CHECK_FUNCS([daemon])
 if test $ac_cv_func_daemon = yes; then
 	ACX_FUNC_DEPRECATED([daemon], [(void)daemon(0, 0);], [
 #include <stdlib.h>
+#include <unistd.h>
 ])
 fi
 
@@ -1779,6 +1780,8 @@ if test "$found_libhiredis" = "yes"; then enable_cachedb="yes"; fi
 case "$enable_cachedb" in
     yes)
     	AC_DEFINE([USE_CACHEDB], [1], [Define to 1 to use cachedb support])
+	AC_SUBST([CACHEDB_SRC], ["cachedb/cachedb.c cachedb/redis.c"])
+	AC_SUBST([CACHEDB_OBJ], ["cachedb.lo redis.lo"])
     	;;
     no|*)
     	# nothing

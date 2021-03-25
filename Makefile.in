@@ -110,6 +110,8 @@ SUBNET_HEADER=@SUBNET_HEADER@
 IPSECMOD_SRC=ipsecmod/ipsecmod.c ipsecmod/ipsecmod-whitelist.c
 IPSECMOD_OBJ=@IPSECMOD_OBJ@
 IPSECMOD_HEADER=@IPSECMOD_HEADER@
+CACHEDB_SRC=@CACHEDB_SRC@
+CACHEDB_OBJ=@CACHEDB_OBJ@
 COMMON_SRC=services/cache/dns.c services/cache/infra.c services/cache/rrset.c \
 util/as112.c util/data/dname.c util/data/msgencode.c util/data/msgparse.c \
 util/data/msgreply.c util/data/packed_rrset.c iterator/iterator.c \
@@ -133,7 +135,7 @@ validator/val_nsec3.c validator/val_nsec.c validator/val_secalgo.c \
 validator/val_sigcrypt.c validator/val_utils.c dns64/dns64.c \
 edns-subnet/edns-subnet.c edns-subnet/subnetmod.c \
 edns-subnet/addrtree.c edns-subnet/subnet-whitelist.c \
-cachedb/cachedb.c cachedb/redis.c respip/respip.c $(CHECKLOCK_SRC) \
+$(CACHEDB_SRC) respip/respip.c $(CHECKLOCK_SRC) \
 $(DNSTAP_SRC) $(DNSCRYPT_SRC) $(IPSECMOD_SRC) $(IPSET_SRC)
 COMMON_OBJ_WITHOUT_NETCALL=dns.lo infra.lo rrset.lo dname.lo msgencode.lo \
 as112.lo msgparse.lo msgreply.lo packed_rrset.lo iterator.lo iter_delegpt.lo \
@@ -145,7 +147,7 @@ random.lo rbtree.lo regional.lo rtt.lo dnstree.lo lookup3.lo lruhash.lo \
 slabhash.lo tcp_conn_limit.lo timehist.lo tube.lo winsock_event.lo \
 autotrust.lo val_anchor.lo rpz.lo \
 validator.lo val_kcache.lo val_kentry.lo val_neg.lo val_nsec3.lo val_nsec.lo \
-val_secalgo.lo val_sigcrypt.lo val_utils.lo dns64.lo cachedb.lo redis.lo authzone.lo \
+val_secalgo.lo val_sigcrypt.lo val_utils.lo dns64.lo $(CACHEDB_OBJ) authzone.lo \
 $(SUBNET_OBJ) $(PYTHONMOD_OBJ) $(CHECKLOCK_OBJ) $(DNSTAP_OBJ) $(DNSCRYPT_OBJ) \
 $(IPSECMOD_OBJ) $(IPSET_OBJ) $(DYNLIBMOD_OBJ) respip.lo
 COMMON_OBJ_WITHOUT_UB_EVENT=$(COMMON_OBJ_WITHOUT_NETCALL) netevent.lo listen_dnsport.lo \
@@ -431,6 +433,8 @@ dtstream.lo dtstream.o: $(srcdir)/dnstap/dtstream.c config.h $(srcdir)/dnstap/dt
 dnstap_fstrm.lo dnstap_fstrm.o: $(srcdir)/dnstap/dnstap_fstrm.c config.h $(srcdir)/dnstap/dnstap_fstrm.h
 unbound-dnstap-socket.lo unbound-dnstap-socket.o: $(srcdir)/dnstap/unbound-dnstap-socket.c config.h $(srcdir)/dnstap/dtstream.h
 dynlibmod.lo dynlibdmod.o: $(srcdir)/dynlibmod/dynlibmod.c config.h $(srcdir)/dynlibmod/dynlibmod.h
+cachedb.lo cachedb.o: $(srcdir)/cachedb/cachedb.c config.h $(srcdir)/cachedb/cachedb.h
+redis.lo redis.o: $(srcdir)/cachedb/redis.c config.h $(srcdir)/cachedb/redis.h
 
 # dnscrypt
 dnscrypt.lo dnscrypt.o: $(srcdir)/dnscrypt/dnscrypt.c config.h \
@@ -464,7 +468,7 @@ libunbound/python/libunbound_wrap.c:	$(srcdir)/libunbound/python/libunbound.i un
 
 # Pyunbound python unbound wrapper
 _unbound.la:	libunbound_wrap.lo libunbound.la
-	$(LIBTOOL) --tag=CC --mode=link $(CC) $(RUNTIME_PATH) $(CPPFLAGS) $(CFLAGS) $(LDFLAGS) -module -avoid-version -no-undefined -shared -o $@ libunbound_wrap.lo -rpath $(PYTHON_SITE_PKG) -L. -L.libs -lunbound
+	$(LIBTOOL) --tag=CC --mode=link $(CC) $(RUNTIME_PATH) $(CPPFLAGS) $(CFLAGS) $(LDFLAGS) -module -avoid-version -no-undefined -shared -o $@ libunbound_wrap.lo -rpath $(PYTHON_SITE_PKG) -L. -L.libs -lunbound $(LIBS)
 
 util/config_file.c:	util/configparser.h
 util/configlexer.c:  $(srcdir)/util/configlexer.lex util/configparser.h

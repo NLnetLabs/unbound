@@ -578,8 +578,10 @@ rpz_insert_local_zones_trigger(struct local_zones* lz, uint8_t* dname,
 			rrtype == LDNS_RR_TYPE_NSEC ||
 			rrtype == LDNS_RR_TYPE_NSEC3PARAM ||
 			rrtype == LDNS_RR_TYPE_NSEC3 ||
-			rrtype == LDNS_RR_TYPE_DS)
+			rrtype == LDNS_RR_TYPE_DS) {
+			free(dname);
 			return; /* no need to log these types as unsupported */
+		}
 		dname_str(dname, str);
 		verbose(VERB_ALGO, "RPZ: qname trigger, %s skipping unsupported action: %s",
 			str, rpz_action_to_string(a));

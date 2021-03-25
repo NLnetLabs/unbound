@@ -643,6 +643,8 @@ IPSET_OBJ
 IPSET_SRC
 IPSECMOD_HEADER
 IPSECMOD_OBJ
+CACHEDB_OBJ
+CACHEDB_SRC
 DNSCRYPT_OBJ
 DNSCRYPT_SRC
 ENABLE_DNSCRYPT
@@ -14793,7 +14795,8 @@ done
 # Check for Apple header. This uncovers TARGET_OS_IPHONE, TARGET_OS_TV or TARGET_OS_WATCH
 for ac_header in TargetConditionals.h
 do :
-  ac_fn_c_check_header_mongrel "$LINENO" "TargetConditionals.h" "ac_cv_header_TargetConditionals_h" "$ac_includes_default"
+  ac_fn_c_check_header_compile "$LINENO" "TargetConditionals.h" "ac_cv_header_TargetConditionals_h" "$ac_includes_default
+"
 if test "x$ac_cv_header_TargetConditionals_h" = xyes; then :
   cat >>confdefs.h <<_ACEOF
 #define HAVE_TARGETCONDITIONALS_H 1
@@ -20149,9 +20152,10 @@ else
 
 echo '
 #include <stdlib.h>
+#include <unistd.h>
 ' >conftest.c
 echo 'void f(){ (void)daemon(0, 0); }' >>conftest.c
-if test -z "`$CC -c conftest.c 2>&1 | grep deprecated`"; then
+if test -z "`$CC $CPPFLAGS $CFLAGS -c conftest.c 2>&1 | grep -e deprecated -e unavailable`"; then
 eval "cv_cc_deprecated_$cache=no"
 else
 eval "cv_cc_deprecated_$cache=yes"
@@ -21510,6 +21514,10 @@ case "$enable_cachedb" in
     yes)
 
 $as_echo "#define USE_CACHEDB 1" >>confdefs.h
+
+	CACHEDB_SRC="cachedb/cachedb.c cachedb/redis.c"
+
+	CACHEDB_OBJ="cachedb.lo redis.lo"
 
     	;;
     no|*)
