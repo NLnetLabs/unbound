@@ -1,3 +1,7 @@
+30 March 2021: George
+	- Disable the use of stack-protector for cross compiled 32-bit windows
+	  builds; relates to #444.
+
 25 March 2021: Wouter
 	- Fix #429: Also fix end of transfer for http download of auth zones.
 

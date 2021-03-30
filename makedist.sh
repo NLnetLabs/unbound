@@ -371,7 +371,12 @@ if [ "$DOWIN" = "yes" ]; then
 	|| error_cleanup "Could not configure"
     fi
     info "Calling make"
-    make $MINJ || error_cleanup "Could not make"
+	# Disable stack-protector for 32-bit windows builds.
+	if test "$W64" = "no"; then
+		make $MINJ CFLAGS='-fno-stack-protector' || error_cleanup "Could not make"
+	else
+		make $MINJ || error_cleanup "Could not make"
+	fi
     info "Make complete"
 
     if test "`uname`" = "Linux"; then 
@@ -386,7 +391,12 @@ if [ "$DOWIN" = "yes" ]; then
 	|| error_cleanup "Could not configure"
     fi
     info "Calling make for DLL"
-    make $MINJ || error_cleanup "Could not make DLL"
+	# Disable stack-protector for 32-bit windows builds.
+	if test "$W64" = "no"; then
+		make $MINJ CFLAGS='-fno-stack-protector' || error_cleanup "Could not make DLL"
+	else
+		make $MINJ || error_cleanup "Could not make DLL"
+	fi
     info "Make DLL complete"
     cd ../unbound
     fi
@@ -413,7 +423,9 @@ if [ "$DOWIN" = "yes" ]; then
     mkdir libunbound
     cp ../../unbound_shared/unbound.h ../../unbound_shared/.libs/libunbound*.dll ../../unbound_shared/.libs/libunbound.dll.a ../../unbound_shared/.libs/libunbound.a ../../unbound_shared/.libs/libunbound*.def ../../sslsharedinstall/lib/libcrypto.dll.a ../../sslsharedinstall/lib/libssl.dll.a ../../sslsharedinstall/bin/libcrypto*.dll ../../sslsharedinstall/bin/libssl*.dll ../../wxpinstall/bin/libexpat*.dll ../../wxpinstall/lib/libexpat.dll.a libunbound/.
     if test "$W64" = "no"; then
-	    cp /usr/i686-w64-mingw32/sys-root/mingw/bin/libssp-0.dll libunbound/.
+	# Disable stack-protector for 32-bit windows builds.
+	# cp /usr/i686-w64-mingw32/sys-root/mingw/bin/libssp-0.dll libunbound/.
+	:
     else
 	    cp /usr/x86_64-w64-mingw32/sys-root/mingw/bin/libssp-0.dll libunbound/.
     fi
