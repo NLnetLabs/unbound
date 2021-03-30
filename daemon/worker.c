@@ -128,8 +128,8 @@ worker_mem_report(struct worker* ATTR_UNUSED(worker),
 		return;
 	front = listen_get_mem(worker->front);
 	back = outnet_get_mem(worker->back);
-	msg = slabhash_get_mem(worker->env.msg_cache);
-	rrset = slabhash_get_mem(&worker->env.rrset_cache->table);
+	msg = slabhash_get_mem(worker->env.current_view_env->msg_cache);
+	rrset = slabhash_get_mem(&worker->env.current_view_env->rrset_cache->table);
 	infra = infra_get_mem(worker->env.infra_cache);
 	mesh = mesh_get_mem(worker->env.mesh);
 	ac = alloc_get_mem(&worker->alloc);
@@ -212,14 +212,14 @@ worker_mem_report(struct worker* ATTR_UNUSED(worker),
 #ifdef CLIENT_SUBNET
 	verbose(VERB_QUERY, "cache memory msg=%u rrset=%u infra=%u val=%u "
 		"subnet=%u",
-		(unsigned)slabhash_get_mem(worker->env.msg_cache),
-		(unsigned)slabhash_get_mem(&worker->env.rrset_cache->table),
+		(unsigned)slabhash_get_mem(worker->env.current_view_env->msg_cache),
+		(unsigned)slabhash_get_mem(&worker->env.current_view_env->rrset_cache->table),
 		(unsigned)infra_get_mem(worker->env.infra_cache),
 		(unsigned)val, (unsigned)subnet);
 #else /* no CLIENT_SUBNET */
 	verbose(VERB_QUERY, "cache memory msg=%u rrset=%u infra=%u val=%u",
-		(unsigned)slabhash_get_mem(worker->env.msg_cache),
-		(unsigned)slabhash_get_mem(&worker->env.rrset_cache->table),
+		(unsigned)slabhash_get_mem(worker->env.current_view_env->msg_cache),
+		(unsigned)slabhash_get_mem(&worker->env.current_view_env->rrset_cache->table),
 		(unsigned)infra_get_mem(worker->env.infra_cache),
 		(unsigned)val);
 #endif /* CLIENT_SUBNET */
@@ -692,7 +692,7 @@ answer_from_cache(struct worker* worker, struct query_info* qinfo,
 			goto bail_out;
 		error_encode(repinfo->c->buffer, LDNS_RCODE_SERVFAIL,
 			qinfo, id, flags, edns);
-		rrset_array_unlock_touch(worker->env.rrset_cache,
+		rrset_array_unlock_touch(worker->env.current_view_env->rrset_cache,
 			worker->scratchpad, rep->ref, rep->rrset_count);
 		if(worker->stats.extended) {
 			worker->stats.ans_bogus ++;
@@ -767,13 +767,13 @@ answer_from_cache(struct worker* worker, struct query_info* qinfo,
 	}
 	/* cannot send the reply right now, because blocking network syscall
 	 * is bad while holding locks. */
-	rrset_array_unlock_touch(worker->env.rrset_cache, worker->scratchpad,
+	rrset_array_unlock_touch(worker->env.current_view_env->rrset_cache, worker->scratchpad,
 		rep->ref, rep->rrset_count);
 	/* go and return this buffer to the client */
 	return 1;
 
 bail_out:
-	rrset_array_unlock_touch(worker->env.rrset_cache, 
+	rrset_array_unlock_touch(worker->env.current_view_env->rrset_cache, 
 		worker->scratchpad, rep->ref, rep->rrset_count);
 	return 0;
 }
@@ -1483,7 +1483,7 @@ lookup_cache:
 		is_expired_answer = 0;
 		is_secure_answer = 0;
 		h = query_info_hash(lookup_qinfo, sldns_buffer_read_u16_at(c->buffer, 2));
-		if((e=slabhash_lookup(worker->env.msg_cache, h, lookup_qinfo, 0))) {
+		if((e=slabhash_lookup(worker->env.current_view_env->msg_cache, h, lookup_qinfo, 0))) {
 			/* answer from cache - we have acquired a readlock on it */
 			if(answer_from_cache(worker, &qinfo,
 				cinfo, &need_drop, &is_expired_answer, &is_secure_answer,
@@ -2020,8 +2020,8 @@ void
 worker_alloc_cleanup(void* arg)
 {
 	struct worker* worker = (struct worker*)arg;
-	slabhash_clear(&worker->env.rrset_cache->table);
-	slabhash_clear(worker->env.msg_cache);
+	slabhash_clear(&worker->env.current_view_env->rrset_cache->table);
+	slabhash_clear(worker->env.current_view_env->msg_cache);
 }
 
 void worker_stats_clear(struct worker* worker)

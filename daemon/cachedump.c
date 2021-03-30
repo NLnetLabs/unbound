@@ -120,7 +120,7 @@ dump_rrset_lruhash(RES* ssl, struct lruhash* h, time_t now)
 static int
 dump_rrset_cache(RES* ssl, struct worker* worker)
 {
-	struct rrset_cache* r = worker->env.rrset_cache;
+	struct rrset_cache* r = worker->env.current_view_env->rrset_cache;
 	size_t slab;
 	if(!ssl_printf(ssl, "START_RRSET_CACHE\n")) return 0;
 	for(slab=0; slab<r->table.size; slab++) {
@@ -276,7 +276,7 @@ dump_msg_lruhash(RES* ssl, struct worker* worker, struct lruhash* h)
 static int
 dump_msg_cache(RES* ssl, struct worker* worker)
 {
-	struct slabhash* sh = worker->env.msg_cache;
+	struct slabhash* sh = worker->env.current_view_env->msg_cache;
 	size_t slab;
 	if(!ssl_printf(ssl, "START_MSG_CACHE\n")) return 0;
 	for(slab=0; slab<sh->size; slab++) {
@@ -428,7 +428,7 @@ move_into_cache(struct ub_packed_rrset_key* k,
 
 	ref.key = ak;
 	ref.id = ak->id;
-	(void)rrset_cache_update(worker->env.rrset_cache, &ref,
+	(void)rrset_cache_update(worker->env.current_view_env->rrset_cache, &ref,
 		&worker->alloc, *worker->env.now);
 	return 1;
 }
@@ -602,7 +602,7 @@ load_ref(RES* ssl, sldns_buffer* buf, struct worker* worker,
 	}
 
 	/* lookup in cache */
-	k = rrset_cache_lookup(worker->env.rrset_cache, qinfo.qname,
+	k = rrset_cache_lookup(worker->env.current_view_env->rrset_cache, qinfo.qname,
 		qinfo.qname_len, qinfo.qtype, qinfo.qclass,
 		(uint32_t)flags, *worker->env.now, 0);
 	if(!k) {

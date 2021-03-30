@@ -182,13 +182,13 @@ nsec_verify_rrset(struct module_env* env, struct val_env* ve,
 		nsec->entry.data;
 	if(d->security == sec_status_secure)
 		return 1;
-	rrset_check_sec_status(env->rrset_cache, nsec, *env->now);
+	rrset_check_sec_status(env->current_view_env->rrset_cache, nsec, *env->now);
 	if(d->security == sec_status_secure)
 		return 1;
 	d->security = val_verify_rrset_entry(env, ve, nsec, kkey, reason,
 		LDNS_SECTION_AUTHORITY, qstate);
 	if(d->security == sec_status_secure) {
-		rrset_update_sec_status(env->rrset_cache, nsec, *env->now);
+		rrset_update_sec_status(env->current_view_env->rrset_cache, nsec, *env->now);
 		return 1;
 	}
 	return 0;

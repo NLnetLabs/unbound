@@ -317,6 +317,14 @@ typedef int inplace_cb_query_response_func_type(struct module_qstate* qstate,
 typedef struct dns_msg* serve_expired_lookup_func_type(
 	struct module_qstate* qstate, struct query_info* lookup_qinfo);
 
+struct view_env {
+	/** shared message cache */
+	struct slabhash* msg_cache;
+	/** shared rrset cache */
+	struct rrset_cache* rrset_cache;
+
+};
+
 /**
  * Module environment.
  * Services and data provided to the module.
@@ -325,10 +333,8 @@ struct module_env {
 	/* --- data --- */
 	/** config file with config options */
 	struct config_file* cfg;
-	/** shared message cache */
-	struct slabhash* msg_cache;
-	/** shared rrset cache */
-	struct rrset_cache* rrset_cache;
+
+	struct view_env* current_view_env;
 	/** shared infrastructure cache (edns, lameness) */
 	struct infra_cache* infra_cache;
 	/** shared key cache */

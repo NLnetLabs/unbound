@@ -806,7 +806,7 @@ validate_positive_response(struct module_env* env, struct val_env* ve,
 			return;
 		}
 		if(wc && !wc_cached && env->cfg->aggressive_nsec) {
-			rrset_cache_update_wildcard(env->rrset_cache, s, wc, wl,
+			rrset_cache_update_wildcard(env->current_view_env->rrset_cache, s, wc, wl,
 				env->alloc, *env->now);
 			wc_cached = 1;
 		}
@@ -1521,7 +1521,7 @@ processInit(struct module_qstate* qstate, struct val_qstate* vq,
 	}
 
 	val_mark_indeterminate(vq->chase_reply, qstate->env->anchors, 
-		qstate->env->rrset_cache, qstate->env);
+		qstate->env->current_view_env->rrset_cache, qstate->env);
 	vq->key_entry = NULL;
 	vq->empty_DS_name = NULL;
 	vq->ds_rrset = 0;
@@ -1599,7 +1599,7 @@ processInit(struct module_qstate* qstate, struct val_qstate* vq,
 		if(anchor && anchor->numDS == 0 && anchor->numDNSKEY == 0) {
 			vq->chase_reply->security = sec_status_insecure;
 			val_mark_insecure(vq->chase_reply, anchor->name, 
-				qstate->env->rrset_cache, qstate->env);
+				qstate->env->current_view_env->rrset_cache, qstate->env);
 			lock_basic_unlock(&anchor->lock);
 			/* go to finished state to cache this result */
 			vq->state = VAL_FINISHED_STATE;
@@ -1627,7 +1627,7 @@ processInit(struct module_qstate* qstate, struct val_qstate* vq,
 		 * essentially proven insecure. */
 		vq->chase_reply->security = sec_status_insecure;
 		val_mark_insecure(vq->chase_reply, vq->key_entry->name, 
-			qstate->env->rrset_cache, qstate->env);
+			qstate->env->current_view_env->rrset_cache, qstate->env);
 		/* go to finished state to cache this result */
 		vq->state = VAL_FINISHED_STATE;
 		return 1;
@@ -1837,7 +1837,7 @@ processValidate(struct module_qstate* qstate, struct val_qstate* vq,
 			vq->signer_name?"":"unsigned ");
 		vq->chase_reply->security = sec_status_insecure;
 		val_mark_insecure(vq->chase_reply, vq->key_entry->name, 
-			qstate->env->rrset_cache, qstate->env);
+			qstate->env->current_view_env->rrset_cache, qstate->env);
 		key_cache_insert(ve->kcache, vq->key_entry, qstate);
 		return 1;
 	}

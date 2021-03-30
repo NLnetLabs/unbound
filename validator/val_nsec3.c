@@ -1299,7 +1299,7 @@ list_is_secure(struct module_env* env, struct val_env* ve,
 			continue;
 		if(d->security == sec_status_secure)
 			continue;
-		rrset_check_sec_status(env->rrset_cache, list[i], *env->now);
+		rrset_check_sec_status(env->current_view_env->rrset_cache, list[i], *env->now);
 		if(d->security == sec_status_secure)
 			continue;
 		d->security = val_verify_rrset_entry(env, ve, list[i], kkey,
@@ -1308,7 +1308,7 @@ list_is_secure(struct module_env* env, struct val_env* ve,
 			verbose(VERB_ALGO, "NSEC3 did not verify");
 			return 0;
 		}
-		rrset_update_sec_status(env->rrset_cache, list[i], *env->now);
+		rrset_update_sec_status(env->current_view_env->rrset_cache, list[i], *env->now);
 	}
 	return 1;
 }

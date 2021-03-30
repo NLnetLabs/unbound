@@ -635,7 +635,7 @@ store_rrset(sldns_buffer* pkt, struct msg_parse* msg, struct module_env* env,
 	ref.key = k;
 	ref.id = k->id;
 	/*ignore ret: it was in the cache, ref updated */
-	(void)rrset_cache_update(env->rrset_cache, &ref, env->alloc, now);
+	(void)rrset_cache_update(env->current_view_env->rrset_cache, &ref, env->alloc, now);
 }
 
 /**

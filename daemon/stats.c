@@ -289,8 +289,8 @@ server_stats_compile(struct worker* worker, struct ub_stats_info* s, int reset)
 	s->svr.queries_ratelimited = (long long)get_queries_ratelimit(worker, reset);
 
 	/* get cache sizes */
-	s->svr.msg_cache_count = (long long)count_slabhash_entries(worker->env.msg_cache);
-	s->svr.rrset_cache_count = (long long)count_slabhash_entries(&worker->env.rrset_cache->table);
+	s->svr.msg_cache_count = (long long)count_slabhash_entries(worker->env.current_view_env->msg_cache);
+	s->svr.rrset_cache_count = (long long)count_slabhash_entries(&worker->env.current_view_env->rrset_cache->table);
 	s->svr.infra_cache_count = (long long)count_slabhash_entries(worker->env.infra_cache->hosts);
 	if(worker->env.key_cache)
 		s->svr.key_cache_count = (long long)count_slabhash_entries(worker->env.key_cache->slab);

@@ -333,8 +333,8 @@ ub_ctx_delete(struct ub_ctx* ctx)
 	tube_delete(ctx->qq_pipe);
 	tube_delete(ctx->rr_pipe);
 	if(ctx->env) {
-		slabhash_delete(ctx->env->msg_cache);
-		rrset_cache_delete(ctx->env->rrset_cache);
+		slabhash_delete(ctx->env->current_view_env->msg_cache);
+		rrset_cache_delete(ctx->env->current_view_env->rrset_cache);
 		infra_delete(ctx->env->infra_cache);
 		config_delete(ctx->env->cfg);
 		edns_known_options_delete(ctx->env);

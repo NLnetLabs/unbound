@@ -850,8 +850,8 @@ handle_newq(struct libworker* w, uint8_t* buf, uint32_t len)
 void libworker_alloc_cleanup(void* arg)
 {
 	struct libworker* w = (struct libworker*)arg;
-	slabhash_clear(&w->env->rrset_cache->table);
-        slabhash_clear(w->env->msg_cache);
+	slabhash_clear(&w->env->current_view_env->rrset_cache->table);
+        slabhash_clear(w->env->current_view_env->msg_cache);
 }
 
 struct outbound_entry* libworker_send_query(struct query_info* qinfo,

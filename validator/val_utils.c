@@ -349,7 +349,7 @@ val_verify_rrset(struct module_env* env, struct val_env* ve,
 		return d->security;
 	}
 	/* check in the cache if verification has already been done */
-	rrset_check_sec_status(env->rrset_cache, rrset, *env->now);
+	rrset_check_sec_status(env->current_view_env->rrset_cache, rrset, *env->now);
 	if(d->security == sec_status_secure) {
 		log_nametypeclass(VERB_ALGO, "verify rrset from cache", 
 			rrset->rk.dname, ntohs(rrset->rk.type), 
@@ -383,7 +383,7 @@ val_verify_rrset(struct module_env* env, struct val_env* ve,
 			lock_basic_unlock(&ve->bogus_lock);
 		}
 		/* if status updated - store in cache for reuse */
-		rrset_update_sec_status(env->rrset_cache, rrset, *env->now);
+		rrset_update_sec_status(env->current_view_env->rrset_cache, rrset, *env->now);
 	}
 
 	return sec;
@@ -1138,7 +1138,7 @@ val_find_DS(struct module_env* env, uint8_t* nm, size_t nmlen, uint16_t c,
 	struct dns_msg* msg;
 	struct query_info qinfo;
 	struct ub_packed_rrset_key *rrset = rrset_cache_lookup(
-		env->rrset_cache, nm, nmlen, LDNS_RR_TYPE_DS, c, 0, 
+		env->current_view_env->rrset_cache, nm, nmlen, LDNS_RR_TYPE_DS, c, 0, 
 		*env->now, 0);
 	if(rrset) {
 		/* DS rrset exists. Return it to the validator immediately*/
@@ -1162,7 +1162,7 @@ val_find_DS(struct module_env* env, uint8_t* nm, size_t nmlen, uint16_t c,
 	qinfo.qclass = c;
 	qinfo.local_alias = NULL;
 	/* do not add SOA to reply message, it is going to be used internal */
-	msg = val_neg_getmsg(env->neg_cache, &qinfo, region, env->rrset_cache,
+	msg = val_neg_getmsg(env->neg_cache, &qinfo, region, env->current_view_env->rrset_cache,
 		env->scratch_buffer, *env->now, 0, topname, env->cfg);
 	return msg;
 }

@@ -258,6 +258,11 @@ daemon_init(void)
 		free(daemon);
 		return NULL;
 	}
+	if(!(daemon->env->current_view_env = (struct view_env*)calloc(1, 
+		sizeof(*daemon->env->current_view_env)))) {
+		free(daemon);
+		return NULL;
+	}
 	/* init edns_known_options */
 	if(!edns_known_options_init(daemon->env)) {
 		free(daemon->env);
@@ -727,8 +732,8 @@ daemon_cleanup(struct daemon* daemon)
 	/* clean up caches because
 	 * a) RRset IDs will be recycled after a reload, causing collisions
 	 * b) validation config can change, thus rrset, msg, keycache clear */
-	slabhash_clear(&daemon->env->rrset_cache->table);
-	slabhash_clear(daemon->env->msg_cache);
+	slabhash_clear(&daemon->env->current_view_env->rrset_cache->table);
+	slabhash_clear(daemon->env->current_view_env->msg_cache);
 	local_zones_delete(daemon->local_zones);
 	daemon->local_zones = NULL;
 	respip_set_delete(daemon->respip_set);
@@ -769,8 +774,8 @@ daemon_delete(struct daemon* daemon)
 	free(daemon->ports);
 	listening_ports_free(daemon->rc_ports);
 	if(daemon->env) {
-		slabhash_delete(daemon->env->msg_cache);
-		rrset_cache_delete(daemon->env->rrset_cache);
+		slabhash_delete(daemon->env->current_view_env->msg_cache);
+		rrset_cache_delete(daemon->env->current_view_env->rrset_cache);
 		infra_delete(daemon->env->infra_cache);
 		edns_known_options_delete(daemon->env);
 		edns_strings_delete(daemon->env->edns_strings);
@@ -841,19 +846,19 @@ void daemon_apply_cfg(struct daemon* daemon, struct config_file* cfg)
 {
         daemon->cfg = cfg;
 	config_apply(cfg);
-	if(!slabhash_is_size(daemon->env->msg_cache, cfg->msg_cache_size,
+	if(!slabhash_is_size(daemon->env->current_view_env->msg_cache, cfg->msg_cache_size,
 	   	cfg->msg_cache_slabs)) {
-		slabhash_delete(daemon->env->msg_cache);
-		daemon->env->msg_cache = slabhash_create(cfg->msg_cache_slabs,
+		slabhash_delete(daemon->env->current_view_env->msg_cache);
+		daemon->env->current_view_env->msg_cache = slabhash_create(cfg->msg_cache_slabs,
 			HASH_DEFAULT_STARTARRAY, cfg->msg_cache_size,
 			msgreply_sizefunc, query_info_compare,
 			query_entry_delete, reply_info_delete, NULL);
-		if(!daemon->env->msg_cache) {
+		if(!daemon->env->current_view_env->msg_cache) {
 			fatal_exit("malloc failure updating config settings");
 		}
 	}
-	if((daemon->env->rrset_cache = rrset_cache_adjust(
-		daemon->env->rrset_cache, cfg, &daemon->superalloc)) == 0)
+	if((daemon->env->current_view_env->rrset_cache = rrset_cache_adjust(
+		daemon->env->current_view_env->rrset_cache, cfg, &daemon->superalloc)) == 0)
 		fatal_exit("malloc failure updating config settings");
 	if((daemon->env->infra_cache = infra_adjust(daemon->env->infra_cache,
 		cfg))==0)

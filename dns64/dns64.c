@@ -861,7 +861,7 @@ dns64_adjust_a(int id, struct module_qstate* super, struct module_qstate* qstate
 				return;
 			/* Delete negative AAAA record from cache stored by
 			 * the iterator module */
-			rrset_cache_remove(super->env->rrset_cache, dk->rk.dname, 
+			rrset_cache_remove(super->env->current_view_env->rrset_cache, dk->rk.dname, 
 					   dk->rk.dname_len, LDNS_RR_TYPE_AAAA, 
 					   LDNS_RR_CLASS_IN, 0);
 			/* Delete negative AAAA in msg cache for CNAMEs,

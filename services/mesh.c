@@ -373,7 +373,7 @@ mesh_serve_expired_lookup(struct module_qstate* qstate,
 		|| qstate->env->cfg->ignore_cd) && qstate->env->need_to_validate;
 	/* Lookup cache */
 	h = query_info_hash(lookup_qinfo, qstate->query_flags);
-	e = slabhash_lookup(qstate->env->msg_cache, h, lookup_qinfo, 0);
+	e = slabhash_lookup(qstate->env->current_view_env->msg_cache, h, lookup_qinfo, 0);
 	if(!e) return NULL;
 
 	key = (struct msgreply_entry*)e->key;

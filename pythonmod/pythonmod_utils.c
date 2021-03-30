@@ -81,7 +81,7 @@ void invalidateQueryInCache(struct module_qstate* qstate, struct query_info* qin
     size_t i, j;
 
     h = query_info_hash(qinfo, qstate->query_flags);
-    if ((e=slabhash_lookup(qstate->env->msg_cache, h, qinfo, 0))) 
+    if ((e=slabhash_lookup(qstate->env->current_view_env->msg_cache, h, qinfo, 0))) 
     {
 	r = (struct reply_info*)(e->data);
 	if (r) 

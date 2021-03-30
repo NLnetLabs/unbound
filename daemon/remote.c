@@ -794,8 +794,8 @@ print_mem(RES* ssl, struct worker* worker, struct daemon* daemon,
 #ifdef WITH_DYNLIBMODULE
     size_t dynlib = 0;
 #endif /* WITH_DYNLIBMODULE */
-	msg = slabhash_get_mem(daemon->env->msg_cache);
-	rrset = slabhash_get_mem(&daemon->env->rrset_cache->table);
+	msg = slabhash_get_mem(daemon->env->current_view_env->msg_cache);
+	rrset = slabhash_get_mem(&daemon->env->current_view_env->rrset_cache->table);
 	val = mod_get_mem(&worker->env, "validator");
 	iter = mod_get_mem(&worker->env, "iterator");
 	respip = mod_get_mem(&worker->env, "respip");
@@ -1540,9 +1540,9 @@ do_cache_remove(struct worker* worker, uint8_t* nm, size_t nmlen,
 {
 	hashvalue_type h;
 	struct query_info k;
-	rrset_cache_remove(worker->env.rrset_cache, nm, nmlen, t, c, 0);
+	rrset_cache_remove(worker->env.current_view_env->rrset_cache, nm, nmlen, t, c, 0);
 	if(t == LDNS_RR_TYPE_SOA)
-		rrset_cache_remove(worker->env.rrset_cache, nm, nmlen, t, c,
+		rrset_cache_remove(worker->env.current_view_env->rrset_cache, nm, nmlen, t, c,
 			PACKED_RRSET_SOA_NEG);
 	k.qname = nm;
 	k.qname_len = nmlen;
@@ -1550,11 +1550,11 @@ do_cache_remove(struct worker* worker, uint8_t* nm, size_t nmlen,
 	k.qclass = c;
 	k.local_alias = NULL;
 	h = query_info_hash(&k, 0);
-	slabhash_remove(worker->env.msg_cache, h, &k);
+	slabhash_remove(worker->env.current_view_env->msg_cache, h, &k);
 	if(t == LDNS_RR_TYPE_AAAA) {
 		/* for AAAA also flush dns64 bit_cd packet */
 		h = query_info_hash(&k, BIT_CD);
-		slabhash_remove(worker->env.msg_cache, h, &k);
+		slabhash_remove(worker->env.current_view_env->msg_cache, h, &k);
 	}
 }
 
@@ -1747,10 +1747,10 @@ do_flush_zone(RES* ssl, struct worker* worker, char* arg)
 	inf.num_rrsets = 0;
 	inf.num_msgs = 0;
 	inf.num_keys = 0;
-	slabhash_traverse(&worker->env.rrset_cache->table, 1, 
+	slabhash_traverse(&worker->env.current_view_env->rrset_cache->table, 1, 
 		&zone_del_rrset, &inf);
 
-	slabhash_traverse(worker->env.msg_cache, 1, &zone_del_msg, &inf);
+	slabhash_traverse(worker->env.current_view_env->msg_cache, 1, &zone_del_msg, &inf);
 
 	/* and validator cache */
 	if(worker->env.key_cache) {
@@ -1816,10 +1816,10 @@ do_flush_bogus(RES* ssl, struct worker* worker)
 	inf.num_rrsets = 0;
 	inf.num_msgs = 0;
 	inf.num_keys = 0;
-	slabhash_traverse(&worker->env.rrset_cache->table, 1, 
+	slabhash_traverse(&worker->env.current_view_env->rrset_cache->table, 1, 
 		&bogus_del_rrset, &inf);
 
-	slabhash_traverse(worker->env.msg_cache, 1, &bogus_del_msg, &inf);
+	slabhash_traverse(worker->env.current_view_env->msg_cache, 1, &bogus_del_msg, &inf);
 
 	/* and validator cache */
 	if(worker->env.key_cache) {
@@ -1891,10 +1891,10 @@ do_flush_negative(RES* ssl, struct worker* worker)
 	inf.num_rrsets = 0;
 	inf.num_msgs = 0;
 	inf.num_keys = 0;
-	slabhash_traverse(&worker->env.rrset_cache->table, 1, 
+	slabhash_traverse(&worker->env.current_view_env->rrset_cache->table, 1, 
 		&negative_del_rrset, &inf);
 
-	slabhash_traverse(worker->env.msg_cache, 1, &negative_del_msg, &inf);
+	slabhash_traverse(worker->env.current_view_env->msg_cache, 1, &negative_del_msg, &inf);
 
 	/* and validator cache */
 	if(worker->env.key_cache) {

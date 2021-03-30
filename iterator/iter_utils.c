@@ -1078,7 +1078,7 @@ iter_store_parentside_rrset(struct module_env* env,
 	ref.key = rrset;
 	ref.id = rrset->id;
 	/* ignore ret: if it was in the cache, ref updated */
-	(void)rrset_cache_update(env->rrset_cache, &ref, env->alloc, *env->now);
+	(void)rrset_cache_update(env->current_view_env->rrset_cache, &ref, env->alloc, *env->now);
 }
 
 /** fetch NS record from reply, if any */
@@ -1168,7 +1168,7 @@ iter_lookup_parent_NS_from_cache(struct module_env* env, struct delegpt* dp,
 	struct regional* region, struct query_info* qinfo)
 {
 	struct ub_packed_rrset_key* akey;
-	akey = rrset_cache_lookup(env->rrset_cache, dp->name, 
+	akey = rrset_cache_lookup(env->current_view_env->rrset_cache, dp->name, 
 		dp->namelen, LDNS_RR_TYPE_NS, qinfo->qclass, 
 		PACKED_RRSET_PARENT_SIDE, *env->now, 0);
 	if(akey) {
@@ -1192,7 +1192,7 @@ int iter_lookup_parent_glue_from_cache(struct module_env* env,
 	size_t num = delegpt_count_targets(dp);
 	for(ns = dp->nslist; ns; ns = ns->next) {
 		/* get cached parentside A */
-		akey = rrset_cache_lookup(env->rrset_cache, ns->name, 
+		akey = rrset_cache_lookup(env->current_view_env->rrset_cache, ns->name, 
 			ns->namelen, LDNS_RR_TYPE_A, qinfo->qclass, 
 			PACKED_RRSET_PARENT_SIDE, *env->now, 0);
 		if(akey) {
@@ -1204,7 +1204,7 @@ int iter_lookup_parent_glue_from_cache(struct module_env* env,
 			lock_rw_unlock(&akey->entry.lock);
 		}
 		/* get cached parentside AAAA */
-		akey = rrset_cache_lookup(env->rrset_cache, ns->name, 
+		akey = rrset_cache_lookup(env->current_view_env->rrset_cache, ns->name, 
 			ns->namelen, LDNS_RR_TYPE_AAAA, qinfo->qclass, 
 			PACKED_RRSET_PARENT_SIDE, *env->now, 0);
 		if(akey) {

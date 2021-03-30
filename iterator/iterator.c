@@ -1304,7 +1304,7 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 			/* lookup in negative cache; may result in
 			 * NOERROR/NODATA or NXDOMAIN answers that need validation */
 			msg = val_neg_getmsg(qstate->env->neg_cache, &iq->qchase,
-				qstate->region, qstate->env->rrset_cache,
+				qstate->region, qstate->env->current_view_env->rrset_cache,
 				qstate->env->scratch_buffer, 
 				*qstate->env->now, 1/*add SOA*/, NULL, 
 				qstate->env->cfg);
