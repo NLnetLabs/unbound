@@ -358,10 +358,10 @@ unbound-control$(EXEEXT):	$(CONTROL_OBJ_LINK) libunbound.la
 	$(LINK) -o $@ $(CONTROL_OBJ_LINK) $(EXTRALINK) $(SSLLIB) $(LIBS)
 
 unbound-host$(EXEEXT):	$(HOST_OBJ_LINK) libunbound.la
-	$(LINK) -o $@ $(HOST_OBJ_LINK) -L. -L.libs -lunbound $(SSLLIB) $(LIBS)
+	$(LINK) -o $@ $(HOST_OBJ_LINK) libunbound.la $(SSLLIB) $(LIBS)
 
 unbound-anchor$(EXEEXT):	$(UBANCHOR_OBJ_LINK) libunbound.la
-	$(LINK) -o $@ $(UBANCHOR_OBJ_LINK) -L. -L.libs -lunbound -lexpat $(SSLLIB) $(LIBS)
+	$(LINK) -o $@ $(UBANCHOR_OBJ_LINK) libunbound.la -lexpat $(SSLLIB) $(LIBS)
 
 unbound-service-install$(EXEEXT):	$(SVCINST_OBJ_LINK)
 	$(LINK) -o $@ $(SVCINST_OBJ_LINK) $(LIBS)
@@ -370,7 +370,7 @@ unbound-service-remove$(EXEEXT):	$(SVCUNINST_OBJ_LINK)
 	$(LINK) -o $@ $(SVCUNINST_OBJ_LINK) $(LIBS)
 
 anchor-update$(EXEEXT):  $(ANCHORUPD_OBJ_LINK) libunbound.la
-	$(LINK) -o $@ $(ANCHORUPD_OBJ_LINK) -L. -L.libs -lunbound $(LIBS)
+	$(LINK) -o $@ $(ANCHORUPD_OBJ_LINK) libunbound.la $(LIBS)
 
 unittest$(EXEEXT):	$(UNITTEST_OBJ_LINK)
 	$(LINK) -o $@ $(UNITTEST_OBJ_LINK) $(SSLLIB) $(LIBS)
@@ -391,7 +391,7 @@ memstats$(EXEEXT):	$(MEMSTATS_OBJ_LINK)
 	$(LINK) -o $@ $(MEMSTATS_OBJ_LINK) $(SSLLIB) $(LIBS)
 
 asynclook$(EXEEXT):	$(ASYNCLOOK_OBJ_LINK) libunbound.la
-	$(LINK) -o $@ $(ASYNCLOOK_OBJ_LINK) -L. -L.libs -lunbound $(SSLLIB) $(LIBS)
+	$(LINK) -o $@ $(ASYNCLOOK_OBJ_LINK) libunbound.la $(SSLLIB) $(LIBS)
 
 streamtcp$(EXEEXT):	$(STREAMTCP_OBJ_LINK)
 	$(LINK) -o $@ $(STREAMTCP_OBJ_LINK) $(SSLLIB) $(LIBS)
@@ -468,7 +468,7 @@ libunbound/python/libunbound_wrap.c:	$(srcdir)/libunbound/python/libunbound.i un
 
 # Pyunbound python unbound wrapper
 _unbound.la:	libunbound_wrap.lo libunbound.la
-	$(LIBTOOL) --tag=CC --mode=link $(CC) $(RUNTIME_PATH) $(CPPFLAGS) $(CFLAGS) $(LDFLAGS) -module -avoid-version -no-undefined -shared -o $@ libunbound_wrap.lo -rpath $(PYTHON_SITE_PKG) -L. -L.libs -lunbound $(LIBS)
+	$(LIBTOOL) --tag=CC --mode=link $(CC) $(RUNTIME_PATH) $(CPPFLAGS) $(CFLAGS) $(LDFLAGS) -module -avoid-version -no-undefined -shared -o $@ libunbound_wrap.lo -rpath $(PYTHON_SITE_PKG) libunbound.la $(LIBS)
 
 util/config_file.c:	util/configparser.h
 util/configlexer.c:  $(srcdir)/util/configlexer.lex util/configparser.h
