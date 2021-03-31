@@ -362,41 +362,35 @@ if [ "$DOWIN" = "yes" ]; then
 	file3_flag="--with-rootcert-file=C:\Program Files (x86)\Unbound\icannbundle.pem"
 	version="$version"-w32
     fi
-    echo "$configure"' --enable-debug --enable-static-exe --disable-flto '"$* $cross_flag "$file_flag" "$file2_flag" "$file3_flag""
     if test "$W64" = "no"; then
-	# Disable stack-protector for 32-bit windows builds.
-	$configure --enable-debug --enable-static-exe --disable-flto $* $cross_flag "$file_flag" "$file2_flag" "$file3_flag" CFLAGS='-O2 -g -fno-stack-protector'\
-	|| error_cleanup "Could not configure"
+		# Disable stack-protector for 32-bit windows builds.
+		echo "$configure"' --enable-debug --enable-static-exe --disable-flto '"$* $cross_flag" "$file_flag" "$file2_flag" "$file3_flag" CFLAGS='-O2 -g -fno-stack-protector'
+		$configure --enable-debug --enable-static-exe --disable-flto $* $cross_flag "$file_flag" "$file2_flag" "$file3_flag" CFLAGS='-O2 -g -fno-stack-protector'\
+		|| error_cleanup "Could not configure"
     else
-        $configure --enable-debug --enable-static-exe --disable-flto $* $cross_flag \
-	|| error_cleanup "Could not configure"
+		echo "$configure"' --enable-debug --enable-static-exe --disable-flto '"$* $cross_flag"
+		$configure --enable-debug --enable-static-exe --disable-flto $* $cross_flag \
+		|| error_cleanup "Could not configure"
     fi
     info "Calling make"
-	if test "$W64" = "no"; then
-		make $MINJ || error_cleanup "Could not make"
-	else
-		make $MINJ || error_cleanup "Could not make"
-	fi
+	make $MINJ || error_cleanup "Could not make"
     info "Make complete"
 
     if test "`uname`" = "Linux"; then 
     info "Make DLL"
     cd ../unbound_shared
-    echo "$configure"' --enable-debug --disable-flto '"$* $shared_cross_flag "$file_flag" "$file2_flag" "$file3_flag""
     if test "$W64" = "no"; then
 	# Disable stack-protector for 32-bit windows builds.
-	$configure --enable-debug --disable-flto $* $shared_cross_flag "$file_flag" "$file2_flag" "$file3_flag" CFLAGS='-O2 -g -fno-stack-protector'\
-	|| error_cleanup "Could not configure"
+		echo "$configure"' --enable-debug --disable-flto '"$* $shared_cross_flag" "$file_flag" "$file2_flag" "$file3_flag" CFLAGS='-O2 -g -fno-stack-protector'
+		$configure --enable-debug --disable-flto $* $shared_cross_flag "$file_flag" "$file2_flag" "$file3_flag" CFLAGS='-O2 -g -fno-stack-protector'\
+		|| error_cleanup "Could not configure"
     else
+		echo "$configure"' --enable-debug --disable-flto '"$* $shared_cross_flag"
         $configure --enable-debug --disable-flto $* $shared_cross_flag \
-	|| error_cleanup "Could not configure"
+		|| error_cleanup "Could not configure"
     fi
     info "Calling make for DLL"
-	if test "$W64" = "no"; then
-		make $MINJ || error_cleanup "Could not make DLL"
-	else
-		make $MINJ || error_cleanup "Could not make DLL"
-	fi
+	make $MINJ || error_cleanup "Could not make DLL"
     info "Make DLL complete"
     cd ../unbound
     fi
