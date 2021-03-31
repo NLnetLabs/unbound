@@ -430,8 +430,8 @@ dnstap.pb-c.lo dnstap.pb-c.o: dnstap/dnstap.pb-c.c dnstap/dnstap.pb-c.h
 dtstream.lo dtstream.o: $(srcdir)/dnstap/dtstream.c config.h $(srcdir)/dnstap/dtstream.h
 dnstap_fstrm.lo dnstap_fstrm.o: $(srcdir)/dnstap/dnstap_fstrm.c config.h $(srcdir)/dnstap/dnstap_fstrm.h
 unbound-dnstap-socket.lo unbound-dnstap-socket.o: $(srcdir)/dnstap/unbound-dnstap-socket.c config.h $(srcdir)/dnstap/dtstream.h
-dynlibmod.lo dynlibdmod.o: $(srcdir)/dynlibmod/dynlibmod.c config.h $(srcdir)/dynlibmod/dynlibmod.h
-dnsmessage.lo dynlibdmod.o: $(srcdir)/dynlibmod/dnsmessage.c config.h $(srcdir)/dynlibmod/dnsmessage.h
+dynlibmod.lo dynlibmod.o: $(srcdir)/dynlibmod/dynlibmod.c config.h $(srcdir)/dynlibmod/dynlibmod.h
+dnsmessage.lo dnsmessage.o: $(srcdir)/dynlibmod/dnsmessage.c config.h $(srcdir)/dynlibmod/dnsmessage.h
 
 # dnscrypt
 dnscrypt.lo dnscrypt.o: $(srcdir)/dnscrypt/dnscrypt.c config.h \
@@ -660,7 +660,7 @@ depend:
 			-e 's?$$(srcdir)/pythonmod/pythonmod.h?$$(PYTHONMOD_HEADER)?g' \
 			-e 's?$$(srcdir)/edns-subnet/subnetmod.h $$(srcdir)/edns-subnet/subnet-whitelist.h $$(srcdir)/edns-subnet/edns-subnet.h $$(srcdir)/edns-subnet/addrtree.h?$$(SUBNET_HEADER)?g' \
 			-e 's?$$(srcdir)/ipsecmod/ipsecmod.h $$(srcdir)/ipsecmod/ipsecmod-whitelist.h?$$(IPSECMOD_HEADER)?g' \
-			-e 's?$$(srcdir)/dynlibmod/dynlibmod.h?$$(DYNLIBMOD_HEADER)?g' \
+			-e 's?$$(srcdir)/dynlibmod/dynlibmod.h $$(srcdir)/dynlibmod/dnsmessage.h?$$(DYNLIBMOD_HEADER)?g' \
 			-e 's!\(.*\)\.o[ :]*!\1.lo \1.o: !g' \
 			> $(DEPEND_TMP)
 	cp $(DEPEND_TARGET) $(DEPEND_TMP2)

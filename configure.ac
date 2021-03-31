@@ -638,9 +638,9 @@ if test x_$withval != x_no; then
   AC_DEFINE(WITH_DYNLIBMODULE, 1, [Define if you want dynlib module.])
   WITH_DYNLIBMODULE=yes
   AC_SUBST(WITH_DYNLIBMODULE)
-  DYNLIBMOD_OBJ="dynlibmod.lo"
+  DYNLIBMOD_OBJ="dynlibmod.lo dnsmessage.lo"
   AC_SUBST(DYNLIBMOD_OBJ)
-  DYNLIBMOD_HEADER='$(srcdir)/dynlibmod/dynlibmod.h'
+  DYNLIBMOD_HEADER='$(srcdir)/dynlibmod/dynlibmod.h $(srcdir)/dynlibmod/dnsmessage.h'
   AC_SUBST(DYNLIBMOD_HEADER)
   if test $on_mingw = "no"; then
     # link with -ldl if not already there, for all executables because

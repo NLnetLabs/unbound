@@ -2,23 +2,8 @@
  * @file Implements the dnsmessage api in C for unbound plugins using the dynlib module
  */
 
-#ifndef DNSMESSAGE_H
-#define DNSMESSAGE_H
-
-#define PKT_QR 1      /* QueRy - query flag */
-#define PKT_AA 2      /* Authoritative Answer - server flag */
-#define PKT_TC 4      /* TrunCated - server flag */
-#define PKT_RD 8      /* Recursion Desired - query flag */
-#define PKT_CD 16     /* Checking Disabled - query flag */
-#define PKT_RA 32     /* Recursion Available - server flag */
-#define PKT_AD 64     /* Authenticated Data - server flag */
-
-enum enum_section {
-  SECTION_QUESTION = 0,
-  SECTION_ANSWER = 1,
-  SECTION_AUTHORITY = 2,
-  SECTION_ADDITIONAL = 3
-};
+#ifndef DYNLIBMOD_DNSMESSAGE_H
+#define DYNLIBMOD_DNSMESSAGE_H
 
 /**
  * Structure encapsulates a new DNS Message.
@@ -43,16 +28,16 @@ void dynlibmod_dnsmessage_free(struct dynlibmod_dnsmessage *dnsmessage);
 /**
  * Print an record to one of the 4 DNS sections.  Uses printf conventions.   See example code for usage.
  */
-void dynlibmod_msg_append(struct dynlibmod_dnsmessage *msg, enum enum_section section, const char *format, ...);
+void dynlibmod_msg_append(struct dynlibmod_dnsmessage *msg, sldns_pkt_section section, const char *format, ...);
 
 /**
  * An alternative to dynlibmod_msg_append for use in creating wrapper functions
  */
-void dynlibmod_vmsg_append(struct dynlibmod_dnsmessage *msg, enum enum_section section, const char *format, va_list args);
+void dynlibmod_vmsg_append(struct dynlibmod_dnsmessage *msg, sldns_pkt_section section, const char *format, va_list args);
 
 /**
  * Finalize the DNS message and store it in the qstate for return to unbound
  */
 int dynlibmod_set_return_msg(struct module_qstate* qstate, struct dynlibmod_dnsmessage *msg);
 
-#endif /* DNSMESSAGE_H */
+#endif /* DYNLIBMOD_DNSMESSAGE_H */
