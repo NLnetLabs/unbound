@@ -1,3 +1,6 @@
+31 March 2021: Wouter
+	- Fix stack-protector change to not override other CFLAGS options.
+
 30 March 2021: George
 	- Disable the use of stack-protector for cross compiled 32-bit windows
 	  builds; relates to #444.

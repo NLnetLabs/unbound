@@ -364,16 +364,16 @@ if [ "$DOWIN" = "yes" ]; then
     fi
     echo "$configure"' --enable-debug --enable-static-exe --disable-flto '"$* $cross_flag "$file_flag" "$file2_flag" "$file3_flag""
     if test "$W64" = "no"; then
-        $configure --enable-debug --enable-static-exe --disable-flto $* $cross_flag "$file_flag" "$file2_flag" "$file3_flag" \
+	# Disable stack-protector for 32-bit windows builds.
+	$configure --enable-debug --enable-static-exe --disable-flto $* $cross_flag "$file_flag" "$file2_flag" "$file3_flag" CFLAGS='-O2 -g -fno-stack-protector'\
 	|| error_cleanup "Could not configure"
     else
         $configure --enable-debug --enable-static-exe --disable-flto $* $cross_flag \
 	|| error_cleanup "Could not configure"
     fi
     info "Calling make"
-	# Disable stack-protector for 32-bit windows builds.
 	if test "$W64" = "no"; then
-		make $MINJ CFLAGS='-fno-stack-protector' || error_cleanup "Could not make"
+		make $MINJ || error_cleanup "Could not make"
 	else
 		make $MINJ || error_cleanup "Could not make"
 	fi
@@ -384,16 +384,16 @@ if [ "$DOWIN" = "yes" ]; then
     cd ../unbound_shared
     echo "$configure"' --enable-debug --disable-flto '"$* $shared_cross_flag "$file_flag" "$file2_flag" "$file3_flag""
     if test "$W64" = "no"; then
-        $configure --enable-debug --disable-flto $* $shared_cross_flag "$file_flag" "$file2_flag" "$file3_flag" \
+	# Disable stack-protector for 32-bit windows builds.
+	$configure --enable-debug --disable-flto $* $shared_cross_flag "$file_flag" "$file2_flag" "$file3_flag" CFLAGS='-O2 -g -fno-stack-protector'\
 	|| error_cleanup "Could not configure"
     else
         $configure --enable-debug --disable-flto $* $shared_cross_flag \
 	|| error_cleanup "Could not configure"
     fi
     info "Calling make for DLL"
-	# Disable stack-protector for 32-bit windows builds.
 	if test "$W64" = "no"; then
-		make $MINJ CFLAGS='-fno-stack-protector' || error_cleanup "Could not make DLL"
+		make $MINJ || error_cleanup "Could not make DLL"
 	else
 		make $MINJ || error_cleanup "Could not make DLL"
 	fi
