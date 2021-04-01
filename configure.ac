@@ -1713,7 +1713,7 @@ case "$enable_allsymbols" in
 	yes)
 	COMMON_OBJ_ALL_SYMBOLS=""
 	UBSYMS=""
-	EXTRALINK="-L. -L.libs -lunbound"
+	EXTRALINK="libunbound.la"
 	AC_DEFINE(EXPORT_ALL_SYMBOLS, 1, [Define this if you enabled-allsymbols from libunbound to link binaries to it for smaller install size, but the libunbound export table is polluted by internal symbols])
 	;;
 	no|*)
