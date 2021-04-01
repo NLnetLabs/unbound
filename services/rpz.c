@@ -1642,6 +1642,15 @@ rpz_synthesize_localdata_from_rrset(struct rpz* ATTR_UNUSED(r), struct module_qs
 	}
 	rp->rk.dname = qi->qname;
 	rp->rk.dname_len = qi->qname_len;
+	/* this rrset is from the rpz data, or synthesized.
+	 * It is not actually from the network, so we flag it with this
+	 * flags as a fake RRset. If later the cache is used to look up
+	 * rrsets, then the fake ones are not returned (if you look without
+	 * the flag). For like CNAME lookups from the iterator or A, AAAA
+	 * lookups for nameserver targets, it would use the without flag
+	 * actual data. So that the actual network data and fake data
+	 * are kept track of separately. */
+	rp->rk.flags |= PACKED_RRSET_RPZ;
 	new_reply_info->rrsets[0] = rp;
 	msg->rep = new_reply_info;
 	return msg;

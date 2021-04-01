@@ -2478,6 +2478,7 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 			qstate->ext_state[id] = module_finished;
 			qstate->return_rcode = FLAGS_GET_RCODE(forged_response->rep->flags);
 			qstate->return_msg = forged_response;
+			iq->response = forged_response;
 			next_state(iq, FINISHED_STATE);
 			if(!iter_prepend(iq, qstate->return_msg, qstate->region)) {
 				log_err("rpz, prepend rrsets: out of memory");
@@ -3041,6 +3042,7 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 				qstate->ext_state[id] = module_finished;
 				qstate->return_rcode = FLAGS_GET_RCODE(forged_response->rep->flags);
 				qstate->return_msg = forged_response;
+				iq->response = forged_response;
 				next_state(iq, FINISHED_STATE);
 				if(!iter_prepend(iq, qstate->return_msg, qstate->region)) {
 					log_err("rpz after cname, prepend rrsets: out of memory");

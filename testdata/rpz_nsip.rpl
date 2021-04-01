@@ -131,6 +131,18 @@ SECTION ADDITIONAL
 ns1.ff. IN A 8.8.6.8
 ENTRY_END
 
+ENTRY_BEGIN
+MATCH opcode subdomain
+ADJUST copy_id copy_query
+REPLY QR NOERROR
+SECTION QUESTION
+bar. IN A
+SECTION AUTHORITY
+bar. IN NS gotham.ff.
+SECTION ADDITIONAL
+gotham.ff. IN A 192.0.5.2
+ENTRY_END
+
 RANGE_END
 
 ; com. -----------------------------------------------------------------------
@@ -383,6 +395,43 @@ SECTION QUESTION
 gotham.ff. IN A
 SECTION ANSWER
 gotham.ff. IN A 127.0.0.1
+ENTRY_END
+
+; again with more cache items
+STEP 40 QUERY
+ENTRY_BEGIN
+REPLY RD
+SECTION QUESTION
+gotham.ff. IN A
+ENTRY_END
+
+STEP 41 CHECK_ANSWER
+ENTRY_BEGIN
+MATCH all
+REPLY QR RD RA NOERROR
+SECTION QUESTION
+gotham.ff. IN A
+SECTION ANSWER
+gotham.ff. IN A 127.0.0.1
+ENTRY_END
+
+; query with a referral that tries to get the
+; just faked A record as nameserver glue (from cache).
+STEP 50 QUERY
+ENTRY_BEGIN
+REPLY RD
+SECTION QUESTION
+gotham.bar. IN A
+ENTRY_END
+
+STEP 51 CHECK_ANSWER
+ENTRY_BEGIN
+MATCH all
+REPLY QR RD RA NOERROR
+SECTION QUESTION
+gotham.bar. IN A
+SECTION ANSWER
+gotham.bar. IN A 127.0.0.1
 ENTRY_END
 
 SCENARIO_END
