@@ -452,6 +452,10 @@ create_udp_sock(int family, int socktype, struct sockaddr* addr,
 	if(err != NULL)
 		log_warn("error setting IP DiffServ codepoint %d on UDP socket: %s", dscp, err);
 	if(family == AF_INET6) {
+# if defined(IPV6_MTU_DISCOVER) && defined(IP_PMTUDISC_DONT)
+		int omit6_set = 0;
+		int action;
+# endif
 # if defined(IPV6_V6ONLY)
 		if(v6only) {
 			int val=(v6only==2)?0:1;
@@ -500,6 +504,39 @@ create_udp_sock(int family, int socktype, struct sockaddr* addr,
 			return -1;
 		}
 # endif /* IPv6 MTU */
+# if defined(IPV6_MTU_DISCOVER) && defined(IP_PMTUDISC_DONT)
+#  if defined(IP_PMTUDISC_OMIT)
+		action = IP_PMTUDISC_OMIT;
+		if (setsockopt(s, IPPROTO_IPV6, IPV6_MTU_DISCOVER,
+			&action, (socklen_t)sizeof(action)) < 0) {
+
+			if (errno != EINVAL) {
+				log_err("setsockopt(..., IPV6_MTU_DISCOVER, IP_PMTUDISC_OMIT...) failed: %s",
+					strerror(errno));
+				sock_close(s);
+				*noproto = 0;
+				*inuse = 0;
+				return -1;
+			}
+		}
+		else
+		{
+		    omit6_set = 1;
+		}
+#  endif
+		if (omit6_set == 0) {
+			action = IP_PMTUDISC_DONT;
+			if (setsockopt(s, IPPROTO_IPV6, IPV6_MTU_DISCOVER,
+				&action, (socklen_t)sizeof(action)) < 0) {
+				log_err("setsockopt(..., IPV6_MTU_DISCOVER, IP_PMTUDISC_DONT...) failed: %s",
+					strerror(errno));
+				sock_close(s);
+				*noproto = 0;
+				*inuse = 0;
+				return -1;
+			}
+		}
+# endif /* IPV6_MTU_DISCOVER */
 	} else if(family == AF_INET) {
 #  if defined(IP_MTU_DISCOVER) && defined(IP_PMTUDISC_DONT)
 /* linux 3.15 has IP_PMTUDISC_OMIT, Hannes Frederic Sowa made it so that
