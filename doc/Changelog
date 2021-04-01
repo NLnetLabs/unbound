@@ -1,3 +1,16 @@
+1 April 2021: Wouter
+	- Merge #460 from orbea: build: Link with the libtool archive.
+
+31 March 2021: George
+	- Clean makedist.sh.
+
+31 March 2021: Wouter
+	- Fix stack-protector change to not override other CFLAGS options.
+
+30 March 2021: George
+	- Disable the use of stack-protector for cross compiled 32-bit windows
+	  builds; relates to #444.
+
 25 March 2021: Wouter
 	- Fix #429: Also fix end of transfer for http download of auth zones.
 

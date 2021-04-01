@@ -362,31 +362,35 @@ if [ "$DOWIN" = "yes" ]; then
 	file3_flag="--with-rootcert-file=C:\Program Files (x86)\Unbound\icannbundle.pem"
 	version="$version"-w32
     fi
-    echo "$configure"' --enable-debug --enable-static-exe --disable-flto '"$* $cross_flag "$file_flag" "$file2_flag" "$file3_flag""
     if test "$W64" = "no"; then
-        $configure --enable-debug --enable-static-exe --disable-flto $* $cross_flag "$file_flag" "$file2_flag" "$file3_flag" \
-	|| error_cleanup "Could not configure"
+		# Disable stack-protector for 32-bit windows builds.
+		echo "$configure"' --enable-debug --enable-static-exe --disable-flto '"$* $cross_flag" "$file_flag" "$file2_flag" "$file3_flag" CFLAGS='-O2 -g -fno-stack-protector'
+		$configure --enable-debug --enable-static-exe --disable-flto $* $cross_flag "$file_flag" "$file2_flag" "$file3_flag" CFLAGS='-O2 -g -fno-stack-protector'\
+		|| error_cleanup "Could not configure"
     else
-        $configure --enable-debug --enable-static-exe --disable-flto $* $cross_flag \
-	|| error_cleanup "Could not configure"
+		echo "$configure"' --enable-debug --enable-static-exe --disable-flto '"$* $cross_flag"
+		$configure --enable-debug --enable-static-exe --disable-flto $* $cross_flag \
+		|| error_cleanup "Could not configure"
     fi
     info "Calling make"
-    make $MINJ || error_cleanup "Could not make"
+	make $MINJ || error_cleanup "Could not make"
     info "Make complete"
 
     if test "`uname`" = "Linux"; then 
     info "Make DLL"
     cd ../unbound_shared
-    echo "$configure"' --enable-debug --disable-flto '"$* $shared_cross_flag "$file_flag" "$file2_flag" "$file3_flag""
     if test "$W64" = "no"; then
-        $configure --enable-debug --disable-flto $* $shared_cross_flag "$file_flag" "$file2_flag" "$file3_flag" \
-	|| error_cleanup "Could not configure"
+	# Disable stack-protector for 32-bit windows builds.
+		echo "$configure"' --enable-debug --disable-flto '"$* $shared_cross_flag" "$file_flag" "$file2_flag" "$file3_flag" CFLAGS='-O2 -g -fno-stack-protector'
+		$configure --enable-debug --disable-flto $* $shared_cross_flag "$file_flag" "$file2_flag" "$file3_flag" CFLAGS='-O2 -g -fno-stack-protector'\
+		|| error_cleanup "Could not configure"
     else
+		echo "$configure"' --enable-debug --disable-flto '"$* $shared_cross_flag"
         $configure --enable-debug --disable-flto $* $shared_cross_flag \
-	|| error_cleanup "Could not configure"
+		|| error_cleanup "Could not configure"
     fi
     info "Calling make for DLL"
-    make $MINJ || error_cleanup "Could not make DLL"
+	make $MINJ || error_cleanup "Could not make DLL"
     info "Make DLL complete"
     cd ../unbound
     fi
@@ -413,7 +417,9 @@ if [ "$DOWIN" = "yes" ]; then
     mkdir libunbound
     cp ../../unbound_shared/unbound.h ../../unbound_shared/.libs/libunbound*.dll ../../unbound_shared/.libs/libunbound.dll.a ../../unbound_shared/.libs/libunbound.a ../../unbound_shared/.libs/libunbound*.def ../../sslsharedinstall/lib/libcrypto.dll.a ../../sslsharedinstall/lib/libssl.dll.a ../../sslsharedinstall/bin/libcrypto*.dll ../../sslsharedinstall/bin/libssl*.dll ../../wxpinstall/bin/libexpat*.dll ../../wxpinstall/lib/libexpat.dll.a libunbound/.
     if test "$W64" = "no"; then
-	    cp /usr/i686-w64-mingw32/sys-root/mingw/bin/libssp-0.dll libunbound/.
+	# Disable stack-protector for 32-bit windows builds.
+	# cp /usr/i686-w64-mingw32/sys-root/mingw/bin/libssp-0.dll libunbound/.
+	:
     else
 	    cp /usr/x86_64-w64-mingw32/sys-root/mingw/bin/libssp-0.dll libunbound/.
     fi
