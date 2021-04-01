@@ -1928,23 +1928,18 @@ rpz_delegation_point_zone_lookup(struct delegpt* dp, struct local_zones* zones,
 	struct local_zone* z = NULL;
 
 	rpz_log_dname("delegation point", dp->name, dp->namelen);
-	// XXX: do we want this?
-	z = rpz_find_zone(zones, dp->name, dp->namelen, qclass, 0, 0, 0);
-	if(z != NULL) {
-		match->dname = dp->name;
-		match->dname_len = dp->namelen;
-	} else if(z == NULL) {
-		for(nameserver = dp->nslist;
-		    nameserver != NULL;
-		    nameserver = nameserver->next) {
-			rpz_log_dname("delegation point", nameserver->name, nameserver->namelen);
-			z = rpz_find_zone(zones, nameserver->name, nameserver->namelen,
-					  qclass, 0, 0, 0);
-			if(z != NULL) {
-				match->dname = nameserver->name;
-				match->dname_len = nameserver->namelen;
-				break;
-			}
+	/* the rpz specs match the nameserver names (NS records), not the
+	 * name of the delegation point itself, to the nsdname triggers */
+	for(nameserver = dp->nslist;
+	    nameserver != NULL;
+	    nameserver = nameserver->next) {
+		rpz_log_dname("delegation point ns", nameserver->name, nameserver->namelen);
+		z = rpz_find_zone(zones, nameserver->name, nameserver->namelen,
+				  qclass, 0, 0, 0);
+		if(z != NULL) {
+			match->dname = nameserver->name;
+			match->dname_len = nameserver->namelen;
+			break;
 		}
 	}
 

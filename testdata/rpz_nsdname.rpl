@@ -16,13 +16,13 @@ rpz	3600	IN	SOA	ns1.rpz.example.com. hostmaster.rpz.example.com. (
 	3600	IN	NS	ns1.rpz.example.com.
 	3600	IN	NS	ns2.rpz.example.com.
 $ORIGIN rpz.example.com.
-gotham.aa.rpz-nsdname CNAME .
-gotham.bb.rpz-nsdname CNAME *.
-gotham.cc.rpz-nsdname CNAME rpz-drop.
-gotham.com.rpz-nsdname CNAME rpz-passthru.
-gotham.dd.rpz-nsdname CNAME rpz-tcp-only.
-gotham.ff.rpz-nsdname A 127.0.0.1
-gotham.ff.rpz-nsdname TXT "42"
+ns1.gotham.aa.rpz-nsdname CNAME .
+ns1.gotham.bb.rpz-nsdname CNAME *.
+ns1.gotham.cc.rpz-nsdname CNAME rpz-drop.
+ns1.gotham.com.rpz-nsdname CNAME rpz-passthru.
+ns1.gotham.dd.rpz-nsdname CNAME rpz-tcp-only.
+ns1.gotham.ff.rpz-nsdname A 127.0.0.1
+ns1.gotham.ff.rpz-nsdname TXT "42"
 TEMPFILE_END
 
 stub-zone:
