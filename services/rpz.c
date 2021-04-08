@@ -1966,21 +1966,25 @@ rpz_callback_from_iterator_module(struct module_qstate* ms, struct iter_qstate* 
 
 	lock_rw_rdlock(&az->rpz_lock);
 
+	/* precedencey of RPZ works, loosely, like this:
+	 * CNAMEs in order of the CNAME chain. rpzs in the order they are
+	 * configured. In an RPZ: first client-IP addr, then QNAME, then
+	 * response IP, then NSDNAME, then NSIP. Longest match first. Smallest
+	 * one from a set. */
 	for(a = az->rpz_first; a != NULL; a = a->rpz_az_next) {
 		lock_rw_rdlock(&a->lock);
 		r = a->rpz;
 
-		// XXX: check rfc which action has preference
-
-		raddr = rpz_delegation_point_ipbased_trigger_lookup(r, is);
-		if(raddr != NULL) {
+		/* the nsdname has precedence over the nsip triggers */
+		z = rpz_delegation_point_zone_lookup(is->dp, r->nsdname_zones,
+						     ms->qinfo.qclass, &match);
+		if(z != NULL) {
 			lock_rw_unlock(&a->lock);
 			break;
 		}
 
-		z = rpz_delegation_point_zone_lookup(is->dp, r->nsdname_zones,
-						     ms->qinfo.qclass, &match);
-		if(z != NULL) {
+		raddr = rpz_delegation_point_ipbased_trigger_lookup(r, is);
+		if(raddr != NULL) {
 			lock_rw_unlock(&a->lock);
 			break;
 		}
