@@ -1,3 +1,6 @@
+7 April 2021: Wouter
+	- Fix for #411: Depth protect for crash on deleted element timeout.
+
 1 April 2021: Wouter
 	- Merge #460 from orbea: build: Link with the libtool archive.
 	- Fix to stop IPv6 PMTU discovery.
