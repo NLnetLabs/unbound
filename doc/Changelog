@@ -1,3 +1,6 @@
+9 April 2021: Wouter
+	- rebuild configure to set EXTRALINK to libunbound.la for #460.
+
 7 April 2021: Wouter
 	- Fix for #411: Depth protect for crash on deleted element timeout.
 
