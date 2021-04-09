@@ -1966,7 +1966,7 @@ rpz_callback_from_iterator_module(struct module_qstate* ms, struct iter_qstate* 
 
 	lock_rw_rdlock(&az->rpz_lock);
 
-	/* precedencey of RPZ works, loosely, like this:
+	/* precedence of RPZ works, loosely, like this:
 	 * CNAMEs in order of the CNAME chain. rpzs in the order they are
 	 * configured. In an RPZ: first client-IP addr, then QNAME, then
 	 * response IP, then NSDNAME, then NSIP. Longest match first. Smallest
