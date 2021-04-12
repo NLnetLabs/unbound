@@ -1,3 +1,7 @@
+12 April 2021: Wouter
+	- Fix permission denied sendto log, squelch the log messages
+	  unless high verbosity is set.
+
 9 April 2021: Wouter
 	- rebuild configure to set EXTRALINK to libunbound.la for #460.
 

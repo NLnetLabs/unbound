@@ -299,6 +299,7 @@ udp_send_errno_needs_log(struct sockaddr* addr, socklen_t addrlen)
 #  ifdef ENETDOWN
 		case ENETDOWN:
 #  endif
+		case EPERM:
 			if(verbosity < VERB_ALGO)
 				return 0;
 		default:
