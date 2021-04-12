@@ -2611,7 +2611,7 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 		(iq->dp->ssl_upstream || qstate->env->cfg->ssl_upstream),
 		target->tls_auth_name, qstate);
 	if(!outq) {
-		log_addr(VERB_DETAIL, "error sending query to auth server", 
+		log_addr(VERB_QUERY, "error sending query to auth server",
 			&target->addr, target->addrlen);
 		if(!(iq->chase_flags & BIT_RD) && !iq->ratelimit_ok)
 		    infra_ratelimit_dec(qstate->env->infra_cache, iq->dp->name,

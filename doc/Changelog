@@ -1,3 +1,7 @@
+12 April 2021: George
+	- Fix (increase) verbosity level for iterator error log in
+	  processQueryTargets().
+
 12 April 2021: Wouter
 	- Fix permission denied sendto log, squelch the log messages
 	  unless high verbosity is set.
