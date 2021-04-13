@@ -1,5 +1,6 @@
 13 April 2021: George
 	- Fix documentation comment for files previously residing in checkconf/.
+	- Remove unused functions worker_handle_reply and libworker_handle_reply.
 
 13 April 2021: Wouter
 	- Fix that nxdomain synthesis does not happen above the stub or
