@@ -1,5 +1,5 @@
 /*
- * checkconf/unbound-checkconf.c - config file checker for unbound.conf file.
+ * smallapp/unbound-checkconf.c - config file checker for unbound.conf file.
  *
  * Copyright (c) 2007, NLnet Labs. All rights reserved.
  *

@@ -1,5 +1,5 @@
 /*
- * checkconf/worker_cb.c - fake callback routines to make fptr_wlist work
+ * smallapp/worker_cb.c - fake callback routines to make fptr_wlist work
  *
  * Copyright (c) 2007, NLnet Labs. All rights reserved.
  *
