@@ -1,6 +1,10 @@
 13 April 2021: George
 	- Fix documentation comment for files previously residing in checkconf/.
 
+13 April 2021: Wouter
+	- Fix that nxdomain synthesis does not happen above the stub or
+	  forward definition.
+
 12 April 2021: George
 	- Fix (increase) verbosity level for iterator error log in
 	  processQueryTargets().
