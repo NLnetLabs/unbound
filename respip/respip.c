@@ -602,7 +602,7 @@ rdata2sockaddr(const struct packed_rrset_data* rd, uint16_t rtype, size_t i,
  */
 static struct resp_addr*
 respip_addr_lookup(const struct reply_info *rep, struct respip_set* rs,
-	size_t* rrset_id)
+	size_t* rrset_id, size_t* rr_id)
 {
 	size_t i;
 	struct resp_addr* ra;
@@ -625,6 +625,7 @@ respip_addr_lookup(const struct reply_info *rep, struct respip_set* rs,
 				&ss, addrlen);
 			if(ra) {
 				*rrset_id = i;
+				*rr_id = j;
 				lock_rw_rdlock(&ra->lock);
 				lock_rw_unlock(&rs->lock);
 				return ra;
@@ -869,7 +870,7 @@ respip_rewrite_reply(const struct query_info* qinfo,
 	size_t tag_datas_size;
 	struct view* view = NULL;
 	struct respip_set* ipset = NULL;
-	size_t rrset_id = 0;
+	size_t rrset_id = 0, rr_id = 0;
 	enum respip_action action = respip_none;
 	int tag = -1;
 	struct resp_addr* raddr = NULL;
@@ -910,7 +911,7 @@ respip_rewrite_reply(const struct query_info* qinfo,
 		lock_rw_rdlock(&view->lock);
 		if(view->respip_set) {
 			if((raddr = respip_addr_lookup(rep,
-				view->respip_set, &rrset_id))) {
+				view->respip_set, &rrset_id, &rr_id))) {
 				/** for per-view respip directives the action
 				 * can only be direct (i.e. not tag-based) */
 				action = raddr->action;
@@ -924,7 +925,7 @@ respip_rewrite_reply(const struct query_info* qinfo,
 		}
 	}
 	if(!raddr && (raddr = respip_addr_lookup(rep, ipset,
-		&rrset_id))) {
+		&rrset_id, &rr_id))) {
 		action = (enum respip_action)local_data_find_tag_action(
 			raddr->taglist, raddr->taglen, ctaglist, ctaglen,
 			tag_actions, tag_actions_size,
@@ -938,7 +939,7 @@ respip_rewrite_reply(const struct query_info* qinfo,
 		if(!r->taglist || taglist_intersect(r->taglist, 
 			r->taglistlen, ctaglist, ctaglen)) {
 			if((raddr = respip_addr_lookup(rep,
-				r->respip_set, &rrset_id))) {
+				r->respip_set, &rrset_id, &rr_id))) {
 				if(!respip_use_rpz(raddr, r, &action, &data,
 					&rpz_log, &log_name, &rpz_cname_override,
 					region, &rpz_used)) {
@@ -949,6 +950,21 @@ respip_rewrite_reply(const struct query_info* qinfo,
 					return 0;
 				}
 				if(rpz_used) {
+					if(verbosity >= VERB_ALGO) {
+						struct sockaddr_storage ss;
+						socklen_t ss_len = 0;
+						char nm[256], ip[256];
+						char qn[255+1];
+						if(!rdata2sockaddr(rep->rrsets[rrset_id]->entry.data, ntohs(rep->rrsets[rrset_id]->rk.type), rr_id, &ss, &ss_len))
+							snprintf(ip, sizeof(ip), "invalidRRdata");
+						else
+							addr_to_str(&ss, ss_len, ip, sizeof(ip));
+						dname_str(qinfo->qname, qn);
+						addr_to_str(&raddr->node.addr,
+							raddr->node.addrlen,
+							nm, sizeof(nm));
+						verbose(VERB_ALGO, "respip: rpz response-ip trigger %s/%d on %s %s with action %s", nm, raddr->node.net, qn, ip, rpz_action_to_string(respip_action_to_rpz_action(action)));
+					}
 					/* break to make sure 'a' stays pointed
 					 * to used auth_zone, and keeps lock */
 					break;

@@ -980,7 +980,6 @@ rpz_insert_response_ip_trigger(struct rpz* r, uint8_t* dname, size_t dnamelen,
 	socklen_t addrlen;
 	int net, af;
 
-	verbose(VERB_ALGO, "rpz: insert response ip trigger: %s", rpz_action_to_string(a));
 	if(a == RPZ_INVALID_ACTION) {
 		return 0;
 	}
