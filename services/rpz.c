@@ -709,15 +709,9 @@ rpz_insert_nsdname_trigger(struct rpz* r, uint8_t* dname, size_t dnamelen,
 {
 	uint8_t* dname_stripped = NULL;
 	size_t dnamelen_stripped = 0;
-	verbose(VERB_ALGO, "rpz: insert nsdname trigger: %s",
-		rpz_action_to_string(a));
 
-	rpz_log_dname("insert nsdname trigger", dname, dnamelen);
 	rpz_strip_nsdname_suffix(dname, dnamelen, &dname_stripped,
 		&dnamelen_stripped);
-	rpz_log_dname("insert nsdname trigger (stripped)", dname_stripped,
-		dnamelen_stripped);
-
 	if(a == RPZ_INVALID_ACTION) {
 		verbose(VERB_ALGO, "rpz: skipping invalid action");
 		free(dname_stripped);
@@ -941,7 +935,6 @@ rpz_insert_nsip_trigger(struct rpz* r, uint8_t* dname, size_t dnamelen,
 	socklen_t addrlen;
 	int net, af;
 
-	verbose(VERB_ALGO, "rpz: insert nsip trigger: %s", rpz_action_to_string(a));
 	if(a == RPZ_INVALID_ACTION) {
 		return 0;
 	}
@@ -1377,12 +1370,16 @@ rpz_ipbased_trigger_lookup(struct clientip_synthesized_rrset* set,
 			addr, addrlen);
 	if(raddr != NULL) {
 		action = raddr->action;
+		if(verbosity >= VERB_ALGO) {
+			char ip[256], net[256];
+			addr_to_str(addr, addrlen, ip, sizeof(ip));
+			addr_to_str(&raddr->node.addr, raddr->node.addrlen,
+				net, sizeof(net));
+			verbose(VERB_ALGO, "rpz: trigger nsip %s/%d on %s action=%s",
+				net, raddr->node.net, ip, rpz_action_to_string(action));
+		}
 		lock_rw_unlock(&raddr->lock);
 	}
-
-	verbose(VERB_ALGO, "rpz: ipbased trigger lookup: found=%d action=%s",
-		raddr != NULL, rpz_action_to_string(action));
-
 	lock_rw_unlock(&set->lock);
 
 	return raddr;
@@ -1679,7 +1676,6 @@ local_data_find_type(struct local_data* data, uint16_t type, int alias_ok)
 	struct local_rrset* p;
 	type = htons(type);
 	for(p = data->rrsets; p; p = p->next) {
-		verbose(VERB_ALGO, "type=%d (%d)", type, p->rrset->rk.type);
 		if(p->rrset->rk.type == type)
 			return p;
 		if(alias_ok && p->rrset->rk.type == htons(LDNS_RR_TYPE_CNAME))
@@ -1826,9 +1822,6 @@ rpz_apply_nsip_trigger(struct module_qstate* ms, struct rpz* r,
 		action = r->action_override;
 	}
 
-	verbose(VERB_ALGO, "rpz: iterator callback: nsip: apply action=%s",
-		rpz_action_to_string(raddr->action));
-
 	if(action == RPZ_LOCAL_DATA_ACTION && raddr->data == NULL) {
 		verbose(VERB_ALGO, "rpz: bug: nsip local data action but no local data");
 		ret = rpz_synthesize_nodata(r, ms, &ms->qinfo);
@@ -1883,8 +1876,6 @@ rpz_apply_nsdname_trigger(struct module_qstate* ms, struct rpz* r,
 		action = r->action_override;
 	}
 
-	verbose(VERB_ALGO, "rpz: nsdame trigger with action=%s", rpz_action_to_string(action));
-
 	switch(action) {
 	case RPZ_NXDOMAIN_ACTION:
 		ret = rpz_synthesize_nxdomain(r, ms, &ms->qinfo);
@@ -1927,23 +1918,30 @@ rpz_delegation_point_zone_lookup(struct delegpt* dp, struct local_zones* zones,
 	struct delegpt_ns* nameserver;
 	struct local_zone* z = NULL;
 
-	rpz_log_dname("delegation point", dp->name, dp->namelen);
 	/* the rpz specs match the nameserver names (NS records), not the
 	 * name of the delegation point itself, to the nsdname triggers */
 	for(nameserver = dp->nslist;
 	    nameserver != NULL;
 	    nameserver = nameserver->next) {
-		rpz_log_dname("delegation point ns", nameserver->name, nameserver->namelen);
 		z = rpz_find_zone(zones, nameserver->name, nameserver->namelen,
 				  qclass, 0, 0, 0);
 		if(z != NULL) {
 			match->dname = nameserver->name;
 			match->dname_len = nameserver->namelen;
+			if(verbosity >= VERB_ALGO) {
+				char nm[255+1], zn[255+1];
+				dname_str(match->dname, nm);
+				dname_str(z->name, zn);
+				if(strcmp(nm, zn) != 0)
+					verbose(VERB_ALGO, "rpz: trigger nsdname %s on %s action=%s",
+						zn, nm, rpz_action_to_string(localzone_type_to_rpz_action(z->type)));
+				else
+					verbose(VERB_ALGO, "rpz: trigger nsdname %s action=%s",
+						nm, rpz_action_to_string(localzone_type_to_rpz_action(z->type)));
+			}
 			break;
 		}
 	}
-
-	verbose(VERB_ALGO, "rpz: delegation point zone found=%d", z != NULL);
 
 	return z;
 }
@@ -1971,6 +1969,8 @@ rpz_callback_from_iterator_module(struct module_qstate* ms, struct iter_qstate* 
 	 * configured. In an RPZ: first client-IP addr, then QNAME, then
 	 * response IP, then NSDNAME, then NSIP. Longest match first. Smallest
 	 * one from a set. */
+	/* we use the precedence rules for the topics and triggers that
+	 * are pertinent at this stage of the resolve processing */
 	for(a = az->rpz_first; a != NULL; a = a->rpz_az_next) {
 		lock_rw_rdlock(&a->lock);
 		r = a->rpz;
