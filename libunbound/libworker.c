@@ -877,35 +877,6 @@ struct outbound_entry* libworker_send_query(struct query_info* qinfo,
 }
 
 int 
-libworker_handle_reply(struct comm_point* c, void* arg, int error,
-        struct comm_reply* reply_info)
-{
-	struct module_qstate* q = (struct module_qstate*)arg;
-	struct libworker* lw = (struct libworker*)q->env->worker;
-	struct outbound_entry e;
-	e.qstate = q;
-	e.qsent = NULL;
-
-	if(error != 0) {
-		mesh_report_reply(lw->env->mesh, &e, reply_info, error);
-		return 0;
-	}
-	/* sanity check. */
-	if(!LDNS_QR_WIRE(sldns_buffer_begin(c->buffer))
-		|| LDNS_OPCODE_WIRE(sldns_buffer_begin(c->buffer)) !=
-			LDNS_PACKET_QUERY
-		|| LDNS_QDCOUNT(sldns_buffer_begin(c->buffer)) > 1) {
-		/* error becomes timeout for the module as if this reply
-		 * never arrived. */
-		mesh_report_reply(lw->env->mesh, &e, reply_info, 
-			NETEVENT_TIMEOUT);
-		return 0;
-	}
-	mesh_report_reply(lw->env->mesh, &e, reply_info, NETEVENT_NOERROR);
-	return 0;
-}
-
-int 
 libworker_handle_service_reply(struct comm_point* c, void* arg, int error,
         struct comm_reply* reply_info)
 {
@@ -942,14 +913,6 @@ void worker_handle_control_cmd(struct tube* ATTR_UNUSED(tube),
 int worker_handle_request(struct comm_point* ATTR_UNUSED(c), 
 	void* ATTR_UNUSED(arg), int ATTR_UNUSED(error),
         struct comm_reply* ATTR_UNUSED(repinfo))
-{
-	log_assert(0);
-	return 0;
-}
-
-int worker_handle_reply(struct comm_point* ATTR_UNUSED(c), 
-	void* ATTR_UNUSED(arg), int ATTR_UNUSED(error),
-        struct comm_reply* ATTR_UNUSED(reply_info))
 {
 	log_assert(0);
 	return 0;

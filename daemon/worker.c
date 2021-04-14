@@ -237,38 +237,6 @@ worker_send_cmd(struct worker* worker, enum worker_commands cmd)
 }
 
 int 
-worker_handle_reply(struct comm_point* c, void* arg, int error, 
-	struct comm_reply* reply_info)
-{
-	struct module_qstate* q = (struct module_qstate*)arg;
-	struct worker* worker = q->env->worker;
-	struct outbound_entry e;
-	e.qstate = q;
-	e.qsent = NULL;
-
-	if(error != 0) {
-		mesh_report_reply(worker->env.mesh, &e, reply_info, error);
-		worker_mem_report(worker, NULL);
-		return 0;
-	}
-	/* sanity check. */
-	if(!LDNS_QR_WIRE(sldns_buffer_begin(c->buffer))
-		|| LDNS_OPCODE_WIRE(sldns_buffer_begin(c->buffer)) != 
-			LDNS_PACKET_QUERY
-		|| LDNS_QDCOUNT(sldns_buffer_begin(c->buffer)) > 1) {
-		/* error becomes timeout for the module as if this reply
-		 * never arrived. */
-		mesh_report_reply(worker->env.mesh, &e, reply_info, 
-			NETEVENT_TIMEOUT);
-		worker_mem_report(worker, NULL);
-		return 0;
-	}
-	mesh_report_reply(worker->env.mesh, &e, reply_info, NETEVENT_NOERROR);
-	worker_mem_report(worker, NULL);
-	return 0;
-}
-
-int 
 worker_handle_service_reply(struct comm_point* c, void* arg, int error, 
 	struct comm_reply* reply_info)
 {
@@ -2072,14 +2040,6 @@ struct outbound_entry* libworker_send_query(
 	uint8_t* ATTR_UNUSED(zone), size_t ATTR_UNUSED(zonelen),
 	int ATTR_UNUSED(ssl_upstream), char* ATTR_UNUSED(tls_auth_name),
 	struct module_qstate* ATTR_UNUSED(q))
-{
-	log_assert(0);
-	return 0;
-}
-
-int libworker_handle_reply(struct comm_point* ATTR_UNUSED(c), 
-	void* ATTR_UNUSED(arg), int ATTR_UNUSED(error),
-        struct comm_reply* ATTR_UNUSED(reply_info))
 {
 	log_assert(0);
 	return 0;

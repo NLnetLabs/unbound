@@ -1,3 +1,22 @@
+13 April 2021: George
+	- Fix documentation comment for files previously residing in checkconf/.
+	- Remove unused functions worker_handle_reply and libworker_handle_reply.
+
+13 April 2021: Wouter
+	- Fix that nxdomain synthesis does not happen above the stub or
+	  forward definition.
+
+12 April 2021: George
+	- Fix (increase) verbosity level for iterator error log in
+	  processQueryTargets().
+
+12 April 2021: Wouter
+	- Fix permission denied sendto log, squelch the log messages
+	  unless high verbosity is set.
+
+9 April 2021: Wouter
+	- rebuild configure to set EXTRALINK to libunbound.la for #460.
+
 7 April 2021: Wouter
 	- Fix for #411: Depth protect for crash on deleted element timeout.
 

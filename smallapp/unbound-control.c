@@ -1,5 +1,5 @@
 /*
- * checkconf/unbound-control.c - remote control utility for unbound.
+ * smallapp/unbound-control.c - remote control utility for unbound.
  *
  * Copyright (c) 2008, NLnet Labs. All rights reserved.
  *
