@@ -1,3 +1,7 @@
+22 April 2021: Wouter
+	- Merge #466 from FGasper: Support OpenSSLs that lack
+	  SSL_get0_alpn_selected.
+
 13 April 2021: George
 	- Fix documentation comment for files previously residing in checkconf/.
 	- Remove unused functions worker_handle_reply and libworker_handle_reply.
