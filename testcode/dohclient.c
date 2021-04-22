@@ -501,7 +501,9 @@ run(struct http2_session* h2_session, int port, int no_tls, int count, char** q)
 	if(!no_tls) {
 		ctx = connect_sslctx_create(NULL, NULL, NULL, 0);
 		if(!ctx) fatal_exit("cannot create ssl ctx");
+#ifdef HAVE_SSL_CTX_SET_ALPN_PROTOS
 		SSL_CTX_set_alpn_protos(ctx, (const unsigned char *)"\x02h2", 3);
+#endif
 		ssl = outgoing_ssl_fd(ctx, fd);
 		if(!ssl) {
 			printf("cannot create ssl\n");

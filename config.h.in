@@ -516,6 +516,9 @@
 /* Define if you have the SSL libraries installed. */
 #undef HAVE_SSL
 
+/* Define to 1 if you have the `SSL_CTX_set_alpn_protos' function. */
+#undef HAVE_SSL_CTX_SET_ALPN_PROTOS
+
 /* Define to 1 if you have the `SSL_CTX_set_alpn_select_cb' function. */
 #undef HAVE_SSL_CTX_SET_ALPN_SELECT_CB
 

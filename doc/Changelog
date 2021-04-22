@@ -2,6 +2,8 @@
 	- Merge #466 from FGasper: Support OpenSSLs that lack
 	  SSL_get0_alpn_selected.
 	- Fix #468: OpenSSL 1.0.1 can no longer build Unbound.
+	- Further fix for #468: detect SSL_CTX_set_alpn_protos for build with
+	  OpenSSL 1.0.1.
 
 13 April 2021: George
 	- Fix documentation comment for files previously residing in checkconf/.
