@@ -1393,7 +1393,7 @@ do_view_zone_add(RES* ssl, struct worker* worker, char* arg)
 			ssl_printf(ssl,"error out of memory\n");
 			return;
 		}
-		if(!v->isfirst) {
+		if(!v->server_view) {
 			/* Global local-zone is not used for this view,
 			 * therefore add defaults to this view-specic
 			 * local-zone. */
@@ -1540,9 +1540,9 @@ do_cache_remove(struct worker* worker, uint8_t* nm, size_t nmlen,
 {
 	hashvalue_type h;
 	struct query_info k;
-	rrset_cache_remove(worker->env.rrset_cache, nm, nmlen, t, c, 0);
+	rrset_cache_remove(worker->env.current_view_env->rrset_cache, nm, nmlen, t, c, 0);
 	if(t == LDNS_RR_TYPE_SOA)
-		rrset_cache_remove(worker->env.rrset_cache, nm, nmlen, t, c,
+		rrset_cache_remove(worker->env.current_view_env->rrset_cache, nm, nmlen, t, c,
 			PACKED_RRSET_SOA_NEG);
 	k.qname = nm;
 	k.qname_len = nmlen;

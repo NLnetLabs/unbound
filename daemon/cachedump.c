@@ -44,8 +44,9 @@
 #include "daemon/cachedump.h"
 #include "daemon/remote.h"
 #include "daemon/worker.h"
-#include "services/cache/rrset.h"
 #include "services/cache/dns.h"
+#include "services/cache/rrset.h"
+#include "services/view.h"
 #include "services/cache/infra.h"
 #include "util/data/msgreply.h"
 #include "util/regional.h"
@@ -120,7 +121,7 @@ dump_rrset_lruhash(RES* ssl, struct lruhash* h, time_t now)
 static int
 dump_rrset_cache(RES* ssl, struct worker* worker)
 {
-	struct rrset_cache* r = worker->env.rrset_cache;
+	struct rrset_cache* r = worker->env.current_view_env->rrset_cache;
 	size_t slab;
 	if(!ssl_printf(ssl, "START_RRSET_CACHE\n")) return 0;
 	for(slab=0; slab<r->table.size; slab++) {
@@ -602,7 +603,7 @@ load_ref(RES* ssl, sldns_buffer* buf, struct worker* worker,
 	}
 
 	/* lookup in cache */
-	k = rrset_cache_lookup(worker->env.rrset_cache, qinfo.qname,
+	k = rrset_cache_lookup(worker->env.current_view_env->rrset_cache, qinfo.qname,
 		qinfo.qname_len, qinfo.qtype, qinfo.qclass,
 		(uint32_t)flags, *worker->env.now, 0);
 	if(!k) {
@@ -677,7 +678,11 @@ load_msg(RES* ssl, sldns_buffer* buf, struct worker* worker)
 	if(!go_on) 
 		return 1; /* skip this one, not all references satisfied */
 
-	if(!dns_cache_store(&worker->env, &qinf, &rep, 0, 0, 0, NULL, flags)) {
+	struct module_qstate qstate;
+	qstate.env = &worker->env;
+	qstate.query_view_env = worker->env.current_view_env;
+
+	if(!dns_cache_store(&qstate, &qinf, &rep, 0, 0, 0, NULL, flags)) {
 		log_warn("error out of memory");
 		return 0;
 	}

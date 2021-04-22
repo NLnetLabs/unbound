@@ -128,8 +128,8 @@ worker_mem_report(struct worker* ATTR_UNUSED(worker),
 		return;
 	front = listen_get_mem(worker->front);
 	back = outnet_get_mem(worker->back);
-	msg = slabhash_get_mem(worker->env.msg_cache);
-	rrset = slabhash_get_mem(&worker->env.rrset_cache->table);
+	msg = slabhash_get_mem(worker->env.current_view_env->msg_cache);
+	rrset = slabhash_get_mem(&worker->env.current_view_env->rrset_cache->table);
 	infra = infra_get_mem(worker->env.infra_cache);
 	mesh = mesh_get_mem(worker->env.mesh);
 	ac = alloc_get_mem(&worker->alloc);
@@ -212,14 +212,14 @@ worker_mem_report(struct worker* ATTR_UNUSED(worker),
 #ifdef CLIENT_SUBNET
 	verbose(VERB_QUERY, "cache memory msg=%u rrset=%u infra=%u val=%u "
 		"subnet=%u",
-		(unsigned)slabhash_get_mem(worker->env.msg_cache),
-		(unsigned)slabhash_get_mem(&worker->env.rrset_cache->table),
+		(unsigned)slabhash_get_mem(worker->env.current_view_env->msg_cache),
+		(unsigned)slabhash_get_mem(&worker->env.current_view_env->rrset_cache->table),
 		(unsigned)infra_get_mem(worker->env.infra_cache),
 		(unsigned)val, (unsigned)subnet);
 #else /* no CLIENT_SUBNET */
 	verbose(VERB_QUERY, "cache memory msg=%u rrset=%u infra=%u val=%u",
-		(unsigned)slabhash_get_mem(worker->env.msg_cache),
-		(unsigned)slabhash_get_mem(&worker->env.rrset_cache->table),
+		(unsigned)slabhash_get_mem(worker->env.current_view_env->msg_cache),
+		(unsigned)slabhash_get_mem(&worker->env.current_view_env->rrset_cache->table),
 		(unsigned)infra_get_mem(worker->env.infra_cache),
 		(unsigned)val);
 #endif /* CLIENT_SUBNET */
@@ -489,7 +489,12 @@ answer_norec_from_cache(struct worker* worker, struct query_info* qinfo,
 	struct dns_msg *msg = NULL;
 	struct delegpt *dp;
 
-	dp = dns_cache_find_delegation(&worker->env, qinfo->qname, 
+	struct module_qstate qstate;
+	qstate.env = &worker->env;
+	qstate.query_view_env = worker->env.current_view_env;
+
+
+	dp = dns_cache_find_delegation(&qstate, qinfo->qname, 
 		qinfo->qname_len, qinfo->qtype, qinfo->qclass,
 		worker->scratchpad, &msg, timenow);
 	if(!dp) { /* no delegation, need to reprime */
@@ -633,7 +638,7 @@ answer_from_cache(struct worker* worker, struct query_info* qinfo,
 	int* is_secure_answer, struct ub_packed_rrset_key** alias_rrset,
 	struct reply_info** partial_repp,
 	struct reply_info* rep, uint16_t id, uint16_t flags,
-	struct comm_reply* repinfo, struct edns_data* edns)
+	struct comm_reply* repinfo, struct edns_data* edns, struct view* view)
 {
 	struct edns_data edns_bak;
 	time_t timenow = *worker->env.now;
@@ -692,7 +697,7 @@ answer_from_cache(struct worker* worker, struct query_info* qinfo,
 			goto bail_out;
 		error_encode(repinfo->c->buffer, LDNS_RCODE_SERVFAIL,
 			qinfo, id, flags, edns);
-		rrset_array_unlock_touch(worker->env.rrset_cache,
+		rrset_array_unlock_touch(view->rrset_cache,
 			worker->scratchpad, rep->ref, rep->rrset_count);
 		if(worker->stats.extended) {
 			worker->stats.ans_bogus ++;
@@ -767,13 +772,13 @@ answer_from_cache(struct worker* worker, struct query_info* qinfo,
 	}
 	/* cannot send the reply right now, because blocking network syscall
 	 * is bad while holding locks. */
-	rrset_array_unlock_touch(worker->env.rrset_cache, worker->scratchpad,
+	rrset_array_unlock_touch(view->rrset_cache, worker->scratchpad,
 		rep->ref, rep->rrset_count);
 	/* go and return this buffer to the client */
 	return 1;
 
 bail_out:
-	rrset_array_unlock_touch(worker->env.rrset_cache, 
+	rrset_array_unlock_touch(view->rrset_cache, 
 		worker->scratchpad, rep->ref, rep->rrset_count);
 	return 0;
 }
@@ -781,7 +786,7 @@ bail_out:
 /** Reply to client and perform prefetch to keep cache up to date. */
 static void
 reply_and_prefetch(struct worker* worker, struct query_info* qinfo, 
-	uint16_t flags, struct comm_reply* repinfo, time_t leeway, int noreply)
+	uint16_t flags, struct comm_reply* repinfo, time_t leeway, int noreply, struct view* view)
 {
 	/* first send answer to client to keep its latency 
 	 * as small as a cachereply */
@@ -800,7 +805,7 @@ reply_and_prefetch(struct worker* worker, struct query_info* qinfo,
 	 * the cache and go to the network for the data). */
 	/* this (potentially) runs the mesh for the new query */
 	mesh_new_prefetch(worker->env.mesh, qinfo, flags, leeway + 
-		PREFETCH_EXPIRY_ADD);
+		PREFETCH_EXPIRY_ADD, view);
 }
 
 /**
@@ -1367,12 +1372,12 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 		regional_free_all(worker->scratchpad);
 		goto send_reply;
 	}
-	if(local_zones_answer(worker->daemon->local_zones, &worker->env, &qinfo,
+	if(local_zones_answer(acladdr->view, &worker->env, &qinfo,
 		&edns, c->buffer, worker->scratchpad, repinfo, acladdr->taglist,
 		acladdr->taglen, acladdr->tag_actions,
 		acladdr->tag_actions_size, acladdr->tag_datas,
 		acladdr->tag_datas_size, worker->daemon->cfg->tagname,
-		worker->daemon->cfg->num_tags, acladdr->view)) {
+		worker->daemon->cfg->num_tags)) {
 		regional_free_all(worker->scratchpad);
 		if(sldns_buffer_limit(c->buffer) == 0) {
 			comm_point_drop_reply(repinfo);
@@ -1473,6 +1478,7 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 		cinfo_tmp.respip_set = worker->daemon->respip_set;
 		cinfo = &cinfo_tmp;
 	}
+	
 
 lookup_cache:
 	/* Lookup the cache.  In case we chase an intermediate CNAME chain
@@ -1483,14 +1489,14 @@ lookup_cache:
 		is_expired_answer = 0;
 		is_secure_answer = 0;
 		h = query_info_hash(lookup_qinfo, sldns_buffer_read_u16_at(c->buffer, 2));
-		if((e=slabhash_lookup(worker->env.msg_cache, h, lookup_qinfo, 0))) {
+		if((e=slabhash_lookup(acladdr->view->msg_cache, h, lookup_qinfo, 0))) {
 			/* answer from cache - we have acquired a readlock on it */
 			if(answer_from_cache(worker, &qinfo,
 				cinfo, &need_drop, &is_expired_answer, &is_secure_answer,
 				&alias_rrset, &partial_rep, (struct reply_info*)e->data,
 				*(uint16_t*)(void *)sldns_buffer_begin(c->buffer),
 				sldns_buffer_read_u16_at(c->buffer, 2), repinfo,
-				&edns)) {
+				&edns, acladdr->view)) {
 				/* prefetch it if the prefetch TTL expired.
 				 * Note that if there is more than one pass
 				 * its qname must be that used for cache
@@ -1499,6 +1505,7 @@ lookup_cache:
 							((struct reply_info*)e->data)->prefetch_ttl) ||
 						(worker->env.cfg->serve_expired &&
 						*worker->env.now >= ((struct reply_info*)e->data)->ttl)) {
+					verbose(VERB_OPS, "TTL expired");
 
 					time_t leeway = ((struct reply_info*)e->
 						data)->ttl - *worker->env.now;
@@ -1509,7 +1516,7 @@ lookup_cache:
 					reply_and_prefetch(worker, lookup_qinfo,
 						sldns_buffer_read_u16_at(c->buffer, 2),
 						repinfo, leeway,
-						(partial_rep || need_drop));
+						(partial_rep || need_drop), acladdr->view);
 					if(!partial_rep) {
 						rc = 0;
 						regional_free_all(worker->scratchpad);
@@ -1572,7 +1579,7 @@ lookup_cache:
 	/* grab a work request structure for this new request */
 	mesh_new_client(worker->env.mesh, &qinfo, cinfo,
 		sldns_buffer_read_u16_at(c->buffer, 2),
-		&edns, repinfo, *(uint16_t*)(void *)sldns_buffer_begin(c->buffer));
+		&edns, repinfo, *(uint16_t*)(void *)sldns_buffer_begin(c->buffer), acladdr->view);
 	regional_free_all(worker->scratchpad);
 	worker_mem_report(worker, NULL);
 	return 0;
@@ -1687,6 +1694,8 @@ void worker_probe_timer_cb(void* arg)
 {
 	struct worker* worker = (struct worker*)arg;
 	struct timeval tv;
+		worker->env.current_view_env->msg_cache = worker->env.msg_cache;
+		worker->env.current_view_env->rrset_cache = worker->env.rrset_cache;
 #ifndef S_SPLINT_S
 	tv.tv_sec = (time_t)autr_probe_timer(&worker->env);
 	tv.tv_usec = 0;
