@@ -4,6 +4,7 @@
 	- Fix #468: OpenSSL 1.0.1 can no longer build Unbound.
 	- Further fix for #468: detect SSL_CTX_set_alpn_protos for build with
 	  OpenSSL 1.0.1.
+	- Fix that testcode dohclient has OpenSSL initialisation calls.
 
 13 April 2021: George
 	- Fix documentation comment for files previously residing in checkconf/.
