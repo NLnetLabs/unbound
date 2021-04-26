@@ -1,3 +1,7 @@
+26 April 2021: Wouter
+	- Merge #470 from edevil: Allow configuration of persistent TCP
+	  connections.
+
 22 April 2021: Wouter
 	- Merge #466 from FGasper: Support OpenSSLs that lack
 	  SSL_get0_alpn_selected.
