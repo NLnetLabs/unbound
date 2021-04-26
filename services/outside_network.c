@@ -514,7 +514,7 @@ reuse_tcp_find(struct outside_network* outnet, struct sockaddr_storage* addr,
 	while(result && result != RBTREE_NULL &&
 		reuse_cmp_addrportssl(result->key, &key_p.reuse) == 0) {
 		if(((struct reuse_tcp*)result)->tree_by_id.count <
-			MAX_REUSE_TCP_QUERIES) {
+			outnet->max_reuse_tcp_queries) {
 			/* same address, port, ssl-yes-or-no, and has
 			 * space for another query */
 			return (struct reuse_tcp*)result;
@@ -1012,22 +1012,22 @@ static void reuse_cb_and_decommission(struct outside_network* outnet,
 
 /** set timeout on tcp fd and setup read event to catch incoming dns msgs */
 static void
-reuse_tcp_setup_timeout(struct pending_tcp* pend_tcp)
+reuse_tcp_setup_timeout(struct pending_tcp* pend_tcp, int tcp_reuse_timeout)
 {
 	log_reuse_tcp(VERB_CLIENT, "reuse_tcp_setup_timeout", &pend_tcp->reuse);
-	comm_point_start_listening(pend_tcp->c, -1, REUSE_TIMEOUT);
+	comm_point_start_listening(pend_tcp->c, -1, tcp_reuse_timeout);
 }
 
 /** set timeout on tcp fd and setup read event to catch incoming dns msgs */
 static void
-reuse_tcp_setup_read_and_timeout(struct pending_tcp* pend_tcp)
+reuse_tcp_setup_read_and_timeout(struct pending_tcp* pend_tcp, int tcp_reuse_timeout)
 {
 	log_reuse_tcp(VERB_CLIENT, "reuse_tcp_setup_readtimeout", &pend_tcp->reuse);
 	sldns_buffer_clear(pend_tcp->c->buffer);
 	pend_tcp->c->tcp_is_reading = 1;
 	pend_tcp->c->tcp_byte_count = 0;
 	comm_point_stop_listening(pend_tcp->c);
-	comm_point_start_listening(pend_tcp->c, -1, REUSE_TIMEOUT);
+	comm_point_start_listening(pend_tcp->c, -1, tcp_reuse_timeout);
 }
 
 int 
@@ -1083,7 +1083,7 @@ outnet_tcp_cb(struct comm_point* c, void* arg, int error,
 			pend->reuse.cp_more_write_again = 0;
 			pend->c->tcp_is_reading = 1;
 			comm_point_stop_listening(pend->c);
-			reuse_tcp_setup_timeout(pend);
+			reuse_tcp_setup_timeout(pend, outnet->tcp_reuse_timeout);
 		}
 		return 0;
 	} else if(error != NETEVENT_NOERROR) {
@@ -1136,7 +1136,7 @@ outnet_tcp_cb(struct comm_point* c, void* arg, int error,
 		 * and there could be more bytes to read on the input */
 		if(pend->reuse.tree_by_id.count != 0)
 			pend->reuse.cp_more_read_again = 1;
-		reuse_tcp_setup_read_and_timeout(pend);
+		reuse_tcp_setup_read_and_timeout(pend, outnet->tcp_reuse_timeout);
 		return 0;
 	}
 	verbose(VERB_CLIENT, "outnet_tcp_cb reuse after cb: decommission it");
@@ -1404,7 +1404,7 @@ outside_network_create(struct comm_base *base, size_t bufsize,
 	int numavailports, size_t unwanted_threshold, int tcp_mss,
 	void (*unwanted_action)(void*), void* unwanted_param, int do_udp,
 	void* sslctx, int delayclose, int tls_use_sni, struct dt_env* dtenv,
-	int udp_connect)
+	int udp_connect, int max_reuse_tcp_queries, int tcp_reuse_timeout)
 {
 	struct outside_network* outnet = (struct outside_network*)
 		calloc(1, sizeof(struct outside_network));
@@ -1416,6 +1416,8 @@ outside_network_create(struct comm_base *base, size_t bufsize,
 	comm_base_timept(base, &outnet->now_secs, &outnet->now_tv);
 	outnet->base = base;
 	outnet->num_tcp = num_tcp;
+	outnet->max_reuse_tcp_queries = max_reuse_tcp_queries;
+	outnet->tcp_reuse_timeout= tcp_reuse_timeout;
 	outnet->num_tcp_outgoing = 0;
 	outnet->infra = infra;
 	outnet->rnd = rnd;
@@ -2443,7 +2445,7 @@ reuse_tcp_remove_serviced_keep(struct waiting_tcp* w,
 		if(!reuse_tcp_insert(sq->outnet, pend_tcp)) {
 			return 0;
 		}
-		reuse_tcp_setup_timeout(pend_tcp);
+		reuse_tcp_setup_timeout(pend_tcp, sq->outnet->tcp_reuse_timeout);
 		return 1;
 	}
 	return 0;

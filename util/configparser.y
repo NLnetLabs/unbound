@@ -100,7 +100,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_PRIVATE_DOMAIN VAR_REMOTE_CONTROL VAR_CONTROL_ENABLE
 %token VAR_CONTROL_INTERFACE VAR_CONTROL_PORT VAR_SERVER_KEY_FILE
 %token VAR_SERVER_CERT_FILE VAR_CONTROL_KEY_FILE VAR_CONTROL_CERT_FILE
-%token VAR_CONTROL_USE_CERT
+%token VAR_CONTROL_USE_CERT VAR_TCP_REUSE_TIMEOUT VAR_MAX_REUSE_TCP_QUERIES
 %token VAR_EXTENDED_STATISTICS VAR_LOCAL_DATA_PTR VAR_JOSTLE_TIMEOUT
 %token VAR_STUB_PRIME VAR_UNWANTED_REPLY_THRESHOLD VAR_LOG_TIME_ASCII
 %token VAR_DOMAIN_INSECURE VAR_PYTHON VAR_PYTHON_SCRIPT VAR_VAL_SIG_SKEW_MIN
@@ -301,7 +301,9 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_tls_ciphersuites | server_tls_session_ticket_keys |
 	server_tls_use_sni | server_edns_client_string |
 	server_edns_client_string_opcode | server_nsid |
-	server_zonemd_permissive_mode
+	server_zonemd_permissive_mode | server_max_reuse_tcp_queries |
+	server_tcp_reuse_timeout
+
 	;
 stubstart: VAR_STUB_ZONE
 	{
@@ -856,6 +858,28 @@ server_tcp_idle_timeout: VAR_TCP_IDLE_TIMEOUT STRING_ARG
 		else if (atoi($2) < 1)
 			cfg_parser->cfg->tcp_idle_timeout = 1;
 		else cfg_parser->cfg->tcp_idle_timeout = atoi($2);
+		free($2);
+	}
+	;
+server_max_reuse_tcp_queries: VAR_MAX_REUSE_TCP_QUERIES STRING_ARG
+	{
+		OUTYY(("P(server_max_reuse_tcp_queries:%s)\n", $2));
+		if(atoi($2) == 0 && strcmp($2, "0") != 0)
+			yyerror("number expected");
+		else if (atoi($2) < 1)
+			cfg_parser->cfg->max_reuse_tcp_queries = 0;
+		else cfg_parser->cfg->max_reuse_tcp_queries = atoi($2);
+		free($2);
+	}
+	;
+server_tcp_reuse_timeout: VAR_TCP_REUSE_TIMEOUT STRING_ARG
+	{
+		OUTYY(("P(server_tcp_reuse_timeout:%s)\n", $2));
+		if(atoi($2) == 0 && strcmp($2, "0") != 0)
+			yyerror("number expected");
+		else if (atoi($2) < 1)
+			cfg_parser->cfg->tcp_reuse_timeout = 0;
+		else cfg_parser->cfg->tcp_reuse_timeout = atoi($2);
 		free($2);
 	}
 	;

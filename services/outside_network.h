@@ -158,6 +158,10 @@ struct outside_network {
 	size_t num_tcp;
 	/** number of tcp communication points in use. */
 	size_t num_tcp_outgoing;
+	/** max number of queries on a reuse connection */
+	int max_reuse_tcp_queries;
+	/** timeout for REUSE entries in milliseconds. */
+	int tcp_reuse_timeout;
 	/**
 	 * tree of still-open and waiting tcp connections for reuse.
 	 * can be closed and reopened to get a new tcp connection.
@@ -294,11 +298,6 @@ struct reuse_tcp {
 	/** the outside network it is part of */
 	struct outside_network* outnet;
 };
-
-/** max number of queries on a reuse connection */
-#define MAX_REUSE_TCP_QUERIES 200
-/** timeout for REUSE entries in milliseconds. */
-#define REUSE_TIMEOUT 60000
 
 /**
  * A query that has an answer pending for it.
@@ -540,6 +539,8 @@ struct serviced_query {
  * @param tls_use_sni: if SNI is used for TLS connections.
  * @param dtenv: environment to send dnstap events with (if enabled).
  * @param udp_connect: if the udp_connect option is enabled.
+ * @param max_reuse_tcp_queries: max number of queries on a reuse connection.
+ * @param tcp_reuse_timeout: timeout for REUSE entries in milliseconds.
  * @return: the new structure (with no pending answers) or NULL on error.
  */
 struct outside_network* outside_network_create(struct comm_base* base,
@@ -549,7 +550,7 @@ struct outside_network* outside_network_create(struct comm_base* base,
 	int numavailports, size_t unwanted_threshold, int tcp_mss,
 	void (*unwanted_action)(void*), void* unwanted_param, int do_udp,
 	void* sslctx, int delayclose, int tls_use_sni, struct dt_env *dtenv,
-	int udp_connect);
+	int udp_connect, int max_reuse_tcp_queries, int tcp_reuse_timeout);
 
 /**
  * Delete outside_network structure.

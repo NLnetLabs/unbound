@@ -901,6 +901,10 @@ server:
 	# ipsecmod-allow: "example.com"
 	# ipsecmod-allow: "nlnetlabs.nl"
 
+	# Timeout for REUSE entries in milliseconds.
+	# tcp-reuse-timeout: 60000
+	# Max number of queries on a reuse connection.
+	# max-reuse-tcp-queries: 200
 
 # Python config section. To enable:
 # o use --with-pythonmodule to configure before compiling.

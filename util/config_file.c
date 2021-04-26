@@ -105,6 +105,8 @@ config_create(void)
 	cfg->do_ip6 = 1;
 	cfg->do_udp = 1;
 	cfg->do_tcp = 1;
+	cfg->tcp_reuse_timeout = 60 * 1000; /* 60s in milisecs */
+	cfg->max_reuse_tcp_queries = 200;
 	cfg->tcp_upstream = 0;
 	cfg->udp_upstream_without_downstream = 0;
 	cfg->tcp_mss = 0;
@@ -518,6 +520,8 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	else S_NUMBER_NONZERO("tcp-mss:", tcp_mss)
 	else S_NUMBER_NONZERO("outgoing-tcp-mss:", outgoing_tcp_mss)
 	else S_NUMBER_NONZERO("tcp-idle-timeout:", tcp_idle_timeout)
+	else S_NUMBER_NONZERO("max-reuse-tcp-queries:", max_reuse_tcp_queries)
+	else S_NUMBER_NONZERO("tcp-reuse-timeout:", tcp_reuse_timeout)
 	else S_YNO("edns-tcp-keepalive:", do_tcp_keepalive)
 	else S_NUMBER_NONZERO("edns-tcp-keepalive-timeout:", tcp_keepalive_timeout)
 	else S_YNO("ssl-upstream:", ssl_upstream)
@@ -1008,6 +1012,8 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_DEC(opt, "tcp-mss", tcp_mss)
 	else O_DEC(opt, "outgoing-tcp-mss", outgoing_tcp_mss)
 	else O_DEC(opt, "tcp-idle-timeout", tcp_idle_timeout)
+	else O_DEC(opt, "max-reuse-tcp-queries", max_reuse_tcp_queries)
+	else O_DEC(opt, "tcp-reuse-timeout", tcp_reuse_timeout)
 	else O_YNO(opt, "edns-tcp-keepalive", do_tcp_keepalive)
 	else O_DEC(opt, "edns-tcp-keepalive-timeout", tcp_keepalive_timeout)
 	else O_YNO(opt, "ssl-upstream", ssl_upstream)
