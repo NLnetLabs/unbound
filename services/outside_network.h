@@ -162,6 +162,8 @@ struct outside_network {
 	size_t max_reuse_tcp_queries;
 	/** timeout for REUSE entries in milliseconds. */
 	int tcp_reuse_timeout;
+	/** timeout in milliseconds for TCP queries to auth servers. */
+	int tcp_auth_query_timeout;
 	/**
 	 * tree of still-open and waiting tcp connections for reuse.
 	 * can be closed and reopened to get a new tcp connection.
@@ -541,6 +543,7 @@ struct serviced_query {
  * @param udp_connect: if the udp_connect option is enabled.
  * @param max_reuse_tcp_queries: max number of queries on a reuse connection.
  * @param tcp_reuse_timeout: timeout for REUSE entries in milliseconds.
+ * @param tcp_auth_query_timeout: timeout in milliseconds for TCP queries to auth servers.
  * @return: the new structure (with no pending answers) or NULL on error.
  */
 struct outside_network* outside_network_create(struct comm_base* base,
@@ -550,7 +553,8 @@ struct outside_network* outside_network_create(struct comm_base* base,
 	int numavailports, size_t unwanted_threshold, int tcp_mss,
 	void (*unwanted_action)(void*), void* unwanted_param, int do_udp,
 	void* sslctx, int delayclose, int tls_use_sni, struct dt_env *dtenv,
-	int udp_connect, int max_reuse_tcp_queries, int tcp_reuse_timeout);
+	int udp_connect, int max_reuse_tcp_queries, int tcp_reuse_timeout,
+	int tcp_auth_query_timeout);
 
 /**
  * Delete outside_network structure.

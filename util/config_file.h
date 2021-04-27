@@ -97,6 +97,8 @@ struct config_file {
 	size_t max_reuse_tcp_queries;
 	/** timeout for REUSE entries in milliseconds. */
 	int tcp_reuse_timeout;
+	/** timeout in milliseconds for TCP queries to auth servers. */
+	int tcp_auth_query_timeout;
 	/** tcp upstream queries (no UDP upstream queries) */
 	int tcp_upstream;
 	/** udp upstream enabled when no UDP downstream is enabled (do_udp no)*/

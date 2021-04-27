@@ -112,6 +112,7 @@ config_create(void)
 	cfg->tcp_mss = 0;
 	cfg->outgoing_tcp_mss = 0;
 	cfg->tcp_idle_timeout = 30 * 1000; /* 30s in millisecs */
+	cfg->tcp_auth_query_timeout = 3 * 1000; /* 3s in millisecs */
 	cfg->do_tcp_keepalive = 0;
 	cfg->tcp_keepalive_timeout = 120 * 1000; /* 120s in millisecs */
 	cfg->ssl_service_key = NULL;
@@ -519,6 +520,7 @@ int config_set_option(struct config_file* cfg, const char* opt,
 		udp_upstream_without_downstream)
 	else S_NUMBER_NONZERO("tcp-mss:", tcp_mss)
 	else S_NUMBER_NONZERO("outgoing-tcp-mss:", outgoing_tcp_mss)
+	else S_NUMBER_NONZERO("tcp-auth-query-timeout:", tcp_auth_query_timeout)
 	else S_NUMBER_NONZERO("tcp-idle-timeout:", tcp_idle_timeout)
 	else S_NUMBER_NONZERO("max-reuse-tcp-queries:", max_reuse_tcp_queries)
 	else S_NUMBER_NONZERO("tcp-reuse-timeout:", tcp_reuse_timeout)
@@ -1011,6 +1013,7 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_YNO(opt, "udp-upstream-without-downstream", udp_upstream_without_downstream)
 	else O_DEC(opt, "tcp-mss", tcp_mss)
 	else O_DEC(opt, "outgoing-tcp-mss", outgoing_tcp_mss)
+	else O_DEC(opt, "tcp-auth-query-timeout", tcp_auth_query_timeout)
 	else O_DEC(opt, "tcp-idle-timeout", tcp_idle_timeout)
 	else O_DEC(opt, "max-reuse-tcp-queries", max_reuse_tcp_queries)
 	else O_DEC(opt, "tcp-reuse-timeout", tcp_reuse_timeout)
