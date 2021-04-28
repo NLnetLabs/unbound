@@ -2837,13 +2837,20 @@ view_local_zone: VAR_LOCAL_ZONE STRING_ARG STRING_ARG
 		   && strcmp($3, "always_transparent")!=0
 		   && strcmp($3, "always_refuse")!=0
 		   && strcmp($3, "always_nxdomain")!=0
+		   && strcmp($3, "always_nodata")!=0
+		   && strcmp($3, "always_deny")!=0
+		   && strcmp($3, "always_null")!=0
 		   && strcmp($3, "noview")!=0
-		   && strcmp($3, "inform")!=0 && strcmp($3, "inform_deny")!=0) {
+		   && strcmp($3, "inform")!=0 && strcmp($3, "inform_deny")!=0
+		   && strcmp($3, "inform_redirect") != 0
+		   && strcmp($3, "ipset") != 0) {
 			yyerror("local-zone type: expected static, deny, "
 				"refuse, redirect, transparent, "
 				"typetransparent, inform, inform_deny, "
-				"always_transparent, always_refuse, "
-				"always_nxdomain, noview or nodefault");
+				"inform_redirect, always_transparent, "
+				"always_refuse, always_nxdomain, "
+				"always_nodata, always_deny, always_null, "
+				"noview, nodefault or ipset");
 			free($2);
 			free($3);
 		} else if(strcmp($3, "nodefault")==0) {
