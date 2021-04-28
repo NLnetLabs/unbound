@@ -1,3 +1,7 @@
+28 April 2021: George
+	- Fix compiler warning for signed/unsigned comparison for
+	  max_reuse_tcp_queries.
+
 28 April 2021: Wouter
 	- Fix #474: always_null and others inside view.
 

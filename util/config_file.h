@@ -94,7 +94,7 @@ struct config_file {
 	/** do tcp query support. */
 	int do_tcp;
 	/** max number of queries on a reuse connection. */
-	int max_reuse_tcp_queries;
+	size_t max_reuse_tcp_queries;
 	/** timeout for REUSE entries in milliseconds. */
 	int tcp_reuse_timeout;
 	/** tcp upstream queries (no UDP upstream queries) */

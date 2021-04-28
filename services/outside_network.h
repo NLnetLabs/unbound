@@ -159,7 +159,7 @@ struct outside_network {
 	/** number of tcp communication points in use. */
 	size_t num_tcp_outgoing;
 	/** max number of queries on a reuse connection */
-	int max_reuse_tcp_queries;
+	size_t max_reuse_tcp_queries;
 	/** timeout for REUSE entries in milliseconds. */
 	int tcp_reuse_timeout;
 	/**
