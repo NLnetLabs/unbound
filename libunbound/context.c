@@ -53,6 +53,7 @@
 #include "util/storage/slabhash.h"
 #include "util/edns.h"
 #include "sldns/sbuffer.h"
+#include "services/view.h"
 
 int 
 context_finalize(struct ub_ctx* ctx)
@@ -84,19 +85,14 @@ context_finalize(struct ub_ctx* ctx)
 	if(!edns_strings_apply_cfg(ctx->env->edns_strings, cfg))
 		return UB_INITFAIL;
 
-	ctx->env->current_view_env->msg_cache =
-	    msg_cache_adjust(ctx->env->current_view_env->msg_cache, cfg);
-
-	if(!ctx->env->current_view_env->msg_cache)
+	ctx->views = views_create();
+	if(!ctx->views)
 		return UB_NOMEM;
 
-	ctx->env->current_view_env->rrset_cache =
-	    rrset_cache_adjust(ctx->env->current_view_env->rrset_cache,
-	                       ctx->env->cfg,
-	                       ctx->env->alloc);
+	if (!views_configure(ctx->views, cfg, ctx->env->alloc)) {
+		return UB_INITFAIL;
+	}
 
-	if(!ctx->env->current_view_env->rrset_cache)
-		return UB_NOMEM;
 	ctx->env->infra_cache = infra_adjust(ctx->env->infra_cache, cfg);
 	if(!ctx->env->infra_cache)
 		return UB_NOMEM;

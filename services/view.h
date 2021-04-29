@@ -49,6 +49,7 @@ struct config_file;
 struct config_view;
 struct respip_set;
 struct daemon;
+struct alloc_cache;
 
 /**
  * View enviroment - encapsulates view-specific values
@@ -148,5 +149,10 @@ int view_cmp(const void* v1, const void* v2);
  * @return: locked view or NULL. 
  */
 struct view* views_find_view(struct views* vs, const char* name, int write);
+int
+views_configure(struct views *vs,
+		struct config_file *cfg,
+		struct alloc_cache *alloc);
+
 
 #endif /* SERVICES_VIEW_H */

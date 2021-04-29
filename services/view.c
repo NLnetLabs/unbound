@@ -251,7 +251,7 @@ view_apply_cfg(struct view *v,
 	return (1);
 }
 
-static int
+int
 views_configure(struct views *vs,
                 struct config_file *cfg,
                 struct alloc_cache *alloc)

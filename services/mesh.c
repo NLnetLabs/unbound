@@ -63,6 +63,8 @@
 #include "util/data/dname.h"
 #include "respip/respip.h"
 #include "services/listen_dnsport.h"
+#include "daemon/worker.h"
+#include "daemon/daemon.h"
 
 /** subtract timers and the values do not overflow or become negative */
 static void
@@ -821,7 +823,14 @@ mesh_state_create(struct module_env* env, struct query_info* qinfo,
 			return NULL;
 		}
 	}
-	mstate->s.query_view_env = view;
+
+	if(view == NULL){
+		//no view specified; fallback to server view.
+		mstate->s.query_view_env = &env->worker->daemon->views->server_view;
+	}
+	else 
+		mstate->s.query_view_env = view;
+	
 	/* remove all weird bits from qflags */
 	mstate->s.query_flags = (qflags & (BIT_RD|BIT_CD));
 	mstate->s.is_priming = prime;
