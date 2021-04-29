@@ -390,6 +390,7 @@ config_view_create(struct config_file* server)
 		// weren't set in the view declaration.
 
 		view->cfg_view.prefetch          = server->prefetch;
+		view->cfg_view.dns64_synthall    = server->dns64_synthall;
 
 		// Even though the cache sizes are set to zero (undefined), inherit
 		// the number of slabs from the server configuration.

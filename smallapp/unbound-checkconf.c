@@ -827,22 +827,30 @@ morechecks(struct config_file* cfg)
 static void
 check_fwd(struct config_file* cfg)
 {
+#if	0
+	// This is now handled in the views
+
 	struct iter_forwards* fwd = forwards_create();
 	if(!fwd || !forwards_apply_cfg(fwd, cfg)) {
 		fatal_exit("Could not set forward zones");
 	}
 	forwards_delete(fwd);
+#endif
 }
 
 /** check hints */
 static void
 check_hints(struct config_file* cfg)
 {
+#if	0
+	// This is now handled in the views
+
 	struct iter_hints* hints = hints_create();
 	if(!hints || !hints_apply_cfg(hints, cfg)) {
 		fatal_exit("Could not set root or stub hints");
 	}
 	hints_delete(hints);
+#endif
 }
 
 /** check auth zones */

@@ -1886,6 +1886,7 @@ worker_init(struct worker* worker, struct config_file *cfg,
 	worker->env.kill_sub = &mesh_state_delete;
 	worker->env.detect_cycle = &mesh_detect_cycle;
 	worker->env.scratch_buffer = sldns_buffer_new(cfg->msg_buffer_size);
+#if	0
 	if(!(worker->env.fwds = forwards_create()) ||
 		!forwards_apply_cfg(worker->env.fwds, cfg)) {
 		log_err("Could not set forward zones");
@@ -1898,6 +1899,12 @@ worker_init(struct worker* worker, struct config_file *cfg,
 		worker_delete(worker);
 		return 0;
 	}
+#else
+	// Get the forwards and hints from the server view for now
+
+	worker->env.fwds  = worker->daemon->views->server_view.fwds;
+	worker->env.hints = worker->daemon->views->server_view.hints;
+#endif
 	/* one probe timer per process -- if we have 5011 anchors */
 	if(autr_get_num_anchors(worker->env.anchors) > 0
 #ifndef THREADS_DISABLED

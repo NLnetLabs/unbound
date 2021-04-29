@@ -80,10 +80,18 @@ view_cleanup(struct view *v)
 	lock_rw_destroy(&v->lock);
 	local_zones_delete(v->local_zones);
 	respip_set_delete(v->respip_set);
-	forwards_delete(v->fwds);
-	hints_delete(v->hints);
-	rrset_cache_delete(v->rrset_cache);
-	slabhash_delete(v->msg_cache);
+
+	if ((v->view_flags & VIEW_FLAG_SHARE_FWDS) == 0) {
+		forwards_delete(v->fwds);
+	}
+	if ((v->view_flags & VIEW_FLAG_SHARE_HINTS) == 0) {
+		hints_delete(v->hints);
+	}
+	if ((v->view_flags & VIEW_FLAG_SHARE_CACHE) == 0) {
+		rrset_cache_delete(v->rrset_cache);
+		slabhash_delete(v->msg_cache);
+	}
+
 	free(v->name);
 }
 
@@ -244,6 +252,46 @@ view_apply_cfg(struct view *v,
 			        server ? "server" : v->name);
 			return (0);
 		}
+	} else if (!server && alloc != NULL) {
+		v->rrset_cache = v->server_view->rrset_cache;
+		v->msg_cache   = v->server_view->msg_cache;
+		v->view_flags |= VIEW_FLAG_SHARE_CACHE;
+	}
+
+	// For hints and forwards, leave the pointer(s) NULL. The resolution
+	// set-up will set up the right values.
+
+	if (server || cfg->forwards != NULL) {
+		if ((v->fwds = forwards_create()) == NULL) {
+			log_err("Could not create forward zones");
+			return (0);
+		}
+		if (!forwards_apply_cfg(v->fwds, cfg)) {
+			log_err("Could not set forward zones");
+			return (0);
+		}
+	} else {
+		v->fwds = v->server_view->fwds;
+		v->view_flags |= VIEW_FLAG_SHARE_FWDS;
+	}
+	if (server || cfg->stubs != NULL || cfg->root_hints != NULL) {
+		// N.B. Depending on what's specified, the view will get:
+		//      Stub Root Semantics
+		//      Y    Y    Both will be configured
+		//      Y    N    Default root hints, unless '.' stub configured
+		//      N    Y    Root hints only
+
+		if ((v->hints = hints_create()) == NULL) {
+			log_err("Could not create root or stub hints");
+			return (0);
+		}
+		if (!hints_apply_cfg(v->hints, cfg)) {
+			log_err("Could not set root or stub hints");
+			return (0);
+		}
+	} else {
+		v->hints = v->server_view->hints;
+		v->view_flags |= VIEW_FLAG_SHARE_HINTS;
 	}
 
 	// TODO: instantiate other view-specific data

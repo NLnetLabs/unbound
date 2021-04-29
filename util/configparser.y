@@ -201,8 +201,8 @@ all:	toplevelvars
 	}
 	;
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
-toplevelvar: serverstart contents_server | stubstart contents_stub |
-	forwardstart contents_forward | pythonstart contents_py |
+toplevelvar: serverstart contents_server | stub_zone |
+	forward_zone | pythonstart contents_py |
 	rcstart contents_rc | dtstart contents_dt | view_block |
 	dnscstart contents_dnsc | cachedbstart contents_cachedb |
 	ipsetstart contents_ipset | authstart contents_auth |
@@ -399,7 +399,7 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_tls_use_sni | server_edns_client_string |
 	server_edns_client_string_opcode | server_nsid
 	;
-stubstart: VAR_STUB_ZONE
+stub_zone: VAR_STUB_ZONE
 	{
 		struct config_stub* s;
 		OUTYY(("\nP(stub_zone:)\n"));
@@ -410,13 +410,14 @@ stubstart: VAR_STUB_ZONE
 		} else
 			yyerror("out of memory");
 	}
+		contents_stub
 	;
 contents_stub: contents_stub content_stub
 	| ;
 content_stub: stub_name | stub_host | stub_addr | stub_prime | stub_first |
 	stub_no_cache | stub_ssl_upstream
 	;
-forwardstart: VAR_FORWARD_ZONE
+forward_zone: VAR_FORWARD_ZONE
 	{
 		struct config_stub* s;
 		OUTYY(("\nP(forward_zone:)\n"));
@@ -427,6 +428,7 @@ forwardstart: VAR_FORWARD_ZONE
 		} else
 			yyerror("out of memory");
 	}
+		contents_forward
 	;
 contents_forward: contents_forward content_forward
 	| ;
@@ -483,7 +485,13 @@ content_view: view_name
 	| server_rrset_cache_slabs
 	| server_msg_cache_size
 	| server_msg_cache_slabs
+	| server_prefetch
 	| server_root_hints
+	| forward_zone
+	| stub_zone
+	| server_dns64_prefix
+	| server_dns64_synthall
+	| server_dns64_ignore_aaaa
 	;
 view_name: VAR_NAME STRING_ARG
 	{
@@ -1959,8 +1967,7 @@ server_dns64_synthall: VAR_DNS64_SYNTHALL yes_or_no
 server_dns64_ignore_aaaa: VAR_DNS64_IGNORE_AAAA STRING_ARG
 	{
 		OUTYY(("P(dns64_ignore_aaaa:%s)\n", $2));
-		if(!cfg_strlist_insert(&cfg_parser->cfg->dns64_ignore_aaaa,
-			$2))
+		if(!cfg_strlist_insert(&cfg_parser->cfg->dns64_ignore_aaaa, $2))
 			fatal_exit("out of memory adding dns64-ignore-aaaa");
 	}
 	;

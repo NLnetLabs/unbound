@@ -59,16 +59,24 @@ struct view {
 	char* name;
 	/** view-specific configuration information */
 	struct config_file *view_cfg;
+	/** Local zones and response IP sets are view-aware and treat
+	 ** them differently.
+	 */
 	/** view specific local authority zones */
 	struct local_zones* local_zones;
 	/** There are three cases:
-	 *    v->server_view == v    This is the server view, local = server
-	 *    v->server_view != NULL fallback to server local_zones when there
-	 *                           is no match in the view specific tree.
-	 *    v->server_view == NULL no fallback */
+	 **   v->server_view == v    This is the server view, local = server
+	 **   v->server_view != NULL fallback to server local_zones when there
+	 **                          is no match in the view specific tree.
+	 **   v->server_view == NULL no fallback
+	 */
 	struct view* server_view;
 	/** response-ip configuration data for this view */
 	struct respip_set* respip_set;
+	/** Caches, stubs, forwards, etc. inherit from the server if not
+	 ** defined in the view. For clean-up, we have to mark whether or
+	 ** not to free them
+     */
 	/** shared message cache */
 	struct slabhash* msg_cache;
 	/** shared rrset cache */
@@ -77,11 +85,17 @@ struct view {
 	struct iter_hints* hints;
 	/** forward zones hints */
 	struct iter_forwards* fwds;
+	/** Ownership flags */
+	unsigned int view_flags;
 	/** lock on the data in the structure
 	 * For the node and name you need to also hold the views_tree lock to
 	 * change them. */
 	lock_rw_type lock;
 };
+
+#define	VIEW_FLAG_SHARE_CACHE  0x01    // Caches are shared with the server
+#define	VIEW_FLAG_SHARE_HINTS  0x02    // Hints are shared with the server
+#define	VIEW_FLAG_SHARE_FWDS   0x04    // Forwards are shared with the server
 
 /**
  * Views storage, shared.
