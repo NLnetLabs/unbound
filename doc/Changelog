@@ -1,3 +1,7 @@
+29 April 2021: Wouter
+	- Add that log-servfail prints an IP address and more information
+	  about one of the last failures for that query.
+
 28 April 2021: George
 	- Fix compiler warning for signed/unsigned comparison for
 	  max_reuse_tcp_queries.
