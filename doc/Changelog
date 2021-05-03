@@ -1,3 +1,6 @@
+3 May 2021: Wouter
+	- Fix #481: Fix comment in configuration file.
+
 29 April 2021: Wouter
 	- Add that log-servfail prints an IP address and more information
 	  about one of the last failures for that query.

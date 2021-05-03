@@ -508,6 +508,7 @@ server:
 	#
 	# If you want to perform DNSSEC validation, run unbound-anchor before
 	# you start unbound (i.e. in the system boot scripts).
+	# And then enable the auto-trust-anchor-file config item.
 	# Please note usage of unbound-anchor root anchor is at your own risk
 	# and under the terms of our LICENSE (see that file in the source).
 	# auto-trust-anchor-file: "@UNBOUND_ROOTKEY_FILE@"
