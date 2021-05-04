@@ -2783,8 +2783,12 @@ serviced_tcp_callback(struct comm_point* c, void* arg, int error,
 	struct comm_reply r2;
 #ifdef USE_DNSTAP
 	struct waiting_tcp* w = (struct waiting_tcp*)sq->pending;
-	struct pending_tcp* pend_tcp = (struct pending_tcp*)w->next_waiting;
-	struct port_if* pi = pend_tcp->pi;
+	struct pending_tcp* pend_tcp = NULL;
+	struct port_if* pi = NULL;
+	if(!w->on_tcp_waiting_list && w->next_waiting) {
+		pend_tcp = (struct pending_tcp*)w->next_waiting;
+		pi = pend_tcp->pi;
+	}
 #endif
 	sq->pending = NULL; /* removed after this callback */
 	if(error != NETEVENT_NOERROR)
@@ -2797,7 +2801,7 @@ serviced_tcp_callback(struct comm_point* c, void* arg, int error,
 	/*
 	 * sending src (local service)/dst (upstream) addresses over DNSTAP
 	 */
-	if(error==NETEVENT_NOERROR && sq->outnet->dtenv &&
+	if(error==NETEVENT_NOERROR && pi && sq->outnet->dtenv &&
 	   (sq->outnet->dtenv->log_resolver_response_messages ||
 	    sq->outnet->dtenv->log_forwarder_response_messages)) {
 		log_addr(VERB_ALGO, "response from upstream", &sq->addr, sq->addrlen);
