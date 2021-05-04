@@ -1404,7 +1404,8 @@ outside_network_create(struct comm_base *base, size_t bufsize,
 	int numavailports, size_t unwanted_threshold, int tcp_mss,
 	void (*unwanted_action)(void*), void* unwanted_param, int do_udp,
 	void* sslctx, int delayclose, int tls_use_sni, struct dt_env* dtenv,
-	int udp_connect, int max_reuse_tcp_queries, int tcp_reuse_timeout)
+	int udp_connect, int max_reuse_tcp_queries, int tcp_reuse_timeout,
+	int tcp_auth_query_timeout)
 {
 	struct outside_network* outnet = (struct outside_network*)
 		calloc(1, sizeof(struct outside_network));
@@ -1418,6 +1419,7 @@ outside_network_create(struct comm_base *base, size_t bufsize,
 	outnet->num_tcp = num_tcp;
 	outnet->max_reuse_tcp_queries = max_reuse_tcp_queries;
 	outnet->tcp_reuse_timeout= tcp_reuse_timeout;
+	outnet->tcp_auth_query_timeout = tcp_auth_query_timeout;
 	outnet->num_tcp_outgoing = 0;
 	outnet->infra = infra;
 	outnet->rnd = rnd;
@@ -2875,7 +2877,7 @@ serviced_tcp_initiate(struct serviced_query* sq, sldns_buffer* buff)
 		sq->status==serviced_query_TCP_EDNS?"EDNS":"");
 	serviced_encode(sq, buff, sq->status == serviced_query_TCP_EDNS);
 	sq->last_sent_time = *sq->outnet->now_tv;
-	sq->pending = pending_tcp_query(sq, buff, TCP_AUTH_QUERY_TIMEOUT,
+	sq->pending = pending_tcp_query(sq, buff, sq->outnet->tcp_auth_query_timeout,
 		serviced_tcp_callback, sq);
 	if(!sq->pending) {
 		/* delete from tree so that a retry by above layer does not
@@ -2903,10 +2905,10 @@ serviced_tcp_send(struct serviced_query* sq, sldns_buffer* buff)
 	sq->last_sent_time = *sq->outnet->now_tv;
 	if(sq->tcp_upstream || sq->ssl_upstream) {
 		timeout = rtt;
-		if(rtt >= UNKNOWN_SERVER_NICENESS && rtt < TCP_AUTH_QUERY_TIMEOUT)
-			timeout = TCP_AUTH_QUERY_TIMEOUT;
+		if(rtt >= UNKNOWN_SERVER_NICENESS && rtt < sq->outnet->tcp_auth_query_timeout)
+			timeout = sq->outnet->tcp_auth_query_timeout;
 	} else {
-		timeout = TCP_AUTH_QUERY_TIMEOUT;
+		timeout = sq->outnet->tcp_auth_query_timeout;
 	}
 	sq->pending = pending_tcp_query(sq, buff, timeout,
 		serviced_tcp_callback, sq);

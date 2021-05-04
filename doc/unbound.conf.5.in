@@ -460,6 +460,10 @@ The maximum number of queries that can be sent on a persistent TCP
 connection.
 This option defaults to 200 queries.
 .TP
+.B tcp-auth-query-timeout: \fI<number>\fR
+Timeout in milliseconds for TCP queries to auth servers.
+This option defaults to 3000 milliseconds.
+.TP
 .B edns-tcp-keepalive: \fI<yes or no>\fR
 Enable or disable EDNS TCP Keepalive. Default is no.
 .TP

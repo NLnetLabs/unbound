@@ -242,7 +242,8 @@ libworker_setup(struct ub_ctx* ctx, int is_bg, struct ub_event_base* eb)
 		cfg->outgoing_tcp_mss, &libworker_alloc_cleanup, w,
 		cfg->do_udp || cfg->udp_upstream_without_downstream, w->sslctx,
 		cfg->delay_close, cfg->tls_use_sni, NULL, cfg->udp_connect,
-		cfg->max_reuse_tcp_queries, cfg->tcp_reuse_timeout);
+		cfg->max_reuse_tcp_queries, cfg->tcp_reuse_timeout,
+		cfg->tcp_auth_query_timeout);
 	w->env->outnet = w->back;
 	if(!w->is_bg || w->is_bg_thread) {
 		lock_basic_unlock(&ctx->cfglock);
