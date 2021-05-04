@@ -1048,6 +1048,10 @@ anchors_apply_cfg(struct val_anchors* anchors, struct config_file* cfg)
 	const char** zstr;
 	char* nm;
 	sldns_buffer* parsebuf = sldns_buffer_new(65535);
+	if(!parsebuf) {
+		log_err("malloc error in anchors_apply_cfg.");
+		return 0;
+	}
 	if(cfg->insecure_lan_zones) {
 		for(zstr = as112_zones; *zstr; zstr++) {
 			if(!anchor_insert_insecure(anchors, *zstr)) {
