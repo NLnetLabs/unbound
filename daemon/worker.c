@@ -1850,6 +1850,11 @@ worker_init(struct worker* worker, struct config_file *cfg,
 		return 0;
 	}
 	worker->env.mesh = mesh_create(&worker->daemon->mods, &worker->env);
+	if(!worker->env.mesh) {
+		log_err("malloc failure");
+		worker_delete(worker);
+		return 0;
+	}
 	/* Pass on daemon variables that we would need in the mesh area */
 	worker->env.mesh->use_response_ip = worker->daemon->use_response_ip;
 	worker->env.mesh->use_rpz = worker->daemon->use_rpz;
@@ -1860,6 +1865,11 @@ worker_init(struct worker* worker, struct config_file *cfg,
 	worker->env.kill_sub = &mesh_state_delete;
 	worker->env.detect_cycle = &mesh_detect_cycle;
 	worker->env.scratch_buffer = sldns_buffer_new(cfg->msg_buffer_size);
+	if(!worker->env.scratch_buffer) {
+		log_err("malloc failure");
+		worker_delete(worker);
+		return 0;
+	}
 	if(!(worker->env.fwds = forwards_create()) ||
 		!forwards_apply_cfg(worker->env.fwds, cfg)) {
 		log_err("Could not set forward zones");
@@ -1914,10 +1924,6 @@ worker_init(struct worker* worker, struct config_file *cfg,
 		}
 	}
 #endif /* USE_DNSTAP */
-	if(!worker->env.mesh || !worker->env.scratch_buffer) {
-		worker_delete(worker);
-		return 0;
-	}
 	worker_mem_report(worker, NULL);
 	/* if statistics enabled start timer */
 	if(worker->env.cfg->stat_interval > 0) {
