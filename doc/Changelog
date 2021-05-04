@@ -5,6 +5,7 @@
 4 May 2021: Wouter
 	- Merge #478: Allow configuration of TCP timeout while waiting for
 	  response.
+	- Fix to squelch tcp socket bind failures when the interface is gone.
 
 3 May 2021: Wouter
 	- Fix #481: Fix comment in configuration file.

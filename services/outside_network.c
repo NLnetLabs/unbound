@@ -238,7 +238,14 @@ pick_outgoing_tcp(struct pending_tcp* pend, struct waiting_tcp* w, int s)
 		((struct sockaddr_in6*)&pi->addr)->sin6_port = 0;
 	else	((struct sockaddr_in*)&pi->addr)->sin_port = 0;
 	if(bind(s, (struct sockaddr*)&pi->addr, pi->addrlen) != 0) {
-		log_err("outgoing tcp: bind: %s", sock_strerror(errno));
+#ifndef USE_WINSOCK
+#ifdef EADDRNOTAVAIL
+		if(!(verbosity < 4 && errno == EADDRNOTAVAIL))
+#endif
+#else /* USE_WINSOCK */
+		if(!(verbosity < 4 && WSAGetLastError() == WSAEADDRNOTAVAIL))
+#endif
+		    log_err("outgoing tcp: bind: %s", sock_strerror(errno));
 		sock_close(s);
 		return 0;
 	}
