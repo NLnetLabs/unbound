@@ -1,6 +1,7 @@
 7 May 2021: Wouter
 	- Fix #485: Unbound occasionally reports broken stats.
 	- Add ./configure --with-deprecate-rsa-1024 that turns off RSA 1024.
+	- Remove case fallthrough from deprecate-rsa-1024 code.
 
 4 May 2021: George
 	- Fix for #367: only attempt to get the interface for queries that are no

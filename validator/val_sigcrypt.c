@@ -409,6 +409,7 @@ int dnskey_size_is_supported(struct ub_packed_rrset_key* dnskey_rrset,
 		/* reject RSA keys of 1024 bits and shorter */
 		if(keysize <= 1024)
 			return 0;
+		break;
 	default:
 		break;
 	}
