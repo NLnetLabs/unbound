@@ -877,6 +877,7 @@ enable_subnet
 enable_gost
 enable_ecdsa
 enable_dsa
+with_deprecate_rsa_1024
 enable_ed25519
 enable_ed448
 enable_event_api
@@ -1639,6 +1640,10 @@ Optional Packages:
                           /usr/ssl /usr/pkg /usr/local /opt/local /usr/sfw
                           /usr)
   --with-libbsd           Use portable libbsd functions
+  --with-deprecate-rsa-1024
+                          Deprecate RSA 1024 bit length, makes that an
+                          unsupported key, for use when OpenSSL FIPS refuses
+                          1024 bit verification
   --with-libevent=pathname
                           use libevent (will check /usr/local /opt/local
                           /usr/lib /usr/pkg /usr/sfw /usr or you can specify
@@ -19034,6 +19039,18 @@ _ACEOF
       # support DSA for DNSSEC Validation.
       ;;
 esac
+
+
+# Check whether --with-deprecate-rsa-1024 was given.
+if test "${with_deprecate_rsa_1024+set}" = set; then :
+  withval=$with_deprecate_rsa_1024;
+fi
+
+if test "$with_deprecate_rsa_1024" = "yes"; then
+
+$as_echo "#define DEPRECATE_RSA_1024 1" >>confdefs.h
+
+fi
 
 # Check whether --enable-ed25519 was given.
 if test "${enable_ed25519+set}" = set; then :

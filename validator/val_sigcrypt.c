@@ -386,6 +386,48 @@ int dnskey_algo_is_supported(struct ub_packed_rrset_key* dnskey_rrset,
 		dnskey_idx));
 }
 
+int dnskey_size_is_supported(struct ub_packed_rrset_key* dnskey_rrset,
+	size_t dnskey_idx)
+{
+#ifdef DEPRECATE_RSA_1024
+	uint8_t* rdata;
+	size_t len;
+	int alg = dnskey_get_algo(dnskey_rrset, dnskey_idx);
+	size_t keysize;
+
+	rrset_get_rdata(dnskey_rrset, dnskey_idx, &rdata, &len);
+	if(len < 2+4)
+		return 0;
+	keysize = sldns_rr_dnskey_key_size_raw(rdata+2+4, len-2-4, alg);
+
+	switch((sldns_algorithm)alg) {
+	case LDNS_RSAMD5:
+	case LDNS_RSASHA1:
+	case LDNS_RSASHA1_NSEC3:
+	case LDNS_RSASHA256:
+	case LDNS_RSASHA512:
+		/* reject RSA keys of 1024 bits and shorter */
+		if(keysize <= 1024)
+			return 0;
+	default:
+		break;
+	}
+#else
+	(void)dnskey_rrset; (void)dnskey_idx;
+#endif /* DEPRECATE_RSA_1024 */
+	return 1;
+}
+
+int dnskeyset_size_is_supported(struct ub_packed_rrset_key* dnskey_rrset)
+{
+	size_t i, num = rrset_get_count(dnskey_rrset);
+	for(i=0; i<num; i++) {
+		if(!dnskey_size_is_supported(dnskey_rrset, i))
+			return 0;
+	}
+	return 1;
+}
+
 void algo_needs_init_dnskey_add(struct algo_needs* n,
         struct ub_packed_rrset_key* dnskey, uint8_t* sigalg)
 {

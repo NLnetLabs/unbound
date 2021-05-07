@@ -180,6 +180,23 @@ uint16_t ds_get_keytag(struct ub_packed_rrset_key* ds_rrset, size_t ds_idx);
 int dnskey_algo_is_supported(struct ub_packed_rrset_key* dnskey_rrset, 
 	size_t dnskey_idx);
 
+/**
+ * See if the DNSKEY size at that algorithm is supported.
+ * @param dnskey_rrset: DNSKEY rrset.
+ * @param dnskey_idx: index of RR in rrset.
+ * @return true if supported.
+ */
+int dnskey_size_is_supported(struct ub_packed_rrset_key* dnskey_rrset,
+	size_t dnskey_idx);
+
+/**
+ * See if the DNSKEY size at that algorithm is supported for all the
+ * RRs in the DNSKEY RRset.
+ * @param dnskey_rrset: DNSKEY rrset.
+ * @return true if supported.
+ */
+int dnskeyset_size_is_supported(struct ub_packed_rrset_key* dnskey_rrset);
+
 /** 
  * See if DS digest algorithm is supported 
  * @param ds_rrset: DS rrset

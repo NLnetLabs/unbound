@@ -1155,6 +1155,11 @@ AC_INCLUDES_DEFAULT
       ;;
 esac
 
+AC_ARG_WITH(deprecate-rsa-1024, AS_HELP_STRING([--with-deprecate-rsa-1024],[Deprecate RSA 1024 bit length, makes that an unsupported key, for use when OpenSSL FIPS refuses 1024 bit verification]))
+if test "$with_deprecate_rsa_1024" = "yes"; then
+	AC_DEFINE([DEPRECATE_RSA_1024], [1], [Deprecate RSA 1024 bit length, makes that an unsupported key])
+fi
+
 AC_ARG_ENABLE(ed25519, AS_HELP_STRING([--disable-ed25519],[Disable ED25519 support]))
 use_ed25519="no"
 case "$enable_ed25519" in

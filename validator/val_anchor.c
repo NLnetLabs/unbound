@@ -971,7 +971,8 @@ anchors_dnskey_unsupported(struct trust_anchor* ta)
 {
 	size_t i, num = 0;
 	for(i=0; i<ta->numDNSKEY; i++) {
-		if(!dnskey_algo_is_supported(ta->dnskey_rrset, i))
+		if(!dnskey_algo_is_supported(ta->dnskey_rrset, i) ||
+			!dnskey_size_is_supported(ta->dnskey_rrset, i))
 			num++;
 	}
 	return num;
