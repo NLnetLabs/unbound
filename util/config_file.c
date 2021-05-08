@@ -253,6 +253,7 @@ config_create(void)
 	cfg->val_date_override = 0;
 	cfg->val_sig_skew_min = 3600; /* at least daylight savings trouble */
 	cfg->val_sig_skew_max = 86400; /* at most timezone settings trouble */
+	cfg->val_max_restart = 5;
 	cfg->val_clean_additional = 1;
 	cfg->val_log_level = 0;
 	cfg->val_log_squelch = 0;
@@ -764,12 +765,14 @@ int config_set_option(struct config_file* cfg, const char* opt,
 #endif
 	else if(strcmp(opt, "define-tag:") ==0) {
 		return config_add_tag(cfg, val);
-	/* val_sig_skew_min and max are copied into val_env during init,
-	 * so this does not update val_env with set_option */
+	/* val_sig_skew_min, max and val_max_restart are copied into val_env
+	 * during init so this does not update val_env with set_option */
 	} else if(strcmp(opt, "val-sig-skew-min:") == 0)
 	{ IS_NUMBER_OR_ZERO; cfg->val_sig_skew_min = (int32_t)atoi(val); }
 	else if(strcmp(opt, "val-sig-skew-max:") == 0)
 	{ IS_NUMBER_OR_ZERO; cfg->val_sig_skew_max = (int32_t)atoi(val); }
+	else if(strcmp(opt, "val-max-restart:") == 0)
+	{ IS_NUMBER_OR_ZERO; cfg->val_max_restart = (int32_t)atoi(val); }
 	else if (strcmp(opt, "outgoing-interface:") == 0) {
 		char* d = strdup(val);
 		char** oi = 
@@ -1190,6 +1193,7 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_DEC(opt, "fast-server-permil", fast_server_permil)
 	else O_DEC(opt, "val-sig-skew-min", val_sig_skew_min)
 	else O_DEC(opt, "val-sig-skew-max", val_sig_skew_max)
+	else O_DEC(opt, "val-max-restart", val_max_restart)
 	else O_YNO(opt, "qname-minimisation", qname_minimisation)
 	else O_YNO(opt, "qname-minimisation-strict", qname_minimisation_strict)
 	else O_IFC(opt, "define-tag", num_tags, tagname)

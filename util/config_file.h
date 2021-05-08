@@ -373,6 +373,8 @@ struct config_file {
 	int32_t val_sig_skew_min;
 	/** the maximum for signature clock skew */
 	int32_t val_sig_skew_max;
+	/** max number of query restarts, number of IPs to probe */
+	int32_t val_max_restart;
 	/** this value sets the number of seconds before revalidating bogus */
 	int bogus_ttl; 
 	/** should validator clean additional section for secure msgs */
