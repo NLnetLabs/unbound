@@ -1,3 +1,6 @@
+10 May 2021: Wouter
+	- Merge PR #487: ifdef RLIMIT_AS in recently added check.
+
 7 May 2021: Wouter
 	- Fix #485: Unbound occasionally reports broken stats.
 	- Add ./configure --with-deprecate-rsa-1024 that turns off RSA 1024.
