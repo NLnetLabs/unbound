@@ -1206,8 +1206,8 @@ sldns_str2wire_svcbparam_no_default_alpn(const char* val, uint8_t* rd, size_t* r
 	if (*rd_len < 4)
 		return LDNS_WIREPARSE_ERR_BUFFER_TOO_SMALL;
 
-	sldns_write_uint16(rd, htons(SVCB_KEY_NO_DEFAULT_ALPN));
-	sldns_write_uint16(rd + 2, htons(0));
+	sldns_write_uint16(rd, SVCB_KEY_NO_DEFAULT_ALPN);
+	sldns_write_uint16(rd + 2, 0);
 	*rd_len = 4;
 
 	return LDNS_WIREPARSE_ERR_OK;
@@ -1229,14 +1229,13 @@ sldns_str2wire_svcbparam_ech_value(const char* val, uint8_t* rd, size_t* rd_len)
 	if (wire_len == -1) {
 		// zc_error_prev_line("invalid base64 data in ech");
 		return LDNS_WIREPARSE_ERR_INVALID_STR;
+	} else if (wire_len + 4 > *rd_len) {
+		return LDNS_WIREPARSE_ERR_BUFFER_TOO_SMALL;
 	} else {
-		sldns_write_uint16(rd, htons(SVCB_KEY_ECH));
-		sldns_write_uint16(rd + 2, htons(wire_len));
-
-		// @TODO memcpy?
-		sldns_write_uint16(rd + 4, htons(buffer));
+		sldns_write_uint16(rd, SVCB_KEY_ECH);
+		sldns_write_uint16(rd + 2, wire_len);
+		memcpy(rd + 4, buffer, wire_len);
 		*rd_len = 4 + wire_len;
-
 		return LDNS_WIREPARSE_ERR_OK;
 	}
 }
