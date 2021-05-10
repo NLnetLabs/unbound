@@ -212,12 +212,14 @@ checkrlimits(struct config_file* cfg)
 	}
 #endif
 
+#ifdef RLIMIT_AS
 	if(getrlimit(RLIMIT_AS, &rlim) == 0) {
 		if(rlim.rlim_cur != (rlim_t)RLIM_INFINITY &&
 			rlim.rlim_cur < (rlim_t)memsize_expect) {
 			log_warn("the ulimit(max memory size) is smaller than the expected memory usage (added size of caches). %u < %u bytes", (unsigned)rlim.rlim_cur, (unsigned)memsize_expect);
 		}
 	}
+#endif
 	if(getrlimit(RLIMIT_DATA, &rlim) == 0) {
 		if(rlim.rlim_cur != (rlim_t)RLIM_INFINITY &&
 			rlim.rlim_cur < memsize_expect) {
