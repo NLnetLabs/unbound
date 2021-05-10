@@ -23,9 +23,24 @@ extern "C" {
 #endif
 struct sldns_struct_lookup_table;
 
+#define LDNS_IP4ADDRLEN      (32/8)
+#define LDNS_IP6ADDRLEN      (128/8)
+
 /** buffer to read an RR, cannot be larger than 64K because of packet size */
 #define LDNS_RR_BUF_SIZE 65535 /* bytes */
 #define LDNS_DEFAULT_TTL	3600
+
+/* SVCB keys currently defined in draft-ietf-dnsop-svcb-https */
+#define SVCB_KEY_MANDATORY		0
+#define SVCB_KEY_ALPN			1
+#define SVCB_KEY_NO_DEFAULT_ALPN	2
+#define SVCB_KEY_PORT			3
+#define SVCB_KEY_IPV4HINT		4
+#define SVCB_KEY_ECH		5
+#define SVCB_KEY_IPV6HINT		6
+#define SVCPARAMKEY_COUNT 7
+
+#define SVCB_MAX_COMMA_SEPARATED_VALUES 1000
 
 /*
  * To convert class and type to string see

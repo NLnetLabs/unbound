@@ -153,6 +153,9 @@ static const sldns_rdf_type type_csync_wireformat[] = {
 static const sldns_rdf_type type_zonemd_wireformat[] = {
 	LDNS_RDF_TYPE_INT32, LDNS_RDF_TYPE_INT8, LDNS_RDF_TYPE_INT8, LDNS_RDF_TYPE_HEX
 };
+static const sldns_rdf_type type_svcb_wireformat[] = {
+	LDNS_RDF_TYPE_INT16, LDNS_RDF_TYPE_DNAME
+};
 /* nsec3 is some vars, followed by same type of data of nsec */
 static const sldns_rdf_type type_nsec3_wireformat[] = {
 /*	LDNS_RDF_TYPE_NSEC3_VARS, LDNS_RDF_TYPE_NSEC3_NEXT_OWNER, LDNS_RDF_TYPE_NSEC*/
@@ -377,7 +380,8 @@ static sldns_rr_descriptor rdata_field_descriptors[] = {
 	{LDNS_RR_TYPE_CSYNC, "CSYNC", 3, 3, type_csync_wireformat, LDNS_RDF_TYPE_NONE, LDNS_RR_NO_COMPRESS, 0 },
 	/* 63 */
 	{LDNS_RR_TYPE_ZONEMD, "ZONEMD", 4, 4, type_zonemd_wireformat, LDNS_RDF_TYPE_NONE, LDNS_RR_NO_COMPRESS, 0 },
-{(enum sldns_enum_rr_type)0, "TYPE64", 1, 1, type_0_wireformat, LDNS_RDF_TYPE_NONE, LDNS_RR_NO_COMPRESS, 0 },
+	/* 64 */
+	{LDNS_RR_TYPE_SVCB, "SVCB", 2, 2, type_svcb_wireformat, LDNS_RDF_TYPE_SVCPARAM, LDNS_RR_NO_COMPRESS, 0 },
 {(enum sldns_enum_rr_type)0, "TYPE65", 1, 1, type_0_wireformat, LDNS_RDF_TYPE_NONE, LDNS_RR_NO_COMPRESS, 0 },
 {(enum sldns_enum_rr_type)0, "TYPE66", 1, 1, type_0_wireformat, LDNS_RDF_TYPE_NONE, LDNS_RR_NO_COMPRESS, 0 },
 {(enum sldns_enum_rr_type)0, "TYPE67", 1, 1, type_0_wireformat, LDNS_RDF_TYPE_NONE, LDNS_RR_NO_COMPRESS, 0 },

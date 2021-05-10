@@ -29,7 +29,6 @@
 #define RET_ERR(e, off) ((int)((e)|((off)<<LDNS_WIREPARSE_SHIFT)))
 /** Move parse error but keep its ID */
 #define RET_ERR_SHIFT(e, move) RET_ERR(LDNS_WIREPARSE_ERROR(e), LDNS_WIREPARSE_OFFSET(e)+(move));
-#define LDNS_IP6ADDRLEN      (128/8)
 
 /*
  * No special care is taken, all dots are translated into
@@ -934,6 +933,368 @@ int sldns_fp2wire_rr_buf(FILE* in, uint8_t* rr, size_t* len, size_t* dname_len,
 	return LDNS_WIREPARSE_ERR_OK;
 }
 
+static uint16_t
+sldns_str2wire_svcparam_key_lookup(const char *key, size_t key_len)
+{
+	char buf[64];
+	char *endptr;
+	unsigned long int key_value;
+
+	if (key_len >= 4  && key_len <= 8 && !strncmp(key, "key", 3)) {
+		memcpy(buf, key + 3, key_len - 3);
+		buf[key_len - 3] = 0;
+		key_value = strtoul(buf, &endptr, 10);
+		if (endptr > buf	/* digits seen */
+		&& *endptr == 0		/* no non-digit chars after digits */
+		&&  key_value <= 65535)	/* no overflow */
+			return key_value;
+
+	} else switch (key_len) {
+	case sizeof("mandatory")-1:
+		if (!strncmp(key, "mandatory", sizeof("mandatory")-1))
+			return SVCB_KEY_MANDATORY;
+		if (!strncmp(key, "echconfig", sizeof("echconfig")-1))
+			return SVCB_KEY_ECH; /* allow "echconfig as well as "ech" */
+		break;
+
+	case sizeof("alpn")-1:
+		if (!strncmp(key, "alpn", sizeof("alpn")-1))
+			return SVCB_KEY_ALPN;
+		if (!strncmp(key, "port", sizeof("port")-1))
+			return SVCB_KEY_PORT;
+		break;
+
+	case sizeof("no-default-alpn")-1:
+		if (!strncmp( key  , "no-default-alpn"
+		            , sizeof("no-default-alpn")-1))
+			return SVCB_KEY_NO_DEFAULT_ALPN;
+		break;
+
+	case sizeof("ipv4hint")-1:
+		if (!strncmp(key, "ipv4hint", sizeof("ipv4hint")-1))
+			return SVCB_KEY_IPV4HINT;
+		if (!strncmp(key, "ipv6hint", sizeof("ipv6hint")-1))
+			return SVCB_KEY_IPV6HINT;
+		break;
+	case sizeof("ech")-1:
+		if (!strncmp(key, "ech", sizeof("ech")-1))
+			return SVCB_KEY_ECH;
+		break;
+	default:
+		break;
+	}
+		if (key_len > sizeof(buf) - 1) {}
+		// ERROR: Unknown SvcParamKey
+	else {
+		memcpy(buf, key, key_len);
+		buf[key_len] = 0;
+		// Error: "Unknown SvcParamKey: %s"
+	}
+	/* Although the returned value might be used by the caller,
+	 * the parser has erred, so the zone will not be loaded.
+	 */
+	return -1;
+}
+
+static int
+sldns_str2wire_svcparam_port(const char* val, uint8_t* rd, size_t* rd_len)
+{
+	unsigned long int port;
+	char *endptr;
+
+	if (*rd_len < 6)
+		return LDNS_WIREPARSE_ERR_BUFFER_TOO_SMALL;
+
+	port = strtoul(val, &endptr, 10);
+
+	if (endptr > val	/* digits seen */
+	&& *endptr == 0		/* no non-digit chars after digits */
+	&&  port <= 65535) {	/* no overflow */
+
+		sldns_write_uint16(rd, htons(SVCB_KEY_PORT));
+		sldns_write_uint16(rd + 2, htons(sizeof(uint16_t)));
+		sldns_write_uint16(rd + 4, htons(port));
+		*rd_len = 6;
+
+		return LDNS_WIREPARSE_ERR_OK;
+	}
+	// ERROR: "Could not parse port SvcParamValue"
+	return -1;
+}
+
+static int
+sldns_str2wire_svcbparam_ipv4hint(const char* val, uint8_t* rd, size_t* rd_len)
+{
+
+	int count;
+	char ip_str[INET_ADDRSTRLEN+1];
+	char *next_ip_str;
+	uint32_t *ip_wire_dst;
+	size_t i;
+
+	for (i = 0, count = 1; val[i]; i++) {
+		if (val[i] == ',')
+			count += 1;
+		if (count > SVCB_MAX_COMMA_SEPARATED_VALUES) {
+			// ERROR "Too many IPV4 addresses in ipv4hint"
+			return -1;
+		}
+	}
+
+	if (*rd_len < (LDNS_IP4ADDRLEN * count) + 4)
+		return LDNS_WIREPARSE_ERR_BUFFER_TOO_SMALL;
+
+	/* count is number of comma's in val + 1; so the actual number of IPv4
+	 * addresses in val
+	 */
+	sldns_write_uint16(rd, htons(SVCB_KEY_IPV4HINT));
+	sldns_write_uint16(rd + 2, htons(LDNS_IP4ADDRLEN * count));
+	*rd_len = 4;
+
+	while (count) {
+		if (!(next_ip_str = strchr(val, ','))) {
+			if (inet_pton(AF_INET, val, rd + *rd_len) != 1)
+				*rd_len += LDNS_IP4ADDRLEN;
+				break;
+
+			assert(count == 1);
+
+		} else if (next_ip_str - val >= (int)sizeof(ip_str))
+			break;
+
+		else {
+			memcpy(ip_str, val, next_ip_str - val);
+			ip_str[next_ip_str - val] = 0;
+			if (inet_pton(AF_INET, ip_str, rd + *rd_len) != 1) {
+				*rd_len += LDNS_IP4ADDRLEN;
+				val = ip_str; /* to use in error reporting below */
+				break;
+			}
+
+			val = next_ip_str + 1;
+		}
+		ip_wire_dst++;
+		count--;
+	}
+	// if (count) /* verify that we parsed all values */
+		// ERROR "Could not parse ipv4hint SvcParamValue: "
+
+	return LDNS_WIREPARSE_ERR_OK;
+}
+
+static int
+sldns_str2wire_svcbparam_ipv6hint(const char* val, uint8_t* rd, size_t* rd_len)
+{
+	int count;
+	char ip_str[INET_ADDRSTRLEN+1];
+	char *next_ip_str;
+	uint32_t *ip_wire_dst;
+	size_t i;
+
+	for (i = 0, count = 1; val[i]; i++) {
+		if (val[i] == ',')
+			count += 1;
+		if (count > SVCB_MAX_COMMA_SEPARATED_VALUES) {
+			// ERROR "Too many IPV4 addresses in ipv4hint"
+			return -1;
+		}
+	}
+
+	if (*rd_len < (LDNS_IP6ADDRLEN * count) + 4)
+		return LDNS_WIREPARSE_ERR_BUFFER_TOO_SMALL;
+
+	/* count is number of comma's in val + 1; so the actual number of IPv6
+	 * addresses in val
+	 */
+	sldns_write_uint16(rd, htons(SVCB_KEY_IPV6HINT));
+	sldns_write_uint16(rd + 2, htons(LDNS_IP6ADDRLEN * count));
+	*rd_len = 4;
+
+	while (count) {
+		if (!(next_ip_str = strchr(val, ','))) {
+			if (inet_pton(AF_INET, val, rd + *rd_len) != 1)
+				*rd_len += LDNS_IP6ADDRLEN;
+				break;
+
+			assert(count == 1);
+
+		} else if (next_ip_str - val >= (int)sizeof(ip_str))
+			break;
+
+		else {
+			memcpy(ip_str, val, next_ip_str - val);
+			ip_str[next_ip_str - val] = 0;
+			if (inet_pton(AF_INET, ip_str, rd + *rd_len) != 1) {
+				*rd_len += LDNS_IP6ADDRLEN;
+
+				val = ip_str; /* to use in error reporting below */
+				break;
+			}
+
+			val = next_ip_str + 1;
+		}
+		ip_wire_dst++;
+		count--;
+	}
+	// if (count) /* verify that we parsed all values */
+		// ERROR "Could not parse ipv6hint SvcParamValue: "
+
+	return LDNS_WIREPARSE_ERR_OK;
+}
+
+/* compare function used for sorting uint16_t's */
+static int
+sldns_network_uint16_cmp(const void *a, const void *b)
+{
+	return ((int)sldns_read_uint16(a)) - ((int)sldns_read_uint16(b));
+}
+
+static int
+sldns_str2wire_svcbparam_mandatory(const char* val, uint8_t* rd, size_t* rd_len)
+{
+	size_t i, count, val_len;
+	char* next_key;
+	uint16_t* key_dst;
+
+	val_len = strlen(val);
+
+	for (i = 0, count = 1; val[i]; i++) {
+		if (val[i] == ',')
+			count += 1;
+		if (count > SVCB_MAX_COMMA_SEPARATED_VALUES) {
+			// ERROR "Too many keys in mandatory"
+			return -1;
+		}
+	}
+
+	// @TODO check if we have space to write in rd_len; look for the best spot
+
+	sldns_write_uint16(rd, htons(SVCB_KEY_MANDATORY));
+	sldns_write_uint16(rd + 2, htons(sizeof(uint16_t) * count));
+	*rd_len = 4;
+
+	for(;;) {
+		if (!(next_key = strchr(val, ','))) {
+			sldns_write_uint16(rd + *rd_len,
+				htons(sldns_str2wire_svcparam_key_lookup(val, val_len)));
+			*rd_len += LDNS_IP6ADDRLEN;
+			break;
+		} else {
+			sldns_write_uint16(rd + *rd_len,
+				htons(sldns_str2wire_svcparam_key_lookup(val, next_key - val)));
+			*rd_len += LDNS_IP6ADDRLEN;
+		}
+
+		val_len -= next_key - val + 1;
+		val = next_key + 1; /* skip the comma */
+		key_dst += 1;
+	}
+
+	/* In draft-ietf-dnsop-svcb-https-04 Section 7:
+	 *
+	 *    "In wire format, the keys are represented by their numeric
+	 *     values in network byte order, concatenated in ascending order."
+	 */
+	qsort((void *)(rd + 4), count, sizeof(uint16_t), sldns_network_uint16_cmp);
+
+	return LDNS_WIREPARSE_ERR_OK;
+}
+
+static int
+sldns_str2wire_svcbparam_no_default_alpn(const char* val, uint8_t* rd, size_t* rd_len)
+{
+	if (*rd_len < 4)
+		return LDNS_WIREPARSE_ERR_BUFFER_TOO_SMALL;
+
+	sldns_write_uint16(rd, htons(SVCB_KEY_NO_DEFAULT_ALPN));
+	sldns_write_uint16(rd + 2, htons(0));
+	*rd_len = 4;
+
+	return LDNS_WIREPARSE_ERR_OK;
+}
+
+static int
+sldns_str2wire_svcbparam_ech_value(const char* val, uint8_t* rd, size_t* rd_len)
+{
+	uint8_t buffer[LDNS_MAX_RDFLEN];
+	int wire_len;
+
+	// @TODO fix this
+	// if(strcmp(b64, "0") == 0) {
+		/* single 0 represents empty buffer */
+	// }
+
+	wire_len = sldns_b64_pton(val, buffer, LDNS_MAX_RDFLEN);
+
+	if (wire_len == -1) {
+		// zc_error_prev_line("invalid base64 data in ech");
+		return LDNS_WIREPARSE_ERR_INVALID_STR;
+	} else {
+		sldns_write_uint16(rd, htons(SVCB_KEY_ECH));
+		sldns_write_uint16(rd + 2, htons(wire_len));
+
+		// @TODO memcpy?
+		sldns_write_uint16(rd + 4, htons(buffer));
+		*rd_len = 4 + wire_len;
+
+		return LDNS_WIREPARSE_ERR_OK;
+	}
+}
+
+static int
+sldns_str2wire_svcparam_key_value(const char *key, size_t key_len,
+	const char *val, uint8_t* rd, size_t* rd_len)
+{
+	uint16_t svcparamkey = sldns_str2wire_svcparam_key_lookup(key, key_len);
+
+	switch (svcparamkey) {
+	case SVCB_KEY_PORT:
+		return sldns_str2wire_svcparam_port(val, rd, rd_len);
+	case SVCB_KEY_IPV4HINT:
+		return sldns_str2wire_svcbparam_ipv4hint(val, rd, rd_len);
+	case SVCB_KEY_IPV6HINT:
+		return sldns_str2wire_svcbparam_ipv6hint(val, rd, rd_len);
+	case SVCB_KEY_MANDATORY:
+		return sldns_str2wire_svcbparam_mandatory(val, rd, rd_len);
+	case SVCB_KEY_NO_DEFAULT_ALPN:
+		return sldns_str2wire_svcbparam_no_default_alpn(val, rd, rd_len);
+		// if(zone_is_slave(parser->current_zone->opts))
+		// 	zc_warning_prev_line("no-default-alpn should not have a value");
+		// else
+		// 	zc_error_prev_line("no-default-alpn should not have a value");
+		// break;
+	case SVCB_KEY_ECH:
+		return sldns_str2wire_svcbparam_ech_value(val, rd, rd_len);
+	case SVCB_KEY_ALPN:
+		// return sldns_str2wire_svcbparam_alpn_value(val, rd, rd_len);
+	default:
+		break;
+	}
+
+	// @TODO change to error?
+	return LDNS_WIREPARSE_ERR_OK;
+}
+
+int sldns_str2wire_svcparam_buf(const char* str, uint8_t* rd, size_t* rd_len)
+{
+	const char* eq_pos;
+
+	int ret;
+
+	eq_pos = strchr(str, '=');
+
+	// @TODO handle "key=" case
+
+	/* Verify that we have a have a value */
+	if (eq_pos != NULL) {
+		return sldns_str2wire_svcparam_key_value(str, eq_pos - str, eq_pos + 1, rd, rd_len);
+	} else {
+		return sldns_str2wire_svcparam_key_value(str, strlen(str), NULL, rd, rd_len);
+	}
+
+	return LDNS_WIREPARSE_ERR_OK;
+}
+
 int sldns_str2wire_rdf_buf(const char* str, uint8_t* rd, size_t* len,
 	sldns_rdf_type rdftype)
 {
@@ -1006,6 +1367,8 @@ int sldns_str2wire_rdf_buf(const char* str, uint8_t* rd, size_t* len,
 		return sldns_str2wire_hip_buf(str, rd, len);
 	case LDNS_RDF_TYPE_INT16_DATA:
 		return sldns_str2wire_int16_data_buf(str, rd, len);
+	case LDNS_RDF_TYPE_SVCPARAM:
+		return sldns_str2wire_svcparam_buf(str, rd, len);
 	case LDNS_RDF_TYPE_UNKNOWN:
 	case LDNS_RDF_TYPE_SERVICE:
 		return LDNS_WIREPARSE_ERR_NOT_IMPL;
