@@ -64,12 +64,14 @@ struct edns_data;
  *	or if edns_present = 0, it is not included.
  * @param dnssec: if 0 DNSSEC records are omitted from the answer.
  * @param secure: if 1, the AD bit is set in the reply.
+ * @param notminimal: if 1, ignore minimalresponses and include additional
+ * 	section anyway.
  * @return: 0 on error (server failure).
  */
 int reply_info_answer_encode(struct query_info* qinf, struct reply_info* rep, 
 	uint16_t id, uint16_t qflags, struct sldns_buffer* dest, time_t timenow,
 	int cached, struct regional* region, uint16_t udpsize, 
-	struct edns_data* edns, int dnssec, int secure);
+	struct edns_data* edns, int dnssec, int secure, int notminimal);
 
 /**
  * Regenerate the wireformat from the stored msg reply.

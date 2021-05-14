@@ -1948,6 +1948,17 @@ static int auth_zone_zonemd_check_hash(struct auth_zone* z,
 	return 0;
 }
 
+/** find the apex SOA RRset, if it exists */
+struct auth_rrset* auth_zone_get_soa_rrset(struct auth_zone* z)
+{
+	struct auth_data* apex;
+	struct auth_rrset* soa;
+	apex = az_find_name(z, z->name, z->namelen);
+	if(!apex) return NULL;
+	soa = az_domain_rrset(apex, LDNS_RR_TYPE_SOA);
+	return soa;
+}
+
 /** find serial number of zone or false if none */
 int
 auth_zone_get_serial(struct auth_zone* z, uint32_t* serial)
@@ -3484,7 +3495,7 @@ auth_answer_encode(struct query_info* qinfo, struct module_env* env,
 		*(uint16_t*)sldns_buffer_begin(buf),
 		sldns_buffer_read_u16_at(buf, 2),
 		buf, 0, 0, temp, udpsize, edns,
-		(int)(edns->bits&EDNS_DO), 0)) {
+		(int)(edns->bits&EDNS_DO), 0, 0)) {
 		error_encode(buf, (LDNS_RCODE_SERVFAIL|BIT_AA), qinfo,
 			*(uint16_t*)sldns_buffer_begin(buf),
 			sldns_buffer_read_u16_at(buf, 2), edns);

@@ -1494,19 +1494,29 @@ static int
 rpz_local_encode(struct module_env* env, struct query_info* qinfo,
 	struct edns_data* edns, struct comm_reply* repinfo, sldns_buffer* buf,
 	struct regional* temp, struct ub_packed_rrset_key* rrset, int ansec,
-	int rcode)
+	int rcode, struct ub_packed_rrset_key* soa_rrset)
 {
 	struct reply_info rep;
 	uint16_t udpsize;
+	struct ub_packed_rrset_key* rrsetlist[3];
 
 	memset(&rep, 0, sizeof(rep));
 	rep.flags = (uint16_t)((BIT_QR | BIT_AA | BIT_RA) | rcode);
 	rep.qdcount = 1;
 	rep.rrset_count = ansec;
+	rep.rrsets = rrsetlist;
 	if(ansec > 0) {
 		rep.an_numrrsets = 1;
-		rep.rrsets = &rrset;
+		rep.rrsets[0] = rrset;
 		rep.ttl = ((struct packed_rrset_data*)rrset->entry.data)->rr_ttl[0];
+	}
+	if(soa_rrset != NULL) {
+		rep.ar_numrrsets = 1;
+		rep.rrsets[rep.rrset_count] = soa_rrset;
+		rep.rrset_count ++;
+		if(rep.ttl < ((struct packed_rrset_data*)soa_rrset->entry.data)->rr_ttl[0]) {
+			rep.ttl = ((struct packed_rrset_data*)soa_rrset->entry.data)->rr_ttl[0];
+		}
 	}
 
 	udpsize = edns->udp_size;
@@ -1518,7 +1528,8 @@ rpz_local_encode(struct module_env* env, struct query_info* qinfo,
 		repinfo, temp, env->now_tv) ||
 	  !reply_info_answer_encode(qinfo, &rep,
 		*(uint16_t*)sldns_buffer_begin(buf), sldns_buffer_read_u16_at(buf, 2),
-		buf, 0, 0, temp, udpsize, edns, (int)(edns->bits&EDNS_DO), 0)) {
+		buf, 0, 0, temp, udpsize, edns, (int)(edns->bits&EDNS_DO), 0,
+		1 /* not minimal */ )) {
 		error_encode(buf, (LDNS_RCODE_SERVFAIL|BIT_AA), qinfo,
 			*(uint16_t*)sldns_buffer_begin(buf),
 			sldns_buffer_read_u16_at(buf, 2), edns);
@@ -1544,11 +1555,12 @@ static void
 rpz_apply_clientip_localdata_action(struct clientip_synthesized_rr* raddr,
 	struct module_env* env, struct query_info* qinfo,
 	struct edns_data* edns, struct comm_reply* repinfo, sldns_buffer* buf,
-	struct regional* temp)
+	struct regional* temp, struct auth_zone* auth_zone)
 {
 	struct local_rrset* rrset;
 	enum rpz_action action = RPZ_INVALID_ACTION;
 	struct ub_packed_rrset_key* rp = NULL;
+	struct ub_packed_rrset_key* rsoa = NULL;
 	int rcode = LDNS_RCODE_NOERROR|BIT_AA;
 	int rrset_count = 1;
 
@@ -1573,12 +1585,37 @@ rpz_apply_clientip_localdata_action(struct clientip_synthesized_rr* raddr,
 		return;
 	}
 
-	rp->rk.flags |= PACKED_RRSET_FIXEDTTL;
+	rp->rk.flags |= PACKED_RRSET_FIXEDTTL | PACKED_RRSET_RPZ;
 	rp->rk.dname = qinfo->qname;
 	rp->rk.dname_len = qinfo->qname_len;
+	rp->entry.hash = rrset_key_hash(&rp->rk);
 nodata:
+	if(auth_zone) {
+		struct auth_rrset* soa = NULL;
+		soa = auth_zone_get_soa_rrset(auth_zone);
+		if(soa) {
+			struct ub_packed_rrset_key csoa;
+			memset(&csoa, 0, sizeof(csoa));
+			csoa.entry.key = &csoa;
+			csoa.rk.rrset_class = htons(LDNS_RR_CLASS_IN);
+			csoa.rk.type = htons(LDNS_RR_TYPE_SOA);
+			csoa.rk.flags |= PACKED_RRSET_FIXEDTTL
+				| PACKED_RRSET_RPZ;
+			csoa.rk.dname = auth_zone->name;
+			csoa.rk.dname_len = auth_zone->namelen;
+			csoa.entry.hash = rrset_key_hash(&csoa.rk);
+			csoa.entry.data = soa->data;
+			rsoa = respip_copy_rrset(&csoa, temp);
+			if(!rsoa) {
+				verbose(VERB_ALGO, "rpz: local data action soa: out of memory");
+				return;
+			}
+		}
+
+	}
+
 	rpz_local_encode(env, qinfo, edns, repinfo, buf, temp, rp,
-		rrset_count, rcode);
+		rrset_count, rcode, rsoa);
 }
 
 static inline struct dns_msg*
@@ -2150,7 +2187,7 @@ rpz_apply_maybe_clientip_trigger(struct auth_zones* az, struct module_env* env,
 		stats->rpz_action[client_action]++;
 		if(client_action == RPZ_LOCAL_DATA_ACTION) {
 			rpz_apply_clientip_localdata_action(node, env, qinfo,
-				edns, repinfo, buf, temp);
+				edns, repinfo, buf, temp, *a_out);
 		} else {
 			if(*r_out && (*r_out)->log)
 				log_rpz_apply(((*z_out)?(*z_out)->name:NULL),
