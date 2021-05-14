@@ -1374,7 +1374,9 @@ log_rpz_apply(uint8_t* dname, enum rpz_action a, struct query_info* qinfo,
 	char ip[128], txt[512];
 	char dnamestr[LDNS_MAX_DOMAINLEN+1];
 	uint16_t port = ntohs(((struct sockaddr_in*)&repinfo->addr)->sin_port);
-	dname_str(dname, dnamestr);
+	if(dname)
+		dname_str(dname, dnamestr);
+	else	dnamestr[0]=0;
 	addr_to_str(&repinfo->addr, repinfo->addrlen, ip, sizeof(ip));
 	if(log_name)
 		snprintf(txt, sizeof(txt), "rpz: applied [%s] %s %s %s@%u",
@@ -1600,14 +1602,14 @@ rpz_synthesize_nodata(struct rpz* ATTR_UNUSED(r), struct module_qstate* ms,
 	msg->qinfo = *qinfo;
 	msg->rep = construct_reply_info_base(ms->region,
 					     LDNS_RCODE_NOERROR | BIT_RD | BIT_QR | BIT_AA | BIT_RA,
-					     1, //qd
-					     0, //ttl
-					     0, //prettl
-					     0, //expttl
-					     0, //an
-					     0, //ns
-					     0, //ar
-					     0, //total
+					     1, /* qd */
+					     0, /* ttl */
+					     0, /* prettl */
+					     0, /* expttl */
+					     0, /* an */
+					     0, /* ns */
+					     0, /* ar */
+					     0, /* total */
 					     sec_status_insecure);
 	if(msg->rep)
 		msg->rep->authoritative = 1;
@@ -1623,14 +1625,14 @@ rpz_synthesize_nxdomain(struct rpz* ATTR_UNUSED(r), struct module_qstate* ms,
 	msg->qinfo = *qinfo;
 	msg->rep = construct_reply_info_base(ms->region,
 					     LDNS_RCODE_NXDOMAIN | BIT_RD | BIT_QR | BIT_AA | BIT_RA,
-					     1, //qd
-					     0, //ttl
-					     0, //prettl
-					     0, //expttl
-					     0, //an
-					     0, //ns
-					     0, //ar
-					     0, //total
+					     1, /* qd */
+					     0, /* ttl */
+					     0, /* prettl */
+					     0, /* expttl */
+					     0, /* an */
+					     0, /* ns */
+					     0, /* ar */
+					     0, /* total */
 					     sec_status_insecure);
 	if(msg->rep)
 		msg->rep->authoritative = 1;
@@ -1649,17 +1651,16 @@ rpz_synthesize_localdata_from_rrset(struct rpz* ATTR_UNUSED(r), struct module_qs
 	msg = rpz_dns_msg_new(ms->region);
 	if(msg == NULL) { return NULL; }
 
-	// XXX: use ttl etc from rpz zone?
         new_reply_info = construct_reply_info_base(ms->region,
                                                    LDNS_RCODE_NOERROR | BIT_RD | BIT_QR | BIT_AA | BIT_RA,
-                                                   1, //qd
-                                                   0, //ttl
-                                                   0, //prettl
-                                                   0, //expttl
-                                                   1, //an
-                                                   0, //ns
-                                                   0, //ar
-                                                   1, //total
+                                                   1, /* qd */
+                                                   0, /* ttl */
+                                                   0, /* prettl */
+                                                   0, /* expttl */
+                                                   1, /* an */
+                                                   0, /* ns */
+                                                   0, /* ar */
+                                                   1, /* total */
                                                    sec_status_insecure);
 	if(new_reply_info == NULL) {
 		log_err("out of memory");
@@ -1703,7 +1704,7 @@ rpz_synthesize_nsip_localdata(struct rpz* r, struct module_qstate* ms,
 	return rpz_synthesize_localdata_from_rrset(r, ms, &ms->qinfo, rrset);
 }
 
-// copy'n'paste from localzone.c
+/* copy'n'paste from localzone.c */
 static struct local_rrset*
 local_data_find_type(struct local_data* data, uint16_t type, int alias_ok)
 {
@@ -1718,7 +1719,7 @@ local_data_find_type(struct local_data* data, uint16_t type, int alias_ok)
 	return NULL;
 }
 
-// based on localzone.c:local_data_answer()
+/* based on localzone.c:local_data_answer() */
 static inline struct dns_msg*
 rpz_synthesize_nsdname_localdata(struct rpz* r, struct module_qstate* ms,
 	struct local_zone* z, struct matched_delegation_point const* match)
@@ -1870,8 +1871,8 @@ rpz_apply_nsip_trigger(struct module_qstate* ms, struct rpz* r,
 		ret = rpz_synthesize_nodata(r, ms, &ms->qinfo);
 		break;
 	case RPZ_TCP_ONLY_ACTION:
-		// basically a passthru here but the tcp-only will be
-		// honored before the query gets send
+		/* basically a passthru here but the tcp-only will be
+		 * honored before the query gets send */
 		ms->respip_action_info->action = respip_truncate;
 		ret = NULL;
 		break;
@@ -1918,8 +1919,8 @@ rpz_apply_nsdname_trigger(struct module_qstate* ms, struct rpz* r,
 		ret = rpz_synthesize_nodata(r, ms, &ms->qinfo);
 		break;
 	case RPZ_TCP_ONLY_ACTION:
-		// basically a passthru here but the tcp-only will be
-		// honored before the query gets send
+		/* basically a passthru here but the tcp-only will be
+		 * honored before the query gets send */
 		ms->respip_action_info->action = respip_truncate;
 		ret = NULL;
 		break;
@@ -2151,7 +2152,10 @@ rpz_apply_maybe_clientip_trigger(struct auth_zones* az, struct module_env* env,
 			rpz_apply_clientip_localdata_action(node, env, qinfo,
 				edns, repinfo, buf, temp);
 		} else {
-			// XXX: log_rpz_apply not possbile because no zone
+			if(*r_out && (*r_out)->log)
+				log_rpz_apply(((*z_out)?(*z_out)->name:NULL),
+					client_action, qinfo, repinfo,
+					(*r_out)->log_name);
 			local_zones_zone_answer(NULL /*no zone*/, env, qinfo, edns,
 				repinfo, buf, temp, 0 /* no local data used */,
 				rpz_action_to_localzone_type(client_action));
