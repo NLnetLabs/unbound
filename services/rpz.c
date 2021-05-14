@@ -2156,7 +2156,7 @@ rpz_apply_maybe_clientip_trigger(struct auth_zones* az, struct module_env* env,
 				log_rpz_apply(((*z_out)?(*z_out)->name:NULL),
 					client_action, qinfo, repinfo,
 					(*r_out)->log_name);
-			local_zones_zone_answer(NULL /*no zone*/, env, qinfo, edns,
+			local_zones_zone_answer(*z_out /*likely NULL, no zone*/, env, qinfo, edns,
 				repinfo, buf, temp, 0 /* no local data used */,
 				rpz_action_to_localzone_type(client_action));
 		}
