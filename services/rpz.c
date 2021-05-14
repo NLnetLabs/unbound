@@ -1637,6 +1637,7 @@ rpz_add_soa(struct reply_info* rep, struct module_qstate* ms,
 	struct auth_rrset* soa = NULL;
 	struct ub_packed_rrset_key* rsoa = NULL;
 	struct ub_packed_rrset_key** prevrrsets;
+	if(!az) return 1;
 	soa = auth_zone_get_soa_rrset(az);
 	if(!soa) return 1;
 	if(!rep) return 0;
@@ -1645,6 +1646,8 @@ rpz_add_soa(struct reply_info* rep, struct module_qstate* ms,
 	prevrrsets = rep->rrsets;
 	rep->rrsets = regional_alloc_zero(ms->region,
 		sizeof(*rep->rrsets)*(rep->rrset_count+1));
+	if(!rep->rrsets)
+		return 0;
 	if(prevrrsets && rep->rrset_count > 0)
 		memcpy(rep->rrsets, prevrrsets, rep->rrset_count*sizeof(*rep->rrsets));
 	rep->rrset_count++;
