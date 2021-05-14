@@ -387,11 +387,15 @@ rpz_clear(struct rpz* r)
 {
 	/* must hold write lock on auth_zone */
 	local_zones_delete(r->local_zones);
+	r->local_zones = NULL;
 	local_zones_delete(r->nsdname_zones);
+	r->nsdname_zones = NULL;
 	respip_set_delete(r->respip_set);
+	r->respip_set = NULL;
 	rpz_clientip_synthesized_set_delete(r->client_set);
+	r->client_set = NULL;
 	rpz_clientip_synthesized_set_delete(r->ns_set);
-	// XXX: this approach seems to leak memory
+	r->ns_set = NULL;
 	if(!(r->local_zones = local_zones_create())){
 		return 0;
 	}
