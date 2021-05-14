@@ -1579,6 +1579,7 @@ key_matches_a_ds(struct module_env* env, struct val_env* ve,
 	for(ds_idx=0; ds_idx<num; ds_idx++) {
 		if(!ds_digest_algo_is_supported(ds_rrset, ds_idx) ||
 			!ds_key_algo_is_supported(ds_rrset, ds_idx) ||
+			!dnskey_size_is_supported(dnskey_rrset, key_idx) ||
 			ds_get_digest_algo(ds_rrset, ds_idx) != d)
 			continue;
 		if(ds_get_key_algo(ds_rrset, ds_idx)
@@ -1633,7 +1634,8 @@ update_events(struct module_env* env, struct val_env* ve,
 		}
 		/* is a key of this type supported?. Note rr_list and
 		 * packed_rrset are in the same order. */
-		if(!dnskey_algo_is_supported(dnskey_rrset, i)) {
+		if(!dnskey_algo_is_supported(dnskey_rrset, i) ||
+			!dnskey_size_is_supported(dnskey_rrset, i)) {
 			/* skip unknown algorithm key, it is useless to us */
 			log_nametypeclass(VERB_DETAIL, "trust point has "
 				"unsupported algorithm at", 

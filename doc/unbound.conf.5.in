@@ -451,6 +451,19 @@ total number configured, and finally to 0 if the number of free buffers
 falls below 20% of the total number configured. A minimum timeout of
 200 milliseconds is observed regardless of the option value used.
 .TP
+.B tcp-reuse-timeout: \fI<msec>\fR
+The period Unbound will keep TCP persistent connections open to
+authority servers. This option defaults to 60000 milliseconds.
+.TP
+.B max-reuse-tcp-queries: \fI<number>\fR
+The maximum number of queries that can be sent on a persistent TCP
+connection.
+This option defaults to 200 queries.
+.TP
+.B tcp-auth-query-timeout: \fI<number>\fR
+Timeout in milliseconds for TCP queries to auth servers.
+This option defaults to 3000 milliseconds.
+.TP
 .B edns-tcp-keepalive: \fI<yes or no>\fR
 Enable or disable EDNS TCP Keepalive. Default is no.
 .TP

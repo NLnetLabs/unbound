@@ -100,7 +100,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_PRIVATE_DOMAIN VAR_REMOTE_CONTROL VAR_CONTROL_ENABLE
 %token VAR_CONTROL_INTERFACE VAR_CONTROL_PORT VAR_SERVER_KEY_FILE
 %token VAR_SERVER_CERT_FILE VAR_CONTROL_KEY_FILE VAR_CONTROL_CERT_FILE
-%token VAR_CONTROL_USE_CERT
+%token VAR_CONTROL_USE_CERT VAR_TCP_REUSE_TIMEOUT VAR_MAX_REUSE_TCP_QUERIES
 %token VAR_EXTENDED_STATISTICS VAR_LOCAL_DATA_PTR VAR_JOSTLE_TIMEOUT
 %token VAR_STUB_PRIME VAR_UNWANTED_REPLY_THRESHOLD VAR_LOG_TIME_ASCII
 %token VAR_DOMAIN_INSECURE VAR_PYTHON VAR_PYTHON_SCRIPT VAR_VAL_SIG_SKEW_MIN
@@ -109,7 +109,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_DEL_HOLDDOWN VAR_SO_RCVBUF VAR_EDNS_BUFFER_SIZE VAR_PREFETCH
 %token VAR_PREFETCH_KEY VAR_SO_SNDBUF VAR_SO_REUSEPORT VAR_HARDEN_BELOW_NXDOMAIN
 %token VAR_IGNORE_CD_FLAG VAR_LOG_QUERIES VAR_LOG_REPLIES VAR_LOG_LOCAL_ACTIONS
-%token VAR_TCP_UPSTREAM VAR_SSL_UPSTREAM
+%token VAR_TCP_UPSTREAM VAR_SSL_UPSTREAM VAR_TCP_AUTH_QUERY_TIMEOUT
 %token VAR_SSL_SERVICE_KEY VAR_SSL_SERVICE_PEM VAR_SSL_PORT VAR_FORWARD_FIRST
 %token VAR_STUB_SSL_UPSTREAM VAR_FORWARD_SSL_UPSTREAM VAR_TLS_CERT_BUNDLE
 %token VAR_HTTPS_PORT VAR_HTTP_ENDPOINT VAR_HTTP_MAX_STREAMS
@@ -301,7 +301,9 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_tls_ciphersuites | server_tls_session_ticket_keys |
 	server_tls_use_sni | server_edns_client_string |
 	server_edns_client_string_opcode | server_nsid |
-	server_zonemd_permissive_mode
+	server_zonemd_permissive_mode | server_max_reuse_tcp_queries |
+	server_tcp_reuse_timeout | server_tcp_auth_query_timeout
+
 	;
 stubstart: VAR_STUB_ZONE
 	{
@@ -856,6 +858,39 @@ server_tcp_idle_timeout: VAR_TCP_IDLE_TIMEOUT STRING_ARG
 		else if (atoi($2) < 1)
 			cfg_parser->cfg->tcp_idle_timeout = 1;
 		else cfg_parser->cfg->tcp_idle_timeout = atoi($2);
+		free($2);
+	}
+	;
+server_max_reuse_tcp_queries: VAR_MAX_REUSE_TCP_QUERIES STRING_ARG
+	{
+		OUTYY(("P(server_max_reuse_tcp_queries:%s)\n", $2));
+		if(atoi($2) == 0 && strcmp($2, "0") != 0)
+			yyerror("number expected");
+		else if (atoi($2) < 1)
+			cfg_parser->cfg->max_reuse_tcp_queries = 0;
+		else cfg_parser->cfg->max_reuse_tcp_queries = atoi($2);
+		free($2);
+	}
+	;
+server_tcp_reuse_timeout: VAR_TCP_REUSE_TIMEOUT STRING_ARG
+	{
+		OUTYY(("P(server_tcp_reuse_timeout:%s)\n", $2));
+		if(atoi($2) == 0 && strcmp($2, "0") != 0)
+			yyerror("number expected");
+		else if (atoi($2) < 1)
+			cfg_parser->cfg->tcp_reuse_timeout = 0;
+		else cfg_parser->cfg->tcp_reuse_timeout = atoi($2);
+		free($2);
+	}
+	;
+server_tcp_auth_query_timeout: VAR_TCP_AUTH_QUERY_TIMEOUT STRING_ARG
+	{
+		OUTYY(("P(server_tcp_auth_query_timeout:%s)\n", $2));
+		if(atoi($2) == 0 && strcmp($2, "0") != 0)
+			yyerror("number expected");
+		else if (atoi($2) < 1)
+			cfg_parser->cfg->tcp_auth_query_timeout = 0;
+		else cfg_parser->cfg->tcp_auth_query_timeout = atoi($2);
 		free($2);
 	}
 	;
@@ -2813,13 +2848,20 @@ view_local_zone: VAR_LOCAL_ZONE STRING_ARG STRING_ARG
 		   && strcmp($3, "always_transparent")!=0
 		   && strcmp($3, "always_refuse")!=0
 		   && strcmp($3, "always_nxdomain")!=0
+		   && strcmp($3, "always_nodata")!=0
+		   && strcmp($3, "always_deny")!=0
+		   && strcmp($3, "always_null")!=0
 		   && strcmp($3, "noview")!=0
-		   && strcmp($3, "inform")!=0 && strcmp($3, "inform_deny")!=0) {
+		   && strcmp($3, "inform")!=0 && strcmp($3, "inform_deny")!=0
+		   && strcmp($3, "inform_redirect") != 0
+		   && strcmp($3, "ipset") != 0) {
 			yyerror("local-zone type: expected static, deny, "
 				"refuse, redirect, transparent, "
 				"typetransparent, inform, inform_deny, "
-				"always_transparent, always_refuse, "
-				"always_nxdomain, noview or nodefault");
+				"inform_redirect, always_transparent, "
+				"always_refuse, always_nxdomain, "
+				"always_nodata, always_deny, always_null, "
+				"noview, nodefault or ipset");
 			free($2);
 			free($3);
 		} else if(strcmp($3, "nodefault")==0) {

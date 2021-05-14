@@ -279,6 +279,7 @@ setup_config(FILE* in, int* lineno, int* pass_argc, char* pass_argv[])
 	fprintf(cfg, "		username: \"\"\n");
 	fprintf(cfg, "		pidfile: \"\"\n");
 	fprintf(cfg, "		val-log-level: 2\n");
+	fprintf(cfg, "		log-servfail: yes\n");
 	fprintf(cfg, "remote-control:	control-enable: no\n");
 	while(fgets(line, MAX_LINE_LEN-1, in)) {
 		parse = line;

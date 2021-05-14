@@ -1314,6 +1314,7 @@ ssl_handshake(struct comm_point* c)
 			c->repinfo.addrlen);
 	}
 
+#ifdef HAVE_SSL_GET0_ALPN_SELECTED
 	/* check if http2 use is negotiated */
 	if(c->type == comm_http && c->h2_session) {
 		const unsigned char *alpn;
@@ -1325,6 +1326,7 @@ ssl_handshake(struct comm_point* c)
 			c->use_h2 = 1;
 		}
 	}
+#endif
 
 	/* setup listen rw correctly */
 	if(c->tcp_is_reading) {

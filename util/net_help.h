@@ -76,8 +76,6 @@ struct config_strlist;
 
 /** timeout in milliseconds for UDP queries to auth servers. */
 #define UDP_AUTH_QUERY_TIMEOUT 3000
-/** timeout in milliseconds for TCP queries to auth servers. */
-#define TCP_AUTH_QUERY_TIMEOUT 3000
 /** Advertised version of EDNS capabilities */
 #define EDNS_ADVERTISED_VERSION         0
 /** Advertised size of EDNS capabilities */

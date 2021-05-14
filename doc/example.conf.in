@@ -507,7 +507,8 @@ server:
 	# Use several entries, one per domain name, to track multiple zones.
 	#
 	# If you want to perform DNSSEC validation, run unbound-anchor before
-	# you start unbound (i.e. in the system boot scripts).  And enable:
+	# you start unbound (i.e. in the system boot scripts).
+	# And then enable the auto-trust-anchor-file config item.
 	# Please note usage of unbound-anchor root anchor is at your own risk
 	# and under the terms of our LICENSE (see that file in the source).
 	# auto-trust-anchor-file: "@UNBOUND_ROOTKEY_FILE@"
@@ -900,6 +901,13 @@ server:
 	# all domains are treated as being allowed.
 	# ipsecmod-allow: "example.com"
 	# ipsecmod-allow: "nlnetlabs.nl"
+
+	# Timeout for REUSE entries in milliseconds.
+	# tcp-reuse-timeout: 60000
+	# Max number of queries on a reuse connection.
+	# max-reuse-tcp-queries: 200
+	# Timeout in milliseconds for TCP queries to auth servers.
+	# tcp-auth-query-timeout: 3000
 
 
 # Python config section. To enable:

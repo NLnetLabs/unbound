@@ -1,3 +1,51 @@
+12 May 2021: Wouter
+	- Fix that auth-zone zonefiles use last TTL if no TTL is specified.
+
+10 May 2021: Wouter
+	- Merge PR #487: ifdef RLIMIT_AS in recently added check.
+
+7 May 2021: Wouter
+	- Fix #485: Unbound occasionally reports broken stats.
+	- Add ./configure --with-deprecate-rsa-1024 that turns off RSA 1024.
+	- Remove case fallthrough from deprecate-rsa-1024 code.
+
+4 May 2021: George
+	- Fix for #367: only attempt to get the interface for queries that are no
+	  longer on the tcp_waiting_list.
+	- Add more logging for out-of-memory cases.
+
+4 May 2021: Wouter
+	- Merge #478: Allow configuration of TCP timeout while waiting for
+	  response.
+	- Fix to squelch tcp socket bind failures when the interface is gone.
+	- Rerun flex and bison.
+
+3 May 2021: Wouter
+	- Fix #481: Fix comment in configuration file.
+
+29 April 2021: Wouter
+	- Add that log-servfail prints an IP address and more information
+	  about one of the last failures for that query.
+
+28 April 2021: George
+	- Fix compiler warning for signed/unsigned comparison for
+	  max_reuse_tcp_queries.
+
+28 April 2021: Wouter
+	- Fix #474: always_null and others inside view.
+
+26 April 2021: Wouter
+	- Merge #470 from edevil: Allow configuration of persistent TCP
+	  connections.
+
+22 April 2021: Wouter
+	- Merge #466 from FGasper: Support OpenSSLs that lack
+	  SSL_get0_alpn_selected.
+	- Fix #468: OpenSSL 1.0.1 can no longer build Unbound.
+	- Further fix for #468: detect SSL_CTX_set_alpn_protos for build with
+	  OpenSSL 1.0.1.
+	- Fix that testcode dohclient has OpenSSL initialisation calls.
+
 13 April 2021: George
 	- Fix documentation comment for files previously residing in checkconf/.
 	- Remove unused functions worker_handle_reply and libworker_handle_reply.

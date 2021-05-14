@@ -238,7 +238,14 @@ pick_outgoing_tcp(struct pending_tcp* pend, struct waiting_tcp* w, int s)
 		((struct sockaddr_in6*)&pi->addr)->sin6_port = 0;
 	else	((struct sockaddr_in*)&pi->addr)->sin_port = 0;
 	if(bind(s, (struct sockaddr*)&pi->addr, pi->addrlen) != 0) {
-		log_err("outgoing tcp: bind: %s", sock_strerror(errno));
+#ifndef USE_WINSOCK
+#ifdef EADDRNOTAVAIL
+		if(!(verbosity < 4 && errno == EADDRNOTAVAIL))
+#endif
+#else /* USE_WINSOCK */
+		if(!(verbosity < 4 && WSAGetLastError() == WSAEADDRNOTAVAIL))
+#endif
+		    log_err("outgoing tcp: bind: %s", sock_strerror(errno));
 		sock_close(s);
 		return 0;
 	}
@@ -514,7 +521,7 @@ reuse_tcp_find(struct outside_network* outnet, struct sockaddr_storage* addr,
 	while(result && result != RBTREE_NULL &&
 		reuse_cmp_addrportssl(result->key, &key_p.reuse) == 0) {
 		if(((struct reuse_tcp*)result)->tree_by_id.count <
-			MAX_REUSE_TCP_QUERIES) {
+			outnet->max_reuse_tcp_queries) {
 			/* same address, port, ssl-yes-or-no, and has
 			 * space for another query */
 			return (struct reuse_tcp*)result;
@@ -1012,22 +1019,22 @@ static void reuse_cb_and_decommission(struct outside_network* outnet,
 
 /** set timeout on tcp fd and setup read event to catch incoming dns msgs */
 static void
-reuse_tcp_setup_timeout(struct pending_tcp* pend_tcp)
+reuse_tcp_setup_timeout(struct pending_tcp* pend_tcp, int tcp_reuse_timeout)
 {
 	log_reuse_tcp(VERB_CLIENT, "reuse_tcp_setup_timeout", &pend_tcp->reuse);
-	comm_point_start_listening(pend_tcp->c, -1, REUSE_TIMEOUT);
+	comm_point_start_listening(pend_tcp->c, -1, tcp_reuse_timeout);
 }
 
 /** set timeout on tcp fd and setup read event to catch incoming dns msgs */
 static void
-reuse_tcp_setup_read_and_timeout(struct pending_tcp* pend_tcp)
+reuse_tcp_setup_read_and_timeout(struct pending_tcp* pend_tcp, int tcp_reuse_timeout)
 {
 	log_reuse_tcp(VERB_CLIENT, "reuse_tcp_setup_readtimeout", &pend_tcp->reuse);
 	sldns_buffer_clear(pend_tcp->c->buffer);
 	pend_tcp->c->tcp_is_reading = 1;
 	pend_tcp->c->tcp_byte_count = 0;
 	comm_point_stop_listening(pend_tcp->c);
-	comm_point_start_listening(pend_tcp->c, -1, REUSE_TIMEOUT);
+	comm_point_start_listening(pend_tcp->c, -1, tcp_reuse_timeout);
 }
 
 int 
@@ -1083,7 +1090,7 @@ outnet_tcp_cb(struct comm_point* c, void* arg, int error,
 			pend->reuse.cp_more_write_again = 0;
 			pend->c->tcp_is_reading = 1;
 			comm_point_stop_listening(pend->c);
-			reuse_tcp_setup_timeout(pend);
+			reuse_tcp_setup_timeout(pend, outnet->tcp_reuse_timeout);
 		}
 		return 0;
 	} else if(error != NETEVENT_NOERROR) {
@@ -1136,7 +1143,7 @@ outnet_tcp_cb(struct comm_point* c, void* arg, int error,
 		 * and there could be more bytes to read on the input */
 		if(pend->reuse.tree_by_id.count != 0)
 			pend->reuse.cp_more_read_again = 1;
-		reuse_tcp_setup_read_and_timeout(pend);
+		reuse_tcp_setup_read_and_timeout(pend, outnet->tcp_reuse_timeout);
 		return 0;
 	}
 	verbose(VERB_CLIENT, "outnet_tcp_cb reuse after cb: decommission it");
@@ -1404,7 +1411,8 @@ outside_network_create(struct comm_base *base, size_t bufsize,
 	int numavailports, size_t unwanted_threshold, int tcp_mss,
 	void (*unwanted_action)(void*), void* unwanted_param, int do_udp,
 	void* sslctx, int delayclose, int tls_use_sni, struct dt_env* dtenv,
-	int udp_connect)
+	int udp_connect, int max_reuse_tcp_queries, int tcp_reuse_timeout,
+	int tcp_auth_query_timeout)
 {
 	struct outside_network* outnet = (struct outside_network*)
 		calloc(1, sizeof(struct outside_network));
@@ -1416,6 +1424,9 @@ outside_network_create(struct comm_base *base, size_t bufsize,
 	comm_base_timept(base, &outnet->now_secs, &outnet->now_tv);
 	outnet->base = base;
 	outnet->num_tcp = num_tcp;
+	outnet->max_reuse_tcp_queries = max_reuse_tcp_queries;
+	outnet->tcp_reuse_timeout= tcp_reuse_timeout;
+	outnet->tcp_auth_query_timeout = tcp_auth_query_timeout;
 	outnet->num_tcp_outgoing = 0;
 	outnet->infra = infra;
 	outnet->rnd = rnd;
@@ -2443,7 +2454,7 @@ reuse_tcp_remove_serviced_keep(struct waiting_tcp* w,
 		if(!reuse_tcp_insert(sq->outnet, pend_tcp)) {
 			return 0;
 		}
-		reuse_tcp_setup_timeout(pend_tcp);
+		reuse_tcp_setup_timeout(pend_tcp, sq->outnet->tcp_reuse_timeout);
 		return 1;
 	}
 	return 0;
@@ -2779,8 +2790,12 @@ serviced_tcp_callback(struct comm_point* c, void* arg, int error,
 	struct comm_reply r2;
 #ifdef USE_DNSTAP
 	struct waiting_tcp* w = (struct waiting_tcp*)sq->pending;
-	struct pending_tcp* pend_tcp = (struct pending_tcp*)w->next_waiting;
-	struct port_if* pi = pend_tcp->pi;
+	struct pending_tcp* pend_tcp = NULL;
+	struct port_if* pi = NULL;
+	if(!w->on_tcp_waiting_list && w->next_waiting) {
+		pend_tcp = (struct pending_tcp*)w->next_waiting;
+		pi = pend_tcp->pi;
+	}
 #endif
 	sq->pending = NULL; /* removed after this callback */
 	if(error != NETEVENT_NOERROR)
@@ -2793,7 +2808,7 @@ serviced_tcp_callback(struct comm_point* c, void* arg, int error,
 	/*
 	 * sending src (local service)/dst (upstream) addresses over DNSTAP
 	 */
-	if(error==NETEVENT_NOERROR && sq->outnet->dtenv &&
+	if(error==NETEVENT_NOERROR && pi && sq->outnet->dtenv &&
 	   (sq->outnet->dtenv->log_resolver_response_messages ||
 	    sq->outnet->dtenv->log_forwarder_response_messages)) {
 		log_addr(VERB_ALGO, "response from upstream", &sq->addr, sq->addrlen);
@@ -2873,7 +2888,7 @@ serviced_tcp_initiate(struct serviced_query* sq, sldns_buffer* buff)
 		sq->status==serviced_query_TCP_EDNS?"EDNS":"");
 	serviced_encode(sq, buff, sq->status == serviced_query_TCP_EDNS);
 	sq->last_sent_time = *sq->outnet->now_tv;
-	sq->pending = pending_tcp_query(sq, buff, TCP_AUTH_QUERY_TIMEOUT,
+	sq->pending = pending_tcp_query(sq, buff, sq->outnet->tcp_auth_query_timeout,
 		serviced_tcp_callback, sq);
 	if(!sq->pending) {
 		/* delete from tree so that a retry by above layer does not
@@ -2901,10 +2916,10 @@ serviced_tcp_send(struct serviced_query* sq, sldns_buffer* buff)
 	sq->last_sent_time = *sq->outnet->now_tv;
 	if(sq->tcp_upstream || sq->ssl_upstream) {
 		timeout = rtt;
-		if(rtt >= UNKNOWN_SERVER_NICENESS && rtt < TCP_AUTH_QUERY_TIMEOUT)
-			timeout = TCP_AUTH_QUERY_TIMEOUT;
+		if(rtt >= UNKNOWN_SERVER_NICENESS && rtt < sq->outnet->tcp_auth_query_timeout)
+			timeout = sq->outnet->tcp_auth_query_timeout;
 	} else {
-		timeout = TCP_AUTH_QUERY_TIMEOUT;
+		timeout = sq->outnet->tcp_auth_query_timeout;
 	}
 	sq->pending = pending_tcp_query(sq, buff, timeout,
 		serviced_tcp_callback, sq);

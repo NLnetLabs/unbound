@@ -406,6 +406,12 @@ struct iter_qstate {
 	int auth_zone_response;
 	/** True if the auth_zones should not be consulted for the query */
 	int auth_zone_avoid;
+	/** true if there have been scrubbing failures of reply packets */
+	int scrub_failures;
+	/** true if there have been parse failures of reply packets */
+	int parse_failures;
+	/** a failure printout address for last received answer */
+	struct comm_reply* fail_reply;
 };
 
 /**
