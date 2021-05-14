@@ -25,6 +25,7 @@
 #include "respip/respip.h"
 #include "services/view.h"
 #include "sldns/rrdef.h"
+#include "util/data/dname.h"
 
 
 /** Subset of resp_addr.node, used for inform-variant logging */
