@@ -2089,6 +2089,10 @@ rpz_callback_from_iterator_module(struct module_qstate* ms, struct iter_qstate* 
 	for(a = az->rpz_first; a != NULL; a = a->rpz_az_next) {
 		lock_rw_rdlock(&a->lock);
 		r = a->rpz;
+		if(r->disabled) {
+			lock_rw_unlock(&a->lock);
+			continue;
+		}
 
 		/* the nsdname has precedence over the nsip triggers */
 		z = rpz_delegation_point_zone_lookup(is->dp, r->nsdname_zones,
