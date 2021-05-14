@@ -878,7 +878,7 @@ int
 reply_info_answer_encode(struct query_info* qinf, struct reply_info* rep, 
 	uint16_t id, uint16_t qflags, sldns_buffer* pkt, time_t timenow,
 	int cached, struct regional* region, uint16_t udpsize, 
-	struct edns_data* edns, int dnssec, int secure, int notminimal)
+	struct edns_data* edns, int dnssec, int secure)
 {
 	uint16_t flags;
 	unsigned int attach_edns = 0;
@@ -916,7 +916,7 @@ reply_info_answer_encode(struct query_info* qinf, struct reply_info* rep,
 	}
 
 	if(!reply_info_encode(qinf, rep, id, flags, pkt, timenow, region,
-		udpsize, dnssec, (notminimal?0:MINIMAL_RESPONSES))) {
+		udpsize, dnssec, MINIMAL_RESPONSES)) {
 		log_err("reply encode: out of memory");
 		return 0;
 	}

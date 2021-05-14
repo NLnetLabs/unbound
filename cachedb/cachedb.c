@@ -402,7 +402,7 @@ prep_data(struct module_qstate* qstate, struct sldns_buffer* buf)
 	                qstate->return_msg->rep);
 	if(!reply_info_answer_encode(&qstate->return_msg->qinfo,
 		qstate->return_msg->rep, 0, qstate->query_flags,
-		buf, 0, 1, qstate->env->scratch, 65535, &edns, 1, 0, 0))
+		buf, 0, 1, qstate->env->scratch, 65535, &edns, 1, 0))
 		return 0;
 
 	/* TTLs in the return_msg are relative to time(0) so we have to
