@@ -1056,7 +1056,7 @@ rpz_insert_rr(struct rpz* r, uint8_t* azname, size_t aznamelen, uint8_t* dname,
 		return 1;
 	}
 	if(t == RPZ_QNAME_TRIGGER) {
-		// policydname will be consumed, no free
+		/* policydname will be consumed, no free */
 		rpz_insert_qname_trigger(r, policydname, policydnamelen,
 			a, rr_type, rr_class, rr_ttl, rdatawl, rdatalen, rr,
 			rr_len);
@@ -1489,8 +1489,10 @@ rpz_is_udp_query(struct comm_reply* repinfo) {
 
 /** encode answer consisting of 1 rrset */
 static int
-rpz_local_encode(struct query_info* qinfo,struct edns_data* edns, sldns_buffer* buf,
-	struct regional* temp, struct ub_packed_rrset_key* rrset, int ansec, int rcode)
+rpz_local_encode(struct module_env* env, struct query_info* qinfo,
+	struct edns_data* edns, struct comm_reply* repinfo, sldns_buffer* buf,
+	struct regional* temp, struct ub_packed_rrset_key* rrset, int ansec,
+	int rcode)
 {
 	struct reply_info rep;
 	uint16_t udpsize;
@@ -1510,8 +1512,9 @@ rpz_local_encode(struct query_info* qinfo,struct edns_data* edns, sldns_buffer* 
 	edns->udp_size = EDNS_ADVERTISED_SIZE;
 	edns->ext_rcode = 0;
 	edns->bits &= EDNS_DO;
-	//!inplace_cb_reply_local_call(env, qinfo, NULL, &rep, rcode, edns,repinfo, temp) ||
-	if(!reply_info_answer_encode(qinfo, &rep,
+	if(!inplace_cb_reply_local_call(env, qinfo, NULL, &rep, rcode, edns,
+		repinfo, temp, env->now_tv) ||
+	  !reply_info_answer_encode(qinfo, &rep,
 		*(uint16_t*)sldns_buffer_begin(buf), sldns_buffer_read_u16_at(buf, 2),
 		buf, 0, 0, temp, udpsize, edns, (int)(edns->bits&EDNS_DO), 0)) {
 		error_encode(buf, (LDNS_RCODE_SERVFAIL|BIT_AA), qinfo,
@@ -1537,7 +1540,8 @@ rpz_find_synthesized_rrset(int qtype, struct clientip_synthesized_rr* data) {
 
 static void
 rpz_apply_clientip_localdata_action(struct clientip_synthesized_rr* raddr,
-	struct query_info* qinfo, struct edns_data* edns, sldns_buffer* buf,
+	struct module_env* env, struct query_info* qinfo,
+	struct edns_data* edns, struct comm_reply* repinfo, sldns_buffer* buf,
 	struct regional* temp)
 {
 	struct local_rrset* rrset;
@@ -1571,7 +1575,8 @@ rpz_apply_clientip_localdata_action(struct clientip_synthesized_rr* raddr,
 	rp->rk.dname = qinfo->qname;
 	rp->rk.dname_len = qinfo->qname_len;
 nodata:
-	rpz_local_encode(qinfo, edns, buf, temp, rp, rrset_count, rcode);
+	rpz_local_encode(env, qinfo, edns, repinfo, buf, temp, rp,
+		rrset_count, rcode);
 }
 
 static inline struct dns_msg*
@@ -2143,8 +2148,8 @@ rpz_apply_maybe_clientip_trigger(struct auth_zones* az, struct module_env* env,
 		}
 		stats->rpz_action[client_action]++;
 		if(client_action == RPZ_LOCAL_DATA_ACTION) {
-			rpz_apply_clientip_localdata_action(node, qinfo, edns,
-							    buf, temp);
+			rpz_apply_clientip_localdata_action(node, env, qinfo,
+				edns, repinfo, buf, temp);
 		} else {
 			// XXX: log_rpz_apply not possbile because no zone
 			local_zones_zone_answer(NULL /*no zone*/, env, qinfo, edns,
