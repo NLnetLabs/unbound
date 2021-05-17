@@ -4204,9 +4204,9 @@ case "$exec_prefix" in
 esac
 
 # are we on MinGW?
-if uname -s 2>&1 | grep MINGW32 >/dev/null; then on_mingw="yes"
+if uname -s 2>&1 | grep MINGW >/dev/null; then on_mingw="yes"
 else
-	if echo $host $target | grep mingw32 >/dev/null; then on_mingw="yes"
+	if echo $host $target | grep mingw >/dev/null; then on_mingw="yes"
 	else on_mingw="no"; fi
 fi
 
@@ -15927,7 +15927,7 @@ fi
 
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking if nonblocking sockets work" >&5
 $as_echo_n "checking if nonblocking sockets work... " >&6; }
-if echo $target | grep mingw32 >/dev/null; then
+if echo $target | grep mingw >/dev/null; then
 	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no (windows)" >&5
 $as_echo "no (windows)" >&6; }
 

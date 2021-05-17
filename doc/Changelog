@@ -1,3 +1,6 @@
+15 May 2021: Wouter
+	- Fix #489: Compile using MSYS2 MinGW 64-bit.
+
 12 May 2021: Wouter
 	- Fix that auth-zone zonefiles use last TTL if no TTL is specified.
 
