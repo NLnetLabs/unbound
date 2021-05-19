@@ -1954,7 +1954,7 @@ rpz_apply_nsip_trigger(struct module_qstate* ms, struct rpz* r,
 		break;
 	case RPZ_TCP_ONLY_ACTION:
 		/* basically a passthru here but the tcp-only will be
-		 * honored before the query gets send */
+		 * honored before the query gets sent. */
 		ms->respip_action_info->action = respip_truncate;
 		ret = NULL;
 		break;
@@ -2003,7 +2003,7 @@ rpz_apply_nsdname_trigger(struct module_qstate* ms, struct rpz* r,
 		break;
 	case RPZ_TCP_ONLY_ACTION:
 		/* basically a passthru here but the tcp-only will be
-		 * honored before the query gets send */
+		 * honored before the query gets sent. */
 		ms->respip_action_info->action = respip_truncate;
 		ret = NULL;
 		break;
