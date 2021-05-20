@@ -1331,10 +1331,6 @@ sldns_str2wire_svcparam_key_value(const char *key, size_t key_len,
 {
 	uint16_t svcparamkey = sldns_str2wire_svcparam_key_lookup(key, key_len);
 
-
-	fprintf(stderr, "key: %s\n", key);
-	fprintf(stderr, "val: %s\n", val);
-
 	switch (svcparamkey) {
 	case SVCB_KEY_PORT:
 		return sldns_str2wire_svcparam_port(val, rd, rd_len);

@@ -1101,8 +1101,6 @@ int sldns_wire2str_svcparam_ech2str(char** s,
 	/* b64_ntop_calculate size includes null at the end */
 	size = sldns_b64_ntop_calculate_size(data_len);
 
-	fprintf(stderr, "size %d\n", size);
-
 	// @TODO store return value?
 	sldns_b64_ntop(data, data_len, *s, *slen);
 	(*s) += size;
