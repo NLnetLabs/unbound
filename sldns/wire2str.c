@@ -950,7 +950,6 @@ static int
 sldns_print_svcparamkey(char** s, size_t* slen, uint16_t svcparamkey)
 {
 	if (svcparamkey < SVCPARAMKEY_COUNT) {
-		// fprintf(stderr, "HERE\n");
 		return sldns_str_print(s, slen, "%s", svcparamkey_strs[svcparamkey]);
 	}
 	else {
@@ -959,106 +958,175 @@ sldns_print_svcparamkey(char** s, size_t* slen, uint16_t svcparamkey)
 }
 
 int sldns_wire2str_svcparam_port2str(char** s,
-	size_t* slen, uint16_t val_len, uint16_t val)
+	size_t* slen, uint16_t data_len, uint16_t data)
 {
 	int w = 0;
 
-	if (val_len != 2)
+	if (data_len != 2)
 		return -1; /* wireformat error, a short is 2 bytes */
-	w = sldns_str_print(s, slen, "=%d", (int)ntohs(val));
+	w = sldns_str_print(s, slen, "=%d", (int)data);
 	return w;
 }
 
 static int
 sldns_wire2str_svcparam_ipv4hint2str(char** s,
-	size_t* slen, uint16_t val_len, uint8_t* data)
+	size_t* slen, uint16_t data_len, uint8_t* data)
 {
 	char ip_str[INET_ADDRSTRLEN + 1];
 
 	// @TODO actually incorporate this
 	int w = 0;
 
-	assert(val_len > 0);
+	assert(data_len > 0);
 
-	if ((val_len % LDNS_IP4ADDRLEN) == 0) {
+	if ((data_len % LDNS_IP4ADDRLEN) == 0) {
 		if (inet_ntop(AF_INET, data, ip_str, sizeof(ip_str)) == NULL)
 			return 0; /* wireformat error, incorrect size or inet family */
 
-		sldns_str_print(s, slen, "=%s", ip_str);
+		w += sldns_str_print(s, slen, "=%s", ip_str);
 		data += LDNS_IP4ADDRLEN / sizeof(uint16_t);
 
-		while ((val_len -= LDNS_IP4ADDRLEN) > 0) {
+		while ((data_len -= LDNS_IP4ADDRLEN) > 0) {
 			if (inet_ntop(AF_INET, data, ip_str, sizeof(ip_str)) == NULL)
 				return 0; /* wireformat error, incorrect size or inet family */
 
-			sldns_str_print(s, slen, ",%s", ip_str);
+			w += sldns_str_print(s, slen, ",%s", ip_str);
 			data += LDNS_IP4ADDRLEN / sizeof(uint16_t);
 		}
-		return 1;
-	} else
-		return 0;
+	}
+
+	return w;
 }
 
 int sldns_wire2str_svcparam_ipv6hint2str(char** s,
-	size_t* slen, uint16_t val_len, uint8_t* data)
+	size_t* slen, uint16_t data_len, uint8_t* data)
 {
 	char ip_str[INET6_ADDRSTRLEN + 1];
 
-	// @TODO actually incorporate this
+	// @TODO actually incorporate this -> is this correct now?
 	int w = 0;
 
-	assert(val_len > 0);
+	assert(data_len > 0);
 
-	if ((val_len % LDNS_IP6ADDRLEN) == 0) {
+	// @TODO fix ntohs -> see output
+
+	if ((data_len % LDNS_IP6ADDRLEN) == 0) {
 		if (inet_ntop(AF_INET6, data, ip_str, sizeof(ip_str)) == NULL)
 			return 0; /* wireformat error, incorrect size or inet family */
 
-		sldns_str_print(s, slen, "=%s", ip_str);
+		w += sldns_str_print(s, slen, "=%s", ip_str);
 		data += LDNS_IP6ADDRLEN / sizeof(uint16_t);
 
-		while ((val_len -= LDNS_IP6ADDRLEN) > 0) {
+		while ((data_len -= LDNS_IP6ADDRLEN) > 0) {
 			if (inet_ntop(AF_INET6, data, ip_str, sizeof(ip_str)) == NULL)
 				return 0; /* wireformat error, incorrect size or inet family */
 
-			sldns_str_print(s, slen, ",%s", ip_str);
+			w += sldns_str_print(s, slen, ",%s", ip_str);
 			data += LDNS_IP6ADDRLEN / sizeof(uint16_t);
 		}
-		return 1;
-	} else
-		return 0;
+	}
+
+	return w;
 }
 
 int sldns_wire2str_svcparam_mandatory2str(char** s,
-	size_t* slen, uint16_t val_len, uint8_t* data)
+	size_t* slen, uint16_t data_len, uint8_t* data)
 {
 	int w = 0;
 
-	assert(val_len > 0);
+	assert(data_len > 0);
 
-	// if (val_len % sizeof(uint16_t))
-	// 	return 0; // wireformat error, val_len must be multiple of shorts
+	// if (data_len % sizeof(uint16_t))
+	// 	return 0; // wireformat error, data_len must be multiple of shorts
 	w += sldns_str_print(s, slen, "=");
-	w += sldns_print_svcparamkey(s, slen, ntohs(sldns_read_uint16(data)));
+	w += sldns_print_svcparamkey(s, slen, sldns_read_uint16(data));
 	data += 2;
 
-	while ((val_len -= sizeof(uint16_t))) {
+	while ((data_len -= sizeof(uint16_t))) {
 		w += sldns_str_print(s, slen, ",");
-		w += sldns_print_svcparamkey(s, slen, ntohs(sldns_read_uint16(data)));
+		w += sldns_print_svcparamkey(s, slen, sldns_read_uint16(data));
 		data += 2;
 	}
 
 	return w;
 }
 
+int sldns_wire2str_svcparam_alpn2str(char** s,
+	size_t* slen, uint16_t data_len, uint8_t* data)
+{
+	uint8_t *dp = (void *)data;
+	int w = 0;
+
+	assert(data_len > 0); /* Guaranteed by rdata_svcparam_to_string */
+
+	w += sldns_str_print(s, slen, "=\"");
+	while (data_len) {
+		uint8_t i, str_len = *dp++;
+
+		if (str_len > --data_len)
+			return 0;
+
+		for (i = 0; i < str_len; i++) {
+			if (dp[i] == '"' || dp[i] == '\\')
+				w += sldns_str_print(s, slen, "\\\\\\%c", dp[i]);
+
+			else if (dp[i] == ',')
+				w += sldns_str_print(s, slen, "\\\\%c", dp[i]);
+
+			else if (!isprint(dp[i]))
+				w += sldns_str_print(s, slen, "\\%03u", (unsigned) dp[i]);
+
+			else
+				w += sldns_str_print(s, slen, "%c", dp[i]);
+		}
+		dp += str_len;
+		if ((data_len -= str_len))
+			w += sldns_str_print(s, slen, "%s", ",");
+	}
+	w += sldns_str_print(s, slen, "\"");
+	
+	return w;
+}
+
+int sldns_wire2str_svcparam_ech2str(char** s,
+	size_t* slen, uint16_t data_len, uint8_t* data)
+{
+	int size;
+	int w;
+
+	assert(data_len > 0); /* Guaranteed by rdata_svcparam_to_string */
+
+	w += sldns_str_print(s, slen, "=\"");
+
+	/* b64_ntop_calculate size includes null at the end */
+	size = sldns_b64_ntop_calculate_size(data_len);
+
+	fprintf(stderr, "size %d\n", size);
+
+	// @TODO store return value?
+	sldns_b64_ntop(data, data_len, *s, *slen);
+	(*s) += size;
+	(*slen) -= size;
+
+	w += sldns_str_print(s, slen, "\"");	
+
+	// @TODO fix check
+	// if(size > *slen) {
+	// 	buffer_skip(output, size);
+	// }
+
+	return w + size;
+}
+
 int sldns_wire2str_svcparam_scan(uint8_t** d, size_t* dlen, char** s, size_t* slen)
 {
-	uint16_t svcparamkey, val_len;
+	uint16_t svcparamkey, data_len;
 	uint8_t* data = *d;
 	int written_chars = 0;
 
 	if(*dlen == 0) return 0; /* verify that we actualy have data */
 
-	svcparamkey = ntohs(sldns_read_uint16(data));
+	svcparamkey = sldns_read_uint16(data);
 
 	written_chars += sldns_print_svcparamkey(s, slen, svcparamkey);
 
@@ -1066,15 +1134,15 @@ int sldns_wire2str_svcparam_scan(uint8_t** d, size_t* dlen, char** s, size_t* sl
 
 	// @TODO fix this to be dynamic and correct
 	// fprintf(stderr, "*dlen2: %zu\n", *dlen);
-	// fprintf(stderr, "val_len %zu\n", val_len);
+	// fprintf(stderr, "data_len %zu\n", data_len);
 	(*dlen) = 0;
 
-	val_len = ntohs(sldns_read_uint16(data+2));
+	data_len = sldns_read_uint16(data+2);
 
 	// if (size != val_len + 4)
 	// 	return 0;  wireformat error
 
-	// if (!val_len) {
+	// if (!data_len) {
 	// 	/* Some SvcParams MUST have values */
 	// 	switch (svcparamkey) {
 	// 	case SVCB_KEY_ALPN:
@@ -1087,34 +1155,35 @@ int sldns_wire2str_svcparam_scan(uint8_t** d, size_t* dlen, char** s, size_t* sl
 	// 		return 1;
 	// 	}
 	// }
+
 	switch (svcparamkey) {
 	case SVCB_KEY_PORT:
-		written_chars += sldns_wire2str_svcparam_port2str(s, slen, val_len, sldns_read_uint16(data+4));
+		written_chars += sldns_wire2str_svcparam_port2str(s, slen, data_len, sldns_read_uint16(data+4));
 		break;
 	case SVCB_KEY_IPV4HINT:
-		written_chars += sldns_wire2str_svcparam_ipv4hint2str(s, slen, val_len, data+4);
+		written_chars += sldns_wire2str_svcparam_ipv4hint2str(s, slen, data_len, data+4);
 		break;
 	case SVCB_KEY_IPV6HINT:
-		written_chars += sldns_wire2str_svcparam_ipv6hint2str(s, slen, val_len, data+4);
+		written_chars += sldns_wire2str_svcparam_ipv6hint2str(s, slen, data_len, data+4);
 		break;
 	case SVCB_KEY_MANDATORY:
-		written_chars += sldns_wire2str_svcparam_mandatory2str(s, slen, val_len, data+4);
+		written_chars += sldns_wire2str_svcparam_mandatory2str(s, slen, data_len, data+4);
 		break;
 	case SVCB_KEY_NO_DEFAULT_ALPN:
 		return 0;  /* wireformat error, should not have a value */
 	case SVCB_KEY_ALPN:
-		// written_chars += sldns_wire2str_svcparam_alpn2str(output, val_len, data+2);
-		// break;
+		written_chars += sldns_wire2str_svcparam_alpn2str(s, slen, data_len, data+4);
+		break;
 	case SVCB_KEY_ECH:
-		// written_chars += sldns_wire2str_svcparam_ech2str(output, val_len, data+2);
-		// break;
+		written_chars += sldns_wire2str_svcparam_ech2str(s, slen, data_len, data+4);
+		break;
 	default:
 		break;
 	}
 
 	// @TODO set str_len to 0: "If the end of the
     // * output string is reached, *str_len is set to 0"
-    // *str_len = 0;
+    // *slen = 0;
 
 	return written_chars;
 }

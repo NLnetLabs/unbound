@@ -1011,13 +1011,14 @@ sldns_str2wire_svcparam_port(const char* val, uint8_t* rd, size_t* rd_len)
 	&& *endptr == 0		/* no non-digit chars after digits */
 	&&  port <= 65535) {	/* no overflow */
 
-		sldns_write_uint16(rd, htons(SVCB_KEY_PORT));
-		sldns_write_uint16(rd + 2, htons(sizeof(uint16_t)));
-		sldns_write_uint16(rd + 4, htons(port));
+		sldns_write_uint16(rd, SVCB_KEY_PORT);
+		sldns_write_uint16(rd + 2, sizeof(uint16_t));
+		sldns_write_uint16(rd + 4, port);
 		*rd_len = 6;
 
 		return LDNS_WIREPARSE_ERR_OK;
 	}
+
 	// ERROR: "Could not parse port SvcParamValue"
 	return -1;
 }
@@ -1047,8 +1048,8 @@ sldns_str2wire_svcbparam_ipv4hint(const char* val, uint8_t* rd, size_t* rd_len)
 	/* count is number of comma's in val + 1; so the actual number of IPv4
 	 * addresses in val
 	 */
-	sldns_write_uint16(rd, htons(SVCB_KEY_IPV4HINT));
-	sldns_write_uint16(rd + 2, htons(LDNS_IP4ADDRLEN * count));
+	sldns_write_uint16(rd, SVCB_KEY_IPV4HINT);
+	sldns_write_uint16(rd + 2, LDNS_IP4ADDRLEN * count);
 	*rd_len = 4;
 
 	while (count) {
@@ -1106,8 +1107,8 @@ sldns_str2wire_svcbparam_ipv6hint(const char* val, uint8_t* rd, size_t* rd_len)
 	/* count is number of comma's in val + 1; so the actual number of IPv6
 	 * addresses in val
 	 */
-	sldns_write_uint16(rd, htons(SVCB_KEY_IPV6HINT));
-	sldns_write_uint16(rd + 2, htons(LDNS_IP6ADDRLEN * count));
+	sldns_write_uint16(rd, SVCB_KEY_IPV6HINT);
+	sldns_write_uint16(rd + 2, LDNS_IP6ADDRLEN * count);
 	*rd_len = 4;
 
 	while (count) {
@@ -1169,19 +1170,19 @@ sldns_str2wire_svcbparam_mandatory(const char* val, uint8_t* rd, size_t* rd_len)
 
 	// @TODO check if we have space to write in rd_len; look for the best spot
 
-	sldns_write_uint16(rd, htons(SVCB_KEY_MANDATORY));
-	sldns_write_uint16(rd + 2, htons(sizeof(uint16_t) * count));
+	sldns_write_uint16(rd, SVCB_KEY_MANDATORY);
+	sldns_write_uint16(rd + 2, sizeof(uint16_t) * count);
 	*rd_len = 4;
 
-	for(;;) {
+	while (1) {
 		if (!(next_key = strchr(val, ','))) {
 			sldns_write_uint16(rd + *rd_len,
-				htons(sldns_str2wire_svcparam_key_lookup(val, val_len)));
+				sldns_str2wire_svcparam_key_lookup(val, val_len));
 			*rd_len += LDNS_IP6ADDRLEN;
 			break;
 		} else {
 			sldns_write_uint16(rd + *rd_len,
-				htons(sldns_str2wire_svcparam_key_lookup(val, next_key - val)));
+				sldns_str2wire_svcparam_key_lookup(val, next_key - val));
 			*rd_len += LDNS_IP6ADDRLEN;
 		}
 
@@ -1228,7 +1229,7 @@ sldns_str2wire_svcbparam_ech_value(const char* val, uint8_t* rd, size_t* rd_len)
 
 	if (wire_len == -1) {
 		// zc_error_prev_line("invalid base64 data in ech");
-		return LDNS_WIREPARSE_ERR_INVALID_STR;
+		return LDNS_WIREPARSE_ERR_SYNTAX_B64;
 	} else if (wire_len + 4 > *rd_len) {
 		return LDNS_WIREPARSE_ERR_BUFFER_TOO_SMALL;
 	} else {
@@ -1236,8 +1237,92 @@ sldns_str2wire_svcbparam_ech_value(const char* val, uint8_t* rd, size_t* rd_len)
 		sldns_write_uint16(rd + 2, wire_len);
 		memcpy(rd + 4, buffer, wire_len);
 		*rd_len = 4 + wire_len;
+
 		return LDNS_WIREPARSE_ERR_OK;
 	}
+}
+
+static const char*
+sldns_str2wire_svcbparam_parse_alpn_next_unescaped_comma(const char *val)
+{
+	while (*val) {
+		/* Only return when the comma is not escaped*/
+		if (*val == '\\'){
+			++val;
+			if (!*val)
+				break;
+		} else if (*val == ',')
+				return val;
+
+		val++;
+	}
+	return NULL;
+}
+
+static size_t
+sldns_str2wire_svcbparam_parse_alpn_copy_unescaped(uint8_t *dst,
+	const char *src, size_t len)
+{
+	uint8_t *orig_dst = dst;
+
+	while (len) {
+		if (*src == '\\') {
+			src++;
+			len--;
+			if (!len)
+				break;
+		}
+		*dst++ = *src++;
+		len--;
+	}
+	return (size_t)(dst - orig_dst);
+}
+
+int sldns_str2wire_svcbparam_alpn_value(const char* val,
+	uint8_t* rd, size_t* rd_len)
+{
+	uint8_t     unescaped_dst[65536];
+	uint8_t    *dst = unescaped_dst;
+	const char *next_str;
+	size_t      str_len;
+	size_t      dst_len;
+	size_t 		val_len;
+	int wire_len;
+	
+	val_len = strlen(val);
+
+	if (val_len > sizeof(unescaped_dst)) {
+		return LDNS_WIREPARSE_ERR_SYNTAX_INTEGER_OVERFLOW;
+	}
+	while (val_len) {
+		size_t dst_len;
+
+		str_len = (next_str = sldns_str2wire_svcbparam_parse_alpn_next_unescaped_comma(val))
+		        ? (size_t)(next_str - val) : val_len;
+
+		if (str_len > 255) {
+			// ERROR "alpn strings need to be smaller than 255 chars"
+			return LDNS_WIREPARSE_ERR_SYNTAX_INTEGER_OVERFLOW;
+		}
+		dst_len = sldns_str2wire_svcbparam_parse_alpn_copy_unescaped(dst + 1, val, str_len);
+		*dst++ = dst_len;
+		 dst  += dst_len;
+
+		if (!next_str)
+			break;
+
+		/* skip the comma for the next iteration */
+		val_len -= next_str - val + 1;
+		val = next_str + 1;
+	}
+	dst_len = dst - unescaped_dst;
+
+	sldns_write_uint16(rd, SVCB_KEY_ALPN);
+	sldns_write_uint16(rd + 2, dst_len);
+	memcpy(rd + 4, unescaped_dst, dst_len);
+	*rd_len = 4 + dst_len;
+	
+	return LDNS_WIREPARSE_ERR_OK;
 }
 
 static int
@@ -1245,6 +1330,10 @@ sldns_str2wire_svcparam_key_value(const char *key, size_t key_len,
 	const char *val, uint8_t* rd, size_t* rd_len)
 {
 	uint16_t svcparamkey = sldns_str2wire_svcparam_key_lookup(key, key_len);
+
+
+	fprintf(stderr, "key: %s\n", key);
+	fprintf(stderr, "val: %s\n", val);
 
 	switch (svcparamkey) {
 	case SVCB_KEY_PORT:
@@ -1265,7 +1354,7 @@ sldns_str2wire_svcparam_key_value(const char *key, size_t key_len,
 	case SVCB_KEY_ECH:
 		return sldns_str2wire_svcbparam_ech_value(val, rd, rd_len);
 	case SVCB_KEY_ALPN:
-		// return sldns_str2wire_svcbparam_alpn_value(val, rd, rd_len);
+		return sldns_str2wire_svcbparam_alpn_value(val, rd, rd_len);
 	default:
 		break;
 	}
