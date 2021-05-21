@@ -54,6 +54,7 @@
 #include "services/cache/dns.h"
 #include "iterator/iterator.h"
 #include "iterator/iter_delegpt.h"
+#include "daemon/worker.h"
 
 typedef struct resp_addr rpz_aclnode_type;
 
@@ -1366,25 +1367,42 @@ rpz_remove_rr(struct rpz* r, size_t aznamelen, uint8_t* dname, size_t dnamelen,
 
 /** print log information for an applied RPZ policy. Based on local-zone's
  * lz_inform_print().
+ * The repinfo contains the reply address. If it is NULL, the module
+ * state is used to report the first IP address (if any).
+ * The dname is used, for the applied rpz, if NULL, addrnode is used.
  */
 static void
-log_rpz_apply(uint8_t* dname, enum rpz_action a, struct query_info* qinfo,
-	struct comm_reply* repinfo, char* log_name)
+log_rpz_apply(char* trigger, uint8_t* dname, struct addr_tree_node* addrnode,
+	enum rpz_action a, struct query_info* qinfo,
+	struct comm_reply* repinfo, struct module_qstate* ms, char* log_name)
 {
-	char ip[128], txt[512];
+	char ip[128], txt[512], portstr[32];
 	char dnamestr[LDNS_MAX_DOMAINLEN+1];
-	uint16_t port = ntohs(((struct sockaddr_in*)&repinfo->addr)->sin_port);
-	if(dname)
+	uint16_t port = 0;
+	if(dname) {
 		dname_str(dname, dnamestr);
-	else	dnamestr[0]=0;
-	addr_to_str(&repinfo->addr, repinfo->addrlen, ip, sizeof(ip));
-	if(log_name)
-		snprintf(txt, sizeof(txt), "rpz: applied [%s] %s %s %s@%u",
-			log_name, dnamestr, rpz_action_to_string(a), ip,
-			(unsigned)port);
-	else
-		snprintf(txt, sizeof(txt), "rpz: applied %s %s %s@%u",
-			dnamestr, rpz_action_to_string(a), ip, (unsigned)port);
+	} else if(addrnode) {
+		char a[128];
+		addr_to_str(&addrnode->addr, addrnode->addrlen, a, sizeof(a));
+		snprintf(dnamestr, sizeof(dnamestr), "%s/%d", a, addrnode->net);
+	} else {
+		dnamestr[0]=0;
+	}
+	if(repinfo) {
+		addr_to_str(&repinfo->addr, repinfo->addrlen, ip, sizeof(ip));
+		port = ntohs(((struct sockaddr_in*)&repinfo->addr)->sin_port);
+	} else if(ms && ms->mesh_info && ms->mesh_info->reply_list) {
+		addr_to_str(&ms->mesh_info->reply_list->query_reply.addr, ms->mesh_info->reply_list->query_reply.addrlen, ip, sizeof(ip));
+		port = ntohs(((struct sockaddr_in*)&ms->mesh_info->reply_list->query_reply.addr)->sin_port);
+	} else {
+		ip[0]=0;
+		port = 0;
+	}
+	snprintf(portstr, sizeof(portstr), "@%u", (unsigned)port);
+	snprintf(txt, sizeof(txt), "rpz: applied %s%s%s%s %s %s %s%s",
+		(log_name?"[":""), (log_name?log_name:""), (log_name?"] ":""),
+		trigger, dnamestr, rpz_action_to_string(a),
+		(ip[0]?ip:""), (ip[0]?portstr:""));
 	log_nametypeclass(0, txt, qinfo->qname, qinfo->qtype, qinfo->qclass);
 }
 
@@ -1448,9 +1466,11 @@ rpz_resolve_client_action_and_zone(struct auth_zones* az, struct query_info* qin
 		node = rpz_ipbased_trigger_lookup(r->client_set, &repinfo->addr, repinfo->addrlen, "clientip");
 		if((z || node) && r->action_override == RPZ_DISABLED_ACTION) {
 			if(r->log)
-				log_rpz_apply(z->name,
+				log_rpz_apply((node?"clientip":"qname"),
+					(z?z->name:NULL),
+					(node?&node->node:NULL),
 					r->action_override,
-					qinfo, repinfo, r->log_name);
+					qinfo, repinfo, NULL, r->log_name);
 			stats->rpz_action[r->action_override]++;
 			lock_rw_unlock(&z->lock);
 			z = NULL;
@@ -1880,8 +1900,8 @@ rpz_synthesize_qname_localdata(struct module_env* env, struct rpz* r,
 		qinfo->local_alias->rrset->rk.dname = qinfo->qname;
 		qinfo->local_alias->rrset->rk.dname_len = qinfo->qname_len;
 		if(r->log) {
-			log_rpz_apply(z->name, RPZ_CNAME_OVERRIDE_ACTION,
-				      qinfo, repinfo, r->log_name);
+			log_rpz_apply("qname", z->name, NULL, RPZ_CNAME_OVERRIDE_ACTION,
+				      qinfo, repinfo, NULL, r->log_name);
 		}
 		stats->rpz_action[RPZ_CNAME_OVERRIDE_ACTION]++;
 		return 0;
@@ -1891,9 +1911,9 @@ rpz_synthesize_qname_localdata(struct module_env* env, struct rpz* r,
 		edns, repinfo, buf, temp, dname_count_labels(qinfo->qname),
 		&ld, lzt, -1, NULL, 0, NULL, 0)) {
 		if(r->log) {
-			log_rpz_apply(z->name,
+			log_rpz_apply("qname", z->name, NULL,
 				localzone_type_to_rpz_action(lzt), qinfo,
-				repinfo, r->log_name);
+				repinfo, NULL, r->log_name);
 		}
 		stats->rpz_action[localzone_type_to_rpz_action(lzt)]++;
 		return !qinfo->local_alias;
@@ -1902,8 +1922,8 @@ rpz_synthesize_qname_localdata(struct module_env* env, struct rpz* r,
 	ret = local_zones_zone_answer(z, env, qinfo, edns, repinfo, buf, temp,
 		0 /* no local data used */, lzt);
 	if(r->log) {
-		log_rpz_apply(z->name, localzone_type_to_rpz_action(lzt),
-			      qinfo, repinfo, r->log_name);
+		log_rpz_apply("qname", z->name, NULL, localzone_type_to_rpz_action(lzt),
+			      qinfo, repinfo, NULL, r->log_name);
 	}
 	stats->rpz_action[localzone_type_to_rpz_action(lzt)]++;
 	return ret;
@@ -1976,6 +1996,11 @@ rpz_apply_nsip_trigger(struct module_qstate* ms, struct rpz* r,
 	}
 
 done:
+	if(r->log)
+		log_rpz_apply("nsip", NULL, &raddr->node,
+			action, &ms->qinfo, NULL, ms, r->log_name);
+	if(ms->env->worker)
+		ms->env->worker->stats.rpz_action[action]++;
 	lock_rw_unlock(&raddr->lock);
 	return ret;
 }
@@ -2024,6 +2049,11 @@ rpz_apply_nsdname_trigger(struct module_qstate* ms, struct rpz* r,
 		ret = NULL;
 	}
 
+	if(r->log)
+		log_rpz_apply("nsdname", match->dname, NULL,
+			action, &ms->qinfo, NULL, ms, r->log_name);
+	if(ms->env->worker)
+		ms->env->worker->stats.rpz_action[action]++;
 	return ret;
 }
 
@@ -2146,6 +2176,12 @@ struct dns_msg* rpz_callback_from_iterator_cname(struct module_qstate* ms,
 		z = rpz_find_zone(r->local_zones, is->qchase.qname,
 			is->qchase.qname_len, is->qchase.qclass, 0, 0, 0);
 		if(z && r->action_override == RPZ_DISABLED_ACTION) {
+			if(r->log)
+				log_rpz_apply("qname", z->name, NULL,
+					r->action_override,
+					&ms->qinfo, NULL, ms, r->log_name);
+			if(ms->env->worker)
+				ms->env->worker->stats.rpz_action[r->action_override]++;
 			lock_rw_unlock(&z->lock);
 			z = NULL;
 		}
@@ -2240,8 +2276,11 @@ rpz_apply_maybe_clientip_trigger(struct auth_zones* az, struct module_env* env,
 				edns, repinfo, buf, temp, *a_out);
 		} else {
 			if(*r_out && (*r_out)->log)
-				log_rpz_apply(((*z_out)?(*z_out)->name:NULL),
-					client_action, qinfo, repinfo,
+				log_rpz_apply(
+					(node?"clientip":"qname"),
+					((*z_out)?(*z_out)->name:NULL),
+					(node?&node->node:NULL),
+					client_action, qinfo, repinfo, NULL,
 					(*r_out)->log_name);
 			local_zones_zone_answer(*z_out /*likely NULL, no zone*/, env, qinfo, edns,
 				repinfo, buf, temp, 0 /* no local data used */,

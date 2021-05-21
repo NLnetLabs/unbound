@@ -7,6 +7,8 @@ server:
 
 rpz:
 	name: "rpz.example.com."
+	rpz-log: yes
+	rpz-log-name: "rpz.example.com"
 	zonefile:
 TEMPFILE_NAME rpz.example.com
 TEMPFILE_CONTENTS rpz.example.com
