@@ -1077,8 +1077,8 @@ sldns_str2wire_svcbparam_ipv4hint(const char* val, uint8_t* rd, size_t* rd_len)
 		ip_wire_dst++;
 		count--;
 	}
-	// if (count) /* verify that we parsed all values */
-		// ERROR "Could not parse ipv4hint SvcParamValue: "
+	if (count) /* verify that we parsed all values */
+		return LDNS_WIREPARSE_ERR_SYNTAX_IP4;
 
 	return LDNS_WIREPARSE_ERR_OK;
 }

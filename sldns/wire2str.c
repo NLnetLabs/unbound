@@ -984,14 +984,14 @@ sldns_wire2str_svcparam_ipv4hint2str(char** s,
 			return 0; /* wireformat error, incorrect size or inet family */
 
 		w += sldns_str_print(s, slen, "=%s", ip_str);
-		data += LDNS_IP4ADDRLEN / sizeof(uint16_t);
+		data += LDNS_IP4ADDRLEN;
 
 		while ((data_len -= LDNS_IP4ADDRLEN) > 0) {
 			if (inet_ntop(AF_INET, data, ip_str, sizeof(ip_str)) == NULL)
 				return 0; /* wireformat error, incorrect size or inet family */
 
 			w += sldns_str_print(s, slen, ",%s", ip_str);
-			data += LDNS_IP4ADDRLEN / sizeof(uint16_t);
+			data += LDNS_IP4ADDRLEN;
 		}
 	}
 
