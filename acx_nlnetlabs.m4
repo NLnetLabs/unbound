@@ -2,7 +2,9 @@
 # Copyright 2009, Wouter Wijngaards, NLnet Labs.   
 # BSD licensed.
 #
-# Version 38
+# Version 39
+# 2021-05-17 fix nonblocking socket test from grep on mingw32 to mingw for
+# 	     64bit compatibility.
 # 2021-03-24 fix ACX_FUNC_DEPRECATED to use CPPFLAGS and CFLAGS.
 # 2021-01-05 fix defun for aclocal
 # 2021-01-05 autoconf 2.70 autoupdate and fixes, no AC_TRY_COMPILE
@@ -915,7 +917,7 @@ dnl a nonblocking socket do not work, a new call to select is necessary.
 AC_DEFUN([ACX_CHECK_NONBLOCKING_BROKEN],
 [
 AC_MSG_CHECKING([if nonblocking sockets work])
-if echo $target | grep mingw32 >/dev/null; then 
+if echo $target | grep mingw >/dev/null; then
 	AC_MSG_RESULT([no (windows)])
 	AC_DEFINE([NONBLOCKING_IS_BROKEN], 1, [Define if the network stack does not fully support nonblocking io (causes lower performance).])
 else

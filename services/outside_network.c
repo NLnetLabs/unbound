@@ -94,6 +94,10 @@ static void waiting_list_remove(struct outside_network* outnet,
 static void reuse_tcp_remove_tree_list(struct outside_network* outnet,
 	struct reuse_tcp* reuse);
 
+/** select a DNS ID for a TCP stream */
+static uint16_t tcp_select_id(struct outside_network* outnet,
+	struct reuse_tcp* reuse);
+
 int 
 pending_cmp(const void* key1, const void* key2)
 {
@@ -406,9 +410,18 @@ static void reuse_write_wait_push_back(struct reuse_tcp* reuse,
 void
 reuse_tree_by_id_insert(struct reuse_tcp* reuse, struct waiting_tcp* w)
 {
+#ifdef UNBOUND_DEBUG
+	rbnode_type* added;
+#endif
 	log_assert(w->id_node.key == NULL);
 	w->id_node.key = w;
+#ifdef UNBOUND_DEBUG
+	added =
+#else
+	(void)
+#endif
 	rbtree_insert(&reuse->tree_by_id, &w->id_node);
+	log_assert(added);  /* should have been added */
 }
 
 /** find element in tree by id */
@@ -752,6 +765,9 @@ use_free_buffer(struct outside_network* outnet)
 		w->on_tcp_waiting_list = 0;
 		reuse = reuse_tcp_find(outnet, &w->addr, w->addrlen,
 			w->ssl_upstream);
+		/* re-select an ID when moving to a new TCP buffer */
+		w->id = tcp_select_id(outnet, reuse);
+		LDNS_ID_SET(w->pkt, w->id);
 		if(reuse) {
 			log_reuse_tcp(VERB_CLIENT, "use free buffer for waiting tcp: "
 				"found reuse", reuse);
@@ -830,8 +846,17 @@ outnet_add_tcp_waiting(struct outside_network* outnet, struct waiting_tcp* w)
 static void
 reuse_tree_by_id_delete(struct reuse_tcp* reuse, struct waiting_tcp* w)
 {
+#ifdef UNBOUND_DEBUG
+	rbnode_type* rem;
+#endif
 	log_assert(w->id_node.key != NULL);
+#ifdef UNBOUND_DEBUG
+	rem =
+#else
+	(void)
+#endif
 	rbtree_delete(&reuse->tree_by_id, w);
+	log_assert(rem);  /* should have been there */
 	w->id_node.key = NULL;
 }
 
@@ -1788,14 +1813,14 @@ select_id(struct outside_network* outnet, struct pending* pend,
 	sldns_buffer* packet)
 {
 	int id_tries = 0;
-	pend->id = ((unsigned)ub_random(outnet->rnd)>>8) & 0xffff;
+	pend->id = GET_RANDOM_ID(outnet->rnd);
 	LDNS_ID_SET(sldns_buffer_begin(packet), pend->id);
 
 	/* insert in tree */
 	pend->node.key = pend;
 	while(!rbtree_insert(outnet->pending, &pend->node)) {
 		/* change ID to avoid collision */
-		pend->id = ((unsigned)ub_random(outnet->rnd)>>8) & 0xffff;
+		pend->id = GET_RANDOM_ID(outnet->rnd);
 		LDNS_ID_SET(sldns_buffer_begin(packet), pend->id);
 		id_tries++;
 		if(id_tries == MAX_ID_RETRY) {
@@ -2088,6 +2113,14 @@ reuse_tcp_close_oldest(struct outside_network* outnet)
 	reuse_cb_and_decommission(outnet, pend, NETEVENT_CLOSED);
 }
 
+static uint16_t
+tcp_select_id(struct outside_network* outnet, struct reuse_tcp* reuse)
+{
+	if(reuse)
+		return reuse_tcp_select_id(reuse, outnet);
+	return GET_RANDOM_ID(outnet->rnd);
+}
+
 /** find spare ID value for reuse tcp stream.  That is random and also does
  * not collide with an existing query ID that is in use or waiting */
 uint16_t
@@ -2101,13 +2134,13 @@ reuse_tcp_select_id(struct reuse_tcp* reuse, struct outside_network* outnet)
 
 	/* make really sure the tree is not empty */
 	if(reuse->tree_by_id.count == 0) {
-		id = ((unsigned)ub_random(outnet->rnd)>>8) & 0xffff;
+		id = GET_RANDOM_ID(outnet->rnd);
 		return id;
 	}
 
 	/* try to find random empty spots by picking them */
 	for(i = 0; i<try_random; i++) {
-		id = ((unsigned)ub_random(outnet->rnd)>>8) & 0xffff;
+		id = GET_RANDOM_ID(outnet->rnd);
 		if(!reuse_tcp_by_id_find(reuse, id)) {
 			return id;
 		}
@@ -2205,9 +2238,7 @@ pending_tcp_query(struct serviced_query* sq, sldns_buffer* packet,
 	w->pkt = (uint8_t*)w + sizeof(struct waiting_tcp);
 	w->pkt_len = sldns_buffer_limit(packet);
 	memmove(w->pkt, sldns_buffer_begin(packet), w->pkt_len);
-	if(reuse)
-		w->id = reuse_tcp_select_id(reuse, sq->outnet);
-	else	w->id = ((unsigned)ub_random(sq->outnet->rnd)>>8) & 0xffff;
+	w->id = tcp_select_id(sq->outnet, reuse);
 	LDNS_ID_SET(w->pkt, w->id);
 	memcpy(&w->addr, &sq->addr, sq->addrlen);
 	w->addrlen = sq->addrlen;
