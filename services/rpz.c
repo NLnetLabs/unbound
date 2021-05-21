@@ -1399,9 +1399,11 @@ log_rpz_apply(char* trigger, uint8_t* dname, struct addr_tree_node* addrnode,
 		port = 0;
 	}
 	snprintf(portstr, sizeof(portstr), "@%u", (unsigned)port);
-	snprintf(txt, sizeof(txt), "rpz: applied %s%s%s%s %s %s %s%s",
+	snprintf(txt, sizeof(txt), "rpz: applied %s%s%s%s%s%s %s %s%s",
 		(log_name?"[":""), (log_name?log_name:""), (log_name?"] ":""),
-		trigger, dnamestr, rpz_action_to_string(a),
+		(strcmp(trigger,"qname")==0?"":trigger),
+		(strcmp(trigger,"qname")==0?"":" "),
+		dnamestr, rpz_action_to_string(a),
 		(ip[0]?ip:""), (ip[0]?portstr:""));
 	log_nametypeclass(0, txt, qinfo->qname, qinfo->qtype, qinfo->qclass);
 }
