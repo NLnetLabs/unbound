@@ -1055,8 +1055,8 @@ sldns_str2wire_svcbparam_ipv4hint(const char* val, uint8_t* rd, size_t* rd_len)
 	while (count) {
 		if (!(next_ip_str = strchr(val, ','))) {
 			if (inet_pton(AF_INET, val, rd + *rd_len) != 1)
-				*rd_len += LDNS_IP4ADDRLEN;
 				break;
+			*rd_len += LDNS_IP4ADDRLEN;
 
 			assert(count == 1);
 
@@ -1067,10 +1067,10 @@ sldns_str2wire_svcbparam_ipv4hint(const char* val, uint8_t* rd, size_t* rd_len)
 			memcpy(ip_str, val, next_ip_str - val);
 			ip_str[next_ip_str - val] = 0;
 			if (inet_pton(AF_INET, ip_str, rd + *rd_len) != 1) {
-				*rd_len += LDNS_IP4ADDRLEN;
 				val = ip_str; /* to use in error reporting below */
 				break;
 			}
+			*rd_len += LDNS_IP4ADDRLEN;
 
 			val = next_ip_str + 1;
 		}

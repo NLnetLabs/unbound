@@ -355,7 +355,7 @@ enum sldns_enum_rdf_type
 	/** TSIG extended 16bit error value */
 	LDNS_RDF_TYPE_TSIGERROR,
 
-	/* draft-ietf-dnsop-svcb-https-04:
+	/* draft-ietf-dnsop-svcb-https-05:
 	 * each SvcParam consisting of a SvcParamKey=SvcParamValue pair or
 	 * a standalone SvcParamKey */
 	LDNS_RDF_TYPE_SVCPARAM,

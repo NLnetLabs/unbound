@@ -1122,7 +1122,7 @@ int sldns_wire2str_svcparam_scan(uint8_t** d, size_t* dlen, char** s, size_t* sl
 	uint8_t* data = *d;
 	int written_chars = 0;
 
-	if(*dlen == 0) return 0; /* verify that we actualy have data */
+	if(*dlen < 4) return 0; /* verify that we actualy have data */
 
 	svcparamkey = sldns_read_uint16(data);
 
