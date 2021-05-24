@@ -785,8 +785,13 @@ bail_out:
 
 /** Reply to client and perform prefetch to keep cache up to date. */
 static void
-reply_and_prefetch(struct worker* worker, struct query_info* qinfo, 
-	uint16_t flags, struct comm_reply* repinfo, time_t leeway, int noreply, struct view* view)
+reply_and_prefetch(struct worker* worker,
+                   struct query_info* qinfo, 
+                   uint16_t flags,
+                   struct comm_reply* repinfo,
+                   time_t leeway,
+                   int noreply,
+                   struct view* view)
 {
 	/* first send answer to client to keep its latency 
 	 * as small as a cachereply */
@@ -798,7 +803,9 @@ reply_and_prefetch(struct worker* worker, struct query_info* qinfo,
 		}
 		comm_point_send_reply(repinfo);
 	}
-	server_stats_prefetch(&worker->stats, worker);
+	server_stats_prefetch(&worker->stats,
+	                      view->view_stats + worker->thread_num,
+	                      worker);
 	
 	/* create the prefetch in the mesh as a normal lookup without
 	 * client addrs waiting, which has the cache blacklisted (to bypass
@@ -1105,8 +1112,6 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 	struct lruhash_entry* e;
 	struct query_info qinfo;
 	struct edns_data edns;
-	enum acl_access acl;
-	struct acl_addr* acladdr;
 	int rc = 0;
 	int need_drop = 0;
 	int is_expired_answer = 0;
@@ -1175,9 +1180,16 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 		dt_msg_send_client_query(&worker->dtenv, &repinfo->addr, c->type,
 			c->buffer);
 #endif
-	acladdr = acl_addr_lookup(worker->daemon->acl, &repinfo->addr, 
-		repinfo->addrlen);
+	struct acl_addr* acladdr;
+	struct view_stats *vs;
+	enum acl_access acl;
+
+	acladdr = acl_addr_lookup(worker->daemon->acl,
+                              &repinfo->addr, 
+                              repinfo->addrlen);
 	acl = acl_get_control(acladdr);
+	vs  = acladdr->view->view_stats + worker->thread_num;
+
 	if((ret=deny_refuse_all(c, acl, worker, repinfo)) != -1)
 	{
 		if(ret == 1)
@@ -1197,6 +1209,7 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 	}
 
 	worker->stats.num_queries++;
+	vs->num_queries++;
 
 	/* check if this query should be dropped based on source ip rate limiting */
 	if(!infra_ip_ratelimit_inc(worker->env.infra_cache, repinfo,
@@ -1213,6 +1226,7 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 				  addrbuf);
 		} else {
 			worker->stats.num_queries_ip_ratelimited++;
+			vs->num_queries_ip_ratelimited++;
 			comm_point_drop_reply(repinfo);
 			return 0;
 		}
@@ -1475,7 +1489,6 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 		cinfo_tmp.tag_datas = acladdr->tag_datas;
 		cinfo_tmp.tag_datas_size = acladdr->tag_datas_size;
 		cinfo_tmp.view = acladdr->view;
-		cinfo_tmp.respip_set = worker->daemon->respip_set;
 		cinfo = &cinfo_tmp;
 	}
 	
@@ -1566,7 +1579,7 @@ lookup_cache:
 		}
 	}
 	sldns_buffer_rewind(c->buffer);
-	server_stats_querymiss(&worker->stats, worker);
+	server_stats_querymiss(&worker->stats, vs, worker);
 
 	if(verbosity >= VERB_CLIENT) {
 		if(c->type == comm_udp)
@@ -1593,6 +1606,7 @@ send_reply_rc:
 	}
 	if(is_expired_answer) {
 		worker->stats.ans_expired++;
+		vs->ans_expired++;
 	}
 	server_stats_insrcode(&worker->stats, c->buffer);
 	if(worker->stats.extended) {
@@ -1978,8 +1992,6 @@ worker_delete(struct worker* worker)
 	outside_network_quit_prepare(worker->back);
 	mesh_delete(worker->env.mesh);
 	sldns_buffer_free(worker->env.scratch_buffer);
-	forwards_delete(worker->env.fwds);
-	hints_delete(worker->env.hints);
 	listen_delete(worker->front);
 	outside_network_delete(worker->back);
 	comm_signal_delete(worker->comsig);

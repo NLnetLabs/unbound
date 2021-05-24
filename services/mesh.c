@@ -187,10 +187,6 @@ client_info_compare(const struct respip_client_info* ci_a,
 		return ci_a->tag_datas < ci_b->tag_datas ? -1 : 1;
 	if(ci_a->view != ci_b->view)
 		return ci_a->view < ci_b->view ? -1 : 1;
-	/* For the unbound daemon these should be non-NULL and identical,
-	 * but we check that just in case. */
-	if(ci_a->respip_set != ci_b->respip_set)
-		return ci_a->respip_set < ci_b->respip_set ? -1 : 1;
 	return 0;
 }
 

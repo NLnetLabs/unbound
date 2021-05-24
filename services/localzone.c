@@ -1749,53 +1749,58 @@ local_zones_answer(struct view* view, struct module_env* env,
 	struct local_data* ld = NULL;
 	struct local_zone* z = NULL;
 	enum localzone_type lzt = local_zone_transparent;
-	int r, tag = -1;
-	struct view* server;
 
-	// If the view is not the server view and has it's own local zones,
-	// check here first.
+	lock_rw_rdlock(&view->lock);
 
-	if ((server = view->server_view) != view && view->local_zones != NULL) {
-		lock_rw_rdlock(&view->lock);
+	struct local_zones *zones;
 
-		if((z = local_zones_lookup(view->local_zones,
-		                           qinfo->qname, qinfo->qname_len, labs,
-		                           qinfo->qclass, qinfo->qtype))) {
-			lock_rw_rdlock(&z->lock);
-			lzt = z->type;
+	if (view->server_view == view) {
+		// The server will always have local zones (even if empty)
+		zones = view->local_zones;
+	} else {
+		// Regular views are looked up without tags
 
-			if(lzt == local_zone_noview) {
-				lock_rw_unlock(&z->lock);
-				z = NULL;
-			} else if((lzt == local_zone_transparent ||
-			           lzt == local_zone_typetransparent ||
-			           lzt == local_zone_inform ||
-			           lzt == local_zone_always_transparent) &&
-			               local_zone_does_not_cover(z, qinfo, labs)) {
-				lock_rw_unlock(&z->lock);
-				z = NULL;
-			} else if (verbosity >= VERB_ALGO) {
-				char zname[255+1];
-				dname_str(z->name, zname);
-				verbose(VERB_ALGO, "using localzone %s %s from view %s", 
-				                   zname,
-				                   local_zone_type2str(lzt),
-				                   view->name);
+		if ((zones = view->local_zones) != NULL) {
+			if((z = local_zones_lookup(zones,
+			                           qinfo->qname, qinfo->qname_len, labs,
+			                           qinfo->qclass, qinfo->qtype))) {
+				lock_rw_rdlock(&z->lock);
+				lzt = z->type;
+	
+				if(lzt == local_zone_noview) {
+					lock_rw_unlock(&z->lock);
+					z = NULL;
+				} else if((lzt == local_zone_transparent ||
+				           lzt == local_zone_typetransparent ||
+				           lzt == local_zone_inform ||
+				           lzt == local_zone_always_transparent) &&
+				               local_zone_does_not_cover(z, qinfo, labs)) {
+					lock_rw_unlock(&z->lock);
+					z = NULL;
+				} else if (verbosity >= VERB_ALGO) {
+					char zname[255+1];
+					dname_str(z->name, zname);
+					verbose(VERB_ALGO, "using localzone %s %s from view %s", 
+					                   zname,
+					                   local_zone_type2str(lzt),
+					                   view->name);
+				}
 			}
 		}
-
-		lock_rw_unlock(&view->lock);
-	}
-	if(!z) {
-		if (server == NULL) {
+		if (z == NULL && (zones = view->server_zones) == NULL) {
 			// This happens if there's a view and it doesn't fall back to
 			// the server's local zones - outta here!
 
+			lock_rw_unlock(&view->lock);
 			return (0);
 		}
+	}
 
-		struct local_zones *zones = server->local_zones;
+	lock_rw_unlock(&view->lock);
 
+	int tag = -1;
+
+	if(!z) {
 		log_assert(zones);
 
 		/* try global local_zones tree */
@@ -1846,6 +1851,9 @@ local_zones_answer(struct view* view, struct module_env* env,
 		 * a local alias. */
 		return !qinfo->local_alias;
 	}
+
+	int r;
+
 	r = local_zones_zone_answer(z, env, qinfo, edns, repinfo, buf, temp, ld, lzt);
 	lock_rw_unlock(&z->lock);
 	return r && !qinfo->local_alias; /* see above */

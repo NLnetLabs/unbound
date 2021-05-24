@@ -52,6 +52,22 @@ struct daemon;
 struct alloc_cache;
 
 /**
+ * View statistics - one allocated per thread to avoid locking
+ */
+struct view_stats {
+	/** number of queries from clients received. */
+	long long num_queries;
+	/** number of queries from clients received. */
+	long long num_queries_ip_ratelimited;
+	/** number of queries that had a cache-miss. */
+	long long num_queries_missed_cache;
+	/** number of prefetch queries - cachehits with prefetch */
+	long long num_queries_prefetch;
+	/** expired answers served from cache */
+	long long ans_expired;
+};
+
+/**
  * View enviroment - encapsulates view-specific values
  */
 struct view {
@@ -59,20 +75,19 @@ struct view {
 	char* name;
 	/** view-specific configuration information */
 	struct config_file *view_cfg;
+	/** Server view - if the same as the current view, this is the server */
+	struct view* server_view;
 	/** Local zones and response IP sets are view-aware and treat
 	 ** them differently.
 	 */
 	/** view specific local authority zones */
 	struct local_zones* local_zones;
-	/** There are three cases:
-	 **   v->server_view == v    This is the server view, local = server
-	 **   v->server_view != NULL fallback to server local_zones when there
-	 **                          is no match in the view specific tree.
-	 **   v->server_view == NULL no fallback
-	 */
-	struct view* server_view;
+	/** server zones, if fallback is configured */
+	struct local_zones* server_zones;
 	/** response-ip configuration data for this view */
 	struct respip_set* respip_set;
+	/** server response-ip configuration data, if fallback is configured */
+	struct respip_set* server_set;
 	/** Caches, stubs, forwards, etc. inherit from the server if not
 	 ** defined in the view. For clean-up, we have to mark whether or
 	 ** not to free them
@@ -87,6 +102,10 @@ struct view {
 	struct iter_forwards* fwds;
 	/** Ownership flags */
 	unsigned int view_flags;
+	/** Number of stats structures */
+	unsigned int view_threads;
+	/** Per-thread view stats - indexed by thread number */
+	struct view_stats *view_stats;
 	/** lock on the data in the structure
 	 * For the node and name you need to also hold the views_tree lock to
 	 * change them. */
@@ -167,6 +186,4 @@ int
 views_configure(struct views *vs,
 		struct config_file *cfg,
 		struct alloc_cache *alloc);
-
-
 #endif /* SERVICES_VIEW_H */

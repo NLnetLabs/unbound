@@ -1398,7 +1398,7 @@ iter_stub_fwd_no_cache(struct module_qstate *qstate, struct query_info *qinf)
 	/* Check for stub. */
 	stub = hints_lookup_stub(qstate->env->hints, qinf->qname,
 	    qinf->qclass, NULL);
-	dp = forwards_lookup(qstate->env->fwds, qinf->qname, qinf->qclass);
+	dp = forwards_lookup(qstate->query_view_env->fwds, qinf->qname, qinf->qclass);
 
 	/* see if forward or stub is more pertinent */
 	if(stub && stub->dp && dp) {

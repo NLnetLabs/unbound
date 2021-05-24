@@ -684,7 +684,7 @@ respip_view_conf_actions_test(void)
 	views = views_create();
 	unit_assert(views);
 	unit_assert(views_apply_cfg(views, &cfg));
-	unit_assert(respip_views_apply_cfg(views, &cfg, &have_respip_cfg));
+	unit_assert(respip_views_apply_cfg(views, &have_respip_cfg));
 
 	/* now verify the respip sets in each view */
 	v = views_find_view(views, "view1", 0);
@@ -813,7 +813,7 @@ respip_view_conf_data_test(void)
 	unit_assert(views_apply_cfg(views, &cfg));
 
 	/* apply configuration and verify rrsets */
-	unit_assert(respip_views_apply_cfg(views, &cfg, &have_respip_cfg));
+	unit_assert(respip_views_apply_cfg(views, &have_respip_cfg));
 	v = views_find_view(views, "view1", 0);
 	unit_assert(v);
 	verify_rrset(v->respip_set, "192.0.1.0/24", "1.2.3.4",

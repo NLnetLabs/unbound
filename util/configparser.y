@@ -478,14 +478,13 @@ content_view: view_name
 	| view_match_destinations
 	| server_local_zone
 	| server_local_data
+	| server_local_data_ptr
 	| server_response_ip
 	| server_response_ip_data
-	| server_local_data_ptr
 	| server_rrset_cache_size
 	| server_rrset_cache_slabs
 	| server_msg_cache_size
 	| server_msg_cache_slabs
-	| server_prefetch
 	| server_root_hints
 	| forward_zone
 	| stub_zone

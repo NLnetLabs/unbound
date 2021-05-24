@@ -760,25 +760,8 @@ struct config_view {
 	/** Fallback to global local_zones when there is no match in the view
 	 * view specific tree. 1 for yes, 0 for no */	
 	int isfirst;
-	/** Set the server view as a failover for local zones */
-	int set_server;
 	/** Underlying configuration file */
 	struct config_file cfg_view;
-
-		struct config_str2list* respip_actions;
-			/** data complementing the 'redirect' response IP actions */
-			struct config_str2list* respip_data;
-
-#ifdef USE_IPSET
-				/** local zones ipset list */
-				struct config_strlist* local_zones_ipset;
-#endif
-					struct config_str2list* local_zones;
-						/** local data RRs */
-						struct config_strlist* local_data;
-							/** local zones nodefault list */
-							struct config_strlist* local_zones_nodefault;
-
 };
 
 /**

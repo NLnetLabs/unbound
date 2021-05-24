@@ -620,16 +620,10 @@ daemon_fork(struct daemon* daemon)
 	daemon->local_zones = daemon->views->server_view.local_zones;
 
 	/* process raw response-ip configuration data */
-	if(!(daemon->respip_set = respip_set_create()))
-		fatal_exit("Could not create response IP set");
-	if(!respip_global_apply_cfg(daemon->respip_set, daemon->cfg))
-		fatal_exit("Could not set up response IP set");
-	if(!respip_views_apply_cfg(daemon->views, daemon->cfg,
-		&have_view_respip_cfg))
+	if(!respip_views_apply_cfg(daemon->views,
+	                           &daemon->use_response_ip))
 		fatal_exit("Could not set up per-view response IP sets");
-	daemon->use_response_ip = !respip_set_is_empty(daemon->respip_set) ||
-		have_view_respip_cfg;
-	
+
 	/* read auth zonefiles */
 	if(!auth_zones_apply_cfg(daemon->env->auth_zones, daemon->cfg, 1,
 		&daemon->use_rpz))
@@ -728,8 +722,6 @@ daemon_cleanup(struct daemon* daemon)
 	slabhash_clear(daemon->env->msg_cache);
 	local_zones_delete(daemon->local_zones);
 	daemon->local_zones = NULL;
-	respip_set_delete(daemon->respip_set);
-	daemon->respip_set = NULL;
 	views_delete(daemon->views);
 	daemon->views = NULL;
 	if(daemon->env->auth_zones)

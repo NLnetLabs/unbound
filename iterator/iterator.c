@@ -587,7 +587,7 @@ handle_cname_response(struct module_qstate* qstate, struct iter_qstate* iq,
 
 /** see if last resort is possible - does config allow queries to parent */
 static int
-can_have_last_resort(struct module_env* env, uint8_t* nm, size_t nmlen,
+can_have_last_resort(struct module_qstate* qstate, uint8_t* nm, size_t nmlen,
 	uint16_t qclass, struct delegpt** retdp)
 {
 	struct delegpt* fwddp;
@@ -597,14 +597,14 @@ can_have_last_resort(struct module_env* env, uint8_t* nm, size_t nmlen,
 	 * or forward is configured, because we do not want to go 'above'
 	 * the configured servers */
 	if(!dname_is_root(nm) && (stub = (struct iter_hints_stub*)
-		name_tree_find(&env->hints->tree, nm, nmlen, labs, qclass)) &&
+		name_tree_find(&qstate->query_view_env->hints->tree, nm, nmlen, labs, qclass)) &&
 		/* has_parent side is turned off for stub_first, where we
 		 * are allowed to go to the parent */
 		stub->dp->has_parent_side_NS) {
 		if(retdp) *retdp = stub->dp;
 		return 0;
 	}
-	if((fwddp = forwards_find(env->fwds, nm, qclass)) &&
+	if((fwddp = forwards_find(qstate->query_view_env->fwds, nm, qclass)) &&
 		/* has_parent_side is turned off for forward_first, where
 		 * we are allowed to go to the parent */
 		fwddp->has_parent_side_NS) {
@@ -782,7 +782,7 @@ prime_root(struct module_qstate* qstate, struct iter_qstate* iq, int id,
 	verbose(VERB_DETAIL, "priming . %s NS", 
 		sldns_lookup_by_id(sldns_rr_classes, (int)qclass)?
 		sldns_lookup_by_id(sldns_rr_classes, (int)qclass)->name:"??");
-	dp = hints_lookup_root(qstate->env->hints, qclass);
+	dp = hints_lookup_root(qstate->query_view_env->hints, qclass);
 	if(!dp) {
 		verbose(VERB_ALGO, "Cannot prime due to lack of hints");
 		return 0;
@@ -845,7 +845,7 @@ prime_stub(struct module_qstate* qstate, struct iter_qstate* iq, int id,
 	struct module_qstate* subq;
 
 	if(!qname) return 0;
-	stub = hints_lookup_stub(qstate->env->hints, qname, qclass, iq->dp);
+	stub = hints_lookup_stub(qstate->query_view_env->hints, qname, qclass, iq->dp);
 	/* The stub (if there is one) does not need priming. */
 	if(!stub)
 		return 0;
@@ -1082,7 +1082,7 @@ generate_ns_check(struct module_qstate* qstate, struct iter_qstate* iq, int id)
 
 	if(iq->depth == ie->max_dependency_depth)
 		return;
-	if(!can_have_last_resort(qstate->env, iq->dp->name, iq->dp->namelen,
+	if(!can_have_last_resort(qstate, iq->dp->name, iq->dp->namelen,
 		iq->qchase.qclass, NULL))
 		return;
 	/* is this query the same as the nscheck? */
@@ -1195,7 +1195,7 @@ forward_request(struct module_qstate* qstate, struct iter_qstate* iq)
 	if( (iq->qchase.qtype == LDNS_RR_TYPE_DS || iq->refetch_glue)
 		&& !dname_is_root(iq->qchase.qname))
 		dname_remove_label(&delname, &delnamelen);
-	dp = forwards_lookup(qstate->env->fwds, delname, iq->qchase.qclass);
+	dp = forwards_lookup(qstate->query_view_env->fwds, delname, iq->qchase.qclass);
 	if(!dp) 
 		return 0;
 	/* send recursion desired to forward addr */
@@ -1273,7 +1273,7 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 	 */
 	if (iq->refetch_glue &&
 	        iq->dp &&
-	        !can_have_last_resort(qstate->env, iq->dp->name,
+	        !can_have_last_resort(qstate, iq->dp->name,
 	             iq->dp->namelen, iq->qchase.qclass, NULL)) {
 	    iq->refetch_glue = 0;
 	}
@@ -1401,7 +1401,7 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 	}
 	if(iq->qchase.qtype == LDNS_RR_TYPE_DS || iq->refetch_glue ||
 	   (iq->qchase.qtype == LDNS_RR_TYPE_NS && qstate->prefetch_leeway
-	   && can_have_last_resort(qstate->env, delname, delnamelen, iq->qchase.qclass, NULL))) {
+	   && can_have_last_resort(qstate, delname, delnamelen, iq->qchase.qclass, NULL))) {
 		/* remove first label from delname, root goes to hints,
 		 * but only to fetch glue, not for qtype=DS. */
 		/* also when prefetching an NS record, fetch it again from
@@ -1445,11 +1445,11 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 				break; /* got noprime-stub-zone, continue */
 			else if(r)
 				return 0; /* stub prime request made */
-			if(forwards_lookup_root(qstate->env->fwds, 
+			if(forwards_lookup_root(qstate->query_view_env->fwds, 
 				iq->qchase.qclass)) {
 				/* forward zone root, no root prime needed */
 				/* fill in some dp - safety belt */
-				iq->dp = hints_lookup_root(qstate->env->hints, 
+				iq->dp = hints_lookup_root(qstate->query_view_env->hints, 
 					iq->qchase.qclass);
 				if(!iq->dp) {
 					log_err("internal error: no hints dp");
@@ -1527,7 +1527,7 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 		if(iter_dp_is_useless(&qstate->qinfo, qstate->query_flags, 
 			iq->dp)) {
 			struct delegpt* retdp = NULL;
-			if(!can_have_last_resort(qstate->env, iq->dp->name, iq->dp->namelen, iq->qchase.qclass, &retdp)) {
+			if(!can_have_last_resort(qstate, iq->dp->name, iq->dp->namelen, iq->qchase.qclass, &retdp)) {
 				if(retdp) {
 					verbose(VERB_QUERY, "cache has stub "
 						"or fwd but no addresses, "
@@ -1556,7 +1556,7 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 				/* use safety belt */
 				verbose(VERB_QUERY, "Cache has root NS but "
 				"no addresses. Fallback to the safety belt.");
-				iq->dp = hints_lookup_root(qstate->env->hints, 
+				iq->dp = hints_lookup_root(qstate->query_view_env->hints, 
 					iq->qchase.qclass);
 				/* note deleg_msg is from previous lookup,
 				 * but RD is on, so it is not used */
@@ -1629,7 +1629,7 @@ processInitRequest2(struct module_qstate* qstate, struct iter_qstate* iq,
 		/* Do not send queries above stub, do not set delname to dp if
 		 * this is above stub without stub-first. */
 		stub = hints_lookup_stub(
-			qstate->env->hints, iq->qchase.qname, iq->qchase.qclass,
+			qstate->query_view_env->hints, iq->qchase.qname, iq->qchase.qclass,
 			iq->dp);
 		if(!stub || !stub->dp->has_parent_side_NS || 
 			dname_subdomain_c(iq->dp->name, stub->dp->name)) {
@@ -1918,7 +1918,7 @@ processLastResort(struct module_qstate* qstate, struct iter_qstate* iq,
 	verbose(VERB_ALGO, "No more query targets, attempting last resort");
 	log_assert(iq->dp);
 
-	if(!can_have_last_resort(qstate->env, iq->dp->name, iq->dp->namelen,
+	if(!can_have_last_resort(qstate, iq->dp->name, iq->dp->namelen,
 		iq->qchase.qclass, NULL)) {
 		/* fail -- no more targets, no more hope of targets, no hope 
 		 * of a response. */
@@ -1928,7 +1928,7 @@ processLastResort(struct module_qstate* qstate, struct iter_qstate* iq,
 		return error_response_cache(qstate, id, LDNS_RCODE_SERVFAIL);
 	}
 	if(!iq->dp->has_parent_side_NS && dname_is_root(iq->dp->name)) {
-		struct delegpt* p = hints_lookup_root(qstate->env->hints,
+		struct delegpt* p = hints_lookup_root(qstate->query_view_env->hints,
 			iq->qchase.qclass);
 		if(p) {
 			struct delegpt_addr* a;
@@ -2017,7 +2017,7 @@ processLastResort(struct module_qstate* qstate, struct iter_qstate* iq,
 		 * delegation point is a stub and we cannot go higher, skip*/
 		if( ((ie->supports_ipv6 && !ns->done_pside6) ||
 		    (ie->supports_ipv4 && !ns->done_pside4)) &&
-		    !can_have_last_resort(qstate->env, ns->name, ns->namelen,
+		    !can_have_last_resort(qstate, ns->name, ns->namelen,
 			iq->qchase.qclass, NULL)) {
 			log_nametypeclass(VERB_ALGO, "cannot pside lookup ns "
 				"because it is also a stub/forward,",
@@ -3473,8 +3473,8 @@ processCollectClass(struct module_qstate* qstate, int id)
 	if(iq->qchase.qclass == 0) {
 		uint16_t c = 0;
 		iq->qchase.qclass = LDNS_RR_CLASS_ANY;
-		while(iter_get_next_root(qstate->env->hints,
-			qstate->env->fwds, &c)) {
+		while(iter_get_next_root(qstate->query_view_env->hints,
+			qstate->query_view_env->fwds, &c)) {
 			/* generate query for this class */
 			log_nametypeclass(VERB_ALGO, "spawn collect query",
 				qstate->qinfo.qname, qstate->qinfo.qtype, c);

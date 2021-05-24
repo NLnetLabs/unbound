@@ -379,27 +379,31 @@ error_exit:
 struct config_view*
 config_view_create(struct config_file* server)
 {
-	struct config_view* view;
+	struct config_view* vcfg;
 
-	if ((view = calloc(1, sizeof(*view))) != NULL) {
-		view->cfg_server = server;
+	if ((vcfg = calloc(1, sizeof(*vcfg))) != NULL) {
+		struct config_file *cfg= &vcfg->cfg_view;
+
+		vcfg->cfg_server = server;
 
 		// Copy over values from the server configuration that may be set
-		// in the view clause but should be inherited, e.g., prefetch. Other
-		// view configuration values are set to zero (NULL) to indicate they
-		// weren't set in the view declaration.
+		// in the view clause but should be inherited, e.g., dns64_synthall.
+		// Other view configuration values are set to zero (NULL) to indicate
+		// they weren't set in the view declaration.
+		//
+		// TODO: We would like to inherit all server values that are referenced
+		//       in the resolution process.
 
-		view->cfg_view.prefetch          = server->prefetch;
-		view->cfg_view.dns64_synthall    = server->dns64_synthall;
+		cfg->dns64_synthall            = server->dns64_synthall;
 
 		// Even though the cache sizes are set to zero (undefined), inherit
 		// the number of slabs from the server configuration.
 
-		view->cfg_view.msg_cache_slabs   = server->msg_cache_slabs;
-		view->cfg_view.rrset_cache_slabs = server->rrset_cache_slabs;
+		cfg->msg_cache_slabs   = server->msg_cache_slabs;
+		cfg->rrset_cache_slabs = server->rrset_cache_slabs;
 	}
 
-	return (view);
+	return (vcfg);
 }
 
 int
@@ -443,14 +447,6 @@ config_view_validate(struct config_view* view)
 		return (-1);
 	}
 
-	// If no view-specific local zones were defined, or view-first was
-	// defined, mark this zone to use the server locals.
-
-	if (view->isfirst ||
-	        (cfg->local_zones == NULL && cfg->local_data == NULL)) {
-		view->set_server = 1;
-	}
-
 	// If either cache size was specified, set an unintialized value
 	// to the default
 
@@ -458,7 +454,7 @@ config_view_validate(struct config_view* view)
 		if (cfg->msg_cache_size == 0) {
 			cfg->msg_cache_size = DEFAULT_MSG_SIZE;
 		} else if (cfg->rrset_cache_size == 0) {
-			cfg->rrset_cache_size == DEFAULT_RRSET_SIZE;
+			cfg->rrset_cache_size = DEFAULT_RRSET_SIZE;
 		}
 	}
 

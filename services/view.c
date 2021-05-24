@@ -120,21 +120,26 @@ views_delete(struct views* vs)
 		// view_cleanup(&vs->server_view);
 		lock_rw_destroy(&vs->lock);
 		traverse_postorder(&vs->vtree, delviewnode, NULL);
+		free(vs->server_view.view_stats);
 		free(vs);
 	}
 }
 
 /** create a new view */
 static struct view_node *
-view_node_create(char* name)
+view_node_create(char* name, unsigned int threads)
 {
+	size_t vsize = sizeof(struct view_node) +
+	                   threads * sizeof(struct view_stats);
 	struct view_node *vn;
 
-	if ((vn = calloc(1, sizeof(*vn))) != NULL) {
+	if ((vn = calloc(1, vsize)) != NULL) {
 		struct view *v = &vn->vinfo;
 
 		if ((v->name = strdup(name)) != NULL) {
 			vn->node.key = v->name;
+			vn->vinfo.view_threads = threads;
+			vn->vinfo.view_stats = (struct view_stats *)(vn + 1);
 			lock_rw_init(&v->lock);
 			lock_protect(&v->lock, v, sizeof(*v));
 		} else {
@@ -148,12 +153,12 @@ view_node_create(char* name)
 
 /** enter a new view returns with WRlock */
 static struct view *
-views_enter_view_name(struct views *vs, char *name)
+views_enter_view_name(struct views *vs, char *name, unsigned int threads)
 {
 	struct view_node *vn;
 	struct view *v;
 
-	if ((vn = view_node_create(name)) != NULL) {
+	if ((vn = view_node_create(name, threads)) != NULL) {
 		/* add to rbtree */
 		lock_rw_wrlock(&vs->lock);
 		lock_rw_wrlock(&vn->vinfo.lock);
@@ -305,7 +310,14 @@ views_configure(struct views *vs,
                 struct alloc_cache *alloc)
 {
 	struct view* v = &vs->server_view;
+	struct view_stats *vstat;
 	struct config_view* cv;
+
+	// Allocate the stats for the server view separately
+
+	if ((vstat = calloc(cfg->num_threads, sizeof(*vstat))) == NULL) {
+		return (0);
+	}
 
 	// Construct the server view by hand, including locking
 
@@ -315,8 +327,10 @@ views_configure(struct views *vs,
 
 	// Mark this view as the server view by pointing to ourselves.
 
-	v->server_view = v;
-	v->view_cfg    = cfg;
+	v->server_view  = v;
+	v->view_cfg     = cfg;
+	v->view_threads = cfg->num_threads;
+	v->view_stats   = vstat;
 
 	if (!view_apply_cfg(&vs->server_view, cfg, alloc)) {
 		return (0);
@@ -327,19 +341,21 @@ views_configure(struct views *vs,
 	for (cv = cfg->views; cv != NULL; cv = cv->next) {
 		/* create and configure view */
 
-		if ((v = views_enter_view_name(vs, cv->name)) == NULL) {
+		if ((v = views_enter_view_name(vs,
+		                               cv->name,
+		                               cfg->num_threads)) == NULL) {
 			return (0);
 		}
 
-		v->view_cfg = &cv->cfg_view;
+		v->view_cfg     = &cv->cfg_view;
+		v->view_threads = cfg->num_threads;
+		v->server_view  = &vs->server_view;
 
-		if (cv->set_server) {
-			// Point to the server view to trigger localzone fallback
-
-			v->server_view = &vs->server_view;
-		}
 		if (!view_apply_cfg(v, &cv->cfg_view, alloc)) {
 			return 0;
+		}
+		if (cv->isfirst || v->local_zones == NULL) {
+			v->server_zones = vs->server_view.local_zones;
 		}
 
 		lock_rw_unlock(&v->lock);
