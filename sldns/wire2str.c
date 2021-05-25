@@ -957,19 +957,18 @@ sldns_print_svcparamkey(char** s, size_t* slen, uint16_t svcparamkey)
 	}
 }
 
-int sldns_wire2str_svcparam_port2str(char** s,
-	size_t* slen, uint16_t data_len, uint16_t data)
+static int sldns_wire2str_svcparam_port2str(char** s,
+	size_t* slen, uint16_t data_len, uint8_t* data)
 {
 	int w = 0;
 
 	if (data_len != 2)
 		return -1; /* wireformat error, a short is 2 bytes */
-	w = sldns_str_print(s, slen, "=%d", (int)data);
+	w = sldns_str_print(s, slen, "=%d", (int)sldns_read_uint16(data));
 	return w;
 }
 
-static int
-sldns_wire2str_svcparam_ipv4hint2str(char** s,
+static int sldns_wire2str_svcparam_ipv4hint2str(char** s,
 	size_t* slen, uint16_t data_len, uint8_t* data)
 {
 	char ip_str[INET_ADDRSTRLEN + 1];
@@ -998,7 +997,7 @@ sldns_wire2str_svcparam_ipv4hint2str(char** s,
 	return w;
 }
 
-int sldns_wire2str_svcparam_ipv6hint2str(char** s,
+static int sldns_wire2str_svcparam_ipv6hint2str(char** s,
 	size_t* slen, uint16_t data_len, uint8_t* data)
 {
 	char ip_str[INET6_ADDRSTRLEN + 1];
@@ -1029,7 +1028,7 @@ int sldns_wire2str_svcparam_ipv6hint2str(char** s,
 	return w;
 }
 
-int sldns_wire2str_svcparam_mandatory2str(char** s,
+static int sldns_wire2str_svcparam_mandatory2str(char** s,
 	size_t* slen, uint16_t data_len, uint8_t* data)
 {
 	int w = 0;
@@ -1051,7 +1050,7 @@ int sldns_wire2str_svcparam_mandatory2str(char** s,
 	return w;
 }
 
-int sldns_wire2str_svcparam_alpn2str(char** s,
+static int sldns_wire2str_svcparam_alpn2str(char** s,
 	size_t* slen, uint16_t data_len, uint8_t* data)
 {
 	uint8_t *dp = (void *)data;
@@ -1088,7 +1087,7 @@ int sldns_wire2str_svcparam_alpn2str(char** s,
 	return w;
 }
 
-int sldns_wire2str_svcparam_ech2str(char** s,
+static int sldns_wire2str_svcparam_ech2str(char** s,
 	size_t* slen, uint16_t data_len, uint8_t* data)
 {
 	int size;
@@ -1119,70 +1118,66 @@ int sldns_wire2str_svcparam_ech2str(char** s,
 int sldns_wire2str_svcparam_scan(uint8_t** d, size_t* dlen, char** s, size_t* slen)
 {
 	uint16_t svcparamkey, data_len;
-	uint8_t* data = *d;
 	int written_chars = 0;
+	int r;
 
-	if(*dlen < 4) return 0; /* verify that we actualy have data */
+	/* verify that we have enough data to read svcparamkey and data_len */
+	if(*dlen < 4)
+		return -1;
 
-	svcparamkey = sldns_read_uint16(data);
+	svcparamkey = sldns_read_uint16(*d);
+	data_len = sldns_read_uint16(*d+2);
+	*d    += 4;
+	*dlen -= 4;
+
+	/* verify that we have data_len data */
+	if (data_len > *dlen)
+		return -1; 
 
 	written_chars += sldns_print_svcparamkey(s, slen, svcparamkey);
-
-	// (*dlen) -= written_chars;
-
-	// @TODO fix this to be dynamic and correct
-	// fprintf(stderr, "*dlen2: %zu\n", *dlen);
-	// fprintf(stderr, "data_len %zu\n", data_len);
-	(*dlen) = 0;
-
-	data_len = sldns_read_uint16(data+2);
-
-	// if (size != val_len + 4)
-	// 	return 0;  wireformat error
-
-	// if (!data_len) {
-	// 	/* Some SvcParams MUST have values */
-	// 	switch (svcparamkey) {
-	// 	case SVCB_KEY_ALPN:
-	// 	case SVCB_KEY_PORT:
-	// 	case SVCB_KEY_IPV4HINT:
-	// 	case SVCB_KEY_IPV6HINT:
-	// 	case SVCB_KEY_MANDATORY:
-	// 		return 0;
-	// 	default:
-	// 		return 1;
-	// 	}
-	// }
-
+	if (!data_len) {
+	 	/* Some SvcParams MUST have values */
+	 	switch (svcparamkey) {
+	 	case SVCB_KEY_ALPN:
+	 	case SVCB_KEY_PORT:
+	 	case SVCB_KEY_IPV4HINT:
+	 	case SVCB_KEY_IPV6HINT:
+	 	case SVCB_KEY_MANDATORY:
+	 		return -1;
+	 	default:
+	 		return written_chars;
+	 	}
+	}
 	switch (svcparamkey) {
 	case SVCB_KEY_PORT:
-		written_chars += sldns_wire2str_svcparam_port2str(s, slen, data_len, sldns_read_uint16(data+4));
+		r = sldns_wire2str_svcparam_port2str(s, slen, data_len, *d);
 		break;
 	case SVCB_KEY_IPV4HINT:
-		written_chars += sldns_wire2str_svcparam_ipv4hint2str(s, slen, data_len, data+4);
+		r = sldns_wire2str_svcparam_ipv4hint2str(s, slen, data_len, *d);
 		break;
 	case SVCB_KEY_IPV6HINT:
-		written_chars += sldns_wire2str_svcparam_ipv6hint2str(s, slen, data_len, data+4);
+		r = sldns_wire2str_svcparam_ipv6hint2str(s, slen, data_len, *d);
 		break;
 	case SVCB_KEY_MANDATORY:
-		written_chars += sldns_wire2str_svcparam_mandatory2str(s, slen, data_len, data+4);
+		r = sldns_wire2str_svcparam_mandatory2str(s, slen, data_len, *d);
 		break;
 	case SVCB_KEY_NO_DEFAULT_ALPN:
-		return 0;  /* wireformat error, should not have a value */
+		return -1;  /* wireformat error, should not have a value */
 	case SVCB_KEY_ALPN:
-		written_chars += sldns_wire2str_svcparam_alpn2str(s, slen, data_len, data+4);
+		r = sldns_wire2str_svcparam_alpn2str(s, slen, data_len, *d);
 		break;
 	case SVCB_KEY_ECH:
-		written_chars += sldns_wire2str_svcparam_ech2str(s, slen, data_len, data+4);
+		r = sldns_wire2str_svcparam_ech2str(s, slen, data_len, *d);
 		break;
 	default:
 		break;
 	}
-
-	// @TODO set str_len to 0: "If the end of the
-    // * output string is reached, *str_len is set to 0"
-    // *slen = 0;
-
+	if (r <= 0)
+		return -1; /* wireformat error */
+	
+	written_chars += r;
+	*d    += data_len;
+	*dlen -= data_len;
 	return written_chars;
 }
 
