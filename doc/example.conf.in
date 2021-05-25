@@ -614,7 +614,7 @@ server:
 	# keysize. Keep this table very short, as linear search is done.
 	# A message with an NSEC3 with larger count is marked insecure.
 	# List in ascending order the keysize and count values.
-	# val-nsec3-keysize-iterations: "1024 150 2048 500 4096 2500"
+	# val-nsec3-keysize-iterations: "1024 150 2048 150 4096 150"
 
 	# if enabled, ZONEMD verification failures do not block the zone.
 	# zonemd-permissive-mode: no

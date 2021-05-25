@@ -309,7 +309,7 @@ config_create(void)
 	if(!(cfg->module_conf = strdup("validator iterator"))) goto error_exit;
 #endif
 	if(!(cfg->val_nsec3_key_iterations = 
-		strdup("1024 150 2048 500 4096 2500"))) goto error_exit;
+		strdup("1024 150 2048 150 4096 150"))) goto error_exit;
 #if defined(DNSTAP_SOCKET_PATH)
 	if(!(cfg->dnstap_socket_path = strdup(DNSTAP_SOCKET_PATH)))
 		goto error_exit;
