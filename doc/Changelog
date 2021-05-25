@@ -4,6 +4,7 @@
 	  for it in the configuration to 150 for all key sizes.
 	- Fix #492: module-config respip missing in unbound.conf.5.in man
 	  page. Merges #494 from he32.
+	- For #492: Fix font highlighting for the man page on emacs.
 
 21 May 2021: Wouter
 	- Test code has -q option for quiet output.
