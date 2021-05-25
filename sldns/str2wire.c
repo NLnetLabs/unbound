@@ -1117,8 +1117,6 @@ sldns_str2wire_svcbparam_ipv6hint(const char* val, uint8_t* rd, size_t* rd_len)
 				break;
 			*rd_len += LDNS_IP6ADDRLEN;
 
-			*rd_len += LDNS_IP6ADDRLEN;
-
 			assert(count == 1);
 
 		} else if (next_ip_str - val >= (int)sizeof(ip_str))
