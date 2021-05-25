@@ -1015,14 +1015,14 @@ int sldns_wire2str_svcparam_ipv6hint2str(char** s,
 			return 0; /* wireformat error, incorrect size or inet family */
 
 		w += sldns_str_print(s, slen, "=%s", ip_str);
-		data += LDNS_IP6ADDRLEN / sizeof(uint16_t);
+		data += LDNS_IP6ADDRLEN;
 
 		while ((data_len -= LDNS_IP6ADDRLEN) > 0) {
 			if (inet_ntop(AF_INET6, data, ip_str, sizeof(ip_str)) == NULL)
 				return 0; /* wireformat error, incorrect size or inet family */
 
 			w += sldns_str_print(s, slen, ",%s", ip_str);
-			data += LDNS_IP6ADDRLEN / sizeof(uint16_t);
+			data += LDNS_IP6ADDRLEN;
 		}
 	}
 
