@@ -1,0 +1,9 @@
+$ORIGIN failure-cases.
+$TTL 3600
+
+@       SOA     primary admin 0 0 0 0 0
+
+; The "mandatory" SvcParamKey MUST not be included in mandatory list
+
+f09	HTTPS   1 foo.example.com. mandatory=mandatory
+

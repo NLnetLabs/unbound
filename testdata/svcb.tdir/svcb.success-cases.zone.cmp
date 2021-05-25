@@ -1,0 +1,12 @@
+$ORIGIN .
+success-cases	3600	IN	SOA	primary.success-cases. admin.success-cases. (
+		0 0 0 0 0 )
+$ORIGIN success-cases.
+s01	3600	IN	SVCB	0 . key123
+s02	3600	IN	SVCB	0 . ech
+s03	3600	IN	HTTPS	0 . alpn="h2,h3" no-default-alpn
+s04	3600	IN	HTTPS	0 . no-default-alpn
+s05	3600	IN	HTTPS	0 . mandatory=port alpn="dot" no-default-alpn port=853
+s06	3600	IN	HTTPS	0 . ech=aGVsbG93b3JsZCE=
+s07	3600	IN	HTTPS	0 . ech=aGVsbG93b3JsZCE=
+; zone success-cases is ok

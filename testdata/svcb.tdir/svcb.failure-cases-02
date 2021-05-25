@@ -1,0 +1,8 @@
+$ORIGIN failure-cases.
+$TTL 3600
+
+@       SOA     primary admin 0 0 0 0 0
+
+; In the next examples the SvcParamKeys are missing their values.
+
+f02	SVCB   1 foo.example.com. mandatory

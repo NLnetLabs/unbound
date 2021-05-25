@@ -1,0 +1,10 @@
+$ORIGIN failure-cases.
+$TTL 3600
+
+@       SOA     primary admin 0 0 0 0 0
+
+; This example has multiple instances of the same SvcParamKey
+
+f01	SVCB   1 foo.example.com. (
+                       key123=abc key123=def
+                       )

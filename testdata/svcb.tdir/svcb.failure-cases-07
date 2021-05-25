@@ -1,0 +1,8 @@
+$ORIGIN failure-cases.
+$TTL 3600
+
+@       SOA     primary admin 0 0 0 0 0
+
+; The "no-default-alpn" SvcParamKey value MUST be empty
+
+f07	SVCB   1 foo.example.com. no-default-alpn=abc

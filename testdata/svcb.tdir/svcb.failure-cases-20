@@ -1,0 +1,10 @@
+$ORIGIN failure-cases.
+$TTL 3600
+
+@       SOA     primary admin 0 0 0 0 0
+
+; Here there are multiple instances of the same SvcParamKey in the mandatory list
+
+f10	HTTPS   1 foo.example.com. (
+                      mandatory=key123,key123 key123=abc
+                      )

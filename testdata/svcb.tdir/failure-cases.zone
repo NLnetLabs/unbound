@@ -1,0 +1,95 @@
+$ORIGIN failure-cases.
+$TTL 3600
+
+
+@       SOA     primary admin 1 3600 1800 7200 3600
+        NS      primary
+primary A       127.0.0.1
+
+; This example has multiple instances of the same SvcParamKey
+
+f01	SVCB   1 foo.example.com. (
+                       key123=abc key123=def
+                       )
+; In the next examples the SvcParamKeys are missing their values.
+
+f02	SVCB   1 foo.example.com. mandatory
+
+; In the next examples the SvcParamKeys are missing their values.
+
+f03	SVCB   1 foo.example.com. alpn
+
+; In the next examples the SvcParamKeys are missing their values.
+
+f04	SVCB   1 foo.example.com. port
+
+; In the next examples the SvcParamKeys are missing their values.
+
+f05	SVCB   1 foo.example.com. ipv4hint
+
+; In the next examples the SvcParamKeys are missing their values.
+
+f06	SVCB   1 foo.example.com. ipv6hint
+
+; The "no-default-alpn" SvcParamKey value MUST be empty
+
+f07	SVCB   1 foo.example.com. no-default-alpn=abc
+
+; In this record a mandatory SvcParam is missing
+
+f08	SVCB   1 foo.example.com. mandatory=key123
+
+; The "mandatory" SvcParamKey MUST not be included in mandatory list
+
+f09	SVCB   1 foo.example.com. mandatory=mandatory
+
+; Here there are multiple instances of the same SvcParamKey in the mandatory list
+
+f10	SVCB   1 foo.example.com. (
+                      mandatory=key123,key123 key123=abc
+                      )
+
+; This example has multiple instances of the same SvcParamKey
+
+f11	HTTPS   1 foo.example.com. (
+                       key123=abc key123=def
+                       )
+
+; In the next examples the SvcParamKeys are missing their values.
+
+f12	HTTPS   1 foo.example.com. mandatory
+
+; In the next examples the SvcParamKeys are missing their values.
+
+f13	HTTPS   1 foo.example.com. alpn
+
+; In the next examples the SvcParamKeys are missing their values.
+
+f14	HTTPS   1 foo.example.com. port
+
+; In the next examples the SvcParamKeys are missing their values.
+
+f15	HTTPS   1 foo.example.com. ipv4hint
+
+; In the next examples the SvcParamKeys are missing their values.
+
+f16	HTTPS   1 foo.example.com. ipv6hint
+
+; The "no-default-alpn" SvcParamKey value MUST be empty
+
+f17	HTTPS   1 foo.example.com. no-default-alpn=abc
+
+; In this record a mandatory SvcParam is missing
+
+f18	HTTPS   1 foo.example.com. mandatory=key123
+
+; The "mandatory" SvcParamKey MUST not be included in mandatory list
+
+f19	HTTPS   1 foo.example.com. mandatory=mandatory
+
+; Here there are multiple instances of the same SvcParamKey in the mandatory list
+
+f20	HTTPS   1 foo.example.com. (
+                      mandatory=key123,key123 key123=abc
+                      )
+

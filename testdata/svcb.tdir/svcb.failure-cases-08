@@ -1,0 +1,8 @@
+$ORIGIN failure-cases.
+$TTL 3600
+
+@       SOA     primary admin 0 0 0 0 0
+
+; In this record a mandatory SvcParam is missing
+
+f08	SVCB   1 foo.example.com. mandatory=key123
