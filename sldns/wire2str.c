@@ -1091,14 +1091,14 @@ static int sldns_wire2str_svcparam_ech2str(char** s,
 	size_t* slen, uint16_t data_len, uint8_t* data)
 {
 	int size;
-	int w;
+	int w = 0;
 
 	assert(data_len > 0); /* Guaranteed by rdata_svcparam_to_string */
 
 	w += sldns_str_print(s, slen, "=\"");
 
 	/* b64_ntop_calculate size includes null at the end */
-	size = sldns_b64_ntop_calculate_size(data_len);
+	size = sldns_b64_ntop_calculate_size(data_len) - 1;
 
 	// @TODO store return value?
 	sldns_b64_ntop(data, data_len, *s, *slen);

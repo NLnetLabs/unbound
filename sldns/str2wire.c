@@ -1168,8 +1168,8 @@ sldns_str2wire_svcbparam_mandatory(const char* val, uint8_t* rd, size_t* rd_len)
 			return -1;
 		}
 	}
-
-	// @TODO check if we have space to write in rd_len; look for the best spot
+	if (sizeof(uint16_t) * (count + 2) > *rd_len)
+		return LDNS_WIREPARSE_ERR_BUFFER_TOO_SMALL;
 
 	sldns_write_uint16(rd, SVCB_KEY_MANDATORY);
 	sldns_write_uint16(rd + 2, sizeof(uint16_t) * count);
@@ -1179,12 +1179,12 @@ sldns_str2wire_svcbparam_mandatory(const char* val, uint8_t* rd, size_t* rd_len)
 		if (!(next_key = strchr(val, ','))) {
 			sldns_write_uint16(rd + *rd_len,
 				sldns_str2wire_svcparam_key_lookup(val, val_len));
-			*rd_len += LDNS_IP6ADDRLEN;
+			*rd_len += 2;
 			break;
 		} else {
 			sldns_write_uint16(rd + *rd_len,
 				sldns_str2wire_svcparam_key_lookup(val, next_key - val));
-			*rd_len += LDNS_IP6ADDRLEN;
+			*rd_len += 2;
 		}
 
 		val_len -= next_key - val + 1;
