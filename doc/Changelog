@@ -2,6 +2,8 @@
 	- Move the NSEC3 max iterations count in line with the 150 value
 	  used by BIND, Knot and PowerDNS. This sets the default value
 	  for it in the configuration to 150 for all key sizes.
+	- Fix #492: module-config respip missing in unbound.conf.5.in man
+	  page. Merges #494 from he32.
 
 21 May 2021: Wouter
 	- Test code has -q option for quiet output.

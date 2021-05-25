@@ -1027,7 +1027,6 @@ from the query ID, for speed and thread safety).  Default is yes.
 .TP
 .B minimal-responses: \fI<yes or no>
 If yes, Unbound doesn't insert authority/additional sections into response
-.\" '
 messages when those sections are not required.  This reduces response
 size significantly, and may avoid TCP fallback for some responses.
 This may cause a slight speedup.  The default is yes, even though the DNS
