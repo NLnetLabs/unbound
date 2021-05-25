@@ -1087,7 +1087,7 @@ static int
 sldns_str2wire_svcbparam_ipv6hint(const char* val, uint8_t* rd, size_t* rd_len)
 {
 	int count;
-	char ip_str[INET_ADDRSTRLEN+1];
+	char ip_str[INET6_ADDRSTRLEN+1];
 	char *next_ip_str;
 	uint32_t *ip_wire_dst;
 	size_t i;
@@ -1113,9 +1113,10 @@ sldns_str2wire_svcbparam_ipv6hint(const char* val, uint8_t* rd, size_t* rd_len)
 
 	while (count) {
 		if (!(next_ip_str = strchr(val, ','))) {
-			if (inet_pton(AF_INET, val, rd + *rd_len) != 1)
-				*rd_len += LDNS_IP6ADDRLEN;
+			if (inet_pton(AF_INET6, val, rd + *rd_len) != 1)
 				break;
+
+			*rd_len += LDNS_IP6ADDRLEN;
 
 			assert(count == 1);
 
@@ -1125,12 +1126,11 @@ sldns_str2wire_svcbparam_ipv6hint(const char* val, uint8_t* rd, size_t* rd_len)
 		else {
 			memcpy(ip_str, val, next_ip_str - val);
 			ip_str[next_ip_str - val] = 0;
-			if (inet_pton(AF_INET, ip_str, rd + *rd_len) != 1) {
-				*rd_len += LDNS_IP6ADDRLEN;
-
+			if (inet_pton(AF_INET6, ip_str, rd + *rd_len) != 1) {
 				val = ip_str; /* to use in error reporting below */
 				break;
 			}
+			*rd_len += LDNS_IP6ADDRLEN;
 
 			val = next_ip_str + 1;
 		}
