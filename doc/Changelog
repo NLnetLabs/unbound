@@ -1,6 +1,8 @@
 27 May 2021: Wouter
 	- Merge #496 from banburybill: Use build system endianness if
 	  available, otherwise try to work it out.
+	- zonemd-check: yesno option, default no, enables the processing
+	  of ZONEMD records for that zone.
 
 25 May 2021: Wouter
 	- Move the NSEC3 max iterations count in line with the 150 value

@@ -1980,6 +1980,12 @@ to the authority servers for this zone, it'll fetch the data directly from
 the zone data.  Turn it on when you want unbound to provide recursion for
 downstream clients, and use the zone data as a local copy to speed up lookups.
 .TP
+.B zonemd\-check: \fI<yes or no>
+Enable this option to check ZONEMD records in the zone. Default is disabled.
+The ZONEMD record is a checksum over the zone data. This includes glue in
+the zone and data from the zone file, and excludes comments from the zone file.
+When there is a DNSSEC chain of trust, DNSSEC signatures are checked too.
+.TP
 .B zonemd\-reject\-absence: \fI<yes or no>
 Enable this option to reject the absence of the ZONEMD record.  Without it,
 when zonemd is not there it is not checked.  It is useful to enable for a
