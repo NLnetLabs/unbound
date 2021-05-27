@@ -614,6 +614,43 @@ sldns_affix_token(sldns_buffer* strbuf, char* token, size_t* token_len,
 	return 1;
 }
 
+static void sldns_check_svcbparams(uint8_t* rdata, uint16_t rdata_len)
+{
+	size_t nparams = 0, i;
+	uint8_t* svcparams[10240]; // @TODO change array size in actual max number of svcbparams
+
+	// 1. Find the SvcParams
+	while (rdata_len) {
+		uint16_t svcbparam_len;
+
+		svcparams[nparams] = rdata;
+		if (rdata_len < 4)
+			return;
+		svcbparam_len = sldns_read_uint16(rdata + 2);
+		rdata_len -= 4;
+		rdata += 4;
+
+		if (rdata_len < svcbparam_len)
+			return;
+		rdata_len -= svcbparam_len;
+		rdata += svcbparam_len;
+
+		nparams += 1;
+	}
+
+	for (i = 0; i < nparams; i++) {
+		uint8_t* svcparam_data = svcparams[i];
+		uint16_t svcparam_key = sldns_read_uint16(svcparam_data);
+		uint16_t svcparam_len = sldns_read_uint16(svcparam_data + 2);
+
+		fprintf(stderr, "param %zu, key: %d, len: %d\n"
+		              , i, (int)svcparam_key, (int)svcparam_len);
+	}
+	// 2. qsort the data according to the keys
+	// 3. verify that keys are unique
+	// 4. verify that mandatory keys are present and unique
+}
+
 /** parse rdata from string into rr buffer(-remainder after dname). */
 static int
 rrinternal_parse_rdata(sldns_buffer* strbuf, char* token, size_t token_len,
@@ -713,15 +750,37 @@ rrinternal_parse_rdata(sldns_buffer* strbuf, char* token, size_t token_len,
 	*rr_len = rr_cur_len;
 	/* SVCB/HTTPS handling  */
 	if (rr_type == LDNS_RR_TYPE_SVCB || rr_type == LDNS_RR_TYPE_HTTPS) {
-
+		uint16_t rdata_len = rr_cur_len - dname_len - 10;
+		uint8_t *rdata = rr+dname_len + 10;
 		
+		/* skip 1st rdata field SvcPriority (uint16_t) */
+		if (rdata_len < sizeof(uint16_t))
+			return LDNS_WIREPARSE_ERR_OK;
 
-		// 1. Find the size
-		// 2. qsort the data according to the keys
-		// 3. verify that keys are unique
-		// 4. verify that mandatory keys are present and unique
+		rdata_len -= sizeof(uint16_t);
+		rdata += sizeof(uint16_t);
 
+		/* skip 2nd rdata field dname */
+		while (rdata_len && *rdata != 0) {
+			uint8_t label_len;
 
+			if (*rdata & 0xC0)
+				return LDNS_WIREPARSE_ERR_OK;
+
+			label_len = *rdata + 1;
+			if (rdata_len < label_len)
+				return LDNS_WIREPARSE_ERR_OK;
+
+			rdata_len -= label_len;
+			rdata += label_len;
+		}
+		assert(*rdata == 0);
+		if (rdata_len < 2)
+			return LDNS_WIREPARSE_ERR_OK;
+
+		rdata_len -= 1;
+		rdata += 1;
+		check_svcbparams(rdata, rdata_len);
 	}
 	return LDNS_WIREPARSE_ERR_OK;
 }
