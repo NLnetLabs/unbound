@@ -199,7 +199,7 @@ sldns_lookup_table* sldns_tsig_errors = sldns_tsig_errors_data;
 /* draft-ietf-dnsop-svcb-https-04: 6. Initial SvcParamKeys */
 const char *svcparamkey_strs[] = {
 	"mandatory", "alpn", "no-default-alpn", "port",
-	"ipv4hint", "echconfig", "ipv6hint"
+	"ipv4hint", "ech", "ipv6hint"
 };
 
 char* sldns_wire2str_pkt(uint8_t* data, size_t len)
@@ -965,6 +965,8 @@ static int sldns_wire2str_svcparam_port2str(char** s,
 	if (data_len != 2)
 		return -1; /* wireformat error, a short is 2 bytes */
 	w = sldns_str_print(s, slen, "=%d", (int)sldns_read_uint16(data));
+	*data     += 2;
+
 	return w;
 }
 
@@ -1117,9 +1119,10 @@ static int sldns_wire2str_svcparam_ech2str(char** s,
 
 int sldns_wire2str_svcparam_scan(uint8_t** d, size_t* dlen, char** s, size_t* slen)
 {
+	char ch;
 	uint16_t svcparamkey, data_len;
 	int written_chars = 0;
-	int r;
+	int r, i;
 
 	/* verify that we have enough data to read svcparamkey and data_len */
 	if(*dlen < 4)
@@ -1130,12 +1133,15 @@ int sldns_wire2str_svcparam_scan(uint8_t** d, size_t* dlen, char** s, size_t* sl
 	*d    += 4;
 	*dlen -= 4;
 
+	// fprintf(stderr, "data_len: %hu\n", data_len);
+
 	/* verify that we have data_len data */
 	if (data_len > *dlen)
 		return -1; 
 
 	written_chars += sldns_print_svcparamkey(s, slen, svcparamkey);
 	if (!data_len) {
+
 	 	/* Some SvcParams MUST have values */
 	 	switch (svcparamkey) {
 	 	case SVCB_KEY_ALPN:
@@ -1143,11 +1149,12 @@ int sldns_wire2str_svcparam_scan(uint8_t** d, size_t* dlen, char** s, size_t* sl
 	 	case SVCB_KEY_IPV4HINT:
 	 	case SVCB_KEY_IPV6HINT:
 	 	case SVCB_KEY_MANDATORY:
-	 		return -1;
+	 		return LDNS_WIREPARSE_ERR_SYNTAX_MISSING_VALUE;
 	 	default:
-	 		return written_chars;
+	 		return LDNS_WIREPARSE_ERR_OK;
 	 	}
 	}
+
 	switch (svcparamkey) {
 	case SVCB_KEY_PORT:
 		r = sldns_wire2str_svcparam_port2str(s, slen, data_len, *d);
@@ -1170,6 +1177,22 @@ int sldns_wire2str_svcparam_scan(uint8_t** d, size_t* dlen, char** s, size_t* sl
 		r = sldns_wire2str_svcparam_ech2str(s, slen, data_len, *d);
 		break;
 	default:
+		r += sldns_str_print(s, slen, "=\"");
+
+		for (i = 0; i < data_len; i++) {
+			ch = (*d)[i];
+
+			if (ch == '"' || ch == '\\')
+				r += sldns_str_print(s, slen, "\\%c", ch);
+
+			else if (!isprint(ch))
+				r += sldns_str_print(s, slen, "\\%03u", (unsigned) ch);
+
+			else
+				r += sldns_str_print(s, slen, "%c", ch);
+
+		}
+		r += sldns_str_print(s, slen, "%c", '"');
 		break;
 	}
 	if (r <= 0)

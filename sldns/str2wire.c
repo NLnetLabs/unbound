@@ -711,6 +711,18 @@ rrinternal_parse_rdata(sldns_buffer* strbuf, char* token, size_t token_len,
 	/* write rdata length */
 	sldns_write_uint16(rr+dname_len+8, (uint16_t)(rr_cur_len-dname_len-10));
 	*rr_len = rr_cur_len;
+	/* SVCB/HTTPS handling  */
+	if (rr_type == LDNS_RR_TYPE_SVCB || rr_type == LDNS_RR_TYPE_HTTPS) {
+
+		
+
+		// 1. Find the size
+		// 2. qsort the data according to the keys
+		// 3. verify that keys are unique
+		// 4. verify that mandatory keys are present and unique
+
+
+	}
 	return LDNS_WIREPARSE_ERR_OK;
 }
 
@@ -976,14 +988,17 @@ sldns_str2wire_svcparam_key_lookup(const char *key, size_t key_len)
 		if (!strncmp(key, "ipv6hint", sizeof("ipv6hint")-1))
 			return SVCB_KEY_IPV6HINT;
 		break;
+
 	case sizeof("ech")-1:
 		if (!strncmp(key, "ech", sizeof("ech")-1))
 			return SVCB_KEY_ECH;
 		break;
+
 	default:
 		break;
 	}
-		if (key_len > sizeof(buf) - 1) {}
+	
+	if (key_len > sizeof(buf) - 1) {}
 		// ERROR: Unknown SvcParamKey
 	else {
 		memcpy(buf, key, key_len);
@@ -1286,7 +1301,6 @@ int sldns_str2wire_svcbparam_alpn_value(const char* val,
 	size_t      str_len;
 	size_t      dst_len;
 	size_t 		val_len;
-	int wire_len;
 	
 	val_len = strlen(val);
 
@@ -1328,8 +1342,28 @@ static int
 sldns_str2wire_svcparam_key_value(const char *key, size_t key_len,
 	const char *val, uint8_t* rd, size_t* rd_len)
 {
+	size_t str_len;
 	uint16_t svcparamkey = sldns_str2wire_svcparam_key_lookup(key, key_len);
 
+
+	// @TODO add case where svcparamkey == -1
+
+	/* key and no value case*/
+	if (val == NULL) {
+		sldns_write_uint16(rd, svcparamkey);
+		sldns_write_uint16(rd + 2, 0);
+		*rd_len = 4;
+
+		return LDNS_WIREPARSE_ERR_OK;
+	}
+
+	// @TODO unescape characters in the value list
+
+	// if (val[0] == '"' && val[str_len - 1]) {
+
+	// }
+
+	/* value is non-empty */
 	switch (svcparamkey) {
 	case SVCB_KEY_PORT:
 		return sldns_str2wire_svcparam_port(val, rd, rd_len);
@@ -1340,18 +1374,24 @@ sldns_str2wire_svcparam_key_value(const char *key, size_t key_len,
 	case SVCB_KEY_MANDATORY:
 		return sldns_str2wire_svcbparam_mandatory(val, rd, rd_len);
 	case SVCB_KEY_NO_DEFAULT_ALPN:
+
+		// @TODO is this superfluous now?
+
 		return sldns_str2wire_svcbparam_no_default_alpn(val, rd, rd_len);
-		// if(zone_is_slave(parser->current_zone->opts))
-		// 	zc_warning_prev_line("no-default-alpn should not have a value");
-		// else
-		// 	zc_error_prev_line("no-default-alpn should not have a value");
-		// break;
 	case SVCB_KEY_ECH:
 		return sldns_str2wire_svcbparam_ech_value(val, rd, rd_len);
 	case SVCB_KEY_ALPN:
 		return sldns_str2wire_svcbparam_alpn_value(val, rd, rd_len);
 	default:
-		break;
+		// @TODO escaping here -> copy from alpn?
+
+		str_len = strlen(val);
+		sldns_write_uint16(rd, svcparamkey);
+		sldns_write_uint16(rd + 2, str_len);
+		memcpy(rd + 4, val, str_len);
+		*rd_len = 4 + str_len;
+
+		return LDNS_WIREPARSE_ERR_OK;
 	}
 
 	// @TODO change to error?
@@ -1360,18 +1400,35 @@ sldns_str2wire_svcparam_key_value(const char *key, size_t key_len,
 
 int sldns_str2wire_svcparam_buf(const char* str, uint8_t* rd, size_t* rd_len)
 {
+	size_t str_len;
 	const char* eq_pos;
-
-	int ret;
+	char unescaped_val[65536];
+	char* val_out = unescaped_val;
+	const char* val_in;
 
 	eq_pos = strchr(str, '=');
 
-	// @TODO handle "key=" case
+	if (eq_pos != NULL && eq_pos[1]) { /* case: key=value */
+		val_in = eq_pos + 1;
+		
+		/* unescape characters and "" blocks */
+		if (*val_in == '"') {
+			val_in++;
+			while (*val_in != '"' && sldns_parse_char( (uint8_t*) val_out, &val_in)) {
+				val_out++;
+			}
+		} else {
+			while ( sldns_parse_char( (uint8_t*) val_out, &val_in)) {
+				val_out++;
+			}
+		}
+		*val_out = 0;
 
-	/* Verify that we have a have a value */
-	if (eq_pos != NULL) {
-		return sldns_str2wire_svcparam_key_value(str, eq_pos - str, eq_pos + 1, rd, rd_len);
-	} else {
+		return sldns_str2wire_svcparam_key_value(str, eq_pos - str, 
+		                                         unescaped_val[0] ? unescaped_val : NULL, rd, rd_len);
+	} else if (eq_pos != NULL && !(eq_pos[1])) { /* case: key= */
+		return sldns_str2wire_svcparam_key_value(str, eq_pos - str, NULL, rd, rd_len);
+	} else { /* case: key */
 		return sldns_str2wire_svcparam_key_value(str, strlen(str), NULL, rd, rd_len);
 	}
 
