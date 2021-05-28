@@ -1,3 +1,20 @@
+27 May 2021: Wouter
+	- Merge #496 from banburybill: Use build system endianness if
+	  available, otherwise try to work it out.
+	- zonemd-check: yesno option, default no, enables the processing
+	  of ZONEMD records for that zone.
+
+25 May 2021: Wouter
+	- Move the NSEC3 max iterations count in line with the 150 value
+	  used by BIND, Knot and PowerDNS. This sets the default value
+	  for it in the configuration to 150 for all key sizes.
+	- Fix #492: module-config respip missing in unbound.conf.5.in man
+	  page. Merges #494 from he32.
+	- For #492: Fix font highlighting for the man page on emacs.
+
+21 May 2021: Wouter
+	- Test code has -q option for quiet output.
+
 19 May 2021: George
 	- Fix for #411, #439, #469: Reset the DNS message ID when moving queries
 	  between TCP streams.

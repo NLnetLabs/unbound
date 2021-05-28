@@ -364,7 +364,8 @@ extern int yydebug;
     VAR_EDNS_CLIENT_STRING_OPCODE = 565, /* VAR_EDNS_CLIENT_STRING_OPCODE  */
     VAR_NSID = 566,                /* VAR_NSID  */
     VAR_ZONEMD_PERMISSIVE_MODE = 567, /* VAR_ZONEMD_PERMISSIVE_MODE  */
-    VAR_ZONEMD_REJECT_ABSENCE = 568 /* VAR_ZONEMD_REJECT_ABSENCE  */
+    VAR_ZONEMD_CHECK = 568,        /* VAR_ZONEMD_CHECK  */
+    VAR_ZONEMD_REJECT_ABSENCE = 569 /* VAR_ZONEMD_REJECT_ABSENCE  */
   };
   typedef enum yytokentype yytoken_kind_t;
 #endif
@@ -682,7 +683,8 @@ extern int yydebug;
 #define VAR_EDNS_CLIENT_STRING_OPCODE 565
 #define VAR_NSID 566
 #define VAR_ZONEMD_PERMISSIVE_MODE 567
-#define VAR_ZONEMD_REJECT_ABSENCE 568
+#define VAR_ZONEMD_CHECK 568
+#define VAR_ZONEMD_REJECT_ABSENCE 569
 
 /* Value type.  */
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
@@ -692,7 +694,7 @@ union YYSTYPE
 
 	char*	str;
 
-#line 696 "util/configparser.h"
+#line 698 "util/configparser.h"
 
 };
 typedef union YYSTYPE YYSTYPE;
