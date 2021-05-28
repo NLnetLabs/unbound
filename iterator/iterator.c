@@ -923,7 +923,7 @@ prime_stub(struct module_qstate* qstate, struct iter_qstate* iq, int id,
 			(void)error_response(qstate, id, LDNS_RCODE_SERVFAIL);
 			return 1; /* return 1 to make module stop, with error */
 		}
-		log_nametypeclass(VERB_DETAIL, "use stub", stub_dp->name, 
+		log_nametypeclass(VERB_QUERY, "use stub", stub_dp->name, 
 			LDNS_RR_TYPE_NS, qclass);
 		return r;
 	}
@@ -1286,7 +1286,7 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 	size_t delnamelen, dpnamelen=0;
 	struct dns_msg* msg = NULL;
 
-	log_query_info(VERB_DETAIL, "resolving", &qstate->qinfo);
+	log_query_info(VERB_QUERY, "resolving", &qstate->qinfo);
 	/* check effort */
 
 	/* We enforce a maximum number of query restarts. This is primarily a
@@ -2821,8 +2821,8 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 	if(type == RESPONSE_TYPE_ANSWER) {
 		/* ANSWER type responses terminate the query algorithm, 
 		 * so they sent on their */
-		if(verbosity >= VERB_DETAIL) {
-			verbose(VERB_DETAIL, "query response was %s",
+		if(verbosity >= VERB_QUERY) {
+			verbose(VERB_QUERY, "query response was %s",
 				FLAGS_GET_RCODE(iq->response->rep->flags)
 				==LDNS_RCODE_NXDOMAIN?"NXDOMAIN ANSWER":
 				(iq->response->rep->an_numrrsets?"ANSWER":
@@ -2913,7 +2913,7 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 	} else if(type == RESPONSE_TYPE_REFERRAL) {
 		/* REFERRAL type responses get a reset of the 
 		 * delegation point, and back to the QUERYTARGETS_STATE. */
-		verbose(VERB_DETAIL, "query response was REFERRAL");
+		verbose(VERB_QUERY, "query response was REFERRAL");
 
 		if(!(iq->chase_flags & BIT_RD) && !iq->ratelimit_ok) {
 			/* we have a referral, no ratelimit, we can send
@@ -3025,7 +3025,7 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 		/* CNAME type responses get a query restart (i.e., get a 
 		 * reset of the query state and go back to INIT_REQUEST_STATE).
 		 */
-		verbose(VERB_DETAIL, "query response was CNAME");
+		verbose(VERB_QUERY, "query response was CNAME");
 		if(verbosity >= VERB_ALGO)
 			log_dns_msg("cname msg", &iq->response->qinfo, 
 				iq->response->rep);
@@ -3094,7 +3094,7 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 		return next_state(iq, INIT_REQUEST_STATE);
 	} else if(type == RESPONSE_TYPE_LAME) {
 		/* Cache the LAMEness. */
-		verbose(VERB_DETAIL, "query response was %sLAME",
+		verbose(VERB_QUERY, "query response was %sLAME",
 			dnsseclame?"DNSSEC ":"");
 		if(!dname_subdomain_c(iq->qchase.qname, iq->dp->name)) {
 			log_err("mark lame: mismatch in qname and dpname");
@@ -3111,7 +3111,7 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 		}
 	} else if(type == RESPONSE_TYPE_REC_LAME) {
 		/* Cache the LAMEness. */
-		verbose(VERB_DETAIL, "query response REC_LAME: "
+		verbose(VERB_QUERY, "query response REC_LAME: "
 			"recursive but not authoritative server");
 		if(!dname_subdomain_c(iq->qchase.qname, iq->dp->name)) {
 			log_err("mark rec_lame: mismatch in qname and dpname");
@@ -3119,7 +3119,7 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 		} else if(qstate->reply) {
 			/* need addr for lameness cache, but we may have
 			 * gotten this from cache, so test to be sure */
-			verbose(VERB_DETAIL, "mark as REC_LAME");
+			verbose(VERB_QUERY, "mark as REC_LAME");
 			if(!infra_set_lame(qstate->env->infra_cache, 
 				&qstate->reply->addr, qstate->reply->addrlen, 
 				iq->dp->name, iq->dp->namelen, 
@@ -3131,7 +3131,7 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 		 * In this case, the event is just sent directly back to 
 		 * the QUERYTARGETS_STATE without resetting anything, 
 		 * because, clearly, the next target must be tried. */
-		verbose(VERB_DETAIL, "query response was THROWAWAY");
+		verbose(VERB_QUERY, "query response was THROWAWAY");
 	} else {
 		log_warn("A query response came back with an unknown type: %d",
 			(int)type);
@@ -3765,7 +3765,7 @@ process_response(struct module_qstate* qstate, struct iter_qstate* iq,
 			/* need fresh attempts for the 0x20 fallback, if
 			 * that was the cause for the failure */
 			iter_dec_attempts(iq->dp, 3);
-			verbose(VERB_DETAIL, "Capsforid: timeouts, starting fallback");
+			verbose(VERB_QUERY, "Capsforid: timeouts, starting fallback");
 			goto handle_it;
 		}
 		goto handle_it;
@@ -3834,7 +3834,7 @@ process_response(struct module_qstate* qstate, struct iter_qstate* iq,
 			iq->caps_minimisation_state = DONOT_MINIMISE_STATE;
 			iq->state = QUERYTARGETS_STATE;
 			iq->num_current_queries--;
-			verbose(VERB_DETAIL, "Capsforid: scrub failed, starting fallback with no response");
+			verbose(VERB_QUERY, "Capsforid: scrub failed, starting fallback with no response");
 		}
 		iq->scrub_failures++;
 		goto handle_it;
@@ -3844,8 +3844,8 @@ process_response(struct module_qstate* qstate, struct iter_qstate* iq,
 	iq->response = dns_alloc_msg(pkt, prs, qstate->region);
 	if(!iq->response)
 		goto handle_it;
-	log_query_info(VERB_DETAIL, "response for", &qstate->qinfo);
-	log_name_addr(VERB_DETAIL, "reply from", iq->dp->name, 
+	log_query_info(VERB_QUERY, "response for", &qstate->qinfo);
+	log_name_addr(VERB_QUERY, "reply from", iq->dp->name, 
 		&qstate->reply->addr, qstate->reply->addrlen);
 	if(verbosity >= VERB_ALGO)
 		log_dns_msg("incoming scrubbed packet:", &iq->response->qinfo, 
@@ -3878,7 +3878,7 @@ process_response(struct module_qstate* qstate, struct iter_qstate* iq,
 			iq->caps_minimisation_state = iq->minimisation_state;
 			iq->state = QUERYTARGETS_STATE;
 			iq->num_current_queries--;
-			verbose(VERB_DETAIL, "Capsforid: starting fallback");
+			verbose(VERB_QUERY, "Capsforid: starting fallback");
 			goto handle_it;
 		} else {
 			/* check if reply is the same, otherwise, fail */
@@ -3904,7 +3904,7 @@ process_response(struct module_qstate* qstate, struct iter_qstate* iq,
 				/* no instructions here, skip other else */
 			} else if(!reply_equal(iq->response->rep, iq->caps_reply,
 				qstate->env->scratch)) {
-				verbose(VERB_DETAIL, "Capsforid fallback: "
+				verbose(VERB_QUERY, "Capsforid fallback: "
 					"getting different replies, failed");
 				outbound_list_remove(&iq->outlist, outbound);
 				errinf(qstate, "0x20 failed, then got different replies in fallback");
@@ -3916,7 +3916,7 @@ process_response(struct module_qstate* qstate, struct iter_qstate* iq,
 			iq->caps_server++;
 			iq->state = QUERYTARGETS_STATE;
 			iq->num_current_queries--;
-			verbose(VERB_DETAIL, "Capsforid: reply is equal. "
+			verbose(VERB_QUERY, "Capsforid: reply is equal. "
 				"go to next fallback");
 			goto handle_it;
 		}
