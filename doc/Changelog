@@ -1,3 +1,6 @@
+1 June 2021: George
+	- Fix test for zonemd-check option.
+
 27 May 2021: Wouter
 	- Merge #496 from banburybill: Use build system endianness if
 	  available, otherwise try to work it out.
