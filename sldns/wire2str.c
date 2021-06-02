@@ -150,9 +150,11 @@ static sldns_lookup_table sldns_wireparse_errors_data[] = {
 	{ LDNS_WIREPARSE_ERR_INCLUDE, "$INCLUDE directive was seen in the zone" },
 	{ LDNS_WIREPARSE_ERR_PARENTHESIS, "Parse error, parenthesis mismatch" },
 	{ LDNS_WIREPARSE_ERR_SVCB_UNKNOWN_KEY, "Unknown SvcParamKey"},
-	{ LDNS_WIREPARSE_ERR_SVCB_MISSING_PARAM, "Value expected for SvcParam"},
+	{ LDNS_WIREPARSE_ERR_SVCB_MISSING_PARAM, "SvcParam is missing a SvcParamValue"},
 	{ LDNS_WIREPARSE_ERR_SVCB_DUPLICATE_KEYS, "Duplicate SVCB key found"},
 	{ LDNS_WIREPARSE_ERR_SVCB_MANDATORY_TOO_MANY_KEYS, "Too many keys in mandatory" },
+	{ LDNS_WIREPARSE_ERR_SVCB_TOO_MANY_PARAMS,
+		"Too many SvcParams. Unbound only allows 64 entries" },
 	{ LDNS_WIREPARSE_ERR_SVCB_MANDATORY_MISSING_PARAM,
 		"Mandatory SvcParamKey is missing"},
 	{ LDNS_WIREPARSE_ERR_SVCB_MANDATORY_DUPLICATE_KEY,
@@ -166,7 +168,9 @@ static sldns_lookup_table sldns_wireparse_errors_data[] = {
 	{ LDNS_WIREPARSE_ERR_SVCB_IPV6_TOO_MANY_KEYS,
 		"Too many IPv6 addresses in ipv6hint" },
 	{ LDNS_WIREPARSE_ERR_SVCB_ALPN_KEY_TOO_LARGE,
-		"alpn strings need to be smaller than 255 chars"},
+		"Alpn strings need to be smaller than 255 chars"},
+	{ LDNS_WIREPARSE_ERR_SVCB_NO_DEFAULT_ALPN_VALUE,
+		"No-default-alpn should not have a value" },
 	{ 0, NULL }
 };
 sldns_lookup_table* sldns_wireparse_errors = sldns_wireparse_errors_data;

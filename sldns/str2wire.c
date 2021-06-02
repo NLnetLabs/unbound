@@ -639,23 +639,19 @@ static int sldns_str2wire_check_svcbparams(uint8_t* rdata, uint16_t rdata_len)
 
 		svcparams[nparams] = rdata_ptr;
 		if (rdata_remaining < 4)
-			// @TODO verify that these are correct
 			return LDNS_WIREPARSE_ERR_GENERAL;
 		svcbparam_len = sldns_read_uint16(rdata_ptr + 2);
 		rdata_remaining -= 4;
 		rdata_ptr += 4;
 
 		if (rdata_remaining < svcbparam_len)
-			// @TODO verify that these are correct
 			return LDNS_WIREPARSE_ERR_GENERAL;
 		rdata_remaining -= svcbparam_len;
 		rdata_ptr += svcbparam_len;
 
 		nparams += 1;
 		if (nparams > sizeof(svcparams))
-			// @TODO Too many svcparams. Unbound allows only
-			//       sizeof(svcparams) svcparams.
-			return LDNS_WIREPARSE_ERR_GENERAL;
+			return LDNS_WIREPARSE_ERR_SVCB_TOO_MANY_PARAMS;
 	}
 
 	/* In draft-ietf-dnsop-svcb-https-05 Section 7:
@@ -674,7 +670,7 @@ static int sldns_str2wire_check_svcbparams(uint8_t* rdata, uint16_t rdata_len)
 	 *
 	 * If they key has already been seen, we have a duplicate
 	 */
-	for (i = 0; i < nparams - 1; i++) {
+	for (i = 0; i < nparams; i++) {
 		uint16_t key = sldns_read_uint16(svcparams[i]);
 
 		if (i + 1 < nparams && key == sldns_read_uint16(svcparams[i+1]))
@@ -686,16 +682,17 @@ static int sldns_str2wire_check_svcbparams(uint8_t* rdata, uint16_t rdata_len)
 
 	/* 4. verify that all the SvcParamKeys in mandatory are present */
 	if (mandatory) {
-		/* divide by sizeof(uint16_t)*/
+
+		/* Divide by sizeof(uint16_t)*/
 		uint16_t mandatory_len = sldns_read_uint16(mandatory + 2) >> 1;
 
-		// @TODO do we need this?
-		if (mandatory_len < 1)
-			return LDNS_WIREPARSE_ERR_SVCB_MISSING_PARAM;
+		/* Guaranteed by sldns_str2wire_svcparam_key_value */
+		assert(mandatory_len > 0);
 
 		for (i = 0; i < mandatory_len; i++) {
-			// @TODO fix ugly math
-			uint16_t mandatory_key = sldns_read_uint16(mandatory + 4 + i * 2);
+			uint16_t mandatory_key = sldns_read_uint16(mandatory
+			                       + 2 * sizeof(uint16_t)
+			                       + i * sizeof(uint16_t));
 			uint8_t found = 0;
 
 			for (j = 0; j < nparams; j++) {
@@ -1333,18 +1330,18 @@ sldns_str2wire_svcbparam_mandatory(const char* val, uint8_t* rd, size_t* rd_len)
 	 */
 	qsort((void *)(rd + 4), count, sizeof(uint16_t), sldns_network_uint16_cmp);
 
+	/* In draft-ietf-dnsop-svcb-https-05 Section 8
+	 * automatically mandatory MUST NOT appear in its own value-list
+	 */
+	if (sldns_read_uint16(rd + 4) == SVCB_KEY_MANDATORY)
+		return LDNS_WIREPARSE_ERR_SVCB_MANDATORY_IN_MANDATORY;
+
 	/* Guarantee key uniqueness. After the sort we only need to
 	 * compare neighbours */
 	if (count > 1) {
 		for (i = 0; i < count - 1; i++) {
 			uint8_t* current_pos = (rd + 4 + (sizeof(uint16_t) * i));
 			uint16_t key = sldns_read_uint16(current_pos);
-
-			/* In draft-ietf-dnsop-svcb-https-05 Section 8
-			 * automatically mandatory MUST NOT appear in its own value-list
-			 */
-			if (key == SVCB_KEY_MANDATORY)
-				return LDNS_WIREPARSE_ERR_SVCB_MANDATORY_IN_MANDATORY;
 
 			if (key == sldns_read_uint16(current_pos + 2)) {
 				return LDNS_WIREPARSE_ERR_SVCB_MANDATORY_DUPLICATE_KEY;
@@ -1356,28 +1353,18 @@ sldns_str2wire_svcbparam_mandatory(const char* val, uint8_t* rd, size_t* rd_len)
 }
 
 static int
-sldns_str2wire_svcbparam_no_default_alpn(const char* val, uint8_t* rd, size_t* rd_len)
-{
-	if (*rd_len < 4)
-		return LDNS_WIREPARSE_ERR_BUFFER_TOO_SMALL;
-
-	sldns_write_uint16(rd, SVCB_KEY_NO_DEFAULT_ALPN);
-	sldns_write_uint16(rd + 2, 0);
-	*rd_len = 4;
-
-	return LDNS_WIREPARSE_ERR_OK;
-}
-
-static int
 sldns_str2wire_svcbparam_ech_value(const char* val, uint8_t* rd, size_t* rd_len)
 {
 	uint8_t buffer[LDNS_MAX_RDFLEN];
 	int wire_len;
 
-	// @TODO fix this
-	// if(strcmp(b64, "0") == 0) {
-		/* single 0 represents empty buffer */
-	// }
+	/* single 0 represents empty buffer */
+	if(strcmp(val, "0") == 0) {
+		sldns_write_uint16(rd, SVCB_KEY_ECH);
+		sldns_write_uint16(rd + 2, 0);
+
+		return LDNS_WIREPARSE_ERR_OK;
+	}
 
 	wire_len = sldns_b64_pton(val, buffer, LDNS_MAX_RDFLEN);
 
@@ -1523,10 +1510,7 @@ sldns_str2wire_svcparam_key_value(const char *key, size_t key_len,
 	case SVCB_KEY_MANDATORY:
 		return sldns_str2wire_svcbparam_mandatory(val, rd, rd_len);
 	case SVCB_KEY_NO_DEFAULT_ALPN:
-
-		// @TODO is this superfluous now?
-
-		return sldns_str2wire_svcbparam_no_default_alpn(val, rd, rd_len);
+		return LDNS_WIREPARSE_ERR_SVCB_NO_DEFAULT_ALPN_VALUE;
 	case SVCB_KEY_ECH:
 		return sldns_str2wire_svcbparam_ech_value(val, rd, rd_len);
 	case SVCB_KEY_ALPN:
