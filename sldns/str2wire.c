@@ -640,14 +640,14 @@ static int sldns_str2wire_check_svcbparams(uint8_t* rdata, uint16_t rdata_len)
 		svcparams[nparams] = rdata_ptr;
 		if (rdata_remaining < 4)
 			// @TODO verify that these are correct
-			return LDNS_WIREPARSE_ERR_OK;
+			return LDNS_WIREPARSE_ERR_GENERAL;
 		svcbparam_len = sldns_read_uint16(rdata_ptr + 2);
 		rdata_remaining -= 4;
 		rdata_ptr += 4;
 
 		if (rdata_remaining < svcbparam_len)
 			// @TODO verify that these are correct
-			return LDNS_WIREPARSE_ERR_OK;
+			return LDNS_WIREPARSE_ERR_GENERAL;
 		rdata_remaining -= svcbparam_len;
 		rdata_ptr += svcbparam_len;
 
@@ -655,7 +655,7 @@ static int sldns_str2wire_check_svcbparams(uint8_t* rdata, uint16_t rdata_len)
 		if (nparams > sizeof(svcparams))
 			// @TODO Too many svcparams. Unbound allows only
 			//       sizeof(svcparams) svcparams.
-			return LDNS_WIREPARSE_ERR_OK;
+			return LDNS_WIREPARSE_ERR_GENERAL;
 	}
 
 	/* In draft-ietf-dnsop-svcb-https-05 Section 7:
@@ -714,11 +714,13 @@ static int sldns_str2wire_check_svcbparams(uint8_t* rdata, uint16_t rdata_len)
 		uint16_t svcparam_len = sldns_read_uint16(svcparams[i] + 2)
 		                      + 2 * sizeof(uint16_t);
 
+		if (new_rdata_ptr + svcparam_len - new_rdata > sizeof(new_rdata))
+			return LDNS_WIREPARSE_ERR_BUFFER_TOO_SMALL;
+
 		memcpy(new_rdata_ptr, svcparams[i], svcparam_len);
 		new_rdata_ptr += svcparam_len;
 	}
 	memcpy(rdata, new_rdata, rdata_len);
-
 	return LDNS_WIREPARSE_ERR_OK;
 }
 
