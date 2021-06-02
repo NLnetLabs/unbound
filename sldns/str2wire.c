@@ -625,31 +625,37 @@ static int sldns_str2wire_svcparam_key_cmp(const void *a, const void *b)
  */
 static int sldns_str2wire_check_svcbparams(uint8_t* rdata, uint16_t rdata_len)
 {
-	size_t nparams = 0, i, j;
-	uint8_t new_rdata[65536];
+	size_t   nparams = 0, i, j;
+	uint8_t  new_rdata[65536];
 	uint8_t* new_rdata_ptr = new_rdata;
 	uint8_t* svcparams[64];
 	uint8_t* mandatory = NULL;
+	uint8_t* rdata_ptr = rdata;
+	uint16_t rdata_remaining = rdata_len;
 
 	/* find the SvcParams */
-	while (rdata_len) {
+	while (rdata_remaining) {
 		uint16_t svcbparam_len;
 
-		svcparams[nparams] = rdata;
-		if (rdata_len < 4)
+		svcparams[nparams] = rdata_ptr;
+		if (rdata_remaining < 4)
 			// @TODO verify that these are correct
 			return LDNS_WIREPARSE_ERR_OK;
-		svcbparam_len = sldns_read_uint16(rdata + 2);
-		rdata_len -= 4;
-		rdata += 4;
+		svcbparam_len = sldns_read_uint16(rdata_ptr + 2);
+		rdata_remaining -= 4;
+		rdata_ptr += 4;
 
-		if (rdata_len < svcbparam_len)
+		if (rdata_remaining < svcbparam_len)
 			// @TODO verify that these are correct
 			return LDNS_WIREPARSE_ERR_OK;
-		rdata_len -= svcbparam_len;
-		rdata += svcbparam_len;
+		rdata_remaining -= svcbparam_len;
+		rdata_ptr += svcbparam_len;
 
 		nparams += 1;
+		if (nparams > sizeof(svcparams))
+			// @TODO Too many svcparams. Unbound allows only
+			//       sizeof(svcparams) svcparams.
+			return LDNS_WIREPARSE_ERR_OK;
 	}
 
 	/* In draft-ietf-dnsop-svcb-https-05 Section 7:
@@ -703,15 +709,15 @@ static int sldns_str2wire_check_svcbparams(uint8_t* rdata, uint16_t rdata_len)
 
 	}
 
-	// Write rdata
+	// Write rdata in correct order
 	for (i = 0; i < nparams; i++) {
-		uint16_t svcparam_len = sldns_read_uint16(svcparams[i] + 2) + 4;
-		fprintf(stderr, "svcparam_len: %d\n", svcparam_len);
+		uint16_t svcparam_len = sldns_read_uint16(svcparams[i] + 2)
+		                      + 2 * sizeof(uint16_t);
+
 		memcpy(new_rdata_ptr, svcparams[i], svcparam_len);
 		new_rdata_ptr += svcparam_len;
 	}
-	memcpy(rdata, new_rdata, new_rdata_ptr - new_rdata);
-	fprintf(stderr, "new_rdata_ptr - new_rdata: %d\n", new_rdata_ptr - new_rdata);
+	memcpy(rdata, new_rdata, rdata_len);
 
 	return LDNS_WIREPARSE_ERR_OK;
 }
