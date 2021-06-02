@@ -149,6 +149,13 @@ static sldns_lookup_table sldns_wireparse_errors_data[] = {
 	{ LDNS_WIREPARSE_ERR_SYNTAX_INTEGER_OVERFLOW, "Syntax error, integer overflow" },
 	{ LDNS_WIREPARSE_ERR_INCLUDE, "$INCLUDE directive was seen in the zone" },
 	{ LDNS_WIREPARSE_ERR_PARENTHESIS, "Parse error, parenthesis mismatch" },
+	{ LDNS_WIREPARSE_ERR_SVCB_MISSING_PARAM, "Value expected for SvcParam"},
+	{ LDNS_WIREPARSE_ERR_SVCB_MISSING_MANDATORY, "Mandatory SvcParamKey is missing"},
+	{ LDNS_WIREPARSE_ERR_SVCB_MANDATORY_DUPLICATE_KEY,
+		"Keys in SvcParam mandatory MUST be unique" },
+	{ LDNS_WIREPARSE_ERR_SVCB_MANDATORY_IN_MANDATORY, 
+		"mandatory MUST not be included as mandatory parameter" },
+	{ LDNS_WIREPARSE_ERR_SVCB_DUPLICATE_KEYS, "Duplicate SVCB key found"},
 	{ 0, NULL }
 };
 sldns_lookup_table* sldns_wireparse_errors = sldns_wireparse_errors_data;
@@ -1132,8 +1139,6 @@ int sldns_wire2str_svcparam_scan(uint8_t** d, size_t* dlen, char** s, size_t* sl
 	data_len = sldns_read_uint16(*d+2);
 	*d    += 4;
 	*dlen -= 4;
-
-	// fprintf(stderr, "data_len: %hu\n", data_len);
 
 	/* verify that we have data_len data */
 	if (data_len > *dlen)

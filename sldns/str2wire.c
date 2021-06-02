@@ -614,41 +614,91 @@ sldns_affix_token(sldns_buffer* strbuf, char* token, size_t* token_len,
 	return 1;
 }
 
-static void sldns_check_svcbparams(uint8_t* rdata, uint16_t rdata_len)
+static int sldns_str2wire_svcparam_key_cmp(const void *a, const void *b)
 {
-	size_t nparams = 0, i;
-	uint8_t* svcparams[10240]; // @TODO change array size in actual max number of svcbparams
+	return sldns_read_uint16(*(uint8_t**) a)
+	     - sldns_read_uint16(*(uint8_t**) b);
+}
 
-	// 1. Find the SvcParams
+static int sldns_str2wire_check_svcbparams(uint8_t* rdata, uint16_t rdata_len)
+{
+	size_t nparams = 0, i, j;
+	uint8_t* svcparams[10240]; // @TODO change array size in actual max number of svcbparams
+	uint8_t* mandatory = NULL;
+
+	/* find the SvcParams */
 	while (rdata_len) {
 		uint16_t svcbparam_len;
 
 		svcparams[nparams] = rdata;
 		if (rdata_len < 4)
-			return;
+			// @TODO verify that these are correct
+			return LDNS_WIREPARSE_ERR_OK;
 		svcbparam_len = sldns_read_uint16(rdata + 2);
 		rdata_len -= 4;
 		rdata += 4;
 
 		if (rdata_len < svcbparam_len)
-			return;
+			// @TODO verify that these are correct
+			return LDNS_WIREPARSE_ERR_OK;
 		rdata_len -= svcbparam_len;
 		rdata += svcbparam_len;
 
 		nparams += 1;
 	}
 
-	for (i = 0; i < nparams; i++) {
-		uint8_t* svcparam_data = svcparams[i];
-		uint16_t svcparam_key = sldns_read_uint16(svcparam_data);
-		uint16_t svcparam_len = sldns_read_uint16(svcparam_data + 2);
+	/* In draft-ietf-dnsop-svcb-https-05 Section 7:
+	 *
+	 *     In wire format, the keys are represented by their numeric
+	 *     values in network byte order, concatenated in ascending order.
+	 */
+	qsort((void *)svcparams
+	     ,nparams
+	     ,sizeof(uint8_t*)
+	     ,sldns_str2wire_svcparam_key_cmp);
 
-		fprintf(stderr, "param %zu, key: %d, len: %d\n"
-		              , i, (int)svcparam_key, (int)svcparam_len);
+	/* In draft-ietf-dnsop-svcb-https-05 Section 7:
+	 *
+	 *     Keys (...) MUST NOT appear more than once.
+	 *
+	 * If they key has already been seen, we have a duplicate
+	 */
+	for (i = 0; i < nparams - 1; i++) {
+		uint16_t key = sldns_read_uint16(svcparams[i]);
+
+		if (i + 1 < nparams && key == sldns_read_uint16(svcparams[i+1]))
+			return LDNS_WIREPARSE_ERR_SVCB_DUPLICATE_KEYS;
+
+		if (key == SVCB_KEY_MANDATORY)
+			mandatory = svcparams[i];
 	}
-	// 2. qsort the data according to the keys
-	// 3. verify that keys are unique
-	// 4. verify that mandatory keys are present and unique
+
+	/* 4. verify that all the SvcParamKeys in mandatory are present */
+	if (mandatory) {
+		/* divide by sizeof(uint16_t)*/
+		uint16_t mandatory_len = sldns_read_uint16(mandatory + 2) >> 1;
+
+		// @TODO do we need this?
+		if (mandatory_len < 1)
+			return LDNS_WIREPARSE_ERR_SVCB_MISSING_PARAM;
+
+		for (i = 0; i < mandatory_len; i++) {
+			// @TODO fix ugly math
+			uint16_t mandatory_key = sldns_read_uint16(mandatory + 2 + 2 * i);
+			uint8_t found = 0;
+
+			for (j = 0; j < nparams; j++) {
+				if (mandatory_key == sldns_read_uint16(svcparams[j]))
+					found = 1;
+			}
+
+			if (!found)
+				return LDNS_WIREPARSE_ERR_SVCB_MISSING_MANDATORY;
+		}
+
+	}
+
+	return LDNS_WIREPARSE_ERR_OK;
 }
 
 /** parse rdata from string into rr buffer(-remainder after dname). */
@@ -750,7 +800,7 @@ rrinternal_parse_rdata(sldns_buffer* strbuf, char* token, size_t token_len,
 	*rr_len = rr_cur_len;
 	/* SVCB/HTTPS handling  */
 	if (rr_type == LDNS_RR_TYPE_SVCB || rr_type == LDNS_RR_TYPE_HTTPS) {
-		uint16_t rdata_len = rr_cur_len - dname_len - 10;
+		size_t rdata_len = rr_cur_len - dname_len - 10;
 		uint8_t *rdata = rr+dname_len + 10;
 		
 		/* skip 1st rdata field SvcPriority (uint16_t) */
@@ -780,7 +830,8 @@ rrinternal_parse_rdata(sldns_buffer* strbuf, char* token, size_t token_len,
 
 		rdata_len -= 1;
 		rdata += 1;
-		check_svcbparams(rdata, rdata_len);
+		return sldns_str2wire_check_svcbparams(rdata, rdata_len);
+
 	}
 	return LDNS_WIREPARSE_ERR_OK;
 }
@@ -1264,12 +1315,31 @@ sldns_str2wire_svcbparam_mandatory(const char* val, uint8_t* rd, size_t* rd_len)
 		key_dst += 1;
 	}
 
-	/* In draft-ietf-dnsop-svcb-https-04 Section 7:
+	/* In draft-ietf-dnsop-svcb-https-05 Section 7:
 	 *
 	 *    "In wire format, the keys are represented by their numeric
 	 *     values in network byte order, concatenated in ascending order."
 	 */
 	qsort((void *)(rd + 4), count, sizeof(uint16_t), sldns_network_uint16_cmp);
+
+	/* Guarantee key uniqueness. After the sort we only need to
+	 * compare neighbours */
+	if (count > 1) {
+		for (i = 0; i < count - 1; i++) {
+			uint8_t* current_pos = (rd + 4 + (sizeof(uint16_t) * i));
+			uint16_t key = sldns_read_uint16(current_pos);
+
+			/* In draft-ietf-dnsop-svcb-https-05 Section 8
+			 * automatically mandatory MUST NOT appear in its own value-list
+			 */
+			if (key == SVCB_KEY_MANDATORY)
+				return LDNS_WIREPARSE_ERR_SVCB_MANDATORY_IN_MANDATORY;
+
+			if (key == sldns_read_uint16(current_pos + 2)) {
+				return LDNS_WIREPARSE_ERR_SVCB_MANDATORY_DUPLICATE_KEY;
+			}
+		}
+	}
 
 	return LDNS_WIREPARSE_ERR_OK;
 }
@@ -1406,6 +1476,8 @@ sldns_str2wire_svcparam_key_value(const char *key, size_t key_len,
 
 
 	// @TODO add case where svcparamkey == -1
+
+	// @TODO add cases where keys cannot be vallueless -> LDNS_WIREPARSE_ERR_SVCB_MISSING_PARAM
 
 	/* key and no value case*/
 	if (val == NULL) {
