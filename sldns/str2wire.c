@@ -620,10 +620,15 @@ static int sldns_str2wire_svcparam_key_cmp(const void *a, const void *b)
 	     - sldns_read_uint16(*(uint8_t**) b);
 }
 
+/**
+ * Add constraints to the SVCB RRs which involve the whole set
+ */
 static int sldns_str2wire_check_svcbparams(uint8_t* rdata, uint16_t rdata_len)
 {
 	size_t nparams = 0, i, j;
-	uint8_t* svcparams[10240]; // @TODO change array size in actual max number of svcbparams
+	uint8_t new_rdata[65536];
+	uint8_t* new_rdata_ptr = new_rdata;
+	uint8_t* svcparams[64];
 	uint8_t* mandatory = NULL;
 
 	/* find the SvcParams */
@@ -684,7 +689,7 @@ static int sldns_str2wire_check_svcbparams(uint8_t* rdata, uint16_t rdata_len)
 
 		for (i = 0; i < mandatory_len; i++) {
 			// @TODO fix ugly math
-			uint16_t mandatory_key = sldns_read_uint16(mandatory + 2 + 2 * i);
+			uint16_t mandatory_key = sldns_read_uint16(mandatory + 4 + i * 2);
 			uint8_t found = 0;
 
 			for (j = 0; j < nparams; j++) {
@@ -693,10 +698,20 @@ static int sldns_str2wire_check_svcbparams(uint8_t* rdata, uint16_t rdata_len)
 			}
 
 			if (!found)
-				return LDNS_WIREPARSE_ERR_SVCB_MISSING_MANDATORY;
+				return LDNS_WIREPARSE_ERR_SVCB_MANDATORY_MISSING_PARAM;
 		}
 
 	}
+
+	// Write rdata
+	for (i = 0; i < nparams; i++) {
+		uint16_t svcparam_len = sldns_read_uint16(svcparams[i] + 2) + 4;
+		fprintf(stderr, "svcparam_len: %d\n", svcparam_len);
+		memcpy(new_rdata_ptr, svcparams[i], svcparam_len);
+		new_rdata_ptr += svcparam_len;
+	}
+	memcpy(rdata, new_rdata, new_rdata_ptr - new_rdata);
+	fprintf(stderr, "new_rdata_ptr - new_rdata: %d\n", new_rdata_ptr - new_rdata);
 
 	return LDNS_WIREPARSE_ERR_OK;
 }
@@ -1107,14 +1122,7 @@ sldns_str2wire_svcparam_key_lookup(const char *key, size_t key_len)
 	default:
 		break;
 	}
-	
-	if (key_len > sizeof(buf) - 1) {}
-		// ERROR: Unknown SvcParamKey
-	else {
-		memcpy(buf, key, key_len);
-		buf[key_len] = 0;
-		// Error: "Unknown SvcParamKey: %s"
-	}
+
 	/* Although the returned value might be used by the caller,
 	 * the parser has erred, so the zone will not be loaded.
 	 */
@@ -1144,8 +1152,7 @@ sldns_str2wire_svcparam_port(const char* val, uint8_t* rd, size_t* rd_len)
 		return LDNS_WIREPARSE_ERR_OK;
 	}
 
-	// ERROR: "Could not parse port SvcParamValue"
-	return -1;
+	return LDNS_WIREPARSE_ERR_SVCB_PORT_UNKNOWN_KEY;
 }
 
 static int
@@ -1162,8 +1169,7 @@ sldns_str2wire_svcbparam_ipv4hint(const char* val, uint8_t* rd, size_t* rd_len)
 		if (val[i] == ',')
 			count += 1;
 		if (count > SVCB_MAX_COMMA_SEPARATED_VALUES) {
-			// ERROR "Too many IPV4 addresses in ipv4hint"
-			return -1;
+			return LDNS_WIREPARSE_ERR_SVCB_IPV4_TOO_MANY_KEYS;
 		}
 	}
 
@@ -1192,7 +1198,6 @@ sldns_str2wire_svcbparam_ipv4hint(const char* val, uint8_t* rd, size_t* rd_len)
 			memcpy(ip_str, val, next_ip_str - val);
 			ip_str[next_ip_str - val] = 0;
 			if (inet_pton(AF_INET, ip_str, rd + *rd_len) != 1) {
-				val = ip_str; /* to use in error reporting below */
 				break;
 			}
 			*rd_len += LDNS_IP4ADDRLEN;
@@ -1221,8 +1226,7 @@ sldns_str2wire_svcbparam_ipv6hint(const char* val, uint8_t* rd, size_t* rd_len)
 		if (val[i] == ',')
 			count += 1;
 		if (count > SVCB_MAX_COMMA_SEPARATED_VALUES) {
-			// ERROR "Too many IPV4 addresses in ipv4hint"
-			return -1;
+			return LDNS_WIREPARSE_ERR_SVCB_IPV6_TOO_MANY_KEYS;
 		}
 	}
 
@@ -1261,8 +1265,8 @@ sldns_str2wire_svcbparam_ipv6hint(const char* val, uint8_t* rd, size_t* rd_len)
 		ip_wire_dst++;
 		count--;
 	}
-	// if (count) /* verify that we parsed all values */
-		// ERROR "Could not parse ipv6hint SvcParamValue: "
+	if (count) /* verify that we parsed all values */
+		return LDNS_WIREPARSE_ERR_SYNTAX_IP6;	
 
 	return LDNS_WIREPARSE_ERR_OK;
 }
@@ -1287,8 +1291,7 @@ sldns_str2wire_svcbparam_mandatory(const char* val, uint8_t* rd, size_t* rd_len)
 		if (val[i] == ',')
 			count += 1;
 		if (count > SVCB_MAX_COMMA_SEPARATED_VALUES) {
-			// ERROR "Too many keys in mandatory"
-			return -1;
+			return LDNS_WIREPARSE_ERR_SVCB_MANDATORY_TOO_MANY_KEYS;
 		}
 	}
 	if (sizeof(uint16_t) * (count + 2) > *rd_len)
@@ -1443,8 +1446,7 @@ int sldns_str2wire_svcbparam_alpn_value(const char* val,
 		        ? (size_t)(next_str - val) : val_len;
 
 		if (str_len > 255) {
-			// ERROR "alpn strings need to be smaller than 255 chars"
-			return LDNS_WIREPARSE_ERR_SYNTAX_INTEGER_OVERFLOW;
+			return LDNS_WIREPARSE_ERR_SVCB_ALPN_KEY_TOO_LARGE;
 		}
 		dst_len = sldns_str2wire_svcbparam_parse_alpn_copy_unescaped(dst + 1, val, str_len);
 		*dst++ = dst_len;
@@ -1474,18 +1476,26 @@ sldns_str2wire_svcparam_key_value(const char *key, size_t key_len,
 	size_t str_len;
 	uint16_t svcparamkey = sldns_str2wire_svcparam_key_lookup(key, key_len);
 
-
-	// @TODO add case where svcparamkey == -1
-
-	// @TODO add cases where keys cannot be vallueless -> LDNS_WIREPARSE_ERR_SVCB_MISSING_PARAM
+	if (svcparamkey < 0) {
+		return LDNS_WIREPARSE_ERR_SVCB_UNKNOWN_KEY;
+	}
 
 	/* key and no value case*/
 	if (val == NULL) {
+		switch (svcparamkey) {
+		case SVCB_KEY_MANDATORY:
+		case SVCB_KEY_ALPN:
+		case SVCB_KEY_PORT:
+		case SVCB_KEY_IPV4HINT:
+		case SVCB_KEY_IPV6HINT:
+			return LDNS_WIREPARSE_ERR_SVCB_MISSING_PARAM;
+		default:
 		sldns_write_uint16(rd, svcparamkey);
 		sldns_write_uint16(rd + 2, 0);
 		*rd_len = 4;
 
 		return LDNS_WIREPARSE_ERR_OK;
+		}
 	}
 
 	// @TODO unescape characters in the value list
