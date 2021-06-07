@@ -650,7 +650,7 @@ static int sldns_str2wire_check_svcbparams(uint8_t* rdata, uint16_t rdata_len)
 		rdata_ptr += svcbparam_len;
 
 		nparams += 1;
-		if (nparams > sizeof(svcparams))
+		if (nparams > sizeof(svcparams)/8)
 			return LDNS_WIREPARSE_ERR_SVCB_TOO_MANY_PARAMS;
 	}
 
@@ -1086,6 +1086,7 @@ sldns_str2wire_svcparam_key_lookup(const char *key, size_t key_len)
 		memcpy(buf, key + 3, key_len - 3);
 		buf[key_len - 3] = 0;
 		key_value = strtoul(buf, &endptr, 10);
+
 		if (endptr > buf	/* digits seen */
 		&& *endptr == 0		/* no non-digit chars after digits */
 		&&  key_value <= 65535)	/* no overflow */
@@ -1384,7 +1385,7 @@ sldns_str2wire_svcbparam_ech_value(const char* val, uint8_t* rd, size_t* rd_len)
 }
 
 static const char*
-sldns_str2wire_svcbparam_parse_alpn_next_unescaped_comma(const char *val)
+sldns_str2wire_svcbparam_parse_next_unescaped_comma(const char *val)
 {
 	while (*val) {
 		/* Only return when the comma is not escaped*/
@@ -1401,7 +1402,7 @@ sldns_str2wire_svcbparam_parse_alpn_next_unescaped_comma(const char *val)
 }
 
 static size_t
-sldns_str2wire_svcbparam_parse_alpn_copy_unescaped(uint8_t *dst,
+sldns_str2wire_svcbparam_parse_copy_unescaped(uint8_t *dst,
 	const char *src, size_t len)
 {
 	uint8_t *orig_dst = dst;
@@ -1419,7 +1420,8 @@ sldns_str2wire_svcbparam_parse_alpn_copy_unescaped(uint8_t *dst,
 	return (size_t)(dst - orig_dst);
 }
 
-int sldns_str2wire_svcbparam_alpn_value(const char* val,
+static int
+sldns_str2wire_svcbparam_alpn_value(const char* val,
 	uint8_t* rd, size_t* rd_len)
 {
 	uint8_t     unescaped_dst[65536];
@@ -1437,13 +1439,14 @@ int sldns_str2wire_svcbparam_alpn_value(const char* val,
 	while (val_len) {
 		size_t dst_len;
 
-		str_len = (next_str = sldns_str2wire_svcbparam_parse_alpn_next_unescaped_comma(val))
+		str_len = (next_str = sldns_str2wire_svcbparam_parse_next_unescaped_comma(val))
 		        ? (size_t)(next_str - val) : val_len;
 
 		if (str_len > 255) {
 			return LDNS_WIREPARSE_ERR_SVCB_ALPN_KEY_TOO_LARGE;
 		}
-		dst_len = sldns_str2wire_svcbparam_parse_alpn_copy_unescaped(dst + 1, val, str_len);
+
+		dst_len = sldns_str2wire_svcbparam_parse_copy_unescaped(dst + 1, val, str_len);
 		*dst++ = dst_len;
 		 dst  += dst_len;
 
@@ -1465,7 +1468,51 @@ int sldns_str2wire_svcbparam_alpn_value(const char* val,
 }
 
 static int
-sldns_str2wire_svcparam_key_value(const char *key, size_t key_len,
+sldns_str2wire_svcbparam_key_value(uint16_t svcparamkey, const char* val,
+	uint8_t* rd, size_t* rd_len)
+{
+	uint8_t     unescaped_dst[65536];
+	uint8_t    *dst = unescaped_dst;
+	const char *next_str;
+	size_t      str_len;
+	size_t      dst_len;
+	size_t 		val_len;
+	
+	val_len = strlen(val);
+
+	if (val_len > sizeof(unescaped_dst)) {
+		return LDNS_WIREPARSE_ERR_SYNTAX_INTEGER_OVERFLOW;
+	}
+	while (val_len) {
+		str_len = (next_str = sldns_str2wire_svcbparam_parse_next_unescaped_comma(val))
+		        ? (size_t)(next_str - val) : val_len;
+
+		if (str_len > 255) {
+			return LDNS_WIREPARSE_ERR_SVCB_ALPN_KEY_TOO_LARGE;
+		}
+		dst_len = sldns_str2wire_svcbparam_parse_copy_unescaped(dst + 1, val, str_len);
+		*dst++ = dst_len;
+		 dst  += dst_len;
+
+		if (!next_str)
+			break;
+
+		/* skip the comma for the next iteration */
+		val_len -= next_str - val + 1;
+		val = next_str + 1;
+	}
+	dst_len = dst - unescaped_dst;
+
+	sldns_write_uint16(rd, svcparamkey);
+	sldns_write_uint16(rd + 2, dst_len);
+	memcpy(rd + 4, unescaped_dst, dst_len);
+	*rd_len = 4 + dst_len;
+	
+	return LDNS_WIREPARSE_ERR_OK;
+}
+
+static int
+sldns_str2wire_svcparam_value(const char *key, size_t key_len,
 	const char *val, uint8_t* rd, size_t* rd_len)
 {
 	size_t str_len;
@@ -1485,19 +1532,13 @@ sldns_str2wire_svcparam_key_value(const char *key, size_t key_len,
 		case SVCB_KEY_IPV6HINT:
 			return LDNS_WIREPARSE_ERR_SVCB_MISSING_PARAM;
 		default:
-		sldns_write_uint16(rd, svcparamkey);
-		sldns_write_uint16(rd + 2, 0);
-		*rd_len = 4;
+			sldns_write_uint16(rd, svcparamkey);
+			sldns_write_uint16(rd + 2, 0);
+			*rd_len = 4;
 
-		return LDNS_WIREPARSE_ERR_OK;
+			return LDNS_WIREPARSE_ERR_OK;
 		}
 	}
-
-	// @TODO unescape characters in the value list
-
-	// if (val[0] == '"' && val[str_len - 1]) {
-
-	// }
 
 	/* value is non-empty */
 	switch (svcparamkey) {
@@ -1516,15 +1557,7 @@ sldns_str2wire_svcparam_key_value(const char *key, size_t key_len,
 	case SVCB_KEY_ALPN:
 		return sldns_str2wire_svcbparam_alpn_value(val, rd, rd_len);
 	default:
-		// @TODO escaping here -> copy from alpn?
-
-		str_len = strlen(val);
-		sldns_write_uint16(rd, svcparamkey);
-		sldns_write_uint16(rd + 2, str_len);
-		memcpy(rd + 4, val, str_len);
-		*rd_len = 4 + str_len;
-
-		return LDNS_WIREPARSE_ERR_OK;
+		return sldns_str2wire_svcbparam_key_value(svcparamkey, val, rd, rd_len);
 	}
 
 	// @TODO change to error?
@@ -1557,12 +1590,12 @@ int sldns_str2wire_svcparam_buf(const char* str, uint8_t* rd, size_t* rd_len)
 		}
 		*val_out = 0;
 
-		return sldns_str2wire_svcparam_key_value(str, eq_pos - str, 
+		return sldns_str2wire_svcparam_value(str, eq_pos - str, 
 		                                         unescaped_val[0] ? unescaped_val : NULL, rd, rd_len);
 	} else if (eq_pos != NULL && !(eq_pos[1])) { /* case: key= */
-		return sldns_str2wire_svcparam_key_value(str, eq_pos - str, NULL, rd, rd_len);
+		return sldns_str2wire_svcparam_value(str, eq_pos - str, NULL, rd, rd_len);
 	} else { /* case: key */
-		return sldns_str2wire_svcparam_key_value(str, strlen(str), NULL, rd, rd_len);
+		return sldns_str2wire_svcparam_value(str, strlen(str), NULL, rd, rd_len);
 	}
 
 	return LDNS_WIREPARSE_ERR_OK;
