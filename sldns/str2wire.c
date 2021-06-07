@@ -1557,7 +1557,12 @@ sldns_str2wire_svcparam_value(const char *key, size_t key_len,
 	case SVCB_KEY_ALPN:
 		return sldns_str2wire_svcbparam_alpn_value(val, rd, rd_len);
 	default:
-		return sldns_str2wire_svcbparam_key_value(svcparamkey, val, rd, rd_len);
+		sldns_write_uint16(rd, svcparamkey);
+		sldns_write_uint16(rd + 2, strlen(val));
+		memcpy(rd + 4, val, strlen(val));
+		*rd_len = 4 + strlen(val);
+		break;
+		//return sldns_str2wire_svcbparam_key_value(svcparamkey, val, rd, rd_len);
 	}
 
 	// @TODO change to error?
