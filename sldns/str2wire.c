@@ -1164,7 +1164,6 @@ sldns_str2wire_svcparam_port(const char* val, uint8_t* rd, size_t* rd_len)
 static int
 sldns_str2wire_svcbparam_ipv4hint(const char* val, uint8_t* rd, size_t* rd_len)
 {
-
 	int count;
 	char ip_str[INET_ADDRSTRLEN+1];
 	char *next_ip_str;
@@ -1338,7 +1337,7 @@ sldns_str2wire_svcbparam_mandatory(const char* val, uint8_t* rd, size_t* rd_len)
 		return LDNS_WIREPARSE_ERR_SVCB_MANDATORY_IN_MANDATORY;
 
 	/* Guarantee key uniqueness. After the sort we only need to
-	 * compare neighbours */
+	 * compare neighbouring keys */
 	if (count > 1) {
 		for (i = 0; i < count - 1; i++) {
 			uint8_t* current_pos = (rd + 4 + (sizeof(uint16_t) * i));
@@ -1452,7 +1451,7 @@ sldns_str2wire_svcbparam_alpn_value(const char* val,
 		if (!next_str)
 			break;
 
-		/* skip the comma for the next iteration */
+		/* skip the comma in the next iteration */
 		val_len -= next_str - val + 1;
 		val = next_str + 1;
 	}
@@ -1477,7 +1476,7 @@ sldns_str2wire_svcparam_value(const char *key, size_t key_len,
 		return LDNS_WIREPARSE_ERR_SVCB_UNKNOWN_KEY;
 	}
 
-	/* key and no value case*/
+	/* key without value */
 	if (val == NULL) {
 		switch (svcparamkey) {
 		case SVCB_KEY_MANDATORY:
@@ -1517,11 +1516,11 @@ sldns_str2wire_svcparam_value(const char *key, size_t key_len,
 		sldns_write_uint16(rd + 2, str_len);
 		memcpy(rd + 4, val, str_len);
 		*rd_len = 4 + str_len;
-		
+
 		return LDNS_WIREPARSE_ERR_OK;
 	}
 
-	// @TODO is this supposed to be an error?
+	// @TODO think about if this is supposed to be an error?
 	return LDNS_WIREPARSE_ERR_GENERAL;
 }
 
@@ -1534,7 +1533,8 @@ int sldns_str2wire_svcparam_buf(const char* str, uint8_t* rd, size_t* rd_len)
 
 	eq_pos = strchr(str, '=');
 
-	if (eq_pos != NULL && eq_pos[1]) { /* case: key=value */
+	/* case: key=value */
+	if (eq_pos != NULL && eq_pos[1]) {
 		val_in = eq_pos + 1;
 		
 		/* unescape characters and "" blocks */
@@ -1552,9 +1552,13 @@ int sldns_str2wire_svcparam_buf(const char* str, uint8_t* rd, size_t* rd_len)
 
 		return sldns_str2wire_svcparam_value(str, eq_pos - str, 
 		                                         unescaped_val[0] ? unescaped_val : NULL, rd, rd_len);
-	} else if (eq_pos != NULL && !(eq_pos[1])) { /* case: key= */
+	}
+	/* case: key= */
+	else if (eq_pos != NULL && !(eq_pos[1])) { 
 		return sldns_str2wire_svcparam_value(str, eq_pos - str, NULL, rd, rd_len);
-	} else { /* case: key */
+	}
+	/* case: key */
+	else {
 		return sldns_str2wire_svcparam_value(str, strlen(str), NULL, rd, rd_len);
 	}
 
