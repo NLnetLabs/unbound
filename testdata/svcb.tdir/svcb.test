@@ -183,52 +183,35 @@ then
 	echo "Failure case 22: port value needs to be a positive integer < 65536"
 	echo "Incorrectly succeeded"
 	exit 1
+
+elif $PRE/readzone svcb.failure-cases-23
+then
+	echo "Failure case 23: 65 SvcParams is too many SvcParams; the limit is 64"
+	echo "Incorrectly succeeded"
+	exit 1
+
+elif $PRE/readzone svcb.failure-cases-23
+then
+	echo "Failure case 24: 256 is too many characters for an alpn; maximum is 255"
+	echo "Incorrectly succeeded"
+	exit 1
 else
 	echo "All failure cases test successfully"
 fi
 
 
 # check all the succes and write them
-if ! $PRE/nsd-checkzone -p success-cases svcb.success-cases.zone > svcb.success-cases.zone.out
+if ! $PRE/readzone svcb.success-cases.zone > svcb.success-cases.zone.out
 then
-	echo "Some particular success cases did not succeed to parse"
-	exit 1
+ 	echo "Some particular success cases did not succeed to parse"
+ 	exit 1
 
 elif ! diff svcb.success-cases.zone.out svcb.success-cases.zone.cmp
 then
 	echo "Some success cases could not be printed"
-	exit 1
+ 	exit 1
 else
-	echo "All particular success cases parsed and printed successfully"
+ 	echo "All particular success cases parsed and printed successfully"
 fi
 
-
-rem $PRE/nsd-control -c svcb.secondary.conf write
-rem while [ ! -f test-vectors-secondary.zone ]
-rem do
-rem 	sleep 1
-rem done
-rem while ! grep '^v20' test-vectors-secondary.zone
-rem do
-rem 	sleep 1
-rem done
-rem grep -v '^;' svcb.test-vectors-pf.zone.out > svcb.test-vectors-pf.zone.out2
-rem grep -v '^;' test-vectors-secondary.zone > test-vectors-secondary.zone.out
-rem if ! diff svcb.test-vectors-pf.zone.out2 test-vectors-secondary.zone.out
-rem then
-rem 	echo "Output from secondary did not match output from primary"
-rem 	exit 1
-rem else
-rem 	echo "Output from secondary did match output from primary"
-rem fi
-
-rem dig @127.0.0.1 -p $TPKG_SEC_PORT f01.failure-cases. TYPE64 > f01.failure-cases.out
-rem if grep 'status: NOERROR' f01.failure-cases.out
-rem then
-rem 	echo "Failure case 1: Multiple instances of the same SvcParamKey"
-rem 	echo "allowed for secondary"
-rem else
-rem 	echo "Could not load failure-cases zone in secondary"
-rem 	exit  1
-rem fi
 

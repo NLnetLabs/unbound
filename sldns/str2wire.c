@@ -1168,7 +1168,7 @@ sldns_str2wire_svcbparam_ipv4hint(const char* val, uint8_t* rd, size_t* rd_len)
 	int count;
 	char ip_str[INET_ADDRSTRLEN+1];
 	char *next_ip_str;
-	uint32_t *ip_wire_dst;
+	uint32_t *ip_wire_dst = NULL;
 	size_t i;
 
 	for (i = 0, count = 1; val[i]; i++) {
@@ -1225,7 +1225,7 @@ sldns_str2wire_svcbparam_ipv6hint(const char* val, uint8_t* rd, size_t* rd_len)
 	int count;
 	char ip_str[INET6_ADDRSTRLEN+1];
 	char *next_ip_str;
-	uint32_t *ip_wire_dst;
+	uint32_t *ip_wire_dst = NULL;
 	size_t i;
 
 	for (i = 0, count = 1; val[i]; i++) {
@@ -1289,7 +1289,7 @@ sldns_str2wire_svcbparam_mandatory(const char* val, uint8_t* rd, size_t* rd_len)
 {
 	size_t i, count, val_len;
 	char* next_key;
-	uint16_t* key_dst;
+	uint16_t* key_dst = NULL;
 
 	val_len = strlen(val);
 
@@ -1369,8 +1369,7 @@ sldns_str2wire_svcbparam_ech_value(const char* val, uint8_t* rd, size_t* rd_len)
 
 	wire_len = sldns_b64_pton(val, buffer, LDNS_MAX_RDFLEN);
 
-	if (wire_len == -1) {
-		// zc_error_prev_line("invalid base64 data in ech");
+	if (wire_len == 0) {
 		return LDNS_WIREPARSE_ERR_SYNTAX_B64;
 	} else if (wire_len + 4 > *rd_len) {
 		return LDNS_WIREPARSE_ERR_BUFFER_TOO_SMALL;
@@ -1468,50 +1467,6 @@ sldns_str2wire_svcbparam_alpn_value(const char* val,
 }
 
 static int
-sldns_str2wire_svcbparam_key_value(uint16_t svcparamkey, const char* val,
-	uint8_t* rd, size_t* rd_len)
-{
-	uint8_t     unescaped_dst[65536];
-	uint8_t    *dst = unescaped_dst;
-	const char *next_str;
-	size_t      str_len;
-	size_t      dst_len;
-	size_t 		val_len;
-	
-	val_len = strlen(val);
-
-	if (val_len > sizeof(unescaped_dst)) {
-		return LDNS_WIREPARSE_ERR_SYNTAX_INTEGER_OVERFLOW;
-	}
-	while (val_len) {
-		str_len = (next_str = sldns_str2wire_svcbparam_parse_next_unescaped_comma(val))
-		        ? (size_t)(next_str - val) : val_len;
-
-		if (str_len > 255) {
-			return LDNS_WIREPARSE_ERR_SVCB_ALPN_KEY_TOO_LARGE;
-		}
-		dst_len = sldns_str2wire_svcbparam_parse_copy_unescaped(dst + 1, val, str_len);
-		*dst++ = dst_len;
-		 dst  += dst_len;
-
-		if (!next_str)
-			break;
-
-		/* skip the comma for the next iteration */
-		val_len -= next_str - val + 1;
-		val = next_str + 1;
-	}
-	dst_len = dst - unescaped_dst;
-
-	sldns_write_uint16(rd, svcparamkey);
-	sldns_write_uint16(rd + 2, dst_len);
-	memcpy(rd + 4, unescaped_dst, dst_len);
-	*rd_len = 4 + dst_len;
-	
-	return LDNS_WIREPARSE_ERR_OK;
-}
-
-static int
 sldns_str2wire_svcparam_value(const char *key, size_t key_len,
 	const char *val, uint8_t* rd, size_t* rd_len)
 {
@@ -1557,21 +1512,21 @@ sldns_str2wire_svcparam_value(const char *key, size_t key_len,
 	case SVCB_KEY_ALPN:
 		return sldns_str2wire_svcbparam_alpn_value(val, rd, rd_len);
 	default:
+		str_len = strlen(val);
 		sldns_write_uint16(rd, svcparamkey);
-		sldns_write_uint16(rd + 2, strlen(val));
-		memcpy(rd + 4, val, strlen(val));
-		*rd_len = 4 + strlen(val);
-		break;
-		//return sldns_str2wire_svcbparam_key_value(svcparamkey, val, rd, rd_len);
+		sldns_write_uint16(rd + 2, str_len);
+		memcpy(rd + 4, val, str_len);
+		*rd_len = 4 + str_len;
+		
+		return LDNS_WIREPARSE_ERR_OK;
 	}
 
-	// @TODO change to error?
-	return LDNS_WIREPARSE_ERR_OK;
+	// @TODO is this supposed to be an error?
+	return LDNS_WIREPARSE_ERR_GENERAL;
 }
 
 int sldns_str2wire_svcparam_buf(const char* str, uint8_t* rd, size_t* rd_len)
 {
-	size_t str_len;
 	const char* eq_pos;
 	char unescaped_val[65536];
 	char* val_out = unescaped_val;

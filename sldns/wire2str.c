@@ -997,7 +997,6 @@ static int sldns_wire2str_svcparam_ipv4hint2str(char** s,
 {
 	char ip_str[INET_ADDRSTRLEN + 1];
 
-	// @TODO actually incorporate this
 	int w = 0;
 
 	assert(data_len > 0);
@@ -1026,12 +1025,9 @@ static int sldns_wire2str_svcparam_ipv6hint2str(char** s,
 {
 	char ip_str[INET6_ADDRSTRLEN + 1];
 
-	// @TODO actually incorporate this -> is this correct now?
 	int w = 0;
 
 	assert(data_len > 0);
-
-	// @TODO fix ntohs -> see output
 
 	if ((data_len % LDNS_IP6ADDRLEN) == 0) {
 		if (inet_ntop(AF_INET6, data, ip_str, sizeof(ip_str)) == NULL)
@@ -1121,11 +1117,8 @@ static int sldns_wire2str_svcparam_ech2str(char** s,
 
 	w += sldns_str_print(s, slen, "=\"");
 
-	/* b64_ntop_calculate size includes null at the end */
-	size = sldns_b64_ntop_calculate_size(data_len) - 1;
+	size = sldns_b64_ntop(data, data_len, *s, *slen);
 
-	// @TODO store return value?
-	sldns_b64_ntop(data, data_len, *s, *slen);
 	(*s) += size;
 	(*slen) -= size;
 
@@ -1141,7 +1134,7 @@ static int sldns_wire2str_svcparam_ech2str(char** s,
 
 int sldns_wire2str_svcparam_scan(uint8_t** d, size_t* dlen, char** s, size_t* slen)
 {
-	char ch;
+	uint8_t ch;
 	uint16_t svcparamkey, data_len;
 	int written_chars = 0;
 	int r, i;
@@ -1197,7 +1190,7 @@ int sldns_wire2str_svcparam_scan(uint8_t** d, size_t* dlen, char** s, size_t* sl
 		r = sldns_wire2str_svcparam_ech2str(s, slen, data_len, *d);
 		break;
 	default:
-		r += sldns_str_print(s, slen, "=\"");
+		r = sldns_str_print(s, slen, "=\"");
 
 		for (i = 0; i < data_len; i++) {
 			ch = (*d)[i];
