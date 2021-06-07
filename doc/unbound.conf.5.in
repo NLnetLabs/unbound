@@ -1923,7 +1923,9 @@ Name of the authority zone.
 .B primary: \fI<IP address or host name>
 Where to download a copy of the zone from, with AXFR and IXFR.  Multiple
 primaries can be specified.  They are all tried if one fails.
-With the "ip#name" notation a AXFR over TLS can be used.
+To use a nondefault port for DNS communication append '@' with the port number.
+You can append a '#' and a name, then AXFR over TLS can be used and the tls authentication certificates will be checked with that name.  If you combine
+the '@' and '#', the '@' comes first.
 If you point it at another Unbound instance, it would not work because
 that does not support AXFR/IXFR for the zone, but if you used \fBurl:\fR to download
 the zonefile as a text file from a webserver that would work.
@@ -2500,6 +2502,15 @@ Name of the authority zone.
 .B primary: \fI<IP address or host name>
 Where to download a copy of the zone from, with AXFR and IXFR.  Multiple
 primaries can be specified.  They are all tried if one fails.
+To use a nondefault port for DNS communication append '@' with the port number.
+You can append a '#' and a name, then AXFR over TLS can be used and the tls authentication certificates will be checked with that name.  If you combine
+the '@' and '#', the '@' comes first.
+If you point it at another Unbound instance, it would not work because
+that does not support AXFR/IXFR for the zone, but if you used \fBurl:\fR to download
+the zonefile as a text file from a webserver that would work.
+If you specify the hostname, you cannot use the domain from the zonefile,
+because it may not have that when retrieving that data, instead use a plain
+IP address to avoid a circular dependency on retrieving that IP address.
 .TP
 .B master: \fI<IP address or host name>
 Alternate syntax for \fBprimary\fR.
