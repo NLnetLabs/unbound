@@ -1,3 +1,6 @@
+8 June 2021: George
+	- Fix unused variable warning when compiling with --enable-dnstap.
+
 7 June 2021: George
 	- Merge #448 from shoeper: Update unbound-control.8.in, fix
 	  rpz_disable typo.
