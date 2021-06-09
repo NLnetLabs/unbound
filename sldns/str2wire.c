@@ -1483,34 +1483,21 @@ sldns_str2wire_svcbparam_dohpath_value(const char* val,
 
 	val_len = strlen(val);
 
-	if (val_len > sizeof(unescaped_dst)) {
+	bzero(&unescaped_dst, 0);
+
+	if (val_len > sizeof(unescaped_dst) || val_len > 255) {
 		return LDNS_WIREPARSE_ERR_SYNTAX_INTEGER_OVERFLOW;
 	}
-	while (val_len) {
-		size_t dst_len;
 
-		str_len = (next_str = sldns_str2wire_svcbparam_parse_next_unescaped_comma(val))
-		        ? (size_t)(next_str - val) : val_len;
-
-		if (str_len > 255) {
-			return LDNS_WIREPARSE_ERR_SVCB_DOHPATH_KEY_TOO_LARGE;
-		}
-
-		dst_len = sldns_str2wire_svcbparam_parse_copy_unescaped(dst + 1, val, str_len);
-		*dst++ = dst_len;
-		 dst  += dst_len;
-
-		if (!next_str)
-			break;
-
-		/* skip the comma in the next iteration */
-		val_len -= next_str - val + 1;
-		val = next_str + 1;
+	if (val_len > 255) {
+		return LDNS_WIREPARSE_ERR_SVCB_DOHPATH_KEY_TOO_LARGE;
 	}
-	dst_len = dst - unescaped_dst;
+
+	dst_len = sldns_str2wire_svcbparam_parse_copy_unescaped(dst, val, val_len);
 
 	sldns_write_uint16(rd, SVCB_KEY_DOHPATH);
 	sldns_write_uint16(rd + 2, dst_len);
+
 	memcpy(rd + 4, unescaped_dst, dst_len);
 	*rd_len = 4 + dst_len;
 
