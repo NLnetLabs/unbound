@@ -1593,7 +1593,7 @@ AC_CHECK_FUNCS([setresuid],,[AC_CHECK_FUNCS([setreuid])])
 AC_CHECK_FUNCS([setresgid],,[AC_CHECK_FUNCS([setregid])])
 
 # check if setreuid en setregid fail, on MacOSX10.4(darwin8).
-if echo $target_os | grep darwin8 > /dev/null; then
+if echo $host_os | grep darwin8 > /dev/null; then
 	AC_DEFINE(DARWIN_BROKEN_SETREUID, 1, [Define this if on macOSX10.4-darwin8 and setreuid and setregid do not work])
 fi
 AC_CHECK_DECLS([inet_pton,inet_ntop], [], [], [

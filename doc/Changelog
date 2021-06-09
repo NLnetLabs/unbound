@@ -3,6 +3,7 @@
 	- Generated lexer and parser for #486; updated example.conf.
 	- Fix #413 (based on patch by k-ronny): unbound: does not compile
 	  on macOS 11.1-x86_64 host.
+	- Use host_os instead of target_os in configure for Darwin8 build.
 
 8 June 2021: George
 	- Fix unused variable warning when compiling with --enable-dnstap.

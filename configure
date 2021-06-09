@@ -20441,7 +20441,7 @@ done
 
 
 # check if setreuid en setregid fail, on MacOSX10.4(darwin8).
-if echo $target_os | grep darwin8 > /dev/null; then
+if echo $host_os | grep darwin8 > /dev/null; then
 
 $as_echo "#define DARWIN_BROKEN_SETREUID 1" >>confdefs.h
 
