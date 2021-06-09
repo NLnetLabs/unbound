@@ -104,13 +104,14 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_EXTENDED_STATISTICS VAR_LOCAL_DATA_PTR VAR_JOSTLE_TIMEOUT
 %token VAR_STUB_PRIME VAR_UNWANTED_REPLY_THRESHOLD VAR_LOG_TIME_ASCII
 %token VAR_DOMAIN_INSECURE VAR_PYTHON VAR_PYTHON_SCRIPT VAR_VAL_SIG_SKEW_MIN
-%token VAR_VAL_SIG_SKEW_MAX VAR_CACHE_MIN_TTL VAR_VAL_LOG_LEVEL
-%token VAR_AUTO_TRUST_ANCHOR_FILE VAR_KEEP_MISSING VAR_ADD_HOLDDOWN 
-%token VAR_DEL_HOLDDOWN VAR_SO_RCVBUF VAR_EDNS_BUFFER_SIZE VAR_PREFETCH
-%token VAR_PREFETCH_KEY VAR_SO_SNDBUF VAR_SO_REUSEPORT VAR_HARDEN_BELOW_NXDOMAIN
-%token VAR_IGNORE_CD_FLAG VAR_LOG_QUERIES VAR_LOG_REPLIES VAR_LOG_LOCAL_ACTIONS
-%token VAR_TCP_UPSTREAM VAR_SSL_UPSTREAM VAR_TCP_AUTH_QUERY_TIMEOUT
-%token VAR_SSL_SERVICE_KEY VAR_SSL_SERVICE_PEM VAR_SSL_PORT VAR_FORWARD_FIRST
+%token VAR_VAL_SIG_SKEW_MAX VAR_VAL_MAX_RESTART VAR_CACHE_MIN_TTL
+%token VAR_VAL_LOG_LEVEL VAR_AUTO_TRUST_ANCHOR_FILE VAR_KEEP_MISSING
+%token VAR_ADD_HOLDDOWN VAR_DEL_HOLDDOWN VAR_SO_RCVBUF VAR_EDNS_BUFFER_SIZE
+%token VAR_PREFETCH VAR_PREFETCH_KEY VAR_SO_SNDBUF VAR_SO_REUSEPORT
+%token VAR_HARDEN_BELOW_NXDOMAIN VAR_IGNORE_CD_FLAG VAR_LOG_QUERIES
+%token VAR_LOG_REPLIES VAR_LOG_LOCAL_ACTIONS VAR_TCP_UPSTREAM
+%token VAR_SSL_UPSTREAM VAR_TCP_AUTH_QUERY_TIMEOUT VAR_SSL_SERVICE_KEY
+%token VAR_SSL_SERVICE_PEM VAR_SSL_PORT VAR_FORWARD_FIRST
 %token VAR_STUB_SSL_UPSTREAM VAR_FORWARD_SSL_UPSTREAM VAR_TLS_CERT_BUNDLE
 %token VAR_HTTPS_PORT VAR_HTTP_ENDPOINT VAR_HTTP_MAX_STREAMS
 %token VAR_HTTP_QUERY_BUFFER_SIZE VAR_HTTP_RESPONSE_BUFFER_SIZE
@@ -243,8 +244,9 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_local_data_ptr | server_jostle_timeout | 
 	server_unwanted_reply_threshold | server_log_time_ascii | 
 	server_domain_insecure | server_val_sig_skew_min | 
-	server_val_sig_skew_max | server_cache_min_ttl | server_val_log_level |
-	server_auto_trust_anchor_file | server_add_holddown | 
+	server_val_sig_skew_max | server_val_max_restart |
+	server_cache_min_ttl | server_val_log_level |
+	server_auto_trust_anchor_file |	server_add_holddown |
 	server_del_holddown | server_keep_missing | server_so_rcvbuf |
 	server_edns_buffer_size | server_prefetch | server_prefetch_key |
 	server_so_sndbuf | server_harden_below_nxdomain | server_ignore_cd_flag |
@@ -1848,6 +1850,19 @@ server_val_sig_skew_max: VAR_VAL_SIG_SKEW_MAX STRING_ARG
 		} else {
 			cfg_parser->cfg->val_sig_skew_max = atoi($2);
 			if(!cfg_parser->cfg->val_sig_skew_max)
+				yyerror("number expected");
+		}
+		free($2);
+	}
+	;
+server_val_max_restart: VAR_VAL_MAX_RESTART STRING_ARG
+	{
+		OUTYY(("P(server_val_max_restart:%s)\n", $2));
+		if(*$2 == '\0' || strcmp($2, "0") == 0) {
+			cfg_parser->cfg->val_max_restart = 0;
+		} else {
+			cfg_parser->cfg->val_max_restart = atoi($2);
+			if(!cfg_parser->cfg->val_max_restart)
 				yyerror("number expected");
 		}
 		free($2);

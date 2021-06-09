@@ -1140,6 +1140,10 @@ min and max very low disables the clock skew allowances.  Setting both
 min and max very high makes the validator check the signature timestamps
 less strictly.
 .TP
+.B val\-max\-restart: \fI<number>
+The maximum number the validator should restart validation with
+another authority in case of failed validation. Default is 5.
+.TP
 .B val\-bogus\-ttl: \fI<number>
 The time to live for bogus data. This is data that has failed validation;
 due to invalid signatures or other checks. The TTL from that data cannot be
