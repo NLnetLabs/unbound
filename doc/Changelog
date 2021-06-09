@@ -1,6 +1,8 @@
 9 June 2021: George
 	- Merge #486 by fobster: Make VAL_MAX_RESTART_COUNT configurable.
 	- Generated lexer and parser for #486; updated example.conf.
+	- Fix #413 (based on patch by k-ronny): unbound: does not compile
+	  on macOS 11.1-x86_64 host.
 
 8 June 2021: George
 	- Fix unused variable warning when compiling with --enable-dnstap.

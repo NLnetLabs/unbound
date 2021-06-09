@@ -1216,23 +1216,23 @@ esac
 AC_ARG_ENABLE(tfo-client, AS_HELP_STRING([--enable-tfo-client],[Enable TCP Fast Open for client mode]))
 case "$enable_tfo_client" in
 	yes)
-		case `uname` in
-			Linux) AC_CHECK_DECL([MSG_FASTOPEN], [AC_MSG_WARN([Check the platform specific TFO kernel parameters are correctly configured to support client mode TFO])],
-			                     [AC_MSG_ERROR([TCP Fast Open is not available for client mode: please rerun without --enable-tfo-client])], 
-			                     [AC_INCLUDES_DEFAULT 
+		case "$host_os" in
+			linux*) AC_CHECK_DECL([MSG_FASTOPEN], [AC_MSG_WARN([Check the platform specific TFO kernel parameters are correctly configured to support client mode TFO])],
+				[AC_MSG_ERROR([TCP Fast Open is not available for client mode: please rerun without --enable-tfo-client])],
+				[AC_INCLUDES_DEFAULT
 #include <netinet/tcp.h>
 ])
-					AC_DEFINE_UNQUOTED([USE_MSG_FASTOPEN], [1], [Define this to enable client TCP Fast Open.])
-			  ;;
-			Darwin) AC_CHECK_DECL([CONNECT_RESUME_ON_READ_WRITE], [AC_MSG_WARN([Check the platform specific TFO kernel parameters are correctly configured to support client mode TFO])], 
-			                      [AC_MSG_ERROR([TCP Fast Open is not available for client mode: please rerun without --enable-tfo-client])], 
-			                      [AC_INCLUDES_DEFAULT
+				AC_DEFINE_UNQUOTED([USE_MSG_FASTOPEN], [1], [Define this to enable client TCP Fast Open.])
+				;;
+			darwin*) AC_CHECK_DECL([CONNECT_RESUME_ON_READ_WRITE], [AC_MSG_WARN([Check the platform specific TFO kernel parameters are correctly configured to support client mode TFO])],
+				[AC_MSG_ERROR([TCP Fast Open is not available for client mode: please rerun without --enable-tfo-client])],
+				[AC_INCLUDES_DEFAULT
 #include <sys/socket.h>
 ])
-					AC_DEFINE_UNQUOTED([USE_OSX_MSG_FASTOPEN], [1], [Define this to enable client TCP Fast Open.])
-			  ;;
+				AC_DEFINE_UNQUOTED([USE_OSX_MSG_FASTOPEN], [1], [Define this to enable client TCP Fast Open.])
+				;;
 		esac
-	;;
+		;;
 	no|*)
 		;;
 esac
