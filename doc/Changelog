@@ -1,3 +1,7 @@
+9 June 2021: George
+	- Merge #486 by fobster: Make VAL_MAX_RESTART_COUNT configurable.
+	- Generated lexer and parser for #486; updated example.conf.
+
 8 June 2021: George
 	- Fix unused variable warning when compiling with --enable-dnstap.
 
