@@ -45,3 +45,5 @@ s08     HTTPS   0 . ( key11=a key12=a key13=a key14=a key15=a key16=a key17=a ke
 ; maximum alpn size allowed (255 characters)
 
 s09     HTTPS   0 . ( alpn="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" )
+
+s10     HTTPS   0 . alpn="h2" ipv4hint="127.0.0.1" ipv6hint="fe80::1" dohpath="/dns-query?{dns}"
