@@ -4,7 +4,7 @@ Version: 1.13.1
 Release: 1%{?dist}
 License: BSD
 Url: http://www.nlnetlabs.nl/unbound/
-Source: http://www.unbound.net/downloads/%{name}-%{version}.tar.gz
+Source: http://www.nlnetlabs.nl/downloads/unbound/%{name}-%{version}.tar.gz
 #Source1: unbound.init
 Group: System Environment/Daemons
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
@@ -91,8 +91,9 @@ fi
 %changelog
 * Thu Jun 10 2021 Wouter Wijngaards <wouter@nlnetlabs.nl> - 1.13.1
 - ldns and ldns-devel no longer required. Fixed date. Version to 1.13.1.
-- Removed symlink %attr mode, made unbound.conf symlink relative.
+- Removed symlink attr mode, made unbound.conf symlink relative.
 - Added pkgconfig/libunbound.pc to the packaged files.
+- fixed download url to nlnetlabs.nl download.
 
 * Wed Jul 13 2011 Wouter Wijngaards <wouter@nlnetlabs.nl> - 1.4.8
 - ldns required and ldns-devel required for build, no more ldns-builtin.
