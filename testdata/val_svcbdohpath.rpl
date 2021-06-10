@@ -1,0 +1,27 @@
+; config options
+server:
+	local-data: "resolver.arpa.  IN SVCB	0 . alpn=h2 ipv4hint=127.0.0.1 ipv6hint=fe80::1 dohpath=/dns-query?{dns}"
+CONFIG_END
+
+SCENARIO_BEGIN Test validator with a query for type SVCB
+
+STEP 1 QUERY
+ENTRY_BEGIN
+REPLY RD
+SECTION QUESTION
+resolver.arpa. IN SVCB
+ENTRY_END
+
+STEP 10 CHECK_ANSWER
+ENTRY_BEGIN
+MATCH all
+REPLY QR AA RD RA NOERROR
+SECTION QUESTION
+resolver.arpa. IN SVCB
+SECTION ANSWER
+resolver.arpa.	3600	IN	SVCB	0 . alpn="h2" ipv4hint=127.0.0.1 ipv6hint=fe80::1 dohpath="/dns-query?{dns}"
+SECTION AUTHORITY
+SECTION ADDITIONAL
+ENTRY_END
+
+SCENARIO_END
