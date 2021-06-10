@@ -1510,16 +1510,12 @@ sldns_str2wire_svcbparam_dohpath_value(const char* val,
 {
 	uint8_t     unescaped_dst[65536];
 	uint8_t    *dst = unescaped_dst;
-	const char *next_str;
-	size_t      str_len;
 	size_t      dst_len;
-	size_t 		val_len;
+	size_t 	    val_len;
 
 	val_len = strlen(val);
 
-	bzero(&unescaped_dst, 0);
-
-	if (val_len > sizeof(unescaped_dst) || val_len > 255) {
+	if (val_len > sizeof(unescaped_dst)) {
 		return LDNS_WIREPARSE_ERR_SYNTAX_INTEGER_OVERFLOW;
 	}
 
