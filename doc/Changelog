@@ -1,3 +1,7 @@
+10 June 2021: Wouter
+	- Fix #500: SPEC file in version 1.13.1 references version 1.4;
+	  unable to build RPM from source.
+
 9 June 2021: George
 	- Merge #486 by fobster: Make VAL_MAX_RESTART_COUNT configurable.
 	- Generated lexer and parser for #486; updated example.conf.
