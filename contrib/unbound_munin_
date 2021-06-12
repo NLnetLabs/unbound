@@ -95,7 +95,6 @@ BSD
 
 =cut
 
-. ${MUNIN_LIBDIR}/plugins/plugin.sh
 state="${MUNIN_PLUGSTATE}/unbound.state"
 seentags="${MUNIN_PLUGSTATE}/unbound-seentags.state"
 conf=${unbound_conf:-/usr/local/etc/unbound/unbound.conf}
@@ -491,7 +490,7 @@ by_opcode)
 	;;
 by_rcode)
 	for nm in `grep "^num.answer.rcode" $seentags`; do
-		print_value $nm $x
+		print_value $nm
 	done
 	print_value "num.answer.secure"
 	print_value "num.answer.bogus"
