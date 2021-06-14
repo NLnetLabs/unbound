@@ -1,3 +1,6 @@
+14 June 2021: Wouter
+	- Fix configure nonblocking test and onmingw test to use host.
+
 10 June 2021: Wouter
 	- Fix #500: SPEC file in version 1.13.1 references version 1.4;
 	  unable to build RPM from source.
