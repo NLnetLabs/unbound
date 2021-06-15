@@ -38,7 +38,7 @@ struct sldns_struct_lookup_table;
 #define SVCB_KEY_IPV4HINT		4
 #define SVCB_KEY_ECH			5
 #define SVCB_KEY_IPV6HINT		6
-#define SVCB_KEY_DOHPATH		7
+#define SVCB_KEY_DOHPATH		65432
 #define SVCPARAMKEY_COUNT 8
 
 #define MAX_NUMBER_OF_SVCPARAMS	64
