@@ -561,9 +561,19 @@ void pythonmod_operate(struct module_qstate* qstate, enum module_ev event,
    {
       /* create qstate */
       pq = qstate->minfo[id] = malloc(sizeof(struct pythonmod_qstate));
+      if(!pq) {
+		log_err("pythonmod_operate: malloc failure for qstate");
+		PyGILState_Release(gil);
+		return;
+      }
 
       /* Initialize per query data */
       pq->data = PyDict_New();
+      if(!pq->data) {
+		log_err("pythonmod_operate: malloc failure for query data dict");
+		PyGILState_Release(gil);
+		return;
+      }
    }
 
    /* Call operate */

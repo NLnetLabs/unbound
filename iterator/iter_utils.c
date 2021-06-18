@@ -440,6 +440,7 @@ iter_filter_order(struct iter_env* iter_env, struct module_env* env,
 		prev = NULL;
 		a = dp->result_list;
 		for(i = 0; i < got_num; i++) {
+			if(!a) break; /* robustness */
 			swap_to_front = 0;
 			if(a->addr.ss_family != AF_INET6 && attempt == -1) {
 				/* if we only have ip4 at low attempt count,
@@ -497,6 +498,7 @@ iter_filter_order(struct iter_env* iter_env, struct module_env* env,
 		prev = NULL;
 		a = dp->result_list;
 		for(i = 0; i < got_num; i++) {
+			if(!a) break; /* robustness */
 			swap_to_front = 0;
 			if(a->addr.ss_family != AF_INET && attempt == -1) {
 				/* if we only have ip6 at low attempt count,
