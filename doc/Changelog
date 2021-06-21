@@ -1,3 +1,6 @@
+21 June 2021: George
+	- Fix #495: Documentation or implementation of "verbosity" option.
+
 18 June 2021: Wouter
 	- Fix a number of warnings reported by the gcc analyzer.
 
