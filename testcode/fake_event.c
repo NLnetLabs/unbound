@@ -451,6 +451,8 @@ fake_front_query(struct replay_runtime* runtime, struct replay_moment *todo)
 	struct comm_reply repinfo;
 	memset(&repinfo, 0, sizeof(repinfo));
 	repinfo.c = (struct comm_point*)calloc(1, sizeof(struct comm_point));
+	if(!repinfo.c)
+		fatal_exit("out of memory in fake_front_query");
 	repinfo.addrlen = (socklen_t)sizeof(struct sockaddr_in);
 	if(todo->addrlen != 0) {
 		repinfo.addrlen = todo->addrlen;
@@ -909,6 +911,8 @@ comm_base_create(int ATTR_UNUSED(sigs))
 	/* we return the runtime structure instead. */
 	struct replay_runtime* runtime = (struct replay_runtime*)
 		calloc(1, sizeof(struct replay_runtime));
+	if(!runtime)
+		fatal_exit("out of memory in fake_event.c:comm_base_create");
 	runtime->scenario = saved_scenario;
 	runtime->vars = macro_store_create();
 	if(!runtime->vars) fatal_exit("out of memory");
@@ -1534,6 +1538,8 @@ struct comm_timer* comm_timer_create(struct comm_base* base,
 {
 	struct replay_runtime* runtime = (struct replay_runtime*)base;
 	struct fake_timer* t = (struct fake_timer*)calloc(1, sizeof(*t));
+	if(!t)
+		fatal_exit("out of memory in fake_event.c:comm_timer_create");
 	t->cb = cb;
 	t->cb_arg = cb_arg;
 	fptr_ok(fptr_whitelist_comm_timer(t->cb)); /* check in advance */

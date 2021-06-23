@@ -1,5 +1,6 @@
 23 June 2021: Wouter
 	- Fix #503: DNS over HTTPS response truncated.
+	- Fix warnings reported by the gcc analyzer.
 
 21 June 2021: George
 	- Fix #495: Documentation or implementation of "verbosity" option.
