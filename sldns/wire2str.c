@@ -1003,19 +1003,20 @@ static int sldns_wire2str_svcparam_ipv4hint2str(char** s,
 
 	if ((data_len % LDNS_IP4ADDRLEN) == 0) {
 		if (inet_ntop(AF_INET, data, ip_str, sizeof(ip_str)) == NULL)
-			return 0; /* wireformat error, incorrect size or inet family */
+			return -1; /* wireformat error, incorrect size or inet family */
 
 		w += sldns_str_print(s, slen, "=%s", ip_str);
 		data += LDNS_IP4ADDRLEN;
 
 		while ((data_len -= LDNS_IP4ADDRLEN) > 0) {
 			if (inet_ntop(AF_INET, data, ip_str, sizeof(ip_str)) == NULL)
-				return 0; /* wireformat error, incorrect size or inet family */
+				return -1; /* wireformat error, incorrect size or inet family */
 
 			w += sldns_str_print(s, slen, ",%s", ip_str);
 			data += LDNS_IP4ADDRLEN;
 		}
-	}
+	} else
+		return -1;
 
 	return w;
 }
@@ -1031,19 +1032,20 @@ static int sldns_wire2str_svcparam_ipv6hint2str(char** s,
 
 	if ((data_len % LDNS_IP6ADDRLEN) == 0) {
 		if (inet_ntop(AF_INET6, data, ip_str, sizeof(ip_str)) == NULL)
-			return 0; /* wireformat error, incorrect size or inet family */
+			return -1; /* wireformat error, incorrect size or inet family */
 
 		w += sldns_str_print(s, slen, "=%s", ip_str);
 		data += LDNS_IP6ADDRLEN;
 
 		while ((data_len -= LDNS_IP6ADDRLEN) > 0) {
 			if (inet_ntop(AF_INET6, data, ip_str, sizeof(ip_str)) == NULL)
-				return 0; /* wireformat error, incorrect size or inet family */
+				return -1; /* wireformat error, incorrect size or inet family */
 
 			w += sldns_str_print(s, slen, ",%s", ip_str);
 			data += LDNS_IP6ADDRLEN;
 		}
-	}
+	} else
+		return -1;
 
 	return w;
 }
@@ -1055,8 +1057,8 @@ static int sldns_wire2str_svcparam_mandatory2str(char** s,
 
 	assert(data_len > 0);
 
-	// if (data_len % sizeof(uint16_t))
-	// 	return 0; // wireformat error, data_len must be multiple of shorts
+	if (data_len % sizeof(uint16_t))
+		return -1; // wireformat error, data_len must be multiple of shorts
 	w += sldns_str_print(s, slen, "=");
 	w += sldns_print_svcparamkey(s, slen, sldns_read_uint16(data));
 	data += 2;
@@ -1076,14 +1078,15 @@ static int sldns_wire2str_svcparam_alpn2str(char** s,
 	uint8_t *dp = (void *)data;
 	int w = 0;
 
-	assert(data_len > 0); /* Guaranteed by rdata_svcparam_to_string */
+	assert(data_len > 0); /* Guaranteed by sldns_wire2str_svcparam_scan */
 
 	w += sldns_str_print(s, slen, "=\"");
 	while (data_len) {
+		/* alpn is list of length byte (str_len) followed by a string of that size */
 		uint8_t i, str_len = *dp++;
 
 		if (str_len > --data_len)
-			return 0;
+			return -1;
 
 		for (i = 0; i < str_len; i++) {
 			if (dp[i] == '"' || dp[i] == '\\')
@@ -1113,21 +1116,17 @@ static int sldns_wire2str_svcparam_ech2str(char** s,
 	int size;
 	int w = 0;
 
-	assert(data_len > 0); /* Guaranteed by rdata_svcparam_to_string */
+	assert(data_len > 0); /* Guaranteed by sldns_wire2str_svcparam_scan */
 
 	w += sldns_str_print(s, slen, "=\"");
 
-	size = sldns_b64_ntop(data, data_len, *s, *slen);
+	if ((size = sldns_b64_ntop(data, data_len, *s, *slen)) < 0)
+		return -1;
 
 	(*s) += size;
 	(*slen) -= size;
 
 	w += sldns_str_print(s, slen, "\"");	
-
-	// @TODO fix check
-	// if(size > *slen) {
-	// 	buffer_skip(output, size);
-	// }
 
 	return w + size;
 }
@@ -1162,9 +1161,9 @@ int sldns_wire2str_svcparam_scan(uint8_t** d, size_t* dlen, char** s, size_t* sl
 	 	case SVCB_KEY_IPV4HINT:
 	 	case SVCB_KEY_IPV6HINT:
 	 	case SVCB_KEY_MANDATORY:
-	 		return LDNS_WIREPARSE_ERR_SYNTAX_MISSING_VALUE;
+	 		return -1;
 	 	default:
-	 		return LDNS_WIREPARSE_ERR_OK;
+	 		return written_chars;
 	 	}
 	}
 
@@ -1205,7 +1204,7 @@ int sldns_wire2str_svcparam_scan(uint8_t** d, size_t* dlen, char** s, size_t* sl
 				r += sldns_str_print(s, slen, "%c", ch);
 
 		}
-		r += sldns_str_print(s, slen, "%c", '"');
+		r += sldns_str_print(s, slen, "\"");
 		break;
 	}
 	if (r <= 0)

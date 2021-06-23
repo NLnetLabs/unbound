@@ -72,7 +72,7 @@ int main(int argc, char *const *argv)
 
 		s = sldns_fp2wire_rr_buf(in, rr, &rr_len, &dname_len, &state);
 		if (s) {
-			fprintf( stderr, "parse error %d:%d: %s"
+			fprintf( stderr, "parse error %d:%d: %s\n"
 			       , state.lineno, LDNS_WIREPARSE_OFFSET(s)
 			       , sldns_get_errorstr_parse(s));
 			break;
@@ -103,5 +103,6 @@ int main(int argc, char *const *argv)
 	}
 	if (in)
 		fclose(in);
+	free(str);
 	return !in || s ? EXIT_FAILURE : EXIT_SUCCESS;
 }

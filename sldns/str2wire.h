@@ -36,7 +36,7 @@ struct sldns_struct_lookup_table;
 #define SVCB_KEY_NO_DEFAULT_ALPN	2
 #define SVCB_KEY_PORT			3
 #define SVCB_KEY_IPV4HINT		4
-#define SVCB_KEY_ECH		5
+#define SVCB_KEY_ECH			5
 #define SVCB_KEY_IPV6HINT		6
 #define SVCPARAMKEY_COUNT 7
 

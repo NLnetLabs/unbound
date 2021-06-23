@@ -41,9 +41,6 @@ extern struct sldns_struct_lookup_table* sldns_wireparse_errors;
 /** tsig errors are the rcodes with extra (higher) values */
 extern struct sldns_struct_lookup_table* sldns_tsig_errors;
 
-/* draft-ietf-dnsop-svcb-https-04: 6. Initial SvcParamKeys */
-extern const char *svcparamkey_strs[];
-
 /**
  * Convert wireformat packet to a string representation
  * @param data: wireformat packet data (starting at ID bytes).
