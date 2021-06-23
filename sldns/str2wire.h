@@ -38,9 +38,11 @@ struct sldns_struct_lookup_table;
 #define SVCB_KEY_IPV4HINT		4
 #define SVCB_KEY_ECH			5
 #define SVCB_KEY_IPV6HINT		6
-#define SVCPARAMKEY_COUNT 7
+#define SVCPARAMKEY_COUNT		7
 
-#define SVCB_MAX_COMMA_SEPARATED_VALUES 1000
+#define MAX_NUMBER_OF_SVCPARAMS	64
+
+#define SVCB_MAX_COMMA_SEPARATED_VALUES	1000
 
 /*
  * To convert class and type to string see

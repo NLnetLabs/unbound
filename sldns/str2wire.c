@@ -1361,7 +1361,7 @@ sldns_str2wire_svcbparam_ech_value(const char* val, uint8_t* rd, size_t* rd_len)
 	/* single 0 represents empty buffer */
 	if(strcmp(val, "0") == 0) {
 		if (*rd_len < 4)
-			return LDNS_WIREPARSE_ERR_BUFFER_TOO_SMALL
+			return LDNS_WIREPARSE_ERR_BUFFER_TOO_SMALL;
 		sldns_write_uint16(rd, SVCB_KEY_ECH);
 		sldns_write_uint16(rd + 2, 0);
 
