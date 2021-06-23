@@ -161,16 +161,18 @@ static sldns_lookup_table sldns_wireparse_errors_data[] = {
 		"Keys in SvcParam mandatory MUST be unique" },
 	{ LDNS_WIREPARSE_ERR_SVCB_MANDATORY_IN_MANDATORY, 
 		"mandatory MUST not be included as mandatory parameter" },
-	{ LDNS_WIREPARSE_ERR_SVCB_PORT_UNKNOWN_KEY,
+	{ LDNS_WIREPARSE_ERR_SVCB_PORT_VALUE_SYNTAX,
 		"Could not parse port SvcParamValue" },
-	{ LDNS_WIREPARSE_ERR_SVCB_IPV4_TOO_MANY_KEYS,
+	{ LDNS_WIREPARSE_ERR_SVCB_IPV4_TOO_MANY_ADDRESSES,
 		"Too many IPv4 addresses in ipv4hint" },
-	{ LDNS_WIREPARSE_ERR_SVCB_IPV6_TOO_MANY_KEYS,
+	{ LDNS_WIREPARSE_ERR_SVCB_IPV6_TOO_MANY_ADDRESSES,
 		"Too many IPv6 addresses in ipv6hint" },
 	{ LDNS_WIREPARSE_ERR_SVCB_ALPN_KEY_TOO_LARGE,
 		"Alpn strings need to be smaller than 255 chars"},
 	{ LDNS_WIREPARSE_ERR_SVCB_NO_DEFAULT_ALPN_VALUE,
 		"No-default-alpn should not have a value" },
+	{ LDNS_WIREPARSE_ERR_SVCPARAM_BROKEN_RDATA,
+		"General SVCParam error" },
 	{ 0, NULL }
 };
 sldns_lookup_table* sldns_wireparse_errors = sldns_wireparse_errors_data;
@@ -218,7 +220,7 @@ static sldns_lookup_table sldns_tsig_errors_data[] = {
 };
 sldns_lookup_table* sldns_tsig_errors = sldns_tsig_errors_data;
 
-/* draft-ietf-dnsop-svcb-https-04: 6. Initial SvcParamKeys */
+/* draft-ietf-dnsop-svcb-https-06: 6. Initial SvcParamKeys */
 const char *svcparamkey_strs[] = {
 	"mandatory", "alpn", "no-default-alpn", "port",
 	"ipv4hint", "ech", "ipv6hint"

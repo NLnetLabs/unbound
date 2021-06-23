@@ -639,13 +639,13 @@ static int sldns_str2wire_check_svcbparams(uint8_t* rdata, uint16_t rdata_len)
 
 		svcparams[nparams] = rdata_ptr;
 		if (rdata_remaining < 4)
-			return LDNS_WIREPARSE_ERR_GENERAL;
+			return LDNS_WIREPARSE_ERR_SVCPARAM_BROKEN_RDATA;
 		svcbparam_len = sldns_read_uint16(rdata_ptr + 2);
 		rdata_remaining -= 4;
 		rdata_ptr += 4;
 
 		if (rdata_remaining < svcbparam_len)
-			return LDNS_WIREPARSE_ERR_GENERAL;
+			return LDNS_WIREPARSE_ERR_SVCPARAM_BROKEN_RDATA;
 		rdata_remaining -= svcbparam_len;
 		rdata_ptr += svcbparam_len;
 
@@ -654,7 +654,7 @@ static int sldns_str2wire_check_svcbparams(uint8_t* rdata, uint16_t rdata_len)
 			return LDNS_WIREPARSE_ERR_SVCB_TOO_MANY_PARAMS;
 	}
 
-	/* In draft-ietf-dnsop-svcb-https-05 Section 7:
+	/* In draft-ietf-dnsop-svcb-https-06 Section 7:
 	 *
 	 *     In wire format, the keys are represented by their numeric
 	 *     values in network byte order, concatenated in ascending order.
@@ -664,7 +664,7 @@ static int sldns_str2wire_check_svcbparams(uint8_t* rdata, uint16_t rdata_len)
 	     ,sizeof(uint8_t*)
 	     ,sldns_str2wire_svcparam_key_cmp);
 
-	/* In draft-ietf-dnsop-svcb-https-05 Section 7:
+	/* In draft-ietf-dnsop-svcb-https-06 Section 7:
 	 *
 	 *     Keys (...) MUST NOT appear more than once.
 	 *
@@ -684,12 +684,12 @@ static int sldns_str2wire_check_svcbparams(uint8_t* rdata, uint16_t rdata_len)
 	if (mandatory) {
 
 		/* Divide by sizeof(uint16_t)*/
-		uint16_t mandatory_len = sldns_read_uint16(mandatory + 2) / sizeof(uint16_t);
+		uint16_t mandatory_nkeys = sldns_read_uint16(mandatory + 2) / sizeof(uint16_t);
 
 		/* Guaranteed by sldns_str2wire_svcparam_key_value */
-		assert(mandatory_len > 0);
+		assert(mandatory_nkeys > 0);
 
-		for (i = 0; i < mandatory_len; i++) {
+		for (i = 0; i < mandatory_nkeys; i++) {
 			uint16_t mandatory_key = sldns_read_uint16(mandatory
 			                       + 2 * sizeof(uint16_t)
 			                       + i * sizeof(uint16_t));
@@ -844,6 +844,8 @@ rrinternal_parse_rdata(sldns_buffer* strbuf, char* token, size_t token_len,
 			rdata_len -= label_len;
 			rdata += label_len;
 		}
+		/* The root label is one more character, so smaller
+		 * than 1 + 1 means no Svcparam Keys */
 		assert(*rdata == 0);
 		if (rdata_len < 2)
 			return LDNS_WIREPARSE_ERR_OK;
@@ -1075,7 +1077,7 @@ int sldns_fp2wire_rr_buf(FILE* in, uint8_t* rr, size_t* len, size_t* dname_len,
 	return LDNS_WIREPARSE_ERR_OK;
 }
 
-static uint16_t
+static int
 sldns_str2wire_svcparam_key_lookup(const char *key, size_t key_len)
 {
 	char buf[64];
@@ -1158,7 +1160,7 @@ sldns_str2wire_svcparam_port(const char* val, uint8_t* rd, size_t* rd_len)
 		return LDNS_WIREPARSE_ERR_OK;
 	}
 
-	return LDNS_WIREPARSE_ERR_SVCB_PORT_UNKNOWN_KEY;
+	return LDNS_WIREPARSE_ERR_SVCB_PORT_VALUE_SYNTAX;
 }
 
 static int
@@ -1174,7 +1176,7 @@ sldns_str2wire_svcbparam_ipv4hint(const char* val, uint8_t* rd, size_t* rd_len)
 		if (val[i] == ',')
 			count += 1;
 		if (count > SVCB_MAX_COMMA_SEPARATED_VALUES) {
-			return LDNS_WIREPARSE_ERR_SVCB_IPV4_TOO_MANY_KEYS;
+			return LDNS_WIREPARSE_ERR_SVCB_IPV4_TOO_MANY_ADDRESSES;
 		}
 	}
 
@@ -1231,7 +1233,7 @@ sldns_str2wire_svcbparam_ipv6hint(const char* val, uint8_t* rd, size_t* rd_len)
 		if (val[i] == ',')
 			count += 1;
 		if (count > SVCB_MAX_COMMA_SEPARATED_VALUES) {
-			return LDNS_WIREPARSE_ERR_SVCB_IPV6_TOO_MANY_KEYS;
+			return LDNS_WIREPARSE_ERR_SVCB_IPV6_TOO_MANY_ADDRESSES;
 		}
 	}
 
@@ -1307,14 +1309,27 @@ sldns_str2wire_svcbparam_mandatory(const char* val, uint8_t* rd, size_t* rd_len)
 	*rd_len = 4;
 
 	while (1) {
+		int svcparamkey;
+
 		if (!(next_key = strchr(val, ','))) {
-			sldns_write_uint16(rd + *rd_len,
-				sldns_str2wire_svcparam_key_lookup(val, val_len));
+			svcparamkey = sldns_str2wire_svcparam_key_lookup(val, val_len);
+
+			if (svcparamkey < 0) {
+				return LDNS_WIREPARSE_ERR_SVCB_UNKNOWN_KEY;
+			}
+
+			sldns_write_uint16(rd + *rd_len, svcparamkey);
 			*rd_len += 2;
 			break;
 		} else {
+			svcparamkey = sldns_str2wire_svcparam_key_lookup(val, next_key - val);
+
+			if (svcparamkey < 0) {
+				return LDNS_WIREPARSE_ERR_SVCB_UNKNOWN_KEY;
+			}
+
 			sldns_write_uint16(rd + *rd_len,
-				sldns_str2wire_svcparam_key_lookup(val, next_key - val));
+				svcparamkey);
 			*rd_len += 2;
 		}
 
@@ -1323,14 +1338,14 @@ sldns_str2wire_svcbparam_mandatory(const char* val, uint8_t* rd, size_t* rd_len)
 		key_dst += 1;
 	}
 
-	/* In draft-ietf-dnsop-svcb-https-05 Section 7:
+	/* In draft-ietf-dnsop-svcb-https-06 Section 7:
 	 *
 	 *    "In wire format, the keys are represented by their numeric
 	 *     values in network byte order, concatenated in ascending order."
 	 */
 	qsort((void *)(rd + 4), count, sizeof(uint16_t), sldns_network_uint16_cmp);
 
-	/* In draft-ietf-dnsop-svcb-https-05 Section 8
+	/* In draft-ietf-dnsop-svcb-https-06 Section 8
 	 * automatically mandatory MUST NOT appear in its own value-list
 	 */
 	if (sldns_read_uint16(rd + 4) == SVCB_KEY_MANDATORY)
@@ -1403,6 +1418,9 @@ sldns_str2wire_svcbparam_parse_next_unescaped_comma(const char *val)
 
 /* The source is already properly unescaped, this double unescaping is purely to allow for
  * comma's in comma seperated alpn lists.
+ * 
+ * In draft-ietf-dnsop-svcb-https-06 Section 7:
+ * To enable simpler parsing, this SvcParamValue MUST NOT contain escape sequences.
  */
 static size_t
 sldns_str2wire_svcbparam_parse_copy_unescaped(uint8_t *dst,
@@ -1476,7 +1494,7 @@ sldns_str2wire_svcparam_value(const char *key, size_t key_len,
 	const char *val, uint8_t* rd, size_t* rd_len)
 {
 	size_t str_len;
-	uint16_t svcparamkey = sldns_str2wire_svcparam_key_lookup(key, key_len);
+	int svcparamkey = sldns_str2wire_svcparam_key_lookup(key, key_len);
 
 	if (svcparamkey < 0) {
 		return LDNS_WIREPARSE_ERR_SVCB_UNKNOWN_KEY;
