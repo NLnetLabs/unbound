@@ -664,60 +664,66 @@ static int sldns_str2wire_check_svcbparams(uint8_t* rdata, uint16_t rdata_len)
 	     ,sizeof(uint8_t*)
 	     ,sldns_str2wire_svcparam_key_cmp);
 
+
+	/* The code below revolves around sematic errors in the SVCParam set.
+	 * So long as we do not distinguish between running Unbound as a primary
+	 * or as a secondary, we default to secondary behavior and we ignore the
+	 * sematic errors. */
+
 	/* In draft-ietf-dnsop-svcb-https-06 Section 7:
 	 *
 	 *     Keys (...) MUST NOT appear more than once.
 	 *
 	 * If they key has already been seen, we have a duplicate
 	 */
-	for (i = 0; i < nparams; i++) {
-		uint16_t key = sldns_read_uint16(svcparams[i]);
+	// for (i = 0; i < nparams; i++) {
+	// 	uint16_t key = sldns_read_uint16(svcparams[i]);
 
-		if (i + 1 < nparams && key == sldns_read_uint16(svcparams[i+1]))
-			return LDNS_WIREPARSE_ERR_SVCB_DUPLICATE_KEYS;
+	// 	if (i + 1 < nparams && key == sldns_read_uint16(svcparams[i+1]))
+	// 		return LDNS_WIREPARSE_ERR_SVCB_DUPLICATE_KEYS;
 
-		if (key == SVCB_KEY_MANDATORY)
-			mandatory = svcparams[i];
-	}
+	// 	if (key == SVCB_KEY_MANDATORY)
+	// 		mandatory = svcparams[i];
+	// }
 
 	/* 4. verify that all the SvcParamKeys in mandatory are present */
-	if (mandatory) {
+	// if (mandatory) {
 
-		/* Divide by sizeof(uint16_t)*/
-		uint16_t mandatory_nkeys = sldns_read_uint16(mandatory + 2) / sizeof(uint16_t);
+	// 	/* Divide by sizeof(uint16_t)*/
+	// 	uint16_t mandatory_nkeys = sldns_read_uint16(mandatory + 2) / sizeof(uint16_t);
 
-		/* Guaranteed by sldns_str2wire_svcparam_key_value */
-		assert(mandatory_nkeys > 0);
+	// 	/* Guaranteed by sldns_str2wire_svcparam_key_value */
+	// 	assert(mandatory_nkeys > 0);
 
-		for (i = 0; i < mandatory_nkeys; i++) {
-			uint16_t mandatory_key = sldns_read_uint16(mandatory
-			                       + 2 * sizeof(uint16_t)
-			                       + i * sizeof(uint16_t));
-			uint8_t found = 0;
+	// 	for (i = 0; i < mandatory_nkeys; i++) {
+	// 		uint16_t mandatory_key = sldns_read_uint16(mandatory
+	// 		                       + 2 * sizeof(uint16_t)
+	// 		                       + i * sizeof(uint16_t));
+	// 		uint8_t found = 0;
 
-			for (j = 0; j < nparams; j++) {
-				if (mandatory_key == sldns_read_uint16(svcparams[j]))
-					found = 1;
-			}
+	// 		for (j = 0; j < nparams; j++) {
+	// 			if (mandatory_key == sldns_read_uint16(svcparams[j]))
+	// 				found = 1;
+	// 		}
 
-			if (!found)
-				return LDNS_WIREPARSE_ERR_SVCB_MANDATORY_MISSING_PARAM;
-		}
+	// 		if (!found)
+	// 			return LDNS_WIREPARSE_ERR_SVCB_MANDATORY_MISSING_PARAM;
+	// 	}
 
-	}
+	// }
 
-	// Write rdata in correct order
-	for (i = 0; i < nparams; i++) {
-		uint16_t svcparam_len = sldns_read_uint16(svcparams[i] + 2)
-		                      + 2 * sizeof(uint16_t);
+	/* Write rdata in correct order */
+	// for (i = 0; i < nparams; i++) {
+	// 	uint16_t svcparam_len = sldns_read_uint16(svcparams[i] + 2)
+	// 	                      + 2 * sizeof(uint16_t);
 
-		if (new_rdata_ptr + svcparam_len - new_rdata > sizeof(new_rdata))
-			return LDNS_WIREPARSE_ERR_BUFFER_TOO_SMALL;
+	// 	if (new_rdata_ptr + svcparam_len - new_rdata > sizeof(new_rdata))
+	// 		return LDNS_WIREPARSE_ERR_BUFFER_TOO_SMALL;
 
-		memcpy(new_rdata_ptr, svcparams[i], svcparam_len);
-		new_rdata_ptr += svcparam_len;
-	}
-	memcpy(rdata, new_rdata, rdata_len);
+	// 	memcpy(new_rdata_ptr, svcparams[i], svcparam_len);
+	// 	new_rdata_ptr += svcparam_len;
+	// }
+	// memcpy(rdata, new_rdata, rdata_len);
 	return LDNS_WIREPARSE_ERR_OK;
 }
 
@@ -1345,24 +1351,29 @@ sldns_str2wire_svcbparam_mandatory(const char* val, uint8_t* rd, size_t* rd_len)
 	 */
 	qsort((void *)(rd + 4), count, sizeof(uint16_t), sldns_network_uint16_cmp);
 
+	/* The code below revolves around sematic errors in the SVCParam set.
+	 * So long as we do not distinguish between running Unbound as a primary
+	 * or as a secondary, we default to secondary behavior and we ignore the
+	 * sematic errors. */
+
 	/* In draft-ietf-dnsop-svcb-https-06 Section 8
 	 * automatically mandatory MUST NOT appear in its own value-list
 	 */
-	if (sldns_read_uint16(rd + 4) == SVCB_KEY_MANDATORY)
-		return LDNS_WIREPARSE_ERR_SVCB_MANDATORY_IN_MANDATORY;
+	// if (sldns_read_uint16(rd + 4) == SVCB_KEY_MANDATORY)
+	// 	return LDNS_WIREPARSE_ERR_SVCB_MANDATORY_IN_MANDATORY;
 
 	/* Guarantee key uniqueness. After the sort we only need to
 	 * compare neighbouring keys */
-	if (count > 1) {
-		for (i = 0; i < count - 1; i++) {
-			uint8_t* current_pos = (rd + 4 + (sizeof(uint16_t) * i));
-			uint16_t key = sldns_read_uint16(current_pos);
+	// if (count > 1) {
+	// 	for (i = 0; i < count - 1; i++) {
+	// 		uint8_t* current_pos = (rd + 4 + (sizeof(uint16_t) * i));
+	// 		uint16_t key = sldns_read_uint16(current_pos);
 
-			if (key == sldns_read_uint16(current_pos + 2)) {
-				return LDNS_WIREPARSE_ERR_SVCB_MANDATORY_DUPLICATE_KEY;
-			}
-		}
-	}
+	// 		if (key == sldns_read_uint16(current_pos + 2)) {
+	// 			return LDNS_WIREPARSE_ERR_SVCB_MANDATORY_DUPLICATE_KEY;
+	// 		}
+	// 	}
+	// }
 
 	return LDNS_WIREPARSE_ERR_OK;
 }
@@ -1548,7 +1559,6 @@ sldns_str2wire_svcparam_value(const char *key, size_t key_len,
 		return LDNS_WIREPARSE_ERR_OK;
 	}
 
-	// @TODO think about if this is supposed to be an error?
 	return LDNS_WIREPARSE_ERR_GENERAL;
 }
 
