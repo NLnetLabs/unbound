@@ -58,12 +58,66 @@ jobs:
 #            test_ios: "yes"
 #            config: "no"
 #            make: "no"
-          - name: Apple iPhone on iOS, arm64
+#          - name: Apple iPhone on iOS, arm64
+#            os: macos-latest
+#            AUTOTOOLS_HOST: aarch64-apple-ios
+#            OPENSSL_HOST: ios64-cross
+#            IOS_SDK: iPhoneOS
+#            IOS_CPU: arm64
+#            test_ios: "yes"
+#            config: "no"
+#            make: "no"
+          - name: Apple TV on iOS, arm64
             os: macos-latest
             AUTOTOOLS_HOST: aarch64-apple-ios
             OPENSSL_HOST: ios64-cross
-            IOS_SDK: iPhoneOS
+            IOS_SDK: AppleTVOS
             IOS_CPU: arm64
+            test_ios: "yes"
+            config: "no"
+            make: "no"
+          - name: Apple Watch on iOS, armv7
+            os: macos-latest
+            AUTOTOOLS_HOST: armv7-apple-ios
+            OPENSSL_HOST: ios-cross
+            IOS_SDK: WatchOS
+            IOS_CPU: armv7k
+            test_ios: "yes"
+            config: "no"
+            make: "no"
+          - name: iPhoneSimulator on OS X, i386
+            os: macos-latest
+            AUTOTOOLS_HOST: i386-apple-ios
+            OPENSSL_HOST: iphoneos-cross
+            IOS_SDK: i386
+            IOS_CPU: iPhoneSimulator
+            test_ios: "yes"
+            config: "no"
+            make: "no"
+          - name: iPhoneSimulator on OS X, x86_64
+            os: macos-latest
+            AUTOTOOLS_HOST: x86_64-apple-ios
+            OPENSSL_HOST: iphoneos-cross
+            IOS_SDK: x86_64
+            IOS_CPU: iPhoneSimulator
+            test_ios: "yes"
+            config: "no"
+            make: "no"
+          - name: AppleTVSimulator on OS X, x86_64
+            os: macos-latest
+            AUTOTOOLS_HOST: x86_64-apple-ios
+            OPENSSL_HOST: iphoneos-cross
+            IOS_SDK: x86_64
+            IOS_CPU: AppleTVSimulator
+            test_ios: "yes"
+            config: "no"
+            make: "no"
+          - name: WatchSimulator on OS X, i386
+            os: macos-latest
+            AUTOTOOLS_HOST: i386-apple-ios
+            OPENSSL_HOST: iphoneos-cross
+            IOS_SDK: i386
+            IOS_CPU: WatchSimulator
             test_ios: "yes"
             config: "no"
             make: "no"
