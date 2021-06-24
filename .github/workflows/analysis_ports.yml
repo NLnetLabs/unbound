@@ -304,6 +304,7 @@ jobs:
           sed -e 's?^SHELL =.*$??' < tests/Makefile.orig > tests/Makefile
           mv xmlwf/Makefile xmlwf/Makefile.orig
           sed -e 's?^SHELL =.*$??' < xmlwf/Makefile.orig > xmlwf/Makefile
+          export MAKESHELL="/bin/sh"
           echo "make"
           make
           echo "make install"
