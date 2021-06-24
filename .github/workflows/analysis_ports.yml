@@ -196,6 +196,8 @@ jobs:
           ls -l '/c/ProgramData/Chocolatey/lib' || echo nevermind
           echo '/c/ProgramData/Chocolatey/lib/OpenSSL.Light'
           ls -l '/c/ProgramData/Chocolatey/lib/OpenSSL.Light' || echo nevermind
+          echo '/c/ProgramData/Chocolatey/lib/OpenSSL.Light/tools'
+          ls -l '/c/ProgramData/Chocolatey/lib/OpenSSL.Light/tools' || echo nevermind
           echo '/c/ProgramData/Chocolatey/lib/mingw'
           ls -l '/c/ProgramData/Chocolatey/lib/mingw' || echo nevermind
           echo '/c/ProgramData/Chocolatey/lib/mingw/tools'
@@ -204,6 +206,14 @@ jobs:
           ls -l '/c/ProgramData/Chocolatey/lib/mingw/tools/install' || echo nevermind
           echo '/c/ProgramData/Chocolatey/lib/mingw/tools/install/mingw64'
           ls -l '/c/ProgramData/Chocolatey/lib/mingw/tools/install/mingw64' || echo nevermind
+          echo '/c/ProgramData/Chocolatey/lib/mingw/tools/install/mingw64/bin'
+          ls -l '/c/ProgramData/Chocolatey/lib/mingw/tools/install/mingw64/bin' || echo nevermind
+          echo '/c/ProgramData/Chocolatey/lib/mingw/tools/install/mingw64/include'
+          ls -l '/c/ProgramData/Chocolatey/lib/mingw/tools/install/mingw64/include' || echo nevermind
+          echo '/c/ProgramData/Chocolatey/lib/rtools'
+          ls -l '/c/ProgramData/Chocolatey/lib/rtools' || echo nevermind
+          echo '/c/ProgramData/Chocolatey/lib/rtools/tools'
+          ls -l '/c/ProgramData/Chocolatey/lib/rtools/tools' || echo nevermind
           echo PATH="$PATH"
           ./configure --enable-debug --enable-static-exe --disable-flto
           make
