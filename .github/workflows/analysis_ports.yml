@@ -289,26 +289,23 @@ jobs:
           curl -L -k -s -S -o expat-2.2.10.tar.gz https://github.com/libexpat/libexpat/releases/download/R_2_2_10/expat-2.2.10.tar.gz
           tar xzf expat-2.2.10.tar.gz
           cd expat-2.2.10
-          echo "./configure SHELL=/usr/bin/bash CONFIG_SHELL=/usr/bin/bash --prefix=\"$prepath/expat\" --exec-prefix=\"$prepath/expat\" --bindir=\"$prepath/expat/bin\" --includedir=\"$prepath/expat/include\" --mandir=\"$prepath/expat/man\" --libdir=\"$prepath/expat/lib\""
+          echo "./configure SHELL=/usr/bin/bash.exe CONFIG_SHELL=/usr/bin/bash.exe --prefix=\"$prepath/expat\" --exec-prefix=\"$prepath/expat\" --bindir=\"$prepath/expat/bin\" --includedir=\"$prepath/expat/include\" --mandir=\"$prepath/expat/man\" --libdir=\"$prepath/expat/lib\""
           ./configure SHELL=/usr/bin/bash CONFIG_SHELL=/usr/bin/bash --prefix="$prepath/expat" --exec-prefix="$prepath/expat" --bindir="$prepath/expat/bin" --includedir="$prepath/expat/include" --mandir="$prepath/expat/man" --libdir="$prepath/expat/lib"
           # fixup shell from space in pathname
           grep 'SHELL =' Makefile | cat
-          grep 'Files' Makefile | cat
-          grep 'SHELL =' lib/Makefile | cat
-          grep 'Files' lib/Makefile | cat
-          mv Makefile Makefile.orig
-          sed -e 's?^SHELL =.*$??' < Makefile.orig > Makefile
-          mv lib/Makefile lib/Makefile.orig
-          sed -e 's?^SHELL =.*$??' < lib/Makefile.orig > lib/Makefile
-          mv doc/Makefile doc/Makefile.orig
-          sed -e 's?^SHELL =.*$??' < doc/Makefile.orig > doc/Makefile
-          mv examples/Makefile examples/Makefile.orig
-          sed -e 's?^SHELL =.*$??' < examples/Makefile.orig > examples/Makefile
-          mv tests/Makefile tests/Makefile.orig
-          sed -e 's?^SHELL =.*$??' < tests/Makefile.orig > tests/Makefile
-          mv xmlwf/Makefile xmlwf/Makefile.orig
-          sed -e 's?^SHELL =.*$??' < xmlwf/Makefile.orig > xmlwf/Makefile
-          export MAKESHELL="/bin/sh"
+          #mv Makefile Makefile.orig
+          #sed -e 's?^SHELL =.*$??' < Makefile.orig > Makefile
+          #mv lib/Makefile lib/Makefile.orig
+          #sed -e 's?^SHELL =.*$??' < lib/Makefile.orig > lib/Makefile
+          #mv doc/Makefile doc/Makefile.orig
+          #sed -e 's?^SHELL =.*$??' < doc/Makefile.orig > doc/Makefile
+          #mv examples/Makefile examples/Makefile.orig
+          #sed -e 's?^SHELL =.*$??' < examples/Makefile.orig > examples/Makefile
+          #mv tests/Makefile tests/Makefile.orig
+          #sed -e 's?^SHELL =.*$??' < tests/Makefile.orig > tests/Makefile
+          #mv xmlwf/Makefile xmlwf/Makefile.orig
+          #sed -e 's?^SHELL =.*$??' < xmlwf/Makefile.orig > xmlwf/Makefile
+          #export MAKESHELL="/bin/sh"
           echo "make"
           make
           echo "make install"
