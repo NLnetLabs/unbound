@@ -49,12 +49,21 @@ jobs:
 #            os: ubuntu-latest
 #            config: 'CFLAGS="-DNDEBUG -g2 -O3 -fsanitize=address" --disable-flto --disable-static'
 #            make_test: "yes"
-          - name: Apple iPhone on iOS, armv7
+#          - name: Apple iPhone on iOS, armv7
+#            os: macos-latest
+#            AUTOTOOLS_HOST: armv7-apple-ios
+#            OPENSSL_HOST: ios-cross
+#            IOS_SDK: iPhoneOS
+#            IOS_CPU: armv7s
+#            test_ios: "yes"
+#            config: "no"
+#            make: "no"
+          - name: Apple iPhone on iOS, arm64
             os: macos-latest
-            AUTOTOOLS_HOST: armv7-apple-ios
-            OPENSSL_HOST: ios-cross
+            AUTOTOOLS_HOST: aarch64-apple-ios
+            OPENSSL_HOST: ios64-cross
             IOS_SDK: iPhoneOS
-            IOS_CPU: armv7s
+            IOS_CPU: arm64
             test_ios: "yes"
             config: "no"
             make: "no"
