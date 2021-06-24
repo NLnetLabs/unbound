@@ -26,6 +26,7 @@ jobs:
 #            clang_analysis: "yes"
           - name: Clang on Linux, libevent, clang-analysis
             os: ubuntu-latest
+            install_libevent: "yes"
             config: "CC=clang --enable-debug --disable-flto --with-libevent"
             make_test: "yes"
             clang_analysis: "yes"
@@ -45,6 +46,9 @@ jobs:
       - uses: actions/checkout@v2
         with:
           submodules: false
+      - name: install libevent
+        if: ${{ matrix.install_libevent == 'yes' }}
+        run: apt-get install libevent-dev
       - name: install expat
         if: ${{ matrix.install_expat == 'yes' }}
         run: brew install expat
