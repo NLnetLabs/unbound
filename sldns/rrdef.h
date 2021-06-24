@@ -433,6 +433,14 @@ enum sldns_enum_edns_option
 };
 typedef enum sldns_enum_edns_option sldns_edns_option;
 
+enum sldns_enum_ede_code
+{
+	LDNS_EDE_OTHER = 0,
+	LDNS_EDE_UNSUPPORTED_DNSKEY_ALG = 1,
+	LDNS_EDE_UNSUPPORTED_DS_DIGEST = 2
+};
+typedef enum sldns_enum_ede_code sldns_ede_code;
+
 #define LDNS_EDNS_MASK_DO_BIT 0x8000
 
 /** TSIG and TKEY extended rcodes (16bit), 0-15 are the normal rcodes. */
