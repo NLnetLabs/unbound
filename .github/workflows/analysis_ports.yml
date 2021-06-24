@@ -48,7 +48,7 @@ jobs:
           submodules: false
       - name: install libevent
         if: ${{ matrix.install_libevent == 'yes' }}
-        run: apt-get install libevent-dev
+        run: sudo apt-get install libevent-dev
       - name: install expat
         if: ${{ matrix.install_expat == 'yes' }}
         run: brew install expat
