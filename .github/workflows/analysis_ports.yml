@@ -170,81 +170,6 @@ jobs:
         if: ${{ matrix.test_windows == 'yes' }}
         shell: bash
         run: |
-          echo 'c:'
-          ls -l 'c:\' || echo nevermind
-          echo 'Program Files'
-          ls -l 'c:\Program Files' || echo nevermind
-          echo 'Program Files (x86)'
-          ls -l 'c:\Program Files (x86)' || echo nevermind
-          echo '/c/Program Files/OpenSSL'
-          ls -l '/c/Program Files/OpenSSL' || echo nevermind
-          echo '/'
-          ls -l '/' || echo nevermind
-          echo '/mingw64'
-          ls -l '/mingw64' || echo nevermind
-          echo '/mingw64/bin'
-          ls -l '/mingw64/bin' || echo nevermind
-          echo '/c/Users'
-          ls -l '/c/Users' || echo nevermind
-          echo '/mingw64/ssl'
-          ls -l '/mingw64/ssl' || echo nevermind
-          echo '/c/ProgramData/Chocolatey'
-          ls -l '/c/ProgramData/Chocolatey' || echo nevermind
-          echo '/c/ProgramData/Chocolatey/tools'
-          ls -l '/c/ProgramData/Chocolatey/tools' || echo nevermind
-          echo '/c/ProgramData/Chocolatey/lib'
-          ls -l '/c/ProgramData/Chocolatey/lib' || echo nevermind
-          echo '/c/ProgramData/Chocolatey/lib/OpenSSL.Light'
-          ls -l '/c/ProgramData/Chocolatey/lib/OpenSSL.Light' || echo nevermind
-          echo '/c/ProgramData/Chocolatey/lib/OpenSSL.Light/tools'
-          ls -l '/c/ProgramData/Chocolatey/lib/OpenSSL.Light/tools' || echo nevermind
-          echo '/c/ProgramData/Chocolatey/lib/mingw'
-          ls -l '/c/ProgramData/Chocolatey/lib/mingw' || echo nevermind
-          echo '/c/ProgramData/Chocolatey/lib/mingw/tools'
-          ls -l '/c/ProgramData/Chocolatey/lib/mingw/tools' || echo nevermind
-          echo '/c/ProgramData/Chocolatey/lib/mingw/tools/install'
-          ls -l '/c/ProgramData/Chocolatey/lib/mingw/tools/install' || echo nevermind
-          echo '/c/ProgramData/Chocolatey/lib/mingw/tools/install/mingw64'
-          ls -l '/c/ProgramData/Chocolatey/lib/mingw/tools/install/mingw64' || echo nevermind
-          echo '/c/ProgramData/Chocolatey/lib/mingw/tools/install/mingw64/bin'
-          ls -l '/c/ProgramData/Chocolatey/lib/mingw/tools/install/mingw64/bin' || echo nevermind
-          echo '/c/ProgramData/Chocolatey/lib/mingw/tools/install/mingw64/include'
-          ls -l '/c/ProgramData/Chocolatey/lib/mingw/tools/install/mingw64/include' || echo nevermind
-          echo '/c/ProgramData/Chocolatey/lib/rtools'
-          ls -l '/c/ProgramData/Chocolatey/lib/rtools' || echo nevermind
-          echo '/c/ProgramData/Chocolatey/lib/rtools/tools'
-          ls -l '/c/ProgramData/Chocolatey/lib/rtools/tools' || echo nevermind
-          echo '/c/Users/Default'
-          ls -l '/c/Users/Default' || echo nevermind
-          echo '/usr'
-          ls -l '/usr' || echo nevermind
-          echo '/usr/lib'
-          ls -l '/usr/lib' || echo nevermind
-          echo '/usr/share'
-          ls -l '/usr/share' || echo nevermind
-          echo '/c/Strawberry/perl'
-          ls -l '/c/Strawberry/perl' || echo nevermind
-          echo '/c/Strawberry/perl/bin'
-          ls -l '/c/Strawberry/perl/bin' || echo nevermind
-          echo '/c/Strawberry/perl/lib'
-          ls -l '/c/Strawberry/perl/lib' || echo nevermind
-          echo '/c/Strawberry/perl/site'
-          ls -l '/c/Strawberry/perl/site' || echo nevermind
-          echo '/c/Strawberry/perl/site/lib'
-          ls -l '/c/Strawberry/perl/site/lib' || echo nevermind
-          echo '/usr/lib/perl5'
-          ls -l '/usr/lib/perl5' || echo nevermind
-          echo '/usr/share/perl5'
-          ls -l '/usr/share/perl5' || echo nevermind
-          echo '/usr/share/perl5/vendor_perl'
-          ls -l '/usr/share/perl5/vendor_perl' || echo nevermind
-          echo '/usr/share/perl5/vendor_perl/Pod'
-          ls -l '/usr/share/perl5/vendor_perl/Pod' || echo nevermind
-          echo '/c/Program Files/Common Files'
-          ls -l '/c/Program Files/Common Files' || echo nevermind
-          echo '/c/Program Files/Common Files/SSL'
-          ls -l '/c/Program Files/Common Files/SSL' || echo nevermind
-          echo PATH="$PATH"
           export unboundpath=`pwd`
           echo unboundpath=${unboundpath}
           cd ..
@@ -253,19 +178,12 @@ jobs:
           #echo "curl cpanm"
           #curl -L -k -s -S -o cpanm https://cpanmin.us/
           #echo "perl cpanm Pod::Usage"
-          #perl cpanm Pod::Usage || echo whatever
+          #perl cpanm Pod::Usage
           mkdir openssl
           echo "curl openssl"
           curl -L -k -s -S -o openssl-1.1.1j.tar.gz https://www.openssl.org/source/openssl-1.1.1j.tar.gz
           tar xzf openssl-1.1.1j.tar.gz
           cd openssl-1.1.1j
-          #export PERL5LIB="/c/Strawberry/perl/lib"
-          #export PERL5LIB="/usr/share/perl5/lib:/usr/share/perl5/vendor:/usr/share/perl5/site"
-          #echo PERL5LIB="$PERL5LIB"
-          #echo "cpan"
-          #cpan POD::Usage
-          #echo "perl MCPAN"
-          #perl -MCPAN -e "CPAN::Shell->force(qw(install POD::Usage));"
           # remove pod::Usage because we do not need -help or -man output
           # from the Configure script
           sed -e 's/use Pod::Usage//' < Configure > Configure.fix

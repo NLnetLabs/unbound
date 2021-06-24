@@ -375,8 +375,7 @@ replay_moment_read(char* remain, FILE* in, const char* name,
 	if(parse_keyword(&remain, "ADDRESS")) {
 		while(isspace((unsigned char)*remain))
 			remain++;
-		if(strlen(remain) > 0) /* remove \n */
-			remain[strlen(remain)-1] = 0;
+		strip_end_white(remain);
 		if(!extstrtoaddr(remain, &mom->addr, &mom->addrlen)) {
 			log_err("line %d: could not parse ADDRESS: %s", 
 				pstate->lineno, remain);
