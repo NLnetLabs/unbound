@@ -14,15 +14,20 @@ jobs:
     strategy:
       matrix:
         include:
-          - name: GCC on Linux
-            os: ubuntu-latest
-            config: --enable-debug --disable-flto
-            make_test: yes
-          - name: Clang on Linux, clang-analysis
-            os: ubuntu-latest
-            config: "CC=clang --enable-debug --disable-flto"
+# temporarily commented out to speed up build.
+#          - name: GCC on Linux
+#            os: ubuntu-latest
+#            config: "--enable-debug --disable-flto"
+#            make_test: "yes"
+#          - name: Clang on Linux, clang-analysis
+#            os: ubuntu-latest
+#            config: "CC=clang --enable-debug --disable-flto"
+#            make_test: "yes"
+#            clang_analysis: "yes"
+          - name: macos
+            os: macos-latest
+            config: "--enable-debug --disable-flto"
             make_test: "yes"
-            clang_analysis: "yes"
  
     steps:
       - uses: actions/checkout@v2
