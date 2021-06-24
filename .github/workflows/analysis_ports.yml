@@ -67,58 +67,67 @@ jobs:
 #            test_ios: "yes"
 #            config: "no"
 #            make: "no"
-          - name: Apple TV on iOS, arm64
-            os: macos-latest
-            AUTOTOOLS_HOST: aarch64-apple-ios
-            OPENSSL_HOST: ios64-cross
-            IOS_SDK: AppleTVOS
-            IOS_CPU: arm64
-            test_ios: "yes"
-            config: "no"
-            make: "no"
-          - name: Apple Watch on iOS, armv7
-            os: macos-latest
-            AUTOTOOLS_HOST: armv7-apple-ios
-            OPENSSL_HOST: ios-cross
-            IOS_SDK: WatchOS
-            IOS_CPU: armv7k
-            test_ios: "yes"
-            config: "no"
-            make: "no"
-          - name: iPhoneSimulator on OS X, i386
-            os: macos-latest
-            AUTOTOOLS_HOST: i386-apple-ios
-            OPENSSL_HOST: iphoneos-cross
-            IOS_SDK: iPhoneSimulator
-            IOS_CPU: i386
-            test_ios: "yes"
-            config: "no"
-            make: "no"
-          - name: iPhoneSimulator on OS X, x86_64
-            os: macos-latest
-            AUTOTOOLS_HOST: x86_64-apple-ios
-            OPENSSL_HOST: iphoneos-cross
-            IOS_SDK: iPhoneSimulator
-            IOS_CPU: x86_64
-            test_ios: "yes"
-            config: "no"
-            make: "no"
-          - name: AppleTVSimulator on OS X, x86_64
-            os: macos-latest
-            AUTOTOOLS_HOST: x86_64-apple-ios
-            OPENSSL_HOST: iphoneos-cross
-            IOS_SDK: AppleTVSimulator
-            IOS_CPU: x86_64
-            test_ios: "yes"
-            config: "no"
-            make: "no"
-          - name: WatchSimulator on OS X, i386
-            os: macos-latest
-            AUTOTOOLS_HOST: i386-apple-ios
-            OPENSSL_HOST: iphoneos-cross
-            IOS_SDK: WatchSimulator
-            IOS_CPU: i386
-            test_ios: "yes"
+#          - name: Apple TV on iOS, arm64
+#            os: macos-latest
+#            AUTOTOOLS_HOST: aarch64-apple-ios
+#            OPENSSL_HOST: ios64-cross
+#            IOS_SDK: AppleTVOS
+#            IOS_CPU: arm64
+#            test_ios: "yes"
+#            config: "no"
+#            make: "no"
+#          - name: Apple Watch on iOS, armv7
+#            os: macos-latest
+#            AUTOTOOLS_HOST: armv7-apple-ios
+#            OPENSSL_HOST: ios-cross
+#            IOS_SDK: WatchOS
+#            IOS_CPU: armv7k
+#            test_ios: "yes"
+#            config: "no"
+#            make: "no"
+#          - name: iPhoneSimulator on OS X, i386
+#            os: macos-latest
+#            AUTOTOOLS_HOST: i386-apple-ios
+#            OPENSSL_HOST: iphoneos-cross
+#            IOS_SDK: iPhoneSimulator
+#            IOS_CPU: i386
+#            test_ios: "yes"
+#            config: "no"
+#            make: "no"
+#          - name: iPhoneSimulator on OS X, x86_64
+#            os: macos-latest
+#            AUTOTOOLS_HOST: x86_64-apple-ios
+#            OPENSSL_HOST: iphoneos-cross
+#            IOS_SDK: iPhoneSimulator
+#            IOS_CPU: x86_64
+#            test_ios: "yes"
+#            config: "no"
+#            make: "no"
+#          - name: AppleTVSimulator on OS X, x86_64
+#            os: macos-latest
+#            AUTOTOOLS_HOST: x86_64-apple-ios
+#            OPENSSL_HOST: iphoneos-cross
+#            IOS_SDK: AppleTVSimulator
+#            IOS_CPU: x86_64
+#            test_ios: "yes"
+#            config: "no"
+#            make: "no"
+#          - name: WatchSimulator on OS X, i386
+#            os: macos-latest
+#            AUTOTOOLS_HOST: i386-apple-ios
+#            OPENSSL_HOST: iphoneos-cross
+#            IOS_SDK: WatchSimulator
+#            IOS_CPU: i386
+#            test_ios: "yes"
+#            config: "no"
+#            make: "no"
+          - name: Android armv7a
+            os: ubuntu-latest
+            AUTOTOOLS_HOST: armv7a-linux-androidabi
+            OPENSSL_HOST: android-arm
+            ANDROID_CPU: armv7a
+            ANDROID_API: 23
+            test_android: "yes"
             config: "no"
             make: "no"
  
@@ -126,6 +135,54 @@ jobs:
       - uses: actions/checkout@v2
         with:
           submodules: false
+      - name: test_android
+        if: ${{ matrix.test_android == 'yes' }}
+        env:
+          AUTOTOOLS_HOST: ${{ matrix.AUTOTOOLS_HOST }}
+          OPENSSL_HOST: ${{ matrix.OPENSSL_HOST }}
+          ANDROID_API: ${{ matrix.ANDROID_API }}
+          ANDROID_CPU: ${{ matrix.ANDROID_CPU }}
+        run: |
+          #(already installed) ./contrib/android/install_tools.sh
+          export ANDROID_PREFIX="$HOME/android$ANDROID_API-$ANDROID_CPU"
+          echo ANDROID_PREFIX=${ANDROID_PREFIX}
+          export ANDROID_SDK_ROOT="$HOME/android-sdk"
+          echo ANDROID_SDK_ROOT=${ANDROID_SDK_ROOT}
+          export ANDROID_NDK_ROOT="$HOME/android-ndk"
+          echo ANDROID_NDK_ROOT=${ANDROID_NDK_ROOT}
+          export AUTOTOOLS_BUILD="$(./config.guess)"
+          echo AUTOTOOLS_BUILD=${AUTOTOOLS_BUILD}
+          export PKG_CONFIG_PATH="$ANDROID_PREFIX/lib/pkgconfig"
+          echo PKG_CONFIG_PATH=${PKG_CONFIG_PATH}
+          export CONFIG_OPTS="--build=$AUTOTOOLS_BUILD --host=$AUTOTOOLS_HOST --prefix=$ANDROID_PREFIX --with-ssl=$ANDROID_PREFIX --disable-gost --with-libexpat=$ANDROID_PREFIX"
+          echo CONFIG_OPTS=${CONFIG_OPTS}
+          echo "::group::install_ndk"
+          echo "./contrib/android/install_ndk.sh"
+          ./contrib/android/install_ndk.sh
+          echo "::endgroup::"
+          echo "::group::setenv_android.sh"
+          echo "./contrib/android/setenv_android.sh"
+          source ./contrib/android/setenv_android.sh
+          echo "::endgroup::"
+          echo "::group::install_openssl"
+          echo "./contrib/android/install_openssl.sh"
+          ./contrib/android/install_openssl.sh
+          echo "::endgroup::"
+          echo "::group::install_expat"
+          echo "./contrib/android/install_expat.sh"
+          ./contrib/android/install_expat.sh
+          echo "::endgroup::"
+          echo "::group::configure"
+          echo "./configure ${CONFIG_OPTS}"
+          ./configure ${CONFIG_OPTS}
+          echo "::endgroup::"
+          echo "::group::make"
+          # make is here to preserve environment variables
+          make
+          echo "::endgroup::"
+          echo "::group::make install"
+          make install
+          echo "::endgroup::"
       - name: test ios
         if: ${{ matrix.test_ios == 'yes' }}
         env:
