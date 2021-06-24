@@ -269,13 +269,13 @@ jobs:
           # remove pod::Usage because we do not need -help or -man output
           # from the Configure script
           sed -e 's/use Pod::Usage//' < Configure > Configure.fix
-          ./Configure.fix no-shared no-asm -DOPENSSL_NO_CAPIENG mingw64 --prefix="/$prepath/openssl"
+          ./Configure.fix no-shared no-asm -DOPENSSL_NO_CAPIENG mingw64 --prefix="$prepath/openssl"
           # make the libs only, build faster
           #make
           make build_libs
-          grep INSTALLTOP= Makefile
-          grep DESTDIR= Makefile
-          grep '\d\a' Makefile
+          mv Makefile Makefile.orig
+          # fixup \\ in the installtop to /.
+          sed -e 's?^INSTALLTOP=.*$?INSTALLTOP='"$prepath"'/openssl?' < Makefile.orig > Makefile
           # install the includes and libs only, build faster
           #make install_sw
           make install_dev
