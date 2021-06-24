@@ -250,10 +250,10 @@ jobs:
           cd ..
           export prepath=`pwd`
           echo prepath=${prepath}
-          echo "curl cpanm"
-          curl -L -k -s -S -o cpanm https://cpanmin.us/
-          echo "perl cpanm Pod::Usage"
-          perl cpanm Pod::Usage || echo whatever
+          #echo "curl cpanm"
+          #curl -L -k -s -S -o cpanm https://cpanmin.us/
+          #echo "perl cpanm Pod::Usage"
+          #perl cpanm Pod::Usage || echo whatever
           mkdir openssl
           echo "curl openssl"
           curl -L -k -s -S -o openssl-1.1.1j.tar.gz https://www.openssl.org/source/openssl-1.1.1j.tar.gz
@@ -266,7 +266,10 @@ jobs:
           #cpan POD::Usage
           #echo "perl MCPAN"
           #perl -MCPAN -e "CPAN::Shell->force(qw(install POD::Usage));"
-          ./Configure no-shared no-asm -DOPENSSL_NO_CAPIENG mingw64 --prefix="/$prepath/openssl"
+          # remove pod::Usage because we do not need -help or -man output
+          # from the Configure script
+          sed -e 's/use Pod::Usage//' < Configure > Configure.fix
+          ./Configure.fix no-shared no-asm -DOPENSSL_NO_CAPIENG mingw64 --prefix="/$prepath/openssl"
           make
           make install_sw
           cd ..
