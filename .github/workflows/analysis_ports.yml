@@ -21,13 +21,13 @@ jobs:
 #            make_test: "yes"
 #          - name: Clang-analyzer
 #            os: ubuntu-latest
-#            config: "CC=clang --enable-debug --disable-flto"
+#            config: "CC=clang --enable-debug --disable-flto --disable-static"
 #            make_test: "yes"
 #            clang_analysis: "yes"
 #          - name: libevent
 #            os: ubuntu-latest
 #            install_libevent: "yes"
-#            config: "CC=clang --enable-debug --disable-flto --with-libevent"
+#            config: "CC=clang --enable-debug --disable-flto --with-libevent --disable-static"
 #            make_test: "yes"
 #            clang_analysis: "yes"
 #          - name: OS X
@@ -38,12 +38,16 @@ jobs:
 #          - name: Clang on OS X
 #            os: macos-latest
 #            install_expat: "yes"
-#            config: "CC=clang --enable-debug --disable-flto --with-ssl=/usr/local/opt/openssl --with-libexpat=/usr/local/opt/expat"
+#            config: "CC=clang --enable-debug --disable-flto --with-ssl=/usr/local/opt/openssl --with-libexpat=/usr/local/opt/expat --disable-static"
 #            make_test: "yes"
 #            clang_analysis: "yes"
-          - name: ubsan (gcc undefined behaviour sanitizer)
+#          - name: ubsan (gcc undefined behaviour sanitizer)
+#            os: ubuntu-latest
+#            config: 'CFLAGS="-DNDEBUG -g2 -O3 -fsanitize=undefined -fno-sanitize-recover=all" --disable-flto --disable-static'
+#            make_test: "yes"
+          - name: asan (gcc address sanitizer)
             os: ubuntu-latest
-            config: 'CFLAGS="-DNDEBUG -g2 -O3 -fsanitize=undefined -fno-sanitize-recover=all" --disable-flto'
+            config: 'CFLAGS="-DNDEBUG -g2 -O3 -fsanitize=address" --disable-flto --disable-static'
             make_test: "yes"
  
     steps:
