@@ -80,13 +80,29 @@ jobs:
           echo PKG_CONFIG_PATH=${PKG_CONFIG_PATH}
           export CONFIG_OPTS="--build=$AUTOTOOLS_BUILD --host=$AUTOTOOLS_HOST --prefix=$IOS_PREFIX --with-ssl=$IOS_PREFIX --disable-gost --with-libexpat=$IOS_PREFIX"
           echo CONFIG_OPTS=${CONFIG_OPTS}
+          echo "::group::setenv_ios.sh"
+          echo "./contrib/ios/setenv_ios.sh"
           source ./contrib/ios/setenv_ios.sh
+          echo "::endgroup::"
+          echo "::group::install_openssl"
+          echo "./contrib/ios/install_openssl.sh"
           ./contrib/ios/install_openssl.sh
+          echo "::endgroup::"
+          echo "::group::install_expat"
+          echo "./contrib/ios/install_expat.sh"
           ./contrib/ios/install_expat.sh
+          echo "::endgroup::"
+          echo "::group::configure"
+          echo "./configure ${CONFIG_OPTS}"
           ./configure ${CONFIG_OPTS}
+          echo "::endgroup::"
+          echo "::group::make"
           # make is here to preserve environment variables
           make
+          echo "::endgroup::"
+          echo "::group::make install"
           make install
+          echo "::endgroup::"
       - name: install libevent
         if: ${{ matrix.install_libevent == 'yes' }}
         run: sudo apt-get install libevent-dev
