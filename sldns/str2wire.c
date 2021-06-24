@@ -628,7 +628,7 @@ static int sldns_str2wire_check_svcbparams(uint8_t* rdata, uint16_t rdata_len)
 	size_t   nparams = 0, i, j;
 	uint8_t  new_rdata[LDNS_MAX_RDFLEN];
 	uint8_t* new_rdata_ptr = new_rdata;
-	uint8_t* svcparams[64];
+	uint8_t* svcparams[MAX_NUMBER_OF_SVCPARAMS];
 	uint8_t* mandatory = NULL;
 	uint8_t* rdata_ptr = rdata;
 	uint16_t rdata_remaining = rdata_len;
@@ -670,60 +670,61 @@ static int sldns_str2wire_check_svcbparams(uint8_t* rdata, uint16_t rdata_len)
 	 * or as a secondary, we default to secondary behavior and we ignore the
 	 * sematic errors. */
 
+#ifdef SVCB_SEMANTIC_ERRORS
 	/* In draft-ietf-dnsop-svcb-https-06 Section 7:
 	 *
 	 *     Keys (...) MUST NOT appear more than once.
 	 *
 	 * If they key has already been seen, we have a duplicate
 	 */
-	// for (i = 0; i < nparams; i++) {
-	// 	uint16_t key = sldns_read_uint16(svcparams[i]);
+	for (i = 0; i < nparams; i++) {
+		uint16_t key = sldns_read_uint16(svcparams[i]);
 
-	// 	if (i + 1 < nparams && key == sldns_read_uint16(svcparams[i+1]))
-	// 		return LDNS_WIREPARSE_ERR_SVCB_DUPLICATE_KEYS;
+		if (i + 1 < nparams && key == sldns_read_uint16(svcparams[i+1]))
+			return LDNS_WIREPARSE_ERR_SVCB_DUPLICATE_KEYS;
 
-	// 	if (key == SVCB_KEY_MANDATORY)
-	// 		mandatory = svcparams[i];
-	// }
+		if (key == SVCB_KEY_MANDATORY)
+			mandatory = svcparams[i];
+	}
 
 	/* 4. verify that all the SvcParamKeys in mandatory are present */
-	// if (mandatory) {
+	if (mandatory) {
 
-	// 	/* Divide by sizeof(uint16_t)*/
-	// 	uint16_t mandatory_nkeys = sldns_read_uint16(mandatory + 2) / sizeof(uint16_t);
+		/* Divide by sizeof(uint16_t)*/
+		uint16_t mandatory_nkeys = sldns_read_uint16(mandatory + 2) / sizeof(uint16_t);
 
-	// 	/* Guaranteed by sldns_str2wire_svcparam_key_value */
-	// 	assert(mandatory_nkeys > 0);
+		/* Guaranteed by sldns_str2wire_svcparam_key_value */
+		assert(mandatory_nkeys > 0);
 
-	// 	for (i = 0; i < mandatory_nkeys; i++) {
-	// 		uint16_t mandatory_key = sldns_read_uint16(mandatory
-	// 		                       + 2 * sizeof(uint16_t)
-	// 		                       + i * sizeof(uint16_t));
-	// 		uint8_t found = 0;
+		for (i = 0; i < mandatory_nkeys; i++) {
+			uint16_t mandatory_key = sldns_read_uint16(mandatory
+			                       + 2 * sizeof(uint16_t)
+			                       + i * sizeof(uint16_t));
+			uint8_t found = 0;
 
-	// 		for (j = 0; j < nparams; j++) {
-	// 			if (mandatory_key == sldns_read_uint16(svcparams[j]))
-	// 				found = 1;
-	// 		}
+			for (j = 0; j < nparams; j++) {
+				if (mandatory_key == sldns_read_uint16(svcparams[j]))
+					found = 1;
+			}
 
-	// 		if (!found)
-	// 			return LDNS_WIREPARSE_ERR_SVCB_MANDATORY_MISSING_PARAM;
-	// 	}
+			if (!found)
+				return LDNS_WIREPARSE_ERR_SVCB_MANDATORY_MISSING_PARAM;
+		}
 
-	// }
-
+	}
+#endif
 	/* Write rdata in correct order */
-	// for (i = 0; i < nparams; i++) {
-	// 	uint16_t svcparam_len = sldns_read_uint16(svcparams[i] + 2)
-	// 	                      + 2 * sizeof(uint16_t);
+	for (i = 0; i < nparams; i++) {
+		uint16_t svcparam_len = sldns_read_uint16(svcparams[i] + 2)
+		                      + 2 * sizeof(uint16_t);
 
-	// 	if (new_rdata_ptr + svcparam_len - new_rdata > sizeof(new_rdata))
-	// 		return LDNS_WIREPARSE_ERR_BUFFER_TOO_SMALL;
+		if (new_rdata_ptr + svcparam_len - new_rdata > sizeof(new_rdata))
+			return LDNS_WIREPARSE_ERR_BUFFER_TOO_SMALL;
 
-	// 	memcpy(new_rdata_ptr, svcparams[i], svcparam_len);
-	// 	new_rdata_ptr += svcparam_len;
-	// }
-	// memcpy(rdata, new_rdata, rdata_len);
+		memcpy(new_rdata_ptr, svcparams[i], svcparam_len);
+		new_rdata_ptr += svcparam_len;
+	}
+	memcpy(rdata, new_rdata, rdata_len);
 	return LDNS_WIREPARSE_ERR_OK;
 }
 
@@ -1514,12 +1515,14 @@ sldns_str2wire_svcparam_value(const char *key, size_t key_len,
 	/* key without value */
 	if (val == NULL) {
 		switch (svcparamkey) {
+#ifdef SVCB_SEMANTIC_ERRORS
 		case SVCB_KEY_MANDATORY:
 		case SVCB_KEY_ALPN:
 		case SVCB_KEY_PORT:
 		case SVCB_KEY_IPV4HINT:
 		case SVCB_KEY_IPV6HINT:
 			return LDNS_WIREPARSE_ERR_SVCB_MISSING_PARAM;
+#endif
 		default:
 			if (*rd_len < 4)
 				return LDNS_WIREPARSE_ERR_BUFFER_TOO_SMALL;
@@ -1541,8 +1544,10 @@ sldns_str2wire_svcparam_value(const char *key, size_t key_len,
 		return sldns_str2wire_svcbparam_ipv6hint(val, rd, rd_len);
 	case SVCB_KEY_MANDATORY:
 		return sldns_str2wire_svcbparam_mandatory(val, rd, rd_len);
+#ifdef SVCB_SEMANTIC_ERRORS
 	case SVCB_KEY_NO_DEFAULT_ALPN:
 		return LDNS_WIREPARSE_ERR_SVCB_NO_DEFAULT_ALPN_VALUE;
+#endif
 	case SVCB_KEY_ECH:
 		return sldns_str2wire_svcbparam_ech_value(val, rd, rd_len);
 	case SVCB_KEY_ALPN:
