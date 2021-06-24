@@ -292,6 +292,10 @@ jobs:
           echo "./configure SHELL=/usr/bin/bash CONFIG_SHELL=/usr/bin/bash --prefix=\"$prepath/expat\" --exec-prefix=\"$prepath/expat\" --bindir=\"$prepath/expat/bin\" --includedir=\"$prepath/expat/include\" --mandir=\"$prepath/expat/man\" --libdir=\"$prepath/expat/lib\""
           ./configure SHELL=/usr/bin/bash CONFIG_SHELL=/usr/bin/bash --prefix="$prepath/expat" --exec-prefix="$prepath/expat" --bindir="$prepath/expat/bin" --includedir="$prepath/expat/include" --mandir="$prepath/expat/man" --libdir="$prepath/expat/lib"
           # fixup shell from space in pathname
+          grep 'SHELL =' Makefile | cat
+          grep 'Files' Makefile | cat
+          grep 'SHELL =' lib/Makefile | cat
+          grep 'Files' lib/Makefile | cat
           mv Makefile Makefile.orig
           sed -e 's?^SHELL =.*$??' < Makefile.orig > Makefile
           mv lib/Makefile lib/Makefile.orig
