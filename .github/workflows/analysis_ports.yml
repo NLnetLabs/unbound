@@ -249,8 +249,9 @@ jobs:
           export prepath=`pwd`
           echo prepath=${prepath}
           echo "curl cpanm"
-          curl -L https://cpanmin.us/ -o cpanm
-          perl cpanm POD::Usage
+          curl -L -k -s -S -o cpanm https://cpanmin.us/
+          echo "perl cpanm Pod::Usage"
+          perl cpanm Pod::Usage
           mkdir openssl
           echo "curl openssl"
           curl -L -k -s -S -o openssl-1.1.1j.tar.gz https://www.openssl.org/source/openssl-1.1.1j.tar.gz
