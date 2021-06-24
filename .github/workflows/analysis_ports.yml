@@ -231,7 +231,12 @@ jobs:
           echo '/c/Strawberry/perl/site/lib'
           ls -l '/c/Strawberry/perl/site/lib' || echo nevermind
           echo '/c/Strawberry/perl/vendor'
-          ls -l '/c/Strawberry/perl/vendor' || echo nevermind
+          ls -l '/usr/lib/perl5' || echo nevermind
+          ls -l '/usr/lib/perl5' || echo nevermind
+          ls -l '/usr/share/perl5' || echo nevermind
+          ls -l '/usr/share/perl5' || echo nevermind
+          echo which perl
+          which perl
           echo PATH="$PATH"
           export unboundpath=`pwd`
           echo unboundpath=${unboundpath}
@@ -242,7 +247,8 @@ jobs:
           curl -L -k -s -S -o openssl-1.1.1j.tar.gz https://www.openssl.org/source/openssl-1.1.1j.tar.gz
           tar xzf openssl-1.1.1j.tar.gz
           cd openssl-1.1.1j
-          export PERL5LIB="/c/Strawberry/perl/lib"
+          #export PERL5LIB="/c/Strawberry/perl/lib"
+          export PERL5LIB="/usr/share/perl5/lib:/usr/share/perl5/vendor:/usr/share/perl5/site"
           echo PERL5LIB="$PERL5LIB"
           ./Configure no-shared no-asm -DOPENSSL_NO_CAPIENG mingw64 --prefix="/$prepath/openssl"
           make
