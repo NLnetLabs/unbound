@@ -232,11 +232,14 @@ jobs:
           ls -l '/c/Strawberry/perl/site' || echo nevermind
           echo '/c/Strawberry/perl/site/lib'
           ls -l '/c/Strawberry/perl/site/lib' || echo nevermind
-          echo '/c/Strawberry/perl/vendor'
+          echo '/usr/lib/perl5'
           ls -l '/usr/lib/perl5' || echo nevermind
-          ls -l '/usr/lib/perl5' || echo nevermind
+          echo '/usr/share/perl5'
           ls -l '/usr/share/perl5' || echo nevermind
-          ls -l '/usr/share/perl5' || echo nevermind
+          echo '/usr/share/perl5/vendor_perl'
+          ls -l '/usr/share/perl5/vendor_perl' || echo nevermind
+          echo '/usr/share/perl5/vendor_perl/Pod'
+          ls -l '/usr/share/perl5/vendor_perl/Pod' || echo nevermind
           echo which perl
           which perl
           echo PATH="$PATH"
@@ -252,8 +255,6 @@ jobs:
           #export PERL5LIB="/c/Strawberry/perl/lib"
           #export PERL5LIB="/usr/share/perl5/lib:/usr/share/perl5/vendor:/usr/share/perl5/site"
           #echo PERL5LIB="$PERL5LIB"
-          export PATH="/c/Strawberry/perl/bin:$PATH"
-          which perl
           ./Configure no-shared no-asm -DOPENSSL_NO_CAPIENG mingw64 --prefix="/$prepath/openssl"
           make
           make install_sw
