@@ -10,15 +10,16 @@ on:
 
 jobs:
   build:
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         include:
-          - runs-on: ubuntu-latest
+          - os: ubuntu-latest
             name: GCC on Linux
             env:
               - CONFIG_OPTS: "--enable-debug --disable-flto"
               - MAKE_TEST: "yes"
-          - runs-on: ubuntu-latest
+          - os: ubuntu-latest
             name: Clang on Linux, clang-analysis
             env:
               - CONFIG_OPTS: "CC=clang --enable-debug --disable-flto"
