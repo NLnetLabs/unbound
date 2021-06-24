@@ -121,11 +121,38 @@ jobs:
 #            test_ios: "yes"
 #            config: "no"
 #            make: "no"
-          - name: Android armv7a
+#          - name: Android armv7a
+#            os: ubuntu-latest
+#            AUTOTOOLS_HOST: armv7a-linux-androidabi
+#            OPENSSL_HOST: android-arm
+#            ANDROID_CPU: armv7a
+#            ANDROID_API: 23
+#            test_android: "yes"
+#            config: "no"
+#            make: "no"
+          - name: Android aarch64
             os: ubuntu-latest
-            AUTOTOOLS_HOST: armv7a-linux-androidabi
-            OPENSSL_HOST: android-arm
-            ANDROID_CPU: armv7a
+            AUTOTOOLS_HOST: aarch64-linux-android
+            OPENSSL_HOST: android-arm64
+            ANDROID_CPU: aarch64
+            ANDROID_API: 23
+            test_android: "yes"
+            config: "no"
+            make: "no"
+          - name: Android x86
+            os: ubuntu-latest
+            AUTOTOOLS_HOST: i686-linux-android
+            OPENSSL_HOST: android-x86
+            ANDROID_CPU: x86
+            ANDROID_API: 23
+            test_android: "yes"
+            config: "no"
+            make: "no"
+          - name: Android x86_64
+            os: ubuntu-latest
+            AUTOTOOLS_HOST: x86_64-linux-android
+            OPENSSL_HOST: android-x86_64
+            ANDROID_CPU: x86_64
             ANDROID_API: 23
             test_android: "yes"
             config: "no"
