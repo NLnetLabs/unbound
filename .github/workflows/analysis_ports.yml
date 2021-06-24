@@ -216,22 +216,36 @@ jobs:
           ls -l '/c/ProgramData/Chocolatey/lib/rtools/tools' || echo nevermind
           echo '/c/Users/Default'
           ls -l '/c/Users/Default' || echo nevermind
+          echo '/usr'
+          ls -l '/usr' || echo nevermind
+          echo '/usr/lib'
+          ls -l '/usr/lib' || echo nevermind
+          echo '/usr/share'
+          ls -l '/usr/share' || echo nevermind
+          echo '/c/Strawberry/perl'
+          ls -l '/c/Strawberry/perl' || echo nevermind
+          echo '/c/Strawberry/perl/lib'
+          ls -l '/c/Strawberry/perl/lib' || echo nevermind
+          echo '/c/Strawberry/perl/site'
+          ls -l '/c/Strawberry/perl/site' || echo nevermind
+          echo '/c/Strawberry/perl/share'
+          ls -l '/c/Strawberry/perl/share' || echo nevermind
           echo PATH="$PATH"
-          echo pwd
-          pwd
+          export unboundpath=`pwd`
+          echo unboundpath=${unboundpath}
           cd ..
-          echo 'ls ..'
-          ls
+          export prepath=`pwd`
+          echo prepath=${prepath}
           mkdir openssl
           curl -L -k -s -S -o openssl-1.1.1j.tar.gz https://www.openssl.org/source/openssl-1.1.1j.tar.gz
           tar xzf openssl-1.1.1j.tar.gz
           cd openssl-1.1.1j
-          ./Configure no-shared no-asm -DOPENSSL_NO_CAPIENG mingw64 --prefix="/c/Users/Default/openssl"
+          ./Configure no-shared no-asm -DOPENSSL_NO_CAPIENG mingw64 --prefix="/$prepath/openssl"
           make
           make install_sw
           cd ..
           cd unbound
-          ./configure --enable-debug --enable-static-exe --disable-flto --with-ssl=/c/Users/Default/openssl
+          ./configure --enable-debug --enable-static-exe --disable-flto --with-ssl=/$prepath/openssl
           make
           make test
       - name: test_android
