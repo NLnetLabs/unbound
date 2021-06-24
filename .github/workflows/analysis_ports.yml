@@ -17,14 +17,14 @@ jobs:
           - os: ubuntu-latest
             name: GCC on Linux
             env:
-              - CONFIG_OPTS: "--enable-debug --disable-flto"
-              - MAKE_TEST: "yes"
+              - CONFIG_OPTS: '--enable-debug --disable-flto'
+              - MAKE_TEST: 'yes'
           - os: ubuntu-latest
             name: Clang on Linux, clang-analysis
             env:
-              - CONFIG_OPTS: "CC=clang --enable-debug --disable-flto"
-              - MAKE_TEST: "yes"
-              - TEST_ANALYZER: "yes"
+              - CONFIG_OPTS: 'CC=clang --enable-debug --disable-flto'
+              - MAKE_TEST: 'yes'
+              - TEST_ANALYZER: 'yes'
  
     steps:
       - uses: actions/checkout@v2
