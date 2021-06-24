@@ -428,6 +428,7 @@ enum sldns_enum_edns_option
 	LDNS_EDNS_CLIENT_SUBNET = 8, /* RFC7871 */
 	LDNS_EDNS_KEEPALIVE = 11, /* draft-ietf-dnsop-edns-tcp-keepalive*/
 	LDNS_EDNS_PADDING = 12, /* RFC7830 */
+	LDNS_EDNS_EDE = 15, /* RFC8914 */
 	LDNS_EDNS_CLIENT_TAG = 16 /* draft-bellis-dnsop-edns-tags-01 */
 };
 typedef enum sldns_enum_edns_option sldns_edns_option;
