@@ -14,17 +14,15 @@ jobs:
     strategy:
       matrix:
         include:
-          - os: ubuntu-latest
-            name: GCC on Linux
-            env:
-              - CONFIG_OPTS: '--enable-debug --disable-flto'
-              - MAKE_TEST: 'yes'
-          - os: ubuntu-latest
-            name: Clang on Linux, clang-analysis
-            env:
-              - CONFIG_OPTS: 'CC=clang --enable-debug --disable-flto'
-              - MAKE_TEST: 'yes'
-              - TEST_ANALYZER: 'yes'
+          - name: GCC on Linux
+            os: ubuntu-latest
+            config: --enable-debug --disable-flto
+            make_test: yes
+          - name: Clang on Linux, clang-analysis
+            os: ubuntu-latest
+            config: "CC=clang --enable-debug --disable-flto"
+            make_test: "yes"
+            clang_analysis: "yes"
  
     steps:
       - uses: actions/checkout@v2
@@ -32,20 +30,16 @@ jobs:
           submodules: false
       - name: checks
         run: |
-          echo $CONFIG_OPTS
-          echo $MAKE_TEST
-          echo $TEST_ANALYZER
+          echo ${{ matrix.config }}
+          echo ${{ matrix.make_test }}
+          echo ${{ matrix.clang_analysis }}
       - name: configure
-        run: ./configure $CONFIG_OPTS
+        run: ./configure ${{ matrix.config }}
       - name: make
         run: make
       - name: make test
-        run: |
-          if [ "$MAKE_TEST" = "yes" ]; then
-            make test
-          fi
-      - name: analyzer
-        run: |
-          if [ "$TEST_ANALYZER" = "yes" ]; then
-            (cd testdata/clang-analysis.tdir; bash clang-analysis.test)
-          fi
+        if: ${{ matrix.make_test == 'yes' }}
+        run: make test
+      - name: clang-analysis
+        if: ${{ matrix.clang_analysis == 'yes' }}
+        run: (cd testdata/clang-analysis.tdir; bash clang-analysis.test)
