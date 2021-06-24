@@ -248,7 +248,11 @@ jobs:
           cd ..
           export prepath=`pwd`
           echo prepath=${prepath}
+          echo "curl cpanm"
+          curl -L https://cpanmin.us/ -o cpanm
+          perl cpanm POD::Usage
           mkdir openssl
+          echo "curl openssl"
           curl -L -k -s -S -o openssl-1.1.1j.tar.gz https://www.openssl.org/source/openssl-1.1.1j.tar.gz
           tar xzf openssl-1.1.1j.tar.gz
           cd openssl-1.1.1j
@@ -257,8 +261,8 @@ jobs:
           #echo PERL5LIB="$PERL5LIB"
           #echo "cpan"
           #cpan POD::Usage
-          echo "perl MCPAN"
-          perl -MCPAN -e "CPAN::Shell->force(qw(install POD::Usage));"
+          #echo "perl MCPAN"
+          #perl -MCPAN -e "CPAN::Shell->force(qw(install POD::Usage));"
           ./Configure no-shared no-asm -DOPENSSL_NO_CAPIENG mingw64 --prefix="/$prepath/openssl"
           make
           make install_sw
