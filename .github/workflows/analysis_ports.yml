@@ -26,18 +26,13 @@ jobs:
 #            clang_analysis: "yes"
           - name: macos
             os: macos-latest
-            config: "--enable-debug --disable-flto"
+            config: "--enable-debug --disable-flto --with-ssl=/usr/local/opt/openssl"
             make_test: "yes"
  
     steps:
       - uses: actions/checkout@v2
         with:
           submodules: false
-      - name: checks
-        run: |
-          echo ${{ matrix.config }}
-          echo ${{ matrix.make_test }}
-          echo ${{ matrix.clang_analysis }}
       - name: configure
         run: ./configure ${{ matrix.config }}
       - name: make
