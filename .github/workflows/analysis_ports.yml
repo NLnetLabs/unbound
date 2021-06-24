@@ -270,11 +270,15 @@ jobs:
           # from the Configure script
           sed -e 's/use Pod::Usage//' < Configure > Configure.fix
           ./Configure.fix no-shared no-asm -DOPENSSL_NO_CAPIENG mingw64 --prefix="/$prepath/openssl"
-          make
+          # make the libs only, build faster
+          #make
+          make build_libs
           grep INSTALLTOP= Makefile
           grep DESTDIR= Makefile
           grep '\d\a' Makefile
-          make install_sw
+          # install the includes and libs only, build faster
+          #make install_sw
+          make install_dev
           cd ..
           cd unbound
           ./configure --enable-debug --enable-static-exe --disable-flto "--with-ssl=/$prepath/openssl"
