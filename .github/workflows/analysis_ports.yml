@@ -168,11 +168,11 @@ jobs:
           submodules: false
       - name: test_windows
         if: ${{ matrix.test_windows == 'yes' }}
+        shell: bash
         run: |
           mingw64-configure --enable-debug --enable-static-exe --disable-flto
           make
           make test
-          shell: bash
       - name: test_android
         if: ${{ matrix.test_android == 'yes' }}
         env:
