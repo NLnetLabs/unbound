@@ -274,7 +274,7 @@ jobs:
           # make the libs only, build faster
           echo "make build_libs"
           #make
-          ###make build_libs
+          make build_libs
           mv Makefile Makefile.orig
           # fixup \\ in the installtop to /.
           echo "fixup INSTALLTOP"
@@ -282,7 +282,7 @@ jobs:
           # install the includes and libs only, build faster
           echo "make install_dev"
           #make install_sw
-          ###make install_dev
+          make install_dev
           cd ..
           mkdir expat
           echo "curl expat"
@@ -292,7 +292,6 @@ jobs:
           echo "./configure SHELL=/usr/bin/bash CONFIG_SHELL=/usr/bin/bash --prefix=\"$prepath/expat\" --exec-prefix=\"$prepath/expat\" --bindir=\"$prepath/expat/bin\" --includedir=\"$prepath/expat/include\" --mandir=\"$prepath/expat/man\" --libdir=\"$prepath/expat/lib\""
           ./configure SHELL=/usr/bin/bash CONFIG_SHELL=/usr/bin/bash --prefix="$prepath/expat" --exec-prefix="$prepath/expat" --bindir="$prepath/expat/bin" --includedir="$prepath/expat/include" --mandir="$prepath/expat/man" --libdir="$prepath/expat/lib"
           # fixup SHELL is treated specially, but SHELZZ is not by make.
-          grep 'SHELL =' Makefile | cat
           mv Makefile Makefile.orig
           sed -e 's/SHELL/SHELLZZ/g' < Makefile.orig > Makefile
           mv lib/Makefile lib/Makefile.orig
