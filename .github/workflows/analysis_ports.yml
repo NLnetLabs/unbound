@@ -293,17 +293,17 @@ jobs:
           ./configure SHELL=/usr/bin/bash CONFIG_SHELL=/usr/bin/bash --prefix="$prepath/expat" --exec-prefix="$prepath/expat" --bindir="$prepath/expat/bin" --includedir="$prepath/expat/include" --mandir="$prepath/expat/man" --libdir="$prepath/expat/lib"
           # fixup shell from space in pathname
           mv Makefile Makefile.orig
-          sed -e 's?C:/Program Files/Git/usr/bin/sh.exe?/usr/bin/sh?g' < Makefile.orig > Makefile
+          sed -e 's?^SHELL =.*$??' < Makefile.orig > Makefile
           mv lib/Makefile lib/Makefile.orig
-          sed -e 's?C:/Program Files/Git/usr/bin/sh.exe?/usr/bin/sh?g' < lib/Makefile.orig > lib/Makefile
+          sed -e 's?^SHELL =.*$??' < lib/Makefile.orig > lib/Makefile
           mv doc/Makefile doc/Makefile.orig
-          sed -e 's?C:/Program Files/Git/usr/bin/sh.exe?/usr/bin/sh?g' < doc/Makefile.orig > doc/Makefile
+          sed -e 's?^SHELL =.*$??' < doc/Makefile.orig > doc/Makefile
           mv examples/Makefile examples/Makefile.orig
-          sed -e 's?C:/Program Files/Git/usr/bin/sh.exe?/usr/bin/sh?g' < examples/Makefile.orig > examples/Makefile
+          sed -e 's?^SHELL =.*$??' < examples/Makefile.orig > examples/Makefile
           mv tests/Makefile tests/Makefile.orig
-          sed -e 's?C:/Program Files/Git/usr/bin/sh.exe?/usr/bin/sh?g' < tests/Makefile.orig > tests/Makefile
+          sed -e 's?^SHELL =.*$??' < tests/Makefile.orig > tests/Makefile
           mv xmlwf/Makefile xmlwf/Makefile.orig
-          sed -e 's?C:/Program Files/Git/usr/bin/sh.exe?/usr/bin/sh?g' < xmlwf/Makefile.orig > xmlwf/Makefile
+          sed -e 's?^SHELL =.*$??' < xmlwf/Makefile.orig > xmlwf/Makefile
           echo "make"
           make
           echo "make install"
