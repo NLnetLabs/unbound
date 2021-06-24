@@ -3,6 +3,6 @@ $TTL 3600
 
 @       SOA     primary admin 0 0 0 0 0
 
-; In the next examples the SvcParamKeys are missing their values.
+; Port must be a positive number < 65536
 
-f02	SVCB   1 foo.example.com. mandatory
+f22	HTTPS   1 foo.example.com. port=65536

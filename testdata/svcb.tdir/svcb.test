@@ -54,143 +54,23 @@ fi
 # check all the failure cases
 if $PRE/readzone svcb.failure-cases-01
 then
-	echo "Failure case 1: Multiple instances of the same SvcParamKey"
+	echo "Failure case 21: ech value is not base64 encoded"
 	echo "Incorrectly succeeded"
 	exit 1
 
 elif $PRE/readzone svcb.failure-cases-02
 then
-	echo "Failure case 2: a SvcParamKey is missing a value"
+	echo "Failure case 22: port value needs to be a positive integer < 65536"
 	echo "Incorrectly succeeded"
 	exit 1
 
 elif $PRE/readzone svcb.failure-cases-03
 then
-	echo "Failure case 3: a SvcParamKey is missing a value"
-	echo "Incorrectly succeeded"
-	exit 1
-
-elif $PRE/readzone svcb.failure-cases-04
-then
-	echo "Failure case 4: a SvcParamKey is missing a value"
-	echo "Incorrectly succeeded"
-	exit 1
-
-elif $PRE/readzone svcb.failure-cases-05
-then
-	echo "Failure case 5: a SvcParamKey is missing a value"
-	echo "Incorrectly succeeded"
-	exit 1
-
-elif $PRE/readzone svcb.failure-cases-06
-then
-	echo "Failure case 6: a SvcParamKey is missing a value"
-	echo "Incorrectly succeeded"
-	exit 1
-
-elif $PRE/readzone svcb.failure-cases-07
-then
-	echo "Failure case 7: The \no-default-alpn\" SvcParamKey value MUST be empty
-	echo "Incorrectly succeeded"
-	exit 1
-
-elif $PRE/readzone svcb.failure-cases-08
-then
-	echo "Failure case 8: a mandatory SvcParam is missing"
-	echo "Incorrectly succeeded"
-	exit 1
-
-elif $PRE/readzone svcb.failure-cases-09
-then
-	echo "Failure case 9: The \"mandatory\" SvcParamKey MUST not be included in mandatory list"
-	echo "Incorrectly succeeded"
-	exit 1
-
-elif $PRE/readzone svcb.failure-cases-10
-then
-	echo "Failure case 10: multiple instances of the same SvcParamKey in the mandatory list"
-	echo "Incorrectly succeeded"
-	exit 1
-
-elif $PRE/readzone svcb.failure-cases-11
-then
-	echo "Failure case 11: Multiple instances of the same SvcParamKey"
-	echo "Incorrectly succeeded"
-	exit 1
-
-elif $PRE/readzone svcb.failure-cases-12
-then
-	echo "Failure case 12: a SvcParamKey is missing a value"
-	echo "Incorrectly succeeded"
-	exit 1
-
-elif $PRE/readzone svcb.failure-cases-13
-then
-	echo "Failure case 13: a SvcParamKey is missing a value"
-	echo "Incorrectly succeeded"
-	exit 1
-
-elif $PRE/readzone svcb.failure-cases-14
-then
-	echo "Failure case 14: a SvcParamKey is missing a value"
-	echo "Incorrectly succeeded"
-	exit 1
-
-elif $PRE/readzone svcb.failure-cases-15
-then
-	echo "Failure case 15: a SvcParamKey is missing a value"
-	echo "Incorrectly succeeded"
-	exit 1
-
-elif $PRE/readzone svcb.failure-cases-16
-then
-	echo "Failure case 16: a SvcParamKey is missing a value"
-	echo "Incorrectly succeeded"
-	exit 1
-
-elif $PRE/readzone svcb.failure-cases-17
-then
-	echo "Failure case 17: The \no-default-alpn\" SvcParamKey value MUST be empty
-	echo "Incorrectly succeeded"
-	exit 1
-
-elif $PRE/readzone svcb.failure-cases-18
-then
-	echo "Failure case 18: a mandatory SvcParam is missing"
-	echo "Incorrectly succeeded"
-	exit 1
-
-elif $PRE/readzone svcb.failure-cases-19
-then
-	echo "Failure case 19: The \"mandatory\" SvcParamKey MUST not be included in mandatory list"
-	echo "Incorrectly succeeded"
-	exit 1
-
-elif $PRE/readzone svcb.failure-cases-20
-then
-	echo "Failure case 20: multiple instances of the same SvcParamKey in the mandatory list"
-	echo "Incorrectly succeeded"
-	exit 1
-
-elif $PRE/readzone svcb.failure-cases-21
-then
-	echo "Failure case 21: ech value is not base64 encoded"
-	echo "Incorrectly succeeded"
-	exit 1
-
-elif $PRE/readzone svcb.failure-cases-22
-then
-	echo "Failure case 22: port value needs to be a positive integer < 65536"
-	echo "Incorrectly succeeded"
-	exit 1
-
-elif $PRE/readzone svcb.failure-cases-23
-then
 	echo "Failure case 23: 65 SvcParams is too many SvcParams; the limit is 64"
 	echo "Incorrectly succeeded"
 	exit 1
 
-elif $PRE/readzone svcb.failure-cases-23
+elif $PRE/readzone svcb.failure-cases-04
 then
 	echo "Failure case 24: 256 is too many characters for an alpn; maximum is 255"
 	echo "Incorrectly succeeded"

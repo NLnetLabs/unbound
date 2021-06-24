@@ -3,8 +3,7 @@ $TTL 3600
 
 @       SOA     primary admin 0 0 0 0 0
 
-; This example has multiple instances of the same SvcParamKey
+; Here there are multiple instances of the same SvcParamKey in the mandatory list
 
-f01	SVCB   1 foo.example.com. (
-                       key123=abc key123=def
-                       )
+f21	HTTPS   1 foo.example.com. ech="123"
+f21	HTTPS   1 foo.example.com. echconfig="123"
