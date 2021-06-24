@@ -250,19 +250,11 @@ jobs:
           cd ..
           export prepath=`pwd`
           echo prepath=${prepath}
-          echo "yum -y install perl-CPAN"
-          yum -y install perl-CPAN
-          echo "yum -y install Pod::Usage"
-          yum -y install Pod::Usage
-          echo "cpan Pod::Usage"
-          cpan Pod::Usage
-          #echo "curl cpanm"
-          #curl -L -k -s -S -o cpanm https://cpanmin.us/
-          #echo "perl cpanm ExtUtils::Manifest"
-          #perl cpanm ExtUtils::Manifest
-          #echo "perl cpanm Pod::Usage"
-          #perl cpanm Pod::Usage
-          #mkdir openssl
+          echo "curl cpanm"
+          curl -L -k -s -S -o cpanm https://cpanmin.us/
+          echo "perl cpanm Pod::Usage"
+          perl cpanm Pod::Usage || echo whatever
+          mkdir openssl
           echo "curl openssl"
           curl -L -k -s -S -o openssl-1.1.1j.tar.gz https://www.openssl.org/source/openssl-1.1.1j.tar.gz
           tar xzf openssl-1.1.1j.tar.gz
