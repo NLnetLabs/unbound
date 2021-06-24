@@ -184,8 +184,18 @@ jobs:
           ls -l '/mingw64' || echo nevermind
           echo '/mingw64/bin'
           ls -l '/mingw64/bin' || echo nevermind
-          echo '/Users'
-          ls -l '/Users' || echo nevermind
+          echo '/c/Users'
+          ls -l '/c/Users' || echo nevermind
+          echo '/mingw64/ssl'
+          ls -l '/mingw64/ssl' || echo nevermind
+          echo '/c/ProgramData/Chocolatey'
+          ls -l '/c/ProgramData/Chocolatey' || echo nevermind
+          echo '/c/ProgramData/Chocolatey/include'
+          ls -l '/c/ProgramData/Chocolatey/include' || echo nevermind
+          echo '/c/ProgramData/Chocolatey/lib'
+          ls -l '/c/ProgramData/Chocolatey/lib' || echo nevermind
+          echo '/c/ProgramData/Chocolatey/lib/mingw'
+          ls -l '/c/ProgramData/Chocolatey/lib/mingw' || echo nevermind
           echo PATH="$PATH"
           ./configure --enable-debug --enable-static-exe --disable-flto
           make
