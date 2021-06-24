@@ -190,12 +190,20 @@ jobs:
           ls -l '/mingw64/ssl' || echo nevermind
           echo '/c/ProgramData/Chocolatey'
           ls -l '/c/ProgramData/Chocolatey' || echo nevermind
-          echo '/c/ProgramData/Chocolatey/include'
-          ls -l '/c/ProgramData/Chocolatey/include' || echo nevermind
+          echo '/c/ProgramData/Chocolatey/tools'
+          ls -l '/c/ProgramData/Chocolatey/tools' || echo nevermind
           echo '/c/ProgramData/Chocolatey/lib'
           ls -l '/c/ProgramData/Chocolatey/lib' || echo nevermind
+          echo '/c/ProgramData/Chocolatey/lib/OpenSSL.Light'
+          ls -l '/c/ProgramData/Chocolatey/lib/OpenSSL.Light' || echo nevermind
           echo '/c/ProgramData/Chocolatey/lib/mingw'
           ls -l '/c/ProgramData/Chocolatey/lib/mingw' || echo nevermind
+          echo '/c/ProgramData/Chocolatey/lib/mingw/tools'
+          ls -l '/c/ProgramData/Chocolatey/lib/mingw/tools' || echo nevermind
+          echo '/c/ProgramData/Chocolatey/lib/mingw/tools/install'
+          ls -l '/c/ProgramData/Chocolatey/lib/mingw/tools/install' || echo nevermind
+          echo '/c/ProgramData/Chocolatey/lib/mingw/tools/install/mingw64'
+          ls -l '/c/ProgramData/Chocolatey/lib/mingw/tools/install/mingw64' || echo nevermind
           echo PATH="$PATH"
           ./configure --enable-debug --enable-static-exe --disable-flto
           make
