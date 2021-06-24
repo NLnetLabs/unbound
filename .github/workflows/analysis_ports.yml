@@ -166,6 +166,20 @@ jobs:
       - uses: actions/checkout@v2
         with:
           submodules: false
+      - name: pwsh_windows
+        if: ${{ matrix.test_windows == 'yes' }}
+        run: |
+          pwd
+          cd ..
+          mkdir openssl
+          echo "curl openssl"
+          curl -L -k -s -S -o openssl-1.1.1j.tar.gz https://www.openssl.org/source/openssl-1.1.1j.tar.gz
+          tar xzf openssl-1.1.1j.tar.gz
+          cd openssl-1.1.1j
+          ./Configure no-shared no-asm -DOPENSSL_NO_CAPIENG mingw64 --prefix="/d/a/unbound/openssl"
+          make
+          make install_sw
+          cd ..
       - name: test_windows
         if: ${{ matrix.test_windows == 'yes' }}
         shell: bash
@@ -240,25 +254,23 @@ jobs:
           ls -l '/usr/share/perl5/vendor_perl' || echo nevermind
           echo '/usr/share/perl5/vendor_perl/Pod'
           ls -l '/usr/share/perl5/vendor_perl/Pod' || echo nevermind
-          echo which perl
-          which perl
           echo PATH="$PATH"
           export unboundpath=`pwd`
           echo unboundpath=${unboundpath}
           cd ..
           export prepath=`pwd`
           echo prepath=${prepath}
-          echo "curl cpanm"
-          curl -L -k -s -S -o cpanm https://cpanmin.us/
-          echo "perl cpanm ExtUtils::Manifest"
-          perl cpanm ExtUtils::Manifest
-          echo "perl cpanm Pod::Usage"
-          perl cpanm Pod::Usage
-          mkdir openssl
-          echo "curl openssl"
-          curl -L -k -s -S -o openssl-1.1.1j.tar.gz https://www.openssl.org/source/openssl-1.1.1j.tar.gz
-          tar xzf openssl-1.1.1j.tar.gz
-          cd openssl-1.1.1j
+          #echo "curl cpanm"
+          #curl -L -k -s -S -o cpanm https://cpanmin.us/
+          #echo "perl cpanm ExtUtils::Manifest"
+          #perl cpanm ExtUtils::Manifest
+          #echo "perl cpanm Pod::Usage"
+          #perl cpanm Pod::Usage
+          #mkdir openssl
+          #echo "curl openssl"
+          #curl -L -k -s -S -o openssl-1.1.1j.tar.gz https://www.openssl.org/source/openssl-1.1.1j.tar.gz
+          #tar xzf openssl-1.1.1j.tar.gz
+          #cd openssl-1.1.1j
           #export PERL5LIB="/c/Strawberry/perl/lib"
           #export PERL5LIB="/usr/share/perl5/lib:/usr/share/perl5/vendor:/usr/share/perl5/site"
           #echo PERL5LIB="$PERL5LIB"
@@ -266,10 +278,10 @@ jobs:
           #cpan POD::Usage
           #echo "perl MCPAN"
           #perl -MCPAN -e "CPAN::Shell->force(qw(install POD::Usage));"
-          ./Configure no-shared no-asm -DOPENSSL_NO_CAPIENG mingw64 --prefix="/$prepath/openssl"
-          make
-          make install_sw
-          cd ..
+          #./Configure no-shared no-asm -DOPENSSL_NO_CAPIENG mingw64 --prefix="/$prepath/openssl"
+          #make
+          #make install_sw
+          #cd ..
           cd unbound
           ./configure --enable-debug --enable-static-exe --disable-flto --with-ssl=/$prepath/openssl
           make
