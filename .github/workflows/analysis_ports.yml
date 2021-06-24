@@ -214,8 +214,24 @@ jobs:
           ls -l '/c/ProgramData/Chocolatey/lib/rtools' || echo nevermind
           echo '/c/ProgramData/Chocolatey/lib/rtools/tools'
           ls -l '/c/ProgramData/Chocolatey/lib/rtools/tools' || echo nevermind
+          echo '/c/Users/Default'
+          ls -l '/c/Users/Default' || echo nevermind
           echo PATH="$PATH"
-          ./configure --enable-debug --enable-static-exe --disable-flto
+          echo pwd
+          pwd
+          cd ..
+          echo 'ls ..'
+          ls
+          mkdir openssl
+          curl -L -k -s -S -o openssl-1.1.1j.tar.gz https://www.openssl.org/source/openssl-1.1.1j.tar.gz
+          tar xzf openssl-1.1.1j.tar.gz
+          cd openssl-1.1.1j
+          ./Configure no-shared no-asm -DOPENSSL_NO_CAPIENG mingw64 --prefix="/c/Users/Default/openssl"
+          make
+          make install_sw
+          cd ..
+          cd unbound
+          ./configure --enable-debug --enable-static-exe --disable-flto --with-ssl=/c/Users/Default/openssl
           make
           make test
       - name: test_android
