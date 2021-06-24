@@ -1000,6 +1000,7 @@ void testbound_selftest(void)
 	tb_assert( v && strcmp(v, "1ww2ww3") == 0);
 	free(v);
 
+#ifndef USE_WINSOCK
 	v = macro_process(store, NULL, "it is ${ctime 123456}");
 	tb_assert( v && strcmp(v, "it is Fri Jan  2 10:17:36 1970") == 0);
 	free(v);
@@ -1013,6 +1014,7 @@ void testbound_selftest(void)
 	v = macro_process(store, NULL, "it is ${ctime $t1}");
 	tb_assert( v && strcmp(v, "it is Fri Jan  2 10:17:36 1970") == 0);
 	free(v);
+#endif /* WINSOCK */
 
 	r = macro_assign(store, "x", "1");
 	tb_assert(r);
