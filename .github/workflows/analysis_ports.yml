@@ -228,8 +228,12 @@ jobs:
           ls -l '/c/Strawberry/perl/lib' || echo nevermind
           echo '/c/Strawberry/perl/site'
           ls -l '/c/Strawberry/perl/site' || echo nevermind
-          echo '/c/Strawberry/perl/share'
-          ls -l '/c/Strawberry/perl/share' || echo nevermind
+          echo '/c/Strawberry/perl/site/lib'
+          ls -l '/c/Strawberry/perl/site/lib' || echo nevermind
+          echo '/c/Strawberry/perl/vendor'
+          ls -l '/c/Strawberry/perl/vendor' || echo nevermind
+          echo PERLLIB="$PERLLIB"
+          echo PERL5LIB="$PERL5LIB"
           echo PATH="$PATH"
           export unboundpath=`pwd`
           echo unboundpath=${unboundpath}
