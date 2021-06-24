@@ -291,9 +291,19 @@ jobs:
           cd expat-2.2.10
           echo "./configure SHELL=/usr/bin/bash CONFIG_SHELL=/usr/bin/bash --prefix=\"$prepath/expat\" --exec-prefix=\"$prepath/expat\" --bindir=\"$prepath/expat/bin\" --includedir=\"$prepath/expat/include\" --mandir=\"$prepath/expat/man\" --libdir=\"$prepath/expat/lib\""
           ./configure SHELL=/usr/bin/bash CONFIG_SHELL=/usr/bin/bash --prefix="$prepath/expat" --exec-prefix="$prepath/expat" --bindir="$prepath/expat/bin" --includedir="$prepath/expat/include" --mandir="$prepath/expat/man" --libdir="$prepath/expat/lib"
-          mv Makefile Makefile.orig
           # fixup shell from space in pathname
+          mv Makefile Makefile.orig
           sed -e 's?^SHELL=.*$?SHELL=/usr/bin/sh?' < Makefile.orig > Makefile
+          mv lib/Makefile lib/Makefile.orig
+          sed -e 's?^SHELL=.*$?SHELL=/usr/bin/sh?' < lib/Makefile.orig > lib/Makefile
+          mv doc/Makefile doc/Makefile.orig
+          sed -e 's?^SHELL=.*$?SHELL=/usr/bin/sh?' < doc/Makefile.orig > doc/Makefile
+          mv examples/Makefile examples/Makefile.orig
+          sed -e 's?^SHELL=.*$?SHELL=/usr/bin/sh?' < examples/Makefile.orig > examples/Makefile
+          mv tests/Makefile tests/Makefile.orig
+          sed -e 's?^SHELL=.*$?SHELL=/usr/bin/sh?' < tests/Makefile.orig > tests/Makefile
+          mv xmlwf/Makefile xmlwf/Makefile.orig
+          sed -e 's?^SHELL=.*$?SHELL=/usr/bin/sh?' < xmlwf/Makefile.orig > xmlwf/Makefile
           echo "make"
           make
           echo "make install"
