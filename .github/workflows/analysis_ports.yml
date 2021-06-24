@@ -224,6 +224,8 @@ jobs:
           ls -l '/usr/share' || echo nevermind
           echo '/c/Strawberry/perl'
           ls -l '/c/Strawberry/perl' || echo nevermind
+          echo '/c/Strawberry/perl/bin'
+          ls -l '/c/Strawberry/perl/bin' || echo nevermind
           echo '/c/Strawberry/perl/lib'
           ls -l '/c/Strawberry/perl/lib' || echo nevermind
           echo '/c/Strawberry/perl/site'
@@ -248,8 +250,10 @@ jobs:
           tar xzf openssl-1.1.1j.tar.gz
           cd openssl-1.1.1j
           #export PERL5LIB="/c/Strawberry/perl/lib"
-          export PERL5LIB="/usr/share/perl5/lib:/usr/share/perl5/vendor:/usr/share/perl5/site"
-          echo PERL5LIB="$PERL5LIB"
+          #export PERL5LIB="/usr/share/perl5/lib:/usr/share/perl5/vendor:/usr/share/perl5/site"
+          #echo PERL5LIB="$PERL5LIB"
+          export PATH="/c/Strawberry/perl/bin:$PATH"
+          which perl
           ./Configure no-shared no-asm -DOPENSSL_NO_CAPIENG mingw64 --prefix="/$prepath/openssl"
           make
           make install_sw
