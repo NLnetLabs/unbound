@@ -382,6 +382,7 @@ static sldns_rr_descriptor rdata_field_descriptors[] = {
 	{LDNS_RR_TYPE_ZONEMD, "ZONEMD", 4, 4, type_zonemd_wireformat, LDNS_RDF_TYPE_NONE, LDNS_RR_NO_COMPRESS, 0 },
 	/* 64 */
 	{LDNS_RR_TYPE_SVCB, "SVCB", 2, 2, type_svcb_wireformat, LDNS_RDF_TYPE_SVCPARAM, LDNS_RR_NO_COMPRESS, 0 },
+	/* 65 */
 	{LDNS_RR_TYPE_HTTPS, "HTTPS", 2, 2, type_svcb_wireformat, LDNS_RDF_TYPE_SVCPARAM, LDNS_RR_NO_COMPRESS, 0 },
 {(enum sldns_enum_rr_type)0, "TYPE66", 1, 1, type_0_wireformat, LDNS_RDF_TYPE_NONE, LDNS_RR_NO_COMPRESS, 0 },
 {(enum sldns_enum_rr_type)0, "TYPE67", 1, 1, type_0_wireformat, LDNS_RDF_TYPE_NONE, LDNS_RR_NO_COMPRESS, 0 },
