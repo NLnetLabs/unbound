@@ -314,7 +314,7 @@ jobs:
           echo "./configure --enable-debug --enable-static-exe --disable-flto \"--with-ssl=$prepath/openssl\" --with-libexpat=\"$prepath/expat\""
           ./configure --enable-debug --enable-static-exe --disable-flto "--with-ssl=$prepath/openssl" --with-libexpat="$prepath/expat"
           make
-          make test
+          make test || ./testbound.exe -p testdata/acl.rpl -o -vvvv
       - name: test_android
         if: ${{ matrix.test_android == 'yes' }}
         env:
