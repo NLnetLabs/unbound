@@ -166,20 +166,6 @@ jobs:
       - uses: actions/checkout@v2
         with:
           submodules: false
-      - name: pwsh_windows
-        if: ${{ matrix.test_windows == 'yes' }}
-        run: |
-          pwd
-          cd ..
-          mkdir openssl
-          echo "curl openssl"
-          curl -L -k -s -S -o openssl-1.1.1j.tar.gz https://www.openssl.org/source/openssl-1.1.1j.tar.gz
-          tar xzf openssl-1.1.1j.tar.gz
-          cd openssl-1.1.1j
-          perl Configure no-shared no-asm -DOPENSSL_NO_CAPIENG mingw64 --prefix="/d/a/unbound/openssl"
-          make
-          make install_sw
-          cd ..
       - name: test_windows
         if: ${{ matrix.test_windows == 'yes' }}
         shell: bash
@@ -254,6 +240,10 @@ jobs:
           ls -l '/usr/share/perl5/vendor_perl' || echo nevermind
           echo '/usr/share/perl5/vendor_perl/Pod'
           ls -l '/usr/share/perl5/vendor_perl/Pod' || echo nevermind
+          echo '/c/Program Files/Common Files'
+          ls -l '/c/Program Files/Common Files' || echo nevermind
+          echo '/c/Program Files/Common Files/SSL'
+          ls -l '/c/Program Files/Common Files/SSL' || echo nevermind
           echo PATH="$PATH"
           export unboundpath=`pwd`
           echo unboundpath=${unboundpath}
@@ -283,7 +273,7 @@ jobs:
           #make install_sw
           #cd ..
           cd unbound
-          ./configure --enable-debug --enable-static-exe --disable-flto --with-ssl=/$prepath/openssl
+          ./configure --enable-debug --enable-static-exe --disable-flto "--with-ssl=/c/Program Files/Common Files/SSL"
           make
           make test
       - name: test_android
