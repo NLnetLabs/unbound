@@ -170,9 +170,14 @@ jobs:
         if: ${{ matrix.test_windows == 'yes' }}
         shell: bash
         run: |
+          echo 'c:'
           ls -l 'c:\' || echo nevermind
-          ls -l 'c:\tools' || echo nevermind
-          ls -l 'c:\tools\mingw' || echo nevermind
+          echo 'Program Files'
+          ls -l 'c:\Program Files' || echo nevermind
+          echo 'Program Files (x86)'
+          ls -l 'c:\Program Files (x86)' || echo nevermind
+          echo PATH="$PATH"
+          find / -name mingw32-make.exe
           mingw32-configure --enable-debug --enable-static-exe --disable-flto
           make
           make test
