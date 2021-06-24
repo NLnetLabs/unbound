@@ -274,7 +274,7 @@ jobs:
           # make the libs only, build faster
           echo "make build_libs"
           #make
-          make build_libs
+          ###make build_libs
           mv Makefile Makefile.orig
           # fixup \\ in the installtop to /.
           echo "fixup INSTALLTOP"
@@ -282,15 +282,15 @@ jobs:
           # install the includes and libs only, build faster
           echo "make install_dev"
           #make install_sw
-          make install_dev
+          ###make install_dev
           cd ..
           mkdir expat
           echo "curl expat"
           curl -L -k -s -S -o expat-2.2.10.tar.gz https://github.com/libexpat/libexpat/releases/download/R_2_2_10/expat-2.2.10.tar.gz
           tar xzf expat-2.2.10.tar.gz
           cd expat-2.2.10
-          echo "./configure SHELL=/usr/bin/sh --prefix=\"$prepath/expat\" --exec-prefix=\"$prepath/expat\" --bindir=\"$prepath/expat/bin\" --includedir=\"$prepath/expat/include\" --mandir=\"$prepath/expat/man\" --libdir=\"$prepath/expat/lib\""
-          ./configure SHELL=/usr/bin/sh --prefix="$prepath/expat" --exec-prefix="$prepath/expat" --bindir="$prepath/expat/bin" --includedir="$prepath/expat/include" --mandir="$prepath/expat/man" --libdir="$prepath/expat/lib"
+          echo "./configure SHELL=/usr/bin/sh.exe --prefix=\"$prepath/expat\" --exec-prefix=\"$prepath/expat\" --bindir=\"$prepath/expat/bin\" --includedir=\"$prepath/expat/include\" --mandir=\"$prepath/expat/man\" --libdir=\"$prepath/expat/lib\""
+          ./configure SHELL=/usr/bin/sh.exe --prefix="$prepath/expat" --exec-prefix="$prepath/expat" --bindir="$prepath/expat/bin" --includedir="$prepath/expat/include" --mandir="$prepath/expat/man" --libdir="$prepath/expat/lib"
           echo "make"
           make
           echo "make install"
