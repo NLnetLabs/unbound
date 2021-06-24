@@ -20,6 +20,7 @@ jobs:
               - MAKE_TEST: "yes"
           - runs-on: ubuntu-latest
             name: Clang on Linux, clang-analysis
+            env:
               - CONFIG_OPTS: "CC=clang --enable-debug --disable-flto"
               - MAKE_TEST: "yes"
               - TEST_ANALYZER: "yes"
