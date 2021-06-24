@@ -176,9 +176,18 @@ jobs:
           ls -l 'c:\Program Files' || echo nevermind
           echo 'Program Files (x86)'
           ls -l 'c:\Program Files (x86)' || echo nevermind
+          echo '/c/Program Files/OpenSSL'
+          ls -l '/c/Program Files/OpenSSL' || echo nevermind
+          echo '/'
+          ls -l '/' || echo nevermind
+          echo '/mingw64'
+          ls -l '/mingw64' || echo nevermind
+          echo '/mingw64/bin'
+          ls -l '/mingw64/bin' || echo nevermind
+          echo '/Users'
+          ls -l '/Users' || echo nevermind
           echo PATH="$PATH"
-          find / -name mingw32-make.exe
-          mingw32-configure --enable-debug --enable-static-exe --disable-flto
+          ./configure --enable-debug --enable-static-exe --disable-flto
           make
           make test
       - name: test_android
