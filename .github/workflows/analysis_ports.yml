@@ -89,8 +89,8 @@ jobs:
             os: macos-latest
             AUTOTOOLS_HOST: i386-apple-ios
             OPENSSL_HOST: iphoneos-cross
-            IOS_SDK: i386
-            IOS_CPU: iPhoneSimulator
+            IOS_SDK: iPhoneSimulator
+            IOS_CPU: i386
             test_ios: "yes"
             config: "no"
             make: "no"
@@ -98,8 +98,8 @@ jobs:
             os: macos-latest
             AUTOTOOLS_HOST: x86_64-apple-ios
             OPENSSL_HOST: iphoneos-cross
-            IOS_SDK: x86_64
-            IOS_CPU: iPhoneSimulator
+            IOS_SDK: iPhoneSimulator
+            IOS_CPU: x86_64
             test_ios: "yes"
             config: "no"
             make: "no"
@@ -107,8 +107,8 @@ jobs:
             os: macos-latest
             AUTOTOOLS_HOST: x86_64-apple-ios
             OPENSSL_HOST: iphoneos-cross
-            IOS_SDK: x86_64
-            IOS_CPU: AppleTVSimulator
+            IOS_SDK: AppleTVSimulator
+            IOS_CPU: x86_64
             test_ios: "yes"
             config: "no"
             make: "no"
@@ -116,8 +116,8 @@ jobs:
             os: macos-latest
             AUTOTOOLS_HOST: i386-apple-ios
             OPENSSL_HOST: iphoneos-cross
-            IOS_SDK: i386
-            IOS_CPU: WatchSimulator
+            IOS_SDK: WatchSimulator
+            IOS_CPU: i386
             test_ios: "yes"
             config: "no"
             make: "no"
