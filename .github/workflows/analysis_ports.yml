@@ -284,10 +284,22 @@ jobs:
           #make install_sw
           make install_dev
           cd ..
+          make expat
+          echo "curl expat"
+          curl -L -k -s -S -o expat-2.2.10.tar.gz https://github.com/libexpat/libexpat/releases/download/R_2_2_10/expat-2.2.10.tar.gz
+          tar xzf expat-2.2.10.tar.gz
+          cd expat-2.2.10
+          echo "./configure --prefix=\"$prepath/expat\" --exec-prefix=\"$prepath/expat\" --bindir=\"$prepath/expat/bin\" --includedir=\"$prepath/expat/include\" --mandir=\"$prepath/expat/man\" --libdir=\"$prepath/expat/lib\""
+          ./configure --prefix="$prepath/expat" --exec-prefix="$prepath/expat" --bindir="$prepath/expat/bin" --includedir="$prepath/expat/include" --mandir="$prepath/expat/man" --libdir="$prepath/expat/lib"
+          echo "make"
+          make
+          echo "make install"
+          make install
+          cd ..
           echo "unbound"
           cd unbound
-          echo "./configure --enable-debug --enable-static-exe --disable-flto \"--with-ssl=$prepath/openssl\""
-          ./configure --enable-debug --enable-static-exe --disable-flto "--with-ssl=$prepath/openssl" || (cat config.log; exit 0)
+          echo "./configure --enable-debug --enable-static-exe --disable-flto \"--with-ssl=$prepath/openssl\" --with-libexpat=\"$prepath/expat\""
+          ./configure --enable-debug --enable-static-exe --disable-flto "--with-ssl=$prepath/openssl" --with-libexpat="$prepath/expat"
           make
           make test
       - name: test_android
