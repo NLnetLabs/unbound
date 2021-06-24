@@ -30,6 +30,11 @@ jobs:
       - uses: actions/checkout@v2
         with:
           submodules: false
+      - name: checks
+        run: |
+          echo $CONFIG_OPTS
+          echo $MAKE_TEST
+          echo $TEST_ANALYZER
       - name: configure
         run: ./configure $CONFIG_OPTS
       - name: make
