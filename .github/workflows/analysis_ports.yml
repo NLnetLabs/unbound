@@ -170,9 +170,9 @@ jobs:
         if: ${{ matrix.test_windows == 'yes' }}
         shell: bash
         run: |
-          ls -l c:\
-          ls -l c:\tools
-          ls -l c:\tools\mingw
+          ls -l 'c:\' || echo nevermind
+          ls -l 'c:\tools' || echo nevermind
+          ls -l 'c:\tools\mingw' || echo nevermind
           mingw32-configure --enable-debug --enable-static-exe --disable-flto
           make
           make test
