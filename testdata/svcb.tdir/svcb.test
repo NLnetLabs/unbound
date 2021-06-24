@@ -52,7 +52,7 @@ fi
 
 
 # check all the failure cases
-if  svcb.failure-cases-01
+if $PRE/readzone svcb.failure-cases-01
 then
 	echo "Failure case 1: Multiple instances of the same SvcParamKey"
 	echo "Incorrectly succeeded"
