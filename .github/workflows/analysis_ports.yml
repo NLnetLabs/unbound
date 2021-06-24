@@ -1,0 +1,44 @@
+name: Analysis and Ports
+
+on:
+  workflow_dispatch:
+    inputs:
+      start:
+        description: 'Start analysis and port workflow'
+        default: 'yes'
+        required: true
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - runs-on: ubuntu-latest
+            name: GCC on Linux
+            env:
+              - CONFIG_OPTS: "--enable-debug --disable-flto"
+              - MAKE_TEST: "yes"
+          - runs-on: ubuntu-latest
+            name: Clang on Linux, clang-analysis
+              - CONFIG_OPTS: "CC=clang --enable-debug --disable-flto"
+              - MAKE_TEST: "yes"
+              - TEST_ANALYZER: "yes"
+ 
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: false
+      - name: configure
+        run: ./configure $CONFIG_OPTS
+      - name: make
+        run: make
+      - name: make test
+        run: |
+          if [ "$MAKE_TEST" = "yes" ]; then
+            make test
+          fi
+      - name: analyzer
+        run: |
+          if [ "$TEST_ANALYZER" = "yes" ]; then
+            (cd testdata/clang-analysis.tdir; bash clang-analysis.test)
+          fi
