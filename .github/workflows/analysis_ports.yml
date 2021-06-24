@@ -170,7 +170,10 @@ jobs:
         if: ${{ matrix.test_windows == 'yes' }}
         shell: bash
         run: |
-          mingw64-configure --enable-debug --enable-static-exe --disable-flto
+          ls -l c:\
+          ls -l c:\tools
+          ls -l c:\tools\mingw
+          mingw32-configure --enable-debug --enable-static-exe --disable-flto
           make
           make test
       - name: test_android
