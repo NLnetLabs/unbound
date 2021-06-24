@@ -269,19 +269,25 @@ jobs:
           # remove pod::Usage because we do not need -help or -man output
           # from the Configure script
           sed -e 's/use Pod::Usage//' < Configure > Configure.fix
+          echo "./Configure.fix no-shared no-asm -DOPENSSL_NO_CAPIENG mingw64 --prefix=\""$prepath/openssl\"""
           ./Configure.fix no-shared no-asm -DOPENSSL_NO_CAPIENG mingw64 --prefix="$prepath/openssl"
           # make the libs only, build faster
+          echo "make build_libs"
           #make
           make build_libs
           mv Makefile Makefile.orig
           # fixup \\ in the installtop to /.
+          echo "fixup INSTALLTOP"
           sed -e 's?^INSTALLTOP=.*$?INSTALLTOP='"$prepath"'/openssl?' < Makefile.orig > Makefile
           # install the includes and libs only, build faster
+          echo "make install_dev"
           #make install_sw
           make install_dev
           cd ..
+          echo "unbound"
           cd unbound
-          ./configure --enable-debug --enable-static-exe --disable-flto "--with-ssl=/$prepath/openssl"
+          echo "./configure --enable-debug --enable-static-exe --disable-flto \"--with-ssl=$prepath/openssl\""
+          ./configure --enable-debug --enable-static-exe --disable-flto "--with-ssl=$prepath/openssl" || (cat config.log; exit 0)
           make
           make test
       - name: test_android
