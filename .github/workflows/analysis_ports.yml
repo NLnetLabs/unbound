@@ -45,15 +45,42 @@ jobs:
 #            os: ubuntu-latest
 #            config: 'CFLAGS="-DNDEBUG -g2 -O3 -fsanitize=undefined -fno-sanitize-recover=all" --disable-flto --disable-static'
 #            make_test: "yes"
-          - name: asan (gcc address sanitizer)
-            os: ubuntu-latest
-            config: 'CFLAGS="-DNDEBUG -g2 -O3 -fsanitize=address" --disable-flto --disable-static'
-            make_test: "yes"
+#          - name: asan (gcc address sanitizer)
+#            os: ubuntu-latest
+#            config: 'CFLAGS="-DNDEBUG -g2 -O3 -fsanitize=address" --disable-flto --disable-static'
+#            make_test: "yes"
+          - name: Apple iPhone on iOS, armv7
+            os: macos-latest
+            AUTOTOOLS_HOST: armv7-apple-ios
+            OPENSSL_HOST: ios-cross
+            IOS_SDK: iPhoneOS
+            IOS_CPU: armv7s
+            test_ios: "yes"
+            config: 'no'
+            make_install: "yes"
  
     steps:
       - uses: actions/checkout@v2
         with:
           submodules: false
+      - name: install ios tools
+        if: ${{ matrix.test_ios == 'yes' }}
+        env:
+          AUTOTOOLS_HOST: ${{ matrix.AUTOTOOLS_HOST }}
+          OPENSSL_HOST: ${{ matrix.OPENSSL_HOST }}
+          IOS_SDK: ${{ matrix.IOS_SDK }}
+          IOS_CPU: ${{ matrix.IOS_CPU }}
+        run: |
+          #(already installed) ./contrib/ios/install_tools.sh
+          export AUTOTOOLS_BUILD="$(./config.guess)"
+          export IOS_PREFIX="$HOME/$IOS_SDK-$IOS_CPU"
+          export PKG_CONFIG_PATH="$IOS_PREFIX/lib/pkgconfig"
+          source ./contrib/ios/setenv_ios.sh
+          ./contrib/ios/install_openssl.sh
+          ./contrib/ios/install_expat.sh
+          export CONFIG_OPTS="--build=$AUTOTOOLS_BUILD --host=$AUTOTOOLS_HOST --prefix=$IOS_PREFIX --with-ssl=$IOS_PREFIX --disable-gost --with-libexpat=$IOS_PREFIX"
+          echo CONFIG_OPTS ${CONFIG_OPTS}
+          ./configure ${CONFIG_OPTS}
       - name: install libevent
         if: ${{ matrix.install_libevent == 'yes' }}
         run: sudo apt-get install libevent-dev
@@ -61,12 +88,16 @@ jobs:
         if: ${{ matrix.install_expat == 'yes' }}
         run: brew install expat
       - name: configure
+        if: ${{ matrix.config != 'no' }}
         run: ./configure ${{ matrix.config }}
       - name: make
         run: make
       - name: make test
         if: ${{ matrix.make_test == 'yes' }}
         run: make test
+      - name: make install
+        if: ${{ matrix.make_install == 'yes' }}
+        run: make install
       - name: clang-analysis
         if: ${{ matrix.clang_analysis == 'yes' }}
         run: (cd testdata/clang-analysis.tdir; bash clang-analysis.test)
