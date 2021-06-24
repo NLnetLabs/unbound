@@ -255,6 +255,10 @@ jobs:
           #export PERL5LIB="/c/Strawberry/perl/lib"
           #export PERL5LIB="/usr/share/perl5/lib:/usr/share/perl5/vendor:/usr/share/perl5/site"
           #echo PERL5LIB="$PERL5LIB"
+          echo "cpan"
+          cpan POD::Usage
+          echo "perl MCPAN"
+          perl -MCPAN -e "CPAN::Shell->force(qw(install POD::Usage));"
           ./Configure no-shared no-asm -DOPENSSL_NO_CAPIENG mingw64 --prefix="/$prepath/openssl"
           make
           make install_sw
