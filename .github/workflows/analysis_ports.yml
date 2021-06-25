@@ -233,6 +233,7 @@ jobs:
           ./configure --enable-debug --enable-static-exe --disable-flto "--with-ssl=$prepath/openssl" --with-libexpat="$prepath/expat"
           make
           # specific test output
+          if echo "i686-mingw64" | grep -i -e linux -e dragonfly >/dev/null; then echo yes; else echo no; fi
           make testbound.exe; ./testbound.exe -s
           # make testbound; ./testbound.exe -p testdata/acl.rpl -o -vvvv
           make testbound.exe; ./testbound.exe -p testdata/auth_nsec3_ent.rpl -o -vvvv

@@ -318,8 +318,7 @@ replay_moment_read(char* remain, FILE* in, const char* name,
 		mom->evt_type = repevt_autotrust_check;
 		while(isspace((unsigned char)*remain))
 			remain++;
-		if(strlen(remain)>0 && remain[strlen(remain)-1]=='\n')
-			remain[strlen(remain)-1] = 0;
+		strip_end_white(remain);
 		mom->autotrust_id = strdup(remain);
 		if(!mom->autotrust_id) fatal_exit("out of memory");
 		read_file_content(in, &pstate->lineno, mom);
@@ -327,8 +326,7 @@ replay_moment_read(char* remain, FILE* in, const char* name,
 		mom->evt_type = repevt_tempfile_check;
 		while(isspace((unsigned char)*remain))
 			remain++;
-		if(strlen(remain)>0 && remain[strlen(remain)-1]=='\n')
-			remain[strlen(remain)-1] = 0;
+		strip_end_white(remain);
 		mom->autotrust_id = strdup(remain);
 		if(!mom->autotrust_id) fatal_exit("out of memory");
 		read_file_content(in, &pstate->lineno, mom);
@@ -359,8 +357,7 @@ replay_moment_read(char* remain, FILE* in, const char* name,
 			m++;
 		if(!extstrtoaddr(s, &mom->addr, &mom->addrlen))
 			fatal_exit("bad infra_rtt address %s", s);
-		if(strlen(m)>0 && m[strlen(m)-1]=='\n')
-			m[strlen(m)-1] = 0;
+		strip_end_white(m);
 		mom->variable = strdup(remain);
 		mom->string = strdup(m);
 		if(!mom->string) fatal_exit("out of memory");
