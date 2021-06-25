@@ -1263,9 +1263,6 @@ int memcmp(const void *x, const void *y, size_t n);
 
 
 #ifndef HAVE_CTIME_R
-#ifdef ctime_r
-#undef ctime_r
-#endif
 #define ctime_r unbound_ctime_r
 char *ctime_r(const time_t *timep, char *buf);
 #endif

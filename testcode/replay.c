@@ -688,6 +688,10 @@ do_macro_ctime(char* arg)
 		return NULL;
 	}
 	ctime_r(&tt, buf);
+#ifdef USE_WINSOCK
+	if(strlen(buf) > 10 && buf[7]==' ' && buf[8]=='0')
+		buf[8]=' '; /* fix error in windows ctime */
+#endif
 	strip_end_white(buf);
 	return strdup(buf);
 }

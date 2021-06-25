@@ -23,7 +23,6 @@ ctime_r_cleanup(void)
 char *ctime_r(const time_t *timep, char *buf)
 {
 	char* result;
-	printf("unbound_ctime_r called\n");
 	if(!ctime_r_init) {
 		/* still small race where this init can be done twice,
 		 * which is mostly harmless */
@@ -34,11 +33,9 @@ char *ctime_r(const time_t *timep, char *buf)
 	lock_basic_lock(&ctime_lock);
 	result = ctime(timep);
 	if(buf && result) {
-		printf("ctime_r called result '%s'\n", result);
 		if(strlen(result) > 10 && result[7]==' ' && result[8]=='0')
 			result[8]=' '; /* fix error in windows ctime */
 		strcpy(buf, result);
-		printf("ctime_r called fixresult '%s'\n", buf);
 	}
 	lock_basic_unlock(&ctime_lock);
 	return buf;
