@@ -51,6 +51,9 @@
 #include "testcode/testpkts.h"
 #include "testcode/fake_event.h"
 #include "sldns/str2wire.h"
+#ifdef ctime_r
+#undef ctime_r
+#endif
 
 /** max length of lines in file */
 #define MAX_LINE_LEN 10240
