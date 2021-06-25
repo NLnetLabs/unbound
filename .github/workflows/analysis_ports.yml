@@ -238,7 +238,7 @@ jobs:
           if echo "i686-mingw64" | grep -i -e dragonfly >/dev/null; then echo yesdragonfly; else echo nodragonfly; fi
           make testbound.exe; ./testbound.exe -s
           # make testbound; ./testbound.exe -p testdata/acl.rpl -o -vvvv
-          make testbound.exe; ./testbound.exe -p testdata/auth_nsec3_ent.rpl -o -vvvv
+          make testbound.exe; ./testbound.exe -p testdata/auth_xfr.rpl -o -vvvv
           make test
       - name: test_android
         if: ${{ matrix.test_android == 'yes' }}
