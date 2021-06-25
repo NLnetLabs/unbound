@@ -1717,6 +1717,7 @@ fi
 LIBOBJ_WITHOUT_CTIME="$LIBOBJS"
 AC_SUBST(LIBOBJ_WITHOUT_CTIME)
 AC_REPLACE_FUNCS(ctime_r)
+#LIBOBJS="$LIBOBJS ctime_r.$ac_objext"
 AC_REPLACE_FUNCS(strsep)
 
 AC_ARG_ENABLE(allsymbols, AS_HELP_STRING([--enable-allsymbols],[export all symbols from libunbound and link binaries to it, smaller install size but libunbound export table is polluted by internal symbols]))
@@ -2044,6 +2045,9 @@ AHX_MEMCMP_BROKEN(unbound)
 
 [
 #ifndef HAVE_CTIME_R
+#ifdef ctime_r
+#undef ctime_r
+#endif
 #define ctime_r unbound_ctime_r
 char *ctime_r(const time_t *timep, char *buf);
 #endif

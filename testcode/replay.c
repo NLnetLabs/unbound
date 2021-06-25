@@ -51,9 +51,6 @@
 #include "testcode/testpkts.h"
 #include "testcode/fake_event.h"
 #include "sldns/str2wire.h"
-#ifdef ctime_r
-#undef ctime_r
-#endif
 
 /** max length of lines in file */
 #define MAX_LINE_LEN 10240
@@ -690,11 +687,7 @@ do_macro_ctime(char* arg)
 		log_err("macro ctime: expected number, not: %s", arg);
 		return NULL;
 	}
-#ifndef HAVE_CTIME_R
-	unbound_ctime_r(&tt, buf);
-#else
 	ctime_r(&tt, buf);
-#endif
 	strip_end_white(buf);
 	return strdup(buf);
 }
