@@ -687,7 +687,11 @@ do_macro_ctime(char* arg)
 		log_err("macro ctime: expected number, not: %s", arg);
 		return NULL;
 	}
+#ifndef HAVE_CTIME_R
+	unbound_ctime_r(&tt, buf);
+#else
 	ctime_r(&tt, buf);
+#endif
 	strip_end_white(buf);
 	return strdup(buf);
 }
