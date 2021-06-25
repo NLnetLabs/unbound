@@ -14616,6 +14616,8 @@ CC=$lt_save_CC
 
 
 
+# pkg-config is only needed for these options, do not require it otherwise
+if test "$enable_systemd" = "yes" -o "$with_pyunbound" = "yes" -o "$with_pythonmod" = "yes"; then
 
 
 
@@ -14735,6 +14737,7 @@ $as_echo "yes" >&6; }
 $as_echo "no" >&6; }
 		PKG_CONFIG=""
 	fi
+fi
 fi
 
 # Checks for header files.
