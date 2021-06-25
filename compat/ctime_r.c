@@ -23,6 +23,7 @@ ctime_r_cleanup(void)
 char *ctime_r(const time_t *timep, char *buf)
 {
 	char* result;
+	printf("unbound_ctime_r called\n");
 	if(!ctime_r_init) {
 		/* still small race where this init can be done twice,
 		 * which is mostly harmless */

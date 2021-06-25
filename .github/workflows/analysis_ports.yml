@@ -234,6 +234,8 @@ jobs:
           make
           # specific test output
           if echo "i686-mingw64" | grep -i -e linux -e dragonfly >/dev/null; then echo yes; else echo no; fi
+          if echo "i686-mingw64" | grep -i -e linux >/dev/null; then echo yeslinux; else echo nolinux; fi
+          if echo "i686-mingw64" | grep -i -e dragonfly >/dev/null; then echo yesdragonfly; else echo nodragonfly; fi
           make testbound.exe; ./testbound.exe -s
           # make testbound; ./testbound.exe -p testdata/acl.rpl -o -vvvv
           make testbound.exe; ./testbound.exe -p testdata/auth_nsec3_ent.rpl -o -vvvv

@@ -124,8 +124,7 @@ replay_range_delete(struct replay_range* rng)
 	free(rng);
 }
 
-/** strip whitespace from end of string */
-static void
+void
 strip_end_white(char* p)
 {
 	size_t i;
@@ -227,7 +226,7 @@ read_file_content(FILE* in, int* lineno, struct replay_moment* mom)
 		if(strncmp(line, "FILE_END", 8) == 0) {
 			return;
 		}
-		if(line[0]) line[strlen(line)-1] = 0; /* remove newline */
+		strip_end_white(line);
 		if(!cfg_strlist_insert(last, strdup(line)))
 			fatal_exit("malloc failure");
 		last = &( (*last)->next );
@@ -249,7 +248,7 @@ read_assign_step(char* remain, struct replay_moment* mom)
 	if(eq != '=')
 		fatal_exit("no '=' in assign: %s", remain);
 	remain += skip;
-	if(remain[0]) remain[strlen(remain)-1]=0; /* remove newline */
+	strip_end_white(remain);
 	mom->string = strdup(remain);
 	if(!mom->variable || !mom->string)
 		fatal_exit("out of memory");
@@ -689,7 +688,7 @@ do_macro_ctime(char* arg)
 		return NULL;
 	}
 	ctime_r(&tt, buf);
-	if(buf[0]) buf[strlen(buf)-1]=0; /* remove trailing newline */
+	strip_end_white(buf);
 	return strdup(buf);
 }
 
