@@ -170,6 +170,8 @@ jobs:
         if: ${{ matrix.test_windows == 'yes' }}
         shell: bash
         run: |
+          #echo commands as we make them.
+          set -x
           export unboundpath=`pwd`
           echo unboundpath=${unboundpath}
           cd ..
@@ -186,6 +188,7 @@ jobs:
           cd openssl-1.1.1j
           # remove pod::Usage because we do not need -help or -man output
           # from the Configure script
+          echo "Fixup ./Configure by removing use Pod::Usage require"
           sed -e 's/use Pod::Usage//' < Configure > Configure.fix
           echo "./Configure.fix no-shared no-asm -DOPENSSL_NO_CAPIENG mingw64 --prefix=\""$prepath/openssl\"""
           ./Configure.fix no-shared no-asm -DOPENSSL_NO_CAPIENG mingw64 --prefix="$prepath/openssl"
@@ -210,6 +213,7 @@ jobs:
           echo "./configure SHELL=/usr/bin/bash CONFIG_SHELL=/usr/bin/bash --prefix=\"$prepath/expat\" --exec-prefix=\"$prepath/expat\" --bindir=\"$prepath/expat/bin\" --includedir=\"$prepath/expat/include\" --mandir=\"$prepath/expat/man\" --libdir=\"$prepath/expat/lib\""
           ./configure SHELL=/usr/bin/bash CONFIG_SHELL=/usr/bin/bash --prefix="$prepath/expat" --exec-prefix="$prepath/expat" --bindir="$prepath/expat/bin" --includedir="$prepath/expat/include" --mandir="$prepath/expat/man" --libdir="$prepath/expat/lib"
           # fixup SHELL is treated specially, but SHELZZ is not by make.
+          echo "Fixup Makefiles by renaming SHELL to SHELLZZ"
           mv Makefile Makefile.orig
           sed -e 's/SHELL/SHELLZZ/g' < Makefile.orig > Makefile
           mv lib/Makefile lib/Makefile.orig
@@ -229,13 +233,12 @@ jobs:
           cd ..
           echo "unbound"
           cd unbound
-          echo "./configure --enable-debug --enable-static-exe --disable-flto \"--with-ssl=$prepath/openssl\" --with-libexpat=\"$prepath/expat\""
-          ./configure --enable-debug --enable-static-exe --disable-flto "--with-ssl=$prepath/openssl" --with-libexpat="$prepath/expat"
+          echo "./configure --enable-debug --enable-static-exe --disable-flto \"--with-ssl=$prepath/openssl\" --with-libexpat=\"$prepath/expat\" --disable-shared"
+          ./configure --enable-debug --enable-static-exe --disable-flto "--with-ssl=$prepath/openssl" --with-libexpat="$prepath/expat" --disable-shared
           make
           # specific test output
-          make testbound.exe; ./testbound.exe -s
-          # make testbound; ./testbound.exe -p testdata/acl.rpl -o -vvvv
-          make testbound.exe; ./testbound.exe -p testdata/auth_xfr.rpl -o -vvvv
+          #make testbound.exe; ./testbound.exe -s
+          #make testbound; ./testbound.exe -p testdata/acl.rpl -o -vvvv
           make test
       - name: test_android
         if: ${{ matrix.test_android == 'yes' }}
