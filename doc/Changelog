@@ -4,6 +4,8 @@
 	- Fix configure grep for reuseport default for failure.
 	- Fix compat ctime_r return value
 	- Fix configure does not require pkg-config if not needed.
+	- Fix unit test in the ctime_r calls for autotrust and in testbound.
+	- Fix auth zone download on windows to unlink before rename.
 
 24 June 2021: Wouter
 	- Add analyzer and port compile github workflow.

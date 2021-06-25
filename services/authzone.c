@@ -5152,6 +5152,9 @@ xfr_write_after_update(struct auth_xfer* xfr, struct module_env* env)
 		lock_rw_unlock(&z->lock);
 		return;
 	}
+#ifdef UB_ON_WINDOWS
+	(void)unlink(zfilename); /* windows does not replace file with rename() */
+#endif
 	if(rename(tmpfile, zfilename) < 0) {
 		log_err("could not rename(%s, %s): %s", tmpfile, zfilename,
 			strerror(errno));
