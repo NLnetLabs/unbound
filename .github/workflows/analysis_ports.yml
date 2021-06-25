@@ -231,9 +231,6 @@ jobs:
           cd unbound
           echo "./configure --enable-debug --enable-static-exe --disable-flto \"--with-ssl=$prepath/openssl\" --with-libexpat=\"$prepath/expat\""
           ./configure --enable-debug --enable-static-exe --disable-flto "--with-ssl=$prepath/openssl" --with-libexpat="$prepath/expat"
-          grep -A 60 "checking for ctime_r" config.log | cat
-          grep CTIME config.h | cat
-          grep LIBOBJS Makefile | cat
           make
           # specific test output
           make testbound.exe; ./testbound.exe -s
