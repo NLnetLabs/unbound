@@ -4206,7 +4206,7 @@ esac
 # are we on MinGW?
 if uname -s 2>&1 | grep MINGW >/dev/null; then on_mingw="yes"
 else
-	if echo $host $target | grep mingw >/dev/null; then on_mingw="yes"
+	if echo $host | grep mingw >/dev/null; then on_mingw="yes"
 	else on_mingw="no"; fi
 fi
 
@@ -16195,7 +16195,10 @@ done
 
 
 # check if we can use SO_REUSEPORT
-if echo "$host" | $GREP -i -e linux -e dragonfly >/dev/null; then
+reuseport_default=0
+if echo "$host" | $GREP -i -e linux >/dev/null; then reuseport_default=1; fi
+if echo "$host" | $GREP -i -e dragonfly >/dev/null; then reuseport_default=1; fi
+if test "$reuseport_default" = 1; then
 
 $as_echo "#define REUSEPORT_DEFAULT 1" >>confdefs.h
 

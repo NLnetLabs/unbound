@@ -490,7 +490,10 @@ ACX_MKDIR_ONE_ARG
 AC_CHECK_FUNCS([strptime],[AC_CHECK_STRPTIME_WORKS],[AC_LIBOBJ([strptime])])
 
 # check if we can use SO_REUSEPORT
-if echo "$host" | $GREP -i -e linux -e dragonfly >/dev/null; then
+reuseport_default=0
+if echo "$host" | $GREP -i -e linux >/dev/null; then reuseport_default=1; fi
+if echo "$host" | $GREP -i -e dragonfly >/dev/null; then reuseport_default=1; fi
+if test "$reuseport_default" = 1; then
 	AC_DEFINE(REUSEPORT_DEFAULT, 1, [if REUSEPORT is enabled by default])
 else
 	AC_DEFINE(REUSEPORT_DEFAULT, 0, [if REUSEPORT is enabled by default])
