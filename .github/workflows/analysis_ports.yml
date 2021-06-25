@@ -170,8 +170,6 @@ jobs:
         if: ${{ matrix.test_windows == 'yes' }}
         shell: bash
         run: |
-          #echo commands as we make them.
-          set -x
           export unboundpath=`pwd`
           echo unboundpath=${unboundpath}
           cd ..
