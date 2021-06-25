@@ -233,9 +233,9 @@ jobs:
           ./configure --enable-debug --enable-static-exe --disable-flto "--with-ssl=$prepath/openssl" --with-libexpat="$prepath/expat"
           make
           # specific test output
-          make testbound; ./testbound -s
+          make testbound.exe; ./testbound.exe -s
           # make testbound; ./testbound.exe -p testdata/acl.rpl -o -vvvv
-          make testbound; ./testbound.exe -p testdata/auth_nsec3_ent.rpl -o -vvvv
+          make testbound.exe; ./testbound.exe -p testdata/auth_nsec3_ent.rpl -o -vvvv
           make test
       - name: test_android
         if: ${{ matrix.test_android == 'yes' }}
