@@ -1,3 +1,4 @@
+#include "config.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
@@ -5,7 +6,6 @@
 #include <unistd.h>
 
 #include <stdint.h>
-#include "config.h"
 #include "sldns/str2wire.h"
 #include "sldns/wire2str.h"
 

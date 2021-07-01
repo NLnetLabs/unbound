@@ -650,7 +650,7 @@ static int sldns_str2wire_check_svcbparams(uint8_t* rdata, uint16_t rdata_len)
 		rdata_ptr += svcbparam_len;
 
 		nparams += 1;
-		if (nparams > MAX_NUMBER_OF_SVCPARAMS)
+		if (nparams >= MAX_NUMBER_OF_SVCPARAMS)
 			return LDNS_WIREPARSE_ERR_SVCB_TOO_MANY_PARAMS;
 	}
 
@@ -1355,7 +1355,7 @@ sldns_str2wire_svcbparam_mandatory(const char* val, uint8_t* rd, size_t* rd_len)
 	/* The code below revolves around sematic errors in the SVCParam set.
 	 * So long as we do not distinguish between running Unbound as a primary
 	 * or as a secondary, we default to secondary behavior and we ignore the
-	 * sematic errors. */
+	 * semantic errors. */
 
 	/* In draft-ietf-dnsop-svcb-https-06 Section 8
 	 * automatically mandatory MUST NOT appear in its own value-list
@@ -1467,7 +1467,7 @@ sldns_str2wire_svcbparam_alpn_value(const char* val,
 	val_len = strlen(val);
 
 	if (val_len > sizeof(unescaped_dst)) {
-		return LDNS_WIREPARSE_ERR_SYNTAX_INTEGER_OVERFLOW;
+		return LDNS_WIREPARSE_ERR_SVCB_ALPN_KEY_TOO_LARGE;
 	}
 	while (val_len) {
 		size_t dst_len;
