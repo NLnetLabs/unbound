@@ -989,7 +989,7 @@ static int sldns_wire2str_svcparam_port2str(char** s,
 	if (data_len != 2)
 		return -1; /* wireformat error, a short is 2 bytes */
 	w = sldns_str_print(s, slen, "=%d", (int)sldns_read_uint16(data));
-	*data     += 2;
+	data += 2;
 
 	return w;
 }

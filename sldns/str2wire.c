@@ -1176,7 +1176,6 @@ sldns_str2wire_svcbparam_ipv4hint(const char* val, uint8_t* rd, size_t* rd_len)
 	int count;
 	char ip_str[INET_ADDRSTRLEN+1];
 	char *next_ip_str;
-	uint32_t *ip_wire_dst = NULL;
 	size_t i;
 
 	for (i = 0, count = 1; val[i]; i++) {
@@ -1218,7 +1217,6 @@ sldns_str2wire_svcbparam_ipv4hint(const char* val, uint8_t* rd, size_t* rd_len)
 
 			val = next_ip_str + 1;
 		}
-		ip_wire_dst++;
 		count--;
 	}
 	if (count) /* verify that we parsed all values */
@@ -1233,7 +1231,6 @@ sldns_str2wire_svcbparam_ipv6hint(const char* val, uint8_t* rd, size_t* rd_len)
 	int count;
 	char ip_str[INET6_ADDRSTRLEN+1];
 	char *next_ip_str;
-	uint32_t *ip_wire_dst = NULL;
 	size_t i;
 
 	for (i = 0, count = 1; val[i]; i++) {
@@ -1269,14 +1266,12 @@ sldns_str2wire_svcbparam_ipv6hint(const char* val, uint8_t* rd, size_t* rd_len)
 			memcpy(ip_str, val, next_ip_str - val);
 			ip_str[next_ip_str - val] = 0;
 			if (inet_pton(AF_INET6, ip_str, rd + *rd_len) != 1) {
-				val = ip_str; /* to use in error reporting below */
 				break;
 			}
 			*rd_len += LDNS_IP6ADDRLEN;
 
 			val = next_ip_str + 1;
 		}
-		ip_wire_dst++;
 		count--;
 	}
 	if (count) /* verify that we parsed all values */
@@ -1297,7 +1292,6 @@ sldns_str2wire_svcbparam_mandatory(const char* val, uint8_t* rd, size_t* rd_len)
 {
 	size_t i, count, val_len;
 	char* next_key;
-	uint16_t* key_dst = NULL;
 
 	val_len = strlen(val);
 
@@ -1342,7 +1336,6 @@ sldns_str2wire_svcbparam_mandatory(const char* val, uint8_t* rd, size_t* rd_len)
 
 		val_len -= next_key - val + 1;
 		val = next_key + 1; /* skip the comma */
-		key_dst += 1;
 	}
 
 	/* In draft-ietf-dnsop-svcb-https-06 Section 7:
@@ -1470,8 +1463,6 @@ sldns_str2wire_svcbparam_alpn_value(const char* val,
 		return LDNS_WIREPARSE_ERR_SVCB_ALPN_KEY_TOO_LARGE;
 	}
 	while (val_len) {
-		size_t dst_len;
-
 		str_len = (next_str = sldns_str2wire_svcbparam_parse_next_unescaped_comma(val))
 		        ? (size_t)(next_str - val) : val_len;
 

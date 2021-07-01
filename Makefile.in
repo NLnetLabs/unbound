@@ -330,7 +330,7 @@ TEST_BIN=asynclook$(EXEEXT) delayer$(EXEEXT) \
 	lock-verify$(EXEEXT) memstats$(EXEEXT) perf$(EXEEXT) \
 	petal$(EXEEXT) pktview$(EXEEXT) streamtcp$(EXEEXT) \
 	$(DNSTAP_SOCKET_TESTBIN) dohclient$(EXEEXT) \
-	testbound$(EXEEXT) unittest$(EXEEXT)
+	testbound$(EXEEXT) unittest$(EXEEXT) readzone$(EXEEXT)
 tests:	all $(TEST_BIN)
 
 check: test
