@@ -936,6 +936,8 @@ int _ub_resolve_async(struct ub_ctx* ctx, char* name, int rrtype, int rrclass, v
       int r;
       struct cb_data* id;
       id = (struct cb_data*) malloc(sizeof(struct cb_data));
+      if(!id)
+              return -2; /* UB_NOMEM */
       id->data = mydata;
       id->func = pyfunc;
    

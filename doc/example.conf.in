@@ -507,7 +507,8 @@ server:
 	# Use several entries, one per domain name, to track multiple zones.
 	#
 	# If you want to perform DNSSEC validation, run unbound-anchor before
-	# you start unbound (i.e. in the system boot scripts).  And enable:
+	# you start unbound (i.e. in the system boot scripts).
+	# And then enable the auto-trust-anchor-file config item.
 	# Please note usage of unbound-anchor root anchor is at your own risk
 	# and under the terms of our LICENSE (see that file in the source).
 	# auto-trust-anchor-file: "@UNBOUND_ROOTKEY_FILE@"
@@ -555,6 +556,10 @@ server:
 	# This leeway is capped with a minimum and a maximum.  In seconds.
 	# val-sig-skew-min: 3600
 	# val-sig-skew-max: 86400
+
+	# The maximum number the validator should restart validation with
+	# another authority in case of failed validation.
+	# val-max-restart: 5
 
 	# Should additional section of secure message also be kept clean of
 	# unsecure data. Useful to shield the users of this validator from
@@ -613,7 +618,7 @@ server:
 	# keysize. Keep this table very short, as linear search is done.
 	# A message with an NSEC3 with larger count is marked insecure.
 	# List in ascending order the keysize and count values.
-	# val-nsec3-keysize-iterations: "1024 150 2048 500 4096 2500"
+	# val-nsec3-keysize-iterations: "1024 150 2048 150 4096 150"
 
 	# if enabled, ZONEMD verification failures do not block the zone.
 	# zonemd-permissive-mode: no
@@ -901,6 +906,13 @@ server:
 	# ipsecmod-allow: "example.com"
 	# ipsecmod-allow: "nlnetlabs.nl"
 
+	# Timeout for REUSE entries in milliseconds.
+	# tcp-reuse-timeout: 60000
+	# Max number of queries on a reuse connection.
+	# max-reuse-tcp-queries: 200
+	# Timeout in milliseconds for TCP queries to auth servers.
+	# tcp-auth-query-timeout: 3000
+
 
 # Python config section. To enable:
 # o use --with-pythonmodule to configure before compiling.
@@ -1025,6 +1037,7 @@ remote-control:
 #	name: "example.org"
 #	for-downstream: yes
 #	for-upstream: yes
+#	zonemd-check: no
 #	zonemd-reject-absence: no
 #	zonefile: "example.org.zone"
 

@@ -130,7 +130,7 @@ timeval_divide(struct timeval* avg, const struct timeval* sum, long long d)
 {
 #ifndef S_SPLINT_S
 	size_t leftover;
-	if(d == 0) {
+	if(d <= 0) {
 		avg->tv_sec = 0;
 		avg->tv_usec = 0;
 		return;
@@ -139,7 +139,13 @@ timeval_divide(struct timeval* avg, const struct timeval* sum, long long d)
 	avg->tv_usec = sum->tv_usec / d;
 	/* handle fraction from seconds divide */
 	leftover = sum->tv_sec - avg->tv_sec*d;
-	avg->tv_usec += (leftover*1000000)/d;
+	if(leftover <= 0)
+		leftover = 0;
+	avg->tv_usec += (((long long)leftover)*((long long)1000000))/d;
+	if(avg->tv_sec < 0)
+		avg->tv_sec = 0;
+	if(avg->tv_usec < 0)
+		avg->tv_usec = 0;
 #endif
 }
 

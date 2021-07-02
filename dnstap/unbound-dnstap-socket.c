@@ -1012,6 +1012,7 @@ void dtio_tap_callback(int fd, short ATTR_UNUSED(bits), void* arg)
 		if(verbosity) log_info("bidirectional stream");
 		if(!reply_with_accept(data)) {
 			tap_data_free(data);
+			return;
 		}
 	} else if(data->len >= 4 && sldns_read_uint32(data->frame) ==
 		FSTRM_CONTROL_FRAME_STOP && data->is_bidirectional) {
@@ -1166,8 +1167,12 @@ int sig_quit = 0;
 /** signal handler for user quit */
 static RETSIGTYPE main_sigh(int sig)
 {
-	if(!sig_quit)
-		fprintf(stderr, "exit on signal %d\n", sig);
+	if(!sig_quit) {
+		char str[] = "exit on signal   \n";
+		str[15] = '0' + (sig/10)%10;
+		str[16] = '0' + sig%10;
+		write(STDERR_FILENO, str, strlen(str));
+	}
 	if(sig_base) {
 		ub_event_base_loopexit(sig_base);
 		sig_base = NULL;

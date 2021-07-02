@@ -241,7 +241,9 @@ libworker_setup(struct ub_ctx* ctx, int is_bg, struct ub_event_base* eb)
 		ports, numports, cfg->unwanted_threshold,
 		cfg->outgoing_tcp_mss, &libworker_alloc_cleanup, w,
 		cfg->do_udp || cfg->udp_upstream_without_downstream, w->sslctx,
-		cfg->delay_close, cfg->tls_use_sni, NULL, cfg->udp_connect);
+		cfg->delay_close, cfg->tls_use_sni, NULL, cfg->udp_connect,
+		cfg->max_reuse_tcp_queries, cfg->tcp_reuse_timeout,
+		cfg->tcp_auth_query_timeout);
 	w->env->outnet = w->back;
 	if(!w->is_bg || w->is_bg_thread) {
 		lock_basic_unlock(&ctx->cfglock);
@@ -454,8 +456,15 @@ fill_res(struct ub_result* res, struct ub_packed_rrset_key* answer,
 		if(rep->rrset_count != 0)
 			res->ttl = (int)rep->ttl;
 		res->data = (char**)calloc(1, sizeof(char*));
+		if(!res->data)
+			return 0; /* out of memory */
 		res->len = (int*)calloc(1, sizeof(int));
-		return (res->data && res->len);
+		if(!res->len) {
+			free(res->data);
+			res->data = NULL;
+			return 0; /* out of memory */
+		}
+		return 1;
 	}
 	data = (struct packed_rrset_data*)answer->entry.data;
 	if(query_dname_compare(rq->qname, answer->rk.dname) != 0) {
@@ -463,15 +472,30 @@ fill_res(struct ub_result* res, struct ub_packed_rrset_key* answer,
 			return 0; /* out of memory */
 	} else	res->canonname = NULL;
 	res->data = (char**)calloc(data->count+1, sizeof(char*));
-	res->len = (int*)calloc(data->count+1, sizeof(int));
-	if(!res->data || !res->len)
+	if(!res->data)
 		return 0; /* out of memory */
+	res->len = (int*)calloc(data->count+1, sizeof(int));
+	if(!res->len) {
+		free(res->data);
+		res->data = NULL;
+		return 0; /* out of memory */
+	}
 	for(i=0; i<data->count; i++) {
 		/* remove rdlength from rdata */
 		res->len[i] = (int)(data->rr_len[i] - 2);
 		res->data[i] = memdup(data->rr_data[i]+2, (size_t)res->len[i]);
-		if(!res->data[i])
+		if(!res->data[i]) {
+			size_t j;
+			for(j=0; j<i; j++) {
+				free(res->data[j]);
+				res->data[j] = NULL;
+			}
+			free(res->data);
+			res->data = NULL;
+			free(res->len);
+			res->len = NULL;
 			return 0; /* out of memory */
+		}
 	}
 	/* ttl for positive answers, from CNAME and answer RRs */
 	if(data->count != 0) {

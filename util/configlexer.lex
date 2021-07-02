@@ -235,6 +235,9 @@ tcp-upstream{COLON}		{ YDVAR(1, VAR_TCP_UPSTREAM) }
 tcp-mss{COLON}			{ YDVAR(1, VAR_TCP_MSS) }
 outgoing-tcp-mss{COLON}		{ YDVAR(1, VAR_OUTGOING_TCP_MSS) }
 tcp-idle-timeout{COLON}		{ YDVAR(1, VAR_TCP_IDLE_TIMEOUT) }
+max-reuse-tcp-queries{COLON}	{ YDVAR(1, VAR_MAX_REUSE_TCP_QUERIES) }
+tcp-reuse-timeout{COLON}	{ YDVAR(1, VAR_TCP_REUSE_TIMEOUT) }
+tcp-auth-query-timeout{COLON}	{ YDVAR(1, VAR_TCP_AUTH_QUERY_TIMEOUT) }
 edns-tcp-keepalive{COLON}	{ YDVAR(1, VAR_EDNS_TCP_KEEPALIVE) }
 edns-tcp-keepalive-timeout{COLON} { YDVAR(1, VAR_EDNS_TCP_KEEPALIVE_TIMEOUT) }
 ssl-upstream{COLON}		{ YDVAR(1, VAR_SSL_UPSTREAM) }
@@ -382,6 +385,7 @@ root-key-sentinel{COLON}	{ YDVAR(1, VAR_ROOT_KEY_SENTINEL) }
 val-override-date{COLON}	{ YDVAR(1, VAR_VAL_OVERRIDE_DATE) }
 val-sig-skew-min{COLON}		{ YDVAR(1, VAR_VAL_SIG_SKEW_MIN) }
 val-sig-skew-max{COLON}		{ YDVAR(1, VAR_VAL_SIG_SKEW_MAX) }
+val-max-restart{COLON}		{ YDVAR(1, VAR_VAL_MAX_RESTART) }
 val-bogus-ttl{COLON}		{ YDVAR(1, VAR_BOGUS_TTL) }
 val-clean-additional{COLON}	{ YDVAR(1, VAR_VAL_CLEAN_ADDITIONAL) }
 val-permissive-mode{COLON}	{ YDVAR(1, VAR_VAL_PERMISSIVE_MODE) }
@@ -402,6 +406,7 @@ neg-cache-size{COLON}		{ YDVAR(1, VAR_NEG_CACHE_SIZE) }
 val-nsec3-keysize-iterations{COLON}	{ 
 				  YDVAR(1, VAR_VAL_NSEC3_KEYSIZE_ITERATIONS) }
 zonemd-permissive-mode{COLON}	{ YDVAR(1, VAR_ZONEMD_PERMISSIVE_MODE) }
+zonemd-check{COLON}		{ YDVAR(1, VAR_ZONEMD_CHECK) }
 zonemd-reject-absence{COLON}	{ YDVAR(1, VAR_ZONEMD_REJECT_ABSENCE) }
 add-holddown{COLON}		{ YDVAR(1, VAR_ADD_HOLDDOWN) }
 del-holddown{COLON}		{ YDVAR(1, VAR_DEL_HOLDDOWN) }

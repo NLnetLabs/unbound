@@ -308,7 +308,7 @@ serial check).  And then the zone is transferred for a newer zone version.
 .B rpz_enable \fIzone\fR
 Enable the RPZ zone if it had previously been disabled.
 .TP
-.B rpz_enable \fIzone\fR
+.B rpz_disable \fIzone\fR
 Disable the RPZ zone.
 .TP
 .B view_list_local_zones \fIview\fR

@@ -21,6 +21,7 @@ auth-zone:
 	## on failures with for-upstream, fallback to sending queries to
 	## the authority servers
 	## fallback-enabled: no
+	zonemd-check: yes
 
 	## this line generates zonefile: \n"/tmp/xxx.example.com"\n
 	zonefile:

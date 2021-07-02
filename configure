@@ -877,6 +877,7 @@ enable_subnet
 enable_gost
 enable_ecdsa
 enable_dsa
+with_deprecate_rsa_1024
 enable_ed25519
 enable_ed448
 enable_event_api
@@ -1639,6 +1640,10 @@ Optional Packages:
                           /usr/ssl /usr/pkg /usr/local /opt/local /usr/sfw
                           /usr)
   --with-libbsd           Use portable libbsd functions
+  --with-deprecate-rsa-1024
+                          Deprecate RSA 1024 bit length, makes that an
+                          unsupported key, for use when OpenSSL FIPS refuses
+                          1024 bit verification
   --with-libevent=pathname
                           use libevent (will check /usr/local /opt/local
                           /usr/lib /usr/pkg /usr/sfw /usr or you can specify
@@ -4199,9 +4204,9 @@ case "$exec_prefix" in
 esac
 
 # are we on MinGW?
-if uname -s 2>&1 | grep MINGW32 >/dev/null; then on_mingw="yes"
+if uname -s 2>&1 | grep MINGW >/dev/null; then on_mingw="yes"
 else
-	if echo $host $target | grep mingw32 >/dev/null; then on_mingw="yes"
+	if echo $host | grep mingw >/dev/null; then on_mingw="yes"
 	else on_mingw="no"; fi
 fi
 
@@ -14611,6 +14616,8 @@ CC=$lt_save_CC
 
 
 
+# pkg-config is only needed for these options, do not require it otherwise
+if test "$enable_systemd" = "yes" -o "$with_pyunbound" = "yes" -o "$with_pythonmod" = "yes"; then
 
 
 
@@ -14730,6 +14737,7 @@ $as_echo "yes" >&6; }
 $as_echo "no" >&6; }
 		PKG_CONFIG=""
 	fi
+fi
 fi
 
 # Checks for header files.
@@ -15922,7 +15930,7 @@ fi
 
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking if nonblocking sockets work" >&5
 $as_echo_n "checking if nonblocking sockets work... " >&6; }
-if echo $target | grep mingw32 >/dev/null; then
+if echo $host | grep mingw >/dev/null; then
 	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no (windows)" >&5
 $as_echo "no (windows)" >&6; }
 
@@ -16190,7 +16198,10 @@ done
 
 
 # check if we can use SO_REUSEPORT
-if echo "$host" | $GREP -i -e linux -e dragonfly >/dev/null; then
+reuseport_default=0
+if echo "$host" | $GREP -i -e linux >/dev/null; then reuseport_default=1; fi
+if echo "$host" | $GREP -i -e dragonfly >/dev/null; then reuseport_default=1; fi
+if test "$reuseport_default" = 1; then
 
 $as_echo "#define REUSEPORT_DEFAULT 1" >>confdefs.h
 
@@ -18418,7 +18429,7 @@ done
 # these check_funcs need -lssl
 BAKLIBS="$LIBS"
 LIBS="-lssl $LIBS"
-for ac_func in OPENSSL_init_ssl SSL_CTX_set_security_level SSL_set1_host SSL_get0_peername X509_VERIFY_PARAM_set1_host SSL_CTX_set_ciphersuites SSL_CTX_set_tlsext_ticket_key_evp_cb SSL_CTX_set_alpn_select_cb
+for ac_func in OPENSSL_init_ssl SSL_CTX_set_security_level SSL_set1_host SSL_get0_peername X509_VERIFY_PARAM_set1_host SSL_CTX_set_ciphersuites SSL_CTX_set_tlsext_ticket_key_evp_cb SSL_CTX_set_alpn_select_cb SSL_get0_alpn_selected SSL_CTX_set_alpn_protos
 do :
   as_ac_var=`$as_echo "ac_cv_func_$ac_func" | $as_tr_sh`
 ac_fn_c_check_func "$LINENO" "$ac_func" "$as_ac_var"
@@ -19035,6 +19046,18 @@ _ACEOF
       ;;
 esac
 
+
+# Check whether --with-deprecate-rsa-1024 was given.
+if test "${with_deprecate_rsa_1024+set}" = set; then :
+  withval=$with_deprecate_rsa_1024;
+fi
+
+if test "$with_deprecate_rsa_1024" = "yes"; then
+
+$as_echo "#define DEPRECATE_RSA_1024 1" >>confdefs.h
+
+fi
+
 # Check whether --enable-ed25519 was given.
 if test "${enable_ed25519+set}" = set; then :
   enableval=$enable_ed25519;
@@ -19161,8 +19184,8 @@ fi
 
 case "$enable_tfo_client" in
 	yes)
-		case `uname` in
-			Linux) ac_fn_c_check_decl "$LINENO" "MSG_FASTOPEN" "ac_cv_have_decl_MSG_FASTOPEN" "$ac_includes_default
+		case "$host_os" in
+			linux*) ac_fn_c_check_decl "$LINENO" "MSG_FASTOPEN" "ac_cv_have_decl_MSG_FASTOPEN" "$ac_includes_default
 #include <netinet/tcp.h>
 
 "
@@ -19178,8 +19201,8 @@ cat >>confdefs.h <<_ACEOF
 #define USE_MSG_FASTOPEN 1
 _ACEOF
 
-			  ;;
-			Darwin) ac_fn_c_check_decl "$LINENO" "CONNECT_RESUME_ON_READ_WRITE" "ac_cv_have_decl_CONNECT_RESUME_ON_READ_WRITE" "$ac_includes_default
+				;;
+			darwin*) ac_fn_c_check_decl "$LINENO" "CONNECT_RESUME_ON_READ_WRITE" "ac_cv_have_decl_CONNECT_RESUME_ON_READ_WRITE" "$ac_includes_default
 #include <sys/socket.h>
 
 "
@@ -19195,9 +19218,9 @@ cat >>confdefs.h <<_ACEOF
 #define USE_OSX_MSG_FASTOPEN 1
 _ACEOF
 
-			  ;;
+				;;
 		esac
-	;;
+		;;
 	no|*)
 		;;
 esac
@@ -20412,7 +20435,7 @@ done
 
 
 # check if setreuid en setregid fail, on MacOSX10.4(darwin8).
-if echo $target_os | grep darwin8 > /dev/null; then
+if echo $host_os | grep darwin8 > /dev/null; then
 
 $as_echo "#define DARWIN_BROKEN_SETREUID 1" >>confdefs.h
 

@@ -82,6 +82,7 @@ static void zonemd_generate_test(const char* zname, char* zfile,
 	/* read file */
 	z = authtest_addzone(az, zname, zfile);
 	unit_assert(z);
+	z->zonemd_check = 1;
 
 	/* create zonemd digest */
 	result = auth_zone_generate_zonemd_hash(z, scheme, hashalgo,
@@ -196,6 +197,7 @@ static void zonemd_check_test(void)
 	/* read file */
 	z = authtest_addzone(az, zname, zfile);
 	unit_assert(z);
+	z->zonemd_check = 1;
 	hashlen = sizeof(hash);
 	if(sldns_str2wire_hex_buf(digest, hash, &hashlen) != 0) {
 		unit_assert(0); /* parse failure */
@@ -291,6 +293,7 @@ static void zonemd_verify_test(char* zname, char* zfile, char* tastr,
 
 	/* test */
 	lock_rw_wrlock(&z->lock);
+	z->zonemd_check = 1;
 	auth_zone_verify_zonemd(z, &env, &mods, &result, 1, 0);
 	lock_rw_unlock(&z->lock);
 	if(verbosity >= VERB_ALGO) {

@@ -507,19 +507,19 @@ dt_msg_send_outside_query(struct dt_env *env,
 
 void
 dt_msg_send_outside_response(struct dt_env *env,
-			     struct sockaddr_storage *rsock,
-			     struct sockaddr_storage *qsock,
-			     enum comm_point_type cptype,
-			     uint8_t *zone, size_t zone_len,
-			     uint8_t *qbuf, size_t qbuf_len,
-			     const struct timeval *qtime,
-			     const struct timeval *rtime,
-			     sldns_buffer *rmsg)
+	struct sockaddr_storage *rsock,
+	struct sockaddr_storage *qsock,
+	enum comm_point_type cptype,
+	uint8_t *zone, size_t zone_len,
+	uint8_t *qbuf, size_t qbuf_len,
+	const struct timeval *qtime,
+	const struct timeval *rtime,
+	sldns_buffer *rmsg)
 {
 	struct dt_msg dm;
 	uint16_t qflags;
 
-	log_assert(qbuf_len >= sizeof(qflags));
+	(void)qbuf_len; log_assert(qbuf_len >= sizeof(qflags));
 	memcpy(&qflags, qbuf, sizeof(qflags));
 	qflags = ntohs(qflags);
 

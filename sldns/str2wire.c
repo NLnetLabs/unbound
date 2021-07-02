@@ -1078,6 +1078,10 @@ int sldns_fp2wire_rr_buf(FILE* in, uint8_t* rr, size_t* len, size_t* dname_len,
 			memmove(parse_state->prev_rr, rr, *dname_len);
 			parse_state->prev_rr_len = (*dname_len);
 		}
+		if(r == LDNS_WIREPARSE_ERR_OK && parse_state) {
+			parse_state->default_ttl = sldns_wirerr_get_ttl(
+				rr, *len, *dname_len);
+		}
 		return r;
 	}
 	return LDNS_WIREPARSE_ERR_OK;

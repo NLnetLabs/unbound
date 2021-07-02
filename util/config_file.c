@@ -105,11 +105,14 @@ config_create(void)
 	cfg->do_ip6 = 1;
 	cfg->do_udp = 1;
 	cfg->do_tcp = 1;
+	cfg->tcp_reuse_timeout = 60 * 1000; /* 60s in milisecs */
+	cfg->max_reuse_tcp_queries = 200;
 	cfg->tcp_upstream = 0;
 	cfg->udp_upstream_without_downstream = 0;
 	cfg->tcp_mss = 0;
 	cfg->outgoing_tcp_mss = 0;
 	cfg->tcp_idle_timeout = 30 * 1000; /* 30s in millisecs */
+	cfg->tcp_auth_query_timeout = 3 * 1000; /* 3s in millisecs */
 	cfg->do_tcp_keepalive = 0;
 	cfg->tcp_keepalive_timeout = 120 * 1000; /* 120s in millisecs */
 	cfg->ssl_service_key = NULL;
@@ -250,6 +253,7 @@ config_create(void)
 	cfg->val_date_override = 0;
 	cfg->val_sig_skew_min = 3600; /* at least daylight savings trouble */
 	cfg->val_sig_skew_max = 86400; /* at most timezone settings trouble */
+	cfg->val_max_restart = 5;
 	cfg->val_clean_additional = 1;
 	cfg->val_log_level = 0;
 	cfg->val_log_squelch = 0;
@@ -306,7 +310,7 @@ config_create(void)
 	if(!(cfg->module_conf = strdup("validator iterator"))) goto error_exit;
 #endif
 	if(!(cfg->val_nsec3_key_iterations = 
-		strdup("1024 150 2048 500 4096 2500"))) goto error_exit;
+		strdup("1024 150 2048 150 4096 150"))) goto error_exit;
 #if defined(DNSTAP_SOCKET_PATH)
 	if(!(cfg->dnstap_socket_path = strdup(DNSTAP_SOCKET_PATH)))
 		goto error_exit;
@@ -517,7 +521,10 @@ int config_set_option(struct config_file* cfg, const char* opt,
 		udp_upstream_without_downstream)
 	else S_NUMBER_NONZERO("tcp-mss:", tcp_mss)
 	else S_NUMBER_NONZERO("outgoing-tcp-mss:", outgoing_tcp_mss)
+	else S_NUMBER_NONZERO("tcp-auth-query-timeout:", tcp_auth_query_timeout)
 	else S_NUMBER_NONZERO("tcp-idle-timeout:", tcp_idle_timeout)
+	else S_NUMBER_NONZERO("max-reuse-tcp-queries:", max_reuse_tcp_queries)
+	else S_NUMBER_NONZERO("tcp-reuse-timeout:", tcp_reuse_timeout)
 	else S_YNO("edns-tcp-keepalive:", do_tcp_keepalive)
 	else S_NUMBER_NONZERO("edns-tcp-keepalive-timeout:", tcp_keepalive_timeout)
 	else S_YNO("ssl-upstream:", ssl_upstream)
@@ -758,12 +765,14 @@ int config_set_option(struct config_file* cfg, const char* opt,
 #endif
 	else if(strcmp(opt, "define-tag:") ==0) {
 		return config_add_tag(cfg, val);
-	/* val_sig_skew_min and max are copied into val_env during init,
-	 * so this does not update val_env with set_option */
+	/* val_sig_skew_min, max and val_max_restart are copied into val_env
+	 * during init so this does not update val_env with set_option */
 	} else if(strcmp(opt, "val-sig-skew-min:") == 0)
 	{ IS_NUMBER_OR_ZERO; cfg->val_sig_skew_min = (int32_t)atoi(val); }
 	else if(strcmp(opt, "val-sig-skew-max:") == 0)
 	{ IS_NUMBER_OR_ZERO; cfg->val_sig_skew_max = (int32_t)atoi(val); }
+	else if(strcmp(opt, "val-max-restart:") == 0)
+	{ IS_NUMBER_OR_ZERO; cfg->val_max_restart = (int32_t)atoi(val); }
 	else if (strcmp(opt, "outgoing-interface:") == 0) {
 		char* d = strdup(val);
 		char** oi = 
@@ -1007,7 +1016,10 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_YNO(opt, "udp-upstream-without-downstream", udp_upstream_without_downstream)
 	else O_DEC(opt, "tcp-mss", tcp_mss)
 	else O_DEC(opt, "outgoing-tcp-mss", outgoing_tcp_mss)
+	else O_DEC(opt, "tcp-auth-query-timeout", tcp_auth_query_timeout)
 	else O_DEC(opt, "tcp-idle-timeout", tcp_idle_timeout)
+	else O_DEC(opt, "max-reuse-tcp-queries", max_reuse_tcp_queries)
+	else O_DEC(opt, "tcp-reuse-timeout", tcp_reuse_timeout)
 	else O_YNO(opt, "edns-tcp-keepalive", do_tcp_keepalive)
 	else O_DEC(opt, "edns-tcp-keepalive-timeout", tcp_keepalive_timeout)
 	else O_YNO(opt, "ssl-upstream", ssl_upstream)
@@ -1181,6 +1193,7 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_DEC(opt, "fast-server-permil", fast_server_permil)
 	else O_DEC(opt, "val-sig-skew-min", val_sig_skew_min)
 	else O_DEC(opt, "val-sig-skew-max", val_sig_skew_max)
+	else O_DEC(opt, "val-max-restart", val_max_restart)
 	else O_YNO(opt, "qname-minimisation", qname_minimisation)
 	else O_YNO(opt, "qname-minimisation-strict", qname_minimisation_strict)
 	else O_IFC(opt, "define-tag", num_tags, tagname)

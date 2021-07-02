@@ -93,6 +93,12 @@ struct config_file {
 	int do_udp;
 	/** do tcp query support. */
 	int do_tcp;
+	/** max number of queries on a reuse connection. */
+	size_t max_reuse_tcp_queries;
+	/** timeout for REUSE entries in milliseconds. */
+	int tcp_reuse_timeout;
+	/** timeout in milliseconds for TCP queries to auth servers. */
+	int tcp_auth_query_timeout;
 	/** tcp upstream queries (no UDP upstream queries) */
 	int tcp_upstream;
 	/** udp upstream enabled when no UDP downstream is enabled (do_udp no)*/
@@ -367,6 +373,8 @@ struct config_file {
 	int32_t val_sig_skew_min;
 	/** the maximum for signature clock skew */
 	int32_t val_sig_skew_max;
+	/** max number of query restarts, number of IPs to probe */
+	int32_t val_max_restart;
 	/** this value sets the number of seconds before revalidating bogus */
 	int bogus_ttl; 
 	/** should validator clean additional section for secure msgs */
@@ -729,6 +737,8 @@ struct config_auth {
 	/** Always reply with this CNAME target if the cname override action is
 	 * used */
 	char* rpz_cname;
+	/** Check ZONEMD records for this zone */
+	int zonemd_check;
 	/** Reject absence of ZONEMD records, zone must have one */
 	int zonemd_reject_absence;
 };
