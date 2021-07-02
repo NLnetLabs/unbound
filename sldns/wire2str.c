@@ -154,7 +154,7 @@ static sldns_lookup_table sldns_wireparse_errors_data[] = {
 	{ LDNS_WIREPARSE_ERR_SVCB_DUPLICATE_KEYS, "Duplicate SVCB key found"},
 	{ LDNS_WIREPARSE_ERR_SVCB_MANDATORY_TOO_MANY_KEYS, "Too many keys in mandatory" },
 	{ LDNS_WIREPARSE_ERR_SVCB_TOO_MANY_PARAMS,
-		"Too many SvcParams. Unbound only allows 64 entries" },
+		"Too many SvcParams. Unbound only allows 63 entries" },
 	{ LDNS_WIREPARSE_ERR_SVCB_MANDATORY_MISSING_PARAM,
 		"Mandatory SvcParamKey is missing"},
 	{ LDNS_WIREPARSE_ERR_SVCB_MANDATORY_DUPLICATE_KEY,

@@ -54,25 +54,25 @@ fi
 # check all the failure cases
 if $PRE/readzone svcb.failure-cases-01
 then
-	echo "Failure case 21: ech value is not base64 encoded"
+	echo "Failure case 01: ech value is not base64 encoded"
 	echo "Incorrectly succeeded"
 	exit 1
 
 elif $PRE/readzone svcb.failure-cases-02
 then
-	echo "Failure case 22: port value needs to be a positive integer < 65536"
+	echo "Failure case 02: port value needs to be a positive integer < 65536"
 	echo "Incorrectly succeeded"
 	exit 1
 
 elif $PRE/readzone svcb.failure-cases-03
 then
-	echo "Failure case 23: 65 SvcParams is too many SvcParams; the limit is 64"
+	echo "Failure case 02: 65 SvcParams is too many SvcParams; the limit is 64"
 	echo "Incorrectly succeeded"
 	exit 1
 
 elif $PRE/readzone svcb.failure-cases-04
 then
-	echo "Failure case 24: 256 is too many characters for an alpn; maximum is 255"
+	echo "Failure case 04: 256 is too many characters for an alpn; maximum is 255"
 	echo "Incorrectly succeeded"
 	exit 1
 else
