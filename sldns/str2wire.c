@@ -1466,6 +1466,8 @@ sldns_str2wire_svcbparam_alpn_value(const char* val,
 		return LDNS_WIREPARSE_ERR_SVCB_ALPN_KEY_TOO_LARGE;
 	}
 	while (val_len) {
+		size_t key_len;
+
 		str_len = (next_str = sldns_str2wire_svcbparam_parse_next_unescaped_comma(val))
 		        ? (size_t)(next_str - val) : val_len;
 
@@ -1473,9 +1475,9 @@ sldns_str2wire_svcbparam_alpn_value(const char* val,
 			return LDNS_WIREPARSE_ERR_SVCB_ALPN_KEY_TOO_LARGE;
 		}
 
-		dst_len = sldns_str2wire_svcbparam_parse_copy_unescaped(dst + 1, val, str_len);
-		*dst++ = dst_len;
-		 dst  += dst_len;
+		key_len = sldns_str2wire_svcbparam_parse_copy_unescaped(dst + 1, val, str_len);
+		*dst++ = key_len;
+		 dst  += key_len;
 
 		if (!next_str)
 			break;
