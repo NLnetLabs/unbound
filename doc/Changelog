@@ -1,3 +1,7 @@
+2 July 2021: Wouter
+	- Fix #506: Python Module Seems to Leak Memory if it Experiences an
+	  Unhandled Exception.
+
 25 June 2021: Wouter
 	- Fix up permissions on rpl data file in tests.
 	- Fix testbound newline treatment in moment_read and tempfile write.

@@ -245,6 +245,11 @@ cleanup:
 	/* clear the exception, by not restoring it */
 	/* Restore the exception state */
 	/* PyErr_Restore(exc_typ, exc_val, exc_tb); */
+	/* when using PyErr_Restore there is no need to Py_XDECREF for
+	 * these 3 pointers. */
+	Py_XDECREF(exc_typ);
+	Py_XDECREF(exc_val);
+	Py_XDECREF(exc_tb);
 }
 
 int pythonmod_init(struct module_env* env, int id)
