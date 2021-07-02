@@ -853,7 +853,6 @@ rrinternal_parse_rdata(sldns_buffer* strbuf, char* token, size_t token_len,
 		}
 		/* The root label is one more character, so smaller
 		 * than 1 + 1 means no Svcparam Keys */
-		assert(*rdata == 0);
 		if (rdata_len < 2)
 			return LDNS_WIREPARSE_ERR_OK;
 
