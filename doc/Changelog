@@ -1,3 +1,6 @@
+2 July 2021: Tom
+	- Merge PR #491: Add SVCB and HTTPS types and handling according to draft-ietf-dnsop-svcb-https
+
 2 July 2021: Wouter
 	- Fix #506: Python Module Seems to Leak Memory if it Experiences an
 	  Unhandled Exception.
