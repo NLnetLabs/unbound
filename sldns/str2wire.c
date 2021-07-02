@@ -853,7 +853,7 @@ rrinternal_parse_rdata(sldns_buffer* strbuf, char* token, size_t token_len,
 		}
 		/* The root label is one more character, so smaller
 		 * than 1 + 1 means no Svcparam Keys */
-		if (rdata_len < 2)
+		if (rdata_len < 2 || *rdata != 0)
 			return LDNS_WIREPARSE_ERR_OK;
 
 		rdata_len -= 1;
@@ -1348,26 +1348,26 @@ sldns_str2wire_svcbparam_mandatory(const char* val, uint8_t* rd, size_t* rd_len)
 	 * So long as we do not distinguish between running Unbound as a primary
 	 * or as a secondary, we default to secondary behavior and we ignore the
 	 * semantic errors. */
-
+#ifdef SVCB_SEMANTIC_ERRORS
 	/* In draft-ietf-dnsop-svcb-https-06 Section 8
 	 * automatically mandatory MUST NOT appear in its own value-list
 	 */
-	// if (sldns_read_uint16(rd + 4) == SVCB_KEY_MANDATORY)
-	// 	return LDNS_WIREPARSE_ERR_SVCB_MANDATORY_IN_MANDATORY;
+	if (sldns_read_uint16(rd + 4) == SVCB_KEY_MANDATORY)
+		return LDNS_WIREPARSE_ERR_SVCB_MANDATORY_IN_MANDATORY;
 
 	/* Guarantee key uniqueness. After the sort we only need to
 	 * compare neighbouring keys */
-	// if (count > 1) {
-	// 	for (i = 0; i < count - 1; i++) {
-	// 		uint8_t* current_pos = (rd + 4 + (sizeof(uint16_t) * i));
-	// 		uint16_t key = sldns_read_uint16(current_pos);
+	if (count > 1) {
+		for (i = 0; i < count - 1; i++) {
+			uint8_t* current_pos = (rd + 4 + (sizeof(uint16_t) * i));
+			uint16_t key = sldns_read_uint16(current_pos);
 
-	// 		if (key == sldns_read_uint16(current_pos + 2)) {
-	// 			return LDNS_WIREPARSE_ERR_SVCB_MANDATORY_DUPLICATE_KEY;
-	// 		}
-	// 	}
-	// }
-
+			if (key == sldns_read_uint16(current_pos + 2)) {
+				return LDNS_WIREPARSE_ERR_SVCB_MANDATORY_DUPLICATE_KEY;
+			}
+		}
+	}
+#endif
 	return LDNS_WIREPARSE_ERR_OK;
 }
 
