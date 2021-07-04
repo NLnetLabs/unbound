@@ -1,3 +1,6 @@
+4 July 2021: George
+	- Fix Wunused-result compile warnings.
+
 2 July 2021: Tom
 	- Merge PR #491: Add SVCB and HTTPS types and handling according to draft-ietf-dnsop-svcb-https
 

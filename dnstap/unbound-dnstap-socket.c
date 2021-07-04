@@ -1171,7 +1171,8 @@ static RETSIGTYPE main_sigh(int sig)
 		char str[] = "exit on signal   \n";
 		str[15] = '0' + (sig/10)%10;
 		str[16] = '0' + sig%10;
-		write(STDERR_FILENO, str, strlen(str));
+		/* simple cast to void will not silence Wunused-result */
+		(void)!write(STDERR_FILENO, str, strlen(str));
 	}
 	if(sig_base) {
 		ub_event_base_loopexit(sig_base);
