@@ -625,11 +625,10 @@ static int sldns_str2wire_svcparam_key_cmp(const void *a, const void *b)
  */
 static int sldns_str2wire_check_svcbparams(uint8_t* rdata, uint16_t rdata_len)
 {
-	size_t   nparams = 0, i, j;
+	size_t   nparams = 0, i;
 	uint8_t  new_rdata[LDNS_MAX_RDFLEN];
 	uint8_t* new_rdata_ptr = new_rdata;
 	uint8_t* svcparams[MAX_NUMBER_OF_SVCPARAMS];
-	uint8_t* mandatory = NULL;
 	uint8_t* rdata_ptr = rdata;
 	uint16_t rdata_remaining = rdata_len;
 
@@ -671,46 +670,49 @@ static int sldns_str2wire_check_svcbparams(uint8_t* rdata, uint16_t rdata_len)
 	 * sematic errors. */
 
 #ifdef SVCB_SEMANTIC_ERRORS
-	/* In draft-ietf-dnsop-svcb-https-06 Section 7:
-	 *
-	 *     Keys (...) MUST NOT appear more than once.
-	 *
-	 * If they key has already been seen, we have a duplicate
-	 */
-	for (i = 0; i < nparams; i++) {
-		uint16_t key = sldns_read_uint16(svcparams[i]);
-
-		if (i + 1 < nparams && key == sldns_read_uint16(svcparams[i+1]))
-			return LDNS_WIREPARSE_ERR_SVCB_DUPLICATE_KEYS;
-
-		if (key == SVCB_KEY_MANDATORY)
-			mandatory = svcparams[i];
-	}
-
-	/* 4. verify that all the SvcParamKeys in mandatory are present */
-	if (mandatory) {
-
-		/* Divide by sizeof(uint16_t)*/
-		uint16_t mandatory_nkeys = sldns_read_uint16(mandatory + 2) / sizeof(uint16_t);
-
-		/* Guaranteed by sldns_str2wire_svcparam_key_value */
-		assert(mandatory_nkeys > 0);
-
-		for (i = 0; i < mandatory_nkeys; i++) {
-			uint16_t mandatory_key = sldns_read_uint16(mandatory
-			                       + 2 * sizeof(uint16_t)
-			                       + i * sizeof(uint16_t));
-			uint8_t found = 0;
-
-			for (j = 0; j < nparams; j++) {
-				if (mandatory_key == sldns_read_uint16(svcparams[j]))
-					found = 1;
-			}
-
-			if (!found)
-				return LDNS_WIREPARSE_ERR_SVCB_MANDATORY_MISSING_PARAM;
+	{
+		uint8_t* mandatory = NULL;
+		/* In draft-ietf-dnsop-svcb-https-06 Section 7:
+		 *
+		 *     Keys (...) MUST NOT appear more than once.
+		 *
+		 * If they key has already been seen, we have a duplicate
+		 */
+		for(i=0; i < nparams; i++) {
+			uint16_t key = sldns_read_uint16(svcparams[i]);
+			if(i + 1 < nparams && key == sldns_read_uint16(svcparams[i+1]))
+				return LDNS_WIREPARSE_ERR_SVCB_DUPLICATE_KEYS;
+			if(key == SVCB_KEY_MANDATORY)
+				mandatory = svcparams[i];
 		}
 
+		/* 4. verify that all the SvcParamKeys in mandatory are present */
+		if(mandatory) {
+			/* Divide by sizeof(uint16_t)*/
+			uint16_t mandatory_nkeys = sldns_read_uint16(mandatory + 2) / sizeof(uint16_t);
+
+			/* Guaranteed by sldns_str2wire_svcparam_key_value */
+			assert(mandatory_nkeys > 0);
+
+			for(i=0; i < mandatory_nkeys; i++) {
+				uint16_t mandatory_key = sldns_read_uint16(
+					mandatory
+					+ 2 * sizeof(uint16_t)
+					+ i * sizeof(uint16_t));
+				uint8_t found = 0;
+				size_t j;
+
+				for(j=0; j < nparams; j++) {
+					if(mandatory_key == sldns_read_uint16(svcparams[j])) {
+						found = 1;
+						break;
+					}
+				}
+
+				if(!found)
+					return LDNS_WIREPARSE_ERR_SVCB_MANDATORY_MISSING_PARAM;
+			}
+		}
 	}
 #endif
 	/* Write rdata in correct order */
@@ -718,7 +720,7 @@ static int sldns_str2wire_check_svcbparams(uint8_t* rdata, uint16_t rdata_len)
 		uint16_t svcparam_len = sldns_read_uint16(svcparams[i] + 2)
 		                      + 2 * sizeof(uint16_t);
 
-		if (new_rdata_ptr + svcparam_len - new_rdata > sizeof(new_rdata))
+		if ((unsigned)(new_rdata_ptr - new_rdata) + svcparam_len > sizeof(new_rdata))
 			return LDNS_WIREPARSE_ERR_BUFFER_TOO_SMALL;
 
 		memcpy(new_rdata_ptr, svcparams[i], svcparam_len);
@@ -1176,7 +1178,7 @@ sldns_str2wire_svcparam_port(const char* val, uint8_t* rd, size_t* rd_len)
 static int
 sldns_str2wire_svcbparam_ipv4hint(const char* val, uint8_t* rd, size_t* rd_len)
 {
-	int count;
+	size_t count;
 	char ip_str[INET_ADDRSTRLEN+1];
 	char *next_ip_str;
 	size_t i;
@@ -1231,7 +1233,7 @@ sldns_str2wire_svcbparam_ipv4hint(const char* val, uint8_t* rd, size_t* rd_len)
 static int
 sldns_str2wire_svcbparam_ipv6hint(const char* val, uint8_t* rd, size_t* rd_len)
 {
-	int count;
+	size_t count;
 	char ip_str[INET6_ADDRSTRLEN+1];
 	char *next_ip_str;
 	size_t i;
@@ -1278,7 +1280,7 @@ sldns_str2wire_svcbparam_ipv6hint(const char* val, uint8_t* rd, size_t* rd_len)
 		count--;
 	}
 	if (count) /* verify that we parsed all values */
-		return LDNS_WIREPARSE_ERR_SYNTAX_IP6;	
+		return LDNS_WIREPARSE_ERR_SYNTAX_IP6;
 
 	return LDNS_WIREPARSE_ERR_OK;
 }
@@ -1393,9 +1395,9 @@ sldns_str2wire_svcbparam_ech_value(const char* val, uint8_t* rd, size_t* rd_len)
 
 	wire_len = sldns_b64_pton(val, buffer, LDNS_MAX_RDFLEN);
 
-	if (wire_len == 0) {
+	if (wire_len <= 0) {
 		return LDNS_WIREPARSE_ERR_SYNTAX_B64;
-	} else if (wire_len + 4 > *rd_len) {
+	} else if ((unsigned)wire_len + 4 > *rd_len) {
 		return LDNS_WIREPARSE_ERR_BUFFER_TOO_SMALL;
 	} else {
 		sldns_write_uint16(rd, SVCB_KEY_ECH);
@@ -1580,12 +1582,12 @@ int sldns_str2wire_svcparam_buf(const char* str, uint8_t* rd, size_t* rd_len)
 		if (*val_in == '"') {
 			val_in++;
 			while (*val_in != '"'
-			&& val_out - unescaped_val < sizeof(unescaped_val) - 1
+			&& (unsigned)(val_out - unescaped_val + 1) < sizeof(unescaped_val)
 			&& sldns_parse_char( (uint8_t*) val_out, &val_in)) {
 				val_out++;
 			}
 		} else {
-			while (val_out - unescaped_val < sizeof(unescaped_val) - 1
+			while ((unsigned)(val_out - unescaped_val + 1) < sizeof(unescaped_val)
 			&& sldns_parse_char( (uint8_t*) val_out, &val_in)) {
 				val_out++;
 			}

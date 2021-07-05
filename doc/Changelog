@@ -1,3 +1,6 @@
+5 July 2021: George
+	- Fix compiler warnings for #491.
+
 4 July 2021: George
 	- Fix Wunused-result compile warnings.
 
