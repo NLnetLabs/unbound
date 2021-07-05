@@ -31,11 +31,13 @@ int main(int argc, char *const *argv)
 	while ((opt = getopt(argc, argv, "hu")) != -1) {
 		switch (opt) {
 		case 'h':
+			free(str);
 			return print_usage(stdout, progname);
 		case 'u':
 			print_in_unknown_type_format = 1;
 			break;
 		default:
+			free(str);
 			return print_usage(stderr, progname);
 		}
 	}
@@ -52,6 +54,7 @@ int main(int argc, char *const *argv)
 		if (s) {
 			fprintf(stderr, "Error parsing origin: %s\n"
 			              , sldns_get_errorstr_parse(s));
+			free(str);
 			return EXIT_FAILURE;
 		}
 		s = -1;
@@ -60,8 +63,10 @@ int main(int argc, char *const *argv)
 		fprintf(stderr, "Memory allocation error: %s\n"
 		              , strerror(errno));
 
-	else if (argc != 1 && argc != 2)
+	else if (argc != 1 && argc != 2) {
+		free(str);
 		return print_usage(stderr, progname);
+	}
 
 	else if (!(in = fopen(argv[0], "r")))
 		fprintf(stderr, "Error opening \"%s\": %s\n"
@@ -73,8 +78,8 @@ int main(int argc, char *const *argv)
 		s = sldns_fp2wire_rr_buf(in, rr, &rr_len, &dname_len, &state);
 		if (s) {
 			fprintf( stderr, "parse error %d:%d: %s\n"
-			       , state.lineno, LDNS_WIREPARSE_OFFSET(s)
-			       , sldns_get_errorstr_parse(s));
+			               , state.lineno, LDNS_WIREPARSE_OFFSET(s)
+			               , sldns_get_errorstr_parse(s));
 			break;
 		}
 		if (rr_len == 0)
@@ -82,10 +87,10 @@ int main(int argc, char *const *argv)
 
 		if (print_in_unknown_type_format)
 			written = sldns_wire2str_rr_unknown_buf(
-					rr, rr_len, str, str_len);
+				rr, rr_len, str, str_len);
 		else
 			written = sldns_wire2str_rr_buf(
-					rr, rr_len, str, str_len);
+				rr, rr_len, str, str_len);
 
 		if (written > str_len) {
 			while (written > str_len)
@@ -93,7 +98,7 @@ int main(int argc, char *const *argv)
 			free(str);
 			if (!(str = malloc(str_len))) {
 				fprintf(stderr, "Memory allocation error: %s\n"
-					      , strerror(errno));
+				              , strerror(errno));
 				s = -1;
 				break;
 			}
