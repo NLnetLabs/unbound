@@ -3,6 +3,7 @@
 	  defined.
 	- Fix for #510: in depth, use ifdefs for windows api event calls.
 	- Fix spelling in doc/unbound.doxygen comment.
+	- Fix spelling in localzone.h comment.
 
 6 July 2021: Wouter
 	- iana portlist update.
