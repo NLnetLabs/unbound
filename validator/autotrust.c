@@ -2275,7 +2275,7 @@ autr_debug_print_ta(struct autr_ta* ta)
 		return;
 	}
 	if(str[0]) str[strlen(str)-1]=0; /* remove newline */
-	autr_ctime_r(&ta->last_change, buf);
+	(void)autr_ctime_r(&ta->last_change, buf);
 	if(buf[0]) buf[strlen(buf)-1]=0; /* remove newline */
 	log_info("[%s] %s ;;state:%d ;;pending_count:%d%s%s last:%s",
 		trustanchor_state2str(ta->s), str, ta->s, ta->pending_count,
@@ -2302,13 +2302,13 @@ autr_debug_print_tp(struct trust_anchor* tp)
 		log_packed_rrset(NO_VERBOSE, "DNSKEY:", tp->dnskey_rrset);
 	}
 	log_info("file %s", tp->autr->file);
-	autr_ctime_r(&tp->autr->last_queried, buf);
+	(void)autr_ctime_r(&tp->autr->last_queried, buf);
 	if(buf[0]) buf[strlen(buf)-1]=0; /* remove newline */
 	log_info("last_queried: %u %s", (unsigned)tp->autr->last_queried, buf);
-	autr_ctime_r(&tp->autr->last_success, buf);
+	(void)autr_ctime_r(&tp->autr->last_success, buf);
 	if(buf[0]) buf[strlen(buf)-1]=0; /* remove newline */
 	log_info("last_success: %u %s", (unsigned)tp->autr->last_success, buf);
-	autr_ctime_r(&tp->autr->next_probe_time, buf);
+	(void)autr_ctime_r(&tp->autr->next_probe_time, buf);
 	if(buf[0]) buf[strlen(buf)-1]=0; /* remove newline */
 	log_info("next_probe_time: %u %s", (unsigned)tp->autr->next_probe_time,
 		buf);
