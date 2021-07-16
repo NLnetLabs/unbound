@@ -439,7 +439,7 @@ mesh_serve_expired_init(struct mesh_state* mstate, int timeout)
 	mstate->s.serve_expired_data->get_cached_answer =
 		mstate->s.serve_expired_data->get_cached_answer?
 		mstate->s.serve_expired_data->get_cached_answer:
-		mesh_serve_expired_lookup;
+		&mesh_serve_expired_lookup;
 
 	/* In case this timer already popped, start it again */
 	if(!mstate->s.serve_expired_data->timer) {
@@ -1946,7 +1946,7 @@ mesh_serve_expired_callback(void* arg)
 	while(1) {
 		fptr_ok(fptr_whitelist_serve_expired_lookup(
 			qstate->serve_expired_data->get_cached_answer));
-		msg = qstate->serve_expired_data->get_cached_answer(qstate,
+		msg = (*qstate->serve_expired_data->get_cached_answer)(qstate,
 			lookup_qinfo);
 		if(!msg)
 			return;

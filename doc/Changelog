@@ -12,6 +12,7 @@
 	- review fix to remove duplicate error printout.
 	- Insert header into testcode/readzone.c, it was missing.
 	- Fix from lint for ignored return value.
+	- Fix for older parsers for function call in serve expired get cached.
 
 6 July 2021: Wouter
 	- iana portlist update.
