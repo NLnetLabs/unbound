@@ -10,6 +10,7 @@
 	- Fix unbound-control local_data and local_datas to print detailed
 	  syntax errors.
 	- review fix to remove duplicate error printout.
+	- Insert header into testcode/readzone.c, it was missing.
 
 6 July 2021: Wouter
 	- iana portlist update.
