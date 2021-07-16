@@ -1437,7 +1437,7 @@ outside_network_create(struct comm_base *base, size_t bufsize,
 	void (*unwanted_action)(void*), void* unwanted_param, int do_udp,
 	void* sslctx, int delayclose, int tls_use_sni, struct dt_env* dtenv,
 	int udp_connect, int max_reuse_tcp_queries, int tcp_reuse_timeout,
-	int tcp_auth_query_timeout, int hide_version)
+	int tcp_auth_query_timeout)
 {
 	struct outside_network* outnet = (struct outside_network*)
 		calloc(1, sizeof(struct outside_network));
@@ -1471,7 +1471,6 @@ outside_network_create(struct comm_base *base, size_t bufsize,
 	outnet->do_udp = do_udp;
 	outnet->tcp_mss = tcp_mss;
 	outnet->ip_dscp = dscp;
-	outnet->hide_version = hide_version;
 #ifndef S_SPLINT_S
 	if(delayclose) {
 		outnet->delayclose = 1;
@@ -3437,14 +3436,13 @@ outnet_comm_point_for_tcp(struct outside_network* outnet,
 
 /** setup http request headers in buffer for sending query to destination */
 static int
-setup_http_request(sldns_buffer* buf, char* host, char* path, int hide_version)
+setup_http_request(sldns_buffer* buf, char* host, char* path)
 {
 	sldns_buffer_clear(buf);
 	sldns_buffer_printf(buf, "GET /%s HTTP/1.1\r\n", path);
 	sldns_buffer_printf(buf, "Host: %s\r\n", host);
-	if(!hide_version)
-		sldns_buffer_printf(buf, "User-Agent: unbound/%s\r\n",
-			PACKAGE_VERSION);
+	sldns_buffer_printf(buf, "User-Agent: unbound/%s\r\n",
+		PACKAGE_VERSION);
 	/* We do not really do multiple queries per connection,
 	 * but this header setting is also not needed.
 	 * sldns_buffer_printf(buf, "Connection: close\r\n") */
@@ -3496,7 +3494,7 @@ outnet_comm_point_for_http(struct outside_network* outnet,
 	comm_point_start_listening(cp, fd, timeout);
 
 	/* setup http request in cp->buffer */
-	if(!setup_http_request(cp->buffer, host, path, outnet->hide_version)) {
+	if(!setup_http_request(cp->buffer, host, path)) {
 		log_err("error setting up http request");
 		comm_point_delete(cp);
 		return NULL;

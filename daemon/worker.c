@@ -1796,7 +1796,7 @@ worker_init(struct worker* worker, struct config_file *cfg,
 		worker->daemon->connect_sslctx, cfg->delay_close,
 		cfg->tls_use_sni, dtenv, cfg->udp_connect,
 		cfg->max_reuse_tcp_queries, cfg->tcp_reuse_timeout,
-		cfg->tcp_auth_query_timeout, cfg->hide_version);
+		cfg->tcp_auth_query_timeout);
 	if(!worker->back) {
 		log_err("could not create outgoing sockets");
 		worker_delete(worker);

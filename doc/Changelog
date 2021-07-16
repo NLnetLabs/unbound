@@ -7,7 +7,6 @@
 	- Fix unbound-control local_data and local_datas to print detailed
 	  syntax errors.
 	- review fix to remove duplicate error printout.
-	- With hide-version unbound also omits the version from http headers.
 
 6 July 2021: Wouter
 	- iana portlist update.
