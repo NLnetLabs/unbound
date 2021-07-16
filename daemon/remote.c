@@ -1359,11 +1359,7 @@ do_datas_add(RES* ssl, struct local_zones* zones)
 		if(buf[0] == 0x04 && buf[1] == 0)
 			break; /* end of transmission */
 		line++;
-		if(!perform_data_add(ssl, zones, buf, line)) {
-			if(!ssl_printf(ssl, "error for input line: %s\n", buf))
-				return;
-		}
-		else
+		if(perform_data_add(ssl, zones, buf, line))
 			num++;
 	}
 	(void)ssl_printf(ssl, "added %d datas\n", num);
