@@ -1364,7 +1364,9 @@ ssl_handle_read(struct comm_point* c)
 					return tcp_req_info_handle_read_close(c->tcp_req_info);
 				return 0; /* shutdown, closed */
 			} else if(want == SSL_ERROR_WANT_READ) {
+#ifdef USE_WINSOCK
 				ub_winsock_tcp_wouldblock(c->ev->ev, UB_EV_READ);
+#endif
 				return 1; /* read more later */
 			} else if(want == SSL_ERROR_WANT_WRITE) {
 				c->ssl_shake_state = comm_ssl_shake_hs_write;
@@ -1412,7 +1414,9 @@ ssl_handle_read(struct comm_point* c)
 					return tcp_req_info_handle_read_close(c->tcp_req_info);
 				return 0; /* shutdown, closed */
 			} else if(want == SSL_ERROR_WANT_READ) {
+#ifdef USE_WINSOCK
 				ub_winsock_tcp_wouldblock(c->ev->ev, UB_EV_READ);
+#endif
 				return 1; /* read more later */
 			} else if(want == SSL_ERROR_WANT_WRITE) {
 				c->ssl_shake_state = comm_ssl_shake_hs_write;
@@ -1505,7 +1509,9 @@ ssl_handle_write(struct comm_point* c)
 				comm_point_listen_for_rw(c, 1, 0);
 				return 1; /* wait for read condition */
 			} else if(want == SSL_ERROR_WANT_WRITE) {
+#ifdef USE_WINSOCK
 				ub_winsock_tcp_wouldblock(c->ev->ev, UB_EV_WRITE);
+#endif
 				return 1; /* write more later */
 			} else if(want == SSL_ERROR_SYSCALL) {
 #ifdef EPIPE
@@ -1555,7 +1561,9 @@ ssl_handle_write(struct comm_point* c)
 			comm_point_listen_for_rw(c, 1, 0);
 			return 1; /* wait for read condition */
 		} else if(want == SSL_ERROR_WANT_WRITE) {
+#ifdef USE_WINSOCK
 			ub_winsock_tcp_wouldblock(c->ev->ev, UB_EV_WRITE);
+#endif
 			return 1; /* write more later */
 		} else if(want == SSL_ERROR_SYSCALL) {
 #ifdef EPIPE
@@ -3940,11 +3948,13 @@ comm_point_close(struct comm_point* c)
 
 	/* close fd after removing from event lists, or epoll.. is messed up */
 	if(c->fd != -1 && !c->do_not_close) {
+#ifdef USE_WINSOCK
 		if(c->type == comm_tcp || c->type == comm_http) {
 			/* delete sticky events for the fd, it gets closed */
 			ub_winsock_tcp_wouldblock(c->ev->ev, UB_EV_READ);
 			ub_winsock_tcp_wouldblock(c->ev->ev, UB_EV_WRITE);
 		}
+#endif
 		verbose(VERB_ALGO, "close fd %d", c->fd);
 		sock_close(c->fd);
 	}
