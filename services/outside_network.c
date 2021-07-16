@@ -3434,15 +3434,28 @@ outnet_comm_point_for_tcp(struct outside_network* outnet,
 	return cp;
 }
 
+/** setup the User-Agent HTTP header based on http-user-agent configuration */
+static void
+setup_http_user_agent(sldns_buffer* buf, struct config_file* cfg)
+{
+	if(cfg->hide_http_user_agent) return;
+	if(cfg->http_user_agent==NULL || cfg->http_user_agent[0] == 0) {
+		sldns_buffer_printf(buf, "User-Agent: %s/%s\r\n", PACKAGE_NAME,
+			PACKAGE_VERSION);
+	} else {
+		sldns_buffer_printf(buf, "User-Agent: %s\r\n", cfg->http_user_agent);
+	}
+}
+
 /** setup http request headers in buffer for sending query to destination */
 static int
-setup_http_request(sldns_buffer* buf, char* host, char* path)
+setup_http_request(sldns_buffer* buf, char* host, char* path,
+	struct config_file* cfg)
 {
 	sldns_buffer_clear(buf);
 	sldns_buffer_printf(buf, "GET /%s HTTP/1.1\r\n", path);
 	sldns_buffer_printf(buf, "Host: %s\r\n", host);
-	sldns_buffer_printf(buf, "User-Agent: unbound/%s\r\n",
-		PACKAGE_VERSION);
+	setup_http_user_agent(buf, cfg);
 	/* We do not really do multiple queries per connection,
 	 * but this header setting is also not needed.
 	 * sldns_buffer_printf(buf, "Connection: close\r\n") */
@@ -3458,7 +3471,7 @@ struct comm_point*
 outnet_comm_point_for_http(struct outside_network* outnet,
 	comm_point_callback_type* cb, void* cb_arg,
 	struct sockaddr_storage* to_addr, socklen_t to_addrlen, int timeout,
-	int ssl, char* host, char* path)
+	int ssl, char* host, char* path, struct config_file* cfg)
 {
 	/* cp calls cb with err=NETEVENT_DONE when transfer is done */
 	struct comm_point* cp;
@@ -3494,7 +3507,7 @@ outnet_comm_point_for_http(struct outside_network* outnet,
 	comm_point_start_listening(cp, fd, timeout);
 
 	/* setup http request in cp->buffer */
-	if(!setup_http_request(cp->buffer, host, path)) {
+	if(!setup_http_request(cp->buffer, host, path, cfg)) {
 		log_err("error setting up http request");
 		comm_point_delete(cp);
 		return NULL;

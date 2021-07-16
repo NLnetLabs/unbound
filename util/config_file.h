@@ -340,10 +340,14 @@ struct config_file {
 	int hide_version;
 	/** do not report trustanchor (trustanchor.unbound) */
 	int hide_trustanchor;
+	/** do not report the User-Agent HTTP header */
+	int hide_http_user_agent;
 	/** identity, hostname is returned if "". */
 	char* identity;
 	/** version, package version returned if "". */
 	char* version;
+	/** User-Agent for HTTP header */
+	char* http_user_agent;
 	/** nsid */
 	char *nsid_cfg_str;
 	uint8_t *nsid;

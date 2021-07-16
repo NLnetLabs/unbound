@@ -371,6 +371,9 @@ server:
 	# enable to not answer trustanchor.unbound queries.
 	# hide-trustanchor: no
 
+	# enable to not set the User-Agent HTTP header.
+	# hide-http-user-agent: no
+
 	# the identity to report. Leave "" or default to return hostname.
 	# identity: ""
 
@@ -379,6 +382,10 @@ server:
 
 	# NSID identity (hex string, or "ascii_somestring"). default disabled.
 	# nsid: "aabbccdd"
+
+	# User-Agent HTTP header to use. Leave "" or default to use package name
+	# and version.
+	# http-user-agent: ""
 
 	# the target fetch policy.
 	# series of integers describing the policy per dependency depth.

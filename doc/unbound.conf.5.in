@@ -852,6 +852,17 @@ If enabled version.server and version.bind queries are refused.
 Set the version to report. If set to "", the default, then the package
 version is returned.
 .TP
+.B hide\-http\-user\-agent: \fI<yes or no>
+If enabled the HTTP header User-Agent is not set. Use with caution as some
+webserver configurations may reject HTTP requests lacking this header.
+If needed, it is better to explicitly set the
+.B http\-user\-agent
+below.
+.TP
+.B http\-user\-agent: \fI<string>
+Set the HTTP User-Agent header for outgoing HTTP requests. If set to "",
+the default, then the package name and version are used.
+.TP
 .B nsid:\fR <string>
 Add the specified nsid to the EDNS section of the answer when queried
 with an NSID EDNS enabled packet.  As a sequence of hex characters or

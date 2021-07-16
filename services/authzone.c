@@ -5426,7 +5426,7 @@ xfr_transfer_init_fetch(struct auth_xfer* xfr, struct module_env* env)
 		xfr->task_transfer->cp = outnet_comm_point_for_http(
 			env->outnet, auth_xfer_transfer_http_callback, xfr,
 			&addr, addrlen, -1, master->ssl, master->host,
-			master->file);
+			master->file, env->cfg);
 		if(!xfr->task_transfer->cp) {
 			char zname[255+1], as[256];
 			dname_str(xfr->name, zname);

@@ -371,8 +371,10 @@ max-ecs-tree-size-ipv6{COLON}	{ YDVAR(1, VAR_MAX_ECS_TREE_SIZE_IPV6) }
 hide-identity{COLON}		{ YDVAR(1, VAR_HIDE_IDENTITY) }
 hide-version{COLON}		{ YDVAR(1, VAR_HIDE_VERSION) }
 hide-trustanchor{COLON}		{ YDVAR(1, VAR_HIDE_TRUSTANCHOR) }
+hide-http-user-agent{COLON}		{ YDVAR(1, VAR_HIDE_HTTP_USER_AGENT) }
 identity{COLON}			{ YDVAR(1, VAR_IDENTITY) }
 version{COLON}			{ YDVAR(1, VAR_VERSION) }
+http-user-agent{COLON}			{ YDVAR(1, VAR_HTTP_USER_AGENT) }
 module-config{COLON}     	{ YDVAR(1, VAR_MODULE_CONF) }
 dlv-anchor{COLON}		{ YDVAR(1, VAR_DLV_ANCHOR) }
 dlv-anchor-file{COLON}		{ YDVAR(1, VAR_DLV_ANCHOR_FILE) }

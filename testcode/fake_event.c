@@ -1749,7 +1749,7 @@ struct comm_point* outnet_comm_point_for_tcp(struct outside_network* outnet,
 struct comm_point* outnet_comm_point_for_http(struct outside_network* outnet,
 	comm_point_callback_type* cb, void* cb_arg,
 	struct sockaddr_storage* to_addr, socklen_t to_addrlen, int timeout,
-	int ssl, char* host, char* path)
+	int ssl, char* host, char* path, struct config_file* cfg)
 {
 	struct replay_runtime* runtime = (struct replay_runtime*)
 		outnet->base;
@@ -1771,6 +1771,7 @@ struct comm_point* outnet_comm_point_for_http(struct outside_network* outnet,
 	(void)ssl;
 	(void)host;
 	(void)path;
+	(void)cfg;
 
 	/* handle http comm point and return contents from test script */
 	return (struct comm_point*)fc;

@@ -63,6 +63,7 @@ struct edns_option;
 struct module_env;
 struct module_qstate;
 struct query_info;
+struct config_file;
 
 /**
  * Send queries to outside servers and wait for answers from servers.
@@ -740,12 +741,13 @@ struct comm_point* outnet_comm_point_for_tcp(struct outside_network* outnet,
  * @param ssl: set to true for https.
  * @param host: hostname to use for the destination. part of http request.
  * @param path: pathname to lookup, eg. name of the file on the destination.
+ * @param cfg: running configuration for User-Agent setup.
  * @return http_out commpoint, or NULL.
  */
 struct comm_point* outnet_comm_point_for_http(struct outside_network* outnet,
 	comm_point_callback_type* cb, void* cb_arg,
 	struct sockaddr_storage* to_addr, socklen_t to_addrlen, int timeout,
-	int ssl, char* host, char* path);
+	int ssl, char* host, char* path, struct config_file* cfg);
 
 /** connect tcp connection to addr, 0 on failure */
 int outnet_tcp_connect(int s, struct sockaddr_storage* addr, socklen_t addrlen);

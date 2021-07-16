@@ -154,6 +154,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_SERVE_EXPIRED_TTL_RESET VAR_SERVE_EXPIRED_REPLY_TTL
 %token VAR_SERVE_EXPIRED_CLIENT_TIMEOUT VAR_SERVE_ORIGINAL_TTL VAR_FAKE_DSA
 %token VAR_FAKE_SHA1 VAR_LOG_IDENTITY VAR_HIDE_TRUSTANCHOR
+%token VAR_HIDE_HTTP_USER_AGENT VAR_HTTP_USER_AGENT
 %token VAR_TRUST_ANCHOR_SIGNALING VAR_AGGRESSIVE_NSEC VAR_USE_SYSTEMD
 %token VAR_SHM_ENABLE VAR_SHM_KEY VAR_ROOT_KEY_SENTINEL
 %token VAR_DNSCRYPT VAR_DNSCRYPT_ENABLE VAR_DNSCRYPT_PORT VAR_DNSCRYPT_PROVIDER
@@ -225,6 +226,7 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_harden_short_bufsize | server_harden_large_queries |
 	server_do_not_query_address | server_hide_identity |
 	server_hide_version | server_identity | server_version |
+	server_hide_http_user_agent | server_http_user_agent |
 	server_harden_glue | server_module_conf | server_trust_anchor_file |
 	server_trust_anchor | server_val_override_date | server_bogus_ttl |
 	server_val_clean_additional | server_val_permissive_mode |
@@ -1337,6 +1339,15 @@ server_hide_trustanchor: VAR_HIDE_TRUSTANCHOR STRING_ARG
 		free($2);
 	}
 	;
+server_hide_http_user_agent: VAR_HIDE_HTTP_USER_AGENT STRING_ARG
+	{
+		OUTYY(("P(server_hide_user_agent:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else cfg_parser->cfg->hide_http_user_agent = (strcmp($2, "yes")==0);
+		free($2);
+	}
+	;
 server_identity: VAR_IDENTITY STRING_ARG
 	{
 		OUTYY(("P(server_identity:%s)\n", $2));
@@ -1349,6 +1360,13 @@ server_version: VAR_VERSION STRING_ARG
 		OUTYY(("P(server_version:%s)\n", $2));
 		free(cfg_parser->cfg->version);
 		cfg_parser->cfg->version = $2;
+	}
+	;
+server_http_user_agent: VAR_HTTP_USER_AGENT STRING_ARG
+	{
+		OUTYY(("P(server_http_user_agent:%s)\n", $2));
+		free(cfg_parser->cfg->http_user_agent);
+		cfg_parser->cfg->http_user_agent = $2;
 	}
 	;
 server_nsid: VAR_NSID STRING_ARG

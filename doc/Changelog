@@ -1,3 +1,6 @@
+16 July 2021: George
+	- Introduce 'http-user-agent:' and 'hide-http-user-agent:' options.
+
 16 July 2021: Wouter
 	- Merge #510 from ndptech: Don't call a function which hasn't been
 	  defined.
@@ -19,7 +22,8 @@
 	- Fix Wunused-result compile warnings.
 
 2 July 2021: Tom
-	- Merge PR #491: Add SVCB and HTTPS types and handling according to draft-ietf-dnsop-svcb-https
+	- Merge PR #491: Add SVCB and HTTPS types and handling according to
+	  draft-ietf-dnsop-svcb-https.
 
 2 July 2021: Wouter
 	- Fix #506: Python Module Seems to Leak Memory if it Experiences an
