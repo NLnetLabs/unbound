@@ -89,8 +89,7 @@ it.  If the zone does not exist, the command succeeds.
 Add new local data, the given resource record. Like \fBlocal\-data\fR
 config statement, except for when no covering zone exists.  In that case
 this remote control command creates a transparent zone with the same 
-name as this record.  This command is not good at returning detailed syntax 
-errors.
+name as this record.
 .TP
 .B local_data_remove \fIname
 Remove all RR data from local name.  If the name already has no items,
