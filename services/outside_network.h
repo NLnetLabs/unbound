@@ -146,6 +146,8 @@ struct outside_network {
 	int tcp_mss;
 	/** IP_TOS socket option requested on the sockets */
 	int ip_dscp;
+	/** hide version option */
+	int hide_version;
 
 	/**
 	 * Array of tcp pending used for outgoing TCP connections.
@@ -544,6 +546,7 @@ struct serviced_query {
  * @param max_reuse_tcp_queries: max number of queries on a reuse connection.
  * @param tcp_reuse_timeout: timeout for REUSE entries in milliseconds.
  * @param tcp_auth_query_timeout: timeout in milliseconds for TCP queries to auth servers.
+ * @param hide_version: if the version is hidden.
  * @return: the new structure (with no pending answers) or NULL on error.
  */
 struct outside_network* outside_network_create(struct comm_base* base,
@@ -554,7 +557,7 @@ struct outside_network* outside_network_create(struct comm_base* base,
 	void (*unwanted_action)(void*), void* unwanted_param, int do_udp,
 	void* sslctx, int delayclose, int tls_use_sni, struct dt_env *dtenv,
 	int udp_connect, int max_reuse_tcp_queries, int tcp_reuse_timeout,
-	int tcp_auth_query_timeout);
+	int tcp_auth_query_timeout, int hide_version);
 
 /**
  * Delete outside_network structure.
