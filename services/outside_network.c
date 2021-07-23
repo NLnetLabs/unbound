@@ -377,6 +377,8 @@ static struct waiting_tcp* reuse_write_wait_pop(struct reuse_tcp* reuse)
 static void reuse_write_wait_remove(struct reuse_tcp* reuse,
 	struct waiting_tcp* w)
 {
+	log_assert(w);
+	log_assert(w->write_wait_queued);
 	if(!w)
 		return;
 	if(!w->write_wait_queued)
@@ -384,9 +386,13 @@ static void reuse_write_wait_remove(struct reuse_tcp* reuse,
 	if(w->write_wait_prev)
 		w->write_wait_prev->write_wait_next = w->write_wait_next;
 	else	reuse->write_wait_first = w->write_wait_next;
+	log_assert(!w->write_wait_prev ||
+		w->write_wait_prev->write_wait_next != w->write_wait_prev);
 	if(w->write_wait_next)
 		w->write_wait_next->write_wait_prev = w->write_wait_prev;
 	else	reuse->write_wait_last = w->write_wait_prev;
+	log_assert(!w->write_wait_next
+		|| w->write_wait_next->write_wait_prev != w->write_wait_next);
 	w->write_wait_queued = 0;
 }
 
@@ -398,6 +404,8 @@ static void reuse_write_wait_push_back(struct reuse_tcp* reuse,
 	log_assert(!w->write_wait_queued);
 	if(reuse->write_wait_last) {
 		reuse->write_wait_last->write_wait_next = w;
+		log_assert(reuse->write_wait_last->write_wait_next !=
+			reuse->write_wait_last);
 		w->write_wait_prev = reuse->write_wait_last;
 	} else {
 		reuse->write_wait_first = w;
@@ -468,13 +476,22 @@ reuse_tcp_insert(struct outside_network* outnet, struct pending_tcp* pend_tcp)
 	pend_tcp->reuse.lru_prev = NULL;
 	if(outnet->tcp_reuse_first) {
 		pend_tcp->reuse.lru_next = outnet->tcp_reuse_first;
+		log_assert(pend_tcp->reuse.lru_next != &pend_tcp->reuse);
 		outnet->tcp_reuse_first->lru_prev = &pend_tcp->reuse;
+		log_assert(outnet->tcp_reuse_first->lru_prev !=
+			outnet->tcp_reuse_first);
 	} else {
 		pend_tcp->reuse.lru_next = NULL;
 		outnet->tcp_reuse_last = &pend_tcp->reuse;
 	}
 	outnet->tcp_reuse_first = &pend_tcp->reuse;
 	pend_tcp->reuse.item_on_lru_list = 1;
+	log_assert((!outnet->tcp_reuse_first && !outnet->tcp_reuse_last) ||
+		(outnet->tcp_reuse_first && outnet->tcp_reuse_last));
+	log_assert(outnet->tcp_reuse_first != outnet->tcp_reuse_first->lru_next &&
+		outnet->tcp_reuse_first != outnet->tcp_reuse_first->lru_prev);
+	log_assert(outnet->tcp_reuse_last != outnet->tcp_reuse_last->lru_next &&
+		outnet->tcp_reuse_last != outnet->tcp_reuse_last->lru_prev);
 	return 1;
 }
 
@@ -719,21 +736,32 @@ reuse_tcp_lru_touch(struct outside_network* outnet, struct reuse_tcp* reuse)
 		log_err("internal error: we need to touch the lru_list but item not in list");
 		return; /* not on the list, no lru to modify */
 	}
+	log_assert(reuse->lru_prev ||
+		(!reuse->lru_prev && outnet->tcp_reuse_first == reuse));
 	if(!reuse->lru_prev)
 		return; /* already first in the list */
 	/* remove at current position */
 	/* since it is not first, there is a previous element */
 	reuse->lru_prev->lru_next = reuse->lru_next;
+	log_assert(reuse->lru_prev->lru_next != reuse->lru_prev);
 	if(reuse->lru_next)
 		reuse->lru_next->lru_prev = reuse->lru_prev;
 	else	outnet->tcp_reuse_last = reuse->lru_prev;
+	log_assert(!reuse->lru_next || reuse->lru_next->lru_prev != reuse->lru_next);
+	log_assert(outnet->tcp_reuse_last != outnet->tcp_reuse_last->lru_next &&
+		outnet->tcp_reuse_last != outnet->tcp_reuse_last->lru_prev);
 	/* insert at the front */
 	reuse->lru_prev = NULL;
 	reuse->lru_next = outnet->tcp_reuse_first;
+	log_assert(reuse->lru_next != reuse);
 	/* since it is not first, it is not the only element and
 	 * lru_next is thus not NULL and thus reuse is now not the last in
 	 * the list, so outnet->tcp_reuse_last does not need to be modified */
 	outnet->tcp_reuse_first = reuse;
+	log_assert(outnet->tcp_reuse_first != outnet->tcp_reuse_first->lru_next &&
+		outnet->tcp_reuse_first != outnet->tcp_reuse_first->lru_prev);
+	log_assert((!outnet->tcp_reuse_first && !outnet->tcp_reuse_last) ||
+		(outnet->tcp_reuse_first && outnet->tcp_reuse_last));
 }
 
 /** call callback on waiting_tcp, if not NULL */
@@ -759,9 +787,13 @@ use_free_buffer(struct outside_network* outnet)
 #endif
 		struct reuse_tcp* reuse = NULL;
 		w = outnet->tcp_wait_first;
+		log_assert(w->on_tcp_waiting_list);
 		outnet->tcp_wait_first = w->next_waiting;
 		if(outnet->tcp_wait_last == w)
 			outnet->tcp_wait_last = NULL;
+		log_assert(
+			(!outnet->tcp_reuse_first && !outnet->tcp_reuse_last) ||
+			(outnet->tcp_reuse_first && outnet->tcp_reuse_last));
 		w->on_tcp_waiting_list = 0;
 		reuse = reuse_tcp_find(outnet, &w->addr, w->addrlen,
 			w->ssl_upstream);
@@ -827,6 +859,7 @@ static void
 outnet_add_tcp_waiting(struct outside_network* outnet, struct waiting_tcp* w)
 {
 	struct timeval tv;
+	log_assert(!w->on_tcp_waiting_list);
 	if(w->on_tcp_waiting_list)
 		return;
 	w->next_waiting = NULL;
@@ -941,19 +974,33 @@ reuse_tcp_remove_tree_list(struct outside_network* outnet,
 			 * and thus have a pending pointer to the struct */
 			log_assert(reuse->lru_prev->pending);
 			reuse->lru_prev->lru_next = reuse->lru_next;
+			log_assert(reuse->lru_prev->lru_next != reuse->lru_prev);
 		} else {
 			log_assert(!reuse->lru_next || reuse->lru_next->pending);
 			outnet->tcp_reuse_first = reuse->lru_next;
+			log_assert(!outnet->tcp_reuse_first ||
+				(outnet->tcp_reuse_first !=
+				 outnet->tcp_reuse_first->lru_next &&
+				 outnet->tcp_reuse_first !=
+				 outnet->tcp_reuse_first->lru_prev));
 		}
 		if(reuse->lru_next) {
 			/* assert that members of the lru list are waiting
 			 * and thus have a pending pointer to the struct */
 			log_assert(reuse->lru_next->pending);
 			reuse->lru_next->lru_prev = reuse->lru_prev;
+			log_assert(reuse->lru_next->lru_prev != reuse->lru_next);
 		} else {
 			log_assert(!reuse->lru_prev || reuse->lru_prev->pending);
 			outnet->tcp_reuse_last = reuse->lru_prev;
+			log_assert(!outnet->tcp_reuse_last ||
+				(outnet->tcp_reuse_last !=
+				 outnet->tcp_reuse_last->lru_next &&
+				 outnet->tcp_reuse_last !=
+				 outnet->tcp_reuse_last->lru_prev));
 		}
+		log_assert((!outnet->tcp_reuse_first && !outnet->tcp_reuse_last) ||
+			(outnet->tcp_reuse_first && outnet->tcp_reuse_last));
 		reuse->item_on_lru_list = 0;
 	}
 }
@@ -984,6 +1031,7 @@ decommission_pending_tcp(struct outside_network* outnet,
 	verbose(VERB_CLIENT, "decommission_pending_tcp");
 	pend->next_free = outnet->tcp_free;
 	outnet->tcp_free = pend;
+	log_assert(outnet->tcp_free->next_free != outnet->tcp_free);
 	if(pend->reuse.node.key) {
 		/* needs unlink from the reuse tree to get deleted */
 		reuse_tcp_remove_tree_list(outnet, &pend->reuse);
@@ -1069,6 +1117,7 @@ outnet_tcp_cb(struct comm_point* c, void* arg, int error,
 	struct pending_tcp* pend = (struct pending_tcp*)arg;
 	struct outside_network* outnet = pend->reuse.outnet;
 	struct waiting_tcp* w = NULL;
+	log_assert(pend->reuse.item_on_lru_list && pend->reuse.node.key);
 	verbose(VERB_ALGO, "outnettcp cb");
 	if(error == NETEVENT_TIMEOUT) {
 		if(pend->c->tcp_write_and_read) {
@@ -2107,6 +2156,8 @@ reuse_tcp_close_oldest(struct outside_network* outnet)
 		outnet->tcp_reuse_last = NULL;
 		outnet->tcp_reuse_first = NULL;
 	}
+	log_assert((!outnet->tcp_reuse_first && !outnet->tcp_reuse_last) ||
+		(outnet->tcp_reuse_first && outnet->tcp_reuse_last));
 	pend->reuse.item_on_lru_list = 0;
 
 	/* free up */
@@ -2216,6 +2267,7 @@ pending_tcp_query(struct serviced_query* sq, sldns_buffer* packet,
 		reuse_tcp_lru_touch(sq->outnet, reuse);
 	}
 
+	log_assert(!reuse || (reuse && pend));
 	/* if !pend but we have reuse streams, close a reuse stream
 	 * to be able to open a new one to this target, no use waiting
 	 * to reuse a file descriptor while another query needs to use
@@ -2223,6 +2275,7 @@ pending_tcp_query(struct serviced_query* sq, sldns_buffer* packet,
 	if(!pend) {
 		reuse_tcp_close_oldest(sq->outnet);
 		pend = sq->outnet->tcp_free;
+		log_assert(!reuse || (pend == reuse->pending));
 	}
 
 	/* allocate space to store query */
@@ -2261,6 +2314,7 @@ pending_tcp_query(struct serviced_query* sq, sldns_buffer* packet,
 	if(pend) {
 		/* we have a buffer available right now */
 		if(reuse) {
+			log_assert(reuse == &pend->reuse);
 			/* reuse existing fd, write query and continue */
 			/* store query in tree by id */
 			verbose(VERB_CLIENT, "pending_tcp_query: reuse, store");
@@ -2447,6 +2501,9 @@ waiting_list_remove(struct outside_network* outnet, struct waiting_tcp* w)
 		prev = p;
 		p = p->next_waiting;
 	}
+	/* waiting_list_remove is currently called only with items that are
+	 * already in the waiting list. */
+	log_assert(0);
 }
 
 /** reuse tcp stream, remove serviced query from stream,
