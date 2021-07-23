@@ -1032,8 +1032,12 @@ decommission_pending_tcp(struct outside_network* outnet,
 	struct pending_tcp* pend)
 {
 	verbose(VERB_CLIENT, "decommission_pending_tcp");
-	pend->next_free = outnet->tcp_free;
-	outnet->tcp_free = pend;
+	/* A certain code path can lead here twice for the same pending_tcp
+	 * creating a loop in the free pending_tcp list. */
+	if(outnet->tcp_free != pend) {
+		pend->next_free = outnet->tcp_free;
+		outnet->tcp_free = pend;
+	}
 	log_assert(outnet->tcp_free->next_free != outnet->tcp_free);
 	if(pend->reuse.node.key) {
 		/* needs unlink from the reuse tree to get deleted */
