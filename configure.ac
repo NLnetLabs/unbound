@@ -699,11 +699,15 @@ if test x_$ub_test_python != x_no; then
       AC_SUBST(PY_MAJOR_VERSION)
       # Have Python
       AC_DEFINE(HAVE_PYTHON,1,[Define if you have Python libraries and header files.])
-      if test -n "$LIBS"; then
-        LIBS="$PYTHON_LDFLAGS $LIBS"
-      else
-        LIBS="$PYTHON_LDFLAGS"
+      if test x_$ub_with_pythonmod != x_no; then
+        if test -n "$LIBS"; then
+          LIBS="$PYTHON_LDFLAGS $LIBS"
+        else
+          LIBS="$PYTHON_LDFLAGS"
+        fi
       fi
+      PYTHON_LIBS="$PYTHON_LDFLAGS"
+      AC_SUBST(PYTHON_LIBS)
       if test -n "$CPPFLAGS"; then
         CPPFLAGS="$CPPFLAGS $PYTHON_CPPFLAGS"
       else
