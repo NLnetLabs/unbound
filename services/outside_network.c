@@ -90,10 +90,6 @@ static int randomize_and_send_udp(struct pending* pend, sldns_buffer* packet,
 static void waiting_list_remove(struct outside_network* outnet,
 	struct waiting_tcp* w);
 
-/** remove reused element from tree and lru list */
-static void reuse_tcp_remove_tree_list(struct outside_network* outnet,
-	struct reuse_tcp* reuse);
-
 /** select a DNS ID for a TCP stream */
 static uint16_t tcp_select_id(struct outside_network* outnet,
 	struct reuse_tcp* reuse);
@@ -459,7 +455,7 @@ tree_by_id_get_id(rbnode_type* node)
 }
 
 /** insert into reuse tcp tree and LRU, false on failure (duplicate) */
-static int
+int
 reuse_tcp_insert(struct outside_network* outnet, struct pending_tcp* pend_tcp)
 {
 	log_reuse_tcp(VERB_CLIENT, "reuse_tcp_insert", &pend_tcp->reuse);
@@ -733,7 +729,7 @@ outnet_tcp_take_into_use(struct waiting_tcp* w)
 /** Touch the lru of a reuse_tcp element, it is in use.
  * This moves it to the front of the list, where it is not likely to
  * be closed.  Items at the back of the list are closed to make space. */
-static void
+void
 reuse_tcp_lru_touch(struct outside_network* outnet, struct reuse_tcp* reuse)
 {
 	if(!reuse->item_on_lru_list) {
@@ -769,6 +765,29 @@ reuse_tcp_lru_touch(struct outside_network* outnet, struct reuse_tcp* reuse)
 		outnet->tcp_reuse_first != outnet->tcp_reuse_first->lru_prev);
 	log_assert((!outnet->tcp_reuse_first && !outnet->tcp_reuse_last) ||
 		(outnet->tcp_reuse_first && outnet->tcp_reuse_last));
+}
+
+/** Snip the last reuse_tcp element off of the LRU list */
+struct reuse_tcp*
+reuse_tcp_lru_snip(struct outside_network* outnet)
+{
+	struct reuse_tcp* reuse = outnet->tcp_reuse_last;
+	if(!reuse) return NULL;
+	/* snip off of LRU */
+	log_assert(reuse->lru_next == NULL);
+	if(reuse->lru_prev) {
+		outnet->tcp_reuse_last = reuse->lru_prev;
+		reuse->lru_prev->lru_next = NULL;
+	} else {
+		outnet->tcp_reuse_last = NULL;
+		outnet->tcp_reuse_first = NULL;
+	}
+	log_assert((!outnet->tcp_reuse_first && !outnet->tcp_reuse_last) ||
+		(outnet->tcp_reuse_first && outnet->tcp_reuse_last));
+	reuse->item_on_lru_list = 0;
+	reuse->lru_next = NULL;
+	reuse->lru_prev = NULL;
+	return reuse;
 }
 
 /** call callback on waiting_tcp, if not NULL */
@@ -955,7 +974,7 @@ reuse_move_writewait_away(struct outside_network* outnet,
 }
 
 /** remove reused element from tree and lru list */
-static void
+void
 reuse_tcp_remove_tree_list(struct outside_network* outnet,
 	struct reuse_tcp* reuse)
 {
@@ -2153,28 +2172,12 @@ outnet_tcptimer(void* arg)
 static void
 reuse_tcp_close_oldest(struct outside_network* outnet)
 {
-	struct pending_tcp* pend;
+	struct reuse_tcp* reuse;
 	verbose(VERB_CLIENT, "reuse_tcp_close_oldest");
-	if(!outnet->tcp_reuse_last) return;
-	pend = outnet->tcp_reuse_last->pending;
-
-	/* snip off of LRU */
-	log_assert(pend->reuse.lru_next == NULL);
-	if(pend->reuse.lru_prev) {
-		outnet->tcp_reuse_last = pend->reuse.lru_prev;
-		pend->reuse.lru_prev->lru_next = NULL;
-	} else {
-		outnet->tcp_reuse_last = NULL;
-		outnet->tcp_reuse_first = NULL;
-	}
-	log_assert((!outnet->tcp_reuse_first && !outnet->tcp_reuse_last) ||
-		(outnet->tcp_reuse_first && outnet->tcp_reuse_last));
-	pend->reuse.item_on_lru_list = 0;
-	pend->reuse.lru_next = NULL;
-	pend->reuse.lru_prev = NULL;
-
+	reuse = reuse_tcp_lru_snip(outnet);
+	if(!reuse) return;
 	/* free up */
-	reuse_cb_and_decommission(outnet, pend, NETEVENT_CLOSED);
+	reuse_cb_and_decommission(outnet, reuse->pending, NETEVENT_CLOSED);
 }
 
 static uint16_t
