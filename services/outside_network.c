@@ -467,10 +467,10 @@ reuse_tcp_insert(struct outside_network* outnet, struct pending_tcp* pend_tcp)
 	pend_tcp->reuse.node.key = &pend_tcp->reuse;
 	pend_tcp->reuse.pending = pend_tcp;
 	if(!rbtree_insert(&outnet->tcp_reuse, &pend_tcp->reuse.node)) {
-		/* this is a duplicate connection, close this one */
+		/* We are not in the LRU list but we are already in the
+		 * tcp_reuse tree, strange.
+		 * Continue to add ourselves to the LRU list. */
 		verbose(VERB_CLIENT, "reuse_tcp_insert: duplicate connection");
-		pend_tcp->reuse.node.key = NULL;
-		return 0;
 	}
 	/* insert into LRU, first is newest */
 	pend_tcp->reuse.lru_prev = NULL;
