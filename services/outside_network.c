@@ -753,6 +753,9 @@ reuse_tcp_lru_touch(struct outside_network* outnet, struct reuse_tcp* reuse)
 	/* insert at the front */
 	reuse->lru_prev = NULL;
 	reuse->lru_next = outnet->tcp_reuse_first;
+	if(outnet->tcp_reuse_first) {
+		outnet->tcp_reuse_first->lru_prev = reuse;
+	}
 	log_assert(reuse->lru_next != reuse);
 	/* since it is not first, it is not the only element and
 	 * lru_next is thus not NULL and thus reuse is now not the last in
