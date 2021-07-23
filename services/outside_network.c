@@ -370,6 +370,8 @@ static struct waiting_tcp* reuse_write_wait_pop(struct reuse_tcp* reuse)
 		w->write_wait_next->write_wait_prev = NULL;
 	else	reuse->write_wait_last = NULL;
 	w->write_wait_queued = 0;
+	w->write_wait_next = NULL;
+	w->write_wait_prev = NULL;
 	return w;
 }
 
@@ -394,6 +396,8 @@ static void reuse_write_wait_remove(struct reuse_tcp* reuse,
 	log_assert(!w->write_wait_next
 		|| w->write_wait_next->write_wait_prev != w->write_wait_next);
 	w->write_wait_queued = 0;
+	w->write_wait_next = NULL;
+	w->write_wait_prev = NULL;
 }
 
 /** push the element after the last on the writewait list */
@@ -1005,7 +1009,10 @@ reuse_tcp_remove_tree_list(struct outside_network* outnet,
 		log_assert((!outnet->tcp_reuse_first && !outnet->tcp_reuse_last) ||
 			(outnet->tcp_reuse_first && outnet->tcp_reuse_last));
 		reuse->item_on_lru_list = 0;
+		reuse->lru_next = NULL;
+		reuse->lru_prev = NULL;
 	}
+	reuse->pending = NULL;
 }
 
 /** helper function that deletes an element from the tree of readwait
@@ -1745,8 +1752,10 @@ outside_network_delete(struct outside_network* outnet)
 				}
 				comm_point_delete(outnet->tcp_conns[i]->c);
 				free(outnet->tcp_conns[i]);
+				outnet->tcp_conns[i] = NULL;
 			}
 		free(outnet->tcp_conns);
+		outnet->tcp_conns = NULL;
 	}
 	if(outnet->tcp_wait_first) {
 		struct waiting_tcp* p = outnet->tcp_wait_first, *np;
@@ -2161,6 +2170,8 @@ reuse_tcp_close_oldest(struct outside_network* outnet)
 	log_assert((!outnet->tcp_reuse_first && !outnet->tcp_reuse_last) ||
 		(outnet->tcp_reuse_first && outnet->tcp_reuse_last));
 	pend->reuse.item_on_lru_list = 0;
+	pend->reuse.lru_next = NULL;
+	pend->reuse.lru_prev = NULL;
 
 	/* free up */
 	reuse_cb_and_decommission(outnet, pend, NETEVENT_CLOSED);
