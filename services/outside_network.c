@@ -1044,8 +1044,8 @@ decommission_pending_tcp(struct outside_network* outnet,
 	if(outnet->tcp_free != pend) {
 		pend->next_free = outnet->tcp_free;
 		outnet->tcp_free = pend;
+		log_assert(outnet->tcp_free->next_free != outnet->tcp_free);
 	}
-	log_assert(outnet->tcp_free->next_free != outnet->tcp_free);
 	if(pend->reuse.node.key) {
 		/* needs unlink from the reuse tree to get deleted */
 		reuse_tcp_remove_tree_list(outnet, &pend->reuse);
