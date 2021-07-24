@@ -801,13 +801,59 @@ waiting_tcp_callback(struct waiting_tcp* w, struct comm_point* c, int error,
 	}
 }
 
+/** add waiting_tcp element to the outnet tcp waiting list */
+static void
+outnet_add_tcp_waiting(struct outside_network* outnet, struct waiting_tcp* w)
+{
+	struct timeval tv;
+	log_assert(!w->on_tcp_waiting_list);
+	if(w->on_tcp_waiting_list)
+		return;
+	w->next_waiting = NULL;
+	if(outnet->tcp_wait_last)
+		outnet->tcp_wait_last->next_waiting = w;
+	else	outnet->tcp_wait_first = w;
+	outnet->tcp_wait_last = w;
+	w->on_tcp_waiting_list = 1;
+#ifndef S_SPLINT_S
+	tv.tv_sec = w->timeout/1000;
+	tv.tv_usec = (w->timeout%1000)*1000;
+#endif
+	comm_timer_set(w->timer, &tv);
+}
+
+/** add waiting_tcp element as first to the outnet tcp waiting list */
+static void
+outnet_add_tcp_waiting_first(struct outside_network* outnet,
+	struct waiting_tcp* w, int reset_timer)
+{
+	struct timeval tv;
+	log_assert(!w->on_tcp_waiting_list);
+	if(w->on_tcp_waiting_list)
+		return;
+	w->next_waiting = outnet->tcp_wait_first;
+	if(!outnet->tcp_wait_last)
+		outnet->tcp_wait_last = w;
+	outnet->tcp_wait_first = w;
+	w->on_tcp_waiting_list = 1;
+	if(reset_timer) {
+#ifndef S_SPLINT_S
+		tv.tv_sec = w->timeout/1000;
+		tv.tv_usec = (w->timeout%1000)*1000;
+#endif
+		comm_timer_set(w->timer, &tv);
+	}
+	log_assert(
+		(!outnet->tcp_reuse_first && !outnet->tcp_reuse_last) ||
+		(outnet->tcp_reuse_first && outnet->tcp_reuse_last));
+}
+
 /** see if buffers can be used to service TCP queries */
 static void
 use_free_buffer(struct outside_network* outnet)
 {
 	struct waiting_tcp* w;
-	while(outnet->tcp_free && outnet->tcp_wait_first 
-		&& !outnet->want_to_quit) {
+	while(outnet->tcp_wait_first && !outnet->want_to_quit) {
 #ifdef USE_DNSTAP
 		struct pending_tcp* pend_tcp = NULL;
 #endif
@@ -848,7 +894,7 @@ use_free_buffer(struct outside_network* outnet)
 					reuse->pending->c->fd, reuse->pending,
 					w);
 			}
-		} else {
+		} else if(outnet->tcp_free) {
 			struct pending_tcp* pend = w->outnet->tcp_free;
 			rbtree_init(&pend->reuse.tree_by_id, reuse_id_cmp);
 			pend->reuse.pending = pend;
@@ -865,11 +911,15 @@ use_free_buffer(struct outside_network* outnet)
 #ifdef USE_DNSTAP
 			pend_tcp = pend;
 #endif
+		} else {
+			/* no reuse and no free buffer, put back at the start */
+			outnet_add_tcp_waiting_first(outnet, w, 0);
+			break;
 		}
 #ifdef USE_DNSTAP
 		if(outnet->dtenv && pend_tcp && w && w->sq &&
-		   (outnet->dtenv->log_resolver_query_messages ||
-		    outnet->dtenv->log_forwarder_query_messages)) {
+			(outnet->dtenv->log_resolver_query_messages ||
+			outnet->dtenv->log_forwarder_query_messages)) {
 			sldns_buffer tmp;
 			sldns_buffer_init_frm_data(&tmp, w->pkt, w->pkt_len);
 			dt_msg_send_outside_query(outnet->dtenv, &w->sq->addr,
@@ -878,27 +928,6 @@ use_free_buffer(struct outside_network* outnet)
 		}
 #endif
 	}
-}
-
-/** add waiting_tcp element to the outnet tcp waiting list */
-static void
-outnet_add_tcp_waiting(struct outside_network* outnet, struct waiting_tcp* w)
-{
-	struct timeval tv;
-	log_assert(!w->on_tcp_waiting_list);
-	if(w->on_tcp_waiting_list)
-		return;
-	w->next_waiting = NULL;
-	if(outnet->tcp_wait_last)
-		outnet->tcp_wait_last->next_waiting = w;
-	else	outnet->tcp_wait_first = w;
-	outnet->tcp_wait_last = w;
-	w->on_tcp_waiting_list = 1;
-#ifndef S_SPLINT_S
-	tv.tv_sec = w->timeout/1000;
-	tv.tv_usec = (w->timeout%1000)*1000;
-#endif
-	comm_timer_set(w->timer, &tv);
 }
 
 /** delete element from tree by id */

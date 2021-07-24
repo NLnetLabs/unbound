@@ -128,7 +128,7 @@ static int create_pending_tcp(struct outside_network* outnet)
 			outnet->num_tcp, sizeof(struct pending_tcp*))))
 		return 0;
 	for(i=0; i<outnet->num_tcp; i++) {
-		if(!(outnet->tcp_conns[i] = (struct pending_tcp*)calloc(1, 
+		if(!(outnet->tcp_conns[i] = (struct pending_tcp*)calloc(1,
 			sizeof(struct pending_tcp))))
 			return 0;
 		outnet->tcp_conns[i]->next_free = outnet->tcp_free;
@@ -216,7 +216,6 @@ static void tcp_reuse_tree_list_test(void)
 	check_removal(&outnet, 2, 5);
 	check_removal(&outnet, 1, 3);
 	check_removal(&outnet, 1, 2);
-	
 	/* check snip */
 	unit_show_func("services/outside_network.c", "reuse_tcp_lru_snip");
 	check_snip(&outnet, 4);
