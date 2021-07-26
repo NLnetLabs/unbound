@@ -461,7 +461,8 @@ reuse_tcp_insert(struct outside_network* outnet, struct pending_tcp* pend_tcp)
 	log_reuse_tcp(VERB_CLIENT, "reuse_tcp_insert", &pend_tcp->reuse);
 	if(pend_tcp->reuse.item_on_lru_list) {
 		if(!pend_tcp->reuse.node.key)
-			log_err("internal error: reuse_tcp_insert: on lru list without key");
+			log_err("internal error: reuse_tcp_insert: "
+				"in lru list without key");
 		return 1;
 	}
 	pend_tcp->reuse.node.key = &pend_tcp->reuse;
@@ -470,7 +471,8 @@ reuse_tcp_insert(struct outside_network* outnet, struct pending_tcp* pend_tcp)
 		/* We are not in the LRU list but we are already in the
 		 * tcp_reuse tree, strange.
 		 * Continue to add ourselves to the LRU list. */
-		verbose(VERB_CLIENT, "reuse_tcp_insert: duplicate connection");
+		log_err("internal error: reuse_tcp_insert: in lru list but "
+			"not in the tree");
 	}
 	/* insert into LRU, first is newest */
 	pend_tcp->reuse.lru_prev = NULL;
@@ -1092,7 +1094,6 @@ decommission_pending_tcp(struct outside_network* outnet,
 	if(outnet->tcp_free != pend) {
 		pend->next_free = outnet->tcp_free;
 		outnet->tcp_free = pend;
-		log_assert(outnet->tcp_free->next_free != outnet->tcp_free);
 	}
 	if(pend->reuse.node.key) {
 		/* needs unlink from the reuse tree to get deleted */
