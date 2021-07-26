@@ -1,3 +1,8 @@
+26 July 2021: George
+	- Merge #513: Stream reuse, attempt to fix #411, #439, #469. This
+	  introduces a couple of fixes for the stream reuse functionality
+	  that could result in broken internal structures.
+
 26 July 2021: Wouter
 	- Merge #512: unbound.service.in: upgrade hardening to latest
 	  standards.
