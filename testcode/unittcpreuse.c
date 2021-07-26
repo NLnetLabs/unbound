@@ -194,6 +194,7 @@ static void tcp_reuse_tree_list_test(void)
 	size_t i;
 	struct outside_network outnet;
 	struct reuse_tcp* reuse;
+	memset(&outnet, 0, sizeof(outnet));
 	rbtree_init(&outnet.tcp_reuse, reuse_cmp);
 	outnet.num_tcp = 5;
 	outnet.tcp_reuse_max = outnet.num_tcp;
