@@ -142,7 +142,12 @@ int main(int argc, char *const *argv)
 				s = -1;
 				break;
 			}
-			(void) sldns_wire2str_rr_buf(rr, rr_len, str, str_len);
+			if (print_in_unknown_type_format)
+				(void) sldns_wire2str_rr_unknown_buf(
+					rr, rr_len, str, str_len);
+			else
+				(void) sldns_wire2str_rr_buf(
+					rr, rr_len, str, str_len);
 		}
 		fprintf(stdout, "%s", str);
 	}
