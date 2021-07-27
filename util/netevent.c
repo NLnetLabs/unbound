@@ -1232,6 +1232,13 @@ ssl_handshake(struct comm_point* c)
 		if(want == SSL_ERROR_WANT_READ) {
 			if(c->ssl_shake_state == comm_ssl_shake_read)
 				return 1;
+			/* According to https://www.openssl.org/docs/man1.1.1/man3/SSL_do_handshake.html
+			 * we should repeat handshake - for non blocking BIO
+			 */
+			if(c->ssl_shake_state == comm_ssl_shake_write) {
+			    comm_point_listen_for_rw(c, 0, 1);
+			    return 1;
+			}
 			c->ssl_shake_state = comm_ssl_shake_read;
 			comm_point_listen_for_rw(c, 1, 0);
 			return 1;
