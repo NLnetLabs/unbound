@@ -541,6 +541,9 @@
 /* Define to 1 if you have the `SSL_get0_peername' function. */
 #undef HAVE_SSL_GET0_PEERNAME
 
+/* Define to 1 if you have the `SSL_get1_peer_certificate' function. */
+#undef HAVE_SSL_GET1_PEER_CERTIFICATE
+
 /* Define to 1 if you have the `SSL_set1_host' function. */
 #undef HAVE_SSL_SET1_HOST
 

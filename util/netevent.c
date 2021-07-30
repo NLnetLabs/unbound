@@ -1271,7 +1271,11 @@ ssl_handshake(struct comm_point* c)
 	if((SSL_get_verify_mode(c->ssl)&SSL_VERIFY_PEER)) {
 		/* verification */
 		if(SSL_get_verify_result(c->ssl) == X509_V_OK) {
+#ifdef HAVE_SSL_GET1_PEER_CERTIFICATE
+			X509* x = SSL_get1_peer_certificate(c->ssl);
+#else
 			X509* x = SSL_get_peer_certificate(c->ssl);
+#endif
 			if(!x) {
 				log_addr(VERB_ALGO, "SSL connection failed: "
 					"no certificate",
@@ -1297,7 +1301,11 @@ ssl_handshake(struct comm_point* c)
 #endif
 			X509_free(x);
 		} else {
+#ifdef HAVE_SSL_GET1_PEER_CERTIFICATE
+			X509* x = SSL_get1_peer_certificate(c->ssl);
+#else
 			X509* x = SSL_get_peer_certificate(c->ssl);
+#endif
 			if(x) {
 				log_cert(VERB_ALGO, "peer certificate", x);
 				X509_free(x);
