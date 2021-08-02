@@ -4,6 +4,7 @@
 	- Move RSA and DSA to use OpenSSL 3.0.0 API.
 	- Move ECDSA functions to use OpenSSL 3.0.0 API.
 	- iana portlist update.
+	- Fix verbose printout failure in tcp reuse unit test.
 
 30 July 2021: Wouter
 	- Fix #515: Compilation against openssl 3.0.0 beta2 is failing to

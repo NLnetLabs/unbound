@@ -347,6 +347,8 @@ log_reuse_tcp(enum verbosity_value v, const char* msg, struct reuse_tcp* reuse)
 	uint16_t port;
 	char addrbuf[128];
 	if(verbosity < v) return;
+	if(!reuse || !reuse->pending || !reuse->pending->c)
+		return;
 	addr_to_str(&reuse->addr, reuse->addrlen, addrbuf, sizeof(addrbuf));
 	port = ntohs(((struct sockaddr_in*)&reuse->addr)->sin_port);
 	verbose(v, "%s %s#%u fd %d", msg, addrbuf, (unsigned)port,
