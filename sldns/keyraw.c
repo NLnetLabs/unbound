@@ -317,6 +317,7 @@ EVP_PKEY *sldns_key_dsa2pkey_raw(unsigned char* key, size_t len)
 
 	ctx = EVP_PKEY_CTX_new_from_name(NULL, "DSA", NULL);
 	if(!ctx) {
+		OSSL_PARAM_free(params);
 		BN_free(p);
 		BN_free(q);
 		BN_free(g);
@@ -482,6 +483,7 @@ EVP_PKEY* sldns_key_rsa2pkey_raw(unsigned char* key, size_t len)
 
 	ctx = EVP_PKEY_CTX_new_from_name(NULL, "RSA", NULL);
 	if(!ctx) {
+		OSSL_PARAM_free(params);
 		BN_free(n);
 		BN_free(e);
 		return NULL;
@@ -555,6 +557,62 @@ sldns_gost2pkey_raw(unsigned char* key, size_t keylen)
 EVP_PKEY*
 sldns_ecdsa2pkey_raw(unsigned char* key, size_t keylen, uint8_t algo)
 {
+#ifdef HAVE_OSSL_PARAM_BLD_NEW
+	unsigned char buf[256+2]; /* sufficient for 2*384/8+1 */
+	EVP_PKEY *evp_key = NULL;
+	EVP_PKEY_CTX* ctx;
+	OSSL_PARAM_BLD* param_bld;
+	OSSL_PARAM* params = NULL;
+	char* group = NULL;
+
+	/* check length, which uncompressed must be 2 bignums */
+	if(algo == LDNS_ECDSAP256SHA256) {
+		if(keylen != 2*256/8) return NULL;
+		group = "prime256v1";
+	} else if(algo == LDNS_ECDSAP384SHA384) {
+		if(keylen != 2*384/8) return NULL;
+		group = "P-384";
+	} else {
+		return NULL;
+	}
+	if(keylen+1 > sizeof(buf)) { /* sanity check */
+		return NULL;
+	}
+	/* prepend the 0x04 for uncompressed format */
+	buf[0] = POINT_CONVERSION_UNCOMPRESSED;
+	memmove(buf+1, key, keylen);
+
+	param_bld = OSSL_PARAM_BLD_new();
+	if(!param_bld) {
+		return NULL;
+	}
+	if(!OSSL_PARAM_BLD_push_utf8_string(param_bld, "group", group, 0) ||
+	   !OSSL_PARAM_BLD_push_octet_string(param_bld, "pub", buf, keylen+1)) {
+		OSSL_PARAM_BLD_free(param_bld);
+		return NULL;
+	}
+	params = OSSL_PARAM_BLD_to_param(param_bld);
+	OSSL_PARAM_BLD_free(param_bld);
+
+	ctx = EVP_PKEY_CTX_new_from_name(NULL, "EC", NULL);
+	if(!ctx) {
+		OSSL_PARAM_free(params);
+		return NULL;
+	}
+	if(EVP_PKEY_fromdata_init(ctx) <= 0) {
+		EVP_PKEY_CTX_free(ctx);
+		OSSL_PARAM_free(params);
+		return NULL;
+	}
+	if(EVP_PKEY_fromdata(ctx, &evp_key, EVP_PKEY_PUBLIC_KEY, params) <= 0) {
+		EVP_PKEY_CTX_free(ctx);
+		OSSL_PARAM_free(params);
+		return NULL;
+	}
+	EVP_PKEY_CTX_free(ctx);
+	OSSL_PARAM_free(params);
+	return evp_key;
+#else
 	unsigned char buf[256+2]; /* sufficient for 2*384/8+1 */
         const unsigned char* pp = buf;
         EVP_PKEY *evp_key;
@@ -591,6 +649,7 @@ sldns_ecdsa2pkey_raw(unsigned char* key, size_t keylen, uint8_t algo)
 		return NULL;
 	}
         return evp_key;
+#endif /* HAVE_OSSL_PARAM_BLD_NEW */
 }
 #endif /* USE_ECDSA */
 
