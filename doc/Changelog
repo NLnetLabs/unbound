@@ -1,6 +1,7 @@
 2 August 2021: Wouter
 	- Prepare for OpenSSL 3.0.0 provider API usage, move the sldns
 	  keyraw functions to produce EVP_PKEY results.
+	- Move RSA and DSA to use OpenSSL 3.0.0 API.
 
 30 July 2021: Wouter
 	- Fix #515: Compilation against openssl 3.0.0 beta2 is failing to
