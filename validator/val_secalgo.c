@@ -519,7 +519,7 @@ setup_key_digest(int algo, EVP_PKEY** evp_key, const EVP_MD** digest_type,
 		case LDNS_DSA_NSEC3:
 			*evp_key = sldns_key_dsa2pkey_raw(key, keylen);
 			if(!*evp_key) {
-				log_err("verify: sldns_key_dsa2pkey failed");
+				verbose(VERB_QUERY, "verify: sldns_key_dsa2pkey failed");
 				return 0;
 			}
 #ifdef HAVE_EVP_DSS1
@@ -544,7 +544,7 @@ setup_key_digest(int algo, EVP_PKEY** evp_key, const EVP_MD** digest_type,
 #endif
 			*evp_key = sldns_key_rsa2pkey_raw(key, keylen);
 			if(!*evp_key) {
-				log_err("verify: sldns_key_rsa2pkey SHA failed");
+				verbose(VERB_QUERY, "verify: sldns_key_rsa2pkey SHA failed");
 				return 0;
 			}
 
@@ -570,7 +570,7 @@ setup_key_digest(int algo, EVP_PKEY** evp_key, const EVP_MD** digest_type,
 		case LDNS_RSAMD5:
 			*evp_key = sldns_key_rsa2pkey_raw(key, keylen);
 			if(!*evp_key) {
-				log_err("verify: sldns_key_rsa2pkey MD5 failed");
+				verbose(VERB_QUERY, "verify: sldns_key_rsa2pkey MD5 failed");
 				return 0;
 			}
 			*digest_type = EVP_md5();
