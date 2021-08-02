@@ -66,6 +66,14 @@ void sldns_key_EVP_unload_gost(void);
 DSA *sldns_key_buf2dsa_raw(unsigned char* key, size_t len);
 
 /**
+ * Converts a holding buffer with DSA key material to EVP PKEY in openssl.
+ * \param[in] key the uncompressed wireformat of the key.
+ * \param[in] len length of key data
+ * \return the key or NULL on error.
+ */
+EVP_PKEY *sldns_key_dsa2pkey_raw(unsigned char* key, size_t len);
+
+/**
  * Converts a holding buffer with key material to EVP PKEY in openssl.
  * Only available if ldns was compiled with GOST.
  * \param[in] key data to convert
@@ -91,6 +99,14 @@ EVP_PKEY* sldns_ecdsa2pkey_raw(unsigned char* key, size_t keylen, uint8_t algo);
  * \return a RSA * structure with the key material
  */
 RSA *sldns_key_buf2rsa_raw(unsigned char* key, size_t len);
+
+/**
+ * Converts a holding buffer with RSA key material to EVP PKEY in openssl.
+ * \param[in] key the uncompressed wireformat of the key.
+ * \param[in] len length of key data
+ * \return the key or NULL on error.
+ */
+EVP_PKEY* sldns_key_rsa2pkey_raw(unsigned char* key, size_t len);
 
 /**
  * Converts a holding buffer with key material to EVP PKEY in openssl.

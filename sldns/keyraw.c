@@ -262,6 +262,26 @@ sldns_key_buf2dsa_raw(unsigned char* key, size_t len)
 	return dsa;
 }
 
+EVP_PKEY *sldns_key_dsa2pkey_raw(unsigned char* key, size_t len)
+{
+	DSA* dsa;
+	EVP_PKEY* evp_key = EVP_PKEY_new();
+	if(!evp_key) {
+		return 0;
+	}
+	dsa = sldns_key_buf2dsa_raw(key, len);
+	if(!dsa) {
+		EVP_PKEY_free(evp_key);
+		return 0;
+	}
+	if(EVP_PKEY_assign_DSA(evp_key, dsa) == 0) {
+		DSA_free(dsa);
+		EVP_PKEY_free(evp_key);
+		return 0;
+	}
+	return evp_key;
+}
+
 RSA *
 sldns_key_buf2rsa_raw(unsigned char* key, size_t len)
 {
@@ -326,6 +346,26 @@ sldns_key_buf2rsa_raw(unsigned char* key, size_t len)
 #endif
 
 	return rsa;
+}
+
+EVP_PKEY* sldns_key_rsa2pkey_raw(unsigned char* key, size_t len)
+{
+	RSA* rsa;
+	EVP_PKEY *evp_key = EVP_PKEY_new();
+	if(!evp_key) {
+		return 0;
+	}
+	rsa = sldns_key_buf2rsa_raw(key, len);
+	if(!rsa) {
+		EVP_PKEY_free(evp_key);
+		return 0;
+	}
+	if(EVP_PKEY_assign_RSA(evp_key, rsa) == 0) {
+		RSA_free(rsa);
+		EVP_PKEY_free(evp_key);
+		return 0;
+	}
+	return evp_key;
 }
 
 #ifdef USE_GOST
