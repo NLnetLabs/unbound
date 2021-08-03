@@ -7,6 +7,7 @@
 	  function that need to reuse the dns answer.
 	- Annotate assertion into error printout; we think it may be an
 	  error, but the situation looks harmless.
+	- Fix sign comparison warning on FreeBSD.
 
 2 August 2021: Wouter
 	- Prepare for OpenSSL 3.0.0 provider API usage, move the sldns
