@@ -2,6 +2,10 @@
 	- Listen to read or write events after the SSL handshake.
 	  Sticky events on windows would stick on read when write was needed.
 
+3 August 2021: Wouter
+	- Merge PR #517 from dyunwei: #420 breaks the mesh reply list
+	  function that need to reuse the dns answer.
+
 2 August 2021: Wouter
 	- Prepare for OpenSSL 3.0.0 provider API usage, move the sldns
 	  keyraw functions to produce EVP_PKEY results.
