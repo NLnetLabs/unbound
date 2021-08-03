@@ -429,6 +429,9 @@
 /* Define to 1 if you have the `OPENSSL_init_ssl' function. */
 #undef HAVE_OPENSSL_INIT_SSL
 
+/* Define to 1 if you have the <openssl/param_build.h> header file. */
+#undef HAVE_OPENSSL_PARAM_BUILD_H
+
 /* Define to 1 if you have the <openssl/rand.h> header file. */
 #undef HAVE_OPENSSL_RAND_H
 
@@ -437,6 +440,9 @@
 
 /* Define to 1 if you have the <openssl/ssl.h> header file. */
 #undef HAVE_OPENSSL_SSL_H
+
+/* Define to 1 if you have the `OSSL_PARAM_BLD_new' function. */
+#undef HAVE_OSSL_PARAM_BLD_NEW
 
 /* Define if you have POSIX threads libraries and header files. */
 #undef HAVE_PTHREAD
@@ -540,6 +546,9 @@
 
 /* Define to 1 if you have the `SSL_get0_peername' function. */
 #undef HAVE_SSL_GET0_PEERNAME
+
+/* Define to 1 if you have the `SSL_get1_peer_certificate' function. */
+#undef HAVE_SSL_GET1_PEER_CERTIFICATE
 
 /* Define to 1 if you have the `SSL_set1_host' function. */
 #undef HAVE_SSL_SET1_HOST

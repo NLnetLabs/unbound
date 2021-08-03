@@ -2,7 +2,8 @@
 # Copyright 2009, Wouter Wijngaards, NLnet Labs.   
 # BSD licensed.
 #
-# Version 40
+# Version 41
+# 2021-07-30 fix for openssl use of lib64 directory.
 # 2021-06-14 fix nonblocking test to use host instead of target for mingw test.
 # 2021-05-17 fix nonblocking socket test from grep on mingw32 to mingw for
 # 	     64bit compatibility.
@@ -669,9 +670,15 @@ AC_DEFUN([ACX_SSL_CHECKS], [
             HAVE_SSL=yes
             dnl assume /usr is already in the lib and dynlib paths.
             if test "$ssldir" != "/usr" -a "$ssldir" != ""; then
-                LDFLAGS="$LDFLAGS -L$ssldir/lib"
-                LIBSSL_LDFLAGS="$LIBSSL_LDFLAGS -L$ssldir/lib"
-                ACX_RUNTIME_PATH_ADD([$ssldir/lib])
+		if test ! -d "$ssldir/lib" -a -d "$ssldir/lib64"; then
+			LDFLAGS="$LDFLAGS -L$ssldir/lib64"
+			LIBSSL_LDFLAGS="$LIBSSL_LDFLAGS -L$ssldir/lib64"
+			ACX_RUNTIME_PATH_ADD([$ssldir/lib64])
+		else
+			LDFLAGS="$LDFLAGS -L$ssldir/lib"
+			LIBSSL_LDFLAGS="$LIBSSL_LDFLAGS -L$ssldir/lib"
+			ACX_RUNTIME_PATH_ADD([$ssldir/lib])
+		fi
             fi
         
             AC_MSG_CHECKING([for EVP_sha256 in -lcrypto])

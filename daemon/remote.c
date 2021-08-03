@@ -3338,7 +3338,11 @@ int remote_control_callback(struct comm_point* c, void* arg, int err,
 	if (!rc->use_cert) {
 		verbose(VERB_ALGO, "unauthenticated remote control connection");
 	} else if(SSL_get_verify_result(s->ssl) == X509_V_OK) {
+#ifdef HAVE_SSL_GET1_PEER_CERTIFICATE
+		X509* x = SSL_get1_peer_certificate(s->ssl);
+#else
 		X509* x = SSL_get_peer_certificate(s->ssl);
+#endif
 		if(!x) {
 			verbose(VERB_DETAIL, "remote control connection "
 				"provided no client certificate");
