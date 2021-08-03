@@ -1727,7 +1727,8 @@ comm_point_tcp_handle_read(int fd, struct comm_point* c, int short_ok)
 			(int)sldns_buffer_limit(c->buffer));
 	}
 
-	log_assert(sldns_buffer_remaining(c->buffer) > 0);
+	if(sldns_buffer_remaining(c->buffer) == 0)
+		log_err("in comm_point_tcp_handle_read buffer_remaining is not > 0 as expected, continuing with (harmless) 0 length recv");
 	r = recv(fd, (void*)sldns_buffer_current(c->buffer), 
 		sldns_buffer_remaining(c->buffer), 0);
 	if(r == 0) {
