@@ -1214,7 +1214,7 @@ ssl_handshake(struct comm_point* c)
 	int r;
 	if(c->ssl_shake_state == comm_ssl_shake_hs_read) {
 		/* read condition satisfied back to writing */
-		comm_point_listen_for_rw(c, 1, 1);
+		comm_point_listen_for_rw(c, 0, 1);
 		c->ssl_shake_state = comm_ssl_shake_none;
 		return 1;
 	}
@@ -1333,7 +1333,7 @@ ssl_handshake(struct comm_point* c)
 		if(c->ssl_shake_state != comm_ssl_shake_read)
 			comm_point_listen_for_rw(c, 1, 0);
 	} else {
-		comm_point_listen_for_rw(c, 1, 1);
+		comm_point_listen_for_rw(c, 0, 1);
 	}
 	c->ssl_shake_state = comm_ssl_shake_none;
 	return 1;
