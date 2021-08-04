@@ -41,7 +41,7 @@ echo "> cat logfiles"
 cat fwd.log 
 cat unbound.log
 echo "> check answer"
-if grep www.example.com outfile | grep "127.0.0.1"; then
+if grep www.example.com outfile | grep "192.0.2.1"; then
 	echo "OK"
 else
 	echo "Not OK"

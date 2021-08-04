@@ -12,6 +12,7 @@
 	- Fix readzone compile under debug config.
 	- Fix out of sourcedir run of zonemd unit tests.
 	- Fix libnettle zonemd unit test.
+	- Fix unit test zonemd_reload for use in run_vm.
 
 3 August 2021: George
 	- Listen to read or write events after the SSL handshake.
