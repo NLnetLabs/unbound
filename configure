@@ -683,7 +683,6 @@ HAVE_SSL
 PC_CRYPTO_DEPENDENCY
 CONFIG_DATE
 NETBSD_LINTFLAGS
-GCC_DOCKER_LINTFLAGS
 PYUNBOUND_UNINSTALL
 PYUNBOUND_INSTALL
 PYUNBOUND_TARGET
@@ -17889,10 +17888,6 @@ if test "`uname`" = "NetBSD"; then
 
 fi
 
-if test "`uname -o`" = "GNU/Linux"; then
-	# splint cannot parse modern c99 header files
-	GCC_DOCKER_LINTFLAGS='-syntax'
-fi
 CONFIG_DATE=`date +%Y%m%d`
 
 
