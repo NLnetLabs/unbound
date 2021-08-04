@@ -1,3 +1,8 @@
+4 August 2021: George
+	- Merge PR #415 from sibeream: Use
+	/proc/sys/net/ipv4/ip_local_port_range to determine available outgoing
+	ports. (New --enable-linux-ip-local-port-range configuration option)
+
 4 August 2021: Wouter
 	- In unit test use openssl set security level to allow keys in test.
 
