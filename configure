@@ -17887,7 +17887,6 @@ if test "`uname`" = "NetBSD"; then
 	NETBSD_LINTFLAGS='"-D__RENAME(x)=" -D_NETINET_IN_H_'
 
 fi
-
 CONFIG_DATE=`date +%Y%m%d`
 
 

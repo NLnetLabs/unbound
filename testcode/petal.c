@@ -245,8 +245,8 @@ setup_ctx(char* key, char* cert)
 	SSL_CTX_set_security_level(ctx, 0); /* for keys in tests */
 #endif
 	if(!SSL_CTX_use_certificate_chain_file(ctx, cert)) {
-	    int e = ERR_peek_error();
-    	printf("error string: %s\n", ERR_reason_error_string(e));
+		int e = ERR_peek_error();
+		printf("error string: %s\n", ERR_reason_error_string(e));
 		print_exit("cannot read cert");
 	}
 	if(!SSL_CTX_use_PrivateKey_file(ctx, key, SSL_FILETYPE_PEM))
