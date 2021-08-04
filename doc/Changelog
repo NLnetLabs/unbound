@@ -1,3 +1,6 @@
+4 August 2021: Wouter
+	- In unit test use openssl set security level to allow keys in test.
+
 3 August 2021: George
 	- Listen to read or write events after the SSL handshake.
 	  Sticky events on windows would stick on read when write was needed.
