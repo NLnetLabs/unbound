@@ -430,13 +430,23 @@ static void zonemd_verify_tests(void)
 		SRCDIRSTR "/testdata/zonemd.example9.zone",
 		"example.com. IN DS 55566 8 2 9c148338951ce1c3b5cd3da532f3d90dfcf92595148022f2c2fd98e5deee90af",
 		"20201020135527",
-		"DNSSEC verify failed for ZONEMD RRset: signature crypto failed");
+#ifdef HAVE_SSL
+		"DNSSEC verify failed for ZONEMD RRset: signature crypto failed"
+#else /* HAVE_NETTLE */
+		"DNSSEC verify failed for ZONEMD RRset: RSA signature verification failed"
+#endif
+		);
 	/* load DNSSEC zone but RRSIG on SOA is wrong */
 	zonemd_verify_test("example.com",
 		SRCDIRSTR "/testdata/zonemd.example10.zone",
 		"example.com. IN DS 55566 8 2 9c148338951ce1c3b5cd3da532f3d90dfcf92595148022f2c2fd98e5deee90af",
 		"20201020135527",
-		"DNSSEC verify failed for SOA RRset: signature crypto failed");
+#ifdef HAVE_SSL
+		"DNSSEC verify failed for SOA RRset: signature crypto failed"
+#else /* HAVE_NETTLE */
+		"DNSSEC verify failed for SOA RRset: RSA signature verification failed"
+#endif
+		);
 
 	/* load DNSSEC zone without ZONEMD, but NSEC bitmap says it exists */
 	zonemd_verify_test("example.com",
@@ -456,20 +466,35 @@ static void zonemd_verify_tests(void)
 		SRCDIRSTR "/testdata/zonemd.example13.zone",
 		"example.com. IN DS 55566 8 2 9c148338951ce1c3b5cd3da532f3d90dfcf92595148022f2c2fd98e5deee90af",
 		"20201020135527",
-		"DNSSEC verify failed for NSEC RRset: signature crypto failed");
+#ifdef HAVE_SSL
+		"DNSSEC verify failed for NSEC RRset: signature crypto failed"
+#else /* HAVE_NETTLE */
+		"DNSSEC verify failed for NSEC RRset: RSA signature verification failed"
+#endif
+		);
 	/* load DNSSEC zone without ZONEMD, but RRSIG on NSEC3 not okay */
 	zonemd_verify_test("example.com",
 		SRCDIRSTR "/testdata/zonemd.example14.zone",
 		"example.com. IN DS 55566 8 2 9c148338951ce1c3b5cd3da532f3d90dfcf92595148022f2c2fd98e5deee90af",
 		"20201020135527",
-		"DNSSEC verify failed for NSEC3 RRset: signature crypto failed");
+#ifdef HAVE_SSL
+		"DNSSEC verify failed for NSEC3 RRset: signature crypto failed"
+#else /* HAVE_NETTLE */
+		"DNSSEC verify failed for NSEC3 RRset: RSA signature verification failed"
+#endif
+		);
 
 	/* load DNSSEC zone, with ZONEMD, but DNSKEY RRSIG is not okay. */
 	zonemd_verify_test("example.com",
 		SRCDIRSTR "/testdata/zonemd.example15.zone",
 		"example.com. IN DS 55566 8 2 9c148338951ce1c3b5cd3da532f3d90dfcf92595148022f2c2fd98e5deee90af",
 		"20201020135527",
-		"verify DNSKEY RRset with trust anchor failed: signature crypto failed");
+#ifdef HAVE_SSL
+		"verify DNSKEY RRset with trust anchor failed: signature crypto failed"
+#else /* HAVE_NETTLE */
+		"verify DNSKEY RRset with trust anchor failed: RSA signature verification failed"
+#endif
+		);
 	/* load DNSSEC zone, but trust anchor mismatches DNSKEY */
 	zonemd_verify_test("example.com",
 		SRCDIRSTR "/testdata/zonemd.example5.zone",
