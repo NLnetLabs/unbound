@@ -9,6 +9,7 @@
 	- In unit test use openssl set security level to allow keys in test.
 	- Fix static analysis warnings about localzone locks that are unused.
 	- Fix missing locks in zonemd unit test.
+	- Fix readzone compile under debug config.
 
 3 August 2021: George
 	- Listen to read or write events after the SSL handshake.
