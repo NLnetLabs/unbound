@@ -499,9 +499,7 @@ static void ssl_path_err(const char* s, const char *path)
 {
 	unsigned long err;
 	err = ERR_peek_error();
-	if (ERR_GET_LIB(err) == ERR_LIB_SYS &&
-		(ERR_GET_FUNC(err) == SYS_F_FOPEN ||
-		 ERR_GET_FUNC(err) == SYS_F_FREAD) ) {
+	if (ERR_GET_LIB(err) == ERR_LIB_SYS) {
 		fprintf(stderr, "error: %s\n%s: %s\n",
 			s, path, ERR_reason_error_string(err));
 		exit(1);

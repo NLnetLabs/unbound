@@ -1214,7 +1214,7 @@ ssl_handshake(struct comm_point* c)
 	int r;
 	if(c->ssl_shake_state == comm_ssl_shake_hs_read) {
 		/* read condition satisfied back to writing */
-		comm_point_listen_for_rw(c, 1, 1);
+		comm_point_listen_for_rw(c, 0, 1);
 		c->ssl_shake_state = comm_ssl_shake_none;
 		return 1;
 	}
@@ -1278,7 +1278,11 @@ ssl_handshake(struct comm_point* c)
 	if((SSL_get_verify_mode(c->ssl)&SSL_VERIFY_PEER)) {
 		/* verification */
 		if(SSL_get_verify_result(c->ssl) == X509_V_OK) {
+#ifdef HAVE_SSL_GET1_PEER_CERTIFICATE
+			X509* x = SSL_get1_peer_certificate(c->ssl);
+#else
 			X509* x = SSL_get_peer_certificate(c->ssl);
+#endif
 			if(!x) {
 				log_addr(VERB_ALGO, "SSL connection failed: "
 					"no certificate",
@@ -1304,7 +1308,11 @@ ssl_handshake(struct comm_point* c)
 #endif
 			X509_free(x);
 		} else {
+#ifdef HAVE_SSL_GET1_PEER_CERTIFICATE
+			X509* x = SSL_get1_peer_certificate(c->ssl);
+#else
 			X509* x = SSL_get_peer_certificate(c->ssl);
+#endif
 			if(x) {
 				log_cert(VERB_ALGO, "peer certificate", x);
 				X509_free(x);
@@ -1340,7 +1348,7 @@ ssl_handshake(struct comm_point* c)
 		if(c->ssl_shake_state != comm_ssl_shake_read)
 			comm_point_listen_for_rw(c, 1, 0);
 	} else {
-		comm_point_listen_for_rw(c, 1, 1);
+		comm_point_listen_for_rw(c, 0, 1);
 	}
 	c->ssl_shake_state = comm_ssl_shake_none;
 	return 1;
@@ -1726,7 +1734,8 @@ comm_point_tcp_handle_read(int fd, struct comm_point* c, int short_ok)
 			(int)sldns_buffer_limit(c->buffer));
 	}
 
-	log_assert(sldns_buffer_remaining(c->buffer) > 0);
+	if(sldns_buffer_remaining(c->buffer) == 0)
+		log_err("in comm_point_tcp_handle_read buffer_remaining is not > 0 as expected, continuing with (harmless) 0 length recv");
 	r = recv(fd, (void*)sldns_buffer_current(c->buffer), 
 		sldns_buffer_remaining(c->buffer), 0);
 	if(r == 0) {
@@ -4062,7 +4071,6 @@ comm_point_send_reply(struct comm_reply *repinfo)
 			}
 			repinfo->c->h2_stream = NULL;
 			repinfo->c->tcp_is_reading = 0;
-			sldns_buffer_clear(repinfo->c->buffer);
 			comm_point_stop_listening(repinfo->c);
 			comm_point_start_listening(repinfo->c, -1,
 				adjusted_tcp_timeout(repinfo->c));

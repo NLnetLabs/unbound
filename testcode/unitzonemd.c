@@ -82,7 +82,9 @@ static void zonemd_generate_test(const char* zname, char* zfile,
 	/* read file */
 	z = authtest_addzone(az, zname, zfile);
 	unit_assert(z);
+	lock_rw_wrlock(&z->lock);
 	z->zonemd_check = 1;
+	lock_rw_unlock(&z->lock);
 
 	/* create zonemd digest */
 	result = auth_zone_generate_zonemd_hash(z, scheme, hashalgo,
@@ -197,7 +199,9 @@ static void zonemd_check_test(void)
 	/* read file */
 	z = authtest_addzone(az, zname, zfile);
 	unit_assert(z);
+	lock_rw_wrlock(&z->lock);
 	z->zonemd_check = 1;
+	lock_rw_unlock(&z->lock);
 	hashlen = sizeof(hash);
 	if(sldns_str2wire_hex_buf(digest, hash, &hashlen) != 0) {
 		unit_assert(0); /* parse failure */

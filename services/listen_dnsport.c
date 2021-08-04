@@ -2477,6 +2477,10 @@ static int http2_query_read_done(struct http2_session* h2_session,
 			"buffer already assigned to stream");
 		return -1;
 	}
+    
+    /* the c->buffer might be used by mesh_send_reply and no be cleard
+	 * need to be cleared before use */
+	sldns_buffer_clear(h2_session->c->buffer);
 	if(sldns_buffer_remaining(h2_session->c->buffer) <
 		sldns_buffer_remaining(h2_stream->qbuffer)) {
 		/* qbuffer will be free'd in frame close cb */
