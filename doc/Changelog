@@ -8,6 +8,7 @@
 4 August 2021: Wouter
 	- In unit test use openssl set security level to allow keys in test.
 	- Fix static analysis warnings about localzone locks that are unused.
+	- Fix missing locks in zonemd unit test.
 
 3 August 2021: George
 	- Listen to read or write events after the SSL handshake.
