@@ -1,3 +1,6 @@
+5 August 2021: Wouter
+	- Tag for 1.13.2 release.
+
 4 August 2021: George
 	- Merge PR #415 from sibeream: Use
 	  /proc/sys/net/ipv4/ip_local_port_range to determine available outgoing
