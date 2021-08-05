@@ -1,5 +1,6 @@
 5 August 2021: Wouter
 	- Tag for 1.13.2rc1 release.
+	- Fix #520: Unbound 1.13.2rc1 fails to build python module.
 
 4 August 2021: George
 	- Merge PR #415 from sibeream: Use
