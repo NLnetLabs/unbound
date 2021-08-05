@@ -485,7 +485,9 @@ advertised timeout.
 .TP
 .B tcp\-upstream: \fI<yes or no>
 Enable or disable whether the upstream queries use TCP only for transport.
-Default is no.  Useful in tunneling scenarios.
+Default is no.  Useful in tunneling scenarios. If set to no you can specify
+TCP transport only for selected forward or stub zones using forward-tcp-upstream
+or stub-tcp-upstream respectively.
 .TP
 .B udp\-upstream\-without\-downstream: \fI<yes or no>
 Enable udp upstream even if do-udp is no.  Default is no, and this does not
@@ -1853,6 +1855,10 @@ Default is no.
 .B stub\-ssl\-upstream: \fI<yes or no>
 Alternate syntax for \fBstub\-tls\-upstream\fR.
 .TP
+.B stub\-tcp\-upstream: \fI<yes or no>
+If it is set to "yes" then upstream queries use TCP only for transport regardless of global flag tcp-upstream.
+Default is no.
+.TP
 .B stub\-no\-cache: \fI<yes or no>
 Default is no.  If enabled, data inside the stub is not cached.  This is
 useful when you want immediate changes to be visible.
@@ -1904,6 +1910,10 @@ load CA certs, otherwise the connections cannot be authenticated.
 .TP
 .B forward\-ssl\-upstream: \fI<yes or no>
 Alternate syntax for \fBforward\-tls\-upstream\fR.
+.TP
+.B forward\-tcp\-upstream: \fI<yes or no>
+If it is set to "yes" then upstream queries use TCP only for transport regardless of global flag tcp-upstream.
+Default is no.
 .TP
 .B forward\-no\-cache: \fI<yes or no>
 Default is no.  If enabled, data inside the forward is not cached.  This is
