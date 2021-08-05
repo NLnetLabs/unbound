@@ -238,8 +238,10 @@ config_create(void)
 	cfg->hide_identity = 0;
 	cfg->hide_version = 0;
 	cfg->hide_trustanchor = 0;
+	cfg->hide_http_user_agent = 0;
 	cfg->identity = NULL;
 	cfg->version = NULL;
+	cfg->http_user_agent = NULL;
 	cfg->nsid_cfg_str = NULL;
 	cfg->nsid = NULL;
 	cfg->nsid_len = 0;
@@ -253,6 +255,7 @@ config_create(void)
 	cfg->val_date_override = 0;
 	cfg->val_sig_skew_min = 3600; /* at least daylight savings trouble */
 	cfg->val_sig_skew_max = 86400; /* at most timezone settings trouble */
+	cfg->val_max_restart = 5;
 	cfg->val_clean_additional = 1;
 	cfg->val_log_level = 0;
 	cfg->val_log_squelch = 0;
@@ -594,8 +597,10 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	else S_YNO("hide-identity:", hide_identity)
 	else S_YNO("hide-version:", hide_version)
 	else S_YNO("hide-trustanchor:", hide_trustanchor)
+	else S_YNO("hide-http-user-agent:", hide_http_user_agent)
 	else S_STR("identity:", identity)
 	else S_STR("version:", version)
+	else S_STR("http-user-agent:", http_user_agent)
 	else if(strcmp(opt, "nsid:") == 0) {
 		free(cfg->nsid_cfg_str);
 		if (!(cfg->nsid_cfg_str = strdup(val)))
@@ -764,12 +769,14 @@ int config_set_option(struct config_file* cfg, const char* opt,
 #endif
 	else if(strcmp(opt, "define-tag:") ==0) {
 		return config_add_tag(cfg, val);
-	/* val_sig_skew_min and max are copied into val_env during init,
-	 * so this does not update val_env with set_option */
+	/* val_sig_skew_min, max and val_max_restart are copied into val_env
+	 * during init so this does not update val_env with set_option */
 	} else if(strcmp(opt, "val-sig-skew-min:") == 0)
 	{ IS_NUMBER_OR_ZERO; cfg->val_sig_skew_min = (int32_t)atoi(val); }
 	else if(strcmp(opt, "val-sig-skew-max:") == 0)
 	{ IS_NUMBER_OR_ZERO; cfg->val_sig_skew_max = (int32_t)atoi(val); }
+	else if(strcmp(opt, "val-max-restart:") == 0)
+	{ IS_NUMBER_OR_ZERO; cfg->val_max_restart = (int32_t)atoi(val); }
 	else if (strcmp(opt, "outgoing-interface:") == 0) {
 		char* d = strdup(val);
 		char** oi = 
@@ -1052,8 +1059,10 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_YNO(opt, "hide-identity", hide_identity)
 	else O_YNO(opt, "hide-version", hide_version)
 	else O_YNO(opt, "hide-trustanchor", hide_trustanchor)
+	else O_YNO(opt, "hide-http-user-agent", hide_http_user_agent)
 	else O_STR(opt, "identity", identity)
 	else O_STR(opt, "version", version)
+	else O_STR(opt, "http-user-agent", http_user_agent)
 	else O_STR(opt, "nsid", nsid_cfg_str)
 	else O_STR(opt, "target-fetch-policy", target_fetch_policy)
 	else O_YNO(opt, "harden-short-bufsize", harden_short_bufsize)
@@ -1190,6 +1199,7 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_DEC(opt, "fast-server-permil", fast_server_permil)
 	else O_DEC(opt, "val-sig-skew-min", val_sig_skew_min)
 	else O_DEC(opt, "val-sig-skew-max", val_sig_skew_max)
+	else O_DEC(opt, "val-max-restart", val_max_restart)
 	else O_YNO(opt, "qname-minimisation", qname_minimisation)
 	else O_YNO(opt, "qname-minimisation-strict", qname_minimisation_strict)
 	else O_IFC(opt, "define-tag", num_tags, tagname)
@@ -1528,6 +1538,7 @@ config_delete(struct config_file* cfg)
 #endif
 	free(cfg->identity);
 	free(cfg->version);
+	free(cfg->http_user_agent);
 	free(cfg->nsid_cfg_str);
 	free(cfg->nsid);
 	free(cfg->module_conf);
@@ -1691,6 +1702,37 @@ int cfg_condense_ports(struct config_file* cfg, int** avail)
 	}
 	log_assert(at == num);
 	return num;
+}
+
+void cfg_apply_local_port_policy(struct config_file* cfg, int num) {
+(void)cfg;
+(void)num;
+#ifdef USE_LINUX_IP_LOCAL_PORT_RANGE
+	{
+		int i = 0;
+		FILE* range_fd;
+		if ((range_fd = fopen(LINUX_IP_LOCAL_PORT_RANGE_PATH, "r")) != NULL) {
+			int min_port = 0;
+			int max_port = num - 1;
+			if (fscanf(range_fd, "%d %d", &min_port, &max_port) == 2) {
+				for(i=0; i<min_port; i++) {
+					cfg->outgoing_avail_ports[i] = 0;
+				}
+				for(i=max_port+1; i<num; i++) {
+					cfg->outgoing_avail_ports[i] = 0;
+				}
+			} else {
+				log_err("unexpected port range in %s",
+						LINUX_IP_LOCAL_PORT_RANGE_PATH);
+			}
+			fclose(range_fd);
+		} else {
+			log_err("failed to read from file: %s (%s)",
+					LINUX_IP_LOCAL_PORT_RANGE_PATH,
+					strerror(errno));
+		}
+	}
+#endif
 }
 
 /** print error with file and line number */

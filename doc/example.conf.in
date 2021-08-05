@@ -371,6 +371,9 @@ server:
 	# enable to not answer trustanchor.unbound queries.
 	# hide-trustanchor: no
 
+	# enable to not set the User-Agent HTTP header.
+	# hide-http-user-agent: no
+
 	# the identity to report. Leave "" or default to return hostname.
 	# identity: ""
 
@@ -379,6 +382,10 @@ server:
 
 	# NSID identity (hex string, or "ascii_somestring"). default disabled.
 	# nsid: "aabbccdd"
+
+	# User-Agent HTTP header to use. Leave "" or default to use package name
+	# and version.
+	# http-user-agent: ""
 
 	# the target fetch policy.
 	# series of integers describing the policy per dependency depth.
@@ -556,6 +563,10 @@ server:
 	# This leeway is capped with a minimum and a maximum.  In seconds.
 	# val-sig-skew-min: 3600
 	# val-sig-skew-max: 86400
+
+	# The maximum number the validator should restart validation with
+	# another authority in case of failed validation.
+	# val-max-restart: 5
 
 	# Should additional section of secure message also be kept clean of
 	# unsecure data. Useful to shield the users of this validator from

@@ -2477,6 +2477,10 @@ static int http2_query_read_done(struct http2_session* h2_session,
 			"buffer already assigned to stream");
 		return -1;
 	}
+    
+    /* the c->buffer might be used by mesh_send_reply and no be cleard
+	 * need to be cleared before use */
+	sldns_buffer_clear(h2_session->c->buffer);
 	if(sldns_buffer_remaining(h2_session->c->buffer) <
 		sldns_buffer_remaining(h2_stream->qbuffer)) {
 		/* qbuffer will be free'd in frame close cb */
@@ -2678,18 +2682,45 @@ static int http2_buffer_uri_query(struct http2_session* h2_session,
 		return 0;
 	}
 
-	if(!(b64len = sldns_b64url_pton(
-		(char const *)start, length,
-		sldns_buffer_current(h2_stream->qbuffer),
-		expectb64len)) || b64len < 0) {
-		lock_basic_lock(&http2_query_buffer_count_lock);
-		http2_query_buffer_count -= expectb64len;
-		lock_basic_unlock(&http2_query_buffer_count_lock);
-		sldns_buffer_free(h2_stream->qbuffer);
-		h2_stream->qbuffer = NULL;
-		/* return without error, method can be an
-		 * unknown POST */
-		return 1;
+	if(sldns_b64_contains_nonurl((char const*)start, length)) {
+		char buf[65536+4];
+		verbose(VERB_ALGO, "HTTP2 stream contains wrong b64 encoding");
+		/* copy to the scratch buffer temporarily to terminate the
+		 * string with a zero */
+		if(length+1 > sizeof(buf)) {
+			/* too long */
+			lock_basic_lock(&http2_query_buffer_count_lock);
+			http2_query_buffer_count -= expectb64len;
+			lock_basic_unlock(&http2_query_buffer_count_lock);
+			sldns_buffer_free(h2_stream->qbuffer);
+			h2_stream->qbuffer = NULL;
+			return 1;
+		}
+		memmove(buf, start, length);
+		buf[length] = 0;
+		if(!(b64len = sldns_b64_pton(buf, sldns_buffer_current(
+			h2_stream->qbuffer), expectb64len)) || b64len < 0) {
+			lock_basic_lock(&http2_query_buffer_count_lock);
+			http2_query_buffer_count -= expectb64len;
+			lock_basic_unlock(&http2_query_buffer_count_lock);
+			sldns_buffer_free(h2_stream->qbuffer);
+			h2_stream->qbuffer = NULL;
+			return 1;
+		}
+	} else {
+		if(!(b64len = sldns_b64url_pton(
+			(char const *)start, length,
+			sldns_buffer_current(h2_stream->qbuffer),
+			expectb64len)) || b64len < 0) {
+			lock_basic_lock(&http2_query_buffer_count_lock);
+			http2_query_buffer_count -= expectb64len;
+			lock_basic_unlock(&http2_query_buffer_count_lock);
+			sldns_buffer_free(h2_stream->qbuffer);
+			h2_stream->qbuffer = NULL;
+			/* return without error, method can be an
+			 * unknown POST */
+			return 1;
+		}
 	}
 	sldns_buffer_skip(h2_stream->qbuffer, (size_t)b64len);
 	return 1;

@@ -355,7 +355,10 @@ parse_create_rrset(sldns_buffer* pkt, struct rrset_parse* pset,
 		return 0;
 	/* copy & decompress */
 	if(!parse_rr_copy(pkt, pset, *data)) {
-		if(!region) free(*data);
+		if(!region) {
+			free(*data);
+			*data = NULL;
+		}
 		return 0;
 	}
 	return 1;
@@ -420,8 +423,13 @@ parse_copy_decompress_rrset(sldns_buffer* pkt, struct msg_parse* msg,
 	pk->rk.type = htons(pset->type);
 	pk->rk.rrset_class = pset->rrset_class;
 	/** read data part. */
-	if(!parse_create_rrset(pkt, pset, &data, region))
+	if(!parse_create_rrset(pkt, pset, &data, region)) {
+		if(!region) {
+			free(pk->rk.dname);
+			pk->rk.dname = NULL;
+		}
 		return 0;
+	}
 	pk->entry.data = (void*)data;
 	pk->entry.key = (void*)pk;
 	pk->entry.hash = pset->hash;

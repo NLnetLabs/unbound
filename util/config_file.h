@@ -340,10 +340,14 @@ struct config_file {
 	int hide_version;
 	/** do not report trustanchor (trustanchor.unbound) */
 	int hide_trustanchor;
+	/** do not report the User-Agent HTTP header */
+	int hide_http_user_agent;
 	/** identity, hostname is returned if "". */
 	char* identity;
 	/** version, package version returned if "". */
 	char* version;
+	/** User-Agent for HTTP header */
+	char* http_user_agent;
 	/** nsid */
 	char *nsid_cfg_str;
 	uint8_t *nsid;
@@ -373,6 +377,8 @@ struct config_file {
 	int32_t val_sig_skew_min;
 	/** the maximum for signature clock skew */
 	int32_t val_sig_skew_max;
+	/** max number of query restarts, number of IPs to probe */
+	int32_t val_max_restart;
 	/** this value sets the number of seconds before revalidating bogus */
 	int bogus_ttl; 
 	/** should validator clean additional section for secure msgs */
@@ -1185,6 +1191,13 @@ int cfg_mark_ports(const char* str, int allow, int* avail, int num);
 int cfg_condense_ports(struct config_file* cfg, int** avail);
 
 /**
+ * Apply system specific port range policy.
+ * @param cfg: config file.
+ * @param num: size of the array (65536).
+ */
+void cfg_apply_local_port_policy(struct config_file* cfg, int num);
+
+/**
  * Scan ports available
  * @param avail: the array from cfg.
  * @param num: size of the array (65536).
@@ -1322,6 +1335,10 @@ int if_is_https(const char* ifname, const char* port, int https_port);
  * @return true if https ports are used for server.
  */
 int cfg_has_https(struct config_file* cfg);
+
+#ifdef USE_LINUX_IP_LOCAL_PORT_RANGE
+#define LINUX_IP_LOCAL_PORT_RANGE_PATH "/proc/sys/net/ipv4/ip_local_port_range"
+#endif
 
 #endif /* UTIL_CONFIG_FILE_H */
 

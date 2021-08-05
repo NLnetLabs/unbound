@@ -149,7 +149,7 @@ esac
 # are we on MinGW?
 if uname -s 2>&1 | grep MINGW >/dev/null; then on_mingw="yes"
 else 
-	if echo $host $target | grep mingw >/dev/null; then on_mingw="yes"
+	if echo $host | grep mingw >/dev/null; then on_mingw="yes"
 	else on_mingw="no"; fi
 fi
 
@@ -385,7 +385,10 @@ AC_CHECK_PROG(doxygen, doxygen, doxygen)
 AC_CHECK_TOOL(STRIP, strip)
 ACX_LIBTOOL_C_ONLY
 
+# pkg-config is only needed for these options, do not require it otherwise
+if test "$enable_systemd" = "yes" -o "$with_pyunbound" = "yes" -o "$with_pythonmod" = "yes"; then
 PKG_PROG_PKG_CONFIG
+fi
 
 # Checks for header files.
 AC_CHECK_HEADERS([stdarg.h stdbool.h netinet/in.h netinet/tcp.h sys/param.h sys/select.h sys/socket.h sys/un.h sys/uio.h sys/resource.h arpa/inet.h syslog.h netdb.h sys/wait.h pwd.h glob.h grp.h login_cap.h winsock2.h ws2tcpip.h endian.h sys/endian.h libkern/OSByteOrder.h sys/ipc.h sys/shm.h ifaddrs.h],,, [AC_INCLUDES_DEFAULT])
@@ -490,7 +493,10 @@ ACX_MKDIR_ONE_ARG
 AC_CHECK_FUNCS([strptime],[AC_CHECK_STRPTIME_WORKS],[AC_LIBOBJ([strptime])])
 
 # check if we can use SO_REUSEPORT
-if echo "$host" | $GREP -i -e linux -e dragonfly >/dev/null; then
+reuseport_default=0
+if echo "$host" | $GREP -i -e linux >/dev/null; then reuseport_default=1; fi
+if echo "$host" | $GREP -i -e dragonfly >/dev/null; then reuseport_default=1; fi
+if test "$reuseport_default" = 1; then
 	AC_DEFINE(REUSEPORT_DEFAULT, 1, [if REUSEPORT is enabled by default])
 else
 	AC_DEFINE(REUSEPORT_DEFAULT, 0, [if REUSEPORT is enabled by default])
@@ -853,13 +859,13 @@ if grep VERSION_TEXT $ssldir/include/openssl/opensslv.h | grep "LibreSSL" >/dev/
 else
 	AC_MSG_RESULT([no])
 fi
-AC_CHECK_HEADERS([openssl/conf.h openssl/engine.h openssl/bn.h openssl/dh.h openssl/dsa.h openssl/rsa.h openssl/core_names.h],,, [AC_INCLUDES_DEFAULT])
-AC_CHECK_FUNCS([OPENSSL_config EVP_sha1 EVP_sha256 EVP_sha512 FIPS_mode EVP_MD_CTX_new OpenSSL_add_all_digests OPENSSL_init_crypto EVP_cleanup ENGINE_cleanup ERR_load_crypto_strings CRYPTO_cleanup_all_ex_data ERR_free_strings RAND_cleanup DSA_SIG_set0 EVP_dss1 EVP_DigestVerify EVP_aes_256_cbc EVP_EncryptInit_ex HMAC_Init_ex CRYPTO_THREADID_set_callback EVP_MAC_CTX_set_params])
+AC_CHECK_HEADERS([openssl/conf.h openssl/engine.h openssl/bn.h openssl/dh.h openssl/dsa.h openssl/rsa.h openssl/core_names.h openssl/param_build.h],,, [AC_INCLUDES_DEFAULT])
+AC_CHECK_FUNCS([OPENSSL_config EVP_sha1 EVP_sha256 EVP_sha512 FIPS_mode EVP_MD_CTX_new OpenSSL_add_all_digests OPENSSL_init_crypto EVP_cleanup ENGINE_cleanup ERR_load_crypto_strings CRYPTO_cleanup_all_ex_data ERR_free_strings RAND_cleanup DSA_SIG_set0 EVP_dss1 EVP_DigestVerify EVP_aes_256_cbc EVP_EncryptInit_ex HMAC_Init_ex CRYPTO_THREADID_set_callback EVP_MAC_CTX_set_params OSSL_PARAM_BLD_new])
 
 # these check_funcs need -lssl
 BAKLIBS="$LIBS"
 LIBS="-lssl $LIBS"
-AC_CHECK_FUNCS([OPENSSL_init_ssl SSL_CTX_set_security_level SSL_set1_host SSL_get0_peername X509_VERIFY_PARAM_set1_host SSL_CTX_set_ciphersuites SSL_CTX_set_tlsext_ticket_key_evp_cb SSL_CTX_set_alpn_select_cb SSL_get0_alpn_selected SSL_CTX_set_alpn_protos])
+AC_CHECK_FUNCS([OPENSSL_init_ssl SSL_CTX_set_security_level SSL_set1_host SSL_get0_peername X509_VERIFY_PARAM_set1_host SSL_CTX_set_ciphersuites SSL_CTX_set_tlsext_ticket_key_evp_cb SSL_CTX_set_alpn_select_cb SSL_get0_alpn_selected SSL_CTX_set_alpn_protos SSL_get1_peer_certificate])
 LIBS="$BAKLIBS"
 
 AC_CHECK_DECLS([SSL_COMP_get_compression_methods,sk_SSL_COMP_pop_free,SSL_CTX_set_ecdh_auto], [], [], [
@@ -1216,23 +1222,23 @@ esac
 AC_ARG_ENABLE(tfo-client, AS_HELP_STRING([--enable-tfo-client],[Enable TCP Fast Open for client mode]))
 case "$enable_tfo_client" in
 	yes)
-		case `uname` in
-			Linux) AC_CHECK_DECL([MSG_FASTOPEN], [AC_MSG_WARN([Check the platform specific TFO kernel parameters are correctly configured to support client mode TFO])],
-			                     [AC_MSG_ERROR([TCP Fast Open is not available for client mode: please rerun without --enable-tfo-client])], 
-			                     [AC_INCLUDES_DEFAULT 
+		case "$host_os" in
+			linux*) AC_CHECK_DECL([MSG_FASTOPEN], [AC_MSG_WARN([Check the platform specific TFO kernel parameters are correctly configured to support client mode TFO])],
+				[AC_MSG_ERROR([TCP Fast Open is not available for client mode: please rerun without --enable-tfo-client])],
+				[AC_INCLUDES_DEFAULT
 #include <netinet/tcp.h>
 ])
-					AC_DEFINE_UNQUOTED([USE_MSG_FASTOPEN], [1], [Define this to enable client TCP Fast Open.])
-			  ;;
-			Darwin) AC_CHECK_DECL([CONNECT_RESUME_ON_READ_WRITE], [AC_MSG_WARN([Check the platform specific TFO kernel parameters are correctly configured to support client mode TFO])], 
-			                      [AC_MSG_ERROR([TCP Fast Open is not available for client mode: please rerun without --enable-tfo-client])], 
-			                      [AC_INCLUDES_DEFAULT
+				AC_DEFINE_UNQUOTED([USE_MSG_FASTOPEN], [1], [Define this to enable client TCP Fast Open.])
+				;;
+			darwin*) AC_CHECK_DECL([CONNECT_RESUME_ON_READ_WRITE], [AC_MSG_WARN([Check the platform specific TFO kernel parameters are correctly configured to support client mode TFO])],
+				[AC_MSG_ERROR([TCP Fast Open is not available for client mode: please rerun without --enable-tfo-client])],
+				[AC_INCLUDES_DEFAULT
 #include <sys/socket.h>
 ])
-					AC_DEFINE_UNQUOTED([USE_OSX_MSG_FASTOPEN], [1], [Define this to enable client TCP Fast Open.])
-			  ;;
+				AC_DEFINE_UNQUOTED([USE_OSX_MSG_FASTOPEN], [1], [Define this to enable client TCP Fast Open.])
+				;;
 		esac
-	;;
+		;;
 	no|*)
 		;;
 esac
@@ -1593,7 +1599,7 @@ AC_CHECK_FUNCS([setresuid],,[AC_CHECK_FUNCS([setreuid])])
 AC_CHECK_FUNCS([setresgid],,[AC_CHECK_FUNCS([setregid])])
 
 # check if setreuid en setregid fail, on MacOSX10.4(darwin8).
-if echo $target_os | grep darwin8 > /dev/null; then
+if echo $host_os | grep darwin8 > /dev/null; then
 	AC_DEFINE(DARWIN_BROKEN_SETREUID, 1, [Define this if on macOSX10.4-darwin8 and setreuid and setregid do not work])
 fi
 AC_CHECK_DECLS([inet_pton,inet_ntop], [], [], [
@@ -1855,6 +1861,17 @@ case "$enable_explicit_port_randomisation" in
 	yes|*)
 		;;
 esac
+
+if echo "$host" | $GREP -i -e linux >/dev/null; then
+	AC_ARG_ENABLE(linux-ip-local-port-range, AC_HELP_STRING([--enable-linux-ip-local-port-range], [Define this to enable use of /proc/sys/net/ipv4/ip_local_port_range as a default outgoing port range. This is only for the libunbound on Linux and does not affect unbound resolving daemon itself. This may severely limit the number of available outgoing ports and thus decrease randomness. Define this only when the target system restricts (e.g. some of SELinux enabled distributions) the use of non-ephemeral ports.]))
+	case "$enable_linux_ip_local_port_range" in
+		yes)
+			AC_DEFINE([USE_LINUX_IP_LOCAL_PORT_RANGE], [1], [Define this to enable use of /proc/sys/net/ipv4/ip_local_port_range as a default outgoing port range. This is only for the libunbound on Linux and does not affect unbound resolving daemon itself. This may severely limit the number of available outgoing ports and thus decrease randomness. Define this only when the target system restricts (e.g. some of SELinux enabled distributions) the use of non-ephemeral ports.])
+			;;
+		no|*)
+			;;
+	esac
+fi
 
 
 AC_MSG_CHECKING([if ${MAKE:-make} supports $< with implicit rule in scope])

@@ -456,8 +456,15 @@ fill_res(struct ub_result* res, struct ub_packed_rrset_key* answer,
 		if(rep->rrset_count != 0)
 			res->ttl = (int)rep->ttl;
 		res->data = (char**)calloc(1, sizeof(char*));
+		if(!res->data)
+			return 0; /* out of memory */
 		res->len = (int*)calloc(1, sizeof(int));
-		return (res->data && res->len);
+		if(!res->len) {
+			free(res->data);
+			res->data = NULL;
+			return 0; /* out of memory */
+		}
+		return 1;
 	}
 	data = (struct packed_rrset_data*)answer->entry.data;
 	if(query_dname_compare(rq->qname, answer->rk.dname) != 0) {
@@ -465,15 +472,30 @@ fill_res(struct ub_result* res, struct ub_packed_rrset_key* answer,
 			return 0; /* out of memory */
 	} else	res->canonname = NULL;
 	res->data = (char**)calloc(data->count+1, sizeof(char*));
-	res->len = (int*)calloc(data->count+1, sizeof(int));
-	if(!res->data || !res->len)
+	if(!res->data)
 		return 0; /* out of memory */
+	res->len = (int*)calloc(data->count+1, sizeof(int));
+	if(!res->len) {
+		free(res->data);
+		res->data = NULL;
+		return 0; /* out of memory */
+	}
 	for(i=0; i<data->count; i++) {
 		/* remove rdlength from rdata */
 		res->len[i] = (int)(data->rr_len[i] - 2);
 		res->data[i] = memdup(data->rr_data[i]+2, (size_t)res->len[i]);
-		if(!res->data[i])
+		if(!res->data[i]) {
+			size_t j;
+			for(j=0; j<i; j++) {
+				free(res->data[j]);
+				res->data[j] = NULL;
+			}
+			free(res->data);
+			res->data = NULL;
+			free(res->len);
+			res->len = NULL;
 			return 0; /* out of memory */
+		}
 	}
 	/* ttl for positive answers, from CNAME and answer RRs */
 	if(data->count != 0) {

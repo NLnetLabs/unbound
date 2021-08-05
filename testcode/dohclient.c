@@ -423,6 +423,7 @@ http2_session_create()
 
 	if(nghttp2_session_callbacks_new(&callbacks) == NGHTTP2_ERR_NOMEM) {
 		log_err("failed to initialize nghttp2 callback");
+		free(h2_session);
 		return NULL;
 	}
 	nghttp2_session_callbacks_set_recv_callback(callbacks, http2_recv_cb);

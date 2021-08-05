@@ -89,11 +89,11 @@ These options are part of the
 clause.
 .TP
 .B verbosity: \fI<number>
-The verbosity number, level 0 means no verbosity, only errors. Level 1
-gives operational information. Level 2 gives detailed operational
-information. Level 3 gives query level information, output per query.
-Level 4 gives algorithm level information.  Level 5 logs client
-identification for cache misses.  Default is level 1.
+The verbosity number, level 0 means no verbosity, only errors.  Level 1
+gives operational information.  Level 2 gives detailed operational
+information including short information per query.  Level 3 gives query level
+information, output per query.  Level 4 gives algorithm level information.
+Level 5 logs client identification for cache misses.  Default is level 1.
 The verbosity can also be increased from the commandline, see \fIunbound\fR(8).
 .TP
 .B statistics\-interval: \fI<seconds>
@@ -852,6 +852,17 @@ If enabled version.server and version.bind queries are refused.
 Set the version to report. If set to "", the default, then the package
 version is returned.
 .TP
+.B hide\-http\-user\-agent: \fI<yes or no>
+If enabled the HTTP header User-Agent is not set. Use with caution as some
+webserver configurations may reject HTTP requests lacking this header.
+If needed, it is better to explicitly set the
+.B http\-user\-agent
+below.
+.TP
+.B http\-user\-agent: \fI<string>
+Set the HTTP User-Agent header for outgoing HTTP requests. If set to "",
+the default, then the package name and version are used.
+.TP
 .B nsid:\fR <string>
 Add the specified nsid to the EDNS section of the answer when queried
 with an NSID EDNS enabled packet.  As a sequence of hex characters or
@@ -1139,6 +1150,10 @@ allows for timezone setting problems in stable domains.  Setting both
 min and max very low disables the clock skew allowances.  Setting both
 min and max very high makes the validator check the signature timestamps
 less strictly.
+.TP
+.B val\-max\-restart: \fI<number>
+The maximum number the validator should restart validation with
+another authority in case of failed validation. Default is 5.
 .TP
 .B val\-bogus\-ttl: \fI<number>
 The time to live for bogus data. This is data that has failed validation;
@@ -1923,7 +1938,9 @@ Name of the authority zone.
 .B primary: \fI<IP address or host name>
 Where to download a copy of the zone from, with AXFR and IXFR.  Multiple
 primaries can be specified.  They are all tried if one fails.
-With the "ip#name" notation a AXFR over TLS can be used.
+To use a nondefault port for DNS communication append '@' with the port number.
+You can append a '#' and a name, then AXFR over TLS can be used and the tls authentication certificates will be checked with that name.  If you combine
+the '@' and '#', the '@' comes first.
 If you point it at another Unbound instance, it would not work because
 that does not support AXFR/IXFR for the zone, but if you used \fBurl:\fR to download
 the zonefile as a text file from a webserver that would work.
@@ -2539,6 +2556,15 @@ Name of the authority zone.
 .B primary: \fI<IP address or host name>
 Where to download a copy of the zone from, with AXFR and IXFR.  Multiple
 primaries can be specified.  They are all tried if one fails.
+To use a nondefault port for DNS communication append '@' with the port number.
+You can append a '#' and a name, then AXFR over TLS can be used and the tls authentication certificates will be checked with that name.  If you combine
+the '@' and '#', the '@' comes first.
+If you point it at another Unbound instance, it would not work because
+that does not support AXFR/IXFR for the zone, but if you used \fBurl:\fR to download
+the zonefile as a text file from a webserver that would work.
+If you specify the hostname, you cannot use the domain from the zonefile,
+because it may not have that when retrieving that data, instead use a plain
+IP address to avoid a circular dependency on retrieving that IP address.
 .TP
 .B master: \fI<IP address or host name>
 Alternate syntax for \fBprimary\fR.
