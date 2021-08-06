@@ -1172,6 +1172,7 @@ void* connect_sslctx_create(char* key, char* pem, char* verifypem, int wincert)
 	if((SSL_CTX_set_options(ctx, SSL_OP_NO_RENEGOTIATION) &
 		SSL_OP_NO_RENEGOTIATION) != SSL_OP_NO_RENEGOTIATION) {
 		log_crypto_err("could not set SSL_OP_NO_RENEGOTIATION");
+		SSL_CTX_free(ctx);
 		return 0;
 	}
 #endif
