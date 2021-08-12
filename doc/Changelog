@@ -8,6 +8,8 @@
 	  stub/forward zones.
 	- For #519: note stub-tcp-upstream and forward-tcp-upstream in
 	  the example configuration file.
+	- For #519: yacc and lex. And fix python bindings, and test program
+	  unbound-dnstap-socket.
 
 5 August 2021: Wouter
 	- Tag for 1.13.2rc1 release.

@@ -710,8 +710,8 @@ struct module_env {
     struct outbound_entry* (*send_query)(struct query_info* qinfo,
         uint16_t flags, int dnssec, int want_dnssec, int nocaps,
         struct sockaddr_storage* addr, socklen_t addrlen,
-        uint8_t* zone, size_t zonelen, int ssl_upstream, char* tls_auth_name,
-        struct module_qstate* q);
+        uint8_t* zone, size_t zonelen, int tcp_upstream, int ssl_upstream,
+        char* tls_auth_name, struct module_qstate* q);
     void (*detach_subs)(struct module_qstate* qstate);
     int (*attach_sub)(struct module_qstate* qstate,
         struct query_info* qinfo, uint16_t qflags, int prime,
