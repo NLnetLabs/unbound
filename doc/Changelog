@@ -11,6 +11,8 @@
 	- For #519: yacc and lex. And fix python bindings, and test program
 	  unbound-dnstap-socket.
 	- For #519: fix comments for doxygen.
+	- Fix to print error from unbound-anchor for writing to the key
+	  file, also when not verbose.
 
 5 August 2021: Wouter
 	- Tag for 1.13.2rc1 release.
