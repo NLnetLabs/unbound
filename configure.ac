@@ -777,6 +777,12 @@ if test "`uname`" = "NetBSD"; then
 	NETBSD_LINTFLAGS='"-D__RENAME(x)=" -D_NETINET_IN_H_'
 	AC_SUBST(NETBSD_LINTFLAGS)
 fi
+
+if test "`uname -o`" = "GNU/Linux"; then
+	# splint cannot parse modern c99 header files
+	GCC_DOCKER_LINTFLAGS='-syntax'
+	AC_SUBST(GCC_DOCKER_LINTFLAGS)
+fi
 CONFIG_DATE=`date +%Y%m%d`
 AC_SUBST(CONFIG_DATE)
 
