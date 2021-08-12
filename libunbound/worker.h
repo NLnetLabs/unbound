@@ -62,6 +62,7 @@ struct query_info;
  * @param addrlen: length of addr.
  * @param zone: delegation point name.
  * @param zonelen: length of zone name wireformat dname.
+ * @param tcp_upstream: use TCP for upstream queries.
  * @param ssl_upstream: use SSL for upstream queries.
  * @param tls_auth_name: if ssl_upstream, use this name with TLS
  * 	authentication.
@@ -113,6 +114,7 @@ void worker_sighandler(int sig, void* arg);
  * @param addrlen: length of addr.
  * @param zone: wireformat dname of the zone.
  * @param zonelen: length of zone name.
+ * @param tcp_upstream: use TCP for upstream queries.
  * @param ssl_upstream: use SSL for upstream queries.
  * @param tls_auth_name: if ssl_upstream, use this name with TLS
  * 	authentication.

@@ -10,6 +10,7 @@
 	  the example configuration file.
 	- For #519: yacc and lex. And fix python bindings, and test program
 	  unbound-dnstap-socket.
+	- For #519: fix comments for doxygen.
 
 5 August 2021: Wouter
 	- Tag for 1.13.2rc1 release.
