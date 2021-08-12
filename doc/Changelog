@@ -1,5 +1,6 @@
 12 August 2021: George
 	- Merge PR #514, from ziollek: Docker environment for run tests.
+	- For #514: generate configure.
 
 12 August 2021: Wouter
 	- And 1.13.2rc1 became the 1.13.2 with the fix for the python module
