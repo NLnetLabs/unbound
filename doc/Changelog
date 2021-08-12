@@ -4,6 +4,10 @@
 	- Add test tool readzone to .gitignore.
 	- Merge #521: Update mini_event.c.
 	- Merge #523: fix: free() call more than once with the same pointer.
+	- Merge #519: Support for selective enabling tcp-upstream for
+	  stub/forward zones.
+	- For #519: note stub-tcp-upstream and forward-tcp-upstream in
+	  the example configuration file.
 
 5 August 2021: Wouter
 	- Tag for 1.13.2rc1 release.
