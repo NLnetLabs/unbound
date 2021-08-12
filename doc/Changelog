@@ -1,6 +1,7 @@
 12 August 2021: Wouter
 	- And 1.13.2rc1 became the 1.13.2 with the fix for the python module
 	  build. The current code repository continues with version 1.13.3.
+	- Add test tool readzone to .gitignore.
 
 5 August 2021: Wouter
 	- Tag for 1.13.2rc1 release.
