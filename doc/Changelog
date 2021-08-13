@@ -2,6 +2,8 @@
 	- Support using system-wide crypto policies.
 	- Fix for #431: Squelch permission denied errors for udp connect,
 	  and udp send, they are visible at higher verbosity settings.
+	- Fix zonemd verification of key that is not in DNS but in the zone
+	  and needs a chain of trust.
 
 12 August 2021: George
 	- Merge PR #514, from ziollek: Docker environment for run tests.
