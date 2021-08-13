@@ -1037,6 +1037,8 @@ rpz_apply_qname_trigger(struct auth_zones* az, struct module_env* env,
 		return 0;
 	}
 
+
+	// @TODO: Find out if it's local answer of blocked; if blocked then EDE: blocked
 	if(lzt == local_zone_redirect && local_data_answer(z, env, qinfo,
 		edns, repinfo, buf, temp, dname_count_labels(qinfo->qname),
 		&ld, lzt, -1, NULL, 0, NULL, 0)) {

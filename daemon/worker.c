@@ -1291,7 +1291,7 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 				edns.bits &= EDNS_DO;
 				edns.opt_list = NULL;
 				EDNS_OPT_APPEND_EDE(&edns, worker->scratchpad,
-					LDNS_EDNS_EDE, "query with bad edns keepalive.");
+					LDNS_EDNS_EDE, "query with bad edns keepalive");
 				verbose(VERB_ALGO, "query with bad edns keepalive.");
 				log_addr(VERB_CLIENT,"from",&repinfo->addr, repinfo->addrlen);
 				error_encode(c->buffer, LDNS_RCODE_FORMERR, &qinfo,
@@ -1404,12 +1404,29 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 	 * ACLs allow the snooping. */
 	if(!(LDNS_RD_WIRE(sldns_buffer_begin(c->buffer))) &&
 		acl != acl_allow_snoop ) {
+
+
+
+		// @TODO ADD Error Code 20 - Not Authoritative
+		// @TODO add EDNS record
+		
+		EDNS_OPT_APPEND_EDE(&edns, worker->scratchpad, LDNS_EDNS_EDE,
+							"Not Authoritative");
+
+
+
+
 		error_encode(c->buffer, LDNS_RCODE_REFUSED, &qinfo,
 			*(uint16_t*)(void *)sldns_buffer_begin(c->buffer),
 			sldns_buffer_read_u16_at(c->buffer, 2), NULL);
 		regional_free_all(worker->scratchpad);
 		log_addr(VERB_ALGO, "refused nonrec (cache snoop) query from",
 			&repinfo->addr, repinfo->addrlen);
+
+		if(sldns_buffer_capacity(c->buffer) >=
+		   sldns_buffer_limit(c->buffer)+calc_edns_field_size(&edns))
+			attach_edns_record(c->buffer, &edns);
+
 		goto send_reply;
 	}
 
@@ -1482,10 +1499,23 @@ lookup_cache:
 						< *worker->env.now)
 						leeway = 0;
 					lock_rw_unlock(&e->lock);
+
+					// // stale answer? 
+					// if (worker->env.cfg->serve_expired &&
+					// 	*worker->env.now >= ((struct reply_info*)e->data)->ttl) {
+					// 	// EDE Error Code 3 - Stale Answer
+					// 	EDNS_OPT_APPEND_EDE(&edns, worker->scratchpad,
+					// LDNS_EDNS_EDE, "query with bad edns keepalive.");
+					// }
+
+					// add EDNS struct?
 					reply_and_prefetch(worker, lookup_qinfo,
 						sldns_buffer_read_u16_at(c->buffer, 2),
 						repinfo, leeway,
 						(partial_rep || need_drop));
+
+
+
 					if(!partial_rep) {
 						rc = 0;
 						regional_free_all(worker->scratchpad);
@@ -1522,6 +1552,9 @@ lookup_cache:
 			verbose(VERB_ALGO, "answer from the cache failed");
 			lock_rw_unlock(&e->lock);
 		}
+
+		// @TODO Extended DNS Error Code 13 - Cached Error? place not clear
+
 		if(!LDNS_RD_WIRE(sldns_buffer_begin(c->buffer))) {
 			if(answer_norec_from_cache(worker, &qinfo,
 				*(uint16_t*)(void *)sldns_buffer_begin(c->buffer), 
