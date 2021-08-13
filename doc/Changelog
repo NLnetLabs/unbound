@@ -1,5 +1,7 @@
 13 August 2021: Wouter
 	- Support using system-wide crypto policies.
+	- Fix for #431: Squelch permission denied errors for udp connect,
+	  and udp send, they are visible at higher verbosity settings.
 
 12 August 2021: George
 	- Merge PR #514, from ziollek: Docker environment for run tests.

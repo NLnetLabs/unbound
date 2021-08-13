@@ -1962,6 +1962,7 @@ static int udp_connect_needs_log(int err)
 	case ENETDOWN:
 #  endif
 	case EPERM:
+	case EACCES:
 		if(verbosity >= VERB_ALGO)
 			return 1;
 		return 0;
