@@ -8104,7 +8104,7 @@ auth_zone_verify_zonemd_key_with_ds(struct auth_zone* z,
 	keystorage->rk.dname_len = apex->namelen;
 	keystorage->rk.type = htons(LDNS_RR_TYPE_DNSKEY);
 	keystorage->rk.rrset_class = htons(z->dclass);
-	auth_zone_log(z->name, VERB_QUERY, "zonemd: verify zone's DNSKEY with DS");
+	auth_zone_log(z->name, VERB_QUERY, "zonemd: verify zone DNSKEY with DS");
 	sec = val_verify_DNSKEY_with_DS(env, ve, keystorage, ds, NULL,
 		why_bogus, NULL);
 	regional_free_all(env->scratch);
@@ -8117,11 +8117,11 @@ auth_zone_verify_zonemd_key_with_ds(struct auth_zone* z,
 	} else {
 		/* bogus */
 		*is_insecure = 0;
+		if(*why_bogus == NULL)
+			*why_bogus = "verify failed";
 		auth_zone_log(z->name, VERB_ALGO,
 			"zonemd: verify DNSKEY RRset with DS failed: %s",
 			*why_bogus);
-		if(*why_bogus == NULL)
-			*why_bogus = "verify failed";
 	}
 	return NULL;
 }

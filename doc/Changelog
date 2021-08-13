@@ -4,6 +4,7 @@
 	  and udp send, they are visible at higher verbosity settings.
 	- Fix zonemd verification of key that is not in DNS but in the zone
 	  and needs a chain of trust.
+	- zonemd, fix order of bogus printout string manipulation.
 
 12 August 2021: George
 	- Merge PR #514, from ziollek: Docker environment for run tests.
