@@ -496,12 +496,18 @@ create_udp_sock(int family, int socktype, struct sockaddr* addr,
 		 */
 		if (setsockopt(s, IPPROTO_IPV6, IPV6_MTU,
 			(void*)&mtu, (socklen_t)sizeof(mtu)) < 0) {
-			log_err("setsockopt(..., IPV6_MTU, ...) failed: %s", 
-				sock_strerror(errno));
-			sock_close(s);
-			*noproto = 0;
-			*inuse = 0;
-			return -1;
+#ifdef USE_WINSOCK
+			if (WSAGetLastError() != WSAENOPROTOOPT) {
+#endif
+				log_err("setsockopt(..., IPV6_MTU, ...) failed: %s", 
+					sock_strerror(errno));
+				sock_close(s);
+				*noproto = 0;
+				*inuse = 0;
+				return -1;
+#ifdef USE_WINSOCK
+			}
+#endif
 		}
 # endif /* IPv6 MTU */
 # if defined(IPV6_MTU_DISCOVER) && defined(IP_PMTUDISC_DONT)
