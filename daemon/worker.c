@@ -1291,7 +1291,7 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 				edns.bits &= EDNS_DO;
 				edns.opt_list = NULL;
 				EDNS_OPT_APPEND_EDE(&edns, worker->scratchpad,
-					LDNS_EDNS_EDE, "query with bad edns keepalive");
+					LDNS_EDE_OTHER, "query with bad edns keepalive");
 				verbose(VERB_ALGO, "query with bad edns keepalive.");
 				log_addr(VERB_CLIENT,"from",&repinfo->addr, repinfo->addrlen);
 				error_encode(c->buffer, LDNS_RCODE_FORMERR, &qinfo,
@@ -1410,8 +1410,8 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 		// @TODO ADD Error Code 20 - Not Authoritative
 		// @TODO add EDNS record
 		
-		EDNS_OPT_APPEND_EDE(&edns, worker->scratchpad, LDNS_EDNS_EDE,
-							"Not Authoritative");
+		EDNS_OPT_APPEND_EDE(&edns, worker->scratchpad,
+			LDNS_EDE_NOT_AUTHORITATIVE, "Not Authoritative");
 
 
 
@@ -1505,7 +1505,7 @@ lookup_cache:
 					// 	*worker->env.now >= ((struct reply_info*)e->data)->ttl) {
 					// 	// EDE Error Code 3 - Stale Answer
 					// 	EDNS_OPT_APPEND_EDE(&edns, worker->scratchpad,
-					// LDNS_EDNS_EDE, "query with bad edns keepalive.");
+					// LDNS_EDE_STALE_ANSWER, "");
 					// }
 
 					// add EDNS struct?
