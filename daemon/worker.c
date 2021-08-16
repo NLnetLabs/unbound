@@ -485,6 +485,8 @@ answer_norec_from_cache(struct worker* worker, struct query_info* qinfo,
 				msg->rep, LDNS_RCODE_SERVFAIL, edns, repinfo, worker->scratchpad,
 				worker->env.now_tv))
 					return 0;
+			EDNS_OPT_APPEND_EDE(edns, worker->scratchpad,
+				LDNS_EDE_DNSSEC_BOGUS, "");
 			error_encode(repinfo->c->buffer, LDNS_RCODE_SERVFAIL, 
 				&msg->qinfo, id, flags, edns);
 			if(worker->stats.extended) {
@@ -659,6 +661,8 @@ answer_from_cache(struct worker* worker, struct query_info* qinfo,
 			LDNS_RCODE_SERVFAIL, edns, repinfo, worker->scratchpad,
 			worker->env.now_tv))
 			goto bail_out;
+		EDNS_OPT_APPEND_EDE(edns, worker->scratchpad,
+			LDNS_EDE_DNSSEC_BOGUS, "");
 		error_encode(repinfo->c->buffer, LDNS_RCODE_SERVFAIL,
 			qinfo, id, flags, edns);
 		rrset_array_unlock_touch(worker->env.rrset_cache,
@@ -1414,18 +1418,12 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 			LDNS_EDE_NOT_AUTHORITATIVE, "Not Authoritative");
 
 
-
-
 		error_encode(c->buffer, LDNS_RCODE_REFUSED, &qinfo,
 			*(uint16_t*)(void *)sldns_buffer_begin(c->buffer),
-			sldns_buffer_read_u16_at(c->buffer, 2), NULL);
+			sldns_buffer_read_u16_at(c->buffer, 2), &edns);
 		regional_free_all(worker->scratchpad);
 		log_addr(VERB_ALGO, "refused nonrec (cache snoop) query from",
 			&repinfo->addr, repinfo->addrlen);
-
-		if(sldns_buffer_capacity(c->buffer) >=
-		   sldns_buffer_limit(c->buffer)+calc_edns_field_size(&edns))
-			attach_edns_record(c->buffer, &edns);
 
 		goto send_reply;
 	}

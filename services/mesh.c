@@ -1271,6 +1271,16 @@ mesh_send_reply(struct mesh_state* m, int rcode, struct reply_info* rep,
 				&r->edns, &r->query_reply, m->s.region, &r->start_time))
 					r->edns.opt_list = NULL;
 		}
+		/* Send along EDE BOGUS EDNS0 option when answer is bogus */
+		if(rcode == LDNS_RCODE_SERVFAIL &&
+			m->s.env->need_to_validate && (!(r->qflags&BIT_CD) ||
+			m->s.env->cfg->ignore_cd) && rep &&
+			(rep->security <= sec_status_bogus ||
+			rep->security == sec_status_secure_sentinel_fail)) {
+
+			EDNS_OPT_APPEND_EDE(&r->edns, m->s.region,
+					LDNS_EDE_DNSSEC_BOGUS, "");
+		}
 		error_encode(r_buffer, rcode, &m->s.qinfo, r->qid,
 			r->qflags, &r->edns);
 		m->reply_list = NULL;
