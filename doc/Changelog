@@ -1,3 +1,7 @@
+16 August 2021: George
+	- Merge PR #528 from fobser: Make sldns_str2wire_svcparam_buf()
+	  static.
+
 13 August 2021: Wouter
 	- Support using system-wide crypto policies.
 	- Fix for #431: Squelch permission denied errors for udp connect,
