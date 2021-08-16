@@ -43,6 +43,7 @@
 #define UTIL_DATA_MSGREPLY_H
 #include "util/storage/lruhash.h"
 #include "util/data/packed_rrset.h"
+#include "sldns/rrdef.h"
 struct sldns_buffer;
 struct comm_reply;
 struct alloc_cache;
@@ -531,7 +532,18 @@ int edns_opt_append(struct edns_data* edns, struct regional* region,
 		edns_opt_append((EDNS), (REGION), LDNS_EDNS_EDE, 	\
 			sizeof(uint16_t) + sizeof(TXT) - 1,		\
 			(void *)&ede);					\
-	} while(0);
+	} while(0)
+
+/**
+ * Append edns EDE option to edns options list
+ * @param edns: the edns data structure to append the edns option to.
+ * @param region: region to allocate the new edns option.
+ * @param code: the EDE code.
+ * @param txt: Additional text for the option
+ * @return false on failure.
+ */
+int edns_opt_append_ede(struct edns_data* edns, struct regional* region,
+	sldns_ede_code code, const char *txt);
 
 /**
  * Append edns option to edns option list

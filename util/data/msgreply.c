@@ -988,6 +988,35 @@ int edns_opt_append(struct edns_data* edns, struct regional* region,
 	return 1;
 }
 
+int edns_opt_append_ede(struct edns_data* edns, struct regional* region,
+	sldns_ede_code code, const char *txt)
+{
+	struct edns_option** prevp;
+	struct edns_option* opt;
+	size_t txt_len = txt ? strlen(txt) : 0;
+
+	/* allocate new element */
+	opt = (struct edns_option*)regional_alloc(region, sizeof(*opt));
+	if(!opt)
+		return 0;
+	opt->next = NULL;
+	opt->opt_code = LDNS_EDNS_EDE;
+	opt->opt_len = txt_len + sizeof(uint16_t);
+	opt->opt_data = regional_alloc(region, txt_len + sizeof(uint16_t));
+	if(!opt->opt_data)
+		return 0;
+	sldns_write_uint16(opt->opt_data, (uint16_t)code);
+	if (txt_len)
+		strncpy(opt->opt_data + 2, txt, txt_len);
+
+	/* append at end of list */
+	prevp = &edns->opt_list;
+	while(*prevp != NULL)
+		prevp = &((*prevp)->next);
+	*prevp = opt;
+	return 1;
+}
+
 int edns_opt_list_append(struct edns_option** list, uint16_t code, size_t len,
 	uint8_t* data, struct regional* region)
 {

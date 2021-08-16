@@ -1278,8 +1278,12 @@ mesh_send_reply(struct mesh_state* m, int rcode, struct reply_info* rep,
 			(rep->security <= sec_status_bogus ||
 			rep->security == sec_status_secure_sentinel_fail)) {
 
-			EDNS_OPT_APPEND_EDE(&r->edns, m->s.region,
-					LDNS_EDE_DNSSEC_BOGUS, "");
+			char *reason = m->s.env->cfg->val_log_level >= 2
+			             ? errinf_to_str_bogus(&m->s) : NULL;
+
+			edns_opt_append_ede(&r->edns, m->s.region,
+					LDNS_EDE_DNSSEC_BOGUS, reason);
+			free(reason);
 		}
 		error_encode(r_buffer, rcode, &m->s.qinfo, r->qid,
 			r->qflags, &r->edns);
