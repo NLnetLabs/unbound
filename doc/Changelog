@@ -2,6 +2,9 @@
 	- Merge PR #528 from fobser: Make sldns_str2wire_svcparam_buf()
 	  static.
 
+16 August 2021: Wouter
+	- Fix to support harden-algo-downgrade for ZONEMD dnssec checks.
+
 13 August 2021: Wouter
 	- Support using system-wide crypto policies.
 	- Fix for #431: Squelch permission denied errors for udp connect,
