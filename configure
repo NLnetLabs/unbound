@@ -1650,7 +1650,7 @@ Optional Packages:
   --with-nettle=path      use libnettle as crypto library, installed at path.
   --with-ssl=pathname     enable SSL (will check /usr/local/ssl /usr/lib/ssl
                           /usr/ssl /usr/pkg /usr/local /opt/local /usr/sfw
-                          /usr)
+                          /usr or specify like /usr/include/openssl11)
   --with-libbsd           Use portable libbsd functions
   --with-deprecate-rsa-1024
                           Deprecate RSA 1024 bit length, makes that an
@@ -18001,6 +18001,25 @@ fi
     if test x_$withval != x_no; then
         { $as_echo "$as_me:${as_lineno-$LINENO}: checking for SSL" >&5
 $as_echo_n "checking for SSL... " >&6; }
+	if test -n "$withval"; then
+										if test ! -f "$withval/include/openssl/ssl.h" -a -f "$withval/openssl/ssl.h"; then
+			ssldir="$withval"
+			found_ssl="yes"
+			withval=""
+			ssldir_include="$ssldir"
+						ssldir_lib=`echo $ssldir | sed -e '/include/lib/'`
+			if test -f "$ssldir_lib/libssl.a" -o -f "$ssldir_lib/libssl.so"; then
+				: # found here
+			else
+				ssldir_lib=`echo $ssldir | sed -e '/include/lib64/'`
+				if test -f "$ssldir_lib/libssl.a" -o -f "$ssldir_lib/libssl.so"; then
+					: # found here
+				else
+					as_fn_error $? "Could not find openssl lib file, $ssldir_lib/libssl.so,a, pass like \"/usr/local\" or \"/usr/include/openssl11\"" "$LINENO" 5
+				fi
+			fi
+		fi
+	fi
         if test x_$withval = x_ -o x_$withval = x_yes; then
             withval="/usr/local/ssl /usr/lib/ssl /usr/ssl /usr/pkg /usr/local /opt/local /usr/sfw /usr"
         fi
@@ -18008,15 +18027,12 @@ $as_echo_n "checking for SSL... " >&6; }
             ssldir="$dir"
             if test -f "$dir/include/openssl/ssl.h"; then
                 found_ssl="yes"
-
-cat >>confdefs.h <<_ACEOF
-#define HAVE_SSL /**/
-_ACEOF
-
-                                if test "$ssldir" != "/usr"; then
-                        CPPFLAGS="$CPPFLAGS -I$ssldir/include"
-                        LIBSSL_CPPFLAGS="$LIBSSL_CPPFLAGS -I$ssldir/include"
-                fi
+		ssldir_include="$ssldir/include"
+		if test ! -d "$ssldir/lib" -a -d "$ssldir/lib64"; then
+			ssldir_lib="$ssldir/lib64"
+		else
+			ssldir_lib="$ssldir/lib"
+		fi
                 break;
             fi
         done
@@ -18025,30 +18041,25 @@ _ACEOF
         else
             { $as_echo "$as_me:${as_lineno-$LINENO}: result: found in $ssldir" >&5
 $as_echo "found in $ssldir" >&6; }
+
+cat >>confdefs.h <<_ACEOF
+#define HAVE_SSL /**/
+_ACEOF
+
             HAVE_SSL=yes
-                        if test "$ssldir" != "/usr" -a "$ssldir" != ""; then
-		if test ! -d "$ssldir/lib" -a -d "$ssldir/lib64"; then
-			LDFLAGS="$LDFLAGS -L$ssldir/lib64"
-			LIBSSL_LDFLAGS="$LIBSSL_LDFLAGS -L$ssldir/lib64"
+	                if test "$ssldir" != "/usr"; then
+		    CPPFLAGS="$CPPFLAGS -I$ssldir_include"
+		    LIBSSL_CPPFLAGS="$LIBSSL_CPPFLAGS -I$ssldir_include"
+		    LDFLAGS="$LDFLAGS -L$ssldir_lib"
+		    LIBSSL_LDFLAGS="$LIBSSL_LDFLAGS -L$ssldir_lib"
 
 	if test "x$enable_rpath" = xyes; then
-		if echo "$ssldir/lib64" | grep "^/" >/dev/null; then
-			RUNTIME_PATH="$RUNTIME_PATH -R$ssldir/lib64"
+		if echo "$ssldir_lib" | grep "^/" >/dev/null; then
+			RUNTIME_PATH="$RUNTIME_PATH -R$ssldir_lib"
 		fi
 	fi
 
-		else
-			LDFLAGS="$LDFLAGS -L$ssldir/lib"
-			LIBSSL_LDFLAGS="$LIBSSL_LDFLAGS -L$ssldir/lib"
-
-	if test "x$enable_rpath" = xyes; then
-		if echo "$ssldir/lib" | grep "^/" >/dev/null; then
-			RUNTIME_PATH="$RUNTIME_PATH -R$ssldir/lib"
-		fi
-	fi
-
-		fi
-            fi
+	    fi
 
             { $as_echo "$as_me:${as_lineno-$LINENO}: checking for EVP_sha256 in -lcrypto" >&5
 $as_echo_n "checking for EVP_sha256 in -lcrypto... " >&6; }
@@ -18377,7 +18388,7 @@ rm -f core conftest.err conftest.$ac_objext \
 
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for LibreSSL" >&5
 $as_echo_n "checking for LibreSSL... " >&6; }
-if grep VERSION_TEXT $ssldir/include/openssl/opensslv.h | grep "LibreSSL" >/dev/null; then
+if grep VERSION_TEXT $ssldir_include/openssl/opensslv.h | grep "LibreSSL" >/dev/null; then
 	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 $as_echo "yes" >&6; }
 
@@ -18799,7 +18810,7 @@ $as_echo_n "checking if GOST works... " >&6; }
 if test c${cross_compiling} = cno; then
 BAKCFLAGS="$CFLAGS"
 if test -n "$ssldir"; then
-	CFLAGS="$CFLAGS -Wl,-rpath,$ssldir/lib"
+	CFLAGS="$CFLAGS -Wl,-rpath,$ssldir_lib"
 fi
 if test "$cross_compiling" = yes; then :
   { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
@@ -18982,8 +18993,8 @@ fi
 	      # see if OPENSSL 1.0.0 or later (has EVP MD and Verify independency)
 	      { $as_echo "$as_me:${as_lineno-$LINENO}: checking if openssl supports SHA2 and ECDSA with EVP" >&5
 $as_echo_n "checking if openssl supports SHA2 and ECDSA with EVP... " >&6; }
-	      if grep OPENSSL_VERSION_TEXT $ssldir/include/openssl/opensslv.h | grep "OpenSSL" >/dev/null; then
-		if grep OPENSSL_VERSION_NUMBER $ssldir/include/openssl/opensslv.h | grep 0x0 >/dev/null; then
+	      if grep OPENSSL_VERSION_TEXT $ssldir_include/openssl/opensslv.h | grep "OpenSSL" >/dev/null; then
+		if grep OPENSSL_VERSION_NUMBER $ssldir_include/openssl/opensslv.h | grep 0x0 >/dev/null; then
 		  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
 $as_echo "no" >&6; }
 
