@@ -1282,7 +1282,7 @@ mesh_send_reply(struct mesh_state* m, int rcode, struct reply_info* rep,
 			             ? errinf_to_str_bogus(&m->s) : NULL;
 
 			edns_opt_append_ede(&r->edns, m->s.region,
-					LDNS_EDE_DNSSEC_BOGUS, reason);
+					rep->reason_bogus, reason);
 			free(reason);
 		}
 		error_encode(r_buffer, rcode, &m->s.qinfo, r->qid,

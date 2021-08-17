@@ -169,6 +169,11 @@ struct reply_info {
 	enum sec_status security;
 
 	/**
+	 * EDE (rfc8914) code with reason for DNSSEC bogus status.
+	 */
+	sldns_ede_code reason_bogus;
+
+	/**
 	 * Number of RRsets in each section.
 	 * The answer section. Add up the RRs in every RRset to calculate
 	 * the number of RRs, and the count for the dns packet. 
