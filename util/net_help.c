@@ -881,6 +881,12 @@ log_cert(unsigned level, const char* str, void* cert)
 	BIO_write(bio, &nul, (int)sizeof(nul));
 	len = BIO_get_mem_data(bio, &pp);
 	if(len != 0 && pp) {
+		/* reduce size of cert printout */
+		char* s;
+		while((s=strstr(pp, "  "))!=NULL)
+			memmove(s, s+1, strlen(s+1)+1);
+		while((s=strstr(pp, "\t\t"))!=NULL)
+			memmove(s, s+1, strlen(s+1)+1);
 		verbose(level, "%s: \n%s", str, pp);
 	}
 	BIO_free(bio);
