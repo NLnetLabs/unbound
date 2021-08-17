@@ -2,7 +2,8 @@
 # Copyright 2009, Wouter Wijngaards, NLnet Labs.   
 # BSD licensed.
 #
-# Version 42
+# Version 43
+# 2021-08-17 fix sed script in ssldir split handling.
 # 2021-08-17 fix for openssl to detect split version, with ssldir_include
 # 	     and ssldir_lib output directories.
 # 2021-07-30 fix for openssl use of lib64 directory.
@@ -660,11 +661,11 @@ AC_DEFUN([ACX_SSL_CHECKS], [
 			withval=""
 			ssldir_include="$ssldir"
 			dnl find the libdir
-			ssldir_lib=`echo $ssldir | sed -e '/include/lib/'`
+			ssldir_lib=`echo $ssldir | sed -e 's/include/lib/'`
 			if test -f "$ssldir_lib/libssl.a" -o -f "$ssldir_lib/libssl.so"; then
 				: # found here
 			else
-				ssldir_lib=`echo $ssldir | sed -e '/include/lib64/'`
+				ssldir_lib=`echo $ssldir | sed -e 's/include/lib64/'`
 				if test -f "$ssldir_lib/libssl.a" -o -f "$ssldir_lib/libssl.so"; then
 					: # found here
 				else

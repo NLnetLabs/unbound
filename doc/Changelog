@@ -2,6 +2,7 @@
 	- Fix that --with-ssl can use "/usr/include/openssl11" to pass the
 	  location of a different openssl version.
 	- Fix #527: not sending quad9 cert to syslog (and may be more).
+	- Fix sed script in ssldir split handling.
 
 16 August 2021: George
 	- Merge PR #528 from fobser: Make sldns_str2wire_svcparam_buf()
