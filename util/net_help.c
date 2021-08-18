@@ -881,6 +881,12 @@ log_cert(unsigned level, const char* str, void* cert)
 	BIO_write(bio, &nul, (int)sizeof(nul));
 	len = BIO_get_mem_data(bio, &pp);
 	if(len != 0 && pp) {
+		/* reduce size of cert printout */
+		char* s;
+		while((s=strstr(pp, "  "))!=NULL)
+			memmove(s, s+1, strlen(s+1)+1);
+		while((s=strstr(pp, "\t\t"))!=NULL)
+			memmove(s, s+1, strlen(s+1)+1);
 		verbose(level, "%s: \n%s", str, pp);
 	}
 	BIO_free(bio);
@@ -945,9 +951,12 @@ listen_sslctx_setup(void* ctxt)
 	}
 #endif
 #if defined(SHA256_DIGEST_LENGTH) && defined(USE_ECDSA)
+	/* if we detect system-wide crypto policies, use those */
+	if (access( "/etc/crypto-policies/config", F_OK ) != 0 ) {
 	/* if we have sha256, set the cipher list to have no known vulns */
-	if(!SSL_CTX_set_cipher_list(ctx, "TLS13-CHACHA20-POLY1305-SHA256:TLS13-AES-256-GCM-SHA384:TLS13-AES-128-GCM-SHA256:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256"))
-		log_crypto_err("could not set cipher list with SSL_CTX_set_cipher_list");
+		if(!SSL_CTX_set_cipher_list(ctx, "TLS13-CHACHA20-POLY1305-SHA256:TLS13-AES-256-GCM-SHA384:TLS13-AES-128-GCM-SHA256:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256"))
+			log_crypto_err("could not set cipher list with SSL_CTX_set_cipher_list");
+	}
 #endif
 
 	if((SSL_CTX_set_options(ctx, SSL_OP_CIPHER_SERVER_PREFERENCE) &

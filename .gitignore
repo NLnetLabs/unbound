@@ -37,6 +37,7 @@
 /perf
 /petal
 /pktview
+/readzone
 /streamtcp
 /unbound-dnstap-socket
 /testbound

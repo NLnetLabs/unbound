@@ -1,5 +1,47 @@
+17 August 2021: Wouter
+	- Fix that --with-ssl can use "/usr/include/openssl11" to pass the
+	  location of a different openssl version.
+	- Fix #527: not sending quad9 cert to syslog (and may be more).
+	- Fix sed script in ssldir split handling.
+
+16 August 2021: George
+	- Merge PR #528 from fobser: Make sldns_str2wire_svcparam_buf()
+	  static.
+
+16 August 2021: Wouter
+	- Fix to support harden-algo-downgrade for ZONEMD dnssec checks.
+
+13 August 2021: Wouter
+	- Support using system-wide crypto policies.
+	- Fix for #431: Squelch permission denied errors for udp connect,
+	  and udp send, they are visible at higher verbosity settings.
+	- Fix zonemd verification of key that is not in DNS but in the zone
+	  and needs a chain of trust.
+	- zonemd, fix order of bogus printout string manipulation.
+
+12 August 2021: George
+	- Merge PR #514, from ziollek: Docker environment for run tests.
+	- For #514: generate configure.
+
+12 August 2021: Wouter
+	- And 1.13.2rc1 became the 1.13.2 with the fix for the python module
+	  build. The current code repository continues with version 1.13.3.
+	- Add test tool readzone to .gitignore.
+	- Merge #521: Update mini_event.c.
+	- Merge #523: fix: free() call more than once with the same pointer.
+	- Merge #519: Support for selective enabling tcp-upstream for
+	  stub/forward zones.
+	- For #519: note stub-tcp-upstream and forward-tcp-upstream in
+	  the example configuration file.
+	- For #519: yacc and lex. And fix python bindings, and test program
+	  unbound-dnstap-socket.
+	- For #519: fix comments for doxygen.
+	- Fix to print error from unbound-anchor for writing to the key
+	  file, also when not verbose.
+
 5 August 2021: Wouter
 	- Tag for 1.13.2rc1 release.
+	- Fix #520: Unbound 1.13.2rc1 fails to build python module.
 
 4 August 2021: George
 	- Merge PR #415 from sibeream: Use

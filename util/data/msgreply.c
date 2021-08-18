@@ -521,7 +521,6 @@ int reply_info_parse(sldns_buffer* pkt, struct alloc_cache* alloc,
 	/* this also performs dname decompression */
 	if(!parse_create_msg(pkt, msg, alloc, qinf, rep, NULL)) {
 		query_info_clear(qinf);
-		reply_info_parsedelete(*rep, alloc);
 		*rep = NULL;
 		return LDNS_RCODE_SERVFAIL;
 	}

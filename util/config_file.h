@@ -697,6 +697,8 @@ struct config_stub {
 	int isprime;
 	/** if forward-first is set (failover to without if fails) */
 	int isfirst;
+	/** use tcp for queries to this stub */
+	int tcp_upstream;
 	/** use SSL for queries to this stub */
 	int ssl_upstream;
 	/*** no cache */

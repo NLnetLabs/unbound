@@ -11,14 +11,14 @@ sinclude(dnscrypt/dnscrypt.m4)
 # must be numbers. ac_defun because of later processing
 m4_define([VERSION_MAJOR],[1])
 m4_define([VERSION_MINOR],[13])
-m4_define([VERSION_MICRO],[2])
+m4_define([VERSION_MICRO],[3])
 AC_INIT([unbound],m4_defn([VERSION_MAJOR]).m4_defn([VERSION_MINOR]).m4_defn([VERSION_MICRO]),[unbound-bugs@nlnetlabs.nl or https://github.com/NLnetLabs/unbound/issues],[unbound])
 AC_SUBST(UNBOUND_VERSION_MAJOR, [VERSION_MAJOR])
 AC_SUBST(UNBOUND_VERSION_MINOR, [VERSION_MINOR])
 AC_SUBST(UNBOUND_VERSION_MICRO, [VERSION_MICRO])
 
 LIBUNBOUND_CURRENT=9
-LIBUNBOUND_REVISION=13
+LIBUNBOUND_REVISION=14
 LIBUNBOUND_AGE=1
 # 1.0.0 had 0:12:0
 # 1.0.1 had 0:13:0
@@ -99,6 +99,7 @@ LIBUNBOUND_AGE=1
 # 1.13.0 had 9:11:1
 # 1.13.1 had 9:12:1
 # 1.13.2 had 9:13:1
+# 1.13.3 had 9:14:1
 
 #   Current  -- the number of the binary API that we're implementing
 #   Revision -- which iteration of the implementation of the binary
@@ -776,6 +777,12 @@ if test "`uname`" = "NetBSD"; then
 	NETBSD_LINTFLAGS='"-D__RENAME(x)=" -D_NETINET_IN_H_'
 	AC_SUBST(NETBSD_LINTFLAGS)
 fi
+
+if test "`uname -o`" = "GNU/Linux"; then
+	# splint cannot parse modern c99 header files
+	GCC_DOCKER_LINTFLAGS='-syntax'
+	AC_SUBST(GCC_DOCKER_LINTFLAGS)
+fi
 CONFIG_DATE=`date +%Y%m%d`
 AC_SUBST(CONFIG_DATE)
 
@@ -850,7 +857,7 @@ AC_LINK_IFELSE([AC_LANG_PROGRAM([[]], [[
 ])
 
 AC_MSG_CHECKING([for LibreSSL])
-if grep VERSION_TEXT $ssldir/include/openssl/opensslv.h | grep "LibreSSL" >/dev/null; then
+if grep VERSION_TEXT $ssldir_include/openssl/opensslv.h | grep "LibreSSL" >/dev/null; then
 	AC_MSG_RESULT([yes])
 	AC_DEFINE([HAVE_LIBRESSL], [1], [Define if we have LibreSSL])
 	# libressl provides these compat functions, but they may also be
@@ -980,7 +987,7 @@ AC_MSG_CHECKING([if GOST works])
 if test c${cross_compiling} = cno; then
 BAKCFLAGS="$CFLAGS"
 if test -n "$ssldir"; then
-	CFLAGS="$CFLAGS -Wl,-rpath,$ssldir/lib"
+	CFLAGS="$CFLAGS -Wl,-rpath,$ssldir_lib"
 fi
 AC_RUN_IFELSE([AC_LANG_SOURCE([[
 #include <string.h>
@@ -1103,8 +1110,8 @@ case "$enable_ecdsa" in
 	      ])
 	      # see if OPENSSL 1.0.0 or later (has EVP MD and Verify independency)
 	      AC_MSG_CHECKING([if openssl supports SHA2 and ECDSA with EVP])
-	      if grep OPENSSL_VERSION_TEXT $ssldir/include/openssl/opensslv.h | grep "OpenSSL" >/dev/null; then
-		if grep OPENSSL_VERSION_NUMBER $ssldir/include/openssl/opensslv.h | grep 0x0 >/dev/null; then
+	      if grep OPENSSL_VERSION_TEXT $ssldir_include/openssl/opensslv.h | grep "OpenSSL" >/dev/null; then
+		if grep OPENSSL_VERSION_NUMBER $ssldir_include/openssl/opensslv.h | grep 0x0 >/dev/null; then
 		  AC_MSG_RESULT([no])
 		  AC_DEFINE_UNQUOTED([USE_ECDSA_EVP_WORKAROUND], [1], [Define this to enable an EVP workaround for older openssl])
 		else

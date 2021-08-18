@@ -1565,7 +1565,7 @@ sldns_str2wire_svcparam_value(const char *key, size_t key_len,
 	return LDNS_WIREPARSE_ERR_GENERAL;
 }
 
-int sldns_str2wire_svcparam_buf(const char* str, uint8_t* rd, size_t* rd_len)
+static int sldns_str2wire_svcparam_buf(const char* str, uint8_t* rd, size_t* rd_len)
 {
 	const char* eq_pos;
 	char unescaped_val[LDNS_MAX_RDFLEN];
