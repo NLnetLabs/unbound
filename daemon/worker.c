@@ -1408,16 +1408,9 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 	 * ACLs allow the snooping. */
 	if(!(LDNS_RD_WIRE(sldns_buffer_begin(c->buffer))) &&
 		acl != acl_allow_snoop ) {
-
-
-
-		// @TODO ADD Error Code 20 - Not Authoritative
-		// @TODO add EDNS record
-		
+		edns.opt_list = NULL;
 		EDNS_OPT_APPEND_EDE(&edns, worker->scratchpad,
-			LDNS_EDE_NOT_AUTHORITATIVE, "Not Authoritative");
-
-
+			LDNS_EDE_NOT_AUTHORITATIVE, "");
 		error_encode(c->buffer, LDNS_RCODE_REFUSED, &qinfo,
 			*(uint16_t*)(void *)sldns_buffer_begin(c->buffer),
 			sldns_buffer_read_u16_at(c->buffer, 2), &edns);
