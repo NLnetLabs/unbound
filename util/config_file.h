@@ -461,6 +461,16 @@ struct config_file {
 	struct config_str3list* acl_tag_datas;
 	/** list of aclname, view*/
 	struct config_str2list* acl_view;
+	/** list of interface action entries, linked list */
+	struct config_str2list* interface_actions;
+	/** list of interface, tagbitlist */
+	struct config_strbytelist* interface_tags;
+	/** list of interface, tagname, localzonetype */
+	struct config_str3list* interface_tag_actions;
+	/** list of interface, tagname, redirectdata */
+	struct config_str3list* interface_tag_datas;
+	/** list of interface, view*/
+	struct config_str2list* interface_view;
 	/** list of IP-netblock, tagbitlist */
 	struct config_strbytelist* respip_tags;
 	/** list of response-driven access control entries, linked list */

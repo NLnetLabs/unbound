@@ -118,7 +118,7 @@ The number of threads to create to serve clients. Use 1 for no threading.
 .B port: \fI<port number>
 The port number, default 53, on which the server responds to queries.
 .TP
-.B interface: \fI<ip address[@port]>
+.B interface: \fI<ip address or interface name [@port]>
 Interface to use to connect to the network. This interface is listened to
 for queries from clients, and answers to clients are given from it.
 Can be given multiple times to work on several interfaces. If none are
@@ -129,7 +129,7 @@ A port number can be specified with @port (without spaces between
 interface and port number), if not specified the default port (from
 \fBport\fR) is used.
 .TP
-.B ip\-address: \fI<ip address[@port]>
+.B ip\-address: \fI<ip address or interface name [@port]>
 Same as interface: (for ease of compatibility with nsd.conf).
 .TP
 .B interface\-automatic: \fI<yes or no>
@@ -1823,9 +1823,11 @@ section for options.  To setup the correct self\-signed certificates use the
 The option is used to enable remote control, default is "no".
 If turned off, the server does not listen for control commands.
 .TP 5
-.B control\-interface: \fI<ip address or path>
+.B control\-interface: \fI<ip address or interface name or path>
 Give IPv4 or IPv6 addresses or local socket path to listen on for
 control commands.
+If an interface name is used instead of an ip address, the list of ip addresses
+on that interface are used.
 By default localhost (127.0.0.1 and ::1) is listened to.
 Use 0.0.0.0 and ::0 to listen to all interfaces.
 If you change this and permissions have been dropped, you must restart

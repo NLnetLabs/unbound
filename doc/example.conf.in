@@ -17,7 +17,7 @@ server:
 	# whitespace is not necessary, but looks cleaner.
 
 	# verbosity number, 0 is least verbose. 1 is default.
-	verbosity: 1
+	# verbosity: 1
 
 	# print statistics to the log (for every thread) every N seconds.
 	# Set to "" or 0 to disable. Default is disabled.
@@ -50,6 +50,7 @@ server:
 	# interface: 192.0.2.154
 	# interface: 192.0.2.154@5003
 	# interface: 2001:DB8::5
+	# interface: eth0@5003
 
 	# enable this feature to copy the source address of queries to reply.
 	# Socket options are not supported on all platforms. experimental.

@@ -822,7 +822,7 @@ int config_set_option(struct config_file* cfg, const char* opt,
 		 * stub-ssl-upstream, forward-zone, auth-zone
 		 * name, forward-addr, forward-host,
 		 * ratelimit-for-domain, ratelimit-below-domain,
-		 * local-zone-tag, access-control-view,
+		 * local-zone-tag, access-control-view, interface-*,
 		 * send-client-subnet, client-subnet-always-forward,
 		 * max-client-subnet-ipv4, max-client-subnet-ipv6,
 		 * min-client-subnet-ipv4, min-client-subnet-ipv6,
@@ -1252,6 +1252,11 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_LS3(opt, "access-control-tag-action", acl_tag_actions)
 	else O_LS3(opt, "access-control-tag-data", acl_tag_datas)
 	else O_LS2(opt, "access-control-view", acl_view)
+	else O_LS2(opt, "interface-action", interface_actions)
+	else O_LTG(opt, "interface-tag", interface_tags)
+	else O_LS3(opt, "interface-tag-action", interface_tag_actions)
+	else O_LS3(opt, "interface-tag-data", interface_tag_datas)
+	else O_LS2(opt, "interface-view", interface_view)
 	else O_YNO(opt, "pad-responses", pad_responses)
 	else O_DEC(opt, "pad-responses-block-size", pad_responses_block_size)
 	else O_YNO(opt, "pad-queries", pad_queries)
@@ -1607,10 +1612,16 @@ config_delete(struct config_file* cfg)
 	config_deltrplstrlist(cfg->local_zone_overrides);
 	config_del_strarray(cfg->tagname, cfg->num_tags);
 	config_del_strbytelist(cfg->local_zone_tags);
-	config_del_strbytelist(cfg->acl_tags);
 	config_del_strbytelist(cfg->respip_tags);
+	config_deldblstrlist(cfg->acl_view);
+	config_del_strbytelist(cfg->acl_tags);
 	config_deltrplstrlist(cfg->acl_tag_actions);
 	config_deltrplstrlist(cfg->acl_tag_datas);
+	config_deldblstrlist(cfg->interface_actions);
+	config_deldblstrlist(cfg->interface_view);
+	config_del_strbytelist(cfg->interface_tags);
+	config_deltrplstrlist(cfg->interface_tag_actions);
+	config_deltrplstrlist(cfg->interface_tag_datas);
 	config_delstrlist(cfg->control_ifs.first);
 	free(cfg->server_key_file);
 	free(cfg->server_cert_file);

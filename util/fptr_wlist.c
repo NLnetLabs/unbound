@@ -44,6 +44,7 @@
  * boundaries in the program.
  */
 #include "config.h"
+#include "daemon/acl_list.h"
 #include "util/fptr_wlist.h"
 #include "util/mini_event.h"
 #include "services/outside_network.h"
@@ -244,6 +245,7 @@ fptr_whitelist_rbtree_cmp(int (*fptr) (const void *, const void *))
 	else if(fptr == &auth_zone_cmp) return 1;
 	else if(fptr == &auth_data_cmp) return 1;
 	else if(fptr == &auth_xfer_cmp) return 1;
+	else if(fptr == &acl_interface_compare) return 1;
 	return 0;
 }
 
