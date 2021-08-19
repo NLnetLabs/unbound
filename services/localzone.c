@@ -1262,6 +1262,7 @@ local_encode(struct query_info* qinfo, struct module_env* env,
 		repinfo, temp, env->now_tv) || !reply_info_answer_encode(qinfo, &rep,
 		*(uint16_t*)sldns_buffer_begin(buf), sldns_buffer_read_u16_at(buf, 2),
 		buf, 0, 0, temp, udpsize, edns, (int)(edns->bits&EDNS_DO), 0)) {
+		/* @TODO: Do we need EDE here? Which one? */
 		error_encode(buf, (LDNS_RCODE_SERVFAIL|BIT_AA), qinfo,
 			*(uint16_t*)sldns_buffer_begin(buf),
 			sldns_buffer_read_u16_at(buf, 2), edns);
@@ -1283,6 +1284,28 @@ local_error_encode(struct query_info* qinfo, struct module_env* env,
 	if(!inplace_cb_reply_local_call(env, qinfo, NULL, NULL,
 		rcode, edns, repinfo, temp, env->now_tv))
 		edns->opt_list = NULL;
+	/* Errors with EDE are generated with local_error_encode_ede,
+	 * so no EDE here. */
+	error_encode(buf, r, qinfo, *(uint16_t*)sldns_buffer_begin(buf),
+		sldns_buffer_read_u16_at(buf, 2), edns);
+}
+
+/** encode local error answer */
+static void
+local_error_encode_ede(struct query_info* qinfo, struct module_env* env,
+	struct edns_data* edns, struct comm_reply* repinfo, sldns_buffer* buf,
+	struct regional* temp, int rcode, int r, sldns_ede_code ede_code,
+	const char* ede_txt)
+{
+	edns->edns_version = EDNS_ADVERTISED_VERSION;
+	edns->udp_size = EDNS_ADVERTISED_SIZE;
+	edns->ext_rcode = 0;
+	edns->bits &= EDNS_DO;
+
+	if(!inplace_cb_reply_local_call(env, qinfo, NULL, NULL,
+		rcode, edns, repinfo, temp, env->now_tv))
+		edns->opt_list = NULL;
+	edns_opt_append_ede(edns, temp, ede_code, ede_txt);
 	error_encode(buf, r, qinfo, *(uint16_t*)sldns_buffer_begin(buf),
 		sldns_buffer_read_u16_at(buf, 2), edns);
 }
@@ -1478,9 +1501,11 @@ local_data_answer(struct local_zone* z, struct module_env* env,
 
 			if(newtargetlen > LDNS_MAX_DOMAINLEN) {
 				qinfo->local_alias = NULL;
-				local_error_encode(qinfo, env, edns, repinfo,
+				local_error_encode_ede(qinfo, env, edns,repinfo,
 					buf, temp, LDNS_RCODE_YXDOMAIN,
-					(LDNS_RCODE_YXDOMAIN|BIT_AA));
+					(LDNS_RCODE_YXDOMAIN|BIT_AA),
+					LDNS_EDE_OTHER,
+					"DNAME expansion became too large");
 				return 1;
 			}
 			memset(&qinfo->local_alias->rrset->entry, 0,
@@ -1573,8 +1598,9 @@ local_zones_zone_answer(struct local_zone* z, struct module_env* env,
 		return 1;
 	} else if(lz_type == local_zone_refuse
 		|| lz_type == local_zone_always_refuse) {
-		local_error_encode(qinfo, env, edns, repinfo, buf, temp,
-			LDNS_RCODE_REFUSED, (LDNS_RCODE_REFUSED|BIT_AA));
+		local_error_encode_ede(qinfo, env, edns, repinfo, buf, temp,
+			LDNS_RCODE_REFUSED, (LDNS_RCODE_REFUSED|BIT_AA),
+			LDNS_EDE_BLOCKED, "");
 		return 1;
 	} else if(lz_type == local_zone_static ||
 		lz_type == local_zone_redirect ||
@@ -1595,6 +1621,7 @@ local_zones_zone_answer(struct local_zone* z, struct module_env* env,
 		if(z->soa && z->soa_negative)
 			return local_encode(qinfo, env, edns, repinfo, buf, temp,
 				z->soa_negative, 0, rcode);
+		/* NODATA or NXDOMAIN: No EDE needed */
 		local_error_encode(qinfo, env, edns, repinfo, buf, temp, rcode,
 			(rcode|BIT_AA));
 		return 1;
@@ -1637,6 +1664,7 @@ local_zones_zone_answer(struct local_zone* z, struct module_env* env,
 			return local_encode(qinfo, env, edns, repinfo, buf, temp,
 				&lrr, 1, LDNS_RCODE_NOERROR);
 		} else {
+			/* NODATA: No EDE needed */
 			local_error_encode(qinfo, env, edns, repinfo, buf,
 				temp, LDNS_RCODE_NOERROR,
 				(LDNS_RCODE_NOERROR|BIT_AA));
@@ -1652,6 +1680,7 @@ local_zones_zone_answer(struct local_zone* z, struct module_env* env,
 		if(z->soa && z->soa_negative)
 			return local_encode(qinfo, env, edns, repinfo, buf, temp,
 				z->soa_negative, 0, rcode);
+		/* NODATA: No EDE needed */
 		local_error_encode(qinfo, env, edns, repinfo, buf, temp, rcode,
 			(rcode|BIT_AA));
 		return 1;
