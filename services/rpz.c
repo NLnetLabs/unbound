@@ -1042,6 +1042,11 @@ rpz_apply_qname_trigger(struct auth_zones* az, struct module_env* env,
 	if(lzt == local_zone_redirect && local_data_answer(z, env, qinfo,
 		edns, repinfo, buf, temp, dname_count_labels(qinfo->qname),
 		&ld, lzt, -1, NULL, 0, NULL, 0)) {
+		if (!local_data_answer(z, env, qinfo,
+			edns, repinfo, buf, temp, dname_count_labels(qinfo->qname),
+			&ld, lzt, -1, NULL, 0, NULL, 0)) /* blocked? */
+			EDNS_OPT_APPEND_EDE(edns, temp,
+				LDNS_EDE_BLOCKED, "");
 		if(r->log)
 			log_rpz_apply(z->name,
 				localzone_type_to_rpz_action(lzt), qinfo,
