@@ -371,6 +371,9 @@ server:
 	# enable to not answer trustanchor.unbound queries.
 	# hide-trustanchor: no
 
+	# enable to not set the User-Agent HTTP header.
+	# hide-http-user-agent: no
+
 	# the identity to report. Leave "" or default to return hostname.
 	# identity: ""
 
@@ -379,6 +382,10 @@ server:
 
 	# NSID identity (hex string, or "ascii_somestring"). default disabled.
 	# nsid: "aabbccdd"
+
+	# User-Agent HTTP header to use. Leave "" or default to use package name
+	# and version.
+	# http-user-agent: ""
 
 	# the target fetch policy.
 	# series of integers describing the policy per dependency depth.
@@ -980,6 +987,7 @@ remote-control:
 #	stub-addr: 192.0.2.68
 #	stub-prime: no
 #	stub-first: no
+#	stub-tcp-upstream: no
 #	stub-tls-upstream: no
 #	stub-no-cache: no
 # stub-zone:
@@ -997,6 +1005,7 @@ remote-control:
 # 	forward-addr: 192.0.2.68
 # 	forward-addr: 192.0.2.73@5355  # forward to port 5355.
 # 	forward-first: no
+# 	forward-tcp-upstream: no
 # 	forward-tls-upstream: no
 #	forward-no-cache: no
 # forward-zone:

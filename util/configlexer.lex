@@ -331,6 +331,7 @@ stub-first{COLON}		{ YDVAR(1, VAR_STUB_FIRST) }
 stub-no-cache{COLON}		{ YDVAR(1, VAR_STUB_NO_CACHE) }
 stub-ssl-upstream{COLON}	{ YDVAR(1, VAR_STUB_SSL_UPSTREAM) }
 stub-tls-upstream{COLON}	{ YDVAR(1, VAR_STUB_SSL_UPSTREAM) }
+stub-tcp-upstream{COLON}	{ YDVAR(1, VAR_STUB_TCP_UPSTREAM) }
 forward-zone{COLON}		{ YDVAR(0, VAR_FORWARD_ZONE) }
 forward-addr{COLON}		{ YDVAR(1, VAR_FORWARD_ADDR) }
 forward-host{COLON}		{ YDVAR(1, VAR_FORWARD_HOST) }
@@ -338,6 +339,7 @@ forward-first{COLON}		{ YDVAR(1, VAR_FORWARD_FIRST) }
 forward-no-cache{COLON}		{ YDVAR(1, VAR_FORWARD_NO_CACHE) }
 forward-ssl-upstream{COLON}	{ YDVAR(1, VAR_FORWARD_SSL_UPSTREAM) }
 forward-tls-upstream{COLON}	{ YDVAR(1, VAR_FORWARD_SSL_UPSTREAM) }
+forward-tcp-upstream{COLON}	{ YDVAR(1, VAR_FORWARD_TCP_UPSTREAM) }
 auth-zone{COLON}		{ YDVAR(0, VAR_AUTH_ZONE) }
 rpz{COLON}			{ YDVAR(0, VAR_RPZ) }
 tags{COLON}			{ YDVAR(1, VAR_TAGS) }
@@ -371,8 +373,10 @@ max-ecs-tree-size-ipv6{COLON}	{ YDVAR(1, VAR_MAX_ECS_TREE_SIZE_IPV6) }
 hide-identity{COLON}		{ YDVAR(1, VAR_HIDE_IDENTITY) }
 hide-version{COLON}		{ YDVAR(1, VAR_HIDE_VERSION) }
 hide-trustanchor{COLON}		{ YDVAR(1, VAR_HIDE_TRUSTANCHOR) }
+hide-http-user-agent{COLON}		{ YDVAR(1, VAR_HIDE_HTTP_USER_AGENT) }
 identity{COLON}			{ YDVAR(1, VAR_IDENTITY) }
 version{COLON}			{ YDVAR(1, VAR_VERSION) }
+http-user-agent{COLON}			{ YDVAR(1, VAR_HTTP_USER_AGENT) }
 module-config{COLON}     	{ YDVAR(1, VAR_MODULE_CONF) }
 dlv-anchor{COLON}		{ YDVAR(1, VAR_DLV_ANCHOR) }
 dlv-anchor-file{COLON}		{ YDVAR(1, VAR_DLV_ANCHOR_FILE) }

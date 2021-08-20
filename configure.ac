@@ -11,14 +11,14 @@ sinclude(dnscrypt/dnscrypt.m4)
 # must be numbers. ac_defun because of later processing
 m4_define([VERSION_MAJOR],[1])
 m4_define([VERSION_MINOR],[13])
-m4_define([VERSION_MICRO],[2])
+m4_define([VERSION_MICRO],[3])
 AC_INIT([unbound],m4_defn([VERSION_MAJOR]).m4_defn([VERSION_MINOR]).m4_defn([VERSION_MICRO]),[unbound-bugs@nlnetlabs.nl or https://github.com/NLnetLabs/unbound/issues],[unbound])
 AC_SUBST(UNBOUND_VERSION_MAJOR, [VERSION_MAJOR])
 AC_SUBST(UNBOUND_VERSION_MINOR, [VERSION_MINOR])
 AC_SUBST(UNBOUND_VERSION_MICRO, [VERSION_MICRO])
 
 LIBUNBOUND_CURRENT=9
-LIBUNBOUND_REVISION=13
+LIBUNBOUND_REVISION=14
 LIBUNBOUND_AGE=1
 # 1.0.0 had 0:12:0
 # 1.0.1 had 0:13:0
@@ -99,6 +99,7 @@ LIBUNBOUND_AGE=1
 # 1.13.0 had 9:11:1
 # 1.13.1 had 9:12:1
 # 1.13.2 had 9:13:1
+# 1.13.3 had 9:14:1
 
 #   Current  -- the number of the binary API that we're implementing
 #   Revision -- which iteration of the implementation of the binary
@@ -385,7 +386,10 @@ AC_CHECK_PROG(doxygen, doxygen, doxygen)
 AC_CHECK_TOOL(STRIP, strip)
 ACX_LIBTOOL_C_ONLY
 
+# pkg-config is only needed for these options, do not require it otherwise
+if test "$enable_systemd" = "yes" -o "$with_pyunbound" = "yes" -o "$with_pythonmod" = "yes"; then
 PKG_PROG_PKG_CONFIG
+fi
 
 # Checks for header files.
 AC_CHECK_HEADERS([stdarg.h stdbool.h netinet/in.h netinet/tcp.h sys/param.h sys/select.h sys/socket.h sys/un.h sys/uio.h sys/resource.h arpa/inet.h syslog.h netdb.h sys/wait.h pwd.h glob.h grp.h login_cap.h winsock2.h ws2tcpip.h endian.h sys/endian.h libkern/OSByteOrder.h sys/ipc.h sys/shm.h ifaddrs.h],,, [AC_INCLUDES_DEFAULT])
@@ -490,7 +494,10 @@ ACX_MKDIR_ONE_ARG
 AC_CHECK_FUNCS([strptime],[AC_CHECK_STRPTIME_WORKS],[AC_LIBOBJ([strptime])])
 
 # check if we can use SO_REUSEPORT
-if echo "$host" | $GREP -i -e linux -e dragonfly >/dev/null; then
+reuseport_default=0
+if echo "$host" | $GREP -i -e linux >/dev/null; then reuseport_default=1; fi
+if echo "$host" | $GREP -i -e dragonfly >/dev/null; then reuseport_default=1; fi
+if test "$reuseport_default" = 1; then
 	AC_DEFINE(REUSEPORT_DEFAULT, 1, [if REUSEPORT is enabled by default])
 else
 	AC_DEFINE(REUSEPORT_DEFAULT, 0, [if REUSEPORT is enabled by default])
@@ -770,6 +777,12 @@ if test "`uname`" = "NetBSD"; then
 	NETBSD_LINTFLAGS='"-D__RENAME(x)=" -D_NETINET_IN_H_'
 	AC_SUBST(NETBSD_LINTFLAGS)
 fi
+
+if test "`uname -o`" = "GNU/Linux"; then
+	# splint cannot parse modern c99 header files
+	GCC_DOCKER_LINTFLAGS='-syntax'
+	AC_SUBST(GCC_DOCKER_LINTFLAGS)
+fi
 CONFIG_DATE=`date +%Y%m%d`
 AC_SUBST(CONFIG_DATE)
 
@@ -844,7 +857,7 @@ AC_LINK_IFELSE([AC_LANG_PROGRAM([[]], [[
 ])
 
 AC_MSG_CHECKING([for LibreSSL])
-if grep VERSION_TEXT $ssldir/include/openssl/opensslv.h | grep "LibreSSL" >/dev/null; then
+if grep VERSION_TEXT $ssldir_include/openssl/opensslv.h | grep "LibreSSL" >/dev/null; then
 	AC_MSG_RESULT([yes])
 	AC_DEFINE([HAVE_LIBRESSL], [1], [Define if we have LibreSSL])
 	# libressl provides these compat functions, but they may also be
@@ -853,13 +866,13 @@ if grep VERSION_TEXT $ssldir/include/openssl/opensslv.h | grep "LibreSSL" >/dev/
 else
 	AC_MSG_RESULT([no])
 fi
-AC_CHECK_HEADERS([openssl/conf.h openssl/engine.h openssl/bn.h openssl/dh.h openssl/dsa.h openssl/rsa.h openssl/core_names.h],,, [AC_INCLUDES_DEFAULT])
-AC_CHECK_FUNCS([OPENSSL_config EVP_sha1 EVP_sha256 EVP_sha512 FIPS_mode EVP_MD_CTX_new OpenSSL_add_all_digests OPENSSL_init_crypto EVP_cleanup ENGINE_cleanup ERR_load_crypto_strings CRYPTO_cleanup_all_ex_data ERR_free_strings RAND_cleanup DSA_SIG_set0 EVP_dss1 EVP_DigestVerify EVP_aes_256_cbc EVP_EncryptInit_ex HMAC_Init_ex CRYPTO_THREADID_set_callback EVP_MAC_CTX_set_params])
+AC_CHECK_HEADERS([openssl/conf.h openssl/engine.h openssl/bn.h openssl/dh.h openssl/dsa.h openssl/rsa.h openssl/core_names.h openssl/param_build.h],,, [AC_INCLUDES_DEFAULT])
+AC_CHECK_FUNCS([OPENSSL_config EVP_sha1 EVP_sha256 EVP_sha512 FIPS_mode EVP_MD_CTX_new OpenSSL_add_all_digests OPENSSL_init_crypto EVP_cleanup ENGINE_cleanup ERR_load_crypto_strings CRYPTO_cleanup_all_ex_data ERR_free_strings RAND_cleanup DSA_SIG_set0 EVP_dss1 EVP_DigestVerify EVP_aes_256_cbc EVP_EncryptInit_ex HMAC_Init_ex CRYPTO_THREADID_set_callback EVP_MAC_CTX_set_params OSSL_PARAM_BLD_new])
 
 # these check_funcs need -lssl
 BAKLIBS="$LIBS"
 LIBS="-lssl $LIBS"
-AC_CHECK_FUNCS([OPENSSL_init_ssl SSL_CTX_set_security_level SSL_set1_host SSL_get0_peername X509_VERIFY_PARAM_set1_host SSL_CTX_set_ciphersuites SSL_CTX_set_tlsext_ticket_key_evp_cb SSL_CTX_set_alpn_select_cb SSL_get0_alpn_selected SSL_CTX_set_alpn_protos])
+AC_CHECK_FUNCS([OPENSSL_init_ssl SSL_CTX_set_security_level SSL_set1_host SSL_get0_peername X509_VERIFY_PARAM_set1_host SSL_CTX_set_ciphersuites SSL_CTX_set_tlsext_ticket_key_evp_cb SSL_CTX_set_alpn_select_cb SSL_get0_alpn_selected SSL_CTX_set_alpn_protos SSL_get1_peer_certificate])
 LIBS="$BAKLIBS"
 
 AC_CHECK_DECLS([SSL_COMP_get_compression_methods,sk_SSL_COMP_pop_free,SSL_CTX_set_ecdh_auto], [], [], [
@@ -974,7 +987,7 @@ AC_MSG_CHECKING([if GOST works])
 if test c${cross_compiling} = cno; then
 BAKCFLAGS="$CFLAGS"
 if test -n "$ssldir"; then
-	CFLAGS="$CFLAGS -Wl,-rpath,$ssldir/lib"
+	CFLAGS="$CFLAGS -Wl,-rpath,$ssldir_lib"
 fi
 AC_RUN_IFELSE([AC_LANG_SOURCE([[
 #include <string.h>
@@ -1097,8 +1110,8 @@ case "$enable_ecdsa" in
 	      ])
 	      # see if OPENSSL 1.0.0 or later (has EVP MD and Verify independency)
 	      AC_MSG_CHECKING([if openssl supports SHA2 and ECDSA with EVP])
-	      if grep OPENSSL_VERSION_TEXT $ssldir/include/openssl/opensslv.h | grep "OpenSSL" >/dev/null; then
-		if grep OPENSSL_VERSION_NUMBER $ssldir/include/openssl/opensslv.h | grep 0x0 >/dev/null; then
+	      if grep OPENSSL_VERSION_TEXT $ssldir_include/openssl/opensslv.h | grep "OpenSSL" >/dev/null; then
+		if grep OPENSSL_VERSION_NUMBER $ssldir_include/openssl/opensslv.h | grep 0x0 >/dev/null; then
 		  AC_MSG_RESULT([no])
 		  AC_DEFINE_UNQUOTED([USE_ECDSA_EVP_WORKAROUND], [1], [Define this to enable an EVP workaround for older openssl])
 		else
@@ -1855,6 +1868,17 @@ case "$enable_explicit_port_randomisation" in
 	yes|*)
 		;;
 esac
+
+if echo "$host" | $GREP -i -e linux >/dev/null; then
+	AC_ARG_ENABLE(linux-ip-local-port-range, AC_HELP_STRING([--enable-linux-ip-local-port-range], [Define this to enable use of /proc/sys/net/ipv4/ip_local_port_range as a default outgoing port range. This is only for the libunbound on Linux and does not affect unbound resolving daemon itself. This may severely limit the number of available outgoing ports and thus decrease randomness. Define this only when the target system restricts (e.g. some of SELinux enabled distributions) the use of non-ephemeral ports.]))
+	case "$enable_linux_ip_local_port_range" in
+		yes)
+			AC_DEFINE([USE_LINUX_IP_LOCAL_PORT_RANGE], [1], [Define this to enable use of /proc/sys/net/ipv4/ip_local_port_range as a default outgoing port range. This is only for the libunbound on Linux and does not affect unbound resolving daemon itself. This may severely limit the number of available outgoing ports and thus decrease randomness. Define this only when the target system restricts (e.g. some of SELinux enabled distributions) the use of non-ephemeral ports.])
+			;;
+		no|*)
+			;;
+	esac
+fi
 
 
 AC_MSG_CHECKING([if ${MAKE:-make} supports $< with implicit rule in scope])

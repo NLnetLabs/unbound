@@ -485,7 +485,9 @@ advertised timeout.
 .TP
 .B tcp\-upstream: \fI<yes or no>
 Enable or disable whether the upstream queries use TCP only for transport.
-Default is no.  Useful in tunneling scenarios.
+Default is no.  Useful in tunneling scenarios. If set to no you can specify
+TCP transport only for selected forward or stub zones using forward-tcp-upstream
+or stub-tcp-upstream respectively.
 .TP
 .B udp\-upstream\-without\-downstream: \fI<yes or no>
 Enable udp upstream even if do-udp is no.  Default is no, and this does not
@@ -851,6 +853,17 @@ If enabled version.server and version.bind queries are refused.
 .B version: \fI<string>
 Set the version to report. If set to "", the default, then the package
 version is returned.
+.TP
+.B hide\-http\-user\-agent: \fI<yes or no>
+If enabled the HTTP header User-Agent is not set. Use with caution as some
+webserver configurations may reject HTTP requests lacking this header.
+If needed, it is better to explicitly set the
+.B http\-user\-agent
+below.
+.TP
+.B http\-user\-agent: \fI<string>
+Set the HTTP User-Agent header for outgoing HTTP requests. If set to "",
+the default, then the package name and version are used.
 .TP
 .B nsid:\fR <string>
 Add the specified nsid to the EDNS section of the answer when queried
@@ -1842,6 +1855,10 @@ Default is no.
 .B stub\-ssl\-upstream: \fI<yes or no>
 Alternate syntax for \fBstub\-tls\-upstream\fR.
 .TP
+.B stub\-tcp\-upstream: \fI<yes or no>
+If it is set to "yes" then upstream queries use TCP only for transport regardless of global flag tcp-upstream.
+Default is no.
+.TP
 .B stub\-no\-cache: \fI<yes or no>
 Default is no.  If enabled, data inside the stub is not cached.  This is
 useful when you want immediate changes to be visible.
@@ -1893,6 +1910,10 @@ load CA certs, otherwise the connections cannot be authenticated.
 .TP
 .B forward\-ssl\-upstream: \fI<yes or no>
 Alternate syntax for \fBforward\-tls\-upstream\fR.
+.TP
+.B forward\-tcp\-upstream: \fI<yes or no>
+If it is set to "yes" then upstream queries use TCP only for transport regardless of global flag tcp-upstream.
+Default is no.
 .TP
 .B forward\-no\-cache: \fI<yes or no>
 Default is no.  If enabled, data inside the forward is not cached.  This is

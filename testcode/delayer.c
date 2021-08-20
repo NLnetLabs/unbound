@@ -350,7 +350,8 @@ static RETSIGTYPE delayer_sigh(int sig)
 	char str[] = "exit on signal   \n";
 	str[15] = '0' + (sig/10)%10;
 	str[16] = '0' + sig%10;
-	write(STDOUT_FILENO, str, strlen(str));
+	/* simple cast to void will not silence Wunused-result */
+	(void)!write(STDOUT_FILENO, str, strlen(str));
 	do_quit = 1;
 }
 

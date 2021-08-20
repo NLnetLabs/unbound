@@ -61,7 +61,7 @@ struct rbtree_type;
  * its subqueries */
 #define MAX_TARGET_NX		5
 /** max number of query restarts. Determines max number of CNAME chain. */
-#define MAX_RESTART_COUNT       8
+#define MAX_RESTART_COUNT	11
 /** max number of referrals. Makes sure resolver does not run away */
 #define MAX_REFERRAL_COUNT	130
 /** max number of queries-sent-out.  Make sure large NS set does not loop */

@@ -82,5 +82,7 @@ void ldns_test(void);
 void authzone_test(void);
 /** unit test for zonemd functions */
 void zonemd_test(void);
+/** unit test for tcp_reuse functions */
+void tcpreuse_test(void);
 
 #endif /* TESTCODE_UNITMAIN_H */

@@ -1171,7 +1171,8 @@ static RETSIGTYPE main_sigh(int sig)
 		char str[] = "exit on signal   \n";
 		str[15] = '0' + (sig/10)%10;
 		str[16] = '0' + sig%10;
-		write(STDERR_FILENO, str, strlen(str));
+		/* simple cast to void will not silence Wunused-result */
+		(void)!write(STDERR_FILENO, str, strlen(str));
 	}
 	if(sig_base) {
 		ub_event_base_loopexit(sig_base);
@@ -1414,8 +1415,9 @@ struct outbound_entry* worker_send_query(
 	int ATTR_UNUSED(dnssec), int ATTR_UNUSED(want_dnssec),
 	int ATTR_UNUSED(nocaps), struct sockaddr_storage* ATTR_UNUSED(addr),
 	socklen_t ATTR_UNUSED(addrlen), uint8_t* ATTR_UNUSED(zone),
-	size_t ATTR_UNUSED(zonelen), int ATTR_UNUSED(ssl_upstream),
-	char* ATTR_UNUSED(tls_auth_name), struct module_qstate* ATTR_UNUSED(q))
+	size_t ATTR_UNUSED(zonelen), int ATTR_UNUSED(tcp_upstream),
+	int ATTR_UNUSED(ssl_upstream), char* ATTR_UNUSED(tls_auth_name),
+	struct module_qstate* ATTR_UNUSED(q))
 {
 	log_assert(0);
 	return 0;
@@ -1446,8 +1448,9 @@ struct outbound_entry* libworker_send_query(
 	int ATTR_UNUSED(dnssec), int ATTR_UNUSED(want_dnssec),
 	int ATTR_UNUSED(nocaps), struct sockaddr_storage* ATTR_UNUSED(addr),
 	socklen_t ATTR_UNUSED(addrlen), uint8_t* ATTR_UNUSED(zone),
-	size_t ATTR_UNUSED(zonelen), int ATTR_UNUSED(ssl_upstream),
-	char* ATTR_UNUSED(tls_auth_name), struct module_qstate* ATTR_UNUSED(q))
+	size_t ATTR_UNUSED(zonelen), int ATTR_UNUSED(tcp_upstream),
+	int ATTR_UNUSED(ssl_upstream), char* ATTR_UNUSED(tls_auth_name),
+	struct module_qstate* ATTR_UNUSED(q))
 {
 	log_assert(0);
 	return 0;

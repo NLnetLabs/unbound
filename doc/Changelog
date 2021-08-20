@@ -1,3 +1,152 @@
+20 August 2021: Wouter
+	- Fix #529: Fix: log_assert does nothing if UNBOUND_DEBUG is
+	  undefined.
+	- Fix #531: Fix: passed to proc after free.
+
+17 August 2021: Wouter
+	- Fix that --with-ssl can use "/usr/include/openssl11" to pass the
+	  location of a different openssl version.
+	- Fix #527: not sending quad9 cert to syslog (and may be more).
+	- Fix sed script in ssldir split handling.
+
+16 August 2021: George
+	- Merge PR #528 from fobser: Make sldns_str2wire_svcparam_buf()
+	  static.
+
+16 August 2021: Wouter
+	- Fix to support harden-algo-downgrade for ZONEMD dnssec checks.
+
+13 August 2021: Wouter
+	- Support using system-wide crypto policies.
+	- Fix for #431: Squelch permission denied errors for udp connect,
+	  and udp send, they are visible at higher verbosity settings.
+	- Fix zonemd verification of key that is not in DNS but in the zone
+	  and needs a chain of trust.
+	- zonemd, fix order of bogus printout string manipulation.
+
+12 August 2021: George
+	- Merge PR #514, from ziollek: Docker environment for run tests.
+	- For #514: generate configure.
+
+12 August 2021: Wouter
+	- And 1.13.2rc1 became the 1.13.2 with the fix for the python module
+	  build. The current code repository continues with version 1.13.3.
+	- Add test tool readzone to .gitignore.
+	- Merge #521: Update mini_event.c.
+	- Merge #523: fix: free() call more than once with the same pointer.
+	- Merge #519: Support for selective enabling tcp-upstream for
+	  stub/forward zones.
+	- For #519: note stub-tcp-upstream and forward-tcp-upstream in
+	  the example configuration file.
+	- For #519: yacc and lex. And fix python bindings, and test program
+	  unbound-dnstap-socket.
+	- For #519: fix comments for doxygen.
+	- Fix to print error from unbound-anchor for writing to the key
+	  file, also when not verbose.
+
+5 August 2021: Wouter
+	- Tag for 1.13.2rc1 release.
+	- Fix #520: Unbound 1.13.2rc1 fails to build python module.
+
+4 August 2021: George
+	- Merge PR #415 from sibeream: Use
+	  /proc/sys/net/ipv4/ip_local_port_range to determine available outgoing
+	  ports. (New --enable-linux-ip-local-port-range configuration option)
+	- Bump MAX_RESTART_COUNT to 11 from 8; in relation to #438. This
+	  allows longer CNAME chains in Unbound.
+
+4 August 2021: Wouter
+	- In unit test use openssl set security level to allow keys in test.
+	- Fix static analysis warnings about localzone locks that are unused.
+	- Fix missing locks in zonemd unit test.
+	- Fix readzone compile under debug config.
+	- Fix out of sourcedir run of zonemd unit tests.
+	- Fix libnettle zonemd unit test.
+	- Fix unit test zonemd_reload for use in run_vm.
+
+3 August 2021: George
+	- Listen to read or write events after the SSL handshake.
+	  Sticky events on windows would stick on read when write was needed.
+
+3 August 2021: Wouter
+	- Merge PR #517 from dyunwei: #420 breaks the mesh reply list
+	  function that need to reuse the dns answer.
+	- Annotate assertion into error printout; we think it may be an
+	  error, but the situation looks harmless.
+	- Fix sign comparison warning on FreeBSD.
+
+2 August 2021: Wouter
+	- Prepare for OpenSSL 3.0.0 provider API usage, move the sldns
+	  keyraw functions to produce EVP_PKEY results.
+	- Move RSA and DSA to use OpenSSL 3.0.0 API.
+	- Move ECDSA functions to use OpenSSL 3.0.0 API.
+	- iana portlist update.
+	- Fix verbose printout failure in tcp reuse unit test.
+
+30 July 2021: Wouter
+	- Fix #515: Compilation against openssl 3.0.0 beta2 is failing to
+	  build unbound.
+	- For #515: Fix compilation with openssl 3.0.0 beta2, lib64 dir and
+	  SSL_get_peer_certificate.
+	- Move acx_nlnetlabs.m4 to version 41, with lib64 openssl dir check.
+
+26 July 2021: George
+	- Merge #513: Stream reuse, attempt to fix #411, #439, #469. This
+	  introduces a couple of fixes for the stream reuse functionality
+	  that could result in broken internal structures.
+
+26 July 2021: Wouter
+	- Merge #512: unbound.service.in: upgrade hardening to latest
+	  standards.
+	- Fix readzone unknown type print for memory resize.
+
+21 July 2021: Wouter
+	- Fix that ldns_zone_new_frm_fp_l counts the line number for an empty
+	  line after a comment.
+
+16 July 2021: George
+	- Introduce 'http-user-agent:' and 'hide-http-user-agent:' options.
+
+16 July 2021: Wouter
+	- Merge #510 from ndptech: Don't call a function which hasn't been
+	  defined.
+	- Fix for #510: in depth, use ifdefs for windows api event calls.
+	- Fix spelling in doc/unbound.doxygen comment.
+	- Fix spelling in localzone.h comment.
+	- Fix unbound-control local_data and local_datas to print detailed
+	  syntax errors.
+	- review fix to remove duplicate error printout.
+	- Insert header into testcode/readzone.c, it was missing.
+	- Fix from lint for ignored return value.
+	- Fix for older parsers for function call in serve expired get cached.
+
+6 July 2021: Wouter
+	- iana portlist update.
+
+5 July 2021: George
+	- Fix compiler warnings for #491.
+	- Fix clang-analysis warnings for testcode/readzone.c.
+
+4 July 2021: George
+	- Fix Wunused-result compile warnings.
+
+2 July 2021: Tom
+	- Merge PR #491: Add SVCB and HTTPS types and handling according to
+	  draft-ietf-dnsop-svcb-https.
+
+2 July 2021: Wouter
+	- Fix #506: Python Module Seems to Leak Memory if it Experiences an
+	  Unhandled Exception.
+
+25 June 2021: Wouter
+	- Fix up permissions on rpl data file in tests.
+	- Fix testbound newline treatment in moment_read and tempfile write.
+	- Fix configure grep for reuseport default for failure.
+	- Fix compat ctime_r return value
+	- Fix configure does not require pkg-config if not needed.
+	- Fix unit test in the ctime_r calls for autotrust and in testbound.
+	- Fix auth zone download on windows to unlink before rename.
+
 24 June 2021: Wouter
 	- Add analyzer and port compile github workflow.
 

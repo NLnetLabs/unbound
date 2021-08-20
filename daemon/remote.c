@@ -1304,10 +1304,35 @@ do_zones_remove(RES* ssl, struct local_zones* zones)
 	(void)ssl_printf(ssl, "removed %d zones\n", num);
 }
 
+/** check syntax of newly added RR */
+static int
+check_RR_syntax(RES* ssl, char* str, int line)
+{
+	uint8_t rr[LDNS_RR_BUF_SIZE];
+	size_t len = sizeof(rr), dname_len = 0;
+	int s = sldns_str2wire_rr_buf(str, rr, &len, &dname_len, 3600,
+		NULL, 0, NULL, 0);
+	if(s != 0) {
+		char linestr[32];
+		if(line == 0)
+			linestr[0]=0;
+		else 	snprintf(linestr, sizeof(linestr), "line %d ", line);
+		if(!ssl_printf(ssl, "error parsing local-data at %sposition %d '%s': %s\n",
+			linestr, LDNS_WIREPARSE_OFFSET(s), str,
+			sldns_get_errorstr_parse(s)))
+			return 0;
+		return 0;
+	}
+	return 1;
+}
+
 /** Add new RR data */
 static int
-perform_data_add(RES* ssl, struct local_zones* zones, char* arg)
+perform_data_add(RES* ssl, struct local_zones* zones, char* arg, int line)
 {
+	if(!check_RR_syntax(ssl, arg, line)) {
+		return 0;
+	}
 	if(!local_zones_add_RR(zones, arg)) {
 		ssl_printf(ssl,"error in syntax or out of memory, %s\n", arg);
 		return 0;
@@ -1319,7 +1344,7 @@ perform_data_add(RES* ssl, struct local_zones* zones, char* arg)
 static void
 do_data_add(RES* ssl, struct local_zones* zones, char* arg)
 {
-	if(!perform_data_add(ssl, zones, arg))
+	if(!perform_data_add(ssl, zones, arg, 0))
 		return;
 	send_ok(ssl);
 }
@@ -1329,15 +1354,12 @@ static void
 do_datas_add(RES* ssl, struct local_zones* zones)
 {
 	char buf[2048];
-	int num = 0;
+	int num = 0, line = 0;
 	while(ssl_read_line(ssl, buf, sizeof(buf))) {
 		if(buf[0] == 0x04 && buf[1] == 0)
 			break; /* end of transmission */
-		if(!perform_data_add(ssl, zones, buf)) {
-			if(!ssl_printf(ssl, "error for input line: %s\n", buf))
-				return;
-		}
-		else
+		line++;
+		if(perform_data_add(ssl, zones, buf, line))
 			num++;
 	}
 	(void)ssl_printf(ssl, "added %d datas\n", num);
@@ -3316,7 +3338,11 @@ int remote_control_callback(struct comm_point* c, void* arg, int err,
 	if (!rc->use_cert) {
 		verbose(VERB_ALGO, "unauthenticated remote control connection");
 	} else if(SSL_get_verify_result(s->ssl) == X509_V_OK) {
+#ifdef HAVE_SSL_GET1_PEER_CERTIFICATE
+		X509* x = SSL_get1_peer_certificate(s->ssl);
+#else
 		X509* x = SSL_get_peer_certificate(s->ssl);
+#endif
 		if(!x) {
 			verbose(VERB_DETAIL, "remote control connection "
 				"provided no client certificate");
