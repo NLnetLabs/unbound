@@ -397,10 +397,10 @@ read_root_hints(struct iter_hints* hints, char* fname)
 		delegpt_free_mlc(dp);
 		return 1;
 	}
+	delegpt_log(VERB_QUERY, dp);
 	if(!hints_insert(hints, c, dp, 0)) {
 		return 0;
 	}
-	delegpt_log(VERB_QUERY, dp);
 	return 1;
 
 stop_read:
