@@ -220,8 +220,11 @@ read_http_headers(SSL* ssl, char* file, size_t flen, char* host, size_t hlen,
 	host[0] = 0;
 	while(read_ssl_line(ssl, buf, sizeof(buf))) {
 		if(verb>=2) printf("read: %s\n", buf);
-		if(buf[0] == 0)
+		if(buf[0] == 0) {
+			int e = ERR_peek_error();
+			printf("error string: %s\n", ERR_reason_error_string(e));
 			return 1;
+		}
 		if(!process_one_header(buf, file, flen, host, hlen, vs))
 			return 0;
 	}
@@ -238,8 +241,14 @@ setup_ctx(char* key, char* cert)
 	(void)SSL_CTX_set_options(ctx, SSL_OP_NO_SSLv2);
 #endif
 	(void)SSL_CTX_set_options(ctx, SSL_OP_NO_SSLv3);
-	if(!SSL_CTX_use_certificate_chain_file(ctx, cert))
+#ifdef HAVE_SSL_CTX_SET_SECURITY_LEVEL
+	SSL_CTX_set_security_level(ctx, 0); /* for keys in tests */
+#endif
+	if(!SSL_CTX_use_certificate_chain_file(ctx, cert)) {
+		int e = ERR_peek_error();
+		printf("error string: %s\n", ERR_reason_error_string(e));
 		print_exit("cannot read cert");
+	}
 	if(!SSL_CTX_use_PrivateKey_file(ctx, key, SSL_FILETYPE_PEM))
 		print_exit("cannot read key");
 	if(!SSL_CTX_check_private_key(ctx))

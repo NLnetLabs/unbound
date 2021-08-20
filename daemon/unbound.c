@@ -222,7 +222,7 @@ checkrlimits(struct config_file* cfg)
 #endif
 	if(getrlimit(RLIMIT_DATA, &rlim) == 0) {
 		if(rlim.rlim_cur != (rlim_t)RLIM_INFINITY &&
-			rlim.rlim_cur < memsize_expect) {
+			rlim.rlim_cur < (rlim_t)memsize_expect) {
 			log_warn("the ulimit(data seg size) is smaller than the expected memory usage (added size of caches). %u < %u bytes", (unsigned)rlim.rlim_cur, (unsigned)memsize_expect);
 		}
 	}

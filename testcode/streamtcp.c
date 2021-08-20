@@ -400,12 +400,14 @@ static RETSIGTYPE sigh(int sig)
 	char str[] = "Got unhandled signal   \n";
 	if(sig == SIGPIPE) {
 		char* strpipe = "got SIGPIPE, remote connection gone\n";
-		write(STDOUT_FILENO, strpipe, strlen(strpipe));
+		/* simple cast to void will not silence Wunused-result */
+		(void)!write(STDOUT_FILENO, strpipe, strlen(strpipe));
 		exit(1);
 	}
 	str[21] = '0' + (sig/10)%10;
 	str[22] = '0' + sig%10;
-	write(STDOUT_FILENO, str, strlen(str));
+	/* simple cast to void will not silence Wunused-result */
+	(void)!write(STDOUT_FILENO, str, strlen(str));
 	exit(1);
 }
 #endif /* SIGPIPE */

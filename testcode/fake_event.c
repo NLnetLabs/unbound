@@ -599,7 +599,7 @@ autotrust_check(struct replay_runtime* runtime, struct replay_moment* mom)
 			log_err("should be: %s", p->str);
 			fatal_exit("autotrust_check failed");
 		}
-		if(line[0]) line[strlen(line)-1] = 0; /* remove newline */
+		strip_end_white(line);
 		expanded = macro_process(runtime->vars, runtime, p->str);
 		if(!expanded) 
 			fatal_exit("could not expand macro line %d", lineno);
@@ -652,7 +652,7 @@ tempfile_check(struct replay_runtime* runtime, struct replay_moment* mom)
 			log_err("should be: %s", p->str);
 			fatal_exit("tempfile_check failed");
 		}
-		if(line[0]) line[strlen(line)-1] = 0; /* remove newline */
+		strip_end_white(line);
 		expanded = macro_process(runtime->vars, runtime, p->str);
 		if(!expanded) 
 			fatal_exit("could not expand macro line %d", lineno);
@@ -1717,7 +1717,7 @@ struct comm_point* outnet_comm_point_for_tcp(struct outside_network* outnet,
 		addr_to_str((struct sockaddr_storage*)to_addr, to_addrlen,
 			addrbuf, sizeof(addrbuf));
 		if(verbosity >= VERB_ALGO) {
-			if(buf[0] != 0) buf[strlen(buf)-1] = 0; /* del newline*/
+			strip_end_white(buf);
 			log_info("tcp to %s: %s", addrbuf, buf);
 		}
 		log_assert(sldns_buffer_limit(query)-LDNS_HEADER_SIZE >= 2);
@@ -1749,7 +1749,7 @@ struct comm_point* outnet_comm_point_for_tcp(struct outside_network* outnet,
 struct comm_point* outnet_comm_point_for_http(struct outside_network* outnet,
 	comm_point_callback_type* cb, void* cb_arg,
 	struct sockaddr_storage* to_addr, socklen_t to_addrlen, int timeout,
-	int ssl, char* host, char* path)
+	int ssl, char* host, char* path, struct config_file* cfg)
 {
 	struct replay_runtime* runtime = (struct replay_runtime*)
 		outnet->base;
@@ -1771,6 +1771,7 @@ struct comm_point* outnet_comm_point_for_http(struct outside_network* outnet,
 	(void)ssl;
 	(void)host;
 	(void)path;
+	(void)cfg;
 
 	/* handle http comm point and return contents from test script */
 	return (struct comm_point*)fc;
@@ -1807,7 +1808,7 @@ int comm_point_send_udp_msg(struct comm_point *c, sldns_buffer* packet,
 		addr_to_str((struct sockaddr_storage*)addr, addrlen,
 			addrbuf, sizeof(addrbuf));
 		if(verbosity >= VERB_ALGO) {
-			if(buf[0] != 0) buf[strlen(buf)-1] = 0; /* del newline*/
+			strip_end_white(buf);
 			log_info("udp to %s: %s", addrbuf, buf);
 		}
 		log_assert(sldns_buffer_limit(packet)-LDNS_HEADER_SIZE >= 2);

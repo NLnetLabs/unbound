@@ -143,6 +143,8 @@ struct auth_zone {
 	 * worker has already picked up the zonemd verification task and
 	 * this worker does not have to do it as well. */
 	struct module_env* zonemd_callback_env;
+	/** for the zonemd callback, the type of data looked up */
+	uint16_t zonemd_callback_qtype;
 	/** zone has been deleted */
 	int zone_deleted;
 	/** deletelist pointer, unused normally except during delete */

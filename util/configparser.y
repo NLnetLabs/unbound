@@ -113,6 +113,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_SSL_UPSTREAM VAR_TCP_AUTH_QUERY_TIMEOUT VAR_SSL_SERVICE_KEY
 %token VAR_SSL_SERVICE_PEM VAR_SSL_PORT VAR_FORWARD_FIRST
 %token VAR_STUB_SSL_UPSTREAM VAR_FORWARD_SSL_UPSTREAM VAR_TLS_CERT_BUNDLE
+%token VAR_STUB_TCP_UPSTREAM VAR_FORWARD_TCP_UPSTREAM
 %token VAR_HTTPS_PORT VAR_HTTP_ENDPOINT VAR_HTTP_MAX_STREAMS
 %token VAR_HTTP_QUERY_BUFFER_SIZE VAR_HTTP_RESPONSE_BUFFER_SIZE
 %token VAR_HTTP_NODELAY VAR_HTTP_NOTLS_DOWNSTREAM
@@ -154,6 +155,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_SERVE_EXPIRED_TTL_RESET VAR_SERVE_EXPIRED_REPLY_TTL
 %token VAR_SERVE_EXPIRED_CLIENT_TIMEOUT VAR_SERVE_ORIGINAL_TTL VAR_FAKE_DSA
 %token VAR_FAKE_SHA1 VAR_LOG_IDENTITY VAR_HIDE_TRUSTANCHOR
+%token VAR_HIDE_HTTP_USER_AGENT VAR_HTTP_USER_AGENT
 %token VAR_TRUST_ANCHOR_SIGNALING VAR_AGGRESSIVE_NSEC VAR_USE_SYSTEMD
 %token VAR_SHM_ENABLE VAR_SHM_KEY VAR_ROOT_KEY_SENTINEL
 %token VAR_DNSCRYPT VAR_DNSCRYPT_ENABLE VAR_DNSCRYPT_PORT VAR_DNSCRYPT_PROVIDER
@@ -225,6 +227,7 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_harden_short_bufsize | server_harden_large_queries |
 	server_do_not_query_address | server_hide_identity |
 	server_hide_version | server_identity | server_version |
+	server_hide_http_user_agent | server_http_user_agent |
 	server_harden_glue | server_module_conf | server_trust_anchor_file |
 	server_trust_anchor | server_val_override_date | server_bogus_ttl |
 	server_val_clean_additional | server_val_permissive_mode |
@@ -322,7 +325,7 @@ stubstart: VAR_STUB_ZONE
 contents_stub: contents_stub content_stub 
 	| ;
 content_stub: stub_name | stub_host | stub_addr | stub_prime | stub_first |
-	stub_no_cache | stub_ssl_upstream
+	stub_no_cache | stub_ssl_upstream | stub_tcp_upstream
 	;
 forwardstart: VAR_FORWARD_ZONE
 	{
@@ -339,7 +342,7 @@ forwardstart: VAR_FORWARD_ZONE
 contents_forward: contents_forward content_forward 
 	| ;
 content_forward: forward_name | forward_host | forward_addr | forward_first |
-	forward_no_cache | forward_ssl_upstream
+	forward_no_cache | forward_ssl_upstream | forward_tcp_upstream
 	;
 viewstart: VAR_VIEW
 	{
@@ -1337,6 +1340,15 @@ server_hide_trustanchor: VAR_HIDE_TRUSTANCHOR STRING_ARG
 		free($2);
 	}
 	;
+server_hide_http_user_agent: VAR_HIDE_HTTP_USER_AGENT STRING_ARG
+	{
+		OUTYY(("P(server_hide_user_agent:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else cfg_parser->cfg->hide_http_user_agent = (strcmp($2, "yes")==0);
+		free($2);
+	}
+	;
 server_identity: VAR_IDENTITY STRING_ARG
 	{
 		OUTYY(("P(server_identity:%s)\n", $2));
@@ -1349,6 +1361,13 @@ server_version: VAR_VERSION STRING_ARG
 		OUTYY(("P(server_version:%s)\n", $2));
 		free(cfg_parser->cfg->version);
 		cfg_parser->cfg->version = $2;
+	}
+	;
+server_http_user_agent: VAR_HTTP_USER_AGENT STRING_ARG
+	{
+		OUTYY(("P(server_http_user_agent:%s)\n", $2));
+		free(cfg_parser->cfg->http_user_agent);
+		cfg_parser->cfg->http_user_agent = $2;
 	}
 	;
 server_nsid: VAR_NSID STRING_ARG
@@ -2703,6 +2722,16 @@ stub_ssl_upstream: VAR_STUB_SSL_UPSTREAM STRING_ARG
 		free($2);
 	}
 	;
+stub_tcp_upstream: VAR_STUB_TCP_UPSTREAM STRING_ARG
+        {
+                OUTYY(("P(stub-tcp-upstream:%s)\n", $2));
+                if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+                        yyerror("expected yes or no.");
+                else cfg_parser->cfg->stubs->tcp_upstream =
+                        (strcmp($2, "yes")==0);
+                free($2);
+        }
+        ;
 stub_prime: VAR_STUB_PRIME STRING_ARG
 	{
 		OUTYY(("P(stub-prime:%s)\n", $2));
@@ -2765,6 +2794,16 @@ forward_ssl_upstream: VAR_FORWARD_SSL_UPSTREAM STRING_ARG
 		free($2);
 	}
 	;
+forward_tcp_upstream: VAR_FORWARD_TCP_UPSTREAM STRING_ARG
+        {
+                OUTYY(("P(forward-tcp-upstream:%s)\n", $2));
+                if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+                        yyerror("expected yes or no.");
+                else cfg_parser->cfg->forwards->tcp_upstream =
+                        (strcmp($2, "yes")==0);
+                free($2);
+        }
+        ;
 auth_name: VAR_NAME STRING_ARG
 	{
 		OUTYY(("P(name:%s)\n", $2));
