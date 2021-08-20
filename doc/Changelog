@@ -1,3 +1,7 @@
+20 August 2021: Wouter
+	- Fix #529: Fix: log_assert does nothing if UNBOUND_DEBUG is
+	  undefined.
+
 17 August 2021: Wouter
 	- Fix that --with-ssl can use "/usr/include/openssl11" to pass the
 	  location of a different openssl version.

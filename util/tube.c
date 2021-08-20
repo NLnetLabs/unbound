@@ -364,9 +364,9 @@ int tube_read_msg(struct tube* tube, uint8_t** buf, uint32_t* len,
 		d += r;
 	}
 	if (*len >= 65536*2) {
-	    log_err("tube msg length is too big", *len);
-        (void)fd_set_nonblock(fd);
-        return 0;
+		log_err("tube msg length %u is too big", (unsigned)*len);
+		(void)fd_set_nonblock(fd);
+		return 0;
 	}
 	*buf = (uint8_t*)malloc(*len);
 	if(!*buf) {
