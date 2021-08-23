@@ -12,7 +12,7 @@ echo "UNBOUND_PORT=$UNBOUND_PORT" >> .tpkg.var.test
 echo "FWD_PORT=$FWD_PORT" >> .tpkg.var.test
 
 # rewrite config file with created ports
-sed -e 's/@PORT\@/'$UNBOUND_PORT'/' < fwd_tcp.conf > ub.conf
+sed -e 's/@PORT\@/'$UNBOUND_PORT'/' < ede.conf > ub.conf
 
 # start unbound in the background
 PRE="../.."
@@ -27,7 +27,14 @@ dig @127.0.0.1 -p $UNBOUND_PORT +tcp +ednsopt=11:010203 > keepalive.txt
 # refused nonrec (cache snoop) (Not Auth)
 dig @127.0.0.1 -p $UNBOUND_PORT +norec > snoop.text
 
+# @TODO dnssec bogus local zones something
+dig @127.0.0.1 qwerqwer.hopsa.kidee. TXT +dnssec > bogus.txt
+
+# refused, not auth ???
+
+
 # DNAME expansion
+
 
 
 
