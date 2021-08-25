@@ -1121,7 +1121,9 @@ rpz_find_zone(struct local_zones* zones, uint8_t* qname, size_t qname_len, uint1
 		dname_count_labels(qname),
 		LDNS_RR_CLASS_IN, &exact);
 	if(!z || (only_exact && !exact)) {
-		lock_rw_unlock(&zones->lock);
+		if(!zones_keep_lock) {
+			lock_rw_unlock(&zones->lock);
+		}
 		return NULL;
 	}
 	if(wr) {
@@ -1420,6 +1422,7 @@ rpz_ipbased_trigger_lookup(struct clientip_synthesized_rrset* set,
 	raddr = (struct clientip_synthesized_rr*)addr_tree_lookup(&set->entries,
 			addr, addrlen);
 	if(raddr != NULL) {
+		lock_rw_rdlock(&raddr->lock);
 		action = raddr->action;
 		if(verbosity >= VERB_ALGO) {
 			char ip[256], net[256];
@@ -1429,7 +1432,6 @@ rpz_ipbased_trigger_lookup(struct clientip_synthesized_rrset* set,
 			verbose(VERB_ALGO, "rpz: trigger %s %s/%d on %s action=%s",
 				triggername, net, raddr->node.net, ip, rpz_action_to_string(action));
 		}
-		lock_rw_unlock(&raddr->lock);
 	}
 	lock_rw_unlock(&set->lock);
 
@@ -2056,6 +2058,7 @@ rpz_apply_nsdname_trigger(struct module_qstate* ms, struct rpz* r,
 			action, &ms->qinfo, NULL, ms, r->log_name);
 	if(ms->env->worker)
 		ms->env->worker->stats.rpz_action[action]++;
+	lock_rw_unlock(&z->lock);
 	return ret;
 }
 
@@ -2148,9 +2151,17 @@ rpz_callback_from_iterator_module(struct module_qstate* ms, struct iter_qstate* 
 	lock_rw_unlock(&az->rpz_lock);
 
 	if(raddr == NULL && z == NULL) { return NULL; }
-	else if(raddr != NULL) { return rpz_apply_nsip_trigger(ms, r, raddr, a); }
-	else if(z != NULL) { return rpz_apply_nsdname_trigger(ms, r, z, &match, a); }
-	else { return NULL; }
+	else if(raddr != NULL) {
+		if(z) {
+			lock_rw_unlock(&z->lock);
+		}
+		return rpz_apply_nsip_trigger(ms, r, raddr, a);
+	} else if(z != NULL) {
+		if(raddr) {
+			lock_rw_unlock(&raddr->lock);
+		}
+		return rpz_apply_nsdname_trigger(ms, r, z, &match, a);
+	} else { return NULL; }
 }
 
 struct dns_msg* rpz_callback_from_iterator_cname(struct module_qstate* ms,
@@ -2313,9 +2324,20 @@ rpz_callback_from_worker_request(struct auth_zones* az, struct module_env* env,
 
 	int clientip_trigger = rpz_apply_maybe_clientip_trigger(az, env, qinfo,
 		edns, repinfo, taglist, taglen, stats, buf, temp, &z, &a, &r);
-	if(clientip_trigger >= 0) { return clientip_trigger; }
+	if(clientip_trigger >= 0) {
+		if(a) {
+			lock_rw_unlock(&a->lock);
+		}
+		if(z) {
+			lock_rw_unlock(&z->lock);
+		}
+		return clientip_trigger;
+	}
 
 	if(z == NULL) {
+		if(a) {
+			lock_rw_unlock(&a->lock);
+		}
 		return 0;
 	}
 

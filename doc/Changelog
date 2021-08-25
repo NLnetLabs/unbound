@@ -7,6 +7,11 @@
 	  to insert into RPZ.
 	- Fix the stream wait stream_wait_count_lock and http2 buffer locks
 	  setup and desetup from race condition.
+	- Fix RPZ locks. Do not unlock zones lock if requested and rpz find
+	  zone does not find the zone. Readlock the clientip that is found
+	  for ipbased triggers. Unlock the nsdname zone lock when done.
+	  Unlock zone and ip in rpz nsip and nsdname callback. Unlock
+	  authzone and localzone if clientip found in rpz worker call.
 
 20 August 2021: Wouter
 	- Fix #529: Fix: log_assert does nothing if UNBOUND_DEBUG is
