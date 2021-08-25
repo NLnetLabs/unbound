@@ -13,6 +13,7 @@
 	  Unlock zone and ip in rpz nsip and nsdname callback. Unlock
 	  authzone and localzone if clientip found in rpz worker call.
 	- Fix compile warning in libunbound for listen desetup routine.
+	- Fix asynclook unit test for setup of lockchecks before log.
 
 20 August 2021: Wouter
 	- Fix #529: Fix: log_assert does nothing if UNBOUND_DEBUG is
