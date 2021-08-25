@@ -64,6 +64,7 @@
 #include "services/cache/infra.h"
 #include "services/cache/rrset.h"
 #include "services/authzone.h"
+#include "services/listen_dnsport.h"
 #include "sldns/sbuffer.h"
 #ifdef HAVE_PTHREAD
 #include <signal.h>
