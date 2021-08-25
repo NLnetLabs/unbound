@@ -1,3 +1,9 @@
+25 August 2021: Wouter
+	- Merge #401: RPZ triggers. This add additional RPZ triggers,
+	  unbound supports a full set of rpz triggers, and this now
+	  includes nsdname, nsip and clientip triggers. Also actions
+	  are fully supported, and this now includes the tcp-only action.
+
 20 August 2021: Wouter
 	- Fix #529: Fix: log_assert does nothing if UNBOUND_DEBUG is
 	  undefined.
