@@ -5,6 +5,8 @@
 	  are fully supported, and this now includes the tcp-only action.
 	- Fix #536: error: RPZ: name of record (drop.spamhaus.org.rpz.local.)
 	  to insert into RPZ.
+	- Fix the stream wait stream_wait_count_lock and http2 buffer locks
+	  setup and desetup from race condition.
 
 20 August 2021: Wouter
 	- Fix #529: Fix: log_assert does nothing if UNBOUND_DEBUG is

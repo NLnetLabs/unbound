@@ -1306,6 +1306,38 @@ listen_cp_insert(struct comm_point* c, struct listen_dnsport* front)
 	return 1;
 }
 
+void listen_setup_locks(void)
+{
+	if(!stream_wait_lock_inited) {
+		lock_basic_init(&stream_wait_count_lock);
+		stream_wait_lock_inited = 1;
+	}
+	if(!http2_query_buffer_lock_inited) {
+		lock_basic_init(&http2_query_buffer_count_lock);
+		http2_query_buffer_lock_inited = 1;
+	}
+	if(!http2_response_buffer_lock_inited) {
+		lock_basic_init(&http2_response_buffer_count_lock);
+		http2_response_buffer_lock_inited = 1;
+	}
+}
+
+void listen_desetup_locks(void)
+{
+	if(stream_wait_lock_inited) {
+		stream_wait_lock_inited = 0;
+		lock_basic_destroy(&stream_wait_count_lock);
+	}
+	if(http2_query_buffer_lock_inited) {
+		http2_query_buffer_lock_inited = 0;
+		lock_basic_destroy(&http2_query_buffer_count_lock);
+	}
+	if(http2_response_buffer_lock_inited) {
+		http2_response_buffer_lock_inited = 0;
+		lock_basic_destroy(&http2_response_buffer_count_lock);
+	}
+}
+
 struct listen_dnsport* 
 listen_create(struct comm_base* base, struct listen_port* ports,
 	size_t bufsize, int tcp_accept_count, int tcp_idle_timeout,
@@ -1326,18 +1358,6 @@ listen_create(struct comm_base* base, struct listen_port* ports,
 	if(!front->udp_buff) {
 		free(front);
 		return NULL;
-	}
-	if(!stream_wait_lock_inited) {
-		lock_basic_init(&stream_wait_count_lock);
-		stream_wait_lock_inited = 1;
-	}
-	if(!http2_query_buffer_lock_inited) {
-		lock_basic_init(&http2_query_buffer_count_lock);
-		http2_query_buffer_lock_inited = 1;
-	}
-	if(!http2_response_buffer_lock_inited) {
-		lock_basic_init(&http2_response_buffer_count_lock);
-		http2_response_buffer_lock_inited = 1;
 	}
 
 	/* create comm points as needed */
@@ -1454,18 +1474,6 @@ listen_delete(struct listen_dnsport* front)
 #endif
 	sldns_buffer_free(front->udp_buff);
 	free(front);
-	if(stream_wait_lock_inited) {
-		stream_wait_lock_inited = 0;
-		lock_basic_destroy(&stream_wait_count_lock);
-	}
-	if(http2_query_buffer_lock_inited) {
-		http2_query_buffer_lock_inited = 0;
-		lock_basic_destroy(&http2_query_buffer_count_lock);
-	}
-	if(http2_response_buffer_lock_inited) {
-		http2_response_buffer_lock_inited = 0;
-		lock_basic_destroy(&http2_response_buffer_count_lock);
-	}
 }
 
 #ifdef HAVE_GETIFADDRS

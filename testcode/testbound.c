@@ -604,3 +604,13 @@ int squelch_err_ssl_handshake(unsigned long ATTR_UNUSED(err))
 {
 	return 0;
 }
+
+void listen_setup_locks(void)
+{
+	/* nothing */
+}
+
+void listen_desetup_locks(void)
+{
+	/* nothing */
+}
