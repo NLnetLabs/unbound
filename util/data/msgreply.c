@@ -222,13 +222,17 @@ rdata_copy(sldns_buffer* pkt, struct packed_rrset_data* data, uint8_t* to,
 		 * minimum-ttl in the rdata of the SOA record */
 		if(*rr_ttl > soa_find_minttl(rr))
 			*rr_ttl = soa_find_minttl(rr);
-		if(*rr_ttl > MAX_NEG_TTL)
-			*rr_ttl = MAX_NEG_TTL;
 	}
 	if(!SERVE_ORIGINAL_TTL && (*rr_ttl < MIN_TTL))
 		*rr_ttl = MIN_TTL;
 	if(!SERVE_ORIGINAL_TTL && (*rr_ttl > MAX_TTL))
 		*rr_ttl = MAX_TTL;
+	if(type == LDNS_RR_TYPE_SOA && section == LDNS_SECTION_AUTHORITY) {
+		/* max neg ttl overrides the min and max ttl of everything
+		 * else, it is for a more specific record */
+		if(*rr_ttl > MAX_NEG_TTL)
+			*rr_ttl = MAX_NEG_TTL;
+	}
 	if(*rr_ttl < data->ttl)
 		data->ttl = *rr_ttl;
 
