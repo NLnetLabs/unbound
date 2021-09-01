@@ -1,3 +1,6 @@
+1 September 2021: Wouter
+	- Fix tcp fastopen failure when disabled, try normal connect instead.
+
 27 August 2021: Wouter
 	- Fix #533: Negative responses get cached even when setting
 	  cache-max-negative-ttl: 1

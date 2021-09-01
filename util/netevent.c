@@ -1863,13 +1863,22 @@ comm_point_tcp_handle_write(int fd, struct comm_point* c)
 			if(errno == EINTR || errno == EAGAIN)
 				return 1;
 			/* Not handling EISCONN here as shouldn't ever hit that case.*/
-			if(errno != EPIPE && errno != 0 && verbosity < 2)
-				return 0; /* silence lots of chatter in the logs */
-			if(errno != EPIPE && errno != 0) {
+			if(errno != EPIPE
+#ifdef EOPNOTSUPP
+				/* if /proc/sys/net/ipv4/tcp_fastopen is
+				 * disabled on Linux, sendmsg may return
+				 * 'Operation not supported', if so
+				 * fallthrough to ordinary connect. */
+				&& errno != EOPNOTSUPP
+#endif
+				&& errno != 0) {
+				if(verbosity < 2)
+					return 0; /* silence lots of chatter in the logs */
 				log_err_addr("tcp sendmsg", strerror(errno),
 					&c->repinfo.addr, c->repinfo.addrlen);
 				return 0;
 			}
+			verbose(VERB_ALGO, "tcp sendmsg for fastopen failed (with %s), try normal connect", strerror(errno));
 			/* fallthrough to nonFASTOPEN
 			 * (MSG_FASTOPEN on Linux 3 produces EPIPE)
 			 * we need to perform connect() */
