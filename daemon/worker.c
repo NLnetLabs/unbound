@@ -146,7 +146,7 @@ worker_mem_report(struct worker* ATTR_UNUSED(worker),
 				(&worker->env, i);
 #ifdef CLIENT_SUBNET
 		else if(strcmp(worker->env.mesh->mods.mod[i]->name,
-			"subnet")==0)
+			"subnetcache")==0)
 			subnet += (*worker->env.mesh->mods.mod[i]->get_mem)
 				(&worker->env, i);
 #endif /* CLIENT_SUBNET */
@@ -205,7 +205,7 @@ worker_mem_report(struct worker* ATTR_UNUSED(worker),
 				(&worker->env, i);
 #ifdef CLIENT_SUBNET
 		else if(strcmp(worker->env.mesh->mods.mod[i]->name,
-			"subnet")==0)
+			"subnetcache")==0)
 			subnet += (*worker->env.mesh->mods.mod[i]->get_mem)
 				(&worker->env, i);
 #endif /* CLIENT_SUBNET */
