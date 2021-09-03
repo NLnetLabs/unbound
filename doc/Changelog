@@ -1,3 +1,6 @@
+3 September 2021: Wouter
+	- Fix #538: Fix subnetcache statistics.
+
 1 September 2021: Wouter
 	- Fix tcp fastopen failure when disabled, try normal connect instead.
 
