@@ -502,6 +502,8 @@ answer_norec_from_cache(struct worker* worker, struct query_info* qinfo,
 			secure = 1;
 			break;
 		case sec_status_indeterminate:
+			EDNS_OPT_APPEND_EDE(edns, worker->scratchpad,
+				LDNS_EDE_DNSSEC_INDETERMINATE, "");
 		case sec_status_insecure:
 		default:
 			/* not secure */

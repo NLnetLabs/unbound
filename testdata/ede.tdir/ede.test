@@ -50,10 +50,37 @@ fi
 
 
 # DNAME expansion
+# @TODO do we have this?
 
-# RPZ
 
+# RPZ DNAME expansion too long
+dig @127.0.0.1 -p $UNBOUND_PORT www.qhqwer.qwer.qwer.h.example.com A > dname_expansion.txt
 
+if ! grep -q "OPT=15: 00 00 44 4e 41 4d 45 20 65 78 70 61 6e 73 69 6f 6e 20 62 65 63 61 6d 65 20 74 6f 6f 20 6c 61 72 67 65" dname_expansion.txt
+then
+	echo "No DNAME expansion for CNAME EDE message"
+	exit 1
+fi
+
+# RPZ always_null gets EDE forged
+dig @127.0.0.1 -p $UNBOUND_PORT uva.nl A > always_null_forged.txt
+
+if ! grep -q "OPT=15: 00 04" always_null_forged.txt
+then
+	echo "local-zone always_null must have EDE forged code"
+	exit 1
+fi
+
+# RPZ always_refuse
+dig @127.0.0.1 -p $UNBOUND_PORT hopsa.kidee. A > always_refuse_forged.txt
+
+if ! grep -q "OPT=15: 00 04" always_refuse_forged.txt
+then
+	echo "local-zone always_null must have EDE blocked code"
+	exit 1
+fi
+
+dig @localhost hopsa.kidee. A
 
 
 # teardown
