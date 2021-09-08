@@ -2725,6 +2725,7 @@ find_NS(struct reply_info* rep, size_t from, size_t to)
  * 
  * @param qstate: query state.
  * @param iq: iterator query state.
+ * @param ie: iterator shared global environment.
  * @param id: module id.
  * @return true if the event requires more immediate processing, false if
  *         not. This is generally only true when forwarding the request to
@@ -2732,7 +2733,7 @@ find_NS(struct reply_info* rep, size_t from, size_t to)
  */
 static int
 processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
-	int id, size_t outbound_msg_retry)
+	struct iter_env* ie, int id)
 {
 	int dnsseclame = 0;
 	enum response_type type;
@@ -3002,7 +3003,8 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 		}
 		if(iq->store_parent_NS && query_dname_compare(iq->dp->name,
 			iq->store_parent_NS->name) == 0)
-			iter_merge_retry_counts(iq->dp, iq->store_parent_NS, outbound_msg_retry);
+			iter_merge_retry_counts(iq->dp, iq->store_parent_NS,
+				ie->outbound_msg_retry);
 		delegpt_log(VERB_ALGO, iq->dp);
 		/* Count this as a referral. */
 		iq->referral_count++;
@@ -3746,8 +3748,7 @@ iter_handle(struct module_qstate* qstate, struct iter_qstate* iq,
 				cont = processQueryTargets(qstate, iq, ie, id);
 				break;
 			case QUERY_RESP_STATE:
-				cont = processQueryResponse(
-					qstate, iq, id, ie->outbound_msg_retry);
+				cont = processQueryResponse(qstate, iq, ie, id);
 				break;
 			case PRIME_RESP_STATE:
 				cont = processPrimeResponse(qstate, id);

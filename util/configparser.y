@@ -319,8 +319,9 @@ stubstart: VAR_STUB_ZONE
 		if(s) {
 			s->next = cfg_parser->cfg->stubs;
 			cfg_parser->cfg->stubs = s;
-		} else
+		} else {
 			yyerror("out of memory");
+		}
 	}
 	;
 contents_stub: contents_stub content_stub
@@ -336,8 +337,9 @@ forwardstart: VAR_FORWARD_ZONE
 		if(s) {
 			s->next = cfg_parser->cfg->forwards;
 			cfg_parser->cfg->forwards = s;
-		} else
+		} else {
 			yyerror("out of memory");
+		}
 	}
 	;
 contents_forward: contents_forward content_forward
@@ -355,8 +357,9 @@ viewstart: VAR_VIEW
 			if(s->next && !s->next->name)
 				yyerror("view without name");
 			cfg_parser->cfg->views = s;
-		} else
+		} else {
 			yyerror("out of memory");
+		}
 	}
 	;
 contents_view: contents_view content_view
@@ -379,8 +382,9 @@ authstart: VAR_AUTH_ZONE
 			s->zonemd_check = 0;
 			s->zonemd_reject_absence = 0;
 			s->isrpz = 0;
-		} else
+		} else {
 			yyerror("out of memory");
+		}
 	}
 	;
 contents_auth: contents_auth content_auth
@@ -465,8 +469,9 @@ rpzstart: VAR_RPZ
 			s->for_upstream = 0;
 			s->fallback_enabled = 0;
 			s->isrpz = 1;
-		} else 
+		} else {
 			yyerror("out of memory");
+		}
 	}
 	;
 contents_rpz: contents_rpz content_rpz 
@@ -1490,9 +1495,9 @@ server_msg_cache_size: VAR_MSG_CACHE_SIZE STRING_ARG
 server_msg_cache_slabs: VAR_MSG_CACHE_SLABS STRING_ARG
 	{
 		OUTYY(("P(server_msg_cache_slabs:%s)\n", $2));
-		if(atoi($2) == 0)
+		if(atoi($2) == 0) {
 			yyerror("number expected");
-		else {
+		} else {
 			cfg_parser->cfg->msg_cache_slabs = atoi($2);
 			if(!is_pow2(cfg_parser->cfg->msg_cache_slabs))
 				yyerror("must be a power of 2");
@@ -1567,9 +1572,9 @@ server_rrset_cache_size: VAR_RRSET_CACHE_SIZE STRING_ARG
 server_rrset_cache_slabs: VAR_RRSET_CACHE_SLABS STRING_ARG
 	{
 		OUTYY(("P(server_rrset_cache_slabs:%s)\n", $2));
-		if(atoi($2) == 0)
+		if(atoi($2) == 0) {
 			yyerror("number expected");
-		else {
+		} else {
 			cfg_parser->cfg->rrset_cache_slabs = atoi($2);
 			if(!is_pow2(cfg_parser->cfg->rrset_cache_slabs))
 				yyerror("must be a power of 2");
@@ -1614,9 +1619,9 @@ server_infra_cache_lame_size: VAR_INFRA_CACHE_LAME_SIZE STRING_ARG
 server_infra_cache_slabs: VAR_INFRA_CACHE_SLABS STRING_ARG
 	{
 		OUTYY(("P(server_infra_cache_slabs:%s)\n", $2));
-		if(atoi($2) == 0)
+		if(atoi($2) == 0) {
 			yyerror("number expected");
-		else {
+		} else {
 			cfg_parser->cfg->infra_cache_slabs = atoi($2);
 			if(!is_pow2(cfg_parser->cfg->infra_cache_slabs))
 				yyerror("must be a power of 2");
@@ -2116,9 +2121,9 @@ server_key_cache_size: VAR_KEY_CACHE_SIZE STRING_ARG
 server_key_cache_slabs: VAR_KEY_CACHE_SLABS STRING_ARG
 	{
 		OUTYY(("P(server_key_cache_slabs:%s)\n", $2));
-		if(atoi($2) == 0)
+		if(atoi($2) == 0) {
 			yyerror("number expected");
-		else {
+		} else {
 			cfg_parser->cfg->key_cache_slabs = atoi($2);
 			if(!is_pow2(cfg_parser->cfg->key_cache_slabs))
 				yyerror("must be a power of 2");
@@ -2390,7 +2395,6 @@ server_ip_ratelimit: VAR_IP_RATELIMIT STRING_ARG
 		free($2);
 	}
 	;
-
 server_ratelimit: VAR_RATELIMIT STRING_ARG
 	{
 		OUTYY(("P(server_ratelimit:%s)\n", $2));
@@ -2401,13 +2405,13 @@ server_ratelimit: VAR_RATELIMIT STRING_ARG
 	}
 	;
 server_ip_ratelimit_size: VAR_IP_RATELIMIT_SIZE STRING_ARG
-{
-	OUTYY(("P(server_ip_ratelimit_size:%s)\n", $2));
-	if(!cfg_parse_memsize($2, &cfg_parser->cfg->ip_ratelimit_size))
-		yyerror("memory size expected");
-	free($2);
-}
-;
+	{
+		OUTYY(("P(server_ip_ratelimit_size:%s)\n", $2));
+		if(!cfg_parse_memsize($2, &cfg_parser->cfg->ip_ratelimit_size))
+			yyerror("memory size expected");
+		free($2);
+	}
+	;
 server_ratelimit_size: VAR_RATELIMIT_SIZE STRING_ARG
 	{
 		OUTYY(("P(server_ratelimit_size:%s)\n", $2));
@@ -2417,24 +2421,24 @@ server_ratelimit_size: VAR_RATELIMIT_SIZE STRING_ARG
 	}
 	;
 server_ip_ratelimit_slabs: VAR_IP_RATELIMIT_SLABS STRING_ARG
-{
-	OUTYY(("P(server_ip_ratelimit_slabs:%s)\n", $2));
-	if(atoi($2) == 0)
-		yyerror("number expected");
-	else {
-		cfg_parser->cfg->ip_ratelimit_slabs = atoi($2);
-		if(!is_pow2(cfg_parser->cfg->ip_ratelimit_slabs))
-			yyerror("must be a power of 2");
+	{
+		OUTYY(("P(server_ip_ratelimit_slabs:%s)\n", $2));
+		if(atoi($2) == 0) {
+			yyerror("number expected");
+		} else {
+			cfg_parser->cfg->ip_ratelimit_slabs = atoi($2);
+			if(!is_pow2(cfg_parser->cfg->ip_ratelimit_slabs))
+				yyerror("must be a power of 2");
+		}
+		free($2);
 	}
-	free($2);
-}
-;
+	;
 server_ratelimit_slabs: VAR_RATELIMIT_SLABS STRING_ARG
 	{
 		OUTYY(("P(server_ratelimit_slabs:%s)\n", $2));
-		if(atoi($2) == 0)
+		if(atoi($2) == 0) {
 			yyerror("number expected");
-		else {
+		} else {
 			cfg_parser->cfg->ratelimit_slabs = atoi($2);
 			if(!is_pow2(cfg_parser->cfg->ratelimit_slabs))
 				yyerror("must be a power of 2");
@@ -2474,11 +2478,11 @@ server_ratelimit_below_domain: VAR_RATELIMIT_BELOW_DOMAIN STRING_ARG STRING_ARG
 	;
 server_ip_ratelimit_factor: VAR_IP_RATELIMIT_FACTOR STRING_ARG
 	{
-	OUTYY(("P(server_ip_ratelimit_factor:%s)\n", $2));
-	if(atoi($2) == 0 && strcmp($2, "0") != 0)
-		yyerror("number expected");
-	else cfg_parser->cfg->ip_ratelimit_factor = atoi($2);
-	free($2);
+		OUTYY(("P(server_ip_ratelimit_factor:%s)\n", $2));
+		if(atoi($2) == 0 && strcmp($2, "0") != 0)
+			yyerror("number expected");
+		else cfg_parser->cfg->ip_ratelimit_factor = atoi($2);
+		free($2);
 	}
 	;
 server_ratelimit_factor: VAR_RATELIMIT_FACTOR STRING_ARG
@@ -2491,14 +2495,14 @@ server_ratelimit_factor: VAR_RATELIMIT_FACTOR STRING_ARG
 	}
 	;
 server_outbound_msg_retry: VAR_OUTBOUND_MSG_RETRY STRING_ARG
-{
-	OUTYY(("P(server_outbound_msg_retry:%s)\n", $2));
-	if(atoi($2) == 0 && strcmp($2, "0") != 0)
-		yyerror("number expected");
-	else cfg_parser->cfg->outbound_msg_retry = atoi($2);
-	free($2);
-}
-;
+	{
+		OUTYY(("P(server_outbound_msg_retry:%s)\n", $2));
+		if(atoi($2) == 0 && strcmp($2, "0") != 0)
+			yyerror("number expected");
+		else cfg_parser->cfg->outbound_msg_retry = atoi($2);
+		free($2);
+	}
+	;
 server_low_rtt: VAR_LOW_RTT STRING_ARG
 	{
 		OUTYY(("P(low-rtt option is deprecated, use fast-server-num instead)\n"));
@@ -3405,9 +3409,9 @@ dnsc_dnscrypt_shared_secret_cache_size: VAR_DNSCRYPT_SHARED_SECRET_CACHE_SIZE ST
 dnsc_dnscrypt_shared_secret_cache_slabs: VAR_DNSCRYPT_SHARED_SECRET_CACHE_SLABS STRING_ARG
   {
 	OUTYY(("P(dnscrypt_shared_secret_cache_slabs:%s)\n", $2));
-	if(atoi($2) == 0)
+	if(atoi($2) == 0) {
 		yyerror("number expected");
-	else {
+	} else {
 		cfg_parser->cfg->dnscrypt_shared_secret_cache_slabs = atoi($2);
 		if(!is_pow2(cfg_parser->cfg->dnscrypt_shared_secret_cache_slabs))
 			yyerror("must be a power of 2");
@@ -3426,9 +3430,9 @@ dnsc_dnscrypt_nonce_cache_size: VAR_DNSCRYPT_NONCE_CACHE_SIZE STRING_ARG
 dnsc_dnscrypt_nonce_cache_slabs: VAR_DNSCRYPT_NONCE_CACHE_SLABS STRING_ARG
   {
 	OUTYY(("P(dnscrypt_nonce_cache_slabs:%s)\n", $2));
-	if(atoi($2) == 0)
+	if(atoi($2) == 0) {
 		yyerror("number expected");
-	else {
+	} else {
 		cfg_parser->cfg->dnscrypt_nonce_cache_slabs = atoi($2);
 		if(!is_pow2(cfg_parser->cfg->dnscrypt_nonce_cache_slabs))
 			yyerror("must be a power of 2");

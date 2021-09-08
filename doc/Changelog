@@ -1,6 +1,10 @@
 8 September 2021: Wouter
 	- Merged #41 from Moritz Schneider: made outbound-msg-retry
 	  configurable.
+	- Small fixes for #41: changelog, conflicts resolved,
+	  processQueryResponse takes an iterator env argument like other
+	  functions in the iterator, no colon in string for set_option,
+	  and some whitespace style, to make it similar to the rest.
 
 3 September 2021: Wouter
 	- Fix #538: Fix subnetcache statistics.
