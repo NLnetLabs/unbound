@@ -7,6 +7,7 @@
 	  and some whitespace style, to make it similar to the rest.
 	- Fix for #41: change outbound retry to int to fix signed comparison
 	  warnings.
+	- Fix root_anchor test to check with new icannbundle date.
 
 3 September 2021: Wouter
 	- Fix #538: Fix subnetcache statistics.
