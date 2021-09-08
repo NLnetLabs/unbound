@@ -139,7 +139,7 @@ struct iter_env {
 	size_t num_queries_ratelimited;
 
 	/** number of retries on outgoing queries */
-	size_t outbound_msg_retry;
+	int outbound_msg_retry;
 };
 
 /**

@@ -1285,7 +1285,7 @@ iter_scrub_nxdomain(struct dns_msg* msg)
 	msg->rep->an_numrrsets = 0;
 }
 
-void iter_dec_attempts(struct delegpt* dp, int d, size_t outbound_msg_retry)
+void iter_dec_attempts(struct delegpt* dp, int d, int outbound_msg_retry)
 {
 	struct delegpt_addr* a;
 	for(a=dp->target_list; a; a = a->next_target) {
@@ -1300,7 +1300,8 @@ void iter_dec_attempts(struct delegpt* dp, int d, size_t outbound_msg_retry)
 	}
 }
 
-void iter_merge_retry_counts(struct delegpt* dp, struct delegpt* old, size_t outbound_msg_retry)
+void iter_merge_retry_counts(struct delegpt* dp, struct delegpt* old,
+	int outbound_msg_retry)
 {
 	struct delegpt_addr* a, *o, *prev;
 	for(a=dp->target_list; a; a = a->next_target) {

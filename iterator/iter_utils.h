@@ -349,7 +349,7 @@ void iter_scrub_nxdomain(struct dns_msg* msg);
  * @param d: decrease.
  * @param outbound_msg_retry: number of retries of outgoing queries
  */
-void iter_dec_attempts(struct delegpt* dp, int d, size_t outbound_msg_retry);
+void iter_dec_attempts(struct delegpt* dp, int d, int outbound_msg_retry);
 
 /**
  * Add retry counts from older delegpt to newer delegpt.
@@ -359,7 +359,7 @@ void iter_dec_attempts(struct delegpt* dp, int d, size_t outbound_msg_retry);
  * @param outbound_msg_retry: number of retries of outgoing queries
  */
 void iter_merge_retry_counts(struct delegpt* dp, struct delegpt* old,
-	size_t outbound_msg_retry);
+	int outbound_msg_retry);
 
 /**
  * See if a DS response (type ANSWER) is too low: a nodata answer with 

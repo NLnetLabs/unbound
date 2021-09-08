@@ -5,6 +5,8 @@
 	  processQueryResponse takes an iterator env argument like other
 	  functions in the iterator, no colon in string for set_option,
 	  and some whitespace style, to make it similar to the rest.
+	- Fix for #41: change outbound retry to int to fix signed comparison
+	  warnings.
 
 3 September 2021: Wouter
 	- Fix #538: Fix subnetcache statistics.
