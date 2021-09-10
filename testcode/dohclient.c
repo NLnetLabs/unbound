@@ -571,8 +571,8 @@ int main(int argc, char** argv)
 		return 1;
 	}
 #endif
-	log_init(0, 0, 0);
 	checklock_start();
+	log_init(0, 0, 0);
 
 	h2_session = http2_session_create();
 	if(!h2_session) fatal_exit("out of memory");
