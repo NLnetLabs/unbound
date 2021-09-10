@@ -210,7 +210,6 @@ daemon_init(void)
 	}
 #endif /* USE_WINSOCK */
 	signal_handling_record();
-	checklock_start();
 #ifdef HAVE_SSL
 #  ifdef HAVE_ERR_LOAD_CRYPTO_STRINGS
 	ERR_load_crypto_strings();

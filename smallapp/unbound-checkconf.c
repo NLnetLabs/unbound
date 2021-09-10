@@ -909,9 +909,9 @@ int main(int argc, char* argv[])
 	const char* f;
 	const char* opt = NULL;
 	const char* cfgfile = CONFIGFILE;
+	checklock_start();
 	log_ident_set("unbound-checkconf");
 	log_init(NULL, 0, NULL);
-	checklock_start();
 #ifdef USE_WINSOCK
 	/* use registry config file in preference to compiletime location */
 	if(!(cfgfile=w_lookup_reg_str("Software\\Unbound", "ConfigFile")))

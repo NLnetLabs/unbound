@@ -1,5 +1,6 @@
 10 September 2021: Wouter
 	- Fix initialisation errors reported by gcc sanitizer.
+	- Fix lock debug code for gcc sanitizer reports.
 
 8 September 2021: Wouter
 	- Merged #41 from Moritz Schneider: made outbound-msg-retry
