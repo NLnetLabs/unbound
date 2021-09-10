@@ -374,6 +374,7 @@ main(int argc, char* argv[])
 	(void)unsetenv("NOTIFY_SOCKET");
 #endif /* HAVE_SYSTEMD */
 
+	checklock_start();
 	log_init(NULL, 0, NULL);
 	/* determine commandline options for the daemon */
 	pass_argc = 1;

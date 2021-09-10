@@ -2105,7 +2105,7 @@ rpz_callback_from_iterator_module(struct module_qstate* ms, struct iter_qstate* 
 	struct auth_zones* az;
 	struct auth_zone* a;
 	struct clientip_synthesized_rr* raddr = NULL;
-	struct rpz* r;
+	struct rpz* r = NULL;
 	struct local_zone* z = NULL;
 	struct matched_delegation_point match = {0};
 
