@@ -80,8 +80,17 @@ then
 	exit 1
 fi
 
+# @TODO what does this trigger?
 dig @localhost hopsa.kidee. A
 
+# @TODO trigger mesh DNSSEC bogus
+dig @127.0.0.1 -p $UNBOUND_PORT servfail.nl > servfail.txt
+
+if ! grep -q "OPT=15: 00 06" servfail.txt
+then
+	echo "query to servfail.nl should return EDE DNSSEC bogus"
+	exit 1
+fi
 
 # teardown
 kill_pid $UNBOUND_PID

@@ -1311,6 +1311,7 @@ mesh_send_reply(struct mesh_state* m, int rcode, struct reply_info* rep,
 			if(!inplace_cb_reply_servfail_call(m->s.env, &m->s.qinfo, &m->s,
 			rep, LDNS_RCODE_SERVFAIL, &r->edns, &r->query_reply, m->s.region, &r->start_time))
 				r->edns.opt_list = NULL;
+			// @TODO EDE?
 			error_encode(r_buffer, LDNS_RCODE_SERVFAIL,
 				&m->s.qinfo, r->qid, r->qflags, &r->edns);
 		}
