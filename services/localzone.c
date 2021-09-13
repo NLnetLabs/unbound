@@ -1281,6 +1281,49 @@ local_encode(struct query_info* qinfo, struct module_env* env,
 	return 1;
 }
 
+/** encode answer consisting of 1 rrset (with EDE code) */
+static int
+local_encode_ede(struct query_info* qinfo, struct module_env* env,
+	struct edns_data* edns, struct comm_reply* repinfo, sldns_buffer* buf,
+	struct regional* temp, struct ub_packed_rrset_key* rrset, int ansec,
+	int rcode, sldns_ede_code ede_code, const char* ede_txt)
+{
+	struct reply_info rep;
+	uint16_t udpsize;
+	/* make answer with time=0 for fixed TTL values */
+	memset(&rep, 0, sizeof(rep));
+	rep.flags = (uint16_t)((BIT_QR | BIT_AA | BIT_RA) | rcode);
+	rep.qdcount = 1;
+	if(ansec)
+		rep.an_numrrsets = 1;
+	else	rep.ns_numrrsets = 1;
+	rep.rrset_count = 1;
+	rep.rrsets = &rrset;
+	udpsize = edns->udp_size;
+	edns->edns_version = EDNS_ADVERTISED_VERSION;
+	edns->udp_size = EDNS_ADVERTISED_SIZE;
+	edns->ext_rcode = 0;
+	edns->bits &= EDNS_DO;
+	if(!inplace_cb_reply_local_call(env, qinfo, NULL, &rep, rcode, edns,
+		repinfo, temp, env->now_tv)) {
+		error_encode(buf, (LDNS_RCODE_SERVFAIL|BIT_AA), qinfo,
+			*(uint16_t*)sldns_buffer_begin(buf),
+			sldns_buffer_read_u16_at(buf, 2), edns);
+	} else {
+		edns_opt_append_ede(edns, temp, ede_code, ede_txt);
+
+		if(!reply_info_answer_encode(qinfo, &rep,
+			*(uint16_t*)sldns_buffer_begin(buf), sldns_buffer_read_u16_at(buf, 2),
+			buf, 0, 0, temp, udpsize, edns, (int)(edns->bits&EDNS_DO), 0)) {
+			error_encode(buf, (LDNS_RCODE_SERVFAIL|BIT_AA), qinfo,
+				*(uint16_t*)sldns_buffer_begin(buf),
+				sldns_buffer_read_u16_at(buf, 2), edns);
+		}
+	}
+	return 1;
+}
+
+
 /** encode local error answer */
 static void
 local_error_encode(struct query_info* qinfo, struct module_env* env,

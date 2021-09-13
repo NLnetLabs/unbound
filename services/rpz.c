@@ -1050,8 +1050,6 @@ rpz_apply_qname_trigger(struct auth_zones* az, struct module_env* env,
 		return !qinfo->local_alias;
 	}
 
-	// @TODO: Find out if it's local answer or blocked; if blocked then EDE: blocked
-	// -> we do that in this function
 	ret = local_zones_zone_answer(z, env, qinfo, edns, repinfo, buf, temp,
 		0 /* no local data used */, lzt);
 	if(r->log)
