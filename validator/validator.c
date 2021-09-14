@@ -592,6 +592,7 @@ validate_msg_signatures(struct module_qstate* qstate, struct module_env* env,
 	enum sec_status sec;
 	int dname_seen = 0;
 	char* reason = NULL;
+	sldns_ede_code reason_bogus = LDNS_EDE_DNSSEC_BOGUS;
 
 	/* validate the ANSWER section */
 	for(i=0; i<chase_reply->an_numrrsets; i++) {
@@ -612,8 +613,8 @@ validate_msg_signatures(struct module_qstate* qstate, struct module_env* env,
 		}
 
 		/* Verify the answer rrset */
-		sec = val_verify_rrset_entry(env, ve, s, key_entry, &reason,
-			LDNS_SECTION_ANSWER, qstate);
+		sec = val_verify_rrset_entry_ede(env, ve, s, key_entry, &reason,
+			&reason_bogus, LDNS_SECTION_ANSWER, qstate);
 		/* If the (answer) rrset failed to validate, then this 
 		 * message is BAD. */
 		if(sec != sec_status_secure) {
@@ -627,6 +628,7 @@ validate_msg_signatures(struct module_qstate* qstate, struct module_env* env,
 				errinf(qstate, "for DNAME");
 			errinf_origin(qstate, qstate->reply_origin);
 			chase_reply->security = sec_status_bogus;
+			chase_reply->reason_bogus = reason_bogus; 
 			return 0;
 		}
 
@@ -642,8 +644,8 @@ validate_msg_signatures(struct module_qstate* qstate, struct module_env* env,
 	for(i=chase_reply->an_numrrsets; i<chase_reply->an_numrrsets+
 		chase_reply->ns_numrrsets; i++) {
 		s = chase_reply->rrsets[i];
-		sec = val_verify_rrset_entry(env, ve, s, key_entry, &reason,
-			LDNS_SECTION_AUTHORITY, qstate);
+		sec = val_verify_rrset_entry_ede(env, ve, s, key_entry, &reason,
+			&reason_bogus, LDNS_SECTION_AUTHORITY, qstate);
 		/* If anything in the authority section fails to be secure, 
 		 * we have a bad message. */
 		if(sec != sec_status_secure) {
@@ -654,6 +656,7 @@ validate_msg_signatures(struct module_qstate* qstate, struct module_env* env,
 			errinf_origin(qstate, qstate->reply_origin);
 			errinf_rrset(qstate, s);
 			chase_reply->security = sec_status_bogus;
+			chase_reply->reason_bogus = reason_bogus;
 			return 0;
 		}
 	}
@@ -2001,17 +2004,21 @@ processFinished(struct module_qstate* qstate, struct val_qstate* vq,
 		vq->orig_msg->rep, vq->rrset_skip);
 
 	/* store overall validation result in orig_msg */
-	if(vq->rrset_skip == 0)
+	if(vq->rrset_skip == 0) {
 		vq->orig_msg->rep->security = vq->chase_reply->security;
-	else if(subtype != VAL_CLASS_REFERRAL ||
+		vq->orig_msg->rep->reason_bogus = vq->chase_reply->reason_bogus;
+	} else if(subtype != VAL_CLASS_REFERRAL ||
 		vq->rrset_skip < vq->orig_msg->rep->an_numrrsets + 
 		vq->orig_msg->rep->ns_numrrsets) {
 		/* ignore sec status of additional section if a referral 
 		 * type message skips there and
 		 * use the lowest security status as end result. */
-		if(vq->chase_reply->security < vq->orig_msg->rep->security)
+		if(vq->chase_reply->security < vq->orig_msg->rep->security) {
 			vq->orig_msg->rep->security = 
 				vq->chase_reply->security;
+			vq->orig_msg->rep->reason_bogus = 
+				vq->chase_reply->reason_bogus;
+		}
 	}
 
 	if(subtype == VAL_CLASS_REFERRAL) {
