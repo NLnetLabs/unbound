@@ -531,6 +531,24 @@ dnskeyset_verify_rrset(struct module_env* env, struct val_env* ve,
 	uint8_t* sigalg, char** reason, sldns_pkt_section section, 
 	struct module_qstate* qstate)
 {
+	return dnskeyset_verify_rrset_ede(
+		env, ve, rrset, dnskey, sigalg, reason, NULL, section, qstate);
+}
+
+static enum sec_status 
+dnskeyset_verify_rrset_sig(struct module_env* env, struct val_env* ve, 
+	time_t now, struct ub_packed_rrset_key* rrset, 
+	struct ub_packed_rrset_key* dnskey, size_t sig_idx, 
+	struct rbtree_type** sortree,
+	char** reason, sldns_ede_code *reason_bogus,
+	sldns_pkt_section section, struct module_qstate* qstate);
+
+enum sec_status 
+dnskeyset_verify_rrset_ede(struct module_env* env, struct val_env* ve,
+	struct ub_packed_rrset_key* rrset, struct ub_packed_rrset_key* dnskey,
+	uint8_t* sigalg, char** reason, sldns_ede_code *reason_bogus,
+	sldns_pkt_section section, struct module_qstate* qstate)
+{
 	enum sec_status sec;
 	size_t i, num;
 	rbtree_type* sortree = NULL;
@@ -543,6 +561,8 @@ dnskeyset_verify_rrset(struct module_env* env, struct val_env* ve,
 		verbose(VERB_QUERY, "rrset failed to verify due to a lack of "
 			"signatures");
 		*reason = "no signatures";
+		if (reason_bogus)
+			*reason_bogus = LDNS_EDE_RRSIGS_MISSING;
 		return sec_status_bogus;
 	}
 
@@ -551,12 +571,15 @@ dnskeyset_verify_rrset(struct module_env* env, struct val_env* ve,
 		if(algo_needs_num_missing(&needs) == 0) {
 			verbose(VERB_QUERY, "zone has no known algorithms");
 			*reason = "zone has no known algorithms";
+			if (reason_bogus)
+				*reason_bogus = LDNS_EDE_UNSUPPORTED_DNSKEY_ALG;
 			return sec_status_insecure;
 		}
 	}
 	for(i=0; i<num; i++) {
 		sec = dnskeyset_verify_rrset_sig(env, ve, *env->now, rrset, 
-			dnskey, i, &sortree, reason, section, qstate);
+			dnskey, i, &sortree, reason, reason_bogus,
+			section, qstate);
 		/* see which algorithm has been fixed up */
 		if(sec == sec_status_secure) {
 			if(!sigalg)
@@ -633,12 +656,22 @@ dnskey_verify_rrset(struct module_env* env, struct val_env* ve,
 	return sec_status_bogus;
 }
 
-enum sec_status 
+static enum sec_status 
+dnskey_verify_rrset_sig_ede(struct regional* region, sldns_buffer* buf, 
+	struct val_env* ve, time_t now,
+        struct ub_packed_rrset_key* rrset, struct ub_packed_rrset_key* dnskey,
+        size_t dnskey_idx, size_t sig_idx,
+	struct rbtree_type** sortree, int* buf_canon,
+	char** reason, sldns_ede_code *reason_bogus,
+	sldns_pkt_section section, struct module_qstate* qstate);
+
+static enum sec_status 
 dnskeyset_verify_rrset_sig(struct module_env* env, struct val_env* ve, 
 	time_t now, struct ub_packed_rrset_key* rrset, 
 	struct ub_packed_rrset_key* dnskey, size_t sig_idx, 
-	struct rbtree_type** sortree, char** reason, sldns_pkt_section section,
-	struct module_qstate* qstate)
+	struct rbtree_type** sortree,
+	char** reason, sldns_ede_code *reason_bogus,
+	sldns_pkt_section section, struct module_qstate* qstate)
 {
 	/* find matching keys and check them */
 	enum sec_status sec = sec_status_bogus;
@@ -661,9 +694,10 @@ dnskeyset_verify_rrset_sig(struct module_env* env, struct val_env* ve,
 		numchecked ++;
 
 		/* see if key verifies */
-		sec = dnskey_verify_rrset_sig(env->scratch, 
+		sec = dnskey_verify_rrset_sig_ede(env->scratch, 
 			env->scratch_buffer, ve, now, rrset, dnskey, i, 
-			sig_idx, sortree, &buf_canon, reason, section, qstate);
+			sig_idx, sortree, &buf_canon, reason, reason_bogus,
+			section, qstate);
 		if(sec == sec_status_secure)
 			return sec;
 	}
@@ -1361,8 +1395,8 @@ subtract_1982(uint32_t a, uint32_t b)
 
 /** check rrsig dates */
 static int
-check_dates(struct val_env* ve, uint32_t unow,
-	uint8_t* expi_p, uint8_t* incep_p, char** reason)
+check_dates(struct val_env* ve, uint32_t unow, uint8_t* expi_p,
+		uint8_t* incep_p, char** reason, sldns_ede_code *reason_bogus)
 {
 	/* read out the dates */
 	uint32_t expi, incep, now;
@@ -1386,6 +1420,7 @@ check_dates(struct val_env* ve, uint32_t unow,
 		sigdate_error("verify: inception after expiration, "
 			"signature bad", expi, incep, now);
 		*reason = "signature inception after expiration";
+		/* @TODO Tom, wat hier te doen? */
 		return 0;
 	}
 	if(compare_1982(incep, now) > 0) {
@@ -1397,6 +1432,8 @@ check_dates(struct val_env* ve, uint32_t unow,
 			sigdate_error("verify: signature bad, current time is"
 				" before inception date", expi, incep, now);
 			*reason = "signature before inception date";
+			if (reason_bogus)
+				*reason_bogus = LDNS_EDE_SIGNATURE_NOT_YET_VALID;
 			return 0;
 		}
 		sigdate_error("verify warning suspicious signature inception "
@@ -1410,6 +1447,8 @@ check_dates(struct val_env* ve, uint32_t unow,
 			sigdate_error("verify: signature expired", expi, 
 				incep, now);
 			*reason = "signature expired";
+			if (reason_bogus)
+				*reason_bogus = LDNS_EDE_SIGNATURE_EXPIRED;
 			return 0;
 		}
 		sigdate_error("verify warning suspicious signature expiration "
@@ -1476,6 +1515,20 @@ dnskey_verify_rrset_sig(struct regional* region, sldns_buffer* buf,
 	struct rbtree_type** sortree, int* buf_canon, char** reason,
 	sldns_pkt_section section, struct module_qstate* qstate)
 {
+	return dnskey_verify_rrset_sig_ede(region, buf, ve, now, rrset, dnskey,
+			dnskey_idx, sig_idx, sortree, buf_canon, reason, NULL,
+			section, qstate);
+}
+
+static enum sec_status 
+dnskey_verify_rrset_sig_ede(struct regional* region, sldns_buffer* buf, 
+	struct val_env* ve, time_t now,
+        struct ub_packed_rrset_key* rrset, struct ub_packed_rrset_key* dnskey,
+        size_t dnskey_idx, size_t sig_idx,
+	struct rbtree_type** sortree, int* buf_canon,
+	char** reason, sldns_ede_code *reason_bogus,
+	sldns_pkt_section section, struct module_qstate* qstate)
+{
 	enum sec_status sec;
 	uint8_t* sig;		/* RRSIG rdata */
 	size_t siglen;
@@ -1498,6 +1551,8 @@ dnskey_verify_rrset_sig(struct regional* region, sldns_buffer* buf,
 	if(!(dnskey_get_flags(dnskey, dnskey_idx) & DNSKEY_BIT_ZSK)) {
 		verbose(VERB_QUERY, "verify: dnskey without ZSK flag");
 		*reason = "dnskey without ZSK flag";
+		if(reason_bogus)
+			*reason_bogus = LDNS_EDE_NO_ZONE_KEY_BIT_SET;
 		return sec_status_bogus; 
 	}
 
@@ -1598,7 +1653,8 @@ dnskey_verify_rrset_sig(struct regional* region, sldns_buffer* buf,
 		/* verify inception, expiration dates 
 		 * Do this last so that if you ignore expired-sigs the
 		 * rest is sure to be OK. */
-		if(!check_dates(ve, now, sig+2+8, sig+2+12, reason)) {
+		if(!check_dates(ve, now, sig+2+8, sig+2+12,
+					reason, reason_bogus)) {
 			return sec_status_bogus;
 		}
 	}

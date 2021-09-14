@@ -332,11 +332,11 @@ rrset_get_ttl(struct ub_packed_rrset_key* rrset)
 	return d->ttl;
 }
 
-enum sec_status 
+static enum sec_status 
 val_verify_rrset(struct module_env* env, struct val_env* ve,
         struct ub_packed_rrset_key* rrset, struct ub_packed_rrset_key* keys,
-	uint8_t* sigalg, char** reason, sldns_pkt_section section,
-	struct module_qstate* qstate)
+	uint8_t* sigalg, char** reason, sldns_ede_code *reason_bogus,
+	sldns_pkt_section section, struct module_qstate* qstate)
 {
 	enum sec_status sec;
 	struct packed_rrset_data* d = (struct packed_rrset_data*)rrset->
@@ -358,8 +358,8 @@ val_verify_rrset(struct module_env* env, struct val_env* ve,
 	}
 	log_nametypeclass(VERB_ALGO, "verify rrset", rrset->rk.dname,
 		ntohs(rrset->rk.type), ntohs(rrset->rk.rrset_class));
-	sec = dnskeyset_verify_rrset(env, ve, rrset, keys, sigalg, reason,
-		section, qstate);
+	sec = dnskeyset_verify_rrset_ede(env, ve, rrset, keys, sigalg, reason,
+		reason_bogus, section, qstate);
 	verbose(VERB_ALGO, "verify result: %s", sec_status_to_string(sec));
 	regional_free_all(env->scratch);
 
@@ -394,6 +394,16 @@ val_verify_rrset_entry(struct module_env* env, struct val_env* ve,
         struct ub_packed_rrset_key* rrset, struct key_entry_key* kkey,
 	char** reason, sldns_pkt_section section, struct module_qstate* qstate)
 {
+	return val_verify_rrset_entry_ede(
+			env, ve, rrset, kkey, reason, NULL, section, qstate);
+}
+
+enum sec_status 
+val_verify_rrset_entry_ede(struct module_env* env, struct val_env* ve,
+        struct ub_packed_rrset_key* rrset, struct key_entry_key* kkey,
+	char** reason, sldns_ede_code *reason_bogus,
+	sldns_pkt_section section, struct module_qstate* qstate)
+{
 	/* temporary dnskey rrset-key */
 	struct ub_packed_rrset_key dnskey;
 	struct key_entry_data* kd = (struct key_entry_data*)kkey->entry.data;
@@ -406,7 +416,7 @@ val_verify_rrset_entry(struct module_env* env, struct val_env* ve,
 	dnskey.entry.key = &dnskey;
 	dnskey.entry.data = kd->rrset_data;
 	sec = val_verify_rrset(env, ve, rrset, &dnskey, kd->algo, reason,
-		section, qstate);
+		reason_bogus, section, qstate);
 	return sec;
 }
 
