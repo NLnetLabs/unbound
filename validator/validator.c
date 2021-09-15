@@ -1717,6 +1717,7 @@ processFindKey(struct module_qstate* qstate, struct val_qstate* vq, int id)
 			/* do not query for empty_DS_name again */
 			verbose(VERB_ALGO, "Cannot retrieve DS for signature");
 			errinf(qstate, "no signatures");
+			vq->chase_reply->reason_bogus = LDNS_EDE_RRSIGS_MISSING;
 			errinf_origin(qstate, qstate->reply_origin);
 			vq->chase_reply->security = sec_status_bogus;
 			vq->state = VAL_FINISHED_STATE;
@@ -1865,6 +1866,7 @@ processValidate(struct module_qstate* qstate, struct val_qstate* vq,
 		verbose(VERB_DETAIL, "Could not establish validation of "
 		          "INSECURE status of unsigned response.");
 		errinf(qstate, "no signatures");
+		vq->chase_reply->reason_bogus = LDNS_EDE_RRSIGS_MISSING;
 		errinf_origin(qstate, qstate->reply_origin);
 		vq->chase_reply->security = sec_status_bogus;
 		return 1;
