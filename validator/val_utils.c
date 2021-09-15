@@ -570,6 +570,7 @@ val_verify_DNSKEY_with_DS(struct module_env* env, struct val_env* ve,
 	if(!has_useful_ds) {
 		verbose(VERB_ALGO, "No usable DS records were found -- "
 			"treating as insecure.");
+		// @TODO add ede DNSSEC Indeterminate?
 		return sec_status_insecure;
 	}
 	/* If any were understandable, then it is bad. */
@@ -786,6 +787,9 @@ val_dsset_isusable(struct ub_packed_rrset_key* ds_rrset)
 		if(lt) snprintf(aerr, sizeof(aerr), "%s", lt->name);
 		else snprintf(aerr, sizeof(aerr), "%d",
 			(int)ds_get_key_algo(ds_rrset, i));
+
+		// @TODO do we want to add EDE Unsupported DS Digest Type here?
+
 		verbose(VERB_ALGO, "DS unsupported, hash %s %s, "
 			"key algorithm %s %s", herr,
 			(ds_digest_algo_is_supported(ds_rrset, 0)?

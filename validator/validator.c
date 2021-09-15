@@ -2405,6 +2405,7 @@ ds_response_to_ke(struct module_qstate* qstate, struct val_qstate* vq,
 		verbose(VERB_DETAIL, "DS response was error, thus bogus");
 		errinf(qstate, rc);
 		errinf(qstate, "no DS");
+
 		goto return_bogus;
 	}
 
@@ -2587,6 +2588,9 @@ ds_response_to_ke(struct module_qstate* qstate, struct val_qstate* vq,
 		goto return_bogus;
 	}
 return_bogus:
+
+	// @TODO add EDE NSEC MISSING
+
 	*ke = key_entry_create_bad(qstate->region, qinfo->qname,
 		qinfo->qname_len, qinfo->qclass, 
 		BOGUS_KEY_TTL, *qstate->env->now);
