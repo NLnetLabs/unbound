@@ -682,6 +682,9 @@ dnskeyset_verify_rrset_sig(struct module_env* env, struct val_env* ve,
 	int buf_canon = 0;
 	verbose(VERB_ALGO, "verify sig %d %d", (int)tag, algo);
 	if(!dnskey_algo_id_is_supported(algo)) {
+		// @TODO do we do LDNS_EDE_UNSUPPORTED_DNSKEY_ALG here?
+		// if (reason_bogus)
+		//	*reason_bogus = LDNS_EDE_UNSUPPORTED_DNSKEY_ALG;
 		verbose(VERB_QUERY, "verify sig: unknown algorithm");
 		return sec_status_insecure;
 	}
@@ -1421,6 +1424,7 @@ check_dates(struct val_env* ve, uint32_t unow, uint8_t* expi_p,
 			"signature bad", expi, incep, now);
 		*reason = "signature inception after expiration";
 		/* @TODO Tom, wat hier te doen? */
+
 		return 0;
 	}
 	if(compare_1982(incep, now) > 0) {
