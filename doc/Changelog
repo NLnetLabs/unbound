@@ -1,3 +1,8 @@
+20 September 2021: Wouter
+	- Fix crosscompile on windows to work with openssl 3.0.0 the
+	  link with ws2_32 needs -l:libssp.a for __strcpy_chk.
+	  Also copy results from lib64 directory if needed.
+
 10 September 2021: Wouter
 	- Fix initialisation errors reported by gcc sanitizer.
 	- Fix lock debug code for gcc sanitizer reports.
