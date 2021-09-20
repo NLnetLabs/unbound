@@ -346,7 +346,7 @@ void log_edns_opt_list(enum verbosity_value level, const char* info_str,
  * @param pkt: the packet.
  * @return 0 if true, 1 if false
  */
-int msgparse_check_edns_in_packet(sldns_buffer* pkt);
+int msgparse_check_edns_in_packet(struct sldns_buffer* pkt);
 
 
 #endif /* UTIL_DATA_MSGPARSE_H */
