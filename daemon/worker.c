@@ -1155,6 +1155,12 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 	acl = acl_get_control(acladdr);
 	if((ret=deny_refuse_all(c, acl, worker, repinfo)) != -1)
 	{
+		/* parse packet to check for EDNS. Add EDE blocked if possible */
+		sldns_buffer_rewind(c->buffer)
+		if (msgparse_check_edns_in_packet(c->buffer))
+			EDNS_OPT_APPEND_EDE(edns, worker->scratchpad,
+				LDNS_EDE_BLOCKED, "");
+
 		if(ret == 1)
 			goto send_reply;
 		return ret;
