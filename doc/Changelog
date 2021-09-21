@@ -1,5 +1,6 @@
 21 September 2021: Wouter
 	- For crosscompile on windows, detect 64bit stackprotector library.
+	- Fix crosscompile shell syntax.
 
 20 September 2021: Wouter
 	- Fix crosscompile on windows to work with openssl 3.0.0 the
