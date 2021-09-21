@@ -1,6 +1,10 @@
 21 September 2021: Wouter
 	- For crosscompile on windows, detect 64bit stackprotector library.
 	- Fix crosscompile shell syntax.
+	- Fix crosscompile windows to use libssp when it exists.
+	- For the windows compile script disable gost.
+	- Fix that on windows, use BIO_set_callback_ex instead of deprecated
+	  BIO_set_callback.
 
 20 September 2021: Wouter
 	- Fix crosscompile on windows to work with openssl 3.0.0 the

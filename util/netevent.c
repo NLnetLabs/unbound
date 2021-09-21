@@ -943,7 +943,16 @@ int comm_point_perform_accept(struct comm_point* c,
 
 #ifdef USE_WINSOCK
 static long win_bio_cb(BIO *b, int oper, const char* ATTR_UNUSED(argp),
-        int ATTR_UNUSED(argi), long argl, long retvalue)
+#ifdef HAVE_BIO_SET_CALLBACK_EX
+	size_t ATTR_UNUSED(len),
+#endif
+        int ATTR_UNUSED(argi), long argl,
+#ifndef HAVE_BIO_SET_CALLBACK_EX
+	long retvalue
+#else
+	int retvalue, size_t* ATTR_UNUSED(processed)
+#endif
+	)
 {
 	int wsa_err = WSAGetLastError(); /* store errcode before it is gone */
 	verbose(VERB_ALGO, "bio_cb %d, %s %s %s", oper,
@@ -973,9 +982,17 @@ comm_point_tcp_win_bio_cb(struct comm_point* c, void* thessl)
 {
 	SSL* ssl = (SSL*)thessl;
 	/* set them both just in case, but usually they are the same BIO */
+#ifdef HAVE_BIO_SET_CALLBACK_EX
+	BIO_set_callback_ex(SSL_get_rbio(ssl), &win_bio_cb);
+#else
 	BIO_set_callback(SSL_get_rbio(ssl), &win_bio_cb);
+#endif
 	BIO_set_callback_arg(SSL_get_rbio(ssl), (char*)c->ev->ev);
+#ifdef HAVE_BIO_SET_CALLBACK_EX
+	BIO_set_callback_ex(SSL_get_wbio(ssl), &win_bio_cb);
+#else
 	BIO_set_callback(SSL_get_wbio(ssl), &win_bio_cb);
+#endif
 	BIO_set_callback_arg(SSL_get_wbio(ssl), (char*)c->ev->ev);
 }
 #endif
