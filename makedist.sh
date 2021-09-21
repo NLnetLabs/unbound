@@ -393,12 +393,12 @@ if [ "$DOWIN" = "yes" ]; then
     cd ../unbound_shared
     if test "$W64" = "no"; then
 	# Disable stack-protector for 32-bit windows builds.
-		echo "$configure"' --enable-debug --disable-flto '"$* $shared_cross_flag" "$file_flag" "$file2_flag" "$file3_flag" CFLAGS='-O2 -g -fno-stack-protector'
-		$configure --enable-debug --disable-flto $* $shared_cross_flag "$file_flag" "$file2_flag" "$file3_flag" CFLAGS='-O2 -g -fno-stack-protector'\
+		echo "$configure"' --enable-debug --disable-flto --disable-gost '"$* $shared_cross_flag" "$file_flag" "$file2_flag" "$file3_flag" CFLAGS='-O2 -g -fno-stack-protector'
+		$configure --enable-debug --disable-flto --disable-gost $* $shared_cross_flag "$file_flag" "$file2_flag" "$file3_flag" CFLAGS='-O2 -g -fno-stack-protector'\
 		|| error_cleanup "Could not configure"
     else
-		echo "$configure"' --enable-debug --disable-flto '"$* $shared_cross_flag"
-        $configure --enable-debug --disable-flto $* $shared_cross_flag \
+		echo "$configure"' --enable-debug --disable-flto --disable-gost '"$* $shared_cross_flag"
+        $configure --enable-debug --disable-flto --disable-gost $* $shared_cross_flag \
 		|| error_cleanup "Could not configure"
     fi
     info "Calling make for DLL"

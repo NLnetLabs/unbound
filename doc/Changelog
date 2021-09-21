@@ -5,6 +5,7 @@
 	- For the windows compile script disable gost.
 	- Fix that on windows, use BIO_set_callback_ex instead of deprecated
 	  BIO_set_callback.
+	- Fix crosscompile script for the shared build flags.
 
 20 September 2021: Wouter
 	- Fix crosscompile on windows to work with openssl 3.0.0 the
