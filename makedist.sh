@@ -271,8 +271,18 @@ if [ "$DOWIN" = "yes" ]; then
 		else
 			sslflags="no-asm -DOPENSSL_NO_CAPIENG mingw"
 		fi
+		if test "$W64" = "yes" -a -f /usr/x86_64-w64-mingw32/sys-root/mingw/bin/libssp-0.dll; then
+			# stack protector lib needs to link in to make
+			# -lws2_32 work in openssl link stage
+			SSPLIB="__CNF_LDLIBS=-l:libssp.a"
+		else
+			# disable SSPLIB for 32bit or if no such file
+			SSPLIB=""
+		fi
 		info "winssl: Configure no-shared $sslflags"
-		__CNF_LDLIBS=-l:libssp.a CC=${warch}-w64-mingw32-gcc AR=${warch}-w64-mingw32-ar RANLIB=${warch}-w64-mingw32-ranlib WINDRES=${warch}-w64-mingw32-windres ./Configure --prefix="$sslinstall" no-shared $sslflags || error_cleanup "OpenSSL Configure failed"
+		set -x # echo the configure command
+		$SSPLIB CC=${warch}-w64-mingw32-gcc AR=${warch}-w64-mingw32-ar RANLIB=${warch}-w64-mingw32-ranlib WINDRES=${warch}-w64-mingw32-windres ./Configure --prefix="$sslinstall" no-shared $sslflags || error_cleanup "OpenSSL Configure failed"
+		set +x
 		info "winssl: make"
 		make $MINJ || error_cleanup "OpenSSL crosscompile failed"
 		# only install sw not docs, which take a long time.
@@ -285,7 +295,9 @@ if [ "$DOWIN" = "yes" ]; then
 		sslsharedinstall="`pwd`/sslsharedinstall"
 		cd openssl_shared
 		info "winssl: Configure shared $sslflags"
-		__CNF_LDLIBS=-l:libssp.a CC=${warch}-w64-mingw32-gcc AR=${warch}-w64-mingw32-ar RANLIB=${warch}-w64-mingw32-ranlib WINDRES=${warch}-w64-mingw32-windres ./Configure --prefix="$sslsharedinstall" shared $sslflags || error_cleanup "OpenSSL Configure failed"
+		set -x # echo the configure command
+		$SSPLIB CC=${warch}-w64-mingw32-gcc AR=${warch}-w64-mingw32-ar RANLIB=${warch}-w64-mingw32-ranlib WINDRES=${warch}-w64-mingw32-windres ./Configure --prefix="$sslsharedinstall" shared $sslflags || error_cleanup "OpenSSL Configure failed"
+		set +x
 		info "winssl: make"
 		make $MINJ || error_cleanup "OpenSSL crosscompile failed"
 		info "winssl: make install_sw"

@@ -1,3 +1,6 @@
+21 September 2021: Wouter
+	- For crosscompile on windows, detect 64bit stackprotector library.
+
 20 September 2021: Wouter
 	- Fix crosscompile on windows to work with openssl 3.0.0 the
 	  link with ws2_32 needs -l:libssp.a for __strcpy_chk.
