@@ -1,3 +1,6 @@
+27 September 2021: Wouter
+	- Implement RFC8375: Special-Use Domain 'home.arpa.'.
+
 21 September 2021: Wouter
 	- For crosscompile on windows, detect 64bit stackprotector library.
 	- Fix crosscompile shell syntax.
