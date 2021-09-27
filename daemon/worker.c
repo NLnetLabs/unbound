@@ -1028,6 +1028,8 @@ deny_refuse(struct comm_point* c, enum acl_access acl,
 			worker->stats.unwanted_queries++;
 		return 0;
 	} else if(acl == refuse) {
+		size_t opt_rr_mark;
+
 		log_addr(VERB_ALGO, "refused query from",
 			&repinfo->addr, repinfo->addrlen);
 		log_buf(VERB_ALGO, "refuse", c->buffer);
@@ -1037,15 +1039,109 @@ deny_refuse(struct comm_point* c, enum acl_access acl,
 			comm_point_drop_reply(repinfo);
 			return 0; /* discard this */
 		}
-		sldns_buffer_set_limit(c->buffer, LDNS_HEADER_SIZE);
-		sldns_buffer_write_at(c->buffer, 4, 
-			(uint8_t*)"\0\0\0\0\0\0\0\0", 8);
+		log_assert(LDNS_QDCOUNT(sldns_buffer_begin(c->buffer)) == 1);
+
+		sldns_buffer_skip(c->buffer, LDNS_HEADER_SIZE); /* skip header */
+
+		if (!query_dname_len(c->buffer)) {
+			LDNS_RCODE_SET(sldns_buffer_begin(c->buffer),
+				LDNS_RCODE_FORMERR);
+			return 1;
+		}
+		if (sldns_buffer_remaining(c->buffer) < 2 * sizeof(uint16_t)) {
+                        LDNS_RCODE_SET(sldns_buffer_begin(c->buffer),
+				 LDNS_RCODE_FORMERR);
+			return 1;
+		}
+		sldns_buffer_skip(c->buffer, (ssize_t)sizeof(uint16_t)); /* skip qtype  */
+		sldns_buffer_skip(c->buffer, (ssize_t)sizeof(uint16_t)); /* skip qclass */
+
 		LDNS_QR_SET(sldns_buffer_begin(c->buffer));
 		LDNS_RCODE_SET(sldns_buffer_begin(c->buffer), 
 			LDNS_RCODE_REFUSED);
-		sldns_buffer_set_position(c->buffer, LDNS_HEADER_SIZE);
+
+		/* check edns section is present */
+		if(LDNS_ARCOUNT(sldns_buffer_begin(c->buffer)) != 1) {
+			LDNS_ANCOUNT_SET(sldns_buffer_begin(c->buffer), 0);
+			LDNS_NSCOUNT_SET(sldns_buffer_begin(c->buffer), 0);
+			LDNS_ARCOUNT_SET(sldns_buffer_begin(c->buffer), 0);
+			sldns_buffer_flip(c->buffer);
+			log_buf(VERB_ALGO, "Refused without EDE", c->buffer);
+			return 1;
+		}
+
+		/* The OPT RR to be returned should come directly after
+		 * the query, so mark this spot.
+		 */
+		opt_rr_mark = sldns_buffer_position(c->buffer);
+
+		if(LDNS_ANCOUNT(sldns_buffer_begin(c->buffer)) != 0 ||
+			LDNS_NSCOUNT(sldns_buffer_begin(c->buffer)) != 0) {
+			if(!skip_pkt_rrs(c->buffer, ((int)LDNS_ANCOUNT(sldns_buffer_begin(c->buffer)))+
+				((int)LDNS_NSCOUNT(sldns_buffer_begin(c->buffer))))) {
+				comm_point_drop_reply(repinfo);
+				return 0;
+			}
+		}
+		/* Do we have a valid OPT RR here? If not return FORMERR */
+		/* domain name must be the root of length 1. */
+		if(pkt_dname_len(c->buffer) != 1) {
+			LDNS_RCODE_SET(sldns_buffer_begin(c->buffer),
+				LDNS_RCODE_FORMERR);
+			return 1;
+		}
+		if(sldns_buffer_read_u16(c->buffer) != LDNS_RR_TYPE_OPT) {
+			LDNS_RCODE_SET(sldns_buffer_begin(c->buffer),
+				LDNS_RCODE_FORMERR);
+			return 1;
+		}
+		/* Write OPT RR directly after the query,
+		 * so without the (possibly skipped) Answer and NS RRs
+		 */
+		LDNS_ANCOUNT_SET(sldns_buffer_begin(c->buffer), 0);
+		LDNS_NSCOUNT_SET(sldns_buffer_begin(c->buffer), 0);
+		sldns_buffer_set_position(c->buffer, opt_rr_mark);
+
+		/* check if OPT record can be written
+		 * 17 == root label (1) + RR type (2) + UDP Size (2)
+		 *     + Fields (4) + rdata len (2) + EDE Option code (2)
+		 *     + EDE Option length (2) + EDE info-code (2)
+		 */
+		if (sldns_buffer_available(c->buffer, 17) == 0) {
+			LDNS_ARCOUNT_SET(sldns_buffer_begin(c->buffer), 0);
+			sldns_buffer_flip(c->buffer);
+			log_buf(VERB_ALGO, "Refused without EDE", c->buffer);
+			return 1;
+		}
+
+		LDNS_ARCOUNT_SET(sldns_buffer_begin(c->buffer), 1);
+
+		/* root label */
+		sldns_buffer_write_u8(c->buffer, 0);
+		sldns_buffer_write_u16(c->buffer, LDNS_RR_TYPE_OPT);
+		sldns_buffer_write_u16(c->buffer, EDNS_ADVERTISED_SIZE);
+
+		/* write OPT Record TTL Field */
+		sldns_buffer_write_u32(c->buffer, 0);
+
+		/* write rdata len: EDE option + length + info-code */
+		sldns_buffer_write_u16(c->buffer, 6);
+
+		/* write OPTIONS; add EDE option code */
+		sldns_buffer_write_u16(c->buffer, LDNS_EDNS_EDE);
+
+		/* write single EDE option length (for just 1 info-code) */
+		sldns_buffer_write_u16(c->buffer, 2);
+
+		/* write single EDE info-code */
+		sldns_buffer_write_u16(c->buffer, LDNS_EDE_PROHIBITED);
+
 		sldns_buffer_flip(c->buffer);
+
+		log_buf(VERB_ALGO, "EDE added, buffer:", c->buffer);
+
 		return 1;
+
 	}
 
 	return -1;
@@ -1155,12 +1251,6 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 	acl = acl_get_control(acladdr);
 	if((ret=deny_refuse_all(c, acl, worker, repinfo)) != -1)
 	{
-		/* parse packet to check for EDNS. Add EDE blocked if possible */
-		sldns_buffer_rewind(c->buffer);
-		if (msgparse_check_edns_in_packet(c->buffer))
-			EDNS_OPT_APPEND_EDE(&edns, worker->scratchpad,
-				LDNS_EDE_BLOCKED, "");
-
 		if(ret == 1)
 			goto send_reply;
 		return ret;

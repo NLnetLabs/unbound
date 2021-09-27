@@ -1604,6 +1604,7 @@ local_data_answer(struct local_zone* z, struct module_env* env,
 		return local_encode(qinfo, env, edns, repinfo, buf, temp, &r, 1,
 			LDNS_RCODE_NOERROR);
 	}
+	// @TODO add EDE?
 	return local_encode(qinfo, env, edns, repinfo, buf, temp, lr->rrset, 1,
 		LDNS_RCODE_NOERROR);
 }
