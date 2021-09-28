@@ -1070,7 +1070,6 @@ deny_refuse(struct comm_point* c, enum acl_access acl,
 			LDNS_NSCOUNT_SET(sldns_buffer_begin(c->buffer), 0);
 			LDNS_ARCOUNT_SET(sldns_buffer_begin(c->buffer), 0);
 			sldns_buffer_flip(c->buffer);
-			sldns_buffer_flip(c->buffer);
 			return 1;
 		}
 
@@ -1098,7 +1097,7 @@ deny_refuse(struct comm_point* c, enum acl_access acl,
 				LDNS_RCODE_FORMERR);
 			return 1;
 		}
-		if(sldns_buffer_remaining(c->buffer) > 1 ||
+		if(sldns_buffer_remaining(c->buffer) < 2 ||
 			sldns_buffer_read_u16(c->buffer) != LDNS_RR_TYPE_OPT) {
 			LDNS_RCODE_SET(sldns_buffer_begin(c->buffer),
 				LDNS_RCODE_FORMERR);
