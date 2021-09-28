@@ -1044,13 +1044,17 @@ deny_refuse(struct comm_point* c, enum acl_access acl,
 		sldns_buffer_skip(c->buffer, LDNS_HEADER_SIZE); /* skip header */
 
 		if (!query_dname_len(c->buffer)) {
+			LDNS_QR_SET(sldns_buffer_begin(c->buffer));
 			LDNS_RCODE_SET(sldns_buffer_begin(c->buffer),
 				LDNS_RCODE_FORMERR);
+			sldns_buffer_flip(c->buffer);
 			return 1;
 		}
 		if (sldns_buffer_remaining(c->buffer) < 2 * sizeof(uint16_t)) {
+                        LDNS_QR_SET(sldns_buffer_begin(c->buffer));
                         LDNS_RCODE_SET(sldns_buffer_begin(c->buffer),
 				 LDNS_RCODE_FORMERR);
+                        sldns_buffer_flip(c->buffer);
 			return 1;
 		}
 		sldns_buffer_skip(c->buffer, (ssize_t)sizeof(uint16_t)); /* skip qtype  */
@@ -1066,7 +1070,7 @@ deny_refuse(struct comm_point* c, enum acl_access acl,
 			LDNS_NSCOUNT_SET(sldns_buffer_begin(c->buffer), 0);
 			LDNS_ARCOUNT_SET(sldns_buffer_begin(c->buffer), 0);
 			sldns_buffer_flip(c->buffer);
-			log_buf(VERB_ALGO, "Refused without EDE", c->buffer);
+			sldns_buffer_flip(c->buffer);
 			return 1;
 		}
 
@@ -1075,12 +1079,16 @@ deny_refuse(struct comm_point* c, enum acl_access acl,
 		 */
 		opt_rr_mark = sldns_buffer_position(c->buffer);
 
+		/* Skip through the RR records */
 		if(LDNS_ANCOUNT(sldns_buffer_begin(c->buffer)) != 0 ||
 			LDNS_NSCOUNT(sldns_buffer_begin(c->buffer)) != 0) {
-			if(!skip_pkt_rrs(c->buffer, ((int)LDNS_ANCOUNT(sldns_buffer_begin(c->buffer)))+
+			if(!skip_pkt_rrs(c->buffer, 
+				((int)LDNS_ANCOUNT(sldns_buffer_begin(c->buffer)))+
 				((int)LDNS_NSCOUNT(sldns_buffer_begin(c->buffer))))) {
-				comm_point_drop_reply(repinfo);
-				return 0;
+				LDNS_RCODE_SET(sldns_buffer_begin(c->buffer),
+					LDNS_RCODE_FORMERR);
+				sldns_buffer_flip(c->buffer);
+				return 1;
 			}
 		}
 		/* Do we have a valid OPT RR here? If not return FORMERR */
@@ -1090,9 +1098,11 @@ deny_refuse(struct comm_point* c, enum acl_access acl,
 				LDNS_RCODE_FORMERR);
 			return 1;
 		}
-		if(sldns_buffer_read_u16(c->buffer) != LDNS_RR_TYPE_OPT) {
+		if(sldns_buffer_remaining(c->buffer) > 1 ||
+			sldns_buffer_read_u16(c->buffer) != LDNS_RR_TYPE_OPT) {
 			LDNS_RCODE_SET(sldns_buffer_begin(c->buffer),
 				LDNS_RCODE_FORMERR);
+			sldns_buffer_flip(c->buffer);
 			return 1;
 		}
 		/* Write OPT RR directly after the query,
@@ -1102,7 +1112,7 @@ deny_refuse(struct comm_point* c, enum acl_access acl,
 		LDNS_NSCOUNT_SET(sldns_buffer_begin(c->buffer), 0);
 		sldns_buffer_set_position(c->buffer, opt_rr_mark);
 
-		/* check if OPT record can be written
+		/* Check if OPT record can be written
 		 * 17 == root label (1) + RR type (2) + UDP Size (2)
 		 *     + Fields (4) + rdata len (2) + EDE Option code (2)
 		 *     + EDE Option length (2) + EDE info-code (2)
@@ -1110,7 +1120,6 @@ deny_refuse(struct comm_point* c, enum acl_access acl,
 		if (sldns_buffer_available(c->buffer, 17) == 0) {
 			LDNS_ARCOUNT_SET(sldns_buffer_begin(c->buffer), 0);
 			sldns_buffer_flip(c->buffer);
-			log_buf(VERB_ALGO, "Refused without EDE", c->buffer);
 			return 1;
 		}
 
@@ -1137,8 +1146,6 @@ deny_refuse(struct comm_point* c, enum acl_access acl,
 		sldns_buffer_write_u16(c->buffer, LDNS_EDE_PROHIBITED);
 
 		sldns_buffer_flip(c->buffer);
-
-		log_buf(VERB_ALGO, "EDE added, buffer:", c->buffer);
 
 		return 1;
 
