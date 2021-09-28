@@ -1007,7 +1007,7 @@ int edns_opt_append_ede(struct edns_data* edns, struct regional* region,
 		return 0;
 	sldns_write_uint16(opt->opt_data, (uint16_t)code);
 	if (txt_len)
-		strncpy(opt->opt_data + 2, txt, txt_len);
+		memmove(opt->opt_data + 2, txt, txt_len);
 
 	/* append at end of list */
 	prevp = &edns->opt_list;
