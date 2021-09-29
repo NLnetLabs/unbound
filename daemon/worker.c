@@ -1061,10 +1061,11 @@ deny_refuse(struct comm_point* c, enum acl_access acl,
 		LDNS_RCODE_SET(sldns_buffer_begin(c->buffer), 
 			LDNS_RCODE_REFUSED);
 
-		sldns_buffer_skip(c->buffer, (ssize_t)sizeof(uint16_t)); /* skip qtype  */
-		
+		sldns_buffer_skip(c->buffer, (ssize_t)sizeof(uint16_t)); /* skip qtype */
+
 		/* check the qclass */
 		if (sldns_buffer_read_u16(c->buffer) != LDNS_RR_CLASS_IN) {
+			LDNS_QDCOUNT_SET(sldns_buffer_begin(c->buffer), 0);
 			LDNS_ANCOUNT_SET(sldns_buffer_begin(c->buffer), 0);
 			LDNS_NSCOUNT_SET(sldns_buffer_begin(c->buffer), 0);
 			LDNS_ARCOUNT_SET(sldns_buffer_begin(c->buffer), 0);
