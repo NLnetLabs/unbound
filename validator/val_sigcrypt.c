@@ -623,6 +623,16 @@ dnskey_verify_rrset(struct module_env* env, struct val_env* ve,
 	size_t dnskey_idx, char** reason, sldns_pkt_section section,
 	struct module_qstate* qstate)
 {
+	return dnskey_verify_rrset_ede(env, ve, rrset, dnskey, dnskey_idx,
+		reason, NULL, section, qstate);
+}
+
+enum sec_status 
+dnskey_verify_rrset_ede(struct module_env* env, struct val_env* ve,
+        struct ub_packed_rrset_key* rrset, struct ub_packed_rrset_key* dnskey,
+	size_t dnskey_idx, char** reason, sldns_ede_code *reason_bogus,
+	sldns_pkt_section section, struct module_qstate* qstate)
+{
 	enum sec_status sec;
 	size_t i, num, numchecked = 0;
 	rbtree_type* sortree = NULL;
@@ -635,6 +645,7 @@ dnskey_verify_rrset(struct module_env* env, struct val_env* ve,
 		verbose(VERB_QUERY, "rrset failed to verify due to a lack of "
 			"signatures");
 		*reason = "no signatures";
+		// @TODO ADD EDE 10
 		return sec_status_bogus;
 	}
 	for(i=0; i<num; i++) {
