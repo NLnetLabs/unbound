@@ -292,6 +292,12 @@ enum sec_status dnskey_verify_rrset(struct module_env* env,
 	struct ub_packed_rrset_key* dnskey, size_t dnskey_idx, char** reason,
 	sldns_pkt_section section, struct module_qstate* qstate);
 
+enum sec_status 
+dnskey_verify_rrset_ede(struct module_env* env, struct val_env* ve,
+        struct ub_packed_rrset_key* rrset, struct ub_packed_rrset_key* dnskey,
+	size_t dnskey_idx, char** reason, sldns_ede_code *reason_bogus,
+	sldns_pkt_section section, struct module_qstate* qstate);
+
 #if 0
 /** 
  * verify rrset, with dnskey rrset, for a specific rrsig in rrset
