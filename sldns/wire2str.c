@@ -1131,6 +1131,11 @@ static int sldns_wire2str_svcparam_ech2str(char** s,
 
 	w += sldns_str_print(s, slen, "\"");
 
+	// @TODO fix check
+	// if(size > *slen) {
+	// 	buffer_skip(output, size);
+	// }
+
 	return w + size;
 }
 

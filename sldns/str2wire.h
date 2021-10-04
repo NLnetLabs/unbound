@@ -235,11 +235,8 @@ uint8_t* sldns_wirerr_get_rdatawl(uint8_t* rr, size_t len, size_t dname_len);
 #define LDNS_WIREPARSE_ERR_SVCB_IPV6_TOO_MANY_ADDRESSES 383
 #define LDNS_WIREPARSE_ERR_SVCB_ALPN_KEY_TOO_LARGE 384
 #define LDNS_WIREPARSE_ERR_SVCB_NO_DEFAULT_ALPN_VALUE 385
-<<<<<<< HEAD
 #define LDNS_WIREPARSE_ERR_SVCPARAM_BROKEN_RDATA 386
-=======
-#define LDNS_WIREPARSE_ERR_SVCB_DOHPATH_KEY_TOO_LARGE 386
->>>>>>> ac3430bc (Add dohpath as type 7.)
+#define LDNS_WIREPARSE_ERR_SVCB_DOHPATH_KEY_TOO_LARGE 387
 
 /**
  * Get reference to a constant string for the (parse) error.
