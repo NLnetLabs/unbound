@@ -1,3 +1,6 @@
+4 October 2021: Wouter
+	- Fix to add example.conf note for outbound-msg-retry.
+
 27 September 2021: Wouter
 	- Implement RFC8375: Special-Use Domain 'home.arpa.'.
 
