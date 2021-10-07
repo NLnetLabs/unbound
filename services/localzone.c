@@ -898,6 +898,11 @@ int local_zone_enter_defaults(struct local_zones* zones, struct config_file* cfg
 		}
 		lock_rw_unlock(&z->lock);
 	}
+	/* home.arpa. zone (RFC 8375) */
+	if(!add_empty_default(zones, cfg, "home.arpa.")) {
+		log_err("out of memory adding default zone");
+		return 0;
+	}
 	/* onion. zone (RFC 7686) */
 	if(!add_empty_default(zones, cfg, "onion.")) {
 		log_err("out of memory adding default zone");
