@@ -54,6 +54,7 @@
 #include "sldns/wire2str.h"
 #include "util/module.h"
 #include "util/fptr_wlist.h"
+#include "util/edns.h"
 
 /** MAX TTL default for messages and rrsets */
 time_t MAX_TTL = 3600 * 24 * 10; /* ten days */
@@ -1077,8 +1078,8 @@ int edns_opt_list_remove(struct edns_option** list, uint16_t code)
 	return 1;
 }
 
-static int inplace_cb_reply_call_generic(
-    struct inplace_cb* callback_list, enum inplace_cb_list_type type,
+static int inplace_cb_reply_call_generic(struct config_file* cfg,
+	struct inplace_cb* callback_list, enum inplace_cb_list_type type,
 	struct query_info* qinfo, struct module_qstate* qstate,
 	struct reply_info* rep, int rcode, struct edns_data* edns,
 	struct comm_reply* repinfo, struct regional* region,
@@ -1086,6 +1087,7 @@ static int inplace_cb_reply_call_generic(
 {
 	struct inplace_cb* cb;
 	struct edns_option* opt_list_out = NULL;
+	struct edns_data edns_bak = *edns;
 #if defined(EXPORT_ALL_SYMBOLS)
 	(void)type; /* param not used when fptr_ok disabled */
 #endif
@@ -1098,7 +1100,7 @@ static int inplace_cb_reply_call_generic(
 			rcode, edns, &opt_list_out, repinfo, region, start_time, cb->id, cb->cb_arg);
 	}
 	edns->opt_list = opt_list_out;
-	return 1;
+	return apply_edns_options(edns, &edns_bak, cfg, repinfo ? repinfo->c : NULL, region);
 }
 
 int inplace_cb_reply_call(struct module_env* env, struct query_info* qinfo,
@@ -1106,7 +1108,7 @@ int inplace_cb_reply_call(struct module_env* env, struct query_info* qinfo,
 	struct edns_data* edns, struct comm_reply* repinfo, struct regional* region,
 	struct timeval* start_time)
 {
-	return inplace_cb_reply_call_generic(
+	return inplace_cb_reply_call_generic(env->cfg,
 		env->inplace_cb_lists[inplace_cb_reply], inplace_cb_reply, qinfo,
 		qstate, rep, rcode, edns, repinfo, region, start_time);
 }
@@ -1117,7 +1119,7 @@ int inplace_cb_reply_cache_call(struct module_env* env,
 	struct comm_reply* repinfo, struct regional* region,
 	struct timeval* start_time)
 {
-	return inplace_cb_reply_call_generic(
+	return inplace_cb_reply_call_generic(env->cfg,
 		env->inplace_cb_lists[inplace_cb_reply_cache], inplace_cb_reply_cache,
 		qinfo, qstate, rep, rcode, edns, repinfo, region, start_time);
 }
@@ -1128,7 +1130,7 @@ int inplace_cb_reply_local_call(struct module_env* env,
 	struct comm_reply* repinfo, struct regional* region,
 	struct timeval* start_time)
 {
-	return inplace_cb_reply_call_generic(
+	return inplace_cb_reply_call_generic(env->cfg,
 		env->inplace_cb_lists[inplace_cb_reply_local], inplace_cb_reply_local,
 		qinfo, qstate, rep, rcode, edns, repinfo, region, start_time);
 }
@@ -1142,7 +1144,7 @@ int inplace_cb_reply_servfail_call(struct module_env* env,
 	/* We are going to servfail. Remove any potential edns options. */
 	if(qstate)
 		qstate->edns_opts_front_out = NULL;
-	return inplace_cb_reply_call_generic(
+	return inplace_cb_reply_call_generic(env->cfg,
 		env->inplace_cb_lists[inplace_cb_reply_servfail],
 		inplace_cb_reply_servfail, qinfo, qstate, rep, rcode, edns, repinfo,
 		region, start_time);

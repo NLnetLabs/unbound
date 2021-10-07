@@ -131,7 +131,7 @@ edns_string_addr_lookup(rbtree_type* tree, struct sockaddr_storage* addr,
 static int edns_keepalive(struct edns_data* edns_out, struct edns_data* edns_in,
 		struct comm_point* c, struct regional* region)
 {
-	if(c->type == comm_udp)
+	if(!c || c->type == comm_udp)
 		return 1;
 
 	/* To respond with a Keepalive option, the client connection
@@ -165,7 +165,7 @@ int apply_edns_options(struct edns_data* edns_out, struct edns_data* edns_in,
 			LDNS_EDNS_NSID, cfg->nsid_len, cfg->nsid, region))
 		return 0;
 
-	if(!cfg->pad_responses || c->type != comm_tcp || !c->ssl
+	if(!cfg->pad_responses || !c || c->type != comm_tcp || !c->ssl
 	|| !edns_opt_list_find(edns_in->opt_list, LDNS_EDNS_PADDING)) {
 	       ; /* pass */
 	}

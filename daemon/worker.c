@@ -449,7 +449,6 @@ answer_norec_from_cache(struct worker* worker, struct query_info* qinfo,
 	 * Then check if it needs validation, if so, this routine fails,
 	 * so that iterator can prime and validator can verify rrsets.
 	 */
-	struct edns_data edns_bak;
 	uint16_t udpsize = edns->udp_size;
 	int secure = 0;
 	time_t timenow = *worker->env.now;
@@ -508,7 +507,6 @@ answer_norec_from_cache(struct worker* worker, struct query_info* qinfo,
 		}
 	}
 	/* return this delegation from the cache */
-	edns_bak = *edns;
 	edns->edns_version = EDNS_ADVERTISED_VERSION;
 	edns->udp_size = EDNS_ADVERTISED_SIZE;
 	edns->ext_rcode = 0;
@@ -518,9 +516,7 @@ answer_norec_from_cache(struct worker* worker, struct query_info* qinfo,
 		worker->env.now_tv))
 			return 0;
 	msg->rep->flags |= BIT_QR|BIT_RA;
-	if(!apply_edns_options(edns, &edns_bak, worker->env.cfg,
-		repinfo->c, worker->scratchpad) ||
-		!reply_info_answer_encode(&msg->qinfo, msg->rep, id, flags, 
+	if(!reply_info_answer_encode(&msg->qinfo, msg->rep, id, flags, 
 		repinfo->c->buffer, 0, 1, worker->scratchpad,
 		udpsize, edns, (int)(edns->bits & EDNS_DO), secure)) {
 		if(!inplace_cb_reply_servfail_call(&worker->env, qinfo, NULL, NULL,
@@ -604,7 +600,6 @@ answer_from_cache(struct worker* worker, struct query_info* qinfo,
 	struct reply_info* rep, uint16_t id, uint16_t flags,
 	struct comm_reply* repinfo, struct edns_data* edns)
 {
-	struct edns_data edns_bak;
 	time_t timenow = *worker->env.now;
 	uint16_t udpsize = edns->udp_size;
 	struct reply_info* encode_rep = rep;
@@ -685,7 +680,6 @@ answer_from_cache(struct worker* worker, struct query_info* qinfo,
 		}
 	} else *is_secure_answer = 0;
 
-	edns_bak = *edns;
 	edns->edns_version = EDNS_ADVERTISED_VERSION;
 	edns->udp_size = EDNS_ADVERTISED_SIZE;
 	edns->ext_rcode = 0;
@@ -722,9 +716,7 @@ answer_from_cache(struct worker* worker, struct query_info* qinfo,
 			if(!*partial_repp)
 				goto bail_out;
 		}
-	} else if(!apply_edns_options(edns, &edns_bak, worker->env.cfg,
-		repinfo->c, worker->scratchpad) ||
-		!reply_info_answer_encode(qinfo, encode_rep, id, flags,
+	} else if(!reply_info_answer_encode(qinfo, encode_rep, id, flags,
 		repinfo->c->buffer, timenow, 1, worker->scratchpad,
 		udpsize, edns, (int)(edns->bits & EDNS_DO), *is_secure_answer)) {
 		if(!inplace_cb_reply_servfail_call(&worker->env, qinfo, NULL, NULL,
