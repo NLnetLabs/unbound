@@ -177,6 +177,11 @@ enum sec_status val_verify_DNSKEY_with_DS(struct module_env* env,
 	struct ub_packed_rrset_key* ds_rrset, uint8_t* sigalg, char** reason,
 	struct module_qstate* qstate);
 
+enum sec_status val_verify_DNSKEY_with_DS_ede(struct module_env* env,
+    struct val_env* ve, struct ub_packed_rrset_key* dnskey_rrset,
+    struct ub_packed_rrset_key* ds_rrset, uint8_t* sigalg, char** reason,
+    sldns_ede_code *reason_bogus, struct module_qstate* qstate);
+
 /**
  * Verify DNSKEYs with DS and DNSKEY rrset.  Like val_verify_DNSKEY_with_DS
  * but for a trust anchor.
@@ -199,6 +204,12 @@ enum sec_status val_verify_DNSKEY_with_TA(struct module_env* env,
 	struct ub_packed_rrset_key* ta_ds,
 	struct ub_packed_rrset_key* ta_dnskey, uint8_t* sigalg, char** reason,
 	struct module_qstate* qstate);
+
+enum sec_status val_verify_DNSKEY_with_TA_ede(struct module_env* env,
+    struct val_env* ve, struct ub_packed_rrset_key* dnskey_rrset,
+    struct ub_packed_rrset_key* ta_ds,
+    struct ub_packed_rrset_key* ta_dnskey, uint8_t* sigalg, char** reason,
+    sldns_ede_code *reason_bogus, struct module_qstate* qstate);
 
 /**
  * Verify new DNSKEYs with DS rrset. The DS contains hash values that should
@@ -230,6 +241,11 @@ struct key_entry_key* val_verify_new_DNSKEYs(struct regional* region,
 	struct ub_packed_rrset_key* ds_rrset, int downprot, char** reason,
 	struct module_qstate* qstate);
 
+struct key_entry_key* val_verify_new_DNSKEYs_ede(struct regional* region,
+    struct module_env* env, struct val_env* ve,
+    struct ub_packed_rrset_key* dnskey_rrset, 
+    struct ub_packed_rrset_key* ds_rrset, int downprot, char** reason,
+    sldns_ede_code *reason_bogus, struct module_qstate* qstate);
 
 /**
  * Verify rrset with trust anchor: DS and DNSKEY rrset.
@@ -260,6 +276,13 @@ struct key_entry_key* val_verify_new_DNSKEYs_with_ta(struct regional* region,
 	struct ub_packed_rrset_key* ta_ds_rrset, 
 	struct ub_packed_rrset_key* ta_dnskey_rrset,
 	int downprot, char** reason, struct module_qstate* qstate);
+
+struct key_entry_key* val_verify_new_DNSKEYs_with_ta_ede(struct regional* region, 
+    struct module_env* env, struct val_env* ve,
+    struct ub_packed_rrset_key* dnskey_rrset,
+    struct ub_packed_rrset_key* ta_ds_rrset,
+    struct ub_packed_rrset_key* ta_dnskey_rrset, int downprot,
+    char** reason, sldns_ede_code *reason_bogus, struct module_qstate* qstate);
 
 /**
  * Determine if DS rrset is usable for validator or not.

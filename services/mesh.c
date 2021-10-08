@@ -1280,9 +1280,11 @@ mesh_send_reply(struct mesh_state* m, int rcode, struct reply_info* rep,
 
 			char *reason = m->s.env->cfg->val_log_level >= 2
 			             ? errinf_to_str_bogus(&m->s) : NULL;
+			sldns_ede_code reason_bogus = rep->reason_bogus != LDNS_EDE_DNSSEC_BOGUS
+			                            ? rep->reason_bogus : errinf_to_reason_bogus(&m->s);
 
 			edns_opt_append_ede(&r->edns, m->s.region,
-					rep->reason_bogus, reason);
+					reason_bogus, reason);
 			free(reason);
 		}
 		error_encode(r_buffer, rcode, &m->s.qinfo, r->qid,

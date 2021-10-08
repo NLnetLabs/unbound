@@ -1720,6 +1720,7 @@ processFindKey(struct module_qstate* qstate, struct val_qstate* vq, int id)
 			vq->chase_reply->reason_bogus = LDNS_EDE_RRSIGS_MISSING;
 			errinf_origin(qstate, qstate->reply_origin);
 			vq->chase_reply->security = sec_status_bogus;
+			// @TODO add EDE 10 - RRSIGs Missing
 			vq->state = VAL_FINISHED_STATE;
 			return 1;
 		}
@@ -2313,6 +2314,7 @@ primeResponseToKE(struct ub_packed_rrset_key* dnskey_rrset,
 	struct key_entry_key* kkey = NULL;
 	enum sec_status sec = sec_status_unchecked;
 	char* reason = NULL;
+	sldns_ede_code reason_bogus = LDNS_EDE_DNSSEC_BOGUS;
 	int downprot = qstate->env->cfg->harden_algo_downgrade;
 
 	if(!dnskey_rrset) {
@@ -2334,9 +2336,9 @@ primeResponseToKE(struct ub_packed_rrset_key* dnskey_rrset,
 		return kkey;
 	}
 	/* attempt to verify with trust anchor DS and DNSKEY */
-	kkey = val_verify_new_DNSKEYs_with_ta(qstate->region, qstate->env, ve, 
+	kkey = val_verify_new_DNSKEYs_with_ta_ede(qstate->region, qstate->env, ve, 
 		dnskey_rrset, ta->ds_rrset, ta->dnskey_rrset, downprot,
-		&reason, qstate);
+		&reason, &reason_bogus, qstate);
 	if(!kkey) {
 		log_err("out of memory: verifying prime TA");
 		return NULL;
@@ -2355,7 +2357,8 @@ primeResponseToKE(struct ub_packed_rrset_key* dnskey_rrset,
 		/* NOTE: in this case, we should probably reject the trust 
 		 * anchor for longer, perhaps forever. */
 		if(qstate->env->cfg->harden_dnssec_stripped) {
-			errinf(qstate, reason);
+			// errinf(qstate, reason);
+			errinf_ede(qstate, reason, reason_bogus);
 			kkey = key_entry_create_bad(qstate->region, ta->name,
 				ta->namelen, ta->dclass, BOGUS_KEY_TTL,
 				*qstate->env->now);
@@ -2706,6 +2709,9 @@ process_dnskey_response(struct module_qstate* qstate, struct val_qstate* vq,
 		/* bad response */
 		verbose(VERB_DETAIL, "Missing DNSKEY RRset in response to "
 			"DNSKEY query.");
+
+		// @TODO add EDE 9 - DNSKEY Missing
+
 		if(vq->restart_count < ve->max_restart) {
 			val_blacklist(&vq->chain_blacklist, qstate->region,
 				origin, 1);
@@ -2733,6 +2739,7 @@ process_dnskey_response(struct module_qstate* qstate, struct val_qstate* vq,
 		return;
 	}
 	downprot = qstate->env->cfg->harden_algo_downgrade;
+	// @TODO add _ede
 	vq->key_entry = val_verify_new_DNSKEYs(qstate->region, qstate->env,
 		ve, dnskey, vq->ds_rrset, downprot, &reason, qstate);
 
