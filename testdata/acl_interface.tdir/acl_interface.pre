@@ -1,0 +1,54 @@
+# #-- acl_interface.pre--#
+PRE="../.."
+. ../common.sh
+
+# This test uses the unshare utility
+if test ! -x "`which unshare 2>&1`"; then
+	skip_test "no unshare (from util-linux package) available, skip test"
+fi
+
+get_random_port 8
+
+PORT_ALLOW=$RND_PORT
+PORT_DENY=$(($RND_PORT + 1))
+PORT_REFUSE=$(($RND_PORT + 2))
+PORT_VIEW_INT=$(($RND_PORT + 3))
+PORT_VIEW_EXT=$(($RND_PORT + 4))
+PORT_VIEW_INTEXT=$(($RND_PORT + 5))
+FORWARD_PORT=$(($RND_PORT + 6))
+STUB_PORT=$(($RND_PORT + 7))
+
+IPV4_ADDR=192.168.1.1
+IPV6_ADDR=2001:db8::1
+
+# make config file
+sed \
+	-e 's/@PORT_ALLOW\@/'$PORT_ALLOW'/' \
+	-e 's/@PORT_DENY\@/'$PORT_DENY'/' \
+	-e 's/@PORT_REFUSE\@/'$PORT_REFUSE'/' \
+	-e 's/@PORT_VIEW_INT\@/'$PORT_VIEW_INT'/' \
+	-e 's/@PORT_VIEW_EXT\@/'$PORT_VIEW_EXT'/' \
+	-e 's/@PORT_VIEW_INTEXT\@/'$PORT_VIEW_INTEXT'/' \
+	-e 's/@FORWARD_PORT\@/'$FORWARD_PORT'/' \
+	-e 's/@STUB_PORT\@/'$STUB_PORT'/' \
+	-e 's/@IPV4_ADDR\@/'$IPV4_ADDR'/' \
+	-e 's/@IPV6_ADDR\@/'$IPV6_ADDR'/' \
+	< acl_interface.conf > ub.conf
+
+if test -x "`which bash`"; then
+	shell="bash"
+else
+	shell="sh"
+fi
+
+echo "PORT_ALLOW=$PORT_ALLOW" >> .tpkg.var.test
+echo "PORT_DENY=$PORT_DENY" >> .tpkg.var.test
+echo "PORT_REFUSE=$PORT_REFUSE" >> .tpkg.var.test
+echo "PORT_VIEW_INT=$PORT_VIEW_INT" >> .tpkg.var.test
+echo "PORT_VIEW_EXT=$PORT_VIEW_EXT" >> .tpkg.var.test
+echo "PORT_VIEW_INTEXT=$PORT_VIEW_INTEXT" >> .tpkg.var.test
+echo "FORWARD_PORT=$FORWARD_PORT" >> .tpkg.var.test
+echo "STUB_PORT=$STUB_PORT" >> .tpkg.var.test
+echo "IPV4_ADDR=$IPV4_ADDR" >> .tpkg.var.test
+echo "IPV6_ADDR=$IPV6_ADDR" >> .tpkg.var.test
+echo "shell=$shell" >> .tpkg.var.test
