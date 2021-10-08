@@ -185,7 +185,7 @@ acl_interface_str_cfg(struct acl_list* acl_interface, const char* interface,
 		return 0;
 	}
 	if(!(node=acl_find_or_create(acl_interface, interface, 1, port))) {
-		log_err("cannot update ACL on non-existing interface: %s %d",
+		log_err("cannot update ACL on non-configured interface: %s %d",
 			interface, port);
 		return 0;
 	}
@@ -221,8 +221,11 @@ acl_list_tags_cfg(struct acl_list* acl, const char* str, uint8_t* bitmap,
 	size_t bitmaplen, int is_interface, int port)
 {
 	struct acl_addr* node;
-	if(!(node=acl_find_or_create(acl, str, is_interface, port)))
+	if(!(node=acl_find_or_create(acl, str, is_interface, port))) {
+		if(is_interface)
+			log_err("non-configured interface: %s", str);
 		return 0;
+	}
 	node->taglen = bitmaplen;
 	node->taglist = regional_alloc_init(acl->region, bitmap, bitmaplen);
 	if(!node->taglist) {
@@ -238,8 +241,11 @@ acl_list_view_cfg(struct acl_list* acl, const char* str, const char* str2,
 	struct views* vs, int is_interface, int port)
 {
 	struct acl_addr* node;
-	if(!(node=acl_find_or_create(acl, str, is_interface, port)))
+	if(!(node=acl_find_or_create(acl, str, is_interface, port))) {
+		if(is_interface)
+			log_err("non-configured interface: %s", str);
 		return 0;
+	}
 	node->view = views_find_view(vs, str2, 0 /* get read lock*/);
 	if(!node->view) {
 		log_err("no view with name: %s", str2);
@@ -258,8 +264,11 @@ acl_list_tag_action_cfg(struct acl_list* acl, struct config_file* cfg,
 	struct acl_addr* node;
 	int tagid;
 	enum localzone_type t;
-	if(!(node=acl_find_or_create(acl, str, is_interface, port)))
+	if(!(node=acl_find_or_create(acl, str, is_interface, port))) {
+		if(is_interface)
+			log_err("non-configured interface: %s", str);
 		return 0;
+	}
 	/* allocate array if not yet */
 	if(!node->tag_actions) {
 		node->tag_actions = (uint8_t*)regional_alloc_zero(acl->region,
@@ -348,8 +357,11 @@ acl_list_tag_data_cfg(struct acl_list* acl, struct config_file* cfg,
 	struct acl_addr* node;
 	int tagid;
 	char* dupdata;
-	if(!(node=acl_find_or_create(acl, str, is_interface, port)))
+	if(!(node=acl_find_or_create(acl, str, is_interface, port))) {
+		if(is_interface)
+			log_err("non-configured interface: %s", str);
 		return 0;
+	}
 	/* allocate array if not yet */
 	if(!node->tag_datas) {
 		node->tag_datas = (struct config_strlist**)regional_alloc_zero(

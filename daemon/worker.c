@@ -1331,7 +1331,7 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 	acladdr = acl_addr_lookup(worker->daemon->acl, &repinfo->addr, 
 		repinfo->addrlen);
 	/* If there is no ACL based on client IP use the interface ACL. */
-	if(!acladdr) {
+	if(!acladdr && c->socket) {
 		acladdr = c->socket->acl;
 	}
 	acl = acl_get_control(acladdr);
