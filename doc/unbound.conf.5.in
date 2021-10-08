@@ -675,7 +675,7 @@ The netblock is given as an IP4 or IP6 address with /size appended for a
 classless network block. The action can be \fIdeny\fR, \fIrefuse\fR,
 \fIallow\fR, \fIallow_setrd\fR, \fIallow_snoop\fR, \fIdeny_non_local\fR or
 \fIrefuse_non_local\fR.
-The most specific netblock match is used, if none match \fIdeny\fR is used.
+The most specific netblock match is used, if none match \fIrefuse\fR is used.
 The order of the access\-control statements therefore does not matter.
 .IP
 The action \fIdeny\fR stops queries from hosts from that netblock.
@@ -740,6 +740,46 @@ Set redirect data for particular tag for given access control element.
 .TP
 .B access\-control\-view: \fI<IP netblock> <view name>
 Set view for given access control element.
+.TP
+.B interface\-action: \fI<ip address or interface name [@port]> <action>
+Similar to \fBaccess\-control:\fR but for interfaces.
+.IP
+The action is the same as the ones defined under \fBaccess\-control:\fR.
+Interfaces are \fIrefuse\fRd by default.
+By default only localhost (the IP netblock, not the loopback interface) is
+\fIallow\fRed through the default \fBaccess\-control:\fR behavior.
+.IP
+Note that the interface needs to be already specified with \fBinterface:\fR
+and that any \fBaccess-control*:\fR setting overrides all \fBinterface-*:\fR
+settings for targeted clients.
+.TP
+.B interface\-tag: \fI<ip address or interface name [@port]> <"list of tags">
+Similar to \fBaccess\-control-tag:\fR but for interfaces.
+.IP
+Note that the interface needs to be already specified with \fBinterface:\fR
+and that any \fBaccess-control*:\fR setting overrides all \fBinterface-*:\fR
+settings for targeted clients.
+.TP
+.B interface\-tag\-action: \fI<ip address or interface name [@port]> <tag> <action>
+Similar to \fBaccess\-control-tag-action:\fR but for interfaces.
+.IP
+Note that the interface needs to be already specified with \fBinterface:\fR
+and that any \fBaccess-control*:\fR setting overrides all \fBinterface-*:\fR
+settings for targeted clients.
+.TP
+.B interface\-tag\-data: \fI<ip address or interface name [@port]> <tag> <"resource record string">
+Similar to \fBaccess\-control-tag-data:\fR but for interfaces.
+.IP
+Note that the interface needs to be already specified with \fBinterface:\fR
+and that any \fBaccess-control*:\fR setting overrides all \fBinterface-*:\fR
+settings for targeted clients.
+.TP
+.B interface\-view: \fI<ip address or interface name [@port]> <view name>
+Similar to \fBaccess\-control-view:\fR but for interfaces.
+.IP
+Note that the interface needs to be already specified with \fBinterface:\fR
+and that any \fBaccess-control*:\fR setting overrides all \fBinterface-*:\fR
+settings for targeted clients.
 .TP
 .B chroot: \fI<directory>
 If chroot is enabled, you should pass the configfile (from the
