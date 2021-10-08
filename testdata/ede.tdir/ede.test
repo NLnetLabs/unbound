@@ -7,18 +7,24 @@
 . ../common.sh
 get_random_port 2
 UNBOUND_PORT=$RND_PORT
-FWD_PORT=$(($RND_PORT + 1))
+UNBOUND_PORT2=$(($RND_PORT + 1))
 echo "UNBOUND_PORT=$UNBOUND_PORT" >> .tpkg.var.test
-echo "FWD_PORT=$FWD_PORT" >> .tpkg.var.test
+echo "UNBOUND_PORT=2=$UNBOUND_PORT2" >> .tpkg.var.test
 
 # rewrite config file with created ports
 sed -e 's/@PORT\@/'$UNBOUND_PORT'/' < ede.conf > ub.conf
+sed -e 's/@PORT2\@/'$UNBOUND_PORT2'/' < ede-auth.conf > ub2.conf
 
 # start unbound in the background
 PRE="../.."
 $PRE/unbound -d -c ub.conf > unbound.log 2>&1 &
 UNBOUND_PID=$!
 echo "UNBOUND_PID=$UNBOUND_PID" >> .tpkg.var.test
+
+# start "authoritative unbound" in the background
+$PRE/unbound -d -c ub.conf > unbound.log 2>&1 &
+UNBOUND_PID2=$!
+echo "UNBOUND_PID2=$UNBOUND_PID2" >> .tpkg.var.test
 
 
 # query with bad edns keepalive
@@ -72,9 +78,9 @@ then
 fi
 
 # RPZ always_refuse
-dig @127.0.0.1 -p $UNBOUND_PORT hopsa.kidee. A > always_refuse_forged.txt
+dig @127.0.0.1 -p $UNBOUND_PORT hopsa.kidee. A > always_refuse.txt
 
-if ! grep -q "OPT=15: 00 04" always_refuse_forged.txt
+if ! grep -q "OPT=15: 00 04" always_refuse.txt
 then
 	echo "local-zone always_null must have EDE blocked code"
 	exit 1
@@ -92,5 +98,30 @@ then
 	exit 1
 fi
 
+# local data forged answer
+dig @127.0.0.1 -p $UNBOUND_PORT hopsa.nlnetlabs.nl TXT
+
+# ACL refused, EDE prohibited
+dig @127.0.0.1 -b 127.0.0.2 example.com > refused.txt
+
+if ! grep -q "OPT=15: 00 12" refused.txt
+then
+	echo "ACL refused does not give EDE prohibited"
+	exit 1
+fi
+
+
+
+# DNSSEC indeterminate
+
+# ZONE KEY TOEVOEGEN AAN UNBOUND
+# SIGNEN MET LDNS SIGNER
+# MAKE ZONE RECORD WITH EXPIRED AND NOT INCEPTED RECORD
+# zone aanmaken met auth-zone op een tweede unbound
+
+
+
+
 # teardown
 kill_pid $UNBOUND_PID
+kill_pid $UNBOUND_PID2
