@@ -645,7 +645,8 @@ dnskey_verify_rrset_ede(struct module_env* env, struct val_env* ve,
 		verbose(VERB_QUERY, "rrset failed to verify due to a lack of "
 			"signatures");
 		*reason = "no signatures";
-		// @TODO ADD EDE 10
+		if(reason_bogus)
+			*reason_bogus = LDNS_EDE_RRSIGS_MISSING;
 		return sec_status_bogus;
 	}
 	for(i=0; i<num; i++) {
@@ -654,6 +655,7 @@ dnskey_verify_rrset_ede(struct module_env* env, struct val_env* ve,
 			tag != rrset_get_sig_keytag(rrset, i))
 			continue;
 		buf_canon = 0;
+		// @TODO should this be _ede verion as well?
 		sec = dnskey_verify_rrset_sig(env->scratch, 
 			env->scratch_buffer, ve, *env->now, rrset, 
 			dnskey, dnskey_idx, i, &sortree, &buf_canon, reason,

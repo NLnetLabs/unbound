@@ -41,6 +41,7 @@
 
 #ifndef UTIL_CONFIG_FILE_H
 #define UTIL_CONFIG_FILE_H
+#include "sldns/rrdef.h"
 struct config_stub;
 struct config_auth;
 struct config_view;
@@ -784,6 +785,8 @@ struct config_strlist {
 	struct config_strlist* next;
 	/** config option string */
 	char* str;
+	/** EDE code companion to the error str */
+	sldns_ede_code reason_bogus;
 };
 
 /**
@@ -1233,6 +1236,8 @@ char* cfg_ptr_reverse(char* str);
  * Failures to allocate are logged.
  */
 void errinf(struct module_qstate* qstate, const char* str);
+void errinf_ede(struct module_qstate* qstate, const char* str,
+                sldns_ede_code reason_bogus);
 
 /**
  * Append text to error info:  from 1.2.3.4
@@ -1267,6 +1272,9 @@ void errinf_dname(struct module_qstate* qstate, const char* str,
  *    This string is malloced and has to be freed by caller.
  */
 char* errinf_to_str_bogus(struct module_qstate* qstate);
+
+// @TODO write this
+sldns_ede_code errinf_to_reason_bogus(struct module_qstate* qstate);
 
 /**
  * Create error info in string.  For other servfails.
