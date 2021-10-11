@@ -1,6 +1,7 @@
 11 October 2021: Wouter
 	- Fix chaos replies to have truncation for short message lengths,
 	  or long reply strings.
+	- Fix to protect custom regional create against small values.
 
 4 October 2021: Wouter
 	- Fix to add example.conf note for outbound-msg-retry.
