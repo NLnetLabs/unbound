@@ -789,6 +789,14 @@ chaos_replystr(sldns_buffer* pkt, char** str, int num, struct edns_data* edns,
 	int i;
 	unsigned int rd = LDNS_RD_WIRE(sldns_buffer_begin(pkt));
 	unsigned int cd = LDNS_CD_WIRE(sldns_buffer_begin(pkt));
+	size_t udpsize = edns->udp_size;
+	edns->edns_version = EDNS_ADVERTISED_VERSION;
+	edns->udp_size = EDNS_ADVERTISED_SIZE;
+	edns->bits &= EDNS_DO;
+	if(!inplace_cb_reply_local_call(&worker->env, NULL, NULL, NULL,
+		LDNS_RCODE_NOERROR, edns, repinfo, worker->scratchpad,
+		worker->env.now_tv))
+			edns->opt_list = NULL;
 	sldns_buffer_clear(pkt);
 	sldns_buffer_skip(pkt, (ssize_t)sizeof(uint16_t)); /* skip id */
 	sldns_buffer_write_u16(pkt, (uint16_t)(BIT_QR|BIT_RA));
@@ -804,6 +812,12 @@ chaos_replystr(sldns_buffer* pkt, char** str, int num, struct edns_data* edns,
 	for(i=0; i<num; i++) {
 		size_t len = strlen(str[i]);
 		if(len>255) len=255; /* cap size of TXT record */
+		if(sldns_buffer_position(pkt)+2+2+2+4+2+1+len+
+			calc_edns_field_size(edns) > udpsize) {
+			sldns_buffer_write_u16_at(pkt, 6, i); /* ANCOUNT */
+			LDNS_TC_SET(sldns_buffer_begin(pkt));
+			break;
+		}
 		sldns_buffer_write_u16(pkt, 0xc00c); /* compr ptr to query */
 		sldns_buffer_write_u16(pkt, LDNS_RR_TYPE_TXT);
 		sldns_buffer_write_u16(pkt, LDNS_RR_CLASS_CH);
@@ -813,13 +827,6 @@ chaos_replystr(sldns_buffer* pkt, char** str, int num, struct edns_data* edns,
 		sldns_buffer_write(pkt, str[i], len);
 	}
 	sldns_buffer_flip(pkt);
-	edns->edns_version = EDNS_ADVERTISED_VERSION;
-	edns->udp_size = EDNS_ADVERTISED_SIZE;
-	edns->bits &= EDNS_DO;
-	if(!inplace_cb_reply_local_call(&worker->env, NULL, NULL, NULL,
-		LDNS_RCODE_NOERROR, edns, repinfo, worker->scratchpad,
-		worker->env.now_tv))
-			edns->opt_list = NULL;
 	if(sldns_buffer_capacity(pkt) >=
 		sldns_buffer_limit(pkt)+calc_edns_field_size(edns))
 		attach_edns_record(pkt, edns);
