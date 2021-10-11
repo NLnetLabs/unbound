@@ -1089,8 +1089,19 @@ static int inplace_cb_reply_call_generic(
 #if defined(EXPORT_ALL_SYMBOLS)
 	(void)type; /* param not used when fptr_ok disabled */
 #endif
-	if(qstate)
+	if(qstate) {
+		/* TODO (after discussion with Yorgos):
+		 * opt_list_out can change by the callbacks bellow,
+		 * but qstate->edns_opts_front_out changes too, but only
+		 * when there was an option already. Which might be a problem
+		 * if this function is called twice before an encoded answer is
+		 * returned.
+		 * To fix: Make opt_list_out a copy of qstate->edns_opts_front_out
+		 * Or to properly fix it: Have an opt_list_in
+		 * and and opt_list_out in the callbacks.
+		 */
 		opt_list_out = qstate->edns_opts_front_out;
+	}
 	for(cb=callback_list; cb; cb=cb->next) {
 		fptr_ok(fptr_whitelist_inplace_cb_reply_generic(
 			(inplace_cb_reply_func_type*)cb->cb, type));
