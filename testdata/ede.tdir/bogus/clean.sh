@@ -1,0 +1,1 @@
+rm -f K* piece1 base expired notyetincepted trust-anchors dnssec-failures.zone.signed
