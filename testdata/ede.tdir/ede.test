@@ -9,10 +9,10 @@ get_random_port 2
 UNBOUND_PORT=$RND_PORT
 UNBOUND_PORT2=$(($RND_PORT + 1))
 echo "UNBOUND_PORT=$UNBOUND_PORT" >> .tpkg.var.test
-echo "UNBOUND_PORT=2=$UNBOUND_PORT2" >> .tpkg.var.test
+echo "UNBOUND_PORT2=$UNBOUND_PORT2" >> .tpkg.var.test
 
 # rewrite config file with created ports
-sed -e 's/@PORT\@/'$UNBOUND_PORT'/' < ede.conf > ub.conf
+sed -e 's/@PORT\@/'$UNBOUND_PORT'/g; s/@PORT2\@/'$UNBOUND_PORT2'/g' < ede.conf > ub.conf
 sed -e 's/@PORT2\@/'$UNBOUND_PORT2'/' < ede-auth.conf > ub2.conf
 
 # start unbound in the background
@@ -20,12 +20,6 @@ PRE="../.."
 $PRE/unbound -d -c ub.conf > unbound.log 2>&1 &
 UNBOUND_PID=$!
 echo "UNBOUND_PID=$UNBOUND_PID" >> .tpkg.var.test
-
-# start "authoritative unbound" in the background
-$PRE/unbound -d -c ub.conf > unbound.log 2>&1 &
-UNBOUND_PID2=$!
-echo "UNBOUND_PID2=$UNBOUND_PID2" >> .tpkg.var.test
-
 
 # query with bad edns keepalive
 dig @127.0.0.1 -p $UNBOUND_PORT +tcp +ednsopt=11:010203 > keepalive.txt
@@ -85,8 +79,10 @@ fi
 # local data forged answer
 dig @127.0.0.1 -p $UNBOUND_PORT hopsa.nlnetlabs.nl TXT
 
+#@TODO write actual test
+
 # ACL refused, EDE prohibited
-dig @127.0.0.1 -b 127.0.0.2 example.com > refused.txt
+dig @127.0.0.1 -p $UNBOUND_PORT -b 127.0.0.2 example.com > refused.txt
 
 if ! grep -q "OPT=15: 00 12" refused.txt
 then
@@ -95,6 +91,27 @@ then
 fi
 
 
+# start authoritative unbound in the background
+$PRE/unbound -d -c ub.conf > unbound.log 2>&1 &
+UNBOUND_PID2=$!
+echo "UNBOUND_PID2=$UNBOUND_PID2" >> .tpkg.var.test
+
+# DNSSEC failure: key not incepted
+dig @127.0.0.1 -p $UNBOUND_PORT notyetincepted.dnssec-failures.test. TXT +dnssec > notyetincepted.txt
+
+if ! grep -q "OPT=15: 00 08" notyetincepted.txt
+then
+	echo "Signature not yet valid does not return EDE Signature Not Yet Valid"
+	exit 1
+fi
+
+dig @127.0.0.1 -p $UNBOUND_PORT expired.dnssec-failures.test. TXT +dnssec > expired.txt
+
+if ! grep -q "OPT=15: 00 07" expired.txt
+then
+	echo "Expired signature does not return EDE Signature expired"
+	exit 1
+fi
 
 # DNSSEC indeterminate
 
