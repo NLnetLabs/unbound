@@ -897,28 +897,28 @@ get_do_flag(uint8_t* pkt, size_t len)
 	return (int)(edns_bits&LDNS_EDNS_MASK_DO_BIT);
 }
 
-/** return the EDNS EDE INFO-CODE if found, else 0 */
-static uint16_t
+/** return the EDNS EDE INFO-CODE if found, else -1 */
+static int
 get_ede_info_code(uint8_t* pkt, size_t len)
 {
 	uint8_t *rdata;
 	uint16_t rdlen, optlen;
 	/* use arguments as temporary variables */
-	if(!pkt_find_edns_opt(&pkt, &len)) return 0;
-	if(len < 8) return 0; /* malformed */
+	if(!pkt_find_edns_opt(&pkt, &len)) return -1;
+	if(len < 8) return -1; /* malformed */
 	rdlen = sldns_read_uint16(pkt+6);
 	rdata = pkt + 8;
 	while(rdlen > 0) {
-		if(rdlen < 4) return 0; /* malformed */
+		if(rdlen < 4) return -1; /* malformed */
 		if(sldns_read_uint16(rdata) == LDNS_EDNS_EDE) {
-			if(rdlen < 6) return 0; /* malformed */
+			if(rdlen < 6) return -1; /* malformed */
 			return sldns_read_uint16(rdata+4);
 		}
 		optlen = sldns_read_uint16(rdata+2);
 		rdlen -= optlen;
 		rdata += 4 + optlen;
 	}
-	return 0;
+	return -1;
 }
 
 /** zero TTLs in packet */
@@ -1545,9 +1545,13 @@ find_match(struct entry* entries, uint8_t* query_pkt, size_t len,
 				verbose(3, "bad serial\n");
 				continue;
 		}
-		if(p->match_ede && get_ede_info_code(query_pkt, len) != p->ede_info_code) {
+		if(p->match_ede) {
+			int info_code = get_ede_info_code(query_pkt, len);
+			if(info_code == -1 ||
+				(uint16_t)info_code != p->ede_info_code) {
 				verbose(3, "bad EDE INFO-CODE\n");
 				continue;
+			}
 		}
 		if(p->match_do && !get_do_flag(query_pkt, len)) {
 			verbose(3, "no DO bit set\n");
