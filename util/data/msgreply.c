@@ -988,9 +988,9 @@ parse_reply_in_temp_region(sldns_buffer* pkt, struct regional* region,
 	}
 	return rep;
 }
-
-int edns_opt_append(struct edns_data* edns, struct regional* region,
-	uint16_t code, size_t len, uint8_t* data)
+#if 0
+int edns_opt_append(struct edns_data* edns, uint16_t code, size_t len,
+	uint8_t* data, struct regional* region)
 {
 	struct edns_option** prevp;
 	struct edns_option* opt;
@@ -1016,7 +1016,7 @@ int edns_opt_append(struct edns_data* edns, struct regional* region,
 	*prevp = opt;
 	return 1;
 }
-
+#endif
 int edns_opt_list_append(struct edns_option** list, uint16_t code, size_t len,
 	uint8_t* data, struct regional* region)
 {
@@ -1043,6 +1043,17 @@ int edns_opt_list_append(struct edns_option** list, uint16_t code, size_t len,
 		prevp = &((*prevp)->next);
 	}
 	*prevp = opt;
+	return 1;
+}
+
+int edns_opt_list_extend(struct edns_option** dst, struct edns_option* src,
+		struct regional* region)
+{
+	struct edns_option* opt;
+
+	for(opt = src; opt; opt = opt->next)
+		edns_opt_list_append(dst,
+			opt->opt_code, opt->opt_len, opt->opt_data, region);
 	return 1;
 }
 
@@ -1085,30 +1096,19 @@ static int inplace_cb_reply_call_generic(
 	struct timeval* start_time)
 {
 	struct inplace_cb* cb;
-	struct edns_option* opt_list_out = NULL;
 #if defined(EXPORT_ALL_SYMBOLS)
 	(void)type; /* param not used when fptr_ok disabled */
 #endif
-	if(qstate) {
-		/* TODO (after discussion with Yorgos):
-		 * opt_list_out can change by the callbacks bellow,
-		 * but qstate->edns_opts_front_out changes too, but only
-		 * when there was an option already. Which might be a problem
-		 * if this function is called twice before an encoded answer is
-		 * returned.
-		 * To fix: Make opt_list_out a copy of qstate->edns_opts_front_out
-		 * Or to properly fix it: Have an opt_list_in
-		 * and and opt_list_out in the callbacks.
-		 */
-		opt_list_out = qstate->edns_opts_front_out;
-	}
+	if(qstate)
+		edns_opt_list_extend(&edns->opt_list_out,
+				qstate->edns_opts_front_out, region);
+
 	for(cb=callback_list; cb; cb=cb->next) {
 		fptr_ok(fptr_whitelist_inplace_cb_reply_generic(
 			(inplace_cb_reply_func_type*)cb->cb, type));
 		(void)(*(inplace_cb_reply_func_type*)cb->cb)(qinfo, qstate, rep,
-			rcode, edns, &opt_list_out, repinfo, region, start_time, cb->id, cb->cb_arg);
+			rcode, edns, &edns->opt_list_out, repinfo, region, start_time, cb->id, cb->cb_arg);
 	}
-	edns->opt_list = opt_list_out;
 	return 1;
 }
 

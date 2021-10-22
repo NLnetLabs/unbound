@@ -517,7 +517,7 @@ void log_reply_info(enum verbosity_value v, struct query_info *qinf,
  */
 void log_query_info(enum verbosity_value v, const char* str, 
 	struct query_info* qinf);
-
+#if 0
 /**
  * Append edns option to edns data structure
  * @param edns: the edns data structure to append the edns option to.
@@ -529,7 +529,7 @@ void log_query_info(enum verbosity_value v, const char* str,
  */
 int edns_opt_append(struct edns_data* edns, struct regional* region,
 	uint16_t code, size_t len, uint8_t* data);
-
+#endif
 /**
  * Append edns option to edns option list
  * @param list: the edns option list to append the edns option to.
@@ -541,6 +541,16 @@ int edns_opt_append(struct edns_data* edns, struct regional* region,
  */
 int edns_opt_list_append(struct edns_option** list, uint16_t code, size_t len,
 	uint8_t* data, struct regional* region);
+
+/**
+ * Extend edns option list with options from another list
+ * @param dst: the edns option list to which elements from src are appended.
+ * @param src: the list from which the options are appended to dst.
+ * @param region: region to allocate the new edns option.
+ * @return false on failure.
+ */
+int edns_opt_list_extend(struct edns_option** dst,
+	struct edns_option* src, struct regional* region);
 
 /**
  * Remove any option found on the edns option list that matches the code.

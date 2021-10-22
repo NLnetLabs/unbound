@@ -526,7 +526,7 @@ answer_norec_from_cache(struct worker* worker, struct query_info* qinfo,
 		if(!inplace_cb_reply_servfail_call(&worker->env, qinfo, NULL, NULL,
 			LDNS_RCODE_SERVFAIL, edns, repinfo, worker->scratchpad,
 			worker->env.now_tv))
-				edns->opt_list = NULL;
+				edns->opt_list_in = NULL; // can we reach this?
 		error_encode(repinfo->c->buffer, LDNS_RCODE_SERVFAIL, 
 			&msg->qinfo, id, flags, edns);
 	}
@@ -730,7 +730,7 @@ answer_from_cache(struct worker* worker, struct query_info* qinfo,
 		if(!inplace_cb_reply_servfail_call(&worker->env, qinfo, NULL, NULL,
 			LDNS_RCODE_SERVFAIL, edns, repinfo, worker->scratchpad,
 			worker->env.now_tv))
-				edns->opt_list = NULL;
+				edns->opt_list_in = NULL; // can we reach this?
 		error_encode(repinfo->c->buffer, LDNS_RCODE_SERVFAIL, 
 			qinfo, id, flags, edns);
 	}
@@ -796,7 +796,7 @@ chaos_replystr(sldns_buffer* pkt, char** str, int num, struct edns_data* edns,
 	if(!inplace_cb_reply_local_call(&worker->env, NULL, NULL, NULL,
 		LDNS_RCODE_NOERROR, edns, repinfo, worker->scratchpad,
 		worker->env.now_tv))
-			edns->opt_list = NULL;
+			edns->opt_list_in = NULL; // can we reach this?
 	sldns_buffer_clear(pkt);
 	sldns_buffer_skip(pkt, (ssize_t)sizeof(uint16_t)); /* skip id */
 	sldns_buffer_write_u16(pkt, (uint16_t)(BIT_QR|BIT_RA));
@@ -1011,7 +1011,8 @@ answer_notify(struct worker* w, struct query_info* qinfo,
 	edns->udp_size = EDNS_ADVERTISED_SIZE;
 	edns->ext_rcode = 0;
 	edns->bits &= EDNS_DO;
-	edns->opt_list = NULL;
+	// @TODO do we copy opt_list_in to opt_list_out
+	edns->opt_list_in = NULL;
 	error_encode(pkt, rcode, qinfo,
 		*(uint16_t*)(void *)sldns_buffer_begin(pkt),
 		sldns_buffer_read_u16_at(pkt, 2), edns);
@@ -1269,7 +1270,8 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 			edns.edns_version = EDNS_ADVERTISED_VERSION;
 			edns.udp_size = EDNS_ADVERTISED_SIZE;
 			edns.bits &= EDNS_DO;
-			edns.opt_list = NULL;
+			edns.opt_list_in = NULL;
+			edns.opt_list_out = NULL;
 			edns.padding_block_size = 0;
 			verbose(VERB_ALGO, "query with bad edns version.");
 			log_addr(VERB_CLIENT,"from",&repinfo->addr, repinfo->addrlen);
@@ -1290,13 +1292,14 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 			edns.udp_size = NORMAL_UDP_SIZE;
 		}
 		if(c->type != comm_udp) {
-			edns_opt = edns_opt_list_find(edns.opt_list, LDNS_EDNS_KEEPALIVE);
+			edns_opt = edns_opt_list_find(edns.opt_list_in, LDNS_EDNS_KEEPALIVE);
 			if(edns_opt && edns_opt->opt_len > 0) {
 				edns.ext_rcode = 0;
 				edns.edns_version = EDNS_ADVERTISED_VERSION;
 				edns.udp_size = EDNS_ADVERTISED_SIZE;
 				edns.bits &= EDNS_DO;
-				edns.opt_list = NULL;
+				edns.opt_list_in = NULL;
+				edns.opt_list_out = NULL;
 				verbose(VERB_ALGO, "query with bad edns keepalive.");
 				log_addr(VERB_CLIENT,"from",&repinfo->addr, repinfo->addrlen);
 				error_encode(c->buffer, LDNS_RCODE_FORMERR, &qinfo,
@@ -1460,7 +1463,7 @@ lookup_cache:
 	 * this is a two-pass operation, and lookup_qinfo is different for
 	 * each pass.  We should still pass the original qinfo to
 	 * answer_from_cache(), however, since it's used to build the reply. */
-	if(!edns_bypass_cache_stage(edns.opt_list, &worker->env)) {
+	if(!edns_bypass_cache_stage(edns.opt_list_in, &worker->env)) {
 		is_expired_answer = 0;
 		is_secure_answer = 0;
 		h = query_info_hash(lookup_qinfo, sldns_buffer_read_u16_at(c->buffer, 2));

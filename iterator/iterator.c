@@ -3858,9 +3858,9 @@ process_response(struct module_qstate* qstate, struct iter_qstate* iq,
 		goto handle_it;
 	}
 
-	/* Copy the edns options we may got from the back end */
-	if(edns.opt_list) {
-		qstate->edns_opts_back_in = edns_opt_copy_region(edns.opt_list,
+	/* Copy the incoming edns options we may have gotten from the back end */
+	if(edns.opt_list_in) {
+		qstate->edns_opts_back_in = edns_opt_copy_region(edns.opt_list_in,
 			qstate->region);
 		if(!qstate->edns_opts_back_in) {
 			log_err("out of memory on incoming message");

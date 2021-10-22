@@ -1244,7 +1244,7 @@ struct serviced_query* outnet_serviced_query(struct outside_network* outnet,
 				client_string_addr->string_len,
 				client_string_addr->string, qstate->region);
 		}
-		edns.opt_list = qstate->edns_opts_back_out;
+		edns.opt_list_out = qstate->edns_opts_back_out;
 		attach_edns_record(pend->buffer, &edns);
 	}
 	memcpy(&pend->addr, addr, addrlen);
