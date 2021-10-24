@@ -21731,6 +21731,12 @@ if test "${with_libunbound_only+set}" = set; then :
 	fi
 
 fi
+ac_fn_c_check_func "$LINENO" "if_nametoindex" "ac_cv_func_if_nametoindex"
+if test "x$ac_cv_func_if_nametoindex" = xyes
+then :
+  printf "%s\n" "#define HAVE_IF_NAMETOINDEX 1" >>confdefs.h
+
+fi
 
 if test $ALLTARGET = "alltargets"; then
 	if test $USE_NSS = "yes"; then
