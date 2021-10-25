@@ -319,7 +319,8 @@ int event_add(struct event* ev, struct timeval* tv)
 		}
 #endif
 		(void)rbtree_insert(ev->ev_base->times, &ev->node);
-	}
+	} else
+		ev->ev_events &= ~EV_TIMEOUT;
 	ev->added = 1;
 	return 0;
 }
