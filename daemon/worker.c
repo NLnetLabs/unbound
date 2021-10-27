@@ -526,7 +526,7 @@ answer_norec_from_cache(struct worker* worker, struct query_info* qinfo,
 		if(!inplace_cb_reply_servfail_call(&worker->env, qinfo, NULL, NULL,
 			LDNS_RCODE_SERVFAIL, edns, repinfo, worker->scratchpad,
 			worker->env.now_tv))
-				edns->opt_list = NULL;
+				edns->opt_list_modules_out = NULL;
 		error_encode(repinfo->c->buffer, LDNS_RCODE_SERVFAIL, 
 			&msg->qinfo, id, flags, edns);
 	}
@@ -730,7 +730,7 @@ answer_from_cache(struct worker* worker, struct query_info* qinfo,
 		if(!inplace_cb_reply_servfail_call(&worker->env, qinfo, NULL, NULL,
 			LDNS_RCODE_SERVFAIL, edns, repinfo, worker->scratchpad,
 			worker->env.now_tv))
-				edns->opt_list = NULL;
+				edns->opt_list_modules_out = NULL;
 		error_encode(repinfo->c->buffer, LDNS_RCODE_SERVFAIL, 
 			qinfo, id, flags, edns);
 	}
@@ -796,7 +796,7 @@ chaos_replystr(sldns_buffer* pkt, char** str, int num, struct edns_data* edns,
 	if(!inplace_cb_reply_local_call(&worker->env, NULL, NULL, NULL,
 		LDNS_RCODE_NOERROR, edns, repinfo, worker->scratchpad,
 		worker->env.now_tv))
-			edns->opt_list = NULL;
+			edns->opt_list_modules_out = NULL;
 	sldns_buffer_clear(pkt);
 	sldns_buffer_skip(pkt, (ssize_t)sizeof(uint16_t)); /* skip id */
 	sldns_buffer_write_u16(pkt, (uint16_t)(BIT_QR|BIT_RA));
