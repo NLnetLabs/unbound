@@ -227,6 +227,9 @@ struct edns_data {
 	uint16_t udp_size;
 	/** rdata element list, or NULL if none */
 	struct edns_option* opt_list;
+	/** rdata element list of outgoing edns options from modules
+	 * or NULL if none */
+	struct edns_option* opt_list_modules_out;
 	/** block size to pad */
 	uint16_t padding_block_size;
 };

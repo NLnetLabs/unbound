@@ -1020,6 +1020,7 @@ parse_extract_edns(struct msg_parse* msg, struct edns_data* edns,
 	edns->bits = sldns_read_uint16(&found->rr_last->ttl_data[2]);
 	edns->udp_size = ntohs(found->rrset_class);
 	edns->opt_list = NULL;
+	edns->opt_list_modules_out = NULL;
 	edns->padding_block_size = 0;
 
 	/* take the options */
@@ -1094,6 +1095,7 @@ parse_edns_from_pkt(sldns_buffer* pkt, struct edns_data* edns,
 	edns->edns_version = sldns_buffer_read_u8(pkt);
 	edns->bits = sldns_buffer_read_u16(pkt);
 	edns->opt_list = NULL;
+	edns->opt_list_modules_out = NULL;
 	edns->padding_block_size = 0;
 
 	/* take the options */

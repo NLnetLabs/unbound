@@ -1012,6 +1012,7 @@ answer_notify(struct worker* w, struct query_info* qinfo,
 	edns->ext_rcode = 0;
 	edns->bits &= EDNS_DO;
 	edns->opt_list = NULL;
+	edns->opt_list_modules_out = NULL;
 	error_encode(pkt, rcode, qinfo,
 		*(uint16_t*)(void *)sldns_buffer_begin(pkt),
 		sldns_buffer_read_u16_at(pkt, 2), edns);
@@ -1270,6 +1271,7 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 			edns.udp_size = EDNS_ADVERTISED_SIZE;
 			edns.bits &= EDNS_DO;
 			edns.opt_list = NULL;
+			edns.opt_list_modules_out = NULL;
 			edns.padding_block_size = 0;
 			verbose(VERB_ALGO, "query with bad edns version.");
 			log_addr(VERB_CLIENT,"from",&repinfo->addr, repinfo->addrlen);
@@ -1297,6 +1299,7 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 				edns.udp_size = EDNS_ADVERTISED_SIZE;
 				edns.bits &= EDNS_DO;
 				edns.opt_list = NULL;
+				edns.opt_list_modules_out = NULL;
 				verbose(VERB_ALGO, "query with bad edns keepalive.");
 				log_addr(VERB_CLIENT,"from",&repinfo->addr, repinfo->addrlen);
 				error_encode(c->buffer, LDNS_RCODE_FORMERR, &qinfo,
