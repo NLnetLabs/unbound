@@ -1217,9 +1217,6 @@ mesh_send_reply(struct mesh_state* m, int rcode, struct reply_info* rep,
 	struct timeval end_time;
 	struct timeval duration;
 	int secure;
-	/* Copy the client's EDNS for later restore, to make sure the edns
-	 * compare is with the correct edns options. */
-	struct edns_data edns_bak = r->edns;
 	/* briefly set the replylist to null in case the
 	 * meshsendreply calls tcpreqinfo sendreply that
 	 * comm_point_drops because of size, and then the
@@ -1307,9 +1304,6 @@ mesh_send_reply(struct mesh_state* m, int rcode, struct reply_info* rep,
 		m->s.qinfo.local_alias = r->local_alias;
 		if(!inplace_cb_reply_call(m->s.env, &m->s.qinfo, &m->s, rep,
 			LDNS_RCODE_NOERROR, &r->edns, &r->query_reply, m->s.region, &r->start_time) ||
-			!apply_edns_options(&r->edns, &edns_bak,
-				m->s.env->cfg, r->query_reply.c,
-				m->s.region) ||
 			!reply_info_answer_encode(&m->s.qinfo, rep, r->qid, 
 			r->qflags, r_buffer, 0, 1, m->s.env->scratch,
 			udp_size, &r->edns, (int)(r->edns.bits & EDNS_DO),
@@ -1321,7 +1315,6 @@ mesh_send_reply(struct mesh_state* m, int rcode, struct reply_info* rep,
 			error_encode(r_buffer, LDNS_RCODE_SERVFAIL,
 				&m->s.qinfo, r->qid, r->qflags, &r->edns);
 		}
-		r->edns = edns_bak;
 		m->reply_list = NULL;
 		comm_point_send_reply(&r->query_reply);
 		m->reply_list = rlist;
