@@ -37,10 +37,12 @@
  * Routines for message parsing a packet buffer to a descriptive structure.
  */
 #include "config.h"
+#include "util/config_file.h"
 #include "util/data/msgparse.h"
 #include "util/data/msgreply.h"
 #include "util/data/dname.h"
 #include "util/data/packed_rrset.h"
+#include "util/netevent.h"
 #include "util/storage/lookup3.h"
 #include "util/regional.h"
 #include "sldns/rrdef.h"
@@ -941,8 +943,12 @@ parse_packet(sldns_buffer* pkt, struct msg_parse* msg, struct regional* region)
 /** parse EDNS options from EDNS wireformat rdata */
 static int
 parse_edns_options(uint8_t* rdata_ptr, size_t rdata_len,
-	struct edns_data* edns, struct regional* region)
+	struct edns_data* edns, struct config_file* cfg, struct comm_point* c,
+	struct regional* region)
 {
+	int keepalive;
+	uint8_t data[2]; /* For keepalive value */
+
 	/* while still more options, and have code+len to read */
 	/* ignores partial content (i.e. rdata len 3) */
 	while(rdata_len >= 4) {
@@ -952,10 +958,61 @@ parse_edns_options(uint8_t* rdata_ptr, size_t rdata_len,
 		rdata_len -= 4;
 		if(opt_len > rdata_len)
 			break; /* option code partial */
-		if(!edns_opt_list_append(&edns->opt_list_in, opt_code, opt_len,
-					rdata_ptr, region)) {
-			log_err("out of memory");
-			return 0;
+
+		/* handle parse time edns options here */
+		switch(opt_code) {
+		case LDNS_EDNS_NSID:
+			if (!cfg->nsid)
+				break;
+			if(!edns_opt_list_append(&edns->opt_list_out,
+						LDNS_EDNS_NSID, cfg->nsid_len,
+						cfg->nsid, region)) {
+				log_err("out of memory");
+				return 0;
+			}
+			break;
+
+		case LDNS_EDNS_KEEPALIVE:
+			/* To respond with a Keepalive option, the client
+			 * connection must have received one message with a TCP
+			 * Keepalive EDNS option, and that option must have 0
+			 * length data. Subsequent messages sent on that
+			 * connection will have a TCP Keepalive option.
+			 */
+			if (!cfg->do_tcp_keepalive || c->type != comm_udp ||
+					!c->tcp_keepalive)
+				break;
+			keepalive = c->tcp_timeout_msec / 100;
+			data[0] = (uint8_t)((keepalive >> 8) & 0xff);
+			data[1] = (uint8_t)(keepalive & 0xff);
+			if(!edns_opt_list_append(&edns->opt_list_out,
+						LDNS_EDNS_KEEPALIVE,
+						sizeof(data), data, region)) {
+				log_err("out of memory");
+				return 0;
+			}
+			c->tcp_keepalive = 1;
+			break;
+
+		case LDNS_EDNS_PADDING:
+			if(!cfg->pad_responses || c->type != comm_tcp ||!c->ssl)
+				break;
+			if(!edns_opt_list_append(&edns->opt_list_out,
+						LDNS_EDNS_PADDING,
+						0, NULL, region)) {
+				log_err("out of memory");
+				return 0;
+			}
+			edns->padding_block_size = cfg->pad_responses_block_size;
+			break;
+
+		default:
+			if(!edns_opt_list_append(&edns->opt_list_in,
+					opt_code, opt_len, rdata_ptr, region)) {
+				log_err("out of memory");
+				return 0;
+			}
+			break;
 		}
 		rdata_ptr += opt_len;
 		rdata_len -= opt_len;
@@ -1027,7 +1084,7 @@ parse_extract_edns(struct msg_parse* msg, struct edns_data* edns,
 	/* take the options */
 	rdata_len = found->rr_first->size-2;
 	rdata_ptr = found->rr_first->ttl_data+6;
-	if(!parse_edns_options(rdata_ptr, rdata_len, edns, region))
+	if(!parse_edns_options(rdata_ptr, rdata_len, edns, NULL, NULL, region))
 		return 0;
 
 	/* ignore rrsigs */
@@ -1063,7 +1120,7 @@ skip_pkt_rrs(sldns_buffer* pkt, int num)
 
 int 
 parse_edns_from_pkt(sldns_buffer* pkt, struct edns_data* edns,
-	struct regional* region)
+	struct config_file* cfg, struct comm_point* c, struct regional* region)
 {
 	size_t rdata_len;
 	uint8_t* rdata_ptr;
@@ -1105,7 +1162,7 @@ parse_edns_from_pkt(sldns_buffer* pkt, struct edns_data* edns,
 	if(sldns_buffer_remaining(pkt) < rdata_len)
 		return LDNS_RCODE_FORMERR;
 	rdata_ptr = sldns_buffer_current(pkt);
-	if(!parse_edns_options(rdata_ptr, rdata_len, edns, region))
+	if(!parse_edns_options(rdata_ptr, rdata_len, edns, cfg, c, region))
 		return LDNS_RCODE_SERVFAIL;
 
 	/* ignore rrsigs */

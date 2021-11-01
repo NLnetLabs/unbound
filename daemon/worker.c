@@ -1242,7 +1242,8 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 		}
 		goto send_reply;
 	}
-	if((ret=parse_edns_from_pkt(c->buffer, &edns, worker->scratchpad)) != 0) {
+	if((ret=parse_edns_from_pkt(c->buffer, &edns, worker->env.cfg, c,
+					worker->scratchpad)) != 0) {
 		struct edns_data reply_edns;
 		verbose(VERB_ALGO, "worker parse edns: formerror.");
 		log_addr(VERB_CLIENT,"from",&repinfo->addr, repinfo->addrlen);

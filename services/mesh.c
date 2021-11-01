@@ -1503,20 +1503,15 @@ int mesh_state_add_cb(struct mesh_state* s, struct edns_data* edns,
 	r->cb = cb;
 	r->cb_arg = cb_arg;
 	r->edns = *edns;
-	if(edns->opt_list_in || edns->opt_list_out || edns->opt_list_modules_out) {
-		r->edns.opt_list_in = edns_opt_copy_region(edns->opt_list_in,
-			s->s.region);
-		if(!r->edns.opt_list_in)
-			return 0;
-		r->edns.opt_list_out = edns_opt_copy_region(edns->opt_list_out,
-			s->s.region);
-		if(!r->edns.opt_list_out)
-			return 0;
-		r->edns.opt_list_modules_out = edns_opt_copy_region(edns->opt_list_modules_out,
-			s->s.region);
-		if(!r->edns.opt_list_modules_out)
-			return 0;
-	}
+	if(edns->opt_list_in && !(r->edns.opt_list_in =
+			edns_opt_copy_region(edns->opt_list_in, s->s.region)))
+		return 0;
+	if(edns->opt_list_out && !(r->edns.opt_list_out =
+			edns_opt_copy_region(edns->opt_list_out, s->s.region)))
+		return 0;
+	if(edns->opt_list_modules_out && !(r->edns.opt_list_modules_out =
+			edns_opt_copy_region(edns->opt_list_modules_out, s->s.region)))
+		return 0;
 	r->qid = qid;
 	r->qflags = qflags;
 	r->next = s->cb_list;
@@ -1535,20 +1530,15 @@ int mesh_state_add_reply(struct mesh_state* s, struct edns_data* edns,
 		return 0;
 	r->query_reply = *rep;
 	r->edns = *edns;
-	if(edns->opt_list_in || edns->opt_list_out || edns->opt_list_modules_out) {
-		r->edns.opt_list_in = edns_opt_copy_region(edns->opt_list_in,
-			s->s.region);
-		if(!r->edns.opt_list_in)
-			return 0;
-		r->edns.opt_list_out = edns_opt_copy_region(edns->opt_list_out,
-			s->s.region);
-		if(!r->edns.opt_list_out)
-			return 0;
-		r->edns.opt_list_modules_out = edns_opt_copy_region(edns->opt_list_modules_out,
-			s->s.region);
-		if(!r->edns.opt_list_modules_out)
-			return 0;
-	}
+	if(edns->opt_list_in && !(r->edns.opt_list_in =
+			edns_opt_copy_region(edns->opt_list_in, s->s.region)))
+		return 0;
+	if(edns->opt_list_out && !(r->edns.opt_list_out =
+			edns_opt_copy_region(edns->opt_list_out, s->s.region)))
+		return 0;
+	if(edns->opt_list_modules_out && !(r->edns.opt_list_modules_out =
+			edns_opt_copy_region(edns->opt_list_modules_out, s->s.region)))
+		return 0;
 	r->qid = qid;
 	r->qflags = qflags;
 	r->start_time = *s->s.env->now_tv;

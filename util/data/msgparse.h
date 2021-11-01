@@ -70,6 +70,8 @@ struct rrset_parse;
 struct rr_parse;
 struct regional;
 struct edns_option;
+struct config_file;
+struct comm_point;
 
 /** number of buckets in parse rrset hash table. Must be power of 2. */
 #define PARSE_TABLE_SIZE 32
@@ -297,12 +299,14 @@ int parse_extract_edns(struct msg_parse* msg, struct edns_data* edns,
  *	section. At end, right after EDNS data or no movement if failed.
  * @param edns: the edns data allocated by the caller. Does not have to be
  *	initialised.
+ * @param cfg: the configuration (with nsid value etc.)
+ * @param c: commpoint to determine transport (if needed)
  * @param region: region to alloc results in (edns option contents)
  * @return: 0 on success, or an RCODE on error.
  *	RCODE formerr if OPT is badly formatted and so on.
  */
 int parse_edns_from_pkt(struct sldns_buffer* pkt, struct edns_data* edns,
-	struct regional* region);
+	struct config_file* cfg, struct comm_point* c, struct regional* region);
 
 /**
  * Calculate hash value for rrset in packet.
