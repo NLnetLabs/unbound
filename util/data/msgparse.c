@@ -940,14 +940,36 @@ parse_packet(sldns_buffer* pkt, struct msg_parse* msg, struct regional* region)
 	return 0;
 }
 
+static int
+edns_opt_list_append_keepalive(struct edns_option** list, int msec,
+		struct regional* region)
+{
+	uint8_t data[2]; /* For keepalive value */
+	data[0] = (uint8_t)((msec >> 8) & 0xff);
+	data[1] = (uint8_t)(msec & 0xff);
+	return edns_opt_list_append(list, LDNS_EDNS_KEEPALIVE, sizeof(data),
+			data, region);
+}
+
 /** parse EDNS options from EDNS wireformat rdata */
 static int
 parse_edns_options(uint8_t* rdata_ptr, size_t rdata_len,
 	struct edns_data* edns, struct config_file* cfg, struct comm_point* c,
 	struct regional* region)
 {
-	int keepalive;
-	uint8_t data[2]; /* For keepalive value */
+	/* To respond with a Keepalive option, the client connection must have
+	 * received one message with a TCP Keepalive EDNS option, and that
+	 * option must have 0 length data. Subsequent messages sent on that
+	 * connection will have a TCP Keepalive option.
+	 */
+	if (cfg && cfg->do_tcp_keepalive && c && c->type != comm_udp && c->tcp_keepalive) {
+		if(!edns_opt_list_append_keepalive(&edns->opt_list_out,
+					c->tcp_timeout_msec / 100, region)) {
+			log_err("out of memory");
+			return LDNS_RCODE_SERVFAIL;
+		}
+		c->tcp_keepalive = 1;
+	}
 
 	/* while still more options, and have code+len to read */
 	/* ignores partial content (i.e. rdata len 3) */
@@ -962,13 +984,13 @@ parse_edns_options(uint8_t* rdata_ptr, size_t rdata_len,
 		/* handle parse time edns options here */
 		switch(opt_code) {
 		case LDNS_EDNS_NSID:
-			if (!cfg->nsid)
+			if (!cfg || !cfg->nsid)
 				break;
 			if(!edns_opt_list_append(&edns->opt_list_out,
 						LDNS_EDNS_NSID, cfg->nsid_len,
 						cfg->nsid, region)) {
 				log_err("out of memory");
-				return 0;
+				return LDNS_RCODE_SERVFAIL;
 			}
 			break;
 
@@ -979,29 +1001,31 @@ parse_edns_options(uint8_t* rdata_ptr, size_t rdata_len,
 			 * length data. Subsequent messages sent on that
 			 * connection will have a TCP Keepalive option.
 			 */
-			if (!cfg->do_tcp_keepalive || c->type != comm_udp ||
-					!c->tcp_keepalive)
+			if (!cfg || !cfg->do_tcp_keepalive || !c ||
+					c->type == comm_udp || c->tcp_keepalive)
 				break;
-			keepalive = c->tcp_timeout_msec / 100;
-			data[0] = (uint8_t)((keepalive >> 8) & 0xff);
-			data[1] = (uint8_t)(keepalive & 0xff);
-			if(!edns_opt_list_append(&edns->opt_list_out,
-						LDNS_EDNS_KEEPALIVE,
-						sizeof(data), data, region)) {
+			if(opt_len) {
+				verbose(VERB_ALGO, "query with bad edns keepalive.");
+				return LDNS_RCODE_FORMERR;
+			}
+			if(!edns_opt_list_append_keepalive(&edns->opt_list_out,
+						c->tcp_timeout_msec / 100,
+						region)) {
 				log_err("out of memory");
-				return 0;
+				return LDNS_RCODE_SERVFAIL;
 			}
 			c->tcp_keepalive = 1;
 			break;
 
 		case LDNS_EDNS_PADDING:
-			if(!cfg->pad_responses || c->type != comm_tcp ||!c->ssl)
+			if(!cfg || !cfg->pad_responses ||
+					!c || c->type != comm_tcp ||!c->ssl)
 				break;
 			if(!edns_opt_list_append(&edns->opt_list_out,
 						LDNS_EDNS_PADDING,
 						0, NULL, region)) {
 				log_err("out of memory");
-				return 0;
+				return LDNS_RCODE_SERVFAIL;
 			}
 			edns->padding_block_size = cfg->pad_responses_block_size;
 			break;
@@ -1010,14 +1034,14 @@ parse_edns_options(uint8_t* rdata_ptr, size_t rdata_len,
 			if(!edns_opt_list_append(&edns->opt_list_in,
 					opt_code, opt_len, rdata_ptr, region)) {
 				log_err("out of memory");
-				return 0;
+				return LDNS_RCODE_SERVFAIL;
 			}
 			break;
 		}
 		rdata_ptr += opt_len;
 		rdata_len -= opt_len;
 	}
-	return 1;
+	return 0;
 }
 
 int 
@@ -1084,7 +1108,7 @@ parse_extract_edns(struct msg_parse* msg, struct edns_data* edns,
 	/* take the options */
 	rdata_len = found->rr_first->size-2;
 	rdata_ptr = found->rr_first->ttl_data+6;
-	if(!parse_edns_options(rdata_ptr, rdata_len, edns, NULL, NULL, region))
+	if(parse_edns_options(rdata_ptr, rdata_len, edns, NULL, NULL, region))
 		return 0;
 
 	/* ignore rrsigs */
@@ -1122,6 +1146,7 @@ int
 parse_edns_from_pkt(sldns_buffer* pkt, struct edns_data* edns,
 	struct config_file* cfg, struct comm_point* c, struct regional* region)
 {
+	int rcode;
 	size_t rdata_len;
 	uint8_t* rdata_ptr;
 	log_assert(LDNS_QDCOUNT(sldns_buffer_begin(pkt)) == 1);
@@ -1162,8 +1187,9 @@ parse_edns_from_pkt(sldns_buffer* pkt, struct edns_data* edns,
 	if(sldns_buffer_remaining(pkt) < rdata_len)
 		return LDNS_RCODE_FORMERR;
 	rdata_ptr = sldns_buffer_current(pkt);
-	if(!parse_edns_options(rdata_ptr, rdata_len, edns, cfg, c, region))
-		return LDNS_RCODE_SERVFAIL;
+	rcode = parse_edns_options(rdata_ptr, rdata_len, edns, cfg, c, region);
+	if(rcode)
+		return rcode;
 
 	/* ignore rrsigs */
 
