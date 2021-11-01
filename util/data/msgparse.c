@@ -952,8 +952,8 @@ parse_edns_options(uint8_t* rdata_ptr, size_t rdata_len,
 		rdata_len -= 4;
 		if(opt_len > rdata_len)
 			break; /* option code partial */
-		if(!edns_opt_append(edns, region, opt_code, opt_len,
-			rdata_ptr)) {
+		if(!edns_opt_list_append(&edns->opt_list_in, opt_code, opt_len,
+					rdata_ptr, region)) {
 			log_err("out of memory");
 			return 0;
 		}
@@ -1019,7 +1019,8 @@ parse_extract_edns(struct msg_parse* msg, struct edns_data* edns,
 	edns->edns_version = found->rr_last->ttl_data[1];
 	edns->bits = sldns_read_uint16(&found->rr_last->ttl_data[2]);
 	edns->udp_size = ntohs(found->rrset_class);
-	edns->opt_list = NULL;
+	edns->opt_list_in = NULL;
+	edns->opt_list_out = NULL;
 	edns->opt_list_modules_out = NULL;
 	edns->padding_block_size = 0;
 
@@ -1094,7 +1095,8 @@ parse_edns_from_pkt(sldns_buffer* pkt, struct edns_data* edns,
 	edns->ext_rcode = sldns_buffer_read_u8(pkt); /* ttl used for bits */
 	edns->edns_version = sldns_buffer_read_u8(pkt);
 	edns->bits = sldns_buffer_read_u16(pkt);
-	edns->opt_list = NULL;
+	edns->opt_list_in = NULL;
+	edns->opt_list_out = NULL;
 	edns->opt_list_modules_out = NULL;
 	edns->padding_block_size = 0;
 

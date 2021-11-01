@@ -140,12 +140,12 @@ static int edns_keepalive(struct edns_data* edns_out, struct edns_data* edns_in,
 	 * sent on that connection will have a TCP Keepalive option.
 	 */
 	if(c->tcp_keepalive ||
-		edns_opt_list_find(edns_in->opt_list, LDNS_EDNS_KEEPALIVE)) {
+		edns_opt_list_find(edns_in->opt_list_in, LDNS_EDNS_KEEPALIVE)) {
 		int keepalive = c->tcp_timeout_msec / 100;
 		uint8_t data[2];
 		data[0] = (uint8_t)((keepalive >> 8) & 0xff);
 		data[1] = (uint8_t)(keepalive & 0xff);
-		if(!edns_opt_list_append(&edns_out->opt_list, LDNS_EDNS_KEEPALIVE,
+		if(!edns_opt_list_append(&edns_out->opt_list_out, LDNS_EDNS_KEEPALIVE,
 			sizeof(data), data, region))
 			return 0;
 		c->tcp_keepalive = 1;
@@ -160,17 +160,17 @@ int apply_edns_options(struct edns_data* edns_out, struct edns_data* edns_in,
 		!edns_keepalive(edns_out, edns_in, c, region))
 		return 0;
 
-	if (cfg->nsid && edns_opt_list_find(edns_in->opt_list, LDNS_EDNS_NSID)
-	&& !edns_opt_list_append(&edns_out->opt_list,
+	if (cfg->nsid && edns_opt_list_find(edns_in->opt_list_in, LDNS_EDNS_NSID)
+	&& !edns_opt_list_append(&edns_out->opt_list_out,
 			LDNS_EDNS_NSID, cfg->nsid_len, cfg->nsid, region))
 		return 0;
 
 	if(!cfg->pad_responses || c->type != comm_tcp || !c->ssl
-	|| !edns_opt_list_find(edns_in->opt_list, LDNS_EDNS_PADDING)) {
+	|| !edns_opt_list_find(edns_in->opt_list_in, LDNS_EDNS_PADDING)) {
 	       ; /* pass */
 	}
 
-	else if(!edns_opt_list_append(&edns_out->opt_list, LDNS_EDNS_PADDING
+	else if(!edns_opt_list_append(&edns_out->opt_list_out, LDNS_EDNS_PADDING
 	                                                 , 0, NULL, region))
 		return 0;
 	else

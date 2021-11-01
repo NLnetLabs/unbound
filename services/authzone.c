@@ -5358,7 +5358,8 @@ xfr_transfer_lookup_host(struct auth_xfer* xfr, struct module_env* env)
 	edns.ext_rcode = 0;
 	edns.edns_version = 0;
 	edns.bits = EDNS_DO;
-	edns.opt_list = NULL;
+	edns.opt_list_in = NULL;
+	edns.opt_list_out = NULL;
 	edns.opt_list_modules_out = NULL;
 	edns.padding_block_size = 0;
 	if(sldns_buffer_capacity(buf) < 65535)
@@ -6548,7 +6549,8 @@ xfr_probe_lookup_host(struct auth_xfer* xfr, struct module_env* env)
 	edns.ext_rcode = 0;
 	edns.edns_version = 0;
 	edns.bits = EDNS_DO;
-	edns.opt_list = NULL;
+	edns.opt_list_in = NULL;
+	edns.opt_list_out = NULL;
 	edns.opt_list_modules_out = NULL;
 	edns.padding_block_size = 0;
 	if(sldns_buffer_capacity(buf) < 65535)
@@ -8324,7 +8326,8 @@ zonemd_lookup_dnskey(struct auth_zone* z, struct module_env* env)
 	edns.ext_rcode = 0;
 	edns.edns_version = 0;
 	edns.bits = EDNS_DO;
-	edns.opt_list = NULL;
+	edns.opt_list_in = NULL;
+	edns.opt_list_out = NULL;
 	edns.opt_list_modules_out = NULL;
 	if(sldns_buffer_capacity(buf) < 65535)
 		edns.udp_size = (uint16_t)sldns_buffer_capacity(buf);

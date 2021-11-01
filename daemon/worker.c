@@ -1003,7 +1003,8 @@ answer_notify(struct worker* w, struct query_info* qinfo,
 	edns->udp_size = EDNS_ADVERTISED_SIZE;
 	edns->ext_rcode = 0;
 	edns->bits &= EDNS_DO;
-	edns->opt_list = NULL;
+	edns->opt_list_in = NULL;
+	edns->opt_list_out = NULL;
 	edns->opt_list_modules_out = NULL;
 	error_encode(pkt, rcode, qinfo,
 		*(uint16_t*)(void *)sldns_buffer_begin(pkt),
@@ -1262,7 +1263,8 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 			edns.edns_version = EDNS_ADVERTISED_VERSION;
 			edns.udp_size = EDNS_ADVERTISED_SIZE;
 			edns.bits &= EDNS_DO;
-			edns.opt_list = NULL;
+			edns.opt_list_in = NULL;
+			edns.opt_list_out = NULL;
 			edns.opt_list_modules_out = NULL;
 			edns.padding_block_size = 0;
 			verbose(VERB_ALGO, "query with bad edns version.");
@@ -1284,13 +1286,15 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 			edns.udp_size = NORMAL_UDP_SIZE;
 		}
 		if(c->type != comm_udp) {
-			edns_opt = edns_opt_list_find(edns.opt_list, LDNS_EDNS_KEEPALIVE);
+			/* @TODO reuse what we found at parse time */
+			edns_opt = edns_opt_list_find(edns.opt_list_in, LDNS_EDNS_KEEPALIVE);
 			if(edns_opt && edns_opt->opt_len > 0) {
 				edns.ext_rcode = 0;
 				edns.edns_version = EDNS_ADVERTISED_VERSION;
 				edns.udp_size = EDNS_ADVERTISED_SIZE;
 				edns.bits &= EDNS_DO;
-				edns.opt_list = NULL;
+				edns.opt_list_in = NULL;
+				edns.opt_list_out = NULL;
 				edns.opt_list_modules_out = NULL;
 				verbose(VERB_ALGO, "query with bad edns keepalive.");
 				log_addr(VERB_CLIENT,"from",&repinfo->addr, repinfo->addrlen);
@@ -1455,7 +1459,7 @@ lookup_cache:
 	 * this is a two-pass operation, and lookup_qinfo is different for
 	 * each pass.  We should still pass the original qinfo to
 	 * answer_from_cache(), however, since it's used to build the reply. */
-	if(!edns_bypass_cache_stage(edns.opt_list, &worker->env)) {
+	if(!edns_bypass_cache_stage(edns.opt_list_in, &worker->env)) {
 		is_expired_answer = 0;
 		is_secure_answer = 0;
 		h = query_info_hash(lookup_qinfo, sldns_buffer_read_u16_at(c->buffer, 2));

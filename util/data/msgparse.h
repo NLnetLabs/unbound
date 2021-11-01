@@ -225,8 +225,12 @@ struct edns_data {
 	uint16_t bits;
 	/** UDP reassembly size. */
 	uint16_t udp_size;
-	/** rdata element list, or NULL if none */
-	struct edns_option* opt_list;
+	/** rdata element list of options of an incoming packet created at
+	 * parse time, or NULL if none */
+	struct edns_option* opt_list_in;
+	/** rdata element list of options to encode for outgoing packets,
+	 * or NULL if none */
+	struct edns_option* opt_list_out;
 	/** rdata element list of outgoing edns options from modules
 	 * or NULL if none */
 	struct edns_option* opt_list_modules_out;
