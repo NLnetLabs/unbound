@@ -1,3 +1,6 @@
+2 November 2021: Wouter
+	- Fix #552: Unbound assumes index.html exists on RPZ host.
+
 11 October 2021: Wouter
 	- Fix chaos replies to have truncation for short message lengths,
 	  or long reply strings.

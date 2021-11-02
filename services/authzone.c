@@ -7160,7 +7160,7 @@ parse_url(char* url, char** host, char** file, int* port, int* ssl)
 	while(p && *p == '/')
 		p++;
 	if(!p || p[0] == 0)
-		*file = strdup("index.html");
+		*file = strdup("/");
 	else	*file = strdup(p);
 	if(!*file) {
 		log_err("malloc failure");
