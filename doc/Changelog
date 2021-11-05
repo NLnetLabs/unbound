@@ -1,3 +1,7 @@
+5 November 2021: Wouter
+	- Fix that forward-zone name is documented as the full name of the
+	  zone. It is not relative but a fully qualified domain name.
+
 2 November 2021: Wouter
 	- Fix #552: Unbound assumes index.html exists on RPZ host.
 

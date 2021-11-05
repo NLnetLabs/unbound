@@ -1838,7 +1838,7 @@ zone.  The local zone nodefault (or \fItransparent\fR) clause makes the
 (reverse\-) zone bypass unbound's filtering of RFC1918 zones.
 .TP
 .B name: \fI<domain name>
-Name of the stub zone.
+Name of the stub zone. This is the full domain name of the zone.
 .TP
 .B stub\-host: \fI<domain name>
 Name of stub zone nameserver. Is itself resolved before it is used.
@@ -1895,7 +1895,7 @@ forward all queries to that other server (unless it can answer from
 the cache).
 .TP
 .B name: \fI<domain name>
-Name of the forward zone.
+Name of the forward zone. This is the full domain name of the zone.
 .TP
 .B forward\-host: \fI<domain name>
 Name of server to forward to. Is itself resolved before it is used.
