@@ -1,6 +1,7 @@
 5 November 2021: George
 	- Fix for #558: fix loop in comm_point->tcp_free when a comm_point is
 	  reclaimed more than once during callbacks.
+	- Fix for #558: clear the UB_EV_TIMEOUT bit before adding an event.
 
 5 November 2021: Wouter
 	- Fix that forward-zone name is documented as the full name of the
