@@ -10,6 +10,7 @@
 	  crash on unlocking the local zone lock.
 	- Fix to remove unused code from rpz resolve client and action
 	  function.
+	- Merge #565: unbound.service.in: Disable ProtectKernelTunables again.
 
 2 November 2021: Wouter
 	- Fix #552: Unbound assumes index.html exists on RPZ host.
