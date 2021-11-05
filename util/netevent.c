@@ -1054,6 +1054,7 @@ comm_point_tcp_accept_callback(int fd, short event, void* arg)
 	/* clear leftover flags from previous use, and then set the
 	 * correct event base for the event structure for libevent */
 	ub_event_free(c_hdl->ev->ev);
+	c_hdl->ev->ev = NULL;
 	if((c_hdl->type == comm_tcp && c_hdl->tcp_req_info) ||
 		c_hdl->type == comm_local || c_hdl->type == comm_raw)
 		c_hdl->tcp_do_toggle_rw = 0;
@@ -1110,6 +1111,7 @@ comm_point_tcp_accept_callback(int fd, short event, void* arg)
 	/* grab the tcp handler buffers */
 	c->cur_tcp_count++;
 	c->tcp_free = c_hdl->tcp_free;
+	c_hdl->tcp_free = NULL;
 	if(!c->tcp_free) {
 		/* stop accepting incoming queries for now. */
 		comm_point_stop_listening(c);
@@ -1131,9 +1133,11 @@ reclaim_tcp_handler(struct comm_point* c)
 	}
 	comm_point_close(c);
 	if(c->tcp_parent) {
-		c->tcp_parent->cur_tcp_count--;
-		c->tcp_free = c->tcp_parent->tcp_free;
-		c->tcp_parent->tcp_free = c;
+		if(c != c->tcp_parent->tcp_free) {
+			c->tcp_parent->cur_tcp_count--;
+			c->tcp_free = c->tcp_parent->tcp_free;
+			c->tcp_parent->tcp_free = c;
+		}
 		if(!c->tcp_free) {
 			/* re-enable listening on accept socket */
 			comm_point_start_listening(c->tcp_parent, -1, -1);
@@ -2228,9 +2232,11 @@ reclaim_http_handler(struct comm_point* c)
 	}
 	comm_point_close(c);
 	if(c->tcp_parent) {
-		c->tcp_parent->cur_tcp_count--;
-		c->tcp_free = c->tcp_parent->tcp_free;
-		c->tcp_parent->tcp_free = c;
+		if(c != c->tcp_parent->tcp_free) {
+			c->tcp_parent->cur_tcp_count--;
+			c->tcp_free = c->tcp_parent->tcp_free;
+			c->tcp_parent->tcp_free = c;
+		}
 		if(!c->tcp_free) {
 			/* re-enable listening on accept socket */
 			comm_point_start_listening(c->tcp_parent, -1, -1);
