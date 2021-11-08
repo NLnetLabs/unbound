@@ -968,7 +968,6 @@ parse_edns_options(uint8_t* rdata_ptr, size_t rdata_len,
 			log_err("out of memory");
 			return LDNS_RCODE_SERVFAIL;
 		}
-		c->tcp_keepalive = 1;
 	}
 
 	/* while still more options, and have code+len to read */
@@ -1031,17 +1030,17 @@ parse_edns_options(uint8_t* rdata_ptr, size_t rdata_len,
 			break;
 
 		default:
-			if(!edns_opt_list_append(&edns->opt_list_in,
-					opt_code, opt_len, rdata_ptr, region)) {
-				log_err("out of memory");
-				return LDNS_RCODE_SERVFAIL;
-			}
 			break;
+		}
+		if(!edns_opt_list_append(&edns->opt_list_in,
+				opt_code, opt_len, rdata_ptr, region)) {
+			log_err("out of memory");
+			return LDNS_RCODE_SERVFAIL;
 		}
 		rdata_ptr += opt_len;
 		rdata_len -= opt_len;
 	}
-	return 0;
+	return LDNS_RCODE_NOERROR;
 }
 
 int 
@@ -1109,7 +1108,7 @@ parse_extract_edns(struct msg_parse* msg, struct edns_data* edns,
 	rdata_len = found->rr_first->size-2;
 	rdata_ptr = found->rr_first->ttl_data+6;
 	if(parse_edns_options(rdata_ptr, rdata_len, edns, NULL, NULL, region))
-		return 0;
+		return LDNS_RCODE_NOERROR;
 
 	/* ignore rrsigs */
 
@@ -1187,12 +1186,8 @@ parse_edns_from_pkt(sldns_buffer* pkt, struct edns_data* edns,
 	if(sldns_buffer_remaining(pkt) < rdata_len)
 		return LDNS_RCODE_FORMERR;
 	rdata_ptr = sldns_buffer_current(pkt);
-	rcode = parse_edns_options(rdata_ptr, rdata_len, edns, cfg, c, region);
-	if(rcode)
-		return rcode;
-
 	/* ignore rrsigs */
-
+	return parse_edns_options(rdata_ptr, rdata_len, edns, cfg, c, region);
 	return 0;
 }
 

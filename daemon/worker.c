@@ -1003,9 +1003,6 @@ answer_notify(struct worker* w, struct query_info* qinfo,
 	edns->udp_size = EDNS_ADVERTISED_SIZE;
 	edns->ext_rcode = 0;
 	edns->bits &= EDNS_DO;
-	edns->opt_list_in = NULL;
-	edns->opt_list_out = NULL;
-	edns->opt_list_modules_out = NULL;
 	error_encode(pkt, rcode, qinfo,
 		*(uint16_t*)(void *)sldns_buffer_begin(pkt),
 		sldns_buffer_read_u16_at(pkt, 2), edns);

@@ -235,7 +235,7 @@ struct edns_data {
 	struct edns_option* opt_list_out;
 	/** rdata element list of outgoing edns options from modules
 	 * or NULL if none */
-	struct edns_option* opt_list_modules_out;
+	struct edns_option* opt_list_inplace_cb_out;
 	/** block size to pad */
 	uint16_t padding_block_size;
 };
