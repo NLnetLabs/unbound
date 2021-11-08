@@ -1101,7 +1101,7 @@ parse_extract_edns(struct msg_parse* msg, struct edns_data* edns,
 	edns->udp_size = ntohs(found->rrset_class);
 	edns->opt_list_in = NULL;
 	edns->opt_list_out = NULL;
-	edns->opt_list_modules_out = NULL;
+	edns->opt_list_inplace_cb_out = NULL;
 	edns->padding_block_size = 0;
 
 	/* take the options */
@@ -1145,7 +1145,6 @@ int
 parse_edns_from_pkt(sldns_buffer* pkt, struct edns_data* edns,
 	struct config_file* cfg, struct comm_point* c, struct regional* region)
 {
-	int rcode;
 	size_t rdata_len;
 	uint8_t* rdata_ptr;
 	log_assert(LDNS_QDCOUNT(sldns_buffer_begin(pkt)) == 1);
@@ -1178,7 +1177,7 @@ parse_edns_from_pkt(sldns_buffer* pkt, struct edns_data* edns,
 	edns->bits = sldns_buffer_read_u16(pkt);
 	edns->opt_list_in = NULL;
 	edns->opt_list_out = NULL;
-	edns->opt_list_modules_out = NULL;
+	edns->opt_list_inplace_cb_out = NULL;
 	edns->padding_block_size = 0;
 
 	/* take the options */

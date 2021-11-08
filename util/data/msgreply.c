@@ -1069,7 +1069,7 @@ static int inplace_cb_reply_call_generic(
 		(void)(*(inplace_cb_reply_func_type*)cb->cb)(qinfo, qstate, rep,
 			rcode, edns, &opt_list_out, repinfo, region, start_time, cb->id, cb->cb_arg);
 	}
-	edns->opt_list_modules_out = opt_list_out;
+	edns->opt_list_inplace_cb_out = opt_list_out;
 	return 1;
 }
 

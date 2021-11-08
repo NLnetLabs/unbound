@@ -2711,7 +2711,7 @@ serviced_encode(struct serviced_query* sq, sldns_buffer* buff, int with_edns)
 		edns.edns_version = EDNS_ADVERTISED_VERSION;
 		edns.opt_list_in = NULL;
 		edns.opt_list_out = sq->opt_list;
-		edns.opt_list_modules_out = NULL;
+		edns.opt_list_inplace_cb_out = NULL;
 		if(sq->status == serviced_query_UDP_EDNS_FRAG) {
 			if(addr_is_ip6(&sq->addr, sq->addrlen)) {
 				if(EDNS_FRAG_SIZE_IP6 < EDNS_ADVERTISED_SIZE)

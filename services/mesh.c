@@ -505,7 +505,7 @@ void mesh_new_client(struct mesh_area* mesh, struct query_info* qinfo,
 			log_err("mesh_state_create: out of memory; SERVFAIL");
 			if(!inplace_cb_reply_servfail_call(mesh->env, qinfo, NULL, NULL,
 				LDNS_RCODE_SERVFAIL, edns, rep, mesh->env->scratch, mesh->env->now_tv))
-					edns->opt_list_modules_out = NULL;
+					edns->opt_list_inplace_cb_out = NULL;
 			error_encode(r_buffer, LDNS_RCODE_SERVFAIL,
 				qinfo, qid, qflags, edns);
 			comm_point_send_reply(rep);
@@ -521,7 +521,7 @@ void mesh_new_client(struct mesh_area* mesh, struct query_info* qinfo,
 				log_err("mesh_state_create: out of memory; SERVFAIL");
 				if(!inplace_cb_reply_servfail_call(mesh->env, qinfo, NULL,
 					NULL, LDNS_RCODE_SERVFAIL, edns, rep, mesh->env->scratch, mesh->env->now_tv))
-						edns->opt_list_modules_out = NULL;
+						edns->opt_list_inplace_cb_out = NULL;
 				error_encode(r_buffer, LDNS_RCODE_SERVFAIL,
 					qinfo, qid, qflags, edns);
 				comm_point_send_reply(rep);
@@ -594,7 +594,7 @@ void mesh_new_client(struct mesh_area* mesh, struct query_info* qinfo,
 servfail_mem:
 	if(!inplace_cb_reply_servfail_call(mesh->env, qinfo, &s->s,
 		NULL, LDNS_RCODE_SERVFAIL, edns, rep, mesh->env->scratch, mesh->env->now_tv))
-			edns->opt_list_modules_out = NULL;
+			edns->opt_list_inplace_cb_out = NULL;
 	error_encode(r_buffer, LDNS_RCODE_SERVFAIL,
 		qinfo, qid, qflags, edns);
 	comm_point_send_reply(rep);
@@ -1145,11 +1145,11 @@ mesh_do_callback(struct mesh_state* m, int rcode, struct reply_info* rep,
 		if(rcode == LDNS_RCODE_SERVFAIL) {
 			if(!inplace_cb_reply_servfail_call(m->s.env, &m->s.qinfo, &m->s,
 				rep, rcode, &r->edns, NULL, m->s.region, start_time))
-					r->edns.opt_list_modules_out = NULL;
+					r->edns.opt_list_inplace_cb_out = NULL;
 		} else {
 			if(!inplace_cb_reply_call(m->s.env, &m->s.qinfo, &m->s, rep, rcode,
 				&r->edns, NULL, m->s.region, start_time))
-					r->edns.opt_list_modules_out = NULL;
+					r->edns.opt_list_inplace_cb_out = NULL;
 		}
 		fptr_ok(fptr_whitelist_mesh_cb(r->cb));
 		(*r->cb)(r->cb_arg, rcode, r->buf, sec_status_unchecked, NULL,
@@ -1267,7 +1267,7 @@ mesh_send_reply(struct mesh_state* m, int rcode, struct reply_info* rep,
 		prev->edns.bits == r->edns.bits &&
 		prev->edns.udp_size == r->edns.udp_size &&
 		edns_opt_list_compare(prev->edns.opt_list_out, r->edns.opt_list_out) == 0 &&
-		edns_opt_list_compare(prev->edns.opt_list_modules_out, r->edns.opt_list_modules_out) == 0
+		edns_opt_list_compare(prev->edns.opt_list_inplace_cb_out, r->edns.opt_list_inplace_cb_out) == 0
 		) {
 		/* if the previous reply is identical to this one, fix ID */
 		if(prev_buffer != r_buffer)
@@ -1284,11 +1284,11 @@ mesh_send_reply(struct mesh_state* m, int rcode, struct reply_info* rep,
 		if(rcode == LDNS_RCODE_SERVFAIL) {
 			if(!inplace_cb_reply_servfail_call(m->s.env, &m->s.qinfo, &m->s,
 				rep, rcode, &r->edns, &r->query_reply, m->s.region, &r->start_time))
-					r->edns.opt_list_modules_out = NULL;
+					r->edns.opt_list_inplace_cb_out = NULL;
 		} else { 
 			if(!inplace_cb_reply_call(m->s.env, &m->s.qinfo, &m->s, rep, rcode,
 				&r->edns, &r->query_reply, m->s.region, &r->start_time))
-					r->edns.opt_list_modules_out = NULL;
+					r->edns.opt_list_inplace_cb_out = NULL;
 		}
 		error_encode(r_buffer, rcode, &m->s.qinfo, r->qid,
 			r->qflags, &r->edns);
@@ -1312,7 +1312,7 @@ mesh_send_reply(struct mesh_state* m, int rcode, struct reply_info* rep,
 		{
 			if(!inplace_cb_reply_servfail_call(m->s.env, &m->s.qinfo, &m->s,
 			rep, LDNS_RCODE_SERVFAIL, &r->edns, &r->query_reply, m->s.region, &r->start_time))
-				r->edns.opt_list_modules_out = NULL;
+				r->edns.opt_list_inplace_cb_out = NULL;
 			error_encode(r_buffer, LDNS_RCODE_SERVFAIL,
 				&m->s.qinfo, r->qid, r->qflags, &r->edns);
 		}
@@ -1509,8 +1509,8 @@ int mesh_state_add_cb(struct mesh_state* s, struct edns_data* edns,
 	if(edns->opt_list_out && !(r->edns.opt_list_out =
 			edns_opt_copy_region(edns->opt_list_out, s->s.region)))
 		return 0;
-	if(edns->opt_list_modules_out && !(r->edns.opt_list_modules_out =
-			edns_opt_copy_region(edns->opt_list_modules_out, s->s.region)))
+	if(edns->opt_list_inplace_cb_out && !(r->edns.opt_list_inplace_cb_out =
+			edns_opt_copy_region(edns->opt_list_inplace_cb_out, s->s.region)))
 		return 0;
 	r->qid = qid;
 	r->qflags = qflags;
@@ -1536,8 +1536,8 @@ int mesh_state_add_reply(struct mesh_state* s, struct edns_data* edns,
 	if(edns->opt_list_out && !(r->edns.opt_list_out =
 			edns_opt_copy_region(edns->opt_list_out, s->s.region)))
 		return 0;
-	if(edns->opt_list_modules_out && !(r->edns.opt_list_modules_out =
-			edns_opt_copy_region(edns->opt_list_modules_out, s->s.region)))
+	if(edns->opt_list_inplace_cb_out && !(r->edns.opt_list_inplace_cb_out =
+			edns_opt_copy_region(edns->opt_list_inplace_cb_out, s->s.region)))
 		return 0;
 	r->qid = qid;
 	r->qflags = qflags;
