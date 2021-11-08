@@ -1187,7 +1187,6 @@ parse_edns_from_pkt(sldns_buffer* pkt, struct edns_data* edns,
 	rdata_ptr = sldns_buffer_current(pkt);
 	/* ignore rrsigs */
 	return parse_edns_options(rdata_ptr, rdata_len, edns, cfg, c, region);
-	return 0;
 }
 
 void
