@@ -1643,6 +1643,9 @@ processInit(struct module_qstate* qstate, struct val_qstate* vq,
 		/* no retries, stop bothering the authority until timeout */
 		vq->restart_count = ve->max_restart;
 		vq->chase_reply->security = sec_status_bogus;
+
+		// @TODO ADD Error Code 6 - DNSSEC Bogus + text chain of trust?
+
 		vq->state = VAL_FINISHED_STATE;
 		return 1;
 	}
@@ -1849,6 +1852,7 @@ processValidate(struct module_qstate* qstate, struct val_qstate* vq,
 			LDNS_RR_TYPE_DNSKEY, vq->key_entry->key_class);
 		vq->chase_reply->security = sec_status_bogus;
 		errinf(qstate, "while building chain of trust");
+		// @TODO ADD Error Code 6 - DNSSEC Bogus + text chain of trust?
 		if(vq->restart_count >= ve->max_restart)
 			key_cache_insert(ve->kcache, vq->key_entry, qstate);
 		return 1;
