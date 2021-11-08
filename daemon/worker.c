@@ -133,7 +133,7 @@ worker_mem_report(struct worker* ATTR_UNUSED(worker),
 	rrset = slabhash_get_mem(&worker->env.rrset_cache->table);
 	infra = infra_get_mem(worker->env.infra_cache);
 	mesh = mesh_get_mem(worker->env.mesh);
-	ac = alloc_get_mem(&worker->alloc);
+	ac = alloc_get_mem(worker->alloc);
 	superac = alloc_get_mem(&worker->daemon->superalloc);
 	anch = anchors_get_mem(worker->env.anchors);
 	iter = 0;
@@ -1834,15 +1834,14 @@ worker_init(struct worker* worker, struct config_file *cfg,
 	}
 
 	server_stats_init(&worker->stats, cfg);
-	alloc_init(&worker->alloc, &worker->daemon->superalloc, 
-		worker->thread_num);
-	alloc_set_id_cleanup(&worker->alloc, &worker_alloc_cleanup, worker);
+	worker->alloc = worker->daemon->worker_allocs[worker->thread_num];
+	alloc_set_id_cleanup(worker->alloc, &worker_alloc_cleanup, worker);
 	worker->env = *worker->daemon->env;
 	comm_base_timept(worker->base, &worker->env.now, &worker->env.now_tv);
 	worker->env.worker = worker;
 	worker->env.worker_base = worker->base;
 	worker->env.send_query = &worker_send_query;
-	worker->env.alloc = &worker->alloc;
+	worker->env.alloc = worker->alloc;
 	worker->env.outnet = worker->back;
 	worker->env.rnd = worker->rndstate;
 	/* If case prefetch is triggered, the corresponding mesh will clear
@@ -1986,7 +1985,7 @@ worker_delete(struct worker* worker)
 #endif /* USE_DNSTAP */
 	comm_base_delete(worker->base);
 	ub_randfree(worker->rndstate);
-	alloc_clear(&worker->alloc);
+	/* don't touch worker->alloc, as it's maintained in daemon */
 	regional_destroy(worker->env.scratch);
 	regional_destroy(worker->scratchpad);
 	free(worker);
