@@ -1341,7 +1341,7 @@ int set_return_msg(struct module_qstate* qstate,
 %pythoncode %{
     class DNSMessage:
         def __init__(self, rr_name, rr_type, rr_class = RR_CLASS_IN, query_flags = 0, default_ttl = 0):
-            """Query flags is a combination of PKT_xx contants"""
+            """Query flags is a combination of PKT_xx constants"""
             self.rr_name = rr_name
             self.rr_type = rr_type
             self.rr_class = rr_class

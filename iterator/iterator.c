@@ -3242,7 +3242,7 @@ prime_supers(struct module_qstate* qstate, int id, struct module_qstate* forq)
 	/* Convert our response to a delegation point */
 	dp = delegpt_from_message(qstate->return_msg, forq->region);
 	if(!dp) {
-		/* if there is no convertable delegation point, then 
+		/* if there is no convertible delegation point, then 
 		 * the ANSWER type was (presumably) a negative answer. */
 		verbose(VERB_ALGO, "prime response was not a positive "
 			"ANSWER; failing");

@@ -224,7 +224,7 @@ struct ub_result {
  * It is called with
  *	void* my_arg: your pointer to a (struct of) data of your choice, 
  *		or NULL.
- *	int err: if 0 all is OK, otherwise an error occured and no results
+ *	int err: if 0 all is OK, otherwise an error occurred and no results
  *	     are forthcoming.
  *	struct result: pointer to more detailed result structure.
  *		This structure is allocated on the heap and needs to be

@@ -465,7 +465,7 @@ lz_find_create_node(struct local_zone* z, uint8_t* nm, size_t nmlen,
 
 /* Mark the SOA record for the zone. This only marks the SOA rrset; the data
  * for the RR is entered later on local_zone_enter_rr() as with the other
- * records. An artifical soa_negative record with a modified TTL (minimum of
+ * records. An artificial soa_negative record with a modified TTL (minimum of
  * the TTL and the SOA.MINIMUM) is also created and marked for usage with
  * negative answers and to avoid allocations during those answers. */
 static int
@@ -1526,7 +1526,7 @@ local_data_answer(struct local_zone* z, struct module_env* env,
 			/* write qname */
 			memmove(d->rr_data[0] + sizeof(uint16_t), qinfo->qname,
 				qinfo->qname_len - 1);
-			/* write cname target wilcard wildcard label */
+			/* write cname target wildcard label */
 			memmove(d->rr_data[0] + sizeof(uint16_t) +
 				qinfo->qname_len - 1, ctarget + 2,
 				ctargetlen - 2);

@@ -84,7 +84,7 @@
 #define AUTH_PROBE_TIMEOUT_STOP 1000 /* msec */
 /* auth transfer timeout for TCP connections, in msec */
 #define AUTH_TRANSFER_TIMEOUT 10000 /* msec */
-/* auth transfer max backoff for failed tranfers and probes */
+/* auth transfer max backoff for failed transfers and probes */
 #define AUTH_TRANSFER_MAX_BACKOFF 86400 /* sec */
 /* auth http port number */
 #define AUTH_HTTP_PORT 80
@@ -243,7 +243,7 @@ msg_add_rrset_an(struct auth_zone* z, struct regional* region,
 	return 1;
 }
 
-/** add rrset to authority section (no additonal section rrsets yet) */
+/** add rrset to authority section (no additional section rrsets yet) */
 static int
 msg_add_rrset_ns(struct auth_zone* z, struct regional* region,
 	struct dns_msg* msg, struct auth_data* node, struct auth_rrset* rrset)
@@ -6491,7 +6491,7 @@ auth_xfer_probe_udp_callback(struct comm_point* c, void* arg, int err,
 	comm_point_delete(xfr->task_probe->cp);
 	xfr->task_probe->cp = NULL;
 
-	/* if the result was not a successfull probe, we need
+	/* if the result was not a successful probe, we need
 	 * to send the next one */
 	xfr_probe_nextmaster(xfr);
 	xfr_probe_send_or_end(xfr, env);

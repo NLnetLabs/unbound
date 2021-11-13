@@ -1095,7 +1095,7 @@ rpz_insert_rr(struct rpz* r, uint8_t* azname, size_t aznamelen, uint8_t* dname,
  * @param qname: qname
  * @param qname_len: length of qname
  * @param qclass: qclass
- * @param only_exact: if 1 only excact (non wildcard) matches are returned
+ * @param only_exact: if 1 only exact (non wildcard) matches are returned
  * @param wr: get write lock for local-zone if 1, read lock if 0
  * @param zones_keep_lock: if set do not release the r->local_zones lock, this
  * 	  makes the caller of this function responsible for releasing the lock.
@@ -1191,7 +1191,7 @@ rpz_find_zone(struct local_zones* zones, uint8_t* qname, size_t qname_len, uint1
  * Remove RR from RPZ's local-data
  * @param z: local-zone for RPZ, holding write lock
  * @param policydname: dname of RR to remove
- * @param policydnamelen: lenth of policydname
+ * @param policydnamelen: length of policydname
  * @param rr_type: RR type of RR to remove
  * @param rdata: rdata of RR to remove
  * @param rdatalen: length of rdata

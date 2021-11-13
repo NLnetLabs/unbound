@@ -257,7 +257,7 @@ void local_zone_delete(struct local_zone* z);
  * @param dclass: class to lookup.
  * @param dtype: type to lookup, if type DS a zone higher is used for zonecuts.
  * @param taglist: taglist to lookup.
- * @param taglen: lenth of taglist.
+ * @param taglen: length of taglist.
  * @param ignoretags: lookup zone by name and class, regardless the
  * local-zone's tags.
  * @return closest local_zone or NULL if no covering zone is found.

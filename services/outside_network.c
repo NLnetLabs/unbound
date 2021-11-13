@@ -1935,7 +1935,7 @@ select_id(struct outside_network* outnet, struct pending* pend,
 		LDNS_ID_SET(sldns_buffer_begin(packet), pend->id);
 		id_tries++;
 		if(id_tries == MAX_ID_RETRY) {
-			pend->id=99999; /* non existant ID */
+			pend->id=99999; /* non existent ID */
 			log_err("failed to generate unique ID, drop msg");
 			return 0;
 		}

@@ -2415,7 +2415,7 @@ This option defaults to "default".
 .P
 The following
 .B cachedb
-otions are specific to the redis backend.
+options are specific to the redis backend.
 .TP
 .B redis-server-host: \fI<server address or name>\fR
 The IP (either v6 or v4) address or domain name of the Redis server.

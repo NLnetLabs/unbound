@@ -358,7 +358,7 @@ struct module_env {
 	 * @param ssl_upstream: use SSL for upstream queries.
 	 * @param tls_auth_name: if ssl_upstream, use this name with TLS
 	 * 	authentication.
-	 * @param q: wich query state to reactivate upon return.
+	 * @param q: which query state to reactivate upon return.
 	 * @return: false on failure (memory or socket related). no query was
 	 *	sent. Or returns an outbound entry with qsent and qstate set.
 	 *	This outbound_entry will be used on later module invocations
