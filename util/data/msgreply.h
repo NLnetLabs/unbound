@@ -569,15 +569,15 @@ int edns_opt_list_append(struct edns_option** list, uint16_t code, size_t len,
  * @param CODE: the EDE code.
  * @param TXT: Additional text for the option
  */
-#define EDNS_OPT_LIST_APPEND_EDE(LIST, REGION, CODE, TXT) 			\
+#define EDNS_OPT_LIST_APPEND_EDE(LIST, REGION, CODE, TXT) 		\
 	do {								\
 		struct {						\
 			uint16_t code;					\
 			char text[sizeof(TXT) - 1];			\
 		} ede = { htons(CODE), TXT };				\
-		edns_opt_list_append((LIST), (REGION), LDNS_EDNS_EDE, 	\
+		edns_opt_list_append((LIST), LDNS_EDNS_EDE, 		\
 			sizeof(uint16_t) + sizeof(TXT) - 1,		\
-			(void *)&ede);					\
+			(void *)&ede, (REGION));			\
 	} while(0)
 
 /**
@@ -588,7 +588,7 @@ int edns_opt_list_append(struct edns_option** list, uint16_t code, size_t len,
  * @param txt: Additional text for the option
  * @return false on failure.
  */
-int edns_opt_append_ede(struct edns_option* list, struct regional* region,
+int edns_opt_list_append_ede(struct edns_option** list, struct regional* region,
 	sldns_ede_code code, const char *txt);
 
 /**

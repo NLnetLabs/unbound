@@ -504,6 +504,7 @@ answer_norec_from_cache(struct worker* worker, struct query_info* qinfo,
 		case sec_status_indeterminate:
 			EDNS_OPT_LIST_APPEND_EDE(&edns->opt_list_out,
 				worker->scratchpad, LDNS_EDE_DNSSEC_INDETERMINATE, "");
+			/* fallthrough */
 		case sec_status_insecure:
 		default:
 			/* not secure */
@@ -1521,7 +1522,6 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 	 * ACLs allow the snooping. */
 	if(!(LDNS_RD_WIRE(sldns_buffer_begin(c->buffer))) &&
 		acl != acl_allow_snoop ) {
-		edns.opt_list = NULL;
 		EDNS_OPT_LIST_APPEND_EDE(&edns.opt_list_out,
 			worker->scratchpad, LDNS_EDE_NOT_AUTHORITATIVE, "");
 		error_encode(c->buffer, LDNS_RCODE_REFUSED, &qinfo,
