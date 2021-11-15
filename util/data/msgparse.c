@@ -961,6 +961,10 @@ parse_edns_options_from_query(uint8_t* rdata_ptr, size_t rdata_len,
 	 * received one message with a TCP Keepalive EDNS option, and that
 	 * option must have 0 length data. Subsequent messages sent on that
 	 * connection will have a TCP Keepalive option.
+	 *
+	 * In the if-statement below, the option is added unsolicited. This
+	 * means that the client has sent an KEEPALIVE option earlier. We know
+	 * here this is true, because c->tcp_keepalive is set.
 	 */
 	if (cfg && cfg->do_tcp_keepalive && c && c->type != comm_udp && c->tcp_keepalive) {
 		if(!edns_opt_list_append_keepalive(&edns->opt_list_out,
@@ -999,6 +1003,14 @@ parse_edns_options_from_query(uint8_t* rdata_ptr, size_t rdata_len,
 			 * Keepalive EDNS option, and that option must have 0
 			 * length data. Subsequent messages sent on that
 			 * connection will have a TCP Keepalive option.
+			 *
+			 * This should be the first time the client sends this
+			 * option, so c->tcp_keepalive is not set.
+			 * Besides adding the reply KEEPALIVE option, 
+			 * c->tcp_keepalive will be set so that the
+			 * option will be added unsolicited in subsequent
+			 * responses (see the comment above the if-statement
+			 * at the start of this function).
 			 */
 			if (!cfg || !cfg->do_tcp_keepalive || !c ||
 					c->type == comm_udp || c->tcp_keepalive)
