@@ -563,6 +563,35 @@ int edns_opt_list_append(struct edns_option** list, uint16_t code, size_t len,
 	uint8_t* data, struct regional* region);
 
 /**
+ * Append edns EDE option to edns options list
+ * @param LIST: the edns option list to append the edns option to.
+ * @param REGION: region to allocate the new edns option.
+ * @param CODE: the EDE code.
+ * @param TXT: Additional text for the option
+ */
+#define EDNS_OPT_LIST_APPEND_EDE(LIST, REGION, CODE, TXT) 			\
+	do {								\
+		struct {						\
+			uint16_t code;					\
+			char text[sizeof(TXT) - 1];			\
+		} ede = { htons(CODE), TXT };				\
+		edns_opt_list_append((LIST), (REGION), LDNS_EDNS_EDE, 	\
+			sizeof(uint16_t) + sizeof(TXT) - 1,		\
+			(void *)&ede);					\
+	} while(0)
+
+/**
+ * Append edns EDE option to edns options list
+ * @param list: the edns option list to append the edns option to.
+ * @param region: region to allocate the new edns option.
+ * @param code: the EDE code.
+ * @param txt: Additional text for the option
+ * @return false on failure.
+ */
+int edns_opt_append_ede(struct edns_option* list, struct regional* region,
+	sldns_ede_code code, const char *txt);
+
+/**
  * Remove any option found on the edns option list that matches the code.
  * @param list: the list of edns options.
  * @param code: the opt code to remove.

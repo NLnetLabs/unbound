@@ -34,13 +34,29 @@ echo "UNBOUND_PID2=$UNBOUND_PID2" >> .tpkg.var.test
 # query with bad edns keepalive
 dig @127.0.0.1 -p $UNBOUND_PORT +tcp +ednsopt=11:010203 > keepalive.txt
 
+if ! grep -q "OPT=15: 00 00 71 75 65 72 79 20 77 69 74 68 20 62 61 64 20 65 64 6e 73 20 6b 65 65 70 61 6c 69 76 65" keepalive.txt
+then
+	echo "Incorect bad edns keepalive output"
+	exit 1
+fi
+
 # refused nonrec (cache snoop) (Not Auth)
-dig @127.0.0.1 -p $UNBOUND_PORT +norec > snoop.text
+dig @127.0.0.1 -p $UNBOUND_PORT +norec > snoop.txt
+
+if ! grep -q "OPT=15: 00 14" snoop.txt
+then
+	echo "Incorect cache snoop output"
+	exit 1
+fi
 
 # @TODO dnssec bogus local zones something
-dig @127.0.0.1 qwerqwer.hopsa.kidee. TXT +dnssec > bogus.txt
+dig @127.0.0.1 -p $UNBOUND_PORT qwerqwer.hopsa.kidee. TXT +dnssec > bogus.txt
 
-# refused, not auth ???
+if ! grep -q "OPT=15: 00 0f" bogus.txt
+then
+	echo "Incorect DNSSEC local zone output"
+	exit 1
+fi
 
 
 # DNAME expansion

@@ -960,35 +960,7 @@ parse_reply_in_temp_region(sldns_buffer* pkt, struct regional* region,
 	return rep;
 }
 
-int edns_opt_append(struct edns_data* edns, struct regional* region,
-	uint16_t code, size_t len, uint8_t* data)
-{
-	struct edns_option** prevp;
-	struct edns_option* opt;
-
-	/* allocate new element */
-	opt = (struct edns_option*)regional_alloc(region, sizeof(*opt));
-	if(!opt)
-		return 0;
-	opt->next = NULL;
-	opt->opt_code = code;
-	opt->opt_len = len;
-	opt->opt_data = NULL;
-	if(len > 0) {
-		opt->opt_data = regional_alloc_init(region, data, len);
-		if(!opt->opt_data)
-			return 0;
-	}
-	
-	/* append at end of list */
-	prevp = &edns->opt_list;
-	while(*prevp != NULL)
-		prevp = &((*prevp)->next);
-	*prevp = opt;
-	return 1;
-}
-
-int edns_opt_append_ede(struct edns_data* edns, struct regional* region,
+int edns_opt_list_append_ede(struct edns_option** list, struct regional* region,
 	sldns_ede_code code, const char *txt)
 {
 	struct edns_option** prevp;
@@ -1010,7 +982,7 @@ int edns_opt_append_ede(struct edns_data* edns, struct regional* region,
 		memmove(opt->opt_data + 2, txt, txt_len);
 
 	/* append at end of list */
-	prevp = &edns->opt_list;
+	prevp = list;
 	while(*prevp != NULL)
 		prevp = &((*prevp)->next);
 	*prevp = opt;

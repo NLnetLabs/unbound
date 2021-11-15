@@ -485,8 +485,8 @@ answer_norec_from_cache(struct worker* worker, struct query_info* qinfo,
 				msg->rep, LDNS_RCODE_SERVFAIL, edns, repinfo, worker->scratchpad,
 				worker->env.now_tv))
 					return 0;
-			EDNS_OPT_APPEND_EDE(edns, worker->scratchpad,
-				LDNS_EDE_DNSSEC_BOGUS, "");
+			EDNS_OPT_LIST_APPEND_EDE(&edns->opt_list_out,
+				worker->scratchpad, LDNS_EDE_DNSSEC_BOGUS, "");
 			error_encode(repinfo->c->buffer, LDNS_RCODE_SERVFAIL, 
 				&msg->qinfo, id, flags, edns);
 			if(worker->stats.extended) {
@@ -502,8 +502,8 @@ answer_norec_from_cache(struct worker* worker, struct query_info* qinfo,
 			secure = 1;
 			break;
 		case sec_status_indeterminate:
-			EDNS_OPT_APPEND_EDE(edns, worker->scratchpad,
-				LDNS_EDE_DNSSEC_INDETERMINATE, "");
+			EDNS_OPT_LIST_APPEND_EDE(&edns->opt_list_out,
+				worker->scratchpad, LDNS_EDE_DNSSEC_INDETERMINATE, "");
 		case sec_status_insecure:
 		default:
 			/* not secure */
@@ -663,8 +663,8 @@ answer_from_cache(struct worker* worker, struct query_info* qinfo,
 			LDNS_RCODE_SERVFAIL, edns, repinfo, worker->scratchpad,
 			worker->env.now_tv))
 			goto bail_out;
-		EDNS_OPT_APPEND_EDE(edns, worker->scratchpad,
-			LDNS_EDE_DNSSEC_BOGUS, "");
+		EDNS_OPT_LIST_APPEND_EDE(&edns->opt_list_out,
+			worker->scratchpad, LDNS_EDE_DNSSEC_BOGUS, "");
 		error_encode(repinfo->c->buffer, LDNS_RCODE_SERVFAIL,
 			qinfo, id, flags, edns);
 		rrset_array_unlock_touch(worker->env.rrset_cache,
@@ -1522,8 +1522,8 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 	if(!(LDNS_RD_WIRE(sldns_buffer_begin(c->buffer))) &&
 		acl != acl_allow_snoop ) {
 		edns.opt_list = NULL;
-		EDNS_OPT_APPEND_EDE(&edns, worker->scratchpad,
-			LDNS_EDE_NOT_AUTHORITATIVE, "");
+		EDNS_OPT_LIST_APPEND_EDE(&edns.opt_list_out,
+			worker->scratchpad, LDNS_EDE_NOT_AUTHORITATIVE, "");
 		error_encode(c->buffer, LDNS_RCODE_REFUSED, &qinfo,
 			*(uint16_t*)(void *)sldns_buffer_begin(c->buffer),
 			sldns_buffer_read_u16_at(c->buffer, 2), &edns);
@@ -1608,7 +1608,7 @@ lookup_cache:
 					// if (worker->env.cfg->serve_expired &&
 					// 	*worker->env.now >= ((struct reply_info*)e->data)->ttl) {
 					// 	// EDE Error Code 3 - Stale Answer
-					// 	EDNS_OPT_APPEND_EDE(&edns, worker->scratchpad,
+					// 	EDNS_OPT_LIST_APPEND_EDE(&edns.opt_list_out, worker->scratchpad,
 					// LDNS_EDE_STALE_ANSWER, "");
 					// }
 
