@@ -518,7 +518,7 @@ int reply_info_parse(sldns_buffer* pkt, struct alloc_cache* alloc,
 	if((ret = parse_packet(pkt, msg, region)) != 0) {
 		return ret;
 	}
-	if((ret = parse_extract_edns(msg, edns, region)) != 0)
+	if((ret = parse_extract_edns_from_response_msg(msg, edns, region)) != 0)
 		return ret;
 
 	/* parse OK, allocate return structures */

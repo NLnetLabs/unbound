@@ -290,8 +290,8 @@ int parse_packet(struct sldns_buffer* pkt, struct msg_parse* msg,
  * @return: 0 on success. or an RCODE on an error.
  *	RCODE formerr if OPT in wrong section, and so on.
  */
-int parse_extract_edns(struct msg_parse* msg, struct edns_data* edns,
-	struct regional* region);
+int parse_extract_edns_from_response_msg(struct msg_parse* msg,
+	struct edns_data* edns, struct regional* region);
 
 /**
  * If EDNS data follows a query section, extract it and initialize edns struct.
@@ -305,7 +305,7 @@ int parse_extract_edns(struct msg_parse* msg, struct edns_data* edns,
  * @return: 0 on success, or an RCODE on error.
  *	RCODE formerr if OPT is badly formatted and so on.
  */
-int parse_edns_from_pkt(struct sldns_buffer* pkt, struct edns_data* edns,
+int parse_edns_from_query_pkt(struct sldns_buffer* pkt, struct edns_data* edns,
 	struct config_file* cfg, struct comm_point* c, struct regional* region);
 
 /**

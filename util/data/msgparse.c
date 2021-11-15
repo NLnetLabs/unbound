@@ -953,7 +953,7 @@ edns_opt_list_append_keepalive(struct edns_option** list, int msec,
 
 /** parse EDNS options from EDNS wireformat rdata */
 static int
-parse_edns_options(uint8_t* rdata_ptr, size_t rdata_len,
+parse_edns_options_from_query(uint8_t* rdata_ptr, size_t rdata_len,
 	struct edns_data* edns, struct config_file* cfg, struct comm_point* c,
 	struct regional* region)
 {
@@ -1044,8 +1044,8 @@ parse_edns_options(uint8_t* rdata_ptr, size_t rdata_len,
 }
 
 int 
-parse_extract_edns(struct msg_parse* msg, struct edns_data* edns,
-	struct regional* region)
+parse_extract_edns_from_response_msg(struct msg_parse* msg,
+	struct edns_data* edns, struct regional* region)
 {
 	struct rrset_parse* rrset = msg->rrset_first;
 	struct rrset_parse* prev = 0;
@@ -1107,11 +1107,26 @@ parse_extract_edns(struct msg_parse* msg, struct edns_data* edns,
 	/* take the options */
 	rdata_len = found->rr_first->size-2;
 	rdata_ptr = found->rr_first->ttl_data+6;
-	if(parse_edns_options(rdata_ptr, rdata_len, edns, NULL, NULL, region))
-		return LDNS_RCODE_NOERROR;
 
+	/* while still more options, and have code+len to read */
+	/* ignores partial content (i.e. rdata len 3) */
+	while(rdata_len >= 4) {
+		uint16_t opt_code = sldns_read_uint16(rdata_ptr);
+		uint16_t opt_len = sldns_read_uint16(rdata_ptr+2);
+		rdata_ptr += 4;
+		rdata_len -= 4;
+		if(opt_len > rdata_len)
+			break; /* option code partial */
+
+		if(!edns_opt_list_append(&edns->opt_list_in,
+				opt_code, opt_len, rdata_ptr, region)) {
+			log_err("out of memory");
+			break;
+		}
+		rdata_ptr += opt_len;
+		rdata_len -= opt_len;
+	}
 	/* ignore rrsigs */
-
 	return LDNS_RCODE_NOERROR;
 }
 
@@ -1142,7 +1157,7 @@ skip_pkt_rrs(sldns_buffer* pkt, int num)
 }
 
 int 
-parse_edns_from_pkt(sldns_buffer* pkt, struct edns_data* edns,
+parse_edns_from_query_pkt(sldns_buffer* pkt, struct edns_data* edns,
 	struct config_file* cfg, struct comm_point* c, struct regional* region)
 {
 	size_t rdata_len;
@@ -1186,7 +1201,8 @@ parse_edns_from_pkt(sldns_buffer* pkt, struct edns_data* edns,
 		return LDNS_RCODE_FORMERR;
 	rdata_ptr = sldns_buffer_current(pkt);
 	/* ignore rrsigs */
-	return parse_edns_options(rdata_ptr, rdata_len, edns, cfg, c, region);
+	return parse_edns_options_from_query(rdata_ptr, rdata_len, edns, cfg,
+			c, region);
 }
 
 void
