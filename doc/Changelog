@@ -1,3 +1,7 @@
+15 November 2021: Tom
+	- Improve EDNS option handling, now also works for synthesised
+	  responses such as local-data and server.id CH TXT responses.
+
 5 November 2021: George
 	- Fix for #558: fix loop in comm_point->tcp_free when a comm_point is
 	  reclaimed more than once during callbacks.
