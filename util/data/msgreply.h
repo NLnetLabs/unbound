@@ -519,18 +519,6 @@ void log_query_info(enum verbosity_value v, const char* str,
 	struct query_info* qinf);
 
 /**
- * Append edns option to edns data structure
- * @param edns: the edns data structure to append the edns option to.
- * @param region: region to allocate the new edns option.
- * @param code: the edns option's code.
- * @param len: the edns option's length.
- * @param data: the edns option's data.
- * @return false on failure.
- */
-int edns_opt_append(struct edns_data* edns, struct regional* region,
-	uint16_t code, size_t len, uint8_t* data);
-
-/**
  * Append edns option to edns option list
  * @param list: the edns option list to append the edns option to.
  * @param code: the edns option's code.

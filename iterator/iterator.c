@@ -3852,15 +3852,15 @@ process_response(struct module_qstate* qstate, struct iter_qstate* iq,
 		goto handle_it;
 	}
 	/* edns is not examined, but removed from message to help cache */
-	if(parse_extract_edns(prs, &edns, qstate->env->scratch) !=
+	if(parse_extract_edns_from_response_msg(prs, &edns, qstate->env->scratch) !=
 		LDNS_RCODE_NOERROR) {
 		iq->parse_failures++;
 		goto handle_it;
 	}
 
 	/* Copy the edns options we may got from the back end */
-	if(edns.opt_list) {
-		qstate->edns_opts_back_in = edns_opt_copy_region(edns.opt_list,
+	if(edns.opt_list_in) {
+		qstate->edns_opts_back_in = edns_opt_copy_region(edns.opt_list_in,
 			qstate->region);
 		if(!qstate->edns_opts_back_in) {
 			log_err("out of memory on incoming message");

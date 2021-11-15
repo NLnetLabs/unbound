@@ -1299,7 +1299,7 @@ local_error_encode(struct query_info* qinfo, struct module_env* env,
 
 	if(!inplace_cb_reply_local_call(env, qinfo, NULL, NULL,
 		rcode, edns, repinfo, temp, env->now_tv))
-		edns->opt_list = NULL;
+		edns->opt_list_inplace_cb_out = NULL;
 	error_encode(buf, r, qinfo, *(uint16_t*)sldns_buffer_begin(buf),
 		sldns_buffer_read_u16_at(buf, 2), edns);
 }
