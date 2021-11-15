@@ -1112,7 +1112,7 @@ parse_extract_edns(struct msg_parse* msg, struct edns_data* edns,
 
 	/* ignore rrsigs */
 
-	return 0;
+	return LDNS_RCODE_NOERROR;
 }
 
 /** skip RR in packet */
