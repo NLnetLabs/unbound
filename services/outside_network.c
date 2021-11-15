@@ -2709,7 +2709,9 @@ serviced_encode(struct serviced_query* sq, sldns_buffer* buff, int with_edns)
 		edns.edns_present = 1;
 		edns.ext_rcode = 0;
 		edns.edns_version = EDNS_ADVERTISED_VERSION;
-		edns.opt_list = sq->opt_list;
+		edns.opt_list_in = NULL;
+		edns.opt_list_out = sq->opt_list;
+		edns.opt_list_inplace_cb_out = NULL;
 		if(sq->status == serviced_query_UDP_EDNS_FRAG) {
 			if(addr_is_ip6(&sq->addr, sq->addrlen)) {
 				if(EDNS_FRAG_SIZE_IP6 < EDNS_ADVERTISED_SIZE)
@@ -2732,8 +2734,8 @@ serviced_encode(struct serviced_query* sq, sldns_buffer* buff, int with_edns)
 			padding_option.opt_code = LDNS_EDNS_PADDING;
 			padding_option.opt_len = 0;
 			padding_option.opt_data = NULL;
-			padding_option.next = edns.opt_list;
-			edns.opt_list = &padding_option;
+			padding_option.next = edns.opt_list_out;
+			edns.opt_list_out = &padding_option;
 			edns.padding_block_size = sq->padding_block_size;
 		}
 		attach_edns_record(buff, &edns);

@@ -72,6 +72,9 @@
 /* If we have be64toh */
 #undef HAVE_BE64TOH
 
+/* Define to 1 if you have the `BIO_set_callback_ex' function. */
+#undef HAVE_BIO_SET_CALLBACK_EX
+
 /* Define to 1 if you have the <bsd/stdlib.h> header file. */
 #undef HAVE_BSD_STDLIB_H
 

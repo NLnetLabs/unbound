@@ -1950,6 +1950,17 @@ static int auth_zone_zonemd_check_hash(struct auth_zone* z,
 	return 0;
 }
 
+/** find the apex SOA RRset, if it exists */
+struct auth_rrset* auth_zone_get_soa_rrset(struct auth_zone* z)
+{
+	struct auth_data* apex;
+	struct auth_rrset* soa;
+	apex = az_find_name(z, z->name, z->namelen);
+	if(!apex) return NULL;
+	soa = az_domain_rrset(apex, LDNS_RR_TYPE_SOA);
+	return soa;
+}
+
 /** find serial number of zone or false if none */
 int
 auth_zone_get_serial(struct auth_zone* z, uint32_t* serial)
@@ -3507,7 +3518,7 @@ auth_error_encode(struct query_info* qinfo, struct module_env* env,
 
 	if(!inplace_cb_reply_local_call(env, qinfo, NULL, NULL,
 		rcode, edns, repinfo, temp, env->now_tv))
-		edns->opt_list = NULL;
+		edns->opt_list_inplace_cb_out = NULL;
 	error_encode(buf, rcode|BIT_AA, qinfo,
 		*(uint16_t*)sldns_buffer_begin(buf),
 		sldns_buffer_read_u16_at(buf, 2), edns);
@@ -5347,7 +5358,9 @@ xfr_transfer_lookup_host(struct auth_xfer* xfr, struct module_env* env)
 	edns.ext_rcode = 0;
 	edns.edns_version = 0;
 	edns.bits = EDNS_DO;
-	edns.opt_list = NULL;
+	edns.opt_list_in = NULL;
+	edns.opt_list_out = NULL;
+	edns.opt_list_inplace_cb_out = NULL;
 	edns.padding_block_size = 0;
 	if(sldns_buffer_capacity(buf) < 65535)
 		edns.udp_size = (uint16_t)sldns_buffer_capacity(buf);
@@ -6536,7 +6549,9 @@ xfr_probe_lookup_host(struct auth_xfer* xfr, struct module_env* env)
 	edns.ext_rcode = 0;
 	edns.edns_version = 0;
 	edns.bits = EDNS_DO;
-	edns.opt_list = NULL;
+	edns.opt_list_in = NULL;
+	edns.opt_list_out = NULL;
+	edns.opt_list_inplace_cb_out = NULL;
 	edns.padding_block_size = 0;
 	if(sldns_buffer_capacity(buf) < 65535)
 		edns.udp_size = (uint16_t)sldns_buffer_capacity(buf);
@@ -7149,7 +7164,7 @@ parse_url(char* url, char** host, char** file, int* port, int* ssl)
 	while(p && *p == '/')
 		p++;
 	if(!p || p[0] == 0)
-		*file = strdup("index.html");
+		*file = strdup("/");
 	else	*file = strdup(p);
 	if(!*file) {
 		log_err("malloc failure");
@@ -8311,7 +8326,9 @@ zonemd_lookup_dnskey(struct auth_zone* z, struct module_env* env)
 	edns.ext_rcode = 0;
 	edns.edns_version = 0;
 	edns.bits = EDNS_DO;
-	edns.opt_list = NULL;
+	edns.opt_list_in = NULL;
+	edns.opt_list_out = NULL;
+	edns.opt_list_inplace_cb_out = NULL;
 	if(sldns_buffer_capacity(buf) < 65535)
 		edns.udp_size = (uint16_t)sldns_buffer_capacity(buf);
 	else	edns.udp_size = 65535;

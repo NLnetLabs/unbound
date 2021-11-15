@@ -271,8 +271,18 @@ if [ "$DOWIN" = "yes" ]; then
 		else
 			sslflags="no-asm -DOPENSSL_NO_CAPIENG mingw"
 		fi
+		if test -f /usr/x86_64-w64-mingw32/sys-root/mingw/bin/libssp-0.dll; then
+			# stack protector lib needs to link in to make
+			# -lws2_32 work in openssl link stage
+			SSPLIB="-l:libssp.a"
+		else
+			# disable SSPLIB if no such file
+			SSPLIB=""
+		fi
 		info "winssl: Configure no-shared $sslflags"
-		CC=${warch}-w64-mingw32-gcc AR=${warch}-w64-mingw32-ar RANLIB=${warch}-w64-mingw32-ranlib WINDRES=${warch}-w64-mingw32-windres ./Configure --prefix="$sslinstall" no-shared $sslflags || error_cleanup "OpenSSL Configure failed"
+		set -x # echo the configure command
+		__CNF_LDLIBS=$SSPLIB CC=${warch}-w64-mingw32-gcc AR=${warch}-w64-mingw32-ar RANLIB=${warch}-w64-mingw32-ranlib WINDRES=${warch}-w64-mingw32-windres ./Configure --prefix="$sslinstall" no-shared $sslflags || error_cleanup "OpenSSL Configure failed"
+		set +x
 		info "winssl: make"
 		make $MINJ || error_cleanup "OpenSSL crosscompile failed"
 		# only install sw not docs, which take a long time.
@@ -285,7 +295,9 @@ if [ "$DOWIN" = "yes" ]; then
 		sslsharedinstall="`pwd`/sslsharedinstall"
 		cd openssl_shared
 		info "winssl: Configure shared $sslflags"
-		CC=${warch}-w64-mingw32-gcc AR=${warch}-w64-mingw32-ar RANLIB=${warch}-w64-mingw32-ranlib WINDRES=${warch}-w64-mingw32-windres ./Configure --prefix="$sslsharedinstall" shared $sslflags || error_cleanup "OpenSSL Configure failed"
+		set -x # echo the configure command
+		__CNF_LDLIBS=$SSPLIB CC=${warch}-w64-mingw32-gcc AR=${warch}-w64-mingw32-ar RANLIB=${warch}-w64-mingw32-ranlib WINDRES=${warch}-w64-mingw32-windres ./Configure --prefix="$sslsharedinstall" shared $sslflags || error_cleanup "OpenSSL Configure failed"
+		set +x
 		info "winssl: make"
 		make $MINJ || error_cleanup "OpenSSL crosscompile failed"
 		info "winssl: make install_sw"
@@ -364,12 +376,12 @@ if [ "$DOWIN" = "yes" ]; then
     fi
     if test "$W64" = "no"; then
 		# Disable stack-protector for 32-bit windows builds.
-		echo "$configure"' --enable-debug --enable-static-exe --disable-flto '"$* $cross_flag" "$file_flag" "$file2_flag" "$file3_flag" CFLAGS='-O2 -g -fno-stack-protector'
-		$configure --enable-debug --enable-static-exe --disable-flto $* $cross_flag "$file_flag" "$file2_flag" "$file3_flag" CFLAGS='-O2 -g -fno-stack-protector'\
+		echo "$configure"' --enable-debug --enable-static-exe --disable-flto --disable-gost '"$* $cross_flag" "$file_flag" "$file2_flag" "$file3_flag" CFLAGS='-O2 -g -fno-stack-protector'
+		$configure --enable-debug --enable-static-exe --disable-flto --disable-gost $* $cross_flag "$file_flag" "$file2_flag" "$file3_flag" CFLAGS='-O2 -g -fno-stack-protector'\
 		|| error_cleanup "Could not configure"
     else
-		echo "$configure"' --enable-debug --enable-static-exe --disable-flto '"$* $cross_flag"
-		$configure --enable-debug --enable-static-exe --disable-flto $* $cross_flag \
+		echo "$configure"' --enable-debug --enable-static-exe --disable-flto --disable-gost '"$* $cross_flag"
+		$configure --enable-debug --enable-static-exe --disable-flto --disable-gost $* $cross_flag \
 		|| error_cleanup "Could not configure"
     fi
     info "Calling make"
@@ -381,12 +393,12 @@ if [ "$DOWIN" = "yes" ]; then
     cd ../unbound_shared
     if test "$W64" = "no"; then
 	# Disable stack-protector for 32-bit windows builds.
-		echo "$configure"' --enable-debug --disable-flto '"$* $shared_cross_flag" "$file_flag" "$file2_flag" "$file3_flag" CFLAGS='-O2 -g -fno-stack-protector'
-		$configure --enable-debug --disable-flto $* $shared_cross_flag "$file_flag" "$file2_flag" "$file3_flag" CFLAGS='-O2 -g -fno-stack-protector'\
+		echo "$configure"' --enable-debug --disable-flto --disable-gost '"$* $shared_cross_flag" "$file_flag" "$file2_flag" "$file3_flag" CFLAGS='-O2 -g -fno-stack-protector'
+		$configure --enable-debug --disable-flto --disable-gost $* $shared_cross_flag "$file_flag" "$file2_flag" "$file3_flag" CFLAGS='-O2 -g -fno-stack-protector'\
 		|| error_cleanup "Could not configure"
     else
-		echo "$configure"' --enable-debug --disable-flto '"$* $shared_cross_flag"
-        $configure --enable-debug --disable-flto $* $shared_cross_flag \
+		echo "$configure"' --enable-debug --disable-flto --disable-gost '"$* $shared_cross_flag"
+        $configure --enable-debug --disable-flto --disable-gost $* $shared_cross_flag \
 		|| error_cleanup "Could not configure"
     fi
     info "Calling make for DLL"
@@ -415,12 +427,19 @@ if [ "$DOWIN" = "yes" ]; then
     cp ../doc/example.conf ../doc/Changelog .
     cp ../unbound.exe ../unbound-anchor.exe ../unbound-host.exe ../unbound-control.exe ../unbound-checkconf.exe ../unbound-service-install.exe ../unbound-service-remove.exe ../LICENSE ../winrc/unbound-control-setup.cmd ../winrc/unbound-website.url ../winrc/service.conf ../winrc/README.txt ../contrib/create_unbound_ad_servers.cmd ../contrib/warmup.cmd ../contrib/unbound_cache.cmd .
     mkdir libunbound
-    cp ../../unbound_shared/unbound.h ../../unbound_shared/.libs/libunbound*.dll ../../unbound_shared/.libs/libunbound.dll.a ../../unbound_shared/.libs/libunbound.a ../../unbound_shared/.libs/libunbound*.def ../../sslsharedinstall/lib/libcrypto.dll.a ../../sslsharedinstall/lib/libssl.dll.a ../../sslsharedinstall/bin/libcrypto*.dll ../../sslsharedinstall/bin/libssl*.dll ../../wxpinstall/bin/libexpat*.dll ../../wxpinstall/lib/libexpat.dll.a libunbound/.
-    if test "$W64" = "no"; then
-	# Disable stack-protector for 32-bit windows builds.
-	# cp /usr/i686-w64-mingw32/sys-root/mingw/bin/libssp-0.dll libunbound/.
-	:
+    # test to see if lib or lib64 (for openssl 3.0.0) needs to be used
+    if test -f ../../sslsharedinstall/lib/libcrypto.dll.a; then
+	cp ../../sslsharedinstall/lib/libcrypto.dll.a libunbound/.
     else
+	cp ../../sslsharedinstall/lib64/libcrypto.dll.a libunbound/.
+    fi
+    if test -f ../../sslsharedinstall/lib/libssl.dll.a; then
+	cp ../../sslsharedinstall/lib/libssl.dll.a libunbound/.
+    else
+	cp ../../sslsharedinstall/lib64/libssl.dll.a libunbound/.
+    fi
+    cp ../../unbound_shared/unbound.h ../../unbound_shared/.libs/libunbound*.dll ../../unbound_shared/.libs/libunbound.dll.a ../../unbound_shared/.libs/libunbound.a ../../unbound_shared/.libs/libunbound*.def ../../sslsharedinstall/bin/libcrypto*.dll ../../sslsharedinstall/bin/libssl*.dll ../../wxpinstall/bin/libexpat*.dll ../../wxpinstall/lib/libexpat.dll.a libunbound/.
+    if test -f /usr/x86_64-w64-mingw32/sys-root/mingw/bin/libssp-0.dll; then
 	    cp /usr/x86_64-w64-mingw32/sys-root/mingw/bin/libssp-0.dll libunbound/.
     fi
     # zipfile

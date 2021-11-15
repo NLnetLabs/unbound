@@ -1264,9 +1264,9 @@ int main(int argc, char** argv)
 	memset(&tls_list, 0, sizeof(tls_list));
 
 	/* lock debug start (if any) */
+	checklock_start();
 	log_ident_set("unbound-dnstap-socket");
 	log_init(0, 0, 0);
-	checklock_start();
 
 #ifdef SIGPIPE
 	if(signal(SIGPIPE, SIG_IGN) == SIG_ERR) {
