@@ -47,7 +47,7 @@ STEP 1 QUERY
 STEP 10 CHECK_ANSWER
 
      ENTRY_BEGIN
-        MATCH TCP ede=0
+        MATCH TCP
         REPLY RD FORMERR
         SECTION QUESTION
                 www.example.com. IN A
