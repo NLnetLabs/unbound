@@ -309,7 +309,8 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_tls_use_sni | server_edns_client_string |
 	server_edns_client_string_opcode | server_nsid |
 	server_zonemd_permissive_mode | server_max_reuse_tcp_queries |
-	server_tcp_reuse_timeout | server_tcp_auth_query_timeout
+	server_tcp_reuse_timeout | server_tcp_auth_query_timeout |
+	server_local_data_do_ede
 
 	;
 stubstart: VAR_STUB_ZONE
@@ -2205,6 +2206,16 @@ server_local_data_ptr: VAR_LOCAL_DATA_PTR STRING_ARG
 		} else {
 			yyerror("local-data-ptr could not be reversed");
 		}
+	}
+	;
+server_local_data_do_ede: VAR_LOCAL_DATA_DO_EDE STRING_ARG
+	{
+		OUTYY(("P(server_local_data_do_ede:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else cfg_parser->cfg->local_data_do_ede =
+			(strcmp($2, "yes")==0);
+		free($2);
 	}
 	;
 server_minimal_responses: VAR_MINIMAL_RESPONSES STRING_ARG
