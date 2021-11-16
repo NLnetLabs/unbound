@@ -187,6 +187,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_DYNLIB VAR_DYNLIB_FILE VAR_EDNS_CLIENT_STRING
 %token VAR_EDNS_CLIENT_STRING_OPCODE VAR_NSID
 %token VAR_ZONEMD_PERMISSIVE_MODE VAR_ZONEMD_CHECK VAR_ZONEMD_REJECT_ABSENCE
+%token VAR_LOCAL_DATA_DO_EDE
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -3004,6 +3005,14 @@ view_local_data_ptr: VAR_LOCAL_DATA_PTR STRING_ARG
 		}
 	}
 	;
+// view_local_data_do_ede: VAR_LOCAL_DATA_DO_EDE STRING_ARG
+// 	{
+// 		OUTYY(("P(view_local_data_do_ede:%s)\n", $2));
+// 		if(!cfg_strlist_insert(&cfg_parser->cfg->views->local_data_do_ede, $2)) {
+// 			fatal_exit("out of memory adding local-data");
+// 		}
+// 	}
+// 	;
 view_first: VAR_VIEW_FIRST STRING_ARG
 	{
 		OUTYY(("P(view-first:%s)\n", $2));
