@@ -310,7 +310,7 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_edns_client_string_opcode | server_nsid |
 	server_zonemd_permissive_mode | server_max_reuse_tcp_queries |
 	server_tcp_reuse_timeout | server_tcp_auth_query_timeout |
-	server_local_data_do_ede
+	server_local_zone_do_ede
 
 	;
 stubstart: VAR_STUB_ZONE
@@ -2208,14 +2208,15 @@ server_local_data_ptr: VAR_LOCAL_DATA_PTR STRING_ARG
 		}
 	}
 	;
-server_local_data_do_ede: VAR_LOCAL_DATA_DO_EDE STRING_ARG
+server_local_zone_do_ede: VAR_LOCAL_DATA_DO_EDE STRING_ARG STRING_ARG
 	{
-		OUTYY(("P(server_local_data_do_ede:%s)\n", $2));
-		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+		OUTYY(("P(server_local_zone_do_ede:%s %s)\n", $2, $3));
+		if(strcmp($3, "yes") != 0 && strcmp($3, "no") != 0)
 			yyerror("expected yes or no.");
-		else cfg_parser->cfg->local_data_do_ede =
-			(strcmp($2, "yes")==0);
-		free($2);
+		if(!cfg_str2list_insert(&cfg_parser->cfg->local_zone_do_ede,
+			$2, $3)) {
+			yyerror("out of memory adding local-zone-do-ede");
+		}
 	}
 	;
 server_minimal_responses: VAR_MINIMAL_RESPONSES STRING_ARG
@@ -3016,14 +3017,6 @@ view_local_data_ptr: VAR_LOCAL_DATA_PTR STRING_ARG
 		}
 	}
 	;
-// view_local_data_do_ede: VAR_LOCAL_DATA_DO_EDE STRING_ARG
-// 	{
-// 		OUTYY(("P(view_local_data_do_ede:%s)\n", $2));
-// 		if(!cfg_strlist_insert(&cfg_parser->cfg->views->local_data_do_ede, $2)) {
-// 			fatal_exit("out of memory adding local-data");
-// 		}
-// 	}
-// 	;
 view_first: VAR_VIEW_FIRST STRING_ARG
 	{
 		OUTYY(("P(view-first:%s)\n", $2));

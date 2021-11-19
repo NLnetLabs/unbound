@@ -164,6 +164,8 @@ struct local_zone {
 	 * artificial negative SOA rrset (TTL is the minimum of the TTL and the
 	 * SOA.MINIMUM). */
 	struct ub_packed_rrset_key* soa_negative;
+        /** should local_data result in EDE (RFC8914) code inclusion? */
+        int do_ede;
 };
 
 /**

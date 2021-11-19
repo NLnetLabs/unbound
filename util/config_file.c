@@ -373,7 +373,7 @@ config_create(void)
 	cfg->ipset_name_v4 = NULL;
 	cfg->ipset_name_v6 = NULL;
 #endif
-	cfg->local_data_do_ede = 0;
+	cfg->local_zone_do_ede = NULL;
 	return cfg;
 error_exit:
 	config_delete(cfg);
@@ -791,7 +791,7 @@ int config_set_option(struct config_file* cfg, const char* opt,
 		}
 		oi[cfg->num_out_ifs++] = d;
 		cfg->out_ifs = oi;
-	} else S_YNO("local-data-do-ede:", local_data_do_ede)
+	} // else S_YNO("local-zone-do-ede:", local_zone_do_ede)
 	else {
 		/* unknown or unsupported (from the set_option interface):
 		 * interface, outgoing-interface, access-control,
@@ -1241,6 +1241,7 @@ config_get_option(struct config_file* cfg, const char* opt,
 #ifdef USE_IPSET
 	else O_STR(opt, "name-v4", ipset_name_v4)
 	else O_STR(opt, "name-v6", ipset_name_v6)
+	else O_LS3(opt, "local-zone-do-ede", local_zone_do_ede)
 #endif
 	/* not here:
 	 * outgoing-permit, outgoing-avoid - have list of ports

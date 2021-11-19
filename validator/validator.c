@@ -1637,6 +1637,9 @@ processInit(struct module_qstate* qstate, struct val_qstate* vq,
 		return 1;
 	} else if(key_entry_isbad(vq->key_entry)) {
 		/* key is bad, chain is bad, reply is bogus */
+
+		// @TODO ADD Error Code 6 - DNSSEC Bogus + text chain of trust?
+
 		errinf_dname(qstate, "key for validation", vq->key_entry->name);
 		errinf(qstate, "is marked as invalid");
 		if(key_entry_get_reason(vq->key_entry)) {
@@ -1854,6 +1857,9 @@ processValidate(struct module_qstate* qstate, struct val_qstate* vq,
 			LDNS_RR_TYPE_DNSKEY, vq->key_entry->key_class);
 		vq->chase_reply->security = sec_status_bogus;
 		errinf(qstate, "while building chain of trust");
+
+		// @TODO ADD Error Code 6 - DNSSEC Bogus + text chain of trust?
+
 		if(vq->restart_count >= ve->max_restart)
 			key_cache_insert(ve->kcache, vq->key_entry, qstate);
 		return 1;

@@ -156,6 +156,7 @@ local_zone_create(uint8_t* nm, size_t len, int labs,
 	z->name = nm;
 	z->namelen = len;
 	z->namelabs = labs;
+	z->do_ede = 0;
 	lock_rw_init(&z->lock);
 	z->region = regional_create_nochunk(sizeof(struct regional));
 	if(!z->region) {
@@ -657,6 +658,53 @@ lz_enter_zone_tag(struct local_zones* zones, char* zname, uint8_t* list,
 	return r;
 }
 
+/** enter do-ede option into zone */
+static int
+lz_enter_ede_respond(struct local_zones* zones, char* zname, char* option)
+{
+	uint8_t dname[LDNS_MAX_DOMAINLEN+1];
+	size_t dname_len = sizeof(dname);
+	uint8_t ede_option = 0;
+	int dname_label_count;
+	struct local_zone* z;
+
+	/* parse zone name */
+	if(sldns_str2wire_dname_buf(zname, dname, &dname_len) != 0) {
+		log_err("cannot parse zone name in local-zone-do-ede: %s",
+			zname);
+		return 0;
+	}
+	dname_label_count = dname_count_labels(dname);
+
+	/* parse option */
+	if(strcmp(option, "yes") == 0)
+		ede_option = 1;
+	else if(strcmp(option, "no") == 0)
+		return 1; /* no need to change the default value */
+
+	/* find localzone entry */
+	lock_rw_rdlock(&zones->lock);
+	z = local_zones_find(zones, dname,
+		    dname_len, dname_label_count, LDNS_RR_CLASS_IN);
+	if(!z) {
+		lock_rw_unlock(&zones->lock);
+		log_err("no local-zone for local-zone-do-ede %s", zname);
+		return 0;
+	}
+	lock_rw_wrlock(&z->lock);
+	lock_rw_unlock(&zones->lock);
+
+	if (z->do_ede) {
+		lock_rw_unlock(&z->lock);
+		log_err("duplicate local-zone-do-ede %s", zname);
+		return 1;
+	}
+
+	z->do_ede = 1; /* respond with EDEs in this local-zone */
+	lock_rw_unlock(&z->lock);
+	return 1;
+}
+
 /** enter override into zone */
 static int
 lz_enter_override(struct local_zones* zones, char* zname, char* netblock,
@@ -943,6 +991,18 @@ lz_enter_overrides(struct local_zones* zones, struct config_file* cfg)
 	return 1;
 }
 
+/** parse local-zone-do-ede: statements */
+static int
+lz_enter_ede_respond_zones(struct local_zones* zones, struct config_file* cfg)
+{
+	struct config_str2list* p;
+	for(p = cfg->local_zone_do_ede; p; p = p->next) {
+		if(!lz_enter_ede_respond(zones, p->str, p->str2))
+			return 0;
+	}
+	return 1;
+}
+
 /** setup parent pointers, so that a lookup can be done for closest match */
 static void
 init_parents(struct local_zones* zones)
@@ -1124,6 +1184,11 @@ local_zones_apply_cfg(struct local_zones* zones, struct config_file* cfg)
 	if(!lz_enter_overrides(zones, cfg)) {
 		return 0;
 	}
+	/* enter EDE (RFC8914) response option for local zones */
+	if(!lz_enter_ede_respond_zones(zones, cfg)) {
+		return 0;
+	}
+
 	/* create implicit transparent zone from data. */
 	if(!lz_setup_implicit(zones, cfg)) {
 		return 0;
@@ -1288,10 +1353,11 @@ local_encode(struct query_info* qinfo, struct module_env* env,
 
 /** encode answer consisting of 1 rrset (with EDE code) */
 static int
-local_encode_ede(struct query_info* qinfo, struct module_env* env,
-	struct edns_data* edns, struct comm_reply* repinfo, sldns_buffer* buf,
-	struct regional* temp, struct ub_packed_rrset_key* rrset, int ansec,
-	int rcode, sldns_ede_code ede_code, const char* ede_txt)
+local_encode_ede(struct local_zone* zone, struct query_info* qinfo,
+	struct module_env* env, struct edns_data* edns,
+	struct comm_reply* repinfo, sldns_buffer* buf, struct regional* temp,
+	struct ub_packed_rrset_key* rrset, int ansec, int rcode,
+	sldns_ede_code ede_code, const char* ede_txt)
 {
 	struct reply_info rep;
 	uint16_t udpsize;
@@ -1315,7 +1381,9 @@ local_encode_ede(struct query_info* qinfo, struct module_env* env,
 			*(uint16_t*)sldns_buffer_begin(buf),
 			sldns_buffer_read_u16_at(buf, 2), edns);
 	} else {
-		edns_opt_list_append_ede(&edns->opt_list_out, temp, ede_code, ede_txt);
+		if(ede_code >= 0 && zone->do_ede)
+			edns_opt_list_append_ede(&edns->opt_list_out,
+				temp, ede_code, ede_txt);
 
 		if(!reply_info_answer_encode(qinfo, &rep,
 			*(uint16_t*)sldns_buffer_begin(buf), sldns_buffer_read_u16_at(buf, 2),
@@ -1330,10 +1398,10 @@ local_encode_ede(struct query_info* qinfo, struct module_env* env,
 
 /** encode local error answer */
 static void
-local_error_encode(struct query_info* qinfo, struct module_env* env,
-	struct edns_data* edns, struct comm_reply* repinfo, sldns_buffer* buf,
-	struct regional* temp, int rcode, int r, sldns_ede_code ede_code,
-	const char* ede_txt)
+local_error_encode(struct local_zone* zone, struct query_info* qinfo,
+	struct module_env* env, struct edns_data* edns,
+	struct comm_reply* repinfo, sldns_buffer* buf, struct regional* temp,
+	int rcode, int r, sldns_ede_code ede_code, const char* ede_txt)
 {
 	edns->edns_version = EDNS_ADVERTISED_VERSION;
 	edns->udp_size = EDNS_ADVERTISED_SIZE;
@@ -1343,7 +1411,7 @@ local_error_encode(struct query_info* qinfo, struct module_env* env,
 	if(!inplace_cb_reply_local_call(env, qinfo, NULL, NULL,
 		rcode, edns, repinfo, temp, env->now_tv))
 		edns->opt_list_inplace_cb_out = NULL;
-	if(ede_code >= 0 && env->cfg->local_data_do_ede)
+	if(ede_code >= 0 && zone->do_ede)
 		edns_opt_list_append_ede(&edns->opt_list_out, temp, ede_code, ede_txt);
 	error_encode(buf, r, qinfo, *(uint16_t*)sldns_buffer_begin(buf),
 		sldns_buffer_read_u16_at(buf, 2), edns);
@@ -1540,7 +1608,7 @@ local_data_answer(struct local_zone* z, struct module_env* env,
 
 			if(newtargetlen > LDNS_MAX_DOMAINLEN) {
 				qinfo->local_alias = NULL;
-				local_error_encode(qinfo, env, edns,repinfo,
+				local_error_encode(z, qinfo, env, edns,repinfo,
 					buf, temp, LDNS_RCODE_YXDOMAIN,
 					(LDNS_RCODE_YXDOMAIN|BIT_AA),
 					LDNS_EDE_OTHER,
@@ -1647,7 +1715,7 @@ local_zones_zone_answer(struct local_zone* z, struct module_env* env,
 		return 1;
 	} else if(lz_type == local_zone_refuse
 		|| lz_type == local_zone_always_refuse) {
-		local_error_encode(qinfo, env, edns, repinfo, buf, temp,
+		local_error_encode(z, qinfo, env, edns, repinfo, buf, temp,
 			LDNS_RCODE_REFUSED, (LDNS_RCODE_REFUSED|BIT_AA),
 			LDNS_EDE_BLOCKED, "");
 		return 1;
@@ -1674,7 +1742,7 @@ local_zones_zone_answer(struct local_zone* z, struct module_env* env,
 		if(z != NULL && z->soa && z->soa_negative)
 			return local_encode(qinfo, env, edns, repinfo, buf, temp,
 				z->soa_negative, 0, rcode);
-		local_error_encode(qinfo, env, edns, repinfo, buf, temp,
+		local_error_encode(z, qinfo, env, edns, repinfo, buf, temp,
 			rcode, (rcode|BIT_AA), LDNS_EDE_BLOCKED, "");
 		return 1;
 	} else if(lz_type == local_zone_typetransparent
@@ -1713,11 +1781,11 @@ local_zones_zone_answer(struct local_zone* z, struct module_env* env,
 			d.rr_len = &rr_len;
 			d.rr_data = &rr_datas;
 			d.rr_ttl = &rr_ttl;
-			return local_encode_ede(qinfo, env, edns, repinfo, buf, temp,
+			return local_encode_ede(z, qinfo, env, edns, repinfo, buf, temp,
 				&lrr, 1, LDNS_RCODE_NOERROR, LDNS_EDE_FORGED_ANSWER, "");
 		} else {
 			/* NODATA: No EDE needed */
-			local_error_encode(qinfo, env, edns, repinfo, buf,
+			local_error_encode(z, qinfo, env, edns, repinfo, buf,
 				temp, LDNS_RCODE_NOERROR,
 				(LDNS_RCODE_NOERROR|BIT_AA), -1, NULL);
 		}
@@ -1733,7 +1801,7 @@ local_zones_zone_answer(struct local_zone* z, struct module_env* env,
 			return local_encode(qinfo, env, edns, repinfo, buf, temp,
 				z->soa_negative, 0, rcode);
 		/* NODATA: No EDE needed */
-		local_error_encode(qinfo, env, edns, repinfo, buf, temp, rcode,
+		local_error_encode(z, qinfo, env, edns, repinfo, buf, temp, rcode,
 			(rcode|BIT_AA), -1, NULL);
 		return 1;
 	}

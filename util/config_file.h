@@ -670,8 +670,8 @@ struct config_file {
 	char* ipset_name_v6;
 #endif
 
-	/** should local_data result in EDE (RFC8914) code inclusion? */
-	int local_data_do_ede;
+	/** should a local_zone results inlude an EDE (RFC8914) code? */
+	struct config_str2list* local_zone_do_ede;
 };
 
 /** from cfg username, after daemonize setup performed */
