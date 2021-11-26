@@ -784,6 +784,12 @@ lz_enter_default_ede_response(struct local_zones* zones, char* zname, char* code
 	/* parse option in case of a textual string or integer value */
 	if (atoi(code) != 0)
 		default_ede = (int) ede_string_to_sldns_ede_code(code);
+		if (default_ede == -1) {
+			log_err("incorect EDE code string found for "
+					"local-zone-default-ede: %s", zname);
+			return 0;
+		}
+
 	else {
 		int tmp = atoi(code);
 		if (!(tmp >= 0 && tmp < 65635))
