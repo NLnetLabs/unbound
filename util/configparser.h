@@ -357,7 +357,9 @@
      VAR_ZONEMD_PERMISSIVE_MODE = 573,
      VAR_ZONEMD_CHECK = 574,
      VAR_ZONEMD_REJECT_ABSENCE = 575,
-     VAR_LOCAL_DATA_DO_EDE = 576
+     VAR_LOCAL_DATA_DO_EDE = 576,
+     VAR_LOCAL_ZONE_DEFAULT_EDE = 577,
+     VAR_EDE_LOCAL_ZONES = 578
    };
 #endif
 /* Tokens.  */
@@ -680,6 +682,8 @@
 #define VAR_ZONEMD_CHECK 574
 #define VAR_ZONEMD_REJECT_ABSENCE 575
 #define VAR_LOCAL_DATA_DO_EDE 576
+#define VAR_LOCAL_ZONE_DEFAULT_EDE 577
+#define VAR_EDE_LOCAL_ZONES 578
 
 
 
@@ -691,7 +695,7 @@ typedef union YYSTYPE
 	char*	str;
 }
 /* Line 1529 of yacc.c.  */
-#line 695 "util/configparser.h"
+#line 699 "util/configparser.h"
 	YYSTYPE;
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */
 # define YYSTYPE_IS_DECLARED 1

@@ -125,6 +125,7 @@ struct rpz {
 	char* log_name;
 	struct regional* region;
 	int disabled;
+    int do_ede; // @TODO write logic for this
 };
 
 /**

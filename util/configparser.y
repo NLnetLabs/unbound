@@ -187,7 +187,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_DYNLIB VAR_DYNLIB_FILE VAR_EDNS_CLIENT_STRING
 %token VAR_EDNS_CLIENT_STRING_OPCODE VAR_NSID
 %token VAR_ZONEMD_PERMISSIVE_MODE VAR_ZONEMD_CHECK VAR_ZONEMD_REJECT_ABSENCE
-%token VAR_LOCAL_DATA_DO_EDE
+%token VAR_LOCAL_DATA_DO_EDE VAR_LOCAL_ZONE_DEFAULT_EDE VAR_EDE_LOCAL_ZONES
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -310,7 +310,8 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_edns_client_string_opcode | server_nsid |
 	server_zonemd_permissive_mode | server_max_reuse_tcp_queries |
 	server_tcp_reuse_timeout | server_tcp_auth_query_timeout |
-	server_local_zone_do_ede
+	server_local_zone_do_ede | server_local_zone_default_ede |
+	server_ede_local_zones
 
 	;
 stubstart: VAR_STUB_ZONE
@@ -2217,6 +2218,53 @@ server_local_zone_do_ede: VAR_LOCAL_DATA_DO_EDE STRING_ARG STRING_ARG
 			$2, $3)) {
 			yyerror("out of memory adding local-zone-do-ede");
 		}
+	}
+	;
+server_local_zone_default_ede: VAR_LOCAL_ZONE_DEFAULT_EDE STRING_ARG STRING_ARG
+	{
+		OUTYY(("P(server_local_zone_default_ede:%s %s)\n", $2, $3));
+		if (!(strcmp($3, "other") == 0) &&
+			!(strcmp($3, "unsupported_dnskey_algorithm") == 0) &&
+			!(strcmp($3, "unsupported_ds_digest_type") == 0) &&
+			!(strcmp($3, "stale_answer") == 0) &&
+			!(strcmp($3, "forged") == 0) &&
+			!(strcmp($3, "dnssec_indeterminate") == 0) &&
+			!(strcmp($3, "dnssec_bogus") == 0) &&
+			!(strcmp($3, "signature_expired") == 0) &&
+			!(strcmp($3, "signature_not_yet_valid") == 0) &&
+			!(strcmp($3, "dnskey_missing") == 0) &&
+			!(strcmp($3, "rrsigs_missing") == 0) &&
+			!(strcmp($3, "no_zone_key_bit_set") == 0) &&
+			!(strcmp($3, "nsec_missing") == 0) &&
+			!(strcmp($3, "cached_error") == 0) &&
+			!(strcmp($3, "not_ready") == 0) &&
+			!(strcmp($3, "blocked") == 0) &&
+			!(strcmp($3, "censored") == 0) &&
+			!(strcmp($3, "filtered") == 0) &&
+			!(strcmp($3, "prohibited") == 0) &&
+			!(strcmp($3, "stale_nxdomain_answer") == 0) &&
+			!(strcmp($3, "not_authoritative") == 0) &&
+			!(strcmp($3, "not_supported") == 0) &&
+			!(strcmp($3, "no_reachable_authority") == 0) &&
+			!(strcmp($3, "network_error") == 0) &&
+			!(strcmp($3, "invalid_data") == 0) &&
+			!(atoi($3) == 0))
+			yyerror("expected default-ede keyword or integer"
+					"refering to the respecive ede code");
+		if(!cfg_str2list_insert(&cfg_parser->cfg->local_zone_default_ede,
+			$2, $3)) {
+			yyerror("out of memory adding local-zone-default-ede");
+		}
+	}
+	;
+server_ede_local_zones: VAR_EDE_LOCAL_ZONES STRING_ARG
+	{
+		OUTYY(("P(server_ede_local_zones:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else cfg_parser->cfg->ede_local_zones =
+			(strcmp($2, "yes")==0);
+		free($2);
 	}
 	;
 server_minimal_responses: VAR_MINIMAL_RESPONSES STRING_ARG

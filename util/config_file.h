@@ -672,6 +672,10 @@ struct config_file {
 
 	/** should a local_zone results inlude an EDE (RFC8914) code? */
 	struct config_str2list* local_zone_do_ede;
+	/** which EDE (RFC8914) should be the default */
+	struct config_str2list* local_zone_default_ede;
+	/** should the default for local_zone results inlude an EDE (RFC8914) code?*/
+	int ede_local_zones;
 };
 
 /** from cfg username, after daemonize setup performed */
