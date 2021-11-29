@@ -1361,7 +1361,7 @@ void mesh_query_done(struct mesh_state* mstate)
 	}
 	if(mstate->s.return_rcode == LDNS_RCODE_SERVFAIL ||
 		(rep && FLAGS_GET_RCODE(rep->flags) == LDNS_RCODE_SERVFAIL)) {
-		/* we are SERVFAILing; check for expired asnwer here */
+		/* we are SERVFAILing; check for expired answer here */
 		mesh_serve_expired_callback(mstate);
 		if((mstate->reply_list || mstate->cb_list)
 		&& mstate->s.env->cfg->log_servfail
@@ -1584,7 +1584,7 @@ int mesh_state_add_reply(struct mesh_state* s, struct edns_data* edns,
 			return 0;
 
 		/* the rrset is not packed, like in the cache, but it is
-		 * individualy allocated with an allocator from localzone. */
+		 * individually allocated with an allocator from localzone. */
 		d = regional_alloc_zero(s->s.region, sizeof(*d));
 		if(!d)
 			return 0;

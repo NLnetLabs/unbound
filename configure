@@ -13600,7 +13600,7 @@ fi
   # Add ABI-specific directories to the system library path.
   sys_lib_dlsearch_path_spec="/lib64 /usr/lib64 /lib /usr/lib"
 
-  # Ideally, we could use ldconfig to report *all* directores which are
+  # Ideally, we could use ldconfig to report *all* directories which are
   # searched for libraries, however this is still not possible.  Aside from not
   # being certain /sbin/ldconfig is available, command
   # 'ldconfig -N -X -v | grep ^/' on 64bit Fedora does not report /usr/lib64,
@@ -15324,7 +15324,7 @@ if test "$ac_res" != no; then :
 fi
 
 
-# check wether strptime also works
+# check whether strptime also works
 
 # check some functions of the OS before linking libs (while still runnable).
 for ac_header in unistd.h
@@ -18777,7 +18777,7 @@ $as_echo "#define CLIENT_SUBNET 1" >>confdefs.h
 	;;
 esac
 
-# check wether gost also works
+# check whether gost also works
 
 # Check whether --enable-gost was given.
 if test "${enable_gost+set}" = set; then :
