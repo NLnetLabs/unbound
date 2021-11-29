@@ -2,6 +2,8 @@
 	- Merge PR #570 from rex4539: Fix typos.
 	- Fix for #570: regen aclocal.m4, fix configure.ac for spelling.
 	- Fix to make python module opt_list use opt_list_in.
+	- Fix #574: unbound-checkconf reports fatal error if interface names
+	  are used as value for interfaces:
 
 15 November 2021: Tom
 	- Improve EDNS option handling, now also works for synthesised
