@@ -363,7 +363,7 @@ interfacechecks(struct config_file* cfg)
 		for(j=0; j<num_resif[i]; j++) {
 			if(!extstrtoaddr(resif[i][j], &a, &alen)) {
 				if(strcmp(cfg->ifs[i], resif[i][j]) != 0)
-					fatal_exit("cannot parse interface address '%s' from the interace specified as '%s'",
+					fatal_exit("cannot parse interface address '%s' from the interface specified as '%s'",
 						resif[i][j], cfg->ifs[i]);
 				else
 					fatal_exit("cannot parse interface specified as '%s'",

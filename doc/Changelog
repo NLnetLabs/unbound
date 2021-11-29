@@ -6,6 +6,7 @@
 	  are used as value for interfaces:
 	- Fix #574: Review fixes for it.
 	- Fix #576: [FR] UB_* error codes in unbound.h
+	- Fix #574: Review fix for spelling.
 
 15 November 2021: Tom
 	- Improve EDNS option handling, now also works for synthesised
