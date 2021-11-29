@@ -678,11 +678,14 @@ struct edns_data {
     uint8_t edns_version;
     uint16_t bits;
     uint16_t udp_size;
-    struct edns_option* opt_list;
+    struct edns_option* opt_list_in;
+    struct edns_option* opt_list_out;
+    struct edns_option* opt_list_inplace_cb_out;
+    uint16_t padding_block_size;
 };
 %inline %{
     struct edns_option** _edns_data_opt_list_get(struct edns_data* edns) {
-       return &edns->opt_list;
+       return &edns->opt_list_in;
     }
 %}
 %extend edns_data {
