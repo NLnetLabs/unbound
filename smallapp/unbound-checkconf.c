@@ -337,7 +337,7 @@ interfacechecks(struct config_file* cfg)
 	socklen_t alen;
 	int i, j, i2, j2;
 	char*** resif = NULL;
-	int* num_resif = 0;
+	int* num_resif = NULL;
 
 	if(cfg->num_ifs != 0) {
 		resif = (char***)calloc(cfg->num_ifs, sizeof(char**));
