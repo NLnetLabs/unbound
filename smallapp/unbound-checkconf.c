@@ -54,6 +54,7 @@
 #include "iterator/iter_hints.h"
 #include "validator/validator.h"
 #include "services/localzone.h"
+#include "services/listen_dnsport.h"
 #include "services/view.h"
 #include "services/authzone.h"
 #include "respip/respip.h"
@@ -340,7 +341,9 @@ interfacechecks(struct config_file* cfg)
 
 	if(cfg->num_ifs != 0) {
 		resif = (char***)calloc(cfg->num_ifs, sizeof(char**));
+		if(!resif) fatal_exit("malloc failure");
 		num_resif = (int*)calloc(cfg->num_ifs, sizeof(int*));
+		if(!num_resif) fatal_exit("malloc failure");
 	}
 	for(i=0; i<cfg->num_ifs; i++) {
 		/* search for duplicates in IP or ifname arguments */
