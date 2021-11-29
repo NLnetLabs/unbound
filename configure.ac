@@ -458,7 +458,7 @@ AC_SUBST(RUNTIME_PATH)
 AC_SEARCH_LIBS([inet_pton], [nsl])
 AC_SEARCH_LIBS([socket], [socket])
 
-# check wether strptime also works
+# check whether strptime also works
 AC_DEFUN([AC_CHECK_STRPTIME_WORKS],
 [AC_REQUIRE([AC_PROG_CC])
 AC_MSG_CHECKING(whether strptime works)
@@ -980,7 +980,7 @@ case "$enable_subnet" in
 	;;
 esac
 
-# check wether gost also works
+# check whether gost also works
 AC_DEFUN([AC_CHECK_GOST_WORKS],
 [AC_REQUIRE([AC_PROG_CC])
 AC_MSG_CHECKING([if GOST works])
