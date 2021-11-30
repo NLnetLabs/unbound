@@ -329,7 +329,7 @@ if [ "$DOWIN" = "yes" ]; then
 	info "git clone --depth=1 --no-tags -b $GITBRANCH $GITREPO unbound"
 	git clone --depth=1 --no-tags -b $GITBRANCH $GITREPO unbound || error_cleanup "git clone failed"
 	cd unbound || error_cleanup "Unbound not exported correctly from git"
-	rm -rf .git || error_cleanup "Failed to remove .git tracking information"
+	rm -rf .git .travis.yml .gitattributes .github .gitignore || error_cleanup "Failed to remove .git tracking and ci information"
 
 	# on a re-configure the cache may no longer be valid...
 	if test -f mingw32-config.cache; then rm mingw32-config.cache; fi
@@ -489,7 +489,7 @@ info "git clone --depth=1 --no-tags -b $GITBRANCH $GITREPO unbound"
 git clone --depth=1 --no-tags -b $GITBRANCH $GITREPO unbound || error_cleanup "git clone failed"
 
 cd unbound || error_cleanup "Unbound not exported correctly from git"
-rm -rf .git || error_cleanup "Failed to remove .git tracking information"
+rm -rf .git .travis.yml .gitattributes .github .gitignore || error_cleanup "Failed to remove .git tracking and ci information"
 
 info "Adding libtool utils (libtoolize)."
 libtoolize -c --install || libtoolize -c || error_cleanup "Libtoolize failed."
