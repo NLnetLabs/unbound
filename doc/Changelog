@@ -1,5 +1,6 @@
 30 November 2021: Wouter
 	- Fix to remove git tracking and ci information from release tarballs.
+	- iana portlist update.
 
 29 November 2021: Wouter
 	- Merge PR #570 from rex4539: Fix typos.
