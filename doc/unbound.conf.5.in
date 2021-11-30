@@ -1562,6 +1562,56 @@ Use this localzone type, regardless the type configured for the local-zone
 (both tagged and untagged) and regardless the type configured using
 access\-control\-tag\-action.
 .TP 5
+.B local\-zone\-do\-ede: \fI<zone> <yes or no>
+If enabled, the responses from this local zone will include an Extended DNS
+Error (RFC8914). The type of error is dependent on the query. For example a
+query for a local-zone type "refuse" will result in EDE code 15 \- Blocked.
+By default this option is disabled.
+.TP 5
+.B local\-zone\-default\-ede: \fI<zone> <EDE code string or integer>
+If enabled, this zone will respond to requests resulting in an Extended DNS
+Error with the EDE code specified as input. This input can either be an integer
+corresponding to the EDE code number (e.g. 15 would be EDE Blocked), or a
+keyword from the following list corresponding to an EDE specified in RFC 8914.
+.TP 5
+EDE keywords:
+.nf
+\h'5'\fIother\fR
+\h'5'\fIunsupported-dnskey-algorithm\fR
+\h'5'\fIunsupported-ds-digest-type\fR
+\h'5'\fIstale-answer\fR
+\h'5'\fIforged\fR
+\h'5'\fIdnssec-indeterminate\fR
+\h'5'\fIdnssec-bogus\fR
+\h'5'\fIsignature-expired\fR
+\h'5'\fIsignature-not-yet-valid\fR
+\h'5'\fIdnskey-missing\fR
+\h'5'\fIrrsigs-missing\fR
+\h'5'\fIno-zone-key-bit-set\fR
+\h'5'\fInsec-missing\fR
+\h'5'\fIcached-error\fR
+\h'5'\fInot-ready\fR
+\h'5'\fIblocked\fR
+\h'5'\fIcensored\fR
+\h'5'\fIfiltered\fR
+\h'5'\fIprohibited\fR
+\h'5'\fIstale-nxdomain-answer\fR
+\h'5'\fInot-authoritative\fR
+\h'5'\fInot-supported\fR
+\h'5'\fIno-reachable-authority\fR
+\h'5'\fInetwork-error\fR
+\h'5'\fIinvalid-data\fR
+.fi
+.TP 5
+
+.B local\-zone\-do\-ede:: \fI<zone> <yes or no>
+If enabled, the responses from this local zone will include an Extended DNS
+Error (RFC8914). The type of error is dependent on the query. For example a
+query for a local-zone type "refuse" will result in EDE code 15 \- Blocked.
+By default this option is disabled.
+
+
+.TP 5
 .B response\-ip: \fI<IP-netblock> <action>
 This requires use of the "respip" module.
 .IP

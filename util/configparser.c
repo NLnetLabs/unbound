@@ -5490,30 +5490,30 @@ yyreduce:
     {
 		OUTYY(("P(server_local_zone_default_ede:%s %s)\n", (yyvsp[(2) - (3)].str), (yyvsp[(3) - (3)].str)));
 		if (!(strcmp((yyvsp[(3) - (3)].str), "other") == 0) &&
-			!(strcmp((yyvsp[(3) - (3)].str), "unsupported_dnskey_algorithm") == 0) &&
-			!(strcmp((yyvsp[(3) - (3)].str), "unsupported_ds_digest_type") == 0) &&
-			!(strcmp((yyvsp[(3) - (3)].str), "stale_answer") == 0) &&
+			!(strcmp((yyvsp[(3) - (3)].str), "unsupported-dnskey-algorithm") == 0) &&
+			!(strcmp((yyvsp[(3) - (3)].str), "unsupported-ds-digest-type") == 0) &&
+			!(strcmp((yyvsp[(3) - (3)].str), "stale-answer") == 0) &&
 			!(strcmp((yyvsp[(3) - (3)].str), "forged") == 0) &&
-			!(strcmp((yyvsp[(3) - (3)].str), "dnssec_indeterminate") == 0) &&
-			!(strcmp((yyvsp[(3) - (3)].str), "dnssec_bogus") == 0) &&
-			!(strcmp((yyvsp[(3) - (3)].str), "signature_expired") == 0) &&
-			!(strcmp((yyvsp[(3) - (3)].str), "signature_not_yet_valid") == 0) &&
-			!(strcmp((yyvsp[(3) - (3)].str), "dnskey_missing") == 0) &&
-			!(strcmp((yyvsp[(3) - (3)].str), "rrsigs_missing") == 0) &&
-			!(strcmp((yyvsp[(3) - (3)].str), "no_zone_key_bit_set") == 0) &&
-			!(strcmp((yyvsp[(3) - (3)].str), "nsec_missing") == 0) &&
-			!(strcmp((yyvsp[(3) - (3)].str), "cached_error") == 0) &&
-			!(strcmp((yyvsp[(3) - (3)].str), "not_ready") == 0) &&
+			!(strcmp((yyvsp[(3) - (3)].str), "dnssec-indeterminate") == 0) &&
+			!(strcmp((yyvsp[(3) - (3)].str), "dnssec-bogus") == 0) &&
+			!(strcmp((yyvsp[(3) - (3)].str), "signature-expired") == 0) &&
+			!(strcmp((yyvsp[(3) - (3)].str), "signature-not-yet-valid") == 0) &&
+			!(strcmp((yyvsp[(3) - (3)].str), "dnskey-missing") == 0) &&
+			!(strcmp((yyvsp[(3) - (3)].str), "rrsigs-missing") == 0) &&
+			!(strcmp((yyvsp[(3) - (3)].str), "no-zone-key-bit-set") == 0) &&
+			!(strcmp((yyvsp[(3) - (3)].str), "nsec-missing") == 0) &&
+			!(strcmp((yyvsp[(3) - (3)].str), "cached-error") == 0) &&
+			!(strcmp((yyvsp[(3) - (3)].str), "not-ready") == 0) &&
 			!(strcmp((yyvsp[(3) - (3)].str), "blocked") == 0) &&
 			!(strcmp((yyvsp[(3) - (3)].str), "censored") == 0) &&
 			!(strcmp((yyvsp[(3) - (3)].str), "filtered") == 0) &&
 			!(strcmp((yyvsp[(3) - (3)].str), "prohibited") == 0) &&
-			!(strcmp((yyvsp[(3) - (3)].str), "stale_nxdomain_answer") == 0) &&
-			!(strcmp((yyvsp[(3) - (3)].str), "not_authoritative") == 0) &&
-			!(strcmp((yyvsp[(3) - (3)].str), "not_supported") == 0) &&
-			!(strcmp((yyvsp[(3) - (3)].str), "no_reachable_authority") == 0) &&
-			!(strcmp((yyvsp[(3) - (3)].str), "network_error") == 0) &&
-			!(strcmp((yyvsp[(3) - (3)].str), "invalid_data") == 0) &&
+			!(strcmp((yyvsp[(3) - (3)].str), "stale-nxdomain-answer") == 0) &&
+			!(strcmp((yyvsp[(3) - (3)].str), "not-authoritative") == 0) &&
+			!(strcmp((yyvsp[(3) - (3)].str), "not-supported") == 0) &&
+			!(strcmp((yyvsp[(3) - (3)].str), "no-reachable-authority") == 0) &&
+			!(strcmp((yyvsp[(3) - (3)].str), "network-error") == 0) &&
+			!(strcmp((yyvsp[(3) - (3)].str), "invalid-data") == 0) &&
 			!(atoi((yyvsp[(3) - (3)].str)) == 0))
 			yyerror("expected default-ede keyword or integer"
 					"refering to the respecive ede code");

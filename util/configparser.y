@@ -2224,30 +2224,30 @@ server_local_zone_default_ede: VAR_LOCAL_ZONE_DEFAULT_EDE STRING_ARG STRING_ARG
 	{
 		OUTYY(("P(server_local_zone_default_ede:%s %s)\n", $2, $3));
 		if (!(strcmp($3, "other") == 0) &&
-			!(strcmp($3, "unsupported_dnskey_algorithm") == 0) &&
-			!(strcmp($3, "unsupported_ds_digest_type") == 0) &&
-			!(strcmp($3, "stale_answer") == 0) &&
+			!(strcmp($3, "unsupported-dnskey-algorithm") == 0) &&
+			!(strcmp($3, "unsupported-ds-digest-type") == 0) &&
+			!(strcmp($3, "stale-answer") == 0) &&
 			!(strcmp($3, "forged") == 0) &&
-			!(strcmp($3, "dnssec_indeterminate") == 0) &&
-			!(strcmp($3, "dnssec_bogus") == 0) &&
-			!(strcmp($3, "signature_expired") == 0) &&
-			!(strcmp($3, "signature_not_yet_valid") == 0) &&
-			!(strcmp($3, "dnskey_missing") == 0) &&
-			!(strcmp($3, "rrsigs_missing") == 0) &&
-			!(strcmp($3, "no_zone_key_bit_set") == 0) &&
-			!(strcmp($3, "nsec_missing") == 0) &&
-			!(strcmp($3, "cached_error") == 0) &&
-			!(strcmp($3, "not_ready") == 0) &&
+			!(strcmp($3, "dnssec-indeterminate") == 0) &&
+			!(strcmp($3, "dnssec-bogus") == 0) &&
+			!(strcmp($3, "signature-expired") == 0) &&
+			!(strcmp($3, "signature-not-yet-valid") == 0) &&
+			!(strcmp($3, "dnskey-missing") == 0) &&
+			!(strcmp($3, "rrsigs-missing") == 0) &&
+			!(strcmp($3, "no-zone-key-bit-set") == 0) &&
+			!(strcmp($3, "nsec-missing") == 0) &&
+			!(strcmp($3, "cached-error") == 0) &&
+			!(strcmp($3, "not-ready") == 0) &&
 			!(strcmp($3, "blocked") == 0) &&
 			!(strcmp($3, "censored") == 0) &&
 			!(strcmp($3, "filtered") == 0) &&
 			!(strcmp($3, "prohibited") == 0) &&
-			!(strcmp($3, "stale_nxdomain_answer") == 0) &&
-			!(strcmp($3, "not_authoritative") == 0) &&
-			!(strcmp($3, "not_supported") == 0) &&
-			!(strcmp($3, "no_reachable_authority") == 0) &&
-			!(strcmp($3, "network_error") == 0) &&
-			!(strcmp($3, "invalid_data") == 0) &&
+			!(strcmp($3, "stale-nxdomain-answer") == 0) &&
+			!(strcmp($3, "not-authoritative") == 0) &&
+			!(strcmp($3, "not-supported") == 0) &&
+			!(strcmp($3, "no-reachable-authority") == 0) &&
+			!(strcmp($3, "network-error") == 0) &&
+			!(strcmp($3, "invalid-data") == 0) &&
 			!(atoi($3) == 0))
 			yyerror("expected default-ede keyword or integer"
 					"refering to the respecive ede code");
