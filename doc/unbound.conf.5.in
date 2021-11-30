@@ -1562,6 +1562,12 @@ Use this localzone type, regardless the type configured for the local-zone
 (both tagged and untagged) and regardless the type configured using
 access\-control\-tag\-action.
 .TP 5
+.B ede\-local\-zones: \fI<zone> <yes or no>
+If enabled, all local zones will respond with Extended DNS Errors (RFC8914).
+This is the global setting for the configuration, but it can be overwritten by
+specifing setting 'local\-zone\-do\-ede' to "yes". By default this option
+is disabled.
+.TP 5
 .B local\-zone\-do\-ede: \fI<zone> <yes or no>
 If enabled, the responses from this local zone will include an Extended DNS
 Error (RFC8914). The type of error is dependent on the query. For example a
@@ -1602,15 +1608,6 @@ EDE keywords:
 \h'5'\fInetwork-error\fR
 \h'5'\fIinvalid-data\fR
 .fi
-.TP 5
-
-.B local\-zone\-do\-ede:: \fI<zone> <yes or no>
-If enabled, the responses from this local zone will include an Extended DNS
-Error (RFC8914). The type of error is dependent on the query. For example a
-query for a local-zone type "refuse" will result in EDE code 15 \- Blocked.
-By default this option is disabled.
-
-
 .TP 5
 .B response\-ip: \fI<IP-netblock> <action>
 This requires use of the "respip" module.
