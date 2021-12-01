@@ -1,5 +1,6 @@
 1 December 2021: George
 	- Merge PR #511 from yan12125: Reduce unnecessary linking.
+	- Merge PR #493 from Jaap: Fix generation of libunbound.pc.
 
 30 November 2021: Wouter
 	- Fix to remove git tracking and ci information from release tarballs.
