@@ -1,5 +1,6 @@
 1 December 2021: Wouter
 	- configure is set to 1.14.0, and release branch.
+	- Fix doc/unbound.doxygen to remove obsolete tag warning.
 
 1 December 2021: George
 	- Merge PR #511 from yan12125: Reduce unnecessary linking.
