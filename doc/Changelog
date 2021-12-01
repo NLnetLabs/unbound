@@ -4,6 +4,7 @@
 	- Merge PR #555 from fobser: Allow interface names as scope-id in IPv6
 	  link-local addresses.
 	- Merge PR #562 from Willem: Reset keepalive per new tcp session.
+	- Merge PR #522 from sibeream: memory management violations fixed.
 
 30 November 2021: Wouter
 	- Fix to remove git tracking and ci information from release tarballs.
