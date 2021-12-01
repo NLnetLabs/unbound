@@ -1,6 +1,8 @@
 1 December 2021: George
 	- Merge PR #511 from yan12125: Reduce unnecessary linking.
 	- Merge PR #493 from Jaap: Fix generation of libunbound.pc.
+	- Merge PR #555 from fobser: Allow interface names as scope-id in IPv6
+	  link-local addresses.
 
 30 November 2021: Wouter
 	- Fix to remove git tracking and ci information from release tarballs.
