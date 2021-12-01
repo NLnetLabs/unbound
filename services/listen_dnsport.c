@@ -869,9 +869,14 @@ set_ip_dscp(int socket, int addrfamily, int dscp)
 	ds = dscp << 2;
 	switch(addrfamily) {
 	case AF_INET6:
-		if(setsockopt(socket, IPPROTO_IPV6, IPV6_TCLASS, (void*)&ds, sizeof(ds)) < 0)
+	#ifdef IPV6_TCLASS
+		if(setsockopt(socket, IPPROTO_IPV6, IPV6_TCLASS, (void*)&ds,
+			sizeof(ds)) < 0)
 			return sock_strerror(errno);
 		break;
+	#else
+		return "IPV6_TCLASS not defined on this system";
+	#endif
 	default:
 		if(setsockopt(socket, IPPROTO_IP, IP_TOS, (void*)&ds, sizeof(ds)) < 0)
 			return sock_strerror(errno);
