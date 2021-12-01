@@ -7,6 +7,7 @@
 	- Merge PR #522 from sibeream: memory management violations fixed.
 	- Merge PR #530 from Shchelk: Fix: dereferencing a null pointer.
 	- Fix #454: listen_dnsport.c:825: error: ‘IPV6_TCLASS’ undeclared.
+	- Fix #574: Review fixes for size allocation.
 
 30 November 2021: Wouter
 	- Fix to remove git tracking and ci information from release tarballs.

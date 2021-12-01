@@ -342,7 +342,7 @@ interfacechecks(struct config_file* cfg)
 	if(cfg->num_ifs != 0) {
 		resif = (char***)calloc(cfg->num_ifs, sizeof(char**));
 		if(!resif) fatal_exit("malloc failure");
-		num_resif = (int*)calloc(cfg->num_ifs, sizeof(int*));
+		num_resif = (int*)calloc(cfg->num_ifs, sizeof(int));
 		if(!num_resif) fatal_exit("malloc failure");
 	}
 	for(i=0; i<cfg->num_ifs; i++) {
