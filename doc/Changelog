@@ -5,6 +5,7 @@
 	  link-local addresses.
 	- Merge PR #562 from Willem: Reset keepalive per new tcp session.
 	- Merge PR #522 from sibeream: memory management violations fixed.
+	- Merge PR #530 from Shchelk: Fix: dereferencing a null pointer.
 
 30 November 2021: Wouter
 	- Fix to remove git tracking and ci information from release tarballs.
