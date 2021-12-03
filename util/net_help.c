@@ -44,6 +44,9 @@
 #ifdef HAVE_NET_IF_H
 #include <net/if.h>
 #endif
+#ifdef HAVE_NETIOAPI_H
+#include <netioapi.h>
+#endif
 #include "util/net_help.h"
 #include "util/log.h"
 #include "util/data/dname.h"

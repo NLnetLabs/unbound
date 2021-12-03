@@ -412,6 +412,39 @@ AC_CHECK_HEADERS([net/if.h],,, [
 
 # Check for Apple header. This uncovers TARGET_OS_IPHONE, TARGET_OS_TV or TARGET_OS_WATCH
 AC_CHECK_HEADERS([TargetConditionals.h],,, [AC_INCLUDES_DEFAULT])
+AC_CHECK_HEADERS([netioapi.h],,, [AC_INCLUDES_DEFAULT
+#if HAVE_SYS_PARAM_H
+#include <sys/param.h>
+#endif
+
+#ifdef HAVE_SYS_SOCKET_H
+#include <sys/socket.h>
+#endif
+
+#ifdef HAVE_SYS_UIO_H
+#include <sys/uio.h>
+#endif
+
+#ifdef HAVE_NETINET_IN_H
+#include <netinet/in.h>
+#endif
+
+#ifdef HAVE_NETINET_TCP_H
+#include <netinet/tcp.h>
+#endif
+
+#ifdef HAVE_ARPA_INET_H
+#include <arpa/inet.h>
+#endif
+
+#ifdef HAVE_WINSOCK2_H
+#include <winsock2.h>
+#endif
+
+#ifdef HAVE_WS2TCPIP_H
+#include <ws2tcpip.h>
+#endif
+])
 
 # check for types.  
 # Using own tests for int64* because autoconf builtin only give 32bit.
