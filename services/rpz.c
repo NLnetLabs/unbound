@@ -836,7 +836,7 @@ rpz_report_rrset_error(const char* msg, uint8_t* rr, size_t rr_len) {
 }
 
 /* from localzone.c; difference is we don't have a dname */
-struct local_rrset*
+static struct local_rrset*
 rpz_clientip_new_rrset(struct regional* region,
 	struct clientip_synthesized_rr* raddr, uint16_t rrtype, uint16_t rrclass)
 {
@@ -1930,7 +1930,7 @@ rpz_synthesize_qname_localdata(struct module_env* env, struct rpz* r,
 	return ret;
 }
 
-struct clientip_synthesized_rr*
+static struct clientip_synthesized_rr*
 rpz_delegation_point_ipbased_trigger_lookup(struct rpz* rpz, struct iter_qstate* is)
 {
 	struct delegpt_addr* cursor;
@@ -1947,7 +1947,7 @@ rpz_delegation_point_ipbased_trigger_lookup(struct rpz* rpz, struct iter_qstate*
 	return NULL;
 }
 
-struct dns_msg*
+static struct dns_msg*
 rpz_apply_nsip_trigger(struct module_qstate* ms, struct rpz* r,
 	struct clientip_synthesized_rr* raddr, struct auth_zone* az)
 {
@@ -2006,7 +2006,7 @@ done:
 	return ret;
 }
 
-struct dns_msg*
+static struct dns_msg*
 rpz_apply_nsdname_trigger(struct module_qstate* ms, struct rpz* r,
 	struct local_zone* z, struct matched_delegation_point const* match,
 	struct auth_zone* az)
