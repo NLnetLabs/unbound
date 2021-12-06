@@ -1582,12 +1582,12 @@ lookup_cache:
 						leeway = 0;
 					lock_rw_unlock(&e->lock);
 
+					// @TODO test this
 					// // stale answer? 
 					// if (worker->env.cfg->serve_expired &&
 					// 	*worker->env.now >= ((struct reply_info*)e->data)->ttl) {
-					// 	// EDE Error Code 3 - Stale Answer
-					// 	EDNS_OPT_LIST_APPEND_EDE(&edns.opt_list_out, worker->scratchpad,
-					// LDNS_EDE_STALE_ANSWER, "");
+					// 	EDNS_OPT_LIST_APPEND_EDE(&edns.opt_list_out,
+					// 		worker->scratchpad, LDNS_EDE_STALE_ANSWER, "");
 					// }
 
 					// add EDNS struct?

@@ -1279,8 +1279,12 @@ void errinf_dname(struct module_qstate* qstate, const char* str,
  *    This string is malloced and has to be freed by caller.
  */
 char* errinf_to_str_bogus(struct module_qstate* qstate);
-
-// @TODO write this
+/**
+ * Check the sldns_ede_code of the qstate.
+ * @param qstate: query state.
+ * @return LDNS_EDE_DNSSEC_BOGUS by default, or another sldns_ede_code 
+ * if this is set.
+ */
 sldns_ede_code errinf_to_reason_bogus(struct module_qstate* qstate);
 
 /**

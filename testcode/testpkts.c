@@ -1549,7 +1549,8 @@ find_match(struct entry* entries, uint8_t* query_pkt, size_t len,
 			int info_code = get_ede_info_code(query_pkt, len);
 			if(info_code == -1 ||
 				(uint16_t)info_code != p->ede_info_code) {
-				verbose(3, "bad EDE INFO-CODE\n");
+				verbose(3, "bad EDE INFO-CODE. Expected: %d, and got: %d\n",
+					p->ede_info_code, info_code);
 				continue;
 			}
 		}

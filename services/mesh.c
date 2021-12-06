@@ -1329,7 +1329,8 @@ mesh_send_reply(struct mesh_state* m, int rcode, struct reply_info* rep,
 			if(!inplace_cb_reply_servfail_call(m->s.env, &m->s.qinfo, &m->s,
 			rep, LDNS_RCODE_SERVFAIL, &r->edns, &r->query_reply, m->s.region, &r->start_time))
 				r->edns.opt_list_inplace_cb_out = NULL;
-			// @TODO EDE?
+			/* internal server error (probably malloc failure) so no
+			 * EDE (RFC8914) needed */
 			error_encode(r_buffer, LDNS_RCODE_SERVFAIL,
 				&m->s.qinfo, r->qid, r->qflags, &r->edns);
 		}
