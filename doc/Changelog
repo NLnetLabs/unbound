@@ -1,3 +1,7 @@
+6 December 2021: Wouter
+	- Merge PR #581 from fobser: Fix -Wmissing-prototypes and -Wshadow
+	  warnings in rpz.
+
 3 December 2021: Wouter
 	- Fix compile warning for if_nametoindex on windows 64bit.
 
