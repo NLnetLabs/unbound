@@ -1562,6 +1562,7 @@ Use this localzone type, regardless the type configured for the local-zone
 (both tagged and untagged) and regardless the type configured using
 access\-control\-tag\-action.
 .TP 5
+logic, and fix typo in the unbound.conf)
 .B response\-ip: \fI<IP-netblock> <action>
 This requires use of the "respip" module.
 .IP
