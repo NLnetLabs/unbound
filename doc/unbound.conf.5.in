@@ -1562,7 +1562,7 @@ Use this localzone type, regardless the type configured for the local-zone
 (both tagged and untagged) and regardless the type configured using
 access\-control\-tag\-action.
 .TP 5
-.B ede\-local\-zones: \fI<zone> <yes or no>
+.B ede\-local\-zones: \fI<yes or no>
 If enabled, all local zones will respond with Extended DNS Errors (RFC8914).
 This is the global setting for the configuration, but it can be overwritten by
 specifing setting 'local\-zone\-do\-ede' to "yes". By default this option

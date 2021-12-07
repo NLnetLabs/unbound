@@ -791,10 +791,11 @@ lz_enter_default_ede_response(struct local_zones* zones, char* zname, char* code
 		}
 	} else {
 		int tmp = atoi(code);
-		if (!(tmp >= 0 && tmp < 65635))
+		if (!(tmp >= 0 && tmp < 65635)) {
 			log_err("incorrect EDE code integer value for"
 					"local-zone-default-ede: %s", zname);
 			return 0;
+		}
 		default_ede = tmp;
 	}
 
@@ -1524,9 +1525,9 @@ local_encode_ede(struct local_zone* zone, struct query_info* qinfo,
 		return 1;
 	}
 	/* check global and local-zone EDE settings */
-	if ((!(env->cfg->ede_local_zones) && do_ede) && /* local precedes global */
-		(env->cfg->ede_local_zones && do_ede) && /* both local and global set */
-		(env->cfg->ede_local_zones && do_ede != -1)) { /* global set, but local not */
+	if (do_ede == 1 ||                     /* local precedes global */
+		(do_ede == -1 &&
+		 env->cfg->ede_local_zones == 1)){ /* global set, but local not */
 
 		if (zone != NULL && zone->default_ede != -1)
 			ede_code = zone->default_ede;
@@ -1560,9 +1561,9 @@ local_error_encode(struct local_zone* zone, struct query_info* qinfo,
 		rcode, edns, repinfo, temp, env->now_tv))
 		edns->opt_list_inplace_cb_out = NULL;
 	/* check global and local-zone ede settings */
-	if ((env->cfg->ede_local_zones && do_ede) || /* both local and global set */
-	    (!(env->cfg->ede_local_zones) && do_ede) || /* local precedes global */
-		(env->cfg->ede_local_zones && do_ede == -1)) { /* global set, but local not */
+	if (do_ede == 1 ||                     /* local precedes global */
+		(do_ede == -1 &&
+		 env->cfg->ede_local_zones == 1)){ /* global set, but local not */
 
 		if (zone != NULL && zone->default_ede != -1)
 			ede_code = zone->default_ede;
