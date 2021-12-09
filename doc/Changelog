@@ -8,6 +8,8 @@
 
 1 December 2021: Wouter
 	- configure is set to 1.14.0, and release branch.
+	  This was released as version 1.14.0 on 9 Dec 2021, with the doxygen
+	  fix below included. The main branch continues as 1.14.1.
 	- Fix doc/unbound.doxygen to remove obsolete tag warning.
 
 1 December 2021: George
