@@ -543,9 +543,10 @@ sldns_parse_rdf_token(sldns_buffer* strbuf, char* token, size_t token_len,
 {
 	size_t slen;
 
-	/* skip spaces */
+	/* skip spaces and tabs */
 	while(sldns_buffer_remaining(strbuf) > 0 && !*quoted &&
-		*(sldns_buffer_current(strbuf)) == ' ') {
+		(*(sldns_buffer_current(strbuf)) == ' ' ||
+		*(sldns_buffer_current(strbuf)) == '\t')) {
 		sldns_buffer_skip(strbuf, 1);
 	}
 

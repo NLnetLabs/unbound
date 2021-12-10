@@ -1,3 +1,7 @@
+10 December 2021: Wouter
+	- Add code similar to fix for ldns for tab between strings, for
+	  consistency, the test case was not broken.
+
 6 December 2021: Wouter
 	- Merge PR #581 from fobser: Fix -Wmissing-prototypes and -Wshadow
 	  warnings in rpz.
