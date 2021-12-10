@@ -1,3 +1,8 @@
+10 December 2021: George
+	- Allow local-data for classes other than IN to inherit a configured
+	  local-zone's type if possible, instead of defaulting to type
+	  transparent as per the implicit rule.
+
 10 December 2021: Wouter
 	- Add code similar to fix for ldns for tab between strings, for
 	  consistency, the test case was not broken.
