@@ -1057,6 +1057,9 @@ lz_setup_implicit(struct local_zones* zones, struct config_file* cfg)
 				rr_name, len, labs, LDNS_RR_CLASS_IN, rr_type);
 			if(z) {
 				uint8_t* name = memdup(z->name, z->namelen);
+				size_t znamelen = z->namelen;
+				int znamelabs = z->namelabs;
+				enum localzone_type ztype = z->type;
 				lock_rw_unlock(&zones->lock);
 				if(!name) {
 					log_err("out of memory");
@@ -1068,8 +1071,8 @@ lz_setup_implicit(struct local_zones* zones, struct config_file* cfg)
 					z =
 #endif
 					lz_enter_zone_dname(zones, name,
-						z->namelen, z->namelabs,
-						z->type, rr_class))) {
+						znamelen, znamelabs,
+						ztype, rr_class))) {
 					free(rr_name);
 					return 0;
 				}
