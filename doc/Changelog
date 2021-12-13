@@ -1,3 +1,8 @@
+13 December 2021: George
+	- Add missing configure flags for optional features in the
+	  documentation.
+	- Fix Unbound capitalization in the documentation.
+
 13 December 2021: Wouter
 	- Fix to pick up other class local zone information before unlock.
 
