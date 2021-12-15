@@ -1858,7 +1858,7 @@ processValidate(struct module_qstate* qstate, struct val_qstate* vq,
 		vq->chase_reply->security = sec_status_bogus;
 		vq->chase_reply->reason_bogus = LDNS_EDE_DNSSEC_BOGUS;
 		errinf_ede(qstate, "while building chain of trust",
-			LDNS_EDE_DNSSEC_BOGUS);
+			LDNS_EDE_DNSKEY_MISSING);
 		if(vq->restart_count >= ve->max_restart)
 			key_cache_insert(ve->kcache, vq->key_entry, qstate);
 		return 1;
@@ -2327,7 +2327,7 @@ primeResponseToKE(struct ub_packed_rrset_key* dnskey_rrset,
 			"could not fetch DNSKEY rrset", 
 			ta->name, LDNS_RR_TYPE_DNSKEY, ta->dclass);
 		if(qstate->env->cfg->harden_dnssec_stripped) {
-			errinf(qstate, "no DNSKEY rrset");
+			errinf_ede(qstate, "no DNSKEY rrset", LDNS_EDE_DNSKEY_MISSING);
 			kkey = key_entry_create_bad(qstate->region, ta->name,
 				ta->namelen, ta->dclass, BOGUS_KEY_TTL,
 				*qstate->env->now);
@@ -2697,7 +2697,7 @@ process_ds_response(struct module_qstate* qstate, struct val_qstate* vq,
  * @param origin: the origin of msg.
  */
 static void
-process_dnskey_response(struct module_qstate* qstate, struct val_qstate* vq,
+  process_dnskey_response(struct module_qstate* qstate, struct val_qstate* vq,
 	int id, int rcode, struct dns_msg* msg, struct query_info* qinfo,
 	struct sock_list* origin)
 {

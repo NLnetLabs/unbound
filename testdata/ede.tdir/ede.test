@@ -196,7 +196,7 @@ fi
 
 # @TODO DNSSEC indeterminate
 
-
+# @TODO touch other validator codepath: val_inform_super()
 
 # teardown
 kill_pid $UNBOUND_PID
