@@ -1120,7 +1120,7 @@ int cfg_count_numbers(const char* str);
 int cfg_parse_memsize(const char* str, size_t* res);
 
 /**
- * Parse nsid from string into binary nsid. nsid is either a hexidecimal
+ * Parse nsid from string into binary nsid. nsid is either a hexadecimal
  * string or an ascii string prepended with ascii_ in which case the
  * characters after ascii_ are simply copied.
  * @param str: the string to parse.

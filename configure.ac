@@ -10,15 +10,15 @@ sinclude(dnscrypt/dnscrypt.m4)
 
 # must be numbers. ac_defun because of later processing
 m4_define([VERSION_MAJOR],[1])
-m4_define([VERSION_MINOR],[13])
-m4_define([VERSION_MICRO],[3])
+m4_define([VERSION_MINOR],[14])
+m4_define([VERSION_MICRO],[1])
 AC_INIT([unbound],m4_defn([VERSION_MAJOR]).m4_defn([VERSION_MINOR]).m4_defn([VERSION_MICRO]),[unbound-bugs@nlnetlabs.nl or https://github.com/NLnetLabs/unbound/issues],[unbound])
 AC_SUBST(UNBOUND_VERSION_MAJOR, [VERSION_MAJOR])
 AC_SUBST(UNBOUND_VERSION_MINOR, [VERSION_MINOR])
 AC_SUBST(UNBOUND_VERSION_MICRO, [VERSION_MICRO])
 
 LIBUNBOUND_CURRENT=9
-LIBUNBOUND_REVISION=14
+LIBUNBOUND_REVISION=15
 LIBUNBOUND_AGE=1
 # 1.0.0 had 0:12:0
 # 1.0.1 had 0:13:0
@@ -99,7 +99,8 @@ LIBUNBOUND_AGE=1
 # 1.13.0 had 9:11:1
 # 1.13.1 had 9:12:1
 # 1.13.2 had 9:13:1
-# 1.13.3 had 9:14:1
+# 1.14.0 had 9:14:1
+# 1.14.1 had 9:15:1
 
 #   Current  -- the number of the binary API that we're implementing
 #   Revision -- which iteration of the implementation of the binary
@@ -412,6 +413,39 @@ AC_CHECK_HEADERS([net/if.h],,, [
 
 # Check for Apple header. This uncovers TARGET_OS_IPHONE, TARGET_OS_TV or TARGET_OS_WATCH
 AC_CHECK_HEADERS([TargetConditionals.h],,, [AC_INCLUDES_DEFAULT])
+AC_CHECK_HEADERS([netioapi.h],,, [AC_INCLUDES_DEFAULT
+#if HAVE_SYS_PARAM_H
+#include <sys/param.h>
+#endif
+
+#ifdef HAVE_SYS_SOCKET_H
+#include <sys/socket.h>
+#endif
+
+#ifdef HAVE_SYS_UIO_H
+#include <sys/uio.h>
+#endif
+
+#ifdef HAVE_NETINET_IN_H
+#include <netinet/in.h>
+#endif
+
+#ifdef HAVE_NETINET_TCP_H
+#include <netinet/tcp.h>
+#endif
+
+#ifdef HAVE_ARPA_INET_H
+#include <arpa/inet.h>
+#endif
+
+#ifdef HAVE_WINSOCK2_H
+#include <winsock2.h>
+#endif
+
+#ifdef HAVE_WS2TCPIP_H
+#include <ws2tcpip.h>
+#endif
+])
 
 # check for types.  
 # Using own tests for int64* because autoconf builtin only give 32bit.
@@ -458,7 +492,7 @@ AC_SUBST(RUNTIME_PATH)
 AC_SEARCH_LIBS([inet_pton], [nsl])
 AC_SEARCH_LIBS([socket], [socket])
 
-# check wether strptime also works
+# check whether strptime also works
 AC_DEFUN([AC_CHECK_STRPTIME_WORKS],
 [AC_REQUIRE([AC_PROG_CC])
 AC_MSG_CHECKING(whether strptime works)
@@ -700,11 +734,15 @@ if test x_$ub_test_python != x_no; then
       AC_SUBST(PY_MAJOR_VERSION)
       # Have Python
       AC_DEFINE(HAVE_PYTHON,1,[Define if you have Python libraries and header files.])
-      if test -n "$LIBS"; then
-        LIBS="$PYTHON_LDFLAGS $LIBS"
-      else
-        LIBS="$PYTHON_LDFLAGS"
+      if test x_$ub_with_pythonmod != x_no; then
+        if test -n "$LIBS"; then
+          LIBS="$PYTHON_LDFLAGS $LIBS"
+        else
+          LIBS="$PYTHON_LDFLAGS"
+        fi
       fi
+      PYTHON_LIBS="$PYTHON_LDFLAGS"
+      AC_SUBST(PYTHON_LIBS)
       if test -n "$CPPFLAGS"; then
         CPPFLAGS="$CPPFLAGS $PYTHON_CPPFLAGS"
       else
@@ -837,7 +875,7 @@ ACX_WITH_SSL
 ACX_LIB_SSL
 SSLLIB="-lssl"
 
-PC_CRYPTO_DEPENDENCY="libcrypto libssl"
+PC_CRYPTO_DEPENDENCY=""
 AC_SUBST(PC_CRYPTO_DEPENDENCY)
 
 # check if -lcrypt32 is needed because CAPIENG needs that. (on windows)
@@ -980,7 +1018,7 @@ case "$enable_subnet" in
 	;;
 esac
 
-# check wether gost also works
+# check whether gost also works
 AC_DEFUN([AC_CHECK_GOST_WORKS],
 [AC_REQUIRE([AC_PROG_CC])
 AC_MSG_CHECKING([if GOST works])
@@ -1601,7 +1639,7 @@ AC_LINK_IFELSE([AC_LANG_PROGRAM([
   AC_MSG_RESULT(no))
 
 AC_SEARCH_LIBS([setusercontext], [util])
-AC_CHECK_FUNCS([tzset sigprocmask fcntl getpwnam endpwent getrlimit setrlimit setsid chroot kill chown sleep usleep random srandom recvmsg sendmsg writev socketpair glob initgroups strftime localtime_r setusercontext _beginthreadex endservent endprotoent fsync shmget accept4 getifaddrs])
+AC_CHECK_FUNCS([tzset sigprocmask fcntl getpwnam endpwent getrlimit setrlimit setsid chroot kill chown sleep usleep random srandom recvmsg sendmsg writev socketpair glob initgroups strftime localtime_r setusercontext _beginthreadex endservent endprotoent fsync shmget accept4 getifaddrs if_nametoindex])
 AC_CHECK_FUNCS([setresuid],,[AC_CHECK_FUNCS([setreuid])])
 AC_CHECK_FUNCS([setresgid],,[AC_CHECK_FUNCS([setregid])])
 

@@ -173,7 +173,7 @@ void rpz_remove_rr(struct rpz* r, size_t aznamelen, uint8_t* dname,
  * @param temp: scratchpad
  * @param repinfo: reply info
  * @param taglist: taglist to lookup.
- * @param taglen: lenth of taglist.
+ * @param taglen: length of taglist.
  * @param stats: worker stats struct
  * @return: 1 if client answer is ready, 0 to continue resolving
  */
@@ -235,7 +235,7 @@ enum rpz_action
 respip_action_to_rpz_action(enum respip_action a);
 
 /**
- * Prepare RPZ after procesing feed content.
+ * Prepare RPZ after processing feed content.
  * @param r: RPZ to use
  */
 void rpz_finish_config(struct rpz* r);

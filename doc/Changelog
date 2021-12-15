@@ -1,3 +1,59 @@
+13 December 2021: George
+	- Add missing configure flags for optional features in the
+	  documentation.
+	- Fix Unbound capitalization in the documentation.
+
+13 December 2021: Wouter
+	- Fix to pick up other class local zone information before unlock.
+
+10 December 2021: George
+	- Allow local-data for classes other than IN to inherit a configured
+	  local-zone's type if possible, instead of defaulting to type
+	  transparent as per the implicit rule.
+
+10 December 2021: Wouter
+	- Add code similar to fix for ldns for tab between strings, for
+	  consistency, the test case was not broken.
+
+6 December 2021: Wouter
+	- Merge PR #581 from fobser: Fix -Wmissing-prototypes and -Wshadow
+	  warnings in rpz.
+	- Fix validator debug output about DS support, print correct algorithm.
+
+3 December 2021: Wouter
+	- Fix compile warning for if_nametoindex on windows 64bit.
+
+1 December 2021: Wouter
+	- configure is set to 1.14.0, and release branch.
+	  This was released as version 1.14.0 on 9 Dec 2021, with the doxygen
+	  fix below included. The main branch continues as 1.14.1.
+	- Fix doc/unbound.doxygen to remove obsolete tag warning.
+
+1 December 2021: George
+	- Merge PR #511 from yan12125: Reduce unnecessary linking.
+	- Merge PR #493 from Jaap: Fix generation of libunbound.pc.
+	- Merge PR #555 from fobser: Allow interface names as scope-id in IPv6
+	  link-local addresses.
+	- Merge PR #562 from Willem: Reset keepalive per new tcp session.
+	- Merge PR #522 from sibeream: memory management violations fixed.
+	- Merge PR #530 from Shchelk: Fix: dereferencing a null pointer.
+	- Fix #454: listen_dnsport.c:825: error: ‘IPV6_TCLASS’ undeclared.
+	- Fix #574: Review fixes for size allocation.
+
+30 November 2021: Wouter
+	- Fix to remove git tracking and ci information from release tarballs.
+	- iana portlist update.
+
+29 November 2021: Wouter
+	- Merge PR #570 from rex4539: Fix typos.
+	- Fix for #570: regen aclocal.m4, fix configure.ac for spelling.
+	- Fix to make python module opt_list use opt_list_in.
+	- Fix #574: unbound-checkconf reports fatal error if interface names
+	  are used as value for interfaces:
+	- Fix #574: Review fixes for it.
+	- Fix #576: [FR] UB_* error codes in unbound.h
+	- Fix #574: Review fix for spelling.
+
 15 November 2021: Tom
 	- Improve EDNS option handling, now also works for synthesised
 	  responses such as local-data and server.id CH TXT responses.

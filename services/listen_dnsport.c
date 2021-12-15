@@ -869,9 +869,14 @@ set_ip_dscp(int socket, int addrfamily, int dscp)
 	ds = dscp << 2;
 	switch(addrfamily) {
 	case AF_INET6:
-		if(setsockopt(socket, IPPROTO_IPV6, IPV6_TCLASS, (void*)&ds, sizeof(ds)) < 0)
+	#ifdef IPV6_TCLASS
+		if(setsockopt(socket, IPPROTO_IPV6, IPV6_TCLASS, (void*)&ds,
+			sizeof(ds)) < 0)
 			return sock_strerror(errno);
 		break;
+	#else
+		return "IPV6_TCLASS not defined on this system";
+	#endif
 	default:
 		if(setsockopt(socket, IPPROTO_IP, IP_TOS, (void*)&ds, sizeof(ds)) < 0)
 			return sock_strerror(errno);
@@ -2618,7 +2623,7 @@ static int http2_req_begin_headers_cb(nghttp2_session* session,
 	int ret;
 	if(frame->hd.type != NGHTTP2_HEADERS ||
 		frame->headers.cat != NGHTTP2_HCAT_REQUEST) {
-		/* only interrested in request headers */
+		/* only interested in request headers */
 		return 0;
 	}
 	if(!(h2_stream = http2_stream_create(frame->hd.stream_id))) {
@@ -2746,7 +2751,7 @@ static int http2_req_header_cb(nghttp2_session* session,
 	 * the HEADER */
 	if(frame->hd.type != NGHTTP2_HEADERS ||
 		frame->headers.cat != NGHTTP2_HCAT_REQUEST) {
-		/* only interrested in request headers */
+		/* only interested in request headers */
 		return 0;
 	}
 	if(!(h2_stream = nghttp2_session_get_stream_user_data(session,
@@ -2842,7 +2847,7 @@ static int http2_req_header_cb(nghttp2_session* session,
 			h2_stream->query_too_large = 1;
 			return 0;
 		}
-		/* guaranteed to only contian digits and be null terminated */
+		/* guaranteed to only contain digits and be null terminated */
 		h2_stream->content_length = atoi((const char*)value);
 		if(h2_stream->content_length >
 			h2_session->c->http2_stream_max_qbuffer_size) {
@@ -2882,7 +2887,7 @@ static int http2_req_data_chunk_recv_cb(nghttp2_session* ATTR_UNUSED(session),
 			/* setting this to msg-buffer-size can result in a lot
 			 * of memory consuption. Most queries should fit in a
 			 * single DATA frame, and most POST queries will
-			 * containt content-length which does not impose this
+			 * contain content-length which does not impose this
 			 * limit. */
 			qlen = len;
 		}

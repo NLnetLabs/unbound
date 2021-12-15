@@ -818,6 +818,7 @@ setup_tcp_handler(struct comm_point* c, int fd, int cur, int max)
 #endif
 	c->tcp_is_reading = 1;
 	c->tcp_byte_count = 0;
+	c->tcp_keepalive = 0;
 	/* if more than half the tcp handlers are in use, use a shorter
 	 * timeout for this TCP connection, we need to make space for
 	 * other connections to be able to get attention */

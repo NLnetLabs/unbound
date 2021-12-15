@@ -66,7 +66,7 @@ struct query_info;
  * @param ssl_upstream: use SSL for upstream queries.
  * @param tls_auth_name: if ssl_upstream, use this name with TLS
  * 	authentication.
- * @param q: wich query state to reactivate upon return.
+ * @param q: which query state to reactivate upon return.
  * @return: false on failure (memory or socket related). no query was
  *      sent.
  */
@@ -118,7 +118,7 @@ void worker_sighandler(int sig, void* arg);
  * @param ssl_upstream: use SSL for upstream queries.
  * @param tls_auth_name: if ssl_upstream, use this name with TLS
  * 	authentication.
- * @param q: wich query state to reactivate upon return.
+ * @param q: which query state to reactivate upon return.
  * @return: false on failure (memory or socket related). no query was
  *      sent.
  */

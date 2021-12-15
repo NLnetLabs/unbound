@@ -836,7 +836,7 @@ rpz_report_rrset_error(const char* msg, uint8_t* rr, size_t rr_len) {
 }
 
 /* from localzone.c; difference is we don't have a dname */
-struct local_rrset*
+static struct local_rrset*
 rpz_clientip_new_rrset(struct regional* region,
 	struct clientip_synthesized_rr* raddr, uint16_t rrtype, uint16_t rrclass)
 {
@@ -1095,7 +1095,7 @@ rpz_insert_rr(struct rpz* r, uint8_t* azname, size_t aznamelen, uint8_t* dname,
  * @param qname: qname
  * @param qname_len: length of qname
  * @param qclass: qclass
- * @param only_exact: if 1 only excact (non wildcard) matches are returned
+ * @param only_exact: if 1 only exact (non wildcard) matches are returned
  * @param wr: get write lock for local-zone if 1, read lock if 0
  * @param zones_keep_lock: if set do not release the r->local_zones lock, this
  * 	  makes the caller of this function responsible for releasing the lock.
@@ -1191,7 +1191,7 @@ rpz_find_zone(struct local_zones* zones, uint8_t* qname, size_t qname_len, uint1
  * Remove RR from RPZ's local-data
  * @param z: local-zone for RPZ, holding write lock
  * @param policydname: dname of RR to remove
- * @param policydnamelen: lenth of policydname
+ * @param policydnamelen: length of policydname
  * @param rr_type: RR type of RR to remove
  * @param rdata: rdata of RR to remove
  * @param rdatalen: length of rdata
@@ -1384,9 +1384,9 @@ log_rpz_apply(char* trigger, uint8_t* dname, struct addr_tree_node* addrnode,
 	if(dname) {
 		dname_str(dname, dnamestr);
 	} else if(addrnode) {
-		char a[128];
-		addr_to_str(&addrnode->addr, addrnode->addrlen, a, sizeof(a));
-		snprintf(dnamestr, sizeof(dnamestr), "%s/%d", a, addrnode->net);
+		char addrbuf[128];
+		addr_to_str(&addrnode->addr, addrnode->addrlen, addrbuf, sizeof(addrbuf));
+		snprintf(dnamestr, sizeof(dnamestr), "%s/%d", addrbuf, addrnode->net);
 	} else {
 		dnamestr[0]=0;
 	}
@@ -1935,7 +1935,7 @@ rpz_synthesize_qname_localdata(struct module_env* env, struct rpz* r,
 	return ret;
 }
 
-struct clientip_synthesized_rr*
+static struct clientip_synthesized_rr*
 rpz_delegation_point_ipbased_trigger_lookup(struct rpz* rpz, struct iter_qstate* is)
 {
 	struct delegpt_addr* cursor;
@@ -1952,7 +1952,7 @@ rpz_delegation_point_ipbased_trigger_lookup(struct rpz* rpz, struct iter_qstate*
 	return NULL;
 }
 
-struct dns_msg*
+static struct dns_msg*
 rpz_apply_nsip_trigger(struct module_qstate* ms, struct rpz* r,
 	struct clientip_synthesized_rr* raddr, struct auth_zone* az)
 {
@@ -2011,7 +2011,7 @@ done:
 	return ret;
 }
 
-struct dns_msg*
+static struct dns_msg*
 rpz_apply_nsdname_trigger(struct module_qstate* ms, struct rpz* r,
 	struct local_zone* z, struct matched_delegation_point const* match,
 	struct auth_zone* az)
