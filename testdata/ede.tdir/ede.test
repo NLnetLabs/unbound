@@ -30,7 +30,7 @@ $PRE/unbound -d -c ub2.conf > unbound.log 2>&1 &
 UNBOUND_PID2=$!
 echo "UNBOUND_PID2=$UNBOUND_PID2" >> .tpkg.var.test
 
-# @TODO did we fix this?
+# @TODO did we fix this? -> we do not trigger this anymore
 # # query with bad edns keepalive
 # dig @127.0.0.1 -p $UNBOUND_PORT +tcp +ednsopt=11:010203 > keepalive.txt
 #
@@ -46,15 +46,17 @@ dig @127.0.0.1 -p $UNBOUND_PORT +norec > snoop.txt
 if ! grep -q "OPT=15: 00 14" snoop.txt
 then
 	echo "Incorect cache snoop output"
+	cat snoop.txt
 	exit 1
 fi
 
-# @TODO dnssec bogus local zones something
-dig @127.0.0.1 -p $UNBOUND_PORT qwerqwer.hopsa.kidee. TXT +dnssec > bogus.txt
+# local-zone always_refuse
+dig @127.0.0.1 -p $UNBOUND_PORT qwerqwer.hopsa.kidee. TXT +dnssec > local_zone_refuse.txt
 
-if ! grep -q "OPT=15: 00 0f" bogus.txt
+if ! grep -q "OPT=15: 00 0f" local_zone_refuse.txt
 then
-	echo "Incorect DNSSEC local zone output"
+	echo "query to qwerqwer.hopsa.kidee. should be EDE blocked"
+	cat local_zone_refuse.txt
 	exit 1
 fi
 
@@ -69,50 +71,59 @@ dig @127.0.0.1 -p $UNBOUND_PORT www.qhqwer.qwer.qwer.h.example.com A > dname_exp
 if ! grep -q "OPT=15: 00 00 44 4e 41 4d 45 20 65 78 70 61 6e 73 69 6f 6e 20 62 65 63 61 6d 65 20 74 6f 6f 20 6c 61 72 67 65" dname_expansion.txt
 then
 	echo "No DNAME expansion for CNAME EDE message"
+	cat dname_expansion.txt
 	exit 1
 fi
 
-# RPZ always_null gets EDE forged
-dig @127.0.0.1 -p $UNBOUND_PORT uva.nl A > always_null_forged.txt
+# local-zone always_null gets EDE forged
+dig @127.0.0.1 -p $UNBOUND_PORT uva.nl A > local_zone_always_null_forged.txt
 
-if ! grep -q "OPT=15: 00 04" always_null_forged.txt
+if ! grep -q "OPT=15: 00 04" local_zone_always_null_forged.txt
 then
 	echo "local-zone always_null must have EDE forged code"
+	cat local_zone_always_null_forged.txt
 	exit 1
 fi
 
 # RPZ always_refuse
-dig @127.0.0.1 -p $UNBOUND_PORT hopsa.kidee. A > always_refuse.txt
+dig @127.0.0.1 -p $UNBOUND_PORT hopsa.kidee. A > local_zone_rpz_always_refuse.txt
 
-if ! grep -q "OPT=15: 00 0f" always_refuse.txt
+if ! grep -q "OPT=15: 00 0f" local_zone_rpz_always_refuse.txt
 then
 	echo "local-zone always_refuse must have EDE blocked code"
+	cat local_zone_rpz_always_refuse.txt
 	exit 1
 fi
 
-# @TODO what does this trigger? -> ede blocked, same as bogus.txt?
-dig @127.0.0.1 -p $UNBOUND_PORT hopsa.kidee. A
-
 # @TODO trigger mesh DNSSEC bogus
+
+
 dig @127.0.0.1 -p $UNBOUND_PORT servfail.nl > servfail.txt
 
-if ! grep -q "OPT=15: 00 06" servfail.txt
+if ! grep -q "OPT=15: 00 07" servfail.txt
 then
-	echo "query to servfail.nl should return EDE DNSSEC bogus"
+	echo "query to servfail.nl should return EDE signature expired"
+	cat servfail.txt
 	exit 1
 fi
 
 # local data forged answer
-#dig @127.0.0.1 -p $UNBOUND_PORT hopsa.nlnetlabs.nl TXT
+dig @127.0.0.1 -p $UNBOUND_PORT hopsa.nlnetlabs.nl TXT > local_data_forged.txt
 
-#@TODO write actual test
+if ! grep -q "OPT=15: 00 04" local_data_forged.txt
+then
+	echo "query to hopsa.nlnetlabs.nl does not give EDE forged"
+	cat local_data_forged.txt
+	exit 1
+fi
 
 # ACL refused, EDE prohibited
-dig @127.0.0.1 -p $UNBOUND_PORT -b 127.0.0.2 example.com > refused.txt
+dig @127.0.0.1 -p $UNBOUND_PORT -b 127.0.0.2 example.com > acl_refused.txt
 
-if ! grep -q "OPT=15: 00 12" refused.txt
+if ! grep -q "OPT=15: 00 12" acl_refused.txt
 then
 	echo "ACL refused does not give EDE prohibited"
+	cat acl_refused.txt
 	exit 1
 fi
 
@@ -123,29 +134,67 @@ UNBOUND_PID2=$!
 echo "UNBOUND_PID2=$UNBOUND_PID2" >> .tpkg.var.test
 
 # DNSSEC failure: key not incepted
-dig @127.0.0.1 -p $UNBOUND_PORT notyetincepted.dnssec-failures.test. TXT +dnssec > notyetincepted.txt
+dig @127.0.0.1 -p $UNBOUND_PORT notyetincepted.dnssec-failures.test. TXT +dnssec > sig_notyetincepted.txt
 
-if ! grep -q "OPT=15: 00 08" notyetincepted.txt
+if ! grep -q "OPT=15: 00 08" sig_notyetincepted.txt
 then
 	echo "Signature not yet valid does not return EDE Signature Not Yet Valid"
+	cat sig_notyetincepted.txt
 	exit 1
 fi
 
-dig @127.0.0.1 -p $UNBOUND_PORT expired.dnssec-failures.test. TXT +dnssec > expired.txt
+# DNSSEC failure: key expired
+dig @127.0.0.1 -p $UNBOUND_PORT expired.dnssec-failures.test. TXT +dnssec > sig_expired.txt
 
-if ! grep -q "OPT=15: 00 07" expired.txt
+if ! grep -q "OPT=15: 00 07" sig_expired.txt
 then
 	echo "Expired signature does not return EDE Signature expired"
+	cat sig_expired.txt
 	exit 1
 fi
 
-# DNSSEC indeterminate
+# DNSSEC failure: missing rrsigs
+dig @127.0.0.1 -p $UNBOUND_PORT missingrrsigs.dnssec-failures.test. TXT +dnssec > missingrrsigs.txt
 
-# ZONE KEY TOEVOEGEN AAN UNBOUND
-# SIGNEN MET LDNS SIGNER
-# MAKE ZONE RECORD WITH EXPIRED AND NOT INCEPTED RECORD
-# zone aanmaken met auth-zone op een tweede unbound
+if ! grep -q "OPT=15: 00 0a" missingrrsigs.txt
+then
+	echo "Expired signature does not return EDE RRSIGs missing"
+	cat missingrrsigs.txt
+	exit 1
+fi
 
+# signed zone with DNSKEY missing
+dig @127.0.0.1 -p $UNBOUND_PORT dnskey-failures.test > dnskey-failure.txt
+
+if ! grep -q "OPT=15: 00 09" dnskey-failure.txt
+then
+	echo "Expired signature does not return EDE DNSKEY missing"
+	cat dnskey-failure.txt
+	exit 1
+fi
+
+# signed zone with RRSIGs missing
+dig @127.0.0.1 -p $UNBOUND_PORT rrsig-failures.test > rrsig-failure.txt
+
+if ! grep -q "OPT=15: 00 0a" rrsig-failure.txt
+then
+	echo "Expired signature does not return EDE RRSIGs missing"
+	cat rrsig-failure.txt
+	exit 1
+fi
+
+# signed zone with NSEC missing
+dig @127.0.0.1 -p $UNBOUND_PORT nsec-failures.test > nsec-failure.txt
+
+if ! grep -q "OPT=15: 00 0c" nsec-failure.txt
+then
+	echo "Expired signature does not return EDE NSEC missing"
+	cat nsec-failure.txt
+	exit 1
+fi
+
+
+# @TODO DNSSEC indeterminate
 
 
 
