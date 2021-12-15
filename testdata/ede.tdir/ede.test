@@ -184,7 +184,7 @@ then
 fi
 
 # signed zone with NSEC missing
-dig @127.0.0.1 -p $UNBOUND_PORT nsec-failures.test > nsec-failure.txt
+dig @127.0.0.1 -p $UNBOUND_PORT abc.nsec-failures.test > nsec-failure.txt
 
 if ! grep -q "OPT=15: 00 0c" nsec-failure.txt
 then
