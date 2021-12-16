@@ -30,7 +30,7 @@ can be used to check unbound.conf prior to usage.
 An example config file is shown below. Copy this to /etc/unbound/unbound.conf
 and start the server with:
 .P
-.nf
+.nfvalidator:val_inform_super
 	$ unbound \-c /etc/unbound/unbound.conf
 .fi
 .P
@@ -1178,6 +1178,8 @@ happens with validation.  Use a diagnosis tool, such as dig or drill,
 to find out why validation is failing for these queries.  At 2, not only
 the query that failed is printed but also the reason why Unbound thought
 it was wrong and which server sent the faulty data.
+Enabling this influences the Extended DNS Errors (RFC 8914) messages, as
+the reason is added in the EDE message.
 .TP
 .B val\-permissive\-mode: \fI<yes or no>
 Instruct the validator to mark bogus messages as indeterminate. The security
@@ -1567,12 +1569,16 @@ If enabled, all local zones will respond with Extended DNS Errors (RFC8914).
 This is the global setting for the configuration, but it can be overwritten by
 specifing setting 'local\-zone\-do\-ede' to "yes". By default this option
 is disabled.
+Note that the val\-log\-level influences the the reason for the error included
+in the EDE message.
 .TP 5
 .B local\-zone\-do\-ede: \fI<zone> <yes or no>
 If enabled, the responses from this local zone will include an Extended DNS
 Error (RFC8914). The type of error is dependent on the query. For example a
 query for a local-zone type "refuse" will result in EDE code 15 \- Blocked.
 By default this option is disabled.
+Note that the val\-log\-level influences the the reason for the error included
+in the EDE message.
 .TP 5
 .B local\-zone\-default\-ede: \fI<zone> <EDE code string or integer>
 If enabled, this zone will respond to requests resulting in an Extended DNS
@@ -1608,6 +1614,9 @@ EDE keywords:
 \h'5'\fInetwork-error\fR
 \h'5'\fIinvalid-data\fR
 .fi
+.TP 5
+Note that the val\-log\-level influences the the reason for the error included
+in the EDE message.
 .TP 5
 .B response\-ip: \fI<IP-netblock> <action>
 This requires use of the "respip" module.
