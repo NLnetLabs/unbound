@@ -1,3 +1,6 @@
+20 December 2021: George
+	- Fix #591: Unbound-anchor manpage links to non-existent license file.
+
 13 December 2021: George
 	- Add missing configure flags for optional features in the
 	  documentation.
