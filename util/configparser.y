@@ -183,7 +183,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_STREAM_WAIT_SIZE VAR_TLS_CIPHERS VAR_TLS_CIPHERSUITES VAR_TLS_USE_SNI
 %token VAR_IPSET VAR_IPSET_NAME_V4 VAR_IPSET_NAME_V6
 %token VAR_TLS_SESSION_TICKET_KEYS VAR_RPZ VAR_TAGS VAR_RPZ_ACTION_OVERRIDE
-%token VAR_RPZ_CNAME_OVERRIDE VAR_RPZ_LOG VAR_RPZ_LOG_NAME
+%token VAR_RPZ_CNAME_OVERRIDE VAR_RPZ_LOG VAR_RPZ_LOG_NAME VAR_RPZ_DO_EDE
 %token VAR_DYNLIB VAR_DYNLIB_FILE VAR_EDNS_CLIENT_STRING
 %token VAR_EDNS_CLIENT_STRING_OPCODE VAR_NSID
 %token VAR_ZONEMD_PERMISSIVE_MODE VAR_ZONEMD_CHECK VAR_ZONEMD_REJECT_ABSENCE
@@ -459,6 +459,17 @@ rpz_log_name: VAR_RPZ_LOG_NAME STRING_ARG
 	}
 	;
 
+rpz_do_ede: VAR_RPZ_DO_EDE STRING_ARG
+	{
+		OUTYY(("P(rpz_do_ede:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else cfg_parser->cfg->auths->rpz_do_ede =
+			(strcmp($2, "yes")==0);
+		free($2);
+	}
+	;
+
 rpzstart: VAR_RPZ
 	{
 		struct config_auth* s;
@@ -481,7 +492,7 @@ contents_rpz: contents_rpz content_rpz
 	| ;
 content_rpz: auth_name | auth_zonefile | rpz_tag | auth_master | auth_url |
 	   auth_allow_notify | rpz_action_override | rpz_cname_override |
-	   rpz_log | rpz_log_name
+	   rpz_log | rpz_log_name | rpz_do_ede
 	;
 server_num_threads: VAR_NUM_THREADS STRING_ARG
 	{

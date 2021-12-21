@@ -510,7 +510,11 @@ int val_favorite_ds_algo(struct ub_packed_rrset_key* ds_rrset)
 	return digest_algo;
 }
 
-// @TODO change the use of this function to _ede function in authzone.c:8111
+/**
+  * This function (without EDE (RFC 8914)) is currently only used in
+  * authzone, after a zone-transfer. This does not invoke a query-response
+  * so we can leave this wrapper in-place.
+  */
 enum sec_status
 val_verify_DNSKEY_with_DS(struct module_env* env, struct val_env* ve,
 	struct ub_packed_rrset_key* dnskey_rrset,

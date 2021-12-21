@@ -513,6 +513,13 @@ rpz_create(struct config_auth* p)
 		goto err;
 	}
 
+	/* Respond with EDEs (RFC 8914) in this zone*/
+	if (p->rpz_do_ede)
+		r->do_ede = 1;
+	else
+		r->do_ede = 0;
+
+
 	r->taglistlen = p->rpz_taglistlen;
 	r->taglist = memdup(p->rpz_taglist, r->taglistlen);
 	if(p->rpz_action_override) {
@@ -2298,10 +2305,10 @@ rpz_apply_maybe_clientip_trigger(struct auth_zones* az, struct module_env* env,
 					(node?&node->node:NULL),
 					client_action, qinfo, repinfo, NULL,
 					(*r_out)->log_name);
-			/* check the rpz if we want to respond with EDE (RFC8914) */
+			/* check the rpz zone if we want to respond with EDE (RFC8914) */
 			if (*r_out && (*r_out)->do_ede)
 				do_ede = (*r_out)->do_ede;
-			else
+			else 
 				do_ede = 0;
 
 			local_zones_zone_answer(*z_out /*likely NULL, no zone*/, env, qinfo, edns,
@@ -2330,9 +2337,8 @@ rpz_callback_from_worker_request(struct auth_zones* az, struct module_env* env,
 	struct local_zone* z = NULL;
 	int ret;
 	enum localzone_type lzt;
-	/* Fill in the EDE (RFC8914) code for the range 15 to 18.
-	 * The default value is -1 when not configured */
-	// struct sldns_ede_code ede_deny = env->cfg->ede_deny_code;
+
+	log_err("HERE in rpz_callback_from_worker_request!!!");
 
 	int clientip_trigger = rpz_apply_maybe_clientip_trigger(az, env, qinfo,
 		edns, repinfo, taglist, taglen, stats, buf, temp, &z, &a, &r);
