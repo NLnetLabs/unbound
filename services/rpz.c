@@ -1917,9 +1917,13 @@ rpz_synthesize_qname_localdata(struct module_env* env, struct rpz* r,
 		return 0;
 	}
 
+	/* check the rpz if we want to respond with EDE (RFC8914) */
+	if (r->do_ede)
+		do_ede = r->do_ede;
+
 	if(lzt == local_zone_redirect && local_data_answer(z, env, qinfo,
 		edns, repinfo, buf, temp, dname_count_labels(qinfo->qname),
-		&ld, lzt, -1, NULL, 0, NULL, 0, 0)) {
+		&ld, lzt, -1, NULL, 0, NULL, 0, do_ede)) {
 		if(r->log) {
 			log_rpz_apply("qname", z->name, NULL,
 				localzone_type_to_rpz_action(lzt), qinfo,
@@ -1928,9 +1932,6 @@ rpz_synthesize_qname_localdata(struct module_env* env, struct rpz* r,
 		stats->rpz_action[localzone_type_to_rpz_action(lzt)]++;
 		return !qinfo->local_alias;
 	}
-	/* check the rpz if we want to respond with EDE (RFC8914) */
-	if (r->do_ede)
-		do_ede = r->do_ede;
 
 	ret = local_zones_zone_answer(z, env, qinfo, edns, repinfo, buf, temp,
 		0 /* no local data used */, lzt, do_ede);
@@ -2400,4 +2401,18 @@ void rpz_disable(struct rpz* r)
     if(!r)
         return;
     r->disabled = 1;
+}
+
+void rpz_do_ede_enable(struct rpz* r)
+{
+    if(!r)
+        return;
+    r->do_ede = 1;
+}
+
+void rpz_do_ede_disable(struct rpz* r)
+{
+    if(!r)
+        return;
+    r->do_ede = 0;
 }

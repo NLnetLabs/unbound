@@ -260,4 +260,16 @@ void rpz_enable(struct rpz* r);
  */
 void rpz_disable(struct rpz* r);
 
+/**
+ * Enable RPZ EDE (RFC 8914) responses
+ * @param r: RPZ struct containing member to disable
+ */
+void rpz_do_ede_enable(struct rpz* r);
+
+/**
+ * Disable RPZ EDE (RFC 8914) responses
+ * @param r: RPZ struct containing member to disable
+ */
+void rpz_do_ede_disable(struct rpz* r);
+
 #endif /* SERVICES_RPZ_H */
