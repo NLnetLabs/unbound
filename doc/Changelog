@@ -1,3 +1,7 @@
+22 December 2021: George
+	- contrib/aaaa-filter-iterator.patch file renewed diff content to
+	  apply cleanly to the current coderepo for the current code version.
+
 20 December 2021: George
 	- Fix #591: Unbound-anchor manpage links to non-existent license file.
 
