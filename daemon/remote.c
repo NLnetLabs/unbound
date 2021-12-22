@@ -1306,6 +1306,7 @@ do_zone_enable_disable_ede(RES* ssl, struct local_zones* zones, char* arg,
 		namelabels, LDNS_RR_CLASS_IN))) {
 		ssl_printf(ssl, "local-zone: %s not found\n", arg);
 		free(name);
+		lock_rw_unlock(&zones->lock);
 		return 0;
 	}
 	/* found local-zone in tree */
@@ -1313,6 +1314,8 @@ do_zone_enable_disable_ede(RES* ssl, struct local_zones* zones, char* arg,
 	if (enable) {
 		z->do_ede = 1;
 	}
+	else
+		z->do_ede = 0;
 	lock_rw_unlock(&z->lock);
 	
 	free(name);
@@ -3310,9 +3313,9 @@ execute_cmd(struct daemon_remote* rc, RES* ssl, char* cmd,
     } else if(cmdcmp(p, "rpz_disable", 11)) {
         do_rpz_disable(ssl, worker, skipwhite(p+11));
     } else if(cmdcmp(p, "rpz_do_ede_enable", 17)) {
-        do_rpz_do_ede_enable(ssl, worker, skipwhite(p+10));
+        do_rpz_do_ede_enable(ssl, worker, skipwhite(p+17));
     } else if(cmdcmp(p, "rpz_do_ede_disable", 18)) {
-        do_rpz_do_ede_disable(ssl, worker, skipwhite(p+11));
+        do_rpz_do_ede_disable(ssl, worker, skipwhite(p+18));
 	} else {
 		(void)ssl_printf(ssl, "error unknown command '%s'\n", p);
 	}
