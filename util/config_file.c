@@ -1420,6 +1420,7 @@ config_delauth(struct config_auth* p)
 	free(p->rpz_action_override);
 	free(p->rpz_cname);
 	free(p->rpz_log_name);
+	free(p->rpz_hashed_keyoob);
 	free(p);
 }
 

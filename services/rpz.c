@@ -380,6 +380,7 @@ rpz_delete(struct rpz* r)
 	regional_destroy(r->region);
 	free(r->taglist);
 	free(r->log_name);
+	free(r->hashed_keyoob);
 	free(r);
 }
 
@@ -545,6 +546,19 @@ rpz_create(struct config_auth* p)
 	if(p->rpz_log_name) {
 		if(!(r->log_name = strdup(p->rpz_log_name))) {
 			log_err("malloc failure on RPZ log_name strdup");
+			goto err;
+		}
+	}
+	if(p->rpz_hashed_keyoob) {
+		// Currently only the OOB key
+		if(!(r->hashed_keyoob = strdup(p->rpz_hashed_keyoob))) {
+			log_err("malloc failure on RPZ hashed_keyoob strdup");
+			goto err;
+		}
+
+		// Initialize the HashedRPZ struct
+		if(!(r->hrpz = hrpz_new(p->rpz_hashed_keyoob))) {
+			log_err("hrpz_new failure");
 			goto err;
 		}
 	}
@@ -1450,6 +1464,7 @@ rpz_resolve_client_action_and_zone(struct auth_zones* az, struct query_info* qin
 	struct auth_zone* a = NULL;
 	struct rpz* r = NULL;
 	struct local_zone* z = NULL;
+	uint8_t hqname[LDNS_MAX_DOMAINLEN+1];
 
 	lock_rw_rdlock(&az->rpz_lock);
 
@@ -1465,7 +1480,33 @@ rpz_resolve_client_action_and_zone(struct auth_zones* az, struct query_info* qin
 			lock_rw_unlock(&a->lock);
 			continue;
 		}
-		z = rpz_find_zone(r->local_zones, qinfo->qname, qinfo->qname_len,
+
+		uint8_t *qname = qinfo->qname;
+		size_t qname_len = qinfo->qname_len;
+
+		if(r->hrpz) {
+			/* For HashedRPZ hash the qname by first converting that to a normal full DNS string */
+			hrpz_err_t herr;
+			char dname[LDNS_MAX_DOMAINLEN+1];
+			char hname[LDNS_MAX_DOMAINLEN+1];
+			size_t h;
+
+			dname_str(qinfo->qname, dname);
+			herr = hrpz_hash(r->hrpz, dname, "long.rpz.domain.name", NULL, hname, sizeof(hname));
+			if(herr != HRPZ_ERR_NONE) {
+				fprintf(stderr, "HashedRPZ error: %d = %s\n", herr, hrpz_errstr(herr));
+				lock_rw_unlock(&r->local_zones->lock);
+				return NULL;
+			}
+
+			qname_len = sizeof(hqname);
+			sldns_str2wire_dname_buf(hname, hqname, &qname_len);
+			qname = hqname;
+
+			dname_str(qname, dname);
+		}
+
+		z = rpz_find_zone(r->local_zones, qname, qname_len,
 			qinfo->qclass, 0, 0, 0);
 		node = rpz_ipbased_trigger_lookup(r->client_set, &repinfo->addr, repinfo->addrlen, "clientip");
 		if((z || node) && r->action_override == RPZ_DISABLED_ACTION) {

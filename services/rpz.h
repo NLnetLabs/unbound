@@ -50,6 +50,9 @@
 #include "sldns/sbuffer.h"
 #include "daemon/stats.h"
 #include "respip/respip.h"
+
+#include <hashedrpz.h>
+
 struct iter_qstate;
 
 /**
@@ -123,6 +126,8 @@ struct rpz {
 	struct ub_packed_rrset_key* cname_override;
 	int log;
 	char* log_name;
+	char* hashed_keyoob;
+	hrpz_t* hrpz;
 	struct regional* region;
 	int disabled;
 };

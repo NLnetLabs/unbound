@@ -1,8 +1,8 @@
-/* A Bison parser, made by GNU Bison 3.6.4.  */
+/* A Bison parser, made by GNU Bison 3.7.5.  */
 
 /* Bison interface for Yacc-like parsers in C
 
-   Copyright (C) 1984, 1989-1990, 2000-2015, 2018-2020 Free Software Foundation,
+   Copyright (C) 1984, 1989-1990, 2000-2015, 2018-2021 Free Software Foundation,
    Inc.
 
    This program is free software: you can redistribute it and/or modify
@@ -364,18 +364,20 @@ extern int yydebug;
     VAR_RPZ_CNAME_OVERRIDE = 565,  /* VAR_RPZ_CNAME_OVERRIDE  */
     VAR_RPZ_LOG = 566,             /* VAR_RPZ_LOG  */
     VAR_RPZ_LOG_NAME = 567,        /* VAR_RPZ_LOG_NAME  */
-    VAR_DYNLIB = 568,              /* VAR_DYNLIB  */
-    VAR_DYNLIB_FILE = 569,         /* VAR_DYNLIB_FILE  */
-    VAR_EDNS_CLIENT_STRING = 570,  /* VAR_EDNS_CLIENT_STRING  */
-    VAR_EDNS_CLIENT_STRING_OPCODE = 571, /* VAR_EDNS_CLIENT_STRING_OPCODE  */
-    VAR_NSID = 572,                /* VAR_NSID  */
-    VAR_ZONEMD_PERMISSIVE_MODE = 573, /* VAR_ZONEMD_PERMISSIVE_MODE  */
-    VAR_ZONEMD_CHECK = 574,        /* VAR_ZONEMD_CHECK  */
-    VAR_ZONEMD_REJECT_ABSENCE = 575 /* VAR_ZONEMD_REJECT_ABSENCE  */
+    VAR_RPZ_HASHED_KEYOOB = 568,   /* VAR_RPZ_HASHED_KEYOOB  */
+    VAR_DYNLIB = 569,              /* VAR_DYNLIB  */
+    VAR_DYNLIB_FILE = 570,         /* VAR_DYNLIB_FILE  */
+    VAR_EDNS_CLIENT_STRING = 571,  /* VAR_EDNS_CLIENT_STRING  */
+    VAR_EDNS_CLIENT_STRING_OPCODE = 572, /* VAR_EDNS_CLIENT_STRING_OPCODE  */
+    VAR_NSID = 573,                /* VAR_NSID  */
+    VAR_ZONEMD_PERMISSIVE_MODE = 574, /* VAR_ZONEMD_PERMISSIVE_MODE  */
+    VAR_ZONEMD_CHECK = 575,        /* VAR_ZONEMD_CHECK  */
+    VAR_ZONEMD_REJECT_ABSENCE = 576 /* VAR_ZONEMD_REJECT_ABSENCE  */
   };
   typedef enum yytokentype yytoken_kind_t;
 #endif
 /* Token kinds.  */
+#define YYEMPTY -2
 #define YYEOF 0
 #define YYerror 256
 #define YYUNDEF 257
@@ -689,14 +691,15 @@ extern int yydebug;
 #define VAR_RPZ_CNAME_OVERRIDE 565
 #define VAR_RPZ_LOG 566
 #define VAR_RPZ_LOG_NAME 567
-#define VAR_DYNLIB 568
-#define VAR_DYNLIB_FILE 569
-#define VAR_EDNS_CLIENT_STRING 570
-#define VAR_EDNS_CLIENT_STRING_OPCODE 571
-#define VAR_NSID 572
-#define VAR_ZONEMD_PERMISSIVE_MODE 573
-#define VAR_ZONEMD_CHECK 574
-#define VAR_ZONEMD_REJECT_ABSENCE 575
+#define VAR_RPZ_HASHED_KEYOOB 568
+#define VAR_DYNLIB 569
+#define VAR_DYNLIB_FILE 570
+#define VAR_EDNS_CLIENT_STRING 571
+#define VAR_EDNS_CLIENT_STRING_OPCODE 572
+#define VAR_NSID 573
+#define VAR_ZONEMD_PERMISSIVE_MODE 574
+#define VAR_ZONEMD_CHECK 575
+#define VAR_ZONEMD_REJECT_ABSENCE 576
 
 /* Value type.  */
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
@@ -706,7 +709,7 @@ union YYSTYPE
 
 	char*	str;
 
-#line 710 "util/configparser.h"
+#line 713 "util/configparser.h"
 
 };
 typedef union YYSTYPE YYSTYPE;
