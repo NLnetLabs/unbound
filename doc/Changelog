@@ -1,3 +1,9 @@
+4 January 2022: Wouter
+	- Fix #596: unset the RA bit when a query is blocked by an unbound
+	  RPZ nxdomain reply. The option rpz-signal-nxdomain-ra allows to
+	  signal that a domain is externally blocked to clients when it
+	  is blocked with NXDOMAIN by unsetting RA.
+
 22 December 2021: George
 	- contrib/aaaa-filter-iterator.patch file renewed diff content to
 	  apply cleanly to the current coderepo for the current code version.

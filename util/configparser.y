@@ -187,6 +187,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_DYNLIB VAR_DYNLIB_FILE VAR_EDNS_CLIENT_STRING
 %token VAR_EDNS_CLIENT_STRING_OPCODE VAR_NSID
 %token VAR_ZONEMD_PERMISSIVE_MODE VAR_ZONEMD_CHECK VAR_ZONEMD_REJECT_ABSENCE
+%token VAR_RPZ_SIGNAL_NXDOMAIN_RA
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -455,6 +456,15 @@ rpz_log_name: VAR_RPZ_LOG_NAME STRING_ARG
 		cfg_parser->cfg->auths->rpz_log_name = $2;
 	}
 	;
+rpz_signal_nxdomain_ra: VAR_RPZ_SIGNAL_NXDOMAIN_RA STRING_ARG
+	{
+		OUTYY(("P(rpz_signal_nxdomain_ra:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else cfg_parser->cfg->auths->rpz_signal_nxdomain_ra = (strcmp($2, "yes")==0);
+		free($2);
+	}
+	;
 
 rpzstart: VAR_RPZ
 	{
@@ -478,7 +488,7 @@ contents_rpz: contents_rpz content_rpz
 	| ;
 content_rpz: auth_name | auth_zonefile | rpz_tag | auth_master | auth_url |
 	   auth_allow_notify | rpz_action_override | rpz_cname_override |
-	   rpz_log | rpz_log_name
+	   rpz_log | rpz_log_name | rpz_signal_nxdomain_ra
 	;
 server_num_threads: VAR_NUM_THREADS STRING_ARG
 	{

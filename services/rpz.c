@@ -542,6 +542,7 @@ rpz_create(struct config_auth* p)
 		}
 	}
 	r->log = p->rpz_log;
+	r->signal_nxdomain_ra = p->rpz_signal_nxdomain_ra;
 	if(p->rpz_log_name) {
 		if(!(r->log_name = strdup(p->rpz_log_name))) {
 			log_err("malloc failure on RPZ log_name strdup");
@@ -1715,14 +1716,18 @@ rpz_synthesize_nodata(struct rpz* ATTR_UNUSED(r), struct module_qstate* ms,
 }
 
 static inline struct dns_msg*
-rpz_synthesize_nxdomain(struct rpz* ATTR_UNUSED(r), struct module_qstate* ms,
+rpz_synthesize_nxdomain(struct rpz* r, struct module_qstate* ms,
 	struct query_info* qinfo, struct auth_zone* az)
 {
 	struct dns_msg* msg = rpz_dns_msg_new(ms->region);
+	uint16_t flags;
 	if(msg == NULL) { return msg; }
 	msg->qinfo = *qinfo;
+	flags = LDNS_RCODE_NXDOMAIN | BIT_RD | BIT_QR | BIT_AA | BIT_RA;
+	if(r->signal_nxdomain_ra)
+		flags &= ~BIT_RA;
 	msg->rep = construct_reply_info_base(ms->region,
-					     LDNS_RCODE_NXDOMAIN | BIT_RD | BIT_QR | BIT_AA | BIT_RA,
+					     flags,
 					     1, /* qd */
 					     0, /* ttl */
 					     0, /* prettl */
@@ -1922,6 +1927,8 @@ rpz_synthesize_qname_localdata(struct module_env* env, struct rpz* r,
 
 	ret = local_zones_zone_answer(z, env, qinfo, edns, repinfo, buf, temp,
 		0 /* no local data used */, lzt);
+	if(r->signal_nxdomain_ra)
+		LDNS_RA_CLR(sldns_buffer_begin(buf));
 	if(r->log) {
 		log_rpz_apply("qname", z->name, NULL, localzone_type_to_rpz_action(lzt),
 			      qinfo, repinfo, NULL, r->log_name);

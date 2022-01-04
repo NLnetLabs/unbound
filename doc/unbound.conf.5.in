@@ -2633,6 +2633,11 @@ Log all applied RPZ actions for this RPZ zone. Default is no.
 .B rpz\-log\-name: \fI<name>
 Specify a string to be part of the log line, for easy referencing.
 .TP
+.B rpz\-signal\-nxdomain\-ra: \fI<yes or no>
+Signal when a query is blocked by the RPZ with NXDOMAIN with an unset RA flag.
+This allows certain clients, like dnsmasq, to infer that the domain is
+externally blocked. Default is no.
+.TP
 .B tags: \fI<list of tags>
 Limit the policies from this RPZ clause to clients with a matching tag. Tags
 need to be defined in \fBdefine\-tag\fR and can be assigned to client addresses

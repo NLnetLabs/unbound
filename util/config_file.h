@@ -745,6 +745,8 @@ struct config_auth {
 	/** Always reply with this CNAME target if the cname override action is
 	 * used */
 	char* rpz_cname;
+	/** signal nxdomain block with unset RA */
+	int rpz_signal_nxdomain_ra;
 	/** Check ZONEMD records for this zone */
 	int zonemd_check;
 	/** Reject absence of ZONEMD records, zone must have one */
