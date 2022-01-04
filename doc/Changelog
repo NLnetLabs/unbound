@@ -3,6 +3,7 @@
 	  RPZ nxdomain reply. The option rpz-signal-nxdomain-ra allows to
 	  signal that a domain is externally blocked to clients when it
 	  is blocked with NXDOMAIN by unsetting RA.
+	- Fix to add test for rpz-signal-nxdomain-ra.
 
 22 December 2021: George
 	- contrib/aaaa-filter-iterator.patch file renewed diff content to
