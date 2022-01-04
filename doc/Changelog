@@ -5,6 +5,8 @@
 	  is blocked with NXDOMAIN by unsetting RA.
 	- Fix to add test for rpz-signal-nxdomain-ra.
 	- Fix #596: only unset RA when NXDOMAIN is signalled.
+	- Fix that RPZ does not set RD flag on replies, it should be copied
+	  from the query.
 
 22 December 2021: George
 	- contrib/aaaa-filter-iterator.patch file renewed diff content to

@@ -1698,7 +1698,7 @@ rpz_synthesize_nodata(struct rpz* ATTR_UNUSED(r), struct module_qstate* ms,
 	if(msg == NULL) { return msg; }
 	msg->qinfo = *qinfo;
 	msg->rep = construct_reply_info_base(ms->region,
-					     LDNS_RCODE_NOERROR | BIT_RD | BIT_QR | BIT_AA | BIT_RA,
+					     LDNS_RCODE_NOERROR | BIT_QR | BIT_AA | BIT_RA,
 					     1, /* qd */
 					     0, /* ttl */
 					     0, /* prettl */
@@ -1723,7 +1723,7 @@ rpz_synthesize_nxdomain(struct rpz* r, struct module_qstate* ms,
 	uint16_t flags;
 	if(msg == NULL) { return msg; }
 	msg->qinfo = *qinfo;
-	flags = LDNS_RCODE_NXDOMAIN | BIT_RD | BIT_QR | BIT_AA | BIT_RA;
+	flags = LDNS_RCODE_NXDOMAIN | BIT_QR | BIT_AA | BIT_RA;
 	if(r->signal_nxdomain_ra)
 		flags &= ~BIT_RA;
 	msg->rep = construct_reply_info_base(ms->region,
@@ -1757,7 +1757,7 @@ rpz_synthesize_localdata_from_rrset(struct rpz* ATTR_UNUSED(r), struct module_qs
 	if(msg == NULL) { return NULL; }
 
         new_reply_info = construct_reply_info_base(ms->region,
-                                                   LDNS_RCODE_NOERROR | BIT_RD | BIT_QR | BIT_AA | BIT_RA,
+                                                   LDNS_RCODE_NOERROR | BIT_QR | BIT_AA | BIT_RA,
                                                    1, /* qd */
                                                    0, /* ttl */
                                                    0, /* prettl */
