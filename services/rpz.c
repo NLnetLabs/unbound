@@ -1927,7 +1927,8 @@ rpz_synthesize_qname_localdata(struct module_env* env, struct rpz* r,
 
 	ret = local_zones_zone_answer(z, env, qinfo, edns, repinfo, buf, temp,
 		0 /* no local data used */, lzt);
-	if(r->signal_nxdomain_ra)
+	if(r->signal_nxdomain_ra && LDNS_RCODE_WIRE(sldns_buffer_begin(buf))
+		== LDNS_RCODE_NXDOMAIN)
 		LDNS_RA_CLR(sldns_buffer_begin(buf));
 	if(r->log) {
 		log_rpz_apply("qname", z->name, NULL, localzone_type_to_rpz_action(lzt),
