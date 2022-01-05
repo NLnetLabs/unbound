@@ -5,6 +5,7 @@
 	- Fix unit tests for rpz now that the AA flag returns successfully from
 	  the iterator loop.
 	- Fix for #596: add unit test for nsdname trigger and signal unset RA.
+	- Fix for #596: add unit test for nsip trigger and signal unset RA.
 
 4 January 2022: Wouter
 	- Fix #596: unset the RA bit when a query is blocked by an unbound
