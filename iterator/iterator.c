@@ -2534,7 +2534,7 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 		struct dns_msg* forged_response = rpz_callback_from_iterator_module(qstate, iq);
 		if(forged_response != NULL) {
 			qstate->ext_state[id] = module_finished;
-			qstate->return_rcode = FLAGS_GET_RCODE(forged_response->rep->flags);
+			qstate->return_rcode = LDNS_RCODE_NOERROR;
 			qstate->return_msg = forged_response;
 			iq->response = forged_response;
 			next_state(iq, FINISHED_STATE);
@@ -3103,7 +3103,7 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 			}
 			if(forged_response != NULL) {
 				qstate->ext_state[id] = module_finished;
-				qstate->return_rcode = FLAGS_GET_RCODE(forged_response->rep->flags);
+				qstate->return_rcode = LDNS_RCODE_NOERROR;
 				qstate->return_msg = forged_response;
 				iq->response = forged_response;
 				next_state(iq, FINISHED_STATE);

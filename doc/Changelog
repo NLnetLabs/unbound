@@ -1,3 +1,8 @@
+5 January 2022: Wouter
+	- Fix for #596: fix that rpz return message is returned and not just
+	  the rcode from the iterator return path. This fixes signal unset RA
+	  after a CNAME.
+
 4 January 2022: Wouter
 	- Fix #596: unset the RA bit when a query is blocked by an unbound
 	  RPZ nxdomain reply. The option rpz-signal-nxdomain-ra allows to
