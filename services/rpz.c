@@ -2303,6 +2303,10 @@ rpz_apply_maybe_clientip_trigger(struct auth_zones* az, struct module_env* env,
 			local_zones_zone_answer(*z_out /*likely NULL, no zone*/, env, qinfo, edns,
 				repinfo, buf, temp, 0 /* no local data used */,
 				rpz_action_to_localzone_type(client_action));
+			if(*r_out && (*r_out)->signal_nxdomain_ra &&
+				LDNS_RCODE_WIRE(sldns_buffer_begin(buf))
+				== LDNS_RCODE_NXDOMAIN)
+				LDNS_RA_CLR(sldns_buffer_begin(buf));
 		}
 		ret = 1;
 		goto done;

@@ -8,6 +8,8 @@
 	- Fix for #596: add unit test for nsip trigger and signal unset RA.
 	- Fix #598: Fix unbound-checkconf fatal error: module conf
 	  'respip dns64 validator iterator' is not known to work.
+	- Fix for #596: Fix rpz-signal-nxdomain-ra to work for clientip
+	  triggered operation.
 
 4 January 2022: Wouter
 	- Fix #596: unset the RA bit when a query is blocked by an unbound

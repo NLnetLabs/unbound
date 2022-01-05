@@ -3,6 +3,7 @@ server:
 	module-config: "respip validator iterator"
 	target-fetch-policy: "0 0 0 0 0"
 	qname-minimisation: no
+	access-control: 192.0.0.0/8 allow
 
 rpz:
 	name: "rpz.example.com."
@@ -20,6 +21,7 @@ a.a CNAME .
 b.a CNAME .
 ns1.a.rpz-nsdname CNAME .
 24.0.0.0.192.rpz-nsip CNAME .
+24.0.3.0.192.rpz-client-ip CNAME .
 TEMPFILE_END
 
 stub-zone:
@@ -97,6 +99,16 @@ SECTION AUTHORITY
 e.a.  IN  NS ns2.a.
 SECTION ADDITIONAL
 ns2.a. IN A 192.0.0.5
+ENTRY_END
+
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR NOERROR
+SECTION QUESTION
+f.a.  IN  TXT
+SECTION ANSWER
+f.a.  IN  TXT "upstream txt rr f.a."
 ENTRY_END
 
 RANGE_END
@@ -219,6 +231,23 @@ MATCH all
 REPLY QR RD AA NXDOMAIN
 SECTION QUESTION
 e.e.a.  IN TXT
+SECTION ANSWER
+ENTRY_END
+
+; clientip trigger
+STEP 50 QUERY ADDRESS 192.0.3.1
+ENTRY_BEGIN
+REPLY RD
+SECTION QUESTION
+f.a.  IN TXT
+ENTRY_END
+
+STEP 51 CHECK_ANSWER
+ENTRY_BEGIN
+MATCH all
+REPLY QR AA RD NXDOMAIN
+SECTION QUESTION
+f.a.  IN TXT
 SECTION ANSWER
 ENTRY_END
 
