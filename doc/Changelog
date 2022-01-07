@@ -1,3 +1,7 @@
+7 January 2022: Wouter
+	- Merge #600 from pemensik: Change file mode before changing file
+	  owner.
+
 5 January 2022: Wouter
 	- Fix for #596: fix that rpz return message is returned and not just
 	  the rcode from the iterator return path. This fixes signal unset RA
