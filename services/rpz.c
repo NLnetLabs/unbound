@@ -2339,8 +2339,6 @@ rpz_callback_from_worker_request(struct auth_zones* az, struct module_env* env,
 	int ret;
 	enum localzone_type lzt;
 
-	log_err("HERE in rpz_callback_from_worker_request!!!");
-
 	int clientip_trigger = rpz_apply_maybe_clientip_trigger(az, env, qinfo,
 		edns, repinfo, taglist, taglen, stats, buf, temp, &z, &a, &r);
 	if(clientip_trigger >= 0) {
