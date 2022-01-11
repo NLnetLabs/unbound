@@ -755,6 +755,8 @@ struct config_auth {
 	char* rpz_cname;
 	/** Respond with EDEs (RFC 8914) for this zone */
 	int rpz_do_ede;
+	/** signal nxdomain block with unset RA */
+	int rpz_signal_nxdomain_ra;
 	/** Check ZONEMD records for this zone */
 	int zonemd_check;
 	/** Reject absence of ZONEMD records, zone must have one */

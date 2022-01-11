@@ -691,6 +691,8 @@ morechecks(struct config_file* cfg)
 		&& strcmp(cfg->module_conf, "dns64 iterator") != 0
 		&& strcmp(cfg->module_conf, "respip iterator") != 0
 		&& strcmp(cfg->module_conf, "respip validator iterator") != 0
+		&& strcmp(cfg->module_conf, "respip dns64 validator iterator") != 0
+		&& strcmp(cfg->module_conf, "respip dns64 iterator") != 0
 #ifdef WITH_PYTHONMODULE
 		&& strcmp(cfg->module_conf, "python iterator") != 0
 		&& strcmp(cfg->module_conf, "python respip iterator") != 0

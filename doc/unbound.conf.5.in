@@ -2692,6 +2692,10 @@ Specify a string to be part of the log line, for easy referencing.
 .B rpz\-do\-ede: \fI<yes or no>
 Specify if this zone RPZ responds with Extended DNS Errors (RFC 8914). The
 default is no.
+.B rpz\-signal\-nxdomain\-ra: \fI<yes or no>
+Signal when a query is blocked by the RPZ with NXDOMAIN with an unset RA flag.
+This allows certain clients, like dnsmasq, to infer that the domain is
+externally blocked. Default is no.
 .TP
 .B tags: \fI<list of tags>
 Limit the policies from this RPZ clause to clients with a matching tag. Tags

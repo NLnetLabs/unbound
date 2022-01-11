@@ -348,6 +348,7 @@ rpz-cname-override{COLON}	{ YDVAR(1, VAR_RPZ_CNAME_OVERRIDE) }
 rpz-log{COLON}			{ YDVAR(1, VAR_RPZ_LOG) }
 rpz-log-name{COLON}		{ YDVAR(1, VAR_RPZ_LOG_NAME) }
 rpz-do-ede{COLON}		{ YDVAR(1, VAR_RPZ_DO_EDE) }
+rpz-signal-nxdomain-ra{COLON}	{ YDVAR(1, VAR_RPZ_SIGNAL_NXDOMAIN_RA) }
 zonefile{COLON}			{ YDVAR(1, VAR_ZONEFILE) }
 master{COLON}			{ YDVAR(1, VAR_MASTER) }
 primary{COLON}			{ YDVAR(1, VAR_MASTER) }

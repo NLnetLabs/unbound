@@ -159,7 +159,7 @@ Or something more suitable for your operational environment.
 The root keys and update certificate included in this tool
 are provided for convenience and under the terms of our
 license (see the LICENSE file in the source distribution or
-http://unbound.nlnetlabs.nl/svn/trunk/LICENSE) and might be stale or
+https://github.com/NLnetLabs/unbound/blob/master/LICENSE) and might be stale or
 not suitable to your purpose.
 .P
 By running "unbound\-anchor \-l" the  keys and certificate that are
