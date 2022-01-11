@@ -1248,6 +1248,12 @@ outnet_tcp_cb(struct comm_point* c, void* arg, int error,
 				c->buffer));
 			/* find the query the reply is for */
 			w = reuse_tcp_by_id_find(&pend->reuse, id);
+			/* Make sure that the reply we got is at least for a
+			 * sent query with the same ID; the waiting_tcp that
+			 * gets a reply is assumed to not be waiting to be
+			 * sent. */
+			if(w && (w->on_tcp_waiting_list || w->write_wait_queued))
+				w = NULL;
 		}
 	}
 	if(error == NETEVENT_NOERROR && !w) {

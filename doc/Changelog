@@ -1,3 +1,6 @@
+11 January 2022: George
+	- Fix prematurely terminated TCP queries when a reply has the same ID.
+
 7 January 2022: Wouter
 	- Merge #600 from pemensik: Change file mode before changing file
 	  owner.
