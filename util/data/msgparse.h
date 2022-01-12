@@ -360,12 +360,4 @@ void msgparse_bucket_remove(struct msg_parse* msg, struct rrset_parse* rrset);
 void log_edns_opt_list(enum verbosity_value level, const char* info_str,
 	struct edns_option* list);
 
-/**
- * Verify if the packet contains EDNS (RFC6891)
- * @param pkt: the packet.
- * @return 0 if true, 1 if false
- */
-int msgparse_check_edns_in_packet(struct sldns_buffer* pkt);
-
-
 #endif /* UTIL_DATA_MSGPARSE_H */
