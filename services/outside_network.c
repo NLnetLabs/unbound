@@ -1248,6 +1248,12 @@ outnet_tcp_cb(struct comm_point* c, void* arg, int error,
 				c->buffer));
 			/* find the query the reply is for */
 			w = reuse_tcp_by_id_find(&pend->reuse, id);
+			/* Make sure that the reply we got is at least for a
+			 * sent query with the same ID; the waiting_tcp that
+			 * gets a reply is assumed to not be waiting to be
+			 * sent. */
+			if(w && (w->on_tcp_waiting_list || w->write_wait_queued))
+				w = NULL;
 		}
 	}
 	if(error == NETEVENT_NOERROR && !w) {
@@ -1935,7 +1941,7 @@ select_id(struct outside_network* outnet, struct pending* pend,
 		LDNS_ID_SET(sldns_buffer_begin(packet), pend->id);
 		id_tries++;
 		if(id_tries == MAX_ID_RETRY) {
-			pend->id=99999; /* non existant ID */
+			pend->id=99999; /* non existent ID */
 			log_err("failed to generate unique ID, drop msg");
 			return 0;
 		}
@@ -2709,7 +2715,9 @@ serviced_encode(struct serviced_query* sq, sldns_buffer* buff, int with_edns)
 		edns.edns_present = 1;
 		edns.ext_rcode = 0;
 		edns.edns_version = EDNS_ADVERTISED_VERSION;
-		edns.opt_list = sq->opt_list;
+		edns.opt_list_in = NULL;
+		edns.opt_list_out = sq->opt_list;
+		edns.opt_list_inplace_cb_out = NULL;
 		if(sq->status == serviced_query_UDP_EDNS_FRAG) {
 			if(addr_is_ip6(&sq->addr, sq->addrlen)) {
 				if(EDNS_FRAG_SIZE_IP6 < EDNS_ADVERTISED_SIZE)
@@ -2732,8 +2740,8 @@ serviced_encode(struct serviced_query* sq, sldns_buffer* buff, int with_edns)
 			padding_option.opt_code = LDNS_EDNS_PADDING;
 			padding_option.opt_len = 0;
 			padding_option.opt_data = NULL;
-			padding_option.next = edns.opt_list;
-			edns.opt_list = &padding_option;
+			padding_option.next = edns.opt_list_out;
+			edns.opt_list_out = &padding_option;
 			edns.padding_block_size = sq->padding_block_size;
 		}
 		attach_edns_record(buff, &edns);

@@ -38,6 +38,15 @@
  */
 
 #include "config.h"
+#ifdef HAVE_SYS_TYPES_H
+#  include <sys/types.h>
+#endif
+#ifdef HAVE_NET_IF_H
+#include <net/if.h>
+#endif
+#ifdef HAVE_NETIOAPI_H
+#include <netioapi.h>
+#endif
 #include "util/net_help.h"
 #include "util/log.h"
 #include "util/data/dname.h"
@@ -266,7 +275,10 @@ ipstrtoaddr(const char* ip, int port, struct sockaddr_storage* addr,
 				return 0;
 			(void)strlcpy(buf, ip, sizeof(buf));
 			buf[s-ip]=0;
-			sa->sin6_scope_id = (uint32_t)atoi(s+1);
+#ifdef HAVE_IF_NAMETOINDEX
+			if (!(sa->sin6_scope_id = if_nametoindex(s+1)))
+#endif /* HAVE_IF_NAMETOINDEX */
+				sa->sin6_scope_id = (uint32_t)atoi(s+1);
 			ip = buf;
 		}
 		if(inet_pton((int)sa->sin6_family, ip, &sa->sin6_addr) <= 0) {
@@ -1181,6 +1193,7 @@ void* connect_sslctx_create(char* key, char* pem, char* verifypem, int wincert)
 	if((SSL_CTX_set_options(ctx, SSL_OP_NO_RENEGOTIATION) &
 		SSL_OP_NO_RENEGOTIATION) != SSL_OP_NO_RENEGOTIATION) {
 		log_crypto_err("could not set SSL_OP_NO_RENEGOTIATION");
+		SSL_CTX_free(ctx);
 		return 0;
 	}
 #endif

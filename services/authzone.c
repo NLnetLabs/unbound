@@ -84,7 +84,7 @@
 #define AUTH_PROBE_TIMEOUT_STOP 1000 /* msec */
 /* auth transfer timeout for TCP connections, in msec */
 #define AUTH_TRANSFER_TIMEOUT 10000 /* msec */
-/* auth transfer max backoff for failed tranfers and probes */
+/* auth transfer max backoff for failed transfers and probes */
 #define AUTH_TRANSFER_MAX_BACKOFF 86400 /* sec */
 /* auth http port number */
 #define AUTH_HTTP_PORT 80
@@ -243,7 +243,7 @@ msg_add_rrset_an(struct auth_zone* z, struct regional* region,
 	return 1;
 }
 
-/** add rrset to authority section (no additonal section rrsets yet) */
+/** add rrset to authority section (no additional section rrsets yet) */
 static int
 msg_add_rrset_ns(struct auth_zone* z, struct regional* region,
 	struct dns_msg* msg, struct auth_data* node, struct auth_rrset* rrset)
@@ -1950,6 +1950,17 @@ static int auth_zone_zonemd_check_hash(struct auth_zone* z,
 	return 0;
 }
 
+/** find the apex SOA RRset, if it exists */
+struct auth_rrset* auth_zone_get_soa_rrset(struct auth_zone* z)
+{
+	struct auth_data* apex;
+	struct auth_rrset* soa;
+	apex = az_find_name(z, z->name, z->namelen);
+	if(!apex) return NULL;
+	soa = az_domain_rrset(apex, LDNS_RR_TYPE_SOA);
+	return soa;
+}
+
 /** find serial number of zone or false if none */
 int
 auth_zone_get_serial(struct auth_zone* z, uint32_t* serial)
@@ -3507,7 +3518,7 @@ auth_error_encode(struct query_info* qinfo, struct module_env* env,
 
 	if(!inplace_cb_reply_local_call(env, qinfo, NULL, NULL,
 		rcode, edns, repinfo, temp, env->now_tv))
-		edns->opt_list = NULL;
+		edns->opt_list_inplace_cb_out = NULL;
 	error_encode(buf, rcode|BIT_AA, qinfo,
 		*(uint16_t*)sldns_buffer_begin(buf),
 		sldns_buffer_read_u16_at(buf, 2), edns);
@@ -5347,7 +5358,9 @@ xfr_transfer_lookup_host(struct auth_xfer* xfr, struct module_env* env)
 	edns.ext_rcode = 0;
 	edns.edns_version = 0;
 	edns.bits = EDNS_DO;
-	edns.opt_list = NULL;
+	edns.opt_list_in = NULL;
+	edns.opt_list_out = NULL;
+	edns.opt_list_inplace_cb_out = NULL;
 	edns.padding_block_size = 0;
 	if(sldns_buffer_capacity(buf) < 65535)
 		edns.udp_size = (uint16_t)sldns_buffer_capacity(buf);
@@ -6480,7 +6493,7 @@ auth_xfer_probe_udp_callback(struct comm_point* c, void* arg, int err,
 	comm_point_delete(xfr->task_probe->cp);
 	xfr->task_probe->cp = NULL;
 
-	/* if the result was not a successfull probe, we need
+	/* if the result was not a successful probe, we need
 	 * to send the next one */
 	xfr_probe_nextmaster(xfr);
 	xfr_probe_send_or_end(xfr, env);
@@ -6536,7 +6549,9 @@ xfr_probe_lookup_host(struct auth_xfer* xfr, struct module_env* env)
 	edns.ext_rcode = 0;
 	edns.edns_version = 0;
 	edns.bits = EDNS_DO;
-	edns.opt_list = NULL;
+	edns.opt_list_in = NULL;
+	edns.opt_list_out = NULL;
+	edns.opt_list_inplace_cb_out = NULL;
 	edns.padding_block_size = 0;
 	if(sldns_buffer_capacity(buf) < 65535)
 		edns.udp_size = (uint16_t)sldns_buffer_capacity(buf);
@@ -7149,7 +7164,7 @@ parse_url(char* url, char** host, char** file, int* port, int* ssl)
 	while(p && *p == '/')
 		p++;
 	if(!p || p[0] == 0)
-		*file = strdup("index.html");
+		*file = strdup("/");
 	else	*file = strdup(p);
 	if(!*file) {
 		log_err("malloc failure");
@@ -8311,7 +8326,9 @@ zonemd_lookup_dnskey(struct auth_zone* z, struct module_env* env)
 	edns.ext_rcode = 0;
 	edns.edns_version = 0;
 	edns.bits = EDNS_DO;
-	edns.opt_list = NULL;
+	edns.opt_list_in = NULL;
+	edns.opt_list_out = NULL;
+	edns.opt_list_inplace_cb_out = NULL;
 	if(sldns_buffer_capacity(buf) < 65535)
 		edns.udp_size = (uint16_t)sldns_buffer_capacity(buf);
 	else	edns.udp_size = 65535;

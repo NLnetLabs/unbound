@@ -579,6 +579,8 @@ struct config_file {
 	struct config_str2list* ratelimit_below_domain;
 	/** ratelimit factor, 0 blocks all, 10 allows 1/10 of traffic */
 	int ratelimit_factor;
+	/** number of retries on outgoing queries */
+	int outbound_msg_retry;
 	/** minimise outgoing QNAME and hide original QTYPE if possible */
 	int qname_minimisation;
 	/** minimise QNAME in strict mode, minimise according to RFC.
@@ -747,6 +749,8 @@ struct config_auth {
 	/** Always reply with this CNAME target if the cname override action is
 	 * used */
 	char* rpz_cname;
+	/** signal nxdomain block with unset RA */
+	int rpz_signal_nxdomain_ra;
 	/** Check ZONEMD records for this zone */
 	int zonemd_check;
 	/** Reject absence of ZONEMD records, zone must have one */
@@ -1114,7 +1118,7 @@ int cfg_count_numbers(const char* str);
 int cfg_parse_memsize(const char* str, size_t* res);
 
 /**
- * Parse nsid from string into binary nsid. nsid is either a hexidecimal
+ * Parse nsid from string into binary nsid. nsid is either a hexadecimal
  * string or an ascii string prepended with ascii_ in which case the
  * characters after ascii_ are simply copied.
  * @param str: the string to parse.

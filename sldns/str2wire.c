@@ -543,9 +543,10 @@ sldns_parse_rdf_token(sldns_buffer* strbuf, char* token, size_t token_len,
 {
 	size_t slen;
 
-	/* skip spaces */
+	/* skip spaces and tabs */
 	while(sldns_buffer_remaining(strbuf) > 0 && !*quoted &&
-		*(sldns_buffer_current(strbuf)) == ' ') {
+		(*(sldns_buffer_current(strbuf)) == ' ' ||
+		*(sldns_buffer_current(strbuf)) == '\t')) {
 		sldns_buffer_skip(strbuf, 1);
 	}
 
@@ -1427,7 +1428,7 @@ sldns_str2wire_svcbparam_parse_next_unescaped_comma(const char *val)
 }
 
 /* The source is already properly unescaped, this double unescaping is purely to allow for
- * comma's in comma seperated alpn lists.
+ * comma's in comma separated alpn lists.
  * 
  * In draft-ietf-dnsop-svcb-https-06 Section 7:
  * To enable simpler parsing, this SvcParamValue MUST NOT contain escape sequences.
