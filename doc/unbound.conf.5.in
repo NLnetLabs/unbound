@@ -30,7 +30,7 @@ can be used to check unbound.conf prior to usage.
 An example config file is shown below. Copy this to /etc/unbound/unbound.conf
 and start the server with:
 .P
-.nf
+.nfvalidator:val_inform_super
 	$ unbound \-c /etc/unbound/unbound.conf
 .fi
 .P
@@ -1178,6 +1178,8 @@ happens with validation.  Use a diagnosis tool, such as dig or drill,
 to find out why validation is failing for these queries.  At 2, not only
 the query that failed is printed but also the reason why Unbound thought
 it was wrong and which server sent the faulty data.
+Enabling this influences the Extended DNS Errors (RFC 8914) messages, as
+the reason is added in the EDE message.
 .TP
 .B val\-permissive\-mode: \fI<yes or no>
 Instruct the validator to mark bogus messages as indeterminate. The security
@@ -1561,6 +1563,60 @@ Override the localzone type for queries from addresses matching netblock.
 Use this localzone type, regardless the type configured for the local-zone
 (both tagged and untagged) and regardless the type configured using
 access\-control\-tag\-action.
+.TP 5
+.B ede\-local\-zones: \fI<yes or no>
+If enabled, all local zones will respond with Extended DNS Errors (RFC8914).
+This is the global setting for the configuration, but it can be overwritten by
+specifing setting 'local\-zone\-do\-ede' to "yes". By default this option
+is disabled.
+Note that the val\-log\-level influences the the reason for the error included
+in the EDE message.
+.TP 5
+.B local\-zone\-do\-ede: \fI<zone> <yes or no>
+If enabled, the responses from this local zone will include an Extended DNS
+Error (RFC8914). The type of error is dependent on the query. For example a
+query for a local-zone type "refuse" will result in EDE code 15 \- Blocked.
+By default this option is disabled.
+Note that the val\-log\-level influences the the reason for the error included
+in the EDE message.
+.TP 5
+.B local\-zone\-default\-ede: \fI<zone> <EDE code string or integer>
+If enabled, this zone will respond to requests resulting in an Extended DNS
+Error with the EDE code specified as input. This input can either be an integer
+corresponding to the EDE code number (e.g. 15 would be EDE Blocked), or a
+keyword from the following list corresponding to an EDE specified in RFC 8914.
+.TP 5
+EDE keywords:
+.nf
+\h'5'\fIother\fR
+\h'5'\fIunsupported-dnskey-algorithm\fR
+\h'5'\fIunsupported-ds-digest-type\fR
+\h'5'\fIstale-answer\fR
+\h'5'\fIforged\fR
+\h'5'\fIdnssec-indeterminate\fR
+\h'5'\fIdnssec-bogus\fR
+\h'5'\fIsignature-expired\fR
+\h'5'\fIsignature-not-yet-valid\fR
+\h'5'\fIdnskey-missing\fR
+\h'5'\fIrrsigs-missing\fR
+\h'5'\fIno-zone-key-bit-set\fR
+\h'5'\fInsec-missing\fR
+\h'5'\fIcached-error\fR
+\h'5'\fInot-ready\fR
+\h'5'\fIblocked\fR
+\h'5'\fIcensored\fR
+\h'5'\fIfiltered\fR
+\h'5'\fIprohibited\fR
+\h'5'\fIstale-nxdomain-answer\fR
+\h'5'\fInot-authoritative\fR
+\h'5'\fInot-supported\fR
+\h'5'\fIno-reachable-authority\fR
+\h'5'\fInetwork-error\fR
+\h'5'\fIinvalid-data\fR
+.fi
+.TP 5
+Note that the val\-log\-level influences the the reason for the error included
+in the EDE message.
 .TP 5
 .B response\-ip: \fI<IP-netblock> <action>
 This requires use of the "respip" module.
@@ -2633,6 +2689,9 @@ Log all applied RPZ actions for this RPZ zone. Default is no.
 .B rpz\-log\-name: \fI<name>
 Specify a string to be part of the log line, for easy referencing.
 .TP
+.B rpz\-do\-ede: \fI<yes or no>
+Specify if this zone RPZ responds with Extended DNS Errors (RFC 8914). The
+default is no.
 .B rpz\-signal\-nxdomain\-ra: \fI<yes or no>
 Signal when a query is blocked by the RPZ with NXDOMAIN with an unset RA flag.
 This allows certain clients, like dnsmasq, to infer that the domain is

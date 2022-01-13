@@ -373,6 +373,9 @@ config_create(void)
 	cfg->ipset_name_v4 = NULL;
 	cfg->ipset_name_v6 = NULL;
 #endif
+	cfg->local_zone_do_ede = NULL;
+	cfg->local_zone_default_ede = NULL;
+	cfg->ede_local_zones = 0;
 	return cfg;
 error_exit:
 	config_delete(cfg);
@@ -790,7 +793,8 @@ int config_set_option(struct config_file* cfg, const char* opt,
 		}
 		oi[cfg->num_out_ifs++] = d;
 		cfg->out_ifs = oi;
-	} else {
+	} else S_YNO("ede-local-zones:", ede_local_zones)
+	else {
 		/* unknown or unsupported (from the set_option interface):
 		 * interface, outgoing-interface, access-control,
 		 * stub-zone, name, stub-addr, stub-host, stub-prime
@@ -1239,6 +1243,8 @@ config_get_option(struct config_file* cfg, const char* opt,
 #ifdef USE_IPSET
 	else O_STR(opt, "name-v4", ipset_name_v4)
 	else O_STR(opt, "name-v6", ipset_name_v6)
+	else O_LS3(opt, "local-zone-do-ede", local_zone_do_ede)
+	else O_LS3(opt, "local-zone-default-ede",local_zone_default_ede)
 #endif
 	/* not here:
 	 * outgoing-permit, outgoing-avoid - have list of ports
@@ -2545,6 +2551,7 @@ void errinf(struct module_qstate* qstate, const char* str)
 	}
 	p->next = NULL;
 	p->str = regional_strdup(qstate->region, str);
+	p->reason_bogus = LDNS_EDE_DNSSEC_BOGUS;
 	if(!p->str) {
 		log_err("malloc failure in validator-error-info string");
 		return;
@@ -2552,7 +2559,34 @@ void errinf(struct module_qstate* qstate, const char* str)
 	/* add at end */
 	if(qstate->errinf) {
 		struct config_strlist* q = qstate->errinf;
-		while(q->next) 
+		while(q->next)
+			q = q->next;
+		q->next = p;
+	} else	qstate->errinf = p;
+}
+
+void errinf_ede(struct module_qstate* qstate,
+	const char* str, sldns_ede_code reason_bogus)
+{
+	struct config_strlist* p;
+	if((qstate->env->cfg->val_log_level < 2 && !qstate->env->cfg->log_servfail) || !str)
+		return;
+	p = (struct config_strlist*)regional_alloc(qstate->region, sizeof(*p));
+	if(!p) {
+		log_err("malloc failure in validator-error-info string");
+		return;
+	}
+	p->next = NULL;
+	p->str = regional_strdup(qstate->region, str);
+	p->reason_bogus = reason_bogus;
+	if(!p->str) {
+		log_err("malloc failure in validator-error-info string");
+		return;
+	}
+	/* add at end */
+	if(qstate->errinf) {
+		struct config_strlist* q = qstate->errinf;
+		while(q->next)
 			q = q->next;
 		q->next = p;
 	} else	qstate->errinf = p;
@@ -2601,6 +2635,17 @@ char* errinf_to_str_bogus(struct module_qstate* qstate)
 	if(!p)
 		log_err("malloc failure in errinf_to_str");
 	return p;
+}
+
+sldns_ede_code errinf_to_reason_bogus(struct module_qstate* qstate)
+{
+	struct config_strlist* s;
+	for(s=qstate->errinf; s; s=s->next) {
+		if (s->reason_bogus != LDNS_EDE_DNSSEC_BOGUS) {
+			return s->reason_bogus;
+		}
+	}
+	return LDNS_EDE_DNSSEC_BOGUS;
 }
 
 char* errinf_to_str_servfail(struct module_qstate* qstate)

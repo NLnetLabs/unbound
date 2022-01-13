@@ -41,6 +41,7 @@
 
 #ifndef UTIL_CONFIG_FILE_H
 #define UTIL_CONFIG_FILE_H
+#include "sldns/rrdef.h"
 struct config_stub;
 struct config_auth;
 struct config_view;
@@ -668,6 +669,13 @@ struct config_file {
 	char* ipset_name_v4;
 	char* ipset_name_v6;
 #endif
+
+	/** should a local_zone results inlude an EDE (RFC8914) code? */
+	struct config_str2list* local_zone_do_ede;
+	/** which EDE (RFC8914) should be the default */
+	struct config_str2list* local_zone_default_ede;
+	/** should the default for local_zone results inlude an EDE (RFC8914) code?*/
+	int ede_local_zones;
 };
 
 /** from cfg username, after daemonize setup performed */
@@ -745,6 +753,8 @@ struct config_auth {
 	/** Always reply with this CNAME target if the cname override action is
 	 * used */
 	char* rpz_cname;
+	/** Respond with EDEs (RFC 8914) for this zone */
+	int rpz_do_ede;
 	/** signal nxdomain block with unset RA */
 	int rpz_signal_nxdomain_ra;
 	/** Check ZONEMD records for this zone */
@@ -788,6 +798,8 @@ struct config_strlist {
 	struct config_strlist* next;
 	/** config option string */
 	char* str;
+	/** EDE code companion to the error str */
+	sldns_ede_code reason_bogus;
 };
 
 /**
@@ -1237,6 +1249,8 @@ char* cfg_ptr_reverse(char* str);
  * Failures to allocate are logged.
  */
 void errinf(struct module_qstate* qstate, const char* str);
+void errinf_ede(struct module_qstate* qstate, const char* str,
+                sldns_ede_code reason_bogus);
 
 /**
  * Append text to error info:  from 1.2.3.4
@@ -1271,6 +1285,13 @@ void errinf_dname(struct module_qstate* qstate, const char* str,
  *    This string is malloced and has to be freed by caller.
  */
 char* errinf_to_str_bogus(struct module_qstate* qstate);
+/**
+ * Check the sldns_ede_code of the qstate.
+ * @param qstate: query state.
+ * @return LDNS_EDE_DNSSEC_BOGUS by default, or another sldns_ede_code 
+ * if this is set.
+ */
+sldns_ede_code errinf_to_reason_bogus(struct module_qstate* qstate);
 
 /**
  * Create error info in string.  For other servfails.

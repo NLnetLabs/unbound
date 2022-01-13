@@ -183,10 +183,11 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_STREAM_WAIT_SIZE VAR_TLS_CIPHERS VAR_TLS_CIPHERSUITES VAR_TLS_USE_SNI
 %token VAR_IPSET VAR_IPSET_NAME_V4 VAR_IPSET_NAME_V6
 %token VAR_TLS_SESSION_TICKET_KEYS VAR_RPZ VAR_TAGS VAR_RPZ_ACTION_OVERRIDE
-%token VAR_RPZ_CNAME_OVERRIDE VAR_RPZ_LOG VAR_RPZ_LOG_NAME
+%token VAR_RPZ_CNAME_OVERRIDE VAR_RPZ_LOG VAR_RPZ_LOG_NAME VAR_RPZ_DO_EDE
 %token VAR_DYNLIB VAR_DYNLIB_FILE VAR_EDNS_CLIENT_STRING
 %token VAR_EDNS_CLIENT_STRING_OPCODE VAR_NSID
 %token VAR_ZONEMD_PERMISSIVE_MODE VAR_ZONEMD_CHECK VAR_ZONEMD_REJECT_ABSENCE
+%token VAR_LOCAL_DATA_DO_EDE VAR_LOCAL_ZONE_DEFAULT_EDE VAR_EDE_LOCAL_ZONES
 %token VAR_RPZ_SIGNAL_NXDOMAIN_RA
 
 %%
@@ -309,7 +310,9 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_tls_use_sni | server_edns_client_string |
 	server_edns_client_string_opcode | server_nsid |
 	server_zonemd_permissive_mode | server_max_reuse_tcp_queries |
-	server_tcp_reuse_timeout | server_tcp_auth_query_timeout
+	server_tcp_reuse_timeout | server_tcp_auth_query_timeout |
+	server_local_zone_do_ede | server_local_zone_default_ede |
+	server_ede_local_zones
 
 	;
 stubstart: VAR_STUB_ZONE
@@ -466,6 +469,17 @@ rpz_signal_nxdomain_ra: VAR_RPZ_SIGNAL_NXDOMAIN_RA STRING_ARG
 	}
 	;
 
+rpz_do_ede: VAR_RPZ_DO_EDE STRING_ARG
+	{
+		OUTYY(("P(rpz_do_ede:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else cfg_parser->cfg->auths->rpz_do_ede =
+			(strcmp($2, "yes")==0);
+		free($2);
+	}
+	;
+
 rpzstart: VAR_RPZ
 	{
 		struct config_auth* s;
@@ -488,7 +502,7 @@ contents_rpz: contents_rpz content_rpz
 	| ;
 content_rpz: auth_name | auth_zonefile | rpz_tag | auth_master | auth_url |
 	   auth_allow_notify | rpz_action_override | rpz_cname_override |
-	   rpz_log | rpz_log_name | rpz_signal_nxdomain_ra
+	   rpz_log | rpz_log_name | rpz_do_ede | rpz_signal_nxdomain_ra
 	;
 server_num_threads: VAR_NUM_THREADS STRING_ARG
 	{
@@ -2214,6 +2228,64 @@ server_local_data_ptr: VAR_LOCAL_DATA_PTR STRING_ARG
 		} else {
 			yyerror("local-data-ptr could not be reversed");
 		}
+	}
+	;
+server_local_zone_do_ede: VAR_LOCAL_DATA_DO_EDE STRING_ARG STRING_ARG
+	{
+		OUTYY(("P(server_local_zone_do_ede:%s %s)\n", $2, $3));
+		if(strcmp($3, "yes") != 0 && strcmp($3, "no") != 0)
+			yyerror("expected yes or no.");
+		if(!cfg_str2list_insert(&cfg_parser->cfg->local_zone_do_ede,
+			$2, $3)) {
+			yyerror("out of memory adding local-zone-do-ede");
+		}
+	}
+	;
+server_local_zone_default_ede: VAR_LOCAL_ZONE_DEFAULT_EDE STRING_ARG STRING_ARG
+	{
+		OUTYY(("P(server_local_zone_default_ede:%s %s)\n", $2, $3));
+		if (!(strcmp($3, "other") == 0) &&
+			!(strcmp($3, "unsupported-dnskey-algorithm") == 0) &&
+			!(strcmp($3, "unsupported-ds-digest-type") == 0) &&
+			!(strcmp($3, "stale-answer") == 0) &&
+			!(strcmp($3, "forged") == 0) &&
+			!(strcmp($3, "dnssec-indeterminate") == 0) &&
+			!(strcmp($3, "dnssec-bogus") == 0) &&
+			!(strcmp($3, "signature-expired") == 0) &&
+			!(strcmp($3, "signature-not-yet-valid") == 0) &&
+			!(strcmp($3, "dnskey-missing") == 0) &&
+			!(strcmp($3, "rrsigs-missing") == 0) &&
+			!(strcmp($3, "no-zone-key-bit-set") == 0) &&
+			!(strcmp($3, "nsec-missing") == 0) &&
+			!(strcmp($3, "cached-error") == 0) &&
+			!(strcmp($3, "not-ready") == 0) &&
+			!(strcmp($3, "blocked") == 0) &&
+			!(strcmp($3, "censored") == 0) &&
+			!(strcmp($3, "filtered") == 0) &&
+			!(strcmp($3, "prohibited") == 0) &&
+			!(strcmp($3, "stale-nxdomain-answer") == 0) &&
+			!(strcmp($3, "not-authoritative") == 0) &&
+			!(strcmp($3, "not-supported") == 0) &&
+			!(strcmp($3, "no-reachable-authority") == 0) &&
+			!(strcmp($3, "network-error") == 0) &&
+			!(strcmp($3, "invalid-data") == 0) &&
+			!(atoi($3) == 0))
+			yyerror("expected default-ede keyword or integer"
+					"refering to the respecive ede code");
+		if(!cfg_str2list_insert(&cfg_parser->cfg->local_zone_default_ede,
+			$2, $3)) {
+			yyerror("out of memory adding local-zone-default-ede");
+		}
+	}
+	;
+server_ede_local_zones: VAR_EDE_LOCAL_ZONES STRING_ARG
+	{
+		OUTYY(("P(server_ede_local_zones:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else cfg_parser->cfg->ede_local_zones =
+			(strcmp($2, "yes")==0);
+		free($2);
 	}
 	;
 server_minimal_responses: VAR_MINIMAL_RESPONSES STRING_ARG

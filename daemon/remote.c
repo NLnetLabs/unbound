@@ -1285,6 +1285,62 @@ do_zone_remove(RES* ssl, struct local_zones* zones, char* arg)
 	send_ok(ssl);
 }
 
+/** Enable or disable EDE (RFC 8914) responses in this local-zone */
+static int
+do_zone_enable_disable_ede(RES* ssl, struct local_zones* zones, char* arg,
+	int enable)
+{
+	uint8_t* name;
+	int namelabels;
+	size_t namelen;
+	struct local_zone* z;
+
+	if(!parse_arg_name(ssl, arg, &name, &namelen, &namelabels)) {
+		free(name);
+		return 0;
+	}
+
+	lock_rw_wrlock(&zones->lock);
+
+	if(!(z=local_zones_find(zones, name, namelen, 
+		namelabels, LDNS_RR_CLASS_IN))) {
+		ssl_printf(ssl, "local-zone: %s not found\n", arg);
+		free(name);
+		lock_rw_unlock(&zones->lock);
+		return 0;
+	}
+	/* found local-zone in tree */
+	lock_rw_wrlock(&z->lock);
+	if (enable) {
+		z->do_ede = 1;
+	}
+	else
+		z->do_ede = 0;
+	lock_rw_unlock(&z->lock);
+	
+	free(name);
+	lock_rw_unlock(&zones->lock);
+	return 1;
+}
+
+/** Perform the do_zone_enable_ede command */
+static void
+do_zone_enable_ede(RES* ssl, struct local_zones* zones, char* arg)
+{
+	if(!(do_zone_enable_disable_ede(ssl, zones, arg, 1)))
+		return;
+	send_ok(ssl);
+}
+
+/** Perform the do_zone_disable_ede command */
+static void
+do_zone_disable_ede(RES* ssl, struct local_zones* zones, char* arg)
+{
+	if(!(do_zone_enable_disable_ede(ssl, zones, arg, 0)))
+		return;
+	send_ok(ssl);
+}
+
 /** Do the local_zones_remove command */
 static void
 do_zones_remove(RES* ssl, struct local_zones* zones)
@@ -2992,6 +3048,60 @@ do_rpz_disable(RES* ssl, struct worker* worker, char* arg)
     do_rpz_enable_disable(ssl, worker, arg, 0);
 }
 
+/** enable/disable EDE (RFC 8914) responses this zone */
+static void
+do_rpz_do_ede_enable_disable(RES* ssl, struct worker* worker, char* arg, int enable) {
+    size_t namelen;
+    int namelabels;
+    uint8_t *name = NULL;
+    struct auth_zones *az = worker->env.auth_zones;
+    struct auth_zone *z = NULL;
+    if (!parse_arg_name(ssl, arg, &name, &namelen, &namelabels))
+        return;
+
+    (void)ssl_printf(ssl, "NAME: %s", name);
+
+    if (az) {
+        lock_rw_rdlock(&az->lock);
+        z = auth_zone_find(az, name, namelen, LDNS_RR_CLASS_IN);
+        if (z) {
+            lock_rw_wrlock(&z->lock);
+        }
+        lock_rw_unlock(&az->lock);
+    }
+    free(name);
+    if (!z) {
+        (void) ssl_printf(ssl, "error no auth-zone %s\n", arg);
+        return;
+    }
+    if (!z->rpz) {
+        (void) ssl_printf(ssl, "error auth-zone %s not RPZ\n", arg);
+        lock_rw_unlock(&z->lock);
+        return;
+    }
+    if (enable) {
+        rpz_do_ede_enable(z->rpz);
+    } else {
+        rpz_do_ede_disable(z->rpz);
+    }
+    lock_rw_unlock(&z->lock);
+    send_ok(ssl);
+}
+
+/** do the rpz_enable command */
+static void
+do_rpz_do_ede_enable(RES* ssl, struct worker* worker, char* arg)
+{
+    do_rpz_enable_disable(ssl, worker, arg, 1);
+}
+
+/** do the rpz_disable command */
+static void
+do_rpz_do_ede_disable(RES* ssl, struct worker* worker, char* arg)
+{
+    do_rpz_do_ede_enable_disable(ssl, worker, arg, 0);
+}
+
 /** tell other processes to execute the command */
 static void
 distribute_cmd(struct daemon_remote* rc, RES* ssl, char* cmd)
@@ -3154,6 +3264,12 @@ execute_cmd(struct daemon_remote* rc, RES* ssl, char* cmd,
 		do_data_remove(ssl, worker->daemon->local_zones, skipwhite(p+17));
 	} else if(cmdcmp(p, "local_datas_remove", 18)) {
 		do_datas_remove(ssl, worker->daemon->local_zones);
+
+	} else if(cmdcmp(p, "local_zone_do_ede_enable", 24)) {
+		do_zone_enable_ede(ssl, worker->daemon->local_zones, skipwhite(p+24));
+	} else if(cmdcmp(p, "local_zone_do_ede_disable", 25)) {
+		do_zone_disable_ede(ssl, worker->daemon->local_zones, skipwhite(p+25));
+
 	} else if(cmdcmp(p, "local_data", 10)) {
 		do_data_add(ssl, worker->daemon->local_zones, skipwhite(p+10));
 	} else if(cmdcmp(p, "local_datas", 11)) {
@@ -3196,6 +3312,10 @@ execute_cmd(struct daemon_remote* rc, RES* ssl, char* cmd,
         do_rpz_enable(ssl, worker, skipwhite(p+10));
     } else if(cmdcmp(p, "rpz_disable", 11)) {
         do_rpz_disable(ssl, worker, skipwhite(p+11));
+    } else if(cmdcmp(p, "rpz_do_ede_enable", 17)) {
+        do_rpz_do_ede_enable(ssl, worker, skipwhite(p+17));
+    } else if(cmdcmp(p, "rpz_do_ede_disable", 18)) {
+        do_rpz_do_ede_disable(ssl, worker, skipwhite(p+18));
 	} else {
 		(void)ssl_printf(ssl, "error unknown command '%s'\n", p);
 	}

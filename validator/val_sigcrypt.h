@@ -45,6 +45,7 @@
 #define VALIDATOR_VAL_SIGCRYPT_H
 #include "util/data/packed_rrset.h"
 #include "sldns/pkthdr.h"
+#include "sldns/rrdef.h"
 struct val_env;
 struct module_env;
 struct module_qstate;
@@ -266,6 +267,12 @@ enum sec_status dnskeyset_verify_rrset(struct module_env* env,
 	struct val_env* ve, struct ub_packed_rrset_key* rrset, 
 	struct ub_packed_rrset_key* dnskey, uint8_t* sigalg, char** reason,
 	sldns_pkt_section section, struct module_qstate* qstate);
+enum sec_status dnskeyset_verify_rrset_ede(struct module_env* env, 
+	struct val_env* ve, struct ub_packed_rrset_key* rrset, 
+	struct ub_packed_rrset_key* dnskey, uint8_t* sigalg,
+	char** reason, sldns_ede_code *reason_bogus,
+	sldns_pkt_section section, struct module_qstate* qstate);
+
 
 /** 
  * verify rrset against one specific dnskey (from rrset) 
@@ -285,6 +292,13 @@ enum sec_status dnskey_verify_rrset(struct module_env* env,
 	struct ub_packed_rrset_key* dnskey, size_t dnskey_idx, char** reason,
 	sldns_pkt_section section, struct module_qstate* qstate);
 
+enum sec_status 
+dnskey_verify_rrset_ede(struct module_env* env, struct val_env* ve,
+        struct ub_packed_rrset_key* rrset, struct ub_packed_rrset_key* dnskey,
+	size_t dnskey_idx, char** reason, sldns_ede_code *reason_bogus,
+	sldns_pkt_section section, struct module_qstate* qstate);
+
+#if 0
 /** 
  * verify rrset, with dnskey rrset, for a specific rrsig in rrset
  * @param env: module environment, scratch space is used.
@@ -306,6 +320,7 @@ enum sec_status dnskeyset_verify_rrset_sig(struct module_env* env,
 	struct ub_packed_rrset_key* dnskey, size_t sig_idx, 
 	struct rbtree_type** sortree, char** reason, sldns_pkt_section section,
 	struct module_qstate* qstate);
+#endif
 
 /** 
  * verify rrset, with specific dnskey(from set), for a specific rrsig 

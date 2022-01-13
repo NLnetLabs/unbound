@@ -47,6 +47,7 @@
 #include "util/module.h"
 #include "services/view.h"
 #include "sldns/sbuffer.h"
+#include "sldns/rrdef.h"
 struct packed_rrset_data;
 struct ub_packed_rrset_key;
 struct regional;
@@ -164,6 +165,10 @@ struct local_zone {
 	 * artificial negative SOA rrset (TTL is the minimum of the TTL and the
 	 * SOA.MINIMUM). */
 	struct ub_packed_rrset_key* soa_negative;
+        /** should local_data result in EDE (RFC8914) code inclusion? */
+        int do_ede;
+        /** the default EDE (RFC8914) code for this zone */
+        int default_ede;
 };
 
 /**
@@ -343,7 +348,8 @@ int
 local_zones_zone_answer(struct local_zone* z, struct module_env* env,
 	struct query_info* qinfo, struct edns_data* edns,
 	struct comm_reply* repinfo, sldns_buffer* buf, struct regional* temp,
-	struct local_data* ld, enum localzone_type lz_type);
+	struct local_data* ld, enum localzone_type lz_type,
+        int do_ede);
 
 /**
  * Parse the string into localzone type.
@@ -608,7 +614,7 @@ local_data_answer(struct local_zone* z, struct module_env* env,
 	struct comm_reply* repinfo, sldns_buffer* buf,
 	struct regional* temp, int labs, struct local_data** ldp,
 	enum localzone_type lz_type, int tag, struct config_strlist** tag_datas,
-	size_t tag_datas_size, char** tagname, int num_tags);
+	size_t tag_datas_size, char** tagname, int num_tags, int do_ede);
 
 /**
  * Add RR to local zone.

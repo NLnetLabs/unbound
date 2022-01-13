@@ -484,6 +484,8 @@ answer_norec_from_cache(struct worker* worker, struct query_info* qinfo,
 				msg->rep, LDNS_RCODE_SERVFAIL, edns, repinfo, worker->scratchpad,
 				worker->env.now_tv))
 					return 0;
+			EDNS_OPT_LIST_APPEND_EDE(&edns->opt_list_out,
+				worker->scratchpad, LDNS_EDE_DNSSEC_BOGUS, "");
 			error_encode(repinfo->c->buffer, LDNS_RCODE_SERVFAIL, 
 				&msg->qinfo, id, flags, edns);
 			if(worker->stats.extended) {
@@ -499,6 +501,9 @@ answer_norec_from_cache(struct worker* worker, struct query_info* qinfo,
 			secure = 1;
 			break;
 		case sec_status_indeterminate:
+			EDNS_OPT_LIST_APPEND_EDE(&edns->opt_list_out,
+				worker->scratchpad, LDNS_EDE_DNSSEC_INDETERMINATE, "");
+			/* fallthrough */
 		case sec_status_insecure:
 		default:
 			/* not secure */
@@ -654,6 +659,8 @@ answer_from_cache(struct worker* worker, struct query_info* qinfo,
 			LDNS_RCODE_SERVFAIL, edns, repinfo, worker->scratchpad,
 			worker->env.now_tv))
 			goto bail_out;
+		EDNS_OPT_LIST_APPEND_EDE(&edns->opt_list_out,
+			worker->scratchpad, LDNS_EDE_DNSSEC_BOGUS, "");
 		error_encode(repinfo->c->buffer, LDNS_RCODE_SERVFAIL,
 			qinfo, id, flags, edns);
 		rrset_array_unlock_touch(worker->env.rrset_cache,
@@ -1020,6 +1027,8 @@ deny_refuse(struct comm_point* c, enum acl_access acl,
 			worker->stats.unwanted_queries++;
 		return 0;
 	} else if(acl == refuse) {
+		size_t opt_rr_mark;
+
 		log_addr(VERB_ALGO, "refused query from",
 			&repinfo->addr, repinfo->addrlen);
 		log_buf(VERB_ALGO, "refuse", c->buffer);
@@ -1029,15 +1038,124 @@ deny_refuse(struct comm_point* c, enum acl_access acl,
 			comm_point_drop_reply(repinfo);
 			return 0; /* discard this */
 		}
-		sldns_buffer_set_limit(c->buffer, LDNS_HEADER_SIZE);
-		sldns_buffer_write_at(c->buffer, 4, 
-			(uint8_t*)"\0\0\0\0\0\0\0\0", 8);
+		log_assert(LDNS_QDCOUNT(sldns_buffer_begin(c->buffer)) == 1);
+
+		sldns_buffer_skip(c->buffer, LDNS_HEADER_SIZE); /* skip header */
+
+		if (!query_dname_len(c->buffer)) {
+			LDNS_QR_SET(sldns_buffer_begin(c->buffer));
+			LDNS_RCODE_SET(sldns_buffer_begin(c->buffer),
+				LDNS_RCODE_FORMERR);
+			sldns_buffer_flip(c->buffer);
+			return 1;
+		}
+		if (sldns_buffer_remaining(c->buffer) < 2 * sizeof(uint16_t)) {
+                        LDNS_QR_SET(sldns_buffer_begin(c->buffer));
+                        LDNS_RCODE_SET(sldns_buffer_begin(c->buffer),
+				 LDNS_RCODE_FORMERR);
+                        sldns_buffer_flip(c->buffer);
+			return 1;
+		}
 		LDNS_QR_SET(sldns_buffer_begin(c->buffer));
 		LDNS_RCODE_SET(sldns_buffer_begin(c->buffer), 
 			LDNS_RCODE_REFUSED);
-		sldns_buffer_set_position(c->buffer, LDNS_HEADER_SIZE);
+
+		sldns_buffer_skip(c->buffer, (ssize_t)sizeof(uint16_t)); /* skip qtype */
+
+		/* check the qclass */
+		if (sldns_buffer_read_u16(c->buffer) != LDNS_RR_CLASS_IN) {
+			LDNS_QDCOUNT_SET(sldns_buffer_begin(c->buffer), 0);
+			LDNS_ANCOUNT_SET(sldns_buffer_begin(c->buffer), 0);
+			LDNS_NSCOUNT_SET(sldns_buffer_begin(c->buffer), 0);
+			LDNS_ARCOUNT_SET(sldns_buffer_begin(c->buffer), 0);
+			sldns_buffer_flip(c->buffer);
+			return 1;
+		}
+
+		/* check edns section is present */
+		if(LDNS_ARCOUNT(sldns_buffer_begin(c->buffer)) != 1) {
+			LDNS_ANCOUNT_SET(sldns_buffer_begin(c->buffer), 0);
+			LDNS_NSCOUNT_SET(sldns_buffer_begin(c->buffer), 0);
+			LDNS_ARCOUNT_SET(sldns_buffer_begin(c->buffer), 0);
+			sldns_buffer_flip(c->buffer);
+			return 1;
+		}
+
+		/* The OPT RR to be returned should come directly after
+		 * the query, so mark this spot.
+		 */
+		opt_rr_mark = sldns_buffer_position(c->buffer);
+
+		/* Skip through the RR records */
+		if(LDNS_ANCOUNT(sldns_buffer_begin(c->buffer)) != 0 ||
+			LDNS_NSCOUNT(sldns_buffer_begin(c->buffer)) != 0) {
+			if(!skip_pkt_rrs(c->buffer, 
+				((int)LDNS_ANCOUNT(sldns_buffer_begin(c->buffer)))+
+				((int)LDNS_NSCOUNT(sldns_buffer_begin(c->buffer))))) {
+				LDNS_RCODE_SET(sldns_buffer_begin(c->buffer),
+					LDNS_RCODE_FORMERR);
+				sldns_buffer_flip(c->buffer);
+				return 1;
+			}
+		}
+		/* Do we have a valid OPT RR here? If not return FORMERR */
+		/* domain name must be the root of length 1. */
+		if(pkt_dname_len(c->buffer) != 1) {
+			LDNS_RCODE_SET(sldns_buffer_begin(c->buffer),
+				LDNS_RCODE_FORMERR);
+			return 1;
+		}
+		if(sldns_buffer_remaining(c->buffer) < 2 ||
+			sldns_buffer_read_u16(c->buffer) != LDNS_RR_TYPE_OPT) {
+			LDNS_RCODE_SET(sldns_buffer_begin(c->buffer),
+				LDNS_RCODE_FORMERR);
+			sldns_buffer_flip(c->buffer);
+			return 1;
+		}
+		/* Write OPT RR directly after the query,
+		 * so without the (possibly skipped) Answer and NS RRs
+		 */
+		LDNS_ANCOUNT_SET(sldns_buffer_begin(c->buffer), 0);
+		LDNS_NSCOUNT_SET(sldns_buffer_begin(c->buffer), 0);
+		sldns_buffer_set_position(c->buffer, opt_rr_mark);
+
+		/* Check if OPT record can be written
+		 * 17 == root label (1) + RR type (2) + UDP Size (2)
+		 *     + Fields (4) + rdata len (2) + EDE Option code (2)
+		 *     + EDE Option length (2) + EDE info-code (2)
+		 */
+		if (sldns_buffer_available(c->buffer, 17) == 0) {
+			LDNS_ARCOUNT_SET(sldns_buffer_begin(c->buffer), 0);
+			sldns_buffer_flip(c->buffer);
+			return 1;
+		}
+
+		LDNS_ARCOUNT_SET(sldns_buffer_begin(c->buffer), 1);
+
+		/* root label */
+		sldns_buffer_write_u8(c->buffer, 0);
+		sldns_buffer_write_u16(c->buffer, LDNS_RR_TYPE_OPT);
+		sldns_buffer_write_u16(c->buffer, EDNS_ADVERTISED_SIZE);
+
+		/* write OPT Record TTL Field */
+		sldns_buffer_write_u32(c->buffer, 0);
+
+		/* write rdata len: EDE option + length + info-code */
+		sldns_buffer_write_u16(c->buffer, 6);
+
+		/* write OPTIONS; add EDE option code */
+		sldns_buffer_write_u16(c->buffer, LDNS_EDNS_EDE);
+
+		/* write single EDE option length (for just 1 info-code) */
+		sldns_buffer_write_u16(c->buffer, 2);
+
+		/* write single EDE info-code */
+		sldns_buffer_write_u16(c->buffer, LDNS_EDE_PROHIBITED);
+
 		sldns_buffer_flip(c->buffer);
+
 		return 1;
+
 	}
 
 	return -1;
@@ -1382,12 +1500,15 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 	 * ACLs allow the snooping. */
 	if(!(LDNS_RD_WIRE(sldns_buffer_begin(c->buffer))) &&
 		acl != acl_allow_snoop ) {
+		EDNS_OPT_LIST_APPEND_EDE(&edns.opt_list_out,
+			worker->scratchpad, LDNS_EDE_NOT_AUTHORITATIVE, "");
 		error_encode(c->buffer, LDNS_RCODE_REFUSED, &qinfo,
 			*(uint16_t*)(void *)sldns_buffer_begin(c->buffer),
-			sldns_buffer_read_u16_at(c->buffer, 2), NULL);
+			sldns_buffer_read_u16_at(c->buffer, 2), &edns);
 		regional_free_all(worker->scratchpad);
 		log_addr(VERB_ALGO, "refused nonrec (cache snoop) query from",
 			&repinfo->addr, repinfo->addrlen);
+
 		goto send_reply;
 	}
 
@@ -1460,10 +1581,23 @@ lookup_cache:
 						< *worker->env.now)
 						leeway = 0;
 					lock_rw_unlock(&e->lock);
+
+					// @TODO test this
+					// // stale answer? 
+					// if (worker->env.cfg->serve_expired &&
+					// 	*worker->env.now >= ((struct reply_info*)e->data)->ttl) {
+					// 	EDNS_OPT_LIST_APPEND_EDE(&edns.opt_list_out,
+					// 		worker->scratchpad, LDNS_EDE_STALE_ANSWER, "");
+					// }
+
+					// add EDNS struct?
 					reply_and_prefetch(worker, lookup_qinfo,
 						sldns_buffer_read_u16_at(c->buffer, 2),
 						repinfo, leeway,
 						(partial_rep || need_drop));
+
+
+
 					if(!partial_rep) {
 						rc = 0;
 						regional_free_all(worker->scratchpad);
@@ -1500,6 +1634,9 @@ lookup_cache:
 			verbose(VERB_ALGO, "answer from the cache failed");
 			lock_rw_unlock(&e->lock);
 		}
+
+		// @TODO Extended DNS Error Code 13 - Cached Error? place not clear
+
 		if(!LDNS_RD_WIRE(sldns_buffer_begin(c->buffer))) {
 			if(answer_norec_from_cache(worker, &qinfo,
 				*(uint16_t*)(void *)sldns_buffer_begin(c->buffer), 

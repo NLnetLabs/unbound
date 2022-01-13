@@ -513,6 +513,13 @@ rpz_create(struct config_auth* p)
 		goto err;
 	}
 
+	/* Respond with EDEs (RFC 8914) in this zone*/
+	if (p->rpz_do_ede)
+		r->do_ede = 1;
+	else
+		r->do_ede = 0;
+
+
 	r->taglistlen = p->rpz_taglistlen;
 	r->taglist = memdup(p->rpz_taglist, r->taglistlen);
 	if(p->rpz_action_override) {
@@ -1893,6 +1900,8 @@ rpz_synthesize_qname_localdata(struct module_env* env, struct rpz* r,
 {
 	struct local_data* ld = NULL;
 	int ret = 0;
+	int do_ede = 0;
+
 	if(r->action_override == RPZ_CNAME_OVERRIDE_ACTION) {
 		qinfo->local_alias = regional_alloc_zero(temp, sizeof(struct local_rrset));
 		if(qinfo->local_alias == NULL) {
@@ -1913,9 +1922,13 @@ rpz_synthesize_qname_localdata(struct module_env* env, struct rpz* r,
 		return 0;
 	}
 
+	/* check the rpz if we want to respond with EDE (RFC8914) */
+	if (r->do_ede)
+		do_ede = r->do_ede;
+
 	if(lzt == local_zone_redirect && local_data_answer(z, env, qinfo,
 		edns, repinfo, buf, temp, dname_count_labels(qinfo->qname),
-		&ld, lzt, -1, NULL, 0, NULL, 0)) {
+		&ld, lzt, -1, NULL, 0, NULL, 0, do_ede)) {
 		if(r->log) {
 			log_rpz_apply("qname", z->name, NULL,
 				localzone_type_to_rpz_action(lzt), qinfo,
@@ -1926,7 +1939,7 @@ rpz_synthesize_qname_localdata(struct module_env* env, struct rpz* r,
 	}
 
 	ret = local_zones_zone_answer(z, env, qinfo, edns, repinfo, buf, temp,
-		0 /* no local data used */, lzt);
+		0 /* no local data used */, lzt, do_ede);
 	if(r->signal_nxdomain_ra && LDNS_RCODE_WIRE(sldns_buffer_begin(buf))
 		== LDNS_RCODE_NXDOMAIN)
 		LDNS_RA_CLR(sldns_buffer_begin(buf));
@@ -2276,6 +2289,7 @@ rpz_apply_maybe_clientip_trigger(struct auth_zones* az, struct module_env* env,
 	enum rpz_action client_action;
 	struct clientip_synthesized_rr* node = rpz_resolve_client_action_and_zone(
 		az, qinfo, repinfo, taglist, taglen, stats, z_out, a_out, r_out);
+	int do_ede;
 
 	client_action = ((node == NULL) ? RPZ_INVALID_ACTION : node->action);
 
@@ -2300,9 +2314,15 @@ rpz_apply_maybe_clientip_trigger(struct auth_zones* az, struct module_env* env,
 					(node?&node->node:NULL),
 					client_action, qinfo, repinfo, NULL,
 					(*r_out)->log_name);
+			/* check the rpz zone if we want to respond with EDE (RFC8914) */
+			if (*r_out && (*r_out)->do_ede)
+				do_ede = (*r_out)->do_ede;
+			else 
+				do_ede = 0;
+
 			local_zones_zone_answer(*z_out /*likely NULL, no zone*/, env, qinfo, edns,
 				repinfo, buf, temp, 0 /* no local data used */,
-				rpz_action_to_localzone_type(client_action));
+				rpz_action_to_localzone_type(client_action), do_ede);
 			if(*r_out && (*r_out)->signal_nxdomain_ra &&
 				LDNS_RCODE_WIRE(sldns_buffer_begin(buf))
 				== LDNS_RCODE_NXDOMAIN)
@@ -2391,4 +2411,18 @@ void rpz_disable(struct rpz* r)
     if(!r)
         return;
     r->disabled = 1;
+}
+
+void rpz_do_ede_enable(struct rpz* r)
+{
+    if(!r)
+        return;
+    r->do_ede = 1;
+}
+
+void rpz_do_ede_disable(struct rpz* r)
+{
+    if(!r)
+        return;
+    r->do_ede = 0;
 }
