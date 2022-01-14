@@ -1,3 +1,9 @@
+14 January 2022: George
+	- Merge PR #605:
+	  - Fix EDNS to upstream where the same option could be attached
+	     more than once.
+	  - Add a region to serviced_query for allocations.
+
 11 January 2022: George
 	- Fix prematurely terminated TCP queries when a reply has the same ID.
 
