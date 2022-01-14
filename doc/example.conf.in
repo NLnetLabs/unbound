@@ -1180,4 +1180,5 @@ remote-control:
 #     rpz-log: yes
 #     rpz-log-name: "example policy"
 #     rpz-signal-nxdomain-ra: no
+#     for-downstream: no
 #     tags: "example"

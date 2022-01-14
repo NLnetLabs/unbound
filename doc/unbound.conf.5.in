@@ -2638,6 +2638,12 @@ Signal when a query is blocked by the RPZ with NXDOMAIN with an unset RA flag.
 This allows certain clients, like dnsmasq, to infer that the domain is
 externally blocked. Default is no.
 .TP
+.B for\-downstream: \fI<yes or no>
+If enabled the zone is authoritatively answered for and queries for the RPZ
+zone information are answered to downstream clients. This is useful for
+monitoring scripts, that can then access the SOA information to check if
+the rpz information is up to date. Default is no.
+.TP
 .B tags: \fI<list of tags>
 Limit the policies from this RPZ clause to clients with a matching tag. Tags
 need to be defined in \fBdefine\-tag\fR and can be assigned to client addresses

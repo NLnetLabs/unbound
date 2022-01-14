@@ -488,7 +488,7 @@ contents_rpz: contents_rpz content_rpz
 	| ;
 content_rpz: auth_name | auth_zonefile | rpz_tag | auth_master | auth_url |
 	   auth_allow_notify | rpz_action_override | rpz_cname_override |
-	   rpz_log | rpz_log_name | rpz_signal_nxdomain_ra
+	   rpz_log | rpz_log_name | rpz_signal_nxdomain_ra | auth_for_downstream
 	;
 server_num_threads: VAR_NUM_THREADS STRING_ARG
 	{
