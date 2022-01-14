@@ -1714,16 +1714,7 @@ static void
 serviced_node_del(rbnode_type* node, void* ATTR_UNUSED(arg))
 {
 	struct serviced_query* sq = (struct serviced_query*)node;
-	struct service_callback* p = sq->cblist, *np;
-	free(sq->qbuf);
-	free(sq->zone);
-	free(sq->tls_auth_name);
-	edns_opt_list_free(sq->opt_list);
-	while(p) {
-		np = p->next;
-		free(p);
-		p = np;
-	}
+	alloc_reg_release(sq->alloc, sq->region);
 	free(sq);
 }
 
@@ -2468,7 +2459,8 @@ serviced_create(struct outside_network* outnet, sldns_buffer* buff, int dnssec,
 	int want_dnssec, int nocaps, int tcp_upstream, int ssl_upstream,
 	char* tls_auth_name, struct sockaddr_storage* addr, socklen_t addrlen,
 	uint8_t* zone, size_t zonelen, int qtype, struct edns_option* opt_list,
-	size_t pad_queries_block_size)
+	size_t pad_queries_block_size, struct alloc_cache* alloc,
+	struct regional* region)
 {
 	struct serviced_query* sq = (struct serviced_query*)malloc(sizeof(*sq));
 #ifdef UNBOUND_DEBUG
@@ -2477,15 +2469,19 @@ serviced_create(struct outside_network* outnet, sldns_buffer* buff, int dnssec,
 	if(!sq) 
 		return NULL;
 	sq->node.key = sq;
-	sq->qbuf = memdup(sldns_buffer_begin(buff), sldns_buffer_limit(buff));
+	sq->alloc = alloc;
+	sq->region = region;
+	sq->qbuf = regional_alloc_init(region, sldns_buffer_begin(buff),
+		sldns_buffer_limit(buff));
 	if(!sq->qbuf) {
+		alloc_reg_release(alloc, region);
 		free(sq);
 		return NULL;
 	}
 	sq->qbuflen = sldns_buffer_limit(buff);
-	sq->zone = memdup(zone, zonelen);
+	sq->zone = regional_alloc_init(region, zone, zonelen);
 	if(!sq->zone) {
-		free(sq->qbuf);
+		alloc_reg_release(alloc, region);
 		free(sq);
 		return NULL;
 	}
@@ -2497,10 +2493,9 @@ serviced_create(struct outside_network* outnet, sldns_buffer* buff, int dnssec,
 	sq->tcp_upstream = tcp_upstream;
 	sq->ssl_upstream = ssl_upstream;
 	if(tls_auth_name) {
-		sq->tls_auth_name = strdup(tls_auth_name);
+		sq->tls_auth_name = regional_strdup(region, tls_auth_name);
 		if(!sq->tls_auth_name) {
-			free(sq->zone);
-			free(sq->qbuf);
+			alloc_reg_release(alloc, region);
 			free(sq);
 			return NULL;
 		}
@@ -2509,17 +2504,7 @@ serviced_create(struct outside_network* outnet, sldns_buffer* buff, int dnssec,
 	}
 	memcpy(&sq->addr, addr, addrlen);
 	sq->addrlen = addrlen;
-	sq->opt_list = NULL;
-	if(opt_list) {
-		sq->opt_list = edns_opt_copy_alloc(opt_list);
-		if(!sq->opt_list) {
-			free(sq->tls_auth_name);
-			free(sq->zone);
-			free(sq->qbuf);
-			free(sq);
-			return NULL;
-		}
-	}
+	sq->opt_list = opt_list;
 	sq->outnet = outnet;
 	sq->cblist = NULL;
 	sq->pending = NULL;
@@ -2528,7 +2513,7 @@ serviced_create(struct outside_network* outnet, sldns_buffer* buff, int dnssec,
 	sq->to_be_deleted = 0;
 	sq->padding_block_size = pad_queries_block_size;
 #ifdef UNBOUND_DEBUG
-	ins = 
+	ins =
 #else
 	(void)
 #endif
@@ -2898,7 +2883,8 @@ serviced_callbacks(struct serviced_query* sq, int error, struct comm_point* c,
 		 * use secondary buffer to store the query.
 		 * This is a data copy, but faster than packet to server */
 		backlen = sldns_buffer_limit(c->buffer);
-		backup_p = memdup(sldns_buffer_begin(c->buffer), backlen);
+		backup_p = regional_alloc_init(sq->region,
+			sldns_buffer_begin(c->buffer), backlen);
 		if(!backup_p) {
 			log_err("malloc failure in serviced query callbacks");
 			error = NETEVENT_CLOSED;
@@ -2916,10 +2902,8 @@ serviced_callbacks(struct serviced_query* sq, int error, struct comm_point* c,
 		}
 		fptr_ok(fptr_whitelist_serviced_query(p->cb));
 		(void)(*p->cb)(c, p->cb_arg, error, rep);
-		free(p);
 	}
 	if(backup_p) {
-		free(backup_p);
 		sq->outnet->svcd_overhead = 0;
 	}
 	verbose(VERB_ALGO, "svcd callbacks end");
@@ -3260,44 +3244,71 @@ outnet_serviced_query(struct outside_network* outnet,
 	int nocaps, int tcp_upstream, int ssl_upstream, char* tls_auth_name,
 	struct sockaddr_storage* addr, socklen_t addrlen, uint8_t* zone,
 	size_t zonelen, struct module_qstate* qstate,
-	comm_point_callback_type* callback, void* callback_arg, sldns_buffer* buff,
-	struct module_env* env)
+	comm_point_callback_type* callback, void* callback_arg,
+	sldns_buffer* buff, struct module_env* env)
 {
 	struct serviced_query* sq;
 	struct service_callback* cb;
 	struct edns_string_addr* client_string_addr;
+	struct regional* region;
+	struct edns_option* backed_up_opt_list = qstate->edns_opts_back_out;
+	struct edns_option* per_upstream_opt_list = NULL;
 
-	if(!inplace_cb_query_call(env, qinfo, flags, addr, addrlen, zone, zonelen,
-		qstate, qstate->region))
+	/* If we have an already populated EDNS option list make a copy since
+	 * we may now add upstream specific EDNS options. */
+	/* Use a region that could be attached to a serviced_query, if it needs
+	 * to be created. If an existing one is found then this region will be
+	 * destroyed here. */
+	region = alloc_reg_obtain(env->alloc);
+	if(!region) return NULL;
+	if(qstate->edns_opts_back_out) {
+		per_upstream_opt_list = edns_opt_copy_region(
+			qstate->edns_opts_back_out, region);
+		if(!per_upstream_opt_list) {
+			alloc_reg_release(env->alloc, region);
 			return NULL;
+		}
+		qstate->edns_opts_back_out = per_upstream_opt_list;
+	}
+
+	if(!inplace_cb_query_call(env, qinfo, flags, addr, addrlen, zone,
+		zonelen, qstate, region)) {
+		alloc_reg_release(env->alloc, region);
+		return NULL;
+	}
+	/* Restore the option list; we can explicitly use the copied one from
+	 * now on. */
+	qstate->edns_opts_back_out = backed_up_opt_list;
 
 	if((client_string_addr = edns_string_addr_lookup(
 		&env->edns_strings->client_strings, addr, addrlen))) {
-		edns_opt_list_append(&qstate->edns_opts_back_out,
+		edns_opt_list_append(&per_upstream_opt_list,
 			env->edns_strings->client_string_opcode,
 			client_string_addr->string_len,
-			client_string_addr->string, qstate->region);
+			client_string_addr->string, region);
 	}
 
 	serviced_gen_query(buff, qinfo->qname, qinfo->qname_len, qinfo->qtype,
 		qinfo->qclass, flags);
 	sq = lookup_serviced(outnet, buff, dnssec, addr, addrlen,
-		qstate->edns_opts_back_out);
-	/* duplicate entries are included in the callback list, because
-	 * there is a counterpart registration by our caller that needs to
-	 * be doubly-removed (with callbacks perhaps). */
-	if(!(cb = (struct service_callback*)malloc(sizeof(*cb))))
-		return NULL;
+		per_upstream_opt_list);
 	if(!sq) {
 		/* make new serviced query entry */
 		sq = serviced_create(outnet, buff, dnssec, want_dnssec, nocaps,
 			tcp_upstream, ssl_upstream, tls_auth_name, addr,
 			addrlen, zone, zonelen, (int)qinfo->qtype,
-			qstate->edns_opts_back_out,
+			per_upstream_opt_list,
 			( ssl_upstream && env->cfg->pad_queries
-			? env->cfg->pad_queries_block_size : 0 ));
+			? env->cfg->pad_queries_block_size : 0 ),
+			env->alloc, region);
 		if(!sq) {
-			free(cb);
+			alloc_reg_release(env->alloc, region);
+			return NULL;
+		}
+		if(!(cb = (struct service_callback*)regional_alloc(
+			sq->region, sizeof(*cb)))) {
+			(void)rbtree_delete(outnet->serviced, sq);
+			serviced_node_del(&sq->node, NULL);
 			return NULL;
 		}
 		/* perform first network action */
@@ -3305,16 +3316,24 @@ outnet_serviced_query(struct outside_network* outnet,
 			if(!serviced_udp_send(sq, buff)) {
 				(void)rbtree_delete(outnet->serviced, sq);
 				serviced_node_del(&sq->node, NULL);
-				free(cb);
 				return NULL;
 			}
 		} else {
 			if(!serviced_tcp_send(sq, buff)) {
 				(void)rbtree_delete(outnet->serviced, sq);
 				serviced_node_del(&sq->node, NULL);
-				free(cb);
 				return NULL;
 			}
+		}
+	} else {
+		/* We don't need this region anymore. */
+		alloc_reg_release(env->alloc, region);
+		/* duplicate entries are included in the callback list, because
+		 * there is a counterpart registration by our caller that needs
+		 * to be doubly-removed (with callbacks perhaps). */
+		if(!(cb = (struct service_callback*)regional_alloc(
+			sq->region, sizeof(*cb)))) {
+			return NULL;
 		}
 	}
 	/* add callback to list of callbacks */
@@ -3334,7 +3353,6 @@ callback_list_remove(struct serviced_query* sq, void* cb_arg)
 		if((*pp)->cb_arg == cb_arg) {
 			struct service_callback* del = *pp;
 			*pp = del->next;
-			free(del);
 			return;
 		}
 		pp = &(*pp)->next;

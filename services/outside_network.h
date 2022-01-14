@@ -43,7 +43,9 @@
 #ifndef OUTSIDE_NETWORK_H
 #define OUTSIDE_NETWORK_H
 
+#include "util/alloc.h"
 #include "util/rbtree.h"
+#include "util/regional.h"
 #include "util/netevent.h"
 #include "dnstap/dnstap_config.h"
 struct pending;
@@ -512,6 +514,11 @@ struct serviced_query {
 	void* pending;
 	/** block size with which to pad encrypted queries (default: 128) */
 	size_t padding_block_size;
+	/** region for this serviced query. Will be cleared when this
+	 * serviced_query will be deleted */
+	struct regional* region;
+	/** allocation service for the region */
+	struct alloc_cache* alloc;
 };
 
 /**

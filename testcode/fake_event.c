@@ -1222,10 +1222,35 @@ struct serviced_query* outnet_serviced_query(struct outside_network* outnet,
 	if(1) {
 		struct edns_data edns;
 		struct edns_string_addr* client_string_addr;
+		struct edns_option* backed_up_opt_list =
+			qstate->edns_opts_back_out;
+		struct edns_option* per_upstream_opt_list = NULL;
+		/* If we have an already populated EDNS option list make a copy
+		 * since we may now add upstream specific EDNS options. */
+		if(qstate->edns_opts_back_out) {
+			per_upstream_opt_list = edns_opt_copy_region(
+				qstate->edns_opts_back_out, qstate->region);
+			if(!per_upstream_opt_list) {
+				free(pend);
+				fatal_exit("out of memory");
+			}
+			qstate->edns_opts_back_out = per_upstream_opt_list;
+		}
 		if(!inplace_cb_query_call(env, qinfo, flags, addr, addrlen,
 			zone, zonelen, qstate, qstate->region)) {
 			free(pend);
 			return NULL;
+		}
+		/* Restore the option list; we can explicitly use the copied
+		 * one from now on. */
+		qstate->edns_opts_back_out = backed_up_opt_list;
+		if((client_string_addr = edns_string_addr_lookup(
+			&env->edns_strings->client_strings,
+			addr, addrlen))) {
+			edns_opt_list_append(&per_upstream_opt_list,
+				env->edns_strings->client_string_opcode,
+				client_string_addr->string_len,
+				client_string_addr->string, qstate->region);
 		}
 		/* add edns */
 		edns.edns_present = 1;
@@ -1236,16 +1261,8 @@ struct serviced_query* outnet_serviced_query(struct outside_network* outnet,
 		if(dnssec)
 			edns.bits = EDNS_DO;
 		edns.padding_block_size = 0;
-		if((client_string_addr = edns_string_addr_lookup(
-			&env->edns_strings->client_strings,
-			addr, addrlen))) {
-			edns_opt_list_append(&qstate->edns_opts_back_out,
-				env->edns_strings->client_string_opcode,
-				client_string_addr->string_len,
-				client_string_addr->string, qstate->region);
-		}
 		edns.opt_list_in = NULL;
-		edns.opt_list_out = qstate->edns_opts_back_out;
+		edns.opt_list_out = per_upstream_opt_list;
 		edns.opt_list_inplace_cb_out = NULL;
 		attach_edns_record(pend->buffer, &edns);
 	}
