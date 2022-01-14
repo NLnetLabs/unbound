@@ -8,6 +8,8 @@
 	- Add rpz: for-downstream: yesno option, where the RPZ zone is
 	  authoritatively answered for, so the RPZ zone contents can be
 	  checked with DNS queries directed at the RPZ zone.
+	- For #602: Allow the module-config "subnetcache validator cachedb
+	  iterator".
 
 11 January 2022: George
 	- Fix prematurely terminated TCP queries when a reply has the same ID.

@@ -787,6 +787,10 @@ morechecks(struct config_file* cfg)
 		&& strcmp(cfg->module_conf, "validator python cachedb iterator") != 0
 		&& strcmp(cfg->module_conf, "respip validator python cachedb iterator") != 0
 #endif
+#if defined(CLIENT_SUBNET) && defined(USE_CACHEDB)
+		&& strcmp(cfg->module_conf, "respip subnetcache validator cachedb iterator") != 0
+		&& strcmp(cfg->module_conf, "subnetcache validator cachedb iterator") != 0
+#endif
 #ifdef CLIENT_SUBNET
 		&& strcmp(cfg->module_conf, "subnetcache iterator") != 0
 		&& strcmp(cfg->module_conf, "respip subnetcache iterator") != 0
