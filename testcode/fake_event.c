@@ -1243,6 +1243,7 @@ struct serviced_query* outnet_serviced_query(struct outside_network* outnet,
 		}
 		/* Restore the option list; we can explicitly use the copied
 		 * one from now on. */
+		per_upstream_opt_list = qstate->edns_opts_back_out;
 		qstate->edns_opts_back_out = backed_up_opt_list;
 		if((client_string_addr = edns_string_addr_lookup(
 			&env->edns_strings->client_strings,
