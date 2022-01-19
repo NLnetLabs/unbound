@@ -1,3 +1,7 @@
+19 January 2022: George
+	- For dnstap, do not wakeupnow right there. Instead zero the timer to
+	  force the wakeup callback asap.
+
 14 January 2022: George
 	- Merge PR #605:
 	  - Fix EDNS to upstream where the same option could be attached
