@@ -723,15 +723,22 @@ answer_from_cache(struct worker* worker, struct query_info* qinfo,
 			if(!*partial_repp)
 				goto bail_out;
 		}
-	} else if(!reply_info_answer_encode(qinfo, encode_rep, id, flags,
-		repinfo->c->buffer, timenow, 1, worker->scratchpad,
-		udpsize, edns, (int)(edns->bits & EDNS_DO), *is_secure_answer)) {
-		if(!inplace_cb_reply_servfail_call(&worker->env, qinfo, NULL, NULL,
-			LDNS_RCODE_SERVFAIL, edns, repinfo, worker->scratchpad,
-			worker->env.now_tv))
-				edns->opt_list_inplace_cb_out = NULL;
-		error_encode(repinfo->c->buffer, LDNS_RCODE_SERVFAIL, 
-			qinfo, id, flags, edns);
+	} else {
+		if (*is_expired_answer == 1) {
+			EDNS_OPT_LIST_APPEND_EDE(&edns->opt_list_out,
+				worker->scratchpad, LDNS_EDE_STALE_ANSWER, "");
+		}
+		if(!reply_info_answer_encode(qinfo, encode_rep, id, flags,
+			repinfo->c->buffer, timenow, 1, worker->scratchpad,
+			udpsize, edns, (int)(edns->bits & EDNS_DO),
+			*is_secure_answer)) {
+			if(!inplace_cb_reply_servfail_call(&worker->env, qinfo,
+				NULL, NULL, LDNS_RCODE_SERVFAIL, edns, repinfo,
+				worker->scratchpad, worker->env.now_tv))
+					edns->opt_list_inplace_cb_out = NULL;
+			error_encode(repinfo->c->buffer, LDNS_RCODE_SERVFAIL,
+				qinfo, id, flags, edns);
+		}
 	}
 	/* cannot send the reply right now, because blocking network syscall
 	 * is bad while holding locks. */
@@ -1582,21 +1589,10 @@ lookup_cache:
 						leeway = 0;
 					lock_rw_unlock(&e->lock);
 
-					// @TODO test this
-					// // stale answer? 
-					// if (worker->env.cfg->serve_expired &&
-					// 	*worker->env.now >= ((struct reply_info*)e->data)->ttl) {
-					// 	EDNS_OPT_LIST_APPEND_EDE(&edns.opt_list_out,
-					// 		worker->scratchpad, LDNS_EDE_STALE_ANSWER, "");
-					// }
-
-					// add EDNS struct?
 					reply_and_prefetch(worker, lookup_qinfo,
 						sldns_buffer_read_u16_at(c->buffer, 2),
 						repinfo, leeway,
 						(partial_rep || need_drop));
-
-
 
 					if(!partial_rep) {
 						rc = 0;
