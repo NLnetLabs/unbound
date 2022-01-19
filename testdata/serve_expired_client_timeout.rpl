@@ -60,6 +60,8 @@ ENTRY_BEGIN
 	REPLY RD
 	SECTION QUESTION
 		example.com. IN A
+		HEX_EDNSDATA_BEGIN
+	    HEX_EDNSDATA_END
 ENTRY_END
 
 ; Check that we got the correct answer (should be cached)
@@ -75,6 +77,8 @@ ENTRY_BEGIN
 		example.com. IN NS ns.example.com.
 	SECTION ADDITIONAL
 		ns.example.com. IN A 1.2.3.4
+		HEX_EDNSDATA_BEGIN
+	    HEX_EDNSDATA_END
 ENTRY_END
 
 ; Wait for the TTL to expire
@@ -86,6 +90,8 @@ ENTRY_BEGIN
 	REPLY RD
 	SECTION QUESTION
 		example.com. IN A
+		HEX_EDNSDATA_BEGIN
+	    HEX_EDNSDATA_END
 ENTRY_END
 
 ; Allow the client timer to expire
@@ -94,7 +100,7 @@ STEP 31 TIME_PASSES ELAPSE 1
 ; Check that we got a stale answer
 STEP 40 CHECK_ANSWER
 ENTRY_BEGIN
-	MATCH all ttl
+	MATCH all_noedns ttl ede=3
 	REPLY QR RD RA NOERROR
 	SECTION QUESTION
 		example.com. IN A
@@ -104,6 +110,8 @@ ENTRY_BEGIN
 		example.com. 123 IN NS ns.example.com.
 	SECTION ADDITIONAL
 		ns.example.com. 123 IN A 1.2.3.4
+		HEX_EDNSDATA_BEGIN
+	    HEX_EDNSDATA_END
 ENTRY_END
 
 ; Reply to the outstanding query so that the test doesn't fail with
@@ -122,6 +130,8 @@ ENTRY_BEGIN
 		example.com. 3600 IN NS ns.example.com.
 	SECTION ADDITIONAL
 		ns.example.com. 3600 IN A 1.2.3.4
+		HEX_EDNSDATA_BEGIN
+	    HEX_EDNSDATA_END
 ENTRY_END
 
 SCENARIO_END

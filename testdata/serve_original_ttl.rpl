@@ -113,12 +113,14 @@ ENTRY_BEGIN
 	REPLY
 	SECTION QUESTION
 		example.com. IN A
+		HEX_EDNSDATA_BEGIN
+	    HEX_EDNSDATA_END
 ENTRY_END
 
 ; Check that we got a stale answer with the original TTL
 STEP 50 CHECK_ANSWER
 ENTRY_BEGIN
-	MATCH all ttl
+	MATCH all_noedns ttl ede=3
 	REPLY QR RA NOERROR
 	SECTION QUESTION
 		example.com. IN A
@@ -128,6 +130,8 @@ ENTRY_BEGIN
 		example.com. NS ns.example.com.
 	SECTION ADDITIONAL
 		ns.example.com. A 1.2.3.4
+		HEX_EDNSDATA_BEGIN
+	    HEX_EDNSDATA_END
 ENTRY_END
 
 ; Give time for the pending query to get answered

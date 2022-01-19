@@ -2060,6 +2060,12 @@ mesh_serve_expired_callback(void* arg)
 			}
 		}
 
+		/* Add EDE Stale Answer (RCF8914) */
+		if (r->edns.edns_present) {
+			edns_opt_list_append_ede(&r->edns.opt_list_out,
+				mstate->s.region, LDNS_EDE_STALE_ANSWER, "");
+		}
+
 		r_buffer = r->query_reply.c->buffer;
 		if(r->query_reply.c->tcp_req_info)
 			r_buffer = r->query_reply.c->tcp_req_info->spool_buffer;
