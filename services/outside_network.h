@@ -519,6 +519,10 @@ struct serviced_query {
 	struct regional* region;
 	/** allocation service for the region */
 	struct alloc_cache* alloc;
+	/** flash timer to start the net I/O as a separate event */
+	struct comm_timer* timer;
+	/** true if serviced_query is currently doing net I/O and may block */
+	int busy;
 };
 
 /**
@@ -791,6 +795,9 @@ void pending_udp_timer_delay_cb(void *arg);
 
 /** callback for outgoing TCP timer event */
 void outnet_tcptimer(void* arg);
+
+/** callback to send serviced queries */
+void serviced_timer_cb(void *arg);
 
 /** callback for serviced query UDP answers */
 int serviced_udp_callback(struct comm_point* c, void* arg, int error,

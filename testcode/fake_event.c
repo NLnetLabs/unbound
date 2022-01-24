@@ -1442,6 +1442,11 @@ void pending_udp_timer_cb(void *ATTR_UNUSED(arg))
 	log_assert(0);
 }
 
+void serviced_timer_cb(void *ATTR_UNUSED(arg))
+{
+	log_assert(0);
+}
+
 void pending_udp_timer_delay_cb(void *ATTR_UNUSED(arg))
 {
 	log_assert(0);
