@@ -1045,21 +1045,32 @@ deny_refuse(struct comm_point* c, enum acl_access acl,
 			comm_point_drop_reply(repinfo);
 			return 0; /* discard this */
 		}
-		log_assert(LDNS_QDCOUNT(sldns_buffer_begin(c->buffer)) == 1);
+		/* worker_check_request() above guarantees that the buffer contains at least a header and that qdcount ==  1 */
+		log_assert(sldns_buffer_limit(pkt) >= LDNS_HEADER_SIZE && LDNS_QDCOUNT(sldns_buffer_begin(c->buffer)) == 1);
 
 		sldns_buffer_skip(c->buffer, LDNS_HEADER_SIZE); /* skip header */
 
 		if (!query_dname_len(c->buffer)) {
+			LDNS_QDCOUNT_SET(sldns_buffer_begin(c->buffer), 0);
+			LDNS_ANCOUNT_SET(sldns_buffer_begin(c->buffer), 0);
+			LDNS_NSCOUNT_SET(sldns_buffer_begin(c->buffer), 0);
+			LDNS_ARCOUNT_SET(sldns_buffer_begin(c->buffer), 0);
 			LDNS_QR_SET(sldns_buffer_begin(c->buffer));
 			LDNS_RCODE_SET(sldns_buffer_begin(c->buffer),
 				LDNS_RCODE_FORMERR);
 			sldns_buffer_flip(c->buffer);
 			return 1;
 		}
+		/* space available for query type and class? */
 		if (sldns_buffer_remaining(c->buffer) < 2 * sizeof(uint16_t)) {
                         LDNS_QR_SET(sldns_buffer_begin(c->buffer));
                         LDNS_RCODE_SET(sldns_buffer_begin(c->buffer),
 				 LDNS_RCODE_FORMERR);
+			LDNS_QDCOUNT_SET(sldns_buffer_begin(c->buffer), 0);
+			LDNS_ANCOUNT_SET(sldns_buffer_begin(c->buffer), 0);
+			LDNS_NSCOUNT_SET(sldns_buffer_begin(c->buffer), 0);
+			LDNS_ARCOUNT_SET(sldns_buffer_begin(c->buffer), 0);
+			sldns_buffer_set_position(c->buffer, LDNS_HEADER_SIZE);
                         sldns_buffer_flip(c->buffer);
 			return 1;
 		}
@@ -1069,15 +1080,7 @@ deny_refuse(struct comm_point* c, enum acl_access acl,
 
 		sldns_buffer_skip(c->buffer, (ssize_t)sizeof(uint16_t)); /* skip qtype */
 
-		/* check the qclass */
-		if (sldns_buffer_read_u16(c->buffer) != LDNS_RR_CLASS_IN) {
-			LDNS_QDCOUNT_SET(sldns_buffer_begin(c->buffer), 0);
-			LDNS_ANCOUNT_SET(sldns_buffer_begin(c->buffer), 0);
-			LDNS_NSCOUNT_SET(sldns_buffer_begin(c->buffer), 0);
-			LDNS_ARCOUNT_SET(sldns_buffer_begin(c->buffer), 0);
-			sldns_buffer_flip(c->buffer);
-			return 1;
-		}
+sldns_buffer_skip(c->buffer, (ssize_t)sizeof(uint16_t)); /* skip qclass */
 
 		/* check edns section is present */
 		if(LDNS_ARCOUNT(sldns_buffer_begin(c->buffer)) != 1) {
@@ -1101,21 +1104,30 @@ deny_refuse(struct comm_point* c, enum acl_access acl,
 				((int)LDNS_NSCOUNT(sldns_buffer_begin(c->buffer))))) {
 				LDNS_RCODE_SET(sldns_buffer_begin(c->buffer),
 					LDNS_RCODE_FORMERR);
+				LDNS_ANCOUNT_SET(sldns_buffer_begin(c->buffer), 0);
+				LDNS_NSCOUNT_SET(sldns_buffer_begin(c->buffer), 0);
+				LDNS_ARCOUNT_SET(sldns_buffer_begin(c->buffer), 0);
+				sldns_buffer_set_position(c->buffer, opt_rr_mark);
 				sldns_buffer_flip(c->buffer);
 				return 1;
 			}
 		}
-		/* Do we have a valid OPT RR here? If not return FORMERR */
+		/* Do we have a valid OPT RR here? If not return REFUSED (could be a valid TSIG or something so no FORMERR) */
 		/* domain name must be the root of length 1. */
-		if(pkt_dname_len(c->buffer) != 1) {
-			LDNS_RCODE_SET(sldns_buffer_begin(c->buffer),
-				LDNS_RCODE_FORMERR);
+		if(sldns_buffer_remaining(c->buffer) < 1 || *sldns_buffer_current(c->buffer) != 0) {
+			LDNS_ANCOUNT_SET(sldns_buffer_begin(c->buffer), 0);
+			LDNS_NSCOUNT_SET(sldns_buffer_begin(c->buffer), 0);
+			LDNS_ARCOUNT_SET(sldns_buffer_begin(c->buffer), 0);
+			sldns_buffer_set_position(c->buffer, opt_rr_mark);
+			sldns_buffer_flip(c->buffer);
 			return 1;
-		}
+		} else
+			sldns_buffer_skip(c->buffer, 1); /* skip root label */
 		if(sldns_buffer_remaining(c->buffer) < 2 ||
 			sldns_buffer_read_u16(c->buffer) != LDNS_RR_TYPE_OPT) {
-			LDNS_RCODE_SET(sldns_buffer_begin(c->buffer),
-				LDNS_RCODE_FORMERR);
+			LDNS_ANCOUNT_SET(sldns_buffer_begin(c->buffer), 0);
+			LDNS_NSCOUNT_SET(sldns_buffer_begin(c->buffer), 0);
+			LDNS_ARCOUNT_SET(sldns_buffer_begin(c->buffer), 0);
 			sldns_buffer_flip(c->buffer);
 			return 1;
 		}
