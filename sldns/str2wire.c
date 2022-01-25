@@ -25,8 +25,10 @@
 #include <netdb.h>
 #endif
 
+/** bits for the offset */
+#define RET_OFFSET_MASK (((unsigned)(~LDNS_WIREPARSE_MASK))>>LDNS_WIREPARSE_SHIFT)
 /** return an error */
-#define RET_ERR(e, off) ((int)((e)|((off)<<LDNS_WIREPARSE_SHIFT)))
+#define RET_ERR(e, off) ((int)(((e)&LDNS_WIREPARSE_MASK)|(((off)&RET_OFFSET_MASK)<<LDNS_WIREPARSE_SHIFT)))
 /** Move parse error but keep its ID */
 #define RET_ERR_SHIFT(e, move) RET_ERR(LDNS_WIREPARSE_ERROR(e), LDNS_WIREPARSE_OFFSET(e)+(move));
 
