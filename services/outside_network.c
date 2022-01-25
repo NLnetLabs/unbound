@@ -3102,7 +3102,6 @@ serviced_udp_callback(struct comm_point* c, void* arg, int error,
 	struct timeval now = *sq->outnet->now_tv;
 #ifdef USE_DNSTAP
 	struct pending* p = (struct pending*)sq->pending;
-	struct port_if* pi = p->pc->pif;
 #endif
 
 	sq->pending = NULL; /* removed after callback */
@@ -3144,14 +3143,16 @@ serviced_udp_callback(struct comm_point* c, void* arg, int error,
 	/*
 	 * sending src (local service)/dst (upstream) addresses over DNSTAP
 	 */
-	if(error == NETEVENT_NOERROR && outnet->dtenv &&
-	   (outnet->dtenv->log_resolver_response_messages ||
-	    outnet->dtenv->log_forwarder_response_messages)) {
+	if(error == NETEVENT_NOERROR && outnet->dtenv && p->pc &&
+		(outnet->dtenv->log_resolver_response_messages ||
+		outnet->dtenv->log_forwarder_response_messages)) {
 		log_addr(VERB_ALGO, "response from upstream", &sq->addr, sq->addrlen);
-		log_addr(VERB_ALGO, "to local addr", &pi->addr, pi->addrlen);
-		dt_msg_send_outside_response(outnet->dtenv, &sq->addr, &pi->addr, c->type,
-		  sq->zone, sq->zonelen, sq->qbuf, sq->qbuflen,
-		  &sq->last_sent_time, sq->outnet->now_tv, c->buffer);
+		log_addr(VERB_ALGO, "to local addr", &p->pc->pif->addr,
+			p->pc->pif->addrlen);
+		dt_msg_send_outside_response(outnet->dtenv, &sq->addr,
+			&p->pc->pif->addr, c->type, sq->zone, sq->zonelen,
+			sq->qbuf, sq->qbuflen, &sq->last_sent_time,
+			sq->outnet->now_tv, c->buffer);
 	}
 #endif
 	if( (sq->status == serviced_query_UDP_EDNS 
