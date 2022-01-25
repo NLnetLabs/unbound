@@ -1147,6 +1147,22 @@ static void reuse_cb_readwait_for_failure(rbtree_type* tree_by_id, int err)
 	}
 }
 
+/** mark the entry for being in the cb_and_decommission stage */
+static void mark_for_cb_and_decommission(rbnode_type* node,
+	void* ATTR_UNUSED(arg))
+{
+	struct waiting_tcp* w = (struct waiting_tcp*)node->key;
+	/* Mark the waiting_tcp to signal later code (serviced_delete) that
+	 * this item is part of the backed up tree_by_id and will be deleted
+	 * later. */
+	w->in_cb_and_decommission = 1;
+	/* Mark the serviced_query for deletion so that later code through
+	 * callbacks (iter_clear .. outnet_serviced_query_stop) won't
+	 * prematurely delete it. */
+	if(w->cb)
+		((struct serviced_query*)w->cb_arg)->to_be_deleted = 1;
+}
+
 /** perform callbacks for failure and also decommission pending tcp.
  * the callbacks remove references in sq->pending to the waiting_tcp
  * members of the tree_by_id in the pending tcp.  The pending_tcp is
@@ -1162,6 +1178,9 @@ static void reuse_cb_and_decommission(struct outside_network* outnet,
 	pend->reuse.write_wait_first = NULL;
 	pend->reuse.write_wait_last = NULL;
 	decommission_pending_tcp(outnet, pend);
+	if(store.root != NULL && store.root != RBTREE_NULL) {
+		traverse_postorder(&store, &mark_for_cb_and_decommission, NULL);
+	}
 	reuse_cb_readwait_for_failure(&store, error);
 	reuse_del_readwait(&store);
 }
@@ -2377,6 +2396,7 @@ pending_tcp_query(struct serviced_query* sq, sldns_buffer* packet,
 #ifdef USE_DNSTAP
 	w->sq = NULL;
 #endif
+	w->in_cb_and_decommission = 0;
 	if(pend) {
 		/* we have a buffer available right now */
 		if(reuse) {
@@ -2674,9 +2694,11 @@ serviced_delete(struct serviced_query* sq)
 				struct pending_tcp* pend =
 					(struct pending_tcp*)w->next_waiting;
 				verbose(VERB_CLIENT, "serviced_delete: writewait");
-				reuse_tree_by_id_delete(&pend->reuse, w);
+				if(!w->in_cb_and_decommission)
+					reuse_tree_by_id_delete(&pend->reuse, w);
 				reuse_write_wait_remove(&pend->reuse, w);
-				waiting_tcp_delete(w);
+				if(!w->in_cb_and_decommission)
+					waiting_tcp_delete(w);
 			} else if(!w->on_tcp_waiting_list) {
 				struct pending_tcp* pend =
 					(struct pending_tcp*)w->next_waiting;
@@ -2686,15 +2708,17 @@ serviced_delete(struct serviced_query* sq)
 				 * serviced_query will be gone. */
 				w->cb = NULL;
 				if(!reuse_tcp_remove_serviced_keep(w, sq)) {
-					reuse_cb_and_decommission(sq->outnet,
-						pend, NETEVENT_CLOSED);
+					if(!w->in_cb_and_decommission)
+						reuse_cb_and_decommission(sq->outnet,
+							pend, NETEVENT_CLOSED);
 					use_free_buffer(sq->outnet);
 				}
 				sq->pending = NULL;
 			} else {
 				verbose(VERB_CLIENT, "serviced_delete: tcpwait");
 				waiting_list_remove(sq->outnet, w);
-				waiting_tcp_delete(w);
+				if(!w->in_cb_and_decommission)
+					waiting_tcp_delete(w);
 			}
 		}
 	}

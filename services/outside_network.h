@@ -414,6 +414,8 @@ struct waiting_tcp {
 	char* tls_auth_name;
 	/** the packet was involved in an error, to stop looping errors */
 	int error_count;
+	/** if true, the item is at the cb_and_decommission stage */
+	int in_cb_and_decommission;
 #ifdef USE_DNSTAP
 	/** serviced query pointer for dnstap to get logging info, if nonNULL*/
 	struct serviced_query* sq;
