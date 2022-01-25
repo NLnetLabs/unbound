@@ -1,3 +1,6 @@
+25 January 2022: Wouter
+	- Fix #610: Undefine-shift in sldns_str2wire_hip_buf.
+
 19 January 2022: George
 	- For dnstap, do not wakeupnow right there. Instead zero the timer to
 	  force the wakeup callback asap.
