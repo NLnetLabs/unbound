@@ -1,6 +1,7 @@
 25 January 2022: George
 	- Fix #588: Unbound 1.13.2 crashes due to p->pc is NULL in
 	  serviced_udp_callback.
+	- Merge PR #612: TCP race condition.
 
 25 January 2022: Wouter
 	- Fix #610: Undefine-shift in sldns_str2wire_hip_buf.
