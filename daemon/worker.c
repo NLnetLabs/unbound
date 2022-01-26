@@ -1045,10 +1045,26 @@ deny_refuse(struct comm_point* c, enum acl_access acl,
 			comm_point_drop_reply(repinfo);
 			return 0; /* discard this */
 		}
-		/* worker_check_request() above guarantees that the buffer contains at least a header and that qdcount ==  1 */
-		log_assert(sldns_buffer_limit(pkt) >= LDNS_HEADER_SIZE && LDNS_QDCOUNT(sldns_buffer_begin(c->buffer)) == 1);
+		/* worker_check_request() above guarantees that the buffer contains at
+		 * least a header and that qdcount == 1
+		 */
+		log_assert(sldns_buffer_limit(c->buffer) >= LDNS_HEADER_SIZE
+			&& LDNS_QDCOUNT(sldns_buffer_begin(c->buffer)) == 1);
 
 		sldns_buffer_skip(c->buffer, LDNS_HEADER_SIZE); /* skip header */
+
+		/* check the qclass to deal with CH class case */
+		if (sldns_buffer_read_u16(c->buffer) != LDNS_RR_CLASS_IN) {
+			LDNS_QDCOUNT_SET(sldns_buffer_begin(c->buffer), 0);
+			LDNS_ANCOUNT_SET(sldns_buffer_begin(c->buffer), 0);
+			LDNS_NSCOUNT_SET(sldns_buffer_begin(c->buffer), 0);
+			LDNS_ARCOUNT_SET(sldns_buffer_begin(c->buffer), 0);
+			LDNS_QR_SET(sldns_buffer_begin(c->buffer));
+			LDNS_RCODE_SET(sldns_buffer_begin(c->buffer),
+				LDNS_RCODE_REFUSED);
+			sldns_buffer_flip(c->buffer);
+			return 1;
+		}
 
 		if (!query_dname_len(c->buffer)) {
 			LDNS_QDCOUNT_SET(sldns_buffer_begin(c->buffer), 0);
