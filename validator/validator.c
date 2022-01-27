@@ -2697,7 +2697,7 @@ process_ds_response(struct module_qstate* qstate, struct val_qstate* vq,
  * @param origin: the origin of msg.
  */
 static void
-  process_dnskey_response(struct module_qstate* qstate, struct val_qstate* vq,
+process_dnskey_response(struct module_qstate* qstate, struct val_qstate* vq,
 	int id, int rcode, struct dns_msg* msg, struct query_info* qinfo,
 	struct sock_list* origin)
 {
@@ -2716,8 +2716,6 @@ static void
 		verbose(VERB_DETAIL, "Missing DNSKEY RRset in response to "
 			"DNSKEY query.");
 
-		reason_bogus = LDNS_EDE_DNSKEY_MISSING;
-
 		if(vq->restart_count < ve->max_restart) {
 			val_blacklist(&vq->chain_blacklist, qstate->region,
 				origin, 1);
@@ -2732,7 +2730,7 @@ static void
 			log_err("alloc failure in missing dnskey response");
 			/* key_entry is NULL for failure in Validate */
 		}
-		errinf_ede(qstate, "No DNSKEY record", reason_bogus);
+		errinf_ede(qstate, "No DNSKEY record", LDNS_EDE_DNSKEY_MISSING);
 		errinf_origin(qstate, origin);
 		errinf_dname(qstate, "for key", qinfo->qname);
 		vq->state = VAL_VALIDATE_STATE;
