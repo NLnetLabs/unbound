@@ -5,6 +5,7 @@ server:
 	minimal-responses: no
 	serve-expired: yes
 	serve-expired-reply-ttl: 123
+	serve-expired-ede: yes
 
 stub-zone:
 	name: "example.com"

@@ -405,6 +405,8 @@ struct config_file {
 	/** serve expired entries only after trying to update the entries and this
 	 *  timeout (in milliseconds) is reached */
 	int serve_expired_client_timeout;
+	/** serve EDE code 3 - Stale Answer (RFC8914) for expired entries */
+	int serve_expired_ede;
 	/** serve original TTLs rather than decrementing ones */
 	int serve_original_ttl;
 	/** nsec3 maximum iterations per key size, string */

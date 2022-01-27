@@ -1226,6 +1226,10 @@ responding with expired data.  A recommended value per
 RFC 8767 is 1800.  Setting this to 0 will disable this
 behavior.  Default is 0.
 .TP
+.B serve\-expired\-ede: \fI<yes or no>
+If enabled, Unbound will attach an Extended DNS Error (RFC8914) Code 3 -
+Stale Answer as EDNS0 option to the expired response. Default is "no".
+.TP
 .B serve\-original\-ttl: \fI<yes or no>
 If enabled, Unbound will always return the original TTL as received from
 the upstream name server rather than the decrementing TTL as

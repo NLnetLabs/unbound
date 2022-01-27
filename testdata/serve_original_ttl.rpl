@@ -9,6 +9,7 @@ server:
 	cache-min-ttl: 20
 	serve-expired: yes
 	serve-expired-reply-ttl: 123
+	serve-expired-ede: yes
 
 stub-zone:
 	name: "example.com"

@@ -484,6 +484,8 @@ answer_norec_from_cache(struct worker* worker, struct query_info* qinfo,
 				msg->rep, LDNS_RCODE_SERVFAIL, edns, repinfo, worker->scratchpad,
 				worker->env.now_tv))
 					return 0;
+			/* TODO store the reason for the bogus reply in cache
+			 * and implement in here instead of the hardcoded EDE */
 			EDNS_OPT_LIST_APPEND_EDE(&edns->opt_list_out,
 				worker->scratchpad, LDNS_EDE_DNSSEC_BOGUS, "");
 			error_encode(repinfo->c->buffer, LDNS_RCODE_SERVFAIL, 
@@ -501,9 +503,6 @@ answer_norec_from_cache(struct worker* worker, struct query_info* qinfo,
 			secure = 1;
 			break;
 		case sec_status_indeterminate:
-			EDNS_OPT_LIST_APPEND_EDE(&edns->opt_list_out,
-				worker->scratchpad, LDNS_EDE_DNSSEC_INDETERMINATE, "");
-			/* fallthrough */
 		case sec_status_insecure:
 		default:
 			/* not secure */
@@ -659,6 +658,8 @@ answer_from_cache(struct worker* worker, struct query_info* qinfo,
 			LDNS_RCODE_SERVFAIL, edns, repinfo, worker->scratchpad,
 			worker->env.now_tv))
 			goto bail_out;
+		/* TODO store the reason for the bogus reply in cache
+		 * and implement in here instead of the hardcoded EDE */
 		EDNS_OPT_LIST_APPEND_EDE(&edns->opt_list_out,
 			worker->scratchpad, LDNS_EDE_DNSSEC_BOGUS, "");
 		error_encode(repinfo->c->buffer, LDNS_RCODE_SERVFAIL,
@@ -724,7 +725,7 @@ answer_from_cache(struct worker* worker, struct query_info* qinfo,
 				goto bail_out;
 		}
 	} else {
-		if (*is_expired_answer == 1) {
+		if (*is_expired_answer == 1 && worker->env.cfg->serve_expired_ede) {
 			EDNS_OPT_LIST_APPEND_EDE(&edns->opt_list_out,
 				worker->scratchpad, LDNS_EDE_STALE_ANSWER, "");
 		}
@@ -1053,8 +1054,8 @@ deny_refuse(struct comm_point* c, enum acl_access acl,
 
 		sldns_buffer_skip(c->buffer, LDNS_HEADER_SIZE); /* skip header */
 
-		/* check the qclass to deal with CH class case */
-		if (sldns_buffer_read_u16(c->buffer) != LDNS_RR_CLASS_IN) {
+		/* check edns section is present */
+		if(LDNS_ARCOUNT(sldns_buffer_begin(c->buffer)) != 1) {
 			LDNS_QDCOUNT_SET(sldns_buffer_begin(c->buffer), 0);
 			LDNS_ANCOUNT_SET(sldns_buffer_begin(c->buffer), 0);
 			LDNS_NSCOUNT_SET(sldns_buffer_begin(c->buffer), 0);
@@ -1096,16 +1097,7 @@ deny_refuse(struct comm_point* c, enum acl_access acl,
 
 		sldns_buffer_skip(c->buffer, (ssize_t)sizeof(uint16_t)); /* skip qtype */
 
-sldns_buffer_skip(c->buffer, (ssize_t)sizeof(uint16_t)); /* skip qclass */
-
-		/* check edns section is present */
-		if(LDNS_ARCOUNT(sldns_buffer_begin(c->buffer)) != 1) {
-			LDNS_ANCOUNT_SET(sldns_buffer_begin(c->buffer), 0);
-			LDNS_NSCOUNT_SET(sldns_buffer_begin(c->buffer), 0);
-			LDNS_ARCOUNT_SET(sldns_buffer_begin(c->buffer), 0);
-			sldns_buffer_flip(c->buffer);
-			return 1;
-		}
+		sldns_buffer_skip(c->buffer, (ssize_t)sizeof(uint16_t)); /* skip qclass */
 
 		/* The OPT RR to be returned should come directly after
 		 * the query, so mark this spot.
@@ -1658,8 +1650,6 @@ lookup_cache:
 			verbose(VERB_ALGO, "answer from the cache failed");
 			lock_rw_unlock(&e->lock);
 		}
-
-		// @TODO Extended DNS Error Code 13 - Cached Error? place not clear
 
 		if(!LDNS_RD_WIRE(sldns_buffer_begin(c->buffer))) {
 			if(answer_norec_from_cache(worker, &qinfo,

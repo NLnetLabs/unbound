@@ -6,6 +6,7 @@ server:
 	serve-expired: yes
 	serve-expired-client-timeout: 1
 	serve-expired-reply-ttl: 123
+	serve-expired-ede: yes
 
 stub-zone:
 	name: "example.com"
