@@ -3391,8 +3391,8 @@ outnet_serviced_query(struct outside_network* outnet,
 		if(check_ratelimit) {
 			timenow = *env->now;
 			if(!infra_ratelimit_inc(env->infra_cache, zone,
-				zonelen, timenow, &qstate->qinfo,
-				qstate->reply)) {
+				zonelen, timenow, env->cfg->ratelimit_backoff,
+				&qstate->qinfo, qstate->reply)) {
 				/* Can we pass through with slip factor? */
 				if(env->cfg->ratelimit_factor == 0 ||
 					ub_random_max(env->rnd,

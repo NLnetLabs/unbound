@@ -1671,6 +1671,15 @@ This can make ordinary queries complete (if repeatedly queried for),
 and enter the cache, whilst also mitigating the traffic flow by the
 factor given.
 .TP 5
+.B ratelimit\-backoff: \fI<yes or no>
+If enabled, the ratelimit is treated as a hard failure instead of the default
+maximum allowed constant rate.  When the limit is reached, traffic is
+ratelimited and demand continues to be kept track of for a 2 second rate
+window.  No traffic is allowed, except for ratelimit\-factor, until demand
+decreases below the configured ratelimit for a 2 second rate window.  Useful to
+set ratelimit to a suspicious rate to aggressively limit unusually high
+traffic.  Default is off.
+.TP 5
 .B ratelimit\-for\-domain: \fI<domain> <number qps or 0>
 Override the global ratelimit for an exact match domain name with the listed
 number.  You can give this for any number of names.  For example, for
