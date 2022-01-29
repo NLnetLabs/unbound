@@ -3333,11 +3333,11 @@ serviced_udp_callback(struct comm_point* c, void* arg, int error,
 struct serviced_query* 
 outnet_serviced_query(struct outside_network* outnet,
 	struct query_info* qinfo, uint16_t flags, int dnssec, int want_dnssec,
-	int nocaps, int tcp_upstream, int ssl_upstream, char* tls_auth_name,
-	struct sockaddr_storage* addr, socklen_t addrlen, uint8_t* zone,
-	size_t zonelen, struct module_qstate* qstate,
+	int nocaps, int check_ratelimit, int tcp_upstream, int ssl_upstream,
+	char* tls_auth_name, struct sockaddr_storage* addr, socklen_t addrlen,
+	uint8_t* zone, size_t zonelen, struct module_qstate* qstate,
 	comm_point_callback_type* callback, void* callback_arg,
-	sldns_buffer* buff, struct module_env* env)
+	sldns_buffer* buff, struct module_env* env, int* was_ratelimited)
 {
 	struct serviced_query* sq;
 	struct service_callback* cb;
@@ -3345,6 +3345,7 @@ outnet_serviced_query(struct outside_network* outnet,
 	struct regional* region;
 	struct edns_option* backed_up_opt_list = qstate->edns_opts_back_out;
 	struct edns_option* per_upstream_opt_list = NULL;
+	time_t timenow = 0;
 
 	/* If we have an already populated EDNS option list make a copy since
 	 * we may now add upstream specific EDNS options. */
@@ -3386,6 +3387,26 @@ outnet_serviced_query(struct outside_network* outnet,
 	sq = lookup_serviced(outnet, buff, dnssec, addr, addrlen,
 		per_upstream_opt_list);
 	if(!sq) {
+		/* Check ratelimit only for new serviced_query */
+		if(check_ratelimit) {
+			timenow = *env->now;
+			if(!infra_ratelimit_inc(env->infra_cache, zone,
+				zonelen, timenow, &qstate->qinfo,
+				qstate->reply)) {
+				/* Can we pass through with slip factor? */
+				if(env->cfg->ratelimit_factor == 0 ||
+					ub_random_max(env->rnd,
+					env->cfg->ratelimit_factor) != 1) {
+					*was_ratelimited = 1;
+					alloc_reg_release(env->alloc, region);
+					return NULL;
+				}
+				log_nametypeclass(VERB_ALGO,
+					"ratelimit allowed through for "
+					"delegation point", zone,
+					LDNS_RR_TYPE_NS, LDNS_RR_CLASS_IN);
+			}
+		}
 		/* make new serviced query entry */
 		sq = serviced_create(outnet, buff, dnssec, want_dnssec, nocaps,
 			tcp_upstream, ssl_upstream, tls_auth_name, addr,
@@ -3395,11 +3416,19 @@ outnet_serviced_query(struct outside_network* outnet,
 			? env->cfg->pad_queries_block_size : 0 ),
 			env->alloc, region);
 		if(!sq) {
+			if(check_ratelimit) {
+				infra_ratelimit_dec(env->infra_cache,
+					zone, zonelen, timenow);
+			}
 			alloc_reg_release(env->alloc, region);
 			return NULL;
 		}
 		if(!(cb = (struct service_callback*)regional_alloc(
 			sq->region, sizeof(*cb)))) {
+			if(check_ratelimit) {
+				infra_ratelimit_dec(env->infra_cache,
+					zone, zonelen, timenow);
+			}
 			(void)rbtree_delete(outnet->serviced, sq);
 			serviced_node_del(&sq->node, NULL);
 			return NULL;

@@ -1648,7 +1648,8 @@ ratelimited by this setting.  The zone of the query is determined by examining
 the nameservers for it, the zone name is used to keep track of the rate.
 For example, 1000 may be a suitable value to stop the server from being
 overloaded with random names, and keeps Unbound from sending traffic to the
-nameservers for those zones.
+nameservers for those zones.  Configured forwarders are excluded from
+ratelimiting.
 .TP 5
 .B ratelimit\-size: \fI<memory size>
 Give the size of the data structure in which the current ongoing rates are
