@@ -1,3 +1,7 @@
+29 January 2022: George
+	- Fix tls-* and ssl-* documented alternate syntax to also be available
+	  through remote-control and unbound-checkconf.
+
 26 January 2022: George
 	- Fix #599: [FR] RFC 9156 (obsoletes RFC 7816), by noting the new RFC
 	  document.
