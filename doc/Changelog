@@ -1,6 +1,9 @@
 31 January 2022: George
 	- Fix review comment for use-after-free when failing to send UDP out.
 
+31 January 2022: Wouter
+	- iana portlist update.
+
 29 January 2022: George
 	- Fix tls-* and ssl-* documented alternate syntax to also be available
 	  through remote-control and unbound-checkconf.
