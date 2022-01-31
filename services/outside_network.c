@@ -1384,8 +1384,9 @@ outnet_send_wait_udp(struct outside_network* outnet)
 					NETEVENT_CLOSED, NULL);
 			}
 			pending_delete(outnet, pend);
+		} else {
+			pend->sq->busy = 0;
 		}
-		pend->sq->busy = 0;
 	}
 }
 
