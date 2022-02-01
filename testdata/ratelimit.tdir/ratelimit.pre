@@ -14,7 +14,7 @@ echo "UNBOUND_PORT=$UNBOUND_PORT" >> .tpkg.var.test
 echo "STUB_PORT=$STUB_PORT" >> .tpkg.var.test
 echo "CONTROL_PORT=$CONTROL_PORT" >> .tpkg.var.test
 
-# start ldns-testnd
+# start ldns-testns
 get_ldns_testns
 $LDNS_TESTNS -v -p $STUB_PORT ratelimit.testns >stub.log 2>&1 &
 STUB_PID=$!
