@@ -1,3 +1,7 @@
+1 February 2022: George
+	- Merge PR #603 from fobser: Use OpenSSL 1.1 API to access DSA and RSA
+	  internals.
+
 31 January 2022: George
 	- Fix review comment for use-after-free when failing to send UDP out.
 
