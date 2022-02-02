@@ -2,6 +2,7 @@
 	- Merge PR #532 from Shchelk: Fix: buffer overflow bug.
 	- Merge PR #616: Update ratelimit logic. It also introduces
 	  ratelimit-backoff and ip-ratelimit-backoff configuration options.
+	- Change aggressive-nsec default to yes.
 
 1 February 2022: George
 	- Merge PR #603 from fobser: Use OpenSSL 1.1 API to access DSA and RSA

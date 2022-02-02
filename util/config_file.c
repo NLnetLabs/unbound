@@ -260,7 +260,7 @@ config_create(void)
 	cfg->val_log_level = 0;
 	cfg->val_log_squelch = 0;
 	cfg->val_permissive_mode = 0;
-	cfg->aggressive_nsec = 0;
+	cfg->aggressive_nsec = 1;
 	cfg->ignore_cd = 0;
 	cfg->serve_expired = 0;
 	cfg->serve_expired_ttl = 0;
