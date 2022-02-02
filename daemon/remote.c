@@ -2865,6 +2865,8 @@ struct ratelimit_list_arg {
 	int all;
 	/** current time */
 	time_t now;
+	/** if backoff is enabled */
+	int backoff;
 };
 
 #define ip_ratelimit_list_arg ratelimit_list_arg
@@ -2878,7 +2880,7 @@ rate_list(struct lruhash_entry* e, void* arg)
 	struct rate_data* d = (struct rate_data*)e->data;
 	char buf[257];
 	int lim = infra_find_ratelimit(a->infra, k->name, k->namelen);
-	int max = infra_rate_max(d, a->now);
+	int max = infra_rate_max(d, a->now, a->backoff);
 	if(a->all == 0) {
 		if(max < lim)
 			return;
@@ -2896,7 +2898,7 @@ ip_rate_list(struct lruhash_entry* e, void* arg)
 	struct ip_rate_key* k = (struct ip_rate_key*)e->key;
 	struct ip_rate_data* d = (struct ip_rate_data*)e->data;
 	int lim = infra_ip_ratelimit;
-	int max = infra_rate_max(d, a->now);
+	int max = infra_rate_max(d, a->now, a->backoff);
 	if(a->all == 0) {
 		if(max < lim)
 			return;
@@ -2914,6 +2916,7 @@ do_ratelimit_list(RES* ssl, struct worker* worker, char* arg)
 	a.infra = worker->env.infra_cache;
 	a.now = *worker->env.now;
 	a.ssl = ssl;
+	a.backoff = worker->env.cfg->ratelimit_backoff;
 	arg = skipwhite(arg);
 	if(strcmp(arg, "+a") == 0)
 		a.all = 1;
@@ -2932,6 +2935,7 @@ do_ip_ratelimit_list(RES* ssl, struct worker* worker, char* arg)
 	a.infra = worker->env.infra_cache;
 	a.now = *worker->env.now;
 	a.ssl = ssl;
+	a.backoff = worker->env.cfg->ip_ratelimit_backoff;
 	arg = skipwhite(arg);
 	if(strcmp(arg, "+a") == 0)
 		a.all = 1;

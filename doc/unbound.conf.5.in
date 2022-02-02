@@ -1648,7 +1648,8 @@ ratelimited by this setting.  The zone of the query is determined by examining
 the nameservers for it, the zone name is used to keep track of the rate.
 For example, 1000 may be a suitable value to stop the server from being
 overloaded with random names, and keeps Unbound from sending traffic to the
-nameservers for those zones.
+nameservers for those zones.  Configured forwarders are excluded from
+ratelimiting.
 .TP 5
 .B ratelimit\-size: \fI<memory size>
 Give the size of the data structure in which the current ongoing rates are
@@ -1670,6 +1671,15 @@ This can make ordinary queries complete (if repeatedly queried for),
 and enter the cache, whilst also mitigating the traffic flow by the
 factor given.
 .TP 5
+.B ratelimit\-backoff: \fI<yes or no>
+If enabled, the ratelimit is treated as a hard failure instead of the default
+maximum allowed constant rate.  When the limit is reached, traffic is
+ratelimited and demand continues to be kept track of for a 2 second rate
+window.  No traffic is allowed, except for ratelimit\-factor, until demand
+decreases below the configured ratelimit for a 2 second rate window.  Useful to
+set ratelimit to a suspicious rate to aggressively limit unusually high
+traffic.  Default is off.
+.TP 5
 .B ratelimit\-for\-domain: \fI<domain> <number qps or 0>
 Override the global ratelimit for an exact match domain name with the listed
 number.  You can give this for any number of names.  For example, for
@@ -1686,7 +1696,7 @@ to use different settings for a top\-level\-domain and subdomains.
 A value of 0 will disable ratelimiting for domain names that end in this name.
 .TP 5
 .B ip\-ratelimit: \fI<number or 0>
-Enable global ratelimiting of queries accepted per ip address.
+Enable global ratelimiting of queries accepted per IP address.
 If 0, the default, it is disabled.  This option is experimental at this time.
 The ratelimit is in queries per second that are allowed.  More queries are
 completely dropped and will not receive a reply, SERVFAIL or otherwise.
@@ -1712,6 +1722,15 @@ to complete.  Default is 10, allowing 1/10 traffic to flow normally.
 This can make ordinary queries complete (if repeatedly queried for),
 and enter the cache, whilst also mitigating the traffic flow by the
 factor given.
+.TP 5
+.B ip\-ratelimit\-backoff: \fI<yes or no>
+If enabled, the ratelimit is treated as a hard failure instead of the default
+maximum allowed constant rate.  When the limit is reached, traffic is
+ratelimited and demand continues to be kept track of for a 2 second rate
+window.  No traffic is allowed, except for ip\-ratelimit\-factor, until demand
+decreases below the configured ratelimit for a 2 second rate window.  Useful to
+set ip\-ratelimit to a suspicious rate to aggressively limit unusually high
+traffic.  Default is off.
 .TP 5
 .B outbound\-msg\-retry: \fI<number>
 The number of retries Unbound will do in case of a non positive response is

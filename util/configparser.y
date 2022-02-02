@@ -142,6 +142,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_OUTBOUND_MSG_RETRY
 %token VAR_RATELIMIT_FOR_DOMAIN VAR_RATELIMIT_BELOW_DOMAIN
 %token VAR_IP_RATELIMIT_FACTOR VAR_RATELIMIT_FACTOR
+%token VAR_IP_RATELIMIT_BACKOFF VAR_RATELIMIT_BACKOFF
 %token VAR_SEND_CLIENT_SUBNET VAR_CLIENT_SUBNET_ZONE
 %token VAR_CLIENT_SUBNET_ALWAYS_FORWARD VAR_CLIENT_SUBNET_OPCODE
 %token VAR_MAX_CLIENT_SUBNET_IPV4 VAR_MAX_CLIENT_SUBNET_IPV6
@@ -272,7 +273,8 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_ip_ratelimit_size | server_ratelimit_size |
 	server_ratelimit_for_domain |
 	server_ratelimit_below_domain | server_ratelimit_factor |
-	server_ip_ratelimit_factor | server_outbound_msg_retry |
+	server_ip_ratelimit_factor | server_ratelimit_backoff |
+	server_ip_ratelimit_backoff | server_outbound_msg_retry |
 	server_send_client_subnet | server_client_subnet_zone |
 	server_client_subnet_always_forward | server_client_subnet_opcode |
 	server_max_client_subnet_ipv4 | server_max_client_subnet_ipv6 |
@@ -2501,6 +2503,26 @@ server_ratelimit_factor: VAR_RATELIMIT_FACTOR STRING_ARG
 		if(atoi($2) == 0 && strcmp($2, "0") != 0)
 			yyerror("number expected");
 		else cfg_parser->cfg->ratelimit_factor = atoi($2);
+		free($2);
+	}
+	;
+server_ip_ratelimit_backoff: VAR_IP_RATELIMIT_BACKOFF STRING_ARG
+	{
+		OUTYY(("P(server_ip_ratelimit_backoff:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else cfg_parser->cfg->ip_ratelimit_backoff =
+			(strcmp($2, "yes")==0);
+		free($2);
+	}
+	;
+server_ratelimit_backoff: VAR_RATELIMIT_BACKOFF STRING_ARG
+	{
+		OUTYY(("P(server_ratelimit_backoff:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else cfg_parser->cfg->ratelimit_backoff =
+			(strcmp($2, "yes")==0);
 		free($2);
 	}
 	;

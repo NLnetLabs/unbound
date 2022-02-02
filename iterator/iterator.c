@@ -1533,36 +1533,6 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 		if(!iq->ratelimit_ok && qstate->prefetch_leeway)
 			iq->ratelimit_ok = 1; /* allow prefetches, this keeps
 			otherwise valid data in the cache */
-		if(!iq->ratelimit_ok && infra_ratelimit_exceeded(
-			qstate->env->infra_cache, iq->dp->name,
-			iq->dp->namelen, *qstate->env->now)) {
-			/* and increment the rate, so that the rate for time
-			 * now will also exceed the rate, keeping cache fresh */
-			(void)infra_ratelimit_inc(qstate->env->infra_cache,
-				iq->dp->name, iq->dp->namelen,
-				*qstate->env->now, &qstate->qinfo,
-				qstate->reply);
-			/* see if we are passed through with slip factor */
-			if(qstate->env->cfg->ratelimit_factor != 0 &&
-				ub_random_max(qstate->env->rnd,
-				    qstate->env->cfg->ratelimit_factor) == 1) {
-				iq->ratelimit_ok = 1;
-				log_nametypeclass(VERB_ALGO, "ratelimit allowed through for "
-					"delegation point", iq->dp->name,
-					LDNS_RR_TYPE_NS, LDNS_RR_CLASS_IN);
-			} else {
-				lock_basic_lock(&ie->queries_ratelimit_lock);
-				ie->num_queries_ratelimited++;
-				lock_basic_unlock(&ie->queries_ratelimit_lock);
-				log_nametypeclass(VERB_ALGO, "ratelimit exceeded with "
-					"delegation point", iq->dp->name,
-					LDNS_RR_TYPE_NS, LDNS_RR_CLASS_IN);
-				qstate->was_ratelimited = 1;
-				errinf(qstate, "query was ratelimited");
-				errinf_dname(qstate, "for zone", iq->dp->name);
-				return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
-			}
-		}
 
 		/* see if this dp not useless.
 		 * It is useless if:
@@ -2211,9 +2181,11 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 	int auth_fallback = 0;
 	uint8_t* qout_orig = NULL;
 	size_t qout_orig_len = 0;
+	int sq_check_ratelimit = 1;
+	int sq_was_ratelimited = 0;
 
-	/* NOTE: a request will encounter this state for each target it 
-	 * needs to send a query to. That is, at least one per referral, 
+	/* NOTE: a request will encounter this state for each target it
+	 * needs to send a query to. That is, at least one per referral,
 	 * more if some targets timeout or return throwaway answers. */
 
 	log_query_info(VERB_QUERY, "processQueryTargets:", &qstate->qinfo);
@@ -2646,22 +2618,9 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 		return 0;
 	}
 
-	/* if not forwarding, check ratelimits per delegationpoint name */
-	if(!(iq->chase_flags & BIT_RD) && !iq->ratelimit_ok) {
-		if(!infra_ratelimit_inc(qstate->env->infra_cache, iq->dp->name,
-			iq->dp->namelen, *qstate->env->now, &qstate->qinfo,
-			qstate->reply)) {
-			lock_basic_lock(&ie->queries_ratelimit_lock);
-			ie->num_queries_ratelimited++;
-			lock_basic_unlock(&ie->queries_ratelimit_lock);
-			verbose(VERB_ALGO, "query exceeded ratelimits");
-			qstate->was_ratelimited = 1;
-			errinf_dname(qstate, "exceeded ratelimit for zone",
-				iq->dp->name);
-			return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
-		}
-	}
-
+	/* Do not check ratelimit for forwarding queries or if we already got a
+	 * pass. */
+	sq_check_ratelimit = (!(iq->chase_flags & BIT_RD) && !iq->ratelimit_ok);
 	/* We have a valid target. */
 	if(verbosity >= VERB_QUERY) {
 		log_query_info(VERB_QUERY, "sending query:", &iq->qinfo_out);
@@ -2673,25 +2632,32 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 	}
 	fptr_ok(fptr_whitelist_modenv_send_query(qstate->env->send_query));
 	outq = (*qstate->env->send_query)(&iq->qinfo_out,
-		iq->chase_flags | (iq->chase_to_rd?BIT_RD:0), 
+		iq->chase_flags | (iq->chase_to_rd?BIT_RD:0),
 		/* unset CD if to forwarder(RD set) and not dnssec retry
 		 * (blacklist nonempty) and no trust-anchors are configured
 		 * above the qname or on the first attempt when dnssec is on */
 		EDNS_DO| ((iq->chase_to_rd||(iq->chase_flags&BIT_RD)!=0)&&
 		!qstate->blacklist&&(!iter_qname_indicates_dnssec(qstate->env,
-		&iq->qinfo_out)||target->attempts==1)?0:BIT_CD), 
+		&iq->qinfo_out)||target->attempts==1)?0:BIT_CD),
 		iq->dnssec_expected, iq->caps_fallback || is_caps_whitelisted(
-		ie, iq), &target->addr, target->addrlen,
+		ie, iq), sq_check_ratelimit, &target->addr, target->addrlen,
 		iq->dp->name, iq->dp->namelen,
 		(iq->dp->tcp_upstream || qstate->env->cfg->tcp_upstream),
 		(iq->dp->ssl_upstream || qstate->env->cfg->ssl_upstream),
-		target->tls_auth_name, qstate);
+		target->tls_auth_name, qstate, &sq_was_ratelimited);
 	if(!outq) {
+		if(sq_was_ratelimited) {
+			lock_basic_lock(&ie->queries_ratelimit_lock);
+			ie->num_queries_ratelimited++;
+			lock_basic_unlock(&ie->queries_ratelimit_lock);
+			verbose(VERB_ALGO, "query exceeded ratelimits");
+			qstate->was_ratelimited = 1;
+			errinf_dname(qstate, "exceeded ratelimit for zone",
+				iq->dp->name);
+			return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
+		}
 		log_addr(VERB_QUERY, "error sending query to auth server",
 			&target->addr, target->addrlen);
-		if(!(iq->chase_flags & BIT_RD) && !iq->ratelimit_ok)
-		    infra_ratelimit_dec(qstate->env->infra_cache, iq->dp->name,
-			iq->dp->namelen, *qstate->env->now);
 		if(qstate->env->cfg->qname_minimisation)
 			iq->minimisation_state = SKIP_MINIMISE_STATE;
 		return next_state(iq, QUERYTARGETS_STATE);
@@ -2934,14 +2900,6 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 		/* REFERRAL type responses get a reset of the 
 		 * delegation point, and back to the QUERYTARGETS_STATE. */
 		verbose(VERB_DETAIL, "query response was REFERRAL");
-
-		if(!(iq->chase_flags & BIT_RD) && !iq->ratelimit_ok) {
-			/* we have a referral, no ratelimit, we can send
-			 * our queries to the given name */
-			infra_ratelimit_dec(qstate->env->infra_cache,
-				iq->dp->name, iq->dp->namelen,
-				*qstate->env->now);
-		}
 
 		/* if hardened, only store referral if we asked for it */
 		if(!qstate->no_cache_store &&
