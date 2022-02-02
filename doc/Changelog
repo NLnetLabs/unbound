@@ -5,7 +5,8 @@
 	- Change aggressive-nsec default to yes.
 	- Merge PR #617: Update stub/forward-host notation to accept port and
 	  tls-auth-name.
-	- Update stream_ssl test to also use the new forward-host notation.
+	- Update stream_ssl.tdir test to also use the new forward-host
+	  notation.
 
 2 February 2022: Wouter
 	- Update version number in repo to 1.15.0 for upcoming release,
