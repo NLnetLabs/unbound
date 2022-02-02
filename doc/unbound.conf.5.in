@@ -1844,16 +1844,16 @@ Name of the stub zone. This is the full domain name of the zone.
 Name of stub zone nameserver. Is itself resolved before it is used.
 To use a nondefault port for DNS communication append '@' with the port number.
 If tls is enabled, then you can append a '#' and a name, then it'll check the
-tls authentication certificates with that name.  If you combine the '@' and
-'#', the '@' comes first.  If only '#' is used the default port is the
+tls authentication certificates with that name.  If you combine the '@'
+and '#', the '@' comes first.  If only '#' is used the default port is the
 configured tls\-port.
 .TP
 .B stub\-addr: \fI<IP address>
 IP address of stub zone nameserver. Can be IP 4 or IP 6.
 To use a nondefault port for DNS communication append '@' with the port number.
 If tls is enabled, then you can append a '#' and a name, then it'll check the
-tls authentication certificates with that name.  If you combine the '@' and
-'#', the '@' comes first.  If only '#' is used the default port is the
+tls authentication certificates with that name.  If you combine the '@'
+and '#', the '@' comes first.  If only '#' is used the default port is the
 configured tls\-port.
 .TP
 .B stub\-prime: \fI<yes or no>
@@ -1907,16 +1907,16 @@ Name of the forward zone. This is the full domain name of the zone.
 Name of server to forward to. Is itself resolved before it is used.
 To use a nondefault port for DNS communication append '@' with the port number.
 If tls is enabled, then you can append a '#' and a name, then it'll check the
-tls authentication certificates with that name.  If you combine the '@' and
-'#', the '@' comes first.  If only '#' is used the default port is the
+tls authentication certificates with that name.  If you combine the '@'
+and '#', the '@' comes first.  If only '#' is used the default port is the
 configured tls\-port.
 .TP
 .B forward\-addr: \fI<IP address>
 IP address of server to forward to. Can be IP 4 or IP 6.
 To use a nondefault port for DNS communication append '@' with the port number.
 If tls is enabled, then you can append a '#' and a name, then it'll check the
-tls authentication certificates with that name.  If you combine the '@' and
-'#', the '@' comes first.  If only '#' is used the default port is the
+tls authentication certificates with that name.  If you combine the '@'
+and '#', the '@' comes first.  If only '#' is used the default port is the
 configured tls\-port.
 .IP
 At high verbosity it logs the TLS certificate, with TLS enabled.
