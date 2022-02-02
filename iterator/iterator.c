@@ -1958,12 +1958,13 @@ processLastResort(struct module_qstate* qstate, struct iter_qstate* iq,
 			iq->chase_flags &= ~BIT_RD; /* go to authorities */
 			for(ns = p->nslist; ns; ns=ns->next) {
 				(void)delegpt_add_ns(iq->dp, qstate->region,
-					ns->name, ns->lame);
+					ns->name, ns->lame, ns->tls_auth_name,
+					ns->port);
 			}
 			for(a = p->target_list; a; a=a->next_target) {
 				(void)delegpt_add_addr(iq->dp, qstate->region,
 					&a->addr, a->addrlen, a->bogus,
-					a->lame, a->tls_auth_name, NULL);
+					a->lame, a->tls_auth_name, -1, NULL);
 			}
 		}
 		iq->dp->has_parent_side_NS = 1;
@@ -3342,21 +3343,22 @@ processTargetResponse(struct module_qstate* qstate, int id,
 			log_err("out of memory adding pside glue");
 	}
 
-	/* This response is relevant to the current query, so we 
-	 * add (attempt to add, anyway) this target(s) and reactivate 
-	 * the original event. 
-	 * NOTE: we could only look for the AnswerRRset if the 
+	/* This response is relevant to the current query, so we
+	 * add (attempt to add, anyway) this target(s) and reactivate
+	 * the original event.
+	 * NOTE: we could only look for the AnswerRRset if the
 	 * response type was ANSWER. */
 	rrset = reply_find_answer_rrset(&iq->qchase, qstate->return_msg->rep);
 	if(rrset) {
 		int additions = 0;
 		/* if CNAMEs have been followed - add new NS to delegpt. */
 		/* BTW. RFC 1918 says NS should not have got CNAMEs. Robust. */
-		if(!delegpt_find_ns(foriq->dp, rrset->rk.dname, 
+		if(!delegpt_find_ns(foriq->dp, rrset->rk.dname,
 			rrset->rk.dname_len)) {
 			/* if dpns->lame then set newcname ns lame too */
-			if(!delegpt_add_ns(foriq->dp, forq->region, 
-				rrset->rk.dname, dpns->lame))
+			if(!delegpt_add_ns(foriq->dp, forq->region,
+				rrset->rk.dname, dpns->lame, dpns->tls_auth_name,
+				dpns->port))
 				log_err("out of memory adding cnamed-ns");
 		}
 		/* if dpns->lame then set the address(es) lame too */
