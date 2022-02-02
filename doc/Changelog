@@ -7,6 +7,10 @@
 	  tls-auth-name.
 	- Update stream_ssl test to also use the new forward-host notation.
 
+2 February 2022: Wouter
+	- Update version number in repo to 1.15.0 for upcoming release,
+	  since it changes the aggressive-nsec default and the ratelimit change.
+
 1 February 2022: George
 	- Merge PR #603 from fobser: Use OpenSSL 1.1 API to access DSA and RSA
 	  internals.
