@@ -17941,7 +17941,7 @@ if test "`uname`" = "NetBSD"; then
 
 fi
 
-if test "`uname -o`" = "GNU/Linux"; then
+if test "`uname`" = "Linux"; then
 	# splint cannot parse modern c99 header files
 	GCC_DOCKER_LINTFLAGS='-syntax'
 

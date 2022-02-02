@@ -816,7 +816,7 @@ if test "`uname`" = "NetBSD"; then
 	AC_SUBST(NETBSD_LINTFLAGS)
 fi
 
-if test "`uname -o`" = "GNU/Linux"; then
+if test "`uname`" = "Linux"; then
 	# splint cannot parse modern c99 header files
 	GCC_DOCKER_LINTFLAGS='-syntax'
 	AC_SUBST(GCC_DOCKER_LINTFLAGS)
