@@ -10,6 +10,7 @@
 2 February 2022: Wouter
 	- Update version number in repo to 1.15.0 for upcoming release,
 	  since it changes the aggressive-nsec default and the ratelimit change.
+	- Fix header comment for doxygen for authextstrtoaddr.
 
 1 February 2022: George
 	- Merge PR #603 from fobser: Use OpenSSL 1.1 API to access DSA and RSA
