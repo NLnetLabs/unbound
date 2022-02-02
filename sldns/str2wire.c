@@ -604,7 +604,10 @@ sldns_affix_token(sldns_buffer* strbuf, char* token, size_t* token_len,
 	size_t addstrlen = 0;
 
 	/* add space */
-	if(addlen < 1) return 0;
+	/* when addlen < 2, the token buffer is full considering the NULL byte
+	 * from strlen and will lead to buffer overflow with the second
+	 * assignement below. */
+	if(addlen < 2) return 0;
 	token[*token_strlen] = ' ';
 	token[++(*token_strlen)] = 0;
 

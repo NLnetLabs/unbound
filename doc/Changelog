@@ -1,3 +1,6 @@
+2 February 2022: George
+	- Merge PR #532 from Shchelk: Fix: buffer overflow bug.
+
 1 February 2022: George
 	- Merge PR #603 from fobser: Use OpenSSL 1.1 API to access DSA and RSA
 	  internals.
