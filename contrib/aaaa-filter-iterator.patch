@@ -1,5 +1,5 @@
 diff --git a/doc/unbound.conf.5.in b/doc/unbound.conf.5.in
-index 50f9224..09456f5 100644
+index 5a75e319..c6c6dbe2 100644
 --- a/doc/unbound.conf.5.in
 +++ b/doc/unbound.conf.5.in
 @@ -970,6 +970,13 @@ potentially broken nameservers. A lot of domains will not be resolvable when
@@ -17,13 +17,14 @@ index 50f9224..09456f5 100644
  Aggressive NSEC uses the DNSSEC NSEC chain to synthesize NXDOMAIN
  and other denials, using information from previous NXDOMAINs answers.
 diff --git a/iterator/iter_scrub.c b/iterator/iter_scrub.c
-index f093c1b..e55a224 100644
+index f093c1bf..e55a2246 100644
 --- a/iterator/iter_scrub.c
 +++ b/iterator/iter_scrub.c
-@@ -680,6 +680,32 @@ static int sanitize_nsec_is_overreach(sldns_buffer* pkt,
+@@ -679,6 +679,32 @@ static int sanitize_nsec_is_overreach(sldns_buffer* pkt,
+ 	return 0;
  }
  
- /**
++/**
 + * ASN: Lookup A records from rrset cache.
 + * @param qinfo: the question originally asked.
 + * @param env: module environment with config and cache.
@@ -49,10 +50,9 @@ index f093c1b..e55a224 100644
 +	return 0;
 +}
 +
-+/**
+ /**
   * Given a response event, remove suspect RRsets from the response.
   * "Suspect" rrsets are potentially poison. Note that this routine expects
-  * the response to be in a "normalized" state -- that is, all "irrelevant"
 @@ -698,6 +724,7 @@ scrub_sanitize(sldns_buffer* pkt, struct msg_parse* msg,
  	struct query_info* qinfo, uint8_t* zonename, struct module_env* env,
  	struct iter_env* ie)
@@ -101,7 +101,7 @@ index f093c1b..e55a224 100644
  		if( (rrset->type == LDNS_RR_TYPE_A || 
  			rrset->type == LDNS_RR_TYPE_AAAA)) {
 diff --git a/iterator/iter_utils.c b/iterator/iter_utils.c
-index 2482a1f..bd5ba24 100644
+index 2482a1f4..bd5ba243 100644
 --- a/iterator/iter_utils.c
 +++ b/iterator/iter_utils.c
 @@ -177,6 +177,7 @@ iter_apply_cfg(struct iter_env* iter_env, struct config_file* cfg)
@@ -113,10 +113,10 @@ index 2482a1f..bd5ba24 100644
  }
  
 diff --git a/iterator/iterator.c b/iterator/iterator.c
-index 48238a2..34ba249 100644
+index 54006940..768fe202 100644
 --- a/iterator/iterator.c
 +++ b/iterator/iterator.c
-@@ -2184,6 +2184,53 @@ processDSNSFind(struct module_qstate* qstate, struct iter_qstate* iq, int id)
+@@ -2155,6 +2155,53 @@ processDSNSFind(struct module_qstate* qstate, struct iter_qstate* iq, int id)
  
  	return 0;
  }
@@ -170,7 +170,7 @@ index 48238a2..34ba249 100644
  	
  /** 
   * This is the request event state where the request will be sent to one of
-@@ -2243,6 +2290,13 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
+@@ -2216,6 +2263,13 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
  		return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
  	}
  	
@@ -184,7 +184,7 @@ index 48238a2..34ba249 100644
  	/* Make sure we have a delegation point, otherwise priming failed
  	 * or another failure occurred */
  	if(!iq->dp) {
-@@ -3688,6 +3742,61 @@ processFinished(struct module_qstate* qstate, struct iter_qstate* iq,
+@@ -3648,6 +3702,61 @@ processFinished(struct module_qstate* qstate, struct iter_qstate* iq,
  	return 0;
  }
  
@@ -246,7 +246,7 @@ index 48238a2..34ba249 100644
  /*
   * Return priming query results to interested super querystates.
   * 
-@@ -3707,6 +3816,9 @@ iter_inform_super(struct module_qstate* qstate, int id,
+@@ -3667,6 +3776,9 @@ iter_inform_super(struct module_qstate* qstate, int id,
  	else if(super->qinfo.qtype == LDNS_RR_TYPE_DS && ((struct iter_qstate*)
  		super->minfo[id])->state == DSNS_FIND_STATE)
  		processDSNSResponse(qstate, id, super);
@@ -256,7 +256,7 @@ index 48238a2..34ba249 100644
  	else if(qstate->return_rcode != LDNS_RCODE_NOERROR)
  		error_supers(qstate, id, super);
  	else if(qstate->is_priming)
-@@ -3744,6 +3856,9 @@ iter_handle(struct module_qstate* qstate, struct iter_qstate* iq,
+@@ -3704,6 +3816,9 @@ iter_handle(struct module_qstate* qstate, struct iter_qstate* iq,
  			case INIT_REQUEST_3_STATE:
  				cont = processInitRequest3(qstate, iq, id);
  				break;
@@ -266,7 +266,7 @@ index 48238a2..34ba249 100644
  			case QUERYTARGETS_STATE:
  				cont = processQueryTargets(qstate, iq, ie, id);
  				break;
-@@ -4080,6 +4195,8 @@ iter_state_to_string(enum iter_state state)
+@@ -4040,6 +4155,8 @@ iter_state_to_string(enum iter_state state)
  		return "INIT REQUEST STATE (stage 2)";
  	case INIT_REQUEST_3_STATE:
  		return "INIT REQUEST STATE (stage 3)";
@@ -275,7 +275,7 @@ index 48238a2..34ba249 100644
  	case QUERYTARGETS_STATE :
  		return "QUERY TARGETS STATE";
  	case PRIME_RESP_STATE :
-@@ -4104,6 +4221,7 @@ iter_state_is_responsestate(enum iter_state s)
+@@ -4064,6 +4181,7 @@ iter_state_is_responsestate(enum iter_state s)
  		case INIT_REQUEST_STATE :
  		case INIT_REQUEST_2_STATE :
  		case INIT_REQUEST_3_STATE :
@@ -284,7 +284,7 @@ index 48238a2..34ba249 100644
  		case COLLECT_CLASS_STATE :
  			return 0;
 diff --git a/iterator/iterator.h b/iterator/iterator.h
-index a9e5856..ace68c6 100644
+index 8b840528..a61c4195 100644
 --- a/iterator/iterator.h
 +++ b/iterator/iterator.h
 @@ -133,6 +133,9 @@ struct iter_env {
@@ -297,10 +297,11 @@ index a9e5856..ace68c6 100644
  	/** lock on ratelimit counter */
  	lock_basic_type queries_ratelimit_lock;
  	/** number of queries that have been ratelimited */
-@@ -188,6 +191,14 @@ enum iter_state {
+@@ -187,6 +190,14 @@ enum iter_state {
+ 	 */
  	INIT_REQUEST_3_STATE,
  
- 	/**
++	/**
 +	 * This state is responsible for intercepting AAAA queries,
 +	 * and launch a A subquery on the same target, to populate the
 +	 * cache with A records, so the AAAA filter scrubbing logic can
@@ -308,10 +309,9 @@ index a9e5856..ace68c6 100644
 +	 */
 +	ASN_FETCH_A_FOR_AAAA_STATE,
 +
-+	/**
+ 	/**
  	 * Each time a delegation point changes for a given query or a 
  	 * query times out and/or wakes up, this state is (re)visited. 
- 	 * This state is responsible for iterating through a list of 
 @@ -376,6 +387,13 @@ struct iter_qstate {
  	 */
  	int refetch_glue;
@@ -327,10 +327,10 @@ index a9e5856..ace68c6 100644
  	struct outbound_list outlist;
  
 diff --git a/pythonmod/interface.i b/pythonmod/interface.i
-index 03483ab..a8c30b5 100644
+index 1ca8686a..d91b19ec 100644
 --- a/pythonmod/interface.i
 +++ b/pythonmod/interface.i
-@@ -994,6 +994,7 @@ struct config_file {
+@@ -995,6 +995,7 @@ struct config_file {
     int harden_dnssec_stripped;
     int harden_referral_path;
     int use_caps_bits_for_id;
@@ -339,7 +339,7 @@ index 03483ab..a8c30b5 100644
     struct config_strlist* private_domain;
     size_t unwanted_threshold;
 diff --git a/util/config_file.c b/util/config_file.c
-index 39050f5..326b0b9 100644
+index 969d664b..8d94b008 100644
 --- a/util/config_file.c
 +++ b/util/config_file.c
 @@ -231,6 +231,7 @@ config_create(void)
@@ -351,7 +351,7 @@ index 39050f5..326b0b9 100644
  	cfg->private_address = NULL;
  	cfg->private_domain = NULL;
 diff --git a/util/config_file.h b/util/config_file.h
-index 18910be..bd59144 100644
+index c7c9a0a4..e3aa15b0 100644
 --- a/util/config_file.h
 +++ b/util/config_file.h
 @@ -285,6 +285,8 @@ struct config_file {
@@ -364,7 +364,7 @@ index 18910be..bd59144 100644
  	struct config_strlist* caps_whitelist;
  	/** strip away these private addrs from answers, no DNS Rebinding */
 diff --git a/util/configlexer.lex b/util/configlexer.lex
-index 71da924..b58b4b6 100644
+index 34a0e5dd..c890be2a 100644
 --- a/util/configlexer.lex
 +++ b/util/configlexer.lex
 @@ -317,6 +317,7 @@ use-caps-for-id{COLON}		{ YDVAR(1, VAR_USE_CAPS_FOR_ID) }
@@ -376,7 +376,7 @@ index 71da924..b58b4b6 100644
  private-domain{COLON}		{ YDVAR(1, VAR_PRIVATE_DOMAIN) }
  prefetch-key{COLON}		{ YDVAR(1, VAR_PREFETCH_KEY) }
 diff --git a/util/configparser.y b/util/configparser.y
-index 1daf853..cd39618 100644
+index d4f965f9..8cc237c6 100644
 --- a/util/configparser.y
 +++ b/util/configparser.y
 @@ -97,6 +97,7 @@ extern struct config_parser_state* cfg_parser;
@@ -387,7 +387,7 @@ index 1daf853..cd39618 100644
  %token VAR_PRIVATE_DOMAIN VAR_REMOTE_CONTROL VAR_CONTROL_ENABLE
  %token VAR_CONTROL_INTERFACE VAR_CONTROL_PORT VAR_SERVER_KEY_FILE
  %token VAR_SERVER_CERT_FILE VAR_CONTROL_KEY_FILE VAR_CONTROL_CERT_FILE
-@@ -245,6 +246,7 @@ content_server: server_num_threads | server_verbosity | server_port |
+@@ -247,6 +248,7 @@ content_server: server_num_threads | server_verbosity | server_port |
  	server_dlv_anchor_file | server_dlv_anchor | server_neg_cache_size |
  	server_harden_referral_path | server_private_address |
  	server_private_domain | server_extended_statistics |
@@ -395,7 +395,7 @@ index 1daf853..cd39618 100644
  	server_local_data_ptr | server_jostle_timeout |
  	server_unwanted_reply_threshold | server_log_time_ascii |
  	server_domain_insecure | server_val_sig_skew_min |
-@@ -1742,6 +1744,15 @@ server_caps_whitelist: VAR_CAPS_WHITELIST STRING_ARG
+@@ -1754,6 +1756,15 @@ server_caps_whitelist: VAR_CAPS_WHITELIST STRING_ARG
  			yyerror("out of memory");
  	}
  	;

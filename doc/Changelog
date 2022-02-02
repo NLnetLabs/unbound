@@ -14,6 +14,8 @@
 	- Fix header comment for doxygen for authextstrtoaddr.
 	- please clang analyzer for loop in test code.
 	- Fix docker splint test to use more portable uname.
+	- Update contrib/aaaa-filter-iterator.patch with diff for current
+	  software version.
 
 1 February 2022: George
 	- Merge PR #603 from fobser: Use OpenSSL 1.1 API to access DSA and RSA
