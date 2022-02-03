@@ -1052,6 +1052,7 @@ deny_refuse(struct comm_point* c, enum acl_access acl,
 		log_assert(sldns_buffer_limit(c->buffer) >= LDNS_HEADER_SIZE
 			&& LDNS_QDCOUNT(sldns_buffer_begin(c->buffer)) == 1);
 
+		sldns_buffer_clear(c->buffer); /* reset write limit */
 		sldns_buffer_skip(c->buffer, LDNS_HEADER_SIZE); /* skip header */
 
 		/* check edns section is present */
@@ -1180,6 +1181,8 @@ deny_refuse(struct comm_point* c, enum acl_access acl,
 		sldns_buffer_write_u16(c->buffer, LDNS_EDE_PROHIBITED);
 
 		sldns_buffer_flip(c->buffer);
+
+		verbose(VERB_ALGO, "attached EDE code: %d", LDNS_EDE_PROHIBITED);
 
 		return 1;
 

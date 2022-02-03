@@ -1015,6 +1015,7 @@ int edns_opt_list_append_ede(struct edns_option** list, struct regional* region,
 	prevp = list;
 	while(*prevp != NULL)
 		prevp = &((*prevp)->next);
+	verbose(VERB_ALGO, "attached EDE code: %d with message: %s", code, txt);
 	*prevp = opt;
 	return 1;
 }

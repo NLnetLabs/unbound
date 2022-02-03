@@ -1328,7 +1328,7 @@ local_encode(struct query_info* qinfo, struct module_env* env,
 static void
 local_error_encode(struct query_info* qinfo, struct module_env* env,
 	struct edns_data* edns, struct comm_reply* repinfo, sldns_buffer* buf,
-	struct regional* temp, int rcode, int r, sldns_ede_code ede_code,
+	struct regional* temp, int rcode, int r, int ede_code,
 	const char* ede_txt)
 {
 	edns->edns_version = EDNS_ADVERTISED_VERSION;
@@ -1340,7 +1340,7 @@ local_error_encode(struct query_info* qinfo, struct module_env* env,
 		rcode, edns, repinfo, temp, env->now_tv))
 		edns->opt_list_inplace_cb_out = NULL;
 
-	if (ede_code > -1) {
+	if (ede_code >= 0) { /* so defined in sldns_ede_code */
 		edns_opt_list_append_ede(&edns->opt_list_out, temp,
 			ede_code, ede_txt);
 	}
