@@ -30,49 +30,8 @@ $PRE/unbound -d -c ub2.conf > unbound.log 2>&1 &
 UNBOUND_PID2=$!
 echo "UNBOUND_PID2=$UNBOUND_PID2" >> .tpkg.var.test
 
-# @TODO did we fix this? -> we do not trigger this anymore
-# # query with bad edns keepalive
-# dig @127.0.0.1 -p $UNBOUND_PORT +tcp +ednsopt=11:010203 > keepalive.txt
-#
-# if ! grep -q "OPT=15: 00 00 71 75 65 72 79 20 77 69 74 68 20 62 61 64 20 65 64 6e 73 20 6b 65 65 70 61 6c 69 76 65" keepalive.txt
-# then
-# 	echo "Incorect bad edns keepalive output"
-# 	exit 1
-# fi
 
-# local-zone always_refuse
-#dig @127.0.0.1 -p $UNBOUND_PORT qwerqwer.hopsa.kidee. TXT +dnssec > local_zone_refuse.txt
-#
-#if ! grep -q "OPT=15: 00 0f" local_zone_refuse.txt
-#then
-#	echo "query to qwerqwer.hopsa.kidee. should be EDE blocked"
-#	cat local_zone_refuse.txt
-#	exit 1
-#fi
-
-# local-zone always_null gets EDE forged
-#dig @127.0.0.1 -p $UNBOUND_PORT uva.nl A > local_zone_always_null_forged.txt
-#
-#if ! grep -q "OPT=15: 00 04" local_zone_always_null_forged.txt
-#then
-#	echo "local-zone always_null must have EDE forged code"
-#	cat local_zone_always_null_forged.txt
-#	exit 1
-#fi
-
-# RPZ always_refuse
-#dig @127.0.0.1 -p $UNBOUND_PORT hopsa.kidee. A > local_zone_rpz_always_refuse.txt
-#
-#if ! grep -q "OPT=15: 00 0f" local_zone_rpz_always_refuse.txt
-#then
-#	echo "local-zone always_refuse must have EDE blocked code"
-#	cat local_zone_rpz_always_refuse.txt
-#	exit 1
-#fi
-
-# @TODO trigger mesh DNSSEC bogus
-
-
+# DNSSEC failure: Signature Expired or DNSKEY Missing (depending on the servfail configuration)
 dig @127.0.0.1 -p $UNBOUND_PORT servfail.nl > servfail.txt
 
 if ! grep -q "OPT=15: 00 07" servfail.txt && ! grep -q "OPT=15: 00 09" servfail.txt
@@ -82,35 +41,6 @@ then
 	exit 1
 fi
 
-# local data forged answer
-#dig @127.0.0.1 -p $UNBOUND_PORT hopsa.nlnetlabs.nl TXT > local_data_forged.txt
-#
-#if ! grep -q "OPT=15: 00 04" local_data_forged.txt
-#then
-#	echo "query to hopsa.nlnetlabs.nl does not give EDE forged"
-#	cat local_data_forged.txt
-#	exit 1
-#fi
-
-# ACL refused, EDE prohibited
-# dig @127.0.0.1 -p $UNBOUND_PORT -b 127.0.0.2 example.com > acl_refused.txt
-
-# if ! grep -q "OPT=15: 00 12" acl_refused.txt
-# then
-# 	echo "ACL refused does not give EDE prohibited"
-# 	cat acl_refused.txt
-# 	exit 1
-# fi
-
-# cache snooping while in ACL, EDE not authoritative
-dig @127.0.0.1 -p $UNBOUND_PORT -b 127.0.0.3 abc.bca +norecurse > acl_not_auth_snoop.txt
-
-if ! grep -q "OPT=15: 00 14" acl_not_auth_snoop.txt
-then
-	echo "Cache snoop while in ACL does not give EDE Not Authoritative"
-	cat acl_not_auth_snoop.txt
-	exit 1
-fi
 
 # start authoritative unbound in the background
 $PRE/unbound -d -c ub.conf > unbound.log 2>&1 &
