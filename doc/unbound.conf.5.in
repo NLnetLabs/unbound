@@ -973,7 +973,7 @@ This option only has effect when qname-minimisation is enabled. Default is no.
 .B aggressive\-nsec: \fI<yes or no>
 Aggressive NSEC uses the DNSSEC NSEC chain to synthesize NXDOMAIN
 and other denials, using information from previous NXDOMAINs answers.
-Default is no.  It helps to reduce the query rate towards targets that get
+Default is yes.  It helps to reduce the query rate towards targets that get
 a very high nonexistent name lookup rate.
 .TP
 .B private\-address: \fI<IP address or subnet>
@@ -1652,7 +1652,8 @@ ratelimited by this setting.  The zone of the query is determined by examining
 the nameservers for it, the zone name is used to keep track of the rate.
 For example, 1000 may be a suitable value to stop the server from being
 overloaded with random names, and keeps Unbound from sending traffic to the
-nameservers for those zones.
+nameservers for those zones.  Configured forwarders are excluded from
+ratelimiting.
 .TP 5
 .B ratelimit\-size: \fI<memory size>
 Give the size of the data structure in which the current ongoing rates are
@@ -1674,6 +1675,15 @@ This can make ordinary queries complete (if repeatedly queried for),
 and enter the cache, whilst also mitigating the traffic flow by the
 factor given.
 .TP 5
+.B ratelimit\-backoff: \fI<yes or no>
+If enabled, the ratelimit is treated as a hard failure instead of the default
+maximum allowed constant rate.  When the limit is reached, traffic is
+ratelimited and demand continues to be kept track of for a 2 second rate
+window.  No traffic is allowed, except for ratelimit\-factor, until demand
+decreases below the configured ratelimit for a 2 second rate window.  Useful to
+set ratelimit to a suspicious rate to aggressively limit unusually high
+traffic.  Default is off.
+.TP 5
 .B ratelimit\-for\-domain: \fI<domain> <number qps or 0>
 Override the global ratelimit for an exact match domain name with the listed
 number.  You can give this for any number of names.  For example, for
@@ -1690,7 +1700,7 @@ to use different settings for a top\-level\-domain and subdomains.
 A value of 0 will disable ratelimiting for domain names that end in this name.
 .TP 5
 .B ip\-ratelimit: \fI<number or 0>
-Enable global ratelimiting of queries accepted per ip address.
+Enable global ratelimiting of queries accepted per IP address.
 If 0, the default, it is disabled.  This option is experimental at this time.
 The ratelimit is in queries per second that are allowed.  More queries are
 completely dropped and will not receive a reply, SERVFAIL or otherwise.
@@ -1716,6 +1726,15 @@ to complete.  Default is 10, allowing 1/10 traffic to flow normally.
 This can make ordinary queries complete (if repeatedly queried for),
 and enter the cache, whilst also mitigating the traffic flow by the
 factor given.
+.TP 5
+.B ip\-ratelimit\-backoff: \fI<yes or no>
+If enabled, the ratelimit is treated as a hard failure instead of the default
+maximum allowed constant rate.  When the limit is reached, traffic is
+ratelimited and demand continues to be kept track of for a 2 second rate
+window.  No traffic is allowed, except for ip\-ratelimit\-factor, until demand
+decreases below the configured ratelimit for a 2 second rate window.  Useful to
+set ip\-ratelimit to a suspicious rate to aggressively limit unusually high
+traffic.  Default is off.
 .TP 5
 .B outbound\-msg\-retry: \fI<number>
 The number of retries Unbound will do in case of a non positive response is
@@ -1846,13 +1865,19 @@ Name of the stub zone. This is the full domain name of the zone.
 .TP
 .B stub\-host: \fI<domain name>
 Name of stub zone nameserver. Is itself resolved before it is used.
+To use a nondefault port for DNS communication append '@' with the port number.
+If tls is enabled, then you can append a '#' and a name, then it'll check the
+tls authentication certificates with that name.  If you combine the '@'
+and '#', the '@' comes first.  If only '#' is used the default port is the
+configured tls\-port.
 .TP
 .B stub\-addr: \fI<IP address>
 IP address of stub zone nameserver. Can be IP 4 or IP 6.
 To use a nondefault port for DNS communication append '@' with the port number.
-If tls is enabled, then you can append a '#' and a name, then it'll check
-the tls authentication certificates with that name.  If you combine
-the '@' and '#', the '@' comes first.
+If tls is enabled, then you can append a '#' and a name, then it'll check the
+tls authentication certificates with that name.  If you combine the '@'
+and '#', the '@' comes first.  If only '#' is used the default port is the
+configured tls\-port.
 .TP
 .B stub\-prime: \fI<yes or no>
 This option is by default no.  If enabled it performs NS set priming,
@@ -1903,13 +1928,19 @@ Name of the forward zone. This is the full domain name of the zone.
 .TP
 .B forward\-host: \fI<domain name>
 Name of server to forward to. Is itself resolved before it is used.
+To use a nondefault port for DNS communication append '@' with the port number.
+If tls is enabled, then you can append a '#' and a name, then it'll check the
+tls authentication certificates with that name.  If you combine the '@'
+and '#', the '@' comes first.  If only '#' is used the default port is the
+configured tls\-port.
 .TP
 .B forward\-addr: \fI<IP address>
 IP address of server to forward to. Can be IP 4 or IP 6.
 To use a nondefault port for DNS communication append '@' with the port number.
-If tls is enabled, then you can append a '#' and a name, then it'll check
-the tls authentication certificates with that name.  If you combine
-the '@' and '#', the '@' comes first.
+If tls is enabled, then you can append a '#' and a name, then it'll check the
+tls authentication certificates with that name.  If you combine the '@'
+and '#', the '@' comes first.  If only '#' is used the default port is the
+configured tls\-port.
 .IP
 At high verbosity it logs the TLS certificate, with TLS enabled.
 If you leave out the '#' and auth name from the forward\-addr, any
@@ -2641,6 +2672,12 @@ Specify a string to be part of the log line, for easy referencing.
 Signal when a query is blocked by the RPZ with NXDOMAIN with an unset RA flag.
 This allows certain clients, like dnsmasq, to infer that the domain is
 externally blocked. Default is no.
+.TP
+.B for\-downstream: \fI<yes or no>
+If enabled the zone is authoritatively answered for and queries for the RPZ
+zone information are answered to downstream clients. This is useful for
+monitoring scripts, that can then access the SOA information to check if
+the rpz information is up to date. Default is no.
 .TP
 .B tags: \fI<list of tags>
 Limit the policies from this RPZ clause to clients with a matching tag. Tags
