@@ -1,3 +1,6 @@
+4 February 2022: Wouter
+	- Fix #412: cache invalidation issue with CNAME+A.
+
 3 February 2022: Wouter
 	- Fix for #611: Integer overflow in sldns_wire2str_pkt_scan.
 

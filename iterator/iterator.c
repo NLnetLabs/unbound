@@ -2832,7 +2832,9 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 		}
 		if(!qstate->no_cache_store)
 			iter_dns_store(qstate->env, &iq->response->qinfo,
-				iq->response->rep, 0, qstate->prefetch_leeway,
+				iq->response->rep,
+				iq->qchase.qtype != iq->response->qinfo.qtype,
+				qstate->prefetch_leeway,
 				iq->dp&&iq->dp->has_parent_side_NS,
 				qstate->region, qstate->query_flags);
 		/* close down outstanding requests to be discarded */
