@@ -1496,6 +1496,10 @@ processInit(struct module_qstate* qstate, struct val_qstate* vq,
 		verbose(VERB_ALGO, "restart count exceeded");
 		return val_error(qstate, id);
 	}
+
+	/* correctly initialize reason_bogus */
+	vq->chase_reply->reason_bogus = LDNS_EDE_DNSSEC_BOGUS;
+
 	verbose(VERB_ALGO, "validator classification %s", 
 		val_classification_to_string(subtype));
 	if(subtype == VAL_CLASS_REFERRAL && 
