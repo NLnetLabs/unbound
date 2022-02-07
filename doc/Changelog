@@ -1,3 +1,6 @@
+7 February 2022: Wouter
+	- Fix that TCP interface does not use TLS when TLS is also configured.
+
 4 February 2022: Wouter
 	- Fix #412: cache invalidation issue with CNAME+A.
 
