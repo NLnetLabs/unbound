@@ -5,6 +5,7 @@ server:
 	val-override-date: "20091113091234"
 	fake-sha1: yes
 	trust-anchor-signaling: no
+	do-ede: yes
 
 forward-zone:
 	name: "."

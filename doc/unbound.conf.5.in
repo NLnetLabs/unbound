@@ -1765,6 +1765,11 @@ option can be used multiple times. The most specific match will be used.
 EDNS0 option code for the \fIedns\-client\-string\fR option, from 0 to 65535.
 A value from the `Reserved for Local/Experimental` range (65001-65534) should
 be used.  Default is 65001.
+.TP 5
+.B do\-ede: \fI<yes or no>
+If enabled, Unbound will respond with Extended DNS Error codes (RFC8914).
+These EDEs attachinformative error messages to a response for various
+errors. Default is "no".
 .SS "Remote Control Options"
 In the
 .B remote\-control:

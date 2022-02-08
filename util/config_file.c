@@ -376,6 +376,7 @@ config_create(void)
 	cfg->ipset_name_v4 = NULL;
 	cfg->ipset_name_v6 = NULL;
 #endif
+	cfg->do_ede = 0;
 	return cfg;
 error_exit:
 	config_delete(cfg);

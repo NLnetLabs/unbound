@@ -1302,8 +1302,10 @@ mesh_send_reply(struct mesh_state* m, int rcode, struct reply_info* rep,
 			sldns_ede_code reason_bogus = rep->reason_bogus != LDNS_EDE_DNSSEC_BOGUS
 			                            ? rep->reason_bogus : errinf_to_reason_bogus(&m->s);
 
-			edns_opt_list_append_ede(&r->edns.opt_list_out, m->s.region,
+			if (m->s.env->cfg->do_ede) {
+				edns_opt_list_append_ede(&r->edns.opt_list_out, m->s.region,
 					reason_bogus, reason);
+			}
 			free(reason);
 		}
 		error_encode(r_buffer, rcode, &m->s.qinfo, r->qid,
@@ -2060,7 +2062,8 @@ mesh_serve_expired_callback(void* arg)
 			}
 		}
 
-		/* Add EDE Stale Answer (RCF8914) */
+		/* Add EDE Stale Answer (RCF8914). Ignore global do_ede as this is
+		 * warning instead of an error */
 		if (r->edns.edns_present && qstate->env->cfg->serve_expired_ede) {
 			edns_opt_list_append_ede(&r->edns.opt_list_out,
 				mstate->s.region, LDNS_EDE_STALE_ANSWER, "");

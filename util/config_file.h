@@ -680,6 +680,8 @@ struct config_file {
 	char* ipset_name_v4;
 	char* ipset_name_v6;
 #endif
+	/** respond with Extended DNS Errors (RFC8914) */
+	int do_ede;
 };
 
 /** from cfg username, after daemonize setup performed */

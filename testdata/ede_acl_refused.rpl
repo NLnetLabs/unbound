@@ -1,6 +1,7 @@
 ; config options
 server:
 	access-control: 127.0.0.0/8 refuse
+	do-ede: yes
 CONFIG_END
 
 SCENARIO_BEGIN Test ede-acl-refused

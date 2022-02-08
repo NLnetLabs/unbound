@@ -360,7 +360,8 @@
      VAR_ZONEMD_PERMISSIVE_MODE = 576,
      VAR_ZONEMD_CHECK = 577,
      VAR_ZONEMD_REJECT_ABSENCE = 578,
-     VAR_RPZ_SIGNAL_NXDOMAIN_RA = 579
+     VAR_RPZ_SIGNAL_NXDOMAIN_RA = 579,
+     VAR_DO_EDE = 580
    };
 #endif
 /* Tokens.  */
@@ -686,6 +687,7 @@
 #define VAR_ZONEMD_CHECK 577
 #define VAR_ZONEMD_REJECT_ABSENCE 578
 #define VAR_RPZ_SIGNAL_NXDOMAIN_RA 579
+#define VAR_DO_EDE 580
 
 
 
@@ -697,7 +699,7 @@ typedef union YYSTYPE
 	char*	str;
 }
 /* Line 1529 of yacc.c.  */
-#line 701 "util/configparser.h"
+#line 703 "util/configparser.h"
 	YYSTYPE;
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */
 # define YYSTYPE_IS_DECLARED 1
