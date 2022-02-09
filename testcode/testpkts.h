@@ -59,6 +59,11 @@ struct sldns_file_parse_state;
 	; 'UDP' matches if the transport is UDP.
 	; 'TCP' matches if the transport is TCP.
 	; 'ede=2' makes the query match if the EDNS EDE info-code is 2.
+	;	It also snips the EDE record out of the packet to facilitate
+	;	other matches.
+	; 'ede=any' makes the query match any EDNS EDE info-code.
+	;	It also snips the EDE record out of the packet to facilitate
+	;	other matches.
 	MATCH [opcode] [qtype] [qname] [serial=<value>] [all] [ttl]
 	MATCH [UDP|TCP] DO
 	MATCH ...
@@ -195,6 +200,8 @@ struct entry {
 	uint8_t match_serial;
 	/** match EDNS EDE info-code */
 	uint8_t match_ede;
+	/** match any EDNS EDE info-code */
+	uint8_t match_ede_any;
 	/** match all of the packet */
 	uint8_t match_all;
 	/** match all of the packet; ignore EDNS */

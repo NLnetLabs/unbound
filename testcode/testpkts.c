@@ -157,7 +157,14 @@ static void matchline(char* line, struct entry* e)
 			if(*parse != '=' && *parse != ':')
 				error("expected = or : in MATCH: %s", line);
 			parse++;
-			e->ede_info_code = (uint16_t)strtol(parse, (char**)&parse, 10);
+			while(isspace((unsigned char)*parse))
+				parse++;
+			if(str_keyword(&parse, "any")) {
+				e->match_ede_any = 1;
+			} else {
+				e->ede_info_code = (uint16_t)strtol(parse,
+					(char**)&parse, 10);
+			}
 			while(isspace((unsigned char)*parse))
 				parse++;
 		} else {
@@ -283,7 +290,8 @@ static struct entry* new_entry(void)
 	e->match_serial = 0;
 	e->ixfr_soa_serial = 0;
 	e->match_ede = 0;
-	e->ede_info_code = 0;
+	e->match_ede_any = 0;
+	e->ede_info_code = -1;
 	e->match_transport = transport_any;
 	e->reply_list = NULL;
 	e->copy_id = 0;
@@ -897,25 +905,34 @@ get_do_flag(uint8_t* pkt, size_t len)
 	return (int)(edns_bits&LDNS_EDNS_MASK_DO_BIT);
 }
 
-/** return the EDNS EDE INFO-CODE if found, else -1 */
+/** Snips the EDE option out of the OPT record and returns the EDNS EDE
+ *  INFO-CODE if found, else -1 */
 static int
-get_ede_info_code(uint8_t* pkt, size_t len)
+extract_ede(uint8_t* pkt, size_t len)
 {
-	uint8_t *rdata;
+	uint8_t *rdata, *opt_position = pkt;
 	uint16_t rdlen, optlen;
-	/* use arguments as temporary variables */
-	if(!pkt_find_edns_opt(&pkt, &len)) return -1;
-	if(len < 8) return -1; /* malformed */
-	rdlen = sldns_read_uint16(pkt+6);
-	rdata = pkt + 8;
+	size_t remaining;
+	int ede_code;
+	if(!pkt_find_edns_opt(&opt_position, &remaining)) return -1;
+	if(remaining < 8) return -1; /* malformed */
+	rdlen = sldns_read_uint16(opt_position+6);
+	rdata = opt_position + 8;
 	while(rdlen > 0) {
 		if(rdlen < 4) return -1; /* malformed */
+		optlen = sldns_read_uint16(rdata+2);
 		if(sldns_read_uint16(rdata) == LDNS_EDNS_EDE) {
 			if(rdlen < 6) return -1; /* malformed */
-			return sldns_read_uint16(rdata+4);
+			ede_code = sldns_read_uint16(rdata+4);
+			/* snip option from packet; assumes len is correct */
+			memmove(rdata, rdata+4+optlen,
+				(pkt+len)-(rdata+4+optlen));
+			/* update OPT size */
+			sldns_write_uint16(opt_position+6,
+				sldns_read_uint16(opt_position+6)-(4+optlen));
+			return ede_code;
 		}
-		optlen = sldns_read_uint16(rdata+2);
-		rdlen -= optlen;
+		rdlen -= 4 + optlen;
 		rdata += 4 + optlen;
 	}
 	return -1;
@@ -1333,7 +1350,7 @@ match_answer(uint8_t* q, size_t qlen, uint8_t* p, size_t plen, int mttl)
  *  zero out if at end of the string */
 static int
 ignore_edns_lines(char* str) {
-	char* current = str, *edns = str, *n;
+	char* edns = str, *n;
 	size_t str_len = strlen(str);
 	while((edns = strstr(edns, "; EDNS"))) {
 		n = strchr(edns, '\n');
@@ -1355,10 +1372,10 @@ match_all(uint8_t* q, size_t qlen, uint8_t* p, size_t plen, int mttl,
 	char* qstr, *pstr;
 	uint8_t* qb = q, *pb = p;
 	int r;
-	/* zero TTLs */
 	qb = memdup(q, qlen);
 	pb = memdup(p, plen);
 	if(!qb || !pb) error("out of memory");
+	/* zero TTLs */
 	if(!mttl) {
 		zerottls(qb, qlen);
 		zerottls(pb, plen);
@@ -1494,6 +1511,17 @@ find_match(struct entry* entries, uint8_t* query_pkt, size_t len,
 		verbose(3, "comparepkt: ");
 		reply = p->reply_list->reply_pkt;
 		rlen = p->reply_list->reply_len;
+		/* Should be first since it may change the query_pkt */
+		if(p->match_ede) {
+			int info_code = extract_ede(query_pkt, len);
+			if(info_code == -1 || (!p->match_ede_any &&
+				(uint16_t)info_code != p->ede_info_code)) {
+				verbose(3, "bad EDE INFO-CODE. Expected: %d, "
+					"and got: %d\n", p->ede_info_code,
+					info_code);
+				continue;
+			}
+		}
 		if(p->match_opcode && get_opcode(query_pkt, len) !=
 			get_opcode(reply, rlen)) {
 			verbose(3, "bad opcode\n");
@@ -1544,15 +1572,6 @@ find_match(struct entry* entries, uint8_t* query_pkt, size_t len,
 		if(p->match_serial && get_serial(query_pkt, len) != p->ixfr_soa_serial) {
 				verbose(3, "bad serial\n");
 				continue;
-		}
-		if(p->match_ede) {
-			int info_code = get_ede_info_code(query_pkt, len);
-			if(info_code == -1 ||
-				(uint16_t)info_code != p->ede_info_code) {
-				verbose(3, "bad EDE INFO-CODE. Expected: %d, and got: %d\n",
-					p->ede_info_code, info_code);
-				continue;
-			}
 		}
 		if(p->match_do && !get_do_flag(query_pkt, len)) {
 			verbose(3, "no DO bit set\n");
