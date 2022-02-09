@@ -121,7 +121,7 @@ ENTRY_END
 ; Check that we got a stale answer with the original TTL
 STEP 50 CHECK_ANSWER
 ENTRY_BEGIN
-	MATCH all_noedns ttl ede=3
+	MATCH all ttl ede=3
 	REPLY QR RA NOERROR
 	SECTION QUESTION
 		example.com. IN A

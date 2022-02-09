@@ -101,7 +101,7 @@ STEP 31 TIME_PASSES ELAPSE 1
 ; Check that we got a stale answer
 STEP 40 CHECK_ANSWER
 ENTRY_BEGIN
-	MATCH all_noedns ttl ede=3
+	MATCH all ttl ede=3
 	REPLY QR RD RA NOERROR
 	SECTION QUESTION
 		example.com. IN A
