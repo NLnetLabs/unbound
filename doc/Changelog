@@ -6,7 +6,8 @@
 
 3 February 2022: Wouter
 	- Fix for #611: Integer overflow in sldns_wire2str_pkt_scan.
-	- Tag for 1.15.0rc1 created.
+	- Tag for 1.15.0rc1 created. That became 1.15.0 on 10 feb 2022.
+	  The repository continues with version 1.15.1.
 
 2 February 2022: George
 	- Merge PR #532 from Shchelk: Fix: buffer overflow bug.
