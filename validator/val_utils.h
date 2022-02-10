@@ -114,26 +114,6 @@ void val_find_signer(enum val_classification subtype,
 	struct query_info* qinf, struct reply_info* rep,
 	size_t cname_skip, uint8_t** signer_name, size_t* signer_len);
 
-#if 0
-/**
- * Verify RRset with keys
- * @param env: module environment (scratch buffer)
- * @param ve: validator environment (verification settings)
- * @param rrset: what to verify
- * @param keys: dnskey rrset to verify with.
- * @param sigalg: if nonNULL provide downgrade protection otherwise one
- *   algorithm is enough.  Algo list is constructed in here.
- * @param reason: reason of failure. Fixed string or alloced in scratch.
- * @param section: section of packet where this rrset comes from.
- * @param qstate: qstate with region.
- * @return security status of verification.
- */
-enum sec_status val_verify_rrset(struct module_env* env, struct val_env* ve,
-	struct ub_packed_rrset_key* rrset, struct ub_packed_rrset_key* keys,
-	uint8_t* sigalg, char** reason, sldns_pkt_section section,
-	struct module_qstate* qstate);
-#endif
-
 /**
  * Verify RRset with keys from a keyset.
  * @param env: module environment (scratch buffer)

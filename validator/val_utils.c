@@ -421,18 +421,6 @@ val_verify_rrset_entry_ede(struct module_env* env, struct val_env* ve,
 }
 
 /** verify that a DS RR hashes to a key and that key signs the set */
-#if 0
-static enum sec_status
-verify_dnskeys_with_ds_rr(struct module_env* env, struct val_env* ve, 
-	struct ub_packed_rrset_key* dnskey_rrset, 
-        struct ub_packed_rrset_key* ds_rrset, size_t ds_idx, char** reason,
-	struct module_qstate* qstate)
-{
-	return verify_dnskeys_with_ds_rr_ede( env, ve, dnskey_rrset, ds_rrset,
-		ds_idx, reason, NULL, qstate);
-}
-#endif
-
 static enum sec_status
 verify_dnskeys_with_ds_rr_ede(struct module_env* env, struct val_env* ve,
 	struct ub_packed_rrset_key* dnskey_rrset,
@@ -593,7 +581,7 @@ val_verify_DNSKEY_with_DS_ede(struct module_env* env, struct val_env* ve,
 	if(!has_useful_ds) {
 		verbose(VERB_ALGO, "No usable DS records were found -- "
 			"treating as insecure.");
-			return sec_status_insecure;
+		return sec_status_insecure;
 	}
 	/* If any were understandable, then it is bad. */
 	verbose(VERB_QUERY, "Failed to match any usable DS to a DNSKEY.");
@@ -779,19 +767,6 @@ val_verify_DNSKEY_with_TA_ede(struct module_env* env, struct val_env* ve,
 	}
 	return sec_status_bogus;
 }
-
-#if 0
-struct key_entry_key* 
-val_verify_new_DNSKEYs_with_ta(struct regional* region, struct module_env* env,
-	struct val_env* ve, struct ub_packed_rrset_key* dnskey_rrset, 
-	struct ub_packed_rrset_key* ta_ds_rrset,
-	struct ub_packed_rrset_key* ta_dnskey_rrset, int downprot,
-	char** reason, struct module_qstate* qstate)
-{
-	return val_verify_rrset_entry_ede(region, env, ve, dnskey_rrset,
-		ta_ds_rrset, ta_dnskey_rrset,downprot, reason, NULL, qstate);
-}
-#endif
 
 struct key_entry_key* 
 val_verify_new_DNSKEYs_with_ta_ede(struct regional* region, struct module_env* env,

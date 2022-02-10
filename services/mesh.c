@@ -1291,7 +1291,7 @@ mesh_send_reply(struct mesh_state* m, int rcode, struct reply_info* rep,
 					r->edns.opt_list_inplace_cb_out = NULL;
 		}
 		/* Send along EDE BOGUS EDNS0 option when answer is bogus */
-		if(rcode == LDNS_RCODE_SERVFAIL &&
+		if(m->s.env->cfg->do_ede && rcode == LDNS_RCODE_SERVFAIL &&
 			m->s.env->need_to_validate && (!(r->qflags&BIT_CD) ||
 			m->s.env->cfg->ignore_cd) && rep &&
 			(rep->security <= sec_status_bogus ||
@@ -1302,10 +1302,8 @@ mesh_send_reply(struct mesh_state* m, int rcode, struct reply_info* rep,
 			sldns_ede_code reason_bogus = rep->reason_bogus != LDNS_EDE_DNSSEC_BOGUS
 			                            ? rep->reason_bogus : errinf_to_reason_bogus(&m->s);
 
-			if (m->s.env->cfg->do_ede) {
-				edns_opt_list_append_ede(&r->edns.opt_list_out, m->s.region,
-					reason_bogus, reason);
-			}
+			edns_opt_list_append_ede(&r->edns.opt_list_out, m->s.region,
+				reason_bogus, reason);
 			free(reason);
 		}
 		error_encode(r_buffer, rcode, &m->s.qinfo, r->qid,
