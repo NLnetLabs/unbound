@@ -188,7 +188,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_DYNLIB VAR_DYNLIB_FILE VAR_EDNS_CLIENT_STRING
 %token VAR_EDNS_CLIENT_STRING_OPCODE VAR_NSID
 %token VAR_ZONEMD_PERMISSIVE_MODE VAR_ZONEMD_CHECK VAR_ZONEMD_REJECT_ABSENCE
-%token VAR_RPZ_SIGNAL_NXDOMAIN_RA
+%token VAR_RPZ_SIGNAL_NXDOMAIN_RA VAR_INTERFACE_AUTOMATIC_PORTS
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -311,7 +311,8 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_tls_use_sni | server_edns_client_string |
 	server_edns_client_string_opcode | server_nsid |
 	server_zonemd_permissive_mode | server_max_reuse_tcp_queries |
-	server_tcp_reuse_timeout | server_tcp_auth_query_timeout
+	server_tcp_reuse_timeout | server_tcp_auth_query_timeout |
+	server_interface_automatic_ports
 
 	;
 stubstart: VAR_STUB_ZONE
@@ -798,6 +799,13 @@ server_interface_automatic: VAR_INTERFACE_AUTOMATIC STRING_ARG
 			yyerror("expected yes or no.");
 		else cfg_parser->cfg->if_automatic = (strcmp($2, "yes")==0);
 		free($2);
+	}
+	;
+server_interface_automatic_ports: VAR_INTERFACE_AUTOMATIC_PORTS STRING_ARG
+	{
+		OUTYY(("P(server_interface_automatic_ports:%s)\n", $2));
+		free(cfg_parser->cfg->if_automatic_ports);
+		cfg_parser->cfg->if_automatic_ports = $2;
 	}
 	;
 server_do_ip4: VAR_DO_IP4 STRING_ARG

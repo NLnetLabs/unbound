@@ -195,6 +195,7 @@ config_create(void)
 	cfg->use_systemd = 0;
 	cfg->do_daemonize = 1;
 	cfg->if_automatic = 0;
+	cfg->if_automatic_ports = NULL;
 	cfg->so_rcvbuf = 0;
 	cfg->so_sndbuf = 0;
 	cfg->so_reuseport = REUSEPORT_DEFAULT;
@@ -559,6 +560,7 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	else S_YNO("http-nodelay:", http_nodelay)
 	else S_YNO("http-notls-downstream:", http_notls_downstream)
 	else S_YNO("interface-automatic:", if_automatic)
+	else S_STR("interface-automatic-ports:", if_automatic_ports)
 	else S_YNO("use-systemd:", use_systemd)
 	else S_YNO("do-daemonize:", do_daemonize)
 	else S_NUMBER_NONZERO("port:", port)
@@ -990,6 +992,7 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_IFC(opt, "interface", num_ifs, ifs)
 	else O_IFC(opt, "outgoing-interface", num_out_ifs, out_ifs)
 	else O_YNO(opt, "interface-automatic", if_automatic)
+	else O_STR(opt, "interface-automatic-ports", if_automatic_ports)
 	else O_DEC(opt, "port", port)
 	else O_DEC(opt, "outgoing-range", outgoing_num_ports)
 	else O_DEC(opt, "outgoing-num-tcp", outgoing_num_tcp)
@@ -1534,6 +1537,7 @@ config_delete(struct config_file* cfg)
 	free(cfg->directory);
 	free(cfg->logfile);
 	free(cfg->pidfile);
+	free(cfg->if_automatic_ports);
 	free(cfg->target_fetch_policy);
 	free(cfg->ssl_service_key);
 	free(cfg->ssl_service_pem);

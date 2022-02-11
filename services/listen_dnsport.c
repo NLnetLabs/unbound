@@ -47,6 +47,7 @@
 #ifdef USE_TCP_FASTOPEN
 #include <netinet/tcp.h>
 #endif
+#include <ctype.h>
 #include "services/listen_dnsport.h"
 #include "services/outside_network.h"
 #include "util/netevent.h"
@@ -1716,6 +1717,63 @@ listening_ports_open(struct config_file* cfg, char** ifs, int num_ifs,
 	}
 	/* create ip4 and ip6 ports so that return addresses are nice. */
 	if(do_auto || num_ifs == 0) {
+		if(do_auto && cfg->if_automatic_ports &&
+			cfg->if_automatic_ports[0]!=0) {
+			char* now = cfg->if_automatic_ports;
+			while(now && *now) {
+				char* after;
+				int extraport;
+				while(isspace((unsigned char)*now))
+					now++;
+				if(!*now)
+					break;
+				after = now;
+				extraport = (int)strtol(now, &after, 10);
+				if(extraport < 0 || extraport > 65535) {
+					log_err("interface-automatic-ports port number out of range, at position %d of '%s'", (int)(now-cfg->if_automatic_ports)+1, cfg->if_automatic_ports);
+					listening_ports_free(list);
+					return NULL;
+				}
+				if(extraport == 0 && now == after) {
+					log_err("interface-automatic-ports could not be parsed, at position %d of '%s'", (int)(now-cfg->if_automatic_ports)+1, cfg->if_automatic_ports);
+					listening_ports_free(list);
+					return NULL;
+				}
+				now = after;
+				snprintf(portbuf, sizeof(portbuf), "%d", extraport);
+				if(do_ip6) {
+					hints.ai_family = AF_INET6;
+					if(!ports_create_if("::0",
+						do_auto, cfg->do_udp, do_tcp,
+						&hints, portbuf, &list,
+						cfg->so_rcvbuf, cfg->so_sndbuf,
+						cfg->ssl_port, cfg->tls_additional_port,
+						cfg->https_port, reuseport, cfg->ip_transparent,
+						cfg->tcp_mss, cfg->ip_freebind,
+						cfg->http_nodelay, cfg->use_systemd,
+						cfg->dnscrypt_port, cfg->ip_dscp)) {
+						listening_ports_free(list);
+						return NULL;
+					}
+				}
+				if(do_ip4) {
+					hints.ai_family = AF_INET;
+					if(!ports_create_if("0.0.0.0",
+						do_auto, cfg->do_udp, do_tcp,
+						&hints, portbuf, &list,
+						cfg->so_rcvbuf, cfg->so_sndbuf,
+						cfg->ssl_port, cfg->tls_additional_port,
+						cfg->https_port, reuseport, cfg->ip_transparent,
+						cfg->tcp_mss, cfg->ip_freebind,
+						cfg->http_nodelay, cfg->use_systemd,
+						cfg->dnscrypt_port, cfg->ip_dscp)) {
+						listening_ports_free(list);
+						return NULL;
+					}
+				}
+			}
+			return list;
+		}
 		if(do_ip6) {
 			hints.ai_family = AF_INET6;
 			if(!ports_create_if(do_auto?"::0":"::1", 

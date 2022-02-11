@@ -1,8 +1,8 @@
-/* A Bison parser, made by GNU Bison 3.7.6.  */
+/* A Bison parser, made by GNU Bison 3.6.4.  */
 
 /* Bison interface for Yacc-like parsers in C
 
-   Copyright (C) 1984, 1989-1990, 2000-2015, 2018-2021 Free Software Foundation,
+   Copyright (C) 1984, 1989-1990, 2000-2015, 2018-2020 Free Software Foundation,
    Inc.
 
    This program is free software: you can redistribute it and/or modify
@@ -16,7 +16,7 @@
    GNU General Public License for more details.
 
    You should have received a copy of the GNU General Public License
-   along with this program.  If not, see <https://www.gnu.org/licenses/>.  */
+   along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
 /* As a special exception, you may create a larger work that contains
    part or all of the Bison parser skeleton and distribute that work
@@ -374,12 +374,12 @@ extern int yydebug;
     VAR_ZONEMD_PERMISSIVE_MODE = 575, /* VAR_ZONEMD_PERMISSIVE_MODE  */
     VAR_ZONEMD_CHECK = 576,        /* VAR_ZONEMD_CHECK  */
     VAR_ZONEMD_REJECT_ABSENCE = 577, /* VAR_ZONEMD_REJECT_ABSENCE  */
-    VAR_RPZ_SIGNAL_NXDOMAIN_RA = 578 /* VAR_RPZ_SIGNAL_NXDOMAIN_RA  */
+    VAR_RPZ_SIGNAL_NXDOMAIN_RA = 578, /* VAR_RPZ_SIGNAL_NXDOMAIN_RA  */
+    VAR_INTERFACE_AUTOMATIC_PORTS = 579 /* VAR_INTERFACE_AUTOMATIC_PORTS  */
   };
   typedef enum yytokentype yytoken_kind_t;
 #endif
 /* Token kinds.  */
-#define YYEMPTY -2
 #define YYEOF 0
 #define YYerror 256
 #define YYUNDEF 257
@@ -704,6 +704,7 @@ extern int yydebug;
 #define VAR_ZONEMD_CHECK 576
 #define VAR_ZONEMD_REJECT_ABSENCE 577
 #define VAR_RPZ_SIGNAL_NXDOMAIN_RA 578
+#define VAR_INTERFACE_AUTOMATIC_PORTS 579
 
 /* Value type.  */
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
@@ -713,7 +714,7 @@ union YYSTYPE
 
 	char*	str;
 
-#line 717 "util/configparser.h"
+#line 718 "util/configparser.h"
 
 };
 typedef union YYSTYPE YYSTYPE;
