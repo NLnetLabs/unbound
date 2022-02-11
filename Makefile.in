@@ -344,17 +344,17 @@ longcheck: longtest
 test:	unittest$(EXEEXT) testbound$(EXEEXT)
 	./unittest$(EXEEXT)
 	./testbound$(EXEEXT) -s
-	for x in $(srcdir)/testdata/*.rpl; do
-		printf "%s" "$$x "
-		if ./testbound$(EXEEXT) -p $$x >/dev/null 2>&1; then
-			echo OK
+	for x in $(srcdir)/testdata/*.rpl; do \
+		printf "%s" "$$x "; \
+		if ./testbound$(EXEEXT) -p $$x >/dev/null 2>&1; then \
+			echo OK; \
 		else
-			echo failed
-			./testbound$(EXEEXT) -p $$x -o -vvvvv
-			printf "%s" "$$x "
-			echo failed
-			exit 1
-		fi
+			echo failed; \
+			./testbound$(EXEEXT) -p $$x -o -vvvvv; \
+			printf "%s" "$$x "; \
+			echo failed; \
+			exit 1; \
+		fi; \
 	done
 	@echo test OK
 
