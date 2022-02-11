@@ -3,6 +3,7 @@
 	  respond to CTRL+C command).
 	- Fix #618: enabling interface-automatic disables DNS-over-TLS.
 	  Adds the option to list interface-automatic-ports.
+	- Remove debug info from #618 fix.
 
 7 February 2022: Wouter
 	- Fix that TCP interface does not use TLS when TLS is also configured.

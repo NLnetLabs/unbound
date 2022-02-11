@@ -426,7 +426,6 @@ ifautomaticportschecks(char* ifautomaticports)
 			fatal_exit("interface-automatic-ports: port out of range at position %d in '%s'", (int)(now-ifautomaticports)+1, ifautomaticports);
 		if(extraport == 0 && now == after)
 			fatal_exit("interface-automatic-ports: parse error at position %d in '%s'", (int)(now-ifautomaticports)+1, ifautomaticports);
-		log_info("extraport %d", extraport);
 		now = after;
 	}
 }
