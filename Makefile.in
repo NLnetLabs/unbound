@@ -348,7 +348,7 @@ test:	unittest$(EXEEXT) testbound$(EXEEXT)
 		printf "%s" "$$x "; \
 		if ./testbound$(EXEEXT) -p $$x >/dev/null 2>&1; then \
 			echo OK; \
-		else
+		else \
 			echo failed; \
 			./testbound$(EXEEXT) -p $$x -o -vvvvv; \
 			printf "%s" "$$x "; \
