@@ -1,3 +1,6 @@
+15 February 2022: Wouter
+	- Fix #628: A rpz-passthru action is not ending RPZ zone processing.
+
 11 February 2022: Wouter
 	- Fix #624: Unable to stop Unbound in Windows console (does not
 	  respond to CTRL+C command).

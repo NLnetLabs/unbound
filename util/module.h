@@ -667,6 +667,8 @@ struct module_qstate {
 	/** Extended result of response-ip action processing, mainly
 	 *  for logging purposes. */
 	struct respip_action_info* respip_action_info;
+	/** if the query is rpz passthru, no further rpz processing for it */
+	int rpz_passthru;
 
 	/** whether the reply should be dropped */
 	int is_drop;

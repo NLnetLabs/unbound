@@ -458,7 +458,8 @@ mesh_serve_expired_init(struct mesh_state* mstate, int timeout)
 
 void mesh_new_client(struct mesh_area* mesh, struct query_info* qinfo,
 	struct respip_client_info* cinfo, uint16_t qflags,
-	struct edns_data* edns, struct comm_reply* rep, uint16_t qid)
+	struct edns_data* edns, struct comm_reply* rep, uint16_t qid,
+	int rpz_passthru)
 {
 	struct mesh_state* s = NULL;
 	int unique = unique_mesh_state(edns->opt_list_in, mesh->env);
@@ -513,6 +514,7 @@ void mesh_new_client(struct mesh_area* mesh, struct query_info* qinfo,
 		}
 		if(unique)
 			mesh_state_make_unique(s);
+		s->s.rpz_passthru = rpz_passthru;
 		/* copy the edns options we got from the front */
 		if(edns->opt_list_in) {
 			s->s.edns_opts_front_in = edns_opt_copy_region(edns->opt_list_in,
@@ -606,7 +608,7 @@ servfail_mem:
 int 
 mesh_new_callback(struct mesh_area* mesh, struct query_info* qinfo,
 	uint16_t qflags, struct edns_data* edns, sldns_buffer* buf, 
-	uint16_t qid, mesh_cb_func_type cb, void* cb_arg)
+	uint16_t qid, mesh_cb_func_type cb, void* cb_arg, int rpz_passthru)
 {
 	struct mesh_state* s = NULL;
 	int unique = unique_mesh_state(edns->opt_list_in, mesh->env);
@@ -632,6 +634,7 @@ mesh_new_callback(struct mesh_area* mesh, struct query_info* qinfo,
 		}
 		if(unique)
 			mesh_state_make_unique(s);
+		s->s.rpz_passthru = rpz_passthru;
 		if(edns->opt_list_in) {
 			s->s.edns_opts_front_in = edns_opt_copy_region(edns->opt_list_in,
 				s->s.region);
@@ -686,7 +689,8 @@ mesh_new_callback(struct mesh_area* mesh, struct query_info* qinfo,
  * 0 (false), in which case the new state is only made runnable so it
  * will not be run recursively on top of the current state. */
 static void mesh_schedule_prefetch(struct mesh_area* mesh,
-	struct query_info* qinfo, uint16_t qflags, time_t leeway, int run)
+	struct query_info* qinfo, uint16_t qflags, time_t leeway, int run,
+	int rpz_passthru)
 {
 	struct mesh_state* s = mesh_area_find(mesh, NULL, qinfo,
 		qflags&(BIT_RD|BIT_CD), 0, 0);
@@ -741,6 +745,7 @@ static void mesh_schedule_prefetch(struct mesh_area* mesh,
 			s->list_select = mesh_jostle_list;
 		}
 	}
+	s->s.rpz_passthru = rpz_passthru;
 
 	if(!run) {
 #ifdef UNBOUND_DEBUG
@@ -757,9 +762,9 @@ static void mesh_schedule_prefetch(struct mesh_area* mesh,
 }
 
 void mesh_new_prefetch(struct mesh_area* mesh, struct query_info* qinfo,
-        uint16_t qflags, time_t leeway)
+        uint16_t qflags, time_t leeway, int rpz_passthru)
 {
-	mesh_schedule_prefetch(mesh, qinfo, qflags, leeway, 1);
+	mesh_schedule_prefetch(mesh, qinfo, qflags, leeway, 1, rpz_passthru);
 }
 
 void mesh_report_reply(struct mesh_area* mesh, struct outbound_entry* e,
@@ -1713,6 +1718,7 @@ mesh_continue(struct mesh_area* mesh, struct mesh_state* mstate,
 		if(mstate->s.curmod == 0) {
 			struct query_info* qinfo = NULL;
 			uint16_t qflags;
+			int rpz_p = 0;
 
 			mesh_query_done(mstate);
 			mesh_walk_supers(mesh, mstate);
@@ -1721,13 +1727,15 @@ mesh_continue(struct mesh_area* mesh, struct mesh_state* mstate,
 			 * from an external DNS server, we'll need to schedule
 			 * a prefetch after removing the current state, so
 			 * we need to make a copy of the query info here. */
-			if(mstate->s.need_refetch)
+			if(mstate->s.need_refetch) {
 				mesh_copy_qinfo(mstate, &qinfo, &qflags);
+				rpz_p = mstate->s.rpz_passthru;
+			}
 
 			mesh_state_delete(&mstate->s);
 			if(qinfo) {
 				mesh_schedule_prefetch(mesh, qinfo, qflags,
-					0, 1);
+					0, 1, rpz_p);
 			}
 			return 0;
 		}
@@ -1937,7 +1945,7 @@ apply_respip_action(struct module_qstate* qstate,
 		return 1;
 
 	if(!respip_rewrite_reply(qinfo, cinfo, rep, encode_repp, actinfo,
-		alias_rrset, 0, qstate->region, az))
+		alias_rrset, 0, qstate->region, az, NULL))
 		return 0;
 
 	/* xxx_deny actions mean dropping the reply, unless the original reply
