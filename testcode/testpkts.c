@@ -1510,12 +1510,15 @@ find_match(struct entry* entries, uint8_t* query_pkt, size_t len,
 	enum transport_type transport)
 {
 	struct entry* p = entries;
-	uint8_t* reply;
-	size_t rlen;
+	uint8_t* reply, *query_pkt_orig;
+	size_t rlen, query_pkt_orig_len;
+	query_pkt_orig = memdup(query_pkt, len);
+	query_pkt_orig_len = len;
 	for(p=entries; p; p=p->next) {
 		verbose(3, "comparepkt: ");
 		reply = p->reply_list->reply_pkt;
 		rlen = p->reply_list->reply_len;
+		memcpy(query_pkt, query_pkt_orig, query_pkt_orig_len);
 		/* Should be first since it may change the query_pkt */
 		if(p->match_ede) {
 			int info_code = extract_ede(query_pkt, len);
@@ -1606,8 +1609,10 @@ find_match(struct entry* entries, uint8_t* query_pkt, size_t len,
 			continue;
 		}
 		verbose(3, "match!\n");
+		free(query_pkt_orig);
 		return p;
 	}
+	free(query_pkt_orig);
 	return NULL;
 }
 
