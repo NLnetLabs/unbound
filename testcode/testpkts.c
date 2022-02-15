@@ -914,14 +914,18 @@ extract_ede(uint8_t* pkt, size_t len)
 	uint16_t rdlen, optlen;
 	size_t remaining;
 	int ede_code;
+        verbose(1, "XXXXXX extract_ede pkt_find_edns_opt");
 	if(!pkt_find_edns_opt(&opt_position, &remaining)) return -1;
+        verbose(1, "XXXXXX extract_ede malformed 1");
 	if(remaining < 8) return -1; /* malformed */
 	rdlen = sldns_read_uint16(opt_position+6);
 	rdata = opt_position + 8;
 	while(rdlen > 0) {
+                verbose(1, "XXXXXX extract_ede malformed 2");
 		if(rdlen < 4) return -1; /* malformed */
 		optlen = sldns_read_uint16(rdata+2);
 		if(sldns_read_uint16(rdata) == LDNS_EDNS_EDE) {
+                        verbose(1, "XXXXXX extract_ede malformed 3");
 			if(rdlen < 6) return -1; /* malformed */
 			ede_code = sldns_read_uint16(rdata+4);
 			/* snip option from packet; assumes len is correct */
@@ -935,6 +939,7 @@ extract_ede(uint8_t* pkt, size_t len)
 		rdlen -= 4 + optlen;
 		rdata += 4 + optlen;
 	}
+        verbose(1, "XXXXXX extract_ede no ede");
 	return -1;
 }
 
