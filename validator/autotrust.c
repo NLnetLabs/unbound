@@ -2397,7 +2397,7 @@ probe_anchor(struct module_env* env, struct trust_anchor* tp)
 		qinfo.qclass);
 
 	if(!mesh_new_callback(env->mesh, &qinfo, qflags, &edns, buf, 0, 
-		&probe_answer_cb, env)) {
+		&probe_answer_cb, env, 0)) {
 		log_err("out of memory making 5011 probe");
 	}
 }
