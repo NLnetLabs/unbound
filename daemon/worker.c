@@ -1758,6 +1758,9 @@ worker_sighandler(int sig, void* arg)
 			comm_base_exit(worker->base);
 			break;
 #endif
+#ifdef SIGBREAK
+		case SIGBREAK:
+#endif
 		case SIGINT:
 			worker->need_to_exit = 1;
 			comm_base_exit(worker->base);
@@ -1876,6 +1879,9 @@ worker_init(struct worker* worker, struct config_file *cfg,
 #ifdef SIGHUP
 		ub_thread_sig_unblock(SIGHUP);
 #endif
+#ifdef SIGBREAK
+		ub_thread_sig_unblock(SIGBREAK);
+#endif
 		ub_thread_sig_unblock(SIGINT);
 #ifdef SIGQUIT
 		ub_thread_sig_unblock(SIGQUIT);
@@ -1892,6 +1898,9 @@ worker_init(struct worker* worker, struct config_file *cfg,
 			|| !comm_signal_bind(worker->comsig, SIGQUIT)
 #endif
 			|| !comm_signal_bind(worker->comsig, SIGTERM)
+#ifdef SIGBREAK
+			|| !comm_signal_bind(worker->comsig, SIGBREAK)
+#endif
 			|| !comm_signal_bind(worker->comsig, SIGINT)) {
 			log_err("could not create signal handlers");
 			worker_delete(worker);

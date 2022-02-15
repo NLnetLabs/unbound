@@ -272,6 +272,7 @@ interface{COLON}		{ YDVAR(1, VAR_INTERFACE) }
 ip-address{COLON}		{ YDVAR(1, VAR_INTERFACE) }
 outgoing-interface{COLON}	{ YDVAR(1, VAR_OUTGOING_INTERFACE) }
 interface-automatic{COLON}	{ YDVAR(1, VAR_INTERFACE_AUTOMATIC) }
+interface-automatic-ports{COLON} { YDVAR(1, VAR_INTERFACE_AUTOMATIC_PORTS) }
 so-rcvbuf{COLON}		{ YDVAR(1, VAR_SO_RCVBUF) }
 so-sndbuf{COLON}		{ YDVAR(1, VAR_SO_SNDBUF) }
 so-reuseport{COLON}		{ YDVAR(1, VAR_SO_REUSEPORT) }

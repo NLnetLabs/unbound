@@ -1,5 +1,20 @@
+11 February 2022: Wouter
+	- Fix #624: Unable to stop Unbound in Windows console (does not
+	  respond to CTRL+C command).
+	- Fix #618: enabling interface-automatic disables DNS-over-TLS.
+	  Adds the option to list interface-automatic-ports.
+	- Remove debug info from #618 fix.
+
+7 February 2022: Wouter
+	- Fix that TCP interface does not use TLS when TLS is also configured.
+
+4 February 2022: Wouter
+	- Fix #412: cache invalidation issue with CNAME+A.
+
 3 February 2022: Wouter
 	- Fix for #611: Integer overflow in sldns_wire2str_pkt_scan.
+	- Tag for 1.15.0rc1 created. That became 1.15.0 on 10 feb 2022.
+	  The repository continues with version 1.15.1.
 
 2 February 2022: George
 	- Merge PR #532 from Shchelk: Fix: buffer overflow bug.

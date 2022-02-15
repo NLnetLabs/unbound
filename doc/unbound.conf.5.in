@@ -140,6 +140,15 @@ ip\-transparent you can select which (future) interfaces Unbound provides
 service on.  This feature is experimental, and needs support in your OS for
 particular socket options.  Default value is no.
 .TP
+.B interface\-automatic\-ports: \fI<string>
+List the port numbers that interface-automatic listens on. If empty, the
+default port is listened on. The port numbers are separated by spaces in the
+string. Default is "".
+.IP
+This can be used to have interface automatic to deal with the interface,
+and listen on the normal port number, by including it in the list, and
+also https or dns over tls port numbers by putting them in the list as well.
+.TP
 .B outgoing\-interface: \fI<ip address or ip6 netblock>
 Interface to use to connect to the network. This interface is used to send
 queries to authoritative servers and receive their replies. Can be given
