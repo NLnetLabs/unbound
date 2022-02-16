@@ -1860,7 +1860,7 @@ processValidate(struct module_qstate* qstate, struct val_qstate* vq,
 			"of trust to keys for", vq->key_entry->name,
 			LDNS_RR_TYPE_DNSKEY, vq->key_entry->key_class);
 		vq->chase_reply->security = sec_status_bogus;
-		vq->chase_reply->reason_bogus = LDNS_EDE_DNSSEC_BOGUS;
+		vq->chase_reply->reason_bogus = LDNS_EDE_DNSKEY_MISSING;
 		errinf_ede(qstate, "while building chain of trust",
 			LDNS_EDE_DNSKEY_MISSING);
 		if(vq->restart_count >= ve->max_restart)
@@ -2418,7 +2418,7 @@ ds_response_to_ke(struct module_qstate* qstate, struct val_qstate* vq,
 		/* errors here pretty much break validation */
 		verbose(VERB_DETAIL, "DS response was error, thus bogus");
 		errinf(qstate, rc);
-		errinf_ede(qstate, "no DS", reason_bogus);
+		errinf_ede(qstate, "no DS", LDNS_EDE_NETWORK_ERROR);
 
 		goto return_bogus;
 	}
@@ -2433,7 +2433,7 @@ ds_response_to_ke(struct module_qstate* qstate, struct val_qstate* vq,
 		if(!ds) {
 			log_warn("internal error: POSITIVE DS response was "
 				"missing DS.");
-			errinf_ede(qstate, "no DS record", reason_bogus);
+			errinf_ede(qstate, "no DS record", LDNS_EDE_DNSSEC_BOGUS);
 			goto return_bogus;
 		}
 		/* Verify only returns BOGUS or SECURE. If the rrset is 
