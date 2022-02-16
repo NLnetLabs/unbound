@@ -1505,17 +1505,25 @@ find_match(struct entry* entries, uint8_t* query_pkt, size_t len,
 	enum transport_type transport)
 {
 	struct entry* p = entries;
-	uint8_t* reply;
-	size_t rlen;
+	uint8_t* reply, *query_pkt_orig;
+	size_t rlen, query_pkt_orig_len;
+	/* Keep the original packet; it may be modified */
+	query_pkt_orig = memdup(query_pkt, len);
+	query_pkt_orig_len = len;
 	for(p=entries; p; p=p->next) {
 		verbose(3, "comparepkt: ");
 		reply = p->reply_list->reply_pkt;
 		rlen = p->reply_list->reply_len;
-		/* Should be first since it may change the query_pkt */
+		/* Restore the original packet for each entry */
+		memcpy(query_pkt, query_pkt_orig, query_pkt_orig_len);
+		/* EDE should be first since it may modify the query_pkt */
 		if(p->match_ede) {
 			int info_code = extract_ede(query_pkt, len);
-			if(info_code == -1 || (!p->match_ede_any &&
-				(uint16_t)info_code != p->ede_info_code)) {
+			if(info_code == -1) {
+				verbose(3, "bad EDE. Expected but not found\n");
+				continue;
+			} else if(!p->match_ede_any &&
+				(uint16_t)info_code != p->ede_info_code) {
 				verbose(3, "bad EDE INFO-CODE. Expected: %d, "
 					"and got: %d\n", p->ede_info_code,
 					info_code);
@@ -1601,8 +1609,10 @@ find_match(struct entry* entries, uint8_t* query_pkt, size_t len,
 			continue;
 		}
 		verbose(3, "match!\n");
+		free(query_pkt_orig);
 		return p;
 	}
+	free(query_pkt_orig);
 	return NULL;
 }
 
