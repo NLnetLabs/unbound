@@ -1609,9 +1609,13 @@ find_match(struct entry* entries, uint8_t* query_pkt, size_t len,
 			continue;
 		}
 		verbose(3, "match!\n");
+		/* Restore the original packet */
+		memcpy(query_pkt, query_pkt_orig, query_pkt_orig_len);
 		free(query_pkt_orig);
 		return p;
 	}
+	/* Restore the original packet */
+	memcpy(query_pkt, query_pkt_orig, query_pkt_orig_len);
 	free(query_pkt_orig);
 	return NULL;
 }
