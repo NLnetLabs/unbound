@@ -1,3 +1,6 @@
+16 February 2022: Wouter
+	- Fix for #628: fix rpz-passthru for qname trigger by localzone type.
+
 15 February 2022: Wouter
 	- Fix #628: A rpz-passthru action is not ending RPZ zone processing.
 

@@ -24,6 +24,22 @@ d.a	A 127.0.0.1
 TEMPFILE_END
 
 rpz:
+	name: "wl.example.com."
+	rpz-log: yes
+	rpz-log-name: "wl.example.com"
+	zonefile:
+TEMPFILE_NAME wl.example.com
+TEMPFILE_CONTENTS wl.example.com
+$ORIGIN example.com.
+wl	3600	IN	SOA	ns1.wl.example.com. hostmaster.wl.example.com. (
+		1379078166 28800 7200 604800 7200 )
+	3600	IN	NS	ns1.wl.example.com.
+	3600	IN	NS	ns2.wl.example.com.
+$ORIGIN wl.example.com.
+e.a	CNAME rpz-passthru.
+TEMPFILE_END
+
+rpz:
 	name: "rpz2.example.com."
 	rpz-log: yes
 	rpz-log-name: "rpz2.example.com"
@@ -72,6 +88,16 @@ d.a. IN A
 SECTION ANSWER
 d.a. IN A 1.2.3.4
 ENTRY_END
+
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR NOERROR
+SECTION QUESTION
+e.a. IN A
+SECTION ANSWER
+e.a. IN A 1.2.3.4
+ENTRY_END
 RANGE_END
 
 STEP 10 QUERY ADDRESS 192.0.5.1
@@ -106,6 +132,23 @@ SECTION QUESTION
 d.a.	IN	A
 SECTION ANSWER
 d.a. IN A 1.2.3.4
+ENTRY_END
+
+STEP 30 QUERY ADDRESS 192.0.2.1
+ENTRY_BEGIN
+REPLY RD
+SECTION QUESTION
+e.a.	IN	A
+ENTRY_END
+
+STEP 31 CHECK_ANSWER
+ENTRY_BEGIN
+MATCH all
+REPLY QR RD RA NOERROR
+SECTION QUESTION
+e.a.	IN	A
+SECTION ANSWER
+e.a. IN A 1.2.3.4
 ENTRY_END
 
 SCENARIO_END

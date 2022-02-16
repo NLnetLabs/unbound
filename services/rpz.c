@@ -2374,7 +2374,8 @@ rpz_callback_from_worker_request(struct auth_zones* az, struct module_env* env,
 	} else {
 		lzt = rpz_action_to_localzone_type(r->action_override);
 	}
-	if(r->action_override == RPZ_PASSTHRU_ACTION) {
+	if(r->action_override == RPZ_PASSTHRU_ACTION ||
+		lzt == local_zone_always_transparent /* RPZ_PASSTHRU_ACTION */) {
 		*passthru = 1;
 	}
 
