@@ -912,7 +912,7 @@ extract_ede(uint8_t* pkt, size_t len)
 {
 	uint8_t *rdata, *opt_position = pkt;
 	uint16_t rdlen, optlen;
-	size_t remaining;
+	size_t remaining = len;
 	int ede_code;
 	if(!pkt_find_edns_opt(&opt_position, &remaining)) return -1;
 	if(remaining < 8) return -1; /* malformed */
