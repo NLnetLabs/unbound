@@ -1997,6 +1997,7 @@ rpz_apply_nsip_trigger(struct module_qstate* ms, struct rpz* r,
 		break;
 	case RPZ_PASSTHRU_ACTION:
 		ret = NULL;
+		ms->rpz_passthru = 1;
 		break;
 	default:
 		verbose(VERB_ALGO, "rpz: nsip: bug: unhandled or invalid action: '%s'",
@@ -2051,6 +2052,7 @@ rpz_apply_nsdname_trigger(struct module_qstate* ms, struct rpz* r,
 		break;
 	case RPZ_PASSTHRU_ACTION:
 		ret = NULL;
+		ms->rpz_passthru = 1;
 		break;
 	default:
 		verbose(VERB_ALGO, "rpz: nsip: bug: unhandled or invalid action: '%s'",
@@ -2113,6 +2115,11 @@ rpz_callback_from_iterator_module(struct module_qstate* ms, struct iter_qstate* 
 	struct rpz* r = NULL;
 	struct local_zone* z = NULL;
 	struct matched_delegation_point match = {0};
+
+	if(ms->rpz_passthru) {
+		verbose(VERB_ALGO, "query is rpz_passthru, no futher processing");
+		return NULL;
+	}
 
 	if(ms->env == NULL || ms->env->auth_zones == NULL) { return 0; }
 
@@ -2178,6 +2185,11 @@ struct dns_msg* rpz_callback_from_iterator_cname(struct module_qstate* ms,
 	struct local_zone* z = NULL;
 	enum localzone_type lzt;
 	struct dns_msg* ret = NULL;
+
+	if(ms->rpz_passthru) {
+		verbose(VERB_ALGO, "query is rpz_passthru, no futher processing");
+		return NULL;
+	}
 
 	if(ms->env == NULL || ms->env->auth_zones == NULL) { return 0; }
 	az = ms->env->auth_zones;
@@ -2253,6 +2265,7 @@ struct dns_msg* rpz_callback_from_iterator_cname(struct module_qstate* ms,
 		break;
 	case RPZ_PASSTHRU_ACTION:
 		ret = NULL;
+		ms->rpz_passthru = 1;
 		break;
 	default:
 		verbose(VERB_ALGO, "rpz: qname trigger after cname: bug: unhandled or invalid action: '%s'",
@@ -2270,7 +2283,8 @@ rpz_apply_maybe_clientip_trigger(struct auth_zones* az, struct module_env* env,
 	uint8_t* taglist, size_t taglen, struct ub_server_stats* stats,
 	sldns_buffer* buf, struct regional* temp,
 	/* output parameters */
-	struct local_zone** z_out, struct auth_zone** a_out, struct rpz** r_out)
+	struct local_zone** z_out, struct auth_zone** a_out, struct rpz** r_out,
+	int* passthru)
 {
 	int ret = 0;
 	enum rpz_action client_action;
@@ -2278,7 +2292,9 @@ rpz_apply_maybe_clientip_trigger(struct auth_zones* az, struct module_env* env,
 		az, qinfo, repinfo, taglist, taglen, stats, z_out, a_out, r_out);
 
 	client_action = ((node == NULL) ? RPZ_INVALID_ACTION : node->action);
-
+	if(client_action == RPZ_PASSTHRU_ACTION) {
+		*passthru = 1;
+	}
 	if(*z_out == NULL || (client_action != RPZ_INVALID_ACTION &&
 			      client_action != RPZ_PASSTHRU_ACTION)) {
 		if(client_action == RPZ_PASSTHRU_ACTION
@@ -2323,7 +2339,7 @@ int
 rpz_callback_from_worker_request(struct auth_zones* az, struct module_env* env,
 	struct query_info* qinfo, struct edns_data* edns, sldns_buffer* buf,
 	struct regional* temp, struct comm_reply* repinfo, uint8_t* taglist,
-	size_t taglen, struct ub_server_stats* stats)
+	size_t taglen, struct ub_server_stats* stats, int* passthru)
 {
 	struct rpz* r = NULL;
 	struct auth_zone* a = NULL;
@@ -2332,7 +2348,8 @@ rpz_callback_from_worker_request(struct auth_zones* az, struct module_env* env,
 	enum localzone_type lzt;
 
 	int clientip_trigger = rpz_apply_maybe_clientip_trigger(az, env, qinfo,
-		edns, repinfo, taglist, taglen, stats, buf, temp, &z, &a, &r);
+		edns, repinfo, taglist, taglen, stats, buf, temp, &z, &a, &r,
+		passthru);
 	if(clientip_trigger >= 0) {
 		if(a) {
 			lock_rw_unlock(&a->lock);
@@ -2356,6 +2373,10 @@ rpz_callback_from_worker_request(struct auth_zones* az, struct module_env* env,
 		lzt = z->type;
 	} else {
 		lzt = rpz_action_to_localzone_type(r->action_override);
+	}
+	if(r->action_override == RPZ_PASSTHRU_ACTION ||
+		lzt == local_zone_always_transparent /* RPZ_PASSTHRU_ACTION */) {
+		*passthru = 1;
 	}
 
 	if(verbosity >= VERB_ALGO) {

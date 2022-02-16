@@ -559,7 +559,7 @@ apply_respip_action(struct worker* worker, const struct query_info* qinfo,
 		return 1;
 
 	if(!respip_rewrite_reply(qinfo, cinfo, rep, encode_repp, &actinfo,
-		alias_rrset, 0, worker->scratchpad, az))
+		alias_rrset, 0, worker->scratchpad, az, NULL))
 		return 0;
 
 	/* xxx_deny actions mean dropping the reply, unless the original reply
@@ -763,7 +763,8 @@ bail_out:
 /** Reply to client and perform prefetch to keep cache up to date. */
 static void
 reply_and_prefetch(struct worker* worker, struct query_info* qinfo, 
-	uint16_t flags, struct comm_reply* repinfo, time_t leeway, int noreply)
+	uint16_t flags, struct comm_reply* repinfo, time_t leeway, int noreply,
+	int rpz_passthru)
 {
 	/* first send answer to client to keep its latency 
 	 * as small as a cachereply */
@@ -782,7 +783,7 @@ reply_and_prefetch(struct worker* worker, struct query_info* qinfo,
 	 * the cache and go to the network for the data). */
 	/* this (potentially) runs the mesh for the new query */
 	mesh_new_prefetch(worker->env.mesh, qinfo, flags, leeway + 
-		PREFETCH_EXPIRY_ADD);
+		PREFETCH_EXPIRY_ADD, rpz_passthru);
 }
 
 /**
@@ -1231,6 +1232,7 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 	int need_drop = 0;
 	int is_expired_answer = 0;
 	int is_secure_answer = 0;
+	int rpz_passthru = 0;
 	/* We might have to chase a CNAME chain internally, in which case
 	 * we'll have up to two replies and combine them to build a complete
 	 * answer.  These variables control this case. */
@@ -1496,7 +1498,8 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 	if(worker->env.auth_zones &&
 		rpz_callback_from_worker_request(worker->env.auth_zones,
 		&worker->env, &qinfo, &edns, c->buffer, worker->scratchpad,
-		repinfo, acladdr->taglist, acladdr->taglen, &worker->stats)) {
+		repinfo, acladdr->taglist, acladdr->taglen, &worker->stats,
+		&rpz_passthru)) {
 		regional_free_all(worker->scratchpad);
 		if(sldns_buffer_limit(c->buffer) == 0) {
 			comm_point_drop_reply(repinfo);
@@ -1629,8 +1632,8 @@ lookup_cache:
 					reply_and_prefetch(worker, lookup_qinfo,
 						sldns_buffer_read_u16_at(c->buffer, 2),
 						repinfo, leeway,
-						(partial_rep || need_drop));
-
+						(partial_rep || need_drop),
+						rpz_passthru);
 					if(!partial_rep) {
 						rc = 0;
 						regional_free_all(worker->scratchpad);
@@ -1694,7 +1697,8 @@ lookup_cache:
 	/* grab a work request structure for this new request */
 	mesh_new_client(worker->env.mesh, &qinfo, cinfo,
 		sldns_buffer_read_u16_at(c->buffer, 2),
-		&edns, repinfo, *(uint16_t*)(void *)sldns_buffer_begin(c->buffer));
+		&edns, repinfo, *(uint16_t*)(void *)sldns_buffer_begin(c->buffer),
+		rpz_passthru);
 	regional_free_all(worker->scratchpad);
 	worker_mem_report(worker, NULL);
 	return 0;
@@ -1758,6 +1762,9 @@ worker_sighandler(int sig, void* arg)
 		case SIGHUP:
 			comm_base_exit(worker->base);
 			break;
+#endif
+#ifdef SIGBREAK
+		case SIGBREAK:
 #endif
 		case SIGINT:
 			worker->need_to_exit = 1;
@@ -1877,6 +1884,9 @@ worker_init(struct worker* worker, struct config_file *cfg,
 #ifdef SIGHUP
 		ub_thread_sig_unblock(SIGHUP);
 #endif
+#ifdef SIGBREAK
+		ub_thread_sig_unblock(SIGBREAK);
+#endif
 		ub_thread_sig_unblock(SIGINT);
 #ifdef SIGQUIT
 		ub_thread_sig_unblock(SIGQUIT);
@@ -1893,6 +1903,9 @@ worker_init(struct worker* worker, struct config_file *cfg,
 			|| !comm_signal_bind(worker->comsig, SIGQUIT)
 #endif
 			|| !comm_signal_bind(worker->comsig, SIGTERM)
+#ifdef SIGBREAK
+			|| !comm_signal_bind(worker->comsig, SIGBREAK)
+#endif
 			|| !comm_signal_bind(worker->comsig, SIGINT)) {
 			log_err("could not create signal handlers");
 			worker_delete(worker);

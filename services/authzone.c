@@ -5370,7 +5370,7 @@ xfr_transfer_lookup_host(struct auth_xfer* xfr, struct module_env* env)
 	 * called straight away */
 	lock_basic_unlock(&xfr->lock);
 	if(!mesh_new_callback(env->mesh, &qinfo, qflags, &edns, buf, 0,
-		&auth_xfer_transfer_lookup_callback, xfr)) {
+		&auth_xfer_transfer_lookup_callback, xfr, 0)) {
 		lock_basic_lock(&xfr->lock);
 		log_err("out of memory lookup up master %s", master->host);
 		return 0;
@@ -6561,7 +6561,7 @@ xfr_probe_lookup_host(struct auth_xfer* xfr, struct module_env* env)
 	 * called straight away */
 	lock_basic_unlock(&xfr->lock);
 	if(!mesh_new_callback(env->mesh, &qinfo, qflags, &edns, buf, 0,
-		&auth_xfer_probe_lookup_callback, xfr)) {
+		&auth_xfer_probe_lookup_callback, xfr, 0)) {
 		lock_basic_lock(&xfr->lock);
 		log_err("out of memory lookup up master %s", master->host);
 		return 0;
@@ -8340,7 +8340,7 @@ zonemd_lookup_dnskey(struct auth_zone* z, struct module_env* env)
 	/* the callback can be called straight away */
 	lock_rw_unlock(&z->lock);
 	if(!mesh_new_callback(env->mesh, &qinfo, qflags, &edns, buf, 0,
-		&auth_zonemd_dnskey_lookup_callback, z)) {
+		&auth_zonemd_dnskey_lookup_callback, z, 0)) {
 		lock_rw_wrlock(&z->lock);
 		log_err("out of memory lookup of %s for zonemd",
 			(fetch_ds?"DS":"DNSKEY"));

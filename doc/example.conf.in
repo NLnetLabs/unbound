@@ -55,6 +55,10 @@ server:
 	# Socket options are not supported on all platforms. experimental.
 	# interface-automatic: no
 
+	# instead of the default port, open additional ports separated by
+	# spaces when interface-automatic is enabled, by listing them here.
+	# interface-automatic-ports: ""
+
 	# port to answer queries from
 	# port: 53
 
