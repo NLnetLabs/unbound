@@ -384,6 +384,14 @@ enum sldns_enum_algorithm
         LDNS_ECDSAP384SHA384    = 14,  /* RFC 6605 */
 	LDNS_ED25519		= 15,  /* RFC 8080 */
 	LDNS_ED448		= 16,  /* RFC 8080 */
+
+	/* The following three entries are only for testing. They are not
+	 * official in any way.
+	 */
+	LDNS_XMSSMT		= 20,
+	LDNS_HSSLMS		= 21,
+	LDNS_XMSS		= 22,
+
         LDNS_INDIRECT           = 252,
         LDNS_PRIVATEDNS         = 253,
         LDNS_PRIVATEOID         = 254
