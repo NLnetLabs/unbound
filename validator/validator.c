@@ -1873,7 +1873,11 @@ processValidate(struct module_qstate* qstate, struct val_qstate* vq,
 			"of trust to keys for", vq->key_entry->name,
 			LDNS_RR_TYPE_DNSKEY, vq->key_entry->key_class);
 		vq->chase_reply->security = sec_status_bogus;
-		vq->chase_reply->reason_bogus = LDNS_EDE_DNSKEY_MISSING;
+
+		/* make sure we don't overwrite a previously set specific
+		 * reason_bogus in the qstate */
+		if (errinf_to_reason_bogus(qstate) == LDNS_EDE_DNSSEC_BOGUS)
+			vq->chase_reply->reason_bogus = LDNS_EDE_DNSKEY_MISSING;
 		errinf_ede(qstate, "while building chain of trust",
 			LDNS_EDE_DNSKEY_MISSING);
 		if(vq->restart_count >= ve->max_restart)
