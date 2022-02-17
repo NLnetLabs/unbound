@@ -50,6 +50,8 @@
 #include "sldns/keyraw.h"
 #include "sldns/sbuffer.h"
 
+#include "cisco-hash-sigs/hss_verify.h"
+
 #if !defined(HAVE_SSL) && !defined(HAVE_NSS) && !defined(HAVE_NETTLE)
 #error "Need crypto library to do digital signature cryptography"
 #endif
@@ -356,6 +358,8 @@ dnskey_algo_id_is_supported(int id)
 		/* we support GOST if it can be loaded */
 		return sldns_key_EVP_load_gost_id();
 #endif
+	case LDNS_HSSLMS:
+		return 1;
 	default:
 		return 0;
 	}
@@ -684,6 +688,21 @@ verify_canonrrset(sldns_buffer* buf, int algo, unsigned char* sigblock,
 		return sec_status_secure;
 #endif
 	
+	if (algo == LDNS_HSSLMS) {
+		/* This algorithm is not supported by openssl. Do stuff
+		 * directly.
+		 */
+		if (!hss_validate_signature(key,
+			(unsigned char*)sldns_buffer_begin(buf),
+			(unsigned int)sldns_buffer_limit(buf),
+			sigblock, sigblock_len, 0)) {
+			return sec_status_bogus;
+		}
+		else {
+			return sec_status_secure;
+		}
+	}
+
 	if(!setup_key_digest(algo, &evp_key, &digest_type, key, keylen)) {
 		verbose(VERB_QUERY, "verify: failed to setup key");
 		*reason = "use of key for crypto failed";
