@@ -174,6 +174,12 @@ sldns/parseutil.c sldns/rrdef.c sldns/str2wire.c
 SLDNS_OBJ=keyraw.lo sbuffer.lo wire2str.lo parse.lo parseutil.lo rrdef.lo \
 str2wire.lo
 SLDNS_ALLOCCHECK_EXTRA_OBJ=@SLDNS_ALLOCCHECK_EXTRA_OBJ@
+HASH_SIGS_SRC=cisco-hash-sigs/hss_verify.c cisco-hash-sigs/lm_verify.c \
+cisco-hash-sigs/lm_common.c cisco-hash-sigs/lm_ots_common.c \
+cisco-hash-sigs/hss_thread_single.c cisco-hash-sigs/hash.c \
+cisco-hash-sigs/lm_ots_verify.c cisco-hash-sigs/endian.c
+HASH_SIGS_OBJ=hss_verify.lo lm_verify.lo lm_common.lo lm_ots_common.lo \
+hss_thread_single.lo hash.lo lm_ots_verify.lo endian.lo
 UNITTEST_SRC=testcode/unitanchor.c testcode/unitdname.c \
 testcode/unitlruhash.c testcode/unitmain.c testcode/unitmsgparse.c \
 testcode/unitneg.c testcode/unitregional.c testcode/unitslabhash.c \
@@ -191,12 +197,12 @@ daemon/remote.c daemon/stats.c daemon/unbound.c daemon/worker.c @WIN_DAEMON_SRC@
 DAEMON_OBJ=acl_list.lo cachedump.lo daemon.lo \
 shm_main.lo remote.lo stats.lo unbound.lo \
 worker.lo @WIN_DAEMON_OBJ@
-DAEMON_OBJ_LINK=$(DAEMON_OBJ) $(COMMON_OBJ_ALL_SYMBOLS) $(SLDNS_OBJ) \
+DAEMON_OBJ_LINK=$(DAEMON_OBJ) $(COMMON_OBJ_ALL_SYMBOLS) $(SLDNS_OBJ) $(HASH_SIGS_OBJ) \
 $(COMPAT_OBJ) @WIN_DAEMON_OBJ_LINK@
 CHECKCONF_SRC=smallapp/unbound-checkconf.c smallapp/worker_cb.c
 CHECKCONF_OBJ=unbound-checkconf.lo worker_cb.lo
 CHECKCONF_OBJ_LINK=$(CHECKCONF_OBJ) $(COMMON_OBJ_ALL_SYMBOLS) $(SLDNS_OBJ) \
-$(COMPAT_OBJ) @WIN_CHECKCONF_OBJ_LINK@
+$(HASH_SIGS_OBJ) $(COMPAT_OBJ) @WIN_CHECKCONF_OBJ_LINK@
 CONTROL_SRC=smallapp/unbound-control.c
 CONTROL_OBJ=unbound-control.lo 
 CONTROL_OBJ_LINK=$(CONTROL_OBJ) worker_cb.lo $(COMMON_OBJ_ALL_SYMBOLS) \
@@ -262,7 +268,8 @@ DNSTAP_SOCKET_TESTBIN=@DNSTAP_SOCKET_TESTBIN@
 LIBUNBOUND_SRC=libunbound/context.c libunbound/libunbound.c \
 libunbound/libworker.c
 LIBUNBOUND_OBJ=context.lo libunbound.lo libworker.lo ub_event_pluggable.lo
-LIBUNBOUND_OBJ_LINK=$(LIBUNBOUND_OBJ) $(COMMON_OBJ_WITHOUT_UB_EVENT) $(SLDNS_OBJ) $(COMPAT_OBJ)
+LIBUNBOUND_OBJ_LINK=$(LIBUNBOUND_OBJ) $(COMMON_OBJ_WITHOUT_UB_EVENT) \
+$(SLDNS_OBJ) $(HASH_SIGS_OBJ) $(COMPAT_OBJ)
 
 # win apps or "" if not on windows
 WINAPPS=@WINAPPS@
@@ -288,7 +295,7 @@ ALL_SRC=$(COMMON_SRC) $(UNITTEST_SRC) $(DAEMON_SRC) \
 	$(CONTROL_SRC) $(UBANCHOR_SRC) $(PETAL_SRC) $(DNSTAP_SOCKET_SRC)\
 	$(PYTHONMOD_SRC) $(PYUNBOUND_SRC) $(WIN_DAEMON_THE_SRC) \
 	$(SVCINST_SRC) $(SVCUNINST_SRC) $(ANCHORUPD_SRC) $(SLDNS_SRC) \
-	$(DOHCLIENT_SRC) $(READZONE_SRC)
+	$(HASH_SIGS_SRC) $(DOHCLIENT_SRC) $(READZONE_SRC)
 
 ALL_OBJ=$(COMMON_OBJ) $(UNITTEST_OBJ) $(DAEMON_OBJ) \
 	$(TESTBOUND_OBJ) $(LOCKVERIFY_OBJ) $(PKTVIEW_OBJ) \
@@ -297,7 +304,7 @@ ALL_OBJ=$(COMMON_OBJ) $(UNITTEST_OBJ) $(DAEMON_OBJ) \
 	$(CONTROL_OBJ) $(UBANCHOR_OBJ) $(PETAL_OBJ) $(DNSTAP_SOCKET_OBJ)\
 	$(COMPAT_OBJ) $(PYUNBOUND_OBJ) \
 	$(SVCINST_OBJ) $(SVCUNINST_OBJ) $(ANCHORUPD_OBJ) $(SLDNS_OBJ) \
-	$(DOHCLIENT_OBJ) $(READZONE_OBJ)
+	$(HASH_SIGS_OBJ) $(DOHCLIENT_OBJ) $(READZONE_OBJ)
 
 COMPILE=$(LIBTOOL) --tag=CC --mode=compile $(CC) $(CPPFLAGS) $(CFLAGS) @PTHREAD_CFLAGS_ONLY@
 LINK=$(LIBTOOL) --tag=CC --mode=link $(CC) $(staticexe) $(RUNTIME_PATH) $(CPPFLAGS) $(CFLAGS) $(LDFLAGS)
@@ -1575,6 +1582,14 @@ parseutil.lo parseutil.o: $(srcdir)/sldns/parseutil.c config.h $(srcdir)/sldns/p
 rrdef.lo rrdef.o: $(srcdir)/sldns/rrdef.c config.h $(srcdir)/sldns/rrdef.h $(srcdir)/sldns/parseutil.h
 str2wire.lo str2wire.o: $(srcdir)/sldns/str2wire.c config.h $(srcdir)/sldns/str2wire.h $(srcdir)/sldns/rrdef.h \
  $(srcdir)/sldns/wire2str.h $(srcdir)/sldns/sbuffer.h $(srcdir)/sldns/parse.h $(srcdir)/sldns/parseutil.h
+hss_verify.lo hss_verify.o: $(srcdir)/cisco-hash-sigs/hss_verify.c
+lm_verify.lo lm_verify.o: $(srcdir)/cisco-hash-sigs/lm_verify.c
+lm_common.lo lm_common.o: $(srcdir)/cisco-hash-sigs/lm_common.c
+lm_ots_common.lo lm_ots_common.o: $(srcdir)/cisco-hash-sigs/lm_ots_common.c
+lm_ots_verify.lo lm_ots_verify.o: $(srcdir)/cisco-hash-sigs/lm_ots_verify.c
+hss_thread_single.lo hss_thread_single.o: $(srcdir)/cisco-hash-sigs/hss_thread_single.c
+hash.lo hash.o: $(srcdir)/cisco-hash-sigs/hash.c
+endian.lo endian.o: $(srcdir)/cisco-hash-sigs/endian.c
 dohclient.lo dohclient.o: $(srcdir)/testcode/dohclient.c config.h $(srcdir)/sldns/wire2str.h \
  $(srcdir)/sldns/sbuffer.h $(srcdir)/sldns/str2wire.h $(srcdir)/sldns/rrdef.h $(srcdir)/sldns/parseutil.h \
  $(srcdir)/util/data/msgencode.h $(srcdir)/util/data/msgreply.h $(srcdir)/util/storage/lruhash.h \
