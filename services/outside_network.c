@@ -1995,6 +1995,9 @@ static int udp_connect_needs_log(int err)
 #  ifdef ENETDOWN
 	case ENETDOWN:
 #  endif
+#  ifdef EADDRNOTAVAIL
+	case EADDRNOTAVAIL:
+#  endif
 	case EPERM:
 	case EACCES:
 		if(verbosity >= VERB_ALGO)
