@@ -2366,7 +2366,7 @@ primeResponseToKE(struct ub_packed_rrset_key* dnskey_rrset,
 		return kkey;
 	}
 	/* attempt to verify with trust anchor DS and DNSKEY */
-	kkey = val_verify_new_DNSKEYs_with_ta_ede(qstate->region, qstate->env, ve, 
+	kkey = val_verify_new_DNSKEYs_with_ta(qstate->region, qstate->env, ve, 
 		dnskey_rrset, ta->ds_rrset, ta->dnskey_rrset, downprot,
 		&reason, &reason_bogus, qstate);
 	if(!kkey) {
@@ -2768,7 +2768,7 @@ process_dnskey_response(struct module_qstate* qstate, struct val_qstate* vq,
 		return;
 	}
 	downprot = qstate->env->cfg->harden_algo_downgrade;
-	vq->key_entry = val_verify_new_DNSKEYs_ede(qstate->region, qstate->env,
+	vq->key_entry = val_verify_new_DNSKEYs(qstate->region, qstate->env,
 		ve, dnskey, vq->ds_rrset, downprot, &reason, &reason_bogus, qstate);
 
 	if(!vq->key_entry) {

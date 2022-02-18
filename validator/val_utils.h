@@ -204,6 +204,7 @@ enum sec_status val_verify_DNSKEY_with_TA_ede(struct module_env* env,
  * @param downprot: if true provide downgrade protection otherwise one
  *   algorithm is enough.
  * @param reason: reason of failure. Fixed string or alloced in scratch.
+ * @param reason_bogus: EDE (RFC8914) code paired with the reason of failure.
  * @param qstate: qstate with region.
  * @return a KeyEntry. This will either contain the now trusted
  *         dnskey_rrset, a "null" key entry indicating that this DS
@@ -215,13 +216,7 @@ enum sec_status val_verify_DNSKEY_with_TA_ede(struct module_env* env,
  *         rrset.
  *         if downprot is set, a key entry with an algo list is made.
  */
-struct key_entry_key* val_verify_new_DNSKEYs(struct regional* region, 
-	struct module_env* env, struct val_env* ve, 
-	struct ub_packed_rrset_key* dnskey_rrset, 
-	struct ub_packed_rrset_key* ds_rrset, int downprot, char** reason,
-	struct module_qstate* qstate);
-
-struct key_entry_key* val_verify_new_DNSKEYs_ede(struct regional* region,
+struct key_entry_key* val_verify_new_DNSKEYs(struct regional* region,
     struct module_env* env, struct val_env* ve,
     struct ub_packed_rrset_key* dnskey_rrset, 
     struct ub_packed_rrset_key* ds_rrset, int downprot, char** reason,
@@ -239,6 +234,7 @@ struct key_entry_key* val_verify_new_DNSKEYs_ede(struct regional* region,
  * @param downprot: if true provide downgrade protection otherwise one
  *   algorithm is enough.
  * @param reason: reason of failure. Fixed string or alloced in scratch.
+ * @param reason_bogus: EDE (RFC8914) code paired with the reason of failure.
  * @param qstate: qstate with region.
  * @return a KeyEntry. This will either contain the now trusted
  *         dnskey_rrset, a "null" key entry indicating that this DS
@@ -251,13 +247,6 @@ struct key_entry_key* val_verify_new_DNSKEYs_ede(struct regional* region,
  *         if downprot is set, a key entry with an algo list is made.
  */
 struct key_entry_key* val_verify_new_DNSKEYs_with_ta(struct regional* region, 
-	struct module_env* env, struct val_env* ve, 
-	struct ub_packed_rrset_key* dnskey_rrset, 
-	struct ub_packed_rrset_key* ta_ds_rrset, 
-	struct ub_packed_rrset_key* ta_dnskey_rrset,
-	int downprot, char** reason, struct module_qstate* qstate);
-
-struct key_entry_key* val_verify_new_DNSKEYs_with_ta_ede(struct regional* region, 
     struct module_env* env, struct val_env* ve,
     struct ub_packed_rrset_key* dnskey_rrset,
     struct ub_packed_rrset_key* ta_ds_rrset,

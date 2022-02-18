@@ -314,17 +314,19 @@ dnskey_verify_rrset_ede(struct module_env* env, struct val_env* ve,
  * 	pass false at start. pass old value only for same rrset and same
  * 	signature (but perhaps different key) for reuse.
  * @param reason: if bogus, a string returned, fixed or alloced in scratch.
+ * @param reason_bogus: EDE (8914) code paired with the reason of failure.
  * @param section: section of packet where this rrset comes from.
  * @param qstate: qstate with region.
  * @return secure if this key signs this signature. unchecked on error or 
  *	bogus if it did not validate.
  */
-enum sec_status dnskey_verify_rrset_sig(struct regional* region, 
-	struct sldns_buffer* buf, struct val_env* ve, time_t now,
-	struct ub_packed_rrset_key* rrset, struct ub_packed_rrset_key* dnskey, 
-	size_t dnskey_idx, size_t sig_idx,
-	struct rbtree_type** sortree, int* buf_canon, char** reason,
-	sldns_pkt_section section, struct module_qstate* qstate);
+enum sec_status dnskey_verify_rrset_sig(struct regional* region,
+        struct sldns_buffer* buf, struct val_env* ve, time_t now,
+        struct ub_packed_rrset_key* rrset, struct ub_packed_rrset_key* dnskey,
+        size_t dnskey_idx, size_t sig_idx,
+        struct rbtree_type** sortree, int* buf_canon,
+        char** reason, sldns_ede_code *reason_bogus,
+        sldns_pkt_section section, struct module_qstate* qstate);
 
 /**
  * canonical compare for two tree entries

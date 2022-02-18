@@ -422,7 +422,7 @@ val_verify_rrset_entry_ede(struct module_env* env, struct val_env* ve,
 
 /** verify that a DS RR hashes to a key and that key signs the set */
 static enum sec_status
-verify_dnskeys_with_ds_rr_ede(struct module_env* env, struct val_env* ve,
+verify_dnskeys_with_ds_rr(struct module_env* env, struct val_env* ve,
 	struct ub_packed_rrset_key* dnskey_rrset,
         struct ub_packed_rrset_key* ds_rrset, size_t ds_idx, char** reason,
 	sldns_ede_code *reason_bogus, struct module_qstate* qstate)
@@ -549,7 +549,7 @@ val_verify_DNSKEY_with_DS_ede(struct module_env* env, struct val_env* ve,
 			continue;
 		}
 
-		sec = verify_dnskeys_with_ds_rr_ede(env, ve, dnskey_rrset,
+		sec = verify_dnskeys_with_ds_rr(env, ve, dnskey_rrset,
 			ds_rrset, i, reason, reason_bogus, qstate);
 		if(sec == sec_status_insecure)
 			continue;
@@ -594,16 +594,6 @@ val_verify_DNSKEY_with_DS_ede(struct module_env* env, struct val_env* ve,
 
 struct key_entry_key*
 val_verify_new_DNSKEYs(struct regional* region, struct module_env* env, 
-	struct val_env* ve, struct ub_packed_rrset_key* dnskey_rrset, 
-	struct ub_packed_rrset_key* ds_rrset, int downprot, char** reason,
-	struct module_qstate* qstate)
-{
-	return val_verify_new_DNSKEYs_ede(region, env, ve,dnskey_rrset, ds_rrset,
-		downprot, reason, NULL, qstate);
-}
-
-struct key_entry_key*
-val_verify_new_DNSKEYs_ede(struct regional* region, struct module_env* env, 
 	struct val_env* ve, struct ub_packed_rrset_key* dnskey_rrset, 
 	struct ub_packed_rrset_key* ds_rrset, int downprot, char** reason,
 	sldns_ede_code *reason_bogus, struct module_qstate* qstate)
@@ -694,7 +684,7 @@ val_verify_DNSKEY_with_TA_ede(struct module_env* env, struct val_env* ve,
 			ds_get_digest_algo(ta_ds, i) != digest_algo)
 			continue;
 
-		sec = verify_dnskeys_with_ds_rr_ede(env, ve, dnskey_rrset,
+		sec = verify_dnskeys_with_ds_rr(env, ve, dnskey_rrset,
 			ta_ds, i, reason, reason_bogus, qstate);
 		if(sec == sec_status_insecure)
 			continue;
@@ -769,7 +759,7 @@ val_verify_DNSKEY_with_TA_ede(struct module_env* env, struct val_env* ve,
 }
 
 struct key_entry_key* 
-val_verify_new_DNSKEYs_with_ta_ede(struct regional* region, struct module_env* env,
+val_verify_new_DNSKEYs_with_ta(struct regional* region, struct module_env* env,
 	struct val_env* ve, struct ub_packed_rrset_key* dnskey_rrset,
 	struct ub_packed_rrset_key* ta_ds_rrset,
 	struct ub_packed_rrset_key* ta_dnskey_rrset, int downprot,

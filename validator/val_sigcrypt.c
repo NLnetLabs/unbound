@@ -627,15 +627,6 @@ dnskey_verify_rrset(struct module_env* env, struct val_env* ve,
 		reason, NULL, section, qstate);
 }
 
-static enum sec_status
-dnskey_verify_rrset_sig_ede(struct regional* region, sldns_buffer* buf,
-	struct val_env* ve, time_t now,
-        struct ub_packed_rrset_key* rrset, struct ub_packed_rrset_key* dnskey,
-        size_t dnskey_idx, size_t sig_idx,
-	struct rbtree_type** sortree, int* buf_canon,
-	char** reason, sldns_ede_code *reason_bogus,
-	sldns_pkt_section section, struct module_qstate* qstate);
-
 enum sec_status 
 dnskey_verify_rrset_ede(struct module_env* env, struct val_env* ve,
         struct ub_packed_rrset_key* rrset, struct ub_packed_rrset_key* dnskey,
@@ -664,7 +655,7 @@ dnskey_verify_rrset_ede(struct module_env* env, struct val_env* ve,
 			tag != rrset_get_sig_keytag(rrset, i))
 			continue;
 		buf_canon = 0;
-		sec = dnskey_verify_rrset_sig_ede(env->scratch,
+		sec = dnskey_verify_rrset_sig(env->scratch,
 			env->scratch_buffer, ve, *env->now, rrset, 
 			dnskey, dnskey_idx, i, &sortree, &buf_canon, reason,
 			reason_bogus, section, qstate);
@@ -708,7 +699,7 @@ dnskeyset_verify_rrset_sig(struct module_env* env, struct val_env* ve,
 		numchecked ++;
 
 		/* see if key verifies */
-		sec = dnskey_verify_rrset_sig_ede(env->scratch, 
+		sec = dnskey_verify_rrset_sig(env->scratch,
 			env->scratch_buffer, ve, now, rrset, dnskey, i, 
 			sig_idx, sortree, &buf_canon, reason, reason_bogus,
 			section, qstate);
@@ -1532,19 +1523,6 @@ adjust_ttl(struct val_env* ve, uint32_t unow,
 
 enum sec_status 
 dnskey_verify_rrset_sig(struct regional* region, sldns_buffer* buf, 
-	struct val_env* ve, time_t now,
-        struct ub_packed_rrset_key* rrset, struct ub_packed_rrset_key* dnskey,
-        size_t dnskey_idx, size_t sig_idx,
-	struct rbtree_type** sortree, int* buf_canon, char** reason,
-	sldns_pkt_section section, struct module_qstate* qstate)
-{
-	return dnskey_verify_rrset_sig_ede(region, buf, ve, now, rrset, dnskey,
-			dnskey_idx, sig_idx, sortree, buf_canon, reason, NULL,
-			section, qstate);
-}
-
-static enum sec_status 
-dnskey_verify_rrset_sig_ede(struct regional* region, sldns_buffer* buf, 
 	struct val_env* ve, time_t now,
         struct ub_packed_rrset_key* rrset, struct ub_packed_rrset_key* dnskey,
         size_t dnskey_idx, size_t sig_idx,
