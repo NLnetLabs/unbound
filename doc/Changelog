@@ -1,6 +1,8 @@
 18 February 2022: Wouter
 	- Fix that address not available is squelched from the logs for
 	  udp connect failures. It is visible on verbosity 4 and more.
+	- Merge #631 from mollyim: Replace OpenSSL's ERR_PACK with
+	  ERR_GET_REASON.
 
 16 February 2022: Wouter
 	- Fix for #628: fix rpz-passthru for qname trigger by localzone type.
