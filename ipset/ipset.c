@@ -138,11 +138,12 @@ ipset_add_rrset_data(struct ipset_env *ie, struct mnl_socket *mnl,
 static int
 ipset_check_zones_for_rrset(struct module_env *env, struct ipset_env *ie,
 	struct mnl_socket *mnl, struct ub_packed_rrset_key *rrset,
-	const char *setname, int af)
+	struct query_info qinfo, const char *setname, int af)
 {
 	static char dname[BUFF_LEN];
-	const char *s;
-	int dlen, plen;
+	static char qname[BUFF_LEN];
+	const char *ds, *qs;
+	int dlen, plen, qlen;
 
 	struct config_strlist *p;
 	struct packed_rrset_data *d;
@@ -156,24 +157,34 @@ ipset_check_zones_for_rrset(struct module_env *env, struct ipset_env *ie,
 		dlen--;
 	}
 
+	qlen = sldns_wire2str_dname_buf(qinfo.qname, qinfo.qname_len, qname, BUFF_LEN);
+	if (qname[qlen - 1] == '.') {
+		qlen--;
+	}
+
 	for (p = env->cfg->local_zones_ipset; p; p = p->next) {
 		plen = strlen(p->str);
 
 		if (dlen >= plen) {
-			s = dname + (dlen - plen);
-
-			if (strncasecmp(p->str, s, plen) == 0) {
-				d = (struct packed_rrset_data*)rrset->entry.data;
-				ipset_add_rrset_data(ie, mnl, d, setname,
-					af, dname);
-				break;
-			}
+			ds = dname + (dlen - plen);
+		}
+		if (qlen >= plen) {
+			qs = qname + (qlen - plen);
+		}
+		if ((ds && strncasecmp(p->str, ds, plen) == 0)
+			|| (qs && strncasecmp(p->str, qs, plen) == 0)) {
+			d = (struct packed_rrset_data*)rrset->entry.data;
+			ipset_add_rrset_data(ie, mnl, d, setname,
+				af, dname);
+			break;
 		}
 	}
 	return 0;
 }
 
-static int ipset_update(struct module_env *env, struct dns_msg *return_msg, struct ipset_env *ie) {
+static int ipset_update(struct module_env *env, struct dns_msg *return_msg,
+	struct query_info qinfo, struct ipset_env *ie)
+{
 	struct mnl_socket *mnl;
 
 	size_t i;
@@ -215,7 +226,7 @@ static int ipset_update(struct module_env *env, struct dns_msg *return_msg, stru
 
 		if (setname) {
 			if(ipset_check_zones_for_rrset(env, ie, mnl, rrset,
-				setname, af) == -1)
+				qinfo, setname, af) == -1)
 				return -1;
 		}
 	}
@@ -311,7 +322,7 @@ void ipset_operate(struct module_qstate *qstate, enum module_ev event, int id,
 
 	if (iq && (event == module_event_moddone)) {
 		if (qstate->return_msg && qstate->return_msg->rep) {
-			ipset_update(qstate->env, qstate->return_msg, ie);
+			ipset_update(qstate->env, qstate->return_msg, qstate->qinfo, ie);
 		}
 		qstate->ext_state[id] = module_finished;
 		return;
