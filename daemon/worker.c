@@ -1060,7 +1060,6 @@ deny_refuse(struct comm_point* c, enum acl_access acl,
 		log_assert(sldns_buffer_limit(c->buffer) >= LDNS_HEADER_SIZE
 			&& LDNS_QDCOUNT(sldns_buffer_begin(c->buffer)) == 1);
 
-		sldns_buffer_clear(c->buffer); /* reset write limit */
 		sldns_buffer_skip(c->buffer, LDNS_HEADER_SIZE); /* skip header */
 
 		/* check additional section is present and that we respond with EDEs */
@@ -1147,6 +1146,7 @@ deny_refuse(struct comm_point* c, enum acl_access acl,
 			LDNS_ANCOUNT_SET(sldns_buffer_begin(c->buffer), 0);
 			LDNS_NSCOUNT_SET(sldns_buffer_begin(c->buffer), 0);
 			LDNS_ARCOUNT_SET(sldns_buffer_begin(c->buffer), 0);
+			sldns_buffer_set_position(c->buffer, opt_rr_mark);
 			sldns_buffer_flip(c->buffer);
 			return 1;
 		}
@@ -1155,6 +1155,7 @@ deny_refuse(struct comm_point* c, enum acl_access acl,
 		 */
 		LDNS_ANCOUNT_SET(sldns_buffer_begin(c->buffer), 0);
 		LDNS_NSCOUNT_SET(sldns_buffer_begin(c->buffer), 0);
+		sldns_buffer_clear(c->buffer); /* reset write limit */
 		sldns_buffer_set_position(c->buffer, opt_rr_mark);
 
 		/* Check if OPT record can be written
