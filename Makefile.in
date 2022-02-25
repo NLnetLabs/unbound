@@ -1248,7 +1248,7 @@ cachedump.lo cachedump.o: $(srcdir)/daemon/cachedump.c config.h $(srcdir)/daemon
  $(srcdir)/util/regional.h $(srcdir)/util/net_help.h $(srcdir)/util/data/dname.h $(srcdir)/iterator/iterator.h \
  $(srcdir)/services/outbound_list.h $(srcdir)/iterator/iter_delegpt.h $(srcdir)/iterator/iter_utils.h \
  $(srcdir)/iterator/iter_resptype.h $(srcdir)/iterator/iter_fwd.h $(srcdir)/iterator/iter_hints.h \
- $(srcdir)/sldns/wire2str.h $(srcdir)/sldns/str2wire.h $(srcdir)/util/config_file.h
+ $(srcdir)/sldns/wire2str.h $(srcdir)/sldns/str2wire.h $(srcdir)/util/config_file.h $(srcdir)/services/outside_network.h
 daemon.lo daemon.o: $(srcdir)/daemon/daemon.c config.h $(srcdir)/daemon/daemon.h $(srcdir)/util/locks.h \
  $(srcdir)/util/log.h $(srcdir)/util/alloc.h $(srcdir)/services/modstack.h  \
   $(srcdir)/daemon/worker.h $(srcdir)/libunbound/worker.h \
