@@ -51,6 +51,7 @@
 #include "util/regional.h"
 #include "util/net_help.h"
 #include "util/data/dname.h"
+#include "util/config_file.h"
 #include "iterator/iterator.h"
 #include "iterator/iter_delegpt.h"
 #include "iterator/iter_utils.h"
@@ -854,7 +855,8 @@ int print_deleg_lookup(RES* ssl, struct worker* worker, uint8_t* nm,
 				"cache; goes to configured roots\n");
 		}
 		/* go up? */
-		if(iter_dp_is_useless(&qinfo, BIT_RD, dp)) {
+		if(iter_dp_is_useless(&qinfo, BIT_RD, dp,
+			worker->env.cfg->do_ip4, worker->env.cfg->do_ip6)) {
 			print_dp_main(ssl, dp, msg);
 			print_dp_details(ssl, worker, dp);
 			if(!ssl_printf(ssl, "cache delegation was "

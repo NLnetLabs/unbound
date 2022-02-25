@@ -1547,7 +1547,7 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 		 * same server reply) if useless-checked.
 		 */
 		if(iter_dp_is_useless(&qstate->qinfo, qstate->query_flags, 
-			iq->dp)) {
+			iq->dp, ie->supports_ipv4, ie->supports_ipv6)) {
 			struct delegpt* retdp = NULL;
 			if(!can_have_last_resort(qstate->env, iq->dp->name, iq->dp->namelen, iq->qchase.qclass, &retdp)) {
 				if(retdp) {
