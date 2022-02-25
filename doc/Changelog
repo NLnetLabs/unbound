@@ -1,6 +1,7 @@
 25 February 2022: Wouter
 	- Fix to detect that no IPv6 support means that IPv6 addresses are
 	  useless for delegation point lookups.
+	- update Makefile dependencies.
 
 18 February 2022: Wouter
 	- Fix that address not available is squelched from the logs for
