@@ -5,6 +5,9 @@
 28 February 2022: Wouter
 	- Fix #633: Document unix domain socket support for unbound-control.
 	- Fix for #633: updated fix with new text.
+	- Fix edns client subnet to add the option based on the option list,
+	  so that it is not state dependent, after the state fix of #605 for
+	  double EDNS options.
 
 25 February 2022: Wouter
 	- Fix to detect that no IPv6 support means that IPv6 addresses are

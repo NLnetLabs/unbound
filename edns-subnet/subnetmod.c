@@ -162,17 +162,21 @@ int ecs_whitelist_check(struct query_info* qinfo,
 		/* Address on whitelist or client query contains ECS option, we
 		 * want to sent out ECS. Only add option if it is not already
 		 * set. */
-		if(!(sq->subnet_sent)) {
+		if(!edns_opt_list_find(qstate->edns_opts_back_out,
+			qstate->env->cfg->client_subnet_opcode)) {
 			ecs_opt_list_append(&sq->ecs_server_out,
 				&qstate->edns_opts_back_out, qstate);
-			sq->subnet_sent = 1;
 		}
+		sq->subnet_sent = 1;
 	}
-	else if(sq->subnet_sent) {
+	else {
 		/* Outgoing ECS option is set, but we don't want to sent it to
 		 * this address, remove option. */
-		edns_opt_list_remove(&qstate->edns_opts_back_out,
-			qstate->env->cfg->client_subnet_opcode);
+		if(!edns_opt_list_find(qstate->edns_opts_back_out,
+			qstate->env->cfg->client_subnet_opcode)) {
+			edns_opt_list_remove(&qstate->edns_opts_back_out,
+				qstate->env->cfg->client_subnet_opcode);
+		}
 		sq->subnet_sent = 0;
 	}
 	return 1;
