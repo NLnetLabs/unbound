@@ -1,5 +1,6 @@
 28 February 2022: George
 	- Fix #630: Unify the RPZ log messages.
+	- Merge #623 from rex4539: Fix typos.
 
 28 February 2022: Wouter
 	- Fix #633: Document unix domain socket support for unbound-control.
