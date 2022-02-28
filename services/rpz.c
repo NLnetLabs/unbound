@@ -2117,7 +2117,7 @@ rpz_callback_from_iterator_module(struct module_qstate* ms, struct iter_qstate* 
 	struct matched_delegation_point match = {0};
 
 	if(ms->rpz_passthru) {
-		verbose(VERB_ALGO, "query is rpz_passthru, no futher processing");
+		verbose(VERB_ALGO, "query is rpz_passthru, no further processing");
 		return NULL;
 	}
 
@@ -2187,7 +2187,7 @@ struct dns_msg* rpz_callback_from_iterator_cname(struct module_qstate* ms,
 	struct dns_msg* ret = NULL;
 
 	if(ms->rpz_passthru) {
-		verbose(VERB_ALGO, "query is rpz_passthru, no futher processing");
+		verbose(VERB_ALGO, "query is rpz_passthru, no further processing");
 		return NULL;
 	}
 

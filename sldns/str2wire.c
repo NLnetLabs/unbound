@@ -606,7 +606,7 @@ sldns_affix_token(sldns_buffer* strbuf, char* token, size_t* token_len,
 	/* add space */
 	/* when addlen < 2, the token buffer is full considering the NULL byte
 	 * from strlen and will lead to buffer overflow with the second
-	 * assignement below. */
+	 * assignment below. */
 	if(addlen < 2) return 0;
 	token[*token_strlen] = ' ';
 	token[++(*token_strlen)] = 0;
@@ -670,10 +670,10 @@ static int sldns_str2wire_check_svcbparams(uint8_t* rdata, uint16_t rdata_len)
 	     ,sldns_str2wire_svcparam_key_cmp);
 
 
-	/* The code below revolves around sematic errors in the SVCParam set.
+	/* The code below revolves around semantic errors in the SVCParam set.
 	 * So long as we do not distinguish between running Unbound as a primary
 	 * or as a secondary, we default to secondary behavior and we ignore the
-	 * sematic errors. */
+	 * semantic errors. */
 
 #ifdef SVCB_SEMANTIC_ERRORS
 	{
@@ -1356,7 +1356,7 @@ sldns_str2wire_svcbparam_mandatory(const char* val, uint8_t* rd, size_t* rd_len)
 	 */
 	qsort((void *)(rd + 4), count, sizeof(uint16_t), sldns_network_uint16_cmp);
 
-	/* The code below revolves around sematic errors in the SVCParam set.
+	/* The code below revolves around semantic errors in the SVCParam set.
 	 * So long as we do not distinguish between running Unbound as a primary
 	 * or as a secondary, we default to secondary behavior and we ignore the
 	 * semantic errors. */
