@@ -1,3 +1,6 @@
+28 February 2022: Wouter
+	- Fix #633: Document unix domain socket support for unbound-control.
+
 25 February 2022: Wouter
 	- Fix to detect that no IPv6 support means that IPv6 addresses are
 	  useless for delegation point lookups.
