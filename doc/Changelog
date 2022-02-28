@@ -8,6 +8,7 @@
 	- Fix edns client subnet to add the option based on the option list,
 	  so that it is not state dependent, after the state fix of #605 for
 	  double EDNS options.
+	- Fix for edns client subnet option add fix in removal code, from review.
 
 25 February 2022: Wouter
 	- Fix to detect that no IPv6 support means that IPv6 addresses are

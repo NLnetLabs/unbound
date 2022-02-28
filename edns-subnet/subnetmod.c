@@ -172,7 +172,7 @@ int ecs_whitelist_check(struct query_info* qinfo,
 	else {
 		/* Outgoing ECS option is set, but we don't want to sent it to
 		 * this address, remove option. */
-		if(!edns_opt_list_find(qstate->edns_opts_back_out,
+		if(edns_opt_list_find(qstate->edns_opts_back_out,
 			qstate->env->cfg->client_subnet_opcode)) {
 			edns_opt_list_remove(&qstate->edns_opts_back_out,
 				qstate->env->cfg->client_subnet_opcode);
