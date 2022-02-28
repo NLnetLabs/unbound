@@ -1,5 +1,6 @@
 28 February 2022: Wouter
 	- Fix #633: Document unix domain socket support for unbound-control.
+	- Fix for #633: updated fix with new text.
 
 25 February 2022: Wouter
 	- Fix to detect that no IPv6 support means that IPv6 addresses are

@@ -1793,9 +1793,8 @@ Use 0.0.0.0 and ::0 to listen to all interfaces.
 If you change this and permissions have been dropped, you must restart
 the server for the change to take effect.
 .IP
-If you set it to an absolute path, a local socket is used.  The local socket
+If you set it to an absolute path, a unix domain socket is used. This socket
 does not use the certificates and keys, so those files need not be present.
-This uses a unix domain socket for communication with the server.
 To restrict access, Unbound sets permissions on the file to the user and
 group that is configured, the access bits are set to allow the group members
 to access the control socket file.  Put users that need to access the socket
