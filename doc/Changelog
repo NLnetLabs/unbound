@@ -1,3 +1,6 @@
+1 March 2022: Wouter
+	- Fix pythonmod for change in iter_dp_is_useless function prototype.
+
 28 February 2022: George
 	- Fix #630: Unify the RPZ log messages.
 	- Merge #623 from rex4539: Fix typos.
