@@ -1203,13 +1203,8 @@ void autr_write_file(struct module_env* env, struct trust_anchor* tp)
 #else
 	llvalue = (unsigned long long)tp;
 #endif
-#ifndef USE_WINSOCK
-	snprintf(tempf, sizeof(tempf), "%s.%d-%d-%llx", fname, (int)getpid(),
+	snprintf(tempf, sizeof(tempf), "%s.%d-%d-" ARG_LL "x", fname, (int)getpid(),
 		env->worker?*(int*)env->worker:0, llvalue);
-#else
-	snprintf(tempf, sizeof(tempf), "%s.%d-%d-%I64x", fname, (int)getpid(),
-		env->worker?*(int*)env->worker:0, llvalue);
-#endif
 #endif /* S_SPLINT_S */
 	verbose(VERB_ALGO, "autotrust: write to disk: %s", tempf);
 	out = fopen(tempf, "w");

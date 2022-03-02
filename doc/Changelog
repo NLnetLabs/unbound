@@ -3,6 +3,9 @@
 	- Various fixes for #632: variable initialisation, convert the qinfo
 	  to str once, accept trailing dot in the local-zone ipset option.
 
+2 March 2022: Wouter
+	- Fix compile warnings for printf ll format on mingw compile.
+
 1 March 2022: Wouter
 	- Fix pythonmod for change in iter_dp_is_useless function prototype.
 
