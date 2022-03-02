@@ -26,6 +26,8 @@ ldns-signzone -i $TOMORROW bogus/dnssec-failures.test $CSK -f - | \
 
 cat base expired notyetincepted > bogus/dnssec-failures.test.signed
 
+# cleanup old zone keys
+rm -f $CSK.*
 # create zone with DNSKEY missing
 CSK=`ldns-keygen -a ECDSAP256SHA256 -k -r /dev/urandom dnskey-failures.test`
 echo $CSK
@@ -34,6 +36,9 @@ cat $CSK.ds >> bogus/trust-anchors
 ldns-signzone bogus/dnskey-failures.test $CSK -f tmp.signed
 grep -v '	DNSKEY	' tmp.signed > bogus/dnskey-failures.test.signed
 
+
+# cleanup old zone keys
+rm -f $CSK.*
 # create zone with NSEC missing
 CSK=`ldns-keygen -a ECDSAP256SHA256 -k -r /dev/urandom nsec-failures.test`
 echo $CSK
@@ -42,6 +47,9 @@ cat $CSK.ds >> bogus/trust-anchors
 ldns-signzone bogus/nsec-failures.test $CSK -f tmp.signed
 grep -v '	NSEC	' tmp.signed > bogus/nsec-failures.test.signed
 
+
+# cleanup old zone keys
+rm -f $CSK.*
 # create zone with RRSIGs missing
 CSK=`ldns-keygen -a ECDSAP256SHA256 -k -r /dev/urandom rrsig-failures.test`
 echo $CSK
