@@ -1,5 +1,7 @@
 2 March 2022: George
 	- Merge PR #632 from scottrw93: Match cnames in ipset.
+	- Various fixes for #632: variable initialisation, convert the qinfo
+	  to str once, accept trailing dot in the local-zone ipset option.
 
 1 March 2022: Wouter
 	- Fix pythonmod for change in iter_dp_is_useless function prototype.
