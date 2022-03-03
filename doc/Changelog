@@ -1,5 +1,6 @@
 3 March 2022: Wouter
 	- Fix #637: Integer Overflow in sldns_str2period function.
+	- Fix for #637: fix integer overflow checks in sldns_str2period.
 
 2 March 2022: George
 	- Merge PR #632 from scottrw93: Match cnames in ipset.

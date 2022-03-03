@@ -291,7 +291,7 @@ sldns_str2period(const char *nptr, const char **endptr, int* overflow)
 			case '7':
 			case '8':
 			case '9':
-				if(i > maxint/10 || i > maxint - (**endptr - '0')) {
+				if(i > maxint/10 || i*10 > maxint - (**endptr - '0')) {
 					*overflow = 1;
 					return 0;
 				}
