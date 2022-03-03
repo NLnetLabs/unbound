@@ -4456,7 +4456,7 @@ chunkline_get_line_collated(struct auth_chunk** chunk, size_t* chunk_pos,
 	return 1;
 }
 
-/** process $ORIGIN for http */
+/** process $ORIGIN for http, 0 nothing, 1 done, 2 error */
 static int
 http_parse_origin(sldns_buffer* buf, struct sldns_file_parse_state* pstate)
 {
@@ -4467,13 +4467,16 @@ http_parse_origin(sldns_buffer* buf, struct sldns_file_parse_state* pstate)
 		pstate->origin_len = sizeof(pstate->origin);
 		s = sldns_str2wire_dname_buf(sldns_strip_ws(line+8),
 			pstate->origin, &pstate->origin_len);
-		if(s) pstate->origin_len = 0;
+		if(s) {
+			pstate->origin_len = 0;
+			return 2;
+		}
 		return 1;
 	}
 	return 0;
 }
 
-/** process $TTL for http */
+/** process $TTL for http, 0 nothing, 1 done, 2 error */
 static int
 http_parse_ttl(sldns_buffer* buf, struct sldns_file_parse_state* pstate)
 {
@@ -4481,8 +4484,12 @@ http_parse_ttl(sldns_buffer* buf, struct sldns_file_parse_state* pstate)
 	if(strncmp(line, "$TTL", 4) == 0 &&
 		isspace((unsigned char)line[4])) {
 		const char* end = NULL;
+		int overflow = 0;
 		pstate->default_ttl = sldns_str2period(
-			sldns_strip_ws(line+5), &end);
+			sldns_strip_ws(line+5), &end, &overflow);
+		if(overflow) {
+			return 2;
+		}
 		return 1;
 	}
 	return 0;
@@ -4493,15 +4500,20 @@ static int
 chunkline_non_comment_RR(struct auth_chunk** chunk, size_t* chunk_pos,
 	sldns_buffer* buf, struct sldns_file_parse_state* pstate)
 {
+	int ret;
 	while(chunkline_get_line_collated(chunk, chunk_pos, buf)) {
 		if(chunkline_is_comment_line_or_empty(buf)) {
 			/* a comment, go to next line */
 			continue;
 		}
-		if(http_parse_origin(buf, pstate)) {
+		if((ret=http_parse_origin(buf, pstate))!=0) {
+			if(ret == 2)
+				return 0;
 			continue; /* $ORIGIN has been handled */
 		}
-		if(http_parse_ttl(buf, pstate)) {
+		if((ret=http_parse_ttl(buf, pstate))!=0) {
+			if(ret == 2)
+				return 0;
 			continue; /* $TTL has been handled */
 		}
 		return 1;
@@ -5007,6 +5019,7 @@ apply_http(struct auth_xfer* xfr, struct auth_zone* z,
 	struct sldns_file_parse_state pstate;
 	struct auth_chunk* chunk;
 	size_t chunk_pos;
+	int ret;
 	memset(&pstate, 0, sizeof(pstate));
 	pstate.default_ttl = 3600;
 	if(xfr->namelen < sizeof(pstate.origin)) {
@@ -5063,10 +5076,24 @@ apply_http(struct auth_xfer* xfr, struct auth_zone* z,
 			continue;
 		}
 		/* parse line and add RR */
-		if(http_parse_origin(scratch_buffer, &pstate)) {
+		if((ret=http_parse_origin(scratch_buffer, &pstate))!=0) {
+			if(ret == 2) {
+				verbose(VERB_ALGO, "error parsing ORIGIN on line [%s:%d] %s",
+					xfr->task_transfer->master->file,
+					pstate.lineno,
+					sldns_buffer_begin(scratch_buffer));
+				return 0;
+			}
 			continue; /* $ORIGIN has been handled */
 		}
-		if(http_parse_ttl(scratch_buffer, &pstate)) {
+		if((ret=http_parse_ttl(scratch_buffer, &pstate))!=0) {
+			if(ret == 2) {
+				verbose(VERB_ALGO, "error parsing TTL on line [%s:%d] %s",
+					xfr->task_transfer->master->file,
+					pstate.lineno,
+					sldns_buffer_begin(scratch_buffer));
+				return 0;
+			}
 			continue; /* $TTL has been handled */
 		}
 		if(!http_parse_add_rr(xfr, z, scratch_buffer, &pstate)) {
