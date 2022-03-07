@@ -1,3 +1,7 @@
+7 March 2022: Wouter
+	- Fix configure for python to use sysutils, because distutils is
+	  deprecated. It uses sysutils when available, distutils otherwise.
+
 3 March 2022: Wouter
 	- Fix #637: Integer Overflow in sldns_str2period function.
 	- Fix for #637: fix integer overflow checks in sldns_str2period.
