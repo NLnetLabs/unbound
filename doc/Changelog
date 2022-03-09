@@ -1,3 +1,7 @@
+9 March 2022: Wouter
+	- Merge #644: Make `install-lib` make target install the pkg-config
+	  file.
+
 7 March 2022: Wouter
 	- Fix configure for python to use sysutils, because distutils is
 	  deprecated. It uses sysutils when available, distutils otherwise.

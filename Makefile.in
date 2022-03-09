@@ -583,9 +583,9 @@ install-lib:	lib $(UNBOUND_EVENT_INSTALL)
 		echo ".so man3/libunbound.3" > $(DESTDIR)$(mandir)/man3/$$mpage.3 ; \
 	done
 	$(LIBTOOL) --mode=install cp unbound.h $(DESTDIR)$(includedir)/unbound.h
-	$(LIBTOOL) --mode=install cp libunbound.la $(DESTDIR)$(libdir)
 	$(INSTALL) -m 755 -d $(DESTDIR)$(libdir)/pkgconfig
 	$(INSTALL) -m 644 contrib/libunbound.pc $(DESTDIR)$(libdir)/pkgconfig
+	$(LIBTOOL) --mode=install cp libunbound.la $(DESTDIR)$(libdir)
 	$(LIBTOOL) --mode=finish $(DESTDIR)$(libdir)
 
 install-all:	all $(PYTHONMOD_INSTALL) $(PYUNBOUND_INSTALL) $(UNBOUND_EVENT_INSTALL) install-lib
