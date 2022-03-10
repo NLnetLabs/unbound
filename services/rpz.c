@@ -526,13 +526,13 @@ rpz_create(struct config_auth* p)
 		size_t nmlen = sizeof(nm);
 
 		if(!p->rpz_cname) {
-			log_err("RPZ override with cname action found, but no "
+			log_err("rpz: override with cname action found, but no "
 				"rpz-cname-override configured");
 			goto err;
 		}
 
 		if(sldns_str2wire_dname_buf(p->rpz_cname, nm, &nmlen) != 0) {
-			log_err("cannot parse RPZ cname override: %s",
+			log_err("rpz: cannot parse cname override: %s",
 				p->rpz_cname);
 			goto err;
 		}
@@ -614,7 +614,7 @@ rpz_insert_local_zones_trigger(struct local_zones* lz, uint8_t* dname,
 			return; /* no need to log these types as unsupported */
 		}
 		dname_str(dname, str);
-		verbose(VERB_ALGO, "RPZ: qname trigger, %s skipping unsupported action: %s",
+		verbose(VERB_ALGO, "rpz: qname trigger, %s skipping unsupported action: %s",
 			str, rpz_action_to_string(a));
 		free(dname);
 		return;
@@ -999,7 +999,7 @@ rpz_insert_response_ip_trigger(struct rpz* r, uint8_t* dname, size_t dnamelen,
 		rpz_action_to_respip_action(a) == respip_invalid) {
 		char str[255+1];
 		dname_str(dname, str);
-		verbose(VERB_ALGO, "RPZ: respip trigger, %s skipping unsupported action: %s",
+		verbose(VERB_ALGO, "rpz: respip trigger, %s skipping unsupported action: %s",
 			str, rpz_action_to_string(a));
 		return 0;
 	}
@@ -2117,7 +2117,7 @@ rpz_callback_from_iterator_module(struct module_qstate* ms, struct iter_qstate* 
 	struct matched_delegation_point match = {0};
 
 	if(ms->rpz_passthru) {
-		verbose(VERB_ALGO, "query is rpz_passthru, no futher processing");
+		verbose(VERB_ALGO, "query is rpz_passthru, no further processing");
 		return NULL;
 	}
 
@@ -2187,7 +2187,7 @@ struct dns_msg* rpz_callback_from_iterator_cname(struct module_qstate* ms,
 	struct dns_msg* ret = NULL;
 
 	if(ms->rpz_passthru) {
-		verbose(VERB_ALGO, "query is rpz_passthru, no futher processing");
+		verbose(VERB_ALGO, "query is rpz_passthru, no further processing");
 		return NULL;
 	}
 

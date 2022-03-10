@@ -1,3 +1,50 @@
+9 March 2022: Wouter
+	- Merge #644: Make `install-lib` make target install the pkg-config
+	  file.
+
+7 March 2022: Wouter
+	- Fix configure for python to use sysutils, because distutils is
+	  deprecated. It uses sysutils when available, distutils otherwise.
+
+3 March 2022: Wouter
+	- Fix #637: Integer Overflow in sldns_str2period function.
+	- Fix for #637: fix integer overflow checks in sldns_str2period.
+
+2 March 2022: George
+	- Merge PR #632 from scottrw93: Match cnames in ipset.
+	- Various fixes for #632: variable initialisation, convert the qinfo
+	  to str once, accept trailing dot in the local-zone ipset option.
+
+2 March 2022: Wouter
+	- Fix compile warnings for printf ll format on mingw compile.
+
+1 March 2022: Wouter
+	- Fix pythonmod for change in iter_dp_is_useless function prototype.
+
+28 February 2022: George
+	- Fix #630: Unify the RPZ log messages.
+	- Merge #623 from rex4539: Fix typos.
+
+28 February 2022: Wouter
+	- Fix #633: Document unix domain socket support for unbound-control.
+	- Fix for #633: updated fix with new text.
+	- Fix edns client subnet to add the option based on the option list,
+	  so that it is not state dependent, after the state fix of #605 for
+	  double EDNS options.
+	- Fix for edns client subnet option add fix in removal code, from review.
+
+25 February 2022: Wouter
+	- Fix to detect that no IPv6 support means that IPv6 addresses are
+	  useless for delegation point lookups.
+	- update Makefile dependencies.
+	- Fix check interface existence for support detection in remote lookup.
+
+18 February 2022: Wouter
+	- Fix that address not available is squelched from the logs for
+	  udp connect failures. It is visible on verbosity 4 and more.
+	- Merge #631 from mollyim: Replace OpenSSL's ERR_PACK with
+	  ERR_GET_REASON.
+
 16 February 2022: Wouter
 	- Fix for #628: fix rpz-passthru for qname trigger by localzone type.
 

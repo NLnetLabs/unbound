@@ -1554,6 +1554,7 @@ if test "$USE_WINSOCK" = 1; then
 	AC_SUBST(WIN_CONTROL_OBJ_LINK)
 	WIN_CHECKCONF_OBJ_LINK="rsrc_unbound_checkconf.o"
 	AC_SUBST(WIN_CHECKCONF_OBJ_LINK)
+	AC_DEFINE(__USE_MINGW_ANSI_STDIO, 1, [defined to use gcc ansi snprintf and sscanf that understands %lld when compiled for windows.])
 fi
 if test $ac_cv_func_getaddrinfo = no; then
 	AC_LIBOBJ([fake-rfc2553])
@@ -2061,7 +2062,7 @@ dnl includes
 #include <ws2tcpip.h>
 #endif
 
-#ifndef USE_WINSOCK
+#if !defined(USE_WINSOCK) || !defined(HAVE_SNPRINTF) || defined(SNPRINTF_RET_BROKEN) || defined(__USE_MINGW_ANSI_STDIO)
 #define ARG_LL "%ll"
 #else
 #define ARG_LL "%I64"

@@ -2185,7 +2185,7 @@ server_local_zone: VAR_LOCAL_ZONE STRING_ARG STRING_ARG
 		   && strcmp($3, "noview")!=0
 		   && strcmp($3, "inform")!=0 && strcmp($3, "inform_deny")!=0
 		   && strcmp($3, "inform_redirect") != 0
-			 && strcmp($3, "ipset") != 0) {
+		   && strcmp($3, "ipset") != 0) {
 			yyerror("local-zone type: expected static, deny, "
 				"refuse, redirect, transparent, "
 				"typetransparent, inform, inform_deny, "
@@ -2202,6 +2202,16 @@ server_local_zone: VAR_LOCAL_ZONE STRING_ARG STRING_ARG
 			free($3);
 #ifdef USE_IPSET
 		} else if(strcmp($3, "ipset")==0) {
+			size_t len = strlen($2);
+			/* Make sure to add the trailing dot.
+			 * These are str compared to domain names. */
+			if($2[len-1] != '.') {
+				if(!($2 = realloc($2, len+2))) {
+					fatal_exit("out of memory adding local-zone");
+				}
+				$2[len] = '.';
+				$2[len+1] = 0;
+			}
 			if(!cfg_strlist_insert(&cfg_parser->cfg->
 				local_zones_ipset, $2))
 				fatal_exit("out of memory adding local-zone");
@@ -3008,6 +3018,16 @@ view_local_zone: VAR_LOCAL_ZONE STRING_ARG STRING_ARG
 			free($3);
 #ifdef USE_IPSET
 		} else if(strcmp($3, "ipset")==0) {
+			size_t len = strlen($2);
+			/* Make sure to add the trailing dot.
+			 * These are str compared to domain names. */
+			if($2[len-1] != '.') {
+				if(!($2 = realloc($2, len+2))) {
+					fatal_exit("out of memory adding local-zone");
+				}
+				$2[len] = '.';
+				$2[len+1] = 0;
+			}
 			if(!cfg_strlist_insert(&cfg_parser->cfg->views->
 				local_zones_ipset, $2))
 				fatal_exit("out of memory adding local-zone");

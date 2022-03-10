@@ -249,11 +249,16 @@ rrinternal_get_ttl(sldns_buffer* strbuf, char* token, size_t token_len,
 	int* not_there, uint32_t* ttl, uint32_t default_ttl)
 {
 	const char* endptr;
+	int overflow;
 	if(sldns_bget_token(strbuf, token, "\t\n ", token_len) == -1) {
 		return RET_ERR(LDNS_WIREPARSE_ERR_SYNTAX_TTL,
 			sldns_buffer_position(strbuf));
 	}
-	*ttl = (uint32_t) sldns_str2period(token, &endptr);
+	*ttl = (uint32_t) sldns_str2period(token, &endptr, &overflow);
+	if(overflow) {
+		return RET_ERR(LDNS_WIREPARSE_ERR_SYNTAX_INTEGER_OVERFLOW,
+			sldns_buffer_position(strbuf));
+	}
 
 	if (strlen(token) > 0 && !isdigit((unsigned char)token[0])) {
 		*not_there = 1;
@@ -606,7 +611,7 @@ sldns_affix_token(sldns_buffer* strbuf, char* token, size_t* token_len,
 	/* add space */
 	/* when addlen < 2, the token buffer is full considering the NULL byte
 	 * from strlen and will lead to buffer overflow with the second
-	 * assignement below. */
+	 * assignment below. */
 	if(addlen < 2) return 0;
 	token[*token_strlen] = ' ';
 	token[++(*token_strlen)] = 0;
@@ -670,10 +675,10 @@ static int sldns_str2wire_check_svcbparams(uint8_t* rdata, uint16_t rdata_len)
 	     ,sldns_str2wire_svcparam_key_cmp);
 
 
-	/* The code below revolves around sematic errors in the SVCParam set.
+	/* The code below revolves around semantic errors in the SVCParam set.
 	 * So long as we do not distinguish between running Unbound as a primary
 	 * or as a secondary, we default to secondary behavior and we ignore the
-	 * sematic errors. */
+	 * semantic errors. */
 
 #ifdef SVCB_SEMANTIC_ERRORS
 	{
@@ -1055,12 +1060,15 @@ int sldns_fp2wire_rr_buf(FILE* in, uint8_t* rr, size_t* len, size_t* dname_len,
 		return s;
 	} else if(strncmp(line, "$TTL", 4) == 0 && isspace((unsigned char)line[4])) {
 		const char* end = NULL;
+		int overflow = 0;
 		strlcpy((char*)rr, line, *len);
 		*len = 0;
 		*dname_len = 0;
 		if(!parse_state) return LDNS_WIREPARSE_ERR_OK;
 		parse_state->default_ttl = sldns_str2period(
-			sldns_strip_ws(line+5), &end);
+			sldns_strip_ws(line+5), &end, &overflow);
+		if(overflow)
+			return LDNS_WIREPARSE_ERR_SYNTAX_INTEGER_OVERFLOW;
 	} else if (strncmp(line, "$INCLUDE", 8) == 0) {
 		strlcpy((char*)rr, line, *len);
 		*len = 0;
@@ -1356,7 +1364,7 @@ sldns_str2wire_svcbparam_mandatory(const char* val, uint8_t* rd, size_t* rd_len)
 	 */
 	qsort((void *)(rd + 4), count, sizeof(uint16_t), sldns_network_uint16_cmp);
 
-	/* The code below revolves around sematic errors in the SVCParam set.
+	/* The code below revolves around semantic errors in the SVCParam set.
 	 * So long as we do not distinguish between running Unbound as a primary
 	 * or as a secondary, we default to secondary behavior and we ignore the
 	 * semantic errors. */
@@ -2157,9 +2165,13 @@ int sldns_str2wire_tsigtime_buf(const char* str, uint8_t* rd, size_t* len)
 int sldns_str2wire_period_buf(const char* str, uint8_t* rd, size_t* len)
 {
 	const char* end;
-	uint32_t p = sldns_str2period(str, &end);
+	int overflow;
+	uint32_t p = sldns_str2period(str, &end, &overflow);
 	if(*end != 0)
 		return RET_ERR(LDNS_WIREPARSE_ERR_SYNTAX_PERIOD, end-str);
+	if(overflow)
+		return RET_ERR(LDNS_WIREPARSE_ERR_SYNTAX_INTEGER_OVERFLOW,
+			end-str);
 	if(*len < 4)
 		return LDNS_WIREPARSE_ERR_BUFFER_TOO_SMALL;
 	sldns_write_uint32(rd, p);

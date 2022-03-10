@@ -970,7 +970,7 @@ respip_rewrite_reply(const struct query_info* qinfo,
 						addr_to_str(&raddr->node.addr,
 							raddr->node.addrlen,
 							nm, sizeof(nm));
-						verbose(VERB_ALGO, "respip: rpz response-ip trigger %s/%d on %s %s with action %s", nm, raddr->node.net, qn, ip, rpz_action_to_string(respip_action_to_rpz_action(action)));
+						verbose(VERB_ALGO, "respip: rpz: response-ip trigger %s/%d on %s %s with action %s", nm, raddr->node.net, qn, ip, rpz_action_to_string(respip_action_to_rpz_action(action)));
 					}
 					/* break to make sure 'a' stays pointed
 					 * to used auth_zone, and keeps lock */
@@ -1308,7 +1308,7 @@ respip_inform_print(struct respip_action_info* respip_actinfo, uint8_t* qname,
 		respip, sizeof(respip));
 	if(respip_actinfo->rpz_log) {
 		txtlen += snprintf(txt+txtlen, sizeof(txt)-txtlen, "%s",
-			"RPZ applied ");
+			"rpz: applied ");
 		if(respip_actinfo->rpz_cname_override)
 			actionstr = rpz_action_to_string(
 				RPZ_CNAME_OVERRIDE_ACTION);
