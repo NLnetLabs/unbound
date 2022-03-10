@@ -812,7 +812,7 @@ val_dsset_isusable(struct ub_packed_rrset_key* ds_rrset)
 			(int)ds_get_key_algo(ds_rrset, 0));
 		if(lt) snprintf(aerr, sizeof(aerr), "%s", lt->name);
 		else snprintf(aerr, sizeof(aerr), "%d",
-			(int)ds_get_key_algo(ds_rrset, i));
+			(int)ds_get_key_algo(ds_rrset, 0));
 
 		verbose(VERB_ALGO, "DS unsupported, hash %s %s, "
 			"key algorithm %s %s", herr,

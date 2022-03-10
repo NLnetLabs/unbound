@@ -672,6 +672,7 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	else if(strcmp(opt, "serve-expired-reply-ttl:") == 0)
 	{ IS_NUMBER_OR_ZERO; cfg->serve_expired_reply_ttl = atoi(val); SERVE_EXPIRED_REPLY_TTL=(time_t)cfg->serve_expired_reply_ttl;}
 	else S_NUMBER_OR_ZERO("serve-expired-client-timeout:", serve_expired_client_timeout)
+	else S_YNO("do-ede:", do_ede)	
 	else S_YNO("serve-expired-ede:", serve_expired_ede)
 	else S_YNO("serve-original-ttl:", serve_original_ttl)
 	else S_STR("val-nsec3-keysize-iterations:", val_nsec3_key_iterations)
@@ -1114,6 +1115,7 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_YNO(opt, "serve-expired-ttl-reset", serve_expired_ttl_reset)
 	else O_DEC(opt, "serve-expired-reply-ttl", serve_expired_reply_ttl)
 	else O_DEC(opt, "serve-expired-client-timeout", serve_expired_client_timeout)
+	else O_YNO(opt, "do-ede", do_ede)
 	else O_YNO(opt, "serve-expired-ede", serve_expired_ede)
 	else O_YNO(opt, "serve-original-ttl", serve_original_ttl)
 	else O_STR(opt, "val-nsec3-keysize-iterations",val_nsec3_key_iterations)
