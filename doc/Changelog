@@ -1,3 +1,6 @@
+16 March 2022: Wouter
+	- Fix to ensure uniform handling of spaces and tabs when parsing RRs.
+
 9 March 2022: Wouter
 	- Merge #644: Make `install-lib` make target install the pkg-config
 	  file.
