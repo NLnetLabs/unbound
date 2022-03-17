@@ -1329,7 +1329,17 @@ are authoritative DNS answers. By default the zones are class IN.
 .IP
 If you need more complicated authoritative data, with referrals, wildcards,
 CNAME/DNAME support, or DNSSEC authoritative service, setup a stub\-zone for
-it as detailed in the stub zone section below.
+it as detailed in the stub zone section below. A stub\-zone can be used to
+have unbound send queries to another server, an authoritative server, to
+fetch the information. With a forward\-zone, unbound sends queries to a server
+that is a recursive server to fetch the information. With an auth\-zone a
+zone can be loaded from file and used, it can be used like a local\-zone
+for users downstream, or the auth\-zone information can be used to fetch
+information from when resolving like it is an upstream server. The
+forward\-zone and auth\-zone options are described in their sections below.
+If you want to perform filtering of the information that the users can fetch,
+the local\-zone and local\-data statements allow for this, but also the
+rpz functionality can be used, described in the RPZ section.
 .TP 10
 \h'5'\fIdeny\fR
 Do not send an answer, drop the query.

@@ -1,3 +1,7 @@
+17 March 2022: Wouter
+	- Fix to describe auth-zone and other configuration at the local-zone
+	  configuration option, to allow for more broadly view of the options.
+
 16 March 2022: Wouter
 	- Fix to ensure uniform handling of spaces and tabs when parsing RRs.
 
