@@ -475,7 +475,7 @@ static void print_stats_shm(const char* cfgfile, int quiet)
 	}
 
 
-	if (!quiet) {
+	if(!quiet) {
 		/* print the stats */
 		do_stats_shm(cfg, stats, shm_stat);
 	}
@@ -502,7 +502,7 @@ static void ssl_path_err(const char* s, const char *path)
 {
 	unsigned long err;
 	err = ERR_peek_error();
-	if (ERR_GET_LIB(err) == ERR_LIB_SYS) {
+	if(ERR_GET_LIB(err) == ERR_LIB_SYS) {
 		fprintf(stderr, "error: %s\n%s: %s\n",
 			s, path, ERR_reason_error_string(err));
 		exit(1);
@@ -544,11 +544,11 @@ setup_ctx(struct config_file* cfg)
 #endif
 	if(!SSL_CTX_use_certificate_chain_file(ctx,c_cert))
 		ssl_path_err("Error setting up SSL_CTX client cert", c_cert);
-	if (!SSL_CTX_use_PrivateKey_file(ctx,c_key,SSL_FILETYPE_PEM))
+	if(!SSL_CTX_use_PrivateKey_file(ctx,c_key,SSL_FILETYPE_PEM))
 		ssl_path_err("Error setting up SSL_CTX client key", c_key);
-	if (!SSL_CTX_check_private_key(ctx))
+	if(!SSL_CTX_check_private_key(ctx))
 		ssl_err("Error setting up SSL_CTX client key");
-	if (SSL_CTX_load_verify_locations(ctx, s_cert, NULL) != 1)
+	if(SSL_CTX_load_verify_locations(ctx, s_cert, NULL) != 1)
 		ssl_path_err("Error setting up SSL_CTX verify, server cert",
 			     s_cert);
 	SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER, NULL);
@@ -883,8 +883,9 @@ go_cmd(SSL* ssl, int fd, int quiet, int argc, char* argv[])
 		if(first_line && strncmp(buf, "error", 5) == 0) {
 			printf("%s", buf);
 			was_error = 1;
-		} else if (!quiet)
+		} else if(!quiet) {
 			printf("%s", buf);
+		}
 
 		first_line = 0;
 	}
