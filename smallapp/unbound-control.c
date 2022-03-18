@@ -444,7 +444,7 @@ static void do_stats_shm(struct config_file* cfg, struct ub_stats_info* stats,
 #endif /* HAVE_SHMGET */
 
 /** print statistics from shm memory segment */
-static void print_stats_shm(const char* cfgfile)
+static void print_stats_shm(const char* cfgfile, int quiet)
 {
 #ifdef HAVE_SHMGET
 	struct config_file* cfg;
@@ -474,8 +474,11 @@ static void print_stats_shm(const char* cfgfile)
 		fatal_exit("shmat(%d): %s", id_arr, strerror(errno));
 	}
 
-	/* print the stats */
-	do_stats_shm(cfg, stats, shm_stat);
+
+	if (!quiet) {
+		/* print the stats */
+		do_stats_shm(cfg, stats, shm_stat);
+	}
 
 	/* shutdown */
 	shmdt(shm_stat);
@@ -987,7 +990,7 @@ int main(int argc, char* argv[])
 #endif
 	}
 	if(argc >= 1 && strcmp(argv[0], "stats_shm")==0) {
-		print_stats_shm(cfgfile);
+		print_stats_shm(cfgfile, quiet);
 		return 0;
 	}
 	check_args_for_listcmd(argc, argv);
