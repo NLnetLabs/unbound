@@ -1013,17 +1013,25 @@ answer_notify(struct worker* w, struct query_info* qinfo,
 static int
 deny_refuse(struct comm_point* c, enum acl_access acl,
 	enum acl_access deny, enum acl_access refuse,
-	struct worker* worker, struct comm_reply* repinfo)
+	struct worker* worker, struct comm_reply* repinfo,
+	struct acl_addr* acladdr)
 {
 	if(acl == deny) {
+		if(verbosity >= VERB_ALGO) {
+			log_acl_action("dropped", &repinfo->addr,
+				repinfo->addrlen, acl, acladdr);
+			log_buf(VERB_ALGO, "dropped", c->buffer);
+		}
 		comm_point_drop_reply(repinfo);
 		if(worker->stats.extended)
 			worker->stats.unwanted_queries++;
 		return 0;
 	} else if(acl == refuse) {
-		log_addr(VERB_ALGO, "refused query from",
-			&repinfo->addr, repinfo->addrlen);
-		log_buf(VERB_ALGO, "refuse", c->buffer);
+		if(verbosity >= VERB_ALGO) {
+			log_acl_action("refused", &repinfo->addr,
+				repinfo->addrlen, acl, acladdr);
+			log_buf(VERB_ALGO, "refuse", c->buffer);
+		}
 		if(worker->stats.extended)
 			worker->stats.unwanted_queries++;
 		if(worker_check_request(c->buffer, worker) == -1) {
@@ -1046,16 +1054,20 @@ deny_refuse(struct comm_point* c, enum acl_access acl,
 
 static int
 deny_refuse_all(struct comm_point* c, enum acl_access acl,
-	struct worker* worker, struct comm_reply* repinfo)
+	struct worker* worker, struct comm_reply* repinfo,
+	struct acl_addr* acladdr)
 {
-	return deny_refuse(c, acl, acl_deny, acl_refuse, worker, repinfo);
+	return deny_refuse(c, acl, acl_deny, acl_refuse, worker, repinfo,
+		acladdr);
 }
 
 static int
 deny_refuse_non_local(struct comm_point* c, enum acl_access acl,
-	struct worker* worker, struct comm_reply* repinfo)
+	struct worker* worker, struct comm_reply* repinfo,
+	struct acl_addr* acladdr)
 {
-	return deny_refuse(c, acl, acl_deny_non_local, acl_refuse_non_local, worker, repinfo);
+	return deny_refuse(c, acl, acl_deny_non_local, acl_refuse_non_local,
+		worker, repinfo, acladdr);
 }
 
 int 
@@ -1147,7 +1159,7 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 	acladdr = acl_addr_lookup(worker->daemon->acl, &repinfo->addr, 
 		repinfo->addrlen);
 	acl = acl_get_control(acladdr);
-	if((ret=deny_refuse_all(c, acl, worker, repinfo)) != -1)
+	if((ret=deny_refuse_all(c, acl, worker, repinfo, acladdr)) != -1)
 	{
 		if(ret == 1)
 			goto send_reply;
@@ -1367,7 +1379,7 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 
 	/* We've looked in our local zones. If the answer isn't there, we
 	 * might need to bail out based on ACLs now. */
-	if((ret=deny_refuse_non_local(c, acl, worker, repinfo)) != -1)
+	if((ret=deny_refuse_non_local(c, acl, worker, repinfo, acladdr)) != -1)
 	{
 		regional_free_all(worker->scratchpad);
 		if(ret == 1)
