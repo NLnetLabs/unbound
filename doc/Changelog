@@ -1,3 +1,6 @@
+25 March 2022: Wouter
+	- Fix spelling error in comment in sldns_str2wire_svcparam_key_lookup.
+
 23 March 2022: Wouter
 	- Fix #651: [FR] Better logging for refused queries.
 
