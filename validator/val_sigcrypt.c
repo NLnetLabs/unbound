@@ -601,7 +601,7 @@ dnskey_verify_rrset(struct module_env* env, struct val_env* ve,
 	struct module_qstate* qstate)
 {
 	enum sec_status sec;
-	size_t i, num, numchecked = 0;
+	size_t i, num, numchecked = 0, numindeterminate = 0;
 	rbtree_type* sortree = NULL;
 	int buf_canon = 0;
 	uint16_t tag = dnskey_calc_keytag(dnskey, dnskey_idx);
@@ -627,9 +627,16 @@ dnskey_verify_rrset(struct module_env* env, struct val_env* ve,
 		if(sec == sec_status_secure)
 			return sec;
 		numchecked ++;
+		if (sec == sec_status_indeterminate)
+			numindeterminate ++;
+		
 	}
 	verbose(VERB_ALGO, "rrset failed to verify: all signatures are bogus");
 	if(!numchecked) *reason = "signature missing";
+	else if (numchecked == numindeterminate) {
+		*reason = "algorithm refused by cryptolib";
+		return sec_status_indeterminate;
+	}
 	return sec_status_bogus;
 }
 
