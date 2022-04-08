@@ -1932,6 +1932,7 @@ static int auth_zone_zonemd_check_hash(struct auth_zone* z,
 			only_unsupported = 0;
 			continue;
 		}
+		*reason = NULL;
 		if(auth_zone_generate_zonemd_check(z, scheme, hashalgo,
 			hash, hashlen, region, buf, reason)) {
 			/* success */

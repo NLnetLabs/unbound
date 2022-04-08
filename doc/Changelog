@@ -8,6 +8,9 @@
 	  and check for success for debug printout.
 	- Fix zonemd unsupported algo check to print unsupported reason before
 	  zeroing it.
+	- Fix zonemd unsupported algo check to set reason to NULL before the
+	  check routine, but after malformed checks, to get the correct NULL
+	  output when the digest matches.
 
 25 March 2022: Wouter
 	- Fix spelling error in comment in sldns_str2wire_svcparam_key_lookup.
