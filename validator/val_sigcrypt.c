@@ -646,6 +646,7 @@ dnskeyset_verify_rrset_sig(struct module_env* env, struct val_env* ve,
 	int algo = rrset_get_sig_algo(rrset, sig_idx);
 	size_t i, num = rrset_get_count(dnskey);
 	size_t numchecked = 0;
+	size_t numindeterminate = 0;
 	int buf_canon = 0;
 	verbose(VERB_ALGO, "verify sig %d %d", (int)tag, algo);
 	if(!dnskey_algo_id_is_supported(algo)) {
@@ -666,12 +667,16 @@ dnskeyset_verify_rrset_sig(struct module_env* env, struct val_env* ve,
 			sig_idx, sortree, &buf_canon, reason, section, qstate);
 		if(sec == sec_status_secure)
 			return sec;
+		else if(sec == sec_status_indeterminate)
+			numindeterminate ++;
 	}
 	if(numchecked == 0) {
 		*reason = "signatures from unknown keys";
 		verbose(VERB_QUERY, "verify: could not find appropriate key");
 		return sec_status_bogus;
 	}
+	if (numindeterminate == numchecked)
+		return sec_status_indeterminate;
 	return sec_status_bogus;
 }
 
