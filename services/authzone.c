@@ -1938,13 +1938,13 @@ static int auth_zone_zonemd_check_hash(struct auth_zone* z,
 			if(*reason) {
 				if(!unsupported_reason)
 					unsupported_reason = *reason;
-				*reason = NULL;
 				/* continue to check for valid ZONEMD */
 				if(verbosity >= VERB_ALGO) {
 					char zstr[255+1];
 					dname_str(z->name, zstr);
 					verbose(VERB_ALGO, "auth-zone %s ZONEMD %d %d is unsupported: %s", zstr, (int)scheme, (int)hashalgo, *reason);
 				}
+				*reason = NULL;
 				continue;
 			}
 			if(verbosity >= VERB_ALGO) {

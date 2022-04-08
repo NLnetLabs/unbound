@@ -6,6 +6,8 @@
 	- Fix zonemd unsupported algo check.
 	- Fix zonemd unsupported algo check reason to not copy to next record,
 	  and check for success for debug printout.
+	- Fix zonemd unsupported algo check to print unsupported reason before
+	  zeroing it.
 
 25 March 2022: Wouter
 	- Fix spelling error in comment in sldns_str2wire_svcparam_key_lookup.
