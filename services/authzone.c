@@ -1938,6 +1938,7 @@ static int auth_zone_zonemd_check_hash(struct auth_zone* z,
 			if(*reason) {
 				if(!unsupported_reason)
 					unsupported_reason = *reason;
+				*reason = NULL;
 				/* continue to check for valid ZONEMD */
 				if(verbosity >= VERB_ALGO) {
 					char zstr[255+1];
@@ -1949,7 +1950,7 @@ static int auth_zone_zonemd_check_hash(struct auth_zone* z,
 			if(verbosity >= VERB_ALGO) {
 				char zstr[255+1];
 				dname_str(z->name, zstr);
-				if(!reason)
+				if(!*reason)
 					verbose(VERB_ALGO, "auth-zone %s ZONEMD hash is correct", zstr);
 			}
 			return 1;
