@@ -1946,7 +1946,6 @@ static int auth_zone_zonemd_check_hash(struct auth_zone* z,
 				}
 				continue;
 			}
-			only_unsupported = 0;
 			if(verbosity >= VERB_ALGO) {
 				char zstr[255+1];
 				dname_str(z->name, zstr);
@@ -1955,6 +1954,7 @@ static int auth_zone_zonemd_check_hash(struct auth_zone* z,
 			}
 			return 1;
 		}
+		only_unsupported = 0;
 		/* try next one */
 	}
 	/* have we seen no failures but only unsupported algo,
