@@ -97,6 +97,23 @@ log_crypto_error(const char* str, unsigned long e)
 	log_err("%s crypto %s", str, buf);
 }
 
+/**
+ * Output a libcrypto openssl error to the logfile as a debug message.
+ * @param level: debug level to use in verbose() call
+ * @param str: string to add to it.
+ * @param e: the error to output, error number from ERR_get_error().
+ */
+static void
+log_crypto_verbose(enum verbosity_value level, const char* str, unsigned long e)
+{
+	char buf[128];
+	/* or use ERR_error_string if ERR_error_string_n is not avail TODO */
+	ERR_error_string_n(e, buf, sizeof(buf));
+	/* buf now contains */
+	/* error:[error code]:[library name]:[function name]:[reason string] */
+	verbose(level, "%s crypto %s", str, buf);
+}
+
 /* return size of digest if supported, or 0 otherwise */
 size_t
 nsec3_hash_algo_size_supported(int id)
@@ -668,10 +685,11 @@ digest_ctx_free(EVP_MD_CTX* ctx, EVP_PKEY *evp_key,
 }
 
 static enum sec_status
-digest_error_status(void)
+digest_error_status(const char *str)
 {
-#ifdef EVP_R_INVALID_DIGEST
 	unsigned long e = ERR_get_error();
+	log_crypto_verbose(VERB_QUERY, str, e);
+#ifdef EVP_R_INVALID_DIGEST
 	if (ERR_GET_LIB(e) == ERR_LIB_EVP &&
 	    ERR_GET_REASON(e) == EVP_R_INVALID_DIGEST)
 		return sec_status_indeterminate;
@@ -762,15 +780,16 @@ verify_canonrrset(sldns_buffer* buf, int algo, unsigned char* sigblock,
 	}
 #ifndef HAVE_EVP_DIGESTVERIFY
 	if(EVP_DigestInit(ctx, digest_type) == 0) {
-		enum sec_status sec = digest_error_status();
-		verbose(VERB_QUERY, "verify: EVP_DigestInit failed");
+		enum sec_status sec;
+		sec = digest_error_status("verify: EVP_DigestInit failed");
 		digest_ctx_free(ctx, evp_key, sigblock,
 				dofree, docrypto_free);
 		return sec;
 	}
 	if(EVP_DigestUpdate(ctx, (unsigned char*)sldns_buffer_begin(buf), 
 		(unsigned int)sldns_buffer_limit(buf)) == 0) {
-		verbose(VERB_QUERY, "verify: EVP_DigestUpdate failed");
+		log_crypto_verbose(VERB_QUERY, "verify: EVP_DigestUpdate failed",
+				   ERR_get_error());
 		digest_ctx_free(ctx, evp_key, sigblock,
 				dofree, docrypto_free);
 		return sec_status_unchecked;
@@ -779,8 +798,8 @@ verify_canonrrset(sldns_buffer* buf, int algo, unsigned char* sigblock,
 	res = EVP_VerifyFinal(ctx, sigblock, sigblock_len, evp_key);
 #else /* HAVE_EVP_DIGESTVERIFY */
 	if(EVP_DigestVerifyInit(ctx, NULL, digest_type, NULL, evp_key) == 0) {
-		enum sec_status sec = digest_error_status();
-		verbose(VERB_QUERY, "verify: EVP_DigestVerifyInit failed");
+		enum sec_status sec;
+		sec = digest_error_status("verify: EVP_DigestVerifyInit failed");
 		digest_ctx_free(ctx, evp_key, sigblock,
 				dofree, docrypto_free);
 		return sec;
