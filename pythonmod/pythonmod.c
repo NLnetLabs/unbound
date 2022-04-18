@@ -245,6 +245,11 @@ cleanup:
 	/* clear the exception, by not restoring it */
 	/* Restore the exception state */
 	/* PyErr_Restore(exc_typ, exc_val, exc_tb); */
+	/* when using PyErr_Restore there is no need to Py_XDECREF for
+	 * these 3 pointers. */
+	Py_XDECREF(exc_typ);
+	Py_XDECREF(exc_val);
+	Py_XDECREF(exc_tb);
 }
 
 int pythonmod_init(struct module_env* env, int id)
@@ -561,9 +566,19 @@ void pythonmod_operate(struct module_qstate* qstate, enum module_ev event,
    {
       /* create qstate */
       pq = qstate->minfo[id] = malloc(sizeof(struct pythonmod_qstate));
+      if(!pq) {
+		log_err("pythonmod_operate: malloc failure for qstate");
+		PyGILState_Release(gil);
+		return;
+      }
 
       /* Initialize per query data */
       pq->data = PyDict_New();
+      if(!pq->data) {
+		log_err("pythonmod_operate: malloc failure for query data dict");
+		PyGILState_Release(gil);
+		return;
+      }
    }
 
    /* Call operate */

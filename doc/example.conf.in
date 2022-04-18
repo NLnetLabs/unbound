@@ -55,6 +55,10 @@ server:
 	# Socket options are not supported on all platforms. experimental.
 	# interface-automatic: no
 
+	# instead of the default port, open additional ports separated by
+	# spaces when interface-automatic is enabled, by listing them here.
+	# interface-automatic-ports: ""
+
 	# port to answer queries from
 	# port: 53
 
@@ -82,13 +86,13 @@ server:
 	# num-queries-per-thread, or, use as many as the OS will allow you.
 	# outgoing-range: 4096
 
-	# permit unbound to use this port number or port range for
+	# permit Unbound to use this port number or port range for
 	# making outgoing queries, using an outgoing interface.
 	# outgoing-port-permit: 32768
 
-	# deny unbound the use this of port number or port range for
+	# deny Unbound the use this of port number or port range for
 	# making outgoing queries, using an outgoing interface.
-	# Use this to make sure unbound does not grab a UDP port that some
+	# Use this to make sure Unbound does not grab a UDP port that some
 	# other server on this computer needs. The default is to avoid
 	# IANA-assigned port numbers.
 	# If multiple outgoing-port-permit and outgoing-port-avoid options
@@ -163,6 +167,9 @@ server:
 
 	# perform connect for UDP sockets to mitigate ICMP side channel.
 	# udp-connect: yes
+
+	# The number of retries when a non-positive response is received.
+	# outbound-msg-retry: 5
 
 	# msec for waiting for an unknown server to reply.  Increase if you
 	# are behind a slow satellite link, to eg. 1128.
@@ -251,7 +258,7 @@ server:
 	# use-systemd: no
 
 	# Detach from the terminal, run in background, "yes" or "no".
-	# Set the value to "no" when unbound runs as systemd service.
+	# Set the value to "no" when Unbound runs as systemd service.
 	# do-daemonize: yes
 
 	# control which clients are allowed to make (recursive) queries
@@ -304,7 +311,7 @@ server:
 	# The pid file can be absolute and outside of the chroot, it is
 	# written just prior to performing the chroot and dropping permissions.
 	#
-	# Additionally, unbound may need to access /dev/urandom (for entropy).
+	# Additionally, Unbound may need to access /dev/urandom (for entropy).
 	# How to do this is specific to your OS.
 	#
 	# If you give "" no chroot is performed. The path must not end in a /.
@@ -371,6 +378,9 @@ server:
 	# enable to not answer trustanchor.unbound queries.
 	# hide-trustanchor: no
 
+	# enable to not set the User-Agent HTTP header.
+	# hide-http-user-agent: no
+
 	# the identity to report. Leave "" or default to return hostname.
 	# identity: ""
 
@@ -379,6 +389,10 @@ server:
 
 	# NSID identity (hex string, or "ascii_somestring"). default disabled.
 	# nsid: "aabbccdd"
+
+	# User-Agent HTTP header to use. Leave "" or default to use package name
+	# and version.
+	# http-user-agent: ""
 
 	# the target fetch policy.
 	# series of integers describing the policy per dependency depth.
@@ -432,7 +446,7 @@ server:
 
 	# Aggressive NSEC uses the DNSSEC NSEC chain to synthesize NXDOMAIN
 	# and other denials, using information from previous NXDOMAINs answers.
-	# aggressive-nsec: no
+	# aggressive-nsec: yes
 
 	# Use 0x20-encoded random bits in the query to foil spoof attempts.
 	# This feature is an experimental implementation of draft dns-0x20.
@@ -507,7 +521,8 @@ server:
 	# Use several entries, one per domain name, to track multiple zones.
 	#
 	# If you want to perform DNSSEC validation, run unbound-anchor before
-	# you start unbound (i.e. in the system boot scripts).  And enable:
+	# you start Unbound (i.e. in the system boot scripts).
+	# And then enable the auto-trust-anchor-file config item.
 	# Please note usage of unbound-anchor root anchor is at your own risk
 	# and under the terms of our LICENSE (see that file in the source).
 	# auto-trust-anchor-file: "@UNBOUND_ROOTKEY_FILE@"
@@ -556,6 +571,10 @@ server:
 	# val-sig-skew-min: 3600
 	# val-sig-skew-max: 86400
 
+	# The maximum number the validator should restart validation with
+	# another authority in case of failed validation.
+	# val-max-restart: 5
+
 	# Should additional section of secure message also be kept clean of
 	# unsecure data. Useful to shield the users of this validator from
 	# potential bogus data in the additional section. All unsigned data
@@ -570,7 +589,7 @@ server:
 	# val-permissive-mode: no
 
 	# Ignore the CD flag in incoming queries and refuse them bogus data.
-	# Enable it if the only clients of unbound are legacy servers (w2008)
+	# Enable it if the only clients of Unbound are legacy servers (w2008)
 	# that set CD but cannot validate themselves.
 	# ignore-cd-flag: no
 
@@ -600,7 +619,7 @@ server:
 
 	# Return the original TTL as received from the upstream name server rather
 	# than the decrementing TTL as stored in the cache.  Enabling this feature
-	# does not impact cache expiry, it only changes the TTL unbound embeds in
+	# does not impact cache expiry, it only changes the TTL Unbound embeds in
 	# responses to queries. Note that enabling this feature implicitly disables
 	# enforcement of the configured minimum and maximum TTL.
 	# serve-original-ttl: no
@@ -613,7 +632,7 @@ server:
 	# keysize. Keep this table very short, as linear search is done.
 	# A message with an NSEC3 with larger count is marked insecure.
 	# List in ascending order the keysize and count values.
-	# val-nsec3-keysize-iterations: "1024 150 2048 500 4096 2500"
+	# val-nsec3-keysize-iterations: "1024 150 2048 150 4096 150"
 
 	# if enabled, ZONEMD verification failures do not block the zone.
 	# zonemd-permissive-mode: no
@@ -654,6 +673,7 @@ server:
 	# local-zone: "localhost." nodefault
 	# local-zone: "127.in-addr.arpa." nodefault
 	# local-zone: "1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.ip6.arpa." nodefault
+	# local-zone: "home.arpa." nodefault
 	# local-zone: "onion." nodefault
 	# local-zone: "test." nodefault
 	# local-zone: "invalid." nodefault
@@ -693,9 +713,9 @@ server:
 	# Add example.com into ipset
 	# local-zone: "example.com" ipset
 
-	# If unbound is running service for the local host then it is useful
+	# If Unbound is running service for the local host then it is useful
 	# to perform lan-wide lookups to the upstream, and unblock the
-	# long list of local-zones above.  If this unbound is a dns server
+	# long list of local-zones above.  If this Unbound is a dns server
 	# for a network of computers, disabled is better and stops information
 	# leakage of local lan information.
 	# unblock-lan-zones: no
@@ -844,6 +864,10 @@ server:
 	# 0 blocks when ratelimited, otherwise let 1/xth traffic through
 	# ratelimit-factor: 10
 
+	# Aggressive rate limit when the limit is reached and until demand has
+	# decreased in a 2 second rate window.
+	# ratelimit-backoff: no
+
 	# override the ratelimit for a specific domain name.
 	# give this setting multiple times to have multiple overrides.
 	# ratelimit-for-domain: example.com 1000
@@ -864,6 +888,10 @@ server:
 	# 0 blocks when ip is ratelimited, otherwise let 1/xth traffic through
 	# ip-ratelimit-factor: 10
 
+	# Aggressive rate limit when the limit is reached and until demand has
+	# decreased in a 2 second rate window.
+	# ip-ratelimit-backoff: no
+
 	# Limit the number of connections simultaneous from a netblock
 	# tcp-connection-limit: 192.0.2.0/24 12
 
@@ -873,7 +901,7 @@ server:
 	# the number of servers that will be used in the fast server selection.
 	# fast-server-num: 3
 
-	# Specific options for ipsecmod. unbound needs to be configured with
+	# Specific options for ipsecmod. Unbound needs to be configured with
 	# --enable-ipsecmod for these to take effect.
 	#
 	# Enable or disable ipsecmod (it still needs to be defined in
@@ -885,7 +913,7 @@ server:
 	# listed in module-config (above).
 	# ipsecmod-hook: "./my_executable"
 	#
-	# When enabled unbound will reply with SERVFAIL if the return value of
+	# When enabled Unbound will reply with SERVFAIL if the return value of
 	# the ipsecmod-hook is not 0.
 	# ipsecmod-strict: no
 	#
@@ -900,6 +928,13 @@ server:
 	# all domains are treated as being allowed.
 	# ipsecmod-allow: "example.com"
 	# ipsecmod-allow: "nlnetlabs.nl"
+
+	# Timeout for REUSE entries in milliseconds.
+	# tcp-reuse-timeout: 60000
+	# Max number of queries on a reuse connection.
+	# max-reuse-tcp-queries: 200
+	# Timeout in milliseconds for TCP queries to auth servers.
+	# tcp-auth-query-timeout: 3000
 
 
 # Python config section. To enable:
@@ -943,10 +978,10 @@ remote-control:
 	# For local sockets this option is ignored, and TLS is not used.
 	# control-use-cert: "yes"
 
-	# unbound server key file.
+	# Unbound server key file.
 	# server-key-file: "@UNBOUND_RUN_DIR@/unbound_server.key"
 
-	# unbound server certificate file.
+	# Unbound server certificate file.
 	# server-cert-file: "@UNBOUND_RUN_DIR@/unbound_server.pem"
 
 	# unbound-control key file.
@@ -968,6 +1003,7 @@ remote-control:
 #	stub-addr: 192.0.2.68
 #	stub-prime: no
 #	stub-first: no
+#	stub-tcp-upstream: no
 #	stub-tls-upstream: no
 #	stub-no-cache: no
 # stub-zone:
@@ -985,6 +1021,7 @@ remote-control:
 # 	forward-addr: 192.0.2.68
 # 	forward-addr: 192.0.2.73@5355  # forward to port 5355.
 # 	forward-first: no
+# 	forward-tcp-upstream: no
 # 	forward-tls-upstream: no
 #	forward-no-cache: no
 # forward-zone:
@@ -1025,6 +1062,7 @@ remote-control:
 #	name: "example.org"
 #	for-downstream: yes
 #	for-upstream: yes
+#	zonemd-check: no
 #	zonemd-reject-absence: no
 #	zonefile: "example.org.zone"
 
@@ -1046,8 +1084,9 @@ remote-control:
 #	local-zone: "example.com" refuse
 
 # DNSCrypt
+# To enable, use --enable-dnscrypt to configure before compiling.
 # Caveats:
-# 1. the keys/certs cannot be produced by unbound. You can use dnscrypt-wrapper
+# 1. the keys/certs cannot be produced by Unbound. You can use dnscrypt-wrapper
 #   for this: https://github.com/cofyc/dnscrypt-wrapper/blob/master/README.md#usage
 # 2. dnscrypt channel attaches to an interface. you MUST set interfaces to
 #   listen on `dnscrypt-port` with the follo0wing snippet:
@@ -1066,7 +1105,9 @@ remote-control:
 #     dnscrypt-provider-cert: /path/unbound-conf/keys2/1.cert
 
 # CacheDB
-# Enable external backend DB as auxiliary cache.  Specify the backend name
+# External backend DB as auxiliary cache.
+# To enable, use --enable-cachedb to configure before compiling.
+# Specify the backend name
 # (default is "testframe", which has no use other than for debugging and
 # testing) and backend-specific options.  The 'cachedb' module must be
 # included in module-config, just before the iterator module.
@@ -1076,6 +1117,7 @@ remote-control:
 #     secret-seed: "default"
 #
 #     # For "redis" backend:
+#     # (to enable, use --with-libhiredis to configure before compiling)
 #     # redis server's IP address or host name
 #     redis-server-host: 127.0.0.1
 #     # redis server's TCP port
@@ -1087,7 +1129,9 @@ remote-control:
 
 # IPSet
 # Add specify domain into set via ipset.
-# Note: To enable ipset unbound needs to run as root user.
+# To enable:
+# o use --enable-ipset to configure before compiling;
+# o Unbound then needs to run as root user.
 # ipset:
 #     # set name for ip v4 addresses
 #     name-v4: "list-v4"
@@ -1095,9 +1139,10 @@ remote-control:
 #     name-v6: "list-v6"
 #
 
-# Dnstap logging support, if compiled in.  To enable, set the dnstap-enable
-# to yes and also some of dnstap-log-..-messages to yes.  And select an
-# upstream log destination, by socket path, TCP or TLS destination.
+# Dnstap logging support, if compiled in by using --enable-dnstap to configure.
+# To enable, set the dnstap-enable to yes and also some of
+# dnstap-log-..-messages to yes.  And select an upstream log destination, by
+# socket path, TCP or TLS destination.
 # dnstap:
 # 	dnstap-enable: no
 # 	# if set to yes frame streams will be used in bidirectional mode
@@ -1110,7 +1155,7 @@ remote-control:
 # 	dnstap-tls: yes
 # 	# name for authenticating the upstream server. or "" disabled.
 # 	dnstap-tls-server-name: ""
-# 	# if "", it uses the cert bundle from the main unbound config.
+# 	# if "", it uses the cert bundle from the main Unbound config.
 # 	dnstap-tls-cert-bundle: ""
 # 	# key file for client authentication, or "" disabled.
 # 	dnstap-tls-client-key-file: ""
@@ -1130,10 +1175,11 @@ remote-control:
 # 	dnstap-log-forwarder-response-messages: no
 
 # Response Policy Zones
-# RPZ policies. Applied in order of configuration. QNAME and Response IP
-# Address trigger are the only supported triggers. Supported actions are:
-# NXDOMAIN, NODATA, PASSTHRU, DROP and Local Data. Policies can be loaded from
-# file, using zone transfer, or using HTTP. The respip module needs to be added
+# RPZ policies. Applied in order of configuration. QNAME, Response IP
+# Address, nsdname, nsip and clientip triggers are supported. Supported
+# actions are: NXDOMAIN, NODATA, PASSTHRU, DROP, Local Data, tcp-only
+# and drop.  Policies can be loaded from a file, or using zone
+# transfer, or using HTTP. The respip module needs to be added
 # to the module-config, e.g.: module-config: "respip validator iterator".
 # rpz:
 #     name: "rpz.example.com"
@@ -1145,4 +1191,6 @@ remote-control:
 #     rpz-cname-override: www.example.org
 #     rpz-log: yes
 #     rpz-log-name: "example policy"
+#     rpz-signal-nxdomain-ra: no
+#     for-downstream: no
 #     tags: "example"

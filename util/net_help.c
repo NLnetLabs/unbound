@@ -38,6 +38,15 @@
  */
 
 #include "config.h"
+#ifdef HAVE_SYS_TYPES_H
+#  include <sys/types.h>
+#endif
+#ifdef HAVE_NET_IF_H
+#include <net/if.h>
+#endif
+#ifdef HAVE_NETIOAPI_H
+#include <netioapi.h>
+#endif
 #include "util/net_help.h"
 #include "util/log.h"
 #include "util/data/dname.h"
@@ -46,6 +55,7 @@
 #include "util/config_file.h"
 #include "sldns/parseutil.h"
 #include "sldns/wire2str.h"
+#include "sldns/str2wire.h"
 #include <fcntl.h>
 #ifdef HAVE_OPENSSL_SSL_H
 #include <openssl/ssl.h>
@@ -266,7 +276,10 @@ ipstrtoaddr(const char* ip, int port, struct sockaddr_storage* addr,
 				return 0;
 			(void)strlcpy(buf, ip, sizeof(buf));
 			buf[s-ip]=0;
-			sa->sin6_scope_id = (uint32_t)atoi(s+1);
+#ifdef HAVE_IF_NAMETOINDEX
+			if (!(sa->sin6_scope_id = if_nametoindex(s+1)))
+#endif /* HAVE_IF_NAMETOINDEX */
+				sa->sin6_scope_id = (uint32_t)atoi(s+1);
 			ip = buf;
 		}
 		if(inet_pton((int)sa->sin6_family, ip, &sa->sin6_addr) <= 0) {
@@ -465,6 +478,42 @@ int authextstrtoaddr(char* str, struct sockaddr_storage* addr,
 	}
 	*auth_name = NULL;
 	return ipstrtoaddr(str, port, addr, addrlen);
+}
+
+uint8_t* authextstrtodname(char* str, int* port, char** auth_name)
+{
+	char* s;
+	uint8_t* dname;
+	size_t dname_len;
+	*port = UNBOUND_DNS_PORT;
+	*auth_name = NULL;
+	if((s=strchr(str, '@'))) {
+		char* hash = strchr(s+1, '#');
+		if(hash) {
+			*auth_name = hash+1;
+		} else {
+			*auth_name = NULL;
+		}
+		*port = atoi(s+1);
+		if(*port == 0) {
+			if(!hash && strcmp(s+1,"0")!=0)
+				return 0;
+			if(hash && strncmp(s+1,"0#",2)!=0)
+				return 0;
+		}
+		*s = 0;
+		dname = sldns_str2wire_dname(str, &dname_len);
+		*s = '@';
+	} else if((s=strchr(str, '#'))) {
+		*port = UNBOUND_DNS_OVER_TLS_PORT;
+		*auth_name = s+1;
+		*s = 0;
+		dname = sldns_str2wire_dname(str, &dname_len);
+		*s = '#';
+	} else {
+		dname = sldns_str2wire_dname(str, &dname_len);
+	}
+	return dname;
 }
 
 /** store port number into sockaddr structure */
@@ -881,13 +930,19 @@ log_cert(unsigned level, const char* str, void* cert)
 	BIO_write(bio, &nul, (int)sizeof(nul));
 	len = BIO_get_mem_data(bio, &pp);
 	if(len != 0 && pp) {
+		/* reduce size of cert printout */
+		char* s;
+		while((s=strstr(pp, "  "))!=NULL)
+			memmove(s, s+1, strlen(s+1)+1);
+		while((s=strstr(pp, "\t\t"))!=NULL)
+			memmove(s, s+1, strlen(s+1)+1);
 		verbose(level, "%s: \n%s", str, pp);
 	}
 	BIO_free(bio);
 }
 #endif /* HAVE_SSL */
 
-#if defined(HAVE_SSL) && defined(HAVE_NGHTTP2)
+#if defined(HAVE_SSL) && defined(HAVE_NGHTTP2) && defined(HAVE_SSL_CTX_SET_ALPN_SELECT_CB)
 static int alpn_select_cb(SSL* ATTR_UNUSED(ssl), const unsigned char** out,
 	unsigned char* outlen, const unsigned char* in, unsigned int inlen,
 	void* ATTR_UNUSED(arg))
@@ -945,9 +1000,12 @@ listen_sslctx_setup(void* ctxt)
 	}
 #endif
 #if defined(SHA256_DIGEST_LENGTH) && defined(USE_ECDSA)
+	/* if we detect system-wide crypto policies, use those */
+	if (access( "/etc/crypto-policies/config", F_OK ) != 0 ) {
 	/* if we have sha256, set the cipher list to have no known vulns */
-	if(!SSL_CTX_set_cipher_list(ctx, "TLS13-CHACHA20-POLY1305-SHA256:TLS13-AES-256-GCM-SHA384:TLS13-AES-128-GCM-SHA256:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256"))
-		log_crypto_err("could not set cipher list with SSL_CTX_set_cipher_list");
+		if(!SSL_CTX_set_cipher_list(ctx, "TLS13-CHACHA20-POLY1305-SHA256:TLS13-AES-256-GCM-SHA384:TLS13-AES-128-GCM-SHA256:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256"))
+			log_crypto_err("could not set cipher list with SSL_CTX_set_cipher_list");
+	}
 #endif
 
 	if((SSL_CTX_set_options(ctx, SSL_OP_CIPHER_SERVER_PREFERENCE) &
@@ -1172,6 +1230,7 @@ void* connect_sslctx_create(char* key, char* pem, char* verifypem, int wincert)
 	if((SSL_CTX_set_options(ctx, SSL_OP_NO_RENEGOTIATION) &
 		SSL_OP_NO_RENEGOTIATION) != SSL_OP_NO_RENEGOTIATION) {
 		log_crypto_err("could not set SSL_OP_NO_RENEGOTIATION");
+		SSL_CTX_free(ctx);
 		return 0;
 	}
 #endif

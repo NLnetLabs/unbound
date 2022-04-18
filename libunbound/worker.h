@@ -58,26 +58,27 @@ struct query_info;
  * @param dnssec: if set, EDNS record will have DO bit set.
  * @param want_dnssec: signatures needed.
  * @param nocaps: ignore capsforid(if in config), do not perturb qname.
+ * @param check_ratelimit: if set, will check ratelimit before sending out.
  * @param addr: where to.
  * @param addrlen: length of addr.
  * @param zone: delegation point name.
  * @param zonelen: length of zone name wireformat dname.
+ * @param tcp_upstream: use TCP for upstream queries.
  * @param ssl_upstream: use SSL for upstream queries.
  * @param tls_auth_name: if ssl_upstream, use this name with TLS
  * 	authentication.
- * @param q: wich query state to reactivate upon return.
+ * @param q: which query state to reactivate upon return.
+ * @param was_ratelimited: it will signal back if the query failed to pass the
+ *	ratelimit check.
  * @return: false on failure (memory or socket related). no query was
  *      sent.
  */
 struct outbound_entry* libworker_send_query(struct query_info* qinfo,
 	uint16_t flags, int dnssec, int want_dnssec, int nocaps,
+	int check_ratelimit,
 	struct sockaddr_storage* addr, socklen_t addrlen, uint8_t* zone,
-	size_t zonelen, int ssl_upstream, char* tls_auth_name,
-	struct module_qstate* q);
-
-/** process incoming replies from the network */
-int libworker_handle_reply(struct comm_point* c, void* arg, int error,
-        struct comm_reply* reply_info);
+	size_t zonelen, int tcp_upstream, int ssl_upstream, char* tls_auth_name,
+	struct module_qstate* q, int* was_ratelimited);
 
 /** process incoming serviced query replies from the network */
 int libworker_handle_service_reply(struct comm_point* c, void* arg, int error,
@@ -113,22 +114,27 @@ void worker_sighandler(int sig, void* arg);
  * @param dnssec: if set, EDNS record will have DO bit set.
  * @param want_dnssec: signatures needed.
  * @param nocaps: ignore capsforid(if in config), do not perturb qname.
+ * @param check_ratelimit: if set, will check ratelimit before sending out.
  * @param addr: where to.
  * @param addrlen: length of addr.
  * @param zone: wireformat dname of the zone.
  * @param zonelen: length of zone name.
+ * @param tcp_upstream: use TCP for upstream queries.
  * @param ssl_upstream: use SSL for upstream queries.
  * @param tls_auth_name: if ssl_upstream, use this name with TLS
  * 	authentication.
- * @param q: wich query state to reactivate upon return.
+ * @param q: which query state to reactivate upon return.
+ * @param was_ratelimited: it will signal back if the query failed to pass the
+ *	ratelimit check.
  * @return: false on failure (memory or socket related). no query was
  *      sent.
  */
 struct outbound_entry* worker_send_query(struct query_info* qinfo,
 	uint16_t flags, int dnssec, int want_dnssec, int nocaps,
+	int check_ratelimit,
 	struct sockaddr_storage* addr, socklen_t addrlen, uint8_t* zone,
-	size_t zonelen, int ssl_upstream, char* tls_auth_name,
-	struct module_qstate* q);
+	size_t zonelen, int tcp_upstream, int ssl_upstream, char* tls_auth_name,
+	struct module_qstate* q, int* was_ratelimited);
 
 /** 
  * process control messages from the main thread. Frees the control 
@@ -145,10 +151,6 @@ void worker_handle_control_cmd(struct tube* tube, uint8_t* msg, size_t len,
 /** handles callbacks from listening event interface */
 int worker_handle_request(struct comm_point* c, void* arg, int error,
 	struct comm_reply* repinfo);
-
-/** process incoming replies from the network */
-int worker_handle_reply(struct comm_point* c, void* arg, int error, 
-	struct comm_reply* reply_info);
 
 /** process incoming serviced query replies from the network */
 int worker_handle_service_reply(struct comm_point* c, void* arg, int error, 

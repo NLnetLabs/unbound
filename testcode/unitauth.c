@@ -468,8 +468,13 @@ tmpfilecleanup(void)
 	int i;
 	char buf[256];
 	for(i=0; i<tempno; i++) {
+#ifdef USE_WINSOCK
+		snprintf(buf, sizeof(buf), "unbound.unittest.%u.%d",
+			(unsigned)getpid(), i);
+#else
 		snprintf(buf, sizeof(buf), "/tmp/unbound.unittest.%u.%d",
 			(unsigned)getpid(), i);
+#endif
 		if(vbmp) printf("cleanup: unlink %s\n", buf);
 		unlink(buf);
 	}
@@ -483,8 +488,13 @@ create_tmp_file(const char* s)
 	char *fname;
 	FILE *out;
 	size_t r;
+#ifdef USE_WINSOCK
+	snprintf(buf, sizeof(buf), "unbound.unittest.%u.%d",
+		(unsigned)getpid(), tempno++);
+#else
 	snprintf(buf, sizeof(buf), "/tmp/unbound.unittest.%u.%d",
 		(unsigned)getpid(), tempno++);
+#endif
 	fname = strdup(buf);
 	if(!fname) fatal_exit("out of memory");
 	/* if no string, just make the name */

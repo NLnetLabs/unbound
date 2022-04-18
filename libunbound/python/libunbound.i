@@ -363,7 +363,7 @@ Result: ['74.125.43.147', '74.125.43.99', '74.125.43.103', '74.125.43.104']
                     ctx.debuglevel(3)
                     ctx.debugout(fw)
 
-                  Another option is to print the debug informations to stderr output
+                  Another option is to print the debug information to stderr output
 
                   ::
 
@@ -936,6 +936,8 @@ int _ub_resolve_async(struct ub_ctx* ctx, char* name, int rrtype, int rrclass, v
       int r;
       struct cb_data* id;
       id = (struct cb_data*) malloc(sizeof(struct cb_data));
+      if(!id)
+              return -2; /* UB_NOMEM */
       id->data = mydata;
       id->func = pyfunc;
    

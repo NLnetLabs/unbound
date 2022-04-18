@@ -678,11 +678,14 @@ struct edns_data {
     uint8_t edns_version;
     uint16_t bits;
     uint16_t udp_size;
-    struct edns_option* opt_list;
+    struct edns_option* opt_list_in;
+    struct edns_option* opt_list_out;
+    struct edns_option* opt_list_inplace_cb_out;
+    uint16_t padding_block_size;
 };
 %inline %{
     struct edns_option** _edns_data_opt_list_get(struct edns_data* edns) {
-       return &edns->opt_list;
+       return &edns->opt_list_in;
     }
 %}
 %extend edns_data {
@@ -709,9 +712,10 @@ struct module_env {
     /* --- services --- */
     struct outbound_entry* (*send_query)(struct query_info* qinfo,
         uint16_t flags, int dnssec, int want_dnssec, int nocaps,
+        int check_ratelimit,
         struct sockaddr_storage* addr, socklen_t addrlen,
-        uint8_t* zone, size_t zonelen, int ssl_upstream, char* tls_auth_name,
-        struct module_qstate* q);
+        uint8_t* zone, size_t zonelen, int tcp_upstream, int ssl_upstream,
+        char* tls_auth_name, struct module_qstate* q, int* was_ratelimited);
     void (*detach_subs)(struct module_qstate* qstate);
     int (*attach_sub)(struct module_qstate* qstate,
         struct query_info* qinfo, uint16_t qflags, int prime,
@@ -1341,7 +1345,7 @@ int set_return_msg(struct module_qstate* qstate,
 %pythoncode %{
     class DNSMessage:
         def __init__(self, rr_name, rr_type, rr_class = RR_CLASS_IN, query_flags = 0, default_ttl = 0):
-            """Query flags is a combination of PKT_xx contants"""
+            """Query flags is a combination of PKT_xx constants"""
             self.rr_name = rr_name
             self.rr_type = rr_type
             self.rr_class = rr_class
@@ -1373,7 +1377,7 @@ struct delegpt* dns_cache_find_delegation(struct module_env* env,
         uint8_t* qname, size_t qnamelen, uint16_t qtype, uint16_t qclass,
         struct regional* region, struct dns_msg** msg, uint32_t timenow);
 int iter_dp_is_useless(struct query_info* qinfo, uint16_t qflags,
-        struct delegpt* dp);
+        struct delegpt* dp, int supports_ipv4, int supports_ipv6);
 struct iter_hints_stub* hints_lookup_stub(struct iter_hints* hints,
         uint8_t* qname, uint16_t qclass, struct delegpt* dp);
 
@@ -1403,7 +1407,8 @@ struct delegpt* find_delegation(struct module_qstate* qstate, char *nm, size_t n
         dp = dns_cache_find_delegation(qstate->env, (uint8_t*)nm, nmlen, qinfo.qtype, qinfo.qclass, region, &msg, timenow);
         if(!dp)
             return NULL;
-        if(iter_dp_is_useless(&qinfo, BIT_RD, dp)) {
+        if(iter_dp_is_useless(&qinfo, BIT_RD, dp,
+                qstate->env->cfg->do_ip4, qstate->env->cfg->do_ip6)) {
             if (dname_is_root((uint8_t*)nm))
                 return NULL;
             nm = (char*)dp->name;
@@ -1546,7 +1551,7 @@ int edns_opt_list_append(struct edns_option** list, uint16_t code, size_t len,
     {
         PyObject *func, *py_edns, *py_qstate, *py_opt_list_out, *py_qinfo;
         PyObject *py_rep, *py_repinfo, *py_region;
-        PyObject *py_args, *py_kwargs, *result;
+        PyObject *py_args = NULL, *py_kwargs = NULL, *result = NULL;
         int res = 0;
         double py_start_time = ((double)start_time->tv_sec) + ((double)start_time->tv_usec) / 1.0e6;
 
@@ -1561,11 +1566,20 @@ int edns_opt_list_append(struct edns_option** list, uint16_t code, size_t len,
         py_rep = SWIG_NewPointerObj((void*) rep, SWIGTYPE_p_reply_info, 0);
         py_repinfo = SWIG_NewPointerObj((void*) repinfo, SWIGTYPE_p_comm_reply, 0);
         py_region = SWIG_NewPointerObj((void*) region, SWIGTYPE_p_regional, 0);
-        py_args = Py_BuildValue("(OOOiOOO)", py_qinfo, py_qstate, py_rep,
-            rcode, py_edns, py_opt_list_out, py_region);
-        py_kwargs = Py_BuildValue("{s:O,s:d}", "repinfo", py_repinfo, "start_time",
-                                  py_start_time);
-        result = PyObject_Call(func, py_args, py_kwargs);
+        if(py_qinfo && py_qstate && py_rep && py_edns && py_opt_list_out
+                && py_region && py_repinfo) {
+                py_args = Py_BuildValue("(OOOiOOO)", py_qinfo, py_qstate, py_rep,
+                        rcode, py_edns, py_opt_list_out, py_region);
+                py_kwargs = Py_BuildValue("{s:O,s:d}", "repinfo", py_repinfo, "start_time",
+                          py_start_time);
+                if(py_args && py_kwargs) {
+                        result = PyObject_Call(func, py_args, py_kwargs);
+                } else {
+                        log_err("pythonmod: malloc failure in python_inplace_cb_reply_generic");
+                }
+        } else {
+                log_err("pythonmod: malloc failure in python_inplace_cb_reply_generic");
+        }
         Py_XDECREF(py_edns);
         Py_XDECREF(py_qstate);
         Py_XDECREF(py_opt_list_out);
@@ -1624,6 +1638,7 @@ int edns_opt_list_append(struct edns_option** list, uint16_t code, size_t len,
     {
         int res = 0;
         PyObject *func = python_callback;
+        PyObject *py_args = NULL, *py_kwargs = NULL, *result = NULL;
 
         PyGILState_STATE gstate = PyGILState_Ensure();
 
@@ -1632,12 +1647,19 @@ int edns_opt_list_append(struct edns_option** list, uint16_t code, size_t len,
         PyObject *py_addr = SWIG_NewPointerObj((void *) addr, SWIGTYPE_p_sockaddr_storage, 0);
         PyObject *py_zone = PyBytes_FromStringAndSize((const char *)zone, zonelen);
         PyObject *py_region = SWIG_NewPointerObj((void*) region, SWIGTYPE_p_regional, 0);
-
-        PyObject *py_args = Py_BuildValue("(OiOOOO)", py_qinfo, flags, py_qstate, py_addr, py_zone, py_region);
-        PyObject *py_kwargs = Py_BuildValue("{}");
-        PyObject *result = PyObject_Call(func, py_args, py_kwargs);
-        if (result) {
-            res = PyInt_AsLong(result);
+        if(py_qinfo && py_qstate && py_addr && py_zone && py_region) {
+                py_args = Py_BuildValue("(OiOOOO)", py_qinfo, flags, py_qstate, py_addr, py_zone, py_region);
+                py_kwargs = Py_BuildValue("{}");
+                if(py_args && py_kwargs) {
+                        result = PyObject_Call(func, py_args, py_kwargs);
+                        if (result) {
+                            res = PyInt_AsLong(result);
+                        }
+                } else {
+                        log_err("pythonmod: malloc failure in python_inplace_cb_query_generic");
+                }
+        } else {
+                log_err("pythonmod: malloc failure in python_inplace_cb_query_generic");
         }
 
         Py_XDECREF(py_qinfo);

@@ -48,6 +48,10 @@
 #include "util/regional.h"
 #include "validator/val_anchor.h"
 
+#define xstr(s) str(s)
+#define str(s) #s
+#define SRCDIRSTR xstr(SRCDIR)
+
 /** Add zone from file for testing */
 struct auth_zone* authtest_addzone(struct auth_zones* az, const char* name,
 	char* fname);
@@ -82,6 +86,9 @@ static void zonemd_generate_test(const char* zname, char* zfile,
 	/* read file */
 	z = authtest_addzone(az, zname, zfile);
 	unit_assert(z);
+	lock_rw_wrlock(&z->lock);
+	z->zonemd_check = 1;
+	lock_rw_unlock(&z->lock);
 
 	/* create zonemd digest */
 	result = auth_zone_generate_zonemd_hash(z, scheme, hashalgo,
@@ -129,37 +136,37 @@ static void zonemd_generate_test(const char* zname, char* zfile,
 static void zonemd_generate_tests(void)
 {
 	unit_show_func("services/authzone.c", "auth_zone_generate_zonemd_hash");
-	zonemd_generate_test("example.org", "testdata/zonemd.example1.zone",
+	zonemd_generate_test("example.org", SRCDIRSTR "/testdata/zonemd.example1.zone",
 		1, 2, "20564D10F50A0CEBEC856C64032B7DFB53D3C449A421A5BC7A21F7627B4ACEA4DF29F2C6FE82ED9C23ADF6F4D420D5DD63EF6E6349D60FDAB910B65DF8D481B7");
 
 	/* https://tools.ietf.org/html/draft-ietf-dnsop-dns-zone-digest-12
 	 * from section A.1 */
-	zonemd_generate_test("example", "testdata/zonemd.example_a1.zone",
+	zonemd_generate_test("example", SRCDIRSTR "/testdata/zonemd.example_a1.zone",
 		1, 1, "c68090d90a7aed716bc459f9340e3d7c1370d4d24b7e2fc3a1ddc0b9a87153b9a9713b3c9ae5cc27777f98b8e730044c");
 
 	/* https://tools.ietf.org/html/draft-ietf-dnsop-dns-zone-digest-12
 	 * from section A.2 */
-	zonemd_generate_test("example", "testdata/zonemd.example_a2.zone",
+	zonemd_generate_test("example", SRCDIRSTR "/testdata/zonemd.example_a2.zone",
 		1, 1, "31cefb03814f5062ad12fa951ba0ef5f8da6ae354a415767246f7dc932ceb1e742a2108f529db6a33a11c01493de358d");
 
 	/* https://tools.ietf.org/html/draft-ietf-dnsop-dns-zone-digest-12
 	 * from section A.3 SHA384 digest */
-	zonemd_generate_test("example", "testdata/zonemd.example_a3.zone",
+	zonemd_generate_test("example", SRCDIRSTR "/testdata/zonemd.example_a3.zone",
 		1, 1, "62e6cf51b02e54b9b5f967d547ce43136792901f9f88e637493daaf401c92c279dd10f0edb1c56f8080211f8480ee306");
 
 	/* https://tools.ietf.org/html/draft-ietf-dnsop-dns-zone-digest-12
 	 * from section A.3 SHA512 digest*/
-	zonemd_generate_test("example", "testdata/zonemd.example_a3.zone",
+	zonemd_generate_test("example", SRCDIRSTR "/testdata/zonemd.example_a3.zone",
 		1, 2, "08cfa1115c7b948c4163a901270395ea226a930cd2cbcf2fa9a5e6eb85f37c8a4e114d884e66f176eab121cb02db7d652e0cc4827e7a3204f166b47e5613fd27");
 
 	/* https://tools.ietf.org/html/draft-ietf-dnsop-dns-zone-digest-12
 	 * from section A.4 */
-	zonemd_generate_test("uri.arpa", "testdata/zonemd.example_a4.zone",
+	zonemd_generate_test("uri.arpa", SRCDIRSTR "/testdata/zonemd.example_a4.zone",
 		1, 1, "1291b78ddf7669b1a39d014d87626b709b55774c5d7d58fadc556439889a10eaf6f11d615900a4f996bd46279514e473");
 
 	/* https://tools.ietf.org/html/draft-ietf-dnsop-dns-zone-digest-12
 	 * from section A.5 */
-	zonemd_generate_test("root-servers.net", "testdata/zonemd.example_a5.zone",
+	zonemd_generate_test("root-servers.net", SRCDIRSTR "/testdata/zonemd.example_a5.zone",
 		1, 1, "f1ca0ccd91bd5573d9f431c00ee0101b2545c97602be0a978a3b11dbfc1c776d5b3e86ae3d973d6b5349ba7f04340f79");
 }
 
@@ -167,7 +174,7 @@ static void zonemd_generate_tests(void)
 static void zonemd_check_test(void)
 {
 	const char* zname = "example.org";
-	char* zfile = "testdata/zonemd.example1.zone";
+	char* zfile = SRCDIRSTR "/testdata/zonemd.example1.zone";
 	int scheme = 1;
 	int hashalgo = 2;
 	const char* digest = "20564D10F50A0CEBEC856C64032B7DFB53D3C449A421A5BC7A21F7627B4ACEA4DF29F2C6FE82ED9C23ADF6F4D420D5DD63EF6E6349D60FDAB910B65DF8D481B7";
@@ -196,6 +203,9 @@ static void zonemd_check_test(void)
 	/* read file */
 	z = authtest_addzone(az, zname, zfile);
 	unit_assert(z);
+	lock_rw_wrlock(&z->lock);
+	z->zonemd_check = 1;
+	lock_rw_unlock(&z->lock);
 	hashlen = sizeof(hash);
 	if(sldns_str2wire_hex_buf(digest, hash, &hashlen) != 0) {
 		unit_assert(0); /* parse failure */
@@ -211,10 +221,10 @@ static void zonemd_check_test(void)
 	unit_assert(result && reason == NULL);
 	result = auth_zone_generate_zonemd_check(z, 241, hashalgo,
 		hash, hashlen, region, buf, &reason);
-	unit_assert(!result && strcmp(reason, "unsupported scheme")==0);
+	unit_assert(result && strcmp(reason, "unsupported scheme")==0);
 	result = auth_zone_generate_zonemd_check(z, scheme, 242,
 		hash, hashlen, region, buf, &reason);
-	unit_assert(!result && strcmp(reason, "unsupported algorithm")==0);
+	unit_assert(result && strcmp(reason, "unsupported algorithm")==0);
 	result = auth_zone_generate_zonemd_check(z, scheme, hashalgo,
 		hash, 2, region, buf, &reason);
 	unit_assert(!result && strcmp(reason, "digest length too small, less than 12")==0);
@@ -291,6 +301,7 @@ static void zonemd_verify_test(char* zname, char* zfile, char* tastr,
 
 	/* test */
 	lock_rw_wrlock(&z->lock);
+	z->zonemd_check = 1;
 	auth_zone_verify_zonemd(z, &env, &mods, &result, 1, 0);
 	lock_rw_unlock(&z->lock);
 	if(verbosity >= VERB_ALGO) {
@@ -334,25 +345,25 @@ static void zonemd_verify_tests(void)
 	unit_show_func("services/authzone.c", "auth_zone_verify_zonemd");
 	/* give trustanchor for unsigned zone, should fail */
 	zonemd_verify_test("example.org",
-		"testdata/zonemd.example1.zone",
+		SRCDIRSTR "/testdata/zonemd.example1.zone",
 		"example.org. IN DS 55566 8 2 9c148338951ce1c3b5cd3da532f3d90dfcf92595148022f2c2fd98e5deee90af",
 		"20180302005009",
 		"verify DNSKEY RRset with trust anchor failed: have trust anchor, but zone has no DNSKEY");
 	/* unsigned zone without ZONEMD in it */
 	zonemd_verify_test("example.org",
-		"testdata/zonemd.example1.zone",
+		SRCDIRSTR "/testdata/zonemd.example1.zone",
 		NULL,
 		"20180302005009",
 		"no ZONEMD present");
 	/* no trust anchor, so it succeeds for zone with a correct ZONEMD */
 	zonemd_verify_test("example.com",
-		"testdata/zonemd.example2.zone",
+		SRCDIRSTR "/testdata/zonemd.example2.zone",
 		NULL,
 		"20180302005009",
 		"ZONEMD verification successful");
 	/* trust anchor for another zone, so it is indeterminate */
 	zonemd_verify_test("example.com",
-		"testdata/zonemd.example2.zone",
+		SRCDIRSTR "/testdata/zonemd.example2.zone",
 		"example.org. IN DS 55566 8 2 9c148338951ce1c3b5cd3da532f3d90dfcf92595148022f2c2fd98e5deee90af",
 		"20180302005009",
 		"ZONEMD verification successful");
@@ -361,7 +372,7 @@ static void zonemd_verify_tests(void)
 	/* this zonefile has an incorrect ZONEMD digest, with correct
 	 * DNSSEC signature. */
 	zonemd_verify_test("example.com",
-		"testdata/zonemd.example3.zone",
+		SRCDIRSTR "/testdata/zonemd.example3.zone",
 		NULL,
 		"20180302005009",
 		"incorrect digest");
@@ -369,7 +380,7 @@ static void zonemd_verify_tests(void)
 	/* this zonefile has an incorrect ZONEMD digest, with correct
 	 * DNSSEC signature. */
 	zonemd_verify_test("example.com",
-		"testdata/zonemd.example4.zone",
+		SRCDIRSTR "/testdata/zonemd.example4.zone",
 		NULL,
 		"20180302005009",
 		"incorrect digest");
@@ -377,91 +388,116 @@ static void zonemd_verify_tests(void)
 	/* this zonefile has a correct ZONEMD digest and
 	 * correct DNSSEC signature */
 	zonemd_verify_test("example.com",
-		"testdata/zonemd.example5.zone",
+		SRCDIRSTR "/testdata/zonemd.example5.zone",
 		NULL,
 		"20180302005009",
 		"ZONEMD verification successful");
 	/* valid zonemd, in dnssec NSEC3 zone, no trust anchor*/
 	zonemd_verify_test("example.com",
-		"testdata/zonemd.example6.zone",
+		SRCDIRSTR "/testdata/zonemd.example6.zone",
 		NULL,
 		"20180302005009",
 		"ZONEMD verification successful");
 
 	/* load a DNSSEC signed zone with a trust anchor, valid ZONEMD */
 	zonemd_verify_test("example.com",
-		"testdata/zonemd.example5.zone",
+		SRCDIRSTR "/testdata/zonemd.example5.zone",
 		"example.com. IN DS 55566 8 2 9c148338951ce1c3b5cd3da532f3d90dfcf92595148022f2c2fd98e5deee90af",
 		"20201020135527",
 		"ZONEMD verification successful");
 	/* load a DNSSEC NSEC3 signed zone with a trust anchor, valid ZONEMD */
 	zonemd_verify_test("example.com",
-		"testdata/zonemd.example6.zone",
+		SRCDIRSTR "/testdata/zonemd.example6.zone",
 		"example.com. IN DS 55566 8 2 9c148338951ce1c3b5cd3da532f3d90dfcf92595148022f2c2fd98e5deee90af",
 		"20201020135527",
 		"ZONEMD verification successful");
 
 	/* load a DNSSEC NSEC zone without ZONEMD */
 	zonemd_verify_test("example.com",
-		"testdata/zonemd.example7.zone",
+		SRCDIRSTR "/testdata/zonemd.example7.zone",
 		"example.com. IN DS 55566 8 2 9c148338951ce1c3b5cd3da532f3d90dfcf92595148022f2c2fd98e5deee90af",
 		"20201020135527",
 		"DNSSEC verified nonexistence of ZONEMD");
 	/* load a DNSSEC NSEC3 zone without ZONEMD */
 	zonemd_verify_test("example.com",
-		"testdata/zonemd.example8.zone",
+		SRCDIRSTR "/testdata/zonemd.example8.zone",
 		"example.com. IN DS 55566 8 2 9c148338951ce1c3b5cd3da532f3d90dfcf92595148022f2c2fd98e5deee90af",
 		"20201020135527",
 		"DNSSEC verified nonexistence of ZONEMD");
 
 	/* load DNSSEC zone but RRSIG on ZONEMD is wrong */
 	zonemd_verify_test("example.com",
-		"testdata/zonemd.example9.zone",
+		SRCDIRSTR "/testdata/zonemd.example9.zone",
 		"example.com. IN DS 55566 8 2 9c148338951ce1c3b5cd3da532f3d90dfcf92595148022f2c2fd98e5deee90af",
 		"20201020135527",
-		"DNSSEC verify failed for ZONEMD RRset: signature crypto failed");
+#ifdef HAVE_SSL
+		"DNSSEC verify failed for ZONEMD RRset: signature crypto failed"
+#else /* HAVE_NETTLE */
+		"DNSSEC verify failed for ZONEMD RRset: RSA signature verification failed"
+#endif
+		);
 	/* load DNSSEC zone but RRSIG on SOA is wrong */
 	zonemd_verify_test("example.com",
-		"testdata/zonemd.example10.zone",
+		SRCDIRSTR "/testdata/zonemd.example10.zone",
 		"example.com. IN DS 55566 8 2 9c148338951ce1c3b5cd3da532f3d90dfcf92595148022f2c2fd98e5deee90af",
 		"20201020135527",
-		"DNSSEC verify failed for SOA RRset: signature crypto failed");
+#ifdef HAVE_SSL
+		"DNSSEC verify failed for SOA RRset: signature crypto failed"
+#else /* HAVE_NETTLE */
+		"DNSSEC verify failed for SOA RRset: RSA signature verification failed"
+#endif
+		);
 
 	/* load DNSSEC zone without ZONEMD, but NSEC bitmap says it exists */
 	zonemd_verify_test("example.com",
-		"testdata/zonemd.example11.zone",
+		SRCDIRSTR "/testdata/zonemd.example11.zone",
 		"example.com. IN DS 55566 8 2 9c148338951ce1c3b5cd3da532f3d90dfcf92595148022f2c2fd98e5deee90af",
 		"20201020135527",
 		"DNSSEC NSEC bitmap says type ZONEMD exists");
 	/* load DNSSEC zone without ZONEMD, but NSEC3 bitmap says it exists */
 	zonemd_verify_test("example.com",
-		"testdata/zonemd.example12.zone",
+		SRCDIRSTR "/testdata/zonemd.example12.zone",
 		"example.com. IN DS 55566 8 2 9c148338951ce1c3b5cd3da532f3d90dfcf92595148022f2c2fd98e5deee90af",
 		"20201020135527",
 		"DNSSEC NSEC3 bitmap says type ZONEMD exists");
 
 	/* load DNSSEC zone without ZONEMD, but RRSIG on NSEC not okay */
 	zonemd_verify_test("example.com",
-		"testdata/zonemd.example13.zone",
+		SRCDIRSTR "/testdata/zonemd.example13.zone",
 		"example.com. IN DS 55566 8 2 9c148338951ce1c3b5cd3da532f3d90dfcf92595148022f2c2fd98e5deee90af",
 		"20201020135527",
-		"DNSSEC verify failed for NSEC RRset: signature crypto failed");
+#ifdef HAVE_SSL
+		"DNSSEC verify failed for NSEC RRset: signature crypto failed"
+#else /* HAVE_NETTLE */
+		"DNSSEC verify failed for NSEC RRset: RSA signature verification failed"
+#endif
+		);
 	/* load DNSSEC zone without ZONEMD, but RRSIG on NSEC3 not okay */
 	zonemd_verify_test("example.com",
-		"testdata/zonemd.example14.zone",
+		SRCDIRSTR "/testdata/zonemd.example14.zone",
 		"example.com. IN DS 55566 8 2 9c148338951ce1c3b5cd3da532f3d90dfcf92595148022f2c2fd98e5deee90af",
 		"20201020135527",
-		"DNSSEC verify failed for NSEC3 RRset: signature crypto failed");
+#ifdef HAVE_SSL
+		"DNSSEC verify failed for NSEC3 RRset: signature crypto failed"
+#else /* HAVE_NETTLE */
+		"DNSSEC verify failed for NSEC3 RRset: RSA signature verification failed"
+#endif
+		);
 
 	/* load DNSSEC zone, with ZONEMD, but DNSKEY RRSIG is not okay. */
 	zonemd_verify_test("example.com",
-		"testdata/zonemd.example15.zone",
+		SRCDIRSTR "/testdata/zonemd.example15.zone",
 		"example.com. IN DS 55566 8 2 9c148338951ce1c3b5cd3da532f3d90dfcf92595148022f2c2fd98e5deee90af",
 		"20201020135527",
-		"verify DNSKEY RRset with trust anchor failed: signature crypto failed");
+#ifdef HAVE_SSL
+		"verify DNSKEY RRset with trust anchor failed: signature crypto failed"
+#else /* HAVE_NETTLE */
+		"verify DNSKEY RRset with trust anchor failed: RSA signature verification failed"
+#endif
+		);
 	/* load DNSSEC zone, but trust anchor mismatches DNSKEY */
 	zonemd_verify_test("example.com",
-		"testdata/zonemd.example5.zone",
+		SRCDIRSTR "/testdata/zonemd.example5.zone",
 		/* okay anchor is
 		"example.com. IN DS 55566 8 2 9c148338951ce1c3b5cd3da532f3d90dfcf92595148022f2c2fd98e5deee90af", */
 		"example.com. IN DS 55566 8 2 0000000000111111222223333444444dfcf92595148022f2c2fd98e5deee90af",
@@ -470,7 +506,7 @@ static void zonemd_verify_tests(void)
 	/* load DNSSEC zone, but trust anchor fails because the zone
 	 * has expired signatures.  We set the date for it */
 	zonemd_verify_test("example.com",
-		"testdata/zonemd.example5.zone",
+		SRCDIRSTR "/testdata/zonemd.example5.zone",
 		"example.com. IN DS 55566 8 2 9c148338951ce1c3b5cd3da532f3d90dfcf92595148022f2c2fd98e5deee90af",
 		/* okay date: "20201020135527", */
 		"20221020135527",
@@ -478,14 +514,14 @@ static void zonemd_verify_tests(void)
 
 	/* duplicate zonemd with same scheme and algorithm */
 	zonemd_verify_test("example.com",
-		"testdata/zonemd.example16.zone",
+		SRCDIRSTR "/testdata/zonemd.example16.zone",
 		NULL,
 		"20180302005009",
 		"ZONEMD RRSet contains more than one RR with the same scheme and hash algorithm");
 	/* different capitalisation of ns name and owner names, should
 	 * be canonicalized. */
 	zonemd_verify_test("example.com",
-		"testdata/zonemd.example17.zone",
+		SRCDIRSTR "/testdata/zonemd.example17.zone",
 		NULL,
 		"20180302005009",
 		"ZONEMD verification successful");

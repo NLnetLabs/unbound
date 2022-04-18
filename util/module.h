@@ -350,14 +350,18 @@ struct module_env {
 	 * 	EDNS, the answer is likely to be useless for this domain.
 	 * @param nocaps: do not use caps_for_id, use the qname as given.
 	 *	(ignored if caps_for_id is disabled).
+	 * @param check_ratelimit: if set, will check ratelimit before sending out.
 	 * @param addr: where to.
 	 * @param addrlen: length of addr.
 	 * @param zone: delegation point name.
 	 * @param zonelen: length of zone name.
+	 * @param tcp_upstream: use TCP for upstream queries.
 	 * @param ssl_upstream: use SSL for upstream queries.
 	 * @param tls_auth_name: if ssl_upstream, use this name with TLS
 	 * 	authentication.
-	 * @param q: wich query state to reactivate upon return.
+	 * @param q: which query state to reactivate upon return.
+	 * @param was_ratelimited: it will signal back if the query failed to pass the
+	 *	ratelimit check.
 	 * @return: false on failure (memory or socket related). no query was
 	 *	sent. Or returns an outbound entry with qsent and qstate set.
 	 *	This outbound_entry will be used on later module invocations
@@ -365,9 +369,10 @@ struct module_env {
 	 */
 	struct outbound_entry* (*send_query)(struct query_info* qinfo,
 		uint16_t flags, int dnssec, int want_dnssec, int nocaps,
+		int check_ratelimit,
 		struct sockaddr_storage* addr, socklen_t addrlen,
-		uint8_t* zone, size_t zonelen, int ssl_upstream,
-		char* tls_auth_name, struct module_qstate* q);
+		uint8_t* zone, size_t zonelen, int tcp_upstream, int ssl_upstream,
+		char* tls_auth_name, struct module_qstate* q, int* was_ratelimited);
 
 	/**
 	 * Detach-subqueries.
@@ -662,6 +667,8 @@ struct module_qstate {
 	/** Extended result of response-ip action processing, mainly
 	 *  for logging purposes. */
 	struct respip_action_info* respip_action_info;
+	/** if the query is rpz passthru, no further rpz processing for it */
+	int rpz_passthru;
 
 	/** whether the reply should be dropped */
 	int is_drop;

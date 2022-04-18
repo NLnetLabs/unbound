@@ -61,7 +61,7 @@ struct rbtree_type;
  * its subqueries */
 #define MAX_TARGET_NX		5
 /** max number of query restarts. Determines max number of CNAME chain. */
-#define MAX_RESTART_COUNT       8
+#define MAX_RESTART_COUNT	11
 /** max number of referrals. Makes sure resolver does not run away */
 #define MAX_REFERRAL_COUNT	130
 /** max number of queries-sent-out.  Make sure large NS set does not loop */
@@ -80,7 +80,7 @@ struct rbtree_type;
 /**
  * number of labels from QNAME that are always send individually when using
  * QNAME minimisation, even when the number of labels of the QNAME is bigger
- * tham MAX_MINIMISE_COUNT */
+ * than MAX_MINIMISE_COUNT */
 #define MINIMISE_ONE_LAB	4
 #define MINIMISE_MULTIPLE_LABS	(MAX_MINIMISE_COUNT - MINIMISE_ONE_LAB)
 /** at what query-sent-count to stop target fetch policy */
@@ -94,8 +94,6 @@ extern int UNKNOWN_SERVER_NICENESS;
  * Equals RTT_MAX_TIMEOUT
  */
 #define USEFUL_SERVER_TOP_TIMEOUT	120000
-/** number of retries on outgoing queries */
-#define OUTBOUND_MSG_RETRY 5
 /** RTT band, within this amount from the best, servers are chosen randomly.
  * Chosen so that the UNKNOWN_SERVER_NICENESS falls within the band of a 
  * fast server, this causes server exploration as a side benefit. msec. */
@@ -142,6 +140,8 @@ struct iter_env {
 
 	/** max number of query restarts to limit length of CNAME chain */
 	size_t max_query_restarts;
+	/** number of retries on outgoing queries */
+	int outbound_msg_retry;
 };
 
 /**
@@ -381,7 +381,7 @@ struct iter_qstate {
 	/** list of pending queries to authoritative servers. */
 	struct outbound_list outlist;
 
-	/** QNAME minimisation state, RFC7816 */
+	/** QNAME minimisation state, RFC9156 */
 	enum minimisation_state minimisation_state;
 
 	/** State for capsfail: QNAME minimisation state for comparisons. */
@@ -409,6 +409,12 @@ struct iter_qstate {
 	int auth_zone_response;
 	/** True if the auth_zones should not be consulted for the query */
 	int auth_zone_avoid;
+	/** true if there have been scrubbing failures of reply packets */
+	int scrub_failures;
+	/** true if there have been parse failures of reply packets */
+	int parse_failures;
+	/** a failure printout address for last received answer */
+	struct comm_reply* fail_reply;
 };
 
 /**

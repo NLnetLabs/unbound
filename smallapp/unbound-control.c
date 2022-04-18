@@ -1,5 +1,5 @@
 /*
- * checkconf/unbound-control.c - remote control utility for unbound.
+ * smallapp/unbound-control.c - remote control utility for unbound.
  *
  * Copyright (c) 2008, NLnet Labs. All rights reserved.
  *
@@ -188,7 +188,7 @@ timeval_divide(struct timeval* avg, const struct timeval* sum, long long d)
 {
 #ifndef S_SPLINT_S
 	size_t leftover;
-	if(d == 0) {
+	if(d <= 0) {
 		avg->tv_sec = 0;
 		avg->tv_usec = 0;
 		return;
@@ -197,7 +197,13 @@ timeval_divide(struct timeval* avg, const struct timeval* sum, long long d)
 	avg->tv_usec = sum->tv_usec / d;
 	/* handle fraction from seconds divide */
 	leftover = sum->tv_sec - avg->tv_sec*d;
-	avg->tv_usec += (leftover*1000000)/d;
+	if(leftover <= 0)
+		leftover = 0;
+	avg->tv_usec += (((long long)leftover)*((long long)1000000))/d;
+	if(avg->tv_sec < 0)
+		avg->tv_sec = 0;
+	if(avg->tv_usec < 0)
+		avg->tv_usec = 0;
 #endif
 }
 
@@ -438,7 +444,7 @@ static void do_stats_shm(struct config_file* cfg, struct ub_stats_info* stats,
 #endif /* HAVE_SHMGET */
 
 /** print statistics from shm memory segment */
-static void print_stats_shm(const char* cfgfile)
+static void print_stats_shm(const char* cfgfile, int quiet)
 {
 #ifdef HAVE_SHMGET
 	struct config_file* cfg;
@@ -468,8 +474,11 @@ static void print_stats_shm(const char* cfgfile)
 		fatal_exit("shmat(%d): %s", id_arr, strerror(errno));
 	}
 
-	/* print the stats */
-	do_stats_shm(cfg, stats, shm_stat);
+
+	if(!quiet) {
+		/* print the stats */
+		do_stats_shm(cfg, stats, shm_stat);
+	}
 
 	/* shutdown */
 	shmdt(shm_stat);
@@ -493,9 +502,7 @@ static void ssl_path_err(const char* s, const char *path)
 {
 	unsigned long err;
 	err = ERR_peek_error();
-	if (ERR_GET_LIB(err) == ERR_LIB_SYS &&
-		(ERR_GET_FUNC(err) == SYS_F_FOPEN ||
-		 ERR_GET_FUNC(err) == SYS_F_FREAD) ) {
+	if(ERR_GET_LIB(err) == ERR_LIB_SYS) {
 		fprintf(stderr, "error: %s\n%s: %s\n",
 			s, path, ERR_reason_error_string(err));
 		exit(1);
@@ -537,11 +544,11 @@ setup_ctx(struct config_file* cfg)
 #endif
 	if(!SSL_CTX_use_certificate_chain_file(ctx,c_cert))
 		ssl_path_err("Error setting up SSL_CTX client cert", c_cert);
-	if (!SSL_CTX_use_PrivateKey_file(ctx,c_key,SSL_FILETYPE_PEM))
+	if(!SSL_CTX_use_PrivateKey_file(ctx,c_key,SSL_FILETYPE_PEM))
 		ssl_path_err("Error setting up SSL_CTX client key", c_key);
-	if (!SSL_CTX_check_private_key(ctx))
+	if(!SSL_CTX_check_private_key(ctx))
 		ssl_err("Error setting up SSL_CTX client key");
-	if (SSL_CTX_load_verify_locations(ctx, s_cert, NULL) != 1)
+	if(SSL_CTX_load_verify_locations(ctx, s_cert, NULL) != 1)
 		ssl_path_err("Error setting up SSL_CTX verify, server cert",
 			     s_cert);
 	SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER, NULL);
@@ -876,8 +883,9 @@ go_cmd(SSL* ssl, int fd, int quiet, int argc, char* argv[])
 		if(first_line && strncmp(buf, "error", 5) == 0) {
 			printf("%s", buf);
 			was_error = 1;
-		} else if (!quiet)
+		} else if(!quiet) {
 			printf("%s", buf);
+		}
 
 		first_line = 0;
 	}
@@ -940,9 +948,9 @@ int main(int argc, char* argv[])
 	extern int check_locking_order;
 	check_locking_order = 0;
 #endif /* USE_THREAD_DEBUG */
+	checklock_start();
 	log_ident_set("unbound-control");
 	log_init(NULL, 0, NULL);
-	checklock_start();
 #ifdef USE_WINSOCK
 	/* use registry config file in preference to compiletime location */
 	if(!(cfgfile=w_lookup_reg_str("Software\\Unbound", "ConfigFile")))
@@ -983,7 +991,7 @@ int main(int argc, char* argv[])
 #endif
 	}
 	if(argc >= 1 && strcmp(argv[0], "stats_shm")==0) {
-		print_stats_shm(cfgfile);
+		print_stats_shm(cfgfile, quiet);
 		return 0;
 	}
 	check_args_for_listcmd(argc, argv);

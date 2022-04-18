@@ -37,7 +37,7 @@
  * \file
  *
  * This file contains a module that facilitates opportunistic IPsec. It does so
- * by also quering for the IPSECKEY for A/AAAA queries and calling a
+ * by also querying for the IPSECKEY for A/AAAA queries and calling a
  * configurable hook (eg. signaling an IKE daemon) before replying.
  */
 
@@ -419,6 +419,7 @@ ipsecmod_handle_query(struct module_qstate* qstate,
 			if(!qstate->env->cfg->ipsecmod_ignore_bogus &&
 				rrset_data->security == sec_status_bogus) {
 				log_err("ipsecmod: bogus IPSECKEY");
+				errinf(qstate, "ipsecmod: bogus IPSECKEY");
 				ipsecmod_error(qstate, id);
 				return;
 			}
@@ -426,6 +427,7 @@ ipsecmod_handle_query(struct module_qstate* qstate,
 			if(!call_hook(qstate, iq, ie) &&
 				qstate->env->cfg->ipsecmod_strict) {
 				log_err("ipsecmod: ipsecmod-hook failed");
+				errinf(qstate, "ipsecmod: ipsecmod-hook failed");
 				ipsecmod_error(qstate, id);
 				return;
 			}
@@ -497,6 +499,7 @@ ipsecmod_handle_response(struct module_qstate* qstate,
 			qstate->qinfo.qname_len, LDNS_RR_TYPE_IPSECKEY,
 			qstate->qinfo.qclass, 0)) {
 			log_err("ipsecmod: could not generate subquery.");
+			errinf(qstate, "ipsecmod: could not generate subquery.");
 			ipsecmod_error(qstate, id);
 		}
 		return;
@@ -520,6 +523,7 @@ ipsecmod_operate(struct module_qstate* qstate, enum module_ev event, int id,
 	if((event == module_event_new || event == module_event_pass) &&
 		iq == NULL) {
 		if(!ipsecmod_new(qstate, id)) {
+			errinf(qstate, "ipsecmod: could not ipsecmod_new");
 			ipsecmod_error(qstate, id);
 			return;
 		}
@@ -542,6 +546,7 @@ ipsecmod_operate(struct module_qstate* qstate, enum module_ev event, int id,
 	}
 	if(event == module_event_error) {
 		verbose(VERB_ALGO, "got called with event error, giving up");
+		errinf(qstate, "ipsecmod: got called with event error");
 		ipsecmod_error(qstate, id);
 		return;
 	}
@@ -552,6 +557,7 @@ ipsecmod_operate(struct module_qstate* qstate, enum module_ev event, int id,
 	}
 
 	log_err("ipsecmod: bad event %s", strmodulevent(event));
+	errinf(qstate, "ipsecmod: operate got bad event");
 	ipsecmod_error(qstate, id);
 	return;
 }

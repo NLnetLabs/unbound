@@ -99,7 +99,7 @@ ah(struct delegpt* dp, const char* sv, const char* ip)
 		log_err("could not parse %s", sv);
 		return 0;
 	}
-	if(!delegpt_add_ns_mlc(dp, dname, 0) ||
+	if(!delegpt_add_ns_mlc(dp, dname, 0, NULL, UNBOUND_DNS_PORT) ||
 	   !extstrtoaddr(ip, &addr, &addrlen) ||
 	   !delegpt_add_target_mlc(dp, dname, dname_len,
 		&addr, addrlen, 0, 0)) {
@@ -213,21 +213,27 @@ read_stubs_name(struct config_stub* s)
 }
 
 /** set stub host names */
-static int 
+static int
 read_stubs_host(struct config_stub* s, struct delegpt* dp)
 {
 	struct config_strlist* p;
-	size_t dname_len;
 	uint8_t* dname;
+	char* tls_auth_name;
+	int port;
 	for(p = s->hosts; p; p = p->next) {
 		log_assert(p->str);
-		dname = sldns_str2wire_dname(p->str, &dname_len);
+		dname = authextstrtodname(p->str, &port, &tls_auth_name);
 		if(!dname) {
 			log_err("cannot parse stub %s nameserver name: '%s'", 
 				s->name, p->str);
 			return 0;
 		}
-		if(!delegpt_add_ns_mlc(dp, dname, 0)) {
+#if ! defined(HAVE_SSL_SET1_HOST) && ! defined(HAVE_X509_VERIFY_PARAM_SET1_HOST)
+		if(tls_auth_name)
+			log_err("no name verification functionality in "
+				"ssl library, ignored name for %s", p->str);
+#endif
+		if(!delegpt_add_ns_mlc(dp, dname, 0, tls_auth_name, port)) {
 			free(dname);
 			log_err("out of memory");
 			return 0;
@@ -258,7 +264,7 @@ read_stubs_addr(struct config_stub* s, struct delegpt* dp)
 				"ssl library, ignored name for %s", p->str);
 #endif
 		if(!delegpt_add_addr_mlc(dp, &addr, addrlen, 0, 0,
-			auth_name)) {
+			auth_name, -1)) {
 			log_err("out of memory");
 			return 0;
 		}
@@ -287,6 +293,8 @@ read_stubs(struct iter_hints* hints, struct config_file* cfg)
 		dp->no_cache = s->no_cache;
 		/* ssl_upstream */
 		dp->ssl_upstream = (uint8_t)s->ssl_upstream;
+		/* tcp_upstream */
+		dp->tcp_upstream = (uint8_t)s->tcp_upstream;
 		delegpt_log(VERB_QUERY, dp);
 		if(!hints_insert(hints, LDNS_RR_CLASS_IN, dp, !s->isprime))
 			return 0;
@@ -336,7 +344,7 @@ read_root_hints(struct iter_hints* hints, char* fname)
 		if(sldns_wirerr_get_type(rr, rr_len, dname_len)
 			== LDNS_RR_TYPE_NS) {
 			if(!delegpt_add_ns_mlc(dp, sldns_wirerr_get_rdata(rr,
-				rr_len, dname_len), 0)) {
+				rr_len, dname_len), 0, NULL, UNBOUND_DNS_PORT)) {
 				log_err("out of memory reading root hints");
 				goto stop_read;
 			}
@@ -395,10 +403,10 @@ read_root_hints(struct iter_hints* hints, char* fname)
 		delegpt_free_mlc(dp);
 		return 1;
 	}
+	delegpt_log(VERB_QUERY, dp);
 	if(!hints_insert(hints, c, dp, 0)) {
 		return 0;
 	}
-	delegpt_log(VERB_QUERY, dp);
 	return 1;
 
 stop_read:

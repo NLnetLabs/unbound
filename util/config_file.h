@@ -93,6 +93,12 @@ struct config_file {
 	int do_udp;
 	/** do tcp query support. */
 	int do_tcp;
+	/** max number of queries on a reuse connection. */
+	size_t max_reuse_tcp_queries;
+	/** timeout for REUSE entries in milliseconds. */
+	int tcp_reuse_timeout;
+	/** timeout in milliseconds for TCP queries to auth servers. */
+	int tcp_auth_query_timeout;
 	/** tcp upstream queries (no UDP upstream queries) */
 	int tcp_upstream;
 	/** udp upstream enabled when no UDP downstream is enabled (do_udp no)*/
@@ -199,6 +205,8 @@ struct config_file {
 	/** automatic interface for incoming messages. Uses ipv6 remapping,
 	 * and recvmsg/sendmsg ancillary data to detect interfaces, boolean */
 	int if_automatic;
+	/** extra ports to open if if_automatic enabled, or NULL for default */
+	char* if_automatic_ports;
 	/** SO_RCVBUF size to set on port 53 UDP socket */
 	size_t so_rcvbuf;
 	/** SO_SNDBUF size to set on port 53 UDP socket */
@@ -334,10 +342,14 @@ struct config_file {
 	int hide_version;
 	/** do not report trustanchor (trustanchor.unbound) */
 	int hide_trustanchor;
+	/** do not report the User-Agent HTTP header */
+	int hide_http_user_agent;
 	/** identity, hostname is returned if "". */
 	char* identity;
 	/** version, package version returned if "". */
 	char* version;
+	/** User-Agent for HTTP header */
+	char* http_user_agent;
 	/** nsid */
 	char *nsid_cfg_str;
 	uint8_t *nsid;
@@ -367,6 +379,8 @@ struct config_file {
 	int32_t val_sig_skew_min;
 	/** the maximum for signature clock skew */
 	int32_t val_sig_skew_max;
+	/** max number of query restarts, number of IPs to probe */
+	int32_t val_max_restart;
 	/** this value sets the number of seconds before revalidating bogus */
 	int bogus_ttl; 
 	/** should validator clean additional section for secure msgs */
@@ -553,6 +567,10 @@ struct config_file {
 	size_t ip_ratelimit_size;
 	/** ip_ratelimit factor, 0 blocks all, 10 allows 1/10 of traffic */
 	int ip_ratelimit_factor;
+	/** ratelimit backoff, when on, if the limit is reached it is
+	 *  considered an attack and it backs off until 'demand' decreases over
+	 *  the RATE_WINDOW. */
+	int ip_ratelimit_backoff;
 
 	/** ratelimit for domains. 0 is off, otherwise qps (unless overridden) */
 	int ratelimit;
@@ -566,6 +584,13 @@ struct config_file {
 	struct config_str2list* ratelimit_below_domain;
 	/** ratelimit factor, 0 blocks all, 10 allows 1/10 of traffic */
 	int ratelimit_factor;
+	/** ratelimit backoff, when on, if the limit is reached it is
+	 *  considered an attack and it backs off until 'demand' decreases over
+	 *  the RATE_WINDOW. */
+	int ratelimit_backoff;
+
+	/** number of retries on outgoing queries */
+	int outbound_msg_retry;
 	/** minimise outgoing QNAME and hide original QTYPE if possible */
 	int qname_minimisation;
 	/** minimise QNAME in strict mode, minimise according to RFC.
@@ -688,6 +713,8 @@ struct config_stub {
 	int isprime;
 	/** if forward-first is set (failover to without if fails) */
 	int isfirst;
+	/** use tcp for queries to this stub */
+	int tcp_upstream;
 	/** use SSL for queries to this stub */
 	int ssl_upstream;
 	/*** no cache */
@@ -732,6 +759,10 @@ struct config_auth {
 	/** Always reply with this CNAME target if the cname override action is
 	 * used */
 	char* rpz_cname;
+	/** signal nxdomain block with unset RA */
+	int rpz_signal_nxdomain_ra;
+	/** Check ZONEMD records for this zone */
+	int zonemd_check;
 	/** Reject absence of ZONEMD records, zone must have one */
 	int zonemd_reject_absence;
 };
@@ -1095,7 +1126,7 @@ int cfg_count_numbers(const char* str);
 int cfg_parse_memsize(const char* str, size_t* res);
 
 /**
- * Parse nsid from string into binary nsid. nsid is either a hexidecimal
+ * Parse nsid from string into binary nsid. nsid is either a hexadecimal
  * string or an ascii string prepended with ascii_ in which case the
  * characters after ascii_ are simply copied.
  * @param str: the string to parse.
@@ -1178,6 +1209,13 @@ int cfg_mark_ports(const char* str, int allow, int* avail, int num);
  * @return: number of ports in array or 0 on error.
  */
 int cfg_condense_ports(struct config_file* cfg, int** avail);
+
+/**
+ * Apply system specific port range policy.
+ * @param cfg: config file.
+ * @param num: size of the array (65536).
+ */
+void cfg_apply_local_port_policy(struct config_file* cfg, int num);
 
 /**
  * Scan ports available
@@ -1317,6 +1355,10 @@ int if_is_https(const char* ifname, const char* port, int https_port);
  * @return true if https ports are used for server.
  */
 int cfg_has_https(struct config_file* cfg);
+
+#ifdef USE_LINUX_IP_LOCAL_PORT_RANGE
+#define LINUX_IP_LOCAL_PORT_RANGE_PATH "/proc/sys/net/ipv4/ip_local_port_range"
+#endif
 
 #endif /* UTIL_CONFIG_FILE_H */
 

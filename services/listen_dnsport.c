@@ -47,6 +47,7 @@
 #ifdef USE_TCP_FASTOPEN
 #include <netinet/tcp.h>
 #endif
+#include <ctype.h>
 #include "services/listen_dnsport.h"
 #include "services/outside_network.h"
 #include "util/netevent.h"
@@ -869,9 +870,14 @@ set_ip_dscp(int socket, int addrfamily, int dscp)
 	ds = dscp << 2;
 	switch(addrfamily) {
 	case AF_INET6:
-		if(setsockopt(socket, IPPROTO_IPV6, IPV6_TCLASS, (void*)&ds, sizeof(ds)) < 0)
+	#ifdef IPV6_TCLASS
+		if(setsockopt(socket, IPPROTO_IPV6, IPV6_TCLASS, (void*)&ds,
+			sizeof(ds)) < 0)
 			return sock_strerror(errno);
 		break;
+	#else
+		return "IPV6_TCLASS not defined on this system";
+	#endif
 	default:
 		if(setsockopt(socket, IPPROTO_IP, IP_TOS, (void*)&ds, sizeof(ds)) < 0)
 			return sock_strerror(errno);
@@ -1306,6 +1312,38 @@ listen_cp_insert(struct comm_point* c, struct listen_dnsport* front)
 	return 1;
 }
 
+void listen_setup_locks(void)
+{
+	if(!stream_wait_lock_inited) {
+		lock_basic_init(&stream_wait_count_lock);
+		stream_wait_lock_inited = 1;
+	}
+	if(!http2_query_buffer_lock_inited) {
+		lock_basic_init(&http2_query_buffer_count_lock);
+		http2_query_buffer_lock_inited = 1;
+	}
+	if(!http2_response_buffer_lock_inited) {
+		lock_basic_init(&http2_response_buffer_count_lock);
+		http2_response_buffer_lock_inited = 1;
+	}
+}
+
+void listen_desetup_locks(void)
+{
+	if(stream_wait_lock_inited) {
+		stream_wait_lock_inited = 0;
+		lock_basic_destroy(&stream_wait_count_lock);
+	}
+	if(http2_query_buffer_lock_inited) {
+		http2_query_buffer_lock_inited = 0;
+		lock_basic_destroy(&http2_query_buffer_count_lock);
+	}
+	if(http2_response_buffer_lock_inited) {
+		http2_response_buffer_lock_inited = 0;
+		lock_basic_destroy(&http2_response_buffer_count_lock);
+	}
+}
+
 struct listen_dnsport* 
 listen_create(struct comm_base* base, struct listen_port* ports,
 	size_t bufsize, int tcp_accept_count, int tcp_idle_timeout,
@@ -1327,57 +1365,44 @@ listen_create(struct comm_base* base, struct listen_port* ports,
 		free(front);
 		return NULL;
 	}
-	if(!stream_wait_lock_inited) {
-		lock_basic_init(&stream_wait_count_lock);
-		stream_wait_lock_inited = 1;
-	}
-	if(!http2_query_buffer_lock_inited) {
-		lock_basic_init(&http2_query_buffer_count_lock);
-		http2_query_buffer_lock_inited = 1;
-	}
-	if(!http2_response_buffer_lock_inited) {
-		lock_basic_init(&http2_response_buffer_count_lock);
-		http2_response_buffer_lock_inited = 1;
-	}
 
 	/* create comm points as needed */
 	while(ports) {
 		struct comm_point* cp = NULL;
 		if(ports->ftype == listen_type_udp ||
-		   ports->ftype == listen_type_udp_dnscrypt)
-			cp = comm_point_create_udp(base, ports->fd, 
+		   ports->ftype == listen_type_udp_dnscrypt) {
+			cp = comm_point_create_udp(base, ports->fd,
 				front->udp_buff, cb, cb_arg, ports->socket);
-		else if(ports->ftype == listen_type_tcp ||
-				ports->ftype == listen_type_tcp_dnscrypt)
-			cp = comm_point_create_tcp(base, ports->fd, 
+		} else if(ports->ftype == listen_type_tcp ||
+				ports->ftype == listen_type_tcp_dnscrypt) {
+			cp = comm_point_create_tcp(base, ports->fd,
 				tcp_accept_count, tcp_idle_timeout,
 				harden_large_queries, 0, NULL,
 				tcp_conn_limit, bufsize, front->udp_buff,
 				ports->ftype, cb, cb_arg, ports->socket);
-		else if(ports->ftype == listen_type_ssl ||
+		} else if(ports->ftype == listen_type_ssl ||
 			ports->ftype == listen_type_http) {
-			cp = comm_point_create_tcp(base, ports->fd, 
+			cp = comm_point_create_tcp(base, ports->fd,
 				tcp_accept_count, tcp_idle_timeout,
 				harden_large_queries,
 				http_max_streams, http_endpoint,
 				tcp_conn_limit, bufsize, front->udp_buff,
 				ports->ftype, cb, cb_arg, ports->socket);
-			if(http_notls && ports->ftype == listen_type_http)
-				cp->ssl = NULL;
-			else
-				cp->ssl = sslctx;
 			if(ports->ftype == listen_type_http) {
 				if(!sslctx && !http_notls) {
-				  log_warn("HTTPS port configured, but no TLS "
-					"tls-service-key or tls-service-pem "
-					"set");
+					log_warn("HTTPS port configured, but "
+						"no TLS tls-service-key or "
+						"tls-service-pem set");
 				}
 #ifndef HAVE_SSL_CTX_SET_ALPN_SELECT_CB
-				if(!http_notls)
-				  log_warn("Unbound is not compiled with an "
-					"OpenSSL version supporting ALPN "
-					" (OpenSSL >= 1.0.2). This is required "
-					"to use DNS-over-HTTPS");
+				if(!http_notls) {
+					log_warn("Unbound is not compiled "
+						"with an OpenSSL version "
+						"supporting ALPN "
+						"(OpenSSL >= 1.0.2). This "
+						"is required to use "
+						"DNS-over-HTTPS");
+				}
 #endif
 #ifndef HAVE_NGHTTP2_NGHTTP2_H
 				log_warn("Unbound is not compiled with "
@@ -1386,14 +1411,25 @@ listen_create(struct comm_base* base, struct listen_port* ports,
 #endif
 			}
 		} else if(ports->ftype == listen_type_udpancil ||
-				  ports->ftype == listen_type_udpancil_dnscrypt)
-			cp = comm_point_create_udp_ancil(base, ports->fd, 
+				  ports->ftype == listen_type_udpancil_dnscrypt) {
+			cp = comm_point_create_udp_ancil(base, ports->fd,
 				front->udp_buff, cb, cb_arg, ports->socket);
+		}
 		if(!cp) {
-			log_err("can't create commpoint");	
+			log_err("can't create commpoint");
 			listen_delete(front);
 			return NULL;
 		}
+		if((http_notls && ports->ftype == listen_type_http) ||
+			(ports->ftype == listen_type_tcp) ||
+			(ports->ftype == listen_type_udp) ||
+			(ports->ftype == listen_type_udpancil) ||
+			(ports->ftype == listen_type_tcp_dnscrypt) ||
+			(ports->ftype == listen_type_udp_dnscrypt) ||
+			(ports->ftype == listen_type_udpancil_dnscrypt))
+			cp->ssl = NULL;
+		else
+			cp->ssl = sslctx;
 		cp->dtenv = dtenv;
 		cp->do_not_close = 1;
 #ifdef USE_DNSCRYPT
@@ -1454,18 +1490,6 @@ listen_delete(struct listen_dnsport* front)
 #endif
 	sldns_buffer_free(front->udp_buff);
 	free(front);
-	if(stream_wait_lock_inited) {
-		stream_wait_lock_inited = 0;
-		lock_basic_destroy(&stream_wait_count_lock);
-	}
-	if(http2_query_buffer_lock_inited) {
-		http2_query_buffer_lock_inited = 0;
-		lock_basic_destroy(&http2_query_buffer_count_lock);
-	}
-	if(http2_response_buffer_lock_inited) {
-		http2_response_buffer_lock_inited = 0;
-		lock_basic_destroy(&http2_response_buffer_count_lock);
-	}
 }
 
 #ifdef HAVE_GETIFADDRS
@@ -1693,6 +1717,63 @@ listening_ports_open(struct config_file* cfg, char** ifs, int num_ifs,
 	}
 	/* create ip4 and ip6 ports so that return addresses are nice. */
 	if(do_auto || num_ifs == 0) {
+		if(do_auto && cfg->if_automatic_ports &&
+			cfg->if_automatic_ports[0]!=0) {
+			char* now = cfg->if_automatic_ports;
+			while(now && *now) {
+				char* after;
+				int extraport;
+				while(isspace((unsigned char)*now))
+					now++;
+				if(!*now)
+					break;
+				after = now;
+				extraport = (int)strtol(now, &after, 10);
+				if(extraport < 0 || extraport > 65535) {
+					log_err("interface-automatic-ports port number out of range, at position %d of '%s'", (int)(now-cfg->if_automatic_ports)+1, cfg->if_automatic_ports);
+					listening_ports_free(list);
+					return NULL;
+				}
+				if(extraport == 0 && now == after) {
+					log_err("interface-automatic-ports could not be parsed, at position %d of '%s'", (int)(now-cfg->if_automatic_ports)+1, cfg->if_automatic_ports);
+					listening_ports_free(list);
+					return NULL;
+				}
+				now = after;
+				snprintf(portbuf, sizeof(portbuf), "%d", extraport);
+				if(do_ip6) {
+					hints.ai_family = AF_INET6;
+					if(!ports_create_if("::0",
+						do_auto, cfg->do_udp, do_tcp,
+						&hints, portbuf, &list,
+						cfg->so_rcvbuf, cfg->so_sndbuf,
+						cfg->ssl_port, cfg->tls_additional_port,
+						cfg->https_port, reuseport, cfg->ip_transparent,
+						cfg->tcp_mss, cfg->ip_freebind,
+						cfg->http_nodelay, cfg->use_systemd,
+						cfg->dnscrypt_port, cfg->ip_dscp)) {
+						listening_ports_free(list);
+						return NULL;
+					}
+				}
+				if(do_ip4) {
+					hints.ai_family = AF_INET;
+					if(!ports_create_if("0.0.0.0",
+						do_auto, cfg->do_udp, do_tcp,
+						&hints, portbuf, &list,
+						cfg->so_rcvbuf, cfg->so_sndbuf,
+						cfg->ssl_port, cfg->tls_additional_port,
+						cfg->https_port, reuseport, cfg->ip_transparent,
+						cfg->tcp_mss, cfg->ip_freebind,
+						cfg->http_nodelay, cfg->use_systemd,
+						cfg->dnscrypt_port, cfg->ip_dscp)) {
+						listening_ports_free(list);
+						return NULL;
+					}
+				}
+			}
+			return list;
+		}
 		if(do_ip6) {
 			hints.ai_family = AF_INET6;
 			if(!ports_create_if(do_auto?"::0":"::1", 
@@ -2477,6 +2558,10 @@ static int http2_query_read_done(struct http2_session* h2_session,
 			"buffer already assigned to stream");
 		return -1;
 	}
+    
+    /* the c->buffer might be used by mesh_send_reply and no be cleard
+	 * need to be cleared before use */
+	sldns_buffer_clear(h2_session->c->buffer);
 	if(sldns_buffer_remaining(h2_session->c->buffer) <
 		sldns_buffer_remaining(h2_stream->qbuffer)) {
 		/* qbuffer will be free'd in frame close cb */
@@ -2606,7 +2691,7 @@ static int http2_req_begin_headers_cb(nghttp2_session* session,
 	int ret;
 	if(frame->hd.type != NGHTTP2_HEADERS ||
 		frame->headers.cat != NGHTTP2_HCAT_REQUEST) {
-		/* only interrested in request headers */
+		/* only interested in request headers */
 		return 0;
 	}
 	if(!(h2_stream = http2_stream_create(frame->hd.stream_id))) {
@@ -2678,18 +2763,45 @@ static int http2_buffer_uri_query(struct http2_session* h2_session,
 		return 0;
 	}
 
-	if(!(b64len = sldns_b64url_pton(
-		(char const *)start, length,
-		sldns_buffer_current(h2_stream->qbuffer),
-		expectb64len)) || b64len < 0) {
-		lock_basic_lock(&http2_query_buffer_count_lock);
-		http2_query_buffer_count -= expectb64len;
-		lock_basic_unlock(&http2_query_buffer_count_lock);
-		sldns_buffer_free(h2_stream->qbuffer);
-		h2_stream->qbuffer = NULL;
-		/* return without error, method can be an
-		 * unknown POST */
-		return 1;
+	if(sldns_b64_contains_nonurl((char const*)start, length)) {
+		char buf[65536+4];
+		verbose(VERB_ALGO, "HTTP2 stream contains wrong b64 encoding");
+		/* copy to the scratch buffer temporarily to terminate the
+		 * string with a zero */
+		if(length+1 > sizeof(buf)) {
+			/* too long */
+			lock_basic_lock(&http2_query_buffer_count_lock);
+			http2_query_buffer_count -= expectb64len;
+			lock_basic_unlock(&http2_query_buffer_count_lock);
+			sldns_buffer_free(h2_stream->qbuffer);
+			h2_stream->qbuffer = NULL;
+			return 1;
+		}
+		memmove(buf, start, length);
+		buf[length] = 0;
+		if(!(b64len = sldns_b64_pton(buf, sldns_buffer_current(
+			h2_stream->qbuffer), expectb64len)) || b64len < 0) {
+			lock_basic_lock(&http2_query_buffer_count_lock);
+			http2_query_buffer_count -= expectb64len;
+			lock_basic_unlock(&http2_query_buffer_count_lock);
+			sldns_buffer_free(h2_stream->qbuffer);
+			h2_stream->qbuffer = NULL;
+			return 1;
+		}
+	} else {
+		if(!(b64len = sldns_b64url_pton(
+			(char const *)start, length,
+			sldns_buffer_current(h2_stream->qbuffer),
+			expectb64len)) || b64len < 0) {
+			lock_basic_lock(&http2_query_buffer_count_lock);
+			http2_query_buffer_count -= expectb64len;
+			lock_basic_unlock(&http2_query_buffer_count_lock);
+			sldns_buffer_free(h2_stream->qbuffer);
+			h2_stream->qbuffer = NULL;
+			/* return without error, method can be an
+			 * unknown POST */
+			return 1;
+		}
 	}
 	sldns_buffer_skip(h2_stream->qbuffer, (size_t)b64len);
 	return 1;
@@ -2707,7 +2819,7 @@ static int http2_req_header_cb(nghttp2_session* session,
 	 * the HEADER */
 	if(frame->hd.type != NGHTTP2_HEADERS ||
 		frame->headers.cat != NGHTTP2_HCAT_REQUEST) {
-		/* only interrested in request headers */
+		/* only interested in request headers */
 		return 0;
 	}
 	if(!(h2_stream = nghttp2_session_get_stream_user_data(session,
@@ -2803,7 +2915,7 @@ static int http2_req_header_cb(nghttp2_session* session,
 			h2_stream->query_too_large = 1;
 			return 0;
 		}
-		/* guaranteed to only contian digits and be null terminated */
+		/* guaranteed to only contain digits and be null terminated */
 		h2_stream->content_length = atoi((const char*)value);
 		if(h2_stream->content_length >
 			h2_session->c->http2_stream_max_qbuffer_size) {
@@ -2843,7 +2955,7 @@ static int http2_req_data_chunk_recv_cb(nghttp2_session* ATTR_UNUSED(session),
 			/* setting this to msg-buffer-size can result in a lot
 			 * of memory consuption. Most queries should fit in a
 			 * single DATA frame, and most POST queries will
-			 * containt content-length which does not impose this
+			 * contain content-length which does not impose this
 			 * limit. */
 			qlen = len;
 		}

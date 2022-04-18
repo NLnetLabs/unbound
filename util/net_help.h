@@ -42,6 +42,7 @@
 #ifndef NET_HELP_H
 #define NET_HELP_H
 #include "util/log.h"
+#include "util/random.h"
 struct sock_list;
 struct regional;
 struct config_strlist;
@@ -76,8 +77,6 @@ struct config_strlist;
 
 /** timeout in milliseconds for UDP queries to auth servers. */
 #define UDP_AUTH_QUERY_TIMEOUT 3000
-/** timeout in milliseconds for TCP queries to auth servers. */
-#define TCP_AUTH_QUERY_TIMEOUT 3000
 /** Advertised version of EDNS capabilities */
 #define EDNS_ADVERTISED_VERSION         0
 /** Advertised size of EDNS capabilities */
@@ -93,6 +92,9 @@ extern uint16_t EDNS_ADVERTISED_SIZE;
 #define DNSKEY_BIT_ZSK 0x0100
 /** DNSKEY secure entry point, KSK flag */
 #define DNSKEY_BIT_SEP 0x0001
+
+/** return a random 16-bit number given a random source */
+#define GET_RANDOM_ID(rnd) (((unsigned)ub_random(rnd)>>8) & 0xffff)
 
 /** minimal responses when positive answer */
 extern int MINIMAL_RESPONSES;
@@ -208,16 +210,29 @@ int netblockstrtoaddr(const char* ip, int port, struct sockaddr_storage* addr,
 /**
  * Convert address string, with "@port" appendix, to sockaddr.
  * It can also have an "#tls-auth-name" appendix (after the port).
- * The returned tls-auth-name string is a pointer into the input string.
- * Uses DNS port by default.
+ * The returned auth_name string is a pointer into the input string.
+ * Uses DNS port by default; TLS port when a "#tls-auth-name" is configured.
  * @param str: the string
  * @param addr: where to store sockaddr.
  * @param addrlen: length of stored sockaddr is returned.
  * @param auth_name: returned pointer to tls_auth_name, or NULL if none.
  * @return 0 on error.
  */
-int authextstrtoaddr(char* str, struct sockaddr_storage* addr, 
+int authextstrtoaddr(char* str, struct sockaddr_storage* addr,
 	socklen_t* addrlen, char** auth_name);
+
+/**
+ * Convert domain string, with "@port" appendix, to dname.
+ * It can also have an "#tls-auth-name" appendix (after the port).
+ * The return port is the parsed port.
+ * Uses DNS port by default; TLS port when a "#tls-auth-name" is configured.
+ * The returned auth_name string is a pointer into the input string.
+ * @param str: the string
+ * @param port: pointer to be assigned the parsed port value.
+ * @param auth_name: returned pointer to tls_auth_name, or NULL if none.
+ * @return pointer to the dname.
+ */
+uint8_t* authextstrtodname(char* str, int* port, char** auth_name);
 
 /**
  * Store port number into sockaddr structure

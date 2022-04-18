@@ -175,10 +175,14 @@ void iter_mark_pside_cycle_targets(struct module_qstate* qstate,
  * @param qinfo: query name and type
  * @param qflags: query flags with RD flag
  * @param dp: delegpt to check.
+ * @param supports_ipv4: if we support ipv4 for lookups to the target.
+ * 	if not, then the IPv4 addresses are useless.
+ * @param supports_ipv6: if we support ipv6 for lookups to the target.
+ * 	if not, then the IPv6 addresses are useless.
  * @return true if dp is useless.
  */
 int iter_dp_is_useless(struct query_info* qinfo, uint16_t qflags, 
-	struct delegpt* dp);
+	struct delegpt* dp, int supports_ipv4, int supports_ipv6);
 
 /**
  * See if qname has DNSSEC needs.  This is true if there is a trust anchor above
@@ -347,16 +351,19 @@ void iter_scrub_nxdomain(struct dns_msg* msg);
  * Remove query attempts from all available ips. For 0x20.
  * @param dp: delegpt.
  * @param d: decrease.
+ * @param outbound_msg_retry: number of retries of outgoing queries
  */
-void iter_dec_attempts(struct delegpt* dp, int d);
+void iter_dec_attempts(struct delegpt* dp, int d, int outbound_msg_retry);
 
 /**
  * Add retry counts from older delegpt to newer delegpt.
  * Does not waste time on timeout'd (or other failing) addresses.
  * @param dp: new delegationpoint.
  * @param old: old delegationpoint.
+ * @param outbound_msg_retry: number of retries of outgoing queries
  */
-void iter_merge_retry_counts(struct delegpt* dp, struct delegpt* old);
+void iter_merge_retry_counts(struct delegpt* dp, struct delegpt* old,
+	int outbound_msg_retry);
 
 /**
  * See if a DS response (type ANSWER) is too low: a nodata answer with 
@@ -382,10 +389,15 @@ int iter_dp_cangodown(struct query_info* qinfo, struct delegpt* dp);
  * Lookup if no_cache is set in stub or fwd.
  * @param qstate: query state with env with hints and fwds.
  * @param qinf: query name to lookup for.
+ * @param retdpname: returns NULL or the deepest enclosing name of fwd or stub.
+ * 	This is the name under which the closest lookup is going to happen.
+ * 	Used for NXDOMAIN checks, above that it is an nxdomain from a
+ * 	different server and zone. You can pass NULL to not get it.
+ * @param retdpnamelen: returns the length of the dpname.
  * @return true if no_cache is set in stub or fwd.
  */
 int iter_stub_fwd_no_cache(struct module_qstate *qstate,
-	struct query_info *qinf);
+	struct query_info *qinf, uint8_t** retdpname, size_t* retdpnamelen);
 
 /**
  * Set support for IP4 and IP6 depending on outgoing interfaces
