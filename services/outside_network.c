@@ -247,6 +247,9 @@ pick_outgoing_tcp(struct pending_tcp* pend, struct waiting_tcp* w, int s)
 	if(addr_is_ip6(&pi->addr, pi->addrlen))
 		((struct sockaddr_in6*)&pi->addr)->sin6_port = 0;
 	else	((struct sockaddr_in*)&pi->addr)->sin_port = 0;
+#ifdef IP_BIND_ADDRESS_NO_PORT
+	setsockopt(s, SOL_IP, IP_BIND_ADDRESS_NO_PORT, &(int) {1}, sizeof(int));
+#endif
 	if(bind(s, (struct sockaddr*)&pi->addr, pi->addrlen) != 0) {
 #ifndef USE_WINSOCK
 #ifdef EADDRNOTAVAIL
