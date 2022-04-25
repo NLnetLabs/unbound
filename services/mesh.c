@@ -1303,9 +1303,9 @@ mesh_send_reply(struct mesh_state* m, int rcode, struct reply_info* rep,
 			rep->security == sec_status_secure_sentinel_fail)) {
 
 			char *reason = m->s.env->cfg->val_log_level >= 2
-			             ? errinf_to_str_bogus(&m->s) : NULL;
+				? errinf_to_str_bogus(&m->s) : NULL;
 			sldns_ede_code reason_bogus = rep->reason_bogus != LDNS_EDE_DNSSEC_BOGUS
-			                            ? rep->reason_bogus : errinf_to_reason_bogus(&m->s);
+				? rep->reason_bogus : errinf_to_reason_bogus(&m->s);
 
 			edns_opt_list_append_ede(&r->edns.opt_list_out, m->s.region,
 				reason_bogus, reason);
@@ -2072,7 +2072,7 @@ mesh_serve_expired_callback(void* arg)
 		 * warning instead of an error */
 		if (r->edns.edns_present && qstate->env->cfg->serve_expired_ede) {
 			edns_opt_list_append_ede(&r->edns.opt_list_out,
-				mstate->s.region, LDNS_EDE_STALE_ANSWER, "");
+				mstate->s.region, LDNS_EDE_STALE_ANSWER, NULL);
 		}
 
 		r_buffer = r->query_reply.c->buffer;

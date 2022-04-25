@@ -1139,8 +1139,9 @@ deny_refuse(struct comm_point* c, enum acl_access acl,
 			sldns_buffer_set_position(c->buffer, opt_rr_mark);
 			sldns_buffer_flip(c->buffer);
 			return 1;
-		} else
+		} else {
 			sldns_buffer_skip(c->buffer, 1); /* skip root label */
+		}
 		if(sldns_buffer_remaining(c->buffer) < 2 ||
 			sldns_buffer_read_u16(c->buffer) != LDNS_RR_TYPE_OPT) {
 			LDNS_ANCOUNT_SET(sldns_buffer_begin(c->buffer), 0);

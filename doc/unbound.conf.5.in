@@ -1777,7 +1777,7 @@ be used.  Default is 65001.
 .TP 5
 .B do\-ede: \fI<yes or no>
 If enabled, Unbound will respond with Extended DNS Error codes (RFC8914).
-These EDEs attachinformative error messages to a response for various
+These EDEs attach informative error messages to a response for various
 errors. Default is "no".
 
 When the \fBval-log-level\fR option is also set to \fB2\fR, responses with Extended DNS Errors concerning DNSSEC failures that are not served from cache, will also contain a descriptive text message about the reason for the failure.
