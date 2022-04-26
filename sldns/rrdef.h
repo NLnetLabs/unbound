@@ -466,7 +466,8 @@ enum sldns_enum_ede_code
 	LDNS_EDE_NOT_SUPPORTED = 21,
 	LDNS_EDE_NO_REACHABLE_AUTHORITY = 22,
 	LDNS_EDE_NETWORK_ERROR = 23,
-	LDNS_EDE_INVALID_DATA = 24
+	LDNS_EDE_INVALID_DATA = 24,
+	LDNS_EDE_NONE = 65535 /* From the *private* range of EDE codes, used internally */
 };
 typedef enum sldns_enum_ede_code sldns_ede_code;
 

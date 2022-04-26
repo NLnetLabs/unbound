@@ -1239,7 +1239,7 @@ mesh_send_reply(struct mesh_state* m, int rcode, struct reply_info* rep,
 		(rep->security <= sec_status_bogus ||
 		rep->security == sec_status_secure_sentinel_fail)) {
 		rcode = LDNS_RCODE_SERVFAIL;
-		if(m->s.env->cfg->stat_extended) 
+		if(m->s.env->cfg->stat_extended)
 			m->s.env->mesh->ans_bogus++;
 	}
 	if(rep && rep->security == sec_status_secure)
@@ -1301,14 +1301,28 @@ mesh_send_reply(struct mesh_state* m, int rcode, struct reply_info* rep,
 			m->s.env->cfg->ignore_cd) && rep &&
 			(rep->security <= sec_status_bogus ||
 			rep->security == sec_status_secure_sentinel_fail)) {
-
 			char *reason = m->s.env->cfg->val_log_level >= 2
 				? errinf_to_str_bogus(&m->s) : NULL;
-			sldns_ede_code reason_bogus = rep->reason_bogus != LDNS_EDE_DNSSEC_BOGUS
-				? rep->reason_bogus : errinf_to_reason_bogus(&m->s);
 
-			edns_opt_list_append_ede(&r->edns.opt_list_out, m->s.region,
-				reason_bogus, reason);
+			/* During validation the EDE code can be received via two
+			 * code paths. One code path fills the reply_info EDE, and
+			 * the other fills it in the errinf_strlist. These paths
+			 * intersect at some points, but where is opaque due to
+			 * the complexity of the validator. At the time of writing
+			 * we make the choice to prefer the EDE from errinf_strlist
+			 * but a compelling reason to do otherwise is just as valid
+			 */
+			sldns_ede_code reason_bogus = errinf_to_reason_bogus(&m->s);
+			if ((reason_bogus == LDNS_EDE_DNSSEC_BOGUS &&
+				rep->reason_bogus != LDNS_EDE_NONE) ||
+				reason_bogus == LDNS_EDE_NONE) {
+					reason_bogus = rep->reason_bogus;
+			}
+
+			if(reason_bogus != LDNS_EDE_NONE) {
+				edns_opt_list_append_ede(&r->edns.opt_list_out,
+					m->s.region, reason_bogus, reason);
+			}
 			free(reason);
 		}
 		error_encode(r_buffer, rcode, &m->s.qinfo, r->qid,

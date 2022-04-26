@@ -69,6 +69,20 @@ static void process_ds_response(struct module_qstate* qstate,
 	struct val_qstate* vq, int id, int rcode, struct dns_msg* msg, 
 	struct query_info* qinfo, struct sock_list* origin);
 
+
+/* Updates the suplied EDE (RFC8914) code selectively so we don't loose
+ * a more specific code
+ */
+static void
+update_reason_bogus(struct reply_info* rep, sldns_ede_code reason_bogus)
+{
+	if (rep->reason_bogus == LDNS_EDE_DNSSEC_BOGUS ||
+		rep->reason_bogus == LDNS_EDE_NONE) {
+		rep->reason_bogus = reason_bogus;
+	}
+}
+
+
 /** fill up nsec3 key iterations config entry */
 static int
 fill_nsec3_iter(struct val_env* ve, char* s, int c)
@@ -230,6 +244,7 @@ val_new_getmsg(struct module_qstate* qstate, struct val_qstate* vq)
 		vq->orig_msg->rep->flags = (uint16_t)(qstate->return_rcode&0xf)
 			|BIT_QR|BIT_RA|(qstate->query_flags|(BIT_CD|BIT_RD));
 		vq->orig_msg->rep->qdcount = 1;
+		vq->orig_msg->rep->reason_bogus = LDNS_EDE_NONE;
 	} else {
 		vq->orig_msg = qstate->return_msg;
 	}
@@ -613,7 +628,7 @@ validate_msg_signatures(struct module_qstate* qstate, struct module_env* env,
 		}
 
 		/* Verify the answer rrset */
-		sec = val_verify_rrset_entry_ede(env, ve, s, key_entry, &reason,
+		sec = val_verify_rrset_entry(env, ve, s, key_entry, &reason,
 			&reason_bogus, LDNS_SECTION_ANSWER, qstate);
 		/* If the (answer) rrset failed to validate, then this 
 		 * message is BAD. */
@@ -621,14 +636,15 @@ validate_msg_signatures(struct module_qstate* qstate, struct module_env* env,
 			log_nametypeclass(VERB_QUERY, "validator: response "
 				"has failed ANSWER rrset:", s->rk.dname,
 				ntohs(s->rk.type), ntohs(s->rk.rrset_class));
-			errinf(qstate, reason);
+			errinf_ede(qstate, reason, reason_bogus);
 			if(ntohs(s->rk.type) == LDNS_RR_TYPE_CNAME)
 				errinf(qstate, "for CNAME");
 			else if(ntohs(s->rk.type) == LDNS_RR_TYPE_DNAME)
 				errinf(qstate, "for DNAME");
 			errinf_origin(qstate, qstate->reply_origin);
 			chase_reply->security = sec_status_bogus;
-			chase_reply->reason_bogus = reason_bogus; 
+			update_reason_bogus(chase_reply, reason_bogus);
+
 			return 0;
 		}
 
@@ -644,7 +660,7 @@ validate_msg_signatures(struct module_qstate* qstate, struct module_env* env,
 	for(i=chase_reply->an_numrrsets; i<chase_reply->an_numrrsets+
 		chase_reply->ns_numrrsets; i++) {
 		s = chase_reply->rrsets[i];
-		sec = val_verify_rrset_entry_ede(env, ve, s, key_entry, &reason,
+		sec = val_verify_rrset_entry(env, ve, s, key_entry, &reason,
 			&reason_bogus, LDNS_SECTION_AUTHORITY, qstate);
 		/* If anything in the authority section fails to be secure, 
 		 * we have a bad message. */
@@ -652,11 +668,11 @@ validate_msg_signatures(struct module_qstate* qstate, struct module_env* env,
 			log_nametypeclass(VERB_QUERY, "validator: response "
 				"has failed AUTHORITY rrset:", s->rk.dname,
 				ntohs(s->rk.type), ntohs(s->rk.rrset_class));
-			errinf(qstate, reason);
+			errinf_ede(qstate, reason, reason_bogus);
 			errinf_origin(qstate, qstate->reply_origin);
 			errinf_rrset(qstate, s);
 			chase_reply->security = sec_status_bogus;
-			chase_reply->reason_bogus = reason_bogus;
+			update_reason_bogus(chase_reply, reason_bogus);
 			return 0;
 		}
 	}
@@ -675,7 +691,7 @@ validate_msg_signatures(struct module_qstate* qstate, struct module_env* env,
 
 		if(sname && query_dname_compare(sname, key_entry->name)==0)
 			(void)val_verify_rrset_entry(env, ve, s, key_entry,
-				&reason, LDNS_SECTION_ADDITIONAL, qstate);
+				&reason, NULL, LDNS_SECTION_ADDITIONAL, qstate);
 		/* the additional section can fail to be secure, 
 		 * it is optional, check signature in case we need
 		 * to clean the additional section later. */
@@ -808,7 +824,7 @@ validate_positive_response(struct module_env* env, struct val_env* ve,
 				"inconsistent wildcard sigs:", s->rk.dname,
 				ntohs(s->rk.type), ntohs(s->rk.rrset_class));
 			chase_reply->security = sec_status_bogus;
-			chase_reply->reason_bogus = LDNS_EDE_DNSSEC_BOGUS;
+			update_reason_bogus(chase_reply, LDNS_EDE_DNSSEC_BOGUS);
 			return;
 		}
 		if(wc && !wc_cached && env->cfg->aggressive_nsec) {
@@ -866,7 +882,7 @@ validate_positive_response(struct module_env* env, struct val_env* ve,
 			"expansion and did not prove original data "
 			"did not exist");
 		chase_reply->security = sec_status_bogus;
-		chase_reply->reason_bogus = LDNS_EDE_DNSSEC_BOGUS;
+		update_reason_bogus(chase_reply, LDNS_EDE_DNSSEC_BOGUS);
 		return;
 	}
 
@@ -965,7 +981,7 @@ validate_nodata_response(struct module_env* env, struct val_env* ve,
 		if(verbosity >= VERB_ALGO)
 			log_dns_msg("Failed NODATA", qchase, chase_reply);
 		chase_reply->security = sec_status_bogus;
-		chase_reply->reason_bogus = LDNS_EDE_DNSSEC_BOGUS;
+		update_reason_bogus(chase_reply, LDNS_EDE_DNSSEC_BOGUS);
 		return;
 	}
 
@@ -1052,7 +1068,7 @@ validate_nameerror_response(struct module_env* env, struct val_env* ve,
 		verbose(VERB_QUERY, "NameError response has failed to prove: "
 		          "qname does not exist");
 		chase_reply->security = sec_status_bogus;
-		chase_reply->reason_bogus = LDNS_EDE_DNSSEC_BOGUS;
+		update_reason_bogus(chase_reply, LDNS_EDE_DNSSEC_BOGUS);
 		/* Be lenient with RCODE in NSEC NameError responses */
 		validate_nodata_response(env, ve, qchase, chase_reply, kkey);
 		if (chase_reply->security == sec_status_secure)
@@ -1064,7 +1080,7 @@ validate_nameerror_response(struct module_env* env, struct val_env* ve,
 		verbose(VERB_QUERY, "NameError response has failed to prove: "
 		          "covering wildcard does not exist");
 		chase_reply->security = sec_status_bogus;
-		chase_reply->reason_bogus = LDNS_EDE_DNSSEC_BOGUS;
+		update_reason_bogus(chase_reply, LDNS_EDE_DNSSEC_BOGUS);
 		/* Be lenient with RCODE in NSEC NameError responses */
 		validate_nodata_response(env, ve, qchase, chase_reply, kkey);
 		if (chase_reply->security == sec_status_secure)
@@ -1147,7 +1163,7 @@ validate_any_response(struct module_env* env, struct val_env* ve,
 	if(qchase->qtype != LDNS_RR_TYPE_ANY) {
 		log_err("internal error: ANY validation called for non-ANY");
 		chase_reply->security = sec_status_bogus;
-		chase_reply->reason_bogus = LDNS_EDE_DNSSEC_BOGUS;
+		update_reason_bogus(chase_reply, LDNS_EDE_DNSSEC_BOGUS);
 		return;
 	}
 
@@ -1164,7 +1180,7 @@ validate_any_response(struct module_env* env, struct val_env* ve,
 				s->rk.dname, ntohs(s->rk.type), 
 				ntohs(s->rk.rrset_class));
 			chase_reply->security = sec_status_bogus;
-			chase_reply->reason_bogus = LDNS_EDE_DNSSEC_BOGUS;
+			update_reason_bogus(chase_reply, LDNS_EDE_DNSSEC_BOGUS);
 			return;
 		}
 	}
@@ -1219,7 +1235,7 @@ validate_any_response(struct module_env* env, struct val_env* ve,
 			"expansion and did not prove original data "
 			"did not exist");
 		chase_reply->security = sec_status_bogus;
-		chase_reply->reason_bogus = LDNS_EDE_DNSSEC_BOGUS;
+		update_reason_bogus(chase_reply, LDNS_EDE_DNSSEC_BOGUS);
 		return;
 	}
 
@@ -1267,7 +1283,7 @@ validate_cname_response(struct module_env* env, struct val_env* ve,
 				"inconsistent wildcard sigs:", s->rk.dname,
 				ntohs(s->rk.type), ntohs(s->rk.rrset_class));
 			chase_reply->security = sec_status_bogus;
-			chase_reply->reason_bogus = LDNS_EDE_DNSSEC_BOGUS;
+			update_reason_bogus(chase_reply, LDNS_EDE_DNSSEC_BOGUS);
 			return;
 		}
 		
@@ -1280,7 +1296,7 @@ validate_cname_response(struct module_env* env, struct val_env* ve,
 				"wildcarded DNAME:", s->rk.dname, 
 				ntohs(s->rk.type), ntohs(s->rk.rrset_class));
 			chase_reply->security = sec_status_bogus;
-			chase_reply->reason_bogus = LDNS_EDE_DNSSEC_BOGUS;
+			update_reason_bogus(chase_reply, LDNS_EDE_DNSSEC_BOGUS);
 			return;
 		}
 
@@ -1338,7 +1354,7 @@ validate_cname_response(struct module_env* env, struct val_env* ve,
 			"expansion and did not prove original data "
 			"did not exist");
 		chase_reply->security = sec_status_bogus;
-		chase_reply->reason_bogus = LDNS_EDE_DNSSEC_BOGUS;
+		update_reason_bogus(chase_reply, LDNS_EDE_DNSSEC_BOGUS);
 		return;
 	}
 
@@ -1439,7 +1455,7 @@ validate_cname_noanswer_response(struct module_env* env, struct val_env* ve,
 		verbose(VERB_QUERY, "CNAMEchain to noanswer proves that name "
 			"exists and not exists, bogus");
 		chase_reply->security = sec_status_bogus;
-		chase_reply->reason_bogus = LDNS_EDE_DNSSEC_BOGUS;
+		update_reason_bogus(chase_reply, LDNS_EDE_DNSSEC_BOGUS);
 		return;
 	}
 	if(!nodata_valid_nsec && !nxdomain_valid_nsec && nsec3s_seen) {
@@ -1465,7 +1481,7 @@ validate_cname_noanswer_response(struct module_env* env, struct val_env* ve,
 		if(verbosity >= VERB_ALGO)
 			log_dns_msg("Failed CNAMEnoanswer", qchase, chase_reply);
 		chase_reply->security = sec_status_bogus;
-		chase_reply->reason_bogus = LDNS_EDE_DNSSEC_BOGUS;
+		update_reason_bogus(chase_reply, LDNS_EDE_DNSSEC_BOGUS);
 		return;
 	}
 
@@ -1511,7 +1527,7 @@ processInit(struct module_qstate* qstate, struct val_qstate* vq,
 	}
 
 	/* correctly initialize reason_bogus */
-	vq->chase_reply->reason_bogus = LDNS_EDE_DNSSEC_BOGUS;
+	update_reason_bogus(vq->chase_reply, LDNS_EDE_DNSSEC_BOGUS);
 
 	verbose(VERB_ALGO, "validator classification %s", 
 		val_classification_to_string(subtype));
@@ -1578,7 +1594,7 @@ processInit(struct module_qstate* qstate, struct val_qstate* vq,
 			verbose(VERB_QUERY, "unsigned parent zone denies"
 				" trust anchor, indeterminate");
 			vq->chase_reply->security = sec_status_indeterminate;
-			vq->chase_reply->reason_bogus = LDNS_EDE_DNSSEC_INDETERMINATE;
+			update_reason_bogus(vq->chase_reply, LDNS_EDE_DNSSEC_INDETERMINATE);
 			vq->state = VAL_FINISHED_STATE;
 			return 1;
 		}
@@ -1610,7 +1626,7 @@ processInit(struct module_qstate* qstate, struct val_qstate* vq,
 	if(vq->key_entry == NULL && anchor == NULL) {
 		/*response isn't under a trust anchor, so we cannot validate.*/
 		vq->chase_reply->security = sec_status_indeterminate;
-		vq->chase_reply->reason_bogus = LDNS_EDE_DNSSEC_INDETERMINATE;
+		update_reason_bogus(vq->chase_reply, LDNS_EDE_DNSSEC_INDETERMINATE);
 		/* go to finished state to cache this result */
 		vq->state = VAL_FINISHED_STATE;
 		return 1;
@@ -1666,7 +1682,7 @@ processInit(struct module_qstate* qstate, struct val_qstate* vq,
 		/* no retries, stop bothering the authority until timeout */
 		vq->restart_count = ve->max_restart;
 		vq->chase_reply->security = sec_status_bogus;
-		vq->chase_reply->reason_bogus = LDNS_EDE_DNSSEC_BOGUS;
+		update_reason_bogus(vq->chase_reply, LDNS_EDE_DNSSEC_BOGUS);
 		vq->state = VAL_FINISHED_STATE;
 		return 1;
 	}
@@ -1740,7 +1756,7 @@ processFindKey(struct module_qstate* qstate, struct val_qstate* vq, int id)
 			errinf_ede(qstate, "no signatures", LDNS_EDE_RRSIGS_MISSING);
 			errinf_origin(qstate, qstate->reply_origin);
 			vq->chase_reply->security = sec_status_bogus;
-			vq->chase_reply->reason_bogus = LDNS_EDE_RRSIGS_MISSING;
+			update_reason_bogus(vq->chase_reply, LDNS_EDE_RRSIGS_MISSING);
 			vq->state = VAL_FINISHED_STATE;
 			return 1;
 		}
@@ -1874,10 +1890,7 @@ processValidate(struct module_qstate* qstate, struct val_qstate* vq,
 			LDNS_RR_TYPE_DNSKEY, vq->key_entry->key_class);
 		vq->chase_reply->security = sec_status_bogus;
 
-		/* make sure we don't overwrite a previously set specific
-		 * reason_bogus in the qstate */
-		if (errinf_to_reason_bogus(qstate) == LDNS_EDE_DNSSEC_BOGUS)
-			vq->chase_reply->reason_bogus = LDNS_EDE_DNSKEY_MISSING;
+		update_reason_bogus(vq->chase_reply, LDNS_EDE_DNSKEY_MISSING);
 		errinf_ede(qstate, "while building chain of trust",
 			LDNS_EDE_DNSKEY_MISSING);
 		if(vq->restart_count >= ve->max_restart)
@@ -1895,7 +1908,7 @@ processValidate(struct module_qstate* qstate, struct val_qstate* vq,
 		errinf_ede(qstate, "no signatures", LDNS_EDE_RRSIGS_MISSING);
 		errinf_origin(qstate, qstate->reply_origin);
 		vq->chase_reply->security = sec_status_bogus;
-		vq->chase_reply->reason_bogus = LDNS_EDE_RRSIGS_MISSING;
+		update_reason_bogus(vq->chase_reply, LDNS_EDE_RRSIGS_MISSING);
 		return 1;
 	}
 	subtype = val_classify_response(qstate->query_flags, &qstate->qinfo,
@@ -2035,7 +2048,7 @@ processFinished(struct module_qstate* qstate, struct val_qstate* vq,
 	/* store overall validation result in orig_msg */
 	if(vq->rrset_skip == 0) {
 		vq->orig_msg->rep->security = vq->chase_reply->security;
-		vq->orig_msg->rep->reason_bogus = vq->chase_reply->reason_bogus;
+		update_reason_bogus(vq->orig_msg->rep, vq->chase_reply->reason_bogus);
 	} else if(subtype != VAL_CLASS_REFERRAL ||
 		vq->rrset_skip < vq->orig_msg->rep->an_numrrsets + 
 		vq->orig_msg->rep->ns_numrrsets) {
@@ -2045,8 +2058,7 @@ processFinished(struct module_qstate* qstate, struct val_qstate* vq,
 		if(vq->chase_reply->security < vq->orig_msg->rep->security) {
 			vq->orig_msg->rep->security = 
 				vq->chase_reply->security;
-			vq->orig_msg->rep->reason_bogus = 
-				vq->chase_reply->reason_bogus;
+			update_reason_bogus(vq->orig_msg->rep, vq->chase_reply->reason_bogus);
 		}
 	}
 
@@ -2070,7 +2082,7 @@ processFinished(struct module_qstate* qstate, struct val_qstate* vq,
 			&vq->rrset_skip)) {
 			verbose(VERB_ALGO, "validator: failed to chase CNAME");
 			vq->orig_msg->rep->security = sec_status_bogus;
-			vq->orig_msg->rep->reason_bogus = LDNS_EDE_DNSSEC_BOGUS;
+			update_reason_bogus(vq->orig_msg->rep, LDNS_EDE_DNSSEC_BOGUS);
 		} else {
 			/* restart process for new qchase at rrset_skip */
 			log_query_info(VERB_ALGO, "validator: chased to",
@@ -2287,8 +2299,7 @@ val_operate(struct module_qstate* qstate, enum module_ev event, int id,
 			if(qstate->return_msg) {
 				qstate->return_msg->rep->security =
 					sec_status_bogus;
-				qstate->return_msg->rep->reason_bogus =
-					LDNS_EDE_DNSSEC_BOGUS;
+				update_reason_bogus(qstate->return_msg->rep, LDNS_EDE_DNSSEC_BOGUS);
 			}
 			qstate->ext_state[id] = module_finished;
 			return;
@@ -2459,7 +2470,7 @@ ds_response_to_ke(struct module_qstate* qstate, struct val_qstate* vq,
 		}
 		/* Verify only returns BOGUS or SECURE. If the rrset is 
 		 * bogus, then we are done. */
-		sec = val_verify_rrset_entry_ede(qstate->env, ve, ds,
+		sec = val_verify_rrset_entry(qstate->env, ve, ds,
 			vq->key_entry, &reason, &reason_bogus, LDNS_SECTION_ANSWER, qstate);
 		if(sec != sec_status_secure) {
 			verbose(VERB_DETAIL, "DS rrset in DS response did "
@@ -2600,7 +2611,7 @@ ds_response_to_ke(struct module_qstate* qstate, struct val_qstate* vq,
 			goto return_bogus;
 		}
 		sec = val_verify_rrset_entry(qstate->env, ve, cname, 
-			vq->key_entry, &reason, LDNS_SECTION_ANSWER, qstate);
+			vq->key_entry, &reason, NULL, LDNS_SECTION_ANSWER, qstate);
 		if(sec == sec_status_secure) {
 			verbose(VERB_ALGO, "CNAME validated, "
 				"proof that DS does not exist");

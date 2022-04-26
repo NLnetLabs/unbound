@@ -121,20 +121,15 @@ void val_find_signer(enum val_classification subtype,
  * @param rrset: what to verify
  * @param kkey: key_entry to verify with.
  * @param reason: reason of failure. Fixed string or alloced in scratch.
+ * @param reason_bogus: EDE (RFC8914) code paired with the reason of failure.
  * @param section: section of packet where this rrset comes from.
  * @param qstate: qstate with region.
  * @return security status of verification.
  */
 enum sec_status val_verify_rrset_entry(struct module_env* env, 
 	struct val_env* ve, struct ub_packed_rrset_key* rrset, 
-	struct key_entry_key* kkey, char** reason, sldns_pkt_section section,
-	struct module_qstate* qstate);
-
-enum sec_status val_verify_rrset_entry_ede(struct module_env* env, 
-	struct val_env* ve, struct ub_packed_rrset_key* rrset, 
 	struct key_entry_key* kkey, char** reason, sldns_ede_code *reason_bogus,
 	sldns_pkt_section section, struct module_qstate* qstate);
-
 
 /**
  * Verify DNSKEYs with DS rrset. Like val_verify_new_DNSKEYs but
@@ -147,17 +142,13 @@ enum sec_status val_verify_rrset_entry_ede(struct module_env* env,
  *   algorithm is enough.  The list of signalled algorithms is returned,
  *   must have enough space for ALGO_NEEDS_MAX+1.
  * @param reason: reason of failure. Fixed string or alloced in scratch.
+ * @param reason_bogus: EDE (RFC8914) code paired with the reason of failure.
  * @param qstate: qstate with region.
  * @return: sec_status_secure if a DS matches.
  *     sec_status_insecure if end of trust (i.e., unknown algorithms).
  *     sec_status_bogus if it fails.
  */
-enum sec_status val_verify_DNSKEY_with_DS(struct module_env* env, 
-	struct val_env* ve, struct ub_packed_rrset_key* dnskey_rrset, 
-	struct ub_packed_rrset_key* ds_rrset, uint8_t* sigalg, char** reason,
-	struct module_qstate* qstate);
-
-enum sec_status val_verify_DNSKEY_with_DS_ede(struct module_env* env,
+enum sec_status val_verify_DNSKEY_with_DS(struct module_env* env,
     struct val_env* ve, struct ub_packed_rrset_key* dnskey_rrset,
     struct ub_packed_rrset_key* ds_rrset, uint8_t* sigalg, char** reason,
     sldns_ede_code *reason_bogus, struct module_qstate* qstate);
@@ -174,18 +165,13 @@ enum sec_status val_verify_DNSKEY_with_DS_ede(struct module_env* env,
  *   algorithm is enough.  The list of signalled algorithms is returned,
  *   must have enough space for ALGO_NEEDS_MAX+1.
  * @param reason: reason of failure. Fixed string or alloced in scratch.
+* @param reason_bogus: EDE (RFC8914) code paired with the reason of failure.
  * @param qstate: qstate with region.
  * @return: sec_status_secure if a DS matches.
  *     sec_status_insecure if end of trust (i.e., unknown algorithms).
  *     sec_status_bogus if it fails.
  */
-enum sec_status val_verify_DNSKEY_with_TA(struct module_env* env, 
-	struct val_env* ve, struct ub_packed_rrset_key* dnskey_rrset, 
-	struct ub_packed_rrset_key* ta_ds,
-	struct ub_packed_rrset_key* ta_dnskey, uint8_t* sigalg, char** reason,
-	struct module_qstate* qstate);
-
-enum sec_status val_verify_DNSKEY_with_TA_ede(struct module_env* env,
+enum sec_status val_verify_DNSKEY_with_TA(struct module_env* env,
     struct val_env* ve, struct ub_packed_rrset_key* dnskey_rrset,
     struct ub_packed_rrset_key* ta_ds,
     struct ub_packed_rrset_key* ta_dnskey, uint8_t* sigalg, char** reason,

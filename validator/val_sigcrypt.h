@@ -265,10 +265,6 @@ uint16_t dnskey_get_flags(struct ub_packed_rrset_key* k, size_t idx);
  */
 enum sec_status dnskeyset_verify_rrset(struct module_env* env, 
 	struct val_env* ve, struct ub_packed_rrset_key* rrset, 
-	struct ub_packed_rrset_key* dnskey, uint8_t* sigalg, char** reason,
-	sldns_pkt_section section, struct module_qstate* qstate);
-enum sec_status dnskeyset_verify_rrset_ede(struct module_env* env, 
-	struct val_env* ve, struct ub_packed_rrset_key* rrset, 
 	struct ub_packed_rrset_key* dnskey, uint8_t* sigalg,
 	char** reason, sldns_ede_code *reason_bogus,
 	sldns_pkt_section section, struct module_qstate* qstate);
@@ -282,18 +278,13 @@ enum sec_status dnskeyset_verify_rrset_ede(struct module_env* env,
  * @param dnskey: DNSKEY rrset, keyset.
  * @param dnskey_idx: which key from the rrset to try.
  * @param reason: if bogus, a string returned, fixed or alloced in scratch.
+ * @param reason_bogus: EDE (RFC8914) code paired with the reason of failure.
  * @param section: section of packet where this rrset comes from.
  * @param qstate: qstate with region.
  * @return secure if *this* key signs any of the signatures on rrset.
  *	unchecked on error or and bogus on bad signature.
  */
-enum sec_status dnskey_verify_rrset(struct module_env* env, 
-	struct val_env* ve, struct ub_packed_rrset_key* rrset, 
-	struct ub_packed_rrset_key* dnskey, size_t dnskey_idx, char** reason,
-	sldns_pkt_section section, struct module_qstate* qstate);
-
-enum sec_status 
-dnskey_verify_rrset_ede(struct module_env* env, struct val_env* ve,
+enum sec_status dnskey_verify_rrset(struct module_env* env, struct val_env* ve,
         struct ub_packed_rrset_key* rrset, struct ub_packed_rrset_key* dnskey,
 	size_t dnskey_idx, char** reason, sldns_ede_code *reason_bogus,
 	sldns_pkt_section section, struct module_qstate* qstate);

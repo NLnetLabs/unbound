@@ -117,7 +117,7 @@ construct_reply_info_base(struct regional* region, uint16_t flags, size_t qd,
 	rep->ar_numrrsets = ar;
 	rep->rrset_count = total;
 	rep->security = sec;
-	rep->reason_bogus = LDNS_EDE_DNSSEC_BOGUS;
+	rep->reason_bogus = LDNS_EDE_NONE;
 	rep->authoritative = 0;
 	/* array starts after the refs */
 	if(region)

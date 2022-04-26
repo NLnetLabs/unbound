@@ -1303,7 +1303,7 @@ list_is_secure(struct module_env* env, struct val_env* ve,
 		if(d->security == sec_status_secure)
 			continue;
 		d->security = val_verify_rrset_entry(env, ve, list[i], kkey,
-			reason, LDNS_SECTION_AUTHORITY, qstate);
+			reason, NULL, LDNS_SECTION_AUTHORITY, qstate);
 		if(d->security != sec_status_secure) {
 			verbose(VERB_ALGO, "NSEC3 did not verify");
 			return 0;

@@ -804,8 +804,6 @@ struct config_strlist {
 	struct config_strlist* next;
 	/** config option string */
 	char* str;
-	/** EDE code companion to the error str */
-	sldns_ede_code reason_bogus;
 };
 
 /**
@@ -1247,65 +1245,6 @@ char* fname_after_chroot(const char* fname, struct config_file* cfg,
  * @return: malloced string "reversed-ip-name PTR name"
  */
 char* cfg_ptr_reverse(char* str);
-
-/**
- * Append text to the error info for validation.
- * @param qstate: query state.
- * @param str: copied into query region and appended.
- * Failures to allocate are logged.
- */
-void errinf(struct module_qstate* qstate, const char* str);
-void errinf_ede(struct module_qstate* qstate, const char* str,
-                sldns_ede_code reason_bogus);
-
-/**
- * Append text to error info:  from 1.2.3.4
- * @param qstate: query state.
- * @param origin: sock list with origin of trouble. 
- *	Every element added.
- *	If NULL: nothing is added.
- *	if 0len element: 'from cache' is added.
- */
-void errinf_origin(struct module_qstate* qstate, struct sock_list *origin);
-
-/**
- * Append text to error info:  for RRset name type class
- * @param qstate: query state.
- * @param rr: rrset_key.
- */
-void errinf_rrset(struct module_qstate* qstate, struct ub_packed_rrset_key *rr);
-
-/**
- * Append text to error info:  str dname
- * @param qstate: query state.
- * @param str: explanation string
- * @param dname: the dname.
- */
-void errinf_dname(struct module_qstate* qstate, const char* str, 
-	uint8_t* dname);
-
-/**
- * Create error info in string.  For validation failures.
- * @param qstate: query state.
- * @return string or NULL on malloc failure (already logged).
- *    This string is malloced and has to be freed by caller.
- */
-char* errinf_to_str_bogus(struct module_qstate* qstate);
-/**
- * Check the sldns_ede_code of the qstate.
- * @param qstate: query state.
- * @return LDNS_EDE_DNSSEC_BOGUS by default, or another sldns_ede_code 
- * if this is set.
- */
-sldns_ede_code errinf_to_reason_bogus(struct module_qstate* qstate);
-
-/**
- * Create error info in string.  For other servfails.
- * @param qstate: query state.
- * @return string or NULL on malloc failure (already logged).
- *    This string is malloced and has to be freed by caller.
- */
-char* errinf_to_str_servfail(struct module_qstate* qstate);
 
 /**
  * Used during options parsing

@@ -132,6 +132,7 @@ msg_create(struct regional* region, struct query_info* qinfo)
 		return NULL;
 	msg->rep->flags = (uint16_t)(BIT_QR | BIT_AA);
 	msg->rep->authoritative = 1;
+	msg->rep->reason_bogus = LDNS_EDE_NONE;
 	msg->rep->qdcount = 1;
 	/* rrsets is NULL, no rrsets yet */
 	return msg;
@@ -7753,7 +7754,7 @@ static int zonemd_dnssec_verify_rrset(struct auth_zone* z,
 		auth_zone_log(z->name, VERB_ALGO,
 			"zonemd: verify %s RRset with DNSKEY", typestr);
 	}
-	sec = dnskeyset_verify_rrset(env, ve, &pk, dnskey, sigalg, why_bogus,
+	sec = dnskeyset_verify_rrset(env, ve, &pk, dnskey, sigalg, why_bogus, NULL,
 		LDNS_SECTION_ANSWER, NULL);
 	if(sec == sec_status_secure) {
 		return 1;

@@ -1263,7 +1263,7 @@ verify_dnskey(struct module_env* env, struct val_env* ve,
 	int downprot = env->cfg->harden_algo_downgrade;
 	enum sec_status sec = val_verify_DNSKEY_with_TA(env, ve, rrset,
 		tp->ds_rrset, tp->dnskey_rrset, downprot?sigalg:NULL, &reason,
-		qstate);
+		NULL, qstate);
 	/* sigalg is ignored, it returns algorithms signalled to exist, but
 	 * in 5011 there are no other rrsets to check.  if downprot is
 	 * enabled, then it checks that the DNSKEY is signed with all
@@ -1312,7 +1312,7 @@ rr_is_selfsigned_revoked(struct module_env* env, struct val_env* ve,
 	/* no algorithm downgrade protection necessary, if it is selfsigned
 	 * revoked it can be removed. */
 	sec = dnskey_verify_rrset(env, ve, dnskey_rrset, dnskey_rrset, i, 
-		&reason, LDNS_SECTION_ANSWER, qstate);
+		&reason, NULL, LDNS_SECTION_ANSWER, qstate);
 	return (sec == sec_status_secure);
 }
 
