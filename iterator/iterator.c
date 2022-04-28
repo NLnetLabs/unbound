@@ -1831,6 +1831,23 @@ query_for_targets(struct module_qstate* qstate, struct iter_qstate* iq,
 	int missing;
 	int toget = 0;
 
+	iter_mark_cycle_targets(qstate, iq->dp);
+	missing = (int)delegpt_count_missing_targets(iq->dp);
+	log_assert(maxtargets != 0); /* that would not be useful */
+
+	/* Generate target requests. Basically, any missing targets
+	 * are queried for here, regardless if it is necessary to do
+	 * so to continue processing. */
+	if(maxtargets < 0 || maxtargets > missing)
+		toget = missing;
+	else	toget = maxtargets;
+	if(toget == 0) {
+		*num = 0;
+		return 1;
+	}
+
+	/* now that we are sure that a target query is going to be made,
+	 * check the limits. */
 	if(iq->depth == ie->max_dependency_depth)
 		return 0;
 	if(iq->depth > 0 && iq->target_count &&
@@ -1850,20 +1867,6 @@ query_for_targets(struct module_qstate* qstate, struct iter_qstate* iq,
 		return 0;
 	}
 
-	iter_mark_cycle_targets(qstate, iq->dp);
-	missing = (int)delegpt_count_missing_targets(iq->dp);
-	log_assert(maxtargets != 0); /* that would not be useful */
-
-	/* Generate target requests. Basically, any missing targets 
-	 * are queried for here, regardless if it is necessary to do 
-	 * so to continue processing. */
-	if(maxtargets < 0 || maxtargets > missing)
-		toget = missing;
-	else	toget = maxtargets;
-	if(toget == 0) {
-		*num = 0;
-		return 1;
-	}
 	/* select 'toget' items from the total of 'missing' items */
 	log_assert(toget <= missing);
 

@@ -1,3 +1,7 @@
+28 April 2022: Wouter
+	- Fix #670: SERVFAIL problems with unbound 1.15.0 running on
+	  OpenBSD 7.1.
+
 8 April 2022: Wouter
 	- Fix zonemd check to allow unsupported algorithms to load.
 	  If there are only unsupported algorithms, or unsupported schemes,
