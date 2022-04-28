@@ -378,7 +378,8 @@ rrinternal_get_quoted(sldns_buffer* strbuf, const char** delimiters,
 
 		/* skip spaces */
 		while(sldns_buffer_remaining(strbuf) > 0 &&
-			*(sldns_buffer_current(strbuf)) == ' ') {
+			(*(sldns_buffer_current(strbuf)) == ' ' ||
+			*(sldns_buffer_current(strbuf)) == '\t')) {
 			sldns_buffer_skip(strbuf, 1);
 		}
 
@@ -780,7 +781,8 @@ rrinternal_parse_rdata(sldns_buffer* strbuf, char* token, size_t token_len,
 
 		/* unknown RR data */
 		if(token_strlen>=2 && strncmp(token, "\\#", 2) == 0 &&
-			!quoted && (token_strlen == 2 || token[2]==' ')) {
+			!quoted && (token_strlen == 2 || token[2]==' ' ||
+			token[2]=='\t')) {
 			was_unknown_rr_format = 1;
 			if((status=rrinternal_parse_unknown(strbuf, token,
 				token_len, rr, rr_len, &rr_cur_len, 
@@ -1125,7 +1127,7 @@ sldns_str2wire_svcparam_key_lookup(const char *key, size_t key_len)
 		if (!strncmp(key, "mandatory", sizeof("mandatory")-1))
 			return SVCB_KEY_MANDATORY;
 		if (!strncmp(key, "echconfig", sizeof("echconfig")-1))
-			return SVCB_KEY_ECH; /* allow "echconfig as well as "ech" */
+			return SVCB_KEY_ECH; /* allow "echconfig" as well as "ech" */
 		break;
 
 	case sizeof("alpn")-1:

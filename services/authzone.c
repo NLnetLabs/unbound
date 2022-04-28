@@ -1883,6 +1883,8 @@ static int auth_zone_zonemd_check_hash(struct auth_zone* z,
 	struct regional* region = NULL;
 	struct sldns_buffer* buf = NULL;
 	uint32_t soa_serial = 0;
+	char* unsupported_reason = NULL;
+	int only_unsupported = 1;
 	region = env->scratch;
 	regional_free_all(region);
 	buf = env->scratch_buffer;
@@ -1912,6 +1914,7 @@ static int auth_zone_zonemd_check_hash(struct auth_zone* z,
 			&hashalgo, &hash, &hashlen)) {
 			/* malformed RR */
 			*reason = "ZONEMD rdata malformed";
+			only_unsupported = 0;
 			continue;
 		}
 		/* check for duplicates */
@@ -1921,24 +1924,50 @@ static int auth_zone_zonemd_check_hash(struct auth_zone* z,
 			 * is not allowed. */
 			*reason = "ZONEMD RRSet contains more than one RR "
 				"with the same scheme and hash algorithm";
+			only_unsupported = 0;
 			continue;
 		}
 		regional_free_all(region);
 		if(serial != soa_serial) {
 			*reason = "ZONEMD serial is wrong";
+			only_unsupported = 0;
 			continue;
 		}
+		*reason = NULL;
 		if(auth_zone_generate_zonemd_check(z, scheme, hashalgo,
 			hash, hashlen, region, buf, reason)) {
 			/* success */
+			if(*reason) {
+				if(!unsupported_reason)
+					unsupported_reason = *reason;
+				/* continue to check for valid ZONEMD */
+				if(verbosity >= VERB_ALGO) {
+					char zstr[255+1];
+					dname_str(z->name, zstr);
+					verbose(VERB_ALGO, "auth-zone %s ZONEMD %d %d is unsupported: %s", zstr, (int)scheme, (int)hashalgo, *reason);
+				}
+				*reason = NULL;
+				continue;
+			}
 			if(verbosity >= VERB_ALGO) {
 				char zstr[255+1];
 				dname_str(z->name, zstr);
-				verbose(VERB_ALGO, "auth-zone %s ZONEMD hash is correct", zstr);
+				if(!*reason)
+					verbose(VERB_ALGO, "auth-zone %s ZONEMD hash is correct", zstr);
 			}
 			return 1;
 		}
+		only_unsupported = 0;
 		/* try next one */
+	}
+	/* have we seen no failures but only unsupported algo,
+	 * and one unsupported algorithm, or more. */
+	if(only_unsupported && unsupported_reason) {
+		/* only unsupported algorithms, with valid serial, not
+		 * malformed. Did not see supported algorithms, failed or
+		 * successful ones. */
+		*reason = unsupported_reason;
+		return 1;
 	}
 	/* fail, we may have reason */
 	if(!*reason)
@@ -7660,13 +7689,16 @@ int auth_zone_generate_zonemd_check(struct auth_zone* z, int scheme,
 {
 	uint8_t gen[512];
 	size_t genlen = 0;
+	*reason = NULL;
 	if(!zonemd_hashalgo_supported(hashalgo)) {
+		/* allow it */
 		*reason = "unsupported algorithm";
-		return 0;
+		return 1;
 	}
 	if(!zonemd_scheme_supported(scheme)) {
+		/* allow it */
 		*reason = "unsupported scheme";
-		return 0;
+		return 1;
 	}
 	if(hashlen < 12) {
 		/* the ZONEMD draft requires digests to fail if too small */
@@ -8031,9 +8063,13 @@ auth_zone_verify_zonemd_with_key(struct auth_zone* z, struct module_env* env,
 	}
 
 	/* success! log the success */
-	auth_zone_log(z->name, VERB_ALGO, "ZONEMD verification successful");
+	if(reason)
+		auth_zone_log(z->name, VERB_ALGO, "ZONEMD %s", reason);
+	else	auth_zone_log(z->name, VERB_ALGO, "ZONEMD verification successful");
 	if(result) {
-		*result = strdup("ZONEMD verification successful");
+		if(reason)
+			*result = strdup(reason);
+		else	*result = strdup("ZONEMD verification successful");
 		if(!*result) log_err("out of memory");
 	}
 }
