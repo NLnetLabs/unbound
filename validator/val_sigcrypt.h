@@ -257,6 +257,7 @@ uint16_t dnskey_get_flags(struct ub_packed_rrset_key* k, size_t idx);
  * @param sigalg: if nonNULL provide downgrade protection otherwise one
  *   algorithm is enough.
  * @param reason: if bogus, a string returned, fixed or alloced in scratch.
+ * @param reason_bogus: EDE (RFC8914) code paired with the reason of failure.
  * @param section: section of packet where this rrset comes from.
  * @param qstate: qstate with region.
  * @return SECURE if one key in the set verifies one rrsig.
