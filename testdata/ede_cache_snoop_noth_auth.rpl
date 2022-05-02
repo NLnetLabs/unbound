@@ -5,8 +5,8 @@ CONFIG_END
 
 SCENARIO_BEGIN Test ede-cache-snoop-not-authoritative
 ; Scenario overview:
-; - query for example.com. A record with EDNS
-; - check that we a refused answer with EDE (RFC8914) code 20 - Not Authoritative
+; - query for example.com. A record with EDNS without the RD bit
+; - check that we get a refused answer with EDE (RFC8914) code 20 - Not Authoritative
 
 ; Query without RD flag
 STEP 1 QUERY

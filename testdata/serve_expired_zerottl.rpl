@@ -80,8 +80,6 @@ ENTRY_BEGIN
 	REPLY RD
 	SECTION QUESTION
 		example.com. IN A
-		HEX_EDNSDATA_BEGIN
-	    HEX_EDNSDATA_END
 ENTRY_END
 
 ; Check that we got the correct answer with 0 TTL
@@ -97,8 +95,6 @@ ENTRY_BEGIN
 		example.com.  0 IN NS ns.example.com.
 	SECTION ADDITIONAL
 		ns.example.com. 0 IN A 1.2.3.4
-		HEX_EDNSDATA_BEGIN
-	    HEX_EDNSDATA_END
 ENTRY_END
 
 ; Let some time to pass
@@ -110,8 +106,6 @@ ENTRY_BEGIN
 	REPLY RD
 	SECTION QUESTION
 		example.com. IN A
-		HEX_EDNSDATA_BEGIN
-	    HEX_EDNSDATA_END
 ENTRY_END
 
 ; Check that we got the correct answer
@@ -127,8 +121,6 @@ ENTRY_BEGIN
 		example.com. 10 IN NS ns.example.com.
 	SECTION ADDITIONAL
 		ns.example.com. 10 IN A 1.2.3.4
-		HEX_EDNSDATA_BEGIN
-	    HEX_EDNSDATA_END
 ENTRY_END
 
 ; Wait for the TTL to expire
@@ -137,18 +129,16 @@ STEP 30 TIME_PASSES ELAPSE 11
 ; Query with RD flag
 STEP 40 QUERY
 ENTRY_BEGIN
-	REPLY RD
+	REPLY RD DO
 	SECTION QUESTION
 		example.com. IN A
-		HEX_EDNSDATA_BEGIN
-	    HEX_EDNSDATA_END
 ENTRY_END
 
 ; Check that we got the correct answer
 STEP 49 CHECK_ANSWER
 ENTRY_BEGIN
 	MATCH all ttl ede=3
-	REPLY QR RD RA NOERROR
+	REPLY QR RD RA DO NOERROR
 	SECTION QUESTION
 		example.com. IN A
 	SECTION ANSWER
@@ -157,8 +147,6 @@ ENTRY_BEGIN
 		example.com. 123 IN NS ns.example.com.
 	SECTION ADDITIONAL
 		ns.example.com. 123 IN A 1.2.3.4
-		HEX_EDNSDATA_BEGIN
-	    HEX_EDNSDATA_END
 ENTRY_END
 
 ; Give time for the pending query to get answered

@@ -7,7 +7,7 @@ CONFIG_END
 SCENARIO_BEGIN Test ede-acl-refused
 ; Scenario overview:
 ; - query for example.com. A record with EDNS
-; - check that we a refused answer with EDE (RFC8914) code 18 - Prohibited
+; - check that we get a refused answer with EDE (RFC8914) code 18 - Prohibited
 
 ; Query without RD flag
 STEP 1 QUERY

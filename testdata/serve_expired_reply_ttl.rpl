@@ -55,15 +55,12 @@ ENTRY_BEGIN
 	REPLY RD
 	SECTION QUESTION
 		example.com. IN A
-	SECTION ADDITIONAL
-    HEX_EDNSDATA_BEGIN
-    HEX_EDNSDATA_END
 ENTRY_END
 
 ; Check that we got the correct answer (should be cached)
 STEP 10 CHECK_ANSWER
 ENTRY_BEGIN
-	MATCH all_noedns ttl
+	MATCH all ttl
 	REPLY QR RD RA NOERROR
 	SECTION QUESTION
 		example.com. IN A
@@ -73,8 +70,6 @@ ENTRY_BEGIN
 		example.com. IN NS ns.example.com.
 	SECTION ADDITIONAL
 		ns.example.com. IN A 1.2.3.4
-	HEX_EDNSDATA_BEGIN
-    HEX_EDNSDATA_END
 ENTRY_END
 
 ; Wait for the TTL to expire
@@ -101,8 +96,6 @@ ENTRY_BEGIN
 		example.com. 123 NS ns.example.com.
 	SECTION ADDITIONAL
 		ns.example.com. 123 A 1.2.3.4
-		HEX_EDNSDATA_BEGIN
-	    HEX_EDNSDATA_END
 ENTRY_END
 
 ; Give time for the pending query to get answered

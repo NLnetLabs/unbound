@@ -56,8 +56,6 @@ ENTRY_BEGIN
 	REPLY RD
 	SECTION QUESTION
 		example.com. IN A
-		HEX_EDNSDATA_BEGIN
-	    HEX_EDNSDATA_END
 ENTRY_END
 
 ; Check that we got the correct answer (should be cached)
@@ -73,8 +71,6 @@ ENTRY_BEGIN
 		example.com. IN NS ns.example.com.
 	SECTION ADDITIONAL
 		ns.example.com. IN A 1.2.3.4
-		HEX_EDNSDATA_BEGIN
-	    HEX_EDNSDATA_END
 ENTRY_END
 
 ; Wait for the TTL to expire
@@ -83,17 +79,16 @@ STEP 11 TIME_PASSES ELAPSE 3601
 ; Query again without RD bit
 STEP 30 QUERY
 ENTRY_BEGIN
+	REPLY DO
 	SECTION QUESTION
 		example.com. IN A
-		HEX_EDNSDATA_BEGIN
-	    HEX_EDNSDATA_END
 ENTRY_END
 
 ; Check that we got a stale answer
 STEP 40 CHECK_ANSWER
 ENTRY_BEGIN
 	MATCH all ttl ede=3
-	REPLY QR RA NOERROR
+	REPLY QR RA DO NOERROR
 	SECTION QUESTION
 		example.com. IN A
 	SECTION ANSWER
@@ -102,8 +97,6 @@ ENTRY_BEGIN
 		example.com. 30 IN NS ns.example.com.
 	SECTION ADDITIONAL
 		ns.example.com. 30 IN A 1.2.3.4
-		HEX_EDNSDATA_BEGIN
-	    HEX_EDNSDATA_END
 ENTRY_END
 
 ; Query with RD bit (the record should have been prefetched)
@@ -112,8 +105,6 @@ ENTRY_BEGIN
 	REPLY RD
 	SECTION QUESTION
 		example.com. IN A
-		HEX_EDNSDATA_BEGIN
-	    HEX_EDNSDATA_END
 ENTRY_END
 
 STEP 60 CHECK_ANSWER
@@ -128,8 +119,6 @@ ENTRY_BEGIN
 		example.com. IN NS ns.example.com.
 	SECTION ADDITIONAL
 		ns.example.com. IN A 1.2.3.4
-		HEX_EDNSDATA_BEGIN
-	    HEX_EDNSDATA_END
 ENTRY_END
 
 SCENARIO_END

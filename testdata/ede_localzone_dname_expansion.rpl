@@ -9,7 +9,7 @@ CONFIG_END
 SCENARIO_BEGIN Test ede-localzone-dname-expansion
 ; Scenario overview:
 ; - query for www.qhqwer.qwer.qwer.h.example.com. (a large Qname) A record with EDNS
-; - check that we a YXDOMAIN answer with EDE (RFC8914) code 0 - Other (with adds a DNAME expansion message)
+; - check that we get a YXDOMAIN answer with EDE (RFC8914) code 0 - Other (which adds a DNAME expansion message)
 
 ; Query with RD flag
 STEP 1 QUERY
