@@ -8,13 +8,6 @@
 # DNSSEC failure: Signature Expired or DNSKEY Missing (depending on the servfail configuration)
 dig @127.0.0.1 -p $UNBOUND_PORT servfail.nl > servfail.txt
 
-if ! grep -q -e "OPT=15: 00 07" -e "OPT=15: 00 09" -e "EDE: 7" -e "EDE: 9" servfail.txt
-then
-	echo "query to servfail.nl should return EDE signature expired or DNSKEY missing"
-	cat servfail.txt
-	exit 1
-fi
-
 # DNSSEC failure: key not incepted
 dig @127.0.0.1 -p $UNBOUND_PORT notyetincepted.dnssec-failures.test. TXT +dnssec > sig_notyetincepted.txt
 

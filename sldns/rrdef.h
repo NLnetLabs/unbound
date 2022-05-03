@@ -442,6 +442,7 @@ typedef enum sldns_enum_edns_option sldns_edns_option;
 
 enum sldns_enum_ede_code
 {
+	LDNS_EDE_NONE = -1, /* EDE undefined for internal use */
 	LDNS_EDE_OTHER = 0,
 	LDNS_EDE_UNSUPPORTED_DNSKEY_ALG = 1,
 	LDNS_EDE_UNSUPPORTED_DS_DIGEST = 2,
@@ -467,7 +468,6 @@ enum sldns_enum_ede_code
 	LDNS_EDE_NO_REACHABLE_AUTHORITY = 22,
 	LDNS_EDE_NETWORK_ERROR = 23,
 	LDNS_EDE_INVALID_DATA = 24,
-	LDNS_EDE_NONE = 65535 /* From the *private* range of EDE codes, used internally */
 };
 typedef enum sldns_enum_ede_code sldns_ede_code;
 
