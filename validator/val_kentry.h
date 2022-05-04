@@ -157,7 +157,7 @@ void key_entry_set_reason(struct key_entry_key* kkey, char* reason);
  * Set the EDE (RFC8914) code why the key is bad, if it
  * exists (so not LDNS_EDE_NONE).
  * @param kkey: bad key.
- * @param reason_bogus: EDE code to attach to this key.
+ * @param ede: EDE code to attach to this key.
  */
 void key_entry_set_reason_bogus(struct key_entry_key* kkey, sldns_ede_code ede);
 
