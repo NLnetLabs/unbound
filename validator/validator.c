@@ -1672,17 +1672,25 @@ processInit(struct module_qstate* qstate, struct val_qstate* vq,
 		vq->state = VAL_FINISHED_STATE;
 		return 1;
 	} else if(key_entry_isbad(vq->key_entry)) {
+		sldns_ede_code ede = LDNS_EDE_DNSSEC_BOGUS;
+
+		/* the key could have a more spefic EDE than just bogus */
+		if(key_entry_get_reason_bogus(vq->key_entry) != LDNS_EDE_NONE) {
+			ede = key_entry_get_reason_bogus(vq->key_entry);
+		}
+
 		/* key is bad, chain is bad, reply is bogus */
 		errinf_dname(qstate, "key for validation", vq->key_entry->name);
-		errinf_ede(qstate, "is marked as invalid", LDNS_EDE_DNSSEC_BOGUS);
+		errinf_ede(qstate, "is marked as invalid", ede);
 		if(key_entry_get_reason(vq->key_entry)) {
 			errinf(qstate, "because of a previous");
 			errinf(qstate, key_entry_get_reason(vq->key_entry));
 		}
+
 		/* no retries, stop bothering the authority until timeout */
 		vq->restart_count = ve->max_restart;
 		vq->chase_reply->security = sec_status_bogus;
-		update_reason_bogus(vq->chase_reply, LDNS_EDE_DNSSEC_BOGUS);
+		update_reason_bogus(vq->chase_reply, ede);
 		vq->state = VAL_FINISHED_STATE;
 		return 1;
 	}
