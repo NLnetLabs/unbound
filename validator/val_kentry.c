@@ -264,10 +264,7 @@ sldns_ede_code
 key_entry_get_reason_bogus(struct key_entry_key* kkey)
 {
 	struct key_entry_data* d = (struct key_entry_data*)kkey->entry.data;
-	if (d->reason_bogus != LDNS_EDE_NONE) { /* init is LDNS_EDE_NONE already */
-		return d->reason_bogus;
-	}
-	return LDNS_EDE_NONE;
+	return d->reason_bogus;
 
 }
 
