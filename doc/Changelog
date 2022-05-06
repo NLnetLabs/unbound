@@ -1,3 +1,6 @@
+6 May 2022: Tom
+	- Merge PR #604: Add basic support for EDE (RFC8914).
+
 28 April 2022: Wouter
 	- Fix #670: SERVFAIL problems with unbound 1.15.0 running on
 	  OpenBSD 7.1.
