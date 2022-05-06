@@ -9,7 +9,7 @@ server:
 	trust-anchor-signaling: no
 	minimal-responses: no
 	nsid: "ascii_hopsa kidee"
-	do-ede: yes
+	ede: yes
 
 stub-zone:
 	name: "."

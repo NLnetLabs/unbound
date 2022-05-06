@@ -1340,7 +1340,7 @@ local_error_encode(struct query_info* qinfo, struct module_env* env,
 		rcode, edns, repinfo, temp, env->now_tv))
 		edns->opt_list_inplace_cb_out = NULL;
 
-	if(ede_code != LDNS_EDE_NONE && env->cfg->do_ede) {
+	if(ede_code != LDNS_EDE_NONE && env->cfg->ede) {
 		edns_opt_list_append_ede(&edns->opt_list_out, temp,
 			ede_code, ede_txt);
 	}

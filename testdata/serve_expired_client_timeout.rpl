@@ -6,7 +6,7 @@ server:
 	serve-expired: yes
 	serve-expired-client-timeout: 1
 	serve-expired-reply-ttl: 123
-	do-ede: yes
+	ede: yes
 	ede-serve-expired: yes
 
 stub-zone:

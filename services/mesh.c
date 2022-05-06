@@ -1296,7 +1296,7 @@ mesh_send_reply(struct mesh_state* m, int rcode, struct reply_info* rep,
 					r->edns.opt_list_inplace_cb_out = NULL;
 		}
 		/* Send along EDE BOGUS EDNS0 option when answer is bogus */
-		if(m->s.env->cfg->do_ede && rcode == LDNS_RCODE_SERVFAIL &&
+		if(m->s.env->cfg->ede && rcode == LDNS_RCODE_SERVFAIL &&
 			m->s.env->need_to_validate && (!(r->qflags&BIT_CD) ||
 			m->s.env->cfg->ignore_cd) && rep &&
 			(rep->security <= sec_status_bogus ||
@@ -2082,10 +2082,10 @@ mesh_serve_expired_callback(void* arg)
 			}
 		}
 
-		/* Add EDE Stale Answer (RCF8914). Ignore global do_ede as this is
+		/* Add EDE Stale Answer (RCF8914). Ignore global ede as this is
 		 * warning instead of an error */
 		if (r->edns.edns_present && qstate->env->cfg->ede_serve_expired &&
-			qstate->env->cfg->do_ede) {
+			qstate->env->cfg->ede) {
 			edns_opt_list_append_ede(&r->edns.opt_list_out,
 				mstate->s.region, LDNS_EDE_STALE_ANSWER, NULL);
 		}

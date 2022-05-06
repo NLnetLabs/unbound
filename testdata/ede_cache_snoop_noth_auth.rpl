@@ -1,6 +1,6 @@
 ; config options
 server:
-	do-ede: yes
+	ede: yes
 CONFIG_END
 
 SCENARIO_BEGIN Test ede-cache-snoop-not-authoritative

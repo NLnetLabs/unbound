@@ -486,7 +486,7 @@ answer_norec_from_cache(struct worker* worker, struct query_info* qinfo,
 					return 0;
 			/* TODO store the reason for the bogus reply in cache
 			 * and implement in here instead of the hardcoded EDE */
-			if (worker->env.cfg->do_ede) {
+			if (worker->env.cfg->ede) {
 				EDNS_OPT_LIST_APPEND_EDE(&edns->opt_list_out,
 					worker->scratchpad, LDNS_EDE_DNSSEC_BOGUS, "");
 			}
@@ -662,7 +662,7 @@ answer_from_cache(struct worker* worker, struct query_info* qinfo,
 			goto bail_out;
 		/* TODO store the reason for the bogus reply in cache
 		 * and implement in here instead of the hardcoded EDE */
-		if (worker->env.cfg->do_ede) {
+		if (worker->env.cfg->ede) {
 			EDNS_OPT_LIST_APPEND_EDE(&edns->opt_list_out,
 				worker->scratchpad, LDNS_EDE_DNSSEC_BOGUS, "");
 		}
@@ -729,10 +729,10 @@ answer_from_cache(struct worker* worker, struct query_info* qinfo,
 				goto bail_out;
 		}
 	} else {
-		/* We don't check the global do_ede as this is a warning, not
+		/* We don't check the global ede as this is a warning, not
 		 * an error */
 		if (*is_expired_answer == 1 &&
-			worker->env.cfg->ede_serve_expired && worker->env.cfg->do_ede) {
+			worker->env.cfg->ede_serve_expired && worker->env.cfg->ede) {
 			EDNS_OPT_LIST_APPEND_EDE(&edns->opt_list_out,
 				worker->scratchpad, LDNS_EDE_STALE_ANSWER, "");
 		}
@@ -1036,7 +1036,7 @@ static int
 deny_refuse(struct comm_point* c, enum acl_access acl,
 	enum acl_access deny, enum acl_access refuse,
 	struct worker* worker, struct comm_reply* repinfo,
-	struct acl_addr* acladdr, int do_ede)
+	struct acl_addr* acladdr, int ede)
 {
 	if(acl == deny) {
 		if(verbosity >= VERB_ALGO) {
@@ -1073,7 +1073,7 @@ deny_refuse(struct comm_point* c, enum acl_access acl,
 
 		/* check additional section is present and that we respond with EDEs */
 		if(LDNS_ARCOUNT(sldns_buffer_begin(c->buffer)) != 1
-			|| !do_ede) {
+			|| !ede) {
 			LDNS_QDCOUNT_SET(sldns_buffer_begin(c->buffer), 0);
 			LDNS_ANCOUNT_SET(sldns_buffer_begin(c->buffer), 0);
 			LDNS_NSCOUNT_SET(sldns_buffer_begin(c->buffer), 0);
@@ -1215,19 +1215,19 @@ deny_refuse(struct comm_point* c, enum acl_access acl,
 static int
 deny_refuse_all(struct comm_point* c, enum acl_access acl,
 	struct worker* worker, struct comm_reply* repinfo,
-	struct acl_addr* acladdr, int do_ede)
+	struct acl_addr* acladdr, int ede)
 {
 	return deny_refuse(c, acl, acl_deny, acl_refuse, worker, repinfo,
-		acladdr, do_ede);
+		acladdr, ede);
 }
 
 static int
 deny_refuse_non_local(struct comm_point* c, enum acl_access acl,
 	struct worker* worker, struct comm_reply* repinfo,
-	struct acl_addr* acladdr, int do_ede)
+	struct acl_addr* acladdr, int ede)
 {
 	return deny_refuse(c, acl, acl_deny_non_local, acl_refuse_non_local,
-		worker, repinfo, acladdr, do_ede);
+		worker, repinfo, acladdr, ede);
 }
 
 int 
@@ -1321,7 +1321,7 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 	acl = acl_get_control(acladdr);
 
 	if((ret=deny_refuse_all(c, acl, worker, repinfo, acladdr,
-		worker->env.cfg->do_ede)) != -1)
+		worker->env.cfg->ede)) != -1)
 	{
 		if(ret == 1)
 			goto send_reply;
@@ -1542,7 +1542,7 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 	/* We've looked in our local zones. If the answer isn't there, we
 	 * might need to bail out based on ACLs now. */
 	if((ret=deny_refuse_non_local(c, acl, worker, repinfo, acladdr,
-		worker->env.cfg->do_ede)) != -1)
+		worker->env.cfg->ede)) != -1)
 	{
 		regional_free_all(worker->scratchpad);
 		if(ret == 1)
@@ -1561,7 +1561,7 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 	 * ACLs allow the snooping. */
 	if(!(LDNS_RD_WIRE(sldns_buffer_begin(c->buffer))) &&
 		acl != acl_allow_snoop ) {
-		if (worker->env.cfg->do_ede) {
+		if (worker->env.cfg->ede) {
 			EDNS_OPT_LIST_APPEND_EDE(&edns.opt_list_out,
 				worker->scratchpad, LDNS_EDE_NOT_AUTHORITATIVE, "");
 		}

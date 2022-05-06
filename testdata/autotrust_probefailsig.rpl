@@ -4,7 +4,7 @@ server:
 	log-time-ascii: yes
 	fake-sha1: yes
 	trust-anchor-signaling: no
-	do-ede: yes
+	ede: yes
 
 stub-zone:
 	name: "."

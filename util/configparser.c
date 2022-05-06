@@ -389,7 +389,7 @@
      VAR_ZONEMD_REJECT_ABSENCE = 578,
      VAR_RPZ_SIGNAL_NXDOMAIN_RA = 579,
      VAR_INTERFACE_AUTOMATIC_PORTS = 580,
-     VAR_DO_EDE = 581
+     VAR_EDE = 581
    };
 #endif
 /* Tokens.  */
@@ -716,7 +716,7 @@
 #define VAR_ZONEMD_REJECT_ABSENCE 578
 #define VAR_RPZ_SIGNAL_NXDOMAIN_RA 579
 #define VAR_INTERFACE_AUTOMATIC_PORTS 580
-#define VAR_DO_EDE 581
+#define VAR_EDE 581
 
 
 
@@ -1543,7 +1543,7 @@ static const char *const yytname[] =
   "VAR_EDNS_CLIENT_STRING", "VAR_EDNS_CLIENT_STRING_OPCODE", "VAR_NSID",
   "VAR_ZONEMD_PERMISSIVE_MODE", "VAR_ZONEMD_CHECK",
   "VAR_ZONEMD_REJECT_ABSENCE", "VAR_RPZ_SIGNAL_NXDOMAIN_RA",
-  "VAR_INTERFACE_AUTOMATIC_PORTS", "VAR_DO_EDE", "$accept", "toplevelvars",
+  "VAR_INTERFACE_AUTOMATIC_PORTS", "VAR_EDE", "$accept", "toplevelvars",
   "toplevelvar", "force_toplevel", "serverstart", "contents_server",
   "content_server", "stubstart", "contents_stub", "content_stub",
   "forwardstart", "contents_forward", "content_forward", "viewstart",
@@ -1645,7 +1645,7 @@ static const char *const yytname[] =
   "server_ipsecmod_hook", "server_ipsecmod_max_ttl",
   "server_ipsecmod_whitelist", "server_ipsecmod_strict",
   "server_edns_client_string", "server_edns_client_string_opcode",
-  "server_do_ede", "stub_name", "stub_host", "stub_addr", "stub_first",
+  "server_ede", "stub_name", "stub_host", "stub_addr", "stub_first",
   "stub_no_cache", "stub_ssl_upstream", "stub_tcp_upstream", "stub_prime",
   "forward_name", "forward_host", "forward_addr", "forward_first",
   "forward_no_cache", "forward_ssl_upstream", "forward_tcp_upstream",
@@ -6124,10 +6124,10 @@ yyreduce:
   case 529:
 #line 2747 "./util/configparser.y"
     {
-		OUTYY(("P(server_do_ede:%s)\n", (yyvsp[(2) - (2)].str)));
+		OUTYY(("P(server_ede:%s)\n", (yyvsp[(2) - (2)].str)));
 		if(strcmp((yyvsp[(2) - (2)].str), "yes") != 0 && strcmp((yyvsp[(2) - (2)].str), "no") != 0)
 			yyerror("expected yes or no.");
-		else cfg_parser->cfg->do_ede = (strcmp((yyvsp[(2) - (2)].str), "yes")==0);
+		else cfg_parser->cfg->ede = (strcmp((yyvsp[(2) - (2)].str), "yes")==0);
 		free((yyvsp[(2) - (2)].str));
 	}
     break;
