@@ -301,7 +301,7 @@
      VAR_SERVE_EXPIRED_TTL_RESET = 490,
      VAR_SERVE_EXPIRED_REPLY_TTL = 491,
      VAR_SERVE_EXPIRED_CLIENT_TIMEOUT = 492,
-     VAR_SERVE_EXPIRED_EDE = 493,
+     VAR_EDE_SERVE_EXPIRED = 493,
      VAR_SERVE_ORIGINAL_TTL = 494,
      VAR_FAKE_DSA = 495,
      VAR_FAKE_SHA1 = 496,
@@ -628,7 +628,7 @@
 #define VAR_SERVE_EXPIRED_TTL_RESET 490
 #define VAR_SERVE_EXPIRED_REPLY_TTL 491
 #define VAR_SERVE_EXPIRED_CLIENT_TIMEOUT 492
-#define VAR_SERVE_EXPIRED_EDE 493
+#define VAR_EDE_SERVE_EXPIRED 493
 #define VAR_SERVE_ORIGINAL_TTL 494
 #define VAR_FAKE_DSA 495
 #define VAR_FAKE_SHA1 496
@@ -1509,7 +1509,7 @@ static const char *const yytname[] =
   "VAR_VIEW", "VAR_ACCESS_CONTROL_VIEW", "VAR_VIEW_FIRST",
   "VAR_SERVE_EXPIRED", "VAR_SERVE_EXPIRED_TTL",
   "VAR_SERVE_EXPIRED_TTL_RESET", "VAR_SERVE_EXPIRED_REPLY_TTL",
-  "VAR_SERVE_EXPIRED_CLIENT_TIMEOUT", "VAR_SERVE_EXPIRED_EDE",
+  "VAR_SERVE_EXPIRED_CLIENT_TIMEOUT", "VAR_EDE_SERVE_EXPIRED",
   "VAR_SERVE_ORIGINAL_TTL", "VAR_FAKE_DSA", "VAR_FAKE_SHA1",
   "VAR_LOG_IDENTITY", "VAR_HIDE_TRUSTANCHOR", "VAR_HIDE_HTTP_USER_AGENT",
   "VAR_HTTP_USER_AGENT", "VAR_TRUST_ANCHOR_SIGNALING",
@@ -1618,7 +1618,7 @@ static const char *const yytname[] =
   "server_ignore_cd_flag", "server_serve_expired",
   "server_serve_expired_ttl", "server_serve_expired_ttl_reset",
   "server_serve_expired_reply_ttl", "server_serve_expired_client_timeout",
-  "server_serve_expired_ede", "server_serve_original_ttl",
+  "server_ede_serve_expired", "server_serve_original_ttl",
   "server_fake_dsa", "server_fake_sha1", "server_val_log_level",
   "server_val_nsec3_keysize_iterations", "server_zonemd_permissive_mode",
   "server_add_holddown", "server_del_holddown", "server_keep_missing",
@@ -5291,10 +5291,10 @@ yyreduce:
   case 467:
 #line 2039 "./util/configparser.y"
     {
-		OUTYY(("P(server_serve_expired_ede:%s)\n", (yyvsp[(2) - (2)].str)));
+		OUTYY(("P(server_ede_serve_expired:%s)\n", (yyvsp[(2) - (2)].str)));
 		if(strcmp((yyvsp[(2) - (2)].str), "yes") != 0 && strcmp((yyvsp[(2) - (2)].str), "no") != 0)
 			yyerror("expected yes or no.");
-		else cfg_parser->cfg->serve_expired_ede = (strcmp((yyvsp[(2) - (2)].str), "yes")==0);
+		else cfg_parser->cfg->ede_serve_expired = (strcmp((yyvsp[(2) - (2)].str), "yes")==0);
 		free((yyvsp[(2) - (2)].str));
 	}
     break;

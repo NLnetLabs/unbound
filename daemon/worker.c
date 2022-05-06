@@ -731,7 +731,8 @@ answer_from_cache(struct worker* worker, struct query_info* qinfo,
 	} else {
 		/* We don't check the global do_ede as this is a warning, not
 		 * an error */
-		if (*is_expired_answer == 1 && worker->env.cfg->serve_expired_ede) {
+		if (*is_expired_answer == 1 &&
+			worker->env.cfg->ede_serve_expired && worker->env.cfg->do_ede) {
 			EDNS_OPT_LIST_APPEND_EDE(&edns->opt_list_out,
 				worker->scratchpad, LDNS_EDE_STALE_ANSWER, "");
 		}

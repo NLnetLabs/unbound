@@ -2084,7 +2084,8 @@ mesh_serve_expired_callback(void* arg)
 
 		/* Add EDE Stale Answer (RCF8914). Ignore global do_ede as this is
 		 * warning instead of an error */
-		if (r->edns.edns_present && qstate->env->cfg->serve_expired_ede) {
+		if (r->edns.edns_present && qstate->env->cfg->ede_serve_expired &&
+			qstate->env->cfg->do_ede) {
 			edns_opt_list_append_ede(&r->edns.opt_list_out,
 				mstate->s.region, LDNS_EDE_STALE_ANSWER, NULL);
 		}

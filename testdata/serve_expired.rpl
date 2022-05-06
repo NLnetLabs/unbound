@@ -5,7 +5,8 @@ server:
 	minimal-responses: no
 	serve-expired: yes
 	access-control: 127.0.0.1/32 allow_snoop
-	serve-expired-ede: yes
+	do-ede: yes
+	ede-serve-expired: yes
 
 stub-zone:
 	name: "example.com"

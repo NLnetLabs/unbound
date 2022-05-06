@@ -7,7 +7,8 @@ server:
 	serve-expired-client-timeout: 1800
 	serve-expired-reply-ttl: 123
 	log-servfail: yes
-	serve-expired-ede: yes
+	do-ede: yes
+	ede-serve-expired: yes
 
 
 stub-zone:

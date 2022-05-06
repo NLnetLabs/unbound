@@ -268,7 +268,7 @@ config_create(void)
 	cfg->serve_expired_ttl_reset = 0;
 	cfg->serve_expired_reply_ttl = 30;
 	cfg->serve_expired_client_timeout = 0;
-	cfg->serve_expired_ede = 0;
+	cfg->ede_serve_expired = 0;
 	cfg->serve_original_ttl = 0;
 	cfg->zonemd_permissive_mode = 0;
 	cfg->add_holddown = 30*24*3600;
@@ -673,7 +673,7 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	{ IS_NUMBER_OR_ZERO; cfg->serve_expired_reply_ttl = atoi(val); SERVE_EXPIRED_REPLY_TTL=(time_t)cfg->serve_expired_reply_ttl;}
 	else S_NUMBER_OR_ZERO("serve-expired-client-timeout:", serve_expired_client_timeout)
 	else S_YNO("do-ede:", do_ede)	
-	else S_YNO("serve-expired-ede:", serve_expired_ede)
+	else S_YNO("ede_serve-expired:", ede_serve_expired)
 	else S_YNO("serve-original-ttl:", serve_original_ttl)
 	else S_STR("val-nsec3-keysize-iterations:", val_nsec3_key_iterations)
 	else S_YNO("zonemd-permissive-mode:", zonemd_permissive_mode)
@@ -1116,7 +1116,7 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_DEC(opt, "serve-expired-reply-ttl", serve_expired_reply_ttl)
 	else O_DEC(opt, "serve-expired-client-timeout", serve_expired_client_timeout)
 	else O_YNO(opt, "do-ede", do_ede)
-	else O_YNO(opt, "serve-expired-ede", serve_expired_ede)
+	else O_YNO(opt, "ede-serve-expired", ede_serve_expired)
 	else O_YNO(opt, "serve-original-ttl", serve_original_ttl)
 	else O_STR(opt, "val-nsec3-keysize-iterations",val_nsec3_key_iterations)
 	else O_YNO(opt, "zonemd-permissive-mode", zonemd_permissive_mode)
