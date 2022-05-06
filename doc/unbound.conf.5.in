@@ -1780,6 +1780,21 @@ option can be used multiple times. The most specific match will be used.
 EDNS0 option code for the \fIedns\-client\-string\fR option, from 0 to 65535.
 A value from the `Reserved for Local/Experimental` range (65001-65534) should
 be used.  Default is 65001.
+.TP 5
+.B ede: \fI<yes or no>
+If enabled, Unbound will respond with Extended DNS Error codes (RFC8914).
+These EDEs attach informative error messages to a response for various
+errors. Default is "no".
+
+When the \fBval-log-level\fR option is also set to \fB2\fR, responses with
+Extended DNS Errors concerning DNSSEC failures that are not served from cache,
+will also contain a descriptive text message about the reason for the failure.
+.TP
+.B ede\-serve\-expired: \fI<yes or no>
+If enabled, Unbound will attach an Extended DNS Error (RFC8914) Code 3 - Stale
+Answer as EDNS0 option to the expired response. Note that this will not attach
+the EDE code without setting the global \fBede\fR option to "yes" as well.
+Default is "no".
 .SS "Remote Control Options"
 In the
 .B remote\-control:

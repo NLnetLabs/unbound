@@ -402,6 +402,7 @@ serve-expired-ttl{COLON}	{ YDVAR(1, VAR_SERVE_EXPIRED_TTL) }
 serve-expired-ttl-reset{COLON}	{ YDVAR(1, VAR_SERVE_EXPIRED_TTL_RESET) }
 serve-expired-reply-ttl{COLON}	{ YDVAR(1, VAR_SERVE_EXPIRED_REPLY_TTL) }
 serve-expired-client-timeout{COLON}	{ YDVAR(1, VAR_SERVE_EXPIRED_CLIENT_TIMEOUT) }
+ede-serve-expired{COLON}	{ YDVAR(1, VAR_EDE_SERVE_EXPIRED) }
 serve-original-ttl{COLON}	{ YDVAR(1, VAR_SERVE_ORIGINAL_TTL) }
 fake-dsa{COLON}			{ YDVAR(1, VAR_FAKE_DSA) }
 fake-sha1{COLON}		{ YDVAR(1, VAR_FAKE_SHA1) }
@@ -553,6 +554,7 @@ tcp-connection-limit{COLON}	{ YDVAR(2, VAR_TCP_CONNECTION_LIMIT) }
 edns-client-string{COLON}	{ YDVAR(2, VAR_EDNS_CLIENT_STRING) }
 edns-client-string-opcode{COLON} { YDVAR(1, VAR_EDNS_CLIENT_STRING_OPCODE) }
 nsid{COLON}			{ YDVAR(1, VAR_NSID ) }
+ede{COLON}			{ YDVAR(1, VAR_EDE ) }
 <INITIAL,val>{NEWLINE}		{ LEXOUT(("NL\n")); cfg_parser->line++; }
 
 	/* Quoted strings. Strip leading and ending quotes */

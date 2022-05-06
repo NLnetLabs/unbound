@@ -132,6 +132,7 @@ msg_create(struct regional* region, struct query_info* qinfo)
 		return NULL;
 	msg->rep->flags = (uint16_t)(BIT_QR | BIT_AA);
 	msg->rep->authoritative = 1;
+	msg->rep->reason_bogus = LDNS_EDE_NONE;
 	msg->rep->qdcount = 1;
 	/* rrsets is NULL, no rrsets yet */
 	return msg;
@@ -7785,7 +7786,7 @@ static int zonemd_dnssec_verify_rrset(struct auth_zone* z,
 		auth_zone_log(z->name, VERB_ALGO,
 			"zonemd: verify %s RRset with DNSKEY", typestr);
 	}
-	sec = dnskeyset_verify_rrset(env, ve, &pk, dnskey, sigalg, why_bogus,
+	sec = dnskeyset_verify_rrset(env, ve, &pk, dnskey, sigalg, why_bogus, NULL,
 		LDNS_SECTION_ANSWER, NULL);
 	if(sec == sec_status_secure) {
 		return 1;
@@ -8128,7 +8129,7 @@ zonemd_get_dnskey_from_anchor(struct auth_zone* z, struct module_env* env,
 	auth_zone_log(z->name, VERB_QUERY,
 		"zonemd: verify DNSKEY RRset with trust anchor");
 	sec = val_verify_DNSKEY_with_TA(env, ve, keystorage, anchor->ds_rrset,
-		anchor->dnskey_rrset, NULL, why_bogus, NULL);
+		anchor->dnskey_rrset, NULL, why_bogus, NULL, NULL);
 	regional_free_all(env->scratch);
 	if(sec == sec_status_secure) {
 		/* success */
@@ -8186,8 +8187,9 @@ auth_zone_verify_zonemd_key_with_ds(struct auth_zone* z,
 	keystorage->rk.type = htons(LDNS_RR_TYPE_DNSKEY);
 	keystorage->rk.rrset_class = htons(z->dclass);
 	auth_zone_log(z->name, VERB_QUERY, "zonemd: verify zone DNSKEY with DS");
+	// @TODO add EDE here? we currently just pass NULL
 	sec = val_verify_DNSKEY_with_DS(env, ve, keystorage, ds, sigalg,
-		why_bogus, NULL);
+		why_bogus, NULL, NULL);
 	regional_free_all(env->scratch);
 	if(sec == sec_status_secure) {
 		/* success */
