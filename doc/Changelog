@@ -1,3 +1,7 @@
+10 May 2022: George
+	- Fix Python build in non-source directory; based on patch by
+	  Michael Tokarev.
+
 6 May 2022: Tom
 	- Merge PR #604: Add basic support for EDE (RFC8914).
 
