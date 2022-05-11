@@ -1,3 +1,7 @@
+11 May 2022: Wouter
+	- Fix #673: DNS over TLS: error: SSL_handshake syscall: No route to
+	  host.
+
 10 May 2022: George
 	- Fix Python build in non-source directory; based on patch by
 	  Michael Tokarev.

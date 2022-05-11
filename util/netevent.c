@@ -1277,6 +1277,12 @@ ssl_handshake(struct comm_point* c)
 			if(errno == ECONNRESET && verbosity < 2)
 				return 0; /* silence reset by peer */
 #endif
+			if(!tcp_connect_errno_needs_log(
+				(struct sockaddr*)&c->repinfo.addr,
+				c->repinfo.addrlen))
+				return 0; /* silence connect failures that
+				show up because after connect this is the
+				first system call that accesses the socket */
 			if(errno != 0)
 				log_err("SSL_handshake syscall: %s",
 					strerror(errno));
