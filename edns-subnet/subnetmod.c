@@ -97,8 +97,8 @@ subnet_new_qstate(struct module_qstate *qstate, int id)
 }
 
 /** Add ecs struct to edns list, after parsing it to wire format. */
-static void
-ecs_opt_list_append(struct ecs_data* ecs, struct edns_option** list,
+void
+subnet_ecs_opt_list_append(struct ecs_data* ecs, struct edns_option** list,
 	struct module_qstate *qstate)
 {
 	size_t sn_octs, sn_octs_remainder;
@@ -164,7 +164,7 @@ int ecs_whitelist_check(struct query_info* qinfo,
 		 * set. */
 		if(!edns_opt_list_find(qstate->edns_opts_back_out,
 			qstate->env->cfg->client_subnet_opcode)) {
-			ecs_opt_list_append(&sq->ecs_server_out,
+			subnet_ecs_opt_list_append(&sq->ecs_server_out,
 				&qstate->edns_opts_back_out, qstate);
 		}
 		sq->subnet_sent = 1;
@@ -231,7 +231,7 @@ subnetmod_init(struct module_env *env, int id)
 	env->unique_mesh = 1;
 	if(!edns_register_option(env->cfg->client_subnet_opcode,
 		env->cfg->client_subnet_always_forward /* bypass cache */,
-		0 /* no aggregation */, env)) {
+		1 /* no aggregation */, env)) {
 		log_err("subnetcache: could not register opcode");
 		ecs_whitelist_delete(sn_env->whitelist);
 		slabhash_delete(sn_env->subnet_msg_cache);
@@ -602,7 +602,7 @@ parse_subnet_option(struct edns_option* ecs_option, struct ecs_data* ecs)
 	return 1;
 }
 
-static void
+void
 subnet_option_from_ss(struct sockaddr_storage *ss, struct ecs_data* ecs,
 	struct config_file* cfg)
 {
@@ -765,7 +765,7 @@ subnetmod_operate(struct module_qstate *qstate, enum module_ev event,
 			verbose(VERB_QUERY, "subnetcache: answered from cache");
 			qstate->ext_state[id] = module_finished;
 
-			ecs_opt_list_append(&sq->ecs_client_out,
+			subnet_ecs_opt_list_append(&sq->ecs_client_out,
 				&qstate->edns_opts_front_out, qstate);
 			return;
 		}
@@ -787,7 +787,7 @@ subnetmod_operate(struct module_qstate *qstate, enum module_ev event,
 			sq->ecs_server_out.subnet_source_mask =
 				qstate->env->cfg->max_client_subnet_ipv6;
 		/* Safe to copy completely, even if the source is limited by the
-		 * configuration. ecs_opt_list_append() will limit the address.
+		 * configuration. subnet_ecs_opt_list_append() will limit the address.
 		 * */
 		memcpy(&sq->ecs_server_out.subnet_addr,
 			sq->ecs_client_in.subnet_addr, INET6_SIZE);
@@ -811,7 +811,7 @@ subnetmod_operate(struct module_qstate *qstate, enum module_ev event,
 		qstate->ext_state[id] = eval_response(qstate, id, sq);
 		if(qstate->ext_state[id] == module_finished &&
 			qstate->return_msg) {
-			ecs_opt_list_append(&sq->ecs_client_out,
+			subnet_ecs_opt_list_append(&sq->ecs_client_out,
 				&qstate->edns_opts_front_out, qstate);
 		}
 		qstate->no_cache_store = sq->started_no_cache_store;
