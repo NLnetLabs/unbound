@@ -251,6 +251,7 @@ tls-port{COLON}			{ YDVAR(1, VAR_SSL_PORT) }
 ssl-cert-bundle{COLON}		{ YDVAR(1, VAR_TLS_CERT_BUNDLE) }
 tls-cert-bundle{COLON}		{ YDVAR(1, VAR_TLS_CERT_BUNDLE) }
 tls-win-cert{COLON}		{ YDVAR(1, VAR_TLS_WIN_CERT) }
+tls-system-cert{COLON}		{ YDVAR(1, VAR_TLS_WIN_CERT) }
 additional-ssl-port{COLON}	{ YDVAR(1, VAR_TLS_ADDITIONAL_PORT) }
 additional-tls-port{COLON}	{ YDVAR(1, VAR_TLS_ADDITIONAL_PORT) }
 tls-additional-ports{COLON}	{ YDVAR(1, VAR_TLS_ADDITIONAL_PORT) }

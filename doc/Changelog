@@ -2,6 +2,11 @@
 	- Fix #417: prefetch and ECS causing cache corruption when used
 	  together.
 
+12 May 2022: Wouter
+	- Merge #677: Allow using system certificates not only on Windows,
+	  from pemensik.
+	- For #677: Added tls-system-cert to config parser and documentation.
+
 11 May 2022: Wouter
 	- Fix #673: DNS over TLS: error: SSL_handshake syscall: No route to
 	  host.

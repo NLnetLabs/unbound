@@ -1057,6 +1057,7 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_STR(opt, "ssl-cert-bundle", tls_cert_bundle)
 	else O_STR(opt, "tls-cert-bundle", tls_cert_bundle)
 	else O_YNO(opt, "tls-win-cert", tls_win_cert)
+	else O_YNO(opt, "tls-system-cert", tls_win_cert)
 	else O_LST(opt, "additional-ssl-port", tls_additional_port)
 	else O_LST(opt, "additional-tls-port", tls_additional_port)
 	else O_LST(opt, "tls-additional-ports", tls_additional_port)
