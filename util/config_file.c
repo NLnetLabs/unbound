@@ -546,6 +546,7 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	else S_STR("ssl-cert-bundle:", tls_cert_bundle)
 	else S_STR("tls-cert-bundle:", tls_cert_bundle)
 	else S_YNO("tls-win-cert:", tls_win_cert)
+	else S_YNO("tls-system-cert:", tls_win_cert)
 	else S_STRLIST("additional-ssl-port:", tls_additional_port)
 	else S_STRLIST("additional-tls-port:", tls_additional_port)
 	else S_STRLIST("tls-additional-ports:", tls_additional_port)
