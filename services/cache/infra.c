@@ -383,12 +383,18 @@ static void
 data_entry_init(struct infra_cache* infra, struct lruhash_entry* e, 
 	time_t timenow)
 {
+	uint8_t cookie[8] = {1,2,3,4,5,6,7,8};
+
 	struct infra_data* data = (struct infra_data*)e->data;
 	data->ttl = timenow + infra->host_ttl;
 	rtt_init(&data->rtt);
 	data->edns_version = 0;
 	data->edns_lame_known = 0;
 	data->probedelay = 0;
+	// @TODO create "random" cookie
+	memset(&data->cookie, 0, sizeof(struct edns_cookie));
+	memcpy(data->cookie.data.components.client, cookie, 8);
+
 	data->isdnsseclame = 0;
 	data->rec_lame = 0;
 	data->lame_type_A = 0;
@@ -459,7 +465,11 @@ infra_host(struct infra_cache* infra, struct sockaddr_storage* addr,
 		if(e) {
 			/* if its still there we have a writelock, init */
 			/* re-initialise */
-			/* do not touch lameness, it may be valid still */
+
+			// @TODO check if "do not touch lameness" is still true
+			/* do not touch lameness, it may be valid still.
+			 * Also don't touch the cookie, as the cookie logic
+			 * will be handled by the server. */
 			data_entry_init(infra, e, timenow);
 			wr = 1;
 			/* TOP_TIMEOUT remains on reuse */
@@ -683,6 +693,40 @@ infra_edns_update(struct infra_cache* infra, struct sockaddr_storage* addr,
 		slabhash_insert(infra->hosts, e->hash, e, e->data, NULL);
 	else 	{ lock_rw_unlock(&e->lock); }
 	return 1;
+}
+
+struct edns_cookie*
+infra_get_cookie(struct infra_cache* infra, struct sockaddr_storage* addr,
+	socklen_t addrlen, uint8_t* nm, size_t nmlen,
+	time_t timenow)
+{
+	struct lruhash_entry* e = infra_lookup_nottl(infra, addr, addrlen,
+		nm, nmlen, 1);
+	struct infra_data* data;
+	int needtoinsert = 0;
+
+	if(!e) {
+		if(!(e = new_entry(infra, addr, addrlen, nm, nmlen, timenow))) {
+			return 0;
+		}
+		needtoinsert = 1;
+	} else if(((struct infra_data*)e->data)->ttl < timenow) {
+		/* @TODO create logic for saving server cookie? -> not sure, find out */
+
+		/* create new cookie if the TTL of the current one expired */
+		data_entry_init(infra, e, timenow);
+	}
+
+	/* we have an entry; update the rtt, and the ttl */
+	data = (struct infra_data*)e->data;
+
+	if(needtoinsert) {
+		slabhash_insert(infra->hosts, e->hash, e, e->data, NULL);
+	} else {
+		lock_rw_unlock(&e->lock);
+	}
+
+	return &data->cookie;
 }
 
 int

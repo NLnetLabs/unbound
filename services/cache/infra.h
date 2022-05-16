@@ -52,6 +52,43 @@
 struct slabhash;
 struct config_file;
 
+/* COOKIE @TODO move this to correct spot */
+
+/**
+ * @TODO write this
+ */
+union edns_cookie_data {
+        uint8_t complete[24];
+        struct {
+                uint8_t client[8];
+                uint8_t version;
+                uint8_t reserved[3];
+                uint32_t timestamp;
+                uint8_t hash[8];
+        } components;
+};
+
+/**
+ * @TODO write this
+ */
+enum edns_cookie_state
+{
+        SERVER_COOKIE_UNKNOWN = 0, /* server cookie unknown, client cookie known */
+        SERVER_COOKIE_LEARNED = 1, /* server (and client) cookie learned */
+        COOKIE_NOT_SUPPORTED = 2, /* upstream does not supported EDNS/cookies */
+};
+
+/**
+ * @TODO write this
+ */
+struct edns_cookie {
+        enum edns_cookie_state state;
+        uint8_t timeout; // @TODO change this to correct value
+        union edns_cookie_data data;
+};
+
+
+
 /**
  * Host information kept for every server, per zone.
  */
@@ -87,6 +124,9 @@ struct infra_data {
 	 * EDNS lame is when EDNS queries or replies are dropped, 
 	 * and cause a timeout */
 	uint8_t edns_lame_known;
+
+        /* The EDNS cookie containing both the client and server cookie */
+        struct edns_cookie cookie;
 
 	/** is the host lame (does not serve the zone authoritatively),
 	 * or is the host dnssec lame (does not serve DNSSEC data) */
@@ -317,6 +357,24 @@ void infra_update_tcp_works(struct infra_cache* infra,
 int infra_edns_update(struct infra_cache* infra,
         struct sockaddr_storage* addr, socklen_t addrlen,
 	uint8_t* name, size_t namelen, int edns_version, time_t timenow);
+
+/**
+ * Find and return the cookie from the infra cache data. Creates an entry in
+ * the cache if there isn't one.
+ * @param infra: infrastructure cache.
+ * @param addr: host address.
+ * @param addrlen: length of addr.
+ * @param name: name of zone
+ * @param namelen: length of name
+ * @param edns_version: the version that it publishes.
+ *      If it is known to support EDNS then no-EDNS is not stored over it.
+ * @param timenow: what time it is now.
+ * @return: struct ends_cookie*
+ */
+struct edns_cookie*
+infra_get_cookie(struct infra_cache* infra, struct sockaddr_storage* addr,
+        socklen_t addrlen, uint8_t* nm, size_t nmlen,
+        time_t timenow);
 
 /**
  * Get Lameness information and average RTT if host is in the cache.

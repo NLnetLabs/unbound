@@ -1030,7 +1030,8 @@ reuse_tcp_remove_tree_list(struct outside_network* outnet,
 			char buf[256];
 			addr_to_str(&reuse->addr, reuse->addrlen, buf,
 				sizeof(buf));
-			log_err("reuse tcp delete: node not present, internal error, %s ssl %d lru %d", buf, reuse->is_ssl, reuse->item_on_lru_list);
+			log_err("reuse tcp delete: node not present, internal error, %s ssl "
+				"%d lru %d", buf, reuse->is_ssl, reuse->item_on_lru_list);
 		}
 		reuse->node.key = NULL;
 		/* defend against loops on broken tree by zeroing the
@@ -1440,6 +1441,7 @@ outnet_udp_cb(struct comm_point* c, void* arg, int error,
 
 	verbose(VERB_ALGO, "received udp reply.");
 	log_buf(VERB_ALGO, "udp message", c->buffer);
+
 	if(p->pc->cp != c) {
 		verbose(VERB_QUERY, "received reply id,addr on wrong port. "
 			"dropped.");
@@ -3347,6 +3349,7 @@ outnet_serviced_query(struct outside_network* outnet,
 	struct service_callback* cb;
 	struct edns_string_addr* client_string_addr;
 	struct regional* region;
+	struct edns_cookie* cookie;
 	struct edns_option* backed_up_opt_list = qstate->edns_opts_back_out;
 	struct edns_option* per_upstream_opt_list = NULL;
 	time_t timenow = 0;
@@ -3384,6 +3387,24 @@ outnet_serviced_query(struct outside_network* outnet,
 			env->edns_strings->client_string_opcode,
 			client_string_addr->string_len,
 			client_string_addr->string, region);
+	}
+
+
+	// @TODO Make configurable
+
+	// 1. lookup the cookie information in the cache
+	cookie = infra_get_cookie(env->infra_cache, addr, addrlen, zone, zonelen,
+		*env->now);
+
+	// 2. attach cookie, dependent on if we know just the client or also the server
+	if (cookie->state == SERVER_COOKIE_LEARNED) {
+		/* We known the complete cookie, so we attach it */
+		edns_opt_list_append(&per_upstream_opt_list, 10, /* @TODO 10 == COOKIE */
+			24, cookie->data.complete, region);
+	} else if (cookie->state == SERVER_COOKIE_UNKNOWN) {
+		/* We known just client cookie, so we attach it */
+		edns_opt_list_append(&per_upstream_opt_list, 10, /* @TODO 10 == COOKIE */
+			8, cookie->data.components.client, region);
 	}
 
 	serviced_gen_query(buff, qinfo->qname, qinfo->qname_len, qinfo->qtype,
@@ -3509,7 +3530,8 @@ fd_for_dest(struct outside_network* outnet, struct sockaddr_storage* to_addr,
 			if(outnet->num_ip6 == 0) {
 				char to[64];
 				addr_to_str(to_addr, to_addrlen, to, sizeof(to));
-				verbose(VERB_QUERY, "need ipv6 to send, but no ipv6 outgoing interfaces, for %s", to);
+				verbose(VERB_QUERY, "need ipv6 to send, but no ipv6 outgoing "
+					"interfaces, for %s", to);
 				return -1;
 			}
 			i = ub_random_max(outnet->rnd, outnet->num_ip6);
@@ -3518,7 +3540,8 @@ fd_for_dest(struct outside_network* outnet, struct sockaddr_storage* to_addr,
 			if(outnet->num_ip4 == 0) {
 				char to[64];
 				addr_to_str(to_addr, to_addrlen, to, sizeof(to));
-				verbose(VERB_QUERY, "need ipv4 to send, but no ipv4 outgoing interfaces, for %s", to);
+				verbose(VERB_QUERY, "need ipv4 to send, but no ipv4 outgoing "
+					"interfaces, for %s", to);
 				return -1;
 			}
 			i = ub_random_max(outnet->rnd, outnet->num_ip4);
