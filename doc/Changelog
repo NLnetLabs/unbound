@@ -1,3 +1,7 @@
+18 May 2022: George
+	- Fix typos in config_set_option for the 'num-threads' and
+	  'ede-serve-expired' options.
+
 15 May 2022: George
 	- Fix #678: [FR] modify behaviour of unbound-control rpz_enable zone,
 	  by updating unbound-control's documentation.
