@@ -230,7 +230,7 @@ setup_domain_limits(struct infra_cache* infra, struct config_file* cfg)
 }
 
 struct infra_cache* 
-infra_create(struct config_file* cfg)
+infra_create(struct config_file* cfg, struct ub_randstate* rnd)
 {
 	struct infra_cache* infra = (struct infra_cache*)calloc(1, 
 		sizeof(struct infra_cache));
@@ -270,6 +270,11 @@ infra_create(struct config_file* cfg)
 		infra_delete(infra);
 		return NULL;
 	}
+	if (!rnd) {
+		infra_delete(infra);
+		return NULL;
+	}
+	infra->random_state = rnd;
 	return infra;
 }
 
@@ -299,7 +304,7 @@ infra_adjust(struct infra_cache* infra, struct config_file* cfg)
 {
 	size_t maxmem;
 	if(!infra)
-		return infra_create(cfg);
+		return infra_create(cfg, ub_initstate(NULL));
 	infra->host_ttl = cfg->host_ttl;
 	infra->infra_keep_probing = cfg->infra_keep_probing;
 	infra_dp_ratelimit = cfg->ratelimit;
@@ -315,7 +320,7 @@ infra_adjust(struct infra_cache* infra, struct config_file* cfg)
 	   !slabhash_is_size(infra->client_ip_rates, cfg->ip_ratelimit_size,
 	   	cfg->ip_ratelimit_slabs)) {
 		infra_delete(infra);
-		infra = infra_create(cfg);
+		infra = infra_create(cfg, ub_initstate(NULL));
 	} else {
 		/* reapply domain limits */
 		traverse_postorder(&infra->domain_limits, domain_limit_free,
@@ -383,7 +388,14 @@ static void
 data_entry_init(struct infra_cache* infra, struct lruhash_entry* e, 
 	time_t timenow)
 {
-	uint8_t cookie[8] = {1,2,3,4,5,6,7,8};
+	int i;
+	uint8_t cookie[8] = {0,0,0,0,0,0,0,0};
+
+	for (i = 0; i < 8; i++) {
+		cookie[i] = ub_random_max(infra->random_state,
+			255); // @TODO is this correct? macro-ify?
+	}
+
 
 	struct infra_data* data = (struct infra_data*)e->data;
 	data->ttl = timenow + infra->host_ttl;
@@ -391,10 +403,9 @@ data_entry_init(struct infra_cache* infra, struct lruhash_entry* e,
 	data->edns_version = 0;
 	data->edns_lame_known = 0;
 	data->probedelay = 0;
-	// @TODO create "random" cookie
+	/* set EDNS cookie to zero, as this also sets the starting state*/
 	memset(&data->cookie, 0, sizeof(struct edns_cookie));
 	memcpy(data->cookie.data.components.client, cookie, 8);
-
 	data->isdnsseclame = 0;
 	data->rec_lame = 0;
 	data->lame_type_A = 0;

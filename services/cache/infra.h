@@ -162,6 +162,8 @@ struct infra_cache {
 	rbtree_type domain_limits;
 	/** hash table with query rates per client ip: ip_rate_key, ip_rate_data */
 	struct slabhash* client_ip_rates;
+        /** random state used in new entries for creating EDNS cookies (RFC9018) */
+        struct ub_randstate* random_state;
 };
 
 /** ratelimit, unless overridden by domain_limits, 0 is off */
@@ -236,7 +238,7 @@ struct rate_data {
  * @param cfg: config parameters or NULL for defaults.
  * @return: new infra cache, or NULL.
  */
-struct infra_cache* infra_create(struct config_file* cfg);
+struct infra_cache* infra_create(struct config_file* cfg, struct ub_randstate* rnd);
 
 /**
  * Delete infra cache.

@@ -469,11 +469,12 @@ infra_test(void)
 	struct infra_key* k;
 	struct infra_data* d;
 	int init = 376;
+	struct ub_randstate* rnd = ub_initstate(NULL);
 
 	unit_show_feature("infra cache");
 	unit_assert(ipstrtoaddr("127.0.0.1", 53, &one, &onelen));
 
-	slab = infra_create(cfg);
+	slab = infra_create(cfg, rnd);
 	unit_assert( infra_host(slab, &one, onelen, zone, zonelen, now,
 		&vs, &edns_lame, &to) );
 	unit_assert( vs == 0 && to == init && edns_lame == 0 );
