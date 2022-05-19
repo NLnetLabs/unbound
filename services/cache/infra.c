@@ -697,16 +697,16 @@ infra_edns_update(struct infra_cache* infra, struct sockaddr_storage* addr,
 
 struct edns_cookie*
 infra_get_cookie(struct infra_cache* infra, struct sockaddr_storage* addr,
-	socklen_t addrlen, uint8_t* nm, size_t nmlen,
+	socklen_t addrlen, uint8_t* name, size_t namelen,
 	time_t timenow)
 {
 	struct lruhash_entry* e = infra_lookup_nottl(infra, addr, addrlen,
-		nm, nmlen, 1);
+		name, namelen, 1);
 	struct infra_data* data;
 	int needtoinsert = 0;
 
 	if(!e) {
-		if(!(e = new_entry(infra, addr, addrlen, nm, nmlen, timenow))) {
+		if(!(e = new_entry(infra, addr, addrlen, name, namelen, timenow))) {
 			return 0;
 		}
 		needtoinsert = 1;
@@ -717,8 +717,7 @@ infra_get_cookie(struct infra_cache* infra, struct sockaddr_storage* addr,
 		data_entry_init(infra, e, timenow);
 	}
 
-	/* we have an entry; update the rtt, and the ttl */
-	data = (struct infra_data*)e->data;
+	data = (struct infra_data*) e->data;
 
 	if(needtoinsert) {
 		slabhash_insert(infra->hosts, e->hash, e, e->data, NULL);
@@ -728,6 +727,35 @@ infra_get_cookie(struct infra_cache* infra, struct sockaddr_storage* addr,
 
 	return &data->cookie;
 }
+
+void
+infra_set_server_cookie(struct infra_cache* infra, struct sockaddr_storage* addr,
+	socklen_t addrlen, uint8_t* name, size_t namelen, struct edns_option* cookie)
+{
+	struct lruhash_entry* e = infra_lookup_nottl(infra, addr, addrlen,
+		name, namelen, 1);
+	struct infra_data* data;
+
+	/* cookie length verification should be checked and handled by caller */
+	assert(cookie->opt_len == 24);
+
+	/* the client cookie was set on the outgoing upstream, so the entry
+	 * must exists here */
+	assert(e);
+
+	data = (struct infra_data*) e->data;
+
+	/* check if we already know the complete cookie */
+	if (data->cookie.state == SERVER_COOKIE_UNKNOWN) {
+		memcpy(data->cookie.data.complete, cookie->opt_data, 24);
+		data->cookie.state = SERVER_COOKIE_LEARNED;
+	}
+	else {
+		lock_rw_unlock(&e->lock);
+	}
+}
+
+
 
 int
 infra_get_lame_rtt(struct infra_cache* infra,

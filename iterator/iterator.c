@@ -3764,6 +3764,7 @@ process_response(struct module_qstate* qstate, struct iter_qstate* iq,
 {
 	struct msg_parse* prs;
 	struct edns_data edns;
+	struct edns_option* cookie;
 	sldns_buffer* pkt;
 
 	verbose(VERB_ALGO, "process_response: new external response event");
@@ -3822,6 +3823,22 @@ process_response(struct module_qstate* qstate, struct iter_qstate* iq,
 		iq->parse_failures++;
 		goto handle_it;
 	}
+
+	if((cookie = edns_list_get_option(edns.opt_list_in, 10 /*@TODO change to cookie with downstream merge*/))) {
+		/* verify this is a 'complete cookie' (RFC9018) with the length */
+		if (cookie->opt_len == 24) {
+			/* store the complete cookie in the infra_cache */
+			infra_set_server_cookie(qstate->env->infra_cache,
+				&qstate->reply->addr, qstate->reply->addrlen,
+				iq->dp->name, iq->dp->namelen, cookie);
+
+			log_hex("complete cookie: ", cookie->opt_data,
+				cookie->opt_len);
+		} else {
+			// @TODO just log error? set state to COOKIE_NOT_SUPPORTED?
+		}
+	}
+
 
 	/* Copy the edns options we may got from the back end */
 	if(edns.opt_list_in) {

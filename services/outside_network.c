@@ -3392,20 +3392,18 @@ outnet_serviced_query(struct outside_network* outnet,
 
 	// @TODO Make configurable
 
-	// 1. lookup the cookie information in the cache
 	cookie = infra_get_cookie(env->infra_cache, addr, addrlen, zone, zonelen,
 		*env->now);
 
-	// 2. attach cookie, dependent on if we know just the client or also the server
 	if (cookie->state == SERVER_COOKIE_LEARNED) {
 		/* We known the complete cookie, so we attach it */
 		edns_opt_list_append(&per_upstream_opt_list, 10, /* @TODO 10 == COOKIE */
 			24, cookie->data.complete, region);
 	} else if (cookie->state == SERVER_COOKIE_UNKNOWN) {
-		/* We known just client cookie, so we attach it */
+		/* We know just client cookie, so we attach it */
 		edns_opt_list_append(&per_upstream_opt_list, 10, /* @TODO 10 == COOKIE */
 			8, cookie->data.components.client, region);
-	}
+	} /* We ignore COOKIE_NOT_SUPPORTED */
 
 	serviced_gen_query(buff, qinfo->qname, qinfo->qname_len, qinfo->qtype,
 		qinfo->qclass, flags);

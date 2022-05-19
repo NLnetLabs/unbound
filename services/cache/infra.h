@@ -55,7 +55,7 @@ struct config_file;
 /* COOKIE @TODO move this to correct spot */
 
 /**
- * @TODO write this
+ * The actual EDNS cookie data
  */
 union edns_cookie_data {
         uint8_t complete[24];
@@ -69,17 +69,17 @@ union edns_cookie_data {
 };
 
 /**
- * @TODO write this
+ * The different states the EDNS cookie can be in
  */
 enum edns_cookie_state
 {
         SERVER_COOKIE_UNKNOWN = 0, /* server cookie unknown, client cookie known */
-        SERVER_COOKIE_LEARNED = 1, /* server (and client) cookie learned */
+        SERVER_COOKIE_LEARNED = 1, /* server (and client) cookie known */
         COOKIE_NOT_SUPPORTED = 2, /* upstream does not supported EDNS/cookies */
 };
 
 /**
- * @TODO write this
+ * Structure for an EDNS cookie (RFC9018) and it's internal state
  */
 struct edns_cookie {
         enum edns_cookie_state state;
@@ -125,7 +125,7 @@ struct infra_data {
 	 * and cause a timeout */
 	uint8_t edns_lame_known;
 
-        /* The EDNS cookie containing both the client and server cookie */
+        /* The EDNS cookie containing the cookie and the internal state */
         struct edns_cookie cookie;
 
 	/** is the host lame (does not serve the zone authoritatively),
@@ -366,15 +366,30 @@ int infra_edns_update(struct infra_cache* infra,
  * @param addrlen: length of addr.
  * @param name: name of zone
  * @param namelen: length of name
- * @param edns_version: the version that it publishes.
- *      If it is known to support EDNS then no-EDNS is not stored over it.
  * @param timenow: what time it is now.
  * @return: struct ends_cookie*
  */
 struct edns_cookie*
 infra_get_cookie(struct infra_cache* infra, struct sockaddr_storage* addr,
-        socklen_t addrlen, uint8_t* nm, size_t nmlen,
+        socklen_t addrlen, uint8_t* name, size_t namelen,
         time_t timenow);
+
+/**
+ * Find the cookie entry in the cache and update it with to make a complete
+ * cookie (RFC9018). This function assumes that the cookie param contains a
+ * complete cookie with a length of 24 bytes. It also assumes that a previous
+ * entry in the cache already exists, as it will update the entry.
+ * @param infra: infrastructure cache.
+ * @param addr: host address.
+ * @param addrlen: length of addr.
+ * @param name: name of zone
+ * @param namelen: length of name
+ * @param timenow: what time it is now.
+ * @param cookie: the EDNS cookie option we want to store.
+ */
+void infra_set_server_cookie(struct infra_cache* infra, struct sockaddr_storage* addr,
+        socklen_t addrlen, uint8_t* name, size_t namelen, struct edns_option* cookie);
+
 
 /**
  * Get Lameness information and average RTT if host is in the cache.
