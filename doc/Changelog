@@ -2,6 +2,7 @@
 	- Fix to silence test for ede error output to the console from the
 	  test setup script.
 	- Fix ede test to not use default pidfile, and use local interface.
+	- Fix some lint type warnings.
 
 18 May 2022: George
 	- Fix typos in config_set_option for the 'num-threads' and

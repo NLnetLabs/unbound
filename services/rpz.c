@@ -1560,7 +1560,9 @@ rpz_local_encode(struct module_env* env, struct query_info* qinfo,
 }
 
 static struct local_rrset*
-rpz_find_synthesized_rrset(int qtype, struct clientip_synthesized_rr* data) {
+rpz_find_synthesized_rrset(uint16_t qtype,
+	struct clientip_synthesized_rr* data)
+{
 	struct local_rrset* cursor = data->data;
 	while( cursor != NULL) {
 		struct packed_rrset_key* packed_rrset = &cursor->rrset->rk;

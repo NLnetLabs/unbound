@@ -2485,7 +2485,7 @@ http_nonchunk_segment(struct comm_point* c)
 	remainbufferlen = sldns_buffer_capacity(c->buffer) -
 		sldns_buffer_limit(c->buffer);
 	if(remainbufferlen+got_now >= c->tcp_byte_count ||
-		remainbufferlen >= (c->ssl?16384:2048)) {
+		remainbufferlen >= (size_t)(c->ssl?16384:2048)) {
 		size_t total = sldns_buffer_limit(c->buffer);
 		sldns_buffer_clear(c->buffer);
 		sldns_buffer_set_position(c->buffer, total);
