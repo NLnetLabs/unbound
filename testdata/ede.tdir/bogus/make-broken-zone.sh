@@ -9,7 +9,7 @@ echo ". IN DS 20326 8 2 e06d44b80b8f1d39a95c0b0d7c65d08458e880409bbc683457104237
 
 # differentiate for MacOS with "gdate"
 DATE=date
-which gdate > /dev/null && DATE=gdate
+which gdate > /dev/null 2>&1 && DATE=gdate
 
 ONEMONTHAGO=`$DATE -d 'now - 1 month' +%Y%m%d`
 YESTERDAY=`$DATE -d 'now - 2 days' +%Y%m%d`

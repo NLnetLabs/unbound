@@ -1,3 +1,7 @@
+20 May 2022: Wouter
+	- Fix to silence test for ede error output to the console from the
+	  test setup script.
+
 18 May 2022: George
 	- Fix typos in config_set_option for the 'num-threads' and
 	  'ede-serve-expired' options.
