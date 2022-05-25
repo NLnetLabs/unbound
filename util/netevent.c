@@ -68,6 +68,10 @@
 #include <openssl/err.h>
 #endif
 
+#ifdef HAVE_NGTCP2
+#include <ngtcp2/ngtcp2.h>
+#endif
+
 /* -------- Start of local definitions -------- */
 /** if CMSG_ALIGN is not defined on this platform, a workaround */
 #ifndef CMSG_ALIGN
@@ -794,6 +798,167 @@ comm_point_udp_callback(int fd, short event, void* arg)
 		if(!rep.c || rep.c->fd != fd) /* commpoint closed to -1 or reused for
 		another UDP port. Note rep.c cannot be reused with TCP fd. */
 			break;
+	}
+}
+
+/** decode doq packet header, false on handled or failure, true to continue
+ * to process the packet */
+static int
+doq_decode_pkt_header_negotiate(struct comm_point* c)
+{
+	uint32_t version;
+	const uint8_t *dcid, *scid;
+	size_t dcidlen, scidlen;
+	int rv;
+	int sv_scidlen = 18; /* server scid length */
+	rv = ngtcp2_pkt_decode_version_cid(&version, &dcid, &dcidlen,
+		&scid, &scidlen, sldns_buffer_begin(c->buffer),
+		sldns_buffer_limit(c->buffer), sv_scidlen);
+	if(rv != 0) {
+		if(rv == NGTCP2_ERR_VERSION_NEGOTIATION) {
+			/* send the version negotiation */
+			return 0;
+		}
+		verbose(VERB_ALGO, "doq: could not decode version "
+			"and CID from QUIC packet header: %s",
+			ngtcp2_strerror(rv));
+		return 0;
+	}
+	return 1;
+}
+
+void
+comm_point_doq_callback(int fd, short event, void* arg)
+{
+	struct comm_point* c;
+	struct msghdr msg;
+	struct iovec iov[1];
+	ssize_t rcv;
+	union {
+		struct cmsghdr hdr;
+		char buf[256];
+	} ancil;
+	struct sockaddr_storage addr, localaddr;
+	socklen_t addrlen, localaddrlen;
+	int i, ifindex;
+#ifndef S_SPLINT_S
+	struct cmsghdr* cmsg;
+#endif /* S_SPLINT_S */
+
+	c = (struct comm_point*)arg;
+	log_assert(c->type == comm_udp);
+
+	if(!(event&UB_EV_READ))
+		return;
+	log_assert(c && c->buffer && c->fd == fd);
+	ub_comm_base_now(c->ev->base);
+	for(i=0; i<NUM_UDP_PER_SELECT; i++) {
+		sldns_buffer_clear(c->buffer);
+		addrlen = (socklen_t)sizeof(addr);
+		localaddrlen = (socklen_t)sizeof(localaddr);
+		ifindex = 0;
+		log_assert(fd != -1);
+		log_assert(sldns_buffer_remaining(c->buffer) > 0);
+		msg.msg_name = &addr;
+		msg.msg_namelen = (socklen_t)sizeof(addr);
+		iov[0].iov_base = sldns_buffer_begin(c->buffer);
+		iov[0].iov_len = sldns_buffer_remaining(c->buffer);
+		msg.msg_iov = iov;
+		msg.msg_iovlen = 1;
+		msg.msg_control = ancil.buf;
+#ifndef S_SPLINT_S
+		msg.msg_controllen = sizeof(ancil.buf);
+#endif /* S_SPLINT_S */
+		msg.msg_flags = 0;
+		rcv = recvmsg(fd, &msg, 0);
+		if(rcv == -1) {
+			if(errno != EAGAIN && errno != EINTR
+				&& udp_recv_needs_log(errno)) {
+				log_err("recvmsg failed for doq: %s", strerror(errno));
+			}
+			return;
+		}
+		addrlen = msg.msg_namelen;
+		sldns_buffer_skip(c->buffer, rcv);
+		sldns_buffer_flip(c->buffer);
+		memset(&localaddr, 0, sizeof(localaddr));
+#ifndef S_SPLINT_S
+		for(cmsg = CMSG_FIRSTHDR(&msg); cmsg != NULL;
+			cmsg = CMSG_NXTHDR(&msg, cmsg)) {
+			if( cmsg->cmsg_level == IPPROTO_IPV6 &&
+				cmsg->cmsg_type == IPV6_PKTINFO) {
+				struct in6_pktinfo* v6info =
+					(struct in6_pktinfo*)CMSG_DATA(cmsg);
+				struct sockaddr_in6* sa= (struct sockaddr_in6*)&localaddr;
+				struct sockaddr_in6* rema = (struct sockaddr_in6*)&addr;
+				if(rema->sin6_family != AF_INET6) {
+					log_err("doq cmsg family mismatch cmsg is ip6");
+					return;
+				}
+				sa->sin6_family = AF_INET6;
+				sa->sin6_port = rema->sin6_port;
+				ifindex = v6info->ipi6_ifindex;
+				memmove(&sa->sin6_addr, &v6info->ipi6_addr,
+					sizeof(struct in6_addr));
+				localaddrlen = sizeof(struct sockaddr_in6);
+				break;
+#ifdef IP_PKTINFO
+			} else if( cmsg->cmsg_level == IPPROTO_IP &&
+				cmsg->cmsg_type == IP_PKTINFO) {
+				struct in_pktinfo* v4info =
+					(struct in_pktinfo*)CMSG_DATA(cmsg);
+				struct sockaddr_in* sa= (struct sockaddr_in*)&localaddr;
+				struct sockaddr_in* rema = (struct sockaddr_in*)&addr;
+				if(rema->sin_family != AF_INET) {
+					log_err("doq cmsg family mismatch cmsg is ip4");
+					return;
+				}
+				sa->sin_family = AF_INET;
+				sa->sin_port = rema->sin_port;
+				ifindex = v4info->ipi_ifindex;
+				memmove(&sa->sin_addr, &v4info->ipi_addr,
+					sizeof(struct in_addr));
+				localaddrlen = sizeof(struct sockaddr_in);
+				break;
+#elif defined(IP_RECVDSTADDR)
+			} else if( cmsg->cmsg_level == IPPROTO_IP &&
+				cmsg->cmsg_type == IP_RECVDSTADDR) {
+				struct sockaddr_in* sa= (struct sockaddr_in*)&localaddr;
+				struct sockaddr_in* rema = (struct sockaddr_in*)&addr;
+				if(rema->sin_family != AF_INET) {
+					log_err("doq cmsg family mismatch cmsg is ip4");
+					return;
+				}
+				sa->sin_family = AF_INET;
+				sa->sin_port = rema->sin_port;
+				ifindex = 0;
+				memmove(&sa.sin_addr, CMSG_DATA(cmsg),
+					sizeof(struct in_addr));
+				localaddrlen = sizeof(struct sockaddr_in);
+				break;
+#endif /* IP_PKTINFO or IP_RECVDSTADDR */
+			}
+		}
+#endif /* S_SPLINT_S */
+
+		/* handle incoming packet from remote addr to localaddr */
+		if(verbosity >= VERB_ALGO) {
+			char remotestr[256], localstr[256];
+			addr_to_str(&addr, addrlen, remotestr,
+				sizeof(remotestr));
+			addr_to_str(&localaddr, localaddrlen, localstr,
+				sizeof(localstr));
+			log_info("incoming doq packet from %s on %s "
+				"ifindex %d", remotestr, localstr, ifindex);
+		}
+
+		if(rcv == 0) {
+			continue;
+		}
+
+		if(!doq_decode_pkt_header_negotiate(c)) {
+			continue;
+		}
 	}
 }
 
@@ -3386,6 +3551,66 @@ comm_point_create_udp_ancil(struct comm_base *base, int fd,
 	/* ub_event stuff */
 	c->ev->ev = ub_event_new(base->eb->base, c->fd, evbits,
 		comm_point_udp_ancil_callback, c);
+	if(c->ev->ev == NULL) {
+		log_err("could not baseset udp event");
+		comm_point_delete(c);
+		return NULL;
+	}
+	if(fd!=-1 && ub_event_add(c->ev->ev, c->timeout) != 0 ) {
+		log_err("could not add udp event");
+		comm_point_delete(c);
+		return NULL;
+	}
+	c->event_added = 1;
+	return c;
+}
+
+struct comm_point*
+comm_point_create_doq(struct comm_base *base, int fd, sldns_buffer* buffer,
+	comm_point_callback_type* callback, void* callback_arg, struct unbound_socket* socket)
+{
+	struct comm_point* c = (struct comm_point*)calloc(1,
+		sizeof(struct comm_point));
+	short evbits;
+	if(!c)
+		return NULL;
+	c->ev = (struct internal_event*)calloc(1,
+		sizeof(struct internal_event));
+	if(!c->ev) {
+		free(c);
+		return NULL;
+	}
+	c->ev->base = base;
+	c->fd = fd;
+	c->buffer = buffer;
+	c->timeout = NULL;
+	c->tcp_is_reading = 0;
+	c->tcp_byte_count = 0;
+	c->tcp_parent = NULL;
+	c->max_tcp_count = 0;
+	c->cur_tcp_count = 0;
+	c->tcp_handlers = NULL;
+	c->tcp_free = NULL;
+	c->type = comm_udp;
+	c->tcp_do_close = 0;
+	c->do_not_close = 0;
+	c->tcp_do_toggle_rw = 0;
+	c->tcp_check_nb_connect = 0;
+#ifdef USE_MSG_FASTOPEN
+	c->tcp_do_fastopen = 0;
+#endif
+#ifdef USE_DNSCRYPT
+	c->dnscrypt = 0;
+	c->dnscrypt_buffer = NULL;
+#endif
+	c->inuse = 0;
+	c->callback = callback;
+	c->cb_arg = callback_arg;
+	c->socket = socket;
+	evbits = UB_EV_READ | UB_EV_PERSIST;
+	/* ub_event stuff */
+	c->ev->ev = ub_event_new(base->eb->base, c->fd, evbits,
+		comm_point_doq_callback, c);
 	if(c->ev->ev == NULL) {
 		log_err("could not baseset udp event");
 		comm_point_delete(c);

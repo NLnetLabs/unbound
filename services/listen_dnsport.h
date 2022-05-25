@@ -99,7 +99,9 @@ enum listen_type {
 	/** udp ipv6 (v4mapped) for use with ancillary data + dnscrypt*/
 	listen_type_udpancil_dnscrypt,
 	/** HTTP(2) over TLS over TCP */
-	listen_type_http
+	listen_type_http,
+	/** DNS over QUIC */
+	listen_type_doq
 };
 
 /*

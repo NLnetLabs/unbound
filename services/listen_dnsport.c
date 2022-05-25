@@ -1190,6 +1190,7 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 	int is_https = if_is_https(ifname, port, https_port);
 	int nodelay = is_https && http2_nodelay;
 	struct unbound_socket* ub_sock;
+	int is_doq = 0;
 #ifdef USE_DNSCRYPT
 	int is_dnscrypt = ((strchr(ifname, '@') && 
 			atoi(strchr(ifname, '@')+1) == dnscrypt_port) ||
@@ -1198,6 +1199,7 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 	int is_dnscrypt = 0;
 	(void)dnscrypt_port;
 #endif
+	is_doq = 1; /* DEBUG */
 
 	if(!do_udp && !do_tcp)
 		return 0;
@@ -1232,9 +1234,16 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 			return 0;
 		}
 	} else if(do_udp) {
+		enum listen_type udp_port_type;
 		ub_sock = calloc(1, sizeof(struct unbound_socket));
 		if(!ub_sock)
 			return 0;
+		if(is_dnscrypt)
+			udp_port_type = listen_type_udp_dnscrypt;
+		else if(is_doq)
+			udp_port_type = listen_type_doq;
+		else
+			udp_port_type = listen_type_udp;
 		/* regular udp socket */
 		if((s = make_sock_port(SOCK_DGRAM, ifname, port, hints, 1, 
 			&noip6, rcv, snd, reuseport, transparent,
@@ -1247,8 +1256,15 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 			}
 			return 0;
 		}
-		if(!port_insert(list, s,
-		   is_dnscrypt?listen_type_udp_dnscrypt:listen_type_udp, ub_sock)) {
+		if(udp_port_type == listen_type_doq) {
+			if(!set_recvpktinfo(s, hints->ai_family)) {
+				sock_close(s);
+				freeaddrinfo(ub_sock->addr);
+				free(ub_sock);
+				return 0;
+			}
+		}
+		if(!port_insert(list, s, udp_port_type, ub_sock)) {
 			sock_close(s);
 			freeaddrinfo(ub_sock->addr);
 			free(ub_sock);
@@ -1372,6 +1388,14 @@ listen_create(struct comm_base* base, struct listen_port* ports,
 		if(ports->ftype == listen_type_udp ||
 		   ports->ftype == listen_type_udp_dnscrypt) {
 			cp = comm_point_create_udp(base, ports->fd,
+				front->udp_buff, cb, cb_arg, ports->socket);
+		} else if(ports->ftype == listen_type_doq) {
+#ifndef HAVE_NGTCP2
+			log_warn("Unbound is not compiled with "
+				"ngtcp2. This is required to use DNS "
+				"over QUIC.");
+#endif
+			cp = comm_point_create_doq(base, ports->fd,
 				front->udp_buff, cb, cb_arg, ports->socket);
 		} else if(ports->ftype == listen_type_tcp ||
 				ports->ftype == listen_type_tcp_dnscrypt) {
