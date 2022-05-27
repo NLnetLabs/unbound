@@ -801,6 +801,151 @@ comm_point_udp_callback(int fd, short event, void* arg)
 	}
 }
 
+#ifdef HAVE_NGTCP2
+/** fetch port number */
+static int
+doq_sockaddr_get_port(struct sockaddr_storage* addr)
+{
+	if(addr->ss_family == AF_INET) {
+		struct sockaddr_in* sa = (struct sockaddr_in*)addr;
+		return ntohs(sa->sin_port);
+	} else if(addr->ss_family == AF_INET6) {
+		struct sockaddr_in6* sa6 = (struct sockaddr_in6*)addr;
+		return ntohs(sa6->sin6_port);
+	}
+	return 0;
+}
+
+/** get local address from ancillary data headers */
+static int
+doq_get_localaddr_cmsg(struct comm_point* c, struct sockaddr_storage* addr,
+	socklen_t ATTR_UNUSED(addrlen), struct sockaddr_storage* localaddr,
+	socklen_t* localaddrlen, int* ifindex, int* pkt_continue,
+	struct msghdr* msg)
+{
+#ifndef S_SPLINT_S
+	struct cmsghdr* cmsg;
+#endif /* S_SPLINT_S */
+
+	memset(localaddr, 0, sizeof(*localaddr));
+#ifndef S_SPLINT_S
+	for(cmsg = CMSG_FIRSTHDR(msg); cmsg != NULL;
+		cmsg = CMSG_NXTHDR(msg, cmsg)) {
+		if( cmsg->cmsg_level == IPPROTO_IPV6 &&
+			cmsg->cmsg_type == IPV6_PKTINFO) {
+			struct in6_pktinfo* v6info =
+				(struct in6_pktinfo*)CMSG_DATA(cmsg);
+			struct sockaddr_in6* sa= (struct sockaddr_in6*)localaddr;
+			struct sockaddr_in6* rema = (struct sockaddr_in6*)addr;
+			if(rema->sin6_family != AF_INET6) {
+				log_err("doq cmsg family mismatch cmsg is ip6");
+				*pkt_continue = 1;
+				return 0;
+			}
+			sa->sin6_family = AF_INET6;
+			sa->sin6_port = htons(doq_sockaddr_get_port(
+				(struct sockaddr_storage*)c->socket->
+				addr->ai_addr));
+			*ifindex = v6info->ipi6_ifindex;
+			memmove(&sa->sin6_addr, &v6info->ipi6_addr,
+				sizeof(struct in6_addr));
+			*localaddrlen = sizeof(struct sockaddr_in6);
+			break;
+#ifdef IP_PKTINFO
+		} else if( cmsg->cmsg_level == IPPROTO_IP &&
+			cmsg->cmsg_type == IP_PKTINFO) {
+			struct in_pktinfo* v4info =
+				(struct in_pktinfo*)CMSG_DATA(cmsg);
+			struct sockaddr_in* sa= (struct sockaddr_in*)localaddr;
+			struct sockaddr_in* rema = (struct sockaddr_in*)addr;
+			if(rema->sin_family != AF_INET) {
+				log_err("doq cmsg family mismatch cmsg is ip4");
+				*pkt_continue = 1;
+				return 0;
+			}
+			sa->sin_family = AF_INET;
+			sa->sin_port = htons(doq_sockaddr_get_port(
+				(struct sockaddr_storage*)c->socket->
+				addr->ai_addr));
+			*ifindex = v4info->ipi_ifindex;
+			memmove(&sa->sin_addr, &v4info->ipi_addr,
+				sizeof(struct in_addr));
+			*localaddrlen = sizeof(struct sockaddr_in);
+			break;
+#elif defined(IP_RECVDSTADDR)
+		} else if( cmsg->cmsg_level == IPPROTO_IP &&
+			cmsg->cmsg_type == IP_RECVDSTADDR) {
+			struct sockaddr_in* sa= (struct sockaddr_in*)localaddr;
+			struct sockaddr_in* rema = (struct sockaddr_in*)addr;
+			if(rema->sin_family != AF_INET) {
+				log_err("doq cmsg family mismatch cmsg is ip4");
+				*pkt_continue = 1;
+				return 0;
+			}
+			sa->sin_family = AF_INET;
+			sa->sin_port = htons(doq_sockaddr_get_port(
+				(struct sockaddr_storage*)c->socket->
+				addr->ai_addr));
+			*ifindex = 0;
+			memmove(&sa.sin_addr, CMSG_DATA(cmsg),
+				sizeof(struct in_addr));
+			*localaddrlen = sizeof(struct sockaddr_in);
+			break;
+#endif /* IP_PKTINFO or IP_RECVDSTADDR */
+		}
+	}
+#endif /* S_SPLINT_S */
+
+return 1;
+}
+
+/** receive packet for DoQ on UDP. get ancillary data for addresses,
+ * return false if failed and the callback can stop receiving UDP packets
+ * if pkt_continue is false. */
+static int
+doq_recv(struct comm_point* c, struct sockaddr_storage* addr,
+	socklen_t* addrlen, struct sockaddr_storage* localaddr,
+	socklen_t* localaddrlen, int* ifindex, int* pkt_continue)
+{
+	struct msghdr msg;
+	struct iovec iov[1];
+	ssize_t rcv;
+	union {
+		struct cmsghdr hdr;
+		char buf[256];
+	} ancil;
+
+	msg.msg_name = addr;
+	msg.msg_namelen = (socklen_t)sizeof(*addr);
+	iov[0].iov_base = sldns_buffer_begin(c->buffer);
+	iov[0].iov_len = sldns_buffer_remaining(c->buffer);
+	msg.msg_iov = iov;
+	msg.msg_iovlen = 1;
+	msg.msg_control = ancil.buf;
+#ifndef S_SPLINT_S
+	msg.msg_controllen = sizeof(ancil.buf);
+#endif /* S_SPLINT_S */
+	msg.msg_flags = 0;
+
+	rcv = recvmsg(c->fd, &msg, 0);
+	if(rcv == -1) {
+		if(errno != EAGAIN && errno != EINTR
+			&& udp_recv_needs_log(errno)) {
+			log_err("recvmsg failed for doq: %s", strerror(errno));
+		}
+		*pkt_continue = 0;
+		return 0;
+	}
+
+	*addrlen = msg.msg_namelen;
+	sldns_buffer_skip(c->buffer, rcv);
+	sldns_buffer_flip(c->buffer);
+	if(!doq_get_localaddr_cmsg(c, addr, *addrlen, localaddr, localaddrlen,
+		ifindex, pkt_continue, &msg))
+		return 0;
+	return 1;
+}
+
 /** decode doq packet header, false on handled or failure, true to continue
  * to process the packet */
 static int
@@ -831,19 +976,9 @@ void
 comm_point_doq_callback(int fd, short event, void* arg)
 {
 	struct comm_point* c;
-	struct msghdr msg;
-	struct iovec iov[1];
-	ssize_t rcv;
-	union {
-		struct cmsghdr hdr;
-		char buf[256];
-	} ancil;
 	struct sockaddr_storage addr, localaddr;
 	socklen_t addrlen, localaddrlen;
-	int i, ifindex;
-#ifndef S_SPLINT_S
-	struct cmsghdr* cmsg;
-#endif /* S_SPLINT_S */
+	int i, ifindex, pkt_continue;
 
 	c = (struct comm_point*)arg;
 	log_assert(c->type == comm_udp);
@@ -859,87 +994,12 @@ comm_point_doq_callback(int fd, short event, void* arg)
 		ifindex = 0;
 		log_assert(fd != -1);
 		log_assert(sldns_buffer_remaining(c->buffer) > 0);
-		msg.msg_name = &addr;
-		msg.msg_namelen = (socklen_t)sizeof(addr);
-		iov[0].iov_base = sldns_buffer_begin(c->buffer);
-		iov[0].iov_len = sldns_buffer_remaining(c->buffer);
-		msg.msg_iov = iov;
-		msg.msg_iovlen = 1;
-		msg.msg_control = ancil.buf;
-#ifndef S_SPLINT_S
-		msg.msg_controllen = sizeof(ancil.buf);
-#endif /* S_SPLINT_S */
-		msg.msg_flags = 0;
-		rcv = recvmsg(fd, &msg, 0);
-		if(rcv == -1) {
-			if(errno != EAGAIN && errno != EINTR
-				&& udp_recv_needs_log(errno)) {
-				log_err("recvmsg failed for doq: %s", strerror(errno));
-			}
+		if(!doq_recv(c, &addr, &addrlen, &localaddr, &localaddrlen,
+			&ifindex, &pkt_continue)) {
+			if(pkt_continue)
+				continue;
 			return;
 		}
-		addrlen = msg.msg_namelen;
-		sldns_buffer_skip(c->buffer, rcv);
-		sldns_buffer_flip(c->buffer);
-		memset(&localaddr, 0, sizeof(localaddr));
-#ifndef S_SPLINT_S
-		for(cmsg = CMSG_FIRSTHDR(&msg); cmsg != NULL;
-			cmsg = CMSG_NXTHDR(&msg, cmsg)) {
-			if( cmsg->cmsg_level == IPPROTO_IPV6 &&
-				cmsg->cmsg_type == IPV6_PKTINFO) {
-				struct in6_pktinfo* v6info =
-					(struct in6_pktinfo*)CMSG_DATA(cmsg);
-				struct sockaddr_in6* sa= (struct sockaddr_in6*)&localaddr;
-				struct sockaddr_in6* rema = (struct sockaddr_in6*)&addr;
-				if(rema->sin6_family != AF_INET6) {
-					log_err("doq cmsg family mismatch cmsg is ip6");
-					return;
-				}
-				sa->sin6_family = AF_INET6;
-				sa->sin6_port = rema->sin6_port;
-				ifindex = v6info->ipi6_ifindex;
-				memmove(&sa->sin6_addr, &v6info->ipi6_addr,
-					sizeof(struct in6_addr));
-				localaddrlen = sizeof(struct sockaddr_in6);
-				break;
-#ifdef IP_PKTINFO
-			} else if( cmsg->cmsg_level == IPPROTO_IP &&
-				cmsg->cmsg_type == IP_PKTINFO) {
-				struct in_pktinfo* v4info =
-					(struct in_pktinfo*)CMSG_DATA(cmsg);
-				struct sockaddr_in* sa= (struct sockaddr_in*)&localaddr;
-				struct sockaddr_in* rema = (struct sockaddr_in*)&addr;
-				if(rema->sin_family != AF_INET) {
-					log_err("doq cmsg family mismatch cmsg is ip4");
-					return;
-				}
-				sa->sin_family = AF_INET;
-				sa->sin_port = rema->sin_port;
-				ifindex = v4info->ipi_ifindex;
-				memmove(&sa->sin_addr, &v4info->ipi_addr,
-					sizeof(struct in_addr));
-				localaddrlen = sizeof(struct sockaddr_in);
-				break;
-#elif defined(IP_RECVDSTADDR)
-			} else if( cmsg->cmsg_level == IPPROTO_IP &&
-				cmsg->cmsg_type == IP_RECVDSTADDR) {
-				struct sockaddr_in* sa= (struct sockaddr_in*)&localaddr;
-				struct sockaddr_in* rema = (struct sockaddr_in*)&addr;
-				if(rema->sin_family != AF_INET) {
-					log_err("doq cmsg family mismatch cmsg is ip4");
-					return;
-				}
-				sa->sin_family = AF_INET;
-				sa->sin_port = rema->sin_port;
-				ifindex = 0;
-				memmove(&sa.sin_addr, CMSG_DATA(cmsg),
-					sizeof(struct in_addr));
-				localaddrlen = sizeof(struct sockaddr_in);
-				break;
-#endif /* IP_PKTINFO or IP_RECVDSTADDR */
-			}
-		}
-#endif /* S_SPLINT_S */
 
 		/* handle incoming packet from remote addr to localaddr */
 		if(verbosity >= VERB_ALGO) {
@@ -948,11 +1008,14 @@ comm_point_doq_callback(int fd, short event, void* arg)
 				sizeof(remotestr));
 			addr_to_str(&localaddr, localaddrlen, localstr,
 				sizeof(localstr));
-			log_info("incoming doq packet from %s on %s "
-				"ifindex %d", remotestr, localstr, ifindex);
+			log_info("incoming doq packet from %s port %d on "
+				"%s port %d ifindex %d",
+				remotestr, doq_sockaddr_get_port(&addr),
+				localstr, doq_sockaddr_get_port(&localaddr),
+				ifindex);
 		}
 
-		if(rcv == 0) {
+		if(sldns_buffer_limit(c->buffer) == 0) {
 			continue;
 		}
 
@@ -961,6 +1024,7 @@ comm_point_doq_callback(int fd, short event, void* arg)
 		}
 	}
 }
+#endif /* HAVE_NGTCP2 */
 
 int adjusted_tcp_timeout(struct comm_point* c)
 {
@@ -3569,6 +3633,7 @@ struct comm_point*
 comm_point_create_doq(struct comm_base *base, int fd, sldns_buffer* buffer,
 	comm_point_callback_type* callback, void* callback_arg, struct unbound_socket* socket)
 {
+#ifdef HAVE_NGTCP2
 	struct comm_point* c = (struct comm_point*)calloc(1,
 		sizeof(struct comm_point));
 	short evbits;
@@ -3623,6 +3688,16 @@ comm_point_create_doq(struct comm_base *base, int fd, sldns_buffer* buffer,
 	}
 	c->event_added = 1;
 	return c;
+#else
+	/* no libngtcp2, so no QUIC support */
+	(void)base;
+	(void)buffer;
+	(void)callback;
+	(void)callback_arg;
+	(void)socket;
+	sock_close(fd);
+	return NULL;
+#endif /* HAVE_NGTCP2 */
 }
 
 static struct comm_point* 
