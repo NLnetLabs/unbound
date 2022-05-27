@@ -1,3 +1,6 @@
+27 May 2022: Wouter
+	- Fix #684: [FTBS] configure script error with libmnl on openSUSE 15.3 (and possibly other distributions)
+
 20 May 2022: Wouter
 	- Fix to silence test for ede error output to the console from the
 	  test setup script.

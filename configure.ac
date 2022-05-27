@@ -1880,11 +1880,17 @@ case "$enable_ipset" in
 			withval="/usr/local /opt/local /usr/lib /usr/pkg /usr/sfw /usr"
 		fi
 		for dir in $withval ; do
-			if test -f "$dir/include/libmnl/libmnl.h"; then
+			if test -f "$dir/include/libmnl/libmnl.h" -o -f "$dir/include/libmnl/libmnl/libmnl.h"; then
 				found_libmnl="yes"
 				dnl assume /usr is in default path.
+				extralibmnl=""
+				if test -f "$dir/include/libmnl/libmnl/libmnl.h"; then
+					extralibmnl="/libmnl"
+				fi
+				if test "$dir" != "/usr" -o -n "$extralibmnl"; then
+					CPPFLAGS="$CPPFLAGS -I$dir/include$extralibmnl"
+				fi
 				if test "$dir" != "/usr"; then
-					CPPFLAGS="$CPPFLAGS -I$dir/include"
 					LDFLAGS="$LDFLAGS -L$dir/lib"
 				fi
 				AC_MSG_RESULT(found in $dir)
