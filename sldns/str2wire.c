@@ -1598,12 +1598,12 @@ static int sldns_str2wire_svcparam_buf(const char* str, uint8_t* rd, size_t* rd_
 		if (*val_in == '"') {
 			val_in++;
 			while (*val_in != '"'
-			&& (unsigned)(val_out - unescaped_val + 1) < sizeof(unescaped_val)
+			&& (size_t)(val_out - unescaped_val + 1) < sizeof(unescaped_val)
 			&& sldns_parse_char( (uint8_t*) val_out, &val_in)) {
 				val_out++;
 			}
 		} else {
-			while ((unsigned)(val_out - unescaped_val + 1) < sizeof(unescaped_val)
+			while ((size_t)(val_out - unescaped_val + 1) < sizeof(unescaped_val)
 			&& sldns_parse_char( (uint8_t*) val_out, &val_in)) {
 				val_out++;
 			}

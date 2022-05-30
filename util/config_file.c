@@ -479,7 +479,7 @@ int config_set_option(struct config_file* cfg, const char* opt,
 		else if(atoi(val) == 0)
 			return 0;
 		else cfg->stat_interval = atoi(val);
-	} else if(strcmp(opt, "num_threads:") == 0) {
+	} else if(strcmp(opt, "num-threads:") == 0) {
 		/* not supported, library must have 1 thread in bgworker */
 		return 0;
 	} else if(strcmp(opt, "outgoing-port-permit:") == 0) {
@@ -546,6 +546,7 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	else S_STR("ssl-cert-bundle:", tls_cert_bundle)
 	else S_STR("tls-cert-bundle:", tls_cert_bundle)
 	else S_YNO("tls-win-cert:", tls_win_cert)
+	else S_YNO("tls-system-cert:", tls_win_cert)
 	else S_STRLIST("additional-ssl-port:", tls_additional_port)
 	else S_STRLIST("additional-tls-port:", tls_additional_port)
 	else S_STRLIST("tls-additional-ports:", tls_additional_port)
@@ -673,7 +674,7 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	{ IS_NUMBER_OR_ZERO; cfg->serve_expired_reply_ttl = atoi(val); SERVE_EXPIRED_REPLY_TTL=(time_t)cfg->serve_expired_reply_ttl;}
 	else S_NUMBER_OR_ZERO("serve-expired-client-timeout:", serve_expired_client_timeout)
 	else S_YNO("ede:", ede)	
-	else S_YNO("ede_serve-expired:", ede_serve_expired)
+	else S_YNO("ede-serve-expired:", ede_serve_expired)
 	else S_YNO("serve-original-ttl:", serve_original_ttl)
 	else S_STR("val-nsec3-keysize-iterations:", val_nsec3_key_iterations)
 	else S_YNO("zonemd-permissive-mode:", zonemd_permissive_mode)
@@ -1056,6 +1057,7 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_STR(opt, "ssl-cert-bundle", tls_cert_bundle)
 	else O_STR(opt, "tls-cert-bundle", tls_cert_bundle)
 	else O_YNO(opt, "tls-win-cert", tls_win_cert)
+	else O_YNO(opt, "tls-system-cert", tls_win_cert)
 	else O_LST(opt, "additional-ssl-port", tls_additional_port)
 	else O_LST(opt, "additional-tls-port", tls_additional_port)
 	else O_LST(opt, "tls-additional-ports", tls_additional_port)

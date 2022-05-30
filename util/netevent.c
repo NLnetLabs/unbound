@@ -1277,6 +1277,12 @@ ssl_handshake(struct comm_point* c)
 			if(errno == ECONNRESET && verbosity < 2)
 				return 0; /* silence reset by peer */
 #endif
+			if(!tcp_connect_errno_needs_log(
+				(struct sockaddr*)&c->repinfo.addr,
+				c->repinfo.addrlen))
+				return 0; /* silence connect failures that
+				show up because after connect this is the
+				first system call that accesses the socket */
 			if(errno != 0)
 				log_err("SSL_handshake syscall: %s",
 					strerror(errno));
@@ -2479,7 +2485,7 @@ http_nonchunk_segment(struct comm_point* c)
 	remainbufferlen = sldns_buffer_capacity(c->buffer) -
 		sldns_buffer_limit(c->buffer);
 	if(remainbufferlen+got_now >= c->tcp_byte_count ||
-		remainbufferlen >= (c->ssl?16384:2048)) {
+		remainbufferlen >= (size_t)(c->ssl?16384:2048)) {
 		size_t total = sldns_buffer_limit(c->buffer);
 		sldns_buffer_clear(c->buffer);
 		sldns_buffer_set_position(c->buffer, total);

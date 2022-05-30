@@ -1158,7 +1158,7 @@ if_is_ssl(const char* ifname, const char* port, int ssl_port,
  * @param do_auto: use automatic interface detection.
  * 	If enabled, then ifname must be the wildcard name.
  * @param do_udp: if udp should be used.
- * @param do_tcp: if udp should be used.
+ * @param do_tcp: if tcp should be used.
  * @param hints: for getaddrinfo. family and flags have to be set by caller.
  * @param port: Port number to use (as string).
  * @param list: list of open ports, appended to, changed to point to list head.

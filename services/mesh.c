@@ -64,6 +64,11 @@
 #include "respip/respip.h"
 #include "services/listen_dnsport.h"
 
+#ifdef CLIENT_SUBNET
+#include "edns-subnet/subnetmod.h"
+#include "edns-subnet/edns-subnet.h"
+#endif
+
 /** subtract timers and the values do not overflow or become negative */
 static void
 timeval_subtract(struct timeval* d, const struct timeval* end, const struct timeval* start)
@@ -736,11 +741,11 @@ static void mesh_schedule_prefetch(struct mesh_area* mesh,
 		/* move to either the forever or the jostle_list */
 		if(mesh->num_forever_states < mesh->max_forever_states) {
 			mesh->num_forever_states ++;
-			mesh_list_insert(s, &mesh->forever_first, 
+			mesh_list_insert(s, &mesh->forever_first,
 				&mesh->forever_last);
 			s->list_select = mesh_forever_list;
 		} else {
-			mesh_list_insert(s, &mesh->jostle_first, 
+			mesh_list_insert(s, &mesh->jostle_first,
 				&mesh->jostle_last);
 			s->list_select = mesh_jostle_list;
 		}
@@ -761,10 +766,114 @@ static void mesh_schedule_prefetch(struct mesh_area* mesh,
 	mesh_run(mesh, s, module_event_new, NULL);
 }
 
-void mesh_new_prefetch(struct mesh_area* mesh, struct query_info* qinfo,
-        uint16_t qflags, time_t leeway, int rpz_passthru)
+#ifdef CLIENT_SUBNET
+/* Same logic as mesh_schedule_prefetch but tailored to the subnet module logic
+ * like passing along the comm_reply info. This will be faked into an EDNS
+ * option for processing by the subnet module if the client has not already
+ * attached its own ECS data. */
+static void mesh_schedule_prefetch_subnet(struct mesh_area* mesh,
+	struct query_info* qinfo, uint16_t qflags, time_t leeway, int run,
+	int rpz_passthru, struct comm_reply* rep, struct edns_option* edns_list)
 {
-	mesh_schedule_prefetch(mesh, qinfo, qflags, leeway, 1, rpz_passthru);
+	struct mesh_state* s = NULL;
+	struct edns_option* opt = NULL;
+#ifdef UNBOUND_DEBUG
+	struct rbnode_type* n;
+#endif
+	if(!mesh_make_new_space(mesh, NULL)) {
+		verbose(VERB_ALGO, "Too many queries. dropped prefetch.");
+		mesh->stats_dropped ++;
+		return;
+	}
+
+	s = mesh_state_create(mesh->env, qinfo, NULL,
+		qflags&(BIT_RD|BIT_CD), 0, 0);
+	if(!s) {
+		log_err("prefetch_subnet mesh_state_create: out of memory");
+		return;
+	}
+	mesh_state_make_unique(s);
+
+	opt = edns_opt_list_find(edns_list, mesh->env->cfg->client_subnet_opcode);
+	if(opt) {
+		/* Use the client's ECS data */
+		if(!edns_opt_list_append(&s->s.edns_opts_front_in, opt->opt_code,
+			opt->opt_len, opt->opt_data, s->s.region)) {
+			log_err("prefetch_subnet edns_opt_list_append: out of memory");
+			return;
+		}
+	} else {
+		/* Fake the ECS data from the client's IP */
+		struct ecs_data ecs;
+		memset(&ecs, 0, sizeof(ecs));
+		subnet_option_from_ss(&rep->addr, &ecs, mesh->env->cfg);
+		if(ecs.subnet_validdata == 0) {
+			log_err("prefetch_subnet subnet_option_from_ss: invalid data");
+			return;
+		}
+		subnet_ecs_opt_list_append(&ecs, &s->s.edns_opts_front_in, &s->s);
+		if(!s->s.edns_opts_front_in) {
+			log_err("prefetch_subnet subnet_ecs_opt_list_append: out of memory");
+			return;
+		}
+	}
+#ifdef UNBOUND_DEBUG
+	n =
+#else
+	(void)
+#endif
+	rbtree_insert(&mesh->all, &s->node);
+	log_assert(n != NULL);
+	/* set detached (it is now) */
+	mesh->num_detached_states++;
+	/* make it ignore the cache */
+	sock_list_insert(&s->s.blacklist, NULL, 0, s->s.region);
+	s->s.prefetch_leeway = leeway;
+
+	if(s->list_select == mesh_no_list) {
+		/* move to either the forever or the jostle_list */
+		if(mesh->num_forever_states < mesh->max_forever_states) {
+			mesh->num_forever_states ++;
+			mesh_list_insert(s, &mesh->forever_first,
+				&mesh->forever_last);
+			s->list_select = mesh_forever_list;
+		} else {
+			mesh_list_insert(s, &mesh->jostle_first,
+				&mesh->jostle_last);
+			s->list_select = mesh_jostle_list;
+		}
+	}
+	s->s.rpz_passthru = rpz_passthru;
+
+	if(!run) {
+#ifdef UNBOUND_DEBUG
+		n =
+#else
+		(void)
+#endif
+		rbtree_insert(&mesh->run, &s->run_node);
+		log_assert(n != NULL);
+		return;
+	}
+
+	mesh_run(mesh, s, module_event_new, NULL);
+}
+#endif /* CLIENT_SUBNET */
+
+void mesh_new_prefetch(struct mesh_area* mesh, struct query_info* qinfo,
+	uint16_t qflags, time_t leeway, int rpz_passthru,
+	struct comm_reply* rep, struct edns_option* opt_list)
+{
+	(void)opt_list;
+	(void)rep;
+#ifdef CLIENT_SUBNET
+	if(rep)
+		mesh_schedule_prefetch_subnet(mesh, qinfo, qflags, leeway, 1,
+			rpz_passthru, rep, opt_list);
+	else
+#endif
+		mesh_schedule_prefetch(mesh, qinfo, qflags, leeway, 1,
+			rpz_passthru);
 }
 
 void mesh_report_reply(struct mesh_area* mesh, struct outbound_entry* e,
@@ -1561,7 +1670,7 @@ int mesh_state_add_reply(struct mesh_state* s, struct edns_data* edns,
         struct comm_reply* rep, uint16_t qid, uint16_t qflags,
         const struct query_info* qinfo)
 {
-	struct mesh_reply* r = regional_alloc(s->s.region, 
+	struct mesh_reply* r = regional_alloc(s->s.region,
 		sizeof(struct mesh_reply));
 	if(!r)
 		return 0;
