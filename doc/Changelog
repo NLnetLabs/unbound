@@ -1,6 +1,8 @@
 27 May 2022: Wouter
 	- Fix #684: [FTBS] configure script error with libmnl on openSUSE 15.3 (and possibly other distributions)
-	- Version is set to 1.16.0 for release. Release tag 1.16.0rc1.
+	- Version is set to 1.16.0 for release. Release tag 1.16.0rc1. This
+	  became release 1.16.0 on 2 June 2022. The source code branch
+	  continues with version 1.16.1 under development.
 
 20 May 2022: Wouter
 	- Fix to silence test for ede error output to the console from the
