@@ -1,3 +1,6 @@
+3 June 2022: Wouter
+	- makedist.sh picks up 32bit libssp-0.dll when 32bit compile.
+
 27 May 2022: Wouter
 	- Fix #684: [FTBS] configure script error with libmnl on openSUSE 15.3 (and possibly other distributions)
 	- Version is set to 1.16.0 for release. Release tag 1.16.0rc1. This
