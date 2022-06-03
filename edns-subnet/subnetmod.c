@@ -93,6 +93,7 @@ subnet_new_qstate(struct module_qstate *qstate, int id)
 	qstate->minfo[id] = sq;
 	memset(sq, 0, sizeof(*sq));
 	sq->started_no_cache_store = qstate->no_cache_store;
+	sq->started_no_cache_lookup = qstate->no_cache_lookup;
 	return 1;
 }
 
@@ -331,9 +332,11 @@ update_cache(struct module_qstate *qstate, int id)
 	struct ecs_data *edns = &sq->ecs_client_in;
 	size_t i;
 
-	/* We already calculated hash upon lookup */
-	hashvalue_type h = qstate->minfo[id] ? 
-		((struct subnet_qstate*)qstate->minfo[id])->qinfo_hash : 
+	/* We already calculated hash upon lookup (lookup_and_reply) if we were
+	 * allowed to look in the ECS cache */
+	hashvalue_type h = qstate->minfo[id] &&
+		((struct subnet_qstate*)qstate->minfo[id])->qinfo_hash_calculated?
+		((struct subnet_qstate*)qstate->minfo[id])->qinfo_hash :
 		query_info_hash(&qstate->qinfo, qstate->query_flags);
 	/* Step 1, general qinfo lookup */
 	struct lruhash_entry *lru_entry = slabhash_lookup(subnet_msg_cache, h,
@@ -416,7 +419,10 @@ lookup_and_reply(struct module_qstate *qstate, int id, struct subnet_qstate *sq)
 
 	memset(&sq->ecs_client_out, 0, sizeof(sq->ecs_client_out));
 
-	if (sq) sq->qinfo_hash = h; /* Might be useful on cache miss */
+	if (sq) {
+		sq->qinfo_hash = h; /* Might be useful on cache miss */
+		sq->qinfo_hash_calculated = 1;
+	}
 	e = slabhash_lookup(sne->subnet_msg_cache, h, &qstate->qinfo, 1);
 	if (!e) return 0; /* qinfo not in cache */
 	data = e->data;
@@ -758,18 +764,20 @@ subnetmod_operate(struct module_qstate *qstate, enum module_ev event,
 				return;
 		}
 
-		lock_rw_wrlock(&sne->biglock);
-		if (lookup_and_reply(qstate, id, sq)) {
-			sne->num_msg_cache++;
-			lock_rw_unlock(&sne->biglock);
-			verbose(VERB_QUERY, "subnetcache: answered from cache");
-			qstate->ext_state[id] = module_finished;
+		if(!sq->started_no_cache_lookup && !qstate->blacklist) {
+			lock_rw_wrlock(&sne->biglock);
+			if(lookup_and_reply(qstate, id, sq)) {
+				sne->num_msg_cache++;
+				lock_rw_unlock(&sne->biglock);
+				verbose(VERB_QUERY, "subnetcache: answered from cache");
+				qstate->ext_state[id] = module_finished;
 
-			subnet_ecs_opt_list_append(&sq->ecs_client_out,
-				&qstate->edns_opts_front_out, qstate);
-			return;
+				subnet_ecs_opt_list_append(&sq->ecs_client_out,
+					&qstate->edns_opts_front_out, qstate);
+				return;
+			}
+			lock_rw_unlock(&sne->biglock);
 		}
-		lock_rw_unlock(&sne->biglock);
 		
 		sq->ecs_server_out.subnet_addr_fam =
 			sq->ecs_client_in.subnet_addr_fam;
@@ -815,6 +823,7 @@ subnetmod_operate(struct module_qstate *qstate, enum module_ev event,
 				&qstate->edns_opts_front_out, qstate);
 		}
 		qstate->no_cache_store = sq->started_no_cache_store;
+		qstate->no_cache_lookup = sq->started_no_cache_lookup;
 		return;
 	}
 	if(sq && outbound) {

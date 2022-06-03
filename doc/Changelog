@@ -1,3 +1,7 @@
+3 June 2022: George
+	- Fix for edns client subnet to respect not looking in its cache when
+	  instructed to do so (e.g., prefetch).
+
 3 June 2022: Wouter
 	- makedist.sh picks up 32bit libssp-0.dll when 32bit compile.
 
