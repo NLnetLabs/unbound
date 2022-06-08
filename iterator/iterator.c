@@ -3824,21 +3824,24 @@ process_response(struct module_qstate* qstate, struct iter_qstate* iq,
 		goto handle_it;
 	}
 
-	if((cookie = edns_list_get_option(edns.opt_list_in, 10 /*@TODO change to cookie with downstream merge*/))) {
-		/* verify this is a 'complete cookie' (RFC9018) with the length */
-		if (cookie->opt_len == 24) {
-			/* store the complete cookie in the infra_cache */
+	/* handle the upstream response cookie */
+	if((cookie = edns_list_get_option(edns.opt_list_in, LDNS_EDNS_COOKIE))) {
+		/* verify this is a 'complete cookie' (RFC9018) with the length and
+		 * store the complete cookie in the infra_cache */
+		if (cookie->opt_len == 24 &&
 			infra_set_server_cookie(qstate->env->infra_cache,
 				&qstate->reply->addr, qstate->reply->addrlen,
-				iq->dp->name, iq->dp->namelen, cookie);
-
+				iq->dp->name, iq->dp->namelen, cookie)) {
+			/* log_hex() uses the verbosity levels of verbose() */
 			log_hex("complete cookie: ", cookie->opt_data,
 				cookie->opt_len);
 		} else {
 			// @TODO just log error? set state to COOKIE_NOT_SUPPORTED?
+			log_info("upstream response server cookie is not added to cache;"
+				"dropping response");
+			goto handle_it;
 		}
 	}
-
 
 	/* Copy the edns options we may got from the back end */
 	if(edns.opt_list_in) {

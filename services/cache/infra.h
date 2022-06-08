@@ -378,8 +378,8 @@ infra_get_cookie(struct infra_cache* infra, struct sockaddr_storage* addr,
 
 /**
  * Find the cookie entry in the cache and update it with to make a complete
- * cookie (RFC9018). This function assumes that the cookie param contains a
- * complete cookie with a length of 24 bytes. It also assumes that a previous
+ * cookie (RFC9018). This function asserts that the cookie param contains a
+ * complete cookie with a length of 24 bytes. It also asserts that a previous
  * entry in the cache already exists, as it will update the entry.
  * @param infra: infrastructure cache.
  * @param addr: host address.
@@ -388,8 +388,9 @@ infra_get_cookie(struct infra_cache* infra, struct sockaddr_storage* addr,
  * @param namelen: length of name
  * @param timenow: what time it is now.
  * @param cookie: the EDNS cookie option we want to store.
+ * @return true if the complete cookie is stored, and false if it is not
  */
-void infra_set_server_cookie(struct infra_cache* infra, struct sockaddr_storage* addr,
+int infra_set_server_cookie(struct infra_cache* infra, struct sockaddr_storage* addr,
         socklen_t addrlen, uint8_t* name, size_t namelen, struct edns_option* cookie);
 
 

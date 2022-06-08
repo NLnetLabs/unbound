@@ -393,7 +393,7 @@ data_entry_init(struct infra_cache* infra, struct lruhash_entry* e,
 
 	for (i = 0; i < 8; i++) {
 		cookie[i] = ub_random_max(infra->random_state,
-			255); // @TODO is this correct? macro-ify?
+			255); // @TODO is 255 correct? macro-ify it?
 	}
 
 
@@ -739,7 +739,7 @@ infra_get_cookie(struct infra_cache* infra, struct sockaddr_storage* addr,
 	return &data->cookie;
 }
 
-void
+int
 infra_set_server_cookie(struct infra_cache* infra, struct sockaddr_storage* addr,
 	socklen_t addrlen, uint8_t* name, size_t namelen, struct edns_option* cookie)
 {
@@ -756,13 +756,17 @@ infra_set_server_cookie(struct infra_cache* infra, struct sockaddr_storage* addr
 
 	data = (struct infra_data*) e->data;
 
-	/* check if we already know the complete cookie */
-	if (data->cookie.state == SERVER_COOKIE_UNKNOWN) {
+	/* check if we already know the complete cookie and that the client cookie
+	 * section matches the client cookie we sent */
+	if (data->cookie.state == SERVER_COOKIE_UNKNOWN &&
+			memcmp(data->cookie.data.components.client,
+				cookie->opt_data+4, 8)) {
 		memcpy(data->cookie.data.complete, cookie->opt_data, 24);
 		data->cookie.state = SERVER_COOKIE_LEARNED;
-	}
-	else {
+		return 1;
+	} else {
 		lock_rw_unlock(&e->lock);
+		return 0;
 	}
 }
 
