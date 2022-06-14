@@ -1226,6 +1226,7 @@ struct serviced_query* outnet_serviced_query(struct outside_network* outnet,
 		struct edns_option* backed_up_opt_list =
 			qstate->edns_opts_back_out;
 		struct edns_option* per_upstream_opt_list = NULL;
+		struct edns_cookie* cookie;
 		/* If we have an already populated EDNS option list make a copy
 		 * since we may now add upstream specific EDNS options. */
 		if(qstate->edns_opts_back_out) {
@@ -1254,6 +1255,22 @@ struct serviced_query* outnet_serviced_query(struct outside_network* outnet,
 				client_string_addr->string_len,
 				client_string_addr->string, qstate->region);
 		}
+
+		// @TODO Make configurable
+
+		cookie = infra_get_cookie(env->infra_cache, addr, addrlen, zone,
+			zonelen, *env->now);
+
+		if (cookie->state == SERVER_COOKIE_LEARNED) {
+			/* We known the complete cookie, so we attach it */
+			edns_opt_list_append(&per_upstream_opt_list, LDNS_EDNS_COOKIE,
+				24, cookie->data.complete, qstate->region);
+		} else if (cookie->state == SERVER_COOKIE_UNKNOWN) {
+			/* We know just client cookie, so we attach it */
+			edns_opt_list_append(&per_upstream_opt_list, LDNS_EDNS_COOKIE,
+				8, cookie->data.components.client, qstate->region);
+		} /* We ignore COOKIE_NOT_SUPPORTED */
+
 		/* add edns */
 		edns.edns_present = 1;
 		edns.ext_rcode = 0;

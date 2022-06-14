@@ -214,6 +214,8 @@ struct entry {
 	uint8_t match_noedns;
 	/** match edns data field given in hex */
 	uint8_t match_ednsdata_raw;
+	/** match an EDNS cookie (RFC7873) of length 8 */
+	uint8_t match_random_client_cookie;
 	/** match query serial with this value. */
 	uint32_t ixfr_soa_serial;
 	/** match on UDP/TCP */
@@ -236,6 +238,10 @@ struct entry {
 	uint8_t increment_ecs_scope;
 	/** in seconds */
 	unsigned int sleeptime; 
+
+	/** add a server cookie (RFC9018) to the response (provided the query
+	 * contains a client cookie) */
+	uint8_t server_cookie;
 
 	/** some number that names this entry, line number in file or so */
 	int lineno;

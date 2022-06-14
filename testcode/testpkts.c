@@ -39,6 +39,8 @@ struct sockaddr_storage;
 #define MAX_LINE   10240	
 /** string to show in warnings and errors */
 static const char* prog_name = "testpkts";
+/** hardcoded EDNS server cookie (RFC7876) */
+static const char* hardcoded_server_cookie = "7e8b5fcc6a4bc7bc";
 
 #ifndef UTIL_LOG_H
 /** verbosity definition for compat */
@@ -140,6 +142,8 @@ static void matchline(char* line, struct entry* e)
 			e->match_noedns = 1;
 		} else if(str_keyword(&parse, "ednsdata")) {
 			e->match_ednsdata_raw = 1;
+		} else if(str_keyword(&parse, "random_client_cookie")) {
+			e->match_random_client_cookie = 1;
 		} else if(str_keyword(&parse, "UDP")) {
 			e->match_transport = transport_udp;
 		} else if(str_keyword(&parse, "TCP")) {
@@ -263,6 +267,8 @@ static void adjustline(char* line, struct entry* e,
 			pkt->packet_sleep = (unsigned int) strtol(parse, (char**)&parse, 10);
 			while(isspace((unsigned char)*parse)) 
 				parse++;
+		} else if (str_keyword(&parse, "add_server_cookie")) {
+			e->server_cookie = 1;
 		} else {
 			error("could not parse ADJUST: '%s'", parse);
 		}
@@ -1499,6 +1505,36 @@ match_ednsdata(uint8_t* q, size_t qlen, uint8_t* p, size_t plen)
 	return (memcmp(walk_p+8, walk_q+8, walk_qlen-8) == 0);
 }
 
+/** verify that a client cookie of length 8 is in the EDNS data of the query */
+static int
+match_random_client_cookie(uint8_t* query, size_t query_len)
+{
+	uint8_t* walk_query = query;
+	size_t walk_query_len = query_len;
+
+	if(!pkt_find_edns_opt(&walk_query, &walk_query_len)) {
+		walk_query_len = 0;
+		log_err("!!!!!! no edns");
+	}
+
+	/* class + ttl + rdlen = 8 */
+	if(walk_query_len <= 8) {
+		verbose(3, "No edns opt, no cookie");
+		return 0;
+	}
+
+	if (sldns_read_uint16(walk_query+8) != 10 /* LDNS_EDNS_COOKIE */) {
+		verbose(3, "EDNS option is not a cookie");
+		return 0;
+	}
+	if (sldns_read_uint16(walk_query+10) != 8) {
+		verbose(3, "EDNS cookie is not 8 bytes, so not a correct client cookie");
+		return 0;
+	}
+
+	return 1;
+}
+
 /* finds entry in list, or returns NULL */
 struct entry* 
 find_match(struct entry* entries, uint8_t* query_pkt, size_t len,
@@ -1592,6 +1628,11 @@ find_match(struct entry* entries, uint8_t* query_pkt, size_t len,
 		if(p->match_ednsdata_raw && 
 				!match_ednsdata(query_pkt, len, reply, rlen)) {
 			verbose(3, "bad EDNS data match.\n");
+			continue;
+		}
+		if (p->match_random_client_cookie &&
+				!match_random_client_cookie(query_pkt, len)) {
+			verbose(3, "bad client cookie match.\n");
 			continue;
 		}
 		if(p->match_transport != transport_any && p->match_transport != transport) {
@@ -1689,6 +1730,71 @@ adjust_packet(struct entry* match, uint8_t** answer_pkt, size_t *answer_len,
 		res[1] = query_pkt[1];
 	if(match->copy_id && reslen >= 1 && query_len >= 1)
 		res[0] = query_pkt[0];
+
+	if(match->server_cookie) {
+		/** Find the cookie option and add the server cookie if 
+		 * the client cookie is present
+		 * */
+		uint8_t* walk_query = query_pkt;
+		size_t walk_query_len = query_len;
+		uint8_t* walk_response = res;
+		size_t walk_response_len = reslen;
+
+		uint8_t* rd_len_ptr;
+
+		/* verify that we have a EDNS record */
+		if(!pkt_find_edns_opt(&walk_query, &walk_query_len)) {
+			walk_query_len = 0;
+		}
+		if(!pkt_find_edns_opt(&walk_response, &walk_response_len)) {
+			walk_response_len = 0;
+		}
+
+		/* verify that we have a EDNS option */
+		if (walk_query_len < 12) /* class + ttl + rdlen + opt_code + opt_len */ {
+			/* invalid or no (OPT) record in the query */
+			walk_query_len = 0;
+		}			
+		if (walk_response_len < 8) /* class + ttl + rdlen */ {
+			walk_response_len = 0;
+		}
+
+		rd_len_ptr = walk_response + 6; /* store the location of the rdlen */
+
+		/* skip past the OPT record to get to the option */
+		walk_query += 8;
+		walk_query_len -= 8;
+		walk_response += 8;
+		walk_response_len -= 8;
+
+		/* assume one record in the query */
+		if (sldns_read_uint16(walk_query) != 10 /* LDNS_EDNS_COOKIE */ ||
+			sldns_read_uint16(walk_query+2) != 8) {/* client cookie length */
+			/* incorrect client cookie */
+			walk_query_len = 0;
+		}
+
+		/* verify that the client cookie exists */
+		if (walk_query_len < 12 /* opt_code + opt_len + client cookie */) {
+			walk_query_len = 0;
+		}
+
+		if (walk_query_len > 0 && walk_response_len == 0) {
+			/* copy the EDNS client cookie from the query packet to the response */
+			memcpy(walk_response, walk_query, 12);
+
+			/* add the server cookie to the client cookie to make it
+			 * 'complete'. we fake the siphash specified in RFC9018
+			 * by hardcoding the server cookie */
+			memcpy(walk_response+12, hardcoded_server_cookie, 16);
+
+			/* update the RDLEN and OPTLEN */
+			sldns_write_uint16(rd_len_ptr, 28);
+			sldns_write_uint16(walk_response+2, 24);
+
+			reslen = origlen + 28;
+		}
+	}
 
 	if(match->copy_ednsdata_assume_clientsubnet) {
 		/** Assume there is only one EDNS option, which is ECS.

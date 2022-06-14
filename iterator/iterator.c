@@ -3841,7 +3841,7 @@ process_response(struct module_qstate* qstate, struct iter_qstate* iq,
 				"dropping response");
 			goto handle_it;
 		}
-	}
+	} //@TODO think about what we do if we did send a cookie but did not get one back?
 
 	/* Copy the edns options we may got from the back end */
 	if(edns.opt_list_in) {
