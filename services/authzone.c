@@ -5512,7 +5512,7 @@ xfr_transfer_init_fetch(struct auth_xfer* xfr, struct module_env* env)
 			addr_to_str(&addr, addrlen, as, sizeof(as));
 			verbose(VERB_ALGO, "auth zone %s transfer next HTTP fetch from %s started", zname, as);
 		}
-		/* Create or refresh the list of of allow_notify addrs */
+		/* Create or refresh the list of allow_notify addrs */
 		probe_copy_masters_for_allow_notify(xfr);
 		return 1;
 	}
