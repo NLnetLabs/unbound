@@ -1,5 +1,7 @@
 14 June 2022: George
 	- Merge PR #688: Rpz url notify issue.
+	- Note in the unbound.conf text that NOTIFY is allowed from the url:
+	  addresses for auth and rpz zones.
 
 3 June 2022: George
 	- Fix for edns client subnet to respect not looking in its cache when
