@@ -8,10 +8,11 @@ PRE="../.."
 . ../common.sh
 get_random_port 2
 UNBOUND_PORT=$RND_PORT
+UNUSED_PORT=$(($RND_PORT + 1))
 echo "UNBOUND_PORT=$UNBOUND_PORT" >> .tpkg.var.test
 
 # make config file
-sed -e 's/@PORT\@/'$UNBOUND_PORT'/' < blanks_cached_zone.conf > ub.conf
+sed -e 's/@PORT\@/'$UNBOUND_PORT'/' -e 's/@TOPORT\@/'$UNUSED_PORT'/' < blanks_cached_zone.conf > ub.conf
 # start unbound in the background
 $PRE/unbound -d -c ub.conf >unbound.log 2>&1 &
 UNBOUND_PID=$!
