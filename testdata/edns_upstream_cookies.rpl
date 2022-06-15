@@ -1,6 +1,6 @@
 ; config options
 server:
-	ede: yes
+	upstream-cookies: yes
 
 stub-zone:
 	name: example.com

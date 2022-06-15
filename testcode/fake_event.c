@@ -1256,20 +1256,23 @@ struct serviced_query* outnet_serviced_query(struct outside_network* outnet,
 				client_string_addr->string, qstate->region);
 		}
 
-		// @TODO Make configurable
+		if (qstate->env->cfg->upstream_cookies) {
+			cookie = infra_get_cookie(env->infra_cache, addr, addrlen,
+				zone, zonelen, *env->now);
 
-		cookie = infra_get_cookie(env->infra_cache, addr, addrlen, zone,
-			zonelen, *env->now);
-
-		if (cookie->state == SERVER_COOKIE_LEARNED) {
-			/* We known the complete cookie, so we attach it */
-			edns_opt_list_append(&per_upstream_opt_list, LDNS_EDNS_COOKIE,
-				24, cookie->data.complete, qstate->region);
-		} else if (cookie->state == SERVER_COOKIE_UNKNOWN) {
-			/* We know just client cookie, so we attach it */
-			edns_opt_list_append(&per_upstream_opt_list, LDNS_EDNS_COOKIE,
-				8, cookie->data.components.client, qstate->region);
-		} /* We ignore COOKIE_NOT_SUPPORTED */
+			if (cookie->state == SERVER_COOKIE_LEARNED) {
+				/* We known the complete cookie, so we attach it */
+				edns_opt_list_append(&per_upstream_opt_list,
+					LDNS_EDNS_COOKIE, 24, cookie->data.complete,
+					qstate->region);
+			} else if (cookie->state == SERVER_COOKIE_UNKNOWN) {
+				/* We know just client cookie, so we attach it */
+				edns_opt_list_append(&per_upstream_opt_list,
+					LDNS_EDNS_COOKIE, 8,
+					cookie->data.components.client,
+					qstate->region);
+			} /* We ignore COOKIE_NOT_SUPPORTED */
+		}
 
 		/* add edns */
 		edns.edns_present = 1;

@@ -3824,12 +3824,13 @@ process_response(struct module_qstate* qstate, struct iter_qstate* iq,
 		goto handle_it;
 	}
 
-	/* handle the upstream response cookie */
-	if((cookie = edns_list_get_option(edns.opt_list_in, LDNS_EDNS_COOKIE))) {
+	/* handle the upstream response cookie if enabled*/
+	if(qstate->env->cfg->upstream_cookies &&
+		(cookie = edns_list_get_option(edns.opt_list_in, LDNS_EDNS_COOKIE))) {
 		/* verify this is a 'complete cookie' (client+server) (RFC9018) with
 		 * the length and store the complete cookie in the infra_cache. Do
-		 * nothing when the cookie is already known and update when the server
-		 * cookie changed*/
+		 * nothing when the cookie is already known and update when the
+		 * server cookie changed*/
 		if (cookie->opt_len == 24 &&
 			infra_set_server_cookie(qstate->env->infra_cache,
 				&qstate->reply->addr, qstate->reply->addrlen,
@@ -3838,8 +3839,8 @@ process_response(struct module_qstate* qstate, struct iter_qstate* iq,
 			log_hex("complete cookie: ", cookie->opt_data,
 				cookie->opt_len);
 		} else {
-			log_info("upstream response server cookie is not added to cache;"
-				" dropping response");
+			log_info("upstream response server cookie is not added to;"
+				" cache dropping response");
 			goto handle_it;
 		}
 	} //@TODO think about what we do if we did send a cookie but did not get one back?
