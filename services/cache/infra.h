@@ -83,7 +83,6 @@ enum edns_cookie_state
  */
 struct edns_cookie {
         enum edns_cookie_state state;
-        uint8_t timeout; // @TODO change this to correct value
         union edns_cookie_data data;
 };
 
