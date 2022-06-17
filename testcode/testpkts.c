@@ -1778,22 +1778,32 @@ adjust_packet(struct entry* match, uint8_t** answer_pkt, size_t *answer_len,
 	if(match->server_cookie) {
 		/** Find the cookie option and add the server cookie if 
 		 * the client cookie is present and not already there */
+		res = realloc(res, reslen + 28);
 		uint8_t* walk_query = query_pkt;
 		size_t walk_query_len = query_len;
 		uint8_t* walk_response = res;
-		size_t walk_response_len = reslen;
+		size_t walk_response_len = reslen+28;
 
 		uint8_t* rdlen_ptr_query;
 		uint8_t* rdlen_ptr_response;
 
+		reslen += 28;
+
+		if (!(walk_response)) {
+			log_err("testbound: out of memory; send without cookie");
+			return;
+		}
+
 		/* verify that we have a EDNS record */
 		if(!pkt_find_edns_opt(&walk_query, &walk_query_len)) {
 			walk_query_len = 0;
-			log_err("testbound: no EDNS in the query packet when trying to attach a EDNS cookie");
+			log_err("testbound: no EDNS in the query packet when "
+				"trying to attach a EDNS cookie");
 		}
 		if(!pkt_find_edns_opt(&walk_response, &walk_response_len)) {
 			walk_response_len = 0;
-			log_err("testbound: no EDNS in the response packet when trying to attach a EDNS cookie");
+			log_err("testbound: no EDNS in the response packet when"
+				 "trying to attach a EDNS cookie");
 		}
 
 		/* verify that we have a EDNS option */
@@ -1832,11 +1842,15 @@ adjust_packet(struct entry* match, uint8_t** answer_pkt, size_t *answer_len,
 			log_err("testbound: invalid EDNS cookie in the query packet");
 		}
 
-		if (walk_query_len > 0 && walk_response_len == 0) {
+		if (walk_query_len > 0 && walk_response_len > 0) {
+			/* create space for the cookie, as the length of the
+			 * rest of the response is 0 */
+
 			/* depending on the incoming cookie, add the server cookie
 			 * or copy the complete cookie to the response */
 			if (sldns_read_uint16(walk_query+2) == 8) {
-				/* copy the EDNS client cookie from the query packet to the response */
+				/* copy the EDNS client cookie from the query
+				 * packet to the response */
 				memcpy(walk_response, walk_query, 12);
 
 				/* add the server cookie to the client cookie to make it
@@ -1859,15 +1873,12 @@ adjust_packet(struct entry* match, uint8_t** answer_pkt, size_t *answer_len,
 					memcpy(rdlen_ptr_response, rdlen_ptr_query, 12);
 					memcpy(walk_response+12, rdlen_ptr_query+12+8, 8);
 					memcpy(walk_response+12+8, rdlen_ptr_query+12, 8);
-
-					reslen = origlen + 28;
 				} else {
 					memcpy(rdlen_ptr_response, rdlen_ptr_query, 28);
-
-					reslen = origlen + 28;
 				}
 			} else {
 				log_err("testbound: the incoming EDNS cookie has the wrong length");
+
 			}
 		} else {
 			log_err("testbound: an error has occured while parsing the EDNS cookie");

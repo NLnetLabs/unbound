@@ -389,6 +389,7 @@ data_entry_init(struct infra_cache* infra, struct lruhash_entry* e,
 	time_t timenow)
 {
 	int i;
+	struct infra_data* data;
 	uint8_t cookie[8] = {0,0,0,0,0,0,0,0};
 
 	for (i = 0; i < 8; i++) {
@@ -396,8 +397,7 @@ data_entry_init(struct infra_cache* infra, struct lruhash_entry* e,
 			255); // @TODO is 255 correct? macro-ify it?
 	}
 
-
-	struct infra_data* data = (struct infra_data*)e->data;
+	data = (struct infra_data*)e->data;
 	data->ttl = timenow + infra->host_ttl;
 	rtt_init(&data->rtt);
 	data->edns_version = 0;
