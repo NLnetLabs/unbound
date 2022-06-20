@@ -3825,25 +3825,33 @@ process_response(struct module_qstate* qstate, struct iter_qstate* iq,
 	}
 
 	/* handle the upstream response cookie if enabled*/
-	if(qstate->env->cfg->upstream_cookies &&
-		(cookie = edns_list_get_option(edns.opt_list_in, LDNS_EDNS_COOKIE))) {
-		/* verify this is a 'complete cookie' (client+server) (RFC9018) with
-		 * the length and store the complete cookie in the infra_cache. Do
-		 * nothing when the cookie is already known and update when the
-		 * server cookie changed*/
-		if (cookie->opt_len == 24 &&
-			infra_set_server_cookie(qstate->env->infra_cache,
-				&qstate->reply->addr, qstate->reply->addrlen,
-				iq->dp->name, iq->dp->namelen, cookie) >= 0) {
-			/* log_hex() uses the verbosity levels of verbose() */
-			log_hex("complete cookie: ", cookie->opt_data,
-				cookie->opt_len);
+	if(qstate->env->cfg->upstream_cookies) {
+		if (edns.opt_list_in &&
+			(cookie = edns_list_get_option(edns.opt_list_in,
+				LDNS_EDNS_COOKIE))){
+			/* verify this is a 'complete cookie' (client+server)
+			 * (RFC9018) with the length and store the complete
+			 * cookie in the infra_cache. Do nothing when the cookie
+			 * is already known and update when the server cookie
+			 * changed */
+			if (cookie->opt_len == 24 &&
+				infra_set_server_cookie(qstate->env->infra_cache,
+					&qstate->reply->addr, qstate->reply->addrlen,
+					iq->dp->name, iq->dp->namelen, cookie) >= 0) {
+				/* log_hex() uses the verbosity levels of verbose() */
+				log_hex("complete cookie: ", cookie->opt_data,
+					cookie->opt_len);
+			} else {
+				log_info("upstream response server cookie is not "
+					"added to cache; dropping response");
+				goto handle_it;
+			}
 		} else {
-			log_info("upstream response server cookie is not added to;"
-				" cache dropping response");
-			goto handle_it;
+			//@TODO think about what we do if we did send a cookie
+			// but did not get one back? for now we log_err()
+			log_err("upstream has not responded with a cookie");
 		}
-	} //@TODO think about what we do if we did send a cookie but did not get one back?
+	}
 
 	/* Copy the edns options we may got from the back end */
 	if(edns.opt_list_in) {

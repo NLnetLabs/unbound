@@ -145,6 +145,9 @@ static void matchline(char* line, struct entry* e)
 			e->match_ednsdata_raw = 1;
 		} else if(str_keyword(&parse, "random_client_cookie")) {
 			e->match_random_client_cookie = 1;
+		} else if (str_keyword(&parse, "random_complete_cookie_renewed")) {
+			e->match_random_complete_cookie = 1;
+			e->match_random_complete_cookie_renewed = 1;
 		} else if(str_keyword(&parse, "random_complete_cookie")) {
 			e->match_random_complete_cookie = 1;
 		} else if(str_keyword(&parse, "UDP")) {
@@ -1544,9 +1547,9 @@ match_random_client_cookie(uint8_t* query, size_t query_len)
 }
 
 /** verify that a complete EDNS cookie (client+server) (RFC9018) of length 24
-  * is in the EDNS data of the query */
+  * is in the EDNS data of the query and the hardcoded cookie is the same */
 static int
-match_random_complete_cookie(uint8_t* query, size_t query_len)
+match_random_complete_cookie(uint8_t* query, size_t query_len, struct entry* p)
 {
 	uint8_t* walk_query = query;
 	size_t walk_query_len = query_len;
@@ -1562,12 +1565,37 @@ match_random_complete_cookie(uint8_t* query, size_t query_len)
 		return 0;
 	}
 
-	if (sldns_read_uint16(walk_query+8) != 10 /* LDNS_EDNS_COOKIE */) {
+	walk_query += 8;
+	walk_query_len -= 8;
+
+	if (sldns_read_uint16(walk_query) != 10 /* LDNS_EDNS_COOKIE */) {
 		verbose(3, "EDNS option is not a cookie");
 		return 0;
 	}
-	if (sldns_read_uint16(walk_query+10) != 24) {
+	if (sldns_read_uint16(walk_query+2) != 24) {
 		verbose(3, "EDNS cookie is not 24 bytes, so not a correct complete cookie");
+		return 0;
+	}
+
+	if (p->match_random_complete_cookie_renewed) {
+		uint8_t renewed_cookie[16];
+
+		/* shuffle the hardcoded cookie like adjust_packet() does */
+		memcpy(renewed_cookie, hardcoded_server_cookie+8, 8);
+		memcpy(renewed_cookie+8, hardcoded_server_cookie, 8);
+		
+		/* client_cookie = 8 */
+		if (!(memcmp(walk_query+8, renewed_cookie, 16))) {
+			verbose(3, "EDNS server cookie does not match the renewed"
+				"cookie, so not a correct complete cookie");
+		return 0;
+		}
+	}
+
+	/* client_cookie = 8 */
+	if (!(memcmp(walk_query+8, hardcoded_server_cookie, 16))) {
+		verbose(3, "EDNS server cookie does not match the hardcoded cookie, "
+			"so not a correct complete cookie");
 		return 0;
 	}
 
@@ -1675,7 +1703,7 @@ find_match(struct entry* entries, uint8_t* query_pkt, size_t len,
 			continue;
 		}
 		if (p->match_random_complete_cookie &&
-				!match_random_complete_cookie(query_pkt, len)) {
+				!match_random_complete_cookie(query_pkt, len, p)) {
 			verbose(3, "bad complete cookie match.\n");
 			continue;
 		}
@@ -1866,6 +1894,10 @@ adjust_packet(struct entry* match, uint8_t** answer_pkt, size_t *answer_len,
 
 				reslen = origlen + 28;
 			} else if (sldns_read_uint16(walk_query+2) == 24) {
+				/* update the RDLEN and OPTLEN */
+				sldns_write_uint16(rdlen_ptr_response, 28);
+				sldns_write_uint16(walk_response+2, 24);
+
 				/* we fake verification of the cookie and send
 				 * it back like it's still valid. We renew the cookie
 				 * if this desired */

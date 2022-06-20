@@ -219,6 +219,9 @@ struct entry {
 	/** match an EDNS cookie (RFC7873) of length 24, we call
 	 * this "complete" (RFC9018) */
 	uint8_t match_random_complete_cookie;
+	/** match an EDNS compelete cookie (RFC7873) of length 24, which cannot be
+	 * the same as the hardcoded client cookie */
+	uint8_t match_random_complete_cookie_renewed;
 	/** match query serial with this value. */
 	uint32_t ixfr_soa_serial;
 	/** match on UDP/TCP */
