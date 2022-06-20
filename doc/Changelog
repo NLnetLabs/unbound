@@ -1,3 +1,6 @@
+20 June 2022: George
+	- Remove unused LDNS function check for GOST Engine unloading.
+
 14 June 2022: George
 	- Merge PR #688: Rpz url notify issue.
 	- Note in the unbound.conf text that NOTIFY is allowed from the url:
