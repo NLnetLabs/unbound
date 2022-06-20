@@ -1778,16 +1778,19 @@ adjust_packet(struct entry* match, uint8_t** answer_pkt, size_t *answer_len,
 	if(match->server_cookie) {
 		/** Find the cookie option and add the server cookie if 
 		 * the client cookie is present and not already there */
-		res = realloc(res, reslen + 28);
 		uint8_t* walk_query = query_pkt;
 		size_t walk_query_len = query_len;
-		uint8_t* walk_response = res;
-		size_t walk_response_len = reslen+28;
+		uint8_t* walk_response;
+		size_t walk_response_len;
 
-		uint8_t* rdlen_ptr_query;
 		uint8_t* rdlen_ptr_response;
 
+		/* create space for the server cookie in the response packet */
+		res = realloc(res, reslen + 28);
 		reslen += 28;
+
+		walk_response = res;
+		walk_response_len = reslen;
 
 		if (!(walk_response)) {
 			log_err("testbound: out of memory; send without cookie");
@@ -1818,7 +1821,6 @@ adjust_packet(struct entry* match, uint8_t** answer_pkt, size_t *answer_len,
 		}
 
 		/* store the location of the rdlen */
-		rdlen_ptr_query = walk_query + 6;
 		rdlen_ptr_response = walk_response + 6;
 
 		/* skip past the OPT record to get to the option */
@@ -1866,19 +1868,18 @@ adjust_packet(struct entry* match, uint8_t** answer_pkt, size_t *answer_len,
 			} else if (sldns_read_uint16(walk_query+2) == 24) {
 				/* we fake verification of the cookie and send
 				 * it back like it's still valid. We renew the cookie
-				 * if this desired*/
+				 * if this desired */
 				if (match->server_cookie_renew) {
 					/* copy the cookie from the response but add a
 					 * different cookie (by reshuffeling server cookie) */
-					memcpy(rdlen_ptr_response, rdlen_ptr_query, 12);
-					memcpy(walk_response+12, rdlen_ptr_query+12+8, 8);
-					memcpy(walk_response+12+8, rdlen_ptr_query+12, 8);
+					memcpy(walk_response, walk_query, 12);
+					memcpy(walk_response+12, walk_query+12+8, 8);
+					memcpy(walk_response+12+8, walk_query+12, 8);
 				} else {
-					memcpy(rdlen_ptr_response, rdlen_ptr_query, 28);
+					memcpy(walk_response, walk_query, 28);
 				}
 			} else {
 				log_err("testbound: the incoming EDNS cookie has the wrong length");
-
 			}
 		} else {
 			log_err("testbound: an error has occured while parsing the EDNS cookie");
