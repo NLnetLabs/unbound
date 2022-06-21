@@ -507,6 +507,7 @@ struct serviced_query {
 	/** do we know edns probe status already, for UDP_EDNS queries */
 	int edns_lame_known;
 	/** edns options to use for sending upstream packet */
+	/** note: this list is allocated using malloc */
 	struct edns_option* opt_list;
 	/** outside network this is part of */
 	struct outside_network* outnet;

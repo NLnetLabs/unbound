@@ -1752,6 +1752,8 @@ serviced_node_del(rbnode_type* node, void* ATTR_UNUSED(arg))
 	alloc_reg_release(sq->alloc, sq->region);
 	if(sq->timer)
 		comm_timer_delete(sq->timer);
+	if (sq->opt_list)
+		edns_opt_list_free(sq->opt_list);
 	free(sq);
 }
 
@@ -2493,6 +2495,9 @@ lookup_serviced(struct outside_network* outnet, sldns_buffer* buff, int dnssec,
 	memcpy(&key.addr, addr, addrlen);
 	key.addrlen = addrlen;
 	key.outnet = outnet;
+	/* Note: key.opt_list should be allocated. However because key does
+	 * not get stored, we can get away with just copying the pointer.
+	 */
 	key.opt_list = opt_list;
 	return (struct serviced_query*)rbtree_search(outnet->serviced, &key);
 }
@@ -2575,11 +2580,21 @@ serviced_create(struct outside_network* outnet, sldns_buffer* buff, int dnssec,
 	}
 	memcpy(&sq->addr, addr, addrlen);
 	sq->addrlen = addrlen;
+	if (opt_list) {
+		opt_list = edns_opt_copy_alloc(opt_list);
+		if (!opt_list) {
+			alloc_reg_release(alloc, region);
+			free(sq);
+			return NULL;
+		}
+	}
 	sq->opt_list = opt_list;
 	sq->busy = 0;
 	sq->timer = comm_timer_create(outnet->base, serviced_timer_cb, sq);
 	if(!sq->timer) {
 		alloc_reg_release(alloc, region);
+		if (sq->opt_list)
+			edns_opt_list_free(sq->opt_list);
 		free(sq);
 		return NULL;
 	}
