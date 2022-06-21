@@ -1,3 +1,7 @@
+21 June 2022: Philip
+	- Fix for loading locally stored zones that have lines with blanks or
+	  blanks and comments.
+
 3 June 2022: George
 	- Fix for edns client subnet to respect not looking in its cache when
 	  instructed to do so (e.g., prefetch).
