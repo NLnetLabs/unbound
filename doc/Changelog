@@ -1,3 +1,7 @@
+21 June 2022: Philip
+	- Fix for loading locally stored zones that have lines with blanks or
+	  blanks and comments.
+
 20 June 2022: George
 	- Remove unused LDNS function check for GOST Engine unloading.
 
