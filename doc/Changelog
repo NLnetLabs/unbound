@@ -1,3 +1,6 @@
+22 June 2022: Philip
+	- Fix #663: use after free issue with edns options.
+
 21 June 2022: Philip
 	- Fix for loading locally stored zones that have lines with blanks or
 	  blanks and comments.
