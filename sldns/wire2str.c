@@ -395,6 +395,28 @@ static int print_remainder_hex(const char* pref, uint8_t** d, size_t* dlen,
 	return w;
 }
 
+/** print remainder of the buffer as characters */
+static int print_remaining_characters(char** s, size_t* slen, uint8_t* buf,
+	size_t len)
+{
+	int w = 0;
+	uint8_t ch;
+	while (amount > 0) {
+		ch = *buf++;
+		if (isprint((int)ch) || ch == '\t') {
+			if (ch == '\"' || ch == '\\')
+				w += sldns_str_print(s, slen, "\\%c", ch);
+			else
+				w += sldns_str_print(s, slen, "%c", ch);
+		} else {
+			w += sldns_str_print(s, slen, "\\%03u",
+				(unsigned)(uint8_t) ch);
+		}
+		amount--;
+	}
+	return w;
+}
+
 int sldns_wire2str_pkt_scan(uint8_t** d, size_t* dlen, char** s, size_t* slen)
 {
 	int w = 0, comprloop = 0;
@@ -2231,6 +2253,129 @@ static int sldns_wire2str_edns_keepalive_print(char** s, size_t* sl,
 	return w;
 }
 
+static int sldns_wire2str_edns_ede_print(char** s, size_t* sl,
+	uint8_t* data, size_t len)
+{
+	int w = 0;
+	uint16_t ede;
+
+	if(len < 2) {
+		w += sldns_str_print(s, sl, "malformed ede ");
+		w += print_hex_buf(s, sl, data, len);
+		return w;
+	}
+
+	ede = ldns_read_uint16(data);
+
+	switch (ede) {
+	case LDNS_EDE_OTHER:
+		w += sldns_str_print(s, sl, " 0 (Other): ");
+		break;
+	case LDNS_EDE_UNSUPPORTED_DNSKEY_ALG:
+		w += sldns_str_print(s, sl, " 1 (Unsupported DNSKEY Algorithm)");
+		break;
+	case LDNS_EDE_UNSUPPORTED_DS_DIGEST:
+		w += sldns_str_print(s, sl, " 2 (Unsupported DS Digest type)");
+		break;
+	case LDNS_EDE_STALE_ANSWER:
+		w += sldns_str_print(s, sl, " 3 (Stale Answer)");
+		break;
+	case LDNS_EDE_FORGED_ANSWER:
+		w += sldns_str_print(s, sl, " 4 (Forged Answer)");
+		break;
+	case LDNS_EDE_DNSSEC_INDETERMINATE:
+		w += sldns_str_print(s, sl, " 5 (DNSSEC Indeterminate)");
+		break;
+	case LDNS_EDE_DNSSEC_BOGUS:
+		w += sldns_str_print(s, sl, " 6 (DNSSEC Bogus)");
+		break;
+	case LDNS_EDE_SIGNATURE_EXPIRED:
+		w += sldns_str_print(s, sl, " 7 (Signature Expired)");
+		break;
+	case LDNS_EDE_SIGNATURE_NOT_YET_VALID:
+		w += sldns_str_print(s, sl, " 8 (Signature Not Yet Valid)");
+		break;
+	case LDNS_EDE_DNSKEY_MISSING:
+		w += sldns_str_print(s, sl, " 9 (DNSKEY Missing)");
+		break;
+	case LDNS_EDE_RRSIGS_MISSING:
+		w += sldns_str_print(s, sl, " 10 (RRSIGs Missing)");
+		break;
+	case LDNS_EDE_NO_ZONE_KEY_BIT_SET:
+		w += sldns_str_print(s, sl, " 11 (No Zone Key Bit Set)");
+		break;
+	case LDNS_EDE_NSEC_MISSING:
+		w += sldns_str_print(s, sl, " 12 (NSEC Missing)");
+		break;
+	case LDNS_EDE_CACHED_ERROR:
+		w += sldns_str_print(s, sl, " 13 (Cached Error)");
+		break;
+	case LDNS_EDE_NOT_READY:
+		w += sldns_str_print(s, sl, " 14 (Not Ready)");
+		break;
+	case LDNS_EDE_BLOCKED:
+		w += sldns_str_print(s, sl, " 15 (Blocked)");
+		break;
+	case LDNS_EDE_CENSORED:
+		w += sldns_str_print(s, sl, " 16 (Censored)");
+		break;
+	case LDNS_EDE_FILTERED:
+		w += sldns_str_print(s, sl, " 17 (Filtered)");
+		break;
+	case LDNS_EDE_PROHIBITED:
+		w += sldns_str_print(s, sl, " 18 (Prohibited)");
+		break;
+	case LDNS_EDE_STALE_NXDOMAIN_ANSWER:
+		w += sldns_str_print(s, sl, " 19 (NXDOMAIN Answer)");
+		break;
+	case LDNS_EDE_NOT_AUTHORITATIVE:
+		w += sldns_str_print(s, sl, " 20 (Not Authoritative)");
+		break;
+	case LDNS_EDE_NOT_SUPPORTED:
+		w += sldns_str_print(s, sl, " 21 (Not Supported)");
+		break;
+	case LDNS_EDE_NO_REACHABLE_AUTHORITY:
+		w += sldns_str_print(s, sl, " 22 (No Reachable Authority)");
+		break;
+	case LDNS_EDE_NETWORK_ERROR:
+		w += sldns_str_print(s, sl, " 23 (Network Error)");
+		break;
+	case LDNS_EDE_INVALID_DATA:
+		w += sldns_str_print(s, sl, " 24 (Invalid Data)");
+		break;
+	case LDNS_EDE_SIGNATURE_EXPIRED_BEFORE_VALID:
+		w += sldns_str_print(s, sl, " 25 (Signature Expired Before Valid)");
+		break;
+	case LDNS_EDE_TOO_EARLY:
+		w += sldns_str_print(s, sl, " 26 (Too Early)");
+		break;
+	default:
+		w += sldns_str_print(s, sl, " %02x", data[0]);
+		w += sldns_str_print(s, sl, " %02x", data[1]);
+		break;
+	}
+
+	/* skip the EDE code in the output */
+	data += 2;
+	len -= 2;
+
+	/* print the data as hex and as human-readable characters after */
+	if (len > 2) {
+		uint8_t* data_copy = data;
+		int len_copy = len;
+
+		/* format the hex bytes */
+		w += print_remainder_hex(":", s, sl, data, len);
+
+		/* format the human-readable string */
+		w += sldns_str_print(s, sl, " (");
+		print_remaining_characters(s, sl, data_copy, len_copy);
+		w += sldns_str_print(s, sl, ")");
+	}
+	return w;
+}
+
+
 int sldns_wire2str_edns_option_print(char** s, size_t* sl,
 	uint16_t option_code, uint8_t* optdata, size_t optlen)
 {
@@ -2259,8 +2404,11 @@ int sldns_wire2str_edns_option_print(char** s, size_t* sl,
 	case LDNS_EDNS_CLIENT_SUBNET:
 		w += sldns_wire2str_edns_subnet_print(s, sl, optdata, optlen);
 		break;
-	 case LDNS_EDNS_KEEPALIVE:
+	case LDNS_EDNS_KEEPALIVE:
 		w += sldns_wire2str_edns_keepalive_print(s, sl, optdata, optlen);
+		break;
+	case LDNS_EDNS_EDE:
+		w += sldns_wire2str_edns_ede_print(s, sl, optdata, optlen);
 		break;
 	case LDNS_EDNS_PADDING:
 		w += print_hex_buf(s, sl, optdata, optlen);
