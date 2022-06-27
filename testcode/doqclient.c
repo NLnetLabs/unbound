@@ -1,5 +1,5 @@
 /*
- * testcode/dohclient.c - debug program. Perform multiple DNS queries using DoH.
+ * testcode/doqclient.c - debug program. Perform multiple DNS queries using DoQ.
  *
  * Copyright (c) 2022, NLnet Labs. All rights reserved.
  *
@@ -103,7 +103,7 @@ int main(int ATTR_UNUSED(argc), char** ATTR_UNUSED(argv))
 				usage(argv);
 		}
 	}
-	
+
 	argc -= optind;
 	argv += optind;
 
