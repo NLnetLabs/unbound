@@ -615,3 +615,11 @@ void listen_desetup_locks(void)
 {
 	/* nothing */
 }
+
+#ifdef HAVE_NGTCP2
+void comm_point_doq_callback(int ATTR_UNUSED(fd), short ATTR_UNUSED(event),
+	void* ATTR_UNUSED(arg))
+{
+	/* nothing */
+}
+#endif
