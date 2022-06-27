@@ -48,7 +48,15 @@
 #ifdef HAVE_NGTCP2
 #include <ngtcp2/ngtcp2.h>
 #include "util/locks.h"
+#include "util/net_help.h"
+#include "sldns/sbuffer.h"
+#include "sldns/str2wire.h"
+#include "sldns/wire2str.h"
+#include "util/data/msgreply.h"
+#include "util/data/msgencode.h"
+#include "util/data/msgparse.h"
 
+/** usage of doqclient */
 static void usage(char* argv[])
 {
 	printf("usage: %s [options] name type class ...\n", argv[0]);
@@ -62,6 +70,85 @@ static void usage(char* argv[])
 	exit(1);
 }
 
+/** open UDP socket to svr */
+static int
+open_svr_udp(const char* svr, int port)
+{
+	struct sockaddr_storage addr;
+	socklen_t addrlen;
+	int fd = -1;
+	int r;
+	if(!ipstrtoaddr(svr, port, &addr, &addrlen)) {
+		printf("fatal: bad server specs '%s'\n", svr);
+		exit(1);
+	}
+
+	fd = socket(addr_is_ip6(&addr, addrlen)?PF_INET6:PF_INET,
+		SOCK_DGRAM, 0);
+	if(fd == -1) {
+		perror("socket() error");
+		exit(1);
+	}
+	r = connect(fd, (struct sockaddr*)&addr, addrlen);
+	if(r < 0 && r != EINPROGRESS) {
+		perror("connect() error");
+		exit(1);
+	}
+	return fd;
+}
+
+static sldns_buffer*
+make_query(char* qname, char* qtype, char* qclass)
+{
+	struct query_info qinfo;
+	struct edns_data edns;
+	sldns_buffer* buf = sldns_buffer_new(65553);
+	if(!buf) fatal_exit("out of memory");
+	qinfo.qname = sldns_str2wire_dname(qname, &qinfo.qname_len);
+	if(!qinfo.qname) {
+		printf("cannot parse query name: '%s'\n", qname);
+		exit(1);
+	}
+
+	qinfo.qtype = sldns_get_rr_type_by_name(qtype);
+	qinfo.qclass = sldns_get_rr_class_by_name(qclass);
+	qinfo.local_alias = NULL;
+
+	qinfo_query_encode(buf, &qinfo); /* flips buffer */
+	free(qinfo.qname);
+	sldns_buffer_write_u16_at(buf, 0, 0x0000);
+	sldns_buffer_write_u16_at(buf, 2, BIT_RD);
+	memset(&edns, 0, sizeof(edns));
+	edns.edns_present = 1;
+	edns.bits = EDNS_DO;
+	edns.udp_size = 4096;
+	if(sldns_buffer_capacity(buf) >=
+		sldns_buffer_limit(buf)+calc_edns_field_size(&edns))
+		attach_edns_record(buf, &edns);
+	return buf;
+}
+
+/* run the dohclient queries */
+static void run(const char* svr, int port, char** qs, int count)
+{
+	int fd, i;
+	struct sldns_buffer* buf = NULL;
+	char* str;
+	fd = open_svr_udp(svr, port);
+
+	/* handle query */
+	for(i=0; i<count; i+=3) {
+		buf = make_query(qs[i], qs[i+1], qs[i+2]);
+		log_buf(0, "send query", buf);
+		str = sldns_wire2str_pkt(sldns_buffer_begin(buf),
+			sldns_buffer_limit(buf));
+		if(!str) verbose(0, "could not sldns_wire2str_pkt");
+		else verbose(0, "send query: %s", str);
+		free(str);
+	}
+
+	sock_close(fd);
+}
 #endif /* HAVE_NGTCP2 */
 
 #ifdef HAVE_NGTCP2
@@ -111,6 +198,8 @@ int main(int ATTR_UNUSED(argc), char** ATTR_UNUSED(argv))
 		printf("Invalid input. Specify qname, qtype, and qclass.\n");
 		return 1;
 	}
+
+	run(svr, port, argv, argc/3);
 
 	checklock_stop();
 #ifdef USE_WINSOCK
