@@ -2266,6 +2266,8 @@ void *unbound_stat_realloc_log(void *ptr, size_t size, const char* file,
 #define UNBOUND_DNS_OVER_TLS_PORT 853
 /** default port for DNS over HTTPS traffic. */
 #define UNBOUND_DNS_OVER_HTTPS_PORT 443
+/** default port for DNS over QUIC traffic. */
+#define UNBOUND_DNS_OVER_QUIC_PORT 8853 /* DEBUG, should be 853 on UDP */
 /** default port for unbound control traffic, registered port with IANA,
     ub-dns-control  8953/tcp    unbound dns nameserver control */
 #define UNBOUND_CONTROL_PORT 8953
