@@ -1,3 +1,6 @@
+28 June 2022: George
+	- Show the output of the exact .rpl run that failed with 'make test'.
+
 23 June 2022: Tom
 	- Clarify -v flag manpage entry (#705)
 
