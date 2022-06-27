@@ -47,6 +47,7 @@
 
 #ifdef HAVE_NGTCP2
 #include <ngtcp2/ngtcp2.h>
+#include <ngtcp2/ngtcp2_crypto.h>
 #include "util/locks.h"
 #include "util/net_help.h"
 #include "sldns/sbuffer.h"
@@ -55,6 +56,31 @@
 #include "util/data/msgreply.h"
 #include "util/data/msgencode.h"
 #include "util/data/msgparse.h"
+#include "util/random.h"
+
+/** the local client data for the DoQ connection */
+struct doq_client_data {
+	/** file descriptor */
+	int fd;
+	/** the ngtcp2 connection information */
+	struct ngtcp2_conn* conn;
+	/** random state */
+	struct ub_randstate* rnd;
+	/** server connected to as a string */
+	const char* svr;
+	/** the static secret */
+	uint8_t* static_secret_data;
+	/** the static secret size */
+	size_t static_secret_size;
+	/** destination address sockaddr */
+	struct sockaddr_storage dest_addr;
+	/** length of dest addr */
+	socklen_t dest_addr_len;
+	/** local address sockaddr */
+	struct sockaddr_storage local_addr;
+	/** length of local addr */
+	socklen_t local_addr_len;
+};
 
 /** usage of doqclient */
 static void usage(char* argv[])
@@ -70,31 +96,50 @@ static void usage(char* argv[])
 	exit(1);
 }
 
-/** open UDP socket to svr */
-static int
-open_svr_udp(const char* svr, int port)
+/** get the dest address */
+static void
+get_dest_addr(struct doq_client_data* data, const char* svr, int port)
 {
-	struct sockaddr_storage addr;
-	socklen_t addrlen;
-	int fd = -1;
-	int r;
-	if(!ipstrtoaddr(svr, port, &addr, &addrlen)) {
+	if(!ipstrtoaddr(svr, port, &data->dest_addr, &data->dest_addr_len)) {
 		printf("fatal: bad server specs '%s'\n", svr);
 		exit(1);
 	}
+}
 
-	fd = socket(addr_is_ip6(&addr, addrlen)?PF_INET6:PF_INET,
-		SOCK_DGRAM, 0);
+/** open UDP socket to svr */
+static int
+open_svr_udp(struct doq_client_data* data)
+{
+	int fd = -1;
+	int r;
+	fd = socket(addr_is_ip6(&data->dest_addr, data->dest_addr_len)?
+		PF_INET6:PF_INET, SOCK_DGRAM, 0);
 	if(fd == -1) {
 		perror("socket() error");
 		exit(1);
 	}
-	r = connect(fd, (struct sockaddr*)&addr, addrlen);
+	r = connect(fd, (struct sockaddr*)&data->dest_addr,
+		data->dest_addr_len);
 	if(r < 0 && r != EINPROGRESS) {
 		perror("connect() error");
 		exit(1);
 	}
 	return fd;
+}
+
+/** get the local address of the connection */
+static void
+get_local_addr(struct doq_client_data* data)
+{
+	memset(&data->local_addr, 0, sizeof(data->local_addr));
+	data->local_addr_len = (socklen_t)sizeof(data->local_addr);
+	if(getsockname(data->fd, (struct sockaddr*)&data->local_addr,
+		&data->local_addr_len) == -1) {
+		perror("getsockname() error");
+		exit(1);
+	}
+	log_addr(0, "local_addr", &data->local_addr, data->local_addr_len);
+	log_addr(0, "dest_addr", &data->dest_addr, data->dest_addr_len);
 }
 
 static sldns_buffer*
@@ -128,13 +173,184 @@ make_query(char* qname, char* qtype, char* qclass)
 	return buf;
 }
 
+/** create the static secret */
+static void generate_static_secret(struct doq_client_data* data, size_t len)
+{
+	size_t i;
+	data->static_secret_data = malloc(len);
+	if(!data->static_secret_data)
+		fatal_exit("malloc failed: out of memory");
+	data->static_secret_size = len;
+	for(i=0; i<len; i++)
+		data->static_secret_data[i] = ub_random(data->rnd)&0xff;
+}
+
+/** fill cid structure with random data */
+static void cid_randfill(struct ngtcp2_cid* cid, size_t datalen,
+	struct ub_randstate* rnd)
+{
+	uint8_t buf[32];
+	size_t i;
+	if(datalen > sizeof(buf))
+		datalen = sizeof(buf);
+	for(i=0; i<datalen; i++)
+		buf[i] = ub_random(rnd)&0xff;
+	ngtcp2_cid_init(cid, buf, datalen);
+}
+
+/** the rand callback routine from ngtcp2 */
+static void rand_cb(uint8_t* dest, size_t destlen,
+	const ngtcp2_rand_ctx* rand_ctx)
+{
+	struct ub_randstate* rnd = (struct ub_randstate*)
+		rand_ctx->native_handle;
+	size_t i;
+	for(i=0; i<destlen; i++)
+		dest[i] = ub_random(rnd)&0xff;
+}
+
+/** the get_new_connection_id callback routine from ngtcp2 */
+static int get_new_connection_id_cb(struct ngtcp2_conn* ATTR_UNUSED(conn),
+	struct ngtcp2_cid* cid, uint8_t* token, size_t cidlen, void* user_data)
+{
+	struct doq_client_data* data = (struct doq_client_data*)user_data;
+	cid_randfill(cid, cidlen, data->rnd);
+	if(ngtcp2_crypto_generate_stateless_reset_token(token,
+		data->static_secret_data, data->static_secret_size, cid) != 0)
+		return NGTCP2_ERR_CALLBACK_FAILURE;
+	return 0;
+}
+
+/** copy sockaddr into ngtcp2 addr */
+static void
+copy_ngaddr(struct ngtcp2_addr* ngaddr, struct sockaddr_storage* addr,
+	socklen_t addrlen)
+{
+	if(addr_is_ip6(addr, addrlen)) {
+#if defined(NGTCP2_USE_GENERIC_SOCKADDR) || defined(NGTCP2_USE_GENERIC_IPV6_SOCKADDR)
+		struct sockaddr_in* i6 = (struct sockaddr_in6*)addr;
+		struct ngtcp2_sockaddr_in6 a6;
+		memset(&a6, 0, sizeof(a6));
+		a6.sin6_family = i6->sin6_family;
+		a6.sin6_port = i6->sin6_port;
+		a6.sin6_flowinfo = i6->sin6_flowinfo;
+		memmove(&a6.sin6_addr, i6->sin6_addr, sizeof(a6.sin6_addr);
+		a6.sin6_scope_id = i6->sin6_scope_id;
+		ngtcp2_addr_init(ngaddr, &a6, sizeof(a6));
+#else
+		ngaddr->addr = (ngtcp2_sockaddr*)addr;
+		ngaddr->addrlen = addrlen;
+#endif
+	} else {
+#ifdef NGTCP2_USE_GENERIC_SOCKADDR
+		struct sockaddr_in* i4 = (struct sockaddr_in*)addr;
+		struct ngtcp2_sockaddr_in a4;
+		memset(&a4, 0, sizeof(a4));
+		a4.sin_family = i4->sin_family;
+		a4.sin_port = i4->sin_port;
+		memmove(&a4.sin_addr, i4->sin_addr, sizeof(a4.sin_addr);
+		ngtcp2_addr_init(ngaddr, &a4, sizeof(a4));
+#else
+		ngaddr->addr = (ngtcp2_sockaddr*)addr;
+		ngaddr->addrlen = addrlen;
+#endif
+	}
+}
+
+/** debug log printf for ngtcp2 connections */
+static void log_printf_for_doq(void* ATTR_UNUSED(user_data),
+	const char* fmt, ...)
+{
+	va_list ap;
+	va_start(ap, fmt);
+	vfprintf(stderr, fmt, ap);
+	va_end(ap);
+	fprintf(stderr, "\n");
+}
+
+/** get a timestamp in nanoseconds */
+static ngtcp2_tstamp get_timestamp_nanosec(void)
+{
+	struct timespec tp;
+	memset(&tp, 0, sizeof(tp));
+	if(clock_gettime(CLOCK_MONOTONIC, &tp) == -1) {
+		if(clock_gettime(CLOCK_REALTIME, &tp) == -1) {
+			log_err("clock_gettime failed: %s", strerror(errno));
+		}
+	}
+	return ((uint64_t)tp.tv_sec)*((uint64_t)1000000000) +
+		((uint64_t)tp.tv_nsec);
+}
+
+/** create ngtcp2 client connection and set up. */
+static struct ngtcp2_conn* conn_client_setup(struct doq_client_data* data)
+{
+	struct ngtcp2_conn* conn = NULL;
+	int rv;
+	struct ngtcp2_cid dcid, scid;
+	struct ngtcp2_path path;
+	uint32_t client_chosen_version = NGTCP2_PROTO_VER_V1;
+	struct ngtcp2_callbacks cbs;
+	struct ngtcp2_settings settings;
+	struct ngtcp2_transport_params params;
+
+	memset(&cbs, 0, sizeof(cbs));
+	memset(&settings, 0, sizeof(settings));
+	memset(&params, 0, sizeof(params));
+	memset(&dcid, 0, sizeof(dcid));
+	memset(&scid, 0, sizeof(scid));
+	memset(&path, 0, sizeof(path));
+
+	ngtcp2_settings_default(&settings);
+	if(str_is_ip6(data->svr))
+		settings.max_udp_payload_size = 1232;
+	settings.rand_ctx.native_handle = data->rnd;
+	settings.log_printf = log_printf_for_doq; /* or NULL for no debug logs */
+	settings.initial_ts = get_timestamp_nanosec();
+	ngtcp2_transport_params_default(&params);
+	cid_randfill(&dcid, 16, data->rnd);
+	cid_randfill(&scid, 16, data->rnd);
+	cbs.client_initial = ngtcp2_crypto_client_initial_cb;
+	cbs.recv_crypto_data = ngtcp2_crypto_recv_crypto_data_cb;
+	cbs.encrypt = ngtcp2_crypto_encrypt_cb;
+	cbs.decrypt = ngtcp2_crypto_decrypt_cb;
+	cbs.hp_mask = ngtcp2_crypto_hp_mask_cb;
+	cbs.recv_retry = ngtcp2_crypto_recv_retry_cb;
+	cbs.update_key = ngtcp2_crypto_update_key_cb;
+	cbs.rand = rand_cb;
+	cbs.get_new_connection_id = get_new_connection_id_cb;
+	cbs.delete_crypto_aead_ctx = ngtcp2_crypto_delete_crypto_aead_ctx_cb;
+	cbs.delete_crypto_cipher_ctx = ngtcp2_crypto_delete_crypto_cipher_ctx_cb;
+	cbs.get_path_challenge_data = ngtcp2_crypto_get_path_challenge_data_cb;
+	cbs.version_negotiation = ngtcp2_crypto_version_negotiation_cb;
+	copy_ngaddr(&path.local, &data->local_addr, data->local_addr_len);
+	copy_ngaddr(&path.remote, &data->dest_addr, data->dest_addr_len);
+
+	rv = ngtcp2_conn_client_new(&conn, &dcid, &scid, &path,
+		client_chosen_version, &cbs, &settings, &params,
+		NULL, /* ngtcp2_mem allocator, use default */
+		data /* callback argument */);
+	if(!conn) fatal_exit("could not ngtcp2_conn_client_new: %s",
+		ngtcp2_strerror(rv));
+	return conn;
+}
+
 /* run the dohclient queries */
 static void run(const char* svr, int port, char** qs, int count)
 {
-	int fd, i;
+	struct doq_client_data* data;
+	int i;
 	struct sldns_buffer* buf = NULL;
 	char* str;
-	fd = open_svr_udp(svr, port);
+	data = calloc(sizeof(*data), 1);
+	if(!data) fatal_exit("calloc failed: out of memory");
+	data->rnd = ub_initstate(NULL);
+	data->svr = svr;
+	get_dest_addr(data, svr, port);
+	data->fd = open_svr_udp(data);
+	generate_static_secret(data, 32);
+	get_local_addr(data);
+	data->conn = conn_client_setup(data);
 
 	/* handle query */
 	for(i=0; i<count; i+=3) {
@@ -147,7 +363,11 @@ static void run(const char* svr, int port, char** qs, int count)
 		free(str);
 	}
 
-	sock_close(fd);
+	ngtcp2_conn_del(data->conn);
+	sock_close(data->fd);
+	ub_randfree(data->rnd);
+	free(data->static_secret_data);
+	free(data);
 }
 #endif /* HAVE_NGTCP2 */
 

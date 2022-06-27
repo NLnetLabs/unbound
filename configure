@@ -19979,7 +19979,7 @@ $as_echo "found in $dir" >&6; }
 
 $as_echo "#define HAVE_NGTCP2 1" >>confdefs.h
 
-		LIBS="$LIBS -lngtcp2"
+		LIBS="$LIBS -lngtcp2 -lngtcp2_crypto_openssl"
                 break;
             fi
     done
@@ -20012,6 +20012,31 @@ fi
 cat >>confdefs.h <<_ACEOF
 #define HAVE_DECL_NGTCP2_CONN_SERVER_NEW $ac_have_decl
 _ACEOF
+
+    ac_fn_c_check_decl "$LINENO" "ngtcp2_crypto_encrypt_cb" "ac_cv_have_decl_ngtcp2_crypto_encrypt_cb" "$ac_includes_default
+    #include <ngtcp2/ngtcp2_crypto.h>
+
+"
+if test "x$ac_cv_have_decl_ngtcp2_crypto_encrypt_cb" = xyes; then :
+  ac_have_decl=1
+else
+  ac_have_decl=0
+fi
+
+cat >>confdefs.h <<_ACEOF
+#define HAVE_DECL_NGTCP2_CRYPTO_ENCRYPT_CB $ac_have_decl
+_ACEOF
+
+    for ac_func in ngtcp2_crypto_encrypt_cb
+do :
+  ac_fn_c_check_func "$LINENO" "ngtcp2_crypto_encrypt_cb" "ac_cv_func_ngtcp2_crypto_encrypt_cb"
+if test "x$ac_cv_func_ngtcp2_crypto_encrypt_cb" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_NGTCP2_CRYPTO_ENCRYPT_CB 1
+_ACEOF
+
+fi
+done
 
 fi
 

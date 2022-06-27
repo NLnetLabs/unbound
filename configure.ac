@@ -1503,7 +1503,7 @@ if test x_$withval = x_yes -o x_$withval != x_no; then
 		fi
 		AC_MSG_RESULT(found in $dir)
 		AC_DEFINE([HAVE_NGTCP2], [1], [Define this to use ngtcp2.])
-		LIBS="$LIBS -lngtcp2"
+		LIBS="$LIBS -lngtcp2 -lngtcp2_crypto_openssl"
                 break;
             fi
     done
@@ -1514,6 +1514,10 @@ if test x_$withval = x_yes -o x_$withval != x_no; then
     AC_CHECK_DECLS([ngtcp2_conn_server_new], [], [], [AC_INCLUDES_DEFAULT
     #include <ngtcp2/ngtcp2.h>
     ])
+    AC_CHECK_DECLS([ngtcp2_crypto_encrypt_cb], [], [], [AC_INCLUDES_DEFAULT
+    #include <ngtcp2/ngtcp2_crypto.h>
+    ])
+    AC_CHECK_FUNCS([ngtcp2_crypto_encrypt_cb])
 fi
 
 # set static linking for uninstalled libraries if requested

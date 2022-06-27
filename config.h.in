@@ -127,6 +127,10 @@
    0 if you don't. */
 #undef HAVE_DECL_NGTCP2_CONN_SERVER_NEW
 
+/* Define to 1 if you have the declaration of `ngtcp2_crypto_encrypt_cb', and
+   to 0 if you don't. */
+#undef HAVE_DECL_NGTCP2_CRYPTO_ENCRYPT_CB
+
 /* Define to 1 if you have the declaration of `NID_ED25519', and to 0 if you
    don't. */
 #undef HAVE_DECL_NID_ED25519
@@ -408,6 +412,9 @@
 
 /* Define this to use ngtcp2. */
 #undef HAVE_NGTCP2
+
+/* Define to 1 if you have the `ngtcp2_crypto_encrypt_cb' function. */
+#undef HAVE_NGTCP2_CRYPTO_ENCRYPT_CB
 
 /* Define to 1 if you have the <ngtcp2/ngtcp2.h> header file. */
 #undef HAVE_NGTCP2_NGTCP2_H
