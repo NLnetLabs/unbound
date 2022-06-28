@@ -1,6 +1,9 @@
 28 June 2022: George
 	- Show the output of the exact .rpl run that failed with 'make test'.
 
+28 June 2022: Wouter
+	- Fix test program dohclient close to use portability routine.
+
 23 June 2022: Tom
 	- Clarify -v flag manpage entry (#705)
 
