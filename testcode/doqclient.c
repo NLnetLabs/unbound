@@ -375,6 +375,21 @@ static void run(const char* svr, int port, char** qs, int count)
 		free(str);
 	}
 
+#if defined(NGTCP2_USE_GENERIC_SOCKADDR) || defined(NGTCP2_USE_GENERIC_IPV6_SOCKADDR)
+	if(addr_is_ip6(&data->dest_addr, data->dest_addr_len)) {
+#  if defined(NGTCP2_USE_GENERIC_SOCKADDR) || defined(NGTCP2_USE_GENERIC_IPV6_SOCKADDR)
+		const struct ngtcp2_path* path = ngtcp2_conn_get_path(data->conn);
+		free(path->local.addr);
+		free(path->remote.addr);
+#  endif
+	} else {
+#  if defined(NGTCP2_USE_GENERIC_SOCKADDR)
+		const struct ngtcp2_path* path = ngtcp2_conn_get_path(data->conn);
+		free(path->local.addr);
+		free(path->remote.addr);
+#  endif
+	}
+#endif
 	ngtcp2_conn_del(data->conn);
 	sock_close(data->fd);
 	ub_randfree(data->rnd);
