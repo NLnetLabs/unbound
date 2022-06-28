@@ -48,6 +48,7 @@
 #ifdef HAVE_NGTCP2
 #include <ngtcp2/ngtcp2.h>
 #include <ngtcp2/ngtcp2_crypto.h>
+#include <openssl/rand.h>
 #include "util/locks.h"
 #include "util/net_help.h"
 #include "sldns/sbuffer.h"
@@ -173,16 +174,24 @@ make_query(char* qname, char* qtype, char* qclass)
 	return buf;
 }
 
+/** fill a buffer with random data */
+static void fill_rand(struct ub_randstate* rnd, uint8_t* buf, size_t len)
+{
+	if(RAND_bytes(buf, len) != 1) {
+		size_t i;
+		for(i=0; i<len; i++)
+			buf[i] = ub_random(rnd)&0xff;
+	}
+}
+
 /** create the static secret */
 static void generate_static_secret(struct doq_client_data* data, size_t len)
 {
-	size_t i;
 	data->static_secret_data = malloc(len);
 	if(!data->static_secret_data)
 		fatal_exit("malloc failed: out of memory");
 	data->static_secret_size = len;
-	for(i=0; i<len; i++)
-		data->static_secret_data[i] = ub_random(data->rnd)&0xff;
+	fill_rand(data->rnd, data->static_secret_data, len);
 }
 
 /** fill cid structure with random data */
@@ -190,11 +199,9 @@ static void cid_randfill(struct ngtcp2_cid* cid, size_t datalen,
 	struct ub_randstate* rnd)
 {
 	uint8_t buf[32];
-	size_t i;
 	if(datalen > sizeof(buf))
 		datalen = sizeof(buf);
-	for(i=0; i<datalen; i++)
-		buf[i] = ub_random(rnd)&0xff;
+	fill_rand(rnd, buf, datalen);
 	ngtcp2_cid_init(cid, buf, datalen);
 }
 
@@ -204,9 +211,7 @@ static void rand_cb(uint8_t* dest, size_t destlen,
 {
 	struct ub_randstate* rnd = (struct ub_randstate*)
 		rand_ctx->native_handle;
-	size_t i;
-	for(i=0; i<destlen; i++)
-		dest[i] = ub_random(rnd)&0xff;
+	fill_rand(rnd, dest, destlen);
 }
 
 /** the get_new_connection_id callback routine from ngtcp2 */
@@ -230,13 +235,16 @@ copy_ngaddr(struct ngtcp2_addr* ngaddr, struct sockaddr_storage* addr,
 #if defined(NGTCP2_USE_GENERIC_SOCKADDR) || defined(NGTCP2_USE_GENERIC_IPV6_SOCKADDR)
 		struct sockaddr_in* i6 = (struct sockaddr_in6*)addr;
 		struct ngtcp2_sockaddr_in6 a6;
+		ngaddr->addr = calloc(sizeof(a6), 1);
+		if(!ngaddr->addr) fatal_exit("calloc failed: out of memory");
+		ngaddr->addrlen = sizeof(a6);
 		memset(&a6, 0, sizeof(a6));
 		a6.sin6_family = i6->sin6_family;
 		a6.sin6_port = i6->sin6_port;
 		a6.sin6_flowinfo = i6->sin6_flowinfo;
 		memmove(&a6.sin6_addr, i6->sin6_addr, sizeof(a6.sin6_addr);
 		a6.sin6_scope_id = i6->sin6_scope_id;
-		ngtcp2_addr_init(ngaddr, &a6, sizeof(a6));
+		memmove(ngaddr->addr, &a6, sizeof(a6));
 #else
 		ngaddr->addr = (ngtcp2_sockaddr*)addr;
 		ngaddr->addrlen = addrlen;
@@ -245,11 +253,14 @@ copy_ngaddr(struct ngtcp2_addr* ngaddr, struct sockaddr_storage* addr,
 #ifdef NGTCP2_USE_GENERIC_SOCKADDR
 		struct sockaddr_in* i4 = (struct sockaddr_in*)addr;
 		struct ngtcp2_sockaddr_in a4;
+		ngaddr->addr = calloc(sizeof(a4), 1);
+		if(!ngaddr->addr) fatal_exit("calloc failed: out of memory");
+		ngaddr->addrlen = sizeof(a4);
 		memset(&a4, 0, sizeof(a4));
 		a4.sin_family = i4->sin_family;
 		a4.sin_port = i4->sin_port;
 		memmove(&a4.sin_addr, i4->sin_addr, sizeof(a4.sin_addr);
-		ngtcp2_addr_init(ngaddr, &a4, sizeof(a4));
+		memmove(ngaddr->addr, &a4, sizeof(a4));
 #else
 		ngaddr->addr = (ngtcp2_sockaddr*)addr;
 		ngaddr->addrlen = addrlen;
@@ -345,6 +356,7 @@ static void run(const char* svr, int port, char** qs, int count)
 	data = calloc(sizeof(*data), 1);
 	if(!data) fatal_exit("calloc failed: out of memory");
 	data->rnd = ub_initstate(NULL);
+	if(!data->rnd) fatal_exit("ub_initstate failed: out of memory");
 	data->svr = svr;
 	get_dest_addr(data, svr, port);
 	data->fd = open_svr_udp(data);
