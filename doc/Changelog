@@ -1,5 +1,7 @@
 28 June 2022: George
 	- Show the output of the exact .rpl run that failed with 'make test'.
+	- Fix for cached 0 TTL records to not trigger prefetching when
+	  serve-expired-client-timeout is set.
 
 28 June 2022: Wouter
 	- Fix test program dohclient close to use portability routine.

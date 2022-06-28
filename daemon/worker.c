@@ -1653,7 +1653,7 @@ lookup_cache:
 				if((worker->env.cfg->prefetch && *worker->env.now >=
 							((struct reply_info*)e->data)->prefetch_ttl) ||
 						(worker->env.cfg->serve_expired &&
-						*worker->env.now >= ((struct reply_info*)e->data)->ttl)) {
+						*worker->env.now > ((struct reply_info*)e->data)->ttl)) {
 
 					time_t leeway = ((struct reply_info*)e->
 						data)->ttl - *worker->env.now;
