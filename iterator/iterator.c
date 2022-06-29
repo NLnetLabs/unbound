@@ -3383,8 +3383,11 @@ processTargetResponse(struct module_qstate* qstate, int id,
 		delegpt_mark_neg(dpns, qstate->qinfo.qtype);
 		dpns->resolved = 1; /* fail the target */
 		if((dpns->got4 == 2 || !ie->supports_ipv4) &&
-			(dpns->got6 == 2 || !ie->supports_ipv6))
+			(dpns->got6 == 2 || !ie->supports_ipv6) &&
+			/* do not count cached answers */
+			(qstate->reply_origin && qstate->reply_origin->len != 0)) {
 			target_count_increase_nx(foriq, 1);
+		}
 	}
 }
 

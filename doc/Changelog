@@ -6,6 +6,7 @@
 	- Fix #704: [FR] Statistics counter for number of outgoing UDP queries
 	  sent; introduces 'num.query.udpout' to the 'unbound-control stats'
 	  command.
+	- Fix to not count cached NXDOMAIN for MAX_TARGET_NX.
 
 28 June 2022: George
 	- Show the output of the exact .rpl run that failed with 'make test'.
