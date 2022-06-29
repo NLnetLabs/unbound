@@ -7,6 +7,8 @@
 	  sent; introduces 'num.query.udpout' to the 'unbound-control stats'
 	  command.
 	- Fix to not count cached NXDOMAIN for MAX_TARGET_NX.
+	- Allow fallback to the parent side when MAX_TARGET_NX is reached.
+	  This will also allow MAX_TARGET_NX more NXDOMAINs.
 
 28 June 2022: George
 	- Show the output of the exact .rpl run that failed with 'make test'.
