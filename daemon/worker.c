@@ -2217,6 +2217,7 @@ void worker_stats_clear(struct worker* worker)
 	mesh_stats_clear(worker->env.mesh);
 	worker->back->unwanted_replies = 0;
 	worker->back->num_tcp_outgoing = 0;
+	worker->back->num_udp_outgoing = 0;
 }
 
 void worker_start_accept(void* arg)

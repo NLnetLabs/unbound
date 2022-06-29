@@ -1608,6 +1608,7 @@ outside_network_create(struct comm_base *base, size_t bufsize,
 	outnet->tcp_reuse_timeout= tcp_reuse_timeout;
 	outnet->tcp_auth_query_timeout = tcp_auth_query_timeout;
 	outnet->num_tcp_outgoing = 0;
+	outnet->num_udp_outgoing = 0;
 	outnet->infra = infra;
 	outnet->rnd = rnd;
 	outnet->sslctx = sslctx;
@@ -2142,6 +2143,7 @@ randomize_and_send_udp(struct pending* pend, sldns_buffer* packet, int timeout)
 		portcomm_loweruse(outnet, pend->pc);
 		return 0;
 	}
+	outnet->num_udp_outgoing++;
 
 	/* system calls to set timeout after sending UDP to make roundtrip
 	   smaller. */

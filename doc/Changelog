@@ -3,6 +3,9 @@
 
 29 June 2022: George
 	- Add debug option to the mini_tdir.sh test code.
+	- Fix #704: [FR] Statistics counter for number of outgoing UDP queries
+	  sent; introduces 'num.query.udpout' to the 'unbound-control stats'
+	  command.
 
 28 June 2022: George
 	- Show the output of the exact .rpl run that failed with 'make test'.
