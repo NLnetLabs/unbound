@@ -233,6 +233,8 @@ jobs:
           cd unbound
           echo "./configure --enable-debug --enable-static-exe --disable-flto \"--with-ssl=$prepath/openssl\" --with-libexpat=\"$prepath/expat\" --disable-shared"
           ./configure --enable-debug --enable-static-exe --disable-flto "--with-ssl=$prepath/openssl" --with-libexpat="$prepath/expat" --disable-shared
+          # debug to see getaddrinfo test output.
+          cat config.log
           make
           # specific test output
           #make testbound.exe; ./testbound.exe -s
