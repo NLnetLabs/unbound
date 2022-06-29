@@ -1,5 +1,6 @@
 29 June 2022: Wouter
 	- iana portlist update.
+	- Fix detection of libz on windows compile with static option.
 
 29 June 2022: George
 	- Add debug option to the mini_tdir.sh test code.

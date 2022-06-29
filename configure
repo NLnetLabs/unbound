@@ -19968,7 +19968,46 @@ if test x_$enable_static_exe = x_yes; then
 		else
 			LIBS="$LIBS -lgdi32"
 		fi
-		LIBS="$LIBS -lz"
+		{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for compress in -lz" >&5
+$as_echo_n "checking for compress in -lz... " >&6; }
+if ${ac_cv_lib_z_compress+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lz  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char compress ();
+int
+main ()
+{
+return compress ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_lib_z_compress=yes
+else
+  ac_cv_lib_z_compress=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_z_compress" >&5
+$as_echo "$ac_cv_lib_z_compress" >&6; }
+if test "x$ac_cv_lib_z_compress" = xyes; then :
+   LIBS="$LIBS -lz"
+fi
+
 		LIBS="$LIBS -l:libssp.a"
 	fi
 fi
@@ -19988,7 +20027,46 @@ if test x_$enable_fully_static = x_yes; then
 		else
 			LIBS="$LIBS -lgdi32"
 		fi
-		LIBS="$LIBS -lz"
+		{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for compress in -lz" >&5
+$as_echo_n "checking for compress in -lz... " >&6; }
+if ${ac_cv_lib_z_compress+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lz  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char compress ();
+int
+main ()
+{
+return compress ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_lib_z_compress=yes
+else
+  ac_cv_lib_z_compress=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_z_compress" >&5
+$as_echo "$ac_cv_lib_z_compress" >&6; }
+if test "x$ac_cv_lib_z_compress" = xyes; then :
+   LIBS="$LIBS -lz"
+fi
+
 		LIBS="$LIBS -l:libssp.a"
 	fi
 fi

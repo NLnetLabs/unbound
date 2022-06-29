@@ -1500,7 +1500,7 @@ if test x_$enable_static_exe = x_yes; then
 		else
 			LIBS="$LIBS -lgdi32"
 		fi
-		LIBS="$LIBS -lz"
+		AC_CHECK_LIB([z], [compress], [ LIBS="$LIBS -lz" ])
 		LIBS="$LIBS -l:libssp.a"
 	fi
 fi
@@ -1517,7 +1517,7 @@ if test x_$enable_fully_static = x_yes; then
 		else
 			LIBS="$LIBS -lgdi32"
 		fi
-		LIBS="$LIBS -lz"
+		AC_CHECK_LIB([z], [compress], [ LIBS="$LIBS -lz" ])
 		LIBS="$LIBS -l:libssp.a"
 	fi
 fi
