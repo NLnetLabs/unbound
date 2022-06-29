@@ -1,6 +1,9 @@
 29 June 2022: Wouter
 	- iana portlist update.
 
+29 June 2022: George
+	- Add debug option to the mini_tdir.sh test code.
+
 28 June 2022: George
 	- Show the output of the exact .rpl run that failed with 'make test'.
 	- Fix for cached 0 TTL records to not trigger prefetching when
