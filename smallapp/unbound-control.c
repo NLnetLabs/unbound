@@ -487,6 +487,7 @@ static void print_stats_shm(const char* cfgfile, int quiet)
 	config_delete(cfg);
 #else
 	(void)cfgfile;
+	(void)quiet;
 #endif /* HAVE_SHMGET */
 }
 
