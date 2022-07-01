@@ -1894,9 +1894,8 @@ adjust_packet(struct entry* match, uint8_t** answer_pkt, size_t *answer_len,
 
 				reslen = origlen + 28;
 			} else if (sldns_read_uint16(walk_query+2) == 24) {
-				/* update the RDLEN and OPTLEN */
+				/* update the RDLEN */
 				sldns_write_uint16(rdlen_ptr_response, 28);
-				sldns_write_uint16(walk_response+2, 24);
 
 				/* we fake verification of the cookie and send
 				 * it back like it's still valid. We renew the cookie
