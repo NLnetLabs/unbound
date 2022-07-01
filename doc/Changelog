@@ -1,3 +1,62 @@
+29 June 2022: Wouter
+	- iana portlist update.
+	- Fix detection of libz on windows compile with static option.
+	- Fix compile warning for windows compile.
+
+29 June 2022: George
+	- Add debug option to the mini_tdir.sh test code.
+	- Fix #704: [FR] Statistics counter for number of outgoing UDP queries
+	  sent; introduces 'num.query.udpout' to the 'unbound-control stats'
+	  command.
+	- Fix to not count cached NXDOMAIN for MAX_TARGET_NX.
+	- Allow fallback to the parent side when MAX_TARGET_NX is reached.
+	  This will also allow MAX_TARGET_NX more NXDOMAINs.
+
+28 June 2022: George
+	- Show the output of the exact .rpl run that failed with 'make test'.
+	- Fix for cached 0 TTL records to not trigger prefetching when
+	  serve-expired-client-timeout is set.
+
+28 June 2022: Wouter
+	- Fix test program dohclient close to use portability routine.
+
+23 June 2022: Tom
+	- Clarify -v flag manpage entry (#705)
+
+22 June 2022: Philip
+	- Fix #663: use after free issue with edns options.
+
+21 June 2022: Philip
+	- Fix for loading locally stored zones that have lines with blanks or
+	  blanks and comments.
+
+20 June 2022: George
+	- Remove unused LDNS function check for GOST Engine unloading.
+
+14 June 2022: George
+	- Merge PR #688: Rpz url notify issue.
+	- Note in the unbound.conf text that NOTIFY is allowed from the url:
+	  addresses for auth and rpz zones.
+
+3 June 2022: George
+	- Fix for edns client subnet to respect not looking in its cache when
+	  instructed to do so (e.g., prefetch).
+
+3 June 2022: Wouter
+	- makedist.sh picks up 32bit libssp-0.dll when 32bit compile.
+
+27 May 2022: Wouter
+	- Fix #684: [FTBS] configure script error with libmnl on openSUSE 15.3 (and possibly other distributions)
+	- Version is set to 1.16.0 for release. Release tag 1.16.0rc1. This
+	  became release 1.16.0 on 2 June 2022. The source code branch
+	  continues with version 1.16.1 under development.
+
+20 May 2022: Wouter
+	- Fix to silence test for ede error output to the console from the
+	  test setup script.
+	- Fix ede test to not use default pidfile, and use local interface.
+	- Fix some lint type warnings.
+
 18 May 2022: George
 	- Fix typos in config_set_option for the 'num-threads' and
 	  'ede-serve-expired' options.

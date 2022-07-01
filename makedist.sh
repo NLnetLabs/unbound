@@ -268,10 +268,12 @@ if [ "$DOWIN" = "yes" ]; then
 		# before 1.0.1i need --cross-compile-prefix=i686-w64-mingw32-
 		if test "$mw64" = "mingw64"; then
 			sslflags="no-asm -DOPENSSL_NO_CAPIENG mingw64"
+			sspdll="/usr/x86_64-w64-mingw32/sys-root/mingw/bin/libssp-0.dll"
 		else
 			sslflags="no-asm -DOPENSSL_NO_CAPIENG mingw"
+			sspdll="/usr/i686-w64-mingw32/sys-root/mingw/bin/libssp-0.dll"
 		fi
-		if test -f /usr/x86_64-w64-mingw32/sys-root/mingw/bin/libssp-0.dll; then
+		if test -f "$sspdll"; then
 			# stack protector lib needs to link in to make
 			# -lws2_32 work in openssl link stage
 			SSPLIB="-l:libssp.a"
@@ -439,8 +441,8 @@ if [ "$DOWIN" = "yes" ]; then
 	cp ../../sslsharedinstall/lib64/libssl.dll.a libunbound/.
     fi
     cp ../../unbound_shared/unbound.h ../../unbound_shared/.libs/libunbound*.dll ../../unbound_shared/.libs/libunbound.dll.a ../../unbound_shared/.libs/libunbound.a ../../unbound_shared/.libs/libunbound*.def ../../sslsharedinstall/bin/libcrypto*.dll ../../sslsharedinstall/bin/libssl*.dll ../../wxpinstall/bin/libexpat*.dll ../../wxpinstall/lib/libexpat.dll.a libunbound/.
-    if test -f /usr/x86_64-w64-mingw32/sys-root/mingw/bin/libssp-0.dll; then
-	    cp /usr/x86_64-w64-mingw32/sys-root/mingw/bin/libssp-0.dll libunbound/.
+    if test -f "$sspdll"; then
+	    cp "$sspdll" libunbound/.
     fi
     # zipfile
     zip -r ../$file LICENSE README.txt unbound.exe unbound-anchor.exe unbound-host.exe unbound-control.exe unbound-checkconf.exe unbound-service-install.exe unbound-service-remove.exe unbound-control-setup.cmd example.conf service.conf root.key unbound-website.url create_unbound_ad_servers.cmd warmup.cmd unbound_cache.cmd Changelog libunbound
