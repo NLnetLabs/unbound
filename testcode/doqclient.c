@@ -48,6 +48,7 @@
 #ifdef HAVE_NGTCP2
 #include <ngtcp2/ngtcp2.h>
 #include <ngtcp2/ngtcp2_crypto.h>
+#include <ngtcp2/ngtcp2_crypto_openssl.h>
 #include <openssl/ssl.h>
 #include <openssl/rand.h>
 #include "util/locks.h"
@@ -106,6 +107,9 @@ struct doq_client_stream {
 	/** data written position */
 	size_t nwrite;
 };
+
+/** the quic method struct, must remain valid during the QUIC connection. */
+static SSL_QUIC_METHOD quic_method;
 
 /** usage of doqclient */
 static void usage(char* argv[])
@@ -375,13 +379,80 @@ static struct ngtcp2_conn* conn_client_setup(struct doq_client_data* data)
 	return conn;
 }
 
+/** quic_method set_encryption_secrets function */
+static int
+set_encryption_secrets(SSL *ssl, OSSL_ENCRYPTION_LEVEL ossl_level,
+	const uint8_t *read_secret, const uint8_t *write_secret,
+	size_t secret_len)
+{
+	struct doq_client_data* data = (struct doq_client_data*)
+		SSL_get_app_data(ssl);
+	ngtcp2_crypto_level level =
+		ngtcp2_crypto_openssl_from_ossl_encryption_level(ossl_level);
+
+	if(read_secret) {
+
+	}
+	(void)write_secret;
+	(void)secret_len;
+	(void)level;
+	(void)data;
+	return 1;
+}
+
+/** quic_method add_handshake_data function */
+static int
+add_handshake_data(SSL *ssl, OSSL_ENCRYPTION_LEVEL ossl_level,
+	const uint8_t *data, size_t len)
+{
+	struct doq_client_data* doqdata = (struct doq_client_data*)
+		SSL_get_app_data(ssl);
+	ngtcp2_crypto_level level =
+		ngtcp2_crypto_openssl_from_ossl_encryption_level(ossl_level);
+	(void)data;
+	(void)len;
+	(void)doqdata;
+	(void)level;
+	return 1;
+}
+
+/** quic_method flush_flight function */
+static int
+flush_flight(SSL* ATTR_UNUSED(ssl))
+{
+	return 1;
+}
+
+/** quic_method send_alert function */
+static int
+send_alert(SSL *ssl, enum ssl_encryption_level_t ATTR_UNUSED(level),
+	uint8_t alert)
+{
+	struct doq_client_data* data = (struct doq_client_data*)
+		SSL_get_app_data(ssl);
+	(void)alert;
+	(void)data;
+	return 1;
+}
+
 /** setup the TLS context */
 static SSL_CTX*
 ctx_client_setup(void)
 {
-	SSL_CTX* ctx;
-	ctx = connect_sslctx_create(NULL, NULL, NULL, 0);
-	if(!ctx) fatal_exit("cannot create ssl ctx");
+	SSL_CTX* ctx = SSL_CTX_new(TLS_client_method());
+	if(!ctx) {
+		log_crypto_err("Could not SSL_CTX_new");
+		exit(1);
+	}
+	SSL_CTX_set_min_proto_version(ctx, TLS1_3_VERSION);
+	SSL_CTX_set_max_proto_version(ctx, TLS1_3_VERSION);
+	SSL_CTX_set_default_verify_paths(ctx);
+	memset(&quic_method, 0, sizeof(quic_method));
+	quic_method.set_encryption_secrets = &set_encryption_secrets;
+	quic_method.add_handshake_data = &add_handshake_data;
+	quic_method.flush_flight = &flush_flight;
+	quic_method.send_alert = &send_alert;
+	SSL_CTX_set_quic_method(ctx, &quic_method);
 #ifdef HAVE_SSL_CTX_SET_ALPN_PROTOS
 	SSL_CTX_set_alpn_protos(ctx, (const unsigned char *)"\x03doq", 4);
 #endif
