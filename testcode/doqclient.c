@@ -93,6 +93,7 @@ static void usage(char* argv[])
 			"default: 127.0.0.1\n");
 	printf("-p		Port to connect to, default: %d\n",
 		UNBOUND_DNS_OVER_QUIC_PORT);
+	printf("-v 		verbose output\n");
 	printf("-h 		This help text\n");
 	exit(1);
 }
@@ -139,8 +140,8 @@ get_local_addr(struct doq_client_data* data)
 		perror("getsockname() error");
 		exit(1);
 	}
-	log_addr(0, "local_addr", &data->local_addr, data->local_addr_len);
-	log_addr(0, "dest_addr", &data->dest_addr, data->dest_addr_len);
+	log_addr(1, "local_addr", &data->local_addr, data->local_addr_len);
+	log_addr(1, "dest_addr", &data->dest_addr, data->dest_addr_len);
 }
 
 static sldns_buffer*
@@ -316,7 +317,10 @@ static struct ngtcp2_conn* conn_client_setup(struct doq_client_data* data)
 	if(str_is_ip6(data->svr))
 		settings.max_udp_payload_size = 1232;
 	settings.rand_ctx.native_handle = data->rnd;
-	settings.log_printf = log_printf_for_doq; /* or NULL for no debug logs */
+	if(verbosity > 0) {
+		/* make debug logs */
+		settings.log_printf = log_printf_for_doq;
+	}
 	settings.initial_ts = get_timestamp_nanosec();
 	ngtcp2_transport_params_default(&params);
 	cid_randfill(&dcid, 16, data->rnd);
@@ -367,11 +371,11 @@ static void run(const char* svr, int port, char** qs, int count)
 	/* handle query */
 	for(i=0; i<count; i+=3) {
 		buf = make_query(qs[i], qs[i+1], qs[i+2]);
-		log_buf(0, "send query", buf);
+		log_buf(1, "send query", buf);
 		str = sldns_wire2str_pkt(sldns_buffer_begin(buf),
 			sldns_buffer_limit(buf));
-		if(!str) verbose(0, "could not sldns_wire2str_pkt");
-		else verbose(0, "send query: %s", str);
+		if(!str) verbose(1, "could not sldns_wire2str_pkt");
+		else verbose(1, "send query: %s", str);
 		free(str);
 	}
 
@@ -418,7 +422,7 @@ int main(int ATTR_UNUSED(argc), char** ATTR_UNUSED(argv))
 	checklock_start();
 	log_init(0, 0, 0);
 
-	while((c=getopt(argc, argv, "hp:s:")) != -1) {
+	while((c=getopt(argc, argv, "hp:s:v")) != -1) {
 		switch(c) {
 			case 'p':
 				if(atoi(optarg)==0 && strcmp(optarg,"0")!=0) {
@@ -430,6 +434,9 @@ int main(int ATTR_UNUSED(argc), char** ATTR_UNUSED(argv))
 				break;
 			case 's':
 				svr = optarg;
+				break;
+			case 'v':
+				verbosity++;
 				break;
 			case 'h':
 			case '?':
