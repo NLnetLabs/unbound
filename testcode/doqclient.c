@@ -48,6 +48,7 @@
 #ifdef HAVE_NGTCP2
 #include <ngtcp2/ngtcp2.h>
 #include <ngtcp2/ngtcp2_crypto.h>
+#include <openssl/ssl.h>
 #include <openssl/rand.h>
 #include "util/locks.h"
 #include "util/net_help.h"
@@ -58,6 +59,7 @@
 #include "util/data/msgencode.h"
 #include "util/data/msgparse.h"
 #include "util/random.h"
+struct doq_client_stream;
 
 /** the local client data for the DoQ connection */
 struct doq_client_data {
@@ -81,6 +83,28 @@ struct doq_client_data {
 	struct sockaddr_storage local_addr;
 	/** length of local addr */
 	socklen_t local_addr_len;
+	/** SSL context */
+	SSL_CTX* ctx;
+	/** SSL object */
+	SSL* ssl;
+	/** the quic version to use */
+	uint32_t quic_version;
+	/** the list of streams */
+	struct doq_client_stream* stream_list;
+};
+
+/** the local client data for a DoQ stream */
+struct doq_client_stream {
+	/** next stream in list */
+	struct doq_client_stream* next;
+	/** the stream id */
+	int64_t stream_id;
+	/** the data buffer */
+	uint8_t* data;
+	/** length of the data buffer */
+	size_t data_len;
+	/** data written position */
+	size_t nwrite;
 };
 
 /** usage of doqclient */
@@ -313,6 +337,7 @@ static struct ngtcp2_conn* conn_client_setup(struct doq_client_data* data)
 	memset(&scid, 0, sizeof(scid));
 	memset(&path, 0, sizeof(path));
 
+	data->quic_version = client_chosen_version;
 	ngtcp2_settings_default(&settings);
 	if(str_is_ip6(data->svr))
 		settings.max_udp_payload_size = 1232;
@@ -350,13 +375,92 @@ static struct ngtcp2_conn* conn_client_setup(struct doq_client_data* data)
 	return conn;
 }
 
+/** setup the TLS context */
+static SSL_CTX*
+ctx_client_setup(void)
+{
+	SSL_CTX* ctx;
+	ctx = connect_sslctx_create(NULL, NULL, NULL, 0);
+	if(!ctx) fatal_exit("cannot create ssl ctx");
+#ifdef HAVE_SSL_CTX_SET_ALPN_PROTOS
+	SSL_CTX_set_alpn_protos(ctx, (const unsigned char *)"\x03doq", 4);
+#endif
+	return ctx;
+}
+
+/* setup the TLS object */
+static SSL*
+ssl_client_setup(struct doq_client_data* data)
+{
+	SSL* ssl = SSL_new(data->ctx);
+	if(!ssl) {
+		log_crypto_err("Could not SSL_new");
+		exit(1);
+	}
+	SSL_set_app_data(ssl, data);
+	SSL_set_connect_state(ssl);
+	if(!SSL_set_fd(ssl, data->fd)) {
+		log_crypto_err("Could not SSL_set_fd");
+		exit(1);
+	}
+	if((data->quic_version & 0xff000000) == 0xff000000) {
+		SSL_set_quic_use_legacy_codepoint(ssl, 1);
+	} else {
+		SSL_set_quic_use_legacy_codepoint(ssl, 0);
+	}
+	SSL_set_alpn_protos(ssl, (const unsigned char *)"\x03doq", 4);
+	/* send the SNI host name */
+	SSL_set_tlsext_host_name(ssl, "localhost");
+	return ssl;
+}
+
+/** send buf on the client stream */
+static void
+client_bidi_stream(struct doq_client_data* data, struct sldns_buffer* buf)
+{
+	int64_t stream_id;
+	int rv;
+	struct doq_client_stream* str;
+
+	/* open new bidirectional stream */
+	rv = ngtcp2_conn_open_bidi_stream(data->conn, &stream_id, NULL);
+	if(rv != 0)
+		fatal_exit("could not ngtcp2_conn_open_bidi_stream: %s",
+			ngtcp2_strerror(rv));
+	verbose(1, "stream id %lld", (long long int)stream_id);
+
+	/* allocate new stream */
+	str = calloc(1, sizeof(*str));
+	if(!str) fatal_exit("calloc failed: out of memory");
+	str->data = memdup(sldns_buffer_begin(buf), sldns_buffer_limit(buf));
+	if(!str->data) fatal_exit("alloc data failed: out of memory");
+	str->data_len = sldns_buffer_limit(buf);
+	str->nwrite = 0;
+	str->stream_id = stream_id;
+
+	/* link it into list */
+	str->next = data->stream_list;
+	data->stream_list = str;
+}
+
+/** free the stream list */
+static void
+stream_list_free(struct doq_client_stream* stream_list)
+{
+	struct doq_client_stream* str = stream_list;
+	while(str) {
+		struct doq_client_stream* next = str->next;
+		free(str->data);
+		free(str);
+		str = next;
+	}
+}
+
 /* run the dohclient queries */
 static void run(const char* svr, int port, char** qs, int count)
 {
 	struct doq_client_data* data;
 	int i;
-	struct sldns_buffer* buf = NULL;
-	char* str;
 	data = calloc(sizeof(*data), 1);
 	if(!data) fatal_exit("calloc failed: out of memory");
 	data->rnd = ub_initstate(NULL);
@@ -368,15 +472,25 @@ static void run(const char* svr, int port, char** qs, int count)
 	get_local_addr(data);
 	data->conn = conn_client_setup(data);
 
+	data->ctx = ctx_client_setup();
+	data->ssl = ssl_client_setup(data);
+	ngtcp2_conn_set_tls_native_handle(data->conn, data->ssl);
+
 	/* handle query */
 	for(i=0; i<count; i+=3) {
+		struct sldns_buffer* buf = NULL;
 		buf = make_query(qs[i], qs[i+1], qs[i+2]);
-		log_buf(1, "send query", buf);
-		str = sldns_wire2str_pkt(sldns_buffer_begin(buf),
-			sldns_buffer_limit(buf));
-		if(!str) verbose(1, "could not sldns_wire2str_pkt");
-		else verbose(1, "send query: %s", str);
-		free(str);
+		if(verbosity > 0) {
+			char* str;
+			log_buf(1, "send query", buf);
+			str = sldns_wire2str_pkt(sldns_buffer_begin(buf),
+				sldns_buffer_limit(buf));
+			if(!str) verbose(1, "could not sldns_wire2str_pkt");
+			else verbose(1, "send query: %s", str);
+			free(str);
+		}
+		client_bidi_stream(data, buf);
+		sldns_buffer_free(buf);
 	}
 
 #if defined(NGTCP2_USE_GENERIC_SOCKADDR) || defined(NGTCP2_USE_GENERIC_IPV6_SOCKADDR)
@@ -395,7 +509,10 @@ static void run(const char* svr, int port, char** qs, int count)
 	}
 #endif
 	ngtcp2_conn_del(data->conn);
+	SSL_free(data->ssl);
 	sock_close(data->fd);
+	SSL_CTX_free(data->ctx);
+	stream_list_free(data->stream_list);
 	ub_randfree(data->rnd);
 	free(data->static_secret_data);
 	free(data);
