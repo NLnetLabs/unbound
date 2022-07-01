@@ -2172,6 +2172,32 @@ processDSNSFind(struct module_qstate* qstate, struct iter_qstate* iq, int id)
 
 	return 0;
 }
+
+/**
+ * Check if we wait responses for sent queries and update the iterator's
+ * external state.
+ */
+static void
+check_waiting_queries(struct iter_qstate* iq, struct module_qstate* qstate,
+	int id)
+{
+	if(iq->num_target_queries>0 && iq->num_current_queries>0) {
+		verbose(VERB_ALGO, "waiting for %d targets to "
+			"resolve or %d outstanding queries to "
+			"respond", iq->num_target_queries,
+			iq->num_current_queries);
+		qstate->ext_state[id] = module_wait_reply;
+	} else if(iq->num_target_queries>0) {
+		verbose(VERB_ALGO, "waiting for %d targets to "
+			"resolve", iq->num_target_queries);
+		qstate->ext_state[id] = module_wait_subquery;
+	} else {
+		verbose(VERB_ALGO, "waiting for %d "
+			"outstanding queries to respond",
+			iq->num_current_queries);
+		qstate->ext_state[id] = module_wait_reply;
+	}
+}
 	
 /** 
  * This is the request event state where the request will be sent to one of
@@ -2225,28 +2251,14 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 		errinf(qstate, "exceeded the maximum number of sends");
 		return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
 	}
+
 	/* Check if we reached MAX_TARGET_NX limit without a fallback activation. */
 	if(iq->target_count && !*iq->nxns_dp &&
 		iq->target_count[TARGET_COUNT_NX] > MAX_TARGET_NX) {
 		struct delegpt_ns* ns;
 		/* If we can wait for resolution, do so. */
 		if(iq->num_target_queries>0 || iq->num_current_queries>0) {
-			if(iq->num_target_queries>0 && iq->num_current_queries>0) {
-				verbose(VERB_ALGO, "waiting for %d targets to "
-					"resolve or %d outstanding queries to "
-					"respond", iq->num_target_queries,
-					iq->num_current_queries);
-				qstate->ext_state[id] = module_wait_reply;
-			} else if(iq->num_target_queries>0) {
-				verbose(VERB_ALGO, "waiting for %d targets to "
-					"resolve", iq->num_target_queries);
-				qstate->ext_state[id] = module_wait_subquery;
-			} else {
-				verbose(VERB_ALGO, "waiting for %d "
-					"outstanding queries to respond",
-					iq->num_current_queries);
-				qstate->ext_state[id] = module_wait_reply;
-			}
+			check_waiting_queries(iq, qstate, id);
 			return 0;
 		}
 		verbose(VERB_ALGO, "request has exceeded the maximum "
@@ -2263,9 +2275,14 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 		/* We reached the limit but we already have parent side
 		 * information; stop resolution */
 		if(iq->dp->has_parent_side_NS) {
+			verbose(VERB_ALGO, "parent-side information is "
+				"already present for the delegation point, no "
+				"fallback possible");
 			errinf(qstate, "exceeded the maximum nameserver nxdomains");
 			return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
 		}
+		verbose(VERB_ALGO, "initiating parent-side fallback for "
+			"nxdomain nameserver lookups");
 		/* Mark all the current NSes as resolved to allow for parent
 		 * fallback */
 		for(ns=iq->dp->nslist; ns; ns=ns->next) {
@@ -2276,7 +2293,10 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 		 * This also marks the fallback activation. */
 		*iq->nxns_dp = malloc(iq->dp->namelen);
 		if(!*iq->nxns_dp) {
-			errinf(qstate, "exceeded the maximum nameserver nxdomains");
+			verbose(VERB_ALGO, "out of memory while initiating "
+				"fallback");
+			errinf(qstate, "exceeded the maximum nameserver "
+				"nxdomains (malloc)");
 			return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
 		}
 		memcpy(*iq->nxns_dp, iq->dp->name, iq->dp->namelen);
@@ -2284,22 +2304,7 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 		/* Handle the NXNS fallback case. */
 		/* If we can wait for resolution, do so. */
 		if(iq->num_target_queries>0 || iq->num_current_queries>0) {
-			if(iq->num_target_queries>0 && iq->num_current_queries>0) {
-				verbose(VERB_ALGO, "waiting for %d targets to "
-					"resolve or %d outstanding queries to "
-					"respond", iq->num_target_queries,
-					iq->num_current_queries);
-				qstate->ext_state[id] = module_wait_reply;
-			} else if(iq->num_target_queries>0) {
-				verbose(VERB_ALGO, "waiting for %d targets to "
-					"resolve", iq->num_target_queries);
-				qstate->ext_state[id] = module_wait_subquery;
-			} else {
-				verbose(VERB_ALGO, "waiting for %d "
-					"outstanding queries to respond",
-					iq->num_current_queries);
-				qstate->ext_state[id] = module_wait_reply;
-			}
+			check_waiting_queries(iq, qstate, id);
 			return 0;
 		}
 		/* Check for dp because we require one below */
@@ -2709,23 +2714,8 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 
 		/* otherwise, we have no current targets, so submerge 
 		 * until one of the target or direct queries return. */
-		if(iq->num_target_queries>0 && iq->num_current_queries>0) {
-			verbose(VERB_ALGO, "no current targets -- waiting "
-				"for %d targets to resolve or %d outstanding"
-				" queries to respond", iq->num_target_queries, 
-				iq->num_current_queries);
-			qstate->ext_state[id] = module_wait_reply;
-		} else if(iq->num_target_queries>0) {
-			verbose(VERB_ALGO, "no current targets -- waiting "
-				"for %d targets to resolve.",
-				iq->num_target_queries);
-			qstate->ext_state[id] = module_wait_subquery;
-		} else {
-			verbose(VERB_ALGO, "no current targets -- waiting "
-				"for %d outstanding queries to respond.",
-				iq->num_current_queries);
-			qstate->ext_state[id] = module_wait_reply;
-		}
+		verbose(VERB_ALGO, "no current targets");
+		check_waiting_queries(iq, qstate, id);
 		/* undo qname minimise step because we'll get back here
 		 * to do it again */
 		if(qout_orig && iq->minimise_count > 0) {
