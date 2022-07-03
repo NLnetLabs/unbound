@@ -1,6 +1,7 @@
 3 July 2022: George
 	- Merge PR #671 from Petr Menšík: Disable ED25519 and ED448 in FIPS
 	  mode on openssl3.
+	- Merge PR #660 from Petr Menšík: Sha1 runtime insecure.
 
 1 July 2022: George
 	- Merge PR #706: NXNS fallback.
