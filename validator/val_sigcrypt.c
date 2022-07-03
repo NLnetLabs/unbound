@@ -513,15 +513,16 @@ size_t algo_needs_num_missing(struct algo_needs* n)
 
 int algo_needs_missing(struct algo_needs* n)
 {
-	int i;
-	/* first check if a needed algo was bogus - report that */
+	int i, miss = -1;
+	/* check if a needed algo was bogus - report that;
+	 * check the first missing algo - report that;
+	 * or return 0 */
 	for(i=0; i<ALGO_NEEDS_MAX; i++)
 		if(n->needs[i] == 2)
 			return 0;
-	/* now check which algo is missing */
-	for(i=0; i<ALGO_NEEDS_MAX; i++)
-		if(n->needs[i] == 1)
-			return i;
+		if(n->needs[i] == 1 && miss == -1)
+			miss = i;
+	if(miss != -1) return miss;
 	return 0;
 }
 

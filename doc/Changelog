@@ -5,6 +5,7 @@
 	- For #660: formatting, less verbose logging, add EDE information.
 	- Fix for correct openssl error when adding windows CA certificates to
 	  the openssl trust store.
+	- Improve val_sigcrypt.c::algo_needs_missing for one loop pass.
 
 1 July 2022: George
 	- Merge PR #706: NXNS fallback.
