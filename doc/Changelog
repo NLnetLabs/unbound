@@ -2,6 +2,15 @@
 	- Merge PR #671 from Petr Menšík: Disable ED25519 and ED448 in FIPS
 	  mode on openssl3.
 
+1 July 2022: George
+	- Merge PR #706: NXNS fallback.
+	- From #706: Cached NXDOMAIN does not increase the target nx
+	  responses.
+	- From #706: Don't generate parent side queries if we already
+	  have the lame records in cache.
+	- From #706: When a lame address is the best choice, don't try to
+	  generate target queries when the missing targets are all lame.
+
 29 June 2022: Wouter
 	- iana portlist update.
 	- Fix detection of libz on windows compile with static option.
