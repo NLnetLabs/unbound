@@ -215,6 +215,10 @@ ds_digest_size_supported(int algo)
 	switch(algo) {
 		case LDNS_SHA1:
 #if defined(HAVE_EVP_SHA1) && defined(USE_SHA1)
+#ifdef HAVE_EVP_DEFAULT_PROPERTIES_IS_FIPS_ENABLED
+			if (EVP_default_properties_is_fips_enabled(NULL))
+				return 0;
+#endif
 			return SHA_DIGEST_LENGTH;
 #else
 			if(fake_sha1) return 20;
@@ -325,7 +329,11 @@ dnskey_algo_id_is_supported(int id)
 	case LDNS_RSASHA1:
 	case LDNS_RSASHA1_NSEC3:
 #ifdef USE_SHA1
+#ifdef HAVE_EVP_DEFAULT_PROPERTIES_IS_FIPS_ENABLED
+		return !EVP_default_properties_is_fips_enabled(NULL);
+#else
 		return 1;
+#endif
 #else
 		if(fake_sha1) return 1;
 		return 0;
@@ -341,14 +349,21 @@ dnskey_algo_id_is_supported(int id)
 	case LDNS_ECDSAP256SHA256:
 	case LDNS_ECDSAP384SHA384:
 #endif
+#if (defined(HAVE_EVP_SHA256) && defined(USE_SHA2)) || (defined(HAVE_EVP_SHA512) && defined(USE_SHA2)) || defined(USE_ECDSA)
+		return 1;
+#endif
 #ifdef USE_ED25519
 	case LDNS_ED25519:
 #endif
 #ifdef USE_ED448
 	case LDNS_ED448:
 #endif
-#if (defined(HAVE_EVP_SHA256) && defined(USE_SHA2)) || (defined(HAVE_EVP_SHA512) && defined(USE_SHA2)) || defined(USE_ECDSA) || defined(USE_ED25519) || defined(USE_ED448)
+#if defined(USE_ED25519) || defined(USE_ED448)
+#ifdef HAVE_EVP_DEFAULT_PROPERTIES_IS_FIPS_ENABLED
+		return !EVP_default_properties_is_fips_enabled(NULL);
+#else
 		return 1;
+#endif
 #endif
 
 #ifdef USE_GOST
