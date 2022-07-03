@@ -725,7 +725,8 @@ digest_error_status(const char *str)
  * @param keylen: length of keydata.
  * @param reason: bogus reason in more detail.
  * @return secure if verification succeeded, bogus on crypto failure,
- *	unchecked on format errors and alloc failures.
+ *	unchecked on format errors and alloc failures, indeterminate
+ *	if digest is not supported by the crypto library (openssl3+ only).
  */
 enum sec_status
 verify_canonrrset(sldns_buffer* buf, int algo, unsigned char* sigblock,

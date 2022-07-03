@@ -6,6 +6,8 @@
 	- Fix for correct openssl error when adding windows CA certificates to
 	  the openssl trust store.
 	- Improve val_sigcrypt.c::algo_needs_missing for one loop pass.
+	- Reintroduce documentation and more EDE support for
+	  val_sigcrypt.c::dnskeyset_verify_rrset_sig.
 
 1 July 2022: George
 	- Merge PR #706: NXNS fallback.
