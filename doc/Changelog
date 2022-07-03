@@ -3,6 +3,8 @@
 	  mode on openssl3.
 	- Merge PR #660 from Petr Menšík: Sha1 runtime insecure.
 	- For #660: formatting, less verbose logging, add EDE information.
+	- Fix for correct openssl error when adding windows CA certificates to
+	  the openssl trust store.
 
 1 July 2022: George
 	- Merge PR #706: NXNS fallback.
