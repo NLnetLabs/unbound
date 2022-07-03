@@ -686,7 +686,7 @@ setup_key_digest(int algo, EVP_PKEY** evp_key, const EVP_MD** digest_type,
 
 static void
 digest_ctx_free(EVP_MD_CTX* ctx, EVP_PKEY *evp_key,
-		unsigned char* sigblock, int dofree, int docrypto_free)
+	unsigned char* sigblock, int dofree, int docrypto_free)
 {
 #ifdef HAVE_EVP_MD_CTX_NEW
 	EVP_MD_CTX_destroy(ctx);
@@ -703,12 +703,14 @@ static enum sec_status
 digest_error_status(const char *str)
 {
 	unsigned long e = ERR_get_error();
-	log_crypto_verbose(VERB_QUERY, str, e);
 #ifdef EVP_R_INVALID_DIGEST
 	if (ERR_GET_LIB(e) == ERR_LIB_EVP &&
-	    ERR_GET_REASON(e) == EVP_R_INVALID_DIGEST)
+		ERR_GET_REASON(e) == EVP_R_INVALID_DIGEST) {
+		log_crypto_verbose(VERB_ALGO, str, e);
 		return sec_status_indeterminate;
+	}
 #endif
+	log_crypto_verbose(VERB_QUERY, str, e);
 	return sec_status_unchecked;
 }
 
@@ -726,7 +728,7 @@ digest_error_status(const char *str)
  *	unchecked on format errors and alloc failures.
  */
 enum sec_status
-verify_canonrrset(sldns_buffer* buf, int algo, unsigned char* sigblock, 
+verify_canonrrset(sldns_buffer* buf, int algo, unsigned char* sigblock,
 	unsigned int sigblock_len, unsigned char* key, unsigned int keylen,
 	char** reason)
 {
@@ -798,15 +800,15 @@ verify_canonrrset(sldns_buffer* buf, int algo, unsigned char* sigblock,
 		enum sec_status sec;
 		sec = digest_error_status("verify: EVP_DigestInit failed");
 		digest_ctx_free(ctx, evp_key, sigblock,
-				dofree, docrypto_free);
+			dofree, docrypto_free);
 		return sec;
 	}
 	if(EVP_DigestUpdate(ctx, (unsigned char*)sldns_buffer_begin(buf), 
 		(unsigned int)sldns_buffer_limit(buf)) == 0) {
 		log_crypto_verbose(VERB_QUERY, "verify: EVP_DigestUpdate failed",
-				   ERR_get_error());
+			ERR_get_error());
 		digest_ctx_free(ctx, evp_key, sigblock,
-				dofree, docrypto_free);
+			dofree, docrypto_free);
 		return sec_status_unchecked;
 	}
 
@@ -816,7 +818,7 @@ verify_canonrrset(sldns_buffer* buf, int algo, unsigned char* sigblock,
 		enum sec_status sec;
 		sec = digest_error_status("verify: EVP_DigestVerifyInit failed");
 		digest_ctx_free(ctx, evp_key, sigblock,
-				dofree, docrypto_free);
+			dofree, docrypto_free);
 		return sec;
 	}
 	res = EVP_DigestVerify(ctx, sigblock, sigblock_len,
@@ -824,7 +826,7 @@ verify_canonrrset(sldns_buffer* buf, int algo, unsigned char* sigblock,
 		sldns_buffer_limit(buf));
 #endif
 	digest_ctx_free(ctx, evp_key, sigblock,
-			dofree, docrypto_free);
+		dofree, docrypto_free);
 
 	if(res == 1) {
 		return sec_status_secure;

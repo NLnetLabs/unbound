@@ -607,7 +607,7 @@ void algo_needs_reason(struct module_env* env, int alg, char** reason, char* s)
 		*reason = s;
 }
 
-enum sec_status 
+enum sec_status
 dnskey_verify_rrset(struct module_env* env, struct val_env* ve,
         struct ub_packed_rrset_key* rrset, struct ub_packed_rrset_key* dnskey,
 	size_t dnskey_idx, char** reason, sldns_ede_code *reason_bogus,
@@ -642,13 +642,19 @@ dnskey_verify_rrset(struct module_env* env, struct val_env* ve,
 		if(sec == sec_status_secure)
 			return sec;
 		numchecked ++;
-		if (sec == sec_status_indeterminate)
+		if(sec == sec_status_indeterminate)
 			numindeterminate ++;
-		
 	}
 	verbose(VERB_ALGO, "rrset failed to verify: all signatures are bogus");
-	if(!numchecked) *reason = "signature missing";
-	else if (numchecked == numindeterminate) {
+	if(!numchecked) {
+		*reason = "signature missing";
+		if(reason_bogus)
+			*reason_bogus = LDNS_EDE_RRSIGS_MISSING;
+	} else if(numchecked == numindeterminate) {
+		verbose(VERB_ALGO, "rrset failed to verify due to algorithm "
+			"refusal by cryptolib");
+		if(reason_bogus)
+			*reason_bogus = LDNS_EDE_UNSUPPORTED_DNSKEY_ALG;
 		*reason = "algorithm refused by cryptolib";
 		return sec_status_indeterminate;
 	}
@@ -703,7 +709,7 @@ dnskeyset_verify_rrset_sig(struct module_env* env, struct val_env* ve,
 		verbose(VERB_QUERY, "verify: could not find appropriate key");
 		return sec_status_bogus;
 	}
-	if (numindeterminate == numchecked)
+	if(numindeterminate == numchecked)
 		return sec_status_indeterminate;
 	return sec_status_bogus;
 }
