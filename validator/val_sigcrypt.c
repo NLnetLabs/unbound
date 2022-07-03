@@ -614,7 +614,7 @@ dnskey_verify_rrset(struct module_env* env, struct val_env* ve,
 	sldns_pkt_section section, struct module_qstate* qstate)
 {
 	enum sec_status sec;
-	size_t i, num, numchecked = 0;
+	size_t i, num, numchecked = 0, numindeterminate = 0;
 	rbtree_type* sortree = NULL;
 	int buf_canon = 0;
 	uint16_t tag = dnskey_calc_keytag(dnskey, dnskey_idx);
@@ -642,9 +642,16 @@ dnskey_verify_rrset(struct module_env* env, struct val_env* ve,
 		if(sec == sec_status_secure)
 			return sec;
 		numchecked ++;
+		if (sec == sec_status_indeterminate)
+			numindeterminate ++;
+		
 	}
 	verbose(VERB_ALGO, "rrset failed to verify: all signatures are bogus");
 	if(!numchecked) *reason = "signature missing";
+	else if (numchecked == numindeterminate) {
+		*reason = "algorithm refused by cryptolib";
+		return sec_status_indeterminate;
+	}
 	return sec_status_bogus;
 }
 
@@ -662,6 +669,7 @@ dnskeyset_verify_rrset_sig(struct module_env* env, struct val_env* ve,
 	int algo = rrset_get_sig_algo(rrset, sig_idx);
 	size_t i, num = rrset_get_count(dnskey);
 	size_t numchecked = 0;
+	size_t numindeterminate = 0;
 	int buf_canon = 0;
 	verbose(VERB_ALGO, "verify sig %d %d", (int)tag, algo);
 	if(!dnskey_algo_id_is_supported(algo)) {
@@ -685,6 +693,8 @@ dnskeyset_verify_rrset_sig(struct module_env* env, struct val_env* ve,
 			section, qstate);
 		if(sec == sec_status_secure)
 			return sec;
+		else if(sec == sec_status_indeterminate)
+			numindeterminate ++;
 	}
 	if(numchecked == 0) {
 		*reason = "signatures from unknown keys";
@@ -693,6 +703,8 @@ dnskeyset_verify_rrset_sig(struct module_env* env, struct val_env* ve,
 		verbose(VERB_QUERY, "verify: could not find appropriate key");
 		return sec_status_bogus;
 	}
+	if (numindeterminate == numchecked)
+		return sec_status_indeterminate;
 	return sec_status_bogus;
 }
 
