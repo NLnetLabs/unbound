@@ -247,9 +247,6 @@ pick_outgoing_tcp(struct pending_tcp* pend, struct waiting_tcp* w, int s)
 	if(addr_is_ip6(&pi->addr, pi->addrlen))
 		((struct sockaddr_in6*)&pi->addr)->sin6_port = 0;
 	else	((struct sockaddr_in*)&pi->addr)->sin_port = 0;
-#ifdef IP_BIND_ADDRESS_NO_PORT
-	setsockopt(s, SOL_IP, IP_BIND_ADDRESS_NO_PORT, &(int) {1}, sizeof(int));
-#endif
 	if(bind(s, (struct sockaddr*)&pi->addr, pi->addrlen) != 0) {
 #ifndef USE_WINSOCK
 #ifdef EADDRNOTAVAIL
@@ -274,7 +271,7 @@ outnet_get_tcp_fd(struct sockaddr_storage* addr, socklen_t addrlen, int tcp_mss,
 	int s;
 	int af;
 	char* err;
-#ifdef SO_REUSEADDR
+#if defined(SO_REUSEADDR) || defined(IP_BIND_ADDRESS_NO_PORT)
 	int on = 1;
 #endif
 #ifdef INET6
@@ -320,7 +317,13 @@ outnet_get_tcp_fd(struct sockaddr_storage* addr, socklen_t addrlen, int tcp_mss,
 			" setsockopt(TCP_MAXSEG) unsupported");
 #endif /* defined(IPPROTO_TCP) && defined(TCP_MAXSEG) */
 	}
-
+#ifdef IP_BIND_ADDRESS_NO_PORT
+	if(setsockopt(s, IPPROTO_IP, IP_BIND_ADDRESS_NO_PORT, (void*)&on,
+		(socklen_t)sizeof(on)) < 0) {
+		verbose(VERB_ALGO, "outgoing tcp:"
+			" setsockopt(.. IP_BIND_ADDRESS_NO_PORT ..) failed");
+	}
+#endif /* IP_BIND_ADDRESS_NO_PORT */
 	return s;
 }
 
