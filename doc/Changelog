@@ -4,6 +4,9 @@
 	- Merge PR #668 from Cristian Rodríguez: Set IP_BIND_ADDRESS_NO_PORT on
 	  outbound tcp sockets.
 
+4 July 2022: Wouter
+	- Tag for 1.16.1rc1 release.
+
 3 July 2022: George
 	- Merge PR #671 from Petr Menšík: Disable ED25519 and ED448 in FIPS
 	  mode on openssl3.
