@@ -1201,8 +1201,7 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 #endif
 	if((!strchr(ifname, '@') && atoi(port) == UNBOUND_DNS_OVER_QUIC_PORT) ||
 		(strchr(ifname, '@') && atoi(strchr(ifname, '@')+1) == UNBOUND_DNS_OVER_QUIC_PORT))
-		is_doq = 1; /* DEBUG, enable for test port. Default is
-			       otherwise port 853 udp for DoQ */
+		is_doq = 1;
 
 	if(!do_udp && !do_tcp)
 		return 0;
