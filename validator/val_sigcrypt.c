@@ -517,11 +517,12 @@ int algo_needs_missing(struct algo_needs* n)
 	/* check if a needed algo was bogus - report that;
 	 * check the first missing algo - report that;
 	 * or return 0 */
-	for(i=0; i<ALGO_NEEDS_MAX; i++)
+	for(i=0; i<ALGO_NEEDS_MAX; i++) {
 		if(n->needs[i] == 2)
 			return 0;
 		if(n->needs[i] == 1 && miss == -1)
 			miss = i;
+	}
 	if(miss != -1) return miss;
 	return 0;
 }
