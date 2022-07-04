@@ -1180,6 +1180,7 @@ if_is_ssl(const char* ifname, const char* port, int ssl_port,
  * @param dnscrypt_port: dnscrypt service port number
  * @param dscp: DSCP to use.
  * @param quic_port: dns over quic port number.
+ * @param http_notls_downstream: if no tls is used for https downstream.
  * @return: returns false on error.
  */
 static int
@@ -1189,7 +1190,7 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 	struct config_strlist* tls_additional_port, int https_port,
 	int* reuseport, int transparent, int tcp_mss, int freebind,
 	int http2_nodelay, int use_systemd, int dnscrypt_port, int dscp,
-	int quic_port)
+	int quic_port, int http_notls_downstream)
 {
 	int s, noip6=0;
 	int is_https = if_is_https(ifname, port, https_port);
@@ -1295,6 +1296,8 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 		} else if(is_https) {
 			port_type = listen_type_http;
 			add = "https";
+			if(http_notls_downstream)
+				add = "http";
 		} else if(is_dnscrypt) {
 			port_type = listen_type_tcp_dnscrypt;
 			add = "dnscrypt";
@@ -1792,7 +1795,7 @@ listening_ports_open(struct config_file* cfg, char** ifs, int num_ifs,
 						cfg->tcp_mss, cfg->ip_freebind,
 						cfg->http_nodelay, cfg->use_systemd,
 						cfg->dnscrypt_port, cfg->ip_dscp,
-						cfg->quic_port)) {
+						cfg->quic_port, cfg->http_notls_downstream)) {
 						listening_ports_free(list);
 						return NULL;
 					}
@@ -1808,7 +1811,7 @@ listening_ports_open(struct config_file* cfg, char** ifs, int num_ifs,
 						cfg->tcp_mss, cfg->ip_freebind,
 						cfg->http_nodelay, cfg->use_systemd,
 						cfg->dnscrypt_port, cfg->ip_dscp,
-						cfg->quic_port)) {
+						cfg->quic_port, cfg->http_notls_downstream)) {
 						listening_ports_free(list);
 						return NULL;
 					}
@@ -1827,7 +1830,7 @@ listening_ports_open(struct config_file* cfg, char** ifs, int num_ifs,
 				cfg->tcp_mss, cfg->ip_freebind,
 				cfg->http_nodelay, cfg->use_systemd,
 				cfg->dnscrypt_port, cfg->ip_dscp,
-				cfg->quic_port)) {
+				cfg->quic_port, cfg->http_notls_downstream)) {
 				listening_ports_free(list);
 				return NULL;
 			}
@@ -1843,7 +1846,7 @@ listening_ports_open(struct config_file* cfg, char** ifs, int num_ifs,
 				cfg->tcp_mss, cfg->ip_freebind,
 				cfg->http_nodelay, cfg->use_systemd,
 				cfg->dnscrypt_port, cfg->ip_dscp,
-				cfg->quic_port)) {
+				cfg->quic_port, cfg->http_notls_downstream)) {
 				listening_ports_free(list);
 				return NULL;
 			}
@@ -1861,7 +1864,7 @@ listening_ports_open(struct config_file* cfg, char** ifs, int num_ifs,
 				cfg->tcp_mss, cfg->ip_freebind,
 				cfg->http_nodelay, cfg->use_systemd,
 				cfg->dnscrypt_port, cfg->ip_dscp,
-				cfg->quic_port)) {
+				cfg->quic_port, cfg->http_notls_downstream)) {
 				listening_ports_free(list);
 				return NULL;
 			}
@@ -1877,7 +1880,7 @@ listening_ports_open(struct config_file* cfg, char** ifs, int num_ifs,
 				cfg->tcp_mss, cfg->ip_freebind,
 				cfg->http_nodelay, cfg->use_systemd,
 				cfg->dnscrypt_port, cfg->ip_dscp,
-				cfg->quic_port)) {
+				cfg->quic_port, cfg->http_notls_downstream)) {
 				listening_ports_free(list);
 				return NULL;
 			}
