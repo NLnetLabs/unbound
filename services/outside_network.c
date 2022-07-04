@@ -271,7 +271,7 @@ outnet_get_tcp_fd(struct sockaddr_storage* addr, socklen_t addrlen, int tcp_mss,
 	int s;
 	int af;
 	char* err;
-#ifdef SO_REUSEADDR
+#if defined(SO_REUSEADDR) || defined(IP_BIND_ADDRESS_NO_PORT)
 	int on = 1;
 #endif
 #ifdef INET6
@@ -317,7 +317,13 @@ outnet_get_tcp_fd(struct sockaddr_storage* addr, socklen_t addrlen, int tcp_mss,
 			" setsockopt(TCP_MAXSEG) unsupported");
 #endif /* defined(IPPROTO_TCP) && defined(TCP_MAXSEG) */
 	}
-
+#ifdef IP_BIND_ADDRESS_NO_PORT
+	if(setsockopt(s, IPPROTO_IP, IP_BIND_ADDRESS_NO_PORT, (void*)&on,
+		(socklen_t)sizeof(on)) < 0) {
+		verbose(VERB_ALGO, "outgoing tcp:"
+			" setsockopt(.. IP_BIND_ADDRESS_NO_PORT ..) failed");
+	}
+#endif /* IP_BIND_ADDRESS_NO_PORT */
 	return s;
 }
 

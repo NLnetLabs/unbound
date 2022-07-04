@@ -1,6 +1,8 @@
 4 July 2022: George
 	- Fix bug introduced in 'improve val_sigcrypt.c::algo_needs_missing for
 	  one loop pass'.
+	- Merge PR #668 from Cristian Rodríguez: Set IP_BIND_ADDRESS_NO_PORT on
+	  outbound tcp sockets.
 
 3 July 2022: George
 	- Merge PR #671 from Petr Menšík: Disable ED25519 and ED448 in FIPS
