@@ -153,6 +153,9 @@ struct config_file {
 	/** Disable TLS for http sockets downstream */
 	int http_notls_downstream;
 
+	/** port on which to provide DNS over QUIC service */
+	int quic_port;
+
 	/** outgoing port range number of ports (per thread) */
 	int outgoing_num_ports;
 	/** number of outgoing tcp buffers per (per thread) */
@@ -1307,6 +1310,9 @@ int if_is_https(const char* ifname, const char* port, int https_port);
  * @return true if https ports are used for server.
  */
 int cfg_has_https(struct config_file* cfg);
+
+/** see if interface is quic, its port number == the quic port number */
+int if_is_quic(const char* ifname, const char* port, int quic_port);
 
 #ifdef USE_LINUX_IP_LOCAL_PORT_RANGE
 #define LINUX_IP_LOCAL_PORT_RANGE_PATH "/proc/sys/net/ipv4/ip_local_port_range"

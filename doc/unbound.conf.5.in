@@ -652,6 +652,10 @@ Ignored if the option is not available. Default is yes.
 Disable use of TLS for the downstream DNS-over-HTTP connections.  Useful for
 local back end servers.  Default is no.
 .TP
+.B quic\-port: \fI<number>
+The port number on which to provide DNS-over-QUIC service, default 853, only
+interfaces configured with that port number as @number get the QUIC service.
+.TP
 .B use\-systemd: \fI<yes or no>
 Enable or disable systemd socket activation.
 Default is no.

@@ -1176,6 +1176,7 @@ if_is_ssl(const char* ifname, const char* port, int ssl_port,
  * @param use_systemd: if true, fetch sockets from systemd.
  * @param dnscrypt_port: dnscrypt service port number
  * @param dscp: DSCP to use.
+ * @param quic_port: dns over quic port number.
  * @return: returns false on error.
  */
 static int
@@ -1184,13 +1185,14 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 	size_t rcv, size_t snd, int ssl_port,
 	struct config_strlist* tls_additional_port, int https_port,
 	int* reuseport, int transparent, int tcp_mss, int freebind,
-	int http2_nodelay, int use_systemd, int dnscrypt_port, int dscp)
+	int http2_nodelay, int use_systemd, int dnscrypt_port, int dscp,
+	int quic_port)
 {
 	int s, noip6=0;
 	int is_https = if_is_https(ifname, port, https_port);
 	int nodelay = is_https && http2_nodelay;
 	struct unbound_socket* ub_sock;
-	int is_doq = 0;
+	int is_doq = if_is_quic(ifname, port, quic_port);
 #ifdef USE_DNSCRYPT
 	int is_dnscrypt = ((strchr(ifname, '@') && 
 			atoi(strchr(ifname, '@')+1) == dnscrypt_port) ||
@@ -1199,9 +1201,6 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 	int is_dnscrypt = 0;
 	(void)dnscrypt_port;
 #endif
-	if((!strchr(ifname, '@') && atoi(port) == UNBOUND_DNS_OVER_QUIC_PORT) ||
-		(strchr(ifname, '@') && atoi(strchr(ifname, '@')+1) == UNBOUND_DNS_OVER_QUIC_PORT))
-		is_doq = 1;
 
 	if(!do_udp && !do_tcp)
 		return 0;
@@ -1777,7 +1776,8 @@ listening_ports_open(struct config_file* cfg, char** ifs, int num_ifs,
 						cfg->https_port, reuseport, cfg->ip_transparent,
 						cfg->tcp_mss, cfg->ip_freebind,
 						cfg->http_nodelay, cfg->use_systemd,
-						cfg->dnscrypt_port, cfg->ip_dscp)) {
+						cfg->dnscrypt_port, cfg->ip_dscp,
+						cfg->quic_port)) {
 						listening_ports_free(list);
 						return NULL;
 					}
@@ -1792,7 +1792,8 @@ listening_ports_open(struct config_file* cfg, char** ifs, int num_ifs,
 						cfg->https_port, reuseport, cfg->ip_transparent,
 						cfg->tcp_mss, cfg->ip_freebind,
 						cfg->http_nodelay, cfg->use_systemd,
-						cfg->dnscrypt_port, cfg->ip_dscp)) {
+						cfg->dnscrypt_port, cfg->ip_dscp,
+						cfg->quic_port)) {
 						listening_ports_free(list);
 						return NULL;
 					}
@@ -1810,7 +1811,8 @@ listening_ports_open(struct config_file* cfg, char** ifs, int num_ifs,
 				cfg->https_port, reuseport, cfg->ip_transparent,
 				cfg->tcp_mss, cfg->ip_freebind,
 				cfg->http_nodelay, cfg->use_systemd,
-				cfg->dnscrypt_port, cfg->ip_dscp)) {
+				cfg->dnscrypt_port, cfg->ip_dscp,
+				cfg->quic_port)) {
 				listening_ports_free(list);
 				return NULL;
 			}
@@ -1825,7 +1827,8 @@ listening_ports_open(struct config_file* cfg, char** ifs, int num_ifs,
 				cfg->https_port, reuseport, cfg->ip_transparent,
 				cfg->tcp_mss, cfg->ip_freebind,
 				cfg->http_nodelay, cfg->use_systemd,
-				cfg->dnscrypt_port, cfg->ip_dscp)) {
+				cfg->dnscrypt_port, cfg->ip_dscp,
+				cfg->quic_port)) {
 				listening_ports_free(list);
 				return NULL;
 			}
@@ -1842,7 +1845,8 @@ listening_ports_open(struct config_file* cfg, char** ifs, int num_ifs,
 				cfg->https_port, reuseport, cfg->ip_transparent,
 				cfg->tcp_mss, cfg->ip_freebind,
 				cfg->http_nodelay, cfg->use_systemd,
-				cfg->dnscrypt_port, cfg->ip_dscp)) {
+				cfg->dnscrypt_port, cfg->ip_dscp,
+				cfg->quic_port)) {
 				listening_ports_free(list);
 				return NULL;
 			}
@@ -1857,7 +1861,8 @@ listening_ports_open(struct config_file* cfg, char** ifs, int num_ifs,
 				cfg->https_port, reuseport, cfg->ip_transparent,
 				cfg->tcp_mss, cfg->ip_freebind,
 				cfg->http_nodelay, cfg->use_systemd,
-				cfg->dnscrypt_port, cfg->ip_dscp)) {
+				cfg->dnscrypt_port, cfg->ip_dscp,
+				cfg->quic_port)) {
 				listening_ports_free(list);
 				return NULL;
 			}

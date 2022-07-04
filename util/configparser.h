@@ -377,7 +377,8 @@ extern int yydebug;
     VAR_ZONEMD_REJECT_ABSENCE = 578, /* VAR_ZONEMD_REJECT_ABSENCE  */
     VAR_RPZ_SIGNAL_NXDOMAIN_RA = 579, /* VAR_RPZ_SIGNAL_NXDOMAIN_RA  */
     VAR_INTERFACE_AUTOMATIC_PORTS = 580, /* VAR_INTERFACE_AUTOMATIC_PORTS  */
-    VAR_EDE = 581                  /* VAR_EDE  */
+    VAR_EDE = 581,                 /* VAR_EDE  */
+    VAR_QUIC_PORT = 582            /* VAR_QUIC_PORT  */
   };
   typedef enum yytokentype yytoken_kind_t;
 #endif
@@ -710,6 +711,7 @@ extern int yydebug;
 #define VAR_RPZ_SIGNAL_NXDOMAIN_RA 579
 #define VAR_INTERFACE_AUTOMATIC_PORTS 580
 #define VAR_EDE 581
+#define VAR_QUIC_PORT 582
 
 /* Value type.  */
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
@@ -719,7 +721,7 @@ union YYSTYPE
 
 	char*	str;
 
-#line 723 "util/configparser.h"
+#line 725 "util/configparser.h"
 
 };
 typedef union YYSTYPE YYSTYPE;
