@@ -109,7 +109,7 @@ static int http2_response_buffer_lock_inited = 0;
  * @param addr: the address returned.
  */
 static void
-verbose_print_addr(struct addrinfo *addr)
+verbose_print_addr(struct addrinfo *addr, const char* additional)
 {
 	if(verbosity >= VERB_ALGO) {
 		char buf[100];
@@ -124,13 +124,14 @@ verbose_print_addr(struct addrinfo *addr)
 			(void)strlcpy(buf, "(null)", sizeof(buf));
 		}
 		buf[sizeof(buf)-1] = 0;
-		verbose(VERB_ALGO, "creating %s%s socket %s %d", 
+		verbose(VERB_ALGO, "creating %s%s socket %s %d%s%s",
 			addr->ai_socktype==SOCK_DGRAM?"udp":
 			addr->ai_socktype==SOCK_STREAM?"tcp":"otherproto",
 			addr->ai_family==AF_INET?"4":
 			addr->ai_family==AF_INET6?"6":
 			"_otherfam", buf, 
-			ntohs(((struct sockaddr_in*)addr->ai_addr)->sin_port));
+			ntohs(((struct sockaddr_in*)addr->ai_addr)->sin_port),
+			(additional?" ":""), (additional?additional:""));
 	}
 }
 
@@ -139,7 +140,7 @@ verbose_print_unbound_socket(struct unbound_socket* ub_sock)
 {
 	if(verbosity >= VERB_ALGO) {
 		log_info("listing of unbound_socket structure:");
-		verbose_print_addr(ub_sock->addr);
+		verbose_print_addr(ub_sock->addr, NULL);
 		log_info("s is: %d, fam is: %s", ub_sock->s, ub_sock->fam == AF_INET?"AF_INET":"AF_INET6");
 	}
 }
@@ -641,7 +642,7 @@ create_udp_sock(int family, int socktype, struct sockaddr* addr,
 int
 create_tcp_accept_sock(struct addrinfo *addr, int v6only, int* noproto,
 	int* reuseport, int transparent, int mss, int nodelay, int freebind,
-	int use_systemd, int dscp)
+	int use_systemd, int dscp, const char* additional)
 {
 	int s;
 	char* err;
@@ -660,7 +661,7 @@ create_tcp_accept_sock(struct addrinfo *addr, int v6only, int* noproto,
 #if !defined(IP_FREEBIND)
 	(void)freebind;
 #endif
-	verbose_print_addr(addr);
+	verbose_print_addr(addr, additional);
 	*noproto = 0;
 #ifdef HAVE_SYSTEMD
 	if (!use_systemd ||
@@ -969,7 +970,8 @@ static int
 make_sock(int stype, const char* ifname, const char* port, 
 	struct addrinfo *hints, int v6only, int* noip6, size_t rcv, size_t snd,
 	int* reuseport, int transparent, int tcp_mss, int nodelay, int freebind,
-	int use_systemd, int dscp, struct unbound_socket* ub_sock)
+	int use_systemd, int dscp, struct unbound_socket* ub_sock,
+	const char* additional)
 {
 	struct addrinfo *res = NULL;
 	int r, s, inuse, noproto;
@@ -993,7 +995,7 @@ make_sock(int stype, const char* ifname, const char* port,
 		return -1;
 	}
 	if(stype == SOCK_DGRAM) {
-		verbose_print_addr(res);
+		verbose_print_addr(res, additional);
 		s = create_udp_sock(res->ai_family, res->ai_socktype,
 			(struct sockaddr*)res->ai_addr, res->ai_addrlen,
 			v6only, &inuse, &noproto, (int)rcv, (int)snd, 1,
@@ -1006,7 +1008,7 @@ make_sock(int stype, const char* ifname, const char* port,
 	} else	{
 		s = create_tcp_accept_sock(res, v6only, &noproto, reuseport,
 			transparent, tcp_mss, nodelay, freebind, use_systemd,
-			dscp);
+			dscp, additional);
 		if(s == -1 && noproto && hints->ai_family == AF_INET6){
 			*noip6 = 1;
 		}
@@ -1024,7 +1026,8 @@ static int
 make_sock_port(int stype, const char* ifname, const char* port, 
 	struct addrinfo *hints, int v6only, int* noip6, size_t rcv, size_t snd,
 	int* reuseport, int transparent, int tcp_mss, int nodelay, int freebind,
-	int use_systemd, int dscp, struct unbound_socket* ub_sock)
+	int use_systemd, int dscp, struct unbound_socket* ub_sock,
+	const char* additional)
 {
 	char* s = strchr(ifname, '@');
 	if(s) {
@@ -1047,11 +1050,11 @@ make_sock_port(int stype, const char* ifname, const char* port,
 		p[strlen(s+1)]=0;
 		return make_sock(stype, newif, p, hints, v6only, noip6, rcv,
 			snd, reuseport, transparent, tcp_mss, nodelay, freebind,
-			use_systemd, dscp, ub_sock);
+			use_systemd, dscp, ub_sock, additional);
 	}
 	return make_sock(stype, ifname, port, hints, v6only, noip6, rcv, snd,
 		reuseport, transparent, tcp_mss, nodelay, freebind, use_systemd,
-		dscp, ub_sock);
+		dscp, ub_sock, additional);
 }
 
 /**
@@ -1193,6 +1196,7 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 	int nodelay = is_https && http2_nodelay;
 	struct unbound_socket* ub_sock;
 	int is_doq = if_is_quic(ifname, port, quic_port);
+	const char* add = NULL;
 #ifdef USE_DNSCRYPT
 	int is_dnscrypt = ((strchr(ifname, '@') && 
 			atoi(strchr(ifname, '@')+1) == dnscrypt_port) ||
@@ -1211,7 +1215,8 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 			return 0;
 		if((s = make_sock_port(SOCK_DGRAM, ifname, port, hints, 1, 
 			&noip6, rcv, snd, reuseport, transparent,
-			tcp_mss, nodelay, freebind, use_systemd, dscp, ub_sock)) == -1) {
+			tcp_mss, nodelay, freebind, use_systemd, dscp, ub_sock,
+			(is_dnscrypt?"udpancil_dnscrypt":"udpancil"))) == -1) {
 			freeaddrinfo(ub_sock->addr);
 			free(ub_sock);
 			if(noip6) {
@@ -1239,16 +1244,21 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 		ub_sock = calloc(1, sizeof(struct unbound_socket));
 		if(!ub_sock)
 			return 0;
-		if(is_dnscrypt)
+		if(is_dnscrypt) {
 			udp_port_type = listen_type_udp_dnscrypt;
-		else if(is_doq)
+			add = "dnscrypt";
+		} else if(is_doq) {
 			udp_port_type = listen_type_doq;
-		else
+			add = "doq";
+		} else {
 			udp_port_type = listen_type_udp;
+			add = NULL;
+		}
 		/* regular udp socket */
 		if((s = make_sock_port(SOCK_DGRAM, ifname, port, hints, 1, 
 			&noip6, rcv, snd, reuseport, transparent,
-			tcp_mss, nodelay, freebind, use_systemd, dscp, ub_sock)) == -1) {
+			tcp_mss, nodelay, freebind, use_systemd, dscp, ub_sock,
+			add)) == -1) {
 			freeaddrinfo(ub_sock->addr);
 			free(ub_sock);
 			if(noip6) {
@@ -1279,17 +1289,22 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 		ub_sock = calloc(1, sizeof(struct unbound_socket));
 		if(!ub_sock)
 			return 0;
-		if(is_ssl)
+		if(is_ssl) {
 			port_type = listen_type_ssl;
-		else if(is_https)
+			add = "tls";
+		} else if(is_https) {
 			port_type = listen_type_http;
-		else if(is_dnscrypt)
+			add = "https";
+		} else if(is_dnscrypt) {
 			port_type = listen_type_tcp_dnscrypt;
-		else
+			add = "dnscrypt";
+		} else {
 			port_type = listen_type_tcp;
+			add = NULL;
+		}
 		if((s = make_sock_port(SOCK_STREAM, ifname, port, hints, 1, 
 			&noip6, 0, 0, reuseport, transparent, tcp_mss, nodelay,
-			freebind, use_systemd, dscp, ub_sock)) == -1) {
+			freebind, use_systemd, dscp, ub_sock, add)) == -1) {
 			freeaddrinfo(ub_sock->addr);
 			free(ub_sock);
 			if(noip6) {

@@ -272,11 +272,12 @@ int create_udp_sock(int family, int socktype, struct sockaddr* addr,
  * @param freebind: set IP_FREEBIND socket option.
  * @param use_systemd: if true, fetch sockets from systemd.
  * @param dscp: DSCP to use.
+ * @param additional: additional log information for the socket type.
  * @return: the socket. -1 on error.
  */
 int create_tcp_accept_sock(struct addrinfo *addr, int v6only, int* noproto,
 	int* reuseport, int transparent, int mss, int nodelay, int freebind,
-	int use_systemd, int dscp);
+	int use_systemd, int dscp, const char* additional);
 
 /**
  * Create and bind local listening socket
