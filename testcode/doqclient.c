@@ -60,12 +60,15 @@
 #include "util/data/msgencode.h"
 #include "util/data/msgparse.h"
 #include "util/random.h"
+#include "util/ub_event.h"
 struct doq_client_stream;
 
 /** the local client data for the DoQ connection */
 struct doq_client_data {
 	/** file descriptor */
 	int fd;
+	/** the ub event */
+	struct ub_event* ev;
 	/** the ngtcp2 connection information */
 	struct ngtcp2_conn* conn;
 	/** random state */
@@ -554,11 +557,36 @@ stream_list_free(struct doq_client_stream* stream_list)
 	}
 }
 
+/** callback for main listening file descriptor */
+void
+doq_client_ev_cb(int fd, short bits, void* arg)
+{
+	struct doq_client_data* data = (struct doq_client_data*)arg;
+	verbose(1, "doq_client_ev_cb %s %s",
+		((bits&UB_EV_READ)!=0?"EV_READ":""),
+		((bits&UB_EV_WRITE)!=0?"EV_WRITE":""));
+	if((bits&UB_EV_READ)) {
+	}
+	(void)data;
+	(void)fd;
+}
+
 /* run the dohclient queries */
 static void run(const char* svr, int port, char** qs, int count)
 {
+	time_t secs = 0;
+	struct timeval now;
+	struct ub_event_base* base;
+	const char *evnm="event", *evsys="", *evmethod="";
 	struct doq_client_data* data;
 	int i;
+
+	memset(&now, 0, sizeof(now));
+	base = ub_default_event_base(1, &secs, &now);
+	if(!base) fatal_exit("could not create ub_event base");
+	ub_get_event_sys(base, &evnm, &evsys, &evmethod);
+	if(verbosity) log_info("%s %s uses %s method", evnm, evsys, evmethod);
+
 	data = calloc(sizeof(*data), 1);
 	if(!data) fatal_exit("calloc failed: out of memory");
 	data->rnd = ub_initstate(NULL);
@@ -573,6 +601,15 @@ static void run(const char* svr, int port, char** qs, int count)
 	data->ctx = ctx_client_setup();
 	data->ssl = ssl_client_setup(data);
 	ngtcp2_conn_set_tls_native_handle(data->conn, data->ssl);
+
+	data->ev = ub_event_new(base, data->fd, UB_EV_READ | UB_EV_WRITE |
+		UB_EV_PERSIST, doq_client_ev_cb, data);
+	if(!data->ev) {
+		fatal_exit("could not ub_event_new");
+	}
+	if(ub_event_add(data->ev, NULL) != 0) {
+		fatal_exit("could not ub_event_add");
+	}
 
 	/* handle query */
 	for(i=0; i<count; i+=3) {
@@ -590,6 +627,8 @@ static void run(const char* svr, int port, char** qs, int count)
 		client_bidi_stream(data, buf);
 		sldns_buffer_free(buf);
 	}
+
+	ub_event_base_dispatch(base);
 
 #if defined(NGTCP2_USE_GENERIC_SOCKADDR) || defined(NGTCP2_USE_GENERIC_IPV6_SOCKADDR)
 	if(addr_is_ip6(&data->dest_addr, data->dest_addr_len)) {
@@ -612,8 +651,13 @@ static void run(const char* svr, int port, char** qs, int count)
 	SSL_CTX_free(data->ctx);
 	stream_list_free(data->stream_list);
 	ub_randfree(data->rnd);
+	if(data->ev) {
+		ub_event_del(data->ev);
+		ub_event_free(data->ev);
+	}
 	free(data->static_secret_data);
 	free(data);
+	ub_event_base_free(base);
 }
 #endif /* HAVE_NGTCP2 */
 
