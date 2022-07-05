@@ -92,6 +92,8 @@ struct doq_client_data {
 	uint32_t quic_version;
 	/** the list of streams */
 	struct doq_client_stream* stream_list;
+	/** the recent tls alert error code */
+	uint8_t tls_alert;
 };
 
 /** the local client data for a DoQ stream */
@@ -379,6 +381,15 @@ static struct ngtcp2_conn* conn_client_setup(struct doq_client_data* data)
 	return conn;
 }
 
+/** applicatation rx key callback, this is where the rx key is set,
+ * and streams can be opened */
+static int
+application_rx_key_cb(struct doq_client_data* data)
+{
+	(void)data;
+	return 1;
+}
+
 /** quic_method set_encryption_secrets function */
 static int
 set_encryption_secrets(SSL *ssl, OSSL_ENCRYPTION_LEVEL ossl_level,
@@ -391,12 +402,24 @@ set_encryption_secrets(SSL *ssl, OSSL_ENCRYPTION_LEVEL ossl_level,
 		ngtcp2_crypto_openssl_from_ossl_encryption_level(ossl_level);
 
 	if(read_secret) {
-
+		if(ngtcp2_crypto_derive_and_install_rx_key(data->conn, NULL,
+			NULL, NULL, level, read_secret, secret_len) != 0) {
+			log_err("ngtcp2_crypto_derive_and_install_rx_key failed");
+			return 0;
+		}
+		if(level == NGTCP2_CRYPTO_LEVEL_APPLICATION) {
+			if(!application_rx_key_cb(data))
+				return 0;
+		}
 	}
-	(void)write_secret;
-	(void)secret_len;
-	(void)level;
-	(void)data;
+
+	if(write_secret) {
+		if(ngtcp2_crypto_derive_and_install_tx_key(data->conn, NULL,
+			NULL, NULL, level, write_secret, secret_len) != 0) {
+			log_err("ngtcp2_crypto_derive_and_install_tx_key failed");
+			return 0;
+		}
+	}
 	return 1;
 }
 
@@ -409,10 +432,15 @@ add_handshake_data(SSL *ssl, OSSL_ENCRYPTION_LEVEL ossl_level,
 		SSL_get_app_data(ssl);
 	ngtcp2_crypto_level level =
 		ngtcp2_crypto_openssl_from_ossl_encryption_level(ossl_level);
-	(void)data;
-	(void)len;
-	(void)doqdata;
-	(void)level;
+	int rv;
+
+	rv = ngtcp2_conn_submit_crypto_data(doqdata->conn, level, data, len);
+	if(rv != 0) {
+		log_err("ngtcp2_conn_submit_crypto_data failed: %s",
+			ngtcp2_strerror(rv));
+		ngtcp2_conn_set_tls_error(doqdata->conn, rv);
+		return 0;
+	}
 	return 1;
 }
 
@@ -430,8 +458,7 @@ send_alert(SSL *ssl, enum ssl_encryption_level_t ATTR_UNUSED(level),
 {
 	struct doq_client_data* data = (struct doq_client_data*)
 		SSL_get_app_data(ssl);
-	(void)alert;
-	(void)data;
+	data->tls_alert = alert;
 	return 1;
 }
 
