@@ -623,7 +623,7 @@ set_ecn(int fd, int family, uint32_t ecn)
 }
 
 /** send a packet */
-static void
+static int
 doq_send_pkt(struct doq_client_data* data, uint32_t ecn, uint8_t* buf,
 	size_t buf_len)
 {
@@ -638,7 +638,7 @@ doq_send_pkt(struct doq_client_data* data, uint32_t ecn, uint8_t* buf,
 	msg.msg_iovlen = 1;
 	set_ecn(data->fd, data->dest_addr.ss_family, ecn);
 
-	while(1) {
+	for(;;) {
 		ret = sendmsg(data->fd, &msg, 0);
 		if(ret == -1 && errno == EINTR)
 			continue;
@@ -646,9 +646,25 @@ doq_send_pkt(struct doq_client_data* data, uint32_t ecn, uint8_t* buf,
 	}
 	if(ret == -1) {
 		if(errno == EAGAIN)
-			return;
+			return 0;
 		log_err("doq sendmsg: %s", strerror(errno));
-		return;
+		return 0;
+	}
+	return 1;
+}
+
+/** change event write on fd to when we have data or when congested */
+static void
+event_change_write(struct doq_client_data* data, int do_write)
+{
+	ub_event_del(data->ev);
+	if(do_write) {
+		ub_event_add_bits(data->ev, UB_EV_WRITE);
+	} else {
+		ub_event_del_bits(data->ev, UB_EV_WRITE);
+	}
+	if(ub_event_add(data->ev, NULL) != 0) {
+		fatal_exit("could not ub_event_add");
 	}
 }
 
@@ -813,11 +829,80 @@ on_read(struct doq_client_data* data)
 	update_timer(data);
 }
 
+/** write the data streams, if possible */
+static int
+write_streams(struct doq_client_data* data)
+{
+	ngtcp2_path_storage ps;
+	ngtcp2_tstamp ts = get_timestamp_nanosec();
+	struct doq_client_stream* str;
+	uint32_t flags;
+	ngtcp2_path_storage_zero(&ps);
+
+	for(str = data->stream_list; str; str = str->next) {
+		uint64_t stream_id;
+		ngtcp2_pkt_info pi;
+		ngtcp2_vec datav;
+		int fin;
+		ngtcp2_ssize ret;
+		ngtcp2_ssize ndatalen = 0;
+		if(str->nwrite == str->data_len || str->stream_id == -1)
+			continue;
+		stream_id = str->stream_id;
+		fin = 1;
+		datav.base = str->data + str->nwrite;
+		datav.len = str->data_len - str->nwrite;
+
+		flags = NGTCP2_WRITE_STREAM_FLAG_MORE;
+		if(fin) {
+			flags |= NGTCP2_WRITE_STREAM_FLAG_FIN;
+		}
+		sldns_buffer_clear(data->pkt_buf);
+		ret = ngtcp2_conn_writev_stream(data->conn, &ps.path, &pi,
+			sldns_buffer_begin(data->pkt_buf),
+			sldns_buffer_remaining(data->pkt_buf), &ndatalen,
+			flags, stream_id, &datav, 1, ts);
+		if(ret < 0) {
+			if(ret == NGTCP2_ERR_STREAM_DATA_BLOCKED) {
+			} else if(ret == NGTCP2_ERR_STREAM_SHUT_WR) {
+			} else if(ret == NGTCP2_ERR_WRITE_MORE) {
+				str->nwrite += ndatalen;
+				continue;
+			}
+			log_err("ngtcp2_conn_writev_stream failed: %s",
+				ngtcp2_strerror(ret));
+			ngtcp2_connection_close_error_set_transport_error_liberr(
+				&data->last_error, ret, NULL, 0);
+			disconnect(data);
+			return 0;
+		}
+		if(ndatalen >= 0) {
+			/* add the new write offset */
+			str->nwrite += ndatalen;
+		}
+		if(ret == 0) {
+			/* congestion limited */
+			ngtcp2_conn_update_pkt_tx_time(data->conn, ts);
+			event_change_write(data, 0);
+			return 0;
+		}
+		if(!doq_send_pkt(data, pi.ecn,
+			sldns_buffer_begin(data->pkt_buf), ret))
+			return 0;
+	}
+	ngtcp2_conn_update_pkt_tx_time(data->conn, ts);
+	event_change_write(data, 1);
+	return 1;
+}
+
 /** perform write operations, if any, on fd */
 static void
 on_write(struct doq_client_data* data)
 {
 	(void)data;
+	if(!write_streams(data))
+		return;
+	update_timer(data);
 }
 
 /** callback for main listening file descriptor */
