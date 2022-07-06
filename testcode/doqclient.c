@@ -371,7 +371,8 @@ static struct ngtcp2_conn* conn_client_setup(struct doq_client_data* data)
 	cbs.rand = rand_cb;
 	cbs.get_new_connection_id = get_new_connection_id_cb;
 	cbs.delete_crypto_aead_ctx = ngtcp2_crypto_delete_crypto_aead_ctx_cb;
-	cbs.delete_crypto_cipher_ctx = ngtcp2_crypto_delete_crypto_cipher_ctx_cb;
+	cbs.delete_crypto_cipher_ctx =
+		ngtcp2_crypto_delete_crypto_cipher_ctx_cb;
 	cbs.get_path_challenge_data = ngtcp2_crypto_get_path_challenge_data_cb;
 	cbs.version_negotiation = ngtcp2_crypto_version_negotiation_cb;
 	copy_ngaddr(&path.local, &data->local_addr, data->local_addr_len);
@@ -564,8 +565,10 @@ void
 doq_client_ev_cb(int fd, short bits, void* arg)
 {
 	struct doq_client_data* data = (struct doq_client_data*)arg;
-	verbose(1, "doq_client_ev_cb %s %s",
+	verbose(1, "doq_client_ev_cb %s%s%s",
 		((bits&UB_EV_READ)!=0?"EV_READ":""),
+		((bits&(UB_EV_READ|UB_EV_WRITE))==(UB_EV_READ|UB_EV_WRITE)?
+		" ":""),
 		((bits&UB_EV_WRITE)!=0?"EV_WRITE":""));
 	if((bits&UB_EV_READ)) {
 	}
@@ -587,10 +590,10 @@ create_doq_client_data(const char* svr, int port, struct ub_event_base* base)
 	data->svr = svr;
 	get_dest_addr(data, svr, port);
 	data->fd = open_svr_udp(data);
-	generate_static_secret(data, 32);
 	get_local_addr(data);
 	data->conn = conn_client_setup(data);
 
+	generate_static_secret(data, 32);
 	data->ctx = ctx_client_setup();
 	data->ssl = ssl_client_setup(data);
 	ngtcp2_conn_set_tls_native_handle(data->conn, data->ssl);
@@ -631,7 +634,8 @@ delete_doq_client_data(struct doq_client_data* data)
 #endif
 	ngtcp2_conn_del(data->conn);
 	SSL_free(data->ssl);
-	sock_close(data->fd);
+	if(data->fd != -1)
+		sock_close(data->fd);
 	SSL_CTX_free(data->ctx);
 	stream_list_free(data->stream_list);
 	ub_randfree(data->rnd);
