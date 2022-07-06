@@ -71,6 +71,10 @@ struct doq_client_data {
 	struct ub_event_base* base;
 	/** the ub event */
 	struct ub_event* ev;
+	/** the expiry timer */
+	struct ub_event* expire_timer;
+	/** is the expire_timer added */
+	int expire_timer_added;
 	/** the ngtcp2 connection information */
 	struct ngtcp2_conn* conn;
 	/** random state */
@@ -97,8 +101,12 @@ struct doq_client_data {
 	uint32_t quic_version;
 	/** the list of streams */
 	struct doq_client_stream* stream_list;
+	/** the last error */
+	struct ngtcp2_connection_close_error last_error;
 	/** the recent tls alert error code */
 	uint8_t tls_alert;
+	/** the buffer for packet operations */
+	struct sldns_buffer* pkt_buf;
 };
 
 /** the local client data for a DoQ stream */
@@ -117,6 +125,9 @@ struct doq_client_stream {
 
 /** the quic method struct, must remain valid during the QUIC connection. */
 static SSL_QUIC_METHOD quic_method;
+
+/** write handle routine */
+static void on_write(struct doq_client_data* data);
 
 /** usage of doqclient */
 static void usage(char* argv[])
@@ -560,9 +571,258 @@ stream_list_free(struct doq_client_stream* stream_list)
 	}
 }
 
+/** get packet ecn information */
+static uint32_t
+msghdr_get_ecn(struct msghdr* msg, int family)
+{
+#ifndef S_SPLINT_S
+	struct cmsghdr* cmsg;
+	if(family == AF_INET6) {
+		for(cmsg = CMSG_FIRSTHDR(msg); cmsg != NULL;
+			cmsg = CMSG_NXTHDR(msg, cmsg)) {
+			if(cmsg->cmsg_level == IPPROTO_IPV6 &&
+				cmsg->cmsg_type == IPV6_TCLASS &&
+				cmsg->cmsg_len != 0) {
+				uint8_t* ecn = (uint8_t*)CMSG_DATA(cmsg);
+				return *ecn;
+			}
+		}
+		return 0;
+	}
+	for(cmsg = CMSG_FIRSTHDR(msg); cmsg != NULL;
+		cmsg = CMSG_NXTHDR(msg, cmsg)) {
+		if(cmsg->cmsg_level == IPPROTO_IP &&
+			cmsg->cmsg_type == IP_TOS &&
+			cmsg->cmsg_len != 0) {
+			uint8_t* ecn = (uint8_t*)CMSG_DATA(cmsg);
+			return *ecn;
+		}
+	}
+	return 0;
+#endif /* S_SPLINT_S */
+}
+
+/** set the ecn on the transmission */
+static void
+set_ecn(int fd, int family, uint32_t ecn)
+{
+	unsigned int val = ecn;
+	if(family == AF_INET6) {
+		if(setsockopt(fd, IPPROTO_IPV6, IPV6_TCLASS, &val,
+			(socklen_t)sizeof(val)) == -1) {
+			log_err("setsockopt(.. IPV6_TCLASS ..): %s",
+				strerror(errno));
+		}
+		return;
+	}
+	if(setsockopt(fd, IPPROTO_IP, IP_TOS, &val,
+		(socklen_t)sizeof(val)) == -1) {
+		log_err("setsockopt(.. IP_TOS ..): %s",
+			strerror(errno));
+	}
+}
+
+/** send a packet */
+static void
+doq_send_pkt(struct doq_client_data* data, uint32_t ecn, uint8_t* buf,
+	size_t buf_len)
+{
+	struct msghdr msg;
+	struct iovec iov[1];
+	ssize_t ret;
+	iov[0].iov_base = buf;
+	iov[0].iov_len = buf_len;
+	msg.msg_name = (void*)&data->dest_addr;
+	msg.msg_namelen = data->dest_addr_len;
+	msg.msg_iov = iov;
+	msg.msg_iovlen = 1;
+	set_ecn(data->fd, data->dest_addr.ss_family, ecn);
+
+	while(1) {
+		ret = sendmsg(data->fd, &msg, 0);
+		if(ret == -1 && errno == EINTR)
+			continue;
+		break;
+	}
+	if(ret == -1) {
+		if(errno == EAGAIN)
+			return;
+		log_err("doq sendmsg: %s", strerror(errno));
+		return;
+	}
+}
+
+/** write the connection close, with possible error */
+static void
+write_conn_close(struct doq_client_data* data)
+{
+	struct ngtcp2_path_storage ps;
+	struct ngtcp2_pkt_info pi;
+	ngtcp2_ssize ret;
+	if(!data->conn || ngtcp2_conn_is_in_closing_period(data->conn) ||
+		ngtcp2_conn_is_in_draining_period(data->conn))
+		return;
+	ngtcp2_path_storage_zero(&ps);
+	sldns_buffer_clear(data->pkt_buf);
+	ret = ngtcp2_conn_write_connection_close(
+		data->conn, &ps.path, &pi, sldns_buffer_begin(data->pkt_buf),
+		sldns_buffer_remaining(data->pkt_buf), &data->last_error,
+		get_timestamp_nanosec());
+	if(ret < 0) {
+		log_err("ngtcp2_conn_write_connection_close failed: %s",
+			ngtcp2_strerror(ret));
+		return;
+	}
+	if(ret == 0)
+		return;
+	doq_send_pkt(data, pi.ecn, sldns_buffer_begin(data->pkt_buf), ret);
+}
+
+/** disconnect we are done */
+static void
+disconnect(struct doq_client_data* data)
+{
+	write_conn_close(data);
+	ub_event_base_loopexit(data->base);
+}
+
+/** the expire timer callback */
+void expire_timer_cb(int ATTR_UNUSED(fd),
+	short ATTR_UNUSED(bits), void* arg)
+{
+	struct doq_client_data* data = (struct doq_client_data*)arg;
+	ngtcp2_tstamp now = get_timestamp_nanosec();
+	int rv;
+
+	verbose(1, "doq expire_timer");
+	rv = ngtcp2_conn_handle_expiry(data->conn, now);
+	if(rv != 0) {
+		log_err("ngtcp2_handle_expiry failed: %s",
+			ngtcp2_strerror(errno));
+		ngtcp2_connection_close_error_set_transport_error_liberr(
+			&data->last_error, rv, NULL, 0);
+		disconnect(data);
+		return;
+	}
+	on_write(data);
+}
+
+/** update the timers */
+static void
+update_timer(struct doq_client_data* data)
+{
+	ngtcp2_tstamp expiry = ngtcp2_conn_get_expiry(data->conn);
+	ngtcp2_tstamp now = get_timestamp_nanosec();
+	ngtcp2_tstamp t;
+	struct timeval tv;
+
+	if(expiry <= now) {
+		/* the timer has already expired */
+		expire_timer_cb(-1, UB_EV_TIMEOUT, data);
+		return;
+	}
+	t = expiry - now;
+
+	/* set the timer */
+	if(data->expire_timer_added) {
+		ub_timer_del(data->expire_timer);
+		data->expire_timer_added = 0;
+	}
+	memset(&tv, 0, sizeof(tv));
+	tv.tv_sec = t / NGTCP2_SECONDS;
+	tv.tv_usec = t / NGTCP2_MICROSECONDS;
+	if(ub_timer_add(data->expire_timer, data->base,
+		&expire_timer_cb, data, &tv) != 0) {
+		log_err("timer_add failed: could not add expire timer");
+		return;
+	}
+	data->expire_timer_added = 1;
+}
+
+/** perform read operations on fd */
+static void
+on_read(struct doq_client_data* data)
+{
+	struct sockaddr_storage addr;
+	struct iovec iov[1];
+	struct msghdr msg;
+	union {
+		struct cmsghdr hdr;
+		char buf[256];
+	} ancil;
+	int i;
+	ssize_t rcv;
+	ngtcp2_pkt_info pi;
+	int rv;
+	struct ngtcp2_path path;
+
+	for(i=0; i<10; i++) {
+		msg.msg_name = &addr;
+		msg.msg_namelen = (socklen_t)sizeof(addr);
+		iov[0].iov_base = sldns_buffer_begin(data->pkt_buf);
+		iov[0].iov_len = sldns_buffer_remaining(data->pkt_buf);
+		msg.msg_iov = iov;
+		msg.msg_iovlen = 1;
+		msg.msg_control = ancil.buf;
+#ifndef S_SPLINT_S
+		msg.msg_controllen = sizeof(ancil.buf);
+#endif /* S_SPLINT_S */
+		msg.msg_flags = 0;
+
+		rcv = recvmsg(data->fd, &msg, 0);
+		if(rcv == -1) {
+			if(errno == EINTR || errno == EAGAIN)
+				break;
+			log_err("doq recvmsg: %s", strerror(errno));
+			break;
+		}
+
+		pi.ecn = msghdr_get_ecn(&msg, addr.ss_family);
+		verbose(1, "recvmsg %d ecn=0x%x", (int)rcv, (int)pi.ecn);
+
+		memset(&path, 0, sizeof(path));
+		path.local.addr = (void*)&data->local_addr;
+		path.local.addrlen = data->local_addr_len;
+		path.remote.addr = (void*)msg.msg_name;
+		path.remote.addrlen = msg.msg_namelen;
+		rv = ngtcp2_conn_read_pkt(data->conn, &path, &pi,
+			iov[0].iov_base, rcv, get_timestamp_nanosec());
+		if(rv != 0) {
+			log_err("ngtcp2_conn_read_pkt failed: %s",
+				ngtcp2_strerror(rv));
+			if(data->last_error.error_code == 0) {
+				if(rv == NGTCP2_ERR_CRYPTO) {
+					/* in picotls the tls alert may need
+					 * to be copied, but this is with
+					 * openssl. And we have the value
+					 * data.tls_alert. */
+					ngtcp2_connection_close_error_set_transport_error_tls_alert(
+						&data->last_error,
+						data->tls_alert, NULL, 0);
+				} else {
+					ngtcp2_connection_close_error_set_transport_error_liberr(
+						&data->last_error, rv, NULL,
+						0);
+				}
+			}
+			disconnect(data);
+			return;
+		}
+	}
+
+	update_timer(data);
+}
+
+/** perform write operations, if any, on fd */
+static void
+on_write(struct doq_client_data* data)
+{
+	(void)data;
+}
+
 /** callback for main listening file descriptor */
 void
-doq_client_ev_cb(int fd, short bits, void* arg)
+doq_client_ev_cb(int ATTR_UNUSED(fd), short bits, void* arg)
 {
 	struct doq_client_data* data = (struct doq_client_data*)arg;
 	verbose(1, "doq_client_ev_cb %s%s%s",
@@ -571,10 +831,13 @@ doq_client_ev_cb(int fd, short bits, void* arg)
 		" ":""),
 		((bits&UB_EV_WRITE)!=0?"EV_WRITE":""));
 	if((bits&UB_EV_READ)) {
+		on_read(data);
 	}
-	(void)data;
-	(void)fd;
-	ub_event_base_loopexit(data->base);
+	/* Perform the write operation anyway. The read operation may
+	 * have produced data, or there is content waiting and it is possible
+	 * to write that. */
+	on_write(data);
+	disconnect(data); /* DEBUG */
 }
 
 /** create doq_client_data */
@@ -589,6 +852,9 @@ create_doq_client_data(const char* svr, int port, struct ub_event_base* base)
 	if(!data->rnd) fatal_exit("ub_initstate failed: out of memory");
 	data->svr = svr;
 	get_dest_addr(data, svr, port);
+	data->pkt_buf = sldns_buffer_new(65552);
+	if(!data->pkt_buf)
+		fatal_exit("sldns_buffer_new failed: out of memory");
 	data->fd = open_svr_udp(data);
 	get_local_addr(data);
 	data->conn = conn_client_setup(data);
@@ -606,6 +872,10 @@ create_doq_client_data(const char* svr, int port, struct ub_event_base* base)
 	if(ub_event_add(data->ev, NULL) != 0) {
 		fatal_exit("could not ub_event_add");
 	}
+	data->expire_timer = ub_event_new(data->base, -1,
+		UB_EV_TIMEOUT, &expire_timer_cb, data);
+	if(!data->expire_timer)
+		fatal_exit("could not ub_event_new");
 	return data;
 }
 
@@ -634,6 +904,7 @@ delete_doq_client_data(struct doq_client_data* data)
 #endif
 	ngtcp2_conn_del(data->conn);
 	SSL_free(data->ssl);
+	sldns_buffer_free(data->pkt_buf);
 	if(data->fd != -1)
 		sock_close(data->fd);
 	SSL_CTX_free(data->ctx);
@@ -643,6 +914,9 @@ delete_doq_client_data(struct doq_client_data* data)
 		ub_event_del(data->ev);
 		ub_event_free(data->ev);
 	}
+	if(data->expire_timer_added)
+		ub_timer_del(data->expire_timer);
+	ub_event_free(data->expire_timer);
 	free(data->static_secret_data);
 	free(data);
 }
