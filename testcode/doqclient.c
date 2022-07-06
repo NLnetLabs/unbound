@@ -67,6 +67,8 @@ struct doq_client_stream;
 struct doq_client_data {
 	/** file descriptor */
 	int fd;
+	/** the event base for the events */
+	struct ub_event_base* base;
 	/** the ub event */
 	struct ub_event* ev;
 	/** the ngtcp2 connection information */
@@ -569,6 +571,7 @@ doq_client_ev_cb(int fd, short bits, void* arg)
 	}
 	(void)data;
 	(void)fd;
+	ub_event_base_loopexit(data->base);
 }
 
 /* run the dohclient queries */
@@ -589,6 +592,7 @@ static void run(const char* svr, int port, char** qs, int count)
 
 	data = calloc(sizeof(*data), 1);
 	if(!data) fatal_exit("calloc failed: out of memory");
+	data->base = base;
 	data->rnd = ub_initstate(NULL);
 	if(!data->rnd) fatal_exit("ub_initstate failed: out of memory");
 	data->svr = svr;
