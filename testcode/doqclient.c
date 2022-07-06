@@ -574,22 +574,11 @@ doq_client_ev_cb(int fd, short bits, void* arg)
 	ub_event_base_loopexit(data->base);
 }
 
-/* run the dohclient queries */
-static void run(const char* svr, int port, char** qs, int count)
+/** create doq_client_data */
+static struct doq_client_data*
+create_doq_client_data(const char* svr, int port, struct ub_event_base* base)
 {
-	time_t secs = 0;
-	struct timeval now;
-	struct ub_event_base* base;
-	const char *evnm="event", *evsys="", *evmethod="";
 	struct doq_client_data* data;
-	int i;
-
-	memset(&now, 0, sizeof(now));
-	base = ub_default_event_base(1, &secs, &now);
-	if(!base) fatal_exit("could not create ub_event base");
-	ub_get_event_sys(base, &evnm, &evsys, &evmethod);
-	if(verbosity) log_info("%s %s uses %s method", evnm, evsys, evmethod);
-
 	data = calloc(sizeof(*data), 1);
 	if(!data) fatal_exit("calloc failed: out of memory");
 	data->base = base;
@@ -614,6 +603,74 @@ static void run(const char* svr, int port, char** qs, int count)
 	if(ub_event_add(data->ev, NULL) != 0) {
 		fatal_exit("could not ub_event_add");
 	}
+	return data;
+}
+
+/** delete doq_client_data */
+static void
+delete_doq_client_data(struct doq_client_data* data)
+{
+	if(!data)
+		return;
+#if defined(NGTCP2_USE_GENERIC_SOCKADDR) || defined(NGTCP2_USE_GENERIC_IPV6_SOCKADDR)
+	if(data->conn && data->dest_addr_len != 0) {
+		if(addr_is_ip6(&data->dest_addr, data->dest_addr_len)) {
+#  if defined(NGTCP2_USE_GENERIC_SOCKADDR) || defined(NGTCP2_USE_GENERIC_IPV6_SOCKADDR)
+			const struct ngtcp2_path* path6 = ngtcp2_conn_get_path(data->conn);
+			free(path6->local.addr);
+			free(path6->remote.addr);
+#  endif
+		} else {
+#  if defined(NGTCP2_USE_GENERIC_SOCKADDR)
+			const struct ngtcp2_path* path = ngtcp2_conn_get_path(data->conn);
+			free(path->local.addr);
+			free(path->remote.addr);
+#  endif
+		}
+	}
+#endif
+	ngtcp2_conn_del(data->conn);
+	SSL_free(data->ssl);
+	sock_close(data->fd);
+	SSL_CTX_free(data->ctx);
+	stream_list_free(data->stream_list);
+	ub_randfree(data->rnd);
+	if(data->ev) {
+		ub_event_del(data->ev);
+		ub_event_free(data->ev);
+	}
+	free(data->static_secret_data);
+	free(data);
+}
+
+/** create the event base that registers events and timers */
+static struct ub_event_base*
+create_event_base(time_t* secs, struct timeval* now)
+{
+	struct ub_event_base* base;
+	const char *evnm="event", *evsys="", *evmethod="";
+
+	memset(&now, 0, sizeof(now));
+	base = ub_default_event_base(1, secs, now);
+	if(!base) fatal_exit("could not create ub_event base");
+
+	ub_get_event_sys(base, &evnm, &evsys, &evmethod);
+	if(verbosity) log_info("%s %s uses %s method", evnm, evsys, evmethod);
+
+	return base;
+}
+
+/** run the dohclient queries */
+static void run(const char* svr, int port, char** qs, int count)
+{
+	time_t secs = 0;
+	struct timeval now;
+	struct ub_event_base* base;
+	struct doq_client_data* data;
+	int i;
+
+	base = create_event_base(&secs, &now);
+	data = create_doq_client_data(svr, port, base);
 
 	/* handle query */
 	for(i=0; i<count; i+=3) {
@@ -634,33 +691,7 @@ static void run(const char* svr, int port, char** qs, int count)
 
 	ub_event_base_dispatch(base);
 
-#if defined(NGTCP2_USE_GENERIC_SOCKADDR) || defined(NGTCP2_USE_GENERIC_IPV6_SOCKADDR)
-	if(addr_is_ip6(&data->dest_addr, data->dest_addr_len)) {
-#  if defined(NGTCP2_USE_GENERIC_SOCKADDR) || defined(NGTCP2_USE_GENERIC_IPV6_SOCKADDR)
-		const struct ngtcp2_path* path = ngtcp2_conn_get_path(data->conn);
-		free(path->local.addr);
-		free(path->remote.addr);
-#  endif
-	} else {
-#  if defined(NGTCP2_USE_GENERIC_SOCKADDR)
-		const struct ngtcp2_path* path = ngtcp2_conn_get_path(data->conn);
-		free(path->local.addr);
-		free(path->remote.addr);
-#  endif
-	}
-#endif
-	ngtcp2_conn_del(data->conn);
-	SSL_free(data->ssl);
-	sock_close(data->fd);
-	SSL_CTX_free(data->ctx);
-	stream_list_free(data->stream_list);
-	ub_randfree(data->rnd);
-	if(data->ev) {
-		ub_event_del(data->ev);
-		ub_event_free(data->ev);
-	}
-	free(data->static_secret_data);
-	free(data);
+	delete_doq_client_data(data);
 	ub_event_base_free(base);
 }
 #endif /* HAVE_NGTCP2 */
