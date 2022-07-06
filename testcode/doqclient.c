@@ -853,8 +853,14 @@ write_streams(struct doq_client_data* data)
 		datav.base = str->data + str->nwrite;
 		datav.len = str->data_len - str->nwrite;
 
-		flags = NGTCP2_WRITE_STREAM_FLAG_MORE;
+		flags = 0;
+		if(str->next != NULL) {
+			/* Coalesce more data from more streams into this
+			 * packet, if possible */
+			flags |= NGTCP2_WRITE_STREAM_FLAG_MORE;
+		}
 		if(fin) {
+			/* This is the final part of data for this stream */
 			flags |= NGTCP2_WRITE_STREAM_FLAG_FIN;
 		}
 		sldns_buffer_clear(data->pkt_buf);
@@ -899,7 +905,6 @@ write_streams(struct doq_client_data* data)
 static void
 on_write(struct doq_client_data* data)
 {
-	(void)data;
 	if(!write_streams(data))
 		return;
 	update_timer(data);
