@@ -655,6 +655,7 @@ local back end servers.  Default is no.
 .B quic\-port: \fI<number>
 The port number on which to provide DNS-over-QUIC service, default 853, only
 interfaces configured with that port number as @number get the QUIC service.
+The interface uses QUIC for the UDP traffic on that port number.
 .TP
 .B use\-systemd: \fI<yes or no>
 Enable or disable systemd socket activation.
