@@ -146,6 +146,14 @@ struct doq_client_stream {
 	/** if the write of the query data is done. That means the
 	 * write channel has FIN, is closed for writing. */
 	int write_is_done;
+	/** data read position */
+	size_t nread;
+	/** the answer length */
+	uint16_t answer_len;
+	/** the answer buffer */
+	struct sldns_buffer* answer;
+	/** if the query is done */
+	int query_is_done;
 };
 
 /** the quic method struct, must remain valid during the QUIC connection. */
@@ -271,16 +279,24 @@ client_stream_free(struct doq_client_stream* str)
 	if(!str)
 		return;
 	free(str->data);
+	sldns_buffer_free(str->answer);
 	free(str);
 }
 
 /** setup the stream to start the write process */
 static void
-client_stream_start_setup(struct doq_client_stream* str, uint64_t stream_id)
+client_stream_start_setup(struct doq_client_stream* str, int64_t stream_id)
 {
 	str->has_stream = 1;
 	str->stream_id = stream_id;
 	str->nwrite = 0;
+	str->nread = 0;
+	str->answer_len = 0;
+	str->query_is_done = 0;
+	if(str->answer) {
+		sldns_buffer_free(str->answer);
+		str->answer = NULL;
+	}
 }
 
 /** Return string for log purposes with query name. */
@@ -421,13 +437,15 @@ static void cid_randfill(struct ngtcp2_cid* cid, size_t datalen,
 
 /** send buf on the client stream */
 static int
-client_bidi_stream(struct doq_client_data* data, uint64_t* ret_stream_id)
+client_bidi_stream(struct doq_client_data* data, int64_t* ret_stream_id,
+	void* stream_user_data)
 {
 	int64_t stream_id;
 	int rv;
 
 	/* open new bidirectional stream */
-	rv = ngtcp2_conn_open_bidi_stream(data->conn, &stream_id, NULL);
+	rv = ngtcp2_conn_open_bidi_stream(data->conn, &stream_id,
+		stream_user_data);
 	if(rv != 0) {
 		if(rv == NGTCP2_ERR_STREAM_ID_BLOCKED) {
 			/* no bidi stream count for this new stream */
@@ -447,8 +465,8 @@ query_streams_start(struct doq_client_data* data)
 {
 	while(data->query_list_start->first) {
 		struct doq_client_stream* str = data->query_list_start->first;
-		uint64_t stream_id = 0;
-		if(!client_bidi_stream(data, &stream_id)) {
+		int64_t stream_id = 0;
+		if(!client_bidi_stream(data, &stream_id, str)) {
 			/* no more bidi streams allowed */
 			break;
 		}
@@ -521,6 +539,102 @@ extend_max_local_streams_bidi(ngtcp2_conn* ATTR_UNUSED(conn),
 	verbose(1, "ngtcp2_conn_get_streams_bidi_left is %d",
 		(int)ngtcp2_conn_get_streams_bidi_left(data->conn));
 	query_streams_start(data);
+	return 0;
+}
+
+/** the recv_stream_data callback from ngtcp2 */
+static int
+recv_stream_data(ngtcp2_conn* ATTR_UNUSED(conn), uint32_t flags,
+	int64_t stream_id, uint64_t offset, const uint8_t* data,
+	size_t datalen, void* user_data, void* stream_user_data)
+{
+	struct doq_client_data* doqdata = (struct doq_client_data*)user_data;
+	struct doq_client_stream* str = (struct doq_client_stream*)
+		stream_user_data;
+	verbose(1, "recv_stream_data stream %d offset %d datalen %d%s%s",
+		(int)stream_id, (int)offset, (int)datalen,
+		((flags&NGTCP2_STREAM_DATA_FLAG_FIN)!=0?" FIN":""),
+		((flags&NGTCP2_STREAM_DATA_FLAG_EARLY)!=0?" EARLY":""));
+	if(verbosity > 0)
+		log_hex("data", (void*)data, datalen);
+	if(verbosity > 0) {
+		char* logs = client_stream_string(str);
+		verbose(1, "the stream_user_data is %s stream id %d, nread %d",
+			logs, (int)str->stream_id, (int)str->nread);
+		free(logs);
+	}
+
+	/* append the data, if there is data */
+	if(datalen > 0) {
+		if(str->nread < 2) {
+			size_t to_move = datalen;
+			if(datalen > 2-str->nread)
+				to_move = 2-str->nread;
+			memmove(((uint8_t*)&str->answer_len)+str->nread,
+				data, to_move);
+			str->nread += to_move;
+			data += to_move;
+			datalen -= to_move;
+			if(str->nread == 2) {
+				/* we can allocate the data buffer */
+				verbose(1, "answer length %d",
+					(int)str->answer_len);
+				str->answer = sldns_buffer_new(
+					str->answer_len);
+				if(!str->answer)
+					fatal_exit("sldns_buffer_new failed: out of memory");
+				sldns_buffer_set_limit(str->answer,
+					str->answer_len);
+			}
+		}
+		/* if we have data bytes */
+		if(datalen > 0) {
+			size_t to_write = datalen;
+			if(datalen > sldns_buffer_remaining(str->answer))
+				to_write = sldns_buffer_remaining(str->answer);
+			if(to_write > 0) {
+				sldns_buffer_write(str->answer, data, to_write);
+				str->nread += to_write;
+				data += to_write;
+				datalen -= to_write;
+			}
+		}
+		/* extra received bytes after end? */
+		if(datalen > 0) {
+			verbose(1, "extra bytes after end of DNS length");
+			if(verbosity > 0)
+				log_hex("extradata", (void*)data, datalen);
+		}
+		/* are we done with it? */
+		if(str->nread >= str->answer_len) {
+			verbose(1, "received all answer content");
+			if(verbosity > 0) {
+				char* logs = client_stream_string(str);
+				char* s;
+				log_buf(1, "received answer", str->answer);
+				s = sldns_wire2str_pkt(sldns_buffer_begin(
+					str->answer), sldns_buffer_limit(
+					str->answer));
+				if(!s) verbose(1, "could not sldns_wire2str_pkt");
+				else verbose(1, "query %s received: %s", logs,
+					s);
+				free(str);
+				free(logs);
+			}
+		}
+	}
+	if((flags&NGTCP2_STREAM_DATA_FLAG_FIN)!=0) {
+		verbose(1, "received FIN from remote");
+		if(str->write_is_done)
+			stream_list_move(str, doqdata->query_list_receive,
+				doqdata->query_list_stop);
+		else
+			stream_list_move(str, doqdata->query_list_send,
+				doqdata->query_list_stop);
+		str->query_is_done = 1;
+	}
+	ngtcp2_conn_extend_max_stream_offset(doqdata->conn, stream_id, datalen);
+	ngtcp2_conn_extend_max_offset(doqdata->conn, datalen);
 	return 0;
 }
 
@@ -625,21 +739,22 @@ static struct ngtcp2_conn* conn_client_setup(struct doq_client_data* data)
 	cid_randfill(&dcid, 16, data->rnd);
 	cid_randfill(&scid, 16, data->rnd);
 	cbs.client_initial = ngtcp2_crypto_client_initial_cb;
-	cbs.handshake_completed = handshake_completed;
 	cbs.recv_crypto_data = ngtcp2_crypto_recv_crypto_data_cb;
 	cbs.encrypt = ngtcp2_crypto_encrypt_cb;
 	cbs.decrypt = ngtcp2_crypto_decrypt_cb;
 	cbs.hp_mask = ngtcp2_crypto_hp_mask_cb;
 	cbs.recv_retry = ngtcp2_crypto_recv_retry_cb;
-	cbs.extend_max_local_streams_bidi = extend_max_local_streams_bidi;
 	cbs.update_key = ngtcp2_crypto_update_key_cb;
-	cbs.rand = rand_cb;
-	cbs.get_new_connection_id = get_new_connection_id_cb;
 	cbs.delete_crypto_aead_ctx = ngtcp2_crypto_delete_crypto_aead_ctx_cb;
 	cbs.delete_crypto_cipher_ctx =
 		ngtcp2_crypto_delete_crypto_cipher_ctx_cb;
 	cbs.get_path_challenge_data = ngtcp2_crypto_get_path_challenge_data_cb;
 	cbs.version_negotiation = ngtcp2_crypto_version_negotiation_cb;
+	cbs.get_new_connection_id = get_new_connection_id_cb;
+	cbs.handshake_completed = handshake_completed;
+	cbs.extend_max_local_streams_bidi = extend_max_local_streams_bidi;
+	cbs.rand = rand_cb;
+	cbs.recv_stream_data = recv_stream_data;
 	copy_ngaddr(&path.local, &data->local_addr, data->local_addr_len);
 	copy_ngaddr(&path.remote, &data->dest_addr, data->dest_addr_len);
 
@@ -1096,8 +1211,7 @@ write_streams(struct doq_client_data* data)
 	 * and we want to send handshake packets. But when there is a
 	 * send_list, loop through that. */
 	for(;;) {
-
-		uint64_t stream_id;
+		int64_t stream_id;
 		ngtcp2_pkt_info pi;
 		ngtcp2_vec datav[2];
 		size_t datav_count = 0;
