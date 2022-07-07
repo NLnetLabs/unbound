@@ -416,13 +416,12 @@ query_streams_start(struct doq_client_data* data)
 		}
 		if(verbosity > 0) {
 			char* logs = client_stream_string(str);
-			verbose(1, "query %s start stream id %lld", logs,
-				(long long int)stream_id);
+			verbose(1, "query %s start on bidi stream id %lld",
+				logs, (long long int)stream_id);
 			free(logs);
 		}
 		/* setup the stream to start */
 		client_stream_start_setup(str, stream_id);
-
 	}
 }
 
