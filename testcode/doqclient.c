@@ -678,6 +678,14 @@ write_conn_close(struct doq_client_data* data)
 	if(!data->conn || ngtcp2_conn_is_in_closing_period(data->conn) ||
 		ngtcp2_conn_is_in_draining_period(data->conn))
 		return;
+	if(data->last_error.type ==
+		NGTCP2_CONNECTION_CLOSE_ERROR_CODE_TYPE_TRANSPORT_IDLE_CLOSE) {
+		/* do not call ngtcp2_conn_write_connection_close on the
+		 * connection because the ngtcp2_conn_handle_expiry call
+		 * has returned NGTCP2_ERR_IDLE_CLOSE. But continue to close
+		 * the connection. */
+		return;
+	}
 	ngtcp2_path_storage_zero(&ps);
 	sldns_buffer_clear(data->pkt_buf);
 	ret = ngtcp2_conn_write_connection_close(
