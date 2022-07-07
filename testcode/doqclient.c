@@ -290,6 +290,25 @@ handshake_completed(ngtcp2_conn* ATTR_UNUSED(conn), void* user_data)
 	return 0;
 }
 
+/** the extend_max_local_streams_bidi callback from ngtcp2 */
+static int
+extend_max_local_streams_bidi(ngtcp2_conn* ATTR_UNUSED(conn),
+	uint64_t max_streams, void* user_data)
+{
+	struct doq_client_data* data = (struct doq_client_data*)user_data;
+	verbose(1, "extend_max_local_streams_bidi callback, %d max_streams",
+		(int)max_streams);
+	verbose(1, "ngtcp2_conn_get_max_data_left is %d",
+		(int)ngtcp2_conn_get_max_data_left(data->conn));
+	verbose(1, "ngtcp2_conn_get_max_local_streams_uni is %d",
+		(int)ngtcp2_conn_get_max_local_streams_uni(data->conn));
+	verbose(1, "ngtcp2_conn_get_streams_uni_left is %d",
+		(int)ngtcp2_conn_get_streams_uni_left(data->conn));
+	verbose(1, "ngtcp2_conn_get_streams_bidi_left is %d",
+		(int)ngtcp2_conn_get_streams_bidi_left(data->conn));
+	return 0;
+}
+
 /** copy sockaddr into ngtcp2 addr */
 static void
 copy_ngaddr(struct ngtcp2_addr* ngaddr, struct sockaddr_storage* addr,
@@ -396,6 +415,7 @@ static struct ngtcp2_conn* conn_client_setup(struct doq_client_data* data)
 	cbs.decrypt = ngtcp2_crypto_decrypt_cb;
 	cbs.hp_mask = ngtcp2_crypto_hp_mask_cb;
 	cbs.recv_retry = ngtcp2_crypto_recv_retry_cb;
+	cbs.extend_max_local_streams_bidi = extend_max_local_streams_bidi;
 	cbs.update_key = ngtcp2_crypto_update_key_cb;
 	cbs.rand = rand_cb;
 	cbs.get_new_connection_id = get_new_connection_id_cb;
