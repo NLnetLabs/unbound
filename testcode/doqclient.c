@@ -273,6 +273,23 @@ static int get_new_connection_id_cb(struct ngtcp2_conn* ATTR_UNUSED(conn),
 	return 0;
 }
 
+/** the handshake completed callback from ngtcp2 */
+static int
+handshake_completed(ngtcp2_conn* ATTR_UNUSED(conn), void* user_data)
+{
+	struct doq_client_data* data = (struct doq_client_data*)user_data;
+	verbose(1, "handshake_completed callback");
+	verbose(1, "ngtcp2_conn_get_max_data_left is %d",
+		(int)ngtcp2_conn_get_max_data_left(data->conn));
+	verbose(1, "ngtcp2_conn_get_max_local_streams_uni is %d",
+		(int)ngtcp2_conn_get_max_local_streams_uni(data->conn));
+	verbose(1, "ngtcp2_conn_get_streams_uni_left is %d",
+		(int)ngtcp2_conn_get_streams_uni_left(data->conn));
+	verbose(1, "ngtcp2_conn_get_streams_bidi_left is %d",
+		(int)ngtcp2_conn_get_streams_bidi_left(data->conn));
+	return 0;
+}
+
 /** copy sockaddr into ngtcp2 addr */
 static void
 copy_ngaddr(struct ngtcp2_addr* ngaddr, struct sockaddr_storage* addr,
@@ -373,6 +390,7 @@ static struct ngtcp2_conn* conn_client_setup(struct doq_client_data* data)
 	cid_randfill(&dcid, 16, data->rnd);
 	cid_randfill(&scid, 16, data->rnd);
 	cbs.client_initial = ngtcp2_crypto_client_initial_cb;
+	cbs.handshake_completed = handshake_completed;
 	cbs.recv_crypto_data = ngtcp2_crypto_recv_crypto_data_cb;
 	cbs.encrypt = ngtcp2_crypto_encrypt_cb;
 	cbs.decrypt = ngtcp2_crypto_decrypt_cb;
@@ -399,11 +417,20 @@ static struct ngtcp2_conn* conn_client_setup(struct doq_client_data* data)
 }
 
 /** applicatation rx key callback, this is where the rx key is set,
- * and streams can be opened */
+ * and streams can be opened, like http3 unidirectional streams, like
+ * the http3 control and http3 qpack encode and decoder streams. */
 static int
 application_rx_key_cb(struct doq_client_data* data)
 {
-	(void)data;
+	verbose(1, "application_rx_key_cb callback");
+	verbose(1, "ngtcp2_conn_get_max_data_left is %d",
+		(int)ngtcp2_conn_get_max_data_left(data->conn));
+	verbose(1, "ngtcp2_conn_get_max_local_streams_uni is %d",
+		(int)ngtcp2_conn_get_max_local_streams_uni(data->conn));
+	verbose(1, "ngtcp2_conn_get_streams_uni_left is %d",
+		(int)ngtcp2_conn_get_streams_uni_left(data->conn));
+	verbose(1, "ngtcp2_conn_get_streams_bidi_left is %d",
+		(int)ngtcp2_conn_get_streams_bidi_left(data->conn));
 	return 1;
 }
 
