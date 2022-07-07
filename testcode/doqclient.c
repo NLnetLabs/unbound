@@ -1114,6 +1114,10 @@ int main(int ATTR_UNUSED(argc), char** ATTR_UNUSED(argv))
 		printf("Invalid input. Specify qname, qtype, and qclass.\n");
 		return 1;
 	}
+	if(port == 53) {
+		printf("Error: port number 53 not for DNS over QUIC. Port number 53 is not allowed to be used with DNS over QUIC. It is used for DNS datagrams.\n");
+		return 1;
+	}
 
 	run(svr, port, argv, argc/3);
 

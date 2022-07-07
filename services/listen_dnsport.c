@@ -1251,6 +1251,17 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 		} else if(is_doq) {
 			udp_port_type = listen_type_doq;
 			add = "doq";
+			if(((strchr(ifname, '@') &&
+				atoi(strchr(ifname, '@')+1) == 53) ||
+				(!strchr(ifname, '@') && atoi(port) == 53))) {
+				log_err("DNS over QUIC is not allowed on "
+					"port 53. Port 53 is for DNS "
+					"datagrams. Error for "
+					"interface '%s'.", ifname);
+				freeaddrinfo(ub_sock->addr);
+				free(ub_sock);
+				return 0;
+			}
 		} else {
 			udp_port_type = listen_type_udp;
 			add = NULL;
