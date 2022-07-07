@@ -59,8 +59,10 @@
 #include "util/data/msgreply.h"
 #include "util/data/msgencode.h"
 #include "util/data/msgparse.h"
+#include "util/data/dname.h"
 #include "util/random.h"
 #include "util/ub_event.h"
+struct doq_client_stream_list;
 struct doq_client_stream;
 
 /** the local client data for the DoQ connection */
@@ -99,20 +101,37 @@ struct doq_client_data {
 	SSL* ssl;
 	/** the quic version to use */
 	uint32_t quic_version;
-	/** the list of streams */
-	struct doq_client_stream* stream_list;
 	/** the last error */
 	struct ngtcp2_connection_close_error last_error;
 	/** the recent tls alert error code */
 	uint8_t tls_alert;
 	/** the buffer for packet operations */
 	struct sldns_buffer* pkt_buf;
+	/** The list of queries to start. They have no stream associated.
+	 * Once they do, they move to the send list. */
+	struct doq_client_stream_list* query_list_start;
+	/** The list of queries to send. They have a stream, and they are
+	 * sending data. Data could also be received, like errors. */
+	struct doq_client_stream_list* query_list_send;
+	/** The list of queries to receive. They have a stream, and the
+	 * send is done, it is possible to read data. */
+	struct doq_client_stream_list* query_list_receive;
+	/** The list of queries that are stopped. They have no stream
+	 * active any more. Write and read are done. The query is done,
+	 * and it may be in error and then have no answer or partial answer. */
+	struct doq_client_stream_list* query_list_stop;
+};
+
+/** the local client stream list, for appending streams to */
+struct doq_client_stream_list {
+	/** first and last members of the list */
+	struct doq_client_stream* first, *last;
 };
 
 /** the local client data for a DoQ stream */
 struct doq_client_stream {
-	/** next stream in list */
-	struct doq_client_stream* next;
+	/** next stream in list, and prev in list */
+	struct doq_client_stream* next, *prev;
 	/** the stream id */
 	int64_t stream_id;
 	/** the data buffer */
@@ -221,6 +240,116 @@ make_query(char* qname, char* qtype, char* qclass)
 	return buf;
 }
 
+/** create client stream structure */
+static struct doq_client_stream*
+client_stream_create(struct sldns_buffer* query_data)
+{
+	struct doq_client_stream* str = calloc(1, sizeof(*str));
+	if(!str)
+		fatal_exit("calloc failed: out of memory");
+	str->data = memdup(sldns_buffer_begin(query_data),
+		sldns_buffer_limit(query_data));
+	if(!str->data)
+		fatal_exit("alloc data failed: out of memory");
+	str->data_len = sldns_buffer_limit(query_data);
+	str->stream_id = -1;
+	return str;
+}
+
+/** free client stream structure */
+static void
+client_stream_free(struct doq_client_stream* str)
+{
+	if(!str)
+		return;
+	free(str->data);
+	free(str);
+}
+
+/** setup the stream to start the write process */
+static void
+client_stream_start_setup(struct doq_client_stream* str, uint64_t stream_id)
+{
+	str->stream_id = stream_id;
+	str->nwrite = 0;
+}
+
+/** Return string for log purposes with query name. */
+static char*
+client_stream_string(struct doq_client_stream* str)
+{
+	char* s;
+	size_t dname_len;
+	char dname[256], tpstr[32], result[256+32+16];
+	uint16_t tp;
+	if(str->data_len <= LDNS_HEADER_SIZE) {
+		s = strdup("query_with_no_question");
+		if(!s)
+			fatal_exit("strdup failed: out of memory");
+		return s;
+	}
+	dname_len = dname_valid(str->data+LDNS_HEADER_SIZE,
+		str->data_len-LDNS_HEADER_SIZE);
+	if(!dname_len) {
+		s = strdup("query_dname_not_valid");
+		if(!s)
+			fatal_exit("strdup failed: out of memory");
+		return s;
+	}
+	(void)sldns_wire2str_dname_buf(str->data+LDNS_HEADER_SIZE, dname_len,
+		dname, sizeof(dname));
+	tp = sldns_wirerr_get_type(str->data+LDNS_HEADER_SIZE,
+		str->data_len-LDNS_HEADER_SIZE, dname_len);
+	(void)sldns_wire2str_type_buf(tp, tpstr, sizeof(tpstr));
+	snprintf(result, sizeof(result), "%s %s", dname, tpstr);
+	s = strdup(result);
+	if(!s)
+		fatal_exit("strdup failed: out of memory");
+	return s;
+}
+
+/** create query stream list */
+static struct doq_client_stream_list*
+stream_list_create(void)
+{
+	struct doq_client_stream_list* list = calloc(1, sizeof(*list));
+	if(!list)
+		fatal_exit("calloc failed: out of memory");
+	return list;
+}
+
+/** free the query stream list */
+static void
+stream_list_free(struct doq_client_stream_list* list)
+{
+	struct doq_client_stream* str;
+	if(!list)
+		return;
+	str = list->first;
+	while(str) {
+		struct doq_client_stream* next = str->next;
+		client_stream_free(str);
+		str = next;
+	}
+	free(list);
+}
+
+/** append item to list */
+static void
+stream_list_append(struct doq_client_stream_list* list,
+	struct doq_client_stream* str)
+{
+	if(list->last) {
+		str->prev = list->last;
+		list->last->next = str;
+	} else {
+		str->prev = NULL;
+		list->first = str;
+	}
+	str->next = NULL;
+	list->last = str;
+}
+
 /** fill a buffer with random data */
 static void fill_rand(struct ub_randstate* rnd, uint8_t* buf, size_t len)
 {
@@ -250,6 +379,51 @@ static void cid_randfill(struct ngtcp2_cid* cid, size_t datalen,
 		datalen = sizeof(buf);
 	fill_rand(rnd, buf, datalen);
 	ngtcp2_cid_init(cid, buf, datalen);
+}
+
+/** send buf on the client stream */
+static int
+client_bidi_stream(struct doq_client_data* data, uint64_t* ret_stream_id)
+{
+	int64_t stream_id;
+	int rv;
+
+	/* open new bidirectional stream */
+	rv = ngtcp2_conn_open_bidi_stream(data->conn, &stream_id, NULL);
+	if(rv != 0) {
+		if(rv == NGTCP2_ERR_STREAM_ID_BLOCKED) {
+			/* no bidi stream count for this new stream */
+			return 0;
+		}
+		fatal_exit("could not ngtcp2_conn_open_bidi_stream: %s",
+			ngtcp2_strerror(rv));
+	}
+	*ret_stream_id = stream_id;
+	return 1;
+}
+
+/** See if we can start query streams, by creating bidirectional streams
+ * on the QUIC transport for them. */
+static void
+query_streams_start(struct doq_client_data* data)
+{
+	while(data->query_list_start->first) {
+		struct doq_client_stream* str = data->query_list_start->first;
+		uint64_t stream_id = 0;
+		if(!client_bidi_stream(data, &stream_id)) {
+			/* no more bidi streams allowed */
+			break;
+		}
+		if(verbosity > 0) {
+			char* logs = client_stream_string(str);
+			verbose(1, "query %s start stream id %lld", logs,
+				(long long int)stream_id);
+			free(logs);
+		}
+		/* setup the stream to start */
+		client_stream_start_setup(str, stream_id);
+
+	}
 }
 
 /** the rand callback routine from ngtcp2 */
@@ -306,6 +480,7 @@ extend_max_local_streams_bidi(ngtcp2_conn* ATTR_UNUSED(conn),
 		(int)ngtcp2_conn_get_streams_uni_left(data->conn));
 	verbose(1, "ngtcp2_conn_get_streams_bidi_left is %d",
 		(int)ngtcp2_conn_get_streams_bidi_left(data->conn));
+	query_streams_start(data);
 	return 0;
 }
 
@@ -574,48 +749,6 @@ ssl_client_setup(struct doq_client_data* data)
 	/* send the SNI host name */
 	SSL_set_tlsext_host_name(ssl, "localhost");
 	return ssl;
-}
-
-/** send buf on the client stream */
-static void
-client_bidi_stream(struct doq_client_data* data, struct sldns_buffer* buf)
-{
-	int64_t stream_id;
-	int rv;
-	struct doq_client_stream* str;
-
-	/* open new bidirectional stream */
-	rv = ngtcp2_conn_open_bidi_stream(data->conn, &stream_id, NULL);
-	if(rv != 0)
-		fatal_exit("could not ngtcp2_conn_open_bidi_stream: %s",
-			ngtcp2_strerror(rv));
-	verbose(1, "stream id %lld", (long long int)stream_id);
-
-	/* allocate new stream */
-	str = calloc(1, sizeof(*str));
-	if(!str) fatal_exit("calloc failed: out of memory");
-	str->data = memdup(sldns_buffer_begin(buf), sldns_buffer_limit(buf));
-	if(!str->data) fatal_exit("alloc data failed: out of memory");
-	str->data_len = sldns_buffer_limit(buf);
-	str->nwrite = 0;
-	str->stream_id = stream_id;
-
-	/* link it into list */
-	str->next = data->stream_list;
-	data->stream_list = str;
-}
-
-/** free the stream list */
-static void
-stream_list_free(struct doq_client_stream* stream_list)
-{
-	struct doq_client_stream* str = stream_list;
-	while(str) {
-		struct doq_client_stream* next = str->next;
-		free(str->data);
-		free(str);
-		str = next;
-	}
 }
 
 /** get packet ecn information */
@@ -890,17 +1023,18 @@ write_streams(struct doq_client_data* data)
 {
 	ngtcp2_path_storage ps;
 	ngtcp2_tstamp ts = get_timestamp_nanosec();
-	struct doq_client_stream* str;
+	struct doq_client_stream* str, *next;
 	uint32_t flags;
 	ngtcp2_path_storage_zero(&ps);
 
-	for(str = data->stream_list; str; str = str->next) {
+	for(str = data->query_list_send->first; str; str = next) {
 		uint64_t stream_id;
 		ngtcp2_pkt_info pi;
 		ngtcp2_vec datav;
 		int fin;
 		ngtcp2_ssize ret;
 		ngtcp2_ssize ndatalen = 0;
+		next = str->next;
 		if(str->nwrite == str->data_len || str->stream_id == -1)
 			continue;
 		stream_id = str->stream_id;
@@ -1021,6 +1155,10 @@ create_doq_client_data(const char* svr, int port, struct ub_event_base* base)
 		UB_EV_TIMEOUT, &expire_timer_cb, data);
 	if(!data->expire_timer)
 		fatal_exit("could not ub_event_new");
+	data->query_list_start = stream_list_create();
+	data->query_list_send = stream_list_create();
+	data->query_list_receive = stream_list_create();
+	data->query_list_stop = stream_list_create();
 	return data;
 }
 
@@ -1053,7 +1191,10 @@ delete_doq_client_data(struct doq_client_data* data)
 	if(data->fd != -1)
 		sock_close(data->fd);
 	SSL_CTX_free(data->ctx);
-	stream_list_free(data->stream_list);
+	stream_list_free(data->query_list_start);
+	stream_list_free(data->query_list_send);
+	stream_list_free(data->query_list_receive);
+	stream_list_free(data->query_list_stop);
 	ub_randfree(data->rnd);
 	if(data->ev) {
 		ub_event_del(data->ev);
@@ -1083,19 +1224,22 @@ create_event_base(time_t* secs, struct timeval* now)
 	return base;
 }
 
-/** run the dohclient queries */
-static void run(const char* svr, int port, char** qs, int count)
+/** enter a query into the query list */
+static void
+client_enter_query_buf(struct doq_client_data* data, struct sldns_buffer* buf)
 {
-	time_t secs = 0;
-	struct timeval now;
-	struct ub_event_base* base;
-	struct doq_client_data* data;
+	struct doq_client_stream* str;
+	str = client_stream_create(buf);
+	if(!str)
+		fatal_exit("client_stream_create failed: out of memory");
+	stream_list_append(data->query_list_start, str);
+}
+
+/** enter the queries into the query list */
+static void
+client_enter_queries(struct doq_client_data* data, char** qs, int count)
+{
 	int i;
-
-	base = create_event_base(&secs, &now);
-	data = create_doq_client_data(svr, port, base);
-
-	/* handle query */
 	for(i=0; i<count; i+=3) {
 		struct sldns_buffer* buf = NULL;
 		buf = make_query(qs[i], qs[i+1], qs[i+2]);
@@ -1108,12 +1252,28 @@ static void run(const char* svr, int port, char** qs, int count)
 			else verbose(1, "send query: %s", str);
 			free(str);
 		}
-		client_bidi_stream(data, buf);
+		client_enter_query_buf(data, buf);
 		sldns_buffer_free(buf);
 	}
+}
 
+/** run the dohclient queries */
+static void run(const char* svr, int port, char** qs, int count)
+{
+	time_t secs = 0;
+	struct timeval now;
+	struct ub_event_base* base;
+	struct doq_client_data* data;
+
+	/* setup */
+	base = create_event_base(&secs, &now);
+	data = create_doq_client_data(svr, port, base);
+	client_enter_queries(data, qs, count);
+
+	/* run the queries */
 	ub_event_base_dispatch(base);
 
+	/* cleanup */
 	delete_doq_client_data(data);
 	ub_event_base_free(base);
 }
