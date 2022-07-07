@@ -1486,7 +1486,7 @@ if test x_$withval = x_yes -o x_$withval != x_no; then
 fi
 
 # ngtcp2
-AC_ARG_WITH(libngtcp2, AS_HELP_STRING([--with-libngtcp2=path],[specify explicit path for libngtcp2.]),
+AC_ARG_WITH(libngtcp2, AS_HELP_STRING([--with-libngtcp2=path],[specify explicit path for libngtcp2, for QUIC.]),
     [ ],[ withval="no" ])
 found_libngtcp2="no"
 if test x_$withval = x_yes -o x_$withval != x_no; then
@@ -1519,6 +1519,7 @@ if test x_$withval = x_yes -o x_$withval != x_no; then
     #include <ngtcp2/ngtcp2_crypto.h>
     ])
     AC_CHECK_FUNCS([ngtcp2_crypto_encrypt_cb])
+    AC_CHECK_FUNCS([SSL_is_quic], [], [AC_MSG_ERROR([No QUIC support detected in OpenSSL. Need OpenSSL version with QUIC support to enable DNS over QUIC with libngtcp2.])])
 fi
 
 # set static linking for uninstalled libraries if requested
