@@ -132,14 +132,20 @@ struct doq_client_stream_list {
 struct doq_client_stream {
 	/** next stream in list, and prev in list */
 	struct doq_client_stream* next, *prev;
-	/** the stream id */
-	int64_t stream_id;
 	/** the data buffer */
 	uint8_t* data;
 	/** length of the data buffer */
 	size_t data_len;
+	/** if the client query has a stream, that is active, associated with
+	 * it. The stream_id is in stream_id. */
+	int has_stream;
+	/** the stream id */
+	int64_t stream_id;
 	/** data written position */
 	size_t nwrite;
+	/** if the write of the query data is done. That means the
+	 * write channel has FIN, is closed for writing. */
+	int write_is_done;
 };
 
 /** the quic method struct, must remain valid during the QUIC connection. */
@@ -147,6 +153,8 @@ static SSL_QUIC_METHOD quic_method;
 
 /** write handle routine */
 static void on_write(struct doq_client_data* data);
+/** update the timer */
+static void update_timer(struct doq_client_data* data);
 
 /** usage of doqclient */
 static void usage(char* argv[])
@@ -270,6 +278,7 @@ client_stream_free(struct doq_client_stream* str)
 static void
 client_stream_start_setup(struct doq_client_stream* str, uint64_t stream_id)
 {
+	str->has_stream = 1;
 	str->stream_id = stream_id;
 	str->nwrite = 0;
 }
@@ -350,6 +359,35 @@ stream_list_append(struct doq_client_stream_list* list,
 	list->last = str;
 }
 
+/** delete the item from the list */
+static void
+stream_list_delete(struct doq_client_stream_list* list,
+	struct doq_client_stream* str)
+{
+	if(str->next) {
+		str->next->prev = str->prev;
+	} else {
+		list->last = str->prev;
+	}
+	if(str->prev) {
+		str->prev->next = str->next;
+	} else {
+		list->first = str->next;
+	}
+	str->prev = NULL;
+	str->next = NULL;
+}
+
+/** move the item from list1 to list2 */
+static void
+stream_list_move(struct doq_client_stream* str,
+	struct doq_client_stream_list* list1,
+	struct doq_client_stream_list* list2)
+{
+	stream_list_delete(list1, str);
+	stream_list_append(list2, str);
+}
+
 /** fill a buffer with random data */
 static void fill_rand(struct ub_randstate* rnd, uint8_t* buf, size_t len)
 {
@@ -422,6 +460,9 @@ query_streams_start(struct doq_client_data* data)
 		}
 		/* setup the stream to start */
 		client_stream_start_setup(str, stream_id);
+		/* move the query entry to the send list to write it */
+		stream_list_move(str, data->query_list_start,
+			data->query_list_send);
 	}
 }
 
@@ -531,6 +572,7 @@ static void log_printf_for_doq(void* ATTR_UNUSED(user_data),
 {
 	va_list ap;
 	va_start(ap, fmt);
+	fprintf(stderr, "libngtcp2: ");
 	vfprintf(stderr, fmt, ap);
 	va_end(ap);
 	fprintf(stderr, "\n");
@@ -811,6 +853,7 @@ doq_send_pkt(struct doq_client_data* data, uint32_t ecn, uint8_t* buf,
 	ssize_t ret;
 	iov[0].iov_base = buf;
 	iov[0].iov_len = buf_len;
+	memset(&msg, 0, sizeof(msg));
 	msg.msg_name = (void*)&data->dest_addr;
 	msg.msg_namelen = data->dest_addr_len;
 	msg.msg_iov = iov;
@@ -865,6 +908,7 @@ write_conn_close(struct doq_client_data* data)
 		 * the connection. */
 		return;
 	}
+	verbose(1, "write connection close");
 	ngtcp2_path_storage_zero(&ps);
 	sldns_buffer_clear(data->pkt_buf);
 	ret = ngtcp2_conn_write_connection_close(
@@ -876,6 +920,7 @@ write_conn_close(struct doq_client_data* data)
 			ngtcp2_strerror(ret));
 		return;
 	}
+	verbose(1, "write connection close packet length %d", (int)ret);
 	if(ret == 0)
 		return;
 	doq_send_pkt(data, pi.ecn, sldns_buffer_begin(data->pkt_buf), ret);
@@ -885,6 +930,7 @@ write_conn_close(struct doq_client_data* data)
 static void
 disconnect(struct doq_client_data* data)
 {
+	verbose(1, "disconnect");
 	write_conn_close(data);
 	ub_event_base_loopexit(data->base);
 }
@@ -898,15 +944,17 @@ void expire_timer_cb(int ATTR_UNUSED(fd),
 	int rv;
 
 	verbose(1, "doq expire_timer");
+	data->expire_timer_added = 0;
 	rv = ngtcp2_conn_handle_expiry(data->conn, now);
 	if(rv != 0) {
-		log_err("ngtcp2_handle_expiry failed: %s",
-			ngtcp2_strerror(errno));
+		log_err("ngtcp2_conn_handle_expiry failed: %s",
+			ngtcp2_strerror(rv));
 		ngtcp2_connection_close_error_set_transport_error_liberr(
 			&data->last_error, rv, NULL, 0);
 		disconnect(data);
 		return;
 	}
+	update_timer(data);
 	on_write(data);
 }
 
@@ -933,7 +981,9 @@ update_timer(struct doq_client_data* data)
 	}
 	memset(&tv, 0, sizeof(tv));
 	tv.tv_sec = t / NGTCP2_SECONDS;
-	tv.tv_usec = t / NGTCP2_MICROSECONDS;
+	tv.tv_usec = (t / NGTCP2_MICROSECONDS)%1000000;
+	verbose(1, "update_timer in %d.%6.6d secs", (int)tv.tv_sec,
+		(int)tv.tv_usec);
 	if(ub_timer_add(data->expire_timer, data->base,
 		&expire_timer_cb, data, &tv) != 0) {
 		log_err("timer_add failed: could not add expire timer");
@@ -1016,6 +1066,21 @@ on_read(struct doq_client_data* data)
 	update_timer(data);
 }
 
+/** the write of this query has completed, it has spooled to packets,
+ * set it to have the write done and move it to the list of receive streams. */
+static void
+query_write_is_done(struct doq_client_data* data,
+	struct doq_client_stream* str)
+{
+	if(verbosity > 0) {
+		char* logs = client_stream_string(str);
+		verbose(1, "query %s write is done", logs);
+		free(logs);
+	}
+	str->write_is_done = 1;
+	stream_list_move(str, data->query_list_send, data->query_list_receive);
+}
+
 /** write the data streams, if possible */
 static int
 write_streams(struct doq_client_data* data)
@@ -1025,24 +1090,56 @@ write_streams(struct doq_client_data* data)
 	struct doq_client_stream* str, *next;
 	uint32_t flags;
 	ngtcp2_path_storage_zero(&ps);
+	str = data->query_list_send->first;
 
-	for(str = data->query_list_send->first; str; str = next) {
+	/* loop like this, because at the start, the send list is empty,
+	 * and we want to send handshake packets. But when there is a
+	 * send_list, loop through that. */
+	for(;;) {
+
 		uint64_t stream_id;
 		ngtcp2_pkt_info pi;
-		ngtcp2_vec datav;
+		ngtcp2_vec datav[2];
+		size_t datav_count = 0;
 		int fin;
 		ngtcp2_ssize ret;
 		ngtcp2_ssize ndatalen = 0;
-		next = str->next;
-		if(str->nwrite == str->data_len || str->stream_id == -1)
-			continue;
-		stream_id = str->stream_id;
-		fin = 1;
-		datav.base = str->data + str->nwrite;
-		datav.len = str->data_len - str->nwrite;
+		uint16_t dnslen = 0;
+
+		if(str) {
+			/* pick up next in case this one is deleted */
+			next = str->next;
+			if(verbosity > 0) {
+				char* logs = client_stream_string(str);
+				verbose(1, "query %s write stream", logs);
+				free(logs);
+			}
+			stream_id = str->stream_id;
+			fin = 1;
+			if(str->nwrite < 2) {
+				dnslen = htons(str->data_len);
+				datav[0].base = ((uint8_t*)&dnslen)+str->nwrite;
+				datav[0].len = 2-str->nwrite;
+				datav[1].base = str->data;
+				datav[1].len = str->data_len;
+				datav_count = 2;
+			} else {
+				datav[0].base = str->data + (str->nwrite-2);
+				datav[0].len = str->data_len - (str->nwrite-2);
+				datav_count = 1;
+			}
+		} else {
+			next = NULL;
+			verbose(1, "write stream -1.");
+			stream_id = -1;
+			fin = 0;
+			datav[0].base = NULL;
+			datav[0].len = 0;
+			datav_count = 1;
+		}
 
 		flags = 0;
-		if(str->next != NULL) {
+		if(str && str->next != NULL) {
 			/* Coalesce more data from more streams into this
 			 * packet, if possible */
 			flags |= NGTCP2_WRITE_STREAM_FLAG_MORE;
@@ -1055,13 +1152,18 @@ write_streams(struct doq_client_data* data)
 		ret = ngtcp2_conn_writev_stream(data->conn, &ps.path, &pi,
 			sldns_buffer_begin(data->pkt_buf),
 			sldns_buffer_remaining(data->pkt_buf), &ndatalen,
-			flags, stream_id, &datav, 1, ts);
+			flags, stream_id, datav, datav_count, ts);
 		if(ret < 0) {
 			if(ret == NGTCP2_ERR_STREAM_DATA_BLOCKED) {
 			} else if(ret == NGTCP2_ERR_STREAM_SHUT_WR) {
 			} else if(ret == NGTCP2_ERR_WRITE_MORE) {
-				str->nwrite += ndatalen;
-				continue;
+				if(str) {
+					str->nwrite += ndatalen;
+					if(str->nwrite >= str->data_len+2)
+						query_write_is_done(data, str);
+					str = next;
+					continue;
+				}
 			}
 			log_err("ngtcp2_conn_writev_stream failed: %s",
 				ngtcp2_strerror(ret));
@@ -1070,19 +1172,29 @@ write_streams(struct doq_client_data* data)
 			disconnect(data);
 			return 0;
 		}
-		if(ndatalen >= 0) {
+		verbose(1, "writev_stream pkt size %d ndatawritten %d",
+			(int)ret, (int)ndatalen);
+		if(ndatalen >= 0 && str) {
 			/* add the new write offset */
 			str->nwrite += ndatalen;
+			if(str->nwrite >= str->data_len+2)
+				query_write_is_done(data, str);
 		}
 		if(ret == 0) {
 			/* congestion limited */
 			ngtcp2_conn_update_pkt_tx_time(data->conn, ts);
 			event_change_write(data, 0);
+			/* update the timer to wait until we can write again */
+			update_timer(data);
 			return 0;
 		}
 		if(!doq_send_pkt(data, pi.ecn,
 			sldns_buffer_begin(data->pkt_buf), ret))
 			return 0;
+		/* continue */
+		str = next;
+		if(str == NULL)
+			break;
 	}
 	ngtcp2_conn_update_pkt_tx_time(data->conn, ts);
 	event_change_write(data, 1);
@@ -1115,7 +1227,6 @@ doq_client_ev_cb(int ATTR_UNUSED(fd), short bits, void* arg)
 	 * have produced data, or there is content waiting and it is possible
 	 * to write that. */
 	on_write(data);
-	disconnect(data); /* DEBUG */
 }
 
 /** create doq_client_data */
