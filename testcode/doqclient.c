@@ -148,10 +148,14 @@ struct doq_client_stream {
 	int write_is_done;
 	/** data read position */
 	size_t nread;
-	/** the answer length */
+	/** the answer length, in network byte order */
 	uint16_t answer_len;
 	/** the answer buffer */
 	struct sldns_buffer* answer;
+	/** the answer is complete */
+	int answer_is_complete;
+	/** the query has an error, it has no answer, or no complete answer */
+	int query_has_error;
 	/** if the query is done */
 	int query_is_done;
 };
@@ -293,6 +297,8 @@ client_stream_start_setup(struct doq_client_stream* str, int64_t stream_id)
 	str->nread = 0;
 	str->answer_len = 0;
 	str->query_is_done = 0;
+	str->answer_is_complete = 0;
+	str->query_has_error = 0;
 	if(str->answer) {
 		sldns_buffer_free(str->answer);
 		str->answer = NULL;
@@ -402,6 +408,195 @@ stream_list_move(struct doq_client_stream* str,
 {
 	stream_list_delete(list1, str);
 	stream_list_append(list2, str);
+}
+
+/** allocate stream data buffer, then answer length is complete */
+static void
+client_stream_datalen_complete(struct doq_client_stream* str)
+{
+	verbose(1, "answer length %d", (int)ntohs(str->answer_len));
+	str->answer = sldns_buffer_new(ntohs(str->answer_len));
+	if(!str->answer)
+		fatal_exit("sldns_buffer_new failed: out of memory");
+	sldns_buffer_set_limit(str->answer, ntohs(str->answer_len));
+}
+
+/** print the answer rrs */
+static void
+print_answer_rrs(uint8_t* pkt, size_t pktlen)
+{
+	char buf[65535];
+	char* str;
+	size_t str_len;
+	int i, qdcount, ancount;
+	uint8_t* data = pkt;
+	size_t data_len = pktlen;
+	int comprloop = 0;
+	if(data_len < LDNS_HEADER_SIZE)
+		return;
+	qdcount = LDNS_QDCOUNT(data);
+	ancount = LDNS_ANCOUNT(data);
+	data += LDNS_HEADER_SIZE;
+	data_len -= LDNS_HEADER_SIZE;
+
+	for(i=0; i<qdcount; i++) {
+		str = buf;
+		str_len = sizeof(buf);
+		(void)sldns_wire2str_rrquestion_scan(&data, &data_len,
+			&str, &str_len, pkt, pktlen, &comprloop);
+	}
+	for(i=0; i<ancount; i++) {
+		str = buf;
+		str_len = sizeof(buf);
+		(void)sldns_wire2str_rr_scan(&data, &data_len, &str, &str_len,
+			pkt, pktlen, &comprloop);
+		/* terminate string */
+		if(str_len == 0)
+			buf[sizeof(buf)-1] = 0;
+		else	*str = 0;
+		printf("%s\n", str);
+	}
+}
+
+/** short output of answer, short error or rcode or answer section RRs. */
+static void
+client_stream_print_short(struct doq_client_stream* str)
+{
+	int rcode, ancount;
+	if(str->query_has_error) {
+		char* logs = client_stream_string(str);
+		printf("%s has error, there is no answer\n", logs);
+		free(logs);
+		return;
+	}
+	if(sldns_buffer_limit(str->answer) < LDNS_HEADER_SIZE) {
+		char* logs = client_stream_string(str);
+		printf("%s received short packet, smaller than header\n",
+			logs);
+		free(logs);
+		return;
+	}
+	rcode = LDNS_RCODE_WIRE(sldns_buffer_begin(str->answer));
+	if(rcode != 0) {
+		char* logs = client_stream_string(str);
+		char rc[16];
+		(void)sldns_wire2str_rcode_buf(rcode, rc, sizeof(rc));
+		printf("%s rcode %s\n", logs, rc);
+		free(logs);
+		return;
+	}
+	ancount = LDNS_ANCOUNT(sldns_buffer_begin(str->answer));
+	if(ancount == 0) {
+		char* logs = client_stream_string(str);
+		printf("%s nodata answer\n", logs);
+		free(logs);
+		return;
+	}
+	print_answer_rrs(sldns_buffer_begin(str->answer),
+		sldns_buffer_limit(str->answer));
+}
+
+/** the stream has completed the data */
+static void
+client_stream_data_complete(struct doq_client_stream* str)
+{
+	verbose(1, "received all answer content");
+	if(verbosity > 0) {
+		char* logs = client_stream_string(str);
+		char* s;
+		log_buf(1, "received answer", str->answer);
+		s = sldns_wire2str_pkt(sldns_buffer_begin(str->answer),
+			sldns_buffer_limit(str->answer));
+		if(!s) verbose(1, "could not sldns_wire2str_pkt");
+		else verbose(1, "query %s received: %s", logs, s);
+		free(str);
+		free(logs);
+	}
+	str->answer_is_complete = 1;
+}
+
+/** the stream has completed but with an error */
+static void
+client_stream_answer_error(struct doq_client_stream* str)
+{
+	if(verbosity > 0) {
+		char* logs = client_stream_string(str);
+		verbose(1, "query %s has an error. received %d/%d bytes.",
+			logs, (int)sldns_buffer_position(str->answer),
+			(int)sldns_buffer_limit(str->answer));
+		free(logs);
+	}
+	str->query_has_error = 1;
+}
+
+/** receive data for a stream */
+static void
+client_stream_recv_data(struct doq_client_stream* str, const uint8_t* data,
+	size_t datalen)
+{
+	int got_data = 0;
+	/* read the tcplength uint16_t at the start of the DNS message */
+	if(str->nread < 2) {
+		size_t to_move = datalen;
+		if(datalen > 2-str->nread)
+			to_move = 2-str->nread;
+		memmove(((uint8_t*)&str->answer_len)+str->nread, data,
+			to_move);
+		str->nread += to_move;
+		data += to_move;
+		datalen -= to_move;
+		if(str->nread == 2) {
+			/* we can allocate the data buffer */
+			client_stream_datalen_complete(str);
+		}
+	}
+	/* if we have data bytes */
+	if(datalen > 0) {
+		size_t to_write = datalen;
+		if(datalen > sldns_buffer_remaining(str->answer))
+			to_write = sldns_buffer_remaining(str->answer);
+		if(to_write > 0) {
+			sldns_buffer_write(str->answer, data, to_write);
+			str->nread += to_write;
+			data += to_write;
+			datalen -= to_write;
+			got_data = 1;
+		}
+	}
+	/* extra received bytes after end? */
+	if(datalen > 0) {
+		verbose(1, "extra bytes after end of DNS length");
+		if(verbosity > 0)
+			log_hex("extradata", (void*)data, datalen);
+	}
+	/* are we done with it? */
+	if(got_data && str->nread >= (size_t)(ntohs(str->answer_len))+2) {
+		client_stream_data_complete(str);
+	}
+}
+
+/** receive FIN from remote end on client stream, no more data to be
+ * received on the stream. */
+static void
+client_stream_recv_fin(struct doq_client_data* data,
+	struct doq_client_stream* str)
+{
+	if(verbosity > 0) {
+		char* logs = client_stream_string(str);
+		verbose(1, "query %s: received FIN from remote", logs);
+		free(logs);
+	}
+	if(str->write_is_done)
+		stream_list_move(str, data->query_list_receive,
+			data->query_list_stop);
+	else
+		stream_list_move(str, data->query_list_send,
+			data->query_list_stop);
+	if(!str->answer_is_complete) {
+		client_stream_answer_error(str);
+	}
+	str->query_is_done = 1;
+	client_stream_print_short(str);
 }
 
 /** fill a buffer with random data */
@@ -566,72 +761,10 @@ recv_stream_data(ngtcp2_conn* ATTR_UNUSED(conn), uint32_t flags,
 
 	/* append the data, if there is data */
 	if(datalen > 0) {
-		if(str->nread < 2) {
-			size_t to_move = datalen;
-			if(datalen > 2-str->nread)
-				to_move = 2-str->nread;
-			memmove(((uint8_t*)&str->answer_len)+str->nread,
-				data, to_move);
-			str->nread += to_move;
-			data += to_move;
-			datalen -= to_move;
-			if(str->nread == 2) {
-				/* we can allocate the data buffer */
-				verbose(1, "answer length %d",
-					(int)str->answer_len);
-				str->answer = sldns_buffer_new(
-					str->answer_len);
-				if(!str->answer)
-					fatal_exit("sldns_buffer_new failed: out of memory");
-				sldns_buffer_set_limit(str->answer,
-					str->answer_len);
-			}
-		}
-		/* if we have data bytes */
-		if(datalen > 0) {
-			size_t to_write = datalen;
-			if(datalen > sldns_buffer_remaining(str->answer))
-				to_write = sldns_buffer_remaining(str->answer);
-			if(to_write > 0) {
-				sldns_buffer_write(str->answer, data, to_write);
-				str->nread += to_write;
-				data += to_write;
-				datalen -= to_write;
-			}
-		}
-		/* extra received bytes after end? */
-		if(datalen > 0) {
-			verbose(1, "extra bytes after end of DNS length");
-			if(verbosity > 0)
-				log_hex("extradata", (void*)data, datalen);
-		}
-		/* are we done with it? */
-		if(str->nread >= str->answer_len) {
-			verbose(1, "received all answer content");
-			if(verbosity > 0) {
-				char* logs = client_stream_string(str);
-				char* s;
-				log_buf(1, "received answer", str->answer);
-				s = sldns_wire2str_pkt(sldns_buffer_begin(
-					str->answer), sldns_buffer_limit(
-					str->answer));
-				if(!s) verbose(1, "could not sldns_wire2str_pkt");
-				else verbose(1, "query %s received: %s", logs,
-					s);
-				free(str);
-				free(logs);
-			}
-		}
+		client_stream_recv_data(str, data, datalen);
 	}
 	if((flags&NGTCP2_STREAM_DATA_FLAG_FIN)!=0) {
-		verbose(1, "received FIN from remote");
-		if(str->write_is_done)
-			stream_list_move(str, doqdata->query_list_receive,
-				doqdata->query_list_stop);
-		else
-			stream_list_move(str, doqdata->query_list_send,
-				doqdata->query_list_stop);
-		str->query_is_done = 1;
+		client_stream_recv_fin(doqdata, str);
 	}
 	ngtcp2_conn_extend_max_stream_offset(doqdata->conn, stream_id, datalen);
 	ngtcp2_conn_extend_max_offset(doqdata->conn, datalen);
