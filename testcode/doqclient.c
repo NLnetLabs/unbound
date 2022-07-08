@@ -508,7 +508,7 @@ client_stream_data_complete(struct doq_client_stream* str)
 		s = sldns_wire2str_pkt(sldns_buffer_begin(str->answer),
 			sldns_buffer_limit(str->answer));
 		if(!s) verbose(1, "could not sldns_wire2str_pkt");
-		else verbose(1, "query %s received: %s", logs, s);
+		else verbose(1, "query %s received:\n%s", logs, s);
 		free(str);
 		free(logs);
 	}
@@ -1604,7 +1604,7 @@ client_enter_queries(struct doq_client_data* data, char** qs, int count)
 			str = sldns_wire2str_pkt(sldns_buffer_begin(buf),
 				sldns_buffer_limit(buf));
 			if(!str) verbose(1, "could not sldns_wire2str_pkt");
-			else verbose(1, "send query: %s", str);
+			else verbose(1, "send query:\n%s", str);
 			free(str);
 		}
 		client_enter_query_buf(data, buf);
@@ -1689,7 +1689,7 @@ int main(int ATTR_UNUSED(argc), char** ATTR_UNUSED(argv))
 		return 1;
 	}
 
-	run(svr, port, argv, argc/3);
+	run(svr, port, argv, argc);
 
 	checklock_stop();
 #ifdef USE_WINSOCK
