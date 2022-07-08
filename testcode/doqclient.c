@@ -1401,9 +1401,7 @@ write_streams(struct doq_client_data* data)
 			sldns_buffer_remaining(data->pkt_buf), &ndatalen,
 			flags, stream_id, datav, datav_count, ts);
 		if(ret < 0) {
-			if(ret == NGTCP2_ERR_STREAM_DATA_BLOCKED) {
-			} else if(ret == NGTCP2_ERR_STREAM_SHUT_WR) {
-			} else if(ret == NGTCP2_ERR_WRITE_MORE) {
+			if(ret == NGTCP2_ERR_WRITE_MORE) {
 				if(str) {
 					str->nwrite += ndatalen;
 					if(str->nwrite >= str->data_len+2)
