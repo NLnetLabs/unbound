@@ -1067,3 +1067,19 @@ void dtio_mainfdcallback(int ATTR_UNUSED(fd), short ATTR_UNUSED(ev),
 	log_assert(0);
 }
 #endif
+
+#ifdef HAVE_NGTCP2
+void doq_client_event_cb(int ATTR_UNUSED(fd), short ATTR_UNUSED(ev),
+	void* ATTR_UNUSED(arg))
+{
+	log_assert(0);
+}
+#endif
+
+#ifdef HAVE_NGTCP2
+void doq_client_timer_cb(int ATTR_UNUSED(fd), short ATTR_UNUSED(ev),
+	void* ATTR_UNUSED(arg))
+{
+	log_assert(0);
+}
+#endif

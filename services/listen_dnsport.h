@@ -454,4 +454,10 @@ char* set_ip_dscp(int socket, int addrfamily, int ds);
  */
 void verbose_print_unbound_socket(struct unbound_socket* ub_sock);
 
+/** event callback for testcode/doqclient */
+void doq_client_event_cb(int fd, short event, void* arg);
+
+/** timer event callback for testcode/doqclient */
+void doq_client_timer_cb(int fd, short event, void* arg);
+
 #endif /* LISTEN_DNSPORT_H */

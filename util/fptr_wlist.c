@@ -47,6 +47,7 @@
 #include "util/fptr_wlist.h"
 #include "util/mini_event.h"
 #include "services/outside_network.h"
+#include "services/listen_dnsport.h"
 #include "services/mesh.h"
 #include "services/localzone.h"
 #include "services/authzone.h"
@@ -187,6 +188,10 @@ fptr_whitelist_event(void (*fptr)(int, short, void *))
 	else if(fptr == &dtio_stop_ev_cb) return 1;
 	else if(fptr == &dtio_tap_callback) return 1;
 	else if(fptr == &dtio_mainfdcallback) return 1;
+#endif
+#ifdef HAVE_NGTCP2
+	else if(fptr == &doq_client_event_cb) return 1;
+	else if(fptr == &doq_client_timer_cb) return 1;
 #endif
 #ifdef UB_ON_WINDOWS
 	else if(fptr == &worker_win_stop_cb) return 1;

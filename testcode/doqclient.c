@@ -1184,7 +1184,7 @@ disconnect(struct doq_client_data* data)
 }
 
 /** the expire timer callback */
-void expire_timer_cb(int ATTR_UNUSED(fd),
+void doq_client_timer_cb(int ATTR_UNUSED(fd),
 	short ATTR_UNUSED(bits), void* arg)
 {
 	struct doq_client_data* data = (struct doq_client_data*)arg;
@@ -1217,7 +1217,7 @@ update_timer(struct doq_client_data* data)
 
 	if(expiry <= now) {
 		/* the timer has already expired */
-		expire_timer_cb(-1, UB_EV_TIMEOUT, data);
+		doq_client_timer_cb(-1, UB_EV_TIMEOUT, data);
 		return;
 	}
 	t = expiry - now;
@@ -1233,7 +1233,7 @@ update_timer(struct doq_client_data* data)
 	verbose(1, "update_timer in %d.%6.6d secs", (int)tv.tv_sec,
 		(int)tv.tv_usec);
 	if(ub_timer_add(data->expire_timer, data->base,
-		&expire_timer_cb, data, &tv) != 0) {
+		&doq_client_timer_cb, data, &tv) != 0) {
 		log_err("timer_add failed: could not add expire timer");
 		return;
 	}
@@ -1459,10 +1459,10 @@ on_write(struct doq_client_data* data)
 
 /** callback for main listening file descriptor */
 void
-doq_client_ev_cb(int ATTR_UNUSED(fd), short bits, void* arg)
+doq_client_event_cb(int ATTR_UNUSED(fd), short bits, void* arg)
 {
 	struct doq_client_data* data = (struct doq_client_data*)arg;
-	verbose(1, "doq_client_ev_cb %s%s%s",
+	verbose(1, "doq_client_event_cb %s%s%s",
 		((bits&UB_EV_READ)!=0?"EV_READ":""),
 		((bits&(UB_EV_READ|UB_EV_WRITE))==(UB_EV_READ|UB_EV_WRITE)?
 		" ":""),
@@ -1501,7 +1501,7 @@ create_doq_client_data(const char* svr, int port, struct ub_event_base* base)
 	ngtcp2_conn_set_tls_native_handle(data->conn, data->ssl);
 
 	data->ev = ub_event_new(base, data->fd, UB_EV_READ | UB_EV_WRITE |
-		UB_EV_PERSIST, doq_client_ev_cb, data);
+		UB_EV_PERSIST, doq_client_event_cb, data);
 	if(!data->ev) {
 		fatal_exit("could not ub_event_new");
 	}
@@ -1509,7 +1509,7 @@ create_doq_client_data(const char* svr, int port, struct ub_event_base* base)
 		fatal_exit("could not ub_event_add");
 	}
 	data->expire_timer = ub_event_new(data->base, -1,
-		UB_EV_TIMEOUT, &expire_timer_cb, data);
+		UB_EV_TIMEOUT, &doq_client_timer_cb, data);
 	if(!data->expire_timer)
 		fatal_exit("could not ub_event_new");
 	data->query_list_start = stream_list_create();
@@ -1571,7 +1571,7 @@ create_event_base(time_t* secs, struct timeval* now)
 	struct ub_event_base* base;
 	const char *evnm="event", *evsys="", *evmethod="";
 
-	memset(&now, 0, sizeof(now));
+	memset(now, 0, sizeof(*now));
 	base = ub_default_event_base(1, secs, now);
 	if(!base) fatal_exit("could not create ub_event base");
 
@@ -1706,3 +1706,204 @@ int main(int ATTR_UNUSED(argc), char** ATTR_UNUSED(argv))
 	return 1;
 }
 #endif /* HAVE_NGTCP2 */
+
+/***--- definitions to make fptr_wlist work. ---***/
+/* These are callbacks, similar to smallapp callbacks, except the debug
+ * tool callbacks are not in it */
+struct tube;
+struct query_info;
+#include "util/data/packed_rrset.h"
+#include "daemon/worker.h"
+#include "daemon/remote.h"
+#include "util/fptr_wlist.h"
+#include "libunbound/context.h"
+
+void worker_handle_control_cmd(struct tube* ATTR_UNUSED(tube),
+	uint8_t* ATTR_UNUSED(buffer), size_t ATTR_UNUSED(len),
+	int ATTR_UNUSED(error), void* ATTR_UNUSED(arg))
+{
+	log_assert(0);
+}
+
+int worker_handle_request(struct comm_point* ATTR_UNUSED(c), 
+	void* ATTR_UNUSED(arg), int ATTR_UNUSED(error),
+        struct comm_reply* ATTR_UNUSED(repinfo))
+{
+	log_assert(0);
+	return 0;
+}
+
+int worker_handle_service_reply(struct comm_point* ATTR_UNUSED(c), 
+	void* ATTR_UNUSED(arg), int ATTR_UNUSED(error),
+        struct comm_reply* ATTR_UNUSED(reply_info))
+{
+	log_assert(0);
+	return 0;
+}
+
+int remote_accept_callback(struct comm_point* ATTR_UNUSED(c), 
+	void* ATTR_UNUSED(arg), int ATTR_UNUSED(error),
+        struct comm_reply* ATTR_UNUSED(repinfo))
+{
+	log_assert(0);
+	return 0;
+}
+
+int remote_control_callback(struct comm_point* ATTR_UNUSED(c), 
+	void* ATTR_UNUSED(arg), int ATTR_UNUSED(error),
+        struct comm_reply* ATTR_UNUSED(repinfo))
+{
+	log_assert(0);
+	return 0;
+}
+
+void worker_sighandler(int ATTR_UNUSED(sig), void* ATTR_UNUSED(arg))
+{
+	log_assert(0);
+}
+
+struct outbound_entry* worker_send_query(
+	struct query_info* ATTR_UNUSED(qinfo), uint16_t ATTR_UNUSED(flags),
+	int ATTR_UNUSED(dnssec), int ATTR_UNUSED(want_dnssec),
+	int ATTR_UNUSED(nocaps), int ATTR_UNUSED(check_ratelimit),
+	struct sockaddr_storage* ATTR_UNUSED(addr),
+	socklen_t ATTR_UNUSED(addrlen), uint8_t* ATTR_UNUSED(zone),
+	size_t ATTR_UNUSED(zonelen), int ATTR_UNUSED(tcp_upstream),
+	int ATTR_UNUSED(ssl_upstream), char* ATTR_UNUSED(tls_auth_name),
+	struct module_qstate* ATTR_UNUSED(q), int* ATTR_UNUSED(was_ratelimited))
+{
+	log_assert(0);
+	return 0;
+}
+
+#ifdef UB_ON_WINDOWS
+void
+worker_win_stop_cb(int ATTR_UNUSED(fd), short ATTR_UNUSED(ev), void* 
+	ATTR_UNUSED(arg)) {
+	log_assert(0);
+}
+
+void
+wsvc_cron_cb(void* ATTR_UNUSED(arg))
+{
+	log_assert(0);
+}
+#endif /* UB_ON_WINDOWS */
+
+void 
+worker_alloc_cleanup(void* ATTR_UNUSED(arg))
+{
+	log_assert(0);
+}
+
+struct outbound_entry* libworker_send_query(
+	struct query_info* ATTR_UNUSED(qinfo), uint16_t ATTR_UNUSED(flags),
+	int ATTR_UNUSED(dnssec), int ATTR_UNUSED(want_dnssec),
+	int ATTR_UNUSED(nocaps), int ATTR_UNUSED(check_ratelimit),
+	struct sockaddr_storage* ATTR_UNUSED(addr),
+	socklen_t ATTR_UNUSED(addrlen), uint8_t* ATTR_UNUSED(zone),
+	size_t ATTR_UNUSED(zonelen), int ATTR_UNUSED(tcp_upstream),
+	int ATTR_UNUSED(ssl_upstream), char* ATTR_UNUSED(tls_auth_name),
+	struct module_qstate* ATTR_UNUSED(q), int* ATTR_UNUSED(was_ratelimited))
+{
+	log_assert(0);
+	return 0;
+}
+
+int libworker_handle_service_reply(struct comm_point* ATTR_UNUSED(c), 
+	void* ATTR_UNUSED(arg), int ATTR_UNUSED(error),
+        struct comm_reply* ATTR_UNUSED(reply_info))
+{
+	log_assert(0);
+	return 0;
+}
+
+void libworker_handle_control_cmd(struct tube* ATTR_UNUSED(tube),
+        uint8_t* ATTR_UNUSED(buffer), size_t ATTR_UNUSED(len),
+        int ATTR_UNUSED(error), void* ATTR_UNUSED(arg))
+{
+        log_assert(0);
+}
+
+void libworker_fg_done_cb(void* ATTR_UNUSED(arg), int ATTR_UNUSED(rcode), 
+	struct sldns_buffer* ATTR_UNUSED(buf), enum sec_status ATTR_UNUSED(s),
+	char* ATTR_UNUSED(why_bogus), int ATTR_UNUSED(was_ratelimited))
+{
+	log_assert(0);
+}
+
+void libworker_bg_done_cb(void* ATTR_UNUSED(arg), int ATTR_UNUSED(rcode), 
+	struct sldns_buffer* ATTR_UNUSED(buf), enum sec_status ATTR_UNUSED(s),
+	char* ATTR_UNUSED(why_bogus), int ATTR_UNUSED(was_ratelimited))
+{
+	log_assert(0);
+}
+
+void libworker_event_done_cb(void* ATTR_UNUSED(arg), int ATTR_UNUSED(rcode), 
+	struct sldns_buffer* ATTR_UNUSED(buf), enum sec_status ATTR_UNUSED(s),
+	char* ATTR_UNUSED(why_bogus), int ATTR_UNUSED(was_ratelimited))
+{
+	log_assert(0);
+}
+
+int context_query_cmp(const void* ATTR_UNUSED(a), const void* ATTR_UNUSED(b))
+{
+	log_assert(0);
+	return 0;
+}
+
+void worker_stat_timer_cb(void* ATTR_UNUSED(arg))
+{
+	log_assert(0);
+}
+
+void worker_probe_timer_cb(void* ATTR_UNUSED(arg))
+{
+	log_assert(0);
+}
+
+void worker_start_accept(void* ATTR_UNUSED(arg))
+{
+	log_assert(0);
+}
+
+void worker_stop_accept(void* ATTR_UNUSED(arg))
+{
+	log_assert(0);
+}
+
+/** keep track of lock id in lock-verify application */
+struct order_id {
+        /** the thread id that created it */
+        int thr;
+        /** the instance number of creation */
+        int instance;
+};
+
+int order_lock_cmp(const void* e1, const void* e2)
+{
+        const struct order_id* o1 = e1;
+        const struct order_id* o2 = e2;
+        if(o1->thr < o2->thr) return -1;
+        if(o1->thr > o2->thr) return 1;
+        if(o1->instance < o2->instance) return -1;
+        if(o1->instance > o2->instance) return 1;
+        return 0;
+}
+
+int
+codeline_cmp(const void* a, const void* b)
+{
+        return strcmp(a, b);
+}
+
+int replay_var_compare(const void* ATTR_UNUSED(a), const void* ATTR_UNUSED(b))
+{
+        log_assert(0);
+        return 0;
+}
+
+void remote_get_opt_ssl(char* ATTR_UNUSED(str), void* ATTR_UNUSED(arg))
+{
+        log_assert(0);
+}
