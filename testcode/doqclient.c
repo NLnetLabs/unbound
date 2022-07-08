@@ -1216,11 +1216,11 @@ update_timer(struct doq_client_data* data)
 	struct timeval tv;
 
 	if(expiry <= now) {
-		/* the timer has already expired */
-		doq_client_timer_cb(-1, UB_EV_TIMEOUT, data);
-		return;
+		/* the timer has already expired, add with zero timeout */
+		t = 0;
+	} else {
+		t = expiry - now;
 	}
-	t = expiry - now;
 
 	/* set the timer */
 	if(data->expire_timer_added) {
