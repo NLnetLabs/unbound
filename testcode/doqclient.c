@@ -120,6 +120,13 @@ struct doq_client_data {
 	 * active any more. Write and read are done. The query is done,
 	 * and it may be in error and then have no answer or partial answer. */
 	struct doq_client_stream_list* query_list_stop;
+	/** is there a blocked packet in the blocked_pkt buffer */
+	int have_blocked_pkt;
+	/** store blocked packet, a packet that could not be sent on the
+	 * nonblocking socket. */
+	struct sldns_buffer* blocked_pkt;
+	/** ecn info for the blocked packet */
+	struct ngtcp2_pkt_info blocked_pkt_pi;
 };
 
 /** the local client stream list, for appending streams to */
@@ -211,6 +218,7 @@ open_svr_udp(struct doq_client_data* data)
 		perror("connect() error");
 		exit(1);
 	}
+	fd_set_nonblock(fd);
 	return fd;
 }
 
@@ -1094,7 +1102,7 @@ set_ecn(int fd, int family, uint32_t ecn)
 /** send a packet */
 static int
 doq_send_pkt(struct doq_client_data* data, uint32_t ecn, uint8_t* buf,
-	size_t buf_len)
+	size_t buf_len, int is_blocked_pkt, int* send_is_blocked)
 {
 	struct msghdr msg;
 	struct iovec iov[1];
@@ -1115,9 +1123,30 @@ doq_send_pkt(struct doq_client_data* data, uint32_t ecn, uint8_t* buf,
 		break;
 	}
 	if(ret == -1) {
-		if(errno == EAGAIN)
+		if(errno == EAGAIN) {
+			if(buf_len >
+				sldns_buffer_capacity(data->blocked_pkt))
+				return 0; /* Cannot store it, but the buffers
+				are equal length and large enough, so this
+				should not happen. */
+			data->have_blocked_pkt = 1;
+			if(send_is_blocked)
+				*send_is_blocked = 1;
+			/* If we already send the previously blocked packet,
+			 * no need to copy it, otherwise store the packet for
+			 * later. */
+			if(!is_blocked_pkt) {
+				data->blocked_pkt_pi.ecn = ecn;
+				sldns_buffer_clear(data->blocked_pkt);
+				sldns_buffer_write(data->blocked_pkt, buf,
+					buf_len);
+				sldns_buffer_flip(data->blocked_pkt);
+			}
 			return 0;
+		}
 		log_err("doq sendmsg: %s", strerror(errno));
+		ngtcp2_connection_close_error_set_transport_error_liberr(
+			&data->last_error, NGTCP2_ERR_INTERNAL, NULL, 0);
 		return 0;
 	}
 	return 1;
@@ -1145,6 +1174,9 @@ write_conn_close(struct doq_client_data* data)
 	struct ngtcp2_path_storage ps;
 	struct ngtcp2_pkt_info pi;
 	ngtcp2_ssize ret;
+	/* Drop blocked packet if there is one, the connection is being
+	 * closed. And thus no further data traffic. */
+	data->have_blocked_pkt = 0;
 	if(!data->conn || ngtcp2_conn_is_in_closing_period(data->conn) ||
 		ngtcp2_conn_is_in_draining_period(data->conn))
 		return;
@@ -1171,7 +1203,8 @@ write_conn_close(struct doq_client_data* data)
 	verbose(1, "write connection close packet length %d", (int)ret);
 	if(ret == 0)
 		return;
-	doq_send_pkt(data, pi.ecn, sldns_buffer_begin(data->pkt_buf), ret);
+	doq_send_pkt(data, pi.ecn, sldns_buffer_begin(data->pkt_buf), ret, 0,
+		NULL);
 }
 
 /** disconnect we are done */
@@ -1352,6 +1385,7 @@ write_streams(struct doq_client_data* data)
 		ngtcp2_ssize ret;
 		ngtcp2_ssize ndatalen = 0;
 		uint16_t dnslen = 0;
+		int send_is_blocked = 0;
 
 		if(str) {
 			/* pick up next in case this one is deleted */
@@ -1429,13 +1463,27 @@ write_streams(struct doq_client_data* data)
 			/* congestion limited */
 			ngtcp2_conn_update_pkt_tx_time(data->conn, ts);
 			event_change_write(data, 0);
-			/* update the timer to wait until we can write again */
+			/* update the timer to wait until it is possible to
+			 * write again */
 			update_timer(data);
 			return 0;
 		}
 		if(!doq_send_pkt(data, pi.ecn,
-			sldns_buffer_begin(data->pkt_buf), ret))
+			sldns_buffer_begin(data->pkt_buf), ret, 0,
+			&send_is_blocked)) {
+			if(send_is_blocked) {
+				/* Blocked packet, wait until it is possible
+				 * to write again and also set a timer. */
+				event_change_write(data, 1);
+				update_timer(data);
+				return 0;
+			}
+			/* Packet could not be sent. Like lost and timeout. */
+			ngtcp2_conn_update_pkt_tx_time(data->conn, ts);
+			event_change_write(data, 0);
+			update_timer(data);
 			return 0;
+		}
 		/* continue */
 		str = next;
 		if(str == NULL)
@@ -1446,10 +1494,44 @@ write_streams(struct doq_client_data* data)
 	return 1;
 }
 
+/** send the blocked packet now that the stream is writable again. */
+static int
+send_blocked_pkt(struct doq_client_data* data)
+{
+	ngtcp2_tstamp ts = get_timestamp_nanosec();
+	int send_is_blocked = 0;
+	if(!doq_send_pkt(data, data->blocked_pkt_pi.ecn,
+		sldns_buffer_begin(data->pkt_buf),
+		sldns_buffer_limit(data->pkt_buf), 1, &send_is_blocked)) {
+		if(send_is_blocked) {
+			/* Send was blocked, again. Wait, again to retry. */
+			event_change_write(data, 1);
+			/* make sure the timer is set while waiting */
+			update_timer(data);
+			return 0;
+		}
+		/* The packed could not be sent. Like it was lost, timeout. */
+		data->have_blocked_pkt = 0;
+		ngtcp2_conn_update_pkt_tx_time(data->conn, ts);
+		event_change_write(data, 0);
+		update_timer(data);
+		return 0;
+	}
+	/* The blocked packet has been sent, the holding buffer can be
+	 * cleared. */
+	data->have_blocked_pkt = 0;
+	ngtcp2_conn_update_pkt_tx_time(data->conn, ts);
+	return 1;
+}
+
 /** perform write operations, if any, on fd */
 static void
 on_write(struct doq_client_data* data)
 {
+	if(data->have_blocked_pkt) {
+		if(!send_blocked_pkt(data))
+			return;
+	}
 	if(!write_streams(data))
 		return;
 	update_timer(data);
@@ -1488,6 +1570,9 @@ create_doq_client_data(const char* svr, int port, struct ub_event_base* base)
 	get_dest_addr(data, svr, port);
 	data->pkt_buf = sldns_buffer_new(65552);
 	if(!data->pkt_buf)
+		fatal_exit("sldns_buffer_new failed: out of memory");
+	data->blocked_pkt = sldns_buffer_new(65552);
+	if(!data->blocked_pkt)
 		fatal_exit("sldns_buffer_new failed: out of memory");
 	data->fd = open_svr_udp(data);
 	get_local_addr(data);
@@ -1543,6 +1628,7 @@ delete_doq_client_data(struct doq_client_data* data)
 	ngtcp2_conn_del(data->conn);
 	SSL_free(data->ssl);
 	sldns_buffer_free(data->pkt_buf);
+	sldns_buffer_free(data->blocked_pkt);
 	if(data->fd != -1)
 		sock_close(data->fd);
 	SSL_CTX_free(data->ctx);
