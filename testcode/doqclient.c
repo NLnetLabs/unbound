@@ -127,6 +127,8 @@ struct doq_client_data {
 	struct sldns_buffer* blocked_pkt;
 	/** ecn info for the blocked packet */
 	struct ngtcp2_pkt_info blocked_pkt_pi;
+	/** the congestion control algorithm */
+	ngtcp2_cc_algo cc_algo;
 };
 
 /** the local client stream list, for appending streams to */
@@ -905,6 +907,7 @@ static struct ngtcp2_conn* conn_client_setup(struct doq_client_data* data)
 		data /* callback argument */);
 	if(!conn) fatal_exit("could not ngtcp2_conn_client_new: %s",
 		ngtcp2_strerror(rv));
+	data->cc_algo = settings.cc_algo;
 	return conn;
 }
 
@@ -1174,12 +1177,12 @@ write_conn_close(struct doq_client_data* data)
 	struct ngtcp2_path_storage ps;
 	struct ngtcp2_pkt_info pi;
 	ngtcp2_ssize ret;
-	/* Drop blocked packet if there is one, the connection is being
-	 * closed. And thus no further data traffic. */
-	data->have_blocked_pkt = 0;
 	if(!data->conn || ngtcp2_conn_is_in_closing_period(data->conn) ||
 		ngtcp2_conn_is_in_draining_period(data->conn))
 		return;
+	/* Drop blocked packet if there is one, the connection is being
+	 * closed. And thus no further data traffic. */
+	data->have_blocked_pkt = 0;
 	if(data->last_error.type ==
 		NGTCP2_CONNECTION_CLOSE_ERROR_CODE_TYPE_TRANSPORT_IDLE_CLOSE) {
 		/* do not call ngtcp2_conn_write_connection_close on the
@@ -1370,8 +1373,25 @@ write_streams(struct doq_client_data* data)
 	ngtcp2_tstamp ts = get_timestamp_nanosec();
 	struct doq_client_stream* str, *next;
 	uint32_t flags;
+	/* number of bytes that can be sent without packet pacing */
+	size_t send_quantum = ngtcp2_conn_get_send_quantum(data->conn);
+	/* Overhead is the stream overhead of adding a header onto the data,
+	 * this make sure the number of bytes to send in data bytes plus
+	 * the overhead overshoots the target quantum by a smaller margin,
+	 * and then it stops sending more bytes. With zero it would overshoot
+	 * more, an accurate number would not overshoot. It is based on the
+	 * stream frame header size. */
+	size_t accumulated_send = 0, overhead_allowed = 24;
+	size_t num_packets = 0, max_packets = 65535;
 	ngtcp2_path_storage_zero(&ps);
 	str = data->query_list_send->first;
+
+	if(data->cc_algo != NGTCP2_CC_ALGO_BBR &&
+		data->cc_algo != NGTCP2_CC_ALGO_BBR2) {
+		/* If we do not have a packet pacing congestion control
+		 * algorithm, limit the number of packets. */
+		max_packets = 10;
+	}
 
 	/* loop like this, because at the start, the send list is empty,
 	 * and we want to send handshake packets. But when there is a
@@ -1419,11 +1439,36 @@ write_streams(struct doq_client_data* data)
 			datav_count = 1;
 		}
 
+		/* Does the first data entry fit into the send quantum? */
+		if(accumulated_send == 0 && ((datav_count == 1 &&
+			datav[0].len+overhead_allowed > send_quantum) ||
+			(datav_count == 2 && datav[0].len+datav[1].len+
+			overhead_allowed > send_quantum))) {
+			/* congestion limited */
+			ngtcp2_conn_update_pkt_tx_time(data->conn, ts);
+			event_change_write(data, 0);
+			/* update the timer to wait until it is possible to
+			 * write again */
+			update_timer(data);
+			return 0;
+		}
 		flags = 0;
 		if(str && str->next != NULL) {
 			/* Coalesce more data from more streams into this
 			 * packet, if possible */
-			flags |= NGTCP2_WRITE_STREAM_FLAG_MORE;
+			/* There is more than one data entry in this send
+			 * quantum, does the next one fit in the quantum? */
+			size_t this_send, possible_next_send;
+			if(datav_count == 1)
+				this_send = datav[0].len;
+			else	this_send = datav[0].len + datav[1].len;
+			if(str->next->nwrite < 2)
+				possible_next_send = (2-str->next->nwrite) +
+					str->next->data_len;
+			else	possible_next_send = str->next->data_len;
+			if(accumulated_send + this_send + possible_next_send
+				+ overhead_allowed < send_quantum)
+				flags |= NGTCP2_WRITE_STREAM_FLAG_MORE;
 		}
 		if(fin) {
 			/* This is the final part of data for this stream */
@@ -1441,6 +1486,7 @@ write_streams(struct doq_client_data* data)
 					if(str->nwrite >= str->data_len+2)
 						query_write_is_done(data, str);
 					str = next;
+					accumulated_send += ndatalen;
 					continue;
 				}
 			}
@@ -1485,8 +1531,14 @@ write_streams(struct doq_client_data* data)
 			return 0;
 		}
 		/* continue */
+		if((size_t)ret >= send_quantum)
+			break;
+		send_quantum -= ret;
+		accumulated_send = 0;
 		str = next;
 		if(str == NULL)
+			break;
+		if(++num_packets == max_packets)
 			break;
 	}
 	ngtcp2_conn_update_pkt_tx_time(data->conn, ts);
