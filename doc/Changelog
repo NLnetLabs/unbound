@@ -1,3 +1,6 @@
+11 July 2022: Wouter
+	- Fix verbose EDE error printout.
+
 4 July 2022: George
 	- Fix bug introduced in 'improve val_sigcrypt.c::algo_needs_missing for
 	  one loop pass'.
@@ -5,7 +8,8 @@
 	  outbound tcp sockets.
 
 4 July 2022: Wouter
-	- Tag for 1.16.1rc1 release.
+	- Tag for 1.16.1rc1 release. This became 1.16.1 on 11 July 2022.
+	  The code repo continues with version 1.16.2 under development.
 
 3 July 2022: George
 	- Merge PR #671 from Petr Menšík: Disable ED25519 and ED448 in FIPS
