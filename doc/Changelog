@@ -1,3 +1,6 @@
+12 July 2022: Wouter
+	- Fix dname count in sldns parse type descriptor for SVCB and HTTPS.
+
 11 July 2022: Wouter
 	- Fix verbose EDE error printout.
 
