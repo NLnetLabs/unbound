@@ -1,3 +1,8 @@
+12 July 2022: George
+	- For windows crosscompile, fix setting the IPV6_MTU socket option
+	  equivalent (IPV6_USER_MTU); allows cross compiling with latest
+	  cross-compiler versions.
+
 12 July 2022: Wouter
 	- Fix dname count in sldns parse type descriptor for SVCB and HTTPS.
 
