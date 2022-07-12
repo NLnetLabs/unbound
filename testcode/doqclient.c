@@ -1381,7 +1381,8 @@ write_streams(struct doq_client_data* data)
 	 * and then it stops sending more bytes. With zero it would overshoot
 	 * more, an accurate number would not overshoot. It is based on the
 	 * stream frame header size. */
-	size_t accumulated_send = 0, overhead_allowed = 24;
+	size_t accumulated_send = 0, overhead_stream = 24, overhead_pkt = 60,
+		max_packet_size = 1200;
 	size_t num_packets = 0, max_packets = 65535;
 	ngtcp2_path_storage_zero(&ps);
 	str = data->query_list_send->first;
@@ -1440,10 +1441,18 @@ write_streams(struct doq_client_data* data)
 		}
 
 		/* Does the first data entry fit into the send quantum? */
+		/* Check if the data size sent, with a max of one full packet,
+		 * with added stream header and packet header is allowed
+		 * within the send quantum number of bytes. If not, it does
+		 * not fit, and wait. */
 		if(accumulated_send == 0 && ((datav_count == 1 &&
-			datav[0].len+overhead_allowed > send_quantum) ||
-			(datav_count == 2 && datav[0].len+datav[1].len+
-			overhead_allowed > send_quantum))) {
+			(datav[0].len>max_packet_size?max_packet_size:
+			datav[0].len)+overhead_stream+overhead_pkt >
+			send_quantum) ||
+			(datav_count == 2 &&
+			(datav[0].len+datav[1].len>max_packet_size?
+			max_packet_size:datav[0].len+datav[1].len)
+			+overhead_stream+overhead_pkt > send_quantum))) {
 			/* congestion limited */
 			ngtcp2_conn_update_pkt_tx_time(data->conn, ts);
 			event_change_write(data, 0);
@@ -1462,12 +1471,26 @@ write_streams(struct doq_client_data* data)
 			if(datav_count == 1)
 				this_send = datav[0].len;
 			else	this_send = datav[0].len + datav[1].len;
+			if(this_send > max_packet_size)
+				this_send = max_packet_size;
 			if(str->next->nwrite < 2)
 				possible_next_send = (2-str->next->nwrite) +
 					str->next->data_len;
 			else	possible_next_send = str->next->data_len;
+			if(possible_next_send > max_packet_size)
+				possible_next_send = max_packet_size;
+			/* Check if the data lengths that writev returned
+			 * with stream headers added up so far, in
+			 * accumulated_send, with added the data length
+			 * of this send, with a max of one full packet, and
+			 * the data length of the next possible send, with
+			 * a max of one full packet, with a stream header for
+			 * this_send and a stream header for the next possible
+			 * send and a packet header, fit in the send quantum
+			 * number of bytes. If so, ask to add more content
+			 * to the packet with the more flag. */
 			if(accumulated_send + this_send + possible_next_send
-				+ overhead_allowed < send_quantum)
+				+2*overhead_stream+ overhead_pkt < send_quantum)
 				flags |= NGTCP2_WRITE_STREAM_FLAG_MORE;
 		}
 		if(fin) {
@@ -1486,7 +1509,7 @@ write_streams(struct doq_client_data* data)
 					if(str->nwrite >= str->data_len+2)
 						query_write_is_done(data, str);
 					str = next;
-					accumulated_send += ndatalen;
+					accumulated_send += ndatalen + overhead_stream;
 					continue;
 				}
 			}
