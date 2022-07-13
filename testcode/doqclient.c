@@ -129,6 +129,12 @@ struct doq_client_data {
 	struct ngtcp2_pkt_info blocked_pkt_pi;
 	/** the congestion control algorithm */
 	ngtcp2_cc_algo cc_algo;
+	/** the transport parameters file, for early data transmission */
+	const char* transport_file;
+	/** the tls session file, for session resumption */
+	const char* session_file;
+	/** if early data is enabled for the connection */
+	int early_data_enabled;
 };
 
 /** the local client stream list, for appending streams to */
@@ -188,6 +194,8 @@ static void usage(char* argv[])
 	printf("-p		Port to connect to, default: %d\n",
 		UNBOUND_DNS_OVER_QUIC_PORT);
 	printf("-v 		verbose output\n");
+	printf("-x file		transport file, for read/write of transport parameters.\n\t\tIf it exists, it is used to send early data. It is then\n\t\twritten to contain the last used transport parameters.\n\t\tAlso -y must be enabled for early data to succeed.\n\t\tOn its own -x is not enough. Use both for 0RTT queries\n\t\tand responses.\n");
+	printf("-y file		session file, for read/write of TLS session. If it exists,\n\t\tit is used for TLS session resumption. It is then written\n\t\tto contain the last session used.\n\t\tOn its own, without also -x, resumes TLS session without 0RTT.\n");
 	printf("-h 		This help text\n");
 	exit(1);
 }
@@ -710,6 +718,42 @@ static int get_new_connection_id_cb(struct ngtcp2_conn* ATTR_UNUSED(conn),
 	return 0;
 }
 
+/** handle that early data is rejected */
+static void
+early_data_is_rejected(struct doq_client_data* data)
+{
+	int rv;
+	verbose(1, "early data was rejected by the server");
+	rv = ngtcp2_conn_early_data_rejected(data->conn);
+	if(rv != 0) {
+		log_err("ngtcp2_conn_early_data_rejected failed: %s",
+			ngtcp2_strerror(rv));
+		return;
+	}
+	/* move the streams back to the start state */
+	while(data->query_list_send->first) {
+		struct doq_client_stream* str = data->query_list_send->first;
+		/* move it back to the start list */
+		stream_list_move(str, data->query_list_send,
+			data->query_list_start);
+		str->has_stream = 0;
+		/* remove stream id */
+		str->stream_id = 0;
+		/* initialise other members, in case they are altered,
+		 * but unlikely, because early streams are rejected. */
+		str->nwrite = 0;
+		str->nread = 0;
+		str->answer_len = 0;
+		str->query_is_done = 0;
+		str->answer_is_complete = 0;
+		str->query_has_error = 0;
+		if(str->answer) {
+			sldns_buffer_free(str->answer);
+			str->answer = NULL;
+		}
+	}
+}
+
 /** the handshake completed callback from ngtcp2 */
 static int
 handshake_completed(ngtcp2_conn* ATTR_UNUSED(conn), void* user_data)
@@ -724,6 +768,29 @@ handshake_completed(ngtcp2_conn* ATTR_UNUSED(conn), void* user_data)
 		(int)ngtcp2_conn_get_streams_uni_left(data->conn));
 	verbose(1, "ngtcp2_conn_get_streams_bidi_left is %d",
 		(int)ngtcp2_conn_get_streams_bidi_left(data->conn));
+	verbose(1, "negotiated cipher name is %s",
+		SSL_get_cipher_name(data->ssl));
+	if(verbosity > 0) {
+		const unsigned char* alpn = NULL;
+		unsigned int alpnlen = 0;
+		char alpnstr[128];
+		SSL_get0_alpn_selected(data->ssl, &alpn, &alpnlen);
+		if(alpnlen > sizeof(alpnstr)-1)
+			alpnlen = sizeof(alpnstr)-1;
+		memmove(alpnstr, alpn, alpnlen);
+		alpnstr[alpnlen]=0;
+		verbose(1, "negotiated ALPN is %s", alpnstr);
+	}
+	/* The SSL_get_early_data_status call works after the handshake
+	 * completes. */
+	if(data->early_data_enabled) {
+		if(SSL_get_early_data_status(data->ssl) !=
+			SSL_EARLY_DATA_ACCEPTED) {
+			early_data_is_rejected(data);
+		} else {
+			verbose(1, "early data was accepted by the server");
+		}
+	}
 	return 0;
 }
 
@@ -911,6 +978,51 @@ static struct ngtcp2_conn* conn_client_setup(struct doq_client_data* data)
 	return conn;
 }
 
+/** write the transport file */
+static void
+transport_file_write(const char* file, struct ngtcp2_transport_params* params)
+{
+	FILE* out;
+	out = fopen(file, "w");
+	if(!out) {
+		perror(file);
+		return;
+	}
+	fprintf(out, "initial_max_streams_bidi=%u\n",
+		(unsigned)params->initial_max_streams_bidi);
+	fprintf(out, "initial_max_streams_uni=%u\n",
+		(unsigned)params->initial_max_streams_uni);
+	fprintf(out, "initial_max_stream_data_bidi_local=%u\n",
+		(unsigned)params->initial_max_stream_data_bidi_local);
+	fprintf(out, "initial_max_stream_data_bidi_remote=%u\n",
+		(unsigned)params->initial_max_stream_data_bidi_remote);
+	fprintf(out, "initial_max_stream_data_uni=%u\n",
+		(unsigned)params->initial_max_stream_data_uni);
+	fprintf(out, "initial_max_data=%u\n",
+		(unsigned)params->initial_max_data);
+	fprintf(out, "active_connection_id_limit=%u\n",
+		(unsigned)params->active_connection_id_limit);
+	fprintf(out, "max_datagram_frame_size=%u\n",
+		(unsigned)params->max_datagram_frame_size);
+	if(ferror(out)) {
+		verbose(1, "There was an error writing %s: %s",
+			file, strerror(errno));
+		fclose(out);
+		return;
+	}
+	fclose(out);
+}
+
+/** fetch and write the transport file */
+static void
+early_data_write_transport(struct doq_client_data* data)
+{
+	struct ngtcp2_transport_params params;
+	memset(&params, 0, sizeof(params));
+	ngtcp2_conn_get_remote_transport_params(data->conn, &params);
+	transport_file_write(data->transport_file, &params);
+}
+
 /** applicatation rx key callback, this is where the rx key is set,
  * and streams can be opened, like http3 unidirectional streams, like
  * the http3 control and http3 qpack encode and decoder streams. */
@@ -926,6 +1038,9 @@ application_rx_key_cb(struct doq_client_data* data)
 		(int)ngtcp2_conn_get_streams_uni_left(data->conn));
 	verbose(1, "ngtcp2_conn_get_streams_bidi_left is %d",
 		(int)ngtcp2_conn_get_streams_bidi_left(data->conn));
+	if(data->transport_file) {
+		early_data_write_transport(data);
+	}
 	return 1;
 }
 
@@ -999,6 +1114,27 @@ send_alert(SSL *ssl, enum ssl_encryption_level_t ATTR_UNUSED(level),
 		SSL_get_app_data(ssl);
 	data->tls_alert = alert;
 	return 1;
+}
+
+/** new session callback. We can write it to file for resumption later. */
+static int
+new_session_cb(SSL* ssl, SSL_SESSION* session)
+{
+	struct doq_client_data* data = (struct doq_client_data*)
+		SSL_get_app_data(ssl);
+	BIO *f;
+	verbose(1, "new session cb: the ssl session max_early_data_size is %u",
+		(unsigned)SSL_SESSION_get_max_early_data(session));
+	f = BIO_new_file(data->session_file, "w");
+	if(!f) {
+		log_err("Could not open %s: %s", data->session_file,
+			strerror(errno));
+		return 0;
+	}
+	PEM_write_bio_SSL_SESSION(f, session);
+	BIO_free(f);
+	verbose(1, "written tls session to %s", data->session_file);
+	return 0;
 }
 
 /** setup the TLS context */
@@ -1632,9 +1768,148 @@ doq_client_event_cb(int ATTR_UNUSED(fd), short bits, void* arg)
 	on_write(data);
 }
 
+/** read the TLS session from file */
+static int
+early_data_setup_session(struct doq_client_data* data)
+{
+	SSL_SESSION* session;
+	BIO* f = BIO_new_file(data->session_file, "r");
+	if(f == NULL) {
+		if(errno == ENOENT) {
+			verbose(1, "session file %s does not exist",
+				data->session_file);
+			return 0;
+		}
+		log_err("Could not read %s: %s", data->session_file,
+			strerror(errno));
+		return 0;
+	}
+	session = PEM_read_bio_SSL_SESSION(f, NULL, 0, NULL);
+	if(session == NULL) {
+		log_crypto_err("Could not read session file with PEM_read_bio_SSL_SESSION");
+		BIO_free(f);
+		return 0;
+	}
+	BIO_free(f);
+	if(!SSL_set_session(data->ssl, session)) {
+		log_crypto_err("Could not SSL_set_session");
+		SSL_SESSION_free(session);
+		return 0;
+	}
+	if(SSL_SESSION_get_max_early_data(session) == 0) {
+		log_err("TLS session early data is 0");
+		SSL_SESSION_free(session);
+		return 0;
+	}
+	SSL_set_quic_early_data_enabled(data->ssl, 1);
+	SSL_SESSION_free(session);
+	return 1;
+}
+
+/** parse one line from the transport file */
+static int
+transport_parse_line(struct ngtcp2_transport_params* params, char* line)
+{
+	if(strncmp(line, "initial_max_streams_bidi=", 25) == 0) {
+		params->initial_max_streams_bidi = atoi(line+25);
+		return 1;
+	}
+	if(strncmp(line, "initial_max_streams_uni=", 24) == 0) {
+		params->initial_max_streams_uni = atoi(line+24);
+		return 1;
+	}
+	if(strncmp(line, "initial_max_stream_data_bidi_local=", 35) == 0) {
+		params->initial_max_stream_data_bidi_local = atoi(line+35);
+		return 1;
+	}
+	if(strncmp(line, "initial_max_stream_data_bidi_remote=", 36) == 0) {
+		params->initial_max_stream_data_bidi_remote = atoi(line+36);
+		return 1;
+	}
+	if(strncmp(line, "initial_max_stream_data_uni=", 28) == 0) {
+		params->initial_max_stream_data_uni = atoi(line+28);
+		return 1;
+	}
+	if(strncmp(line, "initial_max_data=", 17) == 0) {
+		params->initial_max_data = atoi(line+17);
+		return 1;
+	}
+	if(strncmp(line, "active_connection_id_limit=", 27) == 0) {
+		params->active_connection_id_limit = atoi(line+27);
+		return 1;
+	}
+	if(strncmp(line, "max_datagram_frame_size=", 24) == 0) {
+		params->max_datagram_frame_size = atoi(line+24);
+		return 1;
+	}
+	return 0;
+}
+
+/** setup the early data transport file and read it */
+static int
+early_data_setup_transport(struct doq_client_data* data)
+{
+	FILE* in;
+	char buf[1024];
+	struct ngtcp2_transport_params params;
+	memset(&params, 0, sizeof(params));
+	in = fopen(data->transport_file, "r");
+	if(!in) {
+		if(errno == ENOENT) {
+			verbose(1, "transport file %s does not exist",
+				data->transport_file);
+			return 0;
+		}
+		perror(data->transport_file);
+		return 0;
+	}
+	while(!feof(in)) {
+		if(!fgets(buf, sizeof(buf), in)) {
+			log_err("%s: read failed: %s", data->transport_file,
+				strerror(errno));
+			fclose(in);
+			return 0;
+		}
+		if(!transport_parse_line(&params, buf)) {
+			log_err("%s: could not parse line '%s'",
+				data->transport_file, buf);
+			fclose(in);
+			return 0;
+		}
+	}
+	fclose(in);
+	ngtcp2_conn_set_early_remote_transport_params(data->conn, &params);
+	return 1;
+}
+
+/** setup for early data, read the transport file and session file */
+static void
+early_data_setup(struct doq_client_data* data)
+{
+	if(!early_data_setup_session(data)) {
+		verbose(1, "TLS session resumption failed, early data is disabled");
+		data->early_data_enabled = 0;
+		return;
+	}
+	if(!early_data_setup_transport(data)) {
+		verbose(1, "Transport parameters set failed, early data is disabled");
+		data->early_data_enabled = 0;
+		return;
+	}
+}
+
+/** start the early data transmission */
+static void
+early_data_start(struct doq_client_data* data)
+{
+	query_streams_start(data);
+	on_write(data);
+}
+
 /** create doq_client_data */
 static struct doq_client_data*
-create_doq_client_data(const char* svr, int port, struct ub_event_base* base)
+create_doq_client_data(const char* svr, int port, struct ub_event_base* base,
+	const char* transport_file, const char* session_file)
 {
 	struct doq_client_data* data;
 	data = calloc(sizeof(*data), 1);
@@ -1653,11 +1928,23 @@ create_doq_client_data(const char* svr, int port, struct ub_event_base* base)
 	data->fd = open_svr_udp(data);
 	get_local_addr(data);
 	data->conn = conn_client_setup(data);
+	data->transport_file = transport_file;
+	data->session_file = session_file;
+	if(data->transport_file && data->session_file)
+		data->early_data_enabled = 1;
 
 	generate_static_secret(data, 32);
 	data->ctx = ctx_client_setup();
+	if(data->session_file) {
+		SSL_CTX_set_session_cache_mode(data->ctx,
+			SSL_SESS_CACHE_CLIENT |
+			SSL_SESS_CACHE_NO_INTERNAL_STORE);
+		SSL_CTX_sess_set_new_cb(data->ctx, new_session_cb);
+	}
 	data->ssl = ssl_client_setup(data);
 	ngtcp2_conn_set_tls_native_handle(data->conn, data->ssl);
+	if(data->early_data_enabled)
+		early_data_setup(data);
 
 	data->ev = ub_event_new(base, data->fd, UB_EV_READ | UB_EV_WRITE |
 		UB_EV_PERSIST, doq_client_event_cb, data);
@@ -1775,7 +2062,8 @@ client_enter_queries(struct doq_client_data* data, char** qs, int count)
 }
 
 /** run the dohclient queries */
-static void run(const char* svr, int port, char** qs, int count)
+static void run(const char* svr, int port, char** qs, int count,
+	const char* transport_file, const char* session_file)
 {
 	time_t secs = 0;
 	struct timeval now;
@@ -1784,8 +2072,11 @@ static void run(const char* svr, int port, char** qs, int count)
 
 	/* setup */
 	base = create_event_base(&secs, &now);
-	data = create_doq_client_data(svr, port, base);
+	data = create_doq_client_data(svr, port, base, transport_file,
+		session_file);
 	client_enter_queries(data, qs, count);
+	if(data->early_data_enabled)
+		early_data_start(data);
 
 	/* run the queries */
 	ub_event_base_dispatch(base);
@@ -1805,7 +2096,8 @@ int main(int ATTR_UNUSED(argc), char** ATTR_UNUSED(argv))
 {
 	int c;
 	int port = UNBOUND_DNS_OVER_QUIC_PORT;
-	const char* svr = "127.0.0.1";
+	const char* svr = "127.0.0.1", *transport_file = NULL,
+		*session_file = NULL;
 #ifdef USE_WINSOCK
 	WSADATA wsa_data;
 	if(WSAStartup(MAKEWORD(2,2), &wsa_data) != 0) {
@@ -1816,7 +2108,7 @@ int main(int ATTR_UNUSED(argc), char** ATTR_UNUSED(argv))
 	checklock_start();
 	log_init(0, 0, 0);
 
-	while((c=getopt(argc, argv, "hp:s:v")) != -1) {
+	while((c=getopt(argc, argv, "hp:s:vx:y:")) != -1) {
 		switch(c) {
 			case 'p':
 				if(atoi(optarg)==0 && strcmp(optarg,"0")!=0) {
@@ -1831,6 +2123,12 @@ int main(int ATTR_UNUSED(argc), char** ATTR_UNUSED(argv))
 				break;
 			case 'v':
 				verbosity++;
+				break;
+			case 'x':
+				transport_file = optarg;
+				break;
+			case 'y':
+				session_file = optarg;
 				break;
 			case 'h':
 			case '?':
@@ -1851,7 +2149,7 @@ int main(int ATTR_UNUSED(argc), char** ATTR_UNUSED(argv))
 		return 1;
 	}
 
-	run(svr, port, argv, argc);
+	run(svr, port, argv, argc, transport_file, session_file);
 
 	checklock_stop();
 #ifdef USE_WINSOCK
