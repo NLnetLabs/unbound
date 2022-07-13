@@ -1476,7 +1476,8 @@ write_streams(struct doq_client_data* data)
 			if(str->next->nwrite < 2)
 				possible_next_send = (2-str->next->nwrite) +
 					str->next->data_len;
-			else	possible_next_send = str->next->data_len;
+			else	possible_next_send = str->next->data_len -
+					(str->next->nwrite - 2);
 			if(possible_next_send > max_packet_size)
 				possible_next_send = max_packet_size;
 			/* Check if the data lengths that writev returned
