@@ -878,6 +878,7 @@ listen_create(struct comm_base* base, struct listen_port* ATTR_UNUSED(ports),
 	int ATTR_UNUSED(http_notls),
 	struct tcl_list* ATTR_UNUSED(tcp_conn_limit),
 	void* ATTR_UNUSED(sslctx), struct dt_env* ATTR_UNUSED(dtenv),
+	struct ub_randstate* ATTR_UNUSED(rnd),
 	comm_point_callback_type* cb, void *cb_arg)
 {
 	struct replay_runtime* runtime = (struct replay_runtime*)base;

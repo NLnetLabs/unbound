@@ -1395,8 +1395,8 @@ listen_create(struct comm_base* base, struct listen_port* ports,
 	size_t bufsize, int tcp_accept_count, int tcp_idle_timeout,
 	int harden_large_queries, uint32_t http_max_streams,
 	char* http_endpoint, int http_notls, struct tcl_list* tcp_conn_limit,
-	void* sslctx, struct dt_env* dtenv, comm_point_callback_type* cb,
-	void *cb_arg)
+	void* sslctx, struct dt_env* dtenv, struct ub_randstate* rnd,
+	comm_point_callback_type* cb, void *cb_arg)
 {
 	struct listen_dnsport* front = (struct listen_dnsport*)
 		malloc(sizeof(struct listen_dnsport));
@@ -1426,7 +1426,8 @@ listen_create(struct comm_base* base, struct listen_port* ports,
 				"over QUIC.");
 #endif
 			cp = comm_point_create_doq(base, ports->fd,
-				front->udp_buff, cb, cb_arg, ports->socket);
+				front->udp_buff, cb, cb_arg, ports->socket,
+				rnd);
 		} else if(ports->ftype == listen_type_tcp ||
 				ports->ftype == listen_type_tcp_dnscrypt) {
 			cp = comm_point_create_tcp(base, ports->fd,

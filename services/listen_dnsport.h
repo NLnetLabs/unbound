@@ -182,6 +182,7 @@ int resolve_interface_names(char** ifs, int num_ifs,
  * @param tcp_conn_limit: TCP connection limit info.
  * @param sslctx: nonNULL if ssl context.
  * @param dtenv: nonNULL if dnstap enabled.
+ * @param rnd: random state.
  * @param cb: callback function when a request arrives. It is passed
  *	  the packet and user argument. Return true to send a reply.
  * @param cb_arg: user data argument for callback function.
@@ -192,8 +193,8 @@ listen_create(struct comm_base* base, struct listen_port* ports,
 	size_t bufsize, int tcp_accept_count, int tcp_idle_timeout,
 	int harden_large_queries, uint32_t http_max_streams,
 	char* http_endpoint, int http_notls, struct tcl_list* tcp_conn_limit,
-	void* sslctx, struct dt_env* dtenv, comm_point_callback_type* cb,
-	void *cb_arg);
+	void* sslctx, struct dt_env* dtenv, struct ub_randstate* rnd,
+	comm_point_callback_type* cb, void *cb_arg);
 
 /**
  * delete the listening structure

@@ -51,6 +51,7 @@
 #include "dnstap/dnstap.h"
 #include "dnscrypt/dnscrypt.h"
 #include "services/listen_dnsport.h"
+#include "util/random.h"
 #ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h>
 #endif
@@ -802,6 +803,124 @@ comm_point_udp_callback(int fd, short event, void* arg)
 }
 
 #ifdef HAVE_NGTCP2
+/** set the ecn on the transmission */
+static void
+doq_set_ecn(int fd, int family, uint32_t ecn)
+{
+	unsigned int val = ecn;
+	if(family == AF_INET6) {
+		if(setsockopt(fd, IPPROTO_IPV6, IPV6_TCLASS, &val,
+			(socklen_t)sizeof(val)) == -1) {
+			log_err("setsockopt(.. IPV6_TCLASS ..): %s",
+				strerror(errno));
+		}
+		return;
+	}
+	if(setsockopt(fd, IPPROTO_IP, IP_TOS, &val,
+		(socklen_t)sizeof(val)) == -1) {
+		log_err("setsockopt(.. IP_TOS ..): %s",
+			strerror(errno));
+	}
+}
+
+/** set the local address in the control ancillary data */
+static void
+doq_set_localaddr_cmsg(struct msghdr* msg, size_t control_size,
+	struct sockaddr_storage* localaddr, socklen_t localaddrlen,
+	int ifindex)
+{
+#ifndef S_SPLINT_S
+	struct cmsghdr* cmsg;
+#endif /* S_SPLINT_S */
+#ifndef S_SPLINT_S
+	cmsg = CMSG_FIRSTHDR(msg);
+	if(localaddr->ss_family == AF_INET) {
+#ifdef IP_PKTINFO
+		struct sockaddr_in* sa = (struct sockaddr_in*)localaddr;
+		struct in_pktinfo v4info;
+		log_assert(localaddrlen >= sizeof(struct sockaddr_in));
+		msg->msg_controllen = CMSG_SPACE(sizeof(struct in_pktinfo));
+		log_assert(msg->msg_controllen <= control_size);
+		cmsg->cmsg_level = IPPROTO_IP;
+		cmsg->cmsg_type = IP_PKTINFO;
+		memmove(&v4info.ipi_addr, &sa->sin_addr,
+			sizeof(struct in_addr));
+		v4info.ipi_ifindex = ifindex;
+		memmove(CMSG_DATA(cmsg), &v4info, sizeof(struct in_pktinfo));
+		cmsg->cmsg_len = CMSG_LEN(sizeof(struct in_pktinfo));
+#elif defined(IP_SENDSRCADDR)
+		struct sockaddr_in* sa= (struct sockaddr_in*)localaddr;
+		log_assert(localaddrlen >= sizeof(struct sockaddr_in));
+		msg->msg_controllen = CMSG_SPACE(sizeof(struct in_addr));
+		log_assert(msg->msg_controllen <= control_size);
+		cmsg->cmsg_level = IPPROTO_IP;
+		cmsg->cmsg_type = IP_SENDSRCADDR;
+		memmove(CMSG_DATA(cmsg),  &sa->sin_addr,
+			sizeof(struct in_addr));
+		cmsg->cmsg_len = CMSG_LEN(sizeof(struct in_addr));
+#endif
+	} else {
+		struct sockaddr_in6* sa6 = (struct sockaddr_in6*)localaddr;
+		struct in6_pktinfo v6info;
+		log_assert(localaddrlen >= sizeof(struct sockaddr_in6));
+		msg->msg_controllen = CMSG_SPACE(sizeof(struct in6_pktinfo));
+		log_assert(msg->msg_controllen <= control_size);
+		cmsg->cmsg_level = IPPROTO_IPV6;
+		cmsg->cmsg_type = IPV6_PKTINFO;
+		memmove(&v6info.ipi6_addr, &sa6->sin6_addr,
+			sizeof(struct in6_addr));
+		v6info.ipi6_ifindex = ifindex;
+		memmove(CMSG_DATA(cmsg), &v6info, sizeof(struct in6_pktinfo));
+		cmsg->cmsg_len = CMSG_LEN(sizeof(struct in6_pktinfo));
+	}
+#endif /* S_SPLINT_S */
+	/* Ignore unused variables, if no assertions are compiled. */
+	(void)localaddrlen;
+	(void)control_size;
+}
+
+/** send doq packet over UDP. */
+static void
+doq_send(struct comm_point* c, struct sockaddr_storage* addr,
+	socklen_t addrlen, struct sockaddr_storage* localaddr,
+	socklen_t localaddrlen, int ifindex, uint32_t ecn)
+{
+	struct msghdr msg;
+	struct iovec iov[1];
+	union {
+		struct cmsghdr hdr;
+		char buf[256];
+	} control;
+	ssize_t ret;
+	iov[0].iov_base = sldns_buffer_begin(c->buffer);
+	iov[0].iov_len = sldns_buffer_limit(c->buffer);
+	memset(&msg, 0, sizeof(msg));
+	msg.msg_name = (void*)addr;
+	msg.msg_namelen = addrlen;
+	msg.msg_iov = iov;
+	msg.msg_iovlen = 1;
+	msg.msg_control = control.buf;
+#ifndef S_SPLINT_S
+	msg.msg_controllen = sizeof(control.buf);
+#endif /* S_SPLINT_S */
+	msg.msg_flags = 0;
+
+	doq_set_localaddr_cmsg(&msg, sizeof(control.buf), localaddr,
+		localaddrlen, ifindex);
+	doq_set_ecn(c->fd, addr->ss_family, ecn);
+
+	for(;;) {
+		ret = sendmsg(c->fd, &msg, 0);
+		if(ret == -1 && errno == EINTR)
+			continue;
+		break;
+	}
+	if(ret == -1) {
+		log_err("doq sendmsg: %s", strerror(errno));
+		return;
+	}
+}
+
 /** fetch port number */
 static int
 doq_sockaddr_get_port(struct sockaddr_storage* addr)
@@ -946,28 +1065,71 @@ doq_recv(struct comm_point* c, struct sockaddr_storage* addr,
 	return 1;
 }
 
+/** send the version negotiation for doq. */
+static void
+doq_send_version_negotiation(struct comm_point* c,
+	struct sockaddr_storage* addr, socklen_t addrlen,
+	struct sockaddr_storage* localaddr, socklen_t localaddrlen,
+	int ifindex, const uint8_t* dcid, size_t dcidlen,
+	const uint8_t* scid, size_t scidlen)
+{
+	uint32_t versions[2];
+	size_t versions_len = 0;
+	ngtcp2_ssize ret;
+	uint8_t unused_random;
+	/* fill the array with supported versions */
+	versions[0] = NGTCP2_PROTO_VER_V1;
+	versions_len = 1;
+	unused_random = ub_random_max(c->doq_c->rnd, 256);
+	sldns_buffer_clear(c->buffer);
+	ret = ngtcp2_pkt_write_version_negotiation(
+		sldns_buffer_begin(c->buffer),
+		sldns_buffer_capacity(c->buffer), unused_random,
+		dcid, dcidlen, scid, scidlen, versions, versions_len);
+	if(ret < 0) {
+		log_err("ngtcp2_pkt_write_version_negotiation failed: %s",
+			ngtcp2_strerror(ret));
+		return;
+	}
+	sldns_buffer_set_position(c->buffer, ret);
+	sldns_buffer_flip(c->buffer);
+	doq_send(c, addr, addrlen, localaddr, localaddrlen, ifindex, 0);
+}
+
 /** decode doq packet header, false on handled or failure, true to continue
  * to process the packet */
 static int
-doq_decode_pkt_header_negotiate(struct comm_point* c)
+doq_decode_pkt_header_negotiate(struct comm_point* c,
+	struct sockaddr_storage* addr, socklen_t addrlen,
+	struct sockaddr_storage* localaddr, socklen_t localaddrlen,
+	int ifindex)
 {
 	uint32_t version;
 	const uint8_t *dcid, *scid;
 	size_t dcidlen, scidlen;
 	int rv;
-	int sv_scidlen = 18; /* server scid length */
+	int sv_scidlen = 16; /* server scid length */
 	rv = ngtcp2_pkt_decode_version_cid(&version, &dcid, &dcidlen,
 		&scid, &scidlen, sldns_buffer_begin(c->buffer),
 		sldns_buffer_limit(c->buffer), sv_scidlen);
 	if(rv != 0) {
 		if(rv == NGTCP2_ERR_VERSION_NEGOTIATION) {
 			/* send the version negotiation */
+			doq_send_version_negotiation(c, addr, addrlen,
+				localaddr, localaddrlen, ifindex, dcid,
+				dcidlen, scid, scidlen);
 			return 0;
 		}
 		verbose(VERB_ALGO, "doq: could not decode version "
 			"and CID from QUIC packet header: %s",
 			ngtcp2_strerror(rv));
 		return 0;
+	}
+	if(verbosity >= VERB_ALGO) {
+		verbose(VERB_ALGO, "ngtcp2_pkt_decode_version_cid packet has "
+			"QUIC protocol version %u", (unsigned)version);
+		log_hex("dcid", (void*)dcid, dcidlen);
+		log_hex("scid", (void*)scid, scidlen);
 	}
 	return 1;
 }
@@ -1013,16 +1175,41 @@ comm_point_doq_callback(int fd, short event, void* arg)
 				remotestr, doq_sockaddr_get_port(&addr),
 				localstr, doq_sockaddr_get_port(&localaddr),
 				ifindex);
+			log_info("doq_recv length %d",
+				(int)sldns_buffer_limit(c->buffer));
 		}
 
 		if(sldns_buffer_limit(c->buffer) == 0) {
 			continue;
 		}
 
-		if(!doq_decode_pkt_header_negotiate(c)) {
+		if(!doq_decode_pkt_header_negotiate(c, &addr, addrlen,
+			&localaddr, localaddrlen, ifindex)) {
 			continue;
 		}
 	}
+}
+
+/** create new doq connection structure */
+static struct doq_connection*
+doq_connection_create(struct ub_randstate* rnd)
+{
+	struct doq_connection* doq_c;
+	doq_c = calloc(1, sizeof(*doq_c));
+	if(!doq_c) {
+		return NULL;
+	}
+	doq_c->rnd = rnd;
+	return doq_c;
+}
+
+/** delete doq connection structure */
+static void
+doq_connection_delete(struct doq_connection* doq_c)
+{
+	if(!doq_c)
+		return;
+	free(doq_c);
 }
 #endif /* HAVE_NGTCP2 */
 
@@ -3631,7 +3818,8 @@ comm_point_create_udp_ancil(struct comm_base *base, int fd,
 
 struct comm_point*
 comm_point_create_doq(struct comm_base *base, int fd, sldns_buffer* buffer,
-	comm_point_callback_type* callback, void* callback_arg, struct unbound_socket* socket)
+	comm_point_callback_type* callback, void* callback_arg,
+	struct unbound_socket* socket, struct ub_randstate* rnd)
 {
 #ifdef HAVE_NGTCP2
 	struct comm_point* c = (struct comm_point*)calloc(1,
@@ -3667,6 +3855,9 @@ comm_point_create_doq(struct comm_base *base, int fd, sldns_buffer* buffer,
 #ifdef USE_DNSCRYPT
 	c->dnscrypt = 0;
 	c->dnscrypt_buffer = NULL;
+#endif
+#ifdef HAVE_NGTCP2
+	c->doq_c = doq_connection_create(rnd);
 #endif
 	c->inuse = 0;
 	c->callback = callback;
@@ -4348,6 +4539,10 @@ comm_point_delete(struct comm_point* c)
 			http2_session_delete(c->h2_session);
 		}
 	}
+#ifdef HAVE_NGTCP2
+	if(c->doq_c)
+		doq_connection_delete(c->doq_c);
+#endif
 	ub_event_free(c->ev->ev);
 	free(c->ev);
 	free(c);

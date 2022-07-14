@@ -71,6 +71,8 @@ struct comm_reply;
 struct tcl_list;
 struct ub_event_base;
 struct unbound_socket;
+struct doq_connection;
+struct ub_randstate;
 
 struct mesh_state;
 struct mesh_area;
@@ -253,6 +255,10 @@ struct comm_point {
 	/** maximum number of HTTP/2 streams per connection. Send in HTTP/2
 	 * SETTINGS frame. */
 	uint32_t http2_max_streams;
+	/* -------- DoQ ------- */
+#ifdef HAVE_NGTCP2
+	struct doq_connection* doq_c;
+#endif
 
 	/* -------- dnstap ------- */
 	/** the dnstap environment */
@@ -532,12 +538,14 @@ struct comm_point* comm_point_create_udp_ancil(struct comm_base* base,
  * @param callback: callback function pointer.
  * @param callback_arg: will be passed to your callback function.
  * @param socket: and opened socket properties will be passed to your callback function.
+ * @param rnd: random generator to use.
  * @return: returns the allocated communication point. NULL on error.
  * Sets timeout to NULL. Turns off TCP options.
  */
 struct comm_point* comm_point_create_doq(struct comm_base* base,
 	int fd, struct sldns_buffer* buffer,
-	comm_point_callback_type* callback, void* callback_arg, struct unbound_socket* socket);
+	comm_point_callback_type* callback, void* callback_arg,
+	struct unbound_socket* socket, struct ub_randstate* rnd);
 
 /**
  * Create a TCP listener comm point. Calls malloc.
@@ -950,6 +958,14 @@ void http2_session_add_stream(struct http2_session* h2_session,
  */
 void http2_stream_add_meshstate(struct http2_stream* h2_stream,
 	struct mesh_area* mesh, struct mesh_state* m);
+
+/**
+ * The DoQ connection information, for DNS over QUIC.
+ */
+struct doq_connection {
+	/** random generator */
+	struct ub_randstate* rnd;
+};
 
 /**
  * This routine is published for checks and tests, and is only used internally.
