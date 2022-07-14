@@ -965,6 +965,12 @@ void http2_stream_add_meshstate(struct http2_stream* h2_stream,
 struct doq_connection {
 	/** random generator */
 	struct ub_randstate* rnd;
+	/** the server scid length */
+	int sv_scidlen;
+	/** the static secret for the server */
+	uint8_t* static_secret;
+	/** length of the static secret */
+	size_t static_secret_len;
 };
 
 /**

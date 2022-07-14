@@ -71,6 +71,7 @@
 
 #ifdef HAVE_NGTCP2
 #include <ngtcp2/ngtcp2.h>
+#include <ngtcp2/ngtcp2_crypto.h>
 #endif
 
 /* -------- Start of local definitions -------- */
@@ -1108,10 +1109,9 @@ doq_decode_pkt_header_negotiate(struct comm_point* c,
 	const uint8_t *dcid, *scid;
 	size_t dcidlen, scidlen;
 	int rv;
-	int sv_scidlen = 16; /* server scid length */
 	rv = ngtcp2_pkt_decode_version_cid(&version, &dcid, &dcidlen,
 		&scid, &scidlen, sldns_buffer_begin(c->buffer),
-		sldns_buffer_limit(c->buffer), sv_scidlen);
+		sldns_buffer_limit(c->buffer), c->doq_c->sv_scidlen);
 	if(rv != 0) {
 		if(rv == NGTCP2_ERR_VERSION_NEGOTIATION) {
 			/* send the version negotiation */
@@ -1130,6 +1130,141 @@ doq_decode_pkt_header_negotiate(struct comm_point* c,
 			"QUIC protocol version %u", (unsigned)version);
 		log_hex("dcid", (void*)dcid, dcidlen);
 		log_hex("scid", (void*)scid, scidlen);
+	}
+	return 1;
+}
+
+/** fill a buffer with random data */
+static void doq_fill_rand(struct ub_randstate* rnd, uint8_t* buf, size_t len)
+{
+	size_t i;
+	for(i=0; i<len; i++)
+		buf[i] = ub_random(rnd)&0xff;
+}
+
+/** fill cid structure with random data */
+static void doq_cid_randfill(struct ngtcp2_cid* cid, size_t datalen,
+	struct ub_randstate* rnd)
+{
+	uint8_t buf[32];
+	if(datalen > sizeof(buf))
+		datalen = sizeof(buf);
+	doq_fill_rand(rnd, buf, datalen);
+	ngtcp2_cid_init(cid, buf, datalen);
+}
+
+/** get a timestamp in nanoseconds */
+static ngtcp2_tstamp doq_get_timestamp_nanosec(void)
+{
+	struct timespec tp;
+	memset(&tp, 0, sizeof(tp));
+	if(clock_gettime(CLOCK_MONOTONIC, &tp) == -1) {
+		if(clock_gettime(CLOCK_REALTIME, &tp) == -1) {
+			log_err("clock_gettime failed: %s", strerror(errno));
+		}
+	}
+	return ((uint64_t)tp.tv_sec)*((uint64_t)1000000000) +
+		((uint64_t)tp.tv_nsec);
+}
+
+/** write address and port into strings */
+static int
+doq_print_addr_port(struct sockaddr_storage* addr, socklen_t addrlen,
+	char* host, size_t hostlen, char* port, size_t portlen)
+{
+	if(addr->ss_family == AF_INET) {
+		struct sockaddr_in* sa = (struct sockaddr_in*)addr;
+		log_assert(addrlen >= sizeof(*sa));
+		if(inet_ntop(sa->sin_family, &sa->sin_addr, host,
+			(socklen_t)hostlen) == 0) {
+			log_err("doq_send_retry failed: inet_ntop error");
+			log_hex("inet ntop address", &sa->sin_addr,
+				sizeof(sa->sin_addr));
+			return 0;
+		}
+		snprintf(port, portlen, "%u", (unsigned)ntohs(sa->sin_port));
+	} else if(addr->ss_family == AF_INET6) {
+		struct sockaddr_in6* sa6 = (struct sockaddr_in6*)addr;
+		log_assert(addrlen >= sizeof(*sa6));
+		if(inet_ntop(sa6->sin6_family, &sa6->sin6_addr, host,
+			(socklen_t)hostlen) == 0) {
+			log_err("doq_send_retry failed: inet_ntop error");
+			log_hex("inet ntop address", &sa6->sin6_addr,
+				sizeof(sa6->sin6_addr));
+			return 0;
+		}
+		snprintf(port, portlen, "%u", (unsigned)ntohs(sa6->sin6_port));
+	}
+	return 1;
+}
+
+/** send retry packet for doq connection. */
+static void
+doq_send_retry(struct comm_point* c, struct sockaddr_storage* addr,
+	socklen_t addrlen, struct sockaddr_storage* localaddr,
+	socklen_t localaddrlen, int ifindex, struct ngtcp2_pkt_hd* hd)
+{
+	char host[256], port[32];
+	struct ngtcp2_cid scid;
+	uint8_t token[NGTCP2_CRYPTO_MAX_RETRY_TOKENLEN];
+	ngtcp2_tstamp ts;
+	ngtcp2_ssize tokenlen, ret;
+
+	if(!doq_print_addr_port(addr, addrlen, host, sizeof(host), port,
+		sizeof(port))) {
+		return;
+	}
+	verbose(1, "doq: sending retry packet to %s %p", host, port);
+
+	/* the server chosen source connection ID */
+	scid.datalen = c->doq_c->sv_scidlen;
+	doq_cid_randfill(&scid, scid.datalen, c->doq_c->rnd);
+
+	ts = doq_get_timestamp_nanosec();
+
+	tokenlen = ngtcp2_crypto_generate_retry_token(token,
+		c->doq_c->static_secret, c->doq_c->static_secret_len,
+		hd->version, (void*)addr, addrlen, &scid, &hd->dcid, ts);
+	if(tokenlen < 0) {
+		log_err("ngtcp2_crypto_generate_retry_token failed: %s",
+			ngtcp2_strerror(tokenlen));
+		return;
+	}
+
+	sldns_buffer_clear(c->buffer);
+	ret = ngtcp2_crypto_write_retry(sldns_buffer_begin(c->buffer),
+		sldns_buffer_capacity(c->buffer), hd->version,
+		&hd->scid, &scid, &hd->dcid, token, tokenlen);
+	if(ret < 0) {
+		log_err("ngtcp2_crypto_write_retry failed: %s",
+			ngtcp2_strerror(ret));
+		return;
+	}
+	sldns_buffer_set_position(c->buffer, ret);
+	sldns_buffer_flip(c->buffer);
+	doq_send(c, addr, addrlen, localaddr, localaddrlen, ifindex, 0);
+}
+
+/** the doq accept, returns false if no further processing of content */
+static int
+doq_accept(struct comm_point* c, struct sockaddr_storage* addr,
+	socklen_t addrlen, struct sockaddr_storage* localaddr,
+	socklen_t localaddrlen, int ifindex)
+{
+	int rv;
+	struct ngtcp2_pkt_hd hd;
+	memset(&hd, 0, sizeof(hd));
+	rv = ngtcp2_accept(&hd, sldns_buffer_begin(c->buffer),
+		sldns_buffer_limit(c->buffer));
+	if(rv != 0) {
+		if(rv == NGTCP2_ERR_RETRY) {
+			doq_send_retry(c, addr, addrlen, localaddr,
+				localaddrlen, ifindex, &hd);
+			return 0;
+		}
+		log_err("doq: initial packet failed, ngtcp2_accept failed: %s",
+			ngtcp2_strerror(rv));
+		return 0;
 	}
 	return 1;
 }
@@ -1187,6 +1322,10 @@ comm_point_doq_callback(int fd, short event, void* arg)
 			&localaddr, localaddrlen, ifindex)) {
 			continue;
 		}
+		if(!doq_accept(c, &addr, addrlen, &localaddr, localaddrlen,
+			ifindex)) {
+			continue;
+		}
 	}
 }
 
@@ -1200,6 +1339,14 @@ doq_connection_create(struct ub_randstate* rnd)
 		return NULL;
 	}
 	doq_c->rnd = rnd;
+	doq_c->sv_scidlen = 16;
+	doq_c->static_secret_len = 16;
+	doq_c->static_secret = malloc(doq_c->static_secret_len);
+	if(!doq_c->static_secret) {
+		free(doq_c);
+		return NULL;
+	}
+	doq_fill_rand(rnd, doq_c->static_secret, doq_c->static_secret_len);
 	return doq_c;
 }
 
@@ -1209,6 +1356,7 @@ doq_connection_delete(struct doq_connection* doq_c)
 {
 	if(!doq_c)
 		return;
+	free(doq_c->static_secret);
 	free(doq_c);
 }
 #endif /* HAVE_NGTCP2 */
