@@ -71,7 +71,7 @@ struct comm_reply;
 struct tcl_list;
 struct ub_event_base;
 struct unbound_socket;
-struct doq_connection;
+struct doq_server_socket;
 struct ub_randstate;
 
 struct mesh_state;
@@ -257,7 +257,8 @@ struct comm_point {
 	uint32_t http2_max_streams;
 	/* -------- DoQ ------- */
 #ifdef HAVE_NGTCP2
-	struct doq_connection* doq_c;
+	/** the doq server socket, with list of doq connections */
+	struct doq_server_socket* doq_socket;
 #endif
 
 	/* -------- dnstap ------- */
@@ -960,9 +961,9 @@ void http2_stream_add_meshstate(struct http2_stream* h2_stream,
 	struct mesh_area* mesh, struct mesh_state* m);
 
 /**
- * The DoQ connection information, for DNS over QUIC.
+ * The DoQ server socket information, for DNS over QUIC.
  */
-struct doq_connection {
+struct doq_server_socket {
 	/** random generator */
 	struct ub_randstate* rnd;
 	/** the server scid length */

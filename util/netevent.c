@@ -1081,7 +1081,7 @@ doq_send_version_negotiation(struct comm_point* c,
 	/* fill the array with supported versions */
 	versions[0] = NGTCP2_PROTO_VER_V1;
 	versions_len = 1;
-	unused_random = ub_random_max(c->doq_c->rnd, 256);
+	unused_random = ub_random_max(c->doq_socket->rnd, 256);
 	sldns_buffer_clear(c->buffer);
 	ret = ngtcp2_pkt_write_version_negotiation(
 		sldns_buffer_begin(c->buffer),
@@ -1111,7 +1111,7 @@ doq_decode_pkt_header_negotiate(struct comm_point* c,
 	int rv;
 	rv = ngtcp2_pkt_decode_version_cid(&version, &dcid, &dcidlen,
 		&scid, &scidlen, sldns_buffer_begin(c->buffer),
-		sldns_buffer_limit(c->buffer), c->doq_c->sv_scidlen);
+		sldns_buffer_limit(c->buffer), c->doq_socket->sv_scidlen);
 	if(rv != 0) {
 		if(rv == NGTCP2_ERR_VERSION_NEGOTIATION) {
 			/* send the version negotiation */
@@ -1217,13 +1217,13 @@ doq_send_retry(struct comm_point* c, struct sockaddr_storage* addr,
 	verbose(1, "doq: sending retry packet to %s %p", host, port);
 
 	/* the server chosen source connection ID */
-	scid.datalen = c->doq_c->sv_scidlen;
-	doq_cid_randfill(&scid, scid.datalen, c->doq_c->rnd);
+	scid.datalen = c->doq_socket->sv_scidlen;
+	doq_cid_randfill(&scid, scid.datalen, c->doq_socket->rnd);
 
 	ts = doq_get_timestamp_nanosec();
 
 	tokenlen = ngtcp2_crypto_generate_retry_token(token,
-		c->doq_c->static_secret, c->doq_c->static_secret_len,
+		c->doq_socket->static_secret, c->doq_socket->static_secret_len,
 		hd->version, (void*)addr, addrlen, &scid, &hd->dcid, ts);
 	if(tokenlen < 0) {
 		log_err("ngtcp2_crypto_generate_retry_token failed: %s",
@@ -1329,35 +1329,35 @@ comm_point_doq_callback(int fd, short event, void* arg)
 	}
 }
 
-/** create new doq connection structure */
-static struct doq_connection*
-doq_connection_create(struct ub_randstate* rnd)
+/** create new doq server socket structure */
+static struct doq_server_socket*
+doq_server_socket_create(struct ub_randstate* rnd)
 {
-	struct doq_connection* doq_c;
-	doq_c = calloc(1, sizeof(*doq_c));
-	if(!doq_c) {
+	struct doq_server_socket* doq_socket;
+	doq_socket = calloc(1, sizeof(*doq_socket));
+	if(!doq_socket) {
 		return NULL;
 	}
-	doq_c->rnd = rnd;
-	doq_c->sv_scidlen = 16;
-	doq_c->static_secret_len = 16;
-	doq_c->static_secret = malloc(doq_c->static_secret_len);
-	if(!doq_c->static_secret) {
-		free(doq_c);
+	doq_socket->rnd = rnd;
+	doq_socket->sv_scidlen = 16;
+	doq_socket->static_secret_len = 16;
+	doq_socket->static_secret = malloc(doq_socket->static_secret_len);
+	if(!doq_socket->static_secret) {
+		free(doq_socket);
 		return NULL;
 	}
-	doq_fill_rand(rnd, doq_c->static_secret, doq_c->static_secret_len);
-	return doq_c;
+	doq_fill_rand(rnd, doq_socket->static_secret, doq_socket->static_secret_len);
+	return doq_socket;
 }
 
-/** delete doq connection structure */
+/** delete doq server socket structure */
 static void
-doq_connection_delete(struct doq_connection* doq_c)
+doq_server_socket_delete(struct doq_server_socket* doq_socket)
 {
-	if(!doq_c)
+	if(!doq_socket)
 		return;
-	free(doq_c->static_secret);
-	free(doq_c);
+	free(doq_socket->static_secret);
+	free(doq_socket);
 }
 #endif /* HAVE_NGTCP2 */
 
@@ -4005,7 +4005,7 @@ comm_point_create_doq(struct comm_base *base, int fd, sldns_buffer* buffer,
 	c->dnscrypt_buffer = NULL;
 #endif
 #ifdef HAVE_NGTCP2
-	c->doq_c = doq_connection_create(rnd);
+	c->doq_socket = doq_server_socket_create(rnd);
 #endif
 	c->inuse = 0;
 	c->callback = callback;
@@ -4688,8 +4688,8 @@ comm_point_delete(struct comm_point* c)
 		}
 	}
 #ifdef HAVE_NGTCP2
-	if(c->doq_c)
-		doq_connection_delete(c->doq_c);
+	if(c->doq_socket)
+		doq_server_socket_delete(c->doq_socket);
 #endif
 	ub_event_free(c->ev->ev);
 	free(c->ev);

@@ -448,6 +448,20 @@ int http2_submit_dns_response(struct http2_session* h2_session);
 int http2_submit_dns_response(void* v);
 #endif /* HAVE_NGHTTP2 */
 
+/**
+ * DoQ connection, for DNS over QUIC. One connection to a remote endpoint
+ * with a number of streams in it. Every stream is like a tcp stream with
+ * a uint16_t length, query read, and a uint16_t length and answer written.
+ */
+struct doq_conn {
+};
+
+/**
+ * DoQ stream, for DNS over QUIC.
+ */
+struct doq_stream {
+};
+
 char* set_ip_dscp(int socket, int addrfamily, int ds);
 
 /** for debug and profiling purposes only
