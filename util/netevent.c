@@ -1097,13 +1097,37 @@ doq_send_version_negotiation(struct comm_point* c,
 	doq_send(c, addr, addrlen, localaddr, localaddrlen, ifindex, 0);
 }
 
+/** Find the doq_conn object by remote address and dcid */
+static struct doq_conn*
+doq_conn_find(struct doq_server_socket* doq_socket,
+	struct sockaddr_storage* addr, socklen_t addrlen,
+	struct sockaddr_storage* localaddr, socklen_t localaddrlen,
+	int ifindex, const uint8_t* dcid, size_t dcidlen)
+{
+	struct rbnode_type* node;
+	struct doq_conn key;
+	memset(&key.node, 0, sizeof(key.node));
+	key.node.key = &key;
+	memmove(&key.destaddr, addr, addrlen);
+	key.destaddrlen = addrlen;
+	memmove(&key.localaddr, localaddr, localaddrlen);
+	key.localaddrlen = localaddrlen;
+	key.ifindex = ifindex;
+	key.dcid = (void*)dcid;
+	key.dcidlen = dcidlen;
+	node = rbtree_search(doq_socket->conn_tree, &key);
+	if(node)
+		return (struct doq_conn*)node->key;
+	return NULL;
+}
+
 /** decode doq packet header, false on handled or failure, true to continue
  * to process the packet */
 static int
 doq_decode_pkt_header_negotiate(struct comm_point* c,
 	struct sockaddr_storage* addr, socklen_t addrlen,
 	struct sockaddr_storage* localaddr, socklen_t localaddrlen,
-	int ifindex)
+	int ifindex, struct doq_conn** conn)
 {
 	uint32_t version;
 	const uint8_t *dcid, *scid;
@@ -1130,6 +1154,11 @@ doq_decode_pkt_header_negotiate(struct comm_point* c,
 			"QUIC protocol version %u", (unsigned)version);
 		log_hex("dcid", (void*)dcid, dcidlen);
 		log_hex("scid", (void*)scid, scidlen);
+	}
+	*conn = doq_conn_find(c->doq_socket, addr, addrlen, localaddr,
+		localaddrlen, ifindex, dcid, dcidlen);
+	if(*conn) {
+		verbose(VERB_ALGO, "doq: found connection");
 	}
 	return 1;
 }
@@ -1249,7 +1278,7 @@ doq_send_retry(struct comm_point* c, struct sockaddr_storage* addr,
 static int
 doq_accept(struct comm_point* c, struct sockaddr_storage* addr,
 	socklen_t addrlen, struct sockaddr_storage* localaddr,
-	socklen_t localaddrlen, int ifindex)
+	socklen_t localaddrlen, int ifindex, struct doq_conn** conn)
 {
 	int rv;
 	struct ngtcp2_pkt_hd hd;
@@ -1266,6 +1295,28 @@ doq_accept(struct comm_point* c, struct sockaddr_storage* addr,
 			ngtcp2_strerror(rv));
 		return 0;
 	}
+	*conn = doq_conn_create(c, addr, addrlen, localaddr, localaddrlen,
+		ifindex, hd.dcid.data, hd.dcid.datalen, hd.version);
+	if(!*conn) {
+		log_err("doq: could not allocate doq_conn");
+		return 0;
+	}
+	if(!rbtree_insert(c->doq_socket->conn_tree, &(*conn)->node)) {
+		log_err("doq: duplicate connection");
+		doq_conn_delete(*conn);
+		*conn = NULL;
+		return 0;
+	}
+	verbose(VERB_ALGO, "doq: created new connection");
+
+	if(!doq_conn_setup(*conn)) {
+		log_err("doq: could not set up connection");
+		(void)rbtree_delete(c->doq_socket->conn_tree,
+			(*conn)->node.key);
+		doq_conn_delete(*conn);
+		*conn = NULL;
+		return 0;
+	}
 	return 1;
 }
 
@@ -1276,6 +1327,7 @@ comm_point_doq_callback(int fd, short event, void* arg)
 	struct sockaddr_storage addr, localaddr;
 	socklen_t addrlen, localaddrlen;
 	int i, ifindex, pkt_continue;
+	struct doq_conn* conn;
 
 	c = (struct comm_point*)arg;
 	log_assert(c->type == comm_udp);
@@ -1318,13 +1370,16 @@ comm_point_doq_callback(int fd, short event, void* arg)
 			continue;
 		}
 
+		conn = NULL;
 		if(!doq_decode_pkt_header_negotiate(c, &addr, addrlen,
-			&localaddr, localaddrlen, ifindex)) {
+			&localaddr, localaddrlen, ifindex, &conn)) {
 			continue;
 		}
-		if(!doq_accept(c, &addr, addrlen, &localaddr, localaddrlen,
-			ifindex)) {
-			continue;
+		if(!conn) {
+			if(!doq_accept(c, &addr, addrlen, &localaddr,
+				localaddrlen, ifindex, &conn)) {
+				continue;
+			}
 		}
 	}
 }
@@ -1347,7 +1402,22 @@ doq_server_socket_create(struct ub_randstate* rnd)
 		return NULL;
 	}
 	doq_fill_rand(rnd, doq_socket->static_secret, doq_socket->static_secret_len);
+	doq_socket->conn_tree = rbtree_create(doq_conn_cmp);
+	if(!doq_socket->conn_tree) {
+		free(doq_socket->static_secret);
+		free(doq_socket);
+		return NULL;
+	}
 	return doq_socket;
+}
+
+/** delete elements from the connection tree */
+static void
+conn_tree_del(rbnode_type* node, void* ATTR_UNUSED(arg))
+{
+	if(!node)
+		return;
+	doq_conn_delete((struct doq_conn*)node->key);
 }
 
 /** delete doq server socket structure */
@@ -1357,6 +1427,10 @@ doq_server_socket_delete(struct doq_server_socket* doq_socket)
 	if(!doq_socket)
 		return;
 	free(doq_socket->static_secret);
+	if(doq_socket->conn_tree) {
+		traverse_postorder(doq_socket->conn_tree, conn_tree_del, NULL);
+		free(doq_socket->conn_tree);
+	}
 	free(doq_socket);
 }
 #endif /* HAVE_NGTCP2 */

@@ -972,6 +972,9 @@ struct doq_server_socket {
 	uint8_t* static_secret;
 	/** length of the static secret */
 	size_t static_secret_len;
+	/** rbtree of doq_conn, the connections to different destination
+	 * addresses, and can be found by dcid. */
+	struct rbtree_type* conn_tree;
 };
 
 /**

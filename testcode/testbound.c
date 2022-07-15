@@ -622,4 +622,9 @@ void comm_point_doq_callback(int ATTR_UNUSED(fd), short ATTR_UNUSED(event),
 {
 	/* nothing */
 }
+
+int doq_conn_cmp(const void* ATTR_UNUSED(key1), const void* ATTR_UNUSED(key2))
+{
+	return 0;
+}
 #endif

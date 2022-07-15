@@ -80,6 +80,11 @@
 #include <net/if.h>
 #endif
 
+#ifdef HAVE_NGTCP2
+#include <ngtcp2/ngtcp2.h>
+#include <ngtcp2/ngtcp2_crypto.h>
+#endif
+
 /** number of queued TCP connections for listen() */
 #define TCP_BACKLOG 256 
 
@@ -3102,3 +3107,124 @@ nghttp2_session_callbacks* http2_req_callbacks_create(void)
 	return callbacks;
 }
 #endif /* HAVE_NGHTTP2 */
+
+#ifdef HAVE_NGTCP2
+struct doq_conn*
+doq_conn_create(struct comm_point* c, struct sockaddr_storage* addr,
+	socklen_t addrlen, struct sockaddr_storage* localaddr,
+	socklen_t localaddrlen, int ifindex, const uint8_t* dcid,
+	size_t dcidlen, uint32_t version)
+{
+	struct doq_conn* conn = calloc(1, sizeof(*conn));
+	if(!conn)
+		return NULL;
+	conn->node.key = conn;
+	conn->doq_socket = c->doq_socket;
+	memmove(&conn->destaddr, addr, addrlen);
+	conn->destaddrlen = addrlen;
+	memmove(&conn->localaddr, localaddr, localaddrlen);
+	conn->localaddrlen = localaddrlen;
+	conn->ifindex = ifindex;
+	conn->dcid = memdup((void*)dcid, dcidlen);
+	if(!conn->dcid) {
+		free(conn);
+		return NULL;
+	}
+	conn->dcidlen = dcidlen;
+	conn->version = version;
+	return conn;
+}
+
+void
+doq_conn_delete(struct doq_conn* conn)
+{
+	if(!conn)
+		return;
+	ngtcp2_conn_del(conn->conn);
+	free(conn->dcid);
+	free(conn);
+}
+
+int
+doq_conn_cmp(const void* key1, const void* key2)
+{
+	struct doq_conn* c = (struct doq_conn*)key1;
+	struct doq_conn* d = (struct doq_conn*)key2;
+	int r;
+	/* Compared in the order destination address, then
+	 * local address, ifindex and then dcid.
+	 * So that for a search for findlessorequal for the destination
+	 * address will find connections to that address, with different
+	 * dcids.
+	 * Also a printout in sorted order prints the connections by IP
+	 * address of destination, and then a number of them depending on the
+	 * dcids. */
+	if(c->destaddrlen != d->destaddrlen) {
+		if(c->destaddrlen < d->destaddrlen)
+			return -1;
+		return 1;
+	}
+	if((r=memcmp(&c->destaddr, &d->destaddr, c->destaddrlen))!=0)
+		return r;
+	if(c->localaddrlen != d->localaddrlen) {
+		if(c->localaddrlen < d->localaddrlen)
+			return -1;
+		return 1;
+	}
+	if((r=memcmp(&c->localaddr, &d->localaddr, c->localaddrlen))!=0)
+		return r;
+	if(c->ifindex != d->ifindex) {
+		if(c->ifindex < d->ifindex)
+			return -1;
+		return 1;
+	}
+	if(c->dcidlen != d->dcidlen) {
+		if(c->dcidlen < d->dcidlen)
+			return -1;
+		return 1;
+	}
+	if((r=memcmp(c->dcid, d->dcid, c->dcidlen))!=0)
+		return r;
+	return 0;
+}
+
+int
+doq_conn_setup(struct doq_conn* conn)
+{
+	int rv;
+	struct ngtcp2_cid dcid, scid;
+	struct ngtcp2_path path;
+	struct ngtcp2_callbacks callbacks;
+	struct ngtcp2_settings settings;
+	struct ngtcp2_transport_params params;
+	memset(&dcid, 0, sizeof(dcid));
+	memset(&scid, 0, sizeof(scid));
+	memset(&path, 0, sizeof(path));
+	memset(&callbacks, 0, sizeof(callbacks));
+	memset(&settings, 0, sizeof(settings));
+	memset(&params, 0, sizeof(params));
+
+	ngtcp2_cid_init(&dcid, conn->dcid, conn->dcidlen);
+	scid.datalen = conn->doq_socket->sv_scidlen;
+
+	path.remote.addr = (struct sockaddr*)&conn->destaddr;
+	path.remote.addrlen = conn->destaddrlen;
+	path.local.addr = (struct sockaddr*)&conn->localaddr;
+	path.local.addrlen = conn->localaddrlen;
+
+	callbacks.recv_client_initial = ngtcp2_crypto_recv_client_initial_cb;
+
+	ngtcp2_settings_default(&settings);
+
+	ngtcp2_transport_params_default(&params);
+
+	rv = ngtcp2_conn_server_new(&conn->conn, &dcid, &scid, &path,
+		conn->version, &callbacks, &settings, &params, NULL, conn);
+	if(rv != 0) {
+		log_err("ngtcp2_conn_server_new failed: %s",
+			ngtcp2_strerror(rv));
+		return 0;
+	}
+	return 1;
+}
+#endif /* HAVE_NGTCP2 */

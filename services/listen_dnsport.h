@@ -43,6 +43,7 @@
 #define LISTEN_DNSPORT_H
 
 #include "util/netevent.h"
+#include "util/rbtree.h"
 #ifdef HAVE_NGHTTP2_NGHTTP2_H
 #include <nghttp2/nghttp2.h>
 #endif
@@ -448,12 +449,35 @@ int http2_submit_dns_response(struct http2_session* h2_session);
 int http2_submit_dns_response(void* v);
 #endif /* HAVE_NGHTTP2 */
 
+#ifdef HAVE_NGTCP2
 /**
  * DoQ connection, for DNS over QUIC. One connection to a remote endpoint
  * with a number of streams in it. Every stream is like a tcp stream with
  * a uint16_t length, query read, and a uint16_t length and answer written.
  */
 struct doq_conn {
+	/** rbtree node, key is addresses and dcid */
+	struct rbnode_type node;
+	/** the doq server socket this connection is part of */
+	struct doq_server_socket* doq_socket;
+	/** the remote endpoint */
+	struct sockaddr_storage destaddr;
+	/** length of destaddr */
+	socklen_t destaddrlen;
+	/** the local endpoint */
+	struct sockaddr_storage localaddr;
+	/** the length of localaddr */
+	socklen_t localaddrlen;
+	/** the interface index, if any, of the connection packets */
+	int ifindex;
+	/** the doq connection dcid */
+	uint8_t* dcid;
+	/** length of dcid */
+	size_t dcidlen;
+	/** the version, the client chosen version of QUIC */
+	uint32_t version;
+	/** the ngtcp2 connection, a server connection */
+	struct ngtcp2_conn* conn;
 };
 
 /**
@@ -461,6 +485,37 @@ struct doq_conn {
  */
 struct doq_stream {
 };
+
+/**
+ * Create the doq connection.
+ * @param c: the comm point for the listening doq socket.
+ * @param addr: remote address.
+ * @param addrlen: length of addr.
+ * @param localaddr: the local address of the connection.
+ * @param localaddrlen: length of localaddr.
+ * @param ifindex: the interface index of the connection packets.
+ * @param dcid: the dcid, Destination Connection ID.
+ * @param dcidlen: length of dcid.
+ * @param version: client chosen version.
+ * @return new doq connection or NULL on allocation failure.
+ */
+struct doq_conn* doq_conn_create(struct comm_point* c,
+	struct sockaddr_storage* addr, socklen_t addrlen,
+	struct sockaddr_storage* localaddr, socklen_t localaddrlen,
+	int ifindex, const uint8_t* dcid, size_t dcidlen, uint32_t version);
+
+/**
+ * Delete the doq connection structure.
+ * @param conn: to delete.
+ */
+void doq_conn_delete(struct doq_conn* conn);
+
+/** compare function of doq_conn */
+int doq_conn_cmp(const void* key1, const void* key2);
+
+/** setup the doq connection callbacks, and settings. */
+int doq_conn_setup(struct doq_conn* conn);
+#endif /* HAVE_NGTCP2 */
 
 char* set_ip_dscp(int socket, int addrfamily, int ds);
 
