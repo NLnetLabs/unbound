@@ -1,6 +1,7 @@
 15 July 2022: Wouter
 	- Merge PR 714: Avoid treat normal hosts as unresponsive servers.
 	  And fixup the lock code.
+	- iana portlist update.
 
 12 July 2022: George
 	- For windows crosscompile, fix setting the IPV6_MTU socket option
