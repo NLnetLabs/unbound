@@ -71,6 +71,10 @@
 
 /* in msec */
 int UNKNOWN_SERVER_NICENESS = 376;
+/* in msec */
+int USEFUL_SERVER_TOP_TIMEOUT = 120000;
+/* Equals USEFUL_SERVER_TOP_TIMEOUT*4 */
+int BLACKLIST_PENALTY = (120000*4);
 
 static void target_count_increase_nx(struct iter_qstate* iq, int num);
 
