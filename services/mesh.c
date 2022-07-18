@@ -1501,6 +1501,9 @@ void mesh_query_done(struct mesh_state* mstate)
 	struct reply_info* rep = (mstate->s.return_msg?
 		mstate->s.return_msg->rep:NULL);
 	struct timeval tv = {0, 0};
+
+	sldns_ede_code reason_bogus = LDNS_EDE_NONE;
+
 	/* No need for the serve expired timer anymore; we are going to reply. */
 	if(mstate->s.serve_expired_data) {
 		comm_timer_delete(mstate->s.serve_expired_data->timer);
@@ -1519,6 +1522,62 @@ void mesh_query_done(struct mesh_state* mstate)
 			free(err);
 		}
 	}
+
+	struct edns_option* eder = NULL;
+	eder = edns_list_get_option(mstate->s.edns_opts_back_in, (uint16_t) 3843 /* LDNS_EDNS_EDER */ );
+	if (eder) {
+		reason_bogus = errinf_to_reason_bogus(&mstate->s);
+		if (rep && ((reason_bogus == LDNS_EDE_DNSSEC_BOGUS &&
+			rep->reason_bogus != LDNS_EDE_NONE) ||
+			reason_bogus == LDNS_EDE_NONE)) {
+				reason_bogus = rep->reason_bogus;
+		}
+
+		// @TODO create a check for the EDER reporting agent DNAME;
+		// MUST NOT be an amplification attack vector
+
+		/* Report EDE to upstream (draft-ietf-dnsop-dns-error-reporting-01) */
+		if (reason_bogus != LDNS_EDE_NONE && dname_valid(eder->opt_data, eder->opt_len)) {
+			struct query_info qinfo;
+			struct mesh_state* dont_care;
+			struct module_qstate* newq;
+			uint8_t buf[LDNS_MAX_DOMAINLEN];
+			uint8_t count = 0;
+			int written;
+
+			/* Synthesize the error report query in the format:
+			 * "_er.$ede.$qtype.$qname._er.$reporting-agent-domain" */
+
+			memmove(buf+count, "\3_er", 4);
+			count += 4;
+
+			written = snprintf(buf+count, LDNS_MAX_DOMAINLEN-count,
+				"X%d", reason_bogus);
+			(buf+count)[0] = (char)(written - 1);
+			count += written;
+
+			written = snprintf(buf+count, LDNS_MAX_DOMAINLEN-count,
+				"X%d", mstate->s.qinfo.qtype);
+			(buf+count)[0] = (char)(written - 1);
+			count += written;
+
+			memmove(buf+count, mstate->s.qinfo.qname, mstate->s.qinfo.qname_len-1);
+			count += mstate->s.qinfo.qname_len-1;
+			memmove(buf+count, "\3_er", 4);
+			count += 4;
+			memmove(buf+count, eder->opt_data, eder->opt_len); // add the reporting agent
+
+			qinfo.qname = buf;
+			qinfo.qname_len = count+eder->opt_len;
+			qinfo.qtype = LDNS_RR_TYPE_NULL;
+			qinfo.qclass = mstate->s.qinfo.qclass;
+			qinfo.local_alias = NULL;
+
+			mesh_add_sub(&mstate->s, &qinfo, 0, 0, 0, &newq, &dont_care);
+		}
+	}
+
+
 	for(r = mstate->reply_list; r; r = r->next) {
 		tv = r->start_time;
 

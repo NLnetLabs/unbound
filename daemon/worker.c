@@ -490,7 +490,7 @@ answer_norec_from_cache(struct worker* worker, struct query_info* qinfo,
 				EDNS_OPT_LIST_APPEND_EDE(&edns->opt_list_out,
 					worker->scratchpad, LDNS_EDE_DNSSEC_BOGUS, "");
 			}
-			error_encode(repinfo->c->buffer, LDNS_RCODE_SERVFAIL, 
+			error_encode(repinfo->c->buffer, LDNS_RCODE_SERVFAIL,
 				&msg->qinfo, id, flags, edns);
 			if(worker->stats.extended) {
 				worker->stats.ans_bogus++;
