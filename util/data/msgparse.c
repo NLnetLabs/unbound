@@ -597,20 +597,6 @@ parse_query_section(sldns_buffer* pkt, struct msg_parse* msg)
 	return 0;
 }
 
-struct edns_option*
-edns_list_get_option(struct edns_option* option, uint16_t code)
-{
-	while (option) {
-		if (option->opt_code == code) {
-			return option;
-		}
-
-		option = option->next;
-	}
-	return NULL;
-}
-
-
 size_t
 get_rdf_size(sldns_rdf_type rdf)
 {

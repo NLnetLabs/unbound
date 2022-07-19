@@ -255,14 +255,6 @@ struct edns_option {
 };
 
 /**
- * Search through an EDNS list to find if the specified option.
- * @param option: The EDNS list which we search in
- * @param code: the option code that we search for
- * @return: returns the option if it is there, and NULL when it is not
- */
-struct edns_option* edns_list_get_option(struct edns_option* option, uint16_t code);
-
-/**
  * Obtain size in the packet of an rr type, that is before dname type.
  * Do TYPE_DNAME, and type STR, yourself. Gives size for most regular types.
  * @param rdf: the rdf type from the descriptor.

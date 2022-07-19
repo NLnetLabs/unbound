@@ -1524,7 +1524,7 @@ void mesh_query_done(struct mesh_state* mstate)
 	}
 
 	struct edns_option* eder = NULL;
-	eder = edns_list_get_option(mstate->s.edns_opts_back_in, (uint16_t) 3843 /* LDNS_EDNS_EDER */ );
+	eder = edns_opt_list_find(mstate->s.edns_opts_back_in, (uint16_t) 3843 /* LDNS_EDNS_EDER */ );
 	if (eder) {
 		reason_bogus = errinf_to_reason_bogus(&mstate->s);
 		if (rep && ((reason_bogus == LDNS_EDE_DNSSEC_BOGUS &&
