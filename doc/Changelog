@@ -1,6 +1,10 @@
 19 July 2022: George
 	- Update documentation for 'outbound-msg-retry:'.
 
+19 July 2022: Wouter
+	- Merge #718: Introduce infra-cache-max-rtt option to config max
+	  retransmit timeout.
+
 15 July 2022: Wouter
 	- Merge PR 714: Avoid treat normal hosts as unresponsive servers.
 	  And fixup the lock code.
