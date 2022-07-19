@@ -395,6 +395,10 @@ Lower limit for dynamic retransmit timeout calculation in infrastructure
 cache. Default is 50 milliseconds. Increase this value if using forwarders
 needing more time to do recursive name resolution.
 .TP
+.B infra\-cache\-max\-rtt: \fI<msec>
+Upper limit for dynamic retransmit timeout calculation in infrastructure
+cache. Default is 2 minutes.
+.TP
 .B infra\-keep\-probing: \fI<yes or no>
 If enabled the server keeps probing hosts that are down, in the one probe
 at a time regime.  Default is no.  Hosts that are down, eg. they did

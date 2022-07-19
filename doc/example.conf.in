@@ -203,6 +203,9 @@ server:
 	# minimum wait time for responses, increase if uplink is long. In msec.
 	# infra-cache-min-rtt: 50
 
+	# maximum wait time for responses. In msec.
+	# infra-cache-max-rtt: 120000
+
 	# enable to make server probe down hosts more frequently.
 	# infra-keep-probing: no
 
