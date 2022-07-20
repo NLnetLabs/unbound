@@ -1243,7 +1243,7 @@ doq_send_retry(struct comm_point* c, struct sockaddr_storage* addr,
 		sizeof(port))) {
 		return;
 	}
-	verbose(1, "doq: sending retry packet to %s %p", host, port);
+	verbose(VERB_ALGO, "doq: sending retry packet to %s %p", host, port);
 
 	/* the server chosen source connection ID */
 	scid.datalen = c->doq_socket->sv_scidlen;
@@ -1274,6 +1274,37 @@ doq_send_retry(struct comm_point* c, struct sockaddr_storage* addr,
 	doq_send(c, addr, addrlen, localaddr, localaddrlen, ifindex, 0);
 }
 
+/** create and setup a new doq connection, to a new destination, or with
+ * a new dcid. It has a new set of streams. It is inserted in the lookup tree.
+ * Returns NULL on failure. */
+static struct doq_conn*
+doq_setup_new_conn(struct comm_point* c, struct sockaddr_storage* addr,
+	socklen_t addrlen, struct sockaddr_storage* localaddr,
+	socklen_t localaddrlen, int ifindex, struct ngtcp2_pkt_hd* hd)
+{
+	struct doq_conn* conn;
+	conn = doq_conn_create(c, addr, addrlen, localaddr, localaddrlen,
+		ifindex, hd->dcid.data, hd->dcid.datalen, hd->version);
+	if(!conn) {
+		log_err("doq: could not allocate doq_conn");
+		return NULL;
+	}
+	if(!rbtree_insert(c->doq_socket->conn_tree, &conn->node)) {
+		log_err("doq: duplicate connection");
+		doq_conn_delete(conn);
+		return NULL;
+	}
+	verbose(VERB_ALGO, "doq: created new connection");
+
+	if(!doq_conn_setup(conn)) {
+		log_err("doq: could not set up connection");
+		(void)rbtree_delete(c->doq_socket->conn_tree, conn->node.key);
+		doq_conn_delete(conn);
+		return NULL;
+	}
+	return conn;
+}
+
 /** the doq accept, returns false if no further processing of content */
 static int
 doq_accept(struct comm_point* c, struct sockaddr_storage* addr,
@@ -1295,28 +1326,10 @@ doq_accept(struct comm_point* c, struct sockaddr_storage* addr,
 			ngtcp2_strerror(rv));
 		return 0;
 	}
-	*conn = doq_conn_create(c, addr, addrlen, localaddr, localaddrlen,
-		ifindex, hd.dcid.data, hd.dcid.datalen, hd.version);
-	if(!*conn) {
-		log_err("doq: could not allocate doq_conn");
+	*conn = doq_setup_new_conn(c, addr, addrlen, localaddr, localaddrlen,
+		ifindex, &hd);
+	if(!*conn)
 		return 0;
-	}
-	if(!rbtree_insert(c->doq_socket->conn_tree, &(*conn)->node)) {
-		log_err("doq: duplicate connection");
-		doq_conn_delete(*conn);
-		*conn = NULL;
-		return 0;
-	}
-	verbose(VERB_ALGO, "doq: created new connection");
-
-	if(!doq_conn_setup(*conn)) {
-		log_err("doq: could not set up connection");
-		(void)rbtree_delete(c->doq_socket->conn_tree,
-			(*conn)->node.key);
-		doq_conn_delete(*conn);
-		*conn = NULL;
-		return 0;
-	}
 	return 1;
 }
 
