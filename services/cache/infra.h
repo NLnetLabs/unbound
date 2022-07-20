@@ -55,17 +55,21 @@ struct config_file;
 /* COOKIE @TODO move this to correct spot */
 
 /**
- * The actual EDNS cookie data
+ * The actual EDNS cookie data. Note that the cookie can be filled with the 
+ * just 'client' section, or with the 'complete' cookie depending on the state
+ * governed by the edns_cookie_state.
+ * The commented struct provides insight on how the bytes in the struct are
+ * structured.
  */
-union edns_cookie_data {
-        uint8_t complete[24];
-        struct {
+struct edns_cookie_data {
+        uint8_t cookie[24];
+        /* struct {
                 uint8_t client[8];
                 uint8_t version;
                 uint8_t reserved[3];
                 uint32_t timestamp;
                 uint8_t hash[8];
-        } components;
+        } components; */
 };
 
 /**
@@ -83,7 +87,7 @@ enum edns_cookie_state
  */
 struct edns_cookie {
         enum edns_cookie_state state;
-        union edns_cookie_data data;
+        struct edns_cookie_data data;
 };
 
 
@@ -368,18 +372,18 @@ int infra_edns_update(struct infra_cache* infra,
  * @param name: name of zone
  * @param namelen: length of name
  * @param timenow: what time it is now.
- * @return: struct ends_cookie*
+ * @param cookie: the cookie that is retrieved from cache on success.
+ * @return: 0 on error, cookie pointer remains unchanged then.
  */
-struct edns_cookie*
-infra_get_cookie(struct infra_cache* infra, struct sockaddr_storage* addr,
+int infra_get_cookie(struct infra_cache* infra, struct sockaddr_storage* addr,
         socklen_t addrlen, uint8_t* name, size_t namelen,
-        time_t timenow);
+        time_t timenow, struct edns_cookie* cookie);
 
 /**
- * Find the cookie entry in the cache and update it with to make a complete
- * cookie (RFC9018). This function asserts that the cookie param contains a
- * complete cookie with a length of 24 bytes. It also asserts that a previous
- * entry in the cache already exists, as it will update the entry.
+ * Find the cookie entry in the cache and update it with to make a 'complete cookie'
+ * (client+server) (RFC9018). This function asserts that the cookie param contains
+ * a complete cookie with a length of 24 bytes. If the cache entry isn't found
+ * a new one will be inserted.
  * @param infra: infrastructure cache.
  * @param addr: host address.
  * @param addrlen: length of addr.
@@ -387,7 +391,9 @@ infra_get_cookie(struct infra_cache* infra, struct sockaddr_storage* addr,
  * @param namelen: length of name
  * @param timenow: what time it is now.
  * @param cookie: the EDNS cookie option we want to store.
- * @return true if the complete cookie is stored, and false if it is not
+ * @return -1 if the wrong client cookie is found, 0 if the entry isn't found in
+ *      the cache and a new one is inserted, 1 if the complete cookie is inserted
+ *      or unchanged.
  */
 int infra_set_server_cookie(struct infra_cache* infra, struct sockaddr_storage* addr,
         socklen_t addrlen, uint8_t* name, size_t namelen, struct edns_option* cookie);

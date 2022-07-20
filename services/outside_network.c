@@ -3349,7 +3349,7 @@ outnet_serviced_query(struct outside_network* outnet,
 	struct service_callback* cb;
 	struct edns_string_addr* client_string_addr;
 	struct regional* region;
-	struct edns_cookie* cookie;
+	struct edns_cookie cookie;
 	struct edns_option* backed_up_opt_list = qstate->edns_opts_back_out;
 	struct edns_option* per_upstream_opt_list = NULL;
 	time_t timenow = 0;
@@ -3389,18 +3389,18 @@ outnet_serviced_query(struct outside_network* outnet,
 			client_string_addr->string, region);
 	}
 
-	if (env->cfg->upstream_cookies) {
-		cookie = infra_get_cookie(env->infra_cache, addr, addrlen, zone,
-			zonelen, *env->now);
+	if (env->cfg->upstream_cookies &&
+		infra_get_cookie(env->infra_cache, addr, addrlen, zone, zonelen,
+			*env->now, &cookie)) {
 
-		if (cookie->state == SERVER_COOKIE_LEARNED) {
+		if (cookie.state == SERVER_COOKIE_LEARNED) {
 			/* We known the complete cookie, so we attach it */
 			edns_opt_list_append(&per_upstream_opt_list, LDNS_EDNS_COOKIE,
-				24, cookie->data.complete, region);
-		} else if (cookie->state == SERVER_COOKIE_UNKNOWN) {
+				24, cookie.data.cookie, region);
+		} else if (cookie.state == SERVER_COOKIE_UNKNOWN) {
 			/* We know just client cookie, so we attach it */
 			edns_opt_list_append(&per_upstream_opt_list, LDNS_EDNS_COOKIE,
-				8, cookie->data.components.client, region);
+				8, cookie.data.cookie, region);
 		} /* We ignore COOKIE_NOT_SUPPORTED */
 	}
 

@@ -1529,8 +1529,14 @@ match_random_client_cookie(uint8_t* query, size_t query_len)
 	}
 
 	/* class + ttl + rdlen = 8 */
-	if(walk_query_len <= 8) {
-		verbose(3, "No edns opt, no cookie");
+	if (walk_query_len <= 8) {
+		verbose(3, "No correct EDNS record found, so no cookie");
+		return 0;
+	}
+
+	/* class + ttl + rdlen + opt_code + opt_len = 12 */
+	if (walk_query_len < 12) {
+		verbose(3, "No EDNS opt found, so no cookie");
 		return 0;
 	}
 
@@ -1561,12 +1567,18 @@ match_random_complete_cookie(uint8_t* query, size_t query_len, struct entry* p)
 
 	/* class + ttl + rdlen = 8 */
 	if(walk_query_len <= 8) {
-		verbose(3, "No edns opt, no cookie");
+		verbose(3, "No correct EDNS record , so no cookie");
 		return 0;
 	}
 
 	walk_query += 8;
 	walk_query_len -= 8;
+
+	/* opt_code + opt_len = 4 */
+	if (walk_query_len < 4) {
+		verbose(3, "No EDNS opt found, so no cookie");
+		return 0;
+	}
 
 	if (sldns_read_uint16(walk_query) != 10 /* LDNS_EDNS_COOKIE */) {
 		verbose(3, "EDNS option is not a cookie");
@@ -1574,6 +1586,12 @@ match_random_complete_cookie(uint8_t* query, size_t query_len, struct entry* p)
 	}
 	if (sldns_read_uint16(walk_query+2) != 24) {
 		verbose(3, "EDNS cookie is not 24 bytes, so not a correct complete cookie");
+		return 0;
+	}
+
+	/* opt_code + opt_len + cookie_data = 28 */
+	if (walk_query_len < 28) {
+		verbose(3, "No complete cookie found in the packet");
 		return 0;
 	}
 
@@ -1881,18 +1899,16 @@ adjust_packet(struct entry* match, uint8_t** answer_pkt, size_t *answer_len,
 			if (sldns_read_uint16(walk_query+2) == 8) {
 				/* copy the EDNS client cookie from the query
 				 * packet to the response */
-				memcpy(walk_response, walk_query, 12);
+				memmove(walk_response, walk_query, 12);
 
 				/* add the server cookie to the client cookie to make it
 				 * 'complete'. we fake the siphash specified in RFC9018
 				 * by hardcoding the server cookie */
-				memcpy(walk_response+12, hardcoded_server_cookie, 16);
+				memmove(walk_response+12, hardcoded_server_cookie, 16);
 
 				/* update the RDLEN and OPTLEN */
 				sldns_write_uint16(rdlen_ptr_response, 28);
 				sldns_write_uint16(walk_response+2, 24);
-
-				reslen = origlen + 28;
 			} else if (sldns_read_uint16(walk_query+2) == 24) {
 				/* update the RDLEN */
 				sldns_write_uint16(rdlen_ptr_response, 28);
@@ -1903,11 +1919,11 @@ adjust_packet(struct entry* match, uint8_t** answer_pkt, size_t *answer_len,
 				if (match->server_cookie_renew) {
 					/* copy the cookie from the response but add a
 					 * different cookie (by reshuffeling server cookie) */
-					memcpy(walk_response, walk_query, 12);
-					memcpy(walk_response+12, walk_query+12+8, 8);
-					memcpy(walk_response+12+8, walk_query+12, 8);
+					memmove(walk_response, walk_query, 12);
+					memmove(walk_response+12, walk_query+12+8, 8);
+					memmove(walk_response+12+8, walk_query+12, 8);
 				} else {
-					memcpy(walk_response, walk_query, 28);
+					memmove(walk_response, walk_query, 28);
 				}
 			} else {
 				log_err("testbound: the incoming EDNS cookie has the wrong length");

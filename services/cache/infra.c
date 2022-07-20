@@ -393,8 +393,7 @@ data_entry_init(struct infra_cache* infra, struct lruhash_entry* e,
 	uint8_t cookie[8] = {0,0,0,0,0,0,0,0};
 
 	for (i = 0; i < 8; i++) {
-		cookie[i] = ub_random_max(infra->random_state,
-			255); // @TODO is 255 correct? macro-ify it?
+		cookie[i] = ub_random_max(infra->random_state, 256);
 	}
 
 	data = (struct infra_data*)e->data;
@@ -405,7 +404,7 @@ data_entry_init(struct infra_cache* infra, struct lruhash_entry* e,
 	data->probedelay = 0;
 	/* set EDNS cookie to zero, as this also sets the starting state*/
 	memset(&data->cookie, 0, sizeof(struct edns_cookie));
-	memcpy(data->cookie.data.components.client, cookie, 8);
+	memcpy(data->cookie.data.cookie, cookie, 8);
 	data->isdnsseclame = 0;
 	data->rec_lame = 0;
 	data->lame_type_A = 0;
@@ -706,10 +705,10 @@ infra_edns_update(struct infra_cache* infra, struct sockaddr_storage* addr,
 	return 1;
 }
 
-struct edns_cookie*
+int
 infra_get_cookie(struct infra_cache* infra, struct sockaddr_storage* addr,
 	socklen_t addrlen, uint8_t* name, size_t namelen,
-	time_t timenow)
+	time_t timenow, struct edns_cookie* cookie)
 {
 	struct lruhash_entry* e = infra_lookup_nottl(infra, addr, addrlen,
 		name, namelen, 1);
@@ -718,21 +717,22 @@ infra_get_cookie(struct infra_cache* infra, struct sockaddr_storage* addr,
 
 	if(!e) {
 		if(!(e = new_entry(infra, addr, addrlen, name, namelen, timenow))) {
-			return NULL;
+			return 0;
 		}
 		needtoinsert = 1;
 	} else if(((struct infra_data*)e->data)->ttl < timenow) {
 		/* EDNS cookies have their own timeout logic controlled by the
 		 * upstream, so we just copy the cookie from the old cache entry */
 		struct edns_cookie c = ((struct infra_data*)e->data)->cookie;
-		/* @TODO create logic for saving server cookie? -> not sure, find out */
 
-		/* create new cookie if the cache TTL expired */
+		/* create new cookie if the cache TTL expired, keep the cookie */
 		data_entry_init(infra, e, timenow);
 		((struct infra_data*)e->data)->cookie = c;
 	}
 
 	data = (struct infra_data*) e->data;
+
+	memcpy(cookie, &data->cookie, sizeof(struct edns_cookie));
 
 	if(needtoinsert) {
 		slabhash_insert(infra->hosts, e->hash, e, e->data, NULL);
@@ -740,7 +740,7 @@ infra_get_cookie(struct infra_cache* infra, struct sockaddr_storage* addr,
 		lock_rw_unlock(&e->lock);
 	}
 
-	return &data->cookie;
+	return 1;
 }
 
 int
@@ -755,8 +755,13 @@ infra_set_server_cookie(struct infra_cache* infra, struct sockaddr_storage* addr
 	assert(cookie->opt_len == 24);
 
 	/* the client cookie was set on the outgoing upstream, so the entry
-	 * must exists here */
-	assert(e);
+	 * should exists here. This can be false if the cookie has fallen
+	 * out of cache */
+	if (!(e)) {
+		/* No need to insert a new cookie/entry here, this will be
+		 * done with an outgoing request */
+		return 0;
+	}
 
 	data = (struct infra_data*) e->data;
 
@@ -764,25 +769,25 @@ infra_set_server_cookie(struct infra_cache* infra, struct sockaddr_storage* addr
 		/* we known this upstream doesn't support cookies; the state
 		 * remains unchanged */
 		lock_rw_unlock(&e->lock);
-		return 0;
+		return 1;
 	} else if (data->cookie.state == SERVER_COOKIE_LEARNED) {
 		/* wrong client cookie; don't store the server cookie */
-		if (!(memcmp(data->cookie.data.components.client,
+		if (!(memcmp(data->cookie.data.cookie,
 			cookie->opt_data+4, 8))) {
 			/* the state of the cookie remains unchanged as we will
 			 * drop this upstream response */
 
-			verbose(VERB_ALGO, "wrong client cookie from upstream with "
-				"previously seen cookie");
+			verbose(VERB_ALGO, "wrong client cookie from upstream"
+				" with previously seen cookie");
 			lock_rw_unlock(&e->lock);
 			return -1;
 		}
 
 		/* the server cookie has changed, but the client cookie has not
 		 * so we update the server cookie */
-		if (memcmp(data->cookie.data.complete+8,
+		if (memcmp(data->cookie.data.cookie+8,
 				cookie->opt_data+12, 16) != 0) {
-			memcpy(data->cookie.data.complete, cookie->opt_data, 24);
+			memcpy(data->cookie.data.cookie, cookie->opt_data, 24);
 			/* the cookie state remains unchanged*/
 
 			verbose(VERB_ALGO, "update new server cookie from upstream");
@@ -792,13 +797,14 @@ infra_set_server_cookie(struct infra_cache* infra, struct sockaddr_storage* addr
 
 		/* both the complete cookies are identical, so the state
 		 * remains unchanged */
-		verbose(VERB_ALGO, "correctly received indentical cookie from upstream; don't update");
+		verbose(VERB_ALGO, "correctly received indentical cookie from"
+			" upstream; don't update");
 		lock_rw_unlock(&e->lock);
-		return 0;
+		return 1;
 	} else { /* cookie state == SERVER_COOKIE_UNKNOWN */
 
 		/* wrong client cookie; don't store the server cookie */
-		if (!(memcmp(data->cookie.data.components.client,
+		if (!(memcmp(data->cookie.data.cookie,
 			cookie->opt_data+4, 8))) {
 			/* the state of the cookie remains unchanged as we will
 			 * drop this upstream response */
@@ -808,8 +814,8 @@ infra_set_server_cookie(struct infra_cache* infra, struct sockaddr_storage* addr
 			return -1;
 		}
 
-		/* else; store the client cookie */
-		memcpy(data->cookie.data.complete, cookie->opt_data, 24);
+		/* store the server cookie */
+		memcpy(data->cookie.data.cookie, cookie->opt_data, 24);
 		data->cookie.state = SERVER_COOKIE_LEARNED;
 
 		verbose(VERB_QUERY, "storing received server cookie from upstream");

@@ -529,6 +529,7 @@ infra_test(void)
 
 	infra_delete(slab);
 	config_delete(cfg);
+	ub_randfree(rnd);
 }
 
 #include "util/random.h"
