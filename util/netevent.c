@@ -1163,14 +1163,6 @@ doq_decode_pkt_header_negotiate(struct comm_point* c,
 	return 1;
 }
 
-/** fill a buffer with random data */
-static void doq_fill_rand(struct ub_randstate* rnd, uint8_t* buf, size_t len)
-{
-	size_t i;
-	for(i=0; i<len; i++)
-		buf[i] = ub_random(rnd)&0xff;
-}
-
 /** fill cid structure with random data */
 static void doq_cid_randfill(struct ngtcp2_cid* cid, size_t datalen,
 	struct ub_randstate* rnd)

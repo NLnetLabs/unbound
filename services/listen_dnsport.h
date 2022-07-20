@@ -515,6 +515,9 @@ int doq_conn_cmp(const void* key1, const void* key2);
 
 /** setup the doq connection callbacks, and settings. */
 int doq_conn_setup(struct doq_conn* conn);
+
+/** fill a buffer with random data */
+void doq_fill_rand(struct ub_randstate* rnd, uint8_t* buf, size_t len);
 #endif /* HAVE_NGTCP2 */
 
 char* set_ip_dscp(int socket, int addrfamily, int ds);

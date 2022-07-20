@@ -3203,8 +3203,7 @@ doq_conn_cmp(const void* key1, const void* key2)
 	return 0;
 }
 
-/** fill a buffer with random data */
-static void doq_fill_rand(struct ub_randstate* rnd, uint8_t* buf, size_t len)
+void doq_fill_rand(struct ub_randstate* rnd, uint8_t* buf, size_t len)
 {
 	size_t i;
 	for(i=0; i<len; i++)
