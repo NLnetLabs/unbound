@@ -70,8 +70,6 @@
 
 /** time when nameserver glue is said to be 'recent' */
 #define SUSPICION_RECENT_EXPIRY 86400
-/** penalty to validation failed blacklisted IPs */
-#define BLACKLIST_PENALTY (USEFUL_SERVER_TOP_TIMEOUT*4)
 
 /** fillup fetch policy array */
 static void
