@@ -3203,6 +3203,49 @@ doq_conn_cmp(const void* key1, const void* key2)
 	return 0;
 }
 
+/** fill a buffer with random data */
+static void doq_fill_rand(struct ub_randstate* rnd, uint8_t* buf, size_t len)
+{
+	size_t i;
+	for(i=0; i<len; i++)
+		buf[i] = ub_random(rnd)&0xff;
+}
+
+/** ngtcp2 rand callback function */
+static void
+doq_rand_cb(uint8_t* dest, size_t destlen, const ngtcp2_rand_ctx* rand_ctx)
+{
+	struct ub_randstate* rnd = (struct ub_randstate*)
+		rand_ctx->native_handle;
+	doq_fill_rand(rnd, dest, destlen);
+}
+
+/** ngtcp2 get_new_connection_id callback function */
+static int
+doq_get_new_connection_id_cb(ngtcp2_conn* conn, ngtcp2_cid* cid,
+	uint8_t* token, size_t cidlen, void* user_data)
+{
+	struct doq_conn* doq_conn = (struct doq_conn*)user_data;
+	(void)cid;
+	(void)conn;
+	(void)token;
+	(void)cidlen;
+	(void)doq_conn;
+	return 0;
+}
+
+/** ngtc2p log_printf callback function */
+static void
+doq_log_printf_cb(void* ATTR_UNUSED(user_data), const char* fmt, ...)
+{
+	char buf[1024];
+	va_list ap;
+	va_start(ap, fmt);
+	vsnprintf(buf, sizeof(buf), fmt, ap);
+	verbose(VERB_ALGO, "ngtcp2: %s", buf);
+	va_end(ap);
+}
+
 int
 doq_conn_setup(struct doq_conn* conn)
 {
@@ -3221,6 +3264,7 @@ doq_conn_setup(struct doq_conn* conn)
 
 	ngtcp2_cid_init(&dcid, conn->dcid, conn->dcidlen);
 	scid.datalen = conn->doq_socket->sv_scidlen;
+	doq_fill_rand(conn->doq_socket->rnd, scid.data, scid.datalen);
 
 	path.remote.addr = (struct sockaddr*)&conn->destaddr;
 	path.remote.addrlen = conn->destaddrlen;
@@ -3228,8 +3272,26 @@ doq_conn_setup(struct doq_conn* conn)
 	path.local.addrlen = conn->localaddrlen;
 
 	callbacks.recv_client_initial = ngtcp2_crypto_recv_client_initial_cb;
+	callbacks.recv_crypto_data = ngtcp2_crypto_recv_crypto_data_cb;
+	callbacks.encrypt = ngtcp2_crypto_encrypt_cb;
+	callbacks.decrypt = ngtcp2_crypto_decrypt_cb;
+	callbacks.hp_mask = ngtcp2_crypto_hp_mask;
+	callbacks.update_key = ngtcp2_crypto_update_key_cb;
+	callbacks.delete_crypto_aead_ctx =
+		ngtcp2_crypto_delete_crypto_aead_ctx_cb;
+	callbacks.delete_crypto_cipher_ctx =
+		ngtcp2_crypto_delete_crypto_cipher_ctx_cb;
+	callbacks.get_path_challenge_data =
+		ngtcp2_crypto_get_path_challenge_data_cb;
+	callbacks.version_negotiation = ngtcp2_crypto_version_negotiation_cb;
+	callbacks.rand = doq_rand_cb;
+	callbacks.get_new_connection_id = doq_get_new_connection_id_cb;
 
 	ngtcp2_settings_default(&settings);
+	if(verbosity >= VERB_ALGO) {
+		settings.log_printf = doq_log_printf_cb;
+	}
+	settings.rand_ctx.native_handle = conn->doq_socket->rnd;
 
 	ngtcp2_transport_params_default(&params);
 
