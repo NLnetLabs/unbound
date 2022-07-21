@@ -537,11 +537,17 @@ void doq_conn_delete(struct doq_conn* conn);
 /** compare function of doq_conn */
 int doq_conn_cmp(const void* key1, const void* key2);
 
+/** compare function of doq_conid */
+int doq_conid_cmp(const void* key1, const void* key2);
+
 /** setup the doq connection callbacks, and settings. */
 int doq_conn_setup(struct doq_conn* conn);
 
 /** fill a buffer with random data */
 void doq_fill_rand(struct ub_randstate* rnd, uint8_t* buf, size_t len);
+
+/** delete a doq_conid */
+void doq_conid_delete(struct doq_conid* conid);
 
 /** add a connection id to the doq_conn */
 int doq_conn_associate_conid(struct doq_conn* conn, uint8_t* data,

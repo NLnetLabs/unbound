@@ -1429,6 +1429,13 @@ doq_server_socket_create(struct ub_randstate* rnd)
 		free(doq_socket);
 		return NULL;
 	}
+	doq_socket->conid_tree = rbtree_create(doq_conid_cmp);
+	if(!doq_socket->conid_tree) {
+		free(doq_socket->static_secret);
+		free(doq_socket->conn_tree);
+		free(doq_socket);
+		return NULL;
+	}
 	return doq_socket;
 }
 
@@ -1441,6 +1448,15 @@ conn_tree_del(rbnode_type* node, void* ATTR_UNUSED(arg))
 	doq_conn_delete((struct doq_conn*)node->key);
 }
 
+/** delete elements from the connection id tree */
+static void
+conid_tree_del(rbnode_type* node, void* ATTR_UNUSED(arg))
+{
+	if(!node)
+		return;
+	doq_conid_delete((struct doq_conid*)node->key);
+}
+
 /** delete doq server socket structure */
 static void
 doq_server_socket_delete(struct doq_server_socket* doq_socket)
@@ -1451,6 +1467,12 @@ doq_server_socket_delete(struct doq_server_socket* doq_socket)
 	if(doq_socket->conn_tree) {
 		traverse_postorder(doq_socket->conn_tree, conn_tree_del, NULL);
 		free(doq_socket->conn_tree);
+	}
+	if(doq_socket->conid_tree) {
+		/* The tree should be empty, because the doq_conn_delete calls
+		 * above should have also removed their conid elements. */
+		traverse_postorder(doq_socket->conn_tree, conid_tree_del, NULL);
+		free(doq_socket->conid_tree);
 	}
 	free(doq_socket);
 }

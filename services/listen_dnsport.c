@@ -3204,6 +3204,18 @@ doq_conn_cmp(const void* key1, const void* key2)
 	return 0;
 }
 
+int doq_conid_cmp(const void* key1, const void* key2)
+{
+	struct doq_conid* c = (struct doq_conid*)key1;
+	struct doq_conid* d = (struct doq_conid*)key2;
+	if(c->cidlen != d->cidlen) {
+		if(c->cidlen < d->cidlen)
+			return -1;
+		return 1;
+	}
+	return memcmp(c->cid, d->cid, c->cidlen);
+}
+
 void doq_fill_rand(struct ub_randstate* rnd, uint8_t* buf, size_t len)
 {
 	size_t i;
@@ -3399,8 +3411,7 @@ doq_conid_create(uint8_t* data, size_t datalen)
 	return conid;
 }
 
-/** delete a doq_conid */
-static void
+void
 doq_conid_delete(struct doq_conid* conid)
 {
 	if(!conid)
