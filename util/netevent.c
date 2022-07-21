@@ -1190,20 +1190,6 @@ static void doq_cid_randfill(struct ngtcp2_cid* cid, size_t datalen,
 	ngtcp2_cid_init(cid, buf, datalen);
 }
 
-/** get a timestamp in nanoseconds */
-static ngtcp2_tstamp doq_get_timestamp_nanosec(void)
-{
-	struct timespec tp;
-	memset(&tp, 0, sizeof(tp));
-	if(clock_gettime(CLOCK_MONOTONIC, &tp) == -1) {
-		if(clock_gettime(CLOCK_REALTIME, &tp) == -1) {
-			log_err("clock_gettime failed: %s", strerror(errno));
-		}
-	}
-	return ((uint64_t)tp.tv_sec)*((uint64_t)1000000000) +
-		((uint64_t)tp.tv_nsec);
-}
-
 /** write address and port into strings */
 static int
 doq_print_addr_port(struct sockaddr_storage* addr, socklen_t addrlen,
@@ -1407,7 +1393,7 @@ comm_point_doq_callback(int fd, short event, void* arg)
 
 /** create new doq server socket structure */
 static struct doq_server_socket*
-doq_server_socket_create(struct ub_randstate* rnd)
+doq_server_socket_create(struct ub_randstate* rnd, int idle_msec)
 {
 	struct doq_server_socket* doq_socket;
 	doq_socket = calloc(1, sizeof(*doq_socket));
@@ -1415,6 +1401,7 @@ doq_server_socket_create(struct ub_randstate* rnd)
 		return NULL;
 	}
 	doq_socket->rnd = rnd;
+	doq_socket->idle_timeout = ((uint64_t)idle_msec)*NGTCP2_MILLISECONDS;
 	doq_socket->sv_scidlen = 16;
 	doq_socket->static_secret_len = 16;
 	doq_socket->static_secret = malloc(doq_socket->static_secret_len);
@@ -4084,7 +4071,7 @@ comm_point_create_udp_ancil(struct comm_base *base, int fd,
 struct comm_point*
 comm_point_create_doq(struct comm_base *base, int fd, sldns_buffer* buffer,
 	comm_point_callback_type* callback, void* callback_arg,
-	struct unbound_socket* socket, struct ub_randstate* rnd)
+	struct unbound_socket* socket, struct ub_randstate* rnd, int idle_msec)
 {
 #ifdef HAVE_NGTCP2
 	struct comm_point* c = (struct comm_point*)calloc(1,
@@ -4122,7 +4109,7 @@ comm_point_create_doq(struct comm_base *base, int fd, sldns_buffer* buffer,
 	c->dnscrypt_buffer = NULL;
 #endif
 #ifdef HAVE_NGTCP2
-	c->doq_socket = doq_server_socket_create(rnd);
+	c->doq_socket = doq_server_socket_create(rnd, idle_msec);
 #endif
 	c->inuse = 0;
 	c->callback = callback;
@@ -4151,6 +4138,8 @@ comm_point_create_doq(struct comm_base *base, int fd, sldns_buffer* buffer,
 	(void)callback;
 	(void)callback_arg;
 	(void)socket;
+	(void)rnd;
+	(void)idle_msec;
 	sock_close(fd);
 	return NULL;
 #endif /* HAVE_NGTCP2 */

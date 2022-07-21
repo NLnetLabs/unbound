@@ -1447,7 +1447,7 @@ listen_create(struct comm_base* base, struct listen_port* ports,
 #endif
 			cp = comm_point_create_doq(base, ports->fd,
 				front->udp_buff, cb, cb_arg, ports->socket,
-				rnd);
+				rnd, tcp_idle_timeout);
 		} else if(ports->ftype == listen_type_tcp ||
 				ports->ftype == listen_type_tcp_dnscrypt) {
 			cp = comm_point_create_tcp(base, ports->fd,
@@ -3339,8 +3339,21 @@ doq_conn_setup(struct doq_conn* conn)
 		settings.log_printf = doq_log_printf_cb;
 	}
 	settings.rand_ctx.native_handle = conn->doq_socket->rnd;
+	settings.initial_ts = doq_get_timestamp_nanosec();
+	settings.max_stream_window = 6*1024*1024;
+	settings.max_window = 6*1024*1024;
 
 	ngtcp2_transport_params_default(&params);
+	params.max_idle_timeout = conn->doq_socket->idle_timeout;
+	params.active_connection_id_limit = 7;
+	params.initial_max_stream_data_bidi_local = 256*1024;
+	params.initial_max_stream_data_bidi_remote = 256*1024;
+	params.initial_max_data = 1024*1024;
+	/* DoQ uses bidi streams, so we allow 0 uni streams. */
+	params.initial_max_streams_uni = 0;
+	/* Initial max on number of bidi streams the remote end can open.
+	 * That is the number of queries it can make, at first. */
+	params.initial_max_streams_bidi = 10;
 
 	rv = ngtcp2_conn_server_new(&conn->conn, &dcid, &scid, &path,
 		conn->version, &callbacks, &settings, &params, NULL, conn);
@@ -3520,4 +3533,16 @@ doq_conn_clear_conids(struct doq_conn* conn)
 	conn->conid_list = NULL;
 }
 
+ngtcp2_tstamp doq_get_timestamp_nanosec(void)
+{
+	struct timespec tp;
+	memset(&tp, 0, sizeof(tp));
+	if(clock_gettime(CLOCK_MONOTONIC, &tp) == -1) {
+		if(clock_gettime(CLOCK_REALTIME, &tp) == -1) {
+			log_err("clock_gettime failed: %s", strerror(errno));
+		}
+	}
+	return ((uint64_t)tp.tv_sec)*((uint64_t)1000000000) +
+		((uint64_t)tp.tv_nsec);
+}
 #endif /* HAVE_NGTCP2 */

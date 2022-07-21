@@ -47,6 +47,9 @@
 #ifdef HAVE_NGHTTP2_NGHTTP2_H
 #include <nghttp2/nghttp2.h>
 #endif
+#ifdef HAVE_NGTCP2
+#include <ngtcp2/ngtcp2.h>
+#endif
 struct listen_list;
 struct config_file;
 struct addrinfo;
@@ -581,4 +584,6 @@ void doq_client_event_cb(int fd, short event, void* arg);
 /** timer event callback for testcode/doqclient */
 void doq_client_timer_cb(int fd, short event, void* arg);
 
+/** get a timestamp in nanoseconds */
+ngtcp2_tstamp doq_get_timestamp_nanosec(void);
 #endif /* LISTEN_DNSPORT_H */

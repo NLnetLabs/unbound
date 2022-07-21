@@ -540,13 +540,15 @@ struct comm_point* comm_point_create_udp_ancil(struct comm_base* base,
  * @param callback_arg: will be passed to your callback function.
  * @param socket: and opened socket properties will be passed to your callback function.
  * @param rnd: random generator to use.
+ * @param idle_msec: idle timeout in msec.
  * @return: returns the allocated communication point. NULL on error.
  * Sets timeout to NULL. Turns off TCP options.
  */
 struct comm_point* comm_point_create_doq(struct comm_base* base,
 	int fd, struct sldns_buffer* buffer,
 	comm_point_callback_type* callback, void* callback_arg,
-	struct unbound_socket* socket, struct ub_randstate* rnd);
+	struct unbound_socket* socket, struct ub_randstate* rnd,
+	int idle_msec);
 
 /**
  * Create a TCP listener comm point. Calls malloc.
@@ -966,6 +968,8 @@ void http2_stream_add_meshstate(struct http2_stream* h2_stream,
 struct doq_server_socket {
 	/** random generator */
 	struct ub_randstate* rnd;
+	/** the idle timeout in nanoseconds */
+	uint64_t idle_timeout;
 	/** the server scid length */
 	int sv_scidlen;
 	/** the static secret for the server */
