@@ -1121,6 +1121,17 @@ doq_conn_find(struct doq_server_socket* doq_socket,
 	return NULL;
 }
 
+/** find the doq_con by the connection id */
+static struct doq_conn*
+doq_conn_find_by_id(struct doq_server_socket* doq_socket, const uint8_t* dcid,
+	size_t dcidlen)
+{
+	struct doq_conid* conid = doq_conid_find(doq_socket, dcid, dcidlen);
+	if(conid)
+		return conid->conn;
+	return NULL;
+}
+
 /** decode doq packet header, false on handled or failure, true to continue
  * to process the packet */
 static int
@@ -1158,7 +1169,12 @@ doq_decode_pkt_header_negotiate(struct comm_point* c,
 	*conn = doq_conn_find(c->doq_socket, addr, addrlen, localaddr,
 		localaddrlen, ifindex, dcid, dcidlen);
 	if(*conn) {
-		verbose(VERB_ALGO, "doq: found connection");
+		verbose(VERB_ALGO, "doq: found connection by address, dcid");
+	} else {
+		*conn = doq_conn_find_by_id(c->doq_socket, dcid, dcidlen);
+		if(!*conn) {
+			verbose(VERB_ALGO, "doq: found connection by dcid");
+		}
 	}
 	return 1;
 }

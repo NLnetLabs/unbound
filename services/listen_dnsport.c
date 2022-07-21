@@ -3155,6 +3155,7 @@ doq_conn_delete(struct doq_conn* conn)
 {
 	if(!conn)
 		return;
+	doq_conn_clear_conids(conn);
 	ngtcp2_conn_del(conn->conn);
 	free(conn->dcid);
 	free(conn);
@@ -3225,11 +3226,21 @@ doq_get_new_connection_id_cb(ngtcp2_conn* conn, ngtcp2_cid* cid,
 	uint8_t* token, size_t cidlen, void* user_data)
 {
 	struct doq_conn* doq_conn = (struct doq_conn*)user_data;
-	(void)cid;
 	(void)conn;
 	(void)token;
 	(void)cidlen;
-	(void)doq_conn;
+	if(!doq_conn_associate_conid(doq_conn, cid->data, cid->datalen))
+		return NGTCP2_ERR_CALLBACK_FAILURE;
+	return 0;
+}
+
+/** ngtcp2 remove_connection_id callback function */
+static int
+doq_remove_connection_id_cb(ngtcp2_conn* ATTR_UNUSED(conn),
+	const ngtcp2_cid* cid, void* user_data)
+{
+	struct doq_conn* doq_conn = (struct doq_conn*)user_data;
+	doq_conn_dissociate_conid(doq_conn, cid->data, cid->datalen);
 	return 0;
 }
 
@@ -3285,6 +3296,7 @@ doq_conn_setup(struct doq_conn* conn)
 	callbacks.version_negotiation = ngtcp2_crypto_version_negotiation_cb;
 	callbacks.rand = doq_rand_cb;
 	callbacks.get_new_connection_id = doq_get_new_connection_id_cb;
+	callbacks.remove_connection_id = doq_remove_connection_id_cb;
 
 	ngtcp2_settings_default(&settings);
 	if(verbosity >= VERB_ALGO) {
@@ -3301,6 +3313,175 @@ doq_conn_setup(struct doq_conn* conn)
 			ngtcp2_strerror(rv));
 		return 0;
 	}
+	if(!doq_conn_setup_conids(conn)) {
+		log_err("doq_conn_setup_conids failed: out of memory");
+		return 0;
+	}
 	return 1;
+}
+
+struct doq_conid*
+doq_conid_find(struct doq_server_socket* doq_socket, const uint8_t* data,
+	size_t datalen)
+{
+	struct rbnode_type* node;
+	struct doq_conid key;
+	key.node.key = &key;
+	key.cid = (void*)data;
+	key.cidlen = datalen;
+	node = rbtree_search(doq_socket->conid_tree, &key);
+	if(node)
+		return (struct doq_conid*)node->key;
+	return NULL;
+}
+
+/** insert conid in the conid list */
+static void
+doq_conid_list_insert(struct doq_conn* conn, struct doq_conid* conid)
+{
+	conid->prev = NULL;
+	conid->next = conn->conid_list;
+	if(conn->conid_list)
+		conn->conid_list->prev = conid;
+	conn->conid_list = conid;
+}
+
+/** remove conid from the conid list */
+static void
+doq_conid_list_remove(struct doq_conn* conn, struct doq_conid* conid)
+{
+	if(conid->prev)
+		conid->prev->next = conid->next;
+	else	conn->conid_list = conid->next;
+	if(conid->next)
+		conid->next->prev = conid->prev;
+}
+
+/** create a doq_conid */
+static struct doq_conid*
+doq_conid_create(uint8_t* data, size_t datalen)
+{
+	struct doq_conid* conid;
+	conid = calloc(1, sizeof(*conid));
+	if(!conid)
+		return NULL;
+	conid->cid = memdup(data, datalen);
+	if(!conid->cid) {
+		free(conid);
+		return NULL;
+	}
+	conid->cidlen = datalen;
+	conid->node.key = conid;
+	return conid;
+}
+
+/** delete a doq_conid */
+static void
+doq_conid_delete(struct doq_conid* conid)
+{
+	if(!conid)
+		return;
+	free(conid->cid);
+	free(conid);
+}
+
+int
+doq_conn_associate_conid(struct doq_conn* conn, uint8_t* data, size_t datalen)
+{
+	struct doq_conid* conid;
+	conid = doq_conid_find(conn->doq_socket, data, datalen);
+	if(conid && conid->conn != conn) {
+		verbose(VERB_ALGO, "doq connection id already exists for "
+			"another doq_conn. Ignoring second connection id.");
+		/* Already exists to another conn, ignore it.
+		 * This works, in that the conid is listed in the doq_conn
+		 * conid_list element, and removed from there. So our conid
+		 * tree and list are fine, when created and removed.
+		 * The tree now does not have the lookup element pointing
+		 * to this connection. */
+		return 1;
+	}
+	if(conid)
+		return 1; /* already inserted */
+	conid = doq_conid_create(data, datalen);
+	if(!conid)
+		return 0;
+	conid->conn = conn;
+	doq_conid_list_insert(conn, conid);
+	(void)rbtree_insert(conn->doq_socket->conid_tree, &conid->node);
+	return 1;
+}
+
+void
+doq_conn_dissociate_conid(struct doq_conn* conn, const uint8_t* data,
+	size_t datalen)
+{
+	struct doq_conid* conid;
+	conid = doq_conid_find(conn->doq_socket, data, datalen);
+	if(conid && conid->conn != conn)
+		return;
+	if(conid) {
+		(void)rbtree_delete(conn->doq_socket->conid_tree,
+			conid->node.key);
+		doq_conid_list_remove(conn, conid);
+		doq_conid_delete(conid);
+	}
+}
+
+/** associate the scid array and also the dcid */
+static int
+doq_conn_setup_id_array_and_dcid(struct doq_conn* conn,
+	struct ngtcp2_cid* scids, size_t num_scid)
+{
+	size_t i;
+	for(i=0; i<num_scid; i++) {
+		if(!doq_conn_associate_conid(conn, scids[i].data,
+			scids[i].datalen))
+			return 0;
+	}
+	if(!doq_conn_associate_conid(conn, conn->dcid, conn->dcidlen))
+		return 0;
+	return 1;
+}
+
+int
+doq_conn_setup_conids(struct doq_conn* conn)
+{
+	size_t num_scid = ngtcp2_conn_get_num_scid(conn->conn);
+	if(num_scid <= 4) {
+		struct ngtcp2_cid ids[4];
+		/* Usually there are not that many scids when just accepted,
+		 * like only 2. */
+		ngtcp2_conn_get_scid(conn->conn, ids);
+		return doq_conn_setup_id_array_and_dcid(conn, ids, num_scid);
+	} else {
+		struct ngtcp2_cid *scids = calloc(num_scid,
+			sizeof(struct ngtcp2_cid));
+		if(!scids)
+			return 0;
+		ngtcp2_conn_get_scid(conn->conn, scids);
+		if(!doq_conn_setup_id_array_and_dcid(conn, scids, num_scid)) {
+			free(scids);
+			return 0;
+		}
+		free(scids);
+	}
+	return 1;
+}
+
+void
+doq_conn_clear_conids(struct doq_conn* conn)
+{
+	struct doq_conid* p, *next;
+	if(!conn)
+		return;
+	p = conn->conid_list;
+	while(p) {
+		next = p->next;
+		(void)rbtree_delete(conn->doq_socket->conid_tree, p->node.key);
+		doq_conid_delete(p);
+		p = next;
+	}
+	conn->conid_list = NULL;
 }
 #endif /* HAVE_NGTCP2 */

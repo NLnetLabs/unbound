@@ -450,6 +450,8 @@ int http2_submit_dns_response(void* v);
 #endif /* HAVE_NGHTTP2 */
 
 #ifdef HAVE_NGTCP2
+struct doq_conid;
+
 /**
  * DoQ connection, for DNS over QUIC. One connection to a remote endpoint
  * with a number of streams in it. Every stream is like a tcp stream with
@@ -478,6 +480,28 @@ struct doq_conn {
 	uint32_t version;
 	/** the ngtcp2 connection, a server connection */
 	struct ngtcp2_conn* conn;
+	/** the connection ids that are associated with this doq_conn.
+	 * There can be a number, that can change. They are linked here,
+	 * so that upon removal, the list of actually associated conid
+	 * elements can be removed as well. */
+	struct doq_conid* conid_list;
+};
+
+/**
+ * Connection ID and the doq_conn that is that connection. A connection
+ * has an original dcid, and then more connection ids associated.
+ */
+struct doq_conid {
+	/** rbtree node, key is the connection id. */
+	struct rbnode_type node;
+	/** the next and prev in the list of conids for the doq_conn */
+	struct doq_conid* next, *prev;
+	/** the doq_conn that is the connection */
+	struct doq_conn* conn;
+	/** the connection id, byte string */
+	uint8_t* cid;
+	/** the length of cid */
+	size_t cidlen;
 };
 
 /**
@@ -518,6 +542,24 @@ int doq_conn_setup(struct doq_conn* conn);
 
 /** fill a buffer with random data */
 void doq_fill_rand(struct ub_randstate* rnd, uint8_t* buf, size_t len);
+
+/** add a connection id to the doq_conn */
+int doq_conn_associate_conid(struct doq_conn* conn, uint8_t* data,
+	size_t datalen);
+
+/** remove a connection id from the doq_conn */
+void doq_conn_dissociate_conid(struct doq_conn* conn, const uint8_t* data,
+	size_t datalen);
+
+/** initial setup to link current connection ids to the doq_conn */
+int doq_conn_setup_conids(struct doq_conn* conn);
+
+/** remove the connection ids from the doq_conn */
+void doq_conn_clear_conids(struct doq_conn* conn);
+
+/** find a conid in the doq_conn connection */
+struct doq_conid* doq_conid_find(struct doq_server_socket* doq_socket,
+	const uint8_t* data, size_t datalen);
 #endif /* HAVE_NGTCP2 */
 
 char* set_ip_dscp(int socket, int addrfamily, int ds);

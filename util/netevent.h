@@ -975,6 +975,9 @@ struct doq_server_socket {
 	/** rbtree of doq_conn, the connections to different destination
 	 * addresses, and can be found by dcid. */
 	struct rbtree_type* conn_tree;
+	/** rbtree of doq_conid, connections can be found by their
+	 * connection ids. Lookup by connection id, finds doq_conn. */
+	struct rbtree_type* conid_tree;
 };
 
 /**
