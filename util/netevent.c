@@ -1066,7 +1066,8 @@ doq_recv(struct comm_point* c, struct sockaddr_storage* addr,
 	return 1;
 }
 
-/** send the version negotiation for doq. */
+/** send the version negotiation for doq. scid and dcid are flipped around
+ * to send back to the client. */
 static void
 doq_send_version_negotiation(struct comm_point* c,
 	struct sockaddr_storage* addr, socklen_t addrlen,
@@ -1151,8 +1152,8 @@ doq_decode_pkt_header_negotiate(struct comm_point* c,
 		if(rv == NGTCP2_ERR_VERSION_NEGOTIATION) {
 			/* send the version negotiation */
 			doq_send_version_negotiation(c, addr, addrlen,
-				localaddr, localaddrlen, ifindex, dcid,
-				dcidlen, scid, scidlen);
+				localaddr, localaddrlen, ifindex, scid,
+				scidlen, dcid, dcidlen);
 			return 0;
 		}
 		verbose(VERB_ALGO, "doq: could not decode version "
@@ -1237,7 +1238,7 @@ doq_send_retry(struct comm_point* c, struct sockaddr_storage* addr,
 		sizeof(port))) {
 		return;
 	}
-	verbose(VERB_ALGO, "doq: sending retry packet to %s %p", host, port);
+	verbose(VERB_ALGO, "doq: sending retry packet to %s %s", host, port);
 
 	/* the server chosen source connection ID */
 	scid.datalen = c->doq_socket->sv_scidlen;
@@ -1268,13 +1269,85 @@ doq_send_retry(struct comm_point* c, struct sockaddr_storage* addr,
 	doq_send(c, addr, addrlen, localaddr, localaddrlen, ifindex, 0);
 }
 
+/** doq send stateless connection close */
+static void
+doq_send_stateless_connection_close(struct comm_point* c,
+	struct ngtcp2_pkt_hd* hd, struct sockaddr_storage* addr,
+	socklen_t addrlen, struct sockaddr_storage* localaddr,
+	socklen_t localaddrlen, int ifindex)
+{
+	ngtcp2_ssize ret;
+	sldns_buffer_clear(c->buffer);
+	ret = ngtcp2_crypto_write_connection_close(
+		sldns_buffer_begin(c->buffer),
+		sldns_buffer_capacity(c->buffer), hd->version, &hd->scid,
+		&hd->dcid, NGTCP2_INVALID_TOKEN, NULL, 0);
+	if(ret < 0) {
+		log_err("ngtcp2_crypto_write_connection_close failed: %s",
+			ngtcp2_strerror(ret));
+		return;
+	}
+	sldns_buffer_set_position(c->buffer, ret);
+	sldns_buffer_flip(c->buffer);
+	doq_send(c, addr, addrlen, localaddr, localaddrlen, ifindex, 0);
+}
+
+/** doq verify retry token, false on failure */
+static int
+doq_verify_retry_token(struct comm_point* c, struct sockaddr_storage* addr,
+	socklen_t addrlen, struct ngtcp2_cid* ocid, struct ngtcp2_pkt_hd* hd)
+{
+	char host[256], port[32];
+	ngtcp2_tstamp ts;
+	if(!doq_print_addr_port(addr, addrlen, host, sizeof(host), port,
+		sizeof(port)))
+		return 0;
+	ts = doq_get_timestamp_nanosec();
+	verbose(VERB_ALGO, "doq: verifying retry token from %s %s", host,
+		port);
+	if(ngtcp2_crypto_verify_retry_token(ocid, hd->token.base,
+		hd->token.len, c->doq_socket->static_secret,
+		c->doq_socket->static_secret_len, hd->version, (void*)addr,
+		addrlen, &hd->dcid, 10*NGTCP2_SECONDS, ts) != 0) {
+		verbose(VERB_ALGO, "doq: could not verify retry token "
+			"from %s %s", host, port);
+		return 0;
+	}
+	verbose(VERB_ALGO, "doq: verified retry token from %s %s", host, port);
+	return 1;
+}
+
+/** doq verify token, false on failure */
+static int
+doq_verify_token(struct comm_point* c, struct sockaddr_storage* addr,
+	socklen_t addrlen, struct ngtcp2_pkt_hd* hd)
+{
+	char host[256], port[32];
+	ngtcp2_tstamp ts;
+	if(!doq_print_addr_port(addr, addrlen, host, sizeof(host), port,
+		sizeof(port)))
+		return 0;
+	ts = doq_get_timestamp_nanosec();
+	verbose(VERB_ALGO, "doq: verifying token from %s %s", host, port);
+	if(ngtcp2_crypto_verify_regular_token(hd->token.base, hd->token.len,
+		c->doq_socket->static_secret, c->doq_socket->static_secret_len,
+		(void*)addr, addrlen, 3600*NGTCP2_SECONDS, ts) != 0) {
+		verbose(VERB_ALGO, "doq: could not verify token from %s %s",
+			host, port);
+		return 0;
+	}
+	verbose(VERB_ALGO, "doq: verified token from %s %s", host, port);
+	return 1;
+}
+
 /** create and setup a new doq connection, to a new destination, or with
  * a new dcid. It has a new set of streams. It is inserted in the lookup tree.
  * Returns NULL on failure. */
 static struct doq_conn*
 doq_setup_new_conn(struct comm_point* c, struct sockaddr_storage* addr,
 	socklen_t addrlen, struct sockaddr_storage* localaddr,
-	socklen_t localaddrlen, int ifindex, struct ngtcp2_pkt_hd* hd)
+	socklen_t localaddrlen, int ifindex, struct ngtcp2_pkt_hd* hd,
+	struct ngtcp2_cid* ocid)
 {
 	struct doq_conn* conn;
 	conn = doq_conn_create(c, addr, addrlen, localaddr, localaddrlen,
@@ -1290,13 +1363,64 @@ doq_setup_new_conn(struct comm_point* c, struct sockaddr_storage* addr,
 	}
 	verbose(VERB_ALGO, "doq: created new connection");
 
-	if(!doq_conn_setup(conn)) {
+	if(!doq_conn_setup(conn, hd->scid.data, hd->scid.datalen,
+		(ocid?ocid->data:NULL), (ocid?ocid->datalen:0),
+		hd->token.base, hd->token.len)) {
 		log_err("doq: could not set up connection");
 		(void)rbtree_delete(c->doq_socket->conn_tree, conn->node.key);
 		doq_conn_delete(conn);
 		return NULL;
 	}
 	return conn;
+}
+
+/** perform doq address validation */
+static int
+doq_address_validation(struct comm_point* c, struct sockaddr_storage* addr,
+	socklen_t addrlen, struct sockaddr_storage* localaddr,
+	socklen_t localaddrlen, int ifindex, struct ngtcp2_pkt_hd* hd,
+	struct ngtcp2_cid* ocid, struct ngtcp2_cid** pocid)
+{
+	verbose(VERB_ALGO, "doq stateless address validation");
+	if(hd->token.len == 0) {
+		doq_send_retry(c, addr, addrlen, localaddr, localaddrlen,
+			ifindex, hd);
+		return 0;
+	}
+	if(hd->token.base[0] != NGTCP2_CRYPTO_TOKEN_MAGIC_RETRY &&
+		hd->dcid.datalen < NGTCP2_MIN_INITIAL_DCIDLEN) {
+		doq_send_stateless_connection_close(c, hd, addr, addrlen,
+			localaddr, localaddrlen, ifindex);
+		return 0;
+	}
+	if(hd->token.base[0] == NGTCP2_CRYPTO_TOKEN_MAGIC_RETRY) {
+		if(!doq_verify_retry_token(c, addr, addrlen, ocid, hd)) {
+			doq_send_stateless_connection_close(c, hd, addr,
+				addrlen, localaddr, localaddrlen, ifindex);
+			return 0;
+		}
+		*pocid = ocid;
+	} else if(hd->token.base[0] == NGTCP2_CRYPTO_TOKEN_MAGIC_REGULAR) {
+		if(!doq_verify_token(c, addr, addrlen, hd)) {
+			doq_send_retry(c, addr, addrlen, localaddr,
+				localaddrlen, ifindex, hd);
+			return 0;
+		}
+		hd->token.base = NULL;
+		hd->token.len = 0;
+	} else {
+		verbose(VERB_ALGO, "doq address validation: unrecognised "
+			"token in hd.token.base with magic byte 0x%2.2x",
+			(int)hd->token.base[0]);
+		if(c->doq_socket->validate_addr) {
+			doq_send_retry(c, addr, addrlen, localaddr,
+				localaddrlen, ifindex, hd);
+			return 0;
+		}
+		hd->token.base = NULL;
+		hd->token.len = 0;
+	}
+	return 1;
 }
 
 /** the doq accept, returns false if no further processing of content */
@@ -1307,6 +1431,7 @@ doq_accept(struct comm_point* c, struct sockaddr_storage* addr,
 {
 	int rv;
 	struct ngtcp2_pkt_hd hd;
+	struct ngtcp2_cid ocid, *pocid=NULL;
 	memset(&hd, 0, sizeof(hd));
 	rv = ngtcp2_accept(&hd, sldns_buffer_begin(c->buffer),
 		sldns_buffer_limit(c->buffer));
@@ -1320,8 +1445,13 @@ doq_accept(struct comm_point* c, struct sockaddr_storage* addr,
 			ngtcp2_strerror(rv));
 		return 0;
 	}
+	if(c->doq_socket->validate_addr || hd.token.len) {
+		if(!doq_address_validation(c, addr, addrlen, localaddr,
+			localaddrlen, ifindex, &hd, &ocid, &pocid))
+			return 0;
+	}
 	*conn = doq_setup_new_conn(c, addr, addrlen, localaddr, localaddrlen,
-		ifindex, &hd);
+		ifindex, &hd, pocid);
 	if(!*conn)
 		return 0;
 	return 1;
@@ -1393,7 +1523,8 @@ comm_point_doq_callback(int fd, short event, void* arg)
 
 /** create new doq server socket structure */
 static struct doq_server_socket*
-doq_server_socket_create(struct ub_randstate* rnd, int idle_msec)
+doq_server_socket_create(struct ub_randstate* rnd, int idle_msec,
+	const char* ssl_service_key, const char* ssl_service_pem)
 {
 	struct doq_server_socket* doq_socket;
 	doq_socket = calloc(1, sizeof(*doq_socket));
@@ -1402,24 +1533,56 @@ doq_server_socket_create(struct ub_randstate* rnd, int idle_msec)
 	}
 	doq_socket->rnd = rnd;
 	doq_socket->idle_timeout = ((uint64_t)idle_msec)*NGTCP2_MILLISECONDS;
+	doq_socket->validate_addr = 1;
+	doq_socket->ssl_service_key = strdup(ssl_service_key);
+	if(!doq_socket->ssl_service_key) {
+		free(doq_socket);
+		return NULL;
+	}
+	doq_socket->ssl_service_pem = strdup(ssl_service_pem);
+	if(!doq_socket->ssl_service_pem) {
+		free(doq_socket->ssl_service_key);
+		free(doq_socket);
+		return NULL;
+	}
+	doq_socket->ssl_verify_pem = NULL;
 	doq_socket->sv_scidlen = 16;
 	doq_socket->static_secret_len = 16;
 	doq_socket->static_secret = malloc(doq_socket->static_secret_len);
 	if(!doq_socket->static_secret) {
+		free(doq_socket->ssl_service_key);
+		free(doq_socket->ssl_service_pem);
+		free(doq_socket->ssl_verify_pem);
 		free(doq_socket);
 		return NULL;
 	}
 	doq_fill_rand(rnd, doq_socket->static_secret, doq_socket->static_secret_len);
 	doq_socket->conn_tree = rbtree_create(doq_conn_cmp);
 	if(!doq_socket->conn_tree) {
+		free(doq_socket->ssl_service_key);
+		free(doq_socket->ssl_service_pem);
+		free(doq_socket->ssl_verify_pem);
 		free(doq_socket->static_secret);
 		free(doq_socket);
 		return NULL;
 	}
 	doq_socket->conid_tree = rbtree_create(doq_conid_cmp);
 	if(!doq_socket->conid_tree) {
+		free(doq_socket->ssl_service_key);
+		free(doq_socket->ssl_service_pem);
+		free(doq_socket->ssl_verify_pem);
 		free(doq_socket->static_secret);
 		free(doq_socket->conn_tree);
+		free(doq_socket);
+		return NULL;
+	}
+	if(!doq_socket_setup_ctx(doq_socket)) {
+		free(doq_socket->ssl_service_key);
+		free(doq_socket->ssl_service_pem);
+		free(doq_socket->ssl_verify_pem);
+		free(doq_socket->static_secret);
+		free(doq_socket->conn_tree);
+		free(doq_socket->conid_tree);
 		free(doq_socket);
 		return NULL;
 	}
@@ -1461,6 +1624,11 @@ doq_server_socket_delete(struct doq_server_socket* doq_socket)
 		traverse_postorder(doq_socket->conn_tree, conid_tree_del, NULL);
 		free(doq_socket->conid_tree);
 	}
+	SSL_CTX_free(doq_socket->ctx);
+	free(doq_socket->quic_method);
+	free(doq_socket->ssl_service_key);
+	free(doq_socket->ssl_service_pem);
+	free(doq_socket->ssl_verify_pem);
 	free(doq_socket);
 }
 #endif /* HAVE_NGTCP2 */
@@ -4071,7 +4239,8 @@ comm_point_create_udp_ancil(struct comm_base *base, int fd,
 struct comm_point*
 comm_point_create_doq(struct comm_base *base, int fd, sldns_buffer* buffer,
 	comm_point_callback_type* callback, void* callback_arg,
-	struct unbound_socket* socket, struct ub_randstate* rnd, int idle_msec)
+	struct unbound_socket* socket, struct ub_randstate* rnd, int idle_msec,
+	const char* ssl_service_key, const char* ssl_service_pem)
 {
 #ifdef HAVE_NGTCP2
 	struct comm_point* c = (struct comm_point*)calloc(1,
@@ -4109,7 +4278,8 @@ comm_point_create_doq(struct comm_base *base, int fd, sldns_buffer* buffer,
 	c->dnscrypt_buffer = NULL;
 #endif
 #ifdef HAVE_NGTCP2
-	c->doq_socket = doq_server_socket_create(rnd, idle_msec);
+	c->doq_socket = doq_server_socket_create(rnd, idle_msec,
+		ssl_service_key, ssl_service_pem);
 #endif
 	c->inuse = 0;
 	c->callback = callback;

@@ -541,6 +541,8 @@ struct comm_point* comm_point_create_udp_ancil(struct comm_base* base,
  * @param socket: and opened socket properties will be passed to your callback function.
  * @param rnd: random generator to use.
  * @param idle_msec: idle timeout in msec.
+ * @param ssl_service_key: the ssl service key file.
+ * @param ssl_service_pem: the ssl service pem file.
  * @return: returns the allocated communication point. NULL on error.
  * Sets timeout to NULL. Turns off TCP options.
  */
@@ -548,7 +550,8 @@ struct comm_point* comm_point_create_doq(struct comm_base* base,
 	int fd, struct sldns_buffer* buffer,
 	comm_point_callback_type* callback, void* callback_arg,
 	struct unbound_socket* socket, struct ub_randstate* rnd,
-	int idle_msec);
+	int idle_msec, const char* ssl_service_key,
+	const char* ssl_service_pem);
 
 /**
  * Create a TCP listener comm point. Calls malloc.
@@ -970,6 +973,14 @@ struct doq_server_socket {
 	struct ub_randstate* rnd;
 	/** the idle timeout in nanoseconds */
 	uint64_t idle_timeout;
+	/** if address validation is enabled */
+	int validate_addr;
+	/** the ssl service key file */
+	char* ssl_service_key;
+	/** the ssl service pem file */
+	char* ssl_service_pem;
+	/** the ssl verify pem file */
+	char* ssl_verify_pem;
 	/** the server scid length */
 	int sv_scidlen;
 	/** the static secret for the server */
@@ -982,6 +993,10 @@ struct doq_server_socket {
 	/** rbtree of doq_conid, connections can be found by their
 	 * connection ids. Lookup by connection id, finds doq_conn. */
 	struct rbtree_type* conid_tree;
+	/** ssl context, SSL_CTX* */
+	void* ctx;
+	/** quic method functions, SSL_QUIC_METHOD* */
+	void* quic_method;
 };
 
 /**

@@ -1972,7 +1972,8 @@ worker_init(struct worker* worker, struct config_file *cfg,
 		cfg->harden_large_queries, cfg->http_max_streams,
 		cfg->http_endpoint, cfg->http_notls_downstream,
 		worker->daemon->tcl, worker->daemon->listen_sslctx,
-		dtenv, worker->env.rnd, worker_handle_request, worker);
+		dtenv, worker->env.rnd, cfg->ssl_service_key,
+		cfg->ssl_service_pem, worker_handle_request, worker);
 	if(!worker->front) {
 		log_err("could not create listening sockets");
 		worker_delete(worker);

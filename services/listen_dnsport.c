@@ -83,6 +83,11 @@
 #ifdef HAVE_NGTCP2
 #include <ngtcp2/ngtcp2.h>
 #include <ngtcp2/ngtcp2_crypto.h>
+#include <ngtcp2/ngtcp2_crypto_openssl.h>
+#endif
+
+#ifdef HAVE_OPENSSL_SSL_H
+#include <openssl/ssl.h>
 #endif
 
 /** number of queued TCP connections for listen() */
@@ -1416,6 +1421,7 @@ listen_create(struct comm_base* base, struct listen_port* ports,
 	int harden_large_queries, uint32_t http_max_streams,
 	char* http_endpoint, int http_notls, struct tcl_list* tcp_conn_limit,
 	void* sslctx, struct dt_env* dtenv, struct ub_randstate* rnd,
+	const char* ssl_service_key, const char* ssl_service_pem,
 	comm_point_callback_type* cb, void *cb_arg)
 {
 	struct listen_dnsport* front = (struct listen_dnsport*)
@@ -1447,7 +1453,8 @@ listen_create(struct comm_base* base, struct listen_port* ports,
 #endif
 			cp = comm_point_create_doq(base, ports->fd,
 				front->udp_buff, cb, cb_arg, ports->socket,
-				rnd, tcp_idle_timeout);
+				rnd, tcp_idle_timeout, ssl_service_key,
+				ssl_service_pem);
 		} else if(ports->ftype == listen_type_tcp ||
 				ports->ftype == listen_type_tcp_dnscrypt) {
 			cp = comm_point_create_tcp(base, ports->fd,
@@ -3158,6 +3165,7 @@ doq_conn_delete(struct doq_conn* conn)
 	doq_conn_clear_conids(conn);
 	ngtcp2_conn_del(conn->conn);
 	free(conn->dcid);
+	SSL_free(conn->ssl);
 	free(conn);
 }
 
@@ -3292,25 +3300,225 @@ doq_log_printf_cb(void* ATTR_UNUSED(user_data), const char* fmt, ...)
 	va_end(ap);
 }
 
+/** the doq application tx key callback, false on failure */
+static int
+doq_application_tx_key_cb(struct doq_conn* conn)
+{
+	verbose(VERB_ALGO, "doq application tx key cb");
+	/* The server does not want to open streams to the client,
+	 * the client instead initiates by opening bidi streams. */
+	verbose(VERB_ALGO, "doq ngtcp2_conn_get_max_data_left is %d",
+		(int)ngtcp2_conn_get_max_data_left(conn->conn));
+	verbose(VERB_ALGO, "doq ngtcp2_conn_get_max_local_streams_uni is %d",
+		(int)ngtcp2_conn_get_max_local_streams_uni(conn->conn));
+	verbose(VERB_ALGO, "doq ngtcp2_conn_get_streams_uni_left is %d",
+		(int)ngtcp2_conn_get_streams_uni_left(conn->conn));
+	verbose(VERB_ALGO, "doq ngtcp2_conn_get_streams_bidi_left is %d",
+		(int)ngtcp2_conn_get_streams_bidi_left(conn->conn));
+	return 1;
+}
+
+/** quic_method set_encryption_secrets function */
+static int
+doq_set_encryption_secrets(SSL *ssl, OSSL_ENCRYPTION_LEVEL ossl_level,
+	const uint8_t *read_secret, const uint8_t *write_secret,
+	size_t secret_len)
+{
+	struct doq_conn* doq_conn = (struct doq_conn*)SSL_get_app_data(ssl);
+	ngtcp2_crypto_level level =
+		ngtcp2_crypto_openssl_from_ossl_encryption_level(ossl_level);
+
+	if(read_secret) {
+		if(ngtcp2_crypto_derive_and_install_rx_key(doq_conn->conn,
+			NULL, NULL, NULL, level, read_secret, secret_len)
+			!= 0) {
+			log_err("ngtcp2_crypto_derive_and_install_rx_key failed");
+			return 0;
+		}
+	}
+
+	if(write_secret) {
+		if(ngtcp2_crypto_derive_and_install_tx_key(doq_conn->conn,
+			NULL, NULL, NULL, level, write_secret, secret_len)
+			!= 0) {
+			log_err("ngtcp2_crypto_derive_and_install_tx_key failed");
+			return 0;
+		}
+		if(level == NGTCP2_CRYPTO_LEVEL_APPLICATION) {
+			if(!doq_application_tx_key_cb(doq_conn))
+				return 0;
+		}
+	}
+	return 1;
+}
+
+/** quic_method add_handshake_data function */
+static int
+doq_add_handshake_data(SSL *ssl, OSSL_ENCRYPTION_LEVEL ossl_level,
+	const uint8_t *data, size_t len)
+{
+	struct doq_conn* doq_conn = (struct doq_conn*)SSL_get_app_data(ssl);
+	ngtcp2_crypto_level level =
+		ngtcp2_crypto_openssl_from_ossl_encryption_level(ossl_level);
+	int rv;
+
+	rv = ngtcp2_conn_submit_crypto_data(doq_conn->conn, level, data, len);
+	if(rv != 0) {
+		log_err("ngtcp2_conn_submit_crypto_data failed: %s",
+			ngtcp2_strerror(rv));
+		ngtcp2_conn_set_tls_error(doq_conn->conn, rv);
+		return 0;
+	}
+	return 1;
+}
+
+/** quic_method flush_flight function */
+static int
+doq_flush_flight(SSL* ATTR_UNUSED(ssl))
+{
+	return 1;
+}
+
+/** quic_method send_alert function */
+static int
+doq_send_alert(SSL *ssl, enum ssl_encryption_level_t ATTR_UNUSED(level),
+	uint8_t alert)
+{
+	struct doq_conn* doq_conn = (struct doq_conn*)SSL_get_app_data(ssl);
+	doq_conn->tls_alert = alert;
+	return 1;
+}
+
+/** create new tls session for server doq connection */
+static SSL_CTX*
+doq_ctx_server_setup(struct doq_server_socket* doq_socket)
+{
+	char* sid_ctx = "unbound server";
+	SSL_QUIC_METHOD* quic_method;
+	SSL_CTX* ctx = SSL_CTX_new(TLS_server_method());
+	if(!ctx) {
+		log_crypto_err("Could not SSL_CTX_new");
+		return NULL;
+	}
+	SSL_CTX_set_options(ctx,
+		(SSL_OP_ALL & ~SSL_OP_DONT_INSERT_EMPTY_FRAGMENTS) |
+		SSL_OP_SINGLE_ECDH_USE |
+		SSL_OP_CIPHER_SERVER_PREFERENCE |
+		SSL_OP_NO_ANTI_REPLAY);
+	SSL_CTX_set_mode(ctx, SSL_MODE_RELEASE_BUFFERS);
+	SSL_CTX_set_min_proto_version(ctx, TLS1_3_VERSION);
+	SSL_CTX_set_max_proto_version(ctx, TLS1_3_VERSION);
+#ifdef HAVE_SSL_CTX_SET_ALPN_PROTOS
+	SSL_CTX_set_alpn_protos(ctx, (const unsigned char *)"\x03doq", 4);
+#endif
+	SSL_CTX_set_default_verify_paths(ctx);
+	if(!SSL_CTX_use_certificate_chain_file(ctx,
+		doq_socket->ssl_service_pem)) {
+		log_err("doq: error for cert file: %s",
+			doq_socket->ssl_service_pem);
+		log_crypto_err("doq: error in "
+			"SSL_CTX_use_certificate_chain_file");
+		SSL_CTX_free(ctx);
+		return NULL;
+	}
+	if(!SSL_CTX_use_PrivateKey_file(ctx, doq_socket->ssl_service_key,
+		SSL_FILETYPE_PEM)) {
+		log_err("doq: error for private key file: %s",
+			doq_socket->ssl_service_key);
+		log_crypto_err("doq: error in SSL_CTX_use_PrivateKey_file");
+		SSL_CTX_free(ctx);
+		return NULL;
+	}
+	if(!SSL_CTX_check_private_key(ctx)) {
+		log_err("doq: error for key file: %s",
+			doq_socket->ssl_service_key);
+		log_crypto_err("doq: error in SSL_CTX_check_private_key");
+		SSL_CTX_free(ctx);
+		return NULL;
+	}
+	SSL_CTX_set_session_id_context(ctx, (void*)sid_ctx, strlen(sid_ctx));
+	if(doq_socket->ssl_verify_pem && doq_socket->ssl_verify_pem[0]) {
+		if(!SSL_CTX_load_verify_locations(ctx,
+			doq_socket->ssl_verify_pem, NULL)) {
+			log_err("doq: error for verify pem file: %s",
+				doq_socket->ssl_verify_pem);
+			log_crypto_err("doq: error in "
+				"SSL_CTX_load_verify_locations");
+			SSL_CTX_free(ctx);
+			return NULL;
+		}
+		SSL_CTX_set_client_CA_list(ctx, SSL_load_client_CA_file(
+			doq_socket->ssl_verify_pem));
+		SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER|
+			SSL_VERIFY_CLIENT_ONCE|
+			SSL_VERIFY_FAIL_IF_NO_PEER_CERT, NULL);
+	}
+
+	SSL_CTX_set_max_early_data(ctx, 0xffffffff);
+	/* The quic_method needs to remain valid during the SSL_CTX
+	 * lifetime, so we allocate it. It is freed with the
+	 * doq_server_socket. */
+	quic_method = calloc(1, sizeof(SSL_QUIC_METHOD));
+	if(!quic_method) {
+		log_err("calloc failed: out of memory");
+		SSL_CTX_free(ctx);
+		return NULL;
+	}
+	doq_socket->quic_method = quic_method;
+	quic_method->set_encryption_secrets = doq_set_encryption_secrets;
+	quic_method->add_handshake_data = doq_add_handshake_data;
+	quic_method->flush_flight = doq_flush_flight;
+	quic_method->send_alert = doq_send_alert;
+	SSL_CTX_set_quic_method(ctx, doq_socket->quic_method);
+	return ctx;
+}
+
+/** create new SSL session for server connection */
+static SSL*
+doq_ssl_server_setup(SSL_CTX* ctx, struct doq_conn* conn)
+{
+	SSL* ssl = SSL_new(ctx);
+	if(!ssl) {
+		log_crypto_err("doq: SSL_new failed");
+		return NULL;
+	}
+	SSL_set_app_data(ssl, conn);
+	SSL_set_accept_state(ssl);
+	SSL_set_quic_early_data_enabled(ssl, 1);
+	return ssl;
+}
+
+/** setup the doq_socket server tls context */
 int
-doq_conn_setup(struct doq_conn* conn)
+doq_socket_setup_ctx(struct doq_server_socket* doq_socket)
+{
+	doq_socket->ctx = doq_ctx_server_setup(doq_socket);
+	if(!doq_socket->ctx)
+		return 0;
+	return 1;
+}
+
+int
+doq_conn_setup(struct doq_conn* conn, uint8_t* scid, size_t scidlen,
+	uint8_t* ocid, size_t ocidlen, const uint8_t* token, size_t tokenlen)
 {
 	int rv;
-	struct ngtcp2_cid dcid, scid;
+	struct ngtcp2_cid dcid, sv_scid;
 	struct ngtcp2_path path;
 	struct ngtcp2_callbacks callbacks;
 	struct ngtcp2_settings settings;
 	struct ngtcp2_transport_params params;
 	memset(&dcid, 0, sizeof(dcid));
-	memset(&scid, 0, sizeof(scid));
+	memset(&sv_scid, 0, sizeof(sv_scid));
 	memset(&path, 0, sizeof(path));
 	memset(&callbacks, 0, sizeof(callbacks));
 	memset(&settings, 0, sizeof(settings));
 	memset(&params, 0, sizeof(params));
 
 	ngtcp2_cid_init(&dcid, conn->dcid, conn->dcidlen);
-	scid.datalen = conn->doq_socket->sv_scidlen;
-	doq_fill_rand(conn->doq_socket->rnd, scid.data, scid.datalen);
+	sv_scid.datalen = conn->doq_socket->sv_scidlen;
+	if(!doq_conn_generate_new_conid(conn, sv_scid.data, sv_scid.datalen))
+		return 0;
 
 	path.remote.addr = (struct sockaddr*)&conn->destaddr;
 	path.remote.addrlen = conn->destaddrlen;
@@ -3342,6 +3550,8 @@ doq_conn_setup(struct doq_conn* conn)
 	settings.initial_ts = doq_get_timestamp_nanosec();
 	settings.max_stream_window = 6*1024*1024;
 	settings.max_window = 6*1024*1024;
+	settings.token.base = (void*)token;
+	settings.token.len = tokenlen;
 
 	ngtcp2_transport_params_default(&params);
 	params.max_idle_timeout = conn->doq_socket->idle_timeout;
@@ -3354,8 +3564,17 @@ doq_conn_setup(struct doq_conn* conn)
 	/* Initial max on number of bidi streams the remote end can open.
 	 * That is the number of queries it can make, at first. */
 	params.initial_max_streams_bidi = 10;
+	if(ocid) {
+		ngtcp2_cid_init(&params.original_dcid, ocid, ocidlen);
+		ngtcp2_cid_init(&params.retry_scid, scid, scidlen);
+		params.retry_scid_present = 1;
+	} else {
+		ngtcp2_cid_init(&params.original_dcid, scid, scidlen);
+	}
+	doq_fill_rand(conn->doq_socket->rnd, params.stateless_reset_token,
+		sizeof(params.stateless_reset_token));
 
-	rv = ngtcp2_conn_server_new(&conn->conn, &dcid, &scid, &path,
+	rv = ngtcp2_conn_server_new(&conn->conn, &dcid, &sv_scid, &path,
 		conn->version, &callbacks, &settings, &params, NULL, conn);
 	if(rv != 0) {
 		log_err("ngtcp2_conn_server_new failed: %s",
@@ -3366,6 +3585,9 @@ doq_conn_setup(struct doq_conn* conn)
 		log_err("doq_conn_setup_conids failed: out of memory");
 		return 0;
 	}
+	conn->ssl = doq_ssl_server_setup((SSL_CTX*)conn->doq_socket->ctx,
+		conn);
+	ngtcp2_conn_set_tls_native_handle(conn->conn, conn->ssl);
 	return 1;
 }
 

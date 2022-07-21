@@ -187,6 +187,8 @@ int resolve_interface_names(char** ifs, int num_ifs,
  * @param sslctx: nonNULL if ssl context.
  * @param dtenv: nonNULL if dnstap enabled.
  * @param rnd: random state.
+ * @param ssl_service_key: the SSL service key file.
+ * @param ssl_service_pem: the SSL service pem file.
  * @param cb: callback function when a request arrives. It is passed
  *	  the packet and user argument. Return true to send a reply.
  * @param cb_arg: user data argument for callback function.
@@ -198,6 +200,7 @@ listen_create(struct comm_base* base, struct listen_port* ports,
 	int harden_large_queries, uint32_t http_max_streams,
 	char* http_endpoint, int http_notls, struct tcl_list* tcp_conn_limit,
 	void* sslctx, struct dt_env* dtenv, struct ub_randstate* rnd,
+	const char* ssl_service_key, const char* ssl_service_pem,
 	comm_point_callback_type* cb, void *cb_arg);
 
 /**
@@ -488,6 +491,10 @@ struct doq_conn {
 	 * so that upon removal, the list of actually associated conid
 	 * elements can be removed as well. */
 	struct doq_conid* conid_list;
+	/** the recent tls alert error code */
+	uint8_t tls_alert;
+	/** the ssl context, SSL* */
+	void* ssl;
 };
 
 /**
@@ -543,8 +550,12 @@ int doq_conn_cmp(const void* key1, const void* key2);
 /** compare function of doq_conid */
 int doq_conid_cmp(const void* key1, const void* key2);
 
+/** setup the doq_socket server tls context */
+int doq_socket_setup_ctx(struct doq_server_socket* doq_socket);
+
 /** setup the doq connection callbacks, and settings. */
-int doq_conn_setup(struct doq_conn* conn);
+int doq_conn_setup(struct doq_conn* conn, uint8_t* scid, size_t scidlen,
+	uint8_t* ocid, size_t ocidlen, const uint8_t* token, size_t tokenlen);
 
 /** fill a buffer with random data */
 void doq_fill_rand(struct ub_randstate* rnd, uint8_t* buf, size_t len);
