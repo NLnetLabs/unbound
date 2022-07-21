@@ -3211,6 +3211,26 @@ void doq_fill_rand(struct ub_randstate* rnd, uint8_t* buf, size_t len)
 		buf[i] = ub_random(rnd)&0xff;
 }
 
+/** generate new connection id, checks for duplicates */
+static int
+doq_conn_generate_new_conid(struct doq_conn* conn, uint8_t* data,
+	size_t datalen)
+{
+	int max_try = 100;
+	int i;
+	for(i=0; i<max_try; i++) {
+		doq_fill_rand(conn->doq_socket->rnd, data, datalen);
+		if(!doq_conid_find(conn->doq_socket, data, datalen)) {
+			/* Found an unused connection id. */
+			return 1;
+		}
+	}
+	verbose(VERB_ALGO, "doq_conn_generate_new_conid failed: could not "
+		"generate random unused connection id value in %d attempts.",
+		max_try);
+	return 0;
+}
+
 /** ngtcp2 rand callback function */
 static void
 doq_rand_cb(uint8_t* dest, size_t destlen, const ngtcp2_rand_ctx* rand_ctx)
@@ -3222,13 +3242,17 @@ doq_rand_cb(uint8_t* dest, size_t destlen, const ngtcp2_rand_ctx* rand_ctx)
 
 /** ngtcp2 get_new_connection_id callback function */
 static int
-doq_get_new_connection_id_cb(ngtcp2_conn* conn, ngtcp2_cid* cid,
+doq_get_new_connection_id_cb(ngtcp2_conn* ATTR_UNUSED(conn), ngtcp2_cid* cid,
 	uint8_t* token, size_t cidlen, void* user_data)
 {
 	struct doq_conn* doq_conn = (struct doq_conn*)user_data;
-	(void)conn;
-	(void)token;
-	(void)cidlen;
+	if(!doq_conn_generate_new_conid(doq_conn, cid->data, cidlen))
+		return NGTCP2_ERR_CALLBACK_FAILURE;
+	cid->datalen = cidlen;
+	if(ngtcp2_crypto_generate_stateless_reset_token(token,
+		doq_conn->doq_socket->static_secret,
+		doq_conn->doq_socket->static_secret_len, cid) != 0)
+		return NGTCP2_ERR_CALLBACK_FAILURE;
 	if(!doq_conn_associate_conid(doq_conn, cid->data, cid->datalen))
 		return NGTCP2_ERR_CALLBACK_FAILURE;
 	return 0;
@@ -3484,4 +3508,5 @@ doq_conn_clear_conids(struct doq_conn* conn)
 	}
 	conn->conid_list = NULL;
 }
+
 #endif /* HAVE_NGTCP2 */
