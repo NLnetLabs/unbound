@@ -1592,13 +1592,14 @@ comm_point_doq_callback(int fd, short event, void* arg)
 			addr_to_str(&paddr.localaddr, paddr.localaddrlen,
 				localstr, sizeof(localstr));
 			log_info("incoming doq packet from %s port %d on "
-				"%s port %d ifindex %d ecn 0x%x",
+				"%s port %d ifindex %d",
 				remotestr, doq_sockaddr_get_port(&paddr.addr),
 				localstr,
 				doq_sockaddr_get_port(&paddr.localaddr),
-				paddr.ifindex, (int)pi.ecn);
-			log_info("doq_recv length %d",
-				(int)sldns_buffer_limit(c->buffer));
+				paddr.ifindex);
+			log_info("doq_recv length %d ecn 0x%x",
+				(int)sldns_buffer_limit(c->buffer),
+				(int)pi.ecn);
 		}
 
 		if(sldns_buffer_limit(c->buffer) == 0) {
