@@ -788,13 +788,13 @@ daemon_cleanup(struct daemon* daemon)
 		worker_delete(daemon->workers[i]);
 	free(daemon->workers);
 	daemon->workers = NULL;
-	daemon->num = 0;
 	/* Unless we're trying to keep the cache, worker alloc_caches should be
 	 * cleared and freed here. We do this after deleting workers to
 	 * guarantee that the alloc caches are valid throughout the lifetime
 	 * of workers. */
 	if(!daemon->reuse_cache || daemon->need_to_exit)
 		daemon_clear_allocs(daemon);
+	daemon->num = 0;
 #ifdef USE_DNSTAP
 	dt_delete(daemon->dtenv);
 	daemon->dtenv = NULL;
