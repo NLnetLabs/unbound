@@ -1152,6 +1152,7 @@ doq_send_version_negotiation(struct comm_point* c,
 	size_t versions_len = 0;
 	ngtcp2_ssize ret;
 	uint8_t unused_random;
+
 	/* fill the array with supported versions */
 	versions[0] = NGTCP2_PROTO_VER_V1;
 	versions_len = 1;
@@ -1206,6 +1207,26 @@ doq_conn_find_by_id(struct doq_server_socket* doq_socket, const uint8_t* dcid,
 	return NULL;
 }
 
+/** Find the doq_conn, by addr or by connection id */
+static struct doq_conn*
+doq_conn_find_by_addr_or_cid(struct doq_server_socket* doq_socket,
+	struct sockaddr_storage* addr, socklen_t addrlen,
+	struct sockaddr_storage* localaddr, socklen_t localaddrlen,
+	int ifindex, const uint8_t* dcid, size_t dcidlen)
+{
+	struct doq_conn* conn = doq_conn_find(doq_socket, addr, addrlen,
+		localaddr, localaddrlen, ifindex, dcid, dcidlen);
+	if(conn) {
+		verbose(VERB_ALGO, "doq: found connection by address, dcid");
+	} else {
+		conn = doq_conn_find_by_id(doq_socket, dcid, dcidlen);
+		if(conn) {
+			verbose(VERB_ALGO, "doq: found connection by dcid");
+		}
+	}
+	return conn;
+}
+
 /** decode doq packet header, false on handled or failure, true to continue
  * to process the packet */
 static int
@@ -1218,6 +1239,7 @@ doq_decode_pkt_header_negotiate(struct comm_point* c,
 	const uint8_t *dcid, *scid;
 	size_t dcidlen, scidlen;
 	int rv;
+
 	rv = ngtcp2_pkt_decode_version_cid(&version, &dcid, &dcidlen,
 		&scid, &scidlen, sldns_buffer_begin(c->buffer),
 		sldns_buffer_limit(c->buffer), c->doq_socket->sv_scidlen);
@@ -1234,22 +1256,15 @@ doq_decode_pkt_header_negotiate(struct comm_point* c,
 			ngtcp2_strerror(rv));
 		return 0;
 	}
+
 	if(verbosity >= VERB_ALGO) {
 		verbose(VERB_ALGO, "ngtcp2_pkt_decode_version_cid packet has "
 			"QUIC protocol version %u", (unsigned)version);
 		log_hex("dcid", (void*)dcid, dcidlen);
 		log_hex("scid", (void*)scid, scidlen);
 	}
-	*conn = doq_conn_find(c->doq_socket, addr, addrlen, localaddr,
-		localaddrlen, ifindex, dcid, dcidlen);
-	if(*conn) {
-		verbose(VERB_ALGO, "doq: found connection by address, dcid");
-	} else {
-		*conn = doq_conn_find_by_id(c->doq_socket, dcid, dcidlen);
-		if(!*conn) {
-			verbose(VERB_ALGO, "doq: found connection by dcid");
-		}
-	}
+	*conn = doq_conn_find_by_addr_or_cid(c->doq_socket, addr, addrlen,
+		localaddr, localaddrlen, ifindex, dcid, dcidlen);
 	return 1;
 }
 
@@ -1598,7 +1613,8 @@ doq_server_socket_create(struct ub_randstate* rnd, int idle_msec,
 		free(doq_socket);
 		return NULL;
 	}
-	doq_fill_rand(rnd, doq_socket->static_secret, doq_socket->static_secret_len);
+	doq_fill_rand(rnd, doq_socket->static_secret,
+		doq_socket->static_secret_len);
 	doq_socket->conn_tree = rbtree_create(doq_conn_cmp);
 	if(!doq_socket->conn_tree) {
 		free(doq_socket->ssl_service_key);
