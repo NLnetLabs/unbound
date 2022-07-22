@@ -194,8 +194,8 @@ static void usage(char* argv[])
 	printf("-p		Port to connect to, default: %d\n",
 		UNBOUND_DNS_OVER_QUIC_PORT);
 	printf("-v 		verbose output\n");
-	printf("-x file		transport file, for read/write of transport parameters.\n\t\tIf it exists, it is used to send early data. It is then\n\t\twritten to contain the last used transport parameters.\n\t\tAlso -y must be enabled for early data to succeed.\n\t\tOn its own -x is not enough. Use both for 0RTT queries\n\t\tand responses.\n");
-	printf("-y file		session file, for read/write of TLS session. If it exists,\n\t\tit is used for TLS session resumption. It is then written\n\t\tto contain the last session used.\n\t\tOn its own, without also -x, resumes TLS session without 0RTT.\n");
+	printf("-x file		transport file, for read/write of transport parameters.\n\t\tIf it exists, it is used to send early data. It is then\n\t\twritten to contain the last used transport parameters.\n\t\tAlso -y must be enabled for early data to succeed.\n");
+	printf("-y file		session file, for read/write of TLS session. If it exists,\n\t\tit is used for TLS session resumption. It is then written\n\t\tto contain the last session used.\n\t\tOn its own, without also -x, resumes TLS session.\n");
 	printf("-h 		This help text\n");
 	exit(1);
 }
