@@ -3769,4 +3769,75 @@ ngtcp2_tstamp doq_get_timestamp_nanosec(void)
 	return ((uint64_t)tp.tv_sec)*((uint64_t)1000000000) +
 		((uint64_t)tp.tv_nsec);
 }
+
+/** doq close the connection on error. If it returns a failure, it
+ * does not wait to send a close, and the connection can be dropped. */
+static int
+doq_conn_close_error(struct doq_conn* conn)
+{
+	(void)conn;
+	return 1;
+}
+
+int
+doq_conn_recv(struct comm_point* c, struct doq_pkt_addr* paddr,
+	struct doq_conn* conn, struct ngtcp2_pkt_info* pi, int* err_retry,
+	int* err_drop)
+{
+	int ret;
+	ngtcp2_tstamp ts;
+	struct ngtcp2_path path;
+	memset(&path, 0, sizeof(path));
+	path.remote.addr = (struct sockaddr*)&paddr->addr;
+	path.remote.addrlen = paddr->addrlen;
+	path.local.addr = (struct sockaddr*)&paddr->localaddr;
+	path.local.addrlen = paddr->localaddrlen;
+	ts = doq_get_timestamp_nanosec();
+
+	ret = ngtcp2_conn_read_pkt(conn->conn, &path, pi,
+		sldns_buffer_begin(c->buffer),
+		sldns_buffer_limit(c->buffer), ts);
+	if(ret != 0) {
+		*err_retry = 0;
+		*err_drop = 0;
+		if(ret == NGTCP2_ERR_DRAINING) {
+			verbose(VERB_ALGO, "ngtcp2_conn_read_pkt returned %s",
+				ngtcp2_strerror(ret));
+			*err_drop = 0;
+			return 0;
+		} else if(ret == NGTCP2_ERR_DROP_CONN) {
+			verbose(VERB_ALGO, "ngtcp2_conn_read_pkt returned %s",
+				ngtcp2_strerror(ret));
+			*err_drop = 1;
+			return 0;
+		} else if(ret == NGTCP2_ERR_RETRY) {
+			verbose(VERB_ALGO, "ngtcp2_conn_read_pkt returned %s",
+				ngtcp2_strerror(ret));
+			*err_retry = 1;
+			*err_drop = 1;
+			return 0;
+		} else if(ret == NGTCP2_ERR_CRYPTO) {
+			if(!conn->last_error.error_code) {
+				/* in picotls the tls alert may need to be
+				 * copied, but this is with openssl. And there
+				 * is conn->tls_alert. */
+				ngtcp2_connection_close_error_set_transport_error_tls_alert(
+					&conn->last_error, conn->tls_alert,
+					NULL, 0);
+			}
+		} else {
+			if(!conn->last_error.error_code) {
+				ngtcp2_connection_close_error_set_transport_error_liberr(
+					&conn->last_error, ret, NULL, 0);
+			}
+		}
+		log_err("ngtcp2_conn_read_pkt failed: %s",
+			ngtcp2_strerror(ret));
+		if(!doq_conn_close_error(conn))
+			*err_drop = 1;
+		return 0;
+	}
+
+	return 1;
+}
 #endif /* HAVE_NGTCP2 */

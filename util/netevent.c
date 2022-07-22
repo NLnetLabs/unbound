@@ -1113,11 +1113,43 @@ doq_get_localaddr_cmsg(struct comm_point* c, struct doq_pkt_addr* paddr,
 return 1;
 }
 
+/** get packet ecn information */
+static uint32_t
+msghdr_get_ecn(struct msghdr* msg, int family)
+{
+#ifndef S_SPLINT_S
+	struct cmsghdr* cmsg;
+	if(family == AF_INET6) {
+		for(cmsg = CMSG_FIRSTHDR(msg); cmsg != NULL;
+			cmsg = CMSG_NXTHDR(msg, cmsg)) {
+			if(cmsg->cmsg_level == IPPROTO_IPV6 &&
+				cmsg->cmsg_type == IPV6_TCLASS &&
+				cmsg->cmsg_len != 0) {
+				uint8_t* ecn = (uint8_t*)CMSG_DATA(cmsg);
+				return *ecn;
+			}
+		}
+		return 0;
+	}
+	for(cmsg = CMSG_FIRSTHDR(msg); cmsg != NULL;
+		cmsg = CMSG_NXTHDR(msg, cmsg)) {
+		if(cmsg->cmsg_level == IPPROTO_IP &&
+			cmsg->cmsg_type == IP_TOS &&
+			cmsg->cmsg_len != 0) {
+			uint8_t* ecn = (uint8_t*)CMSG_DATA(cmsg);
+			return *ecn;
+		}
+	}
+	return 0;
+#endif /* S_SPLINT_S */
+}
+
 /** receive packet for DoQ on UDP. get ancillary data for addresses,
  * return false if failed and the callback can stop receiving UDP packets
  * if pkt_continue is false. */
 static int
-doq_recv(struct comm_point* c, struct doq_pkt_addr* paddr, int* pkt_continue)
+doq_recv(struct comm_point* c, struct doq_pkt_addr* paddr, int* pkt_continue,
+	struct ngtcp2_pkt_info* pi)
 {
 	struct msghdr msg;
 	struct iovec iov[1];
@@ -1154,6 +1186,7 @@ doq_recv(struct comm_point* c, struct doq_pkt_addr* paddr, int* pkt_continue)
 	sldns_buffer_flip(c->buffer);
 	if(!doq_get_localaddr_cmsg(c, paddr, pkt_continue, &msg))
 		return 0;
+	pi->ecn = msghdr_get_ecn(&msg, paddr->addr.ss_family);
 	return 1;
 }
 
@@ -1487,11 +1520,12 @@ doq_address_validation(struct comm_point* c, struct doq_pkt_addr* paddr,
 /** the doq accept, returns false if no further processing of content */
 static int
 doq_accept(struct comm_point* c, struct doq_pkt_addr* paddr,
-	struct doq_conn** conn)
+	struct doq_conn** conn, struct ngtcp2_pkt_info* pi)
 {
 	int rv;
 	struct ngtcp2_pkt_hd hd;
 	struct ngtcp2_cid ocid, *pocid=NULL;
+	int err_retry, err_drop;
 	memset(&hd, 0, sizeof(hd));
 	rv = ngtcp2_accept(&hd, sldns_buffer_begin(c->buffer),
 		sldns_buffer_limit(c->buffer));
@@ -1511,6 +1545,15 @@ doq_accept(struct comm_point* c, struct doq_pkt_addr* paddr,
 	*conn = doq_setup_new_conn(c, paddr, &hd, pocid);
 	if(!*conn)
 		return 0;
+	if(!doq_conn_recv(c, paddr, *conn, pi, &err_retry, &err_drop)) {
+		if(err_retry)
+			doq_send_retry(c, paddr, &hd);
+		(void)rbtree_delete(c->doq_socket->conn_tree,
+			(*conn)->node.key);
+		doq_conn_delete(*conn);
+		*conn = NULL;
+		return 0;
+	}
 	return 1;
 }
 
@@ -1519,8 +1562,9 @@ comm_point_doq_callback(int fd, short event, void* arg)
 {
 	struct comm_point* c;
 	struct doq_pkt_addr paddr;
-	int i, pkt_continue;
+	int i, pkt_continue, err_retry, err_drop;
 	struct doq_conn* conn;
+	struct ngtcp2_pkt_info pi;
 
 	c = (struct comm_point*)arg;
 	log_assert(c->type == comm_udp);
@@ -1534,7 +1578,7 @@ comm_point_doq_callback(int fd, short event, void* arg)
 		doq_pkt_addr_init(&paddr);
 		log_assert(fd != -1);
 		log_assert(sldns_buffer_remaining(c->buffer) > 0);
-		if(!doq_recv(c, &paddr, &pkt_continue)) {
+		if(!doq_recv(c, &paddr, &pkt_continue, &pi)) {
 			if(pkt_continue)
 				continue;
 			return;
@@ -1548,11 +1592,11 @@ comm_point_doq_callback(int fd, short event, void* arg)
 			addr_to_str(&paddr.localaddr, paddr.localaddrlen,
 				localstr, sizeof(localstr));
 			log_info("incoming doq packet from %s port %d on "
-				"%s port %d ifindex %d",
+				"%s port %d ifindex %d ecn 0x%x",
 				remotestr, doq_sockaddr_get_port(&paddr.addr),
 				localstr,
 				doq_sockaddr_get_port(&paddr.localaddr),
-				paddr.ifindex);
+				paddr.ifindex, (int)pi.ecn);
 			log_info("doq_recv length %d",
 				(int)sldns_buffer_limit(c->buffer));
 		}
@@ -1566,9 +1610,20 @@ comm_point_doq_callback(int fd, short event, void* arg)
 			continue;
 		}
 		if(!conn) {
-			if(!doq_accept(c, &paddr, &conn)) {
+			if(!doq_accept(c, &paddr, &conn, &pi)) {
 				continue;
 			}
+			continue;
+		}
+		if(!doq_conn_recv(c, &paddr, conn, &pi, &err_retry,
+			&err_drop)) {
+			if(err_drop) {
+				/* If not in closing period, drop conn. */
+				(void)rbtree_delete(c->doq_socket->conn_tree,
+					conn->node.key);
+				doq_conn_delete(conn);
+			}
+			continue;
 		}
 	}
 }

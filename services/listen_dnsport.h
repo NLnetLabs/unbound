@@ -570,6 +570,11 @@ void doq_conn_clear_conids(struct doq_conn* conn);
 /** find a conid in the doq_conn connection */
 struct doq_conid* doq_conid_find(struct doq_server_socket* doq_socket,
 	const uint8_t* data, size_t datalen);
+
+/** receive a packet for a connection */
+int doq_conn_recv(struct comm_point* c, struct doq_pkt_addr* paddr,
+	struct doq_conn* conn, struct ngtcp2_pkt_info* pi, int* err_retry,
+	int* err_drop);
 #endif /* HAVE_NGTCP2 */
 
 char* set_ip_dscp(int socket, int addrfamily, int ds);
