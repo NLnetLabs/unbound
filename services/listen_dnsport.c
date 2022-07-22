@@ -3296,7 +3296,7 @@ doq_log_printf_cb(void* ATTR_UNUSED(user_data), const char* fmt, ...)
 	va_list ap;
 	va_start(ap, fmt);
 	vsnprintf(buf, sizeof(buf), fmt, ap);
-	verbose(VERB_ALGO, "ngtcp2: %s", buf);
+	verbose(VERB_ALGO, "libngtcp2: %s", buf);
 	va_end(ap);
 }
 
@@ -3332,7 +3332,8 @@ doq_set_encryption_secrets(SSL *ssl, OSSL_ENCRYPTION_LEVEL ossl_level,
 		if(ngtcp2_crypto_derive_and_install_rx_key(doq_conn->conn,
 			NULL, NULL, NULL, level, read_secret, secret_len)
 			!= 0) {
-			log_err("ngtcp2_crypto_derive_and_install_rx_key failed");
+			log_err("ngtcp2_crypto_derive_and_install_rx_key "
+				"failed");
 			return 0;
 		}
 	}
@@ -3341,7 +3342,8 @@ doq_set_encryption_secrets(SSL *ssl, OSSL_ENCRYPTION_LEVEL ossl_level,
 		if(ngtcp2_crypto_derive_and_install_tx_key(doq_conn->conn,
 			NULL, NULL, NULL, level, write_secret, secret_len)
 			!= 0) {
-			log_err("ngtcp2_crypto_derive_and_install_tx_key failed");
+			log_err("ngtcp2_crypto_derive_and_install_tx_key "
+				"failed");
 			return 0;
 		}
 		if(level == NGTCP2_CRYPTO_LEVEL_APPLICATION) {
