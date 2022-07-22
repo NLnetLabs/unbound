@@ -1928,6 +1928,7 @@ create_doq_client_data(const char* svr, int port, struct ub_event_base* base,
 	data->fd = open_svr_udp(data);
 	get_local_addr(data);
 	data->conn = conn_client_setup(data);
+	ngtcp2_connection_close_error_default(&data->last_error);
 	data->transport_file = transport_file;
 	data->session_file = session_file;
 	if(data->transport_file && data->session_file)

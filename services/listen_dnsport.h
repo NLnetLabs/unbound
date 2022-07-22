@@ -491,6 +491,8 @@ struct doq_conn {
 	 * so that upon removal, the list of actually associated conid
 	 * elements can be removed as well. */
 	struct doq_conid* conid_list;
+	/** the ngtcp2 last error for the connection */
+	struct ngtcp2_connection_close_error last_error;
 	/** the recent tls alert error code */
 	uint8_t tls_alert;
 	/** the ssl context, SSL* */

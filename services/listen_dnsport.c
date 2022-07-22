@@ -3154,6 +3154,7 @@ doq_conn_create(struct comm_point* c, struct sockaddr_storage* addr,
 	}
 	conn->dcidlen = dcidlen;
 	conn->version = version;
+	ngtcp2_connection_close_error_default(&conn->last_error);
 	return conn;
 }
 
