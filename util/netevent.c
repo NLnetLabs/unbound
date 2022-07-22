@@ -849,11 +849,18 @@ doq_set_localaddr_cmsg(struct msghdr* msg, size_t control_size,
 		struct in_pktinfo v4info;
 		log_assert(localaddrlen >= sizeof(struct sockaddr_in));
 		msg->msg_controllen = CMSG_SPACE(sizeof(struct in_pktinfo));
+		memset(msg->msg_control, 0, msg->msg_controllen);
 		log_assert(msg->msg_controllen <= control_size);
 		cmsg->cmsg_level = IPPROTO_IP;
 		cmsg->cmsg_type = IP_PKTINFO;
+		memset(&v4info, 0, sizeof(v4info));
+#  ifdef HAVE_STRUCT_IN_PKTINFO_IPI_SPEC_DST
+		memmove(&v4info.ipi_spec_dst, &sa->sin_addr,
+			sizeof(struct in_addr));
+#  else
 		memmove(&v4info.ipi_addr, &sa->sin_addr,
 			sizeof(struct in_addr));
+#  endif
 		v4info.ipi_ifindex = ifindex;
 		memmove(CMSG_DATA(cmsg), &v4info, sizeof(struct in_pktinfo));
 		cmsg->cmsg_len = CMSG_LEN(sizeof(struct in_pktinfo));
@@ -861,6 +868,7 @@ doq_set_localaddr_cmsg(struct msghdr* msg, size_t control_size,
 		struct sockaddr_in* sa= (struct sockaddr_in*)localaddr;
 		log_assert(localaddrlen >= sizeof(struct sockaddr_in));
 		msg->msg_controllen = CMSG_SPACE(sizeof(struct in_addr));
+		memset(msg->msg_control, 0, msg->msg_controllen);
 		log_assert(msg->msg_controllen <= control_size);
 		cmsg->cmsg_level = IPPROTO_IP;
 		cmsg->cmsg_type = IP_SENDSRCADDR;
@@ -873,9 +881,11 @@ doq_set_localaddr_cmsg(struct msghdr* msg, size_t control_size,
 		struct in6_pktinfo v6info;
 		log_assert(localaddrlen >= sizeof(struct sockaddr_in6));
 		msg->msg_controllen = CMSG_SPACE(sizeof(struct in6_pktinfo));
+		memset(msg->msg_control, 0, msg->msg_controllen);
 		log_assert(msg->msg_controllen <= control_size);
 		cmsg->cmsg_level = IPPROTO_IPV6;
 		cmsg->cmsg_type = IPV6_PKTINFO;
+		memset(&v6info, 0, sizeof(v6info));
 		memmove(&v6info.ipi6_addr, &sa6->sin6_addr,
 			sizeof(struct in6_addr));
 		v6info.ipi6_ifindex = ifindex;
@@ -1664,7 +1674,8 @@ doq_server_socket_delete(struct doq_server_socket* doq_socket)
 	if(doq_socket->conid_tree) {
 		/* The tree should be empty, because the doq_conn_delete calls
 		 * above should have also removed their conid elements. */
-		traverse_postorder(doq_socket->conn_tree, conid_tree_del, NULL);
+		traverse_postorder(doq_socket->conid_tree, conid_tree_del,
+			NULL);
 		free(doq_socket->conid_tree);
 	}
 	SSL_CTX_free(doq_socket->ctx);
