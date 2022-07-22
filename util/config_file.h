@@ -684,6 +684,9 @@ struct config_file {
 #endif
 	/** respond with Extended DNS Errors (RFC8914) */
 	int ede;
+	/** send DNS Error Reports to upstream reporting agent
+	  * (draft-ietf-dnsop-dns-error-reporting) */
+	int eder;
 };
 
 /** from cfg username, after daemonize setup performed */

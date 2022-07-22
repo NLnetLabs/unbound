@@ -1501,6 +1501,7 @@ void mesh_query_done(struct mesh_state* mstate)
 	struct reply_info* rep = (mstate->s.return_msg?
 		mstate->s.return_msg->rep:NULL);
 	struct timeval tv = {0, 0};
+	struct edns_option* eder = NULL;
 
 	sldns_ede_code reason_bogus = LDNS_EDE_NONE;
 
@@ -1522,9 +1523,11 @@ void mesh_query_done(struct mesh_state* mstate)
 			free(err);
 		}
 	}
+	if (mstate->s.env->cfg->eder) {
+		eder = edns_opt_list_find(mstate->s.edns_opts_back_in,
+			(uint16_t) 3843 /* LDNS_EDNS_EDER */);
+	}
 
-	struct edns_option* eder = NULL;
-	eder = edns_opt_list_find(mstate->s.edns_opts_back_in, (uint16_t) 3843 /* LDNS_EDNS_EDER */ );
 	if (eder) {
 		reason_bogus = errinf_to_reason_bogus(&mstate->s);
 		if (rep && ((reason_bogus == LDNS_EDE_DNSSEC_BOGUS &&
@@ -1534,9 +1537,10 @@ void mesh_query_done(struct mesh_state* mstate)
 		}
 
 		// @TODO create a check for the EDER reporting agent DNAME;
-		// MUST NOT be an amplification attack vector
+		// MUST NOT be an amplification attack vector. We currently use
+		// dname_valid() for this.
 
-		/* Report EDE to upstream (draft-ietf-dnsop-dns-error-reporting-01) */
+		/* Report EDE to upstream reporting agent (draft-ietf-dnsop-dns-error-reporting) */
 		if (reason_bogus != LDNS_EDE_NONE && dname_valid(eder->opt_data, eder->opt_len)) {
 			struct query_info qinfo;
 			struct mesh_state* dont_care;
@@ -1572,6 +1576,8 @@ void mesh_query_done(struct mesh_state* mstate)
 			qinfo.qtype = LDNS_RR_TYPE_NULL;
 			qinfo.qclass = mstate->s.qinfo.qclass;
 			qinfo.local_alias = NULL;
+
+			log_info("Synthesized EDER, attaching to mesh");
 
 			mesh_add_sub(&mstate->s, &qinfo, 0, 0, 0, &newq, &dont_care);
 		}

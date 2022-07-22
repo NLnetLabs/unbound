@@ -190,6 +190,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_EDNS_CLIENT_STRING_OPCODE VAR_NSID
 %token VAR_ZONEMD_PERMISSIVE_MODE VAR_ZONEMD_CHECK VAR_ZONEMD_REJECT_ABSENCE
 %token VAR_RPZ_SIGNAL_NXDOMAIN_RA VAR_INTERFACE_AUTOMATIC_PORTS VAR_EDE
+%token VAR_EDER
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -313,7 +314,7 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_edns_client_string_opcode | server_nsid |
 	server_zonemd_permissive_mode | server_max_reuse_tcp_queries |
 	server_tcp_reuse_timeout | server_tcp_auth_query_timeout |
-	server_interface_automatic_ports | server_ede
+	server_interface_automatic_ports | server_ede | server_eder
 
 	;
 stubstart: VAR_STUB_ZONE
@@ -2749,6 +2750,15 @@ server_ede: VAR_EDE STRING_ARG
 		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
 			yyerror("expected yes or no.");
 		else cfg_parser->cfg->ede = (strcmp($2, "yes")==0);
+		free($2);
+	}
+	;
+server_eder: VAR_EDER STRING_ARG
+	{
+		OUTYY(("P(server_eder:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else cfg_parser->cfg->eder = (strcmp($2, "yes")==0);
 		free($2);
 	}
 	;
