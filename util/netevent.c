@@ -880,6 +880,37 @@ doq_set_localaddr_cmsg(struct msghdr* msg, size_t control_size,
 	(void)control_size;
 }
 
+/** write address and port into strings */
+static int
+doq_print_addr_port(struct sockaddr_storage* addr, socklen_t addrlen,
+	char* host, size_t hostlen, char* port, size_t portlen)
+{
+	if(addr->ss_family == AF_INET) {
+		struct sockaddr_in* sa = (struct sockaddr_in*)addr;
+		log_assert(addrlen >= sizeof(*sa));
+		if(inet_ntop(sa->sin_family, &sa->sin_addr, host,
+			(socklen_t)hostlen) == 0) {
+			log_err("doq_send_retry failed: inet_ntop error");
+			log_hex("inet ntop address", &sa->sin_addr,
+				sizeof(sa->sin_addr));
+			return 0;
+		}
+		snprintf(port, portlen, "%u", (unsigned)ntohs(sa->sin_port));
+	} else if(addr->ss_family == AF_INET6) {
+		struct sockaddr_in6* sa6 = (struct sockaddr_in6*)addr;
+		log_assert(addrlen >= sizeof(*sa6));
+		if(inet_ntop(sa6->sin6_family, &sa6->sin6_addr, host,
+			(socklen_t)hostlen) == 0) {
+			log_err("doq_send_retry failed: inet_ntop error");
+			log_hex("inet ntop address", &sa6->sin6_addr,
+				sizeof(sa6->sin6_addr));
+			return 0;
+		}
+		snprintf(port, portlen, "%u", (unsigned)ntohs(sa6->sin6_port));
+	}
+	return 1;
+}
+
 /** send doq packet over UDP. */
 static void
 doq_send(struct comm_point* c, struct sockaddr_storage* addr,
@@ -917,7 +948,49 @@ doq_send(struct comm_point* c, struct sockaddr_storage* addr,
 		break;
 	}
 	if(ret == -1) {
-		log_err("doq sendmsg: %s", strerror(errno));
+#ifndef USE_WINSOCK
+		if(errno == EAGAIN ||
+#  ifdef EWOULDBLOCK
+			errno == EWOULDBLOCK ||
+#  endif
+			errno == ENOBUFS)
+#else
+		if(WSAGetLastError() == WSAEINPROGRESS ||
+			WSAGetLastError() == WSAENOBUFS ||
+			WSAGetLastError() == WSAEWOULDBLOCK)
+#endif
+		{
+			/* udp send has blocked */
+			return;
+		}
+		if(!udp_send_errno_needs_log((void*)addr, addrlen))
+			return;
+		if(verbosity >= VERB_OPS) {
+			char host[256], port[32];
+			if(doq_print_addr_port(addr, addrlen, host,
+				sizeof(host), port, sizeof(port))) {
+				verbose(VERB_OPS, "doq sendmsg to %s %s "
+					"failed: %s", host, port,
+					strerror(errno));
+			} else {
+				verbose(VERB_OPS, "doq sendmsg failed: %s",
+					strerror(errno));
+			}
+		}
+		return;
+	} else if(ret != (ssize_t)sldns_buffer_limit(c->buffer)) {
+		char host[256], port[32];
+		if(doq_print_addr_port(addr, addrlen, host, sizeof(host),
+			port, sizeof(port))) {
+			log_err("doq sendmsg to %s %s failed: "
+				"sent %d in place of %d bytes", 
+				host, port, (int)ret,
+				(int)sldns_buffer_limit(c->buffer));
+		} else {
+			log_err("doq sendmsg failed: "
+				"sent %d in place of %d bytes", 
+				(int)ret, (int)sldns_buffer_limit(c->buffer));
+		}
 		return;
 	}
 }
@@ -1189,37 +1262,6 @@ static void doq_cid_randfill(struct ngtcp2_cid* cid, size_t datalen,
 		datalen = sizeof(buf);
 	doq_fill_rand(rnd, buf, datalen);
 	ngtcp2_cid_init(cid, buf, datalen);
-}
-
-/** write address and port into strings */
-static int
-doq_print_addr_port(struct sockaddr_storage* addr, socklen_t addrlen,
-	char* host, size_t hostlen, char* port, size_t portlen)
-{
-	if(addr->ss_family == AF_INET) {
-		struct sockaddr_in* sa = (struct sockaddr_in*)addr;
-		log_assert(addrlen >= sizeof(*sa));
-		if(inet_ntop(sa->sin_family, &sa->sin_addr, host,
-			(socklen_t)hostlen) == 0) {
-			log_err("doq_send_retry failed: inet_ntop error");
-			log_hex("inet ntop address", &sa->sin_addr,
-				sizeof(sa->sin_addr));
-			return 0;
-		}
-		snprintf(port, portlen, "%u", (unsigned)ntohs(sa->sin_port));
-	} else if(addr->ss_family == AF_INET6) {
-		struct sockaddr_in6* sa6 = (struct sockaddr_in6*)addr;
-		log_assert(addrlen >= sizeof(*sa6));
-		if(inet_ntop(sa6->sin6_family, &sa6->sin6_addr, host,
-			(socklen_t)hostlen) == 0) {
-			log_err("doq_send_retry failed: inet_ntop error");
-			log_hex("inet ntop address", &sa6->sin6_addr,
-				sizeof(sa6->sin6_addr));
-			return 0;
-		}
-		snprintf(port, portlen, "%u", (unsigned)ntohs(sa6->sin6_port));
-	}
-	return 1;
 }
 
 /** send retry packet for doq connection. */
