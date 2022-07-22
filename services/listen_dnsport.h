@@ -468,16 +468,8 @@ struct doq_conn {
 	struct rbnode_type node;
 	/** the doq server socket this connection is part of */
 	struct doq_server_socket* doq_socket;
-	/** the remote endpoint */
-	struct sockaddr_storage destaddr;
-	/** length of destaddr */
-	socklen_t destaddrlen;
-	/** the local endpoint */
-	struct sockaddr_storage localaddr;
-	/** the length of localaddr */
-	socklen_t localaddrlen;
-	/** the interface index, if any, of the connection packets */
-	int ifindex;
+	/** the remote endpoint and local endpoint and ifindex */
+	struct doq_pkt_addr paddr;
 	/** the doq connection dcid */
 	uint8_t* dcid;
 	/** length of dcid */
@@ -525,20 +517,16 @@ struct doq_stream {
 /**
  * Create the doq connection.
  * @param c: the comm point for the listening doq socket.
- * @param addr: remote address.
- * @param addrlen: length of addr.
- * @param localaddr: the local address of the connection.
- * @param localaddrlen: length of localaddr.
- * @param ifindex: the interface index of the connection packets.
+ * @param paddr: with remote and local address and ifindex for the
+ * 	connection destination. This is where packets are sent.
  * @param dcid: the dcid, Destination Connection ID.
  * @param dcidlen: length of dcid.
  * @param version: client chosen version.
  * @return new doq connection or NULL on allocation failure.
  */
 struct doq_conn* doq_conn_create(struct comm_point* c,
-	struct sockaddr_storage* addr, socklen_t addrlen,
-	struct sockaddr_storage* localaddr, socklen_t localaddrlen,
-	int ifindex, const uint8_t* dcid, size_t dcidlen, uint32_t version);
+	struct doq_pkt_addr* paddr, const uint8_t* dcid, size_t dcidlen,
+	uint32_t version);
 
 /**
  * Delete the doq connection structure.

@@ -1000,6 +1000,23 @@ struct doq_server_socket {
 };
 
 /**
+ * DoQ packet address information. From pktinfo, stores local and remote
+ * address and ifindex, so the packet can be sent there.
+ */
+struct doq_pkt_addr {
+	/** the remote addr, and local addr */
+	struct sockaddr_storage addr, localaddr;
+	/** length of addr and length of localaddr */
+	socklen_t addrlen, localaddrlen;
+	/** interface index from pktinfo ancillary information */
+	int ifindex;
+};
+
+/** Initialize the pkt addr with lengths set to sizeof. That is ready for
+ * a call to recv. */
+void doq_pkt_addr_init(struct doq_pkt_addr* paddr);
+
+/**
  * This routine is published for checks and tests, and is only used internally.
  * handle libevent callback for timer comm.
  * @param fd: file descriptor (always -1).

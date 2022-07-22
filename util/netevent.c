@@ -804,6 +804,14 @@ comm_point_udp_callback(int fd, short event, void* arg)
 }
 
 #ifdef HAVE_NGTCP2
+void
+doq_pkt_addr_init(struct doq_pkt_addr* paddr)
+{
+	paddr->addrlen = (socklen_t)sizeof(paddr->addr);
+	paddr->localaddrlen = (socklen_t)sizeof(paddr->localaddr);
+	paddr->ifindex = 0;
+}
+
 /** set the ecn on the transmission */
 static void
 doq_set_ecn(int fd, int family, uint32_t ecn)
@@ -913,9 +921,7 @@ doq_print_addr_port(struct sockaddr_storage* addr, socklen_t addrlen,
 
 /** send doq packet over UDP. */
 static void
-doq_send(struct comm_point* c, struct sockaddr_storage* addr,
-	socklen_t addrlen, struct sockaddr_storage* localaddr,
-	socklen_t localaddrlen, int ifindex, uint32_t ecn)
+doq_send(struct comm_point* c, struct doq_pkt_addr* paddr, uint32_t ecn)
 {
 	struct msghdr msg;
 	struct iovec iov[1];
@@ -927,8 +933,8 @@ doq_send(struct comm_point* c, struct sockaddr_storage* addr,
 	iov[0].iov_base = sldns_buffer_begin(c->buffer);
 	iov[0].iov_len = sldns_buffer_limit(c->buffer);
 	memset(&msg, 0, sizeof(msg));
-	msg.msg_name = (void*)addr;
-	msg.msg_namelen = addrlen;
+	msg.msg_name = (void*)&paddr->addr;
+	msg.msg_namelen = paddr->addrlen;
 	msg.msg_iov = iov;
 	msg.msg_iovlen = 1;
 	msg.msg_control = control.buf;
@@ -937,9 +943,9 @@ doq_send(struct comm_point* c, struct sockaddr_storage* addr,
 #endif /* S_SPLINT_S */
 	msg.msg_flags = 0;
 
-	doq_set_localaddr_cmsg(&msg, sizeof(control.buf), localaddr,
-		localaddrlen, ifindex);
-	doq_set_ecn(c->fd, addr->ss_family, ecn);
+	doq_set_localaddr_cmsg(&msg, sizeof(control.buf), &paddr->localaddr,
+		paddr->localaddrlen, paddr->ifindex);
+	doq_set_ecn(c->fd, paddr->addr.ss_family, ecn);
 
 	for(;;) {
 		ret = sendmsg(c->fd, &msg, 0);
@@ -963,12 +969,13 @@ doq_send(struct comm_point* c, struct sockaddr_storage* addr,
 			/* udp send has blocked */
 			return;
 		}
-		if(!udp_send_errno_needs_log((void*)addr, addrlen))
+		if(!udp_send_errno_needs_log((void*)&paddr->addr,
+			paddr->addrlen))
 			return;
 		if(verbosity >= VERB_OPS) {
 			char host[256], port[32];
-			if(doq_print_addr_port(addr, addrlen, host,
-				sizeof(host), port, sizeof(port))) {
+			if(doq_print_addr_port(&paddr->addr, paddr->addrlen,
+				host, sizeof(host), port, sizeof(port))) {
 				verbose(VERB_OPS, "doq sendmsg to %s %s "
 					"failed: %s", host, port,
 					strerror(errno));
@@ -980,8 +987,8 @@ doq_send(struct comm_point* c, struct sockaddr_storage* addr,
 		return;
 	} else if(ret != (ssize_t)sldns_buffer_limit(c->buffer)) {
 		char host[256], port[32];
-		if(doq_print_addr_port(addr, addrlen, host, sizeof(host),
-			port, sizeof(port))) {
+		if(doq_print_addr_port(&paddr->addr, paddr->addrlen, host,
+			sizeof(host), port, sizeof(port))) {
 			log_err("doq sendmsg to %s %s failed: "
 				"sent %d in place of %d bytes", 
 				host, port, (int)ret,
@@ -1011,16 +1018,14 @@ doq_sockaddr_get_port(struct sockaddr_storage* addr)
 
 /** get local address from ancillary data headers */
 static int
-doq_get_localaddr_cmsg(struct comm_point* c, struct sockaddr_storage* addr,
-	socklen_t ATTR_UNUSED(addrlen), struct sockaddr_storage* localaddr,
-	socklen_t* localaddrlen, int* ifindex, int* pkt_continue,
-	struct msghdr* msg)
+doq_get_localaddr_cmsg(struct comm_point* c, struct doq_pkt_addr* paddr,
+	int* pkt_continue, struct msghdr* msg)
 {
 #ifndef S_SPLINT_S
 	struct cmsghdr* cmsg;
 #endif /* S_SPLINT_S */
 
-	memset(localaddr, 0, sizeof(*localaddr));
+	memset(&paddr->localaddr, 0, sizeof(paddr->localaddr));
 #ifndef S_SPLINT_S
 	for(cmsg = CMSG_FIRSTHDR(msg); cmsg != NULL;
 		cmsg = CMSG_NXTHDR(msg, cmsg)) {
@@ -1028,8 +1033,10 @@ doq_get_localaddr_cmsg(struct comm_point* c, struct sockaddr_storage* addr,
 			cmsg->cmsg_type == IPV6_PKTINFO) {
 			struct in6_pktinfo* v6info =
 				(struct in6_pktinfo*)CMSG_DATA(cmsg);
-			struct sockaddr_in6* sa= (struct sockaddr_in6*)localaddr;
-			struct sockaddr_in6* rema = (struct sockaddr_in6*)addr;
+			struct sockaddr_in6* sa= (struct sockaddr_in6*)
+				&paddr->localaddr;
+			struct sockaddr_in6* rema = (struct sockaddr_in6*)
+				&paddr->addr;
 			if(rema->sin6_family != AF_INET6) {
 				log_err("doq cmsg family mismatch cmsg is ip6");
 				*pkt_continue = 1;
@@ -1039,18 +1046,20 @@ doq_get_localaddr_cmsg(struct comm_point* c, struct sockaddr_storage* addr,
 			sa->sin6_port = htons(doq_sockaddr_get_port(
 				(struct sockaddr_storage*)c->socket->
 				addr->ai_addr));
-			*ifindex = v6info->ipi6_ifindex;
+			paddr->ifindex = v6info->ipi6_ifindex;
 			memmove(&sa->sin6_addr, &v6info->ipi6_addr,
 				sizeof(struct in6_addr));
-			*localaddrlen = sizeof(struct sockaddr_in6);
+			paddr->localaddrlen = sizeof(struct sockaddr_in6);
 			break;
 #ifdef IP_PKTINFO
 		} else if( cmsg->cmsg_level == IPPROTO_IP &&
 			cmsg->cmsg_type == IP_PKTINFO) {
 			struct in_pktinfo* v4info =
 				(struct in_pktinfo*)CMSG_DATA(cmsg);
-			struct sockaddr_in* sa= (struct sockaddr_in*)localaddr;
-			struct sockaddr_in* rema = (struct sockaddr_in*)addr;
+			struct sockaddr_in* sa= (struct sockaddr_in*)
+				&paddr->localaddr;
+			struct sockaddr_in* rema = (struct sockaddr_in*)
+				&paddr->addr;
 			if(rema->sin_family != AF_INET) {
 				log_err("doq cmsg family mismatch cmsg is ip4");
 				*pkt_continue = 1;
@@ -1060,16 +1069,18 @@ doq_get_localaddr_cmsg(struct comm_point* c, struct sockaddr_storage* addr,
 			sa->sin_port = htons(doq_sockaddr_get_port(
 				(struct sockaddr_storage*)c->socket->
 				addr->ai_addr));
-			*ifindex = v4info->ipi_ifindex;
+			paddr->ifindex = v4info->ipi_ifindex;
 			memmove(&sa->sin_addr, &v4info->ipi_addr,
 				sizeof(struct in_addr));
-			*localaddrlen = sizeof(struct sockaddr_in);
+			paddr->localaddrlen = sizeof(struct sockaddr_in);
 			break;
 #elif defined(IP_RECVDSTADDR)
 		} else if( cmsg->cmsg_level == IPPROTO_IP &&
 			cmsg->cmsg_type == IP_RECVDSTADDR) {
-			struct sockaddr_in* sa= (struct sockaddr_in*)localaddr;
-			struct sockaddr_in* rema = (struct sockaddr_in*)addr;
+			struct sockaddr_in* sa= (struct sockaddr_in*)
+				&paddr->localaddr;
+			struct sockaddr_in* rema = (struct sockaddr_in*)
+				&paddr->addr;
 			if(rema->sin_family != AF_INET) {
 				log_err("doq cmsg family mismatch cmsg is ip4");
 				*pkt_continue = 1;
@@ -1079,10 +1090,10 @@ doq_get_localaddr_cmsg(struct comm_point* c, struct sockaddr_storage* addr,
 			sa->sin_port = htons(doq_sockaddr_get_port(
 				(struct sockaddr_storage*)c->socket->
 				addr->ai_addr));
-			*ifindex = 0;
+			paddr->ifindex = 0;
 			memmove(&sa.sin_addr, CMSG_DATA(cmsg),
 				sizeof(struct in_addr));
-			*localaddrlen = sizeof(struct sockaddr_in);
+			paddr->localaddrlen = sizeof(struct sockaddr_in);
 			break;
 #endif /* IP_PKTINFO or IP_RECVDSTADDR */
 		}
@@ -1096,9 +1107,7 @@ return 1;
  * return false if failed and the callback can stop receiving UDP packets
  * if pkt_continue is false. */
 static int
-doq_recv(struct comm_point* c, struct sockaddr_storage* addr,
-	socklen_t* addrlen, struct sockaddr_storage* localaddr,
-	socklen_t* localaddrlen, int* ifindex, int* pkt_continue)
+doq_recv(struct comm_point* c, struct doq_pkt_addr* paddr, int* pkt_continue)
 {
 	struct msghdr msg;
 	struct iovec iov[1];
@@ -1108,8 +1117,8 @@ doq_recv(struct comm_point* c, struct sockaddr_storage* addr,
 		char buf[256];
 	} ancil;
 
-	msg.msg_name = addr;
-	msg.msg_namelen = (socklen_t)sizeof(*addr);
+	msg.msg_name = &paddr->addr;
+	msg.msg_namelen = (socklen_t)sizeof(paddr->addr);
 	iov[0].iov_base = sldns_buffer_begin(c->buffer);
 	iov[0].iov_len = sldns_buffer_remaining(c->buffer);
 	msg.msg_iov = iov;
@@ -1130,11 +1139,10 @@ doq_recv(struct comm_point* c, struct sockaddr_storage* addr,
 		return 0;
 	}
 
-	*addrlen = msg.msg_namelen;
+	paddr->addrlen = msg.msg_namelen;
 	sldns_buffer_skip(c->buffer, rcv);
 	sldns_buffer_flip(c->buffer);
-	if(!doq_get_localaddr_cmsg(c, addr, *addrlen, localaddr, localaddrlen,
-		ifindex, pkt_continue, &msg))
+	if(!doq_get_localaddr_cmsg(c, paddr, pkt_continue, &msg))
 		return 0;
 	return 1;
 }
@@ -1142,11 +1150,9 @@ doq_recv(struct comm_point* c, struct sockaddr_storage* addr,
 /** send the version negotiation for doq. scid and dcid are flipped around
  * to send back to the client. */
 static void
-doq_send_version_negotiation(struct comm_point* c,
-	struct sockaddr_storage* addr, socklen_t addrlen,
-	struct sockaddr_storage* localaddr, socklen_t localaddrlen,
-	int ifindex, const uint8_t* dcid, size_t dcidlen,
-	const uint8_t* scid, size_t scidlen)
+doq_send_version_negotiation(struct comm_point* c, struct doq_pkt_addr* paddr,
+	const uint8_t* dcid, size_t dcidlen, const uint8_t* scid,
+	size_t scidlen)
 {
 	uint32_t versions[2];
 	size_t versions_len = 0;
@@ -1169,7 +1175,7 @@ doq_send_version_negotiation(struct comm_point* c,
 	}
 	sldns_buffer_set_position(c->buffer, ret);
 	sldns_buffer_flip(c->buffer);
-	doq_send(c, addr, addrlen, localaddr, localaddrlen, ifindex, 0);
+	doq_send(c, paddr, 0);
 }
 
 /** Find the doq_conn object by remote address and dcid */
@@ -1183,11 +1189,11 @@ doq_conn_find(struct doq_server_socket* doq_socket,
 	struct doq_conn key;
 	memset(&key.node, 0, sizeof(key.node));
 	key.node.key = &key;
-	memmove(&key.destaddr, addr, addrlen);
-	key.destaddrlen = addrlen;
-	memmove(&key.localaddr, localaddr, localaddrlen);
-	key.localaddrlen = localaddrlen;
-	key.ifindex = ifindex;
+	memmove(&key.paddr.addr, addr, addrlen);
+	key.paddr.addrlen = addrlen;
+	memmove(&key.paddr.localaddr, localaddr, localaddrlen);
+	key.paddr.localaddrlen = localaddrlen;
+	key.paddr.ifindex = ifindex;
 	key.dcid = (void*)dcid;
 	key.dcidlen = dcidlen;
 	node = rbtree_search(doq_socket->conn_tree, &key);
@@ -1210,12 +1216,11 @@ doq_conn_find_by_id(struct doq_server_socket* doq_socket, const uint8_t* dcid,
 /** Find the doq_conn, by addr or by connection id */
 static struct doq_conn*
 doq_conn_find_by_addr_or_cid(struct doq_server_socket* doq_socket,
-	struct sockaddr_storage* addr, socklen_t addrlen,
-	struct sockaddr_storage* localaddr, socklen_t localaddrlen,
-	int ifindex, const uint8_t* dcid, size_t dcidlen)
+	struct doq_pkt_addr* paddr, const uint8_t* dcid, size_t dcidlen)
 {
-	struct doq_conn* conn = doq_conn_find(doq_socket, addr, addrlen,
-		localaddr, localaddrlen, ifindex, dcid, dcidlen);
+	struct doq_conn* conn = doq_conn_find(doq_socket, &paddr->addr,
+		paddr->addrlen, &paddr->localaddr, paddr->localaddrlen,
+		paddr->ifindex, dcid, dcidlen);
 	if(conn) {
 		verbose(VERB_ALGO, "doq: found connection by address, dcid");
 	} else {
@@ -1231,9 +1236,7 @@ doq_conn_find_by_addr_or_cid(struct doq_server_socket* doq_socket,
  * to process the packet */
 static int
 doq_decode_pkt_header_negotiate(struct comm_point* c,
-	struct sockaddr_storage* addr, socklen_t addrlen,
-	struct sockaddr_storage* localaddr, socklen_t localaddrlen,
-	int ifindex, struct doq_conn** conn)
+	struct doq_pkt_addr* paddr, struct doq_conn** conn)
 {
 	uint32_t version;
 	const uint8_t *dcid, *scid;
@@ -1246,9 +1249,8 @@ doq_decode_pkt_header_negotiate(struct comm_point* c,
 	if(rv != 0) {
 		if(rv == NGTCP2_ERR_VERSION_NEGOTIATION) {
 			/* send the version negotiation */
-			doq_send_version_negotiation(c, addr, addrlen,
-				localaddr, localaddrlen, ifindex, scid,
-				scidlen, dcid, dcidlen);
+			doq_send_version_negotiation(c, paddr, scid, scidlen,
+				dcid, dcidlen);
 			return 0;
 		}
 		verbose(VERB_ALGO, "doq: could not decode version "
@@ -1263,8 +1265,8 @@ doq_decode_pkt_header_negotiate(struct comm_point* c,
 		log_hex("dcid", (void*)dcid, dcidlen);
 		log_hex("scid", (void*)scid, scidlen);
 	}
-	*conn = doq_conn_find_by_addr_or_cid(c->doq_socket, addr, addrlen,
-		localaddr, localaddrlen, ifindex, dcid, dcidlen);
+	*conn = doq_conn_find_by_addr_or_cid(c->doq_socket, paddr, dcid,
+		dcidlen);
 	return 1;
 }
 
@@ -1281,9 +1283,8 @@ static void doq_cid_randfill(struct ngtcp2_cid* cid, size_t datalen,
 
 /** send retry packet for doq connection. */
 static void
-doq_send_retry(struct comm_point* c, struct sockaddr_storage* addr,
-	socklen_t addrlen, struct sockaddr_storage* localaddr,
-	socklen_t localaddrlen, int ifindex, struct ngtcp2_pkt_hd* hd)
+doq_send_retry(struct comm_point* c, struct doq_pkt_addr* paddr,
+	struct ngtcp2_pkt_hd* hd)
 {
 	char host[256], port[32];
 	struct ngtcp2_cid scid;
@@ -1291,8 +1292,8 @@ doq_send_retry(struct comm_point* c, struct sockaddr_storage* addr,
 	ngtcp2_tstamp ts;
 	ngtcp2_ssize tokenlen, ret;
 
-	if(!doq_print_addr_port(addr, addrlen, host, sizeof(host), port,
-		sizeof(port))) {
+	if(!doq_print_addr_port(&paddr->addr, paddr->addrlen, host,
+		sizeof(host), port, sizeof(port))) {
 		return;
 	}
 	verbose(VERB_ALGO, "doq: sending retry packet to %s %s", host, port);
@@ -1305,7 +1306,8 @@ doq_send_retry(struct comm_point* c, struct sockaddr_storage* addr,
 
 	tokenlen = ngtcp2_crypto_generate_retry_token(token,
 		c->doq_socket->static_secret, c->doq_socket->static_secret_len,
-		hd->version, (void*)addr, addrlen, &scid, &hd->dcid, ts);
+		hd->version, (void*)&paddr->addr, paddr->addrlen, &scid,
+		&hd->dcid, ts);
 	if(tokenlen < 0) {
 		log_err("ngtcp2_crypto_generate_retry_token failed: %s",
 			ngtcp2_strerror(tokenlen));
@@ -1323,15 +1325,13 @@ doq_send_retry(struct comm_point* c, struct sockaddr_storage* addr,
 	}
 	sldns_buffer_set_position(c->buffer, ret);
 	sldns_buffer_flip(c->buffer);
-	doq_send(c, addr, addrlen, localaddr, localaddrlen, ifindex, 0);
+	doq_send(c, paddr, 0);
 }
 
 /** doq send stateless connection close */
 static void
 doq_send_stateless_connection_close(struct comm_point* c,
-	struct ngtcp2_pkt_hd* hd, struct sockaddr_storage* addr,
-	socklen_t addrlen, struct sockaddr_storage* localaddr,
-	socklen_t localaddrlen, int ifindex)
+	struct doq_pkt_addr* paddr, struct ngtcp2_pkt_hd* hd)
 {
 	ngtcp2_ssize ret;
 	sldns_buffer_clear(c->buffer);
@@ -1346,26 +1346,27 @@ doq_send_stateless_connection_close(struct comm_point* c,
 	}
 	sldns_buffer_set_position(c->buffer, ret);
 	sldns_buffer_flip(c->buffer);
-	doq_send(c, addr, addrlen, localaddr, localaddrlen, ifindex, 0);
+	doq_send(c, paddr, 0);
 }
 
 /** doq verify retry token, false on failure */
 static int
-doq_verify_retry_token(struct comm_point* c, struct sockaddr_storage* addr,
-	socklen_t addrlen, struct ngtcp2_cid* ocid, struct ngtcp2_pkt_hd* hd)
+doq_verify_retry_token(struct comm_point* c, struct doq_pkt_addr* paddr,
+	struct ngtcp2_cid* ocid, struct ngtcp2_pkt_hd* hd)
 {
 	char host[256], port[32];
 	ngtcp2_tstamp ts;
-	if(!doq_print_addr_port(addr, addrlen, host, sizeof(host), port,
-		sizeof(port)))
+	if(!doq_print_addr_port(&paddr->addr, paddr->addrlen, host,
+		sizeof(host), port, sizeof(port)))
 		return 0;
 	ts = doq_get_timestamp_nanosec();
 	verbose(VERB_ALGO, "doq: verifying retry token from %s %s", host,
 		port);
 	if(ngtcp2_crypto_verify_retry_token(ocid, hd->token.base,
 		hd->token.len, c->doq_socket->static_secret,
-		c->doq_socket->static_secret_len, hd->version, (void*)addr,
-		addrlen, &hd->dcid, 10*NGTCP2_SECONDS, ts) != 0) {
+		c->doq_socket->static_secret_len, hd->version,
+		(void*)&paddr->addr, paddr->addrlen, &hd->dcid,
+		10*NGTCP2_SECONDS, ts) != 0) {
 		verbose(VERB_ALGO, "doq: could not verify retry token "
 			"from %s %s", host, port);
 		return 0;
@@ -1376,19 +1377,20 @@ doq_verify_retry_token(struct comm_point* c, struct sockaddr_storage* addr,
 
 /** doq verify token, false on failure */
 static int
-doq_verify_token(struct comm_point* c, struct sockaddr_storage* addr,
-	socklen_t addrlen, struct ngtcp2_pkt_hd* hd)
+doq_verify_token(struct comm_point* c, struct doq_pkt_addr* paddr,
+	struct ngtcp2_pkt_hd* hd)
 {
 	char host[256], port[32];
 	ngtcp2_tstamp ts;
-	if(!doq_print_addr_port(addr, addrlen, host, sizeof(host), port,
-		sizeof(port)))
+	if(!doq_print_addr_port(&paddr->addr, paddr->addrlen, host,
+		sizeof(host), port, sizeof(port)))
 		return 0;
 	ts = doq_get_timestamp_nanosec();
 	verbose(VERB_ALGO, "doq: verifying token from %s %s", host, port);
 	if(ngtcp2_crypto_verify_regular_token(hd->token.base, hd->token.len,
 		c->doq_socket->static_secret, c->doq_socket->static_secret_len,
-		(void*)addr, addrlen, 3600*NGTCP2_SECONDS, ts) != 0) {
+		(void*)&paddr->addr, paddr->addrlen, 3600*NGTCP2_SECONDS,
+		ts) != 0) {
 		verbose(VERB_ALGO, "doq: could not verify token from %s %s",
 			host, port);
 		return 0;
@@ -1401,14 +1403,12 @@ doq_verify_token(struct comm_point* c, struct sockaddr_storage* addr,
  * a new dcid. It has a new set of streams. It is inserted in the lookup tree.
  * Returns NULL on failure. */
 static struct doq_conn*
-doq_setup_new_conn(struct comm_point* c, struct sockaddr_storage* addr,
-	socklen_t addrlen, struct sockaddr_storage* localaddr,
-	socklen_t localaddrlen, int ifindex, struct ngtcp2_pkt_hd* hd,
-	struct ngtcp2_cid* ocid)
+doq_setup_new_conn(struct comm_point* c, struct doq_pkt_addr* paddr,
+	struct ngtcp2_pkt_hd* hd, struct ngtcp2_cid* ocid)
 {
 	struct doq_conn* conn;
-	conn = doq_conn_create(c, addr, addrlen, localaddr, localaddrlen,
-		ifindex, hd->dcid.data, hd->dcid.datalen, hd->version);
+	conn = doq_conn_create(c, paddr, hd->dcid.data, hd->dcid.datalen,
+		hd->version);
 	if(!conn) {
 		log_err("doq: could not allocate doq_conn");
 		return NULL;
@@ -1433,34 +1433,29 @@ doq_setup_new_conn(struct comm_point* c, struct sockaddr_storage* addr,
 
 /** perform doq address validation */
 static int
-doq_address_validation(struct comm_point* c, struct sockaddr_storage* addr,
-	socklen_t addrlen, struct sockaddr_storage* localaddr,
-	socklen_t localaddrlen, int ifindex, struct ngtcp2_pkt_hd* hd,
-	struct ngtcp2_cid* ocid, struct ngtcp2_cid** pocid)
+doq_address_validation(struct comm_point* c, struct doq_pkt_addr* paddr,
+	struct ngtcp2_pkt_hd* hd, struct ngtcp2_cid* ocid,
+	struct ngtcp2_cid** pocid)
 {
 	verbose(VERB_ALGO, "doq stateless address validation");
 	if(hd->token.len == 0) {
-		doq_send_retry(c, addr, addrlen, localaddr, localaddrlen,
-			ifindex, hd);
+		doq_send_retry(c, paddr, hd);
 		return 0;
 	}
 	if(hd->token.base[0] != NGTCP2_CRYPTO_TOKEN_MAGIC_RETRY &&
 		hd->dcid.datalen < NGTCP2_MIN_INITIAL_DCIDLEN) {
-		doq_send_stateless_connection_close(c, hd, addr, addrlen,
-			localaddr, localaddrlen, ifindex);
+		doq_send_stateless_connection_close(c, paddr, hd);
 		return 0;
 	}
 	if(hd->token.base[0] == NGTCP2_CRYPTO_TOKEN_MAGIC_RETRY) {
-		if(!doq_verify_retry_token(c, addr, addrlen, ocid, hd)) {
-			doq_send_stateless_connection_close(c, hd, addr,
-				addrlen, localaddr, localaddrlen, ifindex);
+		if(!doq_verify_retry_token(c, paddr, ocid, hd)) {
+			doq_send_stateless_connection_close(c, paddr, hd);
 			return 0;
 		}
 		*pocid = ocid;
 	} else if(hd->token.base[0] == NGTCP2_CRYPTO_TOKEN_MAGIC_REGULAR) {
-		if(!doq_verify_token(c, addr, addrlen, hd)) {
-			doq_send_retry(c, addr, addrlen, localaddr,
-				localaddrlen, ifindex, hd);
+		if(!doq_verify_token(c, paddr, hd)) {
+			doq_send_retry(c, paddr, hd);
 			return 0;
 		}
 		hd->token.base = NULL;
@@ -1470,8 +1465,7 @@ doq_address_validation(struct comm_point* c, struct sockaddr_storage* addr,
 			"token in hd.token.base with magic byte 0x%2.2x",
 			(int)hd->token.base[0]);
 		if(c->doq_socket->validate_addr) {
-			doq_send_retry(c, addr, addrlen, localaddr,
-				localaddrlen, ifindex, hd);
+			doq_send_retry(c, paddr, hd);
 			return 0;
 		}
 		hd->token.base = NULL;
@@ -1482,9 +1476,8 @@ doq_address_validation(struct comm_point* c, struct sockaddr_storage* addr,
 
 /** the doq accept, returns false if no further processing of content */
 static int
-doq_accept(struct comm_point* c, struct sockaddr_storage* addr,
-	socklen_t addrlen, struct sockaddr_storage* localaddr,
-	socklen_t localaddrlen, int ifindex, struct doq_conn** conn)
+doq_accept(struct comm_point* c, struct doq_pkt_addr* paddr,
+	struct doq_conn** conn)
 {
 	int rv;
 	struct ngtcp2_pkt_hd hd;
@@ -1494,8 +1487,7 @@ doq_accept(struct comm_point* c, struct sockaddr_storage* addr,
 		sldns_buffer_limit(c->buffer));
 	if(rv != 0) {
 		if(rv == NGTCP2_ERR_RETRY) {
-			doq_send_retry(c, addr, addrlen, localaddr,
-				localaddrlen, ifindex, &hd);
+			doq_send_retry(c, paddr, &hd);
 			return 0;
 		}
 		log_err("doq: initial packet failed, ngtcp2_accept failed: %s",
@@ -1503,12 +1495,10 @@ doq_accept(struct comm_point* c, struct sockaddr_storage* addr,
 		return 0;
 	}
 	if(c->doq_socket->validate_addr || hd.token.len) {
-		if(!doq_address_validation(c, addr, addrlen, localaddr,
-			localaddrlen, ifindex, &hd, &ocid, &pocid))
+		if(!doq_address_validation(c, paddr, &hd, &ocid, &pocid))
 			return 0;
 	}
-	*conn = doq_setup_new_conn(c, addr, addrlen, localaddr, localaddrlen,
-		ifindex, &hd, pocid);
+	*conn = doq_setup_new_conn(c, paddr, &hd, pocid);
 	if(!*conn)
 		return 0;
 	return 1;
@@ -1518,9 +1508,8 @@ void
 comm_point_doq_callback(int fd, short event, void* arg)
 {
 	struct comm_point* c;
-	struct sockaddr_storage addr, localaddr;
-	socklen_t addrlen, localaddrlen;
-	int i, ifindex, pkt_continue;
+	struct doq_pkt_addr paddr;
+	int i, pkt_continue;
 	struct doq_conn* conn;
 
 	c = (struct comm_point*)arg;
@@ -1532,13 +1521,10 @@ comm_point_doq_callback(int fd, short event, void* arg)
 	ub_comm_base_now(c->ev->base);
 	for(i=0; i<NUM_UDP_PER_SELECT; i++) {
 		sldns_buffer_clear(c->buffer);
-		addrlen = (socklen_t)sizeof(addr);
-		localaddrlen = (socklen_t)sizeof(localaddr);
-		ifindex = 0;
+		doq_pkt_addr_init(&paddr);
 		log_assert(fd != -1);
 		log_assert(sldns_buffer_remaining(c->buffer) > 0);
-		if(!doq_recv(c, &addr, &addrlen, &localaddr, &localaddrlen,
-			&ifindex, &pkt_continue)) {
+		if(!doq_recv(c, &paddr, &pkt_continue)) {
 			if(pkt_continue)
 				continue;
 			return;
@@ -1547,15 +1533,16 @@ comm_point_doq_callback(int fd, short event, void* arg)
 		/* handle incoming packet from remote addr to localaddr */
 		if(verbosity >= VERB_ALGO) {
 			char remotestr[256], localstr[256];
-			addr_to_str(&addr, addrlen, remotestr,
+			addr_to_str(&paddr.addr, paddr.addrlen, remotestr,
 				sizeof(remotestr));
-			addr_to_str(&localaddr, localaddrlen, localstr,
-				sizeof(localstr));
+			addr_to_str(&paddr.localaddr, paddr.localaddrlen,
+				localstr, sizeof(localstr));
 			log_info("incoming doq packet from %s port %d on "
 				"%s port %d ifindex %d",
-				remotestr, doq_sockaddr_get_port(&addr),
-				localstr, doq_sockaddr_get_port(&localaddr),
-				ifindex);
+				remotestr, doq_sockaddr_get_port(&paddr.addr),
+				localstr,
+				doq_sockaddr_get_port(&paddr.localaddr),
+				paddr.ifindex);
 			log_info("doq_recv length %d",
 				(int)sldns_buffer_limit(c->buffer));
 		}
@@ -1565,13 +1552,11 @@ comm_point_doq_callback(int fd, short event, void* arg)
 		}
 
 		conn = NULL;
-		if(!doq_decode_pkt_header_negotiate(c, &addr, addrlen,
-			&localaddr, localaddrlen, ifindex, &conn)) {
+		if(!doq_decode_pkt_header_negotiate(c, &paddr, &conn)) {
 			continue;
 		}
 		if(!conn) {
-			if(!doq_accept(c, &addr, addrlen, &localaddr,
-				localaddrlen, ifindex, &conn)) {
+			if(!doq_accept(c, &paddr, &conn)) {
 				continue;
 			}
 		}

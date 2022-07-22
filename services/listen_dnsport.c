@@ -3132,21 +3132,19 @@ nghttp2_session_callbacks* http2_req_callbacks_create(void)
 
 #ifdef HAVE_NGTCP2
 struct doq_conn*
-doq_conn_create(struct comm_point* c, struct sockaddr_storage* addr,
-	socklen_t addrlen, struct sockaddr_storage* localaddr,
-	socklen_t localaddrlen, int ifindex, const uint8_t* dcid,
-	size_t dcidlen, uint32_t version)
+doq_conn_create(struct comm_point* c, struct doq_pkt_addr* paddr,
+	const uint8_t* dcid, size_t dcidlen, uint32_t version)
 {
 	struct doq_conn* conn = calloc(1, sizeof(*conn));
 	if(!conn)
 		return NULL;
 	conn->node.key = conn;
 	conn->doq_socket = c->doq_socket;
-	memmove(&conn->destaddr, addr, addrlen);
-	conn->destaddrlen = addrlen;
-	memmove(&conn->localaddr, localaddr, localaddrlen);
-	conn->localaddrlen = localaddrlen;
-	conn->ifindex = ifindex;
+	memmove(&conn->paddr.addr, &paddr->addr, paddr->addrlen);
+	conn->paddr.addrlen = paddr->addrlen;
+	memmove(&conn->paddr.localaddr, &paddr->localaddr, paddr->localaddrlen);
+	conn->paddr.localaddrlen = paddr->localaddrlen;
+	conn->paddr.ifindex = paddr->ifindex;
 	conn->dcid = memdup((void*)dcid, dcidlen);
 	if(!conn->dcid) {
 		free(conn);
@@ -3184,22 +3182,23 @@ doq_conn_cmp(const void* key1, const void* key2)
 	 * Also a printout in sorted order prints the connections by IP
 	 * address of destination, and then a number of them depending on the
 	 * dcids. */
-	if(c->destaddrlen != d->destaddrlen) {
-		if(c->destaddrlen < d->destaddrlen)
+	if(c->paddr.addrlen != d->paddr.addrlen) {
+		if(c->paddr.addrlen < d->paddr.addrlen)
 			return -1;
 		return 1;
 	}
-	if((r=memcmp(&c->destaddr, &d->destaddr, c->destaddrlen))!=0)
+	if((r=memcmp(&c->paddr.addr, &d->paddr.addr, c->paddr.addrlen))!=0)
 		return r;
-	if(c->localaddrlen != d->localaddrlen) {
-		if(c->localaddrlen < d->localaddrlen)
+	if(c->paddr.localaddrlen != d->paddr.localaddrlen) {
+		if(c->paddr.localaddrlen < d->paddr.localaddrlen)
 			return -1;
 		return 1;
 	}
-	if((r=memcmp(&c->localaddr, &d->localaddr, c->localaddrlen))!=0)
+	if((r=memcmp(&c->paddr.localaddr, &d->paddr.localaddr,
+		c->paddr.localaddrlen))!=0)
 		return r;
-	if(c->ifindex != d->ifindex) {
-		if(c->ifindex < d->ifindex)
+	if(c->paddr.ifindex != d->paddr.ifindex) {
+		if(c->paddr.ifindex < d->paddr.ifindex)
 			return -1;
 		return 1;
 	}
@@ -3521,10 +3520,10 @@ doq_conn_setup(struct doq_conn* conn, uint8_t* scid, size_t scidlen,
 	if(!doq_conn_generate_new_conid(conn, sv_scid.data, sv_scid.datalen))
 		return 0;
 
-	path.remote.addr = (struct sockaddr*)&conn->destaddr;
-	path.remote.addrlen = conn->destaddrlen;
-	path.local.addr = (struct sockaddr*)&conn->localaddr;
-	path.local.addrlen = conn->localaddrlen;
+	path.remote.addr = (struct sockaddr*)&conn->paddr.addr;
+	path.remote.addrlen = conn->paddr.addrlen;
+	path.local.addr = (struct sockaddr*)&conn->paddr.localaddr;
+	path.local.addrlen = conn->paddr.localaddrlen;
 
 	callbacks.recv_client_initial = ngtcp2_crypto_recv_client_initial_cb;
 	callbacks.recv_crypto_data = ngtcp2_crypto_recv_crypto_data_cb;
