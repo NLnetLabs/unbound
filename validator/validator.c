@@ -2493,7 +2493,8 @@ ds_response_to_ke(struct module_qstate* qstate, struct val_qstate* vq,
 			/* If they aren't usable, then we treat it like 
 			 * there was no DS. */
 
-			// @TODO add EDE Unsupported DS Digest Type
+			/* TODO add EDE Unsupported DS Digest Type; this needs
+			 * EDE to be added on non SERVFAIL answers. */
 
 			*ke = key_entry_create_null(qstate->region, 
 				qinfo->qname, qinfo->qname_len, qinfo->qclass, 
