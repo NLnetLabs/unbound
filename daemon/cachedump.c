@@ -859,7 +859,8 @@ int print_deleg_lookup(RES* ssl, struct worker* worker, uint8_t* nm,
 		/* go up? */
 		if(iter_dp_is_useless(&qinfo, BIT_RD, dp,
 			(worker->env.cfg->do_ip4 && worker->back->num_ip4 != 0),
-			(worker->env.cfg->do_ip6 && worker->back->num_ip6 != 0))) {
+			(worker->env.cfg->do_ip6 && worker->back->num_ip6 != 0),
+			worker->env.cfg->do_nat64)) {
 			print_dp_main(ssl, dp, msg);
 			print_dp_details(ssl, worker, dp);
 			if(!ssl_printf(ssl, "cache delegation was "

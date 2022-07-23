@@ -2268,6 +2268,18 @@ List domain for which the AAAA records are ignored and the A record is
 used by dns64 processing instead.  Can be entered multiple times, list a
 new domain for which it applies, one per line.  Applies also to names
 underneath the name given.
+.SS "NAT64 Operation"
+.LP
+NAT64 operation allows using a NAT64 prefix for outbound requests to IPv4-only
+servers.  It is controlled by two options in the \fBserver:\fR section:
+.TP
+.B do\-nat64: \fI<yes or no>\fR
+Use NAT64 to reach IPv4-only servers.  Default no.
+.TP
+.B nat64\-prefix: \fI<IPv6 prefix>\fR
+Use a specific NAT64 prefix to reach IPv4-only servers.  Defaults to using
+the prefix configured in \fBdns64\-prefix\fR, which in turn defaults to
+64:ff9b::/96.  Must be /96 or shorter.
 .SS "DNSCrypt Options"
 .LP
 The

@@ -1,3 +1,6 @@
+5 November 2022: equinox (David Lamparter)
+	- Implemented NAT64 support
+
 21 October 2022: George
 	- Merge #767 from jonathangray: consistently use IPv4/IPv6 in
 	  unbound.conf.5.

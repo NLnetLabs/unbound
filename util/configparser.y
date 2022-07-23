@@ -73,7 +73,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_FORCE_TOPLEVEL
 %token VAR_SERVER VAR_VERBOSITY VAR_NUM_THREADS VAR_PORT
 %token VAR_OUTGOING_RANGE VAR_INTERFACE VAR_PREFER_IP4
-%token VAR_DO_IP4 VAR_DO_IP6 VAR_PREFER_IP6 VAR_DO_UDP VAR_DO_TCP
+%token VAR_DO_IP4 VAR_DO_IP6 VAR_DO_NAT64 VAR_PREFER_IP6 VAR_DO_UDP VAR_DO_TCP
 %token VAR_TCP_MSS VAR_OUTGOING_TCP_MSS VAR_TCP_IDLE_TIMEOUT
 %token VAR_EDNS_TCP_KEEPALIVE VAR_EDNS_TCP_KEEPALIVE_TIMEOUT
 %token VAR_CHROOT VAR_USERNAME VAR_DIRECTORY VAR_LOGFILE VAR_PIDFILE
@@ -123,6 +123,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_UNBLOCK_LAN_ZONES VAR_INSECURE_LAN_ZONES
 %token VAR_INFRA_CACHE_MIN_RTT VAR_INFRA_CACHE_MAX_RTT VAR_INFRA_KEEP_PROBING
 %token VAR_DNS64_PREFIX VAR_DNS64_SYNTHALL VAR_DNS64_IGNORE_AAAA
+%token VAR_NAT64_PREFIX
 %token VAR_DNSTAP VAR_DNSTAP_ENABLE VAR_DNSTAP_SOCKET_PATH VAR_DNSTAP_IP
 %token VAR_DNSTAP_TLS VAR_DNSTAP_TLS_SERVER_NAME VAR_DNSTAP_TLS_CERT_BUNDLE
 %token VAR_DNSTAP_TLS_CLIENT_KEY_FILE VAR_DNSTAP_TLS_CLIENT_CERT_FILE
@@ -222,8 +223,8 @@ contents_server: contents_server content_server
 	| ;
 content_server: server_num_threads | server_verbosity | server_port |
 	server_outgoing_range | server_do_ip4 |
-	server_do_ip6 | server_prefer_ip4 | server_prefer_ip6 |
-	server_do_udp | server_do_tcp |
+	server_do_ip6 | server_do_nat64 | server_prefer_ip4 |
+	server_prefer_ip6 | server_do_udp | server_do_tcp |
 	server_tcp_mss | server_outgoing_tcp_mss | server_tcp_idle_timeout |
 	server_tcp_keepalive | server_tcp_keepalive_timeout |
 	server_interface | server_chroot | server_username |
@@ -273,6 +274,7 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_so_reuseport | server_delay_close | server_udp_connect |
 	server_unblock_lan_zones | server_insecure_lan_zones |
 	server_dns64_prefix | server_dns64_synthall | server_dns64_ignore_aaaa |
+	server_nat64_prefix |
 	server_infra_cache_min_rtt | server_infra_cache_max_rtt | server_harden_algo_downgrade |
 	server_ip_transparent | server_ip_ratelimit | server_ratelimit |
 	server_ip_dscp | server_infra_keep_probing |
@@ -837,6 +839,15 @@ server_do_ip6: VAR_DO_IP6 STRING_ARG
 		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
 			yyerror("expected yes or no.");
 		else cfg_parser->cfg->do_ip6 = (strcmp($2, "yes")==0);
+		free($2);
+	}
+	;
+server_do_nat64: VAR_DO_NAT64 STRING_ARG
+	{
+		OUTYY(("P(server_do_nat64:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else cfg_parser->cfg->do_nat64 = (strcmp($2, "yes")==0);
 		free($2);
 	}
 	;
@@ -2321,6 +2332,13 @@ server_dns64_ignore_aaaa: VAR_DNS64_IGNORE_AAAA STRING_ARG
 		if(!cfg_strlist_insert(&cfg_parser->cfg->dns64_ignore_aaaa,
 			$2))
 			fatal_exit("out of memory adding dns64-ignore-aaaa");
+	}
+	;
+server_nat64_prefix: VAR_NAT64_PREFIX STRING_ARG
+	{
+		OUTYY(("P(nat64_prefix:%s)\n", $2));
+		free(cfg_parser->cfg->nat64_prefix);
+		cfg_parser->cfg->nat64_prefix = $2;
 	}
 	;
 server_define_tag: VAR_DEFINE_TAG STRING_ARG
