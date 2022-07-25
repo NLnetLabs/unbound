@@ -779,7 +779,7 @@ handshake_completed(ngtcp2_conn* ATTR_UNUSED(conn), void* user_data)
 			alpnlen = sizeof(alpnstr)-1;
 		memmove(alpnstr, alpn, alpnlen);
 		alpnstr[alpnlen]=0;
-		verbose(1, "negotiated ALPN is %s", alpnstr);
+		verbose(1, "negotiated ALPN is '%s'", alpnstr);
 	}
 	/* The SSL_get_early_data_status call works after the handshake
 	 * completes. */
@@ -1163,9 +1163,6 @@ ctx_client_setup(void)
 	quic_method.flush_flight = &flush_flight;
 	quic_method.send_alert = &send_alert;
 	SSL_CTX_set_quic_method(ctx, &quic_method);
-#ifdef HAVE_SSL_CTX_SET_ALPN_PROTOS
-	SSL_CTX_set_alpn_protos(ctx, (const unsigned char *)"\x03doq", 4);
-#endif
 	return ctx;
 }
 
@@ -1189,7 +1186,7 @@ ssl_client_setup(struct doq_client_data* data)
 	} else {
 		SSL_set_quic_use_legacy_codepoint(ssl, 0);
 	}
-	SSL_set_alpn_protos(ssl, (const unsigned char *)"\x03doq", 4);
+	SSL_set_alpn_protos(ssl, (const unsigned char *)"\x03""doq", 4);
 	/* send the SNI host name */
 	SSL_set_tlsext_host_name(ssl, "localhost");
 	return ssl;
@@ -1248,7 +1245,7 @@ set_ecn(int fd, int family, uint32_t ecn)
 
 /** send a packet */
 static int
-doq_send_pkt(struct doq_client_data* data, uint32_t ecn, uint8_t* buf,
+doq_client_send_pkt(struct doq_client_data* data, uint32_t ecn, uint8_t* buf,
 	size_t buf_len, int is_blocked_pkt, int* send_is_blocked)
 {
 	struct msghdr msg;
@@ -1350,8 +1347,8 @@ write_conn_close(struct doq_client_data* data)
 	verbose(1, "write connection close packet length %d", (int)ret);
 	if(ret == 0)
 		return;
-	doq_send_pkt(data, pi.ecn, sldns_buffer_begin(data->pkt_buf), ret, 0,
-		NULL);
+	doq_client_send_pkt(data, pi.ecn, sldns_buffer_begin(data->pkt_buf),
+		ret, 0, NULL);
 }
 
 /** disconnect we are done */
@@ -1682,7 +1679,7 @@ write_streams(struct doq_client_data* data)
 			update_timer(data);
 			return 0;
 		}
-		if(!doq_send_pkt(data, pi.ecn,
+		if(!doq_client_send_pkt(data, pi.ecn,
 			sldns_buffer_begin(data->pkt_buf), ret, 0,
 			&send_is_blocked)) {
 			if(send_is_blocked) {
@@ -1720,7 +1717,7 @@ send_blocked_pkt(struct doq_client_data* data)
 {
 	ngtcp2_tstamp ts = get_timestamp_nanosec();
 	int send_is_blocked = 0;
-	if(!doq_send_pkt(data, data->blocked_pkt_pi.ecn,
+	if(!doq_client_send_pkt(data, data->blocked_pkt_pi.ecn,
 		sldns_buffer_begin(data->pkt_buf),
 		sldns_buffer_limit(data->pkt_buf), 1, &send_is_blocked)) {
 		if(send_is_blocked) {

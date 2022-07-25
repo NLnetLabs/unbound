@@ -3289,16 +3289,66 @@ doq_remove_connection_id_cb(ngtcp2_conn* ATTR_UNUSED(conn),
 	return 0;
 }
 
-/** ngtc2p log_printf callback function */
-static void
-doq_log_printf_cb(void* ATTR_UNUSED(user_data), const char* fmt, ...)
+/** doq submit a new token */
+static int
+doq_submit_new_token(struct doq_conn* conn)
 {
-	char buf[1024];
-	va_list ap;
-	va_start(ap, fmt);
-	vsnprintf(buf, sizeof(buf), fmt, ap);
-	verbose(VERB_ALGO, "libngtcp2: %s", buf);
-	va_end(ap);
+	uint8_t token[NGTCP2_CRYPTO_MAX_REGULAR_TOKENLEN];
+	ngtcp2_ssize tokenlen;
+	int ret;
+	const ngtcp2_path* path = ngtcp2_conn_get_path(conn->conn);
+	ngtcp2_tstamp ts = doq_get_timestamp_nanosec();
+
+	tokenlen = ngtcp2_crypto_generate_regular_token(token,
+		conn->doq_socket->static_secret,
+		conn->doq_socket->static_secret_len, path->remote.addr,
+		path->remote.addrlen, ts);
+	if(tokenlen < 0) {
+		log_err("doq ngtcp2_crypto_generate_regular_token failed");
+		return 1;
+	}
+
+	verbose(VERB_ALGO, "doq submit new token");
+	ret = ngtcp2_conn_submit_new_token(conn->conn, token, tokenlen);
+	if(ret != 0) {
+		log_err("doq ngtcp2_conn_submit_new_token failed: %s",
+			ngtcp2_strerror(ret));
+		return 0;
+	}
+	return 1;
+}
+
+/** ngtcp2 handshake_completed callback function */
+static int
+doq_handshake_completed_cb(ngtcp2_conn* ATTR_UNUSED(conn), void* user_data)
+{
+	struct doq_conn* doq_conn = (struct doq_conn*)user_data;
+	verbose(VERB_ALGO, "doq handshake_completed callback");
+	verbose(VERB_ALGO, "ngtcp2_conn_get_max_data_left is %d",
+		(int)ngtcp2_conn_get_max_data_left(doq_conn->conn));
+	verbose(VERB_ALGO, "ngtcp2_conn_get_max_local_streams_uni is %d",
+		(int)ngtcp2_conn_get_max_local_streams_uni(doq_conn->conn));
+	verbose(VERB_ALGO, "ngtcp2_conn_get_streams_uni_left is %d",
+		(int)ngtcp2_conn_get_streams_uni_left(doq_conn->conn));
+	verbose(VERB_ALGO, "ngtcp2_conn_get_streams_bidi_left is %d",
+		(int)ngtcp2_conn_get_streams_bidi_left(doq_conn->conn));
+	verbose(VERB_ALGO, "negotiated cipher name is %s",
+		SSL_get_cipher_name(doq_conn->ssl));
+	if(verbosity > VERB_ALGO) {
+		const unsigned char* alpn = NULL;
+		unsigned int alpnlen = 0;
+		char alpnstr[128];
+		SSL_get0_alpn_selected(doq_conn->ssl, &alpn, &alpnlen);
+		if(alpnlen > sizeof(alpnstr)-1)
+			alpnlen = sizeof(alpnstr)-1;
+		memmove(alpnstr, alpn, alpnlen);
+		alpnstr[alpnlen]=0;
+		verbose(VERB_ALGO, "negotiated ALPN is '%s'", alpnstr);
+	}
+
+	if(!doq_submit_new_token(doq_conn))
+		return -1;
+	return 0;
 }
 
 /** ngtcp2 stream_open callback function */
@@ -3326,7 +3376,7 @@ doq_recv_stream_data_cb(ngtcp2_conn* ATTR_UNUSED(conn), uint32_t flags,
 	if(verbosity >= VERB_ALGO)
 		log_hex("doq recv stream data", (void*)data, datalen);
 	(void)doq_conn;
-	if(datalen >= 2) {
+	if(datalen >= 2 && offset == 0) {
 		/* output partial received packet */
 		uint16_t len = sldns_read_uint16(data);
 		char* s = sldns_wire2str_pkt((void*)(data+2), datalen-2);
@@ -3335,6 +3385,18 @@ doq_recv_stream_data_cb(ngtcp2_conn* ATTR_UNUSED(conn), uint32_t flags,
 		free(s);
 	}
 	return 0;
+}
+
+/** ngtc2p log_printf callback function */
+static void
+doq_log_printf_cb(void* ATTR_UNUSED(user_data), const char* fmt, ...)
+{
+	char buf[1024];
+	va_list ap;
+	va_start(ap, fmt);
+	vsnprintf(buf, sizeof(buf), fmt, ap);
+	verbose(VERB_ALGO, "libngtcp2: %s", buf);
+	va_end(ap);
 }
 
 /** the doq application tx key callback, false on failure */
@@ -3432,6 +3494,22 @@ doq_send_alert(SSL *ssl, enum ssl_encryption_level_t ATTR_UNUSED(level),
 	return 1;
 }
 
+/** ALPN select callback for the doq SSL context */
+static int
+doq_alpn_select_cb(SSL* ATTR_UNUSED(ssl), const unsigned char** out,
+	unsigned char* outlen, const unsigned char* in, unsigned int inlen,
+	void* ATTR_UNUSED(arg))
+{
+	/* select "doq" */
+	int ret = SSL_select_next_proto((void*)out, outlen,
+		(const unsigned char*)"\x03""doq", 4, in, inlen);
+	if(ret == OPENSSL_NPN_NEGOTIATED)
+		return SSL_TLSEXT_ERR_OK;
+	verbose(VERB_ALGO, "doq alpn_select_cb: ALPN from client does "
+		"not have 'doq'");
+	return SSL_TLSEXT_ERR_ALERT_FATAL;
+}
+
 /** create new tls session for server doq connection */
 static SSL_CTX*
 doq_ctx_server_setup(struct doq_server_socket* doq_socket)
@@ -3451,8 +3529,8 @@ doq_ctx_server_setup(struct doq_server_socket* doq_socket)
 	SSL_CTX_set_mode(ctx, SSL_MODE_RELEASE_BUFFERS);
 	SSL_CTX_set_min_proto_version(ctx, TLS1_3_VERSION);
 	SSL_CTX_set_max_proto_version(ctx, TLS1_3_VERSION);
-#ifdef HAVE_SSL_CTX_SET_ALPN_PROTOS
-	SSL_CTX_set_alpn_protos(ctx, (const unsigned char *)"\x03doq", 4);
+#ifdef HAVE_SSL_CTX_SET_ALPN_SELECT_CB
+	SSL_CTX_set_alpn_select_cb(ctx, doq_alpn_select_cb, NULL);
 #endif
 	SSL_CTX_set_default_verify_paths(ctx);
 	if(!SSL_CTX_use_certificate_chain_file(ctx,
@@ -3585,6 +3663,7 @@ doq_conn_setup(struct doq_conn* conn, uint8_t* scid, size_t scidlen,
 	callbacks.rand = doq_rand_cb;
 	callbacks.get_new_connection_id = doq_get_new_connection_id_cb;
 	callbacks.remove_connection_id = doq_remove_connection_id_cb;
+	callbacks.handshake_completed = doq_handshake_completed_cb;
 	callbacks.stream_open = doq_stream_open_cb;
 	callbacks.recv_stream_data = doq_recv_stream_data_cb;
 
@@ -3615,11 +3694,11 @@ doq_conn_setup(struct doq_conn* conn, uint8_t* scid, size_t scidlen,
 		ngtcp2_cid_init(&params.retry_scid, conn->dcid, conn->dcidlen);
 		params.retry_scid_present = 1;
 	} else {
-		ngtcp2_cid_init(&params.original_dcid, conn->dcid, conn->dcidlen);
+		ngtcp2_cid_init(&params.original_dcid, conn->dcid,
+			conn->dcidlen);
 	}
 	doq_fill_rand(conn->doq_socket->rnd, params.stateless_reset_token,
 		sizeof(params.stateless_reset_token));
-
 
 	rv = ngtcp2_conn_server_new(&conn->conn, &scid_cid, &sv_scid, &path,
 		conn->version, &callbacks, &settings, &params, NULL, conn);
@@ -3956,7 +4035,7 @@ doq_conn_write_streams(struct comm_point* c, struct doq_conn* conn)
 
 		if(ret == 0) {
 			/* congestion limited */
-			return 0;
+			return 1;
 		}
 		sldns_buffer_set_position(c->buffer, ret);
 		sldns_buffer_flip(c->buffer);
