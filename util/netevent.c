@@ -1442,6 +1442,16 @@ doq_verify_token(struct comm_point* c, struct doq_pkt_addr* paddr,
 	return 1;
 }
 
+/** delete and remove from the lookup tree the doq_conn connection */
+static void
+doq_delete_connection(struct comm_point* c, struct doq_conn* conn)
+{
+	if(!conn)
+		return;
+	(void)rbtree_delete(c->doq_socket->conn_tree, conn->node.key);
+	doq_conn_delete(conn);
+}
+
 /** create and setup a new doq connection, to a new destination, or with
  * a new dcid. It has a new set of streams. It is inserted in the lookup tree.
  * Returns NULL on failure. */
@@ -1470,8 +1480,7 @@ doq_setup_new_conn(struct comm_point* c, struct doq_pkt_addr* paddr,
 		(ocid?ocid->data:NULL), (ocid?ocid->datalen:0),
 		hd->token.base, hd->token.len)) {
 		log_err("doq: could not set up connection");
-		(void)rbtree_delete(c->doq_socket->conn_tree, conn->node.key);
-		doq_conn_delete(conn);
+		doq_delete_connection(c, conn);
 		return NULL;
 	}
 	return conn;
@@ -1528,7 +1537,7 @@ doq_accept(struct comm_point* c, struct doq_pkt_addr* paddr,
 	int rv;
 	struct ngtcp2_pkt_hd hd;
 	struct ngtcp2_cid ocid, *pocid=NULL;
-	int err_retry, err_drop;
+	int err_retry;
 	memset(&hd, 0, sizeof(hd));
 	rv = ngtcp2_accept(&hd, sldns_buffer_begin(c->buffer),
 		sldns_buffer_limit(c->buffer));
@@ -1548,12 +1557,10 @@ doq_accept(struct comm_point* c, struct doq_pkt_addr* paddr,
 	*conn = doq_setup_new_conn(c, paddr, &hd, pocid);
 	if(!*conn)
 		return 0;
-	if(!doq_conn_recv(c, paddr, *conn, pi, &err_retry, &err_drop)) {
+	if(!doq_conn_recv(c, paddr, *conn, pi, &err_retry, NULL)) {
 		if(err_retry)
 			doq_send_retry(c, paddr, &hd);
-		(void)rbtree_delete(c->doq_socket->conn_tree,
-			(*conn)->node.key);
-		doq_conn_delete(*conn);
+		doq_delete_connection(c, *conn);
 		*conn = NULL;
 		return 0;
 	}
@@ -1565,7 +1572,7 @@ comm_point_doq_callback(int fd, short event, void* arg)
 {
 	struct comm_point* c;
 	struct doq_pkt_addr paddr;
-	int i, pkt_continue, err_retry, err_drop;
+	int i, pkt_continue, err_drop;
 	struct doq_conn* conn;
 	struct ngtcp2_pkt_info pi;
 
@@ -1605,28 +1612,23 @@ comm_point_doq_callback(int fd, short event, void* arg)
 				(int)pi.ecn);
 		}
 
-		if(sldns_buffer_limit(c->buffer) == 0) {
+		if(sldns_buffer_limit(c->buffer) == 0)
 			continue;
-		}
 
 		conn = NULL;
-		if(!doq_decode_pkt_header_negotiate(c, &paddr, &conn)) {
+		if(!doq_decode_pkt_header_negotiate(c, &paddr, &conn))
 			continue;
-		}
 		if(!conn) {
-			if(!doq_accept(c, &paddr, &conn, &pi)) {
+			if(!doq_accept(c, &paddr, &conn, &pi))
 				continue;
-			}
 			continue;
 		}
-		if(!doq_conn_recv(c, &paddr, conn, &pi, &err_retry,
-			&err_drop)) {
-			if(err_drop) {
-				/* If not in closing period, drop conn. */
-				(void)rbtree_delete(c->doq_socket->conn_tree,
-					conn->node.key);
-				doq_conn_delete(conn);
-			}
+		if(!doq_conn_recv(c, &paddr, conn, &pi, NULL, &err_drop)) {
+			/* The receive failed, and if it also failed to send
+			 * a close, drop the connection. That means it is not
+			 * in the closing period. */
+			if(err_drop)
+				doq_delete_connection(c, conn);
 			continue;
 		}
 	}

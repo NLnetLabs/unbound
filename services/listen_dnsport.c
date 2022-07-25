@@ -3808,8 +3808,10 @@ doq_conn_recv(struct comm_point* c, struct doq_pkt_addr* paddr,
 		sldns_buffer_begin(c->buffer),
 		sldns_buffer_limit(c->buffer), ts);
 	if(ret != 0) {
-		*err_retry = 0;
-		*err_drop = 0;
+		if(err_retry)
+			*err_retry = 0;
+		if(err_drop)
+			*err_drop = 0;
 		if(ret == NGTCP2_ERR_DRAINING) {
 			verbose(VERB_ALGO, "ngtcp2_conn_read_pkt returned %s",
 				ngtcp2_strerror(ret));
@@ -3817,13 +3819,16 @@ doq_conn_recv(struct comm_point* c, struct doq_pkt_addr* paddr,
 		} else if(ret == NGTCP2_ERR_DROP_CONN) {
 			verbose(VERB_ALGO, "ngtcp2_conn_read_pkt returned %s",
 				ngtcp2_strerror(ret));
-			*err_drop = 1;
+			if(err_drop)
+				*err_drop = 1;
 			return 0;
 		} else if(ret == NGTCP2_ERR_RETRY) {
 			verbose(VERB_ALGO, "ngtcp2_conn_read_pkt returned %s",
 				ngtcp2_strerror(ret));
-			*err_retry = 1;
-			*err_drop = 1;
+			if(err_retry)
+				*err_retry = 1;
+			if(err_drop)
+				*err_drop = 1;
 			return 0;
 		} else if(ret == NGTCP2_ERR_CRYPTO) {
 			if(!conn->last_error.error_code) {
@@ -3842,8 +3847,10 @@ doq_conn_recv(struct comm_point* c, struct doq_pkt_addr* paddr,
 		}
 		log_err("ngtcp2_conn_read_pkt failed: %s",
 			ngtcp2_strerror(ret));
-		if(!doq_conn_close_error(conn))
-			*err_drop = 1;
+		if(!doq_conn_close_error(conn)) {
+			if(err_drop)
+				*err_drop = 1;
+		}
 		return 0;
 	}
 
