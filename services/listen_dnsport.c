@@ -3166,6 +3166,7 @@ doq_conn_delete(struct doq_conn* conn)
 	ngtcp2_conn_del(conn->conn);
 	free(conn->dcid);
 	SSL_free(conn->ssl);
+	free(conn->close_pkt);
 	free(conn);
 }
 
@@ -3898,12 +3899,83 @@ ngtcp2_tstamp doq_get_timestamp_nanosec(void)
 		((uint64_t)tp.tv_nsec);
 }
 
+/** doq start the closing period for the connection. */
+static int
+doq_conn_start_closing_period(struct comm_point* c, struct doq_conn* conn)
+{
+	struct ngtcp2_path_storage ps;
+	struct ngtcp2_pkt_info pi;
+	ngtcp2_ssize ret;
+	if(!conn)
+		return 1;
+	if(ngtcp2_conn_is_in_closing_period(conn->conn))
+		return 1;
+	if(ngtcp2_conn_is_in_draining_period(conn->conn))
+		return 1;
+	ngtcp2_path_storage_zero(&ps);
+	sldns_buffer_clear(c->buffer);
+	/* the call to ngtcp2_conn_write_connection_close causes the
+	 * conn to be closed. It is now in the closing period. */
+	ret = ngtcp2_conn_write_connection_close(conn->conn, &ps.path,
+		&pi, sldns_buffer_begin(c->buffer),
+		sldns_buffer_remaining(c->buffer), &conn->last_error,
+		doq_get_timestamp_nanosec());
+	if(ret < 0) {
+		log_err("doq ngtcp2_conn_write_connection_close failed: %s",
+			ngtcp2_strerror(ret));
+		return 0;
+	}
+	if(ret == 0) {
+		return 0;
+	}
+	sldns_buffer_set_position(c->buffer, ret);
+	sldns_buffer_flip(c->buffer);
+
+	/* The close packet is allocated, because it may have to be repeated.
+	 * When incoming packets have this connection dcid. */
+	conn->close_pkt = memdup(sldns_buffer_begin(c->buffer),
+		sldns_buffer_limit(c->buffer));
+	if(!conn->close_pkt) {
+		log_err("doq: could not allocate close packet: out of memory");
+		return 0;
+	}
+	conn->close_pkt_len = sldns_buffer_limit(c->buffer);
+	conn->close_ecn = pi.ecn;
+	return 1;
+}
+
+/** doq send the close packet for the connection, perhaps again. */
+int
+doq_conn_send_close(struct comm_point* c, struct doq_conn* conn)
+{
+	if(!conn)
+		return 0;
+	if(!conn->close_pkt)
+		return 0;
+	if(conn->close_pkt_len > sldns_buffer_capacity(c->buffer))
+		return 0;
+	sldns_buffer_clear(c->buffer);
+	sldns_buffer_write(c->buffer, conn->close_pkt, conn->close_pkt_len);
+	sldns_buffer_flip(c->buffer);
+	verbose(VERB_ALGO, "doq send connection close");
+	doq_send_pkt(c, &conn->paddr, conn->close_ecn);
+	return 1;
+}
+
 /** doq close the connection on error. If it returns a failure, it
  * does not wait to send a close, and the connection can be dropped. */
 static int
-doq_conn_close_error(struct doq_conn* conn)
+doq_conn_close_error(struct comm_point* c, struct doq_conn* conn)
 {
-	(void)conn;
+	if(conn->last_error.type ==
+		NGTCP2_CONNECTION_CLOSE_ERROR_CODE_TYPE_TRANSPORT_IDLE_CLOSE)
+		return 0;
+	if(!doq_conn_start_closing_period(c, conn))
+		return 0;
+	if(ngtcp2_conn_is_in_draining_period(conn->conn))
+		return 1;
+	if(!doq_conn_send_close(c, conn))
+		return 0;
 	return 1;
 }
 
@@ -3965,7 +4037,7 @@ doq_conn_recv(struct comm_point* c, struct doq_pkt_addr* paddr,
 		}
 		log_err("ngtcp2_conn_read_pkt failed: %s",
 			ngtcp2_strerror(ret));
-		if(!doq_conn_close_error(conn)) {
+		if(!doq_conn_close_error(c, conn)) {
 			if(err_drop)
 				*err_drop = 1;
 		}
@@ -4011,30 +4083,31 @@ doq_conn_write_streams(struct comm_point* c, struct doq_conn* conn)
 			sldns_buffer_remaining(c->buffer),
 			&ndatalen, flags, stream_id, datav, datav_count, ts);
 		if(ret < 0) {
-			if(ret == NGTCP2_ERR_STREAM_DATA_BLOCKED) {
+			if(ret == NGTCP2_ERR_WRITE_MORE) {
+				verbose(VERB_ALGO, "doq: write more, ndatalen %d", (int)ndatalen);
+				continue;
+			} else if(ret == NGTCP2_ERR_STREAM_DATA_BLOCKED) {
 				verbose(VERB_ALGO, "doq: ngtcp2_conn_writev_stream returned NGTCP2_ERR_STREAM_DATA_BLOCKED");
 				ngtcp2_connection_close_error_set_application_error(&conn->last_error, -1, NULL, 0);
-				return doq_conn_close_error(conn);
+				return doq_conn_close_error(c, conn);
 			} else if(ret == NGTCP2_ERR_STREAM_SHUT_WR) {
 				verbose(VERB_ALGO, "doq: ngtcp2_conn_writev_stream returned NGTCP2_ERR_STREAM_SHUT_WR");
 				ngtcp2_connection_close_error_set_application_error(&conn->last_error, -1, NULL, 0);
-				return doq_conn_close_error(conn);
-			} else if(ret == NGTCP2_ERR_WRITE_MORE) {
-				verbose(VERB_ALGO, "doq: write more, ndatalen %d", (int)ndatalen);
-				continue;
+				return doq_conn_close_error(c, conn);
 			}
 
 			log_err("doq: ngtcp2_conn_writev_stream failed: %s",
 				ngtcp2_strerror(ret));
 			ngtcp2_connection_close_error_set_transport_error_liberr(
 				&conn->last_error, ret, NULL, 0);
-			return doq_conn_close_error(conn);
+			return doq_conn_close_error(c, conn);
 		}
 		verbose(VERB_ALGO, "doq: writev_stream pkt size %d ndatawritten %d",
 			(int)ret, (int)ndatalen);
 
 		if(ret == 0) {
 			/* congestion limited */
+			ngtcp2_conn_update_pkt_tx_time(conn->conn, ts);
 			return 1;
 		}
 		sldns_buffer_set_position(c->buffer, ret);

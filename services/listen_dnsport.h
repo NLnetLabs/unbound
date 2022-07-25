@@ -489,6 +489,12 @@ struct doq_conn {
 	uint8_t tls_alert;
 	/** the ssl context, SSL* */
 	void* ssl;
+	/** closure packet, if any */
+	uint8_t* close_pkt;
+	/** length fo closure packet. */
+	size_t close_pkt_len;
+	/** closure ecn */
+	uint32_t close_ecn;
 };
 
 /**
@@ -578,6 +584,9 @@ int doq_conn_recv(struct comm_point* c, struct doq_pkt_addr* paddr,
 
 /** send packets for a connection */
 int doq_conn_write_streams(struct comm_point* c, struct doq_conn* conn);
+
+/** send the close packet for the connection, perhaps again. */
+int doq_conn_send_close(struct comm_point* c, struct doq_conn* conn);
 #endif /* HAVE_NGTCP2 */
 
 char* set_ip_dscp(int socket, int addrfamily, int ds);

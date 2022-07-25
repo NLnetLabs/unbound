@@ -1626,6 +1626,13 @@ comm_point_doq_callback(int fd, short event, void* arg)
 			}
 			continue;
 		}
+		if(ngtcp2_conn_is_in_closing_period(conn->conn)) {
+			if(!doq_conn_send_close(c, conn))
+				doq_delete_connection(c, conn);
+			continue;
+		}
+		if(ngtcp2_conn_is_in_draining_period(conn->conn))
+			continue;
 		if(!doq_conn_recv(c, &paddr, conn, &pi, NULL, &err_drop)) {
 			/* The receive failed, and if it also failed to send
 			 * a close, drop the connection. That means it is not
