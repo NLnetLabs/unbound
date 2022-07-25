@@ -946,6 +946,14 @@ static struct ngtcp2_conn* conn_client_setup(struct doq_client_data* data)
 	}
 	settings.initial_ts = get_timestamp_nanosec();
 	ngtcp2_transport_params_default(&params);
+	params.initial_max_stream_data_bidi_local = 256*1024;
+	params.initial_max_stream_data_bidi_remote = 256*1024;
+	params.initial_max_stream_data_uni = 256*1024;
+	params.initial_max_data = 1024*1024;
+	params.initial_max_streams_bidi = 0;
+	params.initial_max_streams_uni = 100;
+	params.max_idle_timeout = 30*NGTCP2_SECONDS;
+	params.active_connection_id_limit = 7;
 	cid_randfill(&dcid, 16, data->rnd);
 	cid_randfill(&scid, 16, data->rnd);
 	cbs.client_initial = ngtcp2_crypto_client_initial_cb;

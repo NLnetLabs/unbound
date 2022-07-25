@@ -3511,7 +3511,7 @@ doq_conn_setup(struct doq_conn* conn, uint8_t* scid, size_t scidlen,
 	uint8_t* ocid, size_t ocidlen, const uint8_t* token, size_t tokenlen)
 {
 	int rv;
-	struct ngtcp2_cid dcid, sv_scid;
+	struct ngtcp2_cid dcid, sv_scid, scid_cid;
 	struct ngtcp2_path path;
 	struct ngtcp2_callbacks callbacks;
 	struct ngtcp2_settings settings;
@@ -3523,6 +3523,7 @@ doq_conn_setup(struct doq_conn* conn, uint8_t* scid, size_t scidlen,
 	memset(&settings, 0, sizeof(settings));
 	memset(&params, 0, sizeof(params));
 
+	ngtcp2_cid_init(&scid_cid, scid, scidlen);
 	ngtcp2_cid_init(&dcid, conn->dcid, conn->dcidlen);
 	sv_scid.datalen = conn->doq_socket->sv_scidlen;
 	if(!doq_conn_generate_new_conid(conn, sv_scid.data, sv_scid.datalen))
@@ -3574,15 +3575,16 @@ doq_conn_setup(struct doq_conn* conn, uint8_t* scid, size_t scidlen,
 	params.initial_max_streams_bidi = 10;
 	if(ocid) {
 		ngtcp2_cid_init(&params.original_dcid, ocid, ocidlen);
-		ngtcp2_cid_init(&params.retry_scid, scid, scidlen);
+		ngtcp2_cid_init(&params.retry_scid, conn->dcid, conn->dcidlen);
 		params.retry_scid_present = 1;
 	} else {
-		ngtcp2_cid_init(&params.original_dcid, scid, scidlen);
+		ngtcp2_cid_init(&params.original_dcid, conn->dcid, conn->dcidlen);
 	}
 	doq_fill_rand(conn->doq_socket->rnd, params.stateless_reset_token,
 		sizeof(params.stateless_reset_token));
 
-	rv = ngtcp2_conn_server_new(&conn->conn, &dcid, &sv_scid, &path,
+
+	rv = ngtcp2_conn_server_new(&conn->conn, &scid_cid, &sv_scid, &path,
 		conn->version, &callbacks, &settings, &params, NULL, conn);
 	if(rv != 0) {
 		log_err("ngtcp2_conn_server_new failed: %s",

@@ -1463,6 +1463,9 @@ doq_setup_new_conn(struct comm_point* c, struct doq_pkt_addr* paddr,
 	}
 	verbose(VERB_ALGO, "doq: created new connection");
 
+	/* the scid and dcid switch meaning from the accepted client
+	 * connection to the server connection. The 'source' and 'destination'
+	 * meaning is reversed. */
 	if(!doq_conn_setup(conn, hd->scid.data, hd->scid.datalen,
 		(ocid?ocid->data:NULL), (ocid?ocid->datalen:0),
 		hd->token.base, hd->token.len)) {
