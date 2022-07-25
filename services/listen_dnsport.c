@@ -3329,20 +3329,18 @@ doq_set_encryption_secrets(SSL *ssl, OSSL_ENCRYPTION_LEVEL ossl_level,
 		ngtcp2_crypto_openssl_from_ossl_encryption_level(ossl_level);
 
 	if(read_secret) {
-		verbose(VERB_ALGO, "ngtcp2_crypto_derive_and_install_rx_key for level %d ossl %d", (int)level, (int)ossl_level);
-		if(verbosity >= VERB_ALGO)
-			log_hex("read_secret", (void*)read_secret, secret_len);
+		verbose(VERB_ALGO, "doq: ngtcp2_crypto_derive_and_install_rx_key for level %d ossl %d", (int)level, (int)ossl_level);
 		if(ngtcp2_crypto_derive_and_install_rx_key(doq_conn->conn,
 			NULL, NULL, NULL, level, read_secret, secret_len)
 			!= 0) {
 			log_err("ngtcp2_crypto_derive_and_install_rx_key "
 				"failed");
-			verbose(VERB_ALGO, "the tls error is %d", (int)ngtcp2_conn_get_tls_error(doq_conn->conn));
 			return 0;
 		}
 	}
 
 	if(write_secret) {
+		verbose(VERB_ALGO, "doq: ngtcp2_crypto_derive_and_install_tx_key for level %d ossl %d", (int)level, (int)ossl_level);
 		if(ngtcp2_crypto_derive_and_install_tx_key(doq_conn->conn,
 			NULL, NULL, NULL, level, write_secret, secret_len)
 			!= 0) {
