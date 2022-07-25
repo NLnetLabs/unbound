@@ -575,6 +575,9 @@ struct doq_conid* doq_conid_find(struct doq_server_socket* doq_socket,
 int doq_conn_recv(struct comm_point* c, struct doq_pkt_addr* paddr,
 	struct doq_conn* conn, struct ngtcp2_pkt_info* pi, int* err_retry,
 	int* err_drop);
+
+/** send packets for a connection */
+int doq_conn_write_streams(struct comm_point* c, struct doq_conn* conn);
 #endif /* HAVE_NGTCP2 */
 
 char* set_ip_dscp(int socket, int addrfamily, int ds);

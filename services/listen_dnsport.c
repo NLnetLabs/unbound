@@ -56,6 +56,7 @@
 #include "util/net_help.h"
 #include "sldns/sbuffer.h"
 #include "sldns/parseutil.h"
+#include "sldns/wire2str.h"
 #include "services/mesh.h"
 #include "util/fptr_wlist.h"
 #include "util/locks.h"
@@ -3300,6 +3301,42 @@ doq_log_printf_cb(void* ATTR_UNUSED(user_data), const char* fmt, ...)
 	va_end(ap);
 }
 
+/** ngtcp2 stream_open callback function */
+static int
+doq_stream_open_cb(ngtcp2_conn* ATTR_UNUSED(conn), int64_t stream_id,
+	void* user_data)
+{
+	struct doq_conn* doq_conn = (struct doq_conn*)user_data;
+	verbose(VERB_ALGO, "doq new stream %x", (int)stream_id);
+	(void)doq_conn;
+	return 0;
+}
+
+/** ngtcp2 recv_stream_data callback function */
+static int
+doq_recv_stream_data_cb(ngtcp2_conn* ATTR_UNUSED(conn), uint32_t flags,
+	int64_t stream_id, uint64_t offset, const uint8_t* data,
+	size_t datalen, void* user_data, void* ATTR_UNUSED(stream_user_data))
+{
+	struct doq_conn* doq_conn = (struct doq_conn*)user_data;
+	verbose(VERB_ALGO, "doq recv stream data stream id %d offset %d datalen %d%s%s",
+		(int)stream_id, (int)offset, (int)datalen,
+		((flags&NGTCP2_STREAM_DATA_FLAG_FIN)!=0?" FIN":""),
+		((flags&NGTCP2_STREAM_DATA_FLAG_EARLY)!=0?" EARLY":""));
+	if(verbosity >= VERB_ALGO)
+		log_hex("doq recv stream data", (void*)data, datalen);
+	(void)doq_conn;
+	if(datalen >= 2) {
+		/* output partial received packet */
+		uint16_t len = sldns_read_uint16(data);
+		char* s = sldns_wire2str_pkt((void*)(data+2), datalen-2);
+		verbose(VERB_ALGO, "doq: tcplen at start is %d", (int)len);
+		verbose(VERB_ALGO, "doq: incoming packet:%s", (s?s:"null"));
+		free(s);
+	}
+	return 0;
+}
+
 /** the doq application tx key callback, false on failure */
 static int
 doq_application_tx_key_cb(struct doq_conn* conn)
@@ -3548,6 +3585,8 @@ doq_conn_setup(struct doq_conn* conn, uint8_t* scid, size_t scidlen,
 	callbacks.rand = doq_rand_cb;
 	callbacks.get_new_connection_id = doq_get_new_connection_id_cb;
 	callbacks.remove_connection_id = doq_remove_connection_id_cb;
+	callbacks.stream_open = doq_stream_open_cb;
+	callbacks.recv_stream_data = doq_recv_stream_data_cb;
 
 	ngtcp2_settings_default(&settings);
 	if(verbosity >= VERB_ALGO) {
@@ -3854,6 +3893,81 @@ doq_conn_recv(struct comm_point* c, struct doq_pkt_addr* paddr,
 		return 0;
 	}
 
+	return 1;
+}
+
+int
+doq_conn_write_streams(struct comm_point* c, struct doq_conn* conn)
+{
+	ngtcp2_path_storage ps;
+	ngtcp2_tstamp ts = doq_get_timestamp_nanosec();
+	size_t num_packets = 0, max_packets = 65535;
+	ngtcp2_path_storage_zero(&ps);
+
+	for(;;) {
+		int64_t stream_id;
+		uint32_t flags = 0;
+		ngtcp2_pkt_info pi;
+		ngtcp2_vec datav[2];
+		size_t datav_count = 0;
+		ngtcp2_ssize ret, ndatalen = 0;
+		int fin;
+
+		/* no data to send */
+		verbose(VERB_ALGO, "doq: doq_conn write stream -1");
+		stream_id = -1;
+		fin = 0;
+		datav[0].base = NULL;
+		datav[0].len = 0;
+		datav_count = 1;
+		/* if more streams, set it to write more */
+		if(0)
+			flags |= NGTCP2_WRITE_STREAM_FLAG_MORE;
+		if(fin)
+			flags |= NGTCP2_WRITE_STREAM_FLAG_FIN;
+
+		sldns_buffer_clear(c->buffer);
+		ret = ngtcp2_conn_writev_stream(conn->conn, &ps.path, &pi,
+			sldns_buffer_begin(c->buffer),
+			sldns_buffer_remaining(c->buffer),
+			&ndatalen, flags, stream_id, datav, datav_count, ts);
+		if(ret < 0) {
+			if(ret == NGTCP2_ERR_STREAM_DATA_BLOCKED) {
+				verbose(VERB_ALGO, "doq: ngtcp2_conn_writev_stream returned NGTCP2_ERR_STREAM_DATA_BLOCKED");
+				ngtcp2_connection_close_error_set_application_error(&conn->last_error, -1, NULL, 0);
+				return doq_conn_close_error(conn);
+			} else if(ret == NGTCP2_ERR_STREAM_SHUT_WR) {
+				verbose(VERB_ALGO, "doq: ngtcp2_conn_writev_stream returned NGTCP2_ERR_STREAM_SHUT_WR");
+				ngtcp2_connection_close_error_set_application_error(&conn->last_error, -1, NULL, 0);
+				return doq_conn_close_error(conn);
+			} else if(ret == NGTCP2_ERR_WRITE_MORE) {
+				verbose(VERB_ALGO, "doq: write more, ndatalen %d", (int)ndatalen);
+				continue;
+			}
+
+			log_err("doq: ngtcp2_conn_writev_stream failed: %s",
+				ngtcp2_strerror(ret));
+			ngtcp2_connection_close_error_set_transport_error_liberr(
+				&conn->last_error, ret, NULL, 0);
+			return doq_conn_close_error(conn);
+		}
+		verbose(VERB_ALGO, "doq: writev_stream pkt size %d ndatawritten %d",
+			(int)ret, (int)ndatalen);
+
+		if(ret == 0) {
+			/* congestion limited */
+			return 0;
+		}
+		sldns_buffer_set_position(c->buffer, ret);
+		sldns_buffer_flip(c->buffer);
+		doq_send_pkt(c, &conn->paddr, pi.ecn);
+
+		if(++num_packets == max_packets)
+			break;
+		/* stream == NULL, so break, DEBUG */
+		break;
+	}
+	ngtcp2_conn_update_pkt_tx_time(conn->conn, ts);
 	return 1;
 }
 #endif /* HAVE_NGTCP2 */

@@ -1016,6 +1016,10 @@ struct doq_pkt_addr {
  * a call to recv. */
 void doq_pkt_addr_init(struct doq_pkt_addr* paddr);
 
+/** send doq packet over UDP. */
+void doq_send_pkt(struct comm_point* c, struct doq_pkt_addr* paddr,
+	uint32_t ecn);
+
 /**
  * This routine is published for checks and tests, and is only used internally.
  * handle libevent callback for timer comm.

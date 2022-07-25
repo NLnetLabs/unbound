@@ -929,9 +929,8 @@ doq_print_addr_port(struct sockaddr_storage* addr, socklen_t addrlen,
 	return 1;
 }
 
-/** send doq packet over UDP. */
-static void
-doq_send(struct comm_point* c, struct doq_pkt_addr* paddr, uint32_t ecn)
+void
+doq_send_pkt(struct comm_point* c, struct doq_pkt_addr* paddr, uint32_t ecn)
 {
 	struct msghdr msg;
 	struct iovec iov[1];
@@ -1218,7 +1217,7 @@ doq_send_version_negotiation(struct comm_point* c, struct doq_pkt_addr* paddr,
 	}
 	sldns_buffer_set_position(c->buffer, ret);
 	sldns_buffer_flip(c->buffer);
-	doq_send(c, paddr, 0);
+	doq_send_pkt(c, paddr, 0);
 }
 
 /** Find the doq_conn object by remote address and dcid */
@@ -1368,7 +1367,7 @@ doq_send_retry(struct comm_point* c, struct doq_pkt_addr* paddr,
 	}
 	sldns_buffer_set_position(c->buffer, ret);
 	sldns_buffer_flip(c->buffer);
-	doq_send(c, paddr, 0);
+	doq_send_pkt(c, paddr, 0);
 }
 
 /** doq send stateless connection close */
@@ -1389,7 +1388,7 @@ doq_send_stateless_connection_close(struct comm_point* c,
 	}
 	sldns_buffer_set_position(c->buffer, ret);
 	sldns_buffer_flip(c->buffer);
-	doq_send(c, paddr, 0);
+	doq_send_pkt(c, paddr, 0);
 }
 
 /** doq verify retry token, false on failure */
@@ -1621,6 +1620,10 @@ comm_point_doq_callback(int fd, short event, void* arg)
 		if(!conn) {
 			if(!doq_accept(c, &paddr, &conn, &pi))
 				continue;
+			if(!doq_conn_write_streams(c, conn)) {
+				doq_delete_connection(c, conn);
+				continue;
+			}
 			continue;
 		}
 		if(!doq_conn_recv(c, &paddr, conn, &pi, NULL, &err_drop)) {
@@ -1629,6 +1632,10 @@ comm_point_doq_callback(int fd, short event, void* arg)
 			 * in the closing period. */
 			if(err_drop)
 				doq_delete_connection(c, conn);
+			continue;
+		}
+		if(!doq_conn_write_streams(c, conn)) {
+			doq_delete_connection(c, conn);
 			continue;
 		}
 	}
