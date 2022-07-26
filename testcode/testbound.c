@@ -632,4 +632,15 @@ int doq_conid_cmp(const void* ATTR_UNUSED(key1), const void* ATTR_UNUSED(key2))
 {
 	return 0;
 }
+
+struct doq_table* doq_table_create(struct config_file* ATTR_UNUSED(cfg),
+	struct ub_randstate* ATTR_UNUSED(rnd))
+{
+	return calloc(1, sizeof(struct doq_table));
+}
+
+void doq_table_delete(struct doq_table* table)
+{
+	free(table);
+}
 #endif
