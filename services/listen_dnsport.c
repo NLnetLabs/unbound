@@ -3389,7 +3389,7 @@ doq_stream_find(struct doq_conn* conn, int64_t stream_id)
 /** doq receive data for a stream, more bytes of the incoming data */
 static int
 doq_stream_recv_data(struct doq_conn* doq_conn, struct doq_stream* stream,
-	uint32_t flags, uint8_t* data, size_t datalen)
+	uint32_t flags, const uint8_t* data, size_t datalen)
 {
 	(void)doq_conn;
 	(void)stream;
