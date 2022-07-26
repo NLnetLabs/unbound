@@ -1277,8 +1277,8 @@ doq_conn_find_by_id(struct doq_table* table, const uint8_t* dcid,
 		}
 		lock_basic_lock(&conn->lock);
 		if(conn->is_deleted) {
-			lock_basic_unlock(&conn->lock);
 			lock_rw_unlock(&table->lock);
+			lock_basic_unlock(&conn->lock);
 			return NULL;
 		}
 		lock_rw_unlock(&table->lock);
