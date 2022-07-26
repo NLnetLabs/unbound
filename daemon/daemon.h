@@ -58,6 +58,7 @@ struct ub_randstate;
 struct daemon_remote;
 struct respip_set;
 struct shm_main_info;
+struct doq_table;
 
 #include "dnstap/dnstap_config.h"
 #ifdef USE_DNSTAP
@@ -137,6 +138,10 @@ struct daemon {
 #ifdef USE_DNSCRYPT
 	/** the dnscrypt environment */
 	struct dnsc_env* dnscenv;
+#endif
+#ifdef HAVE_NGTCP2
+	/** the doq connection table */
+	struct doq_table* doq_table;
 #endif
 };
 

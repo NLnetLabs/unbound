@@ -1421,9 +1421,10 @@ listen_create(struct comm_base* base, struct listen_port* ports,
 	size_t bufsize, int tcp_accept_count, int tcp_idle_timeout,
 	int harden_large_queries, uint32_t http_max_streams,
 	char* http_endpoint, int http_notls, struct tcl_list* tcp_conn_limit,
-	void* sslctx, struct dt_env* dtenv, struct ub_randstate* rnd,
-	const char* ssl_service_key, const char* ssl_service_pem,
-	comm_point_callback_type* cb, void *cb_arg)
+	void* sslctx, struct dt_env* dtenv, struct doq_table* doq_table,
+	struct ub_randstate* rnd, const char* ssl_service_key,
+	const char* ssl_service_pem, comm_point_callback_type* cb,
+	void *cb_arg)
 {
 	struct listen_dnsport* front = (struct listen_dnsport*)
 		malloc(sizeof(struct listen_dnsport));
@@ -1454,7 +1455,7 @@ listen_create(struct comm_base* base, struct listen_port* ports,
 #endif
 			cp = comm_point_create_doq(base, ports->fd,
 				front->udp_buff, cb, cb_arg, ports->socket,
-				rnd, tcp_idle_timeout, ssl_service_key,
+				doq_table, rnd, ssl_service_key,
 				ssl_service_pem);
 		} else if(ports->ftype == listen_type_tcp ||
 				ports->ftype == listen_type_tcp_dnscrypt) {
@@ -3132,6 +3133,93 @@ nghttp2_session_callbacks* http2_req_callbacks_create(void)
 #endif /* HAVE_NGHTTP2 */
 
 #ifdef HAVE_NGTCP2
+struct doq_table*
+doq_table_create(struct config_file* cfg, struct ub_randstate* rnd)
+{
+	struct doq_table* table = calloc(1, sizeof(*table));
+	if(!table)
+		return NULL;
+	table->idle_timeout = ((uint64_t)cfg->tcp_idle_timeout)*
+		NGTCP2_MILLISECONDS;
+	table->sv_scidlen = 16;
+	table->static_secret_len = 16;
+	table->static_secret = malloc(table->static_secret_len);
+	if(!table->static_secret) {
+		free(table);
+		return NULL;
+	}
+	doq_fill_rand(rnd, table->static_secret, table->static_secret_len);
+	table->conn_tree = rbtree_create(doq_conn_cmp);
+	if(!table->conn_tree) {
+		free(table->static_secret);
+		free(table);
+		return NULL;
+	}
+	table->conid_tree = rbtree_create(doq_conid_cmp);
+	if(!table->conid_tree) {
+		free(table->static_secret);
+		free(table->conn_tree);
+		free(table);
+		return NULL;
+	}
+	lock_rw_init(&table->lock);
+	lock_rw_init(&table->conid_lock);
+	lock_protect(&table->lock, &table->static_secret,
+		sizeof(table->static_secret));
+	lock_protect(&table->lock, &table->static_secret_len,
+		sizeof(table->static_secret_len));
+	lock_protect(&table->lock, table->static_secret,
+		table->static_secret_len);
+	lock_protect(&table->lock, &table->sv_scidlen,
+		sizeof(table->sv_scidlen));
+	lock_protect(&table->lock, &table->idle_timeout,
+		sizeof(table->idle_timeout));
+	lock_protect(&table->lock, &table->conn_tree, sizeof(table->conn_tree));
+	lock_protect(&table->lock, table->conn_tree, sizeof(*table->conn_tree));
+	lock_protect(&table->conid_lock, table->conid_tree,
+		sizeof(*table->conid_tree));
+	return table;
+}
+
+/** delete elements from the connection tree */
+static void
+conn_tree_del(rbnode_type* node, void* ATTR_UNUSED(arg))
+{
+	if(!node)
+		return;
+	doq_conn_delete((struct doq_conn*)node->key);
+}
+
+/** delete elements from the connection id tree */
+static void
+conid_tree_del(rbnode_type* node, void* ATTR_UNUSED(arg))
+{
+	if(!node)
+		return;
+	doq_conid_delete((struct doq_conid*)node->key);
+}
+
+void
+doq_table_delete(struct doq_table* table)
+{
+	if(!table)
+		return;
+	lock_rw_destroy(&table->lock);
+	lock_rw_destroy(&table->conid_lock);
+	free(table->static_secret);
+	if(table->conn_tree) {
+		traverse_postorder(table->conn_tree, conn_tree_del, NULL);
+		free(table->conn_tree);
+	}
+	if(table->conid_tree) {
+		/* The tree should be empty, because the doq_conn_delete calls
+		 * above should have also removed their conid elements. */
+		traverse_postorder(table->conid_tree, conid_tree_del, NULL);
+		free(table->conid_tree);
+	}
+	free(table);
+}
+
 struct doq_conn*
 doq_conn_create(struct comm_point* c, struct doq_pkt_addr* paddr,
 	const uint8_t* dcid, size_t dcidlen, uint32_t version)
@@ -3141,19 +3229,22 @@ doq_conn_create(struct comm_point* c, struct doq_pkt_addr* paddr,
 		return NULL;
 	conn->node.key = conn;
 	conn->doq_socket = c->doq_socket;
-	memmove(&conn->paddr.addr, &paddr->addr, paddr->addrlen);
-	conn->paddr.addrlen = paddr->addrlen;
-	memmove(&conn->paddr.localaddr, &paddr->localaddr, paddr->localaddrlen);
-	conn->paddr.localaddrlen = paddr->localaddrlen;
-	conn->paddr.ifindex = paddr->ifindex;
-	conn->dcid = memdup((void*)dcid, dcidlen);
-	if(!conn->dcid) {
+	memmove(&conn->key.paddr.addr, &paddr->addr, paddr->addrlen);
+	conn->key.paddr.addrlen = paddr->addrlen;
+	memmove(&conn->key.paddr.localaddr, &paddr->localaddr,
+		paddr->localaddrlen);
+	conn->key.paddr.localaddrlen = paddr->localaddrlen;
+	conn->key.paddr.ifindex = paddr->ifindex;
+	conn->key.dcid = memdup((void*)dcid, dcidlen);
+	if(!conn->key.dcid) {
 		free(conn);
 		return NULL;
 	}
-	conn->dcidlen = dcidlen;
+	conn->key.dcidlen = dcidlen;
 	conn->version = version;
 	ngtcp2_connection_close_error_default(&conn->last_error);
+	lock_basic_init(&conn->lock);
+	lock_protect(&conn->lock, conn, sizeof(*conn));
 	return conn;
 }
 
@@ -3162,9 +3253,12 @@ doq_conn_delete(struct doq_conn* conn)
 {
 	if(!conn)
 		return;
+	lock_rw_wrlock(&conn->doq_socket->table->conid_lock);
 	doq_conn_clear_conids(conn);
+	lock_rw_unlock(&conn->doq_socket->table->conid_lock);
+	lock_basic_destroy(&conn->lock);
 	ngtcp2_conn_del(conn->conn);
-	free(conn->dcid);
+	free(conn->key.dcid);
 	SSL_free(conn->ssl);
 	free(conn->close_pkt);
 	free(conn);
@@ -3184,32 +3278,33 @@ doq_conn_cmp(const void* key1, const void* key2)
 	 * Also a printout in sorted order prints the connections by IP
 	 * address of destination, and then a number of them depending on the
 	 * dcids. */
-	if(c->paddr.addrlen != d->paddr.addrlen) {
-		if(c->paddr.addrlen < d->paddr.addrlen)
+	if(c->key.paddr.addrlen != d->key.paddr.addrlen) {
+		if(c->key.paddr.addrlen < d->key.paddr.addrlen)
 			return -1;
 		return 1;
 	}
-	if((r=memcmp(&c->paddr.addr, &d->paddr.addr, c->paddr.addrlen))!=0)
+	if((r=memcmp(&c->key.paddr.addr, &d->key.paddr.addr,
+		c->key.paddr.addrlen))!=0)
 		return r;
-	if(c->paddr.localaddrlen != d->paddr.localaddrlen) {
-		if(c->paddr.localaddrlen < d->paddr.localaddrlen)
+	if(c->key.paddr.localaddrlen != d->key.paddr.localaddrlen) {
+		if(c->key.paddr.localaddrlen < d->key.paddr.localaddrlen)
 			return -1;
 		return 1;
 	}
-	if((r=memcmp(&c->paddr.localaddr, &d->paddr.localaddr,
-		c->paddr.localaddrlen))!=0)
+	if((r=memcmp(&c->key.paddr.localaddr, &d->key.paddr.localaddr,
+		c->key.paddr.localaddrlen))!=0)
 		return r;
-	if(c->paddr.ifindex != d->paddr.ifindex) {
-		if(c->paddr.ifindex < d->paddr.ifindex)
+	if(c->key.paddr.ifindex != d->key.paddr.ifindex) {
+		if(c->key.paddr.ifindex < d->key.paddr.ifindex)
 			return -1;
 		return 1;
 	}
-	if(c->dcidlen != d->dcidlen) {
-		if(c->dcidlen < d->dcidlen)
+	if(c->key.dcidlen != d->key.dcidlen) {
+		if(c->key.dcidlen < d->key.dcidlen)
 			return -1;
 		return 1;
 	}
-	if((r=memcmp(c->dcid, d->dcid, c->dcidlen))!=0)
+	if((r=memcmp(c->key.dcid, d->key.dcid, c->key.dcidlen))!=0)
 		return r;
 	return 0;
 }
@@ -3233,7 +3328,8 @@ void doq_fill_rand(struct ub_randstate* rnd, uint8_t* buf, size_t len)
 		buf[i] = ub_random(rnd)&0xff;
 }
 
-/** generate new connection id, checks for duplicates */
+/** generate new connection id, checks for duplicates.
+ * caller must hold lock on conid tree. */
 static int
 doq_conn_generate_new_conid(struct doq_conn* conn, uint8_t* data,
 	size_t datalen)
@@ -3242,7 +3338,7 @@ doq_conn_generate_new_conid(struct doq_conn* conn, uint8_t* data,
 	int i;
 	for(i=0; i<max_try; i++) {
 		doq_fill_rand(conn->doq_socket->rnd, data, datalen);
-		if(!doq_conid_find(conn->doq_socket, data, datalen)) {
+		if(!doq_conid_find(conn->doq_socket->table, data, datalen)) {
 			/* Found an unused connection id. */
 			return 1;
 		}
@@ -3268,15 +3364,26 @@ doq_get_new_connection_id_cb(ngtcp2_conn* ATTR_UNUSED(conn), ngtcp2_cid* cid,
 	uint8_t* token, size_t cidlen, void* user_data)
 {
 	struct doq_conn* doq_conn = (struct doq_conn*)user_data;
-	if(!doq_conn_generate_new_conid(doq_conn, cid->data, cidlen))
+	/* Lock the conid tree, so we can check for duplicates while
+	 * generating the id, and then insert it, whilst keeping the tree
+	 * locked against other modifications, guaranteeing uniqueness. */
+	lock_rw_wrlock(&doq_conn->doq_socket->table->conid_lock);
+	if(!doq_conn_generate_new_conid(doq_conn, cid->data, cidlen)) {
+		lock_rw_unlock(&doq_conn->doq_socket->table->conid_lock);
 		return NGTCP2_ERR_CALLBACK_FAILURE;
+	}
 	cid->datalen = cidlen;
 	if(ngtcp2_crypto_generate_stateless_reset_token(token,
 		doq_conn->doq_socket->static_secret,
-		doq_conn->doq_socket->static_secret_len, cid) != 0)
+		doq_conn->doq_socket->static_secret_len, cid) != 0) {
+		lock_rw_unlock(&doq_conn->doq_socket->table->conid_lock);
 		return NGTCP2_ERR_CALLBACK_FAILURE;
-	if(!doq_conn_associate_conid(doq_conn, cid->data, cid->datalen))
+	}
+	if(!doq_conn_associate_conid(doq_conn, cid->data, cid->datalen)) {
+		lock_rw_unlock(&doq_conn->doq_socket->table->conid_lock);
 		return NGTCP2_ERR_CALLBACK_FAILURE;
+	}
+	lock_rw_unlock(&doq_conn->doq_socket->table->conid_lock);
 	return 0;
 }
 
@@ -3286,7 +3393,9 @@ doq_remove_connection_id_cb(ngtcp2_conn* ATTR_UNUSED(conn),
 	const ngtcp2_cid* cid, void* user_data)
 {
 	struct doq_conn* doq_conn = (struct doq_conn*)user_data;
+	lock_rw_wrlock(&doq_conn->doq_socket->table->conid_lock);
 	doq_conn_dissociate_conid(doq_conn, cid->data, cid->datalen);
+	lock_rw_unlock(&doq_conn->doq_socket->table->conid_lock);
 	return 0;
 }
 
@@ -3638,15 +3747,12 @@ doq_conn_setup(struct doq_conn* conn, uint8_t* scid, size_t scidlen,
 	memset(&params, 0, sizeof(params));
 
 	ngtcp2_cid_init(&scid_cid, scid, scidlen);
-	ngtcp2_cid_init(&dcid, conn->dcid, conn->dcidlen);
-	sv_scid.datalen = conn->doq_socket->sv_scidlen;
-	if(!doq_conn_generate_new_conid(conn, sv_scid.data, sv_scid.datalen))
-		return 0;
+	ngtcp2_cid_init(&dcid, conn->key.dcid, conn->key.dcidlen);
 
-	path.remote.addr = (struct sockaddr*)&conn->paddr.addr;
-	path.remote.addrlen = conn->paddr.addrlen;
-	path.local.addr = (struct sockaddr*)&conn->paddr.localaddr;
-	path.local.addrlen = conn->paddr.localaddrlen;
+	path.remote.addr = (struct sockaddr*)&conn->key.paddr.addr;
+	path.remote.addrlen = conn->key.paddr.addrlen;
+	path.local.addr = (struct sockaddr*)&conn->key.paddr.localaddr;
+	path.local.addrlen = conn->key.paddr.localaddrlen;
 
 	callbacks.recv_client_initial = ngtcp2_crypto_recv_client_initial_cb;
 	callbacks.recv_crypto_data = ngtcp2_crypto_recv_crypto_data_cb;
@@ -3692,26 +3798,36 @@ doq_conn_setup(struct doq_conn* conn, uint8_t* scid, size_t scidlen,
 	params.initial_max_streams_bidi = 10;
 	if(ocid) {
 		ngtcp2_cid_init(&params.original_dcid, ocid, ocidlen);
-		ngtcp2_cid_init(&params.retry_scid, conn->dcid, conn->dcidlen);
+		ngtcp2_cid_init(&params.retry_scid, conn->key.dcid,
+			conn->key.dcidlen);
 		params.retry_scid_present = 1;
 	} else {
-		ngtcp2_cid_init(&params.original_dcid, conn->dcid,
-			conn->dcidlen);
+		ngtcp2_cid_init(&params.original_dcid, conn->key.dcid,
+			conn->key.dcidlen);
 	}
 	doq_fill_rand(conn->doq_socket->rnd, params.stateless_reset_token,
 		sizeof(params.stateless_reset_token));
+	sv_scid.datalen = conn->doq_socket->sv_scidlen;
+	lock_rw_wrlock(&conn->doq_socket->table->conid_lock);
+	if(!doq_conn_generate_new_conid(conn, sv_scid.data, sv_scid.datalen)) {
+		lock_rw_unlock(&conn->doq_socket->table->conid_lock);
+		return 0;
+	}
 
 	rv = ngtcp2_conn_server_new(&conn->conn, &scid_cid, &sv_scid, &path,
 		conn->version, &callbacks, &settings, &params, NULL, conn);
 	if(rv != 0) {
+		lock_rw_unlock(&conn->doq_socket->table->conid_lock);
 		log_err("ngtcp2_conn_server_new failed: %s",
 			ngtcp2_strerror(rv));
 		return 0;
 	}
 	if(!doq_conn_setup_conids(conn)) {
+		lock_rw_unlock(&conn->doq_socket->table->conid_lock);
 		log_err("doq_conn_setup_conids failed: out of memory");
 		return 0;
 	}
+	lock_rw_unlock(&conn->doq_socket->table->conid_lock);
 	conn->ssl = doq_ssl_server_setup((SSL_CTX*)conn->doq_socket->ctx,
 		conn);
 	if(!conn->ssl) {
@@ -3723,15 +3839,14 @@ doq_conn_setup(struct doq_conn* conn, uint8_t* scid, size_t scidlen,
 }
 
 struct doq_conid*
-doq_conid_find(struct doq_server_socket* doq_socket, const uint8_t* data,
-	size_t datalen)
+doq_conid_find(struct doq_table* table, const uint8_t* data, size_t datalen)
 {
 	struct rbnode_type* node;
 	struct doq_conid key;
 	key.node.key = &key;
 	key.cid = (void*)data;
 	key.cidlen = datalen;
-	node = rbtree_search(doq_socket->conid_tree, &key);
+	node = rbtree_search(table->conid_tree, &key);
 	if(node)
 		return (struct doq_conid*)node->key;
 	return NULL;
@@ -3761,7 +3876,7 @@ doq_conid_list_remove(struct doq_conn* conn, struct doq_conid* conid)
 
 /** create a doq_conid */
 static struct doq_conid*
-doq_conid_create(uint8_t* data, size_t datalen)
+doq_conid_create(uint8_t* data, size_t datalen, struct doq_conn_key* key)
 {
 	struct doq_conid* conid;
 	conid = calloc(1, sizeof(*conid));
@@ -3774,6 +3889,13 @@ doq_conid_create(uint8_t* data, size_t datalen)
 	}
 	conid->cidlen = datalen;
 	conid->node.key = conid;
+	conid->key = *key;
+	conid->key.dcid = memdup(key->dcid, key->dcidlen);
+	if(!conid->key.dcid) {
+		free(conid->cid);
+		free(conid);
+		return NULL;
+	}
 	return conid;
 }
 
@@ -3782,16 +3904,34 @@ doq_conid_delete(struct doq_conid* conid)
 {
 	if(!conid)
 		return;
+	free(conid->key.dcid);
 	free(conid->cid);
 	free(conid);
+}
+
+/** return true if the conid is for the conn. */
+static int
+conid_is_for_conn(struct doq_conn* conn, struct doq_conid* conid)
+{
+	if(conid->key.dcidlen == conn->key.dcidlen &&
+		memcmp(conid->key.dcid, conn->key.dcid, conid->key.dcidlen)==0
+		&& conid->key.paddr.addrlen == conn->key.paddr.addrlen &&
+		memcmp(&conid->key.paddr.addr, &conn->key.paddr.addr,
+			conid->key.paddr.addrlen) == 0 &&
+		conid->key.paddr.localaddrlen == conn->key.paddr.localaddrlen &&
+		memcmp(&conid->key.paddr.localaddr, &conn->key.paddr.localaddr,
+			conid->key.paddr.localaddrlen) == 0 &&
+		conid->key.paddr.ifindex == conn->key.paddr.ifindex)
+		return 1;
+	return 0;
 }
 
 int
 doq_conn_associate_conid(struct doq_conn* conn, uint8_t* data, size_t datalen)
 {
 	struct doq_conid* conid;
-	conid = doq_conid_find(conn->doq_socket, data, datalen);
-	if(conid && conid->conn != conn) {
+	conid = doq_conid_find(conn->doq_socket->table, data, datalen);
+	if(conid && !conid_is_for_conn(conn, conid)) {
 		verbose(VERB_ALGO, "doq connection id already exists for "
 			"another doq_conn. Ignoring second connection id.");
 		/* Already exists to another conn, ignore it.
@@ -3804,12 +3944,11 @@ doq_conn_associate_conid(struct doq_conn* conn, uint8_t* data, size_t datalen)
 	}
 	if(conid)
 		return 1; /* already inserted */
-	conid = doq_conid_create(data, datalen);
+	conid = doq_conid_create(data, datalen, &conn->key);
 	if(!conid)
 		return 0;
-	conid->conn = conn;
 	doq_conid_list_insert(conn, conid);
-	(void)rbtree_insert(conn->doq_socket->conid_tree, &conid->node);
+	(void)rbtree_insert(conn->doq_socket->table->conid_tree, &conid->node);
 	return 1;
 }
 
@@ -3818,18 +3957,19 @@ doq_conn_dissociate_conid(struct doq_conn* conn, const uint8_t* data,
 	size_t datalen)
 {
 	struct doq_conid* conid;
-	conid = doq_conid_find(conn->doq_socket, data, datalen);
-	if(conid && conid->conn != conn)
+	conid = doq_conid_find(conn->doq_socket->table, data, datalen);
+	if(conid && !conid_is_for_conn(conn, conid))
 		return;
 	if(conid) {
-		(void)rbtree_delete(conn->doq_socket->conid_tree,
+		(void)rbtree_delete(conn->doq_socket->table->conid_tree,
 			conid->node.key);
 		doq_conid_list_remove(conn, conid);
 		doq_conid_delete(conid);
 	}
 }
 
-/** associate the scid array and also the dcid */
+/** associate the scid array and also the dcid.
+ * caller must hold the locks on conn and doq_table.conid_lock. */
 static int
 doq_conn_setup_id_array_and_dcid(struct doq_conn* conn,
 	struct ngtcp2_cid* scids, size_t num_scid)
@@ -3840,7 +3980,7 @@ doq_conn_setup_id_array_and_dcid(struct doq_conn* conn,
 			scids[i].datalen))
 			return 0;
 	}
-	if(!doq_conn_associate_conid(conn, conn->dcid, conn->dcidlen))
+	if(!doq_conn_associate_conid(conn, conn->key.dcid, conn->key.dcidlen))
 		return 0;
 	return 1;
 }
@@ -3879,7 +4019,8 @@ doq_conn_clear_conids(struct doq_conn* conn)
 	p = conn->conid_list;
 	while(p) {
 		next = p->next;
-		(void)rbtree_delete(conn->doq_socket->conid_tree, p->node.key);
+		(void)rbtree_delete(conn->doq_socket->table->conid_tree,
+			p->node.key);
 		doq_conid_delete(p);
 		p = next;
 	}
@@ -3958,7 +4099,7 @@ doq_conn_send_close(struct comm_point* c, struct doq_conn* conn)
 	sldns_buffer_write(c->buffer, conn->close_pkt, conn->close_pkt_len);
 	sldns_buffer_flip(c->buffer);
 	verbose(VERB_ALGO, "doq send connection close");
-	doq_send_pkt(c, &conn->paddr, conn->close_ecn);
+	doq_send_pkt(c, &conn->key.paddr, conn->close_ecn);
 	return 1;
 }
 
@@ -4112,7 +4253,7 @@ doq_conn_write_streams(struct comm_point* c, struct doq_conn* conn)
 		}
 		sldns_buffer_set_position(c->buffer, ret);
 		sldns_buffer_flip(c->buffer);
-		doq_send_pkt(c, &conn->paddr, pi.ecn);
+		doq_send_pkt(c, &conn->key.paddr, pi.ecn);
 
 		if(++num_packets == max_packets)
 			break;

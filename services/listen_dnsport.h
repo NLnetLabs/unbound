@@ -44,6 +44,7 @@
 
 #include "util/netevent.h"
 #include "util/rbtree.h"
+#include "util/locks.h"
 #ifdef HAVE_NGHTTP2_NGHTTP2_H
 #include <nghttp2/nghttp2.h>
 #endif
@@ -186,6 +187,7 @@ int resolve_interface_names(char** ifs, int num_ifs,
  * @param tcp_conn_limit: TCP connection limit info.
  * @param sslctx: nonNULL if ssl context.
  * @param dtenv: nonNULL if dnstap enabled.
+ * @param doq_table: the doq connection table, with shared information.
  * @param rnd: random state.
  * @param ssl_service_key: the SSL service key file.
  * @param ssl_service_pem: the SSL service pem file.
@@ -199,9 +201,10 @@ listen_create(struct comm_base* base, struct listen_port* ports,
 	size_t bufsize, int tcp_accept_count, int tcp_idle_timeout,
 	int harden_large_queries, uint32_t http_max_streams,
 	char* http_endpoint, int http_notls, struct tcl_list* tcp_conn_limit,
-	void* sslctx, struct dt_env* dtenv, struct ub_randstate* rnd,
-	const char* ssl_service_key, const char* ssl_service_pem,
-	comm_point_callback_type* cb, void *cb_arg);
+	void* sslctx, struct dt_env* dtenv, struct doq_table* doq_table,
+	struct ub_randstate* rnd, const char* ssl_service_key,
+	const char* ssl_service_pem, comm_point_callback_type* cb,
+	void *cb_arg);
 
 /**
  * delete the listening structure
@@ -459,6 +462,54 @@ int http2_submit_dns_response(void* v);
 struct doq_conid;
 
 /**
+ * DoQ shared connection table. This is the connections for the host.
+ * And some config parameter values for connections. The host has to
+ * respond on that ip,port for those connections, so they are shared
+ * between threads.
+ */
+struct doq_table {
+	/** the lock on the tree and config elements. insert and deletion,
+	 * also lookup in the tree needs to hold the lock. */
+	lock_rw_type lock;
+	/** rbtree of doq_conn, the connections to different destination
+	 * addresses, and can be found by dcid. */
+	struct rbtree_type* conn_tree;
+	/** lock for the conid tree, needed for the conid tree and also
+	 * the conid elements */
+	lock_rw_type conid_lock;
+	/** rbtree of doq_conid, connections can be found by their
+	 * connection ids. Lookup by connection id, finds doq_conn. */
+	struct rbtree_type* conid_tree;
+	/** the server scid length */
+	int sv_scidlen;
+	/** the static secret for the server */
+	uint8_t* static_secret;
+	/** length of the static secret */
+	size_t static_secret_len;
+	/** the idle timeout in nanoseconds */
+	uint64_t idle_timeout;
+};
+
+/** create doq table */
+struct doq_table* doq_table_create(struct config_file* cfg,
+	struct ub_randstate* rnd);
+
+/** delete doq table */
+void doq_table_delete(struct doq_table* table);
+
+/**
+ * Key information that makes a doq_conn node in the tree lookup.
+ */
+struct doq_conn_key {
+	/** the remote endpoint and local endpoint and ifindex */
+	struct doq_pkt_addr paddr;
+	/** the doq connection dcid */
+	uint8_t* dcid;
+	/** length of dcid */
+	size_t dcidlen;
+};
+
+/**
  * DoQ connection, for DNS over QUIC. One connection to a remote endpoint
  * with a number of streams in it. Every stream is like a tcp stream with
  * a uint16_t length, query read, and a uint16_t length and answer written.
@@ -466,14 +517,14 @@ struct doq_conid;
 struct doq_conn {
 	/** rbtree node, key is addresses and dcid */
 	struct rbnode_type node;
+	/** lock on the connection */
+	lock_basic_type lock;
+	/** the key information, with dcid and address endpoint */
+	struct doq_conn_key key;
 	/** the doq server socket this connection is part of */
 	struct doq_server_socket* doq_socket;
-	/** the remote endpoint and local endpoint and ifindex */
-	struct doq_pkt_addr paddr;
-	/** the doq connection dcid */
-	uint8_t* dcid;
-	/** length of dcid */
-	size_t dcidlen;
+	/** if the connection is about to be deleted. */
+	int is_deleted;
 	/** the version, the client chosen version of QUIC */
 	uint32_t version;
 	/** the ngtcp2 connection, a server connection */
@@ -506,8 +557,8 @@ struct doq_conid {
 	struct rbnode_type node;
 	/** the next and prev in the list of conids for the doq_conn */
 	struct doq_conid* next, *prev;
-	/** the doq_conn that is the connection */
-	struct doq_conn* conn;
+	/** key to the doq_conn that is the connection */
+	struct doq_conn_key key;
 	/** the connection id, byte string */
 	uint8_t* cid;
 	/** the length of cid */
@@ -559,22 +610,26 @@ void doq_fill_rand(struct ub_randstate* rnd, uint8_t* buf, size_t len);
 /** delete a doq_conid */
 void doq_conid_delete(struct doq_conid* conid);
 
-/** add a connection id to the doq_conn */
+/** add a connection id to the doq_conn.
+ * caller must hold doq_table.conid_lock. */
 int doq_conn_associate_conid(struct doq_conn* conn, uint8_t* data,
 	size_t datalen);
 
-/** remove a connection id from the doq_conn */
+/** remove a connection id from the doq_conn.
+ * caller must hold doq_table.conid_lock. */
 void doq_conn_dissociate_conid(struct doq_conn* conn, const uint8_t* data,
 	size_t datalen);
 
 /** initial setup to link current connection ids to the doq_conn */
 int doq_conn_setup_conids(struct doq_conn* conn);
 
-/** remove the connection ids from the doq_conn */
+/** remove the connection ids from the doq_conn.
+ * caller must hold doq_table.conid_lock. */
 void doq_conn_clear_conids(struct doq_conn* conn);
 
-/** find a conid in the doq_conn connection */
-struct doq_conid* doq_conid_find(struct doq_server_socket* doq_socket,
+/** find a conid in the doq_conn connection.
+ * caller must hold table.conid_lock. */
+struct doq_conid* doq_conid_find(struct doq_table* doq_table,
 	const uint8_t* data, size_t datalen);
 
 /** receive a packet for a connection */

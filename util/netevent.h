@@ -72,6 +72,7 @@ struct tcl_list;
 struct ub_event_base;
 struct unbound_socket;
 struct doq_server_socket;
+struct doq_table;
 struct ub_randstate;
 
 struct mesh_state;
@@ -539,8 +540,8 @@ struct comm_point* comm_point_create_udp_ancil(struct comm_base* base,
  * @param callback: callback function pointer.
  * @param callback_arg: will be passed to your callback function.
  * @param socket: and opened socket properties will be passed to your callback function.
+ * @param table: the doq connection table for the host.
  * @param rnd: random generator to use.
- * @param idle_msec: idle timeout in msec.
  * @param ssl_service_key: the ssl service key file.
  * @param ssl_service_pem: the ssl service pem file.
  * @return: returns the allocated communication point. NULL on error.
@@ -549,8 +550,8 @@ struct comm_point* comm_point_create_udp_ancil(struct comm_base* base,
 struct comm_point* comm_point_create_doq(struct comm_base* base,
 	int fd, struct sldns_buffer* buffer,
 	comm_point_callback_type* callback, void* callback_arg,
-	struct unbound_socket* socket, struct ub_randstate* rnd,
-	int idle_msec, const char* ssl_service_key,
+	struct unbound_socket* socket, struct doq_table* table,
+	struct ub_randstate* rnd, const char* ssl_service_key,
 	const char* ssl_service_pem);
 
 /**
@@ -969,10 +970,10 @@ void http2_stream_add_meshstate(struct http2_stream* h2_stream,
  * The DoQ server socket information, for DNS over QUIC.
  */
 struct doq_server_socket {
+	/** the doq connection table */
+	struct doq_table* table;
 	/** random generator */
 	struct ub_randstate* rnd;
-	/** the idle timeout in nanoseconds */
-	uint64_t idle_timeout;
 	/** if address validation is enabled */
 	int validate_addr;
 	/** the ssl service key file */
@@ -983,16 +984,12 @@ struct doq_server_socket {
 	char* ssl_verify_pem;
 	/** the server scid length */
 	int sv_scidlen;
+	/** the idle timeout in nanoseconds */
+	uint64_t idle_timeout;
 	/** the static secret for the server */
 	uint8_t* static_secret;
 	/** length of the static secret */
 	size_t static_secret_len;
-	/** rbtree of doq_conn, the connections to different destination
-	 * addresses, and can be found by dcid. */
-	struct rbtree_type* conn_tree;
-	/** rbtree of doq_conid, connections can be found by their
-	 * connection ids. Lookup by connection id, finds doq_conn. */
-	struct rbtree_type* conid_tree;
 	/** ssl context, SSL_CTX* */
 	void* ctx;
 	/** quic method functions, SSL_QUIC_METHOD* */
