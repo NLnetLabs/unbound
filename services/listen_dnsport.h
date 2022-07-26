@@ -546,6 +546,8 @@ struct doq_conn {
 	size_t close_pkt_len;
 	/** closure ecn */
 	uint32_t close_ecn;
+	/** the streams for this connection, of type doq_stream */
+	struct rbtree_type stream_tree;
 };
 
 /**
@@ -569,6 +571,10 @@ struct doq_conid {
  * DoQ stream, for DNS over QUIC.
  */
 struct doq_stream {
+	/** the rbtree node for the stream, key is the stream_id */
+	rbnode_type node;
+	/** the stream id */
+	int64_t stream_id;
 };
 
 /**
@@ -596,6 +602,9 @@ int doq_conn_cmp(const void* key1, const void* key2);
 
 /** compare function of doq_conid */
 int doq_conid_cmp(const void* key1, const void* key2);
+
+/** compare function of doq_stream */
+int doq_stream_cmp(const void* key1, const void* key2);
 
 /** setup the doq_socket server tls context */
 int doq_socket_setup_ctx(struct doq_server_socket* doq_socket);
@@ -642,6 +651,9 @@ int doq_conn_write_streams(struct comm_point* c, struct doq_conn* conn);
 
 /** send the close packet for the connection, perhaps again. */
 int doq_conn_send_close(struct comm_point* c, struct doq_conn* conn);
+
+/** delete doq stream */
+void doq_stream_delete(struct doq_stream* stream);
 #endif /* HAVE_NGTCP2 */
 
 char* set_ip_dscp(int socket, int addrfamily, int ds);

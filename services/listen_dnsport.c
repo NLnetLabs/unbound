@@ -3243,9 +3243,19 @@ doq_conn_create(struct comm_point* c, struct doq_pkt_addr* paddr,
 	conn->key.dcidlen = dcidlen;
 	conn->version = version;
 	ngtcp2_connection_close_error_default(&conn->last_error);
+	rbtree_init(&conn->stream_tree, &doq_stream_cmp);
 	lock_basic_init(&conn->lock);
 	lock_protect(&conn->lock, conn, sizeof(*conn));
 	return conn;
+}
+
+/** delete stream tree node */
+static void
+stream_tree_del(rbnode_type* node, void* ATTR_UNUSED(arg))
+{
+	if(!node)
+		return;
+	doq_stream_delete((struct doq_stream*)node);
 }
 
 void
@@ -3258,6 +3268,9 @@ doq_conn_delete(struct doq_conn* conn)
 	lock_rw_unlock(&conn->doq_socket->table->conid_lock);
 	lock_basic_destroy(&conn->lock);
 	ngtcp2_conn_del(conn->conn);
+	if(conn->stream_tree.count != 0) {
+		traverse_postorder(&conn->stream_tree, stream_tree_del, NULL);
+	}
 	free(conn->key.dcid);
 	SSL_free(conn->ssl);
 	free(conn->close_pkt);
@@ -3319,6 +3332,71 @@ int doq_conid_cmp(const void* key1, const void* key2)
 		return 1;
 	}
 	return memcmp(c->cid, d->cid, c->cidlen);
+}
+
+int doq_stream_cmp(const void* key1, const void* key2)
+{
+	struct doq_stream* c = (struct doq_stream*)key1;
+	struct doq_stream* d = (struct doq_stream*)key2;
+	if(c->stream_id != d->stream_id) {
+		if(c->stream_id < d->stream_id)
+			return -1;
+		return 1;
+	}
+	return 0;
+}
+
+/** add a stream to the connection */
+static void
+doq_conn_add_stream(struct doq_conn* conn, struct doq_stream* stream)
+{
+	(void)rbtree_insert(&conn->stream_tree, &stream->node);
+}
+
+/** doq create new stream */
+static struct doq_stream*
+doq_stream_create(int64_t stream_id)
+{
+	struct doq_stream* stream = calloc(1, sizeof(*stream));
+	if(!stream)
+		return NULL;
+	stream->node.key = stream;
+	stream->stream_id = stream_id;
+	return stream;
+}
+
+void doq_stream_delete(struct doq_stream* stream)
+{
+	if(!stream)
+		return;
+	free(stream);
+}
+
+/** doq find a stream in the connection */
+static struct doq_stream*
+doq_stream_find(struct doq_conn* conn, int64_t stream_id)
+{
+	rbnode_type* node;
+	struct doq_stream key;
+	key.node.key = &key;
+	key.stream_id = stream_id;
+	node = rbtree_search(&conn->stream_tree, &key);
+	if(node)
+		return (struct doq_stream*)node->key;
+	return NULL;
+}
+
+/** doq receive data for a stream, more bytes of the incoming data */
+static int
+doq_stream_recv_data(struct doq_conn* doq_conn, struct doq_stream* stream,
+	uint32_t flags, uint8_t* data, size_t datalen)
+{
+	(void)doq_conn;
+	(void)stream;
+	(void)flags;
+	(void)data;
+	(void)datalen;
+	return 1;
 }
 
 void doq_fill_rand(struct ub_randstate* rnd, uint8_t* buf, size_t len)
@@ -3467,8 +3545,14 @@ doq_stream_open_cb(ngtcp2_conn* ATTR_UNUSED(conn), int64_t stream_id,
 	void* user_data)
 {
 	struct doq_conn* doq_conn = (struct doq_conn*)user_data;
+	struct doq_stream* stream;
 	verbose(VERB_ALGO, "doq new stream %x", (int)stream_id);
-	(void)doq_conn;
+	stream = doq_stream_create(stream_id);
+	if(!stream) {
+		log_err("doq: could not doq_stream_create: out of memory");
+		return NGTCP2_ERR_CALLBACK_FAILURE;
+	}
+	doq_conn_add_stream(doq_conn, stream);
 	return 0;
 }
 
@@ -3479,13 +3563,20 @@ doq_recv_stream_data_cb(ngtcp2_conn* ATTR_UNUSED(conn), uint32_t flags,
 	size_t datalen, void* user_data, void* ATTR_UNUSED(stream_user_data))
 {
 	struct doq_conn* doq_conn = (struct doq_conn*)user_data;
+	struct doq_stream* stream;
 	verbose(VERB_ALGO, "doq recv stream data stream id %d offset %d datalen %d%s%s",
 		(int)stream_id, (int)offset, (int)datalen,
 		((flags&NGTCP2_STREAM_DATA_FLAG_FIN)!=0?" FIN":""),
 		((flags&NGTCP2_STREAM_DATA_FLAG_EARLY)!=0?" EARLY":""));
 	if(verbosity >= VERB_ALGO)
 		log_hex("doq recv stream data", (void*)data, datalen);
-	(void)doq_conn;
+	stream = doq_stream_find(doq_conn, stream_id);
+	if(!stream) {
+		verbose(VERB_ALGO, "doq: received stream data for unknown stream %d", (int)stream_id);
+		return NGTCP2_ERR_CALLBACK_FAILURE;
+	}
+	if(!doq_stream_recv_data(doq_conn, stream, flags, data, datalen))
+		return NGTCP2_ERR_CALLBACK_FAILURE;
 	if(datalen >= 2 && offset == 0) {
 		/* output partial received packet */
 		uint16_t len = sldns_read_uint16(data);

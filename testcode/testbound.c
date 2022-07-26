@@ -633,6 +633,11 @@ int doq_conid_cmp(const void* ATTR_UNUSED(key1), const void* ATTR_UNUSED(key2))
 	return 0;
 }
 
+int doq_stream_cmp(const void* ATTR_UNUSED(key1), const void* ATTR_UNUSED(key2))
+{
+	return 0;
+}
+
 struct doq_table* doq_table_create(struct config_file* ATTR_UNUSED(cfg),
 	struct ub_randstate* ATTR_UNUSED(rnd))
 {
