@@ -3369,6 +3369,7 @@ void doq_stream_delete(struct doq_stream* stream)
 {
 	if(!stream)
 		return;
+	free(stream->in);
 	free(stream);
 }
 
@@ -3386,16 +3387,145 @@ doq_stream_find(struct doq_conn* conn, int64_t stream_id)
 	return NULL;
 }
 
+/** doq shutdown the stream. */
+static int
+doq_stream_close(struct doq_conn* conn, struct doq_stream* stream)
+{
+	int ret;
+	stream->is_closed = 1;
+	verbose(VERB_ALGO, "doq: shutdown stream_id %d with app_error_code %d",
+		(int)stream->stream_id, (int)DOQ_APP_ERROR_CODE);
+	ret = ngtcp2_conn_shutdown_stream(conn->conn, stream->stream_id,
+		DOQ_APP_ERROR_CODE);
+	if(ret != 0) {
+		log_err("doq ngtcp2_conn_shutdown_stream %d failed: %s",
+			(int)stream->stream_id, ngtcp2_strerror(ret));
+		return 0;
+	}
+	return 1;
+}
+
+/** doq stream data length has completed, allocations can be done. False on
+ * allocation failure. */
+static int
+doq_stream_datalen_complete(struct doq_stream* stream)
+{
+	if(stream->inlen > 1024*1024) {
+		log_err("doq stream in length too large %d",
+			(int)stream->inlen);
+		return 0;
+	}
+	stream->in = calloc(1, stream->inlen);
+	if(!stream->in) {
+		log_err("doq could not read stream, calloc failed: "
+			"out of memory");
+		return 0;
+	}
+	return 1;
+}
+
+/** doq stream data is complete, the input data has been received. */
+static int
+doq_stream_data_complete(struct doq_conn* conn, struct doq_stream* stream)
+{
+	if(verbosity >= VERB_ALGO) {
+		char* s = sldns_wire2str_pkt(stream->in, stream->inlen);
+		char a[128];
+		addr_to_str(&conn->key.paddr.addr, conn->key.paddr.addrlen,
+			a, sizeof(a));
+		verbose(VERB_ALGO, "doq %s stream %d incoming query %s",
+			a, (int)stream->stream_id, (s?s:"null"));
+		free(s);
+	}
+	stream->is_query_complete = 1;
+	(void)conn;
+	return 1;
+}
+
 /** doq receive data for a stream, more bytes of the incoming data */
 static int
-doq_stream_recv_data(struct doq_conn* doq_conn, struct doq_stream* stream,
-	uint32_t flags, const uint8_t* data, size_t datalen)
+doq_stream_recv_data(struct doq_conn* conn, struct doq_stream* stream,
+	const uint8_t* data, size_t datalen)
 {
-	(void)doq_conn;
-	(void)stream;
-	(void)flags;
-	(void)data;
-	(void)datalen;
+	int got_data = 0;
+	/* read the tcplength uint16_t at the start */
+	if(stream->nread < 2) {
+		uint16_t tcplen = 0;
+		size_t todolen = 2 - stream->nread;
+
+		if(stream->nread > 0) {
+			/* put in the already read byte if there is one */
+			tcplen = stream->inlen;
+		}
+		if(datalen < todolen)
+			todolen = datalen;
+		memmove(((uint8_t*)&tcplen)+stream->nread, data, todolen);
+		stream->nread += todolen;
+		data += todolen;
+		datalen -= todolen;
+		if(stream->nread == 2) {
+			/* the initial length value is completed */
+			stream->inlen = ntohs(tcplen);
+			if(!doq_stream_datalen_complete(stream))
+				return 0;
+		} else {
+			/* store for later */
+			stream->inlen = tcplen;
+			return 1;
+		}
+	}
+	/* if there are more data bytes */
+	if(datalen > 0) {
+		size_t to_write = datalen;
+		if(stream->nread-2 > stream->inlen) {
+			verbose(VERB_ALGO, "doq stream buffer too small");
+			return 0;
+		}
+		if(datalen > stream->inlen - (stream->nread-2))
+			to_write = stream->inlen - (stream->nread-2);
+		if(to_write > 0) {
+			if(!stream->in) {
+				verbose(VERB_ALGO, "doq: stream has "
+					"no buffer");
+				return 0;
+			}
+			memmove(stream->in+(stream->nread-2), data, to_write);
+			stream->nread += to_write;
+			data += to_write;
+			datalen -= to_write;
+			got_data = 1;
+		}
+	}
+	/* Are there extra bytes received after the end? If so, log them. */
+	if(datalen > 0) {
+		if(verbosity >= VERB_ALGO)
+			log_hex("doq stream has extra bytes received after end",
+				(void*)data, datalen);
+	}
+	/* Is the input data complete? */
+	if(got_data && stream->nread >= stream->inlen+2) {
+		if(!stream->in) {
+			verbose(VERB_ALGO, "doq: completed stream has "
+				"no buffer");
+			return 0;
+		}
+		if(!doq_stream_data_complete(conn, stream))
+			return 0;
+	}
+	return 1;
+}
+
+/** doq receive FIN for a stream. No more bytes are going to arrive. */
+static int
+doq_stream_recv_fin(struct doq_conn* conn, struct doq_stream* stream)
+{
+	if(!stream->is_query_complete) {
+		verbose(VERB_ALGO, "doq: stream recv FIN, but is "
+			"not complete, have %d of %d bytes",
+			((int)stream->nread)-2, (int)stream->inlen);
+		if(!doq_stream_close(conn, stream))
+			return 0;
+	}
 	return 1;
 }
 
@@ -3547,6 +3677,10 @@ doq_stream_open_cb(ngtcp2_conn* ATTR_UNUSED(conn), int64_t stream_id,
 	struct doq_conn* doq_conn = (struct doq_conn*)user_data;
 	struct doq_stream* stream;
 	verbose(VERB_ALGO, "doq new stream %x", (int)stream_id);
+	if(doq_stream_find(doq_conn, stream_id)) {
+		verbose(VERB_ALGO, "doq: stream with this id already exists");
+		return 0;
+	}
 	stream = doq_stream_create(stream_id);
 	if(!stream) {
 		log_err("doq: could not doq_stream_create: out of memory");
@@ -3564,19 +3698,30 @@ doq_recv_stream_data_cb(ngtcp2_conn* ATTR_UNUSED(conn), uint32_t flags,
 {
 	struct doq_conn* doq_conn = (struct doq_conn*)user_data;
 	struct doq_stream* stream;
-	verbose(VERB_ALGO, "doq recv stream data stream id %d offset %d datalen %d%s%s",
-		(int)stream_id, (int)offset, (int)datalen,
+	verbose(VERB_ALGO, "doq recv stream data stream id %d offset %d "
+		"datalen %d%s%s", (int)stream_id, (int)offset, (int)datalen,
 		((flags&NGTCP2_STREAM_DATA_FLAG_FIN)!=0?" FIN":""),
 		((flags&NGTCP2_STREAM_DATA_FLAG_EARLY)!=0?" EARLY":""));
 	if(verbosity >= VERB_ALGO)
 		log_hex("doq recv stream data", (void*)data, datalen);
 	stream = doq_stream_find(doq_conn, stream_id);
 	if(!stream) {
-		verbose(VERB_ALGO, "doq: received stream data for unknown stream %d", (int)stream_id);
-		return NGTCP2_ERR_CALLBACK_FAILURE;
+		verbose(VERB_ALGO, "doq: received stream data for "
+			"unknown stream %d", (int)stream_id);
+		return 0;
 	}
-	if(!doq_stream_recv_data(doq_conn, stream, flags, data, datalen))
-		return NGTCP2_ERR_CALLBACK_FAILURE;
+	if(stream->is_closed) {
+		verbose(VERB_ALGO, "doq: stream is closed, ignore recv data");
+		return 0;
+	}
+	if(datalen != 0) {
+		if(!doq_stream_recv_data(doq_conn, stream, data, datalen))
+			return NGTCP2_ERR_CALLBACK_FAILURE;
+	}
+	if((flags&NGTCP2_STREAM_DATA_FLAG_FIN)!=0) {
+		if(!doq_stream_recv_fin(doq_conn, stream))
+			return NGTCP2_ERR_CALLBACK_FAILURE;
+	}
 	if(datalen >= 2 && offset == 0) {
 		/* output partial received packet */
 		uint16_t len = sldns_read_uint16(data);

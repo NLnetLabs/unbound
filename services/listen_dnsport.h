@@ -575,7 +575,20 @@ struct doq_stream {
 	rbnode_type node;
 	/** the stream id */
 	int64_t stream_id;
+	/** if the stream is closed */
+	int is_closed;
+	/** if the query is complete */
+	int is_query_complete;
+	/** the number of bytes read on the stream, up to querylen+2. */
+	size_t nread;
+	/** the length of the input query bytes */
+	size_t inlen;
+	/** the input bytes */
+	uint8_t* in;
 };
+
+/** doq application error code that is sent when a stream is closed */
+#define DOQ_APP_ERROR_CODE 1
 
 /**
  * Create the doq connection.
