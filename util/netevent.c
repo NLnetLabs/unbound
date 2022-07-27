@@ -1528,8 +1528,8 @@ doq_setup_new_conn(struct comm_point* c, struct doq_pkt_addr* paddr,
 		log_err("doq: could not allocate doq_conn");
 		return NULL;
 	}
-	lock_basic_lock(&conn->lock);
 	lock_rw_wrlock(&c->doq_socket->table->lock);
+	lock_basic_lock(&conn->lock);
 	if(!rbtree_insert(c->doq_socket->table->conn_tree, &conn->node)) {
 		lock_rw_unlock(&c->doq_socket->table->lock);
 		log_err("doq: duplicate connection");
