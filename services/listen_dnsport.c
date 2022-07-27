@@ -3205,12 +3205,12 @@ doq_table_delete(struct doq_table* table)
 	if(!table)
 		return;
 	lock_rw_destroy(&table->lock);
-	lock_rw_destroy(&table->conid_lock);
 	free(table->static_secret);
 	if(table->conn_tree) {
 		traverse_postorder(table->conn_tree, conn_tree_del, NULL);
 		free(table->conn_tree);
 	}
+	lock_rw_destroy(&table->conid_lock);
 	if(table->conid_tree) {
 		/* The tree should be empty, because the doq_conn_delete calls
 		 * above should have also removed their conid elements. */
@@ -3229,6 +3229,7 @@ doq_conn_create(struct comm_point* c, struct doq_pkt_addr* paddr,
 		return NULL;
 	conn->node.key = conn;
 	conn->doq_socket = c->doq_socket;
+	conn->table = c->doq_socket->table;
 	memmove(&conn->key.paddr.addr, &paddr->addr, paddr->addrlen);
 	conn->key.paddr.addrlen = paddr->addrlen;
 	memmove(&conn->key.paddr.localaddr, &paddr->localaddr,
@@ -3263,10 +3264,10 @@ doq_conn_delete(struct doq_conn* conn)
 {
 	if(!conn)
 		return;
-	lock_rw_wrlock(&conn->doq_socket->table->conid_lock);
-	doq_conn_clear_conids(conn);
-	lock_rw_unlock(&conn->doq_socket->table->conid_lock);
 	lock_basic_destroy(&conn->lock);
+	lock_rw_wrlock(&conn->table->conid_lock);
+	doq_conn_clear_conids(conn);
+	lock_rw_unlock(&conn->table->conid_lock);
 	ngtcp2_conn_del(conn->conn);
 	if(conn->stream_tree.count != 0) {
 		traverse_postorder(&conn->stream_tree, stream_tree_del, NULL);
@@ -3433,7 +3434,7 @@ doq_stream_data_complete(struct doq_conn* conn, struct doq_stream* stream)
 		char a[128];
 		addr_to_str(&conn->key.paddr.addr, conn->key.paddr.addrlen,
 			a, sizeof(a));
-		verbose(VERB_ALGO, "doq %s stream %d incoming query %s",
+		verbose(VERB_ALGO, "doq %s stream %d incoming query\n%s",
 			a, (int)stream->stream_id, (s?s:"null"));
 		free(s);
 	}
@@ -3444,8 +3445,8 @@ doq_stream_data_complete(struct doq_conn* conn, struct doq_stream* stream)
 
 /** doq receive data for a stream, more bytes of the incoming data */
 static int
-doq_stream_recv_data(struct doq_conn* conn, struct doq_stream* stream,
-	const uint8_t* data, size_t datalen)
+doq_stream_recv_data(struct doq_stream* stream, const uint8_t* data,
+	size_t datalen, int* recv_done)
 {
 	int got_data = 0;
 	/* read the tcplength uint16_t at the start */
@@ -3509,8 +3510,7 @@ doq_stream_recv_data(struct doq_conn* conn, struct doq_stream* stream,
 				"no buffer");
 			return 0;
 		}
-		if(!doq_stream_data_complete(conn, stream))
-			return 0;
+		*recv_done = 1;
 	}
 	return 1;
 }
@@ -3546,7 +3546,7 @@ doq_conn_generate_new_conid(struct doq_conn* conn, uint8_t* data,
 	int i;
 	for(i=0; i<max_try; i++) {
 		doq_fill_rand(conn->doq_socket->rnd, data, datalen);
-		if(!doq_conid_find(conn->doq_socket->table, data, datalen)) {
+		if(!doq_conid_find(conn->table, data, datalen)) {
 			/* Found an unused connection id. */
 			return 1;
 		}
@@ -3575,23 +3575,23 @@ doq_get_new_connection_id_cb(ngtcp2_conn* ATTR_UNUSED(conn), ngtcp2_cid* cid,
 	/* Lock the conid tree, so we can check for duplicates while
 	 * generating the id, and then insert it, whilst keeping the tree
 	 * locked against other modifications, guaranteeing uniqueness. */
-	lock_rw_wrlock(&doq_conn->doq_socket->table->conid_lock);
+	lock_rw_wrlock(&doq_conn->table->conid_lock);
 	if(!doq_conn_generate_new_conid(doq_conn, cid->data, cidlen)) {
-		lock_rw_unlock(&doq_conn->doq_socket->table->conid_lock);
+		lock_rw_unlock(&doq_conn->table->conid_lock);
 		return NGTCP2_ERR_CALLBACK_FAILURE;
 	}
 	cid->datalen = cidlen;
 	if(ngtcp2_crypto_generate_stateless_reset_token(token,
 		doq_conn->doq_socket->static_secret,
 		doq_conn->doq_socket->static_secret_len, cid) != 0) {
-		lock_rw_unlock(&doq_conn->doq_socket->table->conid_lock);
+		lock_rw_unlock(&doq_conn->table->conid_lock);
 		return NGTCP2_ERR_CALLBACK_FAILURE;
 	}
 	if(!doq_conn_associate_conid(doq_conn, cid->data, cid->datalen)) {
-		lock_rw_unlock(&doq_conn->doq_socket->table->conid_lock);
+		lock_rw_unlock(&doq_conn->table->conid_lock);
 		return NGTCP2_ERR_CALLBACK_FAILURE;
 	}
-	lock_rw_unlock(&doq_conn->doq_socket->table->conid_lock);
+	lock_rw_unlock(&doq_conn->table->conid_lock);
 	return 0;
 }
 
@@ -3601,9 +3601,9 @@ doq_remove_connection_id_cb(ngtcp2_conn* ATTR_UNUSED(conn),
 	const ngtcp2_cid* cid, void* user_data)
 {
 	struct doq_conn* doq_conn = (struct doq_conn*)user_data;
-	lock_rw_wrlock(&doq_conn->doq_socket->table->conid_lock);
+	lock_rw_wrlock(&doq_conn->table->conid_lock);
 	doq_conn_dissociate_conid(doq_conn, cid->data, cid->datalen);
-	lock_rw_unlock(&doq_conn->doq_socket->table->conid_lock);
+	lock_rw_unlock(&doq_conn->table->conid_lock);
 	return 0;
 }
 
@@ -3696,14 +3696,13 @@ doq_recv_stream_data_cb(ngtcp2_conn* ATTR_UNUSED(conn), uint32_t flags,
 	int64_t stream_id, uint64_t offset, const uint8_t* data,
 	size_t datalen, void* user_data, void* ATTR_UNUSED(stream_user_data))
 {
+	int recv_done = 0;
 	struct doq_conn* doq_conn = (struct doq_conn*)user_data;
 	struct doq_stream* stream;
 	verbose(VERB_ALGO, "doq recv stream data stream id %d offset %d "
 		"datalen %d%s%s", (int)stream_id, (int)offset, (int)datalen,
 		((flags&NGTCP2_STREAM_DATA_FLAG_FIN)!=0?" FIN":""),
 		((flags&NGTCP2_STREAM_DATA_FLAG_EARLY)!=0?" EARLY":""));
-	if(verbosity >= VERB_ALGO)
-		log_hex("doq recv stream data", (void*)data, datalen);
 	stream = doq_stream_find(doq_conn, stream_id);
 	if(!stream) {
 		verbose(VERB_ALGO, "doq: received stream data for "
@@ -3715,20 +3714,19 @@ doq_recv_stream_data_cb(ngtcp2_conn* ATTR_UNUSED(conn), uint32_t flags,
 		return 0;
 	}
 	if(datalen != 0) {
-		if(!doq_stream_recv_data(doq_conn, stream, data, datalen))
+		if(!doq_stream_recv_data(stream, data, datalen, &recv_done))
 			return NGTCP2_ERR_CALLBACK_FAILURE;
 	}
 	if((flags&NGTCP2_STREAM_DATA_FLAG_FIN)!=0) {
 		if(!doq_stream_recv_fin(doq_conn, stream))
 			return NGTCP2_ERR_CALLBACK_FAILURE;
 	}
-	if(datalen >= 2 && offset == 0) {
-		/* output partial received packet */
-		uint16_t len = sldns_read_uint16(data);
-		char* s = sldns_wire2str_pkt((void*)(data+2), datalen-2);
-		verbose(VERB_ALGO, "doq: tcplen at start is %d", (int)len);
-		verbose(VERB_ALGO, "doq: incoming packet:%s", (s?s:"null"));
-		free(s);
+	ngtcp2_conn_extend_max_stream_offset(doq_conn->conn, stream_id,
+		datalen);
+	ngtcp2_conn_extend_max_offset(doq_conn->conn, datalen);
+	if(recv_done) {
+		if(!doq_stream_data_complete(doq_conn, stream))
+			return NGTCP2_ERR_CALLBACK_FAILURE;
 	}
 	return 0;
 }
@@ -4044,26 +4042,26 @@ doq_conn_setup(struct doq_conn* conn, uint8_t* scid, size_t scidlen,
 	doq_fill_rand(conn->doq_socket->rnd, params.stateless_reset_token,
 		sizeof(params.stateless_reset_token));
 	sv_scid.datalen = conn->doq_socket->sv_scidlen;
-	lock_rw_wrlock(&conn->doq_socket->table->conid_lock);
+	lock_rw_wrlock(&conn->table->conid_lock);
 	if(!doq_conn_generate_new_conid(conn, sv_scid.data, sv_scid.datalen)) {
-		lock_rw_unlock(&conn->doq_socket->table->conid_lock);
+		lock_rw_unlock(&conn->table->conid_lock);
 		return 0;
 	}
 
 	rv = ngtcp2_conn_server_new(&conn->conn, &scid_cid, &sv_scid, &path,
 		conn->version, &callbacks, &settings, &params, NULL, conn);
 	if(rv != 0) {
-		lock_rw_unlock(&conn->doq_socket->table->conid_lock);
+		lock_rw_unlock(&conn->table->conid_lock);
 		log_err("ngtcp2_conn_server_new failed: %s",
 			ngtcp2_strerror(rv));
 		return 0;
 	}
 	if(!doq_conn_setup_conids(conn)) {
-		lock_rw_unlock(&conn->doq_socket->table->conid_lock);
+		lock_rw_unlock(&conn->table->conid_lock);
 		log_err("doq_conn_setup_conids failed: out of memory");
 		return 0;
 	}
-	lock_rw_unlock(&conn->doq_socket->table->conid_lock);
+	lock_rw_unlock(&conn->table->conid_lock);
 	conn->ssl = doq_ssl_server_setup((SSL_CTX*)conn->doq_socket->ctx,
 		conn);
 	if(!conn->ssl) {
@@ -4166,7 +4164,7 @@ int
 doq_conn_associate_conid(struct doq_conn* conn, uint8_t* data, size_t datalen)
 {
 	struct doq_conid* conid;
-	conid = doq_conid_find(conn->doq_socket->table, data, datalen);
+	conid = doq_conid_find(conn->table, data, datalen);
 	if(conid && !conid_is_for_conn(conn, conid)) {
 		verbose(VERB_ALGO, "doq connection id already exists for "
 			"another doq_conn. Ignoring second connection id.");
@@ -4184,7 +4182,7 @@ doq_conn_associate_conid(struct doq_conn* conn, uint8_t* data, size_t datalen)
 	if(!conid)
 		return 0;
 	doq_conid_list_insert(conn, conid);
-	(void)rbtree_insert(conn->doq_socket->table->conid_tree, &conid->node);
+	(void)rbtree_insert(conn->table->conid_tree, &conid->node);
 	return 1;
 }
 
@@ -4193,11 +4191,11 @@ doq_conn_dissociate_conid(struct doq_conn* conn, const uint8_t* data,
 	size_t datalen)
 {
 	struct doq_conid* conid;
-	conid = doq_conid_find(conn->doq_socket->table, data, datalen);
+	conid = doq_conid_find(conn->table, data, datalen);
 	if(conid && !conid_is_for_conn(conn, conid))
 		return;
 	if(conid) {
-		(void)rbtree_delete(conn->doq_socket->table->conid_tree,
+		(void)rbtree_delete(conn->table->conid_tree,
 			conid->node.key);
 		doq_conid_list_remove(conn, conid);
 		doq_conid_delete(conid);
@@ -4255,8 +4253,7 @@ doq_conn_clear_conids(struct doq_conn* conn)
 	p = conn->conid_list;
 	while(p) {
 		next = p->next;
-		(void)rbtree_delete(conn->doq_socket->table->conid_tree,
-			p->node.key);
+		(void)rbtree_delete(conn->table->conid_tree, p->node.key);
 		doq_conid_delete(p);
 		p = next;
 	}

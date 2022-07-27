@@ -158,6 +158,8 @@ struct doq_client_stream {
 	int64_t stream_id;
 	/** data written position */
 	size_t nwrite;
+	/** the data length for write, in network format */
+	uint16_t data_tcplen;
 	/** if the write of the query data is done. That means the
 	 * write channel has FIN, is closed for writing. */
 	int write_is_done;
@@ -1546,7 +1548,6 @@ write_streams(struct doq_client_data* data)
 		int fin;
 		ngtcp2_ssize ret;
 		ngtcp2_ssize ndatalen = 0;
-		uint16_t dnslen = 0;
 		int send_is_blocked = 0;
 
 		if(str) {
@@ -1560,8 +1561,8 @@ write_streams(struct doq_client_data* data)
 			stream_id = str->stream_id;
 			fin = 1;
 			if(str->nwrite < 2) {
-				dnslen = htons(str->data_len);
-				datav[0].base = ((uint8_t*)&dnslen)+str->nwrite;
+				str->data_tcplen = htons(str->data_len);
+				datav[0].base = ((uint8_t*)&str->data_tcplen)+str->nwrite;
 				datav[0].len = 2-str->nwrite;
 				datav[1].base = str->data;
 				datav[1].len = str->data_len;

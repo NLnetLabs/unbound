@@ -1299,7 +1299,6 @@ doq_conn_find_by_addr_or_cid(struct doq_table* table,
 		&paddr->localaddr, paddr->localaddrlen, paddr->ifindex,
 		dcid, dcidlen);
 	if(conn && conn->is_deleted) {
-		lock_basic_unlock(&conn->lock);
 		conn = NULL;
 	}
 	if(conn) {
@@ -1351,6 +1350,8 @@ doq_decode_pkt_header_negotiate(struct comm_point* c,
 	}
 	*conn = doq_conn_find_by_addr_or_cid(c->doq_socket->table, paddr,
 		dcid, dcidlen);
+	if(*conn)
+		(*conn)->doq_socket = c->doq_socket;
 	return 1;
 }
 
@@ -1527,11 +1528,15 @@ doq_setup_new_conn(struct comm_point* c, struct doq_pkt_addr* paddr,
 		log_err("doq: could not allocate doq_conn");
 		return NULL;
 	}
+	lock_basic_lock(&conn->lock);
+	lock_rw_wrlock(&c->doq_socket->table->lock);
 	if(!rbtree_insert(c->doq_socket->table->conn_tree, &conn->node)) {
+		lock_rw_unlock(&c->doq_socket->table->lock);
 		log_err("doq: duplicate connection");
 		doq_conn_delete(conn);
 		return NULL;
 	}
+	lock_rw_unlock(&c->doq_socket->table->lock);
 	verbose(VERB_ALGO, "doq: created new connection");
 
 	/* the scid and dcid switch meaning from the accepted client
@@ -1618,6 +1623,7 @@ doq_accept(struct comm_point* c, struct doq_pkt_addr* paddr,
 	*conn = doq_setup_new_conn(c, paddr, &hd, pocid);
 	if(!*conn)
 		return 0;
+	(*conn)->doq_socket = c->doq_socket;
 	if(!doq_conn_recv(c, paddr, *conn, pi, &err_retry, NULL)) {
 		if(err_retry)
 			doq_send_retry(c, paddr, &hd);
@@ -1686,6 +1692,7 @@ comm_point_doq_callback(int fd, short event, void* arg)
 				doq_delete_connection(c, conn);
 				continue;
 			}
+			conn->doq_socket = NULL;
 			lock_basic_unlock(&conn->lock);
 			continue;
 		}
@@ -1693,11 +1700,13 @@ comm_point_doq_callback(int fd, short event, void* arg)
 			if(!doq_conn_send_close(c, conn)) {
 				doq_delete_connection(c, conn);
 			} else {
+				conn->doq_socket = NULL;
 				lock_basic_unlock(&conn->lock);
 			}
 			continue;
 		}
 		if(ngtcp2_conn_is_in_draining_period(conn->conn)) {
+			conn->doq_socket = NULL;
 			lock_basic_unlock(&conn->lock);
 			continue;
 		}
@@ -1708,6 +1717,7 @@ comm_point_doq_callback(int fd, short event, void* arg)
 			if(err_drop) {
 				doq_delete_connection(c, conn);
 			} else {
+				conn->doq_socket = NULL;
 				lock_basic_unlock(&conn->lock);
 			}
 			continue;
@@ -1716,6 +1726,7 @@ comm_point_doq_callback(int fd, short event, void* arg)
 			doq_delete_connection(c, conn);
 			continue;
 		}
+		conn->doq_socket = NULL;
 		lock_basic_unlock(&conn->lock);
 	}
 }

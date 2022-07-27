@@ -521,8 +521,10 @@ struct doq_conn {
 	lock_basic_type lock;
 	/** the key information, with dcid and address endpoint */
 	struct doq_conn_key key;
-	/** the doq server socket this connection is part of */
+	/** the doq server socket for inside callbacks */
 	struct doq_server_socket* doq_socket;
+	/** the doq table this connection is part of */
+	struct doq_table* table;
 	/** if the connection is about to be deleted. */
 	int is_deleted;
 	/** the version, the client chosen version of QUIC */
