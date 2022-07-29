@@ -73,6 +73,7 @@ struct ub_event_base;
 struct unbound_socket;
 struct doq_server_socket;
 struct doq_table;
+struct doq_conn;
 struct ub_randstate;
 
 struct mesh_state;
@@ -105,6 +106,8 @@ typedef int comm_point_callback_type(struct comm_point*, void*, int,
 
 /** timeout to slow accept calls when not possible, in msec. */
 #define NETEVENT_SLOW_ACCEPT_TIME 2000
+/** for doq, the maximum dcid length, in ngtcp2 it is 20. */
+#define DOQ_MAX_CIDLEN 24
 
 /**
  * A communication point dispatcher. Thread specific.
@@ -156,6 +159,21 @@ struct comm_reply {
 		pktinfo;
 	/** max udp size for udp packets */
 	size_t max_udp_size;
+#ifdef HAVE_NGTCP2
+	/** the doq ifindex, together with addr and localaddr in pktinfo,
+	 * and dcid makes the doq_conn_key to find the connection */
+	int doq_ifindex;
+	/** the doq dcid, the connection id used to find the connection */
+	uint8_t doq_dcid[DOQ_MAX_CIDLEN];
+	/** the length of the doq dcid */
+	size_t doq_dcidlen;
+	/** the doq stream id where the query came in on */
+	int64_t doq_streamid;
+#  ifndef IP_PKTINFO
+	/** port number for doq */
+	int doq_port
+#  endif
+#endif /* HAVE_NGTCP2 */
 };
 
 /** 
@@ -276,6 +294,8 @@ struct comm_point {
 		comm_tcp,
 		/** HTTP handler socket */
 		comm_http,
+		/** DOQ handler socket */
+		comm_doq,
 		/** AF_UNIX socket - for internal commands. */
 		comm_local,
 		/** raw - not DNS format - for pipe readers and writers */
@@ -994,6 +1014,13 @@ struct doq_server_socket {
 	void* ctx;
 	/** quic method functions, SSL_QUIC_METHOD* */
 	void* quic_method;
+	/** the comm point for this doq server socket */
+	struct comm_point* cp;
+	/** the buffer for packets, doq in and out */
+	struct sldns_buffer* pkt_buf;
+	/** the current doq connection when we are in callbacks to worker,
+	 * so that we have the already locked structure at our disposal. */
+	struct doq_conn* current_conn;
 };
 
 /**

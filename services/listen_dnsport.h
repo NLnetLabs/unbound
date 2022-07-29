@@ -587,6 +587,16 @@ struct doq_stream {
 	size_t inlen;
 	/** the input bytes */
 	uint8_t* in;
+	/** does the stream have an answer to send */
+	int is_answer_available;
+	/** the answer bytes sent, up to outlen+2. */
+	size_t nwrite;
+	/** the length of the output answer bytes */
+	size_t outlen;
+	/** the output length in network wireformat */
+	uint16_t outlen_wire;
+	/** the output packet bytes */
+	uint8_t* out;
 };
 
 /** doq application error code that is sent when a stream is closed */

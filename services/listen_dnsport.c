@@ -3347,6 +3347,98 @@ int doq_stream_cmp(const void* key1, const void* key2)
 	return 0;
 }
 
+/** doq store a local address in repinfo */
+static void
+doq_repinfo_store_localaddr(struct comm_reply* repinfo,
+	struct sockaddr_storage* localaddr, socklen_t localaddrlen)
+{
+	/* use the pktinfo that we have for ancillary udp data otherwise,
+	 * this saves space for a sockaddr */
+	memset(&repinfo->pktinfo, 0, sizeof(repinfo->pktinfo));
+	if(addr_is_ip6(localaddr, localaddrlen)) {
+#ifdef IPV6_PKTINFO
+		log_assert(localaddrlen <= sizeof(
+			repinfo->pktinfo.v6info.ipi6_addr));
+		memmove(&repinfo->pktinfo.v6info.ipi6_addr,
+			localaddr, localaddrlen);
+#endif
+		repinfo->srctype = 6;
+	} else {
+#ifdef IP_PKTINFO
+		log_assert(localaddrlen <= sizeof(
+			repinfo->pktinfo.v4info.ipi_addr));
+		memmove(&repinfo->pktinfo.v4info.ipi_addr,
+			localaddr, localaddrlen);
+#elif defined(IP_RECVDSTADDR)
+		struct sockaddr_in* sa = (struct sockaddr_in*)localaddr;
+		log_assert(localaddrlen <= sizeof(repinfo->pktinfo.v4addr));
+		memmove(&repinfo->pktinfo.v4addr, sa->sin_addr,
+			sizeof(struct in_addr));
+		repinfo->doq_port = sa->sin_port;
+#endif
+		repinfo->srctype = 4;
+	}
+}
+
+/** doq retrieve localaddr from repinfo */
+static void
+doq_repinfo_retrieve_localaddr(struct comm_reply* repinfo,
+	struct sockaddr_storage* localaddr, socklen_t* localaddrlen)
+{
+	if(repinfo->srctype == 6) {
+#ifdef IPV6_PKTINFO
+		*localaddrlen = (socklen_t)sizeof(struct sockaddr_in6);
+		memmove(localaddr, &repinfo->pktinfo.v6info.ipi6_addr,
+			*localaddrlen);
+#endif
+	} else {
+#ifdef IP_PKTINFO
+		*localaddrlen = (socklen_t)sizeof(struct sockaddr_in);
+		memmove(localaddr, &repinfo->pktinfo.v4info.ipi_addr,
+			*localaddrlen);
+#elif defined(IP_RECVDSTADDR)
+		struct sockaddr_in* sa = (struct sockaddr_in*)localaddr;
+		*localaddrlen = (socklen_t)sizeof(struct sockaddr_in);
+		memset(sa, 0, *localaddrlen);
+		sa->sin_family = AF_INET;
+		memmove(&sa->sin_addr, &repinfo->pktinfo.v4addr,
+			sizeof(struct in_addr));
+		sa->sin_port = repinfo->doq_port;
+#endif
+	}
+}
+
+/** doq write a connection key into repinfo, false if it does not fit */
+static int
+doq_conn_key_store_repinfo(struct doq_conn_key* key,
+	struct comm_reply* repinfo)
+{
+	repinfo->doq_ifindex = key->paddr.ifindex;
+	repinfo->addrlen = key->paddr.addrlen;
+	memmove(&repinfo->addr, &key->paddr.addr, repinfo->addrlen);
+	doq_repinfo_store_localaddr(repinfo, &key->paddr.localaddr,
+		key->paddr.localaddrlen);
+	if(key->dcidlen > sizeof(repinfo->doq_dcidlen))
+		return 0;
+	repinfo->doq_dcidlen = key->dcidlen;
+	memmove(repinfo->doq_dcid, key->dcid, key->dcidlen);
+	return 1;
+}
+
+/** doq read a connection key from repinfo. It is not malloced, but points
+ * into the repinfo for the dcid. */
+void
+doq_conn_key_from_repinfo(struct doq_conn_key* key, struct comm_reply* repinfo)
+{
+	key->paddr.ifindex = repinfo->doq_ifindex;
+	key->paddr.addrlen = repinfo->addrlen;
+	memmove(&key->paddr.addr, &repinfo->addr, repinfo->addrlen);
+	doq_repinfo_retrieve_localaddr(repinfo, &key->paddr.localaddr,
+		&key->paddr.localaddrlen);
+	key->dcidlen = repinfo->doq_dcidlen;
+	key->dcid = repinfo->doq_dcid;
+}
+
 /** add a stream to the connection */
 static void
 doq_conn_add_stream(struct doq_conn* conn, struct doq_stream* stream)
@@ -3371,6 +3463,7 @@ void doq_stream_delete(struct doq_stream* stream)
 	if(!stream)
 		return;
 	free(stream->in);
+	free(stream->out);
 	free(stream);
 }
 
@@ -3406,6 +3499,30 @@ doq_stream_close(struct doq_conn* conn, struct doq_stream* stream)
 	return 1;
 }
 
+/** doq stream pick up answer data from buffer */
+static int
+doq_stream_pickup_answer(struct doq_stream* stream, struct sldns_buffer* buf)
+{
+	stream->is_answer_available = 1;
+	if(stream->out) {
+		free(stream->out);
+		stream->out = NULL;
+	}
+	stream->nwrite = 0;
+	stream->outlen = sldns_buffer_limit(buf);
+	/* For quic the output bytes have to stay allocated and available,
+	 * for potential resends, until the remote and has acknowledged them.
+	 * This includes the tcplen start uint16_t, in outlen_wire.
+	 */
+	stream->outlen_wire = htons(stream->outlen);
+	stream->out = memdup(sldns_buffer_begin(buf), sldns_buffer_limit(buf));
+	if(!stream->out) {
+		log_err("doq could not send answer: out of memory");
+		return 0;
+	}
+	return 1;
+}
+
 /** doq stream data length has completed, allocations can be done. False on
  * allocation failure. */
 static int
@@ -3429,6 +3546,7 @@ doq_stream_datalen_complete(struct doq_stream* stream)
 static int
 doq_stream_data_complete(struct doq_conn* conn, struct doq_stream* stream)
 {
+	struct comm_point* c;
 	if(verbosity >= VERB_ALGO) {
 		char* s = sldns_wire2str_pkt(stream->in, stream->inlen);
 		char a[128];
@@ -3439,7 +3557,44 @@ doq_stream_data_complete(struct doq_conn* conn, struct doq_stream* stream)
 		free(s);
 	}
 	stream->is_query_complete = 1;
-	(void)conn;
+	c = conn->doq_socket->cp;
+	if(!stream->in) {
+		verbose(VERB_ALGO, "doq_stream_data_complete: no in buffer");
+		return 0;
+	}
+	if(stream->inlen > sldns_buffer_capacity(c->buffer)) {
+		verbose(VERB_ALGO, "doq_stream_data_complete: query too long");
+		return 0;
+	}
+	sldns_buffer_clear(c->buffer);
+	sldns_buffer_write(c->buffer, stream->in, stream->inlen);
+	sldns_buffer_flip(c->buffer);
+	c->repinfo.c = c;
+	if(!doq_conn_key_store_repinfo(&conn->key, &c->repinfo)) {
+		verbose(VERB_ALGO, "doq_stream_data_complete: connection "
+			"DCID too long");
+		return 0;
+	}
+	c->repinfo.doq_streamid = stream->stream_id;
+	conn->doq_socket->current_conn = conn;
+	fptr_ok(fptr_whitelist_comm_point(c->callback));
+	if( (*c->callback)(c, c->cb_arg, NETEVENT_NOERROR, &c->repinfo)) {
+		conn->doq_socket->current_conn = NULL;
+		if(verbosity >= VERB_ALGO) {
+			char* s2 = sldns_wire2str_pkt(sldns_buffer_begin(
+				c->buffer), sldns_buffer_limit(c->buffer));
+			verbose(VERB_ALGO, "doq stream %d response\n%s",
+				(int)stream->stream_id, (s2?s2:"null"));
+			free(s2);
+		}
+		if(!doq_stream_pickup_answer(stream, c->buffer)) {
+			verbose(VERB_ALGO, "doq: failed to pick up answer "
+				"buffer");
+			return 0;
+		}
+		return 1;
+	}
+	conn->doq_socket->current_conn = NULL;
 	return 1;
 }
 
@@ -4287,12 +4442,12 @@ doq_conn_start_closing_period(struct comm_point* c, struct doq_conn* conn)
 	if(ngtcp2_conn_is_in_draining_period(conn->conn))
 		return 1;
 	ngtcp2_path_storage_zero(&ps);
-	sldns_buffer_clear(c->buffer);
+	sldns_buffer_clear(c->doq_socket->pkt_buf);
 	/* the call to ngtcp2_conn_write_connection_close causes the
 	 * conn to be closed. It is now in the closing period. */
 	ret = ngtcp2_conn_write_connection_close(conn->conn, &ps.path,
-		&pi, sldns_buffer_begin(c->buffer),
-		sldns_buffer_remaining(c->buffer), &conn->last_error,
+		&pi, sldns_buffer_begin(c->doq_socket->pkt_buf),
+		sldns_buffer_remaining(c->doq_socket->pkt_buf), &conn->last_error,
 		doq_get_timestamp_nanosec());
 	if(ret < 0) {
 		log_err("doq ngtcp2_conn_write_connection_close failed: %s",
@@ -4302,18 +4457,18 @@ doq_conn_start_closing_period(struct comm_point* c, struct doq_conn* conn)
 	if(ret == 0) {
 		return 0;
 	}
-	sldns_buffer_set_position(c->buffer, ret);
-	sldns_buffer_flip(c->buffer);
+	sldns_buffer_set_position(c->doq_socket->pkt_buf, ret);
+	sldns_buffer_flip(c->doq_socket->pkt_buf);
 
 	/* The close packet is allocated, because it may have to be repeated.
 	 * When incoming packets have this connection dcid. */
-	conn->close_pkt = memdup(sldns_buffer_begin(c->buffer),
-		sldns_buffer_limit(c->buffer));
+	conn->close_pkt = memdup(sldns_buffer_begin(c->doq_socket->pkt_buf),
+		sldns_buffer_limit(c->doq_socket->pkt_buf));
 	if(!conn->close_pkt) {
 		log_err("doq: could not allocate close packet: out of memory");
 		return 0;
 	}
-	conn->close_pkt_len = sldns_buffer_limit(c->buffer);
+	conn->close_pkt_len = sldns_buffer_limit(c->doq_socket->pkt_buf);
 	conn->close_ecn = pi.ecn;
 	return 1;
 }
@@ -4326,11 +4481,11 @@ doq_conn_send_close(struct comm_point* c, struct doq_conn* conn)
 		return 0;
 	if(!conn->close_pkt)
 		return 0;
-	if(conn->close_pkt_len > sldns_buffer_capacity(c->buffer))
+	if(conn->close_pkt_len > sldns_buffer_capacity(c->doq_socket->pkt_buf))
 		return 0;
-	sldns_buffer_clear(c->buffer);
-	sldns_buffer_write(c->buffer, conn->close_pkt, conn->close_pkt_len);
-	sldns_buffer_flip(c->buffer);
+	sldns_buffer_clear(c->doq_socket->pkt_buf);
+	sldns_buffer_write(c->doq_socket->pkt_buf, conn->close_pkt, conn->close_pkt_len);
+	sldns_buffer_flip(c->doq_socket->pkt_buf);
 	verbose(VERB_ALGO, "doq send connection close");
 	doq_send_pkt(c, &conn->key.paddr, conn->close_ecn);
 	return 1;
@@ -4369,8 +4524,8 @@ doq_conn_recv(struct comm_point* c, struct doq_pkt_addr* paddr,
 	ts = doq_get_timestamp_nanosec();
 
 	ret = ngtcp2_conn_read_pkt(conn->conn, &path, pi,
-		sldns_buffer_begin(c->buffer),
-		sldns_buffer_limit(c->buffer), ts);
+		sldns_buffer_begin(c->doq_socket->pkt_buf),
+		sldns_buffer_limit(c->doq_socket->pkt_buf), ts);
 	if(ret != 0) {
 		if(err_retry)
 			*err_retry = 0;
@@ -4451,10 +4606,10 @@ doq_conn_write_streams(struct comm_point* c, struct doq_conn* conn)
 		if(fin)
 			flags |= NGTCP2_WRITE_STREAM_FLAG_FIN;
 
-		sldns_buffer_clear(c->buffer);
+		sldns_buffer_clear(c->doq_socket->pkt_buf);
 		ret = ngtcp2_conn_writev_stream(conn->conn, &ps.path, &pi,
-			sldns_buffer_begin(c->buffer),
-			sldns_buffer_remaining(c->buffer),
+			sldns_buffer_begin(c->doq_socket->pkt_buf),
+			sldns_buffer_remaining(c->doq_socket->pkt_buf),
 			&ndatalen, flags, stream_id, datav, datav_count, ts);
 		if(ret < 0) {
 			if(ret == NGTCP2_ERR_WRITE_MORE) {
@@ -4484,8 +4639,8 @@ doq_conn_write_streams(struct comm_point* c, struct doq_conn* conn)
 			ngtcp2_conn_update_pkt_tx_time(conn->conn, ts);
 			return 1;
 		}
-		sldns_buffer_set_position(c->buffer, ret);
-		sldns_buffer_flip(c->buffer);
+		sldns_buffer_set_position(c->doq_socket->pkt_buf, ret);
+		sldns_buffer_flip(c->doq_socket->pkt_buf);
 		doq_send_pkt(c, &conn->key.paddr, pi.ecn);
 
 		if(++num_packets == max_packets)

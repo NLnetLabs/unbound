@@ -939,8 +939,8 @@ doq_send_pkt(struct comm_point* c, struct doq_pkt_addr* paddr, uint32_t ecn)
 		char buf[256];
 	} control;
 	ssize_t ret;
-	iov[0].iov_base = sldns_buffer_begin(c->buffer);
-	iov[0].iov_len = sldns_buffer_limit(c->buffer);
+	iov[0].iov_base = sldns_buffer_begin(c->doq_socket->pkt_buf);
+	iov[0].iov_len = sldns_buffer_limit(c->doq_socket->pkt_buf);
 	memset(&msg, 0, sizeof(msg));
 	msg.msg_name = (void*)&paddr->addr;
 	msg.msg_namelen = paddr->addrlen;
@@ -994,18 +994,18 @@ doq_send_pkt(struct comm_point* c, struct doq_pkt_addr* paddr, uint32_t ecn)
 			}
 		}
 		return;
-	} else if(ret != (ssize_t)sldns_buffer_limit(c->buffer)) {
+	} else if(ret != (ssize_t)sldns_buffer_limit(c->doq_socket->pkt_buf)) {
 		char host[256], port[32];
 		if(doq_print_addr_port(&paddr->addr, paddr->addrlen, host,
 			sizeof(host), port, sizeof(port))) {
 			log_err("doq sendmsg to %s %s failed: "
 				"sent %d in place of %d bytes", 
 				host, port, (int)ret,
-				(int)sldns_buffer_limit(c->buffer));
+				(int)sldns_buffer_limit(c->doq_socket->pkt_buf));
 		} else {
 			log_err("doq sendmsg failed: "
 				"sent %d in place of %d bytes", 
-				(int)ret, (int)sldns_buffer_limit(c->buffer));
+				(int)ret, (int)sldns_buffer_limit(c->doq_socket->pkt_buf));
 		}
 		return;
 	}
@@ -1160,8 +1160,8 @@ doq_recv(struct comm_point* c, struct doq_pkt_addr* paddr, int* pkt_continue,
 
 	msg.msg_name = &paddr->addr;
 	msg.msg_namelen = (socklen_t)sizeof(paddr->addr);
-	iov[0].iov_base = sldns_buffer_begin(c->buffer);
-	iov[0].iov_len = sldns_buffer_remaining(c->buffer);
+	iov[0].iov_base = sldns_buffer_begin(c->doq_socket->pkt_buf);
+	iov[0].iov_len = sldns_buffer_remaining(c->doq_socket->pkt_buf);
 	msg.msg_iov = iov;
 	msg.msg_iovlen = 1;
 	msg.msg_control = ancil.buf;
@@ -1181,8 +1181,8 @@ doq_recv(struct comm_point* c, struct doq_pkt_addr* paddr, int* pkt_continue,
 	}
 
 	paddr->addrlen = msg.msg_namelen;
-	sldns_buffer_skip(c->buffer, rcv);
-	sldns_buffer_flip(c->buffer);
+	sldns_buffer_skip(c->doq_socket->pkt_buf, rcv);
+	sldns_buffer_flip(c->doq_socket->pkt_buf);
 	if(!doq_get_localaddr_cmsg(c, paddr, pkt_continue, &msg))
 		return 0;
 	pi->ecn = msghdr_get_ecn(&msg, paddr->addr.ss_family);
@@ -1205,18 +1205,18 @@ doq_send_version_negotiation(struct comm_point* c, struct doq_pkt_addr* paddr,
 	versions[0] = NGTCP2_PROTO_VER_V1;
 	versions_len = 1;
 	unused_random = ub_random_max(c->doq_socket->rnd, 256);
-	sldns_buffer_clear(c->buffer);
+	sldns_buffer_clear(c->doq_socket->pkt_buf);
 	ret = ngtcp2_pkt_write_version_negotiation(
-		sldns_buffer_begin(c->buffer),
-		sldns_buffer_capacity(c->buffer), unused_random,
+		sldns_buffer_begin(c->doq_socket->pkt_buf),
+		sldns_buffer_capacity(c->doq_socket->pkt_buf), unused_random,
 		dcid, dcidlen, scid, scidlen, versions, versions_len);
 	if(ret < 0) {
 		log_err("ngtcp2_pkt_write_version_negotiation failed: %s",
 			ngtcp2_strerror(ret));
 		return;
 	}
-	sldns_buffer_set_position(c->buffer, ret);
-	sldns_buffer_flip(c->buffer);
+	sldns_buffer_set_position(c->doq_socket->pkt_buf, ret);
+	sldns_buffer_flip(c->doq_socket->pkt_buf);
 	doq_send_pkt(c, paddr, 0);
 }
 
@@ -1327,8 +1327,8 @@ doq_decode_pkt_header_negotiate(struct comm_point* c,
 	int rv;
 
 	rv = ngtcp2_pkt_decode_version_cid(&version, &dcid, &dcidlen,
-		&scid, &scidlen, sldns_buffer_begin(c->buffer),
-		sldns_buffer_limit(c->buffer), c->doq_socket->sv_scidlen);
+		&scid, &scidlen, sldns_buffer_begin(c->doq_socket->pkt_buf),
+		sldns_buffer_limit(c->doq_socket->pkt_buf), c->doq_socket->sv_scidlen);
 	if(rv != 0) {
 		if(rv == NGTCP2_ERR_VERSION_NEGOTIATION) {
 			/* send the version negotiation */
@@ -1399,17 +1399,17 @@ doq_send_retry(struct comm_point* c, struct doq_pkt_addr* paddr,
 		return;
 	}
 
-	sldns_buffer_clear(c->buffer);
-	ret = ngtcp2_crypto_write_retry(sldns_buffer_begin(c->buffer),
-		sldns_buffer_capacity(c->buffer), hd->version,
+	sldns_buffer_clear(c->doq_socket->pkt_buf);
+	ret = ngtcp2_crypto_write_retry(sldns_buffer_begin(c->doq_socket->pkt_buf),
+		sldns_buffer_capacity(c->doq_socket->pkt_buf), hd->version,
 		&hd->scid, &scid, &hd->dcid, token, tokenlen);
 	if(ret < 0) {
 		log_err("ngtcp2_crypto_write_retry failed: %s",
 			ngtcp2_strerror(ret));
 		return;
 	}
-	sldns_buffer_set_position(c->buffer, ret);
-	sldns_buffer_flip(c->buffer);
+	sldns_buffer_set_position(c->doq_socket->pkt_buf, ret);
+	sldns_buffer_flip(c->doq_socket->pkt_buf);
 	doq_send_pkt(c, paddr, 0);
 }
 
@@ -1419,18 +1419,18 @@ doq_send_stateless_connection_close(struct comm_point* c,
 	struct doq_pkt_addr* paddr, struct ngtcp2_pkt_hd* hd)
 {
 	ngtcp2_ssize ret;
-	sldns_buffer_clear(c->buffer);
+	sldns_buffer_clear(c->doq_socket->pkt_buf);
 	ret = ngtcp2_crypto_write_connection_close(
-		sldns_buffer_begin(c->buffer),
-		sldns_buffer_capacity(c->buffer), hd->version, &hd->scid,
+		sldns_buffer_begin(c->doq_socket->pkt_buf),
+		sldns_buffer_capacity(c->doq_socket->pkt_buf), hd->version, &hd->scid,
 		&hd->dcid, NGTCP2_INVALID_TOKEN, NULL, 0);
 	if(ret < 0) {
 		log_err("ngtcp2_crypto_write_connection_close failed: %s",
 			ngtcp2_strerror(ret));
 		return;
 	}
-	sldns_buffer_set_position(c->buffer, ret);
-	sldns_buffer_flip(c->buffer);
+	sldns_buffer_set_position(c->doq_socket->pkt_buf, ret);
+	sldns_buffer_flip(c->doq_socket->pkt_buf);
 	doq_send_pkt(c, paddr, 0);
 }
 
@@ -1605,8 +1605,8 @@ doq_accept(struct comm_point* c, struct doq_pkt_addr* paddr,
 	struct ngtcp2_cid ocid, *pocid=NULL;
 	int err_retry;
 	memset(&hd, 0, sizeof(hd));
-	rv = ngtcp2_accept(&hd, sldns_buffer_begin(c->buffer),
-		sldns_buffer_limit(c->buffer));
+	rv = ngtcp2_accept(&hd, sldns_buffer_begin(c->doq_socket->pkt_buf),
+		sldns_buffer_limit(c->doq_socket->pkt_buf));
 	if(rv != 0) {
 		if(rv == NGTCP2_ERR_RETRY) {
 			doq_send_retry(c, paddr, &hd);
@@ -1644,17 +1644,17 @@ comm_point_doq_callback(int fd, short event, void* arg)
 	struct ngtcp2_pkt_info pi;
 
 	c = (struct comm_point*)arg;
-	log_assert(c->type == comm_udp);
+	log_assert(c->type == comm_doq);
 
 	if(!(event&UB_EV_READ))
 		return;
-	log_assert(c && c->buffer && c->fd == fd);
+	log_assert(c && c->doq_socket->pkt_buf && c->fd == fd);
 	ub_comm_base_now(c->ev->base);
 	for(i=0; i<NUM_UDP_PER_SELECT; i++) {
-		sldns_buffer_clear(c->buffer);
+		sldns_buffer_clear(c->doq_socket->pkt_buf);
 		doq_pkt_addr_init(&paddr);
 		log_assert(fd != -1);
-		log_assert(sldns_buffer_remaining(c->buffer) > 0);
+		log_assert(sldns_buffer_remaining(c->doq_socket->pkt_buf) > 0);
 		if(!doq_recv(c, &paddr, &pkt_continue, &pi)) {
 			if(pkt_continue)
 				continue;
@@ -1675,11 +1675,11 @@ comm_point_doq_callback(int fd, short event, void* arg)
 				doq_sockaddr_get_port(&paddr.localaddr),
 				paddr.ifindex);
 			log_info("doq_recv length %d ecn 0x%x",
-				(int)sldns_buffer_limit(c->buffer),
+				(int)sldns_buffer_limit(c->doq_socket->pkt_buf),
 				(int)pi.ecn);
 		}
 
-		if(sldns_buffer_limit(c->buffer) == 0)
+		if(sldns_buffer_limit(c->doq_socket->pkt_buf) == 0)
 			continue;
 
 		conn = NULL;
@@ -1734,7 +1734,8 @@ comm_point_doq_callback(int fd, short event, void* arg)
 /** create new doq server socket structure */
 static struct doq_server_socket*
 doq_server_socket_create(struct doq_table* table, struct ub_randstate* rnd,
-	const char* ssl_service_key, const char* ssl_service_pem)
+	const char* ssl_service_key, const char* ssl_service_pem,
+	struct comm_point* c)
 {
 	struct doq_server_socket* doq_socket;
 	doq_socket = calloc(1, sizeof(*doq_socket));
@@ -1778,6 +1779,18 @@ doq_server_socket_create(struct doq_table* table, struct ub_randstate* rnd,
 	}
 	doq_socket->idle_timeout = table->idle_timeout;
 	doq_socket->sv_scidlen = table->sv_scidlen;
+	doq_socket->cp = c;
+	doq_socket->pkt_buf = sldns_buffer_new(
+		sldns_buffer_capacity(c->buffer));
+	if(!doq_socket->pkt_buf) {
+		free(doq_socket->ssl_service_key);
+		free(doq_socket->ssl_service_pem);
+		free(doq_socket->ssl_verify_pem);
+		free(doq_socket->static_secret);
+		SSL_CTX_free(doq_socket->ctx);
+		free(doq_socket);
+		return NULL;
+	}
 	return doq_socket;
 }
 
@@ -1793,7 +1806,40 @@ doq_server_socket_delete(struct doq_server_socket* doq_socket)
 	free(doq_socket->ssl_service_key);
 	free(doq_socket->ssl_service_pem);
 	free(doq_socket->ssl_verify_pem);
+	sldns_buffer_free(doq_socket->pkt_buf);
 	free(doq_socket);
+}
+
+/** find repinfo in the doq table */
+static struct doq_conn*
+doq_lookup_repinfo(struct doq_table* table, struct comm_reply* repinfo)
+{
+	struct doq_conn* conn;
+	(void)conn;
+	(void)table;
+	(void)repinfo;
+	return NULL;
+}
+
+/** doq send a reply from a comm reply */
+static void
+doq_socket_send_reply(struct comm_reply* repinfo)
+{
+	log_assert(repinfo->c->type == comm_doq);
+	(void)repinfo;
+}
+
+/** doq drop a reply from a comm reply */
+static void
+doq_socket_drop_reply(struct comm_reply* repinfo)
+{
+	struct doq_conn* conn;
+	log_assert(repinfo->c->type == comm_doq);
+	if(repinfo->c->doq_socket->current_conn)
+		conn = repinfo->c->doq_socket->current_conn;
+	else conn = doq_lookup_repinfo(repinfo->c->doq_socket->table, repinfo);
+	if(!conn)
+		return; /* no such connection, drop is easy */
 }
 #endif /* HAVE_NGTCP2 */
 
@@ -4430,7 +4476,7 @@ comm_point_create_doq(struct comm_base *base, int fd, sldns_buffer* buffer,
 	c->cur_tcp_count = 0;
 	c->tcp_handlers = NULL;
 	c->tcp_free = NULL;
-	c->type = comm_udp;
+	c->type = comm_doq;
 	c->tcp_do_close = 0;
 	c->do_not_close = 0;
 	c->tcp_do_toggle_rw = 0;
@@ -4444,7 +4490,7 @@ comm_point_create_doq(struct comm_base *base, int fd, sldns_buffer* buffer,
 #endif
 #ifdef HAVE_NGTCP2
 	c->doq_socket = doq_server_socket_create(table, rnd, ssl_service_key,
-		ssl_service_pem);
+		ssl_service_pem, c);
 #endif
 	c->inuse = 0;
 	c->callback = callback;
@@ -5193,6 +5239,8 @@ comm_point_send_reply(struct comm_reply *repinfo)
 			comm_point_start_listening(repinfo->c, -1,
 				adjusted_tcp_timeout(repinfo->c));
 			return;
+		} else if(repinfo->c->doq_socket) {
+			doq_socket_send_reply(repinfo);
 		} else {
 			comm_point_start_listening(repinfo->c, -1,
 				adjusted_tcp_timeout(repinfo->c));
@@ -5219,6 +5267,9 @@ comm_point_drop_reply(struct comm_reply* repinfo)
 			return;
 		}
 		reclaim_http_handler(repinfo->c);
+		return;
+	} else if(repinfo->c->type == comm_doq) {
+		doq_socket_drop_reply(repinfo);
 		return;
 	}
 	reclaim_tcp_handler(repinfo->c);
