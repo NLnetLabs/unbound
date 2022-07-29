@@ -550,6 +550,10 @@ struct doq_conn {
 	uint32_t close_ecn;
 	/** the streams for this connection, of type doq_stream */
 	struct rbtree_type stream_tree;
+	/** the streams that want write, they have something to write.
+	 * The list is ordered, the last have to wait for the first to
+	 * get their data written. */
+	struct doq_stream* stream_write_first, *stream_write_last;
 };
 
 /**
@@ -597,6 +601,10 @@ struct doq_stream {
 	uint16_t outlen_wire;
 	/** the output packet bytes */
 	uint8_t* out;
+	/** if the stream is on the write list */
+	int on_write_list;
+	/** the prev and next on the write list, if on the list */
+	struct doq_stream* write_prev, *write_next;
 };
 
 /** doq application error code that is sent when a stream is closed */

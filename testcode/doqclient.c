@@ -184,6 +184,8 @@ static SSL_QUIC_METHOD quic_method;
 static void on_write(struct doq_client_data* data);
 /** update the timer */
 static void update_timer(struct doq_client_data* data);
+/** disconnect we are done */
+static void disconnect(struct doq_client_data* data);
 
 /** usage of doqclient */
 static void usage(char* argv[])
@@ -474,7 +476,7 @@ print_answer_rrs(uint8_t* pkt, size_t pktlen)
 		if(str_len == 0)
 			buf[sizeof(buf)-1] = 0;
 		else	*str = 0;
-		printf("%s\n", str);
+		printf("%s", buf);
 	}
 }
 
@@ -529,7 +531,7 @@ client_stream_data_complete(struct doq_client_stream* str)
 			sldns_buffer_limit(str->answer));
 		if(!s) verbose(1, "could not sldns_wire2str_pkt");
 		else verbose(1, "query %s received:\n%s", logs, s);
-		free(str);
+		free(s);
 		free(logs);
 	}
 	str->answer_is_complete = 1;
@@ -617,6 +619,9 @@ client_stream_recv_fin(struct doq_client_data* data,
 	}
 	str->query_is_done = 1;
 	client_stream_print_short(str);
+	if(data->query_list_send->first==NULL &&
+		data->query_list_receive->first==NULL)
+		disconnect(data);
 }
 
 /** fill a buffer with random data */
@@ -1750,6 +1755,8 @@ on_write(struct doq_client_data* data)
 		if(!send_blocked_pkt(data))
 			return;
 	}
+	if(ngtcp2_conn_is_in_closing_period(data->conn))
+		return;
 	if(!write_streams(data))
 		return;
 	update_timer(data);

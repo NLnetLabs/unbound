@@ -3485,6 +3485,39 @@ doq_stream_find(struct doq_conn* conn, int64_t stream_id)
 	return NULL;
 }
 
+/** doq put stream on the conn write list */
+static void
+doq_stream_on_write_list(struct doq_conn* conn, struct doq_stream* stream)
+{
+	if(stream->on_write_list)
+		return;
+	stream->write_prev = conn->stream_write_last;
+	if(conn->stream_write_last)
+		conn->stream_write_last->write_next = stream;
+	else
+		conn->stream_write_first = stream;
+	conn->stream_write_last = stream;
+	stream->write_next = NULL;
+	stream->on_write_list = 1;
+}
+
+/** doq remove stream from the conn write list */
+static void
+doq_stream_off_write_list(struct doq_conn* conn, struct doq_stream* stream)
+{
+	if(!stream->on_write_list)
+		return;
+	if(stream->write_next)
+		stream->write_next->write_prev = stream->write_prev;
+	else conn->stream_write_last = stream->write_prev;
+	if(stream->write_prev)
+		stream->write_prev->write_next = stream->write_next;
+	else conn->stream_write_first = stream->write_next;
+	stream->write_prev = NULL;
+	stream->write_next = NULL;
+	stream->on_write_list = 0;
+}
+
 int
 doq_stream_close(struct doq_conn* conn, struct doq_stream* stream)
 {
@@ -3501,6 +3534,7 @@ doq_stream_close(struct doq_conn* conn, struct doq_stream* stream)
 			(int)stream->stream_id, ngtcp2_strerror(ret));
 		return 0;
 	}
+	doq_stream_off_write_list(conn, stream);
 	return 1;
 }
 
@@ -3540,7 +3574,7 @@ doq_stream_send_reply(struct doq_conn* conn, struct doq_stream* stream,
 	}
 	if(!doq_stream_pickup_answer(stream, buf))
 		return 0;
-	(void)conn;
+	doq_stream_on_write_list(conn, stream);
 	return 1;
 }
 
@@ -4590,9 +4624,18 @@ doq_conn_recv(struct comm_point* c, struct doq_pkt_addr* paddr,
 	return 1;
 }
 
+/** doq stream write is done */
+static void
+doq_stream_write_is_done(struct doq_conn* conn, struct doq_stream* stream)
+{
+	/* Cannot deallocate, the buffer may be needed for resends. */
+	doq_stream_off_write_list(conn, stream);
+}
+
 int
 doq_conn_write_streams(struct comm_point* c, struct doq_conn* conn)
 {
+	struct doq_stream* stream = conn->stream_write_first;
 	ngtcp2_path_storage ps;
 	ngtcp2_tstamp ts = doq_get_timestamp_nanosec();
 	size_t num_packets = 0, max_packets = 65535;
@@ -4607,15 +4650,38 @@ doq_conn_write_streams(struct comm_point* c, struct doq_conn* conn)
 		ngtcp2_ssize ret, ndatalen = 0;
 		int fin;
 
-		/* no data to send */
-		verbose(VERB_ALGO, "doq: doq_conn write stream -1");
-		stream_id = -1;
-		fin = 0;
-		datav[0].base = NULL;
-		datav[0].len = 0;
-		datav_count = 1;
+		if(stream) {
+			/* data to send */
+			verbose(VERB_ALGO, "doq: doq_conn write stream %d",
+				(int)stream->stream_id);
+			stream_id = stream->stream_id;
+			fin = 1;
+			if(stream->nwrite < 2) {
+				datav[0].base = ((uint8_t*)&stream->
+					outlen_wire) + stream->nwrite;
+				datav[0].len = 2 - stream->nwrite;
+				datav[1].base = stream->out;
+				datav[1].len = stream->outlen;
+				datav_count = 2;
+			} else {
+				datav[0].base = stream->out +
+					(stream->nwrite-2);
+				datav[0].len = stream->outlen -
+					(stream->nwrite-2);
+				datav_count = 1;
+			}
+		} else {
+			/* no data to send */
+			verbose(VERB_ALGO, "doq: doq_conn write stream -1");
+			stream_id = -1;
+			fin = 0;
+			datav[0].base = NULL;
+			datav[0].len = 0;
+			datav_count = 1;
+		}
+
 		/* if more streams, set it to write more */
-		if(0)
+		if(stream && stream->write_next)
 			flags |= NGTCP2_WRITE_STREAM_FLAG_MORE;
 		if(fin)
 			flags |= NGTCP2_WRITE_STREAM_FLAG_FIN;
@@ -4628,6 +4694,14 @@ doq_conn_write_streams(struct comm_point* c, struct doq_conn* conn)
 		if(ret < 0) {
 			if(ret == NGTCP2_ERR_WRITE_MORE) {
 				verbose(VERB_ALGO, "doq: write more, ndatalen %d", (int)ndatalen);
+				if(stream) {
+					if(ndatalen >= 0)
+						stream->nwrite += ndatalen;
+					if(stream->nwrite >= stream->outlen+2)
+						doq_stream_write_is_done(
+							conn, stream);
+					stream = stream->write_next;
+				}
 				continue;
 			} else if(ret == NGTCP2_ERR_STREAM_DATA_BLOCKED) {
 				verbose(VERB_ALGO, "doq: ngtcp2_conn_writev_stream returned NGTCP2_ERR_STREAM_DATA_BLOCKED");
@@ -4648,6 +4722,11 @@ doq_conn_write_streams(struct comm_point* c, struct doq_conn* conn)
 		verbose(VERB_ALGO, "doq: writev_stream pkt size %d ndatawritten %d",
 			(int)ret, (int)ndatalen);
 
+		if(ndatalen >= 0 && stream) {
+			stream->nwrite += ndatalen;
+			if(stream->nwrite >= stream->outlen+2)
+				doq_stream_write_is_done(conn, stream);
+		}
 		if(ret == 0) {
 			/* congestion limited */
 			ngtcp2_conn_update_pkt_tx_time(conn->conn, ts);
@@ -4659,8 +4738,10 @@ doq_conn_write_streams(struct comm_point* c, struct doq_conn* conn)
 
 		if(++num_packets == max_packets)
 			break;
-		/* stream == NULL, so break, DEBUG */
-		break;
+		if(stream)
+			stream = stream->write_next;
+		if(stream == NULL)
+			break;
 	}
 	ngtcp2_conn_update_pkt_tx_time(conn->conn, ts);
 	return 1;
