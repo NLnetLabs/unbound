@@ -3357,24 +3357,23 @@ doq_repinfo_store_localaddr(struct comm_reply* repinfo,
 	memset(&repinfo->pktinfo, 0, sizeof(repinfo->pktinfo));
 	if(addr_is_ip6(localaddr, localaddrlen)) {
 #ifdef IPV6_PKTINFO
-		log_assert(localaddrlen <= sizeof(
-			repinfo->pktinfo.v6info.ipi6_addr));
+		struct sockaddr_in6* sa6 = (struct sockaddr_in6*)localaddr;
 		memmove(&repinfo->pktinfo.v6info.ipi6_addr,
-			localaddr, localaddrlen);
+			&sa6->sin6_addr, sizeof(struct in6_addr));
+		repinfo->doq_srcport = sa6->sin6_port;
 #endif
 		repinfo->srctype = 6;
 	} else {
 #ifdef IP_PKTINFO
-		log_assert(localaddrlen <= sizeof(
-			repinfo->pktinfo.v4info.ipi_addr));
+		struct sockaddr_in* sa = (struct sockaddr_in*)localaddr;
 		memmove(&repinfo->pktinfo.v4info.ipi_addr,
-			localaddr, localaddrlen);
+			&sa->sin_addr, sizeof(struct in_addr));
+		repinfo->doq_srcport = sa->sin_port;
 #elif defined(IP_RECVDSTADDR)
 		struct sockaddr_in* sa = (struct sockaddr_in*)localaddr;
-		log_assert(localaddrlen <= sizeof(repinfo->pktinfo.v4addr));
-		memmove(&repinfo->pktinfo.v4addr, sa->sin_addr,
+		memmove(&repinfo->pktinfo.v4addr, &sa->sin_addr,
 			sizeof(struct in_addr));
-		repinfo->doq_port = sa->sin_port;
+		repinfo->doq_srcport = sa->sin_port;
 #endif
 		repinfo->srctype = 4;
 	}
@@ -3387,15 +3386,23 @@ doq_repinfo_retrieve_localaddr(struct comm_reply* repinfo,
 {
 	if(repinfo->srctype == 6) {
 #ifdef IPV6_PKTINFO
+		struct sockaddr_in6* sa6 = (struct sockaddr_in6*)localaddr;
 		*localaddrlen = (socklen_t)sizeof(struct sockaddr_in6);
-		memmove(localaddr, &repinfo->pktinfo.v6info.ipi6_addr,
+		memset(sa6, 0, *localaddrlen);
+		sa6->sin6_family = AF_INET6;
+		memmove(&sa6->sin6_addr, &repinfo->pktinfo.v6info.ipi6_addr,
 			*localaddrlen);
+		sa6->sin6_port = repinfo->doq_srcport;
 #endif
 	} else {
 #ifdef IP_PKTINFO
+		struct sockaddr_in* sa = (struct sockaddr_in*)localaddr;
 		*localaddrlen = (socklen_t)sizeof(struct sockaddr_in);
-		memmove(localaddr, &repinfo->pktinfo.v4info.ipi_addr,
+		memset(sa, 0, *localaddrlen);
+		sa->sin_family = AF_INET;
+		memmove(&sa->sin_addr, &repinfo->pktinfo.v4info.ipi_addr,
 			*localaddrlen);
+		sa->sin_port = repinfo->doq_srcport;
 #elif defined(IP_RECVDSTADDR)
 		struct sockaddr_in* sa = (struct sockaddr_in*)localaddr;
 		*localaddrlen = (socklen_t)sizeof(struct sockaddr_in);
@@ -3403,7 +3410,7 @@ doq_repinfo_retrieve_localaddr(struct comm_reply* repinfo,
 		sa->sin_family = AF_INET;
 		memmove(&sa->sin_addr, &repinfo->pktinfo.v4addr,
 			sizeof(struct in_addr));
-		sa->sin_port = repinfo->doq_port;
+		sa->sin_port = repinfo->doq_srcport;
 #endif
 	}
 }
@@ -3418,15 +3425,13 @@ doq_conn_key_store_repinfo(struct doq_conn_key* key,
 	memmove(&repinfo->addr, &key->paddr.addr, repinfo->addrlen);
 	doq_repinfo_store_localaddr(repinfo, &key->paddr.localaddr,
 		key->paddr.localaddrlen);
-	if(key->dcidlen > sizeof(repinfo->doq_dcidlen))
+	if(key->dcidlen > sizeof(repinfo->doq_dcid))
 		return 0;
 	repinfo->doq_dcidlen = key->dcidlen;
 	memmove(repinfo->doq_dcid, key->dcid, key->dcidlen);
 	return 1;
 }
 
-/** doq read a connection key from repinfo. It is not malloced, but points
- * into the repinfo for the dcid. */
 void
 doq_conn_key_from_repinfo(struct doq_conn_key* key, struct comm_reply* repinfo)
 {
@@ -3467,8 +3472,7 @@ void doq_stream_delete(struct doq_stream* stream)
 	free(stream);
 }
 
-/** doq find a stream in the connection */
-static struct doq_stream*
+struct doq_stream*
 doq_stream_find(struct doq_conn* conn, int64_t stream_id)
 {
 	rbnode_type* node;
@@ -3481,11 +3485,12 @@ doq_stream_find(struct doq_conn* conn, int64_t stream_id)
 	return NULL;
 }
 
-/** doq shutdown the stream. */
-static int
+int
 doq_stream_close(struct doq_conn* conn, struct doq_stream* stream)
 {
 	int ret;
+	if(stream->is_closed)
+		return 1;
 	stream->is_closed = 1;
 	verbose(VERB_ALGO, "doq: shutdown stream_id %d with app_error_code %d",
 		(int)stream->stream_id, (int)DOQ_APP_ERROR_CODE);
@@ -3520,6 +3525,23 @@ doq_stream_pickup_answer(struct doq_stream* stream, struct sldns_buffer* buf)
 		log_err("doq could not send answer: out of memory");
 		return 0;
 	}
+	return 1;
+}
+
+int
+doq_stream_send_reply(struct doq_conn* conn, struct doq_stream* stream,
+	struct sldns_buffer* buf)
+{
+	if(verbosity >= VERB_ALGO) {
+		char* s = sldns_wire2str_pkt(sldns_buffer_begin(buf),
+			sldns_buffer_limit(buf));
+		verbose(VERB_ALGO, "doq stream %d response\n%s",
+			(int)stream->stream_id, (s?s:"null"));
+		free(s);
+	}
+	if(!doq_stream_pickup_answer(stream, buf))
+		return 0;
+	(void)conn;
 	return 1;
 }
 
@@ -3580,16 +3602,8 @@ doq_stream_data_complete(struct doq_conn* conn, struct doq_stream* stream)
 	fptr_ok(fptr_whitelist_comm_point(c->callback));
 	if( (*c->callback)(c, c->cb_arg, NETEVENT_NOERROR, &c->repinfo)) {
 		conn->doq_socket->current_conn = NULL;
-		if(verbosity >= VERB_ALGO) {
-			char* s2 = sldns_wire2str_pkt(sldns_buffer_begin(
-				c->buffer), sldns_buffer_limit(c->buffer));
-			verbose(VERB_ALGO, "doq stream %d response\n%s",
-				(int)stream->stream_id, (s2?s2:"null"));
-			free(s2);
-		}
-		if(!doq_stream_pickup_answer(stream, c->buffer)) {
-			verbose(VERB_ALGO, "doq: failed to pick up answer "
-				"buffer");
+		if(!doq_stream_send_reply(conn, stream, c->buffer)) {
+			verbose(VERB_ALGO, "doq: failed to send_reply");
 			return 0;
 		}
 		return 1;
@@ -3672,9 +3686,10 @@ doq_stream_recv_data(struct doq_stream* stream, const uint8_t* data,
 
 /** doq receive FIN for a stream. No more bytes are going to arrive. */
 static int
-doq_stream_recv_fin(struct doq_conn* conn, struct doq_stream* stream)
+doq_stream_recv_fin(struct doq_conn* conn, struct doq_stream* stream, int
+	recv_done)
 {
-	if(!stream->is_query_complete) {
+	if(!stream->is_query_complete && !recv_done) {
 		verbose(VERB_ALGO, "doq: stream recv FIN, but is "
 			"not complete, have %d of %d bytes",
 			((int)stream->nread)-2, (int)stream->inlen);
@@ -3873,7 +3888,7 @@ doq_recv_stream_data_cb(ngtcp2_conn* ATTR_UNUSED(conn), uint32_t flags,
 			return NGTCP2_ERR_CALLBACK_FAILURE;
 	}
 	if((flags&NGTCP2_STREAM_DATA_FLAG_FIN)!=0) {
-		if(!doq_stream_recv_fin(doq_conn, stream))
+		if(!doq_stream_recv_fin(doq_conn, stream, recv_done))
 			return NGTCP2_ERR_CALLBACK_FAILURE;
 	}
 	ngtcp2_conn_extend_max_stream_offset(doq_conn->conn, stream_id,

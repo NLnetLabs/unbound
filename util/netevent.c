@@ -1815,18 +1815,85 @@ static struct doq_conn*
 doq_lookup_repinfo(struct doq_table* table, struct comm_reply* repinfo)
 {
 	struct doq_conn* conn;
-	(void)conn;
-	(void)table;
-	(void)repinfo;
+	struct doq_conn_key key;
+	doq_conn_key_from_repinfo(&key, repinfo);
+	lock_rw_rdlock(&table->lock);
+	conn = doq_conn_find(table, &key.paddr.addr,
+		key.paddr.addrlen, &key.paddr.localaddr,
+		key.paddr.localaddrlen, key.paddr.ifindex, key.dcid,
+		key.dcidlen);
+	if(conn) {
+		lock_basic_lock(&conn->lock);
+		lock_rw_unlock(&table->lock);
+		return conn;
+	}
+	lock_rw_unlock(&table->lock);
 	return NULL;
+}
+
+/** doq find connection and stream. From inside callbacks from worker. */
+static int
+doq_lookup_conn_stream(struct comm_reply* repinfo, struct comm_point* c,
+	struct doq_conn** conn, struct doq_stream** stream)
+{
+	if(c->doq_socket->current_conn) {
+		*conn = c->doq_socket->current_conn;
+	} else {
+		*conn = doq_lookup_repinfo(c->doq_socket->table, repinfo);
+		if((*conn) && (*conn)->is_deleted) {
+			lock_basic_unlock(&(*conn)->lock);
+			*conn = NULL;
+		}
+		if(*conn) {
+			(*conn)->doq_socket = c->doq_socket;
+		}
+	}
+	if(!*conn) {
+		*stream = NULL;
+		return 0;
+	}
+	*stream = doq_stream_find(*conn, repinfo->doq_streamid);
+	if(!*stream) {
+		if(!c->doq_socket->current_conn) {
+			/* Not inside callbacks, we have our own lock on conn.
+			 * Release it. */
+			lock_basic_unlock(&(*conn)->lock);
+		}
+		return 0;
+	}
+	if((*stream)->is_closed) {
+		/* stream is closed, ignore reply or drop */
+		if(!c->doq_socket->current_conn) {
+			/* Not inside callbacks, we have our own lock on conn.
+			 * Release it. */
+			lock_basic_unlock(&(*conn)->lock);
+		}
+		return 0;
+	}
+	return 1;
 }
 
 /** doq send a reply from a comm reply */
 static void
 doq_socket_send_reply(struct comm_reply* repinfo)
 {
+	struct doq_conn* conn;
+	struct doq_stream* stream;
 	log_assert(repinfo->c->type == comm_doq);
-	(void)repinfo;
+	if(!doq_lookup_conn_stream(repinfo, repinfo->c, &conn, &stream)) {
+		verbose(VERB_ALGO, "doq: send_reply but %s is gone",
+			(conn?"stream":"connection"));
+		/* No stream, it may have been closed. */
+		/* Drop the reply, it cannot be sent. */
+		return;
+	}
+	if(!doq_stream_send_reply(conn, stream, repinfo->c->buffer))
+		doq_stream_close(conn, stream);
+	if(!repinfo->c->doq_socket->current_conn) {
+		/* Not inside callbacks, we have our own lock on conn.
+		 * Release it. */
+		lock_basic_unlock(&conn->lock);
+	}
 }
 
 /** doq drop a reply from a comm reply */
@@ -1834,12 +1901,20 @@ static void
 doq_socket_drop_reply(struct comm_reply* repinfo)
 {
 	struct doq_conn* conn;
+	struct doq_stream* stream;
 	log_assert(repinfo->c->type == comm_doq);
-	if(repinfo->c->doq_socket->current_conn)
-		conn = repinfo->c->doq_socket->current_conn;
-	else conn = doq_lookup_repinfo(repinfo->c->doq_socket->table, repinfo);
-	if(!conn)
-		return; /* no such connection, drop is easy */
+	if(!doq_lookup_conn_stream(repinfo, repinfo->c, &conn, &stream)) {
+		verbose(VERB_ALGO, "doq: drop_reply but %s is gone",
+			(conn?"stream":"connection"));
+		/* The connection or stream is already gone. */
+		return;
+	}
+	doq_stream_close(conn, stream);
+	if(!repinfo->c->doq_socket->current_conn) {
+		/* Not inside callbacks, we have our own lock on conn.
+		 * Release it. */
+		lock_basic_unlock(&conn->lock);
+	}
 }
 #endif /* HAVE_NGTCP2 */
 

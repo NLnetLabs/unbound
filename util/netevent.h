@@ -169,10 +169,8 @@ struct comm_reply {
 	size_t doq_dcidlen;
 	/** the doq stream id where the query came in on */
 	int64_t doq_streamid;
-#  ifndef IP_PKTINFO
 	/** port number for doq */
-	int doq_port
-#  endif
+	int doq_srcport;
 #endif /* HAVE_NGTCP2 */
 };
 

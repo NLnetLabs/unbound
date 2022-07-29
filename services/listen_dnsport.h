@@ -679,6 +679,21 @@ int doq_conn_send_close(struct comm_point* c, struct doq_conn* conn);
 
 /** delete doq stream */
 void doq_stream_delete(struct doq_stream* stream);
+
+/** doq read a connection key from repinfo. It is not malloced, but points
+ * into the repinfo for the dcid. */
+void doq_conn_key_from_repinfo(struct doq_conn_key* key,
+	struct comm_reply* repinfo);
+
+/** doq find a stream in the connection */
+struct doq_stream* doq_stream_find(struct doq_conn* conn, int64_t stream_id);
+
+/** doq shutdown the stream. */
+int doq_stream_close(struct doq_conn* conn, struct doq_stream* stream);
+
+/** send reply for a connection */
+int doq_stream_send_reply(struct doq_conn* conn, struct doq_stream* stream,
+	struct sldns_buffer* buf);
 #endif /* HAVE_NGTCP2 */
 
 char* set_ip_dscp(int socket, int addrfamily, int ds);
