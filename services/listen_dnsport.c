@@ -3516,9 +3516,8 @@ doq_stream_pickup_answer(struct doq_stream* stream, struct sldns_buffer* buf)
 	stream->nwrite = 0;
 	stream->outlen = sldns_buffer_limit(buf);
 	/* For quic the output bytes have to stay allocated and available,
-	 * for potential resends, until the remote and has acknowledged them.
-	 * This includes the tcplen start uint16_t, in outlen_wire.
-	 */
+	 * for potential resends, until the remote end has acknowledged them.
+	 * This includes the tcplen start uint16_t, in outlen_wire. */
 	stream->outlen_wire = htons(stream->outlen);
 	stream->out = memdup(sldns_buffer_begin(buf), sldns_buffer_limit(buf));
 	if(!stream->out) {
