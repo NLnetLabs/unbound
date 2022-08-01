@@ -135,6 +135,10 @@ struct doq_client_data {
 	const char* session_file;
 	/** if early data is enabled for the connection */
 	int early_data_enabled;
+	/** how quiet is the output */
+	int quiet;
+	/** the configured port for the destination */
+	int port;
 };
 
 /** the local client stream list, for appending streams to */
@@ -198,6 +202,7 @@ static void usage(char* argv[])
 	printf("-p		Port to connect to, default: %d\n",
 		UNBOUND_DNS_OVER_QUIC_PORT);
 	printf("-v 		verbose output\n");
+	printf("-q 		quiet, short output of answer\n");
 	printf("-x file		transport file, for read/write of transport parameters.\n\t\tIf it exists, it is used to send early data. It is then\n\t\twritten to contain the last used transport parameters.\n\t\tAlso -y must be enabled for early data to succeed.\n");
 	printf("-y file		session file, for read/write of TLS session. If it exists,\n\t\tit is used for TLS session resumption. It is then written\n\t\tto contain the last session used.\n\t\tOn its own, without also -x, resumes TLS session.\n");
 	printf("-h 		This help text\n");
@@ -518,6 +523,18 @@ client_stream_print_short(struct doq_client_stream* str)
 		sldns_buffer_limit(str->answer));
 }
 
+/** print the stream output answer */
+static void
+client_stream_print_long(struct doq_client_data* data,
+	struct doq_client_stream* str)
+{
+	char* s = sldns_wire2str_pkt(sldns_buffer_begin(str->answer),
+		sldns_buffer_limit(str->answer));
+	printf("%s", (s?s:";sldns_wire2str_pkt failed\n"));
+	printf(";; SERVER: %s %d\n", data->svr, data->port);
+	free(s);
+}
+
 /** the stream has completed the data */
 static void
 client_stream_data_complete(struct doq_client_stream* str)
@@ -618,7 +635,9 @@ client_stream_recv_fin(struct doq_client_data* data,
 		client_stream_answer_error(str);
 	}
 	str->query_is_done = 1;
-	client_stream_print_short(str);
+	if(data->quiet)
+		client_stream_print_short(str);
+	else client_stream_print_long(data, str);
 	if(data->query_list_send->first==NULL &&
 		data->query_list_receive->first==NULL)
 		disconnect(data);
@@ -1922,7 +1941,7 @@ early_data_start(struct doq_client_data* data)
 /** create doq_client_data */
 static struct doq_client_data*
 create_doq_client_data(const char* svr, int port, struct ub_event_base* base,
-	const char* transport_file, const char* session_file)
+	const char* transport_file, const char* session_file, int quiet)
 {
 	struct doq_client_data* data;
 	data = calloc(sizeof(*data), 1);
@@ -1932,6 +1951,8 @@ create_doq_client_data(const char* svr, int port, struct ub_event_base* base,
 	if(!data->rnd) fatal_exit("ub_initstate failed: out of memory");
 	data->svr = svr;
 	get_dest_addr(data, svr, port);
+	data->port = port;
+	data->quiet = quiet;
 	data->pkt_buf = sldns_buffer_new(65552);
 	if(!data->pkt_buf)
 		fatal_exit("sldns_buffer_new failed: out of memory");
@@ -2077,7 +2098,7 @@ client_enter_queries(struct doq_client_data* data, char** qs, int count)
 
 /** run the dohclient queries */
 static void run(const char* svr, int port, char** qs, int count,
-	const char* transport_file, const char* session_file)
+	const char* transport_file, const char* session_file, int quiet)
 {
 	time_t secs = 0;
 	struct timeval now;
@@ -2087,7 +2108,7 @@ static void run(const char* svr, int port, char** qs, int count,
 	/* setup */
 	base = create_event_base(&secs, &now);
 	data = create_doq_client_data(svr, port, base, transport_file,
-		session_file);
+		session_file, quiet);
 	client_enter_queries(data, qs, count);
 	if(data->early_data_enabled)
 		early_data_start(data);
@@ -2109,7 +2130,7 @@ extern char* optarg;
 int main(int ATTR_UNUSED(argc), char** ATTR_UNUSED(argv))
 {
 	int c;
-	int port = UNBOUND_DNS_OVER_QUIC_PORT;
+	int port = UNBOUND_DNS_OVER_QUIC_PORT, quiet = 0;
 	const char* svr = "127.0.0.1", *transport_file = NULL,
 		*session_file = NULL;
 #ifdef USE_WINSOCK
@@ -2122,7 +2143,7 @@ int main(int ATTR_UNUSED(argc), char** ATTR_UNUSED(argv))
 	checklock_start();
 	log_init(0, 0, 0);
 
-	while((c=getopt(argc, argv, "hp:s:vx:y:")) != -1) {
+	while((c=getopt(argc, argv, "hp:qs:vx:y:")) != -1) {
 		switch(c) {
 			case 'p':
 				if(atoi(optarg)==0 && strcmp(optarg,"0")!=0) {
@@ -2131,6 +2152,9 @@ int main(int ATTR_UNUSED(argc), char** ATTR_UNUSED(argv))
 					return 1;
 				}
 				port = atoi(optarg);
+				break;
+			case 'q':
+				quiet++;
 				break;
 			case 's':
 				svr = optarg;
@@ -2163,7 +2187,7 @@ int main(int ATTR_UNUSED(argc), char** ATTR_UNUSED(argv))
 		return 1;
 	}
 
-	run(svr, port, argv, argc, transport_file, session_file);
+	run(svr, port, argv, argc, transport_file, session_file, quiet);
 
 	checklock_stop();
 #ifdef USE_WINSOCK
