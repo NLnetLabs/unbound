@@ -1,3 +1,8 @@
+1 August 2022: Wouter
+	- Fix the novel ghost domain issues CVE-2022-30698 and CVE-2022-30699.
+	- Tests for ghost domain fixes.
+	- Tag for 1.16.2 release. The code repo continues with 1.16.3.
+
 19 July 2022: George
 	- Update documentation for 'outbound-msg-retry:'.
 
