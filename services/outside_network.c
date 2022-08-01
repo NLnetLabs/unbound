@@ -2545,8 +2545,10 @@ serviced_create(struct outside_network* outnet, sldns_buffer* buff, int dnssec,
 #ifdef UNBOUND_DEBUG
 	rbnode_type* ins;
 #endif
-	if(!sq) 
+	if(!sq) {
+		alloc_reg_release(alloc, region);
 		return NULL;
+	}
 	sq->node.key = sq;
 	sq->alloc = alloc;
 	sq->region = region;
@@ -3432,7 +3434,6 @@ outnet_serviced_query(struct outside_network* outnet,
 				infra_ratelimit_dec(env->infra_cache,
 					zone, zonelen, timenow);
 			}
-			alloc_reg_release(env->alloc, region);
 			return NULL;
 		}
 		if(!(cb = (struct service_callback*)regional_alloc(
