@@ -511,12 +511,14 @@ create_udp_sock(int family, int socktype, struct sockaddr* addr,
 		 * instead which is writable; IPV6_MTU is readonly there. */
 		if (setsockopt(s, IPPROTO_IPV6, IPV6_USER_MTU,
 			(void*)&mtu, (socklen_t)sizeof(mtu)) < 0) {
-			log_err("setsockopt(..., IPV6_USER_MTU, ...) failed: %s",
-				wsa_strerror(WSAGetLastError()));
-			sock_close(s);
-			*noproto = 0;
-			*inuse = 0;
-			return -1;
+			if (WSAGetLastError() != WSAENOPROTOOPT) {
+				log_err("setsockopt(..., IPV6_USER_MTU, ...) failed: %s",
+					wsa_strerror(WSAGetLastError()));
+				sock_close(s);
+				*noproto = 0;
+				*inuse = 0;
+				return -1;
+			}
 		}
 #   endif /* USE_WINSOCK */
 # endif /* IPv6 MTU */
