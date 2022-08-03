@@ -1820,7 +1820,14 @@ comm_point_doq_callback(int fd, short event, void* arg)
 				conn = doq_fetch_next_write(c, conn, 0);
 				continue;
 			}
-			verbose(VERB_ALGO, "doq write connection");
+			if(verbosity >= VERB_ALGO) {
+				char remotestr[256];
+				addr_to_str(&conn->key.paddr.addr,
+					conn->key.paddr.addrlen, remotestr,
+					sizeof(remotestr));
+				verbose(VERB_ALGO, "doq write connection %s",
+					remotestr);
+			}
 			if(doq_conn_write_streams(c, conn, &err_drop))
 				err_drop = 0;
 			verbose(VERB_ALGO, "doq write done, write interest is %d", conn->write_interest);
