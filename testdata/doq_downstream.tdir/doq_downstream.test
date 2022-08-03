@@ -18,7 +18,7 @@ if test "$?" -ne 0; then
 	echo "exit status not OK"
 	echo "> cat logfiles"
 	cat outfile
-	cat fwd.log 
+	cat fwd.log
 	cat unbound.log
 	echo "Not OK"
 	exit 1
@@ -29,11 +29,36 @@ else
 	echo "result contents not OK"
 	echo "> cat logfiles"
 	cat outfile
-	cat fwd.log 
+	cat fwd.log
 	cat unbound.log
 	echo "result contents not OK"
 	exit 1
 fi
 echo "OK"
 
+# test query that is resolved
+echo "> query www.example.com."
+$PRE/doqclient -s 127.0.0.1 -p $UNBOUND_PORT www.example.com. A IN >outfile 2>&1
+cat outfile
+if test "$?" -ne 0; then
+	echo "exit status not OK"
+	echo "> cat logfiles"
+	cat outfile
+	cat fwd.log
+	cat unbound.log
+	echo "Not OK"
+	exit 1
+fi
+if grep "www.example.com" outfile | grep "10.20.30.40"; then
+	echo "content OK"
+else
+	echo "result contents not OK"
+	echo "> cat logfiles"
+	cat outfile
+	cat fwd.log
+	cat unbound.log
+	echo "result contents not OK"
+	exit 1
+fi
+echo "OK"
 exit 0

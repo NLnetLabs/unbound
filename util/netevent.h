@@ -1019,6 +1019,8 @@ struct doq_server_socket {
 	/** the current doq connection when we are in callbacks to worker,
 	 * so that we have the already locked structure at our disposal. */
 	struct doq_conn* current_conn;
+	/** if the callback event on the fd has write flags */
+	int event_has_write;
 };
 
 /**

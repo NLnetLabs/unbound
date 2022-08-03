@@ -488,6 +488,9 @@ struct doq_table {
 	size_t static_secret_len;
 	/** the idle timeout in nanoseconds */
 	uint64_t idle_timeout;
+	/** the list of write interested connections, hold the doq_table.lock
+	 * to change them */
+	struct doq_conn* write_list_first, *write_list_last;
 };
 
 /** create doq table */
@@ -554,6 +557,12 @@ struct doq_conn {
 	 * The list is ordered, the last have to wait for the first to
 	 * get their data written. */
 	struct doq_stream* stream_write_first, *stream_write_last;
+	/** the conn has write interest if true, no write interest if false. */
+	int write_interest;
+	/** if the conn is on the connection write list */
+	int on_write_list;
+	/** the connection write list prev and next, if on the write list */
+	struct doq_conn* write_prev, *write_next;
 };
 
 /**
@@ -680,7 +689,8 @@ int doq_conn_recv(struct comm_point* c, struct doq_pkt_addr* paddr,
 	int* err_drop);
 
 /** send packets for a connection */
-int doq_conn_write_streams(struct comm_point* c, struct doq_conn* conn);
+int doq_conn_write_streams(struct comm_point* c, struct doq_conn* conn,
+	int* err_drop);
 
 /** send the close packet for the connection, perhaps again. */
 int doq_conn_send_close(struct comm_point* c, struct doq_conn* conn);
@@ -702,6 +712,19 @@ int doq_stream_close(struct doq_conn* conn, struct doq_stream* stream);
 /** send reply for a connection */
 int doq_stream_send_reply(struct doq_conn* conn, struct doq_stream* stream,
 	struct sldns_buffer* buf);
+
+/** the connection has write interest, wants to write packets */
+void doq_conn_write_enable(struct doq_conn* conn);
+
+/** the connection has no write interest, does not want to write packets */
+void doq_conn_write_disable(struct doq_conn* conn);
+
+/** set the connection on or off the write list, depending on write interest */
+void doq_conn_set_write_list(struct doq_table* table, struct doq_conn* conn);
+
+/** doq remove the connection from the write list */
+void doq_conn_write_list_remove(struct doq_table* table,
+	struct doq_conn* conn);
 #endif /* HAVE_NGTCP2 */
 
 char* set_ip_dscp(int socket, int addrfamily, int ds);

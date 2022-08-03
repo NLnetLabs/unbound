@@ -3219,6 +3219,8 @@ doq_table_delete(struct doq_table* table)
 		traverse_postorder(table->conid_tree, conid_tree_del, NULL);
 		free(table->conid_tree);
 	}
+	table->write_list_first = NULL;
+	table->write_list_last = NULL;
 	free(table);
 }
 
@@ -3537,6 +3539,7 @@ doq_stream_close(struct doq_conn* conn, struct doq_stream* stream)
 		return 0;
 	}
 	doq_stream_off_write_list(conn, stream);
+	doq_conn_write_enable(conn);
 	return 1;
 }
 
@@ -3577,6 +3580,7 @@ doq_stream_send_reply(struct doq_conn* conn, struct doq_stream* stream,
 	if(!doq_stream_pickup_answer(stream, buf))
 		return 0;
 	doq_stream_on_write_list(conn, stream);
+	doq_conn_write_enable(conn);
 	return 1;
 }
 
@@ -4274,6 +4278,7 @@ doq_conn_setup(struct doq_conn* conn, uint8_t* scid, size_t scidlen,
 		return 0;
 	}
 	ngtcp2_conn_set_tls_native_handle(conn->conn, conn->ssl);
+	doq_conn_write_enable(conn);
 	return 1;
 }
 
@@ -4489,8 +4494,10 @@ doq_conn_start_closing_period(struct comm_point* c, struct doq_conn* conn)
 		return 1;
 	if(ngtcp2_conn_is_in_closing_period(conn->conn))
 		return 1;
-	if(ngtcp2_conn_is_in_draining_period(conn->conn))
+	if(ngtcp2_conn_is_in_draining_period(conn->conn)) {
+		doq_conn_write_disable(conn);
 		return 1;
+	}
 	ngtcp2_path_storage_zero(&ps);
 	sldns_buffer_clear(c->doq_socket->pkt_buf);
 	/* the call to ngtcp2_conn_write_connection_close causes the
@@ -4538,6 +4545,7 @@ doq_conn_send_close(struct comm_point* c, struct doq_conn* conn)
 	sldns_buffer_flip(c->doq_socket->pkt_buf);
 	verbose(VERB_ALGO, "doq send connection close");
 	doq_send_pkt(c, &conn->key.paddr, conn->close_ecn);
+	doq_conn_write_disable(conn);
 	return 1;
 }
 
@@ -4551,8 +4559,11 @@ doq_conn_close_error(struct comm_point* c, struct doq_conn* conn)
 		return 0;
 	if(!doq_conn_start_closing_period(c, conn))
 		return 0;
-	if(ngtcp2_conn_is_in_draining_period(conn->conn))
+	if(ngtcp2_conn_is_in_draining_period(conn->conn)) {
+		doq_conn_write_disable(conn);
 		return 1;
+	}
+	doq_conn_write_enable(conn);
 	if(!doq_conn_send_close(c, conn))
 		return 0;
 	return 1;
@@ -4584,6 +4595,7 @@ doq_conn_recv(struct comm_point* c, struct doq_pkt_addr* paddr,
 		if(ret == NGTCP2_ERR_DRAINING) {
 			verbose(VERB_ALGO, "ngtcp2_conn_read_pkt returned %s",
 				ngtcp2_strerror(ret));
+			doq_conn_write_disable(conn);
 			return 0;
 		} else if(ret == NGTCP2_ERR_DROP_CONN) {
 			verbose(VERB_ALGO, "ngtcp2_conn_read_pkt returned %s",
@@ -4622,7 +4634,7 @@ doq_conn_recv(struct comm_point* c, struct doq_pkt_addr* paddr,
 		}
 		return 0;
 	}
-
+	doq_conn_write_enable(conn);
 	return 1;
 }
 
@@ -4635,7 +4647,8 @@ doq_stream_write_is_done(struct doq_conn* conn, struct doq_stream* stream)
 }
 
 int
-doq_conn_write_streams(struct comm_point* c, struct doq_conn* conn)
+doq_conn_write_streams(struct comm_point* c, struct doq_conn* conn,
+	int* err_drop)
 {
 	struct doq_stream* stream = conn->stream_write_first;
 	ngtcp2_path_storage ps;
@@ -4708,18 +4721,36 @@ doq_conn_write_streams(struct comm_point* c, struct doq_conn* conn)
 			} else if(ret == NGTCP2_ERR_STREAM_DATA_BLOCKED) {
 				verbose(VERB_ALGO, "doq: ngtcp2_conn_writev_stream returned NGTCP2_ERR_STREAM_DATA_BLOCKED");
 				ngtcp2_connection_close_error_set_application_error(&conn->last_error, -1, NULL, 0);
-				return doq_conn_close_error(c, conn);
+				if(err_drop)
+					*err_drop = 0;
+				if(!doq_conn_close_error(c, conn)) {
+					if(err_drop)
+						*err_drop = 1;
+				}
+				return 0;
 			} else if(ret == NGTCP2_ERR_STREAM_SHUT_WR) {
 				verbose(VERB_ALGO, "doq: ngtcp2_conn_writev_stream returned NGTCP2_ERR_STREAM_SHUT_WR");
 				ngtcp2_connection_close_error_set_application_error(&conn->last_error, -1, NULL, 0);
-				return doq_conn_close_error(c, conn);
+				if(err_drop)
+					*err_drop = 0;
+				if(!doq_conn_close_error(c, conn)) {
+					if(err_drop)
+						*err_drop = 1;
+				}
+				return 0;
 			}
 
 			log_err("doq: ngtcp2_conn_writev_stream failed: %s",
 				ngtcp2_strerror(ret));
 			ngtcp2_connection_close_error_set_transport_error_liberr(
 				&conn->last_error, ret, NULL, 0);
-			return doq_conn_close_error(c, conn);
+			if(err_drop)
+				*err_drop = 0;
+			if(!doq_conn_close_error(c, conn)) {
+				if(err_drop)
+					*err_drop = 1;
+			}
+			return 0;
 		}
 		verbose(VERB_ALGO, "doq: writev_stream pkt size %d ndatawritten %d",
 			(int)ret, (int)ndatalen);
@@ -4731,6 +4762,7 @@ doq_conn_write_streams(struct comm_point* c, struct doq_conn* conn)
 		}
 		if(ret == 0) {
 			/* congestion limited */
+			doq_conn_write_disable(conn);
 			ngtcp2_conn_update_pkt_tx_time(conn->conn, ts);
 			return 1;
 		}
@@ -4742,10 +4774,63 @@ doq_conn_write_streams(struct comm_point* c, struct doq_conn* conn)
 			break;
 		if(stream)
 			stream = stream->write_next;
-		if(stream == NULL)
-			break;
 	}
 	ngtcp2_conn_update_pkt_tx_time(conn->conn, ts);
 	return 1;
+}
+
+void
+doq_conn_write_enable(struct doq_conn* conn)
+{
+	conn->write_interest = 1;
+}
+
+void
+doq_conn_write_disable(struct doq_conn* conn)
+{
+	conn->write_interest = 0;
+}
+
+/** doq append the connection to the write list */
+static void
+doq_conn_write_list_append(struct doq_table* table, struct doq_conn* conn)
+{
+	if(conn->on_write_list)
+		return;
+	conn->write_prev = table->write_list_last;
+	if(table->write_list_last)
+		table->write_list_last->write_next = conn;
+	else table->write_list_first = conn;
+	conn->write_next = NULL;
+	table->write_list_last = conn;
+	conn->on_write_list = 1;
+}
+
+void
+doq_conn_write_list_remove(struct doq_table* table, struct doq_conn* conn)
+{
+	if(!conn->on_write_list)
+		return;
+	if(conn->write_next)
+		conn->write_next->write_prev = conn->write_prev;
+	else table->write_list_last = conn->write_prev;
+	if(conn->write_prev)
+		conn->write_prev->write_next = conn->write_next;
+	else table->write_list_first = conn->write_next;
+	conn->write_prev = NULL;
+	conn->write_next = NULL;
+	conn->on_write_list = 0;
+}
+
+void
+doq_conn_set_write_list(struct doq_table* table, struct doq_conn* conn)
+{
+	if(conn->write_interest && conn->on_write_list)
+		return;
+	if(!conn->write_interest && !conn->on_write_list)
+		return;
+	if(conn->write_interest)
+		doq_conn_write_list_append(table, conn);
+	else doq_conn_write_list_remove(table, conn);
 }
 #endif /* HAVE_NGTCP2 */
