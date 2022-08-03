@@ -1,3 +1,10 @@
+2 August 2022: Wouter
+	- Fix edns subnet so that scope 0 answers only match sourcemask 0
+	  queries for answers from cache if from a query with sourcemask 0.
+	- Fix unittest for edns subnet change.
+	- Merge #730 from luisdallos: Fix startup failure on Windows 8.1 due
+	  to unsupported IPV6_USER_MTU socket option being set.
+
 1 August 2022: Wouter
 	- Fix the novel ghost domain issues CVE-2022-30698 and CVE-2022-30699.
 	- Tests for ghost domain fixes.
