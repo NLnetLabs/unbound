@@ -1495,6 +1495,7 @@ doq_delete_connection(struct comm_point* c, struct doq_conn* conn)
 		return;
 	/* Copy the key and set it deleted. */
 	conn->is_deleted = 1;
+	doq_conn_write_disable(conn);
 	copy.key = conn->key;
 	log_assert(conn->key.dcidlen <= NGTCP2_MAX_CIDLEN);
 	memcpy(cid, conn->key.dcid, conn->key.dcidlen);
@@ -1685,81 +1686,50 @@ doq_done_with_conn_cb(struct comm_point* c, struct doq_conn* conn)
 	lock_rw_unlock(&c->doq_socket->table->lock);
 }
 
-/** doq fetch connection to write, if any */
-static struct doq_conn*
-doq_fetch_write_conn(struct comm_point* c)
+/** doq count the length of the write list */
+static size_t
+doq_write_list_length(struct comm_point* c)
 {
+	size_t count = 0;
 	struct doq_conn* conn;
 	lock_rw_rdlock(&c->doq_socket->table->lock);
 	conn = c->doq_socket->table->write_list_first;
-	while(conn && conn->is_deleted)
+	while(conn) {
+		count++;
 		conn = conn->write_next;
-	if(conn) {
-		lock_basic_lock(&conn->lock);
-		conn->doq_socket = c->doq_socket;
 	}
 	lock_rw_unlock(&c->doq_socket->table->lock);
+	return count;
+}
+
+/** doq pop the first element from the write list to have write events */
+static struct doq_conn*
+doq_pop_write_conn(struct comm_point* c)
+{
+	struct doq_conn* conn;
+	lock_rw_wrlock(&c->doq_socket->table->lock);
+	conn = doq_table_pop_first(c->doq_socket->table);
+	while(conn && conn->is_deleted)
+		conn = doq_table_pop_first(c->doq_socket->table);
+	if(conn) {
+		lock_basic_lock(&conn->lock);
+	}
+	lock_rw_unlock(&c->doq_socket->table->lock);
+	if(conn)
+		conn->doq_socket = c->doq_socket;
 	return conn;
 }
 
-/** doq fetch the next connection to write, if new are appended at the end
- * of the list we pick them up, but if the write interest stays we are done
- * and move on to the next one */
-static struct doq_conn*
-doq_fetch_next_write(struct comm_point* c, struct doq_conn* prev_conn,
+/** doq the connection is done with write callbacks, release it. */
+static void
+doq_done_with_write_cb(struct comm_point* c, struct doq_conn* conn,
 	int delete_it)
 {
-	struct doq_conn copy;
-	uint8_t cid[NGTCP2_MAX_CIDLEN];
-	rbnode_type* node;
-	struct doq_conn* next_conn, *del_conn=NULL;
-
-	/* release the conn and pick it up again so we hold table.lock */
-	prev_conn->doq_socket = NULL;
-	if(delete_it)
-		prev_conn->is_deleted = 1;
-
-	copy.key = prev_conn->key;
-	log_assert(prev_conn->key.dcidlen <= NGTCP2_MAX_CIDLEN);
-	memcpy(cid, prev_conn->key.dcid, prev_conn->key.dcidlen);
-	copy.key.dcid = cid;
-	copy.node.key = &copy;
-	lock_basic_unlock(&prev_conn->lock);
-
-	lock_rw_wrlock(&c->doq_socket->table->lock);
 	if(delete_it) {
-		/* Delete the node, after picking up the next write
-		 * element. Remove it from the tree already. */
-		node = rbtree_delete(c->doq_socket->table->conn_tree,
-			copy.node.key);
-		if(node) {
-			del_conn = (struct doq_conn*)node->key;
-			lock_basic_lock(&del_conn->lock);
-			doq_conn_write_list_remove(c->doq_socket->table,
-				del_conn);
-		}
-	} else {
-		node = rbtree_search(c->doq_socket->table->conn_tree,
-			copy.node.key);
+		doq_delete_connection(c, conn);
+		return;
 	}
-	if(!node) {
-		next_conn = NULL;
-	} else {
-		struct doq_conn* conn = (struct doq_conn*)node->key;
-		doq_conn_set_write_list(c->doq_socket->table, conn);
-		next_conn = conn->write_next;
-		while(next_conn && next_conn->is_deleted)
-			next_conn = next_conn->write_next;
-		if(next_conn) {
-			lock_basic_lock(&next_conn->lock);
-		}
-	}
-	lock_rw_unlock(&c->doq_socket->table->lock);
-	if(del_conn)
-		doq_conn_delete(del_conn);
-	if(next_conn)
-		next_conn->doq_socket = c->doq_socket;
-	return next_conn;
+	doq_done_with_conn_cb(c, conn);
 }
 
 /** see if the doq socket wants to write packets */
@@ -1804,37 +1774,48 @@ comm_point_doq_callback(int fd, short event, void* arg)
 	int i, pkt_continue, err_drop;
 	struct doq_conn* conn;
 	struct ngtcp2_pkt_info pi;
+	size_t count, num_len;
 
 	c = (struct comm_point*)arg;
 	log_assert(c->type == comm_doq);
 
 	log_assert(c && c->doq_socket->pkt_buf && c->fd == fd);
 	ub_comm_base_now(c->ev->base);
-	if((event&UB_EV_WRITE)!=0) {
-		/* see if there is write interest */
-		conn = doq_fetch_write_conn(c);
-		while(conn) {
-			if(conn->is_deleted ||
-				ngtcp2_conn_is_in_closing_period(conn->conn) ||
-				ngtcp2_conn_is_in_draining_period(conn->conn)) {
-				conn = doq_fetch_next_write(c, conn, 0);
-				continue;
-			}
-			if(verbosity >= VERB_ALGO) {
-				char remotestr[256];
-				addr_to_str(&conn->key.paddr.addr,
-					conn->key.paddr.addrlen, remotestr,
-					sizeof(remotestr));
-				verbose(VERB_ALGO, "doq write connection %s %d",
-					remotestr, doq_sockaddr_get_port(
-					&conn->key.paddr.addr));
-			}
-			if(doq_conn_write_streams(c, conn, &err_drop))
-				err_drop = 0;
-			verbose(VERB_ALGO, "doq write done, write interest is %d", conn->write_interest);
-			conn = doq_fetch_next_write(c, conn, err_drop);
+
+	/* see if there is write interest */
+	count = 0;
+	num_len = doq_write_list_length(c);
+	while((conn = doq_pop_write_conn(c)) != NULL) {
+		if(conn->is_deleted ||
+			ngtcp2_conn_is_in_closing_period(conn->conn) ||
+			ngtcp2_conn_is_in_draining_period(conn->conn)) {
+			conn->doq_socket = NULL;
+			lock_basic_unlock(&conn->lock);
+			if(++count > num_len*2)
+				break;
+			continue;
 		}
+		if(verbosity >= VERB_ALGO) {
+			char remotestr[256];
+			addr_to_str(&conn->key.paddr.addr,
+				conn->key.paddr.addrlen, remotestr,
+				sizeof(remotestr));
+			verbose(VERB_ALGO, "doq write connection %s %d",
+				remotestr, doq_sockaddr_get_port(
+				&conn->key.paddr.addr));
+		}
+		if(doq_conn_write_streams(c, conn, &err_drop))
+			err_drop = 0;
+		doq_done_with_write_cb(c, conn, err_drop);
+		/* Stop overly long write lists that are created
+		 * while we are processing. Do those next time there
+		 * is a write callback. Stops long loops, and keeps
+		 * fair for other events. */
+		if(++count > num_len*2)
+			break;
 	}
+
+	/* check for data to read */
 	if((event&UB_EV_READ)!=0)
 	  for(i=0; i<NUM_UDP_PER_SELECT; i++) {
 		sldns_buffer_clear(c->doq_socket->pkt_buf);

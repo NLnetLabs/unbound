@@ -725,6 +725,9 @@ void doq_conn_set_write_list(struct doq_table* table, struct doq_conn* conn);
 /** doq remove the connection from the write list */
 void doq_conn_write_list_remove(struct doq_table* table,
 	struct doq_conn* conn);
+
+/** doq get the first conn from the write list, if any, popped from list. */
+struct doq_conn* doq_table_pop_first(struct doq_table* table);
 #endif /* HAVE_NGTCP2 */
 
 char* set_ip_dscp(int socket, int addrfamily, int ds);

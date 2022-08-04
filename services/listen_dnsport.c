@@ -4833,4 +4833,20 @@ doq_conn_set_write_list(struct doq_table* table, struct doq_conn* conn)
 		doq_conn_write_list_append(table, conn);
 	else doq_conn_write_list_remove(table, conn);
 }
+
+struct doq_conn*
+doq_table_pop_first(struct doq_table* table)
+{
+	struct doq_conn* conn = table->write_list_first;
+	if(!conn)
+		return NULL;
+	table->write_list_first = conn->write_next;
+	if(conn->write_next)
+		conn->write_next->write_prev = NULL;
+	else table->write_list_last = NULL;
+	conn->write_next = NULL;
+	conn->write_prev = NULL;
+	conn->on_write_list = 0;
+	return conn;
+}
 #endif /* HAVE_NGTCP2 */
