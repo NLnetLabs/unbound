@@ -1825,8 +1825,9 @@ comm_point_doq_callback(int fd, short event, void* arg)
 				addr_to_str(&conn->key.paddr.addr,
 					conn->key.paddr.addrlen, remotestr,
 					sizeof(remotestr));
-				verbose(VERB_ALGO, "doq write connection %s",
-					remotestr);
+				verbose(VERB_ALGO, "doq write connection %s %d",
+					remotestr, doq_sockaddr_get_port(
+					&conn->key.paddr.addr));
 			}
 			if(doq_conn_write_streams(c, conn, &err_drop))
 				err_drop = 0;
