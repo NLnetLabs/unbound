@@ -1040,7 +1040,7 @@ int infra_ratelimit_exceeded(struct infra_cache* infra, uint8_t* name,
 	max = infra_rate_max(entry->data, timenow, backoff);
 	lock_rw_unlock(&entry->lock);
 
-	return (max >= lim);
+	return (max > lim);
 }
 
 size_t 
@@ -1073,7 +1073,7 @@ int infra_ip_ratelimit_inc(struct infra_cache* infra,
 		max = infra_rate_max(entry->data, timenow, backoff);
 		lock_rw_unlock(&entry->lock);
 
-		if(premax < infra_ip_ratelimit && max >= infra_ip_ratelimit) {
+		if(premax <= infra_ip_ratelimit && max > infra_ip_ratelimit) {
 			char client_ip[128], qnm[LDNS_MAX_DOMAINLEN+1+12+12];
 			addr_to_str((struct sockaddr_storage *)&repinfo->addr,
 				repinfo->addrlen, client_ip, sizeof(client_ip));

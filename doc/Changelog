@@ -1,3 +1,7 @@
+4 August 2022: Wouter
+	- Fix ratelimit inconsistency, for ip-ratelimits the value is the
+	  amount allowed, like for ratelimits.
+
 2 August 2022: Wouter
 	- Fix edns subnet so that scope 0 answers only match sourcemask 0
 	  queries for answers from cache if from a query with sourcemask 0.
