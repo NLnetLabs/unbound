@@ -1262,6 +1262,8 @@ struct config_parser_state {
 	struct config_file* cfg;
 	/** the current chroot dir (or NULL if none) */
 	const char* chroot;
+	/** if we are started in a toplevel, or not, after a force_toplevel */
+	int started_toplevel;
 };
 
 /** global config parser object used during config parsing */

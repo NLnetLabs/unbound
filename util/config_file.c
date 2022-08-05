@@ -1302,6 +1302,7 @@ create_cfg_parser(struct config_file* cfg, char* filename, const char* chroot)
 	cfg_parser->errors = 0;
 	cfg_parser->cfg = cfg;
 	cfg_parser->chroot = chroot;
+	cfg_parser->started_toplevel = 0;
 	init_cfg_parse();
 }
 
@@ -1800,6 +1801,9 @@ void ub_c_error_msg(const char* fmt, ...)
 void ub_c_error(const char *str)
 {
 	cfg_parser->errors++;
+	if(strcmp(str, "syntax error")==0 && cfg_parser->started_toplevel ==0)
+		str = "syntax error, is there no section start after an "
+			"include-toplevel directive perhaps.";
 	fprintf(stderr, "%s:%d: error: %s\n", cfg_parser->filename,
 		cfg_parser->line, str);
 }
