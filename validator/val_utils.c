@@ -458,7 +458,7 @@ verify_dnskeys_with_ds_rr(struct module_env* env, struct val_env* ve,
 		}
 		/* If it didn't validate with the DNSKEY, try the next one! */
 	}
-	if(numsizesupp != 0) {
+	if(numsizesupp != 0 || sec == sec_status_indeterminate) {
 		/* there is a working DS, but that DNSKEY is not supported */
 		return sec_status_insecure;
 	}
@@ -489,7 +489,6 @@ int val_favorite_ds_algo(struct ub_packed_rrset_key* ds_rrset)
 	return digest_algo;
 }
 
-// @TODO change the use of this function to _ede function in authzone.c:8111
 enum sec_status
 val_verify_DNSKEY_with_DS(struct module_env* env, struct val_env* ve,
 	struct ub_packed_rrset_key* dnskey_rrset,

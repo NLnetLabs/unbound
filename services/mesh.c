@@ -811,7 +811,8 @@ static void mesh_schedule_prefetch_subnet(struct mesh_area* mesh,
 			log_err("prefetch_subnet subnet_option_from_ss: invalid data");
 			return;
 		}
-		subnet_ecs_opt_list_append(&ecs, &s->s.edns_opts_front_in, &s->s);
+		subnet_ecs_opt_list_append(&ecs, &s->s.edns_opts_front_in,
+			&s->s, s->s.region);
 		if(!s->s.edns_opts_front_in) {
 			log_err("prefetch_subnet subnet_ecs_opt_list_append: out of memory");
 			return;
@@ -953,6 +954,7 @@ mesh_state_create(struct module_env* env, struct query_info* qinfo,
 	mstate->s.no_cache_store = 0;
 	mstate->s.need_refetch = 0;
 	mstate->s.was_ratelimited = 0;
+	mstate->s.qstarttime = *env->now;
 
 	/* init modules */
 	for(i=0; i<env->mesh->mods.num; i++) {

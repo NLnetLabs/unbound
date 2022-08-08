@@ -60,6 +60,9 @@ struct rbtree_type;
 /** max number of nxdomains allowed for target lookups for a query and
  * its subqueries */
 #define MAX_TARGET_NX		5
+/** max number of nxdomains allowed for target lookups for a query and
+ * its subqueries when fallback has kicked in */
+#define MAX_TARGET_NX_FALLBACK	(MAX_TARGET_NX*2)
 /** max number of query restarts. Determines max number of CNAME chain. */
 #define MAX_RESTART_COUNT	11
 /** max number of referrals. Makes sure resolver does not run away */
@@ -91,15 +94,17 @@ struct rbtree_type;
 extern int UNKNOWN_SERVER_NICENESS;
 /** maximum timeout before a host is deemed unsuitable, in msec. 
  * After host_ttl this will be timed out and the host will be tried again. 
- * Equals RTT_MAX_TIMEOUT
- */
-#define USEFUL_SERVER_TOP_TIMEOUT	120000
+ * Equals RTT_MAX_TIMEOUT, and thus when RTT_MAX_TIMEOUT is overwritten by
+ * config infra_cache_max_rtt, it will be overwritten as well. */
+extern int USEFUL_SERVER_TOP_TIMEOUT;
+/** penalty to validation failed blacklisted IPs
+ * Equals USEFUL_SERVER_TOP_TIMEOUT*4, and thus when RTT_MAX_TIMEOUT is
+ * overwritten by config infra_cache_max_rtt, it will be overwritten as well. */
+extern int BLACKLIST_PENALTY;
 /** RTT band, within this amount from the best, servers are chosen randomly.
  * Chosen so that the UNKNOWN_SERVER_NICENESS falls within the band of a 
  * fast server, this causes server exploration as a side benefit. msec. */
 #define RTT_BAND 400
-/** Start value for blacklisting a host, 2*USEFUL_SERVER_TOP_TIMEOUT in sec */
-#define INFRA_BACKOFF_INITIAL 240
 
 /**
  * Global state for the iterator. 
@@ -218,6 +223,21 @@ enum iter_state {
 };
 
 /**
+ * Shared counters for queries.
+ */
+enum target_count_variables {
+	/** Reference count for the shared iter_qstate->target_count. */
+	TARGET_COUNT_REF = 0,
+	/** Number of target queries spawned for the query and subqueries. */
+	TARGET_COUNT_QUERIES,
+	/** Number of nxdomain responses encountered. */
+	TARGET_COUNT_NX,
+
+	/** This should stay last here, it is used for the allocation */
+	TARGET_COUNT_MAX,
+};
+
+/**
  * Per query state for the iterator module.
  */
 struct iter_qstate {
@@ -310,14 +330,19 @@ struct iter_qstate {
 	/** number of queries fired off */
 	int sent_count;
 	
-	/** number of target queries spawned in [1], for this query and its
-	 * subqueries, the malloced-array is shared, [0] refcount.
-	 * in [2] the number of nxdomains is counted. */
+	/** malloced-array shared with this query and its subqueries. It keeps
+	 * track of the defined enum target_count_variables counters. */
 	int* target_count;
 
 	/** number of target lookups per delegation point. Reset to 0 after
 	 * receiving referral answer. Not shared with subqueries. */
 	int dp_target_count;
+
+	/** Delegation point that triggered the NXNS fallback; shared with
+	 * this query and its subqueries, count-referenced by the reference
+	 * counter in target_count.
+	 * This also marks the fallback activation. */
+	uint8_t** nxns_dp;
 
 	/** if true, already tested for ratelimiting and passed the test */
 	int ratelimit_ok;

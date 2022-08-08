@@ -861,13 +861,13 @@ infra_get_lame_rtt(struct infra_cache* infra,
 			else	*rtt = USEFUL_SERVER_TOP_TIMEOUT-1000;
 		}
 	}
+	/* expired entry */
 	if(timenow > host->ttl) {
-		/* expired entry */
+
 		/* see if this can be a re-probe of an unresponsive server */
 		/* minus 1000 because that is outside of the RTTBAND, so
 		 * blacklisted servers stay blacklisted if this is chosen */
-		if(host->rtt.rto >= USEFUL_SERVER_TOP_TIMEOUT ||
-			infra->infra_keep_probing) {
+		if(host->rtt.rto >= USEFUL_SERVER_TOP_TIMEOUT) {
 			lock_rw_unlock(&e->lock);
 			*rtt = USEFUL_SERVER_TOP_TIMEOUT-1000;
 			*lame = 0;
@@ -1180,7 +1180,7 @@ int infra_ratelimit_exceeded(struct infra_cache* infra, uint8_t* name,
 	max = infra_rate_max(entry->data, timenow, backoff);
 	lock_rw_unlock(&entry->lock);
 
-	return (max >= lim);
+	return (max > lim);
 }
 
 size_t 
@@ -1213,7 +1213,7 @@ int infra_ip_ratelimit_inc(struct infra_cache* infra,
 		max = infra_rate_max(entry->data, timenow, backoff);
 		lock_rw_unlock(&entry->lock);
 
-		if(premax < infra_ip_ratelimit && max >= infra_ip_ratelimit) {
+		if(premax <= infra_ip_ratelimit && max > infra_ip_ratelimit) {
 			char client_ip[128], qnm[LDNS_MAX_DOMAINLEN+1+12+12];
 			addr_to_str((struct sockaddr_storage *)&repinfo->addr,
 				repinfo->addrlen, client_ip, sizeof(client_ip));

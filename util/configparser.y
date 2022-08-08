@@ -120,7 +120,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_STUB_FIRST VAR_MINIMAL_RESPONSES VAR_RRSET_ROUNDROBIN
 %token VAR_MAX_UDP_SIZE VAR_DELAY_CLOSE VAR_UDP_CONNECT
 %token VAR_UNBLOCK_LAN_ZONES VAR_INSECURE_LAN_ZONES
-%token VAR_INFRA_CACHE_MIN_RTT VAR_INFRA_KEEP_PROBING
+%token VAR_INFRA_CACHE_MIN_RTT VAR_INFRA_CACHE_MAX_RTT VAR_INFRA_KEEP_PROBING
 %token VAR_DNS64_PREFIX VAR_DNS64_SYNTHALL VAR_DNS64_IGNORE_AAAA
 %token VAR_DNSTAP VAR_DNSTAP_ENABLE VAR_DNSTAP_SOCKET_PATH VAR_DNSTAP_IP
 %token VAR_DNSTAP_TLS VAR_DNSTAP_TLS_SERVER_NAME VAR_DNSTAP_TLS_CERT_BUNDLE
@@ -205,12 +205,14 @@ toplevelvar: serverstart contents_server | stubstart contents_stub |
 force_toplevel: VAR_FORCE_TOPLEVEL
 	{
 		OUTYY(("\nP(force-toplevel)\n"));
+		cfg_parser->started_toplevel = 0;
 	}
 	;
 /* server: declaration */
 serverstart: VAR_SERVER
 	{
 		OUTYY(("\nP(server:)\n"));
+		cfg_parser->started_toplevel = 1;
 	}
 	;
 contents_server: contents_server content_server
@@ -268,7 +270,7 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_so_reuseport | server_delay_close | server_udp_connect |
 	server_unblock_lan_zones | server_insecure_lan_zones |
 	server_dns64_prefix | server_dns64_synthall | server_dns64_ignore_aaaa |
-	server_infra_cache_min_rtt | server_harden_algo_downgrade |
+	server_infra_cache_min_rtt | server_infra_cache_max_rtt | server_harden_algo_downgrade |
 	server_ip_transparent | server_ip_ratelimit | server_ratelimit |
 	server_ip_dscp | server_infra_keep_probing |
 	server_ip_ratelimit_slabs | server_ratelimit_slabs |
@@ -321,6 +323,7 @@ stubstart: VAR_STUB_ZONE
 	{
 		struct config_stub* s;
 		OUTYY(("\nP(stub_zone:)\n"));
+		cfg_parser->started_toplevel = 1;
 		s = (struct config_stub*)calloc(1, sizeof(struct config_stub));
 		if(s) {
 			s->next = cfg_parser->cfg->stubs;
@@ -339,6 +342,7 @@ forwardstart: VAR_FORWARD_ZONE
 	{
 		struct config_stub* s;
 		OUTYY(("\nP(forward_zone:)\n"));
+		cfg_parser->started_toplevel = 1;
 		s = (struct config_stub*)calloc(1, sizeof(struct config_stub));
 		if(s) {
 			s->next = cfg_parser->cfg->forwards;
@@ -357,6 +361,7 @@ viewstart: VAR_VIEW
 	{
 		struct config_view* s;
 		OUTYY(("\nP(view:)\n"));
+		cfg_parser->started_toplevel = 1;
 		s = (struct config_view*)calloc(1, sizeof(struct config_view));
 		if(s) {
 			s->next = cfg_parser->cfg->views;
@@ -377,6 +382,7 @@ authstart: VAR_AUTH_ZONE
 	{
 		struct config_auth* s;
 		OUTYY(("\nP(auth_zone:)\n"));
+		cfg_parser->started_toplevel = 1;
 		s = (struct config_auth*)calloc(1, sizeof(struct config_auth));
 		if(s) {
 			s->next = cfg_parser->cfg->auths;
@@ -475,6 +481,7 @@ rpzstart: VAR_RPZ
 	{
 		struct config_auth* s;
 		OUTYY(("\nP(rpz:)\n")); 
+		cfg_parser->started_toplevel = 1;
 		s = (struct config_auth*)calloc(1, sizeof(struct config_auth));
 		if(s) {
 			s->next = cfg_parser->cfg->auths;
@@ -1657,6 +1664,15 @@ server_infra_cache_min_rtt: VAR_INFRA_CACHE_MIN_RTT STRING_ARG
 		if(atoi($2) == 0 && strcmp($2, "0") != 0)
 			yyerror("number expected");
 		else cfg_parser->cfg->infra_cache_min_rtt = atoi($2);
+		free($2);
+	}
+	;
+server_infra_cache_max_rtt: VAR_INFRA_CACHE_MAX_RTT STRING_ARG
+	{
+		OUTYY(("P(server_infra_cache_max_rtt:%s)\n", $2));
+		if(atoi($2) == 0 && strcmp($2, "0") != 0)
+			yyerror("number expected");
+		else cfg_parser->cfg->infra_cache_max_rtt = atoi($2);
 		free($2);
 	}
 	;
@@ -3103,6 +3119,7 @@ view_first: VAR_VIEW_FIRST STRING_ARG
 rcstart: VAR_REMOTE_CONTROL
 	{
 		OUTYY(("\nP(remote-control:)\n"));
+		cfg_parser->started_toplevel = 1;
 	}
 	;
 contents_rc: contents_rc content_rc
@@ -3175,6 +3192,7 @@ rc_control_cert_file: VAR_CONTROL_CERT_FILE STRING_ARG
 dtstart: VAR_DNSTAP
 	{
 		OUTYY(("\nP(dnstap:)\n"));
+		cfg_parser->started_toplevel = 1;
 	}
 	;
 contents_dt: contents_dt content_dt
@@ -3357,6 +3375,7 @@ dt_dnstap_log_forwarder_response_messages: VAR_DNSTAP_LOG_FORWARDER_RESPONSE_MES
 pythonstart: VAR_PYTHON
 	{
 		OUTYY(("\nP(python:)\n"));
+		cfg_parser->started_toplevel = 1;
 	}
 	;
 contents_py: contents_py content_py
@@ -3372,6 +3391,7 @@ py_script: VAR_PYTHON_SCRIPT STRING_ARG
 dynlibstart: VAR_DYNLIB
 	{ 
 		OUTYY(("\nP(dynlib:)\n")); 
+		cfg_parser->started_toplevel = 1;
 	}
 	;
 contents_dl: contents_dl content_dl
@@ -3421,6 +3441,7 @@ server_response_ip_data: VAR_RESPONSE_IP_DATA STRING_ARG STRING_ARG
 dnscstart: VAR_DNSCRYPT
 	{
 		OUTYY(("\nP(dnscrypt:)\n"));
+		cfg_parser->started_toplevel = 1;
 	}
 	;
 contents_dnsc: contents_dnsc content_dnsc
@@ -3530,6 +3551,7 @@ dnsc_dnscrypt_nonce_cache_slabs: VAR_DNSCRYPT_NONCE_CACHE_SLABS STRING_ARG
 cachedbstart: VAR_CACHEDB
 	{
 		OUTYY(("\nP(cachedb:)\n"));
+		cfg_parser->started_toplevel = 1;
 	}
 	;
 contents_cachedb: contents_cachedb content_cachedb
@@ -3629,6 +3651,7 @@ server_tcp_connection_limit: VAR_TCP_CONNECTION_LIMIT STRING_ARG STRING_ARG
 	ipsetstart: VAR_IPSET
 		{
 			OUTYY(("\nP(ipset:)\n"));
+			cfg_parser->started_toplevel = 1;
 		}
 		;
 	contents_ipset: contents_ipset content_ipset

@@ -70,8 +70,6 @@
 
 /** time when nameserver glue is said to be 'recent' */
 #define SUSPICION_RECENT_EXPIRY 86400
-/** penalty to validation failed blacklisted IPs */
-#define BLACKLIST_PENALTY (USEFUL_SERVER_TOP_TIMEOUT*4)
 
 /** fillup fetch policy array */
 static void
@@ -367,6 +365,7 @@ iter_filter_order(struct iter_env* iter_env, struct module_env* env,
 	struct sock_list* blacklist, time_t prefetch)
 {
 	int got_num = 0, low_rtt = 0, swap_to_front, rtt_band = RTT_BAND, nth;
+	int alllame = 0;
 	size_t num_results;
 	struct delegpt_addr* a, *n, *prev=NULL;
 
@@ -376,7 +375,10 @@ iter_filter_order(struct iter_env* iter_env, struct module_env* env,
 	if(got_num == 0)
 		return 0;
 	if(low_rtt >= USEFUL_SERVER_TOP_TIMEOUT &&
-		(delegpt_count_missing_targets(dp) > 0 || open_target > 0)) {
+		/* If all missing (or not fully resolved) targets are lame,
+		 * then use the remaining lame address. */
+		((delegpt_count_missing_targets(dp, &alllame) > 0 && !alllame) ||
+		open_target > 0)) {
 		verbose(VERB_ALGO, "Bad choices, trying to get more choice");
 		return 0; /* we want more choice. The best choice is a bad one.
 			     return 0 to force the caller to fetch more */
@@ -657,10 +659,10 @@ dns_copy_msg(struct dns_msg* from, struct regional* region)
 void
 iter_dns_store(struct module_env* env, struct query_info* msgqinf,
 	struct reply_info* msgrep, int is_referral, time_t leeway, int pside,
-	struct regional* region, uint16_t flags)
+	struct regional* region, uint16_t flags, time_t qstarttime)
 {
 	if(!dns_cache_store(env, msgqinf, msgrep, is_referral, leeway,
-		pside, region, flags))
+		pside, region, flags, qstarttime))
 		log_err("out of memory: cannot store data in cache");
 }
 
