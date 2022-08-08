@@ -1492,6 +1492,122 @@ mesh_send_reply(struct mesh_state* m, int rcode, struct reply_info* rep,
 	}
 }
 
+/**
+ * Generate the DNS Error Report (draft-ietf-dnsop-dns-error-reporting).
+ * @param qstate: module qstate.
+ * @param rep: prepared reply to be sent.
+ */
+static void dns_error_reporting(struct module_qstate* qstate,
+	struct reply_info* rep)
+{
+	struct query_info qinfo;
+	struct mesh_state* sub;
+	struct module_qstate* newq;
+	uint8_t buf[LDNS_MAX_DOMAINLEN];
+	size_t count = 0;
+	size_t written;
+	struct edns_option* eder;
+	sldns_ede_code reason_bogus = LDNS_EDE_NONE;
+	sldns_rr_type qtype = qstate->qinfo.qtype;
+	uint8_t* qname = qstate->qinfo.qname;
+	size_t qname_len = qstate->qinfo.qname_len-1; /* skip the trailing \0 */
+	uint8_t* agent_domain;
+	size_t agent_domain_len;
+	uint8_t eder_flags;
+
+	eder = edns_opt_list_find(qstate->edns_opts_back_in,
+		(uint16_t) 60909 /* TODO LDNS_EDNS_EDER */);
+	if(!eder) return;
+	eder_flags = *eder->opt_data;
+	agent_domain_len = eder->opt_len - 1;
+	if(agent_domain_len < 1) return;
+	agent_domain = eder->opt_data + 1;
+
+	reason_bogus = errinf_to_reason_bogus(qstate);
+	if(rep && ((reason_bogus == LDNS_EDE_DNSSEC_BOGUS &&
+		rep->reason_bogus != LDNS_EDE_NONE) ||
+		reason_bogus == LDNS_EDE_NONE)) {
+		reason_bogus = rep->reason_bogus;
+	}
+	/* Check the positive feedback flag */
+	/* Needs to check the infra? Where do we keep the TTL information?
+	 * It should be per delegation, not per query */
+	if((reason_bogus == LDNS_EDE_NONE ||
+		// TODO INDETERMINATE is recorded but it could lead to errors
+		//      here. Can we check in validator if the delegation is
+		//      not signed to not attach this there?
+		reason_bogus == LDNS_EDE_DNSSEC_INDETERMINATE) &&
+		eder_flags & 0x80) {
+		reason_bogus = LDNS_EDE_NOERROR;
+	}
+
+	// @TODO create a check for the EDER reporting agent DNAME;
+	// MUST NOT be an amplification attack vector. We currently use
+	// dname_valid() for this.
+	// NOTE If dname is compressed (not clear from the draft, but
+	// why should it?) processing needs to happen in
+	// iterator::process_response where we have the packet
+	// available.
+
+	if(reason_bogus == LDNS_EDE_NONE ||
+		!dname_valid(agent_domain, agent_domain_len)) {
+		return;
+	}
+	// TODO EDER feedback: should the positive flag report a deterministic
+	//      query? For this implementation qtype=NULL and
+	//      qname=reporting-agent are arbitrary chosen.
+	// TODO This feeds a positive feedback query to the state machine.
+	//      Can we save that information in infra-cache and don't waste
+	//      resources in the state machine for already sent information?
+	if(reason_bogus == LDNS_EDE_NOERROR) {
+		qtype = LDNS_RR_TYPE_NULL;
+		qname = agent_domain;
+		qname_len = agent_domain_len-1; /* skip the trailing \0 */
+	}
+
+	/* Synthesize the error report query in the format:
+	 * "_er.$ede.$qtype.$qname._er.$reporting-agent-domain", or
+	 * "_er.$ede.NULL.$reporting-agent-domain._er.$reporting-agent-domain" */
+	memmove(buf+count, "\3_er", 4);
+	count += 4;
+
+	written = snprintf((char*)buf+count, LDNS_MAX_DOMAINLEN-count,
+		"X%d", reason_bogus);
+	*(buf+count) = (char)(written - 1);
+	count += written;
+
+	written = snprintf((char*)buf+count, LDNS_MAX_DOMAINLEN-count,
+		"X%d", qtype);
+	*(buf+count) = (char)(written - 1);
+	count += written;
+
+	/* Skip if the remaining buffer is too short */
+	if(count+qname_len+4+agent_domain_len > LDNS_MAX_DOMAINLEN) {
+		verbose(VERB_ALGO, "EDER: qname too long; skip");
+		return;
+	}
+
+	memmove(buf+count, qname, qname_len);
+	count += qname_len;
+
+	memmove(buf+count, "\3_er", 4);
+	count += 4;
+
+	/* Copy the agent domain */
+	memmove(buf+count, agent_domain, agent_domain_len);
+	count += agent_domain_len;
+
+	qinfo.qname = buf;
+	qinfo.qname_len = count;
+	qinfo.qtype = LDNS_RR_TYPE_NULL;
+	qinfo.qclass = qstate->qinfo.qclass;
+	qinfo.local_alias = NULL;
+
+	log_query_info(VERB_ALGO, "EDER: generating query for",
+		&qinfo);
+	mesh_add_sub(qstate, &qinfo, 0, 0, 0, &newq, &sub);
+}
+
 void mesh_query_done(struct mesh_state* mstate)
 {
 	struct mesh_reply* r;
@@ -1501,9 +1617,6 @@ void mesh_query_done(struct mesh_state* mstate)
 	struct reply_info* rep = (mstate->s.return_msg?
 		mstate->s.return_msg->rep:NULL);
 	struct timeval tv = {0, 0};
-	struct edns_option* eder = NULL;
-
-	sldns_ede_code reason_bogus = LDNS_EDE_NONE;
 
 	/* No need for the serve expired timer anymore; we are going to reply. */
 	if(mstate->s.serve_expired_data) {
@@ -1523,66 +1636,8 @@ void mesh_query_done(struct mesh_state* mstate)
 			free(err);
 		}
 	}
-	if (mstate->s.env->cfg->eder) {
-		eder = edns_opt_list_find(mstate->s.edns_opts_back_in,
-			(uint16_t) 3843 /* LDNS_EDNS_EDER */);
-	}
 
-	if (eder) {
-		reason_bogus = errinf_to_reason_bogus(&mstate->s);
-		if (rep && ((reason_bogus == LDNS_EDE_DNSSEC_BOGUS &&
-			rep->reason_bogus != LDNS_EDE_NONE) ||
-			reason_bogus == LDNS_EDE_NONE)) {
-				reason_bogus = rep->reason_bogus;
-		}
-
-		// @TODO create a check for the EDER reporting agent DNAME;
-		// MUST NOT be an amplification attack vector. We currently use
-		// dname_valid() for this.
-
-		/* Report EDE to upstream reporting agent (draft-ietf-dnsop-dns-error-reporting) */
-		if (reason_bogus != LDNS_EDE_NONE && dname_valid(eder->opt_data, eder->opt_len)) {
-			struct query_info qinfo;
-			struct mesh_state* dont_care;
-			struct module_qstate* newq;
-			uint8_t buf[LDNS_MAX_DOMAINLEN];
-			uint8_t count = 0;
-			int written;
-
-			/* Synthesize the error report query in the format:
-			 * "_er.$ede.$qtype.$qname._er.$reporting-agent-domain" */
-
-			memmove(buf+count, "\3_er", 4);
-			count += 4;
-
-			written = snprintf(buf+count, LDNS_MAX_DOMAINLEN-count,
-				"X%d", reason_bogus);
-			(buf+count)[0] = (char)(written - 1);
-			count += written;
-
-			written = snprintf(buf+count, LDNS_MAX_DOMAINLEN-count,
-				"X%d", mstate->s.qinfo.qtype);
-			(buf+count)[0] = (char)(written - 1);
-			count += written;
-
-			memmove(buf+count, mstate->s.qinfo.qname, mstate->s.qinfo.qname_len-1);
-			count += mstate->s.qinfo.qname_len-1;
-			memmove(buf+count, "\3_er", 4);
-			count += 4;
-			memmove(buf+count, eder->opt_data, eder->opt_len); // add the reporting agent
-
-			qinfo.qname = buf;
-			qinfo.qname_len = count+eder->opt_len;
-			qinfo.qtype = LDNS_RR_TYPE_NULL;
-			qinfo.qclass = mstate->s.qinfo.qclass;
-			qinfo.local_alias = NULL;
-
-			log_info("Synthesized EDER, attaching to mesh");
-
-			mesh_add_sub(&mstate->s, &qinfo, 0, 0, 0, &newq, &dont_care);
-		}
-	}
-
+	if(mstate->s.env->cfg->eder) dns_error_reporting(&mstate->s, rep);
 
 	for(r = mstate->reply_list; r; r = r->next) {
 		tv = r->start_time;
