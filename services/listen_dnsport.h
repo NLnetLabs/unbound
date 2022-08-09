@@ -529,7 +529,7 @@ struct doq_conn {
 	/** the doq table this connection is part of */
 	struct doq_table* table;
 	/** if the connection is about to be deleted. */
-	int is_deleted;
+	uint8_t is_deleted;
 	/** the version, the client chosen version of QUIC */
 	uint32_t version;
 	/** the ngtcp2 connection, a server connection */
@@ -558,9 +558,9 @@ struct doq_conn {
 	 * get their data written. */
 	struct doq_stream* stream_write_first, *stream_write_last;
 	/** the conn has write interest if true, no write interest if false. */
-	int write_interest;
+	uint8_t write_interest;
 	/** if the conn is on the connection write list */
-	int on_write_list;
+	uint8_t on_write_list;
 	/** the connection write list prev and next, if on the write list */
 	struct doq_conn* write_prev, *write_next;
 };
@@ -591,9 +591,9 @@ struct doq_stream {
 	/** the stream id */
 	int64_t stream_id;
 	/** if the stream is closed */
-	int is_closed;
+	uint8_t is_closed;
 	/** if the query is complete */
-	int is_query_complete;
+	uint8_t is_query_complete;
 	/** the number of bytes read on the stream, up to querylen+2. */
 	size_t nread;
 	/** the length of the input query bytes */
@@ -601,7 +601,7 @@ struct doq_stream {
 	/** the input bytes */
 	uint8_t* in;
 	/** does the stream have an answer to send */
-	int is_answer_available;
+	uint8_t is_answer_available;
 	/** the answer bytes sent, up to outlen+2. */
 	size_t nwrite;
 	/** the length of the output answer bytes */
@@ -611,7 +611,7 @@ struct doq_stream {
 	/** the output packet bytes */
 	uint8_t* out;
 	/** if the stream is on the write list */
-	int on_write_list;
+	uint8_t on_write_list;
 	/** the prev and next on the write list, if on the list */
 	struct doq_stream* write_prev, *write_next;
 };

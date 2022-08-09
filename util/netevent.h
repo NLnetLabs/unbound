@@ -985,6 +985,19 @@ void http2_stream_add_meshstate(struct http2_stream* h2_stream,
 	struct mesh_area* mesh, struct mesh_state* m);
 
 /**
+ * DoQ socket address storage for IP4 or IP6 address. Smaller than
+ * the sockaddr_storage because not with af_unix pathnames.
+ */
+struct doq_addr_storage {
+	union {
+		struct sockaddr_in in;
+#ifdef AF_INET6
+		struct sockaddr_in6 in6;
+#endif
+	} sockaddr;
+};
+
+/**
  * The DoQ server socket information, for DNS over QUIC.
  */
 struct doq_server_socket {
@@ -993,7 +1006,7 @@ struct doq_server_socket {
 	/** random generator */
 	struct ub_randstate* rnd;
 	/** if address validation is enabled */
-	int validate_addr;
+	uint8_t validate_addr;
 	/** the ssl service key file */
 	char* ssl_service_key;
 	/** the ssl service pem file */
@@ -1020,7 +1033,7 @@ struct doq_server_socket {
 	 * so that we have the already locked structure at our disposal. */
 	struct doq_conn* current_conn;
 	/** if the callback event on the fd has write flags */
-	int event_has_write;
+	uint8_t event_has_write;
 };
 
 /**
@@ -1029,7 +1042,7 @@ struct doq_server_socket {
  */
 struct doq_pkt_addr {
 	/** the remote addr, and local addr */
-	struct sockaddr_storage addr, localaddr;
+	struct doq_addr_storage addr, localaddr;
 	/** length of addr and length of localaddr */
 	socklen_t addrlen, localaddrlen;
 	/** interface index from pktinfo ancillary information */

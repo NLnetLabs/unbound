@@ -835,7 +835,7 @@ doq_set_ecn(int fd, int family, uint32_t ecn)
 /** set the local address in the control ancillary data */
 static void
 doq_set_localaddr_cmsg(struct msghdr* msg, size_t control_size,
-	struct sockaddr_storage* localaddr, socklen_t localaddrlen,
+	struct doq_addr_storage* localaddr, socklen_t localaddrlen,
 	int ifindex)
 {
 #ifndef S_SPLINT_S
@@ -843,7 +843,7 @@ doq_set_localaddr_cmsg(struct msghdr* msg, size_t control_size,
 #endif /* S_SPLINT_S */
 #ifndef S_SPLINT_S
 	cmsg = CMSG_FIRSTHDR(msg);
-	if(localaddr->ss_family == AF_INET) {
+	if(localaddr->sockaddr.in.sin_family == AF_INET) {
 #ifdef IP_PKTINFO
 		struct sockaddr_in* sa = (struct sockaddr_in*)localaddr;
 		struct in_pktinfo v4info;
@@ -900,10 +900,10 @@ doq_set_localaddr_cmsg(struct msghdr* msg, size_t control_size,
 
 /** write address and port into strings */
 static int
-doq_print_addr_port(struct sockaddr_storage* addr, socklen_t addrlen,
+doq_print_addr_port(struct doq_addr_storage* addr, socklen_t addrlen,
 	char* host, size_t hostlen, char* port, size_t portlen)
 {
-	if(addr->ss_family == AF_INET) {
+	if(addr->sockaddr.in.sin_family == AF_INET) {
 		struct sockaddr_in* sa = (struct sockaddr_in*)addr;
 		log_assert(addrlen >= sizeof(*sa));
 		if(inet_ntop(sa->sin_family, &sa->sin_addr, host,
@@ -914,7 +914,7 @@ doq_print_addr_port(struct sockaddr_storage* addr, socklen_t addrlen,
 			return 0;
 		}
 		snprintf(port, portlen, "%u", (unsigned)ntohs(sa->sin_port));
-	} else if(addr->ss_family == AF_INET6) {
+	} else if(addr->sockaddr.in.sin_family == AF_INET6) {
 		struct sockaddr_in6* sa6 = (struct sockaddr_in6*)addr;
 		log_assert(addrlen >= sizeof(*sa6));
 		if(inet_ntop(sa6->sin6_family, &sa6->sin6_addr, host,
@@ -954,7 +954,7 @@ doq_send_pkt(struct comm_point* c, struct doq_pkt_addr* paddr, uint32_t ecn)
 
 	doq_set_localaddr_cmsg(&msg, sizeof(control.buf), &paddr->localaddr,
 		paddr->localaddrlen, paddr->ifindex);
-	doq_set_ecn(c->fd, paddr->addr.ss_family, ecn);
+	doq_set_ecn(c->fd, paddr->addr.sockaddr.in.sin_family, ecn);
 
 	for(;;) {
 		ret = sendmsg(c->fd, &msg, 0);
@@ -1013,12 +1013,12 @@ doq_send_pkt(struct comm_point* c, struct doq_pkt_addr* paddr, uint32_t ecn)
 
 /** fetch port number */
 static int
-doq_sockaddr_get_port(struct sockaddr_storage* addr)
+doq_sockaddr_get_port(struct doq_addr_storage* addr)
 {
-	if(addr->ss_family == AF_INET) {
+	if(addr->sockaddr.in.sin_family == AF_INET) {
 		struct sockaddr_in* sa = (struct sockaddr_in*)addr;
 		return ntohs(sa->sin_port);
-	} else if(addr->ss_family == AF_INET6) {
+	} else if(addr->sockaddr.in.sin_family == AF_INET6) {
 		struct sockaddr_in6* sa6 = (struct sockaddr_in6*)addr;
 		return ntohs(sa6->sin6_port);
 	}
@@ -1053,8 +1053,7 @@ doq_get_localaddr_cmsg(struct comm_point* c, struct doq_pkt_addr* paddr,
 			}
 			sa->sin6_family = AF_INET6;
 			sa->sin6_port = htons(doq_sockaddr_get_port(
-				(struct sockaddr_storage*)c->socket->
-				addr->ai_addr));
+				(void*)c->socket->addr->ai_addr));
 			paddr->ifindex = v6info->ipi6_ifindex;
 			memmove(&sa->sin6_addr, &v6info->ipi6_addr,
 				sizeof(struct in6_addr));
@@ -1076,8 +1075,7 @@ doq_get_localaddr_cmsg(struct comm_point* c, struct doq_pkt_addr* paddr,
 			}
 			sa->sin_family = AF_INET;
 			sa->sin_port = htons(doq_sockaddr_get_port(
-				(struct sockaddr_storage*)c->socket->
-				addr->ai_addr));
+				(void*)c->socket->addr->ai_addr));
 			paddr->ifindex = v4info->ipi_ifindex;
 			memmove(&sa->sin_addr, &v4info->ipi_addr,
 				sizeof(struct in_addr));
@@ -1185,7 +1183,7 @@ doq_recv(struct comm_point* c, struct doq_pkt_addr* paddr, int* pkt_continue,
 	sldns_buffer_flip(c->doq_socket->pkt_buf);
 	if(!doq_get_localaddr_cmsg(c, paddr, pkt_continue, &msg))
 		return 0;
-	pi->ecn = msghdr_get_ecn(&msg, paddr->addr.ss_family);
+	pi->ecn = msghdr_get_ecn(&msg, paddr->addr.sockaddr.in.sin_family);
 	return 1;
 }
 
@@ -1222,8 +1220,8 @@ doq_send_version_negotiation(struct comm_point* c, struct doq_pkt_addr* paddr,
 
 /** Find the doq_conn object by remote address and dcid */
 static struct doq_conn*
-doq_conn_find(struct doq_table* table, struct sockaddr_storage* addr,
-	socklen_t addrlen, struct sockaddr_storage* localaddr,
+doq_conn_find(struct doq_table* table, struct doq_addr_storage* addr,
+	socklen_t addrlen, struct doq_addr_storage* localaddr,
 	socklen_t localaddrlen, int ifindex, const uint8_t* dcid,
 	size_t dcidlen)
 {
@@ -1797,7 +1795,7 @@ comm_point_doq_callback(int fd, short event, void* arg)
 		}
 		if(verbosity >= VERB_ALGO) {
 			char remotestr[256];
-			addr_to_str(&conn->key.paddr.addr,
+			addr_to_str((void*)&conn->key.paddr.addr,
 				conn->key.paddr.addrlen, remotestr,
 				sizeof(remotestr));
 			verbose(VERB_ALGO, "doq write connection %s %d",
@@ -1831,10 +1829,11 @@ comm_point_doq_callback(int fd, short event, void* arg)
 		/* handle incoming packet from remote addr to localaddr */
 		if(verbosity >= VERB_ALGO) {
 			char remotestr[256], localstr[256];
-			addr_to_str(&paddr.addr, paddr.addrlen, remotestr,
-				sizeof(remotestr));
-			addr_to_str(&paddr.localaddr, paddr.localaddrlen,
-				localstr, sizeof(localstr));
+			addr_to_str((void*)&paddr.addr, paddr.addrlen,
+				remotestr, sizeof(remotestr));
+			addr_to_str((void*)&paddr.localaddr,
+				paddr.localaddrlen, localstr,
+				sizeof(localstr));
 			log_info("incoming doq packet from %s port %d on "
 				"%s port %d ifindex %d",
 				remotestr, doq_sockaddr_get_port(&paddr.addr),

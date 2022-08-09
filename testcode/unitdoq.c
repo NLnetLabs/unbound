@@ -70,6 +70,10 @@ doq_size_conn_check()
 		but we do not count it here. Only if the conn gets closed. */
 	conid_size += 16; /* the dcid of the conn key */
 	conid_size += 16; /* the cid */
+	printf("struct doq_conn %u bytes\n", (unsigned)conn_size);
+	printf("struct doq_conid %u bytes\n", (unsigned)conid_size);
+	printf("struct doq_stream %u bytes without buffers\n",
+		(unsigned)stream_size);
 	stream_size += query_size; /* size of in buffer */
 	stream_size += answer_size; /* size of out buffer */
 	printf("doq connection size %u bytes\n", (unsigned)(conn_size +

@@ -3354,12 +3354,12 @@ int doq_stream_cmp(const void* key1, const void* key2)
 /** doq store a local address in repinfo */
 static void
 doq_repinfo_store_localaddr(struct comm_reply* repinfo,
-	struct sockaddr_storage* localaddr, socklen_t localaddrlen)
+	struct doq_addr_storage* localaddr, socklen_t localaddrlen)
 {
 	/* use the pktinfo that we have for ancillary udp data otherwise,
 	 * this saves space for a sockaddr */
 	memset(&repinfo->pktinfo, 0, sizeof(repinfo->pktinfo));
-	if(addr_is_ip6(localaddr, localaddrlen)) {
+	if(addr_is_ip6((void*)localaddr, localaddrlen)) {
 #ifdef IPV6_PKTINFO
 		struct sockaddr_in6* sa6 = (struct sockaddr_in6*)localaddr;
 		memmove(&repinfo->pktinfo.v6info.ipi6_addr,
@@ -3386,7 +3386,7 @@ doq_repinfo_store_localaddr(struct comm_reply* repinfo,
 /** doq retrieve localaddr from repinfo */
 static void
 doq_repinfo_retrieve_localaddr(struct comm_reply* repinfo,
-	struct sockaddr_storage* localaddr, socklen_t* localaddrlen)
+	struct doq_addr_storage* localaddr, socklen_t* localaddrlen)
 {
 	if(repinfo->srctype == 6) {
 #ifdef IPV6_PKTINFO
@@ -3611,8 +3611,8 @@ doq_stream_data_complete(struct doq_conn* conn, struct doq_stream* stream)
 	if(verbosity >= VERB_ALGO) {
 		char* s = sldns_wire2str_pkt(stream->in, stream->inlen);
 		char a[128];
-		addr_to_str(&conn->key.paddr.addr, conn->key.paddr.addrlen,
-			a, sizeof(a));
+		addr_to_str((void*)&conn->key.paddr.addr,
+			conn->key.paddr.addrlen, a, sizeof(a));
 		verbose(VERB_ALGO, "doq %s stream %d incoming query\n%s",
 			a, (int)stream->stream_id, (s?s:"null"));
 		free(s);
