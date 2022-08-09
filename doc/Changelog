@@ -1,3 +1,7 @@
+5 August 2022: Wouter
+	- Fix #734 [FR] enable unbound-checkconf to detect more (basic)
+	  errors.
+
 4 August 2022: Wouter
 	- Fix ratelimit inconsistency, for ip-ratelimits the value is the
 	  amount allowed, like for ratelimits.
