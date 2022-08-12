@@ -132,6 +132,8 @@ struct internal_base {
 	struct ub_event* slow_accept;
 	/** true if slow_accept is enabled */
 	int slow_accept_enabled;
+	/** last log time for slow logging of file descriptor errors */
+	time_t last_slow_log;
 };
 
 /**
@@ -889,6 +891,15 @@ int comm_point_perform_accept(struct comm_point* c,
 				struct timeval tv;
 				verbose(VERB_ALGO, "out of file descriptors: "
 					"slow accept");
+				ub_comm_base_now(b);
+				if(b->eb->last_slow_log+SLOW_LOG_TIME <=
+					b->eb->secs) {
+					b->eb->last_slow_log = b->eb->secs;
+					log_err("accept failed, slow down "
+						"accept for %d msec: %s",
+						NETEVENT_SLOW_ACCEPT_TIME,
+						sock_strerror(errno));
+				}
 				b->eb->slow_accept_enabled = 1;
 				fptr_ok(fptr_whitelist_stop_accept(
 					b->stop_accept));
@@ -909,6 +920,9 @@ int comm_point_perform_accept(struct comm_point* c,
 					/* we do not want to log here,
 					 * error: "event_add failed." */
 				}
+			} else {
+				log_err("accept, with no slow down, "
+					"failed: %s", sock_strerror(errno));
 			}
 			return -1;
 		}

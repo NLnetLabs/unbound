@@ -1,3 +1,7 @@
+12 August 2022: Wouter
+	- Fix to log accept error ENFILE and EMFILE errno, but slowly, once
+	  per 10 seconds. Also log accept failures when no slow down is used.
+
 5 August 2022: Wouter
 	- Fix #734 [FR] enable unbound-checkconf to detect more (basic)
 	  errors.

@@ -102,6 +102,8 @@ typedef int comm_point_callback_type(struct comm_point*, void*, int,
 
 /** timeout to slow accept calls when not possible, in msec. */
 #define NETEVENT_SLOW_ACCEPT_TIME 2000
+/** timeout to slow down log print, so it does not spam the logs, in sec */
+#define SLOW_LOG_TIME 10
 
 /**
  * A communication point dispatcher. Thread specific.
