@@ -171,6 +171,8 @@ static sldns_lookup_table sldns_wireparse_errors_data[] = {
 		"Alpn strings need to be smaller than 255 chars"},
 	{ LDNS_WIREPARSE_ERR_SVCB_NO_DEFAULT_ALPN_VALUE,
 		"No-default-alpn should not have a value" },
+	{ LDNS_WIREPARSE_ERR_SVCB_NO_DNS_VAR_IN_DOHPATH,
+		"Dohpath must have '?dns' in the URI template variable" },
 	{ LDNS_WIREPARSE_ERR_SVCPARAM_BROKEN_RDATA,
 		"General SVCParam error" },
 	{ 0, NULL }
@@ -224,7 +226,7 @@ sldns_lookup_table* sldns_tsig_errors = sldns_tsig_errors_data;
 /* draft-ietf-dnsop-svcb-https-06: 6. Initial SvcParamKeys */
 const char *svcparamkey_strs[] = {
 	"mandatory", "alpn", "no-default-alpn", "port",
-	"ipv4hint", "ech", "ipv6hint"
+	"ipv4hint", "ech", "ipv6hint", "dohpath"
 };
 
 char* sldns_wire2str_pkt(uint8_t* data, size_t len)
@@ -1144,6 +1146,29 @@ static int sldns_wire2str_svcparam_ech2str(char** s,
 	return w + size;
 }
 
+static int sldns_wire2str_svcparam_dohpath2str(char** s,
+	size_t* slen, uint16_t data_len, uint8_t* data)
+{
+	int w = 0;
+	uint16_t i;
+
+	assert(data_len > 0); /* Guaranteed by sldns_wire2str_svcparam_scan */
+
+	w += sldns_str_print(s, slen, "=\"");
+
+	/* RC6570#section-2.1 specifies that the '\' (and other non-letter
+	 * characters in the URI) are "intended to be copied literally" */
+	for (i = 0; i < data_len; i++) {
+		// @TODO do a check like isprint()?
+
+		w += sldns_str_print(s, slen, "%c", data[i]);
+	}
+
+	w += sldns_str_print(s, slen, "\"");
+
+	return w;
+}
+
 int sldns_wire2str_svcparam_scan(uint8_t** d, size_t* dlen, char** s, size_t* slen)
 {
 	uint8_t ch;
@@ -1174,6 +1199,7 @@ int sldns_wire2str_svcparam_scan(uint8_t** d, size_t* dlen, char** s, size_t* sl
 	 	case SVCB_KEY_IPV4HINT:
 	 	case SVCB_KEY_IPV6HINT:
 	 	case SVCB_KEY_MANDATORY:
+	 	case SVCB_KEY_DOHPATH:
 	 		return -1;
 	 	default:
 	 		return written_chars;
@@ -1200,6 +1226,9 @@ int sldns_wire2str_svcparam_scan(uint8_t** d, size_t* dlen, char** s, size_t* sl
 		break;
 	case SVCB_KEY_ECH:
 		r = sldns_wire2str_svcparam_ech2str(s, slen, data_len, *d);
+		break;
+	case SVCB_KEY_DOHPATH:
+		r = sldns_wire2str_svcparam_dohpath2str(s, slen, data_len, *d);
 		break;
 	default:
 		r = sldns_str_print(s, slen, "=\"");

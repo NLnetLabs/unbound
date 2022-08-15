@@ -1150,6 +1150,11 @@ sldns_str2wire_svcparam_key_lookup(const char *key, size_t key_len)
 			return SVCB_KEY_IPV6HINT;
 		break;
 
+	case sizeof("dohpath")-1:
+		if (!strncmp(key, "dohpath", sizeof("dohpath")-1))
+			return SVCB_KEY_DOHPATH;
+		break;
+
 	case sizeof("ech")-1:
 		if (!strncmp(key, "ech", sizeof("ech")-1))
 			return SVCB_KEY_ECH;
@@ -1516,6 +1521,40 @@ sldns_str2wire_svcbparam_alpn_value(const char* val,
 }
 
 static int
+sldns_str2wire_svcbparam_dohpath_value(const char* val,
+	uint8_t* rd, size_t* rd_len)
+{
+	size_t val_len;
+
+	/* RFC6570#section-2.1
+	 * "The characters outside of expressions in a URI Template string are
+	 * intended to be copied literally"
+	 * Practically this means we do not have to look for "double escapes"
+	 * like in the alpn value list.
+	 */
+
+	val_len = strlen(val);
+
+	if (*rd_len < 4 + val_len) {
+		return LDNS_WIREPARSE_ERR_BUFFER_TOO_SMALL;
+	}
+
+	/* draft-ietf-add-svcb-dns-06#section-5.1
+	 * The URI Template MUST contain a "dns" variable
+	 */
+	if (!(strstr(val, "?dns"))) {
+		return LDNS_WIREPARSE_ERR_SVCB_NO_DNS_VAR_IN_DOHPATH;
+	}
+
+	sldns_write_uint16(rd, SVCB_KEY_DOHPATH);
+	sldns_write_uint16(rd + 2, val_len);
+	memcpy(rd + 4, val, val_len);
+	*rd_len = 4 + val_len;
+
+	return LDNS_WIREPARSE_ERR_OK;
+}
+
+static int
 sldns_str2wire_svcparam_value(const char *key, size_t key_len,
 	const char *val, uint8_t* rd, size_t* rd_len)
 {
@@ -1535,6 +1574,7 @@ sldns_str2wire_svcparam_value(const char *key, size_t key_len,
 		case SVCB_KEY_PORT:
 		case SVCB_KEY_IPV4HINT:
 		case SVCB_KEY_IPV6HINT:
+		case SVCB_KEY_DOHPATH:
 			return LDNS_WIREPARSE_ERR_SVCB_MISSING_PARAM;
 #endif
 		default:
@@ -1566,6 +1606,8 @@ sldns_str2wire_svcparam_value(const char *key, size_t key_len,
 		return sldns_str2wire_svcbparam_ech_value(val, rd, rd_len);
 	case SVCB_KEY_ALPN:
 		return sldns_str2wire_svcbparam_alpn_value(val, rd, rd_len);
+	case SVCB_KEY_DOHPATH:
+		return sldns_str2wire_svcbparam_dohpath_value(val, rd, rd_len);
 	default:
 		str_len = strlen(val);
 		if (*rd_len < 4 + str_len)

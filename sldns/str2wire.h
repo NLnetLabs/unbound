@@ -38,7 +38,8 @@ struct sldns_struct_lookup_table;
 #define SVCB_KEY_IPV4HINT		4
 #define SVCB_KEY_ECH			5
 #define SVCB_KEY_IPV6HINT		6
-#define SVCPARAMKEY_COUNT		7
+#define SVCB_KEY_DOHPATH		7
+#define SVCPARAMKEY_COUNT		8
 
 #define MAX_NUMBER_OF_SVCPARAMS	64
 
@@ -234,7 +235,9 @@ uint8_t* sldns_wirerr_get_rdatawl(uint8_t* rr, size_t len, size_t dname_len);
 #define LDNS_WIREPARSE_ERR_SVCB_IPV6_TOO_MANY_ADDRESSES 383
 #define LDNS_WIREPARSE_ERR_SVCB_ALPN_KEY_TOO_LARGE 384
 #define LDNS_WIREPARSE_ERR_SVCB_NO_DEFAULT_ALPN_VALUE 385
-#define LDNS_WIREPARSE_ERR_SVCPARAM_BROKEN_RDATA 386
+#define LDNS_WIREPARSE_ERR_SVCB_NO_DNS_VAR_IN_DOHPATH 386
+#define LDNS_WIREPARSE_ERR_SVCPARAM_BROKEN_RDATA 387
+
 
 /**
  * Get reference to a constant string for the (parse) error.
