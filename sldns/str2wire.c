@@ -698,7 +698,7 @@ static int sldns_str2wire_check_svcbparams(uint8_t* rdata, uint16_t rdata_len)
 				mandatory = svcparams[i];
 		}
 
-		/* 4. verify that all the SvcParamKeys in mandatory are present */
+		/* Verify that all the SvcParamKeys in mandatory are present */
 		if(mandatory) {
 			/* Divide by sizeof(uint16_t)*/
 			uint16_t mandatory_nkeys = sldns_read_uint16(mandatory + 2) / sizeof(uint16_t);
