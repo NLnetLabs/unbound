@@ -1157,11 +1157,14 @@ static int sldns_wire2str_svcparam_dohpath2str(char** s,
 	w += sldns_str_print(s, slen, "=\"");
 
 	/* RC6570#section-2.1 specifies that the '\' (and other non-letter
-	 * characters in the URI) are "intended to be copied literally" */
+	 * characters in the URI) are "intended to be copied literally" (as 
+	 * opposed to the alpn printing) */
 	for (i = 0; i < data_len; i++) {
-		// @TODO do a check like isprint()?
-
-		w += sldns_str_print(s, slen, "%c", data[i]);
+		if (!isprint(data[i])) {
+			w += sldns_str_print(s, slen, "\\%03u", (unsigned) data[i]);
+		} else {
+			w += sldns_str_print(s, slen, "%c", data[i]);
+		}
 	}
 
 	w += sldns_str_print(s, slen, "\"");
