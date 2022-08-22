@@ -458,7 +458,14 @@ create_udp_sock(int family, int socktype, struct sockaddr* addr,
 		int action;
 # endif
 # if defined(IPV6_V6ONLY)
-		if(v6only) {
+		if(v6only
+#   ifdef HAVE_SYSTEMD
+			/* Systemd wants to control if the socket is v6 only
+			 * or both, with BindIPv6Only=default, ipv6-only or
+			 * both in systemd.socket, so it is not set here. */
+			&& !got_fd_from_systemd
+#   endif
+			) {
 			int val=(v6only==2)?0:1;
 			if (setsockopt(s, IPPROTO_IPV6, IPV6_V6ONLY, 
 				(void*)&val, (socklen_t)sizeof(val)) < 0) {
@@ -776,7 +783,14 @@ create_tcp_accept_sock(struct addrinfo *addr, int v6only, int* noproto,
 	(void)reuseport;
 #endif /* defined(SO_REUSEPORT) */
 #if defined(IPV6_V6ONLY)
-	if(addr->ai_family == AF_INET6 && v6only) {
+	if(addr->ai_family == AF_INET6 && v6only
+#  ifdef HAVE_SYSTEMD
+		/* Systemd wants to control if the socket is v6 only
+		 * or both, with BindIPv6Only=default, ipv6-only or
+		 * both in systemd.socket, so it is not set here. */
+		&& !got_fd_from_systemd
+#  endif
+		) {
 		if(setsockopt(s, IPPROTO_IPV6, IPV6_V6ONLY, 
 			(void*)&on, (socklen_t)sizeof(on)) < 0) {
 			log_err("setsockopt(..., IPV6_V6ONLY, ...) failed: %s",
