@@ -50,3 +50,4 @@ s09     HTTPS   0 . ( alpn="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 
 _dns.doh.example. 7200 IN SVCB 1 doh.example. alpn=h2 dohpath="/dns-query{?dns}"
 _dns.doh.example. 7200 IN SVCB 1 doh.example. alpn=h2 dohpath=/dns-query{?dns}
+_dns.doh.example. 7200 IN SVCB 1 doh.example. alpn=h2 dohpath=/dns-queryéè{?dns}

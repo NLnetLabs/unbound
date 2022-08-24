@@ -10,3 +10,4 @@ s08.success-cases.	3600	IN	HTTPS	0 . key11="a" key12="a" key13="a" key14="a" key
 s09.success-cases.	3600	IN	HTTPS	0 . alpn="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 _dns.doh.example.	7200	IN	SVCB	1 doh.example. alpn="h2" dohpath="/dns-query{?dns}"
 _dns.doh.example.	7200	IN	SVCB	1 doh.example. alpn="h2" dohpath="/dns-query{?dns}"
+_dns.doh.example.	7200	IN	SVCB	1 doh.example. alpn="h2" dohpath="/dns-query\195\169\195\168{?dns}"

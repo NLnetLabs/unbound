@@ -1525,6 +1525,7 @@ sldns_str2wire_svcbparam_dohpath_value(const char* val,
 	uint8_t* rd, size_t* rd_len)
 {
 	size_t val_len;
+	char* open_bracket, * close_bracket, * expr_ptr;
 
 	/* RFC6570#section-2.1
 	 * "The characters outside of expressions in a URI Template string are
@@ -1542,8 +1543,17 @@ sldns_str2wire_svcbparam_dohpath_value(const char* val,
 	/* draft-ietf-add-svcb-dns-06#section-5.1
 	 * The URI Template MUST contain a "dns" variable
 	 */
-	if (!(strstr(val, "?dns"))) {
-		return LDNS_WIREPARSE_ERR_SVCB_NO_DNS_VAR_IN_DOHPATH;
+	open_bracket = strchr(val, '{');
+	close_bracket = strchr(val, '}');
+
+	if (!open_bracket && !close_bracket) {
+		return LDNS_WIREPARSE_ERR_SVCB_NO_DNS_VAR_IN_DOHPATH;	
+	} else {
+		expr_ptr = strstr(open_bracket+1, "?dns");
+
+		if (!expr_ptr || !((close_bracket - expr_ptr) >= 4 ) ) {
+			return LDNS_WIREPARSE_ERR_SVCB_NO_DNS_VAR_IN_DOHPATH;
+		}
 	}
 
 	sldns_write_uint16(rd, SVCB_KEY_DOHPATH);

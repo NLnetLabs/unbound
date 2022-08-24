@@ -75,6 +75,12 @@ then
 	echo "Failure case 04: 256 is too many characters for an alpn; maximum is 255"
 	echo "Incorrectly succeeded"
 	exit 1
+
+elif $PRE/readzone svcb.failure-cases-05
+then
+	echo "Dohpath must have '?dns' in the URI template variable"
+	echo "Incorrectly succeeded"
+	exit 1
 else
 	echo "All failure cases test successfully"
 fi
