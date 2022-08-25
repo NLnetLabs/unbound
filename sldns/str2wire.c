@@ -1525,7 +1525,9 @@ sldns_str2wire_svcbparam_dohpath_value(const char* val,
 	uint8_t* rd, size_t* rd_len)
 {
 	size_t val_len;
-	char* open_bracket, * close_bracket, * expr_ptr;
+	char* open_bracket, * close_bracket;
+	const char* next_char;
+	uint8_t expr_found = 0;
 
 	/* RFC6570#section-2.1
 	 * "The characters outside of expressions in a URI Template string are
@@ -1541,19 +1543,36 @@ sldns_str2wire_svcbparam_dohpath_value(const char* val,
 	}
 
 	/* draft-ietf-add-svcb-dns-06#section-5.1
-	 * The URI Template MUST contain a "dns" variable
+	 * "The URI Template MUST contain a "dns" variable"
+	 * A URI Template is alowed to have multiple variables
 	 */
-	open_bracket = strchr(val, '{');
-	close_bracket = strchr(val, '}');
+	next_char = val;
+	while (next_char && *next_char != '\0') {
+		char* c;
 
-	if (!open_bracket && !close_bracket) {
-		return LDNS_WIREPARSE_ERR_SVCB_NO_DNS_VAR_IN_DOHPATH;	
-	} else {
-		expr_ptr = strstr(open_bracket+1, "?dns");
-
-		if (!expr_ptr || !((close_bracket - expr_ptr) >= 4 ) ) {
+		open_bracket = strchr(next_char, '{');
+		if (!open_bracket) {
 			return LDNS_WIREPARSE_ERR_SVCB_NO_DNS_VAR_IN_DOHPATH;
+			break;
 		}
+
+		close_bracket = strchr(open_bracket, '}');
+		if (!close_bracket) {
+			return LDNS_WIREPARSE_ERR_SVCB_NO_DNS_VAR_IN_DOHPATH;
+
+		}
+		for (c = open_bracket+1; (close_bracket - c) >= 4; c++) {
+			if (c[0] == '?' && c[1] == 'd' && c[2] == 'n'
+				&& c[3] == 's') {
+				expr_found++;
+			}
+		}
+
+		next_char = close_bracket+1;
+	}
+
+	if (expr_found != 1) {
+		return LDNS_WIREPARSE_ERR_SVCB_NO_DNS_VAR_IN_DOHPATH;
 	}
 
 	sldns_write_uint16(rd, SVCB_KEY_DOHPATH);

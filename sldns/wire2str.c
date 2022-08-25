@@ -172,7 +172,7 @@ static sldns_lookup_table sldns_wireparse_errors_data[] = {
 	{ LDNS_WIREPARSE_ERR_SVCB_NO_DEFAULT_ALPN_VALUE,
 		"No-default-alpn should not have a value" },
 	{ LDNS_WIREPARSE_ERR_SVCB_NO_DNS_VAR_IN_DOHPATH,
-		"Dohpath must have '?dns' in the URI template variable" },
+		"Dohpath must contain a correct URI template variable which contains '?dns'" },
 	{ LDNS_WIREPARSE_ERR_SVCPARAM_BROKEN_RDATA,
 		"General SVCParam error" },
 	{ 0, NULL }
