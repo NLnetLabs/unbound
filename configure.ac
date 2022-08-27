@@ -569,6 +569,10 @@ else
 	fi
 fi
 
+if test "$on_mingw" = "yes"; then
+	LIBS="$LIBS -lntdll"
+fi
+
 # check windows threads (we use them, not pthreads, on windows).
 if test "$on_mingw" = "yes"; then
 # check windows threads

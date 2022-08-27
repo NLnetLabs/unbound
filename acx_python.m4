@@ -70,8 +70,13 @@ AC_DEFUN([AC_PYTHON_DEVEL],[
         #
         AC_MSG_CHECKING([for Python library path])
         if test -z "$PYTHON_LDFLAGS"; then
+            if test $on_mingw = "yes"; then
+                PYTHON_LDFLAGS=`$PYTHON -c "from $sysconfig_module import *; \
+                        print('-L'+get_config_var('LIBDIR')+' -L'+get_config_var('LIBDEST')+' '+get_config_var('LIBPYTHON')+'.dll');"`
+            else
                 PYTHON_LDFLAGS=`$PYTHON -c "from $sysconfig_module import *; \
                         print('-L'+get_config_var('LIBDIR')+' -L'+get_config_var('LIBDEST')+' '+get_config_var('BLDLIBRARY'));"`
+            fi
         fi
         AC_MSG_RESULT([$PYTHON_LDFLAGS])
         AC_SUBST([PYTHON_LDFLAGS])
