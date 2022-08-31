@@ -388,7 +388,7 @@ comm_point_send_udp_msg(struct comm_point *c, sldns_buffer* packet,
 #endif
 			/* if we set the fd blocking, other threads suddenly
 			 * have a blocking fd that they operate on */
-			while(
+			while(sent == -1 && (
 #ifndef USE_WINSOCK
 				errno == EAGAIN || errno == EINTR ||
 #  ifdef EWOULDBLOCK
@@ -401,7 +401,7 @@ comm_point_send_udp_msg(struct comm_point *c, sldns_buffer* packet,
 				WSAGetLastError() == WSAENOBUFS ||
 				WSAGetLastError() == WSAEWOULDBLOCK
 #endif
-			) {
+			)) {
 #if defined(HAVE_POLL) || defined(USE_WINSOCK)
 				struct pollfd p;
 				int pret;
@@ -624,7 +624,7 @@ comm_point_send_udp_msg_if(struct comm_point *c, sldns_buffer* packet,
 			WSAGetLastError() == WSAENOBUFS ||
 			WSAGetLastError() == WSAEWOULDBLOCK) {
 #endif
-			while(
+			while(sent == -1 && (
 #ifndef USE_WINSOCK
 				errno == EAGAIN || errno == EINTR ||
 #  ifdef EWOULDBLOCK
@@ -637,7 +637,7 @@ comm_point_send_udp_msg_if(struct comm_point *c, sldns_buffer* packet,
 				WSAGetLastError() == WSAENOBUFS ||
 				WSAGetLastError() == WSAEWOULDBLOCK
 #endif
-			) {
+			)) {
 #if defined(HAVE_POLL) || defined(USE_WINSOCK)
 				struct pollfd p;
 				int pret;

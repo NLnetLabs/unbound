@@ -6,6 +6,7 @@
 	  blocking socket operations.
 	- Fix to wait for blocked write on UDP sockets, with a timeout if it
 	  takes too long the packet is dropped.
+	- Fix for wait for udp send to stop when packet is successfully sent.
 
 22 August 2022: Wouter
 	- Fix #741: systemd socket activation fails on IPv6.
