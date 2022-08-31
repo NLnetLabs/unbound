@@ -379,19 +379,30 @@ comm_point_send_udp_msg(struct comm_point *c, sldns_buffer* packet,
 			WSAGetLastError() == WSAENOBUFS ||
 			WSAGetLastError() == WSAEWOULDBLOCK) {
 #endif
-			int e;
-			fd_set_block(c->fd);
-			if (!is_connected) {
-				sent = sendto(c->fd, (void*)sldns_buffer_begin(packet),
-					sldns_buffer_remaining(packet), 0,
-					addr, addrlen);
-			} else {
-				sent = send(c->fd, (void*)sldns_buffer_begin(packet),
-					sldns_buffer_remaining(packet), 0);
+			/* if we set the fd blocking, other threads suddenly
+			 * have a blocking fd that they operate on */
+			while(
+#ifndef USE_WINSOCK
+				errno == EAGAIN ||
+#  ifdef EWOULDBLOCK
+				errno == EWOULDBLOCK ||
+#  endif
+				errno == ENOBUFS
+#else
+				WSAGetLastError() == WSAEINPROGRESS ||
+				WSAGetLastError() == WSAENOBUFS ||
+				WSAGetLastError() == WSAEWOULDBLOCK
+#endif
+			) {
+				if (!is_connected) {
+					sent = sendto(c->fd, (void*)sldns_buffer_begin(packet),
+						sldns_buffer_remaining(packet), 0,
+						addr, addrlen);
+				} else {
+					sent = send(c->fd, (void*)sldns_buffer_begin(packet),
+						sldns_buffer_remaining(packet), 0);
+				}
 			}
-			e = errno;
-			fd_set_nonblock(c->fd);
-			errno = e;
 		}
 	}
 	if(sent == -1) {
@@ -568,12 +579,21 @@ comm_point_send_udp_msg_if(struct comm_point *c, sldns_buffer* packet,
 			WSAGetLastError() == WSAENOBUFS ||
 			WSAGetLastError() == WSAEWOULDBLOCK) {
 #endif
-			int e;
-			fd_set_block(c->fd);
-			sent = sendmsg(c->fd, &msg, 0);
-			e = errno;
-			fd_set_nonblock(c->fd);
-			errno = e;
+			while(
+#ifndef USE_WINSOCK
+				errno == EAGAIN ||
+#  ifdef EWOULDBLOCK
+				errno == EWOULDBLOCK ||
+#  endif
+				errno == ENOBUFS
+#else
+				WSAGetLastError() == WSAEINPROGRESS ||
+				WSAGetLastError() == WSAENOBUFS ||
+				WSAGetLastError() == WSAEWOULDBLOCK
+#endif
+			) {
+				sent = sendmsg(c->fd, &msg, 0);
+			}
 		}
 	}
 	if(sent == -1) {

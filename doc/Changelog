@@ -1,3 +1,7 @@
+31 August 2022: Wouter
+	- Fix to avoid process wide fcntl calls mixed with nonblocking
+	  operations after a blocked write.
+
 22 August 2022: Wouter
 	- Fix #741: systemd socket activation fails on IPv6.
 
