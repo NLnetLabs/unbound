@@ -1,6 +1,9 @@
 31 August 2022: Wouter
 	- Fix to avoid process wide fcntl calls mixed with nonblocking
 	  operations after a blocked write.
+	- Patch from Vadim Fedorenko that adds MSG_DONTWAIT to receive
+	  operations, so that instruction reordering does not cause mistakenly
+	  blocking socket operations.
 
 22 August 2022: Wouter
 	- Fix #741: systemd socket activation fails on IPv6.

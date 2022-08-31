@@ -96,6 +96,11 @@ extern uint16_t EDNS_ADVERTISED_SIZE;
 /** return a random 16-bit number given a random source */
 #define GET_RANDOM_ID(rnd) (((unsigned)ub_random(rnd)>>8) & 0xffff)
 
+/** define MSG_DONTWAIT for unsupported platforms */
+#ifndef MSG_DONTWAIT
+#define MSG_DONTWAIT 0
+#endif
+
 /** minimal responses when positive answer */
 extern int MINIMAL_RESPONSES;
 

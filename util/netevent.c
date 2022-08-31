@@ -701,7 +701,7 @@ comm_point_udp_ancil_callback(int fd, short event, void* arg)
 		msg.msg_controllen = sizeof(ancil.buf);
 #endif /* S_SPLINT_S */
 		msg.msg_flags = 0;
-		rcv = recvmsg(fd, &msg, 0);
+		rcv = recvmsg(fd, &msg, MSG_DONTWAIT);
 		if(rcv == -1) {
 			if(errno != EAGAIN && errno != EINTR
 				&& udp_recv_needs_log(errno)) {
@@ -781,7 +781,7 @@ comm_point_udp_callback(int fd, short event, void* arg)
 		log_assert(fd != -1);
 		log_assert(sldns_buffer_remaining(rep.c->buffer) > 0);
 		rcv = recvfrom(fd, (void*)sldns_buffer_begin(rep.c->buffer), 
-			sldns_buffer_remaining(rep.c->buffer), 0, 
+			sldns_buffer_remaining(rep.c->buffer), MSG_DONTWAIT,
 			(struct sockaddr*)&rep.addr, &rep.addrlen);
 		if(rcv == -1) {
 #ifndef USE_WINSOCK
@@ -1703,7 +1703,7 @@ comm_point_tcp_handle_read(int fd, struct comm_point* c, int short_ok)
 	if(c->tcp_byte_count < sizeof(uint16_t)) {
 		/* read length bytes */
 		r = recv(fd,(void*)sldns_buffer_at(c->buffer,c->tcp_byte_count),
-			sizeof(uint16_t)-c->tcp_byte_count, 0);
+			sizeof(uint16_t)-c->tcp_byte_count, MSG_DONTWAIT);
 		if(r == 0) {
 			if(c->tcp_req_info)
 				return tcp_req_info_handle_read_close(c->tcp_req_info);
@@ -1794,7 +1794,7 @@ comm_point_tcp_handle_read(int fd, struct comm_point* c, int short_ok)
 	if(sldns_buffer_remaining(c->buffer) == 0)
 		log_err("in comm_point_tcp_handle_read buffer_remaining is not > 0 as expected, continuing with (harmless) 0 length recv");
 	r = recv(fd, (void*)sldns_buffer_current(c->buffer), 
-		sldns_buffer_remaining(c->buffer), 0);
+		sldns_buffer_remaining(c->buffer), MSG_DONTWAIT);
 	if(r == 0) {
 		if(c->tcp_req_info)
 			return tcp_req_info_handle_read_close(c->tcp_req_info);
@@ -2336,7 +2336,7 @@ http_read_more(int fd, struct comm_point* c)
 	ssize_t r;
 	log_assert(sldns_buffer_remaining(c->buffer) > 0);
 	r = recv(fd, (void*)sldns_buffer_current(c->buffer), 
-		sldns_buffer_remaining(c->buffer), 0);
+		sldns_buffer_remaining(c->buffer), MSG_DONTWAIT);
 	if(r == 0) {
 		return 0;
 	} else if(r == -1) {
@@ -2774,7 +2774,7 @@ ssize_t http2_recv_cb(nghttp2_session* ATTR_UNUSED(session), uint8_t* buf,
 	}
 #endif /* HAVE_SSL */
 
-	ret = recv(h2_session->c->fd, buf, len, 0);
+	ret = recv(h2_session->c->fd, buf, len, MSG_DONTWAIT);
 	if(ret == 0) {
 		return NGHTTP2_ERR_EOF;
 	} else if(ret < 0) {
