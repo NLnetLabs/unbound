@@ -60,6 +60,9 @@
 #ifdef HAVE_NETDB_H
 #include <netdb.h>
 #endif
+#ifdef HAVE_POLL_H
+#include <poll.h>
+#endif
 
 #ifdef HAVE_OPENSSL_SSL_H
 #include <openssl/ssl.h>
@@ -106,6 +109,9 @@
 #else
 #define NUM_UDP_PER_SELECT 1
 #endif
+
+/** timeout in millisec to wait for write to unblock, packets dropped after.*/
+#define SEND_BLOCKED_WAIT_TIMEOUT 200
 
 /**
  * The internal event structure for keeping ub_event info for the event.
@@ -369,13 +375,14 @@ comm_point_send_udp_msg(struct comm_point *c, sldns_buffer* packet,
 		 * we want to send the answer, and we will wait for
 		 * the ethernet interface buffer to have space. */
 #ifndef USE_WINSOCK
-		if(errno == EAGAIN || 
+		if(errno == EAGAIN || errno == EINTR ||
 #  ifdef EWOULDBLOCK
 			errno == EWOULDBLOCK ||
 #  endif
 			errno == ENOBUFS) {
 #else
 		if(WSAGetLastError() == WSAEINPROGRESS ||
+			WSAGetLastError() == WSAEINTR ||
 			WSAGetLastError() == WSAENOBUFS ||
 			WSAGetLastError() == WSAEWOULDBLOCK) {
 #endif
@@ -383,17 +390,54 @@ comm_point_send_udp_msg(struct comm_point *c, sldns_buffer* packet,
 			 * have a blocking fd that they operate on */
 			while(
 #ifndef USE_WINSOCK
-				errno == EAGAIN ||
+				errno == EAGAIN || errno == EINTR ||
 #  ifdef EWOULDBLOCK
 				errno == EWOULDBLOCK ||
 #  endif
 				errno == ENOBUFS
 #else
 				WSAGetLastError() == WSAEINPROGRESS ||
+				WSAGetLastError() == WSAEINTR ||
 				WSAGetLastError() == WSAENOBUFS ||
 				WSAGetLastError() == WSAEWOULDBLOCK
 #endif
 			) {
+#if defined(HAVE_POLL) || defined(USE_WINSOCK)
+				struct pollfd p;
+				int pret;
+				memset(&p, 0, sizeof(p));
+				p.fd = c->fd;
+				p.events = POLLOUT | POLLERR | POLLHUP;
+#  ifndef USE_WINSOCK
+				pret = poll(&p, 1, SEND_BLOCKED_WAIT_TIMEOUT);
+#  else
+				pret = WSAPoll(&p, 1,
+					SEND_BLOCKED_WAIT_TIMEOUT);
+#  endif
+				if(pret == 0) {
+					/* timer expired */
+					verbose(VERB_OPS, "send udp blocked "
+						"for long, dropping packet.");
+					return 0;
+				} else if(pret < 0 &&
+#ifndef USE_WINSOCK
+					errno != EAGAIN && errno != EINTR &&
+#  ifdef EWOULDBLOCK
+					errno != EWOULDBLOCK &&
+#  endif
+					errno != ENOBUFS
+#else
+					WSAGetLastError() != WSAEINPROGRESS &&
+					WSAGetLastError() != WSAEINTR &&
+					WSAGetLastError() != WSAENOBUFS &&
+					WSAGetLastError() != WSAEWOULDBLOCK
+#endif
+					) {
+					log_err("poll udp out failed: %s",
+						sock_strerror(errno));
+					return 0;
+				}
+#endif /* defined(HAVE_POLL) || defined(USE_WINSOCK) */
 				if (!is_connected) {
 					sent = sendto(c->fd, (void*)sldns_buffer_begin(packet),
 						sldns_buffer_remaining(packet), 0,
@@ -569,29 +613,67 @@ comm_point_send_udp_msg_if(struct comm_point *c, sldns_buffer* packet,
 		 * we want to send the answer, and we will wait for
 		 * the ethernet interface buffer to have space. */
 #ifndef USE_WINSOCK
-		if(errno == EAGAIN || 
+		if(errno == EAGAIN || errno == EINTR ||
 #  ifdef EWOULDBLOCK
 			errno == EWOULDBLOCK ||
 #  endif
 			errno == ENOBUFS) {
 #else
 		if(WSAGetLastError() == WSAEINPROGRESS ||
+			WSAGetLastError() == WSAEINTR ||
 			WSAGetLastError() == WSAENOBUFS ||
 			WSAGetLastError() == WSAEWOULDBLOCK) {
 #endif
 			while(
 #ifndef USE_WINSOCK
-				errno == EAGAIN ||
+				errno == EAGAIN || errno == EINTR ||
 #  ifdef EWOULDBLOCK
 				errno == EWOULDBLOCK ||
 #  endif
 				errno == ENOBUFS
 #else
 				WSAGetLastError() == WSAEINPROGRESS ||
+				WSAGetLastError() == WSAEINTR ||
 				WSAGetLastError() == WSAENOBUFS ||
 				WSAGetLastError() == WSAEWOULDBLOCK
 #endif
 			) {
+#if defined(HAVE_POLL) || defined(USE_WINSOCK)
+				struct pollfd p;
+				int pret;
+				memset(&p, 0, sizeof(p));
+				p.fd = c->fd;
+				p.events = POLLOUT | POLLERR | POLLHUP;
+#  ifndef USE_WINSOCK
+				pret = poll(&p, 1, SEND_BLOCKED_WAIT_TIMEOUT);
+#  else
+				pret = WSAPoll(&p, 1,
+					SEND_BLOCKED_WAIT_TIMEOUT);
+#  endif
+				if(pret == 0) {
+					/* timer expired */
+					verbose(VERB_OPS, "send udp blocked "
+						"for long, dropping packet.");
+					return 0;
+				} else if(pret < 0 &&
+#ifndef USE_WINSOCK
+					errno != EAGAIN && errno != EINTR &&
+#  ifdef EWOULDBLOCK
+					errno != EWOULDBLOCK &&
+#  endif
+					errno != ENOBUFS
+#else
+					WSAGetLastError() != WSAEINPROGRESS &&
+					WSAGetLastError() != WSAEINTR &&
+					WSAGetLastError() != WSAENOBUFS &&
+					WSAGetLastError() != WSAEWOULDBLOCK
+#endif
+					) {
+					log_err("poll udp out failed: %s",
+						sock_strerror(errno));
+					return 0;
+				}
+#endif /* defined(HAVE_POLL) || defined(USE_WINSOCK) */
 				sent = sendmsg(c->fd, &msg, 0);
 			}
 		}

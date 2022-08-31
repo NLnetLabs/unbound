@@ -4,6 +4,8 @@
 	- Patch from Vadim Fedorenko that adds MSG_DONTWAIT to receive
 	  operations, so that instruction reordering does not cause mistakenly
 	  blocking socket operations.
+	- Fix to wait for blocked write on UDP sockets, with a timeout if it
+	  takes too long the packet is dropped.
 
 22 August 2022: Wouter
 	- Fix #741: systemd socket activation fails on IPv6.

@@ -457,6 +457,12 @@
 /* Define to 1 if you have the `OSSL_PARAM_BLD_new' function. */
 #undef HAVE_OSSL_PARAM_BLD_NEW
 
+/* Define to 1 if you have the `poll' function. */
+#undef HAVE_POLL
+
+/* Define to 1 if you have the <poll.h> header file. */
+#undef HAVE_POLL_H
+
 /* Define if you have POSIX threads libraries and header files. */
 #undef HAVE_PTHREAD
 
