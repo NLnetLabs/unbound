@@ -140,6 +140,8 @@ struct internal_base {
 	int slow_accept_enabled;
 	/** last log time for slow logging of file descriptor errors */
 	time_t last_slow_log;
+	/** last log time for slow logging of write wait failures */
+	time_t last_writewait_log;
 };
 
 /**
@@ -416,8 +418,13 @@ comm_point_send_udp_msg(struct comm_point *c, sldns_buffer* packet,
 #  endif
 				if(pret == 0) {
 					/* timer expired */
-					verbose(VERB_OPS, "send udp blocked "
-						"for long, dropping packet.");
+					struct comm_base* b = c->ev->base;
+					if(b->eb->last_writewait_log+SLOW_LOG_TIME <=
+						b->eb->secs) {
+						b->eb->last_writewait_log = b->eb->secs;
+						verbose(VERB_OPS, "send udp blocked "
+							"for long, dropping packet.");
+					}
 					return 0;
 				} else if(pret < 0 &&
 #ifndef USE_WINSOCK
@@ -652,8 +659,13 @@ comm_point_send_udp_msg_if(struct comm_point *c, sldns_buffer* packet,
 #  endif
 				if(pret == 0) {
 					/* timer expired */
-					verbose(VERB_OPS, "send udp blocked "
-						"for long, dropping packet.");
+					struct comm_base* b = c->ev->base;
+					if(b->eb->last_writewait_log+SLOW_LOG_TIME <=
+						b->eb->secs) {
+						b->eb->last_writewait_log = b->eb->secs;
+						verbose(VERB_OPS, "send udp blocked "
+							"for long, dropping packet.");
+					}
 					return 0;
 				} else if(pret < 0 &&
 #ifndef USE_WINSOCK

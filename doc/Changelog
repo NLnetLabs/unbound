@@ -1,6 +1,7 @@
 1 September 2022: Wouter
 	- Fix to update config tests to fix checking if nonblocking sockets
 	  work on OpenBSD.
+	- Slow down log frequency of write wait failures.
 
 31 August 2022: Wouter
 	- Fix to avoid process wide fcntl calls mixed with nonblocking
