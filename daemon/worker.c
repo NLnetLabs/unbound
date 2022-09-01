@@ -488,7 +488,7 @@ answer_norec_from_cache(struct worker* worker, struct query_info* qinfo,
 			 * and implement in here instead of the hardcoded EDE */
 			if (worker->env.cfg->ede) {
 				EDNS_OPT_LIST_APPEND_EDE(&edns->opt_list_out,
-					worker->scratchpad, LDNS_EDE_DNSSEC_BOGUS, "");
+					worker->scratchpad, msg->rep->reason_bogus, "");
 			}
 			error_encode(repinfo->c->buffer, LDNS_RCODE_SERVFAIL, 
 				&msg->qinfo, id, flags, edns);
@@ -664,7 +664,7 @@ answer_from_cache(struct worker* worker, struct query_info* qinfo,
 		 * and implement in here instead of the hardcoded EDE */
 		if (worker->env.cfg->ede) {
 			EDNS_OPT_LIST_APPEND_EDE(&edns->opt_list_out,
-				worker->scratchpad, LDNS_EDE_DNSSEC_BOGUS, "");
+				worker->scratchpad, rep->reason_bogus, "");
 		}
 		error_encode(repinfo->c->buffer, LDNS_RCODE_SERVFAIL,
 			qinfo, id, flags, edns);

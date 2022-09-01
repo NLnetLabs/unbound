@@ -1709,7 +1709,8 @@ rpz_synthesize_nodata(struct rpz* ATTR_UNUSED(r), struct module_qstate* ms,
 					     0, /* ns */
 					     0, /* ar */
 					     0, /* total */
-					     sec_status_insecure);
+					     sec_status_insecure,
+					     LDNS_EDE_NONE);
 	if(msg->rep)
 		msg->rep->authoritative = 1;
 	if(!rpz_add_soa(msg->rep, ms, az))
@@ -1738,7 +1739,8 @@ rpz_synthesize_nxdomain(struct rpz* r, struct module_qstate* ms,
 					     0, /* ns */
 					     0, /* ar */
 					     0, /* total */
-					     sec_status_insecure);
+					     sec_status_insecure,
+					     LDNS_EDE_NONE);
 	if(msg->rep)
 		msg->rep->authoritative = 1;
 	if(!rpz_add_soa(msg->rep, ms, az))
@@ -1768,7 +1770,8 @@ rpz_synthesize_localdata_from_rrset(struct rpz* ATTR_UNUSED(r), struct module_qs
                                                    0, /* ns */
                                                    0, /* ar */
                                                    1, /* total */
-                                                   sec_status_insecure);
+                                                   sec_status_insecure,
+                                                   LDNS_EDE_NONE);
 	if(new_reply_info == NULL) {
 		log_err("out of memory");
 		return NULL;

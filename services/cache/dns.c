@@ -1064,7 +1064,6 @@ dns_cache_store(struct module_env* env, struct query_info* msgqinf,
 	/* ttl must be relative ;i.e. 0..86400 not  time(0)+86400.
 	 * the env->now is added to message and RRsets in this routine. */
 	/* the leeway is used to invalidate other rrsets earlier */
-
 	if(is_referral) {
 		/* store rrsets */
 		struct rrset_ref ref;
