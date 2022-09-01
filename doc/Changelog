@@ -3,6 +3,9 @@
 	  work on OpenBSD.
 	- Slow down log frequency of write wait failures.
 	- Fix to set out of file descriptor warning to operational verbosity.
+	- Fix to log a verbose message at operational notice level if a
+	  thread is not responding, to stats requests. It is logged with
+	  thread identifiers.
 
 31 August 2022: Wouter
 	- Fix to avoid process wide fcntl calls mixed with nonblocking
