@@ -1009,8 +1009,9 @@ int comm_point_perform_accept(struct comm_point* c,
 				if(b->eb->last_slow_log+SLOW_LOG_TIME <=
 					b->eb->secs) {
 					b->eb->last_slow_log = b->eb->secs;
-					log_err("accept failed, slow down "
-						"accept for %d msec: %s",
+					verbose(VERB_OPS, "accept failed, "
+						"slow down accept for %d "
+						"msec: %s",
 						NETEVENT_SLOW_ACCEPT_TIME,
 						sock_strerror(errno));
 				}
