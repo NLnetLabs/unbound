@@ -1,3 +1,33 @@
+2 September 2022: Wouter
+	- Remove include that was there for debug purposes.
+	- Fix to check pthread_t size after pthread has been detected.
+
+1 September 2022: Wouter
+	- Fix to update config tests to fix checking if nonblocking sockets
+	  work on OpenBSD.
+	- Slow down log frequency of write wait failures.
+	- Fix to set out of file descriptor warning to operational verbosity.
+	- Fix to log a verbose message at operational notice level if a
+	  thread is not responding, to stats requests. It is logged with
+	  thread identifiers.
+
+31 August 2022: Wouter
+	- Fix to avoid process wide fcntl calls mixed with nonblocking
+	  operations after a blocked write.
+	- Patch from Vadim Fedorenko that adds MSG_DONTWAIT to receive
+	  operations, so that instruction reordering does not cause mistakenly
+	  blocking socket operations.
+	- Fix to wait for blocked write on UDP sockets, with a timeout if it
+	  takes too long the packet is dropped.
+	- Fix for wait for udp send to stop when packet is successfully sent.
+
+22 August 2022: Wouter
+	- Fix #741: systemd socket activation fails on IPv6.
+
+12 August 2022: Wouter
+	- Fix to log accept error ENFILE and EMFILE errno, but slowly, once
+	  per 10 seconds. Also log accept failures when no slow down is used.
+
 5 August 2022: Wouter
 	- Fix #734 [FR] enable unbound-checkconf to detect more (basic)
 	  errors.

@@ -954,7 +954,7 @@ static int dtio_write_more(struct dt_io_thread* dtio)
  * -1: continue, >0: number of bytes read into buffer */
 static ssize_t receive_bytes(struct dt_io_thread* dtio, void* buf, size_t len) {
 	ssize_t r;
-	r = recv(dtio->fd, (void*)buf, len, 0);
+	r = recv(dtio->fd, (void*)buf, len, MSG_DONTWAIT);
 	if(r == -1) {
 		char* to = dtio->socket_path;
 		if(!to) to = dtio->ip_str;

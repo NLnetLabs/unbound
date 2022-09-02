@@ -617,7 +617,7 @@ static void log_data_frame(uint8_t* pkt, size_t len)
 static ssize_t receive_bytes(struct tap_data* data, int fd, void* buf,
 	size_t len)
 {
-	ssize_t ret = recv(fd, buf, len, 0);
+	ssize_t ret = recv(fd, buf, len, MSG_DONTWAIT);
 	if(ret == 0) {
 		/* closed */
 		if(verbosity) log_info("dnstap client stream closed from %s",

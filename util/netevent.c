@@ -61,6 +61,9 @@
 #ifdef HAVE_NETDB_H
 #include <netdb.h>
 #endif
+#ifdef HAVE_POLL_H
+#include <poll.h>
+#endif
 
 #ifdef HAVE_OPENSSL_SSL_H
 #include <openssl/ssl.h>
@@ -113,6 +116,9 @@
 #define NUM_UDP_PER_SELECT 1
 #endif
 
+/** timeout in millisec to wait for write to unblock, packets dropped after.*/
+#define SEND_BLOCKED_WAIT_TIMEOUT 200
+
 /**
  * The internal event structure for keeping ub_event info for the event.
  * Possibly other structures (list, tree) this is part of.
@@ -138,6 +144,10 @@ struct internal_base {
 	struct ub_event* slow_accept;
 	/** true if slow_accept is enabled */
 	int slow_accept_enabled;
+	/** last log time for slow logging of file descriptor errors */
+	time_t last_slow_log;
+	/** last log time for slow logging of write wait failures */
+	time_t last_writewait_log;
 };
 
 /**
@@ -373,29 +383,83 @@ comm_point_send_udp_msg(struct comm_point *c, sldns_buffer* packet,
 		 * we want to send the answer, and we will wait for
 		 * the ethernet interface buffer to have space. */
 #ifndef USE_WINSOCK
-		if(errno == EAGAIN || 
+		if(errno == EAGAIN || errno == EINTR ||
 #  ifdef EWOULDBLOCK
 			errno == EWOULDBLOCK ||
 #  endif
 			errno == ENOBUFS) {
 #else
 		if(WSAGetLastError() == WSAEINPROGRESS ||
+			WSAGetLastError() == WSAEINTR ||
 			WSAGetLastError() == WSAENOBUFS ||
 			WSAGetLastError() == WSAEWOULDBLOCK) {
 #endif
-			int e;
-			fd_set_block(c->fd);
-			if (!is_connected) {
-				sent = sendto(c->fd, (void*)sldns_buffer_begin(packet),
-					sldns_buffer_remaining(packet), 0,
-					addr, addrlen);
-			} else {
-				sent = send(c->fd, (void*)sldns_buffer_begin(packet),
-					sldns_buffer_remaining(packet), 0);
+			/* if we set the fd blocking, other threads suddenly
+			 * have a blocking fd that they operate on */
+			while(sent == -1 && (
+#ifndef USE_WINSOCK
+				errno == EAGAIN || errno == EINTR ||
+#  ifdef EWOULDBLOCK
+				errno == EWOULDBLOCK ||
+#  endif
+				errno == ENOBUFS
+#else
+				WSAGetLastError() == WSAEINPROGRESS ||
+				WSAGetLastError() == WSAEINTR ||
+				WSAGetLastError() == WSAENOBUFS ||
+				WSAGetLastError() == WSAEWOULDBLOCK
+#endif
+			)) {
+#if defined(HAVE_POLL) || defined(USE_WINSOCK)
+				struct pollfd p;
+				int pret;
+				memset(&p, 0, sizeof(p));
+				p.fd = c->fd;
+				p.events = POLLOUT | POLLERR | POLLHUP;
+#  ifndef USE_WINSOCK
+				pret = poll(&p, 1, SEND_BLOCKED_WAIT_TIMEOUT);
+#  else
+				pret = WSAPoll(&p, 1,
+					SEND_BLOCKED_WAIT_TIMEOUT);
+#  endif
+				if(pret == 0) {
+					/* timer expired */
+					struct comm_base* b = c->ev->base;
+					if(b->eb->last_writewait_log+SLOW_LOG_TIME <=
+						b->eb->secs) {
+						b->eb->last_writewait_log = b->eb->secs;
+						verbose(VERB_OPS, "send udp blocked "
+							"for long, dropping packet.");
+					}
+					return 0;
+				} else if(pret < 0 &&
+#ifndef USE_WINSOCK
+					errno != EAGAIN && errno != EINTR &&
+#  ifdef EWOULDBLOCK
+					errno != EWOULDBLOCK &&
+#  endif
+					errno != ENOBUFS
+#else
+					WSAGetLastError() != WSAEINPROGRESS &&
+					WSAGetLastError() != WSAEINTR &&
+					WSAGetLastError() != WSAENOBUFS &&
+					WSAGetLastError() != WSAEWOULDBLOCK
+#endif
+					) {
+					log_err("poll udp out failed: %s",
+						sock_strerror(errno));
+					return 0;
+				}
+#endif /* defined(HAVE_POLL) || defined(USE_WINSOCK) */
+				if (!is_connected) {
+					sent = sendto(c->fd, (void*)sldns_buffer_begin(packet),
+						sldns_buffer_remaining(packet), 0,
+						addr, addrlen);
+				} else {
+					sent = send(c->fd, (void*)sldns_buffer_begin(packet),
+						sldns_buffer_remaining(packet), 0);
+				}
 			}
-			e = errno;
-			fd_set_nonblock(c->fd);
-			errno = e;
 		}
 	}
 	if(sent == -1) {
@@ -562,22 +626,74 @@ comm_point_send_udp_msg_if(struct comm_point *c, sldns_buffer* packet,
 		 * we want to send the answer, and we will wait for
 		 * the ethernet interface buffer to have space. */
 #ifndef USE_WINSOCK
-		if(errno == EAGAIN || 
+		if(errno == EAGAIN || errno == EINTR ||
 #  ifdef EWOULDBLOCK
 			errno == EWOULDBLOCK ||
 #  endif
 			errno == ENOBUFS) {
 #else
 		if(WSAGetLastError() == WSAEINPROGRESS ||
+			WSAGetLastError() == WSAEINTR ||
 			WSAGetLastError() == WSAENOBUFS ||
 			WSAGetLastError() == WSAEWOULDBLOCK) {
 #endif
-			int e;
-			fd_set_block(c->fd);
-			sent = sendmsg(c->fd, &msg, 0);
-			e = errno;
-			fd_set_nonblock(c->fd);
-			errno = e;
+			while(sent == -1 && (
+#ifndef USE_WINSOCK
+				errno == EAGAIN || errno == EINTR ||
+#  ifdef EWOULDBLOCK
+				errno == EWOULDBLOCK ||
+#  endif
+				errno == ENOBUFS
+#else
+				WSAGetLastError() == WSAEINPROGRESS ||
+				WSAGetLastError() == WSAEINTR ||
+				WSAGetLastError() == WSAENOBUFS ||
+				WSAGetLastError() == WSAEWOULDBLOCK
+#endif
+			)) {
+#if defined(HAVE_POLL) || defined(USE_WINSOCK)
+				struct pollfd p;
+				int pret;
+				memset(&p, 0, sizeof(p));
+				p.fd = c->fd;
+				p.events = POLLOUT | POLLERR | POLLHUP;
+#  ifndef USE_WINSOCK
+				pret = poll(&p, 1, SEND_BLOCKED_WAIT_TIMEOUT);
+#  else
+				pret = WSAPoll(&p, 1,
+					SEND_BLOCKED_WAIT_TIMEOUT);
+#  endif
+				if(pret == 0) {
+					/* timer expired */
+					struct comm_base* b = c->ev->base;
+					if(b->eb->last_writewait_log+SLOW_LOG_TIME <=
+						b->eb->secs) {
+						b->eb->last_writewait_log = b->eb->secs;
+						verbose(VERB_OPS, "send udp blocked "
+							"for long, dropping packet.");
+					}
+					return 0;
+				} else if(pret < 0 &&
+#ifndef USE_WINSOCK
+					errno != EAGAIN && errno != EINTR &&
+#  ifdef EWOULDBLOCK
+					errno != EWOULDBLOCK &&
+#  endif
+					errno != ENOBUFS
+#else
+					WSAGetLastError() != WSAEINPROGRESS &&
+					WSAGetLastError() != WSAEINTR &&
+					WSAGetLastError() != WSAENOBUFS &&
+					WSAGetLastError() != WSAEWOULDBLOCK
+#endif
+					) {
+					log_err("poll udp out failed: %s",
+						sock_strerror(errno));
+					return 0;
+				}
+#endif /* defined(HAVE_POLL) || defined(USE_WINSOCK) */
+				sent = sendmsg(c->fd, &msg, 0);
+			}
 		}
 	}
 	if(sent == -1) {
@@ -685,7 +801,7 @@ comm_point_udp_ancil_callback(int fd, short event, void* arg)
 		msg.msg_controllen = sizeof(ancil.buf);
 #endif /* S_SPLINT_S */
 		msg.msg_flags = 0;
-		rcv = recvmsg(fd, &msg, 0);
+		rcv = recvmsg(fd, &msg, MSG_DONTWAIT);
 		if(rcv == -1) {
 			if(errno != EAGAIN && errno != EINTR
 				&& udp_recv_needs_log(errno)) {
@@ -765,7 +881,7 @@ comm_point_udp_callback(int fd, short event, void* arg)
 		log_assert(fd != -1);
 		log_assert(sldns_buffer_remaining(rep.c->buffer) > 0);
 		rcv = recvfrom(fd, (void*)sldns_buffer_begin(rep.c->buffer), 
-			sldns_buffer_remaining(rep.c->buffer), 0, 
+			sldns_buffer_remaining(rep.c->buffer), MSG_DONTWAIT,
 			(struct sockaddr*)&rep.addr, &rep.addrlen);
 		if(rcv == -1) {
 #ifndef USE_WINSOCK
@@ -2190,6 +2306,16 @@ int comm_point_perform_accept(struct comm_point* c,
 				struct timeval tv;
 				verbose(VERB_ALGO, "out of file descriptors: "
 					"slow accept");
+				ub_comm_base_now(b);
+				if(b->eb->last_slow_log+SLOW_LOG_TIME <=
+					b->eb->secs) {
+					b->eb->last_slow_log = b->eb->secs;
+					verbose(VERB_OPS, "accept failed, "
+						"slow down accept for %d "
+						"msec: %s",
+						NETEVENT_SLOW_ACCEPT_TIME,
+						sock_strerror(errno));
+				}
 				b->eb->slow_accept_enabled = 1;
 				fptr_ok(fptr_whitelist_stop_accept(
 					b->stop_accept));
@@ -2210,6 +2336,9 @@ int comm_point_perform_accept(struct comm_point* c,
 					/* we do not want to log here,
 					 * error: "event_add failed." */
 				}
+			} else {
+				log_err("accept, with no slow down, "
+					"failed: %s", sock_strerror(errno));
 			}
 			return -1;
 		}
@@ -2970,7 +3099,7 @@ comm_point_tcp_handle_read(int fd, struct comm_point* c, int short_ok)
 	if(c->tcp_byte_count < sizeof(uint16_t)) {
 		/* read length bytes */
 		r = recv(fd,(void*)sldns_buffer_at(c->buffer,c->tcp_byte_count),
-			sizeof(uint16_t)-c->tcp_byte_count, 0);
+			sizeof(uint16_t)-c->tcp_byte_count, MSG_DONTWAIT);
 		if(r == 0) {
 			if(c->tcp_req_info)
 				return tcp_req_info_handle_read_close(c->tcp_req_info);
@@ -3061,7 +3190,7 @@ comm_point_tcp_handle_read(int fd, struct comm_point* c, int short_ok)
 	if(sldns_buffer_remaining(c->buffer) == 0)
 		log_err("in comm_point_tcp_handle_read buffer_remaining is not > 0 as expected, continuing with (harmless) 0 length recv");
 	r = recv(fd, (void*)sldns_buffer_current(c->buffer), 
-		sldns_buffer_remaining(c->buffer), 0);
+		sldns_buffer_remaining(c->buffer), MSG_DONTWAIT);
 	if(r == 0) {
 		if(c->tcp_req_info)
 			return tcp_req_info_handle_read_close(c->tcp_req_info);
@@ -3603,7 +3732,7 @@ http_read_more(int fd, struct comm_point* c)
 	ssize_t r;
 	log_assert(sldns_buffer_remaining(c->buffer) > 0);
 	r = recv(fd, (void*)sldns_buffer_current(c->buffer), 
-		sldns_buffer_remaining(c->buffer), 0);
+		sldns_buffer_remaining(c->buffer), MSG_DONTWAIT);
 	if(r == 0) {
 		return 0;
 	} else if(r == -1) {
@@ -4041,7 +4170,7 @@ ssize_t http2_recv_cb(nghttp2_session* ATTR_UNUSED(session), uint8_t* buf,
 	}
 #endif /* HAVE_SSL */
 
-	ret = recv(h2_session->c->fd, buf, len, 0);
+	ret = recv(h2_session->c->fd, buf, len, MSG_DONTWAIT);
 	if(ret == 0) {
 		return NGHTTP2_ERR_EOF;
 	} else if(ret < 0) {
