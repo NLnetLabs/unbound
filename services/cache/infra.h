@@ -49,6 +49,7 @@
 #include "util/rtt.h"
 #include "util/netevent.h"
 #include "util/data/msgreply.h"
+#include "services/outside_network.h"
 struct slabhash;
 struct config_file;
 
@@ -83,13 +84,15 @@ enum edns_cookie_state
 };
 
 /**
- * Structure for an EDNS cookie (RFC9018) and it's internal state
+ * Structure for an EDNS cookie (RFC9018), it's internal state, and the
+ * the outgoing address that we bind this cookie to for privacy (RFC9018)
  */
 struct edns_cookie {
         enum edns_cookie_state state;
         struct edns_cookie_data data;
+        struct sockaddr_storage bound_addr;
+        socklen_t bound_addrlen;
 };
-
 
 
 /**
@@ -377,7 +380,8 @@ int infra_edns_update(struct infra_cache* infra,
  */
 int infra_get_cookie(struct infra_cache* infra, struct sockaddr_storage* addr,
         socklen_t addrlen, uint8_t* name, size_t namelen,
-        time_t timenow, struct edns_cookie* cookie);
+        time_t timenow, struct outside_network* outnet, struct port_if** pif,
+        struct edns_cookie* cookie);
 
 /**
  * Find the cookie entry in the cache and update it with to make a 'complete cookie'
@@ -390,14 +394,17 @@ int infra_get_cookie(struct infra_cache* infra, struct sockaddr_storage* addr,
  * @param name: name of zone
  * @param namelen: length of name
  * @param timenow: what time it is now.
+ * @param bound_addr: the outgoing address that we bind to this cookie
+ * @param bound_addr: the length of the bound address
  * @param cookie: the EDNS cookie option we want to store.
  * @return -1 if the wrong client cookie is found, 0 if the entry isn't found in
  *      the cache and a new one is inserted, 1 if the complete cookie is inserted
  *      or unchanged.
  */
 int infra_set_server_cookie(struct infra_cache* infra, struct sockaddr_storage* addr,
-        socklen_t addrlen, uint8_t* name, size_t namelen, struct edns_option* cookie);
-
+        socklen_t addrlen, uint8_t* name, size_t namelen,
+        struct sockaddr_storage* bound_addr, socklen_t bound_addrlen,
+        struct edns_option* cookie);
 
 /**
  * Get Lameness information and average RTT if host is in the cache.

@@ -3945,6 +3945,17 @@ process_response(struct module_qstate* qstate, struct iter_qstate* iq,
 		if (edns.opt_list_in &&
 			(cookie = edns_list_get_option(edns.opt_list_in,
 				LDNS_EDNS_COOKIE))){
+			struct sockaddr_storage bound_addr;
+			socklen_t bound_addrlen = sizeof(struct sockaddr);
+
+			if(getsockname(qstate->reply->c->fd,
+				(struct sockaddr *) &bound_addr,
+					&bound_addrlen) != -1) {
+
+				log_addr(VERB_DETAIL, "!!!!! iterator:udp socket:", &bound_addr, bound_addrlen);
+			} else {
+				bound_addrlen = 0;
+			}
 			/* verify this is a 'complete cookie' (client+server)
 			 * (RFC9018) with the length and store the complete
 			 * cookie in the infra_cache. Do nothing when the cookie
@@ -3953,7 +3964,8 @@ process_response(struct module_qstate* qstate, struct iter_qstate* iq,
 			if (cookie->opt_len == 24 &&
 				infra_set_server_cookie(qstate->env->infra_cache,
 					&qstate->reply->addr, qstate->reply->addrlen,
-					iq->dp->name, iq->dp->namelen, cookie) >= 0) {
+					iq->dp->name, iq->dp->namelen, &bound_addr,
+					bound_addrlen, cookie) >= 0) {
 				/* log_hex() uses the verbosity levels of verbose() */
 				log_hex("complete cookie: ", cookie->opt_data,
 					cookie->opt_len);
@@ -3969,7 +3981,7 @@ process_response(struct module_qstate* qstate, struct iter_qstate* iq,
 		}
 	}
 
-	/* Copy the edns options we may got from the back end */
+	/* Copy the edns options we may have gotten from the back end */
 	if(edns.opt_list_in) {
 		qstate->edns_opts_back_in = edns_opt_copy_region(edns.opt_list_in,
 			qstate->region);

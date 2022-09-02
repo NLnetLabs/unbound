@@ -1227,6 +1227,8 @@ struct serviced_query* outnet_serviced_query(struct outside_network* outnet,
 			qstate->edns_opts_back_out;
 		struct edns_option* per_upstream_opt_list = NULL;
 		struct edns_cookie cookie;
+		struct port_if* pif;
+
 		/* If we have an already populated EDNS option list make a copy
 		 * since we may now add upstream specific EDNS options. */
 		if(qstate->edns_opts_back_out) {
@@ -1258,7 +1260,7 @@ struct serviced_query* outnet_serviced_query(struct outside_network* outnet,
 
 		if (qstate->env->cfg->upstream_cookies &&
 			infra_get_cookie(env->infra_cache, addr, addrlen,
-				zone, zonelen, *env->now, &cookie)) {
+				zone, zonelen, *env->now, outnet, &pif, &cookie)) {
 
 			if (cookie.state == SERVER_COOKIE_LEARNED) {
 				/* We known the complete cookie, so we attach it */
