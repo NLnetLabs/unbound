@@ -379,6 +379,7 @@ config_create(void)
 	cfg->ipset_name_v6 = NULL;
 #endif
 	cfg->ede = 0;
+	cfg->upstream_cookies = 0;
 	return cfg;
 error_exit:
 	config_delete(cfg);

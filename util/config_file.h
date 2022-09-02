@@ -686,6 +686,8 @@ struct config_file {
 #endif
 	/** respond with Extended DNS Errors (RFC8914) */
 	int ede;
+	/** Send EDNS cookies to the upstream and keep their state(RFC7873-RFC9018) */
+	int upstream_cookies;
 };
 
 /** from cfg username, after daemonize setup performed */

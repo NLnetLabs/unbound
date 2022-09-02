@@ -1036,7 +1036,8 @@ reuse_tcp_remove_tree_list(struct outside_network* outnet,
 			char buf[256];
 			addr_to_str(&reuse->addr, reuse->addrlen, buf,
 				sizeof(buf));
-			log_err("reuse tcp delete: node not present, internal error, %s ssl %d lru %d", buf, reuse->is_ssl, reuse->item_on_lru_list);
+			log_err("reuse tcp delete: node not present, internal error, %s ssl "
+				"%d lru %d", buf, reuse->is_ssl, reuse->item_on_lru_list);
 		}
 		reuse->node.key = NULL;
 		/* defend against loops on broken tree by zeroing the
@@ -1381,6 +1382,7 @@ outnet_send_wait_udp(struct outside_network* outnet)
 		pend->pkt_len = 0;
 		log_assert(!pend->sq->busy);
 		pend->sq->busy = 1;
+
 		if(!randomize_and_send_udp(pend, outnet->udp_buff,
 			pend->timeout)) {
 			/* callback error on pending */
@@ -1446,6 +1448,7 @@ outnet_udp_cb(struct comm_point* c, void* arg, int error,
 
 	verbose(VERB_ALGO, "received udp reply.");
 	log_buf(VERB_ALGO, "udp message", c->buffer);
+
 	if(p->pc->cp != c) {
 		verbose(VERB_QUERY, "received reply id,addr on wrong port. "
 			"dropped.");
@@ -2016,7 +2019,6 @@ static int udp_connect_needs_log(int err)
 	return 1;
 }
 
-
 /** Select random interface and port */
 static int
 select_ifport(struct outside_network* outnet, struct pending* pend,
@@ -2033,8 +2035,17 @@ select_ifport(struct outside_network* outnet, struct pending* pend,
 	log_assert(outnet->unused_fds);
 	tries = 0;
 	while(1) {
-		my_if = ub_random_max(outnet->rnd, num_if);
-		pif = &ifs[my_if];
+		/* if we have a bound IP address for the EDNS cookie in the
+		 * message, use that interface */
+		if (!(pend->sq->bound_interface)) {
+			my_if = ub_random_max(outnet->rnd, num_if);
+			pif = &ifs[my_if];
+		} else {
+			pif = pend->sq->bound_interface;
+			log_err("!!!!! select_ifport:bound_addrlen: %d", pif->addrlen);
+			log_addr(VERB_OPS, "!!!!! select_ifport:bound_addrlen:", &pif->addr, pif->addrlen);
+		}
+
 #ifndef DISABLE_EXPLICIT_PORT_RANDOMISATION
 		if(outnet->udp_connect) {
 			/* if we connect() we cannot reuse fds for a port */
@@ -2057,6 +2068,9 @@ select_ifport(struct outside_network* outnet, struct pending* pend,
 				break;
 			}
 		}
+
+		log_err("!!!!! pif->inuse: %d, pif->maxout: %d", pif->inuse, pif->maxout);
+
 		/* try to open new port, if fails, loop to try again */
 		log_assert(pif->inuse < pif->maxout);
 		portno = pif->avail_ports[my_port - pif->inuse];
@@ -2192,6 +2206,7 @@ pending_udp_query(struct serviced_query* sq, struct sldns_buffer* packet,
 	pend->cb = cb;
 	pend->cb_arg = cb_arg;
 	pend->node.key = pend;
+
 	pend->timer = comm_timer_create(sq->outnet->base, pending_udp_timer_cb,
 		pend);
 	if(!pend->timer) {
@@ -2538,7 +2553,7 @@ serviced_create(struct outside_network* outnet, sldns_buffer* buff, int dnssec,
 	char* tls_auth_name, struct sockaddr_storage* addr, socklen_t addrlen,
 	uint8_t* zone, size_t zonelen, int qtype, struct edns_option* opt_list,
 	size_t pad_queries_block_size, struct alloc_cache* alloc,
-	struct regional* region)
+	struct port_if* bound_interface, struct regional* region)
 {
 	struct serviced_query* sq = (struct serviced_query*)malloc(sizeof(*sq));
 	struct timeval t;
@@ -2601,6 +2616,7 @@ serviced_create(struct outside_network* outnet, sldns_buffer* buff, int dnssec,
 	sq->status = serviced_initial;
 	sq->retry = 0;
 	sq->to_be_deleted = 0;
+	sq->bound_interface = bound_interface;
 	sq->padding_block_size = pad_queries_block_size;
 #ifdef UNBOUND_DEBUG
 	ins =
@@ -3357,9 +3373,11 @@ outnet_serviced_query(struct outside_network* outnet,
 	struct service_callback* cb;
 	struct edns_string_addr* client_string_addr;
 	struct regional* region;
+	struct edns_cookie cookie;
 	struct edns_option* backed_up_opt_list = qstate->edns_opts_back_out;
 	struct edns_option* per_upstream_opt_list = NULL;
 	time_t timenow = 0;
+	struct port_if* pif;
 
 	/* If we have an already populated EDNS option list make a copy since
 	 * we may now add upstream specific EDNS options. */
@@ -3396,6 +3414,22 @@ outnet_serviced_query(struct outside_network* outnet,
 			client_string_addr->string, region);
 	}
 
+	if (env->cfg->upstream_cookies &&
+		infra_get_cookie(env->infra_cache, addr, addrlen, zone, zonelen,
+			*env->now, outnet, &pif, &cookie)) {
+
+		if (cookie.state == SERVER_COOKIE_LEARNED) {
+			/* We known the complete cookie, so we attach it */
+			edns_opt_list_append(&per_upstream_opt_list, LDNS_EDNS_COOKIE,
+				24, cookie.data.cookie, region);
+		} else if (cookie.state == SERVER_COOKIE_UNKNOWN) {
+			/* We know just client cookie, so we attach it */
+			edns_opt_list_append(&per_upstream_opt_list, LDNS_EDNS_COOKIE,
+				8, cookie.data.cookie, region);
+		} /* We ignore COOKIE_NOT_SUPPORTED */
+
+	}
+
 	serviced_gen_query(buff, qinfo->qname, qinfo->qname_len, qinfo->qtype,
 		qinfo->qclass, flags);
 	sq = lookup_serviced(outnet, buff, dnssec, addr, addrlen,
@@ -3428,7 +3462,7 @@ outnet_serviced_query(struct outside_network* outnet,
 			per_upstream_opt_list,
 			( ssl_upstream && env->cfg->pad_queries
 			? env->cfg->pad_queries_block_size : 0 ),
-			env->alloc, region);
+			env->alloc, pif, region);
 		if(!sq) {
 			if(check_ratelimit) {
 				infra_ratelimit_dec(env->infra_cache,
@@ -3518,7 +3552,8 @@ fd_for_dest(struct outside_network* outnet, struct sockaddr_storage* to_addr,
 			if(outnet->num_ip6 == 0) {
 				char to[64];
 				addr_to_str(to_addr, to_addrlen, to, sizeof(to));
-				verbose(VERB_QUERY, "need ipv6 to send, but no ipv6 outgoing interfaces, for %s", to);
+				verbose(VERB_QUERY, "need ipv6 to send, but no ipv6 outgoing "
+					"interfaces, for %s", to);
 				return -1;
 			}
 			i = ub_random_max(outnet->rnd, outnet->num_ip6);
@@ -3527,7 +3562,8 @@ fd_for_dest(struct outside_network* outnet, struct sockaddr_storage* to_addr,
 			if(outnet->num_ip4 == 0) {
 				char to[64];
 				addr_to_str(to_addr, to_addrlen, to, sizeof(to));
-				verbose(VERB_QUERY, "need ipv4 to send, but no ipv4 outgoing interfaces, for %s", to);
+				verbose(VERB_QUERY, "need ipv4 to send, but no ipv4 outgoing "
+					"interfaces, for %s", to);
 				return -1;
 			}
 			i = ub_random_max(outnet->rnd, outnet->num_ip4);

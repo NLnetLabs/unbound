@@ -433,6 +433,7 @@ enum sldns_enum_edns_option
 	LDNS_EDNS_DHU = 6, /* RFC6975 */
 	LDNS_EDNS_N3U = 7, /* RFC6975 */
 	LDNS_EDNS_CLIENT_SUBNET = 8, /* RFC7871 */
+	LDNS_EDNS_COOKIE = 10, /* RFC7873 */
 	LDNS_EDNS_KEEPALIVE = 11, /* draft-ietf-dnsop-edns-tcp-keepalive*/
 	LDNS_EDNS_PADDING = 12, /* RFC7830 */
 	LDNS_EDNS_EDE = 15, /* RFC8914 */

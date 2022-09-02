@@ -230,7 +230,7 @@ setup_domain_limits(struct infra_cache* infra, struct config_file* cfg)
 }
 
 struct infra_cache* 
-infra_create(struct config_file* cfg)
+infra_create(struct config_file* cfg, struct ub_randstate* rnd)
 {
 	struct infra_cache* infra = (struct infra_cache*)calloc(1, 
 		sizeof(struct infra_cache));
@@ -270,6 +270,11 @@ infra_create(struct config_file* cfg)
 		infra_delete(infra);
 		return NULL;
 	}
+	if (!rnd) {
+		infra_delete(infra);
+		return NULL;
+	}
+	infra->random_state = rnd;
 	return infra;
 }
 
@@ -299,7 +304,7 @@ infra_adjust(struct infra_cache* infra, struct config_file* cfg)
 {
 	size_t maxmem;
 	if(!infra)
-		return infra_create(cfg);
+		return infra_create(cfg, ub_initstate(NULL));
 	infra->host_ttl = cfg->host_ttl;
 	infra->infra_keep_probing = cfg->infra_keep_probing;
 	infra_dp_ratelimit = cfg->ratelimit;
@@ -315,7 +320,7 @@ infra_adjust(struct infra_cache* infra, struct config_file* cfg)
 	   !slabhash_is_size(infra->client_ip_rates, cfg->ip_ratelimit_size,
 	   	cfg->ip_ratelimit_slabs)) {
 		infra_delete(infra);
-		infra = infra_create(cfg);
+		infra = infra_create(cfg, ub_initstate(NULL));
 	} else {
 		/* reapply domain limits */
 		traverse_postorder(&infra->domain_limits, domain_limit_free,
@@ -383,12 +388,23 @@ static void
 data_entry_init(struct infra_cache* infra, struct lruhash_entry* e, 
 	time_t timenow)
 {
-	struct infra_data* data = (struct infra_data*)e->data;
+	int i;
+	struct infra_data* data;
+	uint8_t cookie[8] = {0,0,0,0,0,0,0,0};
+
+	for (i = 0; i < 8; i++) {
+		cookie[i] = ub_random_max(infra->random_state, 256);
+	}
+
+	data = (struct infra_data*)e->data;
 	data->ttl = timenow + infra->host_ttl;
 	rtt_init(&data->rtt);
 	data->edns_version = 0;
 	data->edns_lame_known = 0;
 	data->probedelay = 0;
+	/* set EDNS cookie to zero, as this also sets the starting state*/
+	memset(&data->cookie, 0, sizeof(struct edns_cookie));
+	memcpy(data->cookie.data.cookie, cookie, 8);
 	data->isdnsseclame = 0;
 	data->rec_lame = 0;
 	data->lame_type_A = 0;
@@ -459,7 +475,11 @@ infra_host(struct infra_cache* infra, struct sockaddr_storage* addr,
 		if(e) {
 			/* if its still there we have a writelock, init */
 			/* re-initialise */
-			/* do not touch lameness, it may be valid still */
+
+			// @TODO check if "do not touch lameness" is still true
+			/* do not touch lameness, it may be valid still.
+			 * Also don't touch the cookie, as the cookie logic
+			 * will be handled by the server. */
 			data_entry_init(infra, e, timenow);
 			wr = 1;
 			/* TOP_TIMEOUT remains on reuse */
@@ -683,6 +703,184 @@ infra_edns_update(struct infra_cache* infra, struct sockaddr_storage* addr,
 		slabhash_insert(infra->hosts, e->hash, e, e->data, NULL);
 	else 	{ lock_rw_unlock(&e->lock); }
 	return 1;
+}
+
+/** find the bound addr in the list of interfaces */
+static int
+get_bound_ip_if(struct outside_network* outnet,
+	struct sockaddr_storage bound_addr, socklen_t bound_addrlen,
+	struct port_if** pif_return)
+{
+	int i = 0;
+	struct port_if* pif_list;
+	int pif_list_len;
+
+	if(addr_is_ip6(&bound_addr, bound_addrlen)) {
+		pif_list = outnet->ip6_ifs;
+		pif_list_len = outnet->num_ip6;
+	} else {
+		pif_list = outnet->ip4_ifs;
+		pif_list_len = outnet->num_ip4;
+	}
+
+	for (i = 0; i < pif_list_len; i++) {
+		struct port_if *iface = &pif_list[i];
+
+		if (iface->addrlen == bound_addrlen &&
+			memcmp(&iface->addr, &bound_addr, bound_addrlen)) {
+			*pif_return = iface;
+			return 1;
+		}
+	}
+	return 0;
+}
+
+int
+infra_get_cookie(struct infra_cache* infra, struct sockaddr_storage* addr,
+	socklen_t addrlen, uint8_t* name, size_t namelen,
+	time_t timenow, struct outside_network* outnet, struct port_if** pif,
+	struct edns_cookie* cookie)
+{
+	struct lruhash_entry* e = infra_lookup_nottl(infra, addr, addrlen,
+		name, namelen, 1);
+	struct infra_data* data;
+	int needtoinsert = 0;
+
+	if(!e) {
+		if(!(e = new_entry(infra, addr, addrlen, name, namelen, timenow))) {
+			return 0;
+		}
+		needtoinsert = 1;
+	} else if(((struct infra_data*)e->data)->ttl < timenow) {
+		/* EDNS cookies have their own timeout logic controlled by the
+		 * upstream, so we just copy the cookie from the old cache entry */
+		struct edns_cookie c = ((struct infra_data*)e->data)->cookie;
+
+		/* create new cookie if the cache TTL expired, keep the cookie */
+		data_entry_init(infra, e, timenow);
+		((struct infra_data*)e->data)->cookie = c;
+	}
+
+	data = (struct infra_data*) e->data;
+
+	if (data->cookie.state == SERVER_COOKIE_LEARNED) {
+		// lookup bound interface
+		log_err("!!!!! infra_get_cookie:bound_addrlen: %d", data->cookie.bound_addrlen);
+		log_addr(VERB_OPS, "!!!!! infra_get_cookie:bound_addr, len:", &data->cookie.bound_addr,
+			data->cookie.bound_addrlen);
+
+		if (!(get_bound_ip_if(outnet, data->cookie.bound_addr,
+			data->cookie.bound_addrlen, pif))) {
+			log_err("!!!!!!!! creating new cookie for changed interface");
+			data_entry_init(infra, e, timenow);
+		}
+	}
+
+	// @TODO uggo: data has changed
+	data = (struct infra_data*) e->data;
+
+	memcpy(cookie, &data->cookie, sizeof(struct edns_cookie));
+
+	if(needtoinsert) {
+		slabhash_insert(infra->hosts, e->hash, e, e->data, NULL);
+	} else {
+		lock_rw_unlock(&e->lock);
+	}
+
+	return 1;
+}
+
+int
+infra_set_server_cookie(struct infra_cache* infra, struct sockaddr_storage* addr,
+        socklen_t addrlen, uint8_t* name, size_t namelen,
+        struct sockaddr_storage* bound_addr, socklen_t bound_addrlen,
+        struct edns_option* cookie)
+{
+	struct lruhash_entry* e = infra_lookup_nottl(infra, addr, addrlen,
+		name, namelen, 1);
+	struct infra_data* data;
+
+	/* cookie length verification should be checked and handled by caller */
+	assert(cookie->opt_len == 24);
+
+	/* the client cookie was set on the outgoing upstream, so the entry
+	 * should exists here. This can be false if the cookie has fallen
+	 * out of cache */
+	if (!(e)) {
+		/* No need to insert a new cookie/entry here, this will be
+		 * done with an outgoing request */
+		return 0;
+	}
+
+	data = (struct infra_data*) e->data;
+
+	if (data->cookie.state == COOKIE_NOT_SUPPORTED) {
+		/* we known this upstream doesn't support cookies; the state
+		 * remains unchanged */
+		lock_rw_unlock(&e->lock);
+		return 1;
+	} else if (data->cookie.state == SERVER_COOKIE_LEARNED) {
+		/* wrong client cookie; don't store the server cookie */
+		if (!(memcmp(data->cookie.data.cookie,
+			cookie->opt_data+4, 8))) {
+			/* the state of the cookie remains unchanged as we will
+			 * drop this upstream response */
+
+			verbose(VERB_ALGO, "wrong client cookie from upstream"
+				" with previously seen cookie");
+			lock_rw_unlock(&e->lock);
+			return -1;
+		}
+
+		if (!(data->cookie.bound_addrlen == bound_addrlen) &&
+			memcpy(&data->cookie.bound_addr, bound_addr, bound_addrlen)){
+
+			// @TODO do something? this _should_ only happen on reloads?
+		}
+
+		/* the server cookie has changed, but the client cookie has not
+		 * so we update the server cookie */
+		if (memcmp(data->cookie.data.cookie+8,
+				cookie->opt_data+12, 16) != 0) {
+			memcpy(data->cookie.data.cookie, cookie->opt_data, 24);
+			/* the cookie state remains unchanged*/
+
+			verbose(VERB_ALGO, "update new server cookie from upstream");
+			lock_rw_unlock(&e->lock);
+			return 1;
+		}
+
+		/* both the complete cookies are identical, so the state
+		 * remains unchanged */
+		verbose(VERB_ALGO, "correctly received indentical cookie from"
+			" upstream; don't update");
+		lock_rw_unlock(&e->lock);
+		return 1;
+	} else { /* cookie state == SERVER_COOKIE_UNKNOWN */
+
+		/* wrong client cookie; don't store the server cookie */
+		if (!(memcmp(data->cookie.data.cookie,
+			cookie->opt_data+4, 8))) {
+			/* the state of the cookie remains unchanged as we will
+			 * drop this upstream response */
+
+			verbose(VERB_ALGO, "wrong client cookie from upstream");
+			lock_rw_unlock(&e->lock);
+			return -1;
+		}
+
+		/* store the server cookie */
+		memcpy(data->cookie.data.cookie, cookie->opt_data, 24);
+		data->cookie.state = SERVER_COOKIE_LEARNED;
+		if (bound_addrlen > 0) {
+			memcpy(&data->cookie.bound_addr, bound_addr, bound_addrlen);
+			data->cookie.bound_addrlen = bound_addrlen;
+		}
+		verbose(VERB_QUERY, "storing received server cookie from upstream");
+		lock_rw_unlock(&e->lock);
+		return 1;
+	}
+
 }
 
 int

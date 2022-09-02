@@ -25,6 +25,7 @@ struct sockaddr_storage;
 #include <errno.h>
 #include <stdarg.h>
 #include <ctype.h>
+#include <time.h>
 #include "testcode/testpkts.h"
 #include "util/net_help.h"
 #include "sldns/sbuffer.h"
@@ -39,6 +40,8 @@ struct sockaddr_storage;
 #define MAX_LINE   10240	
 /** string to show in warnings and errors */
 static const char* prog_name = "testpkts";
+/** hardcoded EDNS server cookie (RFC7876) */
+static const char* hardcoded_server_cookie = "7e8b5fcc6a4bc7bc";
 
 #ifndef UTIL_LOG_H
 /** verbosity definition for compat */
@@ -140,6 +143,13 @@ static void matchline(char* line, struct entry* e)
 			e->match_noedns = 1;
 		} else if(str_keyword(&parse, "ednsdata")) {
 			e->match_ednsdata_raw = 1;
+		} else if(str_keyword(&parse, "random_client_cookie")) {
+			e->match_random_client_cookie = 1;
+		} else if (str_keyword(&parse, "random_complete_cookie_renewed")) {
+			e->match_random_complete_cookie = 1;
+			e->match_random_complete_cookie_renewed = 1;
+		} else if(str_keyword(&parse, "random_complete_cookie")) {
+			e->match_random_complete_cookie = 1;
 		} else if(str_keyword(&parse, "UDP")) {
 			e->match_transport = transport_udp;
 		} else if(str_keyword(&parse, "TCP")) {
@@ -263,6 +273,11 @@ static void adjustline(char* line, struct entry* e,
 			pkt->packet_sleep = (unsigned int) strtol(parse, (char**)&parse, 10);
 			while(isspace((unsigned char)*parse)) 
 				parse++;
+		} else if (str_keyword(&parse, "server_cookie_renew")) {
+			e->server_cookie = 1;
+			e->server_cookie_renew = 1;
+		} else if (str_keyword(&parse, "server_cookie")) {
+			e->server_cookie = 1;
 		} else {
 			error("could not parse ADJUST: '%s'", parse);
 		}
@@ -299,6 +314,8 @@ static struct entry* new_entry(void)
 	e->copy_ednsdata_assume_clientsubnet = 0;
 	e->increment_ecs_scope = 0;
 	e->sleeptime = 0;
+	e->server_cookie = 0;
+	e->server_cookie_renew = 0;
 	e->next = NULL;
 	return e;
 }
@@ -1499,6 +1516,110 @@ match_ednsdata(uint8_t* q, size_t qlen, uint8_t* p, size_t plen)
 	return (memcmp(walk_p+8, walk_q+8, walk_qlen-8) == 0);
 }
 
+/** verify that a client cookie of length 8 is in the EDNS data of the query */
+static int
+match_random_client_cookie(uint8_t* query, size_t query_len)
+{
+	uint8_t* walk_query = query;
+	size_t walk_query_len = query_len;
+
+	if(!pkt_find_edns_opt(&walk_query, &walk_query_len)) {
+		walk_query_len = 0;
+		log_err("no edns found");
+	}
+
+	/* class + ttl + rdlen = 8 */
+	if (walk_query_len <= 8) {
+		verbose(3, "No correct EDNS record found, so no cookie");
+		return 0;
+	}
+
+	/* class + ttl + rdlen + opt_code + opt_len = 12 */
+	if (walk_query_len < 12) {
+		verbose(3, "No EDNS opt found, so no cookie");
+		return 0;
+	}
+
+	if (sldns_read_uint16(walk_query+8) != 10 /* LDNS_EDNS_COOKIE */) {
+		verbose(3, "EDNS option is not a cookie");
+		return 0;
+	}
+	if (sldns_read_uint16(walk_query+10) != 8) {
+		verbose(3, "EDNS cookie is not 8 bytes, so not a correct client cookie");
+		return 0;
+	}
+
+	return 1;
+}
+
+/** verify that a complete EDNS cookie (client+server) (RFC9018) of length 24
+  * is in the EDNS data of the query and the hardcoded cookie is the same */
+static int
+match_random_complete_cookie(uint8_t* query, size_t query_len, struct entry* p)
+{
+	uint8_t* walk_query = query;
+	size_t walk_query_len = query_len;
+
+	if(!pkt_find_edns_opt(&walk_query, &walk_query_len)) {
+		walk_query_len = 0;
+		log_err("no edns found");
+	}
+
+	/* class + ttl + rdlen = 8 */
+	if(walk_query_len <= 8) {
+		verbose(3, "No correct EDNS record , so no cookie");
+		return 0;
+	}
+
+	walk_query += 8;
+	walk_query_len -= 8;
+
+	/* opt_code + opt_len = 4 */
+	if (walk_query_len < 4) {
+		verbose(3, "No EDNS opt found, so no cookie");
+		return 0;
+	}
+
+	if (sldns_read_uint16(walk_query) != 10 /* LDNS_EDNS_COOKIE */) {
+		verbose(3, "EDNS option is not a cookie");
+		return 0;
+	}
+	if (sldns_read_uint16(walk_query+2) != 24) {
+		verbose(3, "EDNS cookie is not 24 bytes, so not a correct complete cookie");
+		return 0;
+	}
+
+	/* opt_code + opt_len + cookie_data = 28 */
+	if (walk_query_len < 28) {
+		verbose(3, "No complete cookie found in the packet");
+		return 0;
+	}
+
+	if (p->match_random_complete_cookie_renewed) {
+		uint8_t renewed_cookie[16];
+
+		/* shuffle the hardcoded cookie like adjust_packet() does */
+		memcpy(renewed_cookie, hardcoded_server_cookie+8, 8);
+		memcpy(renewed_cookie+8, hardcoded_server_cookie, 8);
+		
+		/* client_cookie = 8 */
+		if (!(memcmp(walk_query+8, renewed_cookie, 16))) {
+			verbose(3, "EDNS server cookie does not match the renewed"
+				"cookie, so not a correct complete cookie");
+		return 0;
+		}
+	}
+
+	/* client_cookie = 8 */
+	if (!(memcmp(walk_query+8, hardcoded_server_cookie, 16))) {
+		verbose(3, "EDNS server cookie does not match the hardcoded cookie, "
+			"so not a correct complete cookie");
+		return 0;
+	}
+
+	return 1;
+}
+
 /* finds entry in list, or returns NULL */
 struct entry* 
 find_match(struct entry* entries, uint8_t* query_pkt, size_t len,
@@ -1592,6 +1713,16 @@ find_match(struct entry* entries, uint8_t* query_pkt, size_t len,
 		if(p->match_ednsdata_raw && 
 				!match_ednsdata(query_pkt, len, reply, rlen)) {
 			verbose(3, "bad EDNS data match.\n");
+			continue;
+		}
+		if (p->match_random_client_cookie &&
+				!match_random_client_cookie(query_pkt, len)) {
+			verbose(3, "bad client cookie match.\n");
+			continue;
+		}
+		if (p->match_random_complete_cookie &&
+				!match_random_complete_cookie(query_pkt, len, p)) {
+			verbose(3, "bad complete cookie match.\n");
 			continue;
 		}
 		if(p->match_transport != transport_any && p->match_transport != transport) {
@@ -1689,6 +1820,118 @@ adjust_packet(struct entry* match, uint8_t** answer_pkt, size_t *answer_len,
 		res[1] = query_pkt[1];
 	if(match->copy_id && reslen >= 1 && query_len >= 1)
 		res[0] = query_pkt[0];
+
+	if(match->server_cookie) {
+		/** Find the cookie option and add the server cookie if 
+		 * the client cookie is present and not already there */
+		uint8_t* walk_query = query_pkt;
+		size_t walk_query_len = query_len;
+		uint8_t* walk_response;
+		size_t walk_response_len;
+
+		uint8_t* rdlen_ptr_response;
+
+		/* create space for the server cookie in the response packet */
+		res = realloc(res, reslen + 28);
+		reslen += 28;
+
+		walk_response = res;
+		walk_response_len = reslen;
+
+		if (!(walk_response)) {
+			log_err("testbound: out of memory; send without cookie");
+			return;
+		}
+
+		/* verify that we have a EDNS record */
+		if(!pkt_find_edns_opt(&walk_query, &walk_query_len)) {
+			walk_query_len = 0;
+			log_err("testbound: no EDNS in the query packet when "
+				"trying to attach a EDNS cookie");
+		}
+		if(!pkt_find_edns_opt(&walk_response, &walk_response_len)) {
+			walk_response_len = 0;
+			log_err("testbound: no EDNS in the response packet when"
+				 "trying to attach a EDNS cookie");
+		}
+
+		/* verify that we have a EDNS option */
+		if (walk_query_len < 12) /* class + ttl + rdlen + opt_code + opt_len */ {
+			/* invalid or no (OPT) record in the query */
+			walk_query_len = 0;
+			log_err("testbound: invalid or no OPT record in the query packet");
+		}
+		if (walk_response_len < 8) /* class + ttl + rdlen */ {
+			walk_response_len = 0;
+			log_err("testbound: invalid OPT record in the response packet");
+		}
+
+		/* store the location of the rdlen */
+		rdlen_ptr_response = walk_response + 6;
+
+		/* skip past the OPT record to get to the option */
+		walk_query += 8;
+		walk_query_len -= 8;
+		walk_response += 8;
+		walk_response_len -= 8;
+
+		/* verify that the client cookie exists */
+		if (walk_query_len < 12 /* opt_code + opt_len + client cookie */) {
+			walk_query_len = 0;
+			log_err("testbound: no EDNS cookie in the query packet");
+		}
+
+		/* assume one record in the query */
+		if (sldns_read_uint16(walk_query) != 10 /* LDNS_EDNS_COOKIE */ ||
+			!(sldns_read_uint16(walk_query+2) == 8 || /* client cookie length */
+			sldns_read_uint16(walk_query+2) == 24)) { /* client+server cookie */
+			/* incorrect cookie */
+			walk_query_len = 0;
+			log_err("testbound: invalid EDNS cookie in the query packet");
+		}
+
+		if (walk_query_len > 0 && walk_response_len > 0) {
+			/* create space for the cookie, as the length of the
+			 * rest of the response is 0 */
+
+			/* depending on the incoming cookie, add the server cookie
+			 * or copy the complete cookie to the response */
+			if (sldns_read_uint16(walk_query+2) == 8) {
+				/* copy the EDNS client cookie from the query
+				 * packet to the response */
+				memmove(walk_response, walk_query, 12);
+
+				/* add the server cookie to the client cookie to make it
+				 * 'complete'. we fake the siphash specified in RFC9018
+				 * by hardcoding the server cookie */
+				memmove(walk_response+12, hardcoded_server_cookie, 16);
+
+				/* update the RDLEN and OPTLEN */
+				sldns_write_uint16(rdlen_ptr_response, 28);
+				sldns_write_uint16(walk_response+2, 24);
+			} else if (sldns_read_uint16(walk_query+2) == 24) {
+				/* update the RDLEN */
+				sldns_write_uint16(rdlen_ptr_response, 28);
+
+				/* we fake verification of the cookie and send
+				 * it back like it's still valid. We renew the cookie
+				 * if this desired */
+				if (match->server_cookie_renew) {
+					/* copy the cookie from the response but add a
+					 * different cookie (by reshuffeling server cookie) */
+					memmove(walk_response, walk_query, 12);
+					memmove(walk_response+12, walk_query+12+8, 8);
+					memmove(walk_response+12+8, walk_query+12, 8);
+				} else {
+					memmove(walk_response, walk_query, 28);
+				}
+			} else {
+				log_err("testbound: the incoming EDNS cookie has the wrong length");
+			}
+		} else {
+			log_err("testbound: an error has occured while parsing the EDNS cookie");
+		}
+	}
 
 	if(match->copy_ednsdata_assume_clientsubnet) {
 		/** Assume there is only one EDNS option, which is ECS.

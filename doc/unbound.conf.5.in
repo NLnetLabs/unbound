@@ -507,6 +507,15 @@ Enable udp upstream even if do-udp is no.  Default is no, and this does not
 change anything.  Useful for TLS service providers, that want no udp downstream
 but use udp to fetch data upstream.
 .TP
+.B upstream-cookies: \fI<yes or no>
+Enable EDNS cookies from upstream connections. DNS Cookies, as specified in 
+RFC 7873 and 9018 provide a limited-protection transaction security mechanism.
+Once a cookie has been exchanged, the resolver and upstream are known to each
+other and requests to the upstream can be exempted from rate limiting, for
+example. Note that RFC9018 specifies that cookies should not be reused for
+multiple outgoing interfaces, which is not supported at this time. The default
+is no.
+.TP
 .B tls\-upstream: \fI<yes or no>
 Enabled or disable whether the upstream queries use TLS only for transport.
 Default is no.  Useful in tunneling scenarios.  The TLS contains plain DNS in

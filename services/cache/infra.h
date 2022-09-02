@@ -49,8 +49,51 @@
 #include "util/rtt.h"
 #include "util/netevent.h"
 #include "util/data/msgreply.h"
+#include "services/outside_network.h"
 struct slabhash;
 struct config_file;
+
+/* COOKIE @TODO move this to correct spot */
+
+/**
+ * The actual EDNS cookie data. Note that the cookie can be filled with the 
+ * just 'client' section, or with the 'complete' cookie depending on the state
+ * governed by the edns_cookie_state.
+ * The commented struct provides insight on how the bytes in the struct are
+ * structured.
+ */
+struct edns_cookie_data {
+        uint8_t cookie[24];
+        /* struct {
+                uint8_t client[8];
+                uint8_t version;
+                uint8_t reserved[3];
+                uint32_t timestamp;
+                uint8_t hash[8];
+        } components; */
+};
+
+/**
+ * The different states the EDNS cookie can be in
+ */
+enum edns_cookie_state
+{
+        SERVER_COOKIE_UNKNOWN = 0, /* server cookie unknown, client cookie known */
+        SERVER_COOKIE_LEARNED = 1, /* server (and client) cookie known */
+        COOKIE_NOT_SUPPORTED = 2, /* upstream does not supported EDNS/cookies */
+};
+
+/**
+ * Structure for an EDNS cookie (RFC9018), it's internal state, and the
+ * the outgoing address that we bind this cookie to for privacy (RFC9018)
+ */
+struct edns_cookie {
+        enum edns_cookie_state state;
+        struct edns_cookie_data data;
+        struct sockaddr_storage bound_addr;
+        socklen_t bound_addrlen;
+};
+
 
 /**
  * Host information kept for every server, per zone.
@@ -88,6 +131,9 @@ struct infra_data {
 	 * and cause a timeout */
 	uint8_t edns_lame_known;
 
+        /* The EDNS cookie containing the cookie and the internal state */
+        struct edns_cookie cookie;
+
 	/** is the host lame (does not serve the zone authoritatively),
 	 * or is the host dnssec lame (does not serve DNSSEC data) */
 	uint8_t isdnsseclame;
@@ -122,6 +168,8 @@ struct infra_cache {
 	rbtree_type domain_limits;
 	/** hash table with query rates per client ip: ip_rate_key, ip_rate_data */
 	struct slabhash* client_ip_rates;
+        /** random state used in new entries for creating EDNS cookies (RFC9018) */
+        struct ub_randstate* random_state;
 };
 
 /** ratelimit, unless overridden by domain_limits, 0 is off */
@@ -196,7 +244,7 @@ struct rate_data {
  * @param cfg: config parameters or NULL for defaults.
  * @return: new infra cache, or NULL.
  */
-struct infra_cache* infra_create(struct config_file* cfg);
+struct infra_cache* infra_create(struct config_file* cfg, struct ub_randstate* rnd);
 
 /**
  * Delete infra cache.
@@ -317,6 +365,46 @@ void infra_update_tcp_works(struct infra_cache* infra,
 int infra_edns_update(struct infra_cache* infra,
         struct sockaddr_storage* addr, socklen_t addrlen,
 	uint8_t* name, size_t namelen, int edns_version, time_t timenow);
+
+/**
+ * Find and return the cookie from the infra cache data. Creates an entry in
+ * the cache if there isn't one.
+ * @param infra: infrastructure cache.
+ * @param addr: host address.
+ * @param addrlen: length of addr.
+ * @param name: name of zone
+ * @param namelen: length of name
+ * @param timenow: what time it is now.
+ * @param cookie: the cookie that is retrieved from cache on success.
+ * @return: 0 on error, cookie pointer remains unchanged then.
+ */
+int infra_get_cookie(struct infra_cache* infra, struct sockaddr_storage* addr,
+        socklen_t addrlen, uint8_t* name, size_t namelen,
+        time_t timenow, struct outside_network* outnet, struct port_if** pif,
+        struct edns_cookie* cookie);
+
+/**
+ * Find the cookie entry in the cache and update it with to make a 'complete cookie'
+ * (client+server) (RFC9018). This function asserts that the cookie param contains
+ * a complete cookie with a length of 24 bytes. If the cache entry isn't found
+ * a new one will be inserted.
+ * @param infra: infrastructure cache.
+ * @param addr: host address.
+ * @param addrlen: length of addr.
+ * @param name: name of zone
+ * @param namelen: length of name
+ * @param timenow: what time it is now.
+ * @param bound_addr: the outgoing address that we bind to this cookie
+ * @param bound_addr: the length of the bound address
+ * @param cookie: the EDNS cookie option we want to store.
+ * @return -1 if the wrong client cookie is found, 0 if the entry isn't found in
+ *      the cache and a new one is inserted, 1 if the complete cookie is inserted
+ *      or unchanged.
+ */
+int infra_set_server_cookie(struct infra_cache* infra, struct sockaddr_storage* addr,
+        socklen_t addrlen, uint8_t* name, size_t namelen,
+        struct sockaddr_storage* bound_addr, socklen_t bound_addrlen,
+        struct edns_option* cookie);
 
 /**
  * Get Lameness information and average RTT if host is in the cache.

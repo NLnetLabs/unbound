@@ -214,6 +214,14 @@ struct entry {
 	uint8_t match_noedns;
 	/** match edns data field given in hex */
 	uint8_t match_ednsdata_raw;
+	/** match an EDNS cookie (RFC7873) of length 8*/
+	uint8_t match_random_client_cookie;
+	/** match an EDNS cookie (RFC7873) of length 24, we call
+	 * this "complete" (RFC9018) */
+	uint8_t match_random_complete_cookie;
+	/** match an EDNS compelete cookie (RFC7873) of length 24, which cannot be
+	 * the same as the hardcoded client cookie */
+	uint8_t match_random_complete_cookie_renewed;
 	/** match query serial with this value. */
 	uint32_t ixfr_soa_serial;
 	/** match on UDP/TCP */
@@ -236,6 +244,14 @@ struct entry {
 	uint8_t increment_ecs_scope;
 	/** in seconds */
 	unsigned int sleeptime; 
+
+	/** add a server cookie (RFC9018) to the response (provided the query
+	 * contains a client cookie) */
+	uint8_t server_cookie;
+	/** renew the server cookie (RFC9018) to the response (provided the query
+	 * contains a client cookie) by shuffling the bytes in the server cookie
+	 * Note that this also sets "server_cookie" to 1*/
+	uint8_t server_cookie_renew;
 
 	/** some number that names this entry, line number in file or so */
 	int lineno;

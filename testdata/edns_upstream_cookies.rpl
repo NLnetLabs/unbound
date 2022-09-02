@@ -1,0 +1,234 @@
+; config options
+server:
+	upstream-cookies: yes
+
+stub-zone:
+	name: example.com
+	stub-addr: 1.1.1.1
+
+CONFIG_END
+
+SCENARIO_BEGIN Test edns-upstream-cookies
+; Scenario overview:
+; - Send a client cookie to the upstream and receive one back and store it
+; - Send the client+server (complete) cookie and receive it back.
+; - pass time and send the old complete cookie and receive a new one back
+
+
+; Client query for upstream to Unbound
+STEP 1 QUERY
+ENTRY_BEGIN
+	REPLY RD
+	SECTION QUESTION
+		a.example.com. IN A
+	SECTION ADDITIONAL
+		HEX_EDNSDATA_BEGIN
+	    HEX_EDNSDATA_END
+ENTRY_END
+
+; Check that we send a server cookie to the upstream
+STEP 2 CHECK_OUT_QUERY
+ENTRY_BEGIN
+	MATCH qname qtype random_client_cookie
+	SECTION QUESTION
+		a.example.com. IN A
+	SECTION ADDITIONAL
+		HEX_EDNSDATA_BEGIN
+	    HEX_EDNSDATA_END
+ENTRY_END
+
+; Reply with a server cookie
+STEP 3 REPLY
+ENTRY_BEGIN
+	REPLY QR NOERROR
+	ADJUST copy_id server_cookie
+	SECTION QUESTION
+		a.example.com. IN A
+	SECTION ANSWER
+		a.example.com. IN A 1.2.3.4
+	SECTION ADDITIONAL
+		HEX_EDNSDATA_BEGIN
+	    HEX_EDNSDATA_END
+ENTRY_END
+
+
+; Check the answer from Unbound for the client
+STEP 4 CHECK_ANSWER
+ENTRY_BEGIN
+	MATCH all
+	REPLY QR RA RD NOERROR
+	SECTION QUESTION
+		a.example.com. IN A
+	SECTION ANSWER
+		a.example.com. IN A 1.2.3.4
+	SECTION ADDITIONAL
+		HEX_EDNSDATA_BEGIN
+	    HEX_EDNSDATA_END
+ENTRY_END
+
+
+; Query a second time to verify that we have the server cookie stored
+
+; Client query for upstream to Unbound
+STEP 11 QUERY
+ENTRY_BEGIN
+	REPLY RD
+	SECTION QUESTION
+		b.example.com. IN A
+	SECTION ADDITIONAL
+		HEX_EDNSDATA_BEGIN
+	    HEX_EDNSDATA_END
+ENTRY_END
+
+; Check that we send a server cookie to the upstream
+STEP 12 CHECK_OUT_QUERY
+ENTRY_BEGIN
+	MATCH qname qtype random_complete_cookie
+	SECTION QUESTION
+		b.example.com. IN A
+	SECTION ADDITIONAL
+		HEX_EDNSDATA_BEGIN
+	    HEX_EDNSDATA_END
+ENTRY_END
+
+; Reply with a server cookie
+STEP 13 REPLY
+ENTRY_BEGIN
+	REPLY QR NOERROR
+	ADJUST copy_id server_cookie
+	SECTION QUESTION
+		b.example.com. IN A
+	SECTION ANSWER
+		b.example.com. IN A 1.2.3.4
+	SECTION ADDITIONAL
+		HEX_EDNSDATA_BEGIN
+	    HEX_EDNSDATA_END
+ENTRY_END
+
+
+; Check the answer from Unbound for the client
+STEP 14 CHECK_ANSWER
+ENTRY_BEGIN
+	MATCH all
+	REPLY QR RA RD NOERROR
+	SECTION QUESTION
+		b.example.com. IN A
+	SECTION ANSWER
+		b.example.com. IN A 1.2.3.4
+	SECTION ADDITIONAL
+		HEX_EDNSDATA_BEGIN
+	    HEX_EDNSDATA_END
+ENTRY_END
+
+
+; Query a third time while waiting more than hour + 5 minutes, so we should
+; have a new cookie
+
+STEP 20 TIME_PASSES ELAPSE 4000
+
+; Client query for upstream to Unbound
+STEP 21 QUERY
+ENTRY_BEGIN
+	REPLY RD
+	SECTION QUESTION
+		c.example.com. IN A
+	SECTION ADDITIONAL
+		HEX_EDNSDATA_BEGIN
+	    HEX_EDNSDATA_END
+ENTRY_END
+
+; Check that we send a server cookie to the upstream
+STEP 22 CHECK_OUT_QUERY
+ENTRY_BEGIN
+	MATCH qname qtype random_complete_cookie
+	SECTION QUESTION
+		c.example.com. IN A
+	SECTION ADDITIONAL
+		HEX_EDNSDATA_BEGIN
+	    HEX_EDNSDATA_END
+ENTRY_END
+
+; Reply with an updated server cookie that
+STEP 23 REPLY
+ENTRY_BEGIN
+	REPLY QR NOERROR
+	ADJUST copy_id server_cookie_renew
+	SECTION QUESTION
+		c.example.com. IN A
+	SECTION ANSWER
+		c.example.com. IN A 1.2.3.4
+	SECTION ADDITIONAL
+		HEX_EDNSDATA_BEGIN
+	    HEX_EDNSDATA_END
+ENTRY_END
+
+
+; Check the answer from Unbound for the client
+STEP 24 CHECK_ANSWER
+ENTRY_BEGIN
+	MATCH all
+	REPLY QR RA RD NOERROR
+	SECTION QUESTION
+		c.example.com. IN A
+	SECTION ANSWER
+		c.example.com. IN A 1.2.3.4
+	SECTION ADDITIONAL
+		HEX_EDNSDATA_BEGIN
+	    HEX_EDNSDATA_END
+ENTRY_END
+
+
+; Verify that the cookie was updated since the timestep
+
+; Client query for upstream to Unbound
+STEP 31 QUERY
+ENTRY_BEGIN
+	REPLY RD
+	SECTION QUESTION
+		d.example.com. IN A
+	SECTION ADDITIONAL
+		HEX_EDNSDATA_BEGIN
+	    HEX_EDNSDATA_END
+ENTRY_END
+
+; Check that we send a server cookie to the upstream
+STEP 32 CHECK_OUT_QUERY
+ENTRY_BEGIN
+	MATCH qname qtype random_complete_cookie_renewed
+	SECTION QUESTION
+		d.example.com. IN A
+	SECTION ADDITIONAL
+		HEX_EDNSDATA_BEGIN
+	    HEX_EDNSDATA_END
+ENTRY_END
+
+; Reply with an updated server cookie that
+STEP 33 REPLY
+ENTRY_BEGIN
+	REPLY QR NOERROR
+	ADJUST copy_id server_cookie_renew
+	SECTION QUESTION
+		d.example.com. IN A
+	SECTION ANSWER
+		d.example.com. IN A 1.2.3.4
+	SECTION ADDITIONAL
+		HEX_EDNSDATA_BEGIN
+	    HEX_EDNSDATA_END
+ENTRY_END
+
+
+; Check the answer from Unbound for the client
+STEP 34 CHECK_ANSWER
+ENTRY_BEGIN
+	MATCH all
+	REPLY QR RA RD NOERROR
+	SECTION QUESTION
+		d.example.com. IN A
+	SECTION ANSWER
+		d.example.com. IN A 1.2.3.4
+	SECTION ADDITIONAL
+		HEX_EDNSDATA_BEGIN
+	    HEX_EDNSDATA_END
+ENTRY_END
+
+SCENARIO_END
