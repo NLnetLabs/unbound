@@ -1287,7 +1287,7 @@ doq_client_send_pkt(struct doq_client_data* data, uint32_t ecn, uint8_t* buf,
 	set_ecn(data->fd, data->dest_addr.ss_family, ecn);
 
 	for(;;) {
-		ret = sendmsg(data->fd, &msg, 0);
+		ret = sendmsg(data->fd, &msg, MSG_DONTWAIT);
 		if(ret == -1 && errno == EINTR)
 			continue;
 		break;
@@ -1473,7 +1473,7 @@ on_read(struct doq_client_data* data)
 #endif /* S_SPLINT_S */
 		msg.msg_flags = 0;
 
-		rcv = recvmsg(data->fd, &msg, 0);
+		rcv = recvmsg(data->fd, &msg, MSG_DONTWAIT);
 		if(rcv == -1) {
 			if(errno == EINTR || errno == EAGAIN)
 				break;

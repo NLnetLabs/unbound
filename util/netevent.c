@@ -1073,7 +1073,7 @@ doq_send_pkt(struct comm_point* c, struct doq_pkt_addr* paddr, uint32_t ecn)
 	doq_set_ecn(c->fd, paddr->addr.sockaddr.in.sin_family, ecn);
 
 	for(;;) {
-		ret = sendmsg(c->fd, &msg, 0);
+		ret = sendmsg(c->fd, &msg, MSG_DONTWAIT);
 		if(ret == -1 && errno == EINTR)
 			continue;
 		break;
@@ -1284,7 +1284,7 @@ doq_recv(struct comm_point* c, struct doq_pkt_addr* paddr, int* pkt_continue,
 #endif /* S_SPLINT_S */
 	msg.msg_flags = 0;
 
-	rcv = recvmsg(c->fd, &msg, 0);
+	rcv = recvmsg(c->fd, &msg, MSG_DONTWAIT);
 	if(rcv == -1) {
 		if(errno != EAGAIN && errno != EINTR
 			&& udp_recv_needs_log(errno)) {
