@@ -69,7 +69,6 @@
 #ifdef HAVE_SSL
 #include <openssl/ssl.h>
 #endif
-#include <poll.h> /* DEBUG */
 
 /** How long to wait for threads to transmit statistics, in msec. */
 #define STATS_THREAD_WAIT 60000
