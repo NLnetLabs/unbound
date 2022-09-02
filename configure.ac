@@ -487,10 +487,6 @@ AC_INCLUDES_DEFAULT
 #endif
 ])
 AC_CHECK_SIZEOF(size_t)
-AC_CHECK_SIZEOF([unsigned long])
-if test x_$ub_have_pthreads != x_yes; then
-	AC_CHECK_SIZEOF(pthread_t)
-fi
 
 # add option to disable the evil rpath
 ACX_ARG_RPATH
@@ -611,6 +607,8 @@ if test x_$withval != x_no; then
 		CC="$PTHREAD_CC"
 		ub_have_pthreads=yes
 		AC_CHECK_TYPES([pthread_spinlock_t, pthread_rwlock_t],,,[#include <pthread.h>])
+		AC_CHECK_SIZEOF([unsigned long])
+		AC_CHECK_SIZEOF(pthread_t)
 
 		if echo "$CFLAGS" | $GREP -e "-pthread" >/dev/null; then
 		AC_MSG_CHECKING([if -pthread unused during linking])
