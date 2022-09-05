@@ -1477,7 +1477,8 @@ on_read(struct doq_client_data* data)
 		if(rcv == -1) {
 			if(errno == EINTR || errno == EAGAIN)
 				break;
-			log_err("doq recvmsg: %s", strerror(errno));
+			log_err_addr("doq recvmsg", strerror(errno),
+				&data->dest_addr, sizeof(data->dest_addr_len));
 			break;
 		}
 
