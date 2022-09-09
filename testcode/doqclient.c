@@ -51,6 +51,10 @@
 #include <ngtcp2/ngtcp2_crypto_openssl.h>
 #include <openssl/ssl.h>
 #include <openssl/rand.h>
+#ifdef HAVE_TIME_H
+#include <time.h>
+#endif
+#include <sys/time.h>
 #include "util/locks.h"
 #include "util/net_help.h"
 #include "sldns/sbuffer.h"
@@ -931,15 +935,28 @@ static void log_printf_for_doq(void* ATTR_UNUSED(user_data),
 /** get a timestamp in nanoseconds */
 static ngtcp2_tstamp get_timestamp_nanosec(void)
 {
+#ifdef CLOCK_REALTIME
 	struct timespec tp;
 	memset(&tp, 0, sizeof(tp));
+#ifdef CLOCK_MONOTONIC
 	if(clock_gettime(CLOCK_MONOTONIC, &tp) == -1) {
+#endif
 		if(clock_gettime(CLOCK_REALTIME, &tp) == -1) {
 			log_err("clock_gettime failed: %s", strerror(errno));
 		}
+#ifdef CLOCK_MONOTONIC
 	}
+#endif
 	return ((uint64_t)tp.tv_sec)*((uint64_t)1000000000) +
 		((uint64_t)tp.tv_nsec);
+#else
+	struct timeval tv;
+	if(gettimeofday(&tv, NULL) < 0) {
+		log_err("gettimeofday failed: %s", strerror(errno));
+	}
+	return ((uint64_t)tv.tv_sec)*((uint64_t)1000000000) +
+		((uint64_t)tv.tv_usec)*((uint64_t)1000);
+#endif /* CLOCK_REALTIME */
 }
 
 /** create ngtcp2 client connection and set up. */
