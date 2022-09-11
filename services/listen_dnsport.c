@@ -1196,7 +1196,6 @@ if_is_ssl(const char* ifname, const char* port, int ssl_port,
  * @param hints: for getaddrinfo. family and flags have to be set by caller.
  * @param port: Port number to use (as string).
  * @param list: list of open ports, appended to, changed to point to list head.
- * @param acl_interface: acl list with options for the interface.
  * @param rcv: receive buffer size for UDP
  * @param snd: send buffer size for UDP
  * @param ssl_port: ssl service port number
@@ -1216,7 +1215,7 @@ if_is_ssl(const char* ifname, const char* port, int ssl_port,
 static int
 ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 	struct addrinfo *hints, const char* port, struct listen_port** list,
-	struct acl_list* acl_interface, size_t rcv, size_t snd, int ssl_port,
+	size_t rcv, size_t snd, int ssl_port,
 	struct config_strlist* tls_additional_port, int https_port,
 	int* reuseport, int transparent, int tcp_mss, int freebind,
 	int http2_nodelay, int use_systemd, int dnscrypt_port, int dscp)
@@ -1225,7 +1224,6 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 	int is_https = if_is_https(ifname, port, https_port);
 	int nodelay = is_https && http2_nodelay;
 	struct unbound_socket* ub_sock;
-	struct acl_addr* acl_node;
 #ifdef USE_DNSCRYPT
 	int is_dnscrypt = ((strchr(ifname, '@') &&
 			atoi(strchr(ifname, '@')+1) == dnscrypt_port) ||
@@ -1240,7 +1238,6 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 
 	if(do_auto) {
 		ub_sock = calloc(1, sizeof(struct unbound_socket));
-		acl_node = NULL;
 		if(!ub_sock)
 			return 0;
 		if((s = make_sock_port(SOCK_DGRAM, ifname, port, hints, 1,
@@ -1269,17 +1266,8 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 			free(ub_sock);
 			return 0;
 		}
-		if(!(acl_node = acl_interface_insert(acl_interface, ifname,
-			"refuse", ntohs(((struct sockaddr_in*)ub_sock->addr->ai_addr)->sin_port)))) {
-			sock_close(s);
-			freeaddrinfo(ub_sock->addr);
-			free(ub_sock);
-			return 0;
-		}
-		ub_sock->acl = acl_node;
 	} else if(do_udp) {
 		ub_sock = calloc(1, sizeof(struct unbound_socket));
-		acl_node = NULL;
 		if(!ub_sock)
 			return 0;
 		/* regular udp socket */
@@ -1301,21 +1289,12 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 			free(ub_sock);
 			return 0;
 		}
-		if(!(acl_node = acl_interface_insert(acl_interface, ifname,
-			"refuse", ntohs(((struct sockaddr_in*)ub_sock->addr->ai_addr)->sin_port)))) {
-			sock_close(s);
-			freeaddrinfo(ub_sock->addr);
-			free(ub_sock);
-			return 0;
-		}
-		ub_sock->acl = acl_node;
 	}
 	if(do_tcp) {
 		int is_ssl = if_is_ssl(ifname, port, ssl_port,
 			tls_additional_port);
 		enum listen_type port_type;
 		ub_sock = calloc(1, sizeof(struct unbound_socket));
-		acl_node = NULL;
 		if(!ub_sock)
 			return 0;
 		if(is_ssl)
@@ -1345,14 +1324,6 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 			free(ub_sock);
 			return 0;
 		}
-		if(!(acl_node = acl_interface_insert(acl_interface, ifname,
-			"refuse", ntohs(((struct sockaddr_in*)ub_sock->addr->ai_addr)->sin_port)))) {
-			sock_close(s);
-			freeaddrinfo(ub_sock->addr);
-			free(ub_sock);
-			return 0;
-		}
-		ub_sock->acl = acl_node;
 	}
 	return 1;
 }
@@ -1750,8 +1721,8 @@ int resolve_interface_names(char** ifs, int num_ifs,
 }
 
 struct listen_port*
-listening_ports_open(struct config_file* cfg, struct acl_list* acl_interface,
-	char** ifs, int num_ifs, int* reuseport)
+listening_ports_open(struct config_file* cfg, char** ifs, int num_ifs,
+	int* reuseport)
 {
 	struct listen_port* list = NULL;
 	struct addrinfo hints;
@@ -1842,7 +1813,7 @@ listening_ports_open(struct config_file* cfg, struct acl_list* acl_interface,
 			hints.ai_family = AF_INET6;
 			if(!ports_create_if(do_auto?"::0":"::1",
 				do_auto, cfg->do_udp, do_tcp,
-				&hints, portbuf, &list, acl_interface,
+				&hints, portbuf, &list,
 				cfg->so_rcvbuf, cfg->so_sndbuf,
 				cfg->ssl_port, cfg->tls_additional_port,
 				cfg->https_port, reuseport, cfg->ip_transparent,
@@ -1857,7 +1828,7 @@ listening_ports_open(struct config_file* cfg, struct acl_list* acl_interface,
 			hints.ai_family = AF_INET;
 			if(!ports_create_if(do_auto?"0.0.0.0":"127.0.0.1",
 				do_auto, cfg->do_udp, do_tcp,
-				&hints, portbuf, &list, acl_interface,
+				&hints, portbuf, &list,
 				cfg->so_rcvbuf, cfg->so_sndbuf,
 				cfg->ssl_port, cfg->tls_additional_port,
 				cfg->https_port, reuseport, cfg->ip_transparent,
@@ -1874,7 +1845,7 @@ listening_ports_open(struct config_file* cfg, struct acl_list* acl_interface,
 				continue;
 			hints.ai_family = AF_INET6;
 			if(!ports_create_if(ifs[i], 0, cfg->do_udp,
-				do_tcp, &hints, portbuf, &list, acl_interface,
+				do_tcp, &hints, portbuf, &list,
 				cfg->so_rcvbuf, cfg->so_sndbuf,
 				cfg->ssl_port, cfg->tls_additional_port,
 				cfg->https_port, reuseport, cfg->ip_transparent,
@@ -1889,7 +1860,7 @@ listening_ports_open(struct config_file* cfg, struct acl_list* acl_interface,
 				continue;
 			hints.ai_family = AF_INET;
 			if(!ports_create_if(ifs[i], 0, cfg->do_udp,
-				do_tcp, &hints, portbuf, &list, acl_interface,
+				do_tcp, &hints, portbuf, &list,
 				cfg->so_rcvbuf, cfg->so_sndbuf,
 				cfg->ssl_port, cfg->tls_additional_port,
 				cfg->https_port, reuseport, cfg->ip_transparent,

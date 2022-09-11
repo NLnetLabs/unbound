@@ -138,7 +138,6 @@ struct listen_port {
  * interfaces for IP4 and/or IP6, for UDP and/or TCP.
  * On the given port number. It creates the sockets.
  * @param cfg: settings on what ports to open.
- * @param acl_interface: acl list for interface options.
  * @param ifs: interfaces to open, array of IP addresses, "ip[@port]".
  * @param num_ifs: length of ifs.
  * @param reuseport: set to true if you want reuseport, or NULL to not have it,
@@ -147,7 +146,6 @@ struct listen_port {
  * @return: linked list of ports or NULL on error.
  */
 struct listen_port* listening_ports_open(struct config_file* cfg,
-	struct acl_list* acl_interface,
 	char** ifs, int num_ifs, int* reuseport);
 
 /**

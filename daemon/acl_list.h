@@ -123,14 +123,15 @@ void acl_list_delete(struct acl_list* acl);
  * Insert interface in the alc_list. This should happen when the listening
  * interface is setup.
  * @param acl_interface: acl_list to insert to.
- * @param interface: interface (IP) in string format.
- * @param s2: acl_access in string format.
- * @param port: default port.
+ * @param addr: interface IP.
+ * @param addrlen: length of the interface IP.
+ * @param control: acl_access.
  * @return new structure or NULL on error.
  */
 struct acl_addr*
-acl_interface_insert(struct acl_list* acl_interface, const char* interface,
-	const char* s2, int port);
+acl_interface_insert(struct acl_list* acl_interface,
+	struct sockaddr_storage* addr, socklen_t addrlen,
+	enum acl_access control);
 
 /**
  * Process access control config.

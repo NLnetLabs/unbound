@@ -142,8 +142,8 @@ acl_list_str_cfg(struct acl_list* acl, const char* str, const char* s2,
 
 /** find or create node (NULL on parse or error) */
 static struct acl_addr*
-acl_find_or_create(struct acl_list* acl, const char* str, int is_interface,
-	int port)
+acl_find_or_create_str2addr(struct acl_list* acl, const char* str,
+	int is_interface, int port)
 {
 	struct acl_addr* node;
 	struct sockaddr_storage addr;
@@ -174,6 +174,27 @@ acl_find_or_create(struct acl_list* acl, const char* str, int is_interface,
 	return node;
 }
 
+/** find or create node (NULL on error) */
+static struct acl_addr*
+acl_find_or_create(struct acl_list* acl, struct sockaddr_storage* addr,
+	socklen_t addrlen, enum acl_access control)
+{
+	struct acl_addr* node;
+	int net = (addr_is_ip6(addr, addrlen)?128:32);
+	/* find or create node */
+	if(!(node=(struct acl_addr*)addr_tree_find(&acl->tree, addr,
+		addrlen, net))) {
+		/* create node;
+		 * can override with specific access-control: cfg */
+		if(!(node=(struct acl_addr*)acl_list_insert(acl, addr,
+			addrlen, net, control, 1))) {
+			log_err("out of memory");
+			return NULL;
+		}
+	}
+	return node;
+}
+
 /** apply acl_interface string */
 static int
 acl_interface_str_cfg(struct acl_list* acl_interface, const char* interface,
@@ -184,7 +205,7 @@ acl_interface_str_cfg(struct acl_list* acl_interface, const char* interface,
 	if(!parse_acl_access(s2, &control)) {
 		return 0;
 	}
-	if(!(node=acl_find_or_create(acl_interface, interface, 1, port))) {
+	if(!(node=acl_find_or_create_str2addr(acl_interface, interface, 1, port))) {
 		log_err("cannot update ACL on non-configured interface: %s %d",
 			interface, port);
 		return 0;
@@ -194,25 +215,11 @@ acl_interface_str_cfg(struct acl_list* acl_interface, const char* interface,
 }
 
 struct acl_addr*
-acl_interface_insert(struct acl_list* acl_interface, const char* interface,
-	const char* s2, int port)
+acl_interface_insert(struct acl_list* acl_interface,
+	struct sockaddr_storage* addr, socklen_t addrlen,
+	enum acl_access control)
 {
-	struct acl_addr* node;
-	struct sockaddr_storage addr;
-	socklen_t addrlen;
-	enum acl_access control;
-	int net = (str_is_ip6(interface)?128:32);
-	if(!parse_acl_access(s2, &control)) {
-		return NULL;
-	}
-	if((node=acl_find_or_create(acl_interface, interface, 1, port))) {
-		return node;
-	}
-	if(!extstrtoaddr(interface, &addr, &addrlen, port)) {
-		log_err("cannot parse access control: %s %s", interface, s2);
-		return NULL;
-	}
-	return acl_list_insert(acl_interface, &addr, addrlen, net, control, 1);
+	return acl_find_or_create(acl_interface, addr, addrlen, control);
 }
 
 /** apply acl_tag string */
@@ -221,7 +228,7 @@ acl_list_tags_cfg(struct acl_list* acl, const char* str, uint8_t* bitmap,
 	size_t bitmaplen, int is_interface, int port)
 {
 	struct acl_addr* node;
-	if(!(node=acl_find_or_create(acl, str, is_interface, port))) {
+	if(!(node=acl_find_or_create_str2addr(acl, str, is_interface, port))) {
 		if(is_interface)
 			log_err("non-configured interface: %s", str);
 		return 0;
@@ -241,7 +248,7 @@ acl_list_view_cfg(struct acl_list* acl, const char* str, const char* str2,
 	struct views* vs, int is_interface, int port)
 {
 	struct acl_addr* node;
-	if(!(node=acl_find_or_create(acl, str, is_interface, port))) {
+	if(!(node=acl_find_or_create_str2addr(acl, str, is_interface, port))) {
 		if(is_interface)
 			log_err("non-configured interface: %s", str);
 		return 0;
@@ -264,7 +271,7 @@ acl_list_tag_action_cfg(struct acl_list* acl, struct config_file* cfg,
 	struct acl_addr* node;
 	int tagid;
 	enum localzone_type t;
-	if(!(node=acl_find_or_create(acl, str, is_interface, port))) {
+	if(!(node=acl_find_or_create_str2addr(acl, str, is_interface, port))) {
 		if(is_interface)
 			log_err("non-configured interface: %s", str);
 		return 0;
@@ -357,7 +364,7 @@ acl_list_tag_data_cfg(struct acl_list* acl, struct config_file* cfg,
 	struct acl_addr* node;
 	int tagid;
 	char* dupdata;
-	if(!(node=acl_find_or_create(acl, str, is_interface, port))) {
+	if(!(node=acl_find_or_create_str2addr(acl, str, is_interface, port))) {
 		if(is_interface)
 			log_err("non-configured interface: %s", str);
 		return 0;
@@ -557,10 +564,12 @@ void
 acl_interface_init(struct acl_list* acl_interface)
 {
 	regional_free_all(acl_interface->region);
-	/* We want comparison in the tree to include both IP and port.
-	 * Initialise with the given compare fucntion but keep treating it as
-	 * an addr_tree. */
-	rbtree_init(&acl_interface->tree, &acl_interface_compare);
+	/* We want comparison in the tree to include only address and port.
+	 * We don't care about comparing node->net. All addresses in the
+	 * acl_interface->tree should have either 32 (ipv4) or 128 (ipv6).
+	 * Initialise with the appropriate compare fucntion but keep treating
+	 * it as an addr_tree. */
+	addr_tree_addrport_init(&acl_interface->tree);
 }
 
 static int
@@ -604,7 +613,7 @@ read_acl_interface_view(struct acl_list* acl_interface,
 			return 0;
 		}
 		for(i = 0; i<num_resif; i++) {
-			if(!acl_list_view_cfg(acl_interface, p->str, p->str2,
+			if(!acl_list_view_cfg(acl_interface, resif[i], p->str2,
 				v, 1, port)) {
 				config_del_strarray(resif, num_resif);
 				config_deldblstrlist(p);
@@ -639,7 +648,7 @@ read_acl_interface_tags(struct acl_list* acl_interface,
 			return 0;
 		}
 		for(i = 0; i<num_resif; i++) {
-			if(!acl_list_tags_cfg(acl_interface, p->str, p->str2,
+			if(!acl_list_tags_cfg(acl_interface, resif[i], p->str2,
 				p->str2len, 1, port)) {
 				config_del_strbytelist(p);
 				config_del_strarray(resif, num_resif);
@@ -676,8 +685,8 @@ read_acl_interface_tag_actions(struct acl_list* acl_interface,
 			return 0;
 		}
 		for(i = 0; i<num_resif; i++) {
-			if(!acl_list_tag_action_cfg(acl_interface, cfg, p->str,
-				p->str2, p->str3, 1, port)) {
+			if(!acl_list_tag_action_cfg(acl_interface, cfg,
+				resif[i], p->str2, p->str3, 1, port)) {
 				config_deltrplstrlist(p);
 				config_del_strarray(resif, num_resif);
 				return 0;
@@ -714,8 +723,8 @@ read_acl_interface_tag_datas(struct acl_list* acl_interface,
 			return 0;
 		}
 		for(i = 0; i<num_resif; i++) {
-			if(!acl_list_tag_data_cfg(acl_interface, cfg, p->str,
-				p->str2, p->str3, 1, port)) {
+			if(!acl_list_tag_data_cfg(acl_interface, cfg,
+				resif[i], p->str2, p->str3, 1, port)) {
 				config_deltrplstrlist(p);
 				config_del_strarray(resif, num_resif);
 				return 0;

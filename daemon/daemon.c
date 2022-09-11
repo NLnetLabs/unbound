@@ -96,6 +96,9 @@
 #ifdef HAVE_SYSTEMD
 #include <systemd/sd-daemon.h>
 #endif
+#ifdef HAVE_NETDB_H
+#include <netdb.h>
+#endif
 
 /** How many quit requests happened. */
 static int sig_record_quit = 0;
@@ -314,6 +317,29 @@ daemon_init(void)
 	return daemon;	
 }
 
+static int setup_acl_for_ports(struct acl_list* list,
+	struct listen_port* port_list)
+{
+	struct acl_addr* acl_node;
+	struct addrinfo* addr;
+	for(; port_list; port_list=port_list->next) {
+		if(!port_list->socket) {
+			/* This is mainly for testbound where port_list is
+			 * empty. */
+			continue;
+		}
+		addr = port_list->socket->addr;
+		if(!(acl_node = acl_interface_insert(list,
+			(struct sockaddr_storage*)addr->ai_addr,
+			(socklen_t)addr->ai_addrlen,
+			acl_refuse))) {
+			return 0;
+		}
+		port_list->socket->acl = acl_node;
+	}
+	return 1;
+}
+
 int 
 daemon_open_shared_ports(struct daemon* daemon)
 {
@@ -342,8 +368,8 @@ daemon_open_shared_ports(struct daemon* daemon)
 			daemon->reuseport = 1;
 #endif
 		/* try to use reuseport */
-		p0 = listening_ports_open(daemon->cfg, daemon->acl_interface,
-			resif, num_resif, &daemon->reuseport);
+		p0 = listening_ports_open(daemon->cfg, resif, num_resif,
+			&daemon->reuseport);
 		if(!p0) {
 			listening_ports_free(p0);
 			config_del_strarray(resif, num_resif);
@@ -364,15 +390,29 @@ daemon_open_shared_ports(struct daemon* daemon)
 			return 0;
 		}
 		daemon->ports[0] = p0;
+		if(!setup_acl_for_ports(daemon->acl_interface,
+		    daemon->ports[0])) {
+			listening_ports_free(p0);
+			config_del_strarray(resif, num_resif);
+			return 0;
+		}
 		if(daemon->reuseport) {
 			/* continue to use reuseport */
 			for(i=1; i<daemon->num_ports; i++) {
 				if(!(daemon->ports[i]=
 					listening_ports_open(daemon->cfg,
-						daemon->acl_interface,
 						resif, num_resif,
 						&daemon->reuseport))
 					|| !daemon->reuseport ) {
+					for(i=0; i<daemon->num_ports; i++)
+						listening_ports_free(daemon->ports[i]);
+					free(daemon->ports);
+					daemon->ports = NULL;
+					config_del_strarray(resif, num_resif);
+					return 0;
+				}
+				if(!setup_acl_for_ports(daemon->acl_interface,
+					daemon->ports[i])) {
 					for(i=0; i<daemon->num_ports; i++)
 						listening_ports_free(daemon->ports[i]);
 					free(daemon->ports);
