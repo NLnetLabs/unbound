@@ -120,7 +120,7 @@ struct acl_list* acl_list_create(void);
 void acl_list_delete(struct acl_list* acl);
 
 /**
- * Insert interface in the alc_list. This should happen when the listening
+ * Insert interface in the acl_list. This should happen when the listening
  * interface is setup.
  * @param acl_interface: acl_list to insert to.
  * @param addr: interface IP.

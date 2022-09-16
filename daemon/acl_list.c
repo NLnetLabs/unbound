@@ -567,7 +567,7 @@ acl_interface_init(struct acl_list* acl_interface)
 	/* We want comparison in the tree to include only address and port.
 	 * We don't care about comparing node->net. All addresses in the
 	 * acl_interface->tree should have either 32 (ipv4) or 128 (ipv6).
-	 * Initialise with the appropriate compare fucntion but keep treating
+	 * Initialise with the appropriate compare function but keep treating
 	 * it as an addr_tree. */
 	addr_tree_addrport_init(&acl_interface->tree);
 }
