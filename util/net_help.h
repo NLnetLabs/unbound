@@ -183,10 +183,11 @@ void log_err_addr(const char* str, const char* err,
  * @param str: the string
  * @param addr: where to store sockaddr.
  * @param addrlen: length of stored sockaddr is returned.
+ * @param port: default port.
  * @return 0 on error.
  */
 int extstrtoaddr(const char* str, struct sockaddr_storage* addr, 
-	socklen_t* addrlen);
+	socklen_t* addrlen, int port);
 
 /**
  * Convert ip address string and port to sockaddr.
