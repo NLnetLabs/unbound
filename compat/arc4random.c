@@ -22,7 +22,7 @@
 /*
  * ChaCha based random number generator for OpenBSD.
  */
-#define REKEY_BASE (1024*1024) //base 2
+
 #include <fcntl.h>
 #include <limits.h>
 #include <signal.h>
@@ -56,6 +56,8 @@
 #define IVSZ	8
 #define BLOCKSZ	64
 #define RSBUFSZ	(16*BLOCKSZ)
+
+#define REKEY_BASE	(1024*1024) /* NB. should be a power of 2 */
 
 /* Marked MAP_INHERIT_ZERO, so zero'd out in fork children. */
 static struct {
@@ -180,6 +182,7 @@ _rs_stir(void)
 {
 	u_char rnd[KEYSZ + IVSZ];
 	uint32_t rekey_fuzz = 0;
+
 	if (getentropy(rnd, sizeof rnd) == -1) {
 		if(errno != ENOSYS ||
 			fallback_getentropy_urandom(rnd, sizeof rnd) == -1) {
@@ -201,9 +204,10 @@ _rs_stir(void)
 	rs->rs_have = 0;
 	memset(rsx->rs_buf, 0, sizeof(rsx->rs_buf));
 
-	/*rs->rs_count = 1600000;*/
-	chacha_encrypt_bytes(&rsx->rs_chacha, (uint8_t *)&rekey_fuzz,(uint8_t *)&rekey_fuzz, sizeof(rekey_fuzz));
-        rs->rs_count = REKEY_BASE + (rekey_fuzz % REKEY_BASE);
+	/* rekey interval should not be predictable */
+	chacha_encrypt_bytes(&rsx->rs_chacha, (uint8_t *)&rekey_fuzz,
+	    (uint8_t *)&rekey_fuzz, sizeof(rekey_fuzz));
+	rs->rs_count = REKEY_BASE + (rekey_fuzz % REKEY_BASE);
 }
 
 static inline void
