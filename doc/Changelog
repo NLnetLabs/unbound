@@ -1,5 +1,6 @@
 20 September 2022: George
 	- Convert tdir tests to use the new skip_test functionality.
+	- Remove unused testcode/mini_tpkg.sh file.
 
 16 September 2022: George
 	- Merge #753: ACL per interface. (New interface-* configuration
