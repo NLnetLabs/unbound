@@ -1,3 +1,7 @@
+16 September 2022: George
+	- Merge #753: ACL per interface. (New interface-* configuration
+	  options).
+
 2 September 2022: Wouter
 	- Remove include that was there for debug purposes.
 	- Fix to check pthread_t size after pthread has been detected.
