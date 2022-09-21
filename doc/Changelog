@@ -2,6 +2,7 @@
 	- Patch for CVE-2022-3204 Non-Responsive Delegation Attack.
 	- This patch was released in 1.16.3, the code repository continues
 	  with the previous features and fixes for 1.17.0.
+	- Fix doxygen warning in respip.h.
 
 20 September 2022: George
 	- Convert tdir tests to use the new skip_test functionality.
