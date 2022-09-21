@@ -173,6 +173,17 @@ struct reply_info {
 	 */
 	sldns_ede_code reason_bogus;
 
+        /**
+         * EDE (rfc8914) text string with human-readable reason for DNSSEC
+         * bogus status. Used for caching the EDE.
+         */
+        char* reason_bogus_str;
+
+        /**
+         * EDE (rfc8914) text string size.
+         */
+        size_t reason_bogus_str_size;
+
 	/**
 	 * Number of RRsets in each section.
 	 * The answer section. Add up the RRs in every RRset to calculate

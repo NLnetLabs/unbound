@@ -2151,9 +2151,16 @@ processFinished(struct module_qstate* qstate, struct val_qstate* vq,
 				log_query_info(NO_VERBOSE, "validation failure",
 					&qstate->qinfo);
 			else {
-				char* err = errinf_to_str_bogus(qstate);
-				if(err) log_info("%s", err);
-				free(err);
+				char* err_str = errinf_to_str_bogus(qstate);
+				if(err_str) {
+					size_t err_str_len = strlen(err_str);
+
+					/* allocate space and store the error string and it's size*/
+					vq->orig_msg->rep->reason_bogus_str = malloc(sizeof(char) * (err_str_len + 1));
+					memcpy(vq->orig_msg->rep->reason_bogus_str, err_str, err_str_len + 1);
+					vq->orig_msg->rep->reason_bogus_str_size = err_str_len;
+				}
+				free(err_str);
 			}
 		}
 		/*
@@ -2195,6 +2202,7 @@ processFinished(struct module_qstate* qstate, struct val_qstate* vq,
 			}
 		}
 	}
+
 	/* store results in cache */
 	if(qstate->query_flags&BIT_RD) {
 		/* if secure, this will override cache anyway, no need

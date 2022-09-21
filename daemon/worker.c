@@ -484,11 +484,18 @@ answer_norec_from_cache(struct worker* worker, struct query_info* qinfo,
 				msg->rep, LDNS_RCODE_SERVFAIL, edns, repinfo, worker->scratchpad,
 				worker->env.now_tv))
 					return 0;
-			/* TODO store the reason for the bogus reply in cache
-			 * and implement in here instead of the hardcoded EDE */
+			/* Attached the cached EDE (RFC8914) */
 			if (worker->env.cfg->ede) {
-				EDNS_OPT_LIST_APPEND_EDE(&edns->opt_list_out,
-					worker->scratchpad, msg->rep->reason_bogus, "");
+				size_t reason_bogus_str_len = 0;
+				char* reason_bogus_str = msg->rep->reason_bogus_str;
+
+				if (reason_bogus_str) {
+					reason_bogus_str_len = strlen(reason_bogus_str);
+				}
+
+				edns_opt_list_append(&edns->opt_list_out,
+					msg->rep->reason_bogus, reason_bogus_str_len,
+					reason_bogus_str, worker->scratchpad);
 			}
 			error_encode(repinfo->c->buffer, LDNS_RCODE_SERVFAIL, 
 				&msg->qinfo, id, flags, edns);
@@ -660,11 +667,18 @@ answer_from_cache(struct worker* worker, struct query_info* qinfo,
 			LDNS_RCODE_SERVFAIL, edns, repinfo, worker->scratchpad,
 			worker->env.now_tv))
 			goto bail_out;
-		/* TODO store the reason for the bogus reply in cache
-		 * and implement in here instead of the hardcoded EDE */
+		/* Attached the cached EDE (RFC8914) */
 		if (worker->env.cfg->ede) {
-			EDNS_OPT_LIST_APPEND_EDE(&edns->opt_list_out,
-				worker->scratchpad, rep->reason_bogus, "");
+			size_t reason_bogus_str_len = 0;
+			char* reason_bogus_str = rep->reason_bogus_str;
+
+			if (reason_bogus_str) {
+				reason_bogus_str_len = strlen(reason_bogus_str);
+			}
+
+			edns_opt_list_append(&edns->opt_list_out,
+				rep->reason_bogus, reason_bogus_str_len,
+				reason_bogus_str, worker->scratchpad);
 		}
 		error_encode(repinfo->c->buffer, LDNS_RCODE_SERVFAIL,
 			qinfo, id, flags, edns);

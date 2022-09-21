@@ -117,12 +117,16 @@ construct_reply_info_base(struct regional* region, uint16_t flags, size_t qd,
 	rep->ar_numrrsets = ar;
 	rep->rrset_count = total;
 	rep->security = sec;
-	/* veryify that we set the EDE to none by setting it explicitly */
+	/* verify that we set the EDE to none by setting it explicitly */
 	if (reason_bogus != LDNS_EDE_NONE) {
 		rep->reason_bogus = reason_bogus;
 	} else {
 		rep->reason_bogus = LDNS_EDE_NONE;
 	}
+	/* only allocated and used on copy @TODO verify this */
+	rep->reason_bogus_str = NULL;
+	rep->reason_bogus_str_size = 0;
+
 	rep->authoritative = 0;
 	/* array starts after the refs */
 	if(region)
@@ -585,6 +589,7 @@ reply_info_parsedelete(struct reply_info* rep, struct alloc_cache* alloc)
 	for(i=0; i<rep->rrset_count; i++) {
 		ub_packed_rrset_parsedelete(rep->rrsets[i], alloc);
 	}
+	// @TODO free reason_bogus_str
 	free(rep);
 }
 
@@ -753,6 +758,19 @@ reply_info_copy(struct reply_info* rep, struct alloc_cache* alloc,
 		rep->rrset_count, rep->security, rep->reason_bogus);
 	if(!cp)
 		return NULL;
+
+	if (rep->reason_bogus_str_size > 0 && rep->reason_bogus_str) {
+		cp->reason_bogus_str = malloc(sizeof(char) * (rep->reason_bogus_str_size + 1));
+
+		if (!(cp->reason_bogus_str)) {
+			// @TODO add this?
+			// if(!region)
+			// 	reply_info_parsedelete(cp, alloc);
+			return NULL;
+		}
+		memcpy(cp->reason_bogus_str, rep->reason_bogus_str, rep->reason_bogus_str_size+1);
+	}
+
 	/* allocate ub_key structures special or not */
 	if(!reply_info_alloc_rrset_keys(cp, alloc, region)) {
 		if(!region)
