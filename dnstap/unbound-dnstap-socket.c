@@ -272,7 +272,7 @@ static int make_tcp_accept(char* ip)
 
 	memset(&addr, 0, sizeof(addr));
 	len = (socklen_t)sizeof(addr);
-	if(!extstrtoaddr(ip, &addr, &len)) {
+	if(!extstrtoaddr(ip, &addr, &len, UNBOUND_DNS_PORT)) {
 		log_err("could not parse IP '%s'", ip);
 		return -1;
 	}

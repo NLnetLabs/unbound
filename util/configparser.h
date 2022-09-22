@@ -379,7 +379,12 @@ extern int yydebug;
     VAR_RPZ_SIGNAL_NXDOMAIN_RA = 580, /* VAR_RPZ_SIGNAL_NXDOMAIN_RA  */
     VAR_INTERFACE_AUTOMATIC_PORTS = 581, /* VAR_INTERFACE_AUTOMATIC_PORTS  */
     VAR_EDE = 582,                 /* VAR_EDE  */
-    VAR_QUIC_PORT = 583            /* VAR_QUIC_PORT  */
+    VAR_INTERFACE_ACTION = 583,    /* VAR_INTERFACE_ACTION  */
+    VAR_INTERFACE_VIEW = 584,      /* VAR_INTERFACE_VIEW  */
+    VAR_INTERFACE_TAG = 585,       /* VAR_INTERFACE_TAG  */
+    VAR_INTERFACE_TAG_ACTION = 586, /* VAR_INTERFACE_TAG_ACTION  */
+    VAR_INTERFACE_TAG_DATA = 587,  /* VAR_INTERFACE_TAG_DATA  */
+    VAR_QUIC_PORT = 588            /* VAR_QUIC_PORT  */
   };
   typedef enum yytokentype yytoken_kind_t;
 #endif
@@ -713,17 +718,22 @@ extern int yydebug;
 #define VAR_RPZ_SIGNAL_NXDOMAIN_RA 580
 #define VAR_INTERFACE_AUTOMATIC_PORTS 581
 #define VAR_EDE 582
-#define VAR_QUIC_PORT 583
+#define VAR_INTERFACE_ACTION 583
+#define VAR_INTERFACE_VIEW 584
+#define VAR_INTERFACE_TAG 585
+#define VAR_INTERFACE_TAG_ACTION 586
+#define VAR_INTERFACE_TAG_DATA 587
+#define VAR_QUIC_PORT 588
 
 /* Value type.  */
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 union YYSTYPE
 {
-#line 66 "./util/configparser.y"
+#line 67 "./util/configparser.y"
 
 	char*	str;
 
-#line 727 "util/configparser.h"
+#line 737 "util/configparser.h"
 
 };
 typedef union YYSTYPE YYSTYPE;

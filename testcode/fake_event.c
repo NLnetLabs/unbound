@@ -1348,7 +1348,7 @@ struct listen_port* listening_ports_open(struct config_file* ATTR_UNUSED(cfg),
 	char** ATTR_UNUSED(ifs), int ATTR_UNUSED(num_ifs),
 	int* ATTR_UNUSED(reuseport))
 {
-	return calloc(1, 1);
+	return calloc(1, sizeof(struct listen_port));
 }
 
 void listening_ports_free(struct listen_port* list)
