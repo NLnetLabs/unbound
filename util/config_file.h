@@ -114,6 +114,8 @@ struct config_file {
 	int do_tcp_keepalive;
 	/** tcp keepalive timeout, in msec */
 	int tcp_keepalive_timeout;
+	/** proxy protocol ports */
+	struct config_strlist* proxy_protocol_port;
 
 	/** private key file for dnstcp-ssl service (enabled if not NULL) */
 	char* ssl_service_key;

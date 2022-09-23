@@ -1262,6 +1262,7 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_YNO(opt, "pad-queries", pad_queries)
 	else O_DEC(opt, "pad-queries-block-size", pad_queries_block_size)
 	else O_LS2(opt, "edns-client-strings", edns_client_strings)
+	else O_LST(opt, "proxy-protocol-port", proxy_protocol_port)
 #ifdef USE_IPSECMOD
 	else O_YNO(opt, "ipsecmod-enabled", ipsecmod_enabled)
 	else O_YNO(opt, "ipsecmod-ignore-bogus", ipsecmod_ignore_bogus)
@@ -1642,6 +1643,7 @@ config_delete(struct config_file* cfg)
 	config_delstrlist(cfg->python_script);
 	config_delstrlist(cfg->dynlib_file);
 	config_deldblstrlist(cfg->edns_client_strings);
+	config_delstrlist(cfg->proxy_protocol_port);
 #ifdef USE_IPSECMOD
 	free(cfg->ipsecmod_hook);
 	config_delstrlist(cfg->ipsecmod_whitelist);

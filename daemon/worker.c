@@ -1224,12 +1224,24 @@ deny_refuse(struct comm_point* c, enum acl_access acl,
 }
 
 static int
-deny_refuse_all(struct comm_point* c, enum acl_access acl,
+deny_refuse_all(struct comm_point* c, enum acl_access* acl,
 	struct worker* worker, struct comm_reply* repinfo,
-	struct acl_addr* acladdr, int ede)
+	struct acl_addr** acladdr, int ede, int check_proxy)
 {
-	return deny_refuse(c, acl, acl_deny, acl_refuse, worker, repinfo,
-		acladdr, ede);
+	if(check_proxy) {
+	    *acladdr = acl_addr_lookup(worker->daemon->acl, &repinfo->proxy_addr,
+		repinfo->proxy_addrlen);
+	} else {
+	    *acladdr = acl_addr_lookup(worker->daemon->acl, &repinfo->addr,
+		repinfo->addrlen);
+	}
+	/* If there is no ACL based on client IP use the interface ACL. */
+	if(!(*acladdr) && c->socket) {
+		*acladdr = c->socket->acl;
+	}
+	*acl = acl_get_control(*acladdr);
+	return deny_refuse(c, *acl, acl_deny, acl_refuse, worker, repinfo,
+		*acladdr, ede);
 }
 
 static int
@@ -1241,7 +1253,7 @@ deny_refuse_non_local(struct comm_point* c, enum acl_access acl,
 		worker, repinfo, acladdr, ede);
 }
 
-int 
+int
 worker_handle_request(struct comm_point* c, void* arg, int error,
 	struct comm_reply* repinfo)
 {
@@ -1328,21 +1340,22 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 		dt_msg_send_client_query(&worker->dtenv, &repinfo->addr, (void*)repinfo->c->socket->addr->ai_addr, c->type, c->buffer);
 	}
 #endif
-	acladdr = acl_addr_lookup(worker->daemon->acl, &repinfo->addr, 
-		repinfo->addrlen);
-	/* If there is no ACL based on client IP use the interface ACL. */
-	if(!acladdr && c->socket) {
-		acladdr = c->socket->acl;
+	/* Check deny/refuse ACLs */
+	if(repinfo->is_proxied) {
+		if((ret=deny_refuse_all(c, &acl, worker, repinfo, &acladdr,
+			worker->env.cfg->ede, 1)) != -1) {
+			if(ret == 1)
+				goto send_reply;
+			return ret;
+		}
 	}
-	acl = acl_get_control(acladdr);
-
-	if((ret=deny_refuse_all(c, acl, worker, repinfo, acladdr,
-		worker->env.cfg->ede)) != -1)
-	{
+	if((ret=deny_refuse_all(c, &acl, worker, repinfo, &acladdr,
+		worker->env.cfg->ede, 0)) != -1) {
 		if(ret == 1)
 			goto send_reply;
 		return ret;
 	}
+
 	if((ret=worker_check_request(c->buffer, worker)) != 0) {
 		verbose(VERB_ALGO, "worker check request: bad query.");
 		log_addr(VERB_CLIENT,"from",&repinfo->addr, repinfo->addrlen);
