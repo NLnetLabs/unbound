@@ -356,8 +356,7 @@ int tcp_connect_errno_needs_log(struct sockaddr* addr, socklen_t addrlen)
 /* send a UDP reply */
 int
 comm_point_send_udp_msg(struct comm_point *c, sldns_buffer* packet,
-	struct sockaddr* addr, socklen_t addrlen, int is_connected, //
-	struct comm_reply* rep)
+	struct sockaddr* addr, socklen_t addrlen, int is_connected)
 {
 	ssize_t sent;
 	log_assert(c->fd != -1);
@@ -365,11 +364,6 @@ comm_point_send_udp_msg(struct comm_point *c, sldns_buffer* packet,
 	if(sldns_buffer_remaining(packet) == 0)
 		log_err("error: send empty UDP packet");
 #endif
-	//
-	if(rep && rep->is_proxied) {
-		addr = (struct sockaddr*)&rep->proxy_addr;
-		addrlen = rep->proxy_addrlen;
-	}
 	log_assert(addr && addrlen > 0);
 	if(!is_connected) {
 		sent = sendto(c->fd, (void*)sldns_buffer_begin(packet),
@@ -556,11 +550,6 @@ comm_point_send_udp_msg_if(struct comm_point *c, sldns_buffer* packet,
 	if(sldns_buffer_remaining(packet) == 0)
 		log_err("error: send empty UDP packet");
 #endif
-	//
-	if(r->is_proxied) {
-		addr = (struct sockaddr*)&r->proxy_addr;
-		addrlen = r->proxy_addrlen;
-	}
 	log_assert(addr && addrlen > 0);
 
 	msg.msg_name = addr;
@@ -926,7 +915,6 @@ comm_point_udp_ancil_callback(int fd, short event, void* arg)
 			p_ancil("receive_udp on interface", &rep);
 #endif /* S_SPLINT_S */
 
-		//
 		if(rep.c->pp2_enabled && !consume_pp2_header(rep.c->buffer,
 			&rep, 0)) {
 			log_err("proxy_protocol: could not consume PROXYv2 header");
@@ -937,7 +925,11 @@ comm_point_udp_ancil_callback(int fd, short event, void* arg)
 		if((*rep.c->callback)(rep.c, rep.c->cb_arg, NETEVENT_NOERROR, &rep)) {
 			/* send back immediate reply */
 			(void)comm_point_send_udp_msg_if(rep.c, rep.c->buffer,
-				(struct sockaddr*)&rep.addr, rep.addrlen, &rep);
+				rep.is_proxied
+				?(struct sockaddr*)&rep.proxy_addr
+				:(struct sockaddr*)&rep.addr,
+				rep.is_proxied?rep.proxy_addrlen:rep.addrlen,
+				&rep);
 		}
 		if(!rep.c || rep.c->fd == -1) /* commpoint closed */
 			break;
@@ -995,7 +987,6 @@ comm_point_udp_callback(int fd, short event, void* arg)
 		rep.srctype = 0;
 		rep.is_proxied = 0;
 
-		//
 		if(rep.c->pp2_enabled && !consume_pp2_header(rep.c->buffer,
 			&rep, 0)) {
 			log_err("proxy_protocol: could not consume PROXYv2 header");
@@ -1011,9 +1002,11 @@ comm_point_udp_callback(int fd, short event, void* arg)
 			buffer = rep.c->buffer;
 #endif
 			(void)comm_point_send_udp_msg(rep.c, buffer,
-				(struct sockaddr*)&rep.addr, rep.addrlen, 0,
-				//
-				&rep);
+				rep.is_proxied
+				?(struct sockaddr*)&rep.proxy_addr
+				:(struct sockaddr*)&rep.addr,
+				rep.is_proxied?rep.proxy_addrlen:rep.addrlen,
+				0);
 		}
 		if(!rep.c || rep.c->fd != fd) /* commpoint closed to -1 or reused for
 		another UDP port. Note rep.c cannot be reused with TCP fd. */
@@ -1384,7 +1377,6 @@ reclaim_tcp_handler(struct comm_point* c)
 	c->tcp_more_read_again = NULL;
 	c->tcp_more_write_again = NULL;
 	c->tcp_byte_count = 0;
-	//
 	c->pp2_header_state = pp2_header_none;
 	sldns_buffer_clear(c->buffer);
 }
@@ -4553,14 +4545,21 @@ comm_point_send_reply(struct comm_reply *repinfo)
 #endif
 	if(repinfo->c->type == comm_udp) {
 		if(repinfo->srctype)
-			comm_point_send_udp_msg_if(repinfo->c, 
-			buffer, (struct sockaddr*)&repinfo->addr, 
-			repinfo->addrlen, repinfo);
+			comm_point_send_udp_msg_if(repinfo->c, buffer,
+				repinfo->is_proxied
+				?(struct sockaddr*)&repinfo->proxy_addr
+				:(struct sockaddr*)&repinfo->addr,
+				repinfo->is_proxied
+				?repinfo->proxy_addrlen:repinfo->addrlen,
+				repinfo);
 		else
 			comm_point_send_udp_msg(repinfo->c, buffer,
-			(struct sockaddr*)&repinfo->addr, repinfo->addrlen, 0,
-			//
-			repinfo);
+				repinfo->is_proxied
+				?(struct sockaddr*)&repinfo->proxy_addr
+				:(struct sockaddr*)&repinfo->addr,
+				repinfo->is_proxied
+				?repinfo->proxy_addrlen:repinfo->addrlen,
+				0);
 #ifdef USE_DNSTAP
 		/*
 		 * sending src (client)/dst (local service) addresses over DNSTAP from udp callback

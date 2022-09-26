@@ -2145,9 +2145,7 @@ randomize_and_send_udp(struct pending* pend, sldns_buffer* packet, int timeout)
 
 	/* send it over the commlink */
 	if(!comm_point_send_udp_msg(pend->pc->cp, packet,
-		(struct sockaddr*)&pend->addr, pend->addrlen, outnet->udp_connect,
-		//
-		NULL)) {
+		(struct sockaddr*)&pend->addr, pend->addrlen, outnet->udp_connect)) {
 		portcomm_loweruse(outnet, pend->pc);
 		return 0;
 	}
