@@ -163,6 +163,7 @@ if test -f $name.pre; then
 	if test $exit_value -eq 3; then
 		echo "$name: SKIPPED" >> $result
 		echo "$name: SKIPPED" > ../$skip
+		echo "$name: SKIPPED"
 	elif test $exit_value -ne 0; then
 		echo "Warning: $name.pre did not exit successfully"
 	fi
