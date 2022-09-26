@@ -157,7 +157,7 @@ struct comm_reply {
 	/** max udp size for udp packets */
 	size_t max_udp_size;
 
-	//
+	// YYY
 	/* if set, the request came through a proxy */
 	int is_proxied;
 	/** the proxy address to send the reply to (for UDP) */
@@ -400,7 +400,7 @@ struct comm_point {
 	/** argument to pass to callback. */
 	void *cb_arg;
 
-	//
+	// YYY
 	/** if set, PROXYv2 is expected on this connection */
 	int pp2_enabled;
 	/** header state for the PROXYv2 header (for TCP) */
@@ -518,8 +518,9 @@ struct ub_event_base* comm_base_internal(struct comm_base* b);
  * Create an UDP comm point. Calls malloc.
  * setups the structure with the parameters you provide.
  * @param base: in which base to alloc the commpoint.
- * @param fd : file descriptor of open UDP socket.
+ * @param fd: file descriptor of open UDP socket.
  * @param buffer: shared buffer by UDP sockets from this thread.
+ * @param pp2_enabled: if the comm point will support PROXYv2.
  * @param callback: callback function pointer.
  * @param callback_arg: will be passed to your callback function.
  * @param socket: and opened socket properties will be passed to your callback function.
@@ -527,7 +528,7 @@ struct ub_event_base* comm_base_internal(struct comm_base* b);
  * Sets timeout to NULL. Turns off TCP options.
  */
 struct comm_point* comm_point_create_udp(struct comm_base* base,
-	int fd, struct sldns_buffer* buffer, 
+	int fd, struct sldns_buffer* buffer, int pp2_enabled,
 	comm_point_callback_type* callback, void* callback_arg, struct unbound_socket* socket);
 
 /**
@@ -537,6 +538,7 @@ struct comm_point* comm_point_create_udp(struct comm_base* base,
  * @param base: in which base to alloc the commpoint.
  * @param fd : file descriptor of open UDP socket.
  * @param buffer: shared buffer by UDP sockets from this thread.
+ * @param pp2_enabled: if the comm point will support PROXYv2.
  * @param callback: callback function pointer.
  * @param callback_arg: will be passed to your callback function.
  * @param socket: and opened socket properties will be passed to your callback function.
@@ -544,7 +546,7 @@ struct comm_point* comm_point_create_udp(struct comm_base* base,
  * Sets timeout to NULL. Turns off TCP options.
  */
 struct comm_point* comm_point_create_udp_ancil(struct comm_base* base,
-	int fd, struct sldns_buffer* buffer, 
+	int fd, struct sldns_buffer* buffer, int pp2_enabled,
 	comm_point_callback_type* callback, void* callback_arg, struct unbound_socket* socket);
 
 /**
@@ -566,6 +568,7 @@ struct comm_point* comm_point_create_udp_ancil(struct comm_base* base,
  * 	or NULL to not create those structures in the tcp handlers.
  * @param port_type: the type of port we are creating a TCP listener for. Used
  * 	to select handler type to use.
+ * @param pp2_enabled: if the comm point will support PROXYv2.
  * @param callback: callback function pointer for TCP handlers.
  * @param callback_arg: will be passed to your callback function.
  * @param socket: and opened socket properties will be passed to your callback function.
@@ -579,7 +582,7 @@ struct comm_point* comm_point_create_tcp(struct comm_base* base,
 	uint32_t http_max_streams, char* http_endpoint,
 	struct tcl_list* tcp_conn_limit,
 	size_t bufsize, struct sldns_buffer* spoolbuf,
-	enum listen_type port_type,
+	enum listen_type port_type, int pp2_enabled,
 	comm_point_callback_type* callback, void* callback_arg, struct unbound_socket* socket);
 
 /**

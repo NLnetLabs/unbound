@@ -1663,6 +1663,7 @@ int create_udp_sock(int ATTR_UNUSED(family), int ATTR_UNUSED(socktype),
 
 struct comm_point* comm_point_create_udp(struct comm_base *ATTR_UNUSED(base),
 	int ATTR_UNUSED(fd), sldns_buffer* ATTR_UNUSED(buffer),
+	int ATTR_UNUSED(pp2_enabled),
 	comm_point_callback_type* ATTR_UNUSED(callback),
 	void* ATTR_UNUSED(callback_arg),
 	struct unbound_socket* ATTR_UNUSED(socket))

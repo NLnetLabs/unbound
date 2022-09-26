@@ -1690,7 +1690,7 @@ outside_network_create(struct comm_base *base, size_t bufsize,
 			return NULL;
 		}
 		pc->cp = comm_point_create_udp(outnet->base, -1, 
-			outnet->udp_buff, outnet_udp_cb, outnet, NULL);
+			outnet->udp_buff, 0, outnet_udp_cb, outnet, NULL);
 		if(!pc->cp) {
 			log_err("malloc failed");
 			free(pc);
@@ -3582,7 +3582,7 @@ outnet_comm_point_for_udp(struct outside_network* outnet,
 	if(fd == -1) {
 		return NULL;
 	}
-	cp = comm_point_create_udp(outnet->base, fd, outnet->udp_buff,
+	cp = comm_point_create_udp(outnet->base, fd, outnet->udp_buff, 0,
 		cb, cb_arg, NULL);
 	if(!cp) {
 		log_err("malloc failure");

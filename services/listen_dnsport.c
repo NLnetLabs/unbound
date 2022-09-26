@@ -1414,19 +1414,19 @@ listen_create(struct comm_base* base, struct listen_port* ports,
 	/* create comm points as needed */
 	while(ports) {
 		struct comm_point* cp = NULL;
-		int update_req = 0;  // YYY rename this
 		if(ports->ftype == listen_type_udp ||
 		   ports->ftype == listen_type_udp_dnscrypt) {
 			cp = comm_point_create_udp(base, ports->fd,
-				front->udp_buff, cb, cb_arg, ports->socket);
+				front->udp_buff, ports->pp2_enabled, cb,
+				cb_arg, ports->socket);
 		} else if(ports->ftype == listen_type_tcp ||
 				ports->ftype == listen_type_tcp_dnscrypt) {
 			cp = comm_point_create_tcp(base, ports->fd,
 				tcp_accept_count, tcp_idle_timeout,
 				harden_large_queries, 0, NULL,
 				tcp_conn_limit, bufsize, front->udp_buff,
-				ports->ftype, cb, cb_arg, ports->socket);
-			update_req = 1;
+				ports->ftype, ports->pp2_enabled, cb, cb_arg,
+				ports->socket);
 		} else if(ports->ftype == listen_type_ssl ||
 			ports->ftype == listen_type_http) {
 			cp = comm_point_create_tcp(base, ports->fd,
@@ -1434,7 +1434,8 @@ listen_create(struct comm_base* base, struct listen_port* ports,
 				harden_large_queries,
 				http_max_streams, http_endpoint,
 				tcp_conn_limit, bufsize, front->udp_buff,
-				ports->ftype, cb, cb_arg, ports->socket);
+				ports->ftype, ports->pp2_enabled, cb, cb_arg,
+				ports->socket);
 			if(ports->ftype == listen_type_http) {
 				if(!sslctx && !http_notls) {
 					log_warn("HTTPS port configured, but "
@@ -1457,27 +1458,16 @@ listen_create(struct comm_base* base, struct listen_port* ports,
 					"DNS-over-HTTPS.");
 #endif
 			}
-			else {
-				update_req = 1;
-			}
 		} else if(ports->ftype == listen_type_udpancil ||
 				  ports->ftype == listen_type_udpancil_dnscrypt) {
 			cp = comm_point_create_udp_ancil(base, ports->fd,
-				front->udp_buff, cb, cb_arg, ports->socket);
+				front->udp_buff, ports->pp2_enabled, cb,
+				cb_arg, ports->socket);
 		}
 		if(!cp) {
 			log_err("can't create commpoint");
 			listen_delete(front);
 			return NULL;
-		}
-		// YYY
-		cp->pp2_enabled = ports->pp2_enabled;
-		if(update_req) {
-			int i = 0;
-			for(i=0; i<tcp_accept_count; i++) {
-				cp->tcp_handlers[i]->pp2_enabled =
-					ports->pp2_enabled;
-			}
 		}
 		if((http_notls && ports->ftype == listen_type_http) ||
 			(ports->ftype == listen_type_tcp) ||

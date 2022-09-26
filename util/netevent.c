@@ -3740,7 +3740,8 @@ void comm_point_raw_handle_callback(int ATTR_UNUSED(fd),
 
 struct comm_point* 
 comm_point_create_udp(struct comm_base *base, int fd, sldns_buffer* buffer,
-	comm_point_callback_type* callback, void* callback_arg, struct unbound_socket* socket)
+	int pp2_enabled, comm_point_callback_type* callback,
+	void* callback_arg, struct unbound_socket* socket)
 {
 	struct comm_point* c = (struct comm_point*)calloc(1,
 		sizeof(struct comm_point));
@@ -3780,7 +3781,7 @@ comm_point_create_udp(struct comm_base *base, int fd, sldns_buffer* buffer,
 	c->callback = callback;
 	c->cb_arg = callback_arg;
 	c->socket = socket;
-	c->pp2_enabled = 0;
+	c->pp2_enabled = pp2_enabled;
 	c->pp2_header_state = pp2_header_none;
 	evbits = UB_EV_READ | UB_EV_PERSIST;
 	/* ub_event stuff */
@@ -3801,8 +3802,8 @@ comm_point_create_udp(struct comm_base *base, int fd, sldns_buffer* buffer,
 }
 
 struct comm_point* 
-comm_point_create_udp_ancil(struct comm_base *base, int fd, 
-	sldns_buffer* buffer, 
+comm_point_create_udp_ancil(struct comm_base *base, int fd,
+	sldns_buffer* buffer, int pp2_enabled,
 	comm_point_callback_type* callback, void* callback_arg, struct unbound_socket* socket)
 {
 	struct comm_point* c = (struct comm_point*)calloc(1,
@@ -3843,7 +3844,7 @@ comm_point_create_udp_ancil(struct comm_base *base, int fd,
 	c->callback = callback;
 	c->cb_arg = callback_arg;
 	c->socket = socket;
-	c->pp2_enabled = 0;
+	c->pp2_enabled = pp2_enabled;
 	c->pp2_header_state = pp2_header_none;
 	evbits = UB_EV_READ | UB_EV_PERSIST;
 	/* ub_event stuff */
@@ -3924,7 +3925,7 @@ comm_point_create_tcp_handler(struct comm_base *base,
 	c->callback = callback;
 	c->cb_arg = callback_arg;
 	c->socket = socket;
-	c->pp2_enabled = 0;
+	c->pp2_enabled = parent->pp2_enabled;
 	c->pp2_header_state = pp2_header_none;
 	if(spoolbuf) {
 		c->tcp_req_info = tcp_req_info_create(spoolbuf);
@@ -4087,7 +4088,8 @@ comm_point_create_tcp(struct comm_base *base, int fd, int num,
 	uint32_t http_max_streams, char* http_endpoint,
 	struct tcl_list* tcp_conn_limit, size_t bufsize,
 	struct sldns_buffer* spoolbuf, enum listen_type port_type,
-	comm_point_callback_type* callback, void* callback_arg, struct unbound_socket* socket)
+	int pp2_enabled, comm_point_callback_type* callback,
+	void* callback_arg, struct unbound_socket* socket)
 {
 	struct comm_point* c = (struct comm_point*)calloc(1,
 		sizeof(struct comm_point));
@@ -4138,7 +4140,7 @@ comm_point_create_tcp(struct comm_base *base, int fd, int num,
 	c->callback = NULL;
 	c->cb_arg = NULL;
 	c->socket = socket;
-	c->pp2_enabled = 0;
+	c->pp2_enabled = (port_type==listen_type_http?0:pp2_enabled);
 	c->pp2_header_state = pp2_header_none;
 	evbits = UB_EV_READ | UB_EV_PERSIST;
 	/* ub_event stuff */
