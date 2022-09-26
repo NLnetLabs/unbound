@@ -2156,8 +2156,17 @@ processFinished(struct module_qstate* qstate, struct val_qstate* vq,
 					size_t err_str_len = strlen(err_str);
 
 					/* allocate space and store the error string and it's size*/
-					vq->orig_msg->rep->reason_bogus_str = malloc(sizeof(char) * (err_str_len + 1));
-					memcpy(vq->orig_msg->rep->reason_bogus_str, err_str, err_str_len + 1);
+					if (qstate->region) {
+						vq->orig_msg->rep->reason_bogus_str = regional_alloc(
+							qstate->region,
+							sizeof(char) * (err_str_len + 1));
+					} else {
+						vq->orig_msg->rep->reason_bogus_str = malloc(
+							sizeof(char) * (err_str_len + 1));
+					}
+
+					memcpy(vq->orig_msg->rep->reason_bogus_str,
+						err_str, err_str_len + 1);
 					vq->orig_msg->rep->reason_bogus_str_size = err_str_len;
 				}
 				free(err_str);

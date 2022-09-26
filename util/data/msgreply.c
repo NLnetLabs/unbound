@@ -593,6 +593,7 @@ reply_info_parsedelete(struct reply_info* rep, struct alloc_cache* alloc)
 	if (rep->reason_bogus_str_size) {
 		free(rep->reason_bogus_str);
 	}
+	free(rep);
 }
 
 int 
