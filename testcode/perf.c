@@ -575,9 +575,9 @@ int main(int argc, char* argv[])
 	memset(&info, 0, sizeof(info));
 	info.io_num = 16;
 
+	checklock_start();
 	log_init(NULL, 0, NULL);
 	log_ident_set("perf");
-	checklock_start();
 #ifdef USE_WINSOCK
 	if((r = WSAStartup(MAKEWORD(2,2), &wsa_data)) != 0)
 		fatal_exit("WSAStartup failed: %s", wsa_strerror(r));
@@ -618,7 +618,7 @@ int main(int argc, char* argv[])
 		printf("error: pass server IP address on commandline.\n");
 		usage(nm);
 	}
-	if(!extstrtoaddr(argv[0], &info.dest, &info.destlen)) {
+	if(!extstrtoaddr(argv[0], &info.dest, &info.destlen, UNBOUND_DNS_PORT)) {
 		printf("Could not parse ip: %s\n", argv[0]);
 		exit(1);
 	}

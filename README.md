@@ -3,6 +3,7 @@
 [![Travis Build Status](https://travis-ci.org/NLnetLabs/unbound.svg?branch=master)](https://travis-ci.org/NLnetLabs/unbound)
 [![Packaging status](https://repology.org/badge/tiny-repos/unbound.svg)](https://repology.org/project/unbound/versions)
 [![Fuzzing Status](https://oss-fuzz-build-logs.storage.googleapis.com/badges/unbound.svg)](https://bugs.chromium.org/p/oss-fuzz/issues/list?sort=-opened&can=1&q=proj:unbound)
+[![Documentation Status](https://readthedocs.org/projects/unbound/badge/?version=latest)](https://unbound.readthedocs.io/en/latest/?badge=latest)
 
 Unbound is a validating, recursive, caching DNS resolver. It is designed to be
 fast and lean and incorporates modern features based on open standards. If you
@@ -10,7 +11,7 @@ have any feedback, we would love to hear from you. Don’t hesitate to
 [create an issue on Github](https://github.com/NLnetLabs/unbound/issues/new)
 or post a message on the [Unbound mailing list](https://lists.nlnetlabs.nl/mailman/listinfo/unbound-users).
 You can learn more about Unbound by reading our
-[documentation](https://nlnetlabs.nl/documentation/unbound/).
+[documentation](https://unbound.docs.nlnetlabs.nl/).
 
 ## Compiling
 
@@ -32,7 +33,7 @@ support.
 
 All of Unbound's configuration options are described in the man pages, which
 will be installed and are available on the Unbound
-[documentation page](https://nlnetlabs.nl/documentation/unbound/).
+[documentation page](https://unbound.docs.nlnetlabs.nl/).
 
 An example configuration file is located in
 [doc/example.conf](https://github.com/NLnetLabs/unbound/blob/master/doc/example.conf.in).

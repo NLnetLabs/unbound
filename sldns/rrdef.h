@@ -195,6 +195,9 @@ enum sldns_enum_rr_type
 	LDNS_RR_TYPE_CDNSKEY = 60, /** RFC 7344 */
 	LDNS_RR_TYPE_OPENPGPKEY = 61, /* RFC 7929 */
 	LDNS_RR_TYPE_CSYNC = 62, /* RFC 7477 */
+	LDNS_RR_TYPE_ZONEMD = 63, /* draft-ietf-dnsop-dns-zone-digest-12 */
+    LDNS_RR_TYPE_SVCB = 64, /* draft-ietf-dnsop-svcb-https-04 */
+    LDNS_RR_TYPE_HTTPS = 65, /* draft-ietf-dnsop-svcb-https-04 */
 
 	LDNS_RR_TYPE_SPF = 99, /* RFC 4408 */
 
@@ -352,8 +355,13 @@ enum sldns_enum_rdf_type
 	/** TSIG extended 16bit error value */
 	LDNS_RDF_TYPE_TSIGERROR,
 
+	/* draft-ietf-dnsop-svcb-https-05:
+	 * each SvcParam consisting of a SvcParamKey=SvcParamValue pair or
+	 * a standalone SvcParamKey */
+	LDNS_RDF_TYPE_SVCPARAM,
+
         /* Aliases */
-        LDNS_RDF_TYPE_BITMAP = LDNS_RDF_TYPE_NSEC
+        LDNS_RDF_TYPE_BITMAP = LDNS_RDF_TYPE_NSEC,
 };
 typedef enum sldns_enum_rdf_type sldns_rdf_type;
 
@@ -428,9 +436,41 @@ enum sldns_enum_edns_option
 	LDNS_EDNS_COOKIE = 10, /* RFC7873 */
 	LDNS_EDNS_KEEPALIVE = 11, /* draft-ietf-dnsop-edns-tcp-keepalive*/
 	LDNS_EDNS_PADDING = 12, /* RFC7830 */
+	LDNS_EDNS_EDE = 15, /* RFC8914 */
 	LDNS_EDNS_CLIENT_TAG = 16 /* draft-bellis-dnsop-edns-tags-01 */
 };
 typedef enum sldns_enum_edns_option sldns_edns_option;
+
+enum sldns_enum_ede_code
+{
+	LDNS_EDE_NONE = -1, /* EDE undefined for internal use */
+	LDNS_EDE_OTHER = 0,
+	LDNS_EDE_UNSUPPORTED_DNSKEY_ALG = 1,
+	LDNS_EDE_UNSUPPORTED_DS_DIGEST = 2,
+	LDNS_EDE_STALE_ANSWER = 3,
+	LDNS_EDE_FORGED_ANSWER = 4,
+	LDNS_EDE_DNSSEC_INDETERMINATE = 5,
+	LDNS_EDE_DNSSEC_BOGUS = 6,
+	LDNS_EDE_SIGNATURE_EXPIRED = 7,
+	LDNS_EDE_SIGNATURE_NOT_YET_VALID = 8,
+	LDNS_EDE_DNSKEY_MISSING = 9,
+	LDNS_EDE_RRSIGS_MISSING = 10,
+	LDNS_EDE_NO_ZONE_KEY_BIT_SET = 11,
+	LDNS_EDE_NSEC_MISSING = 12,
+	LDNS_EDE_CACHED_ERROR = 13,
+	LDNS_EDE_NOT_READY = 14,
+	LDNS_EDE_BLOCKED = 15,
+	LDNS_EDE_CENSORED = 16,
+	LDNS_EDE_FILTERED = 17,
+	LDNS_EDE_PROHIBITED = 18,
+	LDNS_EDE_STALE_NXDOMAIN_ANSWER = 19,
+	LDNS_EDE_NOT_AUTHORITATIVE = 20,
+	LDNS_EDE_NOT_SUPPORTED = 21,
+	LDNS_EDE_NO_REACHABLE_AUTHORITY = 22,
+	LDNS_EDE_NETWORK_ERROR = 23,
+	LDNS_EDE_INVALID_DATA = 24,
+};
+typedef enum sldns_enum_ede_code sldns_ede_code;
 
 #define LDNS_EDNS_MASK_DO_BIT 0x8000
 

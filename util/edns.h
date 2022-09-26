@@ -119,19 +119,4 @@ struct edns_string_addr*
 edns_string_addr_lookup(rbtree_type* tree, struct sockaddr_storage* addr,
 	socklen_t addrlen);
 
-/**
- * Apply common EDNS options.
- *
- * @param edns_out: initialised edns information with outbound edns.
- * @param edns_in: initialised edns information with received edns.
- * @param cfg: configuration.
- * @param c: comm channel.
- * @param now: the current time.
- * @param region: the region to allocate the edns options in.
- * @return 1 on success, otherwise 0.
- */
-int apply_edns_options(struct edns_data* edns_out, struct edns_data* edns_in,
-	struct config_file* cfg, struct comm_point* c,
-	struct comm_reply *repinfo, time_t now, struct regional* region);
-
 #endif

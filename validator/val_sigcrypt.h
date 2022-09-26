@@ -45,6 +45,7 @@
 #define VALIDATOR_VAL_SIGCRYPT_H
 #include "util/data/packed_rrset.h"
 #include "sldns/pkthdr.h"
+#include "sldns/rrdef.h"
 struct val_env;
 struct module_env;
 struct module_qstate;
@@ -180,6 +181,23 @@ uint16_t ds_get_keytag(struct ub_packed_rrset_key* ds_rrset, size_t ds_idx);
 int dnskey_algo_is_supported(struct ub_packed_rrset_key* dnskey_rrset, 
 	size_t dnskey_idx);
 
+/**
+ * See if the DNSKEY size at that algorithm is supported.
+ * @param dnskey_rrset: DNSKEY rrset.
+ * @param dnskey_idx: index of RR in rrset.
+ * @return true if supported.
+ */
+int dnskey_size_is_supported(struct ub_packed_rrset_key* dnskey_rrset,
+	size_t dnskey_idx);
+
+/**
+ * See if the DNSKEY size at that algorithm is supported for all the
+ * RRs in the DNSKEY RRset.
+ * @param dnskey_rrset: DNSKEY rrset.
+ * @return true if supported.
+ */
+int dnskeyset_size_is_supported(struct ub_packed_rrset_key* dnskey_rrset);
+
 /** 
  * See if DS digest algorithm is supported 
  * @param ds_rrset: DS rrset
@@ -239,6 +257,7 @@ uint16_t dnskey_get_flags(struct ub_packed_rrset_key* k, size_t idx);
  * @param sigalg: if nonNULL provide downgrade protection otherwise one
  *   algorithm is enough.
  * @param reason: if bogus, a string returned, fixed or alloced in scratch.
+ * @param reason_bogus: EDE (RFC8914) code paired with the reason of failure.
  * @param section: section of packet where this rrset comes from.
  * @param qstate: qstate with region.
  * @return SECURE if one key in the set verifies one rrsig.
@@ -247,8 +266,10 @@ uint16_t dnskey_get_flags(struct ub_packed_rrset_key* k, size_t idx);
  */
 enum sec_status dnskeyset_verify_rrset(struct module_env* env, 
 	struct val_env* ve, struct ub_packed_rrset_key* rrset, 
-	struct ub_packed_rrset_key* dnskey, uint8_t* sigalg, char** reason,
+	struct ub_packed_rrset_key* dnskey, uint8_t* sigalg,
+	char** reason, sldns_ede_code *reason_bogus,
 	sldns_pkt_section section, struct module_qstate* qstate);
+
 
 /** 
  * verify rrset against one specific dnskey (from rrset) 
@@ -258,37 +279,16 @@ enum sec_status dnskeyset_verify_rrset(struct module_env* env,
  * @param dnskey: DNSKEY rrset, keyset.
  * @param dnskey_idx: which key from the rrset to try.
  * @param reason: if bogus, a string returned, fixed or alloced in scratch.
+ * @param reason_bogus: EDE (RFC8914) code paired with the reason of failure.
  * @param section: section of packet where this rrset comes from.
  * @param qstate: qstate with region.
  * @return secure if *this* key signs any of the signatures on rrset.
  *	unchecked on error or and bogus on bad signature.
  */
-enum sec_status dnskey_verify_rrset(struct module_env* env, 
-	struct val_env* ve, struct ub_packed_rrset_key* rrset, 
-	struct ub_packed_rrset_key* dnskey, size_t dnskey_idx, char** reason,
+enum sec_status dnskey_verify_rrset(struct module_env* env, struct val_env* ve,
+        struct ub_packed_rrset_key* rrset, struct ub_packed_rrset_key* dnskey,
+	size_t dnskey_idx, char** reason, sldns_ede_code *reason_bogus,
 	sldns_pkt_section section, struct module_qstate* qstate);
-
-/** 
- * verify rrset, with dnskey rrset, for a specific rrsig in rrset
- * @param env: module environment, scratch space is used.
- * @param ve: validator environment, date settings.
- * @param now: current time for validation (can be overridden).
- * @param rrset: to be validated.
- * @param dnskey: DNSKEY rrset, keyset to try.
- * @param sig_idx: which signature to try to validate.
- * @param sortree: reused sorted order. Stored in region. Pass NULL at start,
- * 	and for a new rrset.
- * @param reason: if bogus, a string returned, fixed or alloced in scratch.
- * @param section: section of packet where this rrset comes from.
- * @param qstate: qstate with region.
- * @return secure if any key signs *this* signature. bogus if no key signs it,
- *	or unchecked on error.
- */
-enum sec_status dnskeyset_verify_rrset_sig(struct module_env* env, 
-	struct val_env* ve, time_t now, struct ub_packed_rrset_key* rrset, 
-	struct ub_packed_rrset_key* dnskey, size_t sig_idx, 
-	struct rbtree_type** sortree, char** reason, sldns_pkt_section section,
-	struct module_qstate* qstate);
 
 /** 
  * verify rrset, with specific dnskey(from set), for a specific rrsig 
@@ -306,17 +306,19 @@ enum sec_status dnskeyset_verify_rrset_sig(struct module_env* env,
  * 	pass false at start. pass old value only for same rrset and same
  * 	signature (but perhaps different key) for reuse.
  * @param reason: if bogus, a string returned, fixed or alloced in scratch.
+ * @param reason_bogus: EDE (8914) code paired with the reason of failure.
  * @param section: section of packet where this rrset comes from.
  * @param qstate: qstate with region.
  * @return secure if this key signs this signature. unchecked on error or 
  *	bogus if it did not validate.
  */
-enum sec_status dnskey_verify_rrset_sig(struct regional* region, 
-	struct sldns_buffer* buf, struct val_env* ve, time_t now,
-	struct ub_packed_rrset_key* rrset, struct ub_packed_rrset_key* dnskey, 
-	size_t dnskey_idx, size_t sig_idx,
-	struct rbtree_type** sortree, int* buf_canon, char** reason,
-	sldns_pkt_section section, struct module_qstate* qstate);
+enum sec_status dnskey_verify_rrset_sig(struct regional* region,
+        struct sldns_buffer* buf, struct val_env* ve, time_t now,
+        struct ub_packed_rrset_key* rrset, struct ub_packed_rrset_key* dnskey,
+        size_t dnskey_idx, size_t sig_idx,
+        struct rbtree_type** sortree, int* buf_canon,
+        char** reason, sldns_ede_code *reason_bogus,
+        sldns_pkt_section section, struct module_qstate* qstate);
 
 /**
  * canonical compare for two tree entries
@@ -333,5 +335,17 @@ int canonical_tree_compare(const void* k1, const void* k2);
  */
 int rrset_canonical_equal(struct regional* region,
 	struct ub_packed_rrset_key* k1, struct ub_packed_rrset_key* k2);
+
+/**
+ * Canonicalize an rrset into the buffer.  For an auth zone record, so
+ * this does not use a signature, or the RRSIG TTL or the wildcard label
+ * count from the RRSIG.
+ * @param region: temporary region.
+ * @param buf: the buffer to use.
+ * @param k: the rrset to insert.
+ * @return false on alloc error.
+ */
+int rrset_canonicalize_to_buffer(struct regional* region,
+	struct sldns_buffer* buf, struct ub_packed_rrset_key* k);
 
 #endif /* VALIDATOR_VAL_SIGCRYPT_H */

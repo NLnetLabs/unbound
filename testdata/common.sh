@@ -14,6 +14,7 @@
 # info x		: print info
 # test_tool_avail x	: see if program in path and complain, exit if not.
 # get_ldns_testns	: set LDNS_TESTNS to executable ldns-testns
+# get_ldns_notify	: set LDNS_NOTIFY to executable ldns-notify
 # get_make		: set MAKE to gmake or make tool.
 # get_gcc		: set cc or gcc in CC
 # get_pcat		: set PCAT, PCAT_DIFF and PCAT_PRINT executables.
@@ -26,6 +27,7 @@
 # wait_petal_up		: wait for petal to come up.
 # wait_nsd_up		: wait for nsd to come up.
 # wait_server_up_or_fail: wait for server to come up or print a failure string
+# skip_test x		: print message and skip test (must be called in .pre)
 # kill_pid		: kill a server, make sure and wait for it to go down.
 
 
@@ -59,6 +61,15 @@ get_ldns_testns () {
 		LDNS_TESTNS=ldns-testns
 	else
 		LDNS_TESTNS=/home/wouter/bin/ldns-testns
+	fi
+}
+
+# get ldns-notify tool in LDNS_NOTIFY variable.
+get_ldns_notify () {
+	if test -x "`which ldns-notify 2>&1`"; then
+		LDNS_NOTIFY=ldns-notify
+	else
+		LDNS_NOTIFY=/home/wouter/bin/ldns-notify
 	fi
 }
 
@@ -97,6 +108,13 @@ skip_if_in_list () {
 			SKIP=1;
 		fi
 	fi
+}
+
+# Print a message and skip the test. Must be called in the .pre file.
+# $1: message to print.
+skip_test () {
+	echo "$1"
+	exit 3
 }
 
 # function to get a number of random port numbers.

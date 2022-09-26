@@ -1077,6 +1077,17 @@ trustanchor_state2str(autr_state_type s)
         return " UNKNOWN ";
 }
 
+/** ctime r for autotrust */
+static char* autr_ctime_r(time_t* t, char* s)
+{
+	ctime_r(t, s);
+#ifdef USE_WINSOCK
+	if(strlen(s) > 10 && s[7]==' ' && s[8]=='0')
+		s[8]=' '; /* fix error in windows ctime */
+#endif
+	return s;
+}
+
 /** print ID to file */
 static int
 print_id(FILE* out, char* fname, uint8_t* nm, size_t nmlen, uint16_t dclass)
@@ -1123,13 +1134,13 @@ autr_write_contents(FILE* out, char* fn, struct trust_anchor* tp)
 	}
 	if(fprintf(out, ";;last_queried: %u ;;%s", 
 		(unsigned int)tp->autr->last_queried, 
-		ctime_r(&(tp->autr->last_queried), tmi)) < 0 ||
+		autr_ctime_r(&(tp->autr->last_queried), tmi)) < 0 ||
 	   fprintf(out, ";;last_success: %u ;;%s", 
 		(unsigned int)tp->autr->last_success,
-		ctime_r(&(tp->autr->last_success), tmi)) < 0 ||
+		autr_ctime_r(&(tp->autr->last_success), tmi)) < 0 ||
 	   fprintf(out, ";;next_probe_time: %u ;;%s", 
 		(unsigned int)tp->autr->next_probe_time,
-		ctime_r(&(tp->autr->next_probe_time), tmi)) < 0 ||
+		autr_ctime_r(&(tp->autr->next_probe_time), tmi)) < 0 ||
 	   fprintf(out, ";;query_failed: %d\n", (int)tp->autr->query_failed)<0
 	   || fprintf(out, ";;query_interval: %d\n", 
 	   (int)tp->autr->query_interval) < 0 ||
@@ -1160,7 +1171,7 @@ autr_write_contents(FILE* out, char* fn, struct trust_anchor* tp)
 			";;lastchange=%u ;;%s", str, (int)ta->s, 
 			trustanchor_state2str(ta->s), (int)ta->pending_count,
 			(unsigned int)ta->last_change, 
-			ctime_r(&(ta->last_change), tmi)) < 0) {
+			autr_ctime_r(&(ta->last_change), tmi)) < 0) {
 		   log_err("could not write to %s: %s", fn, strerror(errno));
 		   free(str);
 		   return 0;
@@ -1192,13 +1203,8 @@ void autr_write_file(struct module_env* env, struct trust_anchor* tp)
 #else
 	llvalue = (unsigned long long)tp;
 #endif
-#ifndef USE_WINSOCK
-	snprintf(tempf, sizeof(tempf), "%s.%d-%d-%llx", fname, (int)getpid(),
+	snprintf(tempf, sizeof(tempf), "%s.%d-%d-" ARG_LL "x", fname, (int)getpid(),
 		env->worker?*(int*)env->worker:0, llvalue);
-#else
-	snprintf(tempf, sizeof(tempf), "%s.%d-%d-%I64x", fname, (int)getpid(),
-		env->worker?*(int*)env->worker:0, llvalue);
-#endif
 #endif /* S_SPLINT_S */
 	verbose(VERB_ALGO, "autotrust: write to disk: %s", tempf);
 	out = fopen(tempf, "w");
@@ -1257,7 +1263,7 @@ verify_dnskey(struct module_env* env, struct val_env* ve,
 	int downprot = env->cfg->harden_algo_downgrade;
 	enum sec_status sec = val_verify_DNSKEY_with_TA(env, ve, rrset,
 		tp->ds_rrset, tp->dnskey_rrset, downprot?sigalg:NULL, &reason,
-		qstate);
+		NULL, qstate);
 	/* sigalg is ignored, it returns algorithms signalled to exist, but
 	 * in 5011 there are no other rrsets to check.  if downprot is
 	 * enabled, then it checks that the DNSKEY is signed with all
@@ -1306,7 +1312,7 @@ rr_is_selfsigned_revoked(struct module_env* env, struct val_env* ve,
 	/* no algorithm downgrade protection necessary, if it is selfsigned
 	 * revoked it can be removed. */
 	sec = dnskey_verify_rrset(env, ve, dnskey_rrset, dnskey_rrset, i, 
-		&reason, LDNS_SECTION_ANSWER, qstate);
+		&reason, NULL, LDNS_SECTION_ANSWER, qstate);
 	return (sec == sec_status_secure);
 }
 
@@ -1579,6 +1585,7 @@ key_matches_a_ds(struct module_env* env, struct val_env* ve,
 	for(ds_idx=0; ds_idx<num; ds_idx++) {
 		if(!ds_digest_algo_is_supported(ds_rrset, ds_idx) ||
 			!ds_key_algo_is_supported(ds_rrset, ds_idx) ||
+			!dnskey_size_is_supported(dnskey_rrset, key_idx) ||
 			ds_get_digest_algo(ds_rrset, ds_idx) != d)
 			continue;
 		if(ds_get_key_algo(ds_rrset, ds_idx)
@@ -1633,7 +1640,8 @@ update_events(struct module_env* env, struct val_env* ve,
 		}
 		/* is a key of this type supported?. Note rr_list and
 		 * packed_rrset are in the same order. */
-		if(!dnskey_algo_is_supported(dnskey_rrset, i)) {
+		if(!dnskey_algo_is_supported(dnskey_rrset, i) ||
+			!dnskey_size_is_supported(dnskey_rrset, i)) {
 			/* skip unknown algorithm key, it is useless to us */
 			log_nametypeclass(VERB_DETAIL, "trust point has "
 				"unsupported algorithm at", 
@@ -2262,7 +2270,7 @@ autr_debug_print_ta(struct autr_ta* ta)
 		return;
 	}
 	if(str[0]) str[strlen(str)-1]=0; /* remove newline */
-	ctime_r(&ta->last_change, buf);
+	(void)autr_ctime_r(&ta->last_change, buf);
 	if(buf[0]) buf[strlen(buf)-1]=0; /* remove newline */
 	log_info("[%s] %s ;;state:%d ;;pending_count:%d%s%s last:%s",
 		trustanchor_state2str(ta->s), str, ta->s, ta->pending_count,
@@ -2289,13 +2297,13 @@ autr_debug_print_tp(struct trust_anchor* tp)
 		log_packed_rrset(NO_VERBOSE, "DNSKEY:", tp->dnskey_rrset);
 	}
 	log_info("file %s", tp->autr->file);
-	ctime_r(&tp->autr->last_queried, buf);
+	(void)autr_ctime_r(&tp->autr->last_queried, buf);
 	if(buf[0]) buf[strlen(buf)-1]=0; /* remove newline */
 	log_info("last_queried: %u %s", (unsigned)tp->autr->last_queried, buf);
-	ctime_r(&tp->autr->last_success, buf);
+	(void)autr_ctime_r(&tp->autr->last_success, buf);
 	if(buf[0]) buf[strlen(buf)-1]=0; /* remove newline */
 	log_info("last_success: %u %s", (unsigned)tp->autr->last_success, buf);
-	ctime_r(&tp->autr->next_probe_time, buf);
+	(void)autr_ctime_r(&tp->autr->next_probe_time, buf);
 	if(buf[0]) buf[strlen(buf)-1]=0; /* remove newline */
 	log_info("next_probe_time: %u %s", (unsigned)tp->autr->next_probe_time,
 		buf);
@@ -2364,7 +2372,9 @@ probe_anchor(struct module_env* env, struct trust_anchor* tp)
 	edns.ext_rcode = 0;
 	edns.edns_version = 0;
 	edns.bits = EDNS_DO;
-	edns.opt_list = NULL;
+	edns.opt_list_in = NULL;
+	edns.opt_list_out = NULL;
+	edns.opt_list_inplace_cb_out = NULL;
 	edns.padding_block_size = 0;
 	if(sldns_buffer_capacity(buf) < 65535)
 		edns.udp_size = (uint16_t)sldns_buffer_capacity(buf);
@@ -2382,7 +2392,7 @@ probe_anchor(struct module_env* env, struct trust_anchor* tp)
 		qinfo.qclass);
 
 	if(!mesh_new_callback(env->mesh, &qinfo, qflags, &edns, buf, 0, 
-		&probe_answer_cb, env)) {
+		&probe_answer_cb, env, 0)) {
 		log_err("out of memory making 5011 probe");
 	}
 }

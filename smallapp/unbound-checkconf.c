@@ -1,5 +1,5 @@
 /*
- * checkconf/unbound-checkconf.c - config file checker for unbound.conf file.
+ * smallapp/unbound-checkconf.c - config file checker for unbound.conf file.
  *
  * Copyright (c) 2007, NLnet Labs. All rights reserved.
  *
@@ -54,6 +54,7 @@
 #include "iterator/iter_hints.h"
 #include "validator/validator.h"
 #include "services/localzone.h"
+#include "services/listen_dnsport.h"
 #include "services/view.h"
 #include "services/authzone.h"
 #include "respip/respip.h"
@@ -315,7 +316,7 @@ warn_hosts(const char* typ, struct config_stub* list)
 	struct config_strlist* h;
 	for(s=list; s; s=s->next) {
 		for(h=s->hosts; h; h=h->next) {
-			if(extstrtoaddr(h->str, &a, &alen)) {
+			if(extstrtoaddr(h->str, &a, &alen, UNBOUND_DNS_PORT)) {
 				fprintf(stderr, "unbound-checkconf: warning:"
 				  " %s %s: \"%s\" is an IP%s address, "
 				  "and when looked up as a host name "
@@ -334,19 +335,64 @@ interfacechecks(struct config_file* cfg)
 	int d;
 	struct sockaddr_storage a;
 	socklen_t alen;
-	int i, j;
+	int i, j, i2, j2;
+	char*** resif = NULL;
+	int* num_resif = NULL;
+
+	if(cfg->num_ifs != 0) {
+		resif = (char***)calloc(cfg->num_ifs, sizeof(char**));
+		if(!resif) fatal_exit("malloc failure");
+		num_resif = (int*)calloc(cfg->num_ifs, sizeof(int));
+		if(!num_resif) fatal_exit("malloc failure");
+	}
 	for(i=0; i<cfg->num_ifs; i++) {
-		if(!extstrtoaddr(cfg->ifs[i], &a, &alen)) {
-			fatal_exit("cannot parse interface specified as '%s'",
-				cfg->ifs[i]);
-		}
-		for(j=0; j<cfg->num_ifs; j++) {
-			if(i!=j && strcmp(cfg->ifs[i], cfg->ifs[j])==0)
+		/* search for duplicates in IP or ifname arguments */
+		for(i2=0; i2<i; i2++) {
+			if(strcmp(cfg->ifs[i], cfg->ifs[i2]) == 0) {
 				fatal_exit("interface: %s present twice, "
 					"cannot bind same ports twice.",
 					cfg->ifs[i]);
+			}
+		}
+		if(!resolve_interface_names(&cfg->ifs[i], 1, NULL, &resif[i],
+			&num_resif[i])) {
+			fatal_exit("could not resolve interface names, for %s",
+				cfg->ifs[i]);
+		}
+		/* search for duplicates in the returned addresses */
+		for(j=0; j<num_resif[i]; j++) {
+			if(!extstrtoaddr(resif[i][j], &a, &alen, UNBOUND_DNS_PORT)) {
+				if(strcmp(cfg->ifs[i], resif[i][j]) != 0)
+					fatal_exit("cannot parse interface address '%s' from the interface specified as '%s'",
+						resif[i][j], cfg->ifs[i]);
+				else
+					fatal_exit("cannot parse interface specified as '%s'",
+						cfg->ifs[i]);
+			}
+			for(i2=0; i2<i; i2++) {
+				for(j2=0; j2<num_resif[i2]; j2++) {
+					if(strcmp(resif[i][j], resif[i2][j2])
+						== 0) {
+						char info1[1024], info2[1024];
+						if(strcmp(cfg->ifs[i], resif[i][j]) != 0)
+							snprintf(info1, sizeof(info1), "address %s from interface: %s", resif[i][j], cfg->ifs[i]);
+						else	snprintf(info1, sizeof(info1), "interface: %s", cfg->ifs[i]);
+						if(strcmp(cfg->ifs[i2], resif[i2][j2]) != 0)
+							snprintf(info2, sizeof(info2), "address %s from interface: %s", resif[i2][j2], cfg->ifs[i2]);
+						else	snprintf(info2, sizeof(info2), "interface: %s", cfg->ifs[i2]);
+						fatal_exit("%s present twice, cannot bind the same ports twice. The first entry is %s and the second is %s", resif[i][j], info2, info1);
+					}
+				}
+			}
 		}
 	}
+
+	for(i=0; i<cfg->num_ifs; i++) {
+		config_del_strarray(resif[i], num_resif[i]);
+	}
+	free(resif);
+	free(num_resif);
+
 	for(i=0; i<cfg->num_out_ifs; i++) {
 		if(!ipstrtoaddr(cfg->out_ifs[i], UNBOUND_DNS_PORT, &a, &alen) &&
 		   !netblockstrtoaddr(cfg->out_ifs[i], UNBOUND_DNS_PORT, &a, &alen, &d)) {
@@ -359,6 +405,28 @@ interfacechecks(struct config_file* cfg)
 					"twice, cannot bind same ports twice.",
 					cfg->out_ifs[i]);
 		}
+	}
+}
+
+/** check interface-automatic-ports */
+static void
+ifautomaticportschecks(char* ifautomaticports)
+{
+	char* now = ifautomaticports;
+	while(now && *now) {
+		char* after;
+		int extraport;
+		while(isspace((unsigned char)*now))
+			now++;
+		if(!*now)
+			break;
+		after = now;
+		extraport = (int)strtol(now, &after, 10);
+		if(extraport < 0 || extraport > 65535)
+			fatal_exit("interface-automatic-ports: port out of range at position %d in '%s'", (int)(now-ifautomaticports)+1, ifautomaticports);
+		if(extraport == 0 && now == after)
+			fatal_exit("interface-automatic-ports: parse error at position %d in '%s'", (int)(now-ifautomaticports)+1, ifautomaticports);
+		now = after;
 	}
 }
 
@@ -562,6 +630,7 @@ morechecks(struct config_file* cfg)
 	warn_hosts("stub-host", cfg->stubs);
 	warn_hosts("forward-host", cfg->forwards);
 	interfacechecks(cfg);
+	ifautomaticportschecks(cfg->if_automatic_ports);
 	aclchecks(cfg);
 	tcpconnlimitchecks(cfg);
 
@@ -645,6 +714,8 @@ morechecks(struct config_file* cfg)
 		&& strcmp(cfg->module_conf, "dns64 iterator") != 0
 		&& strcmp(cfg->module_conf, "respip iterator") != 0
 		&& strcmp(cfg->module_conf, "respip validator iterator") != 0
+		&& strcmp(cfg->module_conf, "respip dns64 validator iterator") != 0
+		&& strcmp(cfg->module_conf, "respip dns64 iterator") != 0
 #ifdef WITH_PYTHONMODULE
 		&& strcmp(cfg->module_conf, "python iterator") != 0
 		&& strcmp(cfg->module_conf, "python respip iterator") != 0
@@ -738,6 +809,10 @@ morechecks(struct config_file* cfg)
 		&& strcmp(cfg->module_conf, "respip validator cachedb python iterator") != 0
 		&& strcmp(cfg->module_conf, "validator python cachedb iterator") != 0
 		&& strcmp(cfg->module_conf, "respip validator python cachedb iterator") != 0
+#endif
+#if defined(CLIENT_SUBNET) && defined(USE_CACHEDB)
+		&& strcmp(cfg->module_conf, "respip subnetcache validator cachedb iterator") != 0
+		&& strcmp(cfg->module_conf, "subnetcache validator cachedb iterator") != 0
 #endif
 #ifdef CLIENT_SUBNET
 		&& strcmp(cfg->module_conf, "subnetcache iterator") != 0
@@ -851,7 +926,7 @@ check_auth(struct config_file* cfg)
 {
 	int is_rpz = 0;
 	struct auth_zones* az = auth_zones_create();
-	if(!az || !auth_zones_apply_cfg(az, cfg, 0, &is_rpz)) {
+	if(!az || !auth_zones_apply_cfg(az, cfg, 0, &is_rpz, NULL, NULL)) {
 		fatal_exit("Could not setup authority zones");
 	}
 	auth_zones_delete(az);
@@ -909,9 +984,9 @@ int main(int argc, char* argv[])
 	const char* f;
 	const char* opt = NULL;
 	const char* cfgfile = CONFIGFILE;
+	checklock_start();
 	log_ident_set("unbound-checkconf");
 	log_init(NULL, 0, NULL);
-	checklock_start();
 #ifdef USE_WINSOCK
 	/* use registry config file in preference to compiletime location */
 	if(!(cfgfile=w_lookup_reg_str("Software\\Unbound", "ConfigFile")))

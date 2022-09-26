@@ -124,8 +124,7 @@ replay_range_delete(struct replay_range* rng)
 	free(rng);
 }
 
-/** strip whitespace from end of string */
-static void
+void
 strip_end_white(char* p)
 {
 	size_t i;
@@ -180,7 +179,8 @@ replay_range_read(char* remain, FILE* in, const char* name,
 			while(isspace((unsigned char)*parse))
 				parse++;
 			strip_end_white(parse);
-			if(!extstrtoaddr(parse, &rng->addr, &rng->addrlen)) {
+			if(!extstrtoaddr(parse, &rng->addr, &rng->addrlen,
+				UNBOUND_DNS_PORT)) {
 				log_err("Line %d: could not read ADDRESS: %s", 
 					pstate->lineno, parse);
 				free(rng);
@@ -227,7 +227,7 @@ read_file_content(FILE* in, int* lineno, struct replay_moment* mom)
 		if(strncmp(line, "FILE_END", 8) == 0) {
 			return;
 		}
-		if(line[0]) line[strlen(line)-1] = 0; /* remove newline */
+		strip_end_white(line);
 		if(!cfg_strlist_insert(last, strdup(line)))
 			fatal_exit("malloc failure");
 		last = &( (*last)->next );
@@ -249,7 +249,7 @@ read_assign_step(char* remain, struct replay_moment* mom)
 	if(eq != '=')
 		fatal_exit("no '=' in assign: %s", remain);
 	remain += skip;
-	if(remain[0]) remain[strlen(remain)-1]=0; /* remove newline */
+	strip_end_white(remain);
 	mom->string = strdup(remain);
 	if(!mom->variable || !mom->string)
 		fatal_exit("out of memory");
@@ -288,7 +288,8 @@ replay_moment_read(char* remain, FILE* in, const char* name,
 	} else if(parse_keyword(&remain, "QUERY")) {
 		mom->evt_type = repevt_front_query;
 		readentry = 1;
-		if(!extstrtoaddr("127.0.0.1", &mom->addr, &mom->addrlen))
+		if(!extstrtoaddr("127.0.0.1", &mom->addr, &mom->addrlen,
+			UNBOUND_DNS_PORT))
 			fatal_exit("internal error");
 	} else if(parse_keyword(&remain, "CHECK_ANSWER")) {
 		mom->evt_type = repevt_front_reply;
@@ -318,8 +319,7 @@ replay_moment_read(char* remain, FILE* in, const char* name,
 		mom->evt_type = repevt_autotrust_check;
 		while(isspace((unsigned char)*remain))
 			remain++;
-		if(strlen(remain)>0 && remain[strlen(remain)-1]=='\n')
-			remain[strlen(remain)-1] = 0;
+		strip_end_white(remain);
 		mom->autotrust_id = strdup(remain);
 		if(!mom->autotrust_id) fatal_exit("out of memory");
 		read_file_content(in, &pstate->lineno, mom);
@@ -327,8 +327,7 @@ replay_moment_read(char* remain, FILE* in, const char* name,
 		mom->evt_type = repevt_tempfile_check;
 		while(isspace((unsigned char)*remain))
 			remain++;
-		if(strlen(remain)>0 && remain[strlen(remain)-1]=='\n')
-			remain[strlen(remain)-1] = 0;
+		strip_end_white(remain);
 		mom->autotrust_id = strdup(remain);
 		if(!mom->autotrust_id) fatal_exit("out of memory");
 		read_file_content(in, &pstate->lineno, mom);
@@ -357,10 +356,9 @@ replay_moment_read(char* remain, FILE* in, const char* name,
 		m++;
 		while(isspace((unsigned char)*m))
 			m++;
-		if(!extstrtoaddr(s, &mom->addr, &mom->addrlen))
+		if(!extstrtoaddr(s, &mom->addr, &mom->addrlen, UNBOUND_DNS_PORT))
 			fatal_exit("bad infra_rtt address %s", s);
-		if(strlen(m)>0 && m[strlen(m)-1]=='\n')
-			m[strlen(m)-1] = 0;
+		strip_end_white(m);
 		mom->variable = strdup(remain);
 		mom->string = strdup(m);
 		if(!mom->string) fatal_exit("out of memory");
@@ -375,9 +373,9 @@ replay_moment_read(char* remain, FILE* in, const char* name,
 	if(parse_keyword(&remain, "ADDRESS")) {
 		while(isspace((unsigned char)*remain))
 			remain++;
-		if(strlen(remain) > 0) /* remove \n */
-			remain[strlen(remain)-1] = 0;
-		if(!extstrtoaddr(remain, &mom->addr, &mom->addrlen)) {
+		strip_end_white(remain);
+		if(!extstrtoaddr(remain, &mom->addr, &mom->addrlen,
+			UNBOUND_DNS_PORT)) {
 			log_err("line %d: could not parse ADDRESS: %s", 
 				pstate->lineno, remain);
 			free(mom);
@@ -693,7 +691,11 @@ do_macro_ctime(char* arg)
 		return NULL;
 	}
 	ctime_r(&tt, buf);
-	if(buf[0]) buf[strlen(buf)-1]=0; /* remove trailing newline */
+#ifdef USE_WINSOCK
+	if(strlen(buf) > 10 && buf[7]==' ' && buf[8]=='0')
+		buf[8]=' '; /* fix error in windows ctime */
+#endif
+	strip_end_white(buf);
 	return strdup(buf);
 }
 

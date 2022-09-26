@@ -47,6 +47,7 @@
 #ifdef USE_TCP_FASTOPEN
 #include <netinet/tcp.h>
 #endif
+#include <ctype.h>
 #include "services/listen_dnsport.h"
 #include "services/outside_network.h"
 #include "util/netevent.h"
@@ -123,13 +124,25 @@ verbose_print_addr(struct addrinfo *addr)
 			(void)strlcpy(buf, "(null)", sizeof(buf));
 		}
 		buf[sizeof(buf)-1] = 0;
-		verbose(VERB_ALGO, "creating %s%s socket %s %d", 
+		verbose(VERB_ALGO, "creating %s%s socket %s %d",
 			addr->ai_socktype==SOCK_DGRAM?"udp":
 			addr->ai_socktype==SOCK_STREAM?"tcp":"otherproto",
 			addr->ai_family==AF_INET?"4":
 			addr->ai_family==AF_INET6?"6":
-			"_otherfam", buf, 
+			"_otherfam", buf,
 			ntohs(((struct sockaddr_in*)addr->ai_addr)->sin_port));
+	}
+}
+
+void
+verbose_print_unbound_socket(struct unbound_socket* ub_sock)
+{
+	if(verbosity >= VERB_ALGO) {
+		log_info("listing of unbound_socket structure:");
+		verbose_print_addr(ub_sock->addr);
+		log_info("s is: %d, fam is: %s, acl: %s", ub_sock->s,
+			ub_sock->fam == AF_INET?"AF_INET":"AF_INET6",
+			ub_sock->acl?"yes":"no");
 	}
 }
 
@@ -442,8 +455,19 @@ create_udp_sock(int family, int socktype, struct sockaddr* addr,
 	if(err != NULL)
 		log_warn("error setting IP DiffServ codepoint %d on UDP socket: %s", dscp, err);
 	if(family == AF_INET6) {
+# if defined(IPV6_MTU_DISCOVER) && defined(IP_PMTUDISC_DONT)
+		int omit6_set = 0;
+		int action;
+# endif
 # if defined(IPV6_V6ONLY)
-		if(v6only) {
+		if(v6only
+#   ifdef HAVE_SYSTEMD
+			/* Systemd wants to control if the socket is v6 only
+			 * or both, with BindIPv6Only=default, ipv6-only or
+			 * both in systemd.socket, so it is not set here. */
+			&& !got_fd_from_systemd
+#   endif
+			) {
 			int val=(v6only==2)?0:1;
 			if (setsockopt(s, IPPROTO_IPV6, IPV6_V6ONLY, 
 				(void*)&val, (socklen_t)sizeof(val)) < 0) {
@@ -475,6 +499,7 @@ create_udp_sock(int family, int socktype, struct sockaddr* addr,
 			return -1;
 		}
 # elif defined(IPV6_MTU)
+#   ifndef USE_WINSOCK
 		/*
 		 * On Linux, to send no larger than 1280, the PMTUD is
 		 * disabled by default for datagrams anyway, so we set
@@ -482,14 +507,63 @@ create_udp_sock(int family, int socktype, struct sockaddr* addr,
 		 */
 		if (setsockopt(s, IPPROTO_IPV6, IPV6_MTU,
 			(void*)&mtu, (socklen_t)sizeof(mtu)) < 0) {
-			log_err("setsockopt(..., IPV6_MTU, ...) failed: %s", 
+			log_err("setsockopt(..., IPV6_MTU, ...) failed: %s",
 				sock_strerror(errno));
 			sock_close(s);
 			*noproto = 0;
 			*inuse = 0;
 			return -1;
 		}
+#   elif defined(IPV6_USER_MTU)
+		/* As later versions of the mingw crosscompiler define
+		 * IPV6_MTU, do the same for windows but use IPV6_USER_MTU
+		 * instead which is writable; IPV6_MTU is readonly there. */
+		if (setsockopt(s, IPPROTO_IPV6, IPV6_USER_MTU,
+			(void*)&mtu, (socklen_t)sizeof(mtu)) < 0) {
+			if (WSAGetLastError() != WSAENOPROTOOPT) {
+				log_err("setsockopt(..., IPV6_USER_MTU, ...) failed: %s",
+					wsa_strerror(WSAGetLastError()));
+				sock_close(s);
+				*noproto = 0;
+				*inuse = 0;
+				return -1;
+			}
+		}
+#   endif /* USE_WINSOCK */
 # endif /* IPv6 MTU */
+# if defined(IPV6_MTU_DISCOVER) && defined(IP_PMTUDISC_DONT)
+#  if defined(IP_PMTUDISC_OMIT)
+		action = IP_PMTUDISC_OMIT;
+		if (setsockopt(s, IPPROTO_IPV6, IPV6_MTU_DISCOVER,
+			&action, (socklen_t)sizeof(action)) < 0) {
+
+			if (errno != EINVAL) {
+				log_err("setsockopt(..., IPV6_MTU_DISCOVER, IP_PMTUDISC_OMIT...) failed: %s",
+					strerror(errno));
+				sock_close(s);
+				*noproto = 0;
+				*inuse = 0;
+				return -1;
+			}
+		}
+		else
+		{
+		    omit6_set = 1;
+		}
+#  endif
+		if (omit6_set == 0) {
+			action = IP_PMTUDISC_DONT;
+			if (setsockopt(s, IPPROTO_IPV6, IPV6_MTU_DISCOVER,
+				&action, (socklen_t)sizeof(action)) < 0) {
+				log_err("setsockopt(..., IPV6_MTU_DISCOVER, IP_PMTUDISC_DONT...) failed: %s",
+					strerror(errno));
+				sock_close(s);
+				*noproto = 0;
+				*inuse = 0;
+				return -1;
+			}
+		}
+# endif /* IPV6_MTU_DISCOVER */
 	} else if(family == AF_INET) {
 #  if defined(IP_MTU_DISCOVER) && defined(IP_PMTUDISC_DONT)
 /* linux 3.15 has IP_PMTUDISC_OMIT, Hannes Frederic Sowa made it so that
@@ -711,7 +785,14 @@ create_tcp_accept_sock(struct addrinfo *addr, int v6only, int* noproto,
 	(void)reuseport;
 #endif /* defined(SO_REUSEPORT) */
 #if defined(IPV6_V6ONLY)
-	if(addr->ai_family == AF_INET6 && v6only) {
+	if(addr->ai_family == AF_INET6 && v6only
+#  ifdef HAVE_SYSTEMD
+		/* Systemd wants to control if the socket is v6 only
+		 * or both, with BindIPv6Only=default, ipv6-only or
+		 * both in systemd.socket, so it is not set here. */
+		&& !got_fd_from_systemd
+#  endif
+		) {
 		if(setsockopt(s, IPPROTO_IPV6, IPV6_V6ONLY, 
 			(void*)&on, (socklen_t)sizeof(on)) < 0) {
 			log_err("setsockopt(..., IPV6_V6ONLY, ...) failed: %s",
@@ -822,9 +903,14 @@ set_ip_dscp(int socket, int addrfamily, int dscp)
 	ds = dscp << 2;
 	switch(addrfamily) {
 	case AF_INET6:
-		if(setsockopt(socket, IPPROTO_IPV6, IPV6_TCLASS, (void*)&ds, sizeof(ds)) < 0)
+	#ifdef IPV6_TCLASS
+		if(setsockopt(socket, IPPROTO_IPV6, IPV6_TCLASS, (void*)&ds,
+			sizeof(ds)) < 0)
 			return sock_strerror(errno);
 		break;
+	#else
+		return "IPV6_TCLASS not defined on this system";
+	#endif
 	default:
 		if(setsockopt(socket, IPPROTO_IP, IP_TOS, (void*)&ds, sizeof(ds)) < 0)
 			return sock_strerror(errno);
@@ -916,7 +1002,7 @@ static int
 make_sock(int stype, const char* ifname, const char* port, 
 	struct addrinfo *hints, int v6only, int* noip6, size_t rcv, size_t snd,
 	int* reuseport, int transparent, int tcp_mss, int nodelay, int freebind,
-	int use_systemd, int dscp)
+	int use_systemd, int dscp, struct unbound_socket* ub_sock)
 {
 	struct addrinfo *res = NULL;
 	int r, s, inuse, noproto;
@@ -958,7 +1044,12 @@ make_sock(int stype, const char* ifname, const char* port,
 			*noip6 = 1;
 		}
 	}
-	freeaddrinfo(res);
+
+	ub_sock->addr = res;
+	ub_sock->s = s;
+	ub_sock->fam = hints->ai_family;
+	ub_sock->acl = NULL;
+
 	return s;
 }
 
@@ -967,7 +1058,7 @@ static int
 make_sock_port(int stype, const char* ifname, const char* port, 
 	struct addrinfo *hints, int v6only, int* noip6, size_t rcv, size_t snd,
 	int* reuseport, int transparent, int tcp_mss, int nodelay, int freebind,
-	int use_systemd, int dscp)
+	int use_systemd, int dscp, struct unbound_socket* ub_sock)
 {
 	char* s = strchr(ifname, '@');
 	if(s) {
@@ -990,11 +1081,11 @@ make_sock_port(int stype, const char* ifname, const char* port,
 		p[strlen(s+1)]=0;
 		return make_sock(stype, newif, p, hints, v6only, noip6, rcv,
 			snd, reuseport, transparent, tcp_mss, nodelay, freebind,
-			use_systemd, dscp);
+			use_systemd, dscp, ub_sock);
 	}
 	return make_sock(stype, ifname, port, hints, v6only, noip6, rcv, snd,
 		reuseport, transparent, tcp_mss, nodelay, freebind, use_systemd,
-		dscp);
+		dscp, ub_sock);
 }
 
 /**
@@ -1002,10 +1093,11 @@ make_sock_port(int stype, const char* ifname, const char* port,
  * @param list: list head. changed.
  * @param s: fd.
  * @param ftype: if fd is UDP.
+ * @param ub_sock: socket with address.
  * @return false on failure. list in unchanged then.
  */
 static int
-port_insert(struct listen_port** list, int s, enum listen_type ftype)
+port_insert(struct listen_port** list, int s, enum listen_type ftype, struct unbound_socket* ub_sock)
 {
 	struct listen_port* item = (struct listen_port*)malloc(
 		sizeof(struct listen_port));
@@ -1014,6 +1106,7 @@ port_insert(struct listen_port** list, int s, enum listen_type ftype)
 	item->next = *list;
 	item->fd = s;
 	item->ftype = ftype;
+	item->socket = ub_sock;
 	*list = item;
 	return 1;
 }
@@ -1043,7 +1136,7 @@ set_recvpktinfo(int s, int family)
 			return 0;
 		}
 #           else
-		log_err("no IPV6_RECVPKTINFO and no IPV6_PKTINFO option, please "
+		log_err("no IPV6_RECVPKTINFO and IPV6_PKTINFO options, please "
 			"disable interface-automatic or do-ip6 in config");
 		return 0;
 #           endif /* defined IPV6_RECVPKTINFO */
@@ -1093,25 +1186,13 @@ if_is_ssl(const char* ifname, const char* port, int ssl_port,
 	return 0;
 }
 
-/** see if interface is https, its port number == the https port number */
-static int
-if_is_https(const char* ifname, const char* port, int https_port)
-{
-	char* p = strchr(ifname, '@');
-	if(!p && atoi(port) == https_port)
-		return 1;
-	if(p && atoi(p+1) == https_port)
-		return 1;
-	return 0;
-}
-
 /**
  * Helper for ports_open. Creates one interface (or NULL for default).
  * @param ifname: The interface ip address.
  * @param do_auto: use automatic interface detection.
  * 	If enabled, then ifname must be the wildcard name.
  * @param do_udp: if udp should be used.
- * @param do_tcp: if udp should be used.
+ * @param do_tcp: if tcp should be used.
  * @param hints: for getaddrinfo. family and flags have to be set by caller.
  * @param port: Port number to use (as string).
  * @param list: list of open ports, appended to, changed to point to list head.
@@ -1132,7 +1213,7 @@ if_is_https(const char* ifname, const char* port, int https_port)
  * @return: returns false on error.
  */
 static int
-ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp, 
+ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 	struct addrinfo *hints, const char* port, struct listen_port** list,
 	size_t rcv, size_t snd, int ssl_port,
 	struct config_strlist* tls_additional_port, int https_port,
@@ -1142,8 +1223,9 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 	int s, noip6=0;
 	int is_https = if_is_https(ifname, port, https_port);
 	int nodelay = is_https && http2_nodelay;
+	struct unbound_socket* ub_sock;
 #ifdef USE_DNSCRYPT
-	int is_dnscrypt = ((strchr(ifname, '@') && 
+	int is_dnscrypt = ((strchr(ifname, '@') &&
 			atoi(strchr(ifname, '@')+1) == dnscrypt_port) ||
 			(!strchr(ifname, '@') && atoi(port) == dnscrypt_port));
 #else
@@ -1153,10 +1235,16 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 
 	if(!do_udp && !do_tcp)
 		return 0;
+
 	if(do_auto) {
-		if((s = make_sock_port(SOCK_DGRAM, ifname, port, hints, 1, 
+		ub_sock = calloc(1, sizeof(struct unbound_socket));
+		if(!ub_sock)
+			return 0;
+		if((s = make_sock_port(SOCK_DGRAM, ifname, port, hints, 1,
 			&noip6, rcv, snd, reuseport, transparent,
-			tcp_mss, nodelay, freebind, use_systemd, dscp)) == -1) {
+			tcp_mss, nodelay, freebind, use_systemd, dscp, ub_sock)) == -1) {
+			freeaddrinfo(ub_sock->addr);
+			free(ub_sock);
 			if(noip6) {
 				log_warn("IPv6 protocol not available");
 				return 1;
@@ -1166,27 +1254,39 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 		/* getting source addr packet info is highly non-portable */
 		if(!set_recvpktinfo(s, hints->ai_family)) {
 			sock_close(s);
+			freeaddrinfo(ub_sock->addr);
+			free(ub_sock);
 			return 0;
 		}
-		if(!port_insert(list, s,
-		   is_dnscrypt?listen_type_udpancil_dnscrypt:listen_type_udpancil)) {
+		if(!port_insert(list, s, is_dnscrypt
+			?listen_type_udpancil_dnscrypt:listen_type_udpancil,
+			ub_sock)) {
 			sock_close(s);
+			freeaddrinfo(ub_sock->addr);
+			free(ub_sock);
 			return 0;
 		}
 	} else if(do_udp) {
+		ub_sock = calloc(1, sizeof(struct unbound_socket));
+		if(!ub_sock)
+			return 0;
 		/* regular udp socket */
-		if((s = make_sock_port(SOCK_DGRAM, ifname, port, hints, 1, 
+		if((s = make_sock_port(SOCK_DGRAM, ifname, port, hints, 1,
 			&noip6, rcv, snd, reuseport, transparent,
-			tcp_mss, nodelay, freebind, use_systemd, dscp)) == -1) {
+			tcp_mss, nodelay, freebind, use_systemd, dscp, ub_sock)) == -1) {
+			freeaddrinfo(ub_sock->addr);
+			free(ub_sock);
 			if(noip6) {
 				log_warn("IPv6 protocol not available");
 				return 1;
 			}
 			return 0;
 		}
-		if(!port_insert(list, s,
-		   is_dnscrypt?listen_type_udp_dnscrypt:listen_type_udp)) {
+		if(!port_insert(list, s, is_dnscrypt
+			?listen_type_udp_dnscrypt:listen_type_udp, ub_sock)) {
 			sock_close(s);
+			freeaddrinfo(ub_sock->addr);
+			free(ub_sock);
 			return 0;
 		}
 	}
@@ -1194,6 +1294,9 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 		int is_ssl = if_is_ssl(ifname, port, ssl_port,
 			tls_additional_port);
 		enum listen_type port_type;
+		ub_sock = calloc(1, sizeof(struct unbound_socket));
+		if(!ub_sock)
+			return 0;
 		if(is_ssl)
 			port_type = listen_type_ssl;
 		else if(is_https)
@@ -1202,9 +1305,11 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 			port_type = listen_type_tcp_dnscrypt;
 		else
 			port_type = listen_type_tcp;
-		if((s = make_sock_port(SOCK_STREAM, ifname, port, hints, 1, 
+		if((s = make_sock_port(SOCK_STREAM, ifname, port, hints, 1,
 			&noip6, 0, 0, reuseport, transparent, tcp_mss, nodelay,
-			freebind, use_systemd, dscp)) == -1) {
+			freebind, use_systemd, dscp, ub_sock)) == -1) {
+			freeaddrinfo(ub_sock->addr);
+			free(ub_sock);
 			if(noip6) {
 				/*log_warn("IPv6 protocol not available");*/
 				return 1;
@@ -1213,8 +1318,10 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 		}
 		if(is_ssl)
 			verbose(VERB_ALGO, "setup TCP for SSL service");
-		if(!port_insert(list, s, port_type)) {
+		if(!port_insert(list, s, port_type, ub_sock)) {
 			sock_close(s);
+			freeaddrinfo(ub_sock->addr);
+			free(ub_sock);
 			return 0;
 		}
 	}
@@ -1240,6 +1347,38 @@ listen_cp_insert(struct comm_point* c, struct listen_dnsport* front)
 	return 1;
 }
 
+void listen_setup_locks(void)
+{
+	if(!stream_wait_lock_inited) {
+		lock_basic_init(&stream_wait_count_lock);
+		stream_wait_lock_inited = 1;
+	}
+	if(!http2_query_buffer_lock_inited) {
+		lock_basic_init(&http2_query_buffer_count_lock);
+		http2_query_buffer_lock_inited = 1;
+	}
+	if(!http2_response_buffer_lock_inited) {
+		lock_basic_init(&http2_response_buffer_count_lock);
+		http2_response_buffer_lock_inited = 1;
+	}
+}
+
+void listen_desetup_locks(void)
+{
+	if(stream_wait_lock_inited) {
+		stream_wait_lock_inited = 0;
+		lock_basic_destroy(&stream_wait_count_lock);
+	}
+	if(http2_query_buffer_lock_inited) {
+		http2_query_buffer_lock_inited = 0;
+		lock_basic_destroy(&http2_query_buffer_count_lock);
+	}
+	if(http2_response_buffer_lock_inited) {
+		http2_response_buffer_lock_inited = 0;
+		lock_basic_destroy(&http2_response_buffer_count_lock);
+	}
+}
+
 struct listen_dnsport* 
 listen_create(struct comm_base* base, struct listen_port* ports,
 	size_t bufsize, int tcp_accept_count, int tcp_idle_timeout,
@@ -1261,57 +1400,44 @@ listen_create(struct comm_base* base, struct listen_port* ports,
 		free(front);
 		return NULL;
 	}
-	if(!stream_wait_lock_inited) {
-		lock_basic_init(&stream_wait_count_lock);
-		stream_wait_lock_inited = 1;
-	}
-	if(!http2_query_buffer_lock_inited) {
-		lock_basic_init(&http2_query_buffer_count_lock);
-		http2_query_buffer_lock_inited = 1;
-	}
-	if(!http2_response_buffer_lock_inited) {
-		lock_basic_init(&http2_response_buffer_count_lock);
-		http2_response_buffer_lock_inited = 1;
-	}
 
 	/* create comm points as needed */
 	while(ports) {
 		struct comm_point* cp = NULL;
 		if(ports->ftype == listen_type_udp ||
-		   ports->ftype == listen_type_udp_dnscrypt)
-			cp = comm_point_create_udp(base, ports->fd, 
-				front->udp_buff, cb, cb_arg);
-		else if(ports->ftype == listen_type_tcp ||
-				ports->ftype == listen_type_tcp_dnscrypt)
-			cp = comm_point_create_tcp(base, ports->fd, 
+		   ports->ftype == listen_type_udp_dnscrypt) {
+			cp = comm_point_create_udp(base, ports->fd,
+				front->udp_buff, cb, cb_arg, ports->socket);
+		} else if(ports->ftype == listen_type_tcp ||
+				ports->ftype == listen_type_tcp_dnscrypt) {
+			cp = comm_point_create_tcp(base, ports->fd,
 				tcp_accept_count, tcp_idle_timeout,
 				harden_large_queries, 0, NULL,
 				tcp_conn_limit, bufsize, front->udp_buff,
-				ports->ftype, cb, cb_arg);
-		else if(ports->ftype == listen_type_ssl ||
+				ports->ftype, cb, cb_arg, ports->socket);
+		} else if(ports->ftype == listen_type_ssl ||
 			ports->ftype == listen_type_http) {
-			cp = comm_point_create_tcp(base, ports->fd, 
+			cp = comm_point_create_tcp(base, ports->fd,
 				tcp_accept_count, tcp_idle_timeout,
 				harden_large_queries,
 				http_max_streams, http_endpoint,
 				tcp_conn_limit, bufsize, front->udp_buff,
-				ports->ftype, cb, cb_arg);
-			if(http_notls && ports->ftype == listen_type_http)
-				cp->ssl = NULL;
-			else
-				cp->ssl = sslctx;
+				ports->ftype, cb, cb_arg, ports->socket);
 			if(ports->ftype == listen_type_http) {
 				if(!sslctx && !http_notls) {
-				  log_warn("HTTPS port configured, but no TLS "
-					"tls-service-key or tls-service-pem "
-					"set");
+					log_warn("HTTPS port configured, but "
+						"no TLS tls-service-key or "
+						"tls-service-pem set");
 				}
 #ifndef HAVE_SSL_CTX_SET_ALPN_SELECT_CB
-				if(!http_notls)
-				  log_warn("Unbound is not compiled with an "
-					"OpenSSL version supporting ALPN "
-					" (OpenSSL >= 1.0.2). This is required "
-					"to use DNS-over-HTTPS");
+				if(!http_notls) {
+					log_warn("Unbound is not compiled "
+						"with an OpenSSL version "
+						"supporting ALPN "
+						"(OpenSSL >= 1.0.2). This "
+						"is required to use "
+						"DNS-over-HTTPS");
+				}
 #endif
 #ifndef HAVE_NGHTTP2_NGHTTP2_H
 				log_warn("Unbound is not compiled with "
@@ -1320,14 +1446,25 @@ listen_create(struct comm_base* base, struct listen_port* ports,
 #endif
 			}
 		} else if(ports->ftype == listen_type_udpancil ||
-				  ports->ftype == listen_type_udpancil_dnscrypt)
-			cp = comm_point_create_udp_ancil(base, ports->fd, 
-				front->udp_buff, cb, cb_arg);
+				  ports->ftype == listen_type_udpancil_dnscrypt) {
+			cp = comm_point_create_udp_ancil(base, ports->fd,
+				front->udp_buff, cb, cb_arg, ports->socket);
+		}
 		if(!cp) {
-			log_err("can't create commpoint");	
+			log_err("can't create commpoint");
 			listen_delete(front);
 			return NULL;
 		}
+		if((http_notls && ports->ftype == listen_type_http) ||
+			(ports->ftype == listen_type_tcp) ||
+			(ports->ftype == listen_type_udp) ||
+			(ports->ftype == listen_type_udpancil) ||
+			(ports->ftype == listen_type_tcp_dnscrypt) ||
+			(ports->ftype == listen_type_udp_dnscrypt) ||
+			(ports->ftype == listen_type_udpancil_dnscrypt))
+			cp->ssl = NULL;
+		else
+			cp->ssl = sslctx;
 		cp->dtenv = dtenv;
 		cp->do_not_close = 1;
 #ifdef USE_DNSCRYPT
@@ -1388,18 +1525,6 @@ listen_delete(struct listen_dnsport* front)
 #endif
 	sldns_buffer_free(front->udp_buff);
 	free(front);
-	if(stream_wait_lock_inited) {
-		stream_wait_lock_inited = 0;
-		lock_basic_destroy(&stream_wait_count_lock);
-	}
-	if(http2_query_buffer_lock_inited) {
-		http2_query_buffer_lock_inited = 0;
-		lock_basic_destroy(&http2_query_buffer_count_lock);
-	}
-	if(http2_response_buffer_lock_inited) {
-		http2_response_buffer_lock_inited = 0;
-		lock_basic_destroy(&http2_response_buffer_count_lock);
-	}
 }
 
 #ifdef HAVE_GETIFADDRS
@@ -1456,7 +1581,7 @@ resolve_ifa_name(struct ifaddrs *ifas, const char *search_ifa, char ***ip_addres
 				log_err("inet_ntop failed");
 				return 0;
 			}
-			if_indextoname(in6->sin6_scope_id,
+			(void)if_indextoname(in6->sin6_scope_id,
 				(char *)if_index_name);
 			if (strlen(if_index_name) != 0) {
 				snprintf(addr_buf, sizeof(addr_buf),
@@ -1506,13 +1631,12 @@ resolve_ifa_name(struct ifaddrs *ifas, const char *search_ifa, char ***ip_addres
 }
 #endif /* HAVE_GETIFADDRS */
 
-int resolve_interface_names(struct config_file* cfg, char*** resif,
-	int* num_resif)
+int resolve_interface_names(char** ifs, int num_ifs,
+	struct config_strlist* list, char*** resif, int* num_resif)
 {
 #ifdef HAVE_GETIFADDRS
-	int i;
 	struct ifaddrs *addrs = NULL;
-	if(cfg->num_ifs == 0) {
+	if(num_ifs == 0 && list == NULL) {
 		*resif = NULL;
 		*num_resif = 0;
 		return 1;
@@ -1523,45 +1647,80 @@ int resolve_interface_names(struct config_file* cfg, char*** resif,
 		freeifaddrs(addrs);
 		return 0;
 	}
-	for(i=0; i<cfg->num_ifs; i++) {
-		if(!resolve_ifa_name(addrs, cfg->ifs[i], resif, num_resif)) {
-			freeifaddrs(addrs);
-			config_del_strarray(*resif, *num_resif);
-			*resif = NULL;
-			*num_resif = 0;
-			return 0;
+	if(ifs) {
+		int i;
+		for(i=0; i<num_ifs; i++) {
+			if(!resolve_ifa_name(addrs, ifs[i], resif, num_resif)) {
+				freeifaddrs(addrs);
+				config_del_strarray(*resif, *num_resif);
+				*resif = NULL;
+				*num_resif = 0;
+				return 0;
+			}
 		}
+	}
+	if(list) {
+		struct config_strlist* p;
+		for(p = list; p; p = p->next) {
+			if(!resolve_ifa_name(addrs, p->str, resif, num_resif)) {
+				freeifaddrs(addrs);
+				config_del_strarray(*resif, *num_resif);
+				*resif = NULL;
+				*num_resif = 0;
+				return 0;
+			}
+}
 	}
 	freeifaddrs(addrs);
 	return 1;
 #else
-	int i;
-	if(cfg->num_ifs == 0) {
+	struct config_strlist* p;
+	if(num_ifs == 0 && list == NULL) {
 		*resif = NULL;
 		*num_resif = 0;
 		return 1;
 	}
-	*num_resif = cfg->num_ifs;
+	*num_resif = num_ifs;
+	for(p = list; p; p = p->next) {
+		(*num_resif)++;
+	}
 	*resif = calloc(*num_resif, sizeof(**resif));
 	if(!*resif) {
 		log_err("out of memory");
 		return 0;
 	}
-	for(i=0; i<*num_resif; i++) {
-		(*resif)[i] = strdup(cfg->ifs[i]);
-		if(!((*resif)[i])) {
-			log_err("out of memory");
-			config_del_strarray(*resif, *num_resif);
-			*resif = NULL;
-			*num_resif = 0;
-			return 0;
+	if(ifs) {
+		int i;
+		for(i=0; i<num_ifs; i++) {
+			(*resif)[i] = strdup(ifs[i]);
+			if(!((*resif)[i])) {
+				log_err("out of memory");
+				config_del_strarray(*resif, *num_resif);
+				*resif = NULL;
+				*num_resif = 0;
+				return 0;
+			}
+		}
+	}
+	if(list) {
+		int idx = num_ifs;
+		for(p = list; p; p = p->next) {
+			(*resif)[idx] = strdup(p->str);
+			if(!((*resif)[idx])) {
+				log_err("out of memory");
+				config_del_strarray(*resif, *num_resif);
+				*resif = NULL;
+				*num_resif = 0;
+				return 0;
+			}
+			idx++;
 		}
 	}
 	return 1;
 #endif /* HAVE_GETIFADDRS */
 }
 
-struct listen_port* 
+struct listen_port*
 listening_ports_open(struct config_file* cfg, char** ifs, int num_ifs,
 	int* reuseport)
 {
@@ -1593,10 +1752,67 @@ listening_ports_open(struct config_file* cfg, char** ifs, int num_ifs,
 	}
 	/* create ip4 and ip6 ports so that return addresses are nice. */
 	if(do_auto || num_ifs == 0) {
+		if(do_auto && cfg->if_automatic_ports &&
+			cfg->if_automatic_ports[0]!=0) {
+			char* now = cfg->if_automatic_ports;
+			while(now && *now) {
+				char* after;
+				int extraport;
+				while(isspace((unsigned char)*now))
+					now++;
+				if(!*now)
+					break;
+				after = now;
+				extraport = (int)strtol(now, &after, 10);
+				if(extraport < 0 || extraport > 65535) {
+					log_err("interface-automatic-ports port number out of range, at position %d of '%s'", (int)(now-cfg->if_automatic_ports)+1, cfg->if_automatic_ports);
+					listening_ports_free(list);
+					return NULL;
+				}
+				if(extraport == 0 && now == after) {
+					log_err("interface-automatic-ports could not be parsed, at position %d of '%s'", (int)(now-cfg->if_automatic_ports)+1, cfg->if_automatic_ports);
+					listening_ports_free(list);
+					return NULL;
+				}
+				now = after;
+				snprintf(portbuf, sizeof(portbuf), "%d", extraport);
+				if(do_ip6) {
+					hints.ai_family = AF_INET6;
+					if(!ports_create_if("::0",
+						do_auto, cfg->do_udp, do_tcp,
+						&hints, portbuf, &list,
+						cfg->so_rcvbuf, cfg->so_sndbuf,
+						cfg->ssl_port, cfg->tls_additional_port,
+						cfg->https_port, reuseport, cfg->ip_transparent,
+						cfg->tcp_mss, cfg->ip_freebind,
+						cfg->http_nodelay, cfg->use_systemd,
+						cfg->dnscrypt_port, cfg->ip_dscp)) {
+						listening_ports_free(list);
+						return NULL;
+					}
+				}
+				if(do_ip4) {
+					hints.ai_family = AF_INET;
+					if(!ports_create_if("0.0.0.0",
+						do_auto, cfg->do_udp, do_tcp,
+						&hints, portbuf, &list,
+						cfg->so_rcvbuf, cfg->so_sndbuf,
+						cfg->ssl_port, cfg->tls_additional_port,
+						cfg->https_port, reuseport, cfg->ip_transparent,
+						cfg->tcp_mss, cfg->ip_freebind,
+						cfg->http_nodelay, cfg->use_systemd,
+						cfg->dnscrypt_port, cfg->ip_dscp)) {
+						listening_ports_free(list);
+						return NULL;
+					}
+				}
+			}
+			return list;
+		}
 		if(do_ip6) {
 			hints.ai_family = AF_INET6;
-			if(!ports_create_if(do_auto?"::0":"::1", 
-				do_auto, cfg->do_udp, do_tcp, 
+			if(!ports_create_if(do_auto?"::0":"::1",
+				do_auto, cfg->do_udp, do_tcp,
 				&hints, portbuf, &list,
 				cfg->so_rcvbuf, cfg->so_sndbuf,
 				cfg->ssl_port, cfg->tls_additional_port,
@@ -1610,8 +1826,8 @@ listening_ports_open(struct config_file* cfg, char** ifs, int num_ifs,
 		}
 		if(do_ip4) {
 			hints.ai_family = AF_INET;
-			if(!ports_create_if(do_auto?"0.0.0.0":"127.0.0.1", 
-				do_auto, cfg->do_udp, do_tcp, 
+			if(!ports_create_if(do_auto?"0.0.0.0":"127.0.0.1",
+				do_auto, cfg->do_udp, do_tcp,
 				&hints, portbuf, &list,
 				cfg->so_rcvbuf, cfg->so_sndbuf,
 				cfg->ssl_port, cfg->tls_additional_port,
@@ -1629,7 +1845,7 @@ listening_ports_open(struct config_file* cfg, char** ifs, int num_ifs,
 				continue;
 			hints.ai_family = AF_INET6;
 			if(!ports_create_if(ifs[i], 0, cfg->do_udp,
-				do_tcp, &hints, portbuf, &list, 
+				do_tcp, &hints, portbuf, &list,
 				cfg->so_rcvbuf, cfg->so_sndbuf,
 				cfg->ssl_port, cfg->tls_additional_port,
 				cfg->https_port, reuseport, cfg->ip_transparent,
@@ -1644,7 +1860,7 @@ listening_ports_open(struct config_file* cfg, char** ifs, int num_ifs,
 				continue;
 			hints.ai_family = AF_INET;
 			if(!ports_create_if(ifs[i], 0, cfg->do_udp,
-				do_tcp, &hints, portbuf, &list, 
+				do_tcp, &hints, portbuf, &list,
 				cfg->so_rcvbuf, cfg->so_sndbuf,
 				cfg->ssl_port, cfg->tls_additional_port,
 				cfg->https_port, reuseport, cfg->ip_transparent,
@@ -1656,6 +1872,7 @@ listening_ports_open(struct config_file* cfg, char** ifs, int num_ifs,
 			}
 		}
 	}
+
 	return list;
 }
 
@@ -1666,6 +1883,11 @@ void listening_ports_free(struct listen_port* list)
 		nx = list->next;
 		if(list->fd != -1) {
 			sock_close(list->fd);
+		}
+		/* rc_ports don't have ub_socket */
+		if(list->socket) {
+			freeaddrinfo(list->socket->addr);
+			free(list->socket);
 		}
 		free(list);
 		list = nx;
@@ -2371,6 +2593,10 @@ static int http2_query_read_done(struct http2_session* h2_session,
 			"buffer already assigned to stream");
 		return -1;
 	}
+    
+    /* the c->buffer might be used by mesh_send_reply and no be cleard
+	 * need to be cleared before use */
+	sldns_buffer_clear(h2_session->c->buffer);
 	if(sldns_buffer_remaining(h2_session->c->buffer) <
 		sldns_buffer_remaining(h2_stream->qbuffer)) {
 		/* qbuffer will be free'd in frame close cb */
@@ -2500,7 +2726,7 @@ static int http2_req_begin_headers_cb(nghttp2_session* session,
 	int ret;
 	if(frame->hd.type != NGHTTP2_HEADERS ||
 		frame->headers.cat != NGHTTP2_HCAT_REQUEST) {
-		/* only interrested in request headers */
+		/* only interested in request headers */
 		return 0;
 	}
 	if(!(h2_stream = http2_stream_create(frame->hd.stream_id))) {
@@ -2572,18 +2798,45 @@ static int http2_buffer_uri_query(struct http2_session* h2_session,
 		return 0;
 	}
 
-	if(!(b64len = sldns_b64url_pton(
-		(char const *)start, length,
-		sldns_buffer_current(h2_stream->qbuffer),
-		expectb64len)) || b64len < 0) {
-		lock_basic_lock(&http2_query_buffer_count_lock);
-		http2_query_buffer_count -= expectb64len;
-		lock_basic_unlock(&http2_query_buffer_count_lock);
-		sldns_buffer_free(h2_stream->qbuffer);
-		h2_stream->qbuffer = NULL;
-		/* return without error, method can be an
-		 * unknown POST */
-		return 1;
+	if(sldns_b64_contains_nonurl((char const*)start, length)) {
+		char buf[65536+4];
+		verbose(VERB_ALGO, "HTTP2 stream contains wrong b64 encoding");
+		/* copy to the scratch buffer temporarily to terminate the
+		 * string with a zero */
+		if(length+1 > sizeof(buf)) {
+			/* too long */
+			lock_basic_lock(&http2_query_buffer_count_lock);
+			http2_query_buffer_count -= expectb64len;
+			lock_basic_unlock(&http2_query_buffer_count_lock);
+			sldns_buffer_free(h2_stream->qbuffer);
+			h2_stream->qbuffer = NULL;
+			return 1;
+		}
+		memmove(buf, start, length);
+		buf[length] = 0;
+		if(!(b64len = sldns_b64_pton(buf, sldns_buffer_current(
+			h2_stream->qbuffer), expectb64len)) || b64len < 0) {
+			lock_basic_lock(&http2_query_buffer_count_lock);
+			http2_query_buffer_count -= expectb64len;
+			lock_basic_unlock(&http2_query_buffer_count_lock);
+			sldns_buffer_free(h2_stream->qbuffer);
+			h2_stream->qbuffer = NULL;
+			return 1;
+		}
+	} else {
+		if(!(b64len = sldns_b64url_pton(
+			(char const *)start, length,
+			sldns_buffer_current(h2_stream->qbuffer),
+			expectb64len)) || b64len < 0) {
+			lock_basic_lock(&http2_query_buffer_count_lock);
+			http2_query_buffer_count -= expectb64len;
+			lock_basic_unlock(&http2_query_buffer_count_lock);
+			sldns_buffer_free(h2_stream->qbuffer);
+			h2_stream->qbuffer = NULL;
+			/* return without error, method can be an
+			 * unknown POST */
+			return 1;
+		}
 	}
 	sldns_buffer_skip(h2_stream->qbuffer, (size_t)b64len);
 	return 1;
@@ -2601,7 +2854,7 @@ static int http2_req_header_cb(nghttp2_session* session,
 	 * the HEADER */
 	if(frame->hd.type != NGHTTP2_HEADERS ||
 		frame->headers.cat != NGHTTP2_HCAT_REQUEST) {
-		/* only interrested in request headers */
+		/* only interested in request headers */
 		return 0;
 	}
 	if(!(h2_stream = nghttp2_session_get_stream_user_data(session,
@@ -2697,7 +2950,7 @@ static int http2_req_header_cb(nghttp2_session* session,
 			h2_stream->query_too_large = 1;
 			return 0;
 		}
-		/* guaranteed to only contian digits and be null terminated */
+		/* guaranteed to only contain digits and be null terminated */
 		h2_stream->content_length = atoi((const char*)value);
 		if(h2_stream->content_length >
 			h2_session->c->http2_stream_max_qbuffer_size) {
@@ -2737,7 +2990,7 @@ static int http2_req_data_chunk_recv_cb(nghttp2_session* ATTR_UNUSED(session),
 			/* setting this to msg-buffer-size can result in a lot
 			 * of memory consuption. Most queries should fit in a
 			 * single DATA frame, and most POST queries will
-			 * containt content-length which does not impose this
+			 * contain content-length which does not impose this
 			 * limit. */
 			qlen = len;
 		}

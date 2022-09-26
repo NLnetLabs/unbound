@@ -5,13 +5,6 @@
 [ -f .tpkg.var.test ] && source .tpkg.var.test
 
 PRE="../.."
-if grep "define WITH_PYUNBOUND 1" $PRE/config.h; then
-	echo "have pyunbound"
-else
-	echo "no pyunbound"
-	exit 0
-fi
-
 if test "`uname 2>&1`" = "Darwin"; then
 	echo export DYLD_LIBRARY_PATH="$DYLD_LIBRARY_PATH:../../.libs"
 	export DYLD_LIBRARY_PATH="$DYLD_LIBRARY_PATH:../../.libs"
@@ -42,28 +35,10 @@ else
 	echo "Not OK (async resolve)"
 	exit 1
 fi
-if grep "Ratelimit-fg-on: pass" outfile; then
-	:
-else
-	echo "Not OK (ratelimit-fg-on)"
-	exit 1
-fi
-if grep "Ratelimit-fg-off: \[.\?10.20.30.40.\?\]" outfile; then
-	:
-else
-	echo "Not OK (ratelimit-fg-off)"
-	exit 1
-fi
 if grep "Ratelimit-bg-on: pass" outfile; then
 	:
 else
 	echo "Not OK (ratelimit-bg-on)"
-	exit 1
-fi
-if grep "Ratelimit-bg-off: \[.\?10.20.30.40.\?\]" outfile; then
-	:
-else
-	echo "Not OK (ratelimit-bg-off)"
 	exit 1
 fi
 

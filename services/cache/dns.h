@@ -88,11 +88,13 @@ struct dns_msg {
  * @param flags: flags with BIT_CD for AAAA queries in dns64 translation.
  *   The higher 16 bits are used internally to customize the cache policy.
  *   (See DNSCACHE_STORE_xxx flags).
+ * @param qstarttime: time when the query was started, and thus when the
+ * 	delegations were looked up.
  * @return 0 on alloc error (out of memory).
  */
 int dns_cache_store(struct module_env* env, struct query_info* qinf,
         struct reply_info* rep, int is_referral, time_t leeway, int pside,
-	struct regional* region, uint32_t flags);
+	struct regional* region, uint32_t flags, time_t qstarttime);
 
 /**
  * Store message in the cache. Stores in message cache and rrset cache.
@@ -112,11 +114,14 @@ int dns_cache_store(struct module_env* env, struct query_info* qinf,
  * 	can be updated to full TTL even in prefetch situations.
  * @param qrep: message that can be altered with better rrs from cache.
  * @param flags: customization flags for the cache policy.
+ * @param qstarttime: time when the query was started, and thus when the
+ * 	delegations were looked up.
  * @param region: to allocate into for qmsg.
  */
 void dns_cache_store_msg(struct module_env* env, struct query_info* qinfo,
 	hashvalue_type hash, struct reply_info* rep, time_t leeway, int pside,
-	struct reply_info* qrep, uint32_t flags, struct regional* region);
+	struct reply_info* qrep, uint32_t flags, struct regional* region,
+	time_t qstarttime);
 
 /**
  * Find a delegation from the cache.
@@ -129,11 +134,18 @@ void dns_cache_store_msg(struct module_env* env, struct query_info* qinfo,
  * @param msg: if not NULL, delegation message is returned here, synthesized
  *	from the cache.
  * @param timenow: the time now, for checking if TTL on cache entries is OK.
+ * @param noexpiredabove: if set, no expired NS rrsets above the one found
+ * 	are tolerated. It only returns delegations where the delegations above
+ * 	it are valid.
+ * @param expiretop: if not NULL, name where check for expiry ends for
+ * 	noexpiredabove.
+ * @param expiretoplen: length of expiretop dname.
  * @return new delegation or NULL on error or if not found in cache.
  */
 struct delegpt* dns_cache_find_delegation(struct module_env* env, 
 	uint8_t* qname, size_t qnamelen, uint16_t qtype, uint16_t qclass, 
-	struct regional* region, struct dns_msg** msg, time_t timenow);
+	struct regional* region, struct dns_msg** msg, time_t timenow,
+	int noexpiredabove, uint8_t* expiretop, size_t expiretoplen);
 
 /**
  * generate dns_msg from cached message
@@ -164,6 +176,8 @@ struct dns_msg* tomsg(struct module_env* env, struct query_info* q,
  * @param scratch: where to allocate temporary data.
  * @param no_partial: if true, only complete messages and not a partial
  *	one (with only the start of the CNAME chain and not the rest).
+ * @param dpname: if not NULL, do not return NXDOMAIN above this name.
+ * @param dpnamelen: length of dpname.
  * @return new response message (alloced in region, rrsets do not have IDs).
  * 	or NULL on error or if not found in cache.
  *	TTLs are made relative to the current time.
@@ -171,7 +185,7 @@ struct dns_msg* tomsg(struct module_env* env, struct query_info* q,
 struct dns_msg* dns_cache_lookup(struct module_env* env,
 	uint8_t* qname, size_t qnamelen, uint16_t qtype, uint16_t qclass,
 	uint16_t flags, struct regional* region, struct regional* scratch,
-	int no_partial);
+	int no_partial, uint8_t* dpname, size_t dpnamelen);
 
 /** 
  * find and add A and AAAA records for missing nameservers in delegpt 

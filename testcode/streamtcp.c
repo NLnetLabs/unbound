@@ -89,7 +89,7 @@ open_svr(const char* svr, int udp)
 	int fd = -1;
 	/* svr can be ip@port */
 	memset(&addr, 0, sizeof(addr));
-	if(!extstrtoaddr(svr, &addr, &addrlen)) {
+	if(!extstrtoaddr(svr, &addr, &addrlen, UNBOUND_DNS_PORT)) {
 		printf("fatal: bad server specs '%s'\n", svr);
 		exit(1);
 	}
@@ -397,11 +397,17 @@ send_em(const char* svr, int udp, int usessl, int noanswer, int onarrival,
 /** SIGPIPE handler */
 static RETSIGTYPE sigh(int sig)
 {
+	char str[] = "Got unhandled signal   \n";
 	if(sig == SIGPIPE) {
-		printf("got SIGPIPE, remote connection gone\n");
+		char* strpipe = "got SIGPIPE, remote connection gone\n";
+		/* simple cast to void will not silence Wunused-result */
+		(void)!write(STDOUT_FILENO, strpipe, strlen(strpipe));
 		exit(1);
 	}
-	printf("Got unhandled signal %d\n", sig);
+	str[21] = '0' + (sig/10)%10;
+	str[22] = '0' + sig%10;
+	/* simple cast to void will not silence Wunused-result */
+	(void)!write(STDOUT_FILENO, str, strlen(str));
 	exit(1);
 }
 #endif /* SIGPIPE */
@@ -431,8 +437,8 @@ int main(int argc, char** argv)
 #endif
 
 	/* lock debug start (if any) */
-	log_init(0, 0, 0);
 	checklock_start();
+	log_init(0, 0, 0);
 
 #ifdef SIGPIPE
 	if(signal(SIGPIPE, &sigh) == SIG_ERR) {

@@ -70,6 +70,7 @@ struct comm_point;
 struct comm_reply;
 struct tcl_list;
 struct ub_event_base;
+struct unbound_socket;
 
 struct mesh_state;
 struct mesh_area;
@@ -101,6 +102,8 @@ typedef int comm_point_callback_type(struct comm_point*, void*, int,
 
 /** timeout to slow accept calls when not possible, in msec. */
 #define NETEVENT_SLOW_ACCEPT_TIME 2000
+/** timeout to slow down log print, so it does not spam the logs, in sec */
+#define SLOW_LOG_TIME 10
 
 /**
  * A communication point dispatcher. Thread specific.
@@ -168,6 +171,8 @@ struct comm_point {
 	struct internal_event* ev;
 	/** if the event is added or not */
 	int event_added;
+
+	struct unbound_socket* socket;
 
 	/** file descriptor for communication point */
 	int fd;
@@ -495,12 +500,13 @@ struct ub_event_base* comm_base_internal(struct comm_base* b);
  * @param buffer: shared buffer by UDP sockets from this thread.
  * @param callback: callback function pointer.
  * @param callback_arg: will be passed to your callback function.
+ * @param socket: and opened socket properties will be passed to your callback function.
  * @return: returns the allocated communication point. NULL on error.
  * Sets timeout to NULL. Turns off TCP options.
  */
 struct comm_point* comm_point_create_udp(struct comm_base* base,
 	int fd, struct sldns_buffer* buffer, 
-	comm_point_callback_type* callback, void* callback_arg);
+	comm_point_callback_type* callback, void* callback_arg, struct unbound_socket* socket);
 
 /**
  * Create an UDP with ancillary data comm point. Calls malloc.
@@ -511,12 +517,13 @@ struct comm_point* comm_point_create_udp(struct comm_base* base,
  * @param buffer: shared buffer by UDP sockets from this thread.
  * @param callback: callback function pointer.
  * @param callback_arg: will be passed to your callback function.
+ * @param socket: and opened socket properties will be passed to your callback function.
  * @return: returns the allocated communication point. NULL on error.
  * Sets timeout to NULL. Turns off TCP options.
  */
 struct comm_point* comm_point_create_udp_ancil(struct comm_base* base,
 	int fd, struct sldns_buffer* buffer, 
-	comm_point_callback_type* callback, void* callback_arg);
+	comm_point_callback_type* callback, void* callback_arg, struct unbound_socket* socket);
 
 /**
  * Create a TCP listener comm point. Calls malloc.
@@ -539,6 +546,7 @@ struct comm_point* comm_point_create_udp_ancil(struct comm_base* base,
  * 	to select handler type to use.
  * @param callback: callback function pointer for TCP handlers.
  * @param callback_arg: will be passed to your callback function.
+ * @param socket: and opened socket properties will be passed to your callback function.
  * @return: returns the TCP listener commpoint. You can find the
  *  	TCP handlers in the array inside the listener commpoint.
  *	returns NULL on error.
@@ -550,7 +558,7 @@ struct comm_point* comm_point_create_tcp(struct comm_base* base,
 	struct tcl_list* tcp_conn_limit,
 	size_t bufsize, struct sldns_buffer* spoolbuf,
 	enum listen_type port_type,
-	comm_point_callback_type* callback, void* callback_arg);
+	comm_point_callback_type* callback, void* callback_arg, struct unbound_socket* socket);
 
 /**
  * Create an outgoing TCP commpoint. No file descriptor is opened, left at -1.
@@ -737,7 +745,7 @@ struct comm_signal* comm_signal_create(struct comm_base* base,
 	void (*callback)(int, void*), void* cb_arg);
 
 /**
- * Bind signal struct to catch a signal. A signle comm_signal can be bound
+ * Bind signal struct to catch a signal. A single comm_signal can be bound
  * to multiple signals, calling comm_signal_bind multiple times.
  * @param comsig: the communication point, with callback information.
  * @param sig: signal number.

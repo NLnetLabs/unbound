@@ -64,6 +64,7 @@
 #include "services/cache/infra.h"
 #include "services/cache/rrset.h"
 #include "services/authzone.h"
+#include "services/listen_dnsport.h"
 #include "sldns/sbuffer.h"
 #ifdef HAVE_PTHREAD
 #include <signal.h>
@@ -185,6 +186,7 @@ ub_ctx_create(void)
 		ub_randfree(ctx->seed_rnd);
 		config_delete(ctx->env->cfg);
 		modstack_desetup(&ctx->mods, ctx->env);
+		listen_desetup_locks();
 		edns_known_options_delete(ctx->env);
 		edns_strings_delete(ctx->env->edns_strings);
 		free(ctx->env);
@@ -198,6 +200,7 @@ ub_ctx_create(void)
 		ub_randfree(ctx->seed_rnd);
 		config_delete(ctx->env->cfg);
 		modstack_desetup(&ctx->mods, ctx->env);
+		listen_desetup_locks();
 		edns_known_options_delete(ctx->env);
 		edns_strings_delete(ctx->env->edns_strings);
 		free(ctx->env);
@@ -344,6 +347,7 @@ ub_ctx_delete(struct ub_ctx* ctx)
 	}
 	ub_randfree(ctx->seed_rnd);
 	alloc_clear(&ctx->superalloc);
+	listen_desetup_locks();
 	traverse_postorder(&ctx->queries, delq, NULL);
 	if(ctx_logfile_overridden) {
 		log_file(NULL);
@@ -947,7 +951,7 @@ ub_ctx_set_fwd(struct ub_ctx* ctx, const char* addr)
 	lock_basic_unlock(&ctx->cfglock);
 
 	/* check syntax for addr */
-	if(!extstrtoaddr(addr, &storage, &stlen)) {
+	if(!extstrtoaddr(addr, &storage, &stlen, UNBOUND_DNS_PORT)) {
 		errno=EINVAL;
 		return UB_SYNTAX;
 	}
@@ -1027,7 +1031,7 @@ int ub_ctx_set_stub(struct ub_ctx* ctx, const char* zone, const char* addr,
 	if(addr) {
 		struct sockaddr_storage storage;
 		socklen_t stlen;
-		if(!extstrtoaddr(addr, &storage, &stlen)) {
+		if(!extstrtoaddr(addr, &storage, &stlen, UNBOUND_DNS_PORT)) {
 			errno=EINVAL;
 			return UB_SYNTAX;
 		}

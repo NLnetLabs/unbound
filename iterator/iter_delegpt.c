@@ -73,9 +73,12 @@ struct delegpt* delegpt_copy(struct delegpt* dp, struct regional* region)
 	copy->bogus = dp->bogus;
 	copy->has_parent_side_NS = dp->has_parent_side_NS;
 	copy->ssl_upstream = dp->ssl_upstream;
+	copy->tcp_upstream = dp->tcp_upstream;
 	for(ns = dp->nslist; ns; ns = ns->next) {
-		if(!delegpt_add_ns(copy, region, ns->name, ns->lame))
+		if(!delegpt_add_ns(copy, region, ns->name, ns->lame,
+			ns->tls_auth_name, ns->port))
 			return NULL;
+		copy->nslist->cache_lookup_count = ns->cache_lookup_count;
 		copy->nslist->resolved = ns->resolved;
 		copy->nslist->got4 = ns->got4;
 		copy->nslist->got6 = ns->got6;
@@ -83,8 +86,8 @@ struct delegpt* delegpt_copy(struct delegpt* dp, struct regional* region)
 		copy->nslist->done_pside6 = ns->done_pside6;
 	}
 	for(a = dp->target_list; a; a = a->next_target) {
-		if(!delegpt_add_addr(copy, region, &a->addr, a->addrlen, 
-			a->bogus, a->lame, a->tls_auth_name, NULL))
+		if(!delegpt_add_addr(copy, region, &a->addr, a->addrlen,
+			a->bogus, a->lame, a->tls_auth_name, -1, NULL))
 			return NULL;
 	}
 	return copy;
@@ -101,7 +104,7 @@ delegpt_set_name(struct delegpt* dp, struct regional* region, uint8_t* name)
 
 int 
 delegpt_add_ns(struct delegpt* dp, struct regional* region, uint8_t* name,
-	uint8_t lame)
+	uint8_t lame, char* tls_auth_name, int port)
 {
 	struct delegpt_ns* ns;
 	size_t len;
@@ -119,12 +122,21 @@ delegpt_add_ns(struct delegpt* dp, struct regional* region, uint8_t* name,
 	ns->namelen = len;
 	dp->nslist = ns;
 	ns->name = regional_alloc_init(region, name, ns->namelen);
+	ns->cache_lookup_count = 0;
 	ns->resolved = 0;
 	ns->got4 = 0;
 	ns->got6 = 0;
 	ns->lame = lame;
 	ns->done_pside4 = 0;
 	ns->done_pside6 = 0;
+	ns->port = port;
+	if(tls_auth_name) {
+		ns->tls_auth_name = regional_strdup(region, tls_auth_name);
+		if(!ns->tls_auth_name)
+			return 0;
+	} else {
+		ns->tls_auth_name = NULL;
+	}
 	return ns->name != 0;
 }
 
@@ -158,9 +170,9 @@ delegpt_find_addr(struct delegpt* dp, struct sockaddr_storage* addr,
 	return NULL;
 }
 
-int 
-delegpt_add_target(struct delegpt* dp, struct regional* region, 
-	uint8_t* name, size_t namelen, struct sockaddr_storage* addr, 
+int
+delegpt_add_target(struct delegpt* dp, struct regional* region,
+	uint8_t* name, size_t namelen, struct sockaddr_storage* addr,
 	socklen_t addrlen, uint8_t bogus, uint8_t lame, int* additions)
 {
 	struct delegpt_ns* ns = delegpt_find_ns(dp, name, namelen);
@@ -175,18 +187,27 @@ delegpt_add_target(struct delegpt* dp, struct regional* region,
 		else	ns->got4 = 1;
 		if(ns->got4 && ns->got6)
 			ns->resolved = 1;
+	} else {
+		if(addr_is_ip6(addr, addrlen))
+			ns->done_pside6 = 1;
+		else	ns->done_pside4 = 1;
 	}
-	return delegpt_add_addr(dp, region, addr, addrlen, bogus, lame, NULL,
-		additions);
+	log_assert(ns->port>0);
+	return delegpt_add_addr(dp, region, addr, addrlen, bogus, lame,
+		ns->tls_auth_name, ns->port, additions);
 }
 
-int 
-delegpt_add_addr(struct delegpt* dp, struct regional* region, 
-	struct sockaddr_storage* addr, socklen_t addrlen, uint8_t bogus, 
-	uint8_t lame, char* tls_auth_name, int* additions)
+int
+delegpt_add_addr(struct delegpt* dp, struct regional* region,
+	struct sockaddr_storage* addr, socklen_t addrlen, uint8_t bogus,
+	uint8_t lame, char* tls_auth_name, int port, int* additions)
 {
 	struct delegpt_addr* a;
 	log_assert(!dp->dp_type_mlc);
+	if(port != -1) {
+		log_assert(port>0);
+		sockaddr_store_port(addr, addrlen, port);
+	}
 	/* check for duplicates */
 	if((a = delegpt_find_addr(dp, addr, addrlen))) {
 		if(bogus)
@@ -323,13 +344,16 @@ delegpt_count_targets(struct delegpt* dp)
 }
 
 size_t 
-delegpt_count_missing_targets(struct delegpt* dp)
+delegpt_count_missing_targets(struct delegpt* dp, int* alllame)
 {
 	struct delegpt_ns* ns;
-	size_t n = 0;
-	for(ns = dp->nslist; ns; ns = ns->next)
-		if(!ns->resolved)
-			n++;
+	size_t n = 0, nlame = 0;
+	for(ns = dp->nslist; ns; ns = ns->next) {
+		if(ns->resolved) continue;
+		n++;
+		if(ns->lame) nlame++;
+	}
+	if(alllame && n == nlame) *alllame = 1;
 	return n;
 }
 
@@ -411,7 +435,8 @@ delegpt_rrset_add_ns(struct delegpt* dp, struct regional* region,
 			(size_t)sldns_read_uint16(nsdata->rr_data[i]))
 			continue; /* bad format */
 		/* add rdata of NS (= wirefmt dname), skip rdatalen bytes */
-		if(!delegpt_add_ns(dp, region, nsdata->rr_data[i]+2, lame))
+		if(!delegpt_add_ns(dp, region, nsdata->rr_data[i]+2, lame,
+			NULL, UNBOUND_DNS_PORT))
 			return 0;
 	}
 	return 1;
@@ -428,7 +453,6 @@ delegpt_add_rrset_A(struct delegpt* dp, struct regional* region,
 	log_assert(!dp->dp_type_mlc);
         memset(&sa, 0, len);
         sa.sin_family = AF_INET;
-        sa.sin_port = (in_port_t)htons(UNBOUND_DNS_PORT);
         for(i=0; i<d->count; i++) {
                 if(d->rr_len[i] != 2 + INET_SIZE)
                         continue;
@@ -452,7 +476,6 @@ delegpt_add_rrset_AAAA(struct delegpt* dp, struct regional* region,
 	log_assert(!dp->dp_type_mlc);
         memset(&sa, 0, len);
         sa.sin6_family = AF_INET6;
-        sa.sin6_port = (in_port_t)htons(UNBOUND_DNS_PORT);
         for(i=0; i<d->count; i++) {
                 if(d->rr_len[i] != 2 + INET6_SIZE) /* rdatalen + len of IP6 */
                         continue;
@@ -554,6 +577,7 @@ void delegpt_free_mlc(struct delegpt* dp)
 	while(n) {
 		nn = n->next;
 		free(n->name);
+		free(n->tls_auth_name);
 		free(n);
 		n = nn;
 	}
@@ -576,7 +600,8 @@ int delegpt_set_name_mlc(struct delegpt* dp, uint8_t* name)
 	return (dp->name != NULL);
 }
 
-int delegpt_add_ns_mlc(struct delegpt* dp, uint8_t* name, uint8_t lame)
+int delegpt_add_ns_mlc(struct delegpt* dp, uint8_t* name, uint8_t lame,
+	char* tls_auth_name, int port)
 {
 	struct delegpt_ns* ns;
 	size_t len;
@@ -597,20 +622,37 @@ int delegpt_add_ns_mlc(struct delegpt* dp, uint8_t* name, uint8_t lame)
 	}
 	ns->next = dp->nslist;
 	dp->nslist = ns;
+	ns->cache_lookup_count = 0;
 	ns->resolved = 0;
 	ns->got4 = 0;
 	ns->got6 = 0;
 	ns->lame = (uint8_t)lame;
 	ns->done_pside4 = 0;
 	ns->done_pside6 = 0;
+	ns->port = port;
+	if(tls_auth_name) {
+		ns->tls_auth_name = strdup(tls_auth_name);
+		if(!ns->tls_auth_name) {
+			free(ns->name);
+			free(ns);
+			return 0;
+		}
+	} else {
+		ns->tls_auth_name = NULL;
+	}
 	return 1;
 }
 
 int delegpt_add_addr_mlc(struct delegpt* dp, struct sockaddr_storage* addr,
-	socklen_t addrlen, uint8_t bogus, uint8_t lame, char* tls_auth_name)
+	socklen_t addrlen, uint8_t bogus, uint8_t lame, char* tls_auth_name,
+	int port)
 {
 	struct delegpt_addr* a;
 	log_assert(dp->dp_type_mlc);
+	if(port != -1) {
+		log_assert(port>0);
+		sockaddr_store_port(addr, addrlen, port);
+	}
 	/* check for duplicates */
 	if((a = delegpt_find_addr(dp, addr, addrlen))) {
 		if(bogus)
@@ -662,8 +704,14 @@ int delegpt_add_target_mlc(struct delegpt* dp, uint8_t* name, size_t namelen,
 		else	ns->got4 = 1;
 		if(ns->got4 && ns->got6)
 			ns->resolved = 1;
+	} else {
+		if(addr_is_ip6(addr, addrlen))
+			ns->done_pside6 = 1;
+		else	ns->done_pside4 = 1;
 	}
-	return delegpt_add_addr_mlc(dp, addr, addrlen, bogus, lame, NULL);
+	log_assert(ns->port>0);
+	return delegpt_add_addr_mlc(dp, addr, addrlen, bogus, lame,
+		ns->tls_auth_name, ns->port);
 }
 
 size_t delegpt_get_mem(struct delegpt* dp)

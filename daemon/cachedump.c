@@ -47,10 +47,12 @@
 #include "services/cache/rrset.h"
 #include "services/cache/dns.h"
 #include "services/cache/infra.h"
+#include "services/outside_network.h"
 #include "util/data/msgreply.h"
 #include "util/regional.h"
 #include "util/net_help.h"
 #include "util/data/dname.h"
+#include "util/config_file.h"
 #include "iterator/iterator.h"
 #include "iterator/iter_delegpt.h"
 #include "iterator/iter_utils.h"
@@ -677,7 +679,8 @@ load_msg(RES* ssl, sldns_buffer* buf, struct worker* worker)
 	if(!go_on) 
 		return 1; /* skip this one, not all references satisfied */
 
-	if(!dns_cache_store(&worker->env, &qinf, &rep, 0, 0, 0, NULL, flags)) {
+	if(!dns_cache_store(&worker->env, &qinf, &rep, 0, 0, 0, NULL, flags,
+		*worker->env.now)) {
 		log_warn("error out of memory");
 		return 0;
 	}
@@ -848,13 +851,15 @@ int print_deleg_lookup(RES* ssl, struct worker* worker, uint8_t* nm,
 	while(1) {
 		dp = dns_cache_find_delegation(&worker->env, nm, nmlen, 
 			qinfo.qtype, qinfo.qclass, region, &msg, 
-			*worker->env.now);
+			*worker->env.now, 0, NULL, 0);
 		if(!dp) {
 			return ssl_printf(ssl, "no delegation from "
 				"cache; goes to configured roots\n");
 		}
 		/* go up? */
-		if(iter_dp_is_useless(&qinfo, BIT_RD, dp)) {
+		if(iter_dp_is_useless(&qinfo, BIT_RD, dp,
+			(worker->env.cfg->do_ip4 && worker->back->num_ip4 != 0),
+			(worker->env.cfg->do_ip6 && worker->back->num_ip6 != 0))) {
 			print_dp_main(ssl, dp, msg);
 			print_dp_details(ssl, worker, dp);
 			if(!ssl_printf(ssl, "cache delegation was "

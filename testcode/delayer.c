@@ -347,7 +347,11 @@ static volatile int do_quit = 0;
 /** signal handler for user quit */
 static RETSIGTYPE delayer_sigh(int sig)
 {
-	printf("exit on signal %d\n", sig);
+	char str[] = "exit on signal   \n";
+	str[15] = '0' + (sig/10)%10;
+	str[16] = '0' + sig%10;
+	/* simple cast to void will not silence Wunused-result */
+	(void)!write(STDOUT_FILENO, str, strlen(str));
 	do_quit = 1;
 }
 
@@ -970,7 +974,7 @@ service(const char* bind_str, int bindport, const char* serv_str,
 	dl_tv_add(&reuse, &delay);
 	if(reuse.tv_sec == 0)
 		reuse.tv_sec = 1;
-	if(!extstrtoaddr(serv_str, &srv_addr, &srv_len)) {
+	if(!extstrtoaddr(serv_str, &srv_addr, &srv_len, UNBOUND_DNS_PORT)) {
 		printf("cannot parse forward address: %s\n", serv_str);
 		exit(1);
 	}

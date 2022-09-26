@@ -5,14 +5,27 @@ if test "$1" = "-a"; then
 	shift
 	shift
 fi
-	
+
+# This will keep the temporary directory around and return 1 when the test failed.
+DEBUG=0
+
+quiet=0
+if test "$1" = "-q"; then
+	quiet=1
+	shift
+fi
+
 if test "$1" = "clean"; then
-	echo "rm -f result.* .done* .tdir.var.master .tdir.var.test"
-	rm -f result.* .done* .tdir.var.master .tdir.var.test
+	if test $quiet = 0; then
+		echo "rm -f result.* .done* .skip* .tdir.var.master .tdir.var.test"
+	fi
+	rm -f result.* .done* .skip* .tdir.var.master .tdir.var.test
 	exit 0
 fi
 if test "$1" = "fake"; then
-	echo "minitdir fake $2"
+	if test $quiet = 0; then
+		echo "minitdir fake $2"
+	fi
 	echo "fake" > .done-`basename $2 .tdir`
 	exit 0
 fi
@@ -37,16 +50,19 @@ if test "$1" = "-f" && test "$2" = "report"; then
 			desc=`grep ^Description: "result.$name" | sed -e 's/Description: //'`
 		fi
 		if test -f ".done-$name"; then
-			if test "$1" != "-q"; then
+			if test $quiet = 0; then
 				echo "** PASSED ** $timelen $name: $desc"
 				pass=`expr $pass + 1`
 			fi
+		elif test -f ".skip-$name"; then
+			echo ".. SKIPPED.. $timelen $name: $desc"
+			skip=`expr $pass + 1`
 		else
 			if test -f "result.$name"; then
 				echo "!! FAILED !! $timelen $name: $desc"
 				fail=`expr $fail + 1`
 			else
-				echo ".> SKIPPED<< $timelen $name: $desc"
+				echo ".. SKIPPED.. $timelen $name: $desc"
 				skip=`expr $skip + 1`
 			fi
 		fi
@@ -65,14 +81,18 @@ if test "$1" = "report" || test "$2" = "report"; then
 	for result in *.tdir; do
 		name=`basename $result .tdir`
 		if test -f ".done-$name"; then
-			if test "$1" != "-q"; then
+			if test $quiet = 0; then
 				echo "** PASSED ** : $name"
+			fi
+		elif test -f ".skip-$name"; then
+			if test $quiet = 0; then
+				echo ".. SKIPPED.. : $name"
 			fi
 		else
 			if test -f "result.$name"; then
 				echo "!! FAILED !! : $name"
 			else
-				echo ">> SKIPPED<< : $name"
+				echo ".. SKIPPED.. : $name"
 			fi
 		fi
 	done
@@ -82,9 +102,9 @@ fi
 if test "$1" != 'exe'; then
 	# usage
 	echo "mini tdir. Reduced functionality for old shells."
-	echo "	tdir exe <file>"
-	echo "	tdir fake <file>"
-	echo "	tdir clean"
+	echo "	tdir [-q] exe <file>"
+	echo "	tdir [-q] fake <file>"
+	echo "	tdir [-q] clean"
 	echo "	tdir [-q|-f] report"
 	exit 1
 fi
@@ -103,6 +123,7 @@ name=`basename $1 .tdir`
 dir=$name.$$
 result=result.$name
 done=.done-$name
+skip=.skip-$name
 success="no"
 if test -x "`which bash`"; then
 	shell="bash"
@@ -111,13 +132,15 @@ else
 fi
 
 # check already done
-if test -f .done-$name; then
-	echo "minitdir .done-$name exists. skip test."
+if test -f $done; then
+	echo "minitdir $done exists. skip test."
 	exit 0
 fi
 
 # Copy
-echo "minitdir copy $1 to $dir"
+if test $quiet = 0; then
+	echo "minitdir copy $1 to $dir"
+fi
 mkdir $dir
 if cp --help 2>&1 | grep -- "-a" >/dev/null; then
 cp -a $name.tdir/* $dir/
@@ -131,15 +154,23 @@ echo "minitdir exe $name" > $result
 grep "Description:" $name.dsc >> $result 2>&1
 echo "DateRunStart: "`date "+%s" 2>/dev/null` >> $result
 if test -f $name.pre; then
-	echo "minitdir exe $name.pre"
+	if test $quiet = 0; then
+		echo "minitdir exe $name.pre"
+	fi
 	echo "minitdir exe $name.pre" >> $result
 	$shell $name.pre $args >> $result
-	if test $? -ne 0; then
+	exit_value=$?
+	if test $exit_value -eq 3; then
+		echo "$name: SKIPPED" >> $result
+		echo "$name: SKIPPED" > ../$skip
+	elif test $exit_value -ne 0; then
 		echo "Warning: $name.pre did not exit successfully"
 	fi
 fi
-if test -f $name.test; then
-	echo "minitdir exe $name.test"
+if test -f $name.test -a ! -f ../$skip; then
+	if test $quiet = 0; then
+		echo "minitdir exe $name.test"
+	fi
 	echo "minitdir exe $name.test" >> $result
 	$shell $name.test $args >>$result 2>&1
 	if test $? -ne 0; then
@@ -148,13 +179,17 @@ if test -f $name.test; then
 		success="no"
 	else
 		echo "$name: PASSED" >> $result
-		echo "$name: PASSED" > ../.done-$name
-		echo "$name: PASSED"
+		echo "$name: PASSED" > ../$done
+		if test $quiet = 0; then
+			echo "$name: PASSED"
+		fi
 		success="yes"
 	fi
 fi
-if test -f $name.post; then
-	echo "minitdir exe $name.post"
+if test -f $name.post -a ! -f ../$skip; then
+	if test $quiet = 0; then
+		echo "minitdir exe $name.post"
+	fi
 	echo "minitdir exe $name.post" >> $result
 	$shell $name.post $args >> $result
 	if test $? -ne 0; then
@@ -165,11 +200,18 @@ echo "DateRunEnd: "`date "+%s" 2>/dev/null` >> $result
 
 mv $result ..
 cd ..
-rm -rf $dir
-# compat for windows where deletion may not succeed initially (files locked
-# by processes that still have to exit).
-if test $? -eq 1; then
-	echo "minitdir waiting for processes to terminate"
-	sleep 2 # some time to exit, and try again
+if test $DEBUG -eq 0; then
 	rm -rf $dir
+	# compat for windows where deletion may not succeed initially (files locked
+	# by processes that still have to exit).
+	if test $? -eq 1; then
+		echo "minitdir waiting for processes to terminate"
+		sleep 2 # some time to exit, and try again
+		rm -rf $dir
+	fi
+else
+	if test $success == "no"; then
+		exit 1
+	fi
+	exit 0
 fi

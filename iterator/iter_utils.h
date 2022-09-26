@@ -59,6 +59,17 @@ struct reply_info;
 struct module_qstate;
 struct sock_list;
 struct ub_packed_rrset_key;
+struct module_stack;
+struct outside_network;
+
+/* max number of lookups in the cache for target nameserver names.
+ * This stops, for large delegations, N*N lookups in the cache. */
+#define ITERATOR_NAME_CACHELOOKUP_MAX	3
+/* max number of lookups in the cache for parentside glue for nameserver names
+ * This stops, for larger delegations, N*N lookups in the cache.
+ * It is a little larger than the nonpside max, so it allows a couple extra
+ * lookups of parent side glue. */
+#define ITERATOR_NAME_CACHELOOKUP_MAX_PSIDE	5
 
 /**
  * Process config options and set iterator module state.
@@ -130,7 +141,8 @@ struct dns_msg* dns_copy_msg(struct dns_msg* from, struct regional* regional);
  * 	can be prefetch-updates.
  * @param region: to copy modified (cache is better) rrs back to.
  * @param flags: with BIT_CD for dns64 AAAA translated queries.
- * @return void, because we are not interested in alloc errors,
+ * @param qstarttime: time of query start.
+ * return void, because we are not interested in alloc errors,
  * 	the iterator and validator can operate on the results in their
  * 	scratch space (the qstate.region) and are not dependent on the cache.
  * 	It is useful to log the alloc failure (for the server operator),
@@ -138,7 +150,7 @@ struct dns_msg* dns_copy_msg(struct dns_msg* from, struct regional* regional);
  */
 void iter_dns_store(struct module_env* env, struct query_info* qinf,
 	struct reply_info* rep, int is_referral, time_t leeway, int pside,
-	struct regional* region, uint16_t flags);
+	struct regional* region, uint16_t flags, time_t qstarttime);
 
 /**
  * Select randomly with n/m probability.
@@ -173,10 +185,14 @@ void iter_mark_pside_cycle_targets(struct module_qstate* qstate,
  * @param qinfo: query name and type
  * @param qflags: query flags with RD flag
  * @param dp: delegpt to check.
+ * @param supports_ipv4: if we support ipv4 for lookups to the target.
+ * 	if not, then the IPv4 addresses are useless.
+ * @param supports_ipv6: if we support ipv6 for lookups to the target.
+ * 	if not, then the IPv6 addresses are useless.
  * @return true if dp is useless.
  */
 int iter_dp_is_useless(struct query_info* qinfo, uint16_t qflags, 
-	struct delegpt* dp);
+	struct delegpt* dp, int supports_ipv4, int supports_ipv6);
 
 /**
  * See if qname has DNSSEC needs.  This is true if there is a trust anchor above
@@ -345,16 +361,19 @@ void iter_scrub_nxdomain(struct dns_msg* msg);
  * Remove query attempts from all available ips. For 0x20.
  * @param dp: delegpt.
  * @param d: decrease.
+ * @param outbound_msg_retry: number of retries of outgoing queries
  */
-void iter_dec_attempts(struct delegpt* dp, int d);
+void iter_dec_attempts(struct delegpt* dp, int d, int outbound_msg_retry);
 
 /**
  * Add retry counts from older delegpt to newer delegpt.
  * Does not waste time on timeout'd (or other failing) addresses.
  * @param dp: new delegationpoint.
  * @param old: old delegationpoint.
+ * @param outbound_msg_retry: number of retries of outgoing queries
  */
-void iter_merge_retry_counts(struct delegpt* dp, struct delegpt* old);
+void iter_merge_retry_counts(struct delegpt* dp, struct delegpt* old,
+	int outbound_msg_retry);
 
 /**
  * See if a DS response (type ANSWER) is too low: a nodata answer with 
@@ -380,9 +399,26 @@ int iter_dp_cangodown(struct query_info* qinfo, struct delegpt* dp);
  * Lookup if no_cache is set in stub or fwd.
  * @param qstate: query state with env with hints and fwds.
  * @param qinf: query name to lookup for.
+ * @param retdpname: returns NULL or the deepest enclosing name of fwd or stub.
+ * 	This is the name under which the closest lookup is going to happen.
+ * 	Used for NXDOMAIN checks, above that it is an nxdomain from a
+ * 	different server and zone. You can pass NULL to not get it.
+ * @param retdpnamelen: returns the length of the dpname.
  * @return true if no_cache is set in stub or fwd.
  */
 int iter_stub_fwd_no_cache(struct module_qstate *qstate,
-	struct query_info *qinf);
+	struct query_info *qinf, uint8_t** retdpname, size_t* retdpnamelen);
+
+/**
+ * Set support for IP4 and IP6 depending on outgoing interfaces
+ * in the outside network.  If none, no support, so no use to lookup
+ * the AAAA and then attempt to use it if there is no outgoing-interface
+ * for it.
+ * @param mods: modstack to find iterator module in.
+ * @param env: module env, find iterator module (if one) in there.
+ * @param outnet: outside network structure.
+ */
+void iterator_set_ip46_support(struct module_stack* mods,
+	struct module_env* env, struct outside_network* outnet);
 
 #endif /* ITERATOR_ITER_UTILS_H */

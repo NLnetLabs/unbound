@@ -41,6 +41,7 @@
 
 #ifndef UTIL_CONFIG_FILE_H
 #define UTIL_CONFIG_FILE_H
+#include "sldns/rrdef.h"
 struct config_stub;
 struct config_auth;
 struct config_view;
@@ -93,6 +94,12 @@ struct config_file {
 	int do_udp;
 	/** do tcp query support. */
 	int do_tcp;
+	/** max number of queries on a reuse connection. */
+	size_t max_reuse_tcp_queries;
+	/** timeout for REUSE entries in milliseconds. */
+	int tcp_reuse_timeout;
+	/** timeout in milliseconds for TCP queries to auth servers. */
+	int tcp_auth_query_timeout;
 	/** tcp upstream queries (no UDP upstream queries) */
 	int tcp_upstream;
 	/** udp upstream enabled when no UDP downstream is enabled (do_udp no)*/
@@ -179,8 +186,10 @@ struct config_file {
 	size_t infra_cache_slabs;
 	/** max number of hosts in the infra cache */
 	size_t infra_cache_numhosts;
-	/** min value for infra cache rtt */
+	/** min value for infra cache rtt (min retransmit timeout) */
 	int infra_cache_min_rtt;
+	/** max value for infra cache rtt (max retransmit timeout) */
+	int infra_cache_max_rtt;
 	/** keep probing hosts that are down */
 	int infra_keep_probing;
 	/** delay close of udp-timeouted ports, if 0 no delayclose. in msec */
@@ -199,6 +208,8 @@ struct config_file {
 	/** automatic interface for incoming messages. Uses ipv6 remapping,
 	 * and recvmsg/sendmsg ancillary data to detect interfaces, boolean */
 	int if_automatic;
+	/** extra ports to open if if_automatic enabled, or NULL for default */
+	char* if_automatic_ports;
 	/** SO_RCVBUF size to set on port 53 UDP socket */
 	size_t so_rcvbuf;
 	/** SO_SNDBUF size to set on port 53 UDP socket */
@@ -334,10 +345,14 @@ struct config_file {
 	int hide_version;
 	/** do not report trustanchor (trustanchor.unbound) */
 	int hide_trustanchor;
+	/** do not report the User-Agent HTTP header */
+	int hide_http_user_agent;
 	/** identity, hostname is returned if "". */
 	char* identity;
 	/** version, package version returned if "". */
 	char* version;
+	/** User-Agent for HTTP header */
+	char* http_user_agent;
 	/** nsid */
 	char *nsid_cfg_str;
 	uint8_t *nsid;
@@ -367,6 +382,8 @@ struct config_file {
 	int32_t val_sig_skew_min;
 	/** the maximum for signature clock skew */
 	int32_t val_sig_skew_max;
+	/** max number of query restarts, number of IPs to probe */
+	int32_t val_max_restart;
 	/** this value sets the number of seconds before revalidating bogus */
 	int bogus_ttl; 
 	/** should validator clean additional section for secure msgs */
@@ -392,10 +409,14 @@ struct config_file {
 	/** serve expired entries only after trying to update the entries and this
 	 *  timeout (in milliseconds) is reached */
 	int serve_expired_client_timeout;
+	/** serve EDE code 3 - Stale Answer (RFC8914) for expired entries */
+	int ede_serve_expired;
 	/** serve original TTLs rather than decrementing ones */
 	int serve_original_ttl;
 	/** nsec3 maximum iterations per key size, string */
 	char* val_nsec3_key_iterations;
+	/** if zonemd failures are permitted, only logged */
+	int zonemd_permissive_mode;
 	/** autotrust add holddown time, in seconds */
 	unsigned int add_holddown;
 	/** autotrust del holddown time, in seconds */
@@ -440,6 +461,16 @@ struct config_file {
 	struct config_str3list* acl_tag_datas;
 	/** list of aclname, view*/
 	struct config_str2list* acl_view;
+	/** list of interface action entries, linked list */
+	struct config_str2list* interface_actions;
+	/** list of interface, tagbitlist */
+	struct config_strbytelist* interface_tags;
+	/** list of interface, tagname, localzonetype */
+	struct config_str3list* interface_tag_actions;
+	/** list of interface, tagname, redirectdata */
+	struct config_str3list* interface_tag_datas;
+	/** list of interface, view*/
+	struct config_str2list* interface_view;
 	/** list of IP-netblock, tagbitlist */
 	struct config_strbytelist* respip_tags;
 	/** list of response-driven access control entries, linked list */
@@ -551,6 +582,10 @@ struct config_file {
 	size_t ip_ratelimit_size;
 	/** ip_ratelimit factor, 0 blocks all, 10 allows 1/10 of traffic */
 	int ip_ratelimit_factor;
+	/** ratelimit backoff, when on, if the limit is reached it is
+	 *  considered an attack and it backs off until 'demand' decreases over
+	 *  the RATE_WINDOW. */
+	int ip_ratelimit_backoff;
 
 	/** ratelimit for domains. 0 is off, otherwise qps (unless overridden) */
 	int ratelimit;
@@ -564,6 +599,13 @@ struct config_file {
 	struct config_str2list* ratelimit_below_domain;
 	/** ratelimit factor, 0 blocks all, 10 allows 1/10 of traffic */
 	int ratelimit_factor;
+	/** ratelimit backoff, when on, if the limit is reached it is
+	 *  considered an attack and it backs off until 'demand' decreases over
+	 *  the RATE_WINDOW. */
+	int ratelimit_backoff;
+
+	/** number of retries on outgoing queries */
+	int outbound_msg_retry;
 	/** minimise outgoing QNAME and hide original QTYPE if possible */
 	int qname_minimisation;
 	/** minimise QNAME in strict mode, minimise according to RFC.
@@ -659,6 +701,8 @@ struct config_file {
 	char* ipset_name_v4;
 	char* ipset_name_v6;
 #endif
+	/** respond with Extended DNS Errors (RFC8914) */
+	int ede;
 };
 
 /** from cfg username, after daemonize setup performed */
@@ -690,6 +734,8 @@ struct config_stub {
 	int isprime;
 	/** if forward-first is set (failover to without if fails) */
 	int isfirst;
+	/** use tcp for queries to this stub */
+	int tcp_upstream;
 	/** use SSL for queries to this stub */
 	int ssl_upstream;
 	/*** no cache */
@@ -734,6 +780,12 @@ struct config_auth {
 	/** Always reply with this CNAME target if the cname override action is
 	 * used */
 	char* rpz_cname;
+	/** signal nxdomain block with unset RA */
+	int rpz_signal_nxdomain_ra;
+	/** Check ZONEMD records for this zone */
+	int zonemd_check;
+	/** Reject absence of ZONEMD records, zone must have one */
+	int zonemd_reject_absence;
 };
 
 /**
@@ -1095,7 +1147,7 @@ int cfg_count_numbers(const char* str);
 int cfg_parse_memsize(const char* str, size_t* res);
 
 /**
- * Parse nsid from string into binary nsid. nsid is either a hexidecimal
+ * Parse nsid from string into binary nsid. nsid is either a hexadecimal
  * string or an ascii string prepended with ascii_ in which case the
  * characters after ascii_ are simply copied.
  * @param str: the string to parse.
@@ -1180,6 +1232,13 @@ int cfg_mark_ports(const char* str, int allow, int* avail, int num);
 int cfg_condense_ports(struct config_file* cfg, int** avail);
 
 /**
+ * Apply system specific port range policy.
+ * @param cfg: config file.
+ * @param num: size of the array (65536).
+ */
+void cfg_apply_local_port_policy(struct config_file* cfg, int num);
+
+/**
  * Scan ports available
  * @param avail: the array from cfg.
  * @param num: size of the array (65536).
@@ -1207,56 +1266,6 @@ char* fname_after_chroot(const char* fname, struct config_file* cfg,
 char* cfg_ptr_reverse(char* str);
 
 /**
- * Append text to the error info for validation.
- * @param qstate: query state.
- * @param str: copied into query region and appended.
- * Failures to allocate are logged.
- */
-void errinf(struct module_qstate* qstate, const char* str);
-
-/**
- * Append text to error info:  from 1.2.3.4
- * @param qstate: query state.
- * @param origin: sock list with origin of trouble. 
- *	Every element added.
- *	If NULL: nothing is added.
- *	if 0len element: 'from cache' is added.
- */
-void errinf_origin(struct module_qstate* qstate, struct sock_list *origin);
-
-/**
- * Append text to error info:  for RRset name type class
- * @param qstate: query state.
- * @param rr: rrset_key.
- */
-void errinf_rrset(struct module_qstate* qstate, struct ub_packed_rrset_key *rr);
-
-/**
- * Append text to error info:  str dname
- * @param qstate: query state.
- * @param str: explanation string
- * @param dname: the dname.
- */
-void errinf_dname(struct module_qstate* qstate, const char* str, 
-	uint8_t* dname);
-
-/**
- * Create error info in string.  For validation failures.
- * @param qstate: query state.
- * @return string or NULL on malloc failure (already logged).
- *    This string is malloced and has to be freed by caller.
- */
-char* errinf_to_str_bogus(struct module_qstate* qstate);
-
-/**
- * Create error info in string.  For other servfails.
- * @param qstate: query state.
- * @return string or NULL on malloc failure (already logged).
- *    This string is malloced and has to be freed by caller.
- */
-char* errinf_to_str_servfail(struct module_qstate* qstate);
-
-/**
  * Used during options parsing
  */
 struct config_parser_state {
@@ -1270,6 +1279,8 @@ struct config_parser_state {
 	struct config_file* cfg;
 	/** the current chroot dir (or NULL if none) */
 	const char* chroot;
+	/** if we are started in a toplevel, or not, after a force_toplevel */
+	int started_toplevel;
 };
 
 /** global config parser object used during config parsing */
@@ -1307,6 +1318,20 @@ void w_config_adjust_directory(struct config_file* cfg);
 
 /** debug option for unit tests. */
 extern int fake_dsa, fake_sha1;
+
+/** see if interface is https, its port number == the https port number */
+int if_is_https(const char* ifname, const char* port, int https_port);
+
+/**
+ * Return true if the config contains settings that enable https.
+ * @param cfg: config information.
+ * @return true if https ports are used for server.
+ */
+int cfg_has_https(struct config_file* cfg);
+
+#ifdef USE_LINUX_IP_LOCAL_PORT_RANGE
+#define LINUX_IP_LOCAL_PORT_RANGE_PATH "/proc/sys/net/ipv4/ip_local_port_range"
+#endif
 
 #endif /* UTIL_CONFIG_FILE_H */
 

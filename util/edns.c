@@ -134,31 +134,6 @@ edns_string_addr_lookup(rbtree_type* tree, struct sockaddr_storage* addr,
 	return (struct edns_string_addr*)addr_tree_lookup(tree, addr, addrlen);
 }
 
-static int edns_keepalive(struct edns_data* edns_out, struct edns_data* edns_in,
-		struct comm_point* c, struct regional* region)
-{
-	if(c->type == comm_udp)
-		return 1;
-
-	/* To respond with a Keepalive option, the client connection
-	 * must have received one message with a TCP Keepalive EDNS option,
-	 * and that option must have 0 length data. Subsequent messages
-	 * sent on that connection will have a TCP Keepalive option.
-	 */
-	if(c->tcp_keepalive ||
-		edns_opt_list_find(edns_in->opt_list, LDNS_EDNS_KEEPALIVE)) {
-		int keepalive = c->tcp_timeout_msec / 100;
-		uint8_t data[2];
-		data[0] = (uint8_t)((keepalive >> 8) & 0xff);
-		data[1] = (uint8_t)(keepalive & 0xff);
-		if(!edns_opt_list_append(&edns_out->opt_list, LDNS_EDNS_KEEPALIVE,
-			sizeof(data), data, region))
-			return 0;
-		c->tcp_keepalive = 1;
-	}
-	return 1;
-}
-
 int siphash(const uint8_t *in, const size_t inlen,
 		const uint8_t *k, uint8_t *out, const size_t outlen);
 
@@ -284,45 +259,3 @@ static int edns_cookie(struct edns_data* edns_out, struct edns_data* edns_in,
 	return 1;
 }
 
-static int edns_padding(struct edns_data* edns_out, struct edns_data* edns_in,
-		struct comm_point* c, struct regional* region)
-{
-	if(c->type == comm_udp)
-		return 1;
-
-	if(edns_opt_list_find(edns_in->opt_list, LDNS_EDNS_PADDING)) {
-		if(!edns_opt_list_append(&edns_out->opt_list,
-					LDNS_EDNS_PADDING, 0, NULL, region))
-			return 0;
-	}
-	return 1;
-}
-
-int apply_edns_options(struct edns_data* edns_out, struct edns_data* edns_in,
-	struct config_file* cfg, struct comm_point* c,
-	struct comm_reply *repinfo, time_t now, struct regional* region)
-{
-	if(cfg->do_tcp_keepalive &&
-		!edns_keepalive(edns_out, edns_in, c, region))
-		return 0;
-
-	if(!edns_cookie(edns_out, edns_in, cfg, c, repinfo, now, region))
-		return 0;
-
-	if (cfg->nsid && edns_opt_list_find(edns_in->opt_list, LDNS_EDNS_NSID)
-	&& !edns_opt_list_append(&edns_out->opt_list,
-			LDNS_EDNS_NSID, cfg->nsid_len, cfg->nsid, region))
-		return 0;
-
-	if(!cfg->pad_responses || c->type != comm_tcp || !c->ssl
-	|| !edns_opt_list_find(edns_in->opt_list, LDNS_EDNS_PADDING))
-	       ; /* pass */
-
-	else if(!edns_opt_list_append(&edns_out->opt_list, LDNS_EDNS_PADDING
-	                                                 , 0, NULL, region))
-		return 0;
-	else
-		edns_out->padding_block_size = cfg->pad_responses_block_size;
-
-	return 1;
-}

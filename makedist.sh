@@ -268,11 +268,23 @@ if [ "$DOWIN" = "yes" ]; then
 		# before 1.0.1i need --cross-compile-prefix=i686-w64-mingw32-
 		if test "$mw64" = "mingw64"; then
 			sslflags="no-asm -DOPENSSL_NO_CAPIENG mingw64"
+			sspdll="/usr/x86_64-w64-mingw32/sys-root/mingw/bin/libssp-0.dll"
 		else
 			sslflags="no-asm -DOPENSSL_NO_CAPIENG mingw"
+			sspdll="/usr/i686-w64-mingw32/sys-root/mingw/bin/libssp-0.dll"
+		fi
+		if test -f "$sspdll"; then
+			# stack protector lib needs to link in to make
+			# -lws2_32 work in openssl link stage
+			SSPLIB="-l:libssp.a"
+		else
+			# disable SSPLIB if no such file
+			SSPLIB=""
 		fi
 		info "winssl: Configure no-shared $sslflags"
-		CC=${warch}-w64-mingw32-gcc AR=${warch}-w64-mingw32-ar RANLIB=${warch}-w64-mingw32-ranlib WINDRES=${warch}-w64-mingw32-windres ./Configure --prefix="$sslinstall" no-shared $sslflags || error_cleanup "OpenSSL Configure failed"
+		set -x # echo the configure command
+		__CNF_LDLIBS=$SSPLIB CC=${warch}-w64-mingw32-gcc AR=${warch}-w64-mingw32-ar RANLIB=${warch}-w64-mingw32-ranlib WINDRES=${warch}-w64-mingw32-windres ./Configure --prefix="$sslinstall" no-shared $sslflags || error_cleanup "OpenSSL Configure failed"
+		set +x
 		info "winssl: make"
 		make $MINJ || error_cleanup "OpenSSL crosscompile failed"
 		# only install sw not docs, which take a long time.
@@ -285,7 +297,9 @@ if [ "$DOWIN" = "yes" ]; then
 		sslsharedinstall="`pwd`/sslsharedinstall"
 		cd openssl_shared
 		info "winssl: Configure shared $sslflags"
-		CC=${warch}-w64-mingw32-gcc AR=${warch}-w64-mingw32-ar RANLIB=${warch}-w64-mingw32-ranlib WINDRES=${warch}-w64-mingw32-windres ./Configure --prefix="$sslsharedinstall" shared $sslflags || error_cleanup "OpenSSL Configure failed"
+		set -x # echo the configure command
+		__CNF_LDLIBS=$SSPLIB CC=${warch}-w64-mingw32-gcc AR=${warch}-w64-mingw32-ar RANLIB=${warch}-w64-mingw32-ranlib WINDRES=${warch}-w64-mingw32-windres ./Configure --prefix="$sslsharedinstall" shared $sslflags || error_cleanup "OpenSSL Configure failed"
+		set +x
 		info "winssl: make"
 		make $MINJ || error_cleanup "OpenSSL crosscompile failed"
 		info "winssl: make install_sw"
@@ -317,7 +331,7 @@ if [ "$DOWIN" = "yes" ]; then
 	info "git clone --depth=1 --no-tags -b $GITBRANCH $GITREPO unbound"
 	git clone --depth=1 --no-tags -b $GITBRANCH $GITREPO unbound || error_cleanup "git clone failed"
 	cd unbound || error_cleanup "Unbound not exported correctly from git"
-	rm -rf .git || error_cleanup "Failed to remove .git tracking information"
+	rm -rf .git .travis.yml .gitattributes .github .gitignore || error_cleanup "Failed to remove .git tracking and ci information"
 
 	# on a re-configure the cache may no longer be valid...
 	if test -f mingw32-config.cache; then rm mingw32-config.cache; fi
@@ -362,31 +376,35 @@ if [ "$DOWIN" = "yes" ]; then
 	file3_flag="--with-rootcert-file=C:\Program Files (x86)\Unbound\icannbundle.pem"
 	version="$version"-w32
     fi
-    echo "$configure"' --enable-debug --enable-static-exe --disable-flto '"$* $cross_flag "$file_flag" "$file2_flag" "$file3_flag""
     if test "$W64" = "no"; then
-        $configure --enable-debug --enable-static-exe --disable-flto $* $cross_flag "$file_flag" "$file2_flag" "$file3_flag" \
-	|| error_cleanup "Could not configure"
+		# Disable stack-protector for 32-bit windows builds.
+		echo "$configure"' --enable-debug --enable-static-exe --disable-flto --disable-gost '"$* $cross_flag" "$file_flag" "$file2_flag" "$file3_flag" CFLAGS='-O2 -g -fno-stack-protector'
+		$configure --enable-debug --enable-static-exe --disable-flto --disable-gost $* $cross_flag "$file_flag" "$file2_flag" "$file3_flag" CFLAGS='-O2 -g -fno-stack-protector'\
+		|| error_cleanup "Could not configure"
     else
-        $configure --enable-debug --enable-static-exe --disable-flto $* $cross_flag \
-	|| error_cleanup "Could not configure"
+		echo "$configure"' --enable-debug --enable-static-exe --disable-flto --disable-gost '"$* $cross_flag"
+		$configure --enable-debug --enable-static-exe --disable-flto --disable-gost $* $cross_flag \
+		|| error_cleanup "Could not configure"
     fi
     info "Calling make"
-    make $MINJ || error_cleanup "Could not make"
+	make $MINJ || error_cleanup "Could not make"
     info "Make complete"
 
     if test "`uname`" = "Linux"; then 
     info "Make DLL"
     cd ../unbound_shared
-    echo "$configure"' --enable-debug --disable-flto '"$* $shared_cross_flag "$file_flag" "$file2_flag" "$file3_flag""
     if test "$W64" = "no"; then
-        $configure --enable-debug --disable-flto $* $shared_cross_flag "$file_flag" "$file2_flag" "$file3_flag" \
-	|| error_cleanup "Could not configure"
+	# Disable stack-protector for 32-bit windows builds.
+		echo "$configure"' --enable-debug --disable-flto --disable-gost '"$* $shared_cross_flag" "$file_flag" "$file2_flag" "$file3_flag" CFLAGS='-O2 -g -fno-stack-protector'
+		$configure --enable-debug --disable-flto --disable-gost $* $shared_cross_flag "$file_flag" "$file2_flag" "$file3_flag" CFLAGS='-O2 -g -fno-stack-protector'\
+		|| error_cleanup "Could not configure"
     else
-        $configure --enable-debug --disable-flto $* $shared_cross_flag \
-	|| error_cleanup "Could not configure"
+		echo "$configure"' --enable-debug --disable-flto --disable-gost '"$* $shared_cross_flag"
+        $configure --enable-debug --disable-flto --disable-gost $* $shared_cross_flag \
+		|| error_cleanup "Could not configure"
     fi
     info "Calling make for DLL"
-    make $MINJ || error_cleanup "Could not make DLL"
+	make $MINJ || error_cleanup "Could not make DLL"
     info "Make DLL complete"
     cd ../unbound
     fi
@@ -411,7 +429,21 @@ if [ "$DOWIN" = "yes" ]; then
     cp ../doc/example.conf ../doc/Changelog .
     cp ../unbound.exe ../unbound-anchor.exe ../unbound-host.exe ../unbound-control.exe ../unbound-checkconf.exe ../unbound-service-install.exe ../unbound-service-remove.exe ../LICENSE ../winrc/unbound-control-setup.cmd ../winrc/unbound-website.url ../winrc/service.conf ../winrc/README.txt ../contrib/create_unbound_ad_servers.cmd ../contrib/warmup.cmd ../contrib/unbound_cache.cmd .
     mkdir libunbound
-    cp ../../unbound_shared/unbound.h ../../unbound_shared/.libs/libunbound*.dll ../../unbound_shared/.libs/libunbound.dll.a ../../unbound_shared/.libs/libunbound.a ../../unbound_shared/.libs/libunbound*.def ../../sslsharedinstall/lib/libcrypto.dll.a ../../sslsharedinstall/lib/libssl.dll.a ../../sslsharedinstall/bin/libcrypto*.dll ../../sslsharedinstall/bin/libssl*.dll ../../wxpinstall/bin/libexpat*.dll ../../wxpinstall/lib/libexpat.dll.a libunbound/.
+    # test to see if lib or lib64 (for openssl 3.0.0) needs to be used
+    if test -f ../../sslsharedinstall/lib/libcrypto.dll.a; then
+	cp ../../sslsharedinstall/lib/libcrypto.dll.a libunbound/.
+    else
+	cp ../../sslsharedinstall/lib64/libcrypto.dll.a libunbound/.
+    fi
+    if test -f ../../sslsharedinstall/lib/libssl.dll.a; then
+	cp ../../sslsharedinstall/lib/libssl.dll.a libunbound/.
+    else
+	cp ../../sslsharedinstall/lib64/libssl.dll.a libunbound/.
+    fi
+    cp ../../unbound_shared/unbound.h ../../unbound_shared/.libs/libunbound*.dll ../../unbound_shared/.libs/libunbound.dll.a ../../unbound_shared/.libs/libunbound.a ../../unbound_shared/.libs/libunbound*.def ../../sslsharedinstall/bin/libcrypto*.dll ../../sslsharedinstall/bin/libssl*.dll ../../wxpinstall/bin/libexpat*.dll ../../wxpinstall/lib/libexpat.dll.a libunbound/.
+    if test -f "$sspdll"; then
+	    cp "$sspdll" libunbound/.
+    fi
     # zipfile
     zip -r ../$file LICENSE README.txt unbound.exe unbound-anchor.exe unbound-host.exe unbound-control.exe unbound-checkconf.exe unbound-service-install.exe unbound-service-remove.exe unbound-control-setup.cmd example.conf service.conf root.key unbound-website.url create_unbound_ad_servers.cmd warmup.cmd unbound_cache.cmd Changelog libunbound
     info "Testing $file"
@@ -459,7 +491,7 @@ info "git clone --depth=1 --no-tags -b $GITBRANCH $GITREPO unbound"
 git clone --depth=1 --no-tags -b $GITBRANCH $GITREPO unbound || error_cleanup "git clone failed"
 
 cd unbound || error_cleanup "Unbound not exported correctly from git"
-rm -rf .git || error_cleanup "Failed to remove .git tracking information"
+rm -rf .git .travis.yml .gitattributes .github .gitignore || error_cleanup "Failed to remove .git tracking and ci information"
 
 info "Adding libtool utils (libtoolize)."
 libtoolize -c --install || libtoolize -c || error_cleanup "Libtoolize failed."
