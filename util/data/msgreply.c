@@ -673,6 +673,9 @@ void
 reply_info_delete(void* d, void* ATTR_UNUSED(arg))
 {
 	struct reply_info* r = (struct reply_info*)d;
+	if (r->reason_bogus_str_size) {
+		free(r->reason_bogus_str);
+	}
 	free(r);
 }
 
@@ -761,9 +764,14 @@ reply_info_copy(struct reply_info* rep, struct alloc_cache* alloc,
 	if(!cp)
 		return NULL;
 
-	if (rep->reason_bogus_str_size > 0 && rep->reason_bogus_str && region) {
-		cp->reason_bogus_str = (char*)regional_alloc(region,
-			sizeof(char) * (rep->reason_bogus_str_size + 1));
+	if (rep->reason_bogus_str_size > 0 && rep->reason_bogus_str) {
+		if (region) {
+			cp->reason_bogus_str = (char*)regional_alloc(region,
+				sizeof(char) * (rep->reason_bogus_str_size + 1));
+		}
+		else {
+			cp->reason_bogus_str = malloc(sizeof(char) * (rep->reason_bogus_str_size + 1));
+		}
 
 		if (!(cp->reason_bogus_str)) {
 			if(!region)
