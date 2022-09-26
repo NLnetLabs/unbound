@@ -656,6 +656,15 @@ Ignored if the option is not available. Default is yes.
 Disable use of TLS for the downstream DNS-over-HTTP connections.  Useful for
 local back end servers.  Default is no.
 .TP
+.B proxy\-protocol\-port: \fI<portnr>
+List port numbers as proxy\-protocol\-port, and when interfaces are defined,
+eg. with the @port suffix, as this port number, they support and expect PROXYv2.
+In this case the proxy address will only be used for the network communication
+and initial ACL (check if the proxy itself is denied/refused by configuration).
+The proxied address (if any) will then be used as the true client address and
+will be used where applicable for logging, ACL, DNSTAP, RPZ and IP ratelimiting.
+Can list multiple, each on a new statement.
+.TP
 .B use\-systemd: \fI<yes or no>
 Enable or disable systemd socket activation.
 Default is no.

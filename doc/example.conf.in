@@ -902,6 +902,10 @@ server:
 	# Disable TLS for DNS-over-HTTP downstream service.
 	# http-notls-downstream: no
 
+	# The interfaces that use these listed port numbers will support and
+	# expect PROXYv2.
+	# proxy-protocol-port: portno for each of the port numbers.
+
 	# DNS64 prefix. Must be specified when DNS64 is use.
 	# Enable dns64 in module-config.  Used to synthesize IPv6 from IPv4.
 	# dns64-prefix: 64:ff9b::0/96
