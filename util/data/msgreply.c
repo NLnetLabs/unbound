@@ -123,7 +123,7 @@ construct_reply_info_base(struct regional* region, uint16_t flags, size_t qd,
 	} else {
 		rep->reason_bogus = LDNS_EDE_NONE;
 	}
-	/* only allocated and used on copy @TODO verify this */
+	/* this is only allocated and used for caching on copy */
 	rep->reason_bogus_str = NULL;
 	rep->reason_bogus_str_size = 0;
 
@@ -589,8 +589,10 @@ reply_info_parsedelete(struct reply_info* rep, struct alloc_cache* alloc)
 	for(i=0; i<rep->rrset_count; i++) {
 		ub_packed_rrset_parsedelete(rep->rrsets[i], alloc);
 	}
-	// @TODO free reason_bogus_str
-	free(rep);
+
+	if (rep->reason_bogus_str_size) {
+		free(rep->reason_bogus_str);
+	}
 }
 
 int 
@@ -759,16 +761,18 @@ reply_info_copy(struct reply_info* rep, struct alloc_cache* alloc,
 	if(!cp)
 		return NULL;
 
-	if (rep->reason_bogus_str_size > 0 && rep->reason_bogus_str) {
-		cp->reason_bogus_str = malloc(sizeof(char) * (rep->reason_bogus_str_size + 1));
+	if (rep->reason_bogus_str_size > 0 && rep->reason_bogus_str && region) {
+		cp->reason_bogus_str = (char*)regional_alloc(region,
+			sizeof(char) * (rep->reason_bogus_str_size + 1));
 
 		if (!(cp->reason_bogus_str)) {
-			// @TODO add this?
-			// if(!region)
-			// 	reply_info_parsedelete(cp, alloc);
+			if(!region)
+				reply_info_parsedelete(cp, alloc);
 			return NULL;
 		}
-		memcpy(cp->reason_bogus_str, rep->reason_bogus_str, rep->reason_bogus_str_size+1);
+		memcpy(cp->reason_bogus_str, rep->reason_bogus_str,
+			rep->reason_bogus_str_size+1);
+		cp->reason_bogus_str_size = rep->reason_bogus_str_size;
 	}
 
 	/* allocate ub_key structures special or not */
