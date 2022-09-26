@@ -1189,22 +1189,6 @@ if_is_ssl(const char* ifname, const char* port, int ssl_port,
 	return 0;
 }
 
-/** see if interface is PROXYv2, its port number == the proxy port number */
-static int
-if_is_pp2(const char* ifname, const char* port,
-	struct config_strlist* proxy_protocol_port)
-{
-	struct config_strlist* s;
-	char* p = strchr(ifname, '@');
-	for(s = proxy_protocol_port; s; s = s->next) {
-		if(p && atoi(p+1) == atoi(s->str))
-			return 1;
-		if(!p && atoi(port) == atoi(s->str))
-			return 1;
-	}
-	return 0;
-}
-
 /**
  * Helper for ports_open. Creates one interface (or NULL for default).
  * @param ifname: The interface ip address.
@@ -1243,22 +1227,14 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 {
 	int s, noip6=0;
 	int is_https = if_is_https(ifname, port, https_port);
+	int is_dnscrypt = if_is_dnscrypt(ifname, port, dnscrypt_port);
 	int is_pp2 = if_is_pp2(ifname, port, proxy_protocol_port);
 	int nodelay = is_https && http2_nodelay;
 	struct unbound_socket* ub_sock;
-#ifdef USE_DNSCRYPT
-	int is_dnscrypt = ((strchr(ifname, '@') &&
-			atoi(strchr(ifname, '@')+1) == dnscrypt_port) ||
-			(!strchr(ifname, '@') && atoi(port) == dnscrypt_port));
-#else
-	int is_dnscrypt = 0;
-	(void)dnscrypt_port;
-#endif
 
 	if(!do_udp && !do_tcp)
 		return 0;
 
-	// XXX maybe do the same in check config
 	if(is_pp2) {
 		if(is_dnscrypt) {
 			fatal_exit("PROXYv2 and DNSCrypt combination not "
@@ -1438,7 +1414,7 @@ listen_create(struct comm_base* base, struct listen_port* ports,
 	/* create comm points as needed */
 	while(ports) {
 		struct comm_point* cp = NULL;
-		int update_req = 0;  //XXX rename this
+		int update_req = 0;  // YYY rename this
 		if(ports->ftype == listen_type_udp ||
 		   ports->ftype == listen_type_udp_dnscrypt) {
 			cp = comm_point_create_udp(base, ports->fd,
@@ -1494,7 +1470,7 @@ listen_create(struct comm_base* base, struct listen_port* ports,
 			listen_delete(front);
 			return NULL;
 		}
-		//
+		// YYY
 		cp->pp2_enabled = ports->pp2_enabled;
 		if(update_req) {
 			int i = 0;

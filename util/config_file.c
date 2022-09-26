@@ -2626,3 +2626,35 @@ int cfg_has_https(struct config_file* cfg)
 	}
 	return 0;
 }
+
+/** see if interface is PROXYv2, its port number == the proxy port number */
+int
+if_is_pp2(const char* ifname, const char* port,
+	struct config_strlist* proxy_protocol_port)
+{
+	struct config_strlist* s;
+	char* p = strchr(ifname, '@');
+	for(s = proxy_protocol_port; s; s = s->next) {
+		if(p && atoi(p+1) == atoi(s->str))
+			return 1;
+		if(!p && atoi(port) == atoi(s->str))
+			return 1;
+	}
+	return 0;
+}
+
+/** see if interface is DNSCRYPT, its port number == the dnscrypt port number */
+int
+if_is_dnscrypt(const char* ifname, const char* port, int dnscrypt_port)
+{
+#ifdef USE_DNSCRYPT
+	return ((strchr(ifname, '@') &&
+		atoi(strchr(ifname, '@')+1) == dnscrypt_port) ||
+		(!strchr(ifname, '@') && atoi(port) == dnscrypt_port));
+#else
+	(void)ifname;
+	(void)port;
+	(void)dnscrypt_port;
+	return 0;
+#endif
+}
