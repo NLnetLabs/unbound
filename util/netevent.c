@@ -1671,7 +1671,6 @@ ssl_handle_read(struct comm_point* c)
 				c->tcp_byte_count += r;
 				if(c->tcp_byte_count != current_read_size) return 1;
 				c->pp2_header_state = pp2_header_init;
-				//log_buf(0, "BUFFER 2", c->buffer);
 			}
 		}
 		if(c->pp2_header_state == pp2_header_init) {
@@ -1730,7 +1729,6 @@ ssl_handle_read(struct comm_point* c)
 				c->tcp_byte_count += r;
 				if(c->tcp_byte_count != current_read_size) return 1;
 				c->pp2_header_state = pp2_header_done;
-				//log_buf(0, "BUFFER 3", c->buffer);
 			}
 		}
 		if(c->pp2_header_state != pp2_header_done || !header) {
@@ -2031,7 +2029,6 @@ comm_point_tcp_handle_read(int fd, struct comm_point* c, int short_ok)
 		return 0;
 
 	log_assert(fd != -1);
-	//log_buf(0, "BUFFER 1", c->buffer);
 	if(c->pp2_enabled && c->pp2_header_state != pp2_header_done) {
 		struct pp2_header* header = NULL;
 		size_t want_read_size = 0;
@@ -2063,7 +2060,6 @@ comm_point_tcp_handle_read(int fd, struct comm_point* c, int short_ok)
 				c->tcp_byte_count += r;
 				if(c->tcp_byte_count != current_read_size) return 1;
 				c->pp2_header_state = pp2_header_init;
-				//log_buf(0, "BUFFER 2", c->buffer);
 			}
 		}
 		if(c->pp2_header_state == pp2_header_init) {
@@ -2100,7 +2096,6 @@ comm_point_tcp_handle_read(int fd, struct comm_point* c, int short_ok)
 				c->tcp_byte_count += r;
 				if(c->tcp_byte_count != current_read_size) return 1;
 				c->pp2_header_state = pp2_header_done;
-				//log_buf(0, "BUFFER 3", c->buffer);
 			}
 		}
 		if(c->pp2_header_state != pp2_header_done || !header) {
@@ -2170,7 +2165,6 @@ comm_point_tcp_handle_read(int fd, struct comm_point* c, int short_ok)
 	}
 	sldns_buffer_skip(c->buffer, r);
 	if(sldns_buffer_remaining(c->buffer) <= 0) {
-		//log_buf(0, "BUFFER 5", c->buffer);
 		tcp_callback_reader(c);
 	}
 	return 1;
