@@ -128,9 +128,9 @@ struct comm_reply {
 	/** the comm_point with fd to send reply on to. */
 	struct comm_point* c;
 	/** the address (for UDP based communication) */
-	struct sockaddr_storage addr;
+	struct sockaddr_storage remote_addr;
 	/** length of address */
-	socklen_t addrlen;
+	socklen_t remote_addrlen;
 	/** return type 0 (none), 4(IP4), 6(IP6)
 	 *  used only with listen_type_udp_ancil* */
 	int srctype;
@@ -156,14 +156,13 @@ struct comm_reply {
 		pktinfo;
 	/** max udp size for udp packets */
 	size_t max_udp_size;
-
-	// YYY
 	/* if set, the request came through a proxy */
 	int is_proxied;
-	/** the proxy address to send the reply to (for UDP) */
-	struct sockaddr_storage proxy_addr;
-	/** the proxy address length */
-	socklen_t proxy_addrlen;
+	/** the client address
+	 *  the same as remote_addr if not proxied */
+	struct sockaddr_storage client_addr;
+	/** the original address length */
+	socklen_t client_addrlen;
 };
 
 /** 
@@ -287,6 +286,19 @@ struct comm_point {
 		/** variable with type of socket, UDP,TCP-accept,TCP,pipe */
 		type;
 
+	/* -------- PROXYv2 ------- */
+	/** if set, PROXYv2 is expected on this connection */
+	int pp2_enabled;
+	/** header state for the PROXYv2 header (for TCP) */
+	enum {
+		/** no header encounter yet */
+		pp2_header_none = 0,
+		/** read the static part of the header */
+		pp2_header_init,
+		/** read the full header */
+		pp2_header_done
+	} pp2_header_state;
+
 	/* ---------- Behaviour ----------- */
 	/** if set the connection is NOT closed on delete. */
 	int do_not_close;
@@ -399,19 +411,6 @@ struct comm_point {
 	comm_point_callback_type* callback;
 	/** argument to pass to callback. */
 	void *cb_arg;
-
-	// YYY
-	/** if set, PROXYv2 is expected on this connection */
-	int pp2_enabled;
-	/** header state for the PROXYv2 header (for TCP) */
-	enum {
-		/** no header encounter yet */
-		pp2_header_none = 0,
-		/** read the static part of the header */
-		pp2_header_init,
-		/** read the full header */
-		pp2_header_done
-	} pp2_header_state;
 };
 
 /**

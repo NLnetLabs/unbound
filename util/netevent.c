@@ -775,35 +775,17 @@ static int consume_pp2_header(struct sldns_buffer* buf, struct comm_reply* rep,
 		 * No need to do anything with addresses. */
 		goto done;
 	}
-	/* Copy the proxy address before replacing it with the actual client's
-	 * address. */
-	if(((struct sockaddr_in*)&rep->addr)->sin_family == AF_INET) {
-		struct sockaddr_in* addr = (struct sockaddr_in*)&rep->addr;
-		struct sockaddr_in* paddr =
-			(struct sockaddr_in*)&rep->proxy_addr;
-		paddr->sin_family = AF_INET;
-		paddr->sin_addr.s_addr = addr->sin_addr.s_addr;
-		paddr->sin_port = addr->sin_port;
-	} else {
-		struct sockaddr_in6* addr = (struct sockaddr_in6*)&rep->addr;
-		struct sockaddr_in6* paddr =
-			(struct sockaddr_in6*)&rep->proxy_addr;
-		paddr->sin6_family = AF_INET6;
-		memcpy(&paddr->sin6_addr, &addr->sin6_addr, 16);
-		paddr->sin6_port = addr->sin6_port;
-	}
-	rep->proxy_addrlen = rep->addrlen;
 	/* Read the proxied address */
 	switch(header->fam_prot) {
 		case 0x11: /* AF_INET|STREAM */
 		case 0x12: /* AF_INET|DGRAM */
 			{
 			struct sockaddr_in* addr =
-				(struct sockaddr_in*)&rep->addr;
+				(struct sockaddr_in*)&rep->client_addr;
 			addr->sin_family = AF_INET;
 			addr->sin_addr.s_addr = header->addr.addr4.src_addr;
 			addr->sin_port = header->addr.addr4.src_port;
-			rep->addrlen = (socklen_t)sizeof(struct sockaddr_in);
+			rep->client_addrlen = (socklen_t)sizeof(struct sockaddr_in);
 			}
 			/* Ignore the destination address; it should be us. */
 			break;
@@ -811,12 +793,12 @@ static int consume_pp2_header(struct sldns_buffer* buf, struct comm_reply* rep,
 		case 0x22: /* AF_INET6|DGRAM */
 			{
 			struct sockaddr_in6* addr =
-				(struct sockaddr_in6*)&rep->addr;
+				(struct sockaddr_in6*)&rep->client_addr;
 			addr->sin6_family = AF_INET6;
 			memcpy(&addr->sin6_addr,
 				header->addr.addr6.src_addr, 16);
 			addr->sin6_port = header->addr.addr6.src_port;
-			rep->addrlen = (socklen_t)sizeof(struct sockaddr_in6);
+			rep->client_addrlen = (socklen_t)sizeof(struct sockaddr_in6);
 			}
 			/* Ignore the destination address; it should be us. */
 			break;
@@ -824,7 +806,9 @@ static int consume_pp2_header(struct sldns_buffer* buf, struct comm_reply* rep,
 	rep->is_proxied = 1;
 done:
 	if(!stream) {
-		/* Move the rest of the data to overwrite the PROXYv2 header */
+		/* We are reading a whole packet;
+		 * Move the rest of the data to overwrite the PROXYv2 header */
+		/* XXX can we do better to avoid memmove? */
 		memmove(header, ((void*)header)+size,
 			sldns_buffer_limit(buf)-size);
 		sldns_buffer_set_limit(buf, sldns_buffer_limit(buf)-size);
@@ -858,11 +842,11 @@ comm_point_udp_ancil_callback(int fd, short event, void* arg)
 	ub_comm_base_now(rep.c->ev->base);
 	for(i=0; i<NUM_UDP_PER_SELECT; i++) {
 		sldns_buffer_clear(rep.c->buffer);
-		rep.addrlen = (socklen_t)sizeof(rep.addr);
+		rep.remote_addrlen = (socklen_t)sizeof(rep.remote_addr);
 		log_assert(fd != -1);
 		log_assert(sldns_buffer_remaining(rep.c->buffer) > 0);
-		msg.msg_name = &rep.addr;
-		msg.msg_namelen = (socklen_t)sizeof(rep.addr);
+		msg.msg_name = &rep.remote_addr;
+		msg.msg_namelen = (socklen_t)sizeof(rep.remote_addr);
 		iov[0].iov_base = sldns_buffer_begin(rep.c->buffer);
 		iov[0].iov_len = sldns_buffer_remaining(rep.c->buffer);
 		msg.msg_iov = iov;
@@ -880,7 +864,7 @@ comm_point_udp_ancil_callback(int fd, short event, void* arg)
 			}
 			return;
 		}
-		rep.addrlen = msg.msg_namelen;
+		rep.remote_addrlen = msg.msg_namelen;
 		sldns_buffer_skip(rep.c->buffer, rcv);
 		sldns_buffer_flip(rep.c->buffer);
 		rep.srctype = 0;
@@ -920,16 +904,18 @@ comm_point_udp_ancil_callback(int fd, short event, void* arg)
 			log_err("proxy_protocol: could not consume PROXYv2 header");
 			return;
 		}
+		if(!rep.is_proxied) {
+			rep.client_addrlen = rep.remote_addrlen;
+			memmove(&rep.client_addr, &rep.remote_addr,
+				rep.remote_addrlen);
+		}
 
 		fptr_ok(fptr_whitelist_comm_point(rep.c->callback));
 		if((*rep.c->callback)(rep.c, rep.c->cb_arg, NETEVENT_NOERROR, &rep)) {
 			/* send back immediate reply */
 			(void)comm_point_send_udp_msg_if(rep.c, rep.c->buffer,
-				rep.is_proxied
-				?(struct sockaddr*)&rep.proxy_addr
-				:(struct sockaddr*)&rep.addr,
-				rep.is_proxied?rep.proxy_addrlen:rep.addrlen,
-				&rep);
+				(struct sockaddr*)&rep.remote_addr,
+				rep.remote_addrlen, &rep);
 		}
 		if(!rep.c || rep.c->fd == -1) /* commpoint closed */
 			break;
@@ -960,12 +946,12 @@ comm_point_udp_callback(int fd, short event, void* arg)
 	ub_comm_base_now(rep.c->ev->base);
 	for(i=0; i<NUM_UDP_PER_SELECT; i++) {
 		sldns_buffer_clear(rep.c->buffer);
-		rep.addrlen = (socklen_t)sizeof(rep.addr);
+		rep.remote_addrlen = (socklen_t)sizeof(rep.remote_addr);
 		log_assert(fd != -1);
 		log_assert(sldns_buffer_remaining(rep.c->buffer) > 0);
 		rcv = recvfrom(fd, (void*)sldns_buffer_begin(rep.c->buffer), 
 			sldns_buffer_remaining(rep.c->buffer), MSG_DONTWAIT,
-			(struct sockaddr*)&rep.addr, &rep.addrlen);
+			(struct sockaddr*)&rep.remote_addr, &rep.remote_addrlen);
 		if(rcv == -1) {
 #ifndef USE_WINSOCK
 			if(errno != EAGAIN && errno != EINTR
@@ -992,6 +978,11 @@ comm_point_udp_callback(int fd, short event, void* arg)
 			log_err("proxy_protocol: could not consume PROXYv2 header");
 			return;
 		}
+		if(!rep.is_proxied) {
+			rep.client_addrlen = rep.remote_addrlen;
+			memmove(&rep.client_addr, &rep.remote_addr,
+				rep.remote_addrlen);
+		}
 
 		fptr_ok(fptr_whitelist_comm_point(rep.c->callback));
 		if((*rep.c->callback)(rep.c, rep.c->cb_arg, NETEVENT_NOERROR, &rep)) {
@@ -1002,11 +993,8 @@ comm_point_udp_callback(int fd, short event, void* arg)
 			buffer = rep.c->buffer;
 #endif
 			(void)comm_point_send_udp_msg(rep.c, buffer,
-				rep.is_proxied
-				?(struct sockaddr*)&rep.proxy_addr
-				:(struct sockaddr*)&rep.addr,
-				rep.is_proxied?rep.proxy_addrlen:rep.addrlen,
-				0);
+				(struct sockaddr*)&rep.remote_addr,
+				rep.remote_addrlen, 0);
 		}
 		if(!rep.c || rep.c->fd != fd) /* commpoint closed to -1 or reused for
 		another UDP port. Note rep.c cannot be reused with TCP fd. */
@@ -1322,10 +1310,16 @@ comm_point_tcp_accept_callback(int fd, short event, void* arg)
 	}
 	log_assert(fd != -1);
 	(void)fd;
-	new_fd = comm_point_perform_accept(c, &c_hdl->repinfo.addr,
-		&c_hdl->repinfo.addrlen);
+	new_fd = comm_point_perform_accept(c, &c_hdl->repinfo.remote_addr,
+		&c_hdl->repinfo.remote_addrlen);
 	if(new_fd == -1)
 		return;
+	/* Copy remote_address to client_address.
+	 * Simplest way/time for streams to do that. */
+	c_hdl->repinfo.client_addrlen = c_hdl->repinfo.remote_addrlen;
+	memmove(&c_hdl->repinfo.client_addr,
+		&c_hdl->repinfo.remote_addr,
+		c_hdl->repinfo.remote_addrlen);
 	if(c->ssl) {
 		c_hdl->ssl = incoming_ssl_fd(c->ssl, new_fd);
 		if(!c_hdl->ssl) {
@@ -1509,8 +1503,8 @@ ssl_handshake(struct comm_point* c)
 				return 0; /* silence reset by peer */
 #endif
 			if(!tcp_connect_errno_needs_log(
-				(struct sockaddr*)&c->repinfo.addr,
-				c->repinfo.addrlen))
+				(struct sockaddr*)&c->repinfo.remote_addr,
+				c->repinfo.remote_addrlen))
 				return 0; /* silence connect failures that
 				show up because after connect this is the
 				first system call that accesses the socket */
@@ -1522,8 +1516,9 @@ ssl_handshake(struct comm_point* c)
 			unsigned long err = ERR_get_error();
 			if(!squelch_err_ssl_handshake(err)) {
 				log_crypto_err_code("ssl handshake failed", err);
-				log_addr(VERB_OPS, "ssl handshake failed", &c->repinfo.addr,
-					c->repinfo.addrlen);
+				log_addr(VERB_OPS, "ssl handshake failed",
+					&c->repinfo.remote_addr,
+					c->repinfo.remote_addrlen);
 			}
 			return 0;
 		}
@@ -1540,7 +1535,8 @@ ssl_handshake(struct comm_point* c)
 			if(!x) {
 				log_addr(VERB_ALGO, "SSL connection failed: "
 					"no certificate",
-					&c->repinfo.addr, c->repinfo.addrlen);
+					&c->repinfo.remote_addr,
+					c->repinfo.remote_addrlen);
 				return 0;
 			}
 			log_cert(VERB_ALGO, "peer certificate", x);
@@ -1550,13 +1546,13 @@ ssl_handshake(struct comm_point* c)
 				snprintf(buf, sizeof(buf), "SSL connection "
 					"to %s authenticated",
 					SSL_get0_peername(c->ssl));
-				log_addr(VERB_ALGO, buf, &c->repinfo.addr,
-					c->repinfo.addrlen);
+				log_addr(VERB_ALGO, buf, &c->repinfo.remote_addr,
+					c->repinfo.remote_addrlen);
 			} else {
 #endif
 				log_addr(VERB_ALGO, "SSL connection "
-					"authenticated", &c->repinfo.addr,
-					c->repinfo.addrlen);
+					"authenticated", &c->repinfo.remote_addr,
+					c->repinfo.remote_addrlen);
 #ifdef HAVE_SSL_GET0_PEERNAME
 			}
 #endif
@@ -1573,14 +1569,15 @@ ssl_handshake(struct comm_point* c)
 			}
 			log_addr(VERB_ALGO, "SSL connection failed: "
 				"failed to authenticate",
-				&c->repinfo.addr, c->repinfo.addrlen);
+				&c->repinfo.remote_addr,
+				c->repinfo.remote_addrlen);
 			return 0;
 		}
 	} else {
 		/* unauthenticated, the verify peer flag was not set
 		 * in c->ssl when the ssl object was created from ssl_ctx */
-		log_addr(VERB_ALGO, "SSL connection", &c->repinfo.addr,
-			c->repinfo.addrlen);
+		log_addr(VERB_ALGO, "SSL connection", &c->repinfo.remote_addr,
+			c->repinfo.remote_addrlen);
 	}
 
 #ifdef HAVE_SSL_GET0_ALPN_SELECTED
@@ -1630,7 +1627,8 @@ ssl_handle_read(struct comm_point* c)
 			if(sldns_buffer_remaining(c->buffer)<want_read_size) {
 				log_err_addr("proxy_protocol: not enough "
 					"buffer size to read PROXYv2 header", "",
-					&c->repinfo.addr, c->repinfo.addrlen);
+					&c->repinfo.remote_addr,
+					c->repinfo.remote_addrlen);
 				return 0;
 			}
 			verbose(VERB_ALGO, "proxy_protocol: reading fixed "
@@ -1688,7 +1686,8 @@ ssl_handle_read(struct comm_point* c)
 				PP2_HEADER_SIZE + want_read_size) {
 				log_err_addr("proxy_protocol: not enough "
 					"buffer size to read PROXYv2 header", "",
-					&c->repinfo.addr, c->repinfo.addrlen);
+					&c->repinfo.remote_addr,
+					c->repinfo.remote_addrlen);
 				return 0;
 			}
 			verbose(VERB_ALGO, "proxy_protocol: reading variable "
@@ -1736,14 +1735,14 @@ ssl_handle_read(struct comm_point* c)
 		}
 		if(c->pp2_header_state != pp2_header_done || !header) {
 			log_err_addr("proxy_protocol: wrong state for the "
-				"PROXYv2 header", "", &c->repinfo.addr,
-				c->repinfo.addrlen);
+				"PROXYv2 header", "", &c->repinfo.remote_addr,
+				c->repinfo.remote_addrlen);
 			return 0;
 		}
 		if(!consume_pp2_header(c->buffer, &c->repinfo, 1)) {
 			log_err_addr("proxy_protocol: could not consume "
-				"PROXYv2 header", "", &c->repinfo.addr,
-				c->repinfo.addrlen);
+				"PROXYv2 header", "", &c->repinfo.remote_addr,
+				c->repinfo.remote_addrlen);
 			return 0;
 		}
 		verbose(VERB_ALGO, "proxy_protocol: successful read of "
@@ -2042,7 +2041,8 @@ comm_point_tcp_handle_read(int fd, struct comm_point* c, int short_ok)
 			if(sldns_buffer_remaining(c->buffer)<want_read_size) {
 				log_err_addr("proxy_protocol: not enough "
 					"buffer size to read PROXYv2 header", "",
-					&c->repinfo.addr, c->repinfo.addrlen);
+					&c->repinfo.remote_addr,
+					c->repinfo.remote_addrlen);
 				return 0;
 			}
 			verbose(VERB_ALGO, "proxy_protocol: reading fixed "
@@ -2078,7 +2078,8 @@ comm_point_tcp_handle_read(int fd, struct comm_point* c, int short_ok)
 				PP2_HEADER_SIZE + want_read_size) {
 				log_err_addr("proxy_protocol: not enough "
 					"buffer size to read PROXYv2 header", "",
-					&c->repinfo.addr, c->repinfo.addrlen);
+					&c->repinfo.remote_addr,
+					c->repinfo.remote_addrlen);
 				return 0;
 			}
 			verbose(VERB_ALGO, "proxy_protocol: reading variable "
@@ -2104,14 +2105,14 @@ comm_point_tcp_handle_read(int fd, struct comm_point* c, int short_ok)
 		}
 		if(c->pp2_header_state != pp2_header_done || !header) {
 			log_err_addr("proxy_protocol: wrong state for the "
-				"PROXYv2 header", "", &c->repinfo.addr,
-				c->repinfo.addrlen);
+				"PROXYv2 header", "", &c->repinfo.remote_addr,
+				c->repinfo.remote_addrlen);
 			return 0;
 		}
 		if(!consume_pp2_header(c->buffer, &c->repinfo, 1)) {
 			log_err_addr("proxy_protocol: could not consume "
-				"PROXYv2 header", "", &c->repinfo.addr,
-				c->repinfo.addrlen);
+				"PROXYv2 header", "", &c->repinfo.remote_addr,
+				c->repinfo.remote_addrlen);
 			return 0;
 		}
 		verbose(VERB_ALGO, "proxy_protocol: successful read of "
@@ -2216,7 +2217,8 @@ recv_error:
 				"enabled [--disable-tfo-client "
 				"--disable-tfo-server] but does not "
 				"work", sock_strerror(errno),
-				&c->repinfo.addr, c->repinfo.addrlen);
+				&c->repinfo.remote_addr,
+				c->repinfo.remote_addrlen);
 			return 0;
 		}
 	}
@@ -2245,7 +2247,7 @@ recv_error:
 	}
 #endif
 	log_err_addr("read (in tcp s)", sock_strerror(errno),
-		&c->repinfo.addr, c->repinfo.addrlen);
+		&c->repinfo.remote_addr, c->repinfo.remote_addrlen);
 	return 0;
 }
 
@@ -2292,7 +2294,8 @@ comm_point_tcp_handle_write(int fd, struct comm_point* c)
 			return 0; /* silence lots of chatter in the logs */
                 else if(error != 0) {
 			log_err_addr("tcp connect", strerror(error),
-				&c->repinfo.addr, c->repinfo.addrlen);
+				&c->repinfo.remote_addr,
+				c->repinfo.remote_addrlen);
 #else /* USE_WINSOCK */
 		/* examine error */
 		if(error == WSAEINPROGRESS)
@@ -2304,7 +2307,8 @@ comm_point_tcp_handle_write(int fd, struct comm_point* c)
 			return 0;
 		else if(error != 0) {
 			log_err_addr("tcp connect", wsa_strerror(error),
-				&c->repinfo.addr, c->repinfo.addrlen);
+				&c->repinfo.remote_addr,
+				c->repinfo.remote_addrlen);
 #endif /* USE_WINSOCK */
 			return 0;
 		}
@@ -2336,8 +2340,8 @@ comm_point_tcp_handle_write(int fd, struct comm_point* c)
 			iov[1].iov_len = sldns_buffer_limit(buffer);
 		}
 		log_assert(iov[0].iov_len > 0);
-		msg.msg_name = &c->repinfo.addr;
-		msg.msg_namelen = c->repinfo.addrlen;
+		msg.msg_name = &c->repinfo.remote_addr;
+		msg.msg_namelen = c->repinfo.remote_addrlen;
 		msg.msg_iov = iov;
 		msg.msg_iovlen = 2;
 		r = sendmsg(fd, &msg, MSG_FASTOPEN);
@@ -2363,14 +2367,16 @@ comm_point_tcp_handle_write(int fd, struct comm_point* c)
 				if(verbosity < 2)
 					return 0; /* silence lots of chatter in the logs */
 				log_err_addr("tcp sendmsg", strerror(errno),
-					&c->repinfo.addr, c->repinfo.addrlen);
+					&c->repinfo.remote_addr,
+					c->repinfo.remote_addrlen);
 				return 0;
 			}
 			verbose(VERB_ALGO, "tcp sendmsg for fastopen failed (with %s), try normal connect", strerror(errno));
 			/* fallthrough to nonFASTOPEN
 			 * (MSG_FASTOPEN on Linux 3 produces EPIPE)
 			 * we need to perform connect() */
-			if(connect(fd, (struct sockaddr *)&c->repinfo.addr, c->repinfo.addrlen) == -1) {
+			if(connect(fd, (struct sockaddr *)&c->repinfo.remote_addr,
+				c->repinfo.remote_addrlen) == -1) {
 #ifdef EINPROGRESS
 				if(errno == EINPROGRESS)
 					return 1; /* wait until connect done*/
@@ -2381,9 +2387,12 @@ comm_point_tcp_handle_write(int fd, struct comm_point* c)
 					return 1; /* wait until connect done*/
 #endif
 				if(tcp_connect_errno_needs_log(
-					(struct sockaddr *)&c->repinfo.addr, c->repinfo.addrlen)) {
+					(struct sockaddr *)&c->repinfo.remote_addr,
+					c->repinfo.remote_addrlen)) {
 					log_err_addr("outgoing tcp: connect after EPIPE for fastopen",
-						strerror(errno), &c->repinfo.addr, c->repinfo.addrlen);
+						strerror(errno),
+						&c->repinfo.remote_addr,
+						c->repinfo.remote_addrlen);
 				}
 				return 0;
 			}
@@ -2448,10 +2457,12 @@ comm_point_tcp_handle_write(int fd, struct comm_point* c)
 #endif
 #  ifdef HAVE_WRITEV
 			log_err_addr("tcp writev", strerror(errno),
-				&c->repinfo.addr, c->repinfo.addrlen);
+				&c->repinfo.remote_addr,
+				c->repinfo.remote_addrlen);
 #  else /* HAVE_WRITEV */
 			log_err_addr("tcp send s", strerror(errno),
-				&c->repinfo.addr, c->repinfo.addrlen);
+				&c->repinfo.remote_addr,
+				c->repinfo.remote_addrlen);
 #  endif /* HAVE_WRITEV */
 #else
 			if(WSAGetLastError() == WSAENOTCONN)
@@ -2467,7 +2478,8 @@ comm_point_tcp_handle_write(int fd, struct comm_point* c)
 				return 0; /* silence reset by peer */
 			log_err_addr("tcp send s",
 				wsa_strerror(WSAGetLastError()),
-				&c->repinfo.addr, c->repinfo.addrlen);
+				&c->repinfo.remote_addr,
+				c->repinfo.remote_addrlen);
 #endif
 			return 0;
 		}
@@ -2515,7 +2527,8 @@ comm_point_tcp_handle_write(int fd, struct comm_point* c)
 			return 0; /* silence reset by peer */
 #endif
 		log_err_addr("tcp send r", sock_strerror(errno),
-			&c->repinfo.addr, c->repinfo.addrlen);
+			&c->repinfo.remote_addr,
+			c->repinfo.remote_addrlen);
 		return 0;
 	}
 	if(c->tcp_write_and_read) {
@@ -2779,7 +2792,7 @@ http_read_more(int fd, struct comm_point* c)
 		}
 #endif
 		log_err_addr("read (in http r)", sock_strerror(errno),
-			&c->repinfo.addr, c->repinfo.addrlen);
+			&c->repinfo.remote_addr, c->repinfo.remote_addrlen);
 		return 0;
 	}
 	verbose(VERB_ALGO, "http read more skip to %d + %d",
@@ -3211,8 +3224,8 @@ ssize_t http2_recv_cb(nghttp2_session* ATTR_UNUSED(session), uint8_t* buf,
 			return NGHTTP2_ERR_CALLBACK_FAILURE;
 #endif
 		log_err_addr("could not http2 recv: %s", strerror(errno),
-			&h2_session->c->repinfo.addr,
-			h2_session->c->repinfo.addrlen);
+			&h2_session->c->repinfo.remote_addr,
+			h2_session->c->repinfo.remote_addrlen);
 #else /* USE_WINSOCK */
 		if(WSAGetLastError() == WSAECONNRESET)
 			return NGHTTP2_ERR_CALLBACK_FAILURE;
@@ -3225,8 +3238,8 @@ ssize_t http2_recv_cb(nghttp2_session* ATTR_UNUSED(session), uint8_t* buf,
 		}
 		log_err_addr("could not http2 recv: %s",
 			wsa_strerror(WSAGetLastError()),
-			&h2_session->c->repinfo.addr,
-			h2_session->c->repinfo.addrlen);
+			&h2_session->c->repinfo.remote_addr,
+			h2_session->c->repinfo.remote_addrlen);
 #endif
 		return NGHTTP2_ERR_CALLBACK_FAILURE;
 	}
@@ -3248,8 +3261,8 @@ comm_point_http2_handle_read(int ATTR_UNUSED(fd), struct comm_point* c)
 		if(ret != NGHTTP2_ERR_EOF &&
 			ret != NGHTTP2_ERR_CALLBACK_FAILURE) {
 			char a[256];
-			addr_to_str(&c->repinfo.addr, c->repinfo.addrlen,
-				a, sizeof(a));
+			addr_to_str(&c->repinfo.rmeote_addr,
+				c->repinfo.remote_addrlen, a, sizeof(a));
 			verbose(VERB_QUERY, "http2: session_recv from %s failed, "
 				"error: %s", a, nghttp2_strerror(ret));
 		}
@@ -3397,7 +3410,7 @@ http_check_connect(int fd, struct comm_point* c)
 		return 0; /* silence lots of chatter in the logs */
 	else if(error != 0) {
 		log_err_addr("http connect", strerror(error),
-			&c->repinfo.addr, c->repinfo.addrlen);
+			&c->repinfo.remote_addr, c->repinfo.remote_addrlen);
 #else /* USE_WINSOCK */
 	/* examine error */
 	if(error == WSAEINPROGRESS)
@@ -3409,7 +3422,7 @@ http_check_connect(int fd, struct comm_point* c)
 		return 0;
 	else if(error != 0) {
 		log_err_addr("http connect", wsa_strerror(error),
-			&c->repinfo.addr, c->repinfo.addrlen);
+			&c->repinfo.remote_addr, c->repinfo.remote_addrlen);
 #endif /* USE_WINSOCK */
 		return 0;
 	}
@@ -3479,7 +3492,7 @@ http_write_more(int fd, struct comm_point* c)
 		}
 #endif
 		log_err_addr("http send r", sock_strerror(errno),
-			&c->repinfo.addr, c->repinfo.addrlen);
+			&c->repinfo.remote_addr, c->repinfo.remote_addrlen);
 		return 0;
 	}
 	sldns_buffer_skip(c->buffer, r);
@@ -3543,8 +3556,8 @@ ssize_t http2_send_cb(nghttp2_session* ATTR_UNUSED(session), const uint8_t* buf,
 			return NGHTTP2_ERR_CALLBACK_FAILURE;
 #endif
 		log_err_addr("could not http2 write: %s", strerror(errno),
-			&h2_session->c->repinfo.addr,
-			h2_session->c->repinfo.addrlen);
+			&h2_session->c->repinfo.remote_addr,
+			h2_session->c->repinfo.remote_addrlen);
 #else /* USE_WINSOCK */
 		if(WSAGetLastError() == WSAENOTCONN)
 			return NGHTTP2_ERR_WOULDBLOCK;
@@ -3559,8 +3572,8 @@ ssize_t http2_send_cb(nghttp2_session* ATTR_UNUSED(session), const uint8_t* buf,
 			return NGHTTP2_ERR_CALLBACK_FAILURE;
 		log_err_addr("could not http2 write: %s",
 			wsa_strerror(WSAGetLastError()),
-			&h2_session->c->repinfo.addr,
-			h2_session->c->repinfo.addrlen);
+			&h2_session->c->repinfo.remote_addr,
+			h2_session->c->repinfo.remote_addrlen);
 #endif
 		return NGHTTP2_ERR_CALLBACK_FAILURE;
 	}
@@ -4548,28 +4561,20 @@ comm_point_send_reply(struct comm_reply *repinfo)
 	if(repinfo->c->type == comm_udp) {
 		if(repinfo->srctype)
 			comm_point_send_udp_msg_if(repinfo->c, buffer,
-				repinfo->is_proxied
-				?(struct sockaddr*)&repinfo->proxy_addr
-				:(struct sockaddr*)&repinfo->addr,
-				repinfo->is_proxied
-				?repinfo->proxy_addrlen:repinfo->addrlen,
-				repinfo);
+				(struct sockaddr*)&repinfo->remote_addr,
+				repinfo->remote_addrlen, repinfo);
 		else
 			comm_point_send_udp_msg(repinfo->c, buffer,
-				repinfo->is_proxied
-				?(struct sockaddr*)&repinfo->proxy_addr
-				:(struct sockaddr*)&repinfo->addr,
-				repinfo->is_proxied
-				?repinfo->proxy_addrlen:repinfo->addrlen,
-				0);
+				(struct sockaddr*)&repinfo->remote_addr,
+				repinfo->remote_addrlen, 0);
 #ifdef USE_DNSTAP
 		/*
 		 * sending src (client)/dst (local service) addresses over DNSTAP from udp callback
 		 */
 		if(repinfo->c->dtenv != NULL && repinfo->c->dtenv->log_client_response_messages) {
 			log_addr(VERB_ALGO, "from local addr", (void*)repinfo->c->socket->addr->ai_addr, repinfo->c->socket->addr->ai_addrlen);
-			log_addr(VERB_ALGO, "response to client", &repinfo->addr, repinfo->addrlen);
-			dt_msg_send_client_response(repinfo->c->dtenv, &repinfo->addr, (void*)repinfo->c->socket->addr->ai_addr, repinfo->c->type, repinfo->c->buffer);
+			log_addr(VERB_ALGO, "response to client", &repinfo->client_addr, repinfo->client_addrlen);
+			dt_msg_send_client_response(repinfo->c->dtenv, &repinfo->client_addr, (void*)repinfo->c->socket->addr->ai_addr, repinfo->c->type, repinfo->c->buffer);
 		}
 #endif
 	} else {
@@ -4579,8 +4584,8 @@ comm_point_send_reply(struct comm_reply *repinfo)
 		 */
 		if(repinfo->c->tcp_parent->dtenv != NULL && repinfo->c->tcp_parent->dtenv->log_client_response_messages) {
 			log_addr(VERB_ALGO, "from local addr", (void*)repinfo->c->socket->addr->ai_addr, repinfo->c->socket->addr->ai_addrlen);
-			log_addr(VERB_ALGO, "response to client", &repinfo->addr, repinfo->addrlen);
-			dt_msg_send_client_response(repinfo->c->tcp_parent->dtenv, &repinfo->addr, (void*)repinfo->c->socket->addr->ai_addr, repinfo->c->type,
+			log_addr(VERB_ALGO, "response to client", &repinfo->client_addr, repinfo->client_addrlen);
+			dt_msg_send_client_response(repinfo->c->tcp_parent->dtenv, &repinfo->client_addr, (void*)repinfo->c->socket->addr->ai_addr, repinfo->c->type,
 				( repinfo->c->tcp_req_info? repinfo->c->tcp_req_info->spool_buffer: repinfo->c->buffer ));
 		}
 #endif

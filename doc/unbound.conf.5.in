@@ -663,6 +663,8 @@ In this case the proxy address will only be used for the network communication
 and initial ACL (check if the proxy itself is denied/refused by configuration).
 The proxied address (if any) will then be used as the true client address and
 will be used where applicable for logging, ACL, DNSTAP, RPZ and IP ratelimiting.
+PROXYv2 is supported for UDP and TCP/TLS listening interfaces.
+There is no support for PROXYv2 on a DoH or DNSCrypt listeining interface.
 Can list multiple, each on a new statement.
 .TP
 .B use\-systemd: \fI<yes or no>

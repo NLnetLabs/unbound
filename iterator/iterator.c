@@ -596,15 +596,17 @@ errinf_reply(struct module_qstate* qstate, struct iter_qstate* iq)
 {
 	if(qstate->env->cfg->val_log_level < 2 && !qstate->env->cfg->log_servfail)
 		return;
-	if((qstate->reply && qstate->reply->addrlen != 0) ||
-		(iq->fail_reply && iq->fail_reply->addrlen != 0)) {
+	if((qstate->reply && qstate->reply->remote_addrlen != 0) ||
+		(iq->fail_reply && iq->fail_reply->remote_addrlen != 0)) {
 		char from[256], frm[512];
-		if(qstate->reply && qstate->reply->addrlen != 0)
-			addr_to_str(&qstate->reply->addr, qstate->reply->addrlen,
-				from, sizeof(from));
+		if(qstate->reply && qstate->reply->remote_addrlen != 0)
+			addr_to_str(&qstate->reply->remote_addr,
+				qstate->reply->remote_addrlen, from,
+				sizeof(from));
 		else
-			addr_to_str(&iq->fail_reply->addr, iq->fail_reply->addrlen,
-				from, sizeof(from));
+			addr_to_str(&iq->fail_reply->remote_addr,
+				iq->fail_reply->remote_addrlen, from,
+				sizeof(from));
 		snprintf(frm, sizeof(frm), "from %s", from);
 		errinf(qstate, frm);
 	}
@@ -2896,8 +2898,8 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 			 * use dnssec-lame-bypass if it needs to query there.*/
 			if(qstate->reply) {
 				struct delegpt_addr* a = delegpt_find_addr(
-					iq->dp, &qstate->reply->addr,
-					qstate->reply->addrlen);
+					iq->dp, &qstate->reply->remote_addr,
+					qstate->reply->remote_addrlen);
 				if(a) a->dnsseclame = 1;
 			}
 			/* test the answer is from the zone we expected,
@@ -2993,9 +2995,9 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 		(*qstate->env->detach_subs)(qstate);
 		iq->num_target_queries = 0;
 		if(qstate->reply)
-			sock_list_insert(&qstate->reply_origin, 
-				&qstate->reply->addr, qstate->reply->addrlen, 
-				qstate->region);
+			sock_list_insert(&qstate->reply_origin,
+				&qstate->reply->remote_addr,
+				qstate->reply->remote_addrlen, qstate->region);
 		if(iq->minimisation_state != DONOT_MINIMISE_STATE
 			&& !(iq->chase_flags & BIT_RD)) {
 			if(FLAGS_GET_RCODE(iq->response->rep->flags) != 
@@ -3250,9 +3252,9 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 		(*qstate->env->detach_subs)(qstate);
 		iq->num_target_queries = 0;
 		if(qstate->reply)
-			sock_list_insert(&qstate->reply_origin, 
-				&qstate->reply->addr, qstate->reply->addrlen, 
-				qstate->region);
+			sock_list_insert(&qstate->reply_origin,
+				&qstate->reply->remote_addr,
+				qstate->reply->remote_addrlen, qstate->region);
 		verbose(VERB_ALGO, "cleared outbound list for query restart");
 		/* go to INIT_REQUEST_STATE for new qname. */
 		return next_state(iq, INIT_REQUEST_STATE);
@@ -3266,9 +3268,10 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 		} else if(qstate->reply) {
 			/* need addr for lameness cache, but we may have
 			 * gotten this from cache, so test to be sure */
-			if(!infra_set_lame(qstate->env->infra_cache, 
-				&qstate->reply->addr, qstate->reply->addrlen, 
-				iq->dp->name, iq->dp->namelen, 
+			if(!infra_set_lame(qstate->env->infra_cache,
+				&qstate->reply->remote_addr,
+				qstate->reply->remote_addrlen,
+				iq->dp->name, iq->dp->namelen,
 				*qstate->env->now, dnsseclame, 0,
 				iq->qchase.qtype))
 				log_err("mark host lame: out of memory");
@@ -3285,8 +3288,9 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 			 * gotten this from cache, so test to be sure */
 			verbose(VERB_DETAIL, "mark as REC_LAME");
 			if(!infra_set_lame(qstate->env->infra_cache, 
-				&qstate->reply->addr, qstate->reply->addrlen, 
-				iq->dp->name, iq->dp->namelen, 
+				&qstate->reply->remote_addr,
+				qstate->reply->remote_addrlen,
+				iq->dp->name, iq->dp->namelen,
 				*qstate->env->now, 0, 1, iq->qchase.qtype))
 				log_err("mark host lame: out of memory");
 		} 
@@ -4014,8 +4018,8 @@ process_response(struct module_qstate* qstate, struct iter_qstate* iq,
 	if(!iq->response)
 		goto handle_it;
 	log_query_info(VERB_DETAIL, "response for", &qstate->qinfo);
-	log_name_addr(VERB_DETAIL, "reply from", iq->dp->name, 
-		&qstate->reply->addr, qstate->reply->addrlen);
+	log_name_addr(VERB_DETAIL, "reply from", iq->dp->name,
+		&qstate->reply->remote_addr, qstate->reply->remote_addrlen);
 	if(verbosity >= VERB_ALGO)
 		log_dns_msg("incoming scrubbed packet:", &iq->response->qinfo, 
 			iq->response->rep);
