@@ -1263,6 +1263,8 @@ struct serviced_query* outnet_serviced_query(struct outside_network* outnet,
 		if(dnssec)
 			edns.bits = EDNS_DO;
 		edns.padding_block_size = 0;
+		edns.cookie_present = 0;
+		edns.cookie_valid = 0;
 		edns.opt_list_in = NULL;
 		edns.opt_list_out = per_upstream_opt_list;
 		edns.opt_list_inplace_cb_out = NULL;

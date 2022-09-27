@@ -109,7 +109,7 @@ parse_acl_access(const char* str, enum acl_access* control)
 		*control = acl_allow_snoop;
 	else if(strcmp(str, "allow_setrd") == 0)
 		*control = acl_allow_setrd;
-	else if (strcmp(s2, "allow_cookie") == 0)
+	else if (strcmp(str, "allow_cookie") == 0)
 		*control = acl_allow_cookie;
 	else {
 		log_err("access control type %s unknown", str);
