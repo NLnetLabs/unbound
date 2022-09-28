@@ -1439,8 +1439,6 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 		log_addr(VERB_CLIENT,"from",&repinfo->addr, repinfo->addrlen);
 		memset(&reply_edns, 0, sizeof(reply_edns));
 		reply_edns.edns_present = 1;
-		reply_edns.udp_size = EDNS_ADVERTISED_SIZE;
-		LDNS_RCODE_SET(sldns_buffer_begin(c->buffer), ret);
 		error_encode(c->buffer, ret, &qinfo,
 			*(uint16_t*)(void *)sldns_buffer_begin(c->buffer),
 			sldns_buffer_read_u16_at(c->buffer, 2), &reply_edns);
@@ -1449,22 +1447,14 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 	}
 	if(edns.edns_present) {
 		if(edns.edns_version != 0) {
-			edns.ext_rcode = (uint8_t)(EDNS_RCODE_BADVERS>>4);
-			edns.edns_version = EDNS_ADVERTISED_VERSION;
-			edns.udp_size = EDNS_ADVERTISED_SIZE;
-			edns.bits &= EDNS_DO;
 			edns.opt_list_in = NULL;
 			edns.opt_list_out = NULL;
 			edns.opt_list_inplace_cb_out = NULL;
-			edns.padding_block_size = 0;
 			verbose(VERB_ALGO, "query with bad edns version.");
 			log_addr(VERB_CLIENT,"from",&repinfo->addr, repinfo->addrlen);
-			error_encode(c->buffer, EDNS_RCODE_BADVERS&0xf, &qinfo,
+			extended_error_encode(c->buffer, EDNS_RCODE_BADVERS, &qinfo,
 				*(uint16_t*)(void *)sldns_buffer_begin(c->buffer),
-				sldns_buffer_read_u16_at(c->buffer, 2), NULL);
-			if(sldns_buffer_capacity(c->buffer) >=
-			   sldns_buffer_limit(c->buffer)+calc_edns_field_size(&edns))
-				attach_edns_record(c->buffer, &edns);
+				sldns_buffer_read_u16_at(c->buffer, 2), 0, &edns);
 			regional_free_all(worker->scratchpad);
 			goto send_reply;
 		}
