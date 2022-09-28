@@ -1268,8 +1268,6 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 	struct query_info qinfo_tmp; /* placeholder for lookup_qinfo */
 	struct respip_client_info* cinfo = NULL, cinfo_tmp;
 	memset(&qinfo, 0, sizeof(qinfo));
-	memset(&edns, 0, sizeof(edns));
-	edns.udp_size = 512;
 
 	if((error != NETEVENT_NOERROR && error != NETEVENT_DONE)|| !repinfo) {
 		/* some bad tcp query DNS formats give these error calls */
@@ -1444,34 +1442,32 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 		memset(&reply_edns, 0, sizeof(reply_edns));
 		reply_edns.edns_present = 1;
 		reply_edns.udp_size = EDNS_ADVERTISED_SIZE;
-		LDNS_RCODE_SET(sldns_buffer_begin(c->buffer), ret);
 		error_encode(c->buffer, ret, &qinfo,
 			*(uint16_t*)(void *)sldns_buffer_begin(c->buffer),
 			sldns_buffer_read_u16_at(c->buffer, 2), &reply_edns);
 		regional_free_all(worker->scratchpad);
 		goto send_reply;
 	}
-	if(edns.edns_present && edns.edns_version != 0) {
-		edns.opt_list_in = NULL;
-		edns.opt_list_out = NULL;
-		edns.opt_list_inplace_cb_out = NULL;
-		edns.padding_block_size = 0;
-		edns.cookie_present = 0;
-		edns.cookie_valid = 0;
-		verbose(VERB_ALGO, "query with bad edns version.");
-		log_addr(VERB_CLIENT,"from",&repinfo->addr, repinfo->addrlen);
-		error_encode(c->buffer, EDNS_RCODE_BADVERS, &qinfo,
-			*(uint16_t*)(void *)sldns_buffer_begin(c->buffer),
-			sldns_buffer_read_u16_at(c->buffer, 2), &edns);
-		regional_free_all(worker->scratchpad);
-		goto send_reply;
-	}
-	if(edns.udp_size < NORMAL_UDP_SIZE &&
-	   worker->daemon->cfg->harden_short_bufsize) {
-		verbose(VERB_QUERY, "worker request: EDNS bufsize %d ignored",
-			(int)edns.udp_size);
-		log_addr(VERB_CLIENT,"from",&repinfo->addr, repinfo->addrlen);
-		edns.udp_size = NORMAL_UDP_SIZE;
+	if(edns.edns_present) {
+		if(edns.edns_version != 0) {
+			edns.opt_list_in = NULL;
+			edns.opt_list_out = NULL;
+			edns.opt_list_inplace_cb_out = NULL;
+			verbose(VERB_ALGO, "query with bad edns version.");
+			log_addr(VERB_CLIENT,"from",&repinfo->addr, repinfo->addrlen);
+			extended_error_encode(c->buffer, EDNS_RCODE_BADVERS, &qinfo,
+				*(uint16_t*)(void *)sldns_buffer_begin(c->buffer),
+				sldns_buffer_read_u16_at(c->buffer, 2), 0, &edns);
+			regional_free_all(worker->scratchpad);
+			goto send_reply;
+		}
+		if(edns.udp_size < NORMAL_UDP_SIZE &&
+		   worker->daemon->cfg->harden_short_bufsize) {
+			verbose(VERB_QUERY, "worker request: EDNS bufsize %d ignored",
+				(int)edns.udp_size);
+			log_addr(VERB_CLIENT,"from",&repinfo->addr, repinfo->addrlen);
+			edns.udp_size = NORMAL_UDP_SIZE;
+		}
 	}
 	/* "if, else if" sequence below deals with downstream DNS Cookies */
 	if (acl != acl_allow_cookie)
@@ -1485,12 +1481,12 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 
 	else if (edns.cookie_present) {
 		/* Cookie present, but not valid: Cookie was bad! */
-		error_encode(c->buffer,
+		extended_error_encode(c->buffer,
 			LDNS_EXT_RCODE_BADCOOKIE, &qinfo,
 			*(uint16_t*)(void *)
 			sldns_buffer_begin(c->buffer),
 			sldns_buffer_read_u16_at(c->buffer, 2),
-			&edns);
+			0, &edns);
 		regional_free_all(worker->scratchpad);
 		goto send_reply;
 	} else {
@@ -1503,12 +1499,11 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 			worker->scratchpad, LDNS_EDE_OTHER,
 			"DNS Cookie needed for UDP replies");
 		error_encode(c->buffer,
-			LDNS_RCODE_REFUSED, &qinfo,
+			(LDNS_RCODE_REFUSED|BIT_TC), &qinfo,
 			*(uint16_t*)(void *)
 			sldns_buffer_begin(c->buffer),
 			sldns_buffer_read_u16_at(c->buffer, 2),
 			&edns);
-		LDNS_TC_SET(sldns_buffer_begin(c->buffer));
 		regional_free_all(worker->scratchpad);
 		goto send_reply;
 	}
