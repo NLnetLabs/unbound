@@ -1432,8 +1432,10 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 		}
 		goto send_reply;
 	}
-	if((ret=parse_edns_from_query_pkt(c->buffer, &edns, worker->env.cfg, c,
-					worker->scratchpad)) != 0) {
+	if((ret=parse_edns_from_query_pkt(
+			c->buffer, &edns, worker->env.cfg, c, repinfo,
+			(worker->env.now ? *worker->env.now : time(NULL)),
+			worker->scratchpad)) != 0) {
 		struct edns_data reply_edns;
 		verbose(VERB_ALGO, "worker parse edns: formerror.");
 		log_addr(VERB_CLIENT,"from",&repinfo->addr, repinfo->addrlen);
@@ -1465,6 +1467,44 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 			log_addr(VERB_CLIENT,"from",&repinfo->addr, repinfo->addrlen);
 			edns.udp_size = NORMAL_UDP_SIZE;
 		}
+	}
+	/* "if, else if" sequence below deals with downstream DNS Cookies */
+	if (acl != acl_allow_cookie)
+		; /* pass; No cookie downstream processing whatsoever */
+
+	else if (edns.cookie_valid)
+		; /* pass; Valid cookie is good! */
+
+	else if (c->type != comm_udp)
+		; /* pass; Stateful transport */
+
+	else if (edns.cookie_present) {
+		/* Cookie present, but not valid: Cookie was bad! */
+		extended_error_encode(c->buffer,
+			LDNS_EXT_RCODE_BADCOOKIE, &qinfo,
+			*(uint16_t*)(void *)
+			sldns_buffer_begin(c->buffer),
+			sldns_buffer_read_u16_at(c->buffer, 2),
+			0, &edns);
+		regional_free_all(worker->scratchpad);
+		goto send_reply;
+	} else {
+		/* Cookie requered, but no cookie present on UDP */
+		verbose(VERB_ALGO, "worker request: "
+			"need cookie or stateful transport");
+		log_addr(VERB_ALGO, "from",
+			&repinfo->addr, repinfo->addrlen);
+		EDNS_OPT_LIST_APPEND_EDE(&edns.opt_list_out,
+			worker->scratchpad, LDNS_EDE_OTHER,
+			"DNS Cookie needed for UDP replies");
+		error_encode(c->buffer,
+			(LDNS_RCODE_REFUSED|BIT_TC), &qinfo,
+			*(uint16_t*)(void *)
+			sldns_buffer_begin(c->buffer),
+			sldns_buffer_read_u16_at(c->buffer, 2),
+			&edns);
+		regional_free_all(worker->scratchpad);
+		goto send_reply;
 	}
 	if(edns.udp_size > worker->daemon->cfg->max_udp_size &&
 		c->type == comm_udp) {
