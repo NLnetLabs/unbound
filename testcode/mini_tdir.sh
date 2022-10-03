@@ -56,7 +56,7 @@ if test "$1" = "-f" && test "$2" = "report"; then
 			fi
 		elif test -f ".skip-$name"; then
 			echo ".. SKIPPED.. $timelen $name: $desc"
-			skip=`expr $pass + 1`
+			skip=`expr $skip + 1`
 		else
 			if test -f "result.$name"; then
 				echo "!! FAILED !! $timelen $name: $desc"
@@ -92,7 +92,9 @@ if test "$1" = "report" || test "$2" = "report"; then
 			if test -f "result.$name"; then
 				echo "!! FAILED !! : $name"
 			else
-				echo ".. SKIPPED.. : $name"
+				if test $quiet = 0; then
+					echo ".. SKIPPED.. : $name"
+				fi
 			fi
 		fi
 	done

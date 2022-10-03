@@ -1,5 +1,6 @@
 3 October 2022: Wouter
 	- Fix to remove erroneous TC flag from TCP upstream.
+	- Fix test tdir skip report printout.
 
 26 September 2022: George
 	- Better output for skipped tdir tests.
