@@ -794,6 +794,7 @@ static int consume_pp2_header(struct sldns_buffer* buf, struct comm_reply* rep,
 			{
 			struct sockaddr_in6* addr =
 				(struct sockaddr_in6*)&rep->client_addr;
+			memset(addr, 0, sizeof(*addr));
 			addr->sin6_family = AF_INET6;
 			memcpy(&addr->sin6_addr,
 				header->addr.addr6.src_addr, 16);
