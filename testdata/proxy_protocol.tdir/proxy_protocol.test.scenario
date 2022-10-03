@@ -117,10 +117,10 @@ for prot in "-u" ""; do
 done
 
 # Query with PROXYv2
-# Client 1.1.1.1 should be allowed
+# Client $CLIENT_ADDR_ALLOW should be allowed
 # Expect the result back
 server=127.0.0.1
-client="-p 1.1.1.1@1234"
+client="-p $CLIENT_ADDR_ALLOW@1234"
 query="one.example.net."
 answer="1.1.1.1"
 for prot in "-u" "" "-s"; do
@@ -129,10 +129,22 @@ for prot in "-u" "" "-s"; do
 done
 
 # Query with PROXYv2
-# Client 2.2.2.2 should be refused
+# Client $CLIENT_ADDR_ALLOW6 should be allowed
+# Expect the result back
+server=127.0.0.1
+client="-p $CLIENT_ADDR_ALLOW6@1234"
+query="one.example.net."
+answer="1.1.1.1"
+for prot in "-u" "" "-s"; do
+	send_query "$server" "$client" "$prot" "$query"
+	expect_answer
+done
+
+# Query with PROXYv2
+# Client $CLIENT_ADDR_REFUSE should be refused
 # Expect the REFUSE back
 server=127.0.0.1
-client="-p 2.2.2.2"
+client="-p $CLIENT_ADDR_REFUSE"
 query="one.example.net."
 answer=""
 for prot in "-u" "" "-s"; do
@@ -141,10 +153,22 @@ for prot in "-u" "" "-s"; do
 done
 
 # Query with PROXYv2
-# Client 1.1.1.1 should be allowed; proxy source address should be allowed
+# Client $CLIENT_ADDR_REFUSE6 should be refused
+# Expect the REFUSE back
+server=127.0.0.1
+client="-p $CLIENT_ADDR_REFUSE6"
+query="one.example.net."
+answer=""
+for prot in "-u" "" "-s"; do
+	send_query "$server" "$client" "$prot" "$query"
+	expect_refuse
+done
+
+# Query with PROXYv2
+# Client $CLIENT_ADDR_ALLOW should be allowed; proxy source address should be allowed
 # Expect the result back
 server=$INTERFACE_ALLOW_ADDR
-client="-p 1.1.1.1@1234"
+client="-p $CLIENT_ADDR_ALLOW@1234"
 query="one.example.net."
 answer="1.1.1.1"
 for prot in "-u" "" "-s"; do
@@ -153,10 +177,10 @@ for prot in "-u" "" "-s"; do
 done
 
 # Query with PROXYv2
-# Client 1.1.1.1 should be allowed; proxy source address should be refused
+# Client $CLIENT_ADDR_ALLOW should be allowed; proxy source address should be refused
 # Expect the REFUSE back
 server=$INTERFACE_REFUSE_ADDR
-client="-p 1.1.1.1@1234"
+client="-p $CLIENT_ADDR_ALLOW@1234"
 query="one.example.net."
 answer=""
 for prot in "-u" "" "-s"; do
