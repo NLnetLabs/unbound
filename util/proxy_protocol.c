@@ -65,13 +65,13 @@ pp2_write_to_buf(struct sldns_buffer* buf, struct sockaddr_storage* src,
 		/* length */
 		sldns_buffer_write_u16(buf, 12);
 		/* src addr */
-		sldns_buffer_write_u32(buf,
-			htonl(((struct sockaddr_in*)src)->sin_addr.s_addr));
+		sldns_buffer_write(buf,
+			&((struct sockaddr_in*)src)->sin_addr.s_addr, 4);
 		/* dst addr */
 		sldns_buffer_write_u32(buf, 0);
 		/* src port */
-		sldns_buffer_write_u16(buf,
-			htons(((struct sockaddr_in*)src)->sin_port));
+		sldns_buffer_write(buf,
+			&((struct sockaddr_in*)src)->sin_port, 2);
 		/* dst port */
 		sldns_buffer_write_u16(buf, 0);
 	} else {
@@ -89,8 +89,8 @@ pp2_write_to_buf(struct sldns_buffer* buf, struct sockaddr_storage* src,
 			sldns_buffer_position(buf), 0, 16);
 		sldns_buffer_skip(buf, 16);
 		/* src port */
-		sldns_buffer_write_u16(buf,
-			htons(((struct sockaddr_in6*)src)->sin6_port));
+		sldns_buffer_write(buf,
+			&((struct sockaddr_in6*)src)->sin6_port, 2);
 		/* dst port */
 		sldns_buffer_write_u16(buf, 0);
 	}
