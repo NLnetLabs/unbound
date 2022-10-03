@@ -128,7 +128,10 @@ struct listen_port {
 	int fd;
 	/** type of file descriptor, udp or tcp */
 	enum listen_type ftype;
-	/** fill in unbpound_socket structure for every opened socket at Unbound startup */
+	/** if the port should support PROXYv2 */
+	int pp2_enabled;
+	/** fill in unbound_socket structure for every opened socket at
+	 * Unbound startup */
 	struct unbound_socket* socket;
 };
 

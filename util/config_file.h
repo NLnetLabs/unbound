@@ -114,6 +114,8 @@ struct config_file {
 	int do_tcp_keepalive;
 	/** tcp keepalive timeout, in msec */
 	int tcp_keepalive_timeout;
+	/** proxy protocol ports */
+	struct config_strlist* proxy_protocol_port;
 
 	/** private key file for dnstcp-ssl service (enabled if not NULL) */
 	char* ssl_service_key;
@@ -1322,6 +1324,12 @@ int if_is_https(const char* ifname, const char* port, int https_port);
  */
 int cfg_has_https(struct config_file* cfg);
 
+/** see if interface is PROXYv2, its port number == the proxy port number */
+int if_is_pp2(const char* ifname, const char* port,
+	struct config_strlist* proxy_protocol_port);
+
+/** see if interface is DNSCRYPT, its port number == the dnscrypt port number */
+int if_is_dnscrypt(const char* ifname, const char* port, int dnscrypt_port);
 #ifdef USE_LINUX_IP_LOCAL_PORT_RANGE
 #define LINUX_IP_LOCAL_PORT_RANGE_PATH "/proc/sys/net/ipv4/ip_local_port_range"
 #endif

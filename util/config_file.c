@@ -786,6 +786,7 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	else S_SIZET_NONZERO("pad-responses-block-size:", pad_responses_block_size)
 	else S_YNO("pad-queries:", pad_queries)
 	else S_SIZET_NONZERO("pad-queries-block-size:", pad_queries_block_size)
+	else S_STRLIST("proxy-protocol-port:", proxy_protocol_port)
 #ifdef USE_IPSECMOD
 	else S_YNO("ipsecmod-enabled:", ipsecmod_enabled)
 	else S_YNO("ipsecmod-ignore-bogus:", ipsecmod_ignore_bogus)
@@ -1262,6 +1263,7 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_YNO(opt, "pad-queries", pad_queries)
 	else O_DEC(opt, "pad-queries-block-size", pad_queries_block_size)
 	else O_LS2(opt, "edns-client-strings", edns_client_strings)
+	else O_LST(opt, "proxy-protocol-port", proxy_protocol_port)
 #ifdef USE_IPSECMOD
 	else O_YNO(opt, "ipsecmod-enabled", ipsecmod_enabled)
 	else O_YNO(opt, "ipsecmod-ignore-bogus", ipsecmod_ignore_bogus)
@@ -1642,6 +1644,7 @@ config_delete(struct config_file* cfg)
 	config_delstrlist(cfg->python_script);
 	config_delstrlist(cfg->dynlib_file);
 	config_deldblstrlist(cfg->edns_client_strings);
+	config_delstrlist(cfg->proxy_protocol_port);
 #ifdef USE_IPSECMOD
 	free(cfg->ipsecmod_hook);
 	config_delstrlist(cfg->ipsecmod_whitelist);
@@ -2623,4 +2626,36 @@ int cfg_has_https(struct config_file* cfg)
 			return 1;
 	}
 	return 0;
+}
+
+/** see if interface is PROXYv2, its port number == the proxy port number */
+int
+if_is_pp2(const char* ifname, const char* port,
+	struct config_strlist* proxy_protocol_port)
+{
+	struct config_strlist* s;
+	char* p = strchr(ifname, '@');
+	for(s = proxy_protocol_port; s; s = s->next) {
+		if(p && atoi(p+1) == atoi(s->str))
+			return 1;
+		if(!p && atoi(port) == atoi(s->str))
+			return 1;
+	}
+	return 0;
+}
+
+/** see if interface is DNSCRYPT, its port number == the dnscrypt port number */
+int
+if_is_dnscrypt(const char* ifname, const char* port, int dnscrypt_port)
+{
+#ifdef USE_DNSCRYPT
+	return ((strchr(ifname, '@') &&
+		atoi(strchr(ifname, '@')+1) == dnscrypt_port) ||
+		(!strchr(ifname, '@') && atoi(port) == dnscrypt_port));
+#else
+	(void)ifname;
+	(void)port;
+	(void)dnscrypt_port;
+	return 0;
+#endif
 }

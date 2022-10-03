@@ -721,12 +721,12 @@ outnet_tcp_take_into_use(struct waiting_tcp* w)
 	pend->next_free = NULL;
 	pend->query = w;
 	pend->reuse.outnet = w->outnet;
-	pend->c->repinfo.addrlen = w->addrlen;
+	pend->c->repinfo.remote_addrlen = w->addrlen;
 	pend->c->tcp_more_read_again = &pend->reuse.cp_more_read_again;
 	pend->c->tcp_more_write_again = &pend->reuse.cp_more_write_again;
 	pend->reuse.cp_more_read_again = 0;
 	pend->reuse.cp_more_write_again = 0;
-	memcpy(&pend->c->repinfo.addr, &w->addr, w->addrlen);
+	memcpy(&pend->c->repinfo.remote_addr, &w->addr, w->addrlen);
 	pend->reuse.pending = pend;
 
 	/* Remove from tree in case the is_ssl will be different and causes the
@@ -1417,11 +1417,11 @@ outnet_udp_cb(struct comm_point* c, void* arg, int error,
 
 	/* setup lookup key */
 	key.id = (unsigned)LDNS_ID_WIRE(sldns_buffer_begin(c->buffer));
-	memcpy(&key.addr, &reply_info->addr, reply_info->addrlen);
-	key.addrlen = reply_info->addrlen;
+	memcpy(&key.addr, &reply_info->remote_addr, reply_info->remote_addrlen);
+	key.addrlen = reply_info->remote_addrlen;
 	verbose(VERB_ALGO, "Incoming reply id = %4.4x", key.id);
 	log_addr(VERB_ALGO, "Incoming reply addr =", 
-		&reply_info->addr, reply_info->addrlen);
+		&reply_info->remote_addr, reply_info->remote_addrlen);
 
 	/* find it, see if this thing is a valid query response */
 	verbose(VERB_ALGO, "lookup size is %d entries", (int)outnet->pending->count);
@@ -1690,7 +1690,7 @@ outside_network_create(struct comm_base *base, size_t bufsize,
 			return NULL;
 		}
 		pc->cp = comm_point_create_udp(outnet->base, -1, 
-			outnet->udp_buff, outnet_udp_cb, outnet, NULL);
+			outnet->udp_buff, 0, outnet_udp_cb, outnet, NULL);
 		if(!pc->cp) {
 			log_err("malloc failed");
 			free(pc);
@@ -3103,8 +3103,8 @@ serviced_tcp_callback(struct comm_point* c, void* arg, int error,
 		rep = &r2;
 		r2.c = c;
 	}
-	memcpy(&rep->addr, &sq->addr, sq->addrlen);
-	rep->addrlen = sq->addrlen;
+	memcpy(&rep->remote_addr, &sq->addr, sq->addrlen);
+	rep->remote_addrlen = sq->addrlen;
 	serviced_callbacks(sq, error, c, rep);
 	return 0;
 }
@@ -3582,7 +3582,7 @@ outnet_comm_point_for_udp(struct outside_network* outnet,
 	if(fd == -1) {
 		return NULL;
 	}
-	cp = comm_point_create_udp(outnet->base, fd, outnet->udp_buff,
+	cp = comm_point_create_udp(outnet->base, fd, outnet->udp_buff, 0,
 		cb, cb_arg, NULL);
 	if(!cp) {
 		log_err("malloc failure");
@@ -3670,8 +3670,8 @@ outnet_comm_point_for_tcp(struct outside_network* outnet,
 		close(fd);
 		return 0;
 	}
-	cp->repinfo.addrlen = to_addrlen;
-	memcpy(&cp->repinfo.addr, to_addr, to_addrlen);
+	cp->repinfo.remote_addrlen = to_addrlen;
+	memcpy(&cp->repinfo.remote_addr, to_addr, to_addrlen);
 
 	/* setup for SSL (if needed) */
 	if(ssl) {
@@ -3746,8 +3746,8 @@ outnet_comm_point_for_http(struct outside_network* outnet,
 		close(fd);
 		return 0;
 	}
-	cp->repinfo.addrlen = to_addrlen;
-	memcpy(&cp->repinfo.addr, to_addr, to_addrlen);
+	cp->repinfo.remote_addrlen = to_addrlen;
+	memcpy(&cp->repinfo.remote_addr, to_addr, to_addrlen);
 
 	/* setup for SSL (if needed) */
 	if(ssl) {

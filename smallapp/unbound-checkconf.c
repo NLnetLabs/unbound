@@ -338,6 +338,8 @@ interfacechecks(struct config_file* cfg)
 	int i, j, i2, j2;
 	char*** resif = NULL;
 	int* num_resif = NULL;
+	char portbuf[32];
+	snprintf(portbuf, sizeof(portbuf), "%d", cfg->port);
 
 	if(cfg->num_ifs != 0) {
 		resif = (char***)calloc(cfg->num_ifs, sizeof(char**));
@@ -359,9 +361,21 @@ interfacechecks(struct config_file* cfg)
 			fatal_exit("could not resolve interface names, for %s",
 				cfg->ifs[i]);
 		}
+		/* check for port combinations that are not supported */
+		if(if_is_pp2(resif[i][0], portbuf, cfg->proxy_protocol_port)) {
+			if(if_is_dnscrypt(resif[i][0], portbuf,
+				cfg->dnscrypt_port)) {
+				fatal_exit("PROXYv2 and DNSCrypt combination not "
+					"supported!");
+			} else if(if_is_https(resif[i][0], portbuf,
+				cfg->https_port)) {
+				fatal_exit("PROXYv2 and DoH combination not "
+					"supported!");
+			}
+		}
 		/* search for duplicates in the returned addresses */
 		for(j=0; j<num_resif[i]; j++) {
-			if(!extstrtoaddr(resif[i][j], &a, &alen, UNBOUND_DNS_PORT)) {
+			if(!extstrtoaddr(resif[i][j], &a, &alen, cfg->port)) {
 				if(strcmp(cfg->ifs[i], resif[i][j]) != 0)
 					fatal_exit("cannot parse interface address '%s' from the interface specified as '%s'",
 						resif[i][j], cfg->ifs[i]);

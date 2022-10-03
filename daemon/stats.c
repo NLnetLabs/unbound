@@ -521,7 +521,7 @@ void server_stats_insquery(struct ub_server_stats* stats, struct comm_point* c,
 				stats->qhttps++;
 		}
 	}
-	if(repinfo && addr_is_ip6(&repinfo->addr, repinfo->addrlen))
+	if(repinfo && addr_is_ip6(&repinfo->remote_addr, repinfo->remote_addrlen))
 		stats->qipv6++;
 	if( (flags&BIT_QR) )
 		stats->qbit_QR++;
