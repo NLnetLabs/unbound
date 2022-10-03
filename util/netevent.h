@@ -535,7 +535,7 @@ struct comm_point* comm_point_create_udp(struct comm_base* base,
  * Uses recvmsg instead of recv to get udp message.
  * setups the structure with the parameters you provide.
  * @param base: in which base to alloc the commpoint.
- * @param fd : file descriptor of open UDP socket.
+ * @param fd: file descriptor of open UDP socket.
  * @param buffer: shared buffer by UDP sockets from this thread.
  * @param pp2_enabled: if the comm point will support PROXYv2.
  * @param callback: callback function pointer.

@@ -9,7 +9,7 @@ CmdDepends:
 Depends:
 Help:
 Pre: proxy_protocol.pre
-Post:
+Post: proxy_protocol.post
 Test: proxy_protocol.test
 AuxFiles:
 Passed:
