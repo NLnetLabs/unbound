@@ -3990,6 +3990,8 @@ process_response(struct module_qstate* qstate, struct iter_qstate* iq,
 
 	/* remove CD-bit, we asked for in case we handle validation ourself */
 	prs->flags &= ~BIT_CD;
+	/* remove TC flag, if this is erroneously set by TCP upstream */
+	prs->flags &= ~BIT_TC;
 
 	/* normalize and sanitize: easy to delete items from linked lists */
 	if(!scrub_message(pkt, prs, &iq->qinfo_out, iq->dp->name, 
