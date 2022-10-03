@@ -1,3 +1,7 @@
+3 October 2022: George
+	- Merge #760: PROXYv2 downstream support. (New proxy-protocol-port
+	  configuration option).
+
 3 October 2022: Wouter
 	- Fix to remove erroneous TC flag from TCP upstream.
 	- Fix test tdir skip report printout.
