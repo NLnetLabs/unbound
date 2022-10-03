@@ -6,6 +6,8 @@
 	- Fix to remove erroneous TC flag from TCP upstream.
 	- Fix test tdir skip report printout.
 	- Fix windows compile, the identifier interface is defined in headers.
+	- Fix to close errno block in comm_point_tcp_handle_read outside of
+	  ifdef.
 
 26 September 2022: George
 	- Better output for skipped tdir tests.

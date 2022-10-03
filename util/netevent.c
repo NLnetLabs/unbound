@@ -2216,8 +2216,8 @@ recv_error:
 				c->repinfo.remote_addrlen);
 			return 0;
 		}
-	}
 #endif
+	}
 #else /* USE_WINSOCK */
 	if(recv_initial) {
 		if(WSAGetLastError() == WSAECONNREFUSED && verbosity < 2)
