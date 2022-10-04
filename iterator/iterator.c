@@ -2778,7 +2778,7 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 		&& iq->depth < ie->max_dependency_depth
 		&& ie->target_fetch_policy[iq->depth] != 0
 		&& iq->dp_target_count == 0
-		/* XXX && !ub_random_max(qstate->env->rnd, 10)*/) {
+		&& !ub_random_max(qstate->env->rnd, 10)) {
 		int extra = 0;
 		verbose(VERB_ALGO, "available target exists in cache but "
 			"attempt to get extra 1 target");

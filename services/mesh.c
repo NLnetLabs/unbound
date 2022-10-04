@@ -2247,6 +2247,6 @@ mesh_serve_expired_callback(void* arg)
 int mesh_jostle_exceeded(struct mesh_area* mesh)
 {
 	if(mesh->all.count < mesh->max_reply_states)
-		/* XXX return 0; */ return 1;
+		return 0;
 	return 1;
 }
