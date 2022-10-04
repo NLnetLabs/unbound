@@ -2775,6 +2775,7 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 	 * gone out to the network for a target query for this delegation, then
 	 * it is possible to slip in a promiscuous one with a 1/10 chance. */
 	if(can_do_promisc && tf_policy == 0 && iq->depth == 0
+		&& iq->depth < ie->max_dependency_depth
 		&& ie->target_fetch_policy[iq->depth] != 0
 		&& iq->dp_target_count == 0
 		/* XXX && !ub_random_max(qstate->env->rnd, 10)*/) {
