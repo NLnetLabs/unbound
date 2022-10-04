@@ -109,16 +109,6 @@ ns.example.com. 	IN 	AAAA
 SECTION AUTHORITY
 example.com.		IN 	NS	ns.example.com.
 ENTRY_END
-
-ENTRY_BEGIN
-MATCH opcode qtype qname
-ADJUST copy_id
-REPLY QR NOERROR
-SECTION QUESTION
-ns2.example.com. 	IN 	AAAA
-SECTION AUTHORITY
-example.com.		IN 	NS	ns.example.com.
-ENTRY_END
 RANGE_END
 
 ; ns.example.com.
@@ -165,35 +155,13 @@ ENTRY_END
 ENTRY_BEGIN
 MATCH opcode qtype qname
 ADJUST copy_id
-REPLY QR NOERROR
+REPLY QR AA NOERROR
 SECTION QUESTION
 ns.example.com. IN AAAA
 SECTION AUTHORITY
 example.com.	IN NS	ns.example.com.
 SECTION ADDITIONAL
 ns.example.com. IN A	1.2.3.4
-ENTRY_END
-
-ENTRY_BEGIN
-MATCH opcode qtype qname
-ADJUST copy_id
-REPLY AA QR NOERROR
-SECTION QUESTION
-ns2.example.com. 	IN 	A
-SECTION ANSWER
-ns2.example.com.	IN 	A	1.2.3.4
-SECTION AUTHORITY
-example.com.		IN 	NS	ns.example.com.
-ENTRY_END
-
-ENTRY_BEGIN
-MATCH opcode qtype qname
-ADJUST copy_id
-REPLY QR NOERROR
-SECTION QUESTION
-ns2.example.com. 	IN 	AAAA
-SECTION AUTHORITY
-example.com.		IN 	NS	ns.example.com.
 ENTRY_END
 
 RANGE_END
