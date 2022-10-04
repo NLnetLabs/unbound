@@ -255,9 +255,9 @@ error_supers(struct module_qstate* qstate, int id, struct module_qstate* super)
 				log_err("out of memory adding missing");
 		}
 		delegpt_mark_neg(dpns, qstate->qinfo.qtype);
-		dpns->resolved = 1; /* mark as failed */
 		if((dpns->got4 == 2 || !ie->supports_ipv4) &&
 			(dpns->got6 == 2 || !ie->supports_ipv6)) {
+			dpns->resolved = 1; /* mark as failed */
 			target_count_increase_nx(super_iq, 1);
 		}
 	}
@@ -3563,12 +3563,13 @@ processTargetResponse(struct module_qstate* qstate, int id,
 	} else {
 		verbose(VERB_ALGO, "iterator TargetResponse failed");
 		delegpt_mark_neg(dpns, qstate->qinfo.qtype);
-		dpns->resolved = 1; /* fail the target */
 		if((dpns->got4 == 2 || !ie->supports_ipv4) &&
-			(dpns->got6 == 2 || !ie->supports_ipv6) &&
+			(dpns->got6 == 2 || !ie->supports_ipv6)) {
+			dpns->resolved = 1; /* fail the target */
 			/* do not count cached answers */
-			(qstate->reply_origin && qstate->reply_origin->len != 0)) {
-			target_count_increase_nx(foriq, 1);
+			if(qstate->reply_origin && qstate->reply_origin->len != 0) {
+				target_count_increase_nx(foriq, 1);
+			}
 		}
 	}
 }
