@@ -8,6 +8,7 @@ fi
 
 # This will keep the temporary directory around and return 1 when the test failed.
 DEBUG=0
+test -n "$DEBUG_TDIR" && DEBUG=1
 
 quiet=0
 if test "$1" = "-q"; then
@@ -213,7 +214,7 @@ if test $DEBUG -eq 0; then
 		rm -rf $dir
 	fi
 else
-	if test $success == "no"; then
+	if test $success = "no"; then
 		exit 1
 	fi
 	exit 0
