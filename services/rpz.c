@@ -2168,18 +2168,16 @@ rpz_callback_from_iterator_module(struct module_qstate* ms, struct iter_qstate* 
 
 	lock_rw_unlock(&az->rpz_lock);
 
-	if(raddr == NULL && z == NULL) { return NULL; }
-	else if(raddr != NULL) {
+	if(raddr == NULL && z == NULL)
+		return NULL;
+
+	if(raddr != NULL) {
 		if(z) {
 			lock_rw_unlock(&z->lock);
 		}
 		return rpz_apply_nsip_trigger(ms, r, raddr, a);
-	} else if(z != NULL) {
-		if(raddr) {
-			lock_rw_unlock(&raddr->lock);
-		}
-		return rpz_apply_nsdname_trigger(ms, r, z, &match, a);
-	} else { return NULL; }
+	}
+	return rpz_apply_nsdname_trigger(ms, r, z, &match, a);
 }
 
 struct dns_msg* rpz_callback_from_iterator_cname(struct module_qstate* ms,

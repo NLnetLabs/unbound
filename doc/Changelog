@@ -1,3 +1,7 @@
+4 October 2022: Wouter
+	- Fix static analysis report to remove dead code from the
+	  rpz_callback_from_iterator_module function.
+
 3 October 2022: George
 	- Merge #760: PROXYv2 downstream support. (New proxy-protocol-port
 	  configuration option).
