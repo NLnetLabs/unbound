@@ -176,7 +176,7 @@ SECTION ADDITIONAL
 ns.example.com.		IN 	A	1.2.3.4
 ENTRY_END
 
-; let possible outstanding queries finish resolving
+; let (possible) outstanding queries finish resolving
 STEP 21 TRAFFIC
 
 SCENARIO_END
