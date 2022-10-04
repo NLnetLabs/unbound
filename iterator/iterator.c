@@ -255,9 +255,9 @@ error_supers(struct module_qstate* qstate, int id, struct module_qstate* super)
 				log_err("out of memory adding missing");
 		}
 		delegpt_mark_neg(dpns, qstate->qinfo.qtype);
-		dpns->resolved = 1; /* mark as failed */
 		if((dpns->got4 == 2 || !ie->supports_ipv4) &&
 			(dpns->got6 == 2 || !ie->supports_ipv6)) {
+			dpns->resolved = 1; /* mark as failed */
 			target_count_increase_nx(super_iq, 1);
 		}
 	}
@@ -2264,6 +2264,7 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 	size_t qout_orig_len = 0;
 	int sq_check_ratelimit = 1;
 	int sq_was_ratelimited = 0;
+	int can_do_promisc = 0;
 
 	/* NOTE: a request will encounter this state for each target it
 	 * needs to send a query to. That is, at least one per referral,
@@ -2591,12 +2592,12 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 	if(iq->depth < ie->max_dependency_depth
 		&& iq->num_target_queries == 0
 		&& (!iq->target_count || iq->target_count[TARGET_COUNT_NX]==0)
-		&& iq->sent_count < TARGET_FETCH_STOP
-		/* if the mesh query list is full, then do not waste cpu
-		 * and sockets to fetch promiscuous targets. They can be
-		 * looked up when needed. */
-		&& !mesh_jostle_exceeded(qstate->env->mesh)
-		) {
+		&& iq->sent_count < TARGET_FETCH_STOP) {
+		can_do_promisc = 1;
+	}
+	/* if the mesh query list is full, then do not waste cpu and sockets to
+	 * fetch promiscuous targets. They can be looked up when needed. */
+	if(can_do_promisc && !mesh_jostle_exceeded(qstate->env->mesh)) {
 		tf_policy = ie->target_fetch_policy[iq->depth];
 	}
 
@@ -2766,6 +2767,37 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 			iq->qinfo_out.qname_len = qout_orig_len;
 		}
 		return 0;
+	}
+
+	/* We have a target. We could have created promiscuous target
+	 * queries but we are currently under pressure (mesh_jostle_exceeded).
+	 * If we are configured to allow promiscuous target queries and haven't
+	 * gone out to the network for a target query for this delegation, then
+	 * it is possible to slip in a promiscuous one with a 1/10 chance. */
+	if(can_do_promisc && tf_policy == 0 && iq->depth == 0
+		&& iq->depth < ie->max_dependency_depth
+		&& ie->target_fetch_policy[iq->depth] != 0
+		&& iq->dp_target_count == 0
+		&& !ub_random_max(qstate->env->rnd, 10)) {
+		int extra = 0;
+		verbose(VERB_ALGO, "available target exists in cache but "
+			"attempt to get extra 1 target");
+		(void)query_for_targets(qstate, iq, ie, id, 1, &extra);
+		/* errors ignored, these targets are not strictly necessary for
+		* this result, we do not have to reply with SERVFAIL */
+		if(extra > 0) {
+			iq->num_target_queries += extra;
+			target_count_increase(iq, extra);
+			check_waiting_queries(iq, qstate, id);
+			/* undo qname minimise step because we'll get back here
+			 * to do it again */
+			if(qout_orig && iq->minimise_count > 0) {
+				iq->minimise_count--;
+				iq->qinfo_out.qname = qout_orig;
+				iq->qinfo_out.qname_len = qout_orig_len;
+			}
+			return 0;
+		}
 	}
 
 	/* Do not check ratelimit for forwarding queries or if we already got a
@@ -3531,12 +3563,13 @@ processTargetResponse(struct module_qstate* qstate, int id,
 	} else {
 		verbose(VERB_ALGO, "iterator TargetResponse failed");
 		delegpt_mark_neg(dpns, qstate->qinfo.qtype);
-		dpns->resolved = 1; /* fail the target */
 		if((dpns->got4 == 2 || !ie->supports_ipv4) &&
-			(dpns->got6 == 2 || !ie->supports_ipv6) &&
+			(dpns->got6 == 2 || !ie->supports_ipv6)) {
+			dpns->resolved = 1; /* fail the target */
 			/* do not count cached answers */
-			(qstate->reply_origin && qstate->reply_origin->len != 0)) {
-			target_count_increase_nx(foriq, 1);
+			if(qstate->reply_origin && qstate->reply_origin->len != 0) {
+				target_count_increase_nx(foriq, 1);
+			}
 		}
 	}
 }
