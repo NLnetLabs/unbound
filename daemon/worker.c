@@ -1301,16 +1301,16 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 		if(worker_check_request(c->buffer, worker) != 0) {
 			verbose(VERB_ALGO,
 				"dnscrypt: worker check request: bad query.");
-			log_addr(VERB_CLIENT,"from",&repinfo->addr,
-				repinfo->addrlen);
+			log_addr(VERB_CLIENT,"from",&repinfo->client_addr,
+				repinfo->client_addrlen);
 			comm_point_drop_reply(repinfo);
 			return 0;
 		}
 		if(!query_info_parse(&qinfo, c->buffer)) {
 			verbose(VERB_ALGO,
 				"dnscrypt: worker parse request: formerror.");
-			log_addr(VERB_CLIENT, "from", &repinfo->addr,
-				repinfo->addrlen);
+			log_addr(VERB_CLIENT, "from", &repinfo->client_addr,
+				repinfo->client_addrlen);
 			comm_point_drop_reply(repinfo);
 			return 0;
 		}
