@@ -1,6 +1,7 @@
 5 October 2022: George
 	- Use DEBUG_TDIR from environment in mini_tdir.sh for debugging.
 	- Fix string comparison in mini_tdir.sh.
+	- Make ede.tdir test more predictable by using static data.
 
 4 October 2022: George
 	- Merge #764: Leniency for target discovery when under load (for
