@@ -12,7 +12,7 @@ echo "> cat logfiles"
 cat fwd.log
 cat unbound.log
 echo "> check answer"
-if grep "10.20.30.42" outfile; then
+if grep "SERVFAIL" outfile; then
 	echo "OK"
 else
 	echo "Not OK"

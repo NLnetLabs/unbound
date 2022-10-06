@@ -1,3 +1,8 @@
+6 October 2022: Wouter
+	- Fix to stop responses with TC flag from resulting in partial
+	  responses. It retries to fetch the data elsewhere, or fails the
+	  query and in depth fix removes the TC flag from the cached item.
+
 5 October 2022: Wouter
 	- Fix dnscrypt compile for proxy protocol code changes.
 

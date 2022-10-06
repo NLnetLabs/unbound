@@ -2907,6 +2907,8 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 		(int)((iq->chase_flags&BIT_RD) || iq->chase_to_rd),
 		iq->response, &iq->qinfo_out, iq->dp);
 	iq->chase_to_rd = 0;
+	/* remove TC flag, if this is erroneously set by TCP upstream */
+	iq->response->rep->flags &= ~BIT_TC;
 	if(type == RESPONSE_TYPE_REFERRAL && (iq->chase_flags&BIT_RD) &&
 		!iq->auth_zone_response) {
 		/* When forwarding (RD bit is set), we handle referrals 
@@ -4027,8 +4029,6 @@ process_response(struct module_qstate* qstate, struct iter_qstate* iq,
 
 	/* remove CD-bit, we asked for in case we handle validation ourself */
 	prs->flags &= ~BIT_CD;
-	/* remove TC flag, if this is erroneously set by TCP upstream */
-	prs->flags &= ~BIT_TC;
 
 	/* normalize and sanitize: easy to delete items from linked lists */
 	if(!scrub_message(pkt, prs, &iq->qinfo_out, iq->dp->name, 
