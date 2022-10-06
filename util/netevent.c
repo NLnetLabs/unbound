@@ -1634,7 +1634,7 @@ ssl_handle_read(struct comm_point* c)
 			}
 			verbose(VERB_ALGO, "proxy_protocol: reading fixed "
 				"part of PROXYv2 header (len %lu)",
-				want_read_size);
+				(unsigned long)want_read_size);
 			current_read_size = want_read_size;
 			if(c->tcp_byte_count < current_read_size) {
 				ERR_clear_error();
@@ -1692,7 +1692,7 @@ ssl_handle_read(struct comm_point* c)
 			}
 			verbose(VERB_ALGO, "proxy_protocol: reading variable "
 				"part of PROXYv2 header (len %lu)",
-				want_read_size);
+				(unsigned long)want_read_size);
 			current_read_size = PP2_HEADER_SIZE + want_read_size;
 			if(c->tcp_byte_count < current_read_size) {
 				ERR_clear_error();
@@ -2045,7 +2045,7 @@ comm_point_tcp_handle_read(int fd, struct comm_point* c, int short_ok)
 			}
 			verbose(VERB_ALGO, "proxy_protocol: reading fixed "
 				"part of PROXYv2 header (len %lu)",
-				want_read_size);
+				(unsigned long)want_read_size);
 			current_read_size = want_read_size;
 			if(c->tcp_byte_count < current_read_size) {
 				r = recv(fd, (void*)sldns_buffer_at(c->buffer,
@@ -2081,7 +2081,7 @@ comm_point_tcp_handle_read(int fd, struct comm_point* c, int short_ok)
 			}
 			verbose(VERB_ALGO, "proxy_protocol: reading variable "
 				"part of PROXYv2 header (len %lu)",
-				want_read_size);
+				(unsigned long)want_read_size);
 			current_read_size = PP2_HEADER_SIZE + want_read_size;
 			if(c->tcp_byte_count < current_read_size) {
 				r = recv(fd, (void*)sldns_buffer_at(c->buffer,
