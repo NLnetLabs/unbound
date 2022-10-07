@@ -2,6 +2,7 @@
 	- Fix to stop possible loops in the tcp reuse code (write_wait list
 	  and tcp_wait list). Based on analysis and patch from Prad Seniappan
 	  and Karthik Umashankar.
+	- Fix unit test to properly test the reuse_write_wait_pop function.
 
 6 October 2022: Wouter
 	- Fix to stop responses with TC flag from resulting in partial

@@ -474,9 +474,9 @@ static void reuse_write_wait_test(void)
 
 	/* Check pop */
 	unit_show_func("services/outside_network.c", "reuse_write_wait_pop");
-	check_reuse_write_wait_removal(0, &reuse, store, 0, 3);
-	check_reuse_write_wait_removal(0, &reuse, store, 0, 2);
-	check_reuse_write_wait_removal(0, &reuse, store, 0, 1);
+	check_reuse_write_wait_removal(1, &reuse, store, 0, 3);
+	check_reuse_write_wait_removal(1, &reuse, store, 0, 2);
+	check_reuse_write_wait_removal(1, &reuse, store, 0, 1);
 }
 
 void tcpreuse_test(void)
