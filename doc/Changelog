@@ -1,3 +1,8 @@
+7 October 2022: George
+	- Fix to stop possible loops in the tcp reuse code (write_wait list
+	  and tcp_wait list). Based on analysis and patch from Prad Seniappan
+	  and Karthik Umashankar.
+
 6 October 2022: Wouter
 	- Fix to stop responses with TC flag from resulting in partial
 	  responses. It retries to fetch the data elsewhere, or fails the
