@@ -1694,7 +1694,10 @@ ssl_handle_read(struct comm_point* c)
 				"part of PROXYv2 header (len %lu)",
 				(unsigned long)want_read_size);
 			current_read_size = PP2_HEADER_SIZE + want_read_size;
-			if(c->tcp_byte_count < current_read_size) {
+			if(want_read_size == 0) {
+				/* nothing more to read; header is complete */
+				c->pp2_header_state = pp2_header_done;
+			} else if(c->tcp_byte_count < current_read_size) {
 				ERR_clear_error();
 				if((r=SSL_read(c->ssl, (void*)sldns_buffer_at(
 					c->buffer, c->tcp_byte_count),
@@ -2083,7 +2086,10 @@ comm_point_tcp_handle_read(int fd, struct comm_point* c, int short_ok)
 				"part of PROXYv2 header (len %lu)",
 				(unsigned long)want_read_size);
 			current_read_size = PP2_HEADER_SIZE + want_read_size;
-			if(c->tcp_byte_count < current_read_size) {
+			if(want_read_size == 0) {
+				/* nothing more to read; header is complete */
+				c->pp2_header_state = pp2_header_done;
+			} else if(c->tcp_byte_count < current_read_size) {
 				r = recv(fd, (void*)sldns_buffer_at(c->buffer,
 					c->tcp_byte_count),
 					current_read_size-c->tcp_byte_count, MSG_DONTWAIT);
