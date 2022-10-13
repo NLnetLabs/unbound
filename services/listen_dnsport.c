@@ -3471,9 +3471,14 @@ static int
 doq_conn_key_store_repinfo(struct doq_conn_key* key,
 	struct comm_reply* repinfo)
 {
+	repinfo->is_proxied = 0;
 	repinfo->doq_ifindex = key->paddr.ifindex;
-	repinfo->addrlen = key->paddr.addrlen;
-	memmove(&repinfo->addr, &key->paddr.addr, repinfo->addrlen);
+	repinfo->remote_addrlen = key->paddr.addrlen;
+	memmove(&repinfo->remote_addr, &key->paddr.addr,
+		repinfo->remote_addrlen);
+	repinfo->client_addrlen = key->paddr.addrlen;
+	memmove(&repinfo->client_addr, &key->paddr.addr,
+		repinfo->client_addrlen);
 	doq_repinfo_store_localaddr(repinfo, &key->paddr.localaddr,
 		key->paddr.localaddrlen);
 	if(key->dcidlen > sizeof(repinfo->doq_dcid))
@@ -3487,8 +3492,9 @@ void
 doq_conn_key_from_repinfo(struct doq_conn_key* key, struct comm_reply* repinfo)
 {
 	key->paddr.ifindex = repinfo->doq_ifindex;
-	key->paddr.addrlen = repinfo->addrlen;
-	memmove(&key->paddr.addr, &repinfo->addr, repinfo->addrlen);
+	key->paddr.addrlen = repinfo->remote_addrlen;
+	memmove(&key->paddr.addr, &repinfo->remote_addr,
+		repinfo->remote_addrlen);
 	doq_repinfo_retrieve_localaddr(repinfo, &key->paddr.localaddr,
 		&key->paddr.localaddrlen);
 	key->dcidlen = repinfo->doq_dcidlen;

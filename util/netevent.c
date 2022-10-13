@@ -5229,6 +5229,8 @@ comm_point_create_doq(struct comm_base *base, int fd, sldns_buffer* buffer,
 	c->callback = callback;
 	c->cb_arg = callback_arg;
 	c->socket = socket;
+	c->pp2_enabled = 0;
+	c->pp2_header_state = pp2_header_none;
 	evbits = UB_EV_READ | UB_EV_PERSIST;
 	/* ub_event stuff */
 	c->ev->ev = ub_event_new(base->eb->base, c->fd, evbits,
