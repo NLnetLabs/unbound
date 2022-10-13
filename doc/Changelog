@@ -1,3 +1,7 @@
+11 October 2022: George
+	- Fix PROXYv2 header read for TCP connections when no proxied addresses
+	  are provided.
+
 7 October 2022: Wouter
 	- Tag for 1.17.0rc1 release.
 
