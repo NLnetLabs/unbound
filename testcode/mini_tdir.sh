@@ -8,6 +8,7 @@ fi
 
 # This will keep the temporary directory around and return 1 when the test failed.
 DEBUG=0
+test -n "$DEBUG_TDIR" && DEBUG=1
 
 quiet=0
 if test "$1" = "-q"; then
@@ -56,7 +57,7 @@ if test "$1" = "-f" && test "$2" = "report"; then
 			fi
 		elif test -f ".skip-$name"; then
 			echo ".. SKIPPED.. $timelen $name: $desc"
-			skip=`expr $pass + 1`
+			skip=`expr $skip + 1`
 		else
 			if test -f "result.$name"; then
 				echo "!! FAILED !! $timelen $name: $desc"
@@ -92,7 +93,9 @@ if test "$1" = "report" || test "$2" = "report"; then
 			if test -f "result.$name"; then
 				echo "!! FAILED !! : $name"
 			else
-				echo ".. SKIPPED.. : $name"
+				if test $quiet = 0; then
+					echo ".. SKIPPED.. : $name"
+				fi
 			fi
 		fi
 	done
@@ -163,6 +166,7 @@ if test -f $name.pre; then
 	if test $exit_value -eq 3; then
 		echo "$name: SKIPPED" >> $result
 		echo "$name: SKIPPED" > ../$skip
+		echo "$name: SKIPPED"
 	elif test $exit_value -ne 0; then
 		echo "Warning: $name.pre did not exit successfully"
 	fi
@@ -210,7 +214,7 @@ if test $DEBUG -eq 0; then
 		rm -rf $dir
 	fi
 else
-	if test $success == "no"; then
+	if test $success = "no"; then
 		exit 1
 	fi
 	exit 0

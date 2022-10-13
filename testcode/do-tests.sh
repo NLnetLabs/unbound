@@ -16,7 +16,7 @@ NEED_WHOAMI='07-confroot.tdir'
 NEED_IPV6='fwd_ancil.tdir fwd_tcp_tc6.tdir stub_udp6.tdir edns_cache.tdir'
 NEED_NOMINGW='tcp_sigpipe.tdir 07-confroot.tdir 08-host-lib.tdir fwd_ancil.tdir'
 NEED_DNSCRYPT_PROXY='dnscrypt_queries.tdir dnscrypt_queries_chacha.tdir'
-NEED_UNSHARE='acl_interface.tdir'
+NEED_UNSHARE='acl_interface.tdir proxy_protocol.tdir'
 
 # test if dig and ldns-testns are available.
 test_tool_avail "dig"

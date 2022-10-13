@@ -765,7 +765,7 @@ subnetmod_operate(struct module_qstate *qstate, enum module_ev event,
 		}
 		else if(qstate->mesh_info->reply_list) {
 			subnet_option_from_ss(
-				&qstate->mesh_info->reply_list->query_reply.addr,
+				&qstate->mesh_info->reply_list->query_reply.client_addr,
 				&sq->ecs_client_in, qstate->env->cfg);
 		}
 		
