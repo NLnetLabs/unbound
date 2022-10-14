@@ -1,3 +1,7 @@
+14 October 2022: Wouter
+	- Merge #768 from fobser: Arithmetic on a pointer to void is a GNU
+	  extension.
+
 13 October 2022: Wouter
 	- Tag for 1.17.0 release. The code repository continues with 1.17.1.
 
