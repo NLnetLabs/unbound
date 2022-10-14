@@ -810,7 +810,7 @@ done:
 		/* We are reading a whole packet;
 		 * Move the rest of the data to overwrite the PROXYv2 header */
 		/* XXX can we do better to avoid memmove? */
-		memmove(header, ((void*)header)+size,
+		memmove(header, ((char*)header)+size,
 			sldns_buffer_limit(buf)-size);
 		sldns_buffer_set_limit(buf, sldns_buffer_limit(buf)-size);
 	}
