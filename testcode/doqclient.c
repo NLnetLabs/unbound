@@ -2160,6 +2160,7 @@ int main(int ATTR_UNUSED(argc), char** ATTR_UNUSED(argv))
 #endif
 	checklock_start();
 	log_init(0, 0, 0);
+	log_ident_set("doqclient");
 
 	while((c=getopt(argc, argv, "hp:qs:vx:y:")) != -1) {
 		switch(c) {
