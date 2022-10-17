@@ -1,3 +1,6 @@
+17 October 2022: Wouter
+	- testcode/dohclient sets log identity to its name.
+
 14 October 2022: Wouter
 	- Merge #768 from fobser: Arithmetic on a pointer to void is a GNU
 	  extension.
