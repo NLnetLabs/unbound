@@ -383,18 +383,25 @@ infra_lookup_nottl(struct infra_cache* infra, struct sockaddr_storage* addr,
 	return slabhash_lookup(infra->hosts, k.entry.hash, &k, wr);
 }
 
+/* helper function to fill in random data into the client cookie*/
+void infra_fill_client_cookie_random(struct infra_cache* infra,
+	uint8_t* data) {
+	int i;
+
+	for (i = 0; i < 8; i++) {
+		data[i] = ub_random_max(infra->random_state, 256);
+	}
+}
+
 /** init the data elements */
 static void
 data_entry_init(struct infra_cache* infra, struct lruhash_entry* e, 
 	time_t timenow)
 {
-	int i;
 	struct infra_data* data;
-	uint8_t cookie[8] = {0,0,0,0,0,0,0,0};
+	uint8_t client_cookie_data[8] = {0,0,0,0,0,0,0,0};
 
-	for (i = 0; i < 8; i++) {
-		cookie[i] = ub_random_max(infra->random_state, 256);
-	}
+	infra_fill_client_cookie_random(infra, client_cookie_data);
 
 	data = (struct infra_data*)e->data;
 	data->ttl = timenow + infra->host_ttl;
@@ -404,7 +411,8 @@ data_entry_init(struct infra_cache* infra, struct lruhash_entry* e,
 	data->probedelay = 0;
 	/* set EDNS cookie to zero, as this also sets the starting state*/
 	memset(&data->cookie, 0, sizeof(struct edns_cookie));
-	memcpy(data->cookie.data.cookie, cookie, 8);
+	data->cookie.pif.out = NULL;
+	memcpy(data->cookie.data.cookie, client_cookie_data, 8);
 	data->isdnsseclame = 0;
 	data->rec_lame = 0;
 	data->lame_type_A = 0;
@@ -705,41 +713,10 @@ infra_edns_update(struct infra_cache* infra, struct sockaddr_storage* addr,
 	return 1;
 }
 
-/** find the bound addr in the list of interfaces */
-static int
-get_bound_ip_if(struct outside_network* outnet,
-	struct sockaddr_storage bound_addr, socklen_t bound_addrlen,
-	struct port_if** pif_return)
-{
-	int i = 0;
-	struct port_if* pif_list;
-	int pif_list_len;
-
-	if(addr_is_ip6(&bound_addr, bound_addrlen)) {
-		pif_list = outnet->ip6_ifs;
-		pif_list_len = outnet->num_ip6;
-	} else {
-		pif_list = outnet->ip4_ifs;
-		pif_list_len = outnet->num_ip4;
-	}
-
-	for (i = 0; i < pif_list_len; i++) {
-		struct port_if *iface = &pif_list[i];
-
-		if (iface->addrlen == bound_addrlen &&
-			memcmp(&iface->addr, &bound_addr, bound_addrlen)) {
-			*pif_return = iface;
-			return 1;
-		}
-	}
-	return 0;
-}
-
 int
 infra_get_cookie(struct infra_cache* infra, struct sockaddr_storage* addr,
 	socklen_t addrlen, uint8_t* name, size_t namelen,
-	time_t timenow, struct outside_network* outnet, struct port_if** pif,
-	struct edns_cookie* cookie)
+	time_t timenow, struct edns_cookie* cookie)
 {
 	struct lruhash_entry* e = infra_lookup_nottl(infra, addr, addrlen,
 		name, namelen, 1);
@@ -763,21 +740,11 @@ infra_get_cookie(struct infra_cache* infra, struct sockaddr_storage* addr,
 
 	data = (struct infra_data*) e->data;
 
-	if (data->cookie.state == SERVER_COOKIE_LEARNED) {
-		// lookup bound interface
-		log_err("!!!!! infra_get_cookie:bound_addrlen: %d", data->cookie.bound_addrlen);
-		log_addr(VERB_OPS, "!!!!! infra_get_cookie:bound_addr, len:", &data->cookie.bound_addr,
-			data->cookie.bound_addrlen);
-
-		if (!(get_bound_ip_if(outnet, data->cookie.bound_addr,
-			data->cookie.bound_addrlen, pif))) {
-			log_err("!!!!!!!! creating new cookie for changed interface");
-			data_entry_init(infra, e, timenow);
-		}
-	}
-
-	// @TODO uggo: data has changed
-	data = (struct infra_data*) e->data;
+	// @TODO fix this logic. does the cookie status matter?
+	/* renew cookie if the address isn't available isn't stored */
+	// if (data->cookie->addrlen == 0) {
+	// 	infra_fill_client_cookie_random(infra, &data->cookie->data);
+	// }
 
 	memcpy(cookie, &data->cookie, sizeof(struct edns_cookie));
 
@@ -790,10 +757,9 @@ infra_get_cookie(struct infra_cache* infra, struct sockaddr_storage* addr,
 	return 1;
 }
 
-int
+int 
 infra_set_server_cookie(struct infra_cache* infra, struct sockaddr_storage* addr,
-        socklen_t addrlen, uint8_t* name, size_t namelen,
-        struct sockaddr_storage* bound_addr, socklen_t bound_addrlen,
+        socklen_t addrlen, uint8_t* name, size_t namelen, struct port_if *pif,
         struct edns_option* cookie)
 {
 	struct lruhash_entry* e = infra_lookup_nottl(infra, addr, addrlen,
@@ -832,8 +798,8 @@ infra_set_server_cookie(struct infra_cache* infra, struct sockaddr_storage* addr
 			return -1;
 		}
 
-		if (!(data->cookie.bound_addrlen == bound_addrlen) &&
-			memcpy(&data->cookie.bound_addr, bound_addr, bound_addrlen)){
+		if (!(data->cookie.pif.addrlen == pif->addrlen) &&
+			memcmp(&data->cookie.pif.addr, &pif->addr, pif->addrlen)){
 
 			// @TODO do something? this _should_ only happen on reloads?
 		}
@@ -872,9 +838,12 @@ infra_set_server_cookie(struct infra_cache* infra, struct sockaddr_storage* addr
 		/* store the server cookie */
 		memcpy(data->cookie.data.cookie, cookie->opt_data, 24);
 		data->cookie.state = SERVER_COOKIE_LEARNED;
-		if (bound_addrlen > 0) {
-			memcpy(&data->cookie.bound_addr, bound_addr, bound_addrlen);
-			data->cookie.bound_addrlen = bound_addrlen;
+
+		/* store the inbound interface we receive this cookie on */
+		if (pif->addrlen > 0) {
+			memcpy(&data->cookie.pif,
+				pif, sizeof(struct port_if));
+			data->cookie.pif.addrlen = pif->addrlen;
 		}
 		verbose(VERB_QUERY, "storing received server cookie from upstream");
 		lock_rw_unlock(&e->lock);

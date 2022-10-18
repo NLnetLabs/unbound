@@ -1407,6 +1407,11 @@ outnet_udp_cb(struct comm_point* c, void* arg, int error,
 	struct pending* p;
 	verbose(VERB_ALGO, "answer cb");
 
+
+	log_err("!!!!! outnet_udp_cb: HERE, error: %d", error);
+
+	// @TODO this is the function where we find the failed kernel call
+
 	if(error != NETEVENT_NOERROR) {
 		verbose(VERB_QUERY, "outnetudp got udp error %d", error);
 		return 0;
@@ -1939,6 +1944,9 @@ udp_sockport(struct sockaddr_storage* addr, socklen_t addrlen, int pfxlen,
 	int port, int* inuse, struct ub_randstate* rnd, int dscp)
 {
 	int fd, noproto;
+
+	log_err("!!!!! udp_sockport: HERE!");
+
 	if(addr_is_ip6(addr, addrlen)) {
 		int freebind = 0;
 		struct sockaddr_in6 sa = *(struct sockaddr_in6*)addr;
@@ -2032,6 +2040,7 @@ select_ifport(struct outside_network* outnet, struct pending* pend,
 			"outgoing interfaces of that family");
 		return 0;
 	}
+
 	log_assert(outnet->unused_fds);
 	tries = 0;
 	while(1) {
@@ -2069,7 +2078,7 @@ select_ifport(struct outside_network* outnet, struct pending* pend,
 			}
 		}
 
-		log_err("!!!!! pif->inuse: %d, pif->maxout: %d", pif->inuse, pif->maxout);
+		log_err("!!!!! select_ifport:pif->inuse: %d, pif->maxout: %d", pif->inuse, pif->maxout);
 
 		/* try to open new port, if fails, loop to try again */
 		log_assert(pif->inuse < pif->maxout);
@@ -2080,6 +2089,7 @@ select_ifport(struct outside_network* outnet, struct pending* pend,
 		fd = udp_sockport(&pif->addr, pif->addrlen, pif->pfxlen,
 			portno, &inuse, outnet->rnd, outnet->ip_dscp);
 		if(fd == -1 && !inuse) {
+			log_err("!!!! select_ifport:nonrecoverable error making socket");
 			/* nonrecoverable error making socket */
 			return 0;
 		}
@@ -2616,7 +2626,17 @@ serviced_create(struct outside_network* outnet, sldns_buffer* buff, int dnssec,
 	sq->status = serviced_initial;
 	sq->retry = 0;
 	sq->to_be_deleted = 0;
-	sq->bound_interface = bound_interface;
+	if (bound_interface != NULL) {
+		sq->bound_interface = regional_alloc_init(region,
+			bound_interface, sizeof(struct port_if));
+		if (!sq->bound_interface) {
+			alloc_reg_release(alloc, region);
+			free(sq);
+			return NULL;
+		}
+	} else {
+		sq->bound_interface = NULL;
+	}
 	sq->padding_block_size = pad_queries_block_size;
 #ifdef UNBOUND_DEBUG
 	ins =
@@ -3377,7 +3397,7 @@ outnet_serviced_query(struct outside_network* outnet,
 	struct edns_option* backed_up_opt_list = qstate->edns_opts_back_out;
 	struct edns_option* per_upstream_opt_list = NULL;
 	time_t timenow = 0;
-	struct port_if* pif;
+	struct port_if* pif = NULL;
 
 	/* If we have an already populated EDNS option list make a copy since
 	 * we may now add upstream specific EDNS options. */
@@ -3416,12 +3436,18 @@ outnet_serviced_query(struct outside_network* outnet,
 
 	if (env->cfg->upstream_cookies &&
 		infra_get_cookie(env->infra_cache, addr, addrlen, zone, zonelen,
-			*env->now, outnet, &pif, &cookie)) {
+			*env->now, &cookie)) {
 
 		if (cookie.state == SERVER_COOKIE_LEARNED) {
 			/* We known the complete cookie, so we attach it */
 			edns_opt_list_append(&per_upstream_opt_list, LDNS_EDNS_COOKIE,
 				24, cookie.data.cookie, region);
+
+			if (cookie.pif.addrlen > 0) {
+				pif = &cookie.pif;
+
+				log_addr(VERB_DETAIL, "!!!!! outnet_serviced_query:pif addr:", &cookie.pif.addr, cookie.pif.addrlen);
+			}
 		} else if (cookie.state == SERVER_COOKIE_UNKNOWN) {
 			/* We know just client cookie, so we attach it */
 			edns_opt_list_append(&per_upstream_opt_list, LDNS_EDNS_COOKIE,

@@ -527,7 +527,7 @@ struct serviced_query {
 	struct comm_timer* timer;
 	/** true if serviced_query is currently doing net I/O and may block */
 	int busy;
-	/** Interface bound to the EDNS cookie @TODO fix this */
+	/** interface bound to the EDNS cookie @TODO fix this */
 	struct port_if* bound_interface;
 };
 

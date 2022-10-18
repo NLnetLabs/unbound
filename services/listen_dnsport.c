@@ -630,7 +630,7 @@ create_udp_sock(int family, int socktype, struct sockaddr* addr,
 			&& !(errno == EADDRNOTAVAIL && verbosity < 4 && !listen)
 #endif
 			) {
-			log_err_addr("can't bind socket", strerror(errno),
+			log_err_addr("1can't bind socket", strerror(errno),
 				(struct sockaddr_storage*)addr, addrlen);
 		}
 #endif /* EADDRINUSE */
@@ -638,7 +638,7 @@ create_udp_sock(int family, int socktype, struct sockaddr* addr,
 		if(WSAGetLastError() != WSAEADDRINUSE &&
 			WSAGetLastError() != WSAEADDRNOTAVAIL &&
 			!(WSAGetLastError() == WSAEACCES && verbosity < 4 && !listen)) {
-			log_err_addr("can't bind socket", 
+			log_err_addr("2can't bind socket", 
 				wsa_strerror(WSAGetLastError()),
 				(struct sockaddr_storage*)addr, addrlen);
 		}
@@ -824,12 +824,12 @@ create_tcp_accept_sock(struct addrinfo *addr, int v6only, int* noproto,
 		if(addr->ai_family==AF_INET6 && errno==EINVAL)
 			*noproto = 1;
 		else {
-			log_err_addr("can't bind socket", strerror(errno),
+			log_err_addr("3can't bind socket", strerror(errno),
 				(struct sockaddr_storage*)addr->ai_addr,
 				addr->ai_addrlen);
 		}
 #else
-		log_err_addr("can't bind socket", 
+		log_err_addr("4can't bind socket", 
 			wsa_strerror(WSAGetLastError()),
 			(struct sockaddr_storage*)addr->ai_addr,
 			addr->ai_addrlen);

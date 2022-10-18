@@ -90,8 +90,9 @@ enum edns_cookie_state
 struct edns_cookie {
         enum edns_cookie_state state;
         struct edns_cookie_data data;
-        struct sockaddr_storage bound_addr;
-        socklen_t bound_addrlen;
+        struct port_if pif;
+        // struct sockaddr_storage bound_addr;
+        // socklen_t bound_addrlen;
 };
 
 
@@ -375,13 +376,13 @@ int infra_edns_update(struct infra_cache* infra,
  * @param name: name of zone
  * @param namelen: length of name
  * @param timenow: what time it is now.
+ * @param pif: the interface which contains the outgoing address that we bind to
  * @param cookie: the cookie that is retrieved from cache on success.
  * @return: 0 on error, cookie pointer remains unchanged then.
  */
 int infra_get_cookie(struct infra_cache* infra, struct sockaddr_storage* addr,
         socklen_t addrlen, uint8_t* name, size_t namelen,
-        time_t timenow, struct outside_network* outnet, struct port_if** pif,
-        struct edns_cookie* cookie);
+        time_t timenow, struct edns_cookie* cookie);
 
 /**
  * Find the cookie entry in the cache and update it with to make a 'complete cookie'
@@ -394,16 +395,14 @@ int infra_get_cookie(struct infra_cache* infra, struct sockaddr_storage* addr,
  * @param name: name of zone
  * @param namelen: length of name
  * @param timenow: what time it is now.
- * @param bound_addr: the outgoing address that we bind to this cookie
- * @param bound_addr: the length of the bound address
+ * @param pif: the interface which contains the outgoing address that we bind to
  * @param cookie: the EDNS cookie option we want to store.
  * @return -1 if the wrong client cookie is found, 0 if the entry isn't found in
  *      the cache and a new one is inserted, 1 if the complete cookie is inserted
  *      or unchanged.
  */
 int infra_set_server_cookie(struct infra_cache* infra, struct sockaddr_storage* addr,
-        socklen_t addrlen, uint8_t* name, size_t namelen,
-        struct sockaddr_storage* bound_addr, socklen_t bound_addrlen,
+        socklen_t addrlen, uint8_t* name, size_t namelen, struct port_if *pif,
         struct edns_option* cookie);
 
 /**

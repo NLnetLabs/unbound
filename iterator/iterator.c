@@ -68,6 +68,7 @@
 #include "sldns/str2wire.h"
 #include "sldns/parseutil.h"
 #include "sldns/sbuffer.h"
+#include "daemon/worker.h"
 
 /* in msec */
 int UNKNOWN_SERVER_NICENESS = 376;
@@ -3872,6 +3873,82 @@ process_request(struct module_qstate* qstate, struct iter_qstate* iq,
 	iter_handle(qstate, iq, ie, id);
 }
 
+
+
+/** find the bound addr in the list of interfaces */
+static int
+get_bound_ip_if(struct outside_network* outnet,
+	struct sockaddr_storage *bound_addr, socklen_t bound_addrlen,
+	struct port_if* pif_return)
+{
+	int i = 0;
+	struct port_if* pif_list;
+	int pif_list_len;
+
+	/* Get the list of interfaces and check that that list isn't just the
+	 * "any" address  */
+	if(addr_is_ip6(bound_addr, bound_addrlen)) {
+		pif_list = outnet->ip6_ifs;
+		pif_list_len = outnet->num_ip6;
+
+		// @TODO fix IPv6
+	} else {
+		pif_list = outnet->ip4_ifs;
+		pif_list_len = outnet->num_ip4;
+		struct sockaddr_storage addr_any;
+		socklen_t addr_any_len = 0;
+
+		struct sockaddr_storage addr_fake;
+		socklen_t addr_fake_len = 0;
+
+
+		if (!ipstrtoaddr("0.0.0.0", 0, &addr_any, &addr_any_len)) {
+			// @TODO do something
+		}
+
+		if (!ipstrtoaddr("10.10.1.1", 0, &addr_fake, &addr_fake_len)) {
+			// @TODO do something
+		}
+
+		log_addr(VERB_DETAIL, "!!!!! outnet->ip4_ifs->addr", &outnet->ip4_ifs->addr, bound_addrlen);
+		log_addr(VERB_DETAIL, "!!!!! addr_any", &addr_any, addr_any_len);
+
+		/* if we let the kernel decide the IP, fill in
+		 * the previously used */
+		if (pif_list_len == 1 &&
+			sockaddr_cmp_addr(&outnet->ip4_ifs->addr, outnet->ip4_ifs->addrlen,
+				&addr_any, addr_any_len) == 0) {
+
+			/* return the interface from the list, but substitute the
+			 * previously used address */
+			memcpy(pif_return, outnet->ip4_ifs, sizeof(struct port_if));
+			memcpy(&pif_return->addr, &addr_fake, addr_fake_len);
+			pif_return->addrlen = addr_fake_len;
+
+			log_addr(VERB_DETAIL, "!!!!! get_bound_ip_if: addr from ip4_ifs == 0.0.0.0, new is:", &pif_return->addr, outnet->ip4_ifs->addrlen);
+
+			return 1;
+		}
+	}
+
+	if (pif_list_len == 0) {
+		return 0;
+	}
+
+	for (i = 0; i < pif_list_len; i++) {
+		struct port_if *iface = &pif_list[i];
+
+		if (iface->addrlen == bound_addrlen &&
+			memcmp(&iface->addr, bound_addr, bound_addrlen)) {
+			memcpy(pif_return, iface, sizeof(struct port_if));
+
+			return 1;
+		}
+	}
+
+	return 0;
+}
+
 /** process authoritative server reply */
 static void
 process_response(struct module_qstate* qstate, struct iter_qstate* iq, 
@@ -3940,19 +4017,29 @@ process_response(struct module_qstate* qstate, struct iter_qstate* iq,
 		goto handle_it;
 	}
 
-	/* handle the upstream response cookie if enabled*/
+	/* handle the upstream response cookie if enabled */
 	if(qstate->env->cfg->upstream_cookies) {
 		if (edns.opt_list_in &&
 			(cookie = edns_list_get_option(edns.opt_list_in,
 				LDNS_EDNS_COOKIE))){
 			struct sockaddr_storage bound_addr;
 			socklen_t bound_addrlen = sizeof(struct sockaddr);
+			struct port_if pif;
+			struct port_if *pif_ptr = &pif;
 
 			if(getsockname(qstate->reply->c->fd,
 				(struct sockaddr *) &bound_addr,
 					&bound_addrlen) != -1) {
 
 				log_addr(VERB_DETAIL, "!!!!! iterator:udp socket:", &bound_addr, bound_addrlen);
+
+				if (!(get_bound_ip_if(qstate->env->worker->back,
+					&bound_addr, bound_addrlen, pif_ptr))) {
+					bound_addrlen = 0;
+				}
+
+				log_addr(VERB_DETAIL, "!!!!! iterator:pif addr:", &pif.addr, pif.addrlen);
+
 			} else {
 				bound_addrlen = 0;
 			}
@@ -3964,8 +4051,8 @@ process_response(struct module_qstate* qstate, struct iter_qstate* iq,
 			if (cookie->opt_len == 24 &&
 				infra_set_server_cookie(qstate->env->infra_cache,
 					&qstate->reply->addr, qstate->reply->addrlen,
-					iq->dp->name, iq->dp->namelen, &bound_addr,
-					bound_addrlen, cookie) >= 0) {
+					iq->dp->name, iq->dp->namelen, pif_ptr,
+					cookie) >= 0) {
 				/* log_hex() uses the verbosity levels of verbose() */
 				log_hex("complete cookie: ", cookie->opt_data,
 					cookie->opt_len);
