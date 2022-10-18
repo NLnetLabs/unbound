@@ -1,3 +1,6 @@
+18 October 2022: George
+	- Clarify the use of MAX_SENT_COUNT in the iterator code.
+
 17 October 2022: Wouter
 	- testcode/dohclient sets log identity to its name.
 

@@ -2276,7 +2276,6 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 		iq->num_current_queries, iq->sent_count);
 
 	/* Make sure that we haven't run away */
-	/* FIXME: is this check even necessary? */
 	if(iq->referral_count > MAX_REFERRAL_COUNT) {
 		verbose(VERB_QUERY, "request has exceeded the maximum "
 			"number of referrrals with %d", iq->referral_count);
