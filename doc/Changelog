@@ -1,3 +1,6 @@
+21 October 2022: Wouter
+	- Fix that cachedb does not store failures in the external cache.
+
 18 October 2022: George
 	- Clarify the use of MAX_SENT_COUNT in the iterator code.
 
