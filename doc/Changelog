@@ -1,3 +1,7 @@
+21 October 2022: George
+	- Merge #767 from jonathangray: consistently use IPv4/IPv6 in
+	  unbound.conf.5.
+
 21 October 2022: Wouter
 	- Fix that cachedb does not store failures in the external cache.
 
