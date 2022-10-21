@@ -349,7 +349,7 @@ ip\-transparent option is also available.
 The value of the Differentiated Services Codepoint (DSCP) in the
 differentiated services field (DS) of the outgoing IP packet headers.
 The field replaces the outdated IPv4 Type-Of-Service field and the
-IPV6 traffic class field.
+IPv6 traffic class field.
 .TP
 .B rrset\-cache\-size: \fI<number>
 Number of bytes size of the RRset cache. Default is 4 megabytes.
@@ -416,7 +416,7 @@ Enable or disable whether ip4 queries are answered or issued. Default is yes.
 Enable or disable whether ip6 queries are answered or issued. Default is yes.
 If disabled, queries are not answered on IPv6, and queries are not sent on
 IPv6 to the internet nameservers.  With this option you can disable the
-ipv6 transport for sending DNS traffic, it does not impact the contents of
+IPv6 transport for sending DNS traffic, it does not impact the contents of
 the DNS traffic, which may have ip4 and ip6 addresses in it.
 .TP
 .B prefer\-ip4: \fI<yes or no>
@@ -1671,7 +1671,7 @@ This specifies the action data for \fIresponse-ip\fR with action being
 to redirect as specified by "\fIresource record string\fR".  "Resource
 record string" is similar to that of \fIaccess-control-tag-action\fR,
 but it must be of either AAAA, A or CNAME types.
-If the IP-netblock is an IPv6/IPV4 prefix, the record
+If the IP-netblock is an IPv6/IPv4 prefix, the record
 must be AAAA/A respectively, unless it is a CNAME (which can be used
 for both versions of IP netblocks).  If it is CNAME there must not be
 more than one \fIresponse-ip-data\fR for the same IP-netblock.
