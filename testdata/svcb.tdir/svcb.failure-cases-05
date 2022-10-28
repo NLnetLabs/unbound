@@ -1,8 +1,0 @@
-$ORIGIN failure-cases.
-$TTL 3600
-
-@       SOA     primary admin 0 0 0 0 0
-
-; Dohpath must have '?dns' in the URI template variable
-
-_dns.doh.example. 7200 IN SVCB 1 doh.example. alpn=h2 dohpath=/dns-query{?d}
