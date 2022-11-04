@@ -62,6 +62,15 @@ struct ub_packed_rrset_key;
 struct module_stack;
 struct outside_network;
 
+/* max number of lookups in the cache for target nameserver names.
+ * This stops, for large delegations, N*N lookups in the cache. */
+#define ITERATOR_NAME_CACHELOOKUP_MAX	3
+/* max number of lookups in the cache for parentside glue for nameserver names
+ * This stops, for larger delegations, N*N lookups in the cache.
+ * It is a little larger than the nonpside max, so it allows a couple extra
+ * lookups of parent side glue. */
+#define ITERATOR_NAME_CACHELOOKUP_MAX_PSIDE	5
+
 /**
  * Process config options and set iterator module state.
  * Sets default values if no config is found.
@@ -132,6 +141,7 @@ struct dns_msg* dns_copy_msg(struct dns_msg* from, struct regional* regional);
  * 	can be prefetch-updates.
  * @param region: to copy modified (cache is better) rrs back to.
  * @param flags: with BIT_CD for dns64 AAAA translated queries.
+ * @param qstarttime: time of query start.
  * return void, because we are not interested in alloc errors,
  * 	the iterator and validator can operate on the results in their
  * 	scratch space (the qstate.region) and are not dependent on the cache.
@@ -140,7 +150,7 @@ struct dns_msg* dns_copy_msg(struct dns_msg* from, struct regional* regional);
  */
 void iter_dns_store(struct module_env* env, struct query_info* qinf,
 	struct reply_info* rep, int is_referral, time_t leeway, int pside,
-	struct regional* region, uint16_t flags);
+	struct regional* region, uint16_t flags, time_t qstarttime);
 
 /**
  * Select randomly with n/m probability.

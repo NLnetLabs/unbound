@@ -390,6 +390,15 @@ prep_data(struct module_qstate* qstate, struct sldns_buffer* buf)
 
 	if(!qstate->return_msg || !qstate->return_msg->rep)
 		return 0;
+	/* do not store failures like SERVFAIL in the cachedb, this avoids
+	 * overwriting expired, valid, content with broken content. */
+	if(FLAGS_GET_RCODE(qstate->return_msg->rep->flags) !=
+		LDNS_RCODE_NOERROR &&
+	   FLAGS_GET_RCODE(qstate->return_msg->rep->flags) !=
+		LDNS_RCODE_NXDOMAIN &&
+	   FLAGS_GET_RCODE(qstate->return_msg->rep->flags) !=
+		LDNS_RCODE_YXDOMAIN)
+		return 0;
 	/* We don't store the reply if its TTL is 0 unless serve-expired is
 	 * enabled.  Such a reply won't be reusable and simply be a waste for
 	 * the backend.  It's also compatible with the default behavior of
@@ -662,7 +671,7 @@ cachedb_intcache_store(struct module_qstate* qstate)
 		return;
 	(void)dns_cache_store(qstate->env, &qstate->qinfo,
 		qstate->return_msg->rep, 0, qstate->prefetch_leeway, 0,
-		qstate->region, store_flags);
+		qstate->region, store_flags, qstate->qstarttime);
 }
 
 /**
