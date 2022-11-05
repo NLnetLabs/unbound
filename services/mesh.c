@@ -1515,32 +1515,20 @@ static void dns_error_reporting(struct module_qstate* qstate,
 	size_t qname_len = qstate->qinfo.qname_len-1; /* skip the trailing \0 */
 	uint8_t* agent_domain;
 	size_t agent_domain_len;
-	uint8_t eder_flags;
 
 	eder = edns_opt_list_find(qstate->edns_opts_back_in,
-		(uint16_t) 60909 /* TODO LDNS_EDNS_EDER */);
+		(uint16_t) 65023 /* TODO LDNS_EDNS_EDER */);
+
 	if(!eder) return;
-	eder_flags = *eder->opt_data;
-	agent_domain_len = eder->opt_len - 1;
+	agent_domain_len = eder->opt_len;
 	if(agent_domain_len < 1) return;
-	agent_domain = eder->opt_data + 1;
+	agent_domain = eder->opt_data;
 
 	reason_bogus = errinf_to_reason_bogus(qstate);
 	if(rep && ((reason_bogus == LDNS_EDE_DNSSEC_BOGUS &&
 		rep->reason_bogus != LDNS_EDE_NONE) ||
 		reason_bogus == LDNS_EDE_NONE)) {
 		reason_bogus = rep->reason_bogus;
-	}
-	/* Check the positive feedback flag */
-	/* Needs to check the infra? Where do we keep the TTL information?
-	 * It should be per delegation, not per query */
-	if((reason_bogus == LDNS_EDE_NONE ||
-		// TODO INDETERMINATE is recorded but it could lead to errors
-		//      here. Can we check in validator if the delegation is
-		//      not signed to not attach this there?
-		reason_bogus == LDNS_EDE_DNSSEC_INDETERMINATE) &&
-		eder_flags & 0x80) {
-		reason_bogus = LDNS_EDE_NOERROR;
 	}
 
 	// @TODO create a check for the EDER reporting agent DNAME;
@@ -1562,7 +1550,7 @@ static void dns_error_reporting(struct module_qstate* qstate,
 	//      Can we save that information in infra-cache and don't waste
 	//      resources in the state machine for already sent information?
 	if(reason_bogus == LDNS_EDE_NOERROR) {
-		qtype = LDNS_RR_TYPE_NULL;
+		qtype = LDNS_RR_TYPE_TXT;
 		qname = agent_domain;
 		qname_len = agent_domain_len-1; /* skip the trailing \0 */
 	}
@@ -1572,11 +1560,6 @@ static void dns_error_reporting(struct module_qstate* qstate,
 	 * "_er.$ede.NULL.$reporting-agent-domain._er.$reporting-agent-domain" */
 	memmove(buf+count, "\3_er", 4);
 	count += 4;
-
-	written = snprintf((char*)buf+count, LDNS_MAX_DOMAINLEN-count,
-		"X%d", reason_bogus);
-	*(buf+count) = (char)(written - 1);
-	count += written;
 
 	written = snprintf((char*)buf+count, LDNS_MAX_DOMAINLEN-count,
 		"X%d", qtype);
@@ -1592,6 +1575,11 @@ static void dns_error_reporting(struct module_qstate* qstate,
 	memmove(buf+count, qname, qname_len);
 	count += qname_len;
 
+	written = snprintf((char*)buf+count, LDNS_MAX_DOMAINLEN-count,
+		"X%d", reason_bogus);
+	*(buf+count) = (char)(written - 1);
+	count += written;
+
 	memmove(buf+count, "\3_er", 4);
 	count += 4;
 
@@ -1601,13 +1589,13 @@ static void dns_error_reporting(struct module_qstate* qstate,
 
 	qinfo.qname = buf;
 	qinfo.qname_len = count;
-	qinfo.qtype = LDNS_RR_TYPE_NULL;
+	qinfo.qtype = LDNS_RR_TYPE_TXT;
 	qinfo.qclass = qstate->qinfo.qclass;
 	qinfo.local_alias = NULL;
 
 	log_query_info(VERB_ALGO, "EDER: generating query for",
 		&qinfo);
-	mesh_add_sub(qstate, &qinfo, 0, 0, 0, &newq, &sub);
+	mesh_add_sub(qstate, &qinfo, BIT_RD, 0, 0, &newq, &sub);
 }
 
 void mesh_query_done(struct mesh_state* mstate)
