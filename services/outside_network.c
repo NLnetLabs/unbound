@@ -2574,6 +2574,7 @@ serviced_create(struct outside_network* outnet, sldns_buffer* buff, int dnssec,
 	int want_dnssec, int nocaps, int tcp_upstream, int ssl_upstream,
 	char* tls_auth_name, struct sockaddr_storage* addr, socklen_t addrlen,
 	uint8_t* zone, size_t zonelen, int qtype, struct edns_option* opt_list,
+	const uint8_t* raw_qbuf, size_t raw_qbuf_len,
 	size_t pad_queries_block_size, struct alloc_cache* alloc,
 	struct regional* region)
 {
@@ -2597,6 +2598,8 @@ serviced_create(struct outside_network* outnet, sldns_buffer* buff, int dnssec,
 		return NULL;
 	}
 	sq->qbuflen = sldns_buffer_limit(buff);
+	sq->raw_qbuf = raw_qbuf;
+	sq->raw_qbuf_len = raw_qbuf_len;
 	sq->zone = regional_alloc_init(region, zone, zonelen);
 	if(!sq->zone) {
 		alloc_reg_release(alloc, region);
@@ -2799,6 +2802,13 @@ serviced_encode(struct serviced_query* sq, sldns_buffer* buff, int with_edns)
 	/* if we are using 0x20 bits for ID randomness, perturb them */
 	if(sq->outnet->use_caps_for_id && !sq->nocaps) {
 		serviced_perturb_qname(sq->outnet->rnd, sq->qbuf, sq->qbuflen);
+	}
+	if (sq->raw_qbuf) {
+		/* use the raw packet from libunbound's ub_send */
+		sldns_buffer_clear(buff);
+		sldns_buffer_write(buff, sq->raw_qbuf, sq->raw_qbuf_len);
+		sldns_buffer_flip(buff);
+		return;
 	}
 	/* generate query */
 	sldns_buffer_clear(buff);
@@ -3439,6 +3449,7 @@ outnet_serviced_query(struct outside_network* outnet,
 			tcp_upstream, ssl_upstream, tls_auth_name, addr,
 			addrlen, zone, zonelen, (int)qinfo->qtype,
 			per_upstream_opt_list,
+			qinfo->qbuf, qinfo->qbuf_len,
 			( ssl_upstream && env->cfg->pad_queries
 			? env->cfg->pad_queries_block_size : 0 ),
 			env->alloc, region);

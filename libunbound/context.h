@@ -171,6 +171,11 @@ struct ctx_query {
 	/** store libworker that is handling this query */
 	struct libworker* w;
 
+	/** raw query packet */
+	const uint8_t *qbuf;
+	/** length of raw query packet */
+	size_t qbuf_len;
+
 	/** result structure, also contains original query, type, class.
 	 * malloced ptr ready to hand to the client. */
 	struct ub_result* res;
@@ -224,7 +229,7 @@ void context_query_delete(struct ctx_query* q);
  */
 struct ctx_query* context_new(struct ub_ctx* ctx, const char* name, int rrtype,
         int rrclass,  ub_callback_type cb, ub_event_callback_type cb_event,
-	void* cbarg);
+	void* cbarg, const uint8_t* qbuf, size_t qbuf_len);
 
 /**
  * Get a new alloc. Creates a new one or uses a cached one.

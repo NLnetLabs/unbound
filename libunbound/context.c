@@ -53,6 +53,7 @@
 #include "util/storage/slabhash.h"
 #include "util/edns.h"
 #include "sldns/sbuffer.h"
+#include "sldns/wire2str.h"
 
 int 
 context_finalize(struct ub_ctx* ctx)
@@ -144,9 +145,17 @@ find_id(struct ub_ctx* ctx, int* id)
 
 struct ctx_query* 
 context_new(struct ub_ctx* ctx, const char* name, int rrtype, int rrclass, 
-	ub_callback_type cb, ub_event_callback_type cb_event, void* cbarg)
+	ub_callback_type cb, ub_event_callback_type cb_event, void* cbarg,
+	const uint8_t* qbuf, size_t qbuf_len)
 {
 	struct ctx_query* q = (struct ctx_query*)calloc(1, sizeof(*q));
+	char qname_str_buf[1024];
+	char *qname_str = qname_str_buf;
+	size_t qname_str_len = sizeof(qname_str_buf);
+	uint8_t *qname;
+	size_t qname_len;
+	int comprloop;
+
 	if(!q) return NULL;
 	lock_basic_lock(&ctx->cfglock);
 	if(!find_id(ctx, &q->querynum)) {
@@ -164,6 +173,32 @@ context_new(struct ub_ctx* ctx, const char* name, int rrtype, int rrclass,
 	if(!q->res) {
 		free(q);
 		return NULL;
+	}
+	if(!name && qbuf) {
+		if(qbuf_len < 12) {
+			free(q->res);
+			free(q);
+			return NULL;
+		}
+		qname = (uint8_t* )qbuf + 12;
+		qname_len = qbuf_len - 12;
+		comprloop = 0;
+
+		/* get query name from the input buffer */
+		sldns_wire2str_dname_scan(
+				&qname, &qname_len,
+				&qname_str, &qname_str_len,
+				(uint8_t *)qbuf, qbuf_len,
+				&comprloop);
+		*qname_str = 0;
+		name = qname_str_buf;
+		if (qname_len < 4) {
+			free(q->res);
+			free(q);
+			return NULL;
+		}
+		rrtype = sldns_read_uint16(qname);
+		rrclass = sldns_read_uint16(qname + 2);
 	}
 	q->res->qname = strdup(name);
 	if(!q->res->qname) {

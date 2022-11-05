@@ -456,6 +456,10 @@ struct serviced_query {
 	uint8_t* qbuf;
 	/** length of qbuf. */
 	size_t qbuflen;
+	/** raw_qbuf for sending precreated packets */
+	const uint8_t *raw_qbuf;
+	/** Precreated packet length */
+	size_t raw_qbuf_len;
 	/** If an EDNS section is included, the DO/CD bit will be turned on. */
 	int dnssec;
 	/** We want signatures, or else the answer is likely useless */

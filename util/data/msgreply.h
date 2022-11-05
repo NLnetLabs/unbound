@@ -97,6 +97,11 @@ struct query_info {
 	 * have to be generated if it has to be kept during iterative
 	 * resolution. */
 	struct local_rrset* local_alias;
+
+	/** raw query packet */
+	const uint8_t *qbuf;
+	/** length of raw query packet */
+	size_t qbuf_len;
 };
 
 /**

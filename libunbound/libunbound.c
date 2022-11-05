@@ -714,7 +714,8 @@ ub_resolve(struct ub_ctx* ctx, const char* name, int rrtype,
 	}
 	/* create new ctx_query and attempt to add to the list */
 	lock_basic_unlock(&ctx->cfglock);
-	q = context_new(ctx, name, rrtype, rrclass, NULL, NULL, NULL);
+	q = context_new(ctx, name, rrtype, rrclass,
+			NULL, NULL, NULL, NULL, 0);
 	if(!q)
 		return UB_NOMEM;
 	/* become a resolver thread for a bit */
@@ -771,7 +772,8 @@ ub_resolve_event(struct ub_ctx* ctx, const char* name, int rrtype,
 	ub_comm_base_now(ctx->event_worker->base);
 
 	/* create new ctx_query and attempt to add to the list */
-	q = context_new(ctx, name, rrtype, rrclass, NULL, callback, mydata);
+	q = context_new(ctx, name, rrtype, rrclass,
+			NULL, callback, mydata, NULL, 0);
 	if(!q)
 		return UB_NOMEM;
 
@@ -816,7 +818,8 @@ ub_resolve_async(struct ub_ctx* ctx, const char* name, int rrtype,
 	}
 
 	/* create new ctx_query and attempt to add to the list */
-	q = context_new(ctx, name, rrtype, rrclass, callback, NULL, mydata);
+	q = context_new(ctx, name, rrtype, rrclass,
+			callback, NULL, mydata, NULL, 0);
 	if(!q)
 		return UB_NOMEM;
 
@@ -844,6 +847,116 @@ ub_resolve_async(struct ub_ctx* ctx, const char* name, int rrtype,
 	free(msg);
 	return UB_NOERROR;
 }
+
+int
+ub_send(struct ub_ctx* ctx, const char* packet, int length,
+        struct ub_result** result)
+{
+	struct ctx_query* q;
+	int r;
+	*result = NULL;
+
+	lock_basic_lock(&ctx->cfglock);
+	if(!ctx->finalized) {
+		r = context_finalize(ctx);
+		if(r) {
+			lock_basic_unlock(&ctx->cfglock);
+			return r;
+		}
+	}
+	/* create new ctx_query and attempt to add to the list */
+	lock_basic_unlock(&ctx->cfglock);
+	q = context_new(ctx, NULL, 0, 0,
+			NULL, NULL, NULL, (const uint8_t *)packet, length);
+	if(!q)
+		return UB_NOMEM;
+	/* become a resolver thread for a bit */
+
+	r = libworker_fg(ctx, q);
+	if(r) {
+		lock_basic_lock(&ctx->cfglock);
+		(void)rbtree_delete(&ctx->queries, q->node.key);
+		context_query_delete(q);
+		lock_basic_unlock(&ctx->cfglock);
+		return r;
+	}
+	q->res->answer_packet = q->msg;
+	q->res->answer_len = (int)q->msg_len;
+	q->msg = NULL;
+	*result = q->res;
+	q->res = NULL;
+
+	lock_basic_lock(&ctx->cfglock);
+	(void)rbtree_delete(&ctx->queries, q->node.key);
+	context_query_delete(q);
+	lock_basic_unlock(&ctx->cfglock);
+	return UB_NOERROR;
+}
+
+int 
+ub_send_async(struct ub_ctx* ctx, const char* packet, int length,
+		void* mydata, ub_callback_type callback, int* async_id)
+{
+	struct ctx_query* q;
+	uint8_t* msg = NULL;
+	uint32_t len = 0;
+
+	if(async_id)
+		*async_id = 0;
+	lock_basic_lock(&ctx->cfglock);
+	if(!ctx->finalized) {
+		int r = context_finalize(ctx);
+		if(r) {
+			lock_basic_unlock(&ctx->cfglock);
+			return r;
+		}
+	}
+	if(!ctx->created_bg) {
+		int r;
+		ctx->created_bg = 1;
+		lock_basic_unlock(&ctx->cfglock);
+		r = libworker_bg(ctx);
+		if(r) {
+			lock_basic_lock(&ctx->cfglock);
+			ctx->created_bg = 0;
+			lock_basic_unlock(&ctx->cfglock);
+			return r;
+		}
+	} else {
+		lock_basic_unlock(&ctx->cfglock);
+	}
+
+	/* create new ctx_query and attempt to add to the list */
+	q = context_new(ctx, NULL, 0, 0, callback, NULL,
+			mydata, (const uint8_t*)packet, length);
+	if(!q)
+		return UB_NOMEM;
+
+	/* write over pipe to background worker */
+	lock_basic_lock(&ctx->cfglock);
+	msg = context_serialize_new_query(q, &len);
+	if(!msg) {
+		(void)rbtree_delete(&ctx->queries, q->node.key);
+		ctx->num_async--;
+		context_query_delete(q);
+		lock_basic_unlock(&ctx->cfglock);
+		return UB_NOMEM;
+	}
+	if(async_id)
+		*async_id = q->querynum;
+	lock_basic_unlock(&ctx->cfglock);
+	
+	lock_basic_lock(&ctx->qqpipe_lock);
+	if(!tube_write_msg(ctx->qq_pipe, msg, len, 0)) {
+		lock_basic_unlock(&ctx->qqpipe_lock);
+		free(msg);
+		return UB_PIPE;
+	}
+	lock_basic_unlock(&ctx->qqpipe_lock);
+	free(msg);
+	return UB_NOERROR;
+}
+
 
 int 
 ub_cancel(struct ub_ctx* ctx, int async_id)
