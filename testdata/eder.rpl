@@ -68,9 +68,8 @@ RANGE_BEGIN 10 100
 			; No RRSIG to trigger validator error and EDE
 		SECTION ADDITIONAL
 			HEX_EDNSDATA_BEGIN
-				ED ED				; opt-code
-				00 0B				; opt-len
-				80				; positive-flag
+				FD FF				; opt-code
+				00 0A				; opt-len
 				02 61 6E 05 61 67 65 6E 74 00	; an.agent.
 			HEX_EDNSDATA_END
 	ENTRY_END
@@ -84,9 +83,9 @@ RANGE_BEGIN 10 20
 		ADJUST copy_id
 		REPLY QR NOERROR
 		SECTION QUESTION
-			_er.9.1.a.domain._er.an.agent. IN NULL
-		SECTION AUTHORITY
-			an.agent. IN SOA ns email 1 2 3 4 10
+			_er.1.a.domain.9._er.an.agent. IN TXT
+		SECTION ANSWER
+			_er.1.a.domain.9._er.an.agent. IN TXT "OK"
 	ENTRY_END
 RANGE_END
 
@@ -98,7 +97,7 @@ RANGE_BEGIN 40 50
 		ADJUST copy_id
 		REPLY QR NOERROR
 		SECTION QUESTION
-		    _er.49152.10.an.agent._er.an.agent. IN NULL
+		    _er.49152.10.an.agent._er.an.agent. IN TXT
 		SECTION AUTHORITY
 			an.agent. IN SOA ns email 1 2 3 4 10
 	ENTRY_END
@@ -146,7 +145,7 @@ STEP 20 QUERY
 ENTRY_BEGIN
 REPLY
 SECTION QUESTION
-_er.9.1.a.domain._er.an.agent. IN NULL
+_er.1.a.domain.9._er.an.agent. IN TXT
 ENTRY_END
 
 ; At this range there are no configured agents to answer this.
@@ -157,9 +156,9 @@ ENTRY_BEGIN
 MATCH all
 REPLY QR RA NOERROR
 SECTION QUESTION
-_er.9.1.a.domain._er.an.agent. IN NULL
-SECTION AUTHORITY
-an.agent. IN SOA ns email 1 2 3 4 10
+_er.1.a.domain.9._er.an.agent. IN TXT
+SECTION ANSWER
+_er.1.a.domain.9._er.an.agent. IN TXT "OK"
 ENTRY_END
 
 ; Wait for the a.domain query to expire (5 TTL).

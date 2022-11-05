@@ -70,8 +70,6 @@
 
 /** time when nameserver glue is said to be 'recent' */
 #define SUSPICION_RECENT_EXPIRY 86400
-/** penalty to validation failed blacklisted IPs */
-#define BLACKLIST_PENALTY (USEFUL_SERVER_TOP_TIMEOUT*4)
 
 /** fillup fetch policy array */
 static void
@@ -661,10 +659,10 @@ dns_copy_msg(struct dns_msg* from, struct regional* region)
 void
 iter_dns_store(struct module_env* env, struct query_info* msgqinf,
 	struct reply_info* msgrep, int is_referral, time_t leeway, int pside,
-	struct regional* region, uint16_t flags)
+	struct regional* region, uint16_t flags, time_t qstarttime)
 {
 	if(!dns_cache_store(env, msgqinf, msgrep, is_referral, leeway,
-		pside, region, flags))
+		pside, region, flags, qstarttime))
 		log_err("out of memory: cannot store data in cache");
 }
 
@@ -1211,6 +1209,9 @@ int iter_lookup_parent_glue_from_cache(struct module_env* env,
 	struct delegpt_ns* ns;
 	size_t num = delegpt_count_targets(dp);
 	for(ns = dp->nslist; ns; ns = ns->next) {
+		if(ns->cache_lookup_count > ITERATOR_NAME_CACHELOOKUP_MAX_PSIDE)
+			continue;
+		ns->cache_lookup_count++;
 		/* get cached parentside A */
 		akey = rrset_cache_lookup(env->rrset_cache, ns->name,
 			ns->namelen, LDNS_RR_TYPE_A, qinfo->qclass,
