@@ -569,6 +569,50 @@ int ub_resolve_async(struct ub_ctx* ctx, const char* name, int rrtype,
 	int rrclass, void* mydata, ub_callback_type callback, int* async_id);
 
 /**
+* Transmit a wire-encoded query packet directly to a nameserver.
+* @param ctx: context.
+* 	The context is finalized, and can no longer accept config changes.
+* @param packet: wire-encoded query packet.
+* @param length: length of encoded query packet.
+* @param result: the reply packet, together with its validation status,
+* 	is returned in a newly allocated result structure.
+* 	May be NULL on return, in which case an error code is returned.
+* @return 0 if OK, else error.
+*/
+int ub_send(struct ub_ctx* ctx, const char* packet, int length,
+	struct ub_result** result);
+
+/**
+* Transmit a wire-encoded query packet directly to a nameserver.
+* Asynchronous, after a while, the callback will be called with your
+* data and the result.
+* @param ctx: context.
+* 	If no thread or process has been created yet to perform the
+* 	work in the background, it is created now.
+* 	The context is finalized, and can no longer accept config changes.
+* @param packet: wire-encoded query packet.
+* @param length: length of encoded query packet.
+* @param mydata: this data is your own data (you can pass NULL),
+* 	and is passed on to the callback function.
+* @param callback: this is called on completion of the resolution.
+* 	It is called as:
+* 	void callback(void* mydata, int err, struct ub_result* result)
+* 	with mydata: the same as passed here, you may pass NULL,
+* 	with err: is 0 when a result has been found.
+* 	with result: a newly allocated result structure.
+* 		The result may be NULL, in that case err is set.
+*
+* 	If an error happens during processing, your callback will be called
+* 	with error set to a nonzero value (and result==NULL).
+* @param async_id: if you pass a non-NULL value, an identifier number is
+* 	returned for the query as it is in progress. It can be used to
+* 	cancel the query.
+* @return 0 if OK, else error.
+*/
+int ub_send_async(struct ub_ctx* ctx, const char* packet, int length,
+	void* mydata, ub_callback_type callback, int* async_id);
+
+/**
  * Cancel an async query in progress.
  * Its callback will not be called.
  *
