@@ -31,6 +31,8 @@ ub_resolve
 ub_resolve_async
 ub_resolve_event
 ub_resolve_free
+ub_send
+ub_send_async
 ub_strerror
 ub_version
 ub_wait
