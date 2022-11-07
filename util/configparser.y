@@ -196,6 +196,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_RPZ_SIGNAL_NXDOMAIN_RA VAR_INTERFACE_AUTOMATIC_PORTS VAR_EDE
 %token VAR_INTERFACE_ACTION VAR_INTERFACE_VIEW VAR_INTERFACE_TAG
 %token VAR_INTERFACE_TAG_ACTION VAR_INTERFACE_TAG_DATA
+%token VAR_PROXY_PROTOCOL_PORT
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -324,8 +325,8 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_edns_client_string_opcode | server_nsid |
 	server_zonemd_permissive_mode | server_max_reuse_tcp_queries |
 	server_tcp_reuse_timeout | server_tcp_auth_query_timeout |
-	server_interface_automatic_ports | server_ede
-
+	server_interface_automatic_ports | server_ede |
+	server_proxy_protocol_port
 	;
 stubstart: VAR_STUB_ZONE
 	{
@@ -2826,6 +2827,13 @@ server_ede: VAR_EDE STRING_ARG
 			yyerror("expected yes or no.");
 		else cfg_parser->cfg->ede = (strcmp($2, "yes")==0);
 		free($2);
+	}
+	;
+server_proxy_protocol_port: VAR_PROXY_PROTOCOL_PORT STRING_ARG
+	{
+		OUTYY(("P(server_proxy_protocol_port:%s)\n", $2));
+		if(!cfg_strlist_insert(&cfg_parser->cfg->proxy_protocol_port, $2))
+			yyerror("out of memory");
 	}
 	;
 stub_name: VAR_NAME STRING_ARG

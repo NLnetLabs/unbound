@@ -1144,7 +1144,7 @@ parse_edns_options_from_query(uint8_t* rdata_ptr, size_t rdata_len,
 				   */
 
 			else if (memcmp( cookie_hash( hash, server_cookie
-			                            , &repinfo->addr
+			                            , &repinfo->remote_addr
 			                            , cfg->cookie_secret)
 			               , rdata_ptr + 16 , 8 ) == 0) {
 
@@ -1171,8 +1171,8 @@ parse_edns_options_from_query(uint8_t* rdata_ptr, size_t rdata_len,
 			server_cookie[10] = 0;   /* Reserved */
 			server_cookie[11] = 0;   /* Reserved */
 			sldns_write_uint32(server_cookie + 12, now);
-			cookie_hash( hash, server_cookie
-			           , &repinfo->addr, cfg->cookie_secret);
+			cookie_hash( hash, server_cookie, &repinfo->remote_addr
+			           , cfg->cookie_secret);
 			memcpy(server_cookie + 16, hash, 8);
 			if (!edns_opt_list_append( &edns->opt_list_out
 			                         , LDNS_EDNS_COOKIE

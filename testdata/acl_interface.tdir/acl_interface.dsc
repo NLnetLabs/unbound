@@ -9,7 +9,7 @@ CmdDepends:
 Depends:
 Help:
 Pre: acl_interface.pre
-Post:
+Post: acl_interface.post
 Test: acl_interface.test
 AuxFiles:
 Passed:

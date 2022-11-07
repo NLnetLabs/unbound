@@ -349,7 +349,7 @@ ip\-transparent option is also available.
 The value of the Differentiated Services Codepoint (DSCP) in the
 differentiated services field (DS) of the outgoing IP packet headers.
 The field replaces the outdated IPv4 Type-Of-Service field and the
-IPV6 traffic class field.
+IPv6 traffic class field.
 .TP
 .B rrset\-cache\-size: \fI<number>
 Number of bytes size of the RRset cache. Default is 4 megabytes.
@@ -416,7 +416,7 @@ Enable or disable whether ip4 queries are answered or issued. Default is yes.
 Enable or disable whether ip6 queries are answered or issued. Default is yes.
 If disabled, queries are not answered on IPv6, and queries are not sent on
 IPv6 to the internet nameservers.  With this option you can disable the
-ipv6 transport for sending DNS traffic, it does not impact the contents of
+IPv6 transport for sending DNS traffic, it does not impact the contents of
 the DNS traffic, which may have ip4 and ip6 addresses in it.
 .TP
 .B prefer\-ip4: \fI<yes or no>
@@ -655,6 +655,17 @@ Ignored if the option is not available. Default is yes.
 .B http\-notls\-downstream: \fI<yes or no>
 Disable use of TLS for the downstream DNS-over-HTTP connections.  Useful for
 local back end servers.  Default is no.
+.TP
+.B proxy\-protocol\-port: \fI<portnr>
+List port numbers as proxy\-protocol\-port, and when interfaces are defined,
+eg. with the @port suffix, as this port number, they support and expect PROXYv2.
+In this case the proxy address will only be used for the network communication
+and initial ACL (check if the proxy itself is denied/refused by configuration).
+The proxied address (if any) will then be used as the true client address and
+will be used where applicable for logging, ACL, DNSTAP, RPZ and IP ratelimiting.
+PROXYv2 is supported for UDP and TCP/TLS listening interfaces.
+There is no support for PROXYv2 on a DoH or DNSCrypt listening interface.
+Can list multiple, each on a new statement.
 .TP
 .B use\-systemd: \fI<yes or no>
 Enable or disable systemd socket activation.
@@ -1668,7 +1679,7 @@ This specifies the action data for \fIresponse-ip\fR with action being
 to redirect as specified by "\fIresource record string\fR".  "Resource
 record string" is similar to that of \fIaccess-control-tag-action\fR,
 but it must be of either AAAA, A or CNAME types.
-If the IP-netblock is an IPv6/IPV4 prefix, the record
+If the IP-netblock is an IPv6/IPv4 prefix, the record
 must be AAAA/A respectively, unless it is a CNAME (which can be used
 for both versions of IP netblocks).  If it is CNAME there must not be
 more than one \fIresponse-ip-data\fR for the same IP-netblock.

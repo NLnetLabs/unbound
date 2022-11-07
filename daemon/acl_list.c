@@ -199,7 +199,7 @@ acl_find_or_create(struct acl_list* acl, struct sockaddr_storage* addr,
 
 /** apply acl_interface string */
 static int
-acl_interface_str_cfg(struct acl_list* acl_interface, const char* interface,
+acl_interface_str_cfg(struct acl_list* acl_interface, const char* iface,
 	const char* s2, int port)
 {
 	struct acl_addr* node;
@@ -207,9 +207,9 @@ acl_interface_str_cfg(struct acl_list* acl_interface, const char* interface,
 	if(!parse_acl_access(s2, &control)) {
 		return 0;
 	}
-	if(!(node=acl_find_or_create_str2addr(acl_interface, interface, 1, port))) {
+	if(!(node=acl_find_or_create_str2addr(acl_interface, iface, 1, port))) {
 		log_err("cannot update ACL on non-configured interface: %s %d",
-			interface, port);
+			iface, port);
 		return 0;
 	}
 	node->control = control;
