@@ -2623,6 +2623,9 @@ comm_point_tcp_handle_callback(int fd, short event, void* arg)
 	log_assert(c->type == comm_tcp);
 	ub_comm_base_now(c->ev->base);
 
+	if(c->fd == -1 || c->fd != fd)
+		return; /* duplicate event, but commpoint closed. */
+
 #ifdef USE_DNSCRYPT
 	/* Initialize if this is a dnscrypt socket */
 	if(c->tcp_parent) {
