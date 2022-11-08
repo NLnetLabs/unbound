@@ -3,6 +3,7 @@
 	- Fix to make sure to not read again after a tcp comm point is closed.
 	- Fix #775: libunbound: subprocess reap causes parent process reap
 	  to hang.
+	- iana portlist update.
 
 21 October 2022: George
 	- Merge #767 from jonathangray: consistently use IPv4/IPv6 in
