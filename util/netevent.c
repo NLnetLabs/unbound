@@ -2545,8 +2545,9 @@ comm_point_tcp_handle_write(int fd, struct comm_point* c)
 	return 1;
 }
 
-/** read again to drain buffers when there could be more to read */
-static void
+/** read again to drain buffers when there could be more to read, returns 0
+ * on failure which means the comm point is closed. */
+static int
 tcp_req_info_read_again(int fd, struct comm_point* c)
 {
 	while(c->tcp_req_info->read_again) {
@@ -2563,9 +2564,10 @@ tcp_req_info_read_again(int fd, struct comm_point* c)
 				(void)(*c->callback)(c, c->cb_arg, 
 					NETEVENT_CLOSED, NULL);
 			}
-			return;
+			return 0;
 		}
 	}
+	return 1;
 }
 
 /** read again to drain buffers when there could be more to read */
@@ -2663,7 +2665,6 @@ comm_point_tcp_handle_callback(int fd, short event, void* arg)
 #endif
 		) {
 		int has_tcpq = (c->tcp_req_info != NULL);
-		int* moreread = c->tcp_more_read_again;
 		if(!comm_point_tcp_handle_read(fd, c, 0)) {
 			reclaim_tcp_handler(c);
 			if(!c->tcp_do_close) {
@@ -2674,15 +2675,16 @@ comm_point_tcp_handle_callback(int fd, short event, void* arg)
 			}
 			return;
 		}
-		if(has_tcpq && c->tcp_req_info && c->tcp_req_info->read_again)
-			tcp_req_info_read_again(fd, c);
-		if(moreread && *moreread)
+		if(has_tcpq && c->tcp_req_info && c->tcp_req_info->read_again) {
+			if(!tcp_req_info_read_again(fd, c))
+				return;
+		}
+		if(c->tcp_more_read_again && *c->tcp_more_read_again)
 			tcp_more_read_again(fd, c);
 		return;
 	}
 	if(event&UB_EV_WRITE) {
 		int has_tcpq = (c->tcp_req_info != NULL);
-		int* morewrite = c->tcp_more_write_again;
 		if(!comm_point_tcp_handle_write(fd, c)) {
 			reclaim_tcp_handler(c);
 			if(!c->tcp_do_close) {
@@ -2693,9 +2695,11 @@ comm_point_tcp_handle_callback(int fd, short event, void* arg)
 			}
 			return;
 		}
-		if(has_tcpq && c->tcp_req_info && c->tcp_req_info->read_again)
-			tcp_req_info_read_again(fd, c);
-		if(morewrite && *morewrite)
+		if(has_tcpq && c->tcp_req_info && c->tcp_req_info->read_again) {
+			if(!tcp_req_info_read_again(fd, c))
+				return;
+		}
+		if(c->tcp_more_write_again && *c->tcp_more_write_again)
 			tcp_more_write_again(fd, c);
 		return;
 	}

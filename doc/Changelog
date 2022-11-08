@@ -1,5 +1,6 @@
 8 November 2022: Wouter
 	- Fix to ignore tcp events for closed comm points.
+	- Fix to make sure to not read again after a tcp comm point is closed.
 
 21 October 2022: George
 	- Merge #767 from jonathangray: consistently use IPv4/IPv6 in
