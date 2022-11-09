@@ -1,3 +1,7 @@
+9 November 2022: George
+	- Complementary fix for distutils.sysconfig deprecation in Python 3.10
+	  to commit 62c5039ab9da42713e006e840b7578e01d66e7f2.
+
 8 November 2022: Wouter
 	- Fix to ignore tcp events for closed comm points.
 	- Fix to make sure to not read again after a tcp comm point is closed.
