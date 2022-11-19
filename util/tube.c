@@ -39,6 +39,7 @@
  * This file contains pipe service functions.
  */
 #include "config.h"
+#include "sys/poll.h"
 #include "util/tube.h"
 #include "util/log.h"
 #include "util/net_help.h"
@@ -396,20 +397,19 @@ int tube_read_msg(struct tube* tube, uint8_t** buf, uint32_t* len,
 	return 1;
 }
 
-/** perform a select() on the fd */
-static int
-pollit(int fd, struct timeval* t)
-{
-	fd_set r;
-#ifndef S_SPLINT_S
-	FD_ZERO(&r);
-	FD_SET(FD_SET_T fd, &r);
-#endif
-	if(select(fd+1, &r, NULL, NULL, t) == -1) {
+/** perform a poll() on the fd */
+int pollit(int fd, struct timeval* t) {
+	struct pollfd fds;
+ 
+	fds.fd = fd;
+	fds.events = POLLIN;
+ 
+	int ret = poll( &fds, 1, t->tv_sec*1000 );
+	if ( ret == -1 )
 		return 0;
-	}
+ 
 	errno = 0;
-	return (int)(FD_ISSET(fd, &r));
+	return ret;
 }
 
 int tube_poll(struct tube* tube)
@@ -424,28 +424,22 @@ int tube_wait(struct tube* tube)
 	return pollit(tube->sr, NULL);
 }
 
-int tube_wait_timeout(struct tube* tube, int msec)
-{
-	struct timeval t;
-	int fd = tube->sr;
-	fd_set r;
-	t.tv_sec = msec/1000;
-	t.tv_usec = (msec%1000)*1000;
-#ifndef S_SPLINT_S
-	FD_ZERO(&r);
-	FD_SET(FD_SET_T fd, &r);
-#endif
-	while(1) {
-		if(select(fd+1, &r, NULL, NULL, &t) == -1) {
-			if(errno == EAGAIN || errno == EINTR)
-				continue;
-			return -1;
-		}
-		break;
-	}
-	return (int)(FD_ISSET(fd, &r));
+int tube_wait_timeout(struct tube* tube, int msec) {
+	struct pollfd fds;
+ 
+	fds.fd = tube->sr;
+	fds.events = POLLIN;
+ 
+	int ret = poll( &fds, 1, msec );
+ 
+	if ( ret == -1 )
+		return -1;
+	else if ( ret == 0 )
+		return 0;
+ 
+	return ret;
 }
-
+ 
 int tube_read_fd(struct tube* tube)
 {
 	return tube->sr;
