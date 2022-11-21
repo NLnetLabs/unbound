@@ -1960,7 +1960,7 @@ static int dtio_open_output_tcp(struct dt_io_thread* dtio)
 	memset(&addr, 0, sizeof(addr));
 	addrlen = (socklen_t)sizeof(addr);
 
-	if(!extstrtoaddr(dtio->ip_str, &addr, &addrlen)) {
+	if(!extstrtoaddr(dtio->ip_str, &addr, &addrlen, UNBOUND_DNS_PORT)) {
 		log_err("could not parse IP '%s'", dtio->ip_str);
 		return 0;
 	}
