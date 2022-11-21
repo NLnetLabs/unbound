@@ -56,6 +56,9 @@ struct cachedb_env {
 
 	/** backend specific data here */
 	void* backend_data;
+
+    /** if true, the cache lookup does not look at the internal cache */
+    int no_internal_lookup;
 };
 
 /**
