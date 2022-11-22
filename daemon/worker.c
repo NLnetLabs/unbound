@@ -623,6 +623,14 @@ answer_from_cache(struct worker* worker, struct query_info* qinfo,
 				if(worker->env.cfg->serve_expired_ttl &&
 					rep->serve_expired_ttl < timenow)
 					return 0;
+				/* Ignore expired failure answers */
+				if(FLAGS_GET_RCODE(rep->flags) !=
+					LDNS_RCODE_NOERROR &&
+					FLAGS_GET_RCODE(rep->flags) !=
+					LDNS_RCODE_NXDOMAIN &&
+					FLAGS_GET_RCODE(rep->flags) !=
+					LDNS_RCODE_YXDOMAIN)
+					return 0;
 				if(!rrset_array_lock(rep->ref, rep->rrset_count, 0))
 					return 0;
 				*is_expired_answer = 1;
@@ -730,8 +738,6 @@ answer_from_cache(struct worker* worker, struct query_info* qinfo,
 				goto bail_out;
 		}
 	} else {
-		/* We don't check the global ede as this is a warning, not
-		 * an error */
 		if (*is_expired_answer == 1 &&
 			worker->env.cfg->ede_serve_expired && worker->env.cfg->ede) {
 			EDNS_OPT_LIST_APPEND_EDE(&edns->opt_list_out,

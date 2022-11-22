@@ -551,10 +551,16 @@ parse_data(struct module_qstate* qstate, struct sldns_buffer* buf)
 		verbose(VERB_ALGO, "cachedb msg expired");
 		/* If serve-expired is enabled, we still use an expired message
 		 * setting the TTL to 0. */
-		if(qstate->env->cfg->serve_expired)
-			adjust = -1;
-		else
+		if(!qstate->env->cfg->serve_expired ||
+			(FLAGS_GET_RCODE(qstate->return_msg->rep->flags)
+			!= LDNS_RCODE_NOERROR &&
+			FLAGS_GET_RCODE(qstate->return_msg->rep->flags)
+			!= LDNS_RCODE_NXDOMAIN &&
+			FLAGS_GET_RCODE(qstate->return_msg->rep->flags)
+			!= LDNS_RCODE_YXDOMAIN))
 			return 0; /* message expired */
+		else
+			adjust = -1;
 	}
 	verbose(VERB_ALGO, "cachedb msg adjusted down by %d", (int)adjust);
 	adjust_msg_ttl(qstate->return_msg, adjust);
