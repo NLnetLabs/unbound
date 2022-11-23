@@ -529,6 +529,7 @@ struct tube* tube_create(void)
 	if(tube->event == WSA_INVALID_EVENT) {
 		free(tube);
 		log_err("WSACreateEvent: %s", wsa_strerror(WSAGetLastError()));
+		return NULL;
 	}
 	if(!WSAResetEvent(tube->event)) {
 		log_err("WSAResetEvent: %s", wsa_strerror(WSAGetLastError()));
