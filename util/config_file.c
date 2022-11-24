@@ -187,6 +187,7 @@ config_create(void)
 	if(!(cfg->directory = strdup(RUN_DIR))) goto error_exit;
 	if(!(cfg->logfile = strdup(""))) goto error_exit;
 	if(!(cfg->pidfile = strdup(PIDFILE))) goto error_exit;
+	cfg->azone_io_thread = 0;
 	if(!(cfg->target_fetch_policy = strdup("3 2 1 0 0"))) goto error_exit;
 	cfg->fast_server_permil = 0;
 	cfg->fast_server_num = 3;
@@ -615,6 +616,7 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	else S_STR("username:", username)
 	else S_STR("directory:", directory)
 	else S_STR("pidfile:", pidfile)
+	else S_YNO("azone-io-thread:", azone_io_thread)
 	else S_YNO("hide-identity:", hide_identity)
 	else S_YNO("hide-version:", hide_version)
 	else S_YNO("hide-trustanchor:", hide_trustanchor)
@@ -1094,6 +1096,7 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_YNO(opt, "log-local-actions", log_local_actions)
 	else O_YNO(opt, "log-servfail", log_servfail)
 	else O_STR(opt, "pidfile", pidfile)
+	else O_YNO(opt, "azone-io-thread", azone_io_thread)
 	else O_YNO(opt, "hide-identity", hide_identity)
 	else O_YNO(opt, "hide-version", hide_version)
 	else O_YNO(opt, "hide-trustanchor", hide_trustanchor)

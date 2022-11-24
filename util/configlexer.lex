@@ -285,6 +285,7 @@ username{COLON}			{ YDVAR(1, VAR_USERNAME) }
 directory{COLON}		{ YDVAR(1, VAR_DIRECTORY) }
 logfile{COLON}			{ YDVAR(1, VAR_LOGFILE) }
 pidfile{COLON}			{ YDVAR(1, VAR_PIDFILE) }
+azone-io-thread{COLON}		{ YDVAR(1, VAR_AZONE_IO_THREAD) }
 root-hints{COLON}		{ YDVAR(1, VAR_ROOT_HINTS) }
 stream-wait-size{COLON}		{ YDVAR(1, VAR_STREAM_WAIT_SIZE) }
 edns-buffer-size{COLON}		{ YDVAR(1, VAR_EDNS_BUFFER_SIZE) }

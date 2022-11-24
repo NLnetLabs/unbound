@@ -324,6 +324,9 @@ struct config_file {
 	/** pidfile to write pid to. */
 	char* pidfile;
 
+	/** use a separate thread to write auth zones to disk */
+	int azone_io_thread;
+
 	/** should log messages be sent to syslogd */
 	int use_syslog;
 	/** log timestamp in ascii UTC */
