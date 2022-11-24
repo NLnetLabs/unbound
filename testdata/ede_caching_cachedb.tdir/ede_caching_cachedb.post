@@ -1,4 +1,4 @@
-# #-- ede.post --#
+# #-- ede_caching_cachedb.post --#
 # source the master var file when it's there
 [ -f ../.tpkg.var.master ] && source ../.tpkg.var.master
 # use .tpkg.var.test for in test variable passing

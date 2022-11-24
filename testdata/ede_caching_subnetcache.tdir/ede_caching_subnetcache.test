@@ -1,4 +1,4 @@
-# #-- ede-caching-cachedb.test --#
+# #-- ede_caching_subnetcache.test --#
 # source the master var file when it's there
 [ -f ../.tpkg.var.master ] && source ../.tpkg.var.master
 # use .tpkg.var.test for in test variable passing
@@ -6,7 +6,7 @@
 . ../common.sh
 
 # query with the priming edns opt
-dig @127.0.0.1 -p $UNBOUND_PORT example.nl +ednsopt=49152 > query1.txt
+dig @127.0.0.1 -p $UNBOUND_PORT example.nl +subnet=127.0.0.0/17 > query1.txt
 
 if ! grep -q -e "OPT=15: 00 09" -e "EDE: 9" query1.txt
 then
@@ -19,7 +19,7 @@ fi
 kill_pid $UNBOUND_PID2
 
 # query again to see if we have indeed cached the response
-dig @127.0.0.1 -p $UNBOUND_PORT example.nl +ednsopt=49152 > query2.txt
+dig @127.0.0.1 -p $UNBOUND_PORT example.nl +subnet=127.0.0.0/17 > query2.txt
 
 if ! grep -q -e "OPT=15: 00 09" -e "EDE: 9" query2.txt
 then

@@ -1,4 +1,4 @@
-# #-- ede-caching-cachedb.pre --#
+# #-- ede_caching_cachedb.pre --#
 # source the master var file when it's there
 [ -f ../.tpkg.var.master ] && source ../.tpkg.var.master
 # use .tpkg.var.test for in test variable passing
@@ -6,6 +6,16 @@
 
 PRE="../.."
 . ../common.sh
+
+$PRE/unbound -V > subnet_module_check.txt
+
+if ! grep -q -e "enable-subnet" subnet_module_check.txt
+then
+	echo "Missing subnet_module in the ./configure stage:"
+	echo "'unbound -V' output:"
+	cat subnet_module_check.txt
+	exit 1
+fi
 
 get_random_port 2
 UNBOUND_PORT=$RND_PORT
