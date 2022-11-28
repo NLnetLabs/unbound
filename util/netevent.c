@@ -2665,6 +2665,7 @@ comm_point_tcp_handle_callback(int fd, short event, void* arg)
 #endif
 		) {
 		int has_tcpq = (c->tcp_req_info != NULL);
+		int* moreread = c->tcp_more_read_again;
 		if(!comm_point_tcp_handle_read(fd, c, 0)) {
 			reclaim_tcp_handler(c);
 			if(!c->tcp_do_close) {
@@ -2679,12 +2680,13 @@ comm_point_tcp_handle_callback(int fd, short event, void* arg)
 			if(!tcp_req_info_read_again(fd, c))
 				return;
 		}
-		if(c->tcp_more_read_again && *c->tcp_more_read_again)
+		if(moreread && *moreread)
 			tcp_more_read_again(fd, c);
 		return;
 	}
 	if(event&UB_EV_WRITE) {
 		int has_tcpq = (c->tcp_req_info != NULL);
+		int* morewrite = c->tcp_more_write_again;
 		if(!comm_point_tcp_handle_write(fd, c)) {
 			reclaim_tcp_handler(c);
 			if(!c->tcp_do_close) {
@@ -2699,7 +2701,7 @@ comm_point_tcp_handle_callback(int fd, short event, void* arg)
 			if(!tcp_req_info_read_again(fd, c))
 				return;
 		}
-		if(c->tcp_more_write_again && *c->tcp_more_write_again)
+		if(morewrite && *morewrite)
 			tcp_more_write_again(fd, c);
 		return;
 	}
@@ -4495,6 +4497,11 @@ comm_point_close(struct comm_point* c)
 		tcp_req_info_clear(c->tcp_req_info);
 	if(c->h2_session)
 		http2_session_server_delete(c->h2_session);
+	/* stop the comm point from reading or writing after it is closed. */
+	if(c->tcp_more_read_again && *c->tcp_more_read_again)
+		*c->tcp_more_read_again = 0;
+	if(c->tcp_more_write_again && *c->tcp_more_write_again)
+		*c->tcp_more_write_again = 0;
 
 	/* close fd after removing from event lists, or epoll.. is messed up */
 	if(c->fd != -1 && !c->do_not_close) {

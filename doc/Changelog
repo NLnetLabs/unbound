@@ -1,3 +1,7 @@
+28 November 2022: Wouter
+	- Fix for the ignore of tcp events for closed comm points, preserve
+	  the use after free protection features.
+
 22 November 2022: George
 	- Ignore expired error responses.
 
