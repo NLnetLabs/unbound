@@ -2,6 +2,10 @@
 	- Fix for the ignore of tcp events for closed comm points, preserve
 	  the use after free protection features.
 
+23 November 2022: Philip
+	- Merge #720 from jonathangray: fix use after free when
+	  WSACreateEvent() fails.
+
 22 November 2022: George
 	- Ignore expired error responses.
 
