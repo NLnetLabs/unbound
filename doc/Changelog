@@ -1,9 +1,16 @@
 30 November 2022: George
 	- Add SVCB and HTTPS to the types removed by 'unbound-control flush'.
 
+30 November 2022: Wouter
+	- Fix #782: Segmentation fault in stats.c:404.
+
 28 November 2022: Wouter
 	- Fix for the ignore of tcp events for closed comm points, preserve
 	  the use after free protection features.
+
+23 November 2022: Philip
+	- Merge #720 from jonathangray: fix use after free when
+	  WSACreateEvent() fails.
 
 22 November 2022: George
 	- Ignore expired error responses.
