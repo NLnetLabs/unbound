@@ -2358,6 +2358,9 @@ The maximum size of the ECS cache is controlled by 'msg-cache-size' in the
 configuration file. On top of that, for each query only 100 different subnets
 are allowed to be stored for each address family. Exceeding that number, older
 entries will be purged from cache.
+.LP
+This module does not interact with the \fBserve\-expired*\fR and
+\fBprefetch:\fR options.
 .TP
 .B send\-client\-subnet: \fI<IP address>\fR
 Send client source address to this authority. Append /num to indicate a
