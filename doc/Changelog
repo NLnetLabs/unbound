@@ -1,3 +1,6 @@
+30 November 2022: Wouter
+	- Fix #782: Segmentation fault in stats.c:404.
+
 28 November 2022: Wouter
 	- Fix for the ignore of tcp events for closed comm points, preserve
 	  the use after free protection features.
