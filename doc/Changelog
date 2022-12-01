@@ -1,3 +1,7 @@
+30 November 2022: Wouter
+	- Fix #773: When used with systemd-networkd, unbound does not start
+	  until systemd-networkd-wait-online.service times out.
+
 30 November 2022: George
 	- Add SVCB and HTTPS to the types removed by 'unbound-control flush'.
 	- Clear documentation for interactivity between the subnet module and
