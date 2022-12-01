@@ -1,4 +1,4 @@
-30 November 2022: Wouter
+1 December 2022: Wouter
 	- Fix #773: When used with systemd-networkd, unbound does not start
 	  until systemd-networkd-wait-online.service times out.
 
