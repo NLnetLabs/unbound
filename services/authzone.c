@@ -306,6 +306,10 @@ struct auth_zones* auth_zones_create(void)
 	/* also lock protects the rbnode's in struct auth_zone, auth_xfer */
 	lock_rw_init(&az->rpz_lock);
 	lock_protect(&az->rpz_lock, &az->rpz_first, sizeof(az->rpz_first));
+	/* zone writer */
+	lock_basic_init(&az->todisk_lock);
+	lock_protect(&az->todisk_lock, &az->write_tasks, sizeof(az->write_tasks));
+	pthread_cond_init(&az->todisk_cv, NULL);
 	return az;
 }
 
@@ -2362,6 +2366,18 @@ void auth_zones_delete(struct auth_zones* az)
 	lock_rw_destroy(&az->rpz_lock);
 	traverse_postorder(&az->ztree, auth_zone_del, NULL);
 	traverse_postorder(&az->xtree, auth_xfer_del, NULL);
+	lock_basic_destroy(&az->todisk_lock);
+	pthread_cond_destroy(&az->todisk_cv);
+	if(az->write_tasks) {
+		struct auth_zone_write_task* t, *tn;
+		t = az->write_tasks;
+		while(t) {
+			tn = t->next;
+			free(t->name);
+			free(t);
+			t = tn;
+		}
+	}
 	free(az);
 }
 
@@ -5233,6 +5249,137 @@ xfr_write_after_update(struct auth_xfer* xfr, struct module_env* env)
 	lock_rw_unlock(&z->lock);
 }
 
+static void
+xfr_enqueue_auth_zone_write(struct auth_xfer* xfr, struct module_env* env)
+{
+	struct auth_zone_write_task* task;
+	task = (struct auth_zone_write_task*)calloc(1,
+		sizeof(struct auth_zone_write_task));
+	if(!task) {
+		log_err("out of memory");
+		return;
+	}
+	task->env = env;
+	task->name = memdup(xfr->name, xfr->namelen);
+	task->namelen = xfr->namelen;
+	task->namelabs = xfr->namelabs;
+	task->dclass = xfr->dclass;
+
+	struct auth_zone_write_task* t;
+	lock_basic_lock(&env->auth_zones->todisk_lock);
+	int unused;
+	for (t = env->auth_zones->write_tasks; t; t = t->next) {
+		if (t->dclass == task->dclass &&
+			dname_lab_cmp(t->name, t->namelabs, task->name, task->namelabs, &unused) == 0) {
+				pthread_cond_signal(&env->auth_zones->todisk_cv);
+				lock_basic_unlock(&env->auth_zones->todisk_lock);
+				return;
+		}
+	}
+	if (env->auth_zones->write_tasks != NULL) {
+		task->next = env->auth_zones->write_tasks;
+	}
+	env->auth_zones->write_tasks = task;
+	pthread_cond_signal(&env->auth_zones->todisk_cv);
+	lock_basic_unlock(&env->auth_zones->todisk_lock);
+	return;
+}
+
+static void
+xfr_write_update(struct auth_zone_write_task* t) {
+	struct module_env* env = t->env;
+	struct config_file* cfg = env->cfg;
+	struct auth_zone* z;
+	char tmpfile[1024];
+	char* zfilename;
+
+	/* get lock again, so it is a readlock and concurrently queries
+	 * can be answered */
+	lock_rw_rdlock(&env->auth_zones->lock);
+	z = auth_zone_find(env->auth_zones, t->name, t->namelen, t->dclass);
+	if(!z) {
+		lock_rw_unlock(&env->auth_zones->lock);
+		/* the zone is gone, ignore xfr results */
+		return;
+	}
+	lock_rw_rdlock(&z->lock);
+	lock_rw_unlock(&env->auth_zones->lock);
+
+	if(z->zonefile == NULL || z->zonefile[0] == 0) {
+		lock_rw_unlock(&z->lock);
+		/* no write needed, no zonefile set */
+		return;
+	}
+	zfilename = z->zonefile;
+	if(cfg->chrootdir && cfg->chrootdir[0] && strncmp(zfilename,
+		cfg->chrootdir, strlen(cfg->chrootdir)) == 0)
+		zfilename += strlen(cfg->chrootdir);
+	if(verbosity >= VERB_ALGO) {
+		char nm[255+1];
+		dname_str(z->name, nm);
+		verbose(VERB_ALGO, "write zonefile %s for %s", zfilename, nm);
+	}
+
+	/* write to tempfile first */
+	if((size_t)strlen(zfilename) + 16 > sizeof(tmpfile)) {
+		verbose(VERB_ALGO, "tmpfilename too long, cannot update "
+			" zonefile %s", zfilename);
+		lock_rw_unlock(&z->lock);
+		return;
+	}
+	snprintf(tmpfile, sizeof(tmpfile), "%s.tmp%u", zfilename,
+		(unsigned)getpid());
+	if(!auth_zone_write_file(z, tmpfile)) {
+		unlink(tmpfile);
+		lock_rw_unlock(&z->lock);
+		return;
+	}
+#ifdef UB_ON_WINDOWS
+	(void)unlink(zfilename); /* windows does not replace file with rename() */
+#endif
+	if(rename(tmpfile, zfilename) < 0) {
+		log_err("could not rename(%s, %s): %s", tmpfile, zfilename,
+			strerror(errno));
+		unlink(tmpfile);
+		lock_rw_unlock(&z->lock);
+		return;
+	}
+	lock_rw_unlock(&z->lock);
+}
+
+void*
+auth_zones_write_thread(void* arg)
+{
+	log_info("Starting auth zone writer thread");
+	ub_thread_blocksigs();
+	struct auth_zones* zones = (struct auth_zones*)arg;
+	struct auth_zone_write_task* task;
+	for (;;) {
+		lock_basic_lock(&zones->todisk_lock);
+		while (zones->write_tasks == NULL && !zones->io_thread_need_to_exit) {
+			pthread_cond_wait(&zones->todisk_cv, &zones->todisk_lock);
+		}
+		if (zones->io_thread_need_to_exit) {
+			log_info("Stopping auth zone writer thread");
+			lock_basic_unlock(&zones->todisk_lock);
+			return NULL;
+		}
+		task = zones->write_tasks;
+		zones->write_tasks = NULL;
+		lock_basic_unlock(&zones->todisk_lock);
+
+		struct auth_zone_write_task* t;
+		t = task;
+		while(t) {
+			task = t->next;
+			xfr_write_update(t);
+			free(t->name);
+			free(t);
+			t = task;
+		}
+	}
+}
+
 /** reacquire locks and structures. Starts with no locks, ends
  * with xfr and z locks, if fail, no z lock */
 static int xfr_process_reacquire_locks(struct auth_xfer* xfr,
@@ -5349,7 +5496,11 @@ xfr_process_chunk_list(struct auth_xfer* xfr, struct module_env* env,
 			(unsigned)xfr->serial);
 	}
 	/* see if we need to write to a zonefile */
-	xfr_write_after_update(xfr, env);
+	if (env->cfg->azone_io_thread) {
+		xfr_enqueue_auth_zone_write(xfr, env);
+	} else {
+		xfr_write_after_update(xfr, env);
+	}
 	return 1;
 }
 

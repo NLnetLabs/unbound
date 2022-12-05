@@ -616,6 +616,12 @@ daemon_start_others(struct daemon* daemon)
 		tube_close_read(daemon->workers[i]->cmd);
 #endif /* no threads */
 	}
+
+	if (daemon->cfg->azone_io_thread) {
+		ub_thread_create(&daemon->auth_zone_io_thr_id,
+			auth_zones_write_thread, daemon->env->auth_zones);
+		pthread_setname_np(daemon->auth_zone_io_thr_id, "azone-io-thread");
+	}
 }
 
 /**
@@ -639,6 +645,16 @@ daemon_stop_others(struct daemon* daemon)
 		verbose(VERB_ALGO, "join %d", i);
 		ub_thread_join(daemon->workers[i]->thr_id);
 		verbose(VERB_ALGO, "join success %d", i);
+	}
+	if (daemon->cfg->azone_io_thread) {
+		verbose(VERB_ALGO, "stop auth zones io thread");
+		lock_basic_lock(&daemon->env->auth_zones->todisk_lock);
+		daemon->env->auth_zones->io_thread_need_to_exit = 1;
+		pthread_cond_signal(&daemon->env->auth_zones->todisk_cv);
+		lock_basic_unlock(&daemon->env->auth_zones->todisk_lock);
+		verbose(VERB_ALGO, "join auth zones io thread");
+		ub_thread_join(daemon->auth_zone_io_thr_id);
+		verbose(VERB_ALGO, "join success for auth zone io thread");
 	}
 }
 

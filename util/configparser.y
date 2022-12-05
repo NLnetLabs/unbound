@@ -77,6 +77,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_TCP_MSS VAR_OUTGOING_TCP_MSS VAR_TCP_IDLE_TIMEOUT
 %token VAR_EDNS_TCP_KEEPALIVE VAR_EDNS_TCP_KEEPALIVE_TIMEOUT
 %token VAR_CHROOT VAR_USERNAME VAR_DIRECTORY VAR_LOGFILE VAR_PIDFILE
+%token VAR_AZONE_IO_THREAD
 %token VAR_MSG_CACHE_SIZE VAR_MSG_CACHE_SLABS VAR_NUM_QUERIES_PER_THREAD
 %token VAR_RRSET_CACHE_SIZE VAR_RRSET_CACHE_SLABS VAR_OUTGOING_NUM_TCP
 %token VAR_INFRA_HOST_TTL VAR_INFRA_LAME_TTL VAR_INFRA_CACHE_SLABS
@@ -228,6 +229,7 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_tcp_keepalive | server_tcp_keepalive_timeout |
 	server_interface | server_chroot | server_username |
 	server_directory | server_logfile | server_pidfile |
+	server_azone_io_thread |
 	server_msg_cache_size | server_msg_cache_slabs |
 	server_num_queries_per_thread | server_rrset_cache_size |
 	server_rrset_cache_slabs | server_outgoing_num_tcp |
@@ -1270,6 +1272,15 @@ server_pidfile: VAR_PIDFILE STRING_ARG
 		OUTYY(("P(server_pidfile:%s)\n", $2));
 		free(cfg_parser->cfg->pidfile);
 		cfg_parser->cfg->pidfile = $2;
+	}
+	;
+server_azone_io_thread: VAR_AZONE_IO_THREAD STRING_ARG
+	{
+		OUTYY(("P(server_azone_io_thread:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else cfg_parser->cfg->azone_io_thread = (strcmp($2, "yes")==0);
+		free($2);
 	}
 	;
 server_root_hints: VAR_ROOT_HINTS STRING_ARG

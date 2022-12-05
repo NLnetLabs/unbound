@@ -140,6 +140,7 @@ struct daemon {
 	/** the dnscrypt environment */
 	struct dnsc_env* dnscenv;
 #endif
+	ub_thread_type auth_zone_io_thr_id;
 };
 
 /**

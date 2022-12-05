@@ -87,6 +87,21 @@ struct auth_zones {
 	/** rw lock for rpz linked list, needed when iterating or editing linked
 	 * list. */
 	lock_rw_type rpz_lock;
+
+	int io_thread_need_to_exit;
+	pthread_cond_t todisk_cv;
+	lock_basic_type todisk_lock;
+	/** list of tasks for saving auth zones */
+	struct auth_zone_write_task* write_tasks;
+};
+
+struct auth_zone_write_task {
+	uint8_t* name;
+	size_t namelen;
+	int namelabs;
+	uint16_t dclass;
+	struct module_env* env;
+	struct auth_zone_write_task* next;
 };
 
 /**
@@ -786,5 +801,7 @@ void auth_zonemd_dnskey_lookup_callback(void* arg, int rcode,
  */
 void auth_zones_pickup_zonemd_verify(struct auth_zones* az,
 	struct module_env* env);
+
+void* auth_zones_write_thread(void* arg);
 
 #endif /* SERVICES_AUTHZONE_H */
