@@ -1,0 +1,80 @@
+
+# The problem of this test lies in that we want to look at the connection between
+# the resolver and the upstream. I cannot think of a way for this to be done
+# without either tcpdump or looking at the logs of the upstream.
+
+# Plan of action
+# @TODO Merge upstream cookies into this branch
+
+# Create two IP addresses on 1 interface. Put one of them up and one of them down
+# Start Unbound on this interface
+# Get Unbound to send an upstream query (with a cookie)
+# check the (complete) cookie in the log of the upstream and store the outgoing interface
+# Send another query where we check that it is the same cookie
+# verify that it is the same cookie and verify that the interface is the same
+# @TODO we could do the time skip here as well. see edns_upstream_cookies.rpl
+# take the interface down, send the query again
+# Verify there is a different (client) cookie and that the interface has changed
+# @TODO There could be a logic mishap in the final step as the flow is quite difficult now
+
+
+#NSD_IP=192.128.123.120
+NSD_IP=10.0.0.1
+# UB_IP1=192.128.123.121
+# UB_IP2=192.128.123.122
+# UB_IP3=192.128.123.123
+# UB_IP4=192.128.123.124
+
+# create virtual interfaces
+ip link add veth0 type veth peer name veth1
+ip link set dev veth0 up
+ip link set dev veth1 up
+
+ip addr add $NSD_IP dev veth0
+ip addr add $UB_IP1 dev veth1
+ip addr add $UB_IP2 dev veth1
+ip addr add $UB_IP3 dev veth1
+ip addr add $UB_IP4 dev veth1
+
+# start cookie connection by sending first message
+dig @$UNBOUND -p 9999 example.nl
+
+# check Unbound logs that we got a "complete" (client+server) cookie back
+sed -n "s/^.*complete cookie: \[24:0\] *//p" unbound.log > first_query.txt
+if ! grep -e "complete cookie: [24:0] " grep_test.txt
+then
+	echo "No complete cookie in the response to the first upstream query"
+	exit 1
+fi
+# check on which interface
+IFACE=sed -n -e "s/^.*\!\!\!\!\! iterator:udp socket: *//" -e "s/ port.*//p" unbound.log
+
+# flush unbound log
+echo > unbound.log
+
+# send second query with the previous complete cookie attached
+dig @$UNBOUND -p 9999 example.nl
+
+# check logs that we get the same complete cookie back
+sed -n "s/^.*complete cookie: \[24:0\] *//p" unbound.log > second_query.txt
+if ! grep -e "complete cookie: [24:0] " grep_test.txt
+then
+	echo "No complete cookie in the response to the second upstream query"
+	exit 1
+fi
+
+if [ "$(md5sum < first_query.txt)" != "$(md5sum < second_query.txt)" ]; then
+    echo "Cookies from the first and second query do not match"
+    cat first_query.txt
+    cat second_query.txt
+    exit 1
+fi
+# check on which interface, MUST be the same as last time
+if [ "$(sed -n -e "s/^.*\!\!\!\!\! iterator:udp socket: *//" -e "s/ port.*//p" unbound.log) != $IFACE" ]
+
+# remove interface that the cookie used last time
+
+# send query (on different interface) with different (!) client cookie
+
+# verify that we get a different client cookie in the complete cookie response
+# verify that the cookie was indeed sent on a different interface

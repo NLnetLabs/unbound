@@ -3898,17 +3898,13 @@ get_bound_ip_if(struct outside_network* outnet,
 		struct sockaddr_storage addr_any;
 		socklen_t addr_any_len = 0;
 
-		struct sockaddr_storage addr_fake;
-		socklen_t addr_fake_len = 0;
+		struct sockaddr_storage addr_new;
+		socklen_t addr_new_len = 0;
 
 		if (!ipstrtoaddr("0.0.0.0", 0, &addr_any, &addr_any_len)) {
 			/* this shouldn't fail */
 			return 0;
 		}
-
-		// if (!ipstrtoaddr("10.10.1.1", 0, &addr_fake, &addr_fake_len)) {
-		// 	// @TODO do something
-		// }
 
 		log_addr(VERB_DETAIL, "!!!!! outnet->ip4_ifs->addr", &outnet->ip4_ifs->addr, bound_addrlen);
 		log_addr(VERB_DETAIL, "!!!!! addr_any", &addr_any, addr_any_len);
@@ -3922,8 +3918,8 @@ get_bound_ip_if(struct outside_network* outnet,
 			/* return the interface from the list, but substitute the
 			 * previously used address */
 			memcpy(pif_return, outnet->ip4_ifs, sizeof(struct port_if));
-			memcpy(&pif_return->addr, &addr_fake, addr_fake_len);
-			pif_return->addrlen = addr_fake_len;
+			memcpy(&pif_return->addr, &addr_new, addr_new_len);
+			pif_return->addrlen = addr_new_len;
 
 			log_addr(VERB_DETAIL, "!!!!! get_bound_ip_if: addr from"
 				" ip4_ifs == 0.0.0.0, new is:", &pif_return->addr, outnet->ip4_ifs->addrlen);
