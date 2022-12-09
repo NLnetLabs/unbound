@@ -70,6 +70,8 @@ strmodulevent(enum module_ev e)
 	case module_event_noreply: return "module_event_noreply";
 	case module_event_capsfail: return "module_event_capsfail";
 	case module_event_moddone: return "module_event_moddone";
+	case module_event_interface_not_available: return 
+		"module_event_interface_not_available";
 	case module_event_error: return "module_event_error";
 	}
 	return "bad_event_value";

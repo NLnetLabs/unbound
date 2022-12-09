@@ -740,11 +740,12 @@ infra_get_cookie(struct infra_cache* infra, struct sockaddr_storage* addr,
 
 	data = (struct infra_data*) e->data;
 
-	// @TODO fix this logic. does the cookie status matter?
-	/* renew cookie if the address isn't available isn't stored */
-	// if (data->cookie->addrlen == 0) {
-	// 	infra_fill_client_cookie_random(infra, &data->cookie->data);
-	// }
+	/* renew cookie if the address that is stored isn't available */
+	if (data->cookie.pif.addrlen == 0 &&
+		data->cookie.state == SERVER_COOKIE_LEARNED) {
+		infra_fill_client_cookie_random(infra, (uint8_t*) &data->cookie.data);
+		data->cookie.state == SERVER_COOKIE_UNKNOWN;
+	}
 
 	memcpy(cookie, &data->cookie, sizeof(struct edns_cookie));
 
@@ -798,10 +799,19 @@ infra_set_server_cookie(struct infra_cache* infra, struct sockaddr_storage* addr
 			return -1;
 		}
 
-		if (!(data->cookie.pif.addrlen == pif->addrlen) &&
-			memcmp(&data->cookie.pif.addr, &pif->addr, pif->addrlen)){
-
-			// @TODO do something? this _should_ only happen on reloads?
+		/* We set the local pif addrlen to 0 if the interface is not found
+		 * so it must be unequal to the stored addrlen */
+		if (data->cookie.pif.addrlen != pif->addrlen &&
+			pif->addrlen == 0){
+			/* don't change the status, but change to cookie length
+			 * so it gets renewed during the lookup (which is 
+			 * where all the cookie creation happens) */
+			data->cookie.pif.addrlen = 0;
+			lock_rw_unlock(&e->lock);
+			log_info("the interface to the upstream response server "
+				"that was bound to this EDNS cookie has changed;"
+				" renewing cookie");
+			return 0;
 		}
 
 		/* the server cookie has changed, but the client cookie has not
@@ -813,6 +823,11 @@ infra_set_server_cookie(struct infra_cache* infra, struct sockaddr_storage* addr
 
 			verbose(VERB_ALGO, "update new server cookie from upstream");
 			lock_rw_unlock(&e->lock);
+
+			/* log_hex() uses the verbosity levels of verbose() */
+			log_hex("complete cookie: ", cookie->opt_data,
+				cookie->opt_len);
+
 			return 1;
 		}
 
@@ -820,7 +835,13 @@ infra_set_server_cookie(struct infra_cache* infra, struct sockaddr_storage* addr
 		 * remains unchanged */
 		verbose(VERB_ALGO, "correctly received indentical cookie from"
 			" upstream; don't update");
+
 		lock_rw_unlock(&e->lock);
+
+		/* log_hex() uses the verbosity levels of verbose() */
+				log_hex("complete cookie: ", cookie->opt_data,
+					cookie->opt_len);
+
 		return 1;
 	} else { /* cookie state == SERVER_COOKIE_UNKNOWN */
 
@@ -847,6 +868,10 @@ infra_set_server_cookie(struct infra_cache* infra, struct sockaddr_storage* addr
 		}
 		verbose(VERB_QUERY, "storing received server cookie from upstream");
 		lock_rw_unlock(&e->lock);
+
+		/* log_hex() uses the verbosity levels of verbose() */
+		log_hex("complete cookie: ", cookie->opt_data,
+			cookie->opt_len);
 		return 1;
 	}
 

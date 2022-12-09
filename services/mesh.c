@@ -886,6 +886,8 @@ void mesh_report_reply(struct mesh_area* mesh, struct outbound_entry* e,
 		event = module_event_noreply;
 		if(what == NETEVENT_CAPSFAIL)
 			event = module_event_capsfail;
+		if(what == NETEVENT_BOUND_INTERFACE_NOT_AVAILABLE)
+			event = module_event_interface_not_available;
 	}
 	mesh_run(mesh, e->qstate->mesh_info, event, e);
 }

@@ -579,6 +579,8 @@ enum module_ev {
 	module_event_capsfail,
 	/** next module is done, and its reply is awaiting you */
 	module_event_moddone,
+    /** retry of the query is needed with a rewritten (client) cookie */
+    module_event_interface_not_available,
 	/** error */
 	module_event_error
 };

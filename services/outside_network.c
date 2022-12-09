@@ -2090,6 +2090,14 @@ select_ifport(struct outside_network* outnet, struct pending* pend,
 			portno, &inuse, outnet->rnd, outnet->ip_dscp);
 		if(fd == -1 && !inuse) {
 			log_err("!!!! select_ifport:nonrecoverable error making socket");
+
+			/* we need to retry sending this message with a cookie
+			 * without a bound interface. The cookie needs to be
+			 * changed as to not leak the client cookie part that
+			 * is linked to this outgoing interface. */
+			if (pend->sq->bound_interface != NULL) {
+				pend->sq->bound_interface_failed = 1;
+			}
 			/* nonrecoverable error making socket */
 			return 0;
 		}
@@ -2553,6 +2561,7 @@ serviced_timer_cb(void* arg)
 	 * will get attached by the time we get an answer. */
 	return;
 delete:
+	log_err("!!!!! serviced_timer_cb:delete serviced_udp_send");
 	serviced_callbacks(sq, NETEVENT_CLOSED, NULL, NULL);
 }
 
@@ -2637,6 +2646,7 @@ serviced_create(struct outside_network* outnet, sldns_buffer* buff, int dnssec,
 	} else {
 		sq->bound_interface = NULL;
 	}
+	sq->bound_interface_failed = 0;
 	sq->padding_block_size = pad_queries_block_size;
 #ifdef UNBOUND_DEBUG
 	ins =
@@ -3027,6 +3037,12 @@ serviced_callbacks(struct serviced_query* sq, int error, struct comm_point* c,
 		}
 		sq->outnet->svcd_overhead = backlen;
 	}
+
+	/* set the error to retry the cookie with a new client cookie set */
+	if (sq->bound_interface != NULL && sq->bound_interface_failed) {
+		error = NETEVENT_BOUND_INTERFACE_NOT_AVAILABLE;
+	}
+
 	/* test the actual sq->cblist, because the next elem could be deleted*/
 	while((p=sq->cblist) != NULL) {
 		sq->cblist = p->next; /* remove this element */

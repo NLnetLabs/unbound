@@ -3901,14 +3901,14 @@ get_bound_ip_if(struct outside_network* outnet,
 		struct sockaddr_storage addr_fake;
 		socklen_t addr_fake_len = 0;
 
-
 		if (!ipstrtoaddr("0.0.0.0", 0, &addr_any, &addr_any_len)) {
-			// @TODO do something
+			/* this shouldn't fail */
+			return 0;
 		}
 
-		if (!ipstrtoaddr("10.10.1.1", 0, &addr_fake, &addr_fake_len)) {
-			// @TODO do something
-		}
+		// if (!ipstrtoaddr("10.10.1.1", 0, &addr_fake, &addr_fake_len)) {
+		// 	// @TODO do something
+		// }
 
 		log_addr(VERB_DETAIL, "!!!!! outnet->ip4_ifs->addr", &outnet->ip4_ifs->addr, bound_addrlen);
 		log_addr(VERB_DETAIL, "!!!!! addr_any", &addr_any, addr_any_len);
@@ -3925,7 +3925,8 @@ get_bound_ip_if(struct outside_network* outnet,
 			memcpy(&pif_return->addr, &addr_fake, addr_fake_len);
 			pif_return->addrlen = addr_fake_len;
 
-			log_addr(VERB_DETAIL, "!!!!! get_bound_ip_if: addr from ip4_ifs == 0.0.0.0, new is:", &pif_return->addr, outnet->ip4_ifs->addrlen);
+			log_addr(VERB_DETAIL, "!!!!! get_bound_ip_if: addr from"
+				" ip4_ifs == 0.0.0.0, new is:", &pif_return->addr, outnet->ip4_ifs->addrlen);
 
 			return 1;
 		}
@@ -3963,6 +3964,17 @@ process_response(struct module_qstate* qstate, struct iter_qstate* iq,
 	verbose(VERB_ALGO, "process_response: new external response event");
 	iq->response = NULL;
 	iq->state = QUERY_RESP_STATE;
+
+
+	if (event == module_event_interface_not_available) {
+		log_err("!!!!! process_response:event == module_event_interface_not_available");
+	}
+	if (!qstate->reply) {
+		log_err("!!!!! !qstate->reply");
+	}
+
+	// @TODO set renewed cookie here with infra_set_server_cookie, then bail out
+
 	if(event == module_event_noreply || event == module_event_error) {
 		if(event == module_event_noreply && iq->timeout_count >= 3 &&
 			qstate->env->cfg->use_caps_bits_for_id &&
@@ -3983,8 +3995,8 @@ process_response(struct module_qstate* qstate, struct iter_qstate* iq,
 		}
 		goto handle_it;
 	}
-	if( (event != module_event_reply && event != module_event_capsfail)
-		|| !qstate->reply) {
+	if( (event != module_event_reply && event != module_event_capsfail
+		&& event != module_event_interface_not_available) || !qstate->reply) {
 		log_err("Bad event combined with response");
 		outbound_list_remove(&iq->outlist, outbound);
 		errinf(qstate, "module iterator received wrong internal event with a response message");
@@ -4027,7 +4039,9 @@ process_response(struct module_qstate* qstate, struct iter_qstate* iq,
 			struct port_if pif;
 			struct port_if *pif_ptr = &pif;
 
-			if(getsockname(qstate->reply->c->fd,
+			/* Get the outgoing interface to store with the cookie */
+			if(event != module_event_interface_not_available &&
+				getsockname(qstate->reply->c->fd,
 				(struct sockaddr *) &bound_addr,
 					&bound_addrlen) != -1) {
 
@@ -4035,14 +4049,16 @@ process_response(struct module_qstate* qstate, struct iter_qstate* iq,
 
 				if (!(get_bound_ip_if(qstate->env->worker->back,
 					&bound_addr, bound_addrlen, pif_ptr))) {
-					bound_addrlen = 0;
+					pif.addrlen = 0;
 				}
 
 				log_addr(VERB_DETAIL, "!!!!! iterator:pif addr:", &pif.addr, pif.addrlen);
 
 			} else {
-				bound_addrlen = 0;
+				/* Set to zero so the cookie gets renewed */
+				pif.addrlen = 0;
 			}
+
 			/* verify this is a 'complete cookie' (client+server)
 			 * (RFC9018) with the length and store the complete
 			 * cookie in the infra_cache. Do nothing when the cookie
@@ -4053,9 +4069,7 @@ process_response(struct module_qstate* qstate, struct iter_qstate* iq,
 					&qstate->reply->addr, qstate->reply->addrlen,
 					iq->dp->name, iq->dp->namelen, pif_ptr,
 					cookie) >= 0) {
-				/* log_hex() uses the verbosity levels of verbose() */
-				log_hex("complete cookie: ", cookie->opt_data,
-					cookie->opt_len);
+				// @TODO do something
 			} else {
 				log_info("upstream response server cookie is not "
 					"added to cache; dropping response");

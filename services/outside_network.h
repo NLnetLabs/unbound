@@ -529,6 +529,11 @@ struct serviced_query {
 	int busy;
 	/** interface bound to the EDNS cookie @TODO fix this */
 	struct port_if* bound_interface;
+	/** flag to create a retry when the opening of the socket on the
+	 * bound interface failed. This enables rewriting of the cookie without 
+	 * leaking the previously sent client cookie */
+	int bound_interface_failed;
+
 };
 
 /**

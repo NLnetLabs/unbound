@@ -91,8 +91,6 @@ struct edns_cookie {
         enum edns_cookie_state state;
         struct edns_cookie_data data;
         struct port_if pif;
-        // struct sockaddr_storage bound_addr;
-        // socklen_t bound_addrlen;
 };
 
 

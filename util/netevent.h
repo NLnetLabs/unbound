@@ -99,6 +99,10 @@ typedef int comm_point_callback_type(struct comm_point*, void*, int,
 /** to pass write of the write packet is done to callback function
  * used when tcp_write_and_read is enabled */
 #define NETEVENT_PKT_WRITTEN -5
+/** to pass a retry event when the bound interface of a cookie has failed
+ * and a retry is needed with a rewritten (client) cookie */
+#define NETEVENT_BOUND_INTERFACE_NOT_AVAILABLE -6
+
 
 /** timeout to slow accept calls when not possible, in msec. */
 #define NETEVENT_SLOW_ACCEPT_TIME 2000
