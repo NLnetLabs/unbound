@@ -682,8 +682,10 @@ do_stop(RES* ssl, struct worker* worker)
 
 /** do the reload command */
 static void
-do_reload(RES* ssl, struct worker* worker)
+do_reload(RES* ssl, struct worker* worker, char* arg)
 {
+	arg = skipwhite(arg);
+	worker->reuse_cache = (strcmp(arg, "+keep-cache") == 0);
 	worker->need_to_exit = 0;
 	comm_base_exit(worker->base);
 	send_ok(ssl);
@@ -3030,7 +3032,7 @@ execute_cmd(struct daemon_remote* rc, RES* ssl, char* cmd,
 		do_stop(ssl, worker);
 		return;
 	} else if(cmdcmp(p, "reload", 6)) {
-		do_reload(ssl, worker);
+		do_reload(ssl, worker, skipwhite(p+6));
 		return;
 	} else if(cmdcmp(p, "stats_noreset", 13)) {
 		do_stats(ssl, worker, 0);
