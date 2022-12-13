@@ -67,9 +67,6 @@ struct rbtree_type;
 #define MAX_RESTART_COUNT	11
 /** max number of referrals. Makes sure resolver does not run away */
 #define MAX_REFERRAL_COUNT	130
-/** max number of queries-sent-out. Make sure large NS set does not loop.
- *  Resets on query restarts (e.g., CNAMES) and referrals. */
-#define MAX_SENT_COUNT		32
 /** max number of queries for which to perform dnsseclameness detection,
  * (rrsigs missing detection) after that, just pick up that response */
 #define DNSSEC_LAME_DETECT_COUNT 4
@@ -146,6 +143,9 @@ struct iter_env {
 
 	/** number of retries on outgoing queries */
 	int outbound_msg_retry;
+
+	/** number of queries_sent */
+	int max_sent_count;
 };
 
 /**

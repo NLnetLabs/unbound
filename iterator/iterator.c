@@ -2282,7 +2282,7 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 		errinf(qstate, "exceeded the maximum of referrals");
 		return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
 	}
-	if(iq->sent_count > MAX_SENT_COUNT) {
+	if(iq->sent_count > ie->max_sent_count) {
 		verbose(VERB_QUERY, "request has exceeded the maximum "
 			"number of sends with %d", iq->sent_count);
 		errinf(qstate, "exceeded the maximum number of sends");
@@ -2629,7 +2629,7 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 		 * the original query is one that matched too, so we have
 		 * caps_server+1 number of matching queries now */
 		if(iq->caps_server+1 >= naddr*3 ||
-			iq->caps_server*2+2 >= MAX_SENT_COUNT) {
+			iq->caps_server*2+2 >= (size_t)ie->max_sent_count) {
 			/* *2 on sentcount check because ipv6 may fail */
 			/* we're done, process the response */
 			verbose(VERB_ALGO, "0x20 fallback had %d responses "

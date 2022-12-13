@@ -178,6 +178,11 @@ server:
 	# a throwaway response (also timeouts) is received.
 	# outbound-msg-retry: 5
 
+	# Hard limit on the number of outgoing queries Unbound will make while
+	# resolving a name, making sure large NS sets do not loop.
+	# It resets on query restarts (e.g., CNAME) and referrals.
+	# max-sent-count: 32
+
 	# msec for waiting for an unknown server to reply.  Increase if you
 	# are behind a slow satellite link, to eg. 1128.
 	# unknown-server-time-limit: 376

@@ -610,6 +610,9 @@ struct config_file {
 
 	/** number of retries on outgoing queries */
 	int outbound_msg_retry;
+	/** max sent queries per qstate; resets on query restarts (e.g.,
+	 *  CNAMES) and referrals. */
+	int max_sent_count;
 	/** minimise outgoing QNAME and hide original QTYPE if possible */
 	int qname_minimisation;
 	/** minimise QNAME in strict mode, minimise according to RFC.

@@ -1828,6 +1828,12 @@ If a forward/stub zone is used, this is the number of retries per nameserver in
 the zone.
 Default is 5.
 .TP 5
+.B max\-sent\-count: \fI<number>
+Hard limit on the number of outgoing queries Unbound will make while resolving
+a name, making sure large NS sets do not loop.
+It resets on query restarts (e.g., CNAME) and referrals.
+Default is 32.
+.TP 5
 .B fast\-server\-permil: \fI<number>
 Specify how many times out of 1000 to pick from the set of fastest servers.
 0 turns the feature off.  A value of 900 would pick from the fastest

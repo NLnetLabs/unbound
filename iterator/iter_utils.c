@@ -175,6 +175,7 @@ iter_apply_cfg(struct iter_env* iter_env, struct config_file* cfg)
 	iter_env->supports_ipv6 = cfg->do_ip6;
 	iter_env->supports_ipv4 = cfg->do_ip4;
 	iter_env->outbound_msg_retry = cfg->outbound_msg_retry;
+	iter_env->max_sent_count = cfg->max_sent_count;
 	return 1;
 }
 

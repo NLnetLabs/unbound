@@ -515,6 +515,7 @@ ratelimit-factor{COLON}		{ YDVAR(1, VAR_RATELIMIT_FACTOR) }
 ip-ratelimit-backoff{COLON}		{ YDVAR(1, VAR_IP_RATELIMIT_BACKOFF) }
 ratelimit-backoff{COLON}		{ YDVAR(1, VAR_RATELIMIT_BACKOFF) }
 outbound-msg-retry{COLON}		{ YDVAR(1, VAR_OUTBOUND_MSG_RETRY) }
+max-sent-count{COLON}		{ YDVAR(1, VAR_MAX_SENT_COUNT) }
 low-rtt{COLON}			{ YDVAR(1, VAR_LOW_RTT) }
 fast-server-num{COLON}		{ YDVAR(1, VAR_FAST_SERVER_NUM) }
 low-rtt-pct{COLON}		{ YDVAR(1, VAR_FAST_SERVER_PERMIL) }
