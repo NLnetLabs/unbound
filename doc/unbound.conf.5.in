@@ -112,6 +112,14 @@ If enabled, extended statistics are printed from \fIunbound\-control\fR(8).
 Default is off, because keeping track of more statistics takes time.  The
 counters are listed in \fIunbound\-control\fR(8).
 .TP
+.B statistics\-inhibit\-zero: \fI<yes or no>
+If enabled, selected extended statistics with a value of 0 are inhibited from
+printing with \fIunbound\-control\fR(8).
+These are query types, query classes, query opcodes, answer rcodes
+(except NOERROR, FORMERR, SERVFAIL, NXDOMAIN, NOTIMPL, REFUSED) and
+RPZ actions.
+Default is on.
+.TP
 .B num\-threads: \fI<number>
 The number of threads to create to serve clients. Use 1 for no threading.
 .TP

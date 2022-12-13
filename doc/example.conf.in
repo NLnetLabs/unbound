@@ -35,8 +35,13 @@ server:
 	# statistics-cumulative: no
 
 	# enable extended statistics (query types, answer codes, status)
-	# printed from unbound-control. default off, because of speed.
+	# printed from unbound-control. Default off, because of speed.
 	# extended-statistics: no
+
+	# Inhibits selected extended statistics (qtype, qclass, qopcode, rcode,
+	# rpz-actions) from printing if their value is 0.
+	# Default on.
+	# statistics-inhibit-zero: yes
 
 	# number of threads to create. 1 disables threading.
 	# num-threads: 1

@@ -76,6 +76,8 @@ struct config_file {
 	int stat_cumulative;
 	/** if true, the statistics are kept in greater detail */
 	int stat_extended;
+	/** if true, inhibits a lot of =0 lines from the extended stats output */
+	int stat_inhibit_zero;
 
 	/** number of threads to create */
 	int num_threads;

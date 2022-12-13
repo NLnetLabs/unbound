@@ -180,8 +180,6 @@ usage(void)
 #ifdef HAVE_SHMGET
 /** what to put on statistics lines between var and value, ": " or "=" */
 #define SQ "="
-/** if true, inhibits a lot of =0 lines from the stats output */
-static const int inhibit_zero = 1;
 /** divide sum of timers to get average */
 static void
 timeval_divide(struct timeval* avg, const struct timeval* sum, long long d)
@@ -316,7 +314,7 @@ static void print_hist(struct ub_stats_info* s)
 }
 
 /** print extended */
-static void print_extended(struct ub_stats_info* s)
+static void print_extended(struct ub_stats_info* s, int inhibit_zero)
 {
 	int i;
 	char nm[16];
@@ -439,7 +437,7 @@ static void do_stats_shm(struct config_file* cfg, struct ub_stats_info* stats,
 	if(cfg->stat_extended) {
 		print_mem(shm_stat, &stats[0]);
 		print_hist(stats);
-		print_extended(stats);
+		print_extended(stats, cfg->stat_inhibit_zero);
 	}
 }
 #endif /* HAVE_SHMGET */

@@ -1,3 +1,7 @@
+13 December 2022: George
+	- Expose 'statistics-inhibit-zero' as a configuration option; the
+	  default value retains Unbound's behavior.
+
 1 December 2022: Wouter
 	- Fix #773: When used with systemd-networkd, unbound does not start
 	  until systemd-networkd-wait-online.service times out.

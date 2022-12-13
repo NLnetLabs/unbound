@@ -384,7 +384,8 @@ extern int yydebug;
     VAR_INTERFACE_TAG = 585,       /* VAR_INTERFACE_TAG  */
     VAR_INTERFACE_TAG_ACTION = 586, /* VAR_INTERFACE_TAG_ACTION  */
     VAR_INTERFACE_TAG_DATA = 587,  /* VAR_INTERFACE_TAG_DATA  */
-    VAR_PROXY_PROTOCOL_PORT = 588  /* VAR_PROXY_PROTOCOL_PORT  */
+    VAR_PROXY_PROTOCOL_PORT = 588, /* VAR_PROXY_PROTOCOL_PORT  */
+    VAR_STATISTICS_INHIBIT_ZERO = 589 /* VAR_STATISTICS_INHIBIT_ZERO  */
   };
   typedef enum yytokentype yytoken_kind_t;
 #endif
@@ -724,6 +725,7 @@ extern int yydebug;
 #define VAR_INTERFACE_TAG_ACTION 586
 #define VAR_INTERFACE_TAG_DATA 587
 #define VAR_PROXY_PROTOCOL_PORT 588
+#define VAR_STATISTICS_INHIBIT_ZERO 589
 
 /* Value type.  */
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
@@ -733,7 +735,7 @@ union YYSTYPE
 
 	char*	str;
 
-#line 737 "util/configparser.h"
+#line 739 "util/configparser.h"
 
 };
 typedef union YYSTYPE YYSTYPE;

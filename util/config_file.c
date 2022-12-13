@@ -99,6 +99,7 @@ config_create(void)
 	cfg->stat_interval = 0;
 	cfg->stat_cumulative = 0;
 	cfg->stat_extended = 0;
+	cfg->stat_inhibit_zero = 1;
 	cfg->num_threads = 1;
 	cfg->port = UNBOUND_DNS_PORT;
 	cfg->do_ip4 = 1;
@@ -516,6 +517,7 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	else S_YNO("use-syslog:", use_syslog)
 	else S_STR("log-identity:", log_identity)
 	else S_YNO("extended-statistics:", stat_extended)
+	else S_YNO("statistics-inhibit-zero:", stat_inhibit_zero)
 	else S_YNO("statistics-cumulative:", stat_cumulative)
 	else S_YNO("shm-enable:", shm_enable)
 	else S_NUMBER_OR_ZERO("shm-key:", shm_key)
@@ -996,6 +998,7 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_DEC(opt, "statistics-interval", stat_interval)
 	else O_YNO(opt, "statistics-cumulative", stat_cumulative)
 	else O_YNO(opt, "extended-statistics", stat_extended)
+	else O_YNO(opt, "statistics-inhibit-zero", stat_inhibit_zero)
 	else O_YNO(opt, "shm-enable", shm_enable)
 	else O_DEC(opt, "shm-key", shm_key)
 	else O_YNO(opt, "use-syslog", use_syslog)
