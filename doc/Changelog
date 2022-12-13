@@ -3,6 +3,9 @@
 	  default value retains Unbound's behavior.
 	- Expose 'max-sent-count' as a configuration option; the
 	  default value retains Unbound's behavior.
+	- Merge #461 from Christian Allred: Add max-query-restarts option.
+	  Exposes an internal configuration but the default value retains
+	  Unbound's behavior.
 
 13 December 2022: Wouter
 	- Merge #808: Wrap Makefile script's directory variables in quotes.
