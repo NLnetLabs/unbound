@@ -645,7 +645,7 @@ uninstall:	$(PYTHONMOD_UNINSTALL) $(PYUNBOUND_UNINSTALL) $(UNBOUND_EVENT_UNINSTA
 	rm -f -- $(DESTDIR)$(includedir)/unbound.h
 	$(LIBTOOL) --mode=uninstall rm -f $(DESTDIR)$(libdir)/libunbound.la
 	@echo
-	@echo "You still need to remove "`dirname $(DESTDIR)$(configfile)`" , $(DESTDIR)$(configfile) by hand"
+	@echo "You still need to remove "`dirname "$(DESTDIR)$(configfile)"`" , $(DESTDIR)$(configfile) by hand"
 
 iana_update:
 	curl -o port-numbers.tmp https://www.iana.org/assignments/service-names-port-numbers/service-names-port-numbers.xml --compressed

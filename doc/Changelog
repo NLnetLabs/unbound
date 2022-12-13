@@ -1,5 +1,6 @@
 13 December 2022: Wouter
 	- Merge #808: Wrap Makefile script's directory variables in quotes.
+	- Fix to wrap Makefile scripts directory in quotes for uninstall.
 
 1 December 2022: Wouter
 	- Fix #773: When used with systemd-networkd, unbound does not start
