@@ -141,6 +141,8 @@ struct iter_env {
 	/** number of queries that have been ratelimited */
 	size_t num_queries_ratelimited;
 
+	/** max number of query restarts to limit length of CNAME chain */
+	size_t max_query_restarts;
 	/** number of retries on outgoing queries */
 	int outbound_msg_retry;
 

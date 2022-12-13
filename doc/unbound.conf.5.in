@@ -1834,6 +1834,13 @@ a name, making sure large NS sets do not loop.
 It resets on query restarts (e.g., CNAME) and referrals.
 Default is 32.
 .TP 5
+.B max\-query\-restarts: \fI<number>
+Set the maximum number of times a query is allowed to restart upon encountering
+a CNAME record.
+If a query encounters more than the specified number of CNAME
+records before resolving, Unbound will reply with SERVFAIL.
+Default is 11.
+.TP 5
 .B fast\-server\-permil: \fI<number>
 Specify how many times out of 1000 to pick from the set of fastest servers.
 0 turns the feature off.  A value of 900 would pick from the fastest
@@ -1867,7 +1874,7 @@ errors. Default is "no".
 When the \fBval-log-level\fR option is also set to \fB2\fR, responses with
 Extended DNS Errors concerning DNSSEC failures that are not served from cache,
 will also contain a descriptive text message about the reason for the failure.
-.TP
+.TP 5
 .B ede\-serve\-expired: \fI<yes or no>
 If enabled, Unbound will attach an Extended DNS Error (RFC8914) Code 3 - Stale
 Answer as EDNS0 option to the expired response. Note that this will not attach
