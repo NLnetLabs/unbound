@@ -516,6 +516,7 @@ ip-ratelimit-backoff{COLON}		{ YDVAR(1, VAR_IP_RATELIMIT_BACKOFF) }
 ratelimit-backoff{COLON}		{ YDVAR(1, VAR_RATELIMIT_BACKOFF) }
 outbound-msg-retry{COLON}		{ YDVAR(1, VAR_OUTBOUND_MSG_RETRY) }
 max-sent-count{COLON}		{ YDVAR(1, VAR_MAX_SENT_COUNT) }
+max-query-restarts{COLON}	{ YDVAR(1, VAR_MAX_QUERY_RESTARTS) }
 low-rtt{COLON}			{ YDVAR(1, VAR_LOW_RTT) }
 fast-server-num{COLON}		{ YDVAR(1, VAR_FAST_SERVER_NUM) }
 low-rtt-pct{COLON}		{ YDVAR(1, VAR_FAST_SERVER_PERMIL) }
@@ -541,7 +542,6 @@ pad-responses{COLON}		{ YDVAR(1, VAR_PAD_RESPONSES) }
 pad-responses-block-size{COLON}	{ YDVAR(1, VAR_PAD_RESPONSES_BLOCK_SIZE) }
 pad-queries{COLON}		{ YDVAR(1, VAR_PAD_QUERIES) }
 pad-queries-block-size{COLON}	{ YDVAR(1, VAR_PAD_QUERIES_BLOCK_SIZE) }
-max-query-restarts{COLON}	{ YDVAR(1, VAR_MAX_QUERY_RESTARTS) }
 ipsecmod-enabled{COLON}		{ YDVAR(1, VAR_IPSECMOD_ENABLED) }
 ipsecmod-ignore-bogus{COLON}	{ YDVAR(1, VAR_IPSECMOD_IGNORE_BOGUS) }
 ipsecmod-hook{COLON}		{ YDVAR(1, VAR_IPSECMOD_HOOK) }

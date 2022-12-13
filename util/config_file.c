@@ -338,6 +338,7 @@ config_create(void)
 	cfg->ratelimit_backoff = 0;
 	cfg->outbound_msg_retry = 5;
 	cfg->max_sent_count = 32;
+	cfg->max_query_restarts = 11;
 	cfg->qname_minimisation = 1;
 	cfg->qname_minimisation_strict = 0;
 	cfg->shm_enable = 0;
@@ -358,7 +359,6 @@ config_create(void)
 	cfg->pad_responses_block_size = 468; /* from RFC8467 */
 	cfg->pad_queries = 1;
 	cfg->pad_queries_block_size = 128; /* from RFC8467 */
-	cfg->max_query_restarts = MAX_RESTART_COUNT;
 #ifdef USE_IPSECMOD
 	cfg->ipsecmod_enabled = 1;
 	cfg->ipsecmod_ignore_bogus = 0;
@@ -782,8 +782,8 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	else S_YNO("ip-ratelimit-backoff:", ip_ratelimit_backoff)
 	else S_YNO("ratelimit-backoff:", ratelimit_backoff)
 	else S_NUMBER_NONZERO("outbound-msg-retry:", outbound_msg_retry)
-	else S_NUMBER_NONZERO("max-sent-count", max_sent_count)
-	else S_SIZET_NONZERO("max-query-restarts:", max_query_restarts)
+	else S_NUMBER_NONZERO("max-sent-count:", max_sent_count)
+	else S_NUMBER_NONZERO("max-query-restarts:", max_query_restarts)
 	else S_SIZET_NONZERO("fast-server-num:", fast_server_num)
 	else S_NUMBER_OR_ZERO("fast-server-permil:", fast_server_permil)
 	else S_YNO("qname-minimisation:", qname_minimisation)
@@ -1246,7 +1246,7 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_YNO(opt, "ratelimit-backoff", ratelimit_backoff)
 	else O_UNS(opt, "outbound-msg-retry", outbound_msg_retry)
 	else O_UNS(opt, "max-sent-count", max_sent_count)
-	else O_DEC(opt, "max-query-restarts", max_query_restarts)
+	else O_UNS(opt, "max-query-restarts", max_query_restarts)
 	else O_DEC(opt, "fast-server-num", fast_server_num)
 	else O_DEC(opt, "fast-server-permil", fast_server_permil)
 	else O_DEC(opt, "val-sig-skew-min", val_sig_skew_min)

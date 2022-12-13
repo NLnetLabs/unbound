@@ -140,7 +140,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_DISABLE_DNSSEC_LAME_CHECK
 %token VAR_IP_RATELIMIT VAR_IP_RATELIMIT_SLABS VAR_IP_RATELIMIT_SIZE
 %token VAR_RATELIMIT VAR_RATELIMIT_SLABS VAR_RATELIMIT_SIZE
-%token VAR_OUTBOUND_MSG_RETRY VAR_MAX_SENT_COUNT
+%token VAR_OUTBOUND_MSG_RETRY VAR_MAX_SENT_COUNT VAR_MAX_QUERY_RESTARTS
 %token VAR_RATELIMIT_FOR_DOMAIN VAR_RATELIMIT_BELOW_DOMAIN
 %token VAR_IP_RATELIMIT_FACTOR VAR_RATELIMIT_FACTOR
 %token VAR_IP_RATELIMIT_BACKOFF VAR_RATELIMIT_BACKOFF
@@ -171,7 +171,6 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_DNSCRYPT_NONCE_CACHE_SLABS
 %token VAR_PAD_RESPONSES VAR_PAD_RESPONSES_BLOCK_SIZE
 %token VAR_PAD_QUERIES VAR_PAD_QUERIES_BLOCK_SIZE
-%token VAR_MAX_QUERY_RESTARTS
 %token VAR_IPSECMOD_ENABLED VAR_IPSECMOD_HOOK VAR_IPSECMOD_IGNORE_BOGUS
 %token VAR_IPSECMOD_MAX_TTL VAR_IPSECMOD_WHITELIST VAR_IPSECMOD_STRICT
 %token VAR_CACHEDB VAR_CACHEDB_BACKEND VAR_CACHEDB_SECRETSEED
@@ -282,7 +281,8 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_ratelimit_for_domain |
 	server_ratelimit_below_domain | server_ratelimit_factor |
 	server_ip_ratelimit_factor | server_ratelimit_backoff |
-	server_ip_ratelimit_backoff | server_outbound_msg_retry | server_max_sent_count |
+	server_ip_ratelimit_backoff | server_outbound_msg_retry |
+	server_max_sent_count | server_max_query_restarts |
 	server_send_client_subnet | server_client_subnet_zone |
 	server_client_subnet_always_forward | server_client_subnet_opcode |
 	server_max_client_subnet_ipv4 | server_max_client_subnet_ipv6 |
@@ -299,7 +299,6 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_qname_minimisation_strict |
 	server_pad_responses | server_pad_responses_block_size |
 	server_pad_queries | server_pad_queries_block_size |
-	server_max_query_restarts |
 	server_serve_expired |
 	server_serve_expired_ttl | server_serve_expired_ttl_reset |
 	server_serve_expired_reply_ttl | server_serve_expired_client_timeout |
@@ -2656,6 +2655,15 @@ server_max_sent_count: VAR_MAX_SENT_COUNT STRING_ARG
 		free($2);
 	}
 	;
+server_max_query_restarts: VAR_MAX_QUERY_RESTARTS STRING_ARG
+	{
+		OUTYY(("P(server_max_query_restarts:%s)\n", $2));
+		if(atoi($2) == 0 && strcmp($2, "0") != 0)
+			yyerror("number expected");
+		else cfg_parser->cfg->max_query_restarts = atoi($2);
+		free($2);
+	}
+	;
 server_low_rtt: VAR_LOW_RTT STRING_ARG
 	{
 		OUTYY(("P(low-rtt option is deprecated, use fast-server-num instead)\n"));
@@ -2735,15 +2743,6 @@ server_pad_queries_block_size: VAR_PAD_QUERIES_BLOCK_SIZE STRING_ARG
 		if(atoi($2) == 0)
 			yyerror("number expected");
 		else cfg_parser->cfg->pad_queries_block_size = atoi($2);
-		free($2);
-	}
-	;
-server_max_query_restarts: VAR_MAX_QUERY_RESTARTS STRING_ARG
-	{
-		OUTYY(("P(server_max_query_restarts:%s)\n", $2));
-		if(atoi($2) == 0)
-			yyerror("number expected");
-		else cfg_parser->cfg->max_query_restarts = atoi($2);
 		free($2);
 	}
 	;

@@ -1831,14 +1831,16 @@ Default is 5.
 .B max\-sent\-count: \fI<number>
 Hard limit on the number of outgoing queries Unbound will make while resolving
 a name, making sure large NS sets do not loop.
+Results in SERVFAIL when reached.
 It resets on query restarts (e.g., CNAME) and referrals.
 Default is 32.
 .TP 5
 .B max\-query\-restarts: \fI<number>
-Set the maximum number of times a query is allowed to restart upon encountering
-a CNAME record.
-If a query encounters more than the specified number of CNAME
-records before resolving, Unbound will reply with SERVFAIL.
+Hard limit on the number of times Unbound is allowed to restart a query upon
+encountering a CNAME record.
+Results in SERVFAIL when reached.
+Changing this value needs caution as it can allow long CNAME chains to be
+accepted, where Unbound needs to verify (resolve) each link individually.
 Default is 11.
 .TP 5
 .B fast\-server\-permil: \fI<number>

@@ -183,6 +183,10 @@ server:
 	# It resets on query restarts (e.g., CNAME) and referrals.
 	# max-sent-count: 32
 
+	# Hard limit on the number of times Unbound is allowed to restart a
+	# query upon encountering a CNAME record.
+	# max-query-restarts: 11
+
 	# msec for waiting for an unknown server to reply.  Increase if you
 	# are behind a slow satellite link, to eg. 1128.
 	# unknown-server-time-limit: 376

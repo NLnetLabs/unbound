@@ -611,8 +611,10 @@ struct config_file {
 	/** number of retries on outgoing queries */
 	int outbound_msg_retry;
 	/** max sent queries per qstate; resets on query restarts (e.g.,
-	 *  CNAMES) and referrals. */
+	 *  CNAMES) and referrals */
 	int max_sent_count;
+	/** max number of query restarts; determines max length of CNAME chain */
+	int max_query_restarts;
 	/** minimise outgoing QNAME and hide original QTYPE if possible */
 	int qname_minimisation;
 	/** minimise QNAME in strict mode, minimise according to RFC.
@@ -661,9 +663,6 @@ struct config_file {
 	int pad_queries;
 	/** block size with which to pad encrypted queries (default: 128) */
 	size_t pad_queries_block_size;
-
-	/** max number of query restarts. Determines max number of CNAME chain (default: 8) */
-	size_t max_query_restarts;
 
 	/** IPsec module */
 #ifdef USE_IPSECMOD
