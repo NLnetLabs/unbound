@@ -4,6 +4,10 @@
 	- Expose 'max-sent-count' as a configuration option; the
 	  default value retains Unbound's behavior.
 
+13 December 2022: Wouter
+	- Merge #808: Wrap Makefile script's directory variables in quotes.
+	- Fix to wrap Makefile scripts directory in quotes for uninstall.
+
 1 December 2022: Wouter
 	- Fix #773: When used with systemd-networkd, unbound does not start
 	  until systemd-networkd-wait-online.service times out.
