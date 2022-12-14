@@ -102,7 +102,12 @@ usage(void)
 	printf("  stop				stops the server\n");
 	printf("  reload			reloads the server\n");
 	printf("  				(this flushes data, stats, requestlist)\n");
-	printf("  reload +keep-cache		ditto but keep RRset and message cache\n");
+	printf("  reload_keep_cache		reloads the server but tries to\n");
+	printf("  				keep the RRset and message cache\n");
+	printf("  				if (re)configuration allows for it.\n");
+	printf("  				That means the caches sizes and\n");
+	printf("  				the number of threads must not\n");
+	printf("  				change between reloads.\n");
 	printf("  stats				print statistics\n");
 	printf("  stats_noreset			peek at statistics\n");
 #ifdef HAVE_SHMGET
