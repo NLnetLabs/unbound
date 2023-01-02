@@ -1,3 +1,6 @@
+2 January 2023: Wouter
+	- Fix windows compile for libunbound subprocess reap comm point closes.
+
 14 December 2022: George
 	- Merge #569 from JINMEI Tatuya: add keep-cache option to
 	  'unbound-control reload' to keep caches.
