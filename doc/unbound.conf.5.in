@@ -1391,10 +1391,10 @@ address space are not validated.  This is usually required whenever
 Configure a local zone. The type determines the answer to give if
 there is no match from local\-data. The types are deny, refuse, static,
 transparent, redirect, nodefault, typetransparent, inform, inform_deny,
-inform_redirect, always_transparent, always_refuse, always_nxdomain, always_null, noview,
-and are explained below. After that the default settings are listed. Use
-local\-data: to enter data into the local zone. Answers for local zones
-are authoritative DNS answers. By default the zones are class IN.
+inform_redirect, always_transparent, block_a, always_refuse, always_nxdomain,
+always_null, noview, and are explained below. After that the default settings
+are listed. Use local\-data: to enter data into the local zone. Answers for
+local zones are authoritative DNS answers. By default the zones are class IN.
 .IP
 If you need more complicated authoritative data, with referrals, wildcards,
 CNAME/DNAME support, or DNSSEC authoritative service, setup a stub\-zone for
@@ -1468,6 +1468,12 @@ Ie. answer queries with fixed data and also log the machines that ask.
 .TP 10
 \h'5'\fIalways_transparent\fR
 Like transparent, but ignores local data and resolves normally.
+.TP 10
+\h'5'\fIblock_a\fR
+Like transparent, but ignores local data and resolves normally all query
+types excluding A. For A queries it unconditionally returns NODATA.
+Useful in cases when there is a need to explicitly force all apps to use
+IPv6 protocol and avoid any queries to IPv4.
 .TP 10
 \h'5'\fIalways_refuse\fR
 Like refuse, but ignores local data and refuses the query.
