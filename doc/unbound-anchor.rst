@@ -98,7 +98,7 @@ The available options are:
 .. option:: -c <file>
 
        The root update certificate file, that is read in.
-       Default is :file:`@UNBOUND_ROOTCERT_FILE`.
+       Default is :file:`@UNBOUND_ROOTCERT_FILE@`.
        If the file does not exist, or is empty, a builtin certificate is used.
 
 .. option:: -l
