@@ -134,6 +134,7 @@ section "-hidden.postinstall"
 
 	# register uninstaller
 	WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Unbound" "DisplayName" "Unbound"
+	WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Unbound" "DisplayVersion" "${VERSION}"
 	WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Unbound" "UninstallString" "$\"$INSTDIR\uninst.exe$\""
 	WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Unbound" "QuietUninstallString" "$\"$INSTDIR\uninst.exe$\" /S"
 	WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Unbound" "NoModify" "1"
