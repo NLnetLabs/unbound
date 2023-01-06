@@ -1,6 +1,8 @@
 6 January 2023: Wouter
 	- Fix #823: Response change to NODATA for some ANY queries since
 	  1.12, tested on 1.16.1.
+	- Fix wildcard in hyperlocal zone service degradation, reported
+	  by Sergey Kacheev. This fix is included in 1.17.1rc2.
 
 5 January 2023: Wouter
 	- Tag for 1.17.1 release.
