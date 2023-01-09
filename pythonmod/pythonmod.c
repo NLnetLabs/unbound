@@ -330,6 +330,27 @@ int pythonmod_init(struct module_env* env, int id)
       }
       /* Check if sysconfig is there and use that instead of distutils;
        * distutils.sysconfig is deprecated in Python 3.10. */
+#if PY_MAJOR_VERSION <= 2 || (PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION <= 9)
+      /* For older versions, first try distutils.sysconfig because the
+       * sysconfig paths may contain wrong values, eg. on Debian10 for
+       * python 2.7 and 3.7. */
+      if(PyRun_SimpleString("import distutils.sysconfig \n") < 0) {
+         log_info("pythonmod: module distutils.sysconfig not available; "
+            "falling back to sysconfig.");
+         if(PyRun_SimpleString("import sysconfig \n") < 0
+            || PyRun_SimpleString("sys.path.append("
+            "sysconfig.get_path('platlib')) \n") < 0) {
+            goto python_init_fail;
+         }
+      } else {
+         if(PyRun_SimpleString("sys.path.append("
+            "distutils.sysconfig.get_python_lib(1,0)) \n") < 0) {
+            goto python_init_fail;
+         }
+      }
+#else
+      /* Python 3.10 and higher, check sysconfig first,
+       * distutils is deprecated. */
       if(PyRun_SimpleString("import sysconfig \n") < 0) {
          log_info("pythonmod: module sysconfig not available; "
             "falling back to distutils.sysconfig.");
@@ -344,6 +365,7 @@ int pythonmod_init(struct module_env* env, int id)
             goto python_init_fail;
          }
       }
+#endif
       if(PyRun_SimpleString("from unboundmodule import *\n") < 0)
       {
          goto python_init_fail;
