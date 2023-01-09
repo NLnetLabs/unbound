@@ -17734,7 +17734,14 @@ ac_compiler_gnu=$ac_cv_c_compiler_gnu
         #
 
    if test ! -z "$PYTHON_VERSION"; then
-	if test `$PYTHON -c "print('$PYTHON_VERSION' >= '2.4.0')"` = "False"; then
+	badversion="no"
+	if test "$PYTHON_VERSION_MAJOR" -lt 2; then
+		badversion="yes"
+	fi
+	if test "$PYTHON_VERSION_MAJOR" -eq 2 -a "$PYTHON_VERSION_MINOR" -lt 4; then
+		badversion="yes"
+	fi
+	if test "$badversion" = "yes"; then
 		as_fn_error $? "Python version >= 2.4.0 is required" "$LINENO" 5
 	fi
 

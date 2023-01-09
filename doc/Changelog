@@ -1,5 +1,6 @@
 9 January 2023: Wouter
 	- Fix python module install path detection.
+	- Fix python version detection in configure.
 
 6 January 2023: Wouter
 	- Fix #823: Response change to NODATA for some ANY queries since

@@ -734,7 +734,14 @@ if test x_$ub_test_python != x_no; then
    ac_save_LIBS="$LIBS" dnl otherwise AC_PYTHON_DEVEL thrashes $LIBS
    AC_PYTHON_DEVEL
    if test ! -z "$PYTHON_VERSION"; then
-	if test `$PYTHON -c "print('$PYTHON_VERSION' >= '2.4.0')"` = "False"; then
+	badversion="no"
+	if test "$PYTHON_VERSION_MAJOR" -lt 2; then
+		badversion="yes"
+	fi
+	if test "$PYTHON_VERSION_MAJOR" -eq 2 -a "$PYTHON_VERSION_MINOR" -lt 4; then
+		badversion="yes"
+	fi
+	if test "$badversion" = "yes"; then
 		AC_MSG_ERROR([Python version >= 2.4.0 is required])
 	fi
 
