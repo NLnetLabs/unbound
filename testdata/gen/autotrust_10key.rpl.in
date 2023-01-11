@@ -1,0 +1,144 @@
+; config options
+server:
+	target-fetch-policy: "0 0 0 0 0"
+	log-time-ascii: yes
+	fake-sha1: yes
+	trust-anchor-signaling: no
+stub-zone:
+	name: "."
+	stub-addr: 193.0.14.129         # K.ROOT-SERVERS.NET.
+AUTOTRUST_FILE example.com
+; autotrust trust anchor file
+;;id: example.com. 1
+;;last_queried: 1258962400 ;;Mon Nov 23 07:46:40 2009
+;;last_success: 1258962400 ;;Mon Nov 23 07:46:40 2009
+;;next_probe_time: 1258967360 ;;Mon Nov 23 09:09:20 2009
+;;query_failed: 0
+;;query_interval: 5400
+;;retry_time: 3600
+PUBKEY01 ;;state=2 [  VALID  ] ;;count=0 ;;lastchange=1258962400 ;;Mon Nov 23 07:46:40 2009
+PUBKEY02 ;;state=2 [  VALID  ] ;;count=0 ;;lastchange=1258962400 ;;Mon Nov 23 07:46:40 2009
+AUTOTRUST_END
+CONFIG_END
+
+SCENARIO_BEGIN Test autotrust with 10 keys
+; spec says you must be able to handle at least 5 keys per trust point
+
+; K-ROOT
+RANGE_BEGIN 0 100
+	ADDRESS 193.0.14.129
+ENTRY_BEGIN
+MATCH opcode qname qtype
+ADJUST copy_id copy_query
+REPLY QR AA
+SECTION QUESTION
+. IN NS
+SECTION ANSWER
+. IN NS k.root-servers.net.
+SECTION ADDITIONAL
+k.root-servers.net IN A 193.0.14.129
+ENTRY_END
+
+ENTRY_BEGIN
+MATCH opcode subdomain
+ADJUST copy_id copy_query
+REPLY QR
+SECTION QUESTION
+com. IN NS
+SECTION AUTHORITY
+com. IN NS a.gtld-servers.net.
+SECTION ADDITIONAL
+a.gtld-servers.net. IN A 192.5.6.30
+ENTRY_END
+RANGE_END
+
+; a.gtld-servers.net.
+RANGE_BEGIN 0 100
+	ADDRESS 192.5.6.30
+ENTRY_BEGIN
+MATCH opcode subdomain
+ADJUST copy_id copy_query
+REPLY QR
+SECTION QUESTION
+example.com. IN NS
+SECTION AUTHORITY
+example.com. IN NS ns.example.com.
+SECTION ADDITIONAL
+ns.example.com. IN A 1.2.3.4
+ENTRY_END
+RANGE_END
+
+; ns.example.com.
+RANGE_BEGIN 0 100
+	ADDRESS 1.2.3.4
+ENTRY_BEGIN
+MATCH opcode qname qtype
+ADJUST copy_id
+REPLY QR AA
+SECTION QUESTION
+example.com. IN DNSKEY
+SECTION ANSWER
+
+PUBKEY01 ;;state=2 [  VALID  ] ;;count=0 ;;lastchange=1258962400 ;;Mon Nov 23 07:46:40 2009
+PUBKEY02 ;;state=2 [  VALID  ] ;;count=0 ;;lastchange=1258962400 ;;Mon Nov 23 07:46:40 2009
+PUBKEY03
+PUBKEY04
+PUBKEY05
+PUBKEY06
+PUBKEY07
+PUBKEY08
+PUBKEY09
+PUBKEY10
+PUBKEY11
+PUBKEY12
+PUBKEY13
+SIG1
+
+ENTRY_END
+
+ENTRY_BEGIN
+MATCH opcode subdomain
+ADJUST copy_id copy_query
+REPLY QR
+SECTION QUESTION
+www.example.com. IN A
+SECTION ANSWER
+www.example.com. IN A 10.20.30.40
+ENTRY_END
+
+RANGE_END
+
+; set date/time to Mon Nov 23 09:46:40 2009
+STEP 5 TIME_PASSES EVAL ${1258962400 + 7200}
+STEP 6 TRAFFIC   ; do the probe
+STEP 7 ASSIGN t0 = ${time}
+STEP 8 ASSIGN probe0 = ${range 3200 ${timeout} 5400}
+STEP 9 ASSIGN tp = ${1258962400}
+
+; the auto probing should have been done now.
+STEP 11 CHECK_AUTOTRUST example.com
+FILE_BEGIN
+; autotrust trust anchor file
+;;id: example.com. 1
+;;last_queried: ${$t0} ;;${ctime $t0}
+;;last_success: ${$t0} ;;${ctime $t0}
+;;next_probe_time: ${$t0 + $probe0} ;;${ctime $t0 + $probe0}
+;;query_failed: 0
+;;query_interval: 3600
+;;retry_time: 3600
+PUBKEY13 ;;state=1 [ ADDPEND ] ;;count=1 ;;lastchange=${$t0} ;;${ctime $t0}
+PUBKEY12 ;;state=1 [ ADDPEND ] ;;count=1 ;;lastchange=${$t0} ;;${ctime $t0}
+PUBKEY11 ;;state=1 [ ADDPEND ] ;;count=1 ;;lastchange=${$t0} ;;${ctime $t0}
+PUBKEY10 ;;state=1 [ ADDPEND ] ;;count=1 ;;lastchange=${$t0} ;;${ctime $t0}
+PUBKEY09 ;;state=1 [ ADDPEND ] ;;count=1 ;;lastchange=${$t0} ;;${ctime $t0}
+PUBKEY08 ;;state=1 [ ADDPEND ] ;;count=1 ;;lastchange=${$t0} ;;${ctime $t0}
+PUBKEY07 ;;state=1 [ ADDPEND ] ;;count=1 ;;lastchange=${$t0} ;;${ctime $t0}
+PUBKEY06 ;;state=1 [ ADDPEND ] ;;count=1 ;;lastchange=${$t0} ;;${ctime $t0}
+PUBKEY05 ;;state=1 [ ADDPEND ] ;;count=1 ;;lastchange=${$t0} ;;${ctime $t0}
+PUBKEY04 ;;state=1 [ ADDPEND ] ;;count=1 ;;lastchange=${$t0} ;;${ctime $t0}
+PUBKEY03 ;;state=1 [ ADDPEND ] ;;count=1 ;;lastchange=${$t0} ;;${ctime $t0}
+PUBKEY02 ;;state=2 [  VALID  ] ;;count=0 ;;lastchange=1258962400 ;;Mon Nov 23 07:46:40 2009
+PUBKEY01 ;;state=2 [  VALID  ] ;;count=0 ;;lastchange=1258962400 ;;Mon Nov 23 07:46:40 2009
+FILE_END
+
+SCENARIO_END

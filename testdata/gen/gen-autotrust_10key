@@ -1,0 +1,66 @@
+#!/bin/sh
+
+KEYDIR=keys
+KEYNAME=autotrust_10key
+
+LDNS_KEYGEN=ldns-keygen
+LDNS_SIGNZONE=ldns-signzone
+SECALG=8	# RSA/SHA-256
+
+TMPZONE=tmpzone
+
+replace_keys()
+{
+	pubkey1=$(cat "$KEYDIR/$KEYNAME-1.key")
+	pubkey2=$(cat "$KEYDIR/$KEYNAME-2.key")
+	pubkey3=$(cat "$KEYDIR/$KEYNAME-3.key")
+	pubkey4=$(cat "$KEYDIR/$KEYNAME-4.key")
+	pubkey5=$(cat "$KEYDIR/$KEYNAME-5.key")
+	pubkey6=$(cat "$KEYDIR/$KEYNAME-6.key")
+	pubkey7=$(cat "$KEYDIR/$KEYNAME-7.key")
+	pubkey8=$(cat "$KEYDIR/$KEYNAME-8.key")
+	pubkey9=$(cat "$KEYDIR/$KEYNAME-9.key")
+	pubkey10=$(cat "$KEYDIR/$KEYNAME-10.key")
+	pubkey11=$(cat "$KEYDIR/$KEYNAME-11.key")
+	pubkey12=$(cat "$KEYDIR/$KEYNAME-12.key")
+	pubkey13=$(cat "$KEYDIR/$KEYNAME-13.key")
+
+	sed "s@PUBKEY01@$pubkey1@ ; \
+		s@PUBKEY02@$pubkey2@ ; \
+		s@PUBKEY03@$pubkey3@ ; \
+		s@PUBKEY04@$pubkey4@ ; \
+		s@PUBKEY05@$pubkey5@ ; \
+		s@PUBKEY06@$pubkey6@ ; \
+		s@PUBKEY07@$pubkey7@ ; \
+		s@PUBKEY08@$pubkey8@ ; \
+		s@PUBKEY09@$pubkey9@ ; \
+		s@PUBKEY10@$pubkey10@ ; \
+		s@PUBKEY11@$pubkey11@ ; \
+		s@PUBKEY12@$pubkey12@ ; \
+		s@PUBKEY13@$pubkey13@"
+}
+
+for i in 1 2 3 4 5 6 7 8 9 10 11 12 13
+do
+	if [ -f "$KEYDIR/$KEYNAME-$i.key" ]
+	then
+		continue	# Key already exists, remove to regenerate
+	fi
+	mkdir -p "$KEYDIR"
+	keyname=$($LDNS_KEYGEN -a $SECALG -b 2048 -k example.com.)
+	< "$keyname".key sed 's/IN/3600	IN/' > "$KEYDIR/$KEYNAME-$i.key"
+	rm -f "$keyname".key
+	mv "$keyname".private "$KEYDIR/$KEYNAME-$i.private"
+	mv "$keyname".ds "$KEYDIR/$KEYNAME-$i.ds"
+done
+
+echo 'example.com. IN SOA host.example.com. user.example.com. (1 7200 3600 2419200 3600)' > $TMPZONE
+cat "$KEYDIR/$KEYNAME"-*.key >> $TMPZONE
+$LDNS_SIGNZONE -e 20091124111500 -i 20091018111500 $TMPZONE "$KEYDIR/$KEYNAME-2"
+sig1=$(grep 'RRSIG[ 	]*DNSKEY' < $TMPZONE.signed )
+rm -f "$TMPZONE" "$TMPZONE.signed"
+
+< autotrust_10key.rpl.in \
+	replace_keys |
+	sed "s@SIG1@$sig1@" \
+	> ../autotrust_10key.rpl
