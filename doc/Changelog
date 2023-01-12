@@ -7,6 +7,8 @@
 	  1.12, tested on 1.16.1.
 	- Fix wildcard in hyperlocal zone service degradation, reported
 	  by Sergey Kacheev. This fix is included in 1.17.1rc2.
+	  That became 1.17.1 on 12 Jan 2023, the code repo continues
+	  with 1.17.2. 1.17.1 excludes fix #823, it is included forwards.
 
 5 January 2023: Wouter
 	- Tag for 1.17.1 release.
