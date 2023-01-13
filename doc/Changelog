@@ -1,3 +1,7 @@
+13 January 2023: Wouter
+	- Merge #826: Аdd a metric about the maximum number of collisions in
+	  lrushah.
+
 9 January 2023: Wouter
 	- Fix python module install path detection.
 	- Fix python version detection in configure.
