@@ -656,14 +656,14 @@ per delegation point, and their validation status.
 .I msg.cache.max_collisions
 The maximum number of hash table collisions in the msg cache. This is the
 number of hashes that are identical when a new element is inserted in the
-hash table. If the value is very large, something is wrong with the performance
-of the hash table, hash values are incorrect or malicious.
+hash table. If the value is very large, like hundreds, something is wrong
+with the performance of the hash table, hash values are incorrect or malicious.
 .TP
 .I rrset.cache.max_collisions
 The maximum number of hash table collisions in the rrset cache. This is the
 number of hashes that are identical when a new element is inserted in the
-hash table. If the value is very large, something is wrong with the performance
-of the hash table, hash values are incorrect or malicious.
+hash table. If the value is very large, like hundreds, something is wrong
+with the performance of the hash table, hash values are incorrect or malicious.
 .TP
 .I dnscrypt_shared_secret.cache.count
 The number of items in the shared secret cache. These are precomputed shared
