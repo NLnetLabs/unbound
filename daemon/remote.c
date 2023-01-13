@@ -1065,6 +1065,11 @@ print_ext(RES* ssl, struct ub_stats_info* s, int inhibit_zero)
 		(unsigned)s->svr.infra_cache_count)) return 0;
 	if(!ssl_printf(ssl, "key.cache.count"SQ"%u\n",
 		(unsigned)s->svr.key_cache_count)) return 0;
+	/* max collisions */
+	if(!ssl_printf(ssl, "msg.cache.max_collisions"SQ"%u\n",
+		(unsigned)s->svr.msg_cache_max_collisions)) return 0;
+	if(!ssl_printf(ssl, "rrset.cache.max_collisions"SQ"%u\n",
+		(unsigned)s->svr.rrset_cache_max_collisions)) return 0;
 	/* applied RPZ actions */
 	for(i=0; i<UB_STATS_RPZ_ACTION_NUM; i++) {
 		if(i == RPZ_NO_OVERRIDE_ACTION)

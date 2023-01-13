@@ -788,6 +788,11 @@ struct ub_server_stats {
 	/** number of key cache entries */
 	long long key_cache_count;
 
+	/** maximum number of collisions in the msg cache */
+	long long msg_cache_max_collisions;
+	/** maximum number of collisions in the rrset cache */
+	long long rrset_cache_max_collisions;
+
 	/** number of queries that used dnscrypt */
 	long long num_query_dnscrypt_crypted;
 	/** number of queries that queried dnscrypt certificates */

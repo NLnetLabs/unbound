@@ -403,6 +403,9 @@ static void print_extended(struct ub_stats_info* s, int inhibit_zero)
 	PR_UL("rrset.cache.count", s->svr.rrset_cache_count);
 	PR_UL("infra.cache.count", s->svr.infra_cache_count);
 	PR_UL("key.cache.count", s->svr.key_cache_count);
+	/* max collisions */
+	PR_UL("msg.cache.max_collisions", s->svr.msg_cache_max_collisions);
+	PR_UL("rrset.cache.max_collisions", s->svr.rrset_cache_max_collisions);
 	/* applied RPZ actions */
 	for(i=0; i<UB_STATS_RPZ_ACTION_NUM; i++) {
 		if(i == RPZ_NO_OVERRIDE_ACTION)
