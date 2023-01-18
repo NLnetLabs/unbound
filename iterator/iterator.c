@@ -1451,6 +1451,19 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 			errinf(qstate, "malloc failure for forward zone");
 			return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
 		}
+		if((qstate->query_flags&BIT_RD)==0) {
+			/* If the server accepts RD=0 queries and forwards
+			 * with RD=1, then if the server is listed as an NS
+			 * entry, it starts query loops. Stop that loop by
+			 * disallowing the query. The RD=0 was previously used
+			 * to check the cache with allow_snoop. For stubs,
+			 * the iterator pass would have primed the stub and
+			 * then cached information can be used for further
+			 * queries. */
+			verbose(VERB_ALGO, "cannot forward RD=0 query, to stop query loops");
+			errinf(qstate, "cannot forward RD=0 query");
+			return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
+		}
 		iq->refetch_glue = 0;
 		iq->minimisation_state = DONOT_MINIMISE_STATE;
 		/* the request has been forwarded.

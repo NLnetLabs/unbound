@@ -1,3 +1,9 @@
+18 January 2023: Wouter
+	- Fix not following cleared RD flags potentially enables amplification
+	  DDoS attacks, reported by Xiang Li and Wei Xu from NISL Lab,
+	  Tsinghua University. The fix stops query loops, by refusing to send
+	  RD=0 queries to a forwarder, they still get answered from cache.
+
 13 January 2023: Wouter
 	- Merge #826: Аdd a metric about the maximum number of collisions in
 	  lrushah.
