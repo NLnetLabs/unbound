@@ -9,6 +9,7 @@ server:
 	trust-anchor-signaling: no
 	rrset-roundrobin: no
 	aggressive-nsec: yes
+	harden-unknown-additional: yes
 
 stub-zone:
 	name: "."

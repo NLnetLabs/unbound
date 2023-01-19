@@ -10,6 +10,7 @@
 	  Thanks to Xiang Li, from NISL Lab, Tsinghua University.
 	- Set default for harden-unknown-additional to no. So that it does
 	  not hamper future protocol developments.
+	- Fix test for new default.
 
 18 January 2023: Wouter
 	- Fix not following cleared RD flags potentially enables amplification
