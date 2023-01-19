@@ -1,3 +1,23 @@
+19 January 2023: Wouter
+	- Set max-udp-size default to 1232. This is the same default value as
+	  the default value for edns-buffer-size. It restricts client edns
+	  buffer size choices, and makes unbound behave similar to other DNS
+	  resolvers. The new choice, down from 4096 means it is harder to get
+	  large responses from Unbound. Thanks to Xiang Li, from NISL Lab,
+	  Tsinghua University.
+	- Add harden-unknown-additional option. It removes
+	  unknown records from the authority section and additional section.
+	  Thanks to Xiang Li, from NISL Lab, Tsinghua University.
+	- Set default for harden-unknown-additional to no. So that it does
+	  not hamper future protocol developments.
+	- Fix test for new default.
+
+18 January 2023: Wouter
+	- Fix not following cleared RD flags potentially enables amplification
+	  DDoS attacks, reported by Xiang Li and Wei Xu from NISL Lab,
+	  Tsinghua University. The fix stops query loops, by refusing to send
+	  RD=0 queries to a forwarder, they still get answered from cache.
+
 13 January 2023: Wouter
 	- Merge #826: Аdd a metric about the maximum number of collisions in
 	  lrushah.

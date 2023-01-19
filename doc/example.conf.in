@@ -143,8 +143,8 @@ server:
 	# edns-buffer-size: 1232
 
 	# Maximum UDP response size (not applied to TCP response).
-	# Suggested values are 512 to 4096. Default is 4096. 65536 disables it.
-	# max-udp-size: 4096
+	# Suggested values are 512 to 4096. Default is 1232. 65536 disables it.
+	# max-udp-size: 1232
 
 	# max memory to use for stream(tcp and tls) waiting result buffers.
 	# stream-wait-size: 4m
@@ -502,6 +502,10 @@ server:
 	# advertised in the DS record.  If no, allows the weakest algorithm
 	# to validate the zone.
 	# harden-algo-downgrade: no
+
+	# Harden against unknown records in the authority section and the
+	# additional section.
+	# harden-unknown-additional: no
 
 	# Sent minimum amount of information to upstream servers to enhance
 	# privacy. Only sent minimum required labels of the QNAME and set QTYPE

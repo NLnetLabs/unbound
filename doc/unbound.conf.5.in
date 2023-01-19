@@ -233,7 +233,8 @@ number).
 .B max\-udp\-size: \fI<number>
 Maximum UDP response size (not applied to TCP response).  65536 disables the
 udp response size maximum, and uses the choice from the client, always.
-Suggested values are 512 to 4096. Default is 4096.
+Suggested values are 512 to 4096. Default is 1232. The default value is the
+same as the default for edns\-buffer\-size.
 .TP
 .B stream\-wait\-size: \fI<number>
 Number of bytes size maximum to use for waiting stream buffers.  Default is
@@ -1018,6 +1019,12 @@ advertised in the DS record.  If no, allows the weakest algorithm to
 validate the zone.  Default is no.  Zone signers must produce zones
 that allow this feature to work, but sometimes they do not, and turning
 this option off avoids that validation failure.
+.TP
+.B harden\-unknown\-additional: \fI<yes or no>
+Harden against unknown records in the authority section and additional
+section. Default is no. If no, such records are copied from the upstream
+and presented to the client together with the answer. If yes, it could
+hamper future protocol developments that want to add records.
 .TP
 .B use\-caps\-for\-id: \fI<yes or no>
 Use 0x20\-encoded random bits in the query to foil spoof attempts.
