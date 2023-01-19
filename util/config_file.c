@@ -300,7 +300,7 @@ config_create(void)
 	cfg->minimal_responses = 1;
 	cfg->rrset_roundrobin = 1;
 	cfg->unknown_server_time_limit = 376;
-	cfg->max_udp_size = 4096;
+	cfg->max_udp_size = 1232; /* value taken from edns_buffer_size */
 	if(!(cfg->server_key_file = strdup(RUN_DIR"/unbound_server.key"))) 
 		goto error_exit;
 	if(!(cfg->server_cert_file = strdup(RUN_DIR"/unbound_server.pem"))) 
