@@ -1020,6 +1020,11 @@ validate the zone.  Default is no.  Zone signers must produce zones
 that allow this feature to work, but sometimes they do not, and turning
 this option off avoids that validation failure.
 .TP
+.B harden\-unknown\-additional: \fI<yes or no>
+Harden against unknown records in the authority section and additional
+section. Default is yes. If no, such records are copied from the upstream
+and presented to the client together with the answer.
+.TP
 .B use\-caps\-for\-id: \fI<yes or no>
 Use 0x20\-encoded random bits in the query to foil spoof attempts.
 This perturbs the lowercase and uppercase of query names sent to

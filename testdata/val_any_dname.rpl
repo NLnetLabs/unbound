@@ -8,6 +8,8 @@ server:
 	fake-sha1: yes
 	trust-anchor-signaling: no
 	rrset-roundrobin: no
+	; this allows the SRV entry in the answer packet additional section.
+	harden-unknown-additional: no
 
 stub-zone:
 	name: "."

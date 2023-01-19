@@ -503,6 +503,10 @@ server:
 	# to validate the zone.
 	# harden-algo-downgrade: no
 
+	# Harden against unknown records in the authority section and the
+	# additional section.
+	# harden-unknown-additional: yes
+
 	# Sent minimum amount of information to upstream servers to enhance
 	# privacy. Only sent minimum required labels of the QNAME and set QTYPE
 	# to A when possible.

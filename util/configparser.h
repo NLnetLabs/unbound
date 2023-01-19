@@ -1,4 +1,4 @@
-/* A Bison parser, made by GNU Bison 3.8.2.  */
+/* A Bison parser, made by GNU Bison 3.7.6.  */
 
 /* Bison interface for Yacc-like parsers in C
 
@@ -387,7 +387,8 @@ extern int yydebug;
     VAR_INTERFACE_TAG_ACTION = 588, /* VAR_INTERFACE_TAG_ACTION  */
     VAR_INTERFACE_TAG_DATA = 589,  /* VAR_INTERFACE_TAG_DATA  */
     VAR_PROXY_PROTOCOL_PORT = 590, /* VAR_PROXY_PROTOCOL_PORT  */
-    VAR_STATISTICS_INHIBIT_ZERO = 591 /* VAR_STATISTICS_INHIBIT_ZERO  */
+    VAR_STATISTICS_INHIBIT_ZERO = 591, /* VAR_STATISTICS_INHIBIT_ZERO  */
+    VAR_HARDEN_UNKNOWN_ADDITIONAL = 592 /* VAR_HARDEN_UNKNOWN_ADDITIONAL  */
   };
   typedef enum yytokentype yytoken_kind_t;
 #endif
@@ -730,6 +731,7 @@ extern int yydebug;
 #define VAR_INTERFACE_TAG_DATA 589
 #define VAR_PROXY_PROTOCOL_PORT 590
 #define VAR_STATISTICS_INHIBIT_ZERO 591
+#define VAR_HARDEN_UNKNOWN_ADDITIONAL 592
 
 /* Value type.  */
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
@@ -739,7 +741,7 @@ union YYSTYPE
 
 	char*	str;
 
-#line 743 "util/configparser.h"
+#line 745 "util/configparser.h"
 
 };
 typedef union YYSTYPE YYSTYPE;
@@ -750,8 +752,6 @@ typedef union YYSTYPE YYSTYPE;
 
 extern YYSTYPE yylval;
 
-
 int yyparse (void);
-
 
 #endif /* !YY_YY_UTIL_CONFIGPARSER_H_INCLUDED  */
