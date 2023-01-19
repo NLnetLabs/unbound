@@ -233,7 +233,7 @@ config_create(void)
 	cfg->harden_below_nxdomain = 1;
 	cfg->harden_referral_path = 0;
 	cfg->harden_algo_downgrade = 0;
-	cfg->harden_unknown_additional = 1;
+	cfg->harden_unknown_additional = 0;
 	cfg->use_caps_bits_for_id = 0;
 	cfg->caps_whitelist = NULL;
 	cfg->private_address = NULL;

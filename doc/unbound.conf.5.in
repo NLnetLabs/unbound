@@ -1022,8 +1022,9 @@ this option off avoids that validation failure.
 .TP
 .B harden\-unknown\-additional: \fI<yes or no>
 Harden against unknown records in the authority section and additional
-section. Default is yes. If no, such records are copied from the upstream
-and presented to the client together with the answer.
+section. Default is no. If no, such records are copied from the upstream
+and presented to the client together with the answer. If yes, it could
+hamper future protocol developments that want to add records.
 .TP
 .B use\-caps\-for\-id: \fI<yes or no>
 Use 0x20\-encoded random bits in the query to foil spoof attempts.

@@ -5,9 +5,11 @@
 	  resolvers. The new choice, down from 4096 means it is harder to get
 	  large responses from Unbound. Thanks to Xiang Li, from NISL Lab,
 	  Tsinghua University.
-	- Add harden-unknown-additional option. Default on and it removes
+	- Add harden-unknown-additional option. It removes
 	  unknown records from the authority section and additional section.
 	  Thanks to Xiang Li, from NISL Lab, Tsinghua University.
+	- Set default for harden-unknown-additional to no. So that it does
+	  not hamper future protocol developments.
 
 18 January 2023: Wouter
 	- Fix not following cleared RD flags potentially enables amplification
