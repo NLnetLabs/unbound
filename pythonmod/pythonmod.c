@@ -3,6 +3,7 @@
  *
  * Copyright (c) 2009, Zdenek Vasicek (vasicek AT fit.vutbr.cz)
  *                     Marek Vavrusa  (xvavru00 AT stud.fit.vutbr.cz)
+ * Copyright (c) 2022, Rubicon Communications, LLC (Netgate)
  *
  * This software is open source.
  *
@@ -567,6 +568,10 @@ void pythonmod_deinit(struct module_env* env, int id)
 
    /* Module is deallocated in Python */
    env->modinfo[id] = NULL;
+
+   /* iterate over all possible callback types and clean up each in turn */
+   for (int cbtype = 0; cbtype < inplace_cb_types_total; cbtype++)
+      inplace_cb_delete(env, cbtype, id);
 }
 
 void pythonmod_inform_super(struct module_qstate* qstate, int id, struct module_qstate* super)
