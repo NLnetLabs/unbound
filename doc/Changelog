@@ -1,3 +1,7 @@
+20 January 2023: Wouter
+	- Merge #819: Added new static zone type block_a to suppress all A
+	  queries for specific zones.
+
 19 January 2023: Wouter
 	- Set max-udp-size default to 1232. This is the same default value as
 	  the default value for edns-buffer-size. It restricts client edns

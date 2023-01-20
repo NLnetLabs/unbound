@@ -1681,7 +1681,7 @@ local_zones_zone_answer(struct local_zone* z, struct module_env* env,
 		/* no NODATA or NXDOMAINS for this zone type */
 		return 0;
 	} else if(lz_type == local_zone_block_a) {
-		// Return NODATA for all A queries
+		/* Return NODATA for all A queries */
 		if(qinfo->qtype == LDNS_RR_TYPE_A) {
 			local_error_encode(qinfo, env, edns, repinfo, buf, temp,
 				LDNS_RCODE_NOERROR, (LDNS_RCODE_NOERROR|BIT_AA),
