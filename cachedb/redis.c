@@ -56,6 +56,7 @@ struct redis_moddata {
 	int numctxs;		/* number of ctx entries */
 	const char* server_host; /* server's IP address or host name */
 	int server_port;	 /* server's TCP port */
+	const char* server_path; /* server's unix path, or "", NULL if unused */
 	struct timeval timeout;	 /* timeout for connection setup and commands */
 };
 
@@ -67,8 +68,13 @@ redis_connect(const struct redis_moddata* moddata)
 {
 	redisContext* ctx;
 
-	ctx = redisConnectWithTimeout(moddata->server_host,
-		moddata->server_port, moddata->timeout);
+	if(moddata->server_path && moddata->server_path[0]!=0) {
+		ctx = redisConnectUnixWithTimeout(moddata->server_path,
+			moddata->timeout);
+	} else {
+		ctx = redisConnectWithTimeout(moddata->server_host,
+			moddata->server_port, moddata->timeout);
+	}
 	if(!ctx || ctx->err) {
 		const char *errstr = "out of memory";
 		if(ctx)
@@ -112,6 +118,7 @@ redis_init(struct module_env* env, struct cachedb_env* cachedb_env)
 	 * we don't have to free it in this module. */
 	moddata->server_host = env->cfg->redis_server_host;
 	moddata->server_port = env->cfg->redis_server_port;
+	moddata->server_path = env->cfg->redis_server_path;
 	moddata->timeout.tv_sec = env->cfg->redis_timeout / 1000;
 	moddata->timeout.tv_usec = (env->cfg->redis_timeout % 1000) * 1000;
 	for(i = 0; i < moddata->numctxs; i++)

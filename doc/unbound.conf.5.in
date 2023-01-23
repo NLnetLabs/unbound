@@ -2599,6 +2599,11 @@ This option defaults to "127.0.0.1".
 The TCP port number of the Redis server.
 This option defaults to 6379.
 .TP
+.B redis-server-path: \fI<unix socket path>\fR
+The unix socket path to connect to the redis server. Off by default, and it
+can be set to "" to turn this off. Unix sockets may have better throughput
+than the IP address option.
+.TP
 .B redis-timeout: \fI<msec>\fR
 The period until when Unbound waits for a response from the Redis sever.
 If this timeout expires Unbound closes the connection, treats it as

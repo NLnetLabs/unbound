@@ -1212,6 +1212,8 @@ remote-control:
 #     redis-server-host: 127.0.0.1
 #     # redis server's TCP port
 #     redis-server-port: 6379
+#     # if the server uses a unix socket, set its path, or "" when not used.
+#     # redis-server-path: "/var/lib/redis/redis-server.sock"
 #     # timeout (in ms) for communication with the redis server
 #     redis-timeout: 100
 #     # set timeout on redis records based on DNS response TTL

@@ -1,3 +1,6 @@
+23 January 2023: Wouter
+	- Add #835: [FR] Ability to use Redis unix sockets.
+
 20 January 2023: Wouter
 	- Merge #819: Added new static zone type block_a to suppress all A
 	  queries for specific zones.
