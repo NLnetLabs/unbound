@@ -696,6 +696,8 @@ struct config_file {
 	int redis_server_port;
 	/** redis server's unix path. Or "", NULL if unused */
 	char* redis_server_path;
+	/** redis server's AUTH password. Or "", NULL if unused */
+	char* redis_server_password;
 	/** timeout (in ms) for communication with the redis server */
 	int redis_timeout;
 	/** set timeout on redis records based on DNS response ttl */

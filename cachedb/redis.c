@@ -57,6 +57,7 @@ struct redis_moddata {
 	const char* server_host; /* server's IP address or host name */
 	int server_port;	 /* server's TCP port */
 	const char* server_path; /* server's unix path, or "", NULL if unused */
+	const char* server_password; /* server's AUTH password, or "", NULL if unused */
 	struct timeval timeout;	 /* timeout for connection setup and commands */
 };
 
@@ -85,6 +86,16 @@ redis_connect(const struct redis_moddata* moddata)
 	if(redisSetTimeout(ctx, moddata->timeout) != REDIS_OK) {
 		log_err("failed to set redis timeout");
 		goto fail;
+	}
+	if(moddata->server_password && moddata->server_password[0]!=0) {
+		redisReply* rep;
+		rep = redisCommand(ctx, "AUTH %s", moddata->server_password);
+		if(!rep || rep->type == REDIS_REPLY_ERROR) {
+			log_err("failed to authenticate with password");
+			freeReplyObject(rep);
+			goto fail;
+		}
+		freeReplyObject(rep);
 	}
 	return ctx;
 
@@ -119,6 +130,7 @@ redis_init(struct module_env* env, struct cachedb_env* cachedb_env)
 	moddata->server_host = env->cfg->redis_server_host;
 	moddata->server_port = env->cfg->redis_server_port;
 	moddata->server_path = env->cfg->redis_server_path;
+	moddata->server_password = env->cfg->redis_server_password;
 	moddata->timeout.tv_sec = env->cfg->redis_timeout / 1000;
 	moddata->timeout.tv_usec = (env->cfg->redis_timeout % 1000) * 1000;
 	for(i = 0; i < moddata->numctxs; i++)

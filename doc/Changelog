@@ -1,3 +1,6 @@
+23 January 2023: George
+	- Fix #833: [FR] Ability to set the Redis password.
+
 23 January 2023: Wouter
 	- Fix #835: [FR] Ability to use Redis unix sockets.
 

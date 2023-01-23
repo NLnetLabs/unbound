@@ -2604,6 +2604,11 @@ The unix socket path to connect to the redis server. Off by default, and it
 can be set to "" to turn this off. Unix sockets may have better throughput
 than the IP address option.
 .TP
+.B redis-server-password: \fI"<password>"\fR
+The Redis AUTH password to use for the redis server.
+Only relevant if Redis is configured for client password authorisation.
+Off by default, and it can be set to "" to turn this off.
+.TP
 .B redis-timeout: \fI<msec>\fR
 The period until when Unbound waits for a response from the Redis sever.
 If this timeout expires Unbound closes the connection, treats it as
