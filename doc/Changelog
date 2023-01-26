@@ -1,3 +1,6 @@
+26 January 2023: Wouter
+	- Fix acx_nlnetlabs.m4 for -Wstrict-prototypes.
+
 23 January 2023: George
 	- Fix #833: [FR] Ability to set the Redis password.
 
