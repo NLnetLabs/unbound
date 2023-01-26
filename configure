@@ -5146,7 +5146,7 @@ ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking $CC dependency flag" >&5
 $as_echo_n "checking $CC dependency flag... " >&6; }
-echo 'void f(){}' >conftest.c
+echo 'void f(void){}' >conftest.c
 if test "`$CC -MM conftest.c 2>&1`" = "conftest.o: conftest.c"; then
 	DEPFLAG="-MM"
 else
@@ -5328,7 +5328,7 @@ echo '
 #include <getopt.h>
 #endif
 
-int test() {
+int test(void) {
 	int a;
 	char **opts = NULL;
 	struct timeval tv;
@@ -5349,7 +5349,7 @@ int test() {
 	return a;
 }
 ' > conftest.c
-echo 'void f(){}' >>conftest.c
+echo 'void f(void){}' >>conftest.c
 if test -z "`$CC $CPPFLAGS $CFLAGS $ERRFLAG -c conftest.c 2>&1`"; then
 eval "cv_prog_cc_flag_needed_$cache=no"
 else
@@ -5419,7 +5419,7 @@ echo '
 #include <getopt.h>
 #endif
 
-int test() {
+int test(void) {
 	int a;
 	char **opts = NULL;
 	struct timeval tv;
@@ -5440,7 +5440,7 @@ int test() {
 	return a;
 }
 ' > conftest.c
-echo 'void f(){}' >>conftest.c
+echo 'void f(void){}' >>conftest.c
 if test -z "`$CC $CPPFLAGS $CFLAGS $ERRFLAG -c conftest.c 2>&1`"; then
 eval "cv_prog_cc_flag_needed_$cache=no"
 else
@@ -5499,12 +5499,12 @@ else
 echo '
 #include <stdbool.h>
 #include <ctype.h>
-int test() {
+int test(void) {
         int a = 0;
         return a;
 }
 ' > conftest.c
-echo 'void f(){}' >>conftest.c
+echo 'void f(void){}' >>conftest.c
 if test -z "`$CC $CPPFLAGS $CFLAGS $ERRFLAG -c conftest.c 2>&1`"; then
 eval "cv_prog_cc_flag_needed_$cache=no"
 else
@@ -5563,13 +5563,13 @@ else
 echo '
 #include <ctype.h>
 
-int test() {
+int test(void) {
         int a;
         a = isascii(32);
         return a;
 }
 ' > conftest.c
-echo 'void f(){}' >>conftest.c
+echo 'void f(void){}' >>conftest.c
 if test -z "`$CC $CPPFLAGS $CFLAGS $ERRFLAG -c conftest.c 2>&1`"; then
 eval "cv_prog_cc_flag_needed_$cache=no"
 else
@@ -5628,13 +5628,13 @@ else
 echo '
 #include <netinet/in.h>
 
-int test() {
+int test(void) {
         struct in6_pktinfo inf;
 	int a = (int)sizeof(inf);
         return a;
 }
 ' > conftest.c
-echo 'void f(){}' >>conftest.c
+echo 'void f(void){}' >>conftest.c
 if test -z "`$CC $CPPFLAGS $CFLAGS $ERRFLAG -c conftest.c 2>&1`"; then
 eval "cv_prog_cc_flag_needed_$cache=no"
 else
@@ -5696,13 +5696,13 @@ else
 echo '
 #include <unistd.h>
 
-int test() {
+int test(void) {
 	int a = setresgid(0,0,0);
 	a = setresuid(0,0,0);
         return a;
 }
 ' > conftest.c
-echo 'void f(){}' >>conftest.c
+echo 'void f(void){}' >>conftest.c
 if test -z "`$CC $CPPFLAGS $CFLAGS $ERRFLAG -c conftest.c 2>&1`"; then
 eval "cv_prog_cc_flag_needed_$cache=no"
 else
@@ -5765,7 +5765,7 @@ echo '
 #endif
 #include <netdb.h>
 
-int test() {
+int test(void) {
         int a = 0;
         char *t;
         time_t time = 0;
@@ -5778,7 +5778,7 @@ int test() {
         return a;
 }
 ' > conftest.c
-echo 'void f(){}' >>conftest.c
+echo 'void f(void){}' >>conftest.c
 if test -z "`$CC $CPPFLAGS $CFLAGS $ERRFLAG -c conftest.c 2>&1`"; then
 eval "cv_prog_cc_flag_needed_$cache=no"
 else
@@ -5847,7 +5847,7 @@ echo '
 #include <getopt.h>
 #endif
 
-int test() {
+int test(void) {
         int a;
         char **opts = NULL;
         struct timeval tv;
@@ -5860,7 +5860,7 @@ int test() {
         return a;
 }
 ' > conftest.c
-echo 'void f(){}' >>conftest.c
+echo 'void f(void){}' >>conftest.c
 if test -z "`$CC $CPPFLAGS $CFLAGS $ERRFLAG -c conftest.c 2>&1`"; then
 eval "cv_prog_cc_flag_needed_$cache=no"
 else
@@ -15955,12 +15955,12 @@ else
 
 echo '
 #include <stdio.h>
-int test() {
+int test(void) {
         int a = fseeko(stdin, 0, 0);
         return a;
 }
 ' > conftest.c
-echo 'void f(){}' >>conftest.c
+echo 'void f(void){}' >>conftest.c
 if test -z "`$CC $CPPFLAGS $CFLAGS $ERRFLAG -c conftest.c 2>&1`"; then
 eval "cv_prog_cc_flag_needed_$cache=no"
 else
@@ -20211,7 +20211,7 @@ char* (*f) () = getaddrinfo;
 #ifdef __cplusplus
 }
 #endif
-int main() {
+int main(void) {
         ;
         return 0;
 }
@@ -20485,7 +20485,7 @@ echo '
 #include <stdlib.h>
 #include <unistd.h>
 ' >conftest.c
-echo 'void f(){ (void)daemon(0, 0); }' >>conftest.c
+echo 'void f(void){ (void)daemon(0, 0); }' >>conftest.c
 if test -z "`$CC $CPPFLAGS $CFLAGS -c conftest.c 2>&1 | grep -e deprecated -e unavailable`"; then
 eval "cv_cc_deprecated_$cache=no"
 else
