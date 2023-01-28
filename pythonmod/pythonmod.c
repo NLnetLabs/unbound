@@ -3,7 +3,7 @@
  *
  * Copyright (c) 2009, Zdenek Vasicek (vasicek AT fit.vutbr.cz)
  *                     Marek Vavrusa  (xvavru00 AT stud.fit.vutbr.cz)
- * Copyright (c) 2022, Rubicon Communications, LLC (Netgate)
+ * Copyright (c) 2023, Rubicon Communications, LLC (Netgate)
  *
  * This software is open source.
  *
