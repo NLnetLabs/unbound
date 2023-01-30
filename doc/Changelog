@@ -1,3 +1,6 @@
+30 January 2023: George
+	- Add duration variable for speed_local.test.
+
 26 January 2023: Wouter
 	- Fix acx_nlnetlabs.m4 for -Wstrict-prototypes.
 
