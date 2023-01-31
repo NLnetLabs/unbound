@@ -779,6 +779,11 @@ subnetmod_operate(struct module_qstate *qstate, enum module_ev event,
 				&qstate->mesh_info->reply_list->query_reply.client_addr,
 				&sq->ecs_client_in, qstate->env->cfg);
 		}
+		else if(qstate->client_addr.ss_family != AF_UNSPEC) {
+			subnet_option_from_ss(
+				&qstate->client_addr,
+				&sq->ecs_client_in, qstate->env->cfg);
+		}
 		
 		if(sq->ecs_client_in.subnet_validdata == 0) {
 			/* No clients are interested in result or we could not
