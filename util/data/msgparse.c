@@ -964,11 +964,67 @@ edns_opt_list_append_keepalive(struct edns_option** list, int msec,
 			data, region);
 }
 
+int siphash(const uint8_t *in, const size_t inlen,
+		const uint8_t *k, uint8_t *out, const size_t outlen);
+
+/** RFC 1982 comparison, uses unsigned integers, and tries to avoid
+ * compiler optimization (eg. by avoiding a-b<0 comparisons),
+ * this routine matches compare_serial(), for SOA serial number checks */
+static int
+compare_1982(uint32_t a, uint32_t b)
+{
+	/* for 32 bit values */
+	const uint32_t cutoff = ((uint32_t) 1 << (32 - 1));
+
+	if (a == b) {
+		return 0;
+	} else if ((a < b && b - a < cutoff) || (a > b && a - b > cutoff)) {
+		return -1;
+	} else {
+		return 1;
+	}
+}
+
+/** if we know that b is larger than a, return the difference between them,
+ * that is the distance between them. in RFC1982 arith */
+static uint32_t
+subtract_1982(uint32_t a, uint32_t b)
+{
+	/* for 32 bit values */
+	const uint32_t cutoff = ((uint32_t) 1 << (32 - 1));
+
+	if(a == b)
+		return 0;
+	if(a < b && b - a < cutoff) {
+		return b-a;
+	}
+	if(a > b && a - b > cutoff) {
+		return ((uint32_t)0xffffffff) - (a-b-1);
+	}
+	/* wrong case, b smaller than a */
+	return 0;
+}
+
+
+static uint8_t *
+cookie_hash(uint8_t *hash, uint8_t *buf,
+		struct sockaddr_storage *addr, uint8_t *secret)
+{
+	if (addr->ss_family == AF_INET6) {
+		memcpy(buf+16, &((struct sockaddr_in6 *)addr)->sin6_addr, 16);
+		siphash(buf, 32, secret, hash, 8);
+	} else {
+		memcpy(buf+16, &((struct sockaddr_in *)addr)->sin_addr, 4);
+		siphash(buf, 20, secret, hash, 8);
+	}
+	return hash;
+}
+
 /** parse EDNS options from EDNS wireformat rdata */
 static int
 parse_edns_options_from_query(uint8_t* rdata_ptr, size_t rdata_len,
 	struct edns_data* edns, struct config_file* cfg, struct comm_point* c,
-	struct regional* region)
+	struct comm_reply* repinfo, uint32_t now, struct regional* region)
 {
 	/* To respond with a Keepalive option, the client connection must have
 	 * received one message with a TCP Keepalive EDNS option, and that
@@ -992,6 +1048,10 @@ parse_edns_options_from_query(uint8_t* rdata_ptr, size_t rdata_len,
 	while(rdata_len >= 4) {
 		uint16_t opt_code = sldns_read_uint16(rdata_ptr);
 		uint16_t opt_len = sldns_read_uint16(rdata_ptr+2);
+		uint8_t server_cookie[40], hash[8];
+		uint32_t cookie_time, subt_1982;
+		int comp_1982;
+
 		rdata_ptr += 4;
 		rdata_len -= 4;
 		if(opt_len > rdata_len)
@@ -1054,6 +1114,86 @@ parse_edns_options_from_query(uint8_t* rdata_ptr, size_t rdata_len,
 			edns->padding_block_size = cfg->pad_responses_block_size;
 			break;
 
+		case LDNS_EDNS_COOKIE:
+			if(!cfg || !cfg->do_answer_cookie)
+				break;
+			if(opt_len != 8 && (opt_len < 16 || opt_len > 40)) {
+				verbose(VERB_ALGO, "worker request: "
+						"badly formatted cookie");
+				return LDNS_RCODE_FORMERR;
+			}
+			edns->cookie_present = 1;
+
+			/* Copy client cookie, version and timestamp for
+			 * validation and creation purposes.
+			 */
+			memcpy(server_cookie, rdata_ptr, 16);
+
+			/* In the "if, if else" block below, we validate a
+			 * RFC9018 cookie. If it doesn't match the recipe, or
+			 * if it doesn't validate, or if the cookie is too old
+			 * (< 30 min), a new cookie is generated.
+			 */
+			if (opt_len != 24)
+				; /* RFC9018 cookies are 24 bytes long */
+
+			else if (cfg->cookie_secret_len != 16)
+				; /* RFC9018 cookies have 16 byte secrets */
+
+			else if (rdata_ptr[8] != 1)
+				; /* RFC9018 cookies are cookie version 1 */
+
+			else if ((comp_1982 = compare_1982(now,
+					(cookie_time = sldns_read_uint32(rdata_ptr + 12)))) > 0
+			     &&  (subt_1982 = subtract_1982(cookie_time, now)) > 3600)
+				; /* Cookie is older than 1 hour
+				   * (see RFC9018 Section 4.3.)
+				   */
+
+			else if (comp_1982 <= 0
+			     &&  subtract_1982(now, cookie_time) > 300)
+				; /* Cookie time is more than 5 minutes in the
+				   * future. (see RFC9018 Section 4.3.)
+				   */
+
+			else if (memcmp( cookie_hash( hash, server_cookie
+			                            , &repinfo->remote_addr
+			                            , cfg->cookie_secret)
+			               , rdata_ptr + 16 , 8 ) == 0) {
+
+				/* Cookie is valid! */
+				edns->cookie_valid = 1;
+				if (comp_1982 > 0 && subt_1982 > 1800)
+					; /* But older than 30 minutes,
+					   * so create a new one anyway */
+
+				else if (!edns_opt_list_append( /* Reuse cookie */
+				    &edns->opt_list_out, LDNS_EDNS_COOKIE, opt_len,
+				    rdata_ptr, region)) {
+					log_err("out of memory");
+					return LDNS_RCODE_SERVFAIL;
+				} else
+					/* Cookie to be reused added to
+					 * outgoing options. Done!
+					 */
+					break;
+			}
+			/* Add a new server cookie to outgoing cookies */
+			server_cookie[ 8] = 1;   /* Version */
+			server_cookie[ 9] = 0;   /* Reserved */
+			server_cookie[10] = 0;   /* Reserved */
+			server_cookie[11] = 0;   /* Reserved */
+			sldns_write_uint32(server_cookie + 12, now);
+			cookie_hash( hash, server_cookie, &repinfo->remote_addr
+			           , cfg->cookie_secret);
+			memcpy(server_cookie + 16, hash, 8);
+			if (!edns_opt_list_append( &edns->opt_list_out
+			                         , LDNS_EDNS_COOKIE
+						 , 24, server_cookie, region)) {
+				log_err("out of memory");
+				return LDNS_RCODE_SERVFAIL;
+			}
+			break;
 		default:
 			break;
 		}
@@ -1128,6 +1268,8 @@ parse_extract_edns_from_response_msg(struct msg_parse* msg,
 	edns->opt_list_out = NULL;
 	edns->opt_list_inplace_cb_out = NULL;
 	edns->padding_block_size = 0;
+	edns->cookie_present = 0;
+	edns->cookie_valid = 0;
 
 	/* take the options */
 	rdata_len = found->rr_first->size-2;
@@ -1183,7 +1325,8 @@ skip_pkt_rrs(sldns_buffer* pkt, int num)
 
 int 
 parse_edns_from_query_pkt(sldns_buffer* pkt, struct edns_data* edns,
-	struct config_file* cfg, struct comm_point* c, struct regional* region)
+	struct config_file* cfg, struct comm_point* c,
+	struct comm_reply* repinfo, time_t now, struct regional* region)
 {
 	size_t rdata_len;
 	uint8_t* rdata_ptr;
@@ -1219,6 +1362,8 @@ parse_edns_from_query_pkt(sldns_buffer* pkt, struct edns_data* edns,
 	edns->opt_list_out = NULL;
 	edns->opt_list_inplace_cb_out = NULL;
 	edns->padding_block_size = 0;
+	edns->cookie_present = 0;
+	edns->cookie_valid = 0;
 
 	/* take the options */
 	rdata_len = sldns_buffer_read_u16(pkt);
@@ -1227,7 +1372,7 @@ parse_edns_from_query_pkt(sldns_buffer* pkt, struct edns_data* edns,
 	rdata_ptr = sldns_buffer_current(pkt);
 	/* ignore rrsigs */
 	return parse_edns_options_from_query(rdata_ptr, rdata_len, edns, cfg,
-			c, region);
+			c, repinfo, now, region);
 }
 
 void

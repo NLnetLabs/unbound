@@ -1,3 +1,8 @@
+# #-- edns_upstream_cookies.test --#
+# source the master var file when it's there
+[ -f ../.tpkg.var.master ] && source ../.tpkg.var.master
+# use .tpkg.var.test for in test variable passing
+[ -f .tpkg.var.test ] && source .tpkg.var.test
 
 # The problem of this test lies in that we want to look at the connection between
 # the resolver and the upstream. I cannot think of a way for this to be done
@@ -19,22 +24,12 @@
 
 
 #NSD_IP=192.128.123.120
-NSD_IP=10.0.0.1
-# UB_IP1=192.128.123.121
-# UB_IP2=192.128.123.122
+
 # UB_IP3=192.128.123.123
 # UB_IP4=192.128.123.124
-
-# create virtual interfaces
-ip link add veth0 type veth peer name veth1
-ip link set dev veth0 up
-ip link set dev veth1 up
-
-ip addr add $NSD_IP dev veth0
-ip addr add $UB_IP1 dev veth1
-ip addr add $UB_IP2 dev veth1
-ip addr add $UB_IP3 dev veth1
-ip addr add $UB_IP4 dev veth1
+# ip addr add $UB_IP2 dev veth1
+# ip addr add $UB_IP3 dev veth1
+# ip addr add $UB_IP4 dev veth1
 
 # start cookie connection by sending first message
 dig @$UNBOUND -p 9999 example.nl
@@ -51,6 +46,11 @@ IFACE=sed -n -e "s/^.*\!\!\!\!\! iterator:udp socket: *//" -e "s/ port.*//p" unb
 
 # flush unbound log
 echo > unbound.log
+
+
+# bring up second interface so we verify it keep using the first interface
+ip addr add $UB_IP2 dev veth1
+
 
 # send second query with the previous complete cookie attached
 dig @$UNBOUND -p 9999 example.nl
@@ -72,7 +72,29 @@ fi
 # check on which interface, MUST be the same as last time
 if [ "$(sed -n -e "s/^.*\!\!\!\!\! iterator:udp socket: *//" -e "s/ port.*//p" unbound.log) != $IFACE" ]
 
-# remove interface that the cookie used last time
+
+# remove the first interface so the kernel will have to use the second interface
+ip addr del $UB_IP1 dev veth1
+
+# flush unbound log
+echo > unbound.log
+
+
+dig @$UNBOUND -p 9999 example.nl
+
+# check logs that we get the same complete cookie back
+sed -n "s/^.*complete cookie: \[24:0\] *//p" unbound.log > second_query.txt
+if ! grep -e "complete cookie: [24:0] " grep_test.txt
+then
+	echo "No complete cookie in the response to the second upstream query"
+	exit 1
+fi
+
+# !!!!!! interface unavailable, renewing cookie
+
+
+
+
 
 # send query (on different interface) with different (!) client cookie
 

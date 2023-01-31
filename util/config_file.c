@@ -55,6 +55,7 @@
 #include "util/regional.h"
 #include "util/fptr_wlist.h"
 #include "util/data/dname.h"
+#include "util/random.h"
 #include "util/rtt.h"
 #include "services/cache/infra.h"
 #include "sldns/wire2str.h"
@@ -86,6 +87,9 @@ struct config_parser_state* cfg_parser = 0;
 
 /** init ports possible for use */
 static void init_outgoing_availports(int* array, int num);
+
+/** init cookie with random data */
+static void init_cookie_secret(uint8_t* cookie_secret,size_t cookie_secret_len);
 
 struct config_file* 
 config_create(void)
@@ -364,6 +368,10 @@ config_create(void)
 	cfg->ipsecmod_whitelist = NULL;
 	cfg->ipsecmod_strict = 0;
 #endif
+	cfg->do_answer_cookie = 0;
+	memset(cfg->cookie_secret, 0, sizeof(cfg->cookie_secret));
+	cfg->cookie_secret_len = 16;
+	init_cookie_secret(cfg->cookie_secret, cfg->cookie_secret_len);
 #ifdef USE_CACHEDB
 	if(!(cfg->cachedb_backend = strdup("testframe"))) goto error_exit;
 	if(!(cfg->cachedb_secret = strdup("default"))) goto error_exit;
@@ -787,6 +795,7 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	else S_SIZET_NONZERO("pad-responses-block-size:", pad_responses_block_size)
 	else S_YNO("pad-queries:", pad_queries)
 	else S_SIZET_NONZERO("pad-queries-block-size:", pad_queries_block_size)
+	else S_STRLIST("proxy-protocol-port:", proxy_protocol_port)
 #ifdef USE_IPSECMOD
 	else S_YNO("ipsecmod-enabled:", ipsecmod_enabled)
 	else S_YNO("ipsecmod-ignore-bogus:", ipsecmod_ignore_bogus)
@@ -823,7 +832,7 @@ int config_set_option(struct config_file* cfg, const char* opt,
 		 * stub-ssl-upstream, forward-zone, auth-zone
 		 * name, forward-addr, forward-host,
 		 * ratelimit-for-domain, ratelimit-below-domain,
-		 * local-zone-tag, access-control-view,
+		 * local-zone-tag, access-control-view, interface-*,
 		 * send-client-subnet, client-subnet-always-forward,
 		 * max-client-subnet-ipv4, max-client-subnet-ipv6,
 		 * min-client-subnet-ipv4, min-client-subnet-ipv6,
@@ -1253,11 +1262,17 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_LS3(opt, "access-control-tag-action", acl_tag_actions)
 	else O_LS3(opt, "access-control-tag-data", acl_tag_datas)
 	else O_LS2(opt, "access-control-view", acl_view)
+	else O_LS2(opt, "interface-action", interface_actions)
+	else O_LTG(opt, "interface-tag", interface_tags)
+	else O_LS3(opt, "interface-tag-action", interface_tag_actions)
+	else O_LS3(opt, "interface-tag-data", interface_tag_datas)
+	else O_LS2(opt, "interface-view", interface_view)
 	else O_YNO(opt, "pad-responses", pad_responses)
 	else O_DEC(opt, "pad-responses-block-size", pad_responses_block_size)
 	else O_YNO(opt, "pad-queries", pad_queries)
 	else O_DEC(opt, "pad-queries-block-size", pad_queries_block_size)
 	else O_LS2(opt, "edns-client-strings", edns_client_strings)
+	else O_LST(opt, "proxy-protocol-port", proxy_protocol_port)
 #ifdef USE_IPSECMOD
 	else O_YNO(opt, "ipsecmod-enabled", ipsecmod_enabled)
 	else O_YNO(opt, "ipsecmod-ignore-bogus", ipsecmod_ignore_bogus)
@@ -1608,10 +1623,16 @@ config_delete(struct config_file* cfg)
 	config_deltrplstrlist(cfg->local_zone_overrides);
 	config_del_strarray(cfg->tagname, cfg->num_tags);
 	config_del_strbytelist(cfg->local_zone_tags);
-	config_del_strbytelist(cfg->acl_tags);
 	config_del_strbytelist(cfg->respip_tags);
+	config_deldblstrlist(cfg->acl_view);
+	config_del_strbytelist(cfg->acl_tags);
 	config_deltrplstrlist(cfg->acl_tag_actions);
 	config_deltrplstrlist(cfg->acl_tag_datas);
+	config_deldblstrlist(cfg->interface_actions);
+	config_deldblstrlist(cfg->interface_view);
+	config_del_strbytelist(cfg->interface_tags);
+	config_deltrplstrlist(cfg->interface_tag_actions);
+	config_deltrplstrlist(cfg->interface_tag_datas);
 	config_delstrlist(cfg->control_ifs.first);
 	free(cfg->server_key_file);
 	free(cfg->server_cert_file);
@@ -1632,6 +1653,7 @@ config_delete(struct config_file* cfg)
 	config_delstrlist(cfg->python_script);
 	config_delstrlist(cfg->dynlib_file);
 	config_deldblstrlist(cfg->edns_client_strings);
+	config_delstrlist(cfg->proxy_protocol_port);
 #ifdef USE_IPSECMOD
 	free(cfg->ipsecmod_hook);
 	config_delstrlist(cfg->ipsecmod_whitelist);
@@ -1649,6 +1671,21 @@ config_delete(struct config_file* cfg)
 #endif
 	free(cfg);
 }
+
+static void
+init_cookie_secret(uint8_t* cookie_secret, size_t cookie_secret_len)
+{
+	struct ub_randstate *rand = ub_initstate(NULL);
+
+	if (!rand)
+		fatal_exit("could not init random generator");
+	while (cookie_secret_len) {
+		*cookie_secret++ = (uint8_t)ub_random(rand);
+		cookie_secret_len--;
+	}
+	ub_randfree(rand);
+}
+
 
 static void 
 init_outgoing_availports(int* a, int num)
@@ -2613,4 +2650,36 @@ int cfg_has_https(struct config_file* cfg)
 			return 1;
 	}
 	return 0;
+}
+
+/** see if interface is PROXYv2, its port number == the proxy port number */
+int
+if_is_pp2(const char* ifname, const char* port,
+	struct config_strlist* proxy_protocol_port)
+{
+	struct config_strlist* s;
+	char* p = strchr(ifname, '@');
+	for(s = proxy_protocol_port; s; s = s->next) {
+		if(p && atoi(p+1) == atoi(s->str))
+			return 1;
+		if(!p && atoi(port) == atoi(s->str))
+			return 1;
+	}
+	return 0;
+}
+
+/** see if interface is DNSCRYPT, its port number == the dnscrypt port number */
+int
+if_is_dnscrypt(const char* ifname, const char* port, int dnscrypt_port)
+{
+#ifdef USE_DNSCRYPT
+	return ((strchr(ifname, '@') &&
+		atoi(strchr(ifname, '@')+1) == dnscrypt_port) ||
+		(!strchr(ifname, '@') && atoi(port) == dnscrypt_port));
+#else
+	(void)ifname;
+	(void)port;
+	(void)dnscrypt_port;
+	return 0;
+#endif
 }

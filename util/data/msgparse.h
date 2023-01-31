@@ -72,6 +72,7 @@ struct regional;
 struct edns_option;
 struct config_file;
 struct comm_point;
+struct comm_reply;
 
 /** number of buckets in parse rrset hash table. Must be power of 2. */
 #define PARSE_TABLE_SIZE 32
@@ -217,8 +218,6 @@ struct rr_parse {
  * region.
  */
 struct edns_data {
-	/** if EDNS OPT record was present */
-	int edns_present;
 	/** Extended RCODE */
 	uint8_t ext_rcode;
 	/** The EDNS version number */
@@ -238,7 +237,13 @@ struct edns_data {
 	struct edns_option* opt_list_inplace_cb_out;
 	/** block size to pad */
 	uint16_t padding_block_size;
-};
+	/** if EDNS OPT record was present */
+	unsigned int edns_present   : 1;
+	/** if a cookie was present */
+	unsigned int cookie_present : 1;
+	/** if the cookie validated */
+	unsigned int cookie_valid   : 1;
+};	
 
 /**
  * EDNS option
@@ -324,7 +329,8 @@ int skip_pkt_rrs(struct sldns_buffer* pkt, int num);
  *	RCODE formerr if OPT is badly formatted and so on.
  */
 int parse_edns_from_query_pkt(struct sldns_buffer* pkt, struct edns_data* edns,
-	struct config_file* cfg, struct comm_point* c, struct regional* region);
+	struct config_file* cfg, struct comm_point* c,
+	struct comm_reply* repinfo, time_t now, struct regional* region);
 
 /**
  * Calculate hash value for rrset in packet.
