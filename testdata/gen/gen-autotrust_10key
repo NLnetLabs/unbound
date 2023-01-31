@@ -1,13 +1,8 @@
 #!/bin/sh
 
-KEYDIR=keys
+. ./gen-common
+
 KEYNAME=autotrust_10key
-
-LDNS_KEYGEN=ldns-keygen
-LDNS_SIGNZONE=ldns-signzone
-SECALG=8	# RSA/SHA-256
-
-TMPZONE=tmpzone
 
 replace_keys()
 {
@@ -42,23 +37,10 @@ replace_keys()
 
 for i in 1 2 3 4 5 6 7 8 9 10 11 12 13
 do
-	if [ -f "$KEYDIR/$KEYNAME-$i.key" ]
-	then
-		continue	# Key already exists, remove to regenerate
-	fi
-	mkdir -p "$KEYDIR"
-	keyname=$($LDNS_KEYGEN -a $SECALG -b 2048 -k example.com.)
-	< "$keyname".key sed 's/IN/3600	IN/' > "$KEYDIR/$KEYNAME-$i.key"
-	rm -f "$keyname".key
-	mv "$keyname".private "$KEYDIR/$KEYNAME-$i.private"
-	mv "$keyname".ds "$KEYDIR/$KEYNAME-$i.ds"
+	gen_key_ksk "$KEYDIR/$KEYNAME-$i"
 done
 
-echo 'example.com. IN SOA host.example.com. user.example.com. (1 7200 3600 2419200 3600)' > $TMPZONE
-cat "$KEYDIR/$KEYNAME"-*.key >> $TMPZONE
-$LDNS_SIGNZONE -e 20091124111500 -i 20091018111500 $TMPZONE "$KEYDIR/$KEYNAME-2"
-sig1=$(grep 'RRSIG[ 	]*DNSKEY' < $TMPZONE.signed )
-rm -f "$TMPZONE" "$TMPZONE.signed"
+sig1=$(sig_keys 2 20091124111500 20091018111500 1 2 3 4 5 6 7 8 9 10 11 12 13)
 
 < autotrust_10key.rpl.in \
 	replace_keys |

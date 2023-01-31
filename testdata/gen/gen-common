@@ -1,0 +1,107 @@
+#!/bin/sh
+
+KEYDIR=keys
+
+LDNS_KEYGEN=ldns-keygen
+LDNS_SIGNZONE=ldns-signzone
+SECALG=8	# RSA/SHA-256
+SECBITS=2048
+
+TMPZONE=tmpzone
+
+key_id()
+{
+	expr "$1" : '.*{id = \([0-9]*\).*'
+}
+
+gen_key_ksk()
+{
+	if [ $# -ne 1 ]; then
+		echo >&2 "Usage: gen_key_ksk <file-name>"
+		exit 1
+	fi
+
+	key_file="$1"
+
+
+	if [ -f "$key_file.key" ]
+	then
+		return		# Key already exists, remove to regenerate
+	fi
+	mkdir -p "$KEYDIR"
+	tmp_keyname=$($LDNS_KEYGEN -a $SECALG -b $SECBITS -k example.com.)
+	sed 's/IN/10800	IN/' < "$tmp_keyname".key > "$key_file.key"
+	rm -f "$tmp_keyname".key
+	mv "$tmp_keyname".private "$key_file.private"
+	mv "$tmp_keyname".ds "$key_file.ds"
+}
+
+gen_key_ksk_revoked()
+{
+	if [ $# -ne 2 ]; then
+		echo >&2 "Usage: gen_key_ksk_revoked <orig-file-name> <file-name>"
+		exit 1
+	fi
+
+	orig_key_file="$1"
+	key_file="$2"
+
+
+	if [ -f "$key_file.key" ]
+	then
+		return		# Key already exists, remove to regenerate
+	fi
+	cp "$orig_key_file".key "$key_file".key
+	cp "$orig_key_file".private "$key_file.private"
+	mv "$orig_key_file".ds "$key_file.ds"
+	ldns-revoke "$key_file.key"
+}
+
+gen_key_zsk()
+{
+	if [ $# -ne 1 ]; then
+		echo >&2 "Usage: gen_key_zsk <file-name>"
+		exit 1
+	fi
+
+	key_file="$1"
+
+
+	if [ -f "$key_file.key" ]
+	then
+		return		# Key already exists, remove to regenerate
+	fi
+	mkdir -p "$KEYDIR"
+	tmp_keyname=$($LDNS_KEYGEN -a $SECALG -b $SECBITS example.com.)
+	sed 's/IN/10800	IN/' < "$tmp_keyname".key > "$key_file.key"
+	rm -f "$tmp_keyname".key
+	mv "$tmp_keyname".private "$key_file.private"
+}
+
+sig_keys()
+{
+	if [ $# -lt 4 ]; then
+		echo >&2 'Usage: sig_keys <sig-key-nr> <endtime> <starttime> <key-nr>...'
+		exit 1
+	fi
+	sig_key_nr="$1"
+	shift
+	endtime="$1"
+	shift
+	starttime="$1"
+	shift
+	echo 'example.com. IN SOA host.example.com. user.example.com. (1 7200 3600 2419200 3600)' > $TMPZONE
+	while [ "$1" != "" ]
+	do
+		cat "$KEYDIR/$KEYNAME"-$1.key >> $TMPZONE
+		shift
+	done
+	$LDNS_SIGNZONE -e $endtime -i $starttime $TMPZONE "$KEYDIR/$KEYNAME-$sig_key_nr"
+	#echo '--- signed zone ---' >&2
+	#cat $TMPZONE.signed >&2
+	#echo '--- end signed zone ---' >&2
+	sig=$(grep 'RRSIG[ 	]*DNSKEY' < $TMPZONE.signed )
+	rm -f "$TMPZONE" "$TMPZONE.signed"
+	echo "$sig"
+}
+

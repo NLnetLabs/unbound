@@ -1,0 +1,78 @@
+#!/bin/sh
+
+. ./gen-common
+
+KEYNAME=autotrust_addpend_2exceed
+
+replace_keys()
+{
+	pubkey1=$(cat "$KEYDIR/$KEYNAME-1.key")
+	pubkey2=$(cat "$KEYDIR/$KEYNAME-2.key")
+	pubkey3=$(cat "$KEYDIR/$KEYNAME-3.key")
+	pubkey4=$(cat "$KEYDIR/$KEYNAME-4.key")
+
+	pubkey1_id=$(key_id "$pubkey1")
+	pubkey3_id=$(key_id "$pubkey3")
+	
+	sed "s@PUBKEY1_ID@$pubkey1_id@ ; \
+		s@PUBKEY3_ID@$pubkey3_id@ ; \
+		s@PUBKEY1@$pubkey1@ ; \
+		s@PUBKEY2@$pubkey2@ ; \
+		s@PUBKEY3@$pubkey3@ ; \
+		s@PUBKEY4@$pubkey4@"
+}
+
+gen_key_ksk "$KEYDIR/$KEYNAME-1"
+gen_key_zsk "$KEYDIR/$KEYNAME-2"
+gen_key_ksk "$KEYDIR/$KEYNAME-3"
+gen_key_ksk_revoked "$KEYDIR/$KEYNAME-1" "$KEYDIR/$KEYNAME-4"
+
+
+echo 'example.com. IN SOA host.example.com. user.example.com. (1 7200 3600 2419200 3600)' > $TMPZONE
+echo 'www.example.com. 3600 IN A 10.20.30.40' >>$TMPZONE
+echo 'example.com. 3600 IN NS ns.example.com.' >>$TMPZONE
+echo 'ns.example.com. 3600 IN A 1.2.3.4' >>$TMPZONE
+$LDNS_SIGNZONE -e 20090924111500 -i 20090821111500 $TMPZONE "$KEYDIR/$KEYNAME-2"
+sig1a_pubkey2=$(grep 'www.example.com.*RRSIG[ 	]*A' < $TMPZONE.signed )
+sig1b_pubkey2=$(grep 'IN[ 	]*RRSIG[ 	]*NS[ 	]' < $TMPZONE.signed )
+sig1c_pubkey2=$(grep 'ns.example.com.*RRSIG[ 	]*A' < $TMPZONE.signed )
+rm -f "$TMPZONE" "$TMPZONE.signed"
+
+sig2_pubkey2=$(sig_keys 2 20090924111500 20090821111500 1 2)
+sig2_pubkey1=$(sig_keys 1 20090924111500 20090821111500 1 2)
+
+sig3_pubkey2=$(sig_keys 2 20091024111500 20090921111500 1 3 2)
+sig3_pubkey1=$(sig_keys 1 20091024111500 20090921111500 1 3 2)
+sig3_pubkey3=$(sig_keys 3 20091024111500 20090921111500 1 3 2)
+
+sig4_pubkey2=$(sig_keys 2 20091124111500 20091018111500 3 2)
+sig4_pubkey3=$(sig_keys 3 20091124111500 20091018111500 3 2)
+
+sig5_pubkey2=$(sig_keys 2 20091224111500 20091118111500 4 3 2)
+sig5_pubkey4=$(sig_keys 4 20091224111500 20091118111500 4 3 2)
+sig5_pubkey1=$(sig_keys 1 20091224111500 20091118111500 4 3 2)
+sig5_pubkey3=$(sig_keys 3 20091224111500 20091118111500 4 3 2)
+
+sig6_pubkey2=$(sig_keys 2 20101224111500 20101118111500 3 2)
+sig6_pubkey3=$(sig_keys 3 20101224111500 20101118111500 3 2)
+
+< $KEYNAME.rpl.in \
+	sed "s@SIG1a_PUBKEY2@$sig1a_pubkey2@ ; \
+		s@SIG1b_PUBKEY2@$sig1b_pubkey2@ ; \
+		s@SIG1c_PUBKEY2@$sig1c_pubkey2@ ; \
+		s@SIG2_PUBKEY2@$sig2_pubkey2@ ; \
+		s@SIG2_PUBKEY1@$sig2_pubkey1@ ; \
+		s@SIG3_PUBKEY2@$sig3_pubkey2@ ; \
+		s@SIG3_PUBKEY1@$sig3_pubkey1@ ; \
+		s@SIG3_PUBKEY3@$sig3_pubkey3@ ; \
+		s@SIG4_PUBKEY2@$sig4_pubkey2@ ; \
+		s@SIG4_PUBKEY3@$sig4_pubkey3@ ; \
+		s@SIG5_PUBKEY2@$sig5_pubkey2@ ; \
+		s@SIG5_PUBKEY4@$sig5_pubkey4@ ; \
+		s@SIG5_PUBKEY1@$sig5_pubkey1@ ; \
+		s@SIG5_PUBKEY3@$sig5_pubkey3@ ; \
+		s@SIG6_PUBKEY2@$sig6_pubkey2@ ; \
+		s@SIG6_PUBKEY3@$sig6_pubkey3@ ; \
+	" |
+	replace_keys \
+	> ../$KEYNAME.rpl

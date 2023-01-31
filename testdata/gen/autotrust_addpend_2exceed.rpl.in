@@ -1,0 +1,306 @@
+; config options
+server:
+	target-fetch-policy: "0 0 0 0 0"
+	log-time-ascii: yes
+	fake-sha1: yes
+	trust-anchor-signaling: no
+stub-zone:
+	name: "."
+	stub-addr: 193.0.14.129         # K.ROOT-SERVERS.NET.
+; initial content (say from dig example.com DNSKEY > example.com.key) 
+AUTOTRUST_FILE example.com
+PUBKEY1
+PUBKEY2
+AUTOTRUST_END
+CONFIG_END
+
+SCENARIO_BEGIN Test autotrust with ADDPEND twice and exceeded time
+; should work even though not signed with old key at latest time.
+
+; K-ROOT
+RANGE_BEGIN 0 100
+	ADDRESS 193.0.14.129
+ENTRY_BEGIN
+MATCH opcode qname qtype
+ADJUST copy_id copy_query
+REPLY QR AA
+SECTION QUESTION
+. IN NS
+SECTION ANSWER
+. IN NS k.root-servers.net.
+SECTION ADDITIONAL
+k.root-servers.net IN A 193.0.14.129
+ENTRY_END
+
+ENTRY_BEGIN
+MATCH opcode subdomain
+ADJUST copy_id copy_query
+REPLY QR
+SECTION QUESTION
+com. IN NS
+SECTION AUTHORITY
+com. IN NS a.gtld-servers.net.
+SECTION ADDITIONAL
+a.gtld-servers.net. IN A 192.5.6.30
+ENTRY_END
+RANGE_END
+
+; a.gtld-servers.net.
+RANGE_BEGIN 0 100
+	ADDRESS 192.5.6.30
+ENTRY_BEGIN
+MATCH opcode subdomain
+ADJUST copy_id copy_query
+REPLY QR
+SECTION QUESTION
+example.com. IN NS
+SECTION AUTHORITY
+example.com. IN NS ns.example.com.
+SECTION ADDITIONAL
+ns.example.com. IN A 1.2.3.4
+ENTRY_END
+RANGE_END
+
+; ns.example.com.  KSK PUBKEY1_ID
+RANGE_BEGIN 0 10
+	ADDRESS 1.2.3.4
+ENTRY_BEGIN
+MATCH opcode qname qtype
+ADJUST copy_id
+REPLY QR AA
+SECTION QUESTION
+www.example.com. IN A
+SECTION ANSWER
+www.example.com.	3600	IN	A	10.20.30.40
+SIG1a_PUBKEY2
+SECTION AUTHORITY
+example.com.	3600	IN	NS	ns.example.com.
+SIG1b_PUBKEY2
+SECTION ADDITIONAL
+ns.example.com.	3600	IN	A	1.2.3.4
+SIG1c_PUBKEY2
+ENTRY_END
+
+ENTRY_BEGIN
+MATCH opcode qname qtype
+ADJUST copy_id
+REPLY QR AA
+SECTION QUESTION
+example.com. IN DNSKEY
+SECTION ANSWER
+; KSK 1
+PUBKEY1
+; ZSK 1
+PUBKEY2
+; signatures
+SIG2_PUBKEY2
+SIG2_PUBKEY1
+ENTRY_END
+RANGE_END
+
+; ns.example.com.  KSK PUBKEY1_ID and PUBKEY3_ID
+RANGE_BEGIN 11 40
+	ADDRESS 1.2.3.4
+ENTRY_BEGIN
+MATCH opcode qname qtype
+ADJUST copy_id
+REPLY QR AA
+SECTION QUESTION
+example.com. IN DNSKEY
+SECTION ANSWER
+; KSK 1
+PUBKEY1
+; KSK 2
+PUBKEY3
+; ZSK 1
+PUBKEY2
+; signatures
+SIG3_PUBKEY2
+SIG3_PUBKEY1
+SIG3_PUBKEY3
+ENTRY_END
+RANGE_END
+
+; ns.example.com.  KSK PUBKEY3_ID
+RANGE_BEGIN 41 50
+	ADDRESS 1.2.3.4
+ENTRY_BEGIN
+MATCH opcode qname qtype
+ADJUST copy_id
+REPLY QR AA
+SECTION QUESTION
+example.com. IN DNSKEY
+SECTION ANSWER
+; KSK 2
+PUBKEY3
+; ZSK 1
+PUBKEY2
+; signatures
+SIG4_PUBKEY2
+SIG4_PUBKEY3
+ENTRY_END
+RANGE_END
+
+; ns.example.com.  KSK PUBKEY1_ID-REVOKED and PUBKEY3_ID
+RANGE_BEGIN 51 60
+	ADDRESS 1.2.3.4
+ENTRY_BEGIN
+MATCH opcode qname qtype
+ADJUST copy_id
+REPLY QR AA
+SECTION QUESTION
+example.com. IN DNSKEY
+SECTION ANSWER
+; KSK 1
+PUBKEY4
+; KSK 2
+PUBKEY3
+; ZSK 1
+PUBKEY2
+; signatures
+SIG5_PUBKEY2
+SIG5_PUBKEY4
+; wrong keytag:
+SIG5_PUBKEY1
+SIG5_PUBKEY3
+ENTRY_END
+RANGE_END
+
+; ns.example.com.  KSK PUBKEY3_ID
+RANGE_BEGIN 61 70
+	ADDRESS 1.2.3.4
+ENTRY_BEGIN
+MATCH opcode qname qtype
+ADJUST copy_id
+REPLY QR AA
+SECTION QUESTION
+example.com. IN DNSKEY
+SECTION ANSWER
+; KSK 2
+PUBKEY3
+; ZSK 1
+PUBKEY2
+; signatures
+SIG6_PUBKEY2
+SIG6_PUBKEY3
+ENTRY_END
+RANGE_END
+
+; set date/time to Aug 24 07:46:40  (2009).
+STEP 5 TIME_PASSES ELAPSE 1251100000
+STEP 6 TRAFFIC   ; the initial probe
+STEP 7 ASSIGN t0 = ${time}
+STEP 8 ASSIGN probe0 = ${range 4800 ${timeout} 5400}
+
+; the auto probing should have been done now.
+STEP 10 CHECK_AUTOTRUST example.com
+FILE_BEGIN
+; autotrust trust anchor file
+;;id: example.com. 1
+;;last_queried: ${$t0} ;;${ctime $t0}
+;;last_success: ${$t0} ;;${ctime $t0}
+;;next_probe_time: ${$t0 + $probe0} ;;${ctime $t0 + $probe0}
+;;query_failed: 0
+;;query_interval: 5400
+;;retry_time: 3600
+PUBKEY1 ;;state=2 [  VALID  ] ;;count=0 ;;lastchange=${$t0} ;;${ctime $t0}
+FILE_END
+
+; key prepublished.  First poll. 30 days later
+STEP 11 TIME_PASSES EVAL ${30*24*3600}
+STEP 12 TRAFFIC
+STEP 13 ASSIGN t1 = ${time}
+STEP 14 ASSIGN probe1 = ${range 4800 ${timeout} 5400}
+STEP 15 CHECK_AUTOTRUST example.com
+FILE_BEGIN
+; autotrust trust anchor file
+;;id: example.com. 1
+;;last_queried: ${$t1} ;;${ctime $t1}
+;;last_success: ${$t1} ;;${ctime $t1}
+;;next_probe_time: ${$t1 + $probe1} ;;${ctime $t1 + $probe1}
+;;query_failed: 0
+;;query_interval: 5400
+;;retry_time: 3600
+PUBKEY3 ;;state=1 [ ADDPEND ] ;;count=1 ;;lastchange=${$t1} ;;${ctime $t1}
+PUBKEY1 ;;state=2 [  VALID  ] ;;count=0 ;;lastchange=${$t0} ;;${ctime $t0}
+FILE_END
+
+; Second poll. 10 days later
+STEP 21 TIME_PASSES EVAL ${10*24*3600}
+STEP 22 TRAFFIC
+STEP 23 ASSIGN t2 = ${time}
+STEP 24 ASSIGN probe2 = ${range 4800 ${timeout} 5400}
+STEP 25 CHECK_AUTOTRUST example.com
+FILE_BEGIN
+; autotrust trust anchor file
+;;id: example.com. 1
+;;last_queried: ${$t2} ;;${ctime $t2}
+;;last_success: ${$t2} ;;${ctime $t2}
+;;next_probe_time: ${$t2 + $probe2} ;;${ctime $t2 + $probe2}
+;;query_failed: 0
+;;query_interval: 5400
+;;retry_time: 3600
+PUBKEY3 ;;state=1 [ ADDPEND ] ;;count=2 ;;lastchange=${$t1} ;;${ctime $t1}
+PUBKEY1 ;;state=2 [  VALID  ] ;;count=0 ;;lastchange=${$t0} ;;${ctime $t0}
+FILE_END
+
+; t3 is removed third poll time.
+
+; 21 days later, hold down has lapsed.
+STEP 41 TIME_PASSES EVAL ${21*24*3600}
+STEP 42 TRAFFIC
+STEP 43 ASSIGN t4 = ${time}
+STEP 44 ASSIGN probe4 = ${range 4800 ${timeout} 5400}
+STEP 45 CHECK_AUTOTRUST example.com
+FILE_BEGIN
+; autotrust trust anchor file
+;;id: example.com. 1
+;;last_queried: ${$t4} ;;${ctime $t4}
+;;last_success: ${$t4} ;;${ctime $t4}
+;;next_probe_time: ${$t4 + $probe4} ;;${ctime $t4 + $probe4}
+;;query_failed: 0
+;;query_interval: 5400
+;;retry_time: 3600
+PUBKEY3 ;;state=2 [  VALID  ] ;;count=0 ;;lastchange=${$t4} ;;${ctime $t4}
+PUBKEY1 ;;state=3 [ MISSING ] ;;count=0 ;;lastchange=${$t4} ;;${ctime $t4}
+FILE_END
+
+; 30 days later, the old key is revoked
+STEP 51 TIME_PASSES EVAL ${30*24*3600}
+STEP 52 TRAFFIC
+STEP 53 ASSIGN t5 = ${time}
+STEP 54 ASSIGN probe5 = ${range 4800 ${timeout} 5400}
+STEP 55 CHECK_AUTOTRUST example.com
+FILE_BEGIN
+; autotrust trust anchor file
+;;id: example.com. 1
+;;last_queried: ${$t5} ;;${ctime $t5}
+;;last_success: ${$t5} ;;${ctime $t5}
+;;next_probe_time: ${$t5 + $probe5} ;;${ctime $t5 + $probe5}
+;;query_failed: 0
+;;query_interval: 5400
+;;retry_time: 3600
+PUBKEY3 ;;state=2 [  VALID  ] ;;count=0 ;;lastchange=${$t4} ;;${ctime $t4}
+PUBKEY4 ;;state=4 [ REVOKED ] ;;count=0 ;;lastchange=${$t5} ;;${ctime $t5}
+FILE_END
+
+; 370 days later, the old key is removed from storage
+STEP 61 TIME_PASSES EVAL ${370*24*3600}
+STEP 62 TRAFFIC
+STEP 63 ASSIGN t6 = ${time}
+STEP 64 ASSIGN probe6 = ${range 4800 ${timeout} 5400}
+STEP 65 CHECK_AUTOTRUST example.com
+FILE_BEGIN
+; autotrust trust anchor file
+;;id: example.com. 1
+;;last_queried: ${$t6} ;;${ctime $t6}
+;;last_success: ${$t6} ;;${ctime $t6}
+;;next_probe_time: ${$t6 + $probe6} ;;${ctime $t6 + $probe6}
+;;query_failed: 0
+;;query_interval: 5400
+;;retry_time: 3600
+PUBKEY3 ;;state=2 [  VALID  ] ;;count=0 ;;lastchange=${$t4} ;;${ctime $t4}
+FILE_END
+
+
+SCENARIO_END
