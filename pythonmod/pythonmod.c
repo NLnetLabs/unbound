@@ -566,12 +566,12 @@ void pythonmod_deinit(struct module_env* env, int id)
    pe->fname = NULL;
    free(pe);
 
-   /* Module is deallocated in Python */
-   env->modinfo[id] = NULL;
-
    /* iterate over all possible callback types and clean up each in turn */
    for (int cbtype = 0; cbtype < inplace_cb_types_total; cbtype++)
       inplace_cb_delete(env, cbtype, id);
+
+   /* Module is deallocated in Python */
+   env->modinfo[id] = NULL;
 }
 
 void pythonmod_inform_super(struct module_qstate* qstate, int id, struct module_qstate* super)
