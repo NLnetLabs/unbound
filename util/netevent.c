@@ -2000,20 +2000,21 @@ doq_socket_write_disable(struct comm_point* c)
 static int
 doq_write_blocked_pkt(struct comm_point* c)
 {
+	struct doq_pkt_addr paddr;
 	if(!c->doq_socket->have_blocked_pkt)
 		return 1;
 	c->doq_socket->have_blocked_pkt = 0;
-	sldns_buffer_clear(c->doq_socket->pkt_buf);
 	if(sldns_buffer_limit(c->doq_socket->blocked_pkt) >
 		sldns_buffer_remaining(c->doq_socket->pkt_buf))
 		return 1; /* impossibly large, drop it.
 		impossible since pkt_buf is same size as blocked_pkt buf. */
+	sldns_buffer_clear(c->doq_socket->pkt_buf);
 	sldns_buffer_write(c->doq_socket->pkt_buf,
 		sldns_buffer_begin(c->doq_socket->blocked_pkt),
 		sldns_buffer_limit(c->doq_socket->blocked_pkt));
 	sldns_buffer_flip(c->doq_socket->pkt_buf);
-	doq_send_pkt(c, c->doq_socket->blocked_paddr,
-		c->doq_socket->blocked_pkt_pi.ecn);
+	memcpy(&paddr, c->doq_socket->blocked_paddr, sizeof(paddr));
+	doq_send_pkt(c, &paddr, c->doq_socket->blocked_pkt_pi.ecn);
 	if(c->doq_socket->have_blocked_pkt)
 		return 0;
 	return 1;
@@ -2253,7 +2254,7 @@ doq_server_socket_create(struct doq_table* table, struct ub_randstate* rnd,
 		return NULL;
 	}
 	doq_socket->blocked_pkt = sldns_buffer_new(
-		sldns_buffer_capacity(c->buffer));
+		sldns_buffer_capacity(doq_socket->pkt_buf));
 	if(!doq_socket->pkt_buf) {
 		free(doq_socket->ssl_service_key);
 		free(doq_socket->ssl_service_pem);
