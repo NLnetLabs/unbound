@@ -123,6 +123,8 @@ static int http2_response_buffer_lock_inited = 0;
 /**
  * Debug print of the getaddrinfo returned address.
  * @param addr: the address returned.
+ * @param additional: additional text that describes the type of socket,
+ * 	or NULL for no text.
  */
 static void
 verbose_print_addr(struct addrinfo *addr, const char* additional)
