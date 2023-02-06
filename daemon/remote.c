@@ -105,8 +105,6 @@
 
 /** what to put on statistics lines between var and value, ": " or "=" */
 #define SQ "="
-/** if true, inhibits a lot of =0 lines from the stats output */
-static const int inhibit_zero = 1;
 
 /** subtract timers and the values do not overflow or become negative */
 static void
@@ -684,8 +682,9 @@ do_stop(RES* ssl, struct worker* worker)
 
 /** do the reload command */
 static void
-do_reload(RES* ssl, struct worker* worker)
+do_reload(RES* ssl, struct worker* worker, int reuse_cache)
 {
+	worker->reuse_cache = reuse_cache;
 	worker->need_to_exit = 0;
 	comm_base_exit(worker->base);
 	send_ok(ssl);
@@ -920,7 +919,7 @@ print_hist(RES* ssl, struct ub_stats_info* s)
 
 /** print extended stats */
 static int
-print_ext(RES* ssl, struct ub_stats_info* s)
+print_ext(RES* ssl, struct ub_stats_info* s, int inhibit_zero)
 {
 	int i;
 	char nm[32];
@@ -1066,6 +1065,11 @@ print_ext(RES* ssl, struct ub_stats_info* s)
 		(unsigned)s->svr.infra_cache_count)) return 0;
 	if(!ssl_printf(ssl, "key.cache.count"SQ"%u\n",
 		(unsigned)s->svr.key_cache_count)) return 0;
+	/* max collisions */
+	if(!ssl_printf(ssl, "msg.cache.max_collisions"SQ"%u\n",
+		(unsigned)s->svr.msg_cache_max_collisions)) return 0;
+	if(!ssl_printf(ssl, "rrset.cache.max_collisions"SQ"%u\n",
+		(unsigned)s->svr.rrset_cache_max_collisions)) return 0;
 	/* applied RPZ actions */
 	for(i=0; i<UB_STATS_RPZ_ACTION_NUM; i++) {
 		if(i == RPZ_NO_OVERRIDE_ACTION)
@@ -1129,7 +1133,7 @@ do_stats(RES* ssl, struct worker* worker, int reset)
 			return;
 		if(!print_hist(ssl, &total))
 			return;
-		if(!print_ext(ssl, &total))
+		if(!print_ext(ssl, &total, daemon->cfg->stat_inhibit_zero))
 			return;
 	}
 }
@@ -1963,6 +1967,8 @@ do_flush_name(RES* ssl, struct worker* w, char* arg)
 	do_cache_remove(w, nm, nmlen, LDNS_RR_TYPE_PTR, LDNS_RR_CLASS_IN);
 	do_cache_remove(w, nm, nmlen, LDNS_RR_TYPE_SRV, LDNS_RR_CLASS_IN);
 	do_cache_remove(w, nm, nmlen, LDNS_RR_TYPE_NAPTR, LDNS_RR_CLASS_IN);
+	do_cache_remove(w, nm, nmlen, LDNS_RR_TYPE_SVCB, LDNS_RR_CLASS_IN);
+	do_cache_remove(w, nm, nmlen, LDNS_RR_TYPE_HTTPS, LDNS_RR_CLASS_IN);
 	
 	free(nm);
 	send_ok(ssl);
@@ -3029,8 +3035,11 @@ execute_cmd(struct daemon_remote* rc, RES* ssl, char* cmd,
 	if(cmdcmp(p, "stop", 4)) {
 		do_stop(ssl, worker);
 		return;
+	} else if(cmdcmp(p, "reload_keep_cache", 17)) {
+		do_reload(ssl, worker, 1);
+		return;
 	} else if(cmdcmp(p, "reload", 6)) {
-		do_reload(ssl, worker);
+		do_reload(ssl, worker, 0);
 		return;
 	} else if(cmdcmp(p, "stats_noreset", 13)) {
 		do_stats(ssl, worker, 0);

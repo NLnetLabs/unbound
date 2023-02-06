@@ -1407,6 +1407,11 @@ val_neg_getmsg(struct val_neg_cache* neg, struct query_info* qinfo,
 	/* Matching NSEC, use to generate No Data answer. Not creating answers
 	 * yet for No Data proven using wildcard. */
 	if(nsec && nsec_proves_nodata(nsec, qinfo, &nodata_wc) && !nodata_wc) {
+		/* do not create nodata answers for qtype ANY, it is a query
+		 * type, not an rrtype to disprove. Nameerrors are useful for
+		 * qtype ANY, in the else branch. */
+		if(qinfo->qtype == LDNS_RR_TYPE_ANY)
+			return NULL;
 		if(!(msg = dns_msg_create(qinfo->qname, qinfo->qname_len, 
 			qinfo->qtype, qinfo->qclass, region, 2))) 
 			return NULL;

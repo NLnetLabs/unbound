@@ -35,8 +35,13 @@ server:
 	# statistics-cumulative: no
 
 	# enable extended statistics (query types, answer codes, status)
-	# printed from unbound-control. default off, because of speed.
+	# printed from unbound-control. Default off, because of speed.
 	# extended-statistics: no
+
+	# Inhibits selected extended statistics (qtype, qclass, qopcode, rcode,
+	# rpz-actions) from printing if their value is 0.
+	# Default on.
+	# statistics-inhibit-zero: yes
 
 	# number of threads to create. 1 disables threading.
 	# num-threads: 1
@@ -138,8 +143,8 @@ server:
 	# edns-buffer-size: 1232
 
 	# Maximum UDP response size (not applied to TCP response).
-	# Suggested values are 512 to 4096. Default is 4096. 65536 disables it.
-	# max-udp-size: 4096
+	# Suggested values are 512 to 4096. Default is 1232. 65536 disables it.
+	# max-udp-size: 1232
 
 	# max memory to use for stream(tcp and tls) waiting result buffers.
 	# stream-wait-size: 4m
@@ -172,6 +177,15 @@ server:
 	# The number of retries, per upstream nameserver in a delegation, when
 	# a throwaway response (also timeouts) is received.
 	# outbound-msg-retry: 5
+
+	# Hard limit on the number of outgoing queries Unbound will make while
+	# resolving a name, making sure large NS sets do not loop.
+	# It resets on query restarts (e.g., CNAME) and referrals.
+	# max-sent-count: 32
+
+	# Hard limit on the number of times Unbound is allowed to restart a
+	# query upon encountering a CNAME record.
+	# max-query-restarts: 11
 
 	# msec for waiting for an unknown server to reply.  Increase if you
 	# are behind a slow satellite link, to eg. 1128.
@@ -489,6 +503,10 @@ server:
 	# to validate the zone.
 	# harden-algo-downgrade: no
 
+	# Harden against unknown records in the authority section and the
+	# additional section.
+	# harden-unknown-additional: no
+
 	# Sent minimum amount of information to upstream servers to enhance
 	# privacy. Only sent minimum required labels of the QNAME and set QTYPE
 	# to A when possible.
@@ -796,6 +814,8 @@ server:
 	# o always_transparent, always_refuse, always_nxdomain, always_nodata,
 	#   always_deny resolve in that way but ignore local data for
 	#   that name
+	# o block_a resolves all records normally but returns
+	#   NODATA for A queries and ignores local data for that name
 	# o always_null returns 0.0.0.0 or ::0 for any name in the zone.
 	# o noview breaks out of that view towards global local-zones.
 	#
@@ -1193,6 +1213,10 @@ remote-control:
 #     redis-server-host: 127.0.0.1
 #     # redis server's TCP port
 #     redis-server-port: 6379
+#     # if the server uses a unix socket, set its path, or "" when not used.
+#     # redis-server-path: "/var/lib/redis/redis-server.sock"
+#     # if the server uses an AUTH password, specify here, or "" when not used.
+#     # redis-server-password: ""
 #     # timeout (in ms) for communication with the redis server
 #     redis-timeout: 100
 #     # set timeout on redis records based on DNS response TTL

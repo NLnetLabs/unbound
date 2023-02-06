@@ -140,7 +140,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_DISABLE_DNSSEC_LAME_CHECK
 %token VAR_IP_RATELIMIT VAR_IP_RATELIMIT_SLABS VAR_IP_RATELIMIT_SIZE
 %token VAR_RATELIMIT VAR_RATELIMIT_SLABS VAR_RATELIMIT_SIZE
-%token VAR_OUTBOUND_MSG_RETRY
+%token VAR_OUTBOUND_MSG_RETRY VAR_MAX_SENT_COUNT VAR_MAX_QUERY_RESTARTS
 %token VAR_RATELIMIT_FOR_DOMAIN VAR_RATELIMIT_BELOW_DOMAIN
 %token VAR_IP_RATELIMIT_FACTOR VAR_RATELIMIT_FACTOR
 %token VAR_IP_RATELIMIT_BACKOFF VAR_RATELIMIT_BACKOFF
@@ -175,7 +175,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_IPSECMOD_MAX_TTL VAR_IPSECMOD_WHITELIST VAR_IPSECMOD_STRICT
 %token VAR_CACHEDB VAR_CACHEDB_BACKEND VAR_CACHEDB_SECRETSEED
 %token VAR_CACHEDB_REDISHOST VAR_CACHEDB_REDISPORT VAR_CACHEDB_REDISTIMEOUT
-%token VAR_CACHEDB_REDISEXPIRERECORDS
+%token VAR_CACHEDB_REDISEXPIRERECORDS VAR_CACHEDB_REDISPATH VAR_CACHEDB_REDISPASSWORD
 %token VAR_UDP_UPSTREAM_WITHOUT_DOWNSTREAM VAR_FOR_UPSTREAM
 %token VAR_AUTH_ZONE VAR_ZONEFILE VAR_MASTER VAR_URL VAR_FOR_DOWNSTREAM
 %token VAR_FALLBACK_ENABLED VAR_TLS_ADDITIONAL_PORT VAR_LOW_RTT VAR_LOW_RTT_PERMIL
@@ -193,8 +193,8 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_RPZ_SIGNAL_NXDOMAIN_RA VAR_INTERFACE_AUTOMATIC_PORTS VAR_EDE
 %token VAR_INTERFACE_ACTION VAR_INTERFACE_VIEW VAR_INTERFACE_TAG
 %token VAR_INTERFACE_TAG_ACTION VAR_INTERFACE_TAG_DATA
-%token VAR_PROXY_PROTOCOL_PORT
-%token VAR_QUIC_PORT
+%token VAR_PROXY_PROTOCOL_PORT VAR_QUIC_PORT VAR_STATISTICS_INHIBIT_ZERO
+%token VAR_HARDEN_UNKNOWN_ADDITIONAL
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -283,6 +283,7 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_ratelimit_below_domain | server_ratelimit_factor |
 	server_ip_ratelimit_factor | server_ratelimit_backoff |
 	server_ip_ratelimit_backoff | server_outbound_msg_retry |
+	server_max_sent_count | server_max_query_restarts |
 	server_send_client_subnet | server_client_subnet_zone |
 	server_client_subnet_always_forward | server_client_subnet_opcode |
 	server_max_client_subnet_ipv4 | server_max_client_subnet_ipv6 |
@@ -322,8 +323,9 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_edns_client_string_opcode | server_nsid |
 	server_zonemd_permissive_mode | server_max_reuse_tcp_queries |
 	server_tcp_reuse_timeout | server_tcp_auth_query_timeout |
-	server_interface_automatic_ports | server_ede |
-	server_proxy_protocol_port | server_quic_port
+	server_interface_automatic_ports | server_ede | server_quic_port |
+	server_proxy_protocol_port | server_statistics_inhibit_zero |
+	server_harden_unknown_additional
 	;
 stubstart: VAR_STUB_ZONE
 	{
@@ -552,6 +554,15 @@ server_extended_statistics: VAR_EXTENDED_STATISTICS STRING_ARG
 		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
 			yyerror("expected yes or no.");
 		else cfg_parser->cfg->stat_extended = (strcmp($2, "yes")==0);
+		free($2);
+	}
+	;
+server_statistics_inhibit_zero: VAR_STATISTICS_INHIBIT_ZERO STRING_ARG
+	{
+		OUTYY(("P(server_statistics_inhibit_zero:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else cfg_parser->cfg->stat_inhibit_zero = (strcmp($2, "yes")==0);
 		free($2);
 	}
 	;
@@ -1777,6 +1788,16 @@ server_harden_algo_downgrade: VAR_HARDEN_ALGO_DOWNGRADE STRING_ARG
 		free($2);
 	}
 	;
+server_harden_unknown_additional: VAR_HARDEN_UNKNOWN_ADDITIONAL STRING_ARG
+	{
+		OUTYY(("P(server_harden_unknown_additional:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else cfg_parser->cfg->harden_unknown_additional =
+			(strcmp($2, "yes")==0);
+		free($2);
+	}
+	;
 server_use_caps_for_id: VAR_USE_CAPS_FOR_ID STRING_ARG
 	{
 		OUTYY(("P(server_use_caps_for_id:%s)\n", $2));
@@ -2205,6 +2226,7 @@ server_local_zone: VAR_LOCAL_ZONE STRING_ARG STRING_ARG
 		   strcmp($3, "transparent")!=0 && strcmp($3, "nodefault")!=0
 		   && strcmp($3, "typetransparent")!=0
 		   && strcmp($3, "always_transparent")!=0
+		   && strcmp($3, "block_a")!=0
 		   && strcmp($3, "always_refuse")!=0
 		   && strcmp($3, "always_nxdomain")!=0
 		   && strcmp($3, "always_nodata")!=0
@@ -2217,7 +2239,7 @@ server_local_zone: VAR_LOCAL_ZONE STRING_ARG STRING_ARG
 			yyerror("local-zone type: expected static, deny, "
 				"refuse, redirect, transparent, "
 				"typetransparent, inform, inform_deny, "
-				"inform_redirect, always_transparent, "
+				"inform_redirect, always_transparent, block_a,"
 				"always_refuse, always_nxdomain, "
 				"always_nodata, always_deny, always_null, "
 				"noview, nodefault or ipset");
@@ -2642,6 +2664,24 @@ server_outbound_msg_retry: VAR_OUTBOUND_MSG_RETRY STRING_ARG
 		if(atoi($2) == 0 && strcmp($2, "0") != 0)
 			yyerror("number expected");
 		else cfg_parser->cfg->outbound_msg_retry = atoi($2);
+		free($2);
+	}
+	;
+server_max_sent_count: VAR_MAX_SENT_COUNT STRING_ARG
+	{
+		OUTYY(("P(server_max_sent_count:%s)\n", $2));
+		if(atoi($2) == 0 && strcmp($2, "0") != 0)
+			yyerror("number expected");
+		else cfg_parser->cfg->max_sent_count = atoi($2);
+		free($2);
+	}
+	;
+server_max_query_restarts: VAR_MAX_QUERY_RESTARTS STRING_ARG
+	{
+		OUTYY(("P(server_max_query_restarts:%s)\n", $2));
+		if(atoi($2) == 0 && strcmp($2, "0") != 0)
+			yyerror("number expected");
+		else cfg_parser->cfg->max_query_restarts = atoi($2);
 		free($2);
 	}
 	;
@@ -3622,7 +3662,7 @@ contents_cachedb: contents_cachedb content_cachedb
 	| ;
 content_cachedb: cachedb_backend_name | cachedb_secret_seed |
 	redis_server_host | redis_server_port | redis_timeout |
-	redis_expire_records
+	redis_expire_records | redis_server_path | redis_server_password
 	;
 cachedb_backend_name: VAR_CACHEDB_BACKEND STRING_ARG
 	{
@@ -3673,6 +3713,30 @@ redis_server_port: VAR_CACHEDB_REDISPORT STRING_ARG
 		OUTYY(("P(Compiled without cachedb or redis, ignoring)\n"));
 	#endif
 		free($2);
+	}
+	;
+redis_server_path: VAR_CACHEDB_REDISPATH STRING_ARG
+	{
+	#if defined(USE_CACHEDB) && defined(USE_REDIS)
+		OUTYY(("P(redis_server_path:%s)\n", $2));
+		free(cfg_parser->cfg->redis_server_path);
+		cfg_parser->cfg->redis_server_path = $2;
+	#else
+		OUTYY(("P(Compiled without cachedb or redis, ignoring)\n"));
+		free($2);
+	#endif
+	}
+	;
+redis_server_password: VAR_CACHEDB_REDISPASSWORD STRING_ARG
+	{
+	#if defined(USE_CACHEDB) && defined(USE_REDIS)
+		OUTYY(("P(redis_server_password:%s)\n", $2));
+		free(cfg_parser->cfg->redis_server_password);
+		cfg_parser->cfg->redis_server_password = $2;
+	#else
+		OUTYY(("P(Compiled without cachedb or redis, ignoring)\n"));
+		free($2);
+	#endif
 	}
 	;
 redis_timeout: VAR_CACHEDB_REDISTIMEOUT STRING_ARG

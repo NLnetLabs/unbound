@@ -317,6 +317,7 @@ harden-dnssec-stripped{COLON}	{ YDVAR(1, VAR_HARDEN_DNSSEC_STRIPPED) }
 harden-below-nxdomain{COLON}	{ YDVAR(1, VAR_HARDEN_BELOW_NXDOMAIN) }
 harden-referral-path{COLON}	{ YDVAR(1, VAR_HARDEN_REFERRAL_PATH) }
 harden-algo-downgrade{COLON}	{ YDVAR(1, VAR_HARDEN_ALGO_DOWNGRADE) }
+harden-unknown-additional{COLON}	{ YDVAR(1, VAR_HARDEN_UNKNOWN_ADDITIONAL) }
 use-caps-for-id{COLON}		{ YDVAR(1, VAR_USE_CAPS_FOR_ID) }
 caps-whitelist{COLON}		{ YDVAR(1, VAR_CAPS_WHITELIST) }
 caps-exempt{COLON}		{ YDVAR(1, VAR_CAPS_WHITELIST) }
@@ -439,6 +440,7 @@ insecure-lan-zones{COLON}	{ YDVAR(1, VAR_INSECURE_LAN_ZONES) }
 statistics-interval{COLON}	{ YDVAR(1, VAR_STATISTICS_INTERVAL) }
 statistics-cumulative{COLON}	{ YDVAR(1, VAR_STATISTICS_CUMULATIVE) }
 extended-statistics{COLON}	{ YDVAR(1, VAR_EXTENDED_STATISTICS) }
+statistics-inhibit-zero{COLON}	{ YDVAR(1, VAR_STATISTICS_INHIBIT_ZERO) }
 shm-enable{COLON}		{ YDVAR(1, VAR_SHM_ENABLE) }
 shm-key{COLON}			{ YDVAR(1, VAR_SHM_KEY) }
 remote-control{COLON}		{ YDVAR(0, VAR_REMOTE_CONTROL) }
@@ -515,6 +517,8 @@ ratelimit-factor{COLON}		{ YDVAR(1, VAR_RATELIMIT_FACTOR) }
 ip-ratelimit-backoff{COLON}		{ YDVAR(1, VAR_IP_RATELIMIT_BACKOFF) }
 ratelimit-backoff{COLON}		{ YDVAR(1, VAR_RATELIMIT_BACKOFF) }
 outbound-msg-retry{COLON}		{ YDVAR(1, VAR_OUTBOUND_MSG_RETRY) }
+max-sent-count{COLON}		{ YDVAR(1, VAR_MAX_SENT_COUNT) }
+max-query-restarts{COLON}	{ YDVAR(1, VAR_MAX_QUERY_RESTARTS) }
 low-rtt{COLON}			{ YDVAR(1, VAR_LOW_RTT) }
 fast-server-num{COLON}		{ YDVAR(1, VAR_FAST_SERVER_NUM) }
 low-rtt-pct{COLON}		{ YDVAR(1, VAR_FAST_SERVER_PERMIL) }
@@ -552,6 +556,8 @@ backend{COLON}			{ YDVAR(1, VAR_CACHEDB_BACKEND) }
 secret-seed{COLON}		{ YDVAR(1, VAR_CACHEDB_SECRETSEED) }
 redis-server-host{COLON}	{ YDVAR(1, VAR_CACHEDB_REDISHOST) }
 redis-server-port{COLON}	{ YDVAR(1, VAR_CACHEDB_REDISPORT) }
+redis-server-path{COLON}	{ YDVAR(1, VAR_CACHEDB_REDISPATH) }
+redis-server-password{COLON}	{ YDVAR(1, VAR_CACHEDB_REDISPASSWORD) }
 redis-timeout{COLON}		{ YDVAR(1, VAR_CACHEDB_REDISTIMEOUT) }
 redis-expire-records{COLON}	{ YDVAR(1, VAR_CACHEDB_REDISEXPIRERECORDS) }
 ipset{COLON}			{ YDVAR(0, VAR_IPSET) }

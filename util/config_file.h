@@ -76,6 +76,8 @@ struct config_file {
 	int stat_cumulative;
 	/** if true, the statistics are kept in greater detail */
 	int stat_extended;
+	/** if true, inhibits a lot of =0 lines from the extended stats output */
+	int stat_inhibit_zero;
 
 	/** number of threads to create */
 	int num_threads;
@@ -293,6 +295,9 @@ struct config_file {
 	int harden_referral_path;
 	/** harden against algorithm downgrade */
 	int harden_algo_downgrade;
+	/** harden against unknown records in the authority section and in
+	 * the additional section */
+	int harden_unknown_additional;
 	/** use 0x20 bits in query as random ID bits */
 	int use_caps_bits_for_id;
 	/** 0x20 whitelist, domains that do not use capsforid */
@@ -611,6 +616,11 @@ struct config_file {
 
 	/** number of retries on outgoing queries */
 	int outbound_msg_retry;
+	/** max sent queries per qstate; resets on query restarts (e.g.,
+	 *  CNAMES) and referrals */
+	int max_sent_count;
+	/** max number of query restarts; determines max length of CNAME chain */
+	int max_query_restarts;
 	/** minimise outgoing QNAME and hide original QTYPE if possible */
 	int qname_minimisation;
 	/** minimise QNAME in strict mode, minimise according to RFC.
@@ -687,6 +697,10 @@ struct config_file {
 	char* redis_server_host;
 	/** redis server's TCP port */
 	int redis_server_port;
+	/** redis server's unix path. Or "", NULL if unused */
+	char* redis_server_path;
+	/** redis server's AUTH password. Or "", NULL if unused */
+	char* redis_server_password;
 	/** timeout (in ms) for communication with the redis server */
 	int redis_timeout;
 	/** set timeout on redis records based on DNS response ttl */

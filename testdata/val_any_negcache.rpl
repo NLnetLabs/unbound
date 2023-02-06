@@ -8,14 +8,15 @@ server:
 	fake-sha1: yes
 	trust-anchor-signaling: no
 	rrset-roundrobin: no
-	harden-unknown-additional: no
+	aggressive-nsec: yes
+	harden-unknown-additional: yes
 
 stub-zone:
 	name: "."
 	stub-addr: 193.0.14.129 	# K.ROOT-SERVERS.NET.
 CONFIG_END
 
-SCENARIO_BEGIN Test validator with response to qtype ANY that includes DNAME
+SCENARIO_BEGIN Test validator with response to qtype ANY and negative cache.
 
 ; K.ROOT-SERVERS.NET.
 RANGE_BEGIN 0 100
@@ -33,11 +34,11 @@ K.ROOT-SERVERS.NET.	IN	A	193.0.14.129
 ENTRY_END
 
 ENTRY_BEGIN
-MATCH opcode qtype qname
-ADJUST copy_id
+MATCH opcode subdomain
+ADJUST copy_id copy_query
 REPLY QR NOERROR
 SECTION QUESTION
-example.com. IN ANY
+com. IN NS
 SECTION AUTHORITY
 com.	IN NS	a.gtld-servers.net.
 SECTION ADDITIONAL
@@ -61,11 +62,11 @@ a.gtld-servers.net.     IN      A       192.5.6.30
 ENTRY_END
 
 ENTRY_BEGIN
-MATCH opcode qtype qname
-ADJUST copy_id
+MATCH opcode subdomain
+ADJUST copy_id copy_query
 REPLY QR NOERROR
 SECTION QUESTION
-example.com. IN ANY
+example.com. IN NS
 SECTION AUTHORITY
 example.com.	IN NS	ns.example.com.
 SECTION ADDITIONAL
@@ -108,6 +109,20 @@ ns.example.com.		IN 	A	1.2.3.4
 ns.example.com. 3600    IN      RRSIG   A 3 3 3600 20070926135752 20070829135752 2854 example.com. MC0CFQCMSWxVehgOQLoYclB9PIAbNP229AIUeH0vNNGJhjnZiqgIOKvs1EhzqAo= ;{id = 2854}
 ENTRY_END
 
+; response with NODATA
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR NOERROR
+SECTION QUESTION
+example.com. IN LOC
+SECTION AUTHORITY
+example.com.    86400   IN      SOA     open.example.com. hostmaster.example.com. 2007090400 28800 7200 604800 18000
+example.com.    86400   IN      RRSIG   SOA 3 2 86400 20070926134150 20070829134150 2854 example.com. MC0CFQCSs8KJepwaIp5vu++/0hk04lkXvgIUdphJSAE/MYob30WcRei9/nL49tE= ;{id = 2854}
+example.com.    18000   IN      NSEC    _sip._udp.example.com. A NS SOA MX TXT AAAA NAPTR RRSIG NSEC DNSKEY 
+example.com.    18000   IN      RRSIG   NSEC 3 2 18000 20070926134150 20070829134150 2854 example.com. MCwCFBzOGtpgq4uJ2jeuLPYl2HowIRzDAhQVXNz1haQ1mI7z9lt5gcvWW+lFhA== ;{id = 2854}
+ENTRY_END
+
 ; response to query of interest
 ENTRY_BEGIN
 MATCH opcode qtype qname
@@ -118,8 +133,6 @@ example.com. IN ANY
 SECTION ANSWER
 example.com.    86400   IN      SOA     open.example.com. hostmaster.example.com. 2007090400 28800 7200 604800 18000
 example.com.    86400   IN      RRSIG   SOA 3 2 86400 20070926134150 20070829134150 2854 example.com. MC0CFQCSs8KJepwaIp5vu++/0hk04lkXvgIUdphJSAE/MYob30WcRei9/nL49tE= ;{id = 2854}
-example.com.	3600	IN	DNAME	example.net.
-example.com.    3600    IN      RRSIG   DNAME 3 2 3600 20070926134150 20070829134150 2854 example.com. MC0CFQCdje5lZfq9kENX9a8lOOKn79BRlQIUbVCx/fXo0kfvAgC5kB8Dvd5LodQ= ;{id = 2854}
 example.com.    3600    IN      DNSKEY  256 3 3 ALXLUsWqUrY3JYER3T4TBJIIs70j+sDS/UT2QRp61SE7S3EEXopNXoFE73JLRmvpi/UrOO/Vz4Se6wXv/CYCKjGw06U4WRgRYXcpEhJROyNapmdIKSxhOzfLVE1gqA0PweZR8dtY3aNQSRn3sPpwJr6Mi/PqQKAMMrZ9ckJpf1+bQMOOvxgzz2U1GS18b3yZKcgTMEaJzd/GZYzi/BN2DzQ0MsrSwYXfsNLFOBbs8PJMW4LYIxeeOe6rUgkWOF7CC9Dh/dduQ1QrsJhmZAEFfd6ByYV+ ;{id = 2854 (zsk), size = 1688b}
 example.com.    3600    IN      RRSIG   DNSKEY 3 2 3600 20070926134150 20070829134150 2854 example.com. MCwCFHq7BNVAeLW+Uw/rkjVS08lrMDk/AhR+bvChHfiE4jLb6uoyE54/irCuqA== ;{id = 2854}
 example.com.    600     IN      NAPTR   20 0 "s" "SIP+D2U" "" _sip._udp.example.com.
@@ -161,11 +174,33 @@ ENTRY_BEGIN
 MATCH TCP
 REPLY RD DO
 SECTION QUESTION
+example.com. IN LOC
+ENTRY_END
+
+STEP 10 CHECK_ANSWER
+ENTRY_BEGIN
+MATCH all
+REPLY QR RD RA AD DO NOERROR
+SECTION QUESTION
+example.com. IN LOC
+SECTION ANSWER
+SECTION AUTHORITY
+example.com.    86400   IN      SOA     open.example.com. hostmaster.example.com. 2007090400 28800 7200 604800 18000
+example.com.    86400   IN      RRSIG   SOA 3 2 86400 20070926134150 20070829134150 2854 example.com. MC0CFQCSs8KJepwaIp5vu++/0hk04lkXvgIUdphJSAE/MYob30WcRei9/nL49tE= ;{id = 2854}
+example.com.    18000   IN      NSEC    _sip._udp.example.com. A NS SOA MX TXT AAAA NAPTR RRSIG NSEC DNSKEY 
+example.com.    18000   IN      RRSIG   NSEC 3 2 18000 20070926134150 20070829134150 2854 example.com. MCwCFBzOGtpgq4uJ2jeuLPYl2HowIRzDAhQVXNz1haQ1mI7z9lt5gcvWW+lFhA== ;{id = 2854}
+ENTRY_END
+
+STEP 20 QUERY
+ENTRY_BEGIN
+MATCH TCP
+REPLY RD DO
+SECTION QUESTION
 example.com. IN ANY
 ENTRY_END
 
 ; recursion happens here.
-STEP 10 CHECK_ANSWER
+STEP 30 CHECK_ANSWER
 ENTRY_BEGIN
 MATCH all
 REPLY QR RD RA AD DO NOERROR
@@ -174,8 +209,6 @@ example.com. IN ANY
 SECTION ANSWER
 example.com.    86400   IN      SOA     open.example.com. hostmaster.example.com. 2007090400 28800 7200 604800 18000
 example.com.    86400   IN      RRSIG   SOA 3 2 86400 20070926134150 20070829134150 2854 example.com. MC0CFQCSs8KJepwaIp5vu++/0hk04lkXvgIUdphJSAE/MYob30WcRei9/nL49tE= ;{id = 2854}
-example.com.	3600	IN	DNAME	example.net.
-example.com.    3600    IN      RRSIG   DNAME 3 2 3600 20070926134150 20070829134150 2854 example.com. MC0CFQCdje5lZfq9kENX9a8lOOKn79BRlQIUbVCx/fXo0kfvAgC5kB8Dvd5LodQ= ;{id = 2854}
 example.com.    3600    IN      DNSKEY  256 3 3 ALXLUsWqUrY3JYER3T4TBJIIs70j+sDS/UT2QRp61SE7S3EEXopNXoFE73JLRmvpi/UrOO/Vz4Se6wXv/CYCKjGw06U4WRgRYXcpEhJROyNapmdIKSxhOzfLVE1gqA0PweZR8dtY3aNQSRn3sPpwJr6Mi/PqQKAMMrZ9ckJpf1+bQMOOvxgzz2U1GS18b3yZKcgTMEaJzd/GZYzi/BN2DzQ0MsrSwYXfsNLFOBbs8PJMW4LYIxeeOe6rUgkWOF7CC9Dh/dduQ1QrsJhmZAEFfd6ByYV+ ;{id = 2854 (zsk), size = 1688b}
 example.com.    3600    IN      RRSIG   DNSKEY 3 2 3600 20070926134150 20070829134150 2854 example.com. MCwCFHq7BNVAeLW+Uw/rkjVS08lrMDk/AhR+bvChHfiE4jLb6uoyE54/irCuqA== ;{id = 2854}
 example.com.    600     IN      NAPTR   20 0 "s" "SIP+D2U" "" _sip._udp.example.com.
@@ -200,10 +233,8 @@ SECTION ADDITIONAL
 open.example.com.      600     IN      A       213.154.224.1
 open.example.com.      600     IN      AAAA    2001:7b8:206:1::53
 open.example.com.      600     IN      AAAA    2001:7b8:206:1::1
-_sip._udp.example.com. 600     IN      SRV     0 0 5060 johnny.example.com.
 open.example.com.       600     IN      RRSIG   A 3 3 600 20070926134150 20070829134150 2854 example.com. MC0CFQCh8bja923UJmg1+sYXMK8WIE4dpgIUQe9sZa0GOcUYSgb2rXoogF8af+Y= ;{id = 2854}
 open.example.com.       600     IN      RRSIG   AAAA 3 3 600 20070926134150 20070829134150 2854 example.com. MC0CFQCRGJgIS6kEVG7aJfovuG/q3cgOWwIUYEIFCnfRQlMIYWF7BKMQoMbdkE0= ;{id = 2854}
-_sip._udp.example.com.  600     IN      RRSIG   SRV 3 4 600 20070926134150 20070829134150 2854 example.com. MCwCFFSRVgOcq1ihVuO6MhCuzWs6SxpVAhRPHHCKy0JxymVkYeFOxTkbVSWMMw== ;{id = 2854}
 ENTRY_END
 
 SCENARIO_END
