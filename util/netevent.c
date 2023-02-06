@@ -1135,6 +1135,29 @@ doq_print_addr_port(struct doq_addr_storage* addr, socklen_t addrlen,
 	return 1;
 }
 
+/** doq store the blocked packet when write has blocked */
+static void
+doq_store_blocked_pkt(struct comm_point* c, struct doq_pkt_addr* paddr,
+	uint32_t ecn)
+{
+	if(c->doq_socket->have_blocked_pkt)
+		return; /* should not happen that we write when there is
+		already a blocked write, but if so, drop it. */
+	if(sldns_buffer_limit(c->doq_socket->pkt_buf) >
+		sldns_buffer_capacity(c->doq_socket->blocked_pkt))
+		return; /* impossibly large, drop packet. impossible because
+		pkt_buf and blocked_pkt are the same size. */
+	c->doq_socket->have_blocked_pkt = 1;
+	c->doq_socket->blocked_pkt_pi.ecn = ecn;
+	memcpy(c->doq_socket->blocked_paddr, paddr,
+		sizeof(*c->doq_socket->blocked_paddr));
+	sldns_buffer_clear(c->doq_socket->blocked_pkt);
+	sldns_buffer_write(c->doq_socket->blocked_pkt,
+		sldns_buffer_begin(c->doq_socket->pkt_buf),
+		sldns_buffer_limit(c->doq_socket->pkt_buf));
+	sldns_buffer_flip(c->doq_socket->blocked_pkt);
+}
+
 void
 doq_send_pkt(struct comm_point* c, struct doq_pkt_addr* paddr, uint32_t ecn)
 {
@@ -1182,6 +1205,7 @@ doq_send_pkt(struct comm_point* c, struct doq_pkt_addr* paddr, uint32_t ecn)
 #endif
 		{
 			/* udp send has blocked */
+			doq_store_blocked_pkt(c, paddr, ecn);
 			return;
 		}
 		if(!udp_send_errno_needs_log((void*)&paddr->addr,
@@ -1941,6 +1965,8 @@ static int
 doq_socket_want_write(struct comm_point* c)
 {
 	int want_write = 0;
+	if(c->doq_socket->have_blocked_pkt)
+		return 1;
 	lock_rw_rdlock(&c->doq_socket->table->lock);
 	if(c->doq_socket->table->write_list_first)
 		want_write = 1;
@@ -1970,6 +1996,29 @@ doq_socket_write_disable(struct comm_point* c)
 	c->doq_socket->event_has_write = 0;
 }
 
+/** write blocked packet, if possible. returns false if failed, again. */
+static int
+doq_write_blocked_pkt(struct comm_point* c)
+{
+	if(!c->doq_socket->have_blocked_pkt)
+		return 1;
+	c->doq_socket->have_blocked_pkt = 0;
+	sldns_buffer_clear(c->doq_socket->pkt_buf);
+	if(sldns_buffer_limit(c->doq_socket->blocked_pkt) >
+		sldns_buffer_remaining(c->doq_socket->pkt_buf))
+		return 1; /* impossibly large, drop it.
+		impossible since pkt_buf is same size as blocked_pkt buf. */
+	sldns_buffer_write(c->doq_socket->pkt_buf,
+		sldns_buffer_begin(c->doq_socket->blocked_pkt),
+		sldns_buffer_limit(c->doq_socket->blocked_pkt));
+	sldns_buffer_flip(c->doq_socket->pkt_buf);
+	doq_send_pkt(c, c->doq_socket->blocked_paddr,
+		c->doq_socket->blocked_pkt_pi.ecn);
+	if(c->doq_socket->have_blocked_pkt)
+		return 0;
+	return 1;
+}
+
 void
 comm_point_doq_callback(int fd, short event, void* arg)
 {
@@ -1986,6 +2035,22 @@ comm_point_doq_callback(int fd, short event, void* arg)
 	log_assert(c && c->doq_socket->pkt_buf && c->fd == fd);
 	ub_comm_base_now(c->ev->base);
 
+	/* see if there is a blocked packet, and send that if possible.
+	 * do not attempt to read yet, even if possible, that would just
+	 * push more answers in reply to those read packets onto the list
+	 * of written replies. First attempt to clear the write content out.
+	 * That keeps the memory usage from bloating up. */
+	if(c->doq_socket->have_blocked_pkt) {
+		if(!doq_write_blocked_pkt(c)) {
+			/* this write has also blocked, attempt to write
+			 * later. Make sure the event listens to write
+			 * events. */
+			if(!c->doq_socket->event_has_write)
+				doq_socket_write_enable(c);
+			return;
+		}
+	}
+
 	/* see if there is write interest */
 	count = 0;
 	num_len = doq_write_list_length(c);
@@ -1995,6 +2060,11 @@ comm_point_doq_callback(int fd, short event, void* arg)
 			ngtcp2_conn_is_in_draining_period(conn->conn)) {
 			conn->doq_socket = NULL;
 			lock_basic_unlock(&conn->lock);
+			if(c->doq_socket->have_blocked_pkt) {
+				if(!c->doq_socket->event_has_write)
+					doq_socket_write_enable(c);
+				return;
+			}
 			if(++count > num_len*2)
 				break;
 			continue;
@@ -2011,6 +2081,11 @@ comm_point_doq_callback(int fd, short event, void* arg)
 		if(doq_conn_write_streams(c, conn, &err_drop))
 			err_drop = 0;
 		doq_done_with_write_cb(c, conn, err_drop);
+		if(c->doq_socket->have_blocked_pkt) {
+			if(!c->doq_socket->event_has_write)
+				doq_socket_write_enable(c);
+			return;
+		}
 		/* Stop overly long write lists that are created
 		 * while we are processing. Do those next time there
 		 * is a write callback. Stops long loops, and keeps
@@ -2022,6 +2097,15 @@ comm_point_doq_callback(int fd, short event, void* arg)
 	/* check for data to read */
 	if((event&UB_EV_READ)!=0)
 	  for(i=0; i<NUM_UDP_PER_SELECT; i++) {
+		/* there may be a blocked write packet and if so, stop
+		 * reading because the reply cannot get written. The
+		 * blocked packet could be written during the conn_recv
+		 * handling of replies, or for a connection close. */
+		if(c->doq_socket->have_blocked_pkt) {
+			if(!c->doq_socket->event_has_write)
+				doq_socket_write_enable(c);
+			return;
+		}
 		sldns_buffer_clear(c->doq_socket->pkt_buf);
 		doq_pkt_addr_init(&paddr);
 		log_assert(fd != -1);
@@ -2168,6 +2252,31 @@ doq_server_socket_create(struct doq_table* table, struct ub_randstate* rnd,
 		free(doq_socket);
 		return NULL;
 	}
+	doq_socket->blocked_pkt = sldns_buffer_new(
+		sldns_buffer_capacity(c->buffer));
+	if(!doq_socket->pkt_buf) {
+		free(doq_socket->ssl_service_key);
+		free(doq_socket->ssl_service_pem);
+		free(doq_socket->ssl_verify_pem);
+		free(doq_socket->static_secret);
+		SSL_CTX_free(doq_socket->ctx);
+		sldns_buffer_free(doq_socket->pkt_buf);
+		free(doq_socket);
+		return NULL;
+	}
+	doq_socket->blocked_paddr = calloc(1,
+		sizeof(*doq_socket->blocked_paddr));
+	if(!doq_socket->blocked_paddr) {
+		free(doq_socket->ssl_service_key);
+		free(doq_socket->ssl_service_pem);
+		free(doq_socket->ssl_verify_pem);
+		free(doq_socket->static_secret);
+		SSL_CTX_free(doq_socket->ctx);
+		sldns_buffer_free(doq_socket->pkt_buf);
+		sldns_buffer_free(doq_socket->blocked_pkt);
+		free(doq_socket);
+		return NULL;
+	}
 	return doq_socket;
 }
 
@@ -2184,6 +2293,8 @@ doq_server_socket_delete(struct doq_server_socket* doq_socket)
 	free(doq_socket->ssl_service_pem);
 	free(doq_socket->ssl_verify_pem);
 	sldns_buffer_free(doq_socket->pkt_buf);
+	sldns_buffer_free(doq_socket->blocked_pkt);
+	free(doq_socket->blocked_paddr);
 	free(doq_socket);
 }
 

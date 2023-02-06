@@ -4836,6 +4836,8 @@ doq_conn_write_streams(struct comm_point* c, struct doq_conn* conn,
 		sldns_buffer_flip(c->doq_socket->pkt_buf);
 		doq_send_pkt(c, &conn->key.paddr, pi.ecn);
 
+		if(c->doq_socket->have_blocked_pkt)
+			break;
 		if(++num_packets == max_packets)
 			break;
 		if(stream)

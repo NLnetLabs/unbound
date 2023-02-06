@@ -64,6 +64,9 @@
 #ifdef HAVE_NGHTTP2_NGHTTP2_H
 #include <nghttp2/nghttp2.h>
 #endif
+#ifdef HAVE_NGTCP2
+#include <ngtcp2/ngtcp2.h>
+#endif
 
 struct sldns_buffer;
 struct comm_point;
@@ -1060,6 +1063,16 @@ struct doq_server_socket {
 	struct doq_conn* current_conn;
 	/** if the callback event on the fd has write flags */
 	uint8_t event_has_write;
+	/** if there is a blocked packet in the blocked_pkt buffer */
+	int have_blocked_pkt;
+	/** store blocked packet, a packet that could not be send on the
+	 * nonblocking socket. It has to be sent later, when the write on
+	 * the udp socket unblocks. */
+	struct sldns_buffer* blocked_pkt;
+	/** the ecn info for the blocked packet, congestion information. */
+	struct ngtcp2_pkt_info blocked_pkt_pi;
+	/** the packet destination for the blocked packet. */
+	struct doq_pkt_addr* blocked_paddr;
 };
 
 /**
