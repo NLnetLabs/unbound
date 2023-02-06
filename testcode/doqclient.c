@@ -2158,6 +2158,7 @@ int main(int ATTR_UNUSED(argc), char** ATTR_UNUSED(argv))
 		return 1;
 	}
 #endif
+	checklock_set_output_name("ublocktrace-doqclient");
 	checklock_start();
 	log_init(0, 0, 0);
 	log_ident_set("doqclient");

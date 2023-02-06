@@ -3299,7 +3299,26 @@ doq_conn_create(struct comm_point* c, struct doq_pkt_addr* paddr,
 	ngtcp2_connection_close_error_default(&conn->last_error);
 	rbtree_init(&conn->stream_tree, &doq_stream_cmp);
 	lock_basic_init(&conn->lock);
-	lock_protect(&conn->lock, conn, sizeof(*conn));
+	lock_protect(&conn->lock, &conn->key, sizeof(conn->key));
+	lock_protect(&conn->lock, &conn->doq_socket, sizeof(conn->doq_socket));
+	lock_protect(&conn->lock, &conn->table, sizeof(conn->table));
+	lock_protect(&conn->lock, &conn->is_deleted, sizeof(conn->is_deleted));
+	lock_protect(&conn->lock, &conn->version, sizeof(conn->version));
+	lock_protect(&conn->lock, &conn->conn, sizeof(conn->conn));
+	lock_protect(&conn->lock, &conn->conid_list, sizeof(conn->conid_list));
+	lock_protect(&conn->lock, &conn->last_error, sizeof(conn->last_error));
+	lock_protect(&conn->lock, &conn->tls_alert, sizeof(conn->tls_alert));
+	lock_protect(&conn->lock, &conn->ssl, sizeof(conn->ssl));
+	lock_protect(&conn->lock, &conn->close_pkt, sizeof(conn->close_pkt));
+	lock_protect(&conn->lock, &conn->close_pkt_len, sizeof(conn->close_pkt_len));
+	lock_protect(&conn->lock, &conn->close_ecn, sizeof(conn->close_ecn));
+	lock_protect(&conn->lock, &conn->stream_tree, sizeof(conn->stream_tree));
+	lock_protect(&conn->lock, &conn->stream_write_first, sizeof(conn->stream_write_first));
+	lock_protect(&conn->lock, &conn->stream_write_last, sizeof(conn->stream_write_last));
+	lock_protect(&conn->lock, &conn->write_interest, sizeof(conn->write_interest));
+	lock_protect(&conn->lock, &conn->on_write_list, sizeof(conn->on_write_list));
+	lock_protect(&conn->lock, &conn->write_prev, sizeof(conn->write_prev));
+	lock_protect(&conn->lock, &conn->write_next, sizeof(conn->write_next));
 	return conn;
 }
 
