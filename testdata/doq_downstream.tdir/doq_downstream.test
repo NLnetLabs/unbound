@@ -87,4 +87,23 @@ if test -f ublocktrace.0; then
 		exit 1
 	fi
 fi
+# check valgrind output
+if test -f $PRE/unbound_do_valgrind_in_test; then
+	if grep "All heap blocks were freed -- no leaks are possible" unbound.log; then
+		:  # clean
+	else
+		grep "^==" unbound.log
+		echo "Memory leaked"
+		grep "in use at exit" unbound.log
+		exit 1
+	fi
+	if grep "ERROR SUMMARY: 0 errors from 0 contexts" unbound.log; then
+		:  # clean
+	else
+		grep "^==" unbound.log
+		echo "Errors"
+		grep "ERROR SUMMARY" unbound.log
+		exit 1
+	fi
+fi
 exit 0
