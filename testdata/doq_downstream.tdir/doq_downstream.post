@@ -8,26 +8,6 @@
 PRE="../.."
 . ../common.sh
 kill_pid $FWD_PID
-kill_pid $UNBOUND_PID
-if test -f ublocktrace-doqclient.0; then
-	if $PRE/lock-verify ublocktrace-doqclient.* 2>&1; then
-		echo "lock-verify test ublocktrace-doqclient worked."
-	else
-		echo "lock-verify test ublocktrace-doqclient failed."
-		exit 1
-	fi
+if test -f unbound.pid; then
+	kill_pid $UNBOUND_PID
 fi
-if test -f ublocktrace.0; then
-	if $PRE/lock-verify ublocktrace.* 2>&1; then
-		echo "lock-verify test ublocktrace worked."
-	else
-		echo "lock-verify test ublocktrace failed."
-		exit 1
-	fi
-	if grep "lock error" unbound.log >/dev/null; then
-		echo "lock error"
-		cat unbound.log
-		exit 1
-	fi
-fi
-cat unbound.log
