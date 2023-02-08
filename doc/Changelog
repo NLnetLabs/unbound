@@ -1,3 +1,6 @@
+8 February 2023: Wouter
+	- Fix #841: Unbound won't build with aaaa-filter-iterator.patch.
+
 30 January 2023: George
 	- Add duration variable for speed_local.test.
 
