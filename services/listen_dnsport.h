@@ -553,7 +553,7 @@ struct doq_conn {
 	void* ssl;
 	/** closure packet, if any */
 	uint8_t* close_pkt;
-	/** length fo closure packet. */
+	/** length of closure packet. */
 	size_t close_pkt_len;
 	/** closure ecn */
 	uint32_t close_ecn;
