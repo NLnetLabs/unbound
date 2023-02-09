@@ -3,6 +3,7 @@
 	  This turns completely empty responses, a type of noerror/nodata into
 	  a servfail, but they do not conform to RFC2308, and the retry can
 	  fetch improved content.
+	- Fix unit tests for spurious empty messages.
 
 8 February 2023: Wouter
 	- Fix #841: Unbound won't build with aaaa-filter-iterator.patch.
