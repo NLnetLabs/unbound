@@ -10,6 +10,7 @@
 /config.status
 /dnstap/dnstap_config.h
 /dnscrypt/dnscrypt_config.h
+/clubsyms.def
 /doc/example.conf
 /doc/libunbound.3
 /doc/unbound-anchor.8
