@@ -4,6 +4,7 @@ server:
 	val-override-date: "20091113091234"
 	fake-sha1: yes
 	trust-anchor-signaling: no
+	rrset-roundrobin: no
 
 forward-zone:
 	name: "."
@@ -46,6 +47,7 @@ www.content.hud.gov. IN AAAA
 SECTION ANSWER
 SECTION AUTHORITY
 content.hud.gov.        86400   IN      NS      drfswitch.hud.gov.
+content.hud.gov.        86400   IN      NS      lanswitch.hud.gov.
 ENTRY_END
 
 ENTRY_BEGIN
@@ -110,6 +112,7 @@ SECTION AUTHORITY
 GO8CPDSLPULIOURE31GBK5JJKA0BKIVN.hud.gov.       86400   IN      NSEC3   1 1 5 abcd  gvfjd9enpjtet8a14uhb8hlrfeon2b72 A RRSIG  ; flags: optout
 GO8CPDSLPULIOURE31GBK5JJKA0BKIVN.hud.gov.       86400   IN      RRSIG   NSEC3 7 3 86400 20091204150200 20091104150200 64775 hud.gov. eQFg/RvJ640k+Fa5yIUZwkx8FvsYSivykYFjc6dOiGt7r3VprfxwGWeYpyjYr/+mzu0ugE5ePDjZWtr5naK3dvqmt7qKk4/nEvVDoUmrg7joIUmeTzami9RB9lzCq2O/ddempQ6jpwfjiIDuEKUxHMpBFpw8QQZnZSZHKKQCDB4pOj8U8J/wNJXCS+SP7plU1hEVroC+QXCOYS8NHY2wFyeuW7A+xvg9tyYp9PH6c5MoNMkRQt36Kdvfk1nk3osktwalJNLmMhDr/vtErFieGGD6E9Ud9Pg70bPF2G5nqwwLDRevy7hIFjaMDHfYrcWc4B5hrUSpGtLJkYog9vsd2w== ;{id = 64775}
 content.hud.gov.        86400   IN      NS      drfswitch.hud.gov.
+content.hud.gov.        86400   IN      NS      lanswitch.hud.gov.
 ENTRY_END
 
 SCENARIO_END
