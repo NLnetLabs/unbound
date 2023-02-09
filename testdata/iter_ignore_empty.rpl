@@ -1,17 +1,15 @@
 ; config options
 server:
 	target-fetch-policy: "0 0 0 0 0"
+	qname-minimisation: "no"
 	minimal-responses: no
-	rrset-roundrobin: no
 
 stub-zone:
 	name: "."
 	stub-addr: 193.0.14.129 	# K.ROOT-SERVERS.NET.
 CONFIG_END
 
-SCENARIO_BEGIN Test iterative resolve with two recursion lame servers.
-; both servers are recursion lame. The iterator tries both servers,
-; but they are both lame.  Then it concludes that it only has reclame.
+SCENARIO_BEGIN Test ignore of an empty response.
 
 ; K.ROOT-SERVERS.NET.
 RANGE_BEGIN 0 100
@@ -33,7 +31,7 @@ MATCH opcode subdomain
 ADJUST copy_id copy_query
 REPLY QR NOERROR
 SECTION QUESTION
-com. IN A
+com. IN NS
 SECTION AUTHORITY
 com.	IN NS	a.gtld-servers.net.
 SECTION ADDITIONAL
@@ -61,13 +59,24 @@ MATCH opcode subdomain
 ADJUST copy_id copy_query
 REPLY QR NOERROR
 SECTION QUESTION
-example.com. IN A
+example.com. IN NS
 SECTION AUTHORITY
 example.com.	IN NS	ns.example.com.
-example.com.	IN NS	lame.example.com.
+example.com.	IN NS	ns2.example2.com.
 SECTION ADDITIONAL
 ns.example.com.		IN 	A	1.2.3.4
-lame.example.com.		IN 	A	1.2.3.5
+ENTRY_END
+
+ENTRY_BEGIN
+MATCH opcode subdomain
+ADJUST copy_id copy_query
+REPLY QR NOERROR
+SECTION QUESTION
+example2.com. IN NS
+SECTION AUTHORITY
+example2.com.	IN NS	ns2.example2.com.
+SECTION ADDITIONAL
+ns2.example2.com.		IN 	A	1.2.3.5
 ENTRY_END
 RANGE_END
 
@@ -77,43 +86,20 @@ RANGE_BEGIN 0 100
 ENTRY_BEGIN
 MATCH opcode qtype qname
 ADJUST copy_id
-REPLY QR RA NOERROR
+REPLY QR AA NOERROR
 SECTION QUESTION
 example.com. IN NS
 SECTION ANSWER
 example.com.	IN NS	ns.example.com.
-example.com.	IN NS	lame.example.com.
+example.com.	IN NS	ns2.example.net.
 SECTION ADDITIONAL
 ns.example.com.		IN 	A	1.2.3.4
-lame.example.com.		IN 	A	1.2.3.5
 ENTRY_END
 
 ENTRY_BEGIN
 MATCH opcode qtype qname
 ADJUST copy_id
-REPLY QR RA NOERROR
-SECTION QUESTION
-ns.example.com. IN AAAA
-SECTION ANSWER
-SECTION AUTHORITY
-example.com. IN SOA ns.example.com. root.example.com. 4 14400 3600 604800 3600
-ENTRY_END
-
-ENTRY_BEGIN
-MATCH opcode qtype qname
-ADJUST copy_id
-REPLY QR RA NOERROR
-SECTION QUESTION
-lame.example.com. IN AAAA
-SECTION ANSWER
-SECTION AUTHORITY
-example.com. IN SOA ns.example.com. root.example.com. 4 14400 3600 604800 3600
-ENTRY_END
-
-ENTRY_BEGIN
-MATCH opcode qtype qname
-ADJUST copy_id
-REPLY QR RA NOERROR
+REPLY QR AA NOERROR
 SECTION QUESTION
 ns.example.com. IN A
 SECTION ANSWER
@@ -123,61 +109,68 @@ ENTRY_END
 ENTRY_BEGIN
 MATCH opcode qtype qname
 ADJUST copy_id
-REPLY QR RA NOERROR
+REPLY QR AA NOERROR
 SECTION QUESTION
-lame.example.com. IN A
-SECTION ANSWER
-lame.example.com.		IN 	A	1.2.3.5
+ns.example.com. IN AAAA
+SECTION AUTHORITY
+example.com.	IN SOA ns root 4 14400 3600 604800 3600
 ENTRY_END
 
 ENTRY_BEGIN
 MATCH opcode qtype qname
 ADJUST copy_id
-REPLY QR RA NOERROR
+REPLY QR AA NOERROR
 SECTION QUESTION
 www.example.com. IN A
 SECTION ANSWER
-www.example.com. IN A	10.20.30.40
 SECTION AUTHORITY
-example.com.	IN NS	ns.example.com.
-example.com.	IN NS	lame.example.com.
 SECTION ADDITIONAL
-ns.example.com.		IN 	A	1.2.3.4
-lame.example.com.		IN 	A	1.2.3.5
 ENTRY_END
 RANGE_END
 
-; lame.example.com.
+; ns2.example2.com.
 RANGE_BEGIN 0 100
 	ADDRESS 1.2.3.5
 ENTRY_BEGIN
 MATCH opcode qtype qname
 ADJUST copy_id
-REPLY QR RA NOERROR
+REPLY QR AA NOERROR
 SECTION QUESTION
-example.com. IN NS
+example2.com. IN NS
 SECTION ANSWER
-example.com.	IN NS	ns.example.com.
-example.com.	IN NS	lame.example.com.
+example2.com.	IN NS	ns2.example2.com.
 SECTION ADDITIONAL
-ns.example.com.		IN 	A	1.2.3.4
-lame.example.com.		IN 	A	1.2.3.5
+ns2.example2.com.		IN 	A	1.2.3.5
 ENTRY_END
 
 ENTRY_BEGIN
-MATCH opcode 
-ADJUST copy_id copy_query
-REPLY QR RA NOERROR
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR AA NOERROR
+SECTION QUESTION
+ns2.example2.com. IN A
+SECTION ANSWER
+ns2.example2.com.		IN 	A	1.2.3.5
+ENTRY_END
+
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR AA NOERROR
+SECTION QUESTION
+ns2.example2.com. IN AAAA
+SECTION AUTHORITY
+example2.com.	IN SOA ns2 root 4 14400 3600 604800 3600
+ENTRY_END
+
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR AA NOERROR
 SECTION QUESTION
 www.example.com. IN A
 SECTION ANSWER
 www.example.com. IN A	10.20.30.40
-SECTION AUTHORITY
-example.com.	IN NS	ns.example.com.
-example.com.	IN NS	lame.example.com.
-SECTION ADDITIONAL
-ns.example.com.		IN 	A	1.2.3.4
-lame.example.com.		IN 	A	1.2.3.5
 ENTRY_END
 RANGE_END
 
@@ -197,12 +190,9 @@ SECTION QUESTION
 www.example.com. IN A
 SECTION ANSWER
 www.example.com. IN A	10.20.30.40
-SECTION AUTHORITY
-example.com.	IN NS	ns.example.com.
-example.com.	IN NS	lame.example.com.
-SECTION ADDITIONAL
-ns.example.com.		IN 	A	1.2.3.4
-lame.example.com.		IN 	A	1.2.3.5
 ENTRY_END
+
+; wait for pending nameserver lookups.
+STEP 20 TRAFFIC
 
 SCENARIO_END
