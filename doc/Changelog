@@ -1,3 +1,6 @@
+9 February 2023: George
+	- Allow TTL refresh of expired error responses.
+
 9 February 2023: Wouter
 	- Fix to ignore entirely empty responses, and try at another authority.
 	  This turns completely empty responses, a type of noerror/nodata into

@@ -329,8 +329,7 @@ error_response_cache(struct module_qstate* qstate, int id, int rcode)
 						rep->serve_expired_ttl) {
 						verbose(VERB_ALGO, "reset "
 							"serve-expired-ttl for "
-							"error response in "
-							"cache");
+							"response in cache");
 						rep->serve_expired_ttl =
 							*qstate->env->now +
 							qstate->env->cfg->serve_expired_ttl;
