@@ -2199,6 +2199,7 @@ doq_server_socket_create(struct doq_table* table, struct ub_randstate* rnd,
 	const char* ssl_service_key, const char* ssl_service_pem,
 	struct comm_point* c)
 {
+	size_t doq_buffer_size = 4096; /* bytes buffer size, for one packet. */
 	struct doq_server_socket* doq_socket;
 	doq_socket = calloc(1, sizeof(*doq_socket));
 	if(!doq_socket) {
@@ -2242,8 +2243,7 @@ doq_server_socket_create(struct doq_table* table, struct ub_randstate* rnd,
 	doq_socket->idle_timeout = table->idle_timeout;
 	doq_socket->sv_scidlen = table->sv_scidlen;
 	doq_socket->cp = c;
-	doq_socket->pkt_buf = sldns_buffer_new(
-		sldns_buffer_capacity(c->buffer));
+	doq_socket->pkt_buf = sldns_buffer_new(doq_buffer_size);
 	if(!doq_socket->pkt_buf) {
 		free(doq_socket->ssl_service_key);
 		free(doq_socket->ssl_service_pem);
