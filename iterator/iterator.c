@@ -320,19 +320,34 @@ error_response_cache(struct module_qstate* qstate, int id, int rcode)
 			if((msg=msg_cache_lookup(qstate->env,
 				qstate->qinfo.qname, qstate->qinfo.qname_len,
 				qstate->qinfo.qtype, qstate->qinfo.qclass,
-				qstate->query_flags, 0,
-				qstate->env->cfg->serve_expired_ttl_reset))
-				!= NULL) {
+				qstate->query_flags, 0, 1)) != NULL) {
+				struct reply_info* rep =
+					(struct reply_info*)msg->entry.data;
 				if(qstate->env->cfg->serve_expired_ttl_reset) {
-					struct reply_info* rep =
-						(struct reply_info*)msg->entry.data;
 					if(rep && *qstate->env->now +
 						qstate->env->cfg->serve_expired_ttl  >
 						rep->serve_expired_ttl) {
+						verbose(VERB_ALGO, "reset "
+							"serve-expired-ttl for "
+							"error response in "
+							"cache");
 						rep->serve_expired_ttl =
 							*qstate->env->now +
 							qstate->env->cfg->serve_expired_ttl;
 					}
+				}
+				/* if the expired record is an error response
+				 * refresh for another NORR_TTL */
+				if(rep && *qstate->env->now > rep->ttl &&
+					(FLAGS_GET_RCODE(rep->flags) !=
+					LDNS_RCODE_NOERROR &&
+					FLAGS_GET_RCODE(rep->flags) !=
+					LDNS_RCODE_NXDOMAIN &&
+					FLAGS_GET_RCODE(rep->flags) !=
+					LDNS_RCODE_YXDOMAIN)) {
+					verbose(VERB_ALGO, "refresh TTL for "
+						"error response in cache");
+					rep->ttl = *qstate->env->now + NORR_TTL;
 				}
 				lock_rw_unlock(&msg->entry.lock);
 				return error_response(qstate, id, rcode);
