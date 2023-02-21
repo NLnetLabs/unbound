@@ -619,10 +619,12 @@ struct module_qstate {
 	/** if this is a validation recursion query that does not get
 	 * validation itself */
 	int is_valrec;
+#ifdef CLIENT_SUBNET
 	/** client network address is needed for the client-subnet option
 	 *  when probing, but we want use reply_list in mesh_info, because
 	 * we don't want to send a reply. */
         struct sockaddr_storage client_addr;
+#endif
 
 	/** comm_reply contains server replies */
 	struct comm_reply* reply;
