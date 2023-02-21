@@ -620,9 +620,9 @@ struct module_qstate {
 	 * validation itself */
 	int is_valrec;
 #ifdef CLIENT_SUBNET
-	/** client network address is needed for the client-subnet option
-	 *  when probing, but we want use reply_list in mesh_info, because
-	 * we don't want to send a reply. */
+	/** the client network address is needed for the client-subnet option
+	 *  when prefetching, but we can't use reply_list in mesh_info, because
+	 *  we don't want to send a reply for the internal query. */
         struct sockaddr_storage client_addr;
 #endif
 
