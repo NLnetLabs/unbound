@@ -3237,7 +3237,7 @@ doq_table_create(struct config_file* cfg, struct ub_randstate* rnd)
 	lock_protect(&table->lock, table->conn_tree, sizeof(*table->conn_tree));
 	lock_protect(&table->conid_lock, table->conid_tree,
 		sizeof(*table->conid_tree));
-	lock_protect(&table->conid_lock, table->timer_tree,
+	lock_protect(&table->lock, table->timer_tree,
 		sizeof(*table->timer_tree));
 	return table;
 }
