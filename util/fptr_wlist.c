@@ -254,6 +254,7 @@ fptr_whitelist_rbtree_cmp(int (*fptr) (const void *, const void *))
 #ifdef HAVE_NGTCP2
 	else if(fptr == &doq_conn_cmp) return 1;
 	else if(fptr == &doq_conid_cmp) return 1;
+	else if(fptr == &doq_timer_cmp) return 1;
 	else if(fptr == &doq_stream_cmp) return 1;
 #endif
 	return 0;

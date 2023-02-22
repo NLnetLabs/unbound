@@ -3213,6 +3213,14 @@ doq_table_create(struct config_file* cfg, struct ub_randstate* rnd)
 		free(table);
 		return NULL;
 	}
+	table->timer_tree = rbtree_create(doq_timer_cmp);
+	if(!table->timer_tree) {
+		free(table->static_secret);
+		free(table->conn_tree);
+		free(table->conid_tree);
+		free(table);
+		return NULL;
+	}
 	lock_rw_init(&table->lock);
 	lock_rw_init(&table->conid_lock);
 	lock_protect(&table->lock, &table->static_secret,
@@ -3229,6 +3237,8 @@ doq_table_create(struct config_file* cfg, struct ub_randstate* rnd)
 	lock_protect(&table->lock, table->conn_tree, sizeof(*table->conn_tree));
 	lock_protect(&table->conid_lock, table->conid_tree,
 		sizeof(*table->conid_tree));
+	lock_protect(&table->conid_lock, table->timer_tree,
+		sizeof(*table->timer_tree));
 	return table;
 }
 
@@ -3236,9 +3246,19 @@ doq_table_create(struct config_file* cfg, struct ub_randstate* rnd)
 static void
 conn_tree_del(rbnode_type* node, void* ATTR_UNUSED(arg))
 {
+	struct doq_conn* conn;
 	if(!node)
 		return;
-	doq_conn_delete((struct doq_conn*)node->key);
+	conn = (struct doq_conn*)node->key;
+	if(conn->timer.timer_in_list) {
+		/* Remove timer from list first, because finding the rbnode
+		 * element of the setlist of same timeouts needs tree lookup.
+		 * Edit the tree structure after that lookup. */
+		doq_timer_list_remove(conn->table, &conn->timer);
+	}
+	if(conn->timer.timer_in_tree)
+		doq_timer_tree_remove(conn->table, &conn->timer);
+	doq_conn_delete(conn);
 }
 
 /** delete elements from the connection id tree */
@@ -3268,9 +3288,144 @@ doq_table_delete(struct doq_table* table)
 		traverse_postorder(table->conid_tree, conid_tree_del, NULL);
 		free(table->conid_tree);
 	}
+	if(table->timer_tree) {
+		/* The tree should be empty, because the conn_tree_del calls
+		 * above should also have removed them. Also the doq_timer
+		 * is part of the doq_conn struct, so is already freed. */
+		free(table->timer_tree);
+	}
 	table->write_list_first = NULL;
 	table->write_list_last = NULL;
 	free(table);
+}
+
+/** doq find a timeout in the timer tree */
+static struct doq_timer*
+doq_timer_find_time(struct doq_table* table, struct timeval* tv)
+{
+	struct doq_timer key;
+	struct rbnode_type* node;
+	memset(&key, 0, sizeof(key));
+	key.time.tv_sec = tv->tv_sec;
+	key.time.tv_usec = tv->tv_usec;
+	node = rbtree_search(table->timer_tree, &key);
+	if(node)
+		return (struct doq_timer*)node->key;
+	return NULL;
+}
+
+void
+doq_timer_tree_remove(struct doq_table* table, struct doq_timer* timer)
+{
+	if(!timer->timer_in_tree)
+		return;
+	rbtree_delete(table->timer_tree, timer);
+	timer->timer_in_tree = 0;
+	/* This item could have more timers in the same set. */
+	if(timer->setlist_first) {
+		struct doq_timer* rb_timer = timer->setlist_first;
+		/* del first element from setlist */
+		if(rb_timer->setlist_next)
+			rb_timer->setlist_next->setlist_prev = NULL;
+		else
+			timer->setlist_last = NULL;
+		timer->setlist_first = rb_timer->setlist_next;
+		rb_timer->setlist_prev = NULL;
+		rb_timer->setlist_next = NULL;
+		rb_timer->timer_in_list = 0;
+		/* insert it into the tree as new rb element */
+		rbtree_insert(table->timer_tree, &rb_timer->node);
+		rb_timer->timer_in_tree = 1;
+		/* the setlist, if any remainder, moves to the rb element */
+		rb_timer->setlist_first = timer->setlist_first;
+		rb_timer->setlist_last = timer->setlist_last;
+		timer->setlist_first = NULL;
+		timer->setlist_last = NULL;
+		rb_timer->worker = timer->worker;
+	}
+	timer->worker = NULL;
+}
+
+void
+doq_timer_list_remove(struct doq_table* table, struct doq_timer* timer)
+{
+	struct doq_timer* rb_timer;
+	if(!timer->timer_in_list)
+		return;
+	/* The item in the rbtree has the list start and end. */
+	rb_timer = doq_timer_find_time(table, &timer->time);
+	if(rb_timer) {
+		if(timer->setlist_prev)
+			timer->setlist_prev->setlist_next = timer->setlist_next;
+		else
+			rb_timer->setlist_first = timer->setlist_next;
+		if(timer->setlist_next)
+			timer->setlist_next->setlist_prev = timer->setlist_prev;
+		else
+			rb_timer->setlist_last = timer->setlist_prev;
+		timer->setlist_prev = NULL;
+		timer->setlist_next = NULL;
+	}
+	timer->timer_in_list = 0;
+}
+
+/** doq append timer to setlist */
+static void
+doq_timer_list_append(struct doq_timer* rb_timer, struct doq_timer* timer)
+{
+	log_assert(timer->timer_in_list == 0);
+	timer->timer_in_list = 1;
+	timer->setlist_next = NULL;
+	timer->setlist_prev = rb_timer->setlist_last;
+	if(rb_timer->setlist_last)
+		rb_timer->setlist_last->setlist_next = timer;
+	else
+		rb_timer->setlist_first = timer;
+	rb_timer->setlist_last = timer;
+}
+
+void
+doq_timer_unset(struct doq_table* table, struct doq_timer* timer)
+{
+	if(timer->timer_in_list) {
+		/* Remove timer from list first, because finding the rbnode
+		 * element of the setlist of same timeouts needs tree lookup.
+		 * Edit the tree structure after that lookup. */
+		doq_timer_list_remove(table, timer);
+	}
+	if(timer->timer_in_tree)
+		doq_timer_tree_remove(table, timer);
+	timer->worker = NULL;
+}
+
+void doq_timer_set(struct doq_table* table, struct doq_timer* timer,
+	struct worker* worker, struct timeval* tv)
+{
+	struct doq_timer* rb_timer;
+	if(timer->timer_in_tree || timer->timer_in_list) {
+		if(timer->time.tv_sec == tv->tv_sec &&
+			timer->time.tv_usec == tv->tv_usec)
+			return; /* already set on that time */
+		doq_timer_unset(table, timer);
+	}
+	timer->time.tv_sec = tv->tv_sec;
+	timer->time.tv_usec = tv->tv_usec;
+	rb_timer = doq_timer_find_time(table, tv);
+	if(rb_timer) {
+		/* There is a timeout already with this value. Timer is
+		 * added to the setlist. */
+		doq_timer_list_append(rb_timer, timer);
+	} else {
+		/* There is no timeout with this value. Make timer a new
+		 * tree element. */
+		memset(&timer->node, 0, sizeof(timer->node));
+		timer->node.key = timer;
+		rbtree_insert(table->timer_tree, &timer->node);
+		timer->timer_in_tree = 1;
+		timer->setlist_first = NULL;
+		timer->setlist_last = NULL;
+		timer->worker = worker;
+	}
 }
 
 struct doq_conn*
@@ -3298,6 +3453,7 @@ doq_conn_create(struct comm_point* c, struct doq_pkt_addr* paddr,
 	conn->version = version;
 	ngtcp2_connection_close_error_default(&conn->last_error);
 	rbtree_init(&conn->stream_tree, &doq_stream_cmp);
+	conn->timer.conn = conn;
 	lock_basic_init(&conn->lock);
 	lock_protect(&conn->lock, &conn->key, sizeof(conn->key));
 	lock_protect(&conn->lock, &conn->doq_socket, sizeof(conn->doq_socket));
@@ -3405,6 +3561,21 @@ int doq_conid_cmp(const void* key1, const void* key2)
 		return 1;
 	}
 	return memcmp(c->cid, d->cid, c->cidlen);
+}
+
+int doq_timer_cmp(const void* key1, const void* key2)
+{
+	struct doq_timer* e = (struct doq_timer*)key1;
+	struct doq_timer* f = (struct doq_timer*)key2;
+	if(e->time.tv_sec < f->time.tv_sec)
+		return -1;
+	if(e->time.tv_sec > f->time.tv_sec)
+		return 1;
+	if(e->time.tv_usec < f->time.tv_usec)
+		return -1;
+	if(e->time.tv_usec > f->time.tv_usec)
+		return 1;
+	return 0;
 }
 
 int doq_stream_cmp(const void* key1, const void* key2)

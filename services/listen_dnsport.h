@@ -497,6 +497,8 @@ struct doq_table {
 	/** the list of write interested connections, hold the doq_table.lock
 	 * to change them */
 	struct doq_conn* write_list_first, *write_list_last;
+	/** rbtree of doq_timer. */
+	struct rbtree_type* timer_tree;
 };
 
 /** create doq table */
@@ -505,6 +507,34 @@ struct doq_table* doq_table_create(struct config_file* cfg,
 
 /** delete doq table */
 void doq_table_delete(struct doq_table* table);
+
+/**
+ * Timer information for doq timer.
+ */
+struct doq_timer {
+	/** The rbnode in the tree sorted by timeout value. Key this struct. */
+	struct rbnode_type node;
+	/** The timeout value. Absolute time value. */
+	struct timeval time;
+	/** If the timer is in the time tree, with the node. */
+	int timer_in_tree;
+	/** If there are more timers with the exact same timeout value,
+	 * they form a set of timers. The rbnode timer has a link to the list
+	 * with the other timers in the set. The rbnode timer is not a
+	 * member of the list with the other timers. The other timers are not
+	 * linked into the tree. */
+	struct doq_timer* setlist_first, *setlist_last;
+	/** If the timer is on the setlist. */
+	int timer_in_list;
+	/** If in the setlist, the next and prev element. */
+	struct doq_timer* setlist_next, *setlist_prev;
+	/** The connection that is timeouted. */
+	struct doq_conn* conn;
+	/** The worker that is waiting for the timeout event.
+	 * Set for the rbnode tree linked element. If a worker is waiting
+	 * for the event. If NULL, no worker is waiting for this timeout. */
+	struct worker* worker;
+};
 
 /**
  * Key information that makes a doq_conn node in the tree lookup.
@@ -569,6 +599,11 @@ struct doq_conn {
 	uint8_t on_write_list;
 	/** the connection write list prev and next, if on the write list */
 	struct doq_conn* write_prev, *write_next;
+	/** The timer for the connection. If unused, it is not in the tree
+	 * and not in the list. It is alloced here, so that it is prealloced.
+	 * It has to be set after every read and write on the connection, so
+	 * it improved performance, but also the allocation does not fail. */
+	struct doq_timer timer;
 };
 
 /**
@@ -650,6 +685,9 @@ int doq_conn_cmp(const void* key1, const void* key2);
 
 /** compare function of doq_conid */
 int doq_conid_cmp(const void* key1, const void* key2);
+
+/** compare function of doq_timer */
+int doq_timer_cmp(const void* key1, const void* key2);
 
 /** compare function of doq_stream */
 int doq_stream_cmp(const void* key1, const void* key2);
@@ -734,6 +772,19 @@ void doq_conn_write_list_remove(struct doq_table* table,
 
 /** doq get the first conn from the write list, if any, popped from list. */
 struct doq_conn* doq_table_pop_first(struct doq_table* table);
+
+/** doq remove timer from tree */
+void doq_timer_tree_remove(struct doq_table* table, struct doq_timer* timer);
+
+/** doq remove timer from list */
+void doq_timer_list_remove(struct doq_table* table, struct doq_timer* timer);
+
+/** doq unset the timer if it was set. */
+void doq_timer_unset(struct doq_table* table, struct doq_timer* timer);
+
+/** doq set the timer and add it. */
+void doq_timer_set(struct doq_table* table, struct doq_timer* timer,
+	struct worker* worker, struct timeval* tv);
 #endif /* HAVE_NGTCP2 */
 
 char* set_ip_dscp(int socket, int addrfamily, int ds);

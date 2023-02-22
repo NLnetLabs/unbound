@@ -1738,6 +1738,17 @@ doq_delete_connection(struct comm_point* c, struct doq_conn* conn)
 		conn = (struct doq_conn*)node->key;
 		lock_basic_lock(&conn->lock);
 		doq_conn_write_list_remove(c->doq_socket->table, conn);
+		if(conn->timer.timer_in_list) {
+			/* Remove timer from list first, because finding the
+			 * rbnode element of the setlist of same timeouts
+			 * needs tree lookup. Edit the tree structure after
+			 * that lookup. */
+			doq_timer_list_remove(c->doq_socket->table,
+				&conn->timer);
+		}
+		if(conn->timer.timer_in_tree)
+			doq_timer_tree_remove(c->doq_socket->table,
+				&conn->timer);
 	}
 	lock_rw_unlock(&c->doq_socket->table->lock);
 	if(node)
@@ -1763,6 +1774,7 @@ doq_setup_new_conn(struct comm_point* c, struct doq_pkt_addr* paddr,
 	if(!rbtree_insert(c->doq_socket->table->conn_tree, &conn->node)) {
 		lock_rw_unlock(&c->doq_socket->table->lock);
 		log_err("doq: duplicate connection");
+		/* conn has no entry in writelist, and no timer yet. */
 		doq_conn_delete(conn);
 		return NULL;
 	}
