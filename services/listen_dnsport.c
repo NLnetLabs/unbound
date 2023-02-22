@@ -3404,6 +3404,13 @@ void doq_timer_set(struct doq_table* table, struct doq_timer* timer,
 	struct worker* worker, struct timeval* tv)
 {
 	struct doq_timer* rb_timer;
+	if(verbosity >= VERB_ALGO && timer->conn) {
+		char a[256];
+		addr_to_str((void*)&timer->conn->key.paddr.addr,
+			timer->conn->key.paddr.addrlen, a, sizeof(a));
+		verbose(VERB_ALGO, "doq %s timer set %d.%6.6d",
+			a, (int)tv->tv_sec, (int)tv->tv_usec);
+	}
 	if(timer->timer_in_tree || timer->timer_in_list) {
 		if(timer->time.tv_sec == tv->tv_sec &&
 			timer->time.tv_usec == tv->tv_usec)
