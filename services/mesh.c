@@ -803,20 +803,10 @@ static void mesh_schedule_prefetch_subnet(struct mesh_area* mesh,
 			return;
 		}
 	} else {
-		/* Fake the ECS data from the client's IP */
-		struct ecs_data ecs;
-		memset(&ecs, 0, sizeof(ecs));
-		subnet_option_from_ss(&rep->client_addr, &ecs, mesh->env->cfg);
-		if(ecs.subnet_validdata == 0) {
-			log_err("prefetch_subnet subnet_option_from_ss: invalid data");
-			return;
-		}
-		subnet_ecs_opt_list_append(&ecs, &s->s.edns_opts_front_in,
-			&s->s, s->s.region);
-		if(!s->s.edns_opts_front_in) {
-			log_err("prefetch_subnet subnet_ecs_opt_list_append: out of memory");
-			return;
-		}
+		/* Store the client's address. Later in the subnet module,
+		 * it is decided whether to include an ECS option or not.
+		 */
+		s->s.client_addr =  rep->client_addr;
 	}
 #ifdef UNBOUND_DEBUG
 	n =
