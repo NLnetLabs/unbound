@@ -3334,6 +3334,8 @@ doq_timer_tree_remove(struct doq_table* table, struct doq_timer* timer)
 		rb_timer->setlist_next = NULL;
 		rb_timer->timer_in_list = 0;
 		/* insert it into the tree as new rb element */
+		memset(&rb_timer->node, 0, sizeof(rb_timer->node));
+		rb_timer->node.key = rb_timer;
 		rbtree_insert(table->timer_tree, &rb_timer->node);
 		rb_timer->timer_in_tree = 1;
 		/* the setlist, if any remainder, moves to the rb element */

@@ -602,7 +602,7 @@ struct doq_conn {
 	/** The timer for the connection. If unused, it is not in the tree
 	 * and not in the list. It is alloced here, so that it is prealloced.
 	 * It has to be set after every read and write on the connection, so
-	 * it improved performance, but also the allocation does not fail. */
+	 * this improves performance, but also the allocation does not fail. */
 	struct doq_timer timer;
 };
 
