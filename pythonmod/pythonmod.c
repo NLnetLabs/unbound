@@ -3,7 +3,6 @@
  *
  * Copyright (c) 2009, Zdenek Vasicek (vasicek AT fit.vutbr.cz)
  *                     Marek Vavrusa  (xvavru00 AT stud.fit.vutbr.cz)
- * Copyright (c) 2023, Rubicon Communications, LLC (Netgate)
  *
  * This software is open source.
  *
@@ -254,10 +253,11 @@ cleanup:
 }
 
 /* we only want to unwind Python once at exit */
-void pythonmod_atexit(void)
+static void
+pythonmod_atexit(void)
 {
-   assert(py_mod_count == 0);
-   assert(maimthr != NULL);
+   log_assert(py_mod_count == 0);
+   log_assert(mainthr != NULL);
  
    PyEval_RestoreThread(mainthr);
    Py_Finalize();
@@ -322,7 +322,7 @@ int pythonmod_init(struct module_env* env, int id)
       SWIG_init();
       mainthr = PyEval_SaveThread();
 
-      /* XXX: register callback to unwind Python at exit */
+      /* register callback to unwind Python at exit */
       atexit(pythonmod_atexit);
    }
 
@@ -539,6 +539,7 @@ python_init_fail:
 
 void pythonmod_deinit(struct module_env* env, int id)
 {
+   int cbtype;
    struct pythonmod_env* pe = env->modinfo[id];
    if(pe == NULL)
       return;
@@ -567,7 +568,7 @@ void pythonmod_deinit(struct module_env* env, int id)
    free(pe);
 
    /* iterate over all possible callback types and clean up each in turn */
-   for (int cbtype = 0; cbtype < inplace_cb_types_total; cbtype++)
+   for (cbtype = 0; cbtype < inplace_cb_types_total; cbtype++)
       inplace_cb_delete(env, cbtype, id);
 
    /* Module is deallocated in Python */
