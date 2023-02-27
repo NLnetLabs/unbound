@@ -1920,9 +1920,11 @@ doq_done_setup_timer_and_write(struct comm_point* c, struct doq_conn* conn)
 		return;
 	}
 	conn = (struct doq_conn*)node->key;
+	lock_basic_lock(&conn->lock);
 	if(conn->is_deleted) {
 		/* It is deleted now. */
 		lock_rw_unlock(&c->doq_socket->table->lock);
+		lock_basic_unlock(&conn->lock);
 		return;
 	}
 
@@ -1937,6 +1939,7 @@ doq_done_setup_timer_and_write(struct comm_point* c, struct doq_conn* conn)
 			c->doq_socket, &new_tv);
 	}
 	lock_rw_unlock(&c->doq_socket->table->lock);
+	lock_basic_unlock(&conn->lock);
 }
 
 /** doq done with connection callbacks, release locks and setup write */
@@ -1976,9 +1979,11 @@ doq_done_with_conn_cb(struct comm_point* c, struct doq_conn* conn)
 		return;
 	}
 	conn = (struct doq_conn*)node->key;
+	lock_basic_lock(&conn->lock);
 	if(conn->is_deleted) {
 		/* it is deleted now. */
 		lock_rw_unlock(&c->doq_socket->table->lock);
+		lock_basic_unlock(&conn->lock);
 		return;
 	}
 
@@ -1987,6 +1992,7 @@ doq_done_with_conn_cb(struct comm_point* c, struct doq_conn* conn)
 	 * in the doq_conn structures. */
 	doq_conn_set_write_list(c->doq_socket->table, conn);
 	lock_rw_unlock(&c->doq_socket->table->lock);
+	lock_basic_unlock(&conn->lock);
 }
 
 /** doq count the length of the write list */
