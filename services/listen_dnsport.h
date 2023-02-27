@@ -466,6 +466,7 @@ int http2_submit_dns_response(void* v);
 
 #ifdef HAVE_NGTCP2
 struct doq_conid;
+struct doq_server_socket;
 
 /**
  * DoQ shared connection table. This is the connections for the host.
@@ -533,7 +534,7 @@ struct doq_timer {
 	/** The worker that is waiting for the timeout event.
 	 * Set for the rbnode tree linked element. If a worker is waiting
 	 * for the event. If NULL, no worker is waiting for this timeout. */
-	struct worker* worker;
+	struct doq_server_socket* worker_doq_socket;
 };
 
 /**
@@ -793,7 +794,7 @@ void doq_timer_unset(struct doq_table* table, struct doq_timer* timer);
 
 /** doq set the timer and add it. */
 void doq_timer_set(struct doq_table* table, struct doq_timer* timer,
-	struct worker* worker, struct timeval* tv);
+	struct doq_server_socket* worker_doq_socket, struct timeval* tv);
 #endif /* HAVE_NGTCP2 */
 
 char* set_ip_dscp(int socket, int addrfamily, int ds);

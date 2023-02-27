@@ -1876,6 +1876,69 @@ doq_accept(struct comm_point* c, struct doq_pkt_addr* paddr,
 	return 1;
 }
 
+/** doq done with connection, release locks and setup timer and write */
+static void
+doq_done_setup_timer_and_write(struct comm_point* c, struct doq_conn* conn)
+{
+	struct doq_conn copy;
+	uint8_t cid[NGTCP2_MAX_CIDLEN];
+	rbnode_type* node;
+	struct timeval new_tv;
+	int write_change = 0, timer_change = 0;
+
+	/* No longer in callbacks, so the pointer to doq_socket is back
+	 * to NULL. */
+	conn->doq_socket = NULL;
+
+	if(doq_conn_check_timer(conn, &new_tv))
+		timer_change = 1;
+	if( (conn->write_interest && !conn->on_write_list) ||
+		(!conn->write_interest && conn->on_write_list))
+		write_change = 1;
+
+	if(!timer_change && !write_change) {
+		/* Nothing to do. */
+		lock_basic_unlock(&conn->lock);
+		return;
+	}
+
+	/* The table lock is needed to change the write list and timer tree.
+	 * So the connection lock is release and then the connection is
+	 * looked up again. */
+	copy.key = conn->key;
+	log_assert(conn->key.dcidlen <= NGTCP2_MAX_CIDLEN);
+	memcpy(cid, conn->key.dcid, conn->key.dcidlen);
+	copy.key.dcid = cid;
+	copy.node.key = &copy;
+	lock_basic_unlock(&conn->lock);
+
+	lock_rw_wrlock(&c->doq_socket->table->lock);
+	node = rbtree_search(c->doq_socket->table->conn_tree, copy.node.key);
+	if(!node) {
+		lock_rw_unlock(&c->doq_socket->table->lock);
+		/* Must have been deleted in the mean time. */
+		return;
+	}
+	conn = (struct doq_conn*)node->key;
+	if(conn->is_deleted) {
+		/* It is deleted now. */
+		lock_rw_unlock(&c->doq_socket->table->lock);
+		return;
+	}
+
+	if(write_change) {
+		/* Edit the write lists, we are holding the table.lock and can
+		 * edit the list first,last and also prev,next and on_list
+		 * elements in the doq_conn structures. */
+		doq_conn_set_write_list(c->doq_socket->table, conn);
+	}
+	if(timer_change) {
+		doq_timer_set(c->doq_socket->table, &conn->timer,
+			c->doq_socket, &new_tv);
+	}
+	lock_rw_unlock(&c->doq_socket->table->lock);
+}
+
 /** doq done with connection callbacks, release locks and setup write */
 static void
 doq_done_with_conn_cb(struct comm_point* c, struct doq_conn* conn)
@@ -1969,7 +2032,7 @@ doq_done_with_write_cb(struct comm_point* c, struct doq_conn* conn,
 		doq_delete_connection(c, conn);
 		return;
 	}
-	doq_done_with_conn_cb(c, conn);
+	doq_done_setup_timer_and_write(c, conn);
 }
 
 /** see if the doq socket wants to write packets */
@@ -2161,19 +2224,19 @@ comm_point_doq_callback(int fd, short event, void* arg)
 				doq_delete_connection(c, conn);
 				continue;
 			}
-			doq_done_with_conn_cb(c, conn);
+			doq_done_setup_timer_and_write(c, conn);
 			continue;
 		}
 		if(ngtcp2_conn_is_in_closing_period(conn->conn)) {
 			if(!doq_conn_send_close(c, conn)) {
 				doq_delete_connection(c, conn);
 			} else {
-				doq_done_with_conn_cb(c, conn);
+				doq_done_setup_timer_and_write(c, conn);
 			}
 			continue;
 		}
 		if(ngtcp2_conn_is_in_draining_period(conn->conn)) {
-			doq_done_with_conn_cb(c, conn);
+			doq_done_setup_timer_and_write(c, conn);
 			continue;
 		}
 		if(!doq_conn_recv(c, &paddr, conn, &pi, NULL, &err_drop)) {
@@ -2183,7 +2246,7 @@ comm_point_doq_callback(int fd, short event, void* arg)
 			if(err_drop) {
 				doq_delete_connection(c, conn);
 			} else {
-				doq_done_with_conn_cb(c, conn);
+				doq_done_setup_timer_and_write(c, conn);
 			}
 			continue;
 		}
@@ -2191,11 +2254,11 @@ comm_point_doq_callback(int fd, short event, void* arg)
 			if(err_drop) {
 				doq_delete_connection(c, conn);
 			} else {
-				doq_done_with_conn_cb(c, conn);
+				doq_done_setup_timer_and_write(c, conn);
 			}
 			continue;
 		}
-		doq_done_with_conn_cb(c, conn);
+		doq_done_setup_timer_and_write(c, conn);
 	}
 
 	/* see if we want to have more write events */

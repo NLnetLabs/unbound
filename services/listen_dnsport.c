@@ -3343,9 +3343,9 @@ doq_timer_tree_remove(struct doq_table* table, struct doq_timer* timer)
 		rb_timer->setlist_last = timer->setlist_last;
 		timer->setlist_first = NULL;
 		timer->setlist_last = NULL;
-		rb_timer->worker = timer->worker;
+		rb_timer->worker_doq_socket = timer->worker_doq_socket;
 	}
-	timer->worker = NULL;
+	timer->worker_doq_socket = NULL;
 }
 
 void
@@ -3397,11 +3397,11 @@ doq_timer_unset(struct doq_table* table, struct doq_timer* timer)
 	}
 	if(timer->timer_in_tree)
 		doq_timer_tree_remove(table, timer);
-	timer->worker = NULL;
+	timer->worker_doq_socket = NULL;
 }
 
 void doq_timer_set(struct doq_table* table, struct doq_timer* timer,
-	struct worker* worker, struct timeval* tv)
+	struct doq_server_socket* worker_doq_socket, struct timeval* tv)
 {
 	struct doq_timer* rb_timer;
 	if(verbosity >= VERB_ALGO && timer->conn) {
@@ -3433,7 +3433,7 @@ void doq_timer_set(struct doq_table* table, struct doq_timer* timer,
 		timer->timer_in_tree = 1;
 		timer->setlist_first = NULL;
 		timer->setlist_last = NULL;
-		timer->worker = worker;
+		timer->worker_doq_socket = worker_doq_socket;
 	}
 }
 
