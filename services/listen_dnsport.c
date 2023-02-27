@@ -5118,4 +5118,36 @@ doq_table_pop_first(struct doq_table* table)
 	conn->on_write_list = 0;
 	return conn;
 }
+
+int
+doq_conn_check_timer(struct doq_conn* conn, struct timeval* tv)
+{
+	ngtcp2_tstamp expiry = ngtcp2_conn_get_expiry(conn->conn);
+	ngtcp2_tstamp now = doq_get_timestamp_nanosec();
+	ngtcp2_tstamp t;
+
+	if(expiry <= now) {
+		/* The timer has already expired, add with zero timeout.
+		 * This should call the callback straight away. Calling it
+		 * from the event callbacks is cleaner than calling it here,
+		 * because then it is always called with the same locks and
+		 * so on. This routine only has the conn.lock. */
+		t = now;
+	} else {
+		t = expiry;
+	}
+
+	/* convert to timeval */
+	memset(tv, 0, sizeof(*tv));
+	tv->tv_sec = t / NGTCP2_SECONDS;
+	tv->tv_usec = (t / NGTCP2_MICROSECONDS)%1000000;
+
+	/* If we already have a timer, is it the right value? */
+	if(conn->timer.timer_in_tree || conn->timer.timer_in_list) {
+		if(conn->timer.time.tv_sec == tv->tv_sec &&
+			conn->timer.time.tv_usec == tv->tv_usec)
+			return 0;
+	}
+	return 1;
+}
 #endif /* HAVE_NGTCP2 */

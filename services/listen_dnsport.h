@@ -773,6 +773,15 @@ void doq_conn_write_list_remove(struct doq_table* table,
 /** doq get the first conn from the write list, if any, popped from list. */
 struct doq_conn* doq_table_pop_first(struct doq_table* table);
 
+/**
+ * doq check if the timer for the conn needs to be changed.
+ * @param conn: connection, caller must hold lock on it.
+ * @param tv: time value, absolute time, returned.
+ * @return true if timer needs to be set to tv, false if no change is needed
+ * 	to the timer. The timer is already set to the right time in that case.
+ */
+int doq_conn_check_timer(struct doq_conn* conn, struct timeval* tv);
+
 /** doq remove timer from tree */
 void doq_timer_tree_remove(struct doq_table* table, struct doq_timer* timer);
 
