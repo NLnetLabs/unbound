@@ -289,6 +289,14 @@ create_udp_sock(int family, int socktype, struct sockaddr* addr,
 #endif
 		}
 #endif /* SO_REUSEADDR */
+
+#ifndef USE_WINSOCK
+        if(setsockopt(s, IPPROTO_IP, IP_RECVERR, (void*)&on,
+                    (socklen_t)sizeof(on)) < 0) { 
+            return -1;
+        }
+#endif
+
 #ifdef SO_REUSEPORT
 #  ifdef SO_REUSEPORT_LB
 		/* on FreeBSD 12 we have SO_REUSEPORT_LB that does loadbalance
