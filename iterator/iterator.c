@@ -2896,7 +2896,7 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 		iq->chase_to_rd = 0;
 		iq->dnssec_lame_query = 0;
 		verbose(VERB_ALGO, "query response was timeout");
-        if (iq->timeout_count >= env->cfg->outbound_msg_retry) {
+        if (iq->timeout_count >= qstate->env->cfg->outbound_msg_retry) {
 		    return next_state(iq, FINISHED_STATE);
         } else {
 		    return next_state(iq, QUERYTARGETS_STATE);
