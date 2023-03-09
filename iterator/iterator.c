@@ -2814,7 +2814,8 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 		/* unset CD if to forwarder(RD set) and not dnssec retry
 		 * (blacklist nonempty) and no trust-anchors are configured
 		 * above the qname or on the first attempt when dnssec is on */
-		EDNS_DO| ((iq->chase_to_rd||(iq->chase_flags&BIT_RD)!=0)&&
+		//EDNS_DO | ((iq->chase_to_rd||(iq->chase_flags&BIT_RD)!=0)&&
+		((iq->chase_to_rd||(iq->chase_flags&BIT_RD)!=0)&&
 		!qstate->blacklist&&(!iter_qname_indicates_dnssec(qstate->env,
 		&iq->qinfo_out)||target->attempts==1)?0:BIT_CD),
 		iq->dnssec_expected, iq->caps_fallback || is_caps_whitelisted(
@@ -2896,7 +2897,7 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 		iq->chase_to_rd = 0;
 		iq->dnssec_lame_query = 0;
 		verbose(VERB_ALGO, "query response was timeout");
-        if (iq->timeout_count >= qstate->env->cfg->outbound_msg_retry) {
+        if (iq->timeout_count >= (3 * qstate->env->cfg->outbound_msg_retry)) {
 		    return next_state(iq, FINISHED_STATE);
         } else {
 		    return next_state(iq, QUERYTARGETS_STATE);
