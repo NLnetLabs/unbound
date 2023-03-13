@@ -145,10 +145,8 @@ struct daemon {
 	/** the dnscrypt environment */
 	struct dnsc_env* dnscenv;
 #endif
-#ifdef HAVE_NGTCP2
 	/** the doq connection table */
 	struct doq_table* doq_table;
-#endif
 	/** reuse existing cache on reload if other conditions allow it. */
 	int reuse_cache;
 };

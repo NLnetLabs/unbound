@@ -810,6 +810,8 @@ void doq_client_event_cb(int fd, short event, void* arg);
 /** timer event callback for testcode/doqclient */
 void doq_client_timer_cb(int fd, short event, void* arg);
 
+#ifdef HAVE_NGTCP2
 /** get a timestamp in nanoseconds */
 ngtcp2_tstamp doq_get_timestamp_nanosec(void);
+#endif
 #endif /* LISTEN_DNSPORT_H */

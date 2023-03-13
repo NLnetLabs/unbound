@@ -5457,7 +5457,9 @@ comm_point_create_doq(struct comm_base *base, int fd, sldns_buffer* buffer,
 	(void)callback_arg;
 	(void)socket;
 	(void)rnd;
-	(void)idle_msec;
+	(void)table;
+	(void)ssl_service_key;
+	(void)ssl_service_pem;
 	sock_close(fd);
 	return NULL;
 #endif /* HAVE_NGTCP2 */
@@ -6197,8 +6199,10 @@ comm_point_send_reply(struct comm_reply *repinfo)
 			comm_point_start_listening(repinfo->c, -1,
 				adjusted_tcp_timeout(repinfo->c));
 			return;
+#ifdef HAVE_NGTCP2
 		} else if(repinfo->c->doq_socket) {
 			doq_socket_send_reply(repinfo);
+#endif
 		} else {
 			comm_point_start_listening(repinfo->c, -1,
 				adjusted_tcp_timeout(repinfo->c));
@@ -6226,9 +6230,11 @@ comm_point_drop_reply(struct comm_reply* repinfo)
 		}
 		reclaim_http_handler(repinfo->c);
 		return;
+#ifdef HAVE_NGTCP2
 	} else if(repinfo->c->type == comm_doq) {
 		doq_socket_drop_reply(repinfo);
 		return;
+#endif
 	}
 	reclaim_tcp_handler(repinfo->c);
 }

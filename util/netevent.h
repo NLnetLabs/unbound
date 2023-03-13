@@ -1069,8 +1069,10 @@ struct doq_server_socket {
 	 * nonblocking socket. It has to be sent later, when the write on
 	 * the udp socket unblocks. */
 	struct sldns_buffer* blocked_pkt;
+#ifdef HAVE_NGTCP2
 	/** the ecn info for the blocked packet, congestion information. */
 	struct ngtcp2_pkt_info blocked_pkt_pi;
+#endif
 	/** the packet destination for the blocked packet. */
 	struct doq_pkt_addr* blocked_paddr;
 };
