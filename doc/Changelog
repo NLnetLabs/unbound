@@ -1,3 +1,7 @@
+17 March 2023: George
+	- Fix #812, fix #846, by using the SSL_OP_IGNORE_UNEXPECTED_EOF option
+	  to ignore the unexpected eof while reading in openssl >= 3.
+
 16 March 2023: Wouter
 	- Fix ssl.h include brackets, instead of quotes.
 
