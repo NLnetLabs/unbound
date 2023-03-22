@@ -134,24 +134,19 @@ msg_cache_remove(struct module_env* env, uint8_t* qname, size_t qnamelen,
 
 /** remove servfail msg cache entry */
 static void
-msg_del_servfail(struct module_env* env, struct query_info* qinfo,
+msg_del_for_0ttl(struct module_env* env, struct query_info* qinfo,
 	uint32_t flags)
 {
 	struct msgreply_entry* e;
-	/* see if the entry is servfail, and then remove it, so that
+	/* see if there is an existing entry, and then remove it, so that
 	 * lookups move from the cacheresponse stage to the recursionresponse
 	 * stage */
 	e = msg_cache_lookup(env, qinfo->qname, qinfo->qname_len,
 		qinfo->qtype, qinfo->qclass, flags, 0, 0);
 	if(!e) return;
-	/* we don't check for the ttl here, also expired servfail entries
+	/* we don't check for the ttl here, also expired entries
 	 * are removed.  If the user uses serve-expired, they would still be
 	 * used to answer from cache */
-	if(FLAGS_GET_RCODE(((struct reply_info*)e->entry.data)->flags)
-		!= LDNS_RCODE_SERVFAIL) {
-		lock_rw_unlock(&e->entry.lock);
-		return;
-	}
 	lock_rw_unlock(&e->entry.lock);
 	msg_cache_remove(env, qinfo->qname, qinfo->qname_len, qinfo->qtype,
 		qinfo->qclass, flags);
@@ -183,12 +178,18 @@ dns_cache_store_msg(struct module_env* env, struct query_info* qinfo,
 		 * which could be useful for delegation information */
 		verbose(VERB_ALGO, "TTL 0: dropped msg from cache");
 		free(rep);
-		/* if the message is SERVFAIL in cache, remove that SERVFAIL,
+		/* if the message is in then cache, remove that msg,
 		 * so that the TTL 0 response can be returned for future
-		 * responses (i.e. don't get answered by the servfail from
+		 * responses (i.e. don't get answered from
 		 * cache, but instead go to recursion to get this TTL0
-		 * response). */
-		msg_del_servfail(env, qinfo, flags);
+		 * response).
+		 * Possible messages that could be in the cache:
+		 * - SERVFAIL
+		 * - NXDOMAIN
+		 * - NODATA
+		 * - an older record that is expired
+		 * - an older record that did not yet expire */
+		msg_del_for_0ttl(env, qinfo, flags);
 		return;
 	}
 
