@@ -17,7 +17,7 @@ CONFIG_END
 SCENARIO_BEGIN Test serve-expired with NXDOMAIN followed by 0 TTL
 ; Scenario overview:
 ; - query for 0ttl.example.com. IN A
-; - answer from upstream is NXDOMAIN; will be cached for NORR_TTL(5)
+; - answer from upstream is NXDOMAIN; will be cached for the SOA negative TTL.
 ; - check that the client gets the NXDOMAIN; also cached
 ; - query again right after the TTL expired
 ; - this time the server answers with a 0 TTL RRset

@@ -178,7 +178,7 @@ dns_cache_store_msg(struct module_env* env, struct query_info* qinfo,
 		 * which could be useful for delegation information */
 		verbose(VERB_ALGO, "TTL 0: dropped msg from cache");
 		free(rep);
-		/* if the message is in then cache, remove that msg,
+		/* if the message is in the cache, remove that msg,
 		 * so that the TTL 0 response can be returned for future
 		 * responses (i.e. don't get answered from
 		 * cache, but instead go to recursion to get this TTL0
