@@ -620,6 +620,15 @@ outnet_tcp_take_into_use(struct waiting_tcp* w)
 	log_assert(w->addrlen > 0);
 	pend->c->tcp_do_toggle_rw = 0;
 	pend->c->tcp_do_close = 0;
+
+	/* Consistency check, if we have ssl_upstream but no sslctx, then
+	 * log an error and return failure.
+	 */
+	if (w->ssl_upstream && !w->outnet->sslctx) {
+		log_err("SSL upstream requested but no SSL context");
+		return 0;
+	}
+
 	/* open socket */
 	s = outnet_get_tcp_fd(&w->addr, w->addrlen, w->outnet->tcp_mss, w->outnet->ip_dscp);
 
