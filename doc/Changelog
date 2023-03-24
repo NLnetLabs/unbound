@@ -1,3 +1,9 @@
+24 March 2023: Philip
+	- Fix issue #676: Unencrypted query is sent when
+	  forward-tls-upstream: yes is used without tls-cert-bundle
+	- Extra consistency check to make sure that when TLS is requested,
+	  either we set up a TLS connection or we return an error.
+
 21 March 2023: Philip
 	- Fix issue #851: reserved identifier violation 
 
