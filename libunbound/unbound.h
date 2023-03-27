@@ -94,8 +94,8 @@
  * The second calls another worker thread (or process) to perform the work.
  * And no buffers need to be set up, but a context-switch happens.
  */
-#ifndef _UB_UNBOUND_H
-#define _UB_UNBOUND_H
+#ifndef UB_UNBOUND_H
+#define UB_UNBOUND_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -865,4 +865,4 @@ struct ub_stats_info {
 }
 #endif
 
-#endif /* _UB_UNBOUND_H */
+#endif /* UB_UNBOUND_H */

@@ -1005,6 +1005,16 @@ listen_sslctx_setup(void* ctxt)
 			log_crypto_err("could not set cipher list with SSL_CTX_set_cipher_list");
 	}
 #endif
+#if defined(SSL_OP_IGNORE_UNEXPECTED_EOF)
+	/* ignore errors when peers do not send the mandatory close_notify
+	 * alert on shutdown.
+	 * Relevant for openssl >= 3 */
+	if((SSL_CTX_set_options(ctx, SSL_OP_IGNORE_UNEXPECTED_EOF) &
+		SSL_OP_IGNORE_UNEXPECTED_EOF) != SSL_OP_IGNORE_UNEXPECTED_EOF) {
+		log_crypto_err("could not set SSL_OP_IGNORE_UNEXPECTED_EOF");
+		return 0;
+	}
+#endif
 
 	if((SSL_CTX_set_options(ctx, SSL_OP_CIPHER_SERVER_PREFERENCE) &
 		SSL_OP_CIPHER_SERVER_PREFERENCE) !=
@@ -1230,6 +1240,17 @@ void* connect_sslctx_create(char* key, char* pem, char* verifypem, int wincert)
 	if((SSL_CTX_set_options(ctx, SSL_OP_NO_RENEGOTIATION) &
 		SSL_OP_NO_RENEGOTIATION) != SSL_OP_NO_RENEGOTIATION) {
 		log_crypto_err("could not set SSL_OP_NO_RENEGOTIATION");
+		SSL_CTX_free(ctx);
+		return 0;
+	}
+#endif
+#if defined(SSL_OP_IGNORE_UNEXPECTED_EOF)
+	/* ignore errors when peers do not send the mandatory close_notify
+	 * alert on shutdown.
+	 * Relevant for openssl >= 3 */
+	if((SSL_CTX_set_options(ctx, SSL_OP_IGNORE_UNEXPECTED_EOF) &
+		SSL_OP_IGNORE_UNEXPECTED_EOF) != SSL_OP_IGNORE_UNEXPECTED_EOF) {
+		log_crypto_err("could not set SSL_OP_IGNORE_UNEXPECTED_EOF");
 		SSL_CTX_free(ctx);
 		return 0;
 	}

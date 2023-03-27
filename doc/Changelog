@@ -1,3 +1,26 @@
+24 March 2023: Philip
+	- Fix issue #676: Unencrypted query is sent when
+	  forward-tls-upstream: yes is used without tls-cert-bundle
+	- Extra consistency check to make sure that when TLS is requested,
+	  either we set up a TLS connection or we return an error.
+
+21 March 2023: Philip
+	- Fix issue #851: reserved identifier violation 
+
+20 March 2023: Wouter
+	- iana portlist update.
+
+17 March 2023: George
+	- Fix #812, fix #846, by using the SSL_OP_IGNORE_UNEXPECTED_EOF option
+	  to ignore the unexpected eof while reading in openssl >= 3.
+
+16 March 2023: Wouter
+	- Fix ssl.h include brackets, instead of quotes.
+
+14 March 2023: Wouter
+	- Fix unbound-dnstap-socket test program to reply the finish frame
+	  over a TLS connection correctly.
+
 23 February 2023: Wouter
 	- Fix for #852: Completion of error handling.
 

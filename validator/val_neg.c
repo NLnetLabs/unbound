@@ -43,7 +43,7 @@
  */
 #include "config.h"
 #ifdef HAVE_OPENSSL_SSL_H
-#include "openssl/ssl.h"
+#include <openssl/ssl.h>
 #define NSEC3_SHA_LEN SHA_DIGEST_LENGTH
 #else
 #define NSEC3_SHA_LEN 20
