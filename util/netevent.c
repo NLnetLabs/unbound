@@ -1876,6 +1876,22 @@ doq_accept(struct comm_point* c, struct doq_pkt_addr* paddr,
 	return 1;
 }
 
+/** subtract timers and the values do not overflow or become negative */
+static void
+timeval_subtract(struct timeval* d, const struct timeval* end, 
+	const struct timeval* start)
+{
+#ifndef S_SPLINT_S
+	time_t end_usec = end->tv_usec;
+	d->tv_sec = end->tv_sec - start->tv_sec;
+	if(end_usec < start->tv_usec) {
+		end_usec += 1000000;
+		d->tv_sec--;
+	}
+	d->tv_usec = end_usec - start->tv_usec;
+#endif
+}
+
 /** doq pickup a timer to wait for for the worker. If any timer exists. */
 static void
 doq_pickup_timer(struct comm_point* c)
@@ -1898,10 +1914,21 @@ doq_pickup_timer(struct comm_point* c)
 	}
 	lock_rw_unlock(&c->doq_socket->table->lock);
 
-	if(have_time)
+	if(have_time) {
 		comm_timer_set(c->doq_socket->timer, &tv);
-	else
+		memcpy(&c->doq_socket->marked_time, &tv,
+			sizeof(c->doq_socket->marked_time));
+		if(verbosity >= VERB_ALGO) {
+			struct timeval rel;
+			timeval_subtract(&rel, &tv, c->doq_socket->now_tv);
+			verbose(VERB_ALGO, "doq pickup timer at %d.%6.6d in "
+				"%d.%6.6d", (int)tv.tv_sec, (int)tv.tv_usec,
+				(int)rel.tv_sec, (int)rel.tv_usec);
+		}
+	} else {
 		comm_timer_disable(c->doq_socket->timer);
+		verbose(VERB_ALGO, "doq timer disabled");
+	}
 }
 
 /** doq done with connection, release locks and setup timer and write */
@@ -2129,11 +2156,75 @@ doq_write_blocked_pkt(struct comm_point* c)
 	return 1;
 }
 
+/** doq find a timer that timeouted and return the conn, locked. */
+static struct doq_conn*
+doq_timer_timeout_conn(struct doq_server_socket* doq_socket)
+{
+	struct doq_conn* conn = NULL;
+	struct rbnode_type* node;
+	lock_rw_wrlock(&doq_socket->table->lock);
+	node = rbtree_first(doq_socket->table->timer_tree);
+	if(node && node != RBTREE_NULL) {
+		struct doq_timer* t = (struct doq_timer*)node;
+		conn = t->conn;
+		lock_basic_lock(&conn->lock);
+		conn->doq_socket = doq_socket;
+
+		/* Now that the timer is fired, remove it. */
+		doq_timer_unset(doq_socket->table, t);
+		lock_rw_unlock(&doq_socket->table->lock);
+		return conn;
+	}
+	lock_rw_unlock(&doq_socket->table->lock);
+	return NULL;
+}
+
+/** doq timer erase the marker that said which timer the worker uses. */
+static void
+doq_timer_erase_marker(struct doq_server_socket* doq_socket)
+{
+	struct doq_timer* t;
+	lock_rw_wrlock(&doq_socket->table->lock);
+	t = doq_timer_find_time(doq_socket->table, &doq_socket->marked_time);
+	if(t && t->worker_doq_socket == doq_socket)
+		t->worker_doq_socket = NULL;
+	lock_rw_unlock(&doq_socket->table->lock);
+	memset(&doq_socket->marked_time, 0, sizeof(doq_socket->marked_time));
+}
+
 void
 doq_timer_cb(void* arg)
 {
 	struct doq_server_socket* doq_socket = (struct doq_server_socket*)arg;
-	(void)doq_socket;
+	struct doq_conn* conn;
+	verbose(VERB_ALGO, "doq timer callback");
+
+	doq_timer_erase_marker(doq_socket);
+
+	while((conn = doq_timer_timeout_conn(doq_socket)) != NULL) {
+		if(conn->is_deleted ||
+			ngtcp2_conn_is_in_closing_period(conn->conn) ||
+			ngtcp2_conn_is_in_draining_period(conn->conn)) {
+			if(verbosity >= VERB_ALGO) {
+				char remotestr[256];
+				addr_to_str((void*)&conn->key.paddr.addr,
+					conn->key.paddr.addrlen, remotestr,
+					sizeof(remotestr));
+				verbose(VERB_ALGO, "doq conn %s is deleted "
+					"after timeout", remotestr);
+			}
+			doq_delete_connection(doq_socket->cp, conn);
+			continue;
+		}
+		if(!doq_conn_handle_timeout(conn))
+			doq_delete_connection(doq_socket->cp, conn);
+		else doq_done_setup_timer_and_write(doq_socket->cp, conn);
+	}
+
+	if(doq_socket_want_write(doq_socket->cp))
+		doq_socket_write_enable(doq_socket->cp);
+	else doq_socket_write_disable(doq_socket->cp);
+	doq_pickup_timer(doq_socket->cp);
 }
 
 void
@@ -2412,6 +2503,8 @@ doq_server_socket_create(struct doq_table* table, struct ub_randstate* rnd,
 		free(doq_socket);
 		return NULL;
 	}
+	memset(&doq_socket->marked_time, 0, sizeof(doq_socket->marked_time));
+	comm_base_timept(base, &doq_socket->now_tt, &doq_socket->now_tv);
 	return doq_socket;
 }
 

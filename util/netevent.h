@@ -1077,6 +1077,12 @@ struct doq_server_socket {
 	struct doq_pkt_addr* blocked_paddr;
 	/** timer for this worker on this comm_point to wait on. */
 	struct comm_timer* timer;
+	/** the timer that is marked by the doq_socket as waited on. */
+	struct timeval marked_time;
+	/** the current time for use by time functions, time_t. */
+	time_t* now_tt;
+	/** the current time for use by time functions, timeval. */
+	struct timeval* now_tv;
 };
 
 /**

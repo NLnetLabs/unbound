@@ -3299,8 +3299,7 @@ doq_table_delete(struct doq_table* table)
 	free(table);
 }
 
-/** doq find a timeout in the timer tree */
-static struct doq_timer*
+struct doq_timer*
 doq_timer_find_time(struct doq_table* table, struct timeval* tv)
 {
 	struct doq_timer key;
@@ -5147,6 +5146,47 @@ doq_conn_check_timer(struct doq_conn* conn, struct timeval* tv)
 		if(conn->timer.time.tv_sec == tv->tv_sec &&
 			conn->timer.time.tv_usec == tv->tv_usec)
 			return 0;
+	}
+	return 1;
+}
+
+/* doq print connection log */
+static void
+doq_conn_log_line(struct doq_conn* conn, char* s)
+{
+	char remotestr[256], localstr[256];
+	addr_to_str((void*)&conn->key.paddr.addr, conn->key.paddr.addrlen,
+		remotestr, sizeof(remotestr));
+	addr_to_str((void*)&conn->key.paddr.localaddr,
+		conn->key.paddr.localaddrlen, localstr, sizeof(localstr));
+	log_info("doq conn %s %s %s", remotestr, localstr, s);
+}
+
+int
+doq_conn_handle_timeout(struct doq_conn* conn)
+{
+	ngtcp2_tstamp now = doq_get_timestamp_nanosec();
+	int rv;
+
+	if(verbosity >= VERB_ALGO)
+		doq_conn_log_line(conn, "timeout");
+
+	rv = ngtcp2_conn_handle_expiry(conn->conn, now);
+	if(rv != 0) {
+		verbose(VERB_ALGO, "ngtcp2_conn_handle_expiry failed: %s",
+			ngtcp2_strerror(rv));
+		ngtcp2_connection_close_error_set_transport_error_liberr(
+			&conn->last_error, rv, NULL, 0);
+		if(!doq_conn_close_error(conn->doq_socket->cp, conn)) {
+			/* failed, return for deletion */
+			return 0;
+		}
+		return 1;
+	}
+	doq_conn_write_enable(conn);
+	if(!doq_conn_write_streams(conn->doq_socket->cp, conn, NULL)) {
+		/* failed, return for deletion. */
+		return 0;
 	}
 	return 1;
 }

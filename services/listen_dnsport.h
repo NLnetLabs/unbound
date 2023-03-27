@@ -795,6 +795,14 @@ void doq_timer_unset(struct doq_table* table, struct doq_timer* timer);
 /** doq set the timer and add it. */
 void doq_timer_set(struct doq_table* table, struct doq_timer* timer,
 	struct doq_server_socket* worker_doq_socket, struct timeval* tv);
+
+/** doq find a timeout in the timer tree */
+struct doq_timer* doq_timer_find_time(struct doq_table* table,
+	struct timeval* tv);
+
+/** doq handle timeout for a connection. Pass conn locked. Returns false for
+ * deletion. */
+int doq_conn_handle_timeout(struct doq_conn* conn);
 #endif /* HAVE_NGTCP2 */
 
 char* set_ip_dscp(int socket, int addrfamily, int ds);
