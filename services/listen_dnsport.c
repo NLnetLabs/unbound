@@ -3399,16 +3399,35 @@ doq_timer_unset(struct doq_table* table, struct doq_timer* timer)
 	timer->worker_doq_socket = NULL;
 }
 
+/** subtract timers and the values do not overflow or become negative */
+static void
+timeval_subtract(struct timeval* d, const struct timeval* end, 
+	const struct timeval* start)
+{
+#ifndef S_SPLINT_S
+	time_t end_usec = end->tv_usec;
+	d->tv_sec = end->tv_sec - start->tv_sec;
+	if(end_usec < start->tv_usec) {
+		end_usec += 1000000;
+		d->tv_sec--;
+	}
+	d->tv_usec = end_usec - start->tv_usec;
+#endif
+}
+
 void doq_timer_set(struct doq_table* table, struct doq_timer* timer,
 	struct doq_server_socket* worker_doq_socket, struct timeval* tv)
 {
 	struct doq_timer* rb_timer;
 	if(verbosity >= VERB_ALGO && timer->conn) {
 		char a[256];
+		struct timeval rel;
 		addr_to_str((void*)&timer->conn->key.paddr.addr,
 			timer->conn->key.paddr.addrlen, a, sizeof(a));
-		verbose(VERB_ALGO, "doq %s timer set %d.%6.6d",
-			a, (int)tv->tv_sec, (int)tv->tv_usec);
+		timeval_subtract(&rel, tv, worker_doq_socket->now_tv);
+		verbose(VERB_ALGO, "doq %s timer set %d.%6.6d in %d.%6.6d",
+			a, (int)tv->tv_sec, (int)tv->tv_usec,
+			(int)rel.tv_sec, (int)rel.tv_usec);
 	}
 	if(timer->timer_in_tree || timer->timer_in_list) {
 		if(timer->time.tv_sec == tv->tv_sec &&
@@ -4728,15 +4747,10 @@ ngtcp2_tstamp doq_get_timestamp_nanosec(void)
 #ifdef CLOCK_REALTIME
 	struct timespec tp;
 	memset(&tp, 0, sizeof(tp));
-#ifdef CLOCK_MONOTONIC
-	if(clock_gettime(CLOCK_MONOTONIC, &tp) == -1) {
-#endif
-		if(clock_gettime(CLOCK_REALTIME, &tp) == -1) {
-			log_err("clock_gettime failed: %s", strerror(errno));
-		}
-#ifdef CLOCK_MONOTONIC
+	/* Get a nanosecond time, that can be compared with the event base. */
+	if(clock_gettime(CLOCK_REALTIME, &tp) == -1) {
+		log_err("clock_gettime failed: %s", strerror(errno));
 	}
-#endif
 	return ((uint64_t)tp.tv_sec)*((uint64_t)1000000000) +
 		((uint64_t)tp.tv_nsec);
 #else
