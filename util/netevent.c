@@ -1876,6 +1876,34 @@ doq_accept(struct comm_point* c, struct doq_pkt_addr* paddr,
 	return 1;
 }
 
+/** doq pickup a timer to wait for for the worker. If any timer exists. */
+static void
+doq_pickup_timer(struct comm_point* c)
+{
+	struct doq_timer* t;
+	struct timeval tv;
+	int have_time = 0;
+	memset(&tv, 0, sizeof(tv));
+
+	lock_rw_wrlock(&c->doq_socket->table->lock);
+	RBTREE_FOR(t, struct doq_timer*, c->doq_socket->table->timer_tree) {
+		if(t->worker_doq_socket == NULL ||
+			t->worker_doq_socket == c->doq_socket) {
+			/* pick up this element */
+			t->worker_doq_socket = c->doq_socket;
+			have_time = 1;
+			memcpy(&tv, &t->time, sizeof(tv));
+			break;
+		}
+	}
+	lock_rw_unlock(&c->doq_socket->table->lock);
+
+	if(have_time)
+		comm_timer_set(c->doq_socket->timer, &tv);
+	else
+		comm_timer_disable(c->doq_socket->timer);
+}
+
 /** doq done with connection, release locks and setup timer and write */
 static void
 doq_done_setup_timer_and_write(struct comm_point* c, struct doq_conn* conn)
@@ -2102,6 +2130,13 @@ doq_write_blocked_pkt(struct comm_point* c)
 }
 
 void
+doq_timer_cb(void* arg)
+{
+	struct doq_server_socket* doq_socket = (struct doq_server_socket*)arg;
+	(void)doq_socket;
+}
+
+void
 comm_point_doq_callback(int fd, short event, void* arg)
 {
 	struct comm_point* c;
@@ -2129,6 +2164,7 @@ comm_point_doq_callback(int fd, short event, void* arg)
 			 * events. */
 			if(!c->doq_socket->event_has_write)
 				doq_socket_write_enable(c);
+			doq_pickup_timer(c);
 			return;
 		}
 	}
@@ -2145,6 +2181,7 @@ comm_point_doq_callback(int fd, short event, void* arg)
 			if(c->doq_socket->have_blocked_pkt) {
 				if(!c->doq_socket->event_has_write)
 					doq_socket_write_enable(c);
+				doq_pickup_timer(c);
 				return;
 			}
 			if(++count > num_len*2)
@@ -2166,6 +2203,7 @@ comm_point_doq_callback(int fd, short event, void* arg)
 		if(c->doq_socket->have_blocked_pkt) {
 			if(!c->doq_socket->event_has_write)
 				doq_socket_write_enable(c);
+			doq_pickup_timer(c);
 			return;
 		}
 		/* Stop overly long write lists that are created
@@ -2186,6 +2224,7 @@ comm_point_doq_callback(int fd, short event, void* arg)
 		if(c->doq_socket->have_blocked_pkt) {
 			if(!c->doq_socket->event_has_write)
 				doq_socket_write_enable(c);
+			doq_pickup_timer(c);
 			return;
 		}
 		sldns_buffer_clear(c->doq_socket->pkt_buf);
@@ -2272,13 +2311,14 @@ comm_point_doq_callback(int fd, short event, void* arg)
 	if(doq_socket_want_write(c))
 		doq_socket_write_enable(c);
 	else doq_socket_write_disable(c);
+	doq_pickup_timer(c);
 }
 
 /** create new doq server socket structure */
 static struct doq_server_socket*
 doq_server_socket_create(struct doq_table* table, struct ub_randstate* rnd,
 	const char* ssl_service_key, const char* ssl_service_pem,
-	struct comm_point* c)
+	struct comm_point* c, struct comm_base* base)
 {
 	size_t doq_buffer_size = 4096; /* bytes buffer size, for one packet. */
 	struct doq_server_socket* doq_socket;
@@ -2359,6 +2399,19 @@ doq_server_socket_create(struct doq_table* table, struct ub_randstate* rnd,
 		free(doq_socket);
 		return NULL;
 	}
+	doq_socket->timer = comm_timer_create(base, doq_timer_cb, doq_socket);
+	if(!doq_socket->timer) {
+		free(doq_socket->ssl_service_key);
+		free(doq_socket->ssl_service_pem);
+		free(doq_socket->ssl_verify_pem);
+		free(doq_socket->static_secret);
+		SSL_CTX_free(doq_socket->ctx);
+		sldns_buffer_free(doq_socket->pkt_buf);
+		sldns_buffer_free(doq_socket->blocked_pkt);
+		free(doq_socket->blocked_paddr);
+		free(doq_socket);
+		return NULL;
+	}
 	return doq_socket;
 }
 
@@ -2377,6 +2430,7 @@ doq_server_socket_delete(struct doq_server_socket* doq_socket)
 	sldns_buffer_free(doq_socket->pkt_buf);
 	sldns_buffer_free(doq_socket->blocked_pkt);
 	free(doq_socket->blocked_paddr);
+	comm_timer_delete(doq_socket->timer);
 	free(doq_socket);
 }
 
@@ -5425,7 +5479,7 @@ comm_point_create_doq(struct comm_base *base, int fd, sldns_buffer* buffer,
 #endif
 #ifdef HAVE_NGTCP2
 	c->doq_socket = doq_server_socket_create(table, rnd, ssl_service_key,
-		ssl_service_pem, c);
+		ssl_service_pem, c, base);
 #endif
 	c->inuse = 0;
 	c->callback = callback;

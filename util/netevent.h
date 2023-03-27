@@ -1075,6 +1075,8 @@ struct doq_server_socket {
 #endif
 	/** the packet destination for the blocked packet. */
 	struct doq_pkt_addr* blocked_paddr;
+	/** timer for this worker on this comm_point to wait on. */
+	struct comm_timer* timer;
 };
 
 /**
@@ -1097,6 +1099,9 @@ void doq_pkt_addr_init(struct doq_pkt_addr* paddr);
 /** send doq packet over UDP. */
 void doq_send_pkt(struct comm_point* c, struct doq_pkt_addr* paddr,
 	uint32_t ecn);
+
+/** doq timer callback function. */
+void doq_timer_cb(void* arg);
 
 /**
  * This routine is published for checks and tests, and is only used internally.
