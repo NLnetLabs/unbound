@@ -1943,7 +1943,8 @@ doq_pickup_timer(struct comm_point* c)
 			(int)tv.tv_sec, (int)tv.tv_usec, (int)rel.tv_sec,
 			(int)rel.tv_usec);
 	} else {
-		comm_timer_disable(c->doq_socket->timer);
+		if(comm_timer_is_set(c->doq_socket->timer))
+			comm_timer_disable(c->doq_socket->timer);
 		memset(&c->doq_socket->marked_time, 0,
 			sizeof(c->doq_socket->marked_time));
 		verbose(VERB_ALGO, "doq timer disabled");
