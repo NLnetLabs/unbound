@@ -1777,6 +1777,7 @@ doq_setup_new_conn(struct comm_point* c, struct doq_pkt_addr* paddr,
 		lock_rw_unlock(&c->doq_socket->table->lock);
 		log_err("doq: duplicate connection");
 		/* conn has no entry in writelist, and no timer yet. */
+		lock_basic_unlock(&conn->lock);
 		doq_conn_delete(conn);
 		return NULL;
 	}
