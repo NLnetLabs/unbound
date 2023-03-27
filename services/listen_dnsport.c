@@ -5122,6 +5122,7 @@ doq_table_pop_first(struct doq_table* table)
 	struct doq_conn* conn = table->write_list_first;
 	if(!conn)
 		return NULL;
+	lock_basic_lock(&conn->lock);
 	table->write_list_first = conn->write_next;
 	if(conn->write_next)
 		conn->write_next->write_prev = NULL;

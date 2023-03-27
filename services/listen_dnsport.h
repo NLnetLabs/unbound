@@ -771,7 +771,8 @@ void doq_conn_set_write_list(struct doq_table* table, struct doq_conn* conn);
 void doq_conn_write_list_remove(struct doq_table* table,
 	struct doq_conn* conn);
 
-/** doq get the first conn from the write list, if any, popped from list. */
+/** doq get the first conn from the write list, if any, popped from list.
+ * Locks the conn that is returned. */
 struct doq_conn* doq_table_pop_first(struct doq_table* table);
 
 /**

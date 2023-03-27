@@ -1931,16 +1931,14 @@ doq_pickup_timer(struct comm_point* c)
 	lock_rw_unlock(&c->doq_socket->table->lock);
 
 	if(have_time) {
-		comm_timer_set(c->doq_socket->timer, &tv);
+		struct timeval rel;
+		timeval_subtract(&rel, &tv, c->doq_socket->now_tv);
+		comm_timer_set(c->doq_socket->timer, &rel);
 		memcpy(&c->doq_socket->marked_time, &tv,
 			sizeof(c->doq_socket->marked_time));
-		if(verbosity >= VERB_ALGO) {
-			struct timeval rel;
-			timeval_subtract(&rel, &tv, c->doq_socket->now_tv);
-			verbose(VERB_ALGO, "doq pickup timer at %d.%6.6d in "
-				"%d.%6.6d", (int)tv.tv_sec, (int)tv.tv_usec,
-				(int)rel.tv_sec, (int)rel.tv_usec);
-		}
+		verbose(VERB_ALGO, "doq pickup timer at %d.%6.6d in %d.%6.6d",
+			(int)tv.tv_sec, (int)tv.tv_usec, (int)rel.tv_sec,
+			(int)rel.tv_usec);
 	} else {
 		comm_timer_disable(c->doq_socket->timer);
 		memset(&c->doq_socket->marked_time, 0,
@@ -2091,10 +2089,9 @@ doq_pop_write_conn(struct comm_point* c)
 	struct doq_conn* conn;
 	lock_rw_wrlock(&c->doq_socket->table->lock);
 	conn = doq_table_pop_first(c->doq_socket->table);
-	while(conn && conn->is_deleted)
+	while(conn && conn->is_deleted) {
+		lock_basic_unlock(&conn->lock);
 		conn = doq_table_pop_first(c->doq_socket->table);
-	if(conn) {
-		lock_basic_lock(&conn->lock);
 	}
 	lock_rw_unlock(&c->doq_socket->table->lock);
 	if(conn)
