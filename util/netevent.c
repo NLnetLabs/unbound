@@ -1751,8 +1751,10 @@ doq_delete_connection(struct comm_point* c, struct doq_conn* conn)
 				&conn->timer);
 	}
 	lock_rw_unlock(&c->doq_socket->table->lock);
-	if(node)
+	if(node) {
+		lock_basic_unlock(&conn->lock);
 		doq_conn_delete(conn);
+	}
 }
 
 /** create and setup a new doq connection, to a new destination, or with
