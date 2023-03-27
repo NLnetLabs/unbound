@@ -1892,6 +1892,22 @@ timeval_subtract(struct timeval* d, const struct timeval* end,
 #endif
 }
 
+/** compare of time values */
+static int
+timeval_smaller(const struct timeval* x, const struct timeval* y)
+{
+#ifndef S_SPLINT_S
+	if(x->tv_sec < y->tv_sec)
+		return 1;
+	else if(x->tv_sec == y->tv_sec) {
+		if(x->tv_usec <= y->tv_usec)
+			return 1;
+		else	return 0;
+	}
+	else	return 0;
+#endif
+}
+
 /** doq pickup a timer to wait for for the worker. If any timer exists. */
 static void
 doq_pickup_timer(struct comm_point* c)
@@ -2167,6 +2183,13 @@ doq_timer_timeout_conn(struct doq_server_socket* doq_socket)
 	if(node && node != RBTREE_NULL) {
 		struct doq_timer* t = (struct doq_timer*)node;
 		conn = t->conn;
+
+		/* If now < timer then no further timeouts in tree. */
+		if(timeval_smaller(doq_socket->now_tv, &t->time)) {
+			lock_rw_unlock(&doq_socket->table->lock);
+			return NULL;
+		}
+
 		lock_basic_lock(&conn->lock);
 		conn->doq_socket = doq_socket;
 
