@@ -653,4 +653,9 @@ void doq_table_delete(struct doq_table* table)
 {
 	free(table);
 }
+
+void doq_timer_cb(void* ATTR_UNUSED(arg))
+{
+	/* nothing */
+}
 #endif
