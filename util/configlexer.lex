@@ -268,6 +268,7 @@ http-response-buffer-size{COLON} { YDVAR(1, VAR_HTTP_RESPONSE_BUFFER_SIZE) }
 http-nodelay{COLON}		{ YDVAR(1, VAR_HTTP_NODELAY) }
 http-notls-downstream{COLON}	{ YDVAR(1, VAR_HTTP_NOTLS_DOWNSTREAM) }
 quic-port{COLON}		{ YDVAR(1, VAR_QUIC_PORT) }
+quic-size{COLON}		{ YDVAR(1, VAR_QUIC_SIZE) }
 use-systemd{COLON}		{ YDVAR(1, VAR_USE_SYSTEMD) }
 do-daemonize{COLON}		{ YDVAR(1, VAR_DO_DAEMONIZE) }
 interface{COLON}		{ YDVAR(1, VAR_INTERFACE) }

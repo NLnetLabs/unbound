@@ -923,6 +923,9 @@ server:
 	# Disable TLS for DNS-over-HTTP downstream service.
 	# http-notls-downstream: no
 
+	# Maximum number of bytes used for QUIC buffers.
+	# quic-size: 8m
+
 	# The interfaces that use these listed port numbers will support and
 	# expect PROXYv2. For UDP and TCP/TLS interfaces.
 	# proxy-protocol-port: portno for each of the port numbers.

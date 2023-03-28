@@ -159,6 +159,8 @@ struct config_file {
 
 	/** port on which to provide DNS over QUIC service */
 	int quic_port;
+	/** size of the quic data, max bytes */
+	size_t quic_size;
 
 	/** outgoing port range number of ports (per thread) */
 	int outgoing_num_ports;

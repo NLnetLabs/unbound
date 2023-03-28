@@ -194,7 +194,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_INTERFACE_ACTION VAR_INTERFACE_VIEW VAR_INTERFACE_TAG
 %token VAR_INTERFACE_TAG_ACTION VAR_INTERFACE_TAG_DATA
 %token VAR_PROXY_PROTOCOL_PORT VAR_QUIC_PORT VAR_STATISTICS_INHIBIT_ZERO
-%token VAR_HARDEN_UNKNOWN_ADDITIONAL
+%token VAR_HARDEN_UNKNOWN_ADDITIONAL VAR_QUIC_SIZE
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -325,7 +325,7 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_tcp_reuse_timeout | server_tcp_auth_query_timeout |
 	server_interface_automatic_ports | server_ede | server_quic_port |
 	server_proxy_protocol_port | server_statistics_inhibit_zero |
-	server_harden_unknown_additional
+	server_harden_unknown_additional | server_quic_size
 	;
 stubstart: VAR_STUB_ZONE
 	{
@@ -1146,9 +1146,16 @@ server_http_notls_downstream: VAR_HTTP_NOTLS_DOWNSTREAM STRING_ARG
 server_quic_port: VAR_QUIC_PORT STRING_ARG
 	{
 		OUTYY(("P(server_quic_port:%s)\n", $2));
+		if(!cfg_parse_memsize($2, &cfg_parser->cfg->quic_size))
+			yyerror("memory size expected");
+		free($2);
+	};
+server_quic_size: VAR_QUIC_SIZE STRING_ARG
+	{
+		OUTYY(("P(server_quic_size:%s)\n", $2));
 		if(atoi($2) == 0)
 			yyerror("port number expected");
-		else cfg_parser->cfg->quic_port = atoi($2);
+		else cfg_parser->cfg->quic_size = atoi($2);
 		free($2);
 	};
 server_use_systemd: VAR_USE_SYSTEMD STRING_ARG

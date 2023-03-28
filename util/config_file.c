@@ -130,6 +130,7 @@ config_create(void)
 	cfg->http_response_buffer_size = 4*1024*1024;
 	cfg->http_nodelay = 1;
 	cfg->quic_port = UNBOUND_DNS_OVER_QUIC_PORT;
+	cfg->quic_size = 8*1024*1024;
 	cfg->use_syslog = 1;
 	cfg->log_identity = NULL; /* changed later with argv[0] */
 	cfg->log_time_ascii = 0;
@@ -572,6 +573,7 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	else S_YNO("http-nodelay:", http_nodelay)
 	else S_YNO("http-notls-downstream:", http_notls_downstream)
 	else S_NUMBER_NONZERO("quic-port:", quic_port)
+	else S_MEMSIZE("quic-size:", quic_size)
 	else S_YNO("interface-automatic:", if_automatic)
 	else S_STR("interface-automatic-ports:", if_automatic_ports)
 	else S_YNO("use-systemd:", use_systemd)
@@ -1096,6 +1098,7 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_YNO(opt, "http-nodelay", http_nodelay)
 	else O_YNO(opt, "http-notls-downstream", http_notls_downstream)
 	else O_DEC(opt, "quic-port", quic_port)
+	else O_MEM(opt, "quic-size", quic_size)
 	else O_YNO(opt, "use-systemd", use_systemd)
 	else O_YNO(opt, "do-daemonize", do_daemonize)
 	else O_STR(opt, "chroot", chrootdir)
