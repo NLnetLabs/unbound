@@ -391,7 +391,8 @@ extern int yydebug;
     VAR_PROXY_PROTOCOL_PORT = 592, /* VAR_PROXY_PROTOCOL_PORT  */
     VAR_QUIC_PORT = 593,           /* VAR_QUIC_PORT  */
     VAR_STATISTICS_INHIBIT_ZERO = 594, /* VAR_STATISTICS_INHIBIT_ZERO  */
-    VAR_HARDEN_UNKNOWN_ADDITIONAL = 595 /* VAR_HARDEN_UNKNOWN_ADDITIONAL  */
+    VAR_HARDEN_UNKNOWN_ADDITIONAL = 595, /* VAR_HARDEN_UNKNOWN_ADDITIONAL  */
+    VAR_QUIC_SIZE = 596            /* VAR_QUIC_SIZE  */
   };
   typedef enum yytokentype yytoken_kind_t;
 #endif
@@ -738,6 +739,7 @@ extern int yydebug;
 #define VAR_QUIC_PORT 593
 #define VAR_STATISTICS_INHIBIT_ZERO 594
 #define VAR_HARDEN_UNKNOWN_ADDITIONAL 595
+#define VAR_QUIC_SIZE 596
 
 /* Value type.  */
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
@@ -747,7 +749,7 @@ union YYSTYPE
 
 	char*	str;
 
-#line 751 "util/configparser.h"
+#line 753 "util/configparser.h"
 
 };
 typedef union YYSTYPE YYSTYPE;
