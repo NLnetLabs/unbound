@@ -1462,8 +1462,8 @@ listen_create(struct comm_base* base, struct listen_port* ports,
 	char* http_endpoint, int http_notls, struct tcl_list* tcp_conn_limit,
 	void* sslctx, struct dt_env* dtenv, struct doq_table* doq_table,
 	struct ub_randstate* rnd, const char* ssl_service_key,
-	const char* ssl_service_pem, comm_point_callback_type* cb,
-	void *cb_arg)
+	const char* ssl_service_pem, struct config_file* cfg,
+	comm_point_callback_type* cb, void *cb_arg)
 {
 	struct listen_dnsport* front = (struct listen_dnsport*)
 		malloc(sizeof(struct listen_dnsport));
@@ -1496,7 +1496,7 @@ listen_create(struct comm_base* base, struct listen_port* ports,
 			cp = comm_point_create_doq(base, ports->fd,
 				front->udp_buff, cb, cb_arg, ports->socket,
 				doq_table, rnd, ssl_service_key,
-				ssl_service_pem);
+				ssl_service_pem, cfg);
 		} else if(ports->ftype == listen_type_tcp ||
 				ports->ftype == listen_type_tcp_dnscrypt) {
 			cp = comm_point_create_tcp(base, ports->fd,
@@ -3223,6 +3223,7 @@ doq_table_create(struct config_file* cfg, struct ub_randstate* rnd)
 	}
 	lock_rw_init(&table->lock);
 	lock_rw_init(&table->conid_lock);
+	lock_basic_init(&table->size_lock);
 	lock_protect(&table->lock, &table->static_secret,
 		sizeof(table->static_secret));
 	lock_protect(&table->lock, &table->static_secret_len,
@@ -3239,13 +3240,16 @@ doq_table_create(struct config_file* cfg, struct ub_randstate* rnd)
 		sizeof(*table->conid_tree));
 	lock_protect(&table->lock, table->timer_tree,
 		sizeof(*table->timer_tree));
+	lock_protect(&table->size_lock, &table->current_size,
+		sizeof(table->current_size));
 	return table;
 }
 
 /** delete elements from the connection tree */
 static void
-conn_tree_del(rbnode_type* node, void* ATTR_UNUSED(arg))
+conn_tree_del(rbnode_type* node, void* arg)
 {
+	struct doq_table* table = (struct doq_table*)arg;
 	struct doq_conn* conn;
 	if(!node)
 		return;
@@ -3258,7 +3262,8 @@ conn_tree_del(rbnode_type* node, void* ATTR_UNUSED(arg))
 	}
 	if(conn->timer.timer_in_tree)
 		doq_timer_tree_remove(conn->table, &conn->timer);
-	doq_conn_delete(conn);
+	doq_table_quic_size_subtract(table, sizeof(*conn)+conn->key.dcidlen);
+	doq_conn_delete(conn, table);
 }
 
 /** delete elements from the connection id tree */
@@ -3278,7 +3283,7 @@ doq_table_delete(struct doq_table* table)
 	lock_rw_destroy(&table->lock);
 	free(table->static_secret);
 	if(table->conn_tree) {
-		traverse_postorder(table->conn_tree, conn_tree_del, NULL);
+		traverse_postorder(table->conn_tree, conn_tree_del, table);
 		free(table->conn_tree);
 	}
 	lock_rw_destroy(&table->conid_lock);
@@ -3288,6 +3293,7 @@ doq_table_delete(struct doq_table* table)
 		traverse_postorder(table->conid_tree, conid_tree_del, NULL);
 		free(table->conid_tree);
 	}
+	lock_basic_destroy(&table->size_lock);
 	if(table->timer_tree) {
 		/* The tree should be empty, because the conn_tree_del calls
 		 * above should also have removed them. Also the doq_timer
@@ -3507,15 +3513,23 @@ doq_conn_create(struct comm_point* c, struct doq_pkt_addr* paddr,
 
 /** delete stream tree node */
 static void
-stream_tree_del(rbnode_type* node, void* ATTR_UNUSED(arg))
+stream_tree_del(rbnode_type* node, void* arg)
 {
+	struct doq_table* table = (struct doq_table*)arg;
+	struct doq_stream* stream;
 	if(!node)
 		return;
-	doq_stream_delete((struct doq_stream*)node);
+	stream = (struct doq_stream*)node;
+	if(stream->in)
+		doq_table_quic_size_subtract(table, stream->inlen);
+	if(stream->out)
+		doq_table_quic_size_subtract(table, stream->outlen);
+	doq_table_quic_size_subtract(table, sizeof(*stream));
+	doq_stream_delete(stream);
 }
 
 void
-doq_conn_delete(struct doq_conn* conn)
+doq_conn_delete(struct doq_conn* conn, struct doq_table* table)
 {
 	if(!conn)
 		return;
@@ -3525,7 +3539,7 @@ doq_conn_delete(struct doq_conn* conn)
 	lock_rw_unlock(&conn->table->conid_lock);
 	ngtcp2_conn_del(conn->conn);
 	if(conn->stream_tree.count != 0) {
-		traverse_postorder(&conn->stream_tree, stream_tree_del, NULL);
+		traverse_postorder(&conn->stream_tree, stream_tree_del, table);
 	}
 	free(conn->key.dcid);
 	SSL_free(conn->ssl);
@@ -3823,6 +3837,7 @@ doq_stream_pickup_answer(struct doq_stream* stream, struct sldns_buffer* buf)
 	if(stream->out) {
 		free(stream->out);
 		stream->out = NULL;
+		stream->outlen = 0;
 	}
 	stream->nwrite = 0;
 	stream->outlen = sldns_buffer_limit(buf);
@@ -3849,8 +3864,12 @@ doq_stream_send_reply(struct doq_conn* conn, struct doq_stream* stream,
 			(int)stream->stream_id, (s?s:"null"));
 		free(s);
 	}
+	if(stream->out)
+		doq_table_quic_size_subtract(conn->doq_socket->table,
+			stream->outlen);
 	if(!doq_stream_pickup_answer(stream, buf))
 		return 0;
+	doq_table_quic_size_add(conn->doq_socket->table, stream->outlen);
 	doq_stream_on_write_list(conn, stream);
 	doq_conn_write_enable(conn);
 	return 1;
@@ -3859,7 +3878,7 @@ doq_stream_send_reply(struct doq_conn* conn, struct doq_stream* stream,
 /** doq stream data length has completed, allocations can be done. False on
  * allocation failure. */
 static int
-doq_stream_datalen_complete(struct doq_stream* stream)
+doq_stream_datalen_complete(struct doq_stream* stream, struct doq_table* table)
 {
 	if(stream->inlen > 1024*1024) {
 		log_err("doq stream in length too large %d",
@@ -3872,6 +3891,7 @@ doq_stream_datalen_complete(struct doq_stream* stream)
 			"out of memory");
 		return 0;
 	}
+	doq_table_quic_size_add(table, stream->inlen);
 	return 1;
 }
 
@@ -3926,7 +3946,7 @@ doq_stream_data_complete(struct doq_conn* conn, struct doq_stream* stream)
 /** doq receive data for a stream, more bytes of the incoming data */
 static int
 doq_stream_recv_data(struct doq_stream* stream, const uint8_t* data,
-	size_t datalen, int* recv_done)
+	size_t datalen, int* recv_done, struct doq_table* table)
 {
 	int got_data = 0;
 	/* read the tcplength uint16_t at the start */
@@ -3947,7 +3967,7 @@ doq_stream_recv_data(struct doq_stream* stream, const uint8_t* data,
 		if(stream->nread == 2) {
 			/* the initial length value is completed */
 			stream->inlen = ntohs(tcplen);
-			if(!doq_stream_datalen_complete(stream))
+			if(!doq_stream_datalen_complete(stream, table))
 				return 0;
 		} else {
 			/* store for later */
@@ -4162,11 +4182,29 @@ doq_stream_open_cb(ngtcp2_conn* ATTR_UNUSED(conn), int64_t stream_id,
 		verbose(VERB_ALGO, "doq: stream with this id already exists");
 		return 0;
 	}
+	if(stream_id != 0 /* allow one stream on a new connection */ &&
+		!doq_table_quic_size_available(doq_conn->doq_socket->table,
+		doq_conn->doq_socket->cfg, sizeof(*stream)
+		+ 100 /* estimated query in */
+		+ 512 /* estimated response out */
+		)) {
+		int rv;
+		verbose(VERB_ALGO, "doq: no mem for new stream");
+		rv = ngtcp2_conn_shutdown_stream(doq_conn->conn, stream_id,
+			NGTCP2_CONNECTION_REFUSED);
+		if(rv != 0) {
+			log_err("ngtcp2_conn_shutdown_stream failed: %s",
+				ngtcp2_strerror(rv));
+			return NGTCP2_ERR_CALLBACK_FAILURE;
+		}
+		return 0;
+	}
 	stream = doq_stream_create(stream_id);
 	if(!stream) {
 		log_err("doq: could not doq_stream_create: out of memory");
 		return NGTCP2_ERR_CALLBACK_FAILURE;
 	}
+	doq_table_quic_size_add(doq_conn->doq_socket->table, sizeof(*stream));
 	doq_conn_add_stream(doq_conn, stream);
 	return 0;
 }
@@ -4195,7 +4233,8 @@ doq_recv_stream_data_cb(ngtcp2_conn* ATTR_UNUSED(conn), uint32_t flags,
 		return 0;
 	}
 	if(datalen != 0) {
-		if(!doq_stream_recv_data(stream, data, datalen, &recv_done))
+		if(!doq_stream_recv_data(stream, data, datalen, &recv_done,
+			doq_conn->doq_socket->table))
 			return NGTCP2_ERR_CALLBACK_FAILURE;
 	}
 	if((flags&NGTCP2_STREAM_DATA_FLAG_FIN)!=0) {
@@ -5203,6 +5242,38 @@ doq_conn_handle_timeout(struct doq_conn* conn)
 		/* failed, return for deletion. */
 		return 0;
 	}
+	return 1;
+}
+
+void
+doq_table_quic_size_add(struct doq_table* table, size_t add)
+{
+	lock_basic_lock(&table->size_lock);
+	table->current_size += add;
+	lock_basic_unlock(&table->size_lock);
+}
+
+void
+doq_table_quic_size_subtract(struct doq_table* table, size_t subtract)
+{
+	lock_basic_lock(&table->size_lock);
+	if(table->current_size < subtract)
+		table->current_size = 0;
+	else	table->current_size -= subtract;
+	lock_basic_unlock(&table->size_lock);
+}
+
+int
+doq_table_quic_size_available(struct doq_table* table,
+	struct config_file* cfg, size_t mem)
+{
+	size_t cur;
+	lock_basic_lock(&table->size_lock);
+	cur = table->current_size;
+	lock_basic_unlock(&table->size_lock);
+
+	if(cur + mem > cfg->quic_size)
+		return 0;
 	return 1;
 }
 #endif /* HAVE_NGTCP2 */

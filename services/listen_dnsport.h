@@ -197,6 +197,7 @@ int resolve_interface_names(char** ifs, int num_ifs,
  * @param rnd: random state.
  * @param ssl_service_key: the SSL service key file.
  * @param ssl_service_pem: the SSL service pem file.
+ * @param cfg: config file struct.
  * @param cb: callback function when a request arrives. It is passed
  *	  the packet and user argument. Return true to send a reply.
  * @param cb_arg: user data argument for callback function.
@@ -209,8 +210,8 @@ listen_create(struct comm_base* base, struct listen_port* ports,
 	char* http_endpoint, int http_notls, struct tcl_list* tcp_conn_limit,
 	void* sslctx, struct dt_env* dtenv, struct doq_table* doq_table,
 	struct ub_randstate* rnd, const char* ssl_service_key,
-	const char* ssl_service_pem, comm_point_callback_type* cb,
-	void *cb_arg);
+	const char* ssl_service_pem, struct config_file* cfg,
+	comm_point_callback_type* cb, void *cb_arg);
 
 /**
  * delete the listening structure
@@ -500,6 +501,12 @@ struct doq_table {
 	struct doq_conn* write_list_first, *write_list_last;
 	/** rbtree of doq_timer. */
 	struct rbtree_type* timer_tree;
+	/** lock on the current_size counter. */
+	lock_basic_type size_lock;
+	/** current use, in bytes, of QUIC buffers.
+	 * The doq_conn ngtcp2_conn structure, SSL structure and conid structs
+	 * are not counted. */
+	size_t current_size;
 };
 
 /** create doq table */
@@ -678,8 +685,9 @@ struct doq_conn* doq_conn_create(struct comm_point* c,
 /**
  * Delete the doq connection structure.
  * @param conn: to delete.
+ * @param table: with memory size.
  */
-void doq_conn_delete(struct doq_conn* conn);
+void doq_conn_delete(struct doq_conn* conn, struct doq_table* table);
 
 /** compare function of doq_conn */
 int doq_conn_cmp(const void* key1, const void* key2);
@@ -804,6 +812,16 @@ struct doq_timer* doq_timer_find_time(struct doq_table* table,
 /** doq handle timeout for a connection. Pass conn locked. Returns false for
  * deletion. */
 int doq_conn_handle_timeout(struct doq_conn* conn);
+
+/** doq add size to the current quic buffer counter */
+void doq_table_quic_size_add(struct doq_table* table, size_t add);
+
+/** doq subtract size from the current quic buffer counter */
+void doq_table_quic_size_subtract(struct doq_table* table, size_t subtract);
+
+/** doq check if mem is available for quic. */
+int doq_table_quic_size_available(struct doq_table* table,
+	struct config_file* cfg, size_t mem);
 #endif /* HAVE_NGTCP2 */
 
 char* set_ip_dscp(int socket, int addrfamily, int ds);

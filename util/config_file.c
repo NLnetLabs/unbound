@@ -2689,6 +2689,7 @@ int
 if_is_quic(const char* ifname, const char* port, int quic_port)
 {
 	char* p = strchr(ifname, '@');
+	log_info("is quic called, %s %s %d", ifname, port, quic_port);
 	if(!p && atoi(port) == quic_port)
 		return 1;
 	if(p && atoi(p+1) == quic_port)

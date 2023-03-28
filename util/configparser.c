@@ -1285,7 +1285,7 @@ static const yytype_int16 yyrline[] =
      821,   830,   837,   846,   855,   864,   873,   882,   891,   900,
      909,   922,   933,   944,   955,   964,   977,   986,   995,  1004,
     1011,  1018,  1027,  1034,  1043,  1051,  1058,  1065,  1073,  1082,
-    1090,  1106,  1114,  1122,  1130,  1138,  1146,  1153,  1161,  1170,
+    1090,  1106,  1114,  1122,  1130,  1138,  1146,  1154,  1161,  1170,
     1179,  1193,  1202,  1211,  1220,  1229,  1238,  1247,  1254,  1261,
     1287,  1295,  1302,  1309,  1316,  1323,  1331,  1339,  1347,  1354,
     1365,  1376,  1383,  1392,  1401,  1410,  1419,  1426,  1433,  1440,
@@ -3901,20 +3901,20 @@ yyreduce:
 #line 1147 "./util/configparser.y"
         {
 		OUTYY(("P(server_quic_port:%s)\n", (yyvsp[0].str)));
-		if(!cfg_parse_memsize((yyvsp[0].str), &cfg_parser->cfg->quic_size))
-			yyerror("memory size expected");
+		if(atoi((yyvsp[0].str)) == 0)
+			yyerror("port number expected");
+		else cfg_parser->cfg->quic_port = atoi((yyvsp[0].str));
 		free((yyvsp[0].str));
 	}
-#line 3909 "util/configparser.c"
+#line 3910 "util/configparser.c"
     break;
 
   case 387: /* server_quic_size: VAR_QUIC_SIZE STRING_ARG  */
-#line 1154 "./util/configparser.y"
+#line 1155 "./util/configparser.y"
         {
 		OUTYY(("P(server_quic_size:%s)\n", (yyvsp[0].str)));
-		if(atoi((yyvsp[0].str)) == 0)
-			yyerror("port number expected");
-		else cfg_parser->cfg->quic_size = atoi((yyvsp[0].str));
+		if(!cfg_parse_memsize((yyvsp[0].str), &cfg_parser->cfg->quic_size))
+			yyerror("memory size expected");
 		free((yyvsp[0].str));
 	}
 #line 3921 "util/configparser.c"

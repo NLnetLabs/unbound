@@ -1146,16 +1146,16 @@ server_http_notls_downstream: VAR_HTTP_NOTLS_DOWNSTREAM STRING_ARG
 server_quic_port: VAR_QUIC_PORT STRING_ARG
 	{
 		OUTYY(("P(server_quic_port:%s)\n", $2));
-		if(!cfg_parse_memsize($2, &cfg_parser->cfg->quic_size))
-			yyerror("memory size expected");
+		if(atoi($2) == 0)
+			yyerror("port number expected");
+		else cfg_parser->cfg->quic_port = atoi($2);
 		free($2);
 	};
 server_quic_size: VAR_QUIC_SIZE STRING_ARG
 	{
 		OUTYY(("P(server_quic_size:%s)\n", $2));
-		if(atoi($2) == 0)
-			yyerror("port number expected");
-		else cfg_parser->cfg->quic_size = atoi($2);
+		if(!cfg_parse_memsize($2, &cfg_parser->cfg->quic_size))
+			yyerror("memory size expected");
 		free($2);
 	};
 server_use_systemd: VAR_USE_SYSTEMD STRING_ARG

@@ -1644,14 +1644,15 @@ doq_send_retry(struct comm_point* c, struct doq_pkt_addr* paddr,
 /** doq send stateless connection close */
 static void
 doq_send_stateless_connection_close(struct comm_point* c,
-	struct doq_pkt_addr* paddr, struct ngtcp2_pkt_hd* hd)
+	struct doq_pkt_addr* paddr, struct ngtcp2_pkt_hd* hd,
+	uint64_t error_code)
 {
 	ngtcp2_ssize ret;
 	sldns_buffer_clear(c->doq_socket->pkt_buf);
 	ret = ngtcp2_crypto_write_connection_close(
 		sldns_buffer_begin(c->doq_socket->pkt_buf),
 		sldns_buffer_capacity(c->doq_socket->pkt_buf), hd->version, &hd->scid,
-		&hd->dcid, NGTCP2_INVALID_TOKEN, NULL, 0);
+		&hd->dcid, error_code, NULL, 0);
 	if(ret < 0) {
 		log_err("ngtcp2_crypto_write_connection_close failed: %s",
 			ngtcp2_strerror(ret));
@@ -1753,7 +1754,9 @@ doq_delete_connection(struct comm_point* c, struct doq_conn* conn)
 	lock_rw_unlock(&c->doq_socket->table->lock);
 	if(node) {
 		lock_basic_unlock(&conn->lock);
-		doq_conn_delete(conn);
+		doq_table_quic_size_subtract(c->doq_socket->table,
+			sizeof(*conn)+conn->key.dcidlen);
+		doq_conn_delete(conn, c->doq_socket->table);
 	}
 }
 
@@ -1765,6 +1768,16 @@ doq_setup_new_conn(struct comm_point* c, struct doq_pkt_addr* paddr,
 	struct ngtcp2_pkt_hd* hd, struct ngtcp2_cid* ocid)
 {
 	struct doq_conn* conn;
+	if(!doq_table_quic_size_available(c->doq_socket->table,
+		c->doq_socket->cfg, sizeof(*conn)+hd->dcid.datalen
+		+ sizeof(struct doq_stream)
+		+ 100 /* estimated input query */
+		+ 1200 /* estimated output query */)) {
+		verbose(VERB_ALGO, "doq: no mem available for new connection");
+		doq_send_stateless_connection_close(c, paddr, hd,
+			NGTCP2_CONNECTION_REFUSED);
+		return NULL;
+	}
 	conn = doq_conn_create(c, paddr, hd->dcid.data, hd->dcid.datalen,
 		hd->version);
 	if(!conn) {
@@ -1778,10 +1791,12 @@ doq_setup_new_conn(struct comm_point* c, struct doq_pkt_addr* paddr,
 		log_err("doq: duplicate connection");
 		/* conn has no entry in writelist, and no timer yet. */
 		lock_basic_unlock(&conn->lock);
-		doq_conn_delete(conn);
+		doq_conn_delete(conn, c->doq_socket->table);
 		return NULL;
 	}
 	lock_rw_unlock(&c->doq_socket->table->lock);
+	doq_table_quic_size_add(c->doq_socket->table,
+		sizeof(*conn)+conn->key.dcidlen);
 	verbose(VERB_ALGO, "doq: created new connection");
 
 	/* the scid and dcid switch meaning from the accepted client
@@ -1810,12 +1825,14 @@ doq_address_validation(struct comm_point* c, struct doq_pkt_addr* paddr,
 	}
 	if(hd->token.base[0] != NGTCP2_CRYPTO_TOKEN_MAGIC_RETRY &&
 		hd->dcid.datalen < NGTCP2_MIN_INITIAL_DCIDLEN) {
-		doq_send_stateless_connection_close(c, paddr, hd);
+		doq_send_stateless_connection_close(c, paddr, hd,
+			NGTCP2_INVALID_TOKEN);
 		return 0;
 	}
 	if(hd->token.base[0] == NGTCP2_CRYPTO_TOKEN_MAGIC_RETRY) {
 		if(!doq_verify_retry_token(c, paddr, ocid, hd)) {
-			doq_send_stateless_connection_close(c, paddr, hd);
+			doq_send_stateless_connection_close(c, paddr, hd,
+				NGTCP2_INVALID_TOKEN);
 			return 0;
 		}
 		*pocid = ocid;
@@ -2435,7 +2452,7 @@ comm_point_doq_callback(int fd, short event, void* arg)
 static struct doq_server_socket*
 doq_server_socket_create(struct doq_table* table, struct ub_randstate* rnd,
 	const char* ssl_service_key, const char* ssl_service_pem,
-	struct comm_point* c, struct comm_base* base)
+	struct comm_point* c, struct comm_base* base, struct config_file* cfg)
 {
 	size_t doq_buffer_size = 4096; /* bytes buffer size, for one packet. */
 	struct doq_server_socket* doq_socket;
@@ -2531,6 +2548,7 @@ doq_server_socket_create(struct doq_table* table, struct ub_randstate* rnd,
 	}
 	memset(&doq_socket->marked_time, 0, sizeof(doq_socket->marked_time));
 	comm_base_timept(base, &doq_socket->now_tt, &doq_socket->now_tv);
+	doq_socket->cfg = cfg;
 	return doq_socket;
 }
 
@@ -5559,7 +5577,7 @@ comm_point_create_doq(struct comm_base *base, int fd, sldns_buffer* buffer,
 	comm_point_callback_type* callback, void* callback_arg,
 	struct unbound_socket* socket, struct doq_table* table,
 	struct ub_randstate* rnd, const char* ssl_service_key,
-	const char* ssl_service_pem)
+	const char* ssl_service_pem, struct config_file* cfg)
 {
 #ifdef HAVE_NGTCP2
 	struct comm_point* c = (struct comm_point*)calloc(1,
@@ -5598,7 +5616,7 @@ comm_point_create_doq(struct comm_base *base, int fd, sldns_buffer* buffer,
 #endif
 #ifdef HAVE_NGTCP2
 	c->doq_socket = doq_server_socket_create(table, rnd, ssl_service_key,
-		ssl_service_pem, c, base);
+		ssl_service_pem, c, base, cfg);
 #endif
 	c->inuse = 0;
 	c->callback = callback;

@@ -2017,7 +2017,7 @@ worker_init(struct worker* worker, struct config_file *cfg,
 		cfg->http_endpoint, cfg->http_notls_downstream,
 		worker->daemon->tcl, worker->daemon->listen_sslctx,
 		dtenv, worker->daemon->doq_table, worker->env.rnd,
-		cfg->ssl_service_key, cfg->ssl_service_pem,
+		cfg->ssl_service_key, cfg->ssl_service_pem, cfg,
 		worker_handle_request, worker);
 	if(!worker->front) {
 		log_err("could not create listening sockets");

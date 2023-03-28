@@ -884,6 +884,7 @@ listen_create(struct comm_base* base, struct listen_port* ATTR_UNUSED(ports),
 	struct ub_randstate* ATTR_UNUSED(rnd),
 	const char* ATTR_UNUSED(ssl_service_key),
 	const char* ATTR_UNUSED(ssl_service_pem),
+	struct config_file* ATTR_UNUSED(cfg),
 	comm_point_callback_type* cb, void *cb_arg)
 {
 	struct replay_runtime* runtime = (struct replay_runtime*)base;

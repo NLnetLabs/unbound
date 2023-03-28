@@ -77,6 +77,7 @@ struct unbound_socket;
 struct doq_server_socket;
 struct doq_table;
 struct doq_conn;
+struct config_file;
 struct ub_randstate;
 
 struct mesh_state;
@@ -590,6 +591,7 @@ struct comm_point* comm_point_create_udp_ancil(struct comm_base* base,
  * @param rnd: random generator to use.
  * @param ssl_service_key: the ssl service key file.
  * @param ssl_service_pem: the ssl service pem file.
+ * @param cfg: config file struct.
  * @return: returns the allocated communication point. NULL on error.
  * Sets timeout to NULL. Turns off TCP options.
  */
@@ -598,7 +600,7 @@ struct comm_point* comm_point_create_doq(struct comm_base* base,
 	comm_point_callback_type* callback, void* callback_arg,
 	struct unbound_socket* socket, struct doq_table* table,
 	struct ub_randstate* rnd, const char* ssl_service_key,
-	const char* ssl_service_pem);
+	const char* ssl_service_pem, struct config_file* cfg);
 
 /**
  * Create a TCP listener comm point. Calls malloc.
@@ -1083,6 +1085,8 @@ struct doq_server_socket {
 	time_t* now_tt;
 	/** the current time for use by time functions, timeval. */
 	struct timeval* now_tv;
+	/** config file for the worker. */
+	struct config_file* cfg;
 };
 
 /**
