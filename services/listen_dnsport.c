@@ -3808,6 +3808,31 @@ doq_stream_off_write_list(struct doq_conn* conn, struct doq_stream* stream)
 	stream->on_write_list = 0;
 }
 
+/** doq stream remove in buffer */
+static void
+doq_stream_remove_in_buffer(struct doq_stream* stream, struct doq_table* table)
+{
+	if(stream->in) {
+		doq_table_quic_size_subtract(table, stream->inlen);
+		free(stream->in);
+		stream->in = NULL;
+		stream->inlen = 0;
+	}
+}
+
+/** doq stream remove out buffer */
+static void
+doq_stream_remove_out_buffer(struct doq_stream* stream,
+	struct doq_table* table)
+{
+	if(stream->out) {
+		doq_table_quic_size_subtract(table, stream->outlen);
+		free(stream->out);
+		stream->out = NULL;
+		stream->outlen = 0;
+	}
+}
+
 int
 doq_stream_close(struct doq_conn* conn, struct doq_stream* stream,
 	int send_shutdown)
@@ -3829,6 +3854,8 @@ doq_stream_close(struct doq_conn* conn, struct doq_stream* stream,
 		}
 		doq_conn_write_enable(conn);
 	}
+	doq_stream_remove_in_buffer(stream, conn->doq_socket->table);
+	doq_stream_remove_out_buffer(stream, conn->doq_socket->table);
 	return 1;
 }
 
@@ -4306,6 +4333,35 @@ doq_stream_reset_cb(ngtcp2_conn* ATTR_UNUSED(conn), int64_t stream_id,
 	return 0;
 }
 
+/** ngtcp2 acked_stream_data_offset callback function */
+static int
+doq_acked_stream_data_offset_cb(ngtcp2_conn* ATTR_UNUSED(conn),
+	int64_t stream_id, uint64_t offset, uint64_t datalen, void* user_data,
+	void* ATTR_UNUSED(stream_user_data))
+{
+	struct doq_conn* doq_conn = (struct doq_conn*)user_data;
+	struct doq_stream* stream;
+	verbose(VERB_ALGO, "doq stream acked data for stream id %d offset %d "
+		"datalen %d", (int)stream_id, (int)offset, (int)datalen);
+
+	stream = doq_stream_find(doq_conn, stream_id);
+	if(!stream) {
+		verbose(VERB_ALGO, "doq: stream acked data for "
+			"unknown stream %d", (int)stream_id);
+		return 0;
+	}
+	/* Acked the data from [offset .. offset+datalen). */
+	if(stream->is_closed)
+		return 0;
+	if(offset+datalen >= stream->outlen) {
+		doq_stream_remove_in_buffer(stream,
+			doq_conn->doq_socket->table);
+		doq_stream_remove_out_buffer(stream,
+			doq_conn->doq_socket->table);
+	}
+	return 0;
+}
+
 /** ngtc2p log_printf callback function */
 static void
 doq_log_printf_cb(void* ATTR_UNUSED(user_data), const char* fmt, ...)
@@ -4583,6 +4639,7 @@ doq_conn_setup(struct doq_conn* conn, uint8_t* scid, size_t scidlen,
 	callbacks.stream_open = doq_stream_open_cb;
 	callbacks.stream_close = doq_stream_close_cb;
 	callbacks.stream_reset = doq_stream_reset_cb;
+	callbacks.acked_stream_data_offset = doq_acked_stream_data_offset_cb;
 	callbacks.recv_stream_data = doq_recv_stream_data_cb;
 
 	ngtcp2_settings_default(&settings);
