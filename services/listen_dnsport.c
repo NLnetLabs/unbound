@@ -5400,4 +5400,13 @@ doq_table_quic_size_available(struct doq_table* table,
 		return 0;
 	return 1;
 }
+
+size_t doq_table_quic_size_get(struct doq_table* table)
+{
+	size_t sz;
+	lock_basic_lock(&table->size_lock);
+	sz = table->current_size;
+	lock_basic_unlock(&table->size_lock);
+	return sz;
+}
 #endif /* HAVE_NGTCP2 */

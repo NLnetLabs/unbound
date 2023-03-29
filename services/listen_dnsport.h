@@ -823,6 +823,9 @@ void doq_table_quic_size_subtract(struct doq_table* table, size_t subtract);
 /** doq check if mem is available for quic. */
 int doq_table_quic_size_available(struct doq_table* table,
 	struct config_file* cfg, size_t mem);
+
+/** doq get the quic size value */
+size_t doq_table_quic_size_get(struct doq_table* table);
 #endif /* HAVE_NGTCP2 */
 
 char* set_ip_dscp(int socket, int addrfamily, int ds);

@@ -867,6 +867,10 @@ print_mem(RES* ssl, struct worker* worker, struct daemon* daemon,
 	if(!print_longnum(ssl, "mem.http.response_buffer"SQ,
 		(size_t)s->svr.mem_http2_response_buffer))
 		return 0;
+#ifdef HAVE_NGTCP2
+	if(!print_longnum(ssl, "mem.quic"SQ, (size_t)s->svr.mem_quic))
+		return 0;
+#endif /* HAVE_NGTCP2 */
 	return 1;
 }
 
@@ -997,6 +1001,10 @@ print_ext(RES* ssl, struct ub_stats_info* s, int inhibit_zero)
 		(unsigned long)s->svr.qipv6)) return 0;
 	if(!ssl_printf(ssl, "num.query.https"SQ"%lu\n",
 		(unsigned long)s->svr.qhttps)) return 0;
+#ifdef HAVE_NGTCP2
+	if(!ssl_printf(ssl, "num.query.quic"SQ"%lu\n",
+		(unsigned long)s->svr.qquic)) return 0;
+#endif /* HAVE_NGTCP2 */
 	/* flags */
 	if(!ssl_printf(ssl, "num.query.flags.QR"SQ"%lu\n", 
 		(unsigned long)s->svr.qbit_QR)) return 0;

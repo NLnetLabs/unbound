@@ -658,4 +658,9 @@ void doq_timer_cb(void* ATTR_UNUSED(arg))
 {
 	/* nothing */
 }
+
+size_t doq_table_quic_size_get(struct doq_table* ATTR_UNUSED(table))
+{
+	return 0;
+}
 #endif
