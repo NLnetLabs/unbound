@@ -532,7 +532,14 @@ static void
 client_stream_print_long(struct doq_client_data* data,
 	struct doq_client_stream* str)
 {
-	char* s = sldns_wire2str_pkt(sldns_buffer_begin(str->answer),
+	char* s;
+	if(str->query_has_error) {
+		char* logs = client_stream_string(str);
+		printf("%s has error, there is no answer\n", logs);
+		free(logs);
+		return;
+	}
+	s = sldns_wire2str_pkt(sldns_buffer_begin(str->answer),
 		sldns_buffer_limit(str->answer));
 	printf("%s", (s?s:";sldns_wire2str_pkt failed\n"));
 	printf(";; SERVER: %s %d\n", data->svr, data->port);
@@ -564,9 +571,13 @@ client_stream_answer_error(struct doq_client_stream* str)
 {
 	if(verbosity > 0) {
 		char* logs = client_stream_string(str);
-		verbose(1, "query %s has an error. received %d/%d bytes.",
-			logs, (int)sldns_buffer_position(str->answer),
-			(int)sldns_buffer_limit(str->answer));
+		if(str->answer)
+			verbose(1, "query %s has an error. received %d/%d bytes.",
+				logs, (int)sldns_buffer_position(str->answer),
+				(int)sldns_buffer_limit(str->answer));
+		else
+			verbose(1, "query %s has an error. received no data.",
+				logs);
 		free(logs);
 	}
 	str->query_has_error = 1;
@@ -622,11 +633,14 @@ client_stream_recv_data(struct doq_client_stream* str, const uint8_t* data,
  * received on the stream. */
 static void
 client_stream_recv_fin(struct doq_client_data* data,
-	struct doq_client_stream* str)
+	struct doq_client_stream* str, int is_fin)
 {
 	if(verbosity > 0) {
 		char* logs = client_stream_string(str);
-		verbose(1, "query %s: received FIN from remote", logs);
+		if(is_fin)
+			verbose(1, "query %s: received FIN from remote", logs);
+		else
+			verbose(1, "query %s: stream reset from remote", logs);
 		free(logs);
 	}
 	if(str->write_is_done)
@@ -871,10 +885,25 @@ recv_stream_data(ngtcp2_conn* ATTR_UNUSED(conn), uint32_t flags,
 		client_stream_recv_data(str, data, datalen);
 	}
 	if((flags&NGTCP2_STREAM_DATA_FLAG_FIN)!=0) {
-		client_stream_recv_fin(doqdata, str);
+		client_stream_recv_fin(doqdata, str, 1);
 	}
 	ngtcp2_conn_extend_max_stream_offset(doqdata->conn, stream_id, datalen);
 	ngtcp2_conn_extend_max_offset(doqdata->conn, datalen);
+	return 0;
+}
+
+/** the stream reset callback from ngtcp2 */
+static int
+stream_reset(ngtcp2_conn* ATTR_UNUSED(conn), int64_t stream_id,
+	uint64_t final_size, uint64_t app_error_code, void* user_data,
+	void* stream_user_data)
+{
+	struct doq_client_data* doqdata = (struct doq_client_data*)user_data;
+	struct doq_client_stream* str = (struct doq_client_stream*)
+		stream_user_data;
+	verbose(1, "stream reset for stream %d final size %d app error code %d",
+		(int)stream_id, (int)final_size, (int)app_error_code);
+	client_stream_recv_fin(doqdata, str, 0);
 	return 0;
 }
 
@@ -1016,6 +1045,7 @@ static struct ngtcp2_conn* conn_client_setup(struct doq_client_data* data)
 	cbs.extend_max_local_streams_bidi = extend_max_local_streams_bidi;
 	cbs.rand = rand_cb;
 	cbs.recv_stream_data = recv_stream_data;
+	cbs.stream_reset = stream_reset;
 	copy_ngaddr(&path.local, &data->local_addr, data->local_addr_len);
 	copy_ngaddr(&path.remote, &data->dest_addr, data->dest_addr_len);
 
