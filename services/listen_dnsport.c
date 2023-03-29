@@ -3734,11 +3734,18 @@ doq_conn_key_from_repinfo(struct doq_conn_key* key, struct comm_reply* repinfo)
 	key->dcid = repinfo->doq_dcid;
 }
 
-/** add a stream to the connection */
+/** doq add a stream to the connection */
 static void
 doq_conn_add_stream(struct doq_conn* conn, struct doq_stream* stream)
 {
 	(void)rbtree_insert(&conn->stream_tree, &stream->node);
+}
+
+/** doq delete a stream from the connection */
+static void
+doq_conn_del_stream(struct doq_conn* conn, struct doq_stream* stream)
+{
+	(void)rbtree_delete(&conn->stream_tree, &stream->node);
 }
 
 /** doq create new stream */
@@ -3856,6 +3863,9 @@ doq_stream_close(struct doq_conn* conn, struct doq_stream* stream,
 	}
 	doq_stream_remove_in_buffer(stream, conn->doq_socket->table);
 	doq_stream_remove_out_buffer(stream, conn->doq_socket->table);
+	doq_table_quic_size_subtract(conn->doq_socket->table, sizeof(*stream));
+	doq_conn_del_stream(conn, stream);
+	doq_stream_delete(stream);
 	return 1;
 }
 
@@ -4212,7 +4222,7 @@ doq_stream_open_cb(ngtcp2_conn* ATTR_UNUSED(conn), int64_t stream_id,
 		verbose(VERB_ALGO, "doq: stream with this id already exists");
 		return 0;
 	}
-	if(stream_id != 0 /* allow one stream on a new connection */ &&
+	if(stream_id != 0 && stream_id != 4 && /* allow one stream on a new connection */
 		!doq_table_quic_size_available(doq_conn->doq_socket->table,
 		doq_conn->doq_socket->cfg, sizeof(*stream)
 		+ 100 /* estimated query in */
