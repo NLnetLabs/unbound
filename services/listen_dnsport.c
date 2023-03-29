@@ -3809,23 +3809,26 @@ doq_stream_off_write_list(struct doq_conn* conn, struct doq_stream* stream)
 }
 
 int
-doq_stream_close(struct doq_conn* conn, struct doq_stream* stream)
+doq_stream_close(struct doq_conn* conn, struct doq_stream* stream,
+	int send_shutdown)
 {
 	int ret;
 	if(stream->is_closed)
 		return 1;
 	stream->is_closed = 1;
-	verbose(VERB_ALGO, "doq: shutdown stream_id %d with app_error_code %d",
-		(int)stream->stream_id, (int)DOQ_APP_ERROR_CODE);
-	ret = ngtcp2_conn_shutdown_stream(conn->conn, stream->stream_id,
-		DOQ_APP_ERROR_CODE);
-	if(ret != 0) {
-		log_err("doq ngtcp2_conn_shutdown_stream %d failed: %s",
-			(int)stream->stream_id, ngtcp2_strerror(ret));
-		return 0;
-	}
 	doq_stream_off_write_list(conn, stream);
-	doq_conn_write_enable(conn);
+	if(send_shutdown) {
+		verbose(VERB_ALGO, "doq: shutdown stream_id %d with app_error_code %d",
+			(int)stream->stream_id, (int)DOQ_APP_ERROR_CODE);
+		ret = ngtcp2_conn_shutdown_stream(conn->conn, stream->stream_id,
+			DOQ_APP_ERROR_CODE);
+		if(ret != 0) {
+			log_err("doq ngtcp2_conn_shutdown_stream %d failed: %s",
+				(int)stream->stream_id, ngtcp2_strerror(ret));
+			return 0;
+		}
+		doq_conn_write_enable(conn);
+	}
 	return 1;
 }
 
@@ -4024,7 +4027,7 @@ doq_stream_recv_fin(struct doq_conn* conn, struct doq_stream* stream, int
 		verbose(VERB_ALGO, "doq: stream recv FIN, but is "
 			"not complete, have %d of %d bytes",
 			((int)stream->nread)-2, (int)stream->inlen);
-		if(!doq_stream_close(conn, stream))
+		if(!doq_stream_close(conn, stream, 1))
 			return 0;
 	}
 	return 1;
@@ -4248,6 +4251,58 @@ doq_recv_stream_data_cb(ngtcp2_conn* ATTR_UNUSED(conn), uint32_t flags,
 		if(!doq_stream_data_complete(doq_conn, stream))
 			return NGTCP2_ERR_CALLBACK_FAILURE;
 	}
+	return 0;
+}
+
+/** ngtcp2 stream_close callback function */
+static int
+doq_stream_close_cb(ngtcp2_conn* ATTR_UNUSED(conn), uint32_t flags,
+	int64_t stream_id, uint64_t app_error_code, void* user_data,
+	void* ATTR_UNUSED(stream_user_data))
+{
+	struct doq_conn* doq_conn = (struct doq_conn*)user_data;
+	struct doq_stream* stream;
+	if((flags&NGTCP2_STREAM_CLOSE_FLAG_APP_ERROR_CODE_SET)!=0)
+		verbose(VERB_ALGO, "doq stream close for stream id %d %sapp_error_code %d",
+		(int)stream_id,
+		(((flags&NGTCP2_STREAM_CLOSE_FLAG_APP_ERROR_CODE_SET)!=0)?
+		"APP_ERROR_CODE_SET ":""),
+		(int)app_error_code);
+	else
+		verbose(VERB_ALGO, "doq stream close for stream id %d",
+			(int)stream_id);
+
+	stream = doq_stream_find(doq_conn, stream_id);
+	if(!stream) {
+		verbose(VERB_ALGO, "doq: stream close for "
+			"unknown stream %d", (int)stream_id);
+		return 0;
+	}
+	if(!doq_stream_close(doq_conn, stream, 0))
+		return NGTCP2_ERR_CALLBACK_FAILURE;
+	return 0;
+}
+
+/** ngtcp2 stream_reset callback function */
+static int
+doq_stream_reset_cb(ngtcp2_conn* ATTR_UNUSED(conn), int64_t stream_id,
+	uint64_t final_size, uint64_t app_error_code, void* user_data,
+	void* ATTR_UNUSED(stream_user_data))
+{
+	struct doq_conn* doq_conn = (struct doq_conn*)user_data;
+	struct doq_stream* stream;
+	verbose(VERB_ALGO, "doq stream reset for stream id %d final_size %d "
+		"app_error_code %d", (int)stream_id, (int)final_size,
+		(int)app_error_code);
+
+	stream = doq_stream_find(doq_conn, stream_id);
+	if(!stream) {
+		verbose(VERB_ALGO, "doq: stream reset for "
+			"unknown stream %d", (int)stream_id);
+		return 0;
+	}
+	if(!doq_stream_close(doq_conn, stream, 0))
+		return NGTCP2_ERR_CALLBACK_FAILURE;
 	return 0;
 }
 
@@ -4526,6 +4581,8 @@ doq_conn_setup(struct doq_conn* conn, uint8_t* scid, size_t scidlen,
 	callbacks.remove_connection_id = doq_remove_connection_id_cb;
 	callbacks.handshake_completed = doq_handshake_completed_cb;
 	callbacks.stream_open = doq_stream_open_cb;
+	callbacks.stream_close = doq_stream_close_cb;
+	callbacks.stream_reset = doq_stream_reset_cb;
 	callbacks.recv_stream_data = doq_recv_stream_data_cb;
 
 	ngtcp2_settings_default(&settings);

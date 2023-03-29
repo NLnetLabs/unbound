@@ -2649,7 +2649,7 @@ doq_socket_send_reply(struct comm_reply* repinfo)
 		return;
 	}
 	if(!doq_stream_send_reply(conn, stream, repinfo->c->buffer))
-		doq_stream_close(conn, stream);
+		doq_stream_close(conn, stream, 1);
 	if(!repinfo->c->doq_socket->current_conn) {
 		/* Not inside callbacks, we have our own lock on conn.
 		 * Release it. */
@@ -2678,7 +2678,7 @@ doq_socket_drop_reply(struct comm_reply* repinfo)
 		/* The connection or stream is already gone. */
 		return;
 	}
-	doq_stream_close(conn, stream);
+	doq_stream_close(conn, stream, 1);
 	if(!repinfo->c->doq_socket->current_conn) {
 		/* Not inside callbacks, we have our own lock on conn.
 		 * Release it. */

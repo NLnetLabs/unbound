@@ -760,7 +760,8 @@ void doq_conn_key_from_repinfo(struct doq_conn_key* key,
 struct doq_stream* doq_stream_find(struct doq_conn* conn, int64_t stream_id);
 
 /** doq shutdown the stream. */
-int doq_stream_close(struct doq_conn* conn, struct doq_stream* stream);
+int doq_stream_close(struct doq_conn* conn, struct doq_stream* stream,
+	int send_shutdown);
 
 /** send reply for a connection */
 int doq_stream_send_reply(struct doq_conn* conn, struct doq_stream* stream,
