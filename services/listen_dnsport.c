@@ -5404,6 +5404,8 @@ doq_table_quic_size_available(struct doq_table* table,
 size_t doq_table_quic_size_get(struct doq_table* table)
 {
 	size_t sz;
+	if(!table)
+		return 0;
 	lock_basic_lock(&table->size_lock);
 	sz = table->current_size;
 	lock_basic_unlock(&table->size_lock);
