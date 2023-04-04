@@ -2879,7 +2879,7 @@ static int
 processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 	struct iter_env* ie, int id)
 {
-	int dnsseclame = 0;
+	int dnsseclame = 0, origtypecname = 0;
 	enum response_type type;
 
 	iq->num_current_queries--;
@@ -2962,6 +2962,8 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 		/* YXDOMAIN is a permanent error, no need to retry */
 		type = RESPONSE_TYPE_ANSWER;
 	}
+	if(type == RESPONSE_TYPE_CNAME)
+		origtypecname = 1;
 	if(type == RESPONSE_TYPE_CNAME && iq->response->rep->an_numrrsets >= 1
 		&& ntohs(iq->response->rep->rrsets[0]->rk.type) == LDNS_RR_TYPE_DNAME) {
 		uint8_t* sname = NULL;
@@ -3047,11 +3049,14 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 				iq->minimisation_state = DONOT_MINIMISE_STATE;
 			}
 			if(FLAGS_GET_RCODE(iq->response->rep->flags) ==
-				LDNS_RCODE_NXDOMAIN) {
+				LDNS_RCODE_NXDOMAIN && !origtypecname) {
 				/* Stop resolving when NXDOMAIN is DNSSEC
 				 * signed. Based on assumption that nameservers
 				 * serving signed zones do not return NXDOMAIN
 				 * for empty-non-terminals. */
+				/* If this response is actually a CNAME type,
+				 * the nxdomain rcode may not be for the qname,
+				 * and so it is not the final response. */
 				if(iq->dnssec_expected)
 					return final_state(iq);
 				/* Make subrequest to validate intermediate
