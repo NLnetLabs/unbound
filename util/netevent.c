@@ -5651,6 +5651,7 @@ comm_point_create_doq(struct comm_base *base, int fd, sldns_buffer* buffer,
 	(void)table;
 	(void)ssl_service_key;
 	(void)ssl_service_pem;
+	(void)cfg;
 	sock_close(fd);
 	return NULL;
 #endif /* HAVE_NGTCP2 */

@@ -132,7 +132,9 @@ fptr_whitelist_comm_timer(void (*fptr)(void*))
 	else if(fptr == &pending_udp_timer_delay_cb) return 1;
 	else if(fptr == &worker_stat_timer_cb) return 1;
 	else if(fptr == &worker_probe_timer_cb) return 1;
+#ifdef HAVE_NGTCP2
 	else if(fptr == &doq_timer_cb) return 1;
+#endif
 #ifdef UB_ON_WINDOWS
 	else if(fptr == &wsvc_cron_cb) return 1;
 #endif
