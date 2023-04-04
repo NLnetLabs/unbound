@@ -1,3 +1,7 @@
+4 April 2023: Wouter
+	- Fix #870: NXDOMAIN instead of NOERROR rcode when asked for existing
+	  CNAME record.
+
 24 March 2023: Philip
 	- Fix issue #676: Unencrypted query is sent when
 	  forward-tls-upstream: yes is used without tls-cert-bundle
