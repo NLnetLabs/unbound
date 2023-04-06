@@ -1,3 +1,6 @@
+6 April 2023: Wouter
+	- Fix for #870: Add test case for the qname minimisation and CNAME.
+
 4 April 2023: Wouter
 	- Fix #870: NXDOMAIN instead of NOERROR rcode when asked for existing
 	  CNAME record.
