@@ -68,6 +68,7 @@
 #include "util/fptr_wlist.h"
 #include "util/tube.h"
 #include "util/edns.h"
+#include "util/timeval_func.h"
 #include "iterator/iter_fwd.h"
 #include "iterator/iter_hints.h"
 #include "iterator/iter_utils.h"

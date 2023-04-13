@@ -46,6 +46,7 @@
 #include "util/tcp_conn_limit.h"
 #include "util/fptr_wlist.h"
 #include "util/proxy_protocol.h"
+#include "util/timeval_func.h"
 #include "sldns/pkthdr.h"
 #include "sldns/sbuffer.h"
 #include "sldns/str2wire.h"
@@ -114,6 +115,16 @@
 /** timeout in millisec to wait for write to unblock, packets dropped after.*/
 #define SEND_BLOCKED_WAIT_TIMEOUT 200
 
+/** Let's make timestamping code cleaner and redefine SO_TIMESTAMP* */
+#ifndef SO_TIMESTAMP
+#define SO_TIMESTAMP 29
+#endif
+#ifndef SO_TIMESTAMPNS
+#define SO_TIMESTAMPNS 35
+#endif
+#ifndef SO_TIMESTAMPING
+#define SO_TIMESTAMPING 37
+#endif
 /**
  * The internal event structure for keeping ub_event info for the event.
  * Possibly other structures (list, tree) this is part of.
@@ -833,6 +844,8 @@ comm_point_udp_ancil_callback(int fd, short event, void* arg)
 #ifndef S_SPLINT_S
 	struct cmsghdr* cmsg;
 #endif /* S_SPLINT_S */
+	struct timespec *ts;
+
 	rep.c = (struct comm_point*)arg;
 	log_assert(rep.c->type == comm_udp);
 
@@ -842,7 +855,7 @@ comm_point_udp_ancil_callback(int fd, short event, void* arg)
 	ub_comm_base_now(rep.c->ev->base);
 	for(i=0; i<NUM_UDP_PER_SELECT; i++) {
 		sldns_buffer_clear(rep.c->buffer);
-		memset(&rep.c->recv_tv, 0, sizeof(rep.c->recv_tv));
+		timeval_clear(&rep.c->recv_tv);
 		rep.remote_addrlen = (socklen_t)sizeof(rep.remote_addr);
 		log_assert(fd != -1);
 		log_assert(sldns_buffer_remaining(rep.c->buffer) > 0);
@@ -894,8 +907,20 @@ comm_point_udp_ancil_callback(int fd, short event, void* arg)
 					sizeof(struct in_addr));
 				break;
 #endif /* IP_PKTINFO or IP_RECVDSTADDR */
+			} else if( cmsg->cmsg_level == SOL_SOCKET &&
+				cmsg->cmsg_type == SO_TIMESTAMPNS) {
+				ts = (struct timespec *)CMSG_DATA(cmsg);
+				TIMESPEC_TO_TIMEVAL(&rep.c->recv_tv, ts);
+			} else if( cmsg->cmsg_level == SOL_SOCKET &&
+				cmsg->cmsg_type == SO_TIMESTAMPING) {
+				ts = (struct timespec *)CMSG_DATA(cmsg);
+				TIMESPEC_TO_TIMEVAL(&rep.c->recv_tv, ts);
+			} else if( cmsg->cmsg_level == SOL_SOCKET &&
+				cmsg->cmsg_type == SO_TIMESTAMP) {
+				memmove(&rep.c->recv_tv, CMSG_DATA(cmsg), sizeof(struct timeval));
 			}
 		}
+
 		if(verbosity >= VERB_ALGO)
 			p_ancil("receive_udp on interface", &rep);
 #endif /* S_SPLINT_S */
@@ -3809,7 +3834,11 @@ comm_point_create_udp(struct comm_base *base, int fd, sldns_buffer* buffer,
 	evbits = UB_EV_READ | UB_EV_PERSIST;
 	/* ub_event stuff */
 	c->ev->ev = ub_event_new(base->eb->base, c->fd, evbits,
+#ifdef USE_WINSOCK
 		comm_point_udp_callback, c);
+#else
+		comm_point_udp_ancil_callback, c);
+#endif
 	if(c->ev->ev == NULL) {
 		log_err("could not baseset udp event");
 		comm_point_delete(c);
