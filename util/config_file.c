@@ -116,6 +116,7 @@ config_create(void)
 	cfg->tcp_auth_query_timeout = 3 * 1000; /* 3s in millisecs */
 	cfg->do_tcp_keepalive = 0;
 	cfg->tcp_keepalive_timeout = 120 * 1000; /* 120s in millisecs */
+	cfg->sock_queue_timeout = 0; /* do not check timeout */
 	cfg->ssl_service_key = NULL;
 	cfg->ssl_service_pem = NULL;
 	cfg->ssl_port = UNBOUND_DNS_OVER_TLS_PORT;
@@ -543,6 +544,7 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	else S_NUMBER_NONZERO("tcp-reuse-timeout:", tcp_reuse_timeout)
 	else S_YNO("edns-tcp-keepalive:", do_tcp_keepalive)
 	else S_NUMBER_NONZERO("edns-tcp-keepalive-timeout:", tcp_keepalive_timeout)
+	else S_NUMBER_OR_ZERO("sock-queue-timeout:", sock_queue_timeout)
 	else S_YNO("ssl-upstream:", ssl_upstream)
 	else S_YNO("tls-upstream:", ssl_upstream)
 	else S_STR("ssl-service-key:", ssl_service_key)
@@ -1066,6 +1068,7 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_DEC(opt, "tcp-reuse-timeout", tcp_reuse_timeout)
 	else O_YNO(opt, "edns-tcp-keepalive", do_tcp_keepalive)
 	else O_DEC(opt, "edns-tcp-keepalive-timeout", tcp_keepalive_timeout)
+	else O_DEC(opt, "sock-queue-timeout", sock_queue_timeout)
 	else O_YNO(opt, "ssl-upstream", ssl_upstream)
 	else O_YNO(opt, "tls-upstream", ssl_upstream)
 	else O_STR(opt, "ssl-service-key", ssl_service_key)

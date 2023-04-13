@@ -671,6 +671,9 @@
 /* Define to 1 if you have the <time.h> header file. */
 #undef HAVE_TIME_H
 
+/* Define to 1 if you have the <linux/net_tstamp.h> header file. */
+#undef HAVE_LINUX_NET_TSTAMP_H
+
 /* Define to 1 if you have the `tzset' function. */
 #undef HAVE_TZSET
 

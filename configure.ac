@@ -454,7 +454,10 @@ AC_CHECK_HEADERS([netioapi.h],,, [AC_INCLUDES_DEFAULT
 #endif
 ])
 
-# check for types.
+# Check for Linux timestamping headers
+AC_CHECK_HEADERS([linux/net_tstamp.h],,, [AC_INCLUDES_DEFAULT])
+
+# check for types.  
 # Using own tests for int64* because autoconf builtin only give 32bit.
 AC_CHECK_TYPE(int8_t, signed char)
 AC_CHECK_TYPE(int16_t, short)

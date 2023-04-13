@@ -116,6 +116,8 @@ struct config_file {
 	int do_tcp_keepalive;
 	/** tcp keepalive timeout, in msec */
 	int tcp_keepalive_timeout;
+	/** timeout of packets sitting in the socket queue */
+	int sock_queue_timeout;
 	/** proxy protocol ports */
 	struct config_strlist* proxy_protocol_port;
 

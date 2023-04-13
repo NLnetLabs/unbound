@@ -72,7 +72,9 @@
 #ifdef HAVE_OPENSSL_ERR_H
 #include <openssl/err.h>
 #endif
-
+#ifdef HAVE_LINUX_NET_TSTAMP_H
+#include <linux/net_tstamp.h>
+#endif
 /* -------- Start of local definitions -------- */
 /** if CMSG_ALIGN is not defined on this platform, a workaround */
 #ifndef CMSG_ALIGN
@@ -907,6 +909,7 @@ comm_point_udp_ancil_callback(int fd, short event, void* arg)
 					sizeof(struct in_addr));
 				break;
 #endif /* IP_PKTINFO or IP_RECVDSTADDR */
+#ifdef HAVE_LINUX_NET_TSTAMP_H
 			} else if( cmsg->cmsg_level == SOL_SOCKET &&
 				cmsg->cmsg_type == SO_TIMESTAMPNS) {
 				ts = (struct timespec *)CMSG_DATA(cmsg);
@@ -918,6 +921,7 @@ comm_point_udp_ancil_callback(int fd, short event, void* arg)
 			} else if( cmsg->cmsg_level == SOL_SOCKET &&
 				cmsg->cmsg_type == SO_TIMESTAMP) {
 				memmove(&rep.c->recv_tv, CMSG_DATA(cmsg), sizeof(struct timeval));
+#endif
 			}
 		}
 

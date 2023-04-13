@@ -240,6 +240,7 @@ tcp-reuse-timeout{COLON}	{ YDVAR(1, VAR_TCP_REUSE_TIMEOUT) }
 tcp-auth-query-timeout{COLON}	{ YDVAR(1, VAR_TCP_AUTH_QUERY_TIMEOUT) }
 edns-tcp-keepalive{COLON}	{ YDVAR(1, VAR_EDNS_TCP_KEEPALIVE) }
 edns-tcp-keepalive-timeout{COLON} { YDVAR(1, VAR_EDNS_TCP_KEEPALIVE_TIMEOUT) }
+sock-queue-timeout{COLON} { YDVAR(1, VAR_SOCK_QUEUE_TIMEOUT) }
 ssl-upstream{COLON}		{ YDVAR(1, VAR_SSL_UPSTREAM) }
 tls-upstream{COLON}		{ YDVAR(1, VAR_SSL_UPSTREAM) }
 ssl-service-key{COLON}		{ YDVAR(1, VAR_SSL_SERVICE_KEY) }

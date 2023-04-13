@@ -76,6 +76,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_DO_IP4 VAR_DO_IP6 VAR_PREFER_IP6 VAR_DO_UDP VAR_DO_TCP
 %token VAR_TCP_MSS VAR_OUTGOING_TCP_MSS VAR_TCP_IDLE_TIMEOUT
 %token VAR_EDNS_TCP_KEEPALIVE VAR_EDNS_TCP_KEEPALIVE_TIMEOUT
+%token VAR_SOCK_QUEUE_TIMEOUT
 %token VAR_CHROOT VAR_USERNAME VAR_DIRECTORY VAR_LOGFILE VAR_PIDFILE
 %token VAR_MSG_CACHE_SIZE VAR_MSG_CACHE_SLABS VAR_NUM_QUERIES_PER_THREAD
 %token VAR_RRSET_CACHE_SIZE VAR_RRSET_CACHE_SLABS VAR_OUTGOING_NUM_TCP
@@ -227,6 +228,7 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_do_udp | server_do_tcp |
 	server_tcp_mss | server_outgoing_tcp_mss | server_tcp_idle_timeout |
 	server_tcp_keepalive | server_tcp_keepalive_timeout |
+	server_sock_queue_timeout |
 	server_interface | server_chroot | server_username |
 	server_directory | server_logfile | server_pidfile |
 	server_msg_cache_size | server_msg_cache_slabs |
@@ -971,6 +973,19 @@ server_tcp_keepalive_timeout: VAR_EDNS_TCP_KEEPALIVE_TIMEOUT STRING_ARG
 		else if (atoi($2) < 1)
 			cfg_parser->cfg->tcp_keepalive_timeout = 0;
 		else cfg_parser->cfg->tcp_keepalive_timeout = atoi($2);
+		free($2);
+	}
+	;
+server_sock_queue_timeout: VAR_SOCK_QUEUE_TIMEOUT STRING_ARG
+	{
+		OUTYY(("P(server_sock_queue_timeout:%s)\n", $2));
+		if(atoi($2) == 0 && strcmp($2, "0") != 0)
+			yyerror("number expected");
+		else if (atoi($2) > 6553500)
+			cfg_parser->cfg->sock_queue_timeout = 6553500;
+		else if (atoi($2) < 1)
+			cfg_parser->cfg->sock_queue_timeout = 0;
+		else cfg_parser->cfg->sock_queue_timeout = atoi($2);
 		free($2);
 	}
 	;
