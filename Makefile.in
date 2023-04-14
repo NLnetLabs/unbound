@@ -130,7 +130,7 @@ util/fptr_wlist.c util/locks.c util/log.c util/mini_event.c util/module.c \
 util/netevent.c util/net_help.c util/random.c util/rbtree.c util/regional.c \
 util/rtt.c util/edns.c util/storage/dnstree.c util/storage/lookup3.c \
 util/storage/lruhash.c util/storage/slabhash.c util/tcp_conn_limit.c \
-util/timehist.c util/tube.c util/proxy_protocol.c \
+util/timehist.c util/tsig.c util/tube.c util/proxy_protocol.c \
 util/ub_event.c util/ub_event_pluggable.c util/winsock_event.c \
 validator/autotrust.c validator/val_anchor.c validator/validator.c \
 validator/val_kcache.c validator/val_kentry.c validator/val_neg.c \
@@ -147,7 +147,7 @@ iter_scrub.lo iter_utils.lo localzone.lo mesh.lo modstack.lo view.lo \
 outbound_list.lo alloc.lo config_file.lo configlexer.lo configparser.lo \
 fptr_wlist.lo edns.lo locks.lo log.lo mini_event.lo module.lo net_help.lo \
 random.lo rbtree.lo regional.lo rtt.lo dnstree.lo lookup3.lo lruhash.lo \
-slabhash.lo tcp_conn_limit.lo timehist.lo tube.lo winsock_event.lo \
+slabhash.lo tcp_conn_limit.lo timehist.lo tsig.lo tube.lo winsock_event.lo \
 autotrust.lo val_anchor.lo rpz.lo proxy_protocol.lo \
 validator.lo val_kcache.lo val_kentry.lo val_neg.lo val_nsec3.lo val_nsec.lo \
 val_secalgo.lo val_sigcrypt.lo val_utils.lo dns64.lo $(CACHEDB_OBJ) authzone.lo \
@@ -700,6 +700,7 @@ depend:
 
 # build rules
 ipset.lo ipset.o: $(srcdir)/ipset/ipset.c
+tsig.lo tsig.o: $(srcdir)/util/tsig.c config.h $(srcdir)/util/tsig.h
 
 # Dependencies
 dns.lo dns.o: $(srcdir)/services/cache/dns.c config.h $(srcdir)/iterator/iter_delegpt.h $(srcdir)/util/log.h \
