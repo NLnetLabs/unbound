@@ -1,3 +1,7 @@
+14 April 2023: Wouter
+	- Merge #875: change obsolete txt URL in unbound-anchor.c to point
+	  to RFC 7958, and Fix #874.
+
 13 April 2023: Wouter
 	- Fix build badge, from failing travis link to github ci action link.
 
