@@ -208,6 +208,7 @@ static void pr_stats(const char* nm, struct ub_stats_info* s)
 		s->svr.num_queries - s->svr.num_queries_missed_cache);
 	PR_UL_NM("num.cachemiss", s->svr.num_queries_missed_cache);
 	PR_UL_NM("num.prefetch", s->svr.num_queries_prefetch);
+	PR_UL_NM("num.queries_timed_out", s->svr.num_queries_timed_out);
 	PR_UL_NM("num.expired", s->svr.ans_expired);
 	PR_UL_NM("num.recursivereplies", s->mesh_replies_sent);
 #ifdef USE_DNSCRYPT

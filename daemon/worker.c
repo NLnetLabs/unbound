@@ -1296,6 +1296,16 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 		verbose(VERB_ALGO, "handle request called with err=%d", error);
 		return 0;
 	}
+
+	if (worker->env.cfg->sock_queue_timeout && timeval_isset(c->recv_tv)) {
+	  c->recv_tv.tv_sec += worker->env.cfg->sock_queue_timeout;
+		if (timeval_smaller(c->recv_tv, worker->env.now_tv)) {
+		/* count and drop queries that were sitting in the socket queue too long */
+			worker->stats.num_queries_timed_out++;
+			return 0;
+		}
+	}
+
 #ifdef USE_DNSCRYPT
 	repinfo->max_udp_size = worker->daemon->cfg->max_udp_size;
 	if(!dnsc_handle_curved_request(worker->daemon->dnscenv, repinfo)) {

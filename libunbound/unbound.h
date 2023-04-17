@@ -699,6 +699,8 @@ struct ub_server_stats {
 	long long num_queries_missed_cache;
 	/** number of prefetch queries - cachehits with prefetch */
 	long long num_queries_prefetch;
+	/** number of queries which are too late to process */
+	long long num_queries_timed_out;
 
 	/**
 	 * Sum of the querylistsize of the worker for

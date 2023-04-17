@@ -432,6 +432,7 @@ void server_stats_add(struct ub_stats_info* total, struct ub_stats_info* a)
 	total->svr.num_queries_ip_ratelimited += a->svr.num_queries_ip_ratelimited;
 	total->svr.num_queries_missed_cache += a->svr.num_queries_missed_cache;
 	total->svr.num_queries_prefetch += a->svr.num_queries_prefetch;
+	total->svr.num_queries_timed_out += a->svr.num_queries_timed_out;
 	total->svr.sum_query_list_size += a->svr.sum_query_list_size;
 	total->svr.ans_expired += a->svr.ans_expired;
 #ifdef USE_DNSCRYPT
