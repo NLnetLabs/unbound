@@ -833,7 +833,6 @@ comm_point_udp_ancil_callback(int fd, short event, void* arg)
 #ifndef S_SPLINT_S
 	struct cmsghdr* cmsg;
 #endif /* S_SPLINT_S */
-
 	rep.c = (struct comm_point*)arg;
 	log_assert(rep.c->type == comm_udp);
 
@@ -843,6 +842,7 @@ comm_point_udp_ancil_callback(int fd, short event, void* arg)
 	ub_comm_base_now(rep.c->ev->base);
 	for(i=0; i<NUM_UDP_PER_SELECT; i++) {
 		sldns_buffer_clear(rep.c->buffer);
+		memset(&rep.c->recv_tv, 0, sizeof(rep.c->recv_tv));
 		rep.remote_addrlen = (socklen_t)sizeof(rep.remote_addr);
 		log_assert(fd != -1);
 		log_assert(sldns_buffer_remaining(rep.c->buffer) > 0);

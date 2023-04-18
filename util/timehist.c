@@ -46,6 +46,7 @@
 #include <sys/types.h>
 #include "util/timehist.h"
 #include "util/log.h"
+#include "util/timeval_func.h"
 
 /** special timestwo operation for time values in histogram setup */
 static void
@@ -113,23 +114,6 @@ void timehist_clear(struct timehist* hist)
 	for(i=0; i<hist->num; i++)
 		hist->buckets[i].count = 0;
 }
-
-/** histogram compare of time values */
-static int
-timeval_smaller(const struct timeval* x, const struct timeval* y)
-{
-#ifndef S_SPLINT_S
-	if(x->tv_sec < y->tv_sec)
-		return 1;
-	else if(x->tv_sec == y->tv_sec) {
-		if(x->tv_usec <= y->tv_usec)
-			return 1;
-		else	return 0;
-	}
-	else	return 0;
-#endif
-}
-
 
 void timehist_insert(struct timehist* hist, struct timeval* tv)
 {

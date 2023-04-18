@@ -51,6 +51,7 @@
 #include "testcode/testpkts.h"
 #include "testcode/fake_event.h"
 #include "sldns/str2wire.h"
+#include "util/timeval_func.h"
 
 /** max length of lines in file */
 #define MAX_LINE_LEN 10240
@@ -65,22 +66,6 @@
  */
 static char* macro_expand(rbtree_type* store,
 	struct replay_runtime* runtime, char** text);
-
-/** compare of time values */
-static int
-timeval_smaller(const struct timeval* x, const struct timeval* y)
-{
-#ifndef S_SPLINT_S
-	if(x->tv_sec < y->tv_sec)
-		return 1;
-	else if(x->tv_sec == y->tv_sec) {
-		if(x->tv_usec <= y->tv_usec)
-			return 1;
-		else	return 0;
-	}
-	else	return 0;
-#endif
-}
 
 /** parse keyword in string.
  * @param line: if found, the line is advanced to after the keyword.

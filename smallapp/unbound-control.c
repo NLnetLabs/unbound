@@ -59,6 +59,7 @@
 #include "util/locks.h"
 #include "util/net_help.h"
 #include "util/shm_side/shm_main.h"
+#include "util/timeval_func.h"
 #include "daemon/stats.h"
 #include "sldns/wire2str.h"
 #include "sldns/pkthdr.h"
@@ -186,31 +187,6 @@ usage(void)
 #ifdef HAVE_SHMGET
 /** what to put on statistics lines between var and value, ": " or "=" */
 #define SQ "="
-/** divide sum of timers to get average */
-static void
-timeval_divide(struct timeval* avg, const struct timeval* sum, long long d)
-{
-#ifndef S_SPLINT_S
-	size_t leftover;
-	if(d <= 0) {
-		avg->tv_sec = 0;
-		avg->tv_usec = 0;
-		return;
-	}
-	avg->tv_sec = sum->tv_sec / d;
-	avg->tv_usec = sum->tv_usec / d;
-	/* handle fraction from seconds divide */
-	leftover = sum->tv_sec - avg->tv_sec*d;
-	if(leftover <= 0)
-		leftover = 0;
-	avg->tv_usec += (((long long)leftover)*((long long)1000000))/d;
-	if(avg->tv_sec < 0)
-		avg->tv_sec = 0;
-	if(avg->tv_usec < 0)
-		avg->tv_usec = 0;
-#endif
-}
-
 /** print unsigned long stats value */
 #define PR_UL_NM(str, var) printf("%s."str SQ"%lu\n", nm, (unsigned long)(var));
 #define PR_UL(str, var) printf(str SQ"%lu\n", (unsigned long)(var));

@@ -63,81 +63,12 @@
 #include "util/data/dname.h"
 #include "respip/respip.h"
 #include "services/listen_dnsport.h"
+#include "util/timeval_func.h"
 
 #ifdef CLIENT_SUBNET
 #include "edns-subnet/subnetmod.h"
 #include "edns-subnet/edns-subnet.h"
 #endif
-
-/** subtract timers and the values do not overflow or become negative */
-static void
-timeval_subtract(struct timeval* d, const struct timeval* end, const struct timeval* start)
-{
-#ifndef S_SPLINT_S
-	time_t end_usec = end->tv_usec;
-	d->tv_sec = end->tv_sec - start->tv_sec;
-	if(end_usec < start->tv_usec) {
-		end_usec += 1000000;
-		d->tv_sec--;
-	}
-	d->tv_usec = end_usec - start->tv_usec;
-#endif
-}
-
-/** add timers and the values do not overflow or become negative */
-static void
-timeval_add(struct timeval* d, const struct timeval* add)
-{
-#ifndef S_SPLINT_S
-	d->tv_sec += add->tv_sec;
-	d->tv_usec += add->tv_usec;
-	if(d->tv_usec >= 1000000 ) {
-		d->tv_usec -= 1000000;
-		d->tv_sec++;
-	}
-#endif
-}
-
-/** divide sum of timers to get average */
-static void
-timeval_divide(struct timeval* avg, const struct timeval* sum, size_t d)
-{
-#ifndef S_SPLINT_S
-	size_t leftover;
-	if(d <= 0) {
-		avg->tv_sec = 0;
-		avg->tv_usec = 0;
-		return;
-	}
-	avg->tv_sec = sum->tv_sec / d;
-	avg->tv_usec = sum->tv_usec / d;
-	/* handle fraction from seconds divide */
-	leftover = sum->tv_sec - avg->tv_sec*d;
-	if(leftover <= 0)
-		leftover = 0;
-	avg->tv_usec += (((long long)leftover)*((long long)1000000))/d;
-	if(avg->tv_sec < 0)
-		avg->tv_sec = 0;
-	if(avg->tv_usec < 0)
-		avg->tv_usec = 0;
-#endif
-}
-
-/** histogram compare of time values */
-static int
-timeval_smaller(const struct timeval* x, const struct timeval* y)
-{
-#ifndef S_SPLINT_S
-	if(x->tv_sec < y->tv_sec)
-		return 1;
-	else if(x->tv_sec == y->tv_sec) {
-		if(x->tv_usec <= y->tv_usec)
-			return 1;
-		else	return 0;
-	}
-	else	return 0;
-#endif
-}
 
 /**
  * Compare two response-ip client info entries for the purpose of mesh state

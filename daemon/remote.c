@@ -87,6 +87,7 @@
 #include "sldns/parseutil.h"
 #include "sldns/wire2str.h"
 #include "sldns/sbuffer.h"
+#include "util/timeval_func.h"
 
 #ifdef HAVE_SYS_TYPES_H
 #  include <sys/types.h>
@@ -105,47 +106,6 @@
 
 /** what to put on statistics lines between var and value, ": " or "=" */
 #define SQ "="
-
-/** subtract timers and the values do not overflow or become negative */
-static void
-timeval_subtract(struct timeval* d, const struct timeval* end,
-	const struct timeval* start)
-{
-#ifndef S_SPLINT_S
-	time_t end_usec = end->tv_usec;
-	d->tv_sec = end->tv_sec - start->tv_sec;
-	if(end_usec < start->tv_usec) {
-		end_usec += 1000000;
-		d->tv_sec--;
-	}
-	d->tv_usec = end_usec - start->tv_usec;
-#endif
-}
-
-/** divide sum of timers to get average */
-static void
-timeval_divide(struct timeval* avg, const struct timeval* sum, long long d)
-{
-#ifndef S_SPLINT_S
-	size_t leftover;
-	if(d <= 0) {
-		avg->tv_sec = 0;
-		avg->tv_usec = 0;
-		return;
-	}
-	avg->tv_sec = sum->tv_sec / d;
-	avg->tv_usec = sum->tv_usec / d;
-	/* handle fraction from seconds divide */
-	leftover = sum->tv_sec - avg->tv_sec*d;
-	if(leftover <= 0)
-		leftover = 0;
-	avg->tv_usec += (((long long)leftover)*((long long)1000000))/d;
-	if(avg->tv_sec < 0)
-		avg->tv_sec = 0;
-	if(avg->tv_usec < 0)
-		avg->tv_usec = 0;
-#endif
-}
 
 static int
 remote_setup_ctx(struct daemon_remote* rc, struct config_file* cfg)
