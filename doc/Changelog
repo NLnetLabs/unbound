@@ -1,3 +1,7 @@
+19 April 2023: Wouter
+	- Fix for #878: Invalid IP address in unbound.conf causes Segmentation
+	  Fault on OpenBSD.
+
 14 April 2023: Wouter
 	- Merge #875: change obsolete txt URL in unbound-anchor.c to point
 	  to RFC 7958, and Fix #874.

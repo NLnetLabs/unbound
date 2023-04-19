@@ -1018,7 +1018,7 @@ make_sock(int stype, const char* ifname, const char* port,
 		log_err("node %s:%s getaddrinfo: %s %s", 
 			ifname?ifname:"default", port, gai_strerror(r),
 #ifdef EAI_SYSTEM
-			r==EAI_SYSTEM?(char*)strerror(errno):""
+			(r==EAI_SYSTEM?(char*)strerror(errno):"")
 #else
 			""
 #endif
@@ -1252,7 +1252,8 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 		if((s = make_sock_port(SOCK_DGRAM, ifname, port, hints, 1,
 			&noip6, rcv, snd, reuseport, transparent,
 			tcp_mss, nodelay, freebind, use_systemd, dscp, ub_sock)) == -1) {
-			freeaddrinfo(ub_sock->addr);
+			if(ub_sock->addr)
+				freeaddrinfo(ub_sock->addr);
 			free(ub_sock);
 			if(noip6) {
 				log_warn("IPv6 protocol not available");
@@ -1263,7 +1264,8 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 		/* getting source addr packet info is highly non-portable */
 		if(!set_recvpktinfo(s, hints->ai_family)) {
 			sock_close(s);
-			freeaddrinfo(ub_sock->addr);
+			if(ub_sock->addr)
+				freeaddrinfo(ub_sock->addr);
 			free(ub_sock);
 			return 0;
 		}
@@ -1271,7 +1273,8 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 			?listen_type_udpancil_dnscrypt:listen_type_udpancil,
 			is_pp2, ub_sock)) {
 			sock_close(s);
-			freeaddrinfo(ub_sock->addr);
+			if(ub_sock->addr)
+				freeaddrinfo(ub_sock->addr);
 			free(ub_sock);
 			return 0;
 		}
@@ -1283,7 +1286,8 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 		if((s = make_sock_port(SOCK_DGRAM, ifname, port, hints, 1,
 			&noip6, rcv, snd, reuseport, transparent,
 			tcp_mss, nodelay, freebind, use_systemd, dscp, ub_sock)) == -1) {
-			freeaddrinfo(ub_sock->addr);
+			if(ub_sock->addr)
+				freeaddrinfo(ub_sock->addr);
 			free(ub_sock);
 			if(noip6) {
 				log_warn("IPv6 protocol not available");
@@ -1295,7 +1299,8 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 			?listen_type_udp_dnscrypt:listen_type_udp,
 			is_pp2, ub_sock)) {
 			sock_close(s);
-			freeaddrinfo(ub_sock->addr);
+			if(ub_sock->addr)
+				freeaddrinfo(ub_sock->addr);
 			free(ub_sock);
 			return 0;
 		}
@@ -1318,7 +1323,8 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 		if((s = make_sock_port(SOCK_STREAM, ifname, port, hints, 1,
 			&noip6, 0, 0, reuseport, transparent, tcp_mss, nodelay,
 			freebind, use_systemd, dscp, ub_sock)) == -1) {
-			freeaddrinfo(ub_sock->addr);
+			if(ub_sock->addr)
+				freeaddrinfo(ub_sock->addr);
 			free(ub_sock);
 			if(noip6) {
 				/*log_warn("IPv6 protocol not available");*/
@@ -1330,7 +1336,8 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 			verbose(VERB_ALGO, "setup TCP for SSL service");
 		if(!port_insert(list, s, port_type, is_pp2, ub_sock)) {
 			sock_close(s);
-			freeaddrinfo(ub_sock->addr);
+			if(ub_sock->addr)
+				freeaddrinfo(ub_sock->addr);
 			free(ub_sock);
 			return 0;
 		}
@@ -1908,7 +1915,8 @@ void listening_ports_free(struct listen_port* list)
 		}
 		/* rc_ports don't have ub_socket */
 		if(list->socket) {
-			freeaddrinfo(list->socket->addr);
+			if(list->socket->addr)
+				freeaddrinfo(list->socket->addr);
 			free(list->socket);
 		}
 		free(list);
