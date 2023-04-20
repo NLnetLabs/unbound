@@ -198,7 +198,7 @@ CHECKCONF_OBJ=unbound-checkconf.lo worker_cb.lo
 CHECKCONF_OBJ_LINK=$(CHECKCONF_OBJ) $(COMMON_OBJ_ALL_SYMBOLS) $(SLDNS_OBJ) \
 $(COMPAT_OBJ) @WIN_CHECKCONF_OBJ_LINK@
 CONTROL_SRC=smallapp/unbound-control.c
-CONTROL_OBJ=unbound-control.lo 
+CONTROL_OBJ=unbound-control.lo
 CONTROL_OBJ_LINK=$(CONTROL_OBJ) worker_cb.lo $(COMMON_OBJ_ALL_SYMBOLS) \
 $(SLDNS_OBJ) $(COMPAT_OBJ) @WIN_CONTROL_OBJ_LINK@
 HOST_SRC=smallapp/unbound-host.c
@@ -516,7 +516,7 @@ distclean: clean
 	rm -f doc/example.conf doc/libunbound.3 doc/unbound-anchor.8 doc/unbound-checkconf.8 doc/unbound-control.8 doc/unbound.8 doc/unbound.conf.5 doc/unbound-host.1
 	rm -f smallapp/unbound-control-setup.sh dnstap/dnstap_config.h dnscrypt/dnscrypt_config.h contrib/libunbound.pc contrib/unbound.socket contrib/unbound.service
 	rm -f $(TEST_BIN)
-	rm -f Makefile 
+	rm -f Makefile
 
 maintainer-clean: distclean
 	rm -f util/configlexer.c util/configparser.c util/configparser.h
@@ -649,7 +649,7 @@ uninstall:	$(PYTHONMOD_UNINSTALL) $(PYUNBOUND_UNINSTALL) $(UNBOUND_EVENT_UNINSTA
 
 iana_update:
 	curl -o port-numbers.tmp https://www.iana.org/assignments/service-names-port-numbers/service-names-port-numbers.xml --compressed
-	if file port-numbers.tmp | grep 'gzip' >/dev/null; then zcat port-numbers.tmp; else cat port-numbers.tmp; fi | awk '/<record>/ {p=0;} /<protocol>udp/ {p=1;} /<protocol>[^u]/ {p=0;} /Decomissioned|Decommissioned|Removed|De-registered|unassigned|Unassigned|Reserved/ {u=1;} /<number>/ { if(u==1) {u=0;} else { if(p==1) { match($$0,/[0-9]+/); print substr($$0, RSTART, RLENGTH) ","}}}' | sort -nu > util/iana_ports.inc  
+	if file port-numbers.tmp | grep 'gzip' >/dev/null; then zcat port-numbers.tmp; else cat port-numbers.tmp; fi | awk '/<record>/ {p=0;} /<protocol>udp/ {p=1;} /<protocol>[^u]/ {p=0;} /Decomissioned|Decommissioned|Removed|De-registered|unassigned|Unassigned|Reserved/ {u=1;} /<number>/ { if(u==1) {u=0;} else { if(p==1) { match($$0,/[0-9]+/); print substr($$0, RSTART, RLENGTH) ","}}}' | sort -nu > util/iana_ports.inc
 	rm -f port-numbers.tmp
 
 # dependency generation
@@ -877,7 +877,7 @@ rpz.lo rpz.o: $(srcdir)/services/rpz.c config.h $(srcdir)/services/rpz.h $(srcdi
 outbound_list.lo outbound_list.o: $(srcdir)/services/outbound_list.c config.h \
  $(srcdir)/services/outbound_list.h $(srcdir)/services/outside_network.h $(srcdir)/util/rbtree.h \
  $(srcdir)/util/netevent.h $(srcdir)/dnscrypt/dnscrypt.h  \
- 
+
 outside_network.lo outside_network.o: $(srcdir)/services/outside_network.c config.h \
  $(srcdir)/services/outside_network.h $(srcdir)/util/rbtree.h $(srcdir)/util/netevent.h \
  $(srcdir)/dnscrypt/dnscrypt.h   \
@@ -1186,7 +1186,7 @@ unitmain.lo unitmain.o: $(srcdir)/testcode/unitmain.c config.h $(srcdir)/sldns/r
  $(srcdir)/util/storage/dnstree.h $(srcdir)/util/rbtree.h $(srcdir)/util/netevent.h $(srcdir)/dnscrypt/dnscrypt.h \
   $(srcdir)/util/random.h $(srcdir)/respip/respip.h \
  $(srcdir)/services/localzone.h $(srcdir)/services/view.h $(srcdir)/sldns/sbuffer.h \
- $(srcdir)/services/outside_network.h 
+ $(srcdir)/services/outside_network.h
 unitmsgparse.lo unitmsgparse.o: $(srcdir)/testcode/unitmsgparse.c config.h $(srcdir)/util/log.h \
  $(srcdir)/testcode/unitmain.h $(srcdir)/util/data/msgparse.h $(srcdir)/util/storage/lruhash.h \
  $(srcdir)/util/locks.h $(srcdir)/sldns/pkthdr.h $(srcdir)/sldns/rrdef.h $(srcdir)/util/data/msgreply.h \

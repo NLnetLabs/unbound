@@ -303,7 +303,7 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_serve_expired |
 	server_serve_expired_ttl | server_serve_expired_ttl_reset |
 	server_serve_expired_reply_ttl | server_serve_expired_client_timeout |
-	server_ede_serve_expired | server_serve_original_ttl | server_fake_dsa | 
+	server_ede_serve_expired | server_serve_original_ttl | server_fake_dsa |
 	server_log_identity | server_use_systemd |
 	server_response_ip_tag | server_response_ip | server_response_ip_data |
 	server_shm_enable | server_shm_key | server_fake_sha1 |
@@ -488,7 +488,7 @@ rpz_signal_nxdomain_ra: VAR_RPZ_SIGNAL_NXDOMAIN_RA STRING_ARG
 rpzstart: VAR_RPZ
 	{
 		struct config_auth* s;
-		OUTYY(("\nP(rpz:)\n")); 
+		OUTYY(("\nP(rpz:)\n"));
 		cfg_parser->started_toplevel = 1;
 		s = (struct config_auth*)calloc(1, sizeof(struct config_auth));
 		if(s) {
@@ -504,7 +504,7 @@ rpzstart: VAR_RPZ
 		}
 	}
 	;
-contents_rpz: contents_rpz content_rpz 
+contents_rpz: contents_rpz content_rpz
 	| ;
 content_rpz: auth_name | auth_zonefile | rpz_tag | auth_master | auth_url |
 	   auth_allow_notify | rpz_action_override | rpz_cname_override |
@@ -2726,7 +2726,7 @@ server_pad_responses: VAR_PAD_RESPONSES STRING_ARG
 		OUTYY(("P(server_pad_responses:%s)\n", $2));
 		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
 			yyerror("expected yes or no.");
-		else cfg_parser->cfg->pad_responses = 
+		else cfg_parser->cfg->pad_responses =
 			(strcmp($2, "yes")==0);
 		free($2);
 	}
@@ -2745,7 +2745,7 @@ server_pad_queries: VAR_PAD_QUERIES STRING_ARG
 		OUTYY(("P(server_pad_queries:%s)\n", $2));
 		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
 			yyerror("expected yes or no.");
-		else cfg_parser->cfg->pad_queries = 
+		else cfg_parser->cfg->pad_queries =
 			(strcmp($2, "yes")==0);
 		free($2);
 	}
@@ -3485,8 +3485,8 @@ py_script: VAR_PYTHON_SCRIPT STRING_ARG
 			yyerror("out of memory");
 	}
 dynlibstart: VAR_DYNLIB
-	{ 
-		OUTYY(("\nP(dynlib:)\n")); 
+	{
+		OUTYY(("\nP(dynlib:)\n"));
 		cfg_parser->started_toplevel = 1;
 	}
 	;
