@@ -63,6 +63,7 @@
 #include "util/data/dname.h"
 #include "respip/respip.h"
 #include "services/listen_dnsport.h"
+#include "iterator/iter_utils.h"
 
 #ifdef CLIENT_SUBNET
 #include "edns-subnet/subnetmod.h"
@@ -956,6 +957,10 @@ mesh_state_create(struct module_env* env, struct query_info* qinfo,
 	mstate->s.edns_opts_back_out = NULL;
 	mstate->s.edns_opts_back_in = NULL;
 	mstate->s.edns_opts_front_out = NULL;
+
+	/* Pre-seed no_cache_store based on stub/forward info. */
+	if (iter_stub_fwd_no_cache(&mstate->s, &mstate->s.qinfo, NULL, NULL))
+		mstate->s.no_cache_store = 1;
 
 	return mstate;
 }
