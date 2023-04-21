@@ -681,6 +681,8 @@ print_stats(RES* ssl, const char* nm, struct ub_stats_info* s)
 		(unsigned long)s->svr.num_queries_prefetch)) return 0;
 	if(!ssl_printf(ssl, "%s.num.queries_timed_out"SQ"%lu\n", nm,
 		(unsigned long)s->svr.num_queries_timed_out)) return 0;
+	if(!ssl_printf(ssl, "%s.query.queue_time_us.max"SQ"%lu\n", nm,
+		(unsigned long)s->svr.max_query_time_us)) return 0;
 	if(!ssl_printf(ssl, "%s.num.expired"SQ"%lu\n", nm,
 		(unsigned long)s->svr.ans_expired)) return 0;
 	if(!ssl_printf(ssl, "%s.num.recursivereplies"SQ"%lu\n", nm,

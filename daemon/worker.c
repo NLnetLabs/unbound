@@ -1281,6 +1281,7 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 	int is_expired_answer = 0;
 	int is_secure_answer = 0;
 	int rpz_passthru = 0;
+	long long wait_queue_time = 0;
 	/* We might have to chase a CNAME chain internally, in which case
 	 * we'll have up to two replies and combine them to build a complete
 	 * answer.  These variables control this case. */
@@ -1289,6 +1290,7 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 	struct query_info* lookup_qinfo = &qinfo;
 	struct query_info qinfo_tmp; /* placeholder for lookup_qinfo */
 	struct respip_client_info* cinfo = NULL, cinfo_tmp;
+	struct timeval wait_time;
 	memset(&qinfo, 0, sizeof(qinfo));
 
 	if((error != NETEVENT_NOERROR && error != NETEVENT_DONE)|| !repinfo) {
@@ -1297,9 +1299,13 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 		return 0;
 	}
 
-	if (worker->env.cfg->sock_queue_timeout && timeval_isset(c->recv_tv)) {
-	  c->recv_tv.tv_sec += worker->env.cfg->sock_queue_timeout;
-		if (timeval_smaller(c->recv_tv, worker->env.now_tv)) {
+	if (worker->env.cfg->sock_queue_timeout && timeval_isset(&c->recv_tv)) {
+		timeval_subtract(&wait_time, worker->env.now_tv, &c->recv_tv);
+		wait_queue_time = wait_time.tv_sec * 1000000 +  wait_time.tv_usec;
+		if (worker->stats.max_query_time_us < wait_queue_time)
+			worker->stats.max_query_time_us = wait_queue_time;
+		c->recv_tv.tv_sec += worker->env.cfg->sock_queue_timeout;
+		if (timeval_smaller(&c->recv_tv, worker->env.now_tv)) {
 		/* count and drop queries that were sitting in the socket queue too long */
 			worker->stats.num_queries_timed_out++;
 			return 0;

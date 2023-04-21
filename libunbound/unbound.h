@@ -701,7 +701,8 @@ struct ub_server_stats {
 	long long num_queries_prefetch;
 	/** number of queries which are too late to process */
 	long long num_queries_timed_out;
-
+	/** the longest wait time in the queue */
+	long long max_query_time_us;
 	/**
 	 * Sum of the querylistsize of the worker for
 	 * every query that missed cache. To calculate average.
