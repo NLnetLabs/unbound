@@ -761,8 +761,11 @@ static int udp_recv_needs_log(int err)
 static int consume_pp2_header(struct sldns_buffer* buf, struct comm_reply* rep,
 	int stream) {
 	size_t size;
-	struct pp2_header *header = pp2_read_header(buf);
-	if(header == NULL) return 0;
+	struct pp2_header *header;
+	int err = pp2_read_header(sldns_buffer_begin(buf),
+		sldns_buffer_remaining(buf));
+	if(err) return 0;
+	header = (struct pp2_header*)sldns_buffer_begin(buf);
 	size = PP2_HEADER_SIZE + ntohs(header->len);
 	if((header->ver_cmd & 0xF) == PP2_CMD_LOCAL) {
 		/* A connection from the proxy itself.
@@ -803,6 +806,10 @@ static int consume_pp2_header(struct sldns_buffer* buf, struct comm_reply* rep,
 			}
 			/* Ignore the destination address; it should be us. */
 			break;
+		default:
+			log_err("proxy_protocol: unsupported family and "
+				"protocol");
+			return 0;
 	}
 	rep->is_proxied = 1;
 done:
@@ -1675,12 +1682,17 @@ ssl_handle_read(struct comm_point* c)
 			}
 		}
 		if(c->pp2_header_state == pp2_header_init) {
-			header = pp2_read_header(c->buffer);
-			if(!header) {
+			int err;
+			err = pp2_read_header(
+				sldns_buffer_begin(c->buffer),
+				sldns_buffer_remaining(c->buffer));
+			if(err) {
 				log_err("proxy_protocol: could not parse "
-					"PROXYv2 header");
+					"PROXYv2 header (%s)",
+					pp_lookup_error(err));
 				return 0;
 			}
+			header = (struct pp2_header*)sldns_buffer_begin(c->buffer);
 			want_read_size = ntohs(header->len);
 			if(sldns_buffer_remaining(c->buffer) <
 				PP2_HEADER_SIZE + want_read_size) {
@@ -2067,12 +2079,17 @@ comm_point_tcp_handle_read(int fd, struct comm_point* c, int short_ok)
 			}
 		}
 		if(c->pp2_header_state == pp2_header_init) {
-			header = pp2_read_header(c->buffer);
-			if(!header) {
+			int err;
+			err = pp2_read_header(
+				sldns_buffer_begin(c->buffer),
+				sldns_buffer_remaining(c->buffer));
+			if(err) {
 				log_err("proxy_protocol: could not parse "
-					"PROXYv2 header");
+					"PROXYv2 header (%s)",
+					pp_lookup_error(err));
 				return 0;
 			}
+			header = (struct pp2_header*)sldns_buffer_begin(c->buffer);
 			want_read_size = ntohs(header->len);
 			if(sldns_buffer_remaining(c->buffer) <
 				PP2_HEADER_SIZE + want_read_size) {

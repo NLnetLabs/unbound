@@ -42,7 +42,7 @@
 #ifndef PROXY_PROTOCOL_H
 #define PROXY_PROTOCOL_H
 
-#include "sldns/sbuffer.h"
+#include "config.h"
 
 /** PROXYv2 minimum header size */
 #define PP2_HEADER_SIZE 16
@@ -110,22 +110,50 @@ struct pp2_header {
 };
 
 /**
+ * PROXY parse errors.
+ */
+enum pp_parse_errors {
+	PP_PARSE_NOERROR = 0,
+	PP_PARSE_SIZE,
+	PP_PARSE_WRONG_HEADERv2,
+	PP_PARSE_UNKNOWN_CMD,
+	PP_PARSE_UNKNOWN_FAM_PROT,
+};
+
+/**
+ * Initialize the internal proxy structure.
+ * @param write_uint16: pointer to a function that can write uint16.
+ * @param write_uint32: pointer to a function that can write uint32.
+ */
+void pp_init(void (*write_uint16)(void* buf, uint16_t data),
+	void (*write_uint32)(void* buf, uint32_t data));
+
+/**
+ * Lookup the parsing error description.
+ * @param error: parsing error from pp2_read_header.
+ * @return the description.
+ */
+const char* pp_lookup_error(enum pp_parse_errors error);
+
+/**
  * Write a PROXYv2 header at the current position of the buffer.
- * @param buf: the buffer to write to.
+ * @param buf: pointer to the buffer to write data to.
+ * @param buflen: available size on the buffer.
  * @param src: the source address.
  * @param stream: if the protocol is stream or datagram.
  * @return 1 on success, 0 on failure.
  */
-int pp2_write_to_buf(struct sldns_buffer* buf, struct sockaddr_storage* src,
-	int stream);
+size_t pp2_write_to_buf(uint8_t* buf, size_t buflen,
+	struct sockaddr_storage* src, int stream);
 
 /**
  * Read a PROXYv2 header from the current position of the buffer.
  * It does initial validation and returns a pointer to the buffer position on
  * success.
- * @param buf: the buffer to read from.
- * @return the pointer to the buffer position on success, NULL on error.
+ * @param buf: pointer to the buffer data to read from.
+ * @param buflen: available size on the buffer.
+ * @return parsing error, 0 on success.
  */
-struct pp2_header* pp2_read_header(struct sldns_buffer* buf);
+int pp2_read_header(uint8_t* buf, size_t buflen);
 
 #endif /* PROXY_PROTOCOL_H */

@@ -353,6 +353,7 @@ static int parse_pp2_client(const char* pp2_client, int udp,
 	sldns_buffer* proxy_buf)
 {
 	struct sockaddr_storage pp2_addr;
+	size_t bytes_written;
 	socklen_t pp2_addrlen = 0;
 	memset(&pp2_addr, 0, sizeof(pp2_addr));
 	if(*pp2_client == 0) return 0;
@@ -361,7 +362,9 @@ static int parse_pp2_client(const char* pp2_client, int udp,
 		exit(1);
 	}
 	sldns_buffer_clear(proxy_buf);
-	pp2_write_to_buf(proxy_buf, &pp2_addr, !udp);
+	bytes_written = pp2_write_to_buf(sldns_buffer_begin(proxy_buf),
+		sldns_buffer_remaining(proxy_buf), &pp2_addr, !udp);
+	sldns_buffer_set_position(proxy_buf, bytes_written);
 	sldns_buffer_flip(proxy_buf);
 	return 1;
 }
@@ -529,6 +532,8 @@ int main(int argc, char** argv)
 				break;
 			case 'p':
 				pp2_client = optarg;
+				pp_init(&sldns_write_uint16,
+					&sldns_write_uint32);
 				break;
 			case 'a':
 				onarrival = 1;
