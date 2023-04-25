@@ -83,7 +83,12 @@ pp_lookup_error(enum pp_parse_errors error) {
 }
 
 size_t
-pp2_write_to_buf(uint8_t* buf, size_t buflen, struct sockaddr_storage* src,
+pp2_write_to_buf(uint8_t* buf, size_t buflen,
+#ifdef INET6
+	struct sockaddr_storage* src,
+#else
+	struct sockaddr_in* src,
+#endif
 	int stream)
 {
 	int af;
@@ -123,6 +128,7 @@ pp2_write_to_buf(uint8_t* buf, size_t buflen, struct sockaddr_storage* src,
 		/* dst port */
 		(*pp_data.write_uint16)(buf, 12);
 	} else {
+#ifdef INET6
 		/* family and protocol */
 		*buf = (PP2_AF_INET6<<4) |
 			(stream?PP2_PROT_STREAM:PP2_PROT_DGRAM);
@@ -142,6 +148,9 @@ pp2_write_to_buf(uint8_t* buf, size_t buflen, struct sockaddr_storage* src,
 		buf += 2;
 		/* dst port */
 		(*pp_data.write_uint16)(buf, 0);
+#else
+		return 0;
+#endif /* INET6 */
 	}
 	return expected_size;
 }

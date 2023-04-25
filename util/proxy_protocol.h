@@ -144,7 +144,12 @@ const char* pp_lookup_error(enum pp_parse_errors error);
  * @return 1 on success, 0 on failure.
  */
 size_t pp2_write_to_buf(uint8_t* buf, size_t buflen,
-	struct sockaddr_storage* src, int stream);
+#ifdef INET6
+	struct sockaddr_storage* src,
+#else
+	struct sockaddr_in* src,
+#endif
+	int stream);
 
 /**
  * Read a PROXYv2 header from the current position of the buffer.
