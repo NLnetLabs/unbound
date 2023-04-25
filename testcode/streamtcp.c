@@ -79,6 +79,7 @@ static void usage(char* argv[])
 	printf("-d secs		delay after connection before sending query\n");
 	printf("-s		use ssl\n");
 	printf("-h 		this help text\n");
+	printf("IXFR=N 		for the type, sends ixfr query with serial N.\n");
 	exit(1);
 }
 
@@ -123,6 +124,8 @@ write_q(int fd, int udp, SSL* ssl, sldns_buffer* buf, uint16_t id,
 {
 	struct query_info qinfo;
 	size_t proxy_buf_limit = sldns_buffer_limit(proxy_buf);
+	int have_serial = 0;
+	uint32_t serial = 0;
 	/* qname */
 	qinfo.qname = sldns_str2wire_dname(strname, &qinfo.qname_len);
 	if(!qinfo.qname) {
@@ -131,7 +134,13 @@ write_q(int fd, int udp, SSL* ssl, sldns_buffer* buf, uint16_t id,
 	}
 
 	/* qtype and qclass */
-	qinfo.qtype = sldns_get_rr_type_by_name(strtype);
+	if(strncasecmp(strtype, "IXFR=", 5) == 0) {
+		serial = (uint32_t)atoi(strtype+5);
+		have_serial = 1;
+		qinfo.qtype = LDNS_RR_TYPE_IXFR;
+	} else {
+		qinfo.qtype = sldns_get_rr_type_by_name(strtype);
+	}
 	qinfo.qclass = sldns_get_rr_class_by_name(strclass);
 
 	/* clear local alias */
@@ -141,6 +150,27 @@ write_q(int fd, int udp, SSL* ssl, sldns_buffer* buf, uint16_t id,
 	qinfo_query_encode(buf, &qinfo);
 	sldns_buffer_write_u16_at(buf, 0, id);
 	sldns_buffer_write_u16_at(buf, 2, BIT_RD);
+
+	if(have_serial && qinfo.qtype == LDNS_RR_TYPE_IXFR) {
+		/* Attach serial to SOA record in the authority section. */
+		sldns_buffer_set_position(buf, sldns_buffer_limit(buf));
+		sldns_buffer_set_limit(buf, sldns_buffer_capacity(buf));
+		/* Write compressed reference to the query */
+		sldns_buffer_write_u16(buf, PTR_CREATE(LDNS_HEADER_SIZE));
+		sldns_buffer_write_u16(buf, LDNS_RR_TYPE_SOA);
+		sldns_buffer_write_u16(buf, qinfo.qclass);
+		sldns_buffer_write_u32(buf, 3600); /* TTL */
+		sldns_buffer_write_u16(buf, 1+1+4*5); /* rdatalen */
+		sldns_buffer_write_u8(buf, 0); /* primary "." */
+		sldns_buffer_write_u8(buf, 0); /* email "." */
+		sldns_buffer_write_u32(buf, serial); /* serial */
+		sldns_buffer_write_u32(buf, 0); /* refresh */
+		sldns_buffer_write_u32(buf, 0); /* retry */
+		sldns_buffer_write_u32(buf, 0); /* expire */
+		sldns_buffer_write_u32(buf, 0); /* minimum */
+		LDNS_NSCOUNT_SET(sldns_buffer_begin(buf), 1);
+		sldns_buffer_flip(buf);
+	}
 
 	if(1) {
 		/* add EDNS DO */

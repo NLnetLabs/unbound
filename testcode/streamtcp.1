@@ -61,6 +61,13 @@ Specify the server to send the queries to. If not specified localhost (127.0.0.1
 .B \-d \fIsecs
 Delay after the connection before sending query.  This tests the timeout
 on the other side, eg. if shorter the connection is closed.
+.TP
+.B \-p \fIclient
+Use proxy protocol to send the query. Specify the ipaddr@portnr of the client
+to include in PROXYv2.
+.TP
+.B IXFR=serial
+Pass the type of the query as IXFR=N to send an IXFR query with serial N.
 .SH "EXAMPLES"
 .LP
 Some examples of use.
