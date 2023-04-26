@@ -274,6 +274,10 @@ server:
 	# Timeout for EDNS TCP keepalive, in msec.
 	# edns-tcp-keepalive-timeout: 120000
 
+	# UDP queries that have waited in the socket buffer for a long time
+	# can be dropped. Default is 0, disabled. In seconds, such as 3.
+	# sock-queue-timeout: 0
+
 	# Use systemd socket activation for UDP, TCP, and control sockets.
 	# use-systemd: no
 

@@ -1,7 +1,7 @@
 /*
  * util/timeval_func.c - helpers to work with struct timeval values.
  *
- * Copyright (c) 2007, NLnet Labs. All rights reserved.
+ * Copyright (c) 2023, NLnet Labs. All rights reserved.
  *
  * This software is open source.
  *
@@ -39,6 +39,7 @@
  * This file contains helpers to manipulate struct timeval values.
  */
 
+#include "config.h"
 #include "timeval_func.h"
 
 /** subtract timers and the values do not overflow or become negative */

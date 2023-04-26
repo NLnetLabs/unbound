@@ -1,7 +1,7 @@
 /*
- * util/timeval)func.h - definitions of helpers for strcut timeval values.
+ * util/timeval_func.h - definitions of helpers for struct timeval values.
  *
- * Copyright (c) 2007, NLnet Labs. All rights reserved.
+ * Copyright (c) 2023, NLnet Labs. All rights reserved.
  *
  * This software is open source.
  *

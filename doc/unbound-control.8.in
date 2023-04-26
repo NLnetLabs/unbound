@@ -398,6 +398,14 @@ as a cache response was sent.
 .I threadX.num.expired
 number of replies that served an expired cache entry.
 .TP
+.I threadX.num.queries_timed_out
+number of queries that are dropped because they waited in the UDP socket buffer
+for too long.
+.TP
+.I threadX.query.queue_time_us.max
+The maximum wait time for packets in the socket buffer, in microseconds. This
+is only reported when sock-queue-timeout is enabled.
+.TP
 .I threadX.num.recursivereplies
 The number of replies sent to queries that needed recursive processing. Could be smaller than threadX.num.cachemiss if due to timeouts no replies were sent for some queries.
 .TP
@@ -461,6 +469,12 @@ summed over threads.
 .TP
 .I total.num.expired
 summed over threads.
+.TP
+.I total.num.queries_timed_out
+summed over threads.
+.TP
+.I total.query.queue_time_us.max
+the maximum of the thread values.
 .TP
 .I total.num.recursivereplies
 summed over threads.

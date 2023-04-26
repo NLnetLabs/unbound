@@ -1,3 +1,12 @@
+26 April 2023: Wouter
+	- Merge #882 from vvfedorenko: Features/dropqueuedpackets, with
+	  sock-queue-timeout option that drops packets that have been in the
+	  socket queue for too long. Added statistics num.queries_timed_out
+	  and query.queue_time_us.max that track the socket queue timeouts.
+	- Fix for #882: small changes, date updated in Copyright for
+	  util/timeval_func.c and util/timeval_func.h. Man page entries and
+	  example entry.
+
 19 April 2023: Wouter
 	- Fix for #878: Invalid IP address in unbound.conf causes Segmentation
 	  Fault on OpenBSD.

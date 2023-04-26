@@ -505,6 +505,14 @@ configured, and finally to 0 if the number of free buffers falls below
 A minimum actual timeout of 200 milliseconds is observed regardless of the
 advertised timeout.
 .TP
+.B sock\-queue\-timeout: \fI<sec>\fR
+UDP queries that have waited in the socket buffer for a long time can be
+dropped. Default is 0, disabled. The time is set in seconds, 3 could be a
+good value to ignore old queries that likely the client does not need a reply
+for any more. This could happen if the host has not been able to service
+the queries for a while, i.e. Unbound is not running, and then is enabled
+again. It uses timestamp socket options.
+.TP
 .B tcp\-upstream: \fI<yes or no>
 Enable or disable whether the upstream queries use TCP only for transport.
 Default is no.  Useful in tunneling scenarios. If set to no you can specify
