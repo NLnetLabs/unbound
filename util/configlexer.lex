@@ -209,9 +209,9 @@ SQANY     [^\'\n\r\\]|\\.
 %x	quotedstring singlequotedstr include include_quoted val include_toplevel include_toplevel_quoted
 
 %%
-<INITIAL,val>{SPACE}*	{ 
+<INITIAL,val>{SPACE}*	{
 	LEXOUT(("SP ")); /* ignore */ }
-<INITIAL,val>{SPACE}*{COMMENT}.*	{ 
+<INITIAL,val>{SPACE}*{COMMENT}.*	{
 	/* note that flex makes the longest match and '.' is any but not nl */
 	LEXOUT(("comment(%s) ", yytext)); /* ignore */ }
 server{COLON}			{ YDVAR(0, VAR_SERVER) }
@@ -240,6 +240,7 @@ tcp-reuse-timeout{COLON}	{ YDVAR(1, VAR_TCP_REUSE_TIMEOUT) }
 tcp-auth-query-timeout{COLON}	{ YDVAR(1, VAR_TCP_AUTH_QUERY_TIMEOUT) }
 edns-tcp-keepalive{COLON}	{ YDVAR(1, VAR_EDNS_TCP_KEEPALIVE) }
 edns-tcp-keepalive-timeout{COLON} { YDVAR(1, VAR_EDNS_TCP_KEEPALIVE_TIMEOUT) }
+sock-queue-timeout{COLON} { YDVAR(1, VAR_SOCK_QUEUE_TIMEOUT) }
 ssl-upstream{COLON}		{ YDVAR(1, VAR_SSL_UPSTREAM) }
 tls-upstream{COLON}		{ YDVAR(1, VAR_SSL_UPSTREAM) }
 ssl-service-key{COLON}		{ YDVAR(1, VAR_SSL_SERVICE_KEY) }
@@ -414,7 +415,7 @@ val-log-level{COLON}		{ YDVAR(1, VAR_VAL_LOG_LEVEL) }
 key-cache-size{COLON}		{ YDVAR(1, VAR_KEY_CACHE_SIZE) }
 key-cache-slabs{COLON}		{ YDVAR(1, VAR_KEY_CACHE_SLABS) }
 neg-cache-size{COLON}		{ YDVAR(1, VAR_NEG_CACHE_SIZE) }
-val-nsec3-keysize-iterations{COLON}	{ 
+val-nsec3-keysize-iterations{COLON}	{
 				  YDVAR(1, VAR_VAL_NSEC3_KEYSIZE_ITERATIONS) }
 zonemd-permissive-mode{COLON}	{ YDVAR(1, VAR_ZONEMD_PERMISSIVE_MODE) }
 zonemd-check{COLON}		{ YDVAR(1, VAR_ZONEMD_CHECK) }
@@ -579,7 +580,7 @@ proxy-protocol-port{COLON}	{ YDVAR(1, VAR_PROXY_PROTOCOL_PORT) }
 	else		    { BEGIN(val); }
 }
 <quotedstring>{DQANY}*  { LEXOUT(("STR(%s) ", yytext)); yymore(); }
-<quotedstring>{NEWLINE} { yyerror("newline inside quoted string, no end \""); 
+<quotedstring>{NEWLINE} { yyerror("newline inside quoted string, no end \"");
 			  cfg_parser->line++; BEGIN(INITIAL); }
 <quotedstring>\" {
         LEXOUT(("QE "));
@@ -600,7 +601,7 @@ proxy-protocol-port{COLON}	{ YDVAR(1, VAR_PROXY_PROTOCOL_PORT) }
 	else		    { BEGIN(val); }
 }
 <singlequotedstr>{SQANY}*  { LEXOUT(("STR(%s) ", yytext)); yymore(); }
-<singlequotedstr>{NEWLINE} { yyerror("newline inside quoted string, no end '"); 
+<singlequotedstr>{NEWLINE} { yyerror("newline inside quoted string, no end '");
 			     cfg_parser->line++; BEGIN(INITIAL); }
 <singlequotedstr>\' {
         LEXOUT(("SQE "));
@@ -614,7 +615,7 @@ proxy-protocol-port{COLON}	{ YDVAR(1, VAR_PROXY_PROTOCOL_PORT) }
 }
 
 	/* include: directive */
-<INITIAL,val>include{COLON}	{ 
+<INITIAL,val>include{COLON}	{
 	LEXOUT(("v(%s) ", yytext)); inc_prev = YYSTATE; BEGIN(include); }
 <include><<EOF>>	{
         yyerror("EOF inside include directive");
@@ -633,7 +634,7 @@ proxy-protocol-port{COLON}	{ YDVAR(1, VAR_PROXY_PROTOCOL_PORT) }
         BEGIN(inc_prev);
 }
 <include_quoted>{DQANY}*	{ LEXOUT(("ISTR(%s) ", yytext)); yymore(); }
-<include_quoted>{NEWLINE}	{ yyerror("newline before \" in include name"); 
+<include_quoted>{NEWLINE}	{ yyerror("newline before \" in include name");
 				  cfg_parser->line++; BEGIN(inc_prev); }
 <include_quoted>\"	{
 	LEXOUT(("IQE "));
@@ -688,7 +689,7 @@ proxy-protocol-port{COLON}	{ YDVAR(1, VAR_PROXY_PROTOCOL_PORT) }
 	return (VAR_FORCE_TOPLEVEL);
 }
 
-<val>{UNQUOTEDLETTER}*	{ LEXOUT(("unquotedstr(%s) ", yytext)); 
+<val>{UNQUOTEDLETTER}*	{ LEXOUT(("unquotedstr(%s) ", yytext));
 			if(--num_args == 0) { BEGIN(INITIAL); }
 			yylval.str = strdup(yytext); return STRING_ARG; }
 
