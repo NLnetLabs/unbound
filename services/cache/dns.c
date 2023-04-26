@@ -132,26 +132,6 @@ msg_cache_remove(struct module_env* env, uint8_t* qname, size_t qnamelen,
 	slabhash_remove(env->msg_cache, h, &k);
 }
 
-/** remove servfail msg cache entry */
-static void
-msg_del_for_0ttl(struct module_env* env, struct query_info* qinfo,
-	uint32_t flags)
-{
-	struct msgreply_entry* e;
-	/* see if there is an existing entry, and then remove it, so that
-	 * lookups move from the cacheresponse stage to the recursionresponse
-	 * stage */
-	e = msg_cache_lookup(env, qinfo->qname, qinfo->qname_len,
-		qinfo->qtype, qinfo->qclass, flags, 0, 0);
-	if(!e) return;
-	/* we don't check for the ttl here, also expired entries
-	 * are removed.  If the user uses serve-expired, they would still be
-	 * used to answer from cache */
-	lock_rw_unlock(&e->entry.lock);
-	msg_cache_remove(env, qinfo->qname, qinfo->qname_len, qinfo->qtype,
-		qinfo->qclass, flags);
-}
-
 void 
 dns_cache_store_msg(struct module_env* env, struct query_info* qinfo,
 	hashvalue_type hash, struct reply_info* rep, time_t leeway, int pside,
@@ -189,7 +169,8 @@ dns_cache_store_msg(struct module_env* env, struct query_info* qinfo,
 		 * - NODATA
 		 * - an older record that is expired
 		 * - an older record that did not yet expire */
-		msg_del_for_0ttl(env, qinfo, flags);
+		msg_cache_remove(env, qinfo->qname, qinfo->qname_len,
+			qinfo->qtype, qinfo->qclass, flags);
 		return;
 	}
 
