@@ -1,3 +1,6 @@
+26 April 2023: Philip
+	- Fix issue #860: Bad interaction with 0 TTL records and serve-expired
+
 26 April 2023: Wouter
 	- Merge #882 from vvfedorenko: Features/dropqueuedpackets, with
 	  sock-queue-timeout option that drops packets that have been in the
