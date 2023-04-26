@@ -1378,7 +1378,7 @@ struct delegpt* dns_cache_find_delegation(struct module_env* env,
         struct regional* region, struct dns_msg** msg, uint32_t timenow,
         int noexpiredabove, uint8_t* expiretop, size_t expiretoplen);
 int iter_dp_is_useless(struct query_info* qinfo, uint16_t qflags,
-        struct delegpt* dp, int supports_ipv4, int supports_ipv6);
+        struct delegpt* dp, int supports_ipv4, int supports_ipv6, int use_nat64);
 struct iter_hints_stub* hints_lookup_stub(struct iter_hints* hints,
         uint8_t* qname, uint16_t qclass, struct delegpt* dp);
 
@@ -1409,7 +1409,8 @@ struct delegpt* find_delegation(struct module_qstate* qstate, char *nm, size_t n
         if(!dp)
             return NULL;
         if(iter_dp_is_useless(&qinfo, BIT_RD, dp,
-                qstate->env->cfg->do_ip4, qstate->env->cfg->do_ip6)) {
+                qstate->env->cfg->do_ip4, qstate->env->cfg->do_ip6,
+                qstate->env->cfg->do_nat64)) {
             if (dname_is_root((uint8_t*)nm))
                 return NULL;
             nm = (char*)dp->name;

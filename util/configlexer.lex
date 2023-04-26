@@ -227,6 +227,7 @@ outgoing-num-tcp{COLON}		{ YDVAR(1, VAR_OUTGOING_NUM_TCP) }
 incoming-num-tcp{COLON}		{ YDVAR(1, VAR_INCOMING_NUM_TCP) }
 do-ip4{COLON}			{ YDVAR(1, VAR_DO_IP4) }
 do-ip6{COLON}			{ YDVAR(1, VAR_DO_IP6) }
+do-nat64{COLON}			{ YDVAR(1, VAR_DO_NAT64) }
 prefer-ip4{COLON}		{ YDVAR(1, VAR_PREFER_IP4) }
 prefer-ip6{COLON}		{ YDVAR(1, VAR_PREFER_IP6) }
 do-udp{COLON}			{ YDVAR(1, VAR_DO_UDP) }
@@ -464,6 +465,7 @@ max-udp-size{COLON}		{ YDVAR(1, VAR_MAX_UDP_SIZE) }
 dns64-prefix{COLON}		{ YDVAR(1, VAR_DNS64_PREFIX) }
 dns64-synthall{COLON}		{ YDVAR(1, VAR_DNS64_SYNTHALL) }
 dns64-ignore-aaaa{COLON}	{ YDVAR(1, VAR_DNS64_IGNORE_AAAA) }
+nat64-prefix{COLON}		{ YDVAR(1, VAR_NAT64_PREFIX) }
 define-tag{COLON}		{ YDVAR(1, VAR_DEFINE_TAG) }
 local-zone-tag{COLON}		{ YDVAR(2, VAR_LOCAL_ZONE_TAG) }
 access-control-tag{COLON}	{ YDVAR(2, VAR_ACCESS_CONTROL_TAG) }

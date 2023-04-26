@@ -192,7 +192,8 @@ void iter_mark_pside_cycle_targets(struct module_qstate* qstate,
  * @return true if dp is useless.
  */
 int iter_dp_is_useless(struct query_info* qinfo, uint16_t qflags, 
-	struct delegpt* dp, int supports_ipv4, int supports_ipv6);
+	struct delegpt* dp, int supports_ipv4, int supports_ipv6,
+	int use_nat64);
 
 /**
  * See if qname has DNSSEC needs.  This is true if there is a trust anchor above
