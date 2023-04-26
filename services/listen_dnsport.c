@@ -1234,6 +1234,9 @@ if_is_ssl(const char* ifname, const char* port, int ssl_port,
  * @param use_systemd: if true, fetch sockets from systemd.
  * @param dnscrypt_port: dnscrypt service port number
  * @param dscp: DSCP to use.
+ * @param sock_queue_timeout: the sock_queue_timeout from config. Seconds to
+ * 	wait to discard if UDP packets have waited for long in the socket
+ * 	buffer.
  * @return: returns false on error.
  */
 static int
