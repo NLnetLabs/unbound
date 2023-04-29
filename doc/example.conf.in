@@ -820,6 +820,8 @@ server:
 	#   that name
 	# o block_a resolves all records normally but returns
 	#   NODATA for A queries and ignores local data for that name
+	# o block_aaaa resolves all records normally but returns
+	#   NODATA for AAAA queries and ignores local data for that name
 	# o always_null returns 0.0.0.0 or ::0 for any name in the zone.
 	# o noview breaks out of that view towards global local-zones.
 	#
