@@ -3,6 +3,7 @@ server:
 	do-nat64: yes
 	nat64-prefix: 2001:db8:1234::/96
 	target-fetch-policy: "0 0 0 0 0"
+	do-ip4: no
 
 stub-zone:
 	name: "."

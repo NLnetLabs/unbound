@@ -103,7 +103,7 @@ extern int BLACKLIST_PENALTY;
 #define RTT_BAND 400
 
 /**
- * Global state for the iterator. 
+ * Global state for the iterator.
  */
 struct iter_env {
 	/** A flag to indicate whether or not we have an IPv6 route */

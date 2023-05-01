@@ -180,25 +180,23 @@ iter_apply_cfg(struct iter_env* iter_env, struct config_file* cfg)
 	}
 
 	nat64_prefix = cfg->nat64_prefix;
-	if (!nat64_prefix)
+	if(!nat64_prefix)
 		nat64_prefix = cfg->dns64_prefix;
-	if (!nat64_prefix)
+	if(!nat64_prefix)
 		nat64_prefix = DEFAULT_NAT64_PREFIX;
-	if (!netblockstrtoaddr(nat64_prefix, 0, &iter_env->nat64_prefix_addr,
-			       &iter_env->nat64_prefix_addrlen,
-			       &iter_env->nat64_prefix_net)) {
+	if(!netblockstrtoaddr(nat64_prefix, 0, &iter_env->nat64_prefix_addr,
+		&iter_env->nat64_prefix_addrlen,
+		&iter_env->nat64_prefix_net)) {
 		log_err("cannot parse nat64-prefix netblock: %s", nat64_prefix);
 		return 0;
 	}
-	if (!addr_is_ip6(&iter_env->nat64_prefix_addr,
-			 iter_env->nat64_prefix_addrlen)) {
-		log_err("nat64_prefix is not IPv6: %s", cfg->nat64_prefix);
+	if(!addr_is_ip6(&iter_env->nat64_prefix_addr,
+		iter_env->nat64_prefix_addrlen)) {
+		log_err("nat64-prefix is not IPv6: %s", cfg->nat64_prefix);
 		return 0;
 	}
-	if (iter_env->nat64_prefix_net != 32 && iter_env->nat64_prefix_net != 40 &&
-	    iter_env->nat64_prefix_net != 48 && iter_env->nat64_prefix_net != 56 &&
-	    iter_env->nat64_prefix_net != 64 && iter_env->nat64_prefix_net != 96 ) {
-		log_err("dns64-prefix length it not 32, 40, 48, 56, 64 or 96: %s",
+	if(!prefixnet_is_nat64(iter_env->nat64_prefix_net)) {
+		log_err("nat64-prefix length it not 32, 40, 48, 56, 64 or 96: %s",
 			nat64_prefix);
 		return 0;
 	}
@@ -780,12 +778,13 @@ iter_mark_pside_cycle_targets(struct module_qstate* qstate, struct delegpt* dp)
 
 int
 iter_dp_is_useless(struct query_info* qinfo, uint16_t qflags,
-	struct delegpt* dp, int supports_ipv4, int supports_ipv6, int use_nat64)
+	struct delegpt* dp, int supports_ipv4, int supports_ipv6,
+	int use_nat64)
 {
 	struct delegpt_ns* ns;
 	struct delegpt_addr* a;
 
-	if (supports_ipv6 && use_nat64)
+	if(supports_ipv6 && use_nat64)
 		supports_ipv4 = 1;
 
 	/* check:

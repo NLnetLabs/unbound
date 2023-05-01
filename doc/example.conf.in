@@ -248,6 +248,8 @@ server:
 	# the network, unbound can use NAT64 to reach these servers with
 	# the following option.  This is NOT needed for enabling DNS64 on a
 	# system that has IPv4 connectivity.
+	# Consider also enabling prefer-ip6 to prefer native IPv6 connections
+	# to nameservers.
 	# do-nat64: no
 
 	# NAT64 prefix.  Defaults to using dns64-prefix value.

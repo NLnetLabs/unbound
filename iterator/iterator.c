@@ -1557,17 +1557,17 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 
 		/* see if this dp not useless.
 		 * It is useless if:
-		 *	o all NS items are required glue. 
+		 *	o all NS items are required glue.
 		 *	  or the query is for NS item that is required glue.
 		 *	o no addresses are provided.
 		 *	o RD qflag is on.
 		 * Instead, go up one level, and try to get even further
-		 * If the root was useless, use safety belt information. 
+		 * If the root was useless, use safety belt information.
 		 * Only check cache returns, because replies for servers
 		 * could be useless but lead to loops (bumping into the
 		 * same server reply) if useless-checked.
 		 */
-		if(iter_dp_is_useless(&qstate->qinfo, qstate->query_flags, 
+		if(iter_dp_is_useless(&qstate->qinfo, qstate->query_flags,
 			iq->dp, ie->supports_ipv4, ie->supports_ipv6,
 			ie->use_nat64)) {
 			struct delegpt* retdp = NULL;
@@ -1930,7 +1930,7 @@ query_for_targets(struct module_qstate* qstate, struct iter_qstate* iq,
 				break;
 		}
 		/* Send the A request. */
-		if(ie->supports_ipv4 &&
+		if((ie->supports_ipv4 || ie->use_nat64) &&
 			((ns->lame && !ns->done_pside4) ||
 			(!ns->lame && !ns->got4))) {
 			if(!generate_target_query(qstate, iq, id, 
@@ -2257,6 +2257,8 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 	int tf_policy;
 	struct delegpt_addr* target;
 	struct outbound_entry* outq;
+	struct sockaddr_storage real_addr;
+	socklen_t real_addrlen;
 	int auth_fallback = 0;
 	uint8_t* qout_orig = NULL;
 	size_t qout_orig_len = 0;
@@ -2803,45 +2805,22 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 	/* We have a valid target. */
 	if(verbosity >= VERB_QUERY) {
 		log_query_info(VERB_QUERY, "sending query:", &iq->qinfo_out);
-		log_name_addr(VERB_QUERY, "sending to target:", iq->dp->name, 
+		log_name_addr(VERB_QUERY, "sending to target:", iq->dp->name,
 			&target->addr, target->addrlen);
 		verbose(VERB_ALGO, "dnssec status: %s%s",
 			iq->dnssec_expected?"expected": "not expected",
 			iq->dnssec_lame_query?" but lame_query anyway": "");
 	}
 
-	struct sockaddr_storage real_addr = target->addr;
-	socklen_t real_addrlen = target->addrlen;
+	real_addr = target->addr;
+	real_addrlen = target->addrlen;
 
-	if (ie->use_nat64 && real_addr.ss_family == AF_INET) {
-		struct sockaddr_in *sin = (struct sockaddr_in *)&target->addr;
-		struct sockaddr_in6 *sin6;
-		int plen = ie->nat64_prefix_net;
-		uint8_t *v4_byte;
-
-		real_addr = ie->nat64_prefix_addr;
-		real_addrlen = ie->nat64_prefix_addrlen;
-
-		sin6 = (struct sockaddr_in6 *)&real_addr;
-		sin6->sin6_flowinfo = 0;
-		sin6->sin6_port = sin->sin_port;
-
-		/* config validation enforces these prefix lengths too */
-		log_assert(plen == 32 || plen == 40 || plen == 48 || plen == 56
-			   || plen == 64 || plen == 96);
-		plen = plen / 8;
-
-		v4_byte = (uint8_t *)&sin->sin_addr.s_addr;
-		for (int i = 0; i < 4; i++) {
-			if (plen == 8)
-				/* bits 64...72 are MBZ */
-				sin6->sin6_addr.s6_addr[plen++] = 0;
-
-			sin6->sin6_addr.s6_addr[plen++] = *v4_byte++;
-		}
-
-		log_name_addr(VERB_QUERY, "applied NAT64:", iq->dp->name,
-			&real_addr, real_addrlen);
+	if(ie->use_nat64 && target->addr.ss_family == AF_INET) {
+		addr_to_nat64(&target->addr, &ie->nat64_prefix_addr,
+			ie->nat64_prefix_addrlen, ie->nat64_prefix_net,
+			&real_addr, &real_addrlen);
+		log_name_addr(VERB_QUERY, "applied NAT64:",
+			iq->dp->name, &real_addr, real_addrlen);
 	}
 
 	fptr_ok(fptr_whitelist_modenv_send_query(qstate->env->send_query));
@@ -2871,7 +2850,7 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 			return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
 		}
 		log_addr(VERB_QUERY, "error sending query to auth server",
-			&target->addr, target->addrlen);
+			&real_addr, real_addrlen);
 		if(qstate->env->cfg->qname_minimisation)
 			iq->minimisation_state = SKIP_MINIMISE_STATE;
 		return next_state(iq, QUERYTARGETS_STATE);
