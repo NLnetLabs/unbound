@@ -1,3 +1,7 @@
+1 May 2023: George
+	- Merge #722 from David 'eqvinox' Lamparter: NAT64 support.
+	- For #722: minor fixes, formatting, refactoring.
+
 1 May 2023: Wouter
 	- Fix RPZ IP responses with trigger rpz-drop on cache entries, that
 	  they are dropped.
