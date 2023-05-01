@@ -779,8 +779,8 @@ addr_in_common(struct sockaddr_storage* addr1, int net1,
 	return match;
 }
 
-void 
-addr_to_str(struct sockaddr_storage* addr, socklen_t addrlen, 
+void
+addr_to_str(struct sockaddr_storage* addr, socklen_t addrlen,
 	char* buf, size_t len)
 {
 	int af = (int)((struct sockaddr_in*)addr)->sin_family;
@@ -792,7 +792,50 @@ addr_to_str(struct sockaddr_storage* addr, socklen_t addrlen,
 	}
 }
 
-int 
+int
+prefixnet_is_nat64(int prefixnet)
+{
+	return (prefixnet == 32 || prefixnet == 40 ||
+		prefixnet == 48 || prefixnet == 56 ||
+		prefixnet == 64 || prefixnet == 96);
+}
+
+void
+addr_to_nat64(const struct sockaddr_storage* addr,
+	const struct sockaddr_storage* nat64_prefix,
+	socklen_t nat64_prefixlen, int nat64_prefixnet,
+	struct sockaddr_storage* nat64_addr, socklen_t* nat64_addrlen)
+{
+	struct sockaddr_in *sin = (struct sockaddr_in *)addr;
+	struct sockaddr_in6 *sin6;
+	uint8_t *v4_byte;
+
+	/* This needs to be checked by the caller */
+	log_assert(addr->ss_family == AF_INET);
+	/* Current usage is only from config values; prefix lengths enforced
+	 * during config validation */
+	log_assert(prefixnet_is_nat64(nat64_prefixnet));
+
+	*nat64_addr = *nat64_prefix;
+	*nat64_addrlen = nat64_prefixlen;
+
+	sin6 = (struct sockaddr_in6 *)nat64_addr;
+	sin6->sin6_flowinfo = 0;
+	sin6->sin6_port = sin->sin_port;
+
+	nat64_prefixnet = nat64_prefixnet / 8;
+
+	v4_byte = (uint8_t *)&sin->sin_addr.s_addr;
+	for(int i = 0; i < 4; i++) {
+		if(nat64_prefixnet == 8) {
+			/* bits 64...71 are MBZ */
+			sin6->sin6_addr.s6_addr[nat64_prefixnet++] = 0;
+		}
+		sin6->sin6_addr.s6_addr[nat64_prefixnet++] = *v4_byte++;
+	}
+}
+
+int
 addr_is_ip4mapped(struct sockaddr_storage* addr, socklen_t addrlen)
 {
 	/* prefix for ipv4 into ipv6 mapping is ::ffff:x.x.x.x */

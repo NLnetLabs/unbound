@@ -255,7 +255,7 @@ error_supers(struct module_qstate* qstate, int id, struct module_qstate* super)
 				log_err("out of memory adding missing");
 		}
 		delegpt_mark_neg(dpns, qstate->qinfo.qtype);
-		if((dpns->got4 == 2 || !ie->supports_ipv4) &&
+		if((dpns->got4 == 2 || (!ie->supports_ipv4 && !ie->use_nat64)) &&
 			(dpns->got6 == 2 || !ie->supports_ipv6)) {
 			dpns->resolved = 1; /* mark as failed */
 			target_count_increase_nx(super_iq, 1);
@@ -1557,18 +1557,19 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 
 		/* see if this dp not useless.
 		 * It is useless if:
-		 *	o all NS items are required glue. 
+		 *	o all NS items are required glue.
 		 *	  or the query is for NS item that is required glue.
 		 *	o no addresses are provided.
 		 *	o RD qflag is on.
 		 * Instead, go up one level, and try to get even further
-		 * If the root was useless, use safety belt information. 
+		 * If the root was useless, use safety belt information.
 		 * Only check cache returns, because replies for servers
 		 * could be useless but lead to loops (bumping into the
 		 * same server reply) if useless-checked.
 		 */
-		if(iter_dp_is_useless(&qstate->qinfo, qstate->query_flags, 
-			iq->dp, ie->supports_ipv4, ie->supports_ipv6)) {
+		if(iter_dp_is_useless(&qstate->qinfo, qstate->query_flags,
+			iq->dp, ie->supports_ipv4, ie->supports_ipv6,
+			ie->use_nat64)) {
 			struct delegpt* retdp = NULL;
 			if(!can_have_last_resort(qstate->env, iq->dp->name, iq->dp->namelen, iq->qchase.qclass, &retdp)) {
 				if(retdp) {
@@ -1929,7 +1930,7 @@ query_for_targets(struct module_qstate* qstate, struct iter_qstate* iq,
 				break;
 		}
 		/* Send the A request. */
-		if(ie->supports_ipv4 &&
+		if((ie->supports_ipv4 || ie->use_nat64) &&
 			((ns->lame && !ns->done_pside4) ||
 			(!ns->lame && !ns->got4))) {
 			if(!generate_target_query(qstate, iq, id, 
@@ -2082,14 +2083,14 @@ processLastResort(struct module_qstate* qstate, struct iter_qstate* iq,
 		/* if this nameserver is at a delegation point, but that
 		 * delegation point is a stub and we cannot go higher, skip*/
 		if( ((ie->supports_ipv6 && !ns->done_pside6) ||
-		    (ie->supports_ipv4 && !ns->done_pside4)) &&
+		    ((ie->supports_ipv4 || ie->use_nat64) && !ns->done_pside4)) &&
 		    !can_have_last_resort(qstate->env, ns->name, ns->namelen,
 			iq->qchase.qclass, NULL)) {
 			log_nametypeclass(VERB_ALGO, "cannot pside lookup ns "
 				"because it is also a stub/forward,",
 				ns->name, LDNS_RR_TYPE_NS, iq->qchase.qclass);
 			if(ie->supports_ipv6) ns->done_pside6 = 1;
-			if(ie->supports_ipv4) ns->done_pside4 = 1;
+			if(ie->supports_ipv4 || ie->use_nat64) ns->done_pside4 = 1;
 			continue;
 		}
 		/* query for parent-side A and AAAA for nameservers */
@@ -2114,7 +2115,7 @@ processLastResort(struct module_qstate* qstate, struct iter_qstate* iq,
 				return 0;
 			}
 		}
-		if(ie->supports_ipv4 && !ns->done_pside4) {
+		if((ie->supports_ipv4 || ie->use_nat64) && !ns->done_pside4) {
 			/* Send the A request. */
 			if(!generate_parentside_target_query(qstate, iq, id, 
 				ns->name, ns->namelen, 
@@ -2256,6 +2257,8 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 	int tf_policy;
 	struct delegpt_addr* target;
 	struct outbound_entry* outq;
+	struct sockaddr_storage real_addr;
+	socklen_t real_addrlen;
 	int auth_fallback = 0;
 	uint8_t* qout_orig = NULL;
 	size_t qout_orig_len = 0;
@@ -2381,7 +2384,7 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 	}
 	if(!ie->supports_ipv6)
 		delegpt_no_ipv6(iq->dp);
-	if(!ie->supports_ipv4)
+	if(!ie->supports_ipv4 && !ie->use_nat64)
 		delegpt_no_ipv4(iq->dp);
 	delegpt_log(VERB_ALGO, iq->dp);
 
@@ -2802,12 +2805,24 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 	/* We have a valid target. */
 	if(verbosity >= VERB_QUERY) {
 		log_query_info(VERB_QUERY, "sending query:", &iq->qinfo_out);
-		log_name_addr(VERB_QUERY, "sending to target:", iq->dp->name, 
+		log_name_addr(VERB_QUERY, "sending to target:", iq->dp->name,
 			&target->addr, target->addrlen);
 		verbose(VERB_ALGO, "dnssec status: %s%s",
 			iq->dnssec_expected?"expected": "not expected",
 			iq->dnssec_lame_query?" but lame_query anyway": "");
 	}
+
+	real_addr = target->addr;
+	real_addrlen = target->addrlen;
+
+	if(ie->use_nat64 && target->addr.ss_family == AF_INET) {
+		addr_to_nat64(&target->addr, &ie->nat64_prefix_addr,
+			ie->nat64_prefix_addrlen, ie->nat64_prefix_net,
+			&real_addr, &real_addrlen);
+		log_name_addr(VERB_QUERY, "applied NAT64:",
+			iq->dp->name, &real_addr, real_addrlen);
+	}
+
 	fptr_ok(fptr_whitelist_modenv_send_query(qstate->env->send_query));
 	outq = (*qstate->env->send_query)(&iq->qinfo_out,
 		iq->chase_flags | (iq->chase_to_rd?BIT_RD:0),
@@ -2818,7 +2833,7 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 		!qstate->blacklist&&(!iter_qname_indicates_dnssec(qstate->env,
 		&iq->qinfo_out)||target->attempts==1)?0:BIT_CD),
 		iq->dnssec_expected, iq->caps_fallback || is_caps_whitelisted(
-		ie, iq), sq_check_ratelimit, &target->addr, target->addrlen,
+		ie, iq), sq_check_ratelimit, &real_addr, real_addrlen,
 		iq->dp->name, iq->dp->namelen,
 		(iq->dp->tcp_upstream || qstate->env->cfg->tcp_upstream),
 		(iq->dp->ssl_upstream || qstate->env->cfg->ssl_upstream),
@@ -2835,7 +2850,7 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 			return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
 		}
 		log_addr(VERB_QUERY, "error sending query to auth server",
-			&target->addr, target->addrlen);
+			&real_addr, real_addrlen);
 		if(qstate->env->cfg->qname_minimisation)
 			iq->minimisation_state = SKIP_MINIMISE_STATE;
 		return next_state(iq, QUERYTARGETS_STATE);
@@ -3566,7 +3581,7 @@ processTargetResponse(struct module_qstate* qstate, int id,
 	} else {
 		verbose(VERB_ALGO, "iterator TargetResponse failed");
 		delegpt_mark_neg(dpns, qstate->qinfo.qtype);
-		if((dpns->got4 == 2 || !ie->supports_ipv4) &&
+		if((dpns->got4 == 2 || (!ie->supports_ipv4 && !ie->use_nat64)) &&
 			(dpns->got6 == 2 || !ie->supports_ipv6)) {
 			dpns->resolved = 1; /* fail the target */
 			/* do not count cached answers */
