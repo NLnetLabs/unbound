@@ -566,9 +566,10 @@ apply_respip_action(struct worker* worker, const struct query_info* qinfo,
 
 	/* xxx_deny actions mean dropping the reply, unless the original reply
 	 * was redirected to response-ip data. */
-	if((actinfo.action == respip_deny ||
+	if(actinfo.action == respip_always_deny ||
+		((actinfo.action == respip_deny ||
 		actinfo.action == respip_inform_deny) &&
-		*encode_repp == rep)
+		*encode_repp == rep))
 		*encode_repp = NULL;
 
 	/* If address info is returned, it means the action should be an

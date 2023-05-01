@@ -1,3 +1,7 @@
+1 May 2023: Wouter
+	- Fix RPZ IP responses with trigger rpz-drop on cache entries, that
+	  they are dropped.
+
 26 April 2023: Philip
 	- Fix issue #860: Bad interaction with 0 TTL records and serve-expired
 
