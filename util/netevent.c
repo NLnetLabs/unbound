@@ -1677,6 +1677,7 @@ ssl_handle_read(struct comm_point* c)
 					return 0;
 				}
 				c->tcp_byte_count += r;
+				sldns_buffer_skip(c->buffer, r);
 				if(c->tcp_byte_count != current_read_size) return 1;
 				c->pp2_header_state = pp2_header_init;
 			}
@@ -1685,7 +1686,7 @@ ssl_handle_read(struct comm_point* c)
 			int err;
 			err = pp2_read_header(
 				sldns_buffer_begin(c->buffer),
-				sldns_buffer_position(c->buffer));
+				sldns_buffer_limit(c->buffer));
 			if(err) {
 				log_err("proxy_protocol: could not parse "
 					"PROXYv2 header (%s)",
@@ -1743,6 +1744,7 @@ ssl_handle_read(struct comm_point* c)
 					return 0;
 				}
 				c->tcp_byte_count += r;
+				sldns_buffer_skip(c->buffer, r);
 				if(c->tcp_byte_count != current_read_size) return 1;
 				c->pp2_header_state = pp2_header_done;
 			}
@@ -2075,6 +2077,7 @@ comm_point_tcp_handle_read(int fd, struct comm_point* c, int short_ok)
 					goto recv_error_initial;
 				}
 				c->tcp_byte_count += r;
+				sldns_buffer_skip(c->buffer, r);
 				if(c->tcp_byte_count != current_read_size) return 1;
 				c->pp2_header_state = pp2_header_init;
 			}
@@ -2083,7 +2086,7 @@ comm_point_tcp_handle_read(int fd, struct comm_point* c, int short_ok)
 			int err;
 			err = pp2_read_header(
 				sldns_buffer_begin(c->buffer),
-				sldns_buffer_position(c->buffer));
+				sldns_buffer_limit(c->buffer));
 			if(err) {
 				log_err("proxy_protocol: could not parse "
 					"PROXYv2 header (%s)",
@@ -2119,6 +2122,7 @@ comm_point_tcp_handle_read(int fd, struct comm_point* c, int short_ok)
 					goto recv_error;
 				}
 				c->tcp_byte_count += r;
+				sldns_buffer_skip(c->buffer, r);
 				if(c->tcp_byte_count != current_read_size) return 1;
 				c->pp2_header_state = pp2_header_done;
 			}
