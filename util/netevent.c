@@ -1685,7 +1685,7 @@ ssl_handle_read(struct comm_point* c)
 			int err;
 			err = pp2_read_header(
 				sldns_buffer_begin(c->buffer),
-				sldns_buffer_remaining(c->buffer));
+				sldns_buffer_position(c->buffer));
 			if(err) {
 				log_err("proxy_protocol: could not parse "
 					"PROXYv2 header (%s)",
@@ -1694,7 +1694,7 @@ ssl_handle_read(struct comm_point* c)
 			}
 			header = (struct pp2_header*)sldns_buffer_begin(c->buffer);
 			want_read_size = ntohs(header->len);
-			if(sldns_buffer_remaining(c->buffer) <
+			if(sldns_buffer_limit(c->buffer) <
 				PP2_HEADER_SIZE + want_read_size) {
 				log_err_addr("proxy_protocol: not enough "
 					"buffer size to read PROXYv2 header", "",
@@ -1753,6 +1753,7 @@ ssl_handle_read(struct comm_point* c)
 				c->repinfo.remote_addrlen);
 			return 0;
 		}
+		sldns_buffer_flip(c->buffer);
 		if(!consume_pp2_header(c->buffer, &c->repinfo, 1)) {
 			log_err_addr("proxy_protocol: could not consume "
 				"PROXYv2 header", "", &c->repinfo.remote_addr,
@@ -2082,7 +2083,7 @@ comm_point_tcp_handle_read(int fd, struct comm_point* c, int short_ok)
 			int err;
 			err = pp2_read_header(
 				sldns_buffer_begin(c->buffer),
-				sldns_buffer_remaining(c->buffer));
+				sldns_buffer_position(c->buffer));
 			if(err) {
 				log_err("proxy_protocol: could not parse "
 					"PROXYv2 header (%s)",
@@ -2091,7 +2092,7 @@ comm_point_tcp_handle_read(int fd, struct comm_point* c, int short_ok)
 			}
 			header = (struct pp2_header*)sldns_buffer_begin(c->buffer);
 			want_read_size = ntohs(header->len);
-			if(sldns_buffer_remaining(c->buffer) <
+			if(sldns_buffer_limit(c->buffer) <
 				PP2_HEADER_SIZE + want_read_size) {
 				log_err_addr("proxy_protocol: not enough "
 					"buffer size to read PROXYv2 header", "",
@@ -2128,6 +2129,7 @@ comm_point_tcp_handle_read(int fd, struct comm_point* c, int short_ok)
 				c->repinfo.remote_addrlen);
 			return 0;
 		}
+		sldns_buffer_flip(c->buffer);
 		if(!consume_pp2_header(c->buffer, &c->repinfo, 1)) {
 			log_err_addr("proxy_protocol: could not consume "
 				"PROXYv2 header", "", &c->repinfo.remote_addr,
