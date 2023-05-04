@@ -1,3 +1,7 @@
+4 May 2023: Wouter
+	- Fix #885: Error: util/configlexer.c: No such file or directory,
+	  adds error messages explaining to install flex and bison.
+
 1 May 2023: George
 	- Merge #722 from David 'eqvinox' Lamparter: NAT64 support.
 	- For #722: minor fixes, formatting, refactoring.

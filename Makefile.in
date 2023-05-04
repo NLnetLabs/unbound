@@ -499,6 +499,7 @@ util/configlexer.c:  $(srcdir)/util/configlexer.lex util/configparser.h
 		echo "#include \"util/configyyrename.h\"" >> $@ ;\
 		$(LEX) -t $(srcdir)/util/configlexer.lex >> $@ ;\
 	fi
+	@if test ! -f $@; then echo "No $@ : need flex and bison to compile from source repository"; exit 1; fi
 
 util/configparser.c util/configparser.h:  $(srcdir)/util/configparser.y
 	@-if test ! -d util; then $(INSTALL) -d util; fi

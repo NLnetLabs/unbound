@@ -389,7 +389,17 @@ fi
 if test "$LEX" != "" -a "$LEX" != ":"; then
 ACX_YYLEX_OPTION
 fi
+if test "$LEX" = "" -o "$LEX" = ":"; then
+	if test ! -f util/configlexer.c; then
+		AC_MSG_ERROR([no lex and no util/configlexer.c: need flex and bison to compile from source repository.])
+	fi
+fi
 AC_PROG_YACC
+if test "$YACC" = "" -o "$YACC" = ":"; then
+	if test ! -f util/configparser.c; then
+		AC_MSG_ERROR([no yacc and no util/configparser.c: need flex and bison to compile from source repository.])
+	fi
+fi
 AC_CHECK_PROG(doxygen, doxygen, doxygen)
 AC_CHECK_TOOL(STRIP, strip)
 ACX_LIBTOOL_C_ONLY
