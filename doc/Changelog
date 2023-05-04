@@ -2,6 +2,7 @@
 	- Fix #885: Error: util/configlexer.c: No such file or directory,
 	  adds error messages explaining to install flex and bison.
 	- Fix to remove unused whitespace from acx_nlnetlabs.m4 and config.h.
+	- Fix doxygen in addr_to_nat64 header definition.
 
 1 May 2023: George
 	- Merge #722 from David 'eqvinox' Lamparter: NAT64 support.

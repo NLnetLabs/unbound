@@ -348,7 +348,6 @@ int prefixnet_is_nat64(int prefixnet);
  * @param nat64_prefixnet: NAT64 prefix mask.
  * @param nat64_addr: the resulting NAT64 address.
  * @param nat64_addrlen: the resulting NAT64 address length.
- * @return: 1 on success, 0 on input error.
  */
 void addr_to_nat64(const struct sockaddr_storage* addr,
 	const struct sockaddr_storage* nat64_prefix,
