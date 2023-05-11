@@ -1130,6 +1130,7 @@ set_recvtimestamp(int s)
 	return 1;
 #else
 	log_err("packets timestamping is not supported on this platform");
+	(void)s;
 	return 0;
 #endif
 }
