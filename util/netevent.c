@@ -626,7 +626,7 @@ comm_point_send_udp_msg_if(struct comm_point *c, sldns_buffer* packet,
 		cmsg->cmsg_len = CMSG_LEN(sizeof(struct in6_pktinfo));
 	}
 #endif /* S_SPLINT_S */
-	if(verbosity >= VERB_ALGO)
+	if(verbosity >= VERB_ALGO && r->srctype != 0)
 		p_ancil("send_udp over interface", r);
 	sent = sendmsg(c->fd, &msg, 0);
 	if(sent == -1) {
@@ -925,7 +925,7 @@ comm_point_udp_ancil_callback(int fd, short event, void* arg)
 			}
 		}
 
-		if(verbosity >= VERB_ALGO)
+		if(verbosity >= VERB_ALGO && rep.srctype != 0)
 			p_ancil("receive_udp on interface", &rep);
 #endif /* S_SPLINT_S */
 

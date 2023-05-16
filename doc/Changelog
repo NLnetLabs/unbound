@@ -1,5 +1,6 @@
 16 May 2023: Wouter
 	- Fix #888: [FR] Use kernel timestamps for dnstap.
+	- Fix to print debug log for ancillary data with correct IP address.
 
 11 May 2023: Wouter
 	- Fix warning in windows compile, in set_recvtimestamp.
