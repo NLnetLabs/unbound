@@ -1305,9 +1305,9 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 		wait_queue_time = wait_time.tv_sec * 1000000 +  wait_time.tv_usec;
 		if (worker->stats.max_query_time_us < wait_queue_time)
 			worker->stats.max_query_time_us = wait_queue_time;
-		c->recv_tv.tv_sec += worker->env.cfg->sock_queue_timeout;
-		if (timeval_smaller(&c->recv_tv, worker->env.now_tv)) {
-		/* count and drop queries that were sitting in the socket queue too long */
+		if(wait_queue_time >
+			(long long)(worker->env.cfg->sock_queue_timeout * 1000000)) {
+			/* count and drop queries that were sitting in the socket queue too long */
 			worker->stats.num_queries_timed_out++;
 			return 0;
 		}
@@ -1364,7 +1364,8 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 	if(worker->dtenv.log_client_query_messages) {
 		log_addr(VERB_ALGO, "request from client", &repinfo->client_addr, repinfo->client_addrlen);
 		log_addr(VERB_ALGO, "to local addr", (void*)repinfo->c->socket->addr->ai_addr, repinfo->c->socket->addr->ai_addrlen);
-		dt_msg_send_client_query(&worker->dtenv, &repinfo->client_addr, (void*)repinfo->c->socket->addr->ai_addr, c->type, c->buffer);
+		dt_msg_send_client_query(&worker->dtenv, &repinfo->client_addr, (void*)repinfo->c->socket->addr->ai_addr, c->type, c->buffer,
+		((worker->env.cfg->sock_queue_timeout && timeval_isset(&c->recv_tv))?&c->recv_tv:NULL));
 	}
 #endif
 	/* Check deny/refuse ACLs */
