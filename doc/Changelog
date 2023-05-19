@@ -1,3 +1,6 @@
+19 May 2023: Wouter
+	- Fix RPZ removal of client-ip, nsip, nsdname triggers from IXFR.
+
 16 May 2023: Wouter
 	- Fix #888: [FR] Use kernel timestamps for dnstap.
 	- Fix to print debug log for ancillary data with correct IP address.
