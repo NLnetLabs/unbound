@@ -891,12 +891,6 @@ mesh_state_create(struct module_env* env, struct query_info* qinfo,
 	return mstate;
 }
 
-int
-mesh_state_is_unique(struct mesh_state* mstate)
-{
-	return mstate->unique != NULL;
-}
-
 void
 mesh_state_make_unique(struct mesh_state* mstate)
 {
