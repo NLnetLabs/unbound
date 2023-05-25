@@ -504,7 +504,7 @@ static char* tv_to_str(protobuf_c_boolean has_time_sec, uint64_t time_sec,
 	time_t time_t_sec;
 	memset(&tv, 0, sizeof(tv));
 	if(has_time_sec) tv.tv_sec = time_sec;
-	if(has_time_nsec) tv.tv_usec = time_nsec;
+	if(has_time_nsec) tv.tv_usec = time_nsec/1000;
 
 	buf[0]=0;
 	time_t_sec = tv.tv_sec;
