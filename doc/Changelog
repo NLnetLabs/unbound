@@ -1,3 +1,6 @@
+25 May 2023: Wouter
+	- Fix unbound-dnstap-socket printout when no query is present.
+
 19 May 2023: Wouter
 	- Fix RPZ removal of client-ip, nsip, nsdname triggers from IXFR.
 	- Fix to remove unused variables from RPZ clientip data structure.

@@ -61,6 +61,7 @@
 #include "services/listen_dnsport.h"
 #include "sldns/sbuffer.h"
 #include "sldns/wire2str.h"
+#include "sldns/pkthdr.h"
 #ifdef USE_DNSTAP
 #include <protobuf-c/protobuf-c.h>
 #include "dnstap/dnstap.pb-c.h"
@@ -448,6 +449,7 @@ static char* q_of_msg(ProtobufCBinaryData message)
 	char buf[300];
 	/* header, name, type, class minimum to get the query tuple */
 	if(message.len < 12 + 1 + 4 + 4) return NULL;
+	if(LDNS_QDCOUNT(message.data) < 1) return NULL;
 	if(sldns_wire2str_rrquestion_buf(message.data+12, message.len-12,
 		buf, sizeof(buf)) != 0) {
 		/* remove trailing newline, tabs to spaces */
