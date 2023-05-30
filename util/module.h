@@ -677,6 +677,8 @@ struct module_qstate {
 	 * those servers. By comparing expiry time with qstarttime for type NS.
 	 */
 	time_t qstarttime;
+	/** whether a message from cachedb will be used for the reply */
+	int is_cachedb_answer;
 
 	/**
 	 * Attributes of clients that share the qstate that may affect IP-based

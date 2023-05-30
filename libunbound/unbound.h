@@ -827,6 +827,8 @@ struct ub_server_stats {
 	/** number of queries answered from edns-subnet specific data, and
 	 * the answer was from the edns-subnet cache. */
 	long long num_query_subnet_cache;
+	/** number of queries served from cachedb */
+	long long num_query_cachedb;
 	/** number of bytes in the stream wait buffers */
 	long long mem_stream_wait;
 	/** number of bytes in the HTTP2 query buffers */

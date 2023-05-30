@@ -1064,6 +1064,10 @@ print_ext(RES* ssl, struct ub_stats_info* s, int inhibit_zero)
 	if(!ssl_printf(ssl, "num.query.subnet_cache"SQ"%lu\n",
 		(unsigned long)s->svr.num_query_subnet_cache)) return 0;
 #endif /* CLIENT_SUBNET */
+#ifdef USE_CACHEDB
+	if(!ssl_printf(ssl, "num.query.cachedb"SQ"%lu\n",
+		(unsigned long)s->svr.num_query_cachedb)) return 0;
+#endif /* USE_CACHEDB */
 	return 1;
 }
 

@@ -206,6 +206,7 @@ mesh_create(struct module_stack* stack, struct module_env* env)
 	mesh->stats_jostled = 0;
 	mesh->stats_dropped = 0;
 	mesh->ans_expired = 0;
+	mesh->ans_cachedb = 0;
 	mesh->max_reply_states = env->cfg->num_queries_per_thread;
 	mesh->max_forever_states = (mesh->max_reply_states+1)/2;
 #ifndef S_SPLINT_S
@@ -1492,6 +1493,12 @@ void mesh_query_done(struct mesh_state* mstate)
 			}
 			prev = r;
 			prev_buffer = r_buffer;
+
+			/* Account for each reply sent. */
+			if(mstate->s.env->cfg->stat_extended
+				&& mstate->s.is_cachedb_answer) {
+				mstate->s.env->mesh->ans_cachedb++;
+			}
 		}
 	}
 	if(mstate->reply_list) {
@@ -1518,6 +1525,11 @@ void mesh_query_done(struct mesh_state* mstate)
 		if(!mstate->reply_list && !mstate->cb_list &&
 			mstate->super_set.count == 0)
 			mstate->s.env->mesh->num_detached_states++;
+		/* Account for each callback. */
+		if(mstate->s.env->cfg->stat_extended
+			&& mstate->s.is_cachedb_answer) {
+			mstate->s.env->mesh->ans_cachedb++;
+		}
 		mesh_do_callback(mstate, mstate->s.return_rcode, rep, c, &tv);
 	}
 }
@@ -1889,6 +1901,7 @@ mesh_stats_clear(struct mesh_area* mesh)
 	mesh->ans_secure = 0;
 	mesh->ans_bogus = 0;
 	mesh->ans_expired = 0;
+	mesh->ans_cachedb = 0;
 	memset(&mesh->ans_rcode[0], 0, sizeof(size_t)*UB_STATS_RCODE_NUM);
 	memset(&mesh->rpz_action[0], 0, sizeof(size_t)*UB_STATS_RPZ_ACTION_NUM);
 	mesh->ans_nodata = 0;
@@ -2161,6 +2174,8 @@ mesh_serve_expired_callback(void* arg)
 		if(!mstate->reply_list && !mstate->cb_list &&
 			mstate->super_set.count == 0)
 			qstate->env->mesh->num_detached_states++;
+		/* Account for each callback. */
+		mesh->ans_expired++;
 		mesh_do_callback(mstate, LDNS_RCODE_NOERROR, msg->rep, c, &tv);
 	}
 }

@@ -114,6 +114,8 @@ struct mesh_area {
 	size_t stats_dropped;
 	/** stats, number of expired replies sent */
 	size_t ans_expired;
+	/** stats, number of cached replies from cachedb */
+	size_t ans_cachedb;
 	/** number of replies sent */
 	size_t replies_sent;
 	/** sum of waiting times for the replies */
