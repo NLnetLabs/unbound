@@ -111,6 +111,15 @@ testframe_init(struct module_env* env, struct cachedb_env* cachedb_env)
 		log_err("out of memory");
 		return 0;
 	}
+	/* Register an EDNS option (65534) to bypass the worker cache lookup
+	 * for testing */
+	if(!edns_register_option(LDNS_EDNS_UNBOUND_CACHEDB_TESTFRAME_TEST,
+		1 /* bypass cache */,
+		0 /* no aggregation */, env)) {
+		log_err("testframe_init, could not register test opcode");
+		free(d);
+		return 0;
+	}
 	lock_basic_init(&d->lock);
 	lock_protect(&d->lock, d, sizeof(*d));
 	return 1;
@@ -627,11 +636,15 @@ cachedb_extcache_store(struct module_qstate* qstate, struct cachedb_env* ie)
  * See if unbound's internal cache can answer the query
  */
 static int
-cachedb_intcache_lookup(struct module_qstate* qstate)
+cachedb_intcache_lookup(struct module_qstate* qstate, struct cachedb_env* cde)
 {
 	uint8_t* dpname=NULL;
 	size_t dpnamelen=0;
 	struct dns_msg* msg;
+	/* for testframe bypass this lookup */
+	if(cde->backend == &testframe_backend) {
+		return 0;
+	}
 	if(iter_stub_fwd_no_cache(qstate, &qstate->qinfo,
 		&dpname, &dpnamelen))
 		return 0; /* no cache for these queries */
@@ -707,7 +720,7 @@ cachedb_handle_query(struct module_qstate* qstate,
 
 	/* lookup inside unbound's internal cache.
 	 * This does not look for expired entries. */
-	if(cachedb_intcache_lookup(qstate)) {
+	if(cachedb_intcache_lookup(qstate, ie)) {
 		if(verbosity >= VERB_ALGO) {
 			if(qstate->return_msg->rep)
 				log_dns_msg("cachedb internal cache lookup",
