@@ -414,7 +414,7 @@ rrset.cache.count=3
 infra.cache.count=2"
 
 
-if test x$USE_CACHEDB == "x1"; then
+if test x$USE_CACHEDB = "x1"; then
 
 # Bring the cachedb configured Unbound up
 kill_pid $UNBOUND_PID  # kill current Unbound
