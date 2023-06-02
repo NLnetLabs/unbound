@@ -357,7 +357,7 @@ server_stats_compile(struct worker* worker, struct ub_stats_info* s, int reset)
 	s->svr.num_query_subnet_cache = 0;
 #endif
 #ifdef USE_CACHEDB
-	s->svr.num_query_cachedb += (long long)worker->env.mesh->ans_cachedb;
+	s->svr.num_query_cachedb = (long long)worker->env.mesh->ans_cachedb;
 #else
 	s->svr.num_query_cachedb = 0;
 #endif
