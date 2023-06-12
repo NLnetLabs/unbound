@@ -3,6 +3,7 @@
 	  directories to sys.path.
 	- Fix #895: python + sysconfig gives ANOTHER path comparing to
 	  distutils.
+	- Fix for uncertain unit test for doh buffer size events.
 
 25 May 2023: Wouter
 	- Fix unbound-dnstap-socket printout when no query is present.
