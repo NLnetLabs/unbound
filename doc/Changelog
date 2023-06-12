@@ -1,3 +1,7 @@
+12 June 2023: Wouter
+	- Merge #896: Fix: #895: pythonmodule: add all site-packages
+	  directories to sys.path.
+
 25 May 2023: Wouter
 	- Fix unbound-dnstap-socket printout when no query is present.
 	- Fix unbound-dnstap-socket time fraction conversion for printout.
