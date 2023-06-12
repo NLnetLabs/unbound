@@ -1,6 +1,8 @@
 12 June 2023: Wouter
 	- Merge #896: Fix: #895: pythonmodule: add all site-packages
 	  directories to sys.path.
+	- Fix #895: python + sysconfig gives ANOTHER path comparing to
+	  distutils.
 
 25 May 2023: Wouter
 	- Fix unbound-dnstap-socket printout when no query is present.
