@@ -289,61 +289,83 @@ worker_err_ratelimit(struct worker* worker, int err)
 	return err;
 }
 
+/**
+ * Structure holding the result of the worker_check_request function.
+ * Based on configuration it could be called up to four times; ideally should
+ * be called once.
+ */
+struct check_request_result {
+	int checked;
+	int value;
+};
 /** check request sanity.
  * @param pkt: the wire packet to examine for sanity.
  * @param worker: parameters for checking.
- * @return error code, 0 OK, or -1 discard.
+ * @param out: struct to update with the result.
 */
-static int
-worker_check_request(sldns_buffer* pkt, struct worker* worker)
+static void
+worker_check_request(sldns_buffer* pkt, struct worker* worker,
+	struct check_request_result* out)
 {
+	if(out->checked) return;
+	out->checked = 1;
 	if(sldns_buffer_limit(pkt) < LDNS_HEADER_SIZE) {
 		verbose(VERB_QUERY, "request too short, discarded");
-		return -1;
+		out->value = -1;
+		return;
 	}
 	if(sldns_buffer_limit(pkt) > NORMAL_UDP_SIZE &&
 		worker->daemon->cfg->harden_large_queries) {
 		verbose(VERB_QUERY, "request too large, discarded");
-		return -1;
+		out->value = -1;
+		return;
 	}
 	if(LDNS_QR_WIRE(sldns_buffer_begin(pkt))) {
 		verbose(VERB_QUERY, "request has QR bit on, discarded");
-		return -1;
+		out->value = -1;
+		return;
 	}
 	if(LDNS_TC_WIRE(sldns_buffer_begin(pkt))) {
 		LDNS_TC_CLR(sldns_buffer_begin(pkt));
 		verbose(VERB_QUERY, "request bad, has TC bit on");
-		return worker_err_ratelimit(worker, LDNS_RCODE_FORMERR);
+		out->value = worker_err_ratelimit(worker, LDNS_RCODE_FORMERR);
+		return;
 	}
 	if(LDNS_OPCODE_WIRE(sldns_buffer_begin(pkt)) != LDNS_PACKET_QUERY &&
 		LDNS_OPCODE_WIRE(sldns_buffer_begin(pkt)) != LDNS_PACKET_NOTIFY) {
 		verbose(VERB_QUERY, "request unknown opcode %d",
 			LDNS_OPCODE_WIRE(sldns_buffer_begin(pkt)));
-		return worker_err_ratelimit(worker, LDNS_RCODE_NOTIMPL);
+		out->value = worker_err_ratelimit(worker, LDNS_RCODE_NOTIMPL);
+		return;
 	}
 	if(LDNS_QDCOUNT(sldns_buffer_begin(pkt)) != 1) {
 		verbose(VERB_QUERY, "request wrong nr qd=%d",
 			LDNS_QDCOUNT(sldns_buffer_begin(pkt)));
-		return worker_err_ratelimit(worker, LDNS_RCODE_FORMERR);
+		out->value = worker_err_ratelimit(worker, LDNS_RCODE_FORMERR);
+		return;
 	}
 	if(LDNS_ANCOUNT(sldns_buffer_begin(pkt)) != 0 &&
 		(LDNS_ANCOUNT(sldns_buffer_begin(pkt)) != 1 ||
 		LDNS_OPCODE_WIRE(sldns_buffer_begin(pkt)) != LDNS_PACKET_NOTIFY)) {
 		verbose(VERB_QUERY, "request wrong nr an=%d",
 			LDNS_ANCOUNT(sldns_buffer_begin(pkt)));
-		return worker_err_ratelimit(worker, LDNS_RCODE_FORMERR);
+		out->value = worker_err_ratelimit(worker, LDNS_RCODE_FORMERR);
+		return;
 	}
 	if(LDNS_NSCOUNT(sldns_buffer_begin(pkt)) != 0) {
 		verbose(VERB_QUERY, "request wrong nr ns=%d",
 			LDNS_NSCOUNT(sldns_buffer_begin(pkt)));
-		return worker_err_ratelimit(worker, LDNS_RCODE_FORMERR);
+		out->value = worker_err_ratelimit(worker, LDNS_RCODE_FORMERR);
+		return;
 	}
 	if(LDNS_ARCOUNT(sldns_buffer_begin(pkt)) > 1) {
 		verbose(VERB_QUERY, "request wrong nr ar=%d",
 			LDNS_ARCOUNT(sldns_buffer_begin(pkt)));
-		return worker_err_ratelimit(worker, LDNS_RCODE_FORMERR);
+		out->value = worker_err_ratelimit(worker, LDNS_RCODE_FORMERR);
+		return;
 	}
-	return 0;
+	out->value = 0;
+	return;
 }
 
 void
@@ -1058,7 +1080,8 @@ static int
 deny_refuse(struct comm_point* c, enum acl_access acl,
 	enum acl_access deny, enum acl_access refuse,
 	struct worker* worker, struct comm_reply* repinfo,
-	struct acl_addr* acladdr, int ede)
+	struct acl_addr* acladdr, int ede,
+	struct check_request_result* check_result)
 {
 	if(acl == deny) {
 		if(verbosity >= VERB_ALGO) {
@@ -1081,9 +1104,16 @@ deny_refuse(struct comm_point* c, enum acl_access acl,
 
 		if(worker->stats.extended)
 			worker->stats.unwanted_queries++;
-		if(worker_check_request(c->buffer, worker) == -1) {
+		worker_check_request(c->buffer, worker, check_result);
+		if(check_result->value != 0) {
+			if(check_result->value != -1) {
+				LDNS_QR_SET(sldns_buffer_begin(c->buffer));
+				LDNS_RCODE_SET(sldns_buffer_begin(c->buffer),
+					check_result->value);
+				return 1;
+			}
 			comm_point_drop_reply(repinfo);
-			return 0; /* discard this */
+			return 0;
 		}
 		/* worker_check_request() above guarantees that the buffer contains at
 		 * least a header and that qdcount == 1
@@ -1237,7 +1267,8 @@ deny_refuse(struct comm_point* c, enum acl_access acl,
 static int
 deny_refuse_all(struct comm_point* c, enum acl_access* acl,
 	struct worker* worker, struct comm_reply* repinfo,
-	struct acl_addr** acladdr, int ede, int check_proxy)
+	struct acl_addr** acladdr, int ede, int check_proxy,
+	struct check_request_result* check_result)
 {
 	if(check_proxy) {
 		*acladdr = acl_addr_lookup(worker->daemon->acl,
@@ -1252,16 +1283,17 @@ deny_refuse_all(struct comm_point* c, enum acl_access* acl,
 	}
 	*acl = acl_get_control(*acladdr);
 	return deny_refuse(c, *acl, acl_deny, acl_refuse, worker, repinfo,
-		*acladdr, ede);
+		*acladdr, ede, check_result);
 }
 
 static int
 deny_refuse_non_local(struct comm_point* c, enum acl_access acl,
 	struct worker* worker, struct comm_reply* repinfo,
-	struct acl_addr* acladdr, int ede)
+	struct acl_addr* acladdr, int ede,
+	struct check_request_result* check_result)
 {
 	return deny_refuse(c, acl, acl_deny_non_local, acl_refuse_non_local,
-		worker, repinfo, acladdr, ede);
+		worker, repinfo, acladdr, ede, check_result);
 }
 
 int
@@ -1292,6 +1324,7 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 	struct query_info qinfo_tmp; /* placeholder for lookup_qinfo */
 	struct respip_client_info* cinfo = NULL, cinfo_tmp;
 	struct timeval wait_time;
+	struct check_request_result check_result = {0,0};
 	memset(&qinfo, 0, sizeof(qinfo));
 
 	if((error != NETEVENT_NOERROR && error != NETEVENT_DONE)|| !repinfo) {
@@ -1322,7 +1355,8 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 	if(c->dnscrypt && !repinfo->is_dnscrypted) {
 		char buf[LDNS_MAX_DOMAINLEN+1];
 		/* Check if this is unencrypted and asking for certs */
-		if(worker_check_request(c->buffer, worker) != 0) {
+		worker_check_request(c->buffer, worker, &check_result);
+		if(check_result.value != 0) {
 			verbose(VERB_ALGO,
 				"dnscrypt: worker check request: bad query.");
 			log_addr(VERB_CLIENT,"from",&repinfo->client_addr,
@@ -1371,25 +1405,27 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 	/* Check deny/refuse ACLs */
 	if(repinfo->is_proxied) {
 		if((ret=deny_refuse_all(c, &acl, worker, repinfo, &acladdr,
-			worker->env.cfg->ede, 1)) != -1) {
+			worker->env.cfg->ede, 1, &check_result)) != -1) {
 			if(ret == 1)
 				goto send_reply;
 			return ret;
 		}
 	}
 	if((ret=deny_refuse_all(c, &acl, worker, repinfo, &acladdr,
-		worker->env.cfg->ede, 0)) != -1) {
+		worker->env.cfg->ede, 0, &check_result)) != -1) {
 		if(ret == 1)
 			goto send_reply;
 		return ret;
 	}
 
-	if((ret=worker_check_request(c->buffer, worker)) != 0) {
+	worker_check_request(c->buffer, worker, &check_result);
+	if(check_result.value != 0) {
 		verbose(VERB_ALGO, "worker check request: bad query.");
 		log_addr(VERB_CLIENT,"from",&repinfo->client_addr, repinfo->client_addrlen);
-		if(ret != -1) {
+		if(check_result.value != -1) {
 			LDNS_QR_SET(sldns_buffer_begin(c->buffer));
-			LDNS_RCODE_SET(sldns_buffer_begin(c->buffer), ret);
+			LDNS_RCODE_SET(sldns_buffer_begin(c->buffer),
+				check_result.value);
 			return 1;
 		}
 		comm_point_drop_reply(repinfo);
@@ -1612,7 +1648,7 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 	/* We've looked in our local zones. If the answer isn't there, we
 	 * might need to bail out based on ACLs now. */
 	if((ret=deny_refuse_non_local(c, acl, worker, repinfo, acladdr,
-		worker->env.cfg->ede)) != -1)
+		worker->env.cfg->ede, &check_result)) != -1)
 	{
 		regional_free_all(worker->scratchpad);
 		if(ret == 1)

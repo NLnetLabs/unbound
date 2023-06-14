@@ -1,3 +1,8 @@
+14 June 2023: George
+	- Properly handle all return values of worker_check_request during
+	  early EDE code.
+	- Do not check the incoming request more than once.
+
 12 June 2023: Wouter
 	- Merge #896: Fix: #895: pythonmodule: add all site-packages
 	  directories to sys.path.
