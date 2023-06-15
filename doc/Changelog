@@ -1,3 +1,7 @@
+15 June 2023: Philip
+	- Fix for issue #887 (Timeouts to forward servers on BSD based
+	  system with ASLR)
+	- Probably fixes #516 (Stream reuse does not work on Windows) as well
 14 June 2023: George
 	- Properly handle all return values of worker_check_request during
 	  early EDE code.
