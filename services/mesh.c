@@ -4,22 +4,22 @@
  * Copyright (c) 2007, NLnet Labs. All rights reserved.
  *
  * This software is open source.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
- * 
+ *
  * Redistributions of source code must retain the above copyright notice,
  * this list of conditions and the following disclaimer.
- * 
+ *
  * Redistributions in binary form must reproduce the above copyright notice,
  * this list of conditions and the following disclaimer in the documentation
  * and/or other materials provided with the distribution.
- * 
+ *
  * Neither the name of the NLNET LABS nor the names of its contributors may
  * be used to endorse or promote products derived from this software without
  * specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
  * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -63,81 +63,12 @@
 #include "util/data/dname.h"
 #include "respip/respip.h"
 #include "services/listen_dnsport.h"
+#include "util/timeval_func.h"
 
 #ifdef CLIENT_SUBNET
 #include "edns-subnet/subnetmod.h"
 #include "edns-subnet/edns-subnet.h"
 #endif
-
-/** subtract timers and the values do not overflow or become negative */
-static void
-timeval_subtract(struct timeval* d, const struct timeval* end, const struct timeval* start)
-{
-#ifndef S_SPLINT_S
-	time_t end_usec = end->tv_usec;
-	d->tv_sec = end->tv_sec - start->tv_sec;
-	if(end_usec < start->tv_usec) {
-		end_usec += 1000000;
-		d->tv_sec--;
-	}
-	d->tv_usec = end_usec - start->tv_usec;
-#endif
-}
-
-/** add timers and the values do not overflow or become negative */
-static void
-timeval_add(struct timeval* d, const struct timeval* add)
-{
-#ifndef S_SPLINT_S
-	d->tv_sec += add->tv_sec;
-	d->tv_usec += add->tv_usec;
-	if(d->tv_usec >= 1000000 ) {
-		d->tv_usec -= 1000000;
-		d->tv_sec++;
-	}
-#endif
-}
-
-/** divide sum of timers to get average */
-static void
-timeval_divide(struct timeval* avg, const struct timeval* sum, size_t d)
-{
-#ifndef S_SPLINT_S
-	size_t leftover;
-	if(d <= 0) {
-		avg->tv_sec = 0;
-		avg->tv_usec = 0;
-		return;
-	}
-	avg->tv_sec = sum->tv_sec / d;
-	avg->tv_usec = sum->tv_usec / d;
-	/* handle fraction from seconds divide */
-	leftover = sum->tv_sec - avg->tv_sec*d;
-	if(leftover <= 0)
-		leftover = 0;
-	avg->tv_usec += (((long long)leftover)*((long long)1000000))/d;
-	if(avg->tv_sec < 0)
-		avg->tv_sec = 0;
-	if(avg->tv_usec < 0)
-		avg->tv_usec = 0;
-#endif
-}
-
-/** histogram compare of time values */
-static int
-timeval_smaller(const struct timeval* x, const struct timeval* y)
-{
-#ifndef S_SPLINT_S
-	if(x->tv_sec < y->tv_sec)
-		return 1;
-	else if(x->tv_sec == y->tv_sec) {
-		if(x->tv_usec <= y->tv_usec)
-			return 1;
-		else	return 0;
-	}
-	else	return 0;
-#endif
-}
 
 /**
  * Compare two response-ip client info entries for the purpose of mesh state
@@ -249,7 +180,7 @@ mesh_state_ref_compare(const void* ap, const void* bp)
 	return mesh_state_compare(a->s, b->s);
 }
 
-struct mesh_area* 
+struct mesh_area*
 mesh_create(struct module_stack* stack, struct module_env* env)
 {
 	struct mesh_area* mesh = calloc(1, sizeof(struct mesh_area));
@@ -298,7 +229,7 @@ mesh_delete_helper(rbnode_type* n)
 	 * traversal and rbtree rebalancing do not work together */
 }
 
-void 
+void
 mesh_delete(struct mesh_area* mesh)
 {
 	if(!mesh)
@@ -341,7 +272,7 @@ int mesh_make_new_space(struct mesh_area* mesh, sldns_buffer* qbuf)
 	if(m && m->reply_list && m->list_select == mesh_jostle_list) {
 		/* how old is it? */
 		struct timeval age;
-		timeval_subtract(&age, mesh->env->now_tv, 
+		timeval_subtract(&age, mesh->env->now_tv,
 			&m->reply_list->start_time);
 		if(timeval_smaller(&mesh->jostle_max, &age)) {
 			/* its a goner */
@@ -585,11 +516,11 @@ void mesh_new_client(struct mesh_area* mesh, struct query_info* qinfo,
 		/* move to either the forever or the jostle_list */
 		if(mesh->num_forever_states < mesh->max_forever_states) {
 			mesh->num_forever_states ++;
-			mesh_list_insert(s, &mesh->forever_first, 
+			mesh_list_insert(s, &mesh->forever_first,
 				&mesh->forever_last);
 			s->list_select = mesh_forever_list;
 		} else {
-			mesh_list_insert(s, &mesh->jostle_first, 
+			mesh_list_insert(s, &mesh->jostle_first,
 				&mesh->jostle_last);
 			s->list_select = mesh_jostle_list;
 		}
@@ -610,9 +541,9 @@ servfail_mem:
 	return;
 }
 
-int 
+int
 mesh_new_callback(struct mesh_area* mesh, struct query_info* qinfo,
-	uint16_t qflags, struct edns_data* edns, sldns_buffer* buf, 
+	uint16_t qflags, struct edns_data* edns, sldns_buffer* buf,
 	uint16_t qid, mesh_cb_func_type cb, void* cb_arg, int rpz_passthru)
 {
 	struct mesh_state* s = NULL;
@@ -803,20 +734,10 @@ static void mesh_schedule_prefetch_subnet(struct mesh_area* mesh,
 			return;
 		}
 	} else {
-		/* Fake the ECS data from the client's IP */
-		struct ecs_data ecs;
-		memset(&ecs, 0, sizeof(ecs));
-		subnet_option_from_ss(&rep->client_addr, &ecs, mesh->env->cfg);
-		if(ecs.subnet_validdata == 0) {
-			log_err("prefetch_subnet subnet_option_from_ss: invalid data");
-			return;
-		}
-		subnet_ecs_opt_list_append(&ecs, &s->s.edns_opts_front_in,
-			&s->s, s->s.region);
-		if(!s->s.edns_opts_front_in) {
-			log_err("prefetch_subnet subnet_ecs_opt_list_append: out of memory");
-			return;
-		}
+		/* Store the client's address. Later in the subnet module,
+		 * it is decided whether to include an ECS option or not.
+		 */
+		s->s.client_addr =  rep->client_addr;
 	}
 #ifdef UNBOUND_DEBUG
 	n =
@@ -900,7 +821,7 @@ mesh_state_create(struct module_env* env, struct query_info* qinfo,
 	int i;
 	if(!region)
 		return NULL;
-	mstate = (struct mesh_state*)regional_alloc(region, 
+	mstate = (struct mesh_state*)regional_alloc(region,
 		sizeof(struct mesh_state));
 	if(!mstate) {
 		alloc_reg_release(env->alloc, region);
@@ -982,7 +903,7 @@ mesh_state_make_unique(struct mesh_state* mstate)
 	mstate->unique = mstate;
 }
 
-void 
+void
 mesh_state_cleanup(struct mesh_state* mstate)
 {
 	struct mesh_area* mesh;
@@ -1028,7 +949,7 @@ mesh_state_cleanup(struct mesh_state* mstate)
 	alloc_reg_release(mstate->s.env->alloc, mstate->s.region);
 }
 
-void 
+void
 mesh_state_delete(struct module_qstate* qstate)
 {
 	struct mesh_area* mesh;
@@ -1041,10 +962,10 @@ mesh_state_delete(struct module_qstate* qstate)
 	mesh_detach_subs(&mstate->s);
 	if(mstate->list_select == mesh_forever_list) {
 		mesh->num_forever_states --;
-		mesh_list_remove(mstate, &mesh->forever_first, 
+		mesh_list_remove(mstate, &mesh->forever_first,
 			&mesh->forever_last);
 	} else if(mstate->list_select == mesh_jostle_list) {
-		mesh_list_remove(mstate, &mesh->jostle_first, 
+		mesh_list_remove(mstate, &mesh->jostle_first,
 			&mesh->jostle_last);
 	}
 	if(!mstate->reply_list && !mstate->cb_list
@@ -1116,7 +1037,7 @@ void mesh_detach_subs(struct module_qstate* qstate)
 		if(!ref->s->reply_list && !ref->s->cb_list
 			&& ref->s->super_set.count == 0) {
 			mesh->num_detached_states++;
-			log_assert(mesh->num_detached_states + 
+			log_assert(mesh->num_detached_states +
 				mesh->num_reply_states <= mesh->all.count);
 		}
 	}
@@ -1181,7 +1102,7 @@ int mesh_attach_sub(struct module_qstate* qstate, struct query_info* qinfo,
 	if(!mesh_state_attachment(qstate->mesh_info, sub))
 		return 0;
 	/* if it was a duplicate  attachment, the count was not zero before */
-	if(!sub->reply_list && !sub->cb_list && was_detached && 
+	if(!sub->reply_list && !sub->cb_list && was_detached &&
 		sub->super_set.count == 1) {
 		/* it used to be detached, before this one got added */
 		log_assert(mesh->num_detached_states > 0);
@@ -1280,10 +1201,10 @@ mesh_do_callback(struct mesh_state* m, int rcode, struct reply_info* rep,
 
 		if(!inplace_cb_reply_call(m->s.env, &m->s.qinfo, &m->s, rep,
 			LDNS_RCODE_NOERROR, &r->edns, NULL, m->s.region, start_time) ||
-			!reply_info_answer_encode(&m->s.qinfo, rep, r->qid, 
-			r->qflags, r->buf, 0, 1, 
-			m->s.env->scratch, udp_size, &r->edns, 
-			(int)(r->edns.bits & EDNS_DO), secure)) 
+			!reply_info_answer_encode(&m->s.qinfo, rep, r->qid,
+			r->qflags, r->buf, 0, 1,
+			m->s.env->scratch, udp_size, &r->edns,
+			(int)(r->edns.bits & EDNS_DO), secure))
 		{
 			fptr_ok(fptr_whitelist_mesh_cb(r->cb));
 			(*r->cb)(r->cb_arg, LDNS_RCODE_SERVFAIL, r->buf,
@@ -1346,7 +1267,7 @@ mesh_send_reply(struct mesh_state* m, int rcode, struct reply_info* rep,
 
 	/* examine security status */
 	if(m->s.env->need_to_validate && (!(r->qflags&BIT_CD) ||
-		m->s.env->cfg->ignore_cd) && rep && 
+		m->s.env->cfg->ignore_cd) && rep &&
 		(rep->security <= sec_status_bogus ||
 		rep->security == sec_status_secure_sentinel_fail)) {
 		rcode = LDNS_RCODE_SERVFAIL;
@@ -1401,7 +1322,7 @@ mesh_send_reply(struct mesh_state* m, int rcode, struct reply_info* rep,
 			if(!inplace_cb_reply_servfail_call(m->s.env, &m->s.qinfo, &m->s,
 				rep, rcode, &r->edns, &r->query_reply, m->s.region, &r->start_time))
 					r->edns.opt_list_inplace_cb_out = NULL;
-		} else { 
+		} else {
 			if(!inplace_cb_reply_call(m->s.env, &m->s.qinfo, &m->s, rep, rcode,
 				&r->edns, &r->query_reply, m->s.region, &r->start_time))
 					r->edns.opt_list_inplace_cb_out = NULL;
@@ -1451,10 +1372,10 @@ mesh_send_reply(struct mesh_state* m, int rcode, struct reply_info* rep,
 		m->s.qinfo.local_alias = r->local_alias;
 		if(!inplace_cb_reply_call(m->s.env, &m->s.qinfo, &m->s, rep,
 			LDNS_RCODE_NOERROR, &r->edns, &r->query_reply, m->s.region, &r->start_time) ||
-			!reply_info_answer_encode(&m->s.qinfo, rep, r->qid, 
+			!reply_info_answer_encode(&m->s.qinfo, rep, r->qid,
 			r->qflags, r_buffer, 0, 1, m->s.env->scratch,
 			udp_size, &r->edns, (int)(r->edns.bits & EDNS_DO),
-			secure)) 
+			secure))
 		{
 			if(!inplace_cb_reply_servfail_call(m->s.env, &m->s.qinfo, &m->s,
 			rep, LDNS_RCODE_SERVFAIL, &r->edns, &r->query_reply, m->s.region, &r->start_time))
@@ -1719,7 +1640,7 @@ void mesh_walk_supers(struct mesh_area* mesh, struct mesh_state* mstate)
 		/* callback the function to inform super of result */
 		fptr_ok(fptr_whitelist_mod_inform_super(
 			mesh->mods.mod[ref->s->s.curmod]->inform_super));
-		(*mesh->mods.mod[ref->s->s.curmod]->inform_super)(&mstate->s, 
+		(*mesh->mods.mod[ref->s->s.curmod]->inform_super)(&mstate->s,
 			ref->s->s.curmod, &ref->s->s);
 		/* copy state that is always relevant to super */
 		copy_state_to_super(&mstate->s, ref->s->s.curmod, &ref->s->s);
@@ -1743,7 +1664,7 @@ struct mesh_state* mesh_area_find(struct mesh_area* mesh,
 	 * desire aggregation).*/
 	key.unique = NULL;
 	key.s.client_info = cinfo;
-	
+
 	result = (struct mesh_state*)rbtree_search(&mesh->all, &key);
 	return result;
 }
@@ -1752,7 +1673,7 @@ int mesh_state_add_cb(struct mesh_state* s, struct edns_data* edns,
         sldns_buffer* buf, mesh_cb_func_type cb, void* cb_arg,
 	uint16_t qid, uint16_t qflags)
 {
-	struct mesh_cb* r = regional_alloc(s->s.region, 
+	struct mesh_cb* r = regional_alloc(s->s.region,
 		sizeof(struct mesh_cb));
 	if(!r)
 		return 0;
@@ -1884,7 +1805,7 @@ mesh_copy_qinfo(struct mesh_state* mstate, struct query_info** qinfop,
  * Handles module finished.
  * @param mesh: the mesh area.
  * @param mstate: currently active mesh state.
- * 	Deleted if finished, calls _done and _supers to 
+ * 	Deleted if finished, calls _done and _supers to
  * 	send replies to clients and inform other mesh states.
  * 	This in turn may create additional runnable mesh states.
  * @param s: state at which the current module exited.
@@ -1918,7 +1839,7 @@ mesh_continue(struct mesh_area* mesh, struct mesh_state* mstate,
 		}
 		if(s == module_restart_next) {
 			int curmod = mstate->s.curmod;
-			for(; mstate->s.curmod < mesh->mods.num; 
+			for(; mstate->s.curmod < mesh->mods.num;
 				mstate->s.curmod++) {
 				fptr_ok(fptr_whitelist_mod_clear(
 					mesh->mods.mod[mstate->s.curmod]->clear));
@@ -1996,7 +1917,7 @@ void mesh_run(struct mesh_area* mesh, struct mesh_state* mstate,
 		mstate->s.reply = NULL;
 		regional_free_all(mstate->s.env->scratch);
 		s = mstate->s.ext_state[mstate->s.curmod];
-		verbose(VERB_ALGO, "mesh_run: %s module exit state is %s", 
+		verbose(VERB_ALGO, "mesh_run: %s module exit state is %s",
 			mesh->mods.mod[mstate->s.curmod]->name, strextstate(s));
 		e = NULL;
 		if(mesh_continue(mesh, mstate, s, &ev))
@@ -2016,14 +1937,14 @@ void mesh_run(struct mesh_area* mesh, struct mesh_state* mstate,
 	}
 }
 
-void 
+void
 mesh_log_list(struct mesh_area* mesh)
 {
 	char buf[30];
 	struct mesh_state* m;
 	int num = 0;
 	RBTREE_FOR(m, struct mesh_state*, &mesh->all) {
-		snprintf(buf, sizeof(buf), "%d%s%s%s%s%s%s mod%d %s%s", 
+		snprintf(buf, sizeof(buf), "%d%s%s%s%s%s%s mod%d %s%s",
 			num++, (m->s.is_priming)?"p":"",  /* prime */
 			(m->s.is_valrec)?"v":"",  /* prime */
 			(m->s.query_flags&BIT_RD)?"RD":"",
@@ -2032,18 +1953,18 @@ mesh_log_list(struct mesh_area* mesh)
 			(m->sub_set.count!=0)?"c":"",  /* children */
 			m->s.curmod, (m->reply_list)?"rep":"", /*hasreply*/
 			(m->cb_list)?"cb":"" /* callbacks */
-			); 
+			);
 		log_query_info(VERB_ALGO, buf, &m->s.qinfo);
 	}
 }
 
-void 
+void
 mesh_stats(struct mesh_area* mesh, const char* str)
 {
 	verbose(VERB_DETAIL, "%s %u recursion states (%u with reply, "
 		"%u detached), %u waiting replies, %u recursion replies "
-		"sent, %d replies dropped, %d states jostled out", 
-		str, (unsigned)mesh->all.count, 
+		"sent, %d replies dropped, %d states jostled out",
+		str, (unsigned)mesh->all.count,
 		(unsigned)mesh->num_reply_states,
 		(unsigned)mesh->num_detached_states,
 		(unsigned)mesh->num_reply_addrs,
@@ -2052,7 +1973,7 @@ mesh_stats(struct mesh_area* mesh, const char* str)
 		(unsigned)mesh->stats_jostled);
 	if(mesh->replies_sent > 0) {
 		struct timeval avg;
-		timeval_divide(&avg, &mesh->replies_sum_wait, 
+		timeval_divide(&avg, &mesh->replies_sum_wait,
 			mesh->replies_sent);
 		log_info("average recursion processing time "
 			ARG_LL "d.%6.6d sec",
@@ -2062,7 +1983,7 @@ mesh_stats(struct mesh_area* mesh, const char* str)
 	}
 }
 
-void 
+void
 mesh_stats_clear(struct mesh_area* mesh)
 {
 	if(!mesh)
@@ -2081,7 +2002,7 @@ mesh_stats_clear(struct mesh_area* mesh)
 	mesh->ans_nodata = 0;
 }
 
-size_t 
+size_t
 mesh_get_mem(struct mesh_area* mesh)
 {
 	struct mesh_state* m;
@@ -2095,7 +2016,7 @@ mesh_get_mem(struct mesh_area* mesh)
 	return s;
 }
 
-int 
+int
 mesh_detect_cycle(struct module_qstate* qstate, struct query_info* qinfo,
 	uint16_t flags, int prime, int valrec)
 {

@@ -112,6 +112,14 @@ If enabled, extended statistics are printed from \fIunbound\-control\fR(8).
 Default is off, because keeping track of more statistics takes time.  The
 counters are listed in \fIunbound\-control\fR(8).
 .TP
+.B statistics\-inhibit\-zero: \fI<yes or no>
+If enabled, selected extended statistics with a value of 0 are inhibited from
+printing with \fIunbound\-control\fR(8).
+These are query types, query classes, query opcodes, answer rcodes
+(except NOERROR, FORMERR, SERVFAIL, NXDOMAIN, NOTIMPL, REFUSED) and
+RPZ actions.
+Default is on.
+.TP
 .B num\-threads: \fI<number>
 The number of threads to create to serve clients. Use 1 for no threading.
 .TP
@@ -225,7 +233,8 @@ number).
 .B max\-udp\-size: \fI<number>
 Maximum UDP response size (not applied to TCP response).  65536 disables the
 udp response size maximum, and uses the choice from the client, always.
-Suggested values are 512 to 4096. Default is 4096.
+Suggested values are 512 to 4096. Default is 1232. The default value is the
+same as the default for edns\-buffer\-size.
 .TP
 .B stream\-wait\-size: \fI<number>
 Number of bytes size maximum to use for waiting stream buffers.  Default is
@@ -495,6 +504,14 @@ configured, and finally to 0 if the number of free buffers falls below
 20% of the total number configured.
 A minimum actual timeout of 200 milliseconds is observed regardless of the
 advertised timeout.
+.TP
+.B sock\-queue\-timeout: \fI<sec>\fR
+UDP queries that have waited in the socket buffer for a long time can be
+dropped. Default is 0, disabled. The time is set in seconds, 3 could be a
+good value to ignore old queries that likely the client does not need a reply
+for any more. This could happen if the host has not been able to service
+the queries for a while, i.e. Unbound is not running, and then is enabled
+again. It uses timestamp socket options.
 .TP
 .B tcp\-upstream: \fI<yes or no>
 Enable or disable whether the upstream queries use TCP only for transport.
@@ -1011,6 +1028,12 @@ validate the zone.  Default is no.  Zone signers must produce zones
 that allow this feature to work, but sometimes they do not, and turning
 this option off avoids that validation failure.
 .TP
+.B harden\-unknown\-additional: \fI<yes or no>
+Harden against unknown records in the authority section and additional
+section. Default is no. If no, such records are copied from the upstream
+and presented to the client together with the answer. If yes, it could
+hamper future protocol developments that want to add records.
+.TP
 .B use\-caps\-for\-id: \fI<yes or no>
 Use 0x20\-encoded random bits in the query to foil spoof attempts.
 This perturbs the lowercase and uppercase of query names sent to
@@ -1383,10 +1406,10 @@ address space are not validated.  This is usually required whenever
 Configure a local zone. The type determines the answer to give if
 there is no match from local\-data. The types are deny, refuse, static,
 transparent, redirect, nodefault, typetransparent, inform, inform_deny,
-inform_redirect, always_transparent, always_refuse, always_nxdomain, always_null, noview,
-and are explained below. After that the default settings are listed. Use
-local\-data: to enter data into the local zone. Answers for local zones
-are authoritative DNS answers. By default the zones are class IN.
+inform_redirect, always_transparent, block_a, always_refuse, always_nxdomain,
+always_null, noview, and are explained below. After that the default settings
+are listed. Use local\-data: to enter data into the local zone. Answers for
+local zones are authoritative DNS answers. By default the zones are class IN.
 .IP
 If you need more complicated authoritative data, with referrals, wildcards,
 CNAME/DNAME support, or DNSSEC authoritative service, setup a stub\-zone for
@@ -1460,6 +1483,12 @@ Ie. answer queries with fixed data and also log the machines that ask.
 .TP 10
 \h'5'\fIalways_transparent\fR
 Like transparent, but ignores local data and resolves normally.
+.TP 10
+\h'5'\fIblock_a\fR
+Like transparent, but ignores local data and resolves normally all query
+types excluding A. For A queries it unconditionally returns NODATA.
+Useful in cases when there is a need to explicitly force all apps to use
+IPv6 protocol and avoid any queries to IPv4.
 .TP 10
 \h'5'\fIalways_refuse\fR
 Like refuse, but ignores local data and refuses the query.
@@ -1820,6 +1849,21 @@ If a forward/stub zone is used, this is the number of retries per nameserver in
 the zone.
 Default is 5.
 .TP 5
+.B max\-sent\-count: \fI<number>
+Hard limit on the number of outgoing queries Unbound will make while resolving
+a name, making sure large NS sets do not loop.
+Results in SERVFAIL when reached.
+It resets on query restarts (e.g., CNAME) and referrals.
+Default is 32.
+.TP 5
+.B max\-query\-restarts: \fI<number>
+Hard limit on the number of times Unbound is allowed to restart a query upon
+encountering a CNAME record.
+Results in SERVFAIL when reached.
+Changing this value needs caution as it can allow long CNAME chains to be
+accepted, where Unbound needs to verify (resolve) each link individually.
+Default is 11.
+.TP 5
 .B fast\-server\-permil: \fI<number>
 Specify how many times out of 1000 to pick from the set of fastest servers.
 0 turns the feature off.  A value of 900 would pick from the fastest
@@ -1853,7 +1897,7 @@ errors. Default is "no".
 When the \fBval-log-level\fR option is also set to \fB2\fR, responses with
 Extended DNS Errors concerning DNSSEC failures that are not served from cache,
 will also contain a descriptive text message about the reason for the failure.
-.TP
+.TP 5
 .B ede\-serve\-expired: \fI<yes or no>
 If enabled, Unbound will attach an Extended DNS Error (RFC8914) Code 3 - Stale
 Answer as EDNS0 option to the expired response. Note that this will not attach
@@ -2268,6 +2312,21 @@ List domain for which the AAAA records are ignored and the A record is
 used by dns64 processing instead.  Can be entered multiple times, list a
 new domain for which it applies, one per line.  Applies also to names
 underneath the name given.
+.SS "NAT64 Operation"
+.LP
+NAT64 operation allows using a NAT64 prefix for outbound requests to IPv4-only
+servers.  It is controlled by two options in the \fBserver:\fR section:
+.TP
+.B do\-nat64: \fI<yes or no>\fR
+Use NAT64 to reach IPv4-only servers.
+Consider also enabling \fBprefer\-ip6\fR to prefer native IPv6 connections to
+nameservers.
+Default no.
+.TP
+.B nat64\-prefix: \fI<IPv6 prefix>\fR
+Use a specific NAT64 prefix to reach IPv4-only servers.  Defaults to using
+the prefix configured in \fBdns64\-prefix\fR, which in turn defaults to
+64:ff9b::/96.  The prefix length must be one of /32, /40, /48, /56, /64 or /96.
 .SS "DNSCrypt Options"
 .LP
 The
@@ -2358,6 +2417,9 @@ The maximum size of the ECS cache is controlled by 'msg-cache-size' in the
 configuration file. On top of that, for each query only 100 different subnets
 are allowed to be stored for each address family. Exceeding that number, older
 entries will be purged from cache.
+.LP
+This module does not interact with the \fBserve\-expired*\fR and
+\fBprefetch:\fR options.
 .TP
 .B send\-client\-subnet: \fI<IP address>\fR
 Send client source address to this authority. Append /num to indicate a
@@ -2559,6 +2621,16 @@ This option defaults to "127.0.0.1".
 .B redis-server-port: \fI<port number>\fR
 The TCP port number of the Redis server.
 This option defaults to 6379.
+.TP
+.B redis-server-path: \fI<unix socket path>\fR
+The unix socket path to connect to the redis server. Off by default, and it
+can be set to "" to turn this off. Unix sockets may have better throughput
+than the IP address option.
+.TP
+.B redis-server-password: \fI"<password>"\fR
+The Redis AUTH password to use for the redis server.
+Only relevant if Redis is configured for client password authorisation.
+Off by default, and it can be set to "" to turn this off.
 .TP
 .B redis-timeout: \fI<msec>\fR
 The period until when Unbound waits for a response from the Redis sever.
