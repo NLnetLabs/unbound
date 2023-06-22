@@ -468,6 +468,7 @@ enum sldns_enum_ede_code
 	LDNS_EDE_NO_REACHABLE_AUTHORITY = 22,
 	LDNS_EDE_NETWORK_ERROR = 23,
 	LDNS_EDE_INVALID_DATA = 24,
+	LDNS_EDE_NOERROR = 49152,  /* TODO update value */
 };
 typedef enum sldns_enum_ede_code sldns_ede_code;
 
