@@ -941,17 +941,6 @@ parse_packet(sldns_buffer* pkt, struct msg_parse* msg, struct regional* region)
 	return 0;
 }
 
-static int
-edns_opt_list_append_keepalive(struct edns_option** list, int msec,
-		struct regional* region)
-{
-	uint8_t data[2]; /* For keepalive value */
-	data[0] = (uint8_t)((msec >> 8) & 0xff);
-	data[1] = (uint8_t)(msec & 0xff);
-	return edns_opt_list_append(list, LDNS_EDNS_KEEPALIVE, sizeof(data),
-			data, region);
-}
-
 /** RFC 1982 comparison, uses unsigned integers, and tries to avoid
  * compiler optimization (eg. by avoiding a-b<0 comparisons),
  * this routine matches compare_serial(), for SOA serial number checks */

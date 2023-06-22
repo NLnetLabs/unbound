@@ -1020,6 +1020,16 @@ int edns_opt_list_append_ede(struct edns_option** list, struct regional* region,
 	return 1;
 }
 
+int edns_opt_list_append_keepalive(struct edns_option** list, int msec,
+	struct regional* region)
+{
+	uint8_t data[2]; /* For keepalive value */
+	data[0] = (uint8_t)((msec >> 8) & 0xff);
+	data[1] = (uint8_t)(msec & 0xff);
+	return edns_opt_list_append(list, LDNS_EDNS_KEEPALIVE, sizeof(data),
+		data, region);
+}
+
 int edns_opt_list_append(struct edns_option** list, uint16_t code, size_t len,
 	uint8_t* data, struct regional* region)
 {
