@@ -18,10 +18,10 @@
  * Edited slightly for integration in Unbound. Edits are noted with 'EDIT'.
  */
 /** EDIT
- * #include <assert.h>
- * #include <stdint.h>
- * #include <stdio.h>
- * #include <string.h>
+ * \#include <assert.h>
+ * \#include <stdint.h>
+ * \#include <stdio.h>
+ * \#include <string.h>
  * Replaced the above includes with Unbound's config.h
  */
 #include "config.h"
