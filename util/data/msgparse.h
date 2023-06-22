@@ -315,6 +315,8 @@ int skip_pkt_rrs(struct sldns_buffer* pkt, int num);
  *	initialised.
  * @param cfg: the configuration (with nsid value etc.)
  * @param c: commpoint to determine transport (if needed)
+ * @param repinfo: commreply to determine the client address
+ * @param now: current time
  * @param region: region to alloc results in (edns option contents)
  * @return: 0 on success, or an RCODE on error.
  *	RCODE formerr if OPT is badly formatted and so on.

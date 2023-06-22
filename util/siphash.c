@@ -14,10 +14,17 @@
    this software. If not, see
    <http://creativecommons.org/publicdomain/zero/1.0/>.
  */
-#include <assert.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <string.h>
+/**
+ * Edited slightly for integration in Unbound. Edits are noted with 'EDIT'.
+ */
+/** EDIT
+ * #include <assert.h>
+ * #include <stdint.h>
+ * #include <stdio.h>
+ * #include <string.h>
+ * Replaced the above includes with Unbound's config.h
+ */
+#include "config.h"
 
 /* default: SipHash-2-4 */
 #define cROUNDS 2
@@ -89,6 +96,9 @@ int siphash(const uint8_t *in, const size_t inlen, const uint8_t *k,
     const uint8_t *end = in + inlen - (inlen % sizeof(uint64_t));
     const int left = inlen & 7;
     uint64_t b = ((uint64_t)inlen) << 56;
+    /** EDIT
+     * The following assert moved here from the top for C90 compliance.
+     */
     assert((outlen == 8) || (outlen == 16));
     v3 ^= k1;
     v2 ^= k0;

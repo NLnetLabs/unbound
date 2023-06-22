@@ -43,6 +43,7 @@
 #include "util/data/dname.h"
 #include "util/data/packed_rrset.h"
 #include "util/netevent.h"
+#include "util/siphash.h"
 #include "util/storage/lookup3.h"
 #include "util/regional.h"
 #include "sldns/rrdef.h"
@@ -950,9 +951,6 @@ edns_opt_list_append_keepalive(struct edns_option** list, int msec,
 	return edns_opt_list_append(list, LDNS_EDNS_KEEPALIVE, sizeof(data),
 			data, region);
 }
-
-int siphash(const uint8_t *in, const size_t inlen,
-		const uint8_t *k, uint8_t *out, const size_t outlen);
 
 /** RFC 1982 comparison, uses unsigned integers, and tries to avoid
  * compiler optimization (eg. by avoiding a-b<0 comparisons),
