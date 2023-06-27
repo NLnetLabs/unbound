@@ -1,6 +1,7 @@
 27 June 2023: George
 	- Merge #892: Add cachedb hit stat. Introduces 'num.query.cachedb' as
 	  a new statistical counter.
+	- Remove warning about unknown cast-function-type warning pragma.
 
 22 June 2023: Wouter
 	- Merge #903: contrib: add yocto compatible init script.
