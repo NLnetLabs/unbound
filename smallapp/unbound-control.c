@@ -407,6 +407,9 @@ static void print_extended(struct ub_stats_info* s, int inhibit_zero)
 	PR_UL("num.query.subnet", s->svr.num_query_subnet);
 	PR_UL("num.query.subnet_cache", s->svr.num_query_subnet_cache);
 #endif
+#ifdef USE_CACHEDB
+	PR_UL("num.query.cachedb", s->svr.num_query_cachedb);
+#endif
 }
 
 /** print statistics out of memory structures */

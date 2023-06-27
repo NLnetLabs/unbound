@@ -356,6 +356,11 @@ server_stats_compile(struct worker* worker, struct ub_stats_info* s, int reset)
 	s->svr.num_query_subnet = 0;
 	s->svr.num_query_subnet_cache = 0;
 #endif
+#ifdef USE_CACHEDB
+	s->svr.num_query_cachedb = (long long)worker->env.mesh->ans_cachedb;
+#else
+	s->svr.num_query_cachedb = 0;
+#endif
 
 	/* get tcp accept usage */
 	s->svr.tcp_accept_usage = 0;
@@ -476,6 +481,9 @@ void server_stats_add(struct ub_stats_info* total, struct ub_stats_info* a)
 		total->svr.unwanted_replies += a->svr.unwanted_replies;
 		total->svr.unwanted_queries += a->svr.unwanted_queries;
 		total->svr.tcp_accept_usage += a->svr.tcp_accept_usage;
+#ifdef USE_CACHEDB
+		total->svr.num_query_cachedb += a->svr.num_query_cachedb;
+#endif
 		for(i=0; i<UB_STATS_QTYPE_NUM; i++)
 			total->svr.qtype[i] += a->svr.qtype[i];
 		for(i=0; i<UB_STATS_QCLASS_NUM; i++)

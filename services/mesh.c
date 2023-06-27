@@ -206,6 +206,7 @@ mesh_create(struct module_stack* stack, struct module_env* env)
 	mesh->stats_jostled = 0;
 	mesh->stats_dropped = 0;
 	mesh->ans_expired = 0;
+	mesh->ans_cachedb = 0;
 	mesh->max_reply_states = env->cfg->num_queries_per_thread;
 	mesh->max_forever_states = (mesh->max_reply_states+1)/2;
 #ifndef S_SPLINT_S
@@ -1424,6 +1425,7 @@ void mesh_query_done(struct mesh_state* mstate)
 	struct reply_info* rep = (mstate->s.return_msg?
 		mstate->s.return_msg->rep:NULL);
 	struct timeval tv = {0, 0};
+	int i = 0;
 	/* No need for the serve expired timer anymore; we are going to reply. */
 	if(mstate->s.serve_expired_data) {
 		comm_timer_delete(mstate->s.serve_expired_data->timer);
@@ -1443,6 +1445,7 @@ void mesh_query_done(struct mesh_state* mstate)
 		}
 	}
 	for(r = mstate->reply_list; r; r = r->next) {
+		i++;
 		tv = r->start_time;
 
 		/* if a response-ip address block has been stored the
@@ -1454,16 +1457,6 @@ void mesh_query_done(struct mesh_state* mstate)
 				mstate->s.qinfo.qclass, r->local_alias,
 				&r->query_reply.client_addr,
 				r->query_reply.client_addrlen);
-			if(mstate->s.env->cfg->stat_extended &&
-				mstate->s.respip_action_info->rpz_used) {
-				if(mstate->s.respip_action_info->rpz_disabled)
-					mstate->s.env->mesh->rpz_action[RPZ_DISABLED_ACTION]++;
-				if(mstate->s.respip_action_info->rpz_cname_override)
-					mstate->s.env->mesh->rpz_action[RPZ_CNAME_OVERRIDE_ACTION]++;
-				else
-					mstate->s.env->mesh->rpz_action[respip_action_to_rpz_action(
-						mstate->s.respip_action_info->action)]++;
-			}
 		}
 
 		/* if this query is determined to be dropped during the
@@ -1494,6 +1487,27 @@ void mesh_query_done(struct mesh_state* mstate)
 			prev_buffer = r_buffer;
 		}
 	}
+	/* Account for each reply sent. */
+	if(i > 0 && mstate->s.respip_action_info &&
+		mstate->s.respip_action_info->addrinfo &&
+		mstate->s.env->cfg->stat_extended &&
+		mstate->s.respip_action_info->rpz_used) {
+		if(mstate->s.respip_action_info->rpz_disabled)
+			mstate->s.env->mesh->rpz_action[RPZ_DISABLED_ACTION] += i;
+		if(mstate->s.respip_action_info->rpz_cname_override)
+			mstate->s.env->mesh->rpz_action[RPZ_CNAME_OVERRIDE_ACTION] += i;
+		else
+			mstate->s.env->mesh->rpz_action[respip_action_to_rpz_action(
+				mstate->s.respip_action_info->action)] += i;
+	}
+	if(!mstate->s.is_drop && i > 0) {
+		if(mstate->s.env->cfg->stat_extended
+			&& mstate->s.is_cachedb_answer) {
+			mstate->s.env->mesh->ans_cachedb += i;
+		}
+	}
+
+	/* Mesh area accounting */
 	if(mstate->reply_list) {
 		mstate->reply_list = NULL;
 		if(!mstate->reply_list && !mstate->cb_list) {
@@ -1506,6 +1520,7 @@ void mesh_query_done(struct mesh_state* mstate)
 			mstate->s.env->mesh->num_detached_states++;
 	}
 	mstate->replies_sent = 1;
+
 	while((c = mstate->cb_list) != NULL) {
 		/* take this cb off the list; so that the list can be
 		 * changed, eg. by adds from the callback routine */
@@ -1889,6 +1904,7 @@ mesh_stats_clear(struct mesh_area* mesh)
 	mesh->ans_secure = 0;
 	mesh->ans_bogus = 0;
 	mesh->ans_expired = 0;
+	mesh->ans_cachedb = 0;
 	memset(&mesh->ans_rcode[0], 0, sizeof(size_t)*UB_STATS_RCODE_NUM);
 	memset(&mesh->rpz_action[0], 0, sizeof(size_t)*UB_STATS_RPZ_ACTION_NUM);
 	mesh->ans_nodata = 0;
@@ -2025,6 +2041,7 @@ mesh_serve_expired_callback(void* arg)
 	struct timeval tv = {0, 0};
 	int must_validate = (!(qstate->query_flags&BIT_CD)
 		|| qstate->env->cfg->ignore_cd) && qstate->env->need_to_validate;
+	int i = 0;
 	if(!qstate->serve_expired_data) return;
 	verbose(VERB_ALGO, "Serve expired: Trying to reply with expired data");
 	comm_timer_delete(qstate->serve_expired_data->timer);
@@ -2096,6 +2113,7 @@ mesh_serve_expired_callback(void* arg)
 		log_dns_msg("Serve expired lookup", &qstate->qinfo, msg->rep);
 
 	for(r = mstate->reply_list; r; r = r->next) {
+		i++;
 		tv = r->start_time;
 
 		/* If address info is returned, it means the action should be an
@@ -2105,16 +2123,6 @@ mesh_serve_expired_callback(void* arg)
 				qstate->qinfo.qtype, qstate->qinfo.qclass,
 				r->local_alias, &r->query_reply.client_addr,
 				r->query_reply.client_addrlen);
-
-			if(qstate->env->cfg->stat_extended && actinfo.rpz_used) {
-				if(actinfo.rpz_disabled)
-					qstate->env->mesh->rpz_action[RPZ_DISABLED_ACTION]++;
-				if(actinfo.rpz_cname_override)
-					qstate->env->mesh->rpz_action[RPZ_CNAME_OVERRIDE_ACTION]++;
-				else
-					qstate->env->mesh->rpz_action[
-						respip_action_to_rpz_action(actinfo.action)]++;
-			}
 		}
 
 		/* Add EDE Stale Answer (RCF8914). Ignore global ede as this is
@@ -2134,11 +2142,23 @@ mesh_serve_expired_callback(void* arg)
 			tcp_req_info_remove_mesh_state(r->query_reply.c->tcp_req_info, mstate);
 		prev = r;
 		prev_buffer = r_buffer;
-
-		/* Account for each reply sent. */
-		mesh->ans_expired++;
-
 	}
+	/* Account for each reply sent. */
+	if(i > 0) {
+		mesh->ans_expired += i;
+		if(actinfo.addrinfo && qstate->env->cfg->stat_extended &&
+			actinfo.rpz_used) {
+			if(actinfo.rpz_disabled)
+				qstate->env->mesh->rpz_action[RPZ_DISABLED_ACTION] += i;
+			if(actinfo.rpz_cname_override)
+				qstate->env->mesh->rpz_action[RPZ_CNAME_OVERRIDE_ACTION] += i;
+			else
+				qstate->env->mesh->rpz_action[
+					respip_action_to_rpz_action(actinfo.action)] += i;
+		}
+	}
+
+	/* Mesh area accounting */
 	if(mstate->reply_list) {
 		mstate->reply_list = NULL;
 		if(!mstate->reply_list && !mstate->cb_list) {
@@ -2149,6 +2169,7 @@ mesh_serve_expired_callback(void* arg)
 			}
 		}
 	}
+
 	while((c = mstate->cb_list) != NULL) {
 		/* take this cb off the list; so that the list can be
 		 * changed, eg. by adds from the callback routine */

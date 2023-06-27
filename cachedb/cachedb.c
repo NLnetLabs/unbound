@@ -111,6 +111,15 @@ testframe_init(struct module_env* env, struct cachedb_env* cachedb_env)
 		log_err("out of memory");
 		return 0;
 	}
+	/* Register an EDNS option (65534) to bypass the worker cache lookup
+	 * for testing */
+	if(!edns_register_option(LDNS_EDNS_UNBOUND_CACHEDB_TESTFRAME_TEST,
+		1 /* bypass cache */,
+		0 /* no aggregation */, env)) {
+		log_err("testframe_init, could not register test opcode");
+		free(d);
+		return 0;
+	}
 	lock_basic_init(&d->lock);
 	lock_protect(&d->lock, d, sizeof(*d));
 	return 1;
@@ -228,7 +237,7 @@ cachedb_apply_cfg(struct cachedb_env* cachedb_env, struct config_file* cfg)
 	return 1;
 }
 
-int 
+int
 cachedb_init(struct module_env* env, int id)
 {
 	struct cachedb_env* cachedb_env = (struct cachedb_env*)calloc(1,
@@ -267,19 +276,16 @@ cachedb_init(struct module_env* env, int id)
 	return 1;
 }
 
-void 
+void
 cachedb_deinit(struct module_env* env, int id)
 {
 	struct cachedb_env* cachedb_env;
 	if(!env || !env->modinfo[id])
 		return;
 	cachedb_env = (struct cachedb_env*)env->modinfo[id];
-	/* free contents */
-	/* TODO */
 	if(cachedb_env->enabled) {
 		(*cachedb_env->backend->deinit)(env, cachedb_env);
 	}
-
 	free(cachedb_env);
 	env->modinfo[id] = NULL;
 }
@@ -630,11 +636,15 @@ cachedb_extcache_store(struct module_qstate* qstate, struct cachedb_env* ie)
  * See if unbound's internal cache can answer the query
  */
 static int
-cachedb_intcache_lookup(struct module_qstate* qstate)
+cachedb_intcache_lookup(struct module_qstate* qstate, struct cachedb_env* cde)
 {
 	uint8_t* dpname=NULL;
 	size_t dpnamelen=0;
 	struct dns_msg* msg;
+	/* for testframe bypass this lookup */
+	if(cde->backend == &testframe_backend) {
+		return 0;
+	}
 	if(iter_stub_fwd_no_cache(qstate, &qstate->qinfo,
 		&dpname, &dpnamelen))
 		return 0; /* no cache for these queries */
@@ -693,6 +703,7 @@ cachedb_handle_query(struct module_qstate* qstate,
 	struct cachedb_qstate* ATTR_UNUSED(iq),
 	struct cachedb_env* ie, int id)
 {
+	qstate->is_cachedb_answer = 0;
 	/* check if we are enabled, and skip if so */
 	if(!ie->enabled) {
 		/* pass request to next module */
@@ -709,7 +720,7 @@ cachedb_handle_query(struct module_qstate* qstate,
 
 	/* lookup inside unbound's internal cache.
 	 * This does not look for expired entries. */
-	if(cachedb_intcache_lookup(qstate)) {
+	if(cachedb_intcache_lookup(qstate, ie)) {
 		if(verbosity >= VERB_ALGO) {
 			if(qstate->return_msg->rep)
 				log_dns_msg("cachedb internal cache lookup",
@@ -746,6 +757,7 @@ cachedb_handle_query(struct module_qstate* qstate,
 				qstate->ext_state[id] = module_wait_module;
 				return;
 		}
+		qstate->is_cachedb_answer = 1;
 		/* we are done with the query */
 		qstate->ext_state[id] = module_finished;
 		return;
@@ -768,6 +780,7 @@ static void
 cachedb_handle_response(struct module_qstate* qstate,
 	struct cachedb_qstate* ATTR_UNUSED(iq), struct cachedb_env* ie, int id)
 {
+	qstate->is_cachedb_answer = 0;
 	/* check if we are not enabled or instructed to not cache, and skip */
 	if(!ie->enabled || qstate->no_cache_store) {
 		/* we are done with the query */
