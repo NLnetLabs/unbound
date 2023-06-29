@@ -258,7 +258,7 @@ int pythonmod_init(struct module_env* env, int id)
 
    /* Initialize module */
    FILE* script_py = NULL;
-   PyObject* py_init_arg, *res;
+   PyObject* py_init_arg = NULL, *res = NULL;
    PyGILState_STATE gil;
    int init_standard = 1, i = 0;
 #if PY_MAJOR_VERSION < 3
@@ -317,6 +317,7 @@ int pythonmod_init(struct module_env* env, int id)
    if (py_mod_count==1) {
       /* Initialize Python */
       if(PyRun_SimpleString("import sys \n") < 0 ) {
+         log_err("pythonmod: cannot initialize core module: unboundmodule.py");
          goto python_init_fail;
       }
       PyRun_SimpleString("sys.path.append('.') \n");
@@ -329,13 +330,16 @@ int pythonmod_init(struct module_env* env, int id)
          PyRun_SimpleString(wdir);
       }
       if(PyRun_SimpleString("import site\n") < 0) {
+         log_err("pythonmod: cannot initialize core module: unboundmodule.py");
          goto python_init_fail;
       }
       if(PyRun_SimpleString("sys.path.extend(site.getsitepackages())\n") < 0) {
+         log_err("pythonmod: cannot initialize core module: unboundmodule.py");
          goto python_init_fail;
       }
       if(PyRun_SimpleString("from unboundmodule import *\n") < 0)
       {
+         log_err("pythonmod: cannot initialize core module: unboundmodule.py");
          goto python_init_fail;
       }
    }
@@ -352,18 +356,22 @@ int pythonmod_init(struct module_env* env, int id)
    if (script_py == NULL)
    {
       log_err("pythonmod: can't open file %s for reading", pe->fname);
-      PyGILState_Release(gil);
-      return 0;
+      goto python_init_fail;
    }
 
    /* Load file */
    pe->module = PyImport_AddModule("__main__");
+   Py_XINCREF(pe->module);
    pe->dict = PyModule_GetDict(pe->module);
+   Py_XINCREF(pe->dict);
    pe->data = PyDict_New();
-   Py_XINCREF(pe->data);
-   PyModule_AddObject(pe->module, "mod_env", pe->data);
-
-   /* TODO: deallocation of pe->... if an error occurs */
+   Py_XINCREF(pe->data);  /* reference will be stolen below */
+   if(PyModule_AddObject(pe->module, "mod_env", pe->data) < 0) {
+	log_err("pythonmod: could not add mod_env object");
+	Py_XDECREF(pe->data);  /* 2 times, here and on python_init_fail; */
+	                       /* on failure the reference is not stolen */
+	goto python_init_fail;
+   }
 
    if (PyRun_SimpleFile(script_py, pe->fname) < 0) {
 #if PY_MAJOR_VERSION <= 2 || (PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION < 9)
@@ -394,18 +402,30 @@ int pythonmod_init(struct module_env* env, int id)
       fstr = malloc(flen+1);
       if(!fstr) {
 	      log_err("malloc failure to print parse error");
-	      PyGILState_Release(gil);
+
+/* close the file */
+#if PY_MAJOR_VERSION < 3
+	      Py_XDECREF(PyFileObject);
+#else
 	      fclose(script_py);
-	      return 0;
+#endif
+
+	      goto python_init_fail;
       }
       fseek(script_py, 0, SEEK_SET);
       if(fread(fstr, flen, 1, script_py) < 1) {
 	      log_err("file read failed to print parse error: %s: %s",
 		pe->fname, strerror(errno));
-	      PyGILState_Release(gil);
-	      fclose(script_py);
 	      free(fstr);
-	      return 0;
+
+/* close the file */
+#if PY_MAJOR_VERSION < 3
+	      Py_XDECREF(PyFileObject);
+#else
+	      fclose(script_py);
+#endif
+
+	      goto python_init_fail;
       }
       fstr[flen] = 0;
       /* we compile the string, but do not run it, to stop side-effects */
@@ -413,17 +433,26 @@ int pythonmod_init(struct module_env* env, int id)
        * that we are expecting */
       (void)Py_CompileString(fstr, pe->fname, Py_file_input);
 #endif
+
       log_py_err();
-      PyGILState_Release(gil);
+
+/* close the file */
+#if PY_MAJOR_VERSION < 3
+      Py_XDECREF(PyFileObject);
+#else
       fclose(script_py);
+#endif
+
 #if PY_MAJOR_VERSION <= 2 || (PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION < 9)
       /* no cleanup needed for python before 3.9 */
 #else
       /* cleanup for python 3.9 and newer */
       free(fstr);
 #endif
-      return 0;
+      goto python_init_fail;
    }
+
+/* close the file */
 #if PY_MAJOR_VERSION < 3
    Py_XDECREF(PyFileObject);
 #else
@@ -436,30 +465,26 @@ int pythonmod_init(struct module_env* env, int id)
       if ((pe->func_init = PyDict_GetItemString(pe->dict, "init")) == NULL)
       {
          log_err("pythonmod: function init is missing in %s", pe->fname);
-         PyGILState_Release(gil);
-         return 0;
+         goto python_init_fail;
       }
    }
    Py_XINCREF(pe->func_init);
    if ((pe->func_deinit = PyDict_GetItemString(pe->dict, "deinit")) == NULL)
    {
       log_err("pythonmod: function deinit is missing in %s", pe->fname);
-      PyGILState_Release(gil);
-      return 0;
+      goto python_init_fail;
    }
    Py_XINCREF(pe->func_deinit);
    if ((pe->func_operate = PyDict_GetItemString(pe->dict, "operate")) == NULL)
    {
       log_err("pythonmod: function operate is missing in %s", pe->fname);
-      PyGILState_Release(gil);
-      return 0;
+      goto python_init_fail;
    }
    Py_XINCREF(pe->func_operate);
    if ((pe->func_inform = PyDict_GetItemString(pe->dict, "inform_super")) == NULL)
    {
       log_err("pythonmod: function inform_super is missing in %s", pe->fname);
-      PyGILState_Release(gil);
-      return 0;
+      goto python_init_fail;
    }
    Py_XINCREF(pe->func_inform);
 
@@ -477,20 +502,24 @@ int pythonmod_init(struct module_env* env, int id)
    {
       log_err("pythonmod: Exception occurred in function init");
       log_py_err();
-      Py_XDECREF(res);
-      Py_XDECREF(py_init_arg);
-      PyGILState_Release(gil);
-      return 0;
+      goto python_init_fail;
    }
 
    Py_XDECREF(res);
    Py_XDECREF(py_init_arg);
    PyGILState_Release(gil);
-
    return 1;
 
 python_init_fail:
-   log_err("pythonmod: cannot initialize core module: unboundmodule.py");
+   Py_XDECREF(pe->module);
+   Py_XDECREF(pe->dict);
+   Py_XDECREF(pe->data);
+   Py_XDECREF(pe->func_init);
+   Py_XDECREF(pe->func_deinit);
+   Py_XDECREF(pe->func_operate);
+   Py_XDECREF(pe->func_inform);
+   Py_XDECREF(res);
+   Py_XDECREF(py_init_arg);
    PyGILState_Release(gil);
    return 0;
 }
@@ -516,6 +545,8 @@ void pythonmod_deinit(struct module_env* env, int id)
       /* Free result if any */
       Py_XDECREF(res);
       /* Free shared data if any */
+      Py_XDECREF(pe->module);
+      Py_XDECREF(pe->dict);
       Py_XDECREF(pe->data);
       Py_XDECREF(pe->func_init);
       Py_XDECREF(pe->func_deinit);
