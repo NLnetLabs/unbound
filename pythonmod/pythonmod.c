@@ -252,6 +252,17 @@ cleanup:
 	Py_XDECREF(exc_tb);
 }
 
+/* we only want to unwind Python once at exit */
+static void
+pythonmod_atexit(void)
+{
+   log_assert(py_mod_count == 0);
+   log_assert(mainthr != NULL);
+ 
+   PyEval_RestoreThread(mainthr);
+   Py_Finalize();
+}
+
 int pythonmod_init(struct module_env* env, int id)
 {
    int py_mod_idx = py_mod_count++;
@@ -310,6 +321,9 @@ int pythonmod_init(struct module_env* env, int id)
 #endif
       SWIG_init();
       mainthr = PyEval_SaveThread();
+
+      /* register callback to unwind Python at exit */
+      atexit(pythonmod_atexit);
    }
 
    gil = PyGILState_Ensure();
@@ -526,6 +540,7 @@ python_init_fail:
 
 void pythonmod_deinit(struct module_env* env, int id)
 {
+   int cbtype;
    struct pythonmod_env* pe = env->modinfo[id];
    if(pe == NULL)
       return;
@@ -554,14 +569,14 @@ void pythonmod_deinit(struct module_env* env, int id)
       Py_XDECREF(pe->func_operate);
       PyGILState_Release(gil);
 
-      if(--py_mod_count==0) {
-         PyEval_RestoreThread(mainthr);
-         Py_Finalize();
-         mainthr = NULL;
-      }
+      py_mod_count--;
    }
    pe->fname = NULL;
    free(pe);
+
+   /* iterate over all possible callback types and clean up each in turn */
+   for (cbtype = 0; cbtype < inplace_cb_types_total; cbtype++)
+      inplace_cb_delete(env, cbtype, id);
 
    /* Module is deallocated in Python */
    env->modinfo[id] = NULL;
