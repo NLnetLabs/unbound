@@ -1,3 +1,7 @@
+29 June 2023: Wouter
+	- Fix python modules with multiple scripts, by incrementing reference
+	  counts.
+
 27 June 2023: George
 	- Merge #892: Add cachedb hit stat. Introduces 'num.query.cachedb' as
 	  a new statistical counter.

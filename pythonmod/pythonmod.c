@@ -440,24 +440,28 @@ int pythonmod_init(struct module_env* env, int id)
          return 0;
       }
    }
+   Py_XINCREF(pe->func_init);
    if ((pe->func_deinit = PyDict_GetItemString(pe->dict, "deinit")) == NULL)
    {
       log_err("pythonmod: function deinit is missing in %s", pe->fname);
       PyGILState_Release(gil);
       return 0;
    }
+   Py_XINCREF(pe->func_deinit);
    if ((pe->func_operate = PyDict_GetItemString(pe->dict, "operate")) == NULL)
    {
       log_err("pythonmod: function operate is missing in %s", pe->fname);
       PyGILState_Release(gil);
       return 0;
    }
+   Py_XINCREF(pe->func_operate);
    if ((pe->func_inform = PyDict_GetItemString(pe->dict, "inform_super")) == NULL)
    {
       log_err("pythonmod: function inform_super is missing in %s", pe->fname);
       PyGILState_Release(gil);
       return 0;
    }
+   Py_XINCREF(pe->func_inform);
 
    if (init_standard)
    {
@@ -513,6 +517,10 @@ void pythonmod_deinit(struct module_env* env, int id)
       Py_XDECREF(res);
       /* Free shared data if any */
       Py_XDECREF(pe->data);
+      Py_XDECREF(pe->func_init);
+      Py_XDECREF(pe->func_deinit);
+      Py_XDECREF(pe->func_inform);
+      Py_XDECREF(pe->func_operate);
       PyGILState_Release(gil);
 
       if(--py_mod_count==0) {
