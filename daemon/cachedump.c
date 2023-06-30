@@ -387,7 +387,7 @@ move_into_cache(struct ub_packed_rrset_key* k,
 	struct rrset_ref ref;
 	uint8_t* p;
 
-	ak = alloc_special_obtain(&worker->alloc);
+	ak = alloc_special_obtain(worker->alloc);
 	if(!ak) {
 		log_warn("error out of memory");
 		return 0;
@@ -398,7 +398,7 @@ move_into_cache(struct ub_packed_rrset_key* k,
 	ak->rk.dname = (uint8_t*)memdup(k->rk.dname, k->rk.dname_len);
 	if(!ak->rk.dname) {
 		log_warn("error out of memory");
-		ub_packed_rrset_parsedelete(ak, &worker->alloc);
+		ub_packed_rrset_parsedelete(ak, worker->alloc);
 		return 0;
 	}
 	s = sizeof(*ad) + (sizeof(size_t) + sizeof(uint8_t*) + 
@@ -408,7 +408,7 @@ move_into_cache(struct ub_packed_rrset_key* k,
 	ad = (struct packed_rrset_data*)malloc(s);
 	if(!ad) {
 		log_warn("error out of memory");
-		ub_packed_rrset_parsedelete(ak, &worker->alloc);
+		ub_packed_rrset_parsedelete(ak, worker->alloc);
 		return 0;
 	}
 	p = (uint8_t*)ad;
@@ -431,7 +431,8 @@ move_into_cache(struct ub_packed_rrset_key* k,
 	ref.key = ak;
 	ref.id = ak->id;
 	(void)rrset_cache_update(worker->env.rrset_cache, &ref,
-		&worker->alloc, *worker->env.now);
+		worker->alloc, *worker->env.now);
+
 	return 1;
 }
 
@@ -859,7 +860,8 @@ int print_deleg_lookup(RES* ssl, struct worker* worker, uint8_t* nm,
 		/* go up? */
 		if(iter_dp_is_useless(&qinfo, BIT_RD, dp,
 			(worker->env.cfg->do_ip4 && worker->back->num_ip4 != 0),
-			(worker->env.cfg->do_ip6 && worker->back->num_ip6 != 0))) {
+			(worker->env.cfg->do_ip6 && worker->back->num_ip6 != 0),
+			worker->env.cfg->do_nat64)) {
 			print_dp_main(ssl, dp, msg);
 			print_dp_details(ssl, worker, dp);
 			if(!ssl_printf(ssl, "cache delegation was "
