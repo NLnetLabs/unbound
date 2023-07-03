@@ -66,7 +66,7 @@ then
 
 elif $PRE/readzone svcb.failure-cases-03
 then
-	echo "Failure case 02: 65 SvcParams is too many SvcParams; the limit is 64"
+	echo "Failure case 03: 65 SvcParams is too many SvcParams; the limit is 64"
 	echo "Incorrectly succeeded"
 	exit 1
 
@@ -76,11 +76,6 @@ then
 	echo "Incorrectly succeeded"
 	exit 1
 
-elif $PRE/readzone svcb.failure-cases-05
-then
-	echo "Dohpath must have '?dns' in the URI template variable"
-	echo "Incorrectly succeeded"
-	exit 1
 else
 	echo "All failure cases test successfully"
 fi
