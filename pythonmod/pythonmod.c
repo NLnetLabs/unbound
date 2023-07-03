@@ -303,18 +303,58 @@ int pythonmod_init(struct module_env* env, int id)
    /* Initialize Python libraries */
    if (py_mod_count==1 && !Py_IsInitialized()) 
    {
+#if PY_VERSION_HEX >= 0x03080000
+      PyStatus status;
+      PyPreConfig preconfig;
+      PyConfig config;
+#endif
 #if PY_MAJOR_VERSION >= 3
       wchar_t progname[8];
       mbstowcs(progname, "unbound", 8);
 #else
       char *progname = "unbound";
 #endif
+#if PY_VERSION_HEX < 0x03080000
       Py_SetProgramName(progname);
+#else
+      /* Python must be preinitialized, before the PyImport_AppendInittab
+       * call. */
+      PyPreConfig_InitPythonConfig(&preconfig);
+      status = Py_PreInitialize(&preconfig);
+      if(PyStatus_Exception(status)) {
+	log_err("python exception in Py_PreInitialize: %s%s%s",
+		(status.func?status.func:""), (status.func?": ":""),
+		(status.err_msg?status.err_msg:""));
+	return 0;
+      }
+#endif
       Py_NoSiteFlag = 1;
 #if PY_MAJOR_VERSION >= 3
       PyImport_AppendInittab(SWIG_name, (void*)SWIG_init);
 #endif
+#if PY_VERSION_HEX < 0x03080000
       Py_Initialize();
+#else
+      PyConfig_InitPythonConfig(&config);
+      status = PyConfig_SetString(&config, &config.program_name, progname);
+      if(PyStatus_Exception(status)) {
+	log_err("python exception in PyConfig_SetString(.. program_name ..): %s%s%s",
+		(status.func?status.func:""), (status.func?": ":""),
+		(status.err_msg?status.err_msg:""));
+	PyConfig_Clear(&config);
+	return 0;
+      }
+      config.site_import = 0;
+      status = Py_InitializeFromConfig(&config);
+      if(PyStatus_Exception(status)) {
+	log_err("python exception in Py_InitializeFromConfig: %s%s%s",
+		(status.func?status.func:""), (status.func?": ":""),
+		(status.err_msg?status.err_msg:""));
+	PyConfig_Clear(&config);
+	return 0;
+      }
+      PyConfig_Clear(&config);
+#endif
 #if PY_MAJOR_VERSION <= 2 || (PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION <= 6)
       /* initthreads only for python 3.6 and older */
       PyEval_InitThreads();

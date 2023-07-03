@@ -1,3 +1,6 @@
+3 July 2023: Wouter
+	- Fix #906: warning: ‘Py_SetProgramName’ is deprecated.
+
 29 June 2023: George
 	- More fixes for reference counting for python module and clean up
 	  failure code.
