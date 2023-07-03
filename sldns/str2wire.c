@@ -1123,41 +1123,40 @@ sldns_str2wire_svcparam_key_lookup(const char *key, size_t key_len)
 			return key_value;
 
 	} else switch (key_len) {
-	case sizeof("mandatory")-1:
-		if (!strncmp(key, "mandatory", sizeof("mandatory")-1))
-			return SVCB_KEY_MANDATORY;
-		if (!strncmp(key, "echconfig", sizeof("echconfig")-1))
-			return SVCB_KEY_ECH; /* allow "echconfig" as well as "ech" */
+	case 3:
+		if (!strncmp(key, "ech", key_len))
+			return SVCB_KEY_ECH;
 		break;
 
-	case sizeof("alpn")-1:
-		if (!strncmp(key, "alpn", sizeof("alpn")-1))
+	case 4:
+		if (!strncmp(key, "alpn", key_len))
 			return SVCB_KEY_ALPN;
-		if (!strncmp(key, "port", sizeof("port")-1))
+		if (!strncmp(key, "port", key_len))
 			return SVCB_KEY_PORT;
 		break;
 
-	case sizeof("no-default-alpn")-1:
-		if (!strncmp( key  , "no-default-alpn"
-		            , sizeof("no-default-alpn")-1))
-			return SVCB_KEY_NO_DEFAULT_ALPN;
-		break;
-
-	case sizeof("ipv4hint")-1:
-		if (!strncmp(key, "ipv4hint", sizeof("ipv4hint")-1))
-			return SVCB_KEY_IPV4HINT;
-		if (!strncmp(key, "ipv6hint", sizeof("ipv6hint")-1))
-			return SVCB_KEY_IPV6HINT;
-		break;
-
-	case sizeof("dohpath")-1:
-		if (!strncmp(key, "dohpath", sizeof("dohpath")-1))
+	case 7:
+		if (!strncmp(key, "dohpath", key_len))
 			return SVCB_KEY_DOHPATH;
 		break;
 
-	case sizeof("ech")-1:
-		if (!strncmp(key, "ech", sizeof("ech")-1))
-			return SVCB_KEY_ECH;
+	case 8:
+		if (!strncmp(key, "ipv4hint", key_len))
+			return SVCB_KEY_IPV4HINT;
+		if (!strncmp(key, "ipv6hint", key_len))
+			return SVCB_KEY_IPV6HINT;
+		break;
+
+	case 9:
+		if (!strncmp(key, "mandatory", key_len))
+			return SVCB_KEY_MANDATORY;
+		if (!strncmp(key, "echconfig", key_len))
+			return SVCB_KEY_ECH; /* allow "echconfig" as well as "ech" */
+		break;
+
+	case 15:
+		if (!strncmp(key, "no-default-alpn", key_len))
+			return SVCB_KEY_NO_DEFAULT_ALPN;
 		break;
 
 	default:
