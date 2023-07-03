@@ -1479,9 +1479,6 @@ mesh_send_reply(struct mesh_state* m, int rcode, struct reply_info* rep,
 			error_encode(r_buffer, LDNS_RCODE_SERVFAIL,
 				&m->s.qinfo, r->qid, r->qflags, &r->edns);
 		}
-
-		/* Send along EDE BOGUS EDNS0 option when validation is bogus */
-
 		m->reply_list = NULL;
 		comm_point_send_reply(&r->query_reply);
 		m->reply_list = rlist;
