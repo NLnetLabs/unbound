@@ -1173,7 +1173,7 @@ mesh_do_callback(struct mesh_state* m, int rcode, struct reply_info* rep,
 	else	secure = 0;
 	if(!rep && rcode == LDNS_RCODE_NOERROR)
 		rcode = LDNS_RCODE_SERVFAIL;
-	if(!rcode && (rep->security == sec_status_bogus ||
+	if(!rcode && rep && (rep->security == sec_status_bogus ||
 		rep->security == sec_status_secure_sentinel_fail)) {
 		if(!(reason = errinf_to_str_bogus(&m->s)))
 			rcode = LDNS_RCODE_SERVFAIL;
@@ -1213,7 +1213,8 @@ mesh_do_callback(struct mesh_state* m, int rcode, struct reply_info* rep,
 		} else {
 			fptr_ok(fptr_whitelist_mesh_cb(r->cb));
 			(*r->cb)(r->cb_arg, LDNS_RCODE_NOERROR, r->buf,
-				rep->security, reason, was_ratelimited);
+				(rep?rep->security:sec_status_unchecked),
+				reason, was_ratelimited);
 		}
 	}
 	free(reason);
