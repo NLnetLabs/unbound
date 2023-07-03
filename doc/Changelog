@@ -3,6 +3,9 @@
 	- Code cleanup for sldns_str2wire_svcparam_key_lookup.
 	- Merge #802: add validation EDEs to queries where the CD bit is set.
 	- For #802: Cleanup comments and add RCODE check for CD bit test case.
+	- Skip the 00-lint test. splint is not maintained; it either does not
+	  work or produces false positives. Static analysis is handled in the
+	  clang test.
 
 3 July 2023: Wouter
 	- Fix #906: warning: ‘Py_SetProgramName’ is deprecated.
