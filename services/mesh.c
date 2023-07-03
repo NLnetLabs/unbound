@@ -1238,6 +1238,34 @@ mesh_is_udp(struct mesh_reply const* r) {
 	return r->query_reply.c->type == comm_udp;
 }
 
+static inline void
+mesh_find_and_attach_ede_and_reason(struct mesh_state* m,
+	struct reply_info* rep, struct mesh_reply* r) {
+	char *reason = m->s.env->cfg->val_log_level >= 2
+		? errinf_to_str_bogus(&m->s) : NULL;
+
+	/* During validation the EDE code can be received via two
+	 * code paths. One code path fills the reply_info EDE, and
+	 * the other fills it in the errinf_strlist. These paths
+	 * intersect at some points, but where is opaque due to
+	 * the complexity of the validator. At the time of writing
+	 * we make the choice to prefer the EDE from errinf_strlist
+	 * but a compelling reason to do otherwise is just as valid
+	 */
+	sldns_ede_code reason_bogus = errinf_to_reason_bogus(&m->s);
+	if ((reason_bogus == LDNS_EDE_DNSSEC_BOGUS &&
+		rep->reason_bogus != LDNS_EDE_NONE) ||
+		reason_bogus == LDNS_EDE_NONE) {
+			reason_bogus = rep->reason_bogus;
+	}
+
+	if(reason_bogus != LDNS_EDE_NONE) {
+		edns_opt_list_append_ede(&r->edns.opt_list_out,
+			m->s.region, reason_bogus, reason);
+	}
+	free(reason);
+}
+
 /**
  * Send reply to mesh reply entry
  * @param m: mesh state to send it for.
@@ -1329,35 +1357,14 @@ mesh_send_reply(struct mesh_state* m, int rcode, struct reply_info* rep,
 				&r->edns, &r->query_reply, m->s.region, &r->start_time))
 					r->edns.opt_list_inplace_cb_out = NULL;
 		}
-		/* Send along EDE BOGUS EDNS0 option when answer is bogus */
+		/* Send along EDE BOGUS EDNS0 option when validation is bogus */
 		if(m->s.env->cfg->ede && rcode == LDNS_RCODE_SERVFAIL &&
 			m->s.env->need_to_validate && (!(r->qflags&BIT_CD) ||
 			m->s.env->cfg->ignore_cd) && rep &&
 			(rep->security <= sec_status_bogus ||
 			rep->security == sec_status_secure_sentinel_fail)) {
-			char *reason = m->s.env->cfg->val_log_level >= 2
-				? errinf_to_str_bogus(&m->s) : NULL;
-
-			/* During validation the EDE code can be received via two
-			 * code paths. One code path fills the reply_info EDE, and
-			 * the other fills it in the errinf_strlist. These paths
-			 * intersect at some points, but where is opaque due to
-			 * the complexity of the validator. At the time of writing
-			 * we make the choice to prefer the EDE from errinf_strlist
-			 * but a compelling reason to do otherwise is just as valid
-			 */
-			sldns_ede_code reason_bogus = errinf_to_reason_bogus(&m->s);
-			if ((reason_bogus == LDNS_EDE_DNSSEC_BOGUS &&
-				rep->reason_bogus != LDNS_EDE_NONE) ||
-				reason_bogus == LDNS_EDE_NONE) {
-					reason_bogus = rep->reason_bogus;
-			}
-
-			if(reason_bogus != LDNS_EDE_NONE) {
-				edns_opt_list_append_ede(&r->edns.opt_list_out,
-					m->s.region, reason_bogus, reason);
-			}
-			free(reason);
+			
+			mesh_find_and_attach_ede_and_reason(m, rep, r);
 		}
 		error_encode(r_buffer, rcode, &m->s.qinfo, r->qid,
 			r->qflags, &r->edns);
@@ -1372,6 +1379,14 @@ mesh_send_reply(struct mesh_state* m, int rcode, struct reply_info* rep,
 		r->edns.bits &= EDNS_DO;
 		m->s.qinfo.qname = r->qname;
 		m->s.qinfo.local_alias = r->local_alias;
+
+		/* Attach EDE without servfail if the validation failed */
+		if (m->s.env->cfg->ede && rep && 
+			(rep->security <= sec_status_bogus ||
+			rep->security == sec_status_secure_sentinel_fail)) {
+			mesh_find_and_attach_ede_and_reason(m, rep, r);
+		}
+
 		if(!inplace_cb_reply_call(m->s.env, &m->s.qinfo, &m->s, rep,
 			LDNS_RCODE_NOERROR, &r->edns, &r->query_reply, m->s.region, &r->start_time) ||
 			!reply_info_answer_encode(&m->s.qinfo, rep, r->qid,

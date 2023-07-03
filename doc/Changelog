@@ -1,6 +1,8 @@
 3 July 2023: George
 	- Merge #739: Add SVCB dohpath support.
 	- Code cleanup for sldns_str2wire_svcparam_key_lookup.
+	- Merge #802: add validation EDEs to queries where the CD bit is set.
+	- For #802: Cleanup comments and add RCODE check for CD bit test case.
 
 3 July 2023: Wouter
 	- Fix #906: warning: ‘Py_SetProgramName’ is deprecated.
