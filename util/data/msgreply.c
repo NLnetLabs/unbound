@@ -1195,7 +1195,7 @@ int inplace_cb_query_response_call(struct module_env* env,
 }
 
 struct edns_option* edns_opt_copy_region(struct edns_option* list,
-        struct regional* region)
+	struct regional* region)
 {
 	struct edns_option* result = NULL, *cur = NULL, *s;
 	while(list) {
@@ -1218,6 +1218,42 @@ struct edns_option* edns_opt_copy_region(struct edns_option* list,
 		else	result = s;
 		cur = s;
 
+		/* examine next element */
+		list = list->next;
+	}
+	return result;
+}
+
+struct edns_option* edns_opt_copy_filter_region(struct edns_option* list,
+	uint16_t* filter_list, size_t filter_list_len, struct regional* region)
+{
+	struct edns_option* result = NULL, *cur = NULL, *s;
+	size_t i;
+	while(list) {
+		for(i=0; i<filter_list_len; i++)
+			if(filter_list[i] == list->opt_code) goto found;
+		if(i == filter_list_len) goto next;
+found:
+		/* copy edns option structure */
+		s = regional_alloc_init(region, list, sizeof(*list));
+		if(!s) return NULL;
+		s->next = NULL;
+
+		/* copy option data */
+		if(s->opt_data) {
+			s->opt_data = regional_alloc_init(region, s->opt_data,
+				s->opt_len);
+			if(!s->opt_data)
+				return NULL;
+		}
+
+		/* link into list */
+		if(cur)
+			cur->next = s;
+		else	result = s;
+		cur = s;
+
+next:
 		/* examine next element */
 		list = list->next;
 	}

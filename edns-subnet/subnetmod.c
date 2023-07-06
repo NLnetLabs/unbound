@@ -331,6 +331,8 @@ update_cache(struct module_qstate *qstate, int id)
 	struct ecs_data *edns = &sq->ecs_client_in;
 	size_t i;
 	hashvalue_type h;
+	struct lruhash_entry* lru_entry;
+	int need_to_insert;
 
 	/* qinfo_hash is not set if it is prefetch request */
 	if (qstate->minfo[id] && ((struct subnet_qstate*)qstate->minfo[id])->qinfo_hash) {
@@ -340,9 +342,9 @@ update_cache(struct module_qstate *qstate, int id)
 	}
 
 	/* Step 1, general qinfo lookup */
-	struct lruhash_entry *lru_entry = slabhash_lookup(subnet_msg_cache, h,
+	lru_entry = slabhash_lookup(subnet_msg_cache, h,
 		&qstate->qinfo, 1);
-	int need_to_insert = (lru_entry == NULL);
+	need_to_insert = (lru_entry == NULL);
 	if (!lru_entry) {
 		void* data = calloc(1,
 			sizeof(struct subnet_msg_cache_data));
@@ -456,7 +458,7 @@ lookup_and_reply(struct module_qstate *qstate, int id, struct subnet_qstate *sq,
 		sq->ecs_client_out.subnet_validdata = 1;
 	}
 
-	if (prefetch && *qstate->env->now > ((struct reply_info *)node->elem)->prefetch_ttl) {
+	if (prefetch && *qstate->env->now >= ((struct reply_info *)node->elem)->prefetch_ttl) {
 		qstate->need_refetch = 1;
 	}
 	return 1;

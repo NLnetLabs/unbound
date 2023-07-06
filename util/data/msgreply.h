@@ -719,6 +719,12 @@ struct edns_option* edns_opt_copy_region(struct edns_option* list,
 	struct regional* region);
 
 /**
+ * Copy a filtered edns option list allocated to the new region
+ */
+struct edns_option* edns_opt_copy_filter_region(struct edns_option* list,
+	uint16_t* filter_list, size_t filter_list_len, struct regional* region);
+
+/**
  * Copy edns option list allocated with malloc
  */
 struct edns_option* edns_opt_copy_alloc(struct edns_option* list);
