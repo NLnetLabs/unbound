@@ -705,7 +705,7 @@ static void mesh_schedule_prefetch(struct mesh_area* mesh,
  * attached its own ECS data. */
 static void mesh_schedule_prefetch_subnet(struct mesh_area* mesh,
 	struct query_info* qinfo, uint16_t qflags, time_t leeway, int run,
-	int rpz_passthru, struct comm_reply* rep, struct edns_option* edns_list)
+	int rpz_passthru, struct sockaddr_storage* addr, struct edns_option* edns_list)
 {
 	struct mesh_state* s = NULL;
 	struct edns_option* opt = NULL;
@@ -738,7 +738,7 @@ static void mesh_schedule_prefetch_subnet(struct mesh_area* mesh,
 		/* Store the client's address. Later in the subnet module,
 		 * it is decided whether to include an ECS option or not.
 		 */
-		s->s.client_addr =  rep->client_addr;
+		s->s.client_addr =  *addr;
 	}
 #ifdef UNBOUND_DEBUG
 	n =
@@ -785,14 +785,14 @@ static void mesh_schedule_prefetch_subnet(struct mesh_area* mesh,
 
 void mesh_new_prefetch(struct mesh_area* mesh, struct query_info* qinfo,
 	uint16_t qflags, time_t leeway, int rpz_passthru,
-	struct comm_reply* rep, struct edns_option* opt_list)
+	struct sockaddr_storage* addr, struct edns_option* opt_list)
 {
+	(void)addr;
 	(void)opt_list;
-	(void)rep;
 #ifdef CLIENT_SUBNET
-	if(rep)
+	if(addr)
 		mesh_schedule_prefetch_subnet(mesh, qinfo, qflags, leeway, 1,
-			rpz_passthru, rep, opt_list);
+			rpz_passthru, addr, opt_list);
 	else
 #endif
 		mesh_schedule_prefetch(mesh, qinfo, qflags, leeway, 1,
@@ -1794,8 +1794,20 @@ mesh_continue(struct mesh_area* mesh, struct mesh_state* mstate,
 	if(s == module_finished) {
 		if(mstate->s.curmod == 0) {
 			struct query_info* qinfo = NULL;
+			struct edns_option* opt_list = NULL;
+			struct sockaddr_storage addr;
 			uint16_t qflags;
 			int rpz_p = 0;
+
+#ifdef CLIENT_SUBNET
+			struct edns_option* ecs;
+			if(mstate->s.need_refetch && mstate->reply_list &&
+				modstack_find(&mesh->mods, "subnetcache") != -1 &&
+				mstate->s.env->unique_mesh) {
+				addr = mstate->reply_list->query_reply.client_addr;
+			} else
+#endif
+				memset(&addr, 0, sizeof(addr));
 
 			mesh_query_done(mstate);
 			mesh_walk_supers(mesh, mstate);
@@ -1806,13 +1818,28 @@ mesh_continue(struct mesh_area* mesh, struct mesh_state* mstate,
 			 * we need to make a copy of the query info here. */
 			if(mstate->s.need_refetch) {
 				mesh_copy_qinfo(mstate, &qinfo, &qflags);
+#ifdef CLIENT_SUBNET
+				/* Make also a copy of the ecs option if any */
+				if((ecs = edns_opt_list_find(
+					mstate->s.edns_opts_front_in,
+					mstate->s.env->cfg->client_subnet_opcode)) != NULL) {
+					(void)edns_opt_list_append(&opt_list,
+						ecs->opt_code, ecs->opt_len,
+						ecs->opt_data,
+						mstate->s.env->scratch);
+				}
+#endif
 				rpz_p = mstate->s.rpz_passthru;
 			}
 
-			mesh_state_delete(&mstate->s);
 			if(qinfo) {
-				mesh_schedule_prefetch(mesh, qinfo, qflags,
-					0, 1, rpz_p);
+				mesh_state_delete(&mstate->s);
+				mesh_new_prefetch(mesh, qinfo, qflags, 0,
+					rpz_p,
+					addr.ss_family!=AF_UNSPEC?&addr:NULL,
+					opt_list);
+			} else {
+				mesh_state_delete(&mstate->s);
 			}
 			return 0;
 		}

@@ -817,7 +817,8 @@ reply_and_prefetch(struct worker* worker, struct query_info* qinfo,
 	if(modstack_find(&worker->env.mesh->mods, "subnetcache") != -1
 		&& worker->env.unique_mesh) {
 		mesh_new_prefetch(worker->env.mesh, qinfo, flags, leeway +
-			PREFETCH_EXPIRY_ADD, rpz_passthru, repinfo, opt_list);
+			PREFETCH_EXPIRY_ADD, rpz_passthru,
+			&repinfo->client_addr, opt_list);
 		return;
 	}
 #endif
