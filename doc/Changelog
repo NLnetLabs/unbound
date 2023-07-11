@@ -1,3 +1,11 @@
+11 July 2023: George
+	- Merge #664 from tilan7763: Add prefetch support for subnet cache
+	  entries.
+	- For #664: Easier code flow for subnetcache prefetching.
+	- For #664: Add testcase.
+	- For #664: Rename subnet_prefetch tests to subnet_global_prefetch to
+	  differentiate from the new subnet prefetch support.
+
 3 July 2023: George
 	- Merge #739: Add SVCB dohpath support.
 	- Code cleanup for sldns_str2wire_svcparam_key_lookup.
