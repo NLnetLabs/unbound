@@ -311,6 +311,7 @@ ub_ctx_delete(struct ub_ctx* ctx)
 	 * it and only one should clean up, the one with getpid == pipe_pid.*/
 	if(ctx->created_bg && ctx->pipe_pid != getpid()) {
 		do_stop = 0;
+#ifndef USE_WINSOCK
 		/* Stop events from getting deregistered, if the backend is
 		 * epoll, the epoll fd is the same as the other process.
 		 * That process should deregister them. */
@@ -322,6 +323,7 @@ ub_ctx_delete(struct ub_ctx* ctx)
 			ctx->rr_pipe->listen_com->event_added = 0;
 		if(ctx->rr_pipe->res_com)
 			ctx->rr_pipe->res_com->event_added = 0;
+#endif
 	}
 	/* see if bg thread is created and if threads have been killed */
 	/* no locks, because those may be held by terminated threads */

@@ -97,6 +97,9 @@ ADJUST copy_id
 REPLY QR AA DO NOERROR
 SECTION QUESTION
 ns1.example.        IN DS
+SECTION AUTHORITY
+example.       SOA     ns1.example. bugs.x.w.example. 1 3600 300 ( 3600000 3600 )
+example.        RRSIG   SOA 7 1 3600 20150420235959 20051021000000 ( 40430 example.  Hu25UIyNPmvPIVBrldN+9Mlp9Zql39qaUd8i q4ZLlYWfUUbbAS41pG+68z81q1xhkYAcEyHd VI2LmKusbZsT0Q== )
 ENTRY_END
 
 ENTRY_BEGIN

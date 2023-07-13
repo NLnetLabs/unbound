@@ -59,7 +59,7 @@
  ******************************************************************************/
 
 /**
- * This is the default DNS64 prefix that is used whent he dns64 module is listed
+ * This is the default DNS64 prefix that is used when the dns64 module is listed
  * in module-config but when the dns64-prefix variable is not present.
  */
 static const char DEFAULT_DNS64_PREFIX[] = "64:ff9b::/96";
