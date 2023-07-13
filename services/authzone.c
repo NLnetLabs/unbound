@@ -7510,7 +7510,7 @@ static void add_rrlist_rrsigs_into_data(struct packed_rrset_data* data,
 		size_t j;
 		if(!rrlist[i])
 			continue;
-		if(rrlist[i] && rrlist[i]->type == LDNS_RR_TYPE_ZONEMD &&
+		if(rrlist[i]->type == LDNS_RR_TYPE_ZONEMD &&
 			query_dname_compare(z->name, node->name)==0) {
 			/* omit RRSIGs over type ZONEMD at apex */
 			continue;
