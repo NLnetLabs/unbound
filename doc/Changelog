@@ -1,3 +1,7 @@
+13 July 2023: George
+	- Merge #880 from chipitsine: services/authzone.c: remove redundant
+	  check.
+
 11 July 2023: George
 	- Merge #664 from tilan7763: Add prefetch support for subnet cache
 	  entries.
