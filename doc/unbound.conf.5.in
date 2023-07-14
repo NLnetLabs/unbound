@@ -2112,13 +2112,32 @@ useful when you want immediate changes to be visible.
 Authority zones are configured with \fBauth\-zone:\fR, and each one must
 have a \fBname:\fR.  There can be multiple ones, by listing multiple auth\-zone clauses, each with a different name, pertaining to that part of the namespace.
 The authority zone with the name closest to the name looked up is used.
-Authority zones are processed after \fBlocal\-zones\fR and before
-cache (\fBfor\-downstream:\fR \fIyes\fR), and when used in this manner
-make Unbound respond like an authority server.  Authority zones are also
-processed after cache, just before going to the network to fetch
-information for recursion (\fBfor\-upstream:\fR \fIyes\fR), and when used
-in this manner provide a local copy of an authority server that speeds up
-lookups of that data.
+Authority zones can be processed on two distinct, non-exclusive, configurable
+stages.
+.LP
+With \fBfor\-downstream:\fR \fIyes\fR (default), authority zones are processed
+after \fBlocal\-zones\fR and before cache.
+When used in this manner, Unbound responds like an authority server with no
+further processing other than returning an answer from the zone contents.
+A notable example, in this case, is CNAME records which are returned verbatim
+to downstream clients without further resolution.
+.LP
+With \fBfor\-upstream:\fR \fIyes\fR (default), authority zones are processed
+after the cache lookup, just before going to the network to fetch
+information for recursion.
+When used in this manner they provide a local copy of an authority server
+that speeds up lookups for that data during resolving.
+.LP
+If both options are enabled (default), client queries for an authority zone are
+answered authoritatively from Unbound, while internal queries that require data
+from the authority zone consult the local zone data instead of going to the
+network.
+.LP
+An interesting configuration is \fBfor\-downstream:\fR \fIno\fR,
+\fBfor\-upstream:\fR \fIyes\fR that allows for hyperlocal behavior where both
+client and internal queries consult the local zone data while resolving.
+In this case, the aforementioned CNAME example will result in a thoroughly
+resolved answer.
 .LP
 Authority zones can be read from zonefile.  And can be kept updated via
 AXFR and IXFR.  After update the zonefile is rewritten.  The update mechanism
