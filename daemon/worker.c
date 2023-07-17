@@ -507,8 +507,8 @@ answer_norec_from_cache(struct worker* worker, struct query_info* qinfo,
 				msg->rep, LDNS_RCODE_SERVFAIL, edns, repinfo, worker->scratchpad,
 				worker->env.now_tv))
 					return 0;
-			/* Attached the cached EDE (RFC8914) */
-			if (worker->env.cfg->ede) {
+			/* Attach the cached EDE (RFC8914) */
+			if(worker->env.cfg->ede) {
 				edns_opt_list_append_ede(&edns->opt_list_out,
 					worker->scratchpad, msg->rep->reason_bogus,
 					msg->rep->reason_bogus_str);
@@ -693,8 +693,8 @@ answer_from_cache(struct worker* worker, struct query_info* qinfo,
 			LDNS_RCODE_SERVFAIL, edns, repinfo, worker->scratchpad,
 			worker->env.now_tv))
 			goto bail_out;
-		/* Attached the cached EDE (RFC8914) */
-		if (worker->env.cfg->ede) {
+		/* Attach the cached EDE (RFC8914) */
+		if(worker->env.cfg->ede) {
 			edns_opt_list_append_ede(&edns->opt_list_out,
 					worker->scratchpad, rep->reason_bogus,
 					rep->reason_bogus_str);
@@ -1668,7 +1668,7 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 	 * ACLs allow the snooping. */
 	if(!(LDNS_RD_WIRE(sldns_buffer_begin(c->buffer))) &&
 		acl != acl_allow_snoop ) {
-		if (worker->env.cfg->ede) {
+		if(worker->env.cfg->ede) {
 			EDNS_OPT_LIST_APPEND_EDE(&edns.opt_list_out,
 				worker->scratchpad, LDNS_EDE_NOT_AUTHORITATIVE, "");
 		}

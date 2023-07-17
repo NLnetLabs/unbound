@@ -157,7 +157,7 @@ dns_cache_store_msg(struct module_env* env, struct query_info* qinfo,
 		/* we do not store the message, but we did store the RRs,
 		 * which could be useful for delegation information */
 		verbose(VERB_ALGO, "TTL 0: dropped msg from cache");
-		free(rep);
+		reply_info_delete(rep, NULL);
 		/* if the message is in the cache, remove that msg,
 		 * so that the TTL 0 response can be returned for future
 		 * responses (i.e. don't get answered from
@@ -1073,7 +1073,7 @@ dns_cache_store(struct module_env* env, struct query_info* msgqinf,
 				((ntohs(ref.key->rk.type)==LDNS_RR_TYPE_NS
 				 && !pside) ? qstarttime:*env->now + leeway));
 		}
-		free(rep);
+		reply_info_delete(rep, NULL);
 		return 1;
 	} else {
 		/* store msg, and rrsets */

@@ -652,6 +652,7 @@ load_msg(RES* ssl, sldns_buffer* buf, struct worker* worker)
 		log_warn("error cannot parse numbers: %s", s);
 		return 0;
 	}
+	memset(&rep, 0, sizeof(rep));
 	rep.flags = (uint16_t)flags;
 	rep.qdcount = (uint16_t)qdcount;
 	rep.ttl = (time_t)ttl;

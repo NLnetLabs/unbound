@@ -358,7 +358,6 @@ error_response_cache(struct module_qstate* qstate, int id, int rcode)
 	err.serve_expired_ttl = NORR_TTL;
 	/* do not waste time trying to validate this servfail */
 	err.security = sec_status_indeterminate;
-	err.reason_bogus_str = NULL;
 	verbose(VERB_ALGO, "store error response in message cache");
 	iter_dns_store(qstate->env, &qstate->qinfo, &err, 0, 0, 0, NULL,
 		qstate->query_flags, qstate->qstarttime);
@@ -3827,8 +3826,8 @@ processFinished(struct module_qstate* qstate, struct iter_qstate* iq,
 	/* make sure QR flag is on */
 	iq->response->rep->flags |= BIT_QR;
 
-	/* explicitly set the EDE string size to 0 */
-	iq->response->rep->reason_bogus_str_size = 0;
+	/* explicitly set the EDE string to NULL */
+	iq->response->rep->reason_bogus_str = NULL;
 
 	/* we have finished processing this query */
 	qstate->ext_state[id] = module_finished;

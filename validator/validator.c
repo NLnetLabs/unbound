@@ -2154,20 +2154,14 @@ processFinished(struct module_qstate* qstate, struct val_qstate* vq,
 				char* err_str = errinf_to_str_bogus(qstate);
 				if(err_str) {
 					size_t err_str_len = strlen(err_str);
-
-					/* allocate space and store the error string and it's size*/
-					if (qstate->region) {
-						vq->orig_msg->rep->reason_bogus_str = regional_alloc(
-							qstate->region,
-							sizeof(char) * (err_str_len + 1));
-					} else {
-						vq->orig_msg->rep->reason_bogus_str = malloc(
-							sizeof(char) * (err_str_len + 1));
-					}
-
+					log_info("%s", err_str);
+					/* allocate space and store the error
+					 * string; */
+					vq->orig_msg->rep->reason_bogus_str = regional_alloc(
+						qstate->region,
+						sizeof(char) * (err_str_len+1));
 					memcpy(vq->orig_msg->rep->reason_bogus_str,
-						err_str, err_str_len + 1);
-					vq->orig_msg->rep->reason_bogus_str_size = err_str_len;
+						err_str, err_str_len+1);
 				}
 				free(err_str);
 			}
