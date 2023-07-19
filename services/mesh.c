@@ -1355,13 +1355,11 @@ mesh_send_reply(struct mesh_state* m, int rcode, struct reply_info* rep,
 				&r->edns, &r->query_reply, m->s.region, &r->start_time))
 					r->edns.opt_list_inplace_cb_out = NULL;
 		}
-		/* Send along EDE BOGUS EDNS0 option when validation is bogus */
-		if(m->s.env->cfg->ede && rcode == LDNS_RCODE_SERVFAIL &&
-			m->s.env->need_to_validate && (!(r->qflags&BIT_CD) ||
-			m->s.env->cfg->ignore_cd) && rep &&
-			(rep->security <= sec_status_bogus ||
-			rep->security == sec_status_secure_sentinel_fail)) {
-			
+		/* Send along EDE EDNS0 option when SERVFAILing; usually
+		 * DNSSEC validation failures */
+		/* Since we are SERVFAILing here, CD bit and rep->security
+		 * is already handled. */
+		if(m->s.env->cfg->ede && rep) {
 			mesh_find_and_attach_ede_and_reason(m, rep, r);
 		}
 		error_encode(r_buffer, rcode, &m->s.qinfo, r->qid,
@@ -1378,8 +1376,10 @@ mesh_send_reply(struct mesh_state* m, int rcode, struct reply_info* rep,
 		m->s.qinfo.qname = r->qname;
 		m->s.qinfo.local_alias = r->local_alias;
 
-		/* Attach EDE without servfail if the validation failed */
-		if (m->s.env->cfg->ede && rep && 
+		/* Attach EDE without SERVFAIL if the validation failed.
+		 * Need to explicitly check for rep->security otherwise failed
+		 * validation paths may attach to a secure answer. */
+		if(m->s.env->cfg->ede && rep &&
 			(rep->security <= sec_status_bogus ||
 			rep->security == sec_status_secure_sentinel_fail)) {
 			mesh_find_and_attach_ede_and_reason(m, rep, r);
