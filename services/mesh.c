@@ -1234,36 +1234,34 @@ mesh_is_rpz_respip_tcponly_action(struct mesh_state const* m)
 }
 
 static inline int
-mesh_is_udp(struct mesh_reply const* r) {
+mesh_is_udp(struct mesh_reply const* r)
+{
 	return r->query_reply.c->type == comm_udp;
 }
 
 static inline void
 mesh_find_and_attach_ede_and_reason(struct mesh_state* m,
-	struct reply_info* rep, struct mesh_reply* r) {
-	char *reason = m->s.env->cfg->val_log_level >= 2
-		? errinf_to_str_bogus(&m->s) : NULL;
-
-	/* During validation the EDE code can be received via two
+	struct reply_info* rep, struct mesh_reply* r)
+{
+	/* OLD note:
+	 * During validation the EDE code can be received via two
 	 * code paths. One code path fills the reply_info EDE, and
 	 * the other fills it in the errinf_strlist. These paths
 	 * intersect at some points, but where is opaque due to
 	 * the complexity of the validator. At the time of writing
 	 * we make the choice to prefer the EDE from errinf_strlist
 	 * but a compelling reason to do otherwise is just as valid
+	 * NEW note:
+	 * The compelling reason is that with caching support, the value
+	 * in the * reply_info is cached.
+	 * The reason members of the reply_info struct should be
+	 * updated as they are already cached. No reason to
+	 * try and find the EDE information in errinf anymore.
 	 */
-	sldns_ede_code reason_bogus = errinf_to_reason_bogus(&m->s);
-	if ((reason_bogus == LDNS_EDE_DNSSEC_BOGUS &&
-		rep->reason_bogus != LDNS_EDE_NONE) ||
-		reason_bogus == LDNS_EDE_NONE) {
-			reason_bogus = rep->reason_bogus;
-	}
-
-	if(reason_bogus != LDNS_EDE_NONE) {
+	if(rep->reason_bogus != LDNS_EDE_NONE) {
 		edns_opt_list_append_ede(&r->edns.opt_list_out,
-			m->s.region, reason_bogus, reason);
+			m->s.region, rep->reason_bogus, rep->reason_bogus_str);
 	}
-	free(reason);
 }
 
 /**
