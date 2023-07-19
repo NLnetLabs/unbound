@@ -746,7 +746,7 @@ sldns_get_rr_class_by_name(const char *name)
 	if (strlen(name) > 5 && strncasecmp(name, "CLASS", 5) == 0) {
 		unsigned int a = atoi(name + 5);
 		if (a > LDNS_RR_TYPE_LAST) {
-			return (enum sldns_enum_rr_type)0;
+			return (enum sldns_enum_rr_class)0;
 		}
 		return a;
 	}
