@@ -459,14 +459,14 @@ qlist_parse_line(sldns_buffer* buf, char* p)
 		qinfo.qtype = sldns_get_rr_type_by_name(cl);
 		qinfo.qclass = sldns_get_rr_class_by_name(tp);
 		if((qinfo.qtype == 0 && strcmp(cl, "TYPE0") != 0) ||
-		   (qinfo.qclass == 0 && strcmp(tp, "CLASS0") != 0)) {
+			(qinfo.qclass == 0 && strcmp(tp, "CLASS0") != 0)) {
 			return 0;
 		}
 	} else {
 		qinfo.qtype = sldns_get_rr_type_by_name(tp);
 		qinfo.qclass = sldns_get_rr_class_by_name(cl);
 		if((qinfo.qtype == 0 && strcmp(tp, "TYPE0") != 0) ||
-		   (qinfo.qclass == 0 && strcmp(cl, "CLASS0") != 0)) {
+			(qinfo.qclass == 0 && strcmp(cl, "CLASS0") != 0)) {
 			return 0;
 		}
 	}
