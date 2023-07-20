@@ -3,6 +3,9 @@
 	  CLASSXX representation.
 	- For #909: Fix return values.
 
+20 July 2023: Wouter
+	- For #909: Fix RR class comparison.
+
 14 July 2023: George
 	- More clear description of the different auth-zone behaviors on the
 	  man page.
