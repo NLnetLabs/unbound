@@ -229,6 +229,10 @@ make_query(char* qname, char* qtype, char* qclass)
 
 	qinfo.qtype = sldns_get_rr_type_by_name(qtype);
 	qinfo.qclass = sldns_get_rr_class_by_name(qclass);
+	if((qinfo.qtype == 0 && strcmp(qtype, "TYPE0") != 0) ||
+	   (qinfo.qclass == 0 && strcmp(qclass, "CLASS0") != 0)) {
+		return 0;
+	}
 	qinfo.local_alias = NULL;
 
 	qinfo_query_encode(buf, &qinfo); /* flips buffer */
