@@ -1581,6 +1581,9 @@ do_flush_type(RES* ssl, struct worker* worker, char* arg)
 	if(!parse_arg_name(ssl, arg, &nm, &nmlen, &nmlabs))
 		return;
 	t = sldns_get_rr_type_by_name(arg2);
+	if(t == 0 && strcmp(arg2, "TYPE0") != 0) {
+		return;
+	}
 	do_cache_remove(worker, nm, nmlen, t, LDNS_RR_CLASS_IN);
 
 	free(nm);

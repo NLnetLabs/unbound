@@ -132,7 +132,15 @@ write_q(int fd, int udp, SSL* ssl, sldns_buffer* buf, uint16_t id,
 
 	/* qtype and qclass */
 	qinfo.qtype = sldns_get_rr_type_by_name(strtype);
+	if(qinfo.qtype == 0 && strcmp(strtype, "TYPE0") != 0) {
+		printf("cannot parse query type: '%s'\n", strtype);
+		exit(1);
+	}
 	qinfo.qclass = sldns_get_rr_class_by_name(strclass);
+	if(qinfo.qclass == 0 && strcmp(strclass, "CLASS0") != 0) {
+		printf("cannot parse query class: '%s'\n", strclass);
+		exit(1);
+	}
 
 	/* clear local alias */
 	qinfo.local_alias = NULL;

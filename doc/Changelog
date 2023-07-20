@@ -1,3 +1,8 @@
+20 July 2023: George
+	- Merge #909 from headshog: Numeric truncation when parsing TYPEXX and
+	  CLASSXX representation.
+	- For #909: Fix return values.
+
 14 July 2023: George
 	- More clear description of the different auth-zone behaviors on the
 	  man page.
