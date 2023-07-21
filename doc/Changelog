@@ -7,6 +7,11 @@
 	- Merge #390 from Frank Riley: Add missing callbacks to the python
 	  module.
 	- Cleaner failure code for callback functions in interface.i.
+	- Merge #889 from borisVanhoof: Free memory in error case + remove
+	  unused function.
+	- For #889: use netcat-openbsd instead of netcat-traditional.
+	- For #889: Account for num_detached_states before possible
+	  mesh_state_delete when erroring out.
 
 20 July 2023: George
 	- Merge #909 from headshog: Numeric truncation when parsing TYPEXX and

@@ -1121,7 +1121,7 @@ generate_a_aaaa_check(struct module_qstate* qstate, struct iter_qstate* iq,
  * Generate a NS check request to obtain authoritative information
  * on an NS rrset.
  *
- * @param qstate: the qtstate that triggered the need to prime.
+ * @param qstate: the qstate that triggered the need to prime.
  * @param iq: iterator query state.
  * @param id: module id.
  */

@@ -449,6 +449,8 @@ void mesh_new_client(struct mesh_area* mesh, struct query_info* qinfo,
 			comm_point_send_reply(rep);
 			return;
 		}
+		/* set detached (it is now) */
+		mesh->num_detached_states++;
 		if(unique)
 			mesh_state_make_unique(s);
 		s->s.rpz_passthru = rpz_passthru;
@@ -457,13 +459,14 @@ void mesh_new_client(struct mesh_area* mesh, struct query_info* qinfo,
 			s->s.edns_opts_front_in = edns_opt_copy_region(edns->opt_list_in,
 				s->s.region);
 			if(!s->s.edns_opts_front_in) {
-				log_err("mesh_state_create: out of memory; SERVFAIL");
+				log_err("edns_opt_copy_region: out of memory; SERVFAIL");
 				if(!inplace_cb_reply_servfail_call(mesh->env, qinfo, NULL,
 					NULL, LDNS_RCODE_SERVFAIL, edns, rep, mesh->env->scratch, mesh->env->now_tv))
 						edns->opt_list_inplace_cb_out = NULL;
 				error_encode(r_buffer, LDNS_RCODE_SERVFAIL,
 					qinfo, qid, qflags, edns);
 				comm_point_send_reply(rep);
+				mesh_state_delete(&s->s);
 				return;
 			}
 		}
@@ -475,8 +478,6 @@ void mesh_new_client(struct mesh_area* mesh, struct query_info* qinfo,
 #endif
 		rbtree_insert(&mesh->all, &s->node);
 		log_assert(n != NULL);
-		/* set detached (it is now) */
-		mesh->num_detached_states++;
 		added = 1;
 	}
 	if(!s->reply_list && !s->cb_list) {
@@ -569,6 +570,8 @@ mesh_new_callback(struct mesh_area* mesh, struct query_info* qinfo,
 		if(!s) {
 			return 0;
 		}
+		/* set detached (it is now) */
+		mesh->num_detached_states++;
 		if(unique)
 			mesh_state_make_unique(s);
 		s->s.rpz_passthru = rpz_passthru;
@@ -576,6 +579,7 @@ mesh_new_callback(struct mesh_area* mesh, struct query_info* qinfo,
 			s->s.edns_opts_front_in = edns_opt_copy_region(edns->opt_list_in,
 				s->s.region);
 			if(!s->s.edns_opts_front_in) {
+				mesh_state_delete(&s->s);
 				return 0;
 			}
 		}
@@ -586,8 +590,6 @@ mesh_new_callback(struct mesh_area* mesh, struct query_info* qinfo,
 #endif
 		rbtree_insert(&mesh->all, &s->node);
 		log_assert(n != NULL);
-		/* set detached (it is now) */
-		mesh->num_detached_states++;
 		added = 1;
 	}
 	if(!s->reply_list && !s->cb_list) {
@@ -604,6 +606,8 @@ mesh_new_callback(struct mesh_area* mesh, struct query_info* qinfo,
 	}
 	/* add serve expired timer if not already there */
 	if(timeout && !mesh_serve_expired_init(s, timeout)) {
+		if(added)
+			mesh_state_delete(&s->s);
 		return 0;
 	}
 	/* update statistics */
@@ -890,12 +894,6 @@ mesh_state_create(struct module_env* env, struct query_info* qinfo,
 	mstate->s.edns_opts_front_out = NULL;
 
 	return mstate;
-}
-
-int
-mesh_state_is_unique(struct mesh_state* mstate)
-{
-	return mstate->unique != NULL;
 }
 
 void
