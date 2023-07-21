@@ -386,10 +386,10 @@ send_em(const char* svr, const char* pp2_client, int udp, int usessl,
 	SSL_CTX* ctx = NULL;
 	SSL* ssl = NULL;
 	sldns_buffer* buf = sldns_buffer_new(65553);
-	if(!buf) fatal_exit("out of memory");
 	sldns_buffer* proxy_buf = sldns_buffer_new(65553);
-	if(!proxy_buf) {
+	if(!buf || !proxy_buf) {
 		sldns_buffer_free(buf);
+		sldns_buffer_free(proxy_buf);
 		fatal_exit("out of memory");
 	}
 	pp2_parsed = parse_pp2_client(pp2_client, udp, proxy_buf);
