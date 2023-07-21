@@ -4,6 +4,8 @@
 	- For #857: fix mixed declarations and code.
 	- Merge #118 from mibere: Changed verbosity level for Redis init &
 	  deinit.
+	- Merge #390 from Frank Riley: Add missing callbacks to the python
+	  module.
 
 20 July 2023: George
 	- Merge #909 from headshog: Numeric truncation when parsing TYPEXX and
