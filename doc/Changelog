@@ -6,6 +6,7 @@
 	  deinit.
 	- Merge #390 from Frank Riley: Add missing callbacks to the python
 	  module.
+	- Cleaner failure code for callback functions in interface.i.
 
 20 July 2023: George
 	- Merge #909 from headshog: Numeric truncation when parsing TYPEXX and

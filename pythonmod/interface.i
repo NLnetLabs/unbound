@@ -1551,13 +1551,15 @@ int edns_opt_list_append(struct edns_option** list, uint16_t code, size_t len,
         struct comm_reply* repinfo, struct regional* region,
         struct timeval* start_time, int id, void* python_callback)
     {
-        PyObject *func, *py_edns, *py_qstate, *py_opt_list_out, *py_qinfo;
-        PyObject *py_rep, *py_repinfo, *py_region;
+        PyObject *func = NULL, *py_edns = NULL, *py_qstate = NULL;
+        PyObject *py_opt_list_out = NULL, *py_qinfo = NULL;
+        PyObject *py_rep = NULL, *py_repinfo = NULL, *py_region = NULL;
         PyObject *py_args = NULL, *py_kwargs = NULL, *result = NULL;
         int res = 0;
         double py_start_time = ((double)start_time->tv_sec) + ((double)start_time->tv_usec) / 1.0e6;
 
         PyGILState_STATE gstate = PyGILState_Ensure();
+
         func = (PyObject *) python_callback;
         py_edns = SWIG_NewPointerObj((void*) edns, SWIGTYPE_p_edns_data, 0);
         py_qstate = SWIG_NewPointerObj((void*) qstate,
@@ -1568,20 +1570,24 @@ int edns_opt_list_append(struct edns_option** list, uint16_t code, size_t len,
         py_rep = SWIG_NewPointerObj((void*) rep, SWIGTYPE_p_reply_info, 0);
         py_repinfo = SWIG_NewPointerObj((void*) repinfo, SWIGTYPE_p_comm_reply, 0);
         py_region = SWIG_NewPointerObj((void*) region, SWIGTYPE_p_regional, 0);
-        if(py_qinfo && py_qstate && py_rep && py_edns && py_opt_list_out
-                && py_region && py_repinfo) {
-                py_args = Py_BuildValue("(OOOiOOO)", py_qinfo, py_qstate, py_rep,
-                        rcode, py_edns, py_opt_list_out, py_region);
-                py_kwargs = Py_BuildValue("{s:O,s:d}", "repinfo", py_repinfo, "start_time",
-                          py_start_time);
-                if(py_args && py_kwargs) {
-                        result = PyObject_Call(func, py_args, py_kwargs);
-                } else {
-                        log_err("pythonmod: malloc failure in python_inplace_cb_reply_generic");
-                }
-        } else {
-                log_err("pythonmod: malloc failure in python_inplace_cb_reply_generic");
+        if(!(py_qinfo && py_qstate && py_rep && py_edns && py_opt_list_out
+                && py_region && py_repinfo)) {
+                log_err("pythonmod: swig pointer failure in python_inplace_cb_reply_generic");
+                goto out;
         }
+        py_args = Py_BuildValue("(OOOiOOO)", py_qinfo, py_qstate, py_rep,
+                rcode, py_edns, py_opt_list_out, py_region);
+        py_kwargs = Py_BuildValue("{s:O,s:d}", "repinfo", py_repinfo, "start_time",
+                py_start_time);
+        if(!(py_args && py_kwargs)) {
+                log_err("pythonmod: BuildValue failure in python_inplace_cb_reply_generic");
+                goto out;
+        }
+        result = PyObject_Call(func, py_args, py_kwargs);
+        if (result) {
+            res = PyInt_AsLong(result);
+        }
+out:
         Py_XDECREF(py_edns);
         Py_XDECREF(py_qstate);
         Py_XDECREF(py_opt_list_out);
@@ -1591,9 +1597,6 @@ int edns_opt_list_append(struct edns_option** list, uint16_t code, size_t len,
         Py_XDECREF(py_region);
         Py_XDECREF(py_args);
         Py_XDECREF(py_kwargs);
-        if (result) {
-            res = PyInt_AsLong(result);
-        }
         Py_XDECREF(result);
         PyGILState_Release(gstate);
         return res;
@@ -1641,29 +1644,34 @@ int edns_opt_list_append(struct edns_option** list, uint16_t code, size_t len,
         int res = 0;
         PyObject *func = python_callback;
         PyObject *py_args = NULL, *py_kwargs = NULL, *result = NULL;
+        PyObject *py_qinfo = NULL;
+        PyObject *py_qstate = NULL;
+        PyObject *py_addr = NULL;
+        PyObject *py_zone = NULL;
+        PyObject *py_region = NULL;
 
         PyGILState_STATE gstate = PyGILState_Ensure();
 
-        PyObject *py_qinfo = SWIG_NewPointerObj((void*) qinfo, SWIGTYPE_p_query_info, 0);
-        PyObject *py_qstate = SWIG_NewPointerObj((void*) qstate, SWIGTYPE_p_module_qstate, 0);
-        PyObject *py_addr = SWIG_NewPointerObj((void *) addr, SWIGTYPE_p_sockaddr_storage, 0);
-        PyObject *py_zone = PyBytes_FromStringAndSize((const char *)zone, zonelen);
-        PyObject *py_region = SWIG_NewPointerObj((void*) region, SWIGTYPE_p_regional, 0);
-        if(py_qinfo && py_qstate && py_addr && py_zone && py_region) {
-                py_args = Py_BuildValue("(OiOOOO)", py_qinfo, flags, py_qstate, py_addr, py_zone, py_region);
-                py_kwargs = Py_BuildValue("{}");
-                if(py_args && py_kwargs) {
-                        result = PyObject_Call(func, py_args, py_kwargs);
-                        if (result) {
-                            res = PyInt_AsLong(result);
-                        }
-                } else {
-                        log_err("pythonmod: malloc failure in python_inplace_cb_query_generic");
-                }
-        } else {
-                log_err("pythonmod: malloc failure in python_inplace_cb_query_generic");
+        py_qinfo = SWIG_NewPointerObj((void*) qinfo, SWIGTYPE_p_query_info, 0);
+        py_qstate = SWIG_NewPointerObj((void*) qstate, SWIGTYPE_p_module_qstate, 0);
+        py_addr = SWIG_NewPointerObj((void *) addr, SWIGTYPE_p_sockaddr_storage, 0);
+        py_zone = PyBytes_FromStringAndSize((const char *)zone, zonelen);
+        py_region = SWIG_NewPointerObj((void*) region, SWIGTYPE_p_regional, 0);
+        if(!(py_qinfo && py_qstate && py_addr && py_zone && py_region)) {
+                log_err("pythonmod: swig pointer failure in python_inplace_cb_query_generic");
+                goto out;
         }
-
+        py_args = Py_BuildValue("(OiOOOO)", py_qinfo, flags, py_qstate, py_addr, py_zone, py_region);
+        py_kwargs = Py_BuildValue("{}");
+        if(!(py_args && py_kwargs)) {
+                log_err("pythonmod: BuildValue failure in python_inplace_cb_query_generic");
+                goto out;
+        }
+        result = PyObject_Call(func, py_args, py_kwargs);
+        if (result) {
+            res = PyInt_AsLong(result);
+        }
+out:
         Py_XDECREF(py_qinfo);
         Py_XDECREF(py_qstate);
         Py_XDECREF(py_addr);
@@ -1693,19 +1701,31 @@ int edns_opt_list_append(struct edns_option** list, uint16_t code, size_t len,
     {
         int res = 0;
         PyObject *func = python_callback;
+        PyObject *py_qstate = NULL;
+        PyObject *py_response = NULL;
+        PyObject *py_args = NULL;
+        PyObject *py_kwargs = NULL;
+        PyObject *result = NULL;
 
         PyGILState_STATE gstate = PyGILState_Ensure();
 
-        PyObject *py_qstate = SWIG_NewPointerObj((void*) qstate, SWIGTYPE_p_module_qstate, 0);
-        PyObject *py_response = SWIG_NewPointerObj((void*) response, SWIGTYPE_p_dns_msg, 0);
-
-        PyObject *py_args = Py_BuildValue("(OO)", py_qstate, py_response);
-        PyObject *py_kwargs = Py_BuildValue("{}");
-        PyObject *result = PyObject_Call(func, py_args, py_kwargs);
+        py_qstate = SWIG_NewPointerObj((void*) qstate, SWIGTYPE_p_module_qstate, 0);
+        py_response = SWIG_NewPointerObj((void*) response, SWIGTYPE_p_dns_msg, 0);
+        if(!(py_qstate && py_response)) {
+                log_err("pythonmod: swig pointer failure in python_inplace_cb_query_response");
+                goto out;
+        }
+        py_args = Py_BuildValue("(OO)", py_qstate, py_response);
+        py_kwargs = Py_BuildValue("{}");
+        if(!(py_args && py_kwargs)) {
+                log_err("pythonmod: BuildValue failure in python_inplace_cb_query_response");
+                goto out;
+        }
+        result = PyObject_Call(func, py_args, py_kwargs);
         if (result) {
             res = PyInt_AsLong(result);
         }
-
+out:
         Py_XDECREF(py_qstate);
         Py_XDECREF(py_response);
 
@@ -1732,18 +1752,29 @@ int edns_opt_list_append(struct edns_option** list, uint16_t code, size_t len,
     {
         int res = 0;
         PyObject *func = python_callback;
+        PyObject *py_qstate = NULL;
+        PyObject *py_args = NULL;
+        PyObject *py_kwargs = NULL;
+        PyObject *result = NULL;
 
         PyGILState_STATE gstate = PyGILState_Ensure();
 
-        PyObject *py_qstate = SWIG_NewPointerObj((void*) qstate, SWIGTYPE_p_module_qstate, 0);
-
-        PyObject *py_args = Py_BuildValue("(O)", py_qstate);
-        PyObject *py_kwargs = Py_BuildValue("{}");
-        PyObject *result = PyObject_Call(func, py_args, py_kwargs);
+        py_qstate = SWIG_NewPointerObj((void*) qstate, SWIGTYPE_p_module_qstate, 0);
+        if(!py_qstate) {
+                log_err("pythonmod: swig pointer failure in python_inplace_cb_edns_back_parsed_call");
+                goto out;
+        }
+        py_args = Py_BuildValue("(O)", py_qstate);
+        py_kwargs = Py_BuildValue("{}");
+        if(!(py_args && py_kwargs)) {
+                log_err("pythonmod: BuildValue failure in python_inplace_cb_edns_back_parsed_call");
+                goto out;
+        }
+        result = PyObject_Call(func, py_args, py_kwargs);
         if (result) {
             res = PyInt_AsLong(result);
         }
-
+out:
         Py_XDECREF(py_qstate);
 
         Py_XDECREF(py_args);
