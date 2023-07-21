@@ -449,6 +449,8 @@ void mesh_new_client(struct mesh_area* mesh, struct query_info* qinfo,
 			comm_point_send_reply(rep);
 			return;
 		}
+		/* set detached (it is now) */
+		mesh->num_detached_states++;
 		if(unique)
 			mesh_state_make_unique(s);
 		s->s.rpz_passthru = rpz_passthru;
@@ -476,8 +478,6 @@ void mesh_new_client(struct mesh_area* mesh, struct query_info* qinfo,
 #endif
 		rbtree_insert(&mesh->all, &s->node);
 		log_assert(n != NULL);
-		/* set detached (it is now) */
-		mesh->num_detached_states++;
 		added = 1;
 	}
 	if(!s->reply_list && !s->cb_list) {
@@ -570,6 +570,8 @@ mesh_new_callback(struct mesh_area* mesh, struct query_info* qinfo,
 		if(!s) {
 			return 0;
 		}
+		/* set detached (it is now) */
+		mesh->num_detached_states++;
 		if(unique)
 			mesh_state_make_unique(s);
 		s->s.rpz_passthru = rpz_passthru;
@@ -588,8 +590,6 @@ mesh_new_callback(struct mesh_area* mesh, struct query_info* qinfo,
 #endif
 		rbtree_insert(&mesh->all, &s->node);
 		log_assert(n != NULL);
-		/* set detached (it is now) */
-		mesh->num_detached_states++;
 		added = 1;
 	}
 	if(!s->reply_list && !s->cb_list) {
@@ -606,6 +606,8 @@ mesh_new_callback(struct mesh_area* mesh, struct query_info* qinfo,
 	}
 	/* add serve expired timer if not already there */
 	if(timeout && !mesh_serve_expired_init(s, timeout)) {
+		if(added)
+			mesh_state_delete(&s->s);
 		return 0;
 	}
 	/* update statistics */
