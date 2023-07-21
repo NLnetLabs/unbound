@@ -379,15 +379,19 @@ static void
 send_em(const char* svr, const char* pp2_client, int udp, int usessl,
 	int noanswer, int onarrival, int delay, int num, char** qs)
 {
-	sldns_buffer* buf = sldns_buffer_new(65553);
-	sldns_buffer* proxy_buf = sldns_buffer_new(65553);
 	struct sockaddr_storage svr_addr;
 	socklen_t svr_addrlen;
 	int fd = open_svr(svr, udp, &svr_addr, &svr_addrlen);
 	int i, wait_results = 0, pp2_parsed;
 	SSL_CTX* ctx = NULL;
 	SSL* ssl = NULL;
-	if(!buf) fatal_exit("out of memory");
+	sldns_buffer* buf = sldns_buffer_new(65553);
+	sldns_buffer* proxy_buf = sldns_buffer_new(65553);
+	if(!buf || !proxy_buf) {
+		sldns_buffer_free(buf);
+		sldns_buffer_free(proxy_buf);
+		fatal_exit("out of memory");
+	}
 	pp2_parsed = parse_pp2_client(pp2_client, udp, proxy_buf);
 	if(usessl) {
 		ctx = connect_sslctx_create(NULL, NULL, NULL, 0);
