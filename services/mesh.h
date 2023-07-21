@@ -481,14 +481,6 @@ struct mesh_state* mesh_state_create(struct module_env* env,
 	uint16_t qflags, int prime, int valrec);
 
 /**
- * Check if the mesh state is unique.
- * A unique mesh state uses it's unique member to point to itself, else NULL.
- * @param mstate: mesh state to check.
- * @return true if the mesh state is unique, false otherwise.
- */
-int mesh_state_is_unique(struct mesh_state* mstate);
-
-/**
  * Make a mesh state unique.
  * A unique mesh state uses it's unique member to point to itself.
  * @param mstate: mesh state to check.

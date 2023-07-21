@@ -457,13 +457,14 @@ void mesh_new_client(struct mesh_area* mesh, struct query_info* qinfo,
 			s->s.edns_opts_front_in = edns_opt_copy_region(edns->opt_list_in,
 				s->s.region);
 			if(!s->s.edns_opts_front_in) {
-				log_err("mesh_state_create: out of memory; SERVFAIL");
+				log_err("edns_opt_copy_region: out of memory; SERVFAIL");
 				if(!inplace_cb_reply_servfail_call(mesh->env, qinfo, NULL,
 					NULL, LDNS_RCODE_SERVFAIL, edns, rep, mesh->env->scratch, mesh->env->now_tv))
 						edns->opt_list_inplace_cb_out = NULL;
 				error_encode(r_buffer, LDNS_RCODE_SERVFAIL,
 					qinfo, qid, qflags, edns);
 				comm_point_send_reply(rep);
+				mesh_state_delete(&s->s);
 				return;
 			}
 		}
@@ -576,6 +577,7 @@ mesh_new_callback(struct mesh_area* mesh, struct query_info* qinfo,
 			s->s.edns_opts_front_in = edns_opt_copy_region(edns->opt_list_in,
 				s->s.region);
 			if(!s->s.edns_opts_front_in) {
+				mesh_state_delete(&s->s);
 				return 0;
 			}
 		}
@@ -890,12 +892,6 @@ mesh_state_create(struct module_env* env, struct query_info* qinfo,
 	mstate->s.edns_opts_front_out = NULL;
 
 	return mstate;
-}
-
-int
-mesh_state_is_unique(struct mesh_state* mstate)
-{
-	return mstate->unique != NULL;
 }
 
 void
