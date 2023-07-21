@@ -2,6 +2,8 @@
 	- Merge #857 from eaglegai: fix potential memory leaks when errors
 	  happen.
 	- For #857: fix mixed declarations and code.
+	- Merge #118 from mibere: Changed verbosity level for Redis init &
+	  deinit.
 
 20 July 2023: George
 	- Merge #909 from headshog: Numeric truncation when parsing TYPEXX and
