@@ -2095,6 +2095,7 @@ parse_fs_args(RES* ssl, char* args, uint8_t** nm, struct delegpt** dp,
 	char* rest;
 	size_t nmlen;
 	int nmlabs;
+	uint8_t ssl_upstream = 0, tcp_upstream = 0;
 	/* parse all -x args */
 	while(args[0] == '+') {
 		if(!find_arg2(ssl, args, &rest))
@@ -2104,6 +2105,10 @@ parse_fs_args(RES* ssl, char* args, uint8_t** nm, struct delegpt** dp,
 				*insecure = 1;
 			else if(*args == 'p' && prime)
 				*prime = 1;
+			else if(*args == 't')
+				tcp_upstream = 1;
+			else if(*args == 's')
+				ssl_upstream = 1;
 			else {
 				(void)ssl_printf(ssl, "error: unknown option %s\n", args);
 				return 0;
@@ -2127,6 +2132,8 @@ parse_fs_args(RES* ssl, char* args, uint8_t** nm, struct delegpt** dp,
 			free(*nm);
 			return 0;
 		}
+		(*dp)->tcp_upstream = tcp_upstream;
+		(*dp)->ssl_upstream = ssl_upstream;
 	}
 	return 1;
 }
