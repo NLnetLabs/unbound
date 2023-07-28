@@ -1,3 +1,7 @@
+28 July 2023: George
+	- Fix unused variable compile warning for kernel timestamps in
+	  netevent.c
+
 21 July 2023: George
 	- Merge #857 from eaglegai: fix potential memory leaks when errors
 	  happen.

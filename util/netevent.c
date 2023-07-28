@@ -846,7 +846,9 @@ comm_point_udp_ancil_callback(int fd, short event, void* arg)
 #ifndef S_SPLINT_S
 	struct cmsghdr* cmsg;
 #endif /* S_SPLINT_S */
+#ifdef HAVE_LINUX_NET_TSTAMP_H
 	struct timespec *ts;
+#endif /* HAVE_LINUX_NET_TSTAMP_H */
 
 	rep.c = (struct comm_point*)arg;
 	log_assert(rep.c->type == comm_udp);
@@ -921,7 +923,7 @@ comm_point_udp_ancil_callback(int fd, short event, void* arg)
 			} else if( cmsg->cmsg_level == SOL_SOCKET &&
 				cmsg->cmsg_type == SO_TIMESTAMP) {
 				memmove(&rep.c->recv_tv, CMSG_DATA(cmsg), sizeof(struct timeval));
-#endif
+#endif /* HAVE_LINUX_NET_TSTAMP_H */
 			}
 		}
 
