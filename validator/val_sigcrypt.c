@@ -718,7 +718,7 @@ dnskey_verify_rrset(struct module_env* env, struct val_env* ve,
 	}
 	verbose(VERB_ALGO, "rrset failed to verify: all signatures are bogus");
 	if(!numchecked) {
-		*reason = "signatures bogus";
+		*reason = "signature for expected key and algorithm missing";
 		if(reason_bogus)
 			*reason_bogus = LDNS_EDE_DNSSEC_BOGUS;
 	} else if(numchecked == numindeterminate) {
