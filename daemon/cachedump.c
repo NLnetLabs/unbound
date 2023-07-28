@@ -651,14 +651,15 @@ load_msg(RES* ssl, sldns_buffer* buf, struct worker* worker)
 	}
 
 	/* read remainder of line */
-	if(sscanf(s, " %u %u " ARG_LL "d %u %u %u %u %d%n", &flags, &qdcount, &ttl,
+	/* note the last space before any possible EDE text */
+	if(sscanf(s, " %u %u " ARG_LL "d %u %u %u %u %d %n", &flags, &qdcount, &ttl,
 		&security, &an, &ns, &ar, &ede, &consumed) != 8) {
 		log_warn("error cannot parse numbers: %s", s);
 		return 0;
 	}
 	/* there may be EDE text after the numbers */
 	if(consumed > 0 && (size_t)consumed < strlen(s))
-		ede_str = s + consumed + 1 /* space */;
+		ede_str = s + consumed;
 	memset(&rep, 0, sizeof(rep));
 	rep.flags = (uint16_t)flags;
 	rep.qdcount = (uint16_t)qdcount;

@@ -1253,7 +1253,7 @@ mesh_find_and_attach_ede_and_reason(struct mesh_state* m,
 	 * but a compelling reason to do otherwise is just as valid
 	 * NEW note:
 	 * The compelling reason is that with caching support, the value
-	 * in the * reply_info is cached.
+	 * in the reply_info is cached.
 	 * The reason members of the reply_info struct should be
 	 * updated as they are already cached. No reason to
 	 * try and find the EDE information in errinf anymore.

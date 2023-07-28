@@ -508,7 +508,8 @@ answer_norec_from_cache(struct worker* worker, struct query_info* qinfo,
 				worker->env.now_tv))
 					return 0;
 			/* Attach the cached EDE (RFC8914) */
-			if(worker->env.cfg->ede) {
+			if(worker->env.cfg->ede &&
+				msg->rep->reason_bogus != LDNS_EDE_NONE) {
 				edns_opt_list_append_ede(&edns->opt_list_out,
 					worker->scratchpad, msg->rep->reason_bogus,
 					msg->rep->reason_bogus_str);
@@ -694,7 +695,7 @@ answer_from_cache(struct worker* worker, struct query_info* qinfo,
 			worker->env.now_tv))
 			goto bail_out;
 		/* Attach the cached EDE (RFC8914) */
-		if(worker->env.cfg->ede) {
+		if(worker->env.cfg->ede && rep->reason_bogus != LDNS_EDE_NONE) {
 			edns_opt_list_append_ede(&edns->opt_list_out,
 					worker->scratchpad, rep->reason_bogus,
 					rep->reason_bogus_str);
