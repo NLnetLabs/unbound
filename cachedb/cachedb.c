@@ -558,22 +558,20 @@ parse_data(struct module_qstate* qstate, struct sldns_buffer* buf)
 		return 0;
 	
 	/* We find the EDE in the in-list after parsing */
-	if (qstate->env->cfg->ede && (ede = edns_opt_list_find(edns.opt_list_in, LDNS_EDNS_EDE))) {
-		if (ede->opt_len >= 2) {
+	if(qstate->env->cfg->ede &&
+		(ede = edns_opt_list_find(edns.opt_list_in, LDNS_EDNS_EDE))) {
+		if(ede->opt_len >= 2) {
 			qstate->return_msg->rep->reason_bogus =
 				sldns_read_uint16(ede->opt_data);
 		}
-
 		/* allocate space and store the error string and it's size */
-		if (ede->opt_len > 2) {
+		if(ede->opt_len > 2) {
 			size_t ede_len = ede->opt_len - 2;
-
 			qstate->return_msg->rep->reason_bogus_str = regional_alloc(
-				qstate->region, sizeof(char) * (ede_len));
-
+				qstate->region, sizeof(char) * (ede_len+1));
 			memcpy(qstate->return_msg->rep->reason_bogus_str,
 			ede->opt_data+2, ede_len);
-
+			qstate->return_msg->rep->reason_bogus_str[ede_len] = 0;
 			qstate->return_msg->rep->reason_bogus_str_size = ede_len;
 		}
 	}

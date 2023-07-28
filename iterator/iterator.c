@@ -3811,6 +3811,7 @@ processFinished(struct module_qstate* qstate, struct iter_qstate* iq,
 	iq->response->rep->flags |= BIT_QR;
 
 	/* explicitly set the EDE string size to 0 */
+	iq->response->rep->reason_bogus_str = NULL;
 	iq->response->rep->reason_bogus_str_size = 0;
 
 	/* we have finished processing this query */
