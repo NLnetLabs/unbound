@@ -670,7 +670,7 @@ tomsg(struct module_env* env, struct query_info* q, struct reply_info* r,
 	msg->rep->authoritative = r->authoritative;
 	msg->rep->reason_bogus = r->reason_bogus;
 	if (r->reason_bogus_str_size > 0) {
-		msg->rep->reason_bogus_str = strdup(r->reason_bogus_str);
+		msg->rep->reason_bogus_str = regional_strdup(region, r->reason_bogus_str);
 		msg->rep->reason_bogus_str_size = r->reason_bogus_str_size;
 	}
 
