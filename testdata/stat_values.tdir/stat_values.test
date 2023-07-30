@@ -95,7 +95,7 @@ check_expected_stats () {
 	else
 		echo "! bad expected stats:"
         cat $FILTERED_STATS_FILE
-		exit 1
+		end 1
 	fi
 }
 
@@ -109,7 +109,7 @@ check_rest_stats () {
 	fi
 	if grep -v "=0$" $REST_STATS_FILE; then
 		echo "! bad rest stats"
-		exit 1
+		end 1
 	else
 		echo "OK"
 	fi
@@ -413,5 +413,99 @@ msg.cache.count=3
 rrset.cache.count=3
 infra.cache.count=2"
 
+
+if test x$USE_CACHEDB = "x1"; then
+
+# Bring the cachedb configured Unbound up
+kill_pid $UNBOUND_PID  # kill current Unbound
+$PRE/unbound -d -c ub_cachedb.conf >unbound.log 2>&1 &
+UNBOUND_PID=$!
+echo "UNBOUND_PID=$UNBOUND_PID" >> .tpkg.var.test
+wait_unbound_up unbound.log
+
+echo
+echo "[ Check cachedb cache miss. ]"
+echo "> dig www.example.com."
+dig @127.0.0.1 +ednsopt=65534 -p $UNBOUND_PORT www.example.com. | tee outfile
+echo "> check answer"
+if grep "10.20.30.40" outfile; then
+	echo "OK"
+else
+	end 1
+fi
+check_stats "\
+total.num.queries=1
+total.num.cachemiss=1
+total.num.cachehits=0
+total.num.recursivereplies=1
+num.query.type.A=1
+num.query.class.IN=1
+num.query.opcode.QUERY=1
+num.query.flags.RD=1
+num.query.flags.AD=1
+num.query.edns.present=1
+num.query.udpout=1
+num.query.cachedb=0
+msg.cache.count=1
+rrset.cache.count=1
+infra.cache.count=1
+num.answer.rcode.NOERROR=1"
+
+echo
+echo "[ Check cachedb cache hit. ]"
+echo "> dig www.example.com."
+dig @127.0.0.1 +ednsopt=65534 -p $UNBOUND_PORT www.example.com. | tee outfile
+echo "> check answer"
+if grep "10.20.30.40" outfile; then
+	echo "OK"
+else
+	end 1
+fi
+check_stats "\
+total.num.queries=1
+total.num.cachemiss=1
+total.num.cachehits=0
+total.num.recursivereplies=1
+num.query.type.A=1
+num.query.class.IN=1
+num.query.opcode.QUERY=1
+num.query.flags.RD=1
+num.query.flags.AD=1
+num.query.edns.present=1
+num.query.udpout=0
+num.query.cachedb=1
+msg.cache.count=1
+rrset.cache.count=1
+infra.cache.count=1
+num.answer.rcode.NOERROR=1"
+
+echo
+echo "[ Check cachedb cache hit with stat reset ]"
+echo "> dig www.example.com."
+dig @127.0.0.1 +ednsopt=65534 -p $UNBOUND_PORT www.example.com. | tee outfile
+echo "> check answer"
+if grep "10.20.30.40" outfile; then
+	echo "OK"
+else
+	end 1
+fi
+check_stats "\
+total.num.queries=1
+total.num.cachemiss=1
+total.num.cachehits=0
+total.num.recursivereplies=1
+num.query.type.A=1
+num.query.class.IN=1
+num.query.opcode.QUERY=1
+num.query.flags.RD=1
+num.query.flags.AD=1
+num.query.edns.present=1
+num.query.cachedb=1
+msg.cache.count=1
+rrset.cache.count=1
+infra.cache.count=1
+num.answer.rcode.NOERROR=1"
+
+fi  # USE_CACHEDB
 
 end 0

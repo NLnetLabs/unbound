@@ -5,6 +5,7 @@ server:
 	minimal-responses: no
 	module-config: "cachedb validator iterator"
 	trust-anchor-signaling: no
+	verbosity: 4
 	ede: yes
 	val-log-level: 2
         trust-anchor: "example.nl. DS 50602 8 2 FA8EE175C47325F4BD46D8A4083C3EBEB11C977D689069F2B41F1A29B22446B1"
@@ -51,7 +52,7 @@ SECTION QUESTION
 example.nl. IN A
 SECTION ADDITIONAL
 	HEX_EDNSDATA_BEGIN
-		C0 00 		; option code = 49152
+		FF FE 		; option code = 65534 (LDNS_EDNS_UNBOUND_CACHEDB_TESTFRAME_TEST)
 		00 00 		; option length
 	HEX_EDNSDATA_END
 ENTRY_END
@@ -73,7 +74,7 @@ SECTION QUESTION
 example.nl. IN A
 SECTION ADDITIONAL
 	HEX_EDNSDATA_BEGIN
-		C0 00 		; option code = 49152
+		FF FE 		; option code = 65534 (LDNS_EDNS_UNBOUND_CACHEDB_TESTFRAME_TEST)
 		00 00 		; option length
 	HEX_EDNSDATA_END
 ENTRY_END
