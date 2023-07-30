@@ -94,7 +94,7 @@ parse_create_qinfo(sldns_buffer* pkt, struct msg_parse* msg,
 struct reply_info*
 construct_reply_info_base(struct regional* region, uint16_t flags, size_t qd,
 	time_t ttl, time_t prettl, time_t expttl, size_t an, size_t ns,
-	size_t ar, size_t total, enum sec_status sec)
+	size_t ar, size_t total, enum sec_status sec, sldns_ede_code reason_bogus)
 {
 	struct reply_info* rep;
 	/* rrset_count-1 because the first ref is part of the struct. */
@@ -117,7 +117,9 @@ construct_reply_info_base(struct regional* region, uint16_t flags, size_t qd,
 	rep->ar_numrrsets = ar;
 	rep->rrset_count = total;
 	rep->security = sec;
-	rep->reason_bogus = LDNS_EDE_NONE;
+	rep->reason_bogus = reason_bogus;
+	/* this is only allocated and used for caching on copy */
+	rep->reason_bogus_str = NULL;
 	rep->authoritative = 0;
 	/* array starts after the refs */
 	if(region)
@@ -137,7 +139,7 @@ parse_create_repinfo(struct msg_parse* msg, struct reply_info** rep,
 {
 	*rep = construct_reply_info_base(region, msg->flags, msg->qdcount, 0, 
 		0, 0, msg->an_rrsets, msg->ns_rrsets, msg->ar_rrsets, 
-		msg->rrset_count, sec_status_unchecked);
+		msg->rrset_count, sec_status_unchecked, LDNS_EDE_NONE);
 	if(!*rep)
 		return 0;
 	return 1;
@@ -182,7 +184,7 @@ make_new_reply_info(const struct reply_info* rep, struct regional* region,
 	new_rep = construct_reply_info_base(region, rep->flags,
 		rep->qdcount, rep->ttl, rep->prefetch_ttl,
 		rep->serve_expired_ttl, an_numrrsets, 0, 0, an_numrrsets,
-		sec_status_insecure);
+		sec_status_insecure, LDNS_EDE_NONE);
 	if(!new_rep)
 		return NULL;
 	if(!reply_info_alloc_rrset_keys(new_rep, NULL, region))
@@ -580,6 +582,10 @@ reply_info_parsedelete(struct reply_info* rep, struct alloc_cache* alloc)
 	for(i=0; i<rep->rrset_count; i++) {
 		ub_packed_rrset_parsedelete(rep->rrsets[i], alloc);
 	}
+	if(rep->reason_bogus_str) {
+		free(rep->reason_bogus_str);
+		rep->reason_bogus_str = NULL;
+	}
 	free(rep);
 }
 
@@ -661,6 +667,10 @@ void
 reply_info_delete(void* d, void* ATTR_UNUSED(arg))
 {
 	struct reply_info* r = (struct reply_info*)d;
+	if(r->reason_bogus_str) {
+		free(r->reason_bogus_str);
+		r->reason_bogus_str = NULL;
+	}
 	free(r);
 }
 
@@ -737,17 +747,36 @@ repinfo_copy_rrsets(struct reply_info* dest, struct reply_info* from,
 	return 1;
 }
 
-struct reply_info* 
-reply_info_copy(struct reply_info* rep, struct alloc_cache* alloc, 
+struct reply_info*
+reply_info_copy(struct reply_info* rep, struct alloc_cache* alloc,
 	struct regional* region)
 {
 	struct reply_info* cp;
-	cp = construct_reply_info_base(region, rep->flags, rep->qdcount, 
-		rep->ttl, rep->prefetch_ttl, rep->serve_expired_ttl, 
+	cp = construct_reply_info_base(region, rep->flags, rep->qdcount,
+		rep->ttl, rep->prefetch_ttl, rep->serve_expired_ttl,
 		rep->an_numrrsets, rep->ns_numrrsets, rep->ar_numrrsets,
-		rep->rrset_count, rep->security);
+		rep->rrset_count, rep->security, rep->reason_bogus);
 	if(!cp)
 		return NULL;
+
+	if(rep->reason_bogus_str && *rep->reason_bogus_str != 0) {
+		if(region) {
+			cp->reason_bogus_str = (char*)regional_alloc(region,
+				sizeof(char)
+				* (strlen(rep->reason_bogus_str)+1));
+		} else {
+			cp->reason_bogus_str = malloc(sizeof(char)
+				* (strlen(rep->reason_bogus_str)+1));
+		}
+		if(!cp->reason_bogus_str) {
+			if(!region)
+				reply_info_parsedelete(cp, alloc);
+			return NULL;
+		}
+		memcpy(cp->reason_bogus_str, rep->reason_bogus_str,
+			strlen(rep->reason_bogus_str)+1);
+	}
+
 	/* allocate ub_key structures special or not */
 	if(!reply_info_alloc_rrset_keys(cp, alloc, region)) {
 		if(!region)

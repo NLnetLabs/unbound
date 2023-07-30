@@ -1,3 +1,6 @@
+30 July 2023: George
+	- Merge #759 from Tom Carpay: Add EDE (RFC8914) caching.
+
 28 July 2023: George
 	- Fix unused variable compile warning for kernel timestamps in
 	  netevent.c

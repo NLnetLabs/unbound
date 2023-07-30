@@ -166,8 +166,7 @@ dump_msg_ref(RES* ssl, struct ub_packed_rrset_key* k)
 
 /** dump message entry */
 static int
-dump_msg(RES* ssl, struct query_info* k, struct reply_info* d, 
-	time_t now)
+dump_msg(RES* ssl, struct query_info* k, struct reply_info* d, time_t now)
 {
 	size_t i;
 	char* nm, *tp, *cl;
@@ -192,13 +191,15 @@ dump_msg(RES* ssl, struct query_info* k, struct reply_info* d,
 	}
 	
 	/* meta line */
-	if(!ssl_printf(ssl, "msg %s %s %s %d %d " ARG_LL "d %d %u %u %u\n",
+	if(!ssl_printf(ssl, "msg %s %s %s %d %d " ARG_LL "d %d %u %u %u %d %s\n",
 			nm, cl, tp,
 			(int)d->flags, (int)d->qdcount, 
 			(long long)(d->ttl-now), (int)d->security,
-			(unsigned)d->an_numrrsets, 
+			(unsigned)d->an_numrrsets,
 			(unsigned)d->ns_numrrsets,
-			(unsigned)d->ar_numrrsets)) {
+			(unsigned)d->ar_numrrsets,
+			(int)d->reason_bogus,
+			d->reason_bogus_str?d->reason_bogus_str:"")) {
 		free(nm);
 		free(tp);
 		free(cl);
@@ -633,6 +634,9 @@ load_msg(RES* ssl, sldns_buffer* buf, struct worker* worker)
 	long long ttl;
 	size_t i;
 	int go_on = 1;
+	int ede;
+	int consumed = 0;
+	char* ede_str = NULL;
 
 	regional_free_all(region);
 
@@ -647,11 +651,16 @@ load_msg(RES* ssl, sldns_buffer* buf, struct worker* worker)
 	}
 
 	/* read remainder of line */
-	if(sscanf(s, " %u %u " ARG_LL "d %u %u %u %u", &flags, &qdcount, &ttl, 
-		&security, &an, &ns, &ar) != 7) {
+	/* note the last space before any possible EDE text */
+	if(sscanf(s, " %u %u " ARG_LL "d %u %u %u %u %d %n", &flags, &qdcount, &ttl,
+		&security, &an, &ns, &ar, &ede, &consumed) != 8) {
 		log_warn("error cannot parse numbers: %s", s);
 		return 0;
 	}
+	/* there may be EDE text after the numbers */
+	if(consumed > 0 && (size_t)consumed < strlen(s))
+		ede_str = s + consumed;
+	memset(&rep, 0, sizeof(rep));
 	rep.flags = (uint16_t)flags;
 	rep.qdcount = (uint16_t)qdcount;
 	rep.ttl = (time_t)ttl;
@@ -666,6 +675,8 @@ load_msg(RES* ssl, sldns_buffer* buf, struct worker* worker)
 	rep.ns_numrrsets = (size_t)ns;
 	rep.ar_numrrsets = (size_t)ar;
 	rep.rrset_count = (size_t)an+(size_t)ns+(size_t)ar;
+	rep.reason_bogus = (sldns_ede_code)ede;
+	rep.reason_bogus_str = ede_str?(char*)regional_strdup(region, ede_str):NULL;
 	rep.rrsets = (struct ub_packed_rrset_key**)regional_alloc_zero(
 		region, sizeof(struct ub_packed_rrset_key*)*rep.rrset_count);
 

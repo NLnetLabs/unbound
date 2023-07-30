@@ -3826,6 +3826,9 @@ processFinished(struct module_qstate* qstate, struct iter_qstate* iq,
 	/* make sure QR flag is on */
 	iq->response->rep->flags |= BIT_QR;
 
+	/* explicitly set the EDE string to NULL */
+	iq->response->rep->reason_bogus_str = NULL;
+
 	/* we have finished processing this query */
 	qstate->ext_state[id] = module_finished;
 

@@ -826,11 +826,11 @@ void errinf_dname(struct module_qstate* qstate, const char* str,
  *    This string is malloced and has to be freed by caller.
  */
 char* errinf_to_str_bogus(struct module_qstate* qstate);
+
 /**
- * Check the sldns_ede_code of the qstate.
+ * Check the sldns_ede_code of the qstate->errinf.
  * @param qstate: query state.
- * @return LDNS_EDE_DNSSEC_BOGUS by default, or the first explicitly set
- *   sldns_ede_code.
+ * @return the latest explicitly set sldns_ede_code or LDNS_EDE_NONE.
  */
 sldns_ede_code errinf_to_reason_bogus(struct module_qstate* qstate);
 

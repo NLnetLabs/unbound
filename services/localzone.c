@@ -1308,6 +1308,7 @@ local_encode(struct query_info* qinfo, struct module_env* env,
 	else	rep.ns_numrrsets = 1;
 	rep.rrset_count = 1;
 	rep.rrsets = &rrset;
+	rep.reason_bogus = LDNS_EDE_NONE;
 	udpsize = edns->udp_size;
 	edns->edns_version = EDNS_ADVERTISED_VERSION;
 	edns->udp_size = EDNS_ADVERTISED_SIZE;

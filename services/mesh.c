@@ -1232,36 +1232,34 @@ mesh_is_rpz_respip_tcponly_action(struct mesh_state const* m)
 }
 
 static inline int
-mesh_is_udp(struct mesh_reply const* r) {
+mesh_is_udp(struct mesh_reply const* r)
+{
 	return r->query_reply.c->type == comm_udp;
 }
 
 static inline void
 mesh_find_and_attach_ede_and_reason(struct mesh_state* m,
-	struct reply_info* rep, struct mesh_reply* r) {
-	char *reason = m->s.env->cfg->val_log_level >= 2
-		? errinf_to_str_bogus(&m->s) : NULL;
-
-	/* During validation the EDE code can be received via two
+	struct reply_info* rep, struct mesh_reply* r)
+{
+	/* OLD note:
+	 * During validation the EDE code can be received via two
 	 * code paths. One code path fills the reply_info EDE, and
 	 * the other fills it in the errinf_strlist. These paths
 	 * intersect at some points, but where is opaque due to
 	 * the complexity of the validator. At the time of writing
 	 * we make the choice to prefer the EDE from errinf_strlist
 	 * but a compelling reason to do otherwise is just as valid
+	 * NEW note:
+	 * The compelling reason is that with caching support, the value
+	 * in the reply_info is cached.
+	 * The reason members of the reply_info struct should be
+	 * updated as they are already cached. No reason to
+	 * try and find the EDE information in errinf anymore.
 	 */
-	sldns_ede_code reason_bogus = errinf_to_reason_bogus(&m->s);
-	if ((reason_bogus == LDNS_EDE_DNSSEC_BOGUS &&
-		rep->reason_bogus != LDNS_EDE_NONE) ||
-		reason_bogus == LDNS_EDE_NONE) {
-			reason_bogus = rep->reason_bogus;
-	}
-
-	if(reason_bogus != LDNS_EDE_NONE) {
+	if(rep->reason_bogus != LDNS_EDE_NONE) {
 		edns_opt_list_append_ede(&r->edns.opt_list_out,
-			m->s.region, reason_bogus, reason);
+			m->s.region, rep->reason_bogus, rep->reason_bogus_str);
 	}
-	free(reason);
 }
 
 /**
@@ -1355,13 +1353,11 @@ mesh_send_reply(struct mesh_state* m, int rcode, struct reply_info* rep,
 				&r->edns, &r->query_reply, m->s.region, &r->start_time))
 					r->edns.opt_list_inplace_cb_out = NULL;
 		}
-		/* Send along EDE BOGUS EDNS0 option when validation is bogus */
-		if(m->s.env->cfg->ede && rcode == LDNS_RCODE_SERVFAIL &&
-			m->s.env->need_to_validate && (!(r->qflags&BIT_CD) ||
-			m->s.env->cfg->ignore_cd) && rep &&
-			(rep->security <= sec_status_bogus ||
-			rep->security == sec_status_secure_sentinel_fail)) {
-			
+		/* Send along EDE EDNS0 option when SERVFAILing; usually
+		 * DNSSEC validation failures */
+		/* Since we are SERVFAILing here, CD bit and rep->security
+		 * is already handled. */
+		if(m->s.env->cfg->ede && rep) {
 			mesh_find_and_attach_ede_and_reason(m, rep, r);
 		}
 		error_encode(r_buffer, rcode, &m->s.qinfo, r->qid,
@@ -1378,8 +1374,10 @@ mesh_send_reply(struct mesh_state* m, int rcode, struct reply_info* rep,
 		m->s.qinfo.qname = r->qname;
 		m->s.qinfo.local_alias = r->local_alias;
 
-		/* Attach EDE without servfail if the validation failed */
-		if (m->s.env->cfg->ede && rep && 
+		/* Attach EDE without SERVFAIL if the validation failed.
+		 * Need to explicitly check for rep->security otherwise failed
+		 * validation paths may attach to a secure answer. */
+		if(m->s.env->cfg->ede && rep &&
 			(rep->security <= sec_status_bogus ||
 			rep->security == sec_status_secure_sentinel_fail)) {
 			mesh_find_and_attach_ede_and_reason(m, rep, r);
