@@ -806,6 +806,24 @@ calc_edns_field_size(struct edns_data* edns)
 	return 1 + 2 + 2 + 4 + 2 + rdatalen;
 }
 
+uint16_t
+calc_edns_option_size(struct edns_data* edns, uint16_t code)
+{
+	size_t rdatalen = 0;
+	struct edns_option* opt;
+	if(!edns || !edns->edns_present)
+		return 0;
+	for(opt = edns->opt_list_inplace_cb_out; opt; opt = opt->next) {
+		if (opt->opt_code == code)
+			rdatalen += 4 + opt->opt_len;
+	}
+	for(opt = edns->opt_list_out; opt; opt = opt->next) {
+		if (opt->opt_code == code)
+			rdatalen += 4 + opt->opt_len;
+	}
+	return rdatalen;
+}
+
 static void
 attach_edns_record_max_msg_sz(sldns_buffer* pkt, struct edns_data* edns,
 	uint16_t max_msg_sz)
@@ -918,23 +936,30 @@ reply_info_answer_encode(struct query_info* qinf, struct reply_info* rep,
 		return 0;
 	if(sldns_buffer_capacity(pkt) < udpsize)
 		udpsize = sldns_buffer_capacity(pkt);
-	if(udpsize < LDNS_HEADER_SIZE + calc_edns_field_size(edns)) {
+	if(udpsize < LDNS_HEADER_SIZE + calc_edns_field_size(edns) -
+		calc_edns_option_size(edns, LDNS_EDNS_EDE)) {
 		/* packet too small to contain edns, omit it. */
 		attach_edns = 0;
 	} else {
 		/* reserve space for edns record */
-		attach_edns = (unsigned int)calc_edns_field_size(edns);
-		udpsize -= attach_edns;
+		attach_edns = (unsigned int)calc_edns_field_size(edns) -
+			calc_edns_option_size(edns, LDNS_EDNS_EDE);
 	}
 
 	if(!reply_info_encode(qinf, rep, id, flags, pkt, timenow, region,
-		udpsize, dnssec, MINIMAL_RESPONSES)) {
+		udpsize - attach_edns, dnssec, MINIMAL_RESPONSES)) {
 		log_err("reply encode: out of memory");
 		return 0;
 	}
-	if(attach_edns && sldns_buffer_capacity(pkt) >=
-		sldns_buffer_limit(pkt)+attach_edns)
-		attach_edns_record_max_msg_sz(pkt, edns, udpsize+attach_edns);
+	if(attach_edns) {
+		if(udpsize >= sldns_buffer_limit(pkt)+calc_edns_field_size(edns))
+			attach_edns_record_max_msg_sz(pkt, edns, udpsize);
+		else if(udpsize >= sldns_buffer_limit(pkt) + attach_edns) {
+			edns_opt_list_remove(&edns->opt_list_inplace_cb_out, LDNS_EDNS_EDE);
+			edns_opt_list_remove(&edns->opt_list_out, LDNS_EDNS_EDE);
+			attach_edns_record_max_msg_sz(pkt, edns, udpsize);
+		}
+	}
 	return 1;
 }
 
@@ -996,8 +1021,14 @@ error_encode(sldns_buffer* buf, int r, struct query_info* qinfo,
 		es.ext_rcode = 0;
 		es.bits &= EDNS_DO;
 		if(sldns_buffer_limit(buf) + calc_edns_field_size(&es) >
-			edns->udp_size)
-			return;
+			edns->udp_size) {
+			edns_opt_list_remove(&es.opt_list_inplace_cb_out, LDNS_EDNS_EDE);
+			edns_opt_list_remove(&es.opt_list_out, LDNS_EDNS_EDE);
+			if(sldns_buffer_limit(buf) + calc_edns_field_size(&es) >
+				edns->udp_size) {
+				return;
+			}
+		}
 		attach_edns_record(buf, &es);
 	}
 }
