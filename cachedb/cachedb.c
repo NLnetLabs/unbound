@@ -566,7 +566,7 @@ parse_data(struct module_qstate* qstate, struct sldns_buffer* buf)
 			qstate->return_msg->rep->reason_bogus_str = regional_alloc(
 				qstate->region, sizeof(char) * (ede_len+1));
 			memcpy(qstate->return_msg->rep->reason_bogus_str,
-			ede->opt_data+2, ede_len);
+				ede->opt_data+2, ede_len);
 			qstate->return_msg->rep->reason_bogus_str[ede_len] = 0;
 		}
 	}
