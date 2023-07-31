@@ -2,6 +2,9 @@
 	- Merge #790 from Tom Carpay: Add support for EDE caching in cachedb
 	  and subnetcache.
 
+31 July 2023: Wouter
+	- iana portlist update.
+
 30 July 2023: George
 	- Merge #759 from Tom Carpay: Add EDE (RFC8914) caching.
 
