@@ -835,21 +835,21 @@ calc_ede_option_size(struct edns_data* edns, uint16_t* txt_size)
 	for(opt = edns->opt_list_inplace_cb_out; opt; opt = opt->next) {
 		if(opt->opt_code == LDNS_EDNS_EDE) {
 			rdatalen += 4 + opt->opt_len;
-			if(opt->opt_len > 2)
-				*txt_size += opt->opt_len - 2;
+			if(opt->opt_len > 2) *txt_size += opt->opt_len - 2;
 			if(opt->opt_len >= 2 && sldns_read_uint16(
-				opt->opt_data) == LDNS_EDE_OTHER)
+				opt->opt_data) == LDNS_EDE_OTHER) {
 				*txt_size += 4 + 2;
+			}
 		}
 	}
 	for(opt = edns->opt_list_out; opt; opt = opt->next) {
 		if(opt->opt_code == LDNS_EDNS_EDE) {
 			rdatalen += 4 + opt->opt_len;
-			if(opt->opt_len > 2)
-				*txt_size += opt->opt_len - 2;
+			if(opt->opt_len > 2) *txt_size += opt->opt_len - 2;
 			if(opt->opt_len >= 2 && sldns_read_uint16(
-				opt->opt_data) == LDNS_EDE_OTHER)
+				opt->opt_data) == LDNS_EDE_OTHER) {
 				*txt_size += 4 + 2;
+			}
 		}
 	}
 	return rdatalen;
