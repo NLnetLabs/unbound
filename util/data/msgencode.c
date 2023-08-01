@@ -814,14 +814,83 @@ calc_edns_option_size(struct edns_data* edns, uint16_t code)
 	if(!edns || !edns->edns_present)
 		return 0;
 	for(opt = edns->opt_list_inplace_cb_out; opt; opt = opt->next) {
-		if (opt->opt_code == code)
+		if(opt->opt_code == code)
 			rdatalen += 4 + opt->opt_len;
 	}
 	for(opt = edns->opt_list_out; opt; opt = opt->next) {
-		if (opt->opt_code == code)
+		if(opt->opt_code == code)
 			rdatalen += 4 + opt->opt_len;
 	}
 	return rdatalen;
+}
+
+uint16_t
+calc_ede_option_size(struct edns_data* edns, uint16_t* txt_size)
+{
+	size_t rdatalen = 0;
+	struct edns_option* opt;
+	*txt_size = 0;
+	if(!edns || !edns->edns_present)
+		return 0;
+	for(opt = edns->opt_list_inplace_cb_out; opt; opt = opt->next) {
+		if(opt->opt_code == LDNS_EDNS_EDE)
+			rdatalen += 4 + opt->opt_len;
+			if(opt->opt_len > 2)
+				*txt_size += opt->opt_len - 2;
+			if(opt->opt_len >= 2 && sldns_read_uint16(
+				opt->opt_data) == LDNS_EDE_OTHER)
+				*txt_size += 4 + 2;
+	}
+	for(opt = edns->opt_list_out; opt; opt = opt->next) {
+		if(opt->opt_code == LDNS_EDNS_EDE)
+			rdatalen += 4 + opt->opt_len;
+			if(opt->opt_len > 2)
+				*txt_size += opt->opt_len - 2;
+			if(opt->opt_len >= 2 && sldns_read_uint16(
+				opt->opt_data) == LDNS_EDE_OTHER)
+				*txt_size += 4 + 2;
+	}
+	return rdatalen;
+}
+
+/* Trims the EDE OPTION-DATA to not include any EXTRA-TEXT data.
+ * Also removes any LDNS_EDE_OTHER options from the list since they are useless
+ * without the extra text. */
+static void
+ede_trim_text(struct edns_option** list)
+{
+	struct edns_option* curr, *prev = NULL;
+	if(!list || !(*list)) return;
+	/* Unlink and repoint if LDNS_EDE_OTHER are first in list */
+	while(list && *list && (*list)->opt_code == LDNS_EDNS_EDE
+		&& (*list)->opt_len >= 2
+		&& sldns_read_uint16((*list)->opt_data) == LDNS_EDE_OTHER ) {
+		*list = (*list)->next;
+	}
+	if(!list || !(*list)) return;
+	curr = *list;
+	while(curr) {
+		if(curr->opt_code == LDNS_EDNS_EDE) {
+			if(curr->opt_len >= 2 && sldns_read_uint16(
+				curr->opt_data) == LDNS_EDE_OTHER) {
+				/* LDNS_EDE_OTHER cannot be the first option in
+				 * this while, so prev is always initialized at
+				 * this point from the other branches;
+				 * cut this option off */
+				prev->next = curr->next;
+				curr = curr->next;
+			} else if(curr->opt_len > 2) {
+				/* trim this option's EXTRA-TEXT */
+				curr->opt_len = 2;
+				prev = curr;
+				curr = curr->next;
+			}
+		} else {
+			/* continue */
+			prev = curr;
+			curr = curr->next;
+		}
+	}
 }
 
 static void
@@ -912,6 +981,7 @@ reply_info_answer_encode(struct query_info* qinf, struct reply_info* rep,
 {
 	uint16_t flags;
 	unsigned int attach_edns = 0;
+	uint16_t edns_field_size, ede_size, ede_txt_size;
 
 	if(!cached || rep->authoritative) {
 		/* original flags, copy RD and CD bits from query. */
@@ -934,16 +1004,19 @@ reply_info_answer_encode(struct query_info* qinf, struct reply_info* rep,
 	log_assert(flags & BIT_QR); /* QR bit must be on in our replies */
 	if(udpsize < LDNS_HEADER_SIZE)
 		return 0;
+	/* currently edns does not change during calculations;
+	 * calculate sizes once here */
+	edns_field_size = calc_edns_field_size(edns);
+	ede_size = calc_ede_option_size(edns, &ede_txt_size);
 	if(sldns_buffer_capacity(pkt) < udpsize)
 		udpsize = sldns_buffer_capacity(pkt);
-	if(udpsize < LDNS_HEADER_SIZE + calc_edns_field_size(edns) -
-		calc_edns_option_size(edns, LDNS_EDNS_EDE)) {
+	/* EDEs are optional, try to fit anything else before them */
+	if(udpsize < LDNS_HEADER_SIZE + edns_field_size - ede_size) {
 		/* packet too small to contain edns, omit it. */
 		attach_edns = 0;
 	} else {
 		/* reserve space for edns record */
-		attach_edns = (unsigned int)calc_edns_field_size(edns) -
-			calc_edns_option_size(edns, LDNS_EDNS_EDE);
+		attach_edns = (unsigned int)edns_field_size - ede_size;
 	}
 
 	if(!reply_info_encode(qinf, rep, id, flags, pkt, timenow, region,
@@ -952,9 +1025,13 @@ reply_info_answer_encode(struct query_info* qinf, struct reply_info* rep,
 		return 0;
 	}
 	if(attach_edns) {
-		if(udpsize >= sldns_buffer_limit(pkt)+calc_edns_field_size(edns))
+		if(udpsize >= sldns_buffer_limit(pkt) + edns_field_size)
 			attach_edns_record_max_msg_sz(pkt, edns, udpsize);
-		else if(udpsize >= sldns_buffer_limit(pkt) + attach_edns) {
+		else if(udpsize >= sldns_buffer_limit(pkt) + edns_field_size - ede_txt_size) {
+			ede_trim_text(&edns->opt_list_inplace_cb_out);
+			ede_trim_text(&edns->opt_list_out);
+			attach_edns_record_max_msg_sz(pkt, edns, udpsize);
+		} else if(udpsize >= sldns_buffer_limit(pkt) + edns_field_size - ede_size) {
 			edns_opt_list_remove(&edns->opt_list_inplace_cb_out, LDNS_EDNS_EDE);
 			edns_opt_list_remove(&edns->opt_list_out, LDNS_EDNS_EDE);
 			attach_edns_record_max_msg_sz(pkt, edns, udpsize);

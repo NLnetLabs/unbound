@@ -839,6 +839,218 @@ static void respip_test(void)
 	respip_conf_actions_test();
 }
 
+#include "util/regional.h"
+#include "sldns/sbuffer.h"
+#include "util/data/dname.h"
+#include "util/data/msgreply.h"
+#include "util/data/msgencode.h"
+#include "sldns/str2wire.h"
+
+static void edns_ede_encode_setup(struct edns_data* edns,
+	struct regional* region)
+{
+	memset(edns, 0, sizeof(*edns));
+	edns->edns_present = 1;
+	edns->edns_version = EDNS_ADVERTISED_VERSION;
+	edns->udp_size = EDNS_ADVERTISED_SIZE;
+	edns->bits &= EDNS_DO;
+	/* Fill up opt_list_out with EDEs */
+	unit_assert(
+		edns_opt_list_append_ede(&edns->opt_list_out, region,
+		LDNS_EDE_OTHER, "Too long other text"));
+	unit_assert(
+		edns_opt_list_append_ede(&edns->opt_list_out, region,
+		LDNS_EDE_OTHER, "Too long other text"));
+	unit_assert(
+		edns_opt_list_append_ede(&edns->opt_list_out, region,
+		LDNS_EDE_BLOCKED, "Too long blocked text"));
+	unit_assert(
+		edns_opt_list_append_ede(&edns->opt_list_out, region,
+		LDNS_EDE_OTHER, "Too long other text"));
+	unit_assert(
+		edns_opt_list_append_ede(&edns->opt_list_out, region,
+		LDNS_EDE_BLOCKED, "Too long blocked text"));
+	/* Fill up opt_list_inplace_cb_out with EDEs */
+	unit_assert(
+		edns_opt_list_append_ede(&edns->opt_list_inplace_cb_out, region,
+		LDNS_EDE_OTHER, "Too long other text"));
+	unit_assert(
+		edns_opt_list_append_ede(&edns->opt_list_inplace_cb_out, region,
+		LDNS_EDE_OTHER, "Too long other text"));
+	unit_assert(
+		edns_opt_list_append_ede(&edns->opt_list_inplace_cb_out, region,
+		LDNS_EDE_BLOCKED, "Too long blocked text"));
+	unit_assert(
+		edns_opt_list_append_ede(&edns->opt_list_inplace_cb_out, region,
+		LDNS_EDE_OTHER, "Too long other text"));
+	unit_assert(
+		edns_opt_list_append_ede(&edns->opt_list_inplace_cb_out, region,
+		LDNS_EDE_BLOCKED, "Too long blocked text"));
+	/* append another EDNS option to both lists */
+	unit_assert(
+		edns_opt_list_append(&edns->opt_list_out,
+		LDNS_EDNS_UNBOUND_CACHEDB_TESTFRAME_TEST, 0, NULL, region));
+	unit_assert(
+		edns_opt_list_append(&edns->opt_list_inplace_cb_out,
+		LDNS_EDNS_UNBOUND_CACHEDB_TESTFRAME_TEST, 0, NULL, region));
+	/* append LDNS_EDE_OTHER at the end of both lists */
+	unit_assert(
+		edns_opt_list_append_ede(&edns->opt_list_out, region,
+		LDNS_EDE_OTHER, "Too long other text"));
+	unit_assert(
+		edns_opt_list_append_ede(&edns->opt_list_inplace_cb_out, region,
+		LDNS_EDE_OTHER, "Too long other text"));
+}
+
+static void edns_ede_encode_encodedecode(struct query_info* qinfo,
+	struct reply_info* rep, struct regional* region,
+	struct edns_data* edns, sldns_buffer* pkt)
+{
+	/* encode */
+	unit_assert(
+		reply_info_answer_encode(qinfo, rep, 1, rep->flags, pkt,
+		0, 0, region, 65535, edns, 0, 0));
+	/* buffer ready for reading; skip after the question section */
+	sldns_buffer_skip(pkt, LDNS_HEADER_SIZE);
+	(void)query_dname_len(pkt);
+	sldns_buffer_skip(pkt, 2 + 2);
+	/* decode */
+	unit_assert(
+		parse_edns_from_query_pkt(pkt, edns, NULL, NULL, region)==0);
+}
+
+static void edns_ede_encode_check(struct edns_data* edns, int* found_ede,
+	int* found_ede_other, int* found_ede_txt, int* found_other_edns)
+{
+	struct edns_option* opt;
+	for(opt = edns->opt_list_in; opt; opt = opt->next) {
+		if(opt->opt_code == LDNS_EDNS_EDE) {
+			(*found_ede)++;
+			if(opt->opt_len > 2)
+				(*found_ede_txt)++;
+			if(opt->opt_len >= 2 && sldns_read_uint16(
+				opt->opt_data) == LDNS_EDE_OTHER)
+				(*found_ede_other)++;
+		} else {
+			(*found_other_edns)++;
+		}
+	}
+
+}
+
+static void edns_ede_encode_fit_test(struct query_info* qinfo,
+	struct reply_info* rep, struct regional* region)
+{
+	struct edns_data edns;
+	int found_ede = 0, found_ede_other = 0, found_ede_txt = 0;
+	int found_other_edns = 0;
+	sldns_buffer* pkt = sldns_buffer_new(65535);
+	unit_assert(pkt);
+	edns_ede_encode_setup(&edns, region);
+	/* leave the pkt buffer as is; everything should fit */
+	edns_ede_encode_encodedecode(qinfo, rep, region, &edns, pkt);
+	edns_ede_encode_check(&edns, &found_ede, &found_ede_other,
+		&found_ede_txt, &found_other_edns);
+	unit_assert(found_ede == 12);
+	unit_assert(found_ede_other == 8);
+	unit_assert(found_ede_txt == 12);
+	unit_assert(found_other_edns == 2);
+	/* cleanup */
+	sldns_buffer_free(pkt);
+}
+
+static void edns_ede_encode_notxt_fit_test( struct query_info* qinfo,
+	struct reply_info* rep, struct regional* region)
+{
+	struct edns_data edns;
+	sldns_buffer* pkt;
+	uint16_t edns_field_size, ede_txt_size;
+	int found_ede = 0, found_ede_other = 0, found_ede_txt = 0;
+	int found_other_edns = 0;
+	edns_ede_encode_setup(&edns, region);
+	/* pkt buffer should fit everything if the ede txt is cropped.
+	 * OTHER EDE should not be there since it is useless without text. */
+	edns_field_size = calc_edns_field_size(&edns);
+	(void)calc_ede_option_size(&edns, &ede_txt_size);
+	pkt = sldns_buffer_new(LDNS_HEADER_SIZE
+		+ qinfo->qname_len
+		+ 2 + 2 /* qtype + qclass */
+		+ 11 /* opt record */
+		+ edns_field_size
+		- ede_txt_size);
+	unit_assert(pkt);
+	edns_ede_encode_encodedecode(qinfo, rep, region, &edns, pkt);
+	edns_ede_encode_check(&edns, &found_ede, &found_ede_other,
+		&found_ede_txt, &found_other_edns);
+	unit_assert(found_ede == 4);
+	unit_assert(found_ede_other == 0);
+	unit_assert(found_ede_txt == 0);
+	unit_assert(found_other_edns == 2);
+	/* cleanup */
+	sldns_buffer_free(pkt);
+}
+
+static void edns_ede_encode_no_fit_test( struct query_info* qinfo,
+	struct reply_info* rep, struct regional* region)
+{
+	struct edns_data edns;
+	sldns_buffer* pkt;
+	uint16_t edns_field_size, ede_size, ede_txt_size;
+	int found_ede = 0, found_ede_other = 0, found_ede_txt = 0;
+	int found_other_edns = 0;
+	edns_ede_encode_setup(&edns, region);
+	/* pkt buffer should fit only non-EDE options. */
+	edns_field_size = calc_edns_field_size(&edns);
+	ede_size = calc_ede_option_size(&edns, &ede_txt_size);
+	pkt = sldns_buffer_new(LDNS_HEADER_SIZE
+		+ qinfo->qname_len
+		+ 2 + 2 /* qtype + qclass */
+		+ 11 /* opt record */
+		+ edns_field_size
+		- ede_size);
+	unit_assert(pkt);
+	edns_ede_encode_encodedecode(qinfo, rep, region, &edns, pkt);
+	edns_ede_encode_check(&edns, &found_ede, &found_ede_other,
+		&found_ede_txt, &found_other_edns);
+	unit_assert(found_ede == 0);
+	unit_assert(found_ede_other == 0);
+	unit_assert(found_ede_txt == 0);
+	unit_assert(found_other_edns == 2);
+	/* cleanup */
+	sldns_buffer_free(pkt);
+}
+
+/** test optional EDE encoding with various buffer
+ *  available sizes */
+static void edns_ede_answer_encode_test(void)
+{
+	struct regional* region = regional_create();
+	struct reply_info* rep;
+	struct query_info qinfo;
+	unit_show_feature("edns ede optional encoding");
+	unit_assert(region);
+	rep = construct_reply_info_base(region,
+		LDNS_RCODE_NOERROR | BIT_QR, 1,
+		3600, 3600, 3600,
+		0, 0, 0, 0,
+		sec_status_unchecked, LDNS_EDE_NONE);
+	unit_assert(rep);
+	memset(&qinfo, 0, sizeof(qinfo));
+	qinfo.qname = sldns_str2wire_dname("encode.ede.", &qinfo.qname_len);
+	unit_assert(qinfo.qname);
+	qinfo.qtype = LDNS_RR_TYPE_TXT;
+	qinfo.qclass = LDNS_RR_CLASS_IN;
+
+	edns_ede_encode_fit_test(&qinfo, rep, region);
+	edns_ede_encode_notxt_fit_test(&qinfo, rep, region);
+	edns_ede_encode_no_fit_test(&qinfo, rep, region);
+
+	/* cleanup */
+	free(qinfo.qname);
+	regional_free_all(region);
+	regional_destroy(region);
+}
+
 void unit_show_func(const char* file, const char* func)
 {
 	printf("test %s:%s\n", file, func);
@@ -852,6 +1064,7 @@ void unit_show_feature(const char* feature)
 #ifdef USE_ECDSA_EVP_WORKAROUND
 void ecdsa_evp_workaround_init(void);
 #endif
+
 /**
  * Main unit test program. Setup, teardown and report errors.
  * @param argc: arg count.
@@ -909,6 +1122,7 @@ main(int argc, char* argv[])
 	zonemd_test();
 	tcpreuse_test();
 	msgparse_test();
+	edns_ede_answer_encode_test();
 #ifdef CLIENT_SUBNET
 	ecs_test();
 #endif /* CLIENT_SUBNET */
