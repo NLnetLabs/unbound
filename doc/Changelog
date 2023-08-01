@@ -5,6 +5,7 @@
 	  altogether) before giving up on attaching EDE options.
 	- More braces and formatting for Fix for EDNS EDE size calculation to
 	  avoid future bugs.
+	- Fix to use the now cached EDE, if any, for CD_bit queries.
 
 1 August 2023: Wouter
 	- Fix for EDNS EDE size calculation.

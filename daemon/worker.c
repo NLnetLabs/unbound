@@ -475,7 +475,8 @@ answer_norec_from_cache(struct worker* worker, struct query_info* qinfo,
 	uint16_t udpsize = edns->udp_size;
 	int secure = 0;
 	time_t timenow = *worker->env.now;
-	int must_validate = (!(flags&BIT_CD) || worker->env.cfg->ignore_cd)
+	int has_cd_bit = (flags&BIT_CD);
+	int must_validate = (!has_cd_bit || worker->env.cfg->ignore_cd)
 		&& worker->env.need_to_validate;
 	struct dns_msg *msg = NULL;
 	struct delegpt *dp;
@@ -546,6 +547,16 @@ answer_norec_from_cache(struct worker* worker, struct query_info* qinfo,
 		worker->env.now_tv))
 			return 0;
 	msg->rep->flags |= BIT_QR|BIT_RA;
+	/* Attach the cached EDE (RFC8914) if CD bit is set and the answer is
+	 * bogus. */
+	if(worker->env.cfg->ede && has_cd_bit &&
+		(check_delegation_secure(msg->rep) == sec_status_bogus ||
+		check_delegation_secure(msg->rep) == sec_status_secure_sentinel_fail) &&
+		msg->rep->reason_bogus != LDNS_EDE_NONE) {
+		edns_opt_list_append_ede(&edns->opt_list_out,
+			worker->scratchpad, msg->rep->reason_bogus,
+			msg->rep->reason_bogus_str);
+	}
 	if(!reply_info_answer_encode(&msg->qinfo, msg->rep, id, flags,
 		repinfo->c->buffer, 0, 1, worker->scratchpad,
 		udpsize, edns, (int)(edns->bits & EDNS_DO), secure)) {
@@ -636,7 +647,8 @@ answer_from_cache(struct worker* worker, struct query_info* qinfo,
 	uint16_t udpsize = edns->udp_size;
 	struct reply_info* encode_rep = rep;
 	struct reply_info* partial_rep = *partial_repp;
-	int must_validate = (!(flags&BIT_CD) || worker->env.cfg->ignore_cd)
+	int has_cd_bit = (flags&BIT_CD);
+	int must_validate = (!has_cd_bit || worker->env.cfg->ignore_cd)
 		&& worker->env.need_to_validate;
 	*partial_repp = NULL;  /* avoid accidental further pass */
 
@@ -763,10 +775,19 @@ answer_from_cache(struct worker* worker, struct query_info* qinfo,
 				goto bail_out;
 		}
 	} else {
-		if (*is_expired_answer == 1 &&
+		if(*is_expired_answer == 1 &&
 			worker->env.cfg->ede_serve_expired && worker->env.cfg->ede) {
 			EDNS_OPT_LIST_APPEND_EDE(&edns->opt_list_out,
 				worker->scratchpad, LDNS_EDE_STALE_ANSWER, "");
+		}
+		/* Attach the cached EDE (RFC8914) if CD bit is set and the
+		 * answer is bogus. */
+		if(*is_secure_answer == 0 &&
+			worker->env.cfg->ede && has_cd_bit &&
+			encode_rep->reason_bogus != LDNS_EDE_NONE) {
+			edns_opt_list_append_ede(&edns->opt_list_out,
+				worker->scratchpad, encode_rep->reason_bogus,
+				encode_rep->reason_bogus_str);
 		}
 		if(!reply_info_answer_encode(qinfo, encode_rep, id, flags,
 			repinfo->c->buffer, timenow, 1, worker->scratchpad,
