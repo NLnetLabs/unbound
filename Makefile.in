@@ -122,7 +122,7 @@ iterator/iter_delegpt.c iterator/iter_donotq.c iterator/iter_fwd.c \
 iterator/iter_hints.c iterator/iter_priv.c iterator/iter_resptype.c \
 iterator/iter_scrub.c iterator/iter_utils.c services/listen_dnsport.c \
 services/localzone.c services/mesh.c services/modstack.c services/view.c \
-services/rpz.c \
+services/rpz.c util/rfc_1982.c \
 services/outbound_list.c services/outside_network.c util/alloc.c \
 util/config_file.c util/configlexer.c util/configparser.c \
 util/shm_side/shm_main.c services/authzone.c \
@@ -148,7 +148,7 @@ outbound_list.lo alloc.lo config_file.lo configlexer.lo configparser.lo \
 fptr_wlist.lo siphash.lo edns.lo locks.lo log.lo mini_event.lo module.lo net_help.lo \
 random.lo rbtree.lo regional.lo rtt.lo dnstree.lo lookup3.lo lruhash.lo \
 slabhash.lo tcp_conn_limit.lo timehist.lo tube.lo winsock_event.lo \
-autotrust.lo val_anchor.lo rpz.lo proxy_protocol.lo \
+autotrust.lo val_anchor.lo rpz.lo rfc_1982.lo proxy_protocol.lo \
 validator.lo val_kcache.lo val_kentry.lo val_neg.lo val_nsec3.lo val_nsec.lo \
 val_secalgo.lo val_sigcrypt.lo val_utils.lo dns64.lo $(CACHEDB_OBJ) authzone.lo \
 $(SUBNET_OBJ) $(PYTHONMOD_OBJ) $(CHECKLOCK_OBJ) $(DNSTAP_OBJ) $(DNSCRYPT_OBJ) \
@@ -1008,6 +1008,7 @@ rtt.lo rtt.o: $(srcdir)/util/rtt.c config.h $(srcdir)/util/rtt.h $(srcdir)/itera
  $(srcdir)/util/locks.h $(srcdir)/util/log.h $(srcdir)/util/data/packed_rrset.h $(srcdir)/util/module.h \
  $(srcdir)/util/data/msgparse.h $(srcdir)/sldns/pkthdr.h $(srcdir)/sldns/rrdef.h
 siphash.lo siphash.o: $(srcdir)/util/siphash.c
+rfc_1982.lo rfc_1982.o: $(srcdir)/util/rfc_1982.c
 edns.lo edns.o: $(srcdir)/util/edns.c config.h $(srcdir)/util/edns.h $(srcdir)/util/storage/dnstree.h \
  $(srcdir)/util/rbtree.h $(srcdir)/util/config_file.h $(srcdir)/util/netevent.h $(srcdir)/dnscrypt/dnscrypt.h \
   $(srcdir)/util/net_help.h $(srcdir)/util/log.h $(srcdir)/util/regional.h \

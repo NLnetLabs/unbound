@@ -46,6 +46,7 @@
 #include "util/siphash.h"
 #include "util/storage/lookup3.h"
 #include "util/regional.h"
+#include "util/rfc_1982.h"
 #include "sldns/rrdef.h"
 #include "sldns/sbuffer.h"
 #include "sldns/parseutil.h"
@@ -941,43 +942,43 @@ parse_packet(sldns_buffer* pkt, struct msg_parse* msg, struct regional* region)
 	return 0;
 }
 
-/** RFC 1982 comparison, uses unsigned integers, and tries to avoid
- * compiler optimization (eg. by avoiding a-b<0 comparisons),
- * this routine matches compare_serial(), for SOA serial number checks */
-static int
-compare_1982(uint32_t a, uint32_t b)
-{
-	/* for 32 bit values */
-	const uint32_t cutoff = ((uint32_t) 1 << (32 - 1));
-
-	if (a == b) {
-		return 0;
-	} else if ((a < b && b - a < cutoff) || (a > b && a - b > cutoff)) {
-		return -1;
-	} else {
-		return 1;
-	}
-}
-
-/** if we know that b is larger than a, return the difference between them,
- * that is the distance between them. in RFC1982 arith */
-static uint32_t
-subtract_1982(uint32_t a, uint32_t b)
-{
-	/* for 32 bit values */
-	const uint32_t cutoff = ((uint32_t) 1 << (32 - 1));
-
-	if(a == b)
-		return 0;
-	if(a < b && b - a < cutoff) {
-		return b-a;
-	}
-	if(a > b && a - b > cutoff) {
-		return ((uint32_t)0xffffffff) - (a-b-1);
-	}
-	/* wrong case, b smaller than a */
-	return 0;
-}
+///** RFC 1982 comparison, uses unsigned integers, and tries to avoid
+// * compiler optimization (eg. by avoiding a-b<0 comparisons),
+// * this routine matches compare_serial(), for SOA serial number checks */
+//static int
+//compare_1982(uint32_t a, uint32_t b)
+//{
+//	/* for 32 bit values */
+//	const uint32_t cutoff = ((uint32_t) 1 << (32 - 1));
+//
+//	if (a == b) {
+//		return 0;
+//	} else if ((a < b && b - a < cutoff) || (a > b && a - b > cutoff)) {
+//		return -1;
+//	} else {
+//		return 1;
+//	}
+//}
+//
+///** if we know that b is larger than a, return the difference between them,
+// * that is the distance between them. in RFC1982 arith */
+//static uint32_t
+//subtract_1982(uint32_t a, uint32_t b)
+//{
+//	/* for 32 bit values */
+//	const uint32_t cutoff = ((uint32_t) 1 << (32 - 1));
+//
+//	if(a == b)
+//		return 0;
+//	if(a < b && b - a < cutoff) {
+//		return b-a;
+//	}
+//	if(a > b && a - b > cutoff) {
+//		return ((uint32_t)0xffffffff) - (a-b-1);
+//	}
+//	/* wrong case, b smaller than a */
+//	return 0;
+//}
 
 
 static uint8_t *
