@@ -742,10 +742,6 @@ answer_from_cache(struct worker* worker, struct query_info* qinfo,
 	edns->udp_size = EDNS_ADVERTISED_SIZE;
 	edns->ext_rcode = 0;
 	edns->bits &= EDNS_DO;
-	if(!inplace_cb_reply_cache_call(&worker->env, qinfo, NULL, rep,
-		(int)(flags&LDNS_RCODE_MASK), edns, repinfo, worker->scratchpad,
-		worker->env.now_tv))
-		goto bail_out;
 	*alias_rrset = NULL; /* avoid confusion if caller set it to non-NULL */
 	if((worker->daemon->use_response_ip || worker->daemon->use_rpz) &&
 		!partial_rep && !apply_respip_action(worker, qinfo, cinfo, rep,
@@ -789,6 +785,10 @@ answer_from_cache(struct worker* worker, struct query_info* qinfo,
 				worker->scratchpad, encode_rep->reason_bogus,
 				encode_rep->reason_bogus_str);
 		}
+		if(!inplace_cb_reply_cache_call(&worker->env, qinfo, NULL, encode_rep,
+			(int)(flags&LDNS_RCODE_MASK), edns, repinfo, worker->scratchpad,
+			worker->env.now_tv))
+			goto bail_out;
 		if(!reply_info_answer_encode(qinfo, encode_rep, id, flags,
 			repinfo->c->buffer, timenow, 1, worker->scratchpad,
 			udpsize, edns, (int)(edns->bits & EDNS_DO),
