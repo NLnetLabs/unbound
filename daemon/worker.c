@@ -1477,8 +1477,8 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 			edns.opt_list_out = NULL;
 			edns.opt_list_inplace_cb_out = NULL;
 			verbose(VERB_ALGO, "query with bad edns version.");
-			log_addr( VERB_CLIENT, "from",&repinfo->remote_addr
-			                             , repinfo->remote_addrlen);
+			log_addr(VERB_CLIENT, "from", &repinfo->client_addr,
+				repinfo->client_addrlen);
 			extended_error_encode(c->buffer, EDNS_RCODE_BADVERS, &qinfo,
 				*(uint16_t*)(void *)sldns_buffer_begin(c->buffer),
 				sldns_buffer_read_u16_at(c->buffer, 2), 0, &edns);
@@ -1494,17 +1494,18 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 			edns.udp_size = NORMAL_UDP_SIZE;
 		}
 	}
+
 	/* "if, else if" sequence below deals with downstream DNS Cookies */
-	if (acl != acl_allow_cookie)
+	if(acl != acl_allow_cookie)
 		; /* pass; No cookie downstream processing whatsoever */
 
-	else if (edns.cookie_valid)
+	else if(edns.cookie_valid)
 		; /* pass; Valid cookie is good! */
 
-	else if (c->type != comm_udp)
+	else if(c->type != comm_udp)
 		; /* pass; Stateful transport */
 
-	else if (edns.cookie_present) {
+	else if(edns.cookie_present) {
 		/* Cookie present, but not valid: Cookie was bad! */
 		extended_error_encode(c->buffer,
 			LDNS_EXT_RCODE_BADCOOKIE, &qinfo,
@@ -1515,7 +1516,7 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 		regional_free_all(worker->scratchpad);
 		goto send_reply;
 	} else {
-		/* Cookie requered, but no cookie present on UDP */
+		/* Cookie required, but no cookie present on UDP */
 		verbose(VERB_ALGO, "worker request: "
 			"need cookie or stateful transport");
 		log_addr(VERB_ALGO, "from",&repinfo->remote_addr
@@ -1532,6 +1533,7 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 		regional_free_all(worker->scratchpad);
 		goto send_reply;
 	}
+
 	if(edns.udp_size > worker->daemon->cfg->max_udp_size &&
 		c->type == comm_udp) {
 		verbose(VERB_QUERY,

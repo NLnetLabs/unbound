@@ -958,9 +958,10 @@ qinfo_query_encode(sldns_buffer* pkt, struct query_info* qinfo)
 	sldns_buffer_flip(pkt);
 }
 
-void 
-extended_error_encode(sldns_buffer* buf, uint16_t rcode, struct query_info* qinfo,
-	uint16_t qid, uint16_t qflags, uint16_t xflags, struct edns_data* edns)
+void
+extended_error_encode(sldns_buffer* buf, uint16_t rcode,
+	struct query_info* qinfo, uint16_t qid, uint16_t qflags,
+	uint16_t xflags, struct edns_data* edns)
 {
 	uint16_t flags;
 
@@ -1003,11 +1004,10 @@ extended_error_encode(sldns_buffer* buf, uint16_t rcode, struct query_info* qinf
 	}
 }
 
-void 
+void
 error_encode(sldns_buffer* buf, int r, struct query_info* qinfo,
 	uint16_t qid, uint16_t qflags, struct edns_data* edns)
 {
-	extended_error_encode(buf, (r & 0x000F), qinfo, qid, qflags
-	                         , (r & 0xFFF0), edns);
+	extended_error_encode(buf, (r & 0x000F), qinfo, qid, qflags,
+		(r & 0xFFF0), edns);
 }
-

@@ -116,7 +116,7 @@ uint16_t calc_edns_field_size(struct edns_data* edns);
  */
 void attach_edns_record(struct sldns_buffer* pkt, struct edns_data* edns);
 
-/** 
+/**
  * Encode an error. With QR and RA set.
  *
  * @param pkt: where to store the packet.
@@ -130,7 +130,7 @@ void attach_edns_record(struct sldns_buffer* pkt, struct edns_data* edns);
 void error_encode(struct sldns_buffer* pkt, int r, struct query_info* qinfo,
 	uint16_t qid, uint16_t qflags, struct edns_data* edns);
 
-/** 
+/**
  * Encode an extended error. With QR and RA set.
  *
  * @param pkt: where to store the packet.
@@ -141,7 +141,7 @@ void error_encode(struct sldns_buffer* pkt, int r, struct query_info* qinfo,
  * @param xflags: extra flags to set (such as for example BIT_AA and/or BIT_TC)
  * @param edns: if not NULL, this is the query edns info,
  * 	and an edns reply is attached. Only attached if EDNS record fits reply.
- *      Without edns extended errors (i.e. > 15 )will not be conveyed.
+ * 	Without edns extended errors (i.e. > 15) will not be conveyed.
  */
 void extended_error_encode(struct sldns_buffer* pkt, uint16_t rcode,
 	struct query_info* qinfo, uint16_t qid, uint16_t qflags,
