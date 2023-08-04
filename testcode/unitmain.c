@@ -530,6 +530,208 @@ infra_test(void)
 	config_delete(cfg);
 }
 
+#include "util/edns.h"
+/* Complete version-invalid client cookie; needs a new one.
+ * Based on edns_cookie_rfc9018_a2 */
+static void
+edns_cookie_invalid_version(void)
+{
+	uint32_t timestamp = 1559734385;
+	uint8_t client_cookie[] = {
+		0x24, 0x64, 0xc4, 0xab, 0xcf, 0x10, 0xc9, 0x57,
+		0x99, 0x00, 0x00, 0x00,
+		0x5c, 0xf7, 0x9f, 0x11,
+		0x1f, 0x81, 0x30, 0xc3, 0xee, 0xe2, 0x94, 0x80 };
+	uint8_t server_cookie[] = {
+		0x24, 0x64, 0xc4, 0xab, 0xcf, 0x10, 0xc9, 0x57,
+		0x01, 0x00, 0x00, 0x00,
+		0x5c, 0xf7, 0xa8, 0x71,
+		0xd4, 0xa5, 0x64, 0xa1, 0x44, 0x2a, 0xca, 0x77 };
+	uint8_t server_secret[] = {
+		0xe5, 0xe9, 0x73, 0xe5, 0xa6, 0xb2, 0xa4, 0x3f,
+		0x48, 0xe7, 0xdc, 0x84, 0x9e, 0x37, 0xbf, 0xcf };
+	uint8_t buf[32];
+	/* copy client cookie|version|reserved|timestamp */
+	memcpy(buf, client_cookie, 8 + 4 + 4);
+	/* copy ip 198.51.100.100 */
+	memcpy(buf + 16, "\306\063\144\144", 4);
+	unit_assert(edns_cookie_server_validate(client_cookie,
+		sizeof(client_cookie), server_secret, sizeof(server_secret), 1,
+		buf, timestamp) == 0);
+	edns_cookie_server_write(buf, server_secret, 1, timestamp);
+	log_hex("server:", buf, 32);
+	unit_assert(memcmp(server_cookie, buf, 24) == 0);
+}
+
+/* Complete hash-invalid client cookie; needs a new one. */
+static void
+edns_cookie_invalid_hash(void)
+{
+	uint32_t timestamp = 0;
+	uint8_t client_cookie[] = {
+		0xfc, 0x93, 0xfc, 0x62, 0x80, 0x7d, 0xdb, 0x86,
+		0x01, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00,
+		0x32, 0xF2, 0x43, 0xB9, 0xBC, 0xFE, 0xC4, 0x06 };
+	uint8_t server_cookie[] = {
+		0xfc, 0x93, 0xfc, 0x62, 0x80, 0x7d, 0xdb, 0x86,
+		0x01, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00,
+		0xBA, 0x0D, 0x82, 0x90, 0x8F, 0xAA, 0xEB, 0xBD };
+	uint8_t server_secret[] = {
+		0xe5, 0xe9, 0x73, 0xe5, 0xa6, 0xb2, 0xa4, 0x3f,
+		0x48, 0xe7, 0xdc, 0x84, 0x9e, 0x37, 0xbf, 0xcf };
+	uint8_t buf[32];
+	/* copy client cookie|version|reserved|timestamp */
+	memcpy(buf, client_cookie, 8 + 4 + 4);
+	/* copy ip 203.0.113.203 */
+	memcpy(buf + 16, "\313\000\161\313", 4);
+	unit_assert(edns_cookie_server_validate(client_cookie,
+		sizeof(client_cookie), server_secret, sizeof(server_secret), 1,
+		buf, timestamp) == 0);
+	edns_cookie_server_write(buf, server_secret, 1, timestamp);
+	unit_assert(memcmp(server_cookie, buf, 24) == 0);
+}
+
+/* Complete hash-valid client cookie; more than 30 minutes old; needs a
+ * refreshed server cookie.
+ * A slightly better variation of edns_cookie_rfc9018_a3 for Unbound to check
+ * that RESERVED bits do not influence cookie validation. */
+static void
+edns_cookie_rfc9018_a3_better(void)
+{
+	uint32_t timestamp = 1800 + 1;
+	uint8_t client_cookie[] = {
+		0xfc, 0x93, 0xfc, 0x62, 0x80, 0x7d, 0xdb, 0x86,
+		0x01, 0xab, 0xcd, 0xef,
+		0x00, 0x00, 0x00, 0x00,
+		0x32, 0xF2, 0x43, 0xB9, 0xBC, 0xFE, 0xC4, 0x06 };
+	uint8_t server_cookie[] = {
+		0xfc, 0x93, 0xfc, 0x62, 0x80, 0x7d, 0xdb, 0x86,
+		0x01, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x07, 0x09,
+		0x62, 0xD5, 0x93, 0x09, 0x14, 0x5C, 0x23, 0x9D };
+	uint8_t server_secret[] = {
+		0xe5, 0xe9, 0x73, 0xe5, 0xa6, 0xb2, 0xa4, 0x3f,
+		0x48, 0xe7, 0xdc, 0x84, 0x9e, 0x37, 0xbf, 0xcf };
+	uint8_t buf[32];
+	/* copy client cookie|version|reserved|timestamp */
+	memcpy(buf, client_cookie, 8 + 4 + 4);
+	/* copy ip 203.0.113.203 */
+	memcpy(buf + 16, "\313\000\161\313", 4);
+	unit_assert(edns_cookie_server_validate(client_cookie,
+		sizeof(client_cookie), server_secret, sizeof(server_secret), 1,
+		buf, timestamp) == -1);
+	edns_cookie_server_write(buf, server_secret, 1, timestamp);
+	unit_assert(memcmp(server_cookie, buf, 24) == 0);
+}
+
+/* Complete hash-valid client cookie; more than 60 minutes old; needs a
+ * refreshed server cookie. */
+static void
+edns_cookie_rfc9018_a3(void)
+{
+	uint32_t timestamp = 1559734700;
+	uint8_t client_cookie[] = {
+		0xfc, 0x93, 0xfc, 0x62, 0x80, 0x7d, 0xdb, 0x86,
+		0x01, 0xab, 0xcd, 0xef,
+		0x5c, 0xf7, 0x8f, 0x71,
+		0xa3, 0x14, 0x22, 0x7b, 0x66, 0x79, 0xeb, 0xf5 };
+	uint8_t server_cookie[] = {
+		0xfc, 0x93, 0xfc, 0x62, 0x80, 0x7d, 0xdb, 0x86,
+		0x01, 0x00, 0x00, 0x00,
+		0x5c, 0xf7, 0xa9, 0xac,
+		0xf7, 0x3a, 0x78, 0x10, 0xac, 0xa2, 0x38, 0x1e };
+	uint8_t server_secret[] = {
+		0xe5, 0xe9, 0x73, 0xe5, 0xa6, 0xb2, 0xa4, 0x3f,
+		0x48, 0xe7, 0xdc, 0x84, 0x9e, 0x37, 0xbf, 0xcf };
+	uint8_t buf[32];
+	/* copy client cookie|version|reserved|timestamp */
+	memcpy(buf, client_cookie, 8 + 4 + 4);
+	/* copy ip 203.0.113.203 */
+	memcpy(buf + 16, "\313\000\161\313", 4);
+	unit_assert(edns_cookie_server_validate(client_cookie,
+		sizeof(client_cookie), server_secret, sizeof(server_secret), 1,
+		buf, timestamp) == 0);
+	edns_cookie_server_write(buf, server_secret, 1, timestamp);
+	unit_assert(memcmp(server_cookie, buf, 24) == 0);
+}
+
+/* Complete hash-valid client cookie; more than 30 minutes old; needs a
+ * refreshed server cookie. */
+static void
+edns_cookie_rfc9018_a2(void)
+{
+	uint32_t timestamp = 1559734385;
+	uint8_t client_cookie[] = {
+		0x24, 0x64, 0xc4, 0xab, 0xcf, 0x10, 0xc9, 0x57,
+		0x01, 0x00, 0x00, 0x00,
+		0x5c, 0xf7, 0x9f, 0x11,
+		0x1f, 0x81, 0x30, 0xc3, 0xee, 0xe2, 0x94, 0x80 };
+	uint8_t server_cookie[] = {
+		0x24, 0x64, 0xc4, 0xab, 0xcf, 0x10, 0xc9, 0x57,
+		0x01, 0x00, 0x00, 0x00,
+		0x5c, 0xf7, 0xa8, 0x71,
+		0xd4, 0xa5, 0x64, 0xa1, 0x44, 0x2a, 0xca, 0x77 };
+	uint8_t server_secret[] = {
+		0xe5, 0xe9, 0x73, 0xe5, 0xa6, 0xb2, 0xa4, 0x3f,
+		0x48, 0xe7, 0xdc, 0x84, 0x9e, 0x37, 0xbf, 0xcf };
+	uint8_t buf[32];
+	/* copy client cookie|version|reserved|timestamp */
+	memcpy(buf, client_cookie, 8 + 4 + 4);
+	/* copy ip 198.51.100.100 */
+	memcpy(buf + 16, "\306\063\144\144", 4);
+	unit_assert(edns_cookie_server_validate(client_cookie,
+		sizeof(client_cookie), server_secret, sizeof(server_secret), 1,
+		buf, timestamp) == -1);
+	edns_cookie_server_write(buf, server_secret, 1, timestamp);
+	unit_assert(memcmp(server_cookie, buf, 24) == 0);
+}
+
+/* Only client cookie; needs a complete server cookie. */
+static void
+edns_cookie_rfc9018_a1(void)
+{
+	uint32_t timestamp = 1559731985;
+	uint8_t client_cookie[] = {
+		0x24, 0x64, 0xc4, 0xab, 0xcf, 0x10, 0xc9, 0x57 };
+	uint8_t server_cookie[] = {
+		0x24, 0x64, 0xc4, 0xab, 0xcf, 0x10, 0xc9, 0x57,
+		0x01, 0x00, 0x00, 0x00,
+		0x5c, 0xf7, 0x9f, 0x11,
+		0x1f, 0x81, 0x30, 0xc3, 0xee, 0xe2, 0x94, 0x80 };
+	uint8_t server_secret[] = {
+		0xe5, 0xe9, 0x73, 0xe5, 0xa6, 0xb2, 0xa4, 0x3f,
+		0x48, 0xe7, 0xdc, 0x84, 0x9e, 0x37, 0xbf, 0xcf };
+	uint8_t buf[32];
+	/* copy client cookie|version|reserved|timestamp */
+	memcpy(buf, server_cookie, 8 + 4 + 4);
+	/* copy ip 198.51.100.100 */
+	memcpy(buf + 16, "\306\063\144\144", 4);
+	unit_assert(edns_cookie_server_validate(client_cookie,
+		sizeof(client_cookie),
+		/* these will not be used; it will return invalid
+		 * because of the size. */
+		NULL, 0, 1, NULL, 0) == 0);
+	edns_cookie_server_write(buf, server_secret, 1, timestamp);
+	unit_assert(memcmp(server_cookie, buf, 24) == 0);
+}
+
+/** test interoperable EDNS cookies (RFC9018) */
+static void
+edns_cookie_test(void)
+{
+	unit_show_feature("interoperable edns cookies");
+	/* Check RFC9018 appendix test vectors */
+	edns_cookie_rfc9018_a1();
+	edns_cookie_rfc9018_a2();
+	edns_cookie_rfc9018_a3();
+	/* More tests */
+	edns_cookie_rfc9018_a3_better();
+	edns_cookie_invalid_hash();
+	edns_cookie_invalid_version();
+}
+
 #include "util/random.h"
 /** test randomness */
 static void
@@ -906,6 +1108,7 @@ main(int argc, char* argv[])
 	slabhash_test();
 	infra_test();
 	ldns_test();
+	edns_cookie_test();
 	zonemd_test();
 	tcpreuse_test();
 	msgparse_test();

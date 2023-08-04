@@ -43,10 +43,10 @@
 #include "util/data/dname.h"
 #include "util/data/packed_rrset.h"
 #include "util/netevent.h"
-#include "util/siphash.h"
 #include "util/storage/lookup3.h"
 #include "util/regional.h"
 #include "util/rfc_1982.h"
+#include "util/edns.h"
 #include "sldns/rrdef.h"
 #include "sldns/sbuffer.h"
 #include "sldns/parseutil.h"
@@ -942,21 +942,6 @@ parse_packet(sldns_buffer* pkt, struct msg_parse* msg, struct regional* region)
 	return 0;
 }
 
-
-static uint8_t *
-cookie_hash(uint8_t *hash, uint8_t *buf,
-		struct sockaddr_storage *addr, uint8_t *secret)
-{
-	if (addr->ss_family == AF_INET6) {
-		memcpy(buf+16, &((struct sockaddr_in6 *)addr)->sin6_addr, 16);
-		siphash(buf, 32, secret, hash, 8);
-	} else {
-		memcpy(buf+16, &((struct sockaddr_in *)addr)->sin_addr, 4);
-		siphash(buf, 20, secret, hash, 8);
-	}
-	return hash;
-}
-
 /** parse EDNS options from EDNS wireformat rdata */
 static int
 parse_edns_options_from_query(uint8_t* rdata_ptr, size_t rdata_len,
@@ -985,9 +970,9 @@ parse_edns_options_from_query(uint8_t* rdata_ptr, size_t rdata_len,
 	while(rdata_len >= 4) {
 		uint16_t opt_code = sldns_read_uint16(rdata_ptr);
 		uint16_t opt_len = sldns_read_uint16(rdata_ptr+2);
-		uint8_t server_cookie[40], hash[8];
-		uint32_t cookie_time, subt_1982;
-		int comp_1982;
+		uint8_t server_cookie[40];
+		int cookie_is_valid;
+		int cookie_is_v4 = 1;
 
 		rdata_ptr += 4;
 		rdata_len -= 4;
@@ -1052,11 +1037,11 @@ parse_edns_options_from_query(uint8_t* rdata_ptr, size_t rdata_len,
 			break;
 
 		case LDNS_EDNS_COOKIE:
-			if(!cfg || !cfg->do_answer_cookie)
+			if(!cfg || !cfg->do_answer_cookie || !repinfo)
 				break;
 			if(opt_len != 8 && (opt_len < 16 || opt_len > 40)) {
 				verbose(VERB_ALGO, "worker request: "
-						"badly formatted cookie");
+					"badly formatted cookie");
 				return LDNS_RCODE_FORMERR;
 			}
 			edns->cookie_present = 1;
@@ -1066,67 +1051,41 @@ parse_edns_options_from_query(uint8_t* rdata_ptr, size_t rdata_len,
 			 */
 			memcpy(server_cookie, rdata_ptr, 16);
 
-			/* In the "if, if else" block below, we validate a
-			 * RFC9018 cookie. If it doesn't match the recipe, or
-			 * if it doesn't validate, or if the cookie is too old
-			 * (< 30 min), a new cookie is generated.
+			/* Copy client ip for validation and creation
+			 * purposes. It will be overwritten if (re)creation
+			 * is needed.
 			 */
-			if (opt_len != 24)
-				; /* RFC9018 cookies are 24 bytes long */
+			if(repinfo->remote_addr.ss_family == AF_INET) {
+				memcpy(server_cookie + 16,
+					&((struct sockaddr_in*)&repinfo->remote_addr)->sin_addr, 4);
+			} else {
+				cookie_is_v4 = 0;
+				memcpy(server_cookie + 16,
+					&((struct sockaddr_in6*)&repinfo->remote_addr)->sin6_addr, 16);
+			}
 
-			else if (cfg->cookie_secret_len != 16)
-				; /* RFC9018 cookies have 16 byte secrets */
-
-			else if (rdata_ptr[8] != 1)
-				; /* RFC9018 cookies are cookie version 1 */
-
-			else if ((comp_1982 = compare_1982(now,
-					(cookie_time = sldns_read_uint32(rdata_ptr + 12)))) > 0
-			     &&  (subt_1982 = subtract_1982(cookie_time, now)) > 3600)
-				; /* Cookie is older than 1 hour
-				   * (see RFC9018 Section 4.3.)
-				   */
-
-			else if (comp_1982 <= 0
-			     &&  subtract_1982(now, cookie_time) > 300)
-				; /* Cookie time is more than 5 minutes in the
-				   * future. (see RFC9018 Section 4.3.)
-				   */
-
-			else if (memcmp( cookie_hash( hash, server_cookie
-			                            , &repinfo->remote_addr
-			                            , cfg->cookie_secret)
-			               , rdata_ptr + 16 , 8 ) == 0) {
-
-				/* Cookie is valid! */
-				edns->cookie_valid = 1;
-				if (comp_1982 > 0 && subt_1982 > 1800)
-					; /* But older than 30 minutes,
-					   * so create a new one anyway */
-
-				else if (!edns_opt_list_append( /* Reuse cookie */
-				    &edns->opt_list_out, LDNS_EDNS_COOKIE, opt_len,
-				    rdata_ptr, region)) {
+			cookie_is_valid = edns_cookie_server_validate(
+				rdata_ptr, opt_len, cfg->cookie_secret,
+				cfg->cookie_secret_len, cookie_is_v4,
+				server_cookie, now);
+			if(cookie_is_valid != 0) edns->cookie_valid = 1;
+			if(cookie_is_valid == 1) {
+				/* Reuse cookie */
+				if(!edns_opt_list_append(
+					&edns->opt_list_out, LDNS_EDNS_COOKIE,
+					opt_len, rdata_ptr, region)) {
 					log_err("out of memory");
 					return LDNS_RCODE_SERVFAIL;
-				} else
-					/* Cookie to be reused added to
-					 * outgoing options. Done!
-					 */
-					break;
+				}
+				/* Cookie to be reused added to outgoing
+				 * options. Done!
+				 */
+				break;
 			}
-			/* Add a new server cookie to outgoing cookies */
-			server_cookie[ 8] = 1;   /* Version */
-			server_cookie[ 9] = 0;   /* Reserved */
-			server_cookie[10] = 0;   /* Reserved */
-			server_cookie[11] = 0;   /* Reserved */
-			sldns_write_uint32(server_cookie + 12, now);
-			cookie_hash( hash, server_cookie, &repinfo->remote_addr
-			           , cfg->cookie_secret);
-			memcpy(server_cookie + 16, hash, 8);
-			if (!edns_opt_list_append( &edns->opt_list_out
-			                         , LDNS_EDNS_COOKIE
-						 , 24, server_cookie, region)) {
+			edns_cookie_server_write(server_cookie,
+				cfg->cookie_secret, cookie_is_v4, now);
+			if(!edns_opt_list_append(&edns->opt_list_out,
+				LDNS_EDNS_COOKIE, 24, server_cookie, region)) {
 				log_err("out of memory");
 				return LDNS_RCODE_SERVFAIL;
 			}
@@ -1309,7 +1268,7 @@ parse_edns_from_query_pkt(sldns_buffer* pkt, struct edns_data* edns,
 	rdata_ptr = sldns_buffer_current(pkt);
 	/* ignore rrsigs */
 	return parse_edns_options_from_query(rdata_ptr, rdata_len, edns, cfg,
-			c, repinfo, now, region);
+		c, repinfo, now, region);
 }
 
 void

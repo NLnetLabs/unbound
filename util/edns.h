@@ -106,4 +106,53 @@ struct edns_string_addr*
 edns_string_addr_lookup(rbtree_type* tree, struct sockaddr_storage* addr,
 	socklen_t addrlen);
 
+/**
+ * Compute the interoperable EDNS cookie (RFC9018) hash.
+ * @param in: buffer input for the hash generation. It needs to be:
+ *	Client Cookie | Version | Reserved | Timestamp | Client-IP
+ * @param secret: the server secret; implicit length of 16 octets.
+ * @param v4: if the client IP is v4 or v6.
+ * @param hash: buffer to write the hash to.
+ * return a pointer to the hash.
+ */
+uint8_t* edns_cookie_server_hash(const uint8_t* in, const uint8_t* secret,
+	int v4, uint8_t* hash);
+
+/**
+ * Write an interoperable EDNS server cookie (RFC9018).
+ * @param buf: buffer to write to. It should have a size of at least 32 octets
+ *	as it doubles as the output buffer and the hash input buffer.
+ *	The first 8 octets are expected to be the Client Cookie and will be
+ *		left untouched.
+ *	The next 8 octets will be written with Version | Reserved | Timestamp.
+ *	The next 4 or 16 octets are expected to be the IPv4 or the IPv6 address
+ *		based on the v4 flag.
+ *	Thus the first 20 or 32 octets, based on the v4 flag, will be used as
+ *		the hash input.
+ *	The server hash (8 octets) will be written after the first 16 octets;
+ *		overwriting the address information.
+ *	The caller expects a complete, 24 octet long cookie in the buffer.
+ * @param secret: the server secret; implicit length of 16 octets.
+ * @param v4: if the client IP is v4 or v6.
+ * @param timestamp: the timestamp to use.
+ */
+void edns_cookie_server_write(uint8_t* buf, const uint8_t* secret, int v4,
+	uint32_t timestamp);
+
+/**
+ * Validate an interoperable EDNS cookie (RFC9018).
+ * @param cookie: pointer to the cookie data.
+ * @param cookie_len: the length of the cookie data.
+ * @param secret: pointer to the server secret.
+ * @param secret_len: the length of the secret.
+ * @param v4: if the client IP is v4 or v6.
+ * @param hash_input: pointer to the hash input for validation. It needs to be:
+ *	Client Cookie | Version | Reserved | Timestamp | Client-IP
+ * @param now: the current time.
+ * return 1 if valid, -1 if valid but a new one SHOULD be generated, else 0.
+ */
+int edns_cookie_server_validate(const uint8_t* cookie, size_t cookie_len,
+	const uint8_t* secret, size_t secret_len, int v4,
+	const uint8_t* hash_input, uint32_t now);
+
 #endif
