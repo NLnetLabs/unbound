@@ -64,13 +64,13 @@ struct sldns_file_parse_state;
 	; 'ede=any' makes the query match any EDNS EDE info-code.
 	;	It also snips the EDE record out of the packet to facilitate
 	;	other matches.
-	; 'client_cookie' makes the query match any EDNS Cookie option with
+	; 'client_cookie' makes the query match any DNS Cookie option with
 	;	with a length of 8 octets.
-	;	It also snips the EDNS Cookie record out of the packet to
+	;	It also snips the DNS Cookie record out of the packet to
 	;	facilitate other matches.
-	; 'server_cookie' makes the query match any EDNS Cookie option with
+	; 'server_cookie' makes the query match any DNS Cookie option with
 	;	with a length of 24 octets.
-	;	It also snips the EDNS Cookie record out of the packet to
+	;	It also snips the DNS Cookie record out of the packet to
 	;	facilitate other matches.
 	MATCH [opcode] [qtype] [qname] [serial=<value>] [all] [ttl]
 	MATCH [UDP|TCP] DO
@@ -222,9 +222,9 @@ struct entry {
 	uint8_t match_noedns;
 	/** match edns data field given in hex */
 	uint8_t match_ednsdata_raw;
-	/** match an EDNS cookie of length 8 */
+	/** match an DNS cookie of length 8 */
 	uint8_t match_client_cookie;
-	/** match an EDNS cookie of length 24 */
+	/** match an DNS cookie of length 24 */
 	uint8_t match_server_cookie;
 	/** match query serial with this value. */
 	uint32_t ixfr_soa_serial;

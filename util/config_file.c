@@ -89,7 +89,7 @@ struct config_parser_state* cfg_parser = 0;
 static void init_outgoing_availports(int* array, int num);
 
 /** init cookie with random data */
-static void init_cookie_secret(uint8_t* cookie_secret,size_t cookie_secret_len);
+static void init_cookie_secret(uint8_t* cookie_secret, size_t cookie_secret_len);
 
 struct config_file* 
 config_create(void)

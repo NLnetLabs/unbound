@@ -716,11 +716,11 @@ edns_cookie_rfc9018_a1(void)
 	unit_assert(memcmp(server_cookie, buf, 24) == 0);
 }
 
-/** test interoperable EDNS cookies (RFC9018) */
+/** test interoperable DNS cookies (RFC9018) */
 static void
 edns_cookie_test(void)
 {
-	unit_show_feature("interoperable edns cookies");
+	unit_show_feature("interoperable dns cookies");
 	/* Check RFC9018 appendix test vectors */
 	edns_cookie_rfc9018_a1();
 	edns_cookie_rfc9018_a2();

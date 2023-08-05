@@ -954,7 +954,7 @@ extract_ede(uint8_t* pkt, size_t len)
 	return sldns_read_uint16(buf);
 }
 
-/** Snips the EDNS Cookie option out of the OPT record and puts it in the
+/** Snips the DNS Cookie option out of the OPT record and puts it in the
  *  provided cookie buffer (should be at least 24 octets).
  *  Returns the length of the cookie if found, else -1. */
 static int
@@ -1566,17 +1566,17 @@ find_match(struct entry* entries, uint8_t* query_pkt, size_t len,
 			int cookie_len = extract_cookie(query_pkt, len,
 				cookie);
 			if(cookie_len == -1) {
-				verbose(3, "bad EDNS Cookie. "
+				verbose(3, "bad DNS Cookie. "
 					"Expected but not found\n");
 				continue;
 			} else if(p->match_client_cookie &&
 				cookie_len != 8) {
-				verbose(3, "bad EDNS Cookie. Expected client "
+				verbose(3, "bad DNS Cookie. Expected client "
 					"cookie of length 8.");
 				continue;
 			} else if((p->match_server_cookie) &&
 				cookie_len != 24) {
-				verbose(3, "bad EDNS Cookie. Expected server "
+				verbose(3, "bad DNS Cookie. Expected server "
 					"cookie of length 24.");
 				continue;
 			}

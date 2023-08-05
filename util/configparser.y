@@ -3722,8 +3722,8 @@ server_cookie_secret: VAR_COOKIE_SECRET STRING_ARG
 		size_t secret_len = sizeof(secret);
 
 		OUTYY(("P(server_cookie_secret:%s)\n", $2));
-		if (sldns_str2wire_hex_buf($2, secret, &secret_len)
-		|| (  secret_len != 16))
+		if(sldns_str2wire_hex_buf($2, secret, &secret_len)
+		|| (secret_len != 16))
 			yyerror("expected 128 bit hex string");
 		else {
 			cfg_parser->cfg->cookie_secret_len = secret_len;

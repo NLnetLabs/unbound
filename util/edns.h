@@ -107,7 +107,7 @@ edns_string_addr_lookup(rbtree_type* tree, struct sockaddr_storage* addr,
 	socklen_t addrlen);
 
 /**
- * Compute the interoperable EDNS cookie (RFC9018) hash.
+ * Compute the interoperable DNS cookie (RFC9018) hash.
  * @param in: buffer input for the hash generation. It needs to be:
  *	Client Cookie | Version | Reserved | Timestamp | Client-IP
  * @param secret: the server secret; implicit length of 16 octets.
@@ -119,7 +119,7 @@ uint8_t* edns_cookie_server_hash(const uint8_t* in, const uint8_t* secret,
 	int v4, uint8_t* hash);
 
 /**
- * Write an interoperable EDNS server cookie (RFC9018).
+ * Write an interoperable DNS server cookie (RFC9018).
  * @param buf: buffer to write to. It should have a size of at least 32 octets
  *	as it doubles as the output buffer and the hash input buffer.
  *	The first 8 octets are expected to be the Client Cookie and will be
@@ -140,7 +140,7 @@ void edns_cookie_server_write(uint8_t* buf, const uint8_t* secret, int v4,
 	uint32_t timestamp);
 
 /**
- * Validate an interoperable EDNS cookie (RFC9018).
+ * Validate an interoperable DNS cookie (RFC9018).
  * @param cookie: pointer to the cookie data.
  * @param cookie_len: the length of the cookie data.
  * @param secret: pointer to the server secret.
