@@ -559,7 +559,6 @@ edns_cookie_invalid_version(void)
 		sizeof(client_cookie), server_secret, sizeof(server_secret), 1,
 		buf, timestamp) == 0);
 	edns_cookie_server_write(buf, server_secret, 1, timestamp);
-	log_hex("server:", buf, 32);
 	unit_assert(memcmp(server_cookie, buf, 24) == 0);
 }
 
