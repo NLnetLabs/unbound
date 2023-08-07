@@ -159,7 +159,8 @@ edns_cookie_server_validate(const uint8_t* cookie, size_t cookie_len,
 	const uint8_t* hash_input, uint32_t now)
 {
 	uint8_t hash[8];
-	uint32_t timestamp, subt_1982;
+	uint32_t timestamp;
+	uint32_t subt_1982 = 0; /* Initialize for the compiler; unused value */
 	int comp_1982;
 	if(cookie_len != 24 ||      /* RFC9018 cookies are 24 bytes long */
 		secret_len != 16 || /* RFC9018 cookies have 16 byte secrets */
