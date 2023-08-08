@@ -330,6 +330,7 @@ config_create(void)
 	cfg->dnstap_bidirectional = 1;
 	cfg->dnstap_tls = 1;
 	cfg->disable_dnssec_lame_check = 0;
+	cfg->ip_ratelimit_cookie = 0;
 	cfg->ip_ratelimit = 0;
 	cfg->ratelimit = 0;
 	cfg->ip_ratelimit_slabs = 4;
@@ -779,6 +780,10 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	else S_POW2("dnscrypt-nonce-cache-slabs:",
 		dnscrypt_nonce_cache_slabs)
 #endif
+	else if(strcmp(opt, "ip-ratelimit-cookie:") == 0) {
+	    IS_NUMBER_OR_ZERO; cfg->ip_ratelimit_cookie = atoi(val);
+	    infra_ip_ratelimit_cookie=cfg->ip_ratelimit_cookie;
+	}
 	else if(strcmp(opt, "ip-ratelimit:") == 0) {
 	    IS_NUMBER_OR_ZERO; cfg->ip_ratelimit = atoi(val);
 	    infra_ip_ratelimit=cfg->ip_ratelimit;
@@ -1248,6 +1253,7 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_LST(opt, "python-script", python_script)
 	else O_LST(opt, "dynlib-file", dynlib_file)
 	else O_YNO(opt, "disable-dnssec-lame-check", disable_dnssec_lame_check)
+	else O_DEC(opt, "ip-ratelimit-cookie", ip_ratelimit_cookie)
 	else O_DEC(opt, "ip-ratelimit", ip_ratelimit)
 	else O_DEC(opt, "ratelimit", ratelimit)
 	else O_MEM(opt, "ip-ratelimit-size", ip_ratelimit_size)

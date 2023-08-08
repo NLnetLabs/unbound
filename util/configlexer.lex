@@ -507,6 +507,7 @@ dnstap-log-forwarder-response-messages{COLON}	{
 		YDVAR(1, VAR_DNSTAP_LOG_FORWARDER_RESPONSE_MESSAGES) }
 disable-dnssec-lame-check{COLON} { YDVAR(1, VAR_DISABLE_DNSSEC_LAME_CHECK) }
 ip-ratelimit{COLON}		{ YDVAR(1, VAR_IP_RATELIMIT) }
+ip-ratelimit-cookie{COLON}	{ YDVAR(1, VAR_IP_RATELIMIT_COOKIE) }
 ratelimit{COLON}		{ YDVAR(1, VAR_RATELIMIT) }
 ip-ratelimit-slabs{COLON}		{ YDVAR(1, VAR_IP_RATELIMIT_SLABS) }
 ratelimit-slabs{COLON}		{ YDVAR(1, VAR_RATELIMIT_SLABS) }

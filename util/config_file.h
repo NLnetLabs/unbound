@@ -590,6 +590,9 @@ struct config_file {
 
 	/** ratelimit for ip addresses. 0 is off, otherwise qps (unless overridden) */
 	int ip_ratelimit;
+	/** ratelimit for ip addresses with a valid DNS Cookie. 0 is off,
+	 *  otherwise qps (unless overridden) */
+	int ip_ratelimit_cookie;
 	/** number of slabs for ip_ratelimit cache */
 	size_t ip_ratelimit_slabs;
 	/** memory size in bytes for ip_ratelimit cache */

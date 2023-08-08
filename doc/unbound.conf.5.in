@@ -747,6 +747,10 @@ generated DNS Cookie, allowing clients to retry with that DNS Cookie.
 The \fIallow_cookie\fR action will also accept requests over stateful
 transports, regardless of the presence of an DNS Cookie and regardless of the
 \fBanswer\-cookie\fR setting.
+If \fBip\-ratelimit\fR is used, clients with a valid DNS Cookie will bypass the
+ratelimit.
+If a ratelimit for such clients is still needed, \fBip\-ratelimit\-cookie\fR
+can be used instead.
 .IP
 By default only localhost is \fIallow\fRed, the rest is \fIrefuse\fRd.
 The default is \fIrefuse\fRd, because that is protocol\-friendly. The DNS
@@ -1816,11 +1820,27 @@ A value of 0 will disable ratelimiting for domain names that end in this name.
 .TP 5
 .B ip\-ratelimit: \fI<number or 0>
 Enable global ratelimiting of queries accepted per IP address.
-If 0, the default, it is disabled.  This option is experimental at this time.
+This option is experimental at this time.
 The ratelimit is in queries per second that are allowed.  More queries are
 completely dropped and will not receive a reply, SERVFAIL or otherwise.
 IP ratelimiting happens before looking in the cache. This may be useful for
 mitigating amplification attacks.
+Default is 0 (disabled).
+.TP 5
+.B ip\-ratelimit\-cookie: \fI<number or 0>
+Enable global ratelimiting of queries accepted per IP address with a valid DNS
+Cookie.
+This option is experimental at this time.
+The ratelimit is in queries per second that are allowed.
+More queries are completely dropped and will not receive a reply, SERVFAIL or
+otherwise.
+IP ratelimiting happens before looking in the cache.
+This option could be useful in combination with \fIallow_cookie\fR in an
+attempt to mitigate other amplification attacks than UDP reflections (e.g.,
+attacks targeting Unbound itself) which are already handled with DNS Cookies.
+If used, the value is suggested to be higher than \fBip\-ratelimit\fR e.g.,
+tenfold.
+Default is 0 (disabled).
 .TP 5
 .B ip\-ratelimit\-size: \fI<memory size>
 Give the size of the data structure in which the current ongoing rates are
