@@ -672,6 +672,12 @@ print_stats(RES* ssl, const char* nm, struct ub_stats_info* s)
 		(unsigned long)s->svr.num_queries)) return 0;
 	if(!ssl_printf(ssl, "%s.num.queries_ip_ratelimited"SQ"%lu\n", nm,
 		(unsigned long)s->svr.num_queries_ip_ratelimited)) return 0;
+	if(!ssl_printf(ssl, "%s.num.queries_cookie_valid"SQ"%lu\n", nm,
+		(unsigned long)s->svr.num_queries_cookie_valid)) return 0;
+	if(!ssl_printf(ssl, "%s.num.queries_cookie_client"SQ"%lu\n", nm,
+		(unsigned long)s->svr.num_queries_cookie_client)) return 0;
+	if(!ssl_printf(ssl, "%s.num.queries_cookie_invalid"SQ"%lu\n", nm,
+		(unsigned long)s->svr.num_queries_cookie_invalid)) return 0;
 	if(!ssl_printf(ssl, "%s.num.cachehits"SQ"%lu\n", nm,
 		(unsigned long)(s->svr.num_queries
 			- s->svr.num_queries_missed_cache))) return 0;

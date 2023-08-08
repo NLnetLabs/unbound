@@ -557,7 +557,7 @@ edns_cookie_invalid_version(void)
 	memcpy(buf + 16, "\306\063\144\144", 4);
 	unit_assert(edns_cookie_server_validate(client_cookie,
 		sizeof(client_cookie), server_secret, sizeof(server_secret), 1,
-		buf, timestamp) == 0);
+		buf, timestamp) == COOKIE_STATUS_INVALID);
 	edns_cookie_server_write(buf, server_secret, 1, timestamp);
 	unit_assert(memcmp(server_cookie, buf, 24) == 0);
 }
@@ -587,7 +587,7 @@ edns_cookie_invalid_hash(void)
 	memcpy(buf + 16, "\313\000\161\313", 4);
 	unit_assert(edns_cookie_server_validate(client_cookie,
 		sizeof(client_cookie), server_secret, sizeof(server_secret), 1,
-		buf, timestamp) == 0);
+		buf, timestamp) == COOKIE_STATUS_INVALID);
 	edns_cookie_server_write(buf, server_secret, 1, timestamp);
 	unit_assert(memcmp(server_cookie, buf, 24) == 0);
 }
@@ -620,13 +620,13 @@ edns_cookie_rfc9018_a3_better(void)
 	memcpy(buf + 16, "\313\000\161\313", 4);
 	unit_assert(edns_cookie_server_validate(client_cookie,
 		sizeof(client_cookie), server_secret, sizeof(server_secret), 1,
-		buf, timestamp) == -1);
+		buf, timestamp) == COOKIE_STATUS_VALID_RENEW);
 	edns_cookie_server_write(buf, server_secret, 1, timestamp);
 	unit_assert(memcmp(server_cookie, buf, 24) == 0);
 }
 
-/* Complete hash-valid client cookie; more than 60 minutes old; needs a
- * refreshed server cookie. */
+/* Complete hash-valid client cookie; more than 60 minutes old (expired);
+ * needs a refreshed server cookie. */
 static void
 edns_cookie_rfc9018_a3(void)
 {
@@ -651,7 +651,7 @@ edns_cookie_rfc9018_a3(void)
 	memcpy(buf + 16, "\313\000\161\313", 4);
 	unit_assert(edns_cookie_server_validate(client_cookie,
 		sizeof(client_cookie), server_secret, sizeof(server_secret), 1,
-		buf, timestamp) == 0);
+		buf, timestamp) == COOKIE_STATUS_EXPIRED);
 	edns_cookie_server_write(buf, server_secret, 1, timestamp);
 	unit_assert(memcmp(server_cookie, buf, 24) == 0);
 }
@@ -682,7 +682,7 @@ edns_cookie_rfc9018_a2(void)
 	memcpy(buf + 16, "\306\063\144\144", 4);
 	unit_assert(edns_cookie_server_validate(client_cookie,
 		sizeof(client_cookie), server_secret, sizeof(server_secret), 1,
-		buf, timestamp) == -1);
+		buf, timestamp) == COOKIE_STATUS_VALID_RENEW);
 	edns_cookie_server_write(buf, server_secret, 1, timestamp);
 	unit_assert(memcmp(server_cookie, buf, 24) == 0);
 }
@@ -711,7 +711,7 @@ edns_cookie_rfc9018_a1(void)
 		sizeof(client_cookie),
 		/* these will not be used; it will return invalid
 		 * because of the size. */
-		NULL, 0, 1, NULL, 0) == 0);
+		NULL, 0, 1, NULL, 0) == COOKIE_STATUS_CLIENT_ONLY);
 	edns_cookie_server_write(buf, server_secret, 1, timestamp);
 	unit_assert(memcmp(server_cookie, buf, 24) == 0);
 }

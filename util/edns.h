@@ -75,6 +75,15 @@ struct edns_string_addr {
 	size_t string_len;
 };
 
+enum edns_cookie_val_status {
+	COOKIE_STATUS_CLIENT_ONLY = -3,
+	COOKIE_STATUS_FUTURE = -2,
+	COOKIE_STATUS_EXPIRED = -1,
+	COOKIE_STATUS_INVALID = 0,
+	COOKIE_STATUS_VALID = 1,
+	COOKIE_STATUS_VALID_RENEW = 2,
+};
+
 /**
  * Create structure to hold EDNS strings
  * @return: newly created edns_strings, NULL on alloc failure.
@@ -149,10 +158,11 @@ void edns_cookie_server_write(uint8_t* buf, const uint8_t* secret, int v4,
  * @param hash_input: pointer to the hash input for validation. It needs to be:
  *	Client Cookie | Version | Reserved | Timestamp | Client-IP
  * @param now: the current time.
- * return 1 if valid, -1 if valid but a new one SHOULD be generated, else 0.
+ * return edns_cookie_val_status with the cookie validation status i.e.,
+ *	<=0 for invalid, else valid.
  */
-int edns_cookie_server_validate(const uint8_t* cookie, size_t cookie_len,
-	const uint8_t* secret, size_t secret_len, int v4,
+enum edns_cookie_val_status edns_cookie_server_validate(const uint8_t* cookie,
+	size_t cookie_len, const uint8_t* secret, size_t secret_len, int v4,
 	const uint8_t* hash_input, uint32_t now);
 
 #endif

@@ -153,7 +153,7 @@ edns_cookie_server_write(uint8_t* buf, const uint8_t* secret, int v4,
 	memcpy(buf + 16, hash, 8);
 }
 
-int
+enum edns_cookie_val_status
 edns_cookie_server_validate(const uint8_t* cookie, size_t cookie_len,
 	const uint8_t* secret, size_t secret_len, int v4,
 	const uint8_t* hash_input, uint32_t now)
@@ -162,26 +162,28 @@ edns_cookie_server_validate(const uint8_t* cookie, size_t cookie_len,
 	uint32_t timestamp;
 	uint32_t subt_1982 = 0; /* Initialize for the compiler; unused value */
 	int comp_1982;
-	if(cookie_len != 24 ||      /* RFC9018 cookies are 24 bytes long */
-		secret_len != 16 || /* RFC9018 cookies have 16 byte secrets */
-		cookie[8] != 1)     /* RFC9018 cookies are cookie version 1 */
-		return 0;
+	if(cookie_len != 24)
+		/* RFC9018 cookies are 24 bytes long */
+		return COOKIE_STATUS_CLIENT_ONLY;
+	if(secret_len != 16 ||  /* RFC9018 cookies have 16 byte secrets */
+		cookie[8] != 1) /* RFC9018 cookies are cookie version 1 */
+		return COOKIE_STATUS_INVALID;
 	timestamp = sldns_read_uint32(cookie + 12);
 	if((comp_1982 = compare_1982(now, timestamp)) > 0
 		&& (subt_1982 = subtract_1982(timestamp, now)) > 3600)
 		/* Cookie is older than 1 hour (see RFC9018 Section 4.3.) */
-		return 0;
+		return COOKIE_STATUS_EXPIRED;
 	if(comp_1982 <= 0 && subtract_1982(now, timestamp) > 300)
 		/* Cookie time is more than 5 minutes in the future.
 		 * (see RFC9018 Section 4.3.) */
-		return 0;
+		return COOKIE_STATUS_FUTURE;
 	if(memcmp(edns_cookie_server_hash(hash_input, secret, v4, hash),
 		cookie + 16, 8) != 0)
 		/* Hashes do not match */
-		return 0;
+		return COOKIE_STATUS_INVALID;
 	if(comp_1982 > 0 && subt_1982 > 1800)
 		/* Valid cookie but older than 30 minutes, so create a new one
 		 * anyway */
-		return -1;
-	return 1;
+		return COOKIE_STATUS_VALID_RENEW;
+	return COOKIE_STATUS_VALID;
 }

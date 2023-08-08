@@ -243,6 +243,8 @@ struct edns_data {
 	unsigned int cookie_present : 1;
 	/** if the cookie validated */
 	unsigned int cookie_valid   : 1;
+	/** if the cookie holds only the client part */
+	unsigned int cookie_client  : 1;
 };	
 
 /**

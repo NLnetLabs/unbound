@@ -971,7 +971,7 @@ parse_edns_options_from_query(uint8_t* rdata_ptr, size_t rdata_len,
 		uint16_t opt_code = sldns_read_uint16(rdata_ptr);
 		uint16_t opt_len = sldns_read_uint16(rdata_ptr+2);
 		uint8_t server_cookie[40];
-		int cookie_is_valid;
+		enum edns_cookie_val_status cookie_val_status;
 		int cookie_is_v4 = 1;
 
 		rdata_ptr += 4;
@@ -1064,12 +1064,14 @@ parse_edns_options_from_query(uint8_t* rdata_ptr, size_t rdata_len,
 					&((struct sockaddr_in6*)&repinfo->remote_addr)->sin6_addr, 16);
 			}
 
-			cookie_is_valid = edns_cookie_server_validate(
+			cookie_val_status = edns_cookie_server_validate(
 				rdata_ptr, opt_len, cfg->cookie_secret,
 				cfg->cookie_secret_len, cookie_is_v4,
 				server_cookie, now);
-			if(cookie_is_valid != 0) edns->cookie_valid = 1;
-			if(cookie_is_valid == 1) {
+			switch(cookie_val_status) {
+			case COOKIE_STATUS_VALID:
+			case COOKIE_STATUS_VALID_RENEW:
+				edns->cookie_valid = 1;
 				/* Reuse cookie */
 				if(!edns_opt_list_append(
 					&edns->opt_list_out, LDNS_EDNS_COOKIE,
@@ -1081,13 +1083,22 @@ parse_edns_options_from_query(uint8_t* rdata_ptr, size_t rdata_len,
 				 * options. Done!
 				 */
 				break;
-			}
-			edns_cookie_server_write(server_cookie,
-				cfg->cookie_secret, cookie_is_v4, now);
-			if(!edns_opt_list_append(&edns->opt_list_out,
-				LDNS_EDNS_COOKIE, 24, server_cookie, region)) {
-				log_err("out of memory");
-				return LDNS_RCODE_SERVFAIL;
+			case COOKIE_STATUS_CLIENT_ONLY:
+				edns->cookie_client = 1;
+				/* fallthrough */
+			case COOKIE_STATUS_FUTURE:
+			case COOKIE_STATUS_EXPIRED:
+			case COOKIE_STATUS_INVALID:
+			default:
+				edns_cookie_server_write(server_cookie,
+					cfg->cookie_secret, cookie_is_v4, now);
+				if(!edns_opt_list_append(&edns->opt_list_out,
+					LDNS_EDNS_COOKIE, 24, server_cookie,
+					region)) {
+					log_err("out of memory");
+					return LDNS_RCODE_SERVFAIL;
+				}
+				break;
 			}
 			break;
 		default:

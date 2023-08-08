@@ -1602,6 +1602,9 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 		}
 	}
 
+	/* Get stats for cookies */
+	server_stats_downstream_cookie(&worker->stats, &edns);
+
 	/* If the IP rate limiting check was postponed, check now. */
 	if(!pre_edns_ip_ratelimit) {
 		/* NOTE: we always check the repinfo->client_address.
