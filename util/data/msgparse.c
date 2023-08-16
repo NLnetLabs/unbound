@@ -1049,7 +1049,7 @@ parse_edns_options_from_query(uint8_t* rdata_ptr, size_t rdata_len,
 			/* Copy client cookie, version and timestamp for
 			 * validation and creation purposes.
 			 */
-			memcpy(server_cookie, rdata_ptr, 16);
+			memmove(server_cookie, rdata_ptr, 16);
 
 			/* Copy client ip for validation and creation
 			 * purposes. It will be overwritten if (re)creation
