@@ -928,7 +928,7 @@ pkt_snip_edns_option(uint8_t* pkt, size_t len, sldns_edns_option code,
 		optlen = sldns_read_uint16(rdata+2);
 		if(sldns_read_uint16(rdata) == code) {
 			/* save data to buf for caller inspection */
-			memcpy(buf, rdata+4, optlen);
+			memmove(buf, rdata+4, optlen);
 			/* snip option from packet; assumes len is correct */
 			memmove(rdata, rdata+4+optlen,
 				(pkt+len)-(rdata+4+optlen));
