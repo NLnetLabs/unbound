@@ -1,3 +1,15 @@
+17 August 2023: Wouter
+	- Merge PR #762: Downstream DNS Server Cookies a la RFC7873 and
+	  RFC9018. Create server cookies for clients that send client cookies.
+	  This needs to be explicitly turned on in the config file with:
+	  `answer-cookie: yes`. A `cookie-secret:` can be configured for
+	  anycast setups. Without one, a random cookie secret is generated.
+	  The acl option `allow_cookie` allows queries with either a valid
+	  cookie or over a stateful transport. The statistics output has
+	  `queries_cookie_valid` and `queries_cookie_client` and
+	  `queries_cookie_invalid` information. The `ip\-ratelimit\-cookie:`
+	  value determines a rate limit for queries with cookies, if desired.
+
 2 August 2023: George
 	- Move a cache reply callback in worker.c closer to the cache reply
 	  generation.
