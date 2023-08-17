@@ -15,8 +15,14 @@ get_make
 total_runs=6
 success_threshold=4  # 2/3*total_runs
 
+if dig -h 2>&1 | grep "cookie" >/dev/null; then
+	nocookie="+nocookie"
+else
+	nocookie=""
+fi
+
 echo "> First get a valid cookie"
-dig @127.0.0.1 -p $UNBOUND_PORT +ednsopt=10:0102030405060708 +tcp +retry=0 +time=1 test. TXT >outfile 2>&1
+dig @127.0.0.1 -p $UNBOUND_PORT +ednsopt=10:0102030405060708 $nocookie +tcp +retry=0 +time=1 test. TXT >outfile 2>&1
 if test "$?" -ne 0; then
 	echo "exit status not OK"
 	echo "> cat logfiles"
@@ -56,7 +62,7 @@ for i in $(seq 1 $total_runs); do
 		exit 1
 	fi
 	# Expect no answer because of limit
-	dig @127.0.0.1 -p $UNBOUND_PORT +retry=0 +time=1 test. TXT >outfile 2>&1
+	dig @127.0.0.1 -p $UNBOUND_PORT $nocookie +retry=0 +time=1 test. TXT >outfile 2>&1
 	if test "$?" -eq 0; then
 		continue
 	fi
@@ -71,7 +77,7 @@ for i in $(seq 1 $total_runs); do
 		exit 1
 	fi
 	# Expect answer because of DNS cookie
-	dig @127.0.0.1 -p $UNBOUND_PORT +ednsopt=10:$cookie +retry=0 +time=1 test. TXT >outfile 2>&1
+	dig @127.0.0.1 -p $UNBOUND_PORT +ednsopt=10:$cookie $nocookie +retry=0 +time=1 test. TXT >outfile 2>&1
 	if test "$?" -ne 0; then
 		continue
 	fi
@@ -118,7 +124,7 @@ for i in $(seq 1 $total_runs); do
 		exit 1
 	fi
 	# Expect no answer because of limit
-	dig @127.0.0.1 -p $UNBOUND_PORT +retry=0 +time=1 test. TXT >outfile 2>&1
+	dig @127.0.0.1 -p $UNBOUND_PORT $nocookie +retry=0 +time=1 test. TXT >outfile 2>&1
 	if test "$?" -eq 0; then
 		continue
 	fi
@@ -133,7 +139,7 @@ for i in $(seq 1 $total_runs); do
 		exit 1
 	fi
 	# Expect no answer because of ip-ratelimit-cookie
-	dig @127.0.0.1 -p $UNBOUND_PORT +ednsopt=10:$cookie +retry=0 +time=1 test. TXT >outfile 2>&1
+	dig @127.0.0.1 -p $UNBOUND_PORT +ednsopt=10:$cookie $nocookie +retry=0 +time=1 test. TXT >outfile 2>&1
 	if test "$?" -eq 0; then
 		continue
 	fi

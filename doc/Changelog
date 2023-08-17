@@ -10,6 +10,7 @@
 	  `queries_cookie_invalid` information. The `ip\-ratelimit\-cookie:`
 	  value determines a rate limit for queries with cookies, if desired.
 	- Fix regional_alloc_init for potential unaligned source of the copy.
+	- Fix ip_ratelimit test to work with dig that enables DNS cookies.
 
 2 August 2023: George
 	- Move a cache reply callback in worker.c closer to the cache reply
