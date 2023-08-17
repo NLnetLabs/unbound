@@ -1297,6 +1297,13 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 		if (sock_queue_timeout && !set_recvtimestamp(s)) {
 			log_warn("socket timestamping is not available");
 		}
+		/* getting source addr packet info is highly non-portable */
+		if(!set_recvpktinfo(s, hints->ai_family)) {
+			sock_close(s);
+			freeaddrinfo(ub_sock->addr);
+			free(ub_sock);
+			return 0;
+		}
 		if(!port_insert(list, s, is_dnscrypt
 			?listen_type_udpancil_dnscrypt:listen_type_udpancil,
 			is_pp2, ub_sock)) {
@@ -1454,7 +1461,7 @@ listen_create(struct comm_base* base, struct listen_port* ports,
 		struct comm_point* cp = NULL;
 		if(ports->ftype == listen_type_udp ||
 		   ports->ftype == listen_type_udp_dnscrypt) {
-			cp = comm_point_create_udp(base, ports->fd,
+			cp = comm_point_create_udp_ancil(base, ports->fd,
 				front->udp_buff, ports->pp2_enabled, cb,
 				cb_arg, ports->socket);
 		} else if(ports->ftype == listen_type_tcp ||
