@@ -1062,15 +1062,17 @@ qinfo_query_encode(sldns_buffer* pkt, struct query_info* qinfo)
 	sldns_buffer_flip(pkt);
 }
 
-void 
-error_encode(sldns_buffer* buf, int r, struct query_info* qinfo,
-	uint16_t qid, uint16_t qflags, struct edns_data* edns)
+void
+extended_error_encode(sldns_buffer* buf, uint16_t rcode,
+	struct query_info* qinfo, uint16_t qid, uint16_t qflags,
+	uint16_t xflags, struct edns_data* edns)
 {
 	uint16_t flags;
 
 	sldns_buffer_clear(buf);
 	sldns_buffer_write(buf, &qid, sizeof(uint16_t));
-	flags = (uint16_t)(BIT_QR | BIT_RA | r); /* QR and retcode*/
+	flags = (uint16_t)(BIT_QR | BIT_RA | (rcode & 0xF)); /* QR and retcode*/
+	flags |= xflags;
 	flags |= (qflags & (BIT_RD|BIT_CD)); /* copy RD and CD bit */
 	sldns_buffer_write_u16(buf, flags);
 	if(qinfo) flags = 1;
@@ -1097,7 +1099,7 @@ error_encode(sldns_buffer* buf, int r, struct query_info* qinfo,
 		struct edns_data es = *edns;
 		es.edns_version = EDNS_ADVERTISED_VERSION;
 		es.udp_size = EDNS_ADVERTISED_SIZE;
-		es.ext_rcode = 0;
+		es.ext_rcode = (uint8_t)(rcode >> 4);
 		es.bits &= EDNS_DO;
 		if(sldns_buffer_limit(buf) + calc_edns_field_size(&es) >
 			edns->udp_size) {
@@ -1110,4 +1112,12 @@ error_encode(sldns_buffer* buf, int r, struct query_info* qinfo,
 		}
 		attach_edns_record(buf, &es);
 	}
+}
+
+void
+error_encode(sldns_buffer* buf, int r, struct query_info* qinfo,
+	uint16_t qid, uint16_t qflags, struct edns_data* edns)
+{
+	extended_error_encode(buf, (r & 0x000F), qinfo, qid, qflags,
+		(r & 0xFFF0), edns);
 }

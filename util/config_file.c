@@ -55,6 +55,7 @@
 #include "util/regional.h"
 #include "util/fptr_wlist.h"
 #include "util/data/dname.h"
+#include "util/random.h"
 #include "util/rtt.h"
 #include "services/cache/infra.h"
 #include "sldns/wire2str.h"
@@ -86,6 +87,9 @@ struct config_parser_state* cfg_parser = 0;
 
 /** init ports possible for use */
 static void init_outgoing_availports(int* array, int num);
+
+/** init cookie with random data */
+static void init_cookie_secret(uint8_t* cookie_secret, size_t cookie_secret_len);
 
 struct config_file*
 config_create(void)
@@ -326,6 +330,7 @@ config_create(void)
 	cfg->dnstap_bidirectional = 1;
 	cfg->dnstap_tls = 1;
 	cfg->disable_dnssec_lame_check = 0;
+	cfg->ip_ratelimit_cookie = 0;
 	cfg->ip_ratelimit = 0;
 	cfg->ratelimit = 0;
 	cfg->ip_ratelimit_slabs = 4;
@@ -369,6 +374,10 @@ config_create(void)
 	cfg->ipsecmod_whitelist = NULL;
 	cfg->ipsecmod_strict = 0;
 #endif
+	cfg->do_answer_cookie = 0;
+	memset(cfg->cookie_secret, 0, sizeof(cfg->cookie_secret));
+	cfg->cookie_secret_len = 16;
+	init_cookie_secret(cfg->cookie_secret, cfg->cookie_secret_len);
 #ifdef USE_CACHEDB
 	if(!(cfg->cachedb_backend = strdup("testframe"))) goto error_exit;
 	if(!(cfg->cachedb_secret = strdup("default"))) goto error_exit;
@@ -771,6 +780,10 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	else S_POW2("dnscrypt-nonce-cache-slabs:",
 		dnscrypt_nonce_cache_slabs)
 #endif
+	else if(strcmp(opt, "ip-ratelimit-cookie:") == 0) {
+	    IS_NUMBER_OR_ZERO; cfg->ip_ratelimit_cookie = atoi(val);
+	    infra_ip_ratelimit_cookie=cfg->ip_ratelimit_cookie;
+	}
 	else if(strcmp(opt, "ip-ratelimit:") == 0) {
 	    IS_NUMBER_OR_ZERO; cfg->ip_ratelimit = atoi(val);
 	    infra_ip_ratelimit=cfg->ip_ratelimit;
@@ -1240,6 +1253,7 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_LST(opt, "python-script", python_script)
 	else O_LST(opt, "dynlib-file", dynlib_file)
 	else O_YNO(opt, "disable-dnssec-lame-check", disable_dnssec_lame_check)
+	else O_DEC(opt, "ip-ratelimit-cookie", ip_ratelimit_cookie)
 	else O_DEC(opt, "ip-ratelimit", ip_ratelimit)
 	else O_DEC(opt, "ratelimit", ratelimit)
 	else O_MEM(opt, "ip-ratelimit-size", ip_ratelimit_size)
@@ -1683,6 +1697,20 @@ config_delete(struct config_file* cfg)
 	free(cfg->ipset_name_v6);
 #endif
 	free(cfg);
+}
+
+static void
+init_cookie_secret(uint8_t* cookie_secret, size_t cookie_secret_len)
+{
+	struct ub_randstate *rand = ub_initstate(NULL);
+
+	if (!rand)
+		fatal_exit("could not init random generator");
+	while (cookie_secret_len) {
+		*cookie_secret++ = (uint8_t)ub_random(rand);
+		cookie_secret_len--;
+	}
+	ub_randfree(rand);
 }
 
 static void

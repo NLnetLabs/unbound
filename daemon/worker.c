@@ -1319,6 +1319,40 @@ deny_refuse_non_local(struct comm_point* c, enum acl_access acl,
 		worker, repinfo, acladdr, ede, check_result);
 }
 
+/* Returns 1 if the ip rate limit check can happen before EDNS parsing,
+ * else 0 */
+static int
+pre_edns_ip_ratelimit_check(enum acl_access acl)
+{
+	if(acl == acl_allow_cookie) return 0;
+	return 1;
+}
+
+/* Check if the query is blocked by source IP rate limiting.
+ * Returns 1 if it passes the check, 0 otherwise. */
+static int
+check_ip_ratelimit(struct worker* worker, struct sockaddr_storage* addr,
+	socklen_t addrlen, int has_cookie, sldns_buffer* pkt)
+{
+	if(!infra_ip_ratelimit_inc(worker->env.infra_cache, addr, addrlen,
+			*worker->env.now, has_cookie,
+			worker->env.cfg->ip_ratelimit_backoff, pkt)) {
+		/* See if we can pass through with slip factor */
+		if(!has_cookie && worker->env.cfg->ip_ratelimit_factor != 0 &&
+			ub_random_max(worker->env.rnd,
+			worker->env.cfg->ip_ratelimit_factor) == 0) {
+			char addrbuf[128];
+			addr_to_str(addr, addrlen, addrbuf, sizeof(addrbuf));
+			verbose(VERB_QUERY, "ip_ratelimit allowed through for "
+				"ip address %s because of slip in "
+				"ip_ratelimit_factor", addrbuf);
+			return 1;
+		}
+		return 0;
+	}
+	return 1;
+}
+
 int
 worker_handle_request(struct comm_point* c, void* arg, int error,
 	struct comm_reply* repinfo)
@@ -1332,6 +1366,7 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 	struct edns_option* original_edns_list = NULL;
 	enum acl_access acl;
 	struct acl_addr* acladdr;
+	int pre_edns_ip_ratelimit = 1;
 	int rc = 0;
 	int need_drop = 0;
 	int is_expired_answer = 0;
@@ -1456,33 +1491,21 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 	}
 
 	worker->stats.num_queries++;
+	pre_edns_ip_ratelimit = pre_edns_ip_ratelimit_check(acl);
 
-	/* check if this query should be dropped based on source ip rate limiting
-	 * NOTE: we always check the repinfo->client_address. IP ratelimiting is
-	 *       implicitly disabled for proxies. */
-	if(!infra_ip_ratelimit_inc(worker->env.infra_cache,
-			&repinfo->client_addr, repinfo->client_addrlen,
-			*worker->env.now,
-			worker->env.cfg->ip_ratelimit_backoff, c->buffer)) {
-		/* See if we are passed through with slip factor */
-		if(worker->env.cfg->ip_ratelimit_factor != 0 &&
-			ub_random_max(worker->env.rnd,
-			worker->env.cfg->ip_ratelimit_factor) == 0) {
-			char addrbuf[128];
-			addr_to_str(&repinfo->client_addr,
-				repinfo->client_addrlen, addrbuf,
-				sizeof(addrbuf));
-			verbose(VERB_QUERY, "ip_ratelimit allowed through for "
-				"ip address %s because of slip in "
-				"ip_ratelimit_factor", addrbuf);
-		} else {
+	/* If the IP rate limiting check needs extra EDNS information (e.g.,
+	 * DNS Cookies) postpone the check until after EDNS is parsed. */
+	if(pre_edns_ip_ratelimit) {
+		/* NOTE: we always check the repinfo->client_address.
+		 *       IP ratelimiting is implicitly disabled for proxies. */
+		if(!check_ip_ratelimit(worker, &repinfo->client_addr,
+			repinfo->client_addrlen, 0, c->buffer)) {
 			worker->stats.num_queries_ip_ratelimited++;
 			comm_point_drop_reply(repinfo);
 			return 0;
 		}
 	}
 
-	/* see if query is in the cache */
 	if(!query_info_parse(&qinfo, c->buffer)) {
 		verbose(VERB_ALGO, "worker parse request: formerror.");
 		log_addr(VERB_CLIENT, "from", &repinfo->client_addr,
@@ -1539,16 +1562,16 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 		}
 		goto send_reply;
 	}
-	if((ret=parse_edns_from_query_pkt(c->buffer, &edns, worker->env.cfg, c,
-					worker->scratchpad)) != 0) {
+	if((ret=parse_edns_from_query_pkt(
+			c->buffer, &edns, worker->env.cfg, c, repinfo,
+			(worker->env.now ? *worker->env.now : time(NULL)),
+			worker->scratchpad)) != 0) {
 		struct edns_data reply_edns;
 		verbose(VERB_ALGO, "worker parse edns: formerror.");
 		log_addr(VERB_CLIENT, "from", &repinfo->client_addr,
 			repinfo->client_addrlen);
 		memset(&reply_edns, 0, sizeof(reply_edns));
 		reply_edns.edns_present = 1;
-		reply_edns.udp_size = EDNS_ADVERTISED_SIZE;
-		LDNS_RCODE_SET(sldns_buffer_begin(c->buffer), ret);
 		error_encode(c->buffer, ret, &qinfo,
 			*(uint16_t*)(void *)sldns_buffer_begin(c->buffer),
 			sldns_buffer_read_u16_at(c->buffer, 2), &reply_edns);
@@ -1557,23 +1580,15 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 	}
 	if(edns.edns_present) {
 		if(edns.edns_version != 0) {
-			edns.ext_rcode = (uint8_t)(EDNS_RCODE_BADVERS>>4);
-			edns.edns_version = EDNS_ADVERTISED_VERSION;
-			edns.udp_size = EDNS_ADVERTISED_SIZE;
-			edns.bits &= EDNS_DO;
 			edns.opt_list_in = NULL;
 			edns.opt_list_out = NULL;
 			edns.opt_list_inplace_cb_out = NULL;
-			edns.padding_block_size = 0;
 			verbose(VERB_ALGO, "query with bad edns version.");
 			log_addr(VERB_CLIENT, "from", &repinfo->client_addr,
 				repinfo->client_addrlen);
-			error_encode(c->buffer, EDNS_RCODE_BADVERS&0xf, &qinfo,
+			extended_error_encode(c->buffer, EDNS_RCODE_BADVERS, &qinfo,
 				*(uint16_t*)(void *)sldns_buffer_begin(c->buffer),
-				sldns_buffer_read_u16_at(c->buffer, 2), NULL);
-			if(sldns_buffer_capacity(c->buffer) >=
-			   sldns_buffer_limit(c->buffer)+calc_edns_field_size(&edns))
-				attach_edns_record(c->buffer, &edns);
+				sldns_buffer_read_u16_at(c->buffer, 2), 0, &edns);
 			regional_free_all(worker->scratchpad);
 			goto send_reply;
 		}
@@ -1586,6 +1601,62 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 			edns.udp_size = NORMAL_UDP_SIZE;
 		}
 	}
+
+	/* Get stats for cookies */
+	server_stats_downstream_cookie(&worker->stats, &edns);
+
+	/* If the IP rate limiting check was postponed, check now. */
+	if(!pre_edns_ip_ratelimit) {
+		/* NOTE: we always check the repinfo->client_address.
+		 *       IP ratelimiting is implicitly disabled for proxies. */
+		if(!check_ip_ratelimit(worker, &repinfo->client_addr,
+			repinfo->client_addrlen, edns.cookie_valid,
+			c->buffer)) {
+			worker->stats.num_queries_ip_ratelimited++;
+			comm_point_drop_reply(repinfo);
+			return 0;
+		}
+	}
+
+	/* "if, else if" sequence below deals with downstream DNS Cookies */
+	if(acl != acl_allow_cookie)
+		; /* pass; No cookie downstream processing whatsoever */
+
+	else if(edns.cookie_valid)
+		; /* pass; Valid cookie is good! */
+
+	else if(c->type != comm_udp)
+		; /* pass; Stateful transport */
+
+	else if(edns.cookie_present) {
+		/* Cookie present, but not valid: Cookie was bad! */
+		extended_error_encode(c->buffer,
+			LDNS_EXT_RCODE_BADCOOKIE, &qinfo,
+			*(uint16_t*)(void *)
+			sldns_buffer_begin(c->buffer),
+			sldns_buffer_read_u16_at(c->buffer, 2),
+			0, &edns);
+		regional_free_all(worker->scratchpad);
+		goto send_reply;
+	} else {
+		/* Cookie required, but no cookie present on UDP */
+		verbose(VERB_ALGO, "worker request: "
+			"need cookie or stateful transport");
+		log_addr(VERB_ALGO, "from",&repinfo->remote_addr
+		                          , repinfo->remote_addrlen);
+		EDNS_OPT_LIST_APPEND_EDE(&edns.opt_list_out,
+			worker->scratchpad, LDNS_EDE_OTHER,
+			"DNS Cookie needed for UDP replies");
+		error_encode(c->buffer,
+			(LDNS_RCODE_REFUSED|BIT_TC), &qinfo,
+			*(uint16_t*)(void *)
+			sldns_buffer_begin(c->buffer),
+			sldns_buffer_read_u16_at(c->buffer, 2),
+			&edns);
+		regional_free_all(worker->scratchpad);
+		goto send_reply;
+	}
+
 	if(edns.udp_size > worker->daemon->cfg->max_udp_size &&
 		c->type == comm_udp) {
 		verbose(VERB_QUERY,

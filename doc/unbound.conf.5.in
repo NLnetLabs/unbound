@@ -701,17 +701,17 @@ This option is experimental at this time.
 .B access\-control: \fI<IP netblock> <action>
 The netblock is given as an IP4 or IP6 address with /size appended for a
 classless network block. The action can be \fIdeny\fR, \fIrefuse\fR,
-\fIallow\fR, \fIallow_setrd\fR, \fIallow_snoop\fR, \fIdeny_non_local\fR or
-\fIrefuse_non_local\fR.
+\fIallow\fR, \fIallow_setrd\fR, \fIallow_snoop\fR, \fIallow_cookie\fR,
+\fIdeny_non_local\fR or \fIrefuse_non_local\fR.
 The most specific netblock match is used, if none match \fIrefuse\fR is used.
 The order of the access\-control statements therefore does not matter.
 .IP
-The action \fIdeny\fR stops queries from hosts from that netblock.
+The \fIdeny\fR action stops queries from hosts from that netblock.
 .IP
-The action \fIrefuse\fR stops queries too, but sends a DNS rcode REFUSED
+The \fIrefuse\fR action stops queries too, but sends a DNS rcode REFUSED
 error message back.
 .IP
-The action \fIallow\fR gives access to clients from that netblock.
+The \fIallow\fR action gives access to clients from that netblock.
 It gives only access for recursion clients (which is
 what almost all clients need).  Nonrecursive queries are refused.
 .IP
@@ -731,12 +731,26 @@ may be useful if another DNS server must forward requests for specific
 zones to a resolver DNS server, but only supports stub domains and
 sends queries to the resolver DNS server with the RD bit cleared.
 .IP
-The action \fIallow_snoop\fR gives nonrecursive access too.  This give
+The \fIallow_snoop\fR action gives nonrecursive access too.  This give
 both recursive and non recursive access.  The name \fIallow_snoop\fR refers
 to cache snooping, a technique to use nonrecursive queries to examine
 the cache contents (for malicious acts).  However, nonrecursive queries can
 also be a valuable debugging tool (when you want to examine the cache
 contents). In that case use \fIallow_snoop\fR for your administration host.
+.IP
+The \fIallow_cookie\fR action allows access to UDP queries that contain a
+valid DNS Cookie as specified in RFC 7873 and RFC 9018, when the
+\fBanswer\-cookie\fR option is enabled.
+UDP queries containing only a DNS Client Cookie and no Server Cookie, or an
+invalid DNS Cookie, will receive a BADCOOKIE response including a newly
+generated DNS Cookie, allowing clients to retry with that DNS Cookie.
+The \fIallow_cookie\fR action will also accept requests over stateful
+transports, regardless of the presence of an DNS Cookie and regardless of the
+\fBanswer\-cookie\fR setting.
+If \fBip\-ratelimit\fR is used, clients with a valid DNS Cookie will bypass the
+ratelimit.
+If a ratelimit for such clients is still needed, \fBip\-ratelimit\-cookie\fR
+can be used instead.
 .IP
 By default only localhost is \fIallow\fRed, the rest is \fIrefuse\fRd.
 The default is \fIrefuse\fRd, because that is protocol\-friendly. The DNS
@@ -1806,11 +1820,27 @@ A value of 0 will disable ratelimiting for domain names that end in this name.
 .TP 5
 .B ip\-ratelimit: \fI<number or 0>
 Enable global ratelimiting of queries accepted per IP address.
-If 0, the default, it is disabled.  This option is experimental at this time.
+This option is experimental at this time.
 The ratelimit is in queries per second that are allowed.  More queries are
 completely dropped and will not receive a reply, SERVFAIL or otherwise.
 IP ratelimiting happens before looking in the cache. This may be useful for
 mitigating amplification attacks.
+Default is 0 (disabled).
+.TP 5
+.B ip\-ratelimit\-cookie: \fI<number or 0>
+Enable global ratelimiting of queries accepted per IP address with a valid DNS
+Cookie.
+This option is experimental at this time.
+The ratelimit is in queries per second that are allowed.
+More queries are completely dropped and will not receive a reply, SERVFAIL or
+otherwise.
+IP ratelimiting happens before looking in the cache.
+This option could be useful in combination with \fIallow_cookie\fR in an
+attempt to mitigate other amplification attacks than UDP reflections (e.g.,
+attacks targeting Unbound itself) which are already handled with DNS Cookies.
+If used, the value is suggested to be higher than \fBip\-ratelimit\fR e.g.,
+tenfold.
+Default is 0 (disabled).
 .TP 5
 .B ip\-ratelimit\-size: \fI<memory size>
 Give the size of the data structure in which the current ongoing rates are
@@ -1878,6 +1908,18 @@ servers set. The default for fast\-server\-permil is 0.
 Set the number of servers that should be used for fast server selection. Only
 use the fastest specified number of servers with the fast\-server\-permil
 option, that turns this on or off. The default is to use the fastest 3 servers.
+.TP 5
+.B answer\-cookie: \fI<yes or no>
+If enabled, Unbound will answer to requests containing DNS Cookies as
+specified in RFC 7873 and RFC 9018.
+Default is no.
+.TP 5
+.B cookie\-secret: \fI<128 bit hex string>
+Server's secret for DNS Cookie generation.
+Useful to explicitly set for servers in an anycast deployment that need to
+share the secret in order to verify each other's Server Cookies.
+An example hex string would be "000102030405060708090a0b0c0d0e0f".
+Default is a 128 bits random secret generated at startup time.
 .TP 5
 .B edns\-client\-string: \fI<IP netblock> <string>
 Include an EDNS0 option containing configured ascii string in queries with

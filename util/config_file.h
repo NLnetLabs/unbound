@@ -590,6 +590,9 @@ struct config_file {
 
 	/** ratelimit for ip addresses. 0 is off, otherwise qps (unless overridden) */
 	int ip_ratelimit;
+	/** ratelimit for ip addresses with a valid DNS Cookie. 0 is off,
+	 *  otherwise qps (unless overridden) */
+	int ip_ratelimit_cookie;
 	/** number of slabs for ip_ratelimit cache */
 	size_t ip_ratelimit_slabs;
 	/** memory size in bytes for ip_ratelimit cache */
@@ -711,6 +714,13 @@ struct config_file {
 	int redis_expire_records;
 #endif
 #endif
+	/** Downstream DNS Cookies */
+	/** do answer with server cookie when request contained cookie option */
+	int do_answer_cookie;
+	/** cookie secret */
+	uint8_t cookie_secret[40];
+	/** cookie secret length */
+	size_t  cookie_secret_len;
 
 	/* ipset module */
 #ifdef USE_IPSET

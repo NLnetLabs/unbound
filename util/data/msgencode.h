@@ -137,11 +137,11 @@ uint16_t calc_ede_option_size(struct edns_data* edns, uint16_t* txt_size);
  */
 void attach_edns_record(struct sldns_buffer* pkt, struct edns_data* edns);
 
-/** 
+/**
  * Encode an error. With QR and RA set.
  *
  * @param pkt: where to store the packet.
- * @param r: RCODE value to encode.
+ * @param r: RCODE value to encode (may contain extra flags).
  * @param qinfo: if not NULL, the query is included.
  * @param qid: query ID to set in packet. network order.
  * @param qflags: original query flags (to copy RD and CD bits). host order.
@@ -150,5 +150,22 @@ void attach_edns_record(struct sldns_buffer* pkt, struct edns_data* edns);
  */
 void error_encode(struct sldns_buffer* pkt, int r, struct query_info* qinfo,
 	uint16_t qid, uint16_t qflags, struct edns_data* edns);
+
+/**
+ * Encode an extended error. With QR and RA set.
+ *
+ * @param pkt: where to store the packet.
+ * @param rcode: Extended RCODE value to encode.
+ * @param qinfo: if not NULL, the query is included.
+ * @param qid: query ID to set in packet. network order.
+ * @param qflags: original query flags (to copy RD and CD bits). host order.
+ * @param xflags: extra flags to set (such as for example BIT_AA and/or BIT_TC)
+ * @param edns: if not NULL, this is the query edns info,
+ * 	and an edns reply is attached. Only attached if EDNS record fits reply.
+ * 	Without edns extended errors (i.e. > 15) will not be conveyed.
+ */
+void extended_error_encode(struct sldns_buffer* pkt, uint16_t rcode,
+	struct query_info* qinfo, uint16_t qid, uint16_t qflags,
+	uint16_t xflags, struct edns_data* edns);
 
 #endif /* UTIL_DATA_MSGENCODE_H */

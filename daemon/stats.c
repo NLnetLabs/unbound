@@ -435,6 +435,9 @@ void server_stats_add(struct ub_stats_info* total, struct ub_stats_info* a)
 {
 	total->svr.num_queries += a->svr.num_queries;
 	total->svr.num_queries_ip_ratelimited += a->svr.num_queries_ip_ratelimited;
+	total->svr.num_queries_cookie_valid += a->svr.num_queries_cookie_valid;
+	total->svr.num_queries_cookie_client += a->svr.num_queries_cookie_client;
+	total->svr.num_queries_cookie_invalid += a->svr.num_queries_cookie_invalid;
 	total->svr.num_queries_missed_cache += a->svr.num_queries_missed_cache;
 	total->svr.num_queries_prefetch += a->svr.num_queries_prefetch;
 	total->svr.num_queries_timed_out += a->svr.num_queries_timed_out;
@@ -566,5 +569,18 @@ void server_stats_insrcode(struct ub_server_stats* stats, sldns_buffer* buf)
 		stats->ans_rcode[r] ++;
 		if(r == 0 && LDNS_ANCOUNT( sldns_buffer_begin(buf) ) == 0)
 			stats->ans_rcode_nodata ++;
+	}
+}
+
+void server_stats_downstream_cookie(struct ub_server_stats* stats,
+	struct edns_data* edns)
+{
+	if(!(edns->edns_present && edns->cookie_present)) return;
+	if(edns->cookie_valid) {
+		stats->num_queries_cookie_valid++;
+	} else if(edns->cookie_client) {
+		stats->num_queries_cookie_client++;
+	} else {
+		stats->num_queries_cookie_invalid++;
 	}
 }

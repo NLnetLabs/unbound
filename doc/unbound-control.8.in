@@ -369,6 +369,15 @@ number of queries received by thread
 .I threadX.num.queries_ip_ratelimited
 number of queries rate limited by thread
 .TP
+.I threadX.num.queries_cookie_valid
+number of queries with a valid DNS Cookie by thread
+.TP
+.I threadX.num.queries_cookie_client
+number of queries with a client part only DNS Cookie by thread
+.TP
+.I threadX.num.queries_cookie_invalid
+number of queries with an invalid DNS Cookie by thread
+.TP
 .I threadX.num.cachehits
 number of queries that were successfully answered using a cache lookup
 .TP
@@ -444,6 +453,18 @@ the time of the request.  This helps you spot if the incoming\-num\-tcp
 buffers are full.
 .TP
 .I total.num.queries
+summed over threads.
+.TP
+.I total.num.queries_ip_ratelimited
+summed over threads.
+.TP
+.I total.num.queries_cookie_valid
+summed over threads.
+.TP
+.I total.num.queries_cookie_client
+summed over threads.
+.TP
+.I total.num.queries_cookie_invalid
 summed over threads.
 .TP
 .I total.num.cachehits
@@ -611,7 +632,7 @@ ratelimiting.
 .TP
 .I num.query.dnscrypt.shared_secret.cachemiss
 The number of dnscrypt queries that did not find a shared secret in the cache.
-The can be use to compute the shared secret hitrate.
+This can be used to compute the shared secret hitrate.
 .TP
 .I num.query.dnscrypt.replay
 The number of dnscrypt queries that found a nonce hit in the nonce cache and

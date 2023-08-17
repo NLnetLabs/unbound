@@ -47,6 +47,7 @@
 #include "util/configyyrename.h"
 #include "util/config_file.h"
 #include "util/net_help.h"
+#include "sldns/str2wire.h"
 
 int ub_c_lex(void);
 void ub_c_error(const char *message);
@@ -183,6 +184,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_FALLBACK_ENABLED VAR_TLS_ADDITIONAL_PORT VAR_LOW_RTT VAR_LOW_RTT_PERMIL
 %token VAR_FAST_SERVER_PERMIL VAR_FAST_SERVER_NUM
 %token VAR_ALLOW_NOTIFY VAR_TLS_WIN_CERT VAR_TCP_CONNECTION_LIMIT
+%token VAR_ANSWER_COOKIE VAR_COOKIE_SECRET VAR_IP_RATELIMIT_COOKIE
 %token VAR_FORWARD_NO_CACHE VAR_STUB_NO_CACHE VAR_LOG_SERVFAIL VAR_DENY_ANY
 %token VAR_UNKNOWN_SERVER_TIME_LIMIT VAR_LOG_TAG_QUERYREPLY
 %token VAR_STREAM_WAIT_SIZE VAR_TLS_CIPHERS VAR_TLS_CIPHERSUITES VAR_TLS_USE_SNI
@@ -323,6 +325,7 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_unknown_server_time_limit | server_log_tag_queryreply |
 	server_stream_wait_size | server_tls_ciphers |
 	server_tls_ciphersuites | server_tls_session_ticket_keys |
+	server_answer_cookie | server_cookie_secret | server_ip_ratelimit_cookie |
 	server_tls_use_sni | server_edns_client_string |
 	server_edns_client_string_opcode | server_nsid |
 	server_zonemd_permissive_mode | server_max_reuse_tcp_queries |
@@ -1160,7 +1163,7 @@ server_http_nodelay: VAR_HTTP_NODELAY STRING_ARG
 			yyerror("expected yes or no.");
 		else cfg_parser->cfg->http_nodelay = (strcmp($2, "yes")==0);
 		free($2);
-	}
+	};
 server_http_notls_downstream: VAR_HTTP_NOTLS_DOWNSTREAM STRING_ARG
 	{
 		OUTYY(("P(server_http_notls_downstream:%s)\n", $2));
@@ -2207,6 +2210,7 @@ server_permit_small_holddown: VAR_PERMIT_SMALL_HOLDDOWN STRING_ARG
 			(strcmp($2, "yes")==0);
 		free($2);
 	}
+	;
 server_key_cache_size: VAR_KEY_CACHE_SIZE STRING_ARG
 	{
 		OUTYY(("P(server_key_cache_size:%s)\n", $2));
@@ -2561,6 +2565,15 @@ server_ip_ratelimit: VAR_IP_RATELIMIT STRING_ARG
 		if(atoi($2) == 0 && strcmp($2, "0") != 0)
 			yyerror("number expected");
 		else cfg_parser->cfg->ip_ratelimit = atoi($2);
+		free($2);
+	}
+	;
+server_ip_ratelimit_cookie: VAR_IP_RATELIMIT_COOKIE STRING_ARG
+	{
+		OUTYY(("P(server_ip_ratelimit_cookie:%s)\n", $2));
+		if(atoi($2) == 0 && strcmp($2, "0") != 0)
+			yyerror("number expected");
+		else cfg_parser->cfg->ip_ratelimit_cookie = atoi($2);
 		free($2);
 	}
 	;
@@ -3517,6 +3530,7 @@ py_script: VAR_PYTHON_SCRIPT STRING_ARG
 		if(!cfg_strlist_append_ex(&cfg_parser->cfg->python_script, $2))
 			yyerror("out of memory");
 	}
+	;
 dynlibstart: VAR_DYNLIB
 	{
 		OUTYY(("\nP(dynlib:)\n"));
@@ -3533,6 +3547,7 @@ dl_file: VAR_DYNLIB_FILE STRING_ARG
 		if(!cfg_strlist_append_ex(&cfg_parser->cfg->dynlib_file, $2))
 			yyerror("out of memory");
 	}
+	;
 server_disable_dnssec_lame_check: VAR_DISABLE_DNSSEC_LAME_CHECK STRING_ARG
 	{
 		OUTYY(("P(disable_dnssec_lame_check:%s)\n", $2));
@@ -3593,7 +3608,6 @@ dnsc_dnscrypt_enable: VAR_DNSCRYPT_ENABLE STRING_ARG
 		free($2);
 	}
 	;
-
 dnsc_dnscrypt_port: VAR_DNSCRYPT_PORT STRING_ARG
 	{
 		OUTYY(("P(dnsc_dnscrypt_port:%s)\n", $2));
@@ -3801,6 +3815,31 @@ server_tcp_connection_limit: VAR_TCP_CONNECTION_LIMIT STRING_ARG STRING_ARG
 		}
 	}
 	;
+server_answer_cookie: VAR_ANSWER_COOKIE STRING_ARG
+	{
+		OUTYY(("P(server_answer_cookie:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else cfg_parser->cfg->do_answer_cookie = (strcmp($2, "yes")==0);
+		free($2);
+	}
+	;
+server_cookie_secret: VAR_COOKIE_SECRET STRING_ARG
+	{
+		uint8_t secret[32];
+		size_t secret_len = sizeof(secret);
+
+		OUTYY(("P(server_cookie_secret:%s)\n", $2));
+		if(sldns_str2wire_hex_buf($2, secret, &secret_len)
+		|| (secret_len != 16))
+			yyerror("expected 128 bit hex string");
+		else {
+			cfg_parser->cfg->cookie_secret_len = secret_len;
+			memcpy(cfg_parser->cfg->cookie_secret, secret, sizeof(secret));
+		}
+		free($2);
+	}
+	;
 	ipsetstart: VAR_IPSET
 		{
 			OUTYY(("\nP(ipset:)\n"));
@@ -3870,10 +3909,11 @@ validate_acl_action(const char* action)
 		strcmp(action, "refuse_non_local")!=0 &&
 		strcmp(action, "allow_setrd")!=0 &&
 		strcmp(action, "allow")!=0 &&
-		strcmp(action, "allow_snoop")!=0)
+		strcmp(action, "allow_snoop")!=0 &&
+		strcmp(action, "allow_cookie")!=0)
 	{
 		yyerror("expected deny, refuse, deny_non_local, "
-			"refuse_non_local, allow, allow_setrd or "
-			"allow_snoop as access control action");
+			"refuse_non_local, allow, allow_setrd, "
+			"allow_snoop or allow_cookie as access control action");
 	}
 }

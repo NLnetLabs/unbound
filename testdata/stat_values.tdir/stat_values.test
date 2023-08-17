@@ -414,6 +414,97 @@ rrset.cache.count=3
 infra.cache.count=2"
 
 
+# Bring the downstream DNS Cookies configured Unbound up
+kill_pid $UNBOUND_PID  # kill current Unbound
+$PRE/unbound -d -c ub_downstream_cookies.conf >unbound.log 2>&1 &
+UNBOUND_PID=$!
+echo "UNBOUND_PID=$UNBOUND_PID" >> .tpkg.var.test
+wait_unbound_up unbound.log
+
+echo
+echo "[ Get a DNS Cookie. ]"
+echo "> dig www.local.zone +tcp +ednsopt=10:0102030405060708"
+dig @127.0.0.1 -p $UNBOUND_PORT +tcp +ednsopt=10:0102030405060708 +retry=0 +time=1 www.local.zone. | tee outfile
+echo "> check answer"
+if grep "192.0.2.1" outfile; then
+	echo "OK"
+else
+	end 1
+fi
+# Save valid cookie
+valid_cookie=`grep "COOKIE: " outfile | cut -d ' ' -f 3`
+invalid_cookie=`echo $valid_cookie | tr '0' '4'`
+check_stats "\
+total.num.queries=1
+total.num.queries_cookie_client=1
+total.num.cachehits=1
+num.query.type.A=1
+num.query.class.IN=1
+num.query.opcode.QUERY=1
+num.query.flags.RD=1
+num.query.flags.AD=1
+num.query.edns.present=1
+num.query.tcp=1
+num.answer.rcode.NOERROR=1"
+
+echo
+echo "[ Present the valid DNS Cookie. ]"
+echo "> dig www.local.zone +ednsopt=10:valid_cookie"
+dig @127.0.0.1 -p $UNBOUND_PORT +ednsopt=10:$valid_cookie +retry=0 +time=1 www.local.zone. | tee outfile
+echo "> check answer"
+if grep "192.0.2.1" outfile; then
+	echo "OK"
+else
+	end 1
+fi
+check_stats "\
+total.num.queries=1
+total.num.queries_cookie_valid=1
+total.num.cachehits=1
+num.query.type.A=1
+num.query.class.IN=1
+num.query.opcode.QUERY=1
+num.query.flags.RD=1
+num.query.flags.AD=1
+num.query.edns.present=1
+num.answer.rcode.NOERROR=1"
+
+echo
+echo "[ Present an invalid DNS Cookie. ]"
+echo "> dig www.local.zone +ednsopt=10:invalid_cookie"
+dig @127.0.0.1 -p $UNBOUND_PORT +ednsopt=10:$invalid_cookie +retry=0 +time=1 www.local.zone. | tee outfile
+echo "> check answer"
+if grep "192.0.2.1" outfile; then
+	end 1
+else
+	echo "OK"
+fi
+# A lot of stats are missing since BADCOOKIE error response is before
+# those stat calculations.
+# BADCOOKIE is an extended error code; we record YXRRSET below.
+check_stats "\
+total.num.queries=1
+total.num.queries_cookie_invalid=1
+total.num.cachehits=1
+num.answer.rcode.YXRRSET=1"
+
+echo
+echo "[ Present no DNS Cookie. ]"
+echo "> dig www.local.zone +ignore"
+dig @127.0.0.1 -p $UNBOUND_PORT +ignore +retry=0 +time=1 www.local.zone. | tee outfile
+echo "> check answer"
+if grep "192.0.2.1" outfile; then
+	end 1
+else
+	echo "OK"
+fi
+# A lot of stats are missing since REFUSED error response because of no DNS
+# Cookie is before those stat calculations.
+check_stats "\
+total.num.queries=1
+total.num.cachehits=1
+num.answer.rcode.REFUSED=1"
+
 if test x$USE_CACHEDB = "x1"; then
 
 # Bring the cachedb configured Unbound up
