@@ -2,6 +2,7 @@
 	- Fix for iter_dec_attempts that could cause a hang, part of
 	  capsforid and qname minimisation, depending on the settings.
 	- Fix uninitialized memory passed in padding bytes of cmsg to sendmsg.
+	- Fix stat_values test to work with dig that enables DNS cookies.
 
 17 August 2023: Wouter
 	- Merge PR #762: Downstream DNS Server Cookies a la RFC7873 and

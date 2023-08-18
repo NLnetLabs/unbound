@@ -52,6 +52,12 @@ REST_STATS_FILE=rest_stats.$$
 
 DEBUG=0
 
+if dig -h 2>&1 | grep "cookie" >/dev/null; then
+	nocookie="+nocookie"
+else
+	nocookie=""
+fi
+
 # Write stats to $STATS_FILE.
 # Call this when you want to get stats from unbound.
 get_stats () {
@@ -416,6 +422,9 @@ infra.cache.count=2"
 
 # Bring the downstream DNS Cookies configured Unbound up
 kill_pid $UNBOUND_PID  # kill current Unbound
+echo ""
+cat unbound.log
+echo ""
 $PRE/unbound -d -c ub_downstream_cookies.conf >unbound.log 2>&1 &
 UNBOUND_PID=$!
 echo "UNBOUND_PID=$UNBOUND_PID" >> .tpkg.var.test
@@ -423,8 +432,8 @@ wait_unbound_up unbound.log
 
 echo
 echo "[ Get a DNS Cookie. ]"
-echo "> dig www.local.zone +tcp +ednsopt=10:0102030405060708"
-dig @127.0.0.1 -p $UNBOUND_PORT +tcp +ednsopt=10:0102030405060708 +retry=0 +time=1 www.local.zone. | tee outfile
+echo "> dig www.local.zone +tcp $nocookie +ednsopt=10:0102030405060708"
+dig @127.0.0.1 -p $UNBOUND_PORT +tcp $nocookie +ednsopt=10:0102030405060708 +retry=0 +time=1 www.local.zone. | tee outfile
 echo "> check answer"
 if grep "192.0.2.1" outfile; then
 	echo "OK"
@@ -449,8 +458,8 @@ num.answer.rcode.NOERROR=1"
 
 echo
 echo "[ Present the valid DNS Cookie. ]"
-echo "> dig www.local.zone +ednsopt=10:valid_cookie"
-dig @127.0.0.1 -p $UNBOUND_PORT +ednsopt=10:$valid_cookie +retry=0 +time=1 www.local.zone. | tee outfile
+echo "> dig www.local.zone $nocookie +ednsopt=10:valid_cookie"
+dig @127.0.0.1 -p $UNBOUND_PORT $nocookie +ednsopt=10:$valid_cookie +retry=0 +time=1 www.local.zone. | tee outfile
 echo "> check answer"
 if grep "192.0.2.1" outfile; then
 	echo "OK"
@@ -471,8 +480,8 @@ num.answer.rcode.NOERROR=1"
 
 echo
 echo "[ Present an invalid DNS Cookie. ]"
-echo "> dig www.local.zone +ednsopt=10:invalid_cookie"
-dig @127.0.0.1 -p $UNBOUND_PORT +ednsopt=10:$invalid_cookie +retry=0 +time=1 www.local.zone. | tee outfile
+echo "> dig www.local.zone $nocookie +ednsopt=10:invalid_cookie"
+dig @127.0.0.1 -p $UNBOUND_PORT $nocookie +ednsopt=10:$invalid_cookie +retry=0 +time=1 www.local.zone. | tee outfile
 echo "> check answer"
 if grep "192.0.2.1" outfile; then
 	end 1
@@ -491,7 +500,7 @@ num.answer.rcode.YXRRSET=1"
 echo
 echo "[ Present no DNS Cookie. ]"
 echo "> dig www.local.zone +ignore"
-dig @127.0.0.1 -p $UNBOUND_PORT +ignore +retry=0 +time=1 www.local.zone. | tee outfile
+dig @127.0.0.1 -p $UNBOUND_PORT +ignore $nocookie +retry=0 +time=1 www.local.zone. | tee outfile
 echo "> check answer"
 if grep "192.0.2.1" outfile; then
 	end 1
@@ -509,6 +518,9 @@ if test x$USE_CACHEDB = "x1"; then
 
 # Bring the cachedb configured Unbound up
 kill_pid $UNBOUND_PID  # kill current Unbound
+echo ""
+cat unbound.log
+echo ""
 $PRE/unbound -d -c ub_cachedb.conf >unbound.log 2>&1 &
 UNBOUND_PID=$!
 echo "UNBOUND_PID=$UNBOUND_PID" >> .tpkg.var.test
