@@ -592,6 +592,11 @@ comm_point_send_udp_msg_if(struct comm_point *c, sldns_buffer* packet,
 		cmsg_data = CMSG_DATA(cmsg);
 		((struct in_pktinfo *) cmsg_data)->ipi_ifindex = 0;
 		cmsg->cmsg_len = CMSG_LEN(sizeof(struct in_pktinfo));
+		/* zero the padding bytes inserted by the CMSG_LEN */
+		if(sizeof(struct in_pktinfo) < cmsg->cmsg_len)
+			memset(((uint8_t*)(CMSG_DATA(cmsg))) +
+				sizeof(struct in_pktinfo), 0, cmsg->cmsg_len
+				- sizeof(struct in_pktinfo));
 #elif defined(IP_SENDSRCADDR)
 		msg.msg_controllen = CMSG_SPACE(sizeof(struct in_addr));
 		log_assert(msg.msg_controllen <= sizeof(control.buf));
@@ -600,6 +605,11 @@ comm_point_send_udp_msg_if(struct comm_point *c, sldns_buffer* packet,
 		memmove(CMSG_DATA(cmsg), &r->pktinfo.v4addr,
 			sizeof(struct in_addr));
 		cmsg->cmsg_len = CMSG_LEN(sizeof(struct in_addr));
+		/* zero the padding bytes inserted by the CMSG_LEN */
+		if(sizeof(struct in_addr) < cmsg->cmsg_len)
+			memset(((uint8_t*)(CMSG_DATA(cmsg))) +
+				sizeof(struct in_addr), 0, cmsg->cmsg_len
+				- sizeof(struct in_addr));
 #else
 		verbose(VERB_ALGO, "no IP_PKTINFO or IP_SENDSRCADDR");
 		msg.msg_control = NULL;
@@ -616,6 +626,11 @@ comm_point_send_udp_msg_if(struct comm_point *c, sldns_buffer* packet,
 		cmsg_data = CMSG_DATA(cmsg);
 		((struct in6_pktinfo *) cmsg_data)->ipi6_ifindex = 0;
 		cmsg->cmsg_len = CMSG_LEN(sizeof(struct in6_pktinfo));
+		/* zero the padding bytes inserted by the CMSG_LEN */
+		if(sizeof(struct in6_pktinfo) < cmsg->cmsg_len)
+			memset(((uint8_t*)(CMSG_DATA(cmsg))) +
+				sizeof(struct in6_pktinfo), 0, cmsg->cmsg_len
+				- sizeof(struct in6_pktinfo));
 	} else {
 		/* try to pass all 0 to use default route */
 		msg.msg_controllen = CMSG_SPACE(sizeof(struct in6_pktinfo));
@@ -624,6 +639,11 @@ comm_point_send_udp_msg_if(struct comm_point *c, sldns_buffer* packet,
 		cmsg->cmsg_type = IPV6_PKTINFO;
 		memset(CMSG_DATA(cmsg), 0, sizeof(struct in6_pktinfo));
 		cmsg->cmsg_len = CMSG_LEN(sizeof(struct in6_pktinfo));
+		/* zero the padding bytes inserted by the CMSG_LEN */
+		if(sizeof(struct in6_pktinfo) < cmsg->cmsg_len)
+			memset(((uint8_t*)(CMSG_DATA(cmsg))) +
+				sizeof(struct in6_pktinfo), 0, cmsg->cmsg_len
+				- sizeof(struct in6_pktinfo));
 	}
 #endif /* S_SPLINT_S */
 	if(verbosity >= VERB_ALGO && r->srctype != 0)
