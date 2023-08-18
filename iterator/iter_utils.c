@@ -1346,8 +1346,7 @@ void iter_dec_attempts(struct delegpt* dp, int d, int outbound_msg_retry)
 	for(a=dp->target_list; a; a = a->next_target) {
 		if(a->attempts >= outbound_msg_retry) {
 			/* add back to result list */
-			a->next_result = dp->result_list;
-			dp->result_list = a;
+			delegpt_add_to_result_list(dp, a);
 		}
 		if(a->attempts > d)
 			a->attempts -= d;
