@@ -3,6 +3,8 @@
 	- Fix windows ci workflow to install bison and flex.
 	- Fix for #925: unbound.service: Main process exited, code=killed,
 	  status=11/SEGV. Fixes cachedb configuration handling.
+	- Fix #923: processQueryResponse() THROWAWAY should be mindful of
+	  fail_reply.
 
 18 August 2023: Wouter
 	- Fix for iter_dec_attempts that could cause a hang, part of

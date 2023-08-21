@@ -451,7 +451,14 @@ struct iter_qstate {
 	/** true if there have been parse failures of reply packets */
 	int parse_failures;
 	/** a failure printout address for last received answer */
-	struct comm_reply* fail_reply;
+	union {
+		struct in_addr in;
+#ifdef AF_INET6
+		struct in6_addr in6;
+#endif
+	} fail_addr;
+	/** which fail_addr, 0 is nothing, 4 or 6 */
+	int fail_addr_type;
 };
 
 /**

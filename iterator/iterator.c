@@ -574,6 +574,54 @@ handle_cname_response(struct module_qstate* qstate, struct iter_qstate* iq,
 	return 1;
 }
 
+/** fill fail address for later recovery */
+static void
+fill_fail_addr(struct iter_qstate* iq, struct sockaddr_storage* addr,
+	socklen_t addrlen)
+{
+	if(addrlen == 0) {
+		iq->fail_addr_type = 0;
+		return;
+	}
+	if(((struct sockaddr_in*)addr)->sin_family == AF_INET) {
+		iq->fail_addr_type = 4;
+		memcpy(&iq->fail_addr.in,
+			&((struct sockaddr_in*)addr)->sin_addr,
+			sizeof(iq->fail_addr.in));
+	}
+#ifdef AF_INET6
+	else if(((struct sockaddr_in*)addr)->sin_family == AF_INET6) {
+		iq->fail_addr_type = 6;
+		memcpy(&iq->fail_addr.in6,
+			&((struct sockaddr_in6*)addr)->sin6_addr,
+			sizeof(iq->fail_addr.in6));
+	}
+#endif
+	else {
+		iq->fail_addr_type = 0;
+	}
+}
+
+/** print fail addr to string */
+static void
+print_fail_addr(struct iter_qstate* iq, char* buf, size_t len)
+{
+	if(iq->fail_addr_type == 4) {
+		if(inet_ntop(AF_INET, &iq->fail_addr.in, buf,
+			(socklen_t)len) == 0)
+			(void)strlcpy(buf, "(inet_ntop error)", len);
+	}
+#ifdef AF_INET6
+	else if(iq->fail_addr_type == 6) {
+		if(inet_ntop(AF_INET6, &iq->fail_addr.in6, buf,
+			(socklen_t)len) == 0)
+			(void)strlcpy(buf, "(inet_ntop error)", len);
+	}
+#endif
+	else
+		(void)strlcpy(buf, "", len);
+}
+
 /** add response specific error information for log servfail */
 static void
 errinf_reply(struct module_qstate* qstate, struct iter_qstate* iq)
@@ -581,16 +629,14 @@ errinf_reply(struct module_qstate* qstate, struct iter_qstate* iq)
 	if(qstate->env->cfg->val_log_level < 2 && !qstate->env->cfg->log_servfail)
 		return;
 	if((qstate->reply && qstate->reply->remote_addrlen != 0) ||
-		(iq->fail_reply && iq->fail_reply->remote_addrlen != 0)) {
+		(iq->fail_addr_type != 0)) {
 		char from[256], frm[512];
 		if(qstate->reply && qstate->reply->remote_addrlen != 0)
 			addr_to_str(&qstate->reply->remote_addr,
 				qstate->reply->remote_addrlen, from,
 				sizeof(from));
 		else
-			addr_to_str(&iq->fail_reply->remote_addr,
-				iq->fail_reply->remote_addrlen, from,
-				sizeof(from));
+			print_fail_addr(iq, from, sizeof(from));
 		snprintf(frm, sizeof(frm), "from %s", from);
 		errinf(qstate, frm);
 	}
@@ -3199,7 +3245,7 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 		(*qstate->env->detach_subs)(qstate);
 		iq->num_target_queries = 0;
 		iq->response = NULL;
-		iq->fail_reply = NULL;
+		iq->fail_addr_type = 0;
 		verbose(VERB_ALGO, "cleared outbound list for next round");
 		return next_state(iq, QUERYTARGETS_STATE);
 	} else if(type == RESPONSE_TYPE_CNAME) {
@@ -4007,7 +4053,8 @@ process_response(struct module_qstate* qstate, struct iter_qstate* iq,
 	}
 
 	/* parse message */
-	iq->fail_reply = qstate->reply;
+	fill_fail_addr(iq, &qstate->reply->remote_addr,
+		qstate->reply->remote_addrlen);
 	prs = (struct msg_parse*)regional_alloc(qstate->env->scratch, 
 		sizeof(struct msg_parse));
 	if(!prs) {
