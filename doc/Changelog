@@ -1,5 +1,6 @@
 21 August 2023: Wouter
 	- Debug Windows ci workflow.
+	- Fix windows ci workflow to install bison and flex.
 
 18 August 2023: Wouter
 	- Fix for iter_dec_attempts that could cause a hang, part of
