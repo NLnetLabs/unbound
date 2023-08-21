@@ -5,6 +5,8 @@
 	  status=11/SEGV. Fixes cachedb configuration handling.
 	- Fix #923: processQueryResponse() THROWAWAY should be mindful of
 	  fail_reply.
+	- Fix unit test for unbound-control to work when threads are disabled,
+	  and fix cache dump check.
 
 18 August 2023: Wouter
 	- Fix for iter_dec_attempts that could cause a hang, part of
