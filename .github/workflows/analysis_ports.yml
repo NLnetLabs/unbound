@@ -177,9 +177,9 @@ jobs:
           echo prepath=${prepath}
           echo "choco winflexbison3"
           choco install winflexbison3
-          echo "plain"
-          flex -h
-          bison -h
+          echo "dir"
+          ls -l "C:/ProgramData/chocolatey/lib/winflexbison3/tools"
+          ls -l "C:\\ProgramData\\chocolatey\\lib\\winflexbison3\\tools"
           echo "win_ prefixed"
           win_flex -h
           win_bison -h
