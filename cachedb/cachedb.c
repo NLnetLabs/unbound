@@ -226,6 +226,8 @@ static int
 cachedb_apply_cfg(struct cachedb_env* cachedb_env, struct config_file* cfg)
 {
 	const char* backend_str = cfg->cachedb_backend;
+	if(!backend_str || *backend_str==0)
+		return 1;
 	cachedb_env->backend = cachedb_find_backend(backend_str);
 	if(!cachedb_env->backend) {
 		log_err("cachedb: cannot find backend name '%s'", backend_str);
