@@ -51,6 +51,7 @@
 #endif
 #ifdef HAVE_NGTCP2
 #include <ngtcp2/ngtcp2.h>
+#include <ngtcp2/ngtcp2_crypto.h>
 #endif
 struct listen_list;
 struct config_file;
@@ -593,6 +594,10 @@ struct doq_conn {
 	uint8_t tls_alert;
 	/** the ssl context, SSL* */
 	void* ssl;
+#ifdef HAVE_NGTCP2_CRYPTO_QUICTLS_CONFIGURE_SERVER_CONTEXT
+	/** the connection reference for ngtcp2_conn and userdata in ssl */
+	struct ngtcp2_crypto_conn_ref conn_ref;
+#endif
 	/** closure packet, if any */
 	uint8_t* close_pkt;
 	/** length of closure packet. */

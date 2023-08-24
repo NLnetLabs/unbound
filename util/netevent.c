@@ -2323,8 +2323,17 @@ doq_timer_cb(void* arg)
 
 	while((conn = doq_timer_timeout_conn(doq_socket)) != NULL) {
 		if(conn->is_deleted ||
+#ifdef HAVE_NGTCP2_CONN_IN_CLOSING_PERIOD
+			ngtcp2_conn_in_closing_period(conn->conn) ||
+#else
 			ngtcp2_conn_is_in_closing_period(conn->conn) ||
-			ngtcp2_conn_is_in_draining_period(conn->conn)) {
+#endif
+#ifdef HAVE_NGTCP2_CONN_IN_DRAINING_PERIOD
+			ngtcp2_conn_in_draining_period(conn->conn)
+#else
+			ngtcp2_conn_is_in_draining_period(conn->conn)
+#endif
+			) {
 			if(verbosity >= VERB_ALGO) {
 				char remotestr[256];
 				addr_to_str((void*)&conn->key.paddr.addr,
@@ -2385,8 +2394,17 @@ comm_point_doq_callback(int fd, short event, void* arg)
 	num_len = doq_write_list_length(c);
 	while((conn = doq_pop_write_conn(c)) != NULL) {
 		if(conn->is_deleted ||
+#ifdef HAVE_NGTCP2_CONN_IN_CLOSING_PERIOD
+			ngtcp2_conn_in_closing_period(conn->conn) ||
+#else
 			ngtcp2_conn_is_in_closing_period(conn->conn) ||
-			ngtcp2_conn_is_in_draining_period(conn->conn)) {
+#endif
+#ifdef HAVE_NGTCP2_CONN_IN_DRAINING_PERIOD
+			ngtcp2_conn_in_draining_period(conn->conn)
+#else
+			ngtcp2_conn_is_in_draining_period(conn->conn)
+#endif
+			) {
 			conn->doq_socket = NULL;
 			lock_basic_unlock(&conn->lock);
 			if(c->doq_socket->have_blocked_pkt) {
@@ -2483,7 +2501,13 @@ comm_point_doq_callback(int fd, short event, void* arg)
 			doq_done_setup_timer_and_write(c, conn);
 			continue;
 		}
-		if(ngtcp2_conn_is_in_closing_period(conn->conn)) {
+		if(
+#ifdef HAVE_NGTCP2_CONN_IN_CLOSING_PERIOD
+			ngtcp2_conn_in_closing_period(conn->conn)
+#else
+			ngtcp2_conn_is_in_closing_period(conn->conn)
+#endif
+			) {
 			if(!doq_conn_send_close(c, conn)) {
 				doq_delete_connection(c, conn);
 			} else {
@@ -2491,7 +2515,13 @@ comm_point_doq_callback(int fd, short event, void* arg)
 			}
 			continue;
 		}
-		if(ngtcp2_conn_is_in_draining_period(conn->conn)) {
+		if(
+#ifdef HAVE_NGTCP2_CONN_IN_DRAINING_PERIOD
+			ngtcp2_conn_in_draining_period(conn->conn)
+#else
+			ngtcp2_conn_is_in_draining_period(conn->conn)
+#endif
+			) {
 			doq_done_setup_timer_and_write(c, conn);
 			continue;
 		}
@@ -2637,7 +2667,9 @@ doq_server_socket_delete(struct doq_server_socket* doq_socket)
 		return;
 	free(doq_socket->static_secret);
 	SSL_CTX_free(doq_socket->ctx);
+#ifndef HAVE_NGTCP2_CRYPTO_QUICTLS_CONFIGURE_SERVER_CONTEXT
 	free(doq_socket->quic_method);
+#endif
 	free(doq_socket->ssl_service_key);
 	free(doq_socket->ssl_service_pem);
 	free(doq_socket->ssl_verify_pem);

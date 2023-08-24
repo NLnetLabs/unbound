@@ -4196,8 +4196,10 @@ doq_handshake_completed_cb(ngtcp2_conn* ATTR_UNUSED(conn), void* user_data)
 	verbose(VERB_ALGO, "doq handshake_completed callback");
 	verbose(VERB_ALGO, "ngtcp2_conn_get_max_data_left is %d",
 		(int)ngtcp2_conn_get_max_data_left(doq_conn->conn));
+#ifdef HAVE_NGTCP2_CONN_GET_MAX_LOCAL_STREAMS_UNI
 	verbose(VERB_ALGO, "ngtcp2_conn_get_max_local_streams_uni is %d",
 		(int)ngtcp2_conn_get_max_local_streams_uni(doq_conn->conn));
+#endif
 	verbose(VERB_ALGO, "ngtcp2_conn_get_streams_uni_left is %d",
 		(int)ngtcp2_conn_get_streams_uni_left(doq_conn->conn));
 	verbose(VERB_ALGO, "ngtcp2_conn_get_streams_bidi_left is %d",
@@ -4275,7 +4277,12 @@ doq_recv_stream_data_cb(ngtcp2_conn* ATTR_UNUSED(conn), uint32_t flags,
 	verbose(VERB_ALGO, "doq recv stream data stream id %d offset %d "
 		"datalen %d%s%s", (int)stream_id, (int)offset, (int)datalen,
 		((flags&NGTCP2_STREAM_DATA_FLAG_FIN)!=0?" FIN":""),
-		((flags&NGTCP2_STREAM_DATA_FLAG_EARLY)!=0?" EARLY":""));
+#ifdef NGTCP2_STREAM_DATA_FLAG_0RTT
+		((flags&NGTCP2_STREAM_DATA_FLAG_0RTT)!=0?" 0RTT":"")
+#else
+		((flags&NGTCP2_STREAM_DATA_FLAG_EARLY)!=0?" EARLY":"")
+#endif
+		);
 	stream = doq_stream_find(doq_conn, stream_id);
 	if(!stream) {
 		verbose(VERB_ALGO, "doq: received stream data for "
@@ -4398,6 +4405,7 @@ doq_log_printf_cb(void* ATTR_UNUSED(user_data), const char* fmt, ...)
 	va_end(ap);
 }
 
+#ifndef HAVE_NGTCP2_CRYPTO_QUICTLS_CONFIGURE_SERVER_CONTEXT
 /** the doq application tx key callback, false on failure */
 static int
 doq_application_tx_key_cb(struct doq_conn* conn)
@@ -4407,8 +4415,10 @@ doq_application_tx_key_cb(struct doq_conn* conn)
 	 * the client instead initiates by opening bidi streams. */
 	verbose(VERB_ALGO, "doq ngtcp2_conn_get_max_data_left is %d",
 		(int)ngtcp2_conn_get_max_data_left(conn->conn));
+#ifdef HAVE_NGTCP2_CONN_GET_MAX_LOCAL_STREAMS_UNI
 	verbose(VERB_ALGO, "doq ngtcp2_conn_get_max_local_streams_uni is %d",
 		(int)ngtcp2_conn_get_max_local_streams_uni(conn->conn));
+#endif
 	verbose(VERB_ALGO, "doq ngtcp2_conn_get_streams_uni_left is %d",
 		(int)ngtcp2_conn_get_streams_uni_left(conn->conn));
 	verbose(VERB_ALGO, "doq ngtcp2_conn_get_streams_bidi_left is %d",
@@ -4423,8 +4433,17 @@ doq_set_encryption_secrets(SSL *ssl, OSSL_ENCRYPTION_LEVEL ossl_level,
 	size_t secret_len)
 {
 	struct doq_conn* doq_conn = (struct doq_conn*)SSL_get_app_data(ssl);
-	ngtcp2_crypto_level level =
+#ifdef HAVE_NGTCP2_ENCRYPTION_LEVEL
+	ngtcp2_encryption_level
+#else
+	ngtcp2_crypto_level
+#endif
+		level =
+#ifdef HAVE_NGTCP2_CRYPTO_QUICTLS_FROM_OSSL_ENCRYPTION_LEVEL
+		ngtcp2_crypto_quictls_from_ossl_encryption_level(ossl_level);
+#else
 		ngtcp2_crypto_openssl_from_ossl_encryption_level(ossl_level);
+#endif
 
 	if(read_secret) {
 		verbose(VERB_ALGO, "doq: ngtcp2_crypto_derive_and_install_rx_key for level %d ossl %d", (int)level, (int)ossl_level);
@@ -4460,8 +4479,17 @@ doq_add_handshake_data(SSL *ssl, OSSL_ENCRYPTION_LEVEL ossl_level,
 	const uint8_t *data, size_t len)
 {
 	struct doq_conn* doq_conn = (struct doq_conn*)SSL_get_app_data(ssl);
-	ngtcp2_crypto_level level =
+#ifdef HAVE_NGTCP2_ENCRYPTION_LEVEL
+	ngtcp2_encryption_level
+#else
+	ngtcp2_crypto_level
+#endif
+		level =
+#ifdef HAVE_NGTCP2_CRYPTO_QUICTLS_FROM_OSSL_ENCRYPTION_LEVEL
+		ngtcp2_crypto_quictls_from_ossl_encryption_level(ossl_level);
+#else
 		ngtcp2_crypto_openssl_from_ossl_encryption_level(ossl_level);
+#endif
 	int rv;
 
 	verbose(VERB_ALGO, "doq_add_handshake_data: "
@@ -4492,6 +4520,7 @@ doq_send_alert(SSL *ssl, enum ssl_encryption_level_t ATTR_UNUSED(level),
 	doq_conn->tls_alert = alert;
 	return 1;
 }
+#endif /* HAVE_NGTCP2_CRYPTO_QUICTLS_CONFIGURE_SERVER_CONTEXT */
 
 /** ALPN select callback for the doq SSL context */
 static int
@@ -4514,7 +4543,9 @@ static SSL_CTX*
 doq_ctx_server_setup(struct doq_server_socket* doq_socket)
 {
 	char* sid_ctx = "unbound server";
+#ifndef HAVE_NGTCP2_CRYPTO_QUICTLS_CONFIGURE_SERVER_CONTEXT
 	SSL_QUIC_METHOD* quic_method;
+#endif
 	SSL_CTX* ctx = SSL_CTX_new(TLS_server_method());
 	if(!ctx) {
 		log_crypto_err("Could not SSL_CTX_new");
@@ -4575,6 +4606,13 @@ doq_ctx_server_setup(struct doq_server_socket* doq_socket)
 	}
 
 	SSL_CTX_set_max_early_data(ctx, 0xffffffff);
+#ifdef HAVE_NGTCP2_CRYPTO_QUICTLS_CONFIGURE_SERVER_CONTEXT
+	if(ngtcp2_crypto_quictls_configure_server_context(ctx) != 0) {
+		log_err("ngtcp2_crypto_quictls_configure_server_context failed");
+		SSL_CTX_free(ctx);
+		return NULL;
+	}
+#else
 	/* The quic_method needs to remain valid during the SSL_CTX
 	 * lifetime, so we allocate it. It is freed with the
 	 * doq_server_socket. */
@@ -4590,7 +4628,15 @@ doq_ctx_server_setup(struct doq_server_socket* doq_socket)
 	quic_method->flush_flight = doq_flush_flight;
 	quic_method->send_alert = doq_send_alert;
 	SSL_CTX_set_quic_method(ctx, doq_socket->quic_method);
+#endif
 	return ctx;
+}
+
+/** Get the ngtcp2_conn from ssl userdata of type ngtcp2_conn_ref */
+static ngtcp2_conn* doq_conn_ref_get_conn(ngtcp2_crypto_conn_ref* conn_ref)
+{
+	struct doq_conn* conn = (struct doq_conn*)conn_ref->user_data;
+	return conn->conn;
 }
 
 /** create new SSL session for server connection */
@@ -4602,7 +4648,13 @@ doq_ssl_server_setup(SSL_CTX* ctx, struct doq_conn* conn)
 		log_crypto_err("doq: SSL_new failed");
 		return NULL;
 	}
+#ifdef HAVE_NGTCP2_CRYPTO_QUICTLS_CONFIGURE_SERVER_CONTEXT
+	conn->conn_ref.get_conn = &doq_conn_ref_get_conn;
+	conn->conn_ref.user_data = conn;
+	SSL_set_app_data(ssl, &conn->conn_ref);
+#else
 	SSL_set_app_data(ssl, conn);
+#endif
 	SSL_set_accept_state(ssl);
 	SSL_set_quic_early_data_enabled(ssl, 1);
 	return ssl;
@@ -4702,6 +4754,9 @@ doq_conn_setup(struct doq_conn* conn, uint8_t* scid, size_t scidlen,
 		ngtcp2_cid_init(&params.original_dcid, conn->key.dcid,
 			conn->key.dcidlen);
 	}
+#ifdef HAVE_STRUCT_NGTCP2_TRANSPORT_PARAMS_ORIGINAL_DCID_PRESENT
+	params.original_dcid_present = 1;
+#endif
 	doq_fill_rand(conn->doq_socket->rnd, params.stateless_reset_token,
 		sizeof(params.stateless_reset_token));
 	sv_scid.datalen = conn->doq_socket->sv_scidlen;
@@ -4886,7 +4941,12 @@ doq_conn_setup_id_array_and_dcid(struct doq_conn* conn,
 int
 doq_conn_setup_conids(struct doq_conn* conn)
 {
-	size_t num_scid = ngtcp2_conn_get_num_scid(conn->conn);
+	size_t num_scid =
+#ifndef HAVE_NGTCP2_CONN_GET_NUM_SCID
+		ngtcp2_conn_get_scid(conn->conn, NULL);
+#else
+		ngtcp2_conn_get_num_scid(conn->conn);
+#endif
 	if(num_scid <= 4) {
 		struct ngtcp2_cid ids[4];
 		/* Usually there are not that many scids when just accepted,
@@ -4954,9 +5014,21 @@ doq_conn_start_closing_period(struct comm_point* c, struct doq_conn* conn)
 	ngtcp2_ssize ret;
 	if(!conn)
 		return 1;
-	if(ngtcp2_conn_is_in_closing_period(conn->conn))
+	if(
+#ifdef HAVE_NGTCP2_CONN_IN_CLOSING_PERIOD
+		ngtcp2_conn_in_closing_period(conn->conn)
+#else
+		ngtcp2_conn_is_in_closing_period(conn->conn)
+#endif
+		)
 		return 1;
-	if(ngtcp2_conn_is_in_draining_period(conn->conn)) {
+	if(
+#ifdef HAVE_NGTCP2_CONN_IN_DRAINING_PERIOD
+		ngtcp2_conn_in_draining_period(conn->conn)
+#else
+		ngtcp2_conn_is_in_draining_period(conn->conn)
+#endif
+		) {
 		doq_conn_write_disable(conn);
 		return 1;
 	}
@@ -5031,7 +5103,13 @@ doq_conn_close_error(struct comm_point* c, struct doq_conn* conn)
 #endif
 	if(!doq_conn_start_closing_period(c, conn))
 		return 0;
-	if(ngtcp2_conn_is_in_draining_period(conn->conn)) {
+	if(
+#ifdef HAVE_NGTCP2_CONN_IN_DRAINING_PERIOD
+		ngtcp2_conn_in_draining_period(conn->conn)
+#else
+		ngtcp2_conn_is_in_draining_period(conn->conn)
+#endif
+		) {
 		doq_conn_write_disable(conn);
 		return 1;
 	}

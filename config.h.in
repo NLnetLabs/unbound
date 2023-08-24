@@ -423,11 +423,47 @@
 /* Define to 1 if you have the `ngtcp2_ccerr_default' function. */
 #undef HAVE_NGTCP2_CCERR_DEFAULT
 
+/* Define to 1 if you have the `ngtcp2_conn_encode_0rtt_transport_params'
+   function. */
+#undef HAVE_NGTCP2_CONN_ENCODE_0RTT_TRANSPORT_PARAMS
+
+/* Define to 1 if you have the `ngtcp2_conn_get_max_local_streams_uni'
+   function. */
+#undef HAVE_NGTCP2_CONN_GET_MAX_LOCAL_STREAMS_UNI
+
+/* Define to 1 if you have the `ngtcp2_conn_get_num_scid' function. */
+#undef HAVE_NGTCP2_CONN_GET_NUM_SCID
+
+/* Define to 1 if you have the `ngtcp2_conn_in_closing_period' function. */
+#undef HAVE_NGTCP2_CONN_IN_CLOSING_PERIOD
+
+/* Define to 1 if you have the `ngtcp2_conn_in_draining_period' function. */
+#undef HAVE_NGTCP2_CONN_IN_DRAINING_PERIOD
+
 /* Define if ngtcp2_conn_shutdown_stream has 4 arguments. */
 #undef HAVE_NGTCP2_CONN_SHUTDOWN_STREAM4
 
+/* Define to 1 if you have the `ngtcp2_conn_tls_early_data_rejected' function.
+   */
+#undef HAVE_NGTCP2_CONN_TLS_EARLY_DATA_REJECTED
+
 /* Define to 1 if you have the `ngtcp2_crypto_encrypt_cb' function. */
 #undef HAVE_NGTCP2_CRYPTO_ENCRYPT_CB
+
+/* Define to 1 if you have the
+   `ngtcp2_crypto_quictls_configure_client_context' function. */
+#undef HAVE_NGTCP2_CRYPTO_QUICTLS_CONFIGURE_CLIENT_CONTEXT
+
+/* Define to 1 if you have the
+   `ngtcp2_crypto_quictls_configure_server_context' function. */
+#undef HAVE_NGTCP2_CRYPTO_QUICTLS_CONFIGURE_SERVER_CONTEXT
+
+/* Define to 1 if you have the
+   `ngtcp2_crypto_quictls_from_ossl_encryption_level' function. */
+#undef HAVE_NGTCP2_CRYPTO_QUICTLS_FROM_OSSL_ENCRYPTION_LEVEL
+
+/* Define to 1 if the system has the type `ngtcp2_encryption_level'. */
+#undef HAVE_NGTCP2_ENCRYPTION_LEVEL
 
 /* Define to 1 if you have the <ngtcp2/ngtcp2_crypto_openssl.h> header file.
    */
@@ -648,8 +684,16 @@
 /* Define to 1 if `tokenlen' is a member of `struct ngtcp2_pkt_hd'. */
 #undef HAVE_STRUCT_NGTCP2_PKT_HD_TOKENLEN
 
+/* Define to 1 if `max_tx_udp_payload_size' is a member of `struct
+   ngtcp2_settings'. */
+#undef HAVE_STRUCT_NGTCP2_SETTINGS_MAX_TX_UDP_PAYLOAD_SIZE
+
 /* Define to 1 if `tokenlen' is a member of `struct ngtcp2_settings'. */
 #undef HAVE_STRUCT_NGTCP2_SETTINGS_TOKENLEN
+
+/* Define to 1 if `original_dcid_present' is a member of `struct
+   ngtcp2_transport_params'. */
+#undef HAVE_STRUCT_NGTCP2_TRANSPORT_PARAMS_ORIGINAL_DCID_PRESENT
 
 /* Define to 1 if the system has the type `struct ngtcp2_version_cid'. */
 #undef HAVE_STRUCT_NGTCP2_VERSION_CID

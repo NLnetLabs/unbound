@@ -1054,8 +1054,10 @@ struct doq_server_socket {
 	size_t static_secret_len;
 	/** ssl context, SSL_CTX* */
 	void* ctx;
+#ifndef HAVE_NGTCP2_CRYPTO_QUICTLS_CONFIGURE_SERVER_CONTEXT
 	/** quic method functions, SSL_QUIC_METHOD* */
 	void* quic_method;
+#endif
 	/** the comm point for this doq server socket */
 	struct comm_point* cp;
 	/** the buffer for packets, doq in and out */

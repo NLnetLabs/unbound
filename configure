@@ -20219,7 +20219,7 @@ if test "x$ac_cv_lib_ngtcp2_crypto_quictls_ngtcp2_crypto_encrypt_cb" = xyes; the
    LIBS="$LIBS -lngtcp2_crypto_quictls"
 fi
 
-    for ac_func in ngtcp2_crypto_encrypt_cb ngtcp2_ccerr_default
+    for ac_func in ngtcp2_crypto_encrypt_cb ngtcp2_ccerr_default ngtcp2_conn_in_closing_period ngtcp2_conn_in_draining_period ngtcp2_conn_get_max_local_streams_uni ngtcp2_crypto_quictls_from_ossl_encryption_level ngtcp2_crypto_quictls_configure_server_context ngtcp2_crypto_quictls_configure_client_context ngtcp2_conn_get_num_scid ngtcp2_conn_tls_early_data_rejected ngtcp2_conn_encode_0rtt_transport_params
 do :
   as_ac_var=`$as_echo "ac_cv_func_$ac_func" | $as_tr_sh`
 ac_fn_c_check_func "$LINENO" "$ac_func" "$as_ac_var"
@@ -20256,6 +20256,18 @@ _ACEOF
 
 
 fi
+ac_fn_c_check_type "$LINENO" "ngtcp2_encryption_level" "ac_cv_type_ngtcp2_encryption_level" "$ac_includes_default
+    #include <ngtcp2/ngtcp2.h>
+
+"
+if test "x$ac_cv_type_ngtcp2_encryption_level" = xyes; then :
+
+cat >>confdefs.h <<_ACEOF
+#define HAVE_NGTCP2_ENCRYPTION_LEVEL 1
+_ACEOF
+
+
+fi
 
     ac_fn_c_check_member "$LINENO" "struct ngtcp2_pkt_hd" "tokenlen" "ac_cv_member_struct_ngtcp2_pkt_hd_tokenlen" "$ac_includes_default
     #include <ngtcp2/ngtcp2.h>
@@ -20277,6 +20289,30 @@ if test "x$ac_cv_member_struct_ngtcp2_settings_tokenlen" = xyes; then :
 
 cat >>confdefs.h <<_ACEOF
 #define HAVE_STRUCT_NGTCP2_SETTINGS_TOKENLEN 1
+_ACEOF
+
+
+fi
+ac_fn_c_check_member "$LINENO" "struct ngtcp2_settings" "max_tx_udp_payload_size" "ac_cv_member_struct_ngtcp2_settings_max_tx_udp_payload_size" "$ac_includes_default
+    #include <ngtcp2/ngtcp2.h>
+
+"
+if test "x$ac_cv_member_struct_ngtcp2_settings_max_tx_udp_payload_size" = xyes; then :
+
+cat >>confdefs.h <<_ACEOF
+#define HAVE_STRUCT_NGTCP2_SETTINGS_MAX_TX_UDP_PAYLOAD_SIZE 1
+_ACEOF
+
+
+fi
+ac_fn_c_check_member "$LINENO" "struct ngtcp2_transport_params" "original_dcid_present" "ac_cv_member_struct_ngtcp2_transport_params_original_dcid_present" "$ac_includes_default
+    #include <ngtcp2/ngtcp2.h>
+
+"
+if test "x$ac_cv_member_struct_ngtcp2_transport_params_original_dcid_present" = xyes; then :
+
+cat >>confdefs.h <<_ACEOF
+#define HAVE_STRUCT_NGTCP2_TRANSPORT_PARAMS_ORIGINAL_DCID_PRESENT 1
 _ACEOF
 
 

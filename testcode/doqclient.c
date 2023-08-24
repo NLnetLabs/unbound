@@ -107,6 +107,10 @@ struct doq_client_data {
 	SSL_CTX* ctx;
 	/** SSL object */
 	SSL* ssl;
+#ifdef HAVE_NGTCP2_CRYPTO_QUICTLS_CONFIGURE_CLIENT_CONTEXT
+	/** the connection reference for ngtcp2_conn and userdata in ssl */
+	struct ngtcp2_crypto_conn_ref conn_ref;
+#endif
 	/** the quic version to use */
 	uint32_t quic_version;
 	/** the last error */
@@ -193,8 +197,10 @@ struct doq_client_stream {
 	int query_is_done;
 };
 
+#ifndef HAVE_NGTCP2_CRYPTO_QUICTLS_CONFIGURE_CLIENT_CONTEXT
 /** the quic method struct, must remain valid during the QUIC connection. */
 static SSL_QUIC_METHOD quic_method;
+#endif
 
 /** write handle routine */
 static void on_write(struct doq_client_data* data);
@@ -202,6 +208,8 @@ static void on_write(struct doq_client_data* data);
 static void update_timer(struct doq_client_data* data);
 /** disconnect we are done */
 static void disconnect(struct doq_client_data* data);
+/** fetch and write the transport file */
+static void early_data_write_transport(struct doq_client_data* data);
 
 /** usage of doqclient */
 static void usage(char* argv[])
@@ -776,7 +784,11 @@ early_data_is_rejected(struct doq_client_data* data)
 {
 	int rv;
 	verbose(1, "early data was rejected by the server");
+#ifdef HAVE_NGTCP2_CONN_TLS_EARLY_DATA_REJECTED
+	rv = ngtcp2_conn_tls_early_data_rejected(data->conn);
+#else
 	rv = ngtcp2_conn_early_data_rejected(data->conn);
+#endif
 	if(rv != 0) {
 		log_err("ngtcp2_conn_early_data_rejected failed: %s",
 			ngtcp2_strerror(rv));
@@ -814,8 +826,10 @@ handshake_completed(ngtcp2_conn* ATTR_UNUSED(conn), void* user_data)
 	verbose(1, "handshake_completed callback");
 	verbose(1, "ngtcp2_conn_get_max_data_left is %d",
 		(int)ngtcp2_conn_get_max_data_left(data->conn));
+#ifdef HAVE_NGTCP2_CONN_GET_MAX_LOCAL_STREAMS_UNI
 	verbose(1, "ngtcp2_conn_get_max_local_streams_uni is %d",
 		(int)ngtcp2_conn_get_max_local_streams_uni(data->conn));
+#endif
 	verbose(1, "ngtcp2_conn_get_streams_uni_left is %d",
 		(int)ngtcp2_conn_get_streams_uni_left(data->conn));
 	verbose(1, "ngtcp2_conn_get_streams_bidi_left is %d",
@@ -843,6 +857,9 @@ handshake_completed(ngtcp2_conn* ATTR_UNUSED(conn), void* user_data)
 			verbose(1, "early data was accepted by the server");
 		}
 	}
+	if(data->transport_file) {
+		early_data_write_transport(data);
+	}
 	return 0;
 }
 
@@ -856,8 +873,10 @@ extend_max_local_streams_bidi(ngtcp2_conn* ATTR_UNUSED(conn),
 		(int)max_streams);
 	verbose(1, "ngtcp2_conn_get_max_data_left is %d",
 		(int)ngtcp2_conn_get_max_data_left(data->conn));
+#ifdef HAVE_NGTCP2_CONN_GET_MAX_LOCAL_STREAMS_UNI
 	verbose(1, "ngtcp2_conn_get_max_local_streams_uni is %d",
 		(int)ngtcp2_conn_get_max_local_streams_uni(data->conn));
+#endif
 	verbose(1, "ngtcp2_conn_get_streams_uni_left is %d",
 		(int)ngtcp2_conn_get_streams_uni_left(data->conn));
 	verbose(1, "ngtcp2_conn_get_streams_bidi_left is %d",
@@ -878,7 +897,12 @@ recv_stream_data(ngtcp2_conn* ATTR_UNUSED(conn), uint32_t flags,
 	verbose(1, "recv_stream_data stream %d offset %d datalen %d%s%s",
 		(int)stream_id, (int)offset, (int)datalen,
 		((flags&NGTCP2_STREAM_DATA_FLAG_FIN)!=0?" FIN":""),
-		((flags&NGTCP2_STREAM_DATA_FLAG_EARLY)!=0?" EARLY":""));
+#ifdef NGTCP2_STREAM_DATA_FLAG_0RTT
+		((flags&NGTCP2_STREAM_DATA_FLAG_0RTT)!=0?" 0RTT":"")
+#else
+		((flags&NGTCP2_STREAM_DATA_FLAG_EARLY)!=0?" EARLY":"")
+#endif
+		);
 	if(verbosity > 0)
 		log_hex("data", (void*)data, datalen);
 	if(verbosity > 0) {
@@ -1017,8 +1041,13 @@ static struct ngtcp2_conn* conn_client_setup(struct doq_client_data* data)
 
 	data->quic_version = client_chosen_version;
 	ngtcp2_settings_default(&settings);
-	if(str_is_ip6(data->svr))
+	if(str_is_ip6(data->svr)) {
+#ifdef HAVE_STRUCT_NGTCP2_SETTINGS_MAX_TX_UDP_PAYLOAD_SIZE
+		settings.max_tx_udp_payload_size = 1232;
+#else
 		settings.max_udp_payload_size = 1232;
+#endif
+	}
 	settings.rand_ctx.native_handle = data->rnd;
 	if(verbosity > 0) {
 		/* make debug logs */
@@ -1067,6 +1096,7 @@ static struct ngtcp2_conn* conn_client_setup(struct doq_client_data* data)
 	return conn;
 }
 
+#ifndef HAVE_NGTCP2_CONN_ENCODE_0RTT_TRANSPORT_PARAMS
 /** write the transport file */
 static void
 transport_file_write(const char* file, struct ngtcp2_transport_params* params)
@@ -1101,17 +1131,45 @@ transport_file_write(const char* file, struct ngtcp2_transport_params* params)
 	}
 	fclose(out);
 }
+#endif /* HAVE_NGTCP2_CONN_ENCODE_0RTT_TRANSPORT_PARAMS */
 
 /** fetch and write the transport file */
 static void
 early_data_write_transport(struct doq_client_data* data)
 {
+#ifdef HAVE_NGTCP2_CONN_ENCODE_0RTT_TRANSPORT_PARAMS
+	FILE* out;
+	uint8_t buf[1024];
+	ngtcp2_ssize len = ngtcp2_conn_encode_0rtt_transport_params(data->conn,
+		buf, sizeof(buf));
+	if(len < 0) {
+		log_err("ngtcp2_conn_encode_0rtt_transport_params failed: %s",
+			ngtcp2_strerror(len));
+		return;
+	}
+	out = fopen(data->transport_file, "w");
+	if(!out) {
+		perror(data->transport_file);
+		return;
+	}
+	if(fwrite(buf, 1, len, out) != 1) {
+		log_err("fwrite %s failed: %s", data->transport_file,
+			strerror(errno));
+	}
+	if(ferror(out)) {
+		verbose(1, "There was an error writing %s: %s",
+			data->transport_file, strerror(errno));
+	}
+	fclose(out);
+#else
 	struct ngtcp2_transport_params params;
 	memset(&params, 0, sizeof(params));
 	ngtcp2_conn_get_remote_transport_params(data->conn, &params);
 	transport_file_write(data->transport_file, &params);
+#endif
 }
 
+#ifndef HAVE_NGTCP2_CRYPTO_QUICTLS_CONFIGURE_CLIENT_CONTEXT
 /** applicatation rx key callback, this is where the rx key is set,
  * and streams can be opened, like http3 unidirectional streams, like
  * the http3 control and http3 qpack encode and decoder streams. */
@@ -1121,8 +1179,10 @@ application_rx_key_cb(struct doq_client_data* data)
 	verbose(1, "application_rx_key_cb callback");
 	verbose(1, "ngtcp2_conn_get_max_data_left is %d",
 		(int)ngtcp2_conn_get_max_data_left(data->conn));
+#ifdef HAVE_NGTCP2_CONN_GET_MAX_LOCAL_STREAMS_UNI
 	verbose(1, "ngtcp2_conn_get_max_local_streams_uni is %d",
 		(int)ngtcp2_conn_get_max_local_streams_uni(data->conn));
+#endif
 	verbose(1, "ngtcp2_conn_get_streams_uni_left is %d",
 		(int)ngtcp2_conn_get_streams_uni_left(data->conn));
 	verbose(1, "ngtcp2_conn_get_streams_bidi_left is %d",
@@ -1141,8 +1201,17 @@ set_encryption_secrets(SSL *ssl, OSSL_ENCRYPTION_LEVEL ossl_level,
 {
 	struct doq_client_data* data = (struct doq_client_data*)
 		SSL_get_app_data(ssl);
-	ngtcp2_crypto_level level =
+#ifdef HAVE_NGTCP2_ENCRYPTION_LEVEL
+	ngtcp2_encryption_level
+#else
+	ngtcp2_crypto_level
+#endif
+		level =
+#ifdef HAVE_NGTCP2_CRYPTO_QUICTLS_FROM_OSSL_ENCRYPTION_LEVEL
+		ngtcp2_crypto_quictls_from_ossl_encryption_level(ossl_level);
+#else
 		ngtcp2_crypto_openssl_from_ossl_encryption_level(ossl_level);
+#endif
 
 	if(read_secret) {
 		if(ngtcp2_crypto_derive_and_install_rx_key(data->conn, NULL,
@@ -1173,8 +1242,17 @@ add_handshake_data(SSL *ssl, OSSL_ENCRYPTION_LEVEL ossl_level,
 {
 	struct doq_client_data* doqdata = (struct doq_client_data*)
 		SSL_get_app_data(ssl);
-	ngtcp2_crypto_level level =
+#ifdef HAVE_NGTCP2_ENCRYPTION_LEVEL
+	ngtcp2_encryption_level
+#else
+	ngtcp2_crypto_level
+#endif
+		level =
+#ifdef HAVE_NGTCP2_CRYPTO_QUICTLS_FROM_OSSL_ENCRYPTION_LEVEL
+		ngtcp2_crypto_quictls_from_ossl_encryption_level(ossl_level);
+#else
 		ngtcp2_crypto_openssl_from_ossl_encryption_level(ossl_level);
+#endif
 	int rv;
 
 	rv = ngtcp2_conn_submit_crypto_data(doqdata->conn, level, data, len);
@@ -1204,6 +1282,7 @@ send_alert(SSL *ssl, enum ssl_encryption_level_t ATTR_UNUSED(level),
 	data->tls_alert = alert;
 	return 1;
 }
+#endif /* HAVE_NGTCP2_CRYPTO_QUICTLS_CONFIGURE_CLIENT_CONTEXT */
 
 /** new session callback. We can write it to file for resumption later. */
 static int
@@ -1238,13 +1317,29 @@ ctx_client_setup(void)
 	SSL_CTX_set_min_proto_version(ctx, TLS1_3_VERSION);
 	SSL_CTX_set_max_proto_version(ctx, TLS1_3_VERSION);
 	SSL_CTX_set_default_verify_paths(ctx);
+#ifdef HAVE_NGTCP2_CRYPTO_QUICTLS_CONFIGURE_CLIENT_CONTEXT
+	if(ngtcp2_crypto_quictls_configure_client_context(ctx) != 0) {
+		log_err("ngtcp2_crypto_quictls_configure_client_context failed");
+		exit(1);
+	}
+#else
 	memset(&quic_method, 0, sizeof(quic_method));
 	quic_method.set_encryption_secrets = &set_encryption_secrets;
 	quic_method.add_handshake_data = &add_handshake_data;
 	quic_method.flush_flight = &flush_flight;
 	quic_method.send_alert = &send_alert;
 	SSL_CTX_set_quic_method(ctx, &quic_method);
+#endif
 	return ctx;
+}
+
+/** Get the connection ngtcp2_conn from the ssl app data
+ * ngtcp2_crypto_conn_ref */
+static ngtcp2_conn* conn_ref_get_conn(ngtcp2_crypto_conn_ref* conn_ref)
+{
+	struct doq_client_data* data = (struct doq_client_data*)
+		conn_ref->user_data;
+	return data->conn;
 }
 
 /* setup the TLS object */
@@ -1256,7 +1351,13 @@ ssl_client_setup(struct doq_client_data* data)
 		log_crypto_err("Could not SSL_new");
 		exit(1);
 	}
+#ifdef HAVE_NGTCP2_CRYPTO_QUICTLS_CONFIGURE_CLIENT_CONTEXT
+	data->conn_ref.get_conn = &conn_ref_get_conn;
+	data->conn_ref.user_data = data;
+	SSL_set_app_data(ssl, &data->conn_ref);
+#else
 	SSL_set_app_data(ssl, data);
+#endif
 	SSL_set_connect_state(ssl);
 	if(!SSL_set_fd(ssl, data->fd)) {
 		log_crypto_err("Could not SSL_set_fd");
@@ -1402,8 +1503,18 @@ write_conn_close(struct doq_client_data* data)
 	struct ngtcp2_path_storage ps;
 	struct ngtcp2_pkt_info pi;
 	ngtcp2_ssize ret;
-	if(!data->conn || ngtcp2_conn_is_in_closing_period(data->conn) ||
-		ngtcp2_conn_is_in_draining_period(data->conn))
+	if(!data->conn ||
+#ifdef HAVE_NGTCP2_CONN_IN_CLOSING_PERIOD
+		ngtcp2_conn_in_closing_period(data->conn) ||
+#else
+		ngtcp2_conn_is_in_closing_period(data->conn) ||
+#endif
+#ifdef HAVE_NGTCP2_CONN_IN_DRAINING_PERIOD
+		ngtcp2_conn_in_draining_period(data->conn)
+#else
+		ngtcp2_conn_is_in_draining_period(data->conn)
+#endif
+		)
 		return;
 	/* Drop blocked packet if there is one, the connection is being
 	 * closed. And thus no further data traffic. */
@@ -1869,7 +1980,13 @@ on_write(struct doq_client_data* data)
 		if(!send_blocked_pkt(data))
 			return;
 	}
-	if(ngtcp2_conn_is_in_closing_period(data->conn))
+	if(
+#ifdef HAVE_NGTCP2_CONN_IN_CLOSING_PERIOD
+		ngtcp2_conn_in_closing_period(data->conn)
+#else
+		ngtcp2_conn_is_in_closing_period(data->conn)
+#endif
+		)
 		return;
 	if(!write_streams(data))
 		return;
@@ -1933,6 +2050,7 @@ early_data_setup_session(struct doq_client_data* data)
 	return 1;
 }
 
+#ifndef HAVE_NGTCP2_CONN_ENCODE_0RTT_TRANSPORT_PARAMS
 /** parse one line from the transport file */
 static int
 transport_parse_line(struct ngtcp2_transport_params* params, char* line)
@@ -1971,11 +2089,44 @@ transport_parse_line(struct ngtcp2_transport_params* params, char* line)
 	}
 	return 0;
 }
+#endif /* HAVE_NGTCP2_CONN_ENCODE_0RTT_TRANSPORT_PARAMS */
 
 /** setup the early data transport file and read it */
 static int
 early_data_setup_transport(struct doq_client_data* data)
 {
+#ifdef HAVE_NGTCP2_CONN_ENCODE_0RTT_TRANSPORT_PARAMS
+	FILE* in;
+	uint8_t buf[1024];
+	size_t len;
+	int rv;
+	in = fopen(data->transport_file, "r");
+	if(!in) {
+		if(errno == ENOENT) {
+			verbose(1, "transport file %s does not exist",
+				data->transport_file);
+			return 0;
+		}
+		perror(data->transport_file);
+		return 0;
+	}
+	len = fread(buf, 1, sizeof(buf), in);
+	if(ferror(in)) {
+		log_err("%s: read failed: %s", data->transport_file,
+			strerror(errno));
+		fclose(in);
+		return 0;
+	}
+	fclose(in);
+	rv = ngtcp2_conn_decode_and_set_0rtt_transport_params(data->conn,
+		buf, len);
+	if(rv != 0) {
+		log_err("ngtcp2_conn_decode_and_set_0rtt_transport_params failed: %s",
+			ngtcp2_strerror(rv));
+		return 0;
+	}
+	return 1;
+#else
 	FILE* in;
 	char buf[1024];
 	struct ngtcp2_transport_params params;
@@ -2006,6 +2157,7 @@ early_data_setup_transport(struct doq_client_data* data)
 	}
 	fclose(in);
 	ngtcp2_conn_set_early_remote_transport_params(data->conn, &params);
+#endif
 	return 1;
 }
 
