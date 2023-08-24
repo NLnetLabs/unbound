@@ -89,7 +89,11 @@
 #ifdef HAVE_NGTCP2
 #include <ngtcp2/ngtcp2.h>
 #include <ngtcp2/ngtcp2_crypto.h>
+#ifdef HAVE_NGTCP2_NGTCP2_CRYPTO_QUICTLS_H
+#include <ngtcp2/ngtcp2_crypto_quictls.h>
+#else
 #include <ngtcp2/ngtcp2_crypto_openssl.h>
+#endif
 #endif
 
 #ifdef HAVE_OPENSSL_SSL_H
@@ -3484,7 +3488,11 @@ doq_conn_create(struct comm_point* c, struct doq_pkt_addr* paddr,
 	}
 	conn->key.dcidlen = dcidlen;
 	conn->version = version;
+#ifdef HAVE_NGTCP2_CCERR_DEFAULT
+	ngtcp2_ccerr_default(&conn->ccerr);
+#else
 	ngtcp2_connection_close_error_default(&conn->last_error);
+#endif
 	rbtree_init(&conn->stream_tree, &doq_stream_cmp);
 	conn->timer.conn = conn;
 	lock_basic_init(&conn->lock);
@@ -4660,8 +4668,13 @@ doq_conn_setup(struct doq_conn* conn, uint8_t* scid, size_t scidlen,
 	settings.initial_ts = doq_get_timestamp_nanosec();
 	settings.max_stream_window = 6*1024*1024;
 	settings.max_window = 6*1024*1024;
+#ifdef HAVE_STRUCT_NGTCP2_SETTINGS_TOKENLEN
+	settings.token = (void*)token;
+	settings.tokenlen = tokenlen;
+#else
 	settings.token.base = (void*)token;
 	settings.token.len = tokenlen;
+#endif
 
 	ngtcp2_transport_params_default(&params);
 	params.max_idle_timeout = conn->doq_socket->idle_timeout;
@@ -4947,8 +4960,13 @@ doq_conn_start_closing_period(struct comm_point* c, struct doq_conn* conn)
 	 * conn to be closed. It is now in the closing period. */
 	ret = ngtcp2_conn_write_connection_close(conn->conn, &ps.path,
 		&pi, sldns_buffer_begin(c->doq_socket->pkt_buf),
-		sldns_buffer_remaining(c->doq_socket->pkt_buf), &conn->last_error,
-		doq_get_timestamp_nanosec());
+		sldns_buffer_remaining(c->doq_socket->pkt_buf),
+#ifdef HAVE_NGTCP2_CCERR_DEFAULT
+		&conn->ccerr
+#else
+		&conn->last_error
+#endif
+		, doq_get_timestamp_nanosec());
 	if(ret < 0) {
 		log_err("doq ngtcp2_conn_write_connection_close failed: %s",
 			ngtcp2_strerror(ret));
@@ -4997,9 +5015,14 @@ doq_conn_send_close(struct comm_point* c, struct doq_conn* conn)
 static int
 doq_conn_close_error(struct comm_point* c, struct doq_conn* conn)
 {
+#ifdef HAVE_NGTCP2_CCERR_DEFAULT
+	if(conn->ccerr.type == NGTCP2_CCERR_TYPE_IDLE_CLOSE)
+		return 0;
+#else
 	if(conn->last_error.type ==
 		NGTCP2_CONNECTION_CLOSE_ERROR_CODE_TYPE_TRANSPORT_IDLE_CLOSE)
 		return 0;
+#endif
 	if(!doq_conn_start_closing_period(c, conn))
 		return 0;
 	if(ngtcp2_conn_is_in_draining_period(conn->conn)) {
@@ -5055,18 +5078,40 @@ doq_conn_recv(struct comm_point* c, struct doq_pkt_addr* paddr,
 				*err_drop = 1;
 			return 0;
 		} else if(ret == NGTCP2_ERR_CRYPTO) {
-			if(!conn->last_error.error_code) {
+			if(
+#ifdef HAVE_NGTCP2_CCERR_DEFAULT
+				!conn->ccerr.error_code
+#else
+				!conn->last_error.error_code
+#endif
+				) {
 				/* in picotls the tls alert may need to be
 				 * copied, but this is with openssl. And there
 				 * is conn->tls_alert. */
+#ifdef HAVE_NGTCP2_CCERR_DEFAULT
+				ngtcp2_ccerr_set_tls_alert(&conn->ccerr,
+					conn->tls_alert, NULL, 0);
+#else
 				ngtcp2_connection_close_error_set_transport_error_tls_alert(
 					&conn->last_error, conn->tls_alert,
 					NULL, 0);
+#endif
 			}
 		} else {
-			if(!conn->last_error.error_code) {
+			if(
+#ifdef HAVE_NGTCP2_CCERR_DEFAULT
+				!conn->ccerr.error_code
+#else
+				!conn->last_error.error_code
+#endif
+				) {
+#ifdef HAVE_NGTCP2_CCERR_DEFAULT
+				ngtcp2_ccerr_set_liberr(&conn->ccerr, ret,
+					NULL, 0);
+#else
 				ngtcp2_connection_close_error_set_transport_error_liberr(
 					&conn->last_error, ret, NULL, 0);
+#endif
 			}
 		}
 		log_err("ngtcp2_conn_read_pkt failed: %s",
@@ -5163,7 +5208,12 @@ doq_conn_write_streams(struct comm_point* c, struct doq_conn* conn,
 				continue;
 			} else if(ret == NGTCP2_ERR_STREAM_DATA_BLOCKED) {
 				verbose(VERB_ALGO, "doq: ngtcp2_conn_writev_stream returned NGTCP2_ERR_STREAM_DATA_BLOCKED");
+#ifdef HAVE_NGTCP2_CCERR_DEFAULT
+				ngtcp2_ccerr_set_application_error(
+					&conn->ccerr, -1, NULL, 0);
+#else
 				ngtcp2_connection_close_error_set_application_error(&conn->last_error, -1, NULL, 0);
+#endif
 				if(err_drop)
 					*err_drop = 0;
 				if(!doq_conn_close_error(c, conn)) {
@@ -5173,7 +5223,12 @@ doq_conn_write_streams(struct comm_point* c, struct doq_conn* conn,
 				return 0;
 			} else if(ret == NGTCP2_ERR_STREAM_SHUT_WR) {
 				verbose(VERB_ALGO, "doq: ngtcp2_conn_writev_stream returned NGTCP2_ERR_STREAM_SHUT_WR");
+#ifdef HAVE_NGTCP2_CCERR_DEFAULT
+				ngtcp2_ccerr_set_application_error(
+					&conn->ccerr, -1, NULL, 0);
+#else
 				ngtcp2_connection_close_error_set_application_error(&conn->last_error, -1, NULL, 0);
+#endif
 				if(err_drop)
 					*err_drop = 0;
 				if(!doq_conn_close_error(c, conn)) {
@@ -5185,8 +5240,12 @@ doq_conn_write_streams(struct comm_point* c, struct doq_conn* conn,
 
 			log_err("doq: ngtcp2_conn_writev_stream failed: %s",
 				ngtcp2_strerror(ret));
+#ifdef HAVE_NGTCP2_CCERR_DEFAULT
+			ngtcp2_ccerr_set_liberr(&conn->ccerr, ret, NULL, 0);
+#else
 			ngtcp2_connection_close_error_set_transport_error_liberr(
 				&conn->last_error, ret, NULL, 0);
+#endif
 			if(err_drop)
 				*err_drop = 0;
 			if(!doq_conn_close_error(c, conn)) {
@@ -5353,8 +5412,12 @@ doq_conn_handle_timeout(struct doq_conn* conn)
 	if(rv != 0) {
 		verbose(VERB_ALGO, "ngtcp2_conn_handle_expiry failed: %s",
 			ngtcp2_strerror(rv));
+#ifdef HAVE_NGTCP2_CCERR_DEFAULT
+		ngtcp2_ccerr_set_liberr(&conn->ccerr, rv, NULL, 0);
+#else
 		ngtcp2_connection_close_error_set_transport_error_liberr(
 			&conn->last_error, rv, NULL, 0);
+#endif
 		if(!doq_conn_close_error(conn->doq_socket->cp, conn)) {
 			/* failed, return for deletion */
 			return 0;

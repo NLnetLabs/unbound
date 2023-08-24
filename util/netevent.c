@@ -1549,19 +1549,35 @@ static int
 doq_decode_pkt_header_negotiate(struct comm_point* c,
 	struct doq_pkt_addr* paddr, struct doq_conn** conn)
 {
+#ifdef HAVE_STRUCT_NGTCP2_VERSION_CID
+	struct ngtcp2_version_cid vc;
+#else
 	uint32_t version;
 	const uint8_t *dcid, *scid;
 	size_t dcidlen, scidlen;
+#endif
 	int rv;
 
+#ifdef HAVE_STRUCT_NGTCP2_VERSION_CID
+	rv = ngtcp2_pkt_decode_version_cid(&vc,
+		sldns_buffer_begin(c->doq_socket->pkt_buf),
+		sldns_buffer_limit(c->doq_socket->pkt_buf),
+		c->doq_socket->sv_scidlen);
+#else
 	rv = ngtcp2_pkt_decode_version_cid(&version, &dcid, &dcidlen,
 		&scid, &scidlen, sldns_buffer_begin(c->doq_socket->pkt_buf),
 		sldns_buffer_limit(c->doq_socket->pkt_buf), c->doq_socket->sv_scidlen);
+#endif
 	if(rv != 0) {
 		if(rv == NGTCP2_ERR_VERSION_NEGOTIATION) {
 			/* send the version negotiation */
-			doq_send_version_negotiation(c, paddr, scid, scidlen,
-				dcid, dcidlen);
+			doq_send_version_negotiation(c, paddr,
+#ifdef HAVE_STRUCT_NGTCP2_VERSION_CID
+			vc.scid, vc.scidlen, vc.dcid, vc.dcidlen
+#else
+			scid, scidlen, dcid, dcidlen
+#endif
+			);
 			return 0;
 		}
 		verbose(VERB_ALGO, "doq: could not decode version "
@@ -1572,12 +1588,34 @@ doq_decode_pkt_header_negotiate(struct comm_point* c,
 
 	if(verbosity >= VERB_ALGO) {
 		verbose(VERB_ALGO, "ngtcp2_pkt_decode_version_cid packet has "
-			"QUIC protocol version %u", (unsigned)version);
-		log_hex("dcid", (void*)dcid, dcidlen);
-		log_hex("scid", (void*)scid, scidlen);
+			"QUIC protocol version %u", (unsigned)
+#ifdef HAVE_STRUCT_NGTCP2_VERSION_CID
+			vc.
+#endif
+			version
+			);
+		log_hex("dcid",
+#ifdef HAVE_STRUCT_NGTCP2_VERSION_CID
+			(void*)vc.dcid, vc.dcidlen
+#else
+			(void*)dcid, dcidlen
+#endif
+			);
+		log_hex("scid",
+#ifdef HAVE_STRUCT_NGTCP2_VERSION_CID
+			(void*)vc.scid, vc.scidlen
+#else
+			(void*)scid, scidlen
+#endif
+			);
 	}
 	*conn = doq_conn_find_by_addr_or_cid(c->doq_socket->table, paddr,
-		dcid, dcidlen);
+#ifdef HAVE_STRUCT_NGTCP2_VERSION_CID
+		vc.dcid, vc.dcidlen
+#else
+		dcid, dcidlen
+#endif
+		);
 	if(*conn)
 		(*conn)->doq_socket = c->doq_socket;
 	return 1;
@@ -1676,8 +1714,13 @@ doq_verify_retry_token(struct comm_point* c, struct doq_pkt_addr* paddr,
 	ts = doq_get_timestamp_nanosec();
 	verbose(VERB_ALGO, "doq: verifying retry token from %s %s", host,
 		port);
-	if(ngtcp2_crypto_verify_retry_token(ocid, hd->token.base,
-		hd->token.len, c->doq_socket->static_secret,
+	if(ngtcp2_crypto_verify_retry_token(ocid,
+#ifdef HAVE_STRUCT_NGTCP2_PKT_HD_TOKENLEN
+		hd->token, hd->tokenlen,
+#else
+		hd->token.base, hd->token.len,
+#endif
+		c->doq_socket->static_secret,
 		c->doq_socket->static_secret_len, hd->version,
 		(void*)&paddr->addr, paddr->addrlen, &hd->dcid,
 		10*NGTCP2_SECONDS, ts) != 0) {
@@ -1701,7 +1744,12 @@ doq_verify_token(struct comm_point* c, struct doq_pkt_addr* paddr,
 		return 0;
 	ts = doq_get_timestamp_nanosec();
 	verbose(VERB_ALGO, "doq: verifying token from %s %s", host, port);
-	if(ngtcp2_crypto_verify_regular_token(hd->token.base, hd->token.len,
+	if(ngtcp2_crypto_verify_regular_token(
+#ifdef HAVE_STRUCT_NGTCP2_PKT_HD_TOKENLEN
+		hd->token, hd->tokenlen,
+#else
+		hd->token.base, hd->token.len,
+#endif
 		c->doq_socket->static_secret, c->doq_socket->static_secret_len,
 		(void*)&paddr->addr, paddr->addrlen, 3600*NGTCP2_SECONDS,
 		ts) != 0) {
@@ -1804,7 +1852,12 @@ doq_setup_new_conn(struct comm_point* c, struct doq_pkt_addr* paddr,
 	 * meaning is reversed. */
 	if(!doq_conn_setup(conn, hd->scid.data, hd->scid.datalen,
 		(ocid?ocid->data:NULL), (ocid?ocid->datalen:0),
-		hd->token.base, hd->token.len)) {
+#ifdef HAVE_STRUCT_NGTCP2_PKT_HD_TOKENLEN
+		hd->token, hd->tokenlen
+#else
+		hd->token.base, hd->token.len
+#endif
+		)) {
 		log_err("doq: could not set up connection");
 		doq_delete_connection(c, conn);
 		return NULL;
@@ -1818,41 +1871,59 @@ doq_address_validation(struct comm_point* c, struct doq_pkt_addr* paddr,
 	struct ngtcp2_pkt_hd* hd, struct ngtcp2_cid* ocid,
 	struct ngtcp2_cid** pocid)
 {
+#ifdef HAVE_STRUCT_NGTCP2_PKT_HD_TOKENLEN
+	const uint8_t* token = hd->token;
+	size_t tokenlen = hd->tokenlen;
+#else
+	const uint8_t* token = hd->token.base;
+	size_t tokenlen = hd->token.len;
+#endif
 	verbose(VERB_ALGO, "doq stateless address validation");
-	if(hd->token.len == 0) {
+
+	if(tokenlen == 0 || token == NULL) {
 		doq_send_retry(c, paddr, hd);
 		return 0;
 	}
-	if(hd->token.base[0] != NGTCP2_CRYPTO_TOKEN_MAGIC_RETRY &&
+	if(token[0] != NGTCP2_CRYPTO_TOKEN_MAGIC_RETRY &&
 		hd->dcid.datalen < NGTCP2_MIN_INITIAL_DCIDLEN) {
 		doq_send_stateless_connection_close(c, paddr, hd,
 			NGTCP2_INVALID_TOKEN);
 		return 0;
 	}
-	if(hd->token.base[0] == NGTCP2_CRYPTO_TOKEN_MAGIC_RETRY) {
+	if(token[0] == NGTCP2_CRYPTO_TOKEN_MAGIC_RETRY) {
 		if(!doq_verify_retry_token(c, paddr, ocid, hd)) {
 			doq_send_stateless_connection_close(c, paddr, hd,
 				NGTCP2_INVALID_TOKEN);
 			return 0;
 		}
 		*pocid = ocid;
-	} else if(hd->token.base[0] == NGTCP2_CRYPTO_TOKEN_MAGIC_REGULAR) {
+	} else if(token[0] == NGTCP2_CRYPTO_TOKEN_MAGIC_REGULAR) {
 		if(!doq_verify_token(c, paddr, hd)) {
 			doq_send_retry(c, paddr, hd);
 			return 0;
 		}
+#ifdef HAVE_STRUCT_NGTCP2_PKT_HD_TOKENLEN
+		hd->token = NULL;
+		hd->tokenlen = 0;
+#else
 		hd->token.base = NULL;
 		hd->token.len = 0;
+#endif
 	} else {
 		verbose(VERB_ALGO, "doq address validation: unrecognised "
 			"token in hd.token.base with magic byte 0x%2.2x",
-			(int)hd->token.base[0]);
+			(int)token[0]);
 		if(c->doq_socket->validate_addr) {
 			doq_send_retry(c, paddr, hd);
 			return 0;
 		}
+#ifdef HAVE_STRUCT_NGTCP2_PKT_HD_TOKENLEN
+		hd->token = NULL;
+		hd->tokenlen = 0;
+#else
 		hd->token.base = NULL;
 		hd->token.len = 0;
+#endif
 	}
 	return 1;
 }
@@ -1878,7 +1949,13 @@ doq_accept(struct comm_point* c, struct doq_pkt_addr* paddr,
 			ngtcp2_strerror(rv));
 		return 0;
 	}
-	if(c->doq_socket->validate_addr || hd.token.len) {
+	if(c->doq_socket->validate_addr || 
+#ifdef HAVE_STRUCT_NGTCP2_PKT_HD_TOKENLEN
+		hd.tokenlen
+#else
+		hd.token.len
+#endif
+		) {
 		if(!doq_address_validation(c, paddr, &hd, &ocid, &pocid))
 			return 0;
 	}

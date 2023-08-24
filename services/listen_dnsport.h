@@ -584,7 +584,11 @@ struct doq_conn {
 	 * elements can be removed as well. */
 	struct doq_conid* conid_list;
 	/** the ngtcp2 last error for the connection */
+#ifdef HAVE_NGTCP2_CCERR_DEFAULT
+	struct ngtcp2_ccerr ccerr;
+#else
 	struct ngtcp2_connection_close_error last_error;
+#endif
 	/** the recent tls alert error code */
 	uint8_t tls_alert;
 	/** the ssl context, SSL* */

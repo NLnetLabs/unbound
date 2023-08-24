@@ -20097,13 +20097,14 @@ $as_echo "#define HAVE_NGTCP2 1" >>confdefs.h
     if test x_$found_libngtcp2 != x_yes; then
 	as_fn_error $? "Could not find libngtcp2, ngtcp2.h" "$LINENO" 5
     fi
-    for ac_header in ngtcp2/ngtcp2.h
+    for ac_header in ngtcp2/ngtcp2.h ngtcp2/ngtcp2_crypto_openssl.h ngtcp2/ngtcp2_crypto_quictls.h
 do :
-  ac_fn_c_check_header_compile "$LINENO" "ngtcp2/ngtcp2.h" "ac_cv_header_ngtcp2_ngtcp2_h" "$ac_includes_default
+  as_ac_Header=`$as_echo "ac_cv_header_$ac_header" | $as_tr_sh`
+ac_fn_c_check_header_compile "$LINENO" "$ac_header" "$as_ac_Header" "$ac_includes_default
 "
-if test "x$ac_cv_header_ngtcp2_ngtcp2_h" = xyes; then :
+if eval test \"x\$"$as_ac_Header"\" = x"yes"; then :
   cat >>confdefs.h <<_ACEOF
-#define HAVE_NGTCP2_NGTCP2_H 1
+#define `$as_echo "HAVE_$ac_header" | $as_tr_cpp` 1
 _ACEOF
 
 fi
@@ -20218,12 +20219,13 @@ if test "x$ac_cv_lib_ngtcp2_crypto_quictls_ngtcp2_crypto_encrypt_cb" = xyes; the
    LIBS="$LIBS -lngtcp2_crypto_quictls"
 fi
 
-    for ac_func in ngtcp2_crypto_encrypt_cb
+    for ac_func in ngtcp2_crypto_encrypt_cb ngtcp2_ccerr_default
 do :
-  ac_fn_c_check_func "$LINENO" "ngtcp2_crypto_encrypt_cb" "ac_cv_func_ngtcp2_crypto_encrypt_cb"
-if test "x$ac_cv_func_ngtcp2_crypto_encrypt_cb" = xyes; then :
+  as_ac_var=`$as_echo "ac_cv_func_$ac_func" | $as_tr_sh`
+ac_fn_c_check_func "$LINENO" "$ac_func" "$as_ac_var"
+if eval test \"x\$"$as_ac_var"\" = x"yes"; then :
   cat >>confdefs.h <<_ACEOF
-#define HAVE_NGTCP2_CRYPTO_ENCRYPT_CB 1
+#define `$as_echo "HAVE_$ac_func" | $as_tr_cpp` 1
 _ACEOF
 
 fi
@@ -20241,6 +20243,44 @@ else
   as_fn_error $? "No QUIC support detected in OpenSSL. Need OpenSSL version with QUIC support to enable DNS over QUIC with libngtcp2." "$LINENO" 5
 fi
 done
+
+    ac_fn_c_check_type "$LINENO" "struct ngtcp2_version_cid" "ac_cv_type_struct_ngtcp2_version_cid" "$ac_includes_default
+    #include <ngtcp2/ngtcp2.h>
+
+"
+if test "x$ac_cv_type_struct_ngtcp2_version_cid" = xyes; then :
+
+cat >>confdefs.h <<_ACEOF
+#define HAVE_STRUCT_NGTCP2_VERSION_CID 1
+_ACEOF
+
+
+fi
+
+    ac_fn_c_check_member "$LINENO" "struct ngtcp2_pkt_hd" "tokenlen" "ac_cv_member_struct_ngtcp2_pkt_hd_tokenlen" "$ac_includes_default
+    #include <ngtcp2/ngtcp2.h>
+
+"
+if test "x$ac_cv_member_struct_ngtcp2_pkt_hd_tokenlen" = xyes; then :
+
+cat >>confdefs.h <<_ACEOF
+#define HAVE_STRUCT_NGTCP2_PKT_HD_TOKENLEN 1
+_ACEOF
+
+
+fi
+ac_fn_c_check_member "$LINENO" "struct ngtcp2_settings" "tokenlen" "ac_cv_member_struct_ngtcp2_settings_tokenlen" "$ac_includes_default
+    #include <ngtcp2/ngtcp2.h>
+
+"
+if test "x$ac_cv_member_struct_ngtcp2_settings_tokenlen" = xyes; then :
+
+cat >>confdefs.h <<_ACEOF
+#define HAVE_STRUCT_NGTCP2_SETTINGS_TOKENLEN 1
+_ACEOF
+
+
+fi
 
 fi
 

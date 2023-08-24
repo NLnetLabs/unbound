@@ -48,7 +48,11 @@
 #ifdef HAVE_NGTCP2
 #include <ngtcp2/ngtcp2.h>
 #include <ngtcp2/ngtcp2_crypto.h>
+#ifdef HAVE_NGTCP2_NGTCP2_CRYPTO_QUICTLS_H
+#include <ngtcp2/ngtcp2_crypto_quictls.h>
+#else
 #include <ngtcp2/ngtcp2_crypto_openssl.h>
+#endif
 #include <openssl/ssl.h>
 #include <openssl/rand.h>
 #ifdef HAVE_TIME_H
@@ -106,7 +110,11 @@ struct doq_client_data {
 	/** the quic version to use */
 	uint32_t quic_version;
 	/** the last error */
+#ifdef HAVE_NGTCP2_CCERR_DEFAULT
+	struct ngtcp2_ccerr ccerr;
+#else
 	struct ngtcp2_connection_close_error last_error;
+#endif
 	/** the recent tls alert error code */
 	uint8_t tls_alert;
 	/** the buffer for packet operations */
@@ -1362,8 +1370,11 @@ doq_client_send_pkt(struct doq_client_data* data, uint32_t ecn, uint8_t* buf,
 			return 0;
 		}
 		log_err("doq sendmsg: %s", strerror(errno));
-		ngtcp2_connection_close_error_set_transport_error_liberr(
-			&data->last_error, NGTCP2_ERR_INTERNAL, NULL, 0);
+#ifdef HAVE_NGTCP2_CCERR_DEFAULT
+		ngtcp2_ccerr_set_application_error(&data->ccerr, -1, NULL, 0);
+#else
+		ngtcp2_connection_close_error_set_application_error(&data->last_error, -1, NULL, 0);
+#endif
 		return 0;
 	}
 	return 1;
@@ -1397,8 +1408,14 @@ write_conn_close(struct doq_client_data* data)
 	/* Drop blocked packet if there is one, the connection is being
 	 * closed. And thus no further data traffic. */
 	data->have_blocked_pkt = 0;
-	if(data->last_error.type ==
-		NGTCP2_CONNECTION_CLOSE_ERROR_CODE_TYPE_TRANSPORT_IDLE_CLOSE) {
+	if(
+#ifdef HAVE_NGTCP2_CCERR_DEFAULT
+		data->ccerr.type == NGTCP2_CCERR_TYPE_IDLE_CLOSE
+#else
+		data->last_error.type ==
+		NGTCP2_CONNECTION_CLOSE_ERROR_CODE_TYPE_TRANSPORT_IDLE_CLOSE
+#endif
+		) {
 		/* do not call ngtcp2_conn_write_connection_close on the
 		 * connection because the ngtcp2_conn_handle_expiry call
 		 * has returned NGTCP2_ERR_IDLE_CLOSE. But continue to close
@@ -1410,8 +1427,13 @@ write_conn_close(struct doq_client_data* data)
 	sldns_buffer_clear(data->pkt_buf);
 	ret = ngtcp2_conn_write_connection_close(
 		data->conn, &ps.path, &pi, sldns_buffer_begin(data->pkt_buf),
-		sldns_buffer_remaining(data->pkt_buf), &data->last_error,
-		get_timestamp_nanosec());
+		sldns_buffer_remaining(data->pkt_buf),
+#ifdef HAVE_NGTCP2_CCERR_DEFAULT
+		&data->ccerr
+#else
+		&data->last_error
+#endif
+		, get_timestamp_nanosec());
 	if(ret < 0) {
 		log_err("ngtcp2_conn_write_connection_close failed: %s",
 			ngtcp2_strerror(ret));
@@ -1447,8 +1469,12 @@ void doq_client_timer_cb(int ATTR_UNUSED(fd),
 	if(rv != 0) {
 		log_err("ngtcp2_conn_handle_expiry failed: %s",
 			ngtcp2_strerror(rv));
+#ifdef HAVE_NGTCP2_CCERR_DEFAULT
+		ngtcp2_ccerr_set_liberr(&data->ccerr, rv, NULL, 0);
+#else
 		ngtcp2_connection_close_error_set_transport_error_liberr(
 			&data->last_error, rv, NULL, 0);
+#endif
 		disconnect(data);
 		return;
 	}
@@ -1542,19 +1568,36 @@ on_read(struct doq_client_data* data)
 		if(rv != 0) {
 			log_err("ngtcp2_conn_read_pkt failed: %s",
 				ngtcp2_strerror(rv));
-			if(data->last_error.error_code == 0) {
+			if(
+#ifdef HAVE_NGTCP2_CCERR_DEFAULT
+				data->ccerr.error_code == 0
+#else
+				data->last_error.error_code == 0
+#endif
+				) {
 				if(rv == NGTCP2_ERR_CRYPTO) {
 					/* in picotls the tls alert may need
 					 * to be copied, but this is with
 					 * openssl. And we have the value
 					 * data.tls_alert. */
+#ifdef HAVE_NGTCP2_CCERR_DEFAULT
+					ngtcp2_ccerr_set_tls_alert(
+						&data->ccerr, data->tls_alert,
+						NULL, 0);
+#else
 					ngtcp2_connection_close_error_set_transport_error_tls_alert(
 						&data->last_error,
 						data->tls_alert, NULL, 0);
+#endif
 				} else {
+#ifdef HAVE_NGTCP2_CCERR_DEFAULT
+					ngtcp2_ccerr_set_liberr(&data->ccerr,
+						rv, NULL, 0);
+#else
 					ngtcp2_connection_close_error_set_transport_error_liberr(
 						&data->last_error, rv, NULL,
 						0);
+#endif
 				}
 			}
 			disconnect(data);
@@ -1730,8 +1773,12 @@ write_streams(struct doq_client_data* data)
 			}
 			log_err("ngtcp2_conn_writev_stream failed: %s",
 				ngtcp2_strerror(ret));
+#ifdef HAVE_NGTCP2_CCERR_DEFAULT
+			ngtcp2_ccerr_set_liberr(&data->ccerr, ret, NULL, 0);
+#else
 			ngtcp2_connection_close_error_set_transport_error_liberr(
 				&data->last_error, ret, NULL, 0);
+#endif
 			disconnect(data);
 			return 0;
 		}
@@ -2010,7 +2057,11 @@ create_doq_client_data(const char* svr, int port, struct ub_event_base* base,
 	data->fd = open_svr_udp(data);
 	get_local_addr(data);
 	data->conn = conn_client_setup(data);
+#ifdef HAVE_NGTCP2_CCERR_DEFAULT
+	ngtcp2_ccerr_default(&data->ccerr);
+#else
 	ngtcp2_connection_close_error_default(&data->last_error);
+#endif
 	data->transport_file = transport_file;
 	data->session_file = session_file;
 	if(data->transport_file && data->session_file)

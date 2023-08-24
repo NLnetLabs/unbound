@@ -1525,7 +1525,7 @@ if test x_$withval = x_yes -o x_$withval != x_no; then
     if test x_$found_libngtcp2 != x_yes; then
 	AC_MSG_ERROR([Could not find libngtcp2, ngtcp2.h])
     fi
-    AC_CHECK_HEADERS([ngtcp2/ngtcp2.h],,, [AC_INCLUDES_DEFAULT])
+    AC_CHECK_HEADERS([ngtcp2/ngtcp2.h ngtcp2/ngtcp2_crypto_openssl.h ngtcp2/ngtcp2_crypto_quictls.h],,, [AC_INCLUDES_DEFAULT])
     AC_CHECK_DECLS([ngtcp2_conn_server_new], [], [], [AC_INCLUDES_DEFAULT
     #include <ngtcp2/ngtcp2.h>
     ])
@@ -1534,8 +1534,14 @@ if test x_$withval = x_yes -o x_$withval != x_no; then
     ])
     AC_CHECK_LIB([ngtcp2_crypto_openssl], [ngtcp2_crypto_encrypt_cb], [ LIBS="$LIBS -lngtcp2_crypto_openssl" ])
     AC_CHECK_LIB([ngtcp2_crypto_quictls], [ngtcp2_crypto_encrypt_cb], [ LIBS="$LIBS -lngtcp2_crypto_quictls" ])
-    AC_CHECK_FUNCS([ngtcp2_crypto_encrypt_cb])
+    AC_CHECK_FUNCS([ngtcp2_crypto_encrypt_cb ngtcp2_ccerr_default])
     AC_CHECK_FUNCS([SSL_is_quic], [], [AC_MSG_ERROR([No QUIC support detected in OpenSSL. Need OpenSSL version with QUIC support to enable DNS over QUIC with libngtcp2.])])
+    AC_CHECK_TYPES([struct ngtcp2_version_cid],,,[AC_INCLUDES_DEFAULT
+    #include <ngtcp2/ngtcp2.h>
+    ])
+    AC_CHECK_MEMBERS([struct ngtcp2_pkt_hd.tokenlen, struct ngtcp2_settings.tokenlen],,,[AC_INCLUDES_DEFAULT
+    #include <ngtcp2/ngtcp2.h>
+    ])
 fi
 
 # set static linking for uninstalled libraries if requested
