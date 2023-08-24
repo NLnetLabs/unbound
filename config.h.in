@@ -423,6 +423,9 @@
 /* Define to 1 if you have the `ngtcp2_ccerr_default' function. */
 #undef HAVE_NGTCP2_CCERR_DEFAULT
 
+/* Define if ngtcp2_conn_shutdown_stream has 4 arguments. */
+#undef HAVE_NGTCP2_CONN_SHUTDOWN_STREAM4
+
 /* Define to 1 if you have the `ngtcp2_crypto_encrypt_cb' function. */
 #undef HAVE_NGTCP2_CRYPTO_ENCRYPT_CB
 

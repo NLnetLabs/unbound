@@ -1542,6 +1542,19 @@ if test x_$withval = x_yes -o x_$withval != x_no; then
     AC_CHECK_MEMBERS([struct ngtcp2_pkt_hd.tokenlen, struct ngtcp2_settings.tokenlen],,,[AC_INCLUDES_DEFAULT
     #include <ngtcp2/ngtcp2.h>
     ])
+
+    AC_MSG_CHECKING([whether ngtcp2_conn_shutdown_stream has 4 arguments])
+    AC_COMPILE_IFELSE([AC_LANG_PROGRAM([AC_INCLUDES_DEFAULT
+#include <ngtcp2/ngtcp2.h>
+    ],[
+	(void)ngtcp2_conn_shutdown_stream(NULL, 0, 0, 0);
+    ])],[
+	AC_MSG_RESULT(yes)
+	AC_DEFINE(HAVE_NGTCP2_CONN_SHUTDOWN_STREAM4, 1, [Define if ngtcp2_conn_shutdown_stream has 4 arguments.])
+    ],[
+	AC_MSG_RESULT(no)
+    ])
+
 fi
 
 # set static linking for uninstalled libraries if requested

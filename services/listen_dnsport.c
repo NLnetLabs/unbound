@@ -3860,8 +3860,11 @@ doq_stream_close(struct doq_conn* conn, struct doq_stream* stream,
 	if(send_shutdown) {
 		verbose(VERB_ALGO, "doq: shutdown stream_id %d with app_error_code %d",
 			(int)stream->stream_id, (int)DOQ_APP_ERROR_CODE);
-		ret = ngtcp2_conn_shutdown_stream(conn->conn, stream->stream_id,
-			DOQ_APP_ERROR_CODE);
+		ret = ngtcp2_conn_shutdown_stream(conn->conn,
+#ifdef HAVE_NGTCP2_CONN_SHUTDOWN_STREAM4
+			0,
+#endif
+			stream->stream_id, DOQ_APP_ERROR_CODE);
 		if(ret != 0) {
 			log_err("doq ngtcp2_conn_shutdown_stream %d failed: %s",
 				(int)stream->stream_id, ngtcp2_strerror(ret));
@@ -4238,8 +4241,11 @@ doq_stream_open_cb(ngtcp2_conn* ATTR_UNUSED(conn), int64_t stream_id,
 		)) {
 		int rv;
 		verbose(VERB_ALGO, "doq: no mem for new stream");
-		rv = ngtcp2_conn_shutdown_stream(doq_conn->conn, stream_id,
-			NGTCP2_CONNECTION_REFUSED);
+		rv = ngtcp2_conn_shutdown_stream(doq_conn->conn,
+#ifdef HAVE_NGTCP2_CONN_SHUTDOWN_STREAM4
+			0,
+#endif
+			stream_id, NGTCP2_CONNECTION_REFUSED);
 		if(rv != 0) {
 			log_err("ngtcp2_conn_shutdown_stream failed: %s",
 				ngtcp2_strerror(rv));

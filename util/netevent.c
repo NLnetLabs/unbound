@@ -1949,7 +1949,7 @@ doq_accept(struct comm_point* c, struct doq_pkt_addr* paddr,
 			ngtcp2_strerror(rv));
 		return 0;
 	}
-	if(c->doq_socket->validate_addr || 
+	if(c->doq_socket->validate_addr ||
 #ifdef HAVE_STRUCT_NGTCP2_PKT_HD_TOKENLEN
 		hd.tokenlen
 #else

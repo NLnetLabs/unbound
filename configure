@@ -20282,6 +20282,40 @@ _ACEOF
 
 fi
 
+
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether ngtcp2_conn_shutdown_stream has 4 arguments" >&5
+$as_echo_n "checking whether ngtcp2_conn_shutdown_stream has 4 arguments... " >&6; }
+    cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+$ac_includes_default
+#include <ngtcp2/ngtcp2.h>
+
+int
+main ()
+{
+
+	(void)ngtcp2_conn_shutdown_stream(NULL, 0, 0, 0);
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+
+$as_echo "#define HAVE_NGTCP2_CONN_SHUTDOWN_STREAM4 1" >>confdefs.h
+
+
+else
+
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+
 fi
 
 # set static linking for uninstalled libraries if requested
