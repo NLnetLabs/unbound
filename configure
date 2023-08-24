@@ -20090,7 +20090,7 @@ $as_echo "found in $dir" >&6; }
 
 $as_echo "#define HAVE_NGTCP2 1" >>confdefs.h
 
-		LIBS="$LIBS -lngtcp2 -lngtcp2_crypto_openssl"
+		LIBS="$LIBS -lngtcp2"
                 break;
             fi
     done
@@ -20137,6 +20137,86 @@ fi
 cat >>confdefs.h <<_ACEOF
 #define HAVE_DECL_NGTCP2_CRYPTO_ENCRYPT_CB $ac_have_decl
 _ACEOF
+
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for ngtcp2_crypto_encrypt_cb in -lngtcp2_crypto_openssl" >&5
+$as_echo_n "checking for ngtcp2_crypto_encrypt_cb in -lngtcp2_crypto_openssl... " >&6; }
+if ${ac_cv_lib_ngtcp2_crypto_openssl_ngtcp2_crypto_encrypt_cb+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lngtcp2_crypto_openssl  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char ngtcp2_crypto_encrypt_cb ();
+int
+main ()
+{
+return ngtcp2_crypto_encrypt_cb ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_lib_ngtcp2_crypto_openssl_ngtcp2_crypto_encrypt_cb=yes
+else
+  ac_cv_lib_ngtcp2_crypto_openssl_ngtcp2_crypto_encrypt_cb=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_ngtcp2_crypto_openssl_ngtcp2_crypto_encrypt_cb" >&5
+$as_echo "$ac_cv_lib_ngtcp2_crypto_openssl_ngtcp2_crypto_encrypt_cb" >&6; }
+if test "x$ac_cv_lib_ngtcp2_crypto_openssl_ngtcp2_crypto_encrypt_cb" = xyes; then :
+   LIBS="$LIBS -lngtcp2_crypto_openssl"
+fi
+
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for ngtcp2_crypto_encrypt_cb in -lngtcp2_crypto_quictls" >&5
+$as_echo_n "checking for ngtcp2_crypto_encrypt_cb in -lngtcp2_crypto_quictls... " >&6; }
+if ${ac_cv_lib_ngtcp2_crypto_quictls_ngtcp2_crypto_encrypt_cb+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lngtcp2_crypto_quictls  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char ngtcp2_crypto_encrypt_cb ();
+int
+main ()
+{
+return ngtcp2_crypto_encrypt_cb ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_lib_ngtcp2_crypto_quictls_ngtcp2_crypto_encrypt_cb=yes
+else
+  ac_cv_lib_ngtcp2_crypto_quictls_ngtcp2_crypto_encrypt_cb=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_ngtcp2_crypto_quictls_ngtcp2_crypto_encrypt_cb" >&5
+$as_echo "$ac_cv_lib_ngtcp2_crypto_quictls_ngtcp2_crypto_encrypt_cb" >&6; }
+if test "x$ac_cv_lib_ngtcp2_crypto_quictls_ngtcp2_crypto_encrypt_cb" = xyes; then :
+   LIBS="$LIBS -lngtcp2_crypto_quictls"
+fi
 
     for ac_func in ngtcp2_crypto_encrypt_cb
 do :

@@ -1518,7 +1518,7 @@ if test x_$withval = x_yes -o x_$withval != x_no; then
 		fi
 		AC_MSG_RESULT(found in $dir)
 		AC_DEFINE([HAVE_NGTCP2], [1], [Define this to use ngtcp2.])
-		LIBS="$LIBS -lngtcp2 -lngtcp2_crypto_openssl"
+		LIBS="$LIBS -lngtcp2"
                 break;
             fi
     done
@@ -1532,6 +1532,8 @@ if test x_$withval = x_yes -o x_$withval != x_no; then
     AC_CHECK_DECLS([ngtcp2_crypto_encrypt_cb], [], [], [AC_INCLUDES_DEFAULT
     #include <ngtcp2/ngtcp2_crypto.h>
     ])
+    AC_CHECK_LIB([ngtcp2_crypto_openssl], [ngtcp2_crypto_encrypt_cb], [ LIBS="$LIBS -lngtcp2_crypto_openssl" ])
+    AC_CHECK_LIB([ngtcp2_crypto_quictls], [ngtcp2_crypto_encrypt_cb], [ LIBS="$LIBS -lngtcp2_crypto_quictls" ])
     AC_CHECK_FUNCS([ngtcp2_crypto_encrypt_cb])
     AC_CHECK_FUNCS([SSL_is_quic], [], [AC_MSG_ERROR([No QUIC support detected in OpenSSL. Need OpenSSL version with QUIC support to enable DNS over QUIC with libngtcp2.])])
 fi
