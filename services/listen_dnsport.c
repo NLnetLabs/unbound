@@ -4,22 +4,22 @@
  * Copyright (c) 2007, NLnet Labs. All rights reserved.
  *
  * This software is open source.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
- * 
+ *
  * Redistributions of source code must retain the above copyright notice,
  * this list of conditions and the following disclaimer.
- * 
+ *
  * Redistributions in binary form must reproduce the above copyright notice,
  * this list of conditions and the following disclaimer in the documentation
  * and/or other materials provided with the distribution.
- * 
+ *
  * Neither the name of the NLNET LABS nor the names of its contributors may
  * be used to endorse or promote products derived from this software without
  * specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
  * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -100,8 +100,12 @@
 #include <openssl/ssl.h>
 #endif
 
+#ifdef HAVE_LINUX_NET_TSTAMP_H
+#include <linux/net_tstamp.h>
+#endif
+
 /** number of queued TCP connections for listen() */
-#define TCP_BACKLOG 256 
+#define TCP_BACKLOG 256
 
 #ifndef THREADS_DISABLED
 /** lock on the counter of stream buffer memory */
@@ -210,7 +214,7 @@ systemd_get_activated(int family, int socktype, int listen,
 			log_err("systemd sd_listen_fds(): %s", strerror(-r));
 		return -1;
 	}
-	
+
 	for(i = 0; i < r; i++) {
 		if(sd_is_socket(SD_LISTEN_FDS_START + i, family, socktype, listen)) {
 			s = SD_LISTEN_FDS_START + i;
@@ -276,7 +280,7 @@ create_udp_sock(int family, int socktype, struct sockaddr* addr,
 			return -1;
 		}
 #else
-		if(WSAGetLastError() == WSAEAFNOSUPPORT || 
+		if(WSAGetLastError() == WSAEAFNOSUPPORT ||
 			WSAGetLastError() == WSAEPROTONOSUPPORT) {
 			*noproto = 1;
 			return -1;
@@ -293,7 +297,7 @@ create_udp_sock(int family, int socktype, struct sockaddr* addr,
 #endif
 	if(listen) {
 #ifdef SO_REUSEADDR
-		if(setsockopt(s, SOL_SOCKET, SO_REUSEADDR, (void*)&on, 
+		if(setsockopt(s, SOL_SOCKET, SO_REUSEADDR, (void*)&on,
 			(socklen_t)sizeof(on)) < 0) {
 			log_err("setsockopt(.. SO_REUSEADDR ..) failed: %s",
 				sock_strerror(errno));
@@ -391,9 +395,9 @@ create_udp_sock(int family, int socktype, struct sockaddr* addr,
 		socklen_t slen = (socklen_t)sizeof(got);
 #  ifdef SO_RCVBUFFORCE
 		/* Linux specific: try to use root permission to override
-		 * system limits on rcvbuf. The limit is stored in 
+		 * system limits on rcvbuf. The limit is stored in
 		 * /proc/sys/net/core/rmem_max or sysctl net.core.rmem_max */
-		if(setsockopt(s, SOL_SOCKET, SO_RCVBUFFORCE, (void*)&rcv, 
+		if(setsockopt(s, SOL_SOCKET, SO_RCVBUFFORCE, (void*)&rcv,
 			(socklen_t)sizeof(rcv)) < 0) {
 			if(errno != EPERM) {
 				log_err("setsockopt(..., SO_RCVBUFFORCE, "
@@ -404,7 +408,7 @@ create_udp_sock(int family, int socktype, struct sockaddr* addr,
 				return -1;
 			}
 #  endif /* SO_RCVBUFFORCE */
-			if(setsockopt(s, SOL_SOCKET, SO_RCVBUF, (void*)&rcv, 
+			if(setsockopt(s, SOL_SOCKET, SO_RCVBUF, (void*)&rcv,
 				(socklen_t)sizeof(rcv)) < 0) {
 				log_err("setsockopt(..., SO_RCVBUF, "
 					"...) failed: %s", sock_strerror(errno));
@@ -415,7 +419,7 @@ create_udp_sock(int family, int socktype, struct sockaddr* addr,
 			}
 			/* check if we got the right thing or if system
 			 * reduced to some system max.  Warn if so */
-			if(getsockopt(s, SOL_SOCKET, SO_RCVBUF, (void*)&got, 
+			if(getsockopt(s, SOL_SOCKET, SO_RCVBUF, (void*)&got,
 				&slen) >= 0 && got < rcv/2) {
 				log_warn("so-rcvbuf %u was not granted. "
 					"Got %u. To fix: start with "
@@ -436,9 +440,9 @@ create_udp_sock(int family, int socktype, struct sockaddr* addr,
 		socklen_t slen = (socklen_t)sizeof(got);
 #  ifdef SO_SNDBUFFORCE
 		/* Linux specific: try to use root permission to override
-		 * system limits on sndbuf. The limit is stored in 
+		 * system limits on sndbuf. The limit is stored in
 		 * /proc/sys/net/core/wmem_max or sysctl net.core.wmem_max */
-		if(setsockopt(s, SOL_SOCKET, SO_SNDBUFFORCE, (void*)&snd, 
+		if(setsockopt(s, SOL_SOCKET, SO_SNDBUFFORCE, (void*)&snd,
 			(socklen_t)sizeof(snd)) < 0) {
 			if(errno != EPERM) {
 				log_err("setsockopt(..., SO_SNDBUFFORCE, "
@@ -449,7 +453,7 @@ create_udp_sock(int family, int socktype, struct sockaddr* addr,
 				return -1;
 			}
 #  endif /* SO_SNDBUFFORCE */
-			if(setsockopt(s, SOL_SOCKET, SO_SNDBUF, (void*)&snd, 
+			if(setsockopt(s, SOL_SOCKET, SO_SNDBUF, (void*)&snd,
 				(socklen_t)sizeof(snd)) < 0) {
 				log_err("setsockopt(..., SO_SNDBUF, "
 					"...) failed: %s", sock_strerror(errno));
@@ -460,7 +464,7 @@ create_udp_sock(int family, int socktype, struct sockaddr* addr,
 			}
 			/* check if we got the right thing or if system
 			 * reduced to some system max.  Warn if so */
-			if(getsockopt(s, SOL_SOCKET, SO_SNDBUF, (void*)&got, 
+			if(getsockopt(s, SOL_SOCKET, SO_SNDBUF, (void*)&got,
 				&slen) >= 0 && got < snd/2) {
 				log_warn("so-sndbuf %u was not granted. "
 					"Got %u. To fix: start with "
@@ -492,7 +496,7 @@ create_udp_sock(int family, int socktype, struct sockaddr* addr,
 #   endif
 			) {
 			int val=(v6only==2)?0:1;
-			if (setsockopt(s, IPPROTO_IPV6, IPV6_V6ONLY, 
+			if (setsockopt(s, IPPROTO_IPV6, IPV6_V6ONLY,
 				(void*)&val, (socklen_t)sizeof(val)) < 0) {
 				log_err("setsockopt(..., IPV6_V6ONLY"
 					", ...) failed: %s", sock_strerror(errno));
@@ -599,7 +603,7 @@ create_udp_sock(int family, int socktype, struct sockaddr* addr,
 		int action;
 #   if defined(IP_PMTUDISC_OMIT)
 		action = IP_PMTUDISC_OMIT;
-		if (setsockopt(s, IPPROTO_IP, IP_MTU_DISCOVER, 
+		if (setsockopt(s, IPPROTO_IP, IP_MTU_DISCOVER,
 			&action, (socklen_t)sizeof(action)) < 0) {
 
 			if (errno != EINVAL) {
@@ -632,7 +636,7 @@ create_udp_sock(int family, int socktype, struct sockaddr* addr,
 		/* the IP_DONTFRAG option if defined in the 11.0 OSX headers,
 		 * but does not work on that version, so we exclude it */
 		int off = 0;
-		if (setsockopt(s, IPPROTO_IP, IP_DONTFRAG, 
+		if (setsockopt(s, IPPROTO_IP, IP_DONTFRAG,
 			&off, (socklen_t)sizeof(off)) < 0) {
 			log_err("setsockopt(..., IP_DONTFRAG, ...) failed: %s",
 				strerror(errno));
@@ -670,7 +674,7 @@ create_udp_sock(int family, int socktype, struct sockaddr* addr,
 		if(WSAGetLastError() != WSAEADDRINUSE &&
 			WSAGetLastError() != WSAEADDRNOTAVAIL &&
 			!(WSAGetLastError() == WSAEACCES && verbosity < 4 && !listen)) {
-			log_err_addr("can't bind socket", 
+			log_err_addr("can't bind socket",
 				wsa_strerror(WSAGetLastError()),
 				(struct sockaddr_storage*)addr, addrlen);
 		}
@@ -772,7 +776,7 @@ create_tcp_accept_sock(struct addrinfo *addr, int v6only, int* noproto,
     }
 #endif
 #ifdef SO_REUSEADDR
-	if(setsockopt(s, SOL_SOCKET, SO_REUSEADDR, (void*)&on, 
+	if(setsockopt(s, SOL_SOCKET, SO_REUSEADDR, (void*)&on,
 		(socklen_t)sizeof(on)) < 0) {
 		log_err("setsockopt(.. SO_REUSEADDR ..) failed: %s",
 			sock_strerror(errno));
@@ -816,7 +820,7 @@ create_tcp_accept_sock(struct addrinfo *addr, int v6only, int* noproto,
 		&& !got_fd_from_systemd
 #  endif
 		) {
-		if(setsockopt(s, IPPROTO_IPV6, IPV6_V6ONLY, 
+		if(setsockopt(s, IPPROTO_IPV6, IPV6_V6ONLY,
 			(void*)&on, (socklen_t)sizeof(on)) < 0) {
 			log_err("setsockopt(..., IPV6_V6ONLY, ...) failed: %s",
 				sock_strerror(errno));
@@ -868,7 +872,7 @@ create_tcp_accept_sock(struct addrinfo *addr, int v6only, int* noproto,
 				addr->ai_addrlen);
 		}
 #else
-		log_err_addr("can't bind socket", 
+		log_err_addr("can't bind socket",
 			wsa_strerror(WSAGetLastError()),
 			(struct sockaddr_storage*)addr->ai_addr,
 			addr->ai_addrlen);
@@ -896,7 +900,7 @@ create_tcp_accept_sock(struct addrinfo *addr, int v6only, int* noproto,
 	/* 5 is recommended on linux */
 	qlen = 5;
 #endif
-	if ((setsockopt(s, IPPROTO_TCP, TCP_FASTOPEN, &qlen, 
+	if ((setsockopt(s, IPPROTO_TCP, TCP_FASTOPEN, &qlen,
 		  sizeof(qlen))) == -1 ) {
 #ifdef ENOPROTOOPT
 		/* squelch ENOPROTOOPT: freebsd server mode with kernel support
@@ -1022,7 +1026,7 @@ err:
  * Create socket from getaddrinfo results
  */
 static int
-make_sock(int stype, const char* ifname, const char* port, 
+make_sock(int stype, const char* ifname, const char* port,
 	struct addrinfo *hints, int v6only, int* noip6, size_t rcv, size_t snd,
 	int* reuseport, int transparent, int tcp_mss, int nodelay, int freebind,
 	int use_systemd, int dscp, struct unbound_socket* ub_sock,
@@ -1039,10 +1043,10 @@ make_sock(int stype, const char* ifname, const char* port,
 			return -1;
 		}
 #endif
-		log_err("node %s:%s getaddrinfo: %s %s", 
+		log_err("node %s:%s getaddrinfo: %s %s",
 			ifname?ifname:"default", port, gai_strerror(r),
 #ifdef EAI_SYSTEM
-			r==EAI_SYSTEM?(char*)strerror(errno):""
+			(r==EAI_SYSTEM?(char*)strerror(errno):"")
 #else
 			""
 #endif
@@ -1079,7 +1083,7 @@ make_sock(int stype, const char* ifname, const char* port,
 
 /** make socket and first see if ifname contains port override info */
 static int
-make_sock_port(int stype, const char* ifname, const char* port, 
+make_sock_port(int stype, const char* ifname, const char* port,
 	struct addrinfo *hints, int v6only, int* noip6, size_t rcv, size_t snd,
 	int* reuseport, int transparent, int tcp_mss, int nodelay, int freebind,
 	int use_systemd, int dscp, struct unbound_socket* ub_sock,
@@ -1139,9 +1143,28 @@ port_insert(struct listen_port** list, int s, enum listen_type ftype,
 	return 1;
 }
 
+/** set fd to receive software timestamps */
+static int
+set_recvtimestamp(int s)
+{
+#ifdef HAVE_LINUX_NET_TSTAMP_H
+	int opt = SOF_TIMESTAMPING_RX_SOFTWARE | SOF_TIMESTAMPING_SOFTWARE;
+	if (setsockopt(s, SOL_SOCKET, SO_TIMESTAMPNS, (void*)&opt, (socklen_t)sizeof(opt)) < 0) {
+		log_err("setsockopt(..., SO_TIMESTAMPNS, ...) failed: %s",
+			strerror(errno));
+		return 0;
+	}
+	return 1;
+#else
+	log_err("packets timestamping is not supported on this platform");
+	(void)s;
+	return 0;
+#endif
+}
+
 /** set fd to receive source address packet info */
 static int
-set_recvpktinfo(int s, int family) 
+set_recvpktinfo(int s, int family)
 {
 #if defined(IPV6_RECVPKTINFO) || defined(IPV6_PKTINFO) || (defined(IP_RECVDSTADDR) && defined(IP_SENDSRCADDR)) || defined(IP_PKTINFO)
 	int on = 1;
@@ -1241,6 +1264,9 @@ if_is_ssl(const char* ifname, const char* port, int ssl_port,
  * @param dscp: DSCP to use.
  * @param quic_port: dns over quic port number.
  * @param http_notls_downstream: if no tls is used for https downstream.
+ * @param sock_queue_timeout: the sock_queue_timeout from config. Seconds to
+ * 	wait to discard if UDP packets have waited for long in the socket
+ * 	buffer.
  * @return: returns false on error.
  */
 static int
@@ -1251,7 +1277,7 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 	struct config_strlist* proxy_protocol_port,
 	int* reuseport, int transparent, int tcp_mss, int freebind,
 	int http2_nodelay, int use_systemd, int dnscrypt_port, int dscp,
-	int quic_port, int http_notls_downstream)
+	int quic_port, int http_notls_downstream, int sock_queue_timeout)
 {
 	int s, noip6=0;
 	int is_https = if_is_https(ifname, port, https_port);
@@ -1286,7 +1312,8 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 			&noip6, rcv, snd, reuseport, transparent,
 			tcp_mss, nodelay, freebind, use_systemd, dscp, ub_sock,
 			(is_dnscrypt?"udpancil_dnscrypt":"udpancil"))) == -1) {
-			freeaddrinfo(ub_sock->addr);
+			if(ub_sock->addr)
+				freeaddrinfo(ub_sock->addr);
 			free(ub_sock);
 			if(noip6) {
 				log_warn("IPv6 protocol not available");
@@ -1297,15 +1324,20 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 		/* getting source addr packet info is highly non-portable */
 		if(!set_recvpktinfo(s, hints->ai_family)) {
 			sock_close(s);
-			freeaddrinfo(ub_sock->addr);
+			if(ub_sock->addr)
+				freeaddrinfo(ub_sock->addr);
 			free(ub_sock);
 			return 0;
+		}
+		if (sock_queue_timeout && !set_recvtimestamp(s)) {
+			log_warn("socket timestamping is not available");
 		}
 		if(!port_insert(list, s, is_dnscrypt
 			?listen_type_udpancil_dnscrypt:listen_type_udpancil,
 			is_pp2, ub_sock)) {
 			sock_close(s);
-			freeaddrinfo(ub_sock->addr);
+			if(ub_sock->addr)
+				freeaddrinfo(ub_sock->addr);
 			free(ub_sock);
 			return 0;
 		}
@@ -1327,7 +1359,8 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 					"port 53. Port 53 is for DNS "
 					"datagrams. Error for "
 					"interface '%s'.", ifname);
-				freeaddrinfo(ub_sock->addr);
+				if(ub_sock->addr)
+					freeaddrinfo(ub_sock->addr);
 				free(ub_sock);
 				return 0;
 			}
@@ -1340,7 +1373,8 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 			&noip6, rcv, snd, reuseport, transparent,
 			tcp_mss, nodelay, freebind, use_systemd, dscp, ub_sock,
 			add)) == -1) {
-			freeaddrinfo(ub_sock->addr);
+			if(ub_sock->addr)
+				freeaddrinfo(ub_sock->addr);
 			free(ub_sock);
 			if(noip6) {
 				log_warn("IPv6 protocol not available");
@@ -1351,14 +1385,19 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 		if(udp_port_type == listen_type_doq) {
 			if(!set_recvpktinfo(s, hints->ai_family)) {
 				sock_close(s);
-				freeaddrinfo(ub_sock->addr);
+				if(ub_sock->addr)
+					freeaddrinfo(ub_sock->addr);
 				free(ub_sock);
 				return 0;
 			}
 		}
+		if (sock_queue_timeout && !set_recvtimestamp(s)) {
+			log_warn("socket timestamping is not available");
+		}
 		if(!port_insert(list, s, udp_port_type, is_pp2, ub_sock)) {
 			sock_close(s);
-			freeaddrinfo(ub_sock->addr);
+			if(ub_sock->addr)
+				freeaddrinfo(ub_sock->addr);
 			free(ub_sock);
 			return 0;
 		}
@@ -1388,7 +1427,8 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 		if((s = make_sock_port(SOCK_STREAM, ifname, port, hints, 1,
 			&noip6, 0, 0, reuseport, transparent, tcp_mss, nodelay,
 			freebind, use_systemd, dscp, ub_sock, add)) == -1) {
-			freeaddrinfo(ub_sock->addr);
+			if(ub_sock->addr)
+				freeaddrinfo(ub_sock->addr);
 			free(ub_sock);
 			if(noip6) {
 				/*log_warn("IPv6 protocol not available");*/
@@ -1400,7 +1440,8 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 			verbose(VERB_ALGO, "setup TCP for SSL service");
 		if(!port_insert(list, s, port_type, is_pp2, ub_sock)) {
 			sock_close(s);
-			freeaddrinfo(ub_sock->addr);
+			if(ub_sock->addr)
+				freeaddrinfo(ub_sock->addr);
 			free(ub_sock);
 			return 0;
 		}
@@ -1408,7 +1449,7 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 	return 1;
 }
 
-/** 
+/**
  * Add items to commpoint list in front.
  * @param c: commpoint to add.
  * @param front: listen struct.
@@ -1459,7 +1500,7 @@ void listen_desetup_locks(void)
 	}
 }
 
-struct listen_dnsport* 
+struct listen_dnsport*
 listen_create(struct comm_base* base, struct listen_port* ports,
 	size_t bufsize, int tcp_accept_count, int tcp_idle_timeout,
 	int harden_large_queries, uint32_t http_max_streams,
@@ -1607,10 +1648,10 @@ listen_list_delete(struct listen_list* list)
 	}
 }
 
-void 
+void
 listen_delete(struct listen_dnsport* front)
 {
-	if(!front) 
+	if(!front)
 		return;
 	listen_list_delete(front->cps);
 #ifdef USE_DNSCRYPT
@@ -1885,7 +1926,8 @@ listening_ports_open(struct config_file* cfg, char** ifs, int num_ifs,
 						cfg->tcp_mss, cfg->ip_freebind,
 						cfg->http_nodelay, cfg->use_systemd,
 						cfg->dnscrypt_port, cfg->ip_dscp,
-						cfg->quic_port, cfg->http_notls_downstream)) {
+						cfg->quic_port, cfg->http_notls_downstream,
+						cfg->sock_queue_timeout)) {
 						listening_ports_free(list);
 						return NULL;
 					}
@@ -1903,7 +1945,8 @@ listening_ports_open(struct config_file* cfg, char** ifs, int num_ifs,
 						cfg->tcp_mss, cfg->ip_freebind,
 						cfg->http_nodelay, cfg->use_systemd,
 						cfg->dnscrypt_port, cfg->ip_dscp,
-						cfg->quic_port, cfg->http_notls_downstream)) {
+						cfg->quic_port, cfg->http_notls_downstream,
+						cfg->sock_queue_timeout)) {
 						listening_ports_free(list);
 						return NULL;
 					}
@@ -1923,7 +1966,8 @@ listening_ports_open(struct config_file* cfg, char** ifs, int num_ifs,
 				cfg->tcp_mss, cfg->ip_freebind,
 				cfg->http_nodelay, cfg->use_systemd,
 				cfg->dnscrypt_port, cfg->ip_dscp,
-				cfg->quic_port, cfg->http_notls_downstream)) {
+				cfg->quic_port, cfg->http_notls_downstream,
+				cfg->sock_queue_timeout)) {
 				listening_ports_free(list);
 				return NULL;
 			}
@@ -1940,7 +1984,8 @@ listening_ports_open(struct config_file* cfg, char** ifs, int num_ifs,
 				cfg->tcp_mss, cfg->ip_freebind,
 				cfg->http_nodelay, cfg->use_systemd,
 				cfg->dnscrypt_port, cfg->ip_dscp,
-				cfg->quic_port, cfg->http_notls_downstream)) {
+				cfg->quic_port, cfg->http_notls_downstream,
+				cfg->sock_queue_timeout)) {
 				listening_ports_free(list);
 				return NULL;
 			}
@@ -1959,7 +2004,8 @@ listening_ports_open(struct config_file* cfg, char** ifs, int num_ifs,
 				cfg->tcp_mss, cfg->ip_freebind,
 				cfg->http_nodelay, cfg->use_systemd,
 				cfg->dnscrypt_port, cfg->ip_dscp,
-				cfg->quic_port, cfg->http_notls_downstream)) {
+				cfg->quic_port, cfg->http_notls_downstream,
+				cfg->sock_queue_timeout)) {
 				listening_ports_free(list);
 				return NULL;
 			}
@@ -1976,7 +2022,8 @@ listening_ports_open(struct config_file* cfg, char** ifs, int num_ifs,
 				cfg->tcp_mss, cfg->ip_freebind,
 				cfg->http_nodelay, cfg->use_systemd,
 				cfg->dnscrypt_port, cfg->ip_dscp,
-				cfg->quic_port, cfg->http_notls_downstream)) {
+				cfg->quic_port, cfg->http_notls_downstream,
+				cfg->sock_queue_timeout)) {
 				listening_ports_free(list);
 				return NULL;
 			}
@@ -1996,7 +2043,8 @@ void listening_ports_free(struct listen_port* list)
 		}
 		/* rc_ports don't have ub_socket */
 		if(list->socket) {
-			freeaddrinfo(list->socket->addr);
+			if(list->socket->addr)
+				freeaddrinfo(list->socket->addr);
 			free(list->socket);
 		}
 		free(list);
@@ -2007,8 +2055,8 @@ void listening_ports_free(struct listen_port* list)
 size_t listen_get_mem(struct listen_dnsport* listen)
 {
 	struct listen_list* p;
-	size_t s = sizeof(*listen) + sizeof(*listen->base) + 
-		sizeof(*listen->udp_buff) + 
+	size_t s = sizeof(*listen) + sizeof(*listen->base) +
+		sizeof(*listen->udp_buff) +
 		sldns_buffer_capacity(listen->udp_buff);
 #ifdef USE_DNSCRYPT
 	s += sizeof(*listen->dnscrypt_udp_buff);
@@ -2089,7 +2137,7 @@ void tcp_req_info_clear(struct tcp_req_info* req)
 	}
 	req->open_req_list = NULL;
 	req->num_open_req = 0;
-	
+
 	/* free pending writable result packets */
 	item = req->done_req_list;
 	while(item) {
@@ -2148,7 +2196,7 @@ tcp_req_info_setup_listen(struct tcp_req_info* req)
 		wr = 1;
 	if(!req->read_is_closed)
 		rd = 1;
-	
+
 	if(wr) {
 		req->cp->tcp_is_reading = 0;
 		comm_point_stop_listening(req->cp);
@@ -2284,7 +2332,7 @@ tcp_req_info_handle_readdone(struct tcp_req_info* req)
 	}
 	req->in_worker_handle = 0;
 	/* it should be waiting in the mesh for recursion.
-	 * If mesh failed to add a new entry and called commpoint_drop_reply. 
+	 * If mesh failed to add a new entry and called commpoint_drop_reply.
 	 * Then the mesh state has been cleared. */
 	if(req->is_drop) {
 		/* the reply has been dropped, stream has been closed. */
@@ -2344,7 +2392,7 @@ tcp_req_info_add_result(struct tcp_req_info* req, uint8_t* buf, size_t len)
 	last = req->done_req_list;
 	while(last && last->next)
 		last = last->next;
-	
+
 	/* create new element */
 	item = (struct tcp_req_done_item*)malloc(sizeof(*item));
 	if(!item) {
@@ -2703,7 +2751,7 @@ static int http2_query_read_done(struct http2_session* h2_session,
 			"buffer already assigned to stream");
 		return -1;
 	}
-    
+
     /* the c->buffer might be used by mesh_send_reply and no be cleard
 	 * need to be cleared before use */
 	sldns_buffer_clear(h2_session->c->buffer);

@@ -603,6 +603,8 @@ setup_qinfo_edns(struct libworker* w, struct ctx_query* q,
 	edns->opt_list_out = NULL;
 	edns->opt_list_inplace_cb_out = NULL;
 	edns->padding_block_size = 0;
+	edns->cookie_present = 0;
+	edns->cookie_valid = 0;
 	if(sldns_buffer_capacity(w->back->udp_buff) < 65535)
 		edns->udp_size = (uint16_t)sldns_buffer_capacity(
 			w->back->udp_buff);

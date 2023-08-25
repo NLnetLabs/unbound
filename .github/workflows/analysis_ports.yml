@@ -175,6 +175,12 @@ jobs:
           cd ..
           export prepath=`pwd`
           echo prepath=${prepath}
+          echo "choco install winflexbison3"
+          choco install winflexbison3
+          echo 'LEX="win_flex"'
+          export LEX="win_flex"
+          echo 'YACC="win_bison -y"'
+          export YACC="win_bison -y"
           #echo "curl cpanm"
           #curl -L -k -s -S -o cpanm https://cpanmin.us/
           #echo "perl cpanm Pod::Usage"

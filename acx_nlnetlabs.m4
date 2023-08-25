@@ -2,7 +2,8 @@
 # Copyright 2009, Wouter Wijngaards, NLnet Labs.   
 # BSD licensed.
 #
-# Version 45
+# Version 46
+# 2023-05-04 fix to remove unused whitespace.
 # 2023-01-26 fix -Wstrict-prototypes.
 # 2022-09-01 fix checking if nonblocking sockets work on OpenBSD.
 # 2021-08-17 fix sed script in ssldir split handling.
@@ -476,7 +477,7 @@ fi
 dnl Setup ATTR_FORMAT config.h parts.
 dnl make sure you call ACX_CHECK_FORMAT_ATTRIBUTE also.
 AC_DEFUN([AHX_CONFIG_FORMAT_ATTRIBUTE],
-[ 
+[
 #ifdef HAVE_ATTR_FORMAT
 #  define ATTR_FORMAT(archetype, string_index, first_to_check) \
     __attribute__ ((format (archetype, string_index, first_to_check)))
@@ -1318,7 +1319,7 @@ AC_DEFUN([AHX_CONFIG_W32_FD_SET_T],
 #ifdef HAVE_WINSOCK2_H
 #define FD_SET_T (u_int)
 #else
-#define FD_SET_T 
+#define FD_SET_T
 #endif
 ])
 
@@ -1356,7 +1357,7 @@ dnl $3: define value, 1
 AC_DEFUN([AHX_CONFIG_FLAG_OMITTED],
 [#if defined($1) && !defined($2)
 #define $2 $3
-[#]endif ])
+[#]endif])
 
 dnl Wrapper for AHX_CONFIG_FLAG_OMITTED for -D style flags
 dnl $1: the -DNAME or -DNAME=value string.

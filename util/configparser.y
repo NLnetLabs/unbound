@@ -47,6 +47,7 @@
 #include "util/configyyrename.h"
 #include "util/config_file.h"
 #include "util/net_help.h"
+#include "sldns/str2wire.h"
 
 int ub_c_lex(void);
 void ub_c_error(const char *message);
@@ -73,9 +74,10 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_FORCE_TOPLEVEL
 %token VAR_SERVER VAR_VERBOSITY VAR_NUM_THREADS VAR_PORT
 %token VAR_OUTGOING_RANGE VAR_INTERFACE VAR_PREFER_IP4
-%token VAR_DO_IP4 VAR_DO_IP6 VAR_PREFER_IP6 VAR_DO_UDP VAR_DO_TCP
+%token VAR_DO_IP4 VAR_DO_IP6 VAR_DO_NAT64 VAR_PREFER_IP6 VAR_DO_UDP VAR_DO_TCP
 %token VAR_TCP_MSS VAR_OUTGOING_TCP_MSS VAR_TCP_IDLE_TIMEOUT
 %token VAR_EDNS_TCP_KEEPALIVE VAR_EDNS_TCP_KEEPALIVE_TIMEOUT
+%token VAR_SOCK_QUEUE_TIMEOUT
 %token VAR_CHROOT VAR_USERNAME VAR_DIRECTORY VAR_LOGFILE VAR_PIDFILE
 %token VAR_MSG_CACHE_SIZE VAR_MSG_CACHE_SLABS VAR_NUM_QUERIES_PER_THREAD
 %token VAR_RRSET_CACHE_SIZE VAR_RRSET_CACHE_SLABS VAR_OUTGOING_NUM_TCP
@@ -123,6 +125,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_UNBLOCK_LAN_ZONES VAR_INSECURE_LAN_ZONES
 %token VAR_INFRA_CACHE_MIN_RTT VAR_INFRA_CACHE_MAX_RTT VAR_INFRA_KEEP_PROBING
 %token VAR_DNS64_PREFIX VAR_DNS64_SYNTHALL VAR_DNS64_IGNORE_AAAA
+%token VAR_NAT64_PREFIX
 %token VAR_DNSTAP VAR_DNSTAP_ENABLE VAR_DNSTAP_SOCKET_PATH VAR_DNSTAP_IP
 %token VAR_DNSTAP_TLS VAR_DNSTAP_TLS_SERVER_NAME VAR_DNSTAP_TLS_CERT_BUNDLE
 %token VAR_DNSTAP_TLS_CLIENT_KEY_FILE VAR_DNSTAP_TLS_CLIENT_CERT_FILE
@@ -181,6 +184,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_FALLBACK_ENABLED VAR_TLS_ADDITIONAL_PORT VAR_LOW_RTT VAR_LOW_RTT_PERMIL
 %token VAR_FAST_SERVER_PERMIL VAR_FAST_SERVER_NUM
 %token VAR_ALLOW_NOTIFY VAR_TLS_WIN_CERT VAR_TCP_CONNECTION_LIMIT
+%token VAR_ANSWER_COOKIE VAR_COOKIE_SECRET VAR_IP_RATELIMIT_COOKIE
 %token VAR_FORWARD_NO_CACHE VAR_STUB_NO_CACHE VAR_LOG_SERVFAIL VAR_DENY_ANY
 %token VAR_UNKNOWN_SERVER_TIME_LIMIT VAR_LOG_TAG_QUERYREPLY
 %token VAR_STREAM_WAIT_SIZE VAR_TLS_CIPHERS VAR_TLS_CIPHERSUITES VAR_TLS_USE_SNI
@@ -223,10 +227,11 @@ contents_server: contents_server content_server
 	| ;
 content_server: server_num_threads | server_verbosity | server_port |
 	server_outgoing_range | server_do_ip4 |
-	server_do_ip6 | server_prefer_ip4 | server_prefer_ip6 |
-	server_do_udp | server_do_tcp |
+	server_do_ip6 | server_do_nat64 | server_prefer_ip4 |
+	server_prefer_ip6 | server_do_udp | server_do_tcp |
 	server_tcp_mss | server_outgoing_tcp_mss | server_tcp_idle_timeout |
 	server_tcp_keepalive | server_tcp_keepalive_timeout |
+	server_sock_queue_timeout |
 	server_interface | server_chroot | server_username |
 	server_directory | server_logfile | server_pidfile |
 	server_msg_cache_size | server_msg_cache_slabs |
@@ -274,6 +279,7 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_so_reuseport | server_delay_close | server_udp_connect |
 	server_unblock_lan_zones | server_insecure_lan_zones |
 	server_dns64_prefix | server_dns64_synthall | server_dns64_ignore_aaaa |
+	server_nat64_prefix |
 	server_infra_cache_min_rtt | server_infra_cache_max_rtt | server_harden_algo_downgrade |
 	server_ip_transparent | server_ip_ratelimit | server_ratelimit |
 	server_ip_dscp | server_infra_keep_probing |
@@ -303,7 +309,7 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_serve_expired |
 	server_serve_expired_ttl | server_serve_expired_ttl_reset |
 	server_serve_expired_reply_ttl | server_serve_expired_client_timeout |
-	server_ede_serve_expired | server_serve_original_ttl | server_fake_dsa | 
+	server_ede_serve_expired | server_serve_original_ttl | server_fake_dsa |
 	server_log_identity | server_use_systemd |
 	server_response_ip_tag | server_response_ip | server_response_ip_data |
 	server_shm_enable | server_shm_key | server_fake_sha1 |
@@ -319,6 +325,7 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_unknown_server_time_limit | server_log_tag_queryreply |
 	server_stream_wait_size | server_tls_ciphers |
 	server_tls_ciphersuites | server_tls_session_ticket_keys |
+	server_answer_cookie | server_cookie_secret | server_ip_ratelimit_cookie |
 	server_tls_use_sni | server_edns_client_string |
 	server_edns_client_string_opcode | server_nsid |
 	server_zonemd_permissive_mode | server_max_reuse_tcp_queries |
@@ -488,7 +495,7 @@ rpz_signal_nxdomain_ra: VAR_RPZ_SIGNAL_NXDOMAIN_RA STRING_ARG
 rpzstart: VAR_RPZ
 	{
 		struct config_auth* s;
-		OUTYY(("\nP(rpz:)\n")); 
+		OUTYY(("\nP(rpz:)\n"));
 		cfg_parser->started_toplevel = 1;
 		s = (struct config_auth*)calloc(1, sizeof(struct config_auth));
 		if(s) {
@@ -504,7 +511,7 @@ rpzstart: VAR_RPZ
 		}
 	}
 	;
-contents_rpz: contents_rpz content_rpz 
+contents_rpz: contents_rpz content_rpz
 	| ;
 content_rpz: auth_name | auth_zonefile | rpz_tag | auth_master | auth_url |
 	   auth_allow_notify | rpz_action_override | rpz_cname_override |
@@ -852,6 +859,15 @@ server_do_ip6: VAR_DO_IP6 STRING_ARG
 		free($2);
 	}
 	;
+server_do_nat64: VAR_DO_NAT64 STRING_ARG
+	{
+		OUTYY(("P(server_do_nat64:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else cfg_parser->cfg->do_nat64 = (strcmp($2, "yes")==0);
+		free($2);
+	}
+	;
 server_do_udp: VAR_DO_UDP STRING_ARG
 	{
 		OUTYY(("P(server_do_udp:%s)\n", $2));
@@ -971,6 +987,19 @@ server_tcp_keepalive_timeout: VAR_EDNS_TCP_KEEPALIVE_TIMEOUT STRING_ARG
 		else if (atoi($2) < 1)
 			cfg_parser->cfg->tcp_keepalive_timeout = 0;
 		else cfg_parser->cfg->tcp_keepalive_timeout = atoi($2);
+		free($2);
+	}
+	;
+server_sock_queue_timeout: VAR_SOCK_QUEUE_TIMEOUT STRING_ARG
+	{
+		OUTYY(("P(server_sock_queue_timeout:%s)\n", $2));
+		if(atoi($2) == 0 && strcmp($2, "0") != 0)
+			yyerror("number expected");
+		else if (atoi($2) > 6553500)
+			cfg_parser->cfg->sock_queue_timeout = 6553500;
+		else if (atoi($2) < 1)
+			cfg_parser->cfg->sock_queue_timeout = 0;
+		else cfg_parser->cfg->sock_queue_timeout = atoi($2);
 		free($2);
 	}
 	;
@@ -1134,7 +1163,7 @@ server_http_nodelay: VAR_HTTP_NODELAY STRING_ARG
 			yyerror("expected yes or no.");
 		else cfg_parser->cfg->http_nodelay = (strcmp($2, "yes")==0);
 		free($2);
-	}
+	};
 server_http_notls_downstream: VAR_HTTP_NOTLS_DOWNSTREAM STRING_ARG
 	{
 		OUTYY(("P(server_http_notls_downstream:%s)\n", $2));
@@ -2196,6 +2225,7 @@ server_permit_small_holddown: VAR_PERMIT_SMALL_HOLDDOWN STRING_ARG
 			(strcmp($2, "yes")==0);
 		free($2);
 	}
+	;
 server_key_cache_size: VAR_KEY_CACHE_SIZE STRING_ARG
 	{
 		OUTYY(("P(server_key_cache_size:%s)\n", $2));
@@ -2359,6 +2389,13 @@ server_dns64_ignore_aaaa: VAR_DNS64_IGNORE_AAAA STRING_ARG
 		if(!cfg_strlist_insert(&cfg_parser->cfg->dns64_ignore_aaaa,
 			$2))
 			fatal_exit("out of memory adding dns64-ignore-aaaa");
+	}
+	;
+server_nat64_prefix: VAR_NAT64_PREFIX STRING_ARG
+	{
+		OUTYY(("P(nat64_prefix:%s)\n", $2));
+		free(cfg_parser->cfg->nat64_prefix);
+		cfg_parser->cfg->nat64_prefix = $2;
 	}
 	;
 server_define_tag: VAR_DEFINE_TAG STRING_ARG
@@ -2543,6 +2580,15 @@ server_ip_ratelimit: VAR_IP_RATELIMIT STRING_ARG
 		if(atoi($2) == 0 && strcmp($2, "0") != 0)
 			yyerror("number expected");
 		else cfg_parser->cfg->ip_ratelimit = atoi($2);
+		free($2);
+	}
+	;
+server_ip_ratelimit_cookie: VAR_IP_RATELIMIT_COOKIE STRING_ARG
+	{
+		OUTYY(("P(server_ip_ratelimit_cookie:%s)\n", $2));
+		if(atoi($2) == 0 && strcmp($2, "0") != 0)
+			yyerror("number expected");
+		else cfg_parser->cfg->ip_ratelimit_cookie = atoi($2);
 		free($2);
 	}
 	;
@@ -2741,7 +2787,7 @@ server_pad_responses: VAR_PAD_RESPONSES STRING_ARG
 		OUTYY(("P(server_pad_responses:%s)\n", $2));
 		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
 			yyerror("expected yes or no.");
-		else cfg_parser->cfg->pad_responses = 
+		else cfg_parser->cfg->pad_responses =
 			(strcmp($2, "yes")==0);
 		free($2);
 	}
@@ -2760,7 +2806,7 @@ server_pad_queries: VAR_PAD_QUERIES STRING_ARG
 		OUTYY(("P(server_pad_queries:%s)\n", $2));
 		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
 			yyerror("expected yes or no.");
-		else cfg_parser->cfg->pad_queries = 
+		else cfg_parser->cfg->pad_queries =
 			(strcmp($2, "yes")==0);
 		free($2);
 	}
@@ -3499,9 +3545,10 @@ py_script: VAR_PYTHON_SCRIPT STRING_ARG
 		if(!cfg_strlist_append_ex(&cfg_parser->cfg->python_script, $2))
 			yyerror("out of memory");
 	}
+	;
 dynlibstart: VAR_DYNLIB
-	{ 
-		OUTYY(("\nP(dynlib:)\n")); 
+	{
+		OUTYY(("\nP(dynlib:)\n"));
 		cfg_parser->started_toplevel = 1;
 	}
 	;
@@ -3515,6 +3562,7 @@ dl_file: VAR_DYNLIB_FILE STRING_ARG
 		if(!cfg_strlist_append_ex(&cfg_parser->cfg->dynlib_file, $2))
 			yyerror("out of memory");
 	}
+	;
 server_disable_dnssec_lame_check: VAR_DISABLE_DNSSEC_LAME_CHECK STRING_ARG
 	{
 		OUTYY(("P(disable_dnssec_lame_check:%s)\n", $2));
@@ -3575,7 +3623,6 @@ dnsc_dnscrypt_enable: VAR_DNSCRYPT_ENABLE STRING_ARG
 		free($2);
 	}
 	;
-
 dnsc_dnscrypt_port: VAR_DNSCRYPT_PORT STRING_ARG
 	{
 		OUTYY(("P(dnsc_dnscrypt_port:%s)\n", $2));
@@ -3783,6 +3830,31 @@ server_tcp_connection_limit: VAR_TCP_CONNECTION_LIMIT STRING_ARG STRING_ARG
 		}
 	}
 	;
+server_answer_cookie: VAR_ANSWER_COOKIE STRING_ARG
+	{
+		OUTYY(("P(server_answer_cookie:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else cfg_parser->cfg->do_answer_cookie = (strcmp($2, "yes")==0);
+		free($2);
+	}
+	;
+server_cookie_secret: VAR_COOKIE_SECRET STRING_ARG
+	{
+		uint8_t secret[32];
+		size_t secret_len = sizeof(secret);
+
+		OUTYY(("P(server_cookie_secret:%s)\n", $2));
+		if(sldns_str2wire_hex_buf($2, secret, &secret_len)
+		|| (secret_len != 16))
+			yyerror("expected 128 bit hex string");
+		else {
+			cfg_parser->cfg->cookie_secret_len = secret_len;
+			memcpy(cfg_parser->cfg->cookie_secret, secret, sizeof(secret));
+		}
+		free($2);
+	}
+	;
 	ipsetstart: VAR_IPSET
 		{
 			OUTYY(("\nP(ipset:)\n"));
@@ -3852,10 +3924,11 @@ validate_acl_action(const char* action)
 		strcmp(action, "refuse_non_local")!=0 &&
 		strcmp(action, "allow_setrd")!=0 &&
 		strcmp(action, "allow")!=0 &&
-		strcmp(action, "allow_snoop")!=0)
+		strcmp(action, "allow_snoop")!=0 &&
+		strcmp(action, "allow_cookie")!=0)
 	{
 		yyerror("expected deny, refuse, deny_non_local, "
-			"refuse_non_local, allow, allow_setrd or "
-			"allow_snoop as access control action");
+			"refuse_non_local, allow, allow_setrd, "
+			"allow_snoop or allow_cookie as access control action");
 	}
 }

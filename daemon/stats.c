@@ -4,22 +4,22 @@
  * Copyright (c) 2007, NLnet Labs. All rights reserved.
  *
  * This software is open source.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
- * 
+ *
  * Redistributions of source code must retain the above copyright notice,
  * this list of conditions and the following disclaimer.
- * 
+ *
  * Redistributions in binary form must reproduce the above copyright notice,
  * this list of conditions and the following disclaimer in the documentation
  * and/or other materials provided with the distribution.
- * 
+ *
  * Neither the name of the NLNET LABS nor the names of its contributors may
  * be used to endorse or promote products derived from this software without
  * specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
  * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -116,8 +116,8 @@ void server_stats_log(struct ub_server_stats* stats, struct worker* worker,
 	log_info("server stats for thread %d: %u queries, "
 		"%u answers from cache, %u recursions, %u prefetch, %u rejected by "
 		"ip ratelimiting",
-		threadnum, (unsigned)stats->num_queries, 
-		(unsigned)(stats->num_queries - 
+		threadnum, (unsigned)stats->num_queries,
+		(unsigned)(stats->num_queries -
 			stats->num_queries_missed_cache),
 		(unsigned)stats->num_queries_missed_cache,
 		(unsigned)stats->num_queries_prefetch,
@@ -279,7 +279,7 @@ server_stats_compile(struct worker* worker, struct ub_stats_info* s, int reset)
 		s->svr.ans_rcode[i] += (long long)worker->env.mesh->ans_rcode[i];
 	for(i=0; i<UB_STATS_RPZ_ACTION_NUM; i++)
 		s->svr.rpz_action[i] += (long long)worker->env.mesh->rpz_action[i];
-	timehist_export(worker->env.mesh->histogram, s->svr.hist, 
+	timehist_export(worker->env.mesh->histogram, s->svr.hist,
 		NUM_BUCKETS_HIST);
 	/* values from outside network */
 	s->svr.unwanted_replies = (long long)worker->back->unwanted_replies;
@@ -362,6 +362,11 @@ server_stats_compile(struct worker* worker, struct ub_stats_info* s, int reset)
 	s->svr.num_query_subnet = 0;
 	s->svr.num_query_subnet_cache = 0;
 #endif
+#ifdef USE_CACHEDB
+	s->svr.num_query_cachedb = (long long)worker->env.mesh->ans_cachedb;
+#else
+	s->svr.num_query_cachedb = 0;
+#endif
 
 	/* get tcp accept usage */
 	s->svr.tcp_accept_usage = 0;
@@ -427,7 +432,7 @@ void server_stats_reply(struct worker* worker, int reset)
 	struct ub_stats_info s;
 	server_stats_compile(worker, &s, reset);
 	verbose(VERB_ALGO, "write stats replymsg");
-	if(!tube_write_msg(worker->daemon->workers[0]->cmd, 
+	if(!tube_write_msg(worker->daemon->workers[0]->cmd,
 		(uint8_t*)&s, sizeof(s), 0))
 		fatal_exit("could not write stat values over cmd channel");
 }
@@ -436,8 +441,14 @@ void server_stats_add(struct ub_stats_info* total, struct ub_stats_info* a)
 {
 	total->svr.num_queries += a->svr.num_queries;
 	total->svr.num_queries_ip_ratelimited += a->svr.num_queries_ip_ratelimited;
+	total->svr.num_queries_cookie_valid += a->svr.num_queries_cookie_valid;
+	total->svr.num_queries_cookie_client += a->svr.num_queries_cookie_client;
+	total->svr.num_queries_cookie_invalid += a->svr.num_queries_cookie_invalid;
 	total->svr.num_queries_missed_cache += a->svr.num_queries_missed_cache;
 	total->svr.num_queries_prefetch += a->svr.num_queries_prefetch;
+	total->svr.num_queries_timed_out += a->svr.num_queries_timed_out;
+	if (total->svr.max_query_time_us < a->svr.max_query_time_us)
+		total->svr.max_query_time_us = a->svr.max_query_time_us;
 	total->svr.sum_query_list_size += a->svr.sum_query_list_size;
 	total->svr.ans_expired += a->svr.ans_expired;
 #ifdef USE_DNSCRYPT
@@ -480,6 +491,9 @@ void server_stats_add(struct ub_stats_info* total, struct ub_stats_info* a)
 		total->svr.unwanted_replies += a->svr.unwanted_replies;
 		total->svr.unwanted_queries += a->svr.unwanted_queries;
 		total->svr.tcp_accept_usage += a->svr.tcp_accept_usage;
+#ifdef USE_CACHEDB
+		total->svr.num_query_cachedb += a->svr.num_query_cachedb;
+#endif
 		for(i=0; i<UB_STATS_QTYPE_NUM; i++)
 			total->svr.qtype[i] += a->svr.qtype[i];
 		for(i=0; i<UB_STATS_QCLASS_NUM; i++)
@@ -524,7 +538,7 @@ void server_stats_insquery(struct ub_server_stats* stats, struct comm_point* c,
 		if(c->ssl != NULL) {
 			stats->qtls++;
 #ifdef HAVE_SSL
-			if(SSL_session_reused(c->ssl)) 
+			if(SSL_session_reused(c->ssl))
 				stats->qtls_resume++;
 #endif
 			if(c->type == comm_http)
@@ -567,5 +581,18 @@ void server_stats_insrcode(struct ub_server_stats* stats, sldns_buffer* buf)
 		stats->ans_rcode[r] ++;
 		if(r == 0 && LDNS_ANCOUNT( sldns_buffer_begin(buf) ) == 0)
 			stats->ans_rcode_nodata ++;
+	}
+}
+
+void server_stats_downstream_cookie(struct ub_server_stats* stats,
+	struct edns_data* edns)
+{
+	if(!(edns->edns_present && edns->cookie_present)) return;
+	if(edns->cookie_valid) {
+		stats->num_queries_cookie_valid++;
+	} else if(edns->cookie_client) {
+		stats->num_queries_cookie_client++;
+	} else {
+		stats->num_queries_cookie_invalid++;
 	}
 }
