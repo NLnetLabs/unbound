@@ -2026,38 +2026,6 @@ doq_accept(struct comm_point* c, struct doq_pkt_addr* paddr,
 	return 1;
 }
 
-/** subtract timers and the values do not overflow or become negative */
-static void
-timeval_subtract(struct timeval* d, const struct timeval* end, 
-	const struct timeval* start)
-{
-#ifndef S_SPLINT_S
-	time_t end_usec = end->tv_usec;
-	d->tv_sec = end->tv_sec - start->tv_sec;
-	if(end_usec < start->tv_usec) {
-		end_usec += 1000000;
-		d->tv_sec--;
-	}
-	d->tv_usec = end_usec - start->tv_usec;
-#endif
-}
-
-/** compare of time values */
-static int
-timeval_smaller(const struct timeval* x, const struct timeval* y)
-{
-#ifndef S_SPLINT_S
-	if(x->tv_sec < y->tv_sec)
-		return 1;
-	else if(x->tv_sec == y->tv_sec) {
-		if(x->tv_usec <= y->tv_usec)
-			return 1;
-		else	return 0;
-	}
-	else	return 0;
-#endif
-}
-
 /** doq pickup a timer to wait for for the worker. If any timer exists. */
 static void
 doq_pickup_timer(struct comm_point* c)
