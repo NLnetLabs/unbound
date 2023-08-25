@@ -857,9 +857,11 @@ handshake_completed(ngtcp2_conn* ATTR_UNUSED(conn), void* user_data)
 			verbose(1, "early data was accepted by the server");
 		}
 	}
+#ifdef HAVE_NGTCP2_CRYPTO_QUICTLS_CONFIGURE_CLIENT_CONTEXT
 	if(data->transport_file) {
 		early_data_write_transport(data);
 	}
+#endif
 	return 0;
 }
 
