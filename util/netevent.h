@@ -60,6 +60,7 @@
 #ifndef NET_EVENT_H
 #define NET_EVENT_H
 
+#include <sys/time.h>
 #include "dnscrypt/dnscrypt.h"
 #ifdef HAVE_NGHTTP2_NGHTTP2_H
 #include <nghttp2/nghttp2.h>
