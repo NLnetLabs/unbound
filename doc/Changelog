@@ -1,3 +1,6 @@
+28 August 2023: Wouter
+	- Fix for version generation race condition that ignored changes.
+
 25 August 2023: Wouter
 	- Fix compile error on NetBSD in util/netevent.h.
 
