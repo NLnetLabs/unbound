@@ -1,3 +1,8 @@
+30 August 2023: Wouter
+	- Fix for WKS call to getservbyname that creates allocation on exit
+	  in unit test by testing numbers first and testing from the services
+	  list later.
+
 28 August 2023: Wouter
 	- Fix for version generation race condition that ignored changes.
 
