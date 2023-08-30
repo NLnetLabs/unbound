@@ -5,7 +5,9 @@
 	- Fix compile error on NetBSD in util/netevent.h.
 
 23 August 2023: Wouter
-	- Tag for 1.18.0rc1 release.
+	- Tag for 1.18.0rc1 release. This became the 1.18.0 release on
+	  30 aug 2023, with the fix from 25 aug, fix compile on NetBSD
+	  included. The repository continues with version 1.18.1.
 
 22 August 2023: Wouter
 	- Set version number to 1.18.0.
