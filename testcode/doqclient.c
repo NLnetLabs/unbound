@@ -1758,8 +1758,14 @@ write_streams(struct doq_client_data* data)
 	ngtcp2_path_storage_zero(&ps);
 	str = data->query_list_send->first;
 
-	if(data->cc_algo != NGTCP2_CC_ALGO_BBR &&
-		data->cc_algo != NGTCP2_CC_ALGO_BBR2) {
+	if(data->cc_algo != NGTCP2_CC_ALGO_BBR
+#ifdef NGTCP2_CC_ALGO_BBR_V2
+		&& data->cc_algo != NGTCP2_CC_ALGO_BBR_V2
+#endif
+#ifdef NGTCP2_CC_ALGO_BBR2
+		&& data->cc_algo != NGTCP2_CC_ALGO_BBR2
+#endif
+		) {
 		/* If we do not have a packet pacing congestion control
 		 * algorithm, limit the number of packets. */
 		max_packets = 10;
