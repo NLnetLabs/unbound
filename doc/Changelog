@@ -1,8 +1,22 @@
+31 August 2023: Wouter
+	- Fix autoconf 2.69 warnings in configure.
+	- Fix #927: unbound 1.18.0 make test error. Fix make test without SHA1.
+
+30 August 2023: Wouter
+	- Fix for WKS call to getservbyname that creates allocation on exit
+	  in unit test by testing numbers first and testing from the services
+	  list later.
+
+28 August 2023: Wouter
+	- Fix for version generation race condition that ignored changes.
+
 25 August 2023: Wouter
 	- Fix compile error on NetBSD in util/netevent.h.
 
 23 August 2023: Wouter
-	- Tag for 1.18.0rc1 release.
+	- Tag for 1.18.0rc1 release. This became the 1.18.0 release on
+	  30 aug 2023, with the fix from 25 aug, fix compile on NetBSD
+	  included. The repository continues with version 1.18.1.
 
 22 August 2023: Wouter
 	- Set version number to 1.18.0.

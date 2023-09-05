@@ -358,8 +358,8 @@ if [ "$DOWIN" = "yes" ]; then
 	replace_version "configure.ac" "$version" "$version2"
     	version="$version2"
     	info "Rebuilding configure script (autoconf) snapshot."
-    	autoconf || error_cleanup "Autoconf failed."
-    	autoheader || error_cleanup "Autoheader failed."
+	autoconf -f || error_cleanup "Autoconf failed."
+	autoheader -f || error_cleanup "Autoheader failed."
     	rm -r autom4te* || echo "ignored"
     fi
 
@@ -511,7 +511,7 @@ if [ `uname -s | grep -i -c darwin` -ne 0 ]; then
 fi
 
 info "Building configure script (autoreconf)."
-autoreconf || error_cleanup "Autoconf failed."
+autoreconf -f || error_cleanup "Autoconf failed."
 
 rm -r autom4te* || error_cleanup "Failed to remove autoconf cache directory."
 
@@ -556,7 +556,7 @@ fi
 
 if [ "$RECONFIGURE" = "yes" ]; then
     info "Rebuilding configure script (autoconf) snapshot."
-    autoreconf || error_cleanup "Autoconf failed."
+    autoreconf -f || error_cleanup "Autoconf failed."
     rm -r autom4te* || error_cleanup "Failed to remove autoconf cache directory."
 fi
 
