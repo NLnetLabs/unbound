@@ -2591,6 +2591,16 @@ doq_server_socket_create(struct doq_table* table, struct ub_randstate* rnd,
 	doq_socket->table = table;
 	doq_socket->rnd = rnd;
 	doq_socket->validate_addr = 1;
+	if(ssl_service_key == NULL || ssl_service_key[0]==0) {
+		log_err("doq server socket create: no tls-service-key");
+		free(doq_socket);
+		return NULL;
+	}
+	if(ssl_service_pem == NULL || ssl_service_pem[0]==0) {
+		log_err("doq server socket create: no tls-service-pem");
+		free(doq_socket);
+		return NULL;
+	}
 	doq_socket->ssl_service_key = strdup(ssl_service_key);
 	if(!doq_socket->ssl_service_key) {
 		free(doq_socket);
