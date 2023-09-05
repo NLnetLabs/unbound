@@ -5761,6 +5761,11 @@ comm_point_create_doq(struct comm_base *base, int fd, sldns_buffer* buffer,
 #ifdef HAVE_NGTCP2
 	c->doq_socket = doq_server_socket_create(table, rnd, ssl_service_key,
 		ssl_service_pem, c, base, cfg);
+	if(!c->doq_socket) {
+		log_err("could not create doq comm_point");
+		comm_point_delete(c);
+		return NULL;
+	}
 #endif
 	c->inuse = 0;
 	c->callback = callback;
