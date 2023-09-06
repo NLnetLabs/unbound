@@ -1,3 +1,6 @@
+6 September 2023: Wouter
+	- Merge #931: Prevent warnings from -Wmissing-prototypes.
+
 31 August 2023: Wouter
 	- Fix autoconf 2.69 warnings in configure.
 	- Fix #927: unbound 1.18.0 make test error. Fix make test without SHA1.
