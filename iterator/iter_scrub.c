@@ -716,6 +716,45 @@ static int sanitize_nsec_is_overreach(sldns_buffer* pkt,
 	return 0;
 }
 
+/** Remove individual RRs, if the length is wrong. Returns true if the RRset
+ * has been removed. */
+static int
+scrub_sanitize_rr_length(sldns_buffer* pkt, struct msg_parse* msg,
+	struct rrset_parse* prev, struct rrset_parse** rrset)
+{
+	struct rr_parse* rr, *rr_prev = NULL;
+	for(rr = (*rrset)->rr_first; rr; rr = rr->next) {
+
+		/* Sanity check for length of records
+		 * An A record should be 6 bytes only
+		 * (2 bytes for length and 4 for IPv4 addr)*/
+		if((*rrset)->type == LDNS_RR_TYPE_A && rr->size != 6 ) {
+			if(msgparse_rrset_remove_rr("sanitize: removing type A RR of inappropriate length:",
+				pkt, *rrset, rr_prev, &rr, NULL, 0)) {
+				remove_rrset("sanitize: removing type A RRset of inappropriate length:",
+					pkt, msg, prev, rrset);
+				return 1;
+			}
+			continue;
+		}
+
+		/* Sanity check for length of records
+		 * An AAAA record should be 18 bytes only
+		 * (2 bytes for length and 16 for IPv6 addr)*/
+		if((*rrset)->type == LDNS_RR_TYPE_AAAA && rr->size != 18 ) {
+			if(msgparse_rrset_remove_rr("sanitize: removing type AAAA RR of inappropriate length:",
+				pkt, *rrset, rr_prev, &rr, NULL, 0)) {
+				remove_rrset("sanitize: removing type AAAA RRset of inappropriate length:",
+					pkt, msg, prev, rrset);
+				return 1;
+			}
+			continue;
+		}
+		rr_prev = rr;
+	}
+	return 0;
+}
+
 /**
  * Given a response event, remove suspect RRsets from the response.
  * "Suspect" rrsets are potentially poison. Note that this routine expects
@@ -780,6 +819,13 @@ scrub_sanitize(sldns_buffer* pkt, struct msg_parse* msg,
 	prev = NULL;
 	rrset = msg->rrset_first;
 	while(rrset) {
+
+		/* Sanity check for length of records */
+		if(rrset->type == LDNS_RR_TYPE_A ||
+			rrset->type == LDNS_RR_TYPE_AAAA) {
+			if(scrub_sanitize_rr_length(pkt, msg, prev, &rrset))
+				continue;
+		}
 
 		/* remove private addresses */
 		if( (rrset->type == LDNS_RR_TYPE_A || 

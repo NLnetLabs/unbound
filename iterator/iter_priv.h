@@ -48,6 +48,8 @@ struct iter_env;
 struct config_file;
 struct regional;
 struct rrset_parse;
+struct rr_parse;
+struct rrset_parse;
 
 /**
  * Iterator priv structure
@@ -108,5 +110,10 @@ int priv_rrset_bad(struct iter_priv* priv, struct sldns_buffer* pkt,
  * @return bytes in use.
  */
 size_t priv_get_mem(struct iter_priv* priv);
+
+/** remove RR from msgparse RRset, return true if rrset is entirely bad */
+int msgparse_rrset_remove_rr(const char* str, struct sldns_buffer* pkt,
+	struct rrset_parse* rrset, struct rr_parse* prev, struct rr_parse** rr,
+	struct sockaddr_storage* addr, socklen_t addrlen);
 
 #endif /* ITERATOR_ITER_PRIV_H */
