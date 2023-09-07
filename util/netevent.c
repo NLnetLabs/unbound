@@ -850,10 +850,10 @@ done:
 	return 1;
 }
 
+#if defined(AF_INET6) && defined(IPV6_PKTINFO) && defined(HAVE_RECVMSG)
 void
 comm_point_udp_ancil_callback(int fd, short event, void* arg)
 {
-#if defined(AF_INET6) && defined(IPV6_PKTINFO) && defined(HAVE_RECVMSG)
 	struct comm_reply rep;
 	struct msghdr msg;
 	struct iovec iov[1];
@@ -972,14 +972,8 @@ comm_point_udp_ancil_callback(int fd, short event, void* arg)
 		if(!rep.c || rep.c->fd == -1) /* commpoint closed */
 			break;
 	}
-#else
-	(void)fd;
-	(void)event;
-	(void)arg;
-	fatal_exit("recvmsg: No support for IPV6_PKTINFO; IP_PKTINFO or IP_RECVDSTADDR. "
-		"Please disable interface-automatic");
-#endif /* AF_INET6 && IPV6_PKTINFO && HAVE_RECVMSG */
 }
+#endif /* AF_INET6 && IPV6_PKTINFO && HAVE_RECVMSG */
 
 void
 comm_point_udp_callback(int fd, short event, void* arg)
@@ -3860,7 +3854,7 @@ comm_point_create_udp(struct comm_base *base, int fd, sldns_buffer* buffer,
 	evbits = UB_EV_READ | UB_EV_PERSIST;
 	/* ub_event stuff */
 	c->ev->ev = ub_event_new(base->eb->base, c->fd, evbits,
-#ifdef USE_WINSOCK
+#if defined(USE_WINSOCK) || !(defined(AF_INET6) && defined(IPV6_PKTINFO) && defined(HAVE_RECVMSG))
 		comm_point_udp_callback, c);
 #else
 		comm_point_udp_ancil_callback, c);
@@ -3879,6 +3873,7 @@ comm_point_create_udp(struct comm_base *base, int fd, sldns_buffer* buffer,
 	return c;
 }
 
+#if defined(AF_INET6) && defined(IPV6_PKTINFO) && defined(HAVE_RECVMSG)
 struct comm_point*
 comm_point_create_udp_ancil(struct comm_base *base, int fd,
 	sldns_buffer* buffer, int pp2_enabled,
@@ -3941,6 +3936,7 @@ comm_point_create_udp_ancil(struct comm_base *base, int fd,
 	c->event_added = 1;
 	return c;
 }
+#endif
 
 static struct comm_point*
 comm_point_create_tcp_handler(struct comm_base *base,
