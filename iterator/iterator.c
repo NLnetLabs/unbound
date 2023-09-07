@@ -3874,6 +3874,23 @@ processFinished(struct module_qstate* qstate, struct iter_qstate* iq,
 
 	/* explicitly set the EDE string to NULL */
 	iq->response->rep->reason_bogus_str = NULL;
+	if((qstate->env->cfg->val_log_level >= 2 ||
+		qstate->env->cfg->log_servfail) && qstate->errinf &&
+		!qstate->env->cfg->val_log_squelch) {
+		char* err_str = errinf_to_str_misc(qstate);
+		if(err_str) {
+			size_t err_str_len = strlen(err_str);
+			verbose(VERB_ALGO, "iterator EDE: %s", err_str);
+			/* allocate space and store the error
+			 * string */
+			iq->response->rep->reason_bogus_str = regional_alloc(
+				qstate->region,
+				sizeof(char) * (err_str_len+1));
+			memcpy(iq->response->rep->reason_bogus_str,
+				err_str, err_str_len+1);
+		}
+		free(err_str);
+	}
 
 	/* we have finished processing this query */
 	qstate->ext_state[id] = module_finished;
@@ -4098,7 +4115,7 @@ process_response(struct module_qstate* qstate, struct iter_qstate* iq,
 
 	/* normalize and sanitize: easy to delete items from linked lists */
 	if(!scrub_message(pkt, prs, &iq->qinfo_out, iq->dp->name, 
-		qstate->env->scratch, qstate->env, ie)) {
+		qstate->env->scratch, qstate->env, qstate, ie)) {
 		/* if 0x20 enabled, start fallback, but we have no message */
 		if(event == module_event_capsfail && !iq->caps_fallback) {
 			iq->caps_fallback = 1;

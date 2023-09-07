@@ -843,6 +843,14 @@ sldns_ede_code errinf_to_reason_bogus(struct module_qstate* qstate);
 char* errinf_to_str_servfail(struct module_qstate* qstate);
 
 /**
+ * Create error info in string.  For misc failures that are not servfail.
+ * @param qstate: query state.
+ * @return string or NULL on malloc failure (already logged).
+ *    This string is malloced and has to be freed by caller.
+ */
+char* errinf_to_str_misc(struct module_qstate* qstate);
+
+/**
  * Initialize the edns known options by allocating the required space.
  * @param env: the module environment.
  * @return false on failure (no memory).

@@ -4,6 +4,8 @@ server:
 	qname-minimisation: "no"
 	minimal-responses: no
 	rrset-roundrobin: no
+	ede: yes
+	log-servfail: yes
 
 stub-zone:
 	name: "."
@@ -13,7 +15,7 @@ CONFIG_END
 SCENARIO_BEGIN Test scrub of RRs of inappropriate length
 
 ; K.ROOT-SERVERS.NET.
-RANGE_BEGIN 0 100
+RANGE_BEGIN 0 200
 	ADDRESS 193.0.14.129 
 ENTRY_BEGIN
 MATCH opcode qtype qname
@@ -41,7 +43,7 @@ ENTRY_END
 RANGE_END
 
 ; a.gtld-servers.net.
-RANGE_BEGIN 0 100
+RANGE_BEGIN 0 200
 	ADDRESS 192.5.6.30
 ENTRY_BEGIN
 MATCH opcode qtype qname
@@ -69,7 +71,7 @@ ENTRY_END
 RANGE_END
 
 ; ns.example.com.
-RANGE_BEGIN 0 100
+RANGE_BEGIN 0 200
 	ADDRESS 1.2.3.4
 ENTRY_BEGIN
 MATCH opcode qtype qname
@@ -264,6 +266,28 @@ broken2.example.com. IN A
 SECTION ANSWER
 broken2.example.com. IN A 1.2.3.4
 broken2.example.com. IN A 1.2.3.5
+SECTION AUTHORITY
+example.com.	IN NS	ns.example.com.
+SECTION ADDITIONAL
+ns.example.com.		IN 	A	1.2.3.6
+ns.example.com.		IN 	A	1.2.3.7
+ENTRY_END
+
+STEP 100 QUERY
+ENTRY_BEGIN
+REPLY RD CD DO
+SECTION QUESTION
+www.example.com. IN A
+ENTRY_END
+
+STEP 110 CHECK_ANSWER
+ENTRY_BEGIN
+MATCH all ede=any
+REPLY QR RD CD RA DO NOERROR
+SECTION QUESTION
+www.example.com. IN A
+SECTION ANSWER
+www.example.com. IN A	10.20.30.40
 SECTION AUTHORITY
 example.com.	IN NS	ns.example.com.
 SECTION ADDITIONAL
