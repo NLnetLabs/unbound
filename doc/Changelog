@@ -4,6 +4,7 @@
 	- Fix to move msgparse_rrset_remove_rr code to util/msgparse.c.
 	- Fix to add EDE text when RRs have been removed due to length.
 	- Fix to set ede match in unit test for rr length removal.
+	- Fix to print EDE text in readable form in output logs.
 
 6 September 2023: Wouter
 	- Merge #931: Prevent warnings from -Wmissing-prototypes.
