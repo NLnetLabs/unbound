@@ -3854,11 +3854,7 @@ comm_point_create_udp(struct comm_base *base, int fd, sldns_buffer* buffer,
 	evbits = UB_EV_READ | UB_EV_PERSIST;
 	/* ub_event stuff */
 	c->ev->ev = ub_event_new(base->eb->base, c->fd, evbits,
-#if defined(USE_WINSOCK) || !(defined(AF_INET6) && defined(IPV6_PKTINFO) && defined(HAVE_RECVMSG))
 		comm_point_udp_callback, c);
-#else
-		comm_point_udp_ancil_callback, c);
-#endif
 	if(c->ev->ev == NULL) {
 		log_err("could not baseset udp event");
 		comm_point_delete(c);

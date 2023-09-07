@@ -1327,7 +1327,9 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 			log_warn("socket timestamping is not available");
 		}
 		if(!port_insert(list, s, is_dnscrypt
-			?listen_type_udp_dnscrypt:listen_type_udp,
+			?listen_type_udp_dnscrypt :
+			(sock_queue_timeout ?
+				listen_type_udpancil:listen_type_udp),
 			is_pp2, ub_sock)) {
 			sock_close(s);
 			if(ub_sock->addr)
