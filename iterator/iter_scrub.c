@@ -730,7 +730,7 @@ scrub_sanitize_rr_length(sldns_buffer* pkt, struct msg_parse* msg,
 		 * (2 bytes for length and 4 for IPv4 addr)*/
 		if((*rrset)->type == LDNS_RR_TYPE_A && rr->size != 6 ) {
 			if(msgparse_rrset_remove_rr("sanitize: removing type A RR of inappropriate length:",
-				pkt, *rrset, rr_prev, &rr, NULL, 0)) {
+				pkt, *rrset, rr_prev, rr, NULL, 0)) {
 				remove_rrset("sanitize: removing type A RRset of inappropriate length:",
 					pkt, msg, prev, rrset);
 				return 1;
@@ -743,7 +743,7 @@ scrub_sanitize_rr_length(sldns_buffer* pkt, struct msg_parse* msg,
 		 * (2 bytes for length and 16 for IPv6 addr)*/
 		if((*rrset)->type == LDNS_RR_TYPE_AAAA && rr->size != 18 ) {
 			if(msgparse_rrset_remove_rr("sanitize: removing type AAAA RR of inappropriate length:",
-				pkt, *rrset, rr_prev, &rr, NULL, 0)) {
+				pkt, *rrset, rr_prev, rr, NULL, 0)) {
 				remove_rrset("sanitize: removing type AAAA RRset of inappropriate length:",
 					pkt, msg, prev, rrset);
 				return 1;

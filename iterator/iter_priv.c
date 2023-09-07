@@ -207,31 +207,6 @@ size_t priv_get_mem(struct iter_priv* priv)
 	return sizeof(*priv) + regional_get_mem(priv->region);
 }
 
-/** remove RR from msgparse RRset, return true if rrset is entirely bad */
-int
-msgparse_rrset_remove_rr(const char* str, sldns_buffer* pkt, struct rrset_parse* rrset,
-	struct rr_parse* prev, struct rr_parse** rr, struct sockaddr_storage* addr, socklen_t addrlen)
-{
-	if(verbosity >= VERB_QUERY && rrset->dname_len <= LDNS_MAX_DOMAINLEN && str) {
-		uint8_t buf[LDNS_MAX_DOMAINLEN+1];
-		dname_pkt_copy(pkt, buf, rrset->dname);
-		if(addr)
-			log_name_addr(VERB_QUERY, str, buf, addr, addrlen);
-		else	log_nametypeclass(VERB_QUERY, str, buf,
-				rrset->type, ntohs(rrset->rrset_class));
-	}
-	if(prev)
-		prev->next = (*rr)->next;
-	else	rrset->rr_first = (*rr)->next;
-	if(rrset->rr_last == *rr)
-		rrset->rr_last = prev;
-	rrset->rr_count --;
-	rrset->size -= (*rr)->size;
-	/* rr struct still exists, but is unlinked, so that in the for loop
-	 * the rr->next works fine to continue. */
-	return rrset->rr_count == 0;
-}
-
 int priv_rrset_bad(struct iter_priv* priv, sldns_buffer* pkt,
 	struct rrset_parse* rrset)
 {
@@ -264,7 +239,7 @@ int priv_rrset_bad(struct iter_priv* priv, sldns_buffer* pkt,
 					INET_SIZE);
 				memmove(&addr, &sa, len);
 				if(priv_lookup_addr(priv, &addr, len)) {
-					if(msgparse_rrset_remove_rr("sanitize: removing public name with private address", pkt, rrset, prev, &rr, &addr, len))
+					if(msgparse_rrset_remove_rr("sanitize: removing public name with private address", pkt, rrset, prev, rr, &addr, len))
 						return 1;
 					continue;
 				}
@@ -287,7 +262,7 @@ int priv_rrset_bad(struct iter_priv* priv, sldns_buffer* pkt,
 					INET6_SIZE);
 				memmove(&addr, &sa, len);
 				if(priv_lookup_addr(priv, &addr, len)) {
-					if(msgparse_rrset_remove_rr("sanitize: removing public name with private address", pkt, rrset, prev, &rr, &addr, len))
+					if(msgparse_rrset_remove_rr("sanitize: removing public name with private address", pkt, rrset, prev, rr, &addr, len))
 						return 1;
 					continue;
 				}
