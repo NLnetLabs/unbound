@@ -1,3 +1,8 @@
+8 September 2023: Wouter
+	- Fix send of udp retries when ENOBUFS is returned. It stops looping
+	  and also waits for the condition to go away. Reported by Florian
+	  Obser.
+
 7 September 2023: Wouter
 	- Fix to scrub resource records of type A and AAAA that have an
 	  inappropriate size. They are removed from responses.
