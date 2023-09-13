@@ -1302,6 +1302,13 @@ servers that set the CD flag but cannot validate DNSSEC themselves are
 the clients, and then Unbound provides them with DNSSEC protection.
 The default value is "no".
 .TP
+.B disable\-edns\-do: \fI<yes or no>
+Disable the EDNS DO flag in upstream requests. This can be helpful for
+devices that cannot handle DNSSEC information. But it should not be enabled
+otherwise, because that would stop DNSSEC validation. The DNSSEC validation
+would not work for Unbound itself, and also not for downstream users.
+Default is no.
+.TP
 .B serve\-expired: \fI<yes or no>
 If enabled, Unbound attempts to serve old responses from cache with a
 TTL of \fBserve\-expired\-reply\-ttl\fR in the response without waiting for the
