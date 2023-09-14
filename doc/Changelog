@@ -1,3 +1,6 @@
+14 September 2023: Wouter
+	- Fix authority zone answers for obscured DNAMEs and delegations.
+
 8 September 2023: Wouter
 	- Fix send of udp retries when ENOBUFS is returned. It stops looping
 	  and also waits for the condition to go away. Reported by Florian
