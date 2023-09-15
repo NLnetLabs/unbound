@@ -1,3 +1,6 @@
+15 September 2023: Wouter
+	- Merge #936: Check for c99 with autoconf versions prior to 2.70.
+
 14 September 2023: Wouter
 	- Fix authority zone answers for obscured DNAMEs and delegations.
 
