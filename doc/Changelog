@@ -1,3 +1,6 @@
+18 September 2023: Wouter
+	- Fix rpz tcp-only action with rpz triggers nsdname and nsip.
+
 15 September 2023: Wouter
 	- Merge #936: Check for c99 with autoconf versions prior to 2.70.
 	- Fix to remove two c99 notations.

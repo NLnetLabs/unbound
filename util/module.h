@@ -691,6 +691,8 @@ struct module_qstate {
 	struct respip_action_info* respip_action_info;
 	/** if the query is rpz passthru, no further rpz processing for it */
 	int rpz_passthru;
+	/* Flag tcp required. */
+	int tcp_required;
 
 	/** whether the reply should be dropped */
 	int is_drop;
