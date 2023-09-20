@@ -1224,11 +1224,12 @@ static inline int
 mesh_is_rpz_respip_tcponly_action(struct mesh_state const* m)
 {
 	struct respip_action_info const* respip_info = m->s.respip_action_info;
-	return respip_info == NULL
+	return (respip_info == NULL
 			? 0
 			: (respip_info->rpz_used
 			&& !respip_info->rpz_disabled
-			&& respip_info->action == respip_truncate);
+			&& respip_info->action == respip_truncate))
+		|| m->s.tcp_required;
 }
 
 static inline int
