@@ -1,3 +1,7 @@
+22 September 2023: Wouter
+	- Fix #942: 1.18.0 libunbound DNS regression when built without
+	  OpenSSL.
+
 18 September 2023: Wouter
 	- Fix rpz tcp-only action with rpz triggers nsdname and nsip.
 
