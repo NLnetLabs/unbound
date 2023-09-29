@@ -51,11 +51,11 @@
 #define PP2_SIG "\x0D\x0A\x0D\x0A\x00\x0D\x0A\x51\x55\x49\x54\x0A"
 #define PP2_SIG_LEN 12
 
-/** PROXYv2 version */
+/** PROXYv2 version (protocol value) */
 #define PP2_VERSION 0x2
 
 /**
- * PROXYv2 command.
+ * PROXYv2 command (protocol value).
  */
 enum pp2_command {
 	PP2_CMD_LOCAL = 0x0,
@@ -63,7 +63,7 @@ enum pp2_command {
 };
 
 /**
- * PROXYv2 address family.
+ * PROXYv2 address family (protocol value).
  */
 enum pp2_af {
 	PP2_AF_UNSPEC = 0x0,
@@ -73,12 +73,25 @@ enum pp2_af {
 };
 
 /**
- * PROXYv2 protocol.
+ * PROXYv2 protocol (protocol value).
  */
 enum pp2_protocol {
 	PP2_PROT_UNSPEC = 0x0,
 	PP2_PROT_STREAM = 0x1,
 	PP2_PROT_DGRAM = 0x2
+};
+
+/**
+ * Expected combinations of address family and protocol values used in checks.
+ */
+enum pp2_af_protocol_combination {
+	PP2_UNSPEC_UNSPEC = (PP2_AF_UNSPEC<<4)|PP2_PROT_UNSPEC,
+	PP2_INET_STREAM = (PP2_AF_INET<<4)|PP2_PROT_STREAM,
+	PP2_INET_DGRAM = (PP2_AF_INET<<4)|PP2_PROT_DGRAM,
+	PP2_INET6_STREAM = (PP2_AF_INET6<<4)|PP2_PROT_STREAM,
+	PP2_INET6_DGRAM = (PP2_AF_INET6<<4)|PP2_PROT_DGRAM,
+	PP2_UNIX_STREAM = (PP2_AF_UNIX<<4)|PP2_PROT_STREAM,
+	PP2_UNIX_DGRAM = (PP2_AF_UNIX<<4)|PP2_PROT_DGRAM
 };
 
 /**

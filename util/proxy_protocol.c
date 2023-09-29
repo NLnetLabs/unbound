@@ -105,7 +105,8 @@ pp2_write_to_buf(uint8_t* buf, size_t buflen,
 	/* version and command */
 	*buf = (PP2_VERSION << 4) | PP2_CMD_PROXY;
 	buf++;
-	if(af==AF_INET) {
+	switch(af) {
+	case AF_INET:
 		/* family and protocol */
 		*buf = (PP2_AF_INET<<4) |
 			(stream?PP2_PROT_STREAM:PP2_PROT_DGRAM);
@@ -127,8 +128,9 @@ pp2_write_to_buf(uint8_t* buf, size_t buflen,
 		/* dst addr */
 		/* dst port */
 		(*pp_data.write_uint16)(buf, 12);
-	} else {
+		break;
 #ifdef INET6
+	case AF_INET6:
 		/* family and protocol */
 		*buf = (PP2_AF_INET6<<4) |
 			(stream?PP2_PROT_STREAM:PP2_PROT_DGRAM);
@@ -148,9 +150,12 @@ pp2_write_to_buf(uint8_t* buf, size_t buflen,
 		buf += 2;
 		/* dst port */
 		(*pp_data.write_uint16)(buf, 0);
-#else
-		return 0;
+		break;
 #endif /* INET6 */
+	case AF_UNIX:
+		/* fallthrough */
+	default:
+		return 0;
 	}
 	return expected_size;
 }
@@ -180,13 +185,13 @@ pp2_read_header(uint8_t* buf, size_t buflen)
 		return PP_PARSE_UNKNOWN_CMD;
 	}
 	/* Check for supported family and protocol */
-	if(header->fam_prot != 0x00 /* AF_UNSPEC|UNSPEC */ &&
-		header->fam_prot != 0x11 /* AF_INET|STREAM */ &&
-		header->fam_prot != 0x12 /* AF_INET|DGRAM */ &&
-		header->fam_prot != 0x21 /* AF_INET6|STREAM */ &&
-		header->fam_prot != 0x22 /* AF_INET6|DGRAM */ &&
-		header->fam_prot != 0x31 /* AF_UNIX|STREAM */ &&
-		header->fam_prot != 0x32 /* AF_UNIX|DGRAM */) {
+	if(header->fam_prot != PP2_UNSPEC_UNSPEC &&
+		header->fam_prot != PP2_INET_STREAM &&
+		header->fam_prot != PP2_INET_DGRAM &&
+		header->fam_prot != PP2_INET6_STREAM &&
+		header->fam_prot != PP2_INET6_DGRAM &&
+		header->fam_prot != PP2_UNIX_STREAM &&
+		header->fam_prot != PP2_UNIX_DGRAM) {
 		return PP_PARSE_UNKNOWN_FAM_PROT;
 	}
 	/* We have a correct header */
