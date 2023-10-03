@@ -66,6 +66,7 @@
 #include "util/data/msgencode.h"
 #include "util/data/dname.h"
 #include "util/fptr_wlist.h"
+#include "util/proxy_protocol.h"
 #include "util/tube.h"
 #include "util/edns.h"
 #include "util/timeval_func.h"
@@ -2317,6 +2318,7 @@ worker_init(struct worker* worker, struct config_file *cfg,
 			worker->env.cfg->stat_interval);
 		worker_restart_timer(worker);
 	}
+	pp_init(&sldns_write_uint16, &sldns_write_uint32);
 	return 1;
 }
 

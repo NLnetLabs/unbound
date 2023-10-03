@@ -62,6 +62,7 @@
 #include "util/random.h"
 #include "util/config_file.h"
 #include "util/netevent.h"
+#include "util/proxy_protocol.h"
 #include "util/storage/lookup3.h"
 #include "util/storage/slabhash.h"
 #include "util/net_help.h"
@@ -265,6 +266,7 @@ libworker_setup(struct ub_ctx* ctx, int is_bg, struct ub_event_base* eb)
 	w->env->kill_sub = &mesh_state_delete;
 	w->env->detect_cycle = &mesh_detect_cycle;
 	comm_base_timept(w->base, &w->env->now, &w->env->now_tv);
+	pp_init(&sldns_write_uint16, &sldns_write_uint32);
 	return w;
 }
 
