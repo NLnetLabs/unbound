@@ -892,15 +892,18 @@ static int udp_recv_needs_log(int err)
 static int consume_pp2_header(struct sldns_buffer* buf, struct comm_reply* rep,
 	int stream) {
 	size_t size;
-	struct pp2_header *header = pp2_read_header(buf);
-	if(header == NULL) return 0;
+	struct pp2_header *header;
+	int err = pp2_read_header(sldns_buffer_begin(buf),
+		sldns_buffer_remaining(buf));
+	if(err) return 0;
+	header = (struct pp2_header*)sldns_buffer_begin(buf);
 	size = PP2_HEADER_SIZE + ntohs(header->len);
 	if((header->ver_cmd & 0xF) == PP2_CMD_LOCAL) {
 		/* A connection from the proxy itself.
 		 * No need to do anything with addresses. */
 		goto done;
 	}
-	if(header->fam_prot == 0x00) {
+	if(header->fam_prot == PP2_UNSPEC_UNSPEC) {
 		/* Unspecified family and protocol. This could be used for
 		 * health checks by proxies.
 		 * No need to do anything with addresses. */
@@ -908,8 +911,8 @@ static int consume_pp2_header(struct sldns_buffer* buf, struct comm_reply* rep,
 	}
 	/* Read the proxied address */
 	switch(header->fam_prot) {
-		case 0x11: /* AF_INET|STREAM */
-		case 0x12: /* AF_INET|DGRAM */
+		case PP2_INET_STREAM:
+		case PP2_INET_DGRAM:
 			{
 			struct sockaddr_in* addr =
 				(struct sockaddr_in*)&rep->client_addr;
@@ -920,8 +923,8 @@ static int consume_pp2_header(struct sldns_buffer* buf, struct comm_reply* rep,
 			}
 			/* Ignore the destination address; it should be us. */
 			break;
-		case 0x21: /* AF_INET6|STREAM */
-		case 0x22: /* AF_INET6|DGRAM */
+		case PP2_INET6_STREAM:
+		case PP2_INET6_DGRAM:
 			{
 			struct sockaddr_in6* addr =
 				(struct sockaddr_in6*)&rep->client_addr;
@@ -934,6 +937,10 @@ static int consume_pp2_header(struct sldns_buffer* buf, struct comm_reply* rep,
 			}
 			/* Ignore the destination address; it should be us. */
 			break;
+		default:
+			log_err("proxy_protocol: unsupported family and "
+				"protocol 0x%x", (int)header->fam_prot);
+			return 0;
 	}
 	rep->is_proxied = 1;
 done:
@@ -1813,19 +1820,25 @@ ssl_handle_read(struct comm_point* c)
 					return 0;
 				}
 				c->tcp_byte_count += r;
+				sldns_buffer_skip(c->buffer, r);
 				if(c->tcp_byte_count != current_read_size) return 1;
 				c->pp2_header_state = pp2_header_init;
 			}
 		}
 		if(c->pp2_header_state == pp2_header_init) {
-			header = pp2_read_header(c->buffer);
-			if(!header) {
+			int err;
+			err = pp2_read_header(
+				sldns_buffer_begin(c->buffer),
+				sldns_buffer_limit(c->buffer));
+			if(err) {
 				log_err("proxy_protocol: could not parse "
-					"PROXYv2 header");
+					"PROXYv2 header (%s)",
+					pp_lookup_error(err));
 				return 0;
 			}
+			header = (struct pp2_header*)sldns_buffer_begin(c->buffer);
 			want_read_size = ntohs(header->len);
-			if(sldns_buffer_remaining(c->buffer) <
+			if(sldns_buffer_limit(c->buffer) <
 				PP2_HEADER_SIZE + want_read_size) {
 				log_err_addr("proxy_protocol: not enough "
 					"buffer size to read PROXYv2 header", "",
@@ -1874,6 +1887,7 @@ ssl_handle_read(struct comm_point* c)
 					return 0;
 				}
 				c->tcp_byte_count += r;
+				sldns_buffer_skip(c->buffer, r);
 				if(c->tcp_byte_count != current_read_size) return 1;
 				c->pp2_header_state = pp2_header_done;
 			}
@@ -1884,6 +1898,7 @@ ssl_handle_read(struct comm_point* c)
 				c->repinfo.remote_addrlen);
 			return 0;
 		}
+		sldns_buffer_flip(c->buffer);
 		if(!consume_pp2_header(c->buffer, &c->repinfo, 1)) {
 			log_err_addr("proxy_protocol: could not consume "
 				"PROXYv2 header", "", &c->repinfo.remote_addr,
@@ -2205,19 +2220,25 @@ comm_point_tcp_handle_read(int fd, struct comm_point* c, int short_ok)
 					goto recv_error_initial;
 				}
 				c->tcp_byte_count += r;
+				sldns_buffer_skip(c->buffer, r);
 				if(c->tcp_byte_count != current_read_size) return 1;
 				c->pp2_header_state = pp2_header_init;
 			}
 		}
 		if(c->pp2_header_state == pp2_header_init) {
-			header = pp2_read_header(c->buffer);
-			if(!header) {
+			int err;
+			err = pp2_read_header(
+				sldns_buffer_begin(c->buffer),
+				sldns_buffer_limit(c->buffer));
+			if(err) {
 				log_err("proxy_protocol: could not parse "
-					"PROXYv2 header");
+					"PROXYv2 header (%s)",
+					pp_lookup_error(err));
 				return 0;
 			}
+			header = (struct pp2_header*)sldns_buffer_begin(c->buffer);
 			want_read_size = ntohs(header->len);
-			if(sldns_buffer_remaining(c->buffer) <
+			if(sldns_buffer_limit(c->buffer) <
 				PP2_HEADER_SIZE + want_read_size) {
 				log_err_addr("proxy_protocol: not enough "
 					"buffer size to read PROXYv2 header", "",
@@ -2244,6 +2265,7 @@ comm_point_tcp_handle_read(int fd, struct comm_point* c, int short_ok)
 					goto recv_error;
 				}
 				c->tcp_byte_count += r;
+				sldns_buffer_skip(c->buffer, r);
 				if(c->tcp_byte_count != current_read_size) return 1;
 				c->pp2_header_state = pp2_header_done;
 			}
@@ -2254,6 +2276,7 @@ comm_point_tcp_handle_read(int fd, struct comm_point* c, int short_ok)
 				c->repinfo.remote_addrlen);
 			return 0;
 		}
+		sldns_buffer_flip(c->buffer);
 		if(!consume_pp2_header(c->buffer, &c->repinfo, 1)) {
 			log_err_addr("proxy_protocol: could not consume "
 				"PROXYv2 header", "", &c->repinfo.remote_addr,
