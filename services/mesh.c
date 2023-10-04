@@ -1197,6 +1197,8 @@ mesh_do_callback(struct mesh_state* m, int rcode, struct reply_info* rep,
 		r->edns.udp_size = EDNS_ADVERTISED_SIZE;
 		r->edns.ext_rcode = 0;
 		r->edns.bits &= EDNS_DO;
+		if(m->s.env->cfg->disable_edns_do && (r->edns.bits&EDNS_DO))
+			r->edns.edns_present = 0;
 
 		if(!inplace_cb_reply_call(m->s.env, &m->s.qinfo, &m->s, rep,
 			LDNS_RCODE_NOERROR, &r->edns, NULL, m->s.region, start_time) ||
@@ -1372,6 +1374,8 @@ mesh_send_reply(struct mesh_state* m, int rcode, struct reply_info* rep,
 		r->edns.udp_size = EDNS_ADVERTISED_SIZE;
 		r->edns.ext_rcode = 0;
 		r->edns.bits &= EDNS_DO;
+		if(m->s.env->cfg->disable_edns_do && (r->edns.bits&EDNS_DO))
+			r->edns.edns_present = 0;
 		m->s.qinfo.qname = r->qname;
 		m->s.qinfo.local_alias = r->local_alias;
 

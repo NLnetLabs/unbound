@@ -1307,6 +1307,8 @@ Disable the EDNS DO flag in upstream requests. This can be helpful for
 devices that cannot handle DNSSEC information. But it should not be enabled
 otherwise, because that would stop DNSSEC validation. The DNSSEC validation
 would not work for Unbound itself, and also not for downstream users.
+When the option is enabled, queriers that set the DO flag receive no EDNS
+record in the response to indicate the lack of support to them.
 Default is no.
 .TP
 .B serve\-expired: \fI<yes or no>
