@@ -2940,7 +2940,7 @@ static int
 processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 	struct iter_env* ie, int id)
 {
-	int dnsseclame = 0, origtypecname = 0;
+	int dnsseclame = 0, origtypecname = 0, orig_empty_nodata_found;
 	enum response_type type;
 
 	iq->num_current_queries--;
@@ -2960,12 +2960,25 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 		return next_state(iq, QUERYTARGETS_STATE);
 	}
 	iq->timeout_count = 0;
+	orig_empty_nodata_found = iq->empty_nodata_found;
 	type = response_type_from_server(
 		(int)((iq->chase_flags&BIT_RD) || iq->chase_to_rd),
-		iq->response, &iq->qinfo_out, iq->dp);
+		iq->response, &iq->qinfo_out, iq->dp, &iq->empty_nodata_found);
 	iq->chase_to_rd = 0;
 	/* remove TC flag, if this is erroneously set by TCP upstream */
 	iq->response->rep->flags &= ~BIT_TC;
+	if(orig_empty_nodata_found != iq->empty_nodata_found &&
+		iq->empty_nodata_found < EMPTY_NODATA_RETRY_COUNT) {
+		/* try to search at another server */
+		if(qstate->reply) {
+			struct delegpt_addr* a = delegpt_find_addr(
+				iq->dp, &qstate->reply->remote_addr,
+				qstate->reply->remote_addrlen);
+			/* make selection disprefer it */
+			if(a) a->lame = 1;
+		}
+		return next_state(iq, QUERYTARGETS_STATE);
+	}
 	if(type == RESPONSE_TYPE_REFERRAL && (iq->chase_flags&BIT_RD) &&
 		!iq->auth_zone_response) {
 		/* When forwarding (RD bit is set), we handle referrals 
@@ -3501,7 +3514,7 @@ processPrimeResponse(struct module_qstate* qstate, int id)
 	iq->response->rep->flags &= ~(BIT_RD|BIT_RA); /* ignore rec-lame */
 	type = response_type_from_server(
 		(int)((iq->chase_flags&BIT_RD) || iq->chase_to_rd), 
-		iq->response, &iq->qchase, iq->dp);
+		iq->response, &iq->qchase, iq->dp, NULL);
 	if(type == RESPONSE_TYPE_ANSWER) {
 		qstate->return_rcode = LDNS_RCODE_NOERROR;
 		qstate->return_msg = iq->response;
