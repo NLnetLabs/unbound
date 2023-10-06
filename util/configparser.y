@@ -198,7 +198,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_INTERFACE_ACTION VAR_INTERFACE_VIEW VAR_INTERFACE_TAG
 %token VAR_INTERFACE_TAG_ACTION VAR_INTERFACE_TAG_DATA
 %token VAR_PROXY_PROTOCOL_PORT VAR_STATISTICS_INHIBIT_ZERO
-%token VAR_HARDEN_UNKNOWN_ADDITIONAL
+%token VAR_HARDEN_UNKNOWN_ADDITIONAL VAR_CACHEDB_NO_STORE
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -3701,7 +3701,8 @@ contents_cachedb: contents_cachedb content_cachedb
 	| ;
 content_cachedb: cachedb_backend_name | cachedb_secret_seed |
 	redis_server_host | redis_server_port | redis_timeout |
-	redis_expire_records | redis_server_path | redis_server_password
+	redis_expire_records | redis_server_path | redis_server_password |
+	cachedb_no_store
 	;
 cachedb_backend_name: VAR_CACHEDB_BACKEND STRING_ARG
 	{
@@ -3725,6 +3726,19 @@ cachedb_secret_seed: VAR_CACHEDB_SECRETSEED STRING_ARG
 		OUTYY(("P(Compiled without cachedb, ignoring)\n"));
 		free($2);
 	#endif
+	}
+	;
+cachedb_no_store: VAR_CACHEDB_NO_STORE STRING_ARG
+	{
+	#ifdef USE_CACHEDB
+		OUTYY(("P(cachedb_no_store:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else cfg_parser->cfg->cachedb_no_store = (strcmp($2, "yes")==0);
+	#else
+		OUTYY(("P(Compiled without cachedb, ignoring)\n"));
+	#endif
+		free($2);
 	}
 	;
 redis_server_host: VAR_CACHEDB_REDISHOST STRING_ARG

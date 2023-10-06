@@ -815,6 +815,11 @@ cachedb_handle_response(struct module_qstate* qstate,
 		qstate->ext_state[id] = module_finished;
 		return;
 	}
+	if(qstate->env->cfg->cachedb_no_store) {
+		/* do not store the item in the external cache */
+		qstate->ext_state[id] = module_finished;
+		return;
+	}
 
 	/* store the item into the backend cache */
 	cachedb_extcache_store(qstate, ie);
