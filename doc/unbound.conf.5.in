@@ -1303,12 +1303,17 @@ the clients, and then Unbound provides them with DNSSEC protection.
 The default value is "no".
 .TP
 .B disable\-edns\-do: \fI<yes or no>
-Disable the EDNS DO flag in upstream requests. This can be helpful for
-devices that cannot handle DNSSEC information. But it should not be enabled
-otherwise, because that would stop DNSSEC validation. The DNSSEC validation
-would not work for Unbound itself, and also not for downstream users.
-When the option is enabled, queriers that set the DO flag receive no EDNS
+Disable the EDNS DO flag in upstream requests.
+It breaks DNSSEC validation for Unbound's clients.
+This results in the upstream name servers to not include DNSSEC records in
+their replies and could be helpful for devices that cannot handle DNSSEC
+information.
+When the option is enabled, clients that set the DO flag receive no EDNS
 record in the response to indicate the lack of support to them.
+If this option is enabled but Unbound is already configured for DNSSEC
+validation (i.e., the validator module is enabled; default) this option is
+implicitly turned off with a warning as to not break DNSSEC validation in
+Unbound.
 Default is no.
 .TP
 .B serve\-expired: \fI<yes or no>
