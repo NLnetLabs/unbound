@@ -1,6 +1,8 @@
 9 October 2023: Wouter
 	- Fix edns subnet so that queries with a source prefix of zero cause
 	  the recursor send no edns subnet option to the upstream.
+	- Fix that printout of EDNS options shows the EDNS cookie option by
+	  name.
 
 4 October 2023: Wouter
 	- Fix #946: Forwarder returns servfail on upstream response noerror no
