@@ -982,6 +982,17 @@ dns64_inform_super(struct module_qstate* qstate, int id,
 		return;
 	}
 
+	/* When no A record is found for synthesis fall back to AAAA again. */
+	if (qstate->qinfo.qtype == LDNS_RR_TYPE_A &&
+	    qstate->return_rcode == LDNS_RCODE_NOERROR &&
+	    !( qstate->return_msg &&
+	       qstate->return_msg->rep &&
+	       reply_find_answer_rrset(&qstate->qinfo, qstate->return_msg->rep)))
+	{
+		super_dq->state = DNS64_INTERNAL_QUERY;
+		return;
+	}
+
 	/* Use return code from A query in response to client. */
 	if (super->return_rcode != LDNS_RCODE_NOERROR)
 		super->return_rcode = qstate->return_rcode;
