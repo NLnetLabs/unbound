@@ -577,8 +577,8 @@ handle_event_pass(struct module_qstate* qstate, int id)
             && qstate->qinfo.qtype == LDNS_RR_TYPE_PTR
             && qstate->qinfo.qname_len == 74
             && !strcmp((char*)&qstate->qinfo.qname[64], "\03ip6\04arpa"))
-        /* Handle PTR queries for IPv6 addresses. */
-        return handle_ipv6_ptr(qstate, id);
+		/* Handle PTR queries for IPv6 addresses. */
+		return handle_ipv6_ptr(qstate, id);
 
 	int synth_all_cfg = qstate->env->cfg->dns64_synthall;
 	int synth_qname =
@@ -652,9 +652,12 @@ handle_event_moddone(struct module_qstate* qstate, int id)
 
 	/* Store the response in cache. */
 	if ( (!iq || !iq->started_no_cache_store) &&
-		qstate->return_msg && qstate->return_msg->rep &&
-		!dns_cache_store(qstate->env, &qstate->qinfo, qstate->return_msg->rep,
-		0, 0, 0, NULL, qstate->query_flags, qstate->qstarttime))
+	     qstate->return_msg &&
+	     qstate->return_msg->rep &&
+	     !dns_cache_store(
+		     qstate->env, &qstate->qinfo, qstate->return_msg->rep,
+		     0, 0, 0, NULL,
+		     qstate->query_flags, qstate->qstarttime))
 		log_err("out of memory");
 
 	/* do nothing */
