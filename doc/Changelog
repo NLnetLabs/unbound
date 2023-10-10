@@ -1,3 +1,7 @@
+10 October 2023: George
+	- Fix infinite loop when reading multiple lines of input on a broken
+	  remote control socket. Addesses #947 and #948.
+
 9 October 2023: Wouter
 	- Fix edns subnet so that queries with a source prefix of zero cause
 	  the recursor send no edns subnet option to the upstream.
