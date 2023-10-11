@@ -6,6 +6,7 @@
 	- Fix #949: "could not create control compt".
 	- Fix that cachedb does not warn when serve-expired is disabled about
 	  use of serve-expired-reply-ttl and serve-expired-client-timeout.
+	- Fix for #949: Fix pythonmod/ubmodule-tst.py for Python 3.x.
 
 10 October 2023: George
 	- Fix infinite loop when reading multiple lines of input on a broken
