@@ -714,6 +714,8 @@ struct config_file {
 	int redis_timeout;
 	/** set timeout on redis records based on DNS response ttl */
 	int redis_expire_records;
+	/** set the redis logical database upon connection */
+	int redis_logical_db;
 #endif
 #endif
 	/** Downstream DNS Cookies */

@@ -179,6 +179,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_CACHEDB VAR_CACHEDB_BACKEND VAR_CACHEDB_SECRETSEED
 %token VAR_CACHEDB_REDISHOST VAR_CACHEDB_REDISPORT VAR_CACHEDB_REDISTIMEOUT
 %token VAR_CACHEDB_REDISEXPIRERECORDS VAR_CACHEDB_REDISPATH VAR_CACHEDB_REDISPASSWORD
+%token VAR_CACHEDB_REDISLOGICALDB
 %token VAR_UDP_UPSTREAM_WITHOUT_DOWNSTREAM VAR_FOR_UPSTREAM
 %token VAR_AUTH_ZONE VAR_ZONEFILE VAR_MASTER VAR_URL VAR_FOR_DOWNSTREAM
 %token VAR_FALLBACK_ENABLED VAR_TLS_ADDITIONAL_PORT VAR_LOW_RTT VAR_LOW_RTT_PERMIL
@@ -3702,7 +3703,7 @@ contents_cachedb: contents_cachedb content_cachedb
 content_cachedb: cachedb_backend_name | cachedb_secret_seed |
 	redis_server_host | redis_server_port | redis_timeout |
 	redis_expire_records | redis_server_path | redis_server_password |
-	cachedb_no_store
+	cachedb_no_store | redis_logical_db
 	;
 cachedb_backend_name: VAR_CACHEDB_BACKEND STRING_ARG
 	{
@@ -3812,6 +3813,21 @@ redis_expire_records: VAR_CACHEDB_REDISEXPIRERECORDS STRING_ARG
 		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
 			yyerror("expected yes or no.");
 		else cfg_parser->cfg->redis_expire_records = (strcmp($2, "yes")==0);
+	#else
+		OUTYY(("P(Compiled without cachedb or redis, ignoring)\n"));
+	#endif
+		free($2);
+	}
+	;
+redis_logical_db: VAR_CACHEDB_REDISLOGICALDB STRING_ARG
+	{
+	#if defined(USE_CACHEDB) && defined(USE_REDIS)
+		int db;
+		OUTYY(("P(redis_logical_db:%s)\n", $2));
+		db = atoi($2);
+		if((db == 0 && strcmp($2, "0") != 0) || db < 0)
+			yyerror("valid redis logical database index expected");
+		else cfg_parser->cfg->redis_logical_db = db;
 	#else
 		OUTYY(("P(Compiled without cachedb or redis, ignoring)\n"));
 	#endif

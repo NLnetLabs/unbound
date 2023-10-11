@@ -590,7 +590,7 @@ ssl_read_line(RES* res, char* buf, size_t max)
 			while(1) {
 				ssize_t rr = recv(res->fd, buf+len, 1, 0);
 				if(rr <= 0) {
-					if(rr == 0) {
+					if(rr == 0 && len != 0) {
 						buf[len] = 0;
 						return 1;
 					}

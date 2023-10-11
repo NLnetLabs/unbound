@@ -192,6 +192,7 @@ static sldns_lookup_table sldns_edns_options_data[] = {
 	{ 6, "DHU" },
 	{ 7, "N3U" },
 	{ 8, "edns-client-subnet" },
+	{ 10, "COOKIE" },
 	{ 11, "edns-tcp-keepalive"},
 	{ 12, "Padding" },
 	{ 15, "EDE"},
