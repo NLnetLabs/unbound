@@ -2707,6 +2707,17 @@ Unbound is configured with \fBserve-expired\fR and \fBserve-expired-ttl\fR is 0,
 this option is internally reverted to "no".  Redis SETEX support is required
 for this option (Redis >= 2.0.0).
 This option defaults to no.
+.TP
+.B redis-logical-db: \fI<logical database index>
+The logical database in Redis to use.
+These are databases in the same Redis instance sharing the same configuration
+and persisted in the same RDB/AOF file.
+If unsure about using this option, Redis documentation
+(https://redis.io/commands/select/) suggests not to use a single Redis instance
+for multiple unrelated applications.
+The default database in Redis is 0 while other logical databases need to be
+explicitly SELECT'ed upon connecting.
+This option defaults to 0.
 .SS DNSTAP Logging Options
 DNSTAP support, when compiled in by using \fB\-\-enable\-dnstap\fR, is enabled
 in the \fBdnstap:\fR section.
