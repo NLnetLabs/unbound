@@ -199,7 +199,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_INTERFACE_ACTION VAR_INTERFACE_VIEW VAR_INTERFACE_TAG
 %token VAR_INTERFACE_TAG_ACTION VAR_INTERFACE_TAG_DATA
 %token VAR_PROXY_PROTOCOL_PORT VAR_STATISTICS_INHIBIT_ZERO
-%token VAR_HARDEN_UNKNOWN_ADDITIONAL
+%token VAR_HARDEN_UNKNOWN_ADDITIONAL VAR_DISABLE_EDNS_DO
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -333,7 +333,7 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_tcp_reuse_timeout | server_tcp_auth_query_timeout |
 	server_interface_automatic_ports | server_ede |
 	server_proxy_protocol_port | server_statistics_inhibit_zero |
-	server_harden_unknown_additional
+	server_harden_unknown_additional | server_disable_edns_do
 	;
 stubstart: VAR_STUB_ZONE
 	{
@@ -2058,6 +2058,15 @@ server_ignore_cd_flag: VAR_IGNORE_CD_FLAG STRING_ARG
 		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
 			yyerror("expected yes or no.");
 		else cfg_parser->cfg->ignore_cd = (strcmp($2, "yes")==0);
+		free($2);
+	}
+	;
+server_disable_edns_do: VAR_DISABLE_EDNS_DO STRING_ARG
+	{
+		OUTYY(("P(server_disable_edns_do:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else cfg_parser->cfg->disable_edns_do = (strcmp($2, "yes")==0);
 		free($2);
 	}
 	;
