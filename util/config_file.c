@@ -273,6 +273,7 @@ config_create(void)
 	cfg->val_permissive_mode = 0;
 	cfg->aggressive_nsec = 1;
 	cfg->ignore_cd = 0;
+	cfg->disable_edns_do = 0;
 	cfg->serve_expired = 0;
 	cfg->serve_expired_ttl = 0;
 	cfg->serve_expired_ttl_reset = 0;
@@ -695,6 +696,7 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	else S_YNO("val-permissive-mode:", val_permissive_mode)
 	else S_YNO("aggressive-nsec:", aggressive_nsec)
 	else S_YNO("ignore-cd-flag:", ignore_cd)
+	else S_YNO("disable-edns-do:", disable_edns_do)
 	else if(strcmp(opt, "serve-expired:") == 0)
 	{ IS_YES_OR_NO; cfg->serve_expired = (strcmp(val, "yes") == 0);
 	  SERVE_EXPIRED = cfg->serve_expired; }
@@ -1156,6 +1158,7 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_YNO(opt, "val-permissive-mode", val_permissive_mode)
 	else O_YNO(opt, "aggressive-nsec", aggressive_nsec)
 	else O_YNO(opt, "ignore-cd-flag", ignore_cd)
+	else O_YNO(opt, "disable-edns-do", disable_edns_do)
 	else O_YNO(opt, "serve-expired", serve_expired)
 	else O_DEC(opt, "serve-expired-ttl", serve_expired_ttl)
 	else O_YNO(opt, "serve-expired-ttl-reset", serve_expired_ttl_reset)

@@ -414,6 +414,8 @@ struct config_file {
 	int aggressive_nsec;
 	/** ignore the CD flag in incoming queries and refuse them bogus data */
 	int ignore_cd;
+	/** disable EDNS DO flag in outgoing requests */
+	int disable_edns_do;
 	/** serve expired entries and prefetch them */
 	int serve_expired;
 	/** serve expired entries until TTL after expiration */
