@@ -809,6 +809,7 @@ addr_to_nat64(const struct sockaddr_storage* addr,
 	struct sockaddr_in *sin = (struct sockaddr_in *)addr;
 	struct sockaddr_in6 *sin6;
 	uint8_t *v4_byte;
+	int i;
 
 	/* This needs to be checked by the caller */
 	log_assert(addr->ss_family == AF_INET);
@@ -826,7 +827,7 @@ addr_to_nat64(const struct sockaddr_storage* addr,
 	nat64_prefixnet = nat64_prefixnet / 8;
 
 	v4_byte = (uint8_t *)&sin->sin_addr.s_addr;
-	for(int i = 0; i < 4; i++) {
+	for(i = 0; i < 4; i++) {
 		if(nat64_prefixnet == 8) {
 			/* bits 64...71 are MBZ */
 			sin6->sin6_addr.s6_addr[nat64_prefixnet++] = 0;

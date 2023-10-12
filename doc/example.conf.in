@@ -1240,6 +1240,8 @@ remote-control:
 #     redis-timeout: 100
 #     # set timeout on redis records based on DNS response TTL
 #     redis-expire-records: no
+#     # redis logical database to use, 0 is the default database.
+#     redis-logical-db: 0
 
 # IPSet
 # Add specify domain into set via ipset.

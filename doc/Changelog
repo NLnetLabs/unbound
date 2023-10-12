@@ -1,3 +1,63 @@
+11 October 2023: George
+	- Fix #850: [FR] Ability to use specific database in Redis, with new
+	  redis-logical-db configuration option.
+
+11 October 2023: Wouter
+	- Fix #949: "could not create control compt".
+	- Fix that cachedb does not warn when serve-expired is disabled about
+	  use of serve-expired-reply-ttl and serve-expired-client-timeout.
+	- Fix for #949: Fix pythonmod/ubmodule-tst.py for Python 3.x.
+
+10 October 2023: George
+	- Fix infinite loop when reading multiple lines of input on a broken
+	  remote control socket. Addesses #947 and #948.
+
+9 October 2023: Wouter
+	- Fix edns subnet so that queries with a source prefix of zero cause
+	  the recursor send no edns subnet option to the upstream.
+	- Fix that printout of EDNS options shows the EDNS cookie option by
+	  name.
+
+4 October 2023: Wouter
+	- Fix #946: Forwarder returns servfail on upstream response noerror no
+	  data.
+
+3 October 2023: George
+	- Merge #881: Generalise the proxy protocol code.
+
+2 October 2023: George
+	- Fix misplaced comment.
+
+22 September 2023: Wouter
+	- Fix #942: 1.18.0 libunbound DNS regression when built without
+	  OpenSSL.
+
+18 September 2023: Wouter
+	- Fix rpz tcp-only action with rpz triggers nsdname and nsip.
+
+15 September 2023: Wouter
+	- Merge #936: Check for c99 with autoconf versions prior to 2.70.
+	- Fix to remove two c99 notations.
+
+14 September 2023: Wouter
+	- Fix authority zone answers for obscured DNAMEs and delegations.
+
+8 September 2023: Wouter
+	- Fix send of udp retries when ENOBUFS is returned. It stops looping
+	  and also waits for the condition to go away. Reported by Florian
+	  Obser.
+
+7 September 2023: Wouter
+	- Fix to scrub resource records of type A and AAAA that have an
+	  inappropriate size. They are removed from responses.
+	- Fix to move msgparse_rrset_remove_rr code to util/msgparse.c.
+	- Fix to add EDE text when RRs have been removed due to length.
+	- Fix to set ede match in unit test for rr length removal.
+	- Fix to print EDE text in readable form in output logs.
+
+6 September 2023: Wouter
+	- Merge #931: Prevent warnings from -Wmissing-prototypes.
+
 31 August 2023: Wouter
 	- Fix autoconf 2.69 warnings in configure.
 	- Fix #927: unbound 1.18.0 make test error. Fix make test without SHA1.

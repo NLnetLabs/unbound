@@ -1391,8 +1391,15 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 				return 0;
 			}
 		}
-		if (sock_queue_timeout && !set_recvtimestamp(s)) {
-			log_warn("socket timestamping is not available");
+		if(udp_port_type == listen_type_udp && sock_queue_timeout)
+			udp_port_type = listen_type_udpancil;
+		if (sock_queue_timeout) {
+			if(!set_recvtimestamp(s)) {
+				log_warn("socket timestamping is not available");
+			} else {
+				if(udp_port_type == listen_type_udp)
+					udp_port_type = listen_type_udpancil;
+			}
 		}
 		if(!port_insert(list, s, udp_port_type, is_pp2, ub_sock)) {
 			sock_close(s);
@@ -1583,9 +1590,13 @@ listen_create(struct comm_base* base, struct listen_port* ports,
 			}
 		} else if(ports->ftype == listen_type_udpancil ||
 				  ports->ftype == listen_type_udpancil_dnscrypt) {
+#if defined(AF_INET6) && defined(IPV6_PKTINFO) && defined(HAVE_RECVMSG)
 			cp = comm_point_create_udp_ancil(base, ports->fd,
 				front->udp_buff, ports->pp2_enabled, cb,
 				cb_arg, ports->socket);
+#else
+			log_warn("This system does not support UDP ancilliary data.");
+#endif
 		}
 		if(!cp) {
 			log_err("can't create commpoint");

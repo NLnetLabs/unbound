@@ -2,19 +2,17 @@
 server:
 	target-fetch-policy: "0 0 0 0 0"
 	qname-minimisation: "no"
-	module-config: "dns64 validator iterator"
-	dns64-prefix: 64:ff9b::0/96
 	minimal-responses: no
+	rrset-roundrobin: no
+	ede: yes
+	log-servfail: yes
 
 stub-zone:
 	name: "."
 	stub-addr: 193.0.14.129 	# K.ROOT-SERVERS.NET.
 CONFIG_END
 
-SCENARIO_BEGIN Test dns64 lookup and synthesis.
-; normal A lookup should still succeed
-; AAAA is synthesized if not present.
-; AAAA if present, is passed through unchanged.
+SCENARIO_BEGIN Test scrub of RRs of inappropriate length
 
 ; K.ROOT-SERVERS.NET.
 RANGE_BEGIN 0 200
@@ -42,19 +40,6 @@ com.	IN NS	a.gtld-servers.net.
 SECTION ADDITIONAL
 a.gtld-servers.net.	IN 	A	192.5.6.30
 ENTRY_END
-
-ENTRY_BEGIN
-MATCH opcode subdomain
-ADJUST copy_id copy_query
-REPLY QR NOERROR
-SECTION QUESTION
-7.6.5.in-addr.arpa. IN A
-SECTION AUTHORITY
-7.6.5.in-addr.arpa. IN NS ns.example.com.
-SECTION ADDITIONAL
-ns.example.com.		IN	A	1.2.3.4
-ENTRY_END
-
 RANGE_END
 
 ; a.gtld-servers.net.
@@ -103,11 +88,12 @@ ENTRY_END
 ENTRY_BEGIN
 MATCH opcode qtype qname
 ADJUST copy_id
-REPLY QR NOERROR
+REPLY QR AA NOERROR
 SECTION QUESTION
 www.example.com. IN A
 SECTION ANSWER
 www.example.com. IN A	10.20.30.40
+www.example.com. IN A \# 3 030405
 SECTION AUTHORITY
 example.com.	IN NS	ns.example.com.
 SECTION ADDITIONAL
@@ -117,23 +103,12 @@ ENTRY_END
 ENTRY_BEGIN
 MATCH opcode qtype qname
 ADJUST copy_id
-REPLY QR NOERROR
+REPLY QR AA NOERROR
 SECTION QUESTION
-ip4.example.com. IN AAAA
+www.example.com. IN AAAA
 SECTION ANSWER
-; NO AAAA present
-SECTION AUTHORITY
-example.com.	IN SOA	a. b. 1 2 3 4 5
-ENTRY_END
-
-ENTRY_BEGIN
-MATCH opcode qtype qname
-ADJUST copy_id
-REPLY QR NOERROR
-SECTION QUESTION
-ip4.example.com. IN A
-SECTION ANSWER
-ip4.example.com. IN A	5.6.7.8
+www.example.com. IN AAAA	2001:db8::1234
+www.example.com. IN AAAA \# 48 000102030405060708090A0B0C0D0E0F101112131415161718191A1B1C1D1E1F202122232425262728292A2B2C2D2E2F
 SECTION AUTHORITY
 example.com.	IN NS	ns.example.com.
 SECTION ADDITIONAL
@@ -143,11 +118,12 @@ ENTRY_END
 ENTRY_BEGIN
 MATCH opcode qtype qname
 ADJUST copy_id
-REPLY QR NOERROR
+REPLY QR AA NOERROR
 SECTION QUESTION
-ip6.example.com. IN AAAA
+broken1.example.com. IN A
 SECTION ANSWER
-ip6.example.com. IN AAAA 1:2:3::4
+broken1.example.com. IN A \# 3 030405
+broken1.example.com. IN A \# 3 030406
 SECTION AUTHORITY
 example.com.	IN NS	ns.example.com.
 SECTION ADDITIONAL
@@ -157,15 +133,39 @@ ENTRY_END
 ENTRY_BEGIN
 MATCH opcode qtype qname
 ADJUST copy_id
-REPLY QR NOERROR
+REPLY QR AA NOERROR
 SECTION QUESTION
-8.7.6.5.in-addr.arpa. IN PTR
+broken1.example.com. IN AAAA
 SECTION ANSWER
-8.7.6.5.in-addr.arpa. PTR ip4.example.com.
+broken1.example.com. IN AAAA \# 48 000102030405060708090A0B0C0D0E0F101112131415161718191A1B1C1D1E1F202122232425262728292A2B2C2D2E2F
+broken1.example.com. IN AAAA \# 48 000102030405060708090A0B0C0D0E0F101112131415161718191A1B1C1D1E1F202122232425262728292A2B2C2D2E30
+broken1.example.com. IN AAAA \# 48 000102030405060708090A0B0C0D0E0F101112131415161718191A1B1C1D1E1F202122232425262728292A2B2C2D2E31
 SECTION AUTHORITY
-7.6.5.in-addr.arpa. IN NS ns.example.com.
+example.com.	IN NS	ns.example.com.
+SECTION ADDITIONAL
+ns.example.com.		IN 	A	1.2.3.4
 ENTRY_END
 
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR AA NOERROR
+SECTION QUESTION
+broken2.example.com. IN A
+SECTION ANSWER
+broken2.example.com. IN A 1.2.3.4
+broken2.example.com. IN A \# 3 030405
+broken2.example.com. IN A 1.2.3.5
+broken2.example.com. IN A \# 3 030406
+SECTION AUTHORITY
+example.com.	IN NS	ns.example.com.
+SECTION ADDITIONAL
+ns.example.com. IN A \# 3 030407
+ns.example.com.		IN 	A	1.2.3.6
+ns.example.com. IN A \# 3 030408
+ns.example.com. IN A \# 3 030409
+ns.example.com.		IN 	A	1.2.3.7
+ENTRY_END
 RANGE_END
 
 STEP 1 QUERY
@@ -175,7 +175,6 @@ SECTION QUESTION
 www.example.com. IN A
 ENTRY_END
 
-; recursion happens here.
 STEP 10 CHECK_ANSWER
 ENTRY_BEGIN
 MATCH all
@@ -190,71 +189,110 @@ SECTION ADDITIONAL
 ns.example.com.		IN 	A	1.2.3.4
 ENTRY_END
 
-; synthesize from A record 5.6.7.8
 STEP 20 QUERY
 ENTRY_BEGIN
 REPLY RD
 SECTION QUESTION
-ip4.example.com. IN AAAA
+www.example.com. IN AAAA
 ENTRY_END
 
-; recursion happens here.
 STEP 30 CHECK_ANSWER
 ENTRY_BEGIN
 MATCH all
 REPLY QR RD RA NOERROR
 SECTION QUESTION
-ip4.example.com. IN AAAA
+www.example.com. IN AAAA
 SECTION ANSWER
-ip4.example.com.        IN      AAAA    64:ff9b::506:708
+www.example.com. IN AAAA	2001:db8::1234
 SECTION AUTHORITY
 example.com.	IN NS	ns.example.com.
 SECTION ADDITIONAL
 ns.example.com.		IN 	A	1.2.3.4
 ENTRY_END
 
-; this node has its own ipv6 address
 STEP 40 QUERY
 ENTRY_BEGIN
 REPLY RD
 SECTION QUESTION
-ip6.example.com. IN AAAA
+broken1.example.com. IN A
 ENTRY_END
 
-; recursion happens here.
 STEP 50 CHECK_ANSWER
 ENTRY_BEGIN
 MATCH all
 REPLY QR RD RA NOERROR
 SECTION QUESTION
-ip6.example.com. IN AAAA
+broken1.example.com. IN A
 SECTION ANSWER
-ip6.example.com. IN AAAA 1:2:3::4
 SECTION AUTHORITY
 example.com.	IN NS	ns.example.com.
 SECTION ADDITIONAL
 ns.example.com.		IN 	A	1.2.3.4
 ENTRY_END
 
-; test ptr lookup
 STEP 60 QUERY
 ENTRY_BEGIN
 REPLY RD
 SECTION QUESTION
-8.0.7.0.6.0.5.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.b.9.f.f.4.6.0.0.ip6.arpa. IN PTR
+broken1.example.com. IN AAAA
 ENTRY_END
 
-; recursion happens here.
 STEP 70 CHECK_ANSWER
 ENTRY_BEGIN
 MATCH all
 REPLY QR RD RA NOERROR
 SECTION QUESTION
-8.0.7.0.6.0.5.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.b.9.f.f.4.6.0.0.ip6.arpa. IN PTR
+broken1.example.com. IN AAAA
 SECTION ANSWER
-8.0.7.0.6.0.5.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.b.9.f.f.4.6.0.0.ip6.arpa. IN PTR ip4.example.com.
 SECTION AUTHORITY
-7.6.5.in-addr.arpa. IN NS ns.example.com.
+example.com.	IN NS	ns.example.com.
+SECTION ADDITIONAL
+ns.example.com.		IN 	A	1.2.3.4
+ENTRY_END
+
+STEP 80 QUERY
+ENTRY_BEGIN
+REPLY RD
+SECTION QUESTION
+broken2.example.com. IN A
+ENTRY_END
+
+STEP 90 CHECK_ANSWER
+ENTRY_BEGIN
+MATCH all
+REPLY QR RD RA NOERROR
+SECTION QUESTION
+broken2.example.com. IN A
+SECTION ANSWER
+broken2.example.com. IN A 1.2.3.4
+broken2.example.com. IN A 1.2.3.5
+SECTION AUTHORITY
+example.com.	IN NS	ns.example.com.
+SECTION ADDITIONAL
+ns.example.com.		IN 	A	1.2.3.6
+ns.example.com.		IN 	A	1.2.3.7
+ENTRY_END
+
+STEP 100 QUERY
+ENTRY_BEGIN
+REPLY RD CD DO
+SECTION QUESTION
+www.example.com. IN A
+ENTRY_END
+
+STEP 110 CHECK_ANSWER
+ENTRY_BEGIN
+MATCH all ede=0
+REPLY QR RD CD RA DO NOERROR
+SECTION QUESTION
+www.example.com. IN A
+SECTION ANSWER
+www.example.com. IN A	10.20.30.40
+SECTION AUTHORITY
+example.com.	IN NS	ns.example.com.
+SECTION ADDITIONAL
+ns.example.com.		IN 	A	1.2.3.6
+ns.example.com.		IN 	A	1.2.3.7
 ENTRY_END
 
 SCENARIO_END
