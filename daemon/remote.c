@@ -590,13 +590,13 @@ ssl_read_line(RES* res, char* buf, size_t max)
 			while(1) {
 				ssize_t rr = recv(res->fd, buf+len, 1, 0);
 				if(rr <= 0) {
-					if(rr == 0 && len != 0) {
+					if(rr == 0) {
 						buf[len] = 0;
 						return 1;
 					}
 					if(errno == EINTR || errno == EAGAIN)
 						continue;
-					log_err("could not recv: %s",
+					if(rr < 0) log_err("could not recv: %s",
 						sock_strerror(errno));
 					return 0;
 				}
@@ -1223,8 +1223,8 @@ do_zones_add(RES* ssl, struct local_zones* zones)
 	char buf[2048];
 	int num = 0;
 	while(ssl_read_line(ssl, buf, sizeof(buf))) {
-		if(buf[0] == 0x04 && buf[1] == 0)
-			break; /* end of transmission */
+		if(buf[0] == 0 || (buf[0] == 0x04 && buf[1] == 0))
+			break; /* zero byte line or end of transmission */
 		if(!perform_zone_add(ssl, zones, buf)) {
 			if(!ssl_printf(ssl, "error for input line: %s\n", buf))
 				return;
@@ -1272,8 +1272,8 @@ do_zones_remove(RES* ssl, struct local_zones* zones)
 	char buf[2048];
 	int num = 0;
 	while(ssl_read_line(ssl, buf, sizeof(buf))) {
-		if(buf[0] == 0x04 && buf[1] == 0)
-			break; /* end of transmission */
+		if(buf[0] == 0 || (buf[0] == 0x04 && buf[1] == 0))
+			break; /* zero byte line or end of transmission */
 		if(!perform_zone_remove(ssl, zones, buf)) {
 			if(!ssl_printf(ssl, "error for input line: %s\n", buf))
 				return;
@@ -1336,8 +1336,8 @@ do_datas_add(RES* ssl, struct local_zones* zones)
 	char buf[2048];
 	int num = 0, line = 0;
 	while(ssl_read_line(ssl, buf, sizeof(buf))) {
-		if(buf[0] == 0x04 && buf[1] == 0)
-			break; /* end of transmission */
+		if(buf[0] == 0 || (buf[0] == 0x04 && buf[1] == 0))
+			break; /* zero byte line or end of transmission */
 		line++;
 		if(perform_data_add(ssl, zones, buf, line))
 			num++;
@@ -1376,8 +1376,8 @@ do_datas_remove(RES* ssl, struct local_zones* zones)
 	char buf[2048];
 	int num = 0;
 	while(ssl_read_line(ssl, buf, sizeof(buf))) {
-		if(buf[0] == 0x04 && buf[1] == 0)
-			break; /* end of transmission */
+		if(buf[0] == 0 || (buf[0] == 0x04 && buf[1] == 0))
+			break; /* zero byte line or end of transmission */
 		if(!perform_data_remove(ssl, zones, buf)) {
 			if(!ssl_printf(ssl, "error for input line: %s\n", buf))
 				return;

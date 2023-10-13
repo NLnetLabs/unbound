@@ -1,3 +1,8 @@
+13 October 2023: George
+	- Better fix for infinite loop when reading multiple lines of input on
+	  a broken remote control socket, by treating a zero byte line the
+	  same as transmission end. Addesses #947 and #948.
+
 12 October 2023: Wouter
 	- Merge #944: Disable EDNS DO.
 	  Disable the EDNS DO flag in upstream requests. This can be helpful
