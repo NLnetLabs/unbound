@@ -7,7 +7,6 @@
 # do your teardown here
 PRE="../.."
 . ../common.sh
-if grep "define USE_CACHEDB 1" $PRE/config.h; then echo test enabled; else skip_test "test skipped"; fi
 
 echo "> cat logfiles"
 cat fwd.log 
