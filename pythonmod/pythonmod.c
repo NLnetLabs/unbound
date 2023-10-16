@@ -269,7 +269,7 @@ int pythonmod_init(struct module_env* env, int id)
 
    /* Initialize module */
    FILE* script_py = NULL;
-   PyObject* py_init_arg = NULL, *res = NULL;
+   PyObject* py_init_arg = NULL, *res = NULL, *fname = NULL;
    PyGILState_STATE gil;
    int init_standard = 1, i = 0;
 #if PY_MAJOR_VERSION < 3
@@ -419,6 +419,14 @@ int pythonmod_init(struct module_env* env, int id)
    pe->dict = PyModule_GetDict(pe->module);
    Py_XINCREF(pe->dict);
    pe->data = PyDict_New();
+   /* add the script filename to the global "mod_env" for trivial access */
+   fname = PyString_FromString(pe->fname);
+   if(PyDict_SetItemString(pe->data, "script", fname) < 0) {
+	log_err("pythonmod: could not add item to dictionary");
+	Py_XDECREF(fname);
+	goto python_init_fail;
+   }
+   Py_XDECREF(fname);
    Py_XINCREF(pe->data);  /* reference will be stolen below */
    if(PyModule_AddObject(pe->module, "mod_env", pe->data) < 0) {
 	log_err("pythonmod: could not add mod_env object");

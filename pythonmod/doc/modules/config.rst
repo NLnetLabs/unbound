@@ -339,4 +339,5 @@ config_file
 
    .. attribute:: python_script
    
-      Python script file.
+      Linked list of Python script files.
+      Deprecated; `mod_env['script']` should be used instead.

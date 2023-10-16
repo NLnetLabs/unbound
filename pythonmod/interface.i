@@ -952,6 +952,7 @@ struct config_str2list {
 /* ************************************************************************************ *
    Structure config_file
  * ************************************************************************************ */
+%ignore config_file::python_script;
 struct config_file {
    int verbosity;
    int stat_interval;
@@ -1034,6 +1035,13 @@ struct config_file {
    int do_daemonize;
    struct config_strlist* python_script;
 };
+
+%extend config_file {
+   %pythoncode %{
+        def _deprecated_python_script(self): return "cfg.python_script is deprecated, you can use `mod_env['script']` instead."
+        python_script = property(_deprecated_python_script)
+   %}
+}
 
 /* ************************************************************************************ *
    ASN: Adding structures related to forwards_lookup and dns_cache_find_delegation

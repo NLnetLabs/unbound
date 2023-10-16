@@ -1,3 +1,8 @@
+16 October 2023: George
+	- Expose the script filename in the Python module environment 'mod_env'
+	  instead of the config_file structure which includes the linked list
+	  of scripts in a multi Python module setup; fixes #79.
+
 13 October 2023: George
 	- Better fix for infinite loop when reading multiple lines of input on
 	  a broken remote control socket, by treating a zero byte line the
