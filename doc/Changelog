@@ -5,6 +5,9 @@
 	- Expose the configured listening and outgoing interfaces, if any, as
 	  a list of strings in the Python 'config_file' class instead of the
 	  current Swig object proxy; fixes #79.
+	- For multi Python module setups, clean previously parsed module
+	  functions in __main__'s dictionary, if any, so that only current
+	  module functions are registered.
 
 13 October 2023: George
 	- Better fix for infinite loop when reading multiple lines of input on
