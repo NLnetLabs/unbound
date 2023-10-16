@@ -86,6 +86,20 @@
      }
      return list;
    }
+
+   /* converts an array of strings (char**) to a List of strings */
+   PyObject* CharArrayAsStringList(char** array, int len) {
+     PyObject* list;
+     int i;
+
+     if(!array||len==0) return PyList_New(0);
+
+     list = PyList_New(len);
+     for (i=0; i < len; i++) {
+            PyList_SET_ITEM(list, i, PyString_FromString(array[i]));
+     }
+     return list;
+   }
 %}
 
 /* ************************************************************************************ *
@@ -952,6 +966,8 @@ struct config_str2list {
 /* ************************************************************************************ *
    Structure config_file
  * ************************************************************************************ */
+%ignore config_file::ifs;
+%ignore config_file::out_ifs;
 %ignore config_file::python_script;
 struct config_file {
    int verbosity;
@@ -1036,8 +1052,20 @@ struct config_file {
    struct config_strlist* python_script;
 };
 
+%inline %{
+   PyObject* _get_ifs_tuple(struct config_file* cfg) {
+      return CharArrayAsStringList(cfg->ifs, cfg->num_ifs);
+   }
+   PyObject* _get_ifs_out_tuple(struct config_file* cfg) {
+      return CharArrayAsStringList(cfg->out_ifs, cfg->num_out_ifs);
+   }
+%}
+
 %extend config_file {
    %pythoncode %{
+        ifs = property(_unboundmodule._get_ifs_tuple)
+        out_ifs = property(_unboundmodule._get_ifs_out_tuple)
+
         def _deprecated_python_script(self): return "cfg.python_script is deprecated, you can use `mod_env['script']` instead."
         python_script = property(_deprecated_python_script)
    %}

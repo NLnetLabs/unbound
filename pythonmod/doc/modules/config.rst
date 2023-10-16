@@ -129,7 +129,7 @@ config_file
    
    .. attribute:: ifs
    
-      Interface description strings (IP addresses).
+      List of interface description strings (IP addresses).
 
    .. attribute:: num_out_ifs
    
@@ -138,7 +138,7 @@ config_file
 
    .. attribute:: out_ifs
    
-      Outgoing interface description strings (IP addresses).
+      List of outgoing interface description strings (IP addresses).
       
    .. attribute:: root_hints
    

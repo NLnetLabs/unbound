@@ -2,6 +2,9 @@
 	- Expose the script filename in the Python module environment 'mod_env'
 	  instead of the config_file structure which includes the linked list
 	  of scripts in a multi Python module setup; fixes #79.
+	- Expose the configured listening and outgoing interfaces, if any, as
+	  a list of strings in the Python 'config_file' class instead of the
+	  current Swig object proxy; fixes #79.
 
 13 October 2023: George
 	- Better fix for infinite loop when reading multiple lines of input on
