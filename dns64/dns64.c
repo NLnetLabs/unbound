@@ -573,28 +573,29 @@ static enum module_ext_state
 handle_event_pass(struct module_qstate* qstate, int id)
 {
 	struct dns64_qstate* iq = (struct dns64_qstate*)qstate->minfo[id];
-	if (iq && iq->state == DNS64_NEW_QUERY
-            && qstate->qinfo.qtype == LDNS_RR_TYPE_PTR
-            && qstate->qinfo.qname_len == 74
-            && !strcmp((char*)&qstate->qinfo.qname[64], "\03ip6\04arpa"))
+	int synth_all_cfg = qstate->env->cfg->dns64_synthall;
+	int synth_qname = 0;
+
+	if(iq && iq->state == DNS64_NEW_QUERY
+		&& qstate->qinfo.qtype == LDNS_RR_TYPE_PTR
+		&& qstate->qinfo.qname_len == 74
+		&& !strcmp((char*)&qstate->qinfo.qname[64], "\03ip6\04arpa")) {
 		/* Handle PTR queries for IPv6 addresses. */
 		return handle_ipv6_ptr(qstate, id);
+	}
 
-	int synth_all_cfg = qstate->env->cfg->dns64_synthall;
-	int synth_qname =
-		dns64_always_synth_for_qname(qstate, id) &&
-		!(qstate->query_flags & BIT_CD);
-
-	if (iq && iq->state == DNS64_NEW_QUERY &&
-	    qstate->qinfo.qtype == LDNS_RR_TYPE_AAAA &&
-	    (synth_all_cfg || synth_qname)) {
-		if (synth_qname)
+	if(iq && iq->state == DNS64_NEW_QUERY &&
+		qstate->qinfo.qtype == LDNS_RR_TYPE_AAAA &&
+		(synth_all_cfg ||
+		(synth_qname=(dns64_always_synth_for_qname(qstate, id)
+			&& !(qstate->query_flags & BIT_CD))))) {
+		if(synth_qname)
 			verbose(VERB_ALGO, "dns64: ignore-aaaa and synthesize anyway");
 		return generate_type_A_query(qstate, id);
 	}
 
 	/* We are finished when our sub-query is finished. */
-	if (iq && iq->state == DNS64_SUBQUERY_FINISHED)
+	if(iq && iq->state == DNS64_SUBQUERY_FINISHED)
 		return module_finished;
 
 	/* Otherwise, pass request to next module. */
@@ -636,28 +637,28 @@ handle_event_moddone(struct module_qstate* qstate, int id)
 		qstate->qinfo.qtype == LDNS_RR_TYPE_AAAA &&
 		(!iq || iq->state != DNS64_INTERNAL_QUERY) &&
 		!(qstate->query_flags & BIT_CD);
-	int has_data = /*< whether query returned non-empty rrset */
+	int has_data = /* whether query returned non-empty rrset */
 		qstate->return_msg &&
 		qstate->return_msg->rep &&
 		reply_find_answer_rrset(&qstate->qinfo, qstate->return_msg->rep);
-	int synth_qname;
+	int synth_qname = 0;
 
 	if(want_synth &&
-	   (!has_data || (synth_qname=dns64_always_synth_for_qname(qstate, id))))
-	{
-		if (synth_qname)
+		(!has_data ||
+		(synth_qname=dns64_always_synth_for_qname(qstate, id)))) {
+		if(synth_qname)
 			verbose(VERB_ALGO, "dns64: ignore-aaaa and synthesize anyway");
 		return generate_type_A_query(qstate, id);
 	}
 
 	/* Store the response in cache. */
-	if ( (!iq || !iq->started_no_cache_store) &&
-	     qstate->return_msg &&
-	     qstate->return_msg->rep &&
-	     !dns_cache_store(
-		     qstate->env, &qstate->qinfo, qstate->return_msg->rep,
-		     0, 0, 0, NULL,
-		     qstate->query_flags, qstate->qstarttime))
+	if( (!iq || !iq->started_no_cache_store) &&
+		qstate->return_msg &&
+		qstate->return_msg->rep &&
+		!dns_cache_store(
+			qstate->env, &qstate->qinfo, qstate->return_msg->rep,
+			0, 0, 0, NULL,
+			qstate->query_flags, qstate->qstarttime))
 		log_err("out of memory");
 
 	/* do nothing */
