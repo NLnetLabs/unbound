@@ -395,6 +395,9 @@ config_create(void)
 #ifdef USE_IPSET
 	cfg->ipset_name_v4 = NULL;
 	cfg->ipset_name_v6 = NULL;
+	cfg->ipset_mode = 0;
+	cfg->ipset_table_v4 = NULL;
+	cfg->ipset_table_v6 = NULL;
 #endif
 	cfg->ede = 0;
 	return cfg;
@@ -1323,6 +1326,9 @@ config_get_option(struct config_file* cfg, const char* opt,
 #ifdef USE_IPSET
 	else O_STR(opt, "name-v4", ipset_name_v4)
 	else O_STR(opt, "name-v6", ipset_name_v6)
+	else O_DEC(opt, "mode",     ipset_mode)
+	else O_STR(opt, "table-v4", ipset_table_v4)
+	else O_STR(opt, "table-v6", ipset_table_v6)
 #endif
 	/* not here:
 	 * outgoing-permit, outgoing-avoid - have list of ports
@@ -1700,6 +1706,8 @@ config_delete(struct config_file* cfg)
 #ifdef USE_IPSET
 	free(cfg->ipset_name_v4);
 	free(cfg->ipset_name_v6);
+	free(cfg->ipset_table_v4);
+	free(cfg->ipset_table_v6);
 #endif
 	free(cfg);
 }

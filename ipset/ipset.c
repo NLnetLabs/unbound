@@ -20,6 +20,7 @@
 #include <libmnl/libmnl.h>
 #include <linux/netfilter/nfnetlink.h>
 #include <linux/netfilter/ipset/ip_set.h>
+#include <linux/netfilter/nf_tables.h>
 
 #define BUFF_LEN 256
 
@@ -58,18 +59,26 @@ static struct mnl_socket * open_mnl_socket() {
 	return mnl;
 }
 
-static int add_to_ipset(struct mnl_socket *mnl, const char *setname, const void *ipaddr, int af) {
+static int add_to_ipset(struct ipset_env *ie, const void *ipaddr, int af) {
 	struct nlmsghdr *nlh;
 	struct nfgenmsg *nfg;
 	struct nlattr *nested[2];
-	static char buffer[BUFF_LEN];
+	char *buffer = (char*)(ie + 1);
+	const char *setname;
+
+	if (af != AF_INET && af != AF_INET6) {
+		errno = EAFNOSUPPORT;
+		return -1;
+	}
+
+	setname = (af == AF_INET) ? ie->name_v4 : ie->name_v6;
+	if (!setname) {
+		errno = EINVAL;
+		return -1;
+	}
 
 	if (strlen(setname) >= IPSET_MAXNAMELEN) {
 		errno = ENAMETOOLONG;
-		return -1;
-	}
-	if (af != AF_INET && af != AF_INET6) {
-		errno = EAFNOSUPPORT;
 		return -1;
 	}
 
@@ -83,7 +92,8 @@ static int add_to_ipset(struct mnl_socket *mnl, const char *setname, const void 
 	nfg->res_id = htons(0);
 
 	mnl_attr_put_u8(nlh, IPSET_ATTR_PROTOCOL, IPSET_PROTOCOL);
-	mnl_attr_put(nlh, IPSET_ATTR_SETNAME, strlen(setname) + 1, setname);
+	mnl_attr_put_strz(nlh, IPSET_ATTR_SETNAME, setname);
+
 	nested[0] = mnl_attr_nest_start(nlh, IPSET_ATTR_DATA);
 	nested[1] = mnl_attr_nest_start(nlh, IPSET_ATTR_IP);
 	mnl_attr_put(nlh, (af == AF_INET ? IPSET_ATTR_IPADDR_IPV4 : IPSET_ATTR_IPADDR_IPV6)
@@ -91,15 +101,124 @@ static int add_to_ipset(struct mnl_socket *mnl, const char *setname, const void 
 	mnl_attr_nest_end(nlh, nested[1]);
 	mnl_attr_nest_end(nlh, nested[0]);
 
-	if (mnl_socket_sendto(mnl, nlh, nlh->nlmsg_len) < 0) {
+	if (mnl_socket_sendto(ie->mnl, nlh, nlh->nlmsg_len) < 0) {
 		return -1;
 	}
 	return 0;
 }
 
+
+static struct nlmsghdr *
+__nftnl_nlmsg_build_hdr(char *buf, uint16_t type, uint16_t family,
+						uint16_t flags, uint32_t seq,	uint16_t res_id)
+{
+	struct nlmsghdr *nlh;
+	struct nfgenmsg *nfh;
+
+	nlh = mnl_nlmsg_put_header(buf);
+	nlh->nlmsg_type = type;
+	nlh->nlmsg_flags = NLM_F_REQUEST | flags;
+	nlh->nlmsg_seq = seq;
+
+	nfh = mnl_nlmsg_put_extra_header(nlh, sizeof(struct nfgenmsg));
+	nfh->nfgen_family = family;
+	nfh->version = NFNETLINK_V0;
+	nfh->res_id = htons(res_id);
+
+	return nlh;
+}
+
+static int add_to_nftset(struct ipset_env *ie, const void *ipaddr, int af) {
+	struct nlmsghdr *nlh;
+	struct nlattr *nested[3];
+	char *b = (char*)(ie + 1);
+	size_t l = 0, addr_size;
+	int err;
+	const char *tablename, *setname;
+
+	if (af == AF_INET) {
+		tablename = ie->table_v4;
+		setname   = ie->name_v4;
+		addr_size = sizeof(struct in_addr);
+	} else if (af == AF_INET6) {
+		tablename = ie->table_v6;
+		setname = ie->table_v6;
+		addr_size = sizeof(struct in6_addr);
+	} else {
+		errno = EAFNOSUPPORT;
+		return -1;
+	}
+
+	if (!(tablename && setname)) {
+		errno = EINVAL;
+		return -1;
+	}
+
+	if ((strlen(setname) >= NFT_SET_MAXNAMELEN) ||
+		 (strlen(tablename) >= NFT_TABLE_MAXNAMELEN)) {
+		errno = ENAMETOOLONG;
+		return -1;
+	}
+
+	nlh = __nftnl_nlmsg_build_hdr(b, NFNL_MSG_BATCH_BEGIN,
+                                AF_UNSPEC, 0, ie->seq++, NFNL_SUBSYS_NFTABLES);
+
+	if (!nlh) {
+		errno = ENOMEM;
+		return -1;
+	};
+
+	b += nlh->nlmsg_len;
+	l += nlh->nlmsg_len;
+
+	nlh = __nftnl_nlmsg_build_hdr(b, (NFNL_SUBSYS_NFTABLES << 8) | NFT_MSG_NEWSETELEM,
+                                af, NLM_F_CREATE|NLM_F_EXCL, ie->seq++, 0);
+	if (!nlh) {
+		errno = ENOMEM;
+		return -1;
+	};
+
+	mnl_attr_put_strz(nlh, NFTA_SET_ELEM_LIST_TABLE, tablename);
+	mnl_attr_put_strz(nlh, NFTA_SET_ELEM_LIST_SET,  setname);
+
+	mnl_attr_put_u32(nlh, NFTA_SET_ELEM_LIST_SET_ID, htonl(1));
+	nested[0] = mnl_attr_nest_start(nlh, NFTA_SET_ELEM_LIST_ELEMENTS);
+	nested[1] = mnl_attr_nest_start(nlh, NFTA_SET_ELEM_KEY);
+	nested[2] = mnl_attr_nest_start(nlh, NFTA_SET_ELEM_KEY);
+
+	mnl_attr_put(nlh, NFTA_DATA_VALUE | NLA_F_NET_BYTEORDER, addr_size, ipaddr);
+	mnl_attr_nest_end(nlh, nested[2]);
+	mnl_attr_nest_end(nlh, nested[1]);
+	mnl_attr_nest_end(nlh, nested[0]);
+
+	b += nlh->nlmsg_len;
+	l += nlh->nlmsg_len;
+
+	nlh = __nftnl_nlmsg_build_hdr(b, NFNL_MSG_BATCH_END,
+                                AF_UNSPEC, 0, ie->seq++, NFNL_SUBSYS_NFTABLES);
+
+	if (!nlh) {
+		errno = ENOMEM;
+		return -1;
+	};
+
+	b += nlh->nlmsg_len;
+	l += nlh->nlmsg_len;
+
+	err = mnl_socket_sendto(ie->mnl, ie + 1, l);
+	if (err < 0) {
+		log_err("ipset: can't add address into %s->%s (%i)", tablename, setname, err);
+		errno = -err;
+		return -1;
+	}
+
+	return 0;
+
+}
+
 static void
-ipset_add_rrset_data(struct ipset_env *ie, struct mnl_socket *mnl,
-	struct packed_rrset_data *d, const char* setname, int af,
+ipset_add_rrset_data(struct ipset_env *ie,
+	struct packed_rrset_data *d, int af,
 	const char* dname)
 {
 	int ret;
@@ -121,13 +240,17 @@ ipset_add_rrset_data(struct ipset_env *ie, struct mnl_socket *mnl,
 				char ip[128];
 				if(inet_ntop(af, rr_data+2, ip, (socklen_t)sizeof(ip)) == 0)
 					snprintf(ip, sizeof(ip), "(inet_ntop_error)");
-				verbose(VERB_QUERY, "ipset: add %s to %s for %s", ip, setname, dname);
+				verbose(VERB_QUERY, "ipset: add %s for %s", ip, dname);
 			}
-			ret = add_to_ipset(mnl, setname, rr_data + 2, af);
+			if (ie->mode == 0)
+				ret = add_to_ipset(ie, rr_data + 2, af);
+			else  {
+				ret = add_to_nftset(ie,  rr_data + 2, af);
+			}
 			if (ret < 0) {
-				log_err("ipset: could not add %s into %s", dname, setname);
+				log_err("ipset: could not add %s", dname);
 
-				mnl_socket_close(mnl);
+				mnl_socket_close(ie->mnl);
 				ie->mnl = NULL;
 				break;
 			}
@@ -137,8 +260,8 @@ ipset_add_rrset_data(struct ipset_env *ie, struct mnl_socket *mnl,
 
 static int
 ipset_check_zones_for_rrset(struct module_env *env, struct ipset_env *ie,
-	struct mnl_socket *mnl, struct ub_packed_rrset_key *rrset,
-	const char *qname, const int qlen, const char *setname, int af)
+	struct ub_packed_rrset_key *rrset,
+	const char *qname, const int qlen, int af)
 {
 	static char dname[BUFF_LEN];
 	const char *ds, *qs;
@@ -167,8 +290,7 @@ ipset_check_zones_for_rrset(struct module_env *env, struct ipset_env *ie,
 		if ((ds && strncasecmp(p->str, ds, plen) == 0)
 			|| (qs && strncasecmp(p->str, qs, plen) == 0)) {
 			d = (struct packed_rrset_data*)rrset->entry.data;
-			ipset_add_rrset_data(ie, mnl, d, setname,
-				af, dname);
+			ipset_add_rrset_data(ie, d, af, dname);
 			break;
 		}
 	}
@@ -180,7 +302,6 @@ static int ipset_update(struct module_env *env, struct dns_msg *return_msg,
 {
 	struct mnl_socket *mnl;
 	size_t i;
-	const char *setname;
 	struct ub_packed_rrset_key *rrset;
 	int af;
 	static char qname[BUFF_LEN];
@@ -194,6 +315,7 @@ static int ipset_update(struct module_env *env, struct dns_msg *return_msg,
 			return -1;
 		}
 		ie->mnl = mnl;
+		ie->seq = 1;
 	}
 
 	qlen = sldns_wire2str_dname_buf(qinfo.qname, qinfo.qname_len,
@@ -204,23 +326,17 @@ static int ipset_update(struct module_env *env, struct dns_msg *return_msg,
 	}
 
 	for(i = 0; i < return_msg->rep->rrset_count; i++) {
-		setname = NULL;
 		rrset = return_msg->rep->rrsets[i];
 		if(ntohs(rrset->rk.type) == LDNS_RR_TYPE_A &&
 			ie->v4_enabled == 1) {
 			af = AF_INET;
-			setname = ie->name_v4;
 		} else if(ntohs(rrset->rk.type) == LDNS_RR_TYPE_AAAA &&
 			ie->v6_enabled == 1) {
 			af = AF_INET6;
-			setname = ie->name_v6;
 		}
 
-		if (setname) {
-			if(ipset_check_zones_for_rrset(env, ie, mnl, rrset,
-				qname, qlen, setname, af) == -1)
-				return -1;
-		}
+		if(ipset_check_zones_for_rrset(env, ie, rrset, qname, qlen, af) == -1)
+			return -1;
 	}
 
 	return 0;
@@ -229,7 +345,7 @@ static int ipset_update(struct module_env *env, struct dns_msg *return_msg,
 int ipset_init(struct module_env* env, int id) {
 	struct ipset_env *ipset_env;
 
-	ipset_env = (struct ipset_env *)calloc(1, sizeof(struct ipset_env));
+	ipset_env = (struct ipset_env *)calloc(1, sizeof(struct ipset_env) + BUFF_LEN);
 	if (!ipset_env) {
 		log_err("malloc failure");
 		return 0;
@@ -241,6 +357,10 @@ int ipset_init(struct module_env* env, int id) {
 
 	ipset_env->name_v4 = env->cfg->ipset_name_v4;
 	ipset_env->name_v6 = env->cfg->ipset_name_v6;
+	ipset_env->table_v4 = env->cfg->ipset_table_v4;
+	ipset_env->table_v6 = env->cfg->ipset_table_v6;
+	ipset_env->mode = env->cfg->ipset_mode;
+
 
 	ipset_env->v4_enabled = !ipset_env->name_v4 || (strlen(ipset_env->name_v4) == 0) ? 0 : 1;
 	ipset_env->v6_enabled = !ipset_env->name_v6 || (strlen(ipset_env->name_v6) == 0) ? 0 : 1;
@@ -315,7 +435,7 @@ void ipset_operate(struct module_qstate *qstate, enum module_ev event, int id,
 	if (iq && (event == module_event_moddone)) {
 		if (qstate->return_msg && qstate->return_msg->rep) {
 			ipset_update(qstate->env, qstate->return_msg, qstate->qinfo, ie);
-		}
+    }
 		qstate->ext_state[id] = module_finished;
 		return;
 	}
@@ -372,7 +492,7 @@ size_t ipset_get_mem(struct module_env *env, int id) {
 }
 
 /**
- * The ipset function block 
+ * The ipset function block
  */
 static struct module_func_block ipset_block = {
 	"ipset",
