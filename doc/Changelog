@@ -1,3 +1,7 @@
+17 October 2023: Wouter
+	- Fix #954: Inconsistent RPZ handling for A record returned along with
+	  CNAME.
+
 16 October 2023: George
 	- Expose the script filename in the Python module environment 'mod_env'
 	  instead of the config_file structure which includes the linked list

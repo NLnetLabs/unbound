@@ -2448,6 +2448,10 @@ struct dns_msg* rpz_callback_from_iterator_cname(struct module_qstate* ms,
 			rpz_action_to_string(localzone_type_to_rpz_action(lzt)));
 		ret = NULL;
 	}
+	if(r->log)
+		log_rpz_apply("qname", (z?z->name:NULL), NULL,
+			localzone_type_to_rpz_action(lzt),
+			&is->qchase, NULL, ms, r->log_name);
 	lock_rw_unlock(&z->lock);
 	lock_rw_unlock(&a->lock);
 	return ret;
