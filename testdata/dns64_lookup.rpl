@@ -4,6 +4,8 @@ server:
 	qname-minimisation: "no"
 	module-config: "dns64 validator iterator"
 	dns64-prefix: 64:ff9b::0/96
+	dns64-ignore-aaaa: ip6ignore.example.com
+	dns64-ignore-aaaa: ip6only.example.com
 	minimal-responses: no
 
 stub-zone:
@@ -15,6 +17,7 @@ SCENARIO_BEGIN Test dns64 lookup and synthesis.
 ; normal A lookup should still succeed
 ; AAAA is synthesized if not present.
 ; AAAA if present, is passed through unchanged.
+; AAAA if present (but configured to be ignored) but no A, AAAA is passed through unchanged.
 
 ; K.ROOT-SERVERS.NET.
 RANGE_BEGIN 0 200
@@ -159,6 +162,61 @@ MATCH opcode qtype qname
 ADJUST copy_id
 REPLY QR NOERROR
 SECTION QUESTION
+ip6ignore.example.com. IN AAAA
+SECTION ANSWER
+ip6ignore.example.com. IN AAAA 1:2:3::4
+SECTION AUTHORITY
+example.com.	IN NS	ns.example.com.
+SECTION ADDITIONAL
+ns.example.com.		IN 	A	1.2.3.4
+ENTRY_END
+
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR NOERROR
+SECTION QUESTION
+ip6ignore.example.com. IN A
+SECTION ANSWER
+ip6ignore.example.com. IN A	5.6.7.8
+SECTION AUTHORITY
+example.com.	IN NS	ns.example.com.
+SECTION ADDITIONAL
+ns.example.com.		IN 	A	1.2.3.4
+ENTRY_END
+
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR NOERROR
+SECTION QUESTION
+ip6only.example.com. IN AAAA
+SECTION ANSWER
+ip6only.example.com. IN AAAA 1:2:3::4
+SECTION AUTHORITY
+example.com.	IN NS	ns.example.com.
+SECTION ADDITIONAL
+ns.example.com.		IN 	A	1.2.3.4
+ENTRY_END
+
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR NOERROR
+SECTION QUESTION
+ip6only.example.com. IN A
+SECTION ANSWER
+; NO A present
+SECTION AUTHORITY
+example.com.	IN SOA	a. b. 1 2 3 4 5
+ENTRY_END
+
+
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR NOERROR
+SECTION QUESTION
 8.7.6.5.in-addr.arpa. IN PTR
 SECTION ANSWER
 8.7.6.5.in-addr.arpa. PTR ip4.example.com.
@@ -255,6 +313,52 @@ SECTION ANSWER
 8.0.7.0.6.0.5.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.b.9.f.f.4.6.0.0.ip6.arpa. IN PTR ip4.example.com.
 SECTION AUTHORITY
 7.6.5.in-addr.arpa. IN NS ns.example.com.
+ENTRY_END
+
+; ignore AAAA and synthesize from A record 5.6.7.8
+STEP 80 QUERY
+ENTRY_BEGIN
+REPLY RD
+SECTION QUESTION
+ip6ignore.example.com. IN AAAA
+ENTRY_END
+
+; recursion happens here.
+STEP 90 CHECK_ANSWER
+ENTRY_BEGIN
+MATCH all
+REPLY QR RD RA NOERROR
+SECTION QUESTION
+ip6ignore.example.com. IN AAAA
+SECTION ANSWER
+ip6ignore.example.com.        IN      AAAA    64:ff9b::506:708
+SECTION AUTHORITY
+example.com.	IN NS	ns.example.com.
+SECTION ADDITIONAL
+ns.example.com.		IN 	A	1.2.3.4
+ENTRY_END
+
+; try to ignore AAAA but no A record to synthesize, fallback to AAAA
+STEP 100 QUERY
+ENTRY_BEGIN
+REPLY RD
+SECTION QUESTION
+ip6only.example.com. IN AAAA
+ENTRY_END
+
+; recursion happens here.
+STEP 110 CHECK_ANSWER
+ENTRY_BEGIN
+MATCH all
+REPLY QR RD RA NOERROR
+SECTION QUESTION
+ip6only.example.com. IN AAAA
+SECTION ANSWER
+ip6only.example.com.        IN      AAAA    1:2:3::4
+SECTION AUTHORITY
+example.com.	IN NS	ns.example.com.
+SECTION ADDITIONAL
+ns.example.com.		IN 	A	1.2.3.4
 ENTRY_END
 
 SCENARIO_END

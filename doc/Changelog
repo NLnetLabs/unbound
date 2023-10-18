@@ -3,6 +3,7 @@
 	  AAAA when no A record exists for synthesis, and minor DNS64 code
 	  refactoring for better readability.
 	- Fixes for the DNS64 patches.
+	- Update the dns64_lookup.rpl test for the DNS64 fallback patch.
 
 17 October 2023: Wouter
 	- Fix #954: Inconsistent RPZ handling for A record returned along with
