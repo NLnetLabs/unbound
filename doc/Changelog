@@ -4,6 +4,8 @@
 	  refactoring for better readability.
 	- Fixes for the DNS64 patches.
 	- Update the dns64_lookup.rpl test for the DNS64 fallback patch.
+	- Merge #955 from buevsan: fix ipset wrong behavior.
+	- Update testdata/ipset.tdir test for ipset fix.
 
 17 October 2023: Wouter
 	- Fix #954: Inconsistent RPZ handling for A record returned along with
