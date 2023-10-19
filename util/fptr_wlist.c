@@ -108,6 +108,7 @@ fptr_whitelist_comm_point(comm_point_callback_type *fptr)
 	else if(fptr == &outnet_tcp_cb) return 1;
 	else if(fptr == &tube_handle_listen) return 1;
 	else if(fptr == &auth_xfer_probe_udp_callback) return 1;
+	else if(fptr == &auth_xfer_probe_tcp_callback) return 1;
 	else if(fptr == &auth_xfer_transfer_tcp_callback) return 1;
 	else if(fptr == &auth_xfer_transfer_http_callback) return 1;
 	return 0;

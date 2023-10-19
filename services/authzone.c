@@ -6345,7 +6345,10 @@ xfr_probe_send_probe(struct auth_xfer* xfr, struct module_env* env,
 
 	/* get master addr */
 	if(xfr->task_probe->scan_addr) {
-		if(!authextstrtoaddr(xfr->task_probe->scan_specific->host, &addr, &addrlen, &auth_name)) {
+		/* parse the host string to get the auth name for scan_addr */
+		if(xfr->task_probe->scan_specific &&
+			xfr->task_probe->scan_specific->host &&
+			!authextstrtoaddr(xfr->task_probe->scan_specific->host, &addr, &addrlen, &auth_name)) {
 			char zname[255+1];
 			dname_str(xfr->name, zname);
 			log_err("%s: failed lookup, cannot probe to master %s",
@@ -6365,18 +6368,6 @@ xfr_probe_send_probe(struct auth_xfer* xfr, struct module_env* env,
 				zname, master->host);
 			return 0;
 		}
-		if (auth_name != NULL) {
-			if (addr.ss_family == AF_INET
-			&&  (int)ntohs(((struct sockaddr_in *)&addr)->sin_port)
-		            == env->cfg->ssl_port)
-				((struct sockaddr_in *)&addr)->sin_port
-					= htons((uint16_t)env->cfg->port);
-			else if (addr.ss_family == AF_INET6
-			&&  (int)ntohs(((struct sockaddr_in6 *)&addr)->sin6_port)
-		            == env->cfg->ssl_port)
-                        	((struct sockaddr_in6 *)&addr)->sin6_port
-					= htons((uint16_t)env->cfg->port);
-		}
 	}
 
 	/* create packet */
@@ -6386,11 +6377,12 @@ xfr_probe_send_probe(struct auth_xfer* xfr, struct module_env* env,
 		xfr->task_probe->id = GET_RANDOM_ID(env->rnd);
 	xfr_create_soa_probe_packet(xfr, env->scratch_buffer, 
 		xfr->task_probe->id);
-	/* we need to remove the cp if we have a different ip4/ip6 type now */
+	/* we need to remove the cp if we have a different ip4/ip6 type now.
+	 * And also for tls probes to get a new tcp commpoint. */
 	if(xfr->task_probe->cp &&
 		((xfr->task_probe->cp_is_ip6 && !addr_is_ip6(&addr, addrlen)) ||
-		(!xfr->task_probe->cp_is_ip6 && addr_is_ip6(&addr, addrlen)))
-		) {
+		(!xfr->task_probe->cp_is_ip6 && addr_is_ip6(&addr, addrlen)) ||
+		auth_name != NULL)) {
 		comm_point_delete(xfr->task_probe->cp);
 		xfr->task_probe->cp = NULL;
 	}
@@ -6398,14 +6390,19 @@ xfr_probe_send_probe(struct auth_xfer* xfr, struct module_env* env,
 		if(addr_is_ip6(&addr, addrlen))
 			xfr->task_probe->cp_is_ip6 = 1;
 		else 	xfr->task_probe->cp_is_ip6 = 0;
-		xfr->task_probe->cp = outnet_comm_point_for_udp(env->outnet,
-			auth_xfer_probe_udp_callback, xfr, &addr, addrlen);
+		if(auth_name != NULL)
+			xfr->task_probe->cp = outnet_comm_point_for_tcp(env->outnet,
+				auth_xfer_probe_tcp_callback, xfr, &addr, addrlen, env->scratch_buffer, -1, auth_name != NULL, auth_name);
+		else
+			xfr->task_probe->cp = outnet_comm_point_for_udp(env->outnet,
+				auth_xfer_probe_udp_callback, xfr, &addr, addrlen);
 		if(!xfr->task_probe->cp) {
 			char zname[255+1], as[256];
 			dname_str(xfr->name, zname);
 			addr_to_str(&addr, addrlen, as, sizeof(as));
-			verbose(VERB_ALGO, "cannot create udp cp for "
-				"probe %s to %s", zname, as);
+			verbose(VERB_ALGO, "cannot create %s cp for "
+				"probe %s to %s", (auth_name?"tcp":"udp"),
+				zname, as);
 			return 0;
 		}
 	}
@@ -6418,16 +6415,9 @@ xfr_probe_send_probe(struct auth_xfer* xfr, struct module_env* env,
 		}
 	}
 
-	if(1) {
-		/* DEBUG */
-		char zname[255+1], as[256];
-		dname_str(xfr->name, zname);
-		addr_to_str(&addr, addrlen, as, sizeof(as));
-		verbose(VERB_ALGO, "send soa probe for %s to %s", zname, as);
-		log_addr(VERB_ALGO, "soa probe addr", &addr, addrlen);
-	}
-	/* send udp packet */
-	if(!comm_point_send_udp_msg(xfr->task_probe->cp, env->scratch_buffer,
+	/* send udp packet, for an UDP commpoint. */
+	if(auth_name == NULL &&
+	   !comm_point_send_udp_msg(xfr->task_probe->cp, env->scratch_buffer,
 		(struct sockaddr*)&addr, addrlen, 0)) {
 		char zname[255+1], as[256];
 		dname_str(xfr->name, zname);
@@ -6436,13 +6426,18 @@ xfr_probe_send_probe(struct auth_xfer* xfr, struct module_env* env,
 			zname, as);
 		return 0;
 	}
+	/* for a TCP commpoint, the packet is waiting to be sent in the
+	 * TCP commpoint buffer. The callback returns when there is a reply. */
 	if(verbosity >= VERB_ALGO) {
 		char zname[255+1], as[256];
 		dname_str(xfr->name, zname);
 		addr_to_str(&addr, addrlen, as, sizeof(as));
-		verbose(VERB_ALGO, "auth zone %s soa probe sent to %s", zname,
-			as);
+		verbose(VERB_ALGO, "auth zone %s soa probe sent to %s%s%s",
+			zname, as, (auth_name?"#":""),
+			(auth_name?auth_name:""));
 	}
+	if(auth_name != NULL)
+		timeout *= 10; /* TCP and TLS get a longer timeout */
 	xfr->task_probe->timeout = timeout;
 #ifndef S_SPLINT_S
 	t.tv_sec = timeout/1000;
@@ -6568,6 +6563,94 @@ auth_xfer_probe_udp_callback(struct comm_point* c, void* arg, int err,
 		}
 	}
 	
+	/* failed lookup or not an update */
+	/* delete commpoint so a new one is created, with a fresh port nr */
+	comm_point_delete(xfr->task_probe->cp);
+	xfr->task_probe->cp = NULL;
+
+	/* if the result was not a successful probe, we need
+	 * to send the next one */
+	xfr_probe_nextmaster(xfr);
+	xfr_probe_send_or_end(xfr, env);
+	return 0;
+}
+
+/** callback for task_probe tcp replies */
+int
+auth_xfer_probe_tcp_callback(struct comm_point* c, void* arg, int err,
+	struct comm_reply* ATTR_UNUSED(repinfo))
+{
+	struct auth_xfer* xfr = (struct auth_xfer*)arg;
+	struct module_env* env;
+	log_assert(xfr->task_probe);
+	lock_basic_lock(&xfr->lock);
+	env = xfr->task_probe->env;
+	if(!env || env->outnet->want_to_quit) {
+		lock_basic_unlock(&xfr->lock);
+		return 0; /* stop on quit */
+	}
+	/* stop the timer */
+	comm_timer_disable(xfr->task_probe->timer);
+
+	/* see if we got a reply and what that means */
+	if(err == NETEVENT_NOERROR) {
+		uint32_t serial = 0;
+		if(check_packet_ok(c->buffer, LDNS_RR_TYPE_SOA, xfr,
+			&serial)) {
+			/* successful lookup */
+			if(verbosity >= VERB_ALGO) {
+				char buf[256];
+				dname_str(xfr->name, buf);
+				verbose(VERB_ALGO, "auth zone %s: soa probe "
+					"serial is %u", buf, (unsigned)serial);
+			}
+			/* see if this serial indicates that the zone has
+			 * to be updated */
+			if(xfr_serial_means_update(xfr, serial)) {
+				/* if updated, start the transfer task, if needed */
+				verbose(VERB_ALGO, "auth_zone updated, start transfer");
+				if(xfr->task_transfer->worker == NULL) {
+					struct auth_master* master =
+						xfr_probe_current_master(xfr);
+					/* if we have download URLs use them
+					 * in preference to this master we
+					 * just probed the SOA from */
+					if(xfr->task_transfer->masters &&
+						xfr->task_transfer->masters->http)
+						master = NULL;
+					xfr_probe_disown(xfr);
+					xfr_start_transfer(xfr, env, master);
+					return 0;
+
+				}
+				/* other tasks are running, we don't do this anymore */
+				xfr_probe_disown(xfr);
+				lock_basic_unlock(&xfr->lock);
+				/* return, we don't sent a reply to this udp packet,
+				 * and we setup the tasks to do next */
+				return 0;
+			} else {
+				verbose(VERB_ALGO, "auth_zone master reports unchanged soa serial");
+				/* we if cannot find updates amongst the
+				 * masters, this means we then have a new lease
+				 * on the zone */
+				xfr->task_probe->have_new_lease = 1;
+			}
+		} else {
+			if(verbosity >= VERB_ALGO) {
+				char buf[256];
+				dname_str(xfr->name, buf);
+				verbose(VERB_ALGO, "auth zone %s: bad reply to soa probe", buf);
+			}
+		}
+	} else {
+		if(verbosity >= VERB_ALGO) {
+			char buf[256];
+			dname_str(xfr->name, buf);
+			verbose(VERB_ALGO, "auth zone %s: soa probe failed", buf);
+		}
+	}
+
 	/* failed lookup or not an update */
 	/* delete commpoint so a new one is created, with a fresh port nr */
 	comm_point_delete(xfr->task_probe->cp);

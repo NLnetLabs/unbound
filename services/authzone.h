@@ -678,6 +678,9 @@ void auth_xfer_timer(void* arg);
 /** callback for commpoint udp replies to task_probe */
 int auth_xfer_probe_udp_callback(struct comm_point* c, void* arg, int err,
         struct comm_reply* repinfo);
+/** callback for commpoint tcp replies to task_probe */
+int auth_xfer_probe_tcp_callback(struct comm_point* c, void* arg, int err,
+        struct comm_reply* repinfo);
 /** callback for task_transfer tcp connections */
 int auth_xfer_transfer_tcp_callback(struct comm_point* c, void* arg, int err,
         struct comm_reply* repinfo);
