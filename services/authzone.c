@@ -6345,6 +6345,13 @@ xfr_probe_send_probe(struct auth_xfer* xfr, struct module_env* env,
 
 	/* get master addr */
 	if(xfr->task_probe->scan_addr) {
+		if(!authextstrtoaddr(xfr->task_probe->scan_specific->host, &addr, &addrlen, &auth_name)) {
+			char zname[255+1];
+			dname_str(xfr->name, zname);
+			log_err("%s: failed lookup, cannot probe to master %s",
+				zname, master->host);
+			return 0;
+		}
 		addrlen = xfr->task_probe->scan_addr->addrlen;
 		memmove(&addr, &xfr->task_probe->scan_addr->addr, addrlen);
 	} else {
@@ -6411,6 +6418,14 @@ xfr_probe_send_probe(struct auth_xfer* xfr, struct module_env* env,
 		}
 	}
 
+	if(1) {
+		/* DEBUG */
+		char zname[255+1], as[256];
+		dname_str(xfr->name, zname);
+		addr_to_str(&addr, addrlen, as, sizeof(as));
+		verbose(VERB_ALGO, "send soa probe for %s to %s", zname, as);
+		log_addr(VERB_ALGO, "soa probe addr", &addr, addrlen);
+	}
 	/* send udp packet */
 	if(!comm_point_send_udp_msg(xfr->task_probe->cp, env->scratch_buffer,
 		(struct sockaddr*)&addr, addrlen, 0)) {

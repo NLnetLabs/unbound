@@ -1,0 +1,16 @@
+# #-- auth_axfr_tls.post --#
+# source the master var file when it's there
+[ -f ../.tpkg.var.master ] && source ../.tpkg.var.master
+# source the test var file when it's there
+[ -f .tpkg.var.test ] && source .tpkg.var.test
+#
+# do your teardown here
+. ../common.sh
+kill_pid $AUTH_PID
+kill_pid $UNBOUND_PID
+if test -f nsd.log; then
+	cat nsd.log
+fi
+if test -f unbound.log; then
+	cat unbound.log
+fi

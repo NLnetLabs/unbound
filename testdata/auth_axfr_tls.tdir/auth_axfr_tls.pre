@@ -1,0 +1,51 @@
+# #-- auth_axfr_tls.pre--#
+# source the master var file when it's there
+[ -f ../.tpkg.var.master ] && source ../.tpkg.var.master
+# use .tpkg.var.test for in test variable passing
+[ -f .tpkg.var.test ] && source .tpkg.var.test
+
+. ../common.sh
+# see if we have NSD as an auth server to serve xfr over tls.
+NSD=nsd
+if which nsd 2>/dev/null; then
+	echo "NSD=$NSD"
+else
+	NSD=""
+	for d in ".." "../.." "../../.." "../../../.." ; do
+		if test -z "$NSD" -o ! -f "$NSD"; then
+			if test -d "$d/nsd" && test -f "$d/nsd/nsd"; then
+				NSD="$d/nsd/nsd"
+				break;
+			fi
+		fi
+	done
+fi
+if test -z "$NSD"; then
+	skip_test "Need nsd for auth server, skip test"
+fi
+echo "NSD=$NSD" >> .tpkg.var.test
+
+get_random_port 2
+UNBOUND_PORT=$RND_PORT
+AUTH_PORT=$(($RND_PORT + 1))
+echo "UNBOUND_PORT=$UNBOUND_PORT" >> .tpkg.var.test
+echo "AUTH_PORT=$AUTH_PORT" >> .tpkg.var.test
+
+# start auth server
+sed -e 's/@PORT\@/'$UNBOUND_PORT'/' -e 's/@AUTH_PORT\@/'$AUTH_PORT'/' < auth_axfr_tls.conf2 > nsd.conf
+$NSD -d -c nsd.conf >nsd.log 2>&1 &
+AUTH_PID=$!
+echo "AUTH_PID=$AUTH_PID" >> .tpkg.var.test
+
+# make config file
+sed -e 's/@PORT\@/'$UNBOUND_PORT'/' -e 's/@TOPORT\@/'$AUTH_PORT'/' < auth_axfr_tls.conf > ub.conf
+# start unbound in the background
+PRE="../.."
+$PRE/unbound -d -c ub.conf >unbound.log 2>&1 &
+UNBOUND_PID=$!
+echo "UNBOUND_PID=$UNBOUND_PID" >> .tpkg.var.test
+
+cat .tpkg.var.test
+wait_nsd_up nsd.log
+wait_unbound_up unbound.log
+

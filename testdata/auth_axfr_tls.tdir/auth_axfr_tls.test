@@ -1,0 +1,76 @@
+# #-- auth_axfr_tls.test --#
+# source the master var file when it's there
+[ -f ../.tpkg.var.master ] && source ../.tpkg.var.master
+# use .tpkg.var.test for in test variable passing
+[ -f .tpkg.var.test ] && source .tpkg.var.test
+
+PRE="../.."
+# do the test
+echo "> dig www.example.com."
+dig @localhost -p $UNBOUND_PORT www.example.com. | tee outfile
+# try again if it needs time to do the zone transfer.
+if grep SERVFAIL outfile; then
+	echo "> try again"
+	dig @localhost -p $UNBOUND_PORT www.example.com. | tee outfile
+fi
+if grep SERVFAIL outfile; then
+	echo "> try again"
+	sleep 1
+	dig @localhost -p $UNBOUND_PORT www.example.com. | tee outfile
+fi
+if grep SERVFAIL outfile; then
+	echo "> try again"
+	sleep 1
+	dig @localhost -p $UNBOUND_PORT www.example.com. | tee outfile
+fi
+if grep SERVFAIL outfile; then
+	echo "> try again"
+	sleep 1
+	dig @localhost -p $UNBOUND_PORT www.example.com. | tee outfile
+fi
+echo "> check answer"
+if grep "1.2.3.4" outfile; then
+	echo "OK"
+else
+	echo "Not OK"
+	exit 1
+fi
+
+# update the zone
+mv example.com.zone example.com.zone.old
+mv example.com.zone2 example.com.zone
+kill -1 $AUTH_PID
+wait_server_up nsd.log "serial 4 is updated to 8"
+echo "> auth server updated"
+
+echo "> dig www.example.com."
+dig @localhost -p $UNBOUND_PORT www.example.com. | tee outfile
+# try again if it needs time to do the zone transfer.
+if grep SERVFAIL outfile || grep "1.2.3.4" outfile; then
+	echo "> try again"
+	dig @localhost -p $UNBOUND_PORT www.example.com. | tee outfile
+fi
+if grep SERVFAIL outfile || grep "1.2.3.4" outfile; then
+	echo "> try again"
+	sleep 1
+	dig @localhost -p $UNBOUND_PORT www.example.com. | tee outfile
+fi
+if grep SERVFAIL outfile || grep "1.2.3.4" outfile; then
+	echo "> try again"
+	sleep 1
+	dig @localhost -p $UNBOUND_PORT www.example.com. | tee outfile
+fi
+if grep SERVFAIL outfile || grep "1.2.3.4" outfile; then
+	echo "> try again"
+	sleep 1
+	dig @localhost -p $UNBOUND_PORT www.example.com. | tee outfile
+fi
+echo "> check answer"
+if grep "1.2.3.5" outfile; then
+	echo "OK"
+else
+	echo "Not OK"
+	exit 1
+fi
+
+exit 0

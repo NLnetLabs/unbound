@@ -1,0 +1,22 @@
+server:
+	verbosity: 5
+	logfile: "/dev/stderr"
+	xfrdfile: "xfrd.state"
+	zonesdir: ""
+	username: ""
+	chroot: ""
+	pidfile: "nsd.pid"
+	database: ""
+	zonelistfile: "zone.list"
+	interface: 127.0.0.1@@AUTH_PORT@
+	tls-service-key: "unbound_server.key"
+	tls-service-pem: "unbound_server.pem"
+	tls-port: @AUTH_PORT@
+
+zone:
+	name: "example.com"
+	zonefile: "example.com.zone"
+	provide-xfr: 127.0.0.0/8 NOKEY
+	provide-xfr: ::1 NOKEY
+	provide-xfr: ::ffff:127.0.0.1 NOKEY
+	notify: 127.0.0.1@@PORT@ NOKEY
