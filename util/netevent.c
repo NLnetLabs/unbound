@@ -1666,7 +1666,8 @@ ssl_handshake(struct comm_point* c)
 		} else {
 			unsigned long err = ERR_get_error();
 			if(!squelch_err_ssl_handshake(err)) {
-				log_crypto_err_code("ssl handshake failed", err);
+				log_crypto_err_io_code("ssl handshake failed",
+					want, err);
 				log_addr(VERB_OPS, "ssl handshake failed",
 					&c->repinfo.remote_addr,
 					c->repinfo.remote_addrlen);
@@ -1816,7 +1817,8 @@ ssl_handle_read(struct comm_point* c)
 								strerror(errno));
 						return 0;
 					}
-					log_crypto_err("could not SSL_read");
+					log_crypto_err_io("could not SSL_read",
+						want);
 					return 0;
 				}
 				c->tcp_byte_count += r;
@@ -1883,7 +1885,8 @@ ssl_handle_read(struct comm_point* c)
 								strerror(errno));
 						return 0;
 					}
-					log_crypto_err("could not SSL_read");
+					log_crypto_err_io("could not SSL_read",
+						want);
 					return 0;
 				}
 				c->tcp_byte_count += r;
@@ -1943,7 +1946,7 @@ ssl_handle_read(struct comm_point* c)
 						strerror(errno));
 				return 0;
 			}
-			log_crypto_err("could not SSL_read");
+			log_crypto_err_io("could not SSL_read", want);
 			return 0;
 		}
 		c->tcp_byte_count += r;
@@ -1993,7 +1996,7 @@ ssl_handle_read(struct comm_point* c)
 						strerror(errno));
 				return 0;
 			}
-			log_crypto_err("could not SSL_read");
+			log_crypto_err_io("could not SSL_read", want);
 			return 0;
 		}
 		sldns_buffer_skip(c->buffer, (ssize_t)r);
@@ -2084,7 +2087,7 @@ ssl_handle_write(struct comm_point* c)
 						strerror(errno));
 				return 0;
 			}
-			log_crypto_err("could not SSL_write");
+			log_crypto_err_io("could not SSL_write", want);
 			return 0;
 		}
 		if(c->tcp_write_and_read) {
@@ -2136,7 +2139,7 @@ ssl_handle_write(struct comm_point* c)
 					strerror(errno));
 			return 0;
 		}
-		log_crypto_err("could not SSL_write");
+		log_crypto_err_io("could not SSL_write", want);
 		return 0;
 	}
 	if(c->tcp_write_and_read) {
@@ -2930,7 +2933,7 @@ ssl_http_read_more(struct comm_point* c)
 					strerror(errno));
 			return 0;
 		}
-		log_crypto_err("could not SSL_read");
+		log_crypto_err_io("could not SSL_read", want);
 		return 0;
 	}
 	verbose(VERB_ALGO, "ssl http read more skip to %d + %d",
@@ -3381,7 +3384,7 @@ ssize_t http2_recv_cb(nghttp2_session* ATTR_UNUSED(session), uint8_t* buf,
 						strerror(errno));
 				return NGHTTP2_ERR_CALLBACK_FAILURE;
 			}
-			log_crypto_err("could not SSL_read");
+			log_crypto_err_io("could not SSL_read", want);
 			return NGHTTP2_ERR_CALLBACK_FAILURE;
 		}
 		return r;
@@ -3636,7 +3639,7 @@ ssl_http_write_more(struct comm_point* c)
 					strerror(errno));
 			return 0;
 		}
-		log_crypto_err("could not SSL_write");
+		log_crypto_err_io("could not SSL_write", want);
 		return 0;
 	}
 	sldns_buffer_skip(c->buffer, (ssize_t)r);
@@ -3709,7 +3712,7 @@ ssize_t http2_send_cb(nghttp2_session* ATTR_UNUSED(session), const uint8_t* buf,
 						strerror(errno));
 				return NGHTTP2_ERR_CALLBACK_FAILURE;
 			}
-			log_crypto_err("could not SSL_write");
+			log_crypto_err_io("could not SSL_write", want);
 			return NGHTTP2_ERR_CALLBACK_FAILURE;
 		}
 		return r;

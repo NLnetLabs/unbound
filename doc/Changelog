@@ -1,9 +1,15 @@
+19 October 2023: Wouter
+	- Fix to print detailed errors when an SSL IO routine fails via
+	  SSL_get_error.
+
 18 October 2023: George
 	- Mailing list patches from Daniel Gröber for DNS64 fallback to plain
 	  AAAA when no A record exists for synthesis, and minor DNS64 code
 	  refactoring for better readability.
 	- Fixes for the DNS64 patches.
 	- Update the dns64_lookup.rpl test for the DNS64 fallback patch.
+	- Merge #955 from buevsan: fix ipset wrong behavior.
+	- Update testdata/ipset.tdir test for ipset fix.
 
 17 October 2023: Wouter
 	- Fix #954: Inconsistent RPZ handling for A record returned along with

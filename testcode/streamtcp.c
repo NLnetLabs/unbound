@@ -466,7 +466,7 @@ send_em(const char* svr, const char* pp2_client, int udp, int usessl,
 			r = SSL_get_error(ssl, r);
 			if(r != SSL_ERROR_WANT_READ &&
 				r != SSL_ERROR_WANT_WRITE) {
-				log_crypto_err("could not ssl_handshake");
+				log_crypto_err_io("could not ssl_handshake", r);
 				exit(1);
 			}
 		}
