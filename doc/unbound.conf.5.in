@@ -2681,6 +2681,11 @@ operationally.
 If the backend database is shared by multiple Unbound instances,
 all instances must use the same secret seed.
 This option defaults to "default".
+.TP
+.B cachedb-no-store: \fI<yes or no>\fR
+If the backend should be read from, but not written to. This makes this
+instance not store dns messages in the backend. But if data is available it
+is retrieved. The default is no.
 .P
 The following
 .B cachedb

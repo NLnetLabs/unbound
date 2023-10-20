@@ -1226,6 +1226,8 @@ remote-control:
 #     backend: "testframe"
 #     # secret seed string to calculate hashed keys
 #     secret-seed: "default"
+#     # if the backend should be read from, but not written to.
+#     cachedb-no-store: no
 #
 #     # For "redis" backend:
 #     # (to enable, use --with-libhiredis to configure before compiling)
