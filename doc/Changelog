@@ -1,3 +1,9 @@
+20 October 2023: Wouter
+	- Merge #951: Cachedb no store. The cachedb-no-store: yes option is
+	  used to stop cachedb from writing messages to the backend storage.
+	  It reads messages when data is available from the backend. The
+	  default is no.
+
 19 October 2023: Wouter
 	- Fix to print detailed errors when an SSL IO routine fails via
 	  SSL_get_error.
