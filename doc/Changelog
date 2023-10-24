@@ -1,3 +1,6 @@
+24 October 2023: George
+	- Clearer configure text for missing protobuf-c development libraries.
+
 20 October 2023: Wouter
 	- Merge #951: Cachedb no store. The cachedb-no-store: yes option is
 	  used to stop cachedb from writing messages to the backend storage.
