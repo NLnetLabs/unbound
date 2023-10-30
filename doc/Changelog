@@ -1,3 +1,6 @@
+30 October 2023: Wouter
+	- autoconf.
+
 24 October 2023: George
 	- Clearer configure text for missing protobuf-c development libraries.
 

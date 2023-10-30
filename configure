@@ -21340,7 +21340,7 @@ if test "$ac_res" != no; then :
   test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
 
 else
-  as_fn_error $? "The protobuf-c library was not found. Please install protobuf-c!" "$LINENO" 5
+  as_fn_error $? "The protobuf-c library was not found. Please install the development libraries for protobuf-c!" "$LINENO" 5
 fi
 
 
