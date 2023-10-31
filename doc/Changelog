@@ -1,3 +1,7 @@
+31 October 2023: George
+	- Fix #941: dnscrypt doesn't work after upgrade to 1.18 with
+	  suggestion by dukeartem to also fix the udp_ancil with dnscrypt.
+
 30 October 2023: George
 	- Merge #930 from Stuart Henderson: add void to
 	  log_ident_revert_to_default declaration.

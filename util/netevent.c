@@ -1070,7 +1070,13 @@ comm_point_udp_ancil_callback(int fd, short event, void* arg)
 		fptr_ok(fptr_whitelist_comm_point(rep.c->callback));
 		if((*rep.c->callback)(rep.c, rep.c->cb_arg, NETEVENT_NOERROR, &rep)) {
 			/* send back immediate reply */
-			(void)comm_point_send_udp_msg_if(rep.c, rep.c->buffer,
+			struct sldns_buffer *buffer;
+#ifdef USE_DNSCRYPT
+			buffer = rep.c->dnscrypt_buffer;
+#else
+			buffer = rep.c->buffer;
+#endif
+			(void)comm_point_send_udp_msg_if(rep.c, buffer,
 				(struct sockaddr*)&rep.remote_addr,
 				rep.remote_addrlen, &rep);
 		}
