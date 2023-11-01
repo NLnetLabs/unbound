@@ -1,3 +1,7 @@
+1 November 2023: George
+	- Mention flex and bison in README.md when building from repository
+	  source.
+
 31 October 2023: George
 	- Fix #941: dnscrypt doesn't work after upgrade to 1.18 with
 	  suggestion by dukeartem to also fix the udp_ancil with dnscrypt.
@@ -4885,7 +4889,7 @@
 	- Fix that with openssl 1.1 control-use-cert: no uses less cpu, by
 	  using no encryption over the unix socket.
 
-22 Novenber 2016: Ralph
+22 November 2016: Ralph
 	- Make access-control-tag-data RDATA absolute. This makes the RDATA
 	  origin consistent between local-data and access-control-tag-data.
 	- Fix NSEC ENT wildcard check. Matching wildcard does not have to be a
