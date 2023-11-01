@@ -988,9 +988,11 @@ static void log_crypto_err_io_code_arg(const char* str, int r,
 	case SSL_ERROR_WANT_ASYNC_JOB:
 		inf = "want async job";
 		break;
+#ifdef SSL_ERROR_WANT_CLIENT_HELLO_CB
 	case SSL_ERROR_WANT_CLIENT_HELLO_CB:
 		inf = "want client hello cb";
 		break;
+#endif
 	case SSL_ERROR_SYSCALL:
 		print_errno = 1;
 		inf = "syscall";
