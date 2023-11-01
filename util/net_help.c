@@ -982,12 +982,16 @@ static void log_crypto_err_io_code_arg(const char* str, int r,
 	case SSL_ERROR_WANT_X509_LOOKUP:
 		inf = "want X509 lookup";
 		break;
+#ifdef SSL_ERROR_WANT_ASYNC
 	case SSL_ERROR_WANT_ASYNC:
 		inf = "want async";
 		break;
+#endif
+#ifdef SSL_ERROR_WANT_ASYNC_JOB
 	case SSL_ERROR_WANT_ASYNC_JOB:
 		inf = "want async job";
 		break;
+#endif
 #ifdef SSL_ERROR_WANT_CLIENT_HELLO_CB
 	case SSL_ERROR_WANT_CLIENT_HELLO_CB:
 		inf = "want client hello cb";

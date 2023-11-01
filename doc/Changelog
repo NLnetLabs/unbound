@@ -4,6 +4,8 @@
 
 1 November 2023: Wouter
 	- Fix SSL compile failure for definition in log_crypto_err_io_code_arg.
+	- Fix SSL compile failure for other missing definitions in
+	  log_crypto_err_io_code_arg.
 
 31 October 2023: George
 	- Fix #941: dnscrypt doesn't work after upgrade to 1.18 with
