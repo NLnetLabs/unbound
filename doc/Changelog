@@ -1,3 +1,7 @@
+2 November 2023: Wouter
+	- Set version number to 1.19.0.
+	- Tag for 1.19.0rc1 release.
+
 1 November 2023: George
 	- Mention flex and bison in README.md when building from repository
 	  source.
