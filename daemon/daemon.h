@@ -58,6 +58,7 @@ struct ub_randstate;
 struct daemon_remote;
 struct respip_set;
 struct shm_main_info;
+struct fast_reload_thread;
 
 #include "dnstap/dnstap_config.h"
 #ifdef USE_DNSTAP
@@ -146,6 +147,8 @@ struct daemon {
 #endif
 	/** reuse existing cache on reload if other conditions allow it. */
 	int reuse_cache;
+	/** the fast reload thread, or NULL */
+	struct fast_reload_thread* fast_reload_thread;
 };
 
 /**

@@ -48,6 +48,7 @@
 #ifdef HAVE_OPENSSL_SSL_H
 #include <openssl/ssl.h>
 #endif
+#include "util/locks.h"
 struct config_file;
 struct listen_list;
 struct listen_port;
@@ -117,6 +118,21 @@ struct remote_stream {
 	int fd;
 };
 typedef struct remote_stream RES;
+
+/**
+ * Fast reload thread structure
+ */
+struct fast_reload_thread {
+	/** the thread number for the dtio thread,
+	 * must be first to cast thread arg to int* in checklock code. */
+	int threadnum;
+	/** event base, for event handling */
+	void* event_base;
+	/** thread id, of the io thread */
+	ub_thread_type tid;
+	/** if the io processing has started */
+	int started;
+};
 
 /**
  * Create new remote control state for the daemon.
@@ -202,5 +218,18 @@ int ssl_printf(RES* ssl, const char* format, ...)
  */
 int ssl_read_line(RES* ssl, char* buf, size_t max);
 #endif /* HAVE_SSL */
+
+/**
+ * Start fast reload thread
+ * @param ssl: the RES connection to print to.
+ * @param worker: the remote servicing worker.
+ */
+void fast_reload_thread_start(RES* ssl, struct worker* worker);
+
+/**
+ * Stop fast reload thread
+ * @param fast_reload_thread: the thread struct.
+ */
+void fast_reload_thread_stop(struct fast_reload_thread* fast_reload_thread);
 
 #endif /* DAEMON_REMOTE_H */

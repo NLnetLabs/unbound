@@ -861,6 +861,8 @@ daemon_cleanup(struct daemon* daemon)
 	dnsc_delete(daemon->dnscenv);
 	daemon->dnscenv = NULL;
 #endif
+	if(daemon->fast_reload_thread)
+		fast_reload_thread_stop(daemon->fast_reload_thread);
 	daemon->cfg = NULL;
 }
 

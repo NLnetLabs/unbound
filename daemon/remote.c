@@ -658,7 +658,7 @@ do_fast_reload(RES* ssl, struct worker* worker)
 {
 	if(!ssl_printf(ssl, "start fast_reload\n"))
 		return;
-	(void)worker;
+	fast_reload_thread_start(ssl, worker);
 }
 
 /** do the verbosity command */
@@ -3368,4 +3368,70 @@ int remote_control_callback(struct comm_point* c, void* arg, int err,
 	verbose(VERB_ALGO, "remote control operation completed");
 	clean_point(rc, s);
 	return 0;
+}
+
+#ifndef THREADS_DISABLED
+/** fast reload thread. the thread main function */
+static void* fast_reload_thread_main(void* arg)
+{
+	struct fast_reload_thread* frio = (struct fast_reload_thread*)arg;
+	log_thread_set(&frio->threadnum);
+
+	verbose(VERB_ALGO, "start fast reload thread");
+
+	verbose(VERB_ALGO, "stop fast reload thread");
+	return NULL;
+}
+#endif /* !THREADS_DISABLED */
+
+/** fast reload thread. setup the thread info */
+static int
+fast_reload_thread_setup(struct worker* worker)
+{
+	int numworkers = worker->daemon->num;
+	worker->daemon->fast_reload_thread = (struct fast_reload_thread*)
+		calloc(1, sizeof(*worker->daemon->fast_reload_thread));
+	if(!worker->daemon->fast_reload_thread)
+		return 0;
+	/* The thread id printed in logs, numworker+1 is the dnstap thread.
+	 * This is numworkers+2. */
+	worker->daemon->fast_reload_thread->threadnum = numworkers+2;
+	return 1;
+}
+
+/** fast reload thread. desetup and delete the thread info. */
+static void
+fast_reload_thread_desetup(struct fast_reload_thread* fast_reload_thread)
+{
+	if(!fast_reload_thread)
+		return;
+	free(fast_reload_thread);
+}
+
+void
+fast_reload_thread_start(RES* ssl, struct worker* worker)
+{
+	if(worker->daemon->fast_reload_thread) {
+		log_err("fast reload thread already running");
+		return;
+	}
+	if(!fast_reload_thread_setup(worker)) {
+		if(!ssl_printf(ssl, "error could not setup thread\n"))
+			return;
+		return;
+	}
+	worker->daemon->fast_reload_thread->started = 1;
+#ifndef THREADS_DISABLED
+	ub_thread_create(&worker->daemon->fast_reload_thread->tid,
+		fast_reload_thread_main, worker->daemon->fast_reload_thread);
+#else
+#endif
+}
+
+void
+fast_reload_thread_stop(struct fast_reload_thread* fast_reload_thread)
+{
+	if(!fast_reload_thread)
+		return;
+	fast_reload_thread_desetup(fast_reload_thread);
 }
