@@ -63,6 +63,7 @@
 #include "util/config_file.h"
 #include "util/net_help.h"
 #include "util/module.h"
+#include "util/ub_event.h"
 #include "services/listen_dnsport.h"
 #include "services/cache/rrset.h"
 #include "services/cache/infra.h"
@@ -504,6 +505,11 @@ state_list_remove_elem(struct rc_state** list, struct comm_point* c)
 static void
 clean_point(struct daemon_remote* rc, struct rc_state* s)
 {
+	if(!s->rc) {
+		/* the state has been picked up and moved away */
+		free(s);
+		return;
+	}
 	state_list_remove_elem(&rc->busy_list, s->c);
 	rc->active --;
 	if(s->ssl) {
@@ -654,11 +660,11 @@ do_reload(RES* ssl, struct worker* worker, int reuse_cache)
 
 /** do the fast_reload command */
 static void
-do_fast_reload(RES* ssl, struct worker* worker)
+do_fast_reload(RES* ssl, struct worker* worker, struct rc_state* s)
 {
 	if(!ssl_printf(ssl, "start fast_reload\n"))
 		return;
-	fast_reload_thread_start(ssl, worker);
+	fast_reload_thread_start(ssl, worker, s);
 }
 
 /** do the verbosity command */
@@ -3015,7 +3021,7 @@ cmdcmp(char* p, const char* cmd, size_t len)
 
 /** execute a remote control command */
 static void
-execute_cmd(struct daemon_remote* rc, RES* ssl, char* cmd,
+execute_cmd(struct daemon_remote* rc, struct rc_state* s, RES* ssl, char* cmd,
 	struct worker* worker)
 {
 	char* p = skipwhite(cmd);
@@ -3030,7 +3036,7 @@ execute_cmd(struct daemon_remote* rc, RES* ssl, char* cmd,
 		do_reload(ssl, worker, 0);
 		return;
 	} else if(cmdcmp(p, "fast_reload", 11)) {
-		do_fast_reload(ssl, worker);
+		do_fast_reload(ssl, worker, s);
 		return;
 	} else if(cmdcmp(p, "stats_noreset", 13)) {
 		do_stats(ssl, worker, 0);
@@ -3213,7 +3219,7 @@ daemon_remote_exec(struct worker* worker)
 		return;
 	}
 	verbose(VERB_ALGO, "remote exec distributed: %s", (char*)msg);
-	execute_cmd(NULL, NULL, (char*)msg, worker);
+	execute_cmd(NULL, NULL, NULL, (char*)msg, worker);
 	free(msg);
 }
 
@@ -3277,7 +3283,7 @@ handle_req(struct daemon_remote* rc, struct rc_state* s, RES* res)
 	verbose(VERB_DETAIL, "control cmd: %s", buf);
 
 	/* figure out what to do */
-	execute_cmd(rc, res, buf, rc->worker);
+	execute_cmd(rc, s, res, buf, rc->worker);
 }
 
 /** handle SSL_do_handshake changes to the file descriptor to wait for later */
@@ -3374,8 +3380,8 @@ int remote_control_callback(struct comm_point* c, void* arg, int err,
 /** fast reload thread. the thread main function */
 static void* fast_reload_thread_main(void* arg)
 {
-	struct fast_reload_thread* frio = (struct fast_reload_thread*)arg;
-	log_thread_set(&frio->threadnum);
+	struct fast_reload_thread* fast_reload_thread = (struct fast_reload_thread*)arg;
+	log_thread_set(&fast_reload_thread->threadnum);
 
 	verbose(VERB_ALGO, "start fast reload thread");
 
@@ -3383,6 +3389,204 @@ static void* fast_reload_thread_main(void* arg)
 	return NULL;
 }
 #endif /* !THREADS_DISABLED */
+
+/** create a socketpair for bidirectional communication, false on failure */
+static int
+create_socketpair(int* pair, struct ub_randstate* rand)
+{
+#ifndef USE_WINSOCK
+	if(socketpair(AF_UNIX, SOCK_STREAM, 0, pair) == -1) {
+		log_err("socketpair: %s", strerror(errno));
+		return 0;
+	}
+	(void)rand;
+#else
+	struct sockaddr_in addr, baddr, accaddr, connaddr;
+	socklen_t baddrlen, accaddrlen, connaddrlen;
+	uint8_t localhost[] = {127, 0, 0, 1};
+	uint8_t nonce[16], recvnonce[16];
+	size_t i;
+	int lst;
+	ssize_t ret;
+	pair[0] = -1;
+	pair[1] = -1;
+	for(i=0; i<sizeof(nonce); i++) {
+		nonce[i] = ub_random_max(rand, 256);
+	}
+	lst = socket(AF_INET, SOCK_STREAM, 0);
+	if(lst == -1) {
+		log_err("create_socketpair: socket: %s", sock_strerror(errno));
+		return 0;
+	}
+	memset(&addr, 0, sizeof(addr));
+	addr.sin_family = AF_INET;
+	addr.sin_port = 0;
+	memcpy(&addr.sin_addr, localhost, 4);
+	if(bind(lst, (struct sockaddr*)&addr, (socklen_t)sizeof(addr))
+		== -1) {
+		log_err("create socketpair: bind: %s", sock_strerror(errno));
+		sock_close(lst);
+		return 0;
+	}
+	if(listen(lst, 12) == -1) {
+		log_err("create socketpair: listen: %s", sock_strerror(errno));
+		sock_close(lst);
+		return 0;
+	}
+
+	pair[1] = socket(AF_INET, SOCK_STREAM, 0);
+	if(pair[1] == -1) {
+		log_err("create socketpair: socket: %s", sock_strerror(errno));
+		sock_close(lst);
+		return 0;
+	}
+	baddrlen = (socklen_t)sizeof(baddr);
+	if(getsockname(lst, (struct sockaddr*)&baddr, &baddrlen) == -1) {
+		log_err("create socketpair: getsockname: %s",
+			sock_strerror(errno));
+		sock_close(lst);
+		sock_close(pair[1]);
+		pair[1] = -1;
+		return 0;
+	}
+	if(baddrlen > (socklen_t)sizeof(baddr)) {
+		log_err("create socketpair: getsockname returned addr too big");
+		sock_close(lst);
+		sock_close(pair[1]);
+		pair[1] = -1;
+		return 0;
+	}
+	/* the socket is blocking */
+	if(connect(pair[1], (struct sockaddr*)&baddr, baddrlen) == -1) {
+		log_err("create socketpair: connect: %s",
+			sock_strerror(errno));
+		sock_close(lst);
+		sock_close(pair[1]);
+		pair[1] = -1;
+		return 0;
+	}
+	accaddrlen = (socklen_t)sizeof(accaddr);
+	pair[0] = accept(lst, &accaddr, &accaddrlen);
+	if(pair[0] == -1) {
+		log_err("create socketpair: accept: %s", sock_strerror(errno));
+		sock_close(lst);
+		sock_close(pair[1]);
+		pair[1] = -1;
+		return 0;
+	}
+	if(accaddrlen > (socklen_t)sizeof(accaddr)) {
+		log_err("create socketpair: accept returned addr too big");
+		sock_close(lst);
+		sock_close(pair[0]);
+		sock_close(pair[1]);
+		pair[0] = -1;
+		pair[1] = -1;
+		return 0;
+	}
+	if(accaddr.sin_family != AF_INET ||
+	   memcmp(localhost, &accaddr.sin_addr, 4) != 0) {
+		log_err("create socketpair: accept from wrong address");
+		sock_close(lst);
+		sock_close(pair[0]);
+		sock_close(pair[1]);
+		pair[0] = -1;
+		pair[1] = -1;
+		return 0;
+	}
+	connaddrlen = (socklen_t)sizeof(connaddr);
+	if(getsockname(pair[1], (struct sockaddr*)&connaddr, &connaddrlen)
+		== -1) {
+		log_err("create socketpair: getsockname connectedaddr: %s",
+			sock_strerror(errno));
+		sock_close(lst);
+		sock_close(pair[0]);
+		sock_close(pair[1]);
+		pair[0] = -1;
+		pair[1] = -1;
+		return 0;
+	}
+	if(connaddrlen > (socklen_t)sizeof(connaddr)) {
+		log_err("create socketpair: getsockname connectedaddr returned addr too big");
+		sock_close(lst);
+		sock_close(pair[0]);
+		sock_close(pair[1]);
+		pair[0] = -1;
+		pair[1] = -1;
+		return 0;
+	}
+	if(connaddr.sin_family != AF_INET ||
+	   memcmp(localhost, &connaddr.sin_addr, 4) != 0) {
+		log_err("create socketpair: getsockname connectedadd returned wrong address");
+		sock_close(lst);
+		sock_close(pair[0]);
+		sock_close(pair[1]);
+		pair[0] = -1;
+		pair[1] = -1;
+		return 0;
+	}
+	if(accaddr.sin_port != connaddr.sin_port) {
+		log_err("create socketpair: accept from wrong port");
+		sock_close(lst);
+		sock_close(pair[0]);
+		sock_close(pair[1]);
+		pair[0] = -1;
+		pair[1] = -1;
+		return 0;
+	}
+	sock_close(lst);
+
+	ret = send(pair[1], nonce, sizeof(nonce), 0);
+	if(ret == -1) {
+		log_err("create socketpair: send: %s", sock_strerror(errno));
+		sock_close(pair[0]);
+		sock_close(pair[1]);
+		pair[0] = -1;
+		pair[1] = -1;
+		return 0;
+	} else if(ret != sizeof(nonce)) {
+		log_err("create socketpair: send was truncated");
+		sock_close(pair[0]);
+		sock_close(pair[1]);
+		pair[0] = -1;
+		pair[1] = -1;
+		return 0;
+	}
+
+	ret = recv(pair[0], recvnonce, sizeof(nonce), 0);
+	if(ret == -1) {
+		log_err("create socketpair: recv: %s", sock_strerror(errno));
+		sock_close(pair[0]);
+		sock_close(pair[1]);
+		pair[0] = -1;
+		pair[1] = -1;
+		return 0;
+	} else if(ret == 0) {
+		log_err("create socketpair: stream closed");
+		sock_close(pair[0]);
+		sock_close(pair[1]);
+		pair[0] = -1;
+		pair[1] = -1;
+		return 0;
+	}
+	if(ret != sizeof(nonce)) {
+		log_err("create socketpair: recv did not read all nonce bytes");
+		sock_close(pair[0]);
+		sock_close(pair[1]);
+		pair[0] = -1;
+		pair[1] = -1;
+		return 0;
+	}
+	if(memcmp(nonce, recvnonce, sizeof(nonce)) != 0) {
+		log_err("create socketpair: recv wrong nonce");
+		sock_close(pair[0]);
+		sock_close(pair[1]);
+		pair[0] = -1;
+		pair[1] = -1;
+		return 0;
+	}
+#endif
+	return 1;
+}
 
 /** fast reload thread. setup the thread info */
 static int
@@ -3396,6 +3600,14 @@ fast_reload_thread_setup(struct worker* worker)
 	/* The thread id printed in logs, numworker+1 is the dnstap thread.
 	 * This is numworkers+2. */
 	worker->daemon->fast_reload_thread->threadnum = numworkers+2;
+	worker->daemon->fast_reload_thread->commpair[0] = -1;
+	worker->daemon->fast_reload_thread->commpair[1] = -1;
+	if(!create_socketpair(worker->daemon->fast_reload_thread->commpair,
+		worker->daemon->rand)) {
+		free(worker->daemon->fast_reload_thread);
+		return 0;
+	}
+	worker->daemon->fast_reload_thread->worker = worker;
 	return 1;
 }
 
@@ -3405,11 +3617,44 @@ fast_reload_thread_desetup(struct fast_reload_thread* fast_reload_thread)
 {
 	if(!fast_reload_thread)
 		return;
+	if(fast_reload_thread->service_event &&
+		fast_reload_thread->service_event_is_added) {
+		ub_event_del(fast_reload_thread->service_event);
+		fast_reload_thread->service_event_is_added = 0;
+	}
+	if(fast_reload_thread->service_event)
+		ub_event_free(fast_reload_thread->service_event);
+	sock_close(fast_reload_thread->commpair[0]);
+	sock_close(fast_reload_thread->commpair[1]);
+	if(fast_reload_thread->remote.ssl) {
+		SSL_shutdown(fast_reload_thread->remote.ssl);
+		SSL_free(fast_reload_thread->remote.ssl);
+	}
+	comm_point_delete(fast_reload_thread->client_cp);
 	free(fast_reload_thread);
 }
 
+void fast_reload_service_cb(int ATTR_UNUSED(fd), short ATTR_UNUSED(bits),
+	void* arg)
+{
+	struct fast_reload_thread* fast_reload_thread =
+		(struct fast_reload_thread*)arg;
+	(void)fast_reload_thread;
+}
+
+int fast_reload_client_callback(struct comm_point* c, void* arg, int err,
+	struct comm_reply* ATTR_UNUSED(rep))
+{
+	struct fast_reload_thread* fast_reload_thread =
+		(struct fast_reload_thread*)arg;
+	(void)c;
+	(void)err;
+	(void)fast_reload_thread;
+	return 0;
+}
+
 void
-fast_reload_thread_start(RES* ssl, struct worker* worker)
+fast_reload_thread_start(RES* ssl, struct worker* worker, struct rc_state* s)
 {
 	if(worker->daemon->fast_reload_thread) {
 		log_err("fast reload thread already running");
@@ -3420,8 +3665,43 @@ fast_reload_thread_start(RES* ssl, struct worker* worker)
 			return;
 		return;
 	}
+	worker->daemon->fast_reload_thread->remote = *ssl;
 	worker->daemon->fast_reload_thread->started = 1;
+
 #ifndef THREADS_DISABLED
+	/* Setup command listener in remote servicing thread */
+	worker->daemon->fast_reload_thread->service_event = ub_event_new(
+		comm_base_internal(worker->base),
+		worker->daemon->fast_reload_thread->commpair[0],
+		UB_EV_READ | UB_EV_PERSIST, fast_reload_service_cb,
+		worker->daemon->fast_reload_thread);
+	if(!worker->daemon->fast_reload_thread->service_event) {
+		if(!ssl_printf(ssl, "error out of memory\n"))
+			return;
+		return;
+	}
+	if(ub_event_add(worker->daemon->fast_reload_thread->service_event,
+		NULL) != 0) {
+		if(!ssl_printf(ssl, "error out of memory adding service event\n"))
+			return;
+		return;
+	}
+	worker->daemon->fast_reload_thread->service_event_is_added = 1;
+
+	/* Setup the comm point to the remote control client as an event
+	 * on the remote servicing thread, which it already is.
+	 * It needs a new callback to service it. */
+	log_assert(s);
+	state_list_remove_elem(&s->rc->busy_list, s->c);
+	s->rc->active --;
+	worker->daemon->fast_reload_thread->client_cp = s->c;
+	worker->daemon->fast_reload_thread->client_cp->callback =
+		fast_reload_client_callback;
+	worker->daemon->fast_reload_thread->client_cp->cb_arg =
+		worker->daemon->fast_reload_thread;
+	s->rc = NULL; /* move away the rc state */
+
+	/* Start fast reload thread */
 	ub_thread_create(&worker->daemon->fast_reload_thread->tid,
 		fast_reload_thread_main, worker->daemon->fast_reload_thread);
 #else

@@ -126,12 +126,26 @@ struct fast_reload_thread {
 	/** the thread number for the dtio thread,
 	 * must be first to cast thread arg to int* in checklock code. */
 	int threadnum;
-	/** event base, for event handling */
-	void* event_base;
+	/** communication socket pair, that sends commands */
+	int commpair[2];
 	/** thread id, of the io thread */
 	ub_thread_type tid;
 	/** if the io processing has started */
 	int started;
+
+	/** the event that listens on the remote service worker to the
+	 * commpair, it receives content from the fast reload thread. */
+	void* service_event;
+	/** if the event that listens on the remote service worker has
+	 * been added to the comm base. */
+	int service_event_is_added;
+	/** the remote control connection to print output to. */
+	struct remote_stream remote;
+	/** the worker that the service_event is added in */
+	struct worker* worker;
+	/** the comm point for the client connection, the remote control
+	 * client. */
+	struct comm_point* client_cp;
 };
 
 /**
@@ -223,13 +237,24 @@ int ssl_read_line(RES* ssl, char* buf, size_t max);
  * Start fast reload thread
  * @param ssl: the RES connection to print to.
  * @param worker: the remote servicing worker.
+ * @param s: the rc_state that is servicing the remote control connection to
+ *	the remote control client. It needs to be moved away to stay connected
+ *	while the fast reload is running.
  */
-void fast_reload_thread_start(RES* ssl, struct worker* worker);
+void fast_reload_thread_start(RES* ssl, struct worker* worker,
+	struct rc_state* s);
 
 /**
  * Stop fast reload thread
  * @param fast_reload_thread: the thread struct.
  */
 void fast_reload_thread_stop(struct fast_reload_thread* fast_reload_thread);
+
+/** fast reload thread commands to remote service thread event callback */
+void fast_reload_service_cb(int fd, short bits, void* arg);
+
+/** fast reload callback for the remote control client connection */
+int fast_reload_client_callback(struct comm_point* c, void* arg, int err,
+	struct comm_reply* rep);
 
 #endif /* DAEMON_REMOTE_H */

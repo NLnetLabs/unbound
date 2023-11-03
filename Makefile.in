@@ -962,7 +962,7 @@ fptr_wlist.lo fptr_wlist.o: $(srcdir)/util/fptr_wlist.c config.h $(srcdir)/util/
  $(srcdir)/validator/val_nsec3.h $(srcdir)/validator/val_sigcrypt.h $(srcdir)/validator/val_kentry.h \
  $(srcdir)/validator/val_neg.h $(srcdir)/validator/autotrust.h $(srcdir)/libunbound/libworker.h \
  $(srcdir)/libunbound/context.h $(srcdir)/util/alloc.h $(srcdir)/libunbound/unbound-event.h \
- $(srcdir)/libunbound/worker.h
+ $(srcdir)/libunbound/worker.h $(srcdir)/daemon/remote.h
 locks.lo locks.o: $(srcdir)/util/locks.c config.h $(srcdir)/util/locks.h $(srcdir)/util/log.h
 log.lo log.o: $(srcdir)/util/log.c config.h $(srcdir)/util/log.h $(srcdir)/util/locks.h $(srcdir)/sldns/sbuffer.h
 mini_event.lo mini_event.o: $(srcdir)/util/mini_event.c config.h $(srcdir)/util/mini_event.h $(srcdir)/util/rbtree.h \
@@ -1296,7 +1296,7 @@ remote.lo remote.o: $(srcdir)/daemon/remote.c config.h $(srcdir)/daemon/remote.h
  $(srcdir)/validator/val_anchor.h $(srcdir)/iterator/iterator.h $(srcdir)/services/outbound_list.h \
  $(srcdir)/iterator/iter_fwd.h $(srcdir)/iterator/iter_hints.h $(srcdir)/iterator/iter_delegpt.h \
  $(srcdir)/services/outside_network.h $(srcdir)/sldns/str2wire.h $(srcdir)/sldns/parseutil.h \
- $(srcdir)/sldns/wire2str.h $(srcdir)/util/locks.h
+ $(srcdir)/sldns/wire2str.h $(srcdir)/util/locks.h $(srcdir)/util/ub_event.h
 stats.lo stats.o: $(srcdir)/daemon/stats.c config.h $(srcdir)/daemon/stats.h $(srcdir)/util/timehist.h \
  $(srcdir)/libunbound/unbound.h $(srcdir)/daemon/worker.h $(srcdir)/libunbound/worker.h $(srcdir)/sldns/sbuffer.h \
  $(srcdir)/util/data/packed_rrset.h $(srcdir)/util/storage/lruhash.h $(srcdir)/util/locks.h $(srcdir)/util/log.h \

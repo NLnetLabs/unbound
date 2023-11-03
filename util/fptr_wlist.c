@@ -73,6 +73,7 @@
 #include "libunbound/worker.h"
 #include "util/tube.h"
 #include "util/config_file.h"
+#include "daemon/remote.h"
 #ifdef UB_ON_WINDOWS
 #include "winrc/win_svc.h"
 #endif
@@ -120,6 +121,7 @@ fptr_whitelist_comm_point_raw(comm_point_callback_type *fptr)
 	else if(fptr == &tube_handle_write) return 1;
 	else if(fptr == &remote_accept_callback) return 1;
 	else if(fptr == &remote_control_callback) return 1;
+	else if(fptr == &fast_reload_client_callback) return 1;
 	return 0;
 }
 
@@ -180,6 +182,7 @@ fptr_whitelist_event(void (*fptr)(int, short, void *))
 	else if(fptr == &tube_handle_signal) return 1;
 	else if(fptr == &comm_base_handle_slow_accept) return 1;
 	else if(fptr == &comm_point_http_handle_callback) return 1;
+	else if(fptr == &fast_reload_service_cb) return 1;
 #ifdef USE_DNSTAP
 	else if(fptr == &dtio_output_cb) return 1;
 	else if(fptr == &dtio_cmd_cb) return 1;

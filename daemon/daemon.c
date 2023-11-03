@@ -842,6 +842,8 @@ daemon_cleanup(struct daemon* daemon)
 		auth_zones_cleanup(daemon->env->auth_zones);
 	/* key cache is cleared by module desetup during next daemon_fork() */
 	daemon_remote_clear(daemon->rc);
+	if(daemon->fast_reload_thread)
+		fast_reload_thread_stop(daemon->fast_reload_thread);
 	for(i=0; i<daemon->num; i++)
 		worker_delete(daemon->workers[i]);
 	free(daemon->workers);
@@ -861,8 +863,6 @@ daemon_cleanup(struct daemon* daemon)
 	dnsc_delete(daemon->dnscenv);
 	daemon->dnscenv = NULL;
 #endif
-	if(daemon->fast_reload_thread)
-		fast_reload_thread_stop(daemon->fast_reload_thread);
 	daemon->cfg = NULL;
 }
 
