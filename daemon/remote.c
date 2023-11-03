@@ -652,6 +652,15 @@ do_reload(RES* ssl, struct worker* worker, int reuse_cache)
 	send_ok(ssl);
 }
 
+/** do the fast_reload command */
+static void
+do_fast_reload(RES* ssl, struct worker* worker)
+{
+	if(!ssl_printf(ssl, "start fast_reload\n"))
+		return;
+	(void)worker;
+}
+
 /** do the verbosity command */
 static void
 do_verbosity(RES* ssl, char* str)
@@ -3019,6 +3028,9 @@ execute_cmd(struct daemon_remote* rc, RES* ssl, char* cmd,
 		return;
 	} else if(cmdcmp(p, "reload", 6)) {
 		do_reload(ssl, worker, 0);
+		return;
+	} else if(cmdcmp(p, "fast_reload", 11)) {
+		do_fast_reload(ssl, worker);
 		return;
 	} else if(cmdcmp(p, "stats_noreset", 13)) {
 		do_stats(ssl, worker, 0);
