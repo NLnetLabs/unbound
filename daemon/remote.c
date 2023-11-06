@@ -3394,10 +3394,17 @@ int remote_control_callback(struct comm_point* c, void* arg, int err,
 static int
 sock_poll_timeout(int fd, int timeout, int pollin, int pollout, int* event)
 {
+	int loopcount = 0;
 	/* Loop if the system call returns an errno to do so, like EINTR. */
 	while(1) {
 		struct pollfd p, *fds;
 		int nfds, ret;
+		if(++loopcount > 200) {
+			log_err("sock_poll_timeout: loop");
+			if(event)
+				*event = 0;
+			return 0;
+		}
 		if(fd == -1) {
 			fds = NULL;
 			nfds = 0;
