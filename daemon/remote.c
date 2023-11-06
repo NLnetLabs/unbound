@@ -3670,6 +3670,13 @@ fast_reload_thread_start(RES* ssl, struct worker* worker, struct rc_state* s)
 
 #ifndef THREADS_DISABLED
 	/* Setup command listener in remote servicing thread */
+	/* The listener has to be nonblocking, so the the remote servicing
+	 * thread can continue to service DNS queries, the fast reload
+	 * thread is going to read the config from disk and apply it. */
+	/* The commpair[1] element can stay blocking, it is used by the
+	 * fast reload thread to communicate back. The thread needs to wait
+	 * at these times, when it has to check briefly it can use poll. */
+	fd_set_nonblock(worker->daemon->fast_reload_thread->commpair[0]);
 	worker->daemon->fast_reload_thread->service_event = ub_event_new(
 		comm_base_internal(worker->base),
 		worker->daemon->fast_reload_thread->commpair[0],
@@ -3694,6 +3701,10 @@ fast_reload_thread_start(RES* ssl, struct worker* worker, struct rc_state* s)
 	log_assert(s);
 	state_list_remove_elem(&s->rc->busy_list, s->c);
 	s->rc->active --;
+	/* Set the comm point file descriptor to nonblocking. So that
+	 * printout to the remote control client does not block the
+	 * server thread from servicing DNS queries. */
+	fd_set_nonblock(s->c->fd);
 	worker->daemon->fast_reload_thread->client_cp = s->c;
 	worker->daemon->fast_reload_thread->client_cp->callback =
 		fast_reload_client_callback;
