@@ -99,6 +99,9 @@
 #ifdef HAVE_NETDB_H
 #include <netdb.h>
 #endif
+#ifdef HAVE_POLL_H
+#include <poll.h>
+#endif
 
 /* just for portability */
 #ifdef SQ
@@ -3376,6 +3379,76 @@ int remote_control_callback(struct comm_point* c, void* arg, int err,
 	return 0;
 }
 
+#ifdef USE_WINSOCK
+/**
+ * This routine polls a socket for readiness.
+ * @param fd: file descriptor, -1 uses no fd for a timer only.
+ * @param timeout: time in msec to wait. 0 means nonblocking test,
+ * 	-1 waits blocking for events.
+ * @param pollin: check for input event.
+ * @param pollout: check for output event.
+ * @param event: output variable, set to true if the event happens.
+ * 	It is false if there was an error or timeout.
+ * @return false is system call failure, also logged.
+ */
+static int
+sock_poll_timeout(int fd, int timeout, int pollin, int pollout, int* event)
+{
+	/* Loop if the system call returns an errno to do so, like EINTR. */
+	while(1) {
+		struct pollfd p, *fds;
+		int nfds, ret;
+		if(fd == -1) {
+			fds = NULL;
+			nfds = 0;
+		} else {
+			fds = &p;
+			nfds = 1;
+			memset(&p, 0, sizeof(p));
+			p.fd = fd;
+			p.events = POLLERR | POLLHUP;
+			if(pollin)
+				p.events |= POLLIN;
+			if(pollout)
+				p.events |= POLLOUT;
+		}
+#ifndef USE_WINSOCK
+		ret = poll(fds, nfds, timeout);
+#else
+		ret = WSAPoll(fds, nfds, timeout);
+#endif
+		if(ret == -1) {
+			if(
+#ifndef USE_WINSOCK
+				errno == EINTR || errno == EAGAIN
+#  ifdef EWOULDBLOCK
+				|| errno == EWOULDBLOCK
+#  endif
+#else
+				WSAGetLastError() == WSAEINTR ||
+				WSAGetLastError() == WSAEINPROGRESS ||
+				WSAGetLastError() == WSAEWOULDBLOCK
+#endif
+				)
+				continue; /* Try again. */
+			log_err("poll: %s", sock_strerror(errno));
+			if(event)
+				*event = 0;
+			return 0;
+		} else if(ret == 0) {
+			/* Timeout */
+			if(event)
+				*event = 0;
+			return 1;
+		}
+		break;
+	}
+	if(event)
+		*event = 1;
+	return 1;
+}
+#endif /* USE_WINSOCK */
+
 #ifndef THREADS_DISABLED
 /** fast reload thread. the thread main function */
 static void* fast_reload_thread_main(void* arg)
@@ -3406,7 +3479,7 @@ create_socketpair(int* pair, struct ub_randstate* rand)
 	uint8_t localhost[] = {127, 0, 0, 1};
 	uint8_t nonce[16], recvnonce[16];
 	size_t i;
-	int lst;
+	int lst, pollin_event;
 	ssize_t ret;
 	pair[0] = -1;
 	pair[1] = -1;
@@ -3465,6 +3538,21 @@ create_socketpair(int* pair, struct ub_randstate* rand)
 		pair[1] = -1;
 		return 0;
 	}
+	if(!sock_poll_timeout(lst, 200, 1, 0, &pollin_event)) {
+		log_err("create socketpair: poll for accept failed: %s",
+			sock_strerror(errno));
+		sock_close(lst);
+		sock_close(pair[1]);
+		pair[1] = -1;
+		return 0;
+	}
+	if(!pollin_event) {
+		log_err("create socketpair: poll timeout for accept");
+		sock_close(lst);
+		sock_close(pair[1]);
+		pair[1] = -1;
+		return 0;
+	}
 	accaddrlen = (socklen_t)sizeof(accaddr);
 	pair[0] = accept(lst, &accaddr, &accaddrlen);
 	if(pair[0] == -1) {
@@ -3516,7 +3604,7 @@ create_socketpair(int* pair, struct ub_randstate* rand)
 	}
 	if(connaddr.sin_family != AF_INET ||
 	   memcmp(localhost, &connaddr.sin_addr, 4) != 0) {
-		log_err("create socketpair: getsockname connectedadd returned wrong address");
+		log_err("create socketpair: getsockname connectedaddr returned wrong address");
 		sock_close(lst);
 		sock_close(pair[0]);
 		sock_close(pair[1]);
@@ -3552,6 +3640,23 @@ create_socketpair(int* pair, struct ub_randstate* rand)
 		return 0;
 	}
 
+	if(!sock_poll_timeout(pair[0], 200, 1, 0, &pollin_event)) {
+		log_err("create socketpair: poll failed: %s",
+			sock_strerror(errno));
+		sock_close(pair[0]);
+		sock_close(pair[1]);
+		pair[0] = -1;
+		pair[1] = -1;
+		return 0;
+	}
+	if(!pollin_event) {
+		log_err("create socketpair: poll timeout for recv");
+		sock_close(pair[0]);
+		sock_close(pair[1]);
+		pair[0] = -1;
+		pair[1] = -1;
+		return 0;
+	}
 	ret = recv(pair[0], recvnonce, sizeof(nonce), 0);
 	if(ret == -1) {
 		log_err("create socketpair: recv: %s", sock_strerror(errno));
