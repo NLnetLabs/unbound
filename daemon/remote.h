@@ -120,6 +120,26 @@ struct remote_stream {
 typedef struct remote_stream RES;
 
 /**
+ * Notification status. This is exchanged between the fast reload thread
+ * and the server thread, over the commpair sockets.
+ */
+enum fast_reload_notification {
+	/** nothing, not used */
+	fast_reload_notification_none = 0,
+	/** the fast reload thread is done */
+	fast_reload_notification_done = 1,
+	/** the fast reload thread is done but with an error, it failed */
+	fast_reload_notification_done_error = 2,
+	/** the fast reload thread is told to exit by the server thread.
+	 * Sent on server quit while the reload is running. */
+	fast_reload_notification_exit = 3,
+	/** the fast reload thread has exited, after being told to exit */
+	fast_reload_notification_exited = 4,
+	/** the fast reload thread has information to print out */
+	fast_reload_notification_printout = 5
+};
+
+/**
  * Fast reload thread structure
  */
 struct fast_reload_thread {
@@ -132,6 +152,8 @@ struct fast_reload_thread {
 	ub_thread_type tid;
 	/** if the io processing has started */
 	int started;
+	/** if the thread has to quit */
+	int need_to_quit;
 
 	/** the event that listens on the remote service worker to the
 	 * commpair, it receives content from the fast reload thread. */

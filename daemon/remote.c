@@ -3379,7 +3379,6 @@ int remote_control_callback(struct comm_point* c, void* arg, int err,
 	return 0;
 }
 
-#ifdef USE_WINSOCK
 /**
  * This routine polls a socket for readiness.
  * @param fd: file descriptor, -1 uses no fd for a timer only.
@@ -3454,7 +3453,141 @@ sock_poll_timeout(int fd, int timeout, int pollin, int pollout, int* event)
 		*event = 1;
 	return 1;
 }
-#endif /* USE_WINSOCK */
+
+/** fast reload convert fast reload notification status to string */
+static const char*
+fr_notification_to_string(enum fast_reload_notification status)
+{
+	switch(status) {
+	case fast_reload_notification_none:
+		return "none";
+	case fast_reload_notification_done:
+		return "done";
+	case fast_reload_notification_done_error:
+		return "done_error";
+	case fast_reload_notification_exit:
+		return "exit";
+	case fast_reload_notification_exited:
+		return "exited";
+	case fast_reload_notification_printout:
+		return "printout";
+	default:
+		break;
+	}
+	return "unknown";
+}
+
+/** fast reload, poll for notification incoming. True if quit */
+static int
+fr_poll_for_quit(struct fast_reload_thread* fr)
+{
+	int inevent, loopexit = 0;
+	uint32_t cmd;
+	ssize_t ret;
+
+	/* Is there data? */
+	if(!sock_poll_timeout(fr->commpair[1], 0, 1, 0, &inevent)) {
+		log_err("fr_poll_for_quit: poll failed");
+		return 0;
+	}
+	if(!inevent)
+		return 0;
+
+	/* Read the data */
+	while(1) {
+		if(++loopexit > 200) {
+			log_err("fr_poll_for_quit: recv loops %s",
+				sock_strerror(errno));
+			return 0;
+		}
+		ret = recv(fr->commpair[1], &cmd, sizeof(cmd), 0);
+		if(ret == -1) {
+			if(
+#ifndef USE_WINSOCK
+				errno == EINTR || errno == EAGAIN
+#  ifdef EWOULDBLOCK
+				|| errno == EWOULDBLOCK
+#  endif
+#else
+				WSAGetLastError() == WSAEINTR ||
+				WSAGetLastError() == WSAEINPROGRESS ||
+				WSAGetLastError() == WSAEWOULDBLOCK
+#endif
+				)
+				continue; /* Try again. */
+			log_err("fr_poll_for_quit: recv: %s",
+				sock_strerror(errno));
+			return 0;
+		} if(ret != sizeof(cmd)) {
+			log_err("fr_poll_for_quit: partial read");
+			return 0;
+		}
+		break;
+	}
+	if(cmd == fast_reload_notification_exit) {
+		fr->need_to_quit = 1;
+		verbose(VERB_ALGO, "fast reload: exit notification received");
+		return 1;
+	}
+	log_err("fr_poll_for_quit: unknown notification status received: %d %s",
+		cmd, fr_notification_to_string(cmd));
+	return 0;
+}
+
+/** fast reload thread. Send notification from the fast reload thread */
+static void
+fr_send_notification(struct fast_reload_thread* fr,
+	enum fast_reload_notification status)
+{
+	int outevent, loopexit = 0;
+	uint32_t cmd;
+	ssize_t ret;
+	verbose(VERB_ALGO, "fast reload: send notification %s",
+		fr_notification_to_string(status));
+	/* Make a blocking attempt to send. But meanwhile stay responsive,
+	 * once in a while for quit commands. In case the server has to quit. */
+	/* see if there is incoming quit signals */
+	if(fr_poll_for_quit(fr))
+		return;
+	while(1) {
+		if(++loopexit > 200) {
+			log_err("fast reload: could not send notification");
+			return;
+		}
+		if(!sock_poll_timeout(fr->commpair[1], 200, 0, 1, &outevent)) {
+			log_err("fast reload: poll failed");
+			return;
+		}
+		if(fr_poll_for_quit(fr))
+			return;
+		if(!outevent)
+			continue;
+		cmd = status;
+		ret = send(fr->commpair[1], &cmd, sizeof(cmd), 0);
+		if(ret == -1) {
+			if(
+#ifndef USE_WINSOCK
+				errno == EINTR || errno == EAGAIN
+#  ifdef EWOULDBLOCK
+				|| errno == EWOULDBLOCK
+#  endif
+#else
+				WSAGetLastError() == WSAEINTR ||
+				WSAGetLastError() == WSAEINPROGRESS ||
+				WSAGetLastError() == WSAEWOULDBLOCK
+#endif
+				)
+				continue; /* Try again. */
+			log_err("fast reload send notification: send: %s",
+				sock_strerror(errno));
+			return;
+		} else if(ret != sizeof(cmd)) {
+			log_err("fast reload send notification: partial send");
+			return;
+		}
+		break;
+	}
+}
 
 #ifndef THREADS_DISABLED
 /** fast reload thread. the thread main function */
@@ -3465,7 +3598,21 @@ static void* fast_reload_thread_main(void* arg)
 
 	verbose(VERB_ALGO, "start fast reload thread");
 
+	if(fr_poll_for_quit(fast_reload_thread))
+		goto done;
+
 	verbose(VERB_ALGO, "stop fast reload thread");
+	/* If this is not an exit due to quit earlier, send regular done. */
+	if(!fast_reload_thread->need_to_quit)
+		fr_send_notification(fast_reload_thread,
+			fast_reload_notification_done);
+	/* If during the fast_reload_notification_done send,
+	 * fast_reload_notification_exit was received, ack it. If the
+	 * thread is exiting due to quit received earlier, also ack it.*/
+done:
+	if(fast_reload_thread->need_to_quit)
+		fr_send_notification(fast_reload_thread,
+			fast_reload_notification_exited);
 	return NULL;
 }
 #endif /* !THREADS_DISABLED */
