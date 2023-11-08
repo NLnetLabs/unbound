@@ -1,6 +1,7 @@
 2 November 2023: Wouter
 	- Set version number to 1.19.0.
-	- Tag for 1.19.0rc1 release.
+	- Tag for 1.19.0rc1 release. It became 1.19.0 release on 8 nov 2023.
+	  The repository continues with 1.19.1.
 
 1 November 2023: George
 	- Mention flex and bison in README.md when building from repository
