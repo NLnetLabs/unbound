@@ -1,3 +1,6 @@
+9 November 2023: Wouter
+	- Fix unit test parse of origin syntax.
+
 2 November 2023: Wouter
 	- Set version number to 1.19.0.
 	- Tag for 1.19.0rc1 release. It became 1.19.0 release on 8 nov 2023.
