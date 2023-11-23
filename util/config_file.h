@@ -573,6 +573,8 @@ struct config_file {
 	char* dnstap_identity;
 	/** dnstap "version", package version is used if "". */
 	char* dnstap_version;
+	/** dnstap worker wakeup delay */
+	size_t dnstap_wakeup_delay;
 
 	/** true to log dnstap RESOLVER_QUERY message events */
 	int dnstap_log_resolver_query_messages;

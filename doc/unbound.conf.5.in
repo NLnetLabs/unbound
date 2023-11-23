@@ -2797,6 +2797,11 @@ Default is "".
 The version to send with messages, if "" the package version is used.
 Default is "".
 .TP
+.B dnstap-wakeup-delay: \fI<msec>
+Delay before the dnstap message queue worker will handle incoming
+messages. This reduces performance overhead, but increases latency.
+Default is 1000 milliseconds.
+.TP
 .B dnstap-log-resolver-query-messages: \fI<yes or no>
 Enable to log resolver query messages.  Default is no.
 These are messages from Unbound to upstream servers.

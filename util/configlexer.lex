@@ -494,6 +494,7 @@ dnstap-send-identity{COLON}	{ YDVAR(1, VAR_DNSTAP_SEND_IDENTITY) }
 dnstap-send-version{COLON}	{ YDVAR(1, VAR_DNSTAP_SEND_VERSION) }
 dnstap-identity{COLON}		{ YDVAR(1, VAR_DNSTAP_IDENTITY) }
 dnstap-version{COLON}		{ YDVAR(1, VAR_DNSTAP_VERSION) }
+dnstap-wakeup-delay{COLON}	{ YDVAR(1, VAR_DNSTAP_WAKEUP_DELAY) }
 dnstap-log-resolver-query-messages{COLON}	{
 		YDVAR(1, VAR_DNSTAP_LOG_RESOLVER_QUERY_MESSAGES) }
 dnstap-log-resolver-response-messages{COLON}	{

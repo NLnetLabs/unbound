@@ -105,7 +105,8 @@ dt_apply_cfg(struct dt_env *env, struct config_file *cfg);
  * @return: true on success, false on failure.
  */
 int
-dt_init(struct dt_env *env, struct comm_base* base);
+dt_init(struct dt_env *env, struct comm_base* base,
+		struct timeval* wakeup_delay);
 
 /**
  * Deletes the per-worker state created by dt_init

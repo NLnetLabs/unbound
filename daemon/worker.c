@@ -2160,7 +2160,10 @@ worker_init(struct worker* worker, struct config_file *cfg,
 	if(cfg->dnstap) {
 		log_assert(worker->daemon->dtenv != NULL);
 		memcpy(&worker->dtenv, worker->daemon->dtenv, sizeof(struct dt_env));
-		if(!dt_init(&worker->dtenv, worker->base))
+		struct timeval tv;
+		tv.tv_sec = (time_t)(cfg->dnstap_wakeup_delay / 1000);
+		tv.tv_usec = (time_t)((cfg->dnstap_wakeup_delay % 1000) * 1000);
+		if(!dt_init(&worker->dtenv, worker->base, &tv))
 			fatal_exit("dt_init failed");
 	}
 #endif

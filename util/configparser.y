@@ -130,7 +130,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_DNSTAP_TLS VAR_DNSTAP_TLS_SERVER_NAME VAR_DNSTAP_TLS_CERT_BUNDLE
 %token VAR_DNSTAP_TLS_CLIENT_KEY_FILE VAR_DNSTAP_TLS_CLIENT_CERT_FILE
 %token VAR_DNSTAP_SEND_IDENTITY VAR_DNSTAP_SEND_VERSION VAR_DNSTAP_BIDIRECTIONAL
-%token VAR_DNSTAP_IDENTITY VAR_DNSTAP_VERSION
+%token VAR_DNSTAP_IDENTITY VAR_DNSTAP_VERSION VAR_DNSTAP_WAKEUP_DELAY
 %token VAR_DNSTAP_LOG_RESOLVER_QUERY_MESSAGES
 %token VAR_DNSTAP_LOG_RESOLVER_RESPONSE_MESSAGES
 %token VAR_DNSTAP_LOG_CLIENT_QUERY_MESSAGES
@@ -3354,7 +3354,7 @@ content_dt: dt_dnstap_enable | dt_dnstap_socket_path | dt_dnstap_bidirectional |
 	dt_dnstap_tls_cert_bundle |
 	dt_dnstap_tls_client_key_file | dt_dnstap_tls_client_cert_file |
 	dt_dnstap_send_identity | dt_dnstap_send_version |
-	dt_dnstap_identity | dt_dnstap_version |
+	dt_dnstap_identity | dt_dnstap_version | dt_dnstap_wakeup_delay |
 	dt_dnstap_log_resolver_query_messages |
 	dt_dnstap_log_resolver_response_messages |
 	dt_dnstap_log_client_query_messages |
@@ -3462,6 +3462,15 @@ dt_dnstap_version: VAR_DNSTAP_VERSION STRING_ARG
 		OUTYY(("P(dt_dnstap_version:%s)\n", $2));
 		free(cfg_parser->cfg->dnstap_version);
 		cfg_parser->cfg->dnstap_version = $2;
+	}
+	;
+dt_dnstap_wakeup_delay: VAR_DNSTAP_WAKEUP_DELAY STRING_ARG
+	{
+		OUTYY(("P(dt_dnstap_wakeup_delay:%s)\n", $2));
+		if(atoi($2) == 0 && strcmp($2, "0") != 0)
+			yyerror("number expected");
+		else cfg_parser->cfg->dnstap_wakeup_delay = atoi($2);
+		free($2);
 	}
 	;
 dt_dnstap_log_resolver_query_messages: VAR_DNSTAP_LOG_RESOLVER_QUERY_MESSAGES STRING_ARG
