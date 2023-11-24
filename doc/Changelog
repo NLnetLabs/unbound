@@ -1,3 +1,7 @@
+24 November 2023: Yorgos
+	- Use 127.0.0.1 explicitly in tests to avoid delays and errors on
+	  newer systems.
+
 9 November 2023: Wouter
 	- Fix unit test parse of origin syntax.
 
