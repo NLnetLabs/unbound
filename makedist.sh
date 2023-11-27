@@ -361,6 +361,7 @@ if [ "$DOWIN" = "yes" ]; then
 	autoconf -f || error_cleanup "Autoconf failed."
 	autoheader -f || error_cleanup "Autoheader failed."
     	rm -r autom4te* || echo "ignored"
+	rm -f config.h.in~ || echo "ignore absence of config.h.in~ file."
     fi
 
     if test "`uname`" = "Linux"; then 
@@ -514,6 +515,7 @@ info "Building configure script (autoreconf)."
 autoreconf -f || error_cleanup "Autoconf failed."
 
 rm -r autom4te* || error_cleanup "Failed to remove autoconf cache directory."
+rm -f config.h.in~ || echo "ignore absence of config.h.in~ file."
 
 info "Building lexer and parser."
 echo "#include \"config.h\"" > util/configlexer.c || error_cleanup "Failed to create configlexer"
@@ -558,6 +560,7 @@ if [ "$RECONFIGURE" = "yes" ]; then
     info "Rebuilding configure script (autoconf) snapshot."
     autoreconf -f || error_cleanup "Autoconf failed."
     rm -r autom4te* || error_cleanup "Failed to remove autoconf cache directory."
+    rm -f config.h.in~ || echo "ignore absence of config.h.in~ file."
 fi
 
 replace_all doc/README
