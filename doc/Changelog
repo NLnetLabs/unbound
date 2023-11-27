@@ -1,3 +1,6 @@
+27 November 2023: Yorgos
+	- Merge #968: Replace the obsolescent fgrep with grep -F in tests.
+
 27 November 2023: Wouter
 	- Fix #964: config.h.in~ backup file in release tar balls.
 
