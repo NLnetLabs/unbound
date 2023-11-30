@@ -114,7 +114,7 @@
 /** What number of loop iterations is too much for ipc retries */
 #define IPC_LOOP_MAX 200
 /** Timeout in msec for ipc socket poll. */
-#define IPC_NOTIFICATION_WAIT 20000
+#define IPC_NOTIFICATION_WAIT 200
 
 static int
 remote_setup_ctx(struct daemon_remote* rc, struct config_file* cfg)
@@ -3952,12 +3952,113 @@ fast_reload_thread_desetup(struct fast_reload_thread* fast_reload_thread)
 	free(fast_reload_thread);
 }
 
+/** Fast reload, the main thread handles that the fast reload thread has
+ * exited. */
+static void
+fr_main_perform_done(struct fast_reload_thread* fr)
+{
+	struct worker* worker = fr->worker;
+	verbose(VERB_ALGO, "join with fastreload thread");
+	ub_thread_join(fr->tid);
+	verbose(VERB_ALGO, "joined with fastreload thread");
+	fast_reload_thread_desetup(fr);
+	worker->daemon->fast_reload_thread = NULL;
+}
+
+/** Fast reload, perform the command received from the fast reload thread */
+static void
+fr_main_perform_cmd(struct fast_reload_thread* fr,
+	enum fast_reload_notification status)
+{
+	verbose(VERB_ALGO, "main perform fast reload status: %s",
+		fr_notification_to_string(status));
+	if(status == fast_reload_notification_printout) {
+	} else if(status == fast_reload_notification_done ||
+		status == fast_reload_notification_done_error ||
+		status == fast_reload_notification_exited) {
+		fr_main_perform_done(fr);
+	} else {
+		log_err("main received unknown status from fast reload: %d %s",
+			(int)status, fr_notification_to_string(status));
+	}
+}
+
+/** Fast reload, handle command from fast reload to the main thread. */
+static void
+fr_main_handle_cmd(struct fast_reload_thread* fr)
+{
+	enum fast_reload_notification status;
+	ssize_t ret;
+	ret = recv(fr->commpair[0],
+		((char*)&fr->service_read_cmd)+fr->service_read_cmd_count,
+		sizeof(fr->service_read_cmd)-fr->service_read_cmd_count, 0);
+	if(ret == -1) {
+		if(
+#ifndef USE_WINSOCK
+			errno == EINTR || errno == EAGAIN
+#  ifdef EWOULDBLOCK
+			|| errno == EWOULDBLOCK
+#  endif
+#else
+			WSAGetLastError() == WSAEINTR ||
+			WSAGetLastError() == WSAEINPROGRESS ||
+			WSAGetLastError() == WSAEWOULDBLOCK
+#endif
+			)
+			return; /* Continue later. */
+		log_err("read cmd from fast reload thread, recv: %s",
+			sock_strerror(errno));
+		return;
+	} else if(ret == 0) {
+		verbose(VERB_ALGO, "closed connection from fast reload thread");
+		fr->service_read_cmd_count = 0;
+		/* handle this like an error */
+		fr->service_read_cmd = fast_reload_notification_done_error;
+	} else if(ret + (ssize_t)fr->service_read_cmd_count <
+		(ssize_t)sizeof(fr->service_read_cmd)) {
+		fr->service_read_cmd_count += ret;
+		/* Continue later. */
+		return;
+	}
+	status = fr->service_read_cmd;
+	fr->service_read_cmd = 0;
+	fr->service_read_cmd_count = 0;
+	fr_main_perform_cmd(fr, status);
+}
+
+/** Fast reload, poll for and handle cmd from fast reload thread. */
+static void
+fr_check_cmd_from_thread(struct fast_reload_thread* fr)
+{
+	int inevent = 0;
+	struct worker* worker = fr->worker;
+	/* Stop in case the thread has exited, or there is no read event. */
+	while(worker->daemon->fast_reload_thread) {
+		if(!sock_poll_timeout(fr->commpair[0], 0, 1, 0, &inevent)) {
+			log_err("check for cmd from fast reload thread: "
+				"poll failed");
+			return;
+		}
+		if(!inevent)
+			return;
+		fr_main_handle_cmd(fr);
+	}
+}
+
 void fast_reload_service_cb(int ATTR_UNUSED(fd), short ATTR_UNUSED(bits),
 	void* arg)
 {
 	struct fast_reload_thread* fast_reload_thread =
 		(struct fast_reload_thread*)arg;
-	(void)fast_reload_thread;
+	struct worker* worker = fast_reload_thread->worker;
+
+	/* Read and handle the command */
+	fr_main_handle_cmd(fast_reload_thread);
+	if(worker->daemon->fast_reload_thread != NULL) {
+		/* If not exited, see if there are more pending statuses
+		 * from the fast reload thread. */
+		fr_check_cmd_from_thread(fast_reload_thread);
+	}
 }
 
 int fast_reload_client_callback(struct comm_point* c, void* arg, int err,
@@ -3969,6 +4070,70 @@ int fast_reload_client_callback(struct comm_point* c, void* arg, int err,
 	(void)err;
 	(void)fast_reload_thread;
 	return 0;
+}
+
+/**
+ * Fast reload thread, send a command to the thread. Blocking on timeout.
+ * It handles received input from the thread, if any is received.
+ */
+static void
+fr_send_cmd_to(struct fast_reload_thread* fr,
+	enum fast_reload_notification status)
+{
+	int outevent, loopexit = 0, bcount = 0;
+	uint32_t cmd;
+	ssize_t ret;
+	verbose(VERB_ALGO, "send notification to fast reload thread: %s",
+		fr_notification_to_string(status));
+	cmd = status;
+	while(1) {
+		if(++loopexit > IPC_LOOP_MAX) {
+			log_err("send notification to fast reload: could not send notification: loop");
+			return;
+		}
+		fr_check_cmd_from_thread(fr);
+		/* wait for socket to become writable */
+		if(!sock_poll_timeout(fr->commpair[0], IPC_NOTIFICATION_WAIT,
+			0, 1, &outevent)) {
+			log_err("send notification to fast reload: poll failed");
+			return;
+		}
+		if(!outevent)
+			continue;
+		ret = send(fr->commpair[0], ((char*)&cmd)+bcount,
+			sizeof(cmd)-bcount, 0);
+		if(ret == -1) {
+			if(
+#ifndef USE_WINSOCK
+				errno == EINTR || errno == EAGAIN
+#  ifdef EWOULDBLOCK
+				|| errno == EWOULDBLOCK
+#  endif
+#else
+				WSAGetLastError() == WSAEINTR ||
+				WSAGetLastError() == WSAEINPROGRESS ||
+				WSAGetLastError() == WSAEWOULDBLOCK
+#endif
+				)
+				continue; /* Try again. */
+			log_err("send notification to fast reload: send: %s",
+				sock_strerror(errno));
+			return;
+		} else if(ret+(ssize_t)bcount != sizeof(cmd)) {
+			bcount += ret;
+			if((size_t)bcount < sizeof(cmd))
+				continue;
+		}
+		break;
+	}
+}
+
+/** fast reload thread, send stop command to the thread, from the main thread.
+ */
+static void
+fr_send_stop(struct fast_reload_thread* fr)
+{
+	fr_send_cmd_to(fr, fast_reload_notification_exit);
 }
 
 void
@@ -4040,7 +4205,13 @@ fast_reload_thread_start(RES* ssl, struct worker* worker, struct rc_state* s)
 void
 fast_reload_thread_stop(struct fast_reload_thread* fast_reload_thread)
 {
+	struct worker* worker = fast_reload_thread->worker;
 	if(!fast_reload_thread)
 		return;
-	fast_reload_thread_desetup(fast_reload_thread);
+	fr_send_stop(fast_reload_thread);
+	if(worker->daemon->fast_reload_thread != NULL) {
+		/* If it did not exit yet, join with the thread now. It is
+		 * going to exit because the exit command is sent to it. */
+		fr_main_perform_done(fast_reload_thread);
+	}
 }

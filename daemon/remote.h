@@ -161,6 +161,11 @@ struct fast_reload_thread {
 	/** if the event that listens on the remote service worker has
 	 * been added to the comm base. */
 	int service_event_is_added;
+	/** the service event can read a cmd, nonblocking, so it can
+	 * save the partial read cmd here */
+	uint32_t service_read_cmd;
+	/** the number of bytes in service_read_cmd */
+	int service_read_cmd_count;
 	/** the remote control connection to print output to. */
 	struct remote_stream remote;
 	/** the worker that the service_event is added in */
