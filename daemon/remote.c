@@ -3486,7 +3486,7 @@ fr_notification_to_string(enum fast_reload_notification status)
 static int
 fr_poll_for_quit(struct fast_reload_thread* fr)
 {
-	int inevent, loopexit = 0;
+	int inevent, loopexit = 0, bcount = 0;
 	uint32_t cmd;
 	ssize_t ret;
 
@@ -3505,7 +3505,8 @@ fr_poll_for_quit(struct fast_reload_thread* fr)
 				sock_strerror(errno));
 			return 0;
 		}
-		ret = recv(fr->commpair[1], &cmd, sizeof(cmd), 0);
+		ret = recv(fr->commpair[1], ((char*)&cmd)+bcount,
+			sizeof(cmd)-bcount, 0);
 		if(ret == -1) {
 			if(
 #ifndef USE_WINSOCK
@@ -3523,9 +3524,10 @@ fr_poll_for_quit(struct fast_reload_thread* fr)
 			log_err("fr_poll_for_quit: recv: %s",
 				sock_strerror(errno));
 			return 0;
-		} if(ret != sizeof(cmd)) {
-			log_err("fr_poll_for_quit: partial read");
-			return 0;
+		} else if(ret+(ssize_t)bcount != sizeof(cmd)) {
+			bcount += ret;
+			if((size_t)bcount < sizeof(cmd))
+				continue;
 		}
 		break;
 	}
@@ -3544,7 +3546,7 @@ static void
 fr_send_notification(struct fast_reload_thread* fr,
 	enum fast_reload_notification status)
 {
-	int outevent, loopexit = 0;
+	int outevent, loopexit = 0, bcount = 0;
 	uint32_t cmd;
 	ssize_t ret;
 	verbose(VERB_ALGO, "fast reload: send notification %s",
@@ -3554,6 +3556,7 @@ fr_send_notification(struct fast_reload_thread* fr,
 	/* see if there is incoming quit signals */
 	if(fr_poll_for_quit(fr))
 		return;
+	cmd = status;
 	while(1) {
 		if(++loopexit > IPC_LOOP_MAX) {
 			log_err("fast reload: could not send notification");
@@ -3569,8 +3572,8 @@ fr_send_notification(struct fast_reload_thread* fr,
 			return;
 		if(!outevent)
 			continue;
-		cmd = status;
-		ret = send(fr->commpair[1], &cmd, sizeof(cmd), 0);
+		ret = send(fr->commpair[1], ((char*)&cmd)+bcount,
+			sizeof(cmd)-bcount, 0);
 		if(ret == -1) {
 			if(
 #ifndef USE_WINSOCK
@@ -3588,9 +3591,10 @@ fr_send_notification(struct fast_reload_thread* fr,
 			log_err("fast reload send notification: send: %s",
 				sock_strerror(errno));
 			return;
-		} else if(ret != sizeof(cmd)) {
-			log_err("fast reload send notification: partial send");
-			return;
+		} else if(ret+(ssize_t)bcount != sizeof(cmd)) {
+			bcount += ret;
+			if((size_t)bcount < sizeof(cmd))
+				continue;
 		}
 		break;
 	}
@@ -3640,7 +3644,7 @@ create_socketpair(int* pair, struct ub_randstate* rand)
 	uint8_t localhost[] = {127, 0, 0, 1};
 	uint8_t nonce[16], recvnonce[16];
 	size_t i;
-	int lst, pollin_event;
+	int lst, pollin_event, bcount, loopcount;
 	int connect_poll_timeout = 200; /* msec to wait for connection */
 	ssize_t ret;
 	pair[0] = -1;
@@ -3785,21 +3789,44 @@ create_socketpair(int* pair, struct ub_randstate* rand)
 	}
 	sock_close(lst);
 
-	ret = send(pair[1], nonce, sizeof(nonce), 0);
-	if(ret == -1) {
-		log_err("create socketpair: send: %s", sock_strerror(errno));
-		sock_close(pair[0]);
-		sock_close(pair[1]);
-		pair[0] = -1;
-		pair[1] = -1;
-		return 0;
-	} else if(ret != sizeof(nonce)) {
-		log_err("create socketpair: send was truncated");
-		sock_close(pair[0]);
-		sock_close(pair[1]);
-		pair[0] = -1;
-		pair[1] = -1;
-		return 0;
+	loopcount = 0;
+	bcount = 0;
+	while(1) {
+		if(++loopcount > IPC_LOOP_MAX) {
+			log_err("create socketpair: send failed due to loop");
+			sock_close(pair[0]);
+			sock_close(pair[1]);
+			pair[0] = -1;
+			pair[1] = -1;
+			return 0;
+		}
+		ret = send(pair[1], nonce+bcount, sizeof(nonce)-bcount, 0);
+		if(ret == -1) {
+			if(
+#ifndef USE_WINSOCK
+				errno == EINTR || errno == EAGAIN
+#  ifdef EWOULDBLOCK
+				|| errno == EWOULDBLOCK
+#  endif
+#else
+				WSAGetLastError() == WSAEINTR ||
+				WSAGetLastError() == WSAEINPROGRESS ||
+				WSAGetLastError() == WSAEWOULDBLOCK
+#endif
+				)
+				continue; /* Try again. */
+			log_err("create socketpair: send: %s", sock_strerror(errno));
+			sock_close(pair[0]);
+			sock_close(pair[1]);
+			pair[0] = -1;
+			pair[1] = -1;
+			return 0;
+		} else if(ret+(ssize_t)bcount != sizeof(nonce)) {
+			bcount += ret;
+			if((size_t)bcount < sizeof(nonce))
+				continue;
+		}
+		break;
 	}
 
 	if(!sock_poll_timeout(pair[0], connect_poll_timeout, 1, 0, &pollin_event)) {
@@ -3819,30 +3846,54 @@ create_socketpair(int* pair, struct ub_randstate* rand)
 		pair[1] = -1;
 		return 0;
 	}
-	ret = recv(pair[0], recvnonce, sizeof(nonce), 0);
-	if(ret == -1) {
-		log_err("create socketpair: recv: %s", sock_strerror(errno));
-		sock_close(pair[0]);
-		sock_close(pair[1]);
-		pair[0] = -1;
-		pair[1] = -1;
-		return 0;
-	} else if(ret == 0) {
-		log_err("create socketpair: stream closed");
-		sock_close(pair[0]);
-		sock_close(pair[1]);
-		pair[0] = -1;
-		pair[1] = -1;
-		return 0;
+
+	loopcount = 0;
+	bcount = 0;
+	while(1) {
+		if(++loopcount > IPC_LOOP_MAX) {
+			log_err("create socketpair: recv failed due to loop");
+			sock_close(pair[0]);
+			sock_close(pair[1]);
+			pair[0] = -1;
+			pair[1] = -1;
+			return 0;
+		}
+		ret = recv(pair[0], recvnonce+bcount, sizeof(nonce)-bcount, 0);
+		if(ret == -1) {
+			if(
+#ifndef USE_WINSOCK
+				errno == EINTR || errno == EAGAIN
+#  ifdef EWOULDBLOCK
+				|| errno == EWOULDBLOCK
+#  endif
+#else
+				WSAGetLastError() == WSAEINTR ||
+				WSAGetLastError() == WSAEINPROGRESS ||
+				WSAGetLastError() == WSAEWOULDBLOCK
+#endif
+				)
+				continue; /* Try again. */
+			log_err("create socketpair: recv: %s", sock_strerror(errno));
+			sock_close(pair[0]);
+			sock_close(pair[1]);
+			pair[0] = -1;
+			pair[1] = -1;
+			return 0;
+		} else if(ret == 0) {
+			log_err("create socketpair: stream closed");
+			sock_close(pair[0]);
+			sock_close(pair[1]);
+			pair[0] = -1;
+			pair[1] = -1;
+			return 0;
+		} else if(ret+(ssize_t)bcount != sizeof(nonce)) {
+			bcount += ret;
+			if((size_t)bcount < sizeof(nonce))
+				continue;
+		}
+		break;
 	}
-	if(ret != sizeof(nonce)) {
-		log_err("create socketpair: recv did not read all nonce bytes");
-		sock_close(pair[0]);
-		sock_close(pair[1]);
-		pair[0] = -1;
-		pair[1] = -1;
-		return 0;
-	}
+
 	if(memcmp(nonce, recvnonce, sizeof(nonce)) != 0) {
 		log_err("create socketpair: recv wrong nonce");
 		sock_close(pair[0]);
