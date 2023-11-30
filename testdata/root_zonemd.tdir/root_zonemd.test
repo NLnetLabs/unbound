@@ -7,7 +7,7 @@
 PRE="../.."
 # do the test
 echo "> dig www.example.com."
-dig @localhost -p $UNBOUND_PORT . SOA | tee outfile
+dig @127.0.0.1 -p $UNBOUND_PORT . SOA | tee outfile
 echo "> check answer"
 if grep root-servers outfile | grep "nstld.verisign-grs.com"; then
 	echo "OK"
