@@ -111,6 +111,11 @@
 /** what to put on statistics lines between var and value, ": " or "=" */
 #define SQ "="
 
+/** What number of loop iterations is too much for ipc retries */
+#define IPC_LOOP_MAX 200
+/** Timeout in msec for ipc socket poll. */
+#define IPC_NOTIFICATION_WAIT 20000
+
 static int
 remote_setup_ctx(struct daemon_remote* rc, struct config_file* cfg)
 {
@@ -3398,7 +3403,7 @@ sock_poll_timeout(int fd, int timeout, int pollin, int pollout, int* event)
 	while(1) {
 		struct pollfd p, *fds;
 		int nfds, ret;
-		if(++loopcount > 200) {
+		if(++loopcount > IPC_LOOP_MAX) {
 			log_err("sock_poll_timeout: loop");
 			if(event)
 				*event = 0;
@@ -3495,7 +3500,7 @@ fr_poll_for_quit(struct fast_reload_thread* fr)
 
 	/* Read the data */
 	while(1) {
-		if(++loopexit > 200) {
+		if(++loopexit > IPC_LOOP_MAX) {
 			log_err("fr_poll_for_quit: recv loops %s",
 				sock_strerror(errno));
 			return 0;
@@ -3550,11 +3555,13 @@ fr_send_notification(struct fast_reload_thread* fr,
 	if(fr_poll_for_quit(fr))
 		return;
 	while(1) {
-		if(++loopexit > 200) {
+		if(++loopexit > IPC_LOOP_MAX) {
 			log_err("fast reload: could not send notification");
 			return;
 		}
-		if(!sock_poll_timeout(fr->commpair[1], 200, 0, 1, &outevent)) {
+		/* wait for socket to become writable */
+		if(!sock_poll_timeout(fr->commpair[1], IPC_NOTIFICATION_WAIT,
+			0, 1, &outevent)) {
 			log_err("fast reload: poll failed");
 			return;
 		}
@@ -3634,6 +3641,7 @@ create_socketpair(int* pair, struct ub_randstate* rand)
 	uint8_t nonce[16], recvnonce[16];
 	size_t i;
 	int lst, pollin_event;
+	int connect_poll_timeout = 200; /* msec to wait for connection */
 	ssize_t ret;
 	pair[0] = -1;
 	pair[1] = -1;
@@ -3692,7 +3700,7 @@ create_socketpair(int* pair, struct ub_randstate* rand)
 		pair[1] = -1;
 		return 0;
 	}
-	if(!sock_poll_timeout(lst, 200, 1, 0, &pollin_event)) {
+	if(!sock_poll_timeout(lst, connect_poll_timeout, 1, 0, &pollin_event)) {
 		log_err("create socketpair: poll for accept failed: %s",
 			sock_strerror(errno));
 		sock_close(lst);
@@ -3794,7 +3802,7 @@ create_socketpair(int* pair, struct ub_randstate* rand)
 		return 0;
 	}
 
-	if(!sock_poll_timeout(pair[0], 200, 1, 0, &pollin_event)) {
+	if(!sock_poll_timeout(pair[0], connect_poll_timeout, 1, 0, &pollin_event)) {
 		log_err("create socketpair: poll failed: %s",
 			sock_strerror(errno));
 		sock_close(pair[0]);
