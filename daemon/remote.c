@@ -3490,6 +3490,8 @@ fr_poll_for_quit(struct fast_reload_thread* fr)
 	uint32_t cmd;
 	ssize_t ret;
 
+	if(fr->need_to_quit)
+		return 1;
 	/* Is there data? */
 	if(!sock_poll_timeout(fr->commpair[1], 0, 1, 0, &inevent)) {
 		log_err("fr_poll_for_quit: poll failed");
@@ -3601,6 +3603,53 @@ fr_send_notification(struct fast_reload_thread* fr,
 }
 
 #ifndef THREADS_DISABLED
+/** fast reload thread queue up text string for output */
+static int
+fr_output_text(struct fast_reload_thread* fr, const char* msg)
+{
+	char* item = strdup(msg);
+	if(!item) {
+		log_err("fast reload output text: strdup out of memory");
+		return 0;
+	}
+	lock_basic_lock(&fr->fr_output_lock);
+	if(!cfg_strlist_append(fr->fr_output, item)) {
+		lock_basic_unlock(&fr->fr_output_lock);
+		/* The item is freed by cfg_strlist_append on failure. */
+		log_err("fast reload output text: append out of memory");
+		return 0;
+	}
+	lock_basic_unlock(&fr->fr_output_lock);
+	return 1;
+}
+
+/** fast reload thread output vmsg function */
+static int
+fr_output_vmsg(struct fast_reload_thread* fr, const char* format, va_list args)
+{
+	char msg[1024];
+	vsnprintf(msg, sizeof(msg), format, args);
+	return fr_output_text(fr, msg);
+}
+
+/** fast reload thread printout function, with printf arguments */
+static int fr_output_printf(struct fast_reload_thread* fr,
+	const char* format, ...) ATTR_FORMAT(printf, 2, 3);
+
+/** fast reload thread printout function, prints to list and signals
+ * the remote control thread to move that to get written to the socket
+ * of the remote control connection. */
+static int
+fr_output_printf(struct fast_reload_thread* fr, const char* format, ...)
+{
+	va_list args;
+	int ret;
+	va_start(args, format);
+	ret = fr_output_vmsg(fr, format, args);
+	va_end(args);
+	return ret;
+}
+
 /** fast reload thread. the thread main function */
 static void* fast_reload_thread_main(void* arg)
 {
@@ -3608,7 +3657,14 @@ static void* fast_reload_thread_main(void* arg)
 	log_thread_set(&fast_reload_thread->threadnum);
 
 	verbose(VERB_ALGO, "start fast reload thread");
+	if(fr_poll_for_quit(fast_reload_thread))
+		goto done;
 
+	/* print output to the client */
+	if(!fr_output_printf(fast_reload_thread, "start fast reload"))
+		goto done_error;
+	fr_send_notification(fast_reload_thread,
+		fast_reload_notification_printout);
 	if(fr_poll_for_quit(fast_reload_thread))
 		goto done;
 
@@ -3624,6 +3680,11 @@ done:
 	if(fast_reload_thread->need_to_quit)
 		fr_send_notification(fast_reload_thread,
 			fast_reload_notification_exited);
+	return NULL;
+done_error:
+	verbose(VERB_ALGO, "stop fast reload thread with done_error");
+	fr_send_notification(fast_reload_thread,
+		fast_reload_notification_done_error);
 	return NULL;
 }
 #endif /* !THREADS_DISABLED */
@@ -3910,22 +3971,46 @@ create_socketpair(int* pair, struct ub_randstate* rand)
 static int
 fast_reload_thread_setup(struct worker* worker)
 {
+	struct fast_reload_thread* fr;
 	int numworkers = worker->daemon->num;
 	worker->daemon->fast_reload_thread = (struct fast_reload_thread*)
 		calloc(1, sizeof(*worker->daemon->fast_reload_thread));
 	if(!worker->daemon->fast_reload_thread)
 		return 0;
+	fr = worker->daemon->fast_reload_thread;
 	/* The thread id printed in logs, numworker+1 is the dnstap thread.
 	 * This is numworkers+2. */
-	worker->daemon->fast_reload_thread->threadnum = numworkers+2;
-	worker->daemon->fast_reload_thread->commpair[0] = -1;
-	worker->daemon->fast_reload_thread->commpair[1] = -1;
-	if(!create_socketpair(worker->daemon->fast_reload_thread->commpair,
-		worker->daemon->rand)) {
-		free(worker->daemon->fast_reload_thread);
+	fr->threadnum = numworkers+2;
+	fr->commpair[0] = -1;
+	fr->commpair[1] = -1;
+	if(!create_socketpair(fr->commpair, worker->daemon->rand)) {
+		free(fr);
+		worker->daemon->fast_reload_thread = NULL;
 		return 0;
 	}
-	worker->daemon->fast_reload_thread->worker = worker;
+	fr->worker = worker;
+	fr->fr_output = (struct config_strlist_head*)calloc(1,
+		sizeof(*fr->fr_output));
+	if(!fr->fr_output) {
+		sock_close(fr->commpair[0]);
+		sock_close(fr->commpair[1]);
+		free(fr);
+		worker->daemon->fast_reload_thread = NULL;
+		return 0;
+	}
+	lock_basic_init(&fr->fr_output_lock);
+	lock_protect(&fr->fr_output_lock, fr->fr_output,
+		sizeof(*fr->fr_output));
+	fr->to_print = (struct config_strlist_head*)calloc(1,
+		sizeof(*fr->to_print));
+	if(!fr->fr_output) {
+		free(fr->fr_output);
+		sock_close(fr->commpair[0]);
+		sock_close(fr->commpair[1]);
+		free(fr);
+		worker->daemon->fast_reload_thread = NULL;
+		return 0;
+	}
 	return 1;
 }
 
@@ -3949,6 +4034,15 @@ fast_reload_thread_desetup(struct fast_reload_thread* fast_reload_thread)
 		SSL_free(fast_reload_thread->remote.ssl);
 	}
 	comm_point_delete(fast_reload_thread->client_cp);
+	lock_basic_destroy(&fast_reload_thread->fr_output_lock);
+	if(fast_reload_thread->fr_output) {
+		config_delstrlist(fast_reload_thread->fr_output->first);
+		free(fast_reload_thread->fr_output);
+	}
+	if(fast_reload_thread->to_print) {
+		config_delstrlist(fast_reload_thread->to_print->first);
+		free(fast_reload_thread->to_print);
+	}
 	free(fast_reload_thread);
 }
 
@@ -3965,6 +4059,50 @@ fr_main_perform_done(struct fast_reload_thread* fr)
 	worker->daemon->fast_reload_thread = NULL;
 }
 
+/** Append strlist after strlist */
+static void
+cfg_strlist_append_listhead(struct config_strlist_head* list,
+	struct config_strlist_head* more)
+{
+	if(list->last)
+		list->last->next = more->first;
+	else
+		list->first = more->first;
+	list->last = more->last;
+}
+
+/** Fast reload, the remote control thread handles that the fast reload thread
+ * has output to be printed, on the linked list that is locked. */
+static void
+fr_main_perform_printout(struct fast_reload_thread* fr)
+{
+	struct config_strlist_head out;
+
+	/* Fetch the list of items to be printed */
+	lock_basic_lock(&fr->fr_output_lock);
+	out.first = fr->fr_output->first;
+	out.last = fr->fr_output->last;
+	fr->fr_output->first = NULL;
+	fr->fr_output->last = NULL;
+	lock_basic_unlock(&fr->fr_output_lock);
+
+	if(!fr->client_cp) {
+		/* There is no output socket, delete it. */
+		config_delstrlist(out.first);
+		return;
+	}
+
+	/* Put them on the output list, not locked because the list
+	 * producer and consumer are both owned by the remote control thread,
+	 * it moves the items to the list for printing in the event callback
+	 * for the client_cp. */
+	cfg_strlist_append_listhead(fr->to_print, &out);
+
+	/* Set the client_cp to output if not already */
+	if(!fr->client_cp->event_added)
+		comm_point_listen_for_rw(fr->client_cp, 0, 1);
+}
+
 /** Fast reload, perform the command received from the fast reload thread */
 static void
 fr_main_perform_cmd(struct fast_reload_thread* fr,
@@ -3973,6 +4111,7 @@ fr_main_perform_cmd(struct fast_reload_thread* fr,
 	verbose(VERB_ALGO, "main perform fast reload status: %s",
 		fr_notification_to_string(status));
 	if(status == fast_reload_notification_printout) {
+		fr_main_perform_printout(fr);
 	} else if(status == fast_reload_notification_done ||
 		status == fast_reload_notification_done_error ||
 		status == fast_reload_notification_exited) {
@@ -4061,14 +4200,23 @@ void fast_reload_service_cb(int ATTR_UNUSED(fd), short ATTR_UNUSED(bits),
 	}
 }
 
-int fast_reload_client_callback(struct comm_point* c, void* arg, int err,
-	struct comm_reply* ATTR_UNUSED(rep))
+int fast_reload_client_callback(struct comm_point* ATTR_UNUSED(c), void* arg,
+	int err, struct comm_reply* ATTR_UNUSED(rep))
 {
-	struct fast_reload_thread* fast_reload_thread =
-		(struct fast_reload_thread*)arg;
-	(void)c;
-	(void)err;
-	(void)fast_reload_thread;
+	struct fast_reload_thread* fr = (struct fast_reload_thread*)arg;
+	if(!fr->client_cp)
+		return 0; /* the output is closed and deleted */
+	if(err != NETEVENT_NOERROR) {
+		verbose(VERB_ALGO, "fast reload client: error, close it");
+		comm_point_delete(fr->client_cp);
+		fr->client_cp = NULL;
+		return 0;
+	}
+	if(!fr->to_print->first) {
+		/* done with printing for now */
+		comm_point_stop_listening(fr->client_cp);
+		return 0;
+	}
 	return 0;
 }
 
@@ -4194,6 +4342,8 @@ fast_reload_thread_start(RES* ssl, struct worker* worker, struct rc_state* s)
 	worker->daemon->fast_reload_thread->client_cp->cb_arg =
 		worker->daemon->fast_reload_thread;
 	s->rc = NULL; /* move away the rc state */
+	/* Nothing to print right now, so no need to activate it. */
+	comm_point_stop_listening(worker->daemon->fast_reload_thread->client_cp);
 
 	/* Start fast reload thread */
 	ub_thread_create(&worker->daemon->fast_reload_thread->tid,

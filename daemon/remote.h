@@ -56,6 +56,7 @@ struct worker;
 struct comm_reply;
 struct comm_point;
 struct daemon_remote;
+struct config_strlist_head;
 
 /** number of milliseconds timeout on incoming remote control handshake */
 #define REMOTE_CONTROL_TCP_TIMEOUT 120000
@@ -173,6 +174,16 @@ struct fast_reload_thread {
 	/** the comm point for the client connection, the remote control
 	 * client. */
 	struct comm_point* client_cp;
+	/** lock on fr_output, to stop race when both remote control thread
+	 * and fast reload thread use fr_output list. */
+	lock_basic_type fr_output_lock;
+	/** list of strings, that the fast reload thread produces that have
+	 * to be printed. The remote control thread can pick them up with
+	 * the lock. */
+	struct config_strlist_head* fr_output;
+	/** List of strings that are for printing to the remote control
+	 * client, over the client connection socket client_cp. */
+	struct config_strlist_head* to_print;
 };
 
 /**
