@@ -4043,6 +4043,7 @@ fast_reload_thread_desetup(struct fast_reload_thread* fast_reload_thread)
 		config_delstrlist(fast_reload_thread->to_print->first);
 		free(fast_reload_thread->to_print);
 	}
+	free(fast_reload_thread->client_item);
 	free(fast_reload_thread);
 }
 
@@ -4200,6 +4201,148 @@ void fast_reload_service_cb(int ATTR_UNUSED(fd), short ATTR_UNUSED(bits),
 	}
 }
 
+#ifdef HAVE_SSL
+/** fast reload, send client item over SSL. Returns number of bytes
+ * printed, 0 on wait later, or -1 on failure. */
+static int
+fr_client_send_item_ssl(struct fast_reload_thread* fr)
+{
+	int r;
+	ERR_clear_error();
+	r = SSL_write(fr->remote.ssl,
+		fr->client_item+fr->client_byte_count,
+		fr->client_len - fr->client_byte_count);
+	if(r <= 0) {
+		int want = SSL_get_error(fr->remote.ssl, r);
+		if(want == SSL_ERROR_ZERO_RETURN) {
+			log_err("fast_reload print to remote client: "
+				"SSL_write says connection closed.");
+			return -1;
+		} else if(want == SSL_ERROR_WANT_READ) {
+			/* wait for read condition */
+			fr->client_cp->ssl_shake_state = comm_ssl_shake_hs_read;
+			comm_point_listen_for_rw(fr->client_cp, 1, 0);
+			return 0;
+		} else if(want == SSL_ERROR_WANT_WRITE) {
+#ifdef USE_WINSOCK
+			ub_winsock_tcp_wouldblock(fr->client_cp->ev->ev, UB_EV_WRITE);
+#endif
+			return 0; /* write more later */
+		} else if(want == SSL_ERROR_SYSCALL) {
+#ifdef EPIPE
+			if(errno == EPIPE && verbosity < 2) {
+				/* silence 'broken pipe' */
+				return -1;
+			}
+#endif
+			if(errno != 0)
+				log_err("fast_reload print to remote client: "
+					"SSL_write syscall: %s",
+					sock_strerror(errno));
+			return -1;
+		}
+		log_crypto_err_io("fast_reload print to remote client: "
+			"could not SSL_write", want);
+		return -1;
+	}
+	return r;
+}
+#endif /* HAVE_SSL */
+
+/** fast reload, send client item for fd, returns bytes sent, or 0 for wait
+ * later, or -1 on failure. */
+static int
+fr_client_send_item_fd(struct fast_reload_thread* fr)
+{
+	int r;
+	r = (int)send(fr->remote.fd,
+		fr->client_item+fr->client_byte_count,
+		fr->client_len - fr->client_byte_count, 0);
+	if(r == -1) {
+		if(
+#ifndef USE_WINSOCK
+			errno == EINTR || errno == EAGAIN
+#  ifdef EWOULDBLOCK
+			|| errno == EWOULDBLOCK
+#  endif
+#else
+			WSAGetLastError() == WSAEINTR ||
+			WSAGetLastError() == WSAEINPROGRESS ||
+			WSAGetLastError() == WSAEWOULDBLOCK
+#endif
+			) {
+#ifdef USE_WINSOCK
+			ub_winsock_tcp_wouldblock(fr->client_cp->ev->ev, UB_EV_WRITE);
+#endif
+			return 0; /* Try again. */
+		}
+		log_err("fast_reload print to remote client: send failed: %s",
+			sock_strerror(errno));
+		return -1;
+	}
+	return r;
+}
+
+/** fast reload, send current client item. false on failure or wait later. */
+static int
+fr_client_send_item(struct fast_reload_thread* fr)
+{
+	int r;
+#ifdef HAVE_SSL
+	if(fr->remote.ssl) {
+		r = fr_client_send_item_ssl(fr);
+	} else {
+#endif
+		r = fr_client_send_item_fd(fr);
+#ifdef HAVE_SSL
+	}
+#endif
+	if(r == 0) {
+		/* Wait for later. */
+		return 0;
+	} else if(r == -1) {
+		/* It failed, close comm point and stop sending. */
+		comm_point_delete(fr->client_cp);
+		fr->client_cp = NULL;
+		return 0;
+	}
+	fr->client_byte_count += r;
+	if(fr->client_byte_count < fr->client_len)
+		return 0; /* Print more later. */
+	return 1;
+}
+
+/** fast reload, pick up the next item to print */
+static void
+fr_client_pickup_next_item(struct fast_reload_thread* fr)
+{
+	struct config_strlist* item;
+	/* Pop first off the list. */
+	if(!fr->to_print->first) {
+		fr->client_item = NULL;
+		fr->client_len = 0;
+		fr->client_byte_count = 0;
+		return;
+	}
+	item = fr->to_print->first;
+	if(item->next) {
+		fr->to_print->first = item->next;
+	} else {
+		fr->to_print->first = NULL;
+		fr->to_print->last = NULL;
+	}
+	item->next = NULL;
+	fr->client_len = 0;
+	fr->client_byte_count = 0;
+	fr->client_item = item->str;
+	item->str = NULL;
+	free(item);
+	/* The len is the number of bytes to print out, and thus excludes
+	 * the terminator zero. */
+	if(fr->client_item)
+		fr->client_len = (int)strlen(fr->client_item);
+}
+
 int fast_reload_client_callback(struct comm_point* ATTR_UNUSED(c), void* arg,
 	int err, struct comm_reply* ATTR_UNUSED(rep))
 {
@@ -4212,11 +4355,48 @@ int fast_reload_client_callback(struct comm_point* ATTR_UNUSED(c), void* arg,
 		fr->client_cp = NULL;
 		return 0;
 	}
-	if(!fr->to_print->first) {
-		/* done with printing for now */
+#ifdef HAVE_SSL
+	if(fr->client_cp->ssl_shake_state == comm_ssl_shake_hs_read) {
+		/* read condition satisfied back to writing */
+		comm_point_listen_for_rw(fr->client_cp, 0, 1);
+		fr->client_cp->ssl_shake_state = comm_ssl_shake_none;
+	}
+#endif /* HAVE_SSL */
+
+	/* Pickup an item if there are none */
+	if(!fr->client_item) {
+		fr_client_pickup_next_item(fr);
+	}
+	if(!fr->client_item) {
+		/* Done with printing for now. */
 		comm_point_stop_listening(fr->client_cp);
 		return 0;
 	}
+
+	/* Try to print out a number of items, if they can print in full. */
+	while(fr->client_item) {
+		/* Send current item, if any. */
+		if(fr->client_item && fr->client_len != 0 &&
+			fr->client_byte_count < fr->client_len) {
+			if(!fr_client_send_item(fr))
+				return 0;
+		}
+
+		/* The current item is done. */
+		if(fr->client_item) {
+			free(fr->client_item);
+			fr->client_item = NULL;
+			fr->client_len = 0;
+			fr->client_byte_count = 0;
+		}
+		if(!fr->to_print->first) {
+			/* Done with printing for now. */
+			comm_point_stop_listening(fr->client_cp);
+			return 0;
+		}
+		fr_client_pickup_next_item(fr);
+	}
+
 	return 0;
 }
 

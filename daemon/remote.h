@@ -171,9 +171,18 @@ struct fast_reload_thread {
 	struct remote_stream remote;
 	/** the worker that the service_event is added in */
 	struct worker* worker;
+
 	/** the comm point for the client connection, the remote control
 	 * client. */
 	struct comm_point* client_cp;
+	/** The string that is sent to the client, for output on the terminal,
+	 * it is malloced. */
+	char* client_item;
+	/** The length, strlen, of the client_item, that has to be sent. */
+	int client_len;
+	/** The number of bytes sent of client_item. */
+	int client_byte_count;
+
 	/** lock on fr_output, to stop race when both remote control thread
 	 * and fast reload thread use fr_output list. */
 	lock_basic_type fr_output_lock;
