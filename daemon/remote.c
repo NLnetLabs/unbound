@@ -3661,7 +3661,7 @@ static void* fast_reload_thread_main(void* arg)
 		goto done;
 
 	/* print output to the client */
-	if(!fr_output_printf(fast_reload_thread, "start fast reload\n"))
+	if(!fr_output_printf(fast_reload_thread, "thread started\n"))
 		goto done_error;
 	fr_send_notification(fast_reload_thread,
 		fast_reload_notification_printout);
