@@ -441,6 +441,9 @@ server:
 	# filtering log-queries and log-replies from the log.
 	# log-tag-queryreply: no
 
+	# log with destination address, port and type for log-replies.
+	# log-destaddr: no
+
 	# log the local-zone actions, like local-zone type inform is enabled
 	# also for the other local zone types.
 	# log-local-actions: no

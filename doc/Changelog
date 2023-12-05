@@ -1,5 +1,6 @@
 5 December 2023: Wouter
 	- Merge #971: fix 'WARNING: Message has 41 extra bytes at end'.
+	- Fix #969: [FR] distinguish Do53, DoT and DoH in the logs.
 
 27 November 2023: Yorgos
 	- Merge #968: Replace the obsolescent fgrep with grep -F in tests.

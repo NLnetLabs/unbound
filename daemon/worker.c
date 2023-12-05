@@ -1967,11 +1967,15 @@ send_reply_rc:
 			qinfo.qname = qinfo.local_alias->rrset->rk.dname;
 			log_reply_info(NO_VERBOSE, &qinfo,
 				&repinfo->client_addr, repinfo->client_addrlen,
-				tv, 1, c->buffer);
+				tv, 1, c->buffer,
+				(worker->env.cfg->log_destaddr?(void*)repinfo->c->socket->addr->ai_addr:NULL),
+				c->type);
 		} else {
 			log_reply_info(NO_VERBOSE, &qinfo,
 				&repinfo->client_addr, repinfo->client_addrlen,
-				tv, 1, c->buffer);
+				tv, 1, c->buffer,
+				(worker->env.cfg->log_destaddr?(void*)repinfo->c->socket->addr->ai_addr:NULL),
+				c->type);
 		}
 	}
 #ifdef USE_DNSCRYPT
