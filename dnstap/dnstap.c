@@ -371,13 +371,16 @@ dt_msg_fill_net(struct dt_msg *dm,
                 *has_rport = 1;
         }
 
-	log_assert(cptype == comm_udp || cptype == comm_tcp);
 	if (cptype == comm_udp) {
 		/* socket_protocol */
 		dm->m.socket_protocol = DNSTAP__SOCKET_PROTOCOL__UDP;
 		dm->m.has_socket_protocol = 1;
 	} else if (cptype == comm_tcp) {
 		/* socket_protocol */
+		dm->m.socket_protocol = DNSTAP__SOCKET_PROTOCOL__TCP;
+		dm->m.has_socket_protocol = 1;
+	} else {
+		/* other socket protocol */
 		dm->m.socket_protocol = DNSTAP__SOCKET_PROTOCOL__TCP;
 		dm->m.has_socket_protocol = 1;
 	}
@@ -410,7 +413,6 @@ dt_msg_send_client_query(struct dt_env *env,
 	dt_fill_buffer(qmsg, &dm.m.query_message, &dm.m.has_query_message);
 
 	/* socket_family, socket_protocol, query_address, query_port, response_address, response_port */
-	log_assert(cptype == comm_udp || cptype == comm_tcp);
 	dt_msg_fill_net(&dm, qsock, rsock, cptype,
 			&dm.m.query_address, &dm.m.has_query_address,
 			&dm.m.query_port, &dm.m.has_query_port,
@@ -446,7 +448,6 @@ dt_msg_send_client_response(struct dt_env *env,
 	dt_fill_buffer(rmsg, &dm.m.response_message, &dm.m.has_response_message);
 
 	/* socket_family, socket_protocol, query_address, query_port, response_address, response_port */
-	log_assert(cptype == comm_udp || cptype == comm_tcp);
 	dt_msg_fill_net(&dm, qsock, rsock, cptype,
 			&dm.m.query_address, &dm.m.has_query_address,
 			&dm.m.query_port, &dm.m.has_query_port,
@@ -497,7 +498,6 @@ dt_msg_send_outside_query(struct dt_env *env,
 	dt_fill_buffer(qmsg, &dm.m.query_message, &dm.m.has_query_message);
 
 	/* socket_family, socket_protocol, response_address, response_port, query_address, query_port */
-	log_assert(cptype == comm_udp || cptype == comm_tcp);
 	dt_msg_fill_net(&dm, rsock, qsock, cptype,
 			&dm.m.response_address, &dm.m.has_response_address,
 			&dm.m.response_port, &dm.m.has_response_port,
@@ -556,7 +556,6 @@ dt_msg_send_outside_response(struct dt_env *env,
 	dt_fill_buffer(rmsg, &dm.m.response_message, &dm.m.has_response_message);
 
 	/* socket_family, socket_protocol, response_address, response_port, query_address, query_port */
-	log_assert(cptype == comm_udp || cptype == comm_tcp);
 	dt_msg_fill_net(&dm, rsock, qsock, cptype,
 			&dm.m.response_address, &dm.m.has_response_address,
 			&dm.m.response_port, &dm.m.has_response_port,
