@@ -1,5 +1,6 @@
 6 December 2023: Wouter
 	- Fix to sync the tests script file common.sh.
+	- iana portlist update.
 
 5 December 2023: Wouter
 	- Merge #971: fix 'WARNING: Message has 41 extra bytes at end'.
