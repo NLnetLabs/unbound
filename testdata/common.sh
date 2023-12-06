@@ -1,7 +1,8 @@
 # common.sh - an include file for commonly used functions for test code.
 # BSD licensed (see LICENSE file).
 #
-# Version 5
+# Version 6
+# 2023-12-06: list wait_for_soa_serial in overview
 # 2023-12-06: get_ldns_notify, skip_test and teststep, and previous changes
 # also included are wait_logfile, cpu_count, process_cpu_list, and
 # kill_from_pidfile, and use HOME variable for HOME/bin.
@@ -32,6 +33,7 @@
 # wait_petal_up		: wait for petal to come up.
 # wait_nsd_up		: wait for nsd to come up.
 # wait_server_up_or_fail: wait for server to come up or print a failure string
+# wait_for_soa_serial	: wait and dig at server for serial.
 # skip_test x		: print message and skip test (must be called in .pre)
 # kill_pid		: kill a server, make sure and wait for it to go down.
 # cpu_count		: get number of cpus in system

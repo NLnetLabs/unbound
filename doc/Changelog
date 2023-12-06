@@ -2,6 +2,7 @@
 	- Fix to sync the tests script file common.sh.
 	- iana portlist update.
 	- Updated IPv4 and IPv6 address for b.root-servers.net in root hints.
+	- Update test script file common.sh.
 
 5 December 2023: Wouter
 	- Merge #971: fix 'WARNING: Message has 41 extra bytes at end'.
