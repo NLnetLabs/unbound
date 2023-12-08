@@ -913,6 +913,11 @@ Prints the word 'query' and 'reply' with log\-queries and log\-replies.
 This makes filtering logs easier.  The default is off (for backwards
 compatibility).
 .TP
+.B log\-destaddr: \fI<yes or no>
+Prints the destination address, port and type in the log\-replies output.
+This disambiguates what type of traffic, eg. udp or tcp, and to what local
+port the traffic was sent to.
+.TP
 .B log\-local\-actions: \fI<yes or no>
 Print log lines to inform about local zone actions.  These lines are like the
 local\-zone type inform prints out, but they are also printed for the other

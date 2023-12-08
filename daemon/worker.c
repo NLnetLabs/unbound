@@ -1163,6 +1163,7 @@ deny_refuse(struct comm_point* c, enum acl_access acl,
 			LDNS_QR_SET(sldns_buffer_begin(c->buffer));
 			LDNS_RCODE_SET(sldns_buffer_begin(c->buffer),
 				LDNS_RCODE_REFUSED);
+			sldns_buffer_set_position(c->buffer, LDNS_HEADER_SIZE);
 			sldns_buffer_flip(c->buffer);
 			return 1;
 		}
@@ -1966,11 +1967,15 @@ send_reply_rc:
 			qinfo.qname = qinfo.local_alias->rrset->rk.dname;
 			log_reply_info(NO_VERBOSE, &qinfo,
 				&repinfo->client_addr, repinfo->client_addrlen,
-				tv, 1, c->buffer);
+				tv, 1, c->buffer,
+				(worker->env.cfg->log_destaddr?(void*)repinfo->c->socket->addr->ai_addr:NULL),
+				c->type);
 		} else {
 			log_reply_info(NO_VERBOSE, &qinfo,
 				&repinfo->client_addr, repinfo->client_addrlen,
-				tv, 1, c->buffer);
+				tv, 1, c->buffer,
+				(worker->env.cfg->log_destaddr?(void*)repinfo->c->socket->addr->ai_addr:NULL),
+				c->type);
 		}
 	}
 #ifdef USE_DNSCRYPT

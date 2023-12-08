@@ -1,3 +1,25 @@
+8 December 2023: Yorgos
+	- Merge PR #973: Use the origin (DNAME) TTL for synthesized CNAMEs as
+	  per RFC 6672.
+
+7 December 2023: Wouter
+	- Fix #974: doc: default number of outgoing ports without libevent.
+	- Merge #975: Fixed some syntax errors in rpl files.
+
+6 December 2023: Wouter
+	- Fix to sync the tests script file common.sh.
+	- iana portlist update.
+	- Updated IPv4 and IPv6 address for b.root-servers.net in root hints.
+	- Update test script file common.sh.
+	- Fix tests to use new common.sh functions, wait_logfile and
+	  kill_from_pidfile.
+
+5 December 2023: Wouter
+	- Merge #971: fix 'WARNING: Message has 41 extra bytes at end'.
+	- Fix #969: [FR] distinguish Do53, DoT and DoH in the logs.
+	- Fix dnstap that assertion failed on logging other than UDP and TCP
+	  traffic. It lists it as TCP traffic.
+
 27 November 2023: Yorgos
 	- Merge #968: Replace the obsolescent fgrep with grep -F in tests.
 
