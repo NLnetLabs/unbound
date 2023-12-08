@@ -844,6 +844,8 @@ daemon_cleanup(struct daemon* daemon)
 	daemon_remote_clear(daemon->rc);
 	if(daemon->fast_reload_thread)
 		fast_reload_thread_stop(daemon->fast_reload_thread);
+	if(daemon->fast_reload_printq_list)
+		fast_reload_printq_list_delete(daemon->fast_reload_printq_list);
 	for(i=0; i<daemon->num; i++)
 		worker_delete(daemon->workers[i]);
 	free(daemon->workers);

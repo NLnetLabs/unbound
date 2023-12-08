@@ -317,4 +317,7 @@ void fast_reload_service_cb(int fd, short bits, void* arg);
 int fast_reload_client_callback(struct comm_point* c, void* arg, int err,
 	struct comm_reply* rep);
 
+/** fast reload printq delete list */
+void fast_reload_printq_list_delete(struct fast_reload_printq* list);
+
 #endif /* DAEMON_REMOTE_H */

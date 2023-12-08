@@ -119,6 +119,9 @@
 static void fr_printq_delete(struct fast_reload_printq* printq);
 static void fr_main_perform_printout(struct fast_reload_thread* fr);
 static int fr_printq_empty(struct fast_reload_printq* printq);
+static void fr_printq_list_insert(struct fast_reload_printq* printq,
+	struct daemon* daemon);
+static void fr_printq_remove(struct fast_reload_printq* printq);
 
 static int
 remote_setup_ctx(struct daemon_remote* rc, struct config_file* cfg)
@@ -4029,6 +4032,9 @@ fast_reload_thread_desetup(struct fast_reload_thread* fast_reload_thread)
 		if(fr_printq_empty(fast_reload_thread->printq)) {
 			fr_printq_delete(fast_reload_thread->printq);
 		} else {
+			fr_printq_list_insert(fast_reload_thread->printq,
+				fast_reload_thread->worker->daemon);
+			fast_reload_thread->printq = NULL;
 		}
 	}
 	lock_basic_destroy(&fast_reload_thread->fr_output_lock);
@@ -4294,8 +4300,7 @@ fr_client_send_item(struct fast_reload_printq* printq)
 		return 0;
 	} else if(r == -1) {
 		/* It failed, close comm point and stop sending. */
-		comm_point_delete(printq->client_cp);
-		printq->client_cp = NULL;
+		fr_printq_remove(printq);
 		return 0;
 	}
 	printq->client_byte_count += r;
@@ -4339,12 +4344,13 @@ int fast_reload_client_callback(struct comm_point* ATTR_UNUSED(c), void* arg,
 	int err, struct comm_reply* ATTR_UNUSED(rep))
 {
 	struct fast_reload_printq* printq = (struct fast_reload_printq*)arg;
-	if(!printq->client_cp)
+	if(!printq->client_cp) {
+		fr_printq_remove(printq);
 		return 0; /* the output is closed and deleted */
+	}
 	if(err != NETEVENT_NOERROR) {
 		verbose(VERB_ALGO, "fast reload client: error, close it");
-		comm_point_delete(printq->client_cp);
-		printq->client_cp = NULL;
+		fr_printq_remove(printq);
 		return 0;
 	}
 #ifdef HAVE_SSL
@@ -4360,6 +4366,11 @@ int fast_reload_client_callback(struct comm_point* ATTR_UNUSED(c), void* arg,
 		fr_client_pickup_next_item(printq);
 	}
 	if(!printq->client_item) {
+		if(printq->in_list) {
+			/* Nothing more to print, it can be removed. */
+			fr_printq_remove(printq);
+			return 0;
+		}
 		/* Done with printing for now. */
 		comm_point_stop_listening(printq->client_cp);
 		return 0;
@@ -4382,6 +4393,11 @@ int fast_reload_client_callback(struct comm_point* ATTR_UNUSED(c), void* arg,
 			printq->client_byte_count = 0;
 		}
 		if(!printq->to_print->first) {
+			if(printq->in_list) {
+				/* Nothing more to print, it can be removed. */
+				fr_printq_remove(printq);
+				return 0;
+			}
 			/* Done with printing for now. */
 			comm_point_stop_listening(printq->client_cp);
 			return 0;
@@ -4438,6 +4454,60 @@ fr_printq_empty(struct fast_reload_printq* printq)
 	if(printq->to_print->first == NULL && printq->client_item == NULL)
 		return 1;
 	return 0;
+}
+
+/** fast reload printq, insert onto list */
+static void
+fr_printq_list_insert(struct fast_reload_printq* printq, struct daemon* daemon)
+{
+	if(printq->in_list)
+		return;
+	printq->next = daemon->fast_reload_printq_list;
+	if(printq->next)
+		printq->next->prev = printq;
+	printq->prev = NULL;
+	printq->in_list = 1;
+	daemon->fast_reload_printq_list = printq;
+}
+
+/** fast reload printq delete list */
+void
+fast_reload_printq_list_delete(struct fast_reload_printq* list)
+{
+	struct fast_reload_printq* printq = list, *next;
+	while(printq) {
+		next = printq->next;
+		fr_printq_delete(printq);
+		printq = next;
+	}
+}
+
+/** fast reload printq remove the item from the printq list */
+static void
+fr_printq_list_remove(struct fast_reload_printq* printq)
+{
+	struct daemon* daemon = printq->worker->daemon;
+	if(printq->prev == NULL)
+		daemon->fast_reload_printq_list = printq->next;
+	else	printq->prev->next = printq->next;
+	if(printq->next)
+		printq->next->prev = printq->prev;
+	printq->in_list = 0;
+}
+
+/** fast reload printq, remove the printq when no longer needed,
+ * like the stream is closed. */
+static void
+fr_printq_remove(struct fast_reload_printq* printq)
+{
+	if(!printq)
+		return;
+	if(printq->worker && printq->worker->daemon->fast_reload_thread &&
+		printq->worker->daemon->fast_reload_thread->printq == printq)
+		printq->worker->daemon->fast_reload_thread->printq = NULL;
+	if(printq->in_list)
+		fr_printq_list_remove(printq);
+	fr_printq_delete(printq);
 }
 
 /**
