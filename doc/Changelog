@@ -1,6 +1,8 @@
 8 December 2023: Yorgos
 	- Merge PR #973: Use the origin (DNAME) TTL for synthesized CNAMEs as
 	  per RFC 6672.
+	- Fix root_zonemd unit test, it checks that the root ZONEMD verifies,
+	  now that the root has a valid ZONEMD.
 
 7 December 2023: Wouter
 	- Fix #974: doc: default number of outgoing ports without libevent.
