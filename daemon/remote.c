@@ -116,6 +116,10 @@
 /** Timeout in msec for ipc socket poll. */
 #define IPC_NOTIFICATION_WAIT 200
 
+static void fr_printq_delete(struct fast_reload_printq* printq);
+static void fr_main_perform_printout(struct fast_reload_thread* fr);
+static int fr_printq_empty(struct fast_reload_printq* printq);
+
 static int
 remote_setup_ctx(struct daemon_remote* rc, struct config_file* cfg)
 {
@@ -4001,16 +4005,6 @@ fast_reload_thread_setup(struct worker* worker)
 	lock_basic_init(&fr->fr_output_lock);
 	lock_protect(&fr->fr_output_lock, fr->fr_output,
 		sizeof(*fr->fr_output));
-	fr->to_print = (struct config_strlist_head*)calloc(1,
-		sizeof(*fr->to_print));
-	if(!fr->fr_output) {
-		free(fr->fr_output);
-		sock_close(fr->commpair[0]);
-		sock_close(fr->commpair[1]);
-		free(fr);
-		worker->daemon->fast_reload_thread = NULL;
-		return 0;
-	}
 	return 1;
 }
 
@@ -4029,21 +4023,19 @@ fast_reload_thread_desetup(struct fast_reload_thread* fast_reload_thread)
 		ub_event_free(fast_reload_thread->service_event);
 	sock_close(fast_reload_thread->commpair[0]);
 	sock_close(fast_reload_thread->commpair[1]);
-	if(fast_reload_thread->remote.ssl) {
-		SSL_shutdown(fast_reload_thread->remote.ssl);
-		SSL_free(fast_reload_thread->remote.ssl);
+	if(fast_reload_thread->printq) {
+		fr_main_perform_printout(fast_reload_thread);
+		/* If it is empty now, there is nothing to print on fd. */
+		if(fr_printq_empty(fast_reload_thread->printq)) {
+			fr_printq_delete(fast_reload_thread->printq);
+		} else {
+		}
 	}
-	comm_point_delete(fast_reload_thread->client_cp);
 	lock_basic_destroy(&fast_reload_thread->fr_output_lock);
 	if(fast_reload_thread->fr_output) {
 		config_delstrlist(fast_reload_thread->fr_output->first);
 		free(fast_reload_thread->fr_output);
 	}
-	if(fast_reload_thread->to_print) {
-		config_delstrlist(fast_reload_thread->to_print->first);
-		free(fast_reload_thread->to_print);
-	}
-	free(fast_reload_thread->client_item);
 	free(fast_reload_thread);
 }
 
@@ -4087,7 +4079,7 @@ fr_main_perform_printout(struct fast_reload_thread* fr)
 	fr->fr_output->last = NULL;
 	lock_basic_unlock(&fr->fr_output_lock);
 
-	if(!fr->client_cp) {
+	if(!fr->printq || !fr->printq->client_cp) {
 		/* There is no output socket, delete it. */
 		config_delstrlist(out.first);
 		return;
@@ -4097,11 +4089,11 @@ fr_main_perform_printout(struct fast_reload_thread* fr)
 	 * producer and consumer are both owned by the remote control thread,
 	 * it moves the items to the list for printing in the event callback
 	 * for the client_cp. */
-	cfg_strlist_append_listhead(fr->to_print, &out);
+	cfg_strlist_append_listhead(fr->printq->to_print, &out);
 
 	/* Set the client_cp to output if not already */
-	if(!fr->client_cp->event_added)
-		comm_point_listen_for_rw(fr->client_cp, 0, 1);
+	if(!fr->printq->client_cp->event_added)
+		comm_point_listen_for_rw(fr->printq->client_cp, 0, 1);
 }
 
 /** Fast reload, perform the command received from the fast reload thread */
@@ -4205,27 +4197,27 @@ void fast_reload_service_cb(int ATTR_UNUSED(fd), short ATTR_UNUSED(bits),
 /** fast reload, send client item over SSL. Returns number of bytes
  * printed, 0 on wait later, or -1 on failure. */
 static int
-fr_client_send_item_ssl(struct fast_reload_thread* fr)
+fr_client_send_item_ssl(struct fast_reload_printq* printq)
 {
 	int r;
 	ERR_clear_error();
-	r = SSL_write(fr->remote.ssl,
-		fr->client_item+fr->client_byte_count,
-		fr->client_len - fr->client_byte_count);
+	r = SSL_write(printq->remote.ssl,
+		printq->client_item+printq->client_byte_count,
+		printq->client_len - printq->client_byte_count);
 	if(r <= 0) {
-		int want = SSL_get_error(fr->remote.ssl, r);
+		int want = SSL_get_error(printq->remote.ssl, r);
 		if(want == SSL_ERROR_ZERO_RETURN) {
 			log_err("fast_reload print to remote client: "
 				"SSL_write says connection closed.");
 			return -1;
 		} else if(want == SSL_ERROR_WANT_READ) {
 			/* wait for read condition */
-			fr->client_cp->ssl_shake_state = comm_ssl_shake_hs_read;
-			comm_point_listen_for_rw(fr->client_cp, 1, 0);
+			printq->client_cp->ssl_shake_state = comm_ssl_shake_hs_read;
+			comm_point_listen_for_rw(printq->client_cp, 1, 0);
 			return 0;
 		} else if(want == SSL_ERROR_WANT_WRITE) {
 #ifdef USE_WINSOCK
-			ub_winsock_tcp_wouldblock(fr->client_cp->ev->ev, UB_EV_WRITE);
+			ub_winsock_tcp_wouldblock(printq->client_cp->ev->ev, UB_EV_WRITE);
 #endif
 			return 0; /* write more later */
 		} else if(want == SSL_ERROR_SYSCALL) {
@@ -4252,12 +4244,12 @@ fr_client_send_item_ssl(struct fast_reload_thread* fr)
 /** fast reload, send client item for fd, returns bytes sent, or 0 for wait
  * later, or -1 on failure. */
 static int
-fr_client_send_item_fd(struct fast_reload_thread* fr)
+fr_client_send_item_fd(struct fast_reload_printq* printq)
 {
 	int r;
-	r = (int)send(fr->remote.fd,
-		fr->client_item+fr->client_byte_count,
-		fr->client_len - fr->client_byte_count, 0);
+	r = (int)send(printq->remote.fd,
+		printq->client_item+printq->client_byte_count,
+		printq->client_len - printq->client_byte_count, 0);
 	if(r == -1) {
 		if(
 #ifndef USE_WINSOCK
@@ -4272,7 +4264,7 @@ fr_client_send_item_fd(struct fast_reload_thread* fr)
 #endif
 			) {
 #ifdef USE_WINSOCK
-			ub_winsock_tcp_wouldblock(fr->client_cp->ev->ev, UB_EV_WRITE);
+			ub_winsock_tcp_wouldblock(printq->client_cp->ev->ev, UB_EV_WRITE);
 #endif
 			return 0; /* Try again. */
 		}
@@ -4285,15 +4277,15 @@ fr_client_send_item_fd(struct fast_reload_thread* fr)
 
 /** fast reload, send current client item. false on failure or wait later. */
 static int
-fr_client_send_item(struct fast_reload_thread* fr)
+fr_client_send_item(struct fast_reload_printq* printq)
 {
 	int r;
 #ifdef HAVE_SSL
-	if(fr->remote.ssl) {
-		r = fr_client_send_item_ssl(fr);
+	if(printq->remote.ssl) {
+		r = fr_client_send_item_ssl(printq);
 	} else {
 #endif
-		r = fr_client_send_item_fd(fr);
+		r = fr_client_send_item_fd(printq);
 #ifdef HAVE_SSL
 	}
 #endif
@@ -4302,101 +4294,149 @@ fr_client_send_item(struct fast_reload_thread* fr)
 		return 0;
 	} else if(r == -1) {
 		/* It failed, close comm point and stop sending. */
-		comm_point_delete(fr->client_cp);
-		fr->client_cp = NULL;
+		comm_point_delete(printq->client_cp);
+		printq->client_cp = NULL;
 		return 0;
 	}
-	fr->client_byte_count += r;
-	if(fr->client_byte_count < fr->client_len)
+	printq->client_byte_count += r;
+	if(printq->client_byte_count < printq->client_len)
 		return 0; /* Print more later. */
 	return 1;
 }
 
 /** fast reload, pick up the next item to print */
 static void
-fr_client_pickup_next_item(struct fast_reload_thread* fr)
+fr_client_pickup_next_item(struct fast_reload_printq* printq)
 {
 	struct config_strlist* item;
 	/* Pop first off the list. */
-	if(!fr->to_print->first) {
-		fr->client_item = NULL;
-		fr->client_len = 0;
-		fr->client_byte_count = 0;
+	if(!printq->to_print->first) {
+		printq->client_item = NULL;
+		printq->client_len = 0;
+		printq->client_byte_count = 0;
 		return;
 	}
-	item = fr->to_print->first;
+	item = printq->to_print->first;
 	if(item->next) {
-		fr->to_print->first = item->next;
+		printq->to_print->first = item->next;
 	} else {
-		fr->to_print->first = NULL;
-		fr->to_print->last = NULL;
+		printq->to_print->first = NULL;
+		printq->to_print->last = NULL;
 	}
 	item->next = NULL;
-	fr->client_len = 0;
-	fr->client_byte_count = 0;
-	fr->client_item = item->str;
+	printq->client_len = 0;
+	printq->client_byte_count = 0;
+	printq->client_item = item->str;
 	item->str = NULL;
 	free(item);
 	/* The len is the number of bytes to print out, and thus excludes
 	 * the terminator zero. */
-	if(fr->client_item)
-		fr->client_len = (int)strlen(fr->client_item);
+	if(printq->client_item)
+		printq->client_len = (int)strlen(printq->client_item);
 }
 
 int fast_reload_client_callback(struct comm_point* ATTR_UNUSED(c), void* arg,
 	int err, struct comm_reply* ATTR_UNUSED(rep))
 {
-	struct fast_reload_thread* fr = (struct fast_reload_thread*)arg;
-	if(!fr->client_cp)
+	struct fast_reload_printq* printq = (struct fast_reload_printq*)arg;
+	if(!printq->client_cp)
 		return 0; /* the output is closed and deleted */
 	if(err != NETEVENT_NOERROR) {
 		verbose(VERB_ALGO, "fast reload client: error, close it");
-		comm_point_delete(fr->client_cp);
-		fr->client_cp = NULL;
+		comm_point_delete(printq->client_cp);
+		printq->client_cp = NULL;
 		return 0;
 	}
 #ifdef HAVE_SSL
-	if(fr->client_cp->ssl_shake_state == comm_ssl_shake_hs_read) {
+	if(printq->client_cp->ssl_shake_state == comm_ssl_shake_hs_read) {
 		/* read condition satisfied back to writing */
-		comm_point_listen_for_rw(fr->client_cp, 0, 1);
-		fr->client_cp->ssl_shake_state = comm_ssl_shake_none;
+		comm_point_listen_for_rw(printq->client_cp, 0, 1);
+		printq->client_cp->ssl_shake_state = comm_ssl_shake_none;
 	}
 #endif /* HAVE_SSL */
 
 	/* Pickup an item if there are none */
-	if(!fr->client_item) {
-		fr_client_pickup_next_item(fr);
+	if(!printq->client_item) {
+		fr_client_pickup_next_item(printq);
 	}
-	if(!fr->client_item) {
+	if(!printq->client_item) {
 		/* Done with printing for now. */
-		comm_point_stop_listening(fr->client_cp);
+		comm_point_stop_listening(printq->client_cp);
 		return 0;
 	}
 
 	/* Try to print out a number of items, if they can print in full. */
-	while(fr->client_item) {
+	while(printq->client_item) {
 		/* Send current item, if any. */
-		if(fr->client_item && fr->client_len != 0 &&
-			fr->client_byte_count < fr->client_len) {
-			if(!fr_client_send_item(fr))
+		if(printq->client_item && printq->client_len != 0 &&
+			printq->client_byte_count < printq->client_len) {
+			if(!fr_client_send_item(printq))
 				return 0;
 		}
 
 		/* The current item is done. */
-		if(fr->client_item) {
-			free(fr->client_item);
-			fr->client_item = NULL;
-			fr->client_len = 0;
-			fr->client_byte_count = 0;
+		if(printq->client_item) {
+			free(printq->client_item);
+			printq->client_item = NULL;
+			printq->client_len = 0;
+			printq->client_byte_count = 0;
 		}
-		if(!fr->to_print->first) {
+		if(!printq->to_print->first) {
 			/* Done with printing for now. */
-			comm_point_stop_listening(fr->client_cp);
+			comm_point_stop_listening(printq->client_cp);
 			return 0;
 		}
-		fr_client_pickup_next_item(fr);
+		fr_client_pickup_next_item(printq);
 	}
 
+	return 0;
+}
+
+/** fast reload printq create */
+static struct fast_reload_printq*
+fr_printq_create(struct comm_point* c, struct worker* worker)
+{
+	struct fast_reload_printq* printq = calloc(1, sizeof(*printq));
+	if(!printq)
+		return NULL;
+	printq->to_print = calloc(1, sizeof(*printq->to_print));
+	if(!printq->to_print) {
+		free(printq);
+		return NULL;
+	}
+	printq->worker = worker;
+	printq->client_cp = c;
+	printq->client_cp->callback = fast_reload_client_callback;
+	printq->client_cp->cb_arg = printq;
+	return printq;
+}
+
+/** fast reload printq delete */
+static void
+fr_printq_delete(struct fast_reload_printq* printq)
+{
+	if(!printq)
+		return;
+#ifdef HAVE_SSL
+	if(printq->remote.ssl) {
+		SSL_shutdown(printq->remote.ssl);
+		SSL_free(printq->remote.ssl);
+	}
+#endif
+	comm_point_delete(printq->client_cp);
+	if(printq->to_print) {
+		config_delstrlist(printq->to_print->first);
+		free(printq->to_print);
+	}
+	free(printq);
+}
+
+/** fast reload printq, returns true if the list is empty and no item */
+static int
+fr_printq_empty(struct fast_reload_printq* printq)
+{
+	if(printq->to_print->first == NULL && printq->client_item == NULL)
+		return 1;
 	return 0;
 }
 
@@ -4476,7 +4516,6 @@ fast_reload_thread_start(RES* ssl, struct worker* worker, struct rc_state* s)
 			return;
 		return;
 	}
-	worker->daemon->fast_reload_thread->remote = *ssl;
 	worker->daemon->fast_reload_thread->started = 1;
 
 #ifndef THREADS_DISABLED
@@ -4494,12 +4533,14 @@ fast_reload_thread_start(RES* ssl, struct worker* worker, struct rc_state* s)
 		UB_EV_READ | UB_EV_PERSIST, fast_reload_service_cb,
 		worker->daemon->fast_reload_thread);
 	if(!worker->daemon->fast_reload_thread->service_event) {
+		fast_reload_thread_desetup(worker->daemon->fast_reload_thread);
 		if(!ssl_printf(ssl, "error out of memory\n"))
 			return;
 		return;
 	}
 	if(ub_event_add(worker->daemon->fast_reload_thread->service_event,
 		NULL) != 0) {
+		fast_reload_thread_desetup(worker->daemon->fast_reload_thread);
 		if(!ssl_printf(ssl, "error out of memory adding service event\n"))
 			return;
 		return;
@@ -4516,14 +4557,18 @@ fast_reload_thread_start(RES* ssl, struct worker* worker, struct rc_state* s)
 	 * printout to the remote control client does not block the
 	 * server thread from servicing DNS queries. */
 	fd_set_nonblock(s->c->fd);
-	worker->daemon->fast_reload_thread->client_cp = s->c;
-	worker->daemon->fast_reload_thread->client_cp->callback =
-		fast_reload_client_callback;
-	worker->daemon->fast_reload_thread->client_cp->cb_arg =
-		worker->daemon->fast_reload_thread;
+	worker->daemon->fast_reload_thread->printq = fr_printq_create(s->c,
+		worker);
+	if(!worker->daemon->fast_reload_thread->printq) {
+		fast_reload_thread_desetup(worker->daemon->fast_reload_thread);
+		if(!ssl_printf(ssl, "error out of memory create printq\n"))
+			return;
+		return;
+	}
+	worker->daemon->fast_reload_thread->printq->remote = *ssl;
 	s->rc = NULL; /* move away the rc state */
 	/* Nothing to print right now, so no need to activate it. */
-	comm_point_stop_listening(worker->daemon->fast_reload_thread->client_cp);
+	comm_point_stop_listening(worker->daemon->fast_reload_thread->printq->client_cp);
 
 	/* Start fast reload thread */
 	ub_thread_create(&worker->daemon->fast_reload_thread->tid,

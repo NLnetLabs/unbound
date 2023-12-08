@@ -160,6 +160,8 @@ struct fast_reload_printq {
 	/** the comm point for the client connection, the remote control
 	 * client. */
 	struct comm_point* client_cp;
+	/** the remote control connection to print output to. */
+	struct remote_stream remote;
 	/** the worker that the event is added in */
 	struct worker* worker;
 };
@@ -191,21 +193,11 @@ struct fast_reload_thread {
 	uint32_t service_read_cmd;
 	/** the number of bytes in service_read_cmd */
 	int service_read_cmd_count;
-	/** the remote control connection to print output to. */
-	struct remote_stream remote;
 	/** the worker that the service_event is added in */
 	struct worker* worker;
 
-	/** the comm point for the client connection, the remote control
-	 * client. */
-	struct comm_point* client_cp;
-	/** The string that is sent to the client, for output on the terminal,
-	 * it is malloced. */
-	char* client_item;
-	/** The length, strlen, of the client_item, that has to be sent. */
-	int client_len;
-	/** The number of bytes sent of client_item. */
-	int client_byte_count;
+	/** the printout of output to the remote client. */
+	struct fast_reload_printq *printq;
 
 	/** lock on fr_output, to stop race when both remote control thread
 	 * and fast reload thread use fr_output list. */
@@ -214,9 +206,6 @@ struct fast_reload_thread {
 	 * to be printed. The remote control thread can pick them up with
 	 * the lock. */
 	struct config_strlist_head* fr_output;
-	/** List of strings that are for printing to the remote control
-	 * client, over the client connection socket client_cp. */
-	struct config_strlist_head* to_print;
 };
 
 /**
