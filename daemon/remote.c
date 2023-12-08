@@ -4032,6 +4032,12 @@ fast_reload_thread_desetup(struct fast_reload_thread* fast_reload_thread)
 		if(fr_printq_empty(fast_reload_thread->printq)) {
 			fr_printq_delete(fast_reload_thread->printq);
 		} else {
+			/* Keep the printq around to printout the remaining
+			 * text to the remote client. Until it is done, it
+			 * sits on a list, that is in the daemon struct.
+			 * The event can then spool the remaining text to the
+			 * remote client and eventually delete itself from the
+			 * callback. */
 			fr_printq_list_insert(fast_reload_thread->printq,
 				fast_reload_thread->worker->daemon);
 			fast_reload_thread->printq = NULL;
