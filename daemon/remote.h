@@ -141,6 +141,30 @@ enum fast_reload_notification {
 };
 
 /**
+ * Fast reload printout queue. Contains a list of strings, that need to be
+ * printed over the file descriptor.
+ */
+struct fast_reload_printq {
+	/** if this item is in a list, the previous and next */
+	struct fast_reload_printq *prev, *next;
+	/** if this item is in a list, it is true. */
+	int in_list;
+	/** list of strings to printout */
+	struct config_strlist_head* to_print;
+	/** the current item to print. It is malloced. NULL if none. */
+	char* client_item;
+	/** The length, strlen, of the client_item, that has to be sent. */
+	int client_len;
+	/** The number of bytes sent of client_item. */
+	int client_byte_count;
+	/** the comm point for the client connection, the remote control
+	 * client. */
+	struct comm_point* client_cp;
+	/** the worker that the event is added in */
+	struct worker* worker;
+};
+
+/**
  * Fast reload thread structure
  */
 struct fast_reload_thread {
