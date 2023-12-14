@@ -1748,6 +1748,9 @@ ssl_handshake(struct comm_point* c)
 			/* connection upgraded to HTTP2 */
 			c->tcp_do_toggle_rw = 0;
 			c->use_h2 = 1;
+		} else {
+			verbose(VERB_ALGO, "client doesn't support HTTP/2");
+			return 0;
 		}
 	}
 #endif
