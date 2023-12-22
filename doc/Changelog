@@ -1,3 +1,6 @@
+22 December 2023: Yorgos
+	- Update example.conf with cookie options.
+
 8 December 2023: Yorgos
 	- Merge PR #973: Use the origin (DNAME) TTL for synthesized CNAMEs as
 	  per RFC 6672.
