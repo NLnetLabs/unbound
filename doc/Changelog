@@ -2,6 +2,7 @@
 	- Merge #980: DoH: reject non-h2 early. To fix #979: Improve errors
 	  for non-HTTP/2 DoH clients.
 	- Merge #985: Add DoH and DoT to dnstap message.
+	- Fix #983: Sha1 runtime insecure change was incomplete.
 
 22 December 2023: Yorgos
 	- Update example.conf with cookie options.
