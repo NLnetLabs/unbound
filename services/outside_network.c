@@ -1009,7 +1009,7 @@ use_free_buffer(struct outside_network* outnet)
 			sldns_buffer tmp;
 			sldns_buffer_init_frm_data(&tmp, w->pkt, w->pkt_len);
 			dt_msg_send_outside_query(outnet->dtenv, &w->sq->addr,
-				&pend_tcp->pi->addr, comm_tcp, w->sq->zone,
+				&pend_tcp->pi->addr, comm_tcp, NULL, w->sq->zone,
 				w->sq->zonelen, &tmp);
 		}
 #endif
@@ -2237,7 +2237,7 @@ randomize_and_send_udp(struct pending* pend, sldns_buffer* packet, int timeout)
 		outnet->dtenv->log_forwarder_query_messages)) {
 			log_addr(VERB_ALGO, "from local addr", &pend->pc->pif->addr, pend->pc->pif->addrlen);
 			log_addr(VERB_ALGO, "request to upstream", &pend->addr, pend->addrlen);
-			dt_msg_send_outside_query(outnet->dtenv, &pend->addr, &pend->pc->pif->addr, comm_udp,
+			dt_msg_send_outside_query(outnet->dtenv, &pend->addr, &pend->pc->pif->addr, comm_udp, NULL,
 				pend->sq->zone, pend->sq->zonelen, packet);
 	}
 #endif
@@ -2517,7 +2517,7 @@ pending_tcp_query(struct serviced_query* sq, sldns_buffer* packet,
 			sldns_buffer tmp;
 			sldns_buffer_init_frm_data(&tmp, w->pkt, w->pkt_len);
 			dt_msg_send_outside_query(sq->outnet->dtenv, &sq->addr,
-				&pend->pi->addr, comm_tcp, sq->zone,
+				&pend->pi->addr, comm_tcp, NULL, sq->zone,
 				sq->zonelen, &tmp);
 		}
 #endif
@@ -3083,7 +3083,7 @@ serviced_tcp_callback(struct comm_point* c, void* arg, int error,
 		log_addr(VERB_ALGO, "response from upstream", &sq->addr, sq->addrlen);
 		log_addr(VERB_ALGO, "to local addr", &pi->addr, pi->addrlen);
 		dt_msg_send_outside_response(sq->outnet->dtenv, &sq->addr,
-			&pi->addr, c->type, sq->zone, sq->zonelen, sq->qbuf,
+			&pi->addr, c->type, c->ssl, sq->zone, sq->zonelen, sq->qbuf,
 			sq->qbuflen, &sq->last_sent_time, sq->outnet->now_tv,
 			c->buffer);
 	}
@@ -3296,7 +3296,7 @@ serviced_udp_callback(struct comm_point* c, void* arg, int error,
 		log_addr(VERB_ALGO, "to local addr", &p->pc->pif->addr,
 			p->pc->pif->addrlen);
 		dt_msg_send_outside_response(outnet->dtenv, &sq->addr,
-			&p->pc->pif->addr, c->type, sq->zone, sq->zonelen,
+			&p->pc->pif->addr, c->type, c->ssl, sq->zone, sq->zonelen,
 			sq->qbuf, sq->qbuflen, &sq->last_sent_time,
 			sq->outnet->now_tv, c->buffer);
 	}
