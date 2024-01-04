@@ -850,15 +850,20 @@ int print_deleg_lookup(RES* ssl, struct worker* worker, uint8_t* nm,
 	if(!ssl_printf(ssl, "The following name servers are used for lookup "
 		"of %s\n", b)) 
 		return 0;
-	
+
+	lock_rw_rdlock(&worker->env.fwds->lock);
 	dp = forwards_lookup(worker->env.fwds, nm, qinfo.qclass);
 	if(dp) {
-		if(!ssl_printf(ssl, "forwarding request:\n"))
+		if(!ssl_printf(ssl, "forwarding request:\n")) {
+			lock_rw_unlock(&worker->env.fwds->lock);
 			return 0;
+		}
 		print_dp_main(ssl, dp, NULL);
 		print_dp_details(ssl, worker, dp);
+		lock_rw_unlock(&worker->env.fwds->lock);
 		return 1;
 	}
+	lock_rw_unlock(&worker->env.fwds->lock);
 	
 	while(1) {
 		dp = dns_cache_find_delegation(&worker->env, nm, nmlen, 

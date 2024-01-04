@@ -71,6 +71,7 @@ forwards_create(void)
 		sizeof(struct iter_forwards));
 	if(!fwd)
 		return NULL;
+	lock_rw_init(&fwd->lock);
 	return fwd;
 }
 
@@ -100,6 +101,7 @@ forwards_delete(struct iter_forwards* fwd)
 {
 	if(!fwd) 
 		return;
+	lock_rw_destroy(&fwd->lock);
 	fwd_del_tree(fwd);
 	free(fwd);
 }
@@ -332,17 +334,27 @@ make_stub_holes(struct iter_forwards* fwd, struct config_file* cfg)
 int 
 forwards_apply_cfg(struct iter_forwards* fwd, struct config_file* cfg)
 {
+	if(fwd->tree) {
+		lock_unprotect(&fwd->lock, fwd->tree);
+	}
 	fwd_del_tree(fwd);
 	fwd->tree = rbtree_create(fwd_cmp);
 	if(!fwd->tree)
 		return 0;
+	lock_protect(&fwd->lock, fwd->tree, sizeof(*fwd->tree));
 
+	lock_rw_wrlock(&fwd->lock);
 	/* read forward zones */
-	if(!read_forwards(fwd, cfg))
+	if(!read_forwards(fwd, cfg)) {
+		lock_rw_unlock(&fwd->lock);
 		return 0;
-	if(!make_stub_holes(fwd, cfg))
+	}
+	if(!make_stub_holes(fwd, cfg)) {
+		lock_rw_unlock(&fwd->lock);
 		return 0;
+	}
 	fwd_init_parents(fwd);
+	lock_rw_unlock(&fwd->lock);
 	return 1;
 }
 
@@ -458,10 +470,12 @@ forwards_get_mem(struct iter_forwards* fwd)
 	size_t s;
 	if(!fwd)
 		return 0;
+	lock_rw_rdlock(&fwd->lock);
 	s = sizeof(*fwd) + sizeof(*fwd->tree);
 	RBTREE_FOR(p, struct iter_forward_zone*, fwd->tree) {
 		s += sizeof(*p) + p->namelen + delegpt_get_mem(p->dp);
 	}
+	lock_rw_unlock(&fwd->lock);
 	return s;
 }
 
@@ -504,6 +518,8 @@ forwards_delete_zone(struct iter_forwards* fwd, uint16_t c, uint8_t* nm)
 int
 forwards_add_stub_hole(struct iter_forwards* fwd, uint16_t c, uint8_t* nm)
 {
+	if(fwd_zone_find(fwd, c, nm) != NULL)
+		return 1; /* already a stub zone there */
 	if(!fwd_add_stub_hole(fwd, c, nm)) {
 		return 0;
 	}
@@ -523,4 +539,3 @@ forwards_delete_stub_hole(struct iter_forwards* fwd, uint16_t c, uint8_t* nm)
 	fwd_zone_free(z);
 	fwd_init_parents(fwd);
 }
-

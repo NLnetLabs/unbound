@@ -511,7 +511,7 @@ struct module_env {
 	/** auth zones */
 	struct auth_zones* auth_zones;
 	/** Mapping of forwarding zones to targets.
-	 * iterator forwarder information. per-thread, created by worker */
+	 * iterator forwarder information. */
 	struct iter_forwards* fwds;
 	/** 
 	 * iterator forwarder information. per-thread, created by worker.
