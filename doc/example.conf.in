@@ -303,6 +303,7 @@ server:
 	# Choose deny (drop message), refuse (polite error reply),
 	# allow (recursive ok), allow_setrd (recursive ok, rd bit is forced on),
 	# allow_snoop (recursive and nonrecursive ok)
+	# allow_cookie (allow UDP with valid cookie or stateful transport)
 	# deny_non_local (drop queries unless can be answered from local-data)
 	# refuse_non_local (like deny_non_local but polite error reply).
 	# access-control: 127.0.0.0/8 allow
@@ -986,6 +987,13 @@ server:
 	# if 0(default) it is disabled, otherwise states qps allowed per ip address
 	# ip-ratelimit: 0
 
+	# global query ratelimit for all ip addresses with a valid DNS Cookie.
+	# feature is experimental.
+	# if 0(default) it is disabled, otherwise states qps allowed per ip address
+	# useful in combination with 'allow_cookie'.
+	# If used, suggested to be higher than ip-ratelimit, tenfold.
+	# ip-ratelimit-cookie: 0
+
 	# ip ratelimits are tracked in a cache, size in bytes of cache (or k,m).
 	# ip-ratelimit-size: 4m
 	# ip ratelimit cache slabs, reduces lock contention if equal to cpucount.
@@ -1006,6 +1014,14 @@ server:
 	# fast-server-permil: 0
 	# the number of servers that will be used in the fast server selection.
 	# fast-server-num: 3
+
+	# reply to requests containing DNS Cookies as specified in RFC 7873 and RFC 9018.
+	# answer-cookie: no
+
+	# secret for DNS Cookie generation.
+	# useful for anycast deployments.
+	# example value "000102030405060708090a0b0c0d0e0f".
+	# cookie-secret: <128 bit random hex string>
 
 	# Enable to attach Extended DNS Error codes (RFC8914) to responses.
 	# ede: no
