@@ -3657,6 +3657,57 @@ fr_output_printf(struct fast_reload_thread* fr, const char* format, ...)
 	return ret;
 }
 
+/** fast reload thread, read config */
+static int
+fr_read_config(struct fast_reload_thread* fr, struct config_file** newcfg)
+{
+	/* Create new config structure. */
+	*newcfg = config_create();
+	if(!*newcfg) {
+		if(!fr_output_printf(fr, "config_create failed: out of memory\n"))
+			return 0;
+		fr_send_notification(fr, fast_reload_notification_printout);
+		return 0;
+	}
+	if(fr_poll_for_quit(fr))
+		return 1;
+
+	/* Read new config from file */
+	if(!config_read(*newcfg, fr->worker->daemon->cfgfile,
+		fr->worker->daemon->chroot)) {
+		config_delete(*newcfg);
+		if(!fr_output_printf(fr, "config_read %s failed: %s\n",
+			fr->worker->daemon->cfgfile, strerror(errno)))
+			return 0;
+		fr_send_notification(fr, fast_reload_notification_printout);
+		return 0;
+	}
+	if(fr_poll_for_quit(fr))
+		return 1;
+	if(!fr_output_printf(fr, "done read config file %s\n",
+		fr->worker->daemon->cfgfile))
+		return 0;
+	fr_send_notification(fr, fast_reload_notification_printout);
+
+	return 1;
+}
+
+/** fast reload thread, load config */
+static int
+fr_load_config(struct fast_reload_thread* fr)
+{
+	struct config_file* newcfg = NULL;
+	if(!fr_read_config(fr, &newcfg))
+		return 0;
+	if(fr_poll_for_quit(fr)) {
+		config_delete(newcfg);
+		return 1;
+	}
+
+	config_delete(newcfg);
+	return 1;
+}
+
 /** fast reload thread. the thread main function */
 static void* fast_reload_thread_main(void* arg)
 {
@@ -3672,6 +3723,11 @@ static void* fast_reload_thread_main(void* arg)
 		goto done_error;
 	fr_send_notification(fast_reload_thread,
 		fast_reload_notification_printout);
+	if(fr_poll_for_quit(fast_reload_thread))
+		goto done;
+
+	if(!fr_load_config(fast_reload_thread))
+		goto done_error;
 	if(fr_poll_for_quit(fast_reload_thread))
 		goto done;
 

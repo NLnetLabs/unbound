@@ -896,6 +896,7 @@ daemon_delete(struct daemon* daemon)
 	listen_desetup_locks();
 	free(daemon->chroot);
 	free(daemon->pidfile);
+	free(daemon->cfgfile);
 	free(daemon->env);
 #ifdef HAVE_SSL
 	listen_sslctx_delete_ticket_keys();

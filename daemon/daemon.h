@@ -152,6 +152,8 @@ struct daemon {
 	struct fast_reload_thread* fast_reload_thread;
 	/** the fast reload printq list */
 	struct fast_reload_printq* fast_reload_printq_list;
+	/** config file name */
+	char* cfgfile;
 };
 
 /**
