@@ -91,6 +91,7 @@
 #include "util/net_help.h"
 #include "sldns/keyraw.h"
 #include "respip/respip.h"
+#include "iterator/iter_fwd.h"
 #include <signal.h>
 
 #ifdef HAVE_SYSTEMD
@@ -714,6 +715,9 @@ daemon_fork(struct daemon* daemon)
 		fatal_exit("Could not create local zones: out of memory");
 	if(!local_zones_apply_cfg(daemon->local_zones, daemon->cfg))
 		fatal_exit("Could not set up local zones");
+	if(!(daemon->env->fwds = forwards_create()) ||
+		!forwards_apply_cfg(daemon->env->fwds, daemon->cfg))
+		fatal_exit("Could not set forward zones");
 
 	/* process raw response-ip configuration data */
 	if(!(daemon->respip_set = respip_set_create()))
@@ -830,6 +834,8 @@ daemon_cleanup(struct daemon* daemon)
 		slabhash_clear(daemon->env->msg_cache);
 	}
 	daemon->old_num = daemon->num; /* save the current num */
+	forwards_delete(daemon->env->fwds);
+	daemon->env->fwds = NULL;
 	local_zones_delete(daemon->local_zones);
 	daemon->local_zones = NULL;
 	respip_set_delete(daemon->respip_set);
