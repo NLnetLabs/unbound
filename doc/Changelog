@@ -1,3 +1,7 @@
+4 January 2024: Wouter
+	- Remove unneeded newlines and improve indentation in remote control
+	  code.
+
 3 January 2024: Wouter
 	- Merge #980: DoH: reject non-h2 early. To fix #979: Improve errors
 	  for non-HTTP/2 DoH clients.
