@@ -615,3 +615,9 @@ void listen_desetup_locks(void)
 {
 	/* nothing */
 }
+
+void fast_reload_printq_list_delete(
+	struct fast_reload_printq* ATTR_UNUSED(list))
+{
+	/* nothing */
+}
