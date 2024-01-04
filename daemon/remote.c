@@ -3116,12 +3116,6 @@ execute_cmd(struct daemon_remote* rc, RES* ssl, char* cmd,
 		if(rc) distribute_cmd(rc, ssl, cmd);
 		do_stub_remove(ssl, worker, skipwhite(p+11));
 		return;
-	} else if(cmdcmp(p, "forward_add", 11)) {
-		do_forward_add(ssl, worker, skipwhite(p+11));
-		return;
-	} else if(cmdcmp(p, "forward_remove", 14)) {
-		do_forward_remove(ssl, worker, skipwhite(p+14));
-		return;
 	} else if(cmdcmp(p, "insecure_add", 12)) {
 		/* must always distribute this cmd */
 		if(rc) distribute_cmd(rc, ssl, cmd);
@@ -3131,9 +3125,6 @@ execute_cmd(struct daemon_remote* rc, RES* ssl, char* cmd,
 		/* must always distribute this cmd */
 		if(rc) distribute_cmd(rc, ssl, cmd);
 		do_insecure_remove(ssl, worker, skipwhite(p+15));
-		return;
-	} else if(cmdcmp(p, "forward", 7)) {
-		do_forward(ssl, worker, skipwhite(p+7));
 		return;
 	} else if(cmdcmp(p, "flush_stats", 11)) {
 		/* must always distribute this cmd */
@@ -3176,6 +3167,12 @@ execute_cmd(struct daemon_remote* rc, RES* ssl, char* cmd,
 		do_data_add(ssl, worker->daemon->local_zones, skipwhite(p+10));
 	} else if(cmdcmp(p, "local_datas", 11)) {
 		do_datas_add(ssl, worker->daemon->local_zones);
+	} else if(cmdcmp(p, "forward_add", 11)) {
+		do_forward_add(ssl, worker, skipwhite(p+11));
+	} else if(cmdcmp(p, "forward_remove", 14)) {
+		do_forward_remove(ssl, worker, skipwhite(p+14));
+	} else if(cmdcmp(p, "forward", 7)) {
+		do_forward(ssl, worker, skipwhite(p+7));
 	} else if(cmdcmp(p, "view_local_zone_remove", 22)) {
 		do_view_zone_remove(ssl, worker, skipwhite(p+22));
 	} else if(cmdcmp(p, "view_local_zone", 15)) {
