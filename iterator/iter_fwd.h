@@ -53,7 +53,8 @@ struct delegpt;
 struct iter_forwards {
 	/** lock on the forwards tree.
 	 * When grabbing both this lock and the anchors.lock, this lock
-	 * is grabbed first. */
+	 * is grabbed first. When grabbing both this lock and the hints.lock
+	 * this lock is grabbed first. */
 	lock_rw_type lock;
 	/** 
 	 * Zones are stored in this tree. Sort order is specially chosen.

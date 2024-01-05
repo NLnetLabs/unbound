@@ -1284,12 +1284,14 @@ iter_get_next_root(struct iter_hints* hints, struct iter_forwards* fwd,
 	uint16_t* c)
 {
 	uint16_t c1 = *c, c2 = *c;
-	int r1 = hints_next_root(hints, &c1);
-	int r2;
+	int r1, r2;
 
 	lock_rw_rdlock(&fwd->lock);
+	lock_rw_rdlock(&hints->lock);
+	r1 = hints_next_root(hints, &c1);
 	r2 = forwards_next_root(fwd, &c2);
 	lock_rw_unlock(&fwd->lock);
+	lock_rw_unlock(&hints->lock);
 
 	if(!r1 && !r2) /* got none, end of list */
 		return 0;
@@ -1462,9 +1464,10 @@ iter_stub_fwd_no_cache(struct module_qstate *qstate, struct query_info *qinf,
 	struct delegpt *dp;
 
 	/* Check for stub. */
+	lock_rw_rdlock(&qstate->env->fwds->lock);
+	lock_rw_rdlock(&qstate->env->hints->lock);
 	stub = hints_lookup_stub(qstate->env->hints, qinf->qname,
 	    qinf->qclass, NULL);
-	lock_rw_rdlock(&qstate->env->fwds->lock);
 	dp = forwards_lookup(qstate->env->fwds, qinf->qname, qinf->qclass);
 
 	/* see if forward or stub is more pertinent */
@@ -1479,8 +1482,9 @@ iter_stub_fwd_no_cache(struct module_qstate *qstate, struct query_info *qinf,
 
 	/* check stub */
 	if (stub != NULL && stub->dp != NULL) {
+		int stub_no_cache = stub->dp->no_cache;
 		lock_rw_unlock(&qstate->env->fwds->lock);
-		if(stub->dp->no_cache) {
+		if(stub_no_cache) {
 			char qname[255+1];
 			char dpname[255+1];
 			dname_str(qinf->qname, qname);
@@ -1488,15 +1492,26 @@ iter_stub_fwd_no_cache(struct module_qstate *qstate, struct query_info *qinf,
 			verbose(VERB_ALGO, "stub for %s %s has no_cache", qname, dpname);
 		}
 		if(retdpname) {
-			*retdpname = stub->dp->name;
+			if(stub->dp->namelen > dpname_storage_len) {
+				verbose(VERB_ALGO, "no cache stub dpname too long");
+				lock_rw_unlock(&qstate->env->hints->lock);
+				*retdpname = NULL;
+				*retdpnamelen = 0;
+				return stub_no_cache;
+			}
+			memmove(dpname_storage, stub->dp->name,
+				stub->dp->namelen);
+			*retdpname = dpname_storage;
 			*retdpnamelen = stub->dp->namelen;
 		}
-		return (stub->dp->no_cache);
+		lock_rw_unlock(&qstate->env->hints->lock);
+		return stub_no_cache;
 	}
 
 	/* Check for forward. */
 	if (dp) {
 		int dp_no_cache = dp->no_cache;
+		lock_rw_unlock(&qstate->env->hints->lock);
 		if(dp_no_cache) {
 			char qname[255+1];
 			char dpname[255+1];
@@ -1508,16 +1523,19 @@ iter_stub_fwd_no_cache(struct module_qstate *qstate, struct query_info *qinf,
 			if(dp->namelen > dpname_storage_len) {
 				verbose(VERB_ALGO, "no cache dpname too long");
 				lock_rw_unlock(&qstate->env->fwds->lock);
-				return (dp_no_cache);
+				*retdpname = NULL;
+				*retdpnamelen = 0;
+				return dp_no_cache;
 			}
 			memmove(dpname_storage, dp->name, dp->namelen);
 			*retdpname = dpname_storage;
 			*retdpnamelen = dp->namelen;
 		}
 		lock_rw_unlock(&qstate->env->fwds->lock);
-		return (dp_no_cache);
+		return dp_no_cache;
 	}
 	lock_rw_unlock(&qstate->env->fwds->lock);
+	lock_rw_unlock(&qstate->env->hints->lock);
 	if(retdpname) {
 		*retdpname = NULL;
 		*retdpnamelen = 0;

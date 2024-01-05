@@ -92,6 +92,7 @@
 #include "sldns/keyraw.h"
 #include "respip/respip.h"
 #include "iterator/iter_fwd.h"
+#include "iterator/iter_hints.h"
 #include <signal.h>
 
 #ifdef HAVE_SYSTEMD
@@ -720,6 +721,9 @@ daemon_fork(struct daemon* daemon)
 	if(!(daemon->env->fwds = forwards_create()) ||
 		!forwards_apply_cfg(daemon->env->fwds, daemon->cfg))
 		fatal_exit("Could not set forward zones");
+	if(!(daemon->env->hints = hints_create()) ||
+		!hints_apply_cfg(daemon->env->hints, daemon->cfg))
+		fatal_exit("Could not set root or stub hints");
 
 	/* process raw response-ip configuration data */
 	if(!(daemon->respip_set = respip_set_create()))
@@ -838,6 +842,8 @@ daemon_cleanup(struct daemon* daemon)
 	daemon->old_num = daemon->num; /* save the current num */
 	forwards_delete(daemon->env->fwds);
 	daemon->env->fwds = NULL;
+	hints_delete(daemon->env->hints);
+	daemon->env->hints = NULL;
 	local_zones_delete(daemon->local_zones);
 	daemon->local_zones = NULL;
 	respip_set_delete(daemon->respip_set);

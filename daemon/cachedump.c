@@ -897,22 +897,29 @@ int print_deleg_lookup(RES* ssl, struct worker* worker, uint8_t* nm,
 					return 0;
 				continue;
 			}
-		} 
+		}
+		lock_rw_rdlock(&worker->env.hints->lock);
 		stub = hints_lookup_stub(worker->env.hints, nm, qinfo.qclass,
 			dp);
 		if(stub) {
 			if(stub->noprime) {
 				if(!ssl_printf(ssl, "The noprime stub servers "
-					"are used:\n"))
+					"are used:\n")) {
+					lock_rw_unlock(&worker->env.hints->lock);
 					return 0;
+				}
 			} else {
 				if(!ssl_printf(ssl, "The stub is primed "
-						"with servers:\n"))
+						"with servers:\n")) {
+					lock_rw_unlock(&worker->env.hints->lock);
 					return 0;
+				}
 			}
 			print_dp_main(ssl, stub->dp, NULL);
 			print_dp_details(ssl, worker, stub->dp);
+			lock_rw_unlock(&worker->env.hints->lock);
 		} else {
+			lock_rw_unlock(&worker->env.hints->lock);
 			print_dp_main(ssl, dp, msg);
 			print_dp_details(ssl, worker, dp);
 		}
