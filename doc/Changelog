@@ -1,3 +1,7 @@
+5 January 2024: Wouter
+	- Merge #987: skip edns frag retry if advertised udp payload size is
+	  not smaller.
+
 4 January 2024: Wouter
 	- Remove unneeded newlines and improve indentation in remote control
 	  code.
