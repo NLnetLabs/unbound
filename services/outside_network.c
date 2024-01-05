@@ -2820,6 +2820,25 @@ serviced_perturb_qname(struct ub_randstate* rnd, uint8_t* qbuf, size_t len)
 	}
 }
 
+static uint16_t
+serviced_query_udp_size(struct serviced_query* sq, enum serviced_query_status status) {
+	uint16_t udp_size;
+	if(status == serviced_query_UDP_EDNS_FRAG) {
+		if(addr_is_ip6(&sq->addr, sq->addrlen)) {
+			if(EDNS_FRAG_SIZE_IP6 < EDNS_ADVERTISED_SIZE)
+				udp_size = EDNS_FRAG_SIZE_IP6;
+			else	udp_size = EDNS_ADVERTISED_SIZE;
+		} else {
+			if(EDNS_FRAG_SIZE_IP4 < EDNS_ADVERTISED_SIZE)
+				udp_size = EDNS_FRAG_SIZE_IP4;
+			else	udp_size = EDNS_ADVERTISED_SIZE;
+		}
+	} else {
+		udp_size = EDNS_ADVERTISED_SIZE;
+	}
+	return udp_size;
+}
+
 /** put serviced query into a buffer */
 static void
 serviced_encode(struct serviced_query* sq, sldns_buffer* buff, int with_edns)
@@ -2843,19 +2862,7 @@ serviced_encode(struct serviced_query* sq, sldns_buffer* buff, int with_edns)
 		edns.opt_list_in = NULL;
 		edns.opt_list_out = sq->opt_list;
 		edns.opt_list_inplace_cb_out = NULL;
-		if(sq->status == serviced_query_UDP_EDNS_FRAG) {
-			if(addr_is_ip6(&sq->addr, sq->addrlen)) {
-				if(EDNS_FRAG_SIZE_IP6 < EDNS_ADVERTISED_SIZE)
-					edns.udp_size = EDNS_FRAG_SIZE_IP6;
-				else	edns.udp_size = EDNS_ADVERTISED_SIZE;
-			} else {
-				if(EDNS_FRAG_SIZE_IP4 < EDNS_ADVERTISED_SIZE)
-					edns.udp_size = EDNS_FRAG_SIZE_IP4;
-				else	edns.udp_size = EDNS_ADVERTISED_SIZE;
-			}
-		} else {
-			edns.udp_size = EDNS_ADVERTISED_SIZE;
-		}
+		edns.udp_size = serviced_query_udp_size(sq, sq->status);
 		edns.bits = 0;
 		if(sq->dnssec & EDNS_DO)
 			edns.bits = EDNS_DO;
@@ -3252,7 +3259,8 @@ serviced_udp_callback(struct comm_point* c, void* arg, int error,
 
 	sq->pending = NULL; /* removed after callback */
 	if(error == NETEVENT_TIMEOUT) {
-		if(sq->status == serviced_query_UDP_EDNS && sq->last_rtt < 5000) {
+		if(sq->status == serviced_query_UDP_EDNS && sq->last_rtt < 5000 &&
+		   (serviced_query_udp_size(sq, serviced_query_UDP_EDNS_FRAG) < serviced_query_udp_size(sq, serviced_query_UDP_EDNS))) {
 			/* fallback to 1480/1280 */
 			sq->status = serviced_query_UDP_EDNS_FRAG;
 			log_name_addr(VERB_ALGO, "try edns1xx0", sq->qbuf+10,
