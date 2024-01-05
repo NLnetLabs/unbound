@@ -101,6 +101,8 @@ int hints_apply_cfg(struct iter_hints* hints, struct config_file* cfg);
 
 /**
  * Find root hints for the given class.
+ * The return value is contents of the hints structure, caller should
+ * lock and unlock a readlock on the hints structure.
  * @param hints: hint storage.
  * @param qclass: class for which root hints are requested. host order.
  * @return: NULL if no hints, or a ptr to stored hints.
@@ -123,6 +125,8 @@ int hints_next_root(struct iter_hints* hints, uint16_t* qclass);
  * Given a qname/qclass combination, and the delegation point from the cache
  * for this qname/qclass, determine if this combination indicates that a
  * stub hint exists and must be primed.
+ * The return value is contents of the hints structure, caller should
+ * lock and unlock a readlock on the hints structure.
  *
  * @param hints: hint storage.
  * @param qname: The qname that generated the delegation point.
