@@ -43,6 +43,7 @@
 #ifndef ITERATOR_ITER_HINTS_H
 #define ITERATOR_ITER_HINTS_H
 #include "util/storage/dnstree.h"
+#include "util/locks.h"
 struct iter_env;
 struct config_file;
 struct delegpt;
@@ -51,6 +52,10 @@ struct delegpt;
  * Iterator hints structure
  */
 struct iter_hints {
+	/** lock on the forwards tree.
+	 * When grabbing both this lock and the anchors.lock, this lock
+	 * is grabbed first. */
+	lock_rw_type lock;
 	/** 
 	 * Hints are stored in this tree. Sort order is specially chosen.
 	 * first sorted on qclass. Then on dname in nsec-like order, so that
@@ -131,6 +136,7 @@ struct iter_hints_stub* hints_lookup_stub(struct iter_hints* hints,
 
 /**
  * Get memory in use by hints
+ * Locks and unlocks the structure.
  * @param hints: hint storage.
  * @return bytes in use
  */

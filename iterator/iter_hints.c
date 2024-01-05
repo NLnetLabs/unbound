@@ -57,6 +57,8 @@ hints_create(void)
 		sizeof(struct iter_hints));
 	if(!hints)
 		return NULL;
+	lock_rw_init(&hints->lock);
+	lock_protect(&hints->lock, &hints->tree, sizeof(hints->tree));
 	return hints;
 }
 
@@ -83,6 +85,7 @@ hints_delete(struct iter_hints* hints)
 {
 	if(!hints) 
 		return;
+	lock_rw_destroy(&hints->lock);
 	hints_del_tree(hints);
 	free(hints);
 }
@@ -438,29 +441,39 @@ read_root_hints_list(struct iter_hints* hints, struct config_file* cfg)
 int 
 hints_apply_cfg(struct iter_hints* hints, struct config_file* cfg)
 {
+	lock_rw_wrlock(&hints->lock);
 	hints_del_tree(hints);
 	name_tree_init(&hints->tree);
-	
+
 	/* read root hints */
-	if(!read_root_hints_list(hints, cfg))
+	if(!read_root_hints_list(hints, cfg)) {
+		lock_rw_unlock(&hints->lock);
 		return 0;
+	}
 
 	/* read stub hints */
-	if(!read_stubs(hints, cfg))
+	if(!read_stubs(hints, cfg)) {
+		lock_rw_unlock(&hints->lock);
 		return 0;
+	}
 
 	/* use fallback compiletime root hints */
 	if(!hints_lookup_root(hints, LDNS_RR_CLASS_IN)) {
 		struct delegpt* dp = compile_time_root_prime(cfg->do_ip4,
 			cfg->do_ip6);
 		verbose(VERB_ALGO, "no config, using builtin root hints.");
-		if(!dp) 
+		if(!dp) {
+			lock_rw_unlock(&hints->lock);
 			return 0;
-		if(!hints_insert(hints, LDNS_RR_CLASS_IN, dp, 0))
+		}
+		if(!hints_insert(hints, LDNS_RR_CLASS_IN, dp, 0)) {
+			lock_rw_unlock(&hints->lock);
 			return 0;
+		}
 	}
 
 	name_tree_init_parents(&hints->tree);
+	lock_rw_unlock(&hints->lock);
 	return 1;
 }
 
@@ -524,10 +537,12 @@ hints_get_mem(struct iter_hints* hints)
 	size_t s;
 	struct iter_hints_stub* p;
 	if(!hints) return 0;
+	lock_rw_rdlock(&hints->lock);
 	s = sizeof(*hints);
 	RBTREE_FOR(p, struct iter_hints_stub*, &hints->tree) {
 		s += sizeof(*p) + delegpt_get_mem(p->dp);
 	}
+	lock_rw_unlock(&hints->lock);
 	return s;
 }
 
