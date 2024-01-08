@@ -3698,6 +3698,19 @@ fr_init_time(struct timeval* time_start, struct timeval* time_read,
 		log_err("gettimeofday: %s", strerror(errno));
 }
 
+/**
+ * Structure with constructed elements for use during fast reload.
+ * At the start it contains the tree items for the new config.
+ * After the tree items are swapped into the server, the old elements
+ * are kept in here. They can then be deleted.
+ */
+struct fast_reload_construct {
+	/** construct for forwards */
+	struct iter_forwards* fwds;
+	/** construct for stubs */
+	struct iter_hints* hints;
+};
+
 /** fast reload thread, read config */
 static int
 fr_read_config(struct fast_reload_thread* fr, struct config_file** newcfg)
@@ -3729,6 +3742,42 @@ fr_read_config(struct fast_reload_thread* fr, struct config_file** newcfg)
 		fr->worker->daemon->cfgfile))
 		return 0;
 	fr_send_notification(fr, fast_reload_notification_printout);
+
+	return 1;
+}
+
+/** fast reload thread, clear construct information, deletes items */
+static void
+fr_construct_clear(struct fast_reload_construct* ct)
+{
+	if(!ct)
+		return;
+	forwards_delete(ct->fwds);
+	hints_delete(ct->hints);
+}
+
+/** fast reload thread, construct from config the new items */
+static int
+fr_construct_from_config(struct fast_reload_thread* fr,
+	struct config_file* newcfg, struct fast_reload_construct* ct)
+{
+	if(!(ct->fwds = forwards_create()))
+		return 0;
+	if(!forwards_apply_cfg(ct->fwds, newcfg)) {
+		fr_construct_clear(ct);
+		return 0;
+	}
+	if(fr_poll_for_quit(fr))
+		return 1;
+
+	if(!(ct->hints = hints_create()))
+		return 0;
+	if(!hints_apply_cfg(ct->hints, newcfg)) {
+		fr_construct_clear(ct);
+		return 0;
+	}
+	if(fr_poll_for_quit(fr))
+		return 1;
 
 	return 1;
 }
@@ -3772,7 +3821,11 @@ static int
 fr_load_config(struct fast_reload_thread* fr, struct timeval* time_read,
 	struct timeval* time_construct, struct timeval* time_reload)
 {
+	struct fast_reload_construct ct;
 	struct config_file* newcfg = NULL;
+	memset(&ct, 0, sizeof(ct));
+
+	/* Read file. */
 	if(!fr_read_config(fr, &newcfg))
 		return 0;
 	if(gettimeofday(time_read, NULL) < 0)
@@ -3781,13 +3834,32 @@ fr_load_config(struct fast_reload_thread* fr, struct timeval* time_read,
 		config_delete(newcfg);
 		return 1;
 	}
+
+	/* Construct items. */
+	if(!fr_construct_from_config(fr, newcfg, &ct)) {
+		config_delete(newcfg);
+		if(!fr_output_printf(fr, "Could not construct from the "
+			"config, check for errors with unbound-checkconf, or "
+			"out of memory.\n"))
+			return 0;
+		fr_send_notification(fr, fast_reload_notification_printout);
+		return 0;
+	}
 	if(gettimeofday(time_construct, NULL) < 0)
 		log_err("gettimeofday: %s", strerror(errno));
+	if(fr_poll_for_quit(fr)) {
+		config_delete(newcfg);
+		fr_construct_clear(&ct);
+		return 1;
+	}
 
+	/* Reload server. */
 	if(gettimeofday(time_reload, NULL) < 0)
 		log_err("gettimeofday: %s", strerror(errno));
 
+	/* Delete old. */
 	config_delete(newcfg);
+	fr_construct_clear(&ct);
 	return 1;
 }
 
