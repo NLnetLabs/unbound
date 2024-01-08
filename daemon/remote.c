@@ -4867,7 +4867,7 @@ fast_reload_thread_start(RES* ssl, struct worker* worker, struct rc_state* s)
 	}
 	worker->daemon->fast_reload_thread->printq->remote = *ssl;
 	s->rc = NULL; /* move away the rc state */
-	/* Nothing to print right now, so no need to activate it. */
+	/* Nothing to print right now, so no need to have it active. */
 	comm_point_stop_listening(worker->daemon->fast_reload_thread->printq->client_cp);
 
 	/* Start fast reload thread */
