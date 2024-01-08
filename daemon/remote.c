@@ -3683,6 +3683,18 @@ fr_output_printf(struct fast_reload_thread* fr, const char* format, ...)
 	return ret;
 }
 
+/** fast reload thread, init time counters */
+static void
+fr_init_time(struct timeval* time_start, struct timeval* time_read,
+	struct timeval* time_end)
+{
+	memset(time_start, 0, sizeof(*time_start));
+	memset(time_read, 0, sizeof(*time_read));
+	memset(time_end, 0, sizeof(*time_end));
+	if(gettimeofday(time_start, NULL) < 0)
+		log_err("gettimeofday: %s", strerror(errno));
+}
+
 /** fast reload thread, read config */
 static int
 fr_read_config(struct fast_reload_thread* fr, struct config_file** newcfg)
@@ -3718,13 +3730,36 @@ fr_read_config(struct fast_reload_thread* fr, struct config_file** newcfg)
 	return 1;
 }
 
+/** fast reload thread, finish timers */
+static int
+fr_finish_time(struct fast_reload_thread* fr, struct timeval* time_start,
+	struct timeval* time_read, struct timeval* time_end)
+{
+	struct timeval total, readtime;
+	if(gettimeofday(time_end, NULL) < 0)
+		log_err("gettimeofday: %s", strerror(errno));
+
+	timeval_subtract(&total, time_end, time_start);
+	timeval_subtract(&readtime, time_read, time_start);
+	if(!fr_output_printf(fr, "read disk  %3d.%6.6ds\n",
+		(int)readtime.tv_sec, (int)readtime.tv_usec))
+		return 0;
+	if(!fr_output_printf(fr, "total time %3d.%6.6ds\n", (int)total.tv_sec,
+		(int)total.tv_usec))
+		return 0;
+	fr_send_notification(fr, fast_reload_notification_printout);
+	return 1;
+}
+
 /** fast reload thread, load config */
 static int
-fr_load_config(struct fast_reload_thread* fr)
+fr_load_config(struct fast_reload_thread* fr, struct timeval* time_read)
 {
 	struct config_file* newcfg = NULL;
 	if(!fr_read_config(fr, &newcfg))
 		return 0;
+	if(gettimeofday(time_read, NULL) < 0)
+		log_err("gettimeofday: %s", strerror(errno));
 	if(fr_poll_for_quit(fr)) {
 		config_delete(newcfg);
 		return 1;
@@ -3738,9 +3773,11 @@ fr_load_config(struct fast_reload_thread* fr)
 static void* fast_reload_thread_main(void* arg)
 {
 	struct fast_reload_thread* fast_reload_thread = (struct fast_reload_thread*)arg;
+	struct timeval time_start, time_read, time_end;
 	log_thread_set(&fast_reload_thread->threadnum);
 
 	verbose(VERB_ALGO, "start fast reload thread");
+	fr_init_time(&time_start, &time_read, &time_end);
 	if(fr_poll_for_quit(fast_reload_thread))
 		goto done;
 
@@ -3752,7 +3789,13 @@ static void* fast_reload_thread_main(void* arg)
 	if(fr_poll_for_quit(fast_reload_thread))
 		goto done;
 
-	if(!fr_load_config(fast_reload_thread))
+	if(!fr_load_config(fast_reload_thread, &time_read))
+		goto done_error;
+	if(fr_poll_for_quit(fast_reload_thread))
+		goto done;
+
+	if(!fr_finish_time(fast_reload_thread, &time_start, &time_read,
+		&time_end))
 		goto done_error;
 	if(fr_poll_for_quit(fast_reload_thread))
 		goto done;
@@ -4151,6 +4194,8 @@ static void
 cfg_strlist_append_listhead(struct config_strlist_head* list,
 	struct config_strlist_head* more)
 {
+	if(!more->first)
+		return;
 	if(list->last)
 		list->last->next = more->first;
 	else
