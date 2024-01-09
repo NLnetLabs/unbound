@@ -137,7 +137,13 @@ enum fast_reload_notification {
 	/** the fast reload thread has exited, after being told to exit */
 	fast_reload_notification_exited = 4,
 	/** the fast reload thread has information to print out */
-	fast_reload_notification_printout = 5
+	fast_reload_notification_printout = 5,
+	/** stop as part of the reload the thread and other threads */
+	fast_reload_notification_reload_stop = 6,
+	/** ack the stop as part of the reload */
+	fast_reload_notification_reload_ack = 7,
+	/** resume from stop as part of the reload */
+	fast_reload_notification_reload_start = 8
 };
 
 /**
@@ -206,6 +212,9 @@ struct fast_reload_thread {
 	 * to be printed. The remote control thread can pick them up with
 	 * the lock. */
 	struct config_strlist_head* fr_output;
+
+	/** communication socket pair, to respond to the reload request */
+	int commreload[2];
 };
 
 /**

@@ -369,6 +369,62 @@ worker_check_request(sldns_buffer* pkt, struct worker* worker,
 	return;
 }
 
+/** stop and wait to resume the worker */
+static void
+worker_stop_and_wait(struct worker* worker)
+{
+	uint8_t c = (uint8_t)worker->thread_num;
+	ssize_t ret;
+	uint8_t* buf = NULL;
+	uint32_t len = 0, cmd;
+	while(1) {
+		ret = send(worker->daemon->fast_reload_thread->commreload[1],
+			&c, 1, 0);
+		if(ret == -1) {
+			if(
+#ifndef USE_WINSOCK
+				errno == EINTR || errno == EAGAIN
+#  ifdef EWOULDBLOCK
+				|| errno == EWOULDBLOCK
+#  endif
+#else
+				WSAGetLastError() == WSAEINTR ||
+				WSAGetLastError() == WSAEINPROGRESS ||
+				WSAGetLastError() == WSAEWOULDBLOCK
+#endif
+				)
+				continue; /* Try again. */
+			log_err("worker reload ack reply: send failed: %s",
+				sock_strerror(errno));
+			break;
+		}
+		break;
+	}
+	/* wait for reload */
+	if(!tube_read_msg(worker->cmd, &buf, &len, 0)) {
+		log_err("worker reload read reply failed");
+		return;
+	}
+	if(len != sizeof(uint32_t)) {
+		log_err("worker reload reply, bad control msg length %d",
+			(int)len);
+		free(buf);
+		return;
+	}
+	cmd = sldns_read_uint32(buf);
+	free(buf);
+	if(cmd == worker_cmd_quit) {
+		/* quit anyway */
+		verbose(VERB_ALGO, "reload reply, control cmd quit");
+		comm_base_exit(worker->base);
+		return;
+	}
+	if(cmd != worker_cmd_reload_start) {
+		log_err("worker reload reply, wrong reply command");
+	}
+	verbose(VERB_ALGO, "worker resume after reload");
+}
+
 void
 worker_handle_control_cmd(struct tube* ATTR_UNUSED(tube), uint8_t* msg,
 	size_t len, int error, void* arg)
@@ -403,6 +459,10 @@ worker_handle_control_cmd(struct tube* ATTR_UNUSED(tube), uint8_t* msg,
 	case worker_cmd_remote:
 		verbose(VERB_ALGO, "got control cmd remote");
 		daemon_remote_exec(worker);
+		break;
+	case worker_cmd_reload_stop:
+		verbose(VERB_ALGO, "got control cmd reload_stop");
+		worker_stop_and_wait(worker);
 		break;
 	default:
 		log_err("bad command %d", (int)cmd);
