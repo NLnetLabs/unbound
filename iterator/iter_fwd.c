@@ -544,6 +544,14 @@ void
 forwards_swap_tree(struct iter_forwards* fwd, struct iter_forwards* data)
 {
 	rbtree_type* oldtree = fwd->tree;
+	if(oldtree) {
+		lock_unprotect(&fwd->lock, oldtree);
+	}
+	if(data->tree) {
+		lock_unprotect(&data->lock, data->tree);
+	}
 	fwd->tree = data->tree;
 	data->tree = oldtree;
+	lock_protect(&fwd->lock, fwd->tree, sizeof(*fwd->tree));
+	lock_protect(&data->lock, data->tree, sizeof(*data->tree));
 }
