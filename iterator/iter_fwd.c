@@ -539,3 +539,11 @@ forwards_delete_stub_hole(struct iter_forwards* fwd, uint16_t c, uint8_t* nm)
 	fwd_zone_free(z);
 	fwd_init_parents(fwd);
 }
+
+void
+forwards_swap_tree(struct iter_forwards* fwd, struct iter_forwards* data)
+{
+	rbtree_type* oldtree = fwd->tree;
+	fwd->tree = data->tree;
+	data->tree = oldtree;
+}

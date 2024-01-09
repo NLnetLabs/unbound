@@ -3709,6 +3709,9 @@ struct fast_reload_construct {
 	struct iter_forwards* fwds;
 	/** construct for stubs */
 	struct iter_hints* hints;
+	/** storage for the old configuration elements. The outer struct
+	 * is allocated with malloc here, the items are from config. */
+	struct config_file* oldcfg;
 };
 
 /** fast reload thread, read config */
@@ -3754,6 +3757,13 @@ fr_construct_clear(struct fast_reload_construct* ct)
 		return;
 	forwards_delete(ct->fwds);
 	hints_delete(ct->hints);
+	/* Delete the log identity here so that the global value is not
+	 * reset by config_delete. */
+	if(ct->oldcfg->log_identity) {
+		free(ct->oldcfg->log_identity);
+		ct->oldcfg->log_identity = NULL;
+	}
+	config_delete(ct->oldcfg);
 }
 
 /** fast reload thread, construct from config the new items */
@@ -3779,6 +3789,11 @@ fr_construct_from_config(struct fast_reload_thread* fr,
 	if(fr_poll_for_quit(fr))
 		return 1;
 
+	if(!(ct->oldcfg = (struct config_file*)calloc(1,
+		sizeof(*ct->oldcfg)))) {
+		fr_construct_clear(ct);
+		return 0;
+	}
 	return 1;
 }
 
@@ -3813,6 +3828,62 @@ fr_finish_time(struct fast_reload_thread* fr, struct timeval* time_start,
 		(int)total.tv_usec))
 		return 0;
 	fr_send_notification(fr, fast_reload_notification_printout);
+	return 1;
+}
+
+/** fast reload thread, reload config with putting the new config items
+ * in place and swapping out the old items. */
+static int
+fr_reload_config(struct fast_reload_thread* fr, struct config_file* newcfg,
+	struct fast_reload_construct* ct)
+{
+	struct daemon* daemon = fr->worker->daemon;
+	struct module_env* env = daemon->env;
+
+	/* Grab big locks to satisfy lock conditions. */
+	lock_rw_wrlock(&ct->fwds->lock);
+	lock_rw_wrlock(&ct->hints->lock);
+	lock_rw_wrlock(&env->fwds->lock);
+	lock_rw_wrlock(&env->hints->lock);
+
+	/* Store old config elements. */
+	*ct->oldcfg = *env->cfg;
+	/* Insert new config elements. */
+	*env->cfg = *newcfg;
+	if(env->cfg->log_identity || ct->oldcfg->log_identity) {
+		/* pick up new log_identity string to use for log output. */
+		log_ident_set_or_default(env->cfg->log_identity);
+	}
+	/* the newcfg elements are in env->cfg, so should not be freed here. */
+	memset(newcfg, 0, sizeof(*newcfg));
+
+	/* Quickly swap the tree roots themselves with the already allocated
+	 * elements. This is a quick swap operation on the pointer.
+	 * The other threads are stopped and locks are held, so that a
+	 * consistent view of the configuration, before, and after, exists
+	 * towards the state machine for query resolution. */
+	forwards_swap_tree(env->fwds, ct->fwds);
+	hints_swap_tree(env->hints, ct->hints);
+
+	/* Set globals with new config. */
+	config_apply(env->cfg);
+
+	lock_rw_unlock(&env->fwds->lock);
+	lock_rw_unlock(&env->hints->lock);
+	lock_rw_unlock(&ct->fwds->lock);
+	lock_rw_unlock(&ct->hints->lock);
+
+	return 1;
+}
+
+/** fast reload thread, reload ipc communication to stop and start threads. */
+static int
+fr_reload_ipc(struct fast_reload_thread* fr, struct config_file* newcfg,
+	struct fast_reload_construct* ct)
+{
+	if(!fr_reload_config(fr, newcfg, ct)) {
+		return 0;
+	}
 	return 1;
 }
 
@@ -3854,6 +3925,14 @@ fr_load_config(struct fast_reload_thread* fr, struct timeval* time_read,
 	}
 
 	/* Reload server. */
+	if(!fr_reload_ipc(fr, newcfg, &ct)) {
+		config_delete(newcfg);
+		fr_construct_clear(&ct);
+		if(!fr_output_printf(fr, "error: reload failed\n"))
+			return 0;
+		fr_send_notification(fr, fast_reload_notification_printout);
+		return 0;
+	}
 	if(gettimeofday(time_reload, NULL) < 0)
 		log_err("gettimeofday: %s", strerror(errno));
 
