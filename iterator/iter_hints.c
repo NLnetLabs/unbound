@@ -580,6 +580,9 @@ void
 hints_swap_tree(struct iter_hints* hints, struct iter_hints* data)
 {
 	rbnode_type* oldroot = hints->tree.root;
+	size_t oldcount = hints->tree.count;
 	hints->tree.root = data->tree.root;
+	hints->tree.count = data->tree.count;
 	data->tree.root = oldroot;
+	data->tree.count = oldcount;
 }
