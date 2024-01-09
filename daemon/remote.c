@@ -553,7 +553,7 @@ ssl_print_text(RES* res, const char* text)
 static int
 ssl_print_vmsg(RES* ssl, const char* format, va_list args)
 {
-	char msg[1024];
+	char msg[65535];
 	vsnprintf(msg, sizeof(msg), format, args);
 	return ssl_print_text(ssl, msg);
 }
