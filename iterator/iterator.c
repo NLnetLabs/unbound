@@ -2898,8 +2898,9 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 		addr_to_nat64(&target->addr, &ie->nat64_prefix_addr,
 			ie->nat64_prefix_addrlen, ie->nat64_prefix_net,
 			&real_addr, &real_addrlen);
-		log_name_addr(VERB_QUERY, "applied NAT64:",
-			iq->dp->name, &real_addr, real_addrlen);
+		if(verbosity >= VERB_QUERY)
+			log_name_addr(VERB_QUERY, "applied NAT64:",
+				iq->dp->name, &real_addr, real_addrlen);
 	}
 
 	fptr_ok(fptr_whitelist_modenv_send_query(qstate->env->send_query));
