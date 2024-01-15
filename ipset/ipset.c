@@ -21,6 +21,7 @@
 #include <linux/netfilter/nfnetlink.h>
 #include <linux/netfilter/ipset/ip_set.h>
 #include <linux/netfilter/nf_tables.h>
+#include <linux/netfilter.h>
 
 #define BUFF_LEN 256
 
@@ -135,6 +136,7 @@ static int add_to_nftset(struct ipset_env *ie, const void *ipaddr, int af) {
 	size_t l = 0, addr_size;
 	int err;
 	const char *tablename, *setname;
+	uint16_t nlf = NFPROTO_INET;
 
 	if (af == AF_INET) {
 		tablename = ie->table_v4;
@@ -142,7 +144,7 @@ static int add_to_nftset(struct ipset_env *ie, const void *ipaddr, int af) {
 		addr_size = sizeof(struct in_addr);
 	} else if (af == AF_INET6) {
 		tablename = ie->table_v6;
-		setname = ie->table_v6;
+		setname = ie->name_v6;
 		addr_size = sizeof(struct in6_addr);
 	} else {
 		errno = EAFNOSUPPORT;
@@ -161,7 +163,7 @@ static int add_to_nftset(struct ipset_env *ie, const void *ipaddr, int af) {
 	}
 
 	nlh = __nftnl_nlmsg_build_hdr(b, NFNL_MSG_BATCH_BEGIN,
-                                AF_UNSPEC, 0, ie->seq++, NFNL_SUBSYS_NFTABLES);
+                                NFPROTO_UNSPEC, 0, ie->seq++, NFNL_SUBSYS_NFTABLES);
 
 	if (!nlh) {
 		errno = ENOMEM;
@@ -172,7 +174,7 @@ static int add_to_nftset(struct ipset_env *ie, const void *ipaddr, int af) {
 	l += nlh->nlmsg_len;
 
 	nlh = __nftnl_nlmsg_build_hdr(b, (NFNL_SUBSYS_NFTABLES << 8) | NFT_MSG_NEWSETELEM,
-                                af, NLM_F_CREATE|NLM_F_EXCL, ie->seq++, 0);
+                                nlf, NLM_F_CREATE|NLM_F_EXCL, ie->seq++, 0);
 	if (!nlh) {
 		errno = ENOMEM;
 		return -1;
@@ -333,7 +335,8 @@ static int ipset_update(struct module_env *env, struct dns_msg *return_msg,
 		} else if(ntohs(rrset->rk.type) == LDNS_RR_TYPE_AAAA &&
 			ie->v6_enabled == 1) {
 			af = AF_INET6;
-		}
+		} else
+		  continue;
 
 		if(ipset_check_zones_for_rrset(env, ie, rrset, qname, qlen, af) == -1)
 			return -1;
