@@ -267,10 +267,10 @@ if [ "$DOWIN" = "yes" ]; then
 		# cross-compilation and it is not used anyway
 		# before 1.0.1i need --cross-compile-prefix=i686-w64-mingw32-
 		if test "$mw64" = "mingw64"; then
-			sslflags="no-asm -DOPENSSL_NO_CAPIENG mingw64"
+			sslflags="no-asm no-tests -DOPENSSL_NO_CAPIENG mingw64"
 			sspdll="/usr/x86_64-w64-mingw32/sys-root/mingw/bin/libssp-0.dll"
 		else
-			sslflags="no-asm -DOPENSSL_NO_CAPIENG mingw"
+			sslflags="no-asm no-tests -DOPENSSL_NO_CAPIENG mingw"
 			sspdll="/usr/i686-w64-mingw32/sys-root/mingw/bin/libssp-0.dll"
 		fi
 		if test -f "$sspdll"; then
@@ -282,9 +282,18 @@ if [ "$DOWIN" = "yes" ]; then
 			SSPLIB=""
 		fi
 		info "winssl: Configure no-shared $sslflags"
-		set -x # echo the configure command
-		__CNF_LDLIBS=$SSPLIB CC=${warch}-w64-mingw32-gcc AR=${warch}-w64-mingw32-ar RANLIB=${warch}-w64-mingw32-ranlib WINDRES=${warch}-w64-mingw32-windres ./Configure --prefix="$sslinstall" no-shared $sslflags || error_cleanup "OpenSSL Configure failed"
-		set +x
+		if test "$W64" = "no"; then
+			# Disable stack-protector for 32-bit windows builds.
+			# mingw passes an LDFLAGS, so there is something
+			# passed in the LDFLAGS to stop -lssp passed in it.
+			set -x # echo the configure command
+			__CNF_LDLIBS=$SSPLIB __CNF_LDFLAGS="-fno-stack-protector" CC=${warch}-w64-mingw32-gcc AR=${warch}-w64-mingw32-ar RANLIB=${warch}-w64-mingw32-ranlib WINDRES=${warch}-w64-mingw32-windres ./Configure --prefix="$sslinstall" no-shared $sslflags || error_cleanup "OpenSSL Configure failed"
+			set +x
+		else
+			set -x # echo the configure command
+			__CNF_LDLIBS=$SSPLIB CC=${warch}-w64-mingw32-gcc AR=${warch}-w64-mingw32-ar RANLIB=${warch}-w64-mingw32-ranlib WINDRES=${warch}-w64-mingw32-windres ./Configure --prefix="$sslinstall" no-shared $sslflags || error_cleanup "OpenSSL Configure failed"
+			set +x
+		fi
 		info "winssl: make"
 		make $MINJ || error_cleanup "OpenSSL crosscompile failed"
 		# only install sw not docs, which take a long time.
@@ -297,9 +306,15 @@ if [ "$DOWIN" = "yes" ]; then
 		sslsharedinstall="`pwd`/sslsharedinstall"
 		cd openssl_shared
 		info "winssl: Configure shared $sslflags"
-		set -x # echo the configure command
-		__CNF_LDLIBS=$SSPLIB CC=${warch}-w64-mingw32-gcc AR=${warch}-w64-mingw32-ar RANLIB=${warch}-w64-mingw32-ranlib WINDRES=${warch}-w64-mingw32-windres ./Configure --prefix="$sslsharedinstall" shared $sslflags || error_cleanup "OpenSSL Configure failed"
-		set +x
+		if test "$W64" = "no"; then
+			set -x # echo the configure command
+			__CNF_LDLIBS=$SSPLIB __CNF_LDFLAGS="-fno-stack-protector" CC=${warch}-w64-mingw32-gcc AR=${warch}-w64-mingw32-ar RANLIB=${warch}-w64-mingw32-ranlib WINDRES=${warch}-w64-mingw32-windres ./Configure --prefix="$sslsharedinstall" shared $sslflags || error_cleanup "OpenSSL Configure failed"
+			set +x
+		else
+			set -x # echo the configure command
+			__CNF_LDLIBS=$SSPLIB CC=${warch}-w64-mingw32-gcc AR=${warch}-w64-mingw32-ar RANLIB=${warch}-w64-mingw32-ranlib WINDRES=${warch}-w64-mingw32-windres ./Configure --prefix="$sslsharedinstall" shared $sslflags || error_cleanup "OpenSSL Configure failed"
+			set +x
+		fi
 		info "winssl: make"
 		make $MINJ || error_cleanup "OpenSSL crosscompile failed"
 		info "winssl: make install_sw"
@@ -315,7 +330,16 @@ if [ "$DOWIN" = "yes" ]; then
 		wxpinstall="`pwd`/wxpinstall"
 		cd expat-* || error_cleanup "no expat-X dir in tarball"
 		info "wxp: configure"
-		$configure --prefix="$wxpinstall" --exec-prefix="$wxpinstall" --bindir="$wxpinstall/bin" --includedir="$wxpinstall/include" --mandir="$wxpinstall/man" --libdir="$wxpinstall/lib"  || error_cleanup "libexpat configure failed"
+		if test "$W64" = "no"; then
+			# Disable stack-protector for 32-bit windows builds.
+			set -x # echo the configure command
+			$configure --prefix="$wxpinstall" --exec-prefix="$wxpinstall" --bindir="$wxpinstall/bin" --includedir="$wxpinstall/include" --mandir="$wxpinstall/man" --libdir="$wxpinstall/lib" LDFLAGS="-fno-stack-protector" || error_cleanup "libexpat configure failed"
+			set +x
+		else
+			set -x # echo the configure command
+			$configure --prefix="$wxpinstall" --exec-prefix="$wxpinstall" --bindir="$wxpinstall/bin" --includedir="$wxpinstall/include" --mandir="$wxpinstall/man" --libdir="$wxpinstall/lib"  || error_cleanup "libexpat configure failed"
+			set +x
+		fi
 		info "wxp: make"
 		make $MINJ || error_cleanup "libexpat crosscompile failed"
 		info "wxp: make install"
@@ -379,8 +403,8 @@ if [ "$DOWIN" = "yes" ]; then
     fi
     if test "$W64" = "no"; then
 		# Disable stack-protector for 32-bit windows builds.
-		echo "$configure"' --enable-debug --enable-static-exe --disable-flto --disable-gost '"$* $cross_flag" "$file_flag" "$file2_flag" "$file3_flag" CFLAGS='-O2 -g -fno-stack-protector'
-		$configure --enable-debug --enable-static-exe --disable-flto --disable-gost $* $cross_flag "$file_flag" "$file2_flag" "$file3_flag" CFLAGS='-O2 -g -fno-stack-protector'\
+		echo "$configure"' --enable-debug --enable-static-exe --disable-flto --disable-gost '"$* $cross_flag" "$file_flag" "$file2_flag" "$file3_flag" CFLAGS='-O2 -g -fno-stack-protector' LDFLAGS="-fno-stack-protector"
+		$configure --enable-debug --enable-static-exe --disable-flto --disable-gost $* $cross_flag "$file_flag" "$file2_flag" "$file3_flag" CFLAGS='-O2 -g -fno-stack-protector' LDFLAGS="-fno-stack-protector" \
 		|| error_cleanup "Could not configure"
     else
 		echo "$configure"' --enable-debug --enable-static-exe --disable-flto --disable-gost '"$* $cross_flag"
@@ -396,8 +420,8 @@ if [ "$DOWIN" = "yes" ]; then
     cd ../unbound_shared
     if test "$W64" = "no"; then
 	# Disable stack-protector for 32-bit windows builds.
-		echo "$configure"' --enable-debug --disable-flto --disable-gost '"$* $shared_cross_flag" "$file_flag" "$file2_flag" "$file3_flag" CFLAGS='-O2 -g -fno-stack-protector'
-		$configure --enable-debug --disable-flto --disable-gost $* $shared_cross_flag "$file_flag" "$file2_flag" "$file3_flag" CFLAGS='-O2 -g -fno-stack-protector'\
+		echo "$configure"' --enable-debug --disable-flto --disable-gost '"$* $shared_cross_flag" "$file_flag" "$file2_flag" "$file3_flag" CFLAGS='-O2 -g -fno-stack-protector' LDFLAGS="-fno-stack-protector"
+		$configure --enable-debug --disable-flto --disable-gost $* $shared_cross_flag "$file_flag" "$file2_flag" "$file3_flag" CFLAGS='-O2 -g -fno-stack-protector' LDFLAGS="-fno-stack-protector" \
 		|| error_cleanup "Could not configure"
     else
 		echo "$configure"' --enable-debug --disable-flto --disable-gost '"$* $shared_cross_flag"

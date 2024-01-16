@@ -1526,13 +1526,17 @@ if test x_$enable_static_exe = x_yes; then
 	if test "$on_mingw" = yes; then
 		staticexe="-all-static"
 		# for static compile, include gdi32 and zlib here.
-		if echo $LIBS | grep 'lgdi32' >/dev/null; then
+		if echo "$LIBS" | grep 'lgdi32' >/dev/null; then
 			:
 		else
 			LIBS="$LIBS -lgdi32"
 		fi
 		AC_CHECK_LIB([z], [compress], [ LIBS="$LIBS -lz" ])
-		LIBS="$LIBS -l:libssp.a"
+		if echo "$LIBS" | grep -e "libssp.a" -e "lssp" >/dev/null; then
+			:
+		else
+			LIBS="$LIBS -l:libssp.a"
+		fi
 	fi
 fi
 
@@ -1549,7 +1553,11 @@ if test x_$enable_fully_static = x_yes; then
 			LIBS="$LIBS -lgdi32"
 		fi
 		AC_CHECK_LIB([z], [compress], [ LIBS="$LIBS -lz" ])
-		LIBS="$LIBS -l:libssp.a"
+		if echo "$LIBS" | grep -e "libssp.a" -e "lssp" >/dev/null; then
+			:
+		else
+			LIBS="$LIBS -l:libssp.a"
+		fi
 	fi
 fi
 
