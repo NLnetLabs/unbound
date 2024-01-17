@@ -1,5 +1,6 @@
 17 January 2024: Wouter
 	- Update workflow for ports to use newer openssl on windows compile.
+	- Fix warning for windres on resource files due to redefinition.
 
 16 January 2024: Wouter
 	- Fix to link with libssp for libcrypto and getaddrinfo check for
