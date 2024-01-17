@@ -194,11 +194,10 @@ jobs:
           ls -l C:/msys64
           ls -l C:/msys64/usr
           ls -l C:/msys64/usr/bin
-          #echo "pacman -S perl"
-          #pacman -S perl
-          ls -l C:/msys64/usr/bin/pacman || echo no
-          echo "C:/msys64/usr/bin/perl ./Configure.fix no-shared no-asm -DOPENSSL_NO_CAPIENG mingw64 --prefix=\""$prepath/openssl\"""
-          C:/msys64/usr/bin/perl ./Configure.fix no-shared no-asm -DOPENSSL_NO_CAPIENG mingw64 --prefix="$prepath/openssl"
+          # pacman is used to install for msys2, with
+          # C:/msys64/usr/bin/pacman -S perl
+          echo "C:/msys64/usr/bin/perl ./Configure.fix no-shared no-asm -DOPENSSL_NO_CAPIENG mingw64 --prefix=\""$prepath/openssl"\" PERL=\"C:/msys64/usr/bin/perl\""
+          C:/msys64/usr/bin/perl ./Configure.fix no-shared no-asm -DOPENSSL_NO_CAPIENG mingw64 --prefix="$prepath/openssl" PERL="C:/msys64/usr/bin/perl"
           # make the libs only, build faster
           echo "make build_libs"
           #make
