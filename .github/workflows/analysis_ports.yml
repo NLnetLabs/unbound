@@ -181,12 +181,10 @@ jobs:
           export LEX="win_flex"
           echo 'YACC="win_bison -y"'
           export YACC="win_bison -y"
-          echo "ppm install Locale-Maketext-Simple"
-          ppm install Locale-Maketext-Simple
-          #echo "curl cpanm"
-          #curl -L -k -s -S -o cpanm https://cpanmin.us/
-          #echo "perl cpanm App::cpanminus Locale::Maketext::Simple"
-          #perl cpanm App::cpanminus Locale::Maketext::Simple
+          echo "curl cpanm"
+          curl -L -k -s -S -o cpanm https://cpanmin.us/
+          echo "perl cpanm App::cpanminus Locale::Maketext::Simple"
+          perl cpanm App::cpanminus Locale::Maketext::Simple
           #echo "perl cpanm Pod::Usage"
           #perl cpanm Pod::Usage
           mkdir openssl
