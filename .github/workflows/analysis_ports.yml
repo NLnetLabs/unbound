@@ -192,12 +192,11 @@ jobs:
           sed -e 's/use Pod::Usage//' < Configure > Configure.fix
           echo "ls C:/msys64"
           ls -l C:/msys64
-          ls -l C:/msys64/bin
           ls -l C:/msys64/usr
           ls -l C:/msys64/usr/bin
           #echo "pacman -S perl"
           #pacman -S perl
-          ls -l C:/msys64/usr/bin/pacman
+          ls -l C:/msys64/usr/bin/pacman || echo no
           echo "C:/msys64/usr/bin/perl ./Configure.fix no-shared no-asm -DOPENSSL_NO_CAPIENG mingw64 --prefix=\""$prepath/openssl\"""
           C:/msys64/usr/bin/perl ./Configure.fix no-shared no-asm -DOPENSSL_NO_CAPIENG mingw64 --prefix="$prepath/openssl"
           # make the libs only, build faster
