@@ -181,19 +181,6 @@ jobs:
           export LEX="win_flex"
           echo 'YACC="win_bison -y"'
           export YACC="win_bison -y"
-          echo "dir strawberry perl"
-          ls -l C:/Strawberry/perl
-          ls -l C:/Strawberry/perl/bin
-          echo 'PERL5LIB="/C/Strawberry/perl/site/lib:/C/Strawberry/perl/vendor/lib:/C/Strawberry/perl/lib"'
-          export PERL5LIB="/C/Strawberry/perl/site/lib:/C/Strawberry/perl/vendor/lib:/C/Strawberry/perl/lib"
-          echo "attempt perl in strawberry"
-          C:/Strawberry/perl/bin/perl -h
-          #echo "curl cpanm"
-          #curl -L -k -s -S -o cpanm https://cpanmin.us/
-          #echo "perl cpanm Locale::Maketext::Simple"
-          #perl cpanm Locale::Maketext::Simple
-          #echo "perl cpanm Pod::Usage"
-          #perl cpanm Pod::Usage
           mkdir openssl
           echo "curl openssl"
           curl -L -k -s -S -o openssl-3.2.0.tar.gz https://www.openssl.org/source/openssl-3.2.0.tar.gz
@@ -203,8 +190,8 @@ jobs:
           # from the Configure script
           echo "Fixup ./Configure by removing use Pod::Usage require"
           sed -e 's/use Pod::Usage//' < Configure > Configure.fix
-          echo "./Configure.fix no-shared no-asm -DOPENSSL_NO_CAPIENG mingw64 --prefix=\""$prepath/openssl\"""
-          ./Configure.fix no-shared no-asm -DOPENSSL_NO_CAPIENG mingw64 --prefix="$prepath/openssl"
+          echo "C:/Strawberry/perl/bin/perl ./Configure.fix no-shared no-asm -DOPENSSL_NO_CAPIENG mingw64 --prefix=\""$prepath/openssl\"""
+          C:/Strawberry/perl/bin/perl ./Configure.fix no-shared no-asm -DOPENSSL_NO_CAPIENG mingw64 --prefix="$prepath/openssl"
           # make the libs only, build faster
           echo "make build_libs"
           #make
