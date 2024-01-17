@@ -183,10 +183,11 @@ jobs:
           export YACC="win_bison -y"
           echo "dir strawberry perl"
           ls -l C:/Strawberry/perl
-          echo 'PERL5LIB="C:/Strawberry/perl/site/lib;C:/Strawberry/perl/vendor/lib;C:/Strawberry/perl/lib"'
-          export PERL5LIB="C:/Strawberry/perl/site/lib;C:/Strawberry/perl/vendor/lib C:/Strawberry/perl/lib"
-          echo "perl -V:path_sep"
-          perl -V:path_sep
+          ls -l C:/Strawberry/perl/bin
+          echo 'PERL5LIB="/C/Strawberry/perl/site/lib:/C/Strawberry/perl/vendor/lib:/C/Strawberry/perl/lib"'
+          export PERL5LIB="/C/Strawberry/perl/site/lib:/C/Strawberry/perl/vendor/lib:/C/Strawberry/perl/lib"
+          echo "attempt perl in strawberry"
+          C:/Strawberry/perl/bin/perl -h
           #echo "curl cpanm"
           #curl -L -k -s -S -o cpanm https://cpanmin.us/
           #echo "perl cpanm Locale::Maketext::Simple"
