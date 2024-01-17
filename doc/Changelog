@@ -1,3 +1,6 @@
+17 January 2024: Wouter
+	- Update workflow for ports to use newer openssl on windows compile.
+
 16 January 2024: Wouter
 	- Fix to link with libssp for libcrypto and getaddrinfo check for
 	  only header. Also update crosscompile to remove ssp for 32bit.
