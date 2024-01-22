@@ -1,3 +1,18 @@
+22 January 2024: Wouter
+	- Fix for #997: Print details for SSL certificate failure.
+
+17 January 2024: Wouter
+	- Update workflow for ports to use newer openssl on windows compile.
+	- Fix warning for windres on resource files due to redefinition.
+
+16 January 2024: Wouter
+	- Fix to link with libssp for libcrypto and getaddrinfo check for
+	  only header. Also update crosscompile to remove ssp for 32bit.
+	- Merge #993: Update b.root-servers.net also in example config file.
+
+15 January 2024: Wouter
+	- Fix to link with -lcrypt32 for OpenSSL 3.2.0 on Windows.
+
 9 January 2024: Wouter
 	- Merge #988: Fix NLnetLabs#981: dump_cache truncates large records.
 

@@ -1169,7 +1169,7 @@ remote-control:
 # sources of notifies.
 # auth-zone:
 #	name: "."
-#	primary: 199.9.14.201         # b.root-servers.net
+#	primary: 170.247.170.2        # b.root-servers.net
 #	primary: 192.33.4.12          # c.root-servers.net
 #	primary: 199.7.91.13          # d.root-servers.net
 #	primary: 192.5.5.241          # f.root-servers.net
@@ -1177,7 +1177,7 @@ remote-control:
 #	primary: 193.0.14.129         # k.root-servers.net
 #	primary: 192.0.47.132         # xfr.cjr.dns.icann.org
 #	primary: 192.0.32.132         # xfr.lax.dns.icann.org
-#	primary: 2001:500:200::b      # b.root-servers.net
+#	primary: 2801:1b8:10::b       # b.root-servers.net
 #	primary: 2001:500:2::c        # c.root-servers.net
 #	primary: 2001:500:2d::d       # d.root-servers.net
 #	primary: 2001:500:2f::f       # f.root-servers.net
