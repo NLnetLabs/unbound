@@ -1,3 +1,7 @@
+22 January 2024: Yorgos
+	- Update error printout for duplicate trust anchors to include the
+	  trust anchor name (relates to #920).
+
 22 January 2024: Wouter
 	- Fix for #997: Print details for SSL certificate failure.
 
