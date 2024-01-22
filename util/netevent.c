@@ -1672,8 +1672,13 @@ ssl_handshake(struct comm_point* c)
 		} else {
 			unsigned long err = ERR_get_error();
 			if(!squelch_err_ssl_handshake(err)) {
+				long vr;
 				log_crypto_err_io_code("ssl handshake failed",
 					want, err);
+				if((vr=SSL_get_verify_result(c->ssl)) != 0)
+					log_err("ssl handshake cert error: %s",
+						X509_verify_cert_error_string(
+						vr));
 				log_addr(VERB_OPS, "ssl handshake failed",
 					&c->repinfo.remote_addr,
 					c->repinfo.remote_addrlen);

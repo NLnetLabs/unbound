@@ -1,3 +1,6 @@
+22 January 2024: Wouter
+	- Fix for #997: Print details for SSL certificate failure.
+
 17 January 2024: Wouter
 	- Update workflow for ports to use newer openssl on windows compile.
 	- Fix warning for windres on resource files due to redefinition.
