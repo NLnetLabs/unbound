@@ -1,3 +1,8 @@
+23 January 2024: Yorgos
+	- Update message TTL when using cached RRSETs. It could result in
+	  non-expired messages with expired RRSETs (non-usable messages by
+	  Unbound).
+
 22 January 2024: Yorgos
 	- Update error printout for duplicate trust anchors to include the
 	  trust anchor name (relates to #920).
