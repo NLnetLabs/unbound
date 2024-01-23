@@ -3766,7 +3766,7 @@ fr_construct_clear(struct fast_reload_construct* ct)
 	hints_delete(ct->hints);
 	/* Delete the log identity here so that the global value is not
 	 * reset by config_delete. */
-	if(ct->oldcfg->log_identity) {
+	if(ct->oldcfg && ct->oldcfg->log_identity) {
 		free(ct->oldcfg->log_identity);
 		ct->oldcfg->log_identity = NULL;
 	}
@@ -3847,6 +3847,11 @@ fr_reload_config(struct fast_reload_thread* fr, struct config_file* newcfg,
 {
 	struct daemon* daemon = fr->worker->daemon;
 	struct module_env* env = daemon->env;
+
+	/* These are constructed in the fr_construct_from_config routine. */
+	log_assert(ct->oldcfg);
+	log_assert(ct->fwds);
+	log_assert(ct->hints);
 
 	/* Grab big locks to satisfy lock conditions. */
 	lock_rw_wrlock(&ct->fwds->lock);
