@@ -30,15 +30,24 @@ AC_DEFUN([dt_DNSTAP],
 	  fi
 	  LDFLAGS="$LDFLAGS -L$withval/lib"
 	], [
-	  # workaround for protobuf-c includes at old dir before protobuf-c-1.0.0
-	  if test -f /usr/include/google/protobuf-c/protobuf-c.h; then
-	    CFLAGS="$CFLAGS -I/usr/include/google"
-	  else
-	    if test -f /usr/local/include/google/protobuf-c/protobuf-c.h; then
-	      CFLAGS="$CFLAGS -I/usr/local/include/google"
-	      LDFLAGS="$LDFLAGS -L/usr/local/lib"
-	    fi
-	  fi
+      ifdef([PKG_CHECK_MODULES], [
+        PKG_CHECK_MODULES([PROTOBUFC], [libprotobuf-c], [
+          CFLAGS="$CFLAGS $PROTOBUFC_CFLAGS"
+          LIBS="$LIBS $PROTOBUFC_LIBS"
+        ], [
+          AC_MSG_ERROR([The protobuf-c package was not found with pkg-config. Please install protobuf-c!])
+        ])
+      ], [
+        # workaround for protobuf-c includes at old dir before protobuf-c-1.0.0
+        if test -f /usr/include/google/protobuf-c/protobuf-c.h; then
+          CFLAGS="$CFLAGS -I/usr/include/google"
+        else
+          if test -f /usr/local/include/google/protobuf-c/protobuf-c.h; then
+            CFLAGS="$CFLAGS -I/usr/local/include/google"
+            LDFLAGS="$LDFLAGS -L/usr/local/lib"
+          fi
+        fi
+      ])
     ])
     AC_SEARCH_LIBS([protobuf_c_message_pack], [protobuf-c], [],
       AC_MSG_ERROR([The protobuf-c library was not found. Please install the development libraries for protobuf-c!]))
