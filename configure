@@ -655,6 +655,8 @@ DNSTAP_SOCKET_TESTBIN
 DNSTAP_SOCKET_PATH
 opt_dnstap_socket_path
 ENABLE_DNSTAP
+PROTOBUFC_LIBS
+PROTOBUFC_CFLAGS
 PROTOC_C
 UBSYMS
 EXTRALINK
@@ -926,7 +928,9 @@ SYSTEMD_CFLAGS
 SYSTEMD_LIBS
 SYSTEMD_DAEMON_CFLAGS
 SYSTEMD_DAEMON_LIBS
-PYTHON_VERSION'
+PYTHON_VERSION
+PROTOBUFC_CFLAGS
+PROTOBUFC_LIBS'
 
 
 # Initialize some variables set by options.
@@ -1718,6 +1722,10 @@ Some influential environment variables:
               The installed Python version to use, for example '2.3'. This
               string will be appended to the Python interpreter canonical
               name.
+  PROTOBUFC_CFLAGS
+              C compiler flags for PROTOBUFC, overriding pkg-config
+  PROTOBUFC_LIBS
+              linker flags for PROTOBUFC, overriding pkg-config
 
 Use these variables to override the choices made by `configure' or to help
 it to find libraries and programs with nonstandard names/locations.
@@ -21392,15 +21400,86 @@ if test "${with_protobuf_c+set}" = set; then :
 
 else
 
-	  # workaround for protobuf-c includes at old dir before protobuf-c-1.0.0
-	  if test -f /usr/include/google/protobuf-c/protobuf-c.h; then
-	    CFLAGS="$CFLAGS -I/usr/include/google"
-	  else
-	    if test -f /usr/local/include/google/protobuf-c/protobuf-c.h; then
-	      CFLAGS="$CFLAGS -I/usr/local/include/google"
-	      LDFLAGS="$LDFLAGS -L/usr/local/lib"
-	    fi
-	  fi
+
+
+pkg_failed=no
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for PROTOBUFC" >&5
+$as_echo_n "checking for PROTOBUFC... " >&6; }
+
+if test -n "$PROTOBUFC_CFLAGS"; then
+    pkg_cv_PROTOBUFC_CFLAGS="$PROTOBUFC_CFLAGS"
+ elif test -n "$PKG_CONFIG"; then
+    if test -n "$PKG_CONFIG" && \
+    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"libprotobuf-c\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "libprotobuf-c") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; then
+  pkg_cv_PROTOBUFC_CFLAGS=`$PKG_CONFIG --cflags "libprotobuf-c" 2>/dev/null`
+		      test "x$?" != "x0" && pkg_failed=yes
+else
+  pkg_failed=yes
+fi
+ else
+    pkg_failed=untried
+fi
+if test -n "$PROTOBUFC_LIBS"; then
+    pkg_cv_PROTOBUFC_LIBS="$PROTOBUFC_LIBS"
+ elif test -n "$PKG_CONFIG"; then
+    if test -n "$PKG_CONFIG" && \
+    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"libprotobuf-c\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "libprotobuf-c") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; then
+  pkg_cv_PROTOBUFC_LIBS=`$PKG_CONFIG --libs "libprotobuf-c" 2>/dev/null`
+		      test "x$?" != "x0" && pkg_failed=yes
+else
+  pkg_failed=yes
+fi
+ else
+    pkg_failed=untried
+fi
+
+
+
+if test $pkg_failed = yes; then
+   	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+
+if $PKG_CONFIG --atleast-pkgconfig-version 0.20; then
+        _pkg_short_errors_supported=yes
+else
+        _pkg_short_errors_supported=no
+fi
+        if test $_pkg_short_errors_supported = yes; then
+	        PROTOBUFC_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors --cflags --libs "libprotobuf-c" 2>&1`
+        else
+	        PROTOBUFC_PKG_ERRORS=`$PKG_CONFIG --print-errors --cflags --libs "libprotobuf-c" 2>&1`
+        fi
+	# Put the nasty error message in config.log where it belongs
+	echo "$PROTOBUFC_PKG_ERRORS" >&5
+
+
+          as_fn_error $? "The protobuf-c package was not found with pkg-config. Please install protobuf-c!" "$LINENO" 5
+
+elif test $pkg_failed = untried; then
+     	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+
+          as_fn_error $? "The protobuf-c package was not found with pkg-config. Please install protobuf-c!" "$LINENO" 5
+
+else
+	PROTOBUFC_CFLAGS=$pkg_cv_PROTOBUFC_CFLAGS
+	PROTOBUFC_LIBS=$pkg_cv_PROTOBUFC_LIBS
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+
+          CFLAGS="$CFLAGS $PROTOBUFC_CFLAGS"
+          LIBS="$LIBS $PROTOBUFC_LIBS"
+
+fi
+
 
 fi
 

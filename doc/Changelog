@@ -1,3 +1,6 @@
+30 January 2024: Wouter
+	- Merge #999: Search for protobuf-c with pkg-config.
+
 23 January 2024: Yorgos
 	- Update message TTL when using cached RRSETs. It could result in
 	  non-expired messages with expired RRSETs (non-usable messages by
