@@ -747,7 +747,7 @@ generated DNS Cookie, allowing clients to retry with that DNS Cookie.
 The \fIallow_cookie\fR action will also accept requests over stateful
 transports, regardless of the presence of an DNS Cookie and regardless of the
 \fBanswer\-cookie\fR setting.
-The non cookie UDP traffic receives REFUSED responses with the TC flag set,
+UDP queries without a DNS Cookie receive REFUSED responses with the TC flag set,
 that may trigger fall back to TCP for those clients.
 .IP
 By default only localhost is \fIallow\fRed, the rest is \fIrefuse\fRd.
