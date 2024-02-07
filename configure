@@ -23346,7 +23346,7 @@ else $as_nop
 fi
 
 
-    if test "x$opt_dnstap" == "xno"; then
+    if test "x$opt_dnstap" != "xno"; then
         # Extract the first word of "protoc-c", so it can be a program name with args.
 set dummy protoc-c; ac_word=$2
 { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
