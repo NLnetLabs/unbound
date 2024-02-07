@@ -17,7 +17,7 @@ AC_DEFUN([dt_DNSTAP],
         [opt_dnstap_socket_path=$withval],
         [opt_dnstap_socket_path="$1"])
 
-    if test "x$opt_dnstap" == "xno"; then
+    if test "x$opt_dnstap" != "xno"; then
         AC_PATH_PROG([PROTOC_C], [protoc-c])
         if test -z "$PROTOC_C"; then
           AC_MSG_ERROR([The protoc-c program was not found. Please install protobuf-c!])
