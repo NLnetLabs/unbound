@@ -1,3 +1,6 @@
+7 February 2024: Yorgos
+	- Fix #1006: Can't find protobuf-c package since #999.
+
 30 January 2024: Wouter
 	- Merge #999: Search for protobuf-c with pkg-config.
 
