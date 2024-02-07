@@ -738,7 +738,7 @@ the cache contents (for malicious acts).  However, nonrecursive queries can
 also be a valuable debugging tool (when you want to examine the cache
 contents). In that case use \fIallow_snoop\fR for your administration host.
 .IP
-The \fIallow_cookie\fR action allows only access to UDP queries that contain a
+The \fIallow_cookie\fR action allows access only to UDP queries that contain a
 valid DNS Cookie as specified in RFC 7873 and RFC 9018, when the
 \fBanswer\-cookie\fR option is enabled.
 UDP queries containing only a DNS Client Cookie and no Server Cookie, or an
@@ -747,8 +747,8 @@ generated DNS Cookie, allowing clients to retry with that DNS Cookie.
 The \fIallow_cookie\fR action will also accept requests over stateful
 transports, regardless of the presence of an DNS Cookie and regardless of the
 \fBanswer\-cookie\fR setting.
-The non cookie UDP traffic receives REFUSED responses with the TC flag set,
-that may trigger fall back TCP for those clients.
+UDP queries without a DNS Cookie receive REFUSED responses with the TC flag set,
+that may trigger fall back to TCP for those clients.
 .IP
 By default only localhost is \fIallow\fRed, the rest is \fIrefuse\fRd.
 The default is \fIrefuse\fRd, because that is protocol\-friendly. The DNS
