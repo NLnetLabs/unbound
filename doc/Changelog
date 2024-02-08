@@ -1,3 +1,6 @@
+8 February 2024: Wouter
+	- Fix documentation for access-control in the unbound.conf man page.
+
 7 February 2024: Yorgos
 	- Fix #1006: Can't find protobuf-c package since #999.
 
