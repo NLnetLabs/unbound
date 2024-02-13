@@ -180,6 +180,7 @@ verifytest_rrset(struct module_env* env, struct val_env* ve,
 	enum sec_status sec;
 	char* reason = NULL;
 	uint8_t sigalg[ALGO_NEEDS_MAX+1];
+	int verified = 0;
 	if(vsig) {
 		log_nametypeclass(VERB_QUERY, "verify of rrset",
 			rrset->rk.dname, ntohs(rrset->rk.type),
@@ -188,7 +189,7 @@ verifytest_rrset(struct module_env* env, struct val_env* ve,
 	setup_sigalg(dnskey, sigalg); /* check all algorithms in the dnskey */
 	/* ok to give null as qstate here, won't be used for answer section. */
 	sec = dnskeyset_verify_rrset(env, ve, rrset, dnskey, sigalg, &reason, NULL,
-		LDNS_SECTION_ANSWER, NULL);
+		LDNS_SECTION_ANSWER, NULL, &verified);
 	if(vsig) {
 		printf("verify outcome is: %s %s\n", sec_status_to_string(sec),
 			reason?reason:"");

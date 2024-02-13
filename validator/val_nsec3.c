@@ -1294,6 +1294,7 @@ list_is_secure(struct module_env* env, struct val_env* ve,
 {
 	struct packed_rrset_data* d;
 	size_t i;
+	int verified = 0;
 	for(i=0; i<num; i++) {
 		d = (struct packed_rrset_data*)list[i]->entry.data;
 		if(list[i]->rk.type != htons(LDNS_RR_TYPE_NSEC3))
@@ -1304,7 +1305,8 @@ list_is_secure(struct module_env* env, struct val_env* ve,
 		if(d->security == sec_status_secure)
 			continue;
 		d->security = val_verify_rrset_entry(env, ve, list[i], kkey,
-			reason, reason_bogus, LDNS_SECTION_AUTHORITY, qstate);
+			reason, reason_bogus, LDNS_SECTION_AUTHORITY, qstate,
+			&verified);
 		if(d->security != sec_status_secure) {
 			verbose(VERB_ALGO, "NSEC3 did not verify");
 			return 0;

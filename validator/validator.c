@@ -64,6 +64,11 @@
 #include "sldns/wire2str.h"
 #include "sldns/str2wire.h"
 
+/** Max number of RRSIGs to validate at once, suspend query for later. */
+#define MAX_VALIDATE_AT_ONCE 8
+/** Max number of validation suspends allowed, error out otherwise. */
+#define MAX_VALIDATION_SUSPENDS 16
+
 /* forward decl for cache response and normal super inform calls of a DS */
 static void process_ds_response(struct module_qstate* qstate, 
 	struct val_qstate* vq, int id, int rcode, struct dns_msg* msg, 
@@ -290,6 +295,21 @@ val_new(struct module_qstate* qstate, int id)
 	qstate->minfo[id] = vq;
 	vq->state = VAL_INIT_STATE;
 	return val_new_getmsg(qstate, vq);
+}
+
+/** reset validator query state for query restart */
+static void
+val_restart(struct val_qstate* vq)
+{
+	struct comm_timer* temp_timer;
+	int restart_count;
+	if(!vq) return;
+	temp_timer = vq->msg_signatures_timer;
+	restart_count = vq->restart_count+1;
+	memset(vq, 0, sizeof(*vq));
+	vq->msg_signatures_timer = temp_timer;
+	vq->restart_count = restart_count;
+	vq->state = VAL_INIT_STATE;
 }
 
 /**
@@ -598,30 +618,42 @@ prime_trust_anchor(struct module_qstate* qstate, struct val_qstate* vq,
  * completed.
  * 
  * @param qstate: query state.
+ * @param vq: validator query state.
  * @param env: module env for verify.
  * @param ve: validator env for verify.
  * @param qchase: query that was made.
  * @param chase_reply: answer to validate.
  * @param key_entry: the key entry, which is trusted, and which matches
  * 	the signer of the answer. The key entry isgood().
+ * @param suspend: returned true if the task takes to long and needs to
+ * 	suspend to continue the effort later.
  * @return false if any of the rrsets in the an or ns sections of the message 
  * 	fail to verify. The message is then set to bogus.
  */
 static int
-validate_msg_signatures(struct module_qstate* qstate, struct module_env* env,
-	struct val_env* ve, struct query_info* qchase,
-	struct reply_info* chase_reply, struct key_entry_key* key_entry)
+validate_msg_signatures(struct module_qstate* qstate, struct val_qstate* vq,
+	struct module_env* env, struct val_env* ve, struct query_info* qchase,
+	struct reply_info* chase_reply, struct key_entry_key* key_entry,
+	int* suspend)
 {
 	uint8_t* sname;
 	size_t i, slen;
 	struct ub_packed_rrset_key* s;
 	enum sec_status sec;
-	int dname_seen = 0;
+	int dname_seen = 0, num_verifies = 0, verified, have_state = 0;
 	char* reason = NULL;
 	sldns_ede_code reason_bogus = LDNS_EDE_DNSSEC_BOGUS;
+	*suspend = 0;
+	if(vq->msg_signatures_state) {
+		/* Pick up the state, and reset it, may not be needed now. */
+		vq->msg_signatures_state = 0;
+		have_state = 1;
+	}
 
 	/* validate the ANSWER section */
 	for(i=0; i<chase_reply->an_numrrsets; i++) {
+		if(have_state && i <= vq->msg_signatures_index)
+			continue;
 		s = chase_reply->rrsets[i];
 		/* Skip the CNAME following a (validated) DNAME.
 		 * Because of the normalization routines in the iterator, 
@@ -640,7 +672,7 @@ validate_msg_signatures(struct module_qstate* qstate, struct module_env* env,
 
 		/* Verify the answer rrset */
 		sec = val_verify_rrset_entry(env, ve, s, key_entry, &reason,
-			&reason_bogus, LDNS_SECTION_ANSWER, qstate);
+			&reason_bogus, LDNS_SECTION_ANSWER, qstate, &verified);
 		/* If the (answer) rrset failed to validate, then this 
 		 * message is BAD. */
 		if(sec != sec_status_secure) {
@@ -665,14 +697,33 @@ validate_msg_signatures(struct module_qstate* qstate, struct module_env* env,
 			ntohs(s->rk.type) == LDNS_RR_TYPE_DNAME) {
 			dname_seen = 1;
 		}
+		num_verifies += verified;
+		if(num_verifies > MAX_VALIDATE_AT_ONCE &&
+			i+1 < (env->cfg->val_clean_additional?
+			chase_reply->an_numrrsets+chase_reply->ns_numrrsets:
+			chase_reply->rrset_count)) {
+			/* If the number of RRSIGs exceeds the maximum in
+			 * one go, suspend. Only suspend if there is a next
+			 * rrset to verify, i+1<loopmax. Store where to
+			 * continue later. */
+			*suspend = 1;
+			vq->msg_signatures_state = 1;
+			vq->msg_signatures_index = i;
+			verbose(VERB_ALGO, "msg signature validation "
+				"suspended");
+			return 0;
+		}
 	}
 
 	/* validate the AUTHORITY section */
 	for(i=chase_reply->an_numrrsets; i<chase_reply->an_numrrsets+
 		chase_reply->ns_numrrsets; i++) {
+		if(have_state && i <= vq->msg_signatures_index)
+			continue;
 		s = chase_reply->rrsets[i];
 		sec = val_verify_rrset_entry(env, ve, s, key_entry, &reason,
-			&reason_bogus, LDNS_SECTION_AUTHORITY, qstate);
+			&reason_bogus, LDNS_SECTION_AUTHORITY, qstate,
+			&verified);
 		/* If anything in the authority section fails to be secure, 
 		 * we have a bad message. */
 		if(sec != sec_status_secure) {
@@ -686,6 +737,18 @@ validate_msg_signatures(struct module_qstate* qstate, struct module_env* env,
 			update_reason_bogus(chase_reply, reason_bogus);
 			return 0;
 		}
+		num_verifies += verified;
+		if(num_verifies > MAX_VALIDATE_AT_ONCE &&
+			i+1 < (env->cfg->val_clean_additional?
+			chase_reply->an_numrrsets+chase_reply->ns_numrrsets:
+			chase_reply->rrset_count)) {
+			*suspend = 1;
+			vq->msg_signatures_state = 1;
+			vq->msg_signatures_index = i;
+			verbose(VERB_ALGO, "msg signature validation "
+				"suspended");
+			return 0;
+		}
 	}
 
 	/* If set, the validator should clean the additional section of
@@ -695,19 +758,99 @@ validate_msg_signatures(struct module_qstate* qstate, struct module_env* env,
 	/* attempt to validate the ADDITIONAL section rrsets */
 	for(i=chase_reply->an_numrrsets+chase_reply->ns_numrrsets; 
 		i<chase_reply->rrset_count; i++) {
+		if(have_state && i <= vq->msg_signatures_index)
+			continue;
 		s = chase_reply->rrsets[i];
 		/* only validate rrs that have signatures with the key */
 		/* leave others unchecked, those get removed later on too */
 		val_find_rrset_signer(s, &sname, &slen);
 
+		verified = 0;
 		if(sname && query_dname_compare(sname, key_entry->name)==0)
 			(void)val_verify_rrset_entry(env, ve, s, key_entry,
-				&reason, NULL, LDNS_SECTION_ADDITIONAL, qstate);
+				&reason, NULL, LDNS_SECTION_ADDITIONAL, qstate,
+				&verified);
 		/* the additional section can fail to be secure, 
 		 * it is optional, check signature in case we need
 		 * to clean the additional section later. */
+		num_verifies += verified;
+		if(num_verifies > MAX_VALIDATE_AT_ONCE &&
+			i+1 < chase_reply->rrset_count) {
+			*suspend = 1;
+			vq->msg_signatures_state = 1;
+			vq->msg_signatures_index = i;
+			verbose(VERB_ALGO, "msg signature validation "
+				"suspended");
+			return 0;
+		}
 	}
 
+	return 1;
+}
+
+void
+validate_msg_signatures_timer_cb(void* arg)
+{
+	struct module_qstate* qstate = (struct module_qstate*)arg;
+	verbose(VERB_ALGO, "validate_msg_signatures timer, continue");
+	mesh_run(qstate->env->mesh, qstate->mesh_info, module_event_pass,
+		NULL);
+}
+
+/** Setup timer to continue validation of msg signatures later */
+static int
+validate_msg_signatures_setup_timer(struct module_qstate* qstate,
+	struct val_qstate* vq, int id)
+{
+	struct timeval tv;
+	int usec, slack, base;
+	if(vq->suspend_count >= MAX_VALIDATION_SUSPENDS) {
+		verbose(VERB_ALGO, "validate_msg_signatures_setup_timer: "
+			"reached MAX_VALIDATION_SUSPENDS (%d); error out",
+			MAX_VALIDATION_SUSPENDS);
+		errinf(qstate, "max validation suspends reached, "
+			"too many RRSIG validations");
+		return 0;
+	}
+	vq->state = VAL_VALIDATE_STATE;
+	qstate->ext_state[id] = module_wait_reply;
+	if(!vq->msg_signatures_timer) {
+		vq->msg_signatures_timer = comm_timer_create(
+			qstate->env->worker_base,
+			validate_msg_signatures_timer_cb, qstate);
+		if(!vq->msg_signatures_timer) {
+			log_err("validate_msg_signatures_setup_timer: "
+				"out of memory for comm_timer_create");
+			return 0;
+		}
+	}
+	/* The timer is activated later, after other events in the event
+	 * loop have been processed. The query state can also be deleted,
+	 * when the list is full and query states are dropped. */
+	/* Extend wait time if there are a lot of queries or if this one
+	 * is taking long, to keep around cpu time for ordinary queries. */
+	usec = 50000; /* 50 msec */
+	slack = 0;
+	if(qstate->env->mesh->all.count >= qstate->env->mesh->max_reply_states)
+		slack += 3;
+	else if(qstate->env->mesh->all.count >= qstate->env->mesh->max_reply_states/2)
+		slack += 2;
+	else if(qstate->env->mesh->all.count >= qstate->env->mesh->max_reply_states/4)
+		slack += 1;
+	if(vq->suspend_count > 3)
+		slack += 3;
+	else if(vq->suspend_count > 0)
+		slack += vq->suspend_count;
+	if(slack != 0 && slack <= 12 /* No numeric overflow. */) {
+		usec = usec << slack;
+	}
+	/* Spread such timeouts within 90%-100% of the original timer. */
+	base = usec * 9/10;
+	usec = base + ub_random_max(qstate->env->rnd, usec-base);
+	tv.tv_usec = (usec % 1000000);
+	tv.tv_sec = (usec / 1000000);
+	vq->suspend_count ++;
+	comm_timer_set(vq->msg_signatures_timer, &tv);
 	return 1;
 }
 
@@ -1875,7 +2018,7 @@ processValidate(struct module_qstate* qstate, struct val_qstate* vq,
 	struct val_env* ve, int id)
 {
 	enum val_classification subtype;
-	int rcode;
+	int rcode, suspend;
 
 	if(!vq->key_entry) {
 		verbose(VERB_ALGO, "validate: no key entry, failed");
@@ -1932,8 +2075,14 @@ processValidate(struct module_qstate* qstate, struct val_qstate* vq,
 
 	/* check signatures in the message; 
 	 * answer and authority must be valid, additional is only checked. */
-	if(!validate_msg_signatures(qstate, qstate->env, ve, &vq->qchase, 
-		vq->chase_reply, vq->key_entry)) {
+	if(!validate_msg_signatures(qstate, vq, qstate->env, ve, &vq->qchase,
+		vq->chase_reply, vq->key_entry, &suspend)) {
+		if(suspend) {
+			if(!validate_msg_signatures_setup_timer(qstate, vq,
+				id))
+				return val_error(qstate, id);
+			return 0;
+		}
 		/* workaround bad recursor out there that truncates (even
 		 * with EDNS4k) to 512 by removing RRSIG from auth section
 		 * for positive replies*/
@@ -2129,16 +2278,13 @@ processFinished(struct module_qstate* qstate, struct val_qstate* vq,
 	if(vq->orig_msg->rep->security == sec_status_bogus) {
 		/* see if we can try again to fetch data */
 		if(vq->restart_count < ve->max_restart) {
-			int restart_count = vq->restart_count+1;
 			verbose(VERB_ALGO, "validation failed, "
 				"blacklist and retry to fetch data");
 			val_blacklist(&qstate->blacklist, qstate->region, 
 				qstate->reply_origin, 0);
 			qstate->reply_origin = NULL;
 			qstate->errinf = NULL;
-			memset(vq, 0, sizeof(*vq));
-			vq->restart_count = restart_count;
-			vq->state = VAL_INIT_STATE;
+			val_restart(vq);
 			verbose(VERB_ALGO, "pass back to next module");
 			qstate->ext_state[id] = module_restart_next;
 			return 0;
@@ -2476,6 +2622,7 @@ ds_response_to_ke(struct module_qstate* qstate, struct val_qstate* vq,
 	char* reason = NULL;
 	sldns_ede_code reason_bogus = LDNS_EDE_DNSSEC_BOGUS;
 	enum val_classification subtype;
+	int verified;
 	if(rcode != LDNS_RCODE_NOERROR) {
 		char rc[16];
 		rc[0]=0;
@@ -2506,7 +2653,7 @@ ds_response_to_ke(struct module_qstate* qstate, struct val_qstate* vq,
 		/* Verify only returns BOGUS or SECURE. If the rrset is 
 		 * bogus, then we are done. */
 		sec = val_verify_rrset_entry(qstate->env, ve, ds,
-			vq->key_entry, &reason, &reason_bogus, LDNS_SECTION_ANSWER, qstate);
+			vq->key_entry, &reason, &reason_bogus, LDNS_SECTION_ANSWER, qstate, &verified);
 		if(sec != sec_status_secure) {
 			verbose(VERB_DETAIL, "DS rrset in DS response did "
 				"not verify");
@@ -2652,7 +2799,7 @@ ds_response_to_ke(struct module_qstate* qstate, struct val_qstate* vq,
 		}
 		sec = val_verify_rrset_entry(qstate->env, ve, cname,
 			vq->key_entry, &reason, &reason_bogus,
-			LDNS_SECTION_ANSWER, qstate);
+			LDNS_SECTION_ANSWER, qstate, &verified);
 		if(sec == sec_status_secure) {
 			verbose(VERB_ALGO, "CNAME validated, "
 				"proof that DS does not exist");
@@ -2981,8 +3128,15 @@ val_inform_super(struct module_qstate* qstate, int id,
 void
 val_clear(struct module_qstate* qstate, int id)
 {
+	struct val_qstate* vq;
 	if(!qstate)
 		return;
+	vq = (struct val_qstate*)qstate->minfo[id];
+	if(vq) {
+		if(vq->msg_signatures_timer) {
+			comm_timer_delete(vq->msg_signatures_timer);
+		}
+	}
 	/* everything is allocated in the region, so assign NULL */
 	qstate->minfo[id] = NULL;
 }

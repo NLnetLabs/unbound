@@ -50,6 +50,7 @@ struct key_cache;
 struct key_entry_key;
 struct val_neg_cache;
 struct config_strlist;
+struct comm_timer;
 
 /**
  * This is the TTL to use when a trust anchor fails to prime. A trust anchor
@@ -215,6 +216,15 @@ struct val_qstate {
 
 	/** true if this state is waiting to prime a trust anchor */
 	int wait_prime_ta;
+
+	/** State to continue with RRSIG validation in a message later */
+	int msg_signatures_state;
+	/** The rrset index for the msg signatures to continue from */
+	size_t msg_signatures_index;
+	/** The timer to resume processing msg signatures */
+	struct comm_timer* msg_signatures_timer;
+	/** number of suspends */
+        int suspend_count;
 };
 
 /**
@@ -261,5 +271,8 @@ void val_clear(struct module_qstate* qstate, int id);
  * @return memory in use in bytes.
  */
 size_t val_get_mem(struct module_env* env, int id);
+
+/** Timer callback for msg signatures continue timer */
+void validate_msg_signatures_timer_cb(void* arg);
 
 #endif /* VALIDATOR_VALIDATOR_H */
