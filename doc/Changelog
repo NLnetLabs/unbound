@@ -1,3 +1,11 @@
+13 February 2024: Wouter
+	- Fix CVE-2023-50387, DNSSEC verification complexity can be exploited
+	  to exhaust CPU resources and stall DNS resolvers.
+	- Fix CVE-2023-50868, NSEC3 closest encloser proof can exhaust CPU.
+	- These fixes are part of the 1.19.1 release, that is a security
+	  point release on 1.19.0, the code repository continues with these
+	  fixes, with version number 1.19.2.
+
 8 February 2024: Wouter
 	- Fix documentation for access-control in the unbound.conf man page.
 
