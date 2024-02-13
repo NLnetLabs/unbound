@@ -443,9 +443,9 @@ nsec3_hash_test_entry(struct entry* e, rbtree_type* ct,
 
 	ret = nsec3_hash_name(ct, region, buf, nsec3, 0, qname,
 		qinfo.qname_len, &hash);
-	if(ret != 1) {
+	if(ret < 1) {
 		printf("Bad nsec3_hash_name retcode %d\n", ret);
-		unit_assert(ret == 1);
+		unit_assert(ret == 1 || ret == 2);
 	}
 	unit_assert(hash->dname && hash->hash && hash->hash_len &&
 		hash->b32 && hash->b32_len);

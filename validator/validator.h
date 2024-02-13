@@ -45,6 +45,7 @@
 #include "util/module.h"
 #include "util/data/msgreply.h"
 #include "validator/val_utils.h"
+#include "validator/val_nsec3.h"
 struct val_anchors;
 struct key_cache;
 struct key_entry_key;
@@ -221,10 +222,14 @@ struct val_qstate {
 	int msg_signatures_state;
 	/** The rrset index for the msg signatures to continue from */
 	size_t msg_signatures_index;
+	/** Cache table for NSEC3 hashes */
+	struct nsec3_cache_table nsec3_cache_table;
+	/** DS message from sub if it got suspended from NSEC3 calculations */
+	struct dns_msg* sub_ds_msg;
 	/** The timer to resume processing msg signatures */
-	struct comm_timer* msg_signatures_timer;
-	/** number of suspends */
-        int suspend_count;
+	struct comm_timer* suspend_timer;
+	/** Number of suspends */
+	int suspend_count;
 };
 
 /**
@@ -273,6 +278,6 @@ void val_clear(struct module_qstate* qstate, int id);
 size_t val_get_mem(struct module_env* env, int id);
 
 /** Timer callback for msg signatures continue timer */
-void validate_msg_signatures_timer_cb(void* arg);
+void validate_suspend_timer_cb(void* arg);
 
 #endif /* VALIDATOR_VALIDATOR_H */
