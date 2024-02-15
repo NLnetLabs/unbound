@@ -699,6 +699,12 @@ When at the limit, further connections are accepted but closed immediately.
 This option is experimental at this time.
 .TP
 .B access\-control: \fI<IP netblock> <action>
+Specify treatment of incoming queries from their originating IP address.
+Queries can be allowed to have access to this server that gives DNS
+answers, or refused, with other actions possible. The IP address range
+can be specified as a netblock, it is possible to give the statement
+several times in order to specify the treatment of different netblocks.
+.IP
 The netblock is given as an IP4 or IP6 address with /size appended for a
 classless network block. The action can be \fIdeny\fR, \fIrefuse\fR,
 \fIallow\fR, \fIallow_setrd\fR, \fIallow_snoop\fR, \fIallow_cookie\fR,

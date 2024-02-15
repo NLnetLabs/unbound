@@ -11,14 +11,14 @@ sinclude(dnscrypt/dnscrypt.m4)
 # must be numbers. ac_defun because of later processing
 m4_define([VERSION_MAJOR],[1])
 m4_define([VERSION_MINOR],[19])
-m4_define([VERSION_MICRO],[1])
+m4_define([VERSION_MICRO],[2])
 AC_INIT([unbound],m4_defn([VERSION_MAJOR]).m4_defn([VERSION_MINOR]).m4_defn([VERSION_MICRO]),[unbound-bugs@nlnetlabs.nl or https://github.com/NLnetLabs/unbound/issues],[unbound])
 AC_SUBST(UNBOUND_VERSION_MAJOR, [VERSION_MAJOR])
 AC_SUBST(UNBOUND_VERSION_MINOR, [VERSION_MINOR])
 AC_SUBST(UNBOUND_VERSION_MICRO, [VERSION_MICRO])
 
 LIBUNBOUND_CURRENT=9
-LIBUNBOUND_REVISION=24
+LIBUNBOUND_REVISION=25
 LIBUNBOUND_AGE=1
 # 1.0.0 had 0:12:0
 # 1.0.1 had 0:13:0
@@ -110,6 +110,7 @@ LIBUNBOUND_AGE=1
 # 1.18.0 had 9:22:1
 # 1.19.0 had 9:23:1
 # 1.19.1 had 9:24:1
+# 1.19.2 had 9:25:1
 
 #   Current  -- the number of the binary API that we're implementing
 #   Revision -- which iteration of the implementation of the binary
@@ -407,7 +408,7 @@ AC_CHECK_TOOL(STRIP, strip)
 ACX_LIBTOOL_C_ONLY
 
 # pkg-config is only needed for these options, do not require it otherwise
-if test "$enable_systemd" = "yes" -o "$with_pyunbound" = "yes" -o "$with_pythonmod" = "yes"; then
+if test "$enable_systemd" = "yes" -o "$enable_dnstap" = "yes" -o "$with_pyunbound" = "yes" -o "$with_pythonmod" = "yes"; then
 PKG_PROG_PKG_CONFIG
 fi
 
