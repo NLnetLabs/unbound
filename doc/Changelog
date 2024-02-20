@@ -1,3 +1,9 @@
+20 February 2024: Yorgos
+	- Merge #1010: Mention REFUSED has the TC bit set with unmatched
+	  allow_cookie acl in the manpage. It also fixes the code to match the
+	  documentation about clients with a valid cookie that bypass the
+	  ratelimit regardless of the allow_cookie acl.
+
 13 February 2024: Wouter
 	- Fix CVE-2023-50387, DNSSEC verification complexity can be exploited
 	  to exhaust CPU resources and stall DNS resolvers.
