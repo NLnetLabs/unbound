@@ -1327,15 +1327,6 @@ deny_refuse_non_local(struct comm_point* c, enum acl_access acl,
 		worker, repinfo, acladdr, ede, check_result);
 }
 
-/* Returns 1 if the ip rate limit check can happen before EDNS parsing,
- * else 0 */
-static int
-pre_edns_ip_ratelimit_check(enum acl_access acl)
-{
-	if(acl == acl_allow_cookie) return 0;
-	return 1;
-}
-
 /* Check if the query is blocked by source IP rate limiting.
  * Returns 1 if it passes the check, 0 otherwise. */
 static int
@@ -1499,7 +1490,9 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 	}
 
 	worker->stats.num_queries++;
-	pre_edns_ip_ratelimit = pre_edns_ip_ratelimit_check(acl);
+	pre_edns_ip_ratelimit = !worker->env.cfg->do_answer_cookie
+		|| sldns_buffer_limit(c->buffer) < LDNS_HEADER_SIZE
+		|| LDNS_ARCOUNT(sldns_buffer_begin(c->buffer)) == 0;
 
 	/* If the IP rate limiting check needs extra EDNS information (e.g.,
 	 * DNS Cookies) postpone the check until after EDNS is parsed. */
