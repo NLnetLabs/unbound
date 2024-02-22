@@ -1,3 +1,6 @@
+22 February 2024: Wouter
+	- Fix trim of EDE text from large udp responses from spinning cpu.
+
 20 February 2024: Yorgos
 	- Merge #1010: Mention REFUSED has the TC bit set with unmatched
 	  allow_cookie acl in the manpage. It also fixes the code to match the
