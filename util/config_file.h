@@ -706,18 +706,24 @@ struct config_file {
 #ifdef USE_REDIS
 	/** redis server's IP address or host name */
 	char* redis_server_host;
+	char* redis_replica_server_host;
 	/** redis server's TCP port */
 	int redis_server_port;
+	int redis_replica_server_port;
 	/** redis server's unix path. Or "", NULL if unused */
 	char* redis_server_path;
+	char* redis_replica_server_path;
 	/** redis server's AUTH password. Or "", NULL if unused */
 	char* redis_server_password;
+	char* redis_replica_server_password;
 	/** timeout (in ms) for communication with the redis server */
 	int redis_timeout;
+	int redis_replica_timeout;
 	/** set timeout on redis records based on DNS response ttl */
 	int redis_expire_records;
 	/** set the redis logical database upon connection */
 	int redis_logical_db;
+	int redis_replica_logical_db;
 #endif
 #endif
 	/** Downstream DNS Cookies */

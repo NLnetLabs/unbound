@@ -1236,15 +1236,27 @@ remote-control:
 #     # redis server's TCP port
 #     redis-server-port: 6379
 #     # if the server uses a unix socket, set its path, or "" when not used.
-#     # redis-server-path: "/var/lib/redis/redis-server.sock"
+#     redis-server-path: "/var/lib/redis/redis-server.sock"
 #     # if the server uses an AUTH password, specify here, or "" when not used.
-#     # redis-server-password: ""
+#     redis-server-password: ""
 #     # timeout (in ms) for communication with the redis server
 #     redis-timeout: 100
 #     # set timeout on redis records based on DNS response TTL
 #     redis-expire-records: no
 #     # redis logical database to use, 0 is the default database.
 #     redis-logical-db: 0
+#     # redis replica server's IP address or host name
+#     redis-replica-server-host: 127.0.0.1
+#     # redis replica server's TCP port
+#     redis-replica-server-port: 6379
+#     # if the replica server uses a unix socket, set its path, or "" when not used.
+#     redis-replica-server-path: "/var/lib/redis/redis-server.sock"
+#     # if the replica server uses an AUTH password, specify here, or "" when not used.
+#     redis-replica-server-password: ""
+#     # timeout (in ms) for communication with the redis replica server
+#     redis-replica-timeout: 100
+#     # redis logical database to use for the replica server, 0 is the default database.
+#     redis-replica-logical-db: 0
 
 # IPSet
 # Add specify domain into set via ipset.

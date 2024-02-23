@@ -385,12 +385,18 @@ config_create(void)
 	cfg->cachedb_no_store = 0;
 #ifdef USE_REDIS
 	if(!(cfg->redis_server_host = strdup("127.0.0.1"))) goto error_exit;
+	if(!(cfg->redis_replica_server_host = strdup(""))) goto error_exit;
 	cfg->redis_server_path = NULL;
+	cfg->redis_replica_server_path = NULL;
 	cfg->redis_server_password = NULL;
+	cfg->redis_replica_server_password = NULL;
 	cfg->redis_timeout = 100;
+	cfg->redis_replica_timeout = 100;
 	cfg->redis_server_port = 6379;
+	cfg->redis_replica_server_port = 6379;
 	cfg->redis_expire_records = 0;
 	cfg->redis_logical_db = 0;
+	cfg->redis_replica_logical_db = 0;
 #endif  /* USE_REDIS */
 #endif  /* USE_CACHEDB */
 #ifdef USE_IPSET
@@ -1317,12 +1323,18 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_YNO(opt, "cachedb-no-store", cachedb_no_store)
 #ifdef USE_REDIS
 	else O_STR(opt, "redis-server-host", redis_server_host)
+	else O_STR(opt, "redis-replica-server-host", redis_replica_server_host)
 	else O_DEC(opt, "redis-server-port", redis_server_port)
+	else O_DEC(opt, "redis-replica-server-port", redis_replica_server_port)
 	else O_STR(opt, "redis-server-path", redis_server_path)
+	else O_STR(opt, "redis-replica-server-path", redis_replica_server_path)
 	else O_STR(opt, "redis-server-password", redis_server_password)
+	else O_STR(opt, "redis-replica-server-password", redis_replica_server_password)
 	else O_DEC(opt, "redis-timeout", redis_timeout)
+	else O_DEC(opt, "redis-replica-timeout", redis_replica_timeout)
 	else O_YNO(opt, "redis-expire-records", redis_expire_records)
 	else O_DEC(opt, "redis-logical-db", redis_logical_db)
+	else O_DEC(opt, "redis-replica-logical-db", redis_replica_logical_db)
 #endif  /* USE_REDIS */
 #endif  /* USE_CACHEDB */
 #ifdef USE_IPSET
@@ -1698,8 +1710,11 @@ config_delete(struct config_file* cfg)
 	free(cfg->cachedb_secret);
 #ifdef USE_REDIS
 	free(cfg->redis_server_host);
+	free(cfg->redis_replica_server_host);
 	free(cfg->redis_server_path);
+	free(cfg->redis_replica_server_path);
 	free(cfg->redis_server_password);
+	free(cfg->redis_replica_server_password);
 #endif  /* USE_REDIS */
 #endif  /* USE_CACHEDB */
 #ifdef USE_IPSET

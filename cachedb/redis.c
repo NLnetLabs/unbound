@@ -52,18 +52,33 @@
 #include "hiredis/hiredis.h"
 
 struct redis_moddata {
-	redisContext** ctxs;	/* thread-specific redis contexts */
-	int numctxs;		/* number of ctx entries */
-	const char* server_host; /* server's IP address or host name */
-	int server_port;	 /* server's TCP port */
-	const char* server_path; /* server's unix path, or "", NULL if unused */
-	const char* server_password; /* server's AUTH password, or "", NULL if unused */
-	struct timeval timeout;	 /* timeout for connection setup and commands */
-	int logical_db;		/* the redis logical database to use */
+	/* thread-specific redis contexts */
+	redisContext** ctxs;
+	redisContext** replica_ctxs;
+	/* number of ctx entries */
+	int numctxs;
+	/* server's IP address or host name */
+	const char* server_host;
+	const char* replica_server_host;
+	/* server's TCP port */
+	int server_port;
+	int replica_server_port;
+	/* server's unix path, or "", NULL if unused */
+	const char* server_path;
+	const char* replica_server_path;
+	/* server's AUTH password, or "", NULL if unused */
+	const char* server_password;
+	const char* replica_server_password;
+	/* timeout for connection setup and commands */
+	struct timeval timeout;
+	struct timeval replica_timeout;
+	/* the redis logical database to use */
+	int logical_db;
+	int replica_logical_db;
 };
 
 static redisReply* redis_command(struct module_env*, struct cachedb_env*,
-	const char*, const uint8_t*, size_t);
+	const char*, const uint8_t*, size_t, int);
 
 static void
 moddata_clean(struct redis_moddata** moddata) {
@@ -77,21 +92,28 @@ moddata_clean(struct redis_moddata** moddata) {
 		}
 		free((*moddata)->ctxs);
 	}
+	if((*moddata)->replica_ctxs) {
+		int i;
+		for(i = 0; i < (*moddata)->numctxs; i++) {
+			if((*moddata)->replica_ctxs[i])
+				redisFree((*moddata)->replica_ctxs[i]);
+		}
+		free((*moddata)->replica_ctxs);
+	}
 	free(*moddata);
 	*moddata = NULL;
 }
 
 static redisContext*
-redis_connect(const struct redis_moddata* moddata)
+redis_connect(const char* host, int port, const char* path,
+	const char* password, int logical_db, const struct timeval timeout)
 {
 	redisContext* ctx;
 
-	if(moddata->server_path && moddata->server_path[0]!=0) {
-		ctx = redisConnectUnixWithTimeout(moddata->server_path,
-			moddata->timeout);
+	if(path && path[0]!=0) {
+		ctx = redisConnectUnixWithTimeout(path, timeout);
 	} else {
-		ctx = redisConnectWithTimeout(moddata->server_host,
-			moddata->server_port, moddata->timeout);
+		ctx = redisConnectWithTimeout(host, port, timeout);
 	}
 	if(!ctx || ctx->err) {
 		const char *errstr = "out of memory";
@@ -100,13 +122,13 @@ redis_connect(const struct redis_moddata* moddata)
 		log_err("failed to connect to redis server: %s", errstr);
 		goto fail;
 	}
-	if(redisSetTimeout(ctx, moddata->timeout) != REDIS_OK) {
+	if(redisSetTimeout(ctx, timeout) != REDIS_OK) {
 		log_err("failed to set redis timeout");
 		goto fail;
 	}
-	if(moddata->server_password && moddata->server_password[0]!=0) {
+	if(password && password[0]!=0) {
 		redisReply* rep;
-		rep = redisCommand(ctx, "AUTH %s", moddata->server_password);
+		rep = redisCommand(ctx, "AUTH %s", password);
 		if(!rep || rep->type == REDIS_REPLY_ERROR) {
 			log_err("failed to authenticate with password");
 			freeReplyObject(rep);
@@ -114,18 +136,25 @@ redis_connect(const struct redis_moddata* moddata)
 		}
 		freeReplyObject(rep);
 	}
-	if(moddata->logical_db > 0) {
+	if(logical_db > 0) {
 		redisReply* rep;
-		rep = redisCommand(ctx, "SELECT %d", moddata->logical_db);
+		rep = redisCommand(ctx, "SELECT %d", logical_db);
 		if(!rep || rep->type == REDIS_REPLY_ERROR) {
 			log_err("failed to set logical database (%d)",
-				moddata->logical_db);
+				logical_db);
 			freeReplyObject(rep);
 			goto fail;
 		}
 		freeReplyObject(rep);
 	}
-	verbose(VERB_OPS, "Connection to Redis established");
+	if(verbosity >= VERB_OPS) {
+		char port_str[6+1];
+		port_str[0] = ' ';
+		(void)snprintf(port_str+1, sizeof(port_str-1), "%d", port);
+		verbose(VERB_OPS, "Connection to Redis established (%s%s)",
+			path&&path[0]!=0?path:host,
+			path&&path[0]!=0?"":port_str);
+	}
 	return ctx;
 
 fail:
@@ -148,27 +177,67 @@ redis_init(struct module_env* env, struct cachedb_env* cachedb_env)
 		goto fail;
 	}
 	moddata->numctxs = env->cfg->num_threads;
+	/* note: server_host and similar string configuration options are
+	 * shallow references to configured strings; we don't have to free them
+	 * in this module. */
+	moddata->server_host = env->cfg->redis_server_host;
+	moddata->replica_server_host = env->cfg->redis_replica_server_host;
+	moddata->server_port = env->cfg->redis_server_port;
+	moddata->replica_server_port = env->cfg->redis_replica_server_port;
+	moddata->server_path = env->cfg->redis_server_path;
+	moddata->replica_server_path = env->cfg->redis_replica_server_path;
+	moddata->server_password = env->cfg->redis_server_password;
+	moddata->replica_server_password = env->cfg->redis_replica_server_password;
+	moddata->timeout.tv_sec = env->cfg->redis_timeout / 1000;
+	moddata->timeout.tv_usec = (env->cfg->redis_timeout % 1000) * 1000;
+	moddata->replica_timeout.tv_sec = env->cfg->redis_replica_timeout / 1000;
+	moddata->replica_timeout.tv_usec = (env->cfg->redis_replica_timeout % 1000) * 1000;
+	moddata->logical_db = env->cfg->redis_logical_db;
+	moddata->replica_logical_db = env->cfg->redis_replica_logical_db;
+
 	moddata->ctxs = calloc(env->cfg->num_threads, sizeof(redisContext*));
 	if(!moddata->ctxs) {
 		log_err("out of memory");
 		goto fail;
 	}
-	/* note: server_host is a shallow reference to configured string.
-	 * we don't have to free it in this module. */
-	moddata->server_host = env->cfg->redis_server_host;
-	moddata->server_port = env->cfg->redis_server_port;
-	moddata->server_path = env->cfg->redis_server_path;
-	moddata->server_password = env->cfg->redis_server_password;
-	moddata->timeout.tv_sec = env->cfg->redis_timeout / 1000;
-	moddata->timeout.tv_usec = (env->cfg->redis_timeout % 1000) * 1000;
-	moddata->logical_db = env->cfg->redis_logical_db;
+	if((moddata->replica_server_host && moddata->replica_server_host[0]!=0)
+		|| (moddata->replica_server_path && moddata->replica_server_path[0]!=0)) {
+		/* There is a replica configured, allocate ctxs */
+		moddata->replica_ctxs = calloc(env->cfg->num_threads, sizeof(redisContext*));
+		if(!moddata->replica_ctxs) {
+			log_err("out of memory");
+			goto fail;
+		}
+	}
 	for(i = 0; i < moddata->numctxs; i++) {
-		redisContext* ctx = redis_connect(moddata);
+		redisContext* ctx = redis_connect(
+			moddata->server_host,
+			moddata->server_port,
+			moddata->server_path,
+			moddata->server_password,
+			moddata->logical_db,
+			moddata->timeout);
 		if(!ctx) {
 			log_err("redis_init: failed to init redis");
 			goto fail;
 		}
 		moddata->ctxs[i] = ctx;
+	}
+	if(moddata->replica_ctxs) {
+		for(i = 0; i < moddata->numctxs; i++) {
+			redisContext* ctx = redis_connect(
+				moddata->replica_server_host,
+				moddata->replica_server_port,
+				moddata->replica_server_path,
+				moddata->replica_server_password,
+				moddata->replica_logical_db,
+				moddata->replica_timeout);
+			if(!ctx) {
+				log_err("redis_init: failed to init redis");
+				goto fail;
+			}
+			moddata->replica_ctxs[i] = ctx;
+		}
 	}
 	cachedb_env->backend_data = moddata;
 	if(env->cfg->redis_expire_records) {
@@ -176,7 +245,7 @@ redis_init(struct module_env* env, struct cachedb_env* cachedb_env)
 		int redis_reply_type = 0;
 		/** check if setex command is supported */
 		rep = redis_command(env, cachedb_env,
-			"SETEX __UNBOUND_REDIS_CHECK__ 1 none", NULL, 0);
+			"SETEX __UNBOUND_REDIS_CHECK__ 1 none", NULL, 0, 1);
 		if(!rep) {
 			/** init failed, no response from redis server*/
 			log_err("redis_init: failed to init redis, the "
@@ -229,9 +298,9 @@ redis_deinit(struct module_env* env, struct cachedb_env* cachedb_env)
  */
 static redisReply*
 redis_command(struct module_env* env, struct cachedb_env* cachedb_env,
-	const char* command, const uint8_t* data, size_t data_len)
+	const char* command, const uint8_t* data, size_t data_len, int write)
 {
-	redisContext* ctx;
+	redisContext* ctx, **ctx_selector;
 	redisReply* rep;
 	struct redis_moddata* d = (struct redis_moddata*)
 		cachedb_env->backend_data;
@@ -242,17 +311,36 @@ redis_command(struct module_env* env, struct cachedb_env* cachedb_env,
 	 * assumption throughout the unbound architecture, so we simply assert
 	 * it. */
 	log_assert(env->alloc->thread_num < d->numctxs);
-	ctx = d->ctxs[env->alloc->thread_num];
+
+	ctx_selector = !write && d->replica_ctxs
+		?d->replica_ctxs
+		:d->ctxs;
+	ctx = ctx_selector[env->alloc->thread_num];
 
 	/* If we've not established a connection to the server or we've closed
 	 * it on a failure, try to re-establish a new one.   Failures will be
 	 * logged in redis_connect(). */
 	if(!ctx) {
-		ctx = redis_connect(d);
-		d->ctxs[env->alloc->thread_num] = ctx;
+		if(d->replica_ctxs) {
+			ctx = redis_connect(
+				d->replica_server_host,
+				d->replica_server_port,
+				d->replica_server_path,
+				d->replica_server_password,
+				d->replica_logical_db,
+				d->replica_timeout);
+		} else {
+			ctx = redis_connect(
+				d->server_host,
+				d->server_port,
+				d->server_path,
+				d->server_password,
+				d->logical_db,
+				d->timeout);
+		}
+		ctx_selector[env->alloc->thread_num] = ctx;
 	}
-	if(!ctx)
-		return NULL;
+	if(!ctx) return NULL;
 
 	/* Send the command and get a reply, synchronously. */
 	rep = (redisReply*)redisCommand(ctx, command, data, data_len);
@@ -262,7 +350,7 @@ redis_command(struct module_env* env, struct cachedb_env* cachedb_env,
 		log_err("redis_command: failed to receive a reply, "
 			"closing connection: %s", ctx->errstr);
 		redisFree(ctx);
-		d->ctxs[env->alloc->thread_num] = NULL;
+		ctx_selector[env->alloc->thread_num] = NULL;
 		return NULL;
 	}
 
@@ -292,7 +380,7 @@ redis_lookup(struct module_env* env, struct cachedb_env* cachedb_env,
 		return 0;
 	}
 
-	rep = redis_command(env, cachedb_env, cmdbuf, NULL, 0);
+	rep = redis_command(env, cachedb_env, cmdbuf, NULL, 0, 0);
 	if(!rep)
 		return 0;
 	switch(rep->type) {
@@ -357,7 +445,7 @@ redis_store(struct module_env* env, struct cachedb_env* cachedb_env,
 		return;
 	}
 
-	rep = redis_command(env, cachedb_env, cmdbuf, data, data_len);
+	rep = redis_command(env, cachedb_env, cmdbuf, data, data_len, 1);
 	if(rep) {
 		verbose(VERB_ALGO, "redis_store set completed");
 		if(rep->type != REDIS_REPLY_STATUS &&
