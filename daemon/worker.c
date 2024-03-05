@@ -1151,7 +1151,7 @@ deny_refuse(struct comm_point* c, enum acl_access acl,
 		log_assert(sldns_buffer_limit(c->buffer) >= LDNS_HEADER_SIZE
 			&& LDNS_QDCOUNT(sldns_buffer_begin(c->buffer)) == 1);
 
-		sldns_buffer_skip(c->buffer, LDNS_HEADER_SIZE); /* skip header */
+		sldns_buffer_set_position(c->buffer, LDNS_HEADER_SIZE); /* skip header */
 
 		/* check additional section is present and that we respond with EDEs */
 		if(LDNS_ARCOUNT(sldns_buffer_begin(c->buffer)) != 1

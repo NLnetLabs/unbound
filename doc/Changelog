@@ -1,3 +1,6 @@
+5 March 2024: Wouter
+	- Fix for #1022: Fix ede prohibited in access control refused answers.
+
 4 March 2024: Wouter
 	- Fix edns subnet replies for scope zero answers to not get stored
 	  in the global cache, and in cachedb, when the upstream replies
