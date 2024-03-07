@@ -1,3 +1,9 @@
+7 March 2024: Wouter
+	- Version set to 1.19.3 for release. After 1.19.2 point release with
+	  security fix for CVE-2024-1931, Denial of service when trimming
+	  EDE text on positive replies. The code repo includes the fix and
+	  is for version 1.19.3.
+
 5 March 2024: Wouter
 	- Fix for #1022: Fix ede prohibited in access control refused answers.
 
