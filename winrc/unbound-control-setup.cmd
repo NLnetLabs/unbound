@@ -48,7 +48,7 @@ rem validity period for certificates
 set DAYS=7200
 
 rem size of keys in bits
-set BITS=1536
+set BITS=3072
 
 rem hash algorithm
 set HASH=sha256
