@@ -9,6 +9,7 @@
 	  encountering it and also for when the qtype is DNAME.
 	- Fix qname minimisation for reply with a DNAME for qtype CNAME that
 	  answers it.
+	- Fix doc test so it ignores but outputs unsupported doxygen options.
 
 8 March 2024: Yorgos
 	- Update doc/unbound.doxygen with 'doxygen -u'. Fixes option
