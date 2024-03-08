@@ -7,6 +7,8 @@
 	  redirection answers, and fix validator signature routine for dealing
 	  with the synthesized CNAME for a DNAME without previously
 	  encountering it and also for when the qtype is DNAME.
+	- Fix qname minimisation for reply with a DNAME for qtype CNAME that
+	  answers it.
 
 8 March 2024: Yorgos
 	- Update doc/unbound.doxygen with 'doxygen -u'. Fixes option

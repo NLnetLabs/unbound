@@ -3082,7 +3082,8 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 			/* DNAME to a subdomain loop; do not recurse */
 			type = RESPONSE_TYPE_ANSWER;
 		}
-	} else if(type == RESPONSE_TYPE_CNAME &&
+	}
+	if(type == RESPONSE_TYPE_CNAME &&
 		iq->qchase.qtype == LDNS_RR_TYPE_CNAME &&
 		iq->minimisation_state == MINIMISE_STATE &&
 		query_dname_compare(iq->qchase.qname, iq->qinfo_out.qname) == 0) {
