@@ -2,6 +2,8 @@
 	- Fix unbound-control-setup.cmd to use 3072 bits so that certificates
 	  are long enough for newer OpenSSL versions.
 	- Fix TTL of synthesized CNAME when a DNAME is used from cache.
+	- Fix unbound-control-setup.cmd to have CA v3 basicConstraints,
+	  like unbound-control-setup.sh has.
 
 7 March 2024: Wouter
 	- Version set to 1.19.3 for release. After 1.19.2 point release with
