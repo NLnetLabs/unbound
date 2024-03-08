@@ -828,7 +828,7 @@ synth_dname_msg(struct ub_packed_rrset_key* rrset, struct regional* region,
 	if(!newd)
 		return NULL;
 	ck->entry.data = newd;
-	newd->ttl = d->ttl; /* RFC6672: synth CNAME TTL == DNAME TTL */
+	newd->ttl = d->ttl - now; /* RFC6672: synth CNAME TTL == DNAME TTL */
 	newd->count = 1;
 	newd->rrsig_count = 0;
 	newd->trust = rrset_trust_ans_noAA;
