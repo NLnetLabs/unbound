@@ -1,3 +1,7 @@
+8 March 2024: Wouter
+	- Fix unbound-control-setup.cmd to use 3072 bits so that certificates
+	  are long enough for newer OpenSSL versions.
+
 7 March 2024: Wouter
 	- Version set to 1.19.3 for release. After 1.19.2 point release with
 	  security fix for CVE-2024-1931, Denial of service when trimming
