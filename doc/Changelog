@@ -8,6 +8,10 @@
 	  with the synthesized CNAME for a DNAME without previously
 	  encountering it and also for when the qtype is DNAME.
 
+8 March 2024: Yorgos
+	- Update doc/unbound.doxygen with 'doxygen -u'. Fixes option
+	  deprecation warnings and updates with newer defaults.
+
 7 March 2024: Wouter
 	- Version set to 1.19.3 for release. After 1.19.2 point release with
 	  security fix for CVE-2024-1931, Denial of service when trimming
