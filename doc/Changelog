@@ -3,6 +3,10 @@
 	  are long enough for newer OpenSSL versions.
 	- Fix TTL of synthesized CNAME when a DNAME is used from cache.
 	- Remove unused portion from iter_dname_ttl unit test.
+	- Fix validator classification of qtype DNAME for positive and
+	  redirection answers, and fix validator signature routine for dealing
+	  with the synthesized CNAME for a DNAME without previously
+	  encountering it and also for when the qtype is DNAME.
 
 7 March 2024: Wouter
 	- Version set to 1.19.3 for release. After 1.19.2 point release with
