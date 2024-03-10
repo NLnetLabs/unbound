@@ -444,8 +444,8 @@ void algo_needs_init_dnskey_add(struct algo_needs* n,
 		algo = (uint8_t)dnskey_get_algo(dnskey, i);
 		if(!dnskey_algo_id_is_supported((int)algo))
 			continue;
-		if(n->needs[algo] == 0) {
-			n->needs[algo] = 1;
+		if(n->needs[algo] == ALG_NEED_SECURE) {
+			n->needs[algo] = ALG_NEED_WAITING;
 			sigalg[total] = algo;
 			total++;
 		}
@@ -459,11 +459,11 @@ void algo_needs_init_list(struct algo_needs* n, uint8_t* sigalg)
 	uint8_t algo;
 	size_t total = 0;
 
-	memset(n->needs, 0, sizeof(uint8_t)*ALGO_NEEDS_MAX);
+	memset(n->needs, 0, sizeof(n->needs));
 	while( (algo=*sigalg++) != 0) {
 		log_assert(dnskey_algo_id_is_supported((int)algo));
-		log_assert(n->needs[algo] == 0);
-		n->needs[algo] = 1;
+		log_assert(n->needs[algo] == ALG_NEED_SECURE);
+		n->needs[algo] = ALG_NEED_WAITING;
 		total++;
 	}
 	n->num = total;
@@ -476,7 +476,7 @@ void algo_needs_init_ds(struct algo_needs* n, struct ub_packed_rrset_key* ds,
 	size_t i, total = 0;
 	size_t num = rrset_get_count(ds);
 
-	memset(n->needs, 0, sizeof(uint8_t)*ALGO_NEEDS_MAX);
+	memset(n->needs, 0, sizeof(n->needs));
 	for(i=0; i<num; i++) {
 		if(ds_get_digest_algo(ds, i) != fav_ds_algo)
 			continue;
@@ -484,8 +484,8 @@ void algo_needs_init_ds(struct algo_needs* n, struct ub_packed_rrset_key* ds,
 		if(!dnskey_algo_id_is_supported((int)algo))
 			continue;
 		log_assert(algo != 0); /* we do not support 0 and is EOS */
-		if(n->needs[algo] == 0) {
-			n->needs[algo] = 1;
+		if(n->needs[algo] == ALG_NEED_SECURE) {
+			n->needs[algo] = ALG_NEED_WAITING;
 			sigalg[total] = algo;		
 			total++;
 		}
@@ -496,8 +496,8 @@ void algo_needs_init_ds(struct algo_needs* n, struct ub_packed_rrset_key* ds,
 
 int algo_needs_set_secure(struct algo_needs* n, uint8_t algo)
 {
-	if(n->needs[algo]) {
-		n->needs[algo] = 0;
+	if(n->needs[algo] >= ALG_NEED_WAITING) {
+		n->needs[algo] = ALG_NEED_SECURE;
 		n->num --;
 		if(n->num == 0) /* done! */
 			return 1;
@@ -505,9 +505,16 @@ int algo_needs_set_secure(struct algo_needs* n, uint8_t algo)
 	return 0;
 }
 
+static void algo_needs_set_indeterminate(struct algo_needs* n, uint8_t algo)
+{
+	if(n->needs[algo] == ALG_NEED_WAITING)
+		n->needs[algo] = ALG_NEED_INDETERMINATE;
+}
+
 void algo_needs_set_bogus(struct algo_needs* n, uint8_t algo)
 {
-	if(n->needs[algo]) n->needs[algo] = 2; /* need it, but bogus */
+	if(n->needs[algo] >= ALG_NEED_WAITING)
+		n->needs[algo] = ALG_NEED_BOGUS; /* need it, but bogus */
 }
 
 size_t algo_needs_num_missing(struct algo_needs* n)
@@ -522,13 +529,26 @@ int algo_needs_missing(struct algo_needs* n)
 	 * check the first missing algo - report that;
 	 * or return 0 */
 	for(i=0; i<ALGO_NEEDS_MAX; i++) {
-		if(n->needs[i] == 2)
+		if(n->needs[i] == ALG_NEED_BOGUS)
 			return 0;
-		if(n->needs[i] == 1 && miss == -1)
+		if(n->needs[i] == ALG_NEED_WAITING && miss == -1)
 			miss = i;
 	}
 	if(miss != -1) return miss;
 	return 0;
+}
+
+static size_t algo_needs_num_indeterminate(struct algo_needs* n)
+{
+	int i, num = 0;
+	/* report number of indeterminate results if not bogus */
+	for(i=0; i<ALGO_NEEDS_MAX; i++) {
+		if(n->needs[i] == ALG_NEED_BOGUS)
+			return 0;
+		if(n->needs[i] == ALG_NEED_INDETERMINATE)
+			num++;
+	}
+	return num;
 }
 
 /**
@@ -664,6 +684,9 @@ dnskeyset_verify_rrset(struct module_env* env, struct val_env* ve,
 			else if(algo_needs_set_secure(&needs,
 				(uint8_t)rrset_get_sig_algo(rrset, i)))
 				return sec; /* done! */
+		} else if(sec == sec_status_indeterminate) {
+			algo_needs_set_indeterminate(&needs,
+				(uint8_t)rrset_get_sig_algo(rrset, i));
 		} else if(sigalg && sec == sec_status_bogus) {
 			algo_needs_set_bogus(&needs,
 				(uint8_t)rrset_get_sig_algo(rrset, i));
@@ -681,6 +704,11 @@ dnskeyset_verify_rrset(struct module_env* env, struct val_env* ve,
 			"no valid signatures for %d algorithms",
 			(int)algo_needs_num_missing(&needs));
 		algo_needs_reason(env, alg, reason, "no signatures");
+	} else if (sigalg && (num=algo_needs_num_indeterminate(&needs)) > 0) {
+		verbose(VERB_ALGO, "rrset failed to verify: "
+			"indeterminate signatures for %d algorithms",
+			(int)num);
+		return sec_status_indeterminate;
 	} else {
 		verbose(VERB_ALGO, "rrset failed to verify: "
 			"no valid signatures");

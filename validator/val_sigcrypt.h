@@ -57,14 +57,19 @@ struct sldns_buffer;
 /** number of entries in algorithm needs array */
 #define ALGO_NEEDS_MAX 256
 
+enum algo_needs_types {
+	ALG_NEED_SECURE = 0, /*< not marked */
+	ALG_NEED_WAITING, /*< marked 'necessary but not yet fulfilled' */
+	ALG_NEED_INDETERMINATE,
+	ALG_NEED_BOGUS,   /*< marked bogus */
+};
+
 /**
  * Storage for algorithm needs.  DNSKEY algorithms.
  */
 struct algo_needs {
 	/** the algorithms (8-bit) with each a number.
-	 * 0: not marked.
-	 * 1: marked 'necessary but not yet fulfilled'
-	 * 2: marked bogus.
+	 * contains enum algo_needs_types values.
 	 * Indexed by algorithm number.
 	 */
 	uint8_t needs[ALGO_NEEDS_MAX];

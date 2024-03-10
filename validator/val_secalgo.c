@@ -702,16 +702,19 @@ digest_ctx_free(EVP_MD_CTX* ctx, EVP_PKEY *evp_key,
 static enum sec_status
 digest_error_status(const char *str)
 {
-	unsigned long e = ERR_get_error();
+	enum sec_status r = sec_status_unchecked;
+	unsigned long e;
+	while ((e = ERR_get_error()) != 0) {
 #ifdef EVP_R_INVALID_DIGEST
-	if (ERR_GET_LIB(e) == ERR_LIB_EVP &&
-		ERR_GET_REASON(e) == EVP_R_INVALID_DIGEST) {
-		log_crypto_verbose(VERB_ALGO, str, e);
-		return sec_status_indeterminate;
-	}
+		if (ERR_GET_LIB(e) == ERR_LIB_EVP &&
+			ERR_GET_REASON(e) == EVP_R_INVALID_DIGEST) {
+			log_crypto_verbose(VERB_ALGO, str, e);
+			r = sec_status_indeterminate;
+		} else
 #endif
-	log_crypto_verbose(VERB_QUERY, str, e);
-	return sec_status_unchecked;
+		log_crypto_verbose(VERB_QUERY, str, e);
+	}
+	return r;
 }
 
 /**
