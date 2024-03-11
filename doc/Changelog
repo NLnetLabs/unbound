@@ -1,7 +1,9 @@
 8 March 2024: Wouter
 	- Fix unbound-control-setup.cmd to use 3072 bits so that certificates
-	  are long enough for newer OpenSSL versions.
-	- Fix TTL of synthesized CNAME when a DNAME is used from cache.
+	  are long enough for newer OpenSSL versions. This fix is included
+	  in 1.19.3rc2.
+	- Fix TTL of synthesized CNAME when a DNAME is used from cache. This
+	  fix is included in 1.19.3rc2.
 	- Remove unused portion from iter_dname_ttl unit test.
 	- Fix validator classification of qtype DNAME for positive and
 	  redirection answers, and fix validator signature routine for dealing
@@ -11,7 +13,7 @@
 	  answers it.
 	- Fix doc test so it ignores but outputs unsupported doxygen options.
 	- Fix unbound-control-setup.cmd to have CA v3 basicConstraints,
-	  like unbound-control-setup.sh has.
+	  like unbound-control-setup.sh has. This fix is included in 1.19.3rc2.
 
 8 March 2024: Yorgos
 	- Update doc/unbound.doxygen with 'doxygen -u'. Fixes option
