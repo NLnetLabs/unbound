@@ -478,6 +478,67 @@ new_cname_override(struct regional* region, uint8_t* ct, size_t ctlen)
 	return rrset;
 }
 
+/** delete the cname override */
+static void
+delete_cname_override(struct rpz* r)
+{
+	if(r->cname_override) {
+		/* The cname override is what is allocated in the region. */
+		regional_free_all(r->region);
+		r->cname_override = NULL;
+	}
+}
+
+/** Apply rpz config elements to the rpz structure, false on failure. */
+static int
+rpz_apply_cfg_elements(struct rpz* r, struct config_auth* p)
+{
+	if(p->rpz_taglist && p->rpz_taglistlen) {
+		r->taglistlen = p->rpz_taglistlen;
+		r->taglist = memdup(p->rpz_taglist, r->taglistlen);
+		if(!r->taglist) {
+			log_err("malloc failure on RPZ taglist alloc");
+			return 0;
+		}
+	}
+
+	if(p->rpz_action_override) {
+		r->action_override = rpz_config_to_action(p->rpz_action_override);
+	}
+	else
+		r->action_override = RPZ_NO_OVERRIDE_ACTION;
+
+	if(r->action_override == RPZ_CNAME_OVERRIDE_ACTION) {
+		uint8_t nm[LDNS_MAX_DOMAINLEN+1];
+		size_t nmlen = sizeof(nm);
+
+		if(!p->rpz_cname) {
+			log_err("rpz: override with cname action found, but no "
+				"rpz-cname-override configured");
+			return 0;
+		}
+
+		if(sldns_str2wire_dname_buf(p->rpz_cname, nm, &nmlen) != 0) {
+			log_err("rpz: cannot parse cname override: %s",
+				p->rpz_cname);
+			return 0;
+		}
+		r->cname_override = new_cname_override(r->region, nm, nmlen);
+		if(!r->cname_override) {
+			return 0;
+		}
+	}
+	r->log = p->rpz_log;
+	r->signal_nxdomain_ra = p->rpz_signal_nxdomain_ra;
+	if(p->rpz_log_name) {
+		if(!(r->log_name = strdup(p->rpz_log_name))) {
+			log_err("malloc failure on RPZ log_name strdup");
+			return 0;
+		}
+	}
+	return 1;
+}
+
 struct rpz*
 rpz_create(struct config_auth* p)
 {
@@ -513,42 +574,8 @@ rpz_create(struct config_auth* p)
 		goto err;
 	}
 
-	r->taglistlen = p->rpz_taglistlen;
-	r->taglist = memdup(p->rpz_taglist, r->taglistlen);
-	if(p->rpz_action_override) {
-		r->action_override = rpz_config_to_action(p->rpz_action_override);
-	}
-	else
-		r->action_override = RPZ_NO_OVERRIDE_ACTION;
-
-	if(r->action_override == RPZ_CNAME_OVERRIDE_ACTION) {
-		uint8_t nm[LDNS_MAX_DOMAINLEN+1];
-		size_t nmlen = sizeof(nm);
-
-		if(!p->rpz_cname) {
-			log_err("rpz: override with cname action found, but no "
-				"rpz-cname-override configured");
-			goto err;
-		}
-
-		if(sldns_str2wire_dname_buf(p->rpz_cname, nm, &nmlen) != 0) {
-			log_err("rpz: cannot parse cname override: %s",
-				p->rpz_cname);
-			goto err;
-		}
-		r->cname_override = new_cname_override(r->region, nm, nmlen);
-		if(!r->cname_override) {
-			goto err;
-		}
-	}
-	r->log = p->rpz_log;
-	r->signal_nxdomain_ra = p->rpz_signal_nxdomain_ra;
-	if(p->rpz_log_name) {
-		if(!(r->log_name = strdup(p->rpz_log_name))) {
-			log_err("malloc failure on RPZ log_name strdup");
-			goto err;
-		}
-	}
+	if(!rpz_apply_cfg_elements(r, p))
+		goto err;
 	return r;
 err:
 	if(r) {
@@ -569,6 +596,32 @@ err:
 		free(r);
 	}
 	return NULL;
+}
+
+int
+rpz_config(struct rpz* r, struct config_auth* p)
+{
+	/* If the zonefile changes, it is read later, after which
+	 * rpz_clear and rpz_finish_config is called. */
+
+	/* free taglist, if any */
+	if(r->taglist) {
+		free(r->taglist);
+		r->taglist = NULL;
+		r->taglistlen = 0;
+	}
+
+	/* free logname, if any */
+	if(r->log_name) {
+		free(r->log_name);
+		r->log_name = NULL;
+	}
+
+	delete_cname_override(r);
+
+	if(!rpz_apply_cfg_elements(r, p))
+		return 0;
+	return 1;
 }
 
 /**

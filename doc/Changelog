@@ -1,3 +1,7 @@
+11 March 2024: Wouter
+	- Fix #1021 Inconsistent Behavior with Changing rpz-cname-override
+	  and doing a unbound-control reload.
+
 8 March 2024: Wouter
 	- Fix unbound-control-setup.cmd to use 3072 bits so that certificates
 	  are long enough for newer OpenSSL versions. This fix is included
