@@ -283,7 +283,8 @@ server:
 	# Enable EDNS TCP keepalive option.
 	# edns-tcp-keepalive: no
 
-	# Timeout for EDNS TCP keepalive, in msec.
+	# Timeout for EDNS TCP keepalive, in msec. Overrides tcp-idle-timeout
+	# if edns-tcp-keepalive is set.
 	# edns-tcp-keepalive-timeout: 120000
 
 	# UDP queries that have waited in the socket buffer for a long time

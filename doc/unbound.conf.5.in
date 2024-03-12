@@ -472,6 +472,8 @@ configured value if the number of free buffers falls below 35% of the
 total number configured, and finally to 0 if the number of free buffers
 falls below 20% of the total number configured. A minimum timeout of
 200 milliseconds is observed regardless of the option value used.
+It will be overriden by \fBedns\-tcp\-keepalive\-timeout\fR if
+\fBedns\-tcp\-keepalive\fR is set.
 .TP
 .B tcp-reuse-timeout: \fI<msec>\fR
 The period Unbound will keep TCP persistent connections open to
@@ -490,20 +492,11 @@ This option defaults to 3000 milliseconds.
 Enable or disable EDNS TCP Keepalive. Default is no.
 .TP
 .B edns-tcp-keepalive-timeout: \fI<msec>\fR
-The period Unbound will wait for a query on a TCP connection when
-EDNS TCP Keepalive is active. If this timeout expires Unbound closes
-the connection. If the client supports the EDNS TCP Keepalive option,
+Overrides \fBtcp\-idle\-timeout\fR when EDNS TCP Keepalive is active.
+If the client supports the EDNS TCP Keepalive option,
 Unbound sends the timeout value to the client to encourage it to
 close the connection before the server times out.
 This option defaults to 120000 milliseconds.
-When the number of free incoming TCP buffers falls below 50% of
-the total number configured, the advertised timeout is progressively
-reduced to 1% of the configured value, then to 0.2% of the configured
-value if the number of free buffers falls below 35% of the total number
-configured, and finally to 0 if the number of free buffers falls below
-20% of the total number configured.
-A minimum actual timeout of 200 milliseconds is observed regardless of the
-advertised timeout.
 .TP
 .B sock\-queue\-timeout: \fI<sec>\fR
 UDP queries that have waited in the socket buffer for a long time can be
