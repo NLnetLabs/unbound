@@ -1,3 +1,7 @@
+12 March 2024: Yorgos
+	- Merge #1028: Clearer documentation for tcp-idle-timeout and
+	  edns-tcp-keepalive-timeout.
+
 11 March 2024: Wouter
 	- Fix #1021 Inconsistent Behavior with Changing rpz-cname-override
 	  and doing a unbound-control reload.
