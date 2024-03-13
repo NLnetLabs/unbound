@@ -2139,6 +2139,58 @@ rpz_synthesize_qname_localdata_msg(struct rpz* r, struct module_qstate* ms,
 	return rpz_synthesize_localdata_from_rrset(r, ms, qinfo, rrset, az);
 }
 
+/** Synthesize a CNAME message for RPZ action override */
+static struct dns_msg*
+rpz_synthesize_cname_override_msg(struct rpz* r, struct module_qstate* ms,
+	struct query_info* qinfo)
+{
+	struct dns_msg* msg = NULL;
+	struct reply_info* new_reply_info;
+	struct ub_packed_rrset_key* rp;
+
+	msg = rpz_dns_msg_new(ms->region);
+	if(msg == NULL) { return NULL; }
+
+        new_reply_info = construct_reply_info_base(ms->region,
+                                                   LDNS_RCODE_NOERROR | BIT_QR | BIT_AA | BIT_RA,
+                                                   1, /* qd */
+                                                   0, /* ttl */
+                                                   0, /* prettl */
+                                                   0, /* expttl */
+                                                   1, /* an */
+                                                   0, /* ns */
+                                                   0, /* ar */
+                                                   1, /* total */
+                                                   sec_status_insecure,
+                                                   LDNS_EDE_NONE);
+	if(new_reply_info == NULL) {
+		log_err("out of memory");
+		return NULL;
+	}
+	new_reply_info->authoritative = 1;
+
+	rp = respip_copy_rrset(r->cname_override, ms->region);
+	if(rp == NULL) {
+		log_err("out of memory");
+		return NULL;
+	}
+	rp->rk.dname = qinfo->qname;
+	rp->rk.dname_len = qinfo->qname_len;
+	/* this rrset is from the rpz data, or synthesized.
+	 * It is not actually from the network, so we flag it with this
+	 * flags as a fake RRset. If later the cache is used to look up
+	 * rrsets, then the fake ones are not returned (if you look without
+	 * the flag). For like CNAME lookups from the iterator or A, AAAA
+	 * lookups for nameserver targets, it would use the without flag
+	 * actual data. So that the actual network data and fake data
+	 * are kept track of separately. */
+	rp->rk.flags |= PACKED_RRSET_RPZ;
+	new_reply_info->rrsets[0] = rp;
+
+	msg->rep = new_reply_info;
+	return msg;
+}
+
 static int
 rpz_synthesize_qname_localdata(struct module_env* env, struct rpz* r,
 	struct local_zone* z, enum localzone_type lzt, struct query_info* qinfo,
@@ -2244,6 +2296,9 @@ rpz_apply_nsip_trigger(struct module_qstate* ms, struct rpz* r,
 		ret = NULL;
 		ms->rpz_passthru = 1;
 		break;
+	case RPZ_CNAME_OVERRIDE_ACTION:
+		ret = rpz_synthesize_cname_override_msg(r, ms, &ms->qinfo);
+		break;
 	default:
 		verbose(VERB_ALGO, "rpz: nsip: bug: unhandled or invalid action: '%s'",
 			rpz_action_to_string(action));
@@ -2299,8 +2354,11 @@ rpz_apply_nsdname_trigger(struct module_qstate* ms, struct rpz* r,
 		ret = NULL;
 		ms->rpz_passthru = 1;
 		break;
+	case RPZ_CNAME_OVERRIDE_ACTION:
+		ret = rpz_synthesize_cname_override_msg(r, ms, &ms->qinfo);
+		break;
 	default:
-		verbose(VERB_ALGO, "rpz: nsip: bug: unhandled or invalid action: '%s'",
+		verbose(VERB_ALGO, "rpz: nsdname: bug: unhandled or invalid action: '%s'",
 			rpz_action_to_string(action));
 		ret = NULL;
 	}

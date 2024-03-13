@@ -6,6 +6,7 @@
 	  clientip localdata action is logged. Fix rpz override action cname
 	  for the clientip trigger.
 	- Fix to unify codepath for local alias for rpz cname action override.
+	- Fix rpz for cname override action after nsdname and nsip triggers.
 
 12 March 2024: Yorgos
 	- Merge #1028: Clearer documentation for tcp-idle-timeout and

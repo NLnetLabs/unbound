@@ -2746,8 +2746,48 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 	delegpt_add_unused_targets(iq->dp);
 
 	if(qstate->env->auth_zones) {
+		uint8_t* sname = NULL;
+		size_t snamelen = 0;
 		/* apply rpz triggers at query time */
+		struct dns_msg* forged_response_after_cname;
 		struct dns_msg* forged_response = rpz_callback_from_iterator_module(qstate, iq);
+		while(forged_response && reply_find_rrset_section_an(
+			forged_response->rep, iq->qchase.qname,
+			iq->qchase.qname_len, LDNS_RR_TYPE_CNAME,
+			iq->qchase.qclass)) {
+			/* another cname to follow */
+			if(!handle_cname_response(qstate, iq, forged_response,
+				&sname, &snamelen)) {
+				errinf(qstate, "malloc failure, CNAME info");
+				return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
+			}
+			iq->qchase.qname = sname;
+			iq->qchase.qname_len = snamelen;
+			forged_response_after_cname =
+				rpz_callback_from_iterator_cname(qstate, iq);
+			if(forged_response_after_cname) {
+				forged_response = forged_response_after_cname;
+			} else {
+				/* Follow the CNAME with a query restart */
+				iq->deleg_msg = NULL;
+				iq->dp = NULL;
+				iq->dsns_point = NULL;
+				iq->auth_zone_response = 0;
+				iq->refetch_glue = 0;
+				iq->query_restart_count++;
+				iq->sent_count = 0;
+				iq->dp_target_count = 0;
+				if(qstate->env->cfg->qname_minimisation)
+					iq->minimisation_state = INIT_MINIMISE_STATE;
+				outbound_list_clear(&iq->outlist);
+				iq->num_current_queries = 0;
+				fptr_ok(fptr_whitelist_modenv_detach_subs(
+					qstate->env->detach_subs));
+				(*qstate->env->detach_subs)(qstate);
+				iq->num_target_queries = 0;
+				return next_state(iq, INIT_REQUEST_STATE);
+			}
+		}
 		if(forged_response != NULL) {
 			qstate->ext_state[id] = module_finished;
 			qstate->return_rcode = LDNS_RCODE_NOERROR;
