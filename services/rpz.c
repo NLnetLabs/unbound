@@ -1876,24 +1876,27 @@ nodata:
 		rrset_count, rcode, rsoa);
 }
 
-static void
-rpz_apply_clientip_cname_override_action(struct rpz* r,
+/** Apply the cname override action, during worker request callback.
+ * false on failure. */
+static int
+rpz_apply_cname_override_action(struct rpz* r,
 	struct query_info* qinfo, struct regional* temp)
 {
 	if(!r)
-		return;
+		return 0;
 	qinfo->local_alias = regional_alloc_zero(temp,
 		sizeof(struct local_rrset));
 	if(qinfo->local_alias == NULL)
-		return; /* out of memory */
+		return 0; /* out of memory */
 	qinfo->local_alias->rrset = regional_alloc_init(temp,
 		r->cname_override, sizeof(*r->cname_override));
 	if(qinfo->local_alias->rrset == NULL) {
 		qinfo->local_alias = NULL;
-		return; /* out of memory */
+		return 0; /* out of memory */
 	}
 	qinfo->local_alias->rrset->rk.dname = qinfo->qname;
 	qinfo->local_alias->rrset->rk.dname_len = qinfo->qname_len;
+	return 1;
 }
 
 /** add additional section SOA record to the reply.
@@ -2145,17 +2148,8 @@ rpz_synthesize_qname_localdata(struct module_env* env, struct rpz* r,
 	struct local_data* ld = NULL;
 	int ret = 0;
 	if(r->action_override == RPZ_CNAME_OVERRIDE_ACTION) {
-		qinfo->local_alias = regional_alloc_zero(temp, sizeof(struct local_rrset));
-		if(qinfo->local_alias == NULL) {
-			return 0; /* out of memory */
-		}
-		qinfo->local_alias->rrset = regional_alloc_init(temp, r->cname_override,
-								sizeof(*r->cname_override));
-		if(qinfo->local_alias->rrset == NULL) {
-			return 0; /* out of memory */
-		}
-		qinfo->local_alias->rrset->rk.dname = qinfo->qname;
-		qinfo->local_alias->rrset->rk.dname_len = qinfo->qname_len;
+		if(!rpz_apply_cname_override_action(r, qinfo, temp))
+			return 0;
 		if(r->log) {
 			log_rpz_apply("qname", z->name, NULL, RPZ_CNAME_OVERRIDE_ACTION,
 				      qinfo, repinfo, NULL, r->log_name);
@@ -2576,8 +2570,11 @@ rpz_apply_maybe_clientip_trigger(struct auth_zones* az, struct module_env* env,
 				edns, repinfo, buf, temp, *a_out);
 			ret = 1;
 		} else if(client_action == RPZ_CNAME_OVERRIDE_ACTION) {
-			rpz_apply_clientip_cname_override_action(*r_out,
-				qinfo, temp);
+			if(!rpz_apply_cname_override_action(*r_out, qinfo,
+				temp)) {
+				ret = 0;
+				goto done;
+			}
 			ret = 0;
 		} else {
 			local_zones_zone_answer(*z_out /*likely NULL, no zone*/, env, qinfo, edns,
