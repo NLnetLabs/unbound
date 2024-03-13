@@ -2527,6 +2527,8 @@ rpz_apply_maybe_clientip_trigger(struct auth_zones* az, struct module_env* env,
 	client_action = ((node == NULL) ? RPZ_INVALID_ACTION : node->action);
 	if(client_action == RPZ_PASSTHRU_ACTION) {
 		*passthru = 1;
+		ret = 0;
+		goto done;
 	}
 	if(*z_out == NULL || (client_action != RPZ_INVALID_ACTION &&
 			      client_action != RPZ_PASSTHRU_ACTION)) {

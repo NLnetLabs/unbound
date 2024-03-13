@@ -1,3 +1,7 @@
+13 March 2024: Wouter
+	- Fix #1029: rpz trigger clientip and action rpz-passthru not working
+	  as expected.
+
 12 March 2024: Yorgos
 	- Merge #1028: Clearer documentation for tcp-idle-timeout and
 	  edns-tcp-keepalive-timeout.
