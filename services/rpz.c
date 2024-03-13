@@ -1876,6 +1876,26 @@ nodata:
 		rrset_count, rcode, rsoa);
 }
 
+static void
+rpz_apply_clientip_cname_override_action(struct rpz* r,
+	struct query_info* qinfo, struct regional* temp)
+{
+	if(!r)
+		return;
+	qinfo->local_alias = regional_alloc_zero(temp,
+		sizeof(struct local_rrset));
+	if(qinfo->local_alias == NULL)
+		return; /* out of memory */
+	qinfo->local_alias->rrset = regional_alloc_init(temp,
+		r->cname_override, sizeof(*r->cname_override));
+	if(qinfo->local_alias->rrset == NULL) {
+		qinfo->local_alias = NULL;
+		return; /* out of memory */
+	}
+	qinfo->local_alias->rrset->rk.dname = qinfo->qname;
+	qinfo->local_alias->rrset->rk.dname_len = qinfo->qname_len;
+}
+
 /** add additional section SOA record to the reply.
  * Since this gets fed into the normal iterator answer creation, it
  * gets minimal-responses applied to it, that can remove the additional SOA
@@ -2525,7 +2545,18 @@ rpz_apply_maybe_clientip_trigger(struct auth_zones* az, struct module_env* env,
 		az, qinfo, repinfo, taglist, taglen, stats, z_out, a_out, r_out);
 
 	client_action = ((node == NULL) ? RPZ_INVALID_ACTION : node->action);
+	if(node != NULL && *r_out &&
+		(*r_out)->action_override != RPZ_NO_OVERRIDE_ACTION) {
+		client_action = (*r_out)->action_override;
+	}
 	if(client_action == RPZ_PASSTHRU_ACTION) {
+		if(*r_out && (*r_out)->log)
+			log_rpz_apply(
+				(node?"clientip":"qname"),
+				((*z_out)?(*z_out)->name:NULL),
+				(node?&node->node:NULL),
+				client_action, qinfo, repinfo, NULL,
+				(*r_out)->log_name);
 		*passthru = 1;
 		ret = 0;
 		goto done;
@@ -2543,14 +2574,12 @@ rpz_apply_maybe_clientip_trigger(struct auth_zones* az, struct module_env* env,
 		if(client_action == RPZ_LOCAL_DATA_ACTION) {
 			rpz_apply_clientip_localdata_action(node, env, qinfo,
 				edns, repinfo, buf, temp, *a_out);
+			ret = 1;
+		} else if(client_action == RPZ_CNAME_OVERRIDE_ACTION) {
+			rpz_apply_clientip_cname_override_action(*r_out,
+				qinfo, temp);
+			ret = 0;
 		} else {
-			if(*r_out && (*r_out)->log)
-				log_rpz_apply(
-					(node?"clientip":"qname"),
-					((*z_out)?(*z_out)->name:NULL),
-					(node?&node->node:NULL),
-					client_action, qinfo, repinfo, NULL,
-					(*r_out)->log_name);
 			local_zones_zone_answer(*z_out /*likely NULL, no zone*/, env, qinfo, edns,
 				repinfo, buf, temp, 0 /* no local data used */,
 				rpz_action_to_localzone_type(client_action));
@@ -2558,8 +2587,15 @@ rpz_apply_maybe_clientip_trigger(struct auth_zones* az, struct module_env* env,
 				LDNS_RCODE_WIRE(sldns_buffer_begin(buf))
 				== LDNS_RCODE_NXDOMAIN)
 				LDNS_RA_CLR(sldns_buffer_begin(buf));
+			ret = 1;
 		}
-		ret = 1;
+		if(*r_out && (*r_out)->log)
+			log_rpz_apply(
+				(node?"clientip":"qname"),
+				((*z_out)?(*z_out)->name:NULL),
+				(node?&node->node:NULL),
+				client_action, qinfo, repinfo, NULL,
+				(*r_out)->log_name);
 		goto done;
 	}
 	ret = -1;
