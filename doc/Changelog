@@ -1,3 +1,7 @@
+15 March 2024: Wouter
+	- Fix that addrinfo is not kept around but copied and freed, so that
+	  log-destaddr uses a copy of the information, much like NSD does.
+
 13 March 2024: Wouter
 	- Fix #1029: rpz trigger clientip and action rpz-passthru not working
 	  as expected.
