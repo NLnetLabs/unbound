@@ -1,3 +1,7 @@
+15 March 2024: Yorgos
+	- Merge #1030: Persist the openssl and expat directories for repeated
+	  Windows builds.
+
 15 March 2024: Wouter
 	- Fix that addrinfo is not kept around but copied and freed, so that
 	  log-destaddr uses a copy of the information, much like NSD does.
