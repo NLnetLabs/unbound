@@ -5,6 +5,7 @@
 	- Fix rpz that copies the cname override completely to the temp
 	  region, so there are no references to the rpz region.
 	- Add rpz unit test for nsip action override.
+	- Fix rpz for qtype CNAME after nameserver trigger.
 
 15 March 2024: Yorgos
 	- Merge #1030: Persist the openssl and expat directories for repeated

@@ -1458,6 +1458,7 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 					forged_response->rep, iq->qchase.qname,
 					iq->qchase.qname_len, LDNS_RR_TYPE_CNAME,
 					iq->qchase.qclass) &&
+					iq->qchase.qtype != LDNS_RR_TYPE_CNAME &&
 					count++ < ie->max_query_restarts) {
 					/* another cname to follow */
 					if(!handle_cname_response(qstate, iq, forged_response,
@@ -2750,7 +2751,7 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 	if(qstate->env->auth_zones) {
 		uint8_t* sname = NULL;
 		size_t snamelen = 0;
-		/* apply rpz triggers at query time */
+		/* apply rpz triggers at query time; nameserver IP and dname */
 		struct dns_msg* forged_response_after_cname;
 		struct dns_msg* forged_response = rpz_callback_from_iterator_module(qstate, iq);
 		int count = 0;
@@ -2758,6 +2759,7 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 			forged_response->rep, iq->qchase.qname,
 			iq->qchase.qname_len, LDNS_RR_TYPE_CNAME,
 			iq->qchase.qclass) &&
+			iq->qchase.qtype != LDNS_RR_TYPE_CNAME &&
 			count++ < ie->max_query_restarts) {
 			/* another cname to follow */
 			if(!handle_cname_response(qstate, iq, forged_response,
@@ -3391,6 +3393,7 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 				forged_response->rep, iq->qchase.qname,
 				iq->qchase.qname_len, LDNS_RR_TYPE_CNAME,
 				iq->qchase.qclass) &&
+				iq->qchase.qtype != LDNS_RR_TYPE_CNAME &&
 				count++ < ie->max_query_restarts) {
 				/* another cname to follow */
 				if(!handle_cname_response(qstate, iq, forged_response,
