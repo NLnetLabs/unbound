@@ -1,5 +1,7 @@
 18 March 2024: Wouter
 	- Fix that rpz CNAME content is limited to the max number of cnames.
+	- Fix rpz, it follows iterator CNAMEs for nsip and nsdname and sets
+	  the reply query_info values, that is better for debug logging.
 
 15 March 2024: Yorgos
 	- Merge #1030: Persist the openssl and expat directories for repeated
