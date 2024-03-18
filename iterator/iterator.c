@@ -1453,10 +1453,12 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 				/* apply rpz qname triggers after cname */
 				struct dns_msg* forged_response =
 					rpz_callback_from_iterator_cname(qstate, iq);
+				int count = 0;
 				while(forged_response && reply_find_rrset_section_an(
 					forged_response->rep, iq->qchase.qname,
 					iq->qchase.qname_len, LDNS_RR_TYPE_CNAME,
-					iq->qchase.qclass)) {
+					iq->qchase.qclass) &&
+					count++ < ie->max_query_restarts) {
 					/* another cname to follow */
 					if(!handle_cname_response(qstate, iq, forged_response,
 						&sname, &slen)) {
@@ -2751,10 +2753,12 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 		/* apply rpz triggers at query time */
 		struct dns_msg* forged_response_after_cname;
 		struct dns_msg* forged_response = rpz_callback_from_iterator_module(qstate, iq);
+		int count = 0;
 		while(forged_response && reply_find_rrset_section_an(
 			forged_response->rep, iq->qchase.qname,
 			iq->qchase.qname_len, LDNS_RR_TYPE_CNAME,
-			iq->qchase.qclass)) {
+			iq->qchase.qclass) &&
+			count++ < ie->max_query_restarts) {
 			/* another cname to follow */
 			if(!handle_cname_response(qstate, iq, forged_response,
 				&sname, &snamelen)) {
@@ -3382,10 +3386,12 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 			/* apply rpz qname triggers after cname */
 			struct dns_msg* forged_response =
 				rpz_callback_from_iterator_cname(qstate, iq);
+			int count = 0;
 			while(forged_response && reply_find_rrset_section_an(
 				forged_response->rep, iq->qchase.qname,
 				iq->qchase.qname_len, LDNS_RR_TYPE_CNAME,
-				iq->qchase.qclass)) {
+				iq->qchase.qclass) &&
+				count++ < ie->max_query_restarts) {
 				/* another cname to follow */
 				if(!handle_cname_response(qstate, iq, forged_response,
 					&sname, &snamelen)) {
