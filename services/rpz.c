@@ -1888,8 +1888,7 @@ rpz_apply_cname_override_action(struct rpz* r,
 		sizeof(struct local_rrset));
 	if(qinfo->local_alias == NULL)
 		return 0; /* out of memory */
-	qinfo->local_alias->rrset = regional_alloc_init(temp,
-		r->cname_override, sizeof(*r->cname_override));
+	qinfo->local_alias->rrset = respip_copy_rrset(r->cname_override, temp);
 	if(qinfo->local_alias->rrset == NULL) {
 		qinfo->local_alias = NULL;
 		return 0; /* out of memory */
