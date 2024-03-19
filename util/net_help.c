@@ -953,6 +953,111 @@ void log_crypto_err_code(const char* str, unsigned long err)
 }
 
 #ifdef HAVE_SSL
+/** Print crypt erro with SSL_get_error want code and err_get_error code */
+static void log_crypto_err_io_code_arg(const char* str, int r,
+	unsigned long err, int err_present)
+{
+	int print_errno = 0, print_crypto_err = 0;
+	const char* inf = NULL;
+
+	switch(r) {
+	case SSL_ERROR_NONE:
+		inf = "no error";
+		break;
+	case SSL_ERROR_ZERO_RETURN:
+		inf = "channel closed";
+		break;
+	case SSL_ERROR_WANT_READ:
+		inf = "want read";
+		break;
+	case SSL_ERROR_WANT_WRITE:
+		inf = "want write";
+		break;
+	case SSL_ERROR_WANT_CONNECT:
+		inf = "want connect";
+		break;
+	case SSL_ERROR_WANT_ACCEPT:
+		inf = "want accept";
+		break;
+	case SSL_ERROR_WANT_X509_LOOKUP:
+		inf = "want X509 lookup";
+		break;
+#ifdef SSL_ERROR_WANT_ASYNC
+	case SSL_ERROR_WANT_ASYNC:
+		inf = "want async";
+		break;
+#endif
+#ifdef SSL_ERROR_WANT_ASYNC_JOB
+	case SSL_ERROR_WANT_ASYNC_JOB:
+		inf = "want async job";
+		break;
+#endif
+#ifdef SSL_ERROR_WANT_CLIENT_HELLO_CB
+	case SSL_ERROR_WANT_CLIENT_HELLO_CB:
+		inf = "want client hello cb";
+		break;
+#endif
+	case SSL_ERROR_SYSCALL:
+		print_errno = 1;
+		inf = "syscall";
+		break;
+	case SSL_ERROR_SSL:
+		print_crypto_err = 1;
+		inf = "SSL, usually protocol, error";
+		break;
+	default:
+		inf = "unknown SSL_get_error result code";
+		print_errno = 1;
+		print_crypto_err = 1;
+	}
+	if(print_crypto_err) {
+		if(print_errno) {
+			char buf[1024];
+			snprintf(buf, sizeof(buf), "%s with errno %s",
+				str, strerror(errno));
+			if(err_present)
+				log_crypto_err_code(buf, err);
+			else	log_crypto_err(buf);
+		} else {
+			if(err_present)
+				log_crypto_err_code(str, err);
+			else	log_crypto_err(str);
+		}
+	} else {
+		if(print_errno) {
+			if(errno == 0)
+				log_err("str: syscall error with errno %s",
+					strerror(errno));
+			else log_err("str: %s", strerror(errno));
+		} else {
+			log_err("str: %s", inf);
+		}
+	}
+}
+#endif /* HAVE_SSL */
+
+void log_crypto_err_io(const char* str, int r)
+{
+#ifdef HAVE_SSL
+	log_crypto_err_io_code_arg(str, r, 0, 0);
+#else
+	(void)str;
+	(void)r;
+#endif /* HAVE_SSL */
+}
+
+void log_crypto_err_io_code(const char* str, int r, unsigned long err)
+{
+#ifdef HAVE_SSL
+	log_crypto_err_io_code_arg(str, r, err, 1);
+#else
+	(void)str;
+	(void)r;
+	(void)err;
+#endif /* HAVE_SSL */
+}
+
+#ifdef HAVE_SSL
 /** log certificate details */
 void
 log_cert(unsigned level, const char* str, void* cert)

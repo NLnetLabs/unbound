@@ -436,6 +436,7 @@ log-replies{COLON}		{ YDVAR(1, VAR_LOG_REPLIES) }
 log-tag-queryreply{COLON}	{ YDVAR(1, VAR_LOG_TAG_QUERYREPLY) }
 log-local-actions{COLON}       { YDVAR(1, VAR_LOG_LOCAL_ACTIONS) }
 log-servfail{COLON}		{ YDVAR(1, VAR_LOG_SERVFAIL) }
+log-destaddr{COLON}		{ YDVAR(1, VAR_LOG_DESTADDR) }
 local-zone{COLON}		{ YDVAR(2, VAR_LOCAL_ZONE) }
 local-data{COLON}		{ YDVAR(1, VAR_LOCAL_DATA) }
 local-data-ptr{COLON}		{ YDVAR(1, VAR_LOCAL_DATA_PTR) }
@@ -560,6 +561,7 @@ ipsecmod-strict{COLON}		{ YDVAR(1, VAR_IPSECMOD_STRICT) }
 cachedb{COLON}			{ YDVAR(0, VAR_CACHEDB) }
 backend{COLON}			{ YDVAR(1, VAR_CACHEDB_BACKEND) }
 secret-seed{COLON}		{ YDVAR(1, VAR_CACHEDB_SECRETSEED) }
+cachedb-no-store{COLON}		{ YDVAR(1, VAR_CACHEDB_NO_STORE) }
 redis-server-host{COLON}	{ YDVAR(1, VAR_CACHEDB_REDISHOST) }
 redis-server-port{COLON}	{ YDVAR(1, VAR_CACHEDB_REDISPORT) }
 redis-server-path{COLON}	{ YDVAR(1, VAR_CACHEDB_REDISPATH) }

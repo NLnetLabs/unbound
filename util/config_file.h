@@ -354,6 +354,8 @@ struct config_file {
 	int log_servfail;
 	/** log identity to report */
 	char* log_identity;
+	/** log dest addr for log_replies */
+	int log_destaddr;
 
 	/** do not report identity (id.server, hostname.bind) */
 	int hide_identity;
@@ -706,6 +708,8 @@ struct config_file {
 	char* cachedb_backend;
 	/** secret seed for hash key calculation */
 	char* cachedb_secret;
+	/** cachedb that does not store, but only reads from database, if on */
+	int cachedb_no_store;
 #ifdef USE_REDIS
 	/** redis server's IP address or host name */
 	char* redis_server_host;

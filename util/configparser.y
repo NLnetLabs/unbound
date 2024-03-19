@@ -200,7 +200,8 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_INTERFACE_TAG_ACTION VAR_INTERFACE_TAG_DATA
 %token VAR_QUIC_PORT VAR_QUIC_SIZE
 %token VAR_PROXY_PROTOCOL_PORT VAR_STATISTICS_INHIBIT_ZERO
-%token VAR_HARDEN_UNKNOWN_ADDITIONAL VAR_DISABLE_EDNS_DO
+%token VAR_HARDEN_UNKNOWN_ADDITIONAL VAR_DISABLE_EDNS_DO VAR_CACHEDB_NO_STORE
+%token VAR_LOG_DESTADDR
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -335,7 +336,8 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_quic_port | server_quic_size |
 	server_interface_automatic_ports | server_ede |
 	server_proxy_protocol_port | server_statistics_inhibit_zero |
-	server_harden_unknown_additional | server_disable_edns_do
+	server_harden_unknown_additional | server_disable_edns_do |
+	server_log_destaddr
 	;
 stubstart: VAR_STUB_ZONE
 	{
@@ -1264,6 +1266,15 @@ server_log_servfail: VAR_LOG_SERVFAIL STRING_ARG
 		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
 			yyerror("expected yes or no.");
 		else cfg_parser->cfg->log_servfail = (strcmp($2, "yes")==0);
+		free($2);
+	}
+	;
+server_log_destaddr: VAR_LOG_DESTADDR STRING_ARG
+	{
+		OUTYY(("P(server_log_destaddr:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else cfg_parser->cfg->log_destaddr = (strcmp($2, "yes")==0);
 		free($2);
 	}
 	;
@@ -3729,7 +3740,7 @@ contents_cachedb: contents_cachedb content_cachedb
 content_cachedb: cachedb_backend_name | cachedb_secret_seed |
 	redis_server_host | redis_server_port | redis_timeout |
 	redis_expire_records | redis_server_path | redis_server_password |
-	redis_logical_db
+	cachedb_no_store | redis_logical_db
 	;
 cachedb_backend_name: VAR_CACHEDB_BACKEND STRING_ARG
 	{
@@ -3753,6 +3764,19 @@ cachedb_secret_seed: VAR_CACHEDB_SECRETSEED STRING_ARG
 		OUTYY(("P(Compiled without cachedb, ignoring)\n"));
 		free($2);
 	#endif
+	}
+	;
+cachedb_no_store: VAR_CACHEDB_NO_STORE STRING_ARG
+	{
+	#ifdef USE_CACHEDB
+		OUTYY(("P(cachedb_no_store:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else cfg_parser->cfg->cachedb_no_store = (strcmp($2, "yes")==0);
+	#else
+		OUTYY(("P(Compiled without cachedb, ignoring)\n"));
+	#endif
+		free($2);
 	}
 	;
 redis_server_host: VAR_CACHEDB_REDISHOST STRING_ARG
