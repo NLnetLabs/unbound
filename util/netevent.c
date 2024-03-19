@@ -1441,7 +1441,7 @@ doq_get_localaddr_cmsg(struct comm_point* c, struct doq_pkt_addr* paddr,
 			}
 			sa->sin6_family = AF_INET6;
 			sa->sin6_port = htons(doq_sockaddr_get_port(
-				(void*)c->socket->addr->ai_addr));
+				(void*)c->socket->addr));
 			paddr->ifindex = v6info->ipi6_ifindex;
 			memmove(&sa->sin6_addr, &v6info->ipi6_addr,
 				sizeof(struct in6_addr));
@@ -1463,7 +1463,7 @@ doq_get_localaddr_cmsg(struct comm_point* c, struct doq_pkt_addr* paddr,
 			}
 			sa->sin_family = AF_INET;
 			sa->sin_port = htons(doq_sockaddr_get_port(
-				(void*)c->socket->addr->ai_addr));
+				(void*)c->socket->addr));
 			paddr->ifindex = v4info->ipi_ifindex;
 			memmove(&sa->sin_addr, &v4info->ipi_addr,
 				sizeof(struct in_addr));
@@ -1483,8 +1483,7 @@ doq_get_localaddr_cmsg(struct comm_point* c, struct doq_pkt_addr* paddr,
 			}
 			sa->sin_family = AF_INET;
 			sa->sin_port = htons(doq_sockaddr_get_port(
-				(struct sockaddr_storage*)c->socket->
-				addr->ai_addr));
+				(void*)c->socket->addr));
 			paddr->ifindex = 0;
 			memmove(&sa.sin_addr, CMSG_DATA(cmsg),
 				sizeof(struct in_addr));
