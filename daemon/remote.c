@@ -3773,6 +3773,262 @@ fr_construct_clear(struct fast_reload_construct* ct)
 	config_delete(ct->oldcfg);
 }
 
+/** get memory for string */
+static size_t
+getmem_str(char* str)
+{
+	if(!str) return 0;
+	return strlen(str)+1;
+}
+
+/** get memory for strlist */
+static size_t
+getmem_config_strlist(struct config_strlist* p)
+{
+	size_t m = 0;
+	struct config_strlist* s;
+	for(s = p; s; s = s->next)
+		m += sizeof(*s) + getmem_str(s->str);
+	return m;
+}
+
+/** get memory for str2list */
+static size_t
+getmem_config_str2list(struct config_str2list* p)
+{
+	size_t m = 0;
+	struct config_str2list* s;
+	for(s = p; s; s = s->next)
+		m += sizeof(*s) + getmem_str(s->str) + getmem_str(s->str2);
+	return m;
+}
+
+/** get memory for str3list */
+static size_t
+getmem_config_str3list(struct config_str3list* p)
+{
+	size_t m = 0;
+	struct config_str3list* s;
+	for(s = p; s; s = s->next)
+		m += sizeof(*s) + getmem_str(s->str) + getmem_str(s->str2)
+			+ getmem_str(s->str3);
+	return m;
+}
+
+/** get memory for strbytelist */
+static size_t
+getmem_config_strbytelist(struct config_strbytelist* p)
+{
+	size_t m = 0;
+	struct config_strbytelist* s;
+	for(s = p; s; s = s->next)
+		m += sizeof(*s) + getmem_str(s->str) + (s->str2?s->str2len:0);
+	return m;
+}
+
+/** get memory used by ifs array */
+static size_t
+getmem_ifs(int numifs, char** ifs)
+{
+	size_t m = 0;
+	int i;
+	m += numifs * sizeof(char*);
+	for(i=0; i<numifs; i++)
+		m += getmem_str(ifs[i]);
+	return m;
+}
+
+/** get memory for config_stub */
+static size_t
+getmem_config_stub(struct config_stub* p)
+{
+	size_t m = 0;
+	struct config_stub* s;
+	for(s = p; s; s = s->next)
+		m += sizeof(*s) + getmem_str(s->name)
+			+ getmem_config_strlist(s->hosts)
+			+ getmem_config_strlist(s->addrs);
+	return m;
+}
+
+/** get memory for config_auth */
+static size_t
+getmem_config_auth(struct config_auth* p)
+{
+	size_t m = 0;
+	struct config_auth* s;
+	for(s = p; s; s = s->next)
+		m += sizeof(*s) + getmem_str(s->name)
+			+ getmem_config_strlist(s->masters)
+			+ getmem_config_strlist(s->urls)
+			+ getmem_config_strlist(s->allow_notify)
+			+ getmem_str(s->zonefile)
+			+ s->rpz_taglistlen
+			+ getmem_str(s->rpz_action_override)
+			+ getmem_str(s->rpz_log_name)
+			+ getmem_str(s->rpz_cname);
+	return m;
+}
+
+/** get memory for config_view */
+static size_t
+getmem_config_view(struct config_view* p)
+{
+	size_t m = 0;
+	struct config_view* s;
+	for(s = p; s; s = s->next)
+		m += sizeof(*s) + getmem_str(s->name)
+			+ getmem_config_str2list(s->local_zones)
+			+ getmem_config_strlist(s->local_data)
+			+ getmem_config_strlist(s->local_zones_nodefault)
+#ifdef USE_IPSET
+			+ getmem_config_strlist(s->local_zones_ipset)
+#endif
+			+ getmem_config_str2list(s->respip_actions)
+			+ getmem_config_str2list(s->respip_data);
+
+	return m;
+}
+
+/** get memory used by config_file item, estimate */
+static size_t
+config_file_getmem(struct config_file* cfg)
+{
+	size_t m = 0;
+	m += sizeof(*cfg);
+	m += getmem_config_strlist(cfg->proxy_protocol_port);
+	m += getmem_str(cfg->ssl_service_key);
+	m += getmem_str(cfg->ssl_service_pem);
+	m += getmem_str(cfg->tls_cert_bundle);
+	m += getmem_config_strlist(cfg->tls_additional_port);
+	m += getmem_config_strlist(cfg->tls_session_ticket_keys.first);
+	m += getmem_str(cfg->tls_ciphers);
+	m += getmem_str(cfg->tls_ciphersuites);
+	m += getmem_str(cfg->http_endpoint);
+	m += (cfg->outgoing_avail_ports?65536*sizeof(int):0);
+	m += getmem_str(cfg->target_fetch_policy);
+	m += getmem_str(cfg->if_automatic_ports);
+	m += getmem_ifs(cfg->num_ifs, cfg->ifs);
+	m += getmem_ifs(cfg->num_out_ifs, cfg->out_ifs);
+	m += getmem_config_strlist(cfg->root_hints);
+	m += getmem_config_stub(cfg->stubs);
+	m += getmem_config_stub(cfg->forwards);
+	m += getmem_config_auth(cfg->auths);
+	m += getmem_config_view(cfg->views);
+	m += getmem_config_strlist(cfg->donotqueryaddrs);
+#ifdef CLIENT_SUBNET
+	m += getmem_config_strlist(cfg->client_subnet);
+	m += getmem_config_strlist(cfg->client_subnet_zone);
+#endif
+	m += getmem_config_str2list(cfg->acls);
+	m += getmem_config_str2list(cfg->tcp_connection_limits);
+	m += getmem_config_strlist(cfg->caps_whitelist);
+	m += getmem_config_strlist(cfg->private_address);
+	m += getmem_config_strlist(cfg->private_domain);
+	m += getmem_str(cfg->chrootdir);
+	m += getmem_str(cfg->username);
+	m += getmem_str(cfg->directory);
+	m += getmem_str(cfg->logfile);
+	m += getmem_str(cfg->pidfile);
+	m += getmem_str(cfg->log_identity);
+	m += getmem_str(cfg->identity);
+	m += getmem_str(cfg->version);
+	m += getmem_str(cfg->http_user_agent);
+	m += getmem_str(cfg->nsid_cfg_str);
+	m += (cfg->nsid?cfg->nsid_len:0);
+	m += getmem_str(cfg->module_conf);
+	m += getmem_config_strlist(cfg->trust_anchor_file_list);
+	m += getmem_config_strlist(cfg->trust_anchor_list);
+	m += getmem_config_strlist(cfg->auto_trust_anchor_file_list);
+	m += getmem_config_strlist(cfg->trusted_keys_file_list);
+	m += getmem_config_strlist(cfg->domain_insecure);
+	m += getmem_str(cfg->val_nsec3_key_iterations);
+	m += getmem_config_str2list(cfg->local_zones);
+	m += getmem_config_strlist(cfg->local_zones_nodefault);
+#ifdef USE_IPSET
+	m += getmem_config_strlist(cfg->local_zones_ipset);
+#endif
+	m += getmem_config_strlist(cfg->local_data);
+	m += getmem_config_str3list(cfg->local_zone_overrides);
+	m += getmem_config_strbytelist(cfg->local_zone_tags);
+	m += getmem_config_strbytelist(cfg->acl_tags);
+	m += getmem_config_str3list(cfg->acl_tag_actions);
+	m += getmem_config_str3list(cfg->acl_tag_datas);
+	m += getmem_config_str2list(cfg->acl_view);
+	m += getmem_config_str2list(cfg->interface_actions);
+	m += getmem_config_strbytelist(cfg->interface_tags);
+	m += getmem_config_str3list(cfg->interface_tag_actions);
+	m += getmem_config_str3list(cfg->interface_tag_datas);
+	m += getmem_config_str2list(cfg->interface_view);
+	m += getmem_config_strbytelist(cfg->respip_tags);
+	m += getmem_config_str2list(cfg->respip_actions);
+	m += getmem_config_str2list(cfg->respip_data);
+	m += getmem_ifs(cfg->num_tags, cfg->tagname);
+	m += getmem_config_strlist(cfg->control_ifs.first);
+	m += getmem_str(cfg->server_key_file);
+	m += getmem_str(cfg->server_cert_file);
+	m += getmem_str(cfg->control_key_file);
+	m += getmem_str(cfg->control_cert_file);
+	m += getmem_config_strlist(cfg->python_script);
+	m += getmem_config_strlist(cfg->dynlib_file);
+	m += getmem_str(cfg->dns64_prefix);
+	m += getmem_config_strlist(cfg->dns64_ignore_aaaa);
+	m += getmem_str(cfg->nat64_prefix);
+	m += getmem_str(cfg->dnstap_socket_path);
+	m += getmem_str(cfg->dnstap_ip);
+	m += getmem_str(cfg->dnstap_tls_server_name);
+	m += getmem_str(cfg->dnstap_tls_cert_bundle);
+	m += getmem_str(cfg->dnstap_tls_client_key_file);
+	m += getmem_str(cfg->dnstap_tls_client_cert_file);
+	m += getmem_str(cfg->dnstap_identity);
+	m += getmem_str(cfg->dnstap_version);
+	m += getmem_config_str2list(cfg->ratelimit_for_domain);
+	m += getmem_config_str2list(cfg->ratelimit_below_domain);
+	m += getmem_config_str2list(cfg->edns_client_strings);
+	m += getmem_str(cfg->dnscrypt_provider);
+	m += getmem_config_strlist(cfg->dnscrypt_secret_key);
+	m += getmem_config_strlist(cfg->dnscrypt_provider_cert);
+	m += getmem_config_strlist(cfg->dnscrypt_provider_cert_rotated);
+#ifdef USE_IPSECMOD
+	m += getmem_config_strlist(cfg->ipsecmod_whitelist);
+	m += getmem_str(cfg->ipsecmod_hook);
+#endif
+#ifdef USE_CACHEDB
+	m += getmem_str(cfg->cachedb_backend);
+	m += getmem_str(cfg->cachedb_secret);
+#ifdef USE_REDIS
+	m += getmem_str(cfg->redis_server_host);
+	m += getmem_str(cfg->redis_server_path);
+	m += getmem_str(cfg->redis_server_password);
+#endif
+#endif
+#ifdef USE_IPSET
+	m += getmem_str(cfg->ipset_name_v4);
+	m += getmem_str(cfg->ipset_name_v6);
+#endif
+	return m;
+}
+
+/** fast reload thread, print memory used by construct of items. */
+static int
+fr_printmem(struct fast_reload_thread* fr,
+	struct config_file* newcfg, struct fast_reload_construct* ct)
+{
+	size_t mem = 0;
+	if(fr_poll_for_quit(fr))
+		return 1;
+	mem += forwards_get_mem(ct->fwds);
+	mem += hints_get_mem(ct->hints);
+	mem += sizeof(*ct->oldcfg);
+	mem += config_file_getmem(newcfg);
+
+	if(!fr_output_printf(fr, "memory use %d bytes\n", (int)mem))
+		return 0;
+	fr_send_notification(fr, fast_reload_notification_printout);
+
+	return 1;
+}
+
 /** fast reload thread, construct from config the new items */
 static int
 fr_construct_from_config(struct fast_reload_thread* fr,
@@ -3802,6 +4058,8 @@ fr_construct_from_config(struct fast_reload_thread* fr,
 		log_err("out of memory");
 		return 0;
 	}
+	if(!fr_printmem(fr, newcfg, ct))
+		return 0;
 	return 1;
 }
 
