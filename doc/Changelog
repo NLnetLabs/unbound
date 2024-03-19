@@ -1,6 +1,8 @@
 19 March 2024: Wouter
 	- Fix rpz so that rpz CNAME can apply after rpz CNAME. And fix that
 	  clientip and nsip can give a CNAME.
+	- Fix localdata and rpz localdata to match CNAME only if no direct
+	  type match is available.
 
 18 March 2024: Wouter
 	- Fix that rpz CNAME content is limited to the max number of cnames.
