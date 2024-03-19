@@ -163,7 +163,7 @@ jobs:
             make: "no"
  
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           submodules: false
       - name: test_windows

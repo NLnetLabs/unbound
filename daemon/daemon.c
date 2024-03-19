@@ -323,17 +323,15 @@ static int setup_acl_for_ports(struct acl_list* list,
 	struct listen_port* port_list)
 {
 	struct acl_addr* acl_node;
-	struct addrinfo* addr;
 	for(; port_list; port_list=port_list->next) {
 		if(!port_list->socket) {
 			/* This is mainly for testbound where port_list is
 			 * empty. */
 			continue;
 		}
-		addr = port_list->socket->addr;
 		if(!(acl_node = acl_interface_insert(list,
-			(struct sockaddr_storage*)addr->ai_addr,
-			(socklen_t)addr->ai_addrlen,
+			(struct sockaddr_storage*)port_list->socket->addr,
+			port_list->socket->addrlen,
 			acl_refuse))) {
 			return 0;
 		}
