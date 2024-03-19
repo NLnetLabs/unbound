@@ -1389,7 +1389,59 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 
 	/* This either results in a query restart (CNAME cache response), a
 	 * terminating response (ANSWER), or a cache miss (null). */
-	
+
+	/* Check RPZ for override */
+	if(qstate->env->auth_zones) {
+		/* apply rpz qname triggers, like after cname */
+		struct dns_msg* forged_response =
+			rpz_callback_from_iterator_cname(qstate, iq);
+		if(forged_response) {
+			uint8_t* sname = 0;
+			size_t slen = 0;
+			int count = 0;
+			while(forged_response && reply_find_rrset_section_an(
+				forged_response->rep, iq->qchase.qname,
+				iq->qchase.qname_len, LDNS_RR_TYPE_CNAME,
+				iq->qchase.qclass) &&
+				iq->qchase.qtype != LDNS_RR_TYPE_CNAME &&
+				count++ < ie->max_query_restarts) {
+				/* another cname to follow */
+				if(!handle_cname_response(qstate, iq, forged_response,
+					&sname, &slen)) {
+					errinf(qstate, "malloc failure, CNAME info");
+					return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
+				}
+				iq->qchase.qname = sname;
+				iq->qchase.qname_len = slen;
+				forged_response =
+					rpz_callback_from_iterator_cname(qstate, iq);
+			}
+			if(forged_response != NULL) {
+				qstate->ext_state[id] = module_finished;
+				qstate->return_rcode = LDNS_RCODE_NOERROR;
+				qstate->return_msg = forged_response;
+				iq->response = forged_response;
+				next_state(iq, FINISHED_STATE);
+				if(!iter_prepend(iq, qstate->return_msg, qstate->region)) {
+					log_err("rpz: after cached cname, prepend rrsets: out of memory");
+					return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
+				}
+				qstate->return_msg->qinfo = qstate->qinfo;
+				return 0;
+			}
+			/* Follow the CNAME response */
+			iq->dp = NULL;
+			iq->refetch_glue = 0;
+			iq->query_restart_count++;
+			iq->sent_count = 0;
+			iq->dp_target_count = 0;
+			sock_list_insert(&qstate->reply_origin, NULL, 0, qstate->region);
+			if(qstate->env->cfg->qname_minimisation)
+				iq->minimisation_state = INIT_MINIMISE_STATE;
+			return next_state(iq, INIT_REQUEST_STATE);
+		}
+	}
+
 	if (iter_stub_fwd_no_cache(qstate, &iq->qchase, &dpname, &dpnamelen)) {
 		/* Asked to not query cache. */
 		verbose(VERB_ALGO, "no-cache set, going to the network");
@@ -1449,42 +1501,6 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 			}
 			iq->qchase.qname = sname;
 			iq->qchase.qname_len = slen;
-			if(qstate->env->auth_zones) {
-				/* apply rpz qname triggers after cname */
-				struct dns_msg* forged_response =
-					rpz_callback_from_iterator_cname(qstate, iq);
-				int count = 0;
-				while(forged_response && reply_find_rrset_section_an(
-					forged_response->rep, iq->qchase.qname,
-					iq->qchase.qname_len, LDNS_RR_TYPE_CNAME,
-					iq->qchase.qclass) &&
-					iq->qchase.qtype != LDNS_RR_TYPE_CNAME &&
-					count++ < ie->max_query_restarts) {
-					/* another cname to follow */
-					if(!handle_cname_response(qstate, iq, forged_response,
-						&sname, &slen)) {
-						errinf(qstate, "malloc failure, CNAME info");
-						return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
-					}
-					iq->qchase.qname = sname;
-					iq->qchase.qname_len = slen;
-					forged_response =
-						rpz_callback_from_iterator_cname(qstate, iq);
-				}
-				if(forged_response != NULL) {
-					qstate->ext_state[id] = module_finished;
-					qstate->return_rcode = LDNS_RCODE_NOERROR;
-					qstate->return_msg = forged_response;
-					iq->response = forged_response;
-					next_state(iq, FINISHED_STATE);
-					if(!iter_prepend(iq, qstate->return_msg, qstate->region)) {
-						log_err("rpz: after cached cname, prepend rrsets: out of memory");
-						return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
-					}
-					qstate->return_msg->qinfo = qstate->qinfo;
-					return 0;
-				}
-			}
 			/* This *is* a query restart, even if it is a cheap 
 			 * one. */
 			iq->dp = NULL;
@@ -1497,7 +1513,6 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 				iq->minimisation_state = INIT_MINIMISE_STATE;
 			return next_state(iq, INIT_REQUEST_STATE);
 		}
-
 		/* if from cache, NULL, else insert 'cache IP' len=0 */
 		if(qstate->reply_origin)
 			sock_list_insert(&qstate->reply_origin, NULL, 0, qstate->region);

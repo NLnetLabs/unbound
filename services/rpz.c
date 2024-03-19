@@ -1244,16 +1244,20 @@ rpz_find_zone(struct local_zones* zones, uint8_t* qname, size_t qname_len, uint1
 /** Find entry for RR type in the list of rrsets for the clientip. */
 static struct local_rrset*
 rpz_find_synthesized_rrset(uint16_t qtype,
-	struct clientip_synthesized_rr* data)
+	struct clientip_synthesized_rr* data, int alias_ok)
 {
-	struct local_rrset* cursor = data->data;
+	struct local_rrset* cursor = data->data, *cname = NULL;
 	while( cursor != NULL) {
 		struct packed_rrset_key* packed_rrset = &cursor->rrset->rk;
 		if(htons(qtype) == packed_rrset->type) {
 			return cursor;
 		}
+		if(ntohs(packed_rrset->type) == LDNS_RR_TYPE_CNAME && alias_ok)
+			cname = cursor;
 		cursor = cursor->next;
 	}
+	if(alias_ok)
+		return cname;
 	return NULL;
 }
 
@@ -1439,7 +1443,7 @@ static int rpz_remove_clientip_rr(struct clientip_synthesized_rr* node,
 	struct local_rrset* rrset;
 	struct packed_rrset_data* d;
 	size_t index;
-	rrset = rpz_find_synthesized_rrset(rr_type, node);
+	rrset = rpz_find_synthesized_rrset(rr_type, node, 0);
 	if(rrset == NULL)
 		return 0; /* type not found, ignore */
 	d = (struct packed_rrset_data*)rrset->rrset->entry.data;
@@ -1842,7 +1846,7 @@ rpz_apply_clientip_localdata_action(struct clientip_synthesized_rr* raddr,
 	}
 
 	/* check query type / rr type */
-	rrset = rpz_find_synthesized_rrset(qinfo->qtype, raddr);
+	rrset = rpz_find_synthesized_rrset(qinfo->qtype, raddr, 1);
 	if(rrset == NULL) {
 		verbose(VERB_ALGO, "rpz: unable to find local-data for query");
 		rrset_count = 0;
@@ -2056,7 +2060,7 @@ rpz_synthesize_nsip_localdata(struct rpz* r, struct module_qstate* ms,
 {
 	struct local_rrset* rrset;
 
-	rrset = rpz_find_synthesized_rrset(qi->qtype, data);
+	rrset = rpz_find_synthesized_rrset(qi->qtype, data, 1);
 	if(rrset == NULL) {
 		verbose(VERB_ALGO, "rpz: nsip: no matching local data found");
 		return NULL;
@@ -2128,12 +2132,12 @@ rpz_synthesize_qname_localdata_msg(struct rpz* r, struct module_qstate* ms,
 	key.namelabs = dname_count_labels(qinfo->qname);
 	ld = (struct local_data*)rbtree_search(&z->data, &key.node);
 	if(ld == NULL) {
-		verbose(VERB_ALGO, "rpz: qname after cname: name not found");
+		verbose(VERB_ALGO, "rpz: qname: name not found");
 		return NULL;
 	}
 	rrset = local_data_find_type(ld, qinfo->qtype, 1);
 	if(rrset == NULL) {
-		verbose(VERB_ALGO, "rpz: qname after cname: type not found");
+		verbose(VERB_ALGO, "rpz: qname: type not found");
 		return NULL;
 	}
 	return rpz_synthesize_localdata_from_rrset(r, ms, qinfo, rrset, az);
@@ -2539,10 +2543,10 @@ struct dns_msg* rpz_callback_from_iterator_cname(struct module_qstate* ms,
 		dname_str(is->qchase.qname, nm);
 		dname_str(z->name, zn);
 		if(strcmp(zn, nm) != 0)
-			verbose(VERB_ALGO, "rpz: qname trigger after cname %s on %s, with action=%s",
+			verbose(VERB_ALGO, "rpz: qname trigger %s on %s, with action=%s",
 				zn, nm, rpz_action_to_string(localzone_type_to_rpz_action(lzt)));
 		else
-			verbose(VERB_ALGO, "rpz: qname trigger after cname %s, with action=%s",
+			verbose(VERB_ALGO, "rpz: qname trigger %s, with action=%s",
 				nm, rpz_action_to_string(localzone_type_to_rpz_action(lzt)));
 	}
 	switch(localzone_type_to_rpz_action(lzt)) {
@@ -2571,7 +2575,7 @@ struct dns_msg* rpz_callback_from_iterator_cname(struct module_qstate* ms,
 		ms->rpz_passthru = 1;
 		break;
 	default:
-		verbose(VERB_ALGO, "rpz: qname trigger after cname: bug: unhandled or invalid action: '%s'",
+		verbose(VERB_ALGO, "rpz: qname trigger: bug: unhandled or invalid action: '%s'",
 			rpz_action_to_string(localzone_type_to_rpz_action(lzt)));
 		ret = NULL;
 	}
