@@ -678,9 +678,16 @@ do_reload(RES* ssl, struct worker* worker, int reuse_cache)
 static void
 do_fast_reload(RES* ssl, struct worker* worker, struct rc_state* s)
 {
+#ifdef THREADS_DISABLED
+	if(!ssl_printf(ssl, "error: no threads for fast_reload, compiled without threads.\n"))
+		return;
+	(void)worker;
+	(void)s;
+#else
 	if(!ssl_printf(ssl, "start fast_reload\n"))
 		return;
 	fast_reload_thread_start(ssl, worker, s);
+#endif
 }
 
 /** do the verbosity command */
@@ -3522,6 +3529,7 @@ fr_notification_to_string(enum fast_reload_notification status)
 	return "unknown";
 }
 
+#ifndef THREADS_DISABLED
 /** fast reload, poll for notification incoming. True if quit */
 static int
 fr_poll_for_quit(struct fast_reload_thread* fr)
@@ -3642,7 +3650,6 @@ fr_send_notification(struct fast_reload_thread* fr,
 	}
 }
 
-#ifndef THREADS_DISABLED
 /** fast reload thread queue up text string for output */
 static int
 fr_output_text(struct fast_reload_thread* fr, const char* msg)
@@ -5252,6 +5259,7 @@ int fast_reload_client_callback(struct comm_point* ATTR_UNUSED(c), void* arg,
 	return 0;
 }
 
+#ifndef THREADS_DISABLED
 /** fast reload printq create */
 static struct fast_reload_printq*
 fr_printq_create(struct comm_point* c, struct worker* worker)
@@ -5270,6 +5278,7 @@ fr_printq_create(struct comm_point* c, struct worker* worker)
 	printq->client_cp->cb_arg = printq;
 	return printq;
 }
+#endif /* !THREADS_DISABLED */
 
 /** fast reload printq delete */
 static void
@@ -5432,6 +5441,7 @@ fast_reload_thread_start(RES* ssl, struct worker* worker, struct rc_state* s)
 	ub_thread_create(&worker->daemon->fast_reload_thread->tid,
 		fast_reload_thread_main, worker->daemon->fast_reload_thread);
 #else
+	(void)s;
 #endif
 }
 

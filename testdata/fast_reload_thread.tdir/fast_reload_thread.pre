@@ -4,7 +4,15 @@
 # use .tpkg.var.test for in test variable passing
 [ -f .tpkg.var.test ] && source .tpkg.var.test
 
+PRE="../.."
 . ../common.sh
+# if no threads; exit
+if grep -e "define HAVE_PTHREAD 1" -e "define HAVE_SOLARIS_THREADS 1" -e "define HAVE_WINDOWS_THREADS 1" $PRE/config.h; then
+	echo "have threads"
+else
+	skip_test "no threads"
+fi
+
 get_random_port 1
 UNBOUND_PORT=$RND_PORT
 echo "UNBOUND_PORT=$UNBOUND_PORT" >> .tpkg.var.test
