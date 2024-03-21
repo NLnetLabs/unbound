@@ -109,7 +109,7 @@ usage(void)
 	printf("  				That means the caches sizes and\n");
 	printf("  				the number of threads must not\n");
 	printf("  				change between reloads.\n");
-	printf("  fast_reload [+v]		reloads the server but only briefly stops\n");
+	printf("  fast_reload [+vp]		reloads the server but only briefly stops\n");
 	printf("  				server processing, keeps cache, and only\n");
 	printf("  				changes some options, like forwards\n");
 	printf("  				and stubs.\n");

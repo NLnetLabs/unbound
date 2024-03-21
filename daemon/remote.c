@@ -674,6 +674,39 @@ do_reload(RES* ssl, struct worker* worker, int reuse_cache)
 	send_ok(ssl);
 }
 
+#ifndef THREADS_DISABLED
+/** parse fast reload command options. */
+static int
+fr_parse_options(RES* ssl, char* arg, int* fr_verb, int* fr_nopause)
+{
+	char* argp = arg;
+	while(*argp=='+') {
+		argp++;
+		while(*argp!=0 && *argp!=' ' && *argp!='\t') {
+			if(*argp == 'v') {
+				(*fr_verb)++;
+			} else if(*argp == 'p') {
+				(*fr_nopause) = 1;
+			} else {
+				if(!ssl_printf(ssl,
+					"error: unknown option '+%c'\n",
+					*argp))
+					return 0;
+				return 0;
+			}
+			argp++;
+		}
+		argp = skipwhite(argp);
+	}
+	if(*argp!=0) {
+		if(!ssl_printf(ssl, "error: unknown option '%s'\n", argp))
+			return 0;
+		return 0;
+	}
+	return 1;
+}
+#endif /* !THREADS_DISABLED */
+
 /** do the fast_reload command */
 static void
 do_fast_reload(RES* ssl, struct worker* worker, struct rc_state* s, char* arg)
@@ -685,27 +718,14 @@ do_fast_reload(RES* ssl, struct worker* worker, struct rc_state* s, char* arg)
 	(void)s;
 	(void)arg;
 #else
-	int fr_verb = 0;
-	if(arg[0] == '+') {
-		int i=1;
-		while(arg[i]!=0 && arg[i]!=' ' && arg[i]!='\t') {
-			if(arg[i] == 'v')
-				fr_verb++;
-			else {
-				if(!ssl_printf(ssl,
-					"error: unknown option '+%c'\n",
-					arg[i]))
-					return;
-				return;
-			}
-			i++;
-		}
-	}
+	int fr_verb = 0, fr_nopause = 0;
+	if(!fr_parse_options(ssl, arg, &fr_verb, &fr_nopause))
+		return;
 	if(fr_verb >= 1) {
 		if(!ssl_printf(ssl, "start fast_reload\n"))
 			return;
 	}
-	fast_reload_thread_start(ssl, worker, s, fr_verb);
+	fast_reload_thread_start(ssl, worker, s, fr_verb, fr_nopause);
 #endif
 }
 
@@ -4244,12 +4264,16 @@ fr_reload_ipc(struct fast_reload_thread* fr, struct config_file* newcfg,
 	struct fast_reload_construct* ct)
 {
 	int result = 1;
-	fr_send_notification(fr, fast_reload_notification_reload_stop);
-	fr_poll_for_ack(fr);
+	if(!fr->fr_nopause) {
+		fr_send_notification(fr, fast_reload_notification_reload_stop);
+		fr_poll_for_ack(fr);
+	}
 	if(!fr_reload_config(fr, newcfg, ct)) {
 		result = 0;
 	}
-	fr_send_notification(fr, fast_reload_notification_reload_start);
+	if(!fr->fr_nopause) {
+		fr_send_notification(fr, fast_reload_notification_reload_start);
+	}
 	return result;
 }
 
@@ -4653,7 +4677,7 @@ create_socketpair(int* pair, struct ub_randstate* rand)
 
 /** fast reload thread. setup the thread info */
 static int
-fast_reload_thread_setup(struct worker* worker, int fr_verb)
+fast_reload_thread_setup(struct worker* worker, int fr_verb, int fr_nopause)
 {
 	struct fast_reload_thread* fr;
 	int numworkers = worker->daemon->num;
@@ -4663,6 +4687,7 @@ fast_reload_thread_setup(struct worker* worker, int fr_verb)
 		return 0;
 	fr = worker->daemon->fast_reload_thread;
 	fr->fr_verb = fr_verb;
+	fr->fr_nopause = fr_nopause;
 	/* The thread id printed in logs, numworker+1 is the dnstap thread.
 	 * This is numworkers+2. */
 	fr->threadnum = numworkers+2;
@@ -5407,13 +5432,13 @@ fr_send_stop(struct fast_reload_thread* fr)
 
 void
 fast_reload_thread_start(RES* ssl, struct worker* worker, struct rc_state* s,
-	int fr_verb)
+	int fr_verb, int fr_nopause)
 {
 	if(worker->daemon->fast_reload_thread) {
 		log_err("fast reload thread already running");
 		return;
 	}
-	if(!fast_reload_thread_setup(worker, fr_verb)) {
+	if(!fast_reload_thread_setup(worker, fr_verb, fr_nopause)) {
 		if(!ssl_printf(ssl, "error could not setup thread\n"))
 			return;
 		return;
