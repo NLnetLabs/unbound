@@ -52,6 +52,9 @@
 #ifdef HAVE_OPENSSL_BN_H
 #include <openssl/bn.h>
 #endif
+#ifdef HAVE_STDATOMIC_H
+#include <stdatomic.h>
+#endif
 
 #include <ctype.h>
 #include "daemon/remote.h"
@@ -4153,6 +4156,351 @@ fr_finish_time(struct fast_reload_thread* fr, struct timeval* time_start,
 	return 1;
 }
 
+#ifdef ATOMIC_POINTER_LOCK_FREE
+/** Fast reload thread, if atomics are available, copy the config items
+ * one by one with atomic store operations. */
+static void
+fr_atomic_copy_cfg(struct config_file* oldcfg, struct config_file* cfg,
+	struct config_file* newcfg)
+{
+#define COPY_VAR(var) oldcfg->var = cfg->var; atomic_store(&cfg->var, newcfg->var); newcfg->var = 0;
+	/* If config file items are missing from this list, they are
+	 * not updated by fast-reload +p. */
+	/* For missing items, the oldcfg item is not updated, still NULL,
+	 * and the cfg stays the same. The newcfg item is untouched.
+	 * The newcfg item is then deleted later. */
+	/* Items that need synchronisation are omitted from the list.
+	 * Use fast-reload without +p to update them together. */
+	COPY_VAR(verbosity);
+	COPY_VAR(stat_interval);
+	COPY_VAR(stat_cumulative);
+	COPY_VAR(stat_extended);
+	COPY_VAR(stat_inhibit_zero);
+	COPY_VAR(num_threads);
+	COPY_VAR(port);
+	COPY_VAR(do_ip4);
+	COPY_VAR(do_ip6);
+	COPY_VAR(do_nat64);
+	COPY_VAR(prefer_ip4);
+	COPY_VAR(prefer_ip6);
+	COPY_VAR(do_udp);
+	COPY_VAR(do_tcp);
+	COPY_VAR(max_reuse_tcp_queries);
+	COPY_VAR(tcp_reuse_timeout);
+	COPY_VAR(tcp_auth_query_timeout);
+	COPY_VAR(tcp_upstream);
+	COPY_VAR(udp_upstream_without_downstream);
+	COPY_VAR(tcp_mss);
+	COPY_VAR(outgoing_tcp_mss);
+	COPY_VAR(tcp_idle_timeout);
+	COPY_VAR(do_tcp_keepalive);
+	COPY_VAR(tcp_keepalive_timeout);
+	COPY_VAR(sock_queue_timeout);
+	COPY_VAR(proxy_protocol_port);
+	COPY_VAR(ssl_service_key);
+	COPY_VAR(ssl_service_pem);
+	COPY_VAR(ssl_port);
+	COPY_VAR(ssl_upstream);
+	COPY_VAR(tls_cert_bundle);
+	COPY_VAR(tls_win_cert);
+	COPY_VAR(tls_additional_port);
+	/* The first is used to walk throught the list but last is
+	 * only used during config read. */
+	COPY_VAR(tls_session_ticket_keys.first);
+	COPY_VAR(tls_session_ticket_keys.last);
+	COPY_VAR(tls_ciphers);
+	COPY_VAR(tls_ciphersuites);
+	COPY_VAR(tls_use_sni);
+	COPY_VAR(https_port);
+	COPY_VAR(http_endpoint);
+	COPY_VAR(http_max_streams);
+	COPY_VAR(http_query_buffer_size);
+	COPY_VAR(http_response_buffer_size);
+	COPY_VAR(http_nodelay);
+	COPY_VAR(http_notls_downstream);
+	COPY_VAR(outgoing_num_ports);
+	COPY_VAR(outgoing_num_tcp);
+	COPY_VAR(incoming_num_tcp);
+	COPY_VAR(outgoing_avail_ports);
+	COPY_VAR(edns_buffer_size);
+	COPY_VAR(stream_wait_size);
+	COPY_VAR(msg_buffer_size);
+	COPY_VAR(msg_cache_size);
+	COPY_VAR(msg_cache_slabs);
+	COPY_VAR(num_queries_per_thread);
+	COPY_VAR(jostle_time);
+	COPY_VAR(rrset_cache_size);
+	COPY_VAR(rrset_cache_slabs);
+	COPY_VAR(host_ttl);
+	COPY_VAR(infra_cache_slabs);
+	COPY_VAR(infra_cache_numhosts);
+	COPY_VAR(infra_cache_min_rtt);
+	COPY_VAR(infra_cache_max_rtt);
+	COPY_VAR(infra_keep_probing);
+	COPY_VAR(delay_close);
+	COPY_VAR(udp_connect);
+	COPY_VAR(target_fetch_policy);
+	COPY_VAR(fast_server_permil);
+	COPY_VAR(fast_server_num);
+	COPY_VAR(if_automatic);
+	COPY_VAR(if_automatic_ports);
+	COPY_VAR(so_rcvbuf);
+	COPY_VAR(so_sndbuf);
+	COPY_VAR(so_reuseport);
+	COPY_VAR(ip_transparent);
+	COPY_VAR(ip_freebind);
+	COPY_VAR(ip_dscp);
+	/* Not copied because the length and items could then not match.
+	   num_ifs, ifs, num_out_ifs, out_ifs
+	*/
+	COPY_VAR(root_hints);
+	COPY_VAR(stubs);
+	COPY_VAR(forwards);
+	COPY_VAR(auths);
+	COPY_VAR(views);
+	COPY_VAR(donotqueryaddrs);
+#ifdef CLIENT_SUBNET
+	COPY_VAR(client_subnet);
+	COPY_VAR(client_subnet_zone);
+	COPY_VAR(client_subnet_opcode);
+	COPY_VAR(client_subnet_always_forward);
+	COPY_VAR(max_client_subnet_ipv4);
+	COPY_VAR(max_client_subnet_ipv6);
+	COPY_VAR(min_client_subnet_ipv4);
+	COPY_VAR(min_client_subnet_ipv6);
+	COPY_VAR(max_ecs_tree_size_ipv4);
+	COPY_VAR(max_ecs_tree_size_ipv6);
+#endif
+	COPY_VAR(acls);
+	COPY_VAR(donotquery_localhost);
+	COPY_VAR(tcp_connection_limits);
+	COPY_VAR(harden_short_bufsize);
+	COPY_VAR(harden_large_queries);
+	COPY_VAR(harden_glue);
+	COPY_VAR(harden_dnssec_stripped);
+	COPY_VAR(harden_below_nxdomain);
+	COPY_VAR(harden_referral_path);
+	COPY_VAR(harden_algo_downgrade);
+	COPY_VAR(harden_unknown_additional);
+	COPY_VAR(use_caps_bits_for_id);
+	COPY_VAR(caps_whitelist);
+	COPY_VAR(private_address);
+	COPY_VAR(private_domain);
+	COPY_VAR(unwanted_threshold);
+	COPY_VAR(max_ttl);
+	COPY_VAR(min_ttl);
+	COPY_VAR(max_negative_ttl);
+	COPY_VAR(prefetch);
+	COPY_VAR(prefetch_key);
+	COPY_VAR(deny_any);
+	COPY_VAR(chrootdir);
+	COPY_VAR(username);
+	COPY_VAR(directory);
+	COPY_VAR(logfile);
+	COPY_VAR(pidfile);
+	COPY_VAR(use_syslog);
+	COPY_VAR(log_time_ascii);
+	COPY_VAR(log_queries);
+	COPY_VAR(log_replies);
+	COPY_VAR(log_tag_queryreply);
+	COPY_VAR(log_local_actions);
+	COPY_VAR(log_servfail);
+	COPY_VAR(log_identity);
+	COPY_VAR(log_destaddr);
+	COPY_VAR(hide_identity);
+	COPY_VAR(hide_version);
+	COPY_VAR(hide_trustanchor);
+	COPY_VAR(hide_http_user_agent);
+	COPY_VAR(identity);
+	COPY_VAR(version);
+	COPY_VAR(http_user_agent);
+	COPY_VAR(nsid_cfg_str);
+	/* Not copied because the length and items could then not match.
+	nsid;
+	nsid_len;
+	*/
+	COPY_VAR(module_conf);
+	COPY_VAR(trust_anchor_file_list);
+	COPY_VAR(trust_anchor_list);
+	COPY_VAR(auto_trust_anchor_file_list);
+	COPY_VAR(trusted_keys_file_list);
+	COPY_VAR(domain_insecure);
+	COPY_VAR(trust_anchor_signaling);
+	COPY_VAR(root_key_sentinel);
+	COPY_VAR(val_date_override);
+	COPY_VAR(val_sig_skew_min);
+	COPY_VAR(val_sig_skew_max);
+	COPY_VAR(val_max_restart);
+	COPY_VAR(bogus_ttl);
+	COPY_VAR(val_clean_additional);
+	COPY_VAR(val_log_level);
+	COPY_VAR(val_log_squelch);
+	COPY_VAR(val_permissive_mode);
+	COPY_VAR(aggressive_nsec);
+	COPY_VAR(ignore_cd);
+	COPY_VAR(disable_edns_do);
+	COPY_VAR(serve_expired);
+	COPY_VAR(serve_expired_ttl);
+	COPY_VAR(serve_expired_ttl_reset);
+	COPY_VAR(serve_expired_reply_ttl);
+	COPY_VAR(serve_expired_client_timeout);
+	COPY_VAR(ede_serve_expired);
+	COPY_VAR(serve_original_ttl);
+	COPY_VAR(val_nsec3_key_iterations);
+	COPY_VAR(zonemd_permissive_mode);
+	COPY_VAR(add_holddown);
+	COPY_VAR(del_holddown);
+	COPY_VAR(keep_missing);
+	COPY_VAR(permit_small_holddown);
+	COPY_VAR(key_cache_size);
+	COPY_VAR(key_cache_slabs);
+	COPY_VAR(neg_cache_size);
+	COPY_VAR(local_zones);
+	COPY_VAR(local_zones_nodefault);
+#ifdef USE_IPSET
+	COPY_VAR(local_zones_ipset);
+#endif
+	COPY_VAR(local_zones_disable_default);
+	COPY_VAR(local_data);
+	COPY_VAR(local_zone_overrides);
+	COPY_VAR(unblock_lan_zones);
+	COPY_VAR(insecure_lan_zones);
+	/* These reference tags
+	COPY_VAR(local_zone_tags);
+	COPY_VAR(acl_tags);
+	COPY_VAR(acl_tag_actions);
+	COPY_VAR(acl_tag_datas);
+	*/
+	COPY_VAR(acl_view);
+	COPY_VAR(interface_actions);
+	/* These reference tags
+	COPY_VAR(interface_tags);
+	COPY_VAR(interface_tag_actions);
+	COPY_VAR(interface_tag_datas);
+	*/
+	COPY_VAR(interface_view);
+	/* This references tags
+	COPY_VAR(respip_tags);
+	*/
+	COPY_VAR(respip_actions);
+	COPY_VAR(respip_data);
+	/* Not copied because the length and items could then not match.
+	 * also the respip module keeps a pointer to the array in its state.
+	   tagname, num_tags
+	*/
+	COPY_VAR(remote_control_enable);
+	/* The first is used to walk throught the list but last is
+	 * only used during config read. */
+	COPY_VAR(control_ifs.first);
+	COPY_VAR(control_ifs.last);
+	COPY_VAR(control_use_cert);
+	COPY_VAR(control_port);
+	COPY_VAR(server_key_file);
+	COPY_VAR(server_cert_file);
+	COPY_VAR(control_key_file);
+	COPY_VAR(control_cert_file);
+	COPY_VAR(python_script);
+	COPY_VAR(dynlib_file);
+	COPY_VAR(use_systemd);
+	COPY_VAR(do_daemonize);
+	COPY_VAR(minimal_responses);
+	COPY_VAR(rrset_roundrobin);
+	COPY_VAR(unknown_server_time_limit);
+	COPY_VAR(max_udp_size);
+	COPY_VAR(dns64_prefix);
+	COPY_VAR(dns64_synthall);
+	COPY_VAR(dns64_ignore_aaaa);
+	COPY_VAR(nat64_prefix);
+	COPY_VAR(dnstap);
+	COPY_VAR(dnstap_bidirectional);
+	COPY_VAR(dnstap_socket_path);
+	COPY_VAR(dnstap_ip);
+	COPY_VAR(dnstap_tls);
+	COPY_VAR(dnstap_tls_server_name);
+	COPY_VAR(dnstap_tls_cert_bundle);
+	COPY_VAR(dnstap_tls_client_key_file);
+	COPY_VAR(dnstap_tls_client_cert_file);
+	COPY_VAR(dnstap_send_identity);
+	COPY_VAR(dnstap_send_version);
+	COPY_VAR(dnstap_identity);
+	COPY_VAR(dnstap_version);
+	COPY_VAR(dnstap_log_resolver_query_messages);
+	COPY_VAR(dnstap_log_resolver_response_messages);
+	COPY_VAR(dnstap_log_client_query_messages);
+	COPY_VAR(dnstap_log_client_response_messages);
+	COPY_VAR(dnstap_log_forwarder_query_messages);
+	COPY_VAR(dnstap_log_forwarder_response_messages);
+	COPY_VAR(disable_dnssec_lame_check);
+	COPY_VAR(ip_ratelimit);
+	COPY_VAR(ip_ratelimit_cookie);
+	COPY_VAR(ip_ratelimit_slabs);
+	COPY_VAR(ip_ratelimit_size);
+	COPY_VAR(ip_ratelimit_factor);
+	COPY_VAR(ip_ratelimit_backoff);
+	COPY_VAR(ratelimit);
+	COPY_VAR(ratelimit_slabs);
+	COPY_VAR(ratelimit_size);
+	COPY_VAR(ratelimit_for_domain);
+	COPY_VAR(ratelimit_below_domain);
+	COPY_VAR(ratelimit_factor);
+	COPY_VAR(ratelimit_backoff);
+	COPY_VAR(outbound_msg_retry);
+	COPY_VAR(max_sent_count);
+	COPY_VAR(max_query_restarts);
+	COPY_VAR(qname_minimisation);
+	COPY_VAR(qname_minimisation_strict);
+	COPY_VAR(shm_enable);
+	COPY_VAR(shm_key);
+	COPY_VAR(edns_client_strings);
+	COPY_VAR(edns_client_string_opcode);
+	COPY_VAR(dnscrypt);
+	COPY_VAR(dnscrypt_port);
+	COPY_VAR(dnscrypt_provider);
+	COPY_VAR(dnscrypt_secret_key);
+	COPY_VAR(dnscrypt_provider_cert);
+	COPY_VAR(dnscrypt_provider_cert_rotated);
+	COPY_VAR(dnscrypt_shared_secret_cache_size);
+	COPY_VAR(dnscrypt_shared_secret_cache_slabs);
+	COPY_VAR(dnscrypt_nonce_cache_size);
+	COPY_VAR(dnscrypt_nonce_cache_slabs);
+	COPY_VAR(pad_responses);
+	COPY_VAR(pad_responses_block_size);
+	COPY_VAR(pad_queries);
+	COPY_VAR(pad_queries_block_size);
+#ifdef USE_IPSECMOD
+	COPY_VAR(ipsecmod_enabled);
+	COPY_VAR(ipsecmod_whitelist);
+	COPY_VAR(ipsecmod_hook);
+	COPY_VAR(ipsecmod_ignore_bogus);
+	COPY_VAR(ipsecmod_max_ttl);
+	COPY_VAR(ipsecmod_strict);
+#endif
+#ifdef USE_CACHEDB
+	COPY_VAR(cachedb_backend);
+	COPY_VAR(cachedb_secret);
+	COPY_VAR(cachedb_no_store);
+#ifdef USE_REDIS
+	COPY_VAR(redis_server_host);
+	COPY_VAR(redis_server_port);
+	COPY_VAR(redis_server_path);
+	COPY_VAR(redis_server_password);
+	COPY_VAR(redis_timeout);
+	COPY_VAR(redis_expire_records);
+	COPY_VAR(redis_logical_db);
+#endif
+#endif
+	COPY_VAR(do_answer_cookie);
+	/* Not copied because the length and content could then not match.
+	   cookie_secret[40], cookie_secret_len
+	*/
+#ifdef USE_IPSET
+	COPY_VAR(ipset_name_v4);
+	COPY_VAR(ipset_name_v6);
+#endif
+	COPY_VAR(ede);
+}
+#endif /* ATOMIC_POINTER_LOCK_FREE */
+
 /** fast reload thread, reload config with putting the new config items
  * in place and swapping out the old items. */
 static int
@@ -4173,16 +4521,29 @@ fr_reload_config(struct fast_reload_thread* fr, struct config_file* newcfg,
 	lock_rw_wrlock(&env->fwds->lock);
 	lock_rw_wrlock(&env->hints->lock);
 
-	/* Store old config elements. */
-	*ct->oldcfg = *env->cfg;
-	/* Insert new config elements. */
-	*env->cfg = *newcfg;
+#ifdef ATOMIC_POINTER_LOCK_FREE
+	if(fr->fr_nopause) {
+		fr_atomic_copy_cfg(ct->oldcfg, env->cfg, newcfg);
+	} else {
+#endif
+		/* Store old config elements. */
+		*ct->oldcfg = *env->cfg;
+		/* Insert new config elements. */
+		*env->cfg = *newcfg;
+#ifdef ATOMIC_POINTER_LOCK_FREE
+	}
+#endif
+
 	if(env->cfg->log_identity || ct->oldcfg->log_identity) {
 		/* pick up new log_identity string to use for log output. */
 		log_ident_set_or_default(env->cfg->log_identity);
 	}
 	/* the newcfg elements are in env->cfg, so should not be freed here. */
-	memset(newcfg, 0, sizeof(*newcfg));
+#ifdef ATOMIC_POINTER_LOCK_FREE
+	/* if used, the routine that copies the config has zeroed items. */
+	if(!fr->fr_nopause)
+#endif
+		memset(newcfg, 0, sizeof(*newcfg));
 
 	/* Quickly swap the tree roots themselves with the already allocated
 	 * elements. This is a quick swap operation on the pointer.
