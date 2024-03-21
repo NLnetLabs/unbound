@@ -677,7 +677,8 @@ do_reload(RES* ssl, struct worker* worker, int reuse_cache)
 #ifndef THREADS_DISABLED
 /** parse fast reload command options. */
 static int
-fr_parse_options(RES* ssl, char* arg, int* fr_verb, int* fr_nopause)
+fr_parse_options(RES* ssl, char* arg, int* fr_verb, int* fr_nopause,
+	int* fr_drop_mesh)
 {
 	char* argp = arg;
 	while(*argp=='+') {
@@ -687,6 +688,8 @@ fr_parse_options(RES* ssl, char* arg, int* fr_verb, int* fr_nopause)
 				(*fr_verb)++;
 			} else if(*argp == 'p') {
 				(*fr_nopause) = 1;
+			} else if(*argp == 'd') {
+				(*fr_drop_mesh) = 1;
 			} else {
 				if(!ssl_printf(ssl,
 					"error: unknown option '+%c'\n",
@@ -718,14 +721,15 @@ do_fast_reload(RES* ssl, struct worker* worker, struct rc_state* s, char* arg)
 	(void)s;
 	(void)arg;
 #else
-	int fr_verb = 0, fr_nopause = 0;
-	if(!fr_parse_options(ssl, arg, &fr_verb, &fr_nopause))
+	int fr_verb = 0, fr_nopause = 0, fr_drop_mesh = 0;
+	if(!fr_parse_options(ssl, arg, &fr_verb, &fr_nopause, &fr_drop_mesh))
 		return;
 	if(fr_verb >= 1) {
 		if(!ssl_printf(ssl, "start fast_reload\n"))
 			return;
 	}
-	fast_reload_thread_start(ssl, worker, s, fr_verb, fr_nopause);
+	fast_reload_thread_start(ssl, worker, s, fr_verb, fr_nopause,
+		fr_drop_mesh);
 #endif
 }
 
@@ -4677,7 +4681,8 @@ create_socketpair(int* pair, struct ub_randstate* rand)
 
 /** fast reload thread. setup the thread info */
 static int
-fast_reload_thread_setup(struct worker* worker, int fr_verb, int fr_nopause)
+fast_reload_thread_setup(struct worker* worker, int fr_verb, int fr_nopause,
+	int fr_drop_mesh)
 {
 	struct fast_reload_thread* fr;
 	int numworkers = worker->daemon->num;
@@ -4688,6 +4693,8 @@ fast_reload_thread_setup(struct worker* worker, int fr_verb, int fr_nopause)
 	fr = worker->daemon->fast_reload_thread;
 	fr->fr_verb = fr_verb;
 	fr->fr_nopause = fr_nopause;
+	fr->fr_drop_mesh = fr_drop_mesh;
+	worker->daemon->fast_reload_drop_mesh = fr->fr_drop_mesh;
 	/* The thread id printed in logs, numworker+1 is the dnstap thread.
 	 * This is numworkers+2. */
 	fr->threadnum = numworkers+2;
@@ -5006,6 +5013,11 @@ fr_main_perform_reload_stop(struct fast_reload_thread* fr)
 		if(i == fr->worker->thread_num)
 			continue; /* Do not send to ourselves. */
 		worker_send_cmd(daemon->workers[i], worker_cmd_reload_start);
+	}
+
+	if(fr->worker->daemon->fast_reload_drop_mesh) {
+		verbose(VERB_ALGO, "worker: drop mesh queries after reload");
+		mesh_delete_all(fr->worker->env.mesh);
 	}
 	verbose(VERB_ALGO, "worker resume after reload");
 }
@@ -5432,13 +5444,14 @@ fr_send_stop(struct fast_reload_thread* fr)
 
 void
 fast_reload_thread_start(RES* ssl, struct worker* worker, struct rc_state* s,
-	int fr_verb, int fr_nopause)
+	int fr_verb, int fr_nopause, int fr_drop_mesh)
 {
 	if(worker->daemon->fast_reload_thread) {
 		log_err("fast reload thread already running");
 		return;
 	}
-	if(!fast_reload_thread_setup(worker, fr_verb, fr_nopause)) {
+	if(!fast_reload_thread_setup(worker, fr_verb, fr_nopause,
+		fr_drop_mesh)) {
 		if(!ssl_printf(ssl, "error could not setup thread\n"))
 			return;
 		return;

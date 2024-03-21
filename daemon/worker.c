@@ -422,6 +422,10 @@ worker_stop_and_wait(struct worker* worker)
 	if(cmd != worker_cmd_reload_start) {
 		log_err("worker reload reply, wrong reply command");
 	}
+	if(worker->daemon->fast_reload_drop_mesh) {
+		verbose(VERB_ALGO, "worker: drop mesh queries after reload");
+		mesh_delete_all(worker->env.mesh);
+	}
 	verbose(VERB_ALGO, "worker resume after reload");
 }
 

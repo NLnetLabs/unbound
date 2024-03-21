@@ -191,6 +191,8 @@ struct fast_reload_thread {
 	int fr_verb;
 	/** option to not pause threads during reload */
 	int fr_nopause;
+	/** option to drop mesh queries */
+	int fr_drop_mesh;
 
 	/** the event that listens on the remote service worker to the
 	 * commpair, it receives content from the fast reload thread. */
@@ -316,9 +318,10 @@ int ssl_read_line(RES* ssl, char* buf, size_t max);
  * @param fr_verb: verbosity to print output at. 0 is nothing, 1 is some
  *	and 2 is more detail.
  * @param fr_nopause: option to not pause threads during reload.
+ * @param fr_drop_mesh: option to drop mesh queries.
  */
 void fast_reload_thread_start(RES* ssl, struct worker* worker,
-	struct rc_state* s, int fr_verb, int fr_nopause);
+	struct rc_state* s, int fr_verb, int fr_nopause, int fr_drop_mesh);
 
 /**
  * Stop fast reload thread

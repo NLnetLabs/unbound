@@ -152,6 +152,8 @@ struct daemon {
 	struct fast_reload_thread* fast_reload_thread;
 	/** the fast reload printq list */
 	struct fast_reload_printq* fast_reload_printq_list;
+	/** the fast reload option to drop mesh queries, true if so. */
+	int fast_reload_drop_mesh;
 	/** config file name */
 	char* cfgfile;
 };
