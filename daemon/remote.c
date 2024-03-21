@@ -4319,6 +4319,10 @@ static void* fast_reload_thread_main(void* arg)
 	if(fr_poll_for_quit(fast_reload_thread))
 		goto done;
 
+	if(!fr_output_printf(fast_reload_thread, "ok\n"))
+		goto done_error;
+	fr_send_notification(fast_reload_thread,
+		fast_reload_notification_printout);
 	verbose(VERB_ALGO, "stop fast reload thread");
 	/* If this is not an exit due to quit earlier, send regular done. */
 	if(!fast_reload_thread->need_to_quit)
