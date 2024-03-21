@@ -143,7 +143,10 @@ enum fast_reload_notification {
 	/** ack the stop as part of the reload */
 	fast_reload_notification_reload_ack = 7,
 	/** resume from stop as part of the reload */
-	fast_reload_notification_reload_start = 8
+	fast_reload_notification_reload_start = 8,
+	/** the fast reload thread wants the mainthread to poll workers,
+	 * after the reload, sent when nopause is used */
+	fast_reload_notification_reload_nopause_poll = 9
 };
 
 /**

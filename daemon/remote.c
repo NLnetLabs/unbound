@@ -3564,6 +3564,8 @@ fr_notification_to_string(enum fast_reload_notification status)
 		return "reload_stop";
 	case fast_reload_notification_reload_ack:
 		return "reload_ack";
+	case fast_reload_notification_reload_nopause_poll:
+		return "reload_nopause_poll";
 	case fast_reload_notification_reload_start:
 		return "reload_start";
 	default:
@@ -4331,6 +4333,27 @@ fr_load_config(struct fast_reload_thread* fr, struct timeval* time_read,
 		log_err("gettimeofday: %s", strerror(errno));
 
 	/* Delete old. */
+	if(fr_poll_for_quit(fr)) {
+		config_delete(newcfg);
+		fr_construct_clear(&ct);
+		return 1;
+	}
+	if(fr->fr_nopause) {
+		/* Poll every thread, with a no-work poll item over the
+		 * command pipe. This makes the worker thread surely move
+		 * to deal with that event, and thus the thread is no longer
+		 * holding, eg. a string item from the old config struct.
+		 * And then the old config struct can safely be deleted.
+		 * Only needed when nopause is used, because without that
+		 * the worker threads are already waiting on a command pipe
+		 * item. This nopause command pipe item does not take work,
+		 * it returns immediately, so it does not delay the workers.
+		 * They can be polled one at a time. But its processing causes
+		 * the worker to have released data items from old config. */
+		fr_send_notification(fr,
+			fast_reload_notification_reload_nopause_poll);
+		fr_poll_for_ack(fr);
+	}
 	config_delete(newcfg);
 	fr_construct_clear(&ct);
 	return 1;
@@ -5022,6 +5045,31 @@ fr_main_perform_reload_stop(struct fast_reload_thread* fr)
 	verbose(VERB_ALGO, "worker resume after reload");
 }
 
+/** Fast reload, the main thread performs the nopause poll. It polls every
+ * other worker thread briefly over the command pipe ipc. The command takes
+ * no time for the worker, it can return immediately. After that it sends
+ * an acknowledgement to the fastreload thread. */
+static void
+fr_main_perform_reload_nopause_poll(struct fast_reload_thread* fr)
+{
+	struct daemon* daemon = fr->worker->daemon;
+	int i;
+
+	/* Send the reload_poll to other threads. They can respond
+	 * one at a time. */
+	for(i=0; i<daemon->num; i++) {
+		if(i == fr->worker->thread_num)
+			continue; /* Do not send to ourselves. */
+		worker_send_cmd(daemon->workers[i], worker_cmd_reload_poll);
+	}
+
+	/* Wait for the other threads to ack. */
+	fr_read_ack_from_workers(fr);
+
+	/* Send ack to fast reload thread. */
+	fr_send_cmd_to(fr, fast_reload_notification_reload_ack, 0, 1);
+}
+
 /** Fast reload, perform the command received from the fast reload thread */
 static void
 fr_main_perform_cmd(struct fast_reload_thread* fr,
@@ -5037,6 +5085,8 @@ fr_main_perform_cmd(struct fast_reload_thread* fr,
 		fr_main_perform_done(fr);
 	} else if(status == fast_reload_notification_reload_stop) {
 		fr_main_perform_reload_stop(fr);
+	} else if(status == fast_reload_notification_reload_nopause_poll) {
+		fr_main_perform_reload_nopause_poll(fr);
 	} else {
 		log_err("main received unknown status from fast reload: %d %s",
 			(int)status, fr_notification_to_string(status));

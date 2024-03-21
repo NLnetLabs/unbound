@@ -84,7 +84,10 @@ updated at the same time, so that they are viewed consistently, either old
 or new values together. The option makes the reload time take eg. 3
 microseconds instead of 0.3 milliseconds during which the worker threads are
 interrupted. So, the interruption is much shorter, at the expense of some
-inconsistency.
+inconsistency. After the reload itself, every worker thread is briefly
+contacted to make them release resources, this makes the delete timing
+a little longer, and takes up time from the remote control servicing
+worker thread.
 .IP
 The '+d' option makes the reload drop queries that the worker threads are
 working on. This is like flush_requestlist. Without it the queries are kept

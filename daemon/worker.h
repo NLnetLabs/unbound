@@ -76,7 +76,9 @@ enum worker_commands {
 	/** for fast-reload, perform stop */
 	worker_cmd_reload_stop,
 	/** for fast-reload, start again */
-	worker_cmd_reload_start
+	worker_cmd_reload_start,
+	/** for fast-reload, poll to make sure worker has released data */
+	worker_cmd_reload_poll
 };
 
 /**
