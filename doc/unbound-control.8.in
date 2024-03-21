@@ -60,6 +60,15 @@ Reload the server but try to keep the RRset and message cache if
 That means the caches sizes and the number of threads must not change between
 reloads.
 .TP
+.B fast_reload
+Reload the server, but keep downtime to a minimum, so that user queries
+keep seeing service. This needs the code compiled with threads. The config
+is loaded in a thread, and prepared, then it briefly pauses the existing
+server and updates config options. The intent is that the pause does not
+impact the service of user queries. The cache is kept. Also user queries
+worked on are kept and continue, but with the new config options.
+Not all options are changed, but it changes like forwards and stubs.
+.TP
 .B verbosity \fInumber
 Change verbosity value for logging. Same values as \fBverbosity\fR keyword in
 \fIunbound.conf\fR(5).  This new setting lasts until the server is issued
