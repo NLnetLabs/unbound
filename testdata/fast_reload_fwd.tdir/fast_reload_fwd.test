@@ -47,7 +47,7 @@ mv ub.conf ub.conf.orig
 mv ub.conf2 ub.conf
 echo ""
 echo "> unbound-control fast_reload"
-$PRE/unbound-control -c ub.conf fast_reload 2>&1 | tee output
+$PRE/unbound-control -c ub.conf fast_reload +vv 2>&1 | tee output
 if test $? -ne 0; then
 	echo "wrong exit value."
 	exit 1

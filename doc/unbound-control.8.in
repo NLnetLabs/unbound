@@ -60,7 +60,7 @@ Reload the server but try to keep the RRset and message cache if
 That means the caches sizes and the number of threads must not change between
 reloads.
 .TP
-.B fast_reload
+.B fast_reload \fR[\fI+v\fR]
 Reload the server, but keep downtime to a minimum, so that user queries
 keep seeing service. This needs the code compiled with threads. The config
 is loaded in a thread, and prepared, then it briefly pauses the existing
@@ -68,6 +68,12 @@ server and updates config options. The intent is that the pause does not
 impact the service of user queries. The cache is kept. Also user queries
 worked on are kept and continue, but with the new config options.
 Not all options are changed, but it changes like forwards and stubs.
+.IP
+The '+v' option makes the output verbose. With '+vv' it is more verbose.
+That includes the time it took to do the reload. And with more verbose output
+the amount of memory that was allocated temporarily to perform the reload,
+this amount of memory can be big if the config has large contents. In the
+timing output the 'reload' time is the time during which the server was paused.
 .TP
 .B verbosity \fInumber
 Change verbosity value for logging. Same values as \fBverbosity\fR keyword in

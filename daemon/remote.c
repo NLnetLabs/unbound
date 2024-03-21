@@ -676,17 +676,36 @@ do_reload(RES* ssl, struct worker* worker, int reuse_cache)
 
 /** do the fast_reload command */
 static void
-do_fast_reload(RES* ssl, struct worker* worker, struct rc_state* s)
+do_fast_reload(RES* ssl, struct worker* worker, struct rc_state* s, char* arg)
 {
 #ifdef THREADS_DISABLED
 	if(!ssl_printf(ssl, "error: no threads for fast_reload, compiled without threads.\n"))
 		return;
 	(void)worker;
 	(void)s;
+	(void)arg;
 #else
-	if(!ssl_printf(ssl, "start fast_reload\n"))
-		return;
-	fast_reload_thread_start(ssl, worker, s);
+	int fr_verb = 0;
+	if(arg[0] == '+') {
+		int i=1;
+		while(arg[i]!=0 && arg[i]!=' ' && arg[i]!='\t') {
+			if(arg[i] == 'v')
+				fr_verb++;
+			else {
+				if(!ssl_printf(ssl,
+					"error: unknown option '+%c'\n",
+					arg[i]))
+					return;
+				return;
+			}
+			i++;
+		}
+	}
+	if(fr_verb >= 1) {
+		if(!ssl_printf(ssl, "start fast_reload\n"))
+			return;
+	}
+	fast_reload_thread_start(ssl, worker, s, fr_verb);
 #endif
 }
 
@@ -3100,7 +3119,7 @@ execute_cmd(struct daemon_remote* rc, struct rc_state* s, RES* ssl, char* cmd,
 		do_reload(ssl, worker, 0);
 		return;
 	} else if(cmdcmp(p, "fast_reload", 11)) {
-		do_fast_reload(ssl, worker, s);
+		do_fast_reload(ssl, worker, s, skipwhite(p+11));
 		return;
 	} else if(cmdcmp(p, "stats_noreset", 13)) {
 		do_stats(ssl, worker, 0);
@@ -3755,10 +3774,12 @@ fr_read_config(struct fast_reload_thread* fr, struct config_file** newcfg)
 	}
 	if(fr_poll_for_quit(fr))
 		return 1;
-	if(!fr_output_printf(fr, "done read config file %s\n",
-		fr->worker->daemon->cfgfile))
-		return 0;
-	fr_send_notification(fr, fast_reload_notification_printout);
+	if(fr->fr_verb >= 1) {
+		if(!fr_output_printf(fr, "done read config file %s\n",
+			fr->worker->daemon->cfgfile))
+			return 0;
+		fr_send_notification(fr, fast_reload_notification_printout);
+	}
 
 	return 1;
 }
@@ -4065,8 +4086,10 @@ fr_construct_from_config(struct fast_reload_thread* fr,
 		log_err("out of memory");
 		return 0;
 	}
-	if(!fr_printmem(fr, newcfg, ct))
-		return 0;
+	if(fr->fr_verb >= 2) {
+		if(!fr_printmem(fr, newcfg, ct))
+			return 0;
+	}
 	return 1;
 }
 
@@ -4294,18 +4317,22 @@ static void* fast_reload_thread_main(void* arg)
 	log_thread_set(&fast_reload_thread->threadnum);
 
 	verbose(VERB_ALGO, "start fast reload thread");
-	fr_init_time(&time_start, &time_read, &time_construct, &time_reload,
-		&time_end);
-	if(fr_poll_for_quit(fast_reload_thread))
-		goto done;
+	if(fast_reload_thread->fr_verb >= 1) {
+		fr_init_time(&time_start, &time_read, &time_construct,
+			&time_reload, &time_end);
+		if(fr_poll_for_quit(fast_reload_thread))
+			goto done;
+	}
 
 	/* print output to the client */
-	if(!fr_output_printf(fast_reload_thread, "thread started\n"))
-		goto done_error;
-	fr_send_notification(fast_reload_thread,
-		fast_reload_notification_printout);
-	if(fr_poll_for_quit(fast_reload_thread))
-		goto done;
+	if(fast_reload_thread->fr_verb >= 1) {
+		if(!fr_output_printf(fast_reload_thread, "thread started\n"))
+			goto done_error;
+		fr_send_notification(fast_reload_thread,
+			fast_reload_notification_printout);
+		if(fr_poll_for_quit(fast_reload_thread))
+			goto done;
+	}
 
 	if(!fr_load_config(fast_reload_thread, &time_read, &time_construct,
 		&time_reload))
@@ -4313,11 +4340,13 @@ static void* fast_reload_thread_main(void* arg)
 	if(fr_poll_for_quit(fast_reload_thread))
 		goto done;
 
-	if(!fr_finish_time(fast_reload_thread, &time_start, &time_read,
-		&time_construct, &time_reload, &time_end))
-		goto done_error;
-	if(fr_poll_for_quit(fast_reload_thread))
-		goto done;
+	if(fast_reload_thread->fr_verb >= 1) {
+		if(!fr_finish_time(fast_reload_thread, &time_start, &time_read,
+			&time_construct, &time_reload, &time_end))
+			goto done_error;
+		if(fr_poll_for_quit(fast_reload_thread))
+			goto done;
+	}
 
 	if(!fr_output_printf(fast_reload_thread, "ok\n"))
 		goto done_error;
@@ -4624,7 +4653,7 @@ create_socketpair(int* pair, struct ub_randstate* rand)
 
 /** fast reload thread. setup the thread info */
 static int
-fast_reload_thread_setup(struct worker* worker)
+fast_reload_thread_setup(struct worker* worker, int fr_verb)
 {
 	struct fast_reload_thread* fr;
 	int numworkers = worker->daemon->num;
@@ -4633,6 +4662,7 @@ fast_reload_thread_setup(struct worker* worker)
 	if(!worker->daemon->fast_reload_thread)
 		return 0;
 	fr = worker->daemon->fast_reload_thread;
+	fr->fr_verb = fr_verb;
 	/* The thread id printed in logs, numworker+1 is the dnstap thread.
 	 * This is numworkers+2. */
 	fr->threadnum = numworkers+2;
@@ -5376,13 +5406,14 @@ fr_send_stop(struct fast_reload_thread* fr)
 }
 
 void
-fast_reload_thread_start(RES* ssl, struct worker* worker, struct rc_state* s)
+fast_reload_thread_start(RES* ssl, struct worker* worker, struct rc_state* s,
+	int fr_verb)
 {
 	if(worker->daemon->fast_reload_thread) {
 		log_err("fast reload thread already running");
 		return;
 	}
-	if(!fast_reload_thread_setup(worker)) {
+	if(!fast_reload_thread_setup(worker, fr_verb)) {
 		if(!ssl_printf(ssl, "error could not setup thread\n"))
 			return;
 		return;

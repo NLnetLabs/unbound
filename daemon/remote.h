@@ -187,6 +187,8 @@ struct fast_reload_thread {
 	int started;
 	/** if the thread has to quit */
 	int need_to_quit;
+	/** verbosity of the fast_reload command, the number of +v options */
+	int fr_verb;
 
 	/** the event that listens on the remote service worker to the
 	 * commpair, it receives content from the fast reload thread. */
@@ -309,9 +311,11 @@ int ssl_read_line(RES* ssl, char* buf, size_t max);
  * @param s: the rc_state that is servicing the remote control connection to
  *	the remote control client. It needs to be moved away to stay connected
  *	while the fast reload is running.
+ * @param fr_verb: verbosity to print output at. 0 is nothing, 1 is some
+ *	and 2 is more detail.
  */
 void fast_reload_thread_start(RES* ssl, struct worker* worker,
-	struct rc_state* s);
+	struct rc_state* s, int fr_verb);
 
 /**
  * Stop fast reload thread
