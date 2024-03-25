@@ -1,3 +1,7 @@
+25 March 2024: Yorgos
+	- Merge #831 from Pierre4012: Improve Windows NSIS installer
+	  script (setup.nsi).
+
 19 March 2024: Wouter
 	- Fix rpz so that rpz CNAME can apply after rpz CNAME. And fix that
 	  clientip and nsip can give a CNAME.
