@@ -44,6 +44,10 @@ struct ipset_env {
 
 	const char *name_v4;
 	const char *name_v6;
+	const char *table_v4;
+	const char *table_v6;
+	int mode;
+	unsigned int seq;
 };
 
 struct ipset_qstate {
