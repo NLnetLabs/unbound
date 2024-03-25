@@ -78,6 +78,8 @@ struct dt_msg_queue {
 	struct dt_io_thread* dtio;
 	/** the wakeup timer for dtio, on worker event base */
 	struct comm_timer* wakeup_timer;
+	/** the wakeup delay to use when waking up the worker */
+	struct timeval wakeup_delay;
 };
 
 /**
@@ -245,7 +247,8 @@ struct dt_io_list_item {
  * @param base: event base for wakeup timer.
  * @return NULL on malloc failure or a new queue (not locked).
  */
-struct dt_msg_queue* dt_msg_queue_create(struct comm_base* base);
+struct dt_msg_queue* dt_msg_queue_create(struct comm_base* base,
+		struct timeval* wakeup_delay);
 
 /**
  * Delete a worker message queue.  It has to be unlinked from access,
