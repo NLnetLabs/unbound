@@ -78,9 +78,17 @@ section "Root anchor - DNSSEC" SectionRootKey
 sectionEnd
 
 section "-hidden.postinstall"
-	# stop unbound service to allow file replacement
-	IfFileExists "$INSTDIR\unbound-service-remove.exe" 0 +2
-	nsExec::ExecToLog '"$INSTDIR\unbound-service-remove.exe" stop'
+	# if Unbund is already installed, ask to stop it to allow file replacement
+	IfFileExists "$INSTDIR\unbound-service-remove.exe" 0 next_label
+	MessageBox MB_YESNO "Should Unbound be stopped to permit the update ?" /SD IDYES IDNO false_label # defaults to yes on silent installations
+		nsExec::ExecToLog '"$INSTDIR\unbound-service-remove.exe" stop'
+		Sleep 1000
+		Goto next_label
+	false_label:
+		SetDetailsView show
+		DetailPrint "Update aborted"
+		Abort
+	next_label:
 	# copy files
 	SetRegView 64
 	setOutPath $INSTDIR
