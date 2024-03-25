@@ -79,14 +79,14 @@ sectionEnd
 
 section "-hidden.postinstall"
 	# if Unbund is already installed, ask to stop it to allow file replacement
-	IfFileExists "$INSTDIR\unbound-service-remove.exe" 0 next_label
-	MessageBox MB_YESNO "Unbound is already installed! Would you like to stop the service to continue with the update?" /SD IDYES IDNO false_label # defaults to yes on silent installations
+	IfFileExists "$INSTDIR\unbound-service-remove.exe" 0 service_remove_end
+	MessageBox MB_YESNO|MB_ICONEXCLAMATION "Unbound is already installed!$\r$\n$\r$\nWould you like to stop the service to continue with the update?" /SD IDYES IDNO service_remove_quit # defaults to yes on silent installations
 		nsExec::ExecToLog '"$INSTDIR\unbound-service-remove.exe" stop'
 		Sleep 1000
-		Goto next_label
-	false_label:
+		Goto service_remove_end
+	service_remove_quit:
 		Quit
-	next_label:
+	service_remove_end:
 	# copy files
 	SetRegView 64
 	setOutPath $INSTDIR
