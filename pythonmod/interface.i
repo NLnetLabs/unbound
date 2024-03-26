@@ -1455,10 +1455,14 @@ struct delegpt* find_delegation(struct module_qstate* qstate, char *nm, size_t n
             dname_str((uint8_t*)nm, b);
             continue;
         }
+        lock_rw_rdlock(&qstate->env->hints->lock);
         stub = hints_lookup_stub(qstate->env->hints, qinfo.qname, qinfo.qclass, dp);
         if (stub) {
-            return stub->dp;
+            struct delegpt* stubdp = delegpt_copy(stub->dp, region);
+            lock_rw_unlock(&qstate->env->hints->lock);
+            return stubdp;
         } else {
+            lock_rw_unlock(&qstate->env->hints->lock);
             return dp;
         }
     }

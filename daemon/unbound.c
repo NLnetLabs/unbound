@@ -682,6 +682,9 @@ perform_setup(struct daemon* daemon, struct config_file* cfg, int debug_mode,
 	 * it would succeed on SIGHUP as well */
 	if(!cfg->use_syslog)
 		log_init(cfg->logfile, cfg->use_syslog, cfg->chrootdir);
+	daemon->cfgfile = strdup(*cfgfile);
+	if(!daemon->cfgfile)
+		fatal_exit("out of memory in daemon cfgfile strdup");
 }
 
 /**

@@ -58,6 +58,8 @@ struct ub_randstate;
 struct daemon_remote;
 struct respip_set;
 struct shm_main_info;
+struct fast_reload_thread;
+struct fast_reload_printq;
 
 #include "dnstap/dnstap_config.h"
 #ifdef USE_DNSTAP
@@ -146,6 +148,14 @@ struct daemon {
 #endif
 	/** reuse existing cache on reload if other conditions allow it. */
 	int reuse_cache;
+	/** the fast reload thread, or NULL */
+	struct fast_reload_thread* fast_reload_thread;
+	/** the fast reload printq list */
+	struct fast_reload_printq* fast_reload_printq_list;
+	/** the fast reload option to drop mesh queries, true if so. */
+	int fast_reload_drop_mesh;
+	/** config file name */
+	char* cfgfile;
 };
 
 /**

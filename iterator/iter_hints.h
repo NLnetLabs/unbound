@@ -43,6 +43,7 @@
 #ifndef ITERATOR_ITER_HINTS_H
 #define ITERATOR_ITER_HINTS_H
 #include "util/storage/dnstree.h"
+#include "util/locks.h"
 struct iter_env;
 struct config_file;
 struct delegpt;
@@ -51,6 +52,10 @@ struct delegpt;
  * Iterator hints structure
  */
 struct iter_hints {
+	/** lock on the forwards tree.
+	 * When grabbing both this lock and the anchors.lock, this lock
+	 * is grabbed first. */
+	lock_rw_type lock;
 	/** 
 	 * Hints are stored in this tree. Sort order is specially chosen.
 	 * first sorted on qclass. Then on dname in nsec-like order, so that
@@ -96,6 +101,8 @@ int hints_apply_cfg(struct iter_hints* hints, struct config_file* cfg);
 
 /**
  * Find root hints for the given class.
+ * The return value is contents of the hints structure, caller should
+ * lock and unlock a readlock on the hints structure.
  * @param hints: hint storage.
  * @param qclass: class for which root hints are requested. host order.
  * @return: NULL if no hints, or a ptr to stored hints.
@@ -118,6 +125,8 @@ int hints_next_root(struct iter_hints* hints, uint16_t* qclass);
  * Given a qname/qclass combination, and the delegation point from the cache
  * for this qname/qclass, determine if this combination indicates that a
  * stub hint exists and must be primed.
+ * The return value is contents of the hints structure, caller should
+ * lock and unlock a readlock on the hints structure.
  *
  * @param hints: hint storage.
  * @param qname: The qname that generated the delegation point.
@@ -131,6 +140,7 @@ struct iter_hints_stub* hints_lookup_stub(struct iter_hints* hints,
 
 /**
  * Get memory in use by hints
+ * Locks and unlocks the structure.
  * @param hints: hint storage.
  * @return bytes in use
  */
@@ -157,5 +167,14 @@ int hints_add_stub(struct iter_hints* hints, uint16_t c, struct delegpt* dp,
  * @param nm: name of stub zone (in uncompressed wireformat).
  */
 void hints_delete_stub(struct iter_hints* hints, uint16_t c, uint8_t* nm);
+
+/**
+ * Swap internal tree with preallocated entries. Caller should manage
+ * the locks.
+ * @param hints: the hints data structure.
+ * @param data: the data structure used to take elements from. This contains
+ * 	the old elements on return.
+ */
+void hints_swap_tree(struct iter_hints* hints, struct iter_hints* data);
 
 #endif /* ITERATOR_ITER_HINTS_H */

@@ -46,8 +46,6 @@
 #include "util/data/msgreply.h"
 #include "util/module.h"
 struct delegpt;
-struct iter_hints;
-struct iter_forwards;
 struct iter_donotq;
 struct iter_prep_list;
 struct iter_priv;
