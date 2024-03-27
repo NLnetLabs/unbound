@@ -543,7 +543,9 @@ lruhash_update_space_used(struct lruhash* table, void* cb_arg, int diff_size)
 	/* find bin */
 	lock_quick_lock(&table->lock);
 
-	table->space_used = (size_t)((int)table->space_used + diff_size);
+	if((int)table->space_used + diff_size < 0)
+		table->space_used = 0;
+	else table->space_used = (size_t)((int)table->space_used + diff_size);
 
 	if(table->space_used > table->space_max)
 		reclaim_space(table, &reclaimlist);

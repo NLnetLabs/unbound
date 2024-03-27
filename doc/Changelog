@@ -2,6 +2,7 @@
 	- Fix name of unit test for subnet cache response.
 	- Fix #1032: The size of subnet_msg_cache calculation mistake cause
 	  memory usage increased beyond expectations.
+	- Fix for #1032, add safeguard to make table space positive.
 
 25 March 2024: Yorgos
 	- Merge #831 from Pierre4012: Improve Windows NSIS installer
