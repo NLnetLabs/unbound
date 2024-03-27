@@ -746,7 +746,11 @@ run_daemon(const char* cfgfile, int cmdline_verbose, int debug_mode, int need_pi
 	if(daemon->pidfile) {
 		int fd;
 		/* truncate pidfile */
-		fd = open(daemon->pidfile, O_WRONLY | O_TRUNC, 0644);
+		fd = open(daemon->pidfile, O_WRONLY | O_TRUNC
+#ifdef O_NOFOLLOW
+			| O_NOFOLLOW
+#endif
+			, 0644);
 		if(fd != -1)
 			close(fd);
 		/* delete pidfile */

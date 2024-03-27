@@ -5,6 +5,8 @@
 	- Fix for #1032, add safeguard to make table space positive.
 	- Fix comment in lruhash space function.
 	- Fix to add unit test for lruhash space that exercises the routines.
+	- Fix that when the server truncates the pidfile, it does not follow
+	  symbolic links.
 
 25 March 2024: Yorgos
 	- Merge #831 from Pierre4012: Improve Windows NSIS installer
