@@ -540,7 +540,7 @@ lruhash_update_space_used(struct lruhash* table, void* cb_arg, int diff_size)
 
 	if(cb_arg == NULL) cb_arg = table->cb_arg;
 
-	/* find bin */
+	/* update space used */
 	lock_quick_lock(&table->lock);
 
 	if((int)table->space_used + diff_size < 0)
