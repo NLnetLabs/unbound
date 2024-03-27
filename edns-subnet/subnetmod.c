@@ -310,9 +310,18 @@ delfunc(void *envptr, void *elemptr) {
 static size_t
 sizefunc(void *elemptr) {
 	struct reply_info *elem  = (struct reply_info *)elemptr;
-	return sizeof (struct reply_info) - sizeof (struct rrset_ref)
+	size_t s = sizeof (struct reply_info) - sizeof (struct rrset_ref)
 		+ elem->rrset_count * sizeof (struct rrset_ref)
 		+ elem->rrset_count * sizeof (struct ub_packed_rrset_key *);
+	size_t i;
+	for (i = 0; i < elem->rrset_count; i++) {
+		struct ub_packed_rrset_key *key = elem->rrsets[i];
+		struct packed_rrset_data *data = key->entry.data;
+		s += ub_rrset_sizefunc(key, data);
+	}
+	if(elem->reason_bogus_str)
+		s += strlen(elem->reason_bogus_str)+1;
+	return s;
 }
 
 /**
@@ -352,7 +361,7 @@ update_cache(struct module_qstate *qstate, int id)
 	struct slabhash *subnet_msg_cache = sne->subnet_msg_cache;
 	struct ecs_data *edns = &sq->ecs_client_in;
 	size_t i;
-	int only_match_scope_zero;
+	int only_match_scope_zero, diff_size;
 
 	/* We already calculated hash upon lookup (lookup_and_reply) if we were
 	 * allowed to look in the ECS cache */
@@ -417,14 +426,19 @@ update_cache(struct module_qstate *qstate, int id)
 	if(edns->subnet_source_mask == 0 && edns->subnet_scope_mask == 0)
 		only_match_scope_zero = 1;
 	else only_match_scope_zero = 0;
+	diff_size = (int)tree->size_bytes;
 	addrtree_insert(tree, (addrkey_t*)edns->subnet_addr, 
 		edns->subnet_source_mask, sq->max_scope, rep,
 		rep->ttl, *qstate->env->now, only_match_scope_zero);
+	diff_size = (int)tree->size_bytes - diff_size;
 
 	lock_rw_unlock(&lru_entry->lock);
 	if (need_to_insert) {
 		slabhash_insert(subnet_msg_cache, h, lru_entry, lru_entry->data,
 			NULL);
+	} else {
+		slabhash_update_space_used(subnet_msg_cache, h, NULL,
+			diff_size);
 	}
 }
 
