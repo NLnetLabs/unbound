@@ -1026,11 +1026,11 @@ static void log_crypto_err_io_code_arg(const char* str, int r,
 	} else {
 		if(print_errno) {
 			if(errno == 0)
-				log_err("str: syscall error with errno %s",
-					strerror(errno));
-			else log_err("str: %s", strerror(errno));
+				log_err("%s: syscall error with errno %s",
+					str, strerror(errno));
+			else log_err("%s: %s", str, strerror(errno));
 		} else {
-			log_err("str: %s", inf);
+			log_err("%s: %s", str, inf);
 		}
 	}
 }

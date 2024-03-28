@@ -1,5 +1,6 @@
 28 March 2024: Wouter
 	- Fix #1034: DoT forward-zone via unbound-control.
+	- Fix for crypto related failures to have a better error string.
 
 27 March 2024: Wouter
 	- Fix name of unit test for subnet cache response.
