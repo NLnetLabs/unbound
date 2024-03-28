@@ -1,3 +1,6 @@
+28 March 2024: Wouter
+	- Fix #1034: DoT forward-zone via unbound-control.
+
 27 March 2024: Wouter
 	- Fix name of unit test for subnet cache response.
 	- Fix #1032: The size of subnet_msg_cache calculation mistake cause
