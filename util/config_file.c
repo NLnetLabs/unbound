@@ -1762,7 +1762,7 @@ cfg_mark_ports(const char* str, int allow, int* avail, int num)
 	if(!mid) {
 		int port = atoi(str);
 		if(port < 0) {
-			log_err("Prevent out-of-bounds access to array avail");
+			log_err("port number is negative: %d", port);
 			return 0;
 		}
 		if(port == 0 && strcmp(str, "0") != 0) {
@@ -1774,6 +1774,10 @@ cfg_mark_ports(const char* str, int allow, int* avail, int num)
 	} else {
 		int i, low, high = atoi(mid+1);
 		char buf[16];
+		if(high < 0) {
+			log_err("port number is negative: %d", high);
+			return 0;
+		}
 		if(high == 0 && strcmp(mid+1, "0") != 0) {
 			log_err("cannot parse port number '%s'", mid+1);
 			return 0;
@@ -1786,9 +1790,17 @@ cfg_mark_ports(const char* str, int allow, int* avail, int num)
 			memcpy(buf, str, (size_t)(mid-str));
 		buf[mid-str] = 0;
 		low = atoi(buf);
+		if(low < 0) {
+			log_err("port number is negative: %d", low);
+			return 0;
+		}
 		if(low == 0 && strcmp(buf, "0") != 0) {
 			log_err("cannot parse port number '%s'", buf);
 			return 0;
+		}
+		if(high > num) {
+			/* Stop very high values from taking a long time. */
+			high = num;
 		}
 		for(i=low; i<=high; i++) {
 			if(i < num)

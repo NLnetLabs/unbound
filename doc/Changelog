@@ -1,6 +1,8 @@
 3 April 2024: Wouter
 	- Fix #1040: fix heap-buffer-overflow issue in function cfg_mark_ports
 	  of file util/config_file.c.
+	- For #1040: adjust error text and disallow negative ports in other
+	  parts of cfg_mark_ports.
 
 28 March 2024: Wouter
 	- Fix #1034: DoT forward-zone via unbound-control.
