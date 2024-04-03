@@ -8,6 +8,9 @@
 	- Fix #1035: Potential Bug while parsing port from the "stub-host"
 	  string; also affected forward-zones and remote-control host
 	  directives.
+	- Fix #369: dnstap showing extra responses; for client responses
+	  right from the cache when replying with expired data or
+	  prefetching.
 
 28 March 2024: Wouter
 	- Fix #1034: DoT forward-zone via unbound-control.
