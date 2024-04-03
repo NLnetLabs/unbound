@@ -4,6 +4,11 @@
 	- For #1040: adjust error text and disallow negative ports in other
 	  parts of cfg_mark_ports.
 
+3 April 2024: Yorgos
+	- Fix #1035: Potential Bug while parsing port from the "stub-host"
+	  string; also affected forward-zones and remote-control host
+	  directives.
+
 28 March 2024: Wouter
 	- Fix #1034: DoT forward-zone via unbound-control.
 	- Fix for crypto related failures to have a better error string.
