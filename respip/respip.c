@@ -1326,3 +1326,12 @@ respip_inform_print(struct respip_action_info* respip_actinfo, uint8_t* qname,
 		(actionstr) ? actionstr : "inform", srcip, port);
 	log_nametypeclass(NO_VERBOSE, txt, qname, qtype, qclass);
 }
+
+size_t respip_set_get_mem(struct respip_set* set)
+{
+	size_t m = sizeof(*set);
+	lock_rw_rdlock(&set->lock);
+	m += regional_get_mem(set->region);
+	lock_rw_unlock(&set->lock);
+	return m;
+}

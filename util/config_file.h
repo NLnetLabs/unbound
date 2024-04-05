@@ -1373,4 +1373,7 @@ int if_is_dnscrypt(const char* ifname, const char* port, int dnscrypt_port);
 #define LINUX_IP_LOCAL_PORT_RANGE_PATH "/proc/sys/net/ipv4/ip_local_port_range"
 #endif
 
+/** get memory for string */
+size_t getmem_str(char* str);
+
 #endif /* UTIL_CONFIG_FILE_H */

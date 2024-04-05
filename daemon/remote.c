@@ -3767,6 +3767,8 @@ fr_init_time(struct timeval* time_start, struct timeval* time_read,
  * are kept in here. They can then be deleted.
  */
 struct fast_reload_construct {
+	/** construct for views */
+	struct views* views;
 	/** construct for forwards */
 	struct iter_forwards* fwds;
 	/** construct for stubs */
@@ -3821,6 +3823,7 @@ fr_construct_clear(struct fast_reload_construct* ct)
 		return;
 	forwards_delete(ct->fwds);
 	hints_delete(ct->hints);
+	views_delete(ct->views);
 	/* Delete the log identity here so that the global value is not
 	 * reset by config_delete. */
 	if(ct->oldcfg && ct->oldcfg->log_identity) {
@@ -3828,14 +3831,6 @@ fr_construct_clear(struct fast_reload_construct* ct)
 		ct->oldcfg->log_identity = NULL;
 	}
 	config_delete(ct->oldcfg);
-}
-
-/** get memory for string */
-static size_t
-getmem_str(char* str)
-{
-	if(!str) return 0;
-	return strlen(str)+1;
 }
 
 /** get memory for strlist */
@@ -4074,6 +4069,7 @@ fr_printmem(struct fast_reload_thread* fr,
 	size_t mem = 0;
 	if(fr_poll_for_quit(fr))
 		return 1;
+	mem += views_get_mem(ct->views);
 	mem += forwards_get_mem(ct->fwds);
 	mem += hints_get_mem(ct->hints);
 	mem += sizeof(*ct->oldcfg);
@@ -4091,8 +4087,21 @@ static int
 fr_construct_from_config(struct fast_reload_thread* fr,
 	struct config_file* newcfg, struct fast_reload_construct* ct)
 {
-	if(!(ct->fwds = forwards_create()))
+	if(!(ct->views = views_create())) {
+		fr_construct_clear(ct);
 		return 0;
+	}
+	if(!views_apply_cfg(ct->views, newcfg)) {
+		fr_construct_clear(ct);
+		return 0;
+	}
+	if(fr_poll_for_quit(fr))
+		return 1;
+
+	if(!(ct->fwds = forwards_create())) {
+		fr_construct_clear(ct);
+		return 0;
+	}
 	if(!forwards_apply_cfg(ct->fwds, newcfg)) {
 		fr_construct_clear(ct);
 		return 0;
@@ -4516,6 +4525,8 @@ fr_reload_config(struct fast_reload_thread* fr, struct config_file* newcfg,
 	log_assert(ct->hints);
 
 	/* Grab big locks to satisfy lock conditions. */
+	lock_rw_wrlock(&ct->views->lock);
+	lock_rw_wrlock(&daemon->views->lock);
 	lock_rw_wrlock(&ct->fwds->lock);
 	lock_rw_wrlock(&ct->hints->lock);
 	lock_rw_wrlock(&env->fwds->lock);
@@ -4552,10 +4563,13 @@ fr_reload_config(struct fast_reload_thread* fr, struct config_file* newcfg,
 	 * towards the state machine for query resolution. */
 	forwards_swap_tree(env->fwds, ct->fwds);
 	hints_swap_tree(env->hints, ct->hints);
+	views_swap_tree(daemon->views, ct->views);
 
 	/* Set globals with new config. */
 	config_apply(env->cfg);
 
+	lock_rw_unlock(&ct->views->lock);
+	lock_rw_unlock(&daemon->views->lock);
 	lock_rw_unlock(&env->fwds->lock);
 	lock_rw_unlock(&env->hints->lock);
 	lock_rw_unlock(&ct->fwds->lock);

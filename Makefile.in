@@ -866,7 +866,7 @@ view.lo view.o: $(srcdir)/services/view.c config.h $(srcdir)/services/view.h $(s
  $(srcdir)/util/locks.h $(srcdir)/util/log.h $(srcdir)/services/localzone.h $(srcdir)/util/storage/dnstree.h \
  $(srcdir)/util/module.h $(srcdir)/util/storage/lruhash.h $(srcdir)/util/data/msgreply.h \
  $(srcdir)/util/data/packed_rrset.h $(srcdir)/util/data/msgparse.h $(srcdir)/sldns/pkthdr.h \
- $(srcdir)/sldns/rrdef.h $(srcdir)/sldns/sbuffer.h $(srcdir)/util/config_file.h
+ $(srcdir)/sldns/rrdef.h $(srcdir)/sldns/sbuffer.h $(srcdir)/util/config_file.h $(srcdir)/respip/respip.h
 rpz.lo rpz.o: $(srcdir)/services/rpz.c config.h $(srcdir)/services/rpz.h $(srcdir)/services/localzone.h \
  $(srcdir)/util/rbtree.h $(srcdir)/util/locks.h $(srcdir)/util/log.h $(srcdir)/util/storage/dnstree.h \
  $(srcdir)/util/module.h $(srcdir)/util/storage/lruhash.h $(srcdir)/util/data/msgreply.h \

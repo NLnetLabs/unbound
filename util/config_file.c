@@ -2722,3 +2722,10 @@ if_is_dnscrypt(const char* ifname, const char* port, int dnscrypt_port)
 	return 0;
 #endif
 }
+
+size_t
+getmem_str(char* str)
+{
+	if(!str) return 0;
+	return strlen(str)+1;
+}
