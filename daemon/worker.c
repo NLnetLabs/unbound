@@ -2027,7 +2027,7 @@ send_reply_rc:
 	/*
 	 * sending src (client)/dst (local service) addresses over DNSTAP from send_reply code label (when we serviced local zone for ex.)
 	 */
-	if(worker->dtenv.log_client_response_messages) {
+	if(worker->dtenv.log_client_response_messages && rc !=0) {
 		log_addr(VERB_ALGO, "from local addr", (void*)repinfo->c->socket->addr, repinfo->c->socket->addrlen);
 		log_addr(VERB_ALGO, "response to client", &repinfo->client_addr, repinfo->client_addrlen);
 		dt_msg_send_client_response(&worker->dtenv, &repinfo->client_addr, (void*)repinfo->c->socket->addr, c->type, c->ssl, c->buffer);

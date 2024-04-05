@@ -1,3 +1,41 @@
+5 April 2024: Yorgos
+	- Merge #1027: Introduce 'cache-min-negative-ttl' option.
+
+3 April 2024: Wouter
+	- Fix #1040: fix heap-buffer-overflow issue in function cfg_mark_ports
+	  of file util/config_file.c.
+	- For #1040: adjust error text and disallow negative ports in other
+	  parts of cfg_mark_ports.
+
+3 April 2024: Yorgos
+	- Fix #1035: Potential Bug while parsing port from the "stub-host"
+	  string; also affected forward-zones and remote-control host
+	  directives.
+	- Fix #369: dnstap showing extra responses; for client responses
+	  right from the cache when replying with expired data or
+	  prefetching.
+
+28 March 2024: Wouter
+	- Fix #1034: DoT forward-zone via unbound-control.
+	- Fix for crypto related failures to have a better error string.
+
+27 March 2024: Wouter
+	- Fix name of unit test for subnet cache response.
+	- Fix #1032: The size of subnet_msg_cache calculation mistake cause
+	  memory usage increased beyond expectations.
+	- Fix for #1032, add safeguard to make table space positive.
+	- Fix comment in lruhash space function.
+	- Fix to add unit test for lruhash space that exercises the routines.
+	- Fix that when the server truncates the pidfile, it does not follow
+	  symbolic links.
+	- Fix that the server does not chown the pidfile.
+
+25 March 2024: Yorgos
+	- Merge #831 from Pierre4012: Improve Windows NSIS installer
+	  script (setup.nsi).
+	- For #831: Format text, use exclamation icon and explicit label
+	  names.
+
 19 March 2024: Wouter
 	- Fix rpz so that rpz CNAME can apply after rpz CNAME. And fix that
 	  clientip and nsip can give a CNAME.

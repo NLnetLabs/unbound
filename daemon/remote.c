@@ -2194,7 +2194,7 @@ do_forward(RES* ssl, struct worker* worker, char* args)
 
 static int
 parse_fs_args(RES* ssl, char* args, uint8_t** nm, struct delegpt** dp,
-	int* insecure, int* prime)
+	int* insecure, int* prime, int* tls)
 {
 	char* zonename;
 	char* rest;
@@ -2209,6 +2209,8 @@ parse_fs_args(RES* ssl, char* args, uint8_t** nm, struct delegpt** dp,
 				*insecure = 1;
 			else if(*args == 'p' && prime)
 				*prime = 1;
+			else if(*args == 't' && tls)
+				*tls = 1;
 			else {
 				(void)ssl_printf(ssl, "error: unknown option %s\n", args);
 				return 0;
@@ -2241,11 +2243,13 @@ static void
 do_forward_add(RES* ssl, struct worker* worker, char* args)
 {
 	struct iter_forwards* fwd = worker->env.fwds;
-	int insecure = 0;
+	int insecure = 0, tls = 0;
 	uint8_t* nm = NULL;
 	struct delegpt* dp = NULL;
-	if(!parse_fs_args(ssl, args, &nm, &dp, &insecure, NULL))
+	if(!parse_fs_args(ssl, args, &nm, &dp, &insecure, NULL, &tls))
 		return;
+	if(tls)
+		dp->ssl_upstream = 1;
 	lock_rw_wrlock(&fwd->lock);
 	if(insecure && worker->env.anchors) {
 		if(!anchors_add_insecure(worker->env.anchors, LDNS_RR_CLASS_IN,
@@ -2275,7 +2279,7 @@ do_forward_remove(RES* ssl, struct worker* worker, char* args)
 	struct iter_forwards* fwd = worker->env.fwds;
 	int insecure = 0;
 	uint8_t* nm = NULL;
-	if(!parse_fs_args(ssl, args, &nm, NULL, &insecure, NULL))
+	if(!parse_fs_args(ssl, args, &nm, NULL, &insecure, NULL, NULL))
 		return;
 	lock_rw_wrlock(&fwd->lock);
 	if(insecure && worker->env.anchors)
@@ -2292,11 +2296,13 @@ static void
 do_stub_add(RES* ssl, struct worker* worker, char* args)
 {
 	struct iter_forwards* fwd = worker->env.fwds;
-	int insecure = 0, prime = 0;
+	int insecure = 0, prime = 0, tls = 0;
 	uint8_t* nm = NULL;
 	struct delegpt* dp = NULL;
-	if(!parse_fs_args(ssl, args, &nm, &dp, &insecure, &prime))
+	if(!parse_fs_args(ssl, args, &nm, &dp, &insecure, &prime, &tls))
 		return;
+	if(tls)
+		dp->ssl_upstream = 1;
 	lock_rw_wrlock(&fwd->lock);
 	lock_rw_wrlock(&worker->env.hints->lock);
 	if(insecure && worker->env.anchors) {
@@ -2345,7 +2351,7 @@ do_stub_remove(RES* ssl, struct worker* worker, char* args)
 	struct iter_forwards* fwd = worker->env.fwds;
 	int insecure = 0;
 	uint8_t* nm = NULL;
-	if(!parse_fs_args(ssl, args, &nm, NULL, &insecure, NULL))
+	if(!parse_fs_args(ssl, args, &nm, NULL, &insecure, NULL, NULL))
 		return;
 	lock_rw_wrlock(&fwd->lock);
 	lock_rw_wrlock(&worker->env.hints->lock);
