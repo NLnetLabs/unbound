@@ -388,6 +388,15 @@ Time to live maximum for negative responses, these have a SOA in the
 authority section that is limited in time.  Default is 3600.
 This applies to nxdomain and nodata answers.
 .TP
+.B cache\-min\-negative\-ttl: \fI<seconds>
+Time to live minimum for negative responses, these have a SOA in the
+authority section that is limited in time.
+Default is 0 (disabled).
+If this is disabled and \fBcache-min-ttl\fR is configured, it will take effect
+instead.
+In that case you can set this to 1 to honor the upstream TTL.
+This applies to nxdomain and nodata answers.
+.TP
 .B infra\-host\-ttl: \fI<seconds>
 Time to live for entries in the host cache. The host cache contains
 roundtrip timing, lameness and EDNS support information. Default is 900.

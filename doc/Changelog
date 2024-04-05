@@ -1,3 +1,6 @@
+5 April 2024: Yorgos
+	- Merge #1027: Introduce 'cache-min-negative-ttl' option.
+
 3 April 2024: Wouter
 	- Fix #1040: fix heap-buffer-overflow issue in function cfg_mark_ports
 	  of file util/config_file.c.

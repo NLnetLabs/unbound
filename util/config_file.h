@@ -315,6 +315,8 @@ struct config_file {
 	int min_ttl;
 	/** the number of seconds maximal negative TTL for SOA in auth */
 	int max_negative_ttl;
+	/** the number of seconds minimal negative TTL for SOA in auth */
+	int min_negative_ttl;
 	/** if prefetching of messages should be performed. */
 	int prefetch;
 	/** if prefetching of DNSKEYs should be performed. */
