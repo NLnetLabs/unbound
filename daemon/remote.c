@@ -3863,7 +3863,7 @@ fr_check_tag_defines(struct fast_reload_thread* fr, struct config_file* newcfg)
 	 * needs no changes. */
 	if(!taglist_equal(fr->worker->daemon->cfg->tagname,
 			fr->worker->daemon->cfg->num_tags, newcfg->tagname,
-			newcfg->num_tags) ||
+			newcfg->num_tags) &&
 		!taglist_change_at_end(fr->worker->daemon->cfg->tagname,
 			fr->worker->daemon->cfg->num_tags, newcfg->tagname,
 			newcfg->num_tags)) {
