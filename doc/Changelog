@@ -1,3 +1,6 @@
+5 April 2024: Wouter
+	- Fix comment syntax for view function views_find_view.
+
 5 April 2024: Yorgos
 	- Merge #1027: Introduce 'cache-min-negative-ttl' option.
 
