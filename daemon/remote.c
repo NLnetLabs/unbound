@@ -3821,6 +3821,66 @@ fr_read_config(struct fast_reload_thread* fr, struct config_file** newcfg)
 	return 1;
 }
 
+/** Check if two taglists are equal. */
+static int
+taglist_equal(char** tagname_a, int num_tags_a, char** tagname_b,
+	int num_tags_b)
+{
+	int i;
+	if(num_tags_a != num_tags_b)
+		return 0;
+	for(i=0; i<num_tags_a; i++) {
+		if(strcmp(tagname_a[i], tagname_b[i]) != 0)
+			return 0;
+	}
+	return 1;
+}
+
+/** Check the change from a to b is only new entries at the end. */
+static int
+taglist_change_at_end(char** tagname_a, int num_tags_a, char** tagname_b,
+	int num_tags_b)
+{
+	if(num_tags_a < 0 || num_tags_b < 0)
+		return 0;
+	if(num_tags_a >= num_tags_b)
+		return 0;
+	/* So, b is longer than a. Check if the initial start of the two
+	 * taglists is the same. */
+	if(!taglist_equal(tagname_a, num_tags_a, tagname_b, num_tags_a))
+		return 0;
+	return 1;
+}
+
+/** fast reload thread, check tag defines. */
+static int
+fr_check_tag_defines(struct fast_reload_thread* fr, struct config_file* newcfg)
+{
+	/* The tags are kept in a bitlist for items. Some of them are stored
+	 * in query info. If the tags change, then the old values are
+	 * inaccurate. The solution is to then flush the query list.
+	 * Unless the change only involves adding new tags at the end, that
+	 * needs no changes. */
+	if(!taglist_equal(fr->worker->daemon->cfg->tagname,
+			fr->worker->daemon->cfg->num_tags, newcfg->tagname,
+			newcfg->num_tags) ||
+		!taglist_change_at_end(fr->worker->daemon->cfg->tagname,
+			fr->worker->daemon->cfg->num_tags, newcfg->tagname,
+			newcfg->num_tags)) {
+		/* The tags have changed too much, the define-tag config. */
+		if(fr->fr_drop_mesh)
+			return 1; /* already dropping queries */
+		fr->fr_drop_mesh = 1;
+		fr->worker->daemon->fast_reload_drop_mesh = fr->fr_drop_mesh;
+		if(!fr_output_printf(fr, "tags have changed, with "
+			"'define-tag', and the queries have to be dropped "
+			"for consistency, setting '+d'\n"))
+			return 0;
+		fr_send_notification(fr, fast_reload_notification_printout);
+	}
+	return 1;
+}
+
 /** fast reload thread, clear construct information, deletes items */
 static void
 fr_construct_clear(struct fast_reload_construct* ct)
@@ -4678,6 +4738,16 @@ fr_load_config(struct fast_reload_thread* fr, struct timeval* time_read,
 		return 0;
 	if(gettimeofday(time_read, NULL) < 0)
 		log_err("gettimeofday: %s", strerror(errno));
+	if(fr_poll_for_quit(fr)) {
+		config_delete(newcfg);
+		return 1;
+	}
+
+	/* Check if the config can be loaded */
+	if(!fr_check_tag_defines(fr, newcfg)) {
+		config_delete(newcfg);
+		return 0;
+	}
 	if(fr_poll_for_quit(fr)) {
 		config_delete(newcfg);
 		return 1;
