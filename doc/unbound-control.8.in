@@ -94,6 +94,12 @@ working on. This is like flush_requestlist. Without it the queries are kept
 so that users keep getting answers for those queries that are currently
 processed. The drop makes it so that queries during the life time of the
 query processing see only old, or only new config options.
+.IP
+When there are changes to the config tags, from \fBdefine\-tag\fR config, 
+then the '+d' option is turned on with a warning printout, and queries are
+dropped. This is to stop references to the old tag information, by the old
+queries. If the number of tags is increased in the newly loaded config, by
+adding tags at the end, then the '+d' option is not needed.
 .TP
 .B verbosity \fInumber
 Change verbosity value for logging. Same values as \fBverbosity\fR keyword in
