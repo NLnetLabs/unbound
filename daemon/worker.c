@@ -682,7 +682,8 @@ apply_respip_action(struct worker* worker, const struct query_info* qinfo,
 		return 1;
 
 	if(!respip_rewrite_reply(qinfo, cinfo, rep, encode_repp, &actinfo,
-		alias_rrset, 0, worker->scratchpad, az, NULL))
+		alias_rrset, 0, worker->scratchpad, az, NULL,
+		worker->env.views))
 		return 0;
 
 	/* xxx_deny actions mean dropping the reply, unless the original reply
@@ -842,7 +843,7 @@ answer_from_cache(struct worker* worker, struct query_info* qinfo,
 	} else if(partial_rep &&
 		!respip_merge_cname(partial_rep, qinfo, rep, cinfo,
 		must_validate, &encode_rep, worker->scratchpad,
-		worker->env.auth_zones)) {
+		worker->env.auth_zones, worker->env.views)) {
 		goto bail_out;
 	}
 	if(encode_rep != rep) {
@@ -1893,6 +1894,7 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 		cinfo_tmp.tag_datas = acladdr->tag_datas;
 		cinfo_tmp.tag_datas_size = acladdr->tag_datas_size;
 		cinfo_tmp.view = acladdr->view;
+		cinfo_tmp.view_name = NULL;
 		cinfo_tmp.respip_set = worker->daemon->respip_set;
 		cinfo = &cinfo_tmp;
 	}

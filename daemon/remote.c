@@ -1482,8 +1482,7 @@ do_view_zone_add(RES* ssl, struct worker* worker, char* arg)
 	struct view* v;
 	if(!find_arg2(ssl, arg, &arg2))
 		return;
-	v = views_find_view(worker->daemon->views,
-		arg, 1 /* get write lock*/);
+	v = views_find_view(worker->env.views, arg, 1 /* get write lock*/);
 	if(!v) {
 		ssl_printf(ssl,"no view with name: %s\n", arg);
 		return;
@@ -1515,8 +1514,7 @@ do_view_zone_remove(RES* ssl, struct worker* worker, char* arg)
 	struct view* v;
 	if(!find_arg2(ssl, arg, &arg2))
 		return;
-	v = views_find_view(worker->daemon->views,
-		arg, 1 /* get write lock*/);
+	v = views_find_view(worker->env.views, arg, 1 /* get write lock*/);
 	if(!v) {
 		ssl_printf(ssl,"no view with name: %s\n", arg);
 		return;
@@ -1538,8 +1536,7 @@ do_view_data_add(RES* ssl, struct worker* worker, char* arg)
 	struct view* v;
 	if(!find_arg2(ssl, arg, &arg2))
 		return;
-	v = views_find_view(worker->daemon->views,
-		arg, 1 /* get write lock*/);
+	v = views_find_view(worker->env.views, arg, 1 /* get write lock*/);
 	if(!v) {
 		ssl_printf(ssl,"no view with name: %s\n", arg);
 		return;
@@ -1560,8 +1557,7 @@ static void
 do_view_datas_add(RES* ssl, struct worker* worker, char* arg)
 {
 	struct view* v;
-	v = views_find_view(worker->daemon->views,
-		arg, 1 /* get write lock*/);
+	v = views_find_view(worker->env.views, arg, 1 /* get write lock*/);
 	if(!v) {
 		ssl_printf(ssl,"no view with name: %s\n", arg);
 		return;
@@ -1585,8 +1581,7 @@ do_view_data_remove(RES* ssl, struct worker* worker, char* arg)
 	struct view* v;
 	if(!find_arg2(ssl, arg, &arg2))
 		return;
-	v = views_find_view(worker->daemon->views,
-		arg, 1 /* get write lock*/);
+	v = views_find_view(worker->env.views, arg, 1 /* get write lock*/);
 	if(!v) {
 		ssl_printf(ssl,"no view with name: %s\n", arg);
 		return;
@@ -1605,8 +1600,7 @@ static void
 do_view_datas_remove(RES* ssl, struct worker* worker, char* arg)
 {
 	struct view* v;
-	v = views_find_view(worker->daemon->views,
-		arg, 1 /* get write lock*/);
+	v = views_find_view(worker->env.views, arg, 1 /* get write lock*/);
 	if(!v) {
 		ssl_printf(ssl,"no view with name: %s\n", arg);
 		return;
@@ -2940,7 +2934,7 @@ do_list_local_data(RES* ssl, struct worker* worker, struct local_zones* zones)
 static void
 do_view_list_local_zones(RES* ssl, struct worker* worker, char* arg)
 {
-	struct view* v = views_find_view(worker->daemon->views,
+	struct view* v = views_find_view(worker->env.views,
 		arg, 0 /* get read lock*/);
 	if(!v) {
 		ssl_printf(ssl,"no view with name: %s\n", arg);
@@ -2956,7 +2950,7 @@ do_view_list_local_zones(RES* ssl, struct worker* worker, char* arg)
 static void
 do_view_list_local_data(RES* ssl, struct worker* worker, char* arg)
 {
-	struct view* v = views_find_view(worker->daemon->views,
+	struct view* v = views_find_view(worker->env.views,
 		arg, 0 /* get read lock*/);
 	if(!v) {
 		ssl_printf(ssl,"no view with name: %s\n", arg);
@@ -4592,7 +4586,7 @@ fr_reload_config(struct fast_reload_thread* fr, struct config_file* newcfg,
 
 	/* Grab big locks to satisfy lock conditions. */
 	lock_rw_wrlock(&ct->views->lock);
-	lock_rw_wrlock(&daemon->views->lock);
+	lock_rw_wrlock(&env->views->lock);
 	lock_rw_wrlock(&ct->fwds->lock);
 	lock_rw_wrlock(&ct->hints->lock);
 	lock_rw_wrlock(&env->fwds->lock);
@@ -4629,13 +4623,13 @@ fr_reload_config(struct fast_reload_thread* fr, struct config_file* newcfg,
 	 * towards the state machine for query resolution. */
 	forwards_swap_tree(env->fwds, ct->fwds);
 	hints_swap_tree(env->hints, ct->hints);
-	views_swap_tree(daemon->views, ct->views);
+	views_swap_tree(env->views, ct->views);
 
 	/* Set globals with new config. */
 	config_apply(env->cfg);
 
 	lock_rw_unlock(&ct->views->lock);
-	lock_rw_unlock(&daemon->views->lock);
+	lock_rw_unlock(&env->views->lock);
 	lock_rw_unlock(&env->fwds->lock);
 	lock_rw_unlock(&env->hints->lock);
 	lock_rw_unlock(&ct->fwds->lock);

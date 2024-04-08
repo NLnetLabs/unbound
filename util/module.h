@@ -521,6 +521,8 @@ struct module_env {
 	 * data structure. 
 	 */
 	struct iter_hints* hints;
+	/** views structure containing view tree */
+	struct views* views;
 	/** module specific data. indexed by module id. */
 	void* modinfo[MAX_MODULE];
 

@@ -129,8 +129,6 @@ struct daemon {
 	struct timeval time_last_stat;
 	/** time when daemon started */
 	struct timeval time_boot;
-	/** views structure containing view tree */
-	struct views* views;
 #ifdef USE_DNSTAP
 	/** the dnstap environment master value, copied and changed by threads*/
 	struct dt_env* dtenv;

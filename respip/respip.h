@@ -68,7 +68,12 @@ struct respip_client_info {
 	size_t tag_actions_size;
 	struct config_strlist** tag_datas;
 	size_t tag_datas_size;
+	/** The view for the action, during cache callback that is by
+	 * pointer. */
 	struct view* view;
+	/** If from module query state, the view pointer is NULL, but name is
+	 * stored to the view. */
+	char* view_name;
 	struct respip_set* respip_set;
 };
 
@@ -149,13 +154,14 @@ int respip_views_apply_cfg(struct views* vs, struct config_file* cfg,
  *   on error.
  * @param region: allocator to build *new_repp.
  * @param az: auth zones containing RPZ information.
+ * @param views: views tree to lookup view used.
  * @return 1 on success, 0 on error.
  */
 int respip_merge_cname(struct reply_info* base_rep,
 	const struct query_info* qinfo, const struct reply_info* tgt_rep,
 	const struct respip_client_info* cinfo, int must_validate,
 	struct reply_info** new_repp, struct regional* region,
-	struct auth_zones* az);
+	struct auth_zones* az, struct views* views);
 
 /**
  * See if any IP-based action should apply to any IP address of AAAA/A answer
@@ -178,6 +184,7 @@ int respip_merge_cname(struct reply_info* base_rep,
  * @param region: allocator to build *new_repp.
  * @param rpz_passthru: keeps track of query state can have passthru that
  *   stops further rpz processing. Or NULL for cached answer processing.
+ * @param views: views tree to lookup view used.
  * @return 1 on success, 0 on error.
  */
 int respip_rewrite_reply(const struct query_info* qinfo,
@@ -186,7 +193,7 @@ int respip_rewrite_reply(const struct query_info* qinfo,
 	struct respip_action_info* actinfo,
 	struct ub_packed_rrset_key** alias_rrset,
 	int search_only, struct regional* region, struct auth_zones* az,
-	int* rpz_passthru);
+	int* rpz_passthru, struct views* views);
 
 /**
  * Get the response-ip function block.

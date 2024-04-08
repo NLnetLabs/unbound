@@ -687,16 +687,16 @@ daemon_fork(struct daemon* daemon)
 #endif
 
 	log_assert(daemon);
-	if(!(daemon->views = views_create()))
+	if(!(daemon->env->views = views_create()))
 		fatal_exit("Could not create views: out of memory");
 	/* create individual views and their localzone/data trees */
-	if(!views_apply_cfg(daemon->views, daemon->cfg))
+	if(!views_apply_cfg(daemon->env->views, daemon->cfg))
 		fatal_exit("Could not set up views");
 
-	if(!acl_list_apply_cfg(daemon->acl, daemon->cfg, daemon->views))
+	if(!acl_list_apply_cfg(daemon->acl, daemon->cfg, daemon->env->views))
 		fatal_exit("Could not setup access control list");
 	if(!acl_interface_apply_cfg(daemon->acl_interface, daemon->cfg,
-		daemon->views))
+		daemon->env->views))
 		fatal_exit("Could not setup interface control list");
 	if(!tcl_list_apply_cfg(daemon->tcl, daemon->cfg))
 		fatal_exit("Could not setup TCP connection limits");
@@ -728,7 +728,7 @@ daemon_fork(struct daemon* daemon)
 		fatal_exit("Could not create response IP set");
 	if(!respip_global_apply_cfg(daemon->respip_set, daemon->cfg))
 		fatal_exit("Could not set up response IP set");
-	if(!respip_views_apply_cfg(daemon->views, daemon->cfg,
+	if(!respip_views_apply_cfg(daemon->env->views, daemon->cfg,
 		&have_view_respip_cfg))
 		fatal_exit("Could not set up per-view response IP sets");
 	daemon->use_response_ip = !respip_set_is_empty(daemon->respip_set) ||
@@ -846,8 +846,8 @@ daemon_cleanup(struct daemon* daemon)
 	daemon->local_zones = NULL;
 	respip_set_delete(daemon->respip_set);
 	daemon->respip_set = NULL;
-	views_delete(daemon->views);
-	daemon->views = NULL;
+	views_delete(daemon->env->views);
+	daemon->env->views = NULL;
 	if(daemon->env->auth_zones)
 		auth_zones_cleanup(daemon->env->auth_zones);
 	/* key cache is cleared by module desetup during next daemon_fork() */
