@@ -1,3 +1,8 @@
+8 April 2024: Yorgos
+	- Fix #595: unbound-anchor cannot deal with full disk; it will now
+	  first write out to a temp file before replacing the original one,
+	  like Unbound already does for auto-trust-anchor-file.
+
 5 April 2024: Wouter
 	- Fix comment syntax for view function views_find_view.
 
