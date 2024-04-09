@@ -3773,6 +3773,10 @@ struct fast_reload_construct {
 	struct iter_forwards* fwds;
 	/** construct for stubs */
 	struct iter_hints* hints;
+	/** construct for respip_set */
+	struct respip_set* respip_set;
+	/** if there is response ip configuration in use */
+	int use_response_ip;
 	/** storage for the old configuration elements. The outer struct
 	 * is allocated with malloc here, the items are from config. */
 	struct config_file* oldcfg;
@@ -3883,6 +3887,7 @@ fr_construct_clear(struct fast_reload_construct* ct)
 		return;
 	forwards_delete(ct->fwds);
 	hints_delete(ct->hints);
+	respip_set_delete(ct->respip_set);
 	views_delete(ct->views);
 	/* Delete the log identity here so that the global value is not
 	 * reset by config_delete. */
@@ -4130,6 +4135,7 @@ fr_printmem(struct fast_reload_thread* fr,
 	if(fr_poll_for_quit(fr))
 		return 1;
 	mem += views_get_mem(ct->views);
+	mem += respip_set_get_mem(ct->respip_set);
 	mem += forwards_get_mem(ct->fwds);
 	mem += hints_get_mem(ct->hints);
 	mem += sizeof(*ct->oldcfg);
@@ -4147,6 +4153,8 @@ static int
 fr_construct_from_config(struct fast_reload_thread* fr,
 	struct config_file* newcfg, struct fast_reload_construct* ct)
 {
+	int have_view_respip_cfg = 0;
+
 	if(!(ct->views = views_create())) {
 		fr_construct_clear(ct);
 		return 0;
@@ -4169,12 +4177,33 @@ fr_construct_from_config(struct fast_reload_thread* fr,
 	if(fr_poll_for_quit(fr))
 		return 1;
 
-	if(!(ct->hints = hints_create()))
+	if(!(ct->hints = hints_create())) {
+		fr_construct_clear(ct);
 		return 0;
+	}
 	if(!hints_apply_cfg(ct->hints, newcfg)) {
 		fr_construct_clear(ct);
 		return 0;
 	}
+	if(fr_poll_for_quit(fr))
+		return 1;
+
+	if(!(ct->respip_set = respip_set_create())) {
+		fr_construct_clear(ct);
+		return 0;
+	}
+	if(!respip_global_apply_cfg(ct->respip_set, newcfg)) {
+		fr_construct_clear(ct);
+		return 0;
+	}
+	if(fr_poll_for_quit(fr))
+		return 1;
+	if(!respip_views_apply_cfg(ct->views, newcfg, &have_view_respip_cfg)) {
+		fr_construct_clear(ct);
+		return 0;
+	}
+	ct->use_response_ip = !respip_set_is_empty(ct->respip_set) ||
+		have_view_respip_cfg;
 	if(fr_poll_for_quit(fr))
 		return 1;
 
@@ -4587,6 +4616,8 @@ fr_reload_config(struct fast_reload_thread* fr, struct config_file* newcfg,
 	/* Grab big locks to satisfy lock conditions. */
 	lock_rw_wrlock(&ct->views->lock);
 	lock_rw_wrlock(&env->views->lock);
+	lock_rw_wrlock(&ct->respip_set->lock);
+	lock_rw_wrlock(&env->respip_set->lock);
 	lock_rw_wrlock(&ct->fwds->lock);
 	lock_rw_wrlock(&ct->hints->lock);
 	lock_rw_wrlock(&env->fwds->lock);
@@ -4624,12 +4655,16 @@ fr_reload_config(struct fast_reload_thread* fr, struct config_file* newcfg,
 	forwards_swap_tree(env->fwds, ct->fwds);
 	hints_swap_tree(env->hints, ct->hints);
 	views_swap_tree(env->views, ct->views);
+	respip_set_swap_tree(env->respip_set, ct->respip_set);
+	daemon->use_response_ip = ct->use_response_ip;
 
 	/* Set globals with new config. */
 	config_apply(env->cfg);
 
 	lock_rw_unlock(&ct->views->lock);
 	lock_rw_unlock(&env->views->lock);
+	lock_rw_unlock(&ct->respip_set->lock);
+	lock_rw_unlock(&env->respip_set->lock);
 	lock_rw_unlock(&env->fwds->lock);
 	lock_rw_unlock(&env->hints->lock);
 	lock_rw_unlock(&ct->fwds->lock);
@@ -5450,6 +5485,11 @@ fr_poll_for_reload_start(struct fast_reload_thread* fr)
 	}
 }
 
+void
+fast_reload_worker_pickup_changes(struct worker* worker)
+{
+	worker->env.mesh->use_response_ip = worker->daemon->use_response_ip;
+}
 
 /** fast reload thread, handle reload_stop notification, send reload stop
  * to other threads over IPC and collect their ack. When that is done,
@@ -5487,6 +5527,7 @@ fr_main_perform_reload_stop(struct fast_reload_thread* fr)
 		verbose(VERB_ALGO, "worker: drop mesh queries after reload");
 		mesh_delete_all(fr->worker->env.mesh);
 	}
+	fast_reload_worker_pickup_changes(fr->worker);
 	verbose(VERB_ALGO, "worker resume after reload");
 }
 
@@ -5510,6 +5551,7 @@ fr_main_perform_reload_nopause_poll(struct fast_reload_thread* fr)
 
 	/* Wait for the other threads to ack. */
 	fr_read_ack_from_workers(fr);
+	fast_reload_worker_pickup_changes(fr->worker);
 
 	/* Send ack to fast reload thread. */
 	fr_send_cmd_to(fr, fast_reload_notification_reload_ack, 0, 1);

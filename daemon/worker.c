@@ -442,6 +442,7 @@ worker_stop_and_wait(struct worker* worker)
 		verbose(VERB_ALGO, "worker: drop mesh queries after reload");
 		mesh_delete_all(worker->env.mesh);
 	}
+	fast_reload_worker_pickup_changes(worker);
 	verbose(VERB_ALGO, "worker resume after reload");
 }
 
@@ -486,6 +487,7 @@ worker_handle_control_cmd(struct tube* ATTR_UNUSED(tube), uint8_t* msg,
 		break;
 	case worker_cmd_reload_poll:
 		verbose(VERB_ALGO, "got control cmd reload_poll");
+		fast_reload_worker_pickup_changes(worker);
 		worker_send_reload_ack(worker);
 		break;
 	default:

@@ -23,7 +23,8 @@
 struct respip_set {
 	struct regional* region;
 	struct rbtree_type ip_tree;
-	lock_rw_type lock;	/* lock on the respip tree */
+	lock_rw_type lock;	/* lock on the respip tree. It is ordered
+		after views and before hints and stubs. */
 	char* const* tagname;	/* shallow copy of tag names, for logging */
 	int num_tags;		/* number of tagname entries */
 };
@@ -314,5 +315,14 @@ respip_copy_rrset(const struct ub_packed_rrset_key* key, struct regional* region
 /** Get memory usage of respip set tree. The routine locks and unlocks the
  * set for reading. */
 size_t respip_set_get_mem(struct respip_set* set);
+
+/**
+ * Swap internal tree with preallocated entries. Caller should manage
+ * the locks.
+ * @param respip_set: response ip tree
+ * @param data: preallocated information.
+ */
+void respip_set_swap_tree(struct respip_set* respip_set,
+	struct respip_set* data);
 
 #endif	/* RESPIP_RESPIP_H */

@@ -342,4 +342,7 @@ int fast_reload_client_callback(struct comm_point* c, void* arg, int err,
 /** fast reload printq delete list */
 void fast_reload_printq_list_delete(struct fast_reload_printq* list);
 
+/** Pick up per worker changes after a fast reload. */
+void fast_reload_worker_pickup_changes(struct worker* worker);
+
 #endif /* DAEMON_REMOTE_H */

@@ -1349,3 +1349,24 @@ size_t respip_set_get_mem(struct respip_set* set)
 	lock_rw_unlock(&set->lock);
 	return m;
 }
+
+void
+respip_set_swap_tree(struct respip_set* respip_set,
+	struct respip_set* data)
+{
+	rbnode_type* oldroot = respip_set->ip_tree.root;
+	size_t oldcount = respip_set->ip_tree.count;
+	struct regional* oldregion = respip_set->region;
+	char* const* oldtagname = respip_set->tagname;
+	int oldnum_tags = respip_set->num_tags;
+	respip_set->ip_tree.root = data->ip_tree.root;
+	respip_set->ip_tree.count = data->ip_tree.count;
+	respip_set->region = data->region;
+	respip_set->tagname = data->tagname;
+	respip_set->num_tags = data->num_tags;
+	data->ip_tree.root = oldroot;
+	data->ip_tree.count = oldcount;
+	data->region = oldregion;
+	data->tagname = oldtagname;
+	data->num_tags = oldnum_tags;
+}
