@@ -153,10 +153,6 @@ client_info_compare(const struct respip_client_info* ci_a,
 		if(cmp != 0)
 			return cmp;
 	}
-	/* For the unbound daemon these should be non-NULL and identical,
-	 * but we check that just in case. */
-	if(ci_a->respip_set != ci_b->respip_set)
-		return ci_a->respip_set < ci_b->respip_set ? -1 : 1;
 	return 0;
 }
 
@@ -2140,7 +2136,8 @@ apply_respip_action(struct module_qstate* qstate,
 		return 1;
 
 	if(!respip_rewrite_reply(qinfo, cinfo, rep, encode_repp, actinfo,
-		alias_rrset, 0, qstate->region, az, NULL, qstate->env->views))
+		alias_rrset, 0, qstate->region, az, NULL, qstate->env->views,
+		qstate->env->respip_set))
 		return 0;
 
 	/* xxx_deny actions mean dropping the reply, unless the original reply
@@ -2208,7 +2205,8 @@ mesh_serve_expired_callback(void* arg)
 		} else if(partial_rep &&
 			!respip_merge_cname(partial_rep, &qstate->qinfo, msg->rep,
 			qstate->client_info, must_validate, &encode_rep, qstate->region,
-			qstate->env->auth_zones, qstate->env->views)) {
+			qstate->env->auth_zones, qstate->env->views,
+			qstate->env->respip_set)) {
 			return;
 		}
 		if(!encode_rep || alias_rrset) {

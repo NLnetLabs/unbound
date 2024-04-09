@@ -59,7 +59,6 @@ struct respip_addr_info;
  * This is essentially a subset of acl_addr (except for respip_set) but
  * defined as a separate structure to avoid dependency on the daemon-specific
  * structure.
- * respip_set is supposed to refer to the response-ip set for the global view.
  */
 struct respip_client_info {
 	uint8_t* taglist;
@@ -74,7 +73,6 @@ struct respip_client_info {
 	/** If from module query state, the view pointer is NULL, but the
 	 * name is stored in reference to the view. */
 	char* view_name;
-	struct respip_set* respip_set;
 };
 
 /**
@@ -155,13 +153,15 @@ int respip_views_apply_cfg(struct views* vs, struct config_file* cfg,
  * @param region: allocator to build *new_repp.
  * @param az: auth zones containing RPZ information.
  * @param views: views tree to lookup view used.
+ * @param respip_set: the respip set for the global view.
  * @return 1 on success, 0 on error.
  */
 int respip_merge_cname(struct reply_info* base_rep,
 	const struct query_info* qinfo, const struct reply_info* tgt_rep,
 	const struct respip_client_info* cinfo, int must_validate,
 	struct reply_info** new_repp, struct regional* region,
-	struct auth_zones* az, struct views* views);
+	struct auth_zones* az, struct views* views,
+	struct respip_set* respip_set);
 
 /**
  * See if any IP-based action should apply to any IP address of AAAA/A answer
@@ -185,6 +185,7 @@ int respip_merge_cname(struct reply_info* base_rep,
  * @param rpz_passthru: keeps track of query state can have passthru that
  *   stops further rpz processing. Or NULL for cached answer processing.
  * @param views: views tree to lookup view used.
+ * @param ipset: the respip set for the global view.
  * @return 1 on success, 0 on error.
  */
 int respip_rewrite_reply(const struct query_info* qinfo,
@@ -193,7 +194,7 @@ int respip_rewrite_reply(const struct query_info* qinfo,
 	struct respip_action_info* actinfo,
 	struct ub_packed_rrset_key** alias_rrset,
 	int search_only, struct regional* region, struct auth_zones* az,
-	int* rpz_passthru, struct views* views);
+	int* rpz_passthru, struct views* views, struct respip_set* ipset);
 
 /**
  * Get the response-ip function block.

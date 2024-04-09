@@ -868,7 +868,7 @@ respip_rewrite_reply(const struct query_info* qinfo,
 	struct reply_info** new_repp, struct respip_action_info* actinfo,
 	struct ub_packed_rrset_key** alias_rrset, int search_only,
 	struct regional* region, struct auth_zones* az, int* rpz_passthru,
-	struct views* views)
+	struct views* views, struct respip_set* ipset)
 {
 	const uint8_t* ctaglist;
 	size_t ctaglen;
@@ -877,7 +877,6 @@ respip_rewrite_reply(const struct query_info* qinfo,
 	struct config_strlist** tag_datas;
 	size_t tag_datas_size;
 	struct view* view = NULL;
-	struct respip_set* ipset = NULL;
 	size_t rrset_id = 0, rr_id = 0;
 	enum respip_action action = respip_none;
 	int tag = -1;
@@ -914,7 +913,6 @@ respip_rewrite_reply(const struct query_info* qinfo,
 		}
 		/* The view is rdlocked by views_find_view. */
 	}
-	ipset = cinfo->respip_set;
 
 	log_assert(ipset);
 
@@ -1114,7 +1112,8 @@ respip_operate(struct module_qstate* qstate, enum module_ev event, int id,
 				qstate->client_info, qstate->return_msg->rep,
 				&new_rep, &actinfo, &alias_rrset, 0,
 				qstate->region, qstate->env->auth_zones,
-				&qstate->rpz_passthru, qstate->env->views)) {
+				&qstate->rpz_passthru, qstate->env->views,
+				qstate->env->respip_set)) {
 				goto servfail;
 			}
 			if(actinfo.action != respip_none) {
@@ -1162,7 +1161,8 @@ respip_merge_cname(struct reply_info* base_rep,
 	const struct query_info* qinfo, const struct reply_info* tgt_rep,
 	const struct respip_client_info* cinfo, int must_validate,
 	struct reply_info** new_repp, struct regional* region,
-	struct auth_zones* az, struct views* views)
+	struct auth_zones* az, struct views* views,
+	struct respip_set* respip_set)
 {
 	struct reply_info* new_rep;
 	struct reply_info* tmp_rep = NULL; /* just a placeholder */
@@ -1189,7 +1189,7 @@ respip_merge_cname(struct reply_info* base_rep,
 
 	/* see if the target reply would be subject to a response-ip action. */
 	if(!respip_rewrite_reply(qinfo, cinfo, tgt_rep, &tmp_rep, &actinfo,
-		&alias_rrset, 1, region, az, NULL, views))
+		&alias_rrset, 1, region, az, NULL, views, respip_set))
 		return 0;
 	if(actinfo.action != respip_none) {
 		log_info("CNAME target of redirect response-ip action would "
@@ -1242,7 +1242,8 @@ respip_inform_super(struct module_qstate* qstate, int id,
 	if(!respip_merge_cname(super->return_msg->rep, &qstate->qinfo,
 		qstate->return_msg->rep, super->client_info,
 		super->env->need_to_validate, &new_rep, super->region,
-		qstate->env->auth_zones, qstate->env->views))
+		qstate->env->auth_zones, qstate->env->views,
+		qstate->env->respip_set))
 		goto fail;
 	super->return_msg->rep = new_rep;
 	return;

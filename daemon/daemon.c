@@ -724,15 +724,15 @@ daemon_fork(struct daemon* daemon)
 		fatal_exit("Could not set root or stub hints");
 
 	/* process raw response-ip configuration data */
-	if(!(daemon->respip_set = respip_set_create()))
+	if(!(daemon->env->respip_set = respip_set_create()))
 		fatal_exit("Could not create response IP set");
-	if(!respip_global_apply_cfg(daemon->respip_set, daemon->cfg))
+	if(!respip_global_apply_cfg(daemon->env->respip_set, daemon->cfg))
 		fatal_exit("Could not set up response IP set");
 	if(!respip_views_apply_cfg(daemon->env->views, daemon->cfg,
 		&have_view_respip_cfg))
 		fatal_exit("Could not set up per-view response IP sets");
-	daemon->use_response_ip = !respip_set_is_empty(daemon->respip_set) ||
-		have_view_respip_cfg;
+	daemon->use_response_ip = !respip_set_is_empty(
+		daemon->env->respip_set) || have_view_respip_cfg;
 
 	/* setup modules */
 	daemon_setup_modules(daemon);
@@ -844,8 +844,8 @@ daemon_cleanup(struct daemon* daemon)
 	daemon->env->hints = NULL;
 	local_zones_delete(daemon->local_zones);
 	daemon->local_zones = NULL;
-	respip_set_delete(daemon->respip_set);
-	daemon->respip_set = NULL;
+	respip_set_delete(daemon->env->respip_set);
+	daemon->env->respip_set = NULL;
 	views_delete(daemon->env->views);
 	daemon->env->views = NULL;
 	if(daemon->env->auth_zones)
