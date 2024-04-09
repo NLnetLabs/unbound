@@ -5488,6 +5488,16 @@ fr_poll_for_reload_start(struct fast_reload_thread* fr)
 void
 fast_reload_worker_pickup_changes(struct worker* worker)
 {
+	/* The pickup of changes is called when the fast reload has
+	 * a syncronized moment, and all the threads are paused and the
+	 * reload has been applied. Then the worker can pick up the new
+	 * changes and store them in worker-specific structs.
+	 * The pickup is also called when there is no pause, and then
+	 * it is called after the reload has completed, and the worker
+	 * get a signal to release old information, it can then pick
+	 * up the new information. But in the mean time, the reload has
+	 * swapped in trees, and the worker has been running with the
+	 * older information for some time. */
 	worker->env.mesh->use_response_ip = worker->daemon->use_response_ip;
 }
 
