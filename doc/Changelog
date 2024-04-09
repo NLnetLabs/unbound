@@ -1,3 +1,8 @@
+9 April 2024: Yorgos
+	- Merge #1043 from xiaoxiaoafeifei: Add loongarch support; updates
+	  config.guess(2024-01-01) and config.sub(2024-01-01), verified
+	  with upstream.
+
 8 April 2024: Yorgos
 	- Fix #595: unbound-anchor cannot deal with full disk; it will now
 	  first write out to a temp file before replacing the original one,
