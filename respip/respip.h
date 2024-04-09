@@ -71,8 +71,8 @@ struct respip_client_info {
 	/** The view for the action, during cache callback that is by
 	 * pointer. */
 	struct view* view;
-	/** If from module query state, the view pointer is NULL, but name is
-	 * stored to the view. */
+	/** If from module query state, the view pointer is NULL, but the
+	 * name is stored in reference to the view. */
 	char* view_name;
 	struct respip_set* respip_set;
 };

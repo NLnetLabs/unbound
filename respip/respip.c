@@ -912,6 +912,7 @@ respip_rewrite_reply(const struct query_info* qinfo,
 				"longer exists", cinfo->view_name);
 			return 0;
 		}
+		/* The view is rdlocked by views_find_view. */
 	}
 	ipset = cinfo->respip_set;
 

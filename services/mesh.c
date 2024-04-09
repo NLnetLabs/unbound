@@ -76,6 +76,20 @@
 #include <netdb.h>
 #endif
 
+/** Compare two views by name */
+static int
+view_name_compare(const char* v_a, const char* v_b)
+{
+	if(v_a == NULL && v_b == NULL)
+		return 0;
+	/* The NULL name is smaller than if the name is set. */
+	if(v_a == NULL)
+		return -1;
+	if(v_b == NULL)
+		return 1;
+	return strcmp(v_a, v_b);
+}
+
 /**
  * Compare two response-ip client info entries for the purpose of mesh state
  * compare.  It returns 0 if ci_a and ci_b are considered equal; otherwise
@@ -132,11 +146,9 @@ client_info_compare(const struct respip_client_info* ci_a,
 	if(ci_a->tag_datas != ci_b->tag_datas)
 		return ci_a->tag_datas < ci_b->tag_datas ? -1 : 1;
 	if(ci_a->view || ci_a->view_name || ci_b->view || ci_b->view_name) {
-		if(ci_a->view == NULL && ci_a->view_name == NULL)
-			return -1;
-		if(ci_b->view == NULL && ci_b->view_name == NULL)
-			return 1;
-		cmp = strcmp((ci_a->view?ci_a->view->name:ci_a->view_name),
+		/* Compare the views by name. */
+		cmp = view_name_compare(
+			(ci_a->view?ci_a->view->name:ci_a->view_name),
 			(ci_b->view?ci_b->view->name:ci_b->view_name));
 		if(cmp != 0)
 			return cmp;
