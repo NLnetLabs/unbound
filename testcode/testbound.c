@@ -621,3 +621,8 @@ void fast_reload_printq_list_delete(
 {
 	/* nothing */
 }
+
+void fast_reload_worker_pickup_changes(struct worker* ATTR_UNUSED(worker))
+{
+	/* nothing */
+}
