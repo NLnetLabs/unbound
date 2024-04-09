@@ -100,6 +100,13 @@ then the '+d' option is turned on with a warning printout, and queries are
 dropped. This is to stop references to the old tag information, by the old
 queries. If the number of tags is increased in the newly loaded config, by
 adding tags at the end, then the '+d' option is not needed.
+.IP
+For response ip, that is actions associated with IP addresses, and perhaps
+intersected with access control tag and action information, those settings
+are stored with a query when it comes in based on its source IP address.
+The old information is kept with the query until the queries are done.
+This is gone when those queries are resolved and finished, or it is possible
+to flush the requestlist with '+d'.
 .TP
 .B verbosity \fInumber
 Change verbosity value for logging. Same values as \fBverbosity\fR keyword in
