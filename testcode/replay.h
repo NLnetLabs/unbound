@@ -86,6 +86,7 @@
  *	o CHECK_TEMPFILE [fname] - followed by FILE_BEGIN [to match] FILE_END
  *	o INFRA_RTT [ip] [dp] [rtt] - update infra cache entry with rtt.
  *	o FLUSH_MESSAGE name type class - flushes entry in message cache.
+ *	o EXPIRE_MESSAGE name type class - expires entry in message cache.
  *	o ERROR
  * ; following entry starts on the next line, ENTRY_BEGIN.
  * ; more STEP items
@@ -216,6 +217,8 @@ struct replay_moment {
 		repevt_infra_rtt,
 		/** flush message cache entry */
 		repevt_flush_message,
+		/** expire message cache entry */
+		repevt_expire_message,
 		/** cause traffic to flow */
 		repevt_traffic
 	}

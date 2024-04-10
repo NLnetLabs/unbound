@@ -19,7 +19,7 @@ CONFIG_END
 SCENARIO_BEGIN Test cachedb and serve expired.
 
 ; K.ROOT-SERVERS.NET.
-RANGE_BEGIN 0 300
+RANGE_BEGIN 0 400
 	ADDRESS 193.0.14.129
 ENTRY_BEGIN
 MATCH opcode qtype qname
@@ -47,7 +47,7 @@ ENTRY_END
 RANGE_END
 
 ; a.gtld-servers.net.
-RANGE_BEGIN 0 300
+RANGE_BEGIN 0 400
 	ADDRESS 192.5.6.30
 ENTRY_BEGIN
 MATCH opcode subdomain
@@ -73,7 +73,7 @@ ENTRY_END
 RANGE_END
 
 ; ns2.example.com.
-RANGE_BEGIN 0 300
+RANGE_BEGIN 0 400
 	ADDRESS 1.2.3.5
 ENTRY_BEGIN
 MATCH opcode qname qtype
@@ -247,6 +247,71 @@ www.example.com. IN A
 ENTRY_END
 
 STEP 210 CHECK_ANSWER
+ENTRY_BEGIN
+MATCH all ttl
+REPLY QR RD RA NOERROR
+SECTION QUESTION
+www.example.com. IN A
+SECTION ANSWER
+www.example.com. 10 IN A 1.2.3.4
+ENTRY_END
+
+; expire the entry in cache
+STEP 220 EXPIRE_MESSAGE www.example.com. IN A
+
+; cache is expired, cachedb valid
+STEP 230 QUERY
+ENTRY_BEGIN
+REPLY RD
+SECTION QUESTION
+www.example.com. IN A
+ENTRY_END
+
+STEP 240 CHECK_ANSWER
+ENTRY_BEGIN
+MATCH all ttl
+REPLY QR RD RA NOERROR
+SECTION QUESTION
+www.example.com. IN A
+SECTION ANSWER
+www.example.com. 10 IN A 1.2.3.4
+ENTRY_END
+
+; it is now expired
+STEP 250 TIME_PASSES ELAPSE 20
+; expire the entry in cache
+STEP 260 EXPIRE_MESSAGE www.example.com. IN A
+
+; cache is expired, cachedb is expired
+STEP 270 QUERY
+ENTRY_BEGIN
+REPLY RD
+SECTION QUESTION
+www.example.com. IN A
+ENTRY_END
+
+STEP 280 CHECK_ANSWER
+ENTRY_BEGIN
+MATCH all ttl
+REPLY QR RD RA NOERROR
+SECTION QUESTION
+www.example.com. IN A
+SECTION ANSWER
+www.example.com. 0 IN A 1.2.3.4
+ENTRY_END
+
+STEP 290 TRAFFIC
+; the expired message is updated.
+
+; cache is valid, cachedb is valid
+STEP 300 QUERY
+ENTRY_BEGIN
+REPLY RD
+SECTION QUESTION
+www.example.com. IN A
+ENTRY_END
+
+STEP 310 CHECK_ANSWER
 ENTRY_BEGIN
 MATCH all ttl
 REPLY QR RD RA NOERROR

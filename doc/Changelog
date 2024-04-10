@@ -4,6 +4,7 @@
 	  checks cachedb before serving the expired response.
 	- Fixup compile without cachedb.
 	- Add test for cachedb serve expired.
+	- Extended test for cachedb serve expired.
 
 9 April 2024: Yorgos
 	- Merge #1043 from xiaoxiaoafeifei: Add loongarch support; updates
