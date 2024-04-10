@@ -52,6 +52,7 @@
 #include "util/data/msgreply.h"
 #include "util/data/msgencode.h"
 #include "util/data/dname.h"
+#include "util/storage/slabhash.h"
 #include "util/edns.h"
 #include "util/config_file.h"
 #include "services/listen_dnsport.h"
@@ -65,6 +66,7 @@
 #include "sldns/wire2str.h"
 #include "sldns/str2wire.h"
 #include "daemon/remote.h"
+#include "daemon/daemon.h"
 #include "util/timeval_func.h"
 #include <signal.h>
 struct worker;
@@ -154,6 +156,7 @@ repevt_string(enum replay_event_type t)
 	case repevt_assign:	 return "ASSIGN";
 	case repevt_traffic:	 return "TRAFFIC";
 	case repevt_infra_rtt:	 return "INFRA_RTT";
+	case repevt_flush_message: return "FLUSH_MESSAGE";
 	default:		 return "UNKNOWN";
 	}
 }
@@ -691,6 +694,30 @@ do_infra_rtt(struct replay_runtime* runtime)
 	free(dp);
 }
 
+/** Flush message from message cache. */
+static void
+do_flush_message(struct replay_runtime* runtime)
+{
+	struct replay_moment* now = runtime->now;
+	uint8_t rr[1024];
+	size_t rr_len = sizeof(rr), dname_len = 0;
+	hashvalue_type h;
+	struct query_info k;
+
+	if(sldns_str2wire_rr_question_buf(now->string, rr, &rr_len,
+		&dname_len, NULL, 0, NULL, 0) != 0)
+		fatal_exit("could not parse '%s'", now->string);
+
+	log_info("remove message %s", now->string);
+	k.qname = rr;
+	k.qname_len = dname_len;
+	k.qtype = sldns_wirerr_get_type(rr, rr_len, dname_len);
+	k.qclass = sldns_wirerr_get_class(rr, rr_len, dname_len);
+	k.local_alias = NULL;
+	h = query_info_hash(&k, 0);
+	slabhash_remove(runtime->daemon->env->msg_cache, h, &k);
+}
+
 /** perform exponential backoff on the timeout */
 static void
 expon_timeout_backoff(struct replay_runtime* runtime)
@@ -794,6 +821,10 @@ do_moment_and_advance(struct replay_runtime* runtime)
 		break;
 	case repevt_infra_rtt:
 		do_infra_rtt(runtime);
+		advance_moment(runtime);
+		break;
+	case repevt_flush_message:
+		do_flush_message(runtime);
 		advance_moment(runtime);
 		break;
 	default:
