@@ -511,6 +511,7 @@ void mesh_new_client(struct mesh_area* mesh, struct query_info* qinfo,
 		log_err("mesh_new_client: out of memory initializing serve expired");
 		goto servfail_mem;
 	}
+#ifdef USE_CACHEDB
 	if(!timeout && mesh->env->cfg->serve_expired &&
 		!mesh->env->cfg->serve_expired_client_timeout &&
 		(mesh->env->cachedb_enabled &&
@@ -520,6 +521,7 @@ void mesh_new_client(struct mesh_area* mesh, struct query_info* qinfo,
 			goto servfail_mem;
 		}
 	}
+#endif
 	/* update statistics */
 	if(was_detached) {
 		log_assert(mesh->num_detached_states > 0);
@@ -625,6 +627,7 @@ mesh_new_callback(struct mesh_area* mesh, struct query_info* qinfo,
 			mesh_state_delete(&s->s);
 		return 0;
 	}
+#ifdef USE_CACHEDB
 	if(!timeout && mesh->env->cfg->serve_expired &&
 		!mesh->env->cfg->serve_expired_client_timeout &&
 		(mesh->env->cachedb_enabled &&
@@ -635,6 +638,7 @@ mesh_new_callback(struct mesh_area* mesh, struct query_info* qinfo,
 			return 0;
 		}
 	}
+#endif
 	/* update statistics */
 	if(was_detached) {
 		log_assert(mesh->num_detached_states > 0);

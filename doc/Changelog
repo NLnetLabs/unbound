@@ -2,6 +2,7 @@
 	- Implement cachedb-check-when-serve-expired: yes option, default
 	  is enabled. When serve expired is enabled with cachedb, it first
 	  checks cachedb before serving the expired response.
+	- Fixup compile without cachedb.
 
 9 April 2024: Yorgos
 	- Merge #1043 from xiaoxiaoafeifei: Add loongarch support; updates
