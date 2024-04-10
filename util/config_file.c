@@ -385,6 +385,7 @@ config_create(void)
 	if(!(cfg->cachedb_backend = strdup("testframe"))) goto error_exit;
 	if(!(cfg->cachedb_secret = strdup("default"))) goto error_exit;
 	cfg->cachedb_no_store = 0;
+	cfg->cachedb_check_when_serve_expired = 1;
 #ifdef USE_REDIS
 	if(!(cfg->redis_server_host = strdup("127.0.0.1"))) goto error_exit;
 	cfg->redis_server_path = NULL;
@@ -830,6 +831,7 @@ int config_set_option(struct config_file* cfg, const char* opt,
 #endif
 #ifdef USE_CACHEDB
 	else S_YNO("cachedb-no-store:", cachedb_no_store)
+	else S_YNO("cachedb-check-when-serve-expired:", cachedb_check_when_serve_expired)
 #endif /* USE_CACHEDB */
 	else if(strcmp(opt, "define-tag:") ==0) {
 		return config_add_tag(cfg, val);
@@ -1322,6 +1324,7 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_STR(opt, "backend", cachedb_backend)
 	else O_STR(opt, "secret-seed", cachedb_secret)
 	else O_YNO(opt, "cachedb-no-store", cachedb_no_store)
+	else O_YNO(opt, "cachedb-check-when-serve-expired", cachedb_check_when_serve_expired)
 #ifdef USE_REDIS
 	else O_STR(opt, "redis-server-host", redis_server_host)
 	else O_DEC(opt, "redis-server-port", redis_server_port)

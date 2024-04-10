@@ -50,6 +50,8 @@
 #include "util/data/msgreply.h"
 #include "util/data/msgencode.h"
 #include "services/cache/dns.h"
+#include "services/mesh.h"
+#include "services/modstack.h"
 #include "validator/val_neg.h"
 #include "validator/val_secalgo.h"
 #include "iterator/iter_utils.h"
@@ -791,6 +793,13 @@ cachedb_handle_query(struct module_qstate* qstate,
 		return;
 	}
 
+	if(qstate->serve_expired_data &&
+		qstate->env->cfg->cachedb_check_when_serve_expired) {
+		/* Reply with expired data if any to client, because cachedb
+		 * also has no useful, current data */
+		mesh_respond_serve_expired(qstate->mesh_info);
+	}
+
 	/* no cache fetches */
 	/* pass request to next module */
 	qstate->ext_state[id] = module_wait_module;
@@ -922,5 +931,18 @@ struct module_func_block*
 cachedb_get_funcblock(void)
 {
 	return &cachedb_block;
+}
+
+int
+cachedb_is_enabled(struct module_stack* mods, struct module_env* env)
+{
+	struct cachedb_env* ie;
+	int id = modstack_find(mods, "cachedb");
+	if(id == -1)
+		return 0;
+	ie = (struct cachedb_env*)env->modinfo[id];
+	if(ie && ie->enabled)
+		return 1;
+	return 0;
 }
 #endif /* USE_CACHEDB */

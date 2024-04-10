@@ -385,7 +385,7 @@ mesh_serve_expired_init(struct mesh_state* mstate, int timeout)
 		&mesh_serve_expired_lookup;
 
 	/* In case this timer already popped, start it again */
-	if(!mstate->s.serve_expired_data->timer) {
+	if(!mstate->s.serve_expired_data->timer && timeout != -1) {
 		mstate->s.serve_expired_data->timer = comm_timer_create(
 			mstate->s.env->worker_base, mesh_serve_expired_callback, mstate);
 		if(!mstate->s.serve_expired_data->timer)
@@ -511,6 +511,15 @@ void mesh_new_client(struct mesh_area* mesh, struct query_info* qinfo,
 		log_err("mesh_new_client: out of memory initializing serve expired");
 		goto servfail_mem;
 	}
+	if(!timeout && mesh->env->cfg->serve_expired &&
+		!mesh->env->cfg->serve_expired_client_timeout &&
+		(mesh->env->cachedb_enabled &&
+		 mesh->env->cfg->cachedb_check_when_serve_expired)) {
+		if(!mesh_serve_expired_init(s, -1)) {
+			log_err("mesh_new_client: out of memory initializing serve expired");
+			goto servfail_mem;
+		}
+	}
 	/* update statistics */
 	if(was_detached) {
 		log_assert(mesh->num_detached_states > 0);
@@ -615,6 +624,16 @@ mesh_new_callback(struct mesh_area* mesh, struct query_info* qinfo,
 		if(added)
 			mesh_state_delete(&s->s);
 		return 0;
+	}
+	if(!timeout && mesh->env->cfg->serve_expired &&
+		!mesh->env->cfg->serve_expired_client_timeout &&
+		(mesh->env->cachedb_enabled &&
+		 mesh->env->cfg->cachedb_check_when_serve_expired)) {
+		if(!mesh_serve_expired_init(s, -1)) {
+			if(added)
+				mesh_state_delete(&s->s);
+			return 0;
+		}
 	}
 	/* update statistics */
 	if(was_detached) {
@@ -2236,6 +2255,12 @@ mesh_serve_expired_callback(void* arg)
 			qstate->env->mesh->num_detached_states++;
 		mesh_do_callback(mstate, LDNS_RCODE_NOERROR, msg->rep, c, &tv);
 	}
+}
+
+void
+mesh_respond_serve_expired(struct mesh_state* mstate)
+{
+	mesh_serve_expired_callback(mstate);
 }
 
 int mesh_jostle_exceeded(struct mesh_area* mesh)

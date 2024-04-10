@@ -707,6 +707,8 @@ struct config_file {
 	char* cachedb_secret;
 	/** cachedb that does not store, but only reads from database, if on */
 	int cachedb_no_store;
+	/** cachedb check before serving serve-expired response */
+	int cachedb_check_when_serve_expired;
 #ifdef USE_REDIS
 	/** redis server's IP address or host name */
 	char* redis_server_host;

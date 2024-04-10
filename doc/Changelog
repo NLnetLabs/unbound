@@ -1,3 +1,8 @@
+10 April 2024: Wouter
+	- Implement cachedb-check-when-serve-expired: yes option, default
+	  is enabled. When serve expired is enabled with cachedb, it first
+	  checks cachedb before serving the expired response.
+
 9 April 2024: Yorgos
 	- Merge #1043 from xiaoxiaoafeifei: Add loongarch support; updates
 	  config.guess(2024-01-01) and config.sub(2024-01-01), verified

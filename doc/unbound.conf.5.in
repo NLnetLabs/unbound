@@ -2700,6 +2700,14 @@ This option defaults to "default".
 If the backend should be read from, but not written to. This makes this
 instance not store dns messages in the backend. But if data is available it
 is retrieved. The default is no.
+.TP
+.B cachedb-check-when-serve-expired: \fI<yes or no>\fR
+If enabled, the cachedb is checked before an expired response is returned.
+When serve-expired is enabled, without serve-expired-client-timeout, it then
+does not immediately respond with an expired response from cache, but instead
+first checks the cachedb for valid contents, and if so returns it. If the
+cachedb also has no valid contents, the serve expired response is sent.
+The default is yes.
 .P
 The following
 .B cachedb

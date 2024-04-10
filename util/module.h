@@ -537,6 +537,10 @@ struct module_env {
 	/** EDNS client string information */
 	struct edns_strings* edns_strings;
 
+#ifdef USE_CACHEDB
+	/** the cachedb enabled value, copied and stored here. */
+	int cachedb_enabled;
+#endif
 	/* Make every mesh state unique, do not aggregate mesh states. */
 	int unique_mesh;
 };

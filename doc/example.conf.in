@@ -1253,6 +1253,9 @@ remote-control:
 #     secret-seed: "default"
 #     # if the backend should be read from, but not written to.
 #     cachedb-no-store: no
+#     # if the cachedb should be checked before a serve-expired response is
+#     # given, when serve-expired is enabled.
+#     cachedb-check-when-serve-expired: yes
 #
 #     # For "redis" backend:
 #     # (to enable, use --with-libhiredis to configure before compiling)

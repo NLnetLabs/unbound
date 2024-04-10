@@ -201,7 +201,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_INTERFACE_TAG_ACTION VAR_INTERFACE_TAG_DATA
 %token VAR_PROXY_PROTOCOL_PORT VAR_STATISTICS_INHIBIT_ZERO
 %token VAR_HARDEN_UNKNOWN_ADDITIONAL VAR_DISABLE_EDNS_DO VAR_CACHEDB_NO_STORE
-%token VAR_LOG_DESTADDR
+%token VAR_LOG_DESTADDR VAR_CACHEDB_CHECK_WHEN_SERVE_EXPIRED
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -3734,7 +3734,7 @@ contents_cachedb: contents_cachedb content_cachedb
 content_cachedb: cachedb_backend_name | cachedb_secret_seed |
 	redis_server_host | redis_server_port | redis_timeout |
 	redis_expire_records | redis_server_path | redis_server_password |
-	cachedb_no_store | redis_logical_db
+	cachedb_no_store | redis_logical_db | cachedb_check_when_serve_expired
 	;
 cachedb_backend_name: VAR_CACHEDB_BACKEND STRING_ARG
 	{
@@ -3767,6 +3767,19 @@ cachedb_no_store: VAR_CACHEDB_NO_STORE STRING_ARG
 		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
 			yyerror("expected yes or no.");
 		else cfg_parser->cfg->cachedb_no_store = (strcmp($2, "yes")==0);
+	#else
+		OUTYY(("P(Compiled without cachedb, ignoring)\n"));
+	#endif
+		free($2);
+	}
+	;
+cachedb_check_when_serve_expired: VAR_CACHEDB_CHECK_WHEN_SERVE_EXPIRED STRING_ARG
+	{
+	#ifdef USE_CACHEDB
+		OUTYY(("P(cachedb_check_when_serve_expired:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else cfg_parser->cfg->cachedb_check_when_serve_expired = (strcmp($2, "yes")==0);
 	#else
 		OUTYY(("P(Compiled without cachedb, ignoring)\n"));
 	#endif
