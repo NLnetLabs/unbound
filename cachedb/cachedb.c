@@ -737,12 +737,13 @@ static void
 cachedb_intcache_store(struct module_qstate* qstate, int msg_expired)
 {
 	uint32_t store_flags = qstate->query_flags;
+	int serve_expired = qstate->env->cfg->serve_expired;
 
 	if(qstate->env->cfg->serve_expired)
 		store_flags |= DNSCACHE_STORE_ZEROTTL;
 	if(!qstate->return_msg)
 		return;
-	if(msg_expired) {
+	if(serve_expired && msg_expired) {
 		/* Set TTLs to a value such that value + *env->now is
 		 * going to be now-3 seconds. Making it expired
 		 * in the cache. */
@@ -751,7 +752,7 @@ cachedb_intcache_store(struct module_qstate* qstate, int msg_expired)
 	(void)dns_cache_store(qstate->env, &qstate->qinfo,
 		qstate->return_msg->rep, 0, qstate->prefetch_leeway, 0,
 		qstate->region, store_flags, qstate->qstarttime);
-	if(msg_expired) {
+	if(serve_expired && msg_expired) {
 		/* set TTLs to zero again */
 		adjust_msg_ttl(qstate->return_msg, -1);
 		/* Send serve expired responses based on the cachedb
