@@ -1428,7 +1428,7 @@ fake_event.lo fake_event.o: $(srcdir)/testcode/fake_event.c config.h $(srcdir)/t
  $(srcdir)/util/tube.h $(srcdir)/services/mesh.h $(srcdir)/services/modstack.h $(srcdir)/services/rpz.h \
  $(srcdir)/services/localzone.h $(srcdir)/services/view.h $(srcdir)/sldns/sbuffer.h $(srcdir)/services/authzone.h \
  $(srcdir)/daemon/stats.h $(srcdir)/util/timehist.h $(srcdir)/libunbound/unbound.h $(srcdir)/respip/respip.h \
- $(srcdir)/sldns/wire2str.h $(srcdir)/sldns/str2wire.h $(srcdir)/daemon/remote.h $(srcdir)/storage/slabhash.h $(srcdir)/daemon/daemon.h
+ $(srcdir)/sldns/wire2str.h $(srcdir)/sldns/str2wire.h $(srcdir)/daemon/remote.h $(srcdir)/util/storage/slabhash.h $(srcdir)/daemon/daemon.h
 lock_verify.lo lock_verify.o: $(srcdir)/testcode/lock_verify.c config.h $(srcdir)/util/log.h $(srcdir)/util/rbtree.h \
  $(srcdir)/util/locks.h $(srcdir)/util/fptr_wlist.h $(srcdir)/util/netevent.h $(srcdir)/dnscrypt/dnscrypt.h \
   $(srcdir)/util/storage/lruhash.h $(srcdir)/util/module.h \
