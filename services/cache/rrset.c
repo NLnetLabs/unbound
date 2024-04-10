@@ -127,6 +127,9 @@ need_to_update_rrset(void* nd, void* cd, time_t timenow, int equal, int ns)
 {
 	struct packed_rrset_data* newd = (struct packed_rrset_data*)nd;
 	struct packed_rrset_data* cached = (struct packed_rrset_data*)cd;
+	/*	o if new data is expired, current data is better */
+	if( newd->ttl < timenow && cached->ttl >= timenow)
+		return 0;
 	/* 	o store if rrset has been validated 
 	 *  		everything better than bogus data 
 	 *  		secure is preferred */

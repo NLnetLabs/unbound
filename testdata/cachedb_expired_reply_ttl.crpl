@@ -4,6 +4,7 @@ server:
 	qname-minimisation: no
 	minimal-responses: no
 	serve-expired: yes
+	serve-expired-reply-ttl: 30
 	module-config: "cachedb iterator"
 
 cachedb:
@@ -16,7 +17,7 @@ stub-zone:
 	stub-addr: 193.0.14.129
 CONFIG_END
 
-SCENARIO_BEGIN Test cachedb and serve expired.
+SCENARIO_BEGIN Test cachedb and serve-expired-reply-ttl.
 
 ; K.ROOT-SERVERS.NET.
 RANGE_BEGIN 0 400
@@ -94,8 +95,11 @@ www2.example.com. 10 IN A 1.2.3.5
 ENTRY_END
 RANGE_END
 
+; make time not 0
+STEP 2 TIME_PASSES ELAPSE 212
+
 ; Get an entry in cache, to make it expired.
-STEP 1 QUERY
+STEP 4 QUERY
 ENTRY_BEGIN
 REPLY RD
 SECTION QUESTION
@@ -153,6 +157,24 @@ SECTION ANSWER
 www2.example.com. 30 IN A 1.2.3.5
 ENTRY_END
 
+; got an answer from upstream
+STEP 61 QUERY
+ENTRY_BEGIN
+REPLY RD
+SECTION QUESTION
+www2.example.com. IN A
+ENTRY_END
+
+STEP 62 CHECK_ANSWER
+ENTRY_BEGIN
+MATCH all ttl
+REPLY QR RD RA NOERROR
+SECTION QUESTION
+www2.example.com. IN A
+SECTION ANSWER
+www2.example.com. 10 IN A 1.2.3.5
+ENTRY_END
+
 ; cache is expired, cachedb has no answer
 STEP 70 QUERY
 ENTRY_BEGIN
@@ -191,33 +213,32 @@ SECTION ANSWER
 www.example.com. 10 IN A 1.2.3.4
 ENTRY_END
 
-; flush the entry from cache
-STEP 120 FLUSH_MESSAGE www.example.com. IN A
+; make both cache and cachedb expired.
+STEP 120 TIME_PASSES ELAPSE 20
+STEP 130 FLUSH_MESSAGE www.example.com. IN A
 
-; cache has no answer, cachedb valid
-STEP 130 QUERY
+; cache has no entry and cachedb is expired.
+STEP 140 QUERY
 ENTRY_BEGIN
 REPLY RD
 SECTION QUESTION
 www.example.com. IN A
 ENTRY_END
 
-STEP 140 CHECK_ANSWER
+STEP 150 CHECK_ANSWER
 ENTRY_BEGIN
 MATCH all ttl
 REPLY QR RD RA NOERROR
 SECTION QUESTION
 www.example.com. IN A
 SECTION ANSWER
-www.example.com. 10 IN A 1.2.3.4
+www.example.com. 30 IN A 1.2.3.4
 ENTRY_END
 
-; it is now expired
-STEP 150 TIME_PASSES ELAPSE 20
-; flush the entry from cache
-STEP 160 FLUSH_MESSAGE www.example.com. IN A
+; the name is resolved
+STEP 160 TRAFFIC
 
-; cache has no answer, cachedb is expired
+; the resolve name has been updated.
 STEP 170 QUERY
 ENTRY_BEGIN
 REPLY RD
@@ -226,92 +247,6 @@ www.example.com. IN A
 ENTRY_END
 
 STEP 180 CHECK_ANSWER
-ENTRY_BEGIN
-MATCH all ttl
-REPLY QR RD RA NOERROR
-SECTION QUESTION
-www.example.com. IN A
-SECTION ANSWER
-www.example.com. 30 IN A 1.2.3.4
-ENTRY_END
-
-STEP 190 TRAFFIC
-; the expired message is updated.
-
-; cache is valid, cachedb is valid
-STEP 200 QUERY
-ENTRY_BEGIN
-REPLY RD
-SECTION QUESTION
-www.example.com. IN A
-ENTRY_END
-
-STEP 210 CHECK_ANSWER
-ENTRY_BEGIN
-MATCH all ttl
-REPLY QR RD RA NOERROR
-SECTION QUESTION
-www.example.com. IN A
-SECTION ANSWER
-www.example.com. 10 IN A 1.2.3.4
-ENTRY_END
-
-; expire the entry in cache
-STEP 220 EXPIRE_MESSAGE www.example.com. IN A
-
-; cache is expired, cachedb valid
-STEP 230 QUERY
-ENTRY_BEGIN
-REPLY RD
-SECTION QUESTION
-www.example.com. IN A
-ENTRY_END
-
-STEP 240 CHECK_ANSWER
-ENTRY_BEGIN
-MATCH all ttl
-REPLY QR RD RA NOERROR
-SECTION QUESTION
-www.example.com. IN A
-SECTION ANSWER
-www.example.com. 10 IN A 1.2.3.4
-ENTRY_END
-
-; it is now expired
-STEP 250 TIME_PASSES ELAPSE 20
-; expire the entry in cache
-STEP 260 EXPIRE_MESSAGE www.example.com. IN A
-
-; cache is expired, cachedb is expired
-STEP 270 QUERY
-ENTRY_BEGIN
-REPLY RD
-SECTION QUESTION
-www.example.com. IN A
-ENTRY_END
-
-STEP 280 CHECK_ANSWER
-ENTRY_BEGIN
-MATCH all ttl
-REPLY QR RD RA NOERROR
-SECTION QUESTION
-www.example.com. IN A
-SECTION ANSWER
-www.example.com. 30 IN A 1.2.3.4
-ENTRY_END
-
-STEP 290 TRAFFIC
-; the expired message is updated.
-
-; cache is valid, cachedb is valid
-STEP 300 QUERY
-ENTRY_BEGIN
-REPLY RD
-SECTION QUESTION
-www.example.com. IN A
-ENTRY_END
-
-STEP 310 CHECK_ANSWER
 ENTRY_BEGIN
 MATCH all ttl
 REPLY QR RD RA NOERROR

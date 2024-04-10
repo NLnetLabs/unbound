@@ -2264,6 +2264,8 @@ mesh_serve_expired_callback(void* arg)
 void
 mesh_respond_serve_expired(struct mesh_state* mstate)
 {
+	if(!mstate->s.serve_expired_data)
+		mesh_serve_expired_init(mstate, -1);
 	mesh_serve_expired_callback(mstate);
 }
 

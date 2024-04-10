@@ -6,6 +6,7 @@
 	- Add test for cachedb serve expired.
 	- Extended test for cachedb serve expired.
 	- Fix makefile dependencies for fake_event.c.
+	- Fix cachedb for serve-expired with serve-expired-reply-ttl.
 
 9 April 2024: Yorgos
 	- Merge #1043 from xiaoxiaoafeifei: Add loongarch support; updates
