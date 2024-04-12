@@ -628,6 +628,7 @@ parse_data(struct module_qstate* qstate, struct sldns_buffer* buf,
 	 * 'now' should be redundant given how these values were calculated,
 	 * but we check it just in case as does good_expiry_and_qinfo(). */
 	if(qstate->env->cfg->serve_expired &&
+		!qstate->env->cfg->serve_expired_client_timeout &&
 		(adjust == -1 || (time_t)expiry < *qstate->env->now)) {
 		qstate->need_refetch = 1;
 	}
