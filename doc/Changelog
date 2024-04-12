@@ -1,3 +1,6 @@
+12 April 2024: Wouter
+	- Fix cachedb for serve-expired with serve-expired-client-timeout.
+
 10 April 2024: Wouter
 	- Implement cachedb-check-when-serve-expired: yes option, default
 	  is enabled. When serve expired is enabled with cachedb, it first

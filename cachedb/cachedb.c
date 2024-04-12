@@ -267,11 +267,6 @@ cachedb_init(struct module_env* env, int id)
 		return 0;
 	}
 	cachedb_env->enabled = 1;
-	if(env->cfg->serve_expired && env->cfg->serve_expired_client_timeout)
-		log_warn(
-			"cachedb: serve-expired-client-timeout is set but not working for "
-			"data originating from the external cache; expired data are used "
-			"in the reply without first trying to refresh the data.");
 	return 1;
 }
 
@@ -753,6 +748,13 @@ cachedb_intcache_store(struct module_qstate* qstate, int msg_expired)
 		qstate->return_msg->rep, 0, qstate->prefetch_leeway, 0,
 		qstate->region, store_flags, qstate->qstarttime);
 	if(serve_expired && msg_expired) {
+		if(qstate->env->cfg->serve_expired_client_timeout) {
+			/* No expired response from the query state, the
+			 * query resolution needs to continue and it can
+			 * pick up the expired result after the timer out
+			 * of cache. */
+			return;
+		}
 		/* set TTLs to zero again */
 		adjust_msg_ttl(qstate->return_msg, -1);
 		/* Send serve expired responses based on the cachedb
@@ -822,8 +824,13 @@ cachedb_handle_query(struct module_qstate* qstate,
 		 * data first.
 		 * TODO: this needs revisit. The expired data stored from cachedb has
 		 * 0 TTL which is picked up by iterator later when looking in the cache.
-		 * Document that ext cachedb does not work properly with
-		 * serve_stale_reply_ttl yet. */
+		 */
+		if(qstate->env->cfg->serve_expired && msg_expired &&
+			qstate->env->cfg->serve_expired_client_timeout) {
+			qstate->return_msg = NULL;
+			qstate->ext_state[id] = module_wait_module;
+			return;
+		}
 		if(qstate->need_refetch && qstate->serve_expired_data &&
 			qstate->serve_expired_data->timer) {
 				qstate->return_msg = NULL;
@@ -837,7 +844,8 @@ cachedb_handle_query(struct module_qstate* qstate,
 	}
 
 	if(qstate->serve_expired_data &&
-		qstate->env->cfg->cachedb_check_when_serve_expired) {
+		qstate->env->cfg->cachedb_check_when_serve_expired &&
+		!qstate->env->cfg->serve_expired_client_timeout) {
 		/* Reply with expired data if any to client, because cachedb
 		 * also has no useful, current data */
 		mesh_respond_serve_expired(qstate->mesh_info);

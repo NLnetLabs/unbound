@@ -2640,11 +2640,7 @@ If Unbound cannot even find an answer in the backend, it resolves the
 query as usual, and stores the answer in the backend.
 .P
 This module interacts with the \fBserve\-expired\-*\fR options and will reply
-with expired data if Unbound is configured for that.  Currently the use
-of \fBserve\-expired\-client\-timeout:\fR
-is not consistent for data originating from
-the external cache as it will result in a reply without trying to
-update the data first, ignoring the configured value.
+with expired data if Unbound is configured for that.
 .P
 If Unbound was built with
 \fB\-\-with\-libhiredis\fR
@@ -2707,7 +2703,9 @@ When \fBserve\-expired\fR is enabled, without \fBserve\-expired\-client\-timeout
 does not immediately respond with an expired response from cache, but instead
 first checks the cachedb for valid contents, and if so returns it. If the
 cachedb also has no valid contents, the serve expired response is sent.
-The default is yes.
+If also \fBserve\-expired\-client\-timeout\fR is enabled, the expired response
+is delayed until the timeout expires. Unless the lookup succeeds within the
+timeout. The default is yes.
 .P
 The following
 .B cachedb
