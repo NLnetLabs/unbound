@@ -1,5 +1,7 @@
 12 April 2024: Wouter
 	- Fix cachedb for serve-expired with serve-expired-client-timeout.
+	- Fixup unit test for cachedb server expired client timeout with
+	  a check if response if from upstream or from cachedb.
 
 10 April 2024: Wouter
 	- Implement cachedb-check-when-serve-expired: yes option, default

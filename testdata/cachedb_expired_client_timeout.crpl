@@ -215,6 +215,10 @@ STEP 40 FLUSH_MESSAGE www2.example.com. IN A
 ; because of the client timeout, it should be able to use the
 ; response from cachedb for www2.
 
+; make 2 seconds pass to decrement the TTL on the response,
+; the upstream TTL would be 10, cachedb 8.
+STEP 48 TIME_PASSES ELAPSE 2
+
 STEP 50 QUERY
 ENTRY_BEGIN
 REPLY RD
@@ -229,7 +233,7 @@ REPLY QR RD RA NOERROR
 SECTION QUESTION
 www2.example.com. IN A
 SECTION ANSWER
-www2.example.com. 10 IN A 1.2.3.5
+www2.example.com. 8 IN A 1.2.3.5
 ENTRY_END
 
 ; make both cache and cachedb expired
