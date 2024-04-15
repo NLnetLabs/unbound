@@ -4,7 +4,7 @@ AC_PREREQ([2.56])
 sinclude(acx_nlnetlabs.m4)
 sinclude(ax_pthread.m4)
 sinclude(acx_python.m4)
-sinclude(ac_pkg_swig.m4)
+sinclude(ax_pkg_swig.m4)
 sinclude(dnstap/dnstap.m4)
 sinclude(dnscrypt/dnscrypt.m4)
 
@@ -796,9 +796,9 @@ if test x_$ub_test_python != x_no; then
       ub_have_swig=no
       AC_ARG_ENABLE(swig-version-check, AS_HELP_STRING([--disable-swig-version-check],[Disable swig version check to build python modules with older swig even though that is unreliable]))
       if test "$enable_swig_version_check" = "yes"; then
-      	AC_PROG_SWIG(2.0.1)
+      	AX_PKG_SWIG(2.0.1)
       else
-      	AC_PROG_SWIG
+      	AX_PKG_SWIG
       fi
       AC_MSG_CHECKING(SWIG)
       if test ! -x "$SWIG"; then
