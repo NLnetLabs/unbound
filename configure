@@ -742,6 +742,7 @@ WITH_DYNLIBMODULE
 PTHREAD_CFLAGS_ONLY
 PTHREAD_CFLAGS
 PTHREAD_LIBS
+PTHREAD_CXX
 PTHREAD_CC
 ax_pthread_config
 ASYNCLOOK_ALLOCCHECK_EXTRA_OBJ
@@ -17964,6 +17965,8 @@ ub_have_pthreads=no
 if test x_$withval != x_no; then
 
 
+
+
 ac_ext=c
 ac_cpp='$CPP $CPPFLAGS'
 ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
@@ -17973,19 +17976,28 @@ ac_compiler_gnu=$ac_cv_c_compiler_gnu
 ax_pthread_ok=no
 
 # We used to check for pthread.h first, but this fails if pthread.h
-# requires special compiler flags (e.g. on True64 or Sequent).
+# requires special compiler flags (e.g. on Tru64 or Sequent).
 # It gets checked for in the link test anyway.
 
 # First of all, check if the user has set any of the PTHREAD_LIBS,
 # etcetera environment variables, and if threads linking works using
 # them:
-if test x"$PTHREAD_LIBS$PTHREAD_CFLAGS" != x; then
-        save_CFLAGS="$CFLAGS"
+if test "x$PTHREAD_CFLAGS$PTHREAD_LIBS" != "x"; then
+        ax_pthread_save_CC="$CC"
+        ax_pthread_save_CFLAGS="$CFLAGS"
+        ax_pthread_save_LIBS="$LIBS"
+        if test "x$PTHREAD_CC" != "x"
+then :
+  CC="$PTHREAD_CC"
+fi
+        if test "x$PTHREAD_CXX" != "x"
+then :
+  CXX="$PTHREAD_CXX"
+fi
         CFLAGS="$CFLAGS $PTHREAD_CFLAGS"
-        save_LIBS="$LIBS"
         LIBS="$PTHREAD_LIBS $LIBS"
-        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for pthread_join in LIBS=$PTHREAD_LIBS with CFLAGS=$PTHREAD_CFLAGS" >&5
-printf %s "checking for pthread_join in LIBS=$PTHREAD_LIBS with CFLAGS=$PTHREAD_CFLAGS... " >&6; }
+        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for pthread_join using $CC $PTHREAD_CFLAGS $PTHREAD_LIBS" >&5
+printf %s "checking for pthread_join using $CC $PTHREAD_CFLAGS $PTHREAD_LIBS... " >&6; }
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 
@@ -18009,12 +18021,13 @@ rm -f core conftest.err conftest.$ac_objext conftest.beam \
     conftest$ac_exeext conftest.$ac_ext
         { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ax_pthread_ok" >&5
 printf "%s\n" "$ax_pthread_ok" >&6; }
-        if test x"$ax_pthread_ok" = xno; then
+        if test "x$ax_pthread_ok" = "xno"; then
                 PTHREAD_LIBS=""
                 PTHREAD_CFLAGS=""
         fi
-        LIBS="$save_LIBS"
-        CFLAGS="$save_CFLAGS"
+        CC="$ax_pthread_save_CC"
+        CFLAGS="$ax_pthread_save_CFLAGS"
+        LIBS="$ax_pthread_save_LIBS"
 fi
 
 # We must check for the threads library under a number of different
@@ -18022,12 +18035,14 @@ fi
 # (e.g. DEC) have both -lpthread and -lpthreads, where one of the
 # libraries is broken (non-POSIX).
 
-# Create a list of thread flags to try.  Items starting with a "-" are
-# C compiler flags, and other items are library names, except for "none"
-# which indicates that we try without any flags at all, and "pthread-config"
-# which is a program returning the flags for the Pth emulation library.
+# Create a list of thread flags to try. Items with a "," contain both
+# C compiler flags (before ",") and linker flags (after ","). Other items
+# starting with a "-" are C compiler flags, and remaining items are
+# library names, except for "none" which indicates that we try without
+# any flags at all, and "pthread-config" which is a program returning
+# the flags for the Pth emulation library.
 
-ax_pthread_flags="pthreads none -Kthread -kthread lthread -pthread -pthreads -mthreads pthread --thread-safe -mt pthread-config"
+ax_pthread_flags="pthreads none -Kthread -pthread -pthreads -mthreads pthread --thread-safe -mt pthread-config"
 
 # The ordering *is* (sometimes) important.  Some notes on the
 # individual items follow:
@@ -18036,83 +18051,178 @@ ax_pthread_flags="pthreads none -Kthread -kthread lthread -pthread -pthreads -mt
 # none: in case threads are in libc; should be tried before -Kthread and
 #       other compiler flags to prevent continual compiler warnings
 # -Kthread: Sequent (threads in libc, but -Kthread needed for pthread.h)
-# -kthread: FreeBSD kernel threads (preferred to -pthread since SMP-able)
-# lthread: LinuxThreads port on FreeBSD (also preferred to -pthread)
-# -pthread: Linux/gcc (kernel threads), BSD/gcc (userland threads)
-# -pthreads: Solaris/gcc
-# -mthreads: Mingw32/gcc, Lynx/gcc
+# -pthread: Linux/gcc (kernel threads), BSD/gcc (userland threads), Tru64
+#           (Note: HP C rejects this with "bad form for `-t' option")
+# -pthreads: Solaris/gcc (Note: HP C also rejects)
 # -mt: Sun Workshop C (may only link SunOS threads [-lthread], but it
-#      doesn't hurt to check since this sometimes defines pthreads too;
-#      also defines -D_REENTRANT)
-#      ... -mt is also the pthreads flag for HP/aCC
+#      doesn't hurt to check since this sometimes defines pthreads and
+#      -D_REENTRANT too), HP C (must be checked before -lpthread, which
+#      is present but should not be used directly; and before -mthreads,
+#      because the compiler interprets this as "-mt" + "-hreads")
+# -mthreads: Mingw32/gcc, Lynx/gcc
 # pthread: Linux, etcetera
 # --thread-safe: KAI C++
 # pthread-config: use pthread-config program (for GNU Pth library)
 
-case ${host_os} in
+case $host_os in
+
+        freebsd*)
+
+        # -kthread: FreeBSD kernel threads (preferred to -pthread since SMP-able)
+        # lthread: LinuxThreads port on FreeBSD (also preferred to -pthread)
+
+        ax_pthread_flags="-kthread lthread $ax_pthread_flags"
+        ;;
+
+        hpux*)
+
+        # From the cc(1) man page: "[-mt] Sets various -D flags to enable
+        # multi-threading and also sets -lpthread."
+
+        ax_pthread_flags="-mt -pthread pthread $ax_pthread_flags"
+        ;;
+
+        openedition*)
+
+        # IBM z/OS requires a feature-test macro to be defined in order to
+        # enable POSIX threads at all, so give the user a hint if this is
+        # not set. (We don't define these ourselves, as they can affect
+        # other portions of the system API in unpredictable ways.)
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+#            if !defined(_OPEN_THREADS) && !defined(_UNIX03_THREADS)
+             AX_PTHREAD_ZOS_MISSING
+#            endif
+
+_ACEOF
+if (eval "$ac_cpp conftest.$ac_ext") 2>&5 |
+  $EGREP "AX_PTHREAD_ZOS_MISSING" >/dev/null 2>&1
+then :
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: IBM z/OS requires -D_OPEN_THREADS or -D_UNIX03_THREADS to enable pthreads support." >&5
+printf "%s\n" "$as_me: WARNING: IBM z/OS requires -D_OPEN_THREADS or -D_UNIX03_THREADS to enable pthreads support." >&2;}
+fi
+rm -rf conftest*
+
+        ;;
+
         solaris*)
 
         # On Solaris (at least, for some versions), libc contains stubbed
         # (non-functional) versions of the pthreads routines, so link-based
-        # tests will erroneously succeed.  (We need to link with -pthreads/-mt/
-        # -lpthread.)  (The stubs are missing pthread_cleanup_push, or rather
-        # a function called by this macro, so we could check for that, but
-        # who knows whether they'll stub that too in a future libc.)  So,
-        # we'll just look for -pthreads and -lpthread first:
+        # tests will erroneously succeed. (N.B.: The stubs are missing
+        # pthread_cleanup_push, or rather a function called by this macro,
+        # so we could check for that, but who knows whether they'll stub
+        # that too in a future libc.)  So we'll check first for the
+        # standard Solaris way of linking pthreads (-mt -lpthread).
 
-        ax_pthread_flags="-pthreads pthread -mt -pthread $ax_pthread_flags"
-        ;;
-
-        darwin*)
-        ax_pthread_flags="-pthread $ax_pthread_flags"
+        ax_pthread_flags="-mt,-lpthread pthread $ax_pthread_flags"
         ;;
 esac
 
-# Clang doesn't consider unrecognized options an error unless we specify
-# -Werror. We throw in some extra Clang-specific options to ensure that
-# this doesn't happen for GCC, which also accepts -Werror.
+# Are we compiling with Clang?
 
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking if compiler needs -Werror to reject unknown flags" >&5
-printf %s "checking if compiler needs -Werror to reject unknown flags... " >&6; }
-save_CFLAGS="$CFLAGS"
-ax_pthread_extra_flags="-Werror"
-CFLAGS="$CFLAGS $ax_pthread_extra_flags -Wunknown-warning-option -Wsizeof-array-argument"
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-int foo(void);
-int
-main (void)
-{
-foo()
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_compile "$LINENO"
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking whether $CC is Clang" >&5
+printf %s "checking whether $CC is Clang... " >&6; }
+if test ${ax_cv_PTHREAD_CLANG+y}
 then :
-  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-printf "%s\n" "yes" >&6; }
+  printf %s "(cached) " >&6
 else $as_nop
-  ax_pthread_extra_flags=
-                   { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
-printf "%s\n" "no" >&6; }
+  ax_cv_PTHREAD_CLANG=no
+     # Note that Autoconf sets GCC=yes for Clang as well as GCC
+     if test "x$GCC" = "xyes"; then
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+/* Note: Clang 2.7 lacks __clang_[a-z]+__ */
+#            if defined(__clang__) && defined(__llvm__)
+             AX_PTHREAD_CC_IS_CLANG
+#            endif
+
+_ACEOF
+if (eval "$ac_cpp conftest.$ac_ext") 2>&5 |
+  $EGREP "AX_PTHREAD_CC_IS_CLANG" >/dev/null 2>&1
+then :
+  ax_cv_PTHREAD_CLANG=yes
 fi
-rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
-CFLAGS="$save_CFLAGS"
+rm -rf conftest*
 
-if test x"$ax_pthread_ok" = xno; then
-for flag in $ax_pthread_flags; do
+     fi
 
-        case $flag in
+fi
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ax_cv_PTHREAD_CLANG" >&5
+printf "%s\n" "$ax_cv_PTHREAD_CLANG" >&6; }
+ax_pthread_clang="$ax_cv_PTHREAD_CLANG"
+
+
+# GCC generally uses -pthread, or -pthreads on some platforms (e.g. SPARC)
+
+# Note that for GCC and Clang -pthread generally implies -lpthread,
+# except when -nostdlib is passed.
+# This is problematic using libtool to build C++ shared libraries with pthread:
+# [1] https://gcc.gnu.org/bugzilla/show_bug.cgi?id=25460
+# [2] https://bugzilla.redhat.com/show_bug.cgi?id=661333
+# [3] https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=468555
+# To solve this, first try -pthread together with -lpthread for GCC
+
+if test "x$GCC" = "xyes"
+then :
+  ax_pthread_flags="-pthread,-lpthread -pthread -pthreads $ax_pthread_flags"
+fi
+
+# Clang takes -pthread (never supported any other flag), but we'll try with -lpthread first
+
+if test "x$ax_pthread_clang" = "xyes"
+then :
+  ax_pthread_flags="-pthread,-lpthread -pthread"
+fi
+
+
+# The presence of a feature test macro requesting re-entrant function
+# definitions is, on some systems, a strong hint that pthreads support is
+# correctly enabled
+
+case $host_os in
+        darwin* | hpux* | linux* | osf* | solaris*)
+        ax_pthread_check_macro="_REENTRANT"
+        ;;
+
+        aix*)
+        ax_pthread_check_macro="_THREAD_SAFE"
+        ;;
+
+        *)
+        ax_pthread_check_macro="--"
+        ;;
+esac
+if test "x$ax_pthread_check_macro" = "x--"
+then :
+  ax_pthread_check_cond=0
+else $as_nop
+  ax_pthread_check_cond="!defined($ax_pthread_check_macro)"
+fi
+
+
+if test "x$ax_pthread_ok" = "xno"; then
+for ax_pthread_try_flag in $ax_pthread_flags; do
+
+        case $ax_pthread_try_flag in
                 none)
                 { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking whether pthreads work without any flags" >&5
 printf %s "checking whether pthreads work without any flags... " >&6; }
                 ;;
 
+                *,*)
+                PTHREAD_CFLAGS=`echo $ax_pthread_try_flag | sed "s/^\(.*\),\(.*\)$/\1/"`
+                PTHREAD_LIBS=`echo $ax_pthread_try_flag | sed "s/^\(.*\),\(.*\)$/\2/"`
+                { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking whether pthreads work with \"$PTHREAD_CFLAGS\" and \"$PTHREAD_LIBS\"" >&5
+printf %s "checking whether pthreads work with \"$PTHREAD_CFLAGS\" and \"$PTHREAD_LIBS\"... " >&6; }
+                ;;
+
                 -*)
-                { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking whether pthreads work with $flag" >&5
-printf %s "checking whether pthreads work with $flag... " >&6; }
-                PTHREAD_CFLAGS="$flag"
+                { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking whether pthreads work with $ax_pthread_try_flag" >&5
+printf %s "checking whether pthreads work with $ax_pthread_try_flag... " >&6; }
+                PTHREAD_CFLAGS="$ax_pthread_try_flag"
                 ;;
 
                 pthread-config)
@@ -18159,22 +18269,25 @@ printf "%s\n" "no" >&6; }
 fi
 
 
-                if test x"$ax_pthread_config" = xno; then continue; fi
+                if test "x$ax_pthread_config" = "xno"
+then :
+  continue
+fi
                 PTHREAD_CFLAGS="`pthread-config --cflags`"
                 PTHREAD_LIBS="`pthread-config --ldflags` `pthread-config --libs`"
                 ;;
 
                 *)
-                { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for the pthreads library -l$flag" >&5
-printf %s "checking for the pthreads library -l$flag... " >&6; }
-                PTHREAD_LIBS="-l$flag"
+                { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for the pthreads library -l$ax_pthread_try_flag" >&5
+printf %s "checking for the pthreads library -l$ax_pthread_try_flag... " >&6; }
+                PTHREAD_LIBS="-l$ax_pthread_try_flag"
                 ;;
         esac
 
-        save_LIBS="$LIBS"
-        save_CFLAGS="$CFLAGS"
+        ax_pthread_save_CFLAGS="$CFLAGS"
+        ax_pthread_save_LIBS="$LIBS"
+        CFLAGS="$CFLAGS $PTHREAD_CFLAGS"
         LIBS="$PTHREAD_LIBS $LIBS"
-        CFLAGS="$CFLAGS $PTHREAD_CFLAGS $ax_pthread_extra_flags"
 
         # Check for various functions.  We must include pthread.h,
         # since some functions may be macros.  (On the Sequent, we
@@ -18185,10 +18298,20 @@ printf %s "checking for the pthreads library -l$flag... " >&6; }
         # pthread_cleanup_push because it is one of the few pthread
         # functions on Solaris that doesn't have a non-functional libc stub.
         # We try pthread_create on general principles.
+
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 #include <pthread.h>
-                        static void routine(void *a) { *((int*)a) = 0; }
+#                       if $ax_pthread_check_cond
+#                        error "$ax_pthread_check_macro must be defined"
+#                       endif
+                        static void *some_global = NULL;
+                        static void routine(void *a)
+                          {
+                             /* To avoid any unused-parameter or
+                                unused-but-set-parameter warning.  */
+                             some_global = a;
+                          }
                         static void *start_routine(void *a) { return a; }
 int
 main (void)
@@ -18210,78 +18333,195 @@ fi
 rm -f core conftest.err conftest.$ac_objext conftest.beam \
     conftest$ac_exeext conftest.$ac_ext
 
-        LIBS="$save_LIBS"
-        CFLAGS="$save_CFLAGS"
+        CFLAGS="$ax_pthread_save_CFLAGS"
+        LIBS="$ax_pthread_save_LIBS"
 
         { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ax_pthread_ok" >&5
 printf "%s\n" "$ax_pthread_ok" >&6; }
-        if test "x$ax_pthread_ok" = xyes; then
-                break;
-        fi
+        if test "x$ax_pthread_ok" = "xyes"
+then :
+  break
+fi
 
         PTHREAD_LIBS=""
         PTHREAD_CFLAGS=""
 done
 fi
 
+
+# Clang needs special handling, because older versions handle the -pthread
+# option in a rather... idiosyncratic way
+
+if test "x$ax_pthread_clang" = "xyes"; then
+
+        # Clang takes -pthread; it has never supported any other flag
+
+        # (Note 1: This will need to be revisited if a system that Clang
+        # supports has POSIX threads in a separate library.  This tends not
+        # to be the way of modern systems, but it's conceivable.)
+
+        # (Note 2: On some systems, notably Darwin, -pthread is not needed
+        # to get POSIX threads support; the API is always present and
+        # active.  We could reasonably leave PTHREAD_CFLAGS empty.  But
+        # -pthread does define _REENTRANT, and while the Darwin headers
+        # ignore this macro, third-party headers might not.)
+
+        # However, older versions of Clang make a point of warning the user
+        # that, in an invocation where only linking and no compilation is
+        # taking place, the -pthread option has no effect ("argument unused
+        # during compilation").  They expect -pthread to be passed in only
+        # when source code is being compiled.
+        #
+        # Problem is, this is at odds with the way Automake and most other
+        # C build frameworks function, which is that the same flags used in
+        # compilation (CFLAGS) are also used in linking.  Many systems
+        # supported by AX_PTHREAD require exactly this for POSIX threads
+        # support, and in fact it is often not straightforward to specify a
+        # flag that is used only in the compilation phase and not in
+        # linking.  Such a scenario is extremely rare in practice.
+        #
+        # Even though use of the -pthread flag in linking would only print
+        # a warning, this can be a nuisance for well-run software projects
+        # that build with -Werror.  So if the active version of Clang has
+        # this misfeature, we search for an option to squash it.
+
+        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking whether Clang needs flag to prevent \"argument unused\" warning when linking with -pthread" >&5
+printf %s "checking whether Clang needs flag to prevent \"argument unused\" warning when linking with -pthread... " >&6; }
+if test ${ax_cv_PTHREAD_CLANG_NO_WARN_FLAG+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+  ax_cv_PTHREAD_CLANG_NO_WARN_FLAG=unknown
+             # Create an alternate version of $ac_link that compiles and
+             # links in two steps (.c -> .o, .o -> exe) instead of one
+             # (.c -> exe), because the warning occurs only in the second
+             # step
+             ax_pthread_save_ac_link="$ac_link"
+             ax_pthread_sed='s/conftest\.\$ac_ext/conftest.$ac_objext/g'
+             ax_pthread_link_step=`printf "%s\n" "$ac_link" | sed "$ax_pthread_sed"`
+             ax_pthread_2step_ac_link="($ac_compile) && (echo ==== >&5) && ($ax_pthread_link_step)"
+             ax_pthread_save_CFLAGS="$CFLAGS"
+             for ax_pthread_try in '' -Qunused-arguments -Wno-unused-command-line-argument unknown; do
+                if test "x$ax_pthread_try" = "xunknown"
+then :
+  break
+fi
+                CFLAGS="-Werror -Wunknown-warning-option $ax_pthread_try -pthread $ax_pthread_save_CFLAGS"
+                ac_link="$ax_pthread_save_ac_link"
+                cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+int main(void){return 0;}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"
+then :
+  ac_link="$ax_pthread_2step_ac_link"
+                     cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+int main(void){return 0;}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"
+then :
+  break
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam \
+    conftest$ac_exeext conftest.$ac_ext
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam \
+    conftest$ac_exeext conftest.$ac_ext
+             done
+             ac_link="$ax_pthread_save_ac_link"
+             CFLAGS="$ax_pthread_save_CFLAGS"
+             if test "x$ax_pthread_try" = "x"
+then :
+  ax_pthread_try=no
+fi
+             ax_cv_PTHREAD_CLANG_NO_WARN_FLAG="$ax_pthread_try"
+
+fi
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ax_cv_PTHREAD_CLANG_NO_WARN_FLAG" >&5
+printf "%s\n" "$ax_cv_PTHREAD_CLANG_NO_WARN_FLAG" >&6; }
+
+        case "$ax_cv_PTHREAD_CLANG_NO_WARN_FLAG" in
+                no | unknown) ;;
+                *) PTHREAD_CFLAGS="$ax_cv_PTHREAD_CLANG_NO_WARN_FLAG $PTHREAD_CFLAGS" ;;
+        esac
+
+fi # $ax_pthread_clang = yes
+
+
+
 # Various other checks:
-if test "x$ax_pthread_ok" = xyes; then
-        save_LIBS="$LIBS"
-        LIBS="$PTHREAD_LIBS $LIBS"
-        save_CFLAGS="$CFLAGS"
+if test "x$ax_pthread_ok" = "xyes"; then
+        ax_pthread_save_CFLAGS="$CFLAGS"
+        ax_pthread_save_LIBS="$LIBS"
         CFLAGS="$CFLAGS $PTHREAD_CFLAGS"
+        LIBS="$PTHREAD_LIBS $LIBS"
 
         # Detect AIX lossage: JOINABLE attribute is called UNDETACHED.
         { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for joinable pthread attribute" >&5
 printf %s "checking for joinable pthread attribute... " >&6; }
-        attr_name=unknown
-        for attr in PTHREAD_CREATE_JOINABLE PTHREAD_CREATE_UNDETACHED; do
-            cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+if test ${ax_cv_PTHREAD_JOINABLE_ATTR+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+  ax_cv_PTHREAD_JOINABLE_ATTR=unknown
+             for ax_pthread_attr in PTHREAD_CREATE_JOINABLE PTHREAD_CREATE_UNDETACHED; do
+                 cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 #include <pthread.h>
 int
 main (void)
 {
-int attr = $attr; return attr /* ; */
+int attr = $ax_pthread_attr; return attr /* ; */
   ;
   return 0;
 }
 _ACEOF
 if ac_fn_c_try_link "$LINENO"
 then :
-  attr_name=$attr; break
+  ax_cv_PTHREAD_JOINABLE_ATTR=$ax_pthread_attr; break
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.beam \
     conftest$ac_exeext conftest.$ac_ext
-        done
-        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $attr_name" >&5
-printf "%s\n" "$attr_name" >&6; }
-        if test "$attr_name" != PTHREAD_CREATE_JOINABLE; then
+             done
 
-printf "%s\n" "#define PTHREAD_CREATE_JOINABLE $attr_name" >>confdefs.h
+fi
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ax_cv_PTHREAD_JOINABLE_ATTR" >&5
+printf "%s\n" "$ax_cv_PTHREAD_JOINABLE_ATTR" >&6; }
+        if test "x$ax_cv_PTHREAD_JOINABLE_ATTR" != "xunknown" && \
+               test "x$ax_cv_PTHREAD_JOINABLE_ATTR" != "xPTHREAD_CREATE_JOINABLE" && \
+               test "x$ax_pthread_joinable_attr_defined" != "xyes"
+then :
 
-        fi
+printf "%s\n" "#define PTHREAD_CREATE_JOINABLE $ax_cv_PTHREAD_JOINABLE_ATTR" >>confdefs.h
 
-        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking if more special flags are required for pthreads" >&5
-printf %s "checking if more special flags are required for pthreads... " >&6; }
-        flag=no
-        case ${host_os} in
-            aix* | freebsd* | darwin*) flag="-D_THREAD_SAFE";;
-            osf* | hpux*) flag="-D_REENTRANT";;
-            solaris*)
-            if test "$GCC" = "yes"; then
-                flag="-D_REENTRANT"
-            else
-                # TODO: What about Clang on Solaris?
-                flag="-mt -D_REENTRANT"
-            fi
-            ;;
-        esac
-        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $flag" >&5
-printf "%s\n" "$flag" >&6; }
-        if test "x$flag" != xno; then
-            PTHREAD_CFLAGS="$flag $PTHREAD_CFLAGS"
-        fi
+               ax_pthread_joinable_attr_defined=yes
+
+fi
+
+        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking whether more special flags are required for pthreads" >&5
+printf %s "checking whether more special flags are required for pthreads... " >&6; }
+if test ${ax_cv_PTHREAD_SPECIAL_FLAGS+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+  ax_cv_PTHREAD_SPECIAL_FLAGS=no
+             case $host_os in
+             solaris*)
+             ax_cv_PTHREAD_SPECIAL_FLAGS="-D_POSIX_PTHREAD_SEMANTICS"
+             ;;
+             esac
+
+fi
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ax_cv_PTHREAD_SPECIAL_FLAGS" >&5
+printf "%s\n" "$ax_cv_PTHREAD_SPECIAL_FLAGS" >&6; }
+        if test "x$ax_cv_PTHREAD_SPECIAL_FLAGS" != "xno" && \
+               test "x$ax_pthread_special_flags_added" != "xyes"
+then :
+  PTHREAD_CFLAGS="$ax_cv_PTHREAD_SPECIAL_FLAGS $PTHREAD_CFLAGS"
+               ax_pthread_special_flags_added=yes
+fi
 
         { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for PTHREAD_PRIO_INHERIT" >&5
 printf %s "checking for PTHREAD_PRIO_INHERIT... " >&6; }
@@ -18289,14 +18529,14 @@ if test ${ax_cv_PTHREAD_PRIO_INHERIT+y}
 then :
   printf %s "(cached) " >&6
 else $as_nop
-
-                cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 #include <pthread.h>
 int
 main (void)
 {
 int i = PTHREAD_PRIO_INHERIT;
+                                               return i;
   ;
   return 0;
 }
@@ -18313,31 +18553,44 @@ rm -f core conftest.err conftest.$ac_objext conftest.beam \
 fi
 { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ax_cv_PTHREAD_PRIO_INHERIT" >&5
 printf "%s\n" "$ax_cv_PTHREAD_PRIO_INHERIT" >&6; }
-        if test "x$ax_cv_PTHREAD_PRIO_INHERIT" = "xyes"
+        if test "x$ax_cv_PTHREAD_PRIO_INHERIT" = "xyes" && \
+               test "x$ax_pthread_prio_inherit_defined" != "xyes"
 then :
 
 printf "%s\n" "#define HAVE_PTHREAD_PRIO_INHERIT 1" >>confdefs.h
 
+               ax_pthread_prio_inherit_defined=yes
+
 fi
 
-        LIBS="$save_LIBS"
-        CFLAGS="$save_CFLAGS"
+        CFLAGS="$ax_pthread_save_CFLAGS"
+        LIBS="$ax_pthread_save_LIBS"
 
         # More AIX lossage: compile with *_r variant
-        if test "x$GCC" != xyes; then
+        if test "x$GCC" != "xyes"; then
             case $host_os in
                 aix*)
                 case "x/$CC" in #(
   x*/c89|x*/c89_128|x*/c99|x*/c99_128|x*/cc|x*/cc128|x*/xlc|x*/xlc_v6|x*/xlc128|x*/xlc128_v6) :
     #handle absolute path differently from PATH based program lookup
-                   case "x$CC" in #(
+                     case "x$CC" in #(
   x/*) :
-    if as_fn_executable_p ${CC}_r
+
+			   if as_fn_executable_p ${CC}_r
 then :
   PTHREAD_CC="${CC}_r"
-fi ;; #(
+fi
+			   if test "x${CXX}" != "x"
+then :
+  if as_fn_executable_p ${CXX}_r
+then :
+  PTHREAD_CXX="${CXX}_r"
+fi
+fi
+			  ;; #(
   *) :
-    for ac_prog in ${CC}_r
+
+			   for ac_prog in ${CC}_r
 do
   # Extract the first word of "$ac_prog", so it can be a program name with args.
 set dummy $ac_prog; ac_word=$2
@@ -18384,8 +18637,62 @@ fi
   test -n "$PTHREAD_CC" && break
 done
 test -n "$PTHREAD_CC" || PTHREAD_CC="$CC"
- ;;
-esac ;; #(
+
+			   if test "x${CXX}" != "x"
+then :
+  for ac_prog in ${CXX}_r
+do
+  # Extract the first word of "$ac_prog", so it can be a program name with args.
+set dummy $ac_prog; ac_word=$2
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+printf %s "checking for $ac_word... " >&6; }
+if test ${ac_cv_prog_PTHREAD_CXX+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+  if test -n "$PTHREAD_CXX"; then
+  ac_cv_prog_PTHREAD_CXX="$PTHREAD_CXX" # Let the user override the test.
+else
+as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  case $as_dir in #(((
+    '') as_dir=./ ;;
+    */) ;;
+    *) as_dir=$as_dir/ ;;
+  esac
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if as_fn_executable_p "$as_dir$ac_word$ac_exec_ext"; then
+    ac_cv_prog_PTHREAD_CXX="$ac_prog"
+    printf "%s\n" "$as_me:${as_lineno-$LINENO}: found $as_dir$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+  done
+IFS=$as_save_IFS
+
+fi
+fi
+PTHREAD_CXX=$ac_cv_prog_PTHREAD_CXX
+if test -n "$PTHREAD_CXX"; then
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $PTHREAD_CXX" >&5
+printf "%s\n" "$PTHREAD_CXX" >&6; }
+else
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
+printf "%s\n" "no" >&6; }
+fi
+
+
+  test -n "$PTHREAD_CXX" && break
+done
+test -n "$PTHREAD_CXX" || PTHREAD_CXX="$CXX"
+
+fi
+
+                      ;;
+esac
+                     ;; #(
   *) :
      ;;
 esac
@@ -18395,13 +18702,15 @@ esac
 fi
 
 test -n "$PTHREAD_CC" || PTHREAD_CC="$CC"
+test -n "$PTHREAD_CXX" || PTHREAD_CXX="$CXX"
+
 
 
 
 
 
 # Finally, execute ACTION-IF-FOUND/ACTION-IF-NOT-FOUND:
-if test x"$ax_pthread_ok" = xyes; then
+if test "x$ax_pthread_ok" = "xyes"; then
 
 
 printf "%s\n" "#define HAVE_PTHREAD 1" >>confdefs.h
@@ -19138,8 +19447,11 @@ fi
 
       if test "$enable_swig_version_check" = "yes"; then
 
-        # Extract the first word of "swig", so it can be a program name with args.
-set dummy swig; ac_word=$2
+        # Find path to the "swig" executable.
+        for ac_prog in swig swig3.0 swig2.0
+do
+  # Extract the first word of "$ac_prog", so it can be a program name with args.
+set dummy $ac_prog; ac_word=$2
 { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
 printf %s "checking for $ac_word... " >&6; }
 if test ${ac_cv_path_SWIG+y}
@@ -19183,13 +19495,16 @@ printf "%s\n" "no" >&6; }
 fi
 
 
+  test -n "$SWIG" && break
+done
+
         if test -z "$SWIG" ; then
-                { printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: cannot find 'swig' program. You should look at http://www.swig.org" >&5
-printf "%s\n" "$as_me: WARNING: cannot find 'swig' program. You should look at http://www.swig.org" >&2;}
-                SWIG='echo "Error: SWIG is not installed. You should look at http://www.swig.org" ; false'
-        elif test -n "2.0.1" ; then
-                { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for SWIG version" >&5
-printf %s "checking for SWIG version... " >&6; }
+                :
+        elif test -z "2.0.1" ; then
+                :
+	else
+                { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking SWIG version" >&5
+printf %s "checking SWIG version... " >&6; }
                 swig_version=`$SWIG -version 2>&1 | grep 'SWIG Version' | sed 's/.*\([0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*\).*/\1/g'`
                 { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $swig_version" >&5
 printf "%s\n" "$swig_version" >&6; }
@@ -19200,12 +19515,12 @@ printf "%s\n" "$swig_version" >&6; }
                         if test -z "$required_major" ; then
                                 required_major=0
                         fi
-                        required=`echo $required | sed 's/[0-9]*[^0-9]//'`
+                        required=`echo $required. | sed 's/[0-9]*[^0-9]//'`
                         required_minor=`echo $required | sed 's/[^0-9].*//'`
                         if test -z "$required_minor" ; then
                                 required_minor=0
                         fi
-                        required=`echo $required | sed 's/[0-9]*[^0-9]//'`
+                        required=`echo $required. | sed 's/[0-9]*[^0-9]//'`
                         required_patch=`echo $required | sed 's/[^0-9].*//'`
                         if test -z "$required_patch" ; then
                                 required_patch=0
@@ -19226,42 +19541,43 @@ printf "%s\n" "$swig_version" >&6; }
                         if test -z "$available_patch" ; then
                                 available_patch=0
                         fi
-			badversion=0
-			if test $available_major -lt $required_major ; then
-				badversion=1
-			fi
-                        if test $available_major -eq $required_major \
-                                -a $available_minor -lt $required_minor ; then
-				badversion=1
-			fi
-                        if test $available_major -eq $required_major \
-                                -a $available_minor -eq $required_minor \
-                                -a $available_patch -lt $required_patch ; then
-				badversion=1
-			fi
-			if test $badversion -eq 1 ; then
-                                { printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: SWIG version >= 2.0.1 is required.  You have $swig_version.  You should look at http://www.swig.org" >&5
-printf "%s\n" "$as_me: WARNING: SWIG version >= 2.0.1 is required.  You have $swig_version.  You should look at http://www.swig.org" >&2;}
-                                SWIG='echo "Error: SWIG version >= 2.0.1 is required.  You have '"$swig_version"'.  You should look at http://www.swig.org" ; false'
+                        # Convert the version tuple into a single number for easier comparison.
+                        # Using base 100 should be safe since SWIG internally uses BCD values
+                        # to encode its version number.
+                        required_swig_vernum=`expr $required_major \* 10000 \
+                            \+ $required_minor \* 100 \+ $required_patch`
+                        available_swig_vernum=`expr $available_major \* 10000 \
+                            \+ $available_minor \* 100 \+ $available_patch`
+
+                        if test $available_swig_vernum -lt $required_swig_vernum; then
+                                { printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: SWIG version >= 2.0.1 is required.  You have $swig_version." >&5
+printf "%s\n" "$as_me: WARNING: SWIG version >= 2.0.1 is required.  You have $swig_version." >&2;}
+                                SWIG=''
+
                         else
-                                { printf "%s\n" "$as_me:${as_lineno-$LINENO}: SWIG executable is '$SWIG'" >&5
-printf "%s\n" "$as_me: SWIG executable is '$SWIG'" >&6;}
-                                SWIG_LIB=`$SWIG -swiglib`
-                                { printf "%s\n" "$as_me:${as_lineno-$LINENO}: SWIG library directory is '$SWIG_LIB'" >&5
-printf "%s\n" "$as_me: SWIG library directory is '$SWIG_LIB'" >&6;}
+                                { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for SWIG library" >&5
+printf %s "checking for SWIG library... " >&6; }
+                                SWIG_LIB=`$SWIG -swiglib | tr '\r\n' '  '`
+                                { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $SWIG_LIB" >&5
+printf "%s\n" "$SWIG_LIB" >&6; }
+
                         fi
                 else
                         { printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: cannot determine SWIG version" >&5
 printf "%s\n" "$as_me: WARNING: cannot determine SWIG version" >&2;}
-                        SWIG='echo "Error: Cannot determine SWIG version.  You should look at http://www.swig.org" ; false'
+                        SWIG=''
+
                 fi
         fi
 
 
       else
 
-        # Extract the first word of "swig", so it can be a program name with args.
-set dummy swig; ac_word=$2
+        # Find path to the "swig" executable.
+        for ac_prog in swig swig3.0 swig2.0
+do
+  # Extract the first word of "$ac_prog", so it can be a program name with args.
+set dummy $ac_prog; ac_word=$2
 { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
 printf %s "checking for $ac_word... " >&6; }
 if test ${ac_cv_path_SWIG+y}
@@ -19305,13 +19621,16 @@ printf "%s\n" "no" >&6; }
 fi
 
 
+  test -n "$SWIG" && break
+done
+
         if test -z "$SWIG" ; then
-                { printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: cannot find 'swig' program. You should look at http://www.swig.org" >&5
-printf "%s\n" "$as_me: WARNING: cannot find 'swig' program. You should look at http://www.swig.org" >&2;}
-                SWIG='echo "Error: SWIG is not installed. You should look at http://www.swig.org" ; false'
-        elif test -n "" ; then
-                { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for SWIG version" >&5
-printf %s "checking for SWIG version... " >&6; }
+                :
+        elif test -z "" ; then
+                :
+	else
+                { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking SWIG version" >&5
+printf %s "checking SWIG version... " >&6; }
                 swig_version=`$SWIG -version 2>&1 | grep 'SWIG Version' | sed 's/.*\([0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*\).*/\1/g'`
                 { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $swig_version" >&5
 printf "%s\n" "$swig_version" >&6; }
@@ -19322,12 +19641,12 @@ printf "%s\n" "$swig_version" >&6; }
                         if test -z "$required_major" ; then
                                 required_major=0
                         fi
-                        required=`echo $required | sed 's/[0-9]*[^0-9]//'`
+                        required=`echo $required. | sed 's/[0-9]*[^0-9]//'`
                         required_minor=`echo $required | sed 's/[^0-9].*//'`
                         if test -z "$required_minor" ; then
                                 required_minor=0
                         fi
-                        required=`echo $required | sed 's/[0-9]*[^0-9]//'`
+                        required=`echo $required. | sed 's/[0-9]*[^0-9]//'`
                         required_patch=`echo $required | sed 's/[^0-9].*//'`
                         if test -z "$required_patch" ; then
                                 required_patch=0
@@ -19348,34 +19667,32 @@ printf "%s\n" "$swig_version" >&6; }
                         if test -z "$available_patch" ; then
                                 available_patch=0
                         fi
-			badversion=0
-			if test $available_major -lt $required_major ; then
-				badversion=1
-			fi
-                        if test $available_major -eq $required_major \
-                                -a $available_minor -lt $required_minor ; then
-				badversion=1
-			fi
-                        if test $available_major -eq $required_major \
-                                -a $available_minor -eq $required_minor \
-                                -a $available_patch -lt $required_patch ; then
-				badversion=1
-			fi
-			if test $badversion -eq 1 ; then
-                                { printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: SWIG version >=  is required.  You have $swig_version.  You should look at http://www.swig.org" >&5
-printf "%s\n" "$as_me: WARNING: SWIG version >=  is required.  You have $swig_version.  You should look at http://www.swig.org" >&2;}
-                                SWIG='echo "Error: SWIG version >=  is required.  You have '"$swig_version"'.  You should look at http://www.swig.org" ; false'
+                        # Convert the version tuple into a single number for easier comparison.
+                        # Using base 100 should be safe since SWIG internally uses BCD values
+                        # to encode its version number.
+                        required_swig_vernum=`expr $required_major \* 10000 \
+                            \+ $required_minor \* 100 \+ $required_patch`
+                        available_swig_vernum=`expr $available_major \* 10000 \
+                            \+ $available_minor \* 100 \+ $available_patch`
+
+                        if test $available_swig_vernum -lt $required_swig_vernum; then
+                                { printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: SWIG version >=  is required.  You have $swig_version." >&5
+printf "%s\n" "$as_me: WARNING: SWIG version >=  is required.  You have $swig_version." >&2;}
+                                SWIG=''
+
                         else
-                                { printf "%s\n" "$as_me:${as_lineno-$LINENO}: SWIG executable is '$SWIG'" >&5
-printf "%s\n" "$as_me: SWIG executable is '$SWIG'" >&6;}
-                                SWIG_LIB=`$SWIG -swiglib`
-                                { printf "%s\n" "$as_me:${as_lineno-$LINENO}: SWIG library directory is '$SWIG_LIB'" >&5
-printf "%s\n" "$as_me: SWIG library directory is '$SWIG_LIB'" >&6;}
+                                { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for SWIG library" >&5
+printf %s "checking for SWIG library... " >&6; }
+                                SWIG_LIB=`$SWIG -swiglib | tr '\r\n' '  '`
+                                { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $SWIG_LIB" >&5
+printf "%s\n" "$SWIG_LIB" >&6; }
+
                         fi
                 else
                         { printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: cannot determine SWIG version" >&5
 printf "%s\n" "$as_me: WARNING: cannot determine SWIG version" >&2;}
-                        SWIG='echo "Error: Cannot determine SWIG version.  You should look at http://www.swig.org" ; false'
+                        SWIG=''
+
                 fi
         fi
 
