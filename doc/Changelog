@@ -1,3 +1,6 @@
+15 April 2024: Wouter
+	- Fix #1048: Update ax_pkg_swig.m4 and ax_pthread.m4.
+
 12 April 2024: Wouter
 	- Fix cachedb for serve-expired with serve-expired-client-timeout.
 	- Fixup unit test for cachedb server expired client timeout with
