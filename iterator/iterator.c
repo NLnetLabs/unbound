@@ -52,6 +52,7 @@
 #include "iterator/iter_priv.h"
 #include "validator/val_neg.h"
 #include "services/cache/dns.h"
+#include "services/cache/rrset.h"
 #include "services/cache/infra.h"
 #include "services/authzone.h"
 #include "util/module.h"
@@ -3255,6 +3256,7 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 		}
 		return final_state(iq);
 	} else if(type == RESPONSE_TYPE_REFERRAL) {
+		struct delegpt* old_dp = NULL;
 		/* REFERRAL type responses get a reset of the 
 		 * delegation point, and back to the QUERYTARGETS_STATE. */
 		verbose(VERB_DETAIL, "query response was REFERRAL");
@@ -3306,12 +3308,28 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 		/* Reset the event state, setting the current delegation 
 		 * point to the referral. */
 		iq->deleg_msg = iq->response;
+		/* Keep current delegation point for label comparison */
+		old_dp = iq->dp;
 		iq->dp = delegpt_from_message(iq->response, qstate->region);
 		if (qstate->env->cfg->qname_minimisation)
 			iq->minimisation_state = INIT_MINIMISE_STATE;
 		if(!iq->dp) {
 			errinf(qstate, "malloc failure, for delegation point");
 			return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
+		}
+		if(old_dp->namelabs + 1 < iq->dp->namelabs) {
+			/* We got a grandchild delegation (more than one label
+			 * difference) than expected. Check for in-between
+			 * delegations in the cache and remove them.
+			 * They could prove problematic when they expire
+			 * and rrset_expired_above() encounters them during
+			 * delegation cache lookups. */
+			uint8_t* qname = iq->dp->name;
+			size_t qnamelen = iq->dp->namelen;
+			rrset_cache_remove_above(qstate->env->rrset_cache,
+				&qname, &qnamelen, LDNS_RR_TYPE_NS,
+				iq->qchase.qclass, *qstate->env->now,
+				old_dp->name, old_dp->namelen);
 		}
 		if(!cache_fill_missing(qstate->env, iq->qchase.qclass, 
 			qstate->region, iq->dp)) {
