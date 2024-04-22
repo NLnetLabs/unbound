@@ -43,6 +43,7 @@
 #ifndef ITERATOR_ITER_FWD_H
 #define ITERATOR_ITER_FWD_H
 #include "util/rbtree.h"
+#include "util/locks.h"
 struct config_file;
 struct delegpt;
 
@@ -50,6 +51,11 @@ struct delegpt;
  * Iterator forward zones structure
  */
 struct iter_forwards {
+	/** lock on the forwards tree.
+	 * When grabbing both this lock and the anchors.lock, this lock
+	 * is grabbed first. When grabbing both this lock and the hints.lock
+	 * this lock is grabbed first. */
+	lock_rw_type lock;
 	/** 
 	 * Zones are stored in this tree. Sort order is specially chosen.
 	 * first sorted on qclass. Then on dname in nsec-like order, so that
@@ -106,6 +112,8 @@ int forwards_apply_cfg(struct iter_forwards* fwd, struct config_file* cfg);
 
 /**
  * Find forward zone exactly by name
+ * The return value is contents of the forwards structure, caller should
+ * lock and unlock a readlock on the forwards structure.
  * @param fwd: forward storage.
  * @param qname: The qname of the query.
  * @param qclass: The qclass of the query.
@@ -118,6 +126,8 @@ struct delegpt* forwards_find(struct iter_forwards* fwd, uint8_t* qname,
  * Find forward zone information
  * For this qname/qclass find forward zone information, returns delegation
  * point with server names and addresses, or NULL if no forwarding is needed.
+ * The return value is contents of the forwards structure, caller should
+ * lock and unlock a readlock on the forwards structure.
  *
  * @param fwd: forward storage.
  * @param qname: The qname of the query.
@@ -147,6 +157,7 @@ int forwards_next_root(struct iter_forwards* fwd, uint16_t* qclass);
 
 /**
  * Get memory in use by forward storage
+ * Locks and unlocks the structure.
  * @param fwd: forward storage.
  * @return bytes in use
  */
@@ -195,5 +206,14 @@ int forwards_add_stub_hole(struct iter_forwards* fwd, uint16_t c, uint8_t* nm);
  */
 void forwards_delete_stub_hole(struct iter_forwards* fwd, uint16_t c,
 	uint8_t* nm);
+
+/**
+ * Swap internal tree with preallocated entries. Caller should manage
+ * the locks.
+ * @param fwd: the forward data structure.
+ * @param data: the data structure used to take elements from. This contains
+ * 	the old elements on return.
+ */
+void forwards_swap_tree(struct iter_forwards* fwd, struct iter_forwards* data);
 
 #endif /* ITERATOR_ITER_FWD_H */

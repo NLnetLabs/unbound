@@ -52,6 +52,9 @@
 #ifdef HAVE_OPENSSL_BN_H
 #include <openssl/bn.h>
 #endif
+#ifdef HAVE_STDATOMIC_H
+#include <stdatomic.h>
+#endif
 
 #include <ctype.h>
 #include "daemon/remote.h"
@@ -63,6 +66,7 @@
 #include "util/config_file.h"
 #include "util/net_help.h"
 #include "util/module.h"
+#include "util/ub_event.h"
 #include "services/listen_dnsport.h"
 #include "services/cache/rrset.h"
 #include "services/cache/infra.h"
@@ -98,6 +102,9 @@
 #ifdef HAVE_NETDB_H
 #include <netdb.h>
 #endif
+#ifdef HAVE_POLL_H
+#include <poll.h>
+#endif
 
 /* just for portability */
 #ifdef SQ
@@ -106,6 +113,19 @@
 
 /** what to put on statistics lines between var and value, ": " or "=" */
 #define SQ "="
+
+/** What number of loop iterations is too much for ipc retries */
+#define IPC_LOOP_MAX 200
+/** Timeout in msec for ipc socket poll. */
+#define IPC_NOTIFICATION_WAIT 200
+
+static void fr_printq_delete(struct fast_reload_printq* printq);
+static void fr_main_perform_printout(struct fast_reload_thread* fr);
+static int fr_printq_empty(struct fast_reload_printq* printq);
+static void fr_printq_list_insert(struct fast_reload_printq* printq,
+	struct daemon* daemon);
+static void fr_printq_remove(struct fast_reload_printq* printq);
+static void fr_check_cmd_from_thread(struct fast_reload_thread* fr);
 
 static int
 remote_setup_ctx(struct daemon_remote* rc, struct config_file* cfg)
@@ -504,6 +524,11 @@ state_list_remove_elem(struct rc_state** list, struct comm_point* c)
 static void
 clean_point(struct daemon_remote* rc, struct rc_state* s)
 {
+	if(!s->rc) {
+		/* the state has been picked up and moved away */
+		free(s);
+		return;
+	}
 	state_list_remove_elem(&rc->busy_list, s->c);
 	rc->active --;
 	if(s->ssl) {
@@ -650,6 +675,65 @@ do_reload(RES* ssl, struct worker* worker, int reuse_cache)
 	worker->need_to_exit = 0;
 	comm_base_exit(worker->base);
 	send_ok(ssl);
+}
+
+#ifndef THREADS_DISABLED
+/** parse fast reload command options. */
+static int
+fr_parse_options(RES* ssl, char* arg, int* fr_verb, int* fr_nopause,
+	int* fr_drop_mesh)
+{
+	char* argp = arg;
+	while(*argp=='+') {
+		argp++;
+		while(*argp!=0 && *argp!=' ' && *argp!='\t') {
+			if(*argp == 'v') {
+				(*fr_verb)++;
+			} else if(*argp == 'p') {
+				(*fr_nopause) = 1;
+			} else if(*argp == 'd') {
+				(*fr_drop_mesh) = 1;
+			} else {
+				if(!ssl_printf(ssl,
+					"error: unknown option '+%c'\n",
+					*argp))
+					return 0;
+				return 0;
+			}
+			argp++;
+		}
+		argp = skipwhite(argp);
+	}
+	if(*argp!=0) {
+		if(!ssl_printf(ssl, "error: unknown option '%s'\n", argp))
+			return 0;
+		return 0;
+	}
+	return 1;
+}
+#endif /* !THREADS_DISABLED */
+
+/** do the fast_reload command */
+static void
+do_fast_reload(RES* ssl, struct worker* worker, struct rc_state* s, char* arg)
+{
+#ifdef THREADS_DISABLED
+	if(!ssl_printf(ssl, "error: no threads for fast_reload, compiled without threads.\n"))
+		return;
+	(void)worker;
+	(void)s;
+	(void)arg;
+#else
+	int fr_verb = 0, fr_nopause = 0, fr_drop_mesh = 0;
+	if(!fr_parse_options(ssl, arg, &fr_verb, &fr_nopause, &fr_drop_mesh))
+		return;
+	if(fr_verb >= 1) {
+		if(!ssl_printf(ssl, "start fast_reload\n"))
+			return;
+	}
+	fast_reload_thread_start(ssl, worker, s, fr_verb, fr_nopause,
+		fr_drop_mesh);
+#endif
 }
 
 /** do the verbosity command */
@@ -1992,12 +2076,20 @@ static int
 print_root_fwds(RES* ssl, struct iter_forwards* fwds, uint8_t* root)
 {
 	struct delegpt* dp;
+	lock_rw_rdlock(&fwds->lock);
 	dp = forwards_lookup(fwds, root, LDNS_RR_CLASS_IN);
-	if(!dp)
+	if(!dp) {
+		lock_rw_unlock(&fwds->lock);
 		return ssl_printf(ssl, "off (using root hints)\n");
+	}
 	/* if dp is returned it must be the root */
 	log_assert(query_dname_compare(dp->name, root)==0);
-	return ssl_print_name_dp(ssl, NULL, root, LDNS_RR_CLASS_IN, dp);
+	if(!ssl_print_name_dp(ssl, NULL, root, LDNS_RR_CLASS_IN, dp)) {
+		lock_rw_unlock(&fwds->lock);
+		return 0;
+	}
+	lock_rw_unlock(&fwds->lock);
+	return 1;
 }
 
 /** parse args into delegpt */
@@ -2082,15 +2174,20 @@ do_forward(RES* ssl, struct worker* worker, char* args)
 	/* delete all the existing queries first */
 	mesh_delete_all(worker->env.mesh);
 	if(strcmp(args, "off") == 0) {
+		lock_rw_wrlock(&fwd->lock);
 		forwards_delete_zone(fwd, LDNS_RR_CLASS_IN, root);
+		lock_rw_unlock(&fwd->lock);
 	} else {
 		struct delegpt* dp;
 		if(!(dp = parse_delegpt(ssl, args, root)))
 			return;
+		lock_rw_wrlock(&fwd->lock);
 		if(!forwards_add_zone(fwd, LDNS_RR_CLASS_IN, dp)) {
+			lock_rw_unlock(&fwd->lock);
 			(void)ssl_printf(ssl, "error out of memory\n");
 			return;
 		}
+		lock_rw_unlock(&fwd->lock);
 	}
 	send_ok(ssl);
 }
@@ -2153,9 +2250,11 @@ do_forward_add(RES* ssl, struct worker* worker, char* args)
 		return;
 	if(tls)
 		dp->ssl_upstream = 1;
+	lock_rw_wrlock(&fwd->lock);
 	if(insecure && worker->env.anchors) {
 		if(!anchors_add_insecure(worker->env.anchors, LDNS_RR_CLASS_IN,
 			nm)) {
+			lock_rw_unlock(&fwd->lock);
 			(void)ssl_printf(ssl, "error out of memory\n");
 			delegpt_free_mlc(dp);
 			free(nm);
@@ -2163,10 +2262,12 @@ do_forward_add(RES* ssl, struct worker* worker, char* args)
 		}
 	}
 	if(!forwards_add_zone(fwd, LDNS_RR_CLASS_IN, dp)) {
+		lock_rw_unlock(&fwd->lock);
 		(void)ssl_printf(ssl, "error out of memory\n");
 		free(nm);
 		return;
 	}
+	lock_rw_unlock(&fwd->lock);
 	free(nm);
 	send_ok(ssl);
 }
@@ -2180,10 +2281,12 @@ do_forward_remove(RES* ssl, struct worker* worker, char* args)
 	uint8_t* nm = NULL;
 	if(!parse_fs_args(ssl, args, &nm, NULL, &insecure, NULL, NULL))
 		return;
+	lock_rw_wrlock(&fwd->lock);
 	if(insecure && worker->env.anchors)
 		anchors_delete_insecure(worker->env.anchors, LDNS_RR_CLASS_IN,
 			nm);
 	forwards_delete_zone(fwd, LDNS_RR_CLASS_IN, nm);
+	lock_rw_unlock(&fwd->lock);
 	free(nm);
 	send_ok(ssl);
 }
@@ -2200,9 +2303,13 @@ do_stub_add(RES* ssl, struct worker* worker, char* args)
 		return;
 	if(tls)
 		dp->ssl_upstream = 1;
+	lock_rw_wrlock(&fwd->lock);
+	lock_rw_wrlock(&worker->env.hints->lock);
 	if(insecure && worker->env.anchors) {
 		if(!anchors_add_insecure(worker->env.anchors, LDNS_RR_CLASS_IN,
 			nm)) {
+			lock_rw_unlock(&fwd->lock);
+			lock_rw_unlock(&worker->env.hints->lock);
 			(void)ssl_printf(ssl, "error out of memory\n");
 			delegpt_free_mlc(dp);
 			free(nm);
@@ -2213,6 +2320,8 @@ do_stub_add(RES* ssl, struct worker* worker, char* args)
 		if(insecure && worker->env.anchors)
 			anchors_delete_insecure(worker->env.anchors,
 				LDNS_RR_CLASS_IN, nm);
+		lock_rw_unlock(&fwd->lock);
+		lock_rw_unlock(&worker->env.hints->lock);
 		(void)ssl_printf(ssl, "error out of memory\n");
 		delegpt_free_mlc(dp);
 		free(nm);
@@ -2224,9 +2333,13 @@ do_stub_add(RES* ssl, struct worker* worker, char* args)
 		if(insecure && worker->env.anchors)
 			anchors_delete_insecure(worker->env.anchors,
 				LDNS_RR_CLASS_IN, nm);
+		lock_rw_unlock(&fwd->lock);
+		lock_rw_unlock(&worker->env.hints->lock);
 		free(nm);
 		return;
 	}
+	lock_rw_unlock(&fwd->lock);
+	lock_rw_unlock(&worker->env.hints->lock);
 	free(nm);
 	send_ok(ssl);
 }
@@ -2240,11 +2353,15 @@ do_stub_remove(RES* ssl, struct worker* worker, char* args)
 	uint8_t* nm = NULL;
 	if(!parse_fs_args(ssl, args, &nm, NULL, &insecure, NULL, NULL))
 		return;
+	lock_rw_wrlock(&fwd->lock);
+	lock_rw_wrlock(&worker->env.hints->lock);
 	if(insecure && worker->env.anchors)
 		anchors_delete_insecure(worker->env.anchors, LDNS_RR_CLASS_IN,
 			nm);
 	forwards_delete_stub_hole(fwd, LDNS_RR_CLASS_IN, nm);
 	hints_delete_stub(worker->env.hints, LDNS_RR_CLASS_IN, nm);
+	lock_rw_unlock(&fwd->lock);
+	lock_rw_unlock(&worker->env.hints->lock);
 	free(nm);
 	send_ok(ssl);
 }
@@ -2673,6 +2790,7 @@ do_list_forwards(RES* ssl, struct worker* worker)
 	struct iter_forward_zone* z;
 	struct trust_anchor* a;
 	int insecure;
+	lock_rw_rdlock(&fwds->lock);
 	RBTREE_FOR(z, struct iter_forward_zone*, fwds->tree) {
 		if(!z->dp) continue; /* skip empty marker for stub */
 
@@ -2687,9 +2805,12 @@ do_list_forwards(RES* ssl, struct worker* worker)
 		}
 
 		if(!ssl_print_name_dp(ssl, (insecure?"forward +i":"forward"),
-			z->name, z->dclass, z->dp))
+			z->name, z->dclass, z->dp)) {
+			lock_rw_unlock(&fwds->lock);
 			return;
+		}
 	}
+	lock_rw_unlock(&fwds->lock);
 }
 
 /** do the list_stubs command */
@@ -2700,6 +2821,7 @@ do_list_stubs(RES* ssl, struct worker* worker)
 	struct trust_anchor* a;
 	int insecure;
 	char str[32];
+	lock_rw_rdlock(&worker->env.hints->lock);
 	RBTREE_FOR(z, struct iter_hints_stub*, &worker->env.hints->tree) {
 
 		/* see if it is insecure */
@@ -2715,9 +2837,12 @@ do_list_stubs(RES* ssl, struct worker* worker)
 		snprintf(str, sizeof(str), "stub %sprime%s",
 			(z->noprime?"no":""), (insecure?" +i":""));
 		if(!ssl_print_name_dp(ssl, str, z->node.name,
-			z->node.dclass, z->dp))
+			z->node.dclass, z->dp)) {
+			lock_rw_unlock(&worker->env.hints->lock);
 			return;
+		}
 	}
+	lock_rw_unlock(&worker->env.hints->lock);
 }
 
 /** do the list_auth_zones command */
@@ -3012,7 +3137,7 @@ cmdcmp(char* p, const char* cmd, size_t len)
 
 /** execute a remote control command */
 static void
-execute_cmd(struct daemon_remote* rc, RES* ssl, char* cmd,
+execute_cmd(struct daemon_remote* rc, struct rc_state* s, RES* ssl, char* cmd,
 	struct worker* worker)
 {
 	char* p = skipwhite(cmd);
@@ -3025,6 +3150,9 @@ execute_cmd(struct daemon_remote* rc, RES* ssl, char* cmd,
 		return;
 	} else if(cmdcmp(p, "reload", 6)) {
 		do_reload(ssl, worker, 0);
+		return;
+	} else if(cmdcmp(p, "fast_reload", 11)) {
+		do_fast_reload(ssl, worker, s, skipwhite(p+11));
 		return;
 	} else if(cmdcmp(p, "stats_noreset", 13)) {
 		do_stats(ssl, worker, 0);
@@ -3077,26 +3205,6 @@ execute_cmd(struct daemon_remote* rc, RES* ssl, char* cmd,
 	} else if(cmdcmp(p, "auth_zone_transfer", 18)) {
 		do_auth_zone_transfer(ssl, worker, skipwhite(p+18));
 		return;
-	} else if(cmdcmp(p, "stub_add", 8)) {
-		/* must always distribute this cmd */
-		if(rc) distribute_cmd(rc, ssl, cmd);
-		do_stub_add(ssl, worker, skipwhite(p+8));
-		return;
-	} else if(cmdcmp(p, "stub_remove", 11)) {
-		/* must always distribute this cmd */
-		if(rc) distribute_cmd(rc, ssl, cmd);
-		do_stub_remove(ssl, worker, skipwhite(p+11));
-		return;
-	} else if(cmdcmp(p, "forward_add", 11)) {
-		/* must always distribute this cmd */
-		if(rc) distribute_cmd(rc, ssl, cmd);
-		do_forward_add(ssl, worker, skipwhite(p+11));
-		return;
-	} else if(cmdcmp(p, "forward_remove", 14)) {
-		/* must always distribute this cmd */
-		if(rc) distribute_cmd(rc, ssl, cmd);
-		do_forward_remove(ssl, worker, skipwhite(p+14));
-		return;
 	} else if(cmdcmp(p, "insecure_add", 12)) {
 		/* must always distribute this cmd */
 		if(rc) distribute_cmd(rc, ssl, cmd);
@@ -3106,11 +3214,6 @@ execute_cmd(struct daemon_remote* rc, RES* ssl, char* cmd,
 		/* must always distribute this cmd */
 		if(rc) distribute_cmd(rc, ssl, cmd);
 		do_insecure_remove(ssl, worker, skipwhite(p+15));
-		return;
-	} else if(cmdcmp(p, "forward", 7)) {
-		/* must always distribute this cmd */
-		if(rc) distribute_cmd(rc, ssl, cmd);
-		do_forward(ssl, worker, skipwhite(p+7));
 		return;
 	} else if(cmdcmp(p, "flush_stats", 11)) {
 		/* must always distribute this cmd */
@@ -3153,6 +3256,16 @@ execute_cmd(struct daemon_remote* rc, RES* ssl, char* cmd,
 		do_data_add(ssl, worker->daemon->local_zones, skipwhite(p+10));
 	} else if(cmdcmp(p, "local_datas", 11)) {
 		do_datas_add(ssl, worker->daemon->local_zones);
+	} else if(cmdcmp(p, "forward_add", 11)) {
+		do_forward_add(ssl, worker, skipwhite(p+11));
+	} else if(cmdcmp(p, "forward_remove", 14)) {
+		do_forward_remove(ssl, worker, skipwhite(p+14));
+	} else if(cmdcmp(p, "forward", 7)) {
+		do_forward(ssl, worker, skipwhite(p+7));
+	} else if(cmdcmp(p, "stub_add", 8)) {
+		do_stub_add(ssl, worker, skipwhite(p+8));
+	} else if(cmdcmp(p, "stub_remove", 11)) {
+		do_stub_remove(ssl, worker, skipwhite(p+11));
 	} else if(cmdcmp(p, "view_local_zone_remove", 22)) {
 		do_view_zone_remove(ssl, worker, skipwhite(p+22));
 	} else if(cmdcmp(p, "view_local_zone", 15)) {
@@ -3207,7 +3320,7 @@ daemon_remote_exec(struct worker* worker)
 		return;
 	}
 	verbose(VERB_ALGO, "remote exec distributed: %s", (char*)msg);
-	execute_cmd(NULL, NULL, (char*)msg, worker);
+	execute_cmd(NULL, NULL, NULL, (char*)msg, worker);
 	free(msg);
 }
 
@@ -3271,7 +3384,7 @@ handle_req(struct daemon_remote* rc, struct rc_state* s, RES* res)
 	verbose(VERB_DETAIL, "control cmd: %s", buf);
 
 	/* figure out what to do */
-	execute_cmd(rc, res, buf, rc->worker);
+	execute_cmd(rc, s, res, buf, rc->worker);
 }
 
 /** handle SSL_do_handshake changes to the file descriptor to wait for later */
@@ -3362,4 +3475,2560 @@ int remote_control_callback(struct comm_point* c, void* arg, int err,
 	verbose(VERB_ALGO, "remote control operation completed");
 	clean_point(rc, s);
 	return 0;
+}
+
+/**
+ * This routine polls a socket for readiness.
+ * @param fd: file descriptor, -1 uses no fd for a timer only.
+ * @param timeout: time in msec to wait. 0 means nonblocking test,
+ * 	-1 waits blocking for events.
+ * @param pollin: check for input event.
+ * @param pollout: check for output event.
+ * @param event: output variable, set to true if the event happens.
+ * 	It is false if there was an error or timeout.
+ * @return false is system call failure, also logged.
+ */
+static int
+sock_poll_timeout(int fd, int timeout, int pollin, int pollout, int* event)
+{
+	int loopcount = 0;
+	/* Loop if the system call returns an errno to do so, like EINTR. */
+	while(1) {
+		struct pollfd p, *fds;
+		int nfds, ret;
+		if(++loopcount > IPC_LOOP_MAX) {
+			log_err("sock_poll_timeout: loop");
+			if(event)
+				*event = 0;
+			return 0;
+		}
+		if(fd == -1) {
+			fds = NULL;
+			nfds = 0;
+		} else {
+			fds = &p;
+			nfds = 1;
+			memset(&p, 0, sizeof(p));
+			p.fd = fd;
+			p.events = POLLERR | POLLHUP;
+			if(pollin)
+				p.events |= POLLIN;
+			if(pollout)
+				p.events |= POLLOUT;
+		}
+#ifndef USE_WINSOCK
+		ret = poll(fds, nfds, timeout);
+#else
+		ret = WSAPoll(fds, nfds, timeout);
+#endif
+		if(ret == -1) {
+			if(
+#ifndef USE_WINSOCK
+				errno == EINTR || errno == EAGAIN
+#  ifdef EWOULDBLOCK
+				|| errno == EWOULDBLOCK
+#  endif
+#else
+				WSAGetLastError() == WSAEINTR ||
+				WSAGetLastError() == WSAEINPROGRESS ||
+				WSAGetLastError() == WSAEWOULDBLOCK
+#endif
+				)
+				continue; /* Try again. */
+			log_err("poll: %s", sock_strerror(errno));
+			if(event)
+				*event = 0;
+			return 0;
+		} else if(ret == 0) {
+			/* Timeout */
+			if(event)
+				*event = 0;
+			return 1;
+		}
+		break;
+	}
+	if(event)
+		*event = 1;
+	return 1;
+}
+
+/** fast reload convert fast reload notification status to string */
+static const char*
+fr_notification_to_string(enum fast_reload_notification status)
+{
+	switch(status) {
+	case fast_reload_notification_none:
+		return "none";
+	case fast_reload_notification_done:
+		return "done";
+	case fast_reload_notification_done_error:
+		return "done_error";
+	case fast_reload_notification_exit:
+		return "exit";
+	case fast_reload_notification_exited:
+		return "exited";
+	case fast_reload_notification_printout:
+		return "printout";
+	case fast_reload_notification_reload_stop:
+		return "reload_stop";
+	case fast_reload_notification_reload_ack:
+		return "reload_ack";
+	case fast_reload_notification_reload_nopause_poll:
+		return "reload_nopause_poll";
+	case fast_reload_notification_reload_start:
+		return "reload_start";
+	default:
+		break;
+	}
+	return "unknown";
+}
+
+#ifndef THREADS_DISABLED
+/** fast reload, poll for notification incoming. True if quit */
+static int
+fr_poll_for_quit(struct fast_reload_thread* fr)
+{
+	int inevent, loopexit = 0, bcount = 0;
+	uint32_t cmd;
+	ssize_t ret;
+
+	if(fr->need_to_quit)
+		return 1;
+	/* Is there data? */
+	if(!sock_poll_timeout(fr->commpair[1], 0, 1, 0, &inevent)) {
+		log_err("fr_poll_for_quit: poll failed");
+		return 0;
+	}
+	if(!inevent)
+		return 0;
+
+	/* Read the data */
+	while(1) {
+		if(++loopexit > IPC_LOOP_MAX) {
+			log_err("fr_poll_for_quit: recv loops %s",
+				sock_strerror(errno));
+			return 0;
+		}
+		ret = recv(fr->commpair[1], ((char*)&cmd)+bcount,
+			sizeof(cmd)-bcount, 0);
+		if(ret == -1) {
+			if(
+#ifndef USE_WINSOCK
+				errno == EINTR || errno == EAGAIN
+#  ifdef EWOULDBLOCK
+				|| errno == EWOULDBLOCK
+#  endif
+#else
+				WSAGetLastError() == WSAEINTR ||
+				WSAGetLastError() == WSAEINPROGRESS ||
+				WSAGetLastError() == WSAEWOULDBLOCK
+#endif
+				)
+				continue; /* Try again. */
+			log_err("fr_poll_for_quit: recv: %s",
+				sock_strerror(errno));
+			return 0;
+		} else if(ret+(ssize_t)bcount != sizeof(cmd)) {
+			bcount += ret;
+			if((size_t)bcount < sizeof(cmd))
+				continue;
+		}
+		break;
+	}
+	if(cmd == fast_reload_notification_exit) {
+		fr->need_to_quit = 1;
+		verbose(VERB_ALGO, "fast reload: exit notification received");
+		return 1;
+	}
+	log_err("fr_poll_for_quit: unknown notification status received: %d %s",
+		cmd, fr_notification_to_string(cmd));
+	return 0;
+}
+
+/** fast reload thread. Send notification from the fast reload thread */
+static void
+fr_send_notification(struct fast_reload_thread* fr,
+	enum fast_reload_notification status)
+{
+	int outevent, loopexit = 0, bcount = 0;
+	uint32_t cmd;
+	ssize_t ret;
+	verbose(VERB_ALGO, "fast reload: send notification %s",
+		fr_notification_to_string(status));
+	/* Make a blocking attempt to send. But meanwhile stay responsive,
+	 * once in a while for quit commands. In case the server has to quit. */
+	/* see if there is incoming quit signals */
+	if(fr_poll_for_quit(fr))
+		return;
+	cmd = status;
+	while(1) {
+		if(++loopexit > IPC_LOOP_MAX) {
+			log_err("fast reload: could not send notification");
+			return;
+		}
+		/* wait for socket to become writable */
+		if(!sock_poll_timeout(fr->commpair[1], IPC_NOTIFICATION_WAIT,
+			0, 1, &outevent)) {
+			log_err("fast reload: poll failed");
+			return;
+		}
+		if(fr_poll_for_quit(fr))
+			return;
+		if(!outevent)
+			continue;
+		ret = send(fr->commpair[1], ((char*)&cmd)+bcount,
+			sizeof(cmd)-bcount, 0);
+		if(ret == -1) {
+			if(
+#ifndef USE_WINSOCK
+				errno == EINTR || errno == EAGAIN
+#  ifdef EWOULDBLOCK
+				|| errno == EWOULDBLOCK
+#  endif
+#else
+				WSAGetLastError() == WSAEINTR ||
+				WSAGetLastError() == WSAEINPROGRESS ||
+				WSAGetLastError() == WSAEWOULDBLOCK
+#endif
+				)
+				continue; /* Try again. */
+			log_err("fast reload send notification: send: %s",
+				sock_strerror(errno));
+			return;
+		} else if(ret+(ssize_t)bcount != sizeof(cmd)) {
+			bcount += ret;
+			if((size_t)bcount < sizeof(cmd))
+				continue;
+		}
+		break;
+	}
+}
+
+/** fast reload thread queue up text string for output */
+static int
+fr_output_text(struct fast_reload_thread* fr, const char* msg)
+{
+	char* item = strdup(msg);
+	if(!item) {
+		log_err("fast reload output text: strdup out of memory");
+		return 0;
+	}
+	lock_basic_lock(&fr->fr_output_lock);
+	if(!cfg_strlist_append(fr->fr_output, item)) {
+		lock_basic_unlock(&fr->fr_output_lock);
+		/* The item is freed by cfg_strlist_append on failure. */
+		log_err("fast reload output text: append out of memory");
+		return 0;
+	}
+	lock_basic_unlock(&fr->fr_output_lock);
+	return 1;
+}
+
+/** fast reload thread output vmsg function */
+static int
+fr_output_vmsg(struct fast_reload_thread* fr, const char* format, va_list args)
+{
+	char msg[1024];
+	vsnprintf(msg, sizeof(msg), format, args);
+	return fr_output_text(fr, msg);
+}
+
+/** fast reload thread printout function, with printf arguments */
+static int fr_output_printf(struct fast_reload_thread* fr,
+	const char* format, ...) ATTR_FORMAT(printf, 2, 3);
+
+/** fast reload thread printout function, prints to list and signals
+ * the remote control thread to move that to get written to the socket
+ * of the remote control connection. */
+static int
+fr_output_printf(struct fast_reload_thread* fr, const char* format, ...)
+{
+	va_list args;
+	int ret;
+	va_start(args, format);
+	ret = fr_output_vmsg(fr, format, args);
+	va_end(args);
+	return ret;
+}
+
+/** fast reload thread, init time counters */
+static void
+fr_init_time(struct timeval* time_start, struct timeval* time_read,
+	struct timeval* time_construct, struct timeval* time_reload,
+	struct timeval* time_end)
+{
+	memset(time_start, 0, sizeof(*time_start));
+	memset(time_read, 0, sizeof(*time_read));
+	memset(time_construct, 0, sizeof(*time_construct));
+	memset(time_reload, 0, sizeof(*time_reload));
+	memset(time_end, 0, sizeof(*time_end));
+	if(gettimeofday(time_start, NULL) < 0)
+		log_err("gettimeofday: %s", strerror(errno));
+}
+
+/**
+ * Structure with constructed elements for use during fast reload.
+ * At the start it contains the tree items for the new config.
+ * After the tree items are swapped into the server, the old elements
+ * are kept in here. They can then be deleted.
+ */
+struct fast_reload_construct {
+	/** construct for views */
+	struct views* views;
+	/** construct for forwards */
+	struct iter_forwards* fwds;
+	/** construct for stubs */
+	struct iter_hints* hints;
+	/** storage for the old configuration elements. The outer struct
+	 * is allocated with malloc here, the items are from config. */
+	struct config_file* oldcfg;
+};
+
+/** fast reload thread, read config */
+static int
+fr_read_config(struct fast_reload_thread* fr, struct config_file** newcfg)
+{
+	/* Create new config structure. */
+	*newcfg = config_create();
+	if(!*newcfg) {
+		if(!fr_output_printf(fr, "config_create failed: out of memory\n"))
+			return 0;
+		fr_send_notification(fr, fast_reload_notification_printout);
+		return 0;
+	}
+	if(fr_poll_for_quit(fr))
+		return 1;
+
+	/* Read new config from file */
+	if(!config_read(*newcfg, fr->worker->daemon->cfgfile,
+		fr->worker->daemon->chroot)) {
+		config_delete(*newcfg);
+		if(!fr_output_printf(fr, "config_read %s failed: %s\n",
+			fr->worker->daemon->cfgfile, strerror(errno)))
+			return 0;
+		fr_send_notification(fr, fast_reload_notification_printout);
+		return 0;
+	}
+	if(fr_poll_for_quit(fr))
+		return 1;
+	if(fr->fr_verb >= 1) {
+		if(!fr_output_printf(fr, "done read config file %s\n",
+			fr->worker->daemon->cfgfile))
+			return 0;
+		fr_send_notification(fr, fast_reload_notification_printout);
+	}
+
+	return 1;
+}
+
+/** Check if two taglists are equal. */
+static int
+taglist_equal(char** tagname_a, int num_tags_a, char** tagname_b,
+	int num_tags_b)
+{
+	int i;
+	if(num_tags_a != num_tags_b)
+		return 0;
+	for(i=0; i<num_tags_a; i++) {
+		if(strcmp(tagname_a[i], tagname_b[i]) != 0)
+			return 0;
+	}
+	return 1;
+}
+
+/** Check the change from a to b is only new entries at the end. */
+static int
+taglist_change_at_end(char** tagname_a, int num_tags_a, char** tagname_b,
+	int num_tags_b)
+{
+	if(num_tags_a < 0 || num_tags_b < 0)
+		return 0;
+	if(num_tags_a >= num_tags_b)
+		return 0;
+	/* So, b is longer than a. Check if the initial start of the two
+	 * taglists is the same. */
+	if(!taglist_equal(tagname_a, num_tags_a, tagname_b, num_tags_a))
+		return 0;
+	return 1;
+}
+
+/** fast reload thread, check tag defines. */
+static int
+fr_check_tag_defines(struct fast_reload_thread* fr, struct config_file* newcfg)
+{
+	/* The tags are kept in a bitlist for items. Some of them are stored
+	 * in query info. If the tags change, then the old values are
+	 * inaccurate. The solution is to then flush the query list.
+	 * Unless the change only involves adding new tags at the end, that
+	 * needs no changes. */
+	if(!taglist_equal(fr->worker->daemon->cfg->tagname,
+			fr->worker->daemon->cfg->num_tags, newcfg->tagname,
+			newcfg->num_tags) &&
+		!taglist_change_at_end(fr->worker->daemon->cfg->tagname,
+			fr->worker->daemon->cfg->num_tags, newcfg->tagname,
+			newcfg->num_tags)) {
+		/* The tags have changed too much, the define-tag config. */
+		if(fr->fr_drop_mesh)
+			return 1; /* already dropping queries */
+		fr->fr_drop_mesh = 1;
+		fr->worker->daemon->fast_reload_drop_mesh = fr->fr_drop_mesh;
+		if(!fr_output_printf(fr, "tags have changed, with "
+			"'define-tag', and the queries have to be dropped "
+			"for consistency, setting '+d'\n"))
+			return 0;
+		fr_send_notification(fr, fast_reload_notification_printout);
+	}
+	return 1;
+}
+
+/** fast reload thread, clear construct information, deletes items */
+static void
+fr_construct_clear(struct fast_reload_construct* ct)
+{
+	if(!ct)
+		return;
+	forwards_delete(ct->fwds);
+	hints_delete(ct->hints);
+	views_delete(ct->views);
+	/* Delete the log identity here so that the global value is not
+	 * reset by config_delete. */
+	if(ct->oldcfg && ct->oldcfg->log_identity) {
+		free(ct->oldcfg->log_identity);
+		ct->oldcfg->log_identity = NULL;
+	}
+	config_delete(ct->oldcfg);
+}
+
+/** get memory for strlist */
+static size_t
+getmem_config_strlist(struct config_strlist* p)
+{
+	size_t m = 0;
+	struct config_strlist* s;
+	for(s = p; s; s = s->next)
+		m += sizeof(*s) + getmem_str(s->str);
+	return m;
+}
+
+/** get memory for str2list */
+static size_t
+getmem_config_str2list(struct config_str2list* p)
+{
+	size_t m = 0;
+	struct config_str2list* s;
+	for(s = p; s; s = s->next)
+		m += sizeof(*s) + getmem_str(s->str) + getmem_str(s->str2);
+	return m;
+}
+
+/** get memory for str3list */
+static size_t
+getmem_config_str3list(struct config_str3list* p)
+{
+	size_t m = 0;
+	struct config_str3list* s;
+	for(s = p; s; s = s->next)
+		m += sizeof(*s) + getmem_str(s->str) + getmem_str(s->str2)
+			+ getmem_str(s->str3);
+	return m;
+}
+
+/** get memory for strbytelist */
+static size_t
+getmem_config_strbytelist(struct config_strbytelist* p)
+{
+	size_t m = 0;
+	struct config_strbytelist* s;
+	for(s = p; s; s = s->next)
+		m += sizeof(*s) + getmem_str(s->str) + (s->str2?s->str2len:0);
+	return m;
+}
+
+/** get memory used by ifs array */
+static size_t
+getmem_ifs(int numifs, char** ifs)
+{
+	size_t m = 0;
+	int i;
+	m += numifs * sizeof(char*);
+	for(i=0; i<numifs; i++)
+		m += getmem_str(ifs[i]);
+	return m;
+}
+
+/** get memory for config_stub */
+static size_t
+getmem_config_stub(struct config_stub* p)
+{
+	size_t m = 0;
+	struct config_stub* s;
+	for(s = p; s; s = s->next)
+		m += sizeof(*s) + getmem_str(s->name)
+			+ getmem_config_strlist(s->hosts)
+			+ getmem_config_strlist(s->addrs);
+	return m;
+}
+
+/** get memory for config_auth */
+static size_t
+getmem_config_auth(struct config_auth* p)
+{
+	size_t m = 0;
+	struct config_auth* s;
+	for(s = p; s; s = s->next)
+		m += sizeof(*s) + getmem_str(s->name)
+			+ getmem_config_strlist(s->masters)
+			+ getmem_config_strlist(s->urls)
+			+ getmem_config_strlist(s->allow_notify)
+			+ getmem_str(s->zonefile)
+			+ s->rpz_taglistlen
+			+ getmem_str(s->rpz_action_override)
+			+ getmem_str(s->rpz_log_name)
+			+ getmem_str(s->rpz_cname);
+	return m;
+}
+
+/** get memory for config_view */
+static size_t
+getmem_config_view(struct config_view* p)
+{
+	size_t m = 0;
+	struct config_view* s;
+	for(s = p; s; s = s->next)
+		m += sizeof(*s) + getmem_str(s->name)
+			+ getmem_config_str2list(s->local_zones)
+			+ getmem_config_strlist(s->local_data)
+			+ getmem_config_strlist(s->local_zones_nodefault)
+#ifdef USE_IPSET
+			+ getmem_config_strlist(s->local_zones_ipset)
+#endif
+			+ getmem_config_str2list(s->respip_actions)
+			+ getmem_config_str2list(s->respip_data);
+
+	return m;
+}
+
+/** get memory used by config_file item, estimate */
+static size_t
+config_file_getmem(struct config_file* cfg)
+{
+	size_t m = 0;
+	m += sizeof(*cfg);
+	m += getmem_config_strlist(cfg->proxy_protocol_port);
+	m += getmem_str(cfg->ssl_service_key);
+	m += getmem_str(cfg->ssl_service_pem);
+	m += getmem_str(cfg->tls_cert_bundle);
+	m += getmem_config_strlist(cfg->tls_additional_port);
+	m += getmem_config_strlist(cfg->tls_session_ticket_keys.first);
+	m += getmem_str(cfg->tls_ciphers);
+	m += getmem_str(cfg->tls_ciphersuites);
+	m += getmem_str(cfg->http_endpoint);
+	m += (cfg->outgoing_avail_ports?65536*sizeof(int):0);
+	m += getmem_str(cfg->target_fetch_policy);
+	m += getmem_str(cfg->if_automatic_ports);
+	m += getmem_ifs(cfg->num_ifs, cfg->ifs);
+	m += getmem_ifs(cfg->num_out_ifs, cfg->out_ifs);
+	m += getmem_config_strlist(cfg->root_hints);
+	m += getmem_config_stub(cfg->stubs);
+	m += getmem_config_stub(cfg->forwards);
+	m += getmem_config_auth(cfg->auths);
+	m += getmem_config_view(cfg->views);
+	m += getmem_config_strlist(cfg->donotqueryaddrs);
+#ifdef CLIENT_SUBNET
+	m += getmem_config_strlist(cfg->client_subnet);
+	m += getmem_config_strlist(cfg->client_subnet_zone);
+#endif
+	m += getmem_config_str2list(cfg->acls);
+	m += getmem_config_str2list(cfg->tcp_connection_limits);
+	m += getmem_config_strlist(cfg->caps_whitelist);
+	m += getmem_config_strlist(cfg->private_address);
+	m += getmem_config_strlist(cfg->private_domain);
+	m += getmem_str(cfg->chrootdir);
+	m += getmem_str(cfg->username);
+	m += getmem_str(cfg->directory);
+	m += getmem_str(cfg->logfile);
+	m += getmem_str(cfg->pidfile);
+	m += getmem_str(cfg->log_identity);
+	m += getmem_str(cfg->identity);
+	m += getmem_str(cfg->version);
+	m += getmem_str(cfg->http_user_agent);
+	m += getmem_str(cfg->nsid_cfg_str);
+	m += (cfg->nsid?cfg->nsid_len:0);
+	m += getmem_str(cfg->module_conf);
+	m += getmem_config_strlist(cfg->trust_anchor_file_list);
+	m += getmem_config_strlist(cfg->trust_anchor_list);
+	m += getmem_config_strlist(cfg->auto_trust_anchor_file_list);
+	m += getmem_config_strlist(cfg->trusted_keys_file_list);
+	m += getmem_config_strlist(cfg->domain_insecure);
+	m += getmem_str(cfg->val_nsec3_key_iterations);
+	m += getmem_config_str2list(cfg->local_zones);
+	m += getmem_config_strlist(cfg->local_zones_nodefault);
+#ifdef USE_IPSET
+	m += getmem_config_strlist(cfg->local_zones_ipset);
+#endif
+	m += getmem_config_strlist(cfg->local_data);
+	m += getmem_config_str3list(cfg->local_zone_overrides);
+	m += getmem_config_strbytelist(cfg->local_zone_tags);
+	m += getmem_config_strbytelist(cfg->acl_tags);
+	m += getmem_config_str3list(cfg->acl_tag_actions);
+	m += getmem_config_str3list(cfg->acl_tag_datas);
+	m += getmem_config_str2list(cfg->acl_view);
+	m += getmem_config_str2list(cfg->interface_actions);
+	m += getmem_config_strbytelist(cfg->interface_tags);
+	m += getmem_config_str3list(cfg->interface_tag_actions);
+	m += getmem_config_str3list(cfg->interface_tag_datas);
+	m += getmem_config_str2list(cfg->interface_view);
+	m += getmem_config_strbytelist(cfg->respip_tags);
+	m += getmem_config_str2list(cfg->respip_actions);
+	m += getmem_config_str2list(cfg->respip_data);
+	m += getmem_ifs(cfg->num_tags, cfg->tagname);
+	m += getmem_config_strlist(cfg->control_ifs.first);
+	m += getmem_str(cfg->server_key_file);
+	m += getmem_str(cfg->server_cert_file);
+	m += getmem_str(cfg->control_key_file);
+	m += getmem_str(cfg->control_cert_file);
+	m += getmem_config_strlist(cfg->python_script);
+	m += getmem_config_strlist(cfg->dynlib_file);
+	m += getmem_str(cfg->dns64_prefix);
+	m += getmem_config_strlist(cfg->dns64_ignore_aaaa);
+	m += getmem_str(cfg->nat64_prefix);
+	m += getmem_str(cfg->dnstap_socket_path);
+	m += getmem_str(cfg->dnstap_ip);
+	m += getmem_str(cfg->dnstap_tls_server_name);
+	m += getmem_str(cfg->dnstap_tls_cert_bundle);
+	m += getmem_str(cfg->dnstap_tls_client_key_file);
+	m += getmem_str(cfg->dnstap_tls_client_cert_file);
+	m += getmem_str(cfg->dnstap_identity);
+	m += getmem_str(cfg->dnstap_version);
+	m += getmem_config_str2list(cfg->ratelimit_for_domain);
+	m += getmem_config_str2list(cfg->ratelimit_below_domain);
+	m += getmem_config_str2list(cfg->edns_client_strings);
+	m += getmem_str(cfg->dnscrypt_provider);
+	m += getmem_config_strlist(cfg->dnscrypt_secret_key);
+	m += getmem_config_strlist(cfg->dnscrypt_provider_cert);
+	m += getmem_config_strlist(cfg->dnscrypt_provider_cert_rotated);
+#ifdef USE_IPSECMOD
+	m += getmem_config_strlist(cfg->ipsecmod_whitelist);
+	m += getmem_str(cfg->ipsecmod_hook);
+#endif
+#ifdef USE_CACHEDB
+	m += getmem_str(cfg->cachedb_backend);
+	m += getmem_str(cfg->cachedb_secret);
+#ifdef USE_REDIS
+	m += getmem_str(cfg->redis_server_host);
+	m += getmem_str(cfg->redis_server_path);
+	m += getmem_str(cfg->redis_server_password);
+#endif
+#endif
+#ifdef USE_IPSET
+	m += getmem_str(cfg->ipset_name_v4);
+	m += getmem_str(cfg->ipset_name_v6);
+#endif
+	return m;
+}
+
+/** fast reload thread, print memory used by construct of items. */
+static int
+fr_printmem(struct fast_reload_thread* fr,
+	struct config_file* newcfg, struct fast_reload_construct* ct)
+{
+	size_t mem = 0;
+	if(fr_poll_for_quit(fr))
+		return 1;
+	mem += views_get_mem(ct->views);
+	mem += forwards_get_mem(ct->fwds);
+	mem += hints_get_mem(ct->hints);
+	mem += sizeof(*ct->oldcfg);
+	mem += config_file_getmem(newcfg);
+
+	if(!fr_output_printf(fr, "memory use %d bytes\n", (int)mem))
+		return 0;
+	fr_send_notification(fr, fast_reload_notification_printout);
+
+	return 1;
+}
+
+/** fast reload thread, construct from config the new items */
+static int
+fr_construct_from_config(struct fast_reload_thread* fr,
+	struct config_file* newcfg, struct fast_reload_construct* ct)
+{
+	if(!(ct->views = views_create())) {
+		fr_construct_clear(ct);
+		return 0;
+	}
+	if(!views_apply_cfg(ct->views, newcfg)) {
+		fr_construct_clear(ct);
+		return 0;
+	}
+	if(fr_poll_for_quit(fr))
+		return 1;
+
+	if(!(ct->fwds = forwards_create())) {
+		fr_construct_clear(ct);
+		return 0;
+	}
+	if(!forwards_apply_cfg(ct->fwds, newcfg)) {
+		fr_construct_clear(ct);
+		return 0;
+	}
+	if(fr_poll_for_quit(fr))
+		return 1;
+
+	if(!(ct->hints = hints_create()))
+		return 0;
+	if(!hints_apply_cfg(ct->hints, newcfg)) {
+		fr_construct_clear(ct);
+		return 0;
+	}
+	if(fr_poll_for_quit(fr))
+		return 1;
+
+	if(!(ct->oldcfg = (struct config_file*)calloc(1,
+		sizeof(*ct->oldcfg)))) {
+		fr_construct_clear(ct);
+		log_err("out of memory");
+		return 0;
+	}
+	if(fr->fr_verb >= 2) {
+		if(!fr_printmem(fr, newcfg, ct))
+			return 0;
+	}
+	return 1;
+}
+
+/** fast reload thread, finish timers */
+static int
+fr_finish_time(struct fast_reload_thread* fr, struct timeval* time_start,
+	struct timeval* time_read, struct timeval* time_construct,
+	struct timeval* time_reload, struct timeval* time_end)
+{
+	struct timeval total, readtime, constructtime, reloadtime, deletetime;
+	if(gettimeofday(time_end, NULL) < 0)
+		log_err("gettimeofday: %s", strerror(errno));
+
+	timeval_subtract(&total, time_end, time_start);
+	timeval_subtract(&readtime, time_read, time_start);
+	timeval_subtract(&constructtime, time_construct, time_read);
+	timeval_subtract(&reloadtime, time_reload, time_construct);
+	timeval_subtract(&deletetime, time_end, time_reload);
+	if(!fr_output_printf(fr, "read disk  %3d.%6.6ds\n",
+		(int)readtime.tv_sec, (int)readtime.tv_usec))
+		return 0;
+	if(!fr_output_printf(fr, "construct  %3d.%6.6ds\n",
+		(int)constructtime.tv_sec, (int)constructtime.tv_usec))
+		return 0;
+	if(!fr_output_printf(fr, "reload     %3d.%6.6ds\n",
+		(int)reloadtime.tv_sec, (int)reloadtime.tv_usec))
+		return 0;
+	if(!fr_output_printf(fr, "deletes    %3d.%6.6ds\n",
+		(int)deletetime.tv_sec, (int)deletetime.tv_usec))
+		return 0;
+	if(!fr_output_printf(fr, "total time %3d.%6.6ds\n", (int)total.tv_sec,
+		(int)total.tv_usec))
+		return 0;
+	fr_send_notification(fr, fast_reload_notification_printout);
+	return 1;
+}
+
+#ifdef ATOMIC_POINTER_LOCK_FREE
+/** Fast reload thread, if atomics are available, copy the config items
+ * one by one with atomic store operations. */
+static void
+fr_atomic_copy_cfg(struct config_file* oldcfg, struct config_file* cfg,
+	struct config_file* newcfg)
+{
+#define COPY_VAR(var) oldcfg->var = cfg->var; atomic_store(&cfg->var, newcfg->var); newcfg->var = 0;
+	/* If config file items are missing from this list, they are
+	 * not updated by fast-reload +p. */
+	/* For missing items, the oldcfg item is not updated, still NULL,
+	 * and the cfg stays the same. The newcfg item is untouched.
+	 * The newcfg item is then deleted later. */
+	/* Items that need synchronisation are omitted from the list.
+	 * Use fast-reload without +p to update them together. */
+	COPY_VAR(verbosity);
+	COPY_VAR(stat_interval);
+	COPY_VAR(stat_cumulative);
+	COPY_VAR(stat_extended);
+	COPY_VAR(stat_inhibit_zero);
+	COPY_VAR(num_threads);
+	COPY_VAR(port);
+	COPY_VAR(do_ip4);
+	COPY_VAR(do_ip6);
+	COPY_VAR(do_nat64);
+	COPY_VAR(prefer_ip4);
+	COPY_VAR(prefer_ip6);
+	COPY_VAR(do_udp);
+	COPY_VAR(do_tcp);
+	COPY_VAR(max_reuse_tcp_queries);
+	COPY_VAR(tcp_reuse_timeout);
+	COPY_VAR(tcp_auth_query_timeout);
+	COPY_VAR(tcp_upstream);
+	COPY_VAR(udp_upstream_without_downstream);
+	COPY_VAR(tcp_mss);
+	COPY_VAR(outgoing_tcp_mss);
+	COPY_VAR(tcp_idle_timeout);
+	COPY_VAR(do_tcp_keepalive);
+	COPY_VAR(tcp_keepalive_timeout);
+	COPY_VAR(sock_queue_timeout);
+	COPY_VAR(proxy_protocol_port);
+	COPY_VAR(ssl_service_key);
+	COPY_VAR(ssl_service_pem);
+	COPY_VAR(ssl_port);
+	COPY_VAR(ssl_upstream);
+	COPY_VAR(tls_cert_bundle);
+	COPY_VAR(tls_win_cert);
+	COPY_VAR(tls_additional_port);
+	/* The first is used to walk throught the list but last is
+	 * only used during config read. */
+	COPY_VAR(tls_session_ticket_keys.first);
+	COPY_VAR(tls_session_ticket_keys.last);
+	COPY_VAR(tls_ciphers);
+	COPY_VAR(tls_ciphersuites);
+	COPY_VAR(tls_use_sni);
+	COPY_VAR(https_port);
+	COPY_VAR(http_endpoint);
+	COPY_VAR(http_max_streams);
+	COPY_VAR(http_query_buffer_size);
+	COPY_VAR(http_response_buffer_size);
+	COPY_VAR(http_nodelay);
+	COPY_VAR(http_notls_downstream);
+	COPY_VAR(outgoing_num_ports);
+	COPY_VAR(outgoing_num_tcp);
+	COPY_VAR(incoming_num_tcp);
+	COPY_VAR(outgoing_avail_ports);
+	COPY_VAR(edns_buffer_size);
+	COPY_VAR(stream_wait_size);
+	COPY_VAR(msg_buffer_size);
+	COPY_VAR(msg_cache_size);
+	COPY_VAR(msg_cache_slabs);
+	COPY_VAR(num_queries_per_thread);
+	COPY_VAR(jostle_time);
+	COPY_VAR(rrset_cache_size);
+	COPY_VAR(rrset_cache_slabs);
+	COPY_VAR(host_ttl);
+	COPY_VAR(infra_cache_slabs);
+	COPY_VAR(infra_cache_numhosts);
+	COPY_VAR(infra_cache_min_rtt);
+	COPY_VAR(infra_cache_max_rtt);
+	COPY_VAR(infra_keep_probing);
+	COPY_VAR(delay_close);
+	COPY_VAR(udp_connect);
+	COPY_VAR(target_fetch_policy);
+	COPY_VAR(fast_server_permil);
+	COPY_VAR(fast_server_num);
+	COPY_VAR(if_automatic);
+	COPY_VAR(if_automatic_ports);
+	COPY_VAR(so_rcvbuf);
+	COPY_VAR(so_sndbuf);
+	COPY_VAR(so_reuseport);
+	COPY_VAR(ip_transparent);
+	COPY_VAR(ip_freebind);
+	COPY_VAR(ip_dscp);
+	/* Not copied because the length and items could then not match.
+	   num_ifs, ifs, num_out_ifs, out_ifs
+	*/
+	COPY_VAR(root_hints);
+	COPY_VAR(stubs);
+	COPY_VAR(forwards);
+	COPY_VAR(auths);
+	COPY_VAR(views);
+	COPY_VAR(donotqueryaddrs);
+#ifdef CLIENT_SUBNET
+	COPY_VAR(client_subnet);
+	COPY_VAR(client_subnet_zone);
+	COPY_VAR(client_subnet_opcode);
+	COPY_VAR(client_subnet_always_forward);
+	COPY_VAR(max_client_subnet_ipv4);
+	COPY_VAR(max_client_subnet_ipv6);
+	COPY_VAR(min_client_subnet_ipv4);
+	COPY_VAR(min_client_subnet_ipv6);
+	COPY_VAR(max_ecs_tree_size_ipv4);
+	COPY_VAR(max_ecs_tree_size_ipv6);
+#endif
+	COPY_VAR(acls);
+	COPY_VAR(donotquery_localhost);
+	COPY_VAR(tcp_connection_limits);
+	COPY_VAR(harden_short_bufsize);
+	COPY_VAR(harden_large_queries);
+	COPY_VAR(harden_glue);
+	COPY_VAR(harden_dnssec_stripped);
+	COPY_VAR(harden_below_nxdomain);
+	COPY_VAR(harden_referral_path);
+	COPY_VAR(harden_algo_downgrade);
+	COPY_VAR(harden_unknown_additional);
+	COPY_VAR(use_caps_bits_for_id);
+	COPY_VAR(caps_whitelist);
+	COPY_VAR(private_address);
+	COPY_VAR(private_domain);
+	COPY_VAR(unwanted_threshold);
+	COPY_VAR(max_ttl);
+	COPY_VAR(min_ttl);
+	COPY_VAR(max_negative_ttl);
+	COPY_VAR(prefetch);
+	COPY_VAR(prefetch_key);
+	COPY_VAR(deny_any);
+	COPY_VAR(chrootdir);
+	COPY_VAR(username);
+	COPY_VAR(directory);
+	COPY_VAR(logfile);
+	COPY_VAR(pidfile);
+	COPY_VAR(use_syslog);
+	COPY_VAR(log_time_ascii);
+	COPY_VAR(log_queries);
+	COPY_VAR(log_replies);
+	COPY_VAR(log_tag_queryreply);
+	COPY_VAR(log_local_actions);
+	COPY_VAR(log_servfail);
+	COPY_VAR(log_identity);
+	COPY_VAR(log_destaddr);
+	COPY_VAR(hide_identity);
+	COPY_VAR(hide_version);
+	COPY_VAR(hide_trustanchor);
+	COPY_VAR(hide_http_user_agent);
+	COPY_VAR(identity);
+	COPY_VAR(version);
+	COPY_VAR(http_user_agent);
+	COPY_VAR(nsid_cfg_str);
+	/* Not copied because the length and items could then not match.
+	nsid;
+	nsid_len;
+	*/
+	COPY_VAR(module_conf);
+	COPY_VAR(trust_anchor_file_list);
+	COPY_VAR(trust_anchor_list);
+	COPY_VAR(auto_trust_anchor_file_list);
+	COPY_VAR(trusted_keys_file_list);
+	COPY_VAR(domain_insecure);
+	COPY_VAR(trust_anchor_signaling);
+	COPY_VAR(root_key_sentinel);
+	COPY_VAR(val_date_override);
+	COPY_VAR(val_sig_skew_min);
+	COPY_VAR(val_sig_skew_max);
+	COPY_VAR(val_max_restart);
+	COPY_VAR(bogus_ttl);
+	COPY_VAR(val_clean_additional);
+	COPY_VAR(val_log_level);
+	COPY_VAR(val_log_squelch);
+	COPY_VAR(val_permissive_mode);
+	COPY_VAR(aggressive_nsec);
+	COPY_VAR(ignore_cd);
+	COPY_VAR(disable_edns_do);
+	COPY_VAR(serve_expired);
+	COPY_VAR(serve_expired_ttl);
+	COPY_VAR(serve_expired_ttl_reset);
+	COPY_VAR(serve_expired_reply_ttl);
+	COPY_VAR(serve_expired_client_timeout);
+	COPY_VAR(ede_serve_expired);
+	COPY_VAR(serve_original_ttl);
+	COPY_VAR(val_nsec3_key_iterations);
+	COPY_VAR(zonemd_permissive_mode);
+	COPY_VAR(add_holddown);
+	COPY_VAR(del_holddown);
+	COPY_VAR(keep_missing);
+	COPY_VAR(permit_small_holddown);
+	COPY_VAR(key_cache_size);
+	COPY_VAR(key_cache_slabs);
+	COPY_VAR(neg_cache_size);
+	COPY_VAR(local_zones);
+	COPY_VAR(local_zones_nodefault);
+#ifdef USE_IPSET
+	COPY_VAR(local_zones_ipset);
+#endif
+	COPY_VAR(local_zones_disable_default);
+	COPY_VAR(local_data);
+	COPY_VAR(local_zone_overrides);
+	COPY_VAR(unblock_lan_zones);
+	COPY_VAR(insecure_lan_zones);
+	/* These reference tags
+	COPY_VAR(local_zone_tags);
+	COPY_VAR(acl_tags);
+	COPY_VAR(acl_tag_actions);
+	COPY_VAR(acl_tag_datas);
+	*/
+	COPY_VAR(acl_view);
+	COPY_VAR(interface_actions);
+	/* These reference tags
+	COPY_VAR(interface_tags);
+	COPY_VAR(interface_tag_actions);
+	COPY_VAR(interface_tag_datas);
+	*/
+	COPY_VAR(interface_view);
+	/* This references tags
+	COPY_VAR(respip_tags);
+	*/
+	COPY_VAR(respip_actions);
+	COPY_VAR(respip_data);
+	/* Not copied because the length and items could then not match.
+	 * also the respip module keeps a pointer to the array in its state.
+	   tagname, num_tags
+	*/
+	COPY_VAR(remote_control_enable);
+	/* The first is used to walk throught the list but last is
+	 * only used during config read. */
+	COPY_VAR(control_ifs.first);
+	COPY_VAR(control_ifs.last);
+	COPY_VAR(control_use_cert);
+	COPY_VAR(control_port);
+	COPY_VAR(server_key_file);
+	COPY_VAR(server_cert_file);
+	COPY_VAR(control_key_file);
+	COPY_VAR(control_cert_file);
+	COPY_VAR(python_script);
+	COPY_VAR(dynlib_file);
+	COPY_VAR(use_systemd);
+	COPY_VAR(do_daemonize);
+	COPY_VAR(minimal_responses);
+	COPY_VAR(rrset_roundrobin);
+	COPY_VAR(unknown_server_time_limit);
+	COPY_VAR(max_udp_size);
+	COPY_VAR(dns64_prefix);
+	COPY_VAR(dns64_synthall);
+	COPY_VAR(dns64_ignore_aaaa);
+	COPY_VAR(nat64_prefix);
+	COPY_VAR(dnstap);
+	COPY_VAR(dnstap_bidirectional);
+	COPY_VAR(dnstap_socket_path);
+	COPY_VAR(dnstap_ip);
+	COPY_VAR(dnstap_tls);
+	COPY_VAR(dnstap_tls_server_name);
+	COPY_VAR(dnstap_tls_cert_bundle);
+	COPY_VAR(dnstap_tls_client_key_file);
+	COPY_VAR(dnstap_tls_client_cert_file);
+	COPY_VAR(dnstap_send_identity);
+	COPY_VAR(dnstap_send_version);
+	COPY_VAR(dnstap_identity);
+	COPY_VAR(dnstap_version);
+	COPY_VAR(dnstap_log_resolver_query_messages);
+	COPY_VAR(dnstap_log_resolver_response_messages);
+	COPY_VAR(dnstap_log_client_query_messages);
+	COPY_VAR(dnstap_log_client_response_messages);
+	COPY_VAR(dnstap_log_forwarder_query_messages);
+	COPY_VAR(dnstap_log_forwarder_response_messages);
+	COPY_VAR(disable_dnssec_lame_check);
+	COPY_VAR(ip_ratelimit);
+	COPY_VAR(ip_ratelimit_cookie);
+	COPY_VAR(ip_ratelimit_slabs);
+	COPY_VAR(ip_ratelimit_size);
+	COPY_VAR(ip_ratelimit_factor);
+	COPY_VAR(ip_ratelimit_backoff);
+	COPY_VAR(ratelimit);
+	COPY_VAR(ratelimit_slabs);
+	COPY_VAR(ratelimit_size);
+	COPY_VAR(ratelimit_for_domain);
+	COPY_VAR(ratelimit_below_domain);
+	COPY_VAR(ratelimit_factor);
+	COPY_VAR(ratelimit_backoff);
+	COPY_VAR(outbound_msg_retry);
+	COPY_VAR(max_sent_count);
+	COPY_VAR(max_query_restarts);
+	COPY_VAR(qname_minimisation);
+	COPY_VAR(qname_minimisation_strict);
+	COPY_VAR(shm_enable);
+	COPY_VAR(shm_key);
+	COPY_VAR(edns_client_strings);
+	COPY_VAR(edns_client_string_opcode);
+	COPY_VAR(dnscrypt);
+	COPY_VAR(dnscrypt_port);
+	COPY_VAR(dnscrypt_provider);
+	COPY_VAR(dnscrypt_secret_key);
+	COPY_VAR(dnscrypt_provider_cert);
+	COPY_VAR(dnscrypt_provider_cert_rotated);
+	COPY_VAR(dnscrypt_shared_secret_cache_size);
+	COPY_VAR(dnscrypt_shared_secret_cache_slabs);
+	COPY_VAR(dnscrypt_nonce_cache_size);
+	COPY_VAR(dnscrypt_nonce_cache_slabs);
+	COPY_VAR(pad_responses);
+	COPY_VAR(pad_responses_block_size);
+	COPY_VAR(pad_queries);
+	COPY_VAR(pad_queries_block_size);
+#ifdef USE_IPSECMOD
+	COPY_VAR(ipsecmod_enabled);
+	COPY_VAR(ipsecmod_whitelist);
+	COPY_VAR(ipsecmod_hook);
+	COPY_VAR(ipsecmod_ignore_bogus);
+	COPY_VAR(ipsecmod_max_ttl);
+	COPY_VAR(ipsecmod_strict);
+#endif
+#ifdef USE_CACHEDB
+	COPY_VAR(cachedb_backend);
+	COPY_VAR(cachedb_secret);
+	COPY_VAR(cachedb_no_store);
+#ifdef USE_REDIS
+	COPY_VAR(redis_server_host);
+	COPY_VAR(redis_server_port);
+	COPY_VAR(redis_server_path);
+	COPY_VAR(redis_server_password);
+	COPY_VAR(redis_timeout);
+	COPY_VAR(redis_expire_records);
+	COPY_VAR(redis_logical_db);
+#endif
+#endif
+	COPY_VAR(do_answer_cookie);
+	/* Not copied because the length and content could then not match.
+	   cookie_secret[40], cookie_secret_len
+	*/
+#ifdef USE_IPSET
+	COPY_VAR(ipset_name_v4);
+	COPY_VAR(ipset_name_v6);
+#endif
+	COPY_VAR(ede);
+}
+#endif /* ATOMIC_POINTER_LOCK_FREE */
+
+/** fast reload thread, reload config with putting the new config items
+ * in place and swapping out the old items. */
+static int
+fr_reload_config(struct fast_reload_thread* fr, struct config_file* newcfg,
+	struct fast_reload_construct* ct)
+{
+	struct daemon* daemon = fr->worker->daemon;
+	struct module_env* env = daemon->env;
+
+	/* These are constructed in the fr_construct_from_config routine. */
+	log_assert(ct->oldcfg);
+	log_assert(ct->fwds);
+	log_assert(ct->hints);
+
+	/* Grab big locks to satisfy lock conditions. */
+	lock_rw_wrlock(&ct->views->lock);
+	lock_rw_wrlock(&daemon->views->lock);
+	lock_rw_wrlock(&ct->fwds->lock);
+	lock_rw_wrlock(&ct->hints->lock);
+	lock_rw_wrlock(&env->fwds->lock);
+	lock_rw_wrlock(&env->hints->lock);
+
+#ifdef ATOMIC_POINTER_LOCK_FREE
+	if(fr->fr_nopause) {
+		fr_atomic_copy_cfg(ct->oldcfg, env->cfg, newcfg);
+	} else {
+#endif
+		/* Store old config elements. */
+		*ct->oldcfg = *env->cfg;
+		/* Insert new config elements. */
+		*env->cfg = *newcfg;
+#ifdef ATOMIC_POINTER_LOCK_FREE
+	}
+#endif
+
+	if(env->cfg->log_identity || ct->oldcfg->log_identity) {
+		/* pick up new log_identity string to use for log output. */
+		log_ident_set_or_default(env->cfg->log_identity);
+	}
+	/* the newcfg elements are in env->cfg, so should not be freed here. */
+#ifdef ATOMIC_POINTER_LOCK_FREE
+	/* if used, the routine that copies the config has zeroed items. */
+	if(!fr->fr_nopause)
+#endif
+		memset(newcfg, 0, sizeof(*newcfg));
+
+	/* Quickly swap the tree roots themselves with the already allocated
+	 * elements. This is a quick swap operation on the pointer.
+	 * The other threads are stopped and locks are held, so that a
+	 * consistent view of the configuration, before, and after, exists
+	 * towards the state machine for query resolution. */
+	forwards_swap_tree(env->fwds, ct->fwds);
+	hints_swap_tree(env->hints, ct->hints);
+	views_swap_tree(daemon->views, ct->views);
+
+	/* Set globals with new config. */
+	config_apply(env->cfg);
+
+	lock_rw_unlock(&ct->views->lock);
+	lock_rw_unlock(&daemon->views->lock);
+	lock_rw_unlock(&env->fwds->lock);
+	lock_rw_unlock(&env->hints->lock);
+	lock_rw_unlock(&ct->fwds->lock);
+	lock_rw_unlock(&ct->hints->lock);
+
+	return 1;
+}
+
+/** fast reload, poll for ack incoming. */
+static void
+fr_poll_for_ack(struct fast_reload_thread* fr)
+{
+	int loopexit = 0, bcount = 0;
+	uint32_t cmd;
+	ssize_t ret;
+
+	if(fr->need_to_quit)
+		return;
+	/* Is there data? */
+	if(!sock_poll_timeout(fr->commpair[1], -1, 1, 0, NULL)) {
+		log_err("fr_poll_for_ack: poll failed");
+		return;
+	}
+
+	/* Read the data */
+	while(1) {
+		if(++loopexit > IPC_LOOP_MAX) {
+			log_err("fr_poll_for_ack: recv loops %s",
+				sock_strerror(errno));
+			return;
+		}
+		ret = recv(fr->commpair[1], ((char*)&cmd)+bcount,
+			sizeof(cmd)-bcount, 0);
+		if(ret == -1) {
+			if(
+#ifndef USE_WINSOCK
+				errno == EINTR || errno == EAGAIN
+#  ifdef EWOULDBLOCK
+				|| errno == EWOULDBLOCK
+#  endif
+#else
+				WSAGetLastError() == WSAEINTR ||
+				WSAGetLastError() == WSAEINPROGRESS ||
+				WSAGetLastError() == WSAEWOULDBLOCK
+#endif
+				)
+				continue; /* Try again. */
+			log_err("fr_poll_for_ack: recv: %s",
+				sock_strerror(errno));
+			return;
+		} else if(ret+(ssize_t)bcount != sizeof(cmd)) {
+			bcount += ret;
+			if((size_t)bcount < sizeof(cmd))
+				continue;
+		}
+		break;
+	}
+	if(cmd == fast_reload_notification_exit) {
+		fr->need_to_quit = 1;
+		verbose(VERB_ALGO, "fast reload wait for ack: "
+			"exit notification received");
+		return;
+	}
+	if(cmd != fast_reload_notification_reload_ack) {
+		verbose(VERB_ALGO, "fast reload wait for ack: "
+			"wrong notification %d", (int)cmd);
+	}
+}
+
+/** fast reload thread, reload ipc communication to stop and start threads. */
+static int
+fr_reload_ipc(struct fast_reload_thread* fr, struct config_file* newcfg,
+	struct fast_reload_construct* ct)
+{
+	int result = 1;
+	if(!fr->fr_nopause) {
+		fr_send_notification(fr, fast_reload_notification_reload_stop);
+		fr_poll_for_ack(fr);
+	}
+	if(!fr_reload_config(fr, newcfg, ct)) {
+		result = 0;
+	}
+	if(!fr->fr_nopause) {
+		fr_send_notification(fr, fast_reload_notification_reload_start);
+	}
+	return result;
+}
+
+/** fast reload thread, load config */
+static int
+fr_load_config(struct fast_reload_thread* fr, struct timeval* time_read,
+	struct timeval* time_construct, struct timeval* time_reload)
+{
+	struct fast_reload_construct ct;
+	struct config_file* newcfg = NULL;
+	memset(&ct, 0, sizeof(ct));
+
+	/* Read file. */
+	if(!fr_read_config(fr, &newcfg))
+		return 0;
+	if(gettimeofday(time_read, NULL) < 0)
+		log_err("gettimeofday: %s", strerror(errno));
+	if(fr_poll_for_quit(fr)) {
+		config_delete(newcfg);
+		return 1;
+	}
+
+	/* Check if the config can be loaded */
+	if(!fr_check_tag_defines(fr, newcfg)) {
+		config_delete(newcfg);
+		return 0;
+	}
+	if(fr_poll_for_quit(fr)) {
+		config_delete(newcfg);
+		return 1;
+	}
+
+	/* Construct items. */
+	if(!fr_construct_from_config(fr, newcfg, &ct)) {
+		config_delete(newcfg);
+		if(!fr_output_printf(fr, "Could not construct from the "
+			"config, check for errors with unbound-checkconf, or "
+			"out of memory.\n"))
+			return 0;
+		fr_send_notification(fr, fast_reload_notification_printout);
+		return 0;
+	}
+	if(gettimeofday(time_construct, NULL) < 0)
+		log_err("gettimeofday: %s", strerror(errno));
+	if(fr_poll_for_quit(fr)) {
+		config_delete(newcfg);
+		fr_construct_clear(&ct);
+		return 1;
+	}
+
+	/* Reload server. */
+	if(!fr_reload_ipc(fr, newcfg, &ct)) {
+		config_delete(newcfg);
+		fr_construct_clear(&ct);
+		if(!fr_output_printf(fr, "error: reload failed\n"))
+			return 0;
+		fr_send_notification(fr, fast_reload_notification_printout);
+		return 0;
+	}
+	if(gettimeofday(time_reload, NULL) < 0)
+		log_err("gettimeofday: %s", strerror(errno));
+
+	/* Delete old. */
+	if(fr_poll_for_quit(fr)) {
+		config_delete(newcfg);
+		fr_construct_clear(&ct);
+		return 1;
+	}
+	if(fr->fr_nopause) {
+		/* Poll every thread, with a no-work poll item over the
+		 * command pipe. This makes the worker thread surely move
+		 * to deal with that event, and thus the thread is no longer
+		 * holding, eg. a string item from the old config struct.
+		 * And then the old config struct can safely be deleted.
+		 * Only needed when nopause is used, because without that
+		 * the worker threads are already waiting on a command pipe
+		 * item. This nopause command pipe item does not take work,
+		 * it returns immediately, so it does not delay the workers.
+		 * They can be polled one at a time. But its processing causes
+		 * the worker to have released data items from old config. */
+		fr_send_notification(fr,
+			fast_reload_notification_reload_nopause_poll);
+		fr_poll_for_ack(fr);
+	}
+	config_delete(newcfg);
+	fr_construct_clear(&ct);
+	return 1;
+}
+
+/** fast reload thread. the thread main function */
+static void* fast_reload_thread_main(void* arg)
+{
+	struct fast_reload_thread* fast_reload_thread = (struct fast_reload_thread*)arg;
+	struct timeval time_start, time_read, time_construct, time_reload,
+		time_end;
+	log_thread_set(&fast_reload_thread->threadnum);
+
+	verbose(VERB_ALGO, "start fast reload thread");
+	if(fast_reload_thread->fr_verb >= 1) {
+		fr_init_time(&time_start, &time_read, &time_construct,
+			&time_reload, &time_end);
+		if(fr_poll_for_quit(fast_reload_thread))
+			goto done;
+	}
+
+	/* print output to the client */
+	if(fast_reload_thread->fr_verb >= 1) {
+		if(!fr_output_printf(fast_reload_thread, "thread started\n"))
+			goto done_error;
+		fr_send_notification(fast_reload_thread,
+			fast_reload_notification_printout);
+		if(fr_poll_for_quit(fast_reload_thread))
+			goto done;
+	}
+
+	if(!fr_load_config(fast_reload_thread, &time_read, &time_construct,
+		&time_reload))
+		goto done_error;
+	if(fr_poll_for_quit(fast_reload_thread))
+		goto done;
+
+	if(fast_reload_thread->fr_verb >= 1) {
+		if(!fr_finish_time(fast_reload_thread, &time_start, &time_read,
+			&time_construct, &time_reload, &time_end))
+			goto done_error;
+		if(fr_poll_for_quit(fast_reload_thread))
+			goto done;
+	}
+
+	if(!fr_output_printf(fast_reload_thread, "ok\n"))
+		goto done_error;
+	fr_send_notification(fast_reload_thread,
+		fast_reload_notification_printout);
+	verbose(VERB_ALGO, "stop fast reload thread");
+	/* If this is not an exit due to quit earlier, send regular done. */
+	if(!fast_reload_thread->need_to_quit)
+		fr_send_notification(fast_reload_thread,
+			fast_reload_notification_done);
+	/* If during the fast_reload_notification_done send,
+	 * fast_reload_notification_exit was received, ack it. If the
+	 * thread is exiting due to quit received earlier, also ack it.*/
+done:
+	if(fast_reload_thread->need_to_quit)
+		fr_send_notification(fast_reload_thread,
+			fast_reload_notification_exited);
+	return NULL;
+done_error:
+	verbose(VERB_ALGO, "stop fast reload thread with done_error");
+	fr_send_notification(fast_reload_thread,
+		fast_reload_notification_done_error);
+	return NULL;
+}
+#endif /* !THREADS_DISABLED */
+
+/** create a socketpair for bidirectional communication, false on failure */
+static int
+create_socketpair(int* pair, struct ub_randstate* rand)
+{
+#ifndef USE_WINSOCK
+	if(socketpair(AF_UNIX, SOCK_STREAM, 0, pair) == -1) {
+		log_err("socketpair: %s", strerror(errno));
+		return 0;
+	}
+	(void)rand;
+#else
+	struct sockaddr_in addr, baddr, accaddr, connaddr;
+	socklen_t baddrlen, accaddrlen, connaddrlen;
+	uint8_t localhost[] = {127, 0, 0, 1};
+	uint8_t nonce[16], recvnonce[16];
+	size_t i;
+	int lst, pollin_event, bcount, loopcount;
+	int connect_poll_timeout = 200; /* msec to wait for connection */
+	ssize_t ret;
+	pair[0] = -1;
+	pair[1] = -1;
+	for(i=0; i<sizeof(nonce); i++) {
+		nonce[i] = ub_random_max(rand, 256);
+	}
+	lst = socket(AF_INET, SOCK_STREAM, 0);
+	if(lst == -1) {
+		log_err("create_socketpair: socket: %s", sock_strerror(errno));
+		return 0;
+	}
+	memset(&addr, 0, sizeof(addr));
+	addr.sin_family = AF_INET;
+	addr.sin_port = 0;
+	memcpy(&addr.sin_addr, localhost, 4);
+	if(bind(lst, (struct sockaddr*)&addr, (socklen_t)sizeof(addr))
+		== -1) {
+		log_err("create socketpair: bind: %s", sock_strerror(errno));
+		sock_close(lst);
+		return 0;
+	}
+	if(listen(lst, 12) == -1) {
+		log_err("create socketpair: listen: %s", sock_strerror(errno));
+		sock_close(lst);
+		return 0;
+	}
+
+	pair[1] = socket(AF_INET, SOCK_STREAM, 0);
+	if(pair[1] == -1) {
+		log_err("create socketpair: socket: %s", sock_strerror(errno));
+		sock_close(lst);
+		return 0;
+	}
+	baddrlen = (socklen_t)sizeof(baddr);
+	if(getsockname(lst, (struct sockaddr*)&baddr, &baddrlen) == -1) {
+		log_err("create socketpair: getsockname: %s",
+			sock_strerror(errno));
+		sock_close(lst);
+		sock_close(pair[1]);
+		pair[1] = -1;
+		return 0;
+	}
+	if(baddrlen > (socklen_t)sizeof(baddr)) {
+		log_err("create socketpair: getsockname returned addr too big");
+		sock_close(lst);
+		sock_close(pair[1]);
+		pair[1] = -1;
+		return 0;
+	}
+	/* the socket is blocking */
+	if(connect(pair[1], (struct sockaddr*)&baddr, baddrlen) == -1) {
+		log_err("create socketpair: connect: %s",
+			sock_strerror(errno));
+		sock_close(lst);
+		sock_close(pair[1]);
+		pair[1] = -1;
+		return 0;
+	}
+	if(!sock_poll_timeout(lst, connect_poll_timeout, 1, 0, &pollin_event)) {
+		log_err("create socketpair: poll for accept failed: %s",
+			sock_strerror(errno));
+		sock_close(lst);
+		sock_close(pair[1]);
+		pair[1] = -1;
+		return 0;
+	}
+	if(!pollin_event) {
+		log_err("create socketpair: poll timeout for accept");
+		sock_close(lst);
+		sock_close(pair[1]);
+		pair[1] = -1;
+		return 0;
+	}
+	accaddrlen = (socklen_t)sizeof(accaddr);
+	pair[0] = accept(lst, &accaddr, &accaddrlen);
+	if(pair[0] == -1) {
+		log_err("create socketpair: accept: %s", sock_strerror(errno));
+		sock_close(lst);
+		sock_close(pair[1]);
+		pair[1] = -1;
+		return 0;
+	}
+	if(accaddrlen > (socklen_t)sizeof(accaddr)) {
+		log_err("create socketpair: accept returned addr too big");
+		sock_close(lst);
+		sock_close(pair[0]);
+		sock_close(pair[1]);
+		pair[0] = -1;
+		pair[1] = -1;
+		return 0;
+	}
+	if(accaddr.sin_family != AF_INET ||
+	   memcmp(localhost, &accaddr.sin_addr, 4) != 0) {
+		log_err("create socketpair: accept from wrong address");
+		sock_close(lst);
+		sock_close(pair[0]);
+		sock_close(pair[1]);
+		pair[0] = -1;
+		pair[1] = -1;
+		return 0;
+	}
+	connaddrlen = (socklen_t)sizeof(connaddr);
+	if(getsockname(pair[1], (struct sockaddr*)&connaddr, &connaddrlen)
+		== -1) {
+		log_err("create socketpair: getsockname connectedaddr: %s",
+			sock_strerror(errno));
+		sock_close(lst);
+		sock_close(pair[0]);
+		sock_close(pair[1]);
+		pair[0] = -1;
+		pair[1] = -1;
+		return 0;
+	}
+	if(connaddrlen > (socklen_t)sizeof(connaddr)) {
+		log_err("create socketpair: getsockname connectedaddr returned addr too big");
+		sock_close(lst);
+		sock_close(pair[0]);
+		sock_close(pair[1]);
+		pair[0] = -1;
+		pair[1] = -1;
+		return 0;
+	}
+	if(connaddr.sin_family != AF_INET ||
+	   memcmp(localhost, &connaddr.sin_addr, 4) != 0) {
+		log_err("create socketpair: getsockname connectedaddr returned wrong address");
+		sock_close(lst);
+		sock_close(pair[0]);
+		sock_close(pair[1]);
+		pair[0] = -1;
+		pair[1] = -1;
+		return 0;
+	}
+	if(accaddr.sin_port != connaddr.sin_port) {
+		log_err("create socketpair: accept from wrong port");
+		sock_close(lst);
+		sock_close(pair[0]);
+		sock_close(pair[1]);
+		pair[0] = -1;
+		pair[1] = -1;
+		return 0;
+	}
+	sock_close(lst);
+
+	loopcount = 0;
+	bcount = 0;
+	while(1) {
+		if(++loopcount > IPC_LOOP_MAX) {
+			log_err("create socketpair: send failed due to loop");
+			sock_close(pair[0]);
+			sock_close(pair[1]);
+			pair[0] = -1;
+			pair[1] = -1;
+			return 0;
+		}
+		ret = send(pair[1], nonce+bcount, sizeof(nonce)-bcount, 0);
+		if(ret == -1) {
+			if(
+#ifndef USE_WINSOCK
+				errno == EINTR || errno == EAGAIN
+#  ifdef EWOULDBLOCK
+				|| errno == EWOULDBLOCK
+#  endif
+#else
+				WSAGetLastError() == WSAEINTR ||
+				WSAGetLastError() == WSAEINPROGRESS ||
+				WSAGetLastError() == WSAEWOULDBLOCK
+#endif
+				)
+				continue; /* Try again. */
+			log_err("create socketpair: send: %s", sock_strerror(errno));
+			sock_close(pair[0]);
+			sock_close(pair[1]);
+			pair[0] = -1;
+			pair[1] = -1;
+			return 0;
+		} else if(ret+(ssize_t)bcount != sizeof(nonce)) {
+			bcount += ret;
+			if((size_t)bcount < sizeof(nonce))
+				continue;
+		}
+		break;
+	}
+
+	if(!sock_poll_timeout(pair[0], connect_poll_timeout, 1, 0, &pollin_event)) {
+		log_err("create socketpair: poll failed: %s",
+			sock_strerror(errno));
+		sock_close(pair[0]);
+		sock_close(pair[1]);
+		pair[0] = -1;
+		pair[1] = -1;
+		return 0;
+	}
+	if(!pollin_event) {
+		log_err("create socketpair: poll timeout for recv");
+		sock_close(pair[0]);
+		sock_close(pair[1]);
+		pair[0] = -1;
+		pair[1] = -1;
+		return 0;
+	}
+
+	loopcount = 0;
+	bcount = 0;
+	while(1) {
+		if(++loopcount > IPC_LOOP_MAX) {
+			log_err("create socketpair: recv failed due to loop");
+			sock_close(pair[0]);
+			sock_close(pair[1]);
+			pair[0] = -1;
+			pair[1] = -1;
+			return 0;
+		}
+		ret = recv(pair[0], recvnonce+bcount, sizeof(nonce)-bcount, 0);
+		if(ret == -1) {
+			if(
+#ifndef USE_WINSOCK
+				errno == EINTR || errno == EAGAIN
+#  ifdef EWOULDBLOCK
+				|| errno == EWOULDBLOCK
+#  endif
+#else
+				WSAGetLastError() == WSAEINTR ||
+				WSAGetLastError() == WSAEINPROGRESS ||
+				WSAGetLastError() == WSAEWOULDBLOCK
+#endif
+				)
+				continue; /* Try again. */
+			log_err("create socketpair: recv: %s", sock_strerror(errno));
+			sock_close(pair[0]);
+			sock_close(pair[1]);
+			pair[0] = -1;
+			pair[1] = -1;
+			return 0;
+		} else if(ret == 0) {
+			log_err("create socketpair: stream closed");
+			sock_close(pair[0]);
+			sock_close(pair[1]);
+			pair[0] = -1;
+			pair[1] = -1;
+			return 0;
+		} else if(ret+(ssize_t)bcount != sizeof(nonce)) {
+			bcount += ret;
+			if((size_t)bcount < sizeof(nonce))
+				continue;
+		}
+		break;
+	}
+
+	if(memcmp(nonce, recvnonce, sizeof(nonce)) != 0) {
+		log_err("create socketpair: recv wrong nonce");
+		sock_close(pair[0]);
+		sock_close(pair[1]);
+		pair[0] = -1;
+		pair[1] = -1;
+		return 0;
+	}
+#endif
+	return 1;
+}
+
+/** fast reload thread. setup the thread info */
+static int
+fast_reload_thread_setup(struct worker* worker, int fr_verb, int fr_nopause,
+	int fr_drop_mesh)
+{
+	struct fast_reload_thread* fr;
+	int numworkers = worker->daemon->num;
+	worker->daemon->fast_reload_thread = (struct fast_reload_thread*)
+		calloc(1, sizeof(*worker->daemon->fast_reload_thread));
+	if(!worker->daemon->fast_reload_thread)
+		return 0;
+	fr = worker->daemon->fast_reload_thread;
+	fr->fr_verb = fr_verb;
+	fr->fr_nopause = fr_nopause;
+	fr->fr_drop_mesh = fr_drop_mesh;
+	worker->daemon->fast_reload_drop_mesh = fr->fr_drop_mesh;
+	/* The thread id printed in logs, numworker+1 is the dnstap thread.
+	 * This is numworkers+2. */
+	fr->threadnum = numworkers+2;
+	fr->commpair[0] = -1;
+	fr->commpair[1] = -1;
+	fr->commreload[0] = -1;
+	fr->commreload[1] = -1;
+	if(!create_socketpair(fr->commpair, worker->daemon->rand)) {
+		free(fr);
+		worker->daemon->fast_reload_thread = NULL;
+		return 0;
+	}
+	fr->worker = worker;
+	fr->fr_output = (struct config_strlist_head*)calloc(1,
+		sizeof(*fr->fr_output));
+	if(!fr->fr_output) {
+		sock_close(fr->commpair[0]);
+		sock_close(fr->commpair[1]);
+		free(fr);
+		worker->daemon->fast_reload_thread = NULL;
+		return 0;
+	}
+	if(!create_socketpair(fr->commreload, worker->daemon->rand)) {
+		sock_close(fr->commpair[0]);
+		sock_close(fr->commpair[1]);
+		sock_close(fr->commreload[0]);
+		sock_close(fr->commreload[1]);
+		free(fr->fr_output);
+		free(fr);
+		worker->daemon->fast_reload_thread = NULL;
+		return 0;
+	}
+	lock_basic_init(&fr->fr_output_lock);
+	lock_protect(&fr->fr_output_lock, fr->fr_output,
+		sizeof(*fr->fr_output));
+	return 1;
+}
+
+/** fast reload thread. desetup and delete the thread info. */
+static void
+fast_reload_thread_desetup(struct fast_reload_thread* fast_reload_thread)
+{
+	if(!fast_reload_thread)
+		return;
+	if(fast_reload_thread->service_event &&
+		fast_reload_thread->service_event_is_added) {
+		ub_event_del(fast_reload_thread->service_event);
+		fast_reload_thread->service_event_is_added = 0;
+	}
+	if(fast_reload_thread->service_event)
+		ub_event_free(fast_reload_thread->service_event);
+	sock_close(fast_reload_thread->commpair[0]);
+	sock_close(fast_reload_thread->commpair[1]);
+	sock_close(fast_reload_thread->commreload[0]);
+	sock_close(fast_reload_thread->commreload[1]);
+	if(fast_reload_thread->printq) {
+		fr_main_perform_printout(fast_reload_thread);
+		/* If it is empty now, there is nothing to print on fd. */
+		if(fr_printq_empty(fast_reload_thread->printq)) {
+			fr_printq_delete(fast_reload_thread->printq);
+		} else {
+			/* Keep the printq around to printout the remaining
+			 * text to the remote client. Until it is done, it
+			 * sits on a list, that is in the daemon struct.
+			 * The event can then spool the remaining text to the
+			 * remote client and eventually delete itself from the
+			 * callback. */
+			fr_printq_list_insert(fast_reload_thread->printq,
+				fast_reload_thread->worker->daemon);
+			fast_reload_thread->printq = NULL;
+		}
+	}
+	lock_basic_destroy(&fast_reload_thread->fr_output_lock);
+	if(fast_reload_thread->fr_output) {
+		config_delstrlist(fast_reload_thread->fr_output->first);
+		free(fast_reload_thread->fr_output);
+	}
+	free(fast_reload_thread);
+}
+
+/**
+ * Fast reload thread, send a command to the thread. Blocking on timeout.
+ * It handles received input from the thread, if any is received.
+ */
+static void
+fr_send_cmd_to(struct fast_reload_thread* fr,
+	enum fast_reload_notification status, int check_cmds, int blocking)
+{
+	int outevent, loopexit = 0, bcount = 0;
+	uint32_t cmd;
+	ssize_t ret;
+	verbose(VERB_ALGO, "send notification to fast reload thread: %s",
+		fr_notification_to_string(status));
+	cmd = status;
+	while(1) {
+		if(++loopexit > IPC_LOOP_MAX) {
+			log_err("send notification to fast reload: could not send notification: loop");
+			return;
+		}
+		if(check_cmds)
+			fr_check_cmd_from_thread(fr);
+		/* wait for socket to become writable */
+		if(!sock_poll_timeout(fr->commpair[0],
+			(blocking?-1:IPC_NOTIFICATION_WAIT),
+			0, 1, &outevent)) {
+			log_err("send notification to fast reload: poll failed");
+			return;
+		}
+		if(!outevent)
+			continue;
+		ret = send(fr->commpair[0], ((char*)&cmd)+bcount,
+			sizeof(cmd)-bcount, 0);
+		if(ret == -1) {
+			if(
+#ifndef USE_WINSOCK
+				errno == EINTR || errno == EAGAIN
+#  ifdef EWOULDBLOCK
+				|| errno == EWOULDBLOCK
+#  endif
+#else
+				WSAGetLastError() == WSAEINTR ||
+				WSAGetLastError() == WSAEINPROGRESS ||
+				WSAGetLastError() == WSAEWOULDBLOCK
+#endif
+				)
+				continue; /* Try again. */
+			log_err("send notification to fast reload: send: %s",
+				sock_strerror(errno));
+			return;
+		} else if(ret+(ssize_t)bcount != sizeof(cmd)) {
+			bcount += ret;
+			if((size_t)bcount < sizeof(cmd))
+				continue;
+		}
+		break;
+	}
+}
+
+/** Fast reload, the main thread handles that the fast reload thread has
+ * exited. */
+static void
+fr_main_perform_done(struct fast_reload_thread* fr)
+{
+	struct worker* worker = fr->worker;
+	verbose(VERB_ALGO, "join with fastreload thread");
+	ub_thread_join(fr->tid);
+	verbose(VERB_ALGO, "joined with fastreload thread");
+	fast_reload_thread_desetup(fr);
+	worker->daemon->fast_reload_thread = NULL;
+}
+
+/** Append strlist after strlist */
+static void
+cfg_strlist_append_listhead(struct config_strlist_head* list,
+	struct config_strlist_head* more)
+{
+	if(!more->first)
+		return;
+	if(list->last)
+		list->last->next = more->first;
+	else
+		list->first = more->first;
+	list->last = more->last;
+}
+
+/** Fast reload, the remote control thread handles that the fast reload thread
+ * has output to be printed, on the linked list that is locked. */
+static void
+fr_main_perform_printout(struct fast_reload_thread* fr)
+{
+	struct config_strlist_head out;
+
+	/* Fetch the list of items to be printed */
+	lock_basic_lock(&fr->fr_output_lock);
+	out.first = fr->fr_output->first;
+	out.last = fr->fr_output->last;
+	fr->fr_output->first = NULL;
+	fr->fr_output->last = NULL;
+	lock_basic_unlock(&fr->fr_output_lock);
+
+	if(!fr->printq || !fr->printq->client_cp) {
+		/* There is no output socket, delete it. */
+		config_delstrlist(out.first);
+		return;
+	}
+
+	/* Put them on the output list, not locked because the list
+	 * producer and consumer are both owned by the remote control thread,
+	 * it moves the items to the list for printing in the event callback
+	 * for the client_cp. */
+	cfg_strlist_append_listhead(fr->printq->to_print, &out);
+
+	/* Set the client_cp to output if not already */
+	if(!fr->printq->client_cp->event_added)
+		comm_point_listen_for_rw(fr->printq->client_cp, 0, 1);
+}
+
+/** fast reload, receive ack from workers that they are waiting, run
+ * by the mainthr after sending them reload_stop. */
+static void
+fr_read_ack_from_workers(struct fast_reload_thread* fr)
+{
+	struct daemon* daemon = fr->worker->daemon;
+	/* Every worker sends one byte, wait for num-1 bytes. */
+	int count=0, total=daemon->num-1;
+	while(count < total) {
+		uint8_t r;
+		ssize_t ret;
+		ret = recv(fr->commreload[0], &r, 1, 0);
+		if(ret == -1) {
+			if(
+#ifndef USE_WINSOCK
+                                errno == EINTR || errno == EAGAIN
+#  ifdef EWOULDBLOCK
+                                || errno == EWOULDBLOCK
+#  endif
+#else
+                                WSAGetLastError() == WSAEINTR ||
+                                WSAGetLastError() == WSAEINPROGRESS ||
+                                WSAGetLastError() == WSAEWOULDBLOCK
+#endif
+                                )
+				continue; /* Try again */
+			log_err("worker reload ack: recv failed: %s",
+				sock_strerror(errno));
+			return;
+		}
+		count++;
+		verbose(VERB_ALGO, "worker reload ack from (uint8_t)%d",
+			(int)r);
+	}
+}
+
+/** fast reload, poll for reload_start in mainthr waiting on a notification
+ * from the fast reload thread. */
+static void
+fr_poll_for_reload_start(struct fast_reload_thread* fr)
+{
+	int loopexit = 0, bcount = 0;
+	uint32_t cmd;
+	ssize_t ret;
+
+	/* Is there data? */
+	if(!sock_poll_timeout(fr->commpair[0], -1, 1, 0, NULL)) {
+		log_err("fr_poll_for_reload_start: poll failed");
+		return;
+	}
+
+	/* Read the data */
+	while(1) {
+		if(++loopexit > IPC_LOOP_MAX) {
+			log_err("fr_poll_for_reload_start: recv loops %s",
+				sock_strerror(errno));
+			return;
+		}
+		ret = recv(fr->commpair[0], ((char*)&cmd)+bcount,
+			sizeof(cmd)-bcount, 0);
+		if(ret == -1) {
+			if(
+#ifndef USE_WINSOCK
+				errno == EINTR || errno == EAGAIN
+#  ifdef EWOULDBLOCK
+				|| errno == EWOULDBLOCK
+#  endif
+#else
+				WSAGetLastError() == WSAEINTR ||
+				WSAGetLastError() == WSAEINPROGRESS ||
+				WSAGetLastError() == WSAEWOULDBLOCK
+#endif
+				)
+				continue; /* Try again. */
+			log_err("fr_poll_for_reload_start: recv: %s",
+				sock_strerror(errno));
+			return;
+		} else if(ret+(ssize_t)bcount != sizeof(cmd)) {
+			bcount += ret;
+			if((size_t)bcount < sizeof(cmd))
+				continue;
+		}
+		break;
+	}
+	if(cmd != fast_reload_notification_reload_start) {
+		verbose(VERB_ALGO, "fast reload wait for ack: "
+			"wrong notification %d", (int)cmd);
+	}
+}
+
+
+/** fast reload thread, handle reload_stop notification, send reload stop
+ * to other threads over IPC and collect their ack. When that is done,
+ * ack to the caller, the fast reload thread, and wait for it to send start. */
+static void
+fr_main_perform_reload_stop(struct fast_reload_thread* fr)
+{
+	struct daemon* daemon = fr->worker->daemon;
+	int i;
+
+	/* Send reload_stop to other threads. */
+	for(i=0; i<daemon->num; i++) {
+		if(i == fr->worker->thread_num)
+			continue; /* Do not send to ourselves. */
+		worker_send_cmd(daemon->workers[i], worker_cmd_reload_stop);
+	}
+
+	/* Wait for the other threads to ack. */
+	fr_read_ack_from_workers(fr);
+
+	/* Send ack to fast reload thread. */
+	fr_send_cmd_to(fr, fast_reload_notification_reload_ack, 0, 1);
+
+	/* Wait for reload_start from fast reload thread to resume. */
+	fr_poll_for_reload_start(fr);
+
+	/* Send reload_start to other threads */
+	for(i=0; i<daemon->num; i++) {
+		if(i == fr->worker->thread_num)
+			continue; /* Do not send to ourselves. */
+		worker_send_cmd(daemon->workers[i], worker_cmd_reload_start);
+	}
+
+	if(fr->worker->daemon->fast_reload_drop_mesh) {
+		verbose(VERB_ALGO, "worker: drop mesh queries after reload");
+		mesh_delete_all(fr->worker->env.mesh);
+	}
+	verbose(VERB_ALGO, "worker resume after reload");
+}
+
+/** Fast reload, the main thread performs the nopause poll. It polls every
+ * other worker thread briefly over the command pipe ipc. The command takes
+ * no time for the worker, it can return immediately. After that it sends
+ * an acknowledgement to the fastreload thread. */
+static void
+fr_main_perform_reload_nopause_poll(struct fast_reload_thread* fr)
+{
+	struct daemon* daemon = fr->worker->daemon;
+	int i;
+
+	/* Send the reload_poll to other threads. They can respond
+	 * one at a time. */
+	for(i=0; i<daemon->num; i++) {
+		if(i == fr->worker->thread_num)
+			continue; /* Do not send to ourselves. */
+		worker_send_cmd(daemon->workers[i], worker_cmd_reload_poll);
+	}
+
+	/* Wait for the other threads to ack. */
+	fr_read_ack_from_workers(fr);
+
+	/* Send ack to fast reload thread. */
+	fr_send_cmd_to(fr, fast_reload_notification_reload_ack, 0, 1);
+}
+
+/** Fast reload, perform the command received from the fast reload thread */
+static void
+fr_main_perform_cmd(struct fast_reload_thread* fr,
+	enum fast_reload_notification status)
+{
+	verbose(VERB_ALGO, "main perform fast reload status: %s",
+		fr_notification_to_string(status));
+	if(status == fast_reload_notification_printout) {
+		fr_main_perform_printout(fr);
+	} else if(status == fast_reload_notification_done ||
+		status == fast_reload_notification_done_error ||
+		status == fast_reload_notification_exited) {
+		fr_main_perform_done(fr);
+	} else if(status == fast_reload_notification_reload_stop) {
+		fr_main_perform_reload_stop(fr);
+	} else if(status == fast_reload_notification_reload_nopause_poll) {
+		fr_main_perform_reload_nopause_poll(fr);
+	} else {
+		log_err("main received unknown status from fast reload: %d %s",
+			(int)status, fr_notification_to_string(status));
+	}
+}
+
+/** Fast reload, handle command from fast reload to the main thread. */
+static void
+fr_main_handle_cmd(struct fast_reload_thread* fr)
+{
+	enum fast_reload_notification status;
+	ssize_t ret;
+	ret = recv(fr->commpair[0],
+		((char*)&fr->service_read_cmd)+fr->service_read_cmd_count,
+		sizeof(fr->service_read_cmd)-fr->service_read_cmd_count, 0);
+	if(ret == -1) {
+		if(
+#ifndef USE_WINSOCK
+			errno == EINTR || errno == EAGAIN
+#  ifdef EWOULDBLOCK
+			|| errno == EWOULDBLOCK
+#  endif
+#else
+			WSAGetLastError() == WSAEINTR ||
+			WSAGetLastError() == WSAEINPROGRESS ||
+			WSAGetLastError() == WSAEWOULDBLOCK
+#endif
+			)
+			return; /* Continue later. */
+		log_err("read cmd from fast reload thread, recv: %s",
+			sock_strerror(errno));
+		return;
+	} else if(ret == 0) {
+		verbose(VERB_ALGO, "closed connection from fast reload thread");
+		fr->service_read_cmd_count = 0;
+		/* handle this like an error */
+		fr->service_read_cmd = fast_reload_notification_done_error;
+	} else if(ret + (ssize_t)fr->service_read_cmd_count <
+		(ssize_t)sizeof(fr->service_read_cmd)) {
+		fr->service_read_cmd_count += ret;
+		/* Continue later. */
+		return;
+	}
+	status = fr->service_read_cmd;
+	fr->service_read_cmd = 0;
+	fr->service_read_cmd_count = 0;
+	fr_main_perform_cmd(fr, status);
+}
+
+/** Fast reload, poll for and handle cmd from fast reload thread. */
+static void
+fr_check_cmd_from_thread(struct fast_reload_thread* fr)
+{
+	int inevent = 0;
+	struct worker* worker = fr->worker;
+	/* Stop in case the thread has exited, or there is no read event. */
+	while(worker->daemon->fast_reload_thread) {
+		if(!sock_poll_timeout(fr->commpair[0], 0, 1, 0, &inevent)) {
+			log_err("check for cmd from fast reload thread: "
+				"poll failed");
+			return;
+		}
+		if(!inevent)
+			return;
+		fr_main_handle_cmd(fr);
+	}
+}
+
+void fast_reload_service_cb(int ATTR_UNUSED(fd), short ATTR_UNUSED(bits),
+	void* arg)
+{
+	struct fast_reload_thread* fast_reload_thread =
+		(struct fast_reload_thread*)arg;
+	struct worker* worker = fast_reload_thread->worker;
+
+	/* Read and handle the command */
+	fr_main_handle_cmd(fast_reload_thread);
+	if(worker->daemon->fast_reload_thread != NULL) {
+		/* If not exited, see if there are more pending statuses
+		 * from the fast reload thread. */
+		fr_check_cmd_from_thread(fast_reload_thread);
+	}
+}
+
+#ifdef HAVE_SSL
+/** fast reload, send client item over SSL. Returns number of bytes
+ * printed, 0 on wait later, or -1 on failure. */
+static int
+fr_client_send_item_ssl(struct fast_reload_printq* printq)
+{
+	int r;
+	ERR_clear_error();
+	r = SSL_write(printq->remote.ssl,
+		printq->client_item+printq->client_byte_count,
+		printq->client_len - printq->client_byte_count);
+	if(r <= 0) {
+		int want = SSL_get_error(printq->remote.ssl, r);
+		if(want == SSL_ERROR_ZERO_RETURN) {
+			log_err("fast_reload print to remote client: "
+				"SSL_write says connection closed.");
+			return -1;
+		} else if(want == SSL_ERROR_WANT_READ) {
+			/* wait for read condition */
+			printq->client_cp->ssl_shake_state = comm_ssl_shake_hs_read;
+			comm_point_listen_for_rw(printq->client_cp, 1, 0);
+			return 0;
+		} else if(want == SSL_ERROR_WANT_WRITE) {
+#ifdef USE_WINSOCK
+			ub_winsock_tcp_wouldblock(printq->client_cp->ev->ev, UB_EV_WRITE);
+#endif
+			return 0; /* write more later */
+		} else if(want == SSL_ERROR_SYSCALL) {
+#ifdef EPIPE
+			if(errno == EPIPE && verbosity < 2) {
+				/* silence 'broken pipe' */
+				return -1;
+			}
+#endif
+			if(errno != 0)
+				log_err("fast_reload print to remote client: "
+					"SSL_write syscall: %s",
+					sock_strerror(errno));
+			return -1;
+		}
+		log_crypto_err_io("fast_reload print to remote client: "
+			"could not SSL_write", want);
+		return -1;
+	}
+	return r;
+}
+#endif /* HAVE_SSL */
+
+/** fast reload, send client item for fd, returns bytes sent, or 0 for wait
+ * later, or -1 on failure. */
+static int
+fr_client_send_item_fd(struct fast_reload_printq* printq)
+{
+	int r;
+	r = (int)send(printq->remote.fd,
+		printq->client_item+printq->client_byte_count,
+		printq->client_len - printq->client_byte_count, 0);
+	if(r == -1) {
+		if(
+#ifndef USE_WINSOCK
+			errno == EINTR || errno == EAGAIN
+#  ifdef EWOULDBLOCK
+			|| errno == EWOULDBLOCK
+#  endif
+#else
+			WSAGetLastError() == WSAEINTR ||
+			WSAGetLastError() == WSAEINPROGRESS ||
+			WSAGetLastError() == WSAEWOULDBLOCK
+#endif
+			) {
+#ifdef USE_WINSOCK
+			ub_winsock_tcp_wouldblock(printq->client_cp->ev->ev, UB_EV_WRITE);
+#endif
+			return 0; /* Try again. */
+		}
+		log_err("fast_reload print to remote client: send failed: %s",
+			sock_strerror(errno));
+		return -1;
+	}
+	return r;
+}
+
+/** fast reload, send current client item. false on failure or wait later. */
+static int
+fr_client_send_item(struct fast_reload_printq* printq)
+{
+	int r;
+#ifdef HAVE_SSL
+	if(printq->remote.ssl) {
+		r = fr_client_send_item_ssl(printq);
+	} else {
+#endif
+		r = fr_client_send_item_fd(printq);
+#ifdef HAVE_SSL
+	}
+#endif
+	if(r == 0) {
+		/* Wait for later. */
+		return 0;
+	} else if(r == -1) {
+		/* It failed, close comm point and stop sending. */
+		fr_printq_remove(printq);
+		return 0;
+	}
+	printq->client_byte_count += r;
+	if(printq->client_byte_count < printq->client_len)
+		return 0; /* Print more later. */
+	return 1;
+}
+
+/** fast reload, pick up the next item to print */
+static void
+fr_client_pickup_next_item(struct fast_reload_printq* printq)
+{
+	struct config_strlist* item;
+	/* Pop first off the list. */
+	if(!printq->to_print->first) {
+		printq->client_item = NULL;
+		printq->client_len = 0;
+		printq->client_byte_count = 0;
+		return;
+	}
+	item = printq->to_print->first;
+	if(item->next) {
+		printq->to_print->first = item->next;
+	} else {
+		printq->to_print->first = NULL;
+		printq->to_print->last = NULL;
+	}
+	item->next = NULL;
+	printq->client_len = 0;
+	printq->client_byte_count = 0;
+	printq->client_item = item->str;
+	item->str = NULL;
+	free(item);
+	/* The len is the number of bytes to print out, and thus excludes
+	 * the terminator zero. */
+	if(printq->client_item)
+		printq->client_len = (int)strlen(printq->client_item);
+}
+
+int fast_reload_client_callback(struct comm_point* ATTR_UNUSED(c), void* arg,
+	int err, struct comm_reply* ATTR_UNUSED(rep))
+{
+	struct fast_reload_printq* printq = (struct fast_reload_printq*)arg;
+	if(!printq->client_cp) {
+		fr_printq_remove(printq);
+		return 0; /* the output is closed and deleted */
+	}
+	if(err != NETEVENT_NOERROR) {
+		verbose(VERB_ALGO, "fast reload client: error, close it");
+		fr_printq_remove(printq);
+		return 0;
+	}
+#ifdef HAVE_SSL
+	if(printq->client_cp->ssl_shake_state == comm_ssl_shake_hs_read) {
+		/* read condition satisfied back to writing */
+		comm_point_listen_for_rw(printq->client_cp, 0, 1);
+		printq->client_cp->ssl_shake_state = comm_ssl_shake_none;
+	}
+#endif /* HAVE_SSL */
+
+	/* Pickup an item if there are none */
+	if(!printq->client_item) {
+		fr_client_pickup_next_item(printq);
+	}
+	if(!printq->client_item) {
+		if(printq->in_list) {
+			/* Nothing more to print, it can be removed. */
+			fr_printq_remove(printq);
+			return 0;
+		}
+		/* Done with printing for now. */
+		comm_point_stop_listening(printq->client_cp);
+		return 0;
+	}
+
+	/* Try to print out a number of items, if they can print in full. */
+	while(printq->client_item) {
+		/* Send current item, if any. */
+		if(printq->client_item && printq->client_len != 0 &&
+			printq->client_byte_count < printq->client_len) {
+			if(!fr_client_send_item(printq))
+				return 0;
+		}
+
+		/* The current item is done. */
+		if(printq->client_item) {
+			free(printq->client_item);
+			printq->client_item = NULL;
+			printq->client_len = 0;
+			printq->client_byte_count = 0;
+		}
+		if(!printq->to_print->first) {
+			if(printq->in_list) {
+				/* Nothing more to print, it can be removed. */
+				fr_printq_remove(printq);
+				return 0;
+			}
+			/* Done with printing for now. */
+			comm_point_stop_listening(printq->client_cp);
+			return 0;
+		}
+		fr_client_pickup_next_item(printq);
+	}
+
+	return 0;
+}
+
+#ifndef THREADS_DISABLED
+/** fast reload printq create */
+static struct fast_reload_printq*
+fr_printq_create(struct comm_point* c, struct worker* worker)
+{
+	struct fast_reload_printq* printq = calloc(1, sizeof(*printq));
+	if(!printq)
+		return NULL;
+	printq->to_print = calloc(1, sizeof(*printq->to_print));
+	if(!printq->to_print) {
+		free(printq);
+		return NULL;
+	}
+	printq->worker = worker;
+	printq->client_cp = c;
+	printq->client_cp->callback = fast_reload_client_callback;
+	printq->client_cp->cb_arg = printq;
+	return printq;
+}
+#endif /* !THREADS_DISABLED */
+
+/** fast reload printq delete */
+static void
+fr_printq_delete(struct fast_reload_printq* printq)
+{
+	if(!printq)
+		return;
+#ifdef HAVE_SSL
+	if(printq->remote.ssl) {
+		SSL_shutdown(printq->remote.ssl);
+		SSL_free(printq->remote.ssl);
+	}
+#endif
+	comm_point_delete(printq->client_cp);
+	if(printq->to_print) {
+		config_delstrlist(printq->to_print->first);
+		free(printq->to_print);
+	}
+	free(printq);
+}
+
+/** fast reload printq, returns true if the list is empty and no item */
+static int
+fr_printq_empty(struct fast_reload_printq* printq)
+{
+	if(printq->to_print->first == NULL && printq->client_item == NULL)
+		return 1;
+	return 0;
+}
+
+/** fast reload printq, insert onto list */
+static void
+fr_printq_list_insert(struct fast_reload_printq* printq, struct daemon* daemon)
+{
+	if(printq->in_list)
+		return;
+	printq->next = daemon->fast_reload_printq_list;
+	if(printq->next)
+		printq->next->prev = printq;
+	printq->prev = NULL;
+	printq->in_list = 1;
+	daemon->fast_reload_printq_list = printq;
+}
+
+/** fast reload printq delete list */
+void
+fast_reload_printq_list_delete(struct fast_reload_printq* list)
+{
+	struct fast_reload_printq* printq = list, *next;
+	while(printq) {
+		next = printq->next;
+		fr_printq_delete(printq);
+		printq = next;
+	}
+}
+
+/** fast reload printq remove the item from the printq list */
+static void
+fr_printq_list_remove(struct fast_reload_printq* printq)
+{
+	struct daemon* daemon = printq->worker->daemon;
+	if(printq->prev == NULL)
+		daemon->fast_reload_printq_list = printq->next;
+	else	printq->prev->next = printq->next;
+	if(printq->next)
+		printq->next->prev = printq->prev;
+	printq->in_list = 0;
+}
+
+/** fast reload printq, remove the printq when no longer needed,
+ * like the stream is closed. */
+static void
+fr_printq_remove(struct fast_reload_printq* printq)
+{
+	if(!printq)
+		return;
+	if(printq->worker->daemon->fast_reload_thread &&
+		printq->worker->daemon->fast_reload_thread->printq == printq)
+		printq->worker->daemon->fast_reload_thread->printq = NULL;
+	if(printq->in_list)
+		fr_printq_list_remove(printq);
+	fr_printq_delete(printq);
+}
+
+/** fast reload thread, send stop command to the thread, from the main thread.
+ */
+static void
+fr_send_stop(struct fast_reload_thread* fr)
+{
+	fr_send_cmd_to(fr, fast_reload_notification_exit, 1, 0);
+}
+
+void
+fast_reload_thread_start(RES* ssl, struct worker* worker, struct rc_state* s,
+	int fr_verb, int fr_nopause, int fr_drop_mesh)
+{
+	if(worker->daemon->fast_reload_thread) {
+		log_err("fast reload thread already running");
+		return;
+	}
+	if(!fast_reload_thread_setup(worker, fr_verb, fr_nopause,
+		fr_drop_mesh)) {
+		if(!ssl_printf(ssl, "error could not setup thread\n"))
+			return;
+		return;
+	}
+	worker->daemon->fast_reload_thread->started = 1;
+
+#ifndef THREADS_DISABLED
+	/* Setup command listener in remote servicing thread */
+	/* The listener has to be nonblocking, so the the remote servicing
+	 * thread can continue to service DNS queries, the fast reload
+	 * thread is going to read the config from disk and apply it. */
+	/* The commpair[1] element can stay blocking, it is used by the
+	 * fast reload thread to communicate back. The thread needs to wait
+	 * at these times, when it has to check briefly it can use poll. */
+	fd_set_nonblock(worker->daemon->fast_reload_thread->commpair[0]);
+	worker->daemon->fast_reload_thread->service_event = ub_event_new(
+		comm_base_internal(worker->base),
+		worker->daemon->fast_reload_thread->commpair[0],
+		UB_EV_READ | UB_EV_PERSIST, fast_reload_service_cb,
+		worker->daemon->fast_reload_thread);
+	if(!worker->daemon->fast_reload_thread->service_event) {
+		fast_reload_thread_desetup(worker->daemon->fast_reload_thread);
+		if(!ssl_printf(ssl, "error out of memory\n"))
+			return;
+		return;
+	}
+	if(ub_event_add(worker->daemon->fast_reload_thread->service_event,
+		NULL) != 0) {
+		fast_reload_thread_desetup(worker->daemon->fast_reload_thread);
+		if(!ssl_printf(ssl, "error out of memory adding service event\n"))
+			return;
+		return;
+	}
+	worker->daemon->fast_reload_thread->service_event_is_added = 1;
+
+	/* Setup the comm point to the remote control client as an event
+	 * on the remote servicing thread, which it already is.
+	 * It needs a new callback to service it. */
+	log_assert(s);
+	state_list_remove_elem(&s->rc->busy_list, s->c);
+	s->rc->active --;
+	/* Set the comm point file descriptor to nonblocking. So that
+	 * printout to the remote control client does not block the
+	 * server thread from servicing DNS queries. */
+	fd_set_nonblock(s->c->fd);
+	worker->daemon->fast_reload_thread->printq = fr_printq_create(s->c,
+		worker);
+	if(!worker->daemon->fast_reload_thread->printq) {
+		fast_reload_thread_desetup(worker->daemon->fast_reload_thread);
+		if(!ssl_printf(ssl, "error out of memory create printq\n"))
+			return;
+		return;
+	}
+	worker->daemon->fast_reload_thread->printq->remote = *ssl;
+	s->rc = NULL; /* move away the rc state */
+	/* Nothing to print right now, so no need to have it active. */
+	comm_point_stop_listening(worker->daemon->fast_reload_thread->printq->client_cp);
+
+	/* Start fast reload thread */
+	ub_thread_create(&worker->daemon->fast_reload_thread->tid,
+		fast_reload_thread_main, worker->daemon->fast_reload_thread);
+#else
+	(void)s;
+#endif
+}
+
+void
+fast_reload_thread_stop(struct fast_reload_thread* fast_reload_thread)
+{
+	struct worker* worker = fast_reload_thread->worker;
+	if(!fast_reload_thread)
+		return;
+	fr_send_stop(fast_reload_thread);
+	if(worker->daemon->fast_reload_thread != NULL) {
+		/* If it did not exit yet, join with the thread now. It is
+		 * going to exit because the exit command is sent to it. */
+		fr_main_perform_done(fast_reload_thread);
+	}
 }

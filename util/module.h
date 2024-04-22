@@ -511,10 +511,10 @@ struct module_env {
 	/** auth zones */
 	struct auth_zones* auth_zones;
 	/** Mapping of forwarding zones to targets.
-	 * iterator forwarder information. per-thread, created by worker */
+	 * iterator forwarder information. */
 	struct iter_forwards* fwds;
 	/** 
-	 * iterator forwarder information. per-thread, created by worker.
+	 * iterator stub information.
 	 * The hints -- these aren't stored in the cache because they don't 
 	 * expire. The hints are always used to "prime" the cache. Note 
 	 * that both root hints and stub zone "hints" are stored in this 

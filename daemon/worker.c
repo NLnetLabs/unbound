@@ -369,6 +369,82 @@ worker_check_request(sldns_buffer* pkt, struct worker* worker,
 	return;
 }
 
+/**
+ * Send fast-reload acknowledgement to the mainthread in one byte.
+ * This signals that this works has received the previous command.
+ * The worker is waiting if that is after a reload_stop command.
+ * Or the worker has briefly processed the event itself, and in doing so
+ * released data pointers to old config, after a reload_poll command.
+ */
+static void
+worker_send_reload_ack(struct worker* worker)
+{
+	/* If this is clipped to 8 bits because thread_num>255, then that
+	 * is not a problem, the receiver counts the number of bytes received.
+	 * The number is informative only. */
+	uint8_t c = (uint8_t)worker->thread_num;
+	ssize_t ret;
+	while(1) {
+		ret = send(worker->daemon->fast_reload_thread->commreload[1],
+			&c, 1, 0);
+		if(ret == -1) {
+			if(
+#ifndef USE_WINSOCK
+				errno == EINTR || errno == EAGAIN
+#  ifdef EWOULDBLOCK
+				|| errno == EWOULDBLOCK
+#  endif
+#else
+				WSAGetLastError() == WSAEINTR ||
+				WSAGetLastError() == WSAEINPROGRESS ||
+				WSAGetLastError() == WSAEWOULDBLOCK
+#endif
+				)
+				continue; /* Try again. */
+			log_err("worker reload ack reply: send failed: %s",
+				sock_strerror(errno));
+			break;
+		}
+		break;
+	}
+}
+
+/** stop and wait to resume the worker */
+static void
+worker_stop_and_wait(struct worker* worker)
+{
+	uint8_t* buf = NULL;
+	uint32_t len = 0, cmd;
+	worker_send_reload_ack(worker);
+	/* wait for reload */
+	if(!tube_read_msg(worker->cmd, &buf, &len, 0)) {
+		log_err("worker reload read reply failed");
+		return;
+	}
+	if(len != sizeof(uint32_t)) {
+		log_err("worker reload reply, bad control msg length %d",
+			(int)len);
+		free(buf);
+		return;
+	}
+	cmd = sldns_read_uint32(buf);
+	free(buf);
+	if(cmd == worker_cmd_quit) {
+		/* quit anyway */
+		verbose(VERB_ALGO, "reload reply, control cmd quit");
+		comm_base_exit(worker->base);
+		return;
+	}
+	if(cmd != worker_cmd_reload_start) {
+		log_err("worker reload reply, wrong reply command");
+	}
+	if(worker->daemon->fast_reload_drop_mesh) {
+		verbose(VERB_ALGO, "worker: drop mesh queries after reload");
+		mesh_delete_all(worker->env.mesh);
+	}
+	verbose(VERB_ALGO, "worker resume after reload");
+}
+
 void
 worker_handle_control_cmd(struct tube* ATTR_UNUSED(tube), uint8_t* msg,
 	size_t len, int error, void* arg)
@@ -403,6 +479,14 @@ worker_handle_control_cmd(struct tube* ATTR_UNUSED(tube), uint8_t* msg,
 	case worker_cmd_remote:
 		verbose(VERB_ALGO, "got control cmd remote");
 		daemon_remote_exec(worker);
+		break;
+	case worker_cmd_reload_stop:
+		verbose(VERB_ALGO, "got control cmd reload_stop");
+		worker_stop_and_wait(worker);
+		break;
+	case worker_cmd_reload_poll:
+		verbose(VERB_ALGO, "got control cmd reload_poll");
+		worker_send_reload_ack(worker);
 		break;
 	default:
 		log_err("bad command %d", (int)cmd);
@@ -2266,18 +2350,6 @@ worker_init(struct worker* worker, struct config_file *cfg,
 		worker_delete(worker);
 		return 0;
 	}
-	if(!(worker->env.fwds = forwards_create()) ||
-		!forwards_apply_cfg(worker->env.fwds, cfg)) {
-		log_err("Could not set forward zones");
-		worker_delete(worker);
-		return 0;
-	}
-	if(!(worker->env.hints = hints_create()) ||
-		!hints_apply_cfg(worker->env.hints, cfg)) {
-		log_err("Could not set root or stub hints");
-		worker_delete(worker);
-		return 0;
-	}
 	/* one probe timer per process -- if we have 5011 anchors */
 	if(autr_get_num_anchors(worker->env.anchors) > 0
 #ifndef THREADS_DISABLED
@@ -2350,8 +2422,6 @@ worker_delete(struct worker* worker)
 	outside_network_quit_prepare(worker->back);
 	mesh_delete(worker->env.mesh);
 	sldns_buffer_free(worker->env.scratch_buffer);
-	forwards_delete(worker->env.fwds);
-	hints_delete(worker->env.hints);
 	listen_delete(worker->front);
 	outside_network_delete(worker->back);
 	comm_signal_delete(worker->comsig);

@@ -691,6 +691,7 @@ cachedb_extcache_store(struct module_qstate* qstate, struct cachedb_env* ie)
 static int
 cachedb_intcache_lookup(struct module_qstate* qstate, struct cachedb_env* cde)
 {
+	uint8_t dpname_storage[LDNS_MAX_DOMAINLEN+1];
 	uint8_t* dpname=NULL;
 	size_t dpnamelen=0;
 	struct dns_msg* msg;
@@ -699,7 +700,7 @@ cachedb_intcache_lookup(struct module_qstate* qstate, struct cachedb_env* cde)
 		return 0;
 	}
 	if(iter_stub_fwd_no_cache(qstate, &qstate->qinfo,
-		&dpname, &dpnamelen))
+		&dpname, &dpnamelen, dpname_storage, sizeof(dpname_storage)))
 		return 0; /* no cache for these queries */
 	msg = dns_cache_lookup(qstate->env, qstate->qinfo.qname,
 		qstate->qinfo.qname_len, qstate->qinfo.qtype,

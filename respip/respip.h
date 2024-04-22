@@ -302,4 +302,9 @@ respip_sockaddr_delete(struct respip_set* set, struct resp_addr* node);
 
 struct ub_packed_rrset_key*
 respip_copy_rrset(const struct ub_packed_rrset_key* key, struct regional* region);
+
+/** Get memory usage of respip set tree. The routine locks and unlocks the
+ * set for reading. */
+size_t respip_set_get_mem(struct respip_set* set);
+
 #endif	/* RESPIP_RESPIP_H */
