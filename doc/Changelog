@@ -1,5 +1,7 @@
 22 April 2024: Wouter
 	- Add checklock feature verbose_locking to trace locks and unlocks.
+	- Fix edns subnet to sort rrset references when storing messages
+	  in the cache. This fixes a race condition in the rrset locks.
 
 15 April 2024: Wouter
 	- Fix #1048: Update ax_pkg_swig.m4 and ax_pthread.m4.

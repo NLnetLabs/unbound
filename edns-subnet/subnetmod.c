@@ -421,6 +421,7 @@ update_cache(struct module_qstate *qstate, int id)
 		rep->ref[i].id = rep->rrsets[i]->id;
 	}
 	reply_info_set_ttls(rep, *qstate->env->now);
+	reply_info_sortref(rep);
 	rep->flags |= (BIT_RA | BIT_QR); /* fix flags to be sensible for */
 	rep->flags &= ~(BIT_AA | BIT_CD);/* a reply based on the cache   */
 	if(edns->subnet_source_mask == 0 && edns->subnet_scope_mask == 0)
