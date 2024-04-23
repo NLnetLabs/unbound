@@ -1,3 +1,7 @@
+23 April 2024: Yorgos
+	- Merge #1053: Remove child delegations from cache when grandchild
+	  delegations are returned from parent.
+
 22 April 2024: Wouter
 	- Add checklock feature verbose_locking to trace locks and unlocks.
 	- Fix edns subnet to sort rrset references when storing messages
