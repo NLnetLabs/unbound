@@ -544,12 +544,12 @@ hints_lookup_stub(struct iter_hints* hints, uint8_t* qname,
 	return NULL;
 }
 
-int hints_next_root(struct iter_hints* hints, uint16_t* qclass)
+int hints_next_root(struct iter_hints* hints, uint16_t* qclass, int nolock)
 {
 	int ret;
-	lock_rw_rdlock(&hints->lock);
+	if(!nolock) lock_rw_rdlock(&hints->lock);
 	ret = name_tree_next_root(&hints->tree, qclass);
-	lock_rw_unlock(&hints->lock);
+	if(!nolock) lock_rw_unlock(&hints->lock);
 	return ret;
 }
 

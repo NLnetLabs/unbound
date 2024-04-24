@@ -475,12 +475,12 @@ next_root_locked(struct iter_forwards* fwd, uint16_t* dclass)
 }
 
 int
-forwards_next_root(struct iter_forwards* fwd, uint16_t* dclass)
+forwards_next_root(struct iter_forwards* fwd, uint16_t* dclass, int nolock)
 {
 	int ret;
-	lock_rw_rdlock(&fwd->lock);
+	if(!nolock) lock_rw_rdlock(&fwd->lock);
 	ret = next_root_locked(fwd, dclass);
-	lock_rw_unlock(&fwd->lock);
+	if(!nolock) lock_rw_unlock(&fwd->lock);
 	return ret;
 }
 

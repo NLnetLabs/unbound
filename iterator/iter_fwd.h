@@ -158,12 +158,15 @@ struct delegpt* forwards_lookup_root(struct iter_forwards* fwd,
 
 /**
  * Find next root item in forwards lookup tree.
- * Handles its own locking.
+ * Handles its own locking unless nolock is set. In that case the caller
+ * should lock and unlock a readlock on the forwards structure.
  * @param fwd: the forward storage
  * @param qclass: class to look at next, or higher.
+ * @param nolock: Skip locking, locking is handled by the caller.
  * @return false if none found, or if true stored in qclass.
  */
-int forwards_next_root(struct iter_forwards* fwd, uint16_t* qclass);
+int forwards_next_root(struct iter_forwards* fwd, uint16_t* qclass,
+	int nolock);
 
 /**
  * Get memory in use by forward storage

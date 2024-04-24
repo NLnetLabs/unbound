@@ -127,16 +127,18 @@ struct delegpt* hints_find_root(struct iter_hints* hints,
 
 /**
  * Find next root hints (to cycle through all root hints).
- * Handles its own locking.
+ * Handles its own locking unless nolock is set. In that case the caller
+ * should lock and unlock a readlock on the hints structure.
  * @param hints: hint storage
  * @param qclass: class for which root hints are sought.
  * 	0 means give the first available root hints class.
  * 	x means, give class x or a higher class if any.
  * 	returns the found class in this variable.
+ * @param nolock: Skip locking, locking is handled by the caller.
  * @return true if a root hint class is found.
  * 	false if not root hint class is found (qclass may have been changed).
  */
-int hints_next_root(struct iter_hints* hints, uint16_t* qclass);
+int hints_next_root(struct iter_hints* hints, uint16_t* qclass, int nolock);
 
 /**
  * Given a qname/qclass combination, and the delegation point from the cache

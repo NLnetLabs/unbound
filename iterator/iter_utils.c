@@ -1285,9 +1285,15 @@ iter_get_next_root(struct iter_hints* hints, struct iter_forwards* fwd,
 {
 	uint16_t c1 = *c, c2 = *c;
 	int r1, r2;
+	int nolock = 1;
 
-	r1 = hints_next_root(hints, &c1);
-	r2 = forwards_next_root(fwd, &c2);
+	/* prelock both forwards and hints for atomic read. */
+	lock_rw_rdlock(&fwd->lock);
+	lock_rw_rdlock(&hints->lock);
+	r1 = hints_next_root(hints, &c1, nolock);
+	r2 = forwards_next_root(fwd, &c2, nolock);
+	lock_rw_unlock(&fwd->lock);
+	lock_rw_unlock(&hints->lock);
 
 	if(!r1 && !r2) /* got none, end of list */
 		return 0;
