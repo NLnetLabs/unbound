@@ -678,39 +678,39 @@ errinf_reply(struct module_qstate* qstate, struct iter_qstate* iq)
 
 /** see if last resort is possible - does config allow queries to parent */
 static int
-can_have_last_resort(struct module_env* env, uint8_t* nm, size_t nmlen,
+can_have_last_resort(struct module_env* env, uint8_t* nm, size_t ATTR_UNUSED(nmlen),
 	uint16_t qclass, int* have_dp, struct delegpt** retdp,
 	struct regional* region)
 {
-	struct delegpt* fwddp;
-	struct iter_hints_stub* stub;
-	int labs = dname_count_labels(nm);
+	struct delegpt* dp = NULL;
+	int nolock = 0;
 	/* do not process a last resort (the parent side) if a stub
 	 * or forward is configured, because we do not want to go 'above'
 	 * the configured servers */
-	lock_rw_rdlock(&env->hints->lock);
-	if(!dname_is_root(nm) && (stub = (struct iter_hints_stub*)
-		name_tree_find(&env->hints->tree, nm, nmlen, labs, qclass)) &&
+	if(!dname_is_root(nm) &&
+		(dp = hints_find(env->hints, nm, qclass, nolock)) &&
 		/* has_parent side is turned off for stub_first, where we
 		 * are allowed to go to the parent */
-		stub->dp->has_parent_side_NS) {
-		if(retdp) *retdp = delegpt_copy(stub->dp, region);
+		dp->has_parent_side_NS) {
+		if(retdp) *retdp = delegpt_copy(dp, region);
 		lock_rw_unlock(&env->hints->lock);
 		if(have_dp) *have_dp = 1;
 		return 0;
 	}
-	lock_rw_unlock(&env->hints->lock);
-	lock_rw_rdlock(&env->fwds->lock);
-	if((fwddp = forwards_find(env->fwds, nm, qclass)) &&
+	if(dp) {
+		lock_rw_unlock(&env->hints->lock);
+		dp = NULL;
+	}
+	if((dp = forwards_find(env->fwds, nm, qclass, nolock)) &&
 		/* has_parent_side is turned off for forward_first, where
 		 * we are allowed to go to the parent */
-		fwddp->has_parent_side_NS) {
-		if(retdp) *retdp = delegpt_copy(fwddp, region);
+		dp->has_parent_side_NS) {
+		if(retdp) *retdp = delegpt_copy(dp, region);
 		lock_rw_unlock(&env->fwds->lock);
 		if(have_dp) *have_dp = 1;
 		return 0;
 	}
-	lock_rw_unlock(&env->fwds->lock);
+	if(dp) lock_rw_unlock(&env->fwds->lock);
 	return 1;
 }
 
@@ -886,13 +886,12 @@ prime_root(struct module_qstate* qstate, struct iter_qstate* iq, int id,
 {
 	struct delegpt* dp;
 	struct module_qstate* subq;
+	int nolock = 0;
 	verbose(VERB_DETAIL, "priming . %s NS", 
 		sldns_lookup_by_id(sldns_rr_classes, (int)qclass)?
 		sldns_lookup_by_id(sldns_rr_classes, (int)qclass)->name:"??");
-	lock_rw_rdlock(&qstate->env->hints->lock);
-	dp = hints_lookup_root(qstate->env->hints, qclass);
+	dp = hints_find_root(qstate->env->hints, qclass, nolock);
 	if(!dp) {
-		lock_rw_unlock(&qstate->env->hints->lock);
 		verbose(VERB_ALGO, "Cannot prime due to lack of hints");
 		return 0;
 	}
@@ -956,15 +955,13 @@ prime_stub(struct module_qstate* qstate, struct iter_qstate* iq, int id,
 	struct iter_hints_stub* stub;
 	struct delegpt* stub_dp;
 	struct module_qstate* subq;
+	int nolock = 0;
 
 	if(!qname) return 0;
-	lock_rw_rdlock(&qstate->env->hints->lock);
-	stub = hints_lookup_stub(qstate->env->hints, qname, qclass, iq->dp);
+	stub = hints_lookup_stub(qstate->env->hints, qname, qclass, iq->dp,
+		nolock);
 	/* The stub (if there is one) does not need priming. */
-	if(!stub) {
-		lock_rw_unlock(&qstate->env->hints->lock);
-		return 0;
-	}
+	if(!stub) return 0;
 	stub_dp = stub->dp;
 	/* if we have an auth_zone dp, and stub is equal, don't prime stub
 	 * yet, unless we want to fallback and avoid the auth_zone */
@@ -1319,6 +1316,7 @@ forward_request(struct module_qstate* qstate, struct iter_qstate* iq)
 	struct delegpt* dp;
 	uint8_t* delname = iq->qchase.qname;
 	size_t delnamelen = iq->qchase.qname_len;
+	int nolock = 0;
 	if(iq->refetch_glue && iq->dp) {
 		delname = iq->dp->name;
 		delnamelen = iq->dp->namelen;
@@ -1327,12 +1325,9 @@ forward_request(struct module_qstate* qstate, struct iter_qstate* iq)
 	if( (iq->qchase.qtype == LDNS_RR_TYPE_DS || iq->refetch_glue)
 		&& !dname_is_root(iq->qchase.qname))
 		dname_remove_label(&delname, &delnamelen);
-	lock_rw_rdlock(&qstate->env->fwds->lock);
-	dp = forwards_lookup(qstate->env->fwds, delname, iq->qchase.qclass);
-	if(!dp) {
-		lock_rw_unlock(&qstate->env->fwds->lock);
-		return 0;
-	}
+	dp = forwards_lookup(qstate->env->fwds, delname, iq->qchase.qclass,
+		nolock);
+	if(!dp) return 0;
 	/* send recursion desired to forward addr */
 	iq->chase_flags |= BIT_RD; 
 	iq->dp = delegpt_copy(dp, qstate->region);
@@ -1633,6 +1628,7 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 		 * root priming situation. */
 		if(iq->dp == NULL) {
 			int r;
+			int nolock = 0;
 			/* if under auth zone, no prime needed */
 			if(!auth_zone_delegpt(qstate, iq, delname, delnamelen))
 				return error_response(qstate, id, 
@@ -1646,17 +1642,14 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 				break; /* got noprime-stub-zone, continue */
 			else if(r)
 				return 0; /* stub prime request made */
-			lock_rw_rdlock(&qstate->env->fwds->lock);
-			if(forwards_lookup_root(qstate->env->fwds, 
-				iq->qchase.qclass)) {
+			if(forwards_lookup_root(qstate->env->fwds,
+				iq->qchase.qclass, nolock)) {
 				lock_rw_unlock(&qstate->env->fwds->lock);
 				/* forward zone root, no root prime needed */
 				/* fill in some dp - safety belt */
-				lock_rw_rdlock(&qstate->env->hints->lock);
-				iq->dp = hints_lookup_root(qstate->env->hints, 
-					iq->qchase.qclass);
+				iq->dp = hints_find_root(qstate->env->hints,
+					iq->qchase.qclass, nolock);
 				if(!iq->dp) {
-					lock_rw_unlock(&qstate->env->hints->lock);
 					log_err("internal error: no hints dp");
 					errinf(qstate, "no hints for this class");
 					return error_response(qstate, id, 
@@ -1672,7 +1665,6 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 				}
 				return next_state(iq, INIT_REQUEST_2_STATE);
 			}
-			lock_rw_unlock(&qstate->env->fwds->lock);
 			/* Note that the result of this will set a new
 			 * DelegationPoint based on the result of priming. */
 			if(!prime_root(qstate, iq, id, iq->qchase.qclass))
@@ -1730,15 +1722,14 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 			}
 			if(dname_is_root(iq->dp->name)) {
 				/* use safety belt */
+				int nolock = 0;
 				verbose(VERB_QUERY, "Cache has root NS but "
 				"no addresses. Fallback to the safety belt.");
-				lock_rw_rdlock(&qstate->env->hints->lock);
-				iq->dp = hints_lookup_root(qstate->env->hints, 
-					iq->qchase.qclass);
+				iq->dp = hints_find_root(qstate->env->hints,
+					iq->qchase.qclass, nolock);
 				/* note deleg_msg is from previous lookup,
 				 * but RD is on, so it is not used */
 				if(!iq->dp) {
-					lock_rw_unlock(&qstate->env->hints->lock);
 					log_err("internal error: no hints dp");
 					return error_response(qstate, id, 
 						LDNS_RCODE_REFUSED);
@@ -1800,6 +1791,7 @@ processInitRequest2(struct module_qstate* qstate, struct iter_qstate* iq,
 	delnamelen = iq->qchase.qname_len;
 	if(iq->refetch_glue) {
 		struct iter_hints_stub* stub;
+		int nolock = 0;
 		if(!iq->dp) {
 			log_err("internal or malloc fail: no dp for refetch");
 			errinf(qstate, "malloc failure, no delegation info");
@@ -1807,16 +1799,15 @@ processInitRequest2(struct module_qstate* qstate, struct iter_qstate* iq,
 		}
 		/* Do not send queries above stub, do not set delname to dp if
 		 * this is above stub without stub-first. */
-		lock_rw_rdlock(&qstate->env->hints->lock);
 		stub = hints_lookup_stub(
 			qstate->env->hints, iq->qchase.qname, iq->qchase.qclass,
-			iq->dp);
+			iq->dp, nolock);
 		if(!stub || !stub->dp->has_parent_side_NS || 
 			dname_subdomain_c(iq->dp->name, stub->dp->name)) {
 			delname = iq->dp->name;
 			delnamelen = iq->dp->namelen;
 		}
-		lock_rw_unlock(&qstate->env->hints->lock);
+		if(stub) lock_rw_unlock(&qstate->env->hints->lock);
 	}
 	if(iq->qchase.qtype == LDNS_RR_TYPE_DS || iq->refetch_glue) {
 		if(!dname_is_root(delname))
@@ -2130,24 +2121,25 @@ processLastResort(struct module_qstate* qstate, struct iter_qstate* iq,
 		return error_response_cache(qstate, id, LDNS_RCODE_SERVFAIL);
 	}
 	if(!iq->dp->has_parent_side_NS && dname_is_root(iq->dp->name)) {
-		struct delegpt* p;
-		lock_rw_rdlock(&qstate->env->hints->lock);
-		p = hints_lookup_root(qstate->env->hints, iq->qchase.qclass);
-		if(p) {
+		struct delegpt* dp;
+		int nolock = 0;
+		dp = hints_find_root(qstate->env->hints,
+			iq->qchase.qclass, nolock);
+		if(dp) {
 			struct delegpt_addr* a;
 			iq->chase_flags &= ~BIT_RD; /* go to authorities */
-			for(ns = p->nslist; ns; ns=ns->next) {
+			for(ns = dp->nslist; ns; ns=ns->next) {
 				(void)delegpt_add_ns(iq->dp, qstate->region,
 					ns->name, ns->lame, ns->tls_auth_name,
 					ns->port);
 			}
-			for(a = p->target_list; a; a=a->next_target) {
+			for(a = dp->target_list; a; a=a->next_target) {
 				(void)delegpt_add_addr(iq->dp, qstate->region,
 					&a->addr, a->addrlen, a->bogus,
 					a->lame, a->tls_auth_name, -1, NULL);
 			}
+			lock_rw_unlock(&qstate->env->hints->lock);
 		}
-		lock_rw_unlock(&qstate->env->hints->lock);
 		iq->dp->has_parent_side_NS = 1;
 	} else if(!iq->dp->has_parent_side_NS) {
 		if(!iter_lookup_parent_NS_from_cache(qstate->env, iq->dp,
