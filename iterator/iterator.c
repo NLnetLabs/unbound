@@ -710,7 +710,8 @@ can_have_last_resort(struct module_env* env, uint8_t* nm, size_t ATTR_UNUSED(nml
 		if(have_dp) *have_dp = 1;
 		return 0;
 	}
-	if(dp) lock_rw_unlock(&env->fwds->lock);
+	/* lock_() calls are macros that could be nothing, surround in {} */
+	if(dp) { lock_rw_unlock(&env->fwds->lock); }
 	return 1;
 }
 
@@ -1807,7 +1808,8 @@ processInitRequest2(struct module_qstate* qstate, struct iter_qstate* iq,
 			delname = iq->dp->name;
 			delnamelen = iq->dp->namelen;
 		}
-		if(stub) lock_rw_unlock(&qstate->env->hints->lock);
+		/* lock_() calls are macros that could be nothing, surround in {} */
+		if(stub) { lock_rw_unlock(&qstate->env->hints->lock); }
 	}
 	if(iq->qchase.qtype == LDNS_RR_TYPE_DS || iq->refetch_glue) {
 		if(!dname_is_root(delname))
