@@ -2266,18 +2266,6 @@ worker_init(struct worker* worker, struct config_file *cfg,
 		worker_delete(worker);
 		return 0;
 	}
-	if(!(worker->env.fwds = forwards_create()) ||
-		!forwards_apply_cfg(worker->env.fwds, cfg)) {
-		log_err("Could not set forward zones");
-		worker_delete(worker);
-		return 0;
-	}
-	if(!(worker->env.hints = hints_create()) ||
-		!hints_apply_cfg(worker->env.hints, cfg)) {
-		log_err("Could not set root or stub hints");
-		worker_delete(worker);
-		return 0;
-	}
 	/* one probe timer per process -- if we have 5011 anchors */
 	if(autr_get_num_anchors(worker->env.anchors) > 0
 #ifndef THREADS_DISABLED
@@ -2350,8 +2338,6 @@ worker_delete(struct worker* worker)
 	outside_network_quit_prepare(worker->back);
 	mesh_delete(worker->env.mesh);
 	sldns_buffer_free(worker->env.scratch_buffer);
-	forwards_delete(worker->env.fwds);
-	hints_delete(worker->env.hints);
 	listen_delete(worker->front);
 	outside_network_delete(worker->back);
 	comm_signal_delete(worker->comsig);
