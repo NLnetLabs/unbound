@@ -1,3 +1,6 @@
+25 April 2024: Wouter
+	- Fix configure flto check error, by finding grep for it.
+
 24 April 2024: Wouter
 	- Fix ci workflow for macos for moved install locations.
 

@@ -274,6 +274,9 @@ AC_DEFINE(WINVER, 0x0502, [the version of the windows API enabled])
 ACX_RSRC_VERSION(wnvs)
 AC_DEFINE_UNQUOTED(RSRC_PACKAGE_VERSION, [$wnvs], [version number for resource files])
 
+# Check for 'grep -e' program, here, since ACX_CHECK_FLTO needs that.
+AC_PROG_GREP
+
 # Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST
 AC_LANG([C])
