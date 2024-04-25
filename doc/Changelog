@@ -5,6 +5,7 @@
 	  thread / error: reading root hints.
 	- Fix to disable fragmentation on systems with IP_DONTFRAG,
 	  with a nonzero value for the socket option argument.
+	- Fix doc unit test for out of directory build.
 
 24 April 2024: Wouter
 	- Fix ci workflow for macos for moved install locations.
