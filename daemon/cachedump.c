@@ -839,6 +839,7 @@ int print_deleg_lookup(RES* ssl, struct worker* worker, uint8_t* nm,
 	char b[260];
 	struct query_info qinfo;
 	struct iter_hints_stub* stub;
+	int nolock = 0;
 	regional_free_all(region);
 	qinfo.qname = nm;
 	qinfo.qname_len = nmlen;
@@ -851,8 +852,7 @@ int print_deleg_lookup(RES* ssl, struct worker* worker, uint8_t* nm,
 		"of %s\n", b)) 
 		return 0;
 
-	lock_rw_rdlock(&worker->env.fwds->lock);
-	dp = forwards_lookup(worker->env.fwds, nm, qinfo.qclass);
+	dp = forwards_lookup(worker->env.fwds, nm, qinfo.qclass, nolock);
 	if(dp) {
 		if(!ssl_printf(ssl, "forwarding request:\n")) {
 			lock_rw_unlock(&worker->env.fwds->lock);
@@ -863,7 +863,6 @@ int print_deleg_lookup(RES* ssl, struct worker* worker, uint8_t* nm,
 		lock_rw_unlock(&worker->env.fwds->lock);
 		return 1;
 	}
-	lock_rw_unlock(&worker->env.fwds->lock);
 	
 	while(1) {
 		dp = dns_cache_find_delegation(&worker->env, nm, nmlen, 
@@ -898,9 +897,8 @@ int print_deleg_lookup(RES* ssl, struct worker* worker, uint8_t* nm,
 				continue;
 			}
 		}
-		lock_rw_rdlock(&worker->env.hints->lock);
 		stub = hints_lookup_stub(worker->env.hints, nm, qinfo.qclass,
-			dp);
+			dp, nolock);
 		if(stub) {
 			if(stub->noprime) {
 				if(!ssl_printf(ssl, "The noprime stub servers "
@@ -919,7 +917,6 @@ int print_deleg_lookup(RES* ssl, struct worker* worker, uint8_t* nm,
 			print_dp_details(ssl, worker, stub->dp);
 			lock_rw_unlock(&worker->env.hints->lock);
 		} else {
-			lock_rw_unlock(&worker->env.hints->lock);
 			print_dp_main(ssl, dp, msg);
 			print_dp_details(ssl, worker, dp);
 		}

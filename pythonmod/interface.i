@@ -1416,7 +1416,7 @@ struct delegpt* dns_cache_find_delegation(struct module_env* env,
 int iter_dp_is_useless(struct query_info* qinfo, uint16_t qflags,
         struct delegpt* dp, int supports_ipv4, int supports_ipv6, int use_nat64);
 struct iter_hints_stub* hints_lookup_stub(struct iter_hints* hints,
-        uint8_t* qname, uint16_t qclass, struct delegpt* dp);
+        uint8_t* qname, uint16_t qclass, struct delegpt* dp, int nolock);
 
 /* Custom function to perform logic similar to the one in daemon/cachedump.c */
 struct delegpt* find_delegation(struct module_qstate* qstate, char *nm, size_t nmlen);
@@ -1433,6 +1433,7 @@ struct delegpt* find_delegation(struct module_qstate* qstate, char *nm, size_t n
     struct query_info qinfo;
     struct iter_hints_stub* stub;
     uint32_t timenow = *qstate->env->now;
+    int nolock = 0;
 
     regional_free_all(region);
     qinfo.qname = (uint8_t*)nm;
@@ -1455,14 +1456,13 @@ struct delegpt* find_delegation(struct module_qstate* qstate, char *nm, size_t n
             dname_str((uint8_t*)nm, b);
             continue;
         }
-        lock_rw_rdlock(&qstate->env->hints->lock);
-        stub = hints_lookup_stub(qstate->env->hints, qinfo.qname, qinfo.qclass, dp);
+        stub = hints_lookup_stub(qstate->env->hints, qinfo.qname,
+            qinfo.qclass, dp, nolock);
         if (stub) {
             struct delegpt* stubdp = delegpt_copy(stub->dp, region);
             lock_rw_unlock(&qstate->env->hints->lock);
             return stubdp;
         } else {
-            lock_rw_unlock(&qstate->env->hints->lock);
             return dp;
         }
     }
