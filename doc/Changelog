@@ -3,6 +3,8 @@
 	- Merge #1041: Stub and Forward unshare. This has one structure
 	  for them and fixes #1038: fatal error: Could not initialize
 	  thread / error: reading root hints.
+	- Fix to disable fragmentation on systems with IP_DONTFRAG,
+	  with a nonzero value for the socket option argument.
 
 24 April 2024: Wouter
 	- Fix ci workflow for macos for moved install locations.

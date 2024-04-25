@@ -612,7 +612,9 @@ create_udp_sock(int family, int socktype, struct sockaddr* addr,
 #  elif defined(IP_DONTFRAG) && !defined(__APPLE__)
 		/* the IP_DONTFRAG option if defined in the 11.0 OSX headers,
 		 * but does not work on that version, so we exclude it */
-		int off = 0;
+		/* a nonzero value disables fragmentation, according to
+		 * docs.oracle.com for ip(4). */
+		int off = 1;
 		if (setsockopt(s, IPPROTO_IP, IP_DONTFRAG,
 			&off, (socklen_t)sizeof(off)) < 0) {
 			log_err("setsockopt(..., IP_DONTFRAG, ...) failed: %s",
