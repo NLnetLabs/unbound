@@ -1285,11 +1285,13 @@ iter_get_next_root(struct iter_hints* hints, struct iter_forwards* fwd,
 {
 	uint16_t c1 = *c, c2 = *c;
 	int r1, r2;
+	int nolock = 1;
 
+	/* prelock both forwards and hints for atomic read. */
 	lock_rw_rdlock(&fwd->lock);
 	lock_rw_rdlock(&hints->lock);
-	r1 = hints_next_root(hints, &c1);
-	r2 = forwards_next_root(fwd, &c2);
+	r1 = hints_next_root(hints, &c1, nolock);
+	r2 = forwards_next_root(fwd, &c2, nolock);
 	lock_rw_unlock(&fwd->lock);
 	lock_rw_unlock(&hints->lock);
 
@@ -1462,13 +1464,16 @@ iter_stub_fwd_no_cache(struct module_qstate *qstate, struct query_info *qinf,
 {
 	struct iter_hints_stub *stub;
 	struct delegpt *dp;
+	int nolock = 1;
 
 	/* Check for stub. */
+	/* Lock both forwards and hints for atomic read. */
 	lock_rw_rdlock(&qstate->env->fwds->lock);
 	lock_rw_rdlock(&qstate->env->hints->lock);
 	stub = hints_lookup_stub(qstate->env->hints, qinf->qname,
-	    qinf->qclass, NULL);
-	dp = forwards_lookup(qstate->env->fwds, qinf->qname, qinf->qclass);
+	    qinf->qclass, NULL, nolock);
+	dp = forwards_lookup(qstate->env->fwds, qinf->qname, qinf->qclass,
+		nolock);
 
 	/* see if forward or stub is more pertinent */
 	if(stub && stub->dp && dp) {

@@ -2070,10 +2070,9 @@ static int
 print_root_fwds(RES* ssl, struct iter_forwards* fwds, uint8_t* root)
 {
 	struct delegpt* dp;
-	lock_rw_rdlock(&fwds->lock);
-	dp = forwards_lookup(fwds, root, LDNS_RR_CLASS_IN);
+	int nolock = 0;
+	dp = forwards_lookup(fwds, root, LDNS_RR_CLASS_IN, nolock);
 	if(!dp) {
-		lock_rw_unlock(&fwds->lock);
 		return ssl_printf(ssl, "off (using root hints)\n");
 	}
 	/* if dp is returned it must be the root */
@@ -2155,6 +2154,7 @@ do_forward(RES* ssl, struct worker* worker, char* args)
 {
 	struct iter_forwards* fwd = worker->env.fwds;
 	uint8_t* root = (uint8_t*)"\000";
+	int nolock = 0;
 	if(!fwd) {
 		(void)ssl_printf(ssl, "error: structure not allocated\n");
 		return;
@@ -2168,20 +2168,15 @@ do_forward(RES* ssl, struct worker* worker, char* args)
 	/* delete all the existing queries first */
 	mesh_delete_all(worker->env.mesh);
 	if(strcmp(args, "off") == 0) {
-		lock_rw_wrlock(&fwd->lock);
-		forwards_delete_zone(fwd, LDNS_RR_CLASS_IN, root);
-		lock_rw_unlock(&fwd->lock);
+		forwards_delete_zone(fwd, LDNS_RR_CLASS_IN, root, nolock);
 	} else {
 		struct delegpt* dp;
 		if(!(dp = parse_delegpt(ssl, args, root)))
 			return;
-		lock_rw_wrlock(&fwd->lock);
-		if(!forwards_add_zone(fwd, LDNS_RR_CLASS_IN, dp)) {
-			lock_rw_unlock(&fwd->lock);
+		if(!forwards_add_zone(fwd, LDNS_RR_CLASS_IN, dp, nolock)) {
 			(void)ssl_printf(ssl, "error out of memory\n");
 			return;
 		}
-		lock_rw_unlock(&fwd->lock);
 	}
 	send_ok(ssl);
 }
@@ -2240,10 +2235,12 @@ do_forward_add(RES* ssl, struct worker* worker, char* args)
 	int insecure = 0, tls = 0;
 	uint8_t* nm = NULL;
 	struct delegpt* dp = NULL;
+	int nolock = 1;
 	if(!parse_fs_args(ssl, args, &nm, &dp, &insecure, NULL, &tls))
 		return;
 	if(tls)
 		dp->ssl_upstream = 1;
+	/* prelock forwarders for atomic operation with anchors */
 	lock_rw_wrlock(&fwd->lock);
 	if(insecure && worker->env.anchors) {
 		if(!anchors_add_insecure(worker->env.anchors, LDNS_RR_CLASS_IN,
@@ -2255,7 +2252,7 @@ do_forward_add(RES* ssl, struct worker* worker, char* args)
 			return;
 		}
 	}
-	if(!forwards_add_zone(fwd, LDNS_RR_CLASS_IN, dp)) {
+	if(!forwards_add_zone(fwd, LDNS_RR_CLASS_IN, dp, nolock)) {
 		lock_rw_unlock(&fwd->lock);
 		(void)ssl_printf(ssl, "error out of memory\n");
 		free(nm);
@@ -2273,13 +2270,15 @@ do_forward_remove(RES* ssl, struct worker* worker, char* args)
 	struct iter_forwards* fwd = worker->env.fwds;
 	int insecure = 0;
 	uint8_t* nm = NULL;
+	int nolock = 1;
 	if(!parse_fs_args(ssl, args, &nm, NULL, &insecure, NULL, NULL))
 		return;
+	/* prelock forwarders for atomic operation with anchors */
 	lock_rw_wrlock(&fwd->lock);
 	if(insecure && worker->env.anchors)
 		anchors_delete_insecure(worker->env.anchors, LDNS_RR_CLASS_IN,
 			nm);
-	forwards_delete_zone(fwd, LDNS_RR_CLASS_IN, nm);
+	forwards_delete_zone(fwd, LDNS_RR_CLASS_IN, nm, nolock);
 	lock_rw_unlock(&fwd->lock);
 	free(nm);
 	send_ok(ssl);
@@ -2293,10 +2292,12 @@ do_stub_add(RES* ssl, struct worker* worker, char* args)
 	int insecure = 0, prime = 0, tls = 0;
 	uint8_t* nm = NULL;
 	struct delegpt* dp = NULL;
+	int nolock = 1;
 	if(!parse_fs_args(ssl, args, &nm, &dp, &insecure, &prime, &tls))
 		return;
 	if(tls)
 		dp->ssl_upstream = 1;
+	/* prelock forwarders and hints for atomic operation with anchors */
 	lock_rw_wrlock(&fwd->lock);
 	lock_rw_wrlock(&worker->env.hints->lock);
 	if(insecure && worker->env.anchors) {
@@ -2310,7 +2311,7 @@ do_stub_add(RES* ssl, struct worker* worker, char* args)
 			return;
 		}
 	}
-	if(!forwards_add_stub_hole(fwd, LDNS_RR_CLASS_IN, nm)) {
+	if(!forwards_add_stub_hole(fwd, LDNS_RR_CLASS_IN, nm, nolock)) {
 		if(insecure && worker->env.anchors)
 			anchors_delete_insecure(worker->env.anchors,
 				LDNS_RR_CLASS_IN, nm);
@@ -2321,9 +2322,10 @@ do_stub_add(RES* ssl, struct worker* worker, char* args)
 		free(nm);
 		return;
 	}
-	if(!hints_add_stub(worker->env.hints, LDNS_RR_CLASS_IN, dp, !prime)) {
+	if(!hints_add_stub(worker->env.hints, LDNS_RR_CLASS_IN, dp, !prime,
+		nolock)) {
 		(void)ssl_printf(ssl, "error out of memory\n");
-		forwards_delete_stub_hole(fwd, LDNS_RR_CLASS_IN, nm);
+		forwards_delete_stub_hole(fwd, LDNS_RR_CLASS_IN, nm, nolock);
 		if(insecure && worker->env.anchors)
 			anchors_delete_insecure(worker->env.anchors,
 				LDNS_RR_CLASS_IN, nm);
@@ -2345,15 +2347,17 @@ do_stub_remove(RES* ssl, struct worker* worker, char* args)
 	struct iter_forwards* fwd = worker->env.fwds;
 	int insecure = 0;
 	uint8_t* nm = NULL;
+	int nolock = 1;
 	if(!parse_fs_args(ssl, args, &nm, NULL, &insecure, NULL, NULL))
 		return;
+	/* prelock forwarders and hints for atomic operation with anchors */
 	lock_rw_wrlock(&fwd->lock);
 	lock_rw_wrlock(&worker->env.hints->lock);
 	if(insecure && worker->env.anchors)
 		anchors_delete_insecure(worker->env.anchors, LDNS_RR_CLASS_IN,
 			nm);
-	forwards_delete_stub_hole(fwd, LDNS_RR_CLASS_IN, nm);
-	hints_delete_stub(worker->env.hints, LDNS_RR_CLASS_IN, nm);
+	forwards_delete_stub_hole(fwd, LDNS_RR_CLASS_IN, nm, nolock);
+	hints_delete_stub(worker->env.hints, LDNS_RR_CLASS_IN, nm, nolock);
 	lock_rw_unlock(&fwd->lock);
 	lock_rw_unlock(&worker->env.hints->lock);
 	free(nm);
