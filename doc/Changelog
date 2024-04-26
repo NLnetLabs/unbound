@@ -5,6 +5,7 @@
 	  reply, that is older than the ecs reply, does not return after
 	  the ecs reply expires.
 	- Add unit tests for cachedb and subnet cache expired data.
+	- Man page entry for unbound-checkconf -q.
 
 26 April 2024: Yorgos
 	- Fix #876: [FR] can unbound-checkconf be silenced when configuration
