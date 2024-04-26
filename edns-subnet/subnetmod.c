@@ -57,6 +57,9 @@
 #include "sldns/sbuffer.h"
 #include "sldns/wire2str.h"
 #include "iterator/iter_utils.h"
+#ifdef USE_CACHEDB
+#include "cachedb/cachedb.h"
+#endif
 
 /** externally called */
 void 
@@ -602,7 +605,21 @@ eval_response(struct module_qstate *qstate, int id, struct subnet_qstate *sq)
 	}
 	sne->num_msg_nocache++;
 	lock_rw_unlock(&sne->biglock);
-	
+
+	/* If there is an expired answer in the global cache, remove that,
+	 * because expired answers would otherwise resurface once the ecs data
+	 * expires, giving once in a while global data responses for ecs
+	 * domains, with serve expired enabled. */
+	if(qstate->env->cfg->serve_expired) {
+		msg_cache_remove(qstate->env, qstate->qinfo.qname,
+			qstate->qinfo.qname_len, qstate->qinfo.qtype,
+			qstate->qinfo.qclass, 0);
+#ifdef USE_CACHEDB
+		if(qstate->env->cachedb_enabled)
+			cachedb_msg_remove(qstate);
+#endif
+	}
+
 	if (sq->subnet_downstream) {
 		/* Client wants to see the answer, echo option back
 		 * and adjust the scope. */

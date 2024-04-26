@@ -180,6 +180,7 @@ struct iter_hints;
 struct respip_set;
 struct respip_client_info;
 struct respip_addr_info;
+struct module_stack;
 
 /** Maximum number of modules in operation */
 #define MAX_MODULE 16
@@ -537,6 +538,8 @@ struct module_env {
 	/** EDNS client string information */
 	struct edns_strings* edns_strings;
 
+	/** module stack */
+	struct module_stack* modstack;
 #ifdef USE_CACHEDB
 	/** the cachedb enabled value, copied and stored here. */
 	int cachedb_enabled;

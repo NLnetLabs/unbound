@@ -272,18 +272,31 @@ ENTRY_END
 
 STEP 122 TIME_PASSES ELAPSE 2
 
-STEP 130 CHECK_ANSWER
+; But the entry has been deleted, so it cannot be served, the reply
+; at step 141 is returned instead.
+;STEP 130 CHECK_ANSWER
+;ENTRY_BEGIN
+;MATCH all
+;REPLY QR RD RA NOERROR
+;SECTION QUESTION
+;www.example.com. IN A
+;SECTION ANSWER
+;www.example.com. 30 IN A 1.2.3.4
+;ENTRY_END
+
+; reply can flow again.
+STEP 140 TRAFFIC
+
+STEP 141 CHECK_ANSWER
 ENTRY_BEGIN
 MATCH all
 REPLY QR RD RA NOERROR
 SECTION QUESTION
 www.example.com. IN A
 SECTION ANSWER
-www.example.com. 30 IN A 1.2.3.4
+www.example.com. 10 IN CNAME example.foo.com.
+example.foo.com. 10 IN A 1.2.3.6
 ENTRY_END
-
-; reply can flow again.
-STEP 140 TRAFFIC
 
 ; see the entry now in cache, from the subnetcache.
 STEP 142 TIME_PASSES ELAPSE 2

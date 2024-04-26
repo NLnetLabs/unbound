@@ -827,10 +827,13 @@ cachedb_handle_query(struct module_qstate* qstate,
 		 * TODO: this needs revisit. The expired data stored from cachedb has
 		 * 0 TTL which is picked up by iterator later when looking in the cache.
 		 */
-		if(qstate->env->cfg->serve_expired && msg_expired &&
-			qstate->env->cfg->serve_expired_client_timeout) {
+		if(qstate->env->cfg->serve_expired && msg_expired) {
 			qstate->return_msg = NULL;
 			qstate->ext_state[id] = module_wait_module;
+			/* The expired reply is sent with
+			 * mesh_respond_serve_expired, and so
+			 * the need_refetch is not used. */
+			qstate->need_refetch = 0;
 			return;
 		}
 		if(qstate->need_refetch && qstate->serve_expired_data &&
@@ -997,5 +1000,24 @@ cachedb_is_enabled(struct module_stack* mods, struct module_env* env)
 	if(ie && ie->enabled)
 		return 1;
 	return 0;
+}
+
+void cachedb_msg_remove(struct module_qstate* qstate)
+{
+	char key[(CACHEDB_HASHSIZE/8)*2+1];
+	int id = modstack_find(qstate->env->modstack, "cachedb");
+	struct cachedb_env* ie = (struct cachedb_env*)qstate->env->modinfo[id];
+
+	log_query_info(VERB_ALGO, "cachedb msg remove", &qstate->qinfo);
+	calc_hash(qstate, key, sizeof(key));
+	sldns_buffer_clear(qstate->env->scratch_buffer);
+	sldns_buffer_write_u32(qstate->env->scratch_buffer, 0);
+	sldns_buffer_flip(qstate->env->scratch_buffer);
+
+	/* call backend */
+	(*ie->backend->store)(qstate->env, ie, key,
+		sldns_buffer_begin(qstate->env->scratch_buffer),
+		sldns_buffer_limit(qstate->env->scratch_buffer),
+		0);
 }
 #endif /* USE_CACHEDB */

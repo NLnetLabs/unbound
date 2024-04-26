@@ -1,3 +1,10 @@
+26 April 2024: Wouter
+	- Fix cachedb with serve-expired-client-timeout disabled. The edns
+	  subnet module deletes global cache and cachedb cache when it
+	  stores a result, and serve-expired is enabled, so that the global
+	  reply, that is older than the ecs reply, does not return after
+	  the ecs reply expires.
+
 25 April 2024: Wouter
 	- Fix configure flto check error, by finding grep for it.
 	- Merge #1041: Stub and Forward unshare. This has one structure

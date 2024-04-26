@@ -118,3 +118,11 @@ struct module_func_block* cachedb_get_funcblock(void);
  * @return true if exists and enabled.
  */
 int cachedb_is_enabled(struct module_stack* mods, struct module_env* env);
+
+/**
+ * Remove a message from the global cache. Because edns subnet has a more
+ * specific entry, and if not removed when everything expires, the global
+ * entry is used, instead of a fresh lookup of the edns subnet entry.
+ * @param qstate: query state.
+ */
+void cachedb_msg_remove(struct module_qstate* qstate);
