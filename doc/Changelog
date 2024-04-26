@@ -6,6 +6,10 @@
 	  the ecs reply expires.
 	- Add unit tests for cachedb and subnet cache expired data.
 
+26 April 2024: Yorgos
+	- Fix #876: [FR] can unbound-checkconf be silenced when configuration
+	  is valid?
+
 25 April 2024: Wouter
 	- Fix configure flto check error, by finding grep for it.
 	- Merge #1041: Stub and Forward unshare. This has one structure
