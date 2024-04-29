@@ -1,6 +1,9 @@
 29 April 2024: Yorgos
 	- Cleanup unnecessary strdup calls for EDE strings.
 
+29 April 2024: Wouter
+	- Fix doxygen comment for errinf_to_str_bogus.
+
 26 April 2024: Wouter
 	- Fix cachedb with serve-expired-client-timeout disabled. The edns
 	  subnet module deletes global cache and cachedb cache when it

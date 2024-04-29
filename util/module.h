@@ -831,6 +831,7 @@ void errinf_dname(struct module_qstate* qstate, const char* str,
 /**
  * Create error info in string.  For validation failures.
  * @param qstate: query state.
+ * @param region: the region for the result or NULL for malloced result.
  * @return string or NULL on malloc failure (already logged).
  *    This string is malloced if region is NULL and has to be freed by caller.
  */
