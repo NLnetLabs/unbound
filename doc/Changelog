@@ -1,3 +1,6 @@
+29 April 2024: Yorgos
+	- Cleanup unnecessary strdup calls for EDE strings.
+
 26 April 2024: Wouter
 	- Fix cachedb with serve-expired-client-timeout disabled. The edns
 	  subnet module deletes global cache and cachedb cache when it

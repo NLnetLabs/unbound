@@ -4045,17 +4045,9 @@ processFinished(struct module_qstate* qstate, struct iter_qstate* iq,
 		!qstate->env->cfg->val_log_squelch) {
 		char* err_str = errinf_to_str_misc(qstate);
 		if(err_str) {
-			size_t err_str_len = strlen(err_str);
 			verbose(VERB_ALGO, "iterator EDE: %s", err_str);
-			/* allocate space and store the error
-			 * string */
-			iq->response->rep->reason_bogus_str = regional_alloc(
-				qstate->region,
-				sizeof(char) * (err_str_len+1));
-			memcpy(iq->response->rep->reason_bogus_str,
-				err_str, err_str_len+1);
+			iq->response->rep->reason_bogus_str = err_str;
 		}
-		free(err_str);
 	}
 
 	/* we have finished processing this query */

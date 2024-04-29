@@ -1202,7 +1202,7 @@ mesh_do_callback(struct mesh_state* m, int rcode, struct reply_info* rep,
 		rcode = LDNS_RCODE_SERVFAIL;
 	if(!rcode && rep && (rep->security == sec_status_bogus ||
 		rep->security == sec_status_secure_sentinel_fail)) {
-		if(!(reason = errinf_to_str_bogus(&m->s)))
+		if(!(reason = errinf_to_str_bogus(&m->s, NULL)))
 			rcode = LDNS_RCODE_SERVFAIL;
 	}
 	/* send the reply */
@@ -1487,9 +1487,7 @@ void mesh_query_done(struct mesh_state* mstate)
 		&& mstate->s.env->cfg->log_servfail
 		&& !mstate->s.env->cfg->val_log_squelch) {
 			char* err = errinf_to_str_servfail(&mstate->s);
-			if(err)
-				log_err("%s", err);
-			free(err);
+			if(err) { log_err("%s", err); }
 		}
 	}
 	for(r = mstate->reply_list; r; r = r->next) {
