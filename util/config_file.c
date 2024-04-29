@@ -1377,7 +1377,7 @@ config_read(struct config_file* cfg, const char* filename, const char* chroot)
 	int r, flags;
 #endif
 	if(!fname)
-		return 1;
+		return 0;
 
 	/* check for wildcards */
 #ifdef HAVE_GLOB
