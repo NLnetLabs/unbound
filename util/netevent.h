@@ -68,6 +68,7 @@
 #ifdef HAVE_NGTCP2
 #include <ngtcp2/ngtcp2.h>
 #endif
+#include <coap3/coap.h>
 
 struct sldns_buffer;
 struct comm_point;
@@ -90,6 +91,7 @@ struct internal_base;
 struct internal_timer; /* A sub struct of the comm_timer super struct */
 
 enum listen_type;
+enum CoAPSEcurityMode;
 
 /** callback from communication point function type */
 typedef int comm_point_callback_type(struct comm_point*, void*, int,
@@ -130,6 +132,14 @@ struct comm_base {
 	void (*start_accept)(void*);
 	/** user argument for stop_accept and start_accept functions */
 	void* cb_arg;
+};
+
+struct pdu_response_data {
+	coap_pdu_type_t type;
+	coap_pdu_code_t code;
+	coap_mid_t mid;
+	struct coap_bin_const_t* token;
+	struct coap_optlist_t* options;
 };
 
 /**
@@ -187,6 +197,12 @@ struct comm_reply {
 	/** port number for doq */
 	int doq_srcport;
 #endif /* HAVE_NGTCP2 */
+
+	coap_session_t* session;
+
+	coap_pdu_t* response;
+
+	struct pdu_response_data* pdu_wrapper;
 };
 
 /**
@@ -447,6 +463,8 @@ struct comm_point {
 	comm_point_callback_type* callback;
 	/** argument to pass to callback. */
 	void *cb_arg;
+
+	coap_context_t* context;
 };
 
 /**
@@ -573,6 +591,11 @@ struct ub_event* comm_point_internal(struct comm_point* c);
 struct comm_point* comm_point_create_udp(struct comm_base* base,
 	int fd, struct sldns_buffer* buffer, int pp2_enabled,
 	comm_point_callback_type* callback, void* callback_arg, struct unbound_socket* socket);
+
+struct comm_point* comm_point_create_coap(struct comm_base* base,
+	int fd, struct sldns_buffer* buffer, int pp2_enabled,
+	comm_point_callback_type* callback, void* callback_arg, struct unbound_socket* socket,
+	enum listen_type, coap_context_t* context);
 
 /**
  * Create an UDP with ancillary data comm point. Calls malloc.
@@ -740,6 +763,9 @@ void comm_point_drop_reply(struct comm_reply* repinfo);
 int comm_point_send_udp_msg(struct comm_point* c, struct sldns_buffer* packet,
 	struct sockaddr* addr, socklen_t addrlen,int is_connected);
 
+int comm_point_send_coap_msg(struct comm_point* c, struct sldns_buffer* packet,
+	struct sockaddr* addr, socklen_t addrlen,int is_connected, coap_session_t* session, coap_pdu_t* response, struct pdu_response_data* pdu_wrapper);
+
 /**
  * Stop listening for input on the commpoint. No callbacks will happen.
  * @param c: commpoint to disable. The fd is not closed.
@@ -873,6 +899,8 @@ int comm_point_perform_accept(struct comm_point* c,
  * @param arg: the comm_point structure.
  */
 void comm_point_udp_callback(int fd, short event, void* arg);
+
+void comm_point_oscore_callback(int fd, short event, void* arg);
 
 /**
  * This routine is published for checks and tests, and is only used internally.
