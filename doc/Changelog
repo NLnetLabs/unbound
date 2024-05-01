@@ -2,6 +2,7 @@
 	- Fix for the DNSBomb vulnerability CVE-2024-33655. Thanks to Xiang Li
 	  from the Network and Information Security Lab of Tsinghua University
 	  for reporting it.
+	- Set version number to 1.20.0 for release.
 
 29 April 2024: Yorgos
 	- Cleanup unnecessary strdup calls for EDE strings.
