@@ -1,3 +1,80 @@
+1 May 2024: Wouter
+	- Fix for the DNSBomb vulnerability CVE-2024-33655. Thanks to Xiang Li
+	  from the Network and Information Security Lab of Tsinghua University
+	  for reporting it.
+	- Set version number to 1.20.0 for release.
+
+29 April 2024: Yorgos
+	- Cleanup unnecessary strdup calls for EDE strings.
+
+29 April 2024: Wouter
+	- Fix doxygen comment for errinf_to_str_bogus.
+
+26 April 2024: Wouter
+	- Fix cachedb with serve-expired-client-timeout disabled. The edns
+	  subnet module deletes global cache and cachedb cache when it
+	  stores a result, and serve-expired is enabled, so that the global
+	  reply, that is older than the ecs reply, does not return after
+	  the ecs reply expires.
+	- Add unit tests for cachedb and subnet cache expired data.
+	- Man page entry for unbound-checkconf -q.
+
+26 April 2024: Yorgos
+	- Fix #876: [FR] can unbound-checkconf be silenced when configuration
+	  is valid?
+
+25 April 2024: Wouter
+	- Fix configure flto check error, by finding grep for it.
+	- Merge #1041: Stub and Forward unshare. This has one structure
+	  for them and fixes #1038: fatal error: Could not initialize
+	  thread / error: reading root hints.
+	- Fix to disable fragmentation on systems with IP_DONTFRAG,
+	  with a nonzero value for the socket option argument.
+	- Fix doc unit test for out of directory build.
+
+24 April 2024: Wouter
+	- Fix ci workflow for macos for moved install locations.
+
+23 April 2024: Yorgos
+	- Merge #1053: Remove child delegations from cache when grandchild
+	  delegations are returned from parent.
+
+22 April 2024: Wouter
+	- Add checklock feature verbose_locking to trace locks and unlocks.
+	- Fix edns subnet to sort rrset references when storing messages
+	  in the cache. This fixes a race condition in the rrset locks.
+
+15 April 2024: Wouter
+	- Fix #1048: Update ax_pkg_swig.m4 and ax_pthread.m4.
+	- Fix configure, autoconf for #1048.
+
+15 April 2024: Yorgos
+	- Merge #1049 from Petr Menšík: Py_NoSiteFlag is not needed since
+	  Python 3.8
+
+12 April 2024: Wouter
+	- Fix cachedb for serve-expired with serve-expired-client-timeout.
+	- Fixup unit test for cachedb server expired client timeout with
+	  a check if response if from upstream or from cachedb.
+	- Fixup cachedb to not refetch when serve-expired-client-timeout is
+	  used.
+
+10 April 2024: Wouter
+	- Implement cachedb-check-when-serve-expired: yes option, default
+	  is enabled. When serve expired is enabled with cachedb, it first
+	  checks cachedb before serving the expired response.
+	- Fixup compile without cachedb.
+	- Add test for cachedb serve expired.
+	- Extended test for cachedb serve expired.
+	- Fix makefile dependencies for fake_event.c.
+	- Fix cachedb for serve-expired with serve-expired-reply-ttl.
+	- Fix to not reply serve expired unless enabled for cachedb.
+
+9 April 2024: Yorgos
+	- Merge #1043 from xiaoxiaoafeifei: Add loongarch support; updates
+	  config.guess(2024-01-01) and config.sub(2024-01-01), verified
+	  with upstream.
+
 8 April 2024: Yorgos
 	- Fix #595: unbound-anchor cannot deal with full disk; it will now
 	  first write out to a temp file before replacing the original one,

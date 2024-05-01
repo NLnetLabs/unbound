@@ -746,7 +746,12 @@ answer_from_cache(struct worker* worker, struct query_info* qinfo,
 	if(rep->ttl < timenow) {
 		/* Check if we need to serve expired now */
 		if(worker->env.cfg->serve_expired &&
-			!worker->env.cfg->serve_expired_client_timeout) {
+			!worker->env.cfg->serve_expired_client_timeout
+#ifdef USE_CACHEDB
+			&& !(worker->env.cachedb_enabled &&
+			  worker->env.cfg->cachedb_check_when_serve_expired)
+#endif
+			) {
 				if(worker->env.cfg->serve_expired_ttl &&
 					rep->serve_expired_ttl < timenow)
 					return 0;

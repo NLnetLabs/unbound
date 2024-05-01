@@ -181,6 +181,7 @@ struct views;
 struct respip_set;
 struct respip_client_info;
 struct respip_addr_info;
+struct module_stack;
 
 /** Maximum number of modules in operation */
 #define MAX_MODULE 16
@@ -542,6 +543,12 @@ struct module_env {
 	/** EDNS client string information */
 	struct edns_strings* edns_strings;
 
+	/** module stack */
+	struct module_stack* modstack;
+#ifdef USE_CACHEDB
+	/** the cachedb enabled value, copied and stored here. */
+	int cachedb_enabled;
+#endif
 	/* Make every mesh state unique, do not aggregate mesh states. */
 	int unique_mesh;
 };
@@ -829,10 +836,11 @@ void errinf_dname(struct module_qstate* qstate, const char* str,
 /**
  * Create error info in string.  For validation failures.
  * @param qstate: query state.
+ * @param region: the region for the result or NULL for malloced result.
  * @return string or NULL on malloc failure (already logged).
- *    This string is malloced and has to be freed by caller.
+ *    This string is malloced if region is NULL and has to be freed by caller.
  */
-char* errinf_to_str_bogus(struct module_qstate* qstate);
+char* errinf_to_str_bogus(struct module_qstate* qstate, struct regional* region);
 
 /**
  * Check the sldns_ede_code of the qstate->errinf.
@@ -845,7 +853,6 @@ sldns_ede_code errinf_to_reason_bogus(struct module_qstate* qstate);
  * Create error info in string.  For other servfails.
  * @param qstate: query state.
  * @return string or NULL on malloc failure (already logged).
- *    This string is malloced and has to be freed by caller.
  */
 char* errinf_to_str_servfail(struct module_qstate* qstate);
 
@@ -853,7 +860,6 @@ char* errinf_to_str_servfail(struct module_qstate* qstate);
  * Create error info in string.  For misc failures that are not servfail.
  * @param qstate: query state.
  * @return string or NULL on malloc failure (already logged).
- *    This string is malloced and has to be freed by caller.
  */
 char* errinf_to_str_misc(struct module_qstate* qstate);
 

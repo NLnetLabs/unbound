@@ -32,12 +32,12 @@ jobs:
           - name: OS X
             os: macos-latest
             install_expat: "yes"
-            config: "--enable-debug --disable-flto --with-ssl=/usr/local/opt/openssl --with-libexpat=/usr/local/opt/expat"
+            config: "--enable-debug --disable-flto --with-ssl=/opt/homebrew/opt/openssl --with-libexpat=/opt/homebrew/opt/expat"
             make_test: "yes"
           - name: Clang on OS X
             os: macos-latest
             install_expat: "yes"
-            config: "CC=clang --enable-debug --disable-flto --with-ssl=/usr/local/opt/openssl --with-libexpat=/usr/local/opt/expat --disable-static"
+            config: "CC=clang --enable-debug --disable-flto --with-ssl=/opt/homebrew/opt/openssl --with-libexpat=/opt/homebrew/opt/expat --disable-static"
             make_test: "yes"
             clang_analysis: "yes"
           - name: ubsan (gcc undefined behaviour sanitizer)

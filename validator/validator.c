@@ -2453,19 +2453,12 @@ processFinished(struct module_qstate* qstate, struct val_qstate* vq,
 				log_query_info(NO_VERBOSE, "validation failure",
 					&qstate->qinfo);
 			else {
-				char* err_str = errinf_to_str_bogus(qstate);
+				char* err_str = errinf_to_str_bogus(qstate,
+					qstate->region);
 				if(err_str) {
-					size_t err_str_len = strlen(err_str);
 					log_info("%s", err_str);
-					/* allocate space and store the error
-					 * string */
-					vq->orig_msg->rep->reason_bogus_str = regional_alloc(
-						qstate->region,
-						sizeof(char) * (err_str_len+1));
-					memcpy(vq->orig_msg->rep->reason_bogus_str,
-						err_str, err_str_len+1);
+					vq->orig_msg->rep->reason_bogus_str = err_str;
 				}
-				free(err_str);
 			}
 		}
 		/*
