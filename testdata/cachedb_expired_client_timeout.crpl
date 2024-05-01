@@ -9,6 +9,7 @@ server:
 	; testbound script steps, but also reply within the time.
 	serve-expired-client-timeout: 1200
 	module-config: "cachedb iterator"
+	discard-timeout: 3000
 
 cachedb:
 	backend: "testframe"

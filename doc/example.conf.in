@@ -191,6 +191,21 @@ server:
 	# are behind a slow satellite link, to eg. 1128.
 	# unknown-server-time-limit: 376
 
+	# msec before recursion replies are dropped. The work item continues.
+	# discard-timeout: 1900
+
+	# Max number of replies waiting for recursion per IP address.
+	# wait-limit: 1000
+
+	# Max replies waiting for recursion for IP address with cookie.
+	# wait-limit-cookie: 10000
+
+	# Apart from the default, the wait limit can be set for a netblock.
+	# wait-limit-netblock: 192.0.2.0/24 50000
+
+	# Apart from the default, the wait limit with cookie can be adjusted.
+	# wait-limit-cookie-netblock: 192.0.2.0/24 50000
+
 	# the amount of memory to use for the RRset cache.
 	# plain value in bytes or you can append k, m or G. default is "4Mb".
 	# rrset-cache-size: 4m

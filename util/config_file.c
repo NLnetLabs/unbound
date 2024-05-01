@@ -309,6 +309,11 @@ config_create(void)
 	cfg->minimal_responses = 1;
 	cfg->rrset_roundrobin = 1;
 	cfg->unknown_server_time_limit = 376;
+	cfg->discard_timeout = 1900; /* msec */
+	cfg->wait_limit = 1000;
+	cfg->wait_limit_cookie = 10000;
+	cfg->wait_limit_netblock = NULL;
+	cfg->wait_limit_cookie_netblock = NULL;
 	cfg->max_udp_size = 1232; /* value taken from edns_buffer_size */
 	if(!(cfg->server_key_file = strdup(RUN_DIR"/unbound_server.key")))
 		goto error_exit;
@@ -726,6 +731,9 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	else S_YNO("minimal-responses:", minimal_responses)
 	else S_YNO("rrset-roundrobin:", rrset_roundrobin)
 	else S_NUMBER_OR_ZERO("unknown-server-time-limit:", unknown_server_time_limit)
+	else S_NUMBER_OR_ZERO("discard-timeout:", discard_timeout)
+	else S_NUMBER_OR_ZERO("wait-limit:", wait_limit)
+	else S_NUMBER_OR_ZERO("wait-limit-cookie:", wait_limit_cookie)
 	else S_STRLIST("local-data:", local_data)
 	else S_YNO("unblock-lan-zones:", unblock_lan_zones)
 	else S_YNO("insecure-lan-zones:", insecure_lan_zones)
@@ -1207,6 +1215,11 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_YNO(opt, "minimal-responses", minimal_responses)
 	else O_YNO(opt, "rrset-roundrobin", rrset_roundrobin)
 	else O_DEC(opt, "unknown-server-time-limit", unknown_server_time_limit)
+	else O_DEC(opt, "discard-timeout", discard_timeout)
+	else O_DEC(opt, "wait-limit", wait_limit)
+	else O_DEC(opt, "wait-limit-cookie", wait_limit_cookie)
+	else O_LS2(opt, "wait-limit-netblock", wait_limit_netblock)
+	else O_LS2(opt, "wait-limit-cookie-netblock", wait_limit_cookie_netblock)
 #ifdef CLIENT_SUBNET
 	else O_LST(opt, "send-client-subnet", client_subnet)
 	else O_LST(opt, "client-subnet-zone", client_subnet_zone)
@@ -1678,6 +1691,8 @@ config_delete(struct config_file* cfg)
 	config_deltrplstrlist(cfg->interface_tag_actions);
 	config_deltrplstrlist(cfg->interface_tag_datas);
 	config_delstrlist(cfg->control_ifs.first);
+	config_deldblstrlist(cfg->wait_limit_netblock);
+	config_deldblstrlist(cfg->wait_limit_cookie_netblock);
 	free(cfg->server_key_file);
 	free(cfg->server_cert_file);
 	free(cfg->control_key_file);

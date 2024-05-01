@@ -537,6 +537,21 @@ struct config_file {
 	/* wait time for unknown server in msec */
 	int unknown_server_time_limit;
 
+	/** Wait time to drop recursion replies */
+	int discard_timeout;
+
+	/** Wait limit for number of replies per IP address */
+	int wait_limit;
+
+	/** Wait limit for number of replies per IP address with cookie */
+	int wait_limit_cookie;
+
+	/** wait limit per netblock */
+	struct config_str2list* wait_limit_netblock;
+
+	/** wait limit with cookie per netblock */
+	struct config_str2list* wait_limit_cookie_netblock;
+
 	/* maximum UDP response size */
 	size_t max_udp_size;
 

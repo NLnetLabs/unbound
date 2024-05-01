@@ -302,6 +302,36 @@ Increase this if you are behind a slow satellite link, to eg. 1128.
 That would then avoid re\-querying every initial query because it times out.
 Default is 376 msec.
 .TP
+.B discard\-timeout: \fI<msec>
+The wait time in msec where recursion requests are dropped. This is
+to stop a large number of replies from accumulating. They receive
+no reply, the work item continues to recurse. It is nice to be a bit
+larger than serve\-expired\-client\-timeout if that is enabled.
+A value of 1900 msec is suggested. The value 0 disables it.
+Default 1900 msec.
+.TP
+.B wait\-limit: \fI<number>
+The number of replies that can wait for recursion, for an IP address.
+This makes a ratelimit per IP address of waiting replies for recursion.
+It stops very large amounts of queries waiting to be returned to one
+destination. The value 0 disables wait limits. Default is 1000.
+.TP
+.B wait\-limit\-cookie: \fI<number>
+The number of replies that can wait for recursion, for an IP address
+that sent the query with a valid DNS cookie. Since the cookie validates
+the client address, the limit can be higher. Default is 10000.
+.TP
+.B wait\-limit\-netblock: \fI<netblock> <number>
+The wait limit for the netblock. If not given the wait\-limit value is
+used. The most specific netblock is used to determine the limit. Useful for
+overriding the default for a specific, group or individual, server.
+The value -1 disables wait limits for the netblock.
+.TP
+.B wait\-limit\-cookie\-netblock: \fI<netblock> <number>
+The wait limit for the netblock, when the query has a DNS cookie.
+If not given, the wait\-limit\-cookie value is used.
+The value -1 disables wait limits for the netblock.
+.TP
 .B so\-rcvbuf: \fI<number>
 If not 0, then set the SO_RCVBUF socket option to get more buffer
 space on UDP port 53 incoming queries.  So that short spikes on busy
