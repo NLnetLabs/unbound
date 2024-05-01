@@ -24,7 +24,7 @@ struct respip_set {
 	struct regional* region;
 	struct rbtree_type ip_tree;
 	lock_rw_type lock;	/* lock on the respip tree. It is ordered
-		after views and before hints and stubs. */
+		after views and before hints, stubs and local zones. */
 	char* const* tagname;	/* shallow copy of tag names, for logging */
 	int num_tags;		/* number of tagname entries */
 };

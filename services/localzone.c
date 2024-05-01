@@ -2226,3 +2226,10 @@ size_t local_zones_get_mem(struct local_zones* zones)
 	lock_rw_unlock(&zones->lock);
 	return m;
 }
+
+void local_zones_swap_tree(struct local_zones* zones, struct local_zones* data)
+{
+	rbtree_type oldtree = zones->ztree;
+	zones->ztree = data->ztree;
+	data->ztree = oldtree;
+}

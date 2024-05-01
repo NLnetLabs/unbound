@@ -646,4 +646,14 @@ local_zone_find_data(struct local_zone* z, uint8_t* nm, size_t nmlen, int nmlabs
  * the tree for reading. */
 size_t local_zones_get_mem(struct local_zones* zones);
 
+/**
+ * Swap internal tree with preallocated entries. Caller should manage
+ * the locks.
+ * @param zones: the local zones structure.
+ * @param data: the data structure used to take elements from. This contains
+ * 	the old elements on return.
+ */
+void local_zones_swap_tree(struct local_zones* zones,
+	struct local_zones* data);
+
 #endif /* SERVICES_LOCALZONE_H */

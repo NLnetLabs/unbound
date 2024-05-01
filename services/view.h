@@ -55,7 +55,7 @@ struct respip_set;
  */
 struct views {
 	/** lock on the view tree. When locking order, the views lock
-	 * is before the forwards,hints,anchors lock. */
+	 * is before the forwards,hints,anchors,localzones lock. */
 	lock_rw_type lock;
 	/** rbtree of struct view */
 	rbtree_type vtree;

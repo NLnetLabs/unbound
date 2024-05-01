@@ -3775,6 +3775,8 @@ struct fast_reload_construct {
 	struct iter_hints* hints;
 	/** construct for respip_set */
 	struct respip_set* respip_set;
+	/** construct for local zones */
+	struct local_zones* local_zones;
 	/** if there is response ip configuration in use */
 	int use_response_ip;
 	/** storage for the old configuration elements. The outer struct
@@ -3888,6 +3890,7 @@ fr_construct_clear(struct fast_reload_construct* ct)
 	forwards_delete(ct->fwds);
 	hints_delete(ct->hints);
 	respip_set_delete(ct->respip_set);
+	local_zones_delete(ct->local_zones);
 	views_delete(ct->views);
 	/* Delete the log identity here so that the global value is not
 	 * reset by config_delete. */
@@ -4138,6 +4141,7 @@ fr_printmem(struct fast_reload_thread* fr,
 	mem += respip_set_get_mem(ct->respip_set);
 	mem += forwards_get_mem(ct->fwds);
 	mem += hints_get_mem(ct->hints);
+	mem += local_zones_get_mem(ct->local_zones);
 	mem += sizeof(*ct->oldcfg);
 	mem += config_file_getmem(newcfg);
 
@@ -4182,6 +4186,17 @@ fr_construct_from_config(struct fast_reload_thread* fr,
 		return 0;
 	}
 	if(!hints_apply_cfg(ct->hints, newcfg)) {
+		fr_construct_clear(ct);
+		return 0;
+	}
+	if(fr_poll_for_quit(fr))
+		return 1;
+
+	if(!(ct->local_zones = local_zones_create())) {
+		fr_construct_clear(ct);
+		return 0;
+	}
+	if(!local_zones_apply_cfg(ct->local_zones, newcfg)) {
 		fr_construct_clear(ct);
 		return 0;
 	}
@@ -4618,9 +4633,11 @@ fr_reload_config(struct fast_reload_thread* fr, struct config_file* newcfg,
 	lock_rw_wrlock(&env->views->lock);
 	lock_rw_wrlock(&ct->respip_set->lock);
 	lock_rw_wrlock(&env->respip_set->lock);
+	lock_rw_wrlock(&ct->local_zones->lock);
+	lock_rw_wrlock(&daemon->local_zones->lock);
 	lock_rw_wrlock(&ct->fwds->lock);
-	lock_rw_wrlock(&ct->hints->lock);
 	lock_rw_wrlock(&env->fwds->lock);
+	lock_rw_wrlock(&ct->hints->lock);
 	lock_rw_wrlock(&env->hints->lock);
 
 #ifdef ATOMIC_POINTER_LOCK_FREE
@@ -4655,6 +4672,7 @@ fr_reload_config(struct fast_reload_thread* fr, struct config_file* newcfg,
 	forwards_swap_tree(env->fwds, ct->fwds);
 	hints_swap_tree(env->hints, ct->hints);
 	views_swap_tree(env->views, ct->views);
+	local_zones_swap_tree(daemon->local_zones, ct->local_zones);
 	respip_set_swap_tree(env->respip_set, ct->respip_set);
 	daemon->use_response_ip = ct->use_response_ip;
 
@@ -4665,9 +4683,11 @@ fr_reload_config(struct fast_reload_thread* fr, struct config_file* newcfg,
 	lock_rw_unlock(&env->views->lock);
 	lock_rw_unlock(&ct->respip_set->lock);
 	lock_rw_unlock(&env->respip_set->lock);
+	lock_rw_unlock(&ct->local_zones->lock);
+	lock_rw_unlock(&daemon->local_zones->lock);
 	lock_rw_unlock(&env->fwds->lock);
-	lock_rw_unlock(&env->hints->lock);
 	lock_rw_unlock(&ct->fwds->lock);
+	lock_rw_unlock(&env->hints->lock);
 	lock_rw_unlock(&ct->hints->lock);
 
 	return 1;
@@ -4829,7 +4849,9 @@ fr_load_config(struct fast_reload_thread* fr, struct timeval* time_read,
 		 * item. This nopause command pipe item does not take work,
 		 * it returns immediately, so it does not delay the workers.
 		 * They can be polled one at a time. But its processing causes
-		 * the worker to have released data items from old config. */
+		 * the worker to have released data items from old config.
+		 * This also makes sure the threads are not holding locks on
+		 * individual items in the local_zones, views, respip_set. */
 		fr_send_notification(fr,
 			fast_reload_notification_reload_nopause_poll);
 		fr_poll_for_ack(fr);
