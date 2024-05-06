@@ -195,4 +195,12 @@ void daemon_delete(struct daemon* daemon);
  */
 void daemon_apply_cfg(struct daemon* daemon, struct config_file* cfg);
 
+/**
+ * Setup acl list to have entries for the port list.
+ * @param list: the acl interface
+ * @param port_list: list of open ports, or none.
+ * @return false on failure
+ */
+int setup_acl_for_ports(struct acl_list* list, struct listen_port* port_list);
+
 #endif /* DAEMON_H */

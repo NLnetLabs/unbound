@@ -3781,6 +3781,8 @@ struct fast_reload_construct {
 	struct respip_set* respip_set;
 	/** construct for access control */
 	struct acl_list* acl;
+	/** construct for access control interface */
+	struct acl_list* acl_interface;
 	/** construct for local zones */
 	struct local_zones* local_zones;
 	/** if there is response ip configuration in use */
@@ -3898,6 +3900,7 @@ fr_construct_clear(struct fast_reload_construct* ct)
 	respip_set_delete(ct->respip_set);
 	local_zones_delete(ct->local_zones);
 	acl_list_delete(ct->acl);
+	acl_list_delete(ct->acl_interface);
 	views_delete(ct->views);
 	/* Delete the log identity here so that the global value is not
 	 * reset by config_delete. */
@@ -4150,6 +4153,7 @@ fr_printmem(struct fast_reload_thread* fr,
 	mem += hints_get_mem(ct->hints);
 	mem += local_zones_get_mem(ct->local_zones);
 	mem += acl_list_get_mem(ct->acl);
+	mem += acl_list_get_mem(ct->acl_interface);
 	mem += sizeof(*ct->oldcfg);
 	mem += config_file_getmem(newcfg);
 
@@ -4157,6 +4161,27 @@ fr_printmem(struct fast_reload_thread* fr,
 		return 0;
 	fr_send_notification(fr, fast_reload_notification_printout);
 
+	return 1;
+}
+
+/** fast reload thread, setup the acl_interface for the ports that
+ * the server has. */
+static int
+ct_acl_interface_setup_ports(struct acl_list* acl_interface,
+	struct daemon* daemon)
+{
+	/* clean acl_interface */
+	acl_interface_init(acl_interface);
+	if(!setup_acl_for_ports(acl_interface, daemon->ports[0]))
+		return 0;
+	if(daemon->reuseport) {
+		size_t i;
+		for(i=1; i<daemon->num_ports; i++) {
+			if(!setup_acl_for_ports(acl_interface,
+				daemon->ports[i]))
+				return 0;
+		}
+	}
 	return 1;
 }
 
@@ -4183,6 +4208,22 @@ fr_construct_from_config(struct fast_reload_thread* fr,
 		return 0;
 	}
 	if(!acl_list_apply_cfg(ct->acl, newcfg, ct->views)) {
+		fr_construct_clear(ct);
+		return 0;
+	}
+	if(fr_poll_for_quit(fr))
+		return 1;
+
+	if(!(ct->acl_interface = acl_list_create())) {
+		fr_construct_clear(ct);
+		return 0;
+	}
+	if(!ct_acl_interface_setup_ports(ct->acl_interface,
+		fr->worker->daemon)) {
+		fr_construct_clear(ct);
+		return 0;
+	}
+	if(!acl_interface_apply_cfg(ct->acl_interface, newcfg, ct->views)) {
 		fr_construct_clear(ct);
 		return 0;
 	}
@@ -4692,6 +4733,7 @@ fr_reload_config(struct fast_reload_thread* fr, struct config_file* newcfg,
 	hints_swap_tree(env->hints, ct->hints);
 	views_swap_tree(env->views, ct->views);
 	acl_list_swap_tree(daemon->acl, ct->acl);
+	acl_list_swap_tree(daemon->acl_interface, ct->acl_interface);
 	local_zones_swap_tree(daemon->local_zones, ct->local_zones);
 	respip_set_swap_tree(env->respip_set, ct->respip_set);
 	daemon->use_response_ip = ct->use_response_ip;

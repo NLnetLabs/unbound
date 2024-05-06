@@ -323,8 +323,7 @@ daemon_init(void)
 	return daemon;	
 }
 
-static int setup_acl_for_ports(struct acl_list* list,
-	struct listen_port* port_list)
+int setup_acl_for_ports(struct acl_list* list, struct listen_port* port_list)
 {
 	struct acl_addr* acl_node;
 	for(; port_list; port_list=port_list->next) {
