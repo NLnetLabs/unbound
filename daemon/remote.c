@@ -92,6 +92,7 @@
 #include "sldns/wire2str.h"
 #include "sldns/sbuffer.h"
 #include "util/timeval_func.h"
+#include "util/tcp_conn_limit.h"
 
 #ifdef HAVE_SYS_TYPES_H
 #  include <sys/types.h>
@@ -3783,6 +3784,8 @@ struct fast_reload_construct {
 	struct acl_list* acl;
 	/** construct for access control interface */
 	struct acl_list* acl_interface;
+	/** construct for tcp connection limit */
+	struct tcl_list* tcl;
 	/** construct for local zones */
 	struct local_zones* local_zones;
 	/** if there is response ip configuration in use */
@@ -3901,6 +3904,7 @@ fr_construct_clear(struct fast_reload_construct* ct)
 	local_zones_delete(ct->local_zones);
 	acl_list_delete(ct->acl);
 	acl_list_delete(ct->acl_interface);
+	tcl_list_delete(ct->tcl);
 	views_delete(ct->views);
 	/* Delete the log identity here so that the global value is not
 	 * reset by config_delete. */
@@ -4154,6 +4158,7 @@ fr_printmem(struct fast_reload_thread* fr,
 	mem += local_zones_get_mem(ct->local_zones);
 	mem += acl_list_get_mem(ct->acl);
 	mem += acl_list_get_mem(ct->acl_interface);
+	mem += tcl_list_get_mem(ct->tcl);
 	mem += sizeof(*ct->oldcfg);
 	mem += config_file_getmem(newcfg);
 
@@ -4224,6 +4229,17 @@ fr_construct_from_config(struct fast_reload_thread* fr,
 		return 0;
 	}
 	if(!acl_interface_apply_cfg(ct->acl_interface, newcfg, ct->views)) {
+		fr_construct_clear(ct);
+		return 0;
+	}
+	if(fr_poll_for_quit(fr))
+		return 1;
+
+	if(!(ct->tcl = tcl_list_create())) {
+		fr_construct_clear(ct);
+		return 0;
+	}
+	if(!tcl_list_apply_cfg(ct->tcl, newcfg)) {
 		fr_construct_clear(ct);
 		return 0;
 	}
@@ -4734,6 +4750,7 @@ fr_reload_config(struct fast_reload_thread* fr, struct config_file* newcfg,
 	views_swap_tree(env->views, ct->views);
 	acl_list_swap_tree(daemon->acl, ct->acl);
 	acl_list_swap_tree(daemon->acl_interface, ct->acl_interface);
+	tcl_list_swap_tree(daemon->tcl, ct->tcl);
 	local_zones_swap_tree(daemon->local_zones, ct->local_zones);
 	respip_set_swap_tree(env->respip_set, ct->respip_set);
 	daemon->use_response_ip = ct->use_response_ip;
