@@ -5586,6 +5586,38 @@ fr_poll_for_reload_start(struct fast_reload_thread* fr)
 	}
 }
 
+/**
+ * Remove the old tcl_addr entries from the open connections.
+ * They are only incremented when an accept is performed on a tcp comm point.
+ * @param front: listening comm ports of the worker.
+ */
+void
+tcl_remove_old(struct listen_dnsport* front)
+{
+	struct listen_list* l;
+	l = front->cps;
+	while(l) {
+		if(l->com->type == comm_tcp_accept) {
+			int i;
+			for(i=0; i<l->com->cur_tcp_count; i++) {
+				if(l->com->tcp_handlers[i]->tcl_addr) {
+					/* Because the increment of the
+					 * connection limit was in the old
+					 * tcl list, the new list does not
+					 * need a decrement. With NULL it is
+					 * not decremented when the connection
+					 * is done, and also there is no
+					 * reference to the old connection
+					 * limit structure. */
+					l->com->tcp_handlers[i]->tcl_addr =
+						NULL;
+				}
+			}
+		}
+		l = l->next;
+	}
+}
+
 void
 fast_reload_worker_pickup_changes(struct worker* worker)
 {
@@ -5600,6 +5632,10 @@ fast_reload_worker_pickup_changes(struct worker* worker)
 	 * swapped in trees, and the worker has been running with the
 	 * older information for some time. */
 	worker->env.mesh->use_response_ip = worker->daemon->use_response_ip;
+
+	/* Since the tcp connection limit has changed, the open connections
+	 * need to remove their reference for the old tcp limits counters. */
+	tcl_remove_old(worker->front);
 }
 
 /** fast reload thread, handle reload_stop notification, send reload stop
