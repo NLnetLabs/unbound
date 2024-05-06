@@ -150,6 +150,9 @@ struct daemon {
 	struct fast_reload_printq* fast_reload_printq_list;
 	/** the fast reload option to drop mesh queries, true if so. */
 	int fast_reload_drop_mesh;
+	/** for fast reload, if the tcl, tcp connection limits, has
+	 * changes for workers */
+	int fast_reload_tcl_has_changes;
 	/** config file name */
 	char* cfgfile;
 };

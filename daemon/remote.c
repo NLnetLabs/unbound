@@ -4243,6 +4243,9 @@ fr_construct_from_config(struct fast_reload_thread* fr,
 		fr_construct_clear(ct);
 		return 0;
 	}
+	if(fr->worker->daemon->tcl->tree.count != 0)
+		fr->worker->daemon->fast_reload_tcl_has_changes = 1;
+	else	fr->worker->daemon->fast_reload_tcl_has_changes = 0;
 	if(fr_poll_for_quit(fr))
 		return 1;
 
@@ -5633,9 +5636,10 @@ fast_reload_worker_pickup_changes(struct worker* worker)
 	 * older information for some time. */
 	worker->env.mesh->use_response_ip = worker->daemon->use_response_ip;
 
-	/* Since the tcp connection limit has changed, the open connections
+	/* If the tcp connection limit has changed, the open connections
 	 * need to remove their reference for the old tcp limits counters. */
-	tcl_remove_old(worker->front);
+	if(worker->daemon->fast_reload_tcl_has_changes)
+		tcl_remove_old(worker->front);
 }
 
 /** fast reload thread, handle reload_stop notification, send reload stop
