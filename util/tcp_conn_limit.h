@@ -129,7 +129,7 @@ size_t tcl_list_get_mem(struct tcl_list* tcl);
 
 /**
  * Swap internal tree with preallocated entries. Caller should manage
- * the locks.
+ * tcl_addr item locks.
  * @param tcl: the tcp connection list structure.
  * @param data: the data structure used to take elements from. This contains
  * 	the old elements on return.

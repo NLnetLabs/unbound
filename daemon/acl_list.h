@@ -203,8 +203,7 @@ void log_acl_action(const char* action, struct sockaddr_storage* addr,
 	socklen_t addrlen, enum acl_access acl, struct acl_addr* acladdr);
 
 /**
- * Swap internal tree with preallocated entries. Caller should manage
- * the locks.
+ * Swap internal tree with preallocated entries.
  * @param acl: the acl structure.
  * @param data: the data structure used to take elements from. This contains
  * 	the old elements on return.
