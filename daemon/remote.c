@@ -5599,7 +5599,7 @@ tcl_remove_old(struct listen_dnsport* front)
 	while(l) {
 		if(l->com->type == comm_tcp_accept) {
 			int i;
-			for(i=0; i<l->com->cur_tcp_count; i++) {
+			for(i=0; i<l->com->max_tcp_count; i++) {
 				if(l->com->tcp_handlers[i]->tcl_addr) {
 					/* Because the increment of the
 					 * connection limit was in the old
