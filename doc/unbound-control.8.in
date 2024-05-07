@@ -67,7 +67,11 @@ is loaded in a thread, and prepared, then it briefly pauses the existing
 server and updates config options. The intent is that the pause does not
 impact the service of user queries. The cache is kept. Also user queries
 worked on are kept and continue, but with the new config options.
-Not all options are changed, but it changes like forwards and stubs.
+Not all options are changed, but it changes like forwards, stubs and
+local zones. Also access-control and interface-action and similar options,
+also tcp-connection-limits, views. It can reload some define-tag changes.
+It does not work with interface, outgoing-interface changes, also not with
+remote-control changes.
 .IP
 The '+v' option makes the output verbose. With '+vv' it is more verbose.
 That includes the time it took to do the reload. And with more verbose output
