@@ -1776,12 +1776,13 @@ init_outgoing_availports(int* a, int num)
 static int
 extract_port_from_str(const char* str, int max_port) {
 	char* endptr;
+	long int value;
 	if (str == NULL || *str == '\0') {
-		log_err("str: '%s' is invalid", str);
+		log_err("str: '%s' is invalid", (str?str:"NULL"));
 		return -1;
 	}
 
-	long int value = strtol(str, &endptr, 10);
+	value = strtol(str, &endptr, 10);
 	if ((endptr == str) || (*endptr != '\0'))  {
 		log_err("cannot parse port number '%s'", str);
 		return -1;
@@ -1820,7 +1821,8 @@ cfg_mark_ports(const char* str, int allow, int* avail, int num)
 			log_err("Failed to parse the port number");
 			return 0;
 		}
-		avail[port] = (allow?port:0);
+		if(port < num)
+			avail[port] = (allow?port:0);
 	} else {
 		char buf[16];
 		int i, low;

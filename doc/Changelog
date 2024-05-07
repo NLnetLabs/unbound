@@ -1,3 +1,9 @@
+7 May 2024: Wouter
+	- Merge #1062: Fix potential overflow bug while parsing port in
+	  function cfg_mark_ports.
+	- Fix for #1062: declaration before statement, avoid print of null,
+	  and redundant check for array size.
+
 1 May 2024: Wouter
 	- Fix for the DNSBomb vulnerability CVE-2024-33655. Thanks to Xiang Li
 	  from the Network and Information Security Lab of Tsinghua University
