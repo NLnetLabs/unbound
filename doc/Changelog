@@ -1,3 +1,7 @@
+8 May 2024: Wouter
+	- Fix to squelch udp connect errors in the log at low verbosity about
+	  invalid argument for IPv6 link local addresses.
+
 7 May 2024: Wouter
 	- Merge #1062: Fix potential overflow bug while parsing port in
 	  function cfg_mark_ports.

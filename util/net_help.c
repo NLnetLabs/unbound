@@ -862,6 +862,20 @@ addr_is_ip4mapped(struct sockaddr_storage* addr, socklen_t addrlen)
 	return (memcmp(s, map_prefix, 12) == 0);
 }
 
+int addr_is_ip6linklocal(struct sockaddr_storage* addr, socklen_t addrlen)
+{
+	const uint8_t prefix[2] = {0xfe, 0x80};
+	int af = (int)((struct sockaddr_in6*)addr)->sin6_family;
+	void* sin6addr = &((struct sockaddr_in6*)addr)->sin6_addr;
+	uint8_t start[2];
+	if(af != AF_INET6 || addrlen<(socklen_t)sizeof(struct sockaddr_in6))
+		return 0;
+	/* Put the first 10 bits of sin6addr in start, match fe80::/10. */
+	memmove(start, sin6addr, 2);
+	start[1] &= 0xc0;
+	return memcmp(start, prefix, 2) == 0;
+}
+
 int addr_is_broadcast(struct sockaddr_storage* addr, socklen_t addrlen)
 {
 	int af = (int)((struct sockaddr_in*)addr)->sin_family;
