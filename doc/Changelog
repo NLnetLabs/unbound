@@ -1,3 +1,6 @@
+15 May 2024: Yorgos
+	- Add missing common functions to tdir tests.
+
 10 May 2024: Wouter
 	- Fix when the mesh jostle is exceeded that nameserver targets are
 	  marked as resolved, so that the lookup is not stuck on the
