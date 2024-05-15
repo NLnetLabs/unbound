@@ -121,14 +121,18 @@ Remove local data RRs read from stdin of unbound\-control. Input is one name per
 line. For bulk removals.
 .TP
 .B dump_cache
-The contents of the cache is printed in a text format to stdout. You can
-redirect it to a file to store the cache in a file.
+The content of the cache is printed in a text format to stdout.
+You can redirect it to a file to store the cache in a file.
+Not supported in remote Unbounds in multi-process operation.
 .TP
 .B load_cache
-The contents of the cache is loaded from stdin.  Uses the same format as
-dump_cache uses.  Loading the cache with old, or wrong data can result
-in old or wrong data returned to clients.  Loading data into the cache
-in this way is supported in order to aid with debugging.
+The content of the cache is loaded from stdin.
+Uses the same format as dump_cache uses.
+Loading the cache with old, or wrong data can result in old or wrong data
+returned to clients.
+Loading data into the cache in this way is supported in order to aid with
+debugging.
+Not supported in remote Unbounds in multi-process operation.
 .TP
 .B lookup \fIname
 Print to stdout the name servers that would be used to look up the
