@@ -363,6 +363,14 @@ void addr_to_nat64(const struct sockaddr_storage* addr,
 int addr_is_ip4mapped(struct sockaddr_storage* addr, socklen_t addrlen);
 
 /**
+ * See if sockaddr is an ipv6 fe80::/10 link local address.
+ * @param addr: address
+ * @param addrlen: length of address
+ * @return true if so
+ */
+int addr_is_ip6linklocal(struct sockaddr_storage* addr, socklen_t addrlen);
+
+/**
  * See if sockaddr is 255.255.255.255.
  * @param addr: address
  * @param addrlen: length of address

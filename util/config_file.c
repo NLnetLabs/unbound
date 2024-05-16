@@ -42,6 +42,7 @@
 #include "config.h"
 #include <ctype.h>
 #include <stdarg.h>
+#include <errno.h>
 #ifdef HAVE_TIME_H
 #include <time.h>
 #endif
@@ -1772,6 +1773,39 @@ init_outgoing_availports(int* a, int num)
 	}
 }
 
+static int
+extract_port_from_str(const char* str, int max_port) {
+	char* endptr;
+	long int value;
+	if (str == NULL || *str == '\0') {
+		log_err("str: '%s' is invalid", (str?str:"NULL"));
+		return -1;
+	}
+
+	value = strtol(str, &endptr, 10);
+	if ((endptr == str) || (*endptr != '\0'))  {
+		log_err("cannot parse port number '%s'", str);
+		return -1;
+	}
+
+	if (errno == ERANGE) {
+                log_err("overflow occurred when parsing '%s'", str);
+		return -1;
+	}
+
+	if (value == 0 && strcmp(str, "0") != 0) {
+		log_err("cannot parse port number '%s'", str);
+		return -1;
+	}
+
+	if (value < 0 || value >= max_port) {
+		log_err(" '%s' is out of bounds [0, %d)", str, max_port);
+		return -1;
+	}
+
+	return (int)value;
+}
+
 int
 cfg_mark_ports(const char* str, int allow, int* avail, int num)
 {
@@ -1782,53 +1816,45 @@ cfg_mark_ports(const char* str, int allow, int* avail, int num)
 		"options");
 #endif
 	if(!mid) {
-		int port = atoi(str);
-		if(port < 0) {
-			log_err("port number is negative: %d", port);
-			return 0;
-		}
-		if(port == 0 && strcmp(str, "0") != 0) {
-			log_err("cannot parse port number '%s'", str);
+		int port = extract_port_from_str(str, num);
+		if (port < 0) {
+			log_err("Failed to parse the port number");
 			return 0;
 		}
 		if(port < num)
 			avail[port] = (allow?port:0);
 	} else {
-		int i, low, high = atoi(mid+1);
 		char buf[16];
-		if(high < 0) {
-			log_err("port number is negative: %d", high);
+		int i, low;
+		int high = extract_port_from_str(mid+1, num);
+		if (high < 0) {
+			log_err("Failed to parse the port number");
 			return 0;
 		}
-		if(high == 0 && strcmp(mid+1, "0") != 0) {
-			log_err("cannot parse port number '%s'", mid+1);
-			return 0;
-		}
+
 		if( (int)(mid-str)+1 >= (int)sizeof(buf) ) {
 			log_err("cannot parse port number '%s'", str);
 			return 0;
 		}
+
 		if(mid > str)
 			memcpy(buf, str, (size_t)(mid-str));
 		buf[mid-str] = 0;
-		low = atoi(buf);
-		if(low < 0) {
-			log_err("port number is negative: %d", low);
+		low = extract_port_from_str(buf, num);
+		if (low < 0) {
+			log_err("Failed to parse the port number");
 			return 0;
 		}
-		if(low == 0 && strcmp(buf, "0") != 0) {
-			log_err("cannot parse port number '%s'", buf);
+
+		if (low > high) {
+			log_err("Low value is greater than high value");
 			return 0;
 		}
-		if(high > num) {
-			/* Stop very high values from taking a long time. */
-			high = num;
-		}
+
 		for(i=low; i<=high; i++) {
 			if(i < num)
 				avail[i] = (allow?i:0);
 		}
-		return 1;
 	}
 	return 1;
 }

@@ -1,8 +1,27 @@
+15 May 2024: Yorgos
+	- Add missing common functions to tdir tests.
+
+10 May 2024: Wouter
+	- Fix when the mesh jostle is exceeded that nameserver targets are
+	  marked as resolved, so that the lookup is not stuck on the
+	  requestlist.
+
+8 May 2024: Wouter
+	- Fix to squelch udp connect errors in the log at low verbosity about
+	  invalid argument for IPv6 link local addresses.
+
+7 May 2024: Wouter
+	- Merge #1062: Fix potential overflow bug while parsing port in
+	  function cfg_mark_ports.
+	- Fix for #1062: declaration before statement, avoid print of null,
+	  and redundant check for array size.
+
 1 May 2024: Wouter
 	- Fix for the DNSBomb vulnerability CVE-2024-33655. Thanks to Xiang Li
 	  from the Network and Information Security Lab of Tsinghua University
 	  for reporting it.
-	- Set version number to 1.20.0 for release.
+	- Set version number to 1.20.0 for release. This became the release
+	  on 8 may 2024, the repository continues with version 1.20.1.
 
 29 April 2024: Yorgos
 	- Cleanup unnecessary strdup calls for EDE strings.

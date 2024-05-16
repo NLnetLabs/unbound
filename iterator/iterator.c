@@ -2057,8 +2057,16 @@ query_for_targets(struct module_qstate* qstate, struct iter_qstate* iq,
 			 * increase, because the spawned state uses cpu and a
 			 * socket while this state waits for that spawned
 			 * state. Next time we can look up further targets */
-			if(mesh_jostle_exceeded(qstate->env->mesh))
+			if(mesh_jostle_exceeded(qstate->env->mesh)) {
+				/* If no ip4 query is possible, that makes
+				 * this ns resolved. */
+				if(!((ie->supports_ipv4 || ie->use_nat64) &&
+					((ns->lame && !ns->done_pside4) ||
+					(!ns->lame && !ns->got4)))) {
+					ns->resolved = 1;
+				}
 				break;
+			}
 		}
 		/* Send the A request. */
 		if((ie->supports_ipv4 || ie->use_nat64) &&
@@ -2074,8 +2082,13 @@ query_for_targets(struct module_qstate* qstate, struct iter_qstate* iq,
 			}
 			query_count++;
 			/* If the mesh query list is full, exit the loop. */
-			if(mesh_jostle_exceeded(qstate->env->mesh))
+			if(mesh_jostle_exceeded(qstate->env->mesh)) {
+				/* With the ip6 query already checked for,
+				 * this makes the ns resolved. It is no longer
+				 * a missing target. */
+				ns->resolved = 1;
 				break;
+			}
 		}
 
 		/* mark this target as in progress. */
@@ -2901,6 +2914,17 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 					 * when we get back here missing==0,
 					 * so this is not a loop. */
 					return 1;
+				}
+				if(qs == 0) {
+					/* There should be targets now, and
+					 * if there are not, it should not
+					 * wait for no targets. Stop it from
+					 * waiting forever, or looping to
+					 * here, as a safeguard. */
+					errinf(qstate, "could not generate nameserver lookups");
+					errinf_dname(qstate, "at zone", iq->dp->name);
+					return error_response(qstate, id,
+						LDNS_RCODE_SERVFAIL);
 				}
 				iq->num_target_queries += qs;
 				target_count_increase(iq, qs);
