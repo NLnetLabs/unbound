@@ -88,6 +88,9 @@
 #include "sldns/wire2str.h"
 #include "sldns/sbuffer.h"
 #include "util/timeval_func.h"
+#ifdef USE_CACHEDB
+#include "cachedb/cachedb.h"
+#endif
 
 #ifdef HAVE_SYS_TYPES_H
 #  include <sys/types.h>
@@ -1553,7 +1556,7 @@ do_lookup(RES* ssl, struct worker* worker, char* arg)
 /** flush something from rrset and msg caches */
 static void
 do_cache_remove(struct worker* worker, uint8_t* nm, size_t nmlen,
-	uint16_t t, uint16_t c)
+	uint16_t t, uint16_t c, int remcachedb)
 {
 	hashvalue_type h;
 	struct query_info k;
@@ -1573,6 +1576,27 @@ do_cache_remove(struct worker* worker, uint8_t* nm, size_t nmlen,
 		h = query_info_hash(&k, BIT_CD);
 		slabhash_remove(worker->env.msg_cache, h, &k);
 	}
+#ifdef USE_CACHEDB
+	if(remcachedb && worker->env.cachedb_enabled)
+		cachedb_msg_remove_qinfo(&worker->env, &k);
+#endif
+}
+
+/** parse '+c' option, modifies string to return remainder. */
+static int
+parse_remcachedb(RES* ssl, char** arg, int* pc)
+{
+	*arg = skipwhite(*arg);
+	if((*arg)[0] == '+' && (*arg)[1] == 'c') {
+		char* arg2;
+		*pc = 1;
+		if(!find_arg2(ssl, *arg, &arg2))
+			return 0;
+		*arg = arg2;
+		return 1;
+	}
+	/* The option was not found, no problem */
+	return 1;
 }
 
 /** flush a type */
@@ -1584,15 +1608,20 @@ do_flush_type(RES* ssl, struct worker* worker, char* arg)
 	size_t nmlen;
 	char* arg2;
 	uint16_t t;
+	int pc = 0; /* '+c' option */
+	if(!parse_remcachedb(ssl, &arg, &pc))
+		return;
 	if(!find_arg2(ssl, arg, &arg2))
 		return;
 	if(!parse_arg_name(ssl, arg, &nm, &nmlen, &nmlabs))
 		return;
 	t = sldns_get_rr_type_by_name(arg2);
 	if(t == 0 && strcmp(arg2, "TYPE0") != 0) {
+		(void)ssl_printf(ssl, "error parsing RRset type: '%s'\n", arg2);
+		free(nm);
 		return;
 	}
-	do_cache_remove(worker, nm, nmlen, t, LDNS_RR_CLASS_IN);
+	do_cache_remove(worker, nm, nmlen, t, LDNS_RR_CLASS_IN, pc);
 
 	free(nm);
 	send_ok(ssl);
@@ -1630,6 +1659,8 @@ struct del_info {
 	socklen_t addrlen;
 	/** socket address for host deletion */
 	struct sockaddr_storage addr;
+	/** if cachedb information should be flushed too */
+	int remcachedb;
 };
 
 /** callback to delete hosts in infra cache */
@@ -1681,6 +1712,7 @@ do_flush_infra(RES* ssl, struct worker* worker, char* arg)
 	inf.num_msgs = 0;
 	inf.num_keys = 0;
 	inf.addrlen = len;
+	inf.remcachedb = 0;
 	memmove(&inf.addr, &addr, len);
 	slabhash_traverse(worker->env.infra_cache->hosts, 1, &infra_del_host,
 		&inf);
@@ -1727,6 +1759,10 @@ zone_del_msg(struct lruhash_entry* e, void* arg)
 			d->serve_expired_ttl = inf->expired;
 			inf->num_msgs++;
 		}
+#ifdef USE_CACHEDB
+		if(inf->remcachedb && inf->worker->env.cachedb_enabled)
+			cachedb_msg_remove_qinfo(&inf->worker->env, &k->key);
+#endif
 	}
 }
 
@@ -1754,6 +1790,9 @@ do_flush_zone(RES* ssl, struct worker* worker, char* arg)
 	int nmlabs;
 	size_t nmlen;
 	struct del_info inf;
+	int pc = 0; /* '+c' option */
+	if(!parse_remcachedb(ssl, &arg, &pc))
+		return;
 	if(!parse_arg_name(ssl, arg, &nm, &nmlen, &nmlabs))
 		return;
 	/* delete all RRs and key entries from zone */
@@ -1767,6 +1806,7 @@ do_flush_zone(RES* ssl, struct worker* worker, char* arg)
 	inf.num_rrsets = 0;
 	inf.num_msgs = 0;
 	inf.num_keys = 0;
+	inf.remcachedb = pc;
 	slabhash_traverse(&worker->env.rrset_cache->table, 1,
 		&zone_del_rrset, &inf);
 
@@ -1808,6 +1848,11 @@ bogus_del_msg(struct lruhash_entry* e, void* arg)
 	if(d->security == sec_status_bogus) {
 		d->ttl = inf->expired;
 		inf->num_msgs++;
+#ifdef USE_CACHEDB
+		if(inf->remcachedb && inf->worker->env.cachedb_enabled)
+			cachedb_msg_remove_qinfo(&inf->worker->env,
+				&((struct msgreply_entry*)e->key)->key);
+#endif
 	}
 }
 
@@ -1826,9 +1871,12 @@ bogus_del_kcache(struct lruhash_entry* e, void* arg)
 
 /** remove all bogus rrsets, msgs and keys from cache */
 static void
-do_flush_bogus(RES* ssl, struct worker* worker)
+do_flush_bogus(RES* ssl, struct worker* worker, char* arg)
 {
 	struct del_info inf;
+	int pc = 0; /* '+c' option */
+	if(!parse_remcachedb(ssl, &arg, &pc))
+		return;
 	/* what we do is to set them all expired */
 	inf.worker = worker;
 	inf.expired = *worker->env.now;
@@ -1836,6 +1884,7 @@ do_flush_bogus(RES* ssl, struct worker* worker)
 	inf.num_rrsets = 0;
 	inf.num_msgs = 0;
 	inf.num_keys = 0;
+	inf.remcachedb = pc;
 	slabhash_traverse(&worker->env.rrset_cache->table, 1,
 		&bogus_del_rrset, &inf);
 
@@ -1881,6 +1930,11 @@ negative_del_msg(struct lruhash_entry* e, void* arg)
 	if(FLAGS_GET_RCODE(d->flags) != 0 || d->an_numrrsets == 0) {
 		d->ttl = inf->expired;
 		inf->num_msgs++;
+#ifdef USE_CACHEDB
+		if(inf->remcachedb && inf->worker->env.cachedb_enabled)
+			cachedb_msg_remove_qinfo(&inf->worker->env,
+				&((struct msgreply_entry*)e->key)->key);
+#endif
 	}
 }
 
@@ -1901,9 +1955,12 @@ negative_del_kcache(struct lruhash_entry* e, void* arg)
 
 /** remove all negative(NODATA,NXDOMAIN), and servfail messages from cache */
 static void
-do_flush_negative(RES* ssl, struct worker* worker)
+do_flush_negative(RES* ssl, struct worker* worker, char* arg)
 {
 	struct del_info inf;
+	int pc = 0; /* '+c' option */
+	if(!parse_remcachedb(ssl, &arg, &pc))
+		return;
 	/* what we do is to set them all expired */
 	inf.worker = worker;
 	inf.expired = *worker->env.now;
@@ -1911,6 +1968,7 @@ do_flush_negative(RES* ssl, struct worker* worker)
 	inf.num_rrsets = 0;
 	inf.num_msgs = 0;
 	inf.num_keys = 0;
+	inf.remcachedb = pc;
 	slabhash_traverse(&worker->env.rrset_cache->table, 1,
 		&negative_del_rrset, &inf);
 
@@ -1934,20 +1992,23 @@ do_flush_name(RES* ssl, struct worker* w, char* arg)
 	uint8_t* nm;
 	int nmlabs;
 	size_t nmlen;
+	int pc = 0; /* '+c' option */
+	if(!parse_remcachedb(ssl, &arg, &pc))
+		return;
 	if(!parse_arg_name(ssl, arg, &nm, &nmlen, &nmlabs))
 		return;
-	do_cache_remove(w, nm, nmlen, LDNS_RR_TYPE_A, LDNS_RR_CLASS_IN);
-	do_cache_remove(w, nm, nmlen, LDNS_RR_TYPE_AAAA, LDNS_RR_CLASS_IN);
-	do_cache_remove(w, nm, nmlen, LDNS_RR_TYPE_NS, LDNS_RR_CLASS_IN);
-	do_cache_remove(w, nm, nmlen, LDNS_RR_TYPE_SOA, LDNS_RR_CLASS_IN);
-	do_cache_remove(w, nm, nmlen, LDNS_RR_TYPE_CNAME, LDNS_RR_CLASS_IN);
-	do_cache_remove(w, nm, nmlen, LDNS_RR_TYPE_DNAME, LDNS_RR_CLASS_IN);
-	do_cache_remove(w, nm, nmlen, LDNS_RR_TYPE_MX, LDNS_RR_CLASS_IN);
-	do_cache_remove(w, nm, nmlen, LDNS_RR_TYPE_PTR, LDNS_RR_CLASS_IN);
-	do_cache_remove(w, nm, nmlen, LDNS_RR_TYPE_SRV, LDNS_RR_CLASS_IN);
-	do_cache_remove(w, nm, nmlen, LDNS_RR_TYPE_NAPTR, LDNS_RR_CLASS_IN);
-	do_cache_remove(w, nm, nmlen, LDNS_RR_TYPE_SVCB, LDNS_RR_CLASS_IN);
-	do_cache_remove(w, nm, nmlen, LDNS_RR_TYPE_HTTPS, LDNS_RR_CLASS_IN);
+	do_cache_remove(w, nm, nmlen, LDNS_RR_TYPE_A, LDNS_RR_CLASS_IN, pc);
+	do_cache_remove(w, nm, nmlen, LDNS_RR_TYPE_AAAA, LDNS_RR_CLASS_IN, pc);
+	do_cache_remove(w, nm, nmlen, LDNS_RR_TYPE_NS, LDNS_RR_CLASS_IN, pc);
+	do_cache_remove(w, nm, nmlen, LDNS_RR_TYPE_SOA, LDNS_RR_CLASS_IN, pc);
+	do_cache_remove(w, nm, nmlen, LDNS_RR_TYPE_CNAME, LDNS_RR_CLASS_IN, pc);
+	do_cache_remove(w, nm, nmlen, LDNS_RR_TYPE_DNAME, LDNS_RR_CLASS_IN, pc);
+	do_cache_remove(w, nm, nmlen, LDNS_RR_TYPE_MX, LDNS_RR_CLASS_IN, pc);
+	do_cache_remove(w, nm, nmlen, LDNS_RR_TYPE_PTR, LDNS_RR_CLASS_IN, pc);
+	do_cache_remove(w, nm, nmlen, LDNS_RR_TYPE_SRV, LDNS_RR_CLASS_IN, pc);
+	do_cache_remove(w, nm, nmlen, LDNS_RR_TYPE_NAPTR, LDNS_RR_CLASS_IN, pc);
+	do_cache_remove(w, nm, nmlen, LDNS_RR_TYPE_SVCB, LDNS_RR_CLASS_IN, pc);
+	do_cache_remove(w, nm, nmlen, LDNS_RR_TYPE_HTTPS, LDNS_RR_CLASS_IN, pc);
 
 	free(nm);
 	send_ok(ssl);
@@ -3214,9 +3275,9 @@ execute_cmd(struct daemon_remote* rc, RES* ssl, char* cmd,
 	} else if(cmdcmp(p, "get_option", 10)) {
 		do_get_option(ssl, worker, skipwhite(p+10));
 	} else if(cmdcmp(p, "flush_bogus", 11)) {
-		do_flush_bogus(ssl, worker);
+		do_flush_bogus(ssl, worker, skipwhite(p+11));
 	} else if(cmdcmp(p, "flush_negative", 14)) {
-		do_flush_negative(ssl, worker);
+		do_flush_negative(ssl, worker, skipwhite(p+14));
 	} else if(cmdcmp(p, "rpz_enable", 10)) {
 		do_rpz_enable(ssl, worker, skipwhite(p+10));
 	} else if(cmdcmp(p, "rpz_disable", 11)) {

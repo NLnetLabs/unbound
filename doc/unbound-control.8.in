@@ -134,18 +134,21 @@ in this way is supported in order to aid with debugging.
 Print to stdout the name servers that would be used to look up the
 name specified.
 .TP
-.B flush \fIname
+.B flush \fR[\fI+c\fR] \fIname
 Remove the name from the cache. Removes the types
 A, AAAA, NS, SOA, CNAME, DNAME, MX, PTR, SRV, NAPTR, SVCB and HTTPS.
 Because that is fast to do. Other record types can be removed using
 .B flush_type
 or
 .B flush_zone\fR.
+.IP
+The '+c' option removes the items also from the cachedb cache. If
+cachedb is in use.
 .TP
-.B flush_type \fIname\fR \fItype
+.B flush_type \fR[\fI+c\fR] \fIname\fR \fItype
 Remove the name, type information from the cache.
 .TP
-.B flush_zone \fIname
+.B flush_zone \fR[\fI+c\fR] \fIname
 Remove all information at or below the name from the cache.
 The rrsets and key entries are removed so that new lookups will be performed.
 This needs to walk and inspect the entire cache, and is a slow operation.
@@ -153,10 +156,10 @@ The entries are set to expired in the implementation of this command (so,
 with serve\-expired enabled, it'll serve that information but schedule a
 prefetch for new information).
 .TP
-.B flush_bogus
+.B flush_bogus \fR[\fI+c\fR]
 Remove all bogus data from the cache.
 .TP
-.B flush_negative
+.B flush_negative \fR[\fI+c\fR]
 Remove all negative data from the cache.  This is nxdomain answers,
 nodata answers and servfail answers.  Also removes bad key entries
 (which could be due to failed lookups) from the dnssec key cache, and

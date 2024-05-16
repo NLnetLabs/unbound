@@ -2,6 +2,10 @@
 	- Merge #1070: Fix rtt assignement for low values of
 	  infra-cache-max-rtt.
 
+16 May 2024: Wouter
+	- Fix #1071: [FR] Clear both in-memory and cachedb module cache with
+	  `unbound-control flush*` commands.
+
 15 May 2024: Yorgos
 	- Add missing common functions to tdir tests.
 
