@@ -1,3 +1,7 @@
+16 May 2024: Yorgos
+	- Merge #1070: Fix rtt assignement for low values of
+	  infra-cache-max-rtt.
+
 15 May 2024: Yorgos
 	- Add missing common functions to tdir tests.
 
