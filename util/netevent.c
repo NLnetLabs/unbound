@@ -5030,8 +5030,9 @@ comm_timer_is_set(struct comm_timer* timer)
 }
 
 size_t
-comm_timer_get_mem(struct comm_timer* ATTR_UNUSED(timer))
+comm_timer_get_mem(struct comm_timer* timer)
 {
+	if(!timer) return 0;
 	return sizeof(struct internal_timer);
 }
 

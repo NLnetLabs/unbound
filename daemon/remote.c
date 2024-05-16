@@ -3774,6 +3774,8 @@ fr_init_time(struct timeval* time_start, struct timeval* time_read,
 struct fast_reload_construct {
 	/** construct for views */
 	struct views* views;
+	/** construct for auth zones */
+	struct auth_zones* auth_zones;
 	/** construct for forwards */
 	struct iter_forwards* fwds;
 	/** construct for stubs */
@@ -3898,6 +3900,7 @@ fr_construct_clear(struct fast_reload_construct* ct)
 {
 	if(!ct)
 		return;
+	auth_zones_delete(ct->auth_zones);
 	forwards_delete(ct->fwds);
 	hints_delete(ct->hints);
 	respip_set_delete(ct->respip_set);
@@ -4153,6 +4156,7 @@ fr_printmem(struct fast_reload_thread* fr,
 		return 1;
 	mem += views_get_mem(ct->views);
 	mem += respip_set_get_mem(ct->respip_set);
+	mem += auth_zones_get_mem(ct->auth_zones);
 	mem += forwards_get_mem(ct->fwds);
 	mem += hints_get_mem(ct->hints);
 	mem += local_zones_get_mem(ct->local_zones);
@@ -4246,6 +4250,19 @@ fr_construct_from_config(struct fast_reload_thread* fr,
 	if(fr->worker->daemon->tcl->tree.count != 0)
 		fr->worker->daemon->fast_reload_tcl_has_changes = 1;
 	else	fr->worker->daemon->fast_reload_tcl_has_changes = 0;
+	if(fr_poll_for_quit(fr))
+		return 1;
+
+	if(!(ct->auth_zones = auth_zones_create())) {
+		fr_construct_clear(ct);
+		return 0;
+	}
+	if(!auth_zones_apply_cfg(ct->auth_zones, newcfg, 1,
+		&fr->worker->daemon->use_rpz, fr->worker->daemon->env,
+		&fr->worker->daemon->mods)) {
+		fr_construct_clear(ct);
+		return 0;
+	}
 	if(fr_poll_for_quit(fr))
 		return 1;
 
@@ -4346,6 +4363,27 @@ fr_finish_time(struct fast_reload_thread* fr, struct timeval* time_start,
 		return 0;
 	fr_send_notification(fr, fast_reload_notification_printout);
 	return 1;
+}
+
+/** Swap auth zone information */
+static void
+auth_zones_swap(struct auth_zones* az, struct auth_zones* data)
+{
+	rbtree_type oldztree = az->ztree;
+	int old_have_downstream = az->have_downstream;
+	struct auth_zone* old_rpz_first = az->rpz_first;
+
+	az->ztree = data->ztree;
+	data->ztree = oldztree;
+
+	az->have_downstream = data->have_downstream;
+	data->have_downstream = old_have_downstream;
+
+	/* Leave num_query_up and num_query_down, the statistics can
+	 * remain counted. */
+
+	az->rpz_first = data->rpz_first;
+	data->rpz_first = old_rpz_first;
 }
 
 #ifdef ATOMIC_POINTER_LOCK_FREE
@@ -4714,6 +4752,10 @@ fr_reload_config(struct fast_reload_thread* fr, struct config_file* newcfg,
 	lock_rw_wrlock(&env->respip_set->lock);
 	lock_rw_wrlock(&ct->local_zones->lock);
 	lock_rw_wrlock(&daemon->local_zones->lock);
+	lock_rw_wrlock(&ct->auth_zones->rpz_lock);
+	lock_rw_wrlock(&env->auth_zones->rpz_lock);
+	lock_rw_wrlock(&ct->auth_zones->lock);
+	lock_rw_wrlock(&env->auth_zones->lock);
 	lock_rw_wrlock(&ct->fwds->lock);
 	lock_rw_wrlock(&env->fwds->lock);
 	lock_rw_wrlock(&ct->hints->lock);
@@ -4757,6 +4799,7 @@ fr_reload_config(struct fast_reload_thread* fr, struct config_file* newcfg,
 	local_zones_swap_tree(daemon->local_zones, ct->local_zones);
 	respip_set_swap_tree(env->respip_set, ct->respip_set);
 	daemon->use_response_ip = ct->use_response_ip;
+	auth_zones_swap(env->auth_zones, ct->auth_zones);
 
 	/* Set globals with new config. */
 	config_apply(env->cfg);
@@ -4767,6 +4810,10 @@ fr_reload_config(struct fast_reload_thread* fr, struct config_file* newcfg,
 	lock_rw_unlock(&env->respip_set->lock);
 	lock_rw_unlock(&ct->local_zones->lock);
 	lock_rw_unlock(&daemon->local_zones->lock);
+	lock_rw_unlock(&env->auth_zones->lock);
+	lock_rw_unlock(&ct->auth_zones->lock);
+	lock_rw_unlock(&env->auth_zones->rpz_lock);
+	lock_rw_unlock(&ct->auth_zones->rpz_lock);
 	lock_rw_unlock(&env->fwds->lock);
 	lock_rw_unlock(&ct->fwds->lock);
 	lock_rw_unlock(&env->hints->lock);

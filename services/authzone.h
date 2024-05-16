@@ -70,7 +70,8 @@ struct auth_chunk;
  * Authoritative zones, shared.
  */
 struct auth_zones {
-	/** lock on the authzone trees */
+	/** lock on the authzone trees. It is locked after views, respip,
+	 * local_zones and before fwds and stubs. */
 	lock_rw_type lock;
 	/** rbtree of struct auth_zone */
 	rbtree_type ztree;
@@ -786,5 +787,9 @@ void auth_zonemd_dnskey_lookup_callback(void* arg, int rcode,
  */
 void auth_zones_pickup_zonemd_verify(struct auth_zones* az,
 	struct module_env* env);
+
+/** Get memory usage for auth zones. The routine locks and unlocks
+ * for reading. */
+size_t auth_zones_get_mem(struct auth_zones* zones);
 
 #endif /* SERVICES_AUTHZONE_H */
