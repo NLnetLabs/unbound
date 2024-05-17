@@ -3792,6 +3792,8 @@ struct fast_reload_construct {
 	struct local_zones* local_zones;
 	/** if there is response ip configuration in use */
 	int use_response_ip;
+	/** if there is an rpz zone */
+	int use_rpz;
 	/** storage for the old configuration elements. The outer struct
 	 * is allocated with malloc here, the items are from config. */
 	struct config_file* oldcfg;
@@ -4257,9 +4259,8 @@ fr_construct_from_config(struct fast_reload_thread* fr,
 		fr_construct_clear(ct);
 		return 0;
 	}
-	if(!auth_zones_apply_cfg(ct->auth_zones, newcfg, 1,
-		&fr->worker->daemon->use_rpz, fr->worker->daemon->env,
-		&fr->worker->daemon->mods)) {
+	if(!auth_zones_apply_cfg(ct->auth_zones, newcfg, 1, &ct->use_rpz,
+		fr->worker->daemon->env, &fr->worker->daemon->mods)) {
 		fr_construct_clear(ct);
 		return 0;
 	}
@@ -4799,6 +4800,7 @@ fr_reload_config(struct fast_reload_thread* fr, struct config_file* newcfg,
 	local_zones_swap_tree(daemon->local_zones, ct->local_zones);
 	respip_set_swap_tree(env->respip_set, ct->respip_set);
 	daemon->use_response_ip = ct->use_response_ip;
+	daemon->use_rpz = ct->use_rpz;
 	auth_zones_swap(env->auth_zones, ct->auth_zones);
 
 	/* Set globals with new config. */
