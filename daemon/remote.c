@@ -650,7 +650,7 @@ distribute_cmd(struct daemon_remote* rc, RES* ssl, char* cmd)
 			worker_cmd_remote);
 		if(!tube_write_msg(rc->worker->daemon->workers[i]->cmd,
 			(uint8_t*)cmd, strlen(cmd)+1, 0)) {
-			ssl_printf(ssl, "error could not distribute cmd\n");
+			(void)ssl_printf(ssl, "error could not distribute cmd\n");
 			return;
 		}
 	}
