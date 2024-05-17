@@ -1738,6 +1738,25 @@ struct mesh_state* mesh_area_find(struct mesh_area* mesh,
 	return result;
 }
 
+/** remove mesh state callback */
+int mesh_state_del_cb(struct mesh_state* s, mesh_cb_func_type cb, void* cb_arg)
+{
+	struct mesh_cb* r, *prev = NULL;
+	r = s->cb_list;
+	while(r) {
+		if(r->cb == cb && r->cb_arg == cb_arg) {
+			/* Delete this entry. */
+			/* It was allocated in the s.region, so no free. */
+			if(prev) prev->next = r->next;
+			else s->cb_list = r->next;
+			return 1;
+		}
+		prev = r;
+		r = r->next;
+	}
+	return 0;
+}
+
 int mesh_state_add_cb(struct mesh_state* s, struct edns_data* edns,
         sldns_buffer* buf, mesh_cb_func_type cb, void* cb_arg,
 	uint16_t qid, uint16_t qflags)
@@ -2416,4 +2435,26 @@ int mesh_jostle_exceeded(struct mesh_area* mesh)
 	if(mesh->all.count < mesh->max_reply_states)
 		return 0;
 	return 1;
+}
+
+void mesh_remove_callback(struct mesh_area* mesh, struct query_info* qinfo,
+	uint16_t qflags, mesh_cb_func_type cb, void* cb_arg)
+{
+	struct mesh_state* s = NULL;
+	s = mesh_area_find(mesh, NULL, qinfo, qflags&(BIT_RD|BIT_CD), 0, 0);
+	if(s) {
+		if(mesh_state_del_cb(s, cb, cb_arg)) {
+			/* It was in the list and removed. */
+			log_assert(mesh->num_reply_addrs > 0);
+			mesh->num_reply_addrs--;
+			if(!s->reply_list && !s->cb_list) {
+				/* was a reply state, not anymore */
+				log_assert(mesh->num_reply_states > 0);
+				mesh->num_reply_states--;
+			}
+			if(!s->reply_list && !s->cb_list &&
+				s->super_set.count == 0)
+				mesh->num_detached_states++;
+		}
+	}
 }

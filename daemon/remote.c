@@ -4363,6 +4363,106 @@ ct_acl_interface_setup_ports(struct acl_list* acl_interface,
 	return 1;
 }
 
+/** fast reload, add new change to list of auth zones */
+static int
+fr_add_auth_zone_change(struct fast_reload_thread* fr, struct auth_zone* old_z,
+	struct auth_zone* new_z, int is_deleted, int is_added, int is_changed)
+{
+	struct fast_reload_auth_change* item;
+	item = calloc(1, sizeof(*item));
+	if(!item) {
+		log_err("malloc failure in add auth zone change");
+		return 0;
+	}
+	item->old_z = old_z;
+	item->new_z = new_z;
+	item->is_deleted = is_deleted;
+	item->is_added = is_added;
+	item->is_changed = is_changed;
+
+	item->next = fr->auth_zone_change_list;
+	fr->auth_zone_change_list = item;
+	return 1;
+}
+
+/** Check what has changed in auth zones, like added and deleted zones */
+static int
+auth_zones_check_changes(struct fast_reload_thread* fr,
+	struct fast_reload_construct* ct)
+{
+	/* Check every zone in turn. */
+	struct auth_zone* new_z, *old_z;
+	struct module_env* env = &fr->worker->env;
+
+	/* Nobody is using the new ct version yet.
+	 * Also the ct lock is picked up before the env lock for auth_zones. */
+	lock_rw_rdlock(&ct->auth_zones->lock);
+
+	/* Find deleted zones by looping over the current list and looking
+	 * up in the new tree. */
+	lock_rw_rdlock(&env->auth_zones->lock);
+	RBTREE_FOR(old_z, struct auth_zone*, &env->auth_zones->ztree) {
+		new_z = auth_zone_find(ct->auth_zones, old_z->name,
+			old_z->namelen, old_z->dclass);
+		if(!new_z) {
+			/* The zone has been removed. */
+			if(!fr_add_auth_zone_change(fr, old_z, NULL, 1, 0,
+				0)) {
+				lock_rw_unlock(&env->auth_zones->lock);
+				lock_rw_unlock(&ct->auth_zones->lock);
+				return 0;
+			}
+		}
+	}
+	lock_rw_unlock(&env->auth_zones->lock);
+
+	/* Find added zones by looping over new list and lookup in current. */
+	RBTREE_FOR(new_z, struct auth_zone*, &ct->auth_zones->ztree) {
+		lock_rw_rdlock(&env->auth_zones->lock);
+		old_z = auth_zone_find(env->auth_zones, new_z->name,
+			new_z->namelen, new_z->dclass);
+		if(!old_z) {
+			/* The zone has been added. */
+			lock_rw_unlock(&env->auth_zones->lock);
+			if(!fr_add_auth_zone_change(fr, NULL, new_z, 0, 1,
+				0)) {
+				lock_rw_unlock(&ct->auth_zones->lock);
+				return 0;
+			}
+		} else {
+			uint32_t old_serial = 0, new_serial = 0;
+			int have_old = 0, have_new = 0;
+			lock_rw_rdlock(&new_z->lock);
+			lock_rw_rdlock(&old_z->lock);
+			lock_rw_unlock(&env->auth_zones->lock);
+
+			/* Change in the auth zone can be detected. */
+			/* A change in serial number means that auth_xfer
+			 * has to be updated. */
+			have_old = (auth_zone_get_serial(old_z,
+				&old_serial)!=0);
+			have_new = (auth_zone_get_serial(new_z,
+				&new_serial)!=0);
+			if(have_old != have_new || old_serial != new_serial) {
+				/* The zone has been changed. */
+				if(!fr_add_auth_zone_change(fr, old_z, new_z,
+					0, 0, 1)) {
+					lock_rw_unlock(&old_z->lock);
+					lock_rw_unlock(&new_z->lock);
+					lock_rw_unlock(&ct->auth_zones->lock);
+					return 0;
+				}
+			}
+
+			lock_rw_unlock(&old_z->lock);
+			lock_rw_unlock(&new_z->lock);
+		}
+	}
+
+	lock_rw_unlock(&ct->auth_zones->lock);
+	return 1;
+}
+
 /** fast reload thread, construct from config the new items */
 static int
 fr_construct_from_config(struct fast_reload_thread* fr,
@@ -4428,6 +4528,10 @@ fr_construct_from_config(struct fast_reload_thread* fr,
 	}
 	if(!auth_zones_apply_cfg(ct->auth_zones, newcfg, 1, &ct->use_rpz,
 		fr->worker->daemon->env, &fr->worker->daemon->mods)) {
+		fr_construct_clear(ct);
+		return 0;
+	}
+	if(!auth_zones_check_changes(fr, ct)) {
 		fr_construct_clear(ct);
 		return 0;
 	}
@@ -5556,6 +5660,20 @@ fast_reload_thread_setup(struct worker* worker, int fr_verb, int fr_nopause,
 	return 1;
 }
 
+/** fast reload, delete auth zone change list */
+static void
+fr_auth_change_list_delete(
+	struct fast_reload_auth_change* auth_zone_change_list)
+{
+	struct fast_reload_auth_change* item, *next;
+	item = auth_zone_change_list;
+	while(item) {
+		next = item->next;
+		free(item);
+		item = next;
+	}
+}
+
 /** fast reload thread. desetup and delete the thread info. */
 static void
 fast_reload_thread_desetup(struct fast_reload_thread* fast_reload_thread)
@@ -5595,6 +5713,8 @@ fast_reload_thread_desetup(struct fast_reload_thread* fast_reload_thread)
 		config_delstrlist(fast_reload_thread->fr_output->first);
 		free(fast_reload_thread->fr_output);
 	}
+	fr_auth_change_list_delete(fast_reload_thread->auth_zone_change_list);
+
 	free(fast_reload_thread);
 }
 
@@ -5837,6 +5957,44 @@ tcl_remove_old(struct listen_dnsport* front)
 	}
 }
 
+/** Stop zonemd lookup */
+static void
+auth_zone_zonemd_stop_lookup(struct auth_zone* z, struct mesh_area* mesh)
+{
+	struct query_info qinfo;
+	uint16_t qflags = BIT_RD;
+	qinfo.qname_len = z->namelen;
+	qinfo.qname = z->name;
+	qinfo.qclass = z->dclass;
+	qinfo.qtype = z->zonemd_callback_qtype;
+	qinfo.local_alias = NULL;
+
+	mesh_remove_callback(mesh, &qinfo, qflags,
+		&auth_zonemd_dnskey_lookup_callback, z);
+}
+
+/** Fast reload, the worker picks up changes in auth zones. */
+static void
+fr_worker_pickup_auth_changes(struct worker* worker,
+	struct fast_reload_auth_change* auth_zone_change_list)
+{
+	struct fast_reload_auth_change* item;
+	for(item = auth_zone_change_list; item; item = item->next) {
+		if(item->is_deleted) {
+			lock_rw_wrlock(&item->old_z->lock);
+			if(item->old_z->zonemd_callback_env &&
+			   item->old_z->zonemd_callback_env->worker == worker){
+				/* This worker was performing a zonemd lookup,
+				 * stop the lookup and remove that entry. */
+				auth_zone_zonemd_stop_lookup(item->old_z,
+					worker->env.mesh);
+				item->old_z->zonemd_callback_env = NULL;
+			}
+			lock_rw_unlock(&item->old_z->lock);
+		}
+	}
+}
+
 void
 fast_reload_worker_pickup_changes(struct worker* worker)
 {
@@ -5856,6 +6014,11 @@ fast_reload_worker_pickup_changes(struct worker* worker)
 	 * need to remove their reference for the old tcp limits counters. */
 	if(worker->daemon->fast_reload_tcl_has_changes)
 		tcl_remove_old(worker->front);
+
+	/* If there are zonemd lookups, but the zone was deleted, the
+	 * lookups should be cancelled. */
+	fr_worker_pickup_auth_changes(worker,
+		worker->daemon->fast_reload_thread->auth_zone_change_list);
 }
 
 /** fast reload thread, handle reload_stop notification, send reload stop

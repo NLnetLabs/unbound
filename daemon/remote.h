@@ -176,6 +176,26 @@ struct fast_reload_printq {
 };
 
 /**
+ * Fast reload auth zone change. Keeps track if an auth zone was removed,
+ * added or changed. This is needed because workers can have events for
+ * dealing with auth zones, like transfers, and those have to be removed
+ * too, not just the auth zone structure from the tree. */
+struct fast_reload_auth_change {
+	/** next in the list of auth zone changes. */
+	struct fast_reload_auth_change* next;
+	/** the zone in the old config */
+	struct auth_zone* old_z;
+	/** the zone in the new config */
+	struct auth_zone* new_z;
+	/** if the zone was deleted */
+	int is_deleted;
+	/** if the zone was added */
+	int is_added;
+	/** if the zone has been changed */
+	int is_changed;
+};
+
+/**
  * Fast reload thread structure
  */
 struct fast_reload_thread {
@@ -224,6 +244,9 @@ struct fast_reload_thread {
 
 	/** communication socket pair, to respond to the reload request */
 	int commreload[2];
+
+	/** the list of auth zone changes. */
+	struct fast_reload_auth_change* auth_zone_change_list;
 };
 
 /**
