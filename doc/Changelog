@@ -1,3 +1,14 @@
+17 May 2024: Yorgos
+	- Merge #1069: Fix unbound-control stdin commands for multi-process
+	  Unbounds.
+	- Fix unbound-control commands that read stdin in multi-process
+	  operation (local_zones_remove, local_zones, local_datas_remove,
+	  local_datas, view_local_datas_remove, view_local_datas). They will
+	  be properly distributed to all processes. dump_cache and load_cache
+	  are no longer supported in multi-process operation.
+	- Remove testdata/remote-threaded.tdir. testdata/09-unbound-control.tdir
+	  now checks both single and multi process/thread operation.
+
 16 May 2024: Yorgos
 	- Merge #1070: Fix rtt assignement for low values of
 	  infra-cache-max-rtt.
