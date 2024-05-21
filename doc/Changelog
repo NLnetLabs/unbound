@@ -4,6 +4,8 @@
 	- Fix to print a parse error when config is read with no name for
 	  a forward-zone, stub-zone or view.
 	- Fix for parse end of forward-zone, stub-zone and view.
+	- Fix for #1064: Fix that cachedb expired messages are considered
+	  insecure, and thus can be served to clients when dnssec is enabled.
 
 17 May 2024: Yorgos
 	- Merge #1069: Fix unbound-control stdin commands for multi-process
