@@ -357,7 +357,7 @@ stubstart: VAR_STUB_ZONE
 		}
 	}
 	;
-contents_stub: contents_stub content_stub
+contents_stub: content_stub contents_stub
 	|
 	{
 		/* stub end */
@@ -382,7 +382,7 @@ forwardstart: VAR_FORWARD_ZONE
 		}
 	}
 	;
-contents_forward: contents_forward content_forward
+contents_forward: content_forward contents_forward
 	|
 	{
 		/* forward end */
@@ -407,7 +407,7 @@ viewstart: VAR_VIEW
 		}
 	}
 	;
-contents_view: contents_view content_view
+contents_view: content_view contents_view
 	|
 	{
 		/* view end */
