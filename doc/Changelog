@@ -1,6 +1,8 @@
 21 May 2024: Wouter
 	- Merge #1073: fix null pointer dereference issue in function
 	  ub_ctx_set_fwd.
+	- Fix to print a parse error when config is read with no name for
+	  a forward-zone, stub-zone or view.
 
 17 May 2024: Yorgos
 	- Merge #1069: Fix unbound-control stdin commands for multi-process
