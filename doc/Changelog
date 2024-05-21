@@ -1,3 +1,7 @@
+21 May 2024: Wouter
+	- Merge #1073: fix null pointer dereference issue in function
+	  ub_ctx_set_fwd.
+
 17 May 2024: Yorgos
 	- Merge #1069: Fix unbound-control stdin commands for multi-process
 	  Unbounds.
