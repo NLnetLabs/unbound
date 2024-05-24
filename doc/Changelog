@@ -1,6 +1,11 @@
 24 May 2024: Wouter
 	- Fix #1064: Unbound 1.20 Cachedb broken?
 
+24 May 2024: Yorgos
+	- Fix #1059: Intermittent DNS blocking failure with local-zone and
+	  always_nxdomain. Addition of local_zones dynamically via
+	  unbound-control was not finding the zone's parent correctly.
+
 21 May 2024: Wouter
 	- Merge #1073: fix null pointer dereference issue in function
 	  ub_ctx_set_fwd.
