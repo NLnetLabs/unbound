@@ -659,5 +659,5 @@ lz_enter_zone(struct local_zones* zones, const char* name, const char* type,
  *  @param zones: the local zones tree
  */
 void
-init_parents(struct local_zones* zones);
+lz_init_parents(struct local_zones* zones);
 #endif /* SERVICES_LOCALZONE_H */

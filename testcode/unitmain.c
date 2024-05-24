@@ -1328,7 +1328,7 @@ static void localzone_parents_test(void)
 		z = lz_enter_zone(z1, zone_data[i], "always_nxdomain",
 			LDNS_RR_CLASS_IN);
 		lock_rw_unlock(&z->lock);
-		init_parents(z1);
+		lz_init_parents(z1);
 
 		/* This is the unbound-control way */
 		nm = sldns_str2wire_dname(zone_data[i], &nmlen);

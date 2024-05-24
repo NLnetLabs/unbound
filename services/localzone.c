@@ -1008,7 +1008,7 @@ static struct local_zone* find_closest_parent(struct local_zone* curr,
 
 /** setup parent pointers, so that a lookup can be done for closest match */
 void
-init_parents(struct local_zones* zones)
+lz_init_parents(struct local_zones* zones)
 {
 	struct local_zone* node, *prev = NULL;
 	lock_rw_wrlock(&zones->lock);
@@ -1039,7 +1039,7 @@ lz_setup_implicit(struct local_zones* zones, struct config_file* cfg)
 	int nmlabs = 0;
 	int match = 0; /* number of labels match count */
 
-	init_parents(zones); /* to enable local_zones_lookup() */
+	lz_init_parents(zones); /* to enable local_zones_lookup() */
 	for(p = cfg->local_data; p; p = p->next) {
 		uint8_t* rr_name;
 		uint16_t rr_class, rr_type;
@@ -1205,7 +1205,7 @@ local_zones_apply_cfg(struct local_zones* zones, struct config_file* cfg)
 	}
 
 	/* setup parent ptrs for lookup during data entry */
-	init_parents(zones);
+	lz_init_parents(zones);
 	/* insert local zone tags */
 	if(!lz_enter_zone_tags(zones, cfg)) {
 		return 0;
