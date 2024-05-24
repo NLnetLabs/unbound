@@ -1,3 +1,6 @@
+24 May 2024: Wouter
+	- Fix #1064: Unbound 1.20 Cachedb broken?
+
 21 May 2024: Wouter
 	- Merge #1073: fix null pointer dereference issue in function
 	  ub_ctx_set_fwd.
