@@ -1327,6 +1327,8 @@ static void localzone_parents_test(void)
 		/* This is the config way */
 		z = lz_enter_zone(z1, zone_data[i], "always_nxdomain",
 			LDNS_RR_CLASS_IN);
+		(void)z;  /* please compiler when no threading and no lock
+		code; the following line disappears and z stays unused */
 		lock_rw_unlock(&z->lock);
 		lz_init_parents(z1);
 
