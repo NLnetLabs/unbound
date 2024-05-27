@@ -1,3 +1,7 @@
+27 May 2024: Wouter
+	- Fix to enable that SERVFAIL is cached, for a short period, for more
+	  cases. In the cases where limits are exceeded.
+
 24 May 2024: Wouter
 	- Fix #1064: Unbound 1.20 Cachedb broken?
 
