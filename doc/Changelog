@@ -5,6 +5,10 @@
 
 27 May 2024: Yorgos
 	- Fix unused variable warning on compilation with no thread support.
+	- unbound-control-setup: check openssl availability before doing
+	  anything, patch from Michael Tokarev.
+	- Update patch to remove 'command' shell builtin and update error
+	  text.
 
 24 May 2024: Wouter
 	- Fix #1064: Unbound 1.20 Cachedb broken?
