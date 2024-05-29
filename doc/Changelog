@@ -1,3 +1,6 @@
+29 May 2024: Wouter
+	- Merge #1078: Only check old pid if no username.
+
 27 May 2024: Wouter
 	- Fix to enable that SERVFAIL is cached, for a short period, for more
 	  cases. In the cases where limits are exceeded.
