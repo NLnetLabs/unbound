@@ -1,3 +1,7 @@
+30 May 2024: Wouter
+	- Fix #1079: tags from tagged rpz zones are no longer honored after
+	  upgrade from 1.19.3 to 1.20.0.
+
 29 May 2024: Wouter
 	- Merge #1078: Only check old pid if no username.
 
