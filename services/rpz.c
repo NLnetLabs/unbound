@@ -2453,10 +2453,10 @@ rpz_callback_from_iterator_module(struct module_qstate* ms, struct iter_qstate* 
 			lock_rw_unlock(&a->lock);
 			continue;
 		}
-		if(r->taglist && ms->client_info &&
+		if(r->taglist && (!ms->client_info ||
 			!taglist_intersect(r->taglist, r->taglistlen,
 				ms->client_info->taglist,
-				ms->client_info->taglen)) {
+				ms->client_info->taglen))) {
 			lock_rw_unlock(&a->lock);
 			continue;
 		}
@@ -2518,10 +2518,10 @@ struct dns_msg* rpz_callback_from_iterator_cname(struct module_qstate* ms,
 			lock_rw_unlock(&a->lock);
 			continue;
 		}
-		if(r->taglist && ms->client_info &&
+		if(r->taglist && (!ms->client_info ||
 			!taglist_intersect(r->taglist, r->taglistlen,
 				ms->client_info->taglist,
-				ms->client_info->taglen)) {
+				ms->client_info->taglen))) {
 			lock_rw_unlock(&a->lock);
 			continue;
 		}
