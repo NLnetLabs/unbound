@@ -7,7 +7,7 @@
 . ../common.sh
 PRE="../.."
 get_make
-(cd $PRE ; $MAKE unittest; $MAKE lock-verify)
+(cd $PRE ; $MAKE unittest; $MAKE lock-verify; $MAKE unbound-dnstap-socket)
 
 if test -f $PRE/unbound_do_valgrind_in_test; then
 	do_valgrind=yes
@@ -16,11 +16,16 @@ else
 fi
 VALGRIND_FLAGS="--leak-check=full --show-leak-kinds=all"
 
+## START -- Loop over unit tests
+##
+for unit_cmd in "unittest" "unbound-dnstap-socket -c"; do
+
+echo "> testing $unit_cmd"
 if test $do_valgrind = "yes"; then
 	echo "valgrind yes"
 	echo
 	tmpout=/tmp/tmpout.$$
-	if (cd $PRE; valgrind $VALGRIND_FLAGS ./unittest >$tmpout 2>&1); then
+	if (cd $PRE; valgrind $VALGRIND_FLAGS ./$unit_cmd >$tmpout 2>&1); then
 		echo "unit test worked."
 	else
 		echo "unit test failed."
@@ -30,7 +35,7 @@ if test $do_valgrind = "yes"; then
 		:  # clean
 	else
 		cat $tmpout
-		echo "Memory leaked in unittest"
+		echo "Memory leaked in unit test"
 		grep "in use at exit" $tmpout
 		exit 1
 	fi
@@ -38,14 +43,14 @@ if test $do_valgrind = "yes"; then
 		:  # clean
 	else
 		cat $tmpout
-		echo "Errors in unittest"
+		echo "Errors in unit test"
 		grep "ERROR SUMMARY" $tmpout
 		exit 1
 	fi
 	rm -f $tmpout
 else
 	# without valgrind
-	if (cd $PRE; ./unittest); then
+	if (cd $PRE; ./$unit_cmd); then
 		echo "unit test worked."
 	else
 		echo "unit test failed."
@@ -60,4 +65,9 @@ if test -f $PRE/ublocktrace.0; then
 		exit 1
 	fi
 fi
+
+done
+##
+## END -- Loop over unit tests
+
 exit 0
