@@ -2365,11 +2365,11 @@ recv_error:
 #ifndef USE_WINSOCK
 	if(errno == EINTR || errno == EAGAIN)
 		return 1;
-	if(recv_initial) {
 #ifdef ECONNRESET
-		if(errno == ECONNRESET && verbosity < 2)
-			return 0; /* silence reset by peer */
+	if(errno == ECONNRESET && verbosity < 2)
+		return 0; /* silence reset by peer */
 #endif
+	if(recv_initial) {
 #ifdef ECONNREFUSED
 		if(errno == ECONNREFUSED && verbosity < 2)
 			return 0; /* silence reset by peer */
@@ -2396,7 +2396,7 @@ recv_error:
 #endif
 #ifdef ENOTCONN
 		if(errno == ENOTCONN) {
-			log_err_addr("read (in tcp s) failed and this "
+			log_err_addr("read (in tcp initial) failed and this "
 				"could be because TCP Fast Open is "
 				"enabled [--disable-tfo-client "
 				"--disable-tfo-server] but does not "
@@ -2430,8 +2430,9 @@ recv_error:
 		return 1;
 	}
 #endif
-	log_err_addr("read (in tcp s)", sock_strerror(errno),
-		&c->repinfo.remote_addr, c->repinfo.remote_addrlen);
+	log_err_addr((recv_initial?"read (in tcp initial)":"read (in tcp)"),
+		sock_strerror(errno), &c->repinfo.remote_addr,
+		c->repinfo.remote_addrlen);
 	return 0;
 }
 

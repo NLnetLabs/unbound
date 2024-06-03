@@ -1,3 +1,7 @@
+3 June 2024: Wouter
+	- Fix to squelch connection reset by peer errors from log. And fix
+	  that the tcp read errors are labeled as initial for the first calls.
+
 30 May 2024: Wouter
 	- Fix #1079: tags from tagged rpz zones are no longer honored after
 	  upgrade from 1.19.3 to 1.20.0.
