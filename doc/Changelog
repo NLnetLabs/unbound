@@ -1,3 +1,11 @@
+4 June 2024: Yorgos
+	- Merge #1080: AddressSanitizer detection in tdir tests and memory leak
+	  fixes.
+	- Fix memory leak when reload_keep_cache is used and num-threads
+	  changes.
+	- Fix memory leak on exit for unbound-dnstap-socket; creates false
+	  negatives during testing.
+
 3 June 2024: Wouter
 	- Fix to squelch connection reset by peer errors from log. And fix
 	  that the tcp read errors are labeled as initial for the first calls.
