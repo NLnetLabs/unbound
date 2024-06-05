@@ -5997,6 +5997,25 @@ fr_worker_pickup_auth_changes(struct worker* worker,
 			}
 			lock_rw_unlock(&item->old_z->lock);
 		}
+		if(item->is_added) {
+			if(worker->thread_num == 0) {
+				struct auth_xfer* xfr = NULL;
+				/* Start zone transfers and lookups. */
+				lock_rw_wrlock(&item->new_z->lock);
+				auth_zones_lock_xfr(worker->env.auth_zones,
+					&item->new_z, 0, &xfr, 0, 0);
+				auth_xfer_pickup_initial_zone(xfr,
+					&worker->env);
+
+				/* Perform ZONEMD verification lookups. */
+				lock_rw_wrlock(&item->new_z->lock);
+				/* holding only the new_z lock */
+				auth_zone_verify_zonemd(item->new_z,
+					&worker->env, &worker->env.mesh->mods,
+					NULL, 0, 1);
+				lock_rw_unlock(&item->new_z->lock);
+			}
+		}
 	}
 }
 

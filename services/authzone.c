@@ -6987,6 +6987,18 @@ xfr_set_timeout(struct auth_xfer* xfr, struct module_env* env,
 	comm_timer_set(xfr->task_nextprobe->timer, &tv);
 }
 
+void auth_xfer_pickup_initial_zone(struct auth_xfer* x, struct module_env* env)
+{
+	/* set lease_time, because we now have timestamp in env,
+	 * (not earlier during startup and apply_cfg), and this
+	 * notes the start time when the data was acquired */
+	if(x->have_zone)
+		x->lease_time = *env->now;
+	if(x->task_nextprobe && x->task_nextprobe->worker == NULL) {
+		xfr_set_timeout(x, env, 0, 1);
+	}
+}
+
 /** initial pick up of worker timeouts, ties events to worker event loop */
 void
 auth_xfer_pickup_initial(struct auth_zones* az, struct module_env* env)
@@ -6995,14 +7007,7 @@ auth_xfer_pickup_initial(struct auth_zones* az, struct module_env* env)
 	lock_rw_wrlock(&az->lock);
 	RBTREE_FOR(x, struct auth_xfer*, &az->xtree) {
 		lock_basic_lock(&x->lock);
-		/* set lease_time, because we now have timestamp in env,
-		 * (not earlier during startup and apply_cfg), and this
-		 * notes the start time when the data was acquired */
-		if(x->have_zone)
-			x->lease_time = *env->now;
-		if(x->task_nextprobe && x->task_nextprobe->worker == NULL) {
-			xfr_set_timeout(x, env, 0, 1);
-		}
+		auth_xfer_pickup_initial_zone(x, env);
 		lock_basic_unlock(&x->lock);
 	}
 	lock_rw_unlock(&az->lock);
@@ -8687,4 +8692,43 @@ size_t auth_zones_get_mem(struct auth_zones* zones)
 	lock_rw_unlock(&zones->lock);
 	lock_rw_unlock(&zones->rpz_lock);
 	return m;
+}
+
+void auth_zones_lock_xfr(struct auth_zones* az, struct auth_zone** z, int zwr,
+	struct auth_xfer** x, int azlock_start, int azlock_return)
+{
+	uint8_t nm[LDNS_MAX_DOMAINLEN+1];
+	size_t nmlen;
+	uint16_t dclass;
+
+	/* Store name */
+	if((*z)->namelen > sizeof(nm)) {
+		/* This should never happen, the buffer is large enough. */
+		*x = NULL;
+		return;
+	}
+	nmlen = (*z)->namelen;
+	dclass = (*z)->dclass;
+	memmove(nm, (*z)->name, nmlen);
+
+	/* Look it up again */
+	lock_rw_unlock(&(*z)->lock);
+	if(!azlock_start) {
+		lock_rw_rdlock(&az->lock);
+	}
+	*z = auth_zone_find(az, nm, nmlen, dclass);
+	*x = auth_xfer_find(az, nm, nmlen, dclass);
+	if(*z) {
+		if(zwr == 0) {
+			lock_rw_rdlock(&(*z)->lock);
+		} else if(zwr == 1) {
+			lock_rw_wrlock(&(*z)->lock);
+		}
+	}
+	if(*x) {
+		lock_basic_lock(&(*x)->lock);
+	}
+	if(!azlock_return) {
+		lock_rw_unlock(&az->lock);
+	}
 }
