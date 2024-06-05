@@ -6006,6 +6006,7 @@ fr_worker_pickup_auth_changes(struct worker* worker,
 					&item->new_z, 0, &xfr, 0, 0);
 				auth_xfer_pickup_initial_zone(xfr,
 					&worker->env);
+				lock_basic_unlock(&xfr->lock);
 
 				/* Perform ZONEMD verification lookups. */
 				lock_rw_wrlock(&item->new_z->lock);
