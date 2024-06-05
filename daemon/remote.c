@@ -4656,6 +4656,11 @@ auth_zones_swap(struct auth_zones* az, struct auth_zones* data)
 
 	az->rpz_first = data->rpz_first;
 	data->rpz_first = old_rpz_first;
+
+	/* The xtree is not swapped. This contains the auth_xfer elements
+	 * that contain tasks in progress, like zone transfers.
+	 * The unchanged zones can keep their tasks in the tree, and thus
+	 * the xfer elements can continue to be their callbacks. */
 }
 
 #ifdef ATOMIC_POINTER_LOCK_FREE
