@@ -6003,7 +6003,7 @@ fr_worker_pickup_auth_changes(struct worker* worker,
 				/* Start zone transfers and lookups. */
 				lock_rw_wrlock(&item->new_z->lock);
 				auth_zones_lock_xfr(worker->env.auth_zones,
-					&item->new_z, 0, &xfr, 0, 0);
+					&item->new_z, 2, &xfr, 0, 0);
 				auth_xfer_pickup_initial_zone(xfr,
 					&worker->env);
 				lock_basic_unlock(&xfr->lock);
