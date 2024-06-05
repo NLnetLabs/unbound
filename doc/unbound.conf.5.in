@@ -511,7 +511,7 @@ configured value if the number of free buffers falls below 35% of the
 total number configured, and finally to 0 if the number of free buffers
 falls below 20% of the total number configured. A minimum timeout of
 200 milliseconds is observed regardless of the option value used.
-It will be overriden by \fBedns\-tcp\-keepalive\-timeout\fR if
+It will be overridden by \fBedns\-tcp\-keepalive\-timeout\fR if
 \fBedns\-tcp\-keepalive\fR is enabled.
 .TP
 .B tcp-reuse-timeout: \fI<msec>\fR

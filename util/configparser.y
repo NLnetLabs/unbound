@@ -357,8 +357,14 @@ stubstart: VAR_STUB_ZONE
 		}
 	}
 	;
-contents_stub: contents_stub content_stub
-	| ;
+contents_stub: content_stub contents_stub
+	|
+	{
+		/* stub end */
+		if(cfg_parser->cfg->stubs &&
+			!cfg_parser->cfg->stubs->name)
+			yyerror("stub-zone without name");
+	};
 content_stub: stub_name | stub_host | stub_addr | stub_prime | stub_first |
 	stub_no_cache | stub_ssl_upstream | stub_tcp_upstream
 	;
@@ -376,8 +382,14 @@ forwardstart: VAR_FORWARD_ZONE
 		}
 	}
 	;
-contents_forward: contents_forward content_forward
-	| ;
+contents_forward: content_forward contents_forward
+	|
+	{
+		/* forward end */
+		if(cfg_parser->cfg->forwards &&
+			!cfg_parser->cfg->forwards->name)
+			yyerror("forward-zone without name");
+	};
 content_forward: forward_name | forward_host | forward_addr | forward_first |
 	forward_no_cache | forward_ssl_upstream | forward_tcp_upstream
 	;
@@ -389,16 +401,20 @@ viewstart: VAR_VIEW
 		s = (struct config_view*)calloc(1, sizeof(struct config_view));
 		if(s) {
 			s->next = cfg_parser->cfg->views;
-			if(s->next && !s->next->name)
-				yyerror("view without name");
 			cfg_parser->cfg->views = s;
 		} else {
 			yyerror("out of memory");
 		}
 	}
 	;
-contents_view: contents_view content_view
-	| ;
+contents_view: content_view contents_view
+	|
+	{
+		/* view end */
+		if(cfg_parser->cfg->views &&
+			!cfg_parser->cfg->views->name)
+			yyerror("view without name");
+	};
 content_view: view_name | view_local_zone | view_local_data | view_first |
 		view_response_ip | view_response_ip_data | view_local_data_ptr
 	;

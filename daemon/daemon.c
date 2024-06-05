@@ -502,7 +502,10 @@ daemon_clear_allocs(struct daemon* daemon)
 {
 	int i;
 
-	for(i=0; i<daemon->num; i++) {
+	/* daemon->num may be different during reloads (after configuration
+	 * read). Use old_num which has the correct value used to setup the
+	 * worker_allocs */
+	for(i=0; i<daemon->old_num; i++) {
 		alloc_clear(daemon->worker_allocs[i]);
 		free(daemon->worker_allocs[i]);
 	}

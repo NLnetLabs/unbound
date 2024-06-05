@@ -745,6 +745,10 @@ cachedb_intcache_store(struct module_qstate* qstate, int msg_expired)
 		 * going to be now-3 seconds. Making it expired
 		 * in the cache. */
 		set_msg_ttl(qstate->return_msg, (time_t)-3);
+		/* The expired entry does not get checked by the validator
+		 * and we need a validation value for it. */
+		if(qstate->env->cfg->cachedb_check_when_serve_expired)
+			qstate->return_msg->rep->security = sec_status_insecure;
 	}
 	(void)dns_cache_store(qstate->env, &qstate->qinfo,
 		qstate->return_msg->rep, 0, qstate->prefetch_leeway, 0,

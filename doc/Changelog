@@ -1,3 +1,53 @@
+4 June 2024: Yorgos
+	- Merge #1080: AddressSanitizer detection in tdir tests and memory leak
+	  fixes.
+	- Fix memory leak when reload_keep_cache is used and num-threads
+	  changes.
+	- Fix memory leak on exit for unbound-dnstap-socket; creates false
+	  negatives during testing.
+
+3 June 2024: Wouter
+	- Fix to squelch connection reset by peer errors from log. And fix
+	  that the tcp read errors are labeled as initial for the first calls.
+
+30 May 2024: Wouter
+	- Fix #1079: tags from tagged rpz zones are no longer honored after
+	  upgrade from 1.19.3 to 1.20.0.
+	- Fix for #1079: fix RPZ taglist in iterator callback that no client
+	  info is like no taglist intersection.
+
+29 May 2024: Wouter
+	- Merge #1078: Only check old pid if no username.
+
+27 May 2024: Wouter
+	- Fix to enable that SERVFAIL is cached, for a short period, for more
+	  cases. In the cases where limits are exceeded.
+	- Fix spelling of tcp-idle-timeout docs, from Michael Tokarev.
+
+27 May 2024: Yorgos
+	- Fix unused variable warning on compilation with no thread support.
+	- unbound-control-setup: check openssl availability before doing
+	  anything, patch from Michael Tokarev.
+	- Update patch to remove 'command' shell builtin and update error
+	  text.
+
+24 May 2024: Wouter
+	- Fix #1064: Unbound 1.20 Cachedb broken?
+
+24 May 2024: Yorgos
+	- Fix #1059: Intermittent DNS blocking failure with local-zone and
+	  always_nxdomain. Addition of local_zones dynamically via
+	  unbound-control was not finding the zone's parent correctly.
+
+21 May 2024: Wouter
+	- Merge #1073: fix null pointer dereference issue in function
+	  ub_ctx_set_fwd.
+	- Fix to print a parse error when config is read with no name for
+	  a forward-zone, stub-zone or view.
+	- Fix for parse end of forward-zone, stub-zone and view.
+	- Fix for #1064: Fix that cachedb expired messages are considered
+	  insecure, and thus can be served to clients when dnssec is enabled.
+
 17 May 2024: Yorgos
 	- Merge #1069: Fix unbound-control stdin commands for multi-process
 	  Unbounds.

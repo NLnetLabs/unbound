@@ -2435,10 +2435,9 @@ rpz_callback_from_iterator_module(struct module_qstate* ms, struct iter_qstate* 
 	if(ms->env == NULL || ms->env->auth_zones == NULL) { return 0; }
 
 	az = ms->env->auth_zones;
+	lock_rw_rdlock(&az->rpz_lock);
 
 	verbose(VERB_ALGO, "rpz: iterator module callback: have_rpz=%d", az->rpz_first != NULL);
-
-	lock_rw_rdlock(&az->rpz_lock);
 
 	/* precedence of RPZ works, loosely, like this:
 	 * CNAMEs in order of the CNAME chain. rpzs in the order they are
@@ -2451,6 +2450,13 @@ rpz_callback_from_iterator_module(struct module_qstate* ms, struct iter_qstate* 
 		lock_rw_rdlock(&a->lock);
 		r = a->rpz;
 		if(r->disabled) {
+			lock_rw_unlock(&a->lock);
+			continue;
+		}
+		if(r->taglist && (!ms->client_info ||
+			!taglist_intersect(r->taglist, r->taglistlen,
+				ms->client_info->taglist,
+				ms->client_info->taglen))) {
 			lock_rw_unlock(&a->lock);
 			continue;
 		}
@@ -2509,6 +2515,13 @@ struct dns_msg* rpz_callback_from_iterator_cname(struct module_qstate* ms,
 		lock_rw_rdlock(&a->lock);
 		r = a->rpz;
 		if(r->disabled) {
+			lock_rw_unlock(&a->lock);
+			continue;
+		}
+		if(r->taglist && (!ms->client_info ||
+			!taglist_intersect(r->taglist, r->taglistlen,
+				ms->client_info->taglist,
+				ms->client_info->taglen))) {
 			lock_rw_unlock(&a->lock);
 			continue;
 		}

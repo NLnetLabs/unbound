@@ -656,4 +656,22 @@ size_t local_zones_get_mem(struct local_zones* zones);
 void local_zones_swap_tree(struct local_zones* zones,
 	struct local_zones* data);
 
+/** Enter a new zone; returns with WRlock
+ *  Made public for unit testing
+ *  @param zones: the local zones tree
+ *  @param name: name of the zone
+ *  @param type: type of the zone
+ *  @param dclass: class of the zone
+ *  @return local_zone (or duplicate), NULL on parse and malloc failures
+ */
+struct local_zone*
+lz_enter_zone(struct local_zones* zones, const char* name, const char* type,
+	uint16_t dclass);
+
+/** Setup parent pointers, so that a lookup can be done for closest match
+ *  Made public for unit testing
+ *  @param zones: the local zones tree
+ */
+void
+lz_init_parents(struct local_zones* zones);
 #endif /* SERVICES_LOCALZONE_H */

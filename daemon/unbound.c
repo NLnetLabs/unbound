@@ -550,7 +550,7 @@ perform_setup(struct daemon* daemon, struct config_file* cfg, int debug_mode,
 		 * because that creates privilege escape problems, with the
 		 * pidfile writable by unprivileged users, but used by
 		 * privileged users. */
-		if(cfg->username && cfg->username[0])
+		if(!(cfg->username && cfg->username[0]))
 			checkoldpid(daemon->pidfile, pidinchroot);
 	}
 #endif
