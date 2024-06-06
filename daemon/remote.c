@@ -6010,7 +6010,7 @@ fr_worker_auth_del(struct worker* worker, struct fast_reload_auth_change* item,
 		lock_basic_unlock(&xfr->lock);
 	}
 
-	if(!for_change && released) {
+	if(!for_change && (released || worker->thread_num == 0)) {
 		/* See if the xfr item can be deleted. */
 		xfr = NULL;
 		lock_rw_rdlock(&item->old_z->lock);
