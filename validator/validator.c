@@ -275,7 +275,7 @@ val_new_getmsg(struct module_qstate* qstate, struct val_qstate* vq)
 		return NULL; /* protect against integer overflow */
 	vq->chase_reply->rrsets = regional_alloc_init(qstate->region,
 		vq->orig_msg->rep->rrsets, sizeof(struct ub_packed_rrset_key*)
-			* vq->orig_msg->rep->rrset_count);
+			* (vq->orig_msg->rep->rrset_count + vq->orig_msg->rep->an_numrrsets /* for extra DNAME records for unsigned CNAME repetitions*/) );
 	if(!vq->chase_reply->rrsets)
 		return NULL;
 	vq->rrset_skip = 0;
