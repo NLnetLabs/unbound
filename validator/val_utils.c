@@ -240,6 +240,26 @@ val_find_best_signer(struct ub_packed_rrset_key* rrset,
 	}
 }
 
+/** Detect if the, unsigned, CNAME is under a previous DNAME RR in the
+ * message, and thus it was generated from that previous DNAME.
+ */
+static int
+cname_under_previous_dname(struct reply_info* rep, size_t cname_idx,
+	size_t* ret)
+{
+	size_t i;
+	for(i=0; i<cname_idx; i++) {
+		if(ntohs(rep->rrsets[i]->rk.type) == LDNS_RR_TYPE_DNAME &&
+			dname_strict_subdomain_c(rep->rrsets[cname_idx]->
+			rk.dname, rep->rrsets[i]->rk.dname)) {
+			*ret = i;
+			return 1;
+		}
+	}
+	*ret = 0;
+	return 0;
+}
+
 void 
 val_find_signer(enum val_classification subtype, struct query_info* qinf, 
 	struct reply_info* rep, size_t skip, uint8_t** signer_name, 
@@ -275,12 +295,19 @@ val_find_signer(enum val_classification subtype, struct query_info* qinf,
 		*signer_name = NULL;
 		*signer_len = 0;
 	} else if(subtype == VAL_CLASS_CNAME) {
+		size_t j;
 		/* check for the first signed cname/dname rrset */
 		for(i=skip; i<rep->an_numrrsets; i++) {
 			val_find_rrset_signer(rep->rrsets[i], 
 				signer_name, signer_len);
 			if(*signer_name)
 				return;
+			if(ntohs(rep->rrsets[i]->rk.type) == LDNS_RR_TYPE_CNAME
+				&& cname_under_previous_dname(rep, i, &j)) {
+				val_find_rrset_signer(rep->rrsets[j],
+					signer_name, signer_len);
+				return;
+			}
 			if(ntohs(rep->rrsets[i]->rk.type) != LDNS_RR_TYPE_DNAME)
 				break; /* only check CNAME after a DNAME */
 		}
@@ -979,7 +1006,7 @@ void
 val_fill_reply(struct reply_info* chase, struct reply_info* orig, 
 	size_t skip, uint8_t* name, size_t len, uint8_t* signer)
 {
-	size_t i;
+	size_t i, j;
 	int seen_dname = 0;
 	chase->rrset_count = 0;
 	chase->an_numrrsets = 0;
@@ -1002,8 +1029,15 @@ val_fill_reply(struct reply_info* chase, struct reply_info* orig,
 				LDNS_RR_TYPE_DNAME) {
 					seen_dname = 1;
 			}
+		} else if(ntohs(orig->rrsets[i]->rk.type) == LDNS_RR_TYPE_CNAME
+			&& ((struct packed_rrset_data*)orig->rrsets[i]->
+			entry.data)->rrsig_count == 0 &&
+			cname_under_previous_dname(orig, i, &j) &&
+			rrset_has_signer(orig->rrsets[j], name, len)) {
+			chase->rrsets[chase->an_numrrsets++] = orig->rrsets[j];
+			chase->rrsets[chase->an_numrrsets++] = orig->rrsets[i];
 		}
-	}	
+	}
 	/* AUTHORITY section */
 	for(i = (skip > orig->an_numrrsets)?skip:orig->an_numrrsets;
 		i<orig->an_numrrsets+orig->ns_numrrsets; 
