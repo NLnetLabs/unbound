@@ -1,3 +1,6 @@
+6 June 2024: Wouter
+	- Fix memory leak in setup of dsa sig.
+
 4 June 2024: Yorgos
 	- Merge #1080: AddressSanitizer detection in tdir tests and memory leak
 	  fixes.
