@@ -143,7 +143,7 @@
  * also contain an rcode that is nonzero, but in this case additional
  * information (query, additional) can be passed along.
  *
- * The rcode and dns_msg are used to pass the result from the the rightmost
+ * The rcode and dns_msg are used to pass the result from the rightmost
  * module towards the leftmost modules and then towards the user.
  *
  * If you want to avoid recursion-cycles where queries need other queries

@@ -53,7 +53,7 @@ Generate a distribution tar file for unbound.
                         (which will then be unbound-<version>rc<number>)
     -u git_url          Retrieve the source from the specified repository url.
                         Detected from the working copy if not specified.
-    -b git_branch       Retrieve the the specified branch or tag.
+    -b git_branch       Retrieve the specified branch or tag.
                         Detected from the working copy if not specified.
     -wssl openssl.xx.tar.gz Also build openssl from tarball for windows dist.
     -wxp expat.xx.tar.gz Also build expat from tarball for windows dist.

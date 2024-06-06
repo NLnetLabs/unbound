@@ -151,7 +151,7 @@
 #define HTTPS_PORT 443
 
 #ifdef USE_WINSOCK
-/* sneakily reuse the the wsa_strerror function, on windows */
+/* sneakily reuse the wsa_strerror function, on windows */
 char* wsa_strerror(int err);
 #endif
 

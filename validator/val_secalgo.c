@@ -423,7 +423,10 @@ setup_dsa_sig(unsigned char** sig, unsigned int* len)
 	if(!dsasig) return 0;
 
 #ifdef HAVE_DSA_SIG_SET0
-	if(!DSA_SIG_set0(dsasig, R, S)) return 0;
+	if(!DSA_SIG_set0(dsasig, R, S)) {
+		DSA_SIG_free(dsasig);
+		return 0;
+	}
 #else
 #  ifndef S_SPLINT_S
 	dsasig->r = R;
