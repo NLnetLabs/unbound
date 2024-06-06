@@ -5978,6 +5978,111 @@ auth_zone_zonemd_stop_lookup(struct auth_zone* z, struct mesh_area* mesh)
 		&auth_zonemd_dnskey_lookup_callback, z);
 }
 
+/** Fast reload, worker picks up deleted auth zone */
+static void
+fr_worker_auth_del(struct worker* worker, struct fast_reload_auth_change* item,
+	int for_change)
+{
+	int released = 0; /* Did this routine release callbacks. */
+	struct auth_xfer* xfr = NULL;
+
+	lock_rw_wrlock(&item->old_z->lock);
+	if(item->old_z->zonemd_callback_env &&
+	   item->old_z->zonemd_callback_env->worker == worker){
+		/* This worker was performing a zonemd lookup,
+		 * stop the lookup and remove that entry. */
+		auth_zone_zonemd_stop_lookup(item->old_z, worker->env.mesh);
+		item->old_z->zonemd_callback_env = NULL;
+	}
+	lock_rw_unlock(&item->old_z->lock);
+
+	lock_rw_rdlock(&item->old_z->lock);
+	auth_zones_lock_xfr(worker->env.auth_zones, &item->old_z, 2, &xfr,
+		0, 0);
+	if(xfr) {
+		/* Release callbacks on the xfr, if this worker holds them. */
+		if(xfr->task_nextprobe->worker == worker ||
+			xfr->task_probe->worker == worker ||
+			xfr->task_transfer->worker == worker) {
+			released = 1;
+			xfr_disown_tasks(xfr, worker);
+		}
+		lock_basic_unlock(&xfr->lock);
+	}
+
+	if(!for_change && released) {
+		/* See if the xfr item can be deleted. */
+		xfr = NULL;
+		lock_rw_rdlock(&item->old_z->lock);
+		auth_zones_lock_xfr(worker->env.auth_zones, &item->old_z, 2,
+			&xfr, 0, 1);
+		if(xfr && xfr->task_nextprobe->worker == NULL &&
+			xfr->task_probe->worker == NULL &&
+			xfr->task_transfer->worker == NULL) {
+			(void)rbtree_delete(&worker->env.auth_zones->xtree,
+				&xfr->node);
+			lock_rw_unlock(&worker->env.auth_zones->lock);
+			lock_basic_unlock(&xfr->lock);
+			auth_xfer_delete(xfr);
+		} else {
+			lock_rw_unlock(&worker->env.auth_zones->lock);
+			if(xfr) {
+				lock_basic_unlock(&xfr->lock);
+			}
+		}
+	}
+}
+
+/** Fast reload, worker picks up added auth zone */
+static void
+fr_worker_auth_add(struct worker* worker, struct fast_reload_auth_change* item,
+	int for_change)
+{
+	struct auth_xfer* xfr = NULL;
+
+	/* Start zone transfers and lookups. */
+	lock_rw_wrlock(&item->new_z->lock);
+	auth_zones_lock_xfr(worker->env.auth_zones, &item->new_z, 0, &xfr,
+		0, 1);
+	if(xfr == NULL) {
+		/* The xfr item needs to be created. The auth zones lock
+		 * is held to make this possible. */
+		xfr = auth_xfer_create(worker->env.auth_zones, item->new_z);
+		/* Serial information is copied into the xfr struct. */
+		if(!xfr_find_soa(item->new_z, xfr)) {
+			xfr->serial = 0;
+		}
+	} else if(for_change) {
+		if(!xfr_find_soa(item->new_z, xfr)) {
+			xfr->serial = 0;
+		}
+	}
+	lock_rw_unlock(&item->new_z->lock);
+	lock_rw_unlock(&worker->env.auth_zones->lock);
+	auth_xfer_pickup_initial_zone(xfr, &worker->env);
+	lock_basic_unlock(&xfr->lock);
+
+	/* Perform ZONEMD verification lookups. */
+	lock_rw_wrlock(&item->new_z->lock);
+	/* holding only the new_z lock */
+	auth_zone_verify_zonemd(item->new_z, &worker->env,
+		&worker->env.mesh->mods, NULL, 0, 1);
+	lock_rw_unlock(&item->new_z->lock);
+}
+
+/** Fast reload, worker picks up changed auth zone */
+static void
+fr_worker_auth_cha(struct worker* worker, struct fast_reload_auth_change* item)
+{
+	/* Since the zone has been changed, by rereading it from zone file,
+	 * existing transfers and probes are likely for the old version.
+	 * Stop them, and start new ones if needed. */
+	fr_worker_auth_del(worker, item, 1);
+	if(worker->thread_num == 0) {
+		fr_worker_auth_add(worker, item, 1);
+	}
+}
+
 /** Fast reload, the worker picks up changes in auth zones. */
 static void
 fr_worker_pickup_auth_changes(struct worker* worker,
@@ -5986,36 +6091,15 @@ fr_worker_pickup_auth_changes(struct worker* worker,
 	struct fast_reload_auth_change* item;
 	for(item = auth_zone_change_list; item; item = item->next) {
 		if(item->is_deleted) {
-			lock_rw_wrlock(&item->old_z->lock);
-			if(item->old_z->zonemd_callback_env &&
-			   item->old_z->zonemd_callback_env->worker == worker){
-				/* This worker was performing a zonemd lookup,
-				 * stop the lookup and remove that entry. */
-				auth_zone_zonemd_stop_lookup(item->old_z,
-					worker->env.mesh);
-				item->old_z->zonemd_callback_env = NULL;
-			}
-			lock_rw_unlock(&item->old_z->lock);
+			fr_worker_auth_del(worker, item, 0);
 		}
 		if(item->is_added) {
 			if(worker->thread_num == 0) {
-				struct auth_xfer* xfr = NULL;
-				/* Start zone transfers and lookups. */
-				lock_rw_wrlock(&item->new_z->lock);
-				auth_zones_lock_xfr(worker->env.auth_zones,
-					&item->new_z, 2, &xfr, 0, 0);
-				auth_xfer_pickup_initial_zone(xfr,
-					&worker->env);
-				lock_basic_unlock(&xfr->lock);
-
-				/* Perform ZONEMD verification lookups. */
-				lock_rw_wrlock(&item->new_z->lock);
-				/* holding only the new_z lock */
-				auth_zone_verify_zonemd(item->new_z,
-					&worker->env, &worker->env.mesh->mods,
-					NULL, 0, 1);
-				lock_rw_unlock(&item->new_z->lock);
+				fr_worker_auth_add(worker, item, 0);
 			}
+		}
+		if(item->is_changed) {
+			fr_worker_auth_cha(worker, item);
 		}
 	}
 }

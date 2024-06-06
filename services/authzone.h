@@ -820,4 +820,20 @@ void auth_zones_lock_xfr(struct auth_zones* az, struct auth_zone** z, int zwr,
 void auth_xfer_pickup_initial_zone(struct auth_xfer* x,
 	struct module_env* env);
 
+/**
+ * Delete auth xfer structure
+ * @param xfr: delete this xfer and its tasks.
+ */
+void auth_xfer_delete(struct auth_xfer* xfr);
+
+/**
+ * Disown tasks from the xfr that belong to this worker.
+ * Only tasks for the worker in question, the comm point and timer
+ * delete functions need to run in the thread of that worker to be
+ * able to delete the callback from the event base.
+ * @param xfr: xfr structure
+ * @param worker: the worker for which to stop tasks.
+ */
+void xfr_disown_tasks(struct auth_xfer* xfr, struct worker* worker);
+
 #endif /* SERVICES_AUTHZONE_H */
