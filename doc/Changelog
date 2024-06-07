@@ -1,3 +1,6 @@
+7 June 2024: Wouter
+	- Add unit test for validation of repeated use of a DNAME record.
+
 6 June 2024: Wouter
 	- Fix memory leak in setup of dsa sig.
 	- Fix typos for 'the the' in text.
