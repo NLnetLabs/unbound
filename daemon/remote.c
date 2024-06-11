@@ -6115,10 +6115,10 @@ fr_worker_auth_cha(struct worker* worker, struct fast_reload_auth_change* item)
 
 	lock_rw_rdlock(&item->new_z->lock);
 	lock_rw_rdlock(&item->old_z->lock);
-	auth_zones_lock_xfr(worker->env.auth_zones, &item->new_z, 2, &xfr,
+	auth_zones_lock_xfr(worker->env.auth_zones, &item->new_z, 1, &xfr,
 		1, 1);
 	auth_zones_lock_xfr(worker->daemon->fast_reload_thread->old_auth_zones,
-		&item->old_z, 2, &loadxfr, 1, 1);
+		&item->old_z, 1, &loadxfr, 1, 1);
 
 	/* The xfr is not there any more if the zone is not set to have
 	 * zone transfers. Or the xfr needs to be created if it is set to
