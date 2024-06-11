@@ -4394,6 +4394,7 @@ auth_zones_check_changes(struct fast_reload_thread* fr,
 	struct auth_zone* new_z, *old_z;
 	struct module_env* env = &fr->worker->env;
 
+	fr->old_auth_zones = ct->auth_zones;
 	/* Nobody is using the new ct version yet.
 	 * Also the ct lock is picked up before the env lock for auth_zones. */
 	lock_rw_rdlock(&ct->auth_zones->lock);
@@ -6044,7 +6045,7 @@ fr_worker_auth_add(struct worker* worker, struct fast_reload_auth_change* item,
 	lock_rw_wrlock(&item->new_z->lock);
 	auth_zones_lock_xfr(worker->env.auth_zones, &item->new_z, 0, &xfr,
 		0, 1);
-	if(xfr == NULL) {
+	if(xfr == NULL && item->new_z->zone_is_slave) {
 		/* The xfr item needs to be created. The auth zones lock
 		 * is held to make this possible. */
 		xfr = auth_xfer_create(worker->env.auth_zones, item->new_z);
@@ -6052,15 +6053,17 @@ fr_worker_auth_add(struct worker* worker, struct fast_reload_auth_change* item,
 		if(!xfr_find_soa(item->new_z, xfr)) {
 			xfr->serial = 0;
 		}
-	} else if(for_change) {
+	} else if(for_change && xfr) {
 		if(!xfr_find_soa(item->new_z, xfr)) {
 			xfr->serial = 0;
 		}
 	}
 	lock_rw_unlock(&item->new_z->lock);
 	lock_rw_unlock(&worker->env.auth_zones->lock);
-	auth_xfer_pickup_initial_zone(xfr, &worker->env);
-	lock_basic_unlock(&xfr->lock);
+	if(xfr) {
+		auth_xfer_pickup_initial_zone(xfr, &worker->env);
+		lock_basic_unlock(&xfr->lock);
+	}
 
 	/* Perform ZONEMD verification lookups. */
 	lock_rw_wrlock(&item->new_z->lock);
@@ -6070,14 +6073,81 @@ fr_worker_auth_add(struct worker* worker, struct fast_reload_auth_change* item,
 	lock_rw_unlock(&item->new_z->lock);
 }
 
+/** Fast reload, auth xfer config is picked up */
+static void
+auth_xfr_pickup_config(struct auth_xfer* loadxfr, struct auth_xfer* xfr)
+{
+	struct auth_master *probe_masters, *transfer_masters;
+	log_assert(loadxfr->namelen == xfr->namelen);
+	log_assert(loadxfr->namelabs == xfr->namelabs);
+	log_assert(loadxfr->dclass == xfr->dclass);
+
+	/* The lists can be swapped in, the other xfr struct will be deleted
+	 * afterwards. */
+	probe_masters = xfr->task_probe->masters;
+	transfer_masters = xfr->task_transfer->masters;
+	xfr->task_probe->masters = loadxfr->task_probe->masters;
+	xfr->task_transfer->masters = loadxfr->task_transfer->masters;
+	loadxfr->task_probe->masters = probe_masters;
+	loadxfr->task_transfer->masters = transfer_masters;
+}
+
 /** Fast reload, worker picks up changed auth zone */
 static void
 fr_worker_auth_cha(struct worker* worker, struct fast_reload_auth_change* item)
 {
+	int todelete = 0;
+	struct auth_xfer* loadxfr = NULL, *xfr = NULL;
 	/* Since the zone has been changed, by rereading it from zone file,
 	 * existing transfers and probes are likely for the old version.
 	 * Stop them, and start new ones if needed. */
 	fr_worker_auth_del(worker, item, 1);
+
+	/* The old callbacks are stopped, tasks have been disowned. The
+	 * new config contents can be picked up. SOA information is picked
+	 * up in the auth_add routine, as it has the new_z ready. */
+
+	lock_rw_rdlock(&worker->daemon->fast_reload_thread->old_auth_zones->lock);
+	lock_rw_wrlock(&worker->env.auth_zones->lock);
+
+	lock_rw_rdlock(&item->new_z->lock);
+	lock_rw_rdlock(&item->old_z->lock);
+	auth_zones_lock_xfr(worker->env.auth_zones, &item->new_z, 2, &xfr,
+		1, 1);
+	auth_zones_lock_xfr(worker->daemon->fast_reload_thread->old_auth_zones,
+		&item->old_z, 2, &loadxfr, 1, 1);
+
+	/* The xfr is not there any more if the zone is not set to have
+	 * zone transfers. Or the xfr needs to be created if it is set to
+	 * have zone transfers. */
+	if(loadxfr && xfr) {
+		/* Copy the config from loadxfr to the xfr in current use. */
+		auth_xfr_pickup_config(loadxfr, xfr);
+	} else if(!loadxfr && xfr) {
+		/* Delete the xfr. */
+		(void)rbtree_delete(&worker->env.auth_zones->xtree,
+			&xfr->node);
+		todelete = 1;
+		item->new_z->zone_is_slave = 0;
+	} else if(loadxfr && !xfr) {
+		/* Create the xfr. */
+		xfr = auth_xfer_create(worker->env.auth_zones, item->new_z);
+		item->new_z->zone_is_slave = 1;
+	}
+	lock_rw_unlock(&item->new_z->lock);
+	lock_rw_unlock(&item->old_z->lock);
+	lock_rw_unlock(&worker->daemon->fast_reload_thread->old_auth_zones->lock);
+	lock_rw_unlock(&worker->env.auth_zones->lock);
+	if(loadxfr) {
+		lock_basic_unlock(&loadxfr->lock);
+	}
+	if(xfr) {
+		lock_basic_unlock(&xfr->lock);
+	}
+	if(todelete) {
+		auth_xfer_delete(xfr);
+	}
+
 	if(worker->thread_num == 0) {
 		fr_worker_auth_add(worker, item, 1);
 	}
