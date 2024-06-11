@@ -6103,6 +6103,9 @@ fr_worker_auth_cha(struct worker* worker, struct fast_reload_auth_change* item)
 	 * Stop them, and start new ones if needed. */
 	fr_worker_auth_del(worker, item, 1);
 
+	if(worker->thread_num != 0)
+		return;
+
 	/* The old callbacks are stopped, tasks have been disowned. The
 	 * new config contents can be picked up. SOA information is picked
 	 * up in the auth_add routine, as it has the new_z ready. */
@@ -6148,9 +6151,7 @@ fr_worker_auth_cha(struct worker* worker, struct fast_reload_auth_change* item)
 		auth_xfer_delete(xfr);
 	}
 
-	if(worker->thread_num == 0) {
-		fr_worker_auth_add(worker, item, 1);
-	}
+	fr_worker_auth_add(worker, item, 1);
 }
 
 /** Fast reload, the worker picks up changes in auth zones. */
