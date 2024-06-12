@@ -32,7 +32,33 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+// @JESSE: Iterator (this file) is the module that does all the needed DNS
+//         iterations and walking the DNS tree to try and find an answer.
+//         It includes but not limited to:
+//              1. Finding the closest known delegation point
+//                 (root at startup, or configured zones)
+//              2. Sends a query (the original query if no qname-minimisation)
+//                 to that and gets either an answer or a referral answer.
+//              3. In case of referral answer goes back to 1.
+//
+//          A lot more is happening here, like fallbacks and retries. Don't try
+//          to understand everything at once, it's better to go with the flow
+//          and see what is relevant for you.
 
+// @JESSE: We do not use '//' comments in the Unbound code base. I explicitly
+//         use them to identify non-relevant parts or WIP comments.
+
+// @JESSE: Some tips:
+//         - For printf kind of debug logging it's easier to use log_err();
+//           these are printed on all verbosity levels.
+//         - For domain name manipulation methods you can have a look at
+//           dname.c/h.
+//         - If you need to do allocations; for your case everything should
+//           have the lifetime of the query state (qstate); you can use
+//           qstate->region as your arena allocator and pass that region to
+//           functions that require one. You can then alloc items there and
+//           forget about them. The whole region is freed when the qstate is
+//           no more.
 /**
  * \file
  *
@@ -69,6 +95,7 @@
 #include "sldns/str2wire.h"
 #include "sldns/parseutil.h"
 #include "sldns/sbuffer.h"
+
 
 /* in msec */
 int UNKNOWN_SERVER_NICENESS = 376;
@@ -136,6 +163,8 @@ iter_deinit(struct module_env* env, int id)
 static int
 iter_new(struct module_qstate* qstate, int id)
 {
+    // @JESSE: each module can have its own query state. The iter_qstate
+	//         struct below is the state for the iterator.
 	struct iter_qstate* iq = (struct iter_qstate*)regional_alloc(
 		qstate->region, sizeof(struct iter_qstate));
 	qstate->minfo[id] = iq;
@@ -164,7 +193,11 @@ iter_new(struct module_qstate* qstate, int id)
 	iq->dnssec_lame_query = 0;
 	iq->chase_flags = qstate->query_flags;
 	/* Start with the (current) qname. */
+    	// @JESSE: iq->qchase will be the qinfo iterator will be working on and
+	//         updating through the iteration process. It is set here to
+	//         the initial query (qstate->qinfo) that started all this.
 	iq->qchase = qstate->qinfo;
+    iq->deleg_state = 0;
 	outbound_list_init(&iq->outlist);
 	iq->minimise_count = 0;
 	iq->timeout_count = 0;
@@ -172,7 +205,7 @@ iter_new(struct module_qstate* qstate, int id)
 		iq->minimisation_state = INIT_MINIMISE_STATE;
 	else
 		iq->minimisation_state = DONOT_MINIMISE_STATE;
-	
+    // @JESSE: iq->qinfo_out is the qinfo that will be sent out.
 	memset(&iq->qinfo_out, 0, sizeof(struct query_info));
 	return 1;
 }
@@ -1596,8 +1629,10 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 		delname = iq->dp->name;
 		delnamelen = iq->dp->namelen;
 	} else {
-		delname = iq->qchase.qname;
-		delnamelen = iq->qchase.qname_len;
+        		// @JESSE: Here we set the delegation name to be the original
+		//         one ...
+        delname = iq->qchase.qname;
+        delnamelen = iq->qchase.qname_len;
 	}
 	if(iq->qchase.qtype == LDNS_RR_TYPE_DS || iq->refetch_glue ||
 	   (iq->qchase.qtype == LDNS_RR_TYPE_NS && qstate->prefetch_leeway
@@ -1618,8 +1653,10 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 		
 		/* Lookup the delegation in the cache. If null, then the 
 		 * cache needs to be primed for the qclass. */
+        	// @JESSE: ... and here we'll try to get the closest delegation
+		//         from cache.
 		if(delname)
-		     iq->dp = dns_cache_find_delegation(qstate->env, delname, 
+		    iq->dp = dns_cache_find_delegation(qstate->env, delname, 
 			delnamelen, iq->qchase.qtype, iq->qchase.qclass, 
 			qstate->region, &iq->deleg_msg,
 			*qstate->env->now+qstate->prefetch_leeway, 1,
@@ -1950,6 +1987,7 @@ generate_parentside_target_query(struct module_qstate* qstate,
  * @param qclass: target qclass.
  * @return true on success, false on failure.
  */
+//JESSE Use this to generate new query?
 static int
 generate_target_query(struct module_qstate* qstate, struct iter_qstate* iq,
         int id, uint8_t* name, size_t namelen, uint16_t qtype, uint16_t qclass)
@@ -2384,6 +2422,7 @@ check_waiting_queries(struct iter_qstate* iq, struct module_qstate* qstate,
 	}
 }
 	
+// @JESSE: This is where most of the iteration time will be spent.
 /** 
  * This is the request event state where the request will be sent to one of
  * its current query targets. This state also handles issuing target lookup
@@ -2538,6 +2577,57 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 		delegpt_no_ipv4(iq->dp);
 	delegpt_log(VERB_ALGO, iq->dp);
 
+    uint8_t root_len = iq->qchase.qname[0];
+    //NICE point
+    if (iq->deleg_state == 0 && root_len > 0) {
+        //we have to add _deleg after the first label
+        //for ex. jesse.nlnetlabs.nl becomes jesse._deleg.nlnetlabs.nl
+        uint8_t deleg_wireformat[] = {6, 95, 100, 101, 108, 101, 103}; //{06}_deleg
+        size_t delnamelen = iq->qchase.qname_len + sizeof(deleg_wireformat);
+        log_err("deleg wireformat size: %d, original qname size: %d, qname len (variable): %d, size of first label orginal qname: %d allocated space: %d", sizeof(deleg_wireformat), sizeof(iq->qchase.qname), iq->qchase.qname_len, iq->qchase.qname[0], delnamelen);
+        // delnamelen = iq->qchase.qname_len + sizeof(deleg_wireformat);
+        // delname = (uint8_t *)malloc(delnamelen);
+        uint8_t *delname = (uint8_t *)malloc(delnamelen);
+        if (delname == NULL) {
+            fprintf(stderr, "Memory allocation failed\n");
+        }
+        //put first label of original qname
+        uint8_t first_label_len = iq->qchase.qname[0];
+        log_err("First label length: %d", first_label_len);
+        uint8_t *qname_minus_first_label = iq->qchase.qname + first_label_len + 1;
+        uint8_t leftover_len = iq->qchase.qname_len - first_label_len - 1;
+        // memcpy(delname, iq->qchase.qname, sizeof(iq->qchase.qname)); //memcpy 1st label into delname
+        memcpy(delname, iq->qchase.qname, first_label_len + 1); //memcpy 1st label into delname
+        memcpy(delname + first_label_len + 1, deleg_wireformat, sizeof(deleg_wireformat)); //memcpy _deleg label in delname
+        memcpy(delname + first_label_len + sizeof(deleg_wireformat) + 1, qname_minus_first_label, leftover_len); //memcpy other labels in delname
+        log_err("Old delegation point: %s", iq->qchase.qname);
+        log_err("cname without first label: %s", qname_minus_first_label);
+
+        // log_err("delegation name in bytes:");
+        // for (size_t i = 0; i < delnamelen; ++i) {
+        //     log_err("%u ", delname[i]);
+        // }
+
+        log_err("The _deleg delegation point: %s", delname);
+
+        //uncomment if not onlys used in stub zone
+        iq->deleg_state = 1;
+
+        //left here
+        iq->dp->namelen = delnamelen;
+        // iq->dp->namelabs++;
+        iq->qchase.qtype = 64;
+		iq->qchase.qname = delname;
+        iq->qchase.qname_len = delnamelen;
+
+        iq->qinfo_out.qtype = 64;
+        iq->qinfo_out.qname = delname;
+        iq->qinfo_out.qname_len = delnamelen;
+        // iq->deleg_original_qname = qstate->qinfo.qname;
+        // qstate->qinfo.qname = delname;
+        // generate_target_query(qstate, iq, id, uint8_t* name, size_t namelen, uint16_t qtype, uint16_t qclass) 
+    }
+
 	if(iq->num_current_queries>0) {
 		/* already busy answering a query, this restart is because
 		 * more delegpt addrs became available, wait for existing
@@ -2547,6 +2637,13 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 		return 0;
 	}
 
+    //DELEG first check if _deleg in delegation point
+    //if no _deleg let unbound handle it
+// @JESSE: The following ifs is where most qname-minimisation happens.
+	//         We need something similar (adding a label at a time) but
+	//         without the best-effort nature of qname-minimisation and its
+	//         fallback. You can take inspiration from here on how to
+	//         correctly set iq->qinfo_out.
 	if(iq->minimisation_state == INIT_MINIMISE_STATE
 		&& !(iq->chase_flags & BIT_RD)) {
 		/* (Re)set qinfo_out to (new) delegation point, except when
@@ -3031,7 +3128,10 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 		log_name_addr(VERB_QUERY, "applied NAT64:",
 			iq->dp->name, &real_addr, real_addrlen);
 	}
-
+	// @JESSE: This is where a query is finally going out, hopefully.
+    log_err("JESSE send qname: %s", qstate->qinfo.qname);
+    log_err("JESSE send type: %d", qstate->qinfo.qtype);
+    
 	fptr_ok(fptr_whitelist_modenv_send_query(qstate->env->send_query));
 	outq = (*qstate->env->send_query)(&iq->qinfo_out,
 		iq->chase_flags | (iq->chase_to_rd?BIT_RD:0),
@@ -3085,7 +3185,7 @@ find_NS(struct reply_info* rep, size_t from, size_t to)
 	return NULL;
 }
 
-
+// @JESSE: This is where responses are read.
 /** 
  * Process the query response. All queries end up at this state first. This
  * process generally consists of analyzing the response and routing the
@@ -3180,8 +3280,83 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 			dnsseclame = 1;
 		}
 	} else iq->dnssec_lame_query = 0;
+    // @JESSE: Answers to _deleg queries would end up here. You need to
+	//         make sure you identify those answers correclty and treat
+	//         them the same way as referrals below.
+	/* handle each of the type cases */
+    //check deleg and change to referal type TODO add check to see if _deleg in name
+    uint16_t SVCB_QTYPE = 64;
+    log_err("JESSE: the qtype of the answer is: %d ", iq->qchase.qtype);
+    log_err("JESSE: the type is: %d", type);
+    if (iq->qchase.qtype == SVCB_QTYPE) {
+	    struct ub_packed_rrset_key* rrset_key;
+        log_err("JESSE: the returnmsg: %s", iq->response->rep);
+        rrset_key = reply_find_answer_rrset(&iq->qchase, iq->response->rep);
+        // struct packed_rrset_key rr_records = rrset->rk;
+
+        if(rrset_key) {
+            struct packed_rrset_data* rrset_data = (struct packed_rrset_data*) rrset_key->entry.data;
+
+            size_t data_len = rrset_data->rr_len[0];
+            uint8_t* svcb_data = rrset_data->rr_data[0];
+            log_err("JESSE: The wireformat SVCB name:");
+            for (size_t i = 0; i < data_len;  ++i) {
+                log_err("%u ", svcb_data[i]);
+            }
+            size_t index = 4;
+            while(svcb_data[index] != 0) { //loop through dns labels, label length 0 mean root so stop looping
+               index = index + svcb_data[index] + 1; 
+            }
+            index = index + 1;//add 1 for the root label
+            //Reference https://datatracker.ietf.org/doc/rfc9460/ section 2.2
+            uint8_t *ipv4;
+            uint8_t *ipv6;
+            while(index < data_len && (ipv4 == NULL || ipv6 == NULL)) {
+                uint16_t svcParamkey    = (svcb_data[index] << 8)   | svcb_data[index+1];
+                uint16_t svcParamValLen = (svcb_data[index+2] << 8) | svcb_data[index+3];
+                index = index + 4;
+                //logic fault, will never enter the paramkey checks TODOOOOOOOO
+                if (svcParamkey == 4) { //parse IPv4
+                    ipv4 = (uint8_t *)malloc(4 * sizeof(uint8_t));
+                    memcpy(ipv4, svcb_data + index, 4);
+                    log_err("Parsed IPv4 Hint:");
+                    for (size_t i = 0; i < 4;  ++i) {
+                        log_err("%u ", ipv4[i]);
+                    }
+                } else if (svcParamkey == 6) { //parse ipv6
+                    ipv6 = (uint8_t *)malloc(16 * sizeof(uint8_t));
+                    memcpy(ipv6, svcb_data + index, 16);
+                    log_err("Parsed IPv6 Hint:");
+                    for (size_t i = 0; i < 4;  ++i) {
+                        log_err("%u ", ipv6[i]);
+                    }
+                }
+                index = index + svcParamValLen;
+            }
+        } else {
+            log_err("TESTTTTTTT2");
+            //this means no _deleg record found
+            iq->qchase.qtype = 1;
+            qstate->qinfo.qtype = 1;
+            // iq->deleg_state = 0;
+            qstate->qinfo.qname = iq->deleg_original_qname;
+        }
+        // log_err("RRset result in bytes:");
+        // if(rrset) {
+        //     for (size_t i = 0; i < rr_records->count; ++i) {
+        //         size_t len = rr_records->rr_len[i];
+        //         log_err("Resource record %d:", i);
+        //         for (size_t j = 0; j < len; ++i) {
+        //             log_err("%u ", rr_records->rr_data[i][j]);
+        //         }
+        //     }
+        // }
+        //set new delegation point
+		// iq->dp = delegpt_from_message(iq->response, qstate->region);
+    }
 	/* see if referral brings us close to the target */
-	if(type == RESPONSE_TYPE_REFERRAL) {
+	if(type == RESPONSE_TYPE_REFERRAL){
+        // iq->deleg_state = 0;
 		struct ub_packed_rrset_key* ns = find_NS(
 			iq->response->rep, iq->response->rep->an_numrrsets,
 			iq->response->rep->an_numrrsets 
@@ -3224,8 +3399,7 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 		type = RESPONSE_TYPE_ANSWER;
 	}
 
-	/* handle each of the type cases */
-	if(type == RESPONSE_TYPE_ANSWER) {
+	if(type == RESPONSE_TYPE_ANSWER ){
 		/* ANSWER type responses terminate the query algorithm, 
 		 * so they sent on their */
 		if(verbosity >= VERB_DETAIL) {
@@ -3235,6 +3409,7 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 				(iq->response->rep->an_numrrsets?"ANSWER":
 				"nodata ANSWER"));
 		}
+
 		/* if qtype is DS, check we have the right level of answer,
 		 * like grandchild answer but we need the middle, reject it */
 		if(iq->qchase.qtype == LDNS_RR_TYPE_DS && !iq->dsns_point
@@ -3323,8 +3498,13 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 			return next_state(iq, QUERYTARGETS_STATE);
 		}
 		return final_state(iq);
+        	// @JESSE: I guess for the test environemnt we mostly don't care about
+	//         referrals; these are traditional DNS referral responses.
 	} else if(type == RESPONSE_TYPE_REFERRAL) {
+        //added code
+        // iq->deleg_state = 0; 
 		struct delegpt* old_dp = NULL;
+
 		/* REFERRAL type responses get a reset of the 
 		 * delegation point, and back to the QUERYTARGETS_STATE. */
 		verbose(VERB_DETAIL, "query response was REFERRAL");
@@ -4140,6 +4320,12 @@ iter_inform_super(struct module_qstate* qstate, int id,
 	else	processTargetResponse(qstate, id, super);
 }
 
+// @JESSE: These are all the available states the iterator could be for a given
+//         query. You should not worry about the following cases:
+//              - COLLECT_CLASS_STATE (it has to do with ANY queries)
+//              - DSNS_FIND_STATE (it tries to find the correct parent for a DS
+//                                 query; I think it is not relevant since the
+//                                 _deleg stuff always live at the parent)
 /**
  * Handle iterator state.
  * Handle events. This is the real processing loop for events, responsible
