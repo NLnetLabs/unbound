@@ -43,6 +43,7 @@
 #define UTIL_EDNS_H
 
 #include "util/storage/dnstree.h"
+#include "util/locks.h"
 
 struct edns_data;
 struct config_file;
@@ -73,6 +74,31 @@ struct edns_string_addr {
 	uint8_t* string;
 	/** length of string */
 	size_t string_len;
+};
+
+#define UNBOUND_COOKIE_HISTORY_SIZE 2
+#define UNBOUND_COOKIE_SECRET_SIZE 16
+
+typedef struct cookie_secret cookie_secret_type;
+struct cookie_secret {
+	/** cookie secret */
+	uint8_t cookie_secret[UNBOUND_COOKIE_SECRET_SIZE];
+};
+
+/**
+ * The cookie secrets from the cookie-secret-file.
+ */
+struct cookie_secrets {
+	/** lock on the structure, in case there are modifications
+	 * from remote control, this avoids race conditions. */
+	lock_basic_type lock;
+
+	/** how many cookies are there in the cookies array */
+	size_t cookie_count;
+
+	/* keep track of the last `UNBOUND_COOKIE_HISTORY_SIZE`
+	 * cookies as per rfc requirement .*/
+	cookie_secret_type cookie_secrets[UNBOUND_COOKIE_HISTORY_SIZE];
 };
 
 enum edns_cookie_val_status {
