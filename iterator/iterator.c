@@ -2589,10 +2589,7 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
         log_err("deleg wireformat size: %d, original qname size: %d, qname len (variable): %d, size of first label orginal qname: %d allocated space: %d", sizeof(deleg_wireformat), sizeof(iq->qchase.qname), iq->qchase.qname_len, iq->qchase.qname[0], delnamelen);
         // delnamelen = iq->qchase.qname_len + sizeof(deleg_wireformat);
         // delname = (uint8_t *)malloc(delnamelen);
-        uint8_t *delname = (uint8_t *)malloc(delnamelen);
-        if (delname == NULL) {
-            fprintf(stderr, "Memory allocation failed\n");
-        }
+        uint8_t *delname = (uint8_t *)regional_alloc(qstate->region, delnamelen);
         //put first label of original qname
         uint8_t first_label_len = iq->qchase.qname[0];
         log_err("First label length: %d", first_label_len);
@@ -3304,8 +3301,8 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
             for (size_t i = 0; i < data_len;  ++i) {
                 log_err("%u ", svcb_data[i]);
             }
-            size_t index = 4;
-            while(svcb_data[index] != 0) { //loop through dns labels, label length 0 mean root so stop looping
+            size_t index = 4; //index of 4 to start at first label (skip message length(2 octet) and priority(2 octet))
+            while(svcb_data[index] != 0) { //loop through dns labels, label length 0 means root so stop looping though labels
                index = index + svcb_data[index] + 1; 
             }
             index = index + 1;//add 1 for the root label
@@ -3319,14 +3316,14 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
                 log_err("scvparamlength: %d", svcParamValLen);
                 index = index + 4;
                 if (svcParamkey == 4) { //parse IPv4
-                    ipv4 = (uint8_t *)malloc(4 * sizeof(uint8_t));
+                    ipv4 = (uint8_t *)regional_alloc(qstate->region, 4 * sizeof(uint8_t));
                     memcpy(ipv4, svcb_data + index, 4);
                     log_err("Parsed IPv4 Hint:");
                     for (size_t i = 0; i < 4;  ++i) {
                         log_err("%u ", ipv4[i]);
                     }
                 } else if (svcParamkey == 6) { //parse ipv6
-                    ipv6 = (uint8_t *)malloc(16 * sizeof(uint8_t));
+                    ipv6 = (uint8_t *)regional_alloc(qstate->region, 16 * sizeof(uint8_t));
                     memcpy(ipv6, svcb_data + index, 16);
                     log_err("Parsed IPv6 Hint:");
                     for (size_t i = 0; i < 16;  ++i) {
