@@ -187,3 +187,87 @@ edns_cookie_server_validate(const uint8_t* cookie, size_t cookie_len,
 		return COOKIE_STATUS_VALID_RENEW;
 	return COOKIE_STATUS_VALID;
 }
+
+struct cookie_secrets*
+cookie_secrets_create(void)
+{
+	struct cookie_secrets* cookie_secrets = calloc(1,
+		sizeof(*cookie_secrets));
+	if(!cookie_secrets)
+		return NULL;
+	lock_basic_init(&cookie_secrets->lock);
+	lock_protect(&cookie_secrets->lock, &cookie_secrets->cookie_count,
+		sizeof(cookie_secrets->cookie_count));
+	lock_protect(&cookie_secrets->lock, cookie_secrets->cookie_secrets,
+		sizeof(cookie_secret_type)*UNBOUND_COOKIE_HISTORY_SIZE);
+	return cookie_secrets;
+}
+
+void
+cookie_secrets_delete(struct cookie_secrets* cookie_secrets)
+{
+	if(!cookie_secrets)
+		return;
+	lock_basic_destroy(&cookie_secrets->lock);
+	explicit_bzero(cookie_secrets->cookie_secrets,
+		sizeof(cookie_secret_type)*UNBOUND_COOKIE_HISTORY_SIZE);
+	free(cookie_secrets);
+}
+
+/** Read the cookie secret file */
+static int
+cookie_secret_file_read(struct cookie_secrets* cookie_secrets,
+	char* cookie_secret_file)
+{
+	char secret[UNBOUND_COOKIE_SECRET_SIZE * 2 + 2/*'\n' and '\0'*/];
+	FILE* f;
+	int corrupt = 0;
+	size_t count;
+
+	log_assert(cookie_secret_file != NULL);
+	cookie_secrets->cookie_count = 0;
+	f = fopen(cookie_secret_file, "r");
+	/* a non-existing cookie file is not an error */
+	if( f == NULL ) {
+		if(errno != EPERM) {
+			log_err("Could not read cookie-secret-file '%s': %s",
+				cookie_secret_file, strerror(errno));
+			return 0;
+		}
+		return 1;
+	}
+	/* cookie secret file exists and is readable */
+	for( count = 0; count < UNBOUND_COOKIE_HISTORY_SIZE; count++ ) {
+		size_t secret_len = 0;
+		ssize_t decoded_len = 0;
+		if( fgets(secret, sizeof(secret), f) == NULL ) { break; }
+		secret_len = strlen(secret);
+		if( secret_len == 0 ) { break; }
+		log_assert( secret_len <= sizeof(secret) );
+		secret_len = secret[secret_len - 1] == '\n' ? secret_len - 1 : secret_len;
+		if( secret_len != UNBOUND_COOKIE_SECRET_SIZE * 2 ) { corrupt++; break; }
+		/* needed for `hex_pton`; stripping potential `\n` */
+		secret[secret_len] = '\0';
+		decoded_len = hex_pton(secret, cookie_secrets->cookie_secrets[count].cookie_secret,
+		                       UNBOUND_COOKIE_SECRET_SIZE);
+		if( decoded_len != UNBOUND_COOKIE_SECRET_SIZE ) { corrupt++; break; }
+		cookie_secrets->cookie_count++;
+	}
+	fclose(f);
+	return corrupt == 0;
+}
+
+int
+cookie_secrets_apply_cfg(struct cookie_secrets* cookie_secrets,
+	char* cookie_secret_file)
+{
+	if(!cookie_secrets) {
+		if(!cookie_secret_file || !cookie_secret_file[0])
+			return 1; /* There is nothing to read anyway */
+		log_err("Could not read cookie secrets, no structure alloced");
+		return 0;
+	}
+	if(!cookie_secret_file_read(cookie_secrets, cookie_secret_file))
+		return 0;
+	return 1;
+}

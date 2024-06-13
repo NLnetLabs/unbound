@@ -191,4 +191,25 @@ enum edns_cookie_val_status edns_cookie_server_validate(const uint8_t* cookie,
 	size_t cookie_len, const uint8_t* secret, size_t secret_len, int v4,
 	const uint8_t* hash_input, uint32_t now);
 
+/**
+ * Create the cookie secrets structure.
+ * @return the structure or NULL on failure.
+ */
+struct cookie_secrets* cookie_secrets_create(void);
+
+/**
+ * Delete the cookie secrets.
+ * @param cookie_secrets: the cookie secrets.
+ */
+void cookie_secrets_delete(struct cookie_secrets* cookie_secrets);
+
+/**
+ * Apply configuration to cookie secrets, read them from file.
+ * @param cookie_secrets: the cookie secrets structure.
+ * @param cookie_secret_file: the file name, it is read.
+ * @return false on failure.
+ */
+int cookie_secrets_apply_cfg(struct cookie_secrets* cookie_secrets,
+	char* cookie_secret_file);
+
 #endif
