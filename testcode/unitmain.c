@@ -1380,8 +1380,12 @@ main(int argc, char* argv[])
 {
 	checklock_start();
 	log_init(NULL, 0, NULL);
-	if(argc != 1) {
-		printf("usage: %s\n", argv[0]);
+	if (argc == 2 && strcmp(argv[1], "-v") == 0) {
+		verbosity = VERB_ALGO;
+	}
+	if(argc != 1 && verbosity != VERB_ALGO) {
+		printf("usage: [-v] %s\n", argv[0]);
+		printf("-v\tprint verbose logs.\n");
 		printf("\tperforms unit tests.\n");
 		return 1;
 	}
