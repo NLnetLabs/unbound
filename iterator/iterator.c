@@ -2581,6 +2581,7 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 
     uint8_t root_len = iq->qchase.qname[0];
     //NICE point
+    log_err("Current delegation point: %s", iq->dp->name);
     if (iq->deleg_state == 0 && root_len > 0) {
         //we have to add _deleg after the first label
         //for ex. jesse.nlnetlabs.nl becomes jesse._deleg.nlnetlabs.nl
@@ -3286,7 +3287,7 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
     uint16_t SVCB_QTYPE = 64;
     log_err("JESSE: the qtype of the answer is: %d ", iq->qchase.qtype);
     log_err("JESSE: the type is: %d", type);
-    if (iq->qchase.qtype == SVCB_QTYPE) {
+    if (iq->deleg_state == 1 && type == RESPONSE_TYPE_ANSWER && iq->qchase.qtype == 64) {
 	    struct ub_packed_rrset_key* rrset_key;
         log_err("JESSE: the returnmsg: %s", iq->response->rep);
         rrset_key = reply_find_answer_rrset(&iq->qchase, iq->response->rep);
@@ -3331,7 +3332,7 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
                     }
                 }
                 index = index + svcParamValLen;
-
+            // iq->deleg_state = 0;
             }
             // old_dp = iq->dp;
             iq->dp = delegpt_from_deleg(iq->response, qstate->region, ipv4, ipv6, iq->deleg_original_qname, iq->deleg_original_qname_len);
@@ -3357,22 +3358,22 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 
 
             //turns all values back to normal, normally you would do this after first query found nothing. TODO?
-            iq->qchase.qname = iq->deleg_original_qname;
-            iq->qchase.qtype = 1;
-            iq->qchase.qname_len = iq->deleg_original_qname_len;
-
-            iq->qinfo_out.qtype = 1;
-            iq->qinfo_out.qname = iq->deleg_original_qname;
-            iq->qinfo_out.qname_len = iq->deleg_original_qname_len;
+            // iq->qchase.qname = iq->deleg_original_qname;
+            // iq->qchase.qtype = 1;
+            // iq->qchase.qname_len = iq->deleg_original_qname_len;
+            //
+            // iq->qinfo_out.qtype = 1;
+            // iq->qinfo_out.qname = iq->deleg_original_qname;
+            // iq->qinfo_out.qname_len = iq->deleg_original_qname_len;
 
             return next_state(iq, QUERYTARGETS_STATE);
         } else {
-            log_err("TESTTTTTTT2");
-            //this means no _deleg record found
-            iq->qchase.qtype = 1;
-            qstate->qinfo.qtype = 1;
-            // iq->deleg_state = 0;
-            qstate->qinfo.qname = iq->deleg_original_qname;
+            // log_err("TESTTTTTTT2");
+            // //this means no _deleg record found
+            // iq->qchase.qtype = 1;
+            // qstate->qinfo.qtype = 1;
+            // // iq->deleg_state = 0;
+            // qstate->qinfo.qname = iq->deleg_original_qname;
         }
         // log_err("RRset result in bytes:");
         // if(rrset) {
@@ -3806,6 +3807,15 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 		 * In this case, the event is just sent directly back to 
 		 * the QUERYTARGETS_STATE without resetting anything, 
 		 * because, clearly, the next target must be tried. */
+        log_err("JESSE: the qtype of the THROWAWAY is: %d ", iq->qchase.qtype);
+        iq->qchase.qname = iq->deleg_original_qname;
+        iq->qchase.qtype = 1;
+        iq->qchase.qname_len = iq->deleg_original_qname_len;
+
+        iq->qinfo_out.qtype = 1;
+        iq->qinfo_out.qname = iq->deleg_original_qname;
+        iq->qinfo_out.qname_len = iq->deleg_original_qname_len;
+
 		verbose(VERB_DETAIL, "query response was THROWAWAY");
 	} else {
 		log_warn("A query response came back with an unknown type: %d",
