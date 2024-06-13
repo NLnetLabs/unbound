@@ -192,7 +192,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_DISCARD_TIMEOUT VAR_WAIT_LIMIT VAR_WAIT_LIMIT_COOKIE
 %token VAR_WAIT_LIMIT_NETBLOCK VAR_WAIT_LIMIT_COOKIE_NETBLOCK
 %token VAR_STREAM_WAIT_SIZE VAR_TLS_CIPHERS VAR_TLS_CIPHERSUITES VAR_TLS_USE_SNI
-%token VAR_IPSET VAR_IPSET_NAME_V4 VAR_IPSET_NAME_V6
+%token VAR_IPSET VAR_IPSET_NAME_V4 VAR_IPSET_NAME_V6 VAR_IPSET_MODE VAR_IPSET_TABLE_V4 VAR_IPSET_TABLE_V6
 %token VAR_TLS_SESSION_TICKET_KEYS VAR_RPZ VAR_TAGS VAR_RPZ_ACTION_OVERRIDE
 %token VAR_RPZ_CNAME_OVERRIDE VAR_RPZ_LOG VAR_RPZ_LOG_NAME
 %token VAR_DYNLIB VAR_DYNLIB_FILE VAR_EDNS_CLIENT_STRING
@@ -3993,7 +3993,7 @@ server_cookie_secret: VAR_COOKIE_SECRET STRING_ARG
 		;
 	contents_ipset: contents_ipset content_ipset
 		| ;
-	content_ipset: ipset_name_v4 | ipset_name_v6
+	content_ipset: ipset_name_v4 | ipset_name_v6 | ipset_table_v4 | ipset_table_v6 | ipset_mode
 		;
 	ipset_name_v4: VAR_IPSET_NAME_V4 STRING_ARG
 		{
@@ -4019,6 +4019,50 @@ server_cookie_secret: VAR_COOKIE_SECRET STRING_ARG
 					"name for ip v6");
 			free(cfg_parser->cfg->ipset_name_v6);
 			cfg_parser->cfg->ipset_name_v6 = $2;
+		#else
+			OUTYY(("P(Compiled without ipset, ignoring)\n"));
+			free($2);
+		#endif
+		}
+	;
+	ipset_table_v4: VAR_IPSET_TABLE_V4 STRING_ARG
+		{
+		#ifdef USE_IPSET
+			OUTYY(("P(table-v4:%s)\n", $2));
+			if(cfg_parser->cfg->ipset_table_v4)
+				yyerror("ipset table v4 override, there must be one "
+					"table name for ip v4");
+			free(cfg_parser->cfg->ipset_table_v4);
+			cfg_parser->cfg->ipset_table_v4 = $2;
+		#else
+			OUTYY(("P(Compiled without ipset, ignoring)\n"));
+			free($2);
+		#endif
+		}
+	;
+	ipset_table_v6: VAR_IPSET_TABLE_V6 STRING_ARG
+	{
+		#ifdef USE_IPSET
+			OUTYY(("P(table-v6:%s)\n", $2));
+			if(cfg_parser->cfg->ipset_table_v6)
+				yyerror("ipset table v6 override, there must be one "
+					"table name for ip v6");
+			free(cfg_parser->cfg->ipset_table_v6);
+			cfg_parser->cfg->ipset_table_v6 = $2;
+		#else
+			OUTYY(("P(Compiled without ipset, ignoring)\n"));
+			free($2);
+		#endif
+		}
+	;
+	ipset_mode: VAR_IPSET_MODE STRING_ARG
+	{
+		#ifdef USE_IPSET
+			OUTYY(("P(ipset_mode:%s)\n", $2));
+			if(sscanf($2,"%d", &cfg_parser->cfg->ipset_mode) < 1) {
+				yyerror("number expected");
+			}
+			free($2);
 		#else
 			OUTYY(("P(Compiled without ipset, ignoring)\n"));
 			free($2);
