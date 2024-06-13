@@ -198,6 +198,8 @@ iter_new(struct module_qstate* qstate, int id)
 	//         the initial query (qstate->qinfo) that started all this.
 	iq->qchase = qstate->qinfo;
     iq->deleg_state = 0;
+    iq->deleg_original_qname_len = 0;
+    iq->deleg_original_qname = NULL;
 	outbound_list_init(&iq->outlist);
 	iq->minimise_count = 0;
 	iq->timeout_count = 0;
@@ -2602,7 +2604,8 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
         memcpy(delname + first_label_len + sizeof(deleg_wireformat) + 1, qname_minus_first_label, leftover_len); //memcpy other labels in delname
         log_err("Old delegation point: %s", iq->qchase.qname);
         log_err("cname without first label: %s", qname_minus_first_label);
-
+        iq->deleg_original_qname = iq->qchase.qname;
+        iq->deleg_original_qname_len = iq->qchase.qname_len;
         // log_err("delegation name in bytes:");
         // for (size_t i = 0; i < delnamelen; ++i) {
         //     log_err("%u ", delname[i]);
@@ -2610,10 +2613,9 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 
         log_err("The _deleg delegation point: %s", delname);
 
-        //uncomment if not onlys used in stub zone
         iq->deleg_state = 1;
+        iq->deleg_original_qname = qstate->qinfo.qname;
 
-        //left here
         iq->dp->namelen = delnamelen;
         // iq->dp->namelabs++;
         iq->qchase.qtype = 64;
@@ -2623,7 +2625,6 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
         iq->qinfo_out.qtype = 64;
         iq->qinfo_out.qname = delname;
         iq->qinfo_out.qname_len = delnamelen;
-        // iq->deleg_original_qname = qstate->qinfo.qname;
         // qstate->qinfo.qname = delname;
         // generate_target_query(qstate, iq, id, uint8_t* name, size_t namelen, uint16_t qtype, uint16_t qclass) 
     }
@@ -3309,13 +3310,14 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
             }
             index = index + 1;//add 1 for the root label
             //Reference https://datatracker.ietf.org/doc/rfc9460/ section 2.2
-            uint8_t *ipv4;
-            uint8_t *ipv6;
+            uint8_t *ipv4 = NULL;
+            uint8_t *ipv6 = NULL;
             while(index < data_len && (ipv4 == NULL || ipv6 == NULL)) {
                 uint16_t svcParamkey    = (svcb_data[index] << 8)   | svcb_data[index+1];
                 uint16_t svcParamValLen = (svcb_data[index+2] << 8) | svcb_data[index+3];
+                log_err("scvparamkey: %d", svcParamkey);
+                log_err("scvparamlength: %d", svcParamValLen);
                 index = index + 4;
-                //logic fault, will never enter the paramkey checks TODOOOOOOOO
                 if (svcParamkey == 4) { //parse IPv4
                     ipv4 = (uint8_t *)malloc(4 * sizeof(uint8_t));
                     memcpy(ipv4, svcb_data + index, 4);
@@ -3327,12 +3329,46 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
                     ipv6 = (uint8_t *)malloc(16 * sizeof(uint8_t));
                     memcpy(ipv6, svcb_data + index, 16);
                     log_err("Parsed IPv6 Hint:");
-                    for (size_t i = 0; i < 4;  ++i) {
+                    for (size_t i = 0; i < 16;  ++i) {
                         log_err("%u ", ipv6[i]);
                     }
                 }
                 index = index + svcParamValLen;
+
             }
+            // old_dp = iq->dp;
+            iq->dp = delegpt_from_deleg(iq->response, qstate->region, ipv4, ipv6, iq->deleg_original_qname, iq->deleg_original_qname_len);
+            iq->referral_count++;
+            iq->sent_count = 0;
+            iq->dp_target_count = 0;
+            if(qstate->env->cfg->harden_referral_path)
+                generate_ns_check(qstate, iq, id);
+
+            /* stop current outstanding queries. 
+             * FIXME: should the outstanding queries be waited for and
+             * handled? Say by a subquery that inherits the outbound_entry.
+             */
+            outbound_list_clear(&iq->outlist);
+            iq->num_current_queries = 0;
+            fptr_ok(fptr_whitelist_modenv_detach_subs(
+                qstate->env->detach_subs));
+            (*qstate->env->detach_subs)(qstate);
+            iq->num_target_queries = 0;
+            iq->response = NULL;
+            iq->fail_addr_type = 0;
+            verbose(VERB_ALGO, "cleared outbound list for next round");
+
+
+            //turns all values back to normal, normally you would do this after first query found nothing. TODO?
+            iq->qchase.qname = iq->deleg_original_qname;
+            iq->qchase.qtype = 1;
+            iq->qchase.qname_len = iq->deleg_original_qname_len;
+
+            iq->qinfo_out.qtype = 1;
+            iq->qinfo_out.qname = iq->deleg_original_qname;
+            iq->qinfo_out.qname_len = iq->deleg_original_qname_len;
+
+            return next_state(iq, QUERYTARGETS_STATE);
         } else {
             log_err("TESTTTTTTT2");
             //this means no _deleg record found

@@ -408,6 +408,32 @@ find_NS(struct reply_info* rep, size_t from, size_t to)
 	return NULL;
 }
 
+struct delegpt* delegpt_from_deleg(struct dns_msg*, struct regional* region, uint8_t* ipv4, uint8_t* ipv6, uint8_t* ns_name, size_t ns_name_len) {
+	struct delegpt* dp;
+	dp = delegpt_create(region);
+	delegpt_set_name(dp, region, ns_name);
+    delegpt_add_ns(dp, region,  ns_name, 0, NULL, 53);
+	// delegpt_rrset_add_ns(dp, region, ns_rrset, 0);
+    struct sockaddr_in sa4;
+    socklen_t lenv4 = (socklen_t)sizeof(sa4);
+    memset(&sa4, 0, lenv4);
+    sa4.sin_family = AF_INET;
+    memmove(&sa4.sin_addr, ipv4, INET_SIZE);
+
+    struct sockaddr_in6 sa6;
+    socklen_t lenv6 = (socklen_t)sizeof(sa6);
+    memset(&sa6, 0, lenv6);
+    sa6.sin6_family = AF_INET6;
+    memmove(&sa6.sin6_addr, ipv6, INET6_SIZE);
+    
+    delegpt_add_target(dp, region, ns_name, ns_name_len, (struct sockaddr_storage*)&sa4, lenv4, 0, 0, NULL);
+    delegpt_add_target(dp, region, ns_name, ns_name_len, (struct sockaddr_storage*)&sa6, lenv6, 0, 0, NULL);
+    return dp;
+// delegpt_add_addr(struct delegpt* dp, struct regional* region,
+// 	struct sockaddr_storage* addr, socklen_t addrlen, uint8_t bogus,
+// 	uint8_t lame, char* tls_auth_name, int port, int* additions)
+}
+
 struct delegpt* 
 delegpt_from_message(struct dns_msg* msg, struct regional* region)
 {

@@ -361,6 +361,7 @@ size_t delegpt_count_targets(struct delegpt* dp);
 struct delegpt* delegpt_from_message(struct dns_msg* msg, 
 	struct regional* regional);
 
+struct delegpt* delegpt_from_deleg(struct dns_msg*, struct regional* region, uint8_t* ipv4, uint8_t* pv6, uint8_t* ns_name, size_t ns_name_len);
 /**
  * Mark negative return in delegation point for specific nameserver.
  * sets the got4 or got6 to negative, updates the ns->resolved.
