@@ -229,4 +229,25 @@ enum edns_cookie_val_status cookie_secrets_server_validate(
 	struct cookie_secrets* cookie_secrets, int v4,
 	const uint8_t* hash_input, uint32_t now);
 
+/**
+ * Add a cookie secret. If there are no secrets yet, the secret will become
+ * the active secret. Otherwise it will become the staging secret.
+ * Active secrets are used to both verify and create new DNS Cookies.
+ * Staging secrets are only used to verify DNS Cookies. Caller has to lock.
+ */
+void add_cookie_secret(struct cookie_secrets* cookie_secrets, uint8_t* secret,
+	size_t secret_len);
+
+/**
+ * Makes the staging cookie secret active and the active secret staging.
+ * Caller has to lock.
+ */
+void activate_cookie_secret(struct cookie_secrets* cookie_secrets);
+
+/**
+ * Drop a cookie secret. Drops the staging secret. An active secret will not
+ * be dropped. Caller has to lock.
+ */
+void drop_cookie_secret(struct cookie_secrets* cookie_secrets);
+
 #endif

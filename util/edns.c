@@ -280,19 +280,93 @@ cookie_secrets_server_validate(const uint8_t* cookie, size_t cookie_len,
 	size_t i;
 	enum edns_cookie_val_status cookie_val_status,
 		last = COOKIE_STATUS_INVALID;
-	if(!cookie_secrets || cookie_secrets->cookie_count == 0)
+	if(!cookie_secrets)
 		return COOKIE_STATUS_INVALID; /* There are no cookie secrets.*/
+	lock_basic_lock(&cookie_secrets->lock);
+	if(cookie_secrets->cookie_count == 0) {
+		lock_basic_unlock(&cookie_secrets->lock);
+		return COOKIE_STATUS_INVALID; /* There are no cookie secrets.*/
+	}
 	for(i=0; i<cookie_secrets->cookie_count; i++) {
 		cookie_val_status = edns_cookie_server_validate(cookie,
 			cookie_len,
 			cookie_secrets->cookie_secrets[i].cookie_secret,
 			UNBOUND_COOKIE_SECRET_SIZE, v4, hash_input, now);
 		if(cookie_val_status == COOKIE_STATUS_VALID ||
-			cookie_val_status == COOKIE_STATUS_VALID_RENEW)
+			cookie_val_status == COOKIE_STATUS_VALID_RENEW) {
+			lock_basic_unlock(&cookie_secrets->lock);
 			return cookie_val_status;
+		}
 		if(last == COOKIE_STATUS_INVALID)
 			last = cookie_val_status; /* Store more interesting
 				failure to return. */
 	}
+	lock_basic_unlock(&cookie_secrets->lock);
 	return last;
+}
+
+void add_cookie_secret(struct cookie_secrets* cookie_secrets,
+	uint8_t* secret, size_t secret_len)
+{
+	log_assert(secret_len == UNBOUND_COOKIE_SECRET_SIZE);
+	(void)secret_len;
+	if(!cookie_secrets)
+		return;
+
+	/* New cookie secret becomes the staging secret (position 1)
+	 * unless there is no active cookie yet, then it becomes the active
+	 * secret.  If the UNBOUND_COOKIE_HISTORY_SIZE > 2 then all staging cookies
+	 * are moved one position down.
+	 */
+	if(cookie_secrets->cookie_count == 0) {
+		memcpy( cookie_secrets->cookie_secrets->cookie_secret
+		       , secret, UNBOUND_COOKIE_SECRET_SIZE);
+		cookie_secrets->cookie_count = 1;
+		explicit_bzero(secret, UNBOUND_COOKIE_SECRET_SIZE);
+		return;
+	}
+#if UNBOUND_COOKIE_HISTORY_SIZE > 2
+	memmove( &cookie_secrets->cookie_secrets[2], &cookie_secrets->cookie_secrets[1]
+	       , sizeof(struct cookie_secret) * (UNBOUND_COOKIE_HISTORY_SIZE - 2));
+#endif
+	memcpy( cookie_secrets->cookie_secrets[1].cookie_secret
+	      , secret, UNBOUND_COOKIE_SECRET_SIZE);
+	cookie_secrets->cookie_count = cookie_secrets->cookie_count     < UNBOUND_COOKIE_HISTORY_SIZE
+	                  ? cookie_secrets->cookie_count + 1 : UNBOUND_COOKIE_HISTORY_SIZE;
+	explicit_bzero(secret, UNBOUND_COOKIE_SECRET_SIZE);
+}
+
+void activate_cookie_secret(struct cookie_secrets* cookie_secrets)
+{
+	uint8_t active_secret[UNBOUND_COOKIE_SECRET_SIZE];
+	if(!cookie_secrets)
+		return;
+	/* The staging secret becomes the active secret.
+	 * The active secret becomes a staging secret.
+	 * If the UNBOUND_COOKIE_HISTORY_SIZE > 2 then all staging secrets are moved
+	 * one position up and the previously active secret becomes the last
+	 * staging secret.
+	 */
+	if(cookie_secrets->cookie_count < 2)
+		return;
+	memcpy( active_secret, cookie_secrets->cookie_secrets[0].cookie_secret
+	      , UNBOUND_COOKIE_SECRET_SIZE);
+	memmove( &cookie_secrets->cookie_secrets[0], &cookie_secrets->cookie_secrets[1]
+	       , sizeof(struct cookie_secret) * (UNBOUND_COOKIE_HISTORY_SIZE - 1));
+	memcpy( cookie_secrets->cookie_secrets[cookie_secrets->cookie_count - 1].cookie_secret
+	      , active_secret, UNBOUND_COOKIE_SECRET_SIZE);
+	explicit_bzero(active_secret, UNBOUND_COOKIE_SECRET_SIZE);
+}
+
+void drop_cookie_secret(struct cookie_secrets* cookie_secrets)
+{
+	if(!cookie_secrets)
+		return;
+	/* Drops a staging cookie secret. If there are more than one, it will
+	 * drop the last staging secret. */
+	if(cookie_secrets->cookie_count < 2)
+		return;
+	explicit_bzero( cookie_secrets->cookie_secrets[cookie_secrets->cookie_count - 1].cookie_secret
+	              , UNBOUND_COOKIE_SECRET_SIZE);
+	cookie_secrets->cookie_count -= 1;
 }
