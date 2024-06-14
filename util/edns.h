@@ -212,4 +212,21 @@ void cookie_secrets_delete(struct cookie_secrets* cookie_secrets);
 int cookie_secrets_apply_cfg(struct cookie_secrets* cookie_secrets,
 	char* cookie_secret_file);
 
+/**
+ * Validate the cookie secrets, try all of them.
+ * @param cookie: pointer to the cookie data.
+ * @param cookie_len: the length of the cookie data.
+ * @param cookie_secrets: struct of cookie secrets.
+ * @param v4: if the client IP is v4 or v6.
+ * @param hash_input: pointer to the hash input for validation. It needs to be:
+ *	Client Cookie | Version | Reserved | Timestamp | Client-IP
+ * @param now: the current time.
+ * return edns_cookie_val_status with the cookie validation status i.e.,
+ *	<=0 for invalid, else valid.
+ */
+enum edns_cookie_val_status cookie_secrets_server_validate(
+	const uint8_t* cookie, size_t cookie_len,
+	struct cookie_secrets* cookie_secrets, int v4,
+	const uint8_t* hash_input, uint32_t now);
+
 #endif

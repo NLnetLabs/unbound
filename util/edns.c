@@ -271,3 +271,28 @@ cookie_secrets_apply_cfg(struct cookie_secrets* cookie_secrets,
 		return 0;
 	return 1;
 }
+
+enum edns_cookie_val_status
+cookie_secrets_server_validate(const uint8_t* cookie, size_t cookie_len,
+	struct cookie_secrets* cookie_secrets, int v4,
+	const uint8_t* hash_input, uint32_t now)
+{
+	size_t i;
+	enum edns_cookie_val_status cookie_val_status,
+		last = COOKIE_STATUS_INVALID;
+	if(!cookie_secrets || cookie_secrets->cookie_count == 0)
+		return COOKIE_STATUS_INVALID; /* There are no cookie secrets.*/
+	for(i=0; i<cookie_secrets->cookie_count; i++) {
+		cookie_val_status = edns_cookie_server_validate(cookie,
+			cookie_len,
+			cookie_secrets->cookie_secrets[i].cookie_secret,
+			UNBOUND_COOKIE_SECRET_SIZE, v4, hash_input, now);
+		if(cookie_val_status == COOKIE_STATUS_VALID ||
+			cookie_val_status == COOKIE_STATUS_VALID_RENEW)
+			return cookie_val_status;
+		if(last == COOKIE_STATUS_INVALID)
+			last = cookie_val_status; /* Store more interesting
+				failure to return. */
+	}
+	return last;
+}

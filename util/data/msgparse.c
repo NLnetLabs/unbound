@@ -947,7 +947,8 @@ parse_packet(sldns_buffer* pkt, struct msg_parse* msg, struct regional* region)
 static int
 parse_edns_options_from_query(uint8_t* rdata_ptr, size_t rdata_len,
 	struct edns_data* edns, struct config_file* cfg, struct comm_point* c,
-	struct comm_reply* repinfo, uint32_t now, struct regional* region)
+	struct comm_reply* repinfo, uint32_t now, struct regional* region,
+	struct cookie_secrets* cookie_secrets)
 {
 	/* To respond with a Keepalive option, the client connection must have
 	 * received one message with a TCP Keepalive EDNS option, and that
@@ -1070,10 +1071,20 @@ parse_edns_options_from_query(uint8_t* rdata_ptr, size_t rdata_len,
 					&((struct sockaddr_in6*)&repinfo->remote_addr)->sin6_addr, 16);
 			}
 
-			cookie_val_status = edns_cookie_server_validate(
-				rdata_ptr, opt_len, cfg->cookie_secret,
-				cfg->cookie_secret_len, cookie_is_v4,
-				server_cookie, now);
+			if(cfg->cookie_secret_file &&
+				cfg->cookie_secret_file[0]) {
+				/* Loop over the active and staging cookies. */
+				cookie_val_status =
+					cookie_secrets_server_validate(
+					rdata_ptr, opt_len, cookie_secrets,
+					cookie_is_v4, server_cookie, now);
+			} else {
+				/* Use the cookie option value to validate. */
+				cookie_val_status = edns_cookie_server_validate(
+					rdata_ptr, opt_len, cfg->cookie_secret,
+					cfg->cookie_secret_len, cookie_is_v4,
+					server_cookie, now);
+			}
 			switch(cookie_val_status) {
 			case COOKIE_STATUS_VALID:
 			case COOKIE_STATUS_VALID_RENEW:
@@ -1239,7 +1250,8 @@ skip_pkt_rrs(sldns_buffer* pkt, int num)
 int 
 parse_edns_from_query_pkt(sldns_buffer* pkt, struct edns_data* edns,
 	struct config_file* cfg, struct comm_point* c,
-	struct comm_reply* repinfo, time_t now, struct regional* region)
+	struct comm_reply* repinfo, time_t now, struct regional* region,
+	struct cookie_secrets* cookie_secrets)
 {
 	size_t rdata_len;
 	uint8_t* rdata_ptr;
@@ -1285,7 +1297,7 @@ parse_edns_from_query_pkt(sldns_buffer* pkt, struct edns_data* edns,
 	rdata_ptr = sldns_buffer_current(pkt);
 	/* ignore rrsigs */
 	return parse_edns_options_from_query(rdata_ptr, rdata_len, edns, cfg,
-		c, repinfo, now, region);
+		c, repinfo, now, region, cookie_secrets);
 }
 
 void
