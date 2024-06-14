@@ -295,6 +295,9 @@ cookie_secrets_server_validate(const uint8_t* cookie, size_t cookie_len,
 		if(cookie_val_status == COOKIE_STATUS_VALID ||
 			cookie_val_status == COOKIE_STATUS_VALID_RENEW) {
 			lock_basic_unlock(&cookie_secrets->lock);
+			/* For staging cookies, write a fresh cookie. */
+			if(i != 0)
+				return COOKIE_STATUS_VALID_RENEW;
 			return cookie_val_status;
 		}
 		if(last == COOKIE_STATUS_INVALID)

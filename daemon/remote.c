@@ -3194,7 +3194,8 @@ do_rpz_disable(RES* ssl, struct worker* worker, char* arg)
     do_rpz_enable_disable(ssl, worker, arg, 0);
 }
 
-/* write the cookie secrets to file, returns `0` on failure */
+/** Write the cookie secrets to file, returns `0` on failure.
+ * Caller has to hold the lock. */
 static int
 cookie_secret_file_dump(RES* ssl, struct worker* worker) {
 	char const* secret_file = worker->env.cfg->cookie_secret_file;
@@ -3219,7 +3220,6 @@ cookie_secret_file_dump(RES* ssl, struct worker* worker) {
 		fclose(f);
 		return 1;
 	}
-	lock_basic_lock(&cookie_secrets->lock);
 
 	for(i = 0; i < cookie_secrets->cookie_count; i++) {
 		struct cookie_secret const* cs = &cookie_secrets->
@@ -3232,7 +3232,6 @@ cookie_secret_file_dump(RES* ssl, struct worker* worker) {
 		secret_hex[UNBOUND_COOKIE_SECRET_SIZE * 2] = '\0';
 		fprintf(f, "%s\n", secret_hex);
 	}
-	lock_basic_unlock(&cookie_secrets->lock);
 	explicit_bzero(secret_hex, sizeof(secret_hex));
 	fclose(f);
 	return 1;

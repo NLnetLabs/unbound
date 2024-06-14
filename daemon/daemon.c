@@ -724,7 +724,7 @@ daemon_fork(struct daemon* daemon)
 			fatal_exit("Could not create cookie_secrets: out of memory");
 		if(!cookie_secrets_apply_cfg(daemon->cookie_secrets,
 			daemon->cfg->cookie_secret_file))
-			fatal_exit("Could not setu up cookie_secrets");
+			fatal_exit("Could not setup cookie_secrets");
 	}
 	/* create global local_zones */
 	if(!(daemon->local_zones = local_zones_create()))

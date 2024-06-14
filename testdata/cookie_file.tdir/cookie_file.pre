@@ -1,0 +1,32 @@
+# #-- cookie_file.pre--#
+PRE="../.."
+. ../common.sh
+
+# This test uses the unshare utility
+if test ! -x "`which unshare 2>&1`"; then
+	skip_test "no unshare (from util-linux package) available, skip test"
+fi
+
+get_random_port 1
+SERVER_PORT=$RND_PORT
+CONTROL_PATH=/tmp
+CONTROL_PID=$$
+
+# make config file
+sed \
+	-e 's/@SERVER_PORT\@/'$SERVER_PORT'/' \
+	-e 's?@CONTROL_PATH\@?'$CONTROL_PATH'?' \
+	-e 's/@CONTROL_PID\@/'$CONTROL_PID'/' \
+	< cookie_file.conf > ub.conf
+
+if test -x "`which bash`"; then
+	shell="bash"
+else
+	shell="sh"
+fi
+
+echo "SERVER_PORT=$SERVER_PORT" >> .tpkg.var.test
+echo "CONTROL_PORT=$CONTROL_PORT" >> .tpkg.var.test
+echo "CONTROL_PATH=$CONTROL_PATH" >> .tpkg.var.test
+echo "CONTROL_PID=$CONTROL_PID" >> .tpkg.var.test
+echo "shell=$shell" >> .tpkg.var.test
