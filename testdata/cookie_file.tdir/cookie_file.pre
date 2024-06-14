@@ -26,7 +26,6 @@ else
 fi
 
 echo "SERVER_PORT=$SERVER_PORT" >> .tpkg.var.test
-echo "CONTROL_PORT=$CONTROL_PORT" >> .tpkg.var.test
 echo "CONTROL_PATH=$CONTROL_PATH" >> .tpkg.var.test
 echo "CONTROL_PID=$CONTROL_PID" >> .tpkg.var.test
 echo "shell=$shell" >> .tpkg.var.test
