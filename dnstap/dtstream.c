@@ -1322,7 +1322,11 @@ static int dtio_ssl_check_peer(struct dt_io_thread* dtio)
 	if((SSL_get_verify_mode(dtio->ssl)&SSL_VERIFY_PEER)) {
 		/* verification */
 		if(SSL_get_verify_result(dtio->ssl) == X509_V_OK) {
+#ifdef HAVE_SSL_GET1_PEER_CERTIFICATE
+			X509* x = SSL_get1_peer_certificate(dtio->ssl);
+#else
 			X509* x = SSL_get_peer_certificate(dtio->ssl);
+#endif
 			if(!x) {
 				verbose(VERB_ALGO, "dnstap io, %s, SSL "
 					"connection failed no certificate",
@@ -1347,7 +1351,11 @@ static int dtio_ssl_check_peer(struct dt_io_thread* dtio)
 #endif
 			X509_free(x);
 		} else {
+#ifdef HAVE_SSL_GET1_PEER_CERTIFICATE
+			X509* x = SSL_get1_peer_certificate(dtio->ssl);
+#else
 			X509* x = SSL_get_peer_certificate(dtio->ssl);
+#endif
 			if(x) {
 				log_cert(VERB_ALGO, "dnstap io, peer "
 					"certificate", x);

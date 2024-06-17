@@ -20656,6 +20656,12 @@ then :
   printf "%s\n" "#define HAVE_BIO_SET_CALLBACK_EX 1" >>confdefs.h
 
 fi
+ac_fn_c_check_func "$LINENO" "SSL_CTX_set_tmp_ecdh" "ac_cv_func_SSL_CTX_set_tmp_ecdh"
+if test "x$ac_cv_func_SSL_CTX_set_tmp_ecdh" = xyes
+then :
+  printf "%s\n" "#define HAVE_SSL_CTX_SET_TMP_ECDH 1" >>confdefs.h
+
+fi
 
 
 # these check_funcs need -lssl
@@ -21190,7 +21196,25 @@ case "$enable_ecdsa" in
       ;;
     *)
       if test $USE_NSS = "no" -a $USE_NETTLE = "no"; then
-	      ac_fn_c_check_func "$LINENO" "ECDSA_sign" "ac_cv_func_ECDSA_sign"
+	      ac_fn_c_check_func "$LINENO" "EVP_PKEY_fromdata" "ac_cv_func_EVP_PKEY_fromdata"
+if test "x$ac_cv_func_EVP_PKEY_fromdata" = xyes
+then :
+
+	          # with EVP_PKEY_fromdata, check if EC is not disabled
+	          ac_fn_check_decl "$LINENO" "OPENSSL_NO_EC" "ac_cv_have_decl_OPENSSL_NO_EC" "$ac_includes_default
+#include <openssl/evp.h>
+
+" "$ac_c_undeclared_builtin_options" "CFLAGS"
+if test "x$ac_cv_have_decl_OPENSSL_NO_EC" = xyes
+then :
+  as_fn_error $? "OpenSSL does not support ECDSA: please upgrade or rerun with --disable-ecdsa" "$LINENO" 5
+
+fi
+
+else $as_nop
+
+		  # without EVP_PKEY_fromdata, older openssl, check for support
+		  ac_fn_c_check_func "$LINENO" "ECDSA_sign" "ac_cv_func_ECDSA_sign"
 if test "x$ac_cv_func_ECDSA_sign" = xyes
 then :
 
@@ -21198,12 +21222,15 @@ else $as_nop
   as_fn_error $? "OpenSSL does not support ECDSA: please upgrade or rerun with --disable-ecdsa" "$LINENO" 5
 fi
 
-	      ac_fn_c_check_func "$LINENO" "SHA384_Init" "ac_cv_func_SHA384_Init"
+		  ac_fn_c_check_func "$LINENO" "SHA384_Init" "ac_cv_func_SHA384_Init"
 if test "x$ac_cv_func_SHA384_Init" = xyes
 then :
 
 else $as_nop
   as_fn_error $? "OpenSSL does not support SHA384: please upgrade or rerun with --disable-ecdsa" "$LINENO" 5
+fi
+
+
 fi
 
 	      ac_fn_check_decl "$LINENO" "NID_X9_62_prime256v1" "ac_cv_have_decl_NID_X9_62_prime256v1" "$ac_includes_default
