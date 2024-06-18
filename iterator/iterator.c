@@ -2580,9 +2580,38 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 	delegpt_log(VERB_ALGO, iq->dp);
 
     uint8_t root_len = iq->qchase.qname[0];
+    //TODOOO copy the original name to somewhere it wont be overwritten.
+    if (iq->deleg_original_qname == NULL) {
+        iq->deleg_original_qname = (uint8_t *)regional_alloc(qstate->region, iq->qchase.qname_len + 1);
+        memcpy(iq->deleg_original_qname, qstate->qinfo.qname, iq->qchase.qname_len);
+        iq->deleg_original_qname_len = iq->qchase.qname_len;
+        log_err("JESSE: Copied original qname: %s", iq->deleg_original_qname);
+    } else {
+        memcpy(qstate->qinfo.qname, iq->deleg_original_qname, iq->deleg_original_qname_len);
+        memcpy(iq->qchase.qname, iq->deleg_original_qname, iq->deleg_original_qname_len);
+        iq->qchase.qname_len = iq->deleg_original_qname_len;
+    }
     //NICE point
-    log_err("Current delegation point: %s", iq->dp->name);
+    //root len check not needed anymore TODO
+    log_err("JESSE: Current delegation state: %d", iq->deleg_state);
     if (iq->deleg_state == 0 && root_len > 0) {
+        iq->deleg_original_qname_len = iq->qchase.qname_len;
+        iq->deleg_state = 1;
+
+
+        // iq->deleg_original_qname = qstate->qinfo.qname;
+
+        log_err("JESSE: Current delegation point: %s", iq->dp->name);
+        // int delegation_labels_len = dname_count_labels(iq->dp->name);
+        log_err("JESSE: Current delegation point amount labels: %d", iq->dp->namelabs);
+        int qchase_label_len = dname_count_labels(iq->qchase.qname);
+        log_err("JESSE: Current qchase amount labels: %d", qchase_label_len);
+        // int labdiff = qchaselabs - dname_count_labels(iq->qinfo_out.qname);
+        log_err("JESSE: qchase before label removing: %s", iq->qchase.qname);
+        size_t labdiff =  qchase_label_len - iq->dp->namelabs - 1;
+        dname_remove_labels(&iq->qchase.qname, &iq->qchase.qname_len, labdiff);
+        log_err("JESSE: qchase after label removing: %s", iq->qchase.qname);
+
         //we have to add _deleg after the first label
         //for ex. jesse.nlnetlabs.nl becomes jesse._deleg.nlnetlabs.nl
         uint8_t deleg_wireformat[] = {6, 95, 100, 101, 108, 101, 103}; //{06}_deleg
@@ -2602,8 +2631,6 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
         memcpy(delname + first_label_len + sizeof(deleg_wireformat) + 1, qname_minus_first_label, leftover_len); //memcpy other labels in delname
         log_err("Old delegation point: %s", iq->qchase.qname);
         log_err("cname without first label: %s", qname_minus_first_label);
-        iq->deleg_original_qname = iq->qchase.qname;
-        iq->deleg_original_qname_len = iq->qchase.qname_len;
         // log_err("delegation name in bytes:");
         // for (size_t i = 0; i < delnamelen; ++i) {
         //     log_err("%u ", delname[i]);
@@ -2611,8 +2638,6 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 
         log_err("The _deleg delegation point: %s", delname);
 
-        iq->deleg_state = 1;
-        iq->deleg_original_qname = qstate->qinfo.qname;
 
         iq->dp->namelen = delnamelen;
         // iq->dp->namelabs++;
@@ -3287,7 +3312,23 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
     uint16_t SVCB_QTYPE = 64;
     log_err("JESSE: the qtype of the answer is: %d ", iq->qchase.qtype);
     log_err("JESSE: the type is: %d", type);
-    if (iq->deleg_state == 1 && type == RESPONSE_TYPE_ANSWER && iq->qchase.qtype == 64) {
+    if (iq->deleg_state == 1 && type == RESPONSE_TYPE_ANSWER && iq->qchase.qtype == 64 ) {
+        if (FLAGS_GET_RCODE(iq->response->rep->flags) == LDNS_RCODE_NXDOMAIN) {
+            log_err("JESSE: got into the else!!!");
+            // log_err("Is the ns resolved: %d", iq->dp->nslist[0].resolved);
+            // iq->dp->nslist[0].resolved = 0;
+
+            //turns all values back to normal, normally you would do this after first query found nothing. TODO?
+            iq->qchase.qname = iq->deleg_original_qname;
+            iq->qchase.qtype = 1;
+            iq->qchase.qname_len = iq->deleg_original_qname_len;
+
+            iq->qinfo_out.qtype = 1;
+            iq->qinfo_out.qname = iq->deleg_original_qname;
+            iq->qinfo_out.qname_len = iq->deleg_original_qname_len;
+            return next_state(iq, QUERYTARGETS_STATE);
+        }
+        iq->deleg_state = 0;
 	    struct ub_packed_rrset_key* rrset_key;
         log_err("JESSE: the returnmsg: %s", iq->response->rep);
         rrset_key = reply_find_answer_rrset(&iq->qchase, iq->response->rep);
@@ -3335,7 +3376,38 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
             // iq->deleg_state = 0;
             }
             // old_dp = iq->dp;
-            iq->dp = delegpt_from_deleg(iq->response, qstate->region, ipv4, ipv6, iq->deleg_original_qname, iq->deleg_original_qname_len);
+            // TODO delegation point name, has to be 1 closer then the original qname
+        //svcb_data->rk.dname;
+//to get the new delegation name, we have to remove the second label, which is the _deleg label
+            
+            //count labels with dname_count_labels()
+            size_t new_delegation_label_count = dname_count_labels(rrset_key->rk.dname);
+            size_t old_label_count = dname_count_labels(iq->deleg_original_qname);
+            size_t diff_label_len = old_label_count - new_delegation_label_count + 1;
+            log_err("old label: %s", iq->deleg_original_qname);
+            log_err("old label count: %d", old_label_count);
+            log_err("new label count: %d", new_delegation_label_count);
+            log_err("new label: %s", rrset_key->rk.dname);
+
+            uint8_t *new_delegation_name = (uint8_t *)regional_alloc(qstate->region, iq->deleg_original_qname_len);
+            size_t new_delegation_name_len = iq->deleg_original_qname_len;
+            memcpy(new_delegation_name, iq->deleg_original_qname, iq->deleg_original_qname_len);
+            log_err("JESSE: Amount of labels to remove %d", diff_label_len);
+            log_err("JESSE: Newly created delegation point before removing: %s", new_delegation_name);
+            dname_remove_labels(&new_delegation_name, &new_delegation_name_len, diff_label_len);
+            log_err("JESSE: Newly created delegation point after removing: %s", new_delegation_name);
+            
+            // uint8_t deleg_label_len = 7;
+            // uint8_t new_delegation_name_len = rrset_key->rk.dname_len - deleg_label_len;
+            // uint8_t *new_delegation_name = (uint8_t *)regional_alloc(qstate->region, new_delegation_name_len);
+            // uint8_t first_label_len = rrset_key->rk.dname[0];
+            // log_err("JESSE: New delegation name len: %d", new_delegation_name_len);
+            // memcpy(new_delegation_name, rrset_key->rk.dname, first_label_len + 1 );//copies first label plus first label size
+            // memcpy(new_delegation_name, rrset_key->rk.dname + first_label_len + 1, new_delegation_name_len - first_label_len -1);//copies first label plus first label size
+            // log_err("JESSE: Newly created delegation point: %s", new_delegation_name);
+            
+            iq->dp = delegpt_from_deleg(iq->response, qstate->region, ipv4, ipv6, new_delegation_name, new_delegation_name_len);
+            // iq->dp = delegpt_from_deleg(iq->response, qstate->region, ipv4, ipv6, iq->deleg_original_qname, iq->deleg_original_qname_len);
             iq->referral_count++;
             iq->sent_count = 0;
             iq->dp_target_count = 0;
@@ -3387,7 +3459,11 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
         // }
         //set new delegation point
 		// iq->dp = delegpt_from_message(iq->response, qstate->region);
+    } else {
+
     }
+    //JESSE deleg_state back to 0, maybe incorrect
+
 	/* see if referral brings us close to the target */
 	if(type == RESPONSE_TYPE_REFERRAL){
         // iq->deleg_state = 0;
