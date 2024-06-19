@@ -71,7 +71,8 @@ Not all options are changed, but it changes like forwards, stubs and
 local zones. Also access-control and interface-action and similar options,
 also tcp-connection-limits, views. It can reload some define-tag changes.
 It does not work with interface, outgoing-interface changes, also not with
-remote-control changes.
+remote-control, outgoing-port-permit, outgoing-port-avoid, msg-buffer-size
+and statistics-interval changes.
 .IP
 The '+v' option makes the output verbose. With '+vv' it is more verbose.
 That includes the time it took to do the reload. And with more verbose output
