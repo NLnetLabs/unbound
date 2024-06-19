@@ -8,11 +8,13 @@ have_systemd=no
 AS_IF([test "x$enable_systemd" != xno], [
     ifdef([PKG_CHECK_MODULES], [
 	dnl systemd v209 or newer
-	PKG_CHECK_MODULES([SYSTEMD], [libsystemd], [have_systemd=yes], [have_systemd=no])
+	have_systemd=no
+	PKG_CHECK_MODULES([SYSTEMD], [libsystemd], [have_systemd=yes], [])
 	dnl old systemd library
 	AS_IF([test "x$have_systemd" != "xyes"], [
+		have_systemd_daemon=no
 		PKG_CHECK_MODULES([SYSTEMD_DAEMON], [libsystemd-daemon],
-			[have_systemd_daemon=yes], [have_systemd_daemon=no])
+			[have_systemd_daemon=yes], [])
 		AS_IF([test "x$have_systemd_daemon" = "xyes"],
 			[have_systemd=yes])
 	])
