@@ -5100,6 +5100,11 @@ fr_reload_config(struct fast_reload_thread* fr, struct config_file* newcfg,
 	daemon->env->cachedb_enabled = cachedb_is_enabled(&daemon->mods,
 		daemon->env);
 #endif
+#ifdef USE_DNSTAP
+	if(env->cfg->dnstap) {
+		dt_apply_cfg(daemon->dtenv, env->cfg);
+	}
+#endif
 
 	/* Set globals with new config. */
 	config_apply(env->cfg);

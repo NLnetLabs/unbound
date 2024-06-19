@@ -166,8 +166,11 @@ static void
 dt_apply_identity(struct dt_env *env, struct config_file *cfg)
 {
 	char buf[MAXHOSTNAMELEN+1];
-	if (!cfg->dnstap_send_identity)
+	if (!cfg->dnstap_send_identity) {
+		free(env->identity);
+		env->identity = NULL;
 		return;
+	}
 	free(env->identity);
 	if (cfg->dnstap_identity == NULL || cfg->dnstap_identity[0] == 0) {
 		if (gethostname(buf, MAXHOSTNAMELEN) == 0) {
@@ -189,8 +192,11 @@ dt_apply_identity(struct dt_env *env, struct config_file *cfg)
 static void
 dt_apply_version(struct dt_env *env, struct config_file *cfg)
 {
-	if (!cfg->dnstap_send_version)
+	if (!cfg->dnstap_send_version) {
+		free(env->version);
+		env->version = NULL;
 		return;
+	}
 	free(env->version);
 	if (cfg->dnstap_version == NULL || cfg->dnstap_version[0] == 0)
 		env->version = strdup(PACKAGE_STRING);
