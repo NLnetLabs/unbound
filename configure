@@ -17633,6 +17633,7 @@ if test "x$enable_systemd" != xno
 then :
 
 
+		have_systemd=no
 
 pkg_failed=no
 { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for SYSTEMD" >&5
@@ -17692,11 +17693,31 @@ fi
 	# Put the nasty error message in config.log where it belongs
 	echo "$SYSTEMD_PKG_ERRORS" >&5
 
-	have_systemd=no
+	as_fn_error $? "Package requirements (libsystemd) were not met:
+
+$SYSTEMD_PKG_ERRORS
+
+Consider adjusting the PKG_CONFIG_PATH environment variable if you
+installed software in a non-standard prefix.
+
+Alternatively, you may set the environment variables SYSTEMD_CFLAGS
+and SYSTEMD_LIBS to avoid the need to call pkg-config.
+See the pkg-config man page for more details." "$LINENO" 5
 elif test $pkg_failed = untried; then
      	{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
 printf "%s\n" "no" >&6; }
-	have_systemd=no
+	{ { printf "%s\n" "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
+printf "%s\n" "$as_me: error: in \`$ac_pwd':" >&2;}
+as_fn_error $? "The pkg-config script could not be found or is too old.  Make sure it
+is in your PATH or set the PKG_CONFIG environment variable to the full
+path to pkg-config.
+
+Alternatively, you may set the environment variables SYSTEMD_CFLAGS
+and SYSTEMD_LIBS to avoid the need to call pkg-config.
+See the pkg-config man page for more details.
+
+To get pkg-config, see <http://pkg-config.freedesktop.org/>.
+See \`config.log' for more details" "$LINENO" 5; }
 else
 	SYSTEMD_CFLAGS=$pkg_cv_SYSTEMD_CFLAGS
 	SYSTEMD_LIBS=$pkg_cv_SYSTEMD_LIBS
@@ -17707,6 +17728,7 @@ fi
 		if test "x$have_systemd" != "xyes"
 then :
 
+		have_systemd_daemon=no
 
 pkg_failed=no
 { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for SYSTEMD_DAEMON" >&5
@@ -17766,11 +17788,31 @@ fi
 	# Put the nasty error message in config.log where it belongs
 	echo "$SYSTEMD_DAEMON_PKG_ERRORS" >&5
 
-	have_systemd_daemon=no
+	as_fn_error $? "Package requirements (libsystemd-daemon) were not met:
+
+$SYSTEMD_DAEMON_PKG_ERRORS
+
+Consider adjusting the PKG_CONFIG_PATH environment variable if you
+installed software in a non-standard prefix.
+
+Alternatively, you may set the environment variables SYSTEMD_DAEMON_CFLAGS
+and SYSTEMD_DAEMON_LIBS to avoid the need to call pkg-config.
+See the pkg-config man page for more details." "$LINENO" 5
 elif test $pkg_failed = untried; then
      	{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
 printf "%s\n" "no" >&6; }
-	have_systemd_daemon=no
+	{ { printf "%s\n" "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
+printf "%s\n" "$as_me: error: in \`$ac_pwd':" >&2;}
+as_fn_error $? "The pkg-config script could not be found or is too old.  Make sure it
+is in your PATH or set the PKG_CONFIG environment variable to the full
+path to pkg-config.
+
+Alternatively, you may set the environment variables SYSTEMD_DAEMON_CFLAGS
+and SYSTEMD_DAEMON_LIBS to avoid the need to call pkg-config.
+See the pkg-config man page for more details.
+
+To get pkg-config, see <http://pkg-config.freedesktop.org/>.
+See \`config.log' for more details" "$LINENO" 5; }
 else
 	SYSTEMD_DAEMON_CFLAGS=$pkg_cv_SYSTEMD_DAEMON_CFLAGS
 	SYSTEMD_DAEMON_LIBS=$pkg_cv_SYSTEMD_DAEMON_LIBS
@@ -19193,7 +19235,7 @@ fi
 
 
         if test -z "$PYTHON"; then
-           as_fn_error $? "Cannot find python$PYTHON_VERSION in your system path" "$LINENO" 5
+           as_fn_error $? "Cannot find 'python$PYTHON_VERSION' in your system path. You can use the environment variable 'PYTHON_VERSION=version_number' for an explicit version." "$LINENO" 5
            PYTHON_VERSION=""
         fi
 

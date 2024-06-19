@@ -1,3 +1,8 @@
+19 June 2024: Yorgos
+	- Fix #1092: Ubuntu 22.04 Jammy fails to compile unbound 1.20.0; by
+	  adding helpful text for the Python interpreter version and allowing
+	  the default pkg-config unavailability error message to be shown.
+
 17 June 2024: Wouter
 	- Fix #1091: Build fails with OpenSSL >= 3.0 built with
 	  OPENSSL_NO_DEPRECATED.
