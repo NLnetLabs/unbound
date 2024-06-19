@@ -566,6 +566,9 @@
    function. */
 #undef HAVE_SSL_CTX_SET_TLSEXT_TICKET_KEY_EVP_CB
 
+/* Define to 1 if you have the `SSL_CTX_set_tmp_ecdh' function. */
+#undef HAVE_SSL_CTX_SET_TMP_ECDH
+
 /* Define to 1 if you have the `SSL_get0_alpn_selected' function. */
 #undef HAVE_SSL_GET0_ALPN_SELECTED
 

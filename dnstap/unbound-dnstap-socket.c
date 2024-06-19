@@ -916,7 +916,11 @@ static int tap_check_peer(struct tap_data* data)
 	if((SSL_get_verify_mode(data->ssl)&SSL_VERIFY_PEER)) {
 		/* verification */
 		if(SSL_get_verify_result(data->ssl) == X509_V_OK) {
+#ifdef HAVE_SSL_GET1_PEER_CERTIFICATE
+			X509* x = SSL_get1_peer_certificate(data->ssl);
+#else
 			X509* x = SSL_get_peer_certificate(data->ssl);
+#endif
 			if(!x) {
 				if(verbosity) log_info("SSL connection %s"
 					" failed no certificate", data->id);
@@ -938,7 +942,11 @@ static int tap_check_peer(struct tap_data* data)
 #endif
 			X509_free(x);
 		} else {
+#ifdef HAVE_SSL_GET1_PEER_CERTIFICATE
+			X509* x = SSL_get1_peer_certificate(data->ssl);
+#else
 			X509* x = SSL_get_peer_certificate(data->ssl);
+#endif
 			if(x) {
 				if(verbosity)
 					log_cert(VERB_ALGO, "peer certificate", x);
