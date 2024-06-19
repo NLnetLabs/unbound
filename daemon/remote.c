@@ -5079,6 +5079,10 @@ fr_reload_config(struct fast_reload_thread* fr, struct config_file* newcfg,
 	daemon->use_response_ip = ct->use_response_ip;
 	daemon->use_rpz = ct->use_rpz;
 	auth_zones_swap(env->auth_zones, ct->auth_zones);
+#ifdef USE_CACHEDB
+	daemon->env->cachedb_enabled = cachedb_is_enabled(&daemon->mods,
+		daemon->env);
+#endif
 
 	/* Set globals with new config. */
 	config_apply(env->cfg);
@@ -6199,6 +6203,9 @@ fast_reload_worker_pickup_changes(struct worker* worker)
 	 * lookups should be cancelled. */
 	fr_worker_pickup_auth_changes(worker,
 		worker->daemon->fast_reload_thread->auth_zone_change_list);
+#ifdef USE_CACHEDB
+	worker->env.cachedb_enabled = worker->daemon->env->cachedb_enabled;
+#endif
 }
 
 /** fast reload thread, handle reload_stop notification, send reload stop
