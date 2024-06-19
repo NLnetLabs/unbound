@@ -2588,6 +2588,7 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
         log_err("JESSE: Copied original qname: %s", iq->deleg_original_qname);
         iq->original_query = iq->qchase.qtype;
     } else {
+        //restore qname to original to put _deleg in correct point
         memcpy(qstate->qinfo.qname, iq->deleg_original_qname, iq->deleg_original_qname_len);
         memcpy(iq->qchase.qname, iq->deleg_original_qname, iq->deleg_original_qname_len);
         iq->qchase.qname_len = iq->deleg_original_qname_len;
@@ -3313,18 +3314,30 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
     uint16_t SVCB_QTYPE = 64;
     log_err("JESSE: the qtype of the answer is: %d ", iq->qchase.qtype);
     log_err("JESSE: the type is: %d", type);
-    if (iq->deleg_state == 1 && type == RESPONSE_TYPE_ANSWER && iq->qchase.qtype == 64 ) {
+
+    //check wether it was a deleg query
+    uint8_t deleg_wireformat[] = {6, 95, 100, 101, 108, 101, 103}; //{06}_deleg
+    uint8_t first_label_len = iq->qchase.qname[0]; 
+    int is_deleg_query = memcmp(iq->qchase.qname + first_label_len + 1, deleg_wireformat, 7);
+    for (size_t i = 0; i < 7;  ++i) {
+        log_err("%u ", iq->qchase.qname[i+ first_label_len]);
+    }
+
+    log_err("JESSE: is deleg query: %d", is_deleg_query);
+
+    if (iq->deleg_state == 1 && type == RESPONSE_TYPE_ANSWER && iq->qchase.qtype == 64 && (is_deleg_query == 0)) {
         if (FLAGS_GET_RCODE(iq->response->rep->flags) == LDNS_RCODE_NXDOMAIN) {
             log_err("JESSE: got into the else!!!");
+            // iq->deleg_state = 2;
             // log_err("Is the ns resolved: %d", iq->dp->nslist[0].resolved);
             // iq->dp->nslist[0].resolved = 0;
 
             //turns all values back to normal, normally you would do this after first query found nothing. TODO?
             iq->qchase.qname = iq->deleg_original_qname;
-            iq->qchase.qtype = 1;
+            iq->qchase.qtype = iq->original_query;
             iq->qchase.qname_len = iq->deleg_original_qname_len;
 
-            iq->qinfo_out.qtype = 1;
+            iq->qinfo_out.qtype = iq->original_query;
             iq->qinfo_out.qname = iq->deleg_original_qname;
             iq->qinfo_out.qname_len = iq->deleg_original_qname_len;
             return next_state(iq, QUERYTARGETS_STATE);
