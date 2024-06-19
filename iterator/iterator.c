@@ -2586,6 +2586,7 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
         memcpy(iq->deleg_original_qname, qstate->qinfo.qname, iq->qchase.qname_len);
         iq->deleg_original_qname_len = iq->qchase.qname_len;
         log_err("JESSE: Copied original qname: %s", iq->deleg_original_qname);
+        iq->original_query = iq->qchase.qtype;
     } else {
         memcpy(qstate->qinfo.qname, iq->deleg_original_qname, iq->deleg_original_qname_len);
         memcpy(iq->qchase.qname, iq->deleg_original_qname, iq->deleg_original_qname_len);
@@ -3885,10 +3886,10 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 		 * because, clearly, the next target must be tried. */
         log_err("JESSE: the qtype of the THROWAWAY is: %d ", iq->qchase.qtype);
         iq->qchase.qname = iq->deleg_original_qname;
-        iq->qchase.qtype = 1;
+        iq->qchase.qtype = iq->original_query;
         iq->qchase.qname_len = iq->deleg_original_qname_len;
 
-        iq->qinfo_out.qtype = 1;
+        iq->qinfo_out.qtype = iq->original_query;
         iq->qinfo_out.qname = iq->deleg_original_qname;
         iq->qinfo_out.qname_len = iq->deleg_original_qname_len;
 

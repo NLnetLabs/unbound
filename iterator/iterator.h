@@ -435,6 +435,7 @@ struct iter_qstate {
     int deleg_state;
     uint8_t* deleg_original_qname;
     size_t deleg_original_qname_len;
+    uint16_t original_query;
 
 	/**
 	 * The query info that is sent upstream. Will be a subset of qchase
