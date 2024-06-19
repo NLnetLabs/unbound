@@ -74,15 +74,15 @@ It does not work with interface, outgoing-interface changes, also not with
 remote-control, outgoing-port-permit, outgoing-port-avoid, msg-buffer-size
 and statistics-interval changes.
 .IP
-For dnstap, the options can be changed: dnstap-send-identity,
-dnstap-send-version, dnstap-identity, dnstap-version,
-dnstap-log-resolver-query-messages, dnstap-log-resolver-response-messages,
-dnstap-log-client-query-messages, dnstap-log-client-response-messages,
-dnstap-log-forwarder-query-messages and dnstap-log-forwarder-response-messages.
-It does not work with these options: dnstap-enable, dnstap-bidirectional,
-dnstap-socket-path, dnstap-ip, dnstap-tls, dnstap-tls-server-name,
-dnstap-tls-cert-bundle, dnstap-tls-client-key-file and
-dnstap-tls-client-cert-file.
+For dnstap, the options can be changed: dnstap-log-resolver-query-messages,
+dnstap-log-resolver-response-messages, dnstap-log-client-query-messages,
+dnstap-log-client-response-messages, dnstap-log-forwarder-query-messages
+and dnstap-log-forwarder-response-messages. It does not work with
+these options: dnstap-enable, dnstap-bidirectional, dnstap-socket-path,
+dnstap-ip, dnstap-tls, dnstap-tls-server-name, dnstap-tls-cert-bundle,
+dnstap-tls-client-key-file and dnstap-tls-client-cert-file. The options
+dnstap-send-identity, dnstap-send-version, dnstap-identity, and
+dnstap-version can be loaded when '+p' is not used.
 .IP
 The '+v' option makes the output verbose. With '+vv' it is more verbose.
 That includes the time it took to do the reload. And with more verbose output

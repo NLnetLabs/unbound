@@ -5102,7 +5102,9 @@ fr_reload_config(struct fast_reload_thread* fr, struct config_file* newcfg,
 #endif
 #ifdef USE_DNSTAP
 	if(env->cfg->dnstap) {
-		dt_apply_cfg(daemon->dtenv, env->cfg);
+		if(!fr->fr_nopause)
+			dt_apply_cfg(daemon->dtenv, env->cfg);
+		else dt_apply_logcfg(daemon->dtenv, env->cfg);
 	}
 #endif
 
