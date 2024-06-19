@@ -3480,7 +3480,8 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 
 	/* see if referral brings us close to the target */
 	if(type == RESPONSE_TYPE_REFERRAL){
-        // iq->deleg_state = 0;
+        //JESSE back to 0 state when normal refferal found to try deleg again for child
+        iq->deleg_state = 0;
 		struct ub_packed_rrset_key* ns = find_NS(
 			iq->response->rep, iq->response->rep->an_numrrsets,
 			iq->response->rep->an_numrrsets 
