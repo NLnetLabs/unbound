@@ -197,7 +197,7 @@ iter_new(struct module_qstate* qstate, int id)
 	//         updating through the iteration process. It is set here to
 	//         the initial query (qstate->qinfo) that started all this.
 	iq->qchase = qstate->qinfo;
-    iq->deleg_state = 0;
+    iq->deleg_state = 2;
     iq->deleg_original_qname_len = 0;
     iq->deleg_original_qname = NULL;
 	outbound_list_init(&iq->outlist);
@@ -2597,8 +2597,10 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
     }
     //NICE point
     //root len check not needed anymore TODO
-    // log_err("JESSE: Current delegation state: %d", iq->deleg_state);
+    log_err("JESSE: Current delegation state: %d", iq->deleg_state);
+    log_err("JESSE: root length: %d", root_len);
     if (iq->deleg_state == 0 && root_len > 0) {
+        log_err("komt in de state 0");
         iq->deleg_original_qname_len = iq->qchase.qname_len;
         iq->deleg_state = 1;
 
@@ -2654,6 +2656,37 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
         iq->qinfo_out.qname_len = delnamelen;
         // qstate->qinfo.qname = delname;
         // generate_target_query(qstate, iq, id, uint8_t* name, size_t namelen, uint16_t qtype, uint16_t qclass) 
+    } else if (root_len > 0 && iq->deleg_state == 2) {
+        log_err("Got into the deleg prime");
+        int qchase_label_len = dname_count_labels(iq->qchase.qname);
+        size_t labdiff =  qchase_label_len - iq->dp->namelabs;
+        dname_remove_labels(&iq->qchase.qname, &iq->qchase.qname_len, labdiff);
+
+
+        uint8_t deleg_wireformat[] = {6, 95, 100, 101, 108, 101, 103}; //{06}_deleg
+        size_t deleg_len = sizeof(deleg_wireformat);
+
+        size_t delnamelen = iq->qchase.qname_len + deleg_len;
+        uint8_t *delname = (uint8_t *)regional_alloc(qstate->region, delnamelen);
+
+        memcpy(delname, deleg_wireformat, deleg_len);
+        memcpy(delname+deleg_len, iq->qchase.qname, iq->qchase.qname_len); 
+
+        iq->dp->namelen = deleg_len;
+        // iq->dp->namelabs++;
+        iq->qchase.qtype = 64;
+		iq->qchase.qname = delname;
+        iq->qchase.qname_len = delnamelen;
+
+        iq->qinfo_out.qtype = 64;
+        iq->qinfo_out.qname = delname;
+        iq->qinfo_out.qname_len = delnamelen;
+
+
+        log_err("delegation name in bytes:");
+        for (size_t i = 0; i < delnamelen; ++i) {
+            log_err("%u ", delname[i]);
+        }
     }
 
 	if(iq->num_current_queries>0) {
@@ -3321,12 +3354,14 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
     uint8_t deleg_wireformat[] = {6, 95, 100, 101, 108, 101, 103}; //{06}_deleg
     uint8_t first_label_len = iq->qchase.qname[0]; 
     int is_deleg_query = memcmp(iq->qchase.qname + first_label_len + 1, deleg_wireformat, 7);
+    int is_deleg_prime_query = memcmp(iq->qchase.qname, deleg_wireformat, 7);
     // for (size_t i = 0; i < 7;  ++i) {
     //     log_err("%u ", iq->qchase.qname[i+ first_label_len]);
     // }
 
     // log_err("JESSE: is deleg query: %d", is_deleg_query);
 
+    //deleg state check is unnecessary?
     if (iq->deleg_state == 1 && type == RESPONSE_TYPE_ANSWER && iq->qchase.qtype == 64 && is_deleg_query == 0) {
         //or lame respone?
         if (FLAGS_GET_RCODE(iq->response->rep->flags) == LDNS_RCODE_NXDOMAIN) {
@@ -3345,7 +3380,7 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
             iq->qinfo_out.qname_len = iq->deleg_original_qname_len;
             return next_state(iq, QUERYTARGETS_STATE);
         }
-        iq->deleg_state = 0;
+        iq->deleg_state = 2;
 	    struct ub_packed_rrset_key* rrset_key;
         // log_err("JESSE: the returnmsg: %s", iq->response->rep);
         rrset_key = reply_find_answer_rrset(&iq->qchase, iq->response->rep);
@@ -3476,15 +3511,23 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
         // }
         //set new delegation point
 		// iq->dp = delegpt_from_message(iq->response, qstate->region);
-    } else {
-
+    //_deleg query state
+    } else if (is_deleg_prime_query == 0) {
+        if (FLAGS_GET_RCODE(iq->response->rep->flags) == LDNS_RCODE_NXDOMAIN) {
+            //NX DOMAIN mean deleg not supported (no error and answer count = 0)
+            iq->deleg_state = 1;
+            return next_state(iq, QUERYTARGETS_STATE);
+        } else if (FLAGS_GET_RCODE(iq->response->rep->flags) == LDNS_RCODE_NOERROR && iq->response->rep->an_numrrsets == 0) {
+            //no data means _deleg supported
+            iq->deleg_state = 0;
+            return next_state(iq, QUERYTARGETS_STATE);
+        }
     }
-    //JESSE deleg_state back to 0, maybe incorrect
 
 	/* see if referral brings us close to the target */
 	if(type == RESPONSE_TYPE_REFERRAL){
         //JESSE back to 0 state when normal refferal found to try deleg again for child
-        iq->deleg_state = 0;
+        iq->deleg_state = 2;
 		struct ub_packed_rrset_key* ns = find_NS(
 			iq->response->rep, iq->response->rep->an_numrrsets,
 			iq->response->rep->an_numrrsets 
