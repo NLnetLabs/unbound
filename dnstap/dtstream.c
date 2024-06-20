@@ -101,7 +101,7 @@ static int dtio_enable_brief_write(struct dt_io_thread* dtio);
 #endif
 
 struct dt_msg_queue*
-dt_msg_queue_create(struct comm_base* base)
+dt_msg_queue_create(struct comm_base* base, struct timeval* wakeup_delay)
 {
 	struct dt_msg_queue* mq = calloc(1, sizeof(*mq));
 	if(!mq) return NULL;
@@ -109,6 +109,7 @@ dt_msg_queue_create(struct comm_base* base)
 		about 1 M should contain 64K messages with some overhead,
 		or a whole bunch smaller ones */
 	mq->wakeup_timer = comm_timer_create(base, mq_wakeup_cb, mq);
+	mq->wakeup_delay = *wakeup_delay;
 	if(!mq->wakeup_timer) {
 		free(mq);
 		return NULL;
@@ -219,8 +220,7 @@ dt_msg_queue_start_timer(struct dt_msg_queue* mq, int wakeupnow)
 
 	/* start the timer, in mq, in the event base of our worker */
 	if(!wakeupnow) {
-		tv.tv_sec = 1;
-		tv.tv_usec = 0;
+		tv = mq->wakeup_delay;
 	}
 	comm_timer_set(mq->wakeup_timer, &tv);
 	lock_basic_unlock(&mq->dtio->wakeup_timer_lock);
