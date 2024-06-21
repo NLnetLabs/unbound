@@ -85,3 +85,18 @@ auth-zone:
 auth-zone:
 	name: "auth4.org"
 	zonefile: "auth2.zone"
+
+auth-zone:
+	name: "auth5.org"
+	zonefile: "auth5.zone"
+	primary: 127.0.0.1@@NS1_PORT@
+
+auth-zone:
+	name: "auth7.org"
+	zonefile: "auth7.zone"
+	primary: 127.0.0.1@@NS2_PORT@
+
+auth-zone:
+	name: "auth8.org"
+	zonefile: "auth8.zone"
+	primary: 127.0.0.1@@NS1_PORT@

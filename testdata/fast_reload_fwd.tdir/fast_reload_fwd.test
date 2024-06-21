@@ -41,7 +41,7 @@ for x in example4.org example5.org example6.org stub4.org stub5.org stub6.org; d
 	fi
 done
 
-for x in auth1.org auth2.org auth3.org; do
+for x in auth1.org auth2.org auth3.org auth5.org auth6.org auth7.org; do
 	echo ""
 	echo "dig www.$x [auth is 1.2.3.4]"
 	dig @127.0.0.1 -p $UNBOUND_PORT www.$x A 2>&1 | tee outfile
@@ -118,8 +118,8 @@ for x in example1.org example3.org example5.org stub1.org stub3.org stub5.org; d
 	fi
 done
 
-# unchanged auth
-for x in auth1.org; do
+# auth is unchanged, or at ns1.
+for x in auth1.org auth5.org auth8.org; do
 	echo ""
 	echo "dig www.$x [auth is 1.2.3.4]"
 	dig @127.0.0.1 -p $UNBOUND_PORT www.$x A 2>&1 | tee outfile
@@ -132,7 +132,7 @@ for x in auth1.org; do
 done
 
 # deleted auth
-for x in auth2.org; do
+for x in auth2.org auth6.org; do
 	echo ""
 	echo "dig www.$x [auth is deleted]"
 	dig @127.0.0.1 -p $UNBOUND_PORT www.$x A 2>&1 | tee outfile
@@ -145,7 +145,7 @@ for x in auth2.org; do
 done
 
 # changed and added auth
-for x in auth3.org auth4.org; do
+for x in auth3.org auth4.org auth7.org; do
 	echo ""
 	echo "dig www.$x [auth is 1.2.3.5]"
 	dig @127.0.0.1 -p $UNBOUND_PORT www.$x A 2>&1 | tee outfile

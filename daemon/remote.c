@@ -4390,6 +4390,72 @@ fr_add_auth_zone_change(struct fast_reload_thread* fr, struct auth_zone* old_z,
 	return 1;
 }
 
+/** See if auth master is equal */
+static int
+xfr_auth_master_equal(struct auth_master* m1, struct auth_master* m2)
+{
+	if(!m1 && !m2)
+		return 1;
+	if(!m1 || !m2)
+		return 0;
+
+	if((m1->host && !m2->host) || (!m1->host && m2->host))
+		return 0;
+	if(m1->host && m2->host && strcmp(m1->host, m2->host) != 0)
+		return 0;
+
+	if((m1->file && !m2->file) || (!m1->file && m2->file))
+		return 0;
+	if(m1->file && m2->file && strcmp(m1->file, m2->file) != 0)
+		return 0;
+
+	if((m1->http && !m2->http) || (!m1->http && m2->http))
+		return 0;
+	if((m1->ixfr && !m2->ixfr) || (!m1->ixfr && m2->ixfr))
+		return 0;
+	if((m1->allow_notify && !m2->allow_notify) || (!m1->allow_notify && m2->allow_notify))
+		return 0;
+	if((m1->ssl && !m2->ssl) || (!m1->ssl && m2->ssl))
+		return 0;
+	if(m1->port != m2->port)
+		return 0;
+	return 1;
+}
+
+/** See if list of auth masters is equal */
+static int
+xfr_masterlist_equal(struct auth_master* list1, struct auth_master* list2)
+{
+	struct auth_master* p1 = list1, *p2 = list2;
+	while(p1 && p2) {
+		if(!xfr_auth_master_equal(p1, p2))
+			return 0;
+		p1 = p1->next;
+		p2 = p2->next;
+	}
+	if(!p2 && !p2)
+		return 1;
+	return 0;
+}
+
+/** See if the list of masters has changed. */
+static int
+xfr_masters_equal(struct auth_xfer* xfr1, struct auth_xfer* xfr2)
+{
+	if(xfr1 == NULL && xfr2 == NULL)
+		return 1;
+	if(xfr1 == NULL && xfr2 != NULL)
+		return 0;
+	if(xfr1 != NULL && xfr2 == NULL)
+		return 0;
+	if(xfr_masterlist_equal(xfr1->task_probe->masters,
+		xfr2->task_probe->masters) &&
+		xfr_masterlist_equal(xfr1->task_transfer->masters,
+		xfr2->task_transfer->masters))
+		return 1;
+	return 0;
+}
+
 /** Check what has changed in auth zones, like added and deleted zones */
 static int
 auth_zones_check_changes(struct fast_reload_thread* fr,
@@ -4438,8 +4504,19 @@ auth_zones_check_changes(struct fast_reload_thread* fr,
 		} else {
 			uint32_t old_serial = 0, new_serial = 0;
 			int have_old = 0, have_new = 0;
+			struct auth_xfer* old_xfr, *new_xfr;
 			lock_rw_rdlock(&new_z->lock);
 			lock_rw_rdlock(&old_z->lock);
+			new_xfr = auth_xfer_find(ct->auth_zones, old_z->name,
+				old_z->namelen, old_z->dclass);
+			old_xfr = auth_xfer_find(env->auth_zones, old_z->name,
+				old_z->namelen, old_z->dclass);
+			if(new_xfr) {
+				lock_basic_lock(&new_xfr->lock);
+			}
+			if(old_xfr) {
+				lock_basic_lock(&old_xfr->lock);
+			}
 			lock_rw_unlock(&env->auth_zones->lock);
 
 			/* Change in the auth zone can be detected. */
@@ -4449,17 +4526,30 @@ auth_zones_check_changes(struct fast_reload_thread* fr,
 				&old_serial)!=0);
 			have_new = (auth_zone_get_serial(new_z,
 				&new_serial)!=0);
-			if(have_old != have_new || old_serial != new_serial) {
+			if(have_old != have_new || old_serial != new_serial
+				|| !xfr_masters_equal(old_xfr, new_xfr)) {
 				/* The zone has been changed. */
 				if(!fr_add_auth_zone_change(fr, old_z, new_z,
 					0, 0, 1)) {
 					lock_rw_unlock(&old_z->lock);
 					lock_rw_unlock(&new_z->lock);
 					lock_rw_unlock(&ct->auth_zones->lock);
+					if(new_xfr) {
+						lock_basic_unlock(&new_xfr->lock);
+					}
+					if(old_xfr) {
+						lock_basic_unlock(&old_xfr->lock);
+					}
 					return 0;
 				}
 			}
 
+			if(new_xfr) {
+				lock_basic_unlock(&new_xfr->lock);
+			}
+			if(old_xfr) {
+				lock_basic_unlock(&old_xfr->lock);
+			}
 			lock_rw_unlock(&old_z->lock);
 			lock_rw_unlock(&new_z->lock);
 		}
@@ -6048,9 +6138,11 @@ fr_worker_auth_del(struct worker* worker, struct fast_reload_auth_change* item,
 	if(!for_change && (released || worker->thread_num == 0)) {
 		/* See if the xfr item can be deleted. */
 		xfr = NULL;
+		lock_rw_wrlock(&worker->env.auth_zones->lock);
 		lock_rw_rdlock(&item->old_z->lock);
-		auth_zones_lock_xfr(worker->env.auth_zones, &item->old_z, 2,
-			&xfr, 0, 1);
+		lookold_z = item->old_z;
+		auth_zones_lock_xfr(worker->env.auth_zones, &lookold_z, 2,
+			&xfr, 1, 1);
 		if(xfr && xfr->task_nextprobe->worker == NULL &&
 			xfr->task_probe->worker == NULL &&
 			xfr->task_transfer->worker == NULL) {
@@ -6066,45 +6158,6 @@ fr_worker_auth_del(struct worker* worker, struct fast_reload_auth_change* item,
 			}
 		}
 	}
-}
-
-/** Fast reload, worker picks up added auth zone */
-static void
-fr_worker_auth_add(struct worker* worker, struct fast_reload_auth_change* item,
-	int for_change)
-{
-	struct auth_xfer* xfr = NULL;
-
-	/* Start zone transfers and lookups. */
-	lock_rw_wrlock(&item->new_z->lock);
-	auth_zones_lock_xfr(worker->env.auth_zones, &item->new_z, 0, &xfr,
-		0, 1);
-	if(xfr == NULL && item->new_z->zone_is_slave) {
-		/* The xfr item needs to be created. The auth zones lock
-		 * is held to make this possible. */
-		xfr = auth_xfer_create(worker->env.auth_zones, item->new_z);
-		/* Serial information is copied into the xfr struct. */
-		if(!xfr_find_soa(item->new_z, xfr)) {
-			xfr->serial = 0;
-		}
-	} else if(for_change && xfr) {
-		if(!xfr_find_soa(item->new_z, xfr)) {
-			xfr->serial = 0;
-		}
-	}
-	lock_rw_unlock(&item->new_z->lock);
-	lock_rw_unlock(&worker->env.auth_zones->lock);
-	if(xfr) {
-		auth_xfer_pickup_initial_zone(xfr, &worker->env);
-		lock_basic_unlock(&xfr->lock);
-	}
-
-	/* Perform ZONEMD verification lookups. */
-	lock_rw_wrlock(&item->new_z->lock);
-	/* holding only the new_z lock */
-	auth_zone_verify_zonemd(item->new_z, &worker->env,
-		&worker->env.mesh->mods, NULL, 0, 1);
-	lock_rw_unlock(&item->new_z->lock);
 }
 
 /** Fast reload, auth xfer config is picked up */
@@ -6124,6 +6177,61 @@ auth_xfr_pickup_config(struct auth_xfer* loadxfr, struct auth_xfer* xfr)
 	xfr->task_transfer->masters = loadxfr->task_transfer->masters;
 	loadxfr->task_probe->masters = probe_masters;
 	loadxfr->task_transfer->masters = transfer_masters;
+}
+
+/** Fast reload, worker picks up added auth zone */
+static void
+fr_worker_auth_add(struct worker* worker, struct fast_reload_auth_change* item,
+	int for_change)
+{
+	struct auth_xfer* xfr = NULL, *loadxfr = NULL;
+
+	/* Start zone transfers and lookups. */
+	lock_rw_rdlock(&worker->daemon->fast_reload_thread->old_auth_zones->lock);
+	lock_rw_wrlock(&worker->env.auth_zones->lock);
+	lock_rw_wrlock(&item->new_z->lock);
+	loadxfr = auth_xfer_find(worker->daemon->fast_reload_thread->
+		old_auth_zones, item->new_z->name, item->new_z->namelen,
+		item->new_z->dclass);
+	if(loadxfr) {
+		lock_basic_lock(&loadxfr->lock);
+	}
+	auth_zones_lock_xfr(worker->env.auth_zones, &item->new_z, 0, &xfr,
+		1, 1);
+	if(xfr == NULL && item->new_z->zone_is_slave) {
+		/* The xfr item needs to be created. The auth zones lock
+		 * is held to make this possible. */
+		xfr = auth_xfer_create(worker->env.auth_zones, item->new_z);
+		auth_xfr_pickup_config(loadxfr, xfr);
+		/* Serial information is copied into the xfr struct. */
+		if(!xfr_find_soa(item->new_z, xfr)) {
+			xfr->serial = 0;
+		}
+	} else if(for_change && xfr) {
+		if(!xfr_find_soa(item->new_z, xfr)) {
+			xfr->serial = 0;
+		}
+	}
+	lock_rw_unlock(&item->new_z->lock);
+	lock_rw_unlock(&worker->env.auth_zones->lock);
+	lock_rw_unlock(&worker->daemon->fast_reload_thread->old_auth_zones->lock);
+	if(loadxfr) {
+		lock_basic_unlock(&loadxfr->lock);
+	}
+	if(xfr) {
+		auth_xfer_pickup_initial_zone(xfr, &worker->env);
+		if(for_change) {
+			xfr->task_probe->only_lookup = 0;
+		}
+		lock_basic_unlock(&xfr->lock);
+	}
+
+	/* Perform ZONEMD verification lookups. */
+	lock_rw_wrlock(&item->new_z->lock);
+	/* holding only the new_z lock */
+	auth_zone_verify_zonemd(item->new_z, &worker->env,
+		&worker->env.mesh->mods, NULL, 0, 1);
+	lock_rw_unlock(&item->new_z->lock);
 }
 
 /** Fast reload, worker picks up changed auth zone */
@@ -6169,6 +6277,7 @@ fr_worker_auth_cha(struct worker* worker, struct fast_reload_auth_change* item)
 	} else if(loadxfr && !xfr) {
 		/* Create the xfr. */
 		xfr = auth_xfer_create(worker->env.auth_zones, item->new_z);
+		auth_xfr_pickup_config(loadxfr, xfr);
 		item->new_z->zone_is_slave = 1;
 	}
 	lock_rw_unlock(&item->new_z->lock);

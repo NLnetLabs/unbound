@@ -239,6 +239,40 @@ SECTION ANSWER
 www2.stub6.org. IN A 1.2.3.2
 ENTRY_END
 
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR AA NOERROR
+SECTION QUESTION
+auth7.org. IN SOA
+SECTION ANSWER
+auth7.org. SOA ns root 2 3600 300 7200 3600
+ENTRY_END
+
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR AA NOERROR
+SECTION QUESTION
+auth7.org. IN AXFR
+SECTION ANSWER
+auth7.org. SOA ns root 2 3600 300 7200 3600
+www.auth7.org. A 1.2.3.5
+auth7.org. SOA ns root 2 3600 300 7200 3600
+ENTRY_END
+
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR AA NOERROR
+SECTION QUESTION
+auth7.org. IN IXFR
+SECTION ANSWER
+auth7.org. SOA ns root 2 3600 300 7200 3600
+www.auth7.org. A 1.2.3.5
+auth7.org. SOA ns root 2 3600 300 7200 3600
+ENTRY_END
+
 ; match anything and return a reply
 ENTRY_BEGIN
 MATCH opcode

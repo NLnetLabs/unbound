@@ -239,6 +239,94 @@ SECTION ANSWER
 www2.stub6.org. IN A 1.2.3.1
 ENTRY_END
 
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR AA NOERROR
+SECTION QUESTION
+auth5.org. IN SOA
+SECTION ANSWER
+auth5.org. SOA ns root 1 3600 300 7200 3600
+ENTRY_END
+
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR AA NOERROR
+SECTION QUESTION
+auth5.org. IN AXFR
+SECTION ANSWER
+auth5.org. SOA ns root 1 3600 300 7200 3600
+www.auth5.org. A 1.2.3.4
+auth5.org. SOA ns root 1 3600 300 7200 3600
+ENTRY_END
+
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR AA NOERROR
+SECTION QUESTION
+auth6.org. IN SOA
+SECTION ANSWER
+auth6.org. SOA ns root 1 3600 300 7200 3600
+ENTRY_END
+
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR AA NOERROR
+SECTION QUESTION
+auth6.org. IN AXFR
+SECTION ANSWER
+auth6.org. SOA ns root 1 3600 300 7200 3600
+www.auth6.org. A 1.2.3.4
+auth6.org. SOA ns root 1 3600 300 7200 3600
+ENTRY_END
+
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR AA NOERROR
+SECTION QUESTION
+auth7.org. IN SOA
+SECTION ANSWER
+auth7.org. SOA ns root 1 3600 300 7200 3600
+ENTRY_END
+
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR AA NOERROR
+SECTION QUESTION
+auth7.org. IN AXFR
+SECTION ANSWER
+auth7.org. SOA ns root 1 3600 300 7200 3600
+www.auth7.org. A 1.2.3.4
+auth7.org. SOA ns root 1 3600 300 7200 3600
+ENTRY_END
+
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR AA NOERROR
+SECTION QUESTION
+auth8.org. IN SOA
+SECTION ANSWER
+auth8.org. SOA ns root 1 3600 300 7200 3600
+ENTRY_END
+
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR AA NOERROR
+SECTION QUESTION
+auth8.org. IN AXFR
+SECTION ANSWER
+auth8.org. SOA ns root 1 3600 300 7200 3600
+www.auth8.org. A 1.2.3.4
+auth8.org. SOA ns root 1 3600 300 7200 3600
+ENTRY_END
+
 ; match anything and return a reply
 ENTRY_BEGIN
 MATCH opcode
