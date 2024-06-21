@@ -1596,7 +1596,8 @@ Optional Features:
   --disable-libtool-lock  avoid locking (might break parallel builds)
   --disable-rpath         disable hardcoded rpath (default=enabled)
   --disable-largefile     omit support for large files
-  --enable-systemd        compile with systemd support
+  --enable-systemd        compile with systemd support (requires libsystemd,
+                          pkg-config)
   --enable-alloc-checks   enable to memory allocation statistics, for debug
                           purposes
   --enable-alloc-lite     enable for lightweight alloc assertions, for debug
@@ -17624,7 +17625,7 @@ have_systemd=no
 if test "x$enable_systemd" != xno
 then :
 
-
+    if test -n "$PKG_CONFIG"; then
 		have_systemd=no
 
 pkg_failed=no
@@ -17831,7 +17832,9 @@ printf "%s\n" "#define HAVE_SYSTEMD 1" >>confdefs.h
   *) :
      ;;
 esac
-
+    else
+    	as_fn_error $? "systemd enabled but need pkg-config to configure for it" "$LINENO" 5
+    fi
 
 fi
  if test "x$have_systemd" = xyes; then
@@ -23802,7 +23805,7 @@ then :
 
 else $as_nop
 
-
+                if test -n "$PKG_CONFIG"; then
 
 pkg_failed=no
 { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for PROTOBUFC" >&5
@@ -23863,36 +23866,36 @@ fi
 	echo "$PROTOBUFC_PKG_ERRORS" >&5
 
 
-                                # pkg-config failed; try falling back to known values
-                                # workaround for protobuf-c includes at old dir before protobuf-c-1.0.0
-                                if test -f /usr/include/google/protobuf-c/protobuf-c.h; then
-                                    CFLAGS="$CFLAGS -I/usr/include/google"
+                            # pkg-config failed; try falling back to known values
+                            # workaround for protobuf-c includes at old dir before protobuf-c-1.0.0
+                            if test -f /usr/include/google/protobuf-c/protobuf-c.h; then
+                                CFLAGS="$CFLAGS -I/usr/include/google"
+                            else
+                                if test -f /usr/local/include/google/protobuf-c/protobuf-c.h; then
+                                    CFLAGS="$CFLAGS -I/usr/local/include/google"
+                                    LDFLAGS="$LDFLAGS -L/usr/local/lib"
                                 else
-                                    if test -f /usr/local/include/google/protobuf-c/protobuf-c.h; then
-                                        CFLAGS="$CFLAGS -I/usr/local/include/google"
-                                        LDFLAGS="$LDFLAGS -L/usr/local/lib"
-                                    else
-                                        as_fn_error $? "The protobuf-c package was not found with pkg-config. Please install protobuf-c!" "$LINENO" 5
-                                    fi
+                                    as_fn_error $? "The protobuf-c package was not found with pkg-config. Please install protobuf-c!" "$LINENO" 5
                                 fi
+                            fi
 
 
 elif test $pkg_failed = untried; then
      	{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
 printf "%s\n" "no" >&6; }
 
-                                # pkg-config failed; try falling back to known values
-                                # workaround for protobuf-c includes at old dir before protobuf-c-1.0.0
-                                if test -f /usr/include/google/protobuf-c/protobuf-c.h; then
-                                    CFLAGS="$CFLAGS -I/usr/include/google"
+                            # pkg-config failed; try falling back to known values
+                            # workaround for protobuf-c includes at old dir before protobuf-c-1.0.0
+                            if test -f /usr/include/google/protobuf-c/protobuf-c.h; then
+                                CFLAGS="$CFLAGS -I/usr/include/google"
+                            else
+                                if test -f /usr/local/include/google/protobuf-c/protobuf-c.h; then
+                                    CFLAGS="$CFLAGS -I/usr/local/include/google"
+                                    LDFLAGS="$LDFLAGS -L/usr/local/lib"
                                 else
-                                    if test -f /usr/local/include/google/protobuf-c/protobuf-c.h; then
-                                        CFLAGS="$CFLAGS -I/usr/local/include/google"
-                                        LDFLAGS="$LDFLAGS -L/usr/local/lib"
-                                    else
-                                        as_fn_error $? "The protobuf-c package was not found with pkg-config. Please install protobuf-c!" "$LINENO" 5
-                                    fi
+                                    as_fn_error $? "The protobuf-c package was not found with pkg-config. Please install protobuf-c!" "$LINENO" 5
                                 fi
+                            fi
 
 
 else
@@ -23901,11 +23904,21 @@ else
         { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 printf "%s\n" "yes" >&6; }
 
-                                CFLAGS="$CFLAGS $PROTOBUFC_CFLAGS"
-                                LIBS="$LIBS $PROTOBUFC_LIBS"
+                            CFLAGS="$CFLAGS $PROTOBUFC_CFLAGS"
+                            LIBS="$LIBS $PROTOBUFC_LIBS"
 
 fi
-
+                else
+                    # workaround for protobuf-c includes at old dir before protobuf-c-1.0.0
+                    if test -f /usr/include/google/protobuf-c/protobuf-c.h; then
+                        CFLAGS="$CFLAGS -I/usr/include/google"
+                    else
+                        if test -f /usr/local/include/google/protobuf-c/protobuf-c.h; then
+                            CFLAGS="$CFLAGS -I/usr/local/include/google"
+                            LDFLAGS="$LDFLAGS -L/usr/local/lib"
+                        fi
+                    fi
+                fi
 
 
 fi
