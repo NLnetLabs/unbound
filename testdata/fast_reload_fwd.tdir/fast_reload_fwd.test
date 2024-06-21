@@ -166,7 +166,6 @@ if test -f unbound.pid; then sleep 1; fi
 if test -f unbound.pid; then echo "unbound.pid still there"; fi
 # check the locks.
 function locktest() {
-	cp ublocktrace.* ..
 	if test -x $PRE/lock-verify -a -f ublocktrace.0; then
 		$PRE/lock-verify ublocktrace.*
 		if test $? -ne 0; then
