@@ -6099,13 +6099,51 @@ auth_zone_zonemd_stop_lookup(struct auth_zone* z, struct mesh_area* mesh)
 		&auth_zonemd_dnskey_lookup_callback, z);
 }
 
+/** Pick up the auth zone locks. */
+static void
+fr_pickup_auth_locks(struct worker* worker, struct auth_zone* namez,
+	struct auth_zone* old_z, struct auth_zone* new_z,
+	struct auth_xfer** xfr, struct auth_xfer** loadxfr)
+{
+	uint8_t nm[LDNS_MAX_DOMAINLEN+1];
+	size_t nmlen;
+	uint16_t dclass;
+
+	log_assert(namez->namelen <= sizeof(nm));
+	lock_rw_rdlock(&namez->lock);
+	nmlen = namez->namelen;
+	dclass = namez->dclass;
+	memmove(nm, namez->name, nmlen);
+	lock_rw_unlock(&namez->lock);
+
+	lock_rw_wrlock(&worker->daemon->fast_reload_thread->old_auth_zones->lock);
+	lock_rw_wrlock(&worker->env.auth_zones->lock);
+	if(new_z) {
+		lock_rw_wrlock(&new_z->lock);
+	}
+	if(old_z) {
+		lock_rw_wrlock(&old_z->lock);
+	}
+	if(loadxfr)
+		*loadxfr = auth_xfer_find(worker->daemon->fast_reload_thread->
+			old_auth_zones, nm, nmlen, dclass);
+	if(xfr)
+		*xfr = auth_xfer_find(worker->env.auth_zones, nm, nmlen,
+			dclass);
+	if(loadxfr && *loadxfr) {
+		lock_basic_lock(&(*loadxfr)->lock);
+	}
+	if(xfr && *xfr) {
+		lock_basic_lock(&(*xfr)->lock);
+	}
+}
+
 /** Fast reload, worker picks up deleted auth zone */
 static void
 fr_worker_auth_del(struct worker* worker, struct fast_reload_auth_change* item,
 	int for_change)
 {
 	int released = 0; /* Did this routine release callbacks. */
-	struct auth_zone* lookold_z;
 	struct auth_xfer* xfr = NULL;
 
 	lock_rw_wrlock(&item->old_z->lock);
@@ -6118,12 +6156,11 @@ fr_worker_auth_del(struct worker* worker, struct fast_reload_auth_change* item,
 	}
 	lock_rw_unlock(&item->old_z->lock);
 
-	lock_rw_rdlock(&item->old_z->lock);
-	/* The auth zones do not contain the zone any more, so the
-	 * lookup is going to return a NULL zone pointer. */
-	lookold_z = item->old_z;
-	auth_zones_lock_xfr(worker->env.auth_zones, &lookold_z, 2, &xfr,
-		0, 0);
+	fr_pickup_auth_locks(worker, item->old_z, item->old_z, NULL, &xfr,
+		NULL);
+	lock_rw_unlock(&worker->daemon->fast_reload_thread->old_auth_zones->lock);
+	lock_rw_unlock(&worker->env.auth_zones->lock);
+	lock_rw_unlock(&item->old_z->lock);
 	if(xfr) {
 		/* Release callbacks on the xfr, if this worker holds them. */
 		if(xfr->task_nextprobe->worker == worker ||
@@ -6138,11 +6175,10 @@ fr_worker_auth_del(struct worker* worker, struct fast_reload_auth_change* item,
 	if(!for_change && (released || worker->thread_num == 0)) {
 		/* See if the xfr item can be deleted. */
 		xfr = NULL;
-		lock_rw_wrlock(&worker->env.auth_zones->lock);
-		lock_rw_rdlock(&item->old_z->lock);
-		lookold_z = item->old_z;
-		auth_zones_lock_xfr(worker->env.auth_zones, &lookold_z, 2,
-			&xfr, 1, 1);
+		fr_pickup_auth_locks(worker, item->old_z, item->old_z, NULL,
+			&xfr, NULL);
+		lock_rw_unlock(&worker->daemon->fast_reload_thread->old_auth_zones->lock);
+		lock_rw_unlock(&item->old_z->lock);
 		if(xfr && xfr->task_nextprobe->worker == NULL &&
 			xfr->task_probe->worker == NULL &&
 			xfr->task_transfer->worker == NULL) {
@@ -6187,17 +6223,8 @@ fr_worker_auth_add(struct worker* worker, struct fast_reload_auth_change* item,
 	struct auth_xfer* xfr = NULL, *loadxfr = NULL;
 
 	/* Start zone transfers and lookups. */
-	lock_rw_rdlock(&worker->daemon->fast_reload_thread->old_auth_zones->lock);
-	lock_rw_wrlock(&worker->env.auth_zones->lock);
-	lock_rw_wrlock(&item->new_z->lock);
-	loadxfr = auth_xfer_find(worker->daemon->fast_reload_thread->
-		old_auth_zones, item->new_z->name, item->new_z->namelen,
-		item->new_z->dclass);
-	if(loadxfr) {
-		lock_basic_lock(&loadxfr->lock);
-	}
-	auth_zones_lock_xfr(worker->env.auth_zones, &item->new_z, 0, &xfr,
-		1, 1);
+	fr_pickup_auth_locks(worker, item->new_z, NULL, item->new_z, &xfr,
+		&loadxfr);
 	if(xfr == NULL && item->new_z->zone_is_slave) {
 		/* The xfr item needs to be created. The auth zones lock
 		 * is held to make this possible. */
@@ -6252,15 +6279,8 @@ fr_worker_auth_cha(struct worker* worker, struct fast_reload_auth_change* item)
 	 * new config contents can be picked up. SOA information is picked
 	 * up in the auth_add routine, as it has the new_z ready. */
 
-	lock_rw_rdlock(&worker->daemon->fast_reload_thread->old_auth_zones->lock);
-	lock_rw_wrlock(&worker->env.auth_zones->lock);
-
-	lock_rw_rdlock(&item->new_z->lock);
-	lock_rw_rdlock(&item->old_z->lock);
-	auth_zones_lock_xfr(worker->env.auth_zones, &item->new_z, 1, &xfr,
-		1, 1);
-	auth_zones_lock_xfr(worker->daemon->fast_reload_thread->old_auth_zones,
-		&item->old_z, 1, &loadxfr, 1, 1);
+	fr_pickup_auth_locks(worker, item->new_z, item->old_z, item->new_z,
+		&xfr, &loadxfr);
 
 	/* The xfr is not there any more if the zone is not set to have
 	 * zone transfers. Or the xfr needs to be created if it is set to

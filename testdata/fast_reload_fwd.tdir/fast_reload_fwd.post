@@ -5,10 +5,13 @@
 [ -f .tpkg.var.test ] && source .tpkg.var.test
 #
 # do your teardown here
+PRE="../.."
 . ../common.sh
 kill_pid $NS1_PID
 kill_pid $NS2_PID
-kill_pid $UNBOUND_PID
+if test -f unbound.pid; then
+	kill_pid $UNBOUND_PID
+fi
 rm -f $CONTROL_PATH/controlpipe.$CONTROL_PID
 echo
 echo "> ns1.log"
@@ -19,3 +22,4 @@ cat ns2.log
 echo
 echo "> unbound.log"
 cat unbound.log
+exit 0

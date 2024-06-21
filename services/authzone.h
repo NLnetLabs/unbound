@@ -212,7 +212,9 @@ struct auth_xfer {
 	 * one of the tasks. 
 	 * Once it has the task assigned to it, the worker can access the
 	 * other elements of the task structure without a lock, because that
-	 * is necessary for the eventloop and callbacks from that. */
+	 * is necessary for the eventloop and callbacks from that.
+	 * The auth_zone->lock is locked before this lock.
+	 */
 	lock_basic_type lock;
 
 	/** zone name, in uncompressed wireformat */

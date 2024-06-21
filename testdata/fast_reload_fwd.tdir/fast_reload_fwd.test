@@ -157,4 +157,24 @@ for x in auth3.org auth4.org auth7.org; do
 	fi
 done
 
+echo ""
+echo "> stop unbound"
+kill_pid $UNBOUND_PID
+if test -f unbound.pid; then sleep 1; fi
+if test -f unbound.pid; then sleep 1; fi
+if test -f unbound.pid; then sleep 1; fi
+if test -f unbound.pid; then echo "unbound.pid still there"; fi
+# check the locks.
+function locktest() {
+	cp ublocktrace.* ..
+	if test -x $PRE/lock-verify -a -f ublocktrace.0; then
+		$PRE/lock-verify ublocktrace.*
+		if test $? -ne 0; then
+			echo "lock-verify error"
+			exit 1
+		fi
+	fi
+}
+locktest
+
 exit 0
