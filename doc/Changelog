@@ -1,3 +1,7 @@
+21 June 2024: Yorgos
+	- Fix pkg-config availability check in dnstap/dnstap.m4 and
+	  systemd.m4.
+
 19 June 2024: Yorgos
 	- Fix #1092: Ubuntu 22.04 Jammy fails to compile unbound 1.20.0; by
 	  adding helpful text for the Python interpreter version and allowing
