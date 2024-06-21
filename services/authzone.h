@@ -795,25 +795,6 @@ void auth_zones_pickup_zonemd_verify(struct auth_zones* az,
 size_t auth_zones_get_mem(struct auth_zones* zones);
 
 /**
- * Pick up the xfr item for an auth zone. The routine assumes the
- * zone object is there and is locked for reading. It unlocks and looks
- * up new z, x pointers.
- * @param az: auth zones.
- * @param z: the zone with lookup name information. On start it is locked
- *	by the caller.
- *	On return it is changed to the new zone, if it is new,
- *	and with a lock if requested.
- * @param zwr: is a writelock(1) or readlock(0) on z requested, 2 no lock.
- * @param x: the xfr item for the zone.
- * 	If it is found, it is locked on return.
- * @param azlock_start: if true, the auth zones are locked, by caller,
- *	when the function is called.
- * @param azlock_return: if true, the auth zones are locked on return.
- */
-void auth_zones_lock_xfr(struct auth_zones* az, struct auth_zone** z, int zwr,
-	struct auth_xfer** x, int azlock_start, int azlock_return);
-
-/**
  * Initial pick up of the auth zone nextprobe timeout and that turns
  * into further zone transfer work, if any. Also sets the lease time.
  * @param x: xfer structure, locked by caller.

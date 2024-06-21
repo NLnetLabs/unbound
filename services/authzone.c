@@ -8691,45 +8691,6 @@ size_t auth_zones_get_mem(struct auth_zones* zones)
 	return m;
 }
 
-void auth_zones_lock_xfr(struct auth_zones* az, struct auth_zone** z, int zwr,
-	struct auth_xfer** x, int azlock_start, int azlock_return)
-{
-	uint8_t nm[LDNS_MAX_DOMAINLEN+1];
-	size_t nmlen;
-	uint16_t dclass;
-
-	/* Store name */
-	if((*z)->namelen > sizeof(nm)) {
-		/* This should never happen, the buffer is large enough. */
-		*x = NULL;
-		return;
-	}
-	nmlen = (*z)->namelen;
-	dclass = (*z)->dclass;
-	memmove(nm, (*z)->name, nmlen);
-
-	/* Look it up again */
-	lock_rw_unlock(&(*z)->lock);
-	if(!azlock_start) {
-		lock_rw_rdlock(&az->lock);
-	}
-	*z = auth_zone_find(az, nm, nmlen, dclass);
-	*x = auth_xfer_find(az, nm, nmlen, dclass);
-	if(*z) {
-		if(zwr == 0) {
-			lock_rw_rdlock(&(*z)->lock);
-		} else if(zwr == 1) {
-			lock_rw_wrlock(&(*z)->lock);
-		}
-	}
-	if(*x) {
-		lock_basic_lock(&(*x)->lock);
-	}
-	if(!azlock_return) {
-		lock_rw_unlock(&az->lock);
-	}
-}
-
 void xfr_disown_tasks(struct auth_xfer* xfr, struct worker* worker)
 {
 	if(xfr->task_nextprobe->worker == worker) {
