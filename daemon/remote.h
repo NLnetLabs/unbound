@@ -140,7 +140,7 @@ enum fast_reload_notification {
 	fast_reload_notification_printout = 5,
 	/** stop as part of the reload the thread and other threads */
 	fast_reload_notification_reload_stop = 6,
-	/** ack the stop as part of the reload */
+	/** ack the stop as part of the reload, and also ack start */
 	fast_reload_notification_reload_ack = 7,
 	/** resume from stop as part of the reload */
 	fast_reload_notification_reload_start = 8,

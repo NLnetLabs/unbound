@@ -443,6 +443,7 @@ worker_stop_and_wait(struct worker* worker)
 		mesh_delete_all(worker->env.mesh);
 	}
 	fast_reload_worker_pickup_changes(worker);
+	worker_send_reload_ack(worker);
 	verbose(VERB_ALGO, "worker resume after reload");
 }
 

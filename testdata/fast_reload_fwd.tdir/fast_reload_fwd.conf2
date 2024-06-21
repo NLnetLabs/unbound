@@ -12,7 +12,8 @@ server:
 
 forward-zone:
 	name: "."
-	forward-addr: "127.0.0.1@12345"
+	# No addresses makes the server return SERVFAIL for deleted zones.
+	#forward-addr: "127.0.0.1@12345"
 
 remote-control:
 	control-enable: yes
@@ -72,3 +73,15 @@ stub-zone:
 	name: "stub6.org"
 	stub-addr: "127.0.0.1@@NS1_PORT@"
 	stub-prime: no
+
+auth-zone:
+	name: "auth1.org"
+	zonefile: "auth1.zone"
+
+auth-zone:
+	name: "auth3.org"
+	zonefile: "auth2.zone"
+
+auth-zone:
+	name: "auth4.org"
+	zonefile: "auth2.zone"

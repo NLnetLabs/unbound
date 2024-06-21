@@ -5205,6 +5205,7 @@ fr_reload_ipc(struct fast_reload_thread* fr, struct config_file* newcfg,
 	}
 	if(!fr->fr_nopause) {
 		fr_send_notification(fr, fast_reload_notification_reload_start);
+		fr_poll_for_ack(fr);
 	}
 	return result;
 }
@@ -5268,7 +5269,6 @@ fr_load_config(struct fast_reload_thread* fr, struct timeval* time_read,
 	if(gettimeofday(time_reload, NULL) < 0)
 		log_err("gettimeofday: %s", strerror(errno));
 
-	/* Delete old. */
 	if(fr_poll_for_quit(fr)) {
 		config_delete(newcfg);
 		fr_construct_clear(&ct);
@@ -5292,6 +5292,8 @@ fr_load_config(struct fast_reload_thread* fr, struct timeval* time_read,
 			fast_reload_notification_reload_nopause_poll);
 		fr_poll_for_ack(fr);
 	}
+
+	/* Delete old. */
 	config_delete(newcfg);
 	fr_construct_clear(&ct);
 	return 1;
@@ -6013,6 +6015,7 @@ fr_worker_auth_del(struct worker* worker, struct fast_reload_auth_change* item,
 	int for_change)
 {
 	int released = 0; /* Did this routine release callbacks. */
+	struct auth_zone* lookold_z;
 	struct auth_xfer* xfr = NULL;
 
 	lock_rw_wrlock(&item->old_z->lock);
@@ -6026,7 +6029,10 @@ fr_worker_auth_del(struct worker* worker, struct fast_reload_auth_change* item,
 	lock_rw_unlock(&item->old_z->lock);
 
 	lock_rw_rdlock(&item->old_z->lock);
-	auth_zones_lock_xfr(worker->env.auth_zones, &item->old_z, 2, &xfr,
+	/* The auth zones do not contain the zone any more, so the
+	 * lookup is going to return a NULL zone pointer. */
+	lookold_z = item->old_z;
+	auth_zones_lock_xfr(worker->env.auth_zones, &lookold_z, 2, &xfr,
 		0, 0);
 	if(xfr) {
 		/* Release callbacks on the xfr, if this worker holds them. */
@@ -6264,11 +6270,19 @@ fr_main_perform_reload_stop(struct fast_reload_thread* fr)
 		worker_send_cmd(daemon->workers[i], worker_cmd_reload_start);
 	}
 
+	/* Pick up changes for this worker. */
 	if(fr->worker->daemon->fast_reload_drop_mesh) {
 		verbose(VERB_ALGO, "worker: drop mesh queries after reload");
 		mesh_delete_all(fr->worker->env.mesh);
 	}
 	fast_reload_worker_pickup_changes(fr->worker);
+
+	/* Wait for the other threads to ack. */
+	fr_read_ack_from_workers(fr);
+
+	/* Send ack to fast reload thread. */
+	fr_send_cmd_to(fr, fast_reload_notification_reload_ack, 0, 1);
+
 	verbose(VERB_ALGO, "worker resume after reload");
 }
 

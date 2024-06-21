@@ -39,7 +39,7 @@ echo "NS2_PID=$NS2_PID" >> .tpkg.var.test
 
 # start unbound in the background
 PRE="../.."
-$PRE/unbound -d -c ub.conf >unbound.log 2>&1 &
+valgrind --leak-check=full --show-reachable=yes $PRE/unbound -d -c ub.conf >unbound.log 2>&1 &
 UNBOUND_PID=$!
 echo "UNBOUND_PID=$UNBOUND_PID" >> .tpkg.var.test
 echo "CONTROL_PATH=$CONTROL_PATH" >> .tpkg.var.test
