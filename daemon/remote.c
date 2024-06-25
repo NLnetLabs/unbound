@@ -81,6 +81,7 @@
 #include "validator/val_kcache.h"
 #include "validator/val_kentry.h"
 #include "validator/val_anchor.h"
+#include "validator/val_neg.h"
 #include "iterator/iterator.h"
 #include "iterator/iter_fwd.h"
 #include "iterator/iter_hints.h"
@@ -5133,6 +5134,29 @@ fr_atomic_copy_cfg(struct config_file* oldcfg, struct config_file* cfg,
 }
 #endif /* ATOMIC_POINTER_LOCK_FREE */
 
+/** fast reload thread, adjust the cache sizes */
+static void
+fr_adjust_cache(struct module_env* env)
+{
+	size_t inframem = env->cfg->infra_cache_numhosts *
+		(sizeof(struct infra_key) + sizeof(struct infra_data)
+		+ INFRA_BYTES_NAME);
+	slabhash_adjust_size(env->msg_cache, env->cfg->msg_cache_size);
+	slabhash_adjust_size(&env->rrset_cache->table,
+		env->cfg->rrset_cache_size);
+	if(env->key_cache)
+		slabhash_adjust_size(env->key_cache->slab,
+			env->cfg->key_cache_size);
+	slabhash_adjust_size(env->infra_cache->hosts, inframem);
+	slabhash_adjust_size(env->infra_cache->domain_rates,
+		env->cfg->ratelimit_size);
+	slabhash_adjust_size(env->infra_cache->client_ip_rates,
+		env->cfg->ratelimit_size);
+	if(env->neg_cache) {
+		val_neg_adjust_size(env->neg_cache, env->cfg->neg_cache_size);
+	}
+}
+
 /** fast reload thread, reload config with putting the new config items
  * in place and swapping out the old items. */
 static int
@@ -5220,6 +5244,7 @@ fr_reload_config(struct fast_reload_thread* fr, struct config_file* newcfg,
 		else dt_apply_logcfg(daemon->dtenv, env->cfg);
 	}
 #endif
+	fr_adjust_cache(env);
 
 	/* Set globals with new config. */
 	config_apply(env->cfg);

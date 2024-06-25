@@ -71,14 +71,15 @@ Not all options are changed, but it changes like forwards, stubs and
 local zones. Also access-control and interface-action and similar options,
 also tcp-connection-limits, views. It can reload some define-tag changes.
 It does not work with interface, outgoing-interface changes, also not with
-remote-control, outgoing-port-permit, outgoing-port-avoid, msg-buffer-size
-and statistics-interval changes.
+remote-control, outgoing-port-permit, outgoing-port-avoid, msg-buffer-size,
+slabs options and statistics-interval changes.
 .IP
 The fast reload also works on the options: insecure-lan-zones, domain-insecure,
 trust-anchor-file, trust-anchor, trusted-key-file, auto-trust-anchor-file,
 auth-zone and its options, rpz and its options, edns-strings, respip_set,
 view and its options, access-control options, tcp-connection-limit,
-log-identity.
+log-identity, infra-cache-numhosts, msg-cache-size, rrset-cache-size,
+key-cache-size, ratelimit-size, neg-cache-size.
 .IP
 For dnstap, the options can be changed: dnstap-log-resolver-query-messages,
 dnstap-log-resolver-response-messages, dnstap-log-client-query-messages,
