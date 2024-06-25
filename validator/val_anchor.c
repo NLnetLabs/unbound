@@ -1384,17 +1384,17 @@ void
 anchors_swap_tree(struct val_anchors* anchors, struct val_anchors* data)
 {
 	rbtree_type* oldtree;
-	struct autr_global_data* oldautr;
+	rbtree_type oldprobe;
 
 	if(!anchors || !data)
 		return; /* If anchors is NULL, there is no validation. */
 
 	oldtree = anchors->tree;
-	oldautr = anchors->autr;
+	oldprobe = anchors->autr->probe;
 
 	anchors->tree = data->tree;
-	anchors->autr = data->autr;
+	anchors->autr->probe = data->autr->probe;
 
 	data->tree = oldtree;
-	data->autr = oldautr;
+	data->autr->probe = oldprobe;
 }

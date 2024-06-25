@@ -54,6 +54,41 @@ for x in auth1.org auth2.org auth3.org auth5.org auth6.org auth7.org; do
 done
 
 echo ""
+echo "> list_insecure"
+$PRE/unbound-control -c ub.conf list_insecure 2>&1 | tee output
+if test $? -ne 0; then
+	echo "wrong exit value."
+	exit 1
+fi
+if grep "insec1.ta1.example.com" output >/dev/null; then :; else
+	echo "wrong output"
+	exit 1
+fi
+if grep "insec2.ta1.example.com" output >/dev/null; then :; else
+	echo "wrong output"
+	exit 1
+fi
+if grep "insec3.ta1.example.com" output >/dev/null; then :; else
+	echo "wrong output"
+	exit 1
+fi
+echo ""
+echo "> trustanchor.unbound"
+dig @127.0.0.1 -p $UNBOUND_PORT trustanchor.unbound CH TXT 2>&1 | tee outfile
+if grep "ta1.example.com. 55566" outfile >/dev/null; then :; else
+	echo "wrong output ta1"
+	exit 1
+fi
+if grep "ta2.example.com. 55566" outfile >/dev/null; then :; else
+	echo "wrong output"
+	exit 1
+fi
+if grep "ta3.example.com. 55566" outfile >/dev/null; then :; else
+	echo "wrong output"
+	exit 1
+fi
+
+echo ""
 echo "> replace config file ub.conf"
 mv ub.conf ub.conf.orig
 mv ub.conf2 ub.conf
@@ -156,6 +191,53 @@ for x in auth3.org auth4.org auth7.org; do
 		exit 1
 	fi
 done
+
+echo ""
+echo "> list_insecure"
+$PRE/unbound-control -c ub.conf list_insecure 2>&1 | tee output
+if test $? -ne 0; then
+	echo "wrong exit value."
+	exit 1
+fi
+if grep "insec1.ta1.example.com" output >/dev/null; then :; else
+	echo "wrong output"
+	exit 1
+fi
+if grep "insec2.ta1.example.com" output >/dev/null; then
+	echo "wrong output"
+	exit 1
+fi
+if grep "insec3.ta1.example.com" output >/dev/null; then :; else
+	echo "wrong output"
+	exit 1
+fi
+if grep "insec4.ta1.example.com" output >/dev/null; then :; else
+	echo "wrong output"
+	exit 1
+fi
+echo ""
+echo "> trustanchor.unbound"
+dig @127.0.0.1 -p $UNBOUND_PORT trustanchor.unbound CH TXT 2>&1 | tee outfile
+if grep "ta1.example.com. 55566" outfile >/dev/null; then :; else
+	echo "wrong output"
+	exit 1
+fi
+if grep "ta2.example.com. 55566" outfile >/dev/null; then
+	echo "wrong output"
+	exit 1
+fi
+if grep "ta3.example.com. 55566" outfile >/dev/null; then
+	echo "wrong output"
+	exit 1
+fi
+if grep "ta3.example.com. 55567" outfile >/dev/null; then :; else
+	echo "wrong output"
+	exit 1
+fi
+if grep "ta4.example.com. 55566" outfile >/dev/null; then :; else
+	echo "wrong output"
+	exit 1
+fi
 
 echo ""
 echo "> stop unbound"
