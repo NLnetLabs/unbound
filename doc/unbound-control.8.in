@@ -74,6 +74,12 @@ It does not work with interface, outgoing-interface changes, also not with
 remote-control, outgoing-port-permit, outgoing-port-avoid, msg-buffer-size
 and statistics-interval changes.
 .IP
+The fast reload also works on the options: insecure-lan-zones, domain-insecure,
+trust-anchor-file, trust-anchor, trusted-key-file, auto-trust-anchor-file,
+auth-zone and its options, rpz and its options, edns-strings, respip_set,
+view and its options, access-control options, tcp-connection-limit,
+log-identity.
+.IP
 For dnstap, the options can be changed: dnstap-log-resolver-query-messages,
 dnstap-log-resolver-response-messages, dnstap-log-client-query-messages,
 dnstap-log-client-response-messages, dnstap-log-forwarder-query-messages

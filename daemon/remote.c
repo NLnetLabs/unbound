@@ -3964,6 +3964,8 @@ struct fast_reload_construct {
 	int use_rpz;
 	/** construct for edns strings */
 	struct edns_strings* edns_strings;
+	/** construct for trust anchors */
+	struct val_anchors* anchors;
 	/** storage for the old configuration elements. The outer struct
 	 * is allocated with malloc here, the items are from config. */
 	struct config_file* oldcfg;
@@ -4081,6 +4083,7 @@ fr_construct_clear(struct fast_reload_construct* ct)
 	acl_list_delete(ct->acl_interface);
 	tcl_list_delete(ct->tcl);
 	edns_strings_delete(ct->edns_strings);
+	anchors_delete(ct->anchors);
 	views_delete(ct->views);
 	/* Delete the log identity here so that the global value is not
 	 * reset by config_delete. */
@@ -4337,6 +4340,7 @@ fr_printmem(struct fast_reload_thread* fr,
 	mem += acl_list_get_mem(ct->acl_interface);
 	mem += tcl_list_get_mem(ct->tcl);
 	mem += edns_strings_get_mem(ct->edns_strings);
+	mem += anchors_get_mem(ct->anchors);
 	mem += sizeof(*ct->oldcfg);
 	mem += config_file_getmem(newcfg);
 
@@ -4696,6 +4700,20 @@ fr_construct_from_config(struct fast_reload_thread* fr,
 	}
 	if(fr_poll_for_quit(fr))
 		return 1;
+
+	if(fr->worker->env.anchors) {
+		/* There are trust anchors already, so create it for reload. */
+		if(!(ct->anchors = anchors_create())) {
+			fr_construct_clear(ct);
+			return 0;
+		}
+		if(!anchors_apply_cfg(ct->anchors, newcfg)) {
+			fr_construct_clear(ct);
+			return 0;
+		}
+		if(fr_poll_for_quit(fr))
+			return 1;
+	}
 
 	if(!(ct->oldcfg = (struct config_file*)calloc(1,
 		sizeof(*ct->oldcfg)))) {
@@ -5144,6 +5162,10 @@ fr_reload_config(struct fast_reload_thread* fr, struct config_file* newcfg,
 	lock_rw_wrlock(&env->fwds->lock);
 	lock_rw_wrlock(&ct->hints->lock);
 	lock_rw_wrlock(&env->hints->lock);
+	if(ct->anchors) {
+		lock_basic_lock(&ct->anchors->lock);
+		lock_basic_lock(&env->anchors->lock);
+	}
 
 #ifdef ATOMIC_POINTER_LOCK_FREE
 	if(fr->fr_nopause) {
@@ -5186,6 +5208,7 @@ fr_reload_config(struct fast_reload_thread* fr, struct config_file* newcfg,
 	daemon->use_rpz = ct->use_rpz;
 	auth_zones_swap(env->auth_zones, ct->auth_zones);
 	edns_strings_swap_tree(env->edns_strings, ct->edns_strings);
+	anchors_swap_tree(env->anchors, ct->anchors);
 #ifdef USE_CACHEDB
 	daemon->env->cachedb_enabled = cachedb_is_enabled(&daemon->mods,
 		daemon->env);
@@ -5215,6 +5238,10 @@ fr_reload_config(struct fast_reload_thread* fr, struct config_file* newcfg,
 	lock_rw_unlock(&ct->fwds->lock);
 	lock_rw_unlock(&env->hints->lock);
 	lock_rw_unlock(&ct->hints->lock);
+	if(ct->anchors) {
+		lock_basic_unlock(&ct->anchors->lock);
+		lock_basic_unlock(&env->anchors->lock);
+	}
 
 	return 1;
 }
