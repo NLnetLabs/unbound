@@ -413,6 +413,7 @@ void mesh_new_client(struct mesh_area* mesh, struct query_info* qinfo,
 	int timeout = mesh->env->cfg->serve_expired?
 		mesh->env->cfg->serve_expired_client_timeout:0;
 	struct sldns_buffer* r_buffer = rep->c->buffer;
+	uint16_t mesh_flags = qflags&(BIT_RD|BIT_CD);
 	if(rep->c->tcp_req_info) {
 		r_buffer = rep->c->tcp_req_info->spool_buffer;
 	}
@@ -425,7 +426,7 @@ void mesh_new_client(struct mesh_area* mesh, struct query_info* qinfo,
 		return;
 	}
 	if(!unique)
-		s = mesh_area_find(mesh, cinfo, qinfo, qflags&(BIT_RD|BIT_CD), 0, 0);
+		s = mesh_area_find(mesh, cinfo, qinfo, mesh_flags, 0, 0);
 	/* does this create a new reply state? */
 	if(!s || s->list_select == mesh_no_list) {
 		if(!mesh_make_new_space(mesh, rep->c->buffer)) {
@@ -453,7 +454,7 @@ void mesh_new_client(struct mesh_area* mesh, struct query_info* qinfo,
 		struct rbnode_type* n;
 #endif
 		s = mesh_state_create(mesh->env, qinfo, cinfo,
-			qflags&(BIT_RD|BIT_CD), 0, 0);
+			mesh_flags, 0, 0);
 		if(!s) {
 			log_err("mesh_state_create: out of memory; SERVFAIL");
 			if(!inplace_cb_reply_servfail_call(mesh->env, qinfo, NULL, NULL,
@@ -583,8 +584,9 @@ mesh_new_callback(struct mesh_area* mesh, struct query_info* qinfo,
 	int was_detached = 0;
 	int was_noreply = 0;
 	int added = 0;
+	uint16_t mesh_flags = qflags&(BIT_RD|BIT_CD);
 	if(!unique)
-		s = mesh_area_find(mesh, NULL, qinfo, qflags&(BIT_RD|BIT_CD), 0, 0);
+		s = mesh_area_find(mesh, NULL, qinfo, mesh_flags, 0, 0);
 
 	/* there are no limits on the number of callbacks */
 
@@ -594,7 +596,7 @@ mesh_new_callback(struct mesh_area* mesh, struct query_info* qinfo,
 		struct rbnode_type* n;
 #endif
 		s = mesh_state_create(mesh->env, qinfo, NULL,
-			qflags&(BIT_RD|BIT_CD), 0, 0);
+			mesh_flags, 0, 0);
 		if(!s) {
 			return 0;
 		}
@@ -673,8 +675,12 @@ static void mesh_schedule_prefetch(struct mesh_area* mesh,
 	struct query_info* qinfo, uint16_t qflags, time_t leeway, int run,
 	int rpz_passthru)
 {
+	/* Explicitly set the BIT_RD regardless of the client's flags. This is
+	 * for a prefetch query (no client attached) but it needs to be treated
+	 * as a recursion query. */
+	uint16_t mesh_flags = BIT_RD|(qflags&BIT_CD);
 	struct mesh_state* s = mesh_area_find(mesh, NULL, qinfo,
-		qflags&(BIT_RD|BIT_CD), 0, 0);
+		mesh_flags, 0, 0);
 #ifdef UNBOUND_DEBUG
 	struct rbnode_type* n;
 #endif
@@ -694,8 +700,7 @@ static void mesh_schedule_prefetch(struct mesh_area* mesh,
 		return;
 	}
 
-	s = mesh_state_create(mesh->env, qinfo, NULL,
-		qflags&(BIT_RD|BIT_CD), 0, 0);
+	s = mesh_state_create(mesh->env, qinfo, NULL, mesh_flags, 0, 0);
 	if(!s) {
 		log_err("prefetch mesh_state_create: out of memory");
 		return;
@@ -756,14 +761,17 @@ static void mesh_schedule_prefetch_subnet(struct mesh_area* mesh,
 #ifdef UNBOUND_DEBUG
 	struct rbnode_type* n;
 #endif
+	/* Explicitly set the BIT_RD regardless of the client's flags. This is
+	 * for a prefetch query (no client attached) but it needs to be treated
+	 * as a recursion query. */
+	uint16_t mesh_flags = BIT_RD|(qflags&BIT_CD);
 	if(!mesh_make_new_space(mesh, NULL)) {
 		verbose(VERB_ALGO, "Too many queries. dropped prefetch.");
 		mesh->stats_dropped ++;
 		return;
 	}
 
-	s = mesh_state_create(mesh->env, qinfo, NULL,
-		qflags&(BIT_RD|BIT_CD), 0, 0);
+	s = mesh_state_create(mesh->env, qinfo, NULL, mesh_flags, 0, 0);
 	if(!s) {
 		log_err("prefetch_subnet mesh_state_create: out of memory");
 		return;
