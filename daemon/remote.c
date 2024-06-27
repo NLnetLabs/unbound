@@ -3967,6 +3967,12 @@ struct fast_reload_construct {
 	struct edns_strings* edns_strings;
 	/** construct for trust anchors */
 	struct val_anchors* anchors;
+	/** construct for nsec3 key size */
+	size_t* nsec3_keysize;
+	/** construct for nsec3 max iter */
+	size_t* nsec3_maxiter;
+	/** construct for nsec3 keyiter count */
+	int nsec3_keyiter_count;
 	/** storage for the old configuration elements. The outer struct
 	 * is allocated with malloc here, the items are from config. */
 	struct config_file* oldcfg;
@@ -4069,6 +4075,87 @@ fr_check_tag_defines(struct fast_reload_thread* fr, struct config_file* newcfg)
 	return 1;
 }
 
+/** fast reload thread, check if config item has changed, if not add to
+ * the explanatory string. */
+static void
+fr_check_changed_cfg(int cmp, const char* desc, char* str, size_t len)
+{
+	if(!cmp) {
+		size_t slen = strlen(str);
+		size_t desclen = strlen(desc);
+		if(slen == 0) {
+			snprintf(str, len, "%s", desc);
+			return;
+		}
+		if(len - slen < desclen+2)
+			return; /* It does not fit */
+		snprintf(str+slen, len-slen, " %s", desc);
+	}
+}
+
+/** fast reload thread, check if config string has changed, checks NULLs. */
+static void
+fr_check_changed_cfg_str(char* cmp1, char* cmp2, const char* desc, char* str,
+	size_t len)
+{
+	if((!cmp1 && cmp2)  ||
+		(cmp1 && !cmp2) ||
+		(cmp1 && cmp2 && strcmp(cmp1, cmp2) != 0)) {
+		fr_check_changed_cfg(0, desc, str, len);
+	}
+}
+
+/** fast reload thread, check nopause config items */
+static int
+fr_check_nopause_cfg(struct fast_reload_thread* fr, struct config_file* newcfg)
+{
+	char changed_str[1024];
+	struct config_file* cfg = fr->worker->env.cfg;
+	if(!fr->fr_nopause)
+		return 1; /* The nopause is not enabled, so no problem. */
+	changed_str[0]=0;
+
+	/* Check for val_env. */
+	fr_check_changed_cfg(cfg->bogus_ttl != newcfg->bogus_ttl,
+		"val-bogus-ttl", changed_str, sizeof(changed_str));
+	fr_check_changed_cfg(
+		cfg->val_date_override != newcfg->val_date_override,
+		"val-date-override", changed_str, sizeof(changed_str));
+	fr_check_changed_cfg(cfg->val_sig_skew_min != newcfg->val_sig_skew_min,
+		"val-sig-skew-min", changed_str, sizeof(changed_str));
+	fr_check_changed_cfg(cfg->val_sig_skew_max != newcfg->val_sig_skew_max,
+		"val-sig-skew-max", changed_str, sizeof(changed_str));
+	fr_check_changed_cfg(cfg->val_max_restart != newcfg->val_max_restart,
+		"val-max-restart", changed_str, sizeof(changed_str));
+	fr_check_changed_cfg(strcmp(cfg->val_nsec3_key_iterations,
+		newcfg->val_nsec3_key_iterations) != 0,
+		"val-nsec3-keysize-iterations", changed_str,
+		sizeof(changed_str));
+
+	/* Check for dnstap. */
+	fr_check_changed_cfg(
+		cfg->dnstap_send_identity != newcfg->dnstap_send_identity,
+		"dnstap-send-identity", changed_str, sizeof(changed_str));
+	fr_check_changed_cfg(
+		cfg->dnstap_send_version != newcfg->dnstap_send_version,
+		"dnstap-send-version", changed_str, sizeof(changed_str));
+	fr_check_changed_cfg_str(cfg->dnstap_identity, newcfg->dnstap_identity,
+		"dnstap-identity", changed_str, sizeof(changed_str));
+	fr_check_changed_cfg_str(cfg->dnstap_version, newcfg->dnstap_version,
+		"dnstap-version", changed_str, sizeof(changed_str));
+
+	if(changed_str[0] != 0) {
+		/* The new config changes some items that need a pause,
+		 * to be able to update the variables. */
+		if(!fr_output_printf(fr, "The config changes items that need "
+			"the +p option disabled: %s\n", changed_str))
+			return 0;
+		fr_send_notification(fr, fast_reload_notification_printout);
+		return 0;
+	}
+	return 1;
+}
+
 /** fast reload thread, clear construct information, deletes items */
 static void
 fr_construct_clear(struct fast_reload_construct* ct)
@@ -4086,6 +4173,8 @@ fr_construct_clear(struct fast_reload_construct* ct)
 	edns_strings_delete(ct->edns_strings);
 	anchors_delete(ct->anchors);
 	views_delete(ct->views);
+	free(ct->nsec3_keysize);
+	free(ct->nsec3_maxiter);
 	/* Delete the log identity here so that the global value is not
 	 * reset by config_delete. */
 	if(ct->oldcfg && ct->oldcfg->log_identity) {
@@ -4716,6 +4805,15 @@ fr_construct_from_config(struct fast_reload_thread* fr,
 			return 1;
 	}
 
+	if(!val_env_parse_key_iter(newcfg->val_nsec3_key_iterations,
+		&ct->nsec3_keysize, &ct->nsec3_maxiter,
+		&ct->nsec3_keyiter_count)) {
+		fr_construct_clear(ct);
+		return 0;
+	}
+	if(fr_poll_for_quit(fr))
+		return 1;
+
 	if(!(ct->oldcfg = (struct config_file*)calloc(1,
 		sizeof(*ct->oldcfg)))) {
 		fr_construct_clear(ct);
@@ -5165,6 +5263,46 @@ fr_adjust_cache(struct module_env* env, struct config_file* oldcfg)
 	}
 }
 
+/** fast reload thread, adjust the validator env */
+static void
+fr_adjust_val_env(struct module_env* env, struct fast_reload_construct* ct,
+	struct config_file* oldcfg)
+{
+	int m;
+	struct val_env* val_env = NULL;
+	if(env->cfg->bogus_ttl == oldcfg->bogus_ttl &&
+		env->cfg->val_date_override == oldcfg->val_date_override &&
+		env->cfg->val_sig_skew_min == oldcfg->val_sig_skew_min &&
+		env->cfg->val_sig_skew_max == oldcfg->val_sig_skew_max &&
+		env->cfg->val_max_restart == oldcfg->val_max_restart &&
+		strcmp(env->cfg->val_nsec3_key_iterations,
+		oldcfg->val_nsec3_key_iterations) == 0)
+		return; /* no changes */
+
+	/* Because the validator env is not locked, the update cannot happen
+	 * when fr nopause is used. Without it the fast reload pauses the
+	 * other threads, so they are not currently using the structure. */
+	m = modstack_find(&env->mesh->mods, "validator");
+	if(m != -1) val_env = (struct val_env*)env->modinfo[m];
+	if(val_env) {
+		/* Swap the arrays so that the delete happens afterwards. */
+		size_t* oldkeysize = val_env->nsec3_keysize;
+		size_t* oldmaxiter = val_env->nsec3_maxiter;
+		val_env->nsec3_keysize = NULL;
+		val_env->nsec3_maxiter = NULL;
+		val_env_apply_cfg(val_env, env->cfg, ct->nsec3_keysize,
+			ct->nsec3_maxiter, ct->nsec3_keyiter_count);
+		ct->nsec3_keysize = oldkeysize;
+		ct->nsec3_maxiter = oldmaxiter;
+		if(env->neg_cache) {
+			lock_basic_lock(&env->neg_cache->lock);
+			env->neg_cache->nsec3_max_iter = val_env->
+				nsec3_maxiter[val_env->nsec3_keyiter_count-1];
+			lock_basic_unlock(&env->neg_cache->lock);
+		}
+	}
+}
+
 /** fast reload thread, reload config with putting the new config items
  * in place and swapping out the old items. */
 static int
@@ -5253,6 +5391,9 @@ fr_reload_config(struct fast_reload_thread* fr, struct config_file* newcfg,
 	}
 #endif
 	fr_adjust_cache(env, ct->oldcfg);
+	if(!fr->fr_nopause) {
+		fr_adjust_val_env(env, ct, ct->oldcfg);
+	}
 
 	/* Set globals with new config. */
 	config_apply(env->cfg);
@@ -5381,6 +5522,10 @@ fr_load_config(struct fast_reload_thread* fr, struct timeval* time_read,
 
 	/* Check if the config can be loaded */
 	if(!fr_check_tag_defines(fr, newcfg)) {
+		config_delete(newcfg);
+		return 0;
+	}
+	if(!fr_check_nopause_cfg(fr, newcfg)) {
 		config_delete(newcfg);
 		return 0;
 	}
