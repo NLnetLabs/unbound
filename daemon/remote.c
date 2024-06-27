@@ -6256,6 +6256,22 @@ fr_poll_for_reload_start(struct fast_reload_thread* fr)
 	}
 }
 
+/** Pick up the worker mesh changes, after fast reload. */
+void
+fr_worker_pickup_mesh(struct worker* worker)
+{
+	struct mesh_area* mesh = worker->env.mesh;
+	struct config_file* cfg = worker->env.cfg;
+	mesh->use_response_ip = worker->daemon->use_response_ip;
+	mesh->use_rpz = worker->daemon->use_rpz;
+	mesh->max_reply_states = cfg->num_queries_per_thread;
+	mesh->max_forever_states = (mesh->max_reply_states+1)/2;
+#ifndef S_SPLINT_S
+	mesh->jostle_max.tv_sec = (time_t)(cfg->jostle_time / 1000);
+	mesh->jostle_max.tv_usec = (time_t)((cfg->jostle_time % 1000)*1000);
+#endif
+}
+
 /**
  * Remove the old tcl_addr entries from the open connections.
  * They are only incremented when an accept is performed on a tcp comm point.
@@ -6556,7 +6572,7 @@ fast_reload_worker_pickup_changes(struct worker* worker)
 	 * up the new information. But in the mean time, the reload has
 	 * swapped in trees, and the worker has been running with the
 	 * older information for some time. */
-	worker->env.mesh->use_response_ip = worker->daemon->use_response_ip;
+	fr_worker_pickup_mesh(worker);
 
 	/* If the tcp connection limit has changed, the open connections
 	 * need to remove their reference for the old tcp limits counters. */

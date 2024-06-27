@@ -79,7 +79,8 @@ trust-anchor-file, trust-anchor, trusted-key-file, auto-trust-anchor-file,
 auth-zone and its options, rpz and its options, edns-strings, respip_set,
 view and its options, access-control options, tcp-connection-limit,
 log-identity, infra-cache-numhosts, msg-cache-size, rrset-cache-size,
-key-cache-size, ratelimit-size, neg-cache-size.
+key-cache-size, ratelimit-size, neg-cache-size, num-queries-per-thread,
+jostle-timeout.
 .IP
 For dnstap, the options can be changed: dnstap-log-resolver-query-messages,
 dnstap-log-resolver-response-messages, dnstap-log-client-query-messages,
