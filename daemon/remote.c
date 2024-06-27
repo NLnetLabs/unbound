@@ -4158,7 +4158,8 @@ fr_check_compat_cfg(struct fast_reload_thread* fr, struct config_file* newcfg)
 		/* The new config changes some items that do not work with
 		 * fast reload. */
 		if(!fr_output_printf(fr, "The config changes items that are "
-			"not compatible with fast_reload: %s\n", changed_str))
+			"not compatible with fast_reload, perhaps do reload "
+			"or restart: %s\n", changed_str))
 			return 0;
 		fr_send_notification(fr, fast_reload_notification_printout);
 		return 0;
