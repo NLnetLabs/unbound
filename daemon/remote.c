@@ -4210,7 +4210,8 @@ fr_check_nopause_cfg(struct fast_reload_thread* fr, struct config_file* newcfg)
 		/* The new config changes some items that need a pause,
 		 * to be able to update the variables. */
 		if(!fr_output_printf(fr, "The config changes items that need "
-			"the +p option disabled: %s\n", changed_str))
+			"the fast_reload +p option, for nopause, "
+			"disabled to be reloaded: %s\n", changed_str))
 			return 0;
 		fr_send_notification(fr, fast_reload_notification_printout);
 		return 0;
