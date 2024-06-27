@@ -4105,6 +4105,67 @@ fr_check_changed_cfg_str(char* cmp1, char* cmp2, const char* desc, char* str,
 	}
 }
 
+/** fast reload thread, check compatible config items */
+static int
+fr_check_compat_cfg(struct fast_reload_thread* fr, struct config_file* newcfg)
+{
+	char changed_str[1024];
+	struct config_file* cfg = fr->worker->env.cfg;
+	changed_str[0]=0;
+
+	/* Find incompatible options, and if so, print an error. */
+	fr_check_changed_cfg(cfg->num_threads != newcfg->num_threads,
+		"num-threads", changed_str, sizeof(changed_str));
+	fr_check_changed_cfg(cfg->do_ip4 != newcfg->do_ip4,
+		"do-ip4", changed_str, sizeof(changed_str));
+	fr_check_changed_cfg(cfg->do_ip6 != newcfg->do_ip6,
+		"do-ip6", changed_str, sizeof(changed_str));
+	fr_check_changed_cfg(cfg->do_udp != newcfg->do_udp,
+		"do-udp", changed_str, sizeof(changed_str));
+	fr_check_changed_cfg(cfg->do_tcp != newcfg->do_tcp,
+		"do-tcp", changed_str, sizeof(changed_str));
+	fr_check_changed_cfg(cfg->port != newcfg->port,
+		"port", changed_str, sizeof(changed_str));
+	fr_check_changed_cfg(
+		cfg->outgoing_num_ports != newcfg->outgoing_num_ports,
+		"outgoing_num_ports", changed_str, sizeof(changed_str));
+	fr_check_changed_cfg(cfg->outgoing_num_tcp != newcfg->outgoing_num_tcp,
+		"outgoing_num_tcp", changed_str, sizeof(changed_str));
+	fr_check_changed_cfg(cfg->incoming_num_tcp != newcfg->incoming_num_tcp,
+		"incoming_num_tcp", changed_str, sizeof(changed_str));
+	fr_check_changed_cfg(cfg->incoming_num_tcp != newcfg->incoming_num_tcp,
+		"incoming_num_tcp", changed_str, sizeof(changed_str));
+	fr_check_changed_cfg(cfg->num_out_ifs != newcfg->num_out_ifs,
+		"outgoing-interface", changed_str, sizeof(changed_str));
+	fr_check_changed_cfg(cfg->num_ifs != newcfg->num_ifs,
+		"interface", changed_str, sizeof(changed_str));
+	fr_check_changed_cfg(cfg->if_automatic != newcfg->if_automatic,
+		"interface-automatic", changed_str, sizeof(changed_str));
+	fr_check_changed_cfg(cfg->so_rcvbuf != newcfg->so_rcvbuf,
+		"so-rcvbuf", changed_str, sizeof(changed_str));
+	fr_check_changed_cfg(cfg->so_sndbuf != newcfg->so_sndbuf,
+		"so-sndbuf", changed_str, sizeof(changed_str));
+	fr_check_changed_cfg(cfg->so_reuseport != newcfg->so_reuseport,
+		"so-reuseport", changed_str, sizeof(changed_str));
+	fr_check_changed_cfg(cfg->ip_transparent != newcfg->ip_transparent,
+		"ip-transparent", changed_str, sizeof(changed_str));
+	fr_check_changed_cfg(cfg->ip_freebind != newcfg->ip_freebind,
+		"ip-freebind", changed_str, sizeof(changed_str));
+	fr_check_changed_cfg(cfg->udp_connect != newcfg->udp_connect,
+		"udp-connect", changed_str, sizeof(changed_str));
+
+	if(changed_str[0] != 0) {
+		/* The new config changes some items that do not work with
+		 * fast reload. */
+		if(!fr_output_printf(fr, "The config changes items that are "
+			"not compatible with fast_reload: %s\n", changed_str))
+			return 0;
+		fr_send_notification(fr, fast_reload_notification_printout);
+		return 0;
+	}
+	return 1;
+}
+
 /** fast reload thread, check nopause config items */
 static int
 fr_check_nopause_cfg(struct fast_reload_thread* fr, struct config_file* newcfg)
@@ -5522,6 +5583,10 @@ fr_load_config(struct fast_reload_thread* fr, struct timeval* time_read,
 
 	/* Check if the config can be loaded */
 	if(!fr_check_tag_defines(fr, newcfg)) {
+		config_delete(newcfg);
+		return 0;
+	}
+	if(!fr_check_compat_cfg(fr, newcfg)) {
 		config_delete(newcfg);
 		return 0;
 	}
