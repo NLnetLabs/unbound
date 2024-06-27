@@ -357,6 +357,7 @@ infra_create(struct config_file* cfg)
 		return NULL;
 	}
 	infra_ip_ratelimit = cfg->ip_ratelimit;
+	infra_ip_ratelimit_cookie = cfg->ip_ratelimit_cookie;
 	infra->client_ip_rates = slabhash_create(cfg->ip_ratelimit_slabs,
 	    INFRA_HOST_STARTSIZE, cfg->ip_ratelimit_size, &ip_rate_sizefunc,
 	    &ip_rate_compfunc, &ip_rate_delkeyfunc, &ip_rate_deldatafunc, NULL);
@@ -408,6 +409,7 @@ infra_adjust(struct infra_cache* infra, struct config_file* cfg)
 	infra->infra_keep_probing = cfg->infra_keep_probing;
 	infra_dp_ratelimit = cfg->ratelimit;
 	infra_ip_ratelimit = cfg->ip_ratelimit;
+	infra_ip_ratelimit_cookie = cfg->ip_ratelimit_cookie;
 	maxmem = cfg->infra_cache_numhosts * (sizeof(struct infra_key)+
 		sizeof(struct infra_data)+INFRA_BYTES_NAME);
 	/* divide cachesize by slabs and multiply by slabs, because if the
