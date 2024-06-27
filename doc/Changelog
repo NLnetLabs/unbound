@@ -1,3 +1,8 @@
+26 June 2024: Yorgos
+	- Explicitly set the RD bit for the mesh query flags when prefetching.
+	  These queries have no waiting client but they need to be treated as
+	  recursive.
+
 21 June 2024: Yorgos
 	- Fix pkg-config availability check in dnstap/dnstap.m4 and
 	  systemd.m4.
