@@ -4128,13 +4128,11 @@ fr_check_compat_cfg(struct fast_reload_thread* fr, struct config_file* newcfg)
 		"port", changed_str, sizeof(changed_str));
 	fr_check_changed_cfg(
 		cfg->outgoing_num_ports != newcfg->outgoing_num_ports,
-		"outgoing_num_ports", changed_str, sizeof(changed_str));
+		"outgoing-range", changed_str, sizeof(changed_str));
 	fr_check_changed_cfg(cfg->outgoing_num_tcp != newcfg->outgoing_num_tcp,
-		"outgoing_num_tcp", changed_str, sizeof(changed_str));
+		"outgoing-num-tcp", changed_str, sizeof(changed_str));
 	fr_check_changed_cfg(cfg->incoming_num_tcp != newcfg->incoming_num_tcp,
-		"incoming_num_tcp", changed_str, sizeof(changed_str));
-	fr_check_changed_cfg(cfg->incoming_num_tcp != newcfg->incoming_num_tcp,
-		"incoming_num_tcp", changed_str, sizeof(changed_str));
+		"incoming-num-tcp", changed_str, sizeof(changed_str));
 	fr_check_changed_cfg(cfg->num_out_ifs != newcfg->num_out_ifs,
 		"outgoing-interface", changed_str, sizeof(changed_str));
 	fr_check_changed_cfg(cfg->num_ifs != newcfg->num_ifs,
