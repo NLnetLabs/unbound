@@ -5136,23 +5136,31 @@ fr_atomic_copy_cfg(struct config_file* oldcfg, struct config_file* cfg,
 
 /** fast reload thread, adjust the cache sizes */
 static void
-fr_adjust_cache(struct module_env* env)
+fr_adjust_cache(struct module_env* env, struct config_file* oldcfg)
 {
-	size_t inframem = env->cfg->infra_cache_numhosts *
-		(sizeof(struct infra_key) + sizeof(struct infra_data)
-		+ INFRA_BYTES_NAME);
-	slabhash_adjust_size(env->msg_cache, env->cfg->msg_cache_size);
-	slabhash_adjust_size(&env->rrset_cache->table,
-		env->cfg->rrset_cache_size);
-	if(env->key_cache)
+	if(env->cfg->msg_cache_size != oldcfg->msg_cache_size)
+		slabhash_adjust_size(env->msg_cache, env->cfg->msg_cache_size);
+	if(env->cfg->rrset_cache_size != oldcfg->rrset_cache_size)
+		slabhash_adjust_size(&env->rrset_cache->table,
+			env->cfg->rrset_cache_size);
+	if(env->key_cache &&
+		env->cfg->key_cache_size != oldcfg->key_cache_size)
 		slabhash_adjust_size(env->key_cache->slab,
 			env->cfg->key_cache_size);
-	slabhash_adjust_size(env->infra_cache->hosts, inframem);
-	slabhash_adjust_size(env->infra_cache->domain_rates,
-		env->cfg->ratelimit_size);
-	slabhash_adjust_size(env->infra_cache->client_ip_rates,
-		env->cfg->ratelimit_size);
-	if(env->neg_cache) {
+	if(env->cfg->infra_cache_numhosts != oldcfg->infra_cache_numhosts) {
+		size_t inframem = env->cfg->infra_cache_numhosts *
+			(sizeof(struct infra_key) + sizeof(struct infra_data)
+			+ INFRA_BYTES_NAME);
+		slabhash_adjust_size(env->infra_cache->hosts, inframem);
+	}
+	if(env->cfg->ratelimit_size != oldcfg->ratelimit_size) {
+		slabhash_adjust_size(env->infra_cache->domain_rates,
+			env->cfg->ratelimit_size);
+		slabhash_adjust_size(env->infra_cache->client_ip_rates,
+			env->cfg->ratelimit_size);
+	}
+	if(env->neg_cache &&
+		env->cfg->neg_cache_size != oldcfg->neg_cache_size) {
 		val_neg_adjust_size(env->neg_cache, env->cfg->neg_cache_size);
 	}
 }
@@ -5244,7 +5252,7 @@ fr_reload_config(struct fast_reload_thread* fr, struct config_file* newcfg,
 		else dt_apply_logcfg(daemon->dtenv, env->cfg);
 	}
 #endif
-	fr_adjust_cache(env);
+	fr_adjust_cache(env, ct->oldcfg);
 
 	/* Set globals with new config. */
 	config_apply(env->cfg);
