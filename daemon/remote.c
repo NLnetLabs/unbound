@@ -4080,7 +4080,7 @@ fr_check_tag_defines(struct fast_reload_thread* fr, struct config_file* newcfg)
 static void
 fr_check_changed_cfg(int cmp, const char* desc, char* str, size_t len)
 {
-	if(!cmp) {
+	if(cmp) {
 		size_t slen = strlen(str);
 		size_t desclen = strlen(desc);
 		if(slen == 0) {
@@ -4101,7 +4101,7 @@ fr_check_changed_cfg_str(char* cmp1, char* cmp2, const char* desc, char* str,
 	if((!cmp1 && cmp2)  ||
 		(cmp1 && !cmp2) ||
 		(cmp1 && cmp2 && strcmp(cmp1, cmp2) != 0)) {
-		fr_check_changed_cfg(0, desc, str, len);
+		fr_check_changed_cfg(1, desc, str, len);
 	}
 }
 
