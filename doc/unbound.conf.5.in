@@ -1978,6 +1978,19 @@ Useful to explicitly set for servers in an anycast deployment that need to
 share the secret in order to verify each other's Server Cookies.
 An example hex string would be "000102030405060708090a0b0c0d0e0f".
 Default is a 128 bits random secret generated at startup time.
+This option is ignored if a \fBcookie\-secret\-file\fR is
+present.  In that case the secrets from that file are used in DNS Cookie
+calculations.
+.TP 5
+.B cookie\-secret\-file: \fI<filename>
+File from which the secrets are read used in DNS Cookie calculations. When this
+file exists, the secrets in this file are used and the secret specified by the
+\fBcookie-secret\fR option is ignored. Default is "". With "" it is disabled.
+Enable it by setting a filename, like "/usr/local/etc/unbound_cookiesecrets.txt".
+The content of this file must be manipulated with the \fBadd_cookie_secret\fR,
+\fBdrop_cookie_secret\fR and \fBactivate_cookie_secret\fR commands to the
+\fIunbound\-control\fR(8) tool. Please see that manpage how to perform a safe
+cookie secret rollover.
 .TP 5
 .B edns\-client\-string: \fI<IP netblock> <string>
 Include an EDNS0 option containing configured ascii string in queries with

@@ -47,6 +47,7 @@
 #ifdef HAVE_NETIOAPI_H
 #include <netioapi.h>
 #endif
+#include <ctype.h>
 #include "util/net_help.h"
 #include "util/log.h"
 #include "util/data/dname.h"
@@ -1871,3 +1872,42 @@ sock_close(int socket)
 	closesocket(socket);
 }
 #  endif /* USE_WINSOCK */
+
+ssize_t
+hex_ntop(uint8_t const *src, size_t srclength, char *target, size_t targsize)
+{
+	static char hexdigits[] = {
+		'0', '1', '2', '3', '4', '5', '6', '7',
+		'8', '9', 'a', 'b', 'c', 'd', 'e', 'f'
+	};
+	size_t i;
+
+	if (targsize < srclength * 2 + 1) {
+		return -1;
+	}
+
+	for (i = 0; i < srclength; ++i) {
+		*target++ = hexdigits[src[i] >> 4U];
+		*target++ = hexdigits[src[i] & 0xfU];
+	}
+	*target = '\0';
+	return 2 * srclength;
+}
+
+ssize_t
+hex_pton(const char* src, uint8_t* target, size_t targsize)
+{
+	uint8_t *t = target;
+	if(strlen(src) % 2 != 0 || strlen(src)/2 > targsize) {
+		return -1;
+	}
+	while(*src) {
+		if(!isxdigit((unsigned char)src[0]) ||
+			!isxdigit((unsigned char)src[1]))
+			return -1;
+		*t++ = sldns_hexdigit_to_int(src[0]) * 16 +
+			sldns_hexdigit_to_int(src[1]) ;
+		src += 2;
+	}
+	return t-target;
+}

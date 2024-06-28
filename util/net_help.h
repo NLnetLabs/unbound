@@ -572,4 +572,13 @@ char* sock_strerror(int errn);
 /** close the socket with close, or wsa closesocket */
 void sock_close(int socket);
 
+/**
+ * Convert binary data to a string of hexadecimal characters.
+ */
+ssize_t hex_ntop(uint8_t const *src, size_t srclength, char *target,
+		 size_t targsize);
+
+/** Convert hexadecimal data to binary. */
+ssize_t hex_pton(const char* src, uint8_t* target, size_t targsize);
+
 #endif /* NET_HELP_H */
