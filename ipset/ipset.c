@@ -17,8 +17,6 @@
 #include "sldns/wire2str.h"
 #include "sldns/parseutil.h"
 
-#include <stdint.h>
-
 #ifdef HAVE_NET_PFVAR_H
 #include <fcntl.h>
 #include <sys/ioctl.h>
@@ -225,7 +223,7 @@ ipset_add_rrset_data(struct ipset_env *ie,
 
 static int
 ipset_check_zones_for_rrset(struct module_env *env, struct ipset_env *ie,
-	struct ub_packed_rrset_key *rrset, const char *qname, const int qlen,
+	struct ub_packed_rrset_key *rrset, const char *qname, int qlen,
 	const char *setname, int af)
 {
 	static char dname[BUFF_LEN];
@@ -242,6 +240,9 @@ ipset_check_zones_for_rrset(struct module_env *env, struct ipset_env *ie,
 	}
 	if (dname[dlen - 1] == '.') {
 		dlen--;
+	}
+	if (qname[qlen - 1] == '.') {
+		qlen--;
 	}
 
 	for (p = env->cfg->local_zones_ipset; p; p = p->next) {
@@ -344,10 +345,24 @@ int ipset_startup(struct module_env* env, int id) {
 }
 
 void ipset_destartup(struct module_env* env, int id) {
-	struct ipset_env *ipset_env = env->modinfo[id];
-#ifdef HAVE_NET_PFVAR_H
-	close((filter_dev)ipset_env->dev);
+	filter_dev dev;
+	struct ipset_env *ipset_env;
+
+	if (!env || !env->modinfo[id]) {
+		return;
+	}
+	ipset_env = (struct ipset_env*)env->modinfo[id];
+
+	dev = (filter_dev)ipset_env->dev;
+	if (dev) {
+#if HAVE_NET_PFVAR_H
+		close(dev);
+#else
+		mnl_socket_close(dev);
 #endif
+		ipset_env->dev = NULL;
+	}
+
 	free(ipset_env);
 	env->modinfo[id] = NULL;
 }
@@ -369,28 +384,8 @@ int ipset_init(struct module_env* env, int id) {
 	return 1;
 }
 
-void ipset_deinit(struct module_env *env, int id) {
-	filter_dev dev;
-	struct ipset_env *ipset_env;
-
-	if (!env || !env->modinfo[id]) {
-		return;
-	}
-
-	ipset_env = (struct ipset_env *)env->modinfo[id];
-
-	dev = (filter_dev)ipset_env->dev;
-	if (dev) {
-#if HAVE_NET_PFVAR_H
-		close(dev);
-#else
-		mnl_socket_close(dev);
-#endif
-		ipset_env->dev = NULL;
-	}
-
-	free(ipset_env);
-	env->modinfo[id] = NULL;
+void ipset_deinit(struct module_env *ATTR_UNUSED(env), int ATTR_UNUSED(id)) {
+	/* nothing */
 }
 
 static int ipset_new(struct module_qstate* qstate, int id) {
