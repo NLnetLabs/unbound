@@ -57,7 +57,7 @@ static void * open_filter() {
 
 	dev = open("/dev/pf", O_RDWR);
 	if (dev == -1) {
-		log_err("open(\"/dev/pf\") failed");
+		log_err("open(\"/dev/pf\") failed: %s", strerror(errno));
 		return NULL;
 	}
 	else
