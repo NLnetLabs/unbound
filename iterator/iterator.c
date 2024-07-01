@@ -80,7 +80,7 @@ int BLACKLIST_PENALTY = (120000*4);
 static void target_count_increase_nx(struct iter_qstate* iq, int num);
 
 int 
-iter_setup(struct module_env* env, int id)
+iter_init(struct module_env* env, int id)
 {
 	struct iter_env* iter_env = (struct iter_env*)calloc(1,
 		sizeof(struct iter_env));
@@ -114,7 +114,7 @@ caps_free(struct rbnode_type* n, void* ATTR_UNUSED(d))
 }
 
 void 
-iter_desetup(struct module_env* env, int id)
+iter_deinit(struct module_env* env, int id)
 {
 	struct iter_env* iter_env;
 	if(!env || !env->modinfo[id])
@@ -4489,8 +4489,8 @@ iter_get_mem(struct module_env* env, int id)
  */
 static struct module_func_block iter_block = {
 	"iterator",
-	&module_dummy_init, &module_dummy_init, &iter_setup, &iter_desetup,
-	&iter_operate, &iter_inform_super, &iter_clear, &iter_get_mem
+	&iter_init, &iter_deinit, NULL, NULL, &iter_operate,
+	&iter_inform_super, &iter_clear, &iter_get_mem
 };
 
 struct module_func_block* 

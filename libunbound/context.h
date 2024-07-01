@@ -337,4 +337,7 @@ struct ctx_query* context_deserialize_answer(struct ub_ctx* ctx,
 struct ctx_query* context_deserialize_cancel(struct ub_ctx* ctx, 
 	uint8_t* p, uint32_t len);
 
+/** If the modules have started. */
+extern int modstack_started;
+
 #endif /* LIBUNBOUND_CONTEXT_H */

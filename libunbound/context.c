@@ -56,6 +56,9 @@
 #include "iterator/iter_fwd.h"
 #include "iterator/iter_hints.h"
 
+/** If the modules have started, once. */
+int modstack_started = 0;
+
 int 
 context_finalize(struct ub_ctx* ctx)
 {
@@ -75,9 +78,12 @@ context_finalize(struct ub_ctx* ctx)
 	ctx->pipe_pid = getpid();
 	cfg_apply_local_port_policy(cfg, 65536);
 	config_apply(cfg);
-	if(!modstack_init(&ctx->mods, cfg->module_conf, ctx->env))
-		return UB_INITFAIL;
-	if(!modstack_setup(&ctx->mods, cfg->module_conf, ctx->env))
+	if(!modstack_started) {
+		modstack_started = 1;
+		if(!modstack_startup(&ctx->mods, cfg->module_conf, ctx->env))
+			return UB_INITFAIL;
+	}
+	if(!modstack_call_init(&ctx->mods, cfg->module_conf, ctx->env))
 		return UB_INITFAIL;
 	listen_setup_locks();
 	log_edns_known_options(VERB_ALGO, ctx->env);

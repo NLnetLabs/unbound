@@ -473,7 +473,11 @@ perform_setup(struct daemon* daemon, struct config_file* cfg, int debug_mode,
 #endif
 #ifdef HAVE_GETPWNAM
 	struct passwd *pwd = NULL;
+#endif
 
+	if(!daemon_privileged(daemon))
+		fatal_exit("could not do privileged setup");
+#ifdef HAVE_GETPWNAM
 	if(cfg->username && cfg->username[0]) {
 		if((pwd = getpwnam(cfg->username)) == NULL)
 			fatal_exit("user '%s' does not exist.", cfg->username);
@@ -717,9 +721,9 @@ run_daemon(const char* cfgfile, int cmdline_verbose, int debug_mode, int need_pi
 			config_lookup_uid(cfg);
 	
 		/* prepare */
+		if(!daemon_open_shared_ports(daemon))
+			fatal_exit("could not open ports");
 		if(!done_setup) { 
-			if(!daemon_privileged(daemon))
-				fatal_exit("could not do privileged setup");
 			perform_setup(daemon, cfg, debug_mode, &cfgfile, need_pidfile);
 			done_setup = 1; 
 		} else {

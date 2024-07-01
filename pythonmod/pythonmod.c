@@ -777,8 +777,8 @@ size_t pythonmod_get_mem(struct module_env* env, int id)
  */
 static struct module_func_block pythonmod_block = {
    "python",
-   &module_dummy_init, &module_dummy_init, &pythonmod_init, &pythonmod_deinit, &pythonmod_operate, &pythonmod_inform_super,
-   &pythonmod_clear, &pythonmod_get_mem
+   &pythonmod_init, &pythonmod_deinit, NULL, NULL, &pythonmod_operate,
+   &pythonmod_inform_super, &pythonmod_clear, &pythonmod_get_mem
 };
 
 struct module_func_block* pythonmod_get_funcblock(void)

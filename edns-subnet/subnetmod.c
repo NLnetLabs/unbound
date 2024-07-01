@@ -206,7 +206,7 @@ subnet_markdel(void* key)
 }
 
 int
-subnetmod_setup(struct module_env *env, int id)
+subnetmod_init(struct module_env *env, int id)
 {
 	struct subnet_env *sn_env = (struct subnet_env*)calloc(1,
 		sizeof(struct subnet_env));
@@ -275,7 +275,7 @@ subnetmod_setup(struct module_env *env, int id)
 }
 
 void
-subnetmod_desetup(struct module_env *env, int id)
+subnetmod_deinit(struct module_env *env, int id)
 {
 	struct subnet_env *sn_env;
 	if(!env || !env->modinfo[id])
@@ -996,9 +996,8 @@ subnetmod_get_mem(struct module_env *env, int id)
  */
 static struct module_func_block subnetmod_block = {
 	"subnetcache",
-	&module_dummy_init, &module_dummy_init, &subnetmod_setup,
-	&subnetmod_desetup, &subnetmod_operate, &subnetmod_inform_super,
-	&subnetmod_clear, &subnetmod_get_mem
+	&subnetmod_init, &subnetmod_deinit, NULL, NULL, &subnetmod_operate,
+	&subnetmod_inform_super, &subnetmod_clear, &subnetmod_get_mem
 };
 
 struct module_func_block*

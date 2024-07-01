@@ -447,15 +447,12 @@ daemon_open_shared_ports(struct daemon* daemon)
 int
 daemon_privileged(struct daemon* daemon)
 {
-	if(!daemon_open_shared_ports(daemon))
-		fatal_exit("could not open ports");
-
 	daemon->env->cfg = daemon->cfg;
 	daemon->env->alloc = &daemon->superalloc;
 	daemon->env->worker = NULL;
-	if(!modstack_init(&daemon->mods, daemon->cfg->module_conf,
+	if(!modstack_startup(&daemon->mods, daemon->cfg->module_conf,
 		daemon->env)) {
-		fatal_exit("failed to init modules");
+		fatal_exit("failed to startup modules");
 	}
 	return 1;
 }
@@ -470,7 +467,9 @@ static void daemon_setup_modules(struct daemon* daemon)
 	daemon->env->alloc = &daemon->superalloc;
 	daemon->env->worker = NULL;
 	daemon->env->need_to_validate = 0; /* set by module init below */
-	if(!modstack_setup(&daemon->mods, daemon->cfg->module_conf, 
+	if(daemon->mods.num != 0)
+		modstack_deinit(&daemon->mods, daemon->env);
+	if(!modstack_call_init(&daemon->mods, daemon->cfg->module_conf,
 		daemon->env)) {
 		fatal_exit("failed to setup modules");
 	}
@@ -877,7 +876,7 @@ daemon_cleanup(struct daemon* daemon)
 	daemon->views = NULL;
 	if(daemon->env->auth_zones)
 		auth_zones_cleanup(daemon->env->auth_zones);
-	/* key cache is cleared by module desetup during next daemon_fork() */
+	/* key cache is cleared by module deinit during next daemon_fork() */
 	daemon_remote_clear(daemon->rc);
 	for(i=0; i<daemon->num; i++)
 		worker_delete(daemon->workers[i]);
@@ -907,7 +906,8 @@ daemon_delete(struct daemon* daemon)
 	size_t i;
 	if(!daemon)
 		return;
-	modstack_desetup(&daemon->mods, daemon->env);
+	modstack_deinit(&daemon->mods, daemon->env);
+	modstack_destartup(&daemon->mods, daemon->env);
 	daemon_remote_delete(daemon->rc);
 	for(i = 0; i < daemon->num_ports; i++)
 		listening_ports_free(daemon->ports[i]);

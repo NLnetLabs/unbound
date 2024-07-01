@@ -320,10 +320,10 @@ static int ipset_update(struct module_env *env, struct dns_msg *return_msg,
 	return 0;
 }
 
-int ipset_init(struct module_env* env, int id) {
+int ipset_startup(struct module_env* env, int id) {
 	struct ipset_env *ipset_env;
 
-	ipset_env = (struct ipset_env *)malloc(sizeof(struct ipset_env));
+	ipset_env = (struct ipset_env *)calloc(1, sizeof(struct ipset_env));
 	if (!ipset_env) {
 		log_err("malloc failure");
 		return 0;
@@ -343,17 +343,16 @@ int ipset_init(struct module_env* env, int id) {
 	return 1;
 }
 
-int ipset_deinit(struct module_env* env, int id) {
+void ipset_destartup(struct module_env* env, int id) {
 	struct ipset_env *ipset_env = env->modinfo[id];
 #ifdef HAVE_NET_PFVAR_H
 	close((filter_dev)ipset_env->dev);
 #endif
 	free(ipset_env);
 	env->modinfo[id] = NULL;
-	return 1;
 }
 
-int ipset_setup(struct module_env* env, int id) {
+int ipset_init(struct module_env* env, int id) {
 	struct ipset_env *ipset_env = env->modinfo[id];
 
 	ipset_env->name_v4 = env->cfg->ipset_name_v4;
@@ -370,7 +369,7 @@ int ipset_setup(struct module_env* env, int id) {
 	return 1;
 }
 
-void ipset_desetup(struct module_env *env, int id) {
+void ipset_deinit(struct module_env *env, int id) {
 	filter_dev dev;
 	struct ipset_env *ipset_env;
 
@@ -497,7 +496,7 @@ size_t ipset_get_mem(struct module_env *env, int id) {
  */
 static struct module_func_block ipset_block = {
 	"ipset",
-	&ipset_init, &ipset_deinit, &ipset_setup, &ipset_desetup,
+	&ipset_init, &ipset_deinit, &ipset_startup, &ipset_destartup,
 	&ipset_operate, &ipset_inform_super, &ipset_clear, &ipset_get_mem
 };
 

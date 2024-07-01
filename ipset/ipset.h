@@ -50,14 +50,14 @@ struct ipset_qstate {
 	int dummy;
 };
 
+/** Startup the ipset module */
+int ipset_startup(struct module_env* env, int id);
+/** Destartup the ipset module */
+void ipset_destartup(struct module_env* env, int id);
 /** Init the ipset module */
 int ipset_init(struct module_env* env, int id);
 /** Deinit the ipset module */
-int ipset_deinit(struct module_env* env, int id);
-/** Setup the ipset module */
-int ipset_setup(struct module_env* env, int id);
-/** Desetup the ipset module */
-void ipset_desetup(struct module_env* env, int id);
+void ipset_deinit(struct module_env* env, int id);
 /** Operate on an event on a query (in qstate). */
 void ipset_operate(struct module_qstate* qstate, enum module_ev event,
 	int id, struct outbound_entry* outbound);

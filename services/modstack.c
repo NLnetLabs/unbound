@@ -216,7 +216,7 @@ module_func_block* module_factory(const char** str)
 }
 
 int
-modstack_init(struct module_stack* stack, const char* module_conf,
+modstack_startup(struct module_stack* stack, const char* module_conf,
 	struct module_env* env)
 {
 	int i;
@@ -227,11 +227,13 @@ modstack_init(struct module_stack* stack, const char* module_conf,
 		return 0;
         }
         for(i=0; i<stack->num; i++) {
-                verbose(VERB_OPS, "init module %d: %s",
+		if(stack->mod[i]->startup == NULL)
+			continue;
+                verbose(VERB_OPS, "startup module %d: %s",
                         i, stack->mod[i]->name);
-                fptr_ok(fptr_whitelist_mod_init(stack->mod[i]->init));
-                if(!(*stack->mod[i]->init)(env, i)) {
-                        log_err("module init for module %s failed",
+                fptr_ok(fptr_whitelist_mod_startup(stack->mod[i]->startup));
+                if(!(*stack->mod[i]->startup)(env, i)) {
+                        log_err("module startup for module %s failed",
                                 stack->mod[i]->name);
 			return 0;
                 }
@@ -240,7 +242,7 @@ modstack_init(struct module_stack* stack, const char* module_conf,
 }
 
 int
-modstack_setup(struct module_stack* stack, const char* module_conf,
+modstack_call_init(struct module_stack* stack, const char* module_conf,
 	struct module_env* env)
 {
         int i;
@@ -254,26 +256,16 @@ modstack_setup(struct module_stack* stack, const char* module_conf,
 			return 0;
 		}
 		module_conf += strlen(stack->mod[i]->name);
-                verbose(VERB_OPS, "setup module %d: %s",
+                verbose(VERB_OPS, "init module %d: %s",
                         i, stack->mod[i]->name);
-                fptr_ok(fptr_whitelist_mod_setup(stack->mod[i]->setup));
-                if(!(*stack->mod[i]->setup)(env, i)) {
-                        log_err("module setup for module %s failed",
+                fptr_ok(fptr_whitelist_mod_init(stack->mod[i]->init));
+                if(!(*stack->mod[i]->init)(env, i)) {
+                        log_err("module init for module %s failed",
                                 stack->mod[i]->name);
 			return 0;
                 }
         }
 	return 1;
-}
-
-void
-modstack_desetup(struct module_stack* stack, struct module_env* env)
-{
-        int i;
-        for(i=0; i<stack->num; i++) {
-                fptr_ok(fptr_whitelist_mod_desetup(stack->mod[i]->desetup));
-                (*stack->mod[i]->desetup)(env, i);
-        }
 }
 
 void
@@ -283,6 +275,18 @@ modstack_deinit(struct module_stack* stack, struct module_env* env)
         for(i=0; i<stack->num; i++) {
                 fptr_ok(fptr_whitelist_mod_deinit(stack->mod[i]->deinit));
                 (*stack->mod[i]->deinit)(env, i);
+        }
+}
+
+void
+modstack_destartup(struct module_stack* stack, struct module_env* env)
+{
+        int i;
+        for(i=0; i<stack->num; i++) {
+		if(stack->mod[i]->destartup == NULL)
+			continue;
+                fptr_ok(fptr_whitelist_mod_destartup(stack->mod[i]->destartup));
+                (*stack->mod[i]->destartup)(env, i);
         }
         stack->num = 0;
         free(stack->mod);

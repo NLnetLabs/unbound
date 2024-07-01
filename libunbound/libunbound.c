@@ -188,7 +188,8 @@ ub_ctx_create(void)
 		int e = errno;
 		ub_randfree(ctx->seed_rnd);
 		config_delete(ctx->env->cfg);
-		modstack_desetup(&ctx->mods, ctx->env);
+		modstack_deinit(&ctx->mods, ctx->env);
+		modstack_destartup(&ctx->mods, ctx->env);
 		listen_desetup_locks();
 		edns_known_options_delete(ctx->env);
 		edns_strings_delete(ctx->env->edns_strings);
@@ -202,7 +203,8 @@ ub_ctx_create(void)
 		tube_delete(ctx->qq_pipe);
 		ub_randfree(ctx->seed_rnd);
 		config_delete(ctx->env->cfg);
-		modstack_desetup(&ctx->mods, ctx->env);
+		modstack_deinit(&ctx->mods, ctx->env);
+		modstack_destartup(&ctx->mods, ctx->env);
 		listen_desetup_locks();
 		edns_known_options_delete(ctx->env);
 		edns_strings_delete(ctx->env->edns_strings);
@@ -360,8 +362,8 @@ ub_ctx_delete(struct ub_ctx* ctx)
 	}
 	libworker_delete_event(ctx->event_worker);
 
-	modstack_desetup(&ctx->mods, ctx->env);
 	modstack_deinit(&ctx->mods, ctx->env);
+	modstack_destartup(&ctx->mods, ctx->env);
 	a = ctx->alloc_list;
 	while(a) {
 		na = a->super;
