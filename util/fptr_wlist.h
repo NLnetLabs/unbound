@@ -271,6 +271,14 @@ int fptr_whitelist_modenv_detect_cycle(int (*fptr)(
 int fptr_whitelist_mod_init(int (*fptr)(struct module_env* env, int id));
 
 /**
+ * Check function pointer whitelist for module deinit call values.
+ *
+ * @param fptr: function pointer to check.
+ * @return false if not in whitelist.
+ */
+int fptr_whitelist_mod_deinit(int (*fptr)(struct module_env* env, int id));
+
+/**
  * Check function pointer whitelist for module setup call values.
  *
  * @param fptr: function pointer to check.

@@ -420,7 +420,7 @@ fptr_whitelist_mod_setup(int (*fptr)(struct module_env* env, int id))
 	else if(fptr == &dns64_setup) return 1;
 	else if(fptr == &respip_setup) return 1;
 #ifdef WITH_PYTHONMODULE
-	else if(fptr == &pythonmod_setup) return 1;
+	else if(fptr == &pythonmod_init) return 1;
 #endif
 #ifdef WITH_DYNLIBMODULE
 	else if(fptr == &dynlibmod_init) return 1;
@@ -448,7 +448,7 @@ fptr_whitelist_mod_desetup(void (*fptr)(struct module_env* env, int id))
 	else if(fptr == &dns64_desetup) return 1;
 	else if(fptr == &respip_desetup) return 1;
 #ifdef WITH_PYTHONMODULE
-	else if(fptr == &pythonmod_desetup) return 1;
+	else if(fptr == &pythonmod_deinit) return 1;
 #endif
 #ifdef WITH_DYNLIBMODULE
 	else if(fptr == &dynlibmod_deinit) return 1;

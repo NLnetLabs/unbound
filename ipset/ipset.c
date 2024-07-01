@@ -270,6 +270,7 @@ ipset_check_zones_for_rrset(struct module_env *env, struct ipset_env *ie,
 
 static int ipset_update(struct module_env *env, struct dns_msg *return_msg,
 	struct query_info qinfo, struct ipset_env *ie)
+{
 	size_t i;
 	const char *setname;
 	struct ub_packed_rrset_key *rrset;
@@ -344,7 +345,9 @@ int ipset_init(struct module_env* env, int id) {
 
 int ipset_deinit(struct module_env* env, int id) {
 	struct ipset_env *ipset_env = env->modinfo[id];
+#ifdef HAVE_NET_PFVAR_H
 	close((filter_dev)ipset_env->dev);
+#endif
 	free(ipset_env);
 	env->modinfo[id] = NULL;
 	return 1;
