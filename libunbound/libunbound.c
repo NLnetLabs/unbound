@@ -172,7 +172,7 @@ static struct ub_ctx* ub_ctx_create_nopipe(void)
 	ctx->env->alloc = &ctx->superalloc;
 	ctx->env->worker = NULL;
 	ctx->env->need_to_validate = 0;
-	modstack_init(&ctx->mods);
+	memset(&ctx->mods, 0, sizeof(ctx->mods));
 	ctx->env->modstack = &ctx->mods;
 	rbtree_init(&ctx->queries, &context_query_cmp);
 	return ctx;
@@ -361,6 +361,7 @@ ub_ctx_delete(struct ub_ctx* ctx)
 	libworker_delete_event(ctx->event_worker);
 
 	modstack_desetup(&ctx->mods, ctx->env);
+	modstack_deinit(&ctx->mods, ctx->env);
 	a = ctx->alloc_list;
 	while(a) {
 		na = a->super;
