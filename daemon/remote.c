@@ -4113,9 +4113,31 @@ static void
 fr_check_changed_cfg_str(char* cmp1, char* cmp2, const char* desc, char* str,
 	size_t len)
 {
-	if((!cmp1 && cmp2)  ||
+	if((!cmp1 && cmp2) ||
 		(cmp1 && !cmp2) ||
 		(cmp1 && cmp2 && strcmp(cmp1, cmp2) != 0)) {
+		fr_check_changed_cfg(1, desc, str, len);
+	}
+}
+
+/** fast reload thread, check if config strlist has changed. */
+static void
+fr_check_changed_cfg_strlist(struct config_strlist* cmp1,
+	struct config_strlist* cmp2, const char* desc, char* str, size_t len)
+{
+	struct config_strlist* p1 = cmp1, *p2 = cmp2;
+	while(p1 && p2) {
+		if((!p1->str && p2->str) ||
+			(p1->str && !p2->str) ||
+			(p1->str && p2->str && strcmp(p1->str, p2->str) != 0)) {
+			/* The strlist is different. */
+			fr_check_changed_cfg(1, desc, str, len);
+			return;
+		}
+		p1 = p1->next;
+		p2 = p2->next;
+	}
+	if((!p1 && p2) || (p1 && !p2)) {
 		fr_check_changed_cfg(1, desc, str, len);
 	}
 }
@@ -4202,6 +4224,21 @@ fr_check_nopause_cfg(struct fast_reload_thread* fr, struct config_file* newcfg)
 	fr_check_changed_cfg(strcmp(cfg->target_fetch_policy,
 		newcfg->target_fetch_policy) != 0,
 		"target-fetch-policy", changed_str, sizeof(changed_str));
+	fr_check_changed_cfg(
+		cfg->donotquery_localhost != newcfg->donotquery_localhost,
+		"do-not-query-localhost", changed_str, sizeof(changed_str));
+	fr_check_changed_cfg_strlist(cfg->donotqueryaddrs,
+		newcfg->donotqueryaddrs, "do-not-query-localhost",
+		changed_str, sizeof(changed_str));
+	fr_check_changed_cfg_strlist(cfg->private_address,
+		newcfg->private_address, "private-address",
+		changed_str, sizeof(changed_str));
+	fr_check_changed_cfg_strlist(cfg->private_domain,
+		newcfg->private_domain, "private-domain",
+		changed_str, sizeof(changed_str));
+	fr_check_changed_cfg_strlist(cfg->caps_whitelist,
+		newcfg->caps_whitelist, "caps-exempt",
+		changed_str, sizeof(changed_str));
 
 	/* Check for val_env. */
 	fr_check_changed_cfg(cfg->bogus_ttl != newcfg->bogus_ttl,
@@ -5396,6 +5433,10 @@ fr_adjust_iter_env(struct module_env* env, struct fast_reload_construct* ct)
 {
 	int m;
 	struct iter_env* iter_env = NULL;
+	/* There is no comparison here to see if no options changed and thus
+	 * no swap is needed, the trees with addresses and domains can be
+	 * large and that would take too long. Instead the trees are
+	 * swapped in. */
 
 	/* Because the iterator env is not locked, the update cannot happen
 	 * when fr nopause is used. Without it the fast reload pauses the
