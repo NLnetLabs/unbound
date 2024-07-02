@@ -1,3 +1,6 @@
+2 July 2024: Wouter
+	- Fix to remove unused include from the readzone test program.
+
 17 June 2024: Wouter
 	- Fix ip-ratelimit-cookie setting, it was not applied.
 
