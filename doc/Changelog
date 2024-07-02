@@ -1,6 +1,7 @@
 2 July 2024: Wouter
 	- Fix to remove unused include from the readzone test program.
 	- Fix unused variable warning in do_cache_remove.
+	- Fix compile warning in worker pthread id printout.
 
 17 June 2024: Wouter
 	- Fix ip-ratelimit-cookie setting, it was not applied.
