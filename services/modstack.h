@@ -55,6 +55,12 @@ struct module_stack {
 };
 
 /**
+ * Init a stack of modules
+ * @param stack: initialised as empty.
+ */
+void modstack_init(struct module_stack* stack);
+
+/**
  * Initialises modules and assignes ids.
  * @param stack: Expected empty, filled according to module_conf
  * @param module_conf: string what modules to initialize
@@ -97,15 +103,15 @@ const char** module_list_avail(void);
  *	env.need_to_validate is set by the modules.
  * @return on false a module init failed.
  */
-int modstack_call_init(struct module_stack* stack, const char* module_conf,
+int modstack_setup(struct module_stack* stack, const char* module_conf,
 	struct module_env* env);
 
 /**
- * Deinint the modules
+ * Desetup the modules, deinit.
  * @param stack: made empty.
  * @param env: module env for module deinit() calls.
  */
-void modstack_deinit(struct module_stack* stack, struct module_env* env);
+void modstack_desetup(struct module_stack* stack, struct module_env* env);
 
 /**
  * Destartup the modules, close, delete.

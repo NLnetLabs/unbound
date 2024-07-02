@@ -172,7 +172,7 @@ static struct ub_ctx* ub_ctx_create_nopipe(void)
 	ctx->env->alloc = &ctx->superalloc;
 	ctx->env->worker = NULL;
 	ctx->env->need_to_validate = 0;
-	memset(&ctx->mods, 0, sizeof(ctx->mods));
+	modstack_init(&ctx->mods);
 	ctx->env->modstack = &ctx->mods;
 	rbtree_init(&ctx->queries, &context_query_cmp);
 	return ctx;
@@ -188,7 +188,7 @@ ub_ctx_create(void)
 		int e = errno;
 		ub_randfree(ctx->seed_rnd);
 		config_delete(ctx->env->cfg);
-		modstack_deinit(&ctx->mods, ctx->env);
+		modstack_desetup(&ctx->mods, ctx->env);
 		modstack_destartup(&ctx->mods, ctx->env);
 		listen_desetup_locks();
 		edns_known_options_delete(ctx->env);
@@ -203,7 +203,7 @@ ub_ctx_create(void)
 		tube_delete(ctx->qq_pipe);
 		ub_randfree(ctx->seed_rnd);
 		config_delete(ctx->env->cfg);
-		modstack_deinit(&ctx->mods, ctx->env);
+		modstack_desetup(&ctx->mods, ctx->env);
 		modstack_destartup(&ctx->mods, ctx->env);
 		listen_desetup_locks();
 		edns_known_options_delete(ctx->env);
@@ -362,7 +362,7 @@ ub_ctx_delete(struct ub_ctx* ctx)
 	}
 	libworker_delete_event(ctx->event_worker);
 
-	modstack_deinit(&ctx->mods, ctx->env);
+	modstack_desetup(&ctx->mods, ctx->env);
 	modstack_destartup(&ctx->mods, ctx->env);
 	a = ctx->alloc_list;
 	while(a) {

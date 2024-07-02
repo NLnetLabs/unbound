@@ -259,7 +259,7 @@ daemon_init(void)
 	tzset();
 #endif
 	daemon->need_to_exit = 0;
-	memset(&daemon->mods, 0, sizeof(daemon->mods));
+	modstack_init(&daemon->mods);
 	if(!(daemon->env = (struct module_env*)calloc(1, 
 		sizeof(*daemon->env)))) {
 		free(daemon);
@@ -467,9 +467,7 @@ static void daemon_setup_modules(struct daemon* daemon)
 	daemon->env->alloc = &daemon->superalloc;
 	daemon->env->worker = NULL;
 	daemon->env->need_to_validate = 0; /* set by module init below */
-	if(daemon->mods.num != 0)
-		modstack_deinit(&daemon->mods, daemon->env);
-	if(!modstack_call_init(&daemon->mods, daemon->cfg->module_conf,
+	if(!modstack_setup(&daemon->mods, daemon->cfg->module_conf,
 		daemon->env)) {
 		fatal_exit("failed to setup modules");
 	}
@@ -906,7 +904,7 @@ daemon_delete(struct daemon* daemon)
 	size_t i;
 	if(!daemon)
 		return;
-	modstack_deinit(&daemon->mods, daemon->env);
+	modstack_desetup(&daemon->mods, daemon->env);
 	modstack_destartup(&daemon->mods, daemon->env);
 	daemon_remote_delete(daemon->rc);
 	for(i = 0; i < daemon->num_ports; i++)

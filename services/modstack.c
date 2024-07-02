@@ -88,6 +88,13 @@ count_modules(const char* s)
         return num;
 }
 
+void
+modstack_init(struct module_stack* stack)
+{
+	stack->num = 0;
+	stack->mod = NULL;
+}
+
 int
 modstack_config(struct module_stack* stack, const char* module_conf)
 {
@@ -219,8 +226,8 @@ int
 modstack_startup(struct module_stack* stack, const char* module_conf,
 	struct module_env* env)
 {
-	int i;
-	if (stack->num != 0)
+        int i;
+        if(stack->num != 0)
 		fatal_exit("unexpected already initialised modules");
         /* fixed setup of the modules */
         if(!modstack_config(stack, module_conf)) {
@@ -242,11 +249,13 @@ modstack_startup(struct module_stack* stack, const char* module_conf,
 }
 
 int
-modstack_call_init(struct module_stack* stack, const char* module_conf,
+modstack_setup(struct module_stack* stack, const char* module_conf,
 	struct module_env* env)
 {
         int i;
-        env->need_to_validate = 0; /* set by module setup below */
+	if(stack->num != 0)
+		modstack_desetup(stack, env);
+        env->need_to_validate = 0; /* set by module init below */
         for(i=0; i<stack->num; i++) {
 		while(*module_conf && isspace(*module_conf))
 			module_conf++;
@@ -269,7 +278,7 @@ modstack_call_init(struct module_stack* stack, const char* module_conf,
 }
 
 void
-modstack_deinit(struct module_stack* stack, struct module_env* env)
+modstack_desetup(struct module_stack* stack, struct module_env* env)
 {
         int i;
         for(i=0; i<stack->num; i++) {
