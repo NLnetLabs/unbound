@@ -77,36 +77,41 @@
 static const char DEFAULT_NAT64_PREFIX[] = "64:ff9b::/96";
 
 /** fillup fetch policy array */
-static void
-fetch_fill(struct iter_env* ie, const char* str)
+static int
+fetch_fill(int* target_fetch_policy, int max_dependency_depth, const char* str)
 {
 	char* s = (char*)str, *e;
 	int i;
-	for(i=0; i<ie->max_dependency_depth+1; i++) {
-		ie->target_fetch_policy[i] = strtol(s, &e, 10);
-		if(s == e)
-			fatal_exit("cannot parse fetch policy number %s", s);
+	for(i=0; i<max_dependency_depth+1; i++) {
+		target_fetch_policy[i] = strtol(s, &e, 10);
+		if(s == e) {
+			log_err("cannot parse fetch policy number %s", s);
+			return 0;
+		}
 		s = e;
 	}
+	return 1;
 }
 
 /** Read config string that represents the target fetch policy */
-static int
-read_fetch_policy(struct iter_env* ie, const char* str)
+int
+read_fetch_policy(int** target_fetch_policy, int* max_dependency_depth,
+	const char* str)
 {
 	int count = cfg_count_numbers(str);
 	if(count < 1) {
 		log_err("Cannot parse target fetch policy: \"%s\"", str);
 		return 0;
 	}
-	ie->max_dependency_depth = count - 1;
-	ie->target_fetch_policy = (int*)calloc(
-		(size_t)ie->max_dependency_depth+1, sizeof(int));
-	if(!ie->target_fetch_policy) {
+	*max_dependency_depth = count - 1;
+	*target_fetch_policy = (int*)calloc(
+		(size_t)(*max_dependency_depth)+1, sizeof(int));
+	if(!*target_fetch_policy) {
 		log_err("alloc fetch policy: out of memory");
 		return 0;
 	}
-	fetch_fill(ie, str);
+	if(!fetch_fill(*target_fetch_policy, *max_dependency_depth, str))
+		return 0;
 	return 1;
 }
 
@@ -150,7 +155,8 @@ iter_apply_cfg(struct iter_env* iter_env, struct config_file* cfg)
 	const char *nat64_prefix;
 	int i;
 	/* target fetch policy */
-	if(!read_fetch_policy(iter_env, cfg->target_fetch_policy))
+	if(!read_fetch_policy(&iter_env->target_fetch_policy,
+		&iter_env->max_dependency_depth, cfg->target_fetch_policy))
 		return 0;
 	for(i=0; i<iter_env->max_dependency_depth+1; i++)
 		verbose(VERB_QUERY, "target fetch policy for level %d is %d",

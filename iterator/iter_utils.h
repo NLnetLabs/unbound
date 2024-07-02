@@ -428,4 +428,14 @@ int iter_stub_fwd_no_cache(struct module_qstate *qstate,
 void iterator_set_ip46_support(struct module_stack* mods,
 	struct module_env* env, struct outside_network* outnet);
 
+/**
+ * Read config string that represents the target fetch policy.
+ * @param target_fetch_policy: alloced on return.
+ * @param max_dependency_depth: set on return.
+ * @param str: the config string
+ * @return false on failure.
+ */
+int read_fetch_policy(int** target_fetch_policy, int* max_dependency_depth,
+	const char* str);
+
 #endif /* ITERATOR_ITER_UTILS_H */

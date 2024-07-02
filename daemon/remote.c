@@ -86,6 +86,7 @@
 #include "iterator/iter_fwd.h"
 #include "iterator/iter_hints.h"
 #include "iterator/iter_delegpt.h"
+#include "iterator/iter_utils.h"
 #include "services/outbound_list.h"
 #include "services/outside_network.h"
 #include "sldns/str2wire.h"
@@ -3973,6 +3974,10 @@ struct fast_reload_construct {
 	size_t* nsec3_maxiter;
 	/** construct for nsec3 keyiter count */
 	int nsec3_keyiter_count;
+	/** construct for target fetch policy */
+	int* target_fetch_policy;
+	/** construct for max dependency depth */
+	int max_dependency_depth;
 	/** storage for the old configuration elements. The outer struct
 	 * is allocated with malloc here, the items are from config. */
 	struct config_file* oldcfg;
@@ -4236,6 +4241,7 @@ fr_construct_clear(struct fast_reload_construct* ct)
 	views_delete(ct->views);
 	free(ct->nsec3_keysize);
 	free(ct->nsec3_maxiter);
+	free(ct->target_fetch_policy);
 	/* Delete the log identity here so that the global value is not
 	 * reset by config_delete. */
 	if(ct->oldcfg && ct->oldcfg->log_identity) {
@@ -4875,6 +4881,14 @@ fr_construct_from_config(struct fast_reload_thread* fr,
 	if(fr_poll_for_quit(fr))
 		return 1;
 
+	if(!read_fetch_policy(&ct->target_fetch_policy,
+		&ct->max_dependency_depth, newcfg->target_fetch_policy)) {
+		fr_construct_clear(ct);
+		return 0;
+	}
+	if(fr_poll_for_quit(fr))
+		return 1;
+
 	if(!(ct->oldcfg = (struct config_file*)calloc(1,
 		sizeof(*ct->oldcfg)))) {
 		fr_construct_clear(ct);
@@ -5324,6 +5338,41 @@ fr_adjust_cache(struct module_env* env, struct config_file* oldcfg)
 	}
 }
 
+/** fast reload thread, adjust the iterator env */
+static void
+fr_adjust_iter_env(struct module_env* env, struct fast_reload_construct* ct,
+	struct config_file* oldcfg)
+{
+	int m;
+	struct iter_env* iter_env = NULL;
+	if(env->cfg->outbound_msg_retry == oldcfg->outbound_msg_retry &&
+		env->cfg->max_sent_count == oldcfg->max_sent_count &&
+		env->cfg->max_query_restarts == oldcfg->max_query_restarts &&
+		strcmp(env->cfg->target_fetch_policy,
+		oldcfg->target_fetch_policy) == 0)
+		return; /* no changes */
+
+	/* Because the iterator env is not locked, the update cannot happen
+	 * when fr nopause is used. Without it the fast reload pauses the
+	 * other threads, so they are not currently using the structure. */
+	m = modstack_find(&env->mesh->mods, "iterator");
+	if(m != -1) iter_env = (struct iter_env*)env->modinfo[m];
+	if(iter_env) {
+		/* Swap the data so that the delete happens afterwards. */
+		int* oldtargetfetchpolicy = iter_env->target_fetch_policy;
+		int oldmaxdependencydepth = iter_env->max_dependency_depth;
+
+		iter_env->target_fetch_policy = ct->target_fetch_policy;
+		iter_env->max_dependency_depth = ct->max_dependency_depth;
+		iter_env->outbound_msg_retry = env->cfg->outbound_msg_retry;
+		iter_env->max_sent_count = env->cfg->max_sent_count;
+		iter_env->max_query_restarts = env->cfg->max_query_restarts;
+
+		ct->target_fetch_policy = oldtargetfetchpolicy;
+		ct->max_dependency_depth = oldmaxdependencydepth;
+	}
+}
+
 /** fast reload thread, adjust the validator env */
 static void
 fr_adjust_val_env(struct module_env* env, struct fast_reload_construct* ct,
@@ -5453,6 +5502,7 @@ fr_reload_config(struct fast_reload_thread* fr, struct config_file* newcfg,
 #endif
 	fr_adjust_cache(env, ct->oldcfg);
 	if(!fr->fr_nopause) {
+		fr_adjust_iter_env(env, ct, ct->oldcfg);
 		fr_adjust_val_env(env, ct, ct->oldcfg);
 	}
 
