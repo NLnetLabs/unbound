@@ -1682,6 +1682,8 @@ do_cache_remove(struct worker* worker, uint8_t* nm, size_t nmlen,
 #ifdef USE_CACHEDB
 	if(remcachedb && worker->env.cachedb_enabled)
 		cachedb_msg_remove_qinfo(&worker->env, &k);
+#else
+	(void)remcachedb;
 #endif
 }
 
