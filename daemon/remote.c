@@ -3990,6 +3990,12 @@ struct fast_reload_construct {
 	struct rbtree_type* caps_white;
 	/** construct for nat64 */
 	struct iter_nat64 nat64;
+	/** construct for wait_limits_netblock */
+	struct rbtree_type wait_limits_netblock;
+	/** construct for wait_limits_cookie_netblock */
+	struct rbtree_type wait_limits_cookie_netblock;
+	/** construct for domain limits */
+	struct rbtree_type domain_limits;
 	/** storage for the old configuration elements. The outer struct
 	 * is allocated with malloc here, the items are from config. */
 	struct config_file* oldcfg;
@@ -4144,6 +4150,36 @@ fr_check_changed_cfg_strlist(struct config_strlist* cmp1,
 	}
 }
 
+/** fast reload thread, check if config str2list has changed. */
+static void
+fr_check_changed_cfg_str2list(struct config_str2list* cmp1,
+	struct config_str2list* cmp2, const char* desc, char* str, size_t len)
+{
+	struct config_str2list* p1 = cmp1, *p2 = cmp2;
+	while(p1 && p2) {
+		if((!p1->str && p2->str) ||
+			(p1->str && !p2->str) ||
+			(p1->str && p2->str && strcmp(p1->str, p2->str) != 0)) {
+			/* The str2list is different. */
+			fr_check_changed_cfg(1, desc, str, len);
+			return;
+		}
+		if((!p1->str2 && p2->str2) ||
+			(p1->str2 && !p2->str2) ||
+			(p1->str2 && p2->str2 &&
+			strcmp(p1->str2, p2->str2) != 0)) {
+			/* The str2list is different. */
+			fr_check_changed_cfg(1, desc, str, len);
+			return;
+		}
+		p1 = p1->next;
+		p2 = p2->next;
+	}
+	if((!p1 && p2) || (p1 && !p2)) {
+		fr_check_changed_cfg(1, desc, str, len);
+	}
+}
+
 /** fast reload thread, check compatible config items */
 static int
 fr_check_compat_cfg(struct fast_reload_thread* fr, struct config_file* newcfg)
@@ -4276,6 +4312,35 @@ fr_check_nopause_cfg(struct fast_reload_thread* fr, struct config_file* newcfg)
 		"val-nsec3-keysize-iterations", changed_str,
 		sizeof(changed_str));
 
+	/* Check for infra. */
+	fr_check_changed_cfg(cfg->host_ttl != newcfg->host_ttl,
+		"infra-host-ttl", changed_str, sizeof(changed_str));
+	fr_check_changed_cfg(
+		cfg->infra_keep_probing != newcfg->infra_keep_probing,
+		"infra-keep-probing", changed_str, sizeof(changed_str));
+	fr_check_changed_cfg(
+		cfg->ratelimit != newcfg->ratelimit,
+		"ratelimit", changed_str, sizeof(changed_str));
+	fr_check_changed_cfg(
+		cfg->ip_ratelimit != newcfg->ip_ratelimit,
+		"ip-ratelimit", changed_str, sizeof(changed_str));
+	fr_check_changed_cfg(
+		cfg->ip_ratelimit_cookie != newcfg->ip_ratelimit_cookie,
+		"ip-ratelimit-cookie", changed_str, sizeof(changed_str));
+	fr_check_changed_cfg_str2list(cfg->wait_limit_netblock,
+		newcfg->wait_limit_netblock, "wait-limit-netblock",
+		changed_str, sizeof(changed_str));
+	fr_check_changed_cfg_str2list(cfg->wait_limit_cookie_netblock,
+		newcfg->wait_limit_cookie_netblock,
+		"wait-limit-cookie-netblock", changed_str,
+		sizeof(changed_str));
+	fr_check_changed_cfg_str2list(cfg->ratelimit_below_domain,
+		newcfg->ratelimit_below_domain, "ratelimit-below-domain",
+		changed_str, sizeof(changed_str));
+	fr_check_changed_cfg_str2list(cfg->ratelimit_for_domain,
+		newcfg->ratelimit_for_domain, "ratelimit-for-domain",
+		changed_str, sizeof(changed_str));
+
 	/* Check for dnstap. */
 	fr_check_changed_cfg(
 		cfg->dnstap_send_identity != newcfg->dnstap_send_identity,
@@ -4324,6 +4389,9 @@ fr_construct_clear(struct fast_reload_construct* ct)
 	donotq_delete(ct->donotq);
 	priv_delete(ct->priv);
 	caps_white_delete(ct->caps_white);
+	wait_limits_free(&ct->wait_limits_netblock);
+	wait_limits_free(&ct->wait_limits_cookie_netblock);
+	domain_limits_free(&ct->domain_limits);
 	/* Delete the log identity here so that the global value is not
 	 * reset by config_delete. */
 	if(ct->oldcfg && ct->oldcfg->log_identity) {
@@ -5001,6 +5069,18 @@ fr_construct_from_config(struct fast_reload_thread* fr,
 	if(fr_poll_for_quit(fr))
 		return 1;
 
+	if(!setup_wait_limits(&ct->wait_limits_netblock,
+		&ct->wait_limits_cookie_netblock, newcfg)) {
+		fr_construct_clear(ct);
+		return 0;
+	}
+	if(!setup_domain_limits(&ct->domain_limits, newcfg)) {
+		fr_construct_clear(ct);
+		return 0;
+	}
+	if(fr_poll_for_quit(fr))
+		return 1;
+
 	if(!(ct->oldcfg = (struct config_file*)calloc(1,
 		sizeof(*ct->oldcfg)))) {
 		fr_construct_clear(ct);
@@ -5534,6 +5614,33 @@ fr_adjust_val_env(struct module_env* env, struct fast_reload_construct* ct,
 	}
 }
 
+/** fast reload thread, adjust the infra cache parameters */
+static void
+fr_adjust_infra(struct module_env* env, struct fast_reload_construct* ct)
+{
+	struct infra_cache* infra = env->infra_cache;
+	struct config_file* cfg = env->cfg;
+	struct rbtree_type oldwaitlim = infra->wait_limits_netblock;
+	struct rbtree_type oldwaitlimcookie =
+		infra->wait_limits_cookie_netblock;
+	struct rbtree_type olddomainlim = infra->domain_limits;
+
+	/* The size of the infra cache and ip rates is changed
+	 * in fr_adjust_cache. */
+	infra->host_ttl = cfg->host_ttl;
+	infra->infra_keep_probing = cfg->infra_keep_probing;
+	infra_dp_ratelimit = cfg->ratelimit;
+	infra_ip_ratelimit = cfg->ip_ratelimit;
+	infra_ip_ratelimit_cookie = cfg->ip_ratelimit_cookie;
+	infra->wait_limits_netblock = ct->wait_limits_netblock;
+	infra->wait_limits_cookie_netblock = ct->wait_limits_cookie_netblock;
+	infra->domain_limits = ct->domain_limits;
+
+	ct->wait_limits_netblock = oldwaitlim;
+	ct->wait_limits_cookie_netblock = oldwaitlimcookie;
+	ct->domain_limits = olddomainlim;
+}
+
 /** fast reload thread, reload config with putting the new config items
  * in place and swapping out the old items. */
 static int
@@ -5625,6 +5732,7 @@ fr_reload_config(struct fast_reload_thread* fr, struct config_file* newcfg,
 	if(!fr->fr_nopause) {
 		fr_adjust_iter_env(env, ct);
 		fr_adjust_val_env(env, ct, ct->oldcfg);
+		fr_adjust_infra(env, ct);
 	}
 
 	/* Set globals with new config. */
