@@ -3344,8 +3344,8 @@ val_get_mem(struct module_env* env, int id)
  */
 static struct module_func_block val_block = {
 	"validator",
-	&val_init, &val_deinit, &val_operate, &val_inform_super, &val_clear,
-	&val_get_mem
+	&val_init, &val_deinit, NULL, NULL, &val_operate, &val_inform_super,
+	&val_clear, &val_get_mem
 };
 
 struct module_func_block* 

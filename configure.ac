@@ -1931,15 +1931,17 @@ case "$enable_ipset" in
 		IPSET_OBJ="ipset.lo"
 		AC_SUBST(IPSET_OBJ)
 
-		# mnl
-		AC_ARG_WITH(libmnl, AS_HELP_STRING([--with-libmnl=path],[specify explicit path for libmnl.]),
+		# BSD's pf
+		AC_CHECK_HEADERS([net/pfvar.h], [], [
+		    # mnl
+		    AC_ARG_WITH(libmnl, AS_HELP_STRING([--with-libmnl=path],[specify explicit path for libmnl.]),
 			[ ],[ withval="yes" ])
-		found_libmnl="no"
-		AC_MSG_CHECKING(for libmnl)
-		if test x_$withval = x_ -o x_$withval = x_yes; then
+		    found_libmnl="no"
+		    AC_MSG_CHECKING(for libmnl)
+		    if test x_$withval = x_ -o x_$withval = x_yes; then
 			withval="/usr/local /opt/local /usr/lib /usr/pkg /usr/sfw /usr"
-		fi
-		for dir in $withval ; do
+		    fi
+		    for dir in $withval ; do
 			if test -f "$dir/include/libmnl/libmnl.h" -o -f "$dir/include/libmnl/libmnl/libmnl.h"; then
 				found_libmnl="yes"
 				dnl assume /usr is in default path.
@@ -1957,10 +1959,14 @@ case "$enable_ipset" in
 				LIBS="$LIBS -lmnl"
 				break;
 			fi
-		done
-		if test x_$found_libmnl != x_yes; then
-			AC_MSG_ERROR([Could not find libmnl, libmnl.h])
-		fi
+		    done
+		    if test x_$found_libmnl != x_yes; then
+			  AC_MSG_ERROR([Could not find libmnl, libmnl.h])
+		    fi
+		], [
+		  #include <netinet/in.h>
+		  #include <net/if.h>
+		])
 		;;
     no|*)
     	# nothing
