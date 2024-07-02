@@ -61,6 +61,7 @@ struct sock_list;
 struct ub_packed_rrset_key;
 struct module_stack;
 struct outside_network;
+struct iter_nat64;
 
 /* max number of lookups in the cache for target nameserver names.
  * This stops, for large delegations, N*N lookups in the cache. */
@@ -456,5 +457,13 @@ void caps_white_delete(struct rbtree_type* caps_white);
  * @param cfg: config with options.
  */
 int caps_white_apply_cfg(struct rbtree_type* ntree, struct config_file* cfg);
+
+/**
+ * Apply config for nat64
+ * @param nat64: the nat64 state.
+ * @param cfg: config with options.
+ * @return false on failure.
+ */
+int nat64_apply_cfg(struct iter_nat64* nat64, struct config_file* cfg);
 
 #endif /* ITERATOR_ITER_UTILS_H */

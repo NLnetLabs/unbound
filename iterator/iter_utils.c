@@ -177,9 +177,37 @@ caps_white_apply_cfg(rbtree_type* ntree, struct config_file* cfg)
 }
 
 int
-iter_apply_cfg(struct iter_env* iter_env, struct config_file* cfg)
+nat64_apply_cfg(struct iter_nat64* nat64, struct config_file* cfg)
 {
 	const char *nat64_prefix;
+
+	nat64_prefix = cfg->nat64_prefix;
+	if(!nat64_prefix)
+		nat64_prefix = cfg->dns64_prefix;
+	if(!nat64_prefix)
+		nat64_prefix = DEFAULT_NAT64_PREFIX;
+	if(!netblockstrtoaddr(nat64_prefix, 0, &nat64->nat64_prefix_addr,
+		&nat64->nat64_prefix_addrlen, &nat64->nat64_prefix_net)) {
+		log_err("cannot parse nat64-prefix netblock: %s", nat64_prefix);
+		return 0;
+	}
+	if(!addr_is_ip6(&nat64->nat64_prefix_addr,
+		nat64->nat64_prefix_addrlen)) {
+		log_err("nat64-prefix is not IPv6: %s", cfg->nat64_prefix);
+		return 0;
+	}
+	if(!prefixnet_is_nat64(nat64->nat64_prefix_net)) {
+		log_err("nat64-prefix length it not 32, 40, 48, 56, 64 or 96: %s",
+			nat64_prefix);
+		return 0;
+	}
+	nat64->use_nat64 = cfg->do_nat64;
+	return 1;
+}
+
+int
+iter_apply_cfg(struct iter_env* iter_env, struct config_file* cfg)
+{
 	int i;
 	/* target fetch policy */
 	if(!read_fetch_policy(&iter_env->target_fetch_policy,
@@ -212,31 +240,13 @@ iter_apply_cfg(struct iter_env* iter_env, struct config_file* cfg)
 
 	}
 
-	nat64_prefix = cfg->nat64_prefix;
-	if(!nat64_prefix)
-		nat64_prefix = cfg->dns64_prefix;
-	if(!nat64_prefix)
-		nat64_prefix = DEFAULT_NAT64_PREFIX;
-	if(!netblockstrtoaddr(nat64_prefix, 0, &iter_env->nat64_prefix_addr,
-		&iter_env->nat64_prefix_addrlen,
-		&iter_env->nat64_prefix_net)) {
-		log_err("cannot parse nat64-prefix netblock: %s", nat64_prefix);
-		return 0;
-	}
-	if(!addr_is_ip6(&iter_env->nat64_prefix_addr,
-		iter_env->nat64_prefix_addrlen)) {
-		log_err("nat64-prefix is not IPv6: %s", cfg->nat64_prefix);
-		return 0;
-	}
-	if(!prefixnet_is_nat64(iter_env->nat64_prefix_net)) {
-		log_err("nat64-prefix length it not 32, 40, 48, 56, 64 or 96: %s",
-			nat64_prefix);
+	if(!nat64_apply_cfg(&iter_env->nat64, cfg)) {
+		log_err("Could not setup nat64");
 		return 0;
 	}
 
 	iter_env->supports_ipv6 = cfg->do_ip6;
 	iter_env->supports_ipv4 = cfg->do_ip4;
-	iter_env->use_nat64 = cfg->do_nat64;
 	iter_env->outbound_msg_retry = cfg->outbound_msg_retry;
 	iter_env->max_sent_count = cfg->max_sent_count;
 	iter_env->max_query_restarts = cfg->max_query_restarts;
@@ -303,7 +313,7 @@ iter_filter_unsuitable(struct iter_env* iter_env, struct module_env* env,
 	if(!iter_env->supports_ipv6 && addr_is_ip6(&a->addr, a->addrlen)) {
 		return -1; /* there is no ip6 available */
 	}
-	if(!iter_env->supports_ipv4 && !iter_env->use_nat64 &&
+	if(!iter_env->supports_ipv4 && !iter_env->nat64.use_nat64 &&
 	   !addr_is_ip6(&a->addr, a->addrlen)) {
 		return -1; /* there is no ip4 available */
 	}

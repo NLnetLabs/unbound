@@ -243,7 +243,7 @@ error_supers(struct module_qstate* qstate, int id, struct module_qstate* super)
 				log_err("out of memory adding missing");
 		}
 		delegpt_mark_neg(dpns, qstate->qinfo.qtype);
-		if((dpns->got4 == 2 || (!ie->supports_ipv4 && !ie->use_nat64)) &&
+		if((dpns->got4 == 2 || (!ie->supports_ipv4 && !ie->nat64.use_nat64)) &&
 			(dpns->got6 == 2 || !ie->supports_ipv6)) {
 			dpns->resolved = 1; /* mark as failed */
 			target_count_increase_nx(super_iq, 1);
@@ -1684,7 +1684,7 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 		 */
 		if(iter_dp_is_useless(&qstate->qinfo, qstate->query_flags,
 			iq->dp, ie->supports_ipv4, ie->supports_ipv6,
-			ie->use_nat64)) {
+			ie->nat64.use_nat64)) {
 			int have_dp = 0;
 			if(!can_have_last_resort(qstate->env, iq->dp->name, iq->dp->namelen, iq->qchase.qclass, &have_dp, &iq->dp, qstate->region)) {
 				if(have_dp) {
@@ -2048,7 +2048,7 @@ query_for_targets(struct module_qstate* qstate, struct iter_qstate* iq,
 			if(mesh_jostle_exceeded(qstate->env->mesh)) {
 				/* If no ip4 query is possible, that makes
 				 * this ns resolved. */
-				if(!((ie->supports_ipv4 || ie->use_nat64) &&
+				if(!((ie->supports_ipv4 || ie->nat64.use_nat64) &&
 					((ns->lame && !ns->done_pside4) ||
 					(!ns->lame && !ns->got4)))) {
 					ns->resolved = 1;
@@ -2057,7 +2057,7 @@ query_for_targets(struct module_qstate* qstate, struct iter_qstate* iq,
 			}
 		}
 		/* Send the A request. */
-		if((ie->supports_ipv4 || ie->use_nat64) &&
+		if((ie->supports_ipv4 || ie->nat64.use_nat64) &&
 			((ns->lame && !ns->done_pside4) ||
 			(!ns->lame && !ns->got4))) {
 			if(!generate_target_query(qstate, iq, id, 
@@ -2220,14 +2220,14 @@ processLastResort(struct module_qstate* qstate, struct iter_qstate* iq,
 		/* if this nameserver is at a delegation point, but that
 		 * delegation point is a stub and we cannot go higher, skip*/
 		if( ((ie->supports_ipv6 && !ns->done_pside6) ||
-		    ((ie->supports_ipv4 || ie->use_nat64) && !ns->done_pside4)) &&
+		    ((ie->supports_ipv4 || ie->nat64.use_nat64) && !ns->done_pside4)) &&
 		    !can_have_last_resort(qstate->env, ns->name, ns->namelen,
 			iq->qchase.qclass, NULL, NULL, NULL)) {
 			log_nametypeclass(VERB_ALGO, "cannot pside lookup ns "
 				"because it is also a stub/forward,",
 				ns->name, LDNS_RR_TYPE_NS, iq->qchase.qclass);
 			if(ie->supports_ipv6) ns->done_pside6 = 1;
-			if(ie->supports_ipv4 || ie->use_nat64) ns->done_pside4 = 1;
+			if(ie->supports_ipv4 || ie->nat64.use_nat64) ns->done_pside4 = 1;
 			continue;
 		}
 		/* query for parent-side A and AAAA for nameservers */
@@ -2252,7 +2252,7 @@ processLastResort(struct module_qstate* qstate, struct iter_qstate* iq,
 				return 0;
 			}
 		}
-		if((ie->supports_ipv4 || ie->use_nat64) && !ns->done_pside4) {
+		if((ie->supports_ipv4 || ie->nat64.use_nat64) && !ns->done_pside4) {
 			/* Send the A request. */
 			if(!generate_parentside_target_query(qstate, iq, id, 
 				ns->name, ns->namelen, 
@@ -2521,7 +2521,7 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 	}
 	if(!ie->supports_ipv6)
 		delegpt_no_ipv6(iq->dp);
-	if(!ie->supports_ipv4 && !ie->use_nat64)
+	if(!ie->supports_ipv4 && !ie->nat64.use_nat64)
 		delegpt_no_ipv4(iq->dp);
 	delegpt_log(VERB_ALGO, iq->dp);
 
@@ -3011,9 +3011,9 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 	real_addr = target->addr;
 	real_addrlen = target->addrlen;
 
-	if(ie->use_nat64 && target->addr.ss_family == AF_INET) {
-		addr_to_nat64(&target->addr, &ie->nat64_prefix_addr,
-			ie->nat64_prefix_addrlen, ie->nat64_prefix_net,
+	if(ie->nat64.use_nat64 && target->addr.ss_family == AF_INET) {
+		addr_to_nat64(&target->addr, &ie->nat64.nat64_prefix_addr,
+			ie->nat64.nat64_prefix_addrlen, ie->nat64.nat64_prefix_net,
 			&real_addr, &real_addrlen);
 		log_name_addr(VERB_QUERY, "applied NAT64:",
 			iq->dp->name, &real_addr, real_addrlen);
@@ -3812,7 +3812,7 @@ processTargetResponse(struct module_qstate* qstate, int id,
 	} else {
 		verbose(VERB_ALGO, "iterator TargetResponse failed");
 		delegpt_mark_neg(dpns, qstate->qinfo.qtype);
-		if((dpns->got4 == 2 || (!ie->supports_ipv4 && !ie->use_nat64)) &&
+		if((dpns->got4 == 2 || (!ie->supports_ipv4 && !ie->nat64.use_nat64)) &&
 			(dpns->got6 == 2 || !ie->supports_ipv6)) {
 			dpns->resolved = 1; /* fail the target */
 			/* do not count cached answers */

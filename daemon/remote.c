@@ -3988,6 +3988,8 @@ struct fast_reload_construct {
 	struct iter_priv* priv;
 	/** construct whitelist for capsforid names */
 	struct rbtree_type* caps_white;
+	/** construct for nat64 */
+	struct iter_nat64 nat64;
 	/** storage for the old configuration elements. The outer struct
 	 * is allocated with malloc here, the items are from config. */
 	struct config_file* oldcfg;
@@ -4252,6 +4254,10 @@ fr_check_nopause_cfg(struct fast_reload_thread* fr, struct config_file* newcfg)
 	fr_check_changed_cfg_strlist(cfg->caps_whitelist,
 		newcfg->caps_whitelist, "caps-exempt",
 		changed_str, sizeof(changed_str));
+	fr_check_changed_cfg(cfg->do_nat64 != newcfg->do_nat64,
+		"do-nat64", changed_str, sizeof(changed_str));
+	fr_check_changed_cfg_str(cfg->nat64_prefix, newcfg->nat64_prefix,
+		"nat64-prefix", changed_str, sizeof(changed_str));
 
 	/* Check for val_env. */
 	fr_check_changed_cfg(cfg->bogus_ttl != newcfg->bogus_ttl,
@@ -4988,6 +4994,10 @@ fr_construct_from_config(struct fast_reload_thread* fr,
 			return 0;
 		}
 	}
+	if(!nat64_apply_cfg(&ct->nat64, newcfg)) {
+		fr_construct_clear(ct);
+		return 0;
+	}
 	if(fr_poll_for_quit(fr))
 		return 1;
 
@@ -5463,12 +5473,14 @@ fr_adjust_iter_env(struct module_env* env, struct fast_reload_construct* ct)
 		struct iter_donotq* olddonotq = iter_env->donotq;
 		struct iter_priv* oldpriv = iter_env->priv;
 		struct rbtree_type* oldcapswhite = iter_env->caps_white;
+		struct iter_nat64 oldnat64 = iter_env->nat64;
 
 		iter_env->target_fetch_policy = ct->target_fetch_policy;
 		iter_env->max_dependency_depth = ct->max_dependency_depth;
 		iter_env->donotq = ct->donotq;
 		iter_env->priv = ct->priv;
 		iter_env->caps_white = ct->caps_white;
+		iter_env->nat64 = ct->nat64;
 		iter_env->outbound_msg_retry = env->cfg->outbound_msg_retry;
 		iter_env->max_sent_count = env->cfg->max_sent_count;
 		iter_env->max_query_restarts = env->cfg->max_query_restarts;
@@ -5478,6 +5490,7 @@ fr_adjust_iter_env(struct module_env* env, struct fast_reload_construct* ct)
 		ct->donotq = olddonotq;
 		ct->priv = oldpriv;
 		ct->caps_white = oldcapswhite;
+		ct->nat64 = oldnat64;
 	}
 }
 

@@ -103,15 +103,9 @@ extern int BLACKLIST_PENALTY;
 #define EMPTY_NODATA_RETRY_COUNT 2
 
 /**
- * Global state for the iterator.
+ * Iterator global state for nat64.
  */
-struct iter_env {
-	/** A flag to indicate whether or not we have an IPv6 route */
-	int supports_ipv6;
-
-	/** A flag to indicate whether or not we have an IPv4 route */
-	int supports_ipv4;
-
+struct iter_nat64 {
 	/** A flag to locally apply NAT64 to make IPv4 addrs into IPv6 */
 	int use_nat64;
 
@@ -123,6 +117,20 @@ struct iter_env {
 
 	/** CIDR mask length of NAT64 prefix */
 	int nat64_prefix_net;
+};
+
+/**
+ * Global state for the iterator.
+ */
+struct iter_env {
+	/** A flag to indicate whether or not we have an IPv6 route */
+	int supports_ipv6;
+
+	/** A flag to indicate whether or not we have an IPv4 route */
+	int supports_ipv4;
+
+	/** State for nat64 */
+	struct iter_nat64 nat64;
 
 	/** A set of inetaddrs that should never be queried. */
 	struct iter_donotq* donotq;
