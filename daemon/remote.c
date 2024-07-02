@@ -4202,9 +4202,8 @@ fr_check_compat_cfg(struct fast_reload_thread* fr, struct config_file* newcfg)
 		"do-tcp", changed_str, sizeof(changed_str));
 	fr_check_changed_cfg(cfg->port != newcfg->port,
 		"port", changed_str, sizeof(changed_str));
-	fr_check_changed_cfg(
-		cfg->outgoing_num_ports != newcfg->outgoing_num_ports,
-		"outgoing-range", changed_str, sizeof(changed_str));
+	/* But cfg->outgoing_num_ports has been changed at startup,
+	 * possibly to reduce it, so cannot check it here. */
 	fr_check_changed_cfg(cfg->outgoing_num_tcp != newcfg->outgoing_num_tcp,
 		"outgoing-num-tcp", changed_str, sizeof(changed_str));
 	fr_check_changed_cfg(cfg->incoming_num_tcp != newcfg->incoming_num_tcp,
@@ -5544,7 +5543,7 @@ fr_adjust_iter_env(struct module_env* env, struct fast_reload_construct* ct)
 	/* Because the iterator env is not locked, the update cannot happen
 	 * when fr nopause is used. Without it the fast reload pauses the
 	 * other threads, so they are not currently using the structure. */
-	m = modstack_find(&env->mesh->mods, "iterator");
+	m = modstack_find(env->modstack, "iterator");
 	if(m != -1) iter_env = (struct iter_env*)env->modinfo[m];
 	if(iter_env) {
 		/* Swap the data so that the delete happens afterwards. */
@@ -5593,7 +5592,7 @@ fr_adjust_val_env(struct module_env* env, struct fast_reload_construct* ct,
 	/* Because the validator env is not locked, the update cannot happen
 	 * when fr nopause is used. Without it the fast reload pauses the
 	 * other threads, so they are not currently using the structure. */
-	m = modstack_find(&env->mesh->mods, "validator");
+	m = modstack_find(env->modstack, "validator");
 	if(m != -1) val_env = (struct val_env*)env->modinfo[m];
 	if(val_env) {
 		/* Swap the arrays so that the delete happens afterwards. */
