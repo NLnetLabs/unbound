@@ -4182,6 +4182,19 @@ fr_check_nopause_cfg(struct fast_reload_thread* fr, struct config_file* newcfg)
 		return 1; /* The nopause is not enabled, so no problem. */
 	changed_str[0]=0;
 
+	/* Check for iter_env */
+	fr_check_changed_cfg(
+		cfg->outbound_msg_retry != newcfg->outbound_msg_retry,
+		"outbound-msg-retry", changed_str, sizeof(changed_str));
+	fr_check_changed_cfg(cfg->max_sent_count != newcfg->max_sent_count,
+		"max-sent-count", changed_str, sizeof(changed_str));
+	fr_check_changed_cfg(
+		cfg->max_query_restarts != newcfg->max_query_restarts,
+		"max-query-restarts", changed_str, sizeof(changed_str));
+	fr_check_changed_cfg(strcmp(cfg->target_fetch_policy,
+		newcfg->target_fetch_policy) != 0,
+		"target-fetch-policy", changed_str, sizeof(changed_str));
+
 	/* Check for val_env. */
 	fr_check_changed_cfg(cfg->bogus_ttl != newcfg->bogus_ttl,
 		"val-bogus-ttl", changed_str, sizeof(changed_str));
