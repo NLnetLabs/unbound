@@ -115,8 +115,35 @@ read_fetch_policy(int** target_fetch_policy, int* max_dependency_depth,
 	return 1;
 }
 
-/** apply config caps whitelist items to name tree */
-static int
+struct rbtree_type*
+caps_white_create(void)
+{
+	struct rbtree_type* caps_white = rbtree_create(name_tree_compare);
+	if(!caps_white)
+		log_err("out of memory");
+	return caps_white;
+}
+
+/** delete caps_whitelist element */
+static void
+caps_free(struct rbnode_type* n, void* ATTR_UNUSED(d))
+{
+	if(n) {
+		free(((struct name_tree_node*)n)->name);
+		free(n);
+	}
+}
+
+void
+caps_white_delete(struct rbtree_type* caps_white)
+{
+	if(!caps_white)
+		return;
+	traverse_postorder(caps_white, caps_free, NULL);
+	free(caps_white);
+}
+
+int
 caps_white_apply_cfg(rbtree_type* ntree, struct config_file* cfg)
 {
 	struct config_strlist* p;
@@ -176,7 +203,7 @@ iter_apply_cfg(struct iter_env* iter_env, struct config_file* cfg)
 	}
 	if(cfg->caps_whitelist) {
 		if(!iter_env->caps_white)
-			iter_env->caps_white = rbtree_create(name_tree_compare);
+			iter_env->caps_white = caps_white_create();
 		if(!iter_env->caps_white || !caps_white_apply_cfg(
 			iter_env->caps_white, cfg)) {
 			log_err("Could not set capsforid whitelist");

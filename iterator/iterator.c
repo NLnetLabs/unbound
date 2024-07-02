@@ -103,16 +103,6 @@ iter_init(struct module_env* env, int id)
 	return 1;
 }
 
-/** delete caps_whitelist element */
-static void
-caps_free(struct rbnode_type* n, void* ATTR_UNUSED(d))
-{
-	if(n) {
-		free(((struct name_tree_node*)n)->name);
-		free(n);
-	}
-}
-
 void 
 iter_deinit(struct module_env* env, int id)
 {
@@ -124,10 +114,7 @@ iter_deinit(struct module_env* env, int id)
 	free(iter_env->target_fetch_policy);
 	priv_delete(iter_env->priv);
 	donotq_delete(iter_env->donotq);
-	if(iter_env->caps_white) {
-		traverse_postorder(iter_env->caps_white, caps_free, NULL);
-		free(iter_env->caps_white);
-	}
+	caps_white_delete(iter_env->caps_white);
 	free(iter_env);
 	env->modinfo[id] = NULL;
 }

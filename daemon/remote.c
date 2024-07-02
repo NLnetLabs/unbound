@@ -87,6 +87,8 @@
 #include "iterator/iter_hints.h"
 #include "iterator/iter_delegpt.h"
 #include "iterator/iter_utils.h"
+#include "iterator/iter_donotq.h"
+#include "iterator/iter_priv.h"
 #include "services/outbound_list.h"
 #include "services/outside_network.h"
 #include "sldns/str2wire.h"
@@ -3980,6 +3982,12 @@ struct fast_reload_construct {
 	int* target_fetch_policy;
 	/** construct for max dependency depth */
 	int max_dependency_depth;
+	/** construct for donotquery addresses */
+	struct iter_donotq* donotq;
+	/** construct for private addresses and domains */
+	struct iter_priv* priv;
+	/** construct whitelist for capsforid names */
+	struct rbtree_type* caps_white;
 	/** storage for the old configuration elements. The outer struct
 	 * is allocated with malloc here, the items are from config. */
 	struct config_file* oldcfg;
@@ -4182,7 +4190,7 @@ fr_check_nopause_cfg(struct fast_reload_thread* fr, struct config_file* newcfg)
 		return 1; /* The nopause is not enabled, so no problem. */
 	changed_str[0]=0;
 
-	/* Check for iter_env */
+	/* Check for iter_env. */
 	fr_check_changed_cfg(
 		cfg->outbound_msg_retry != newcfg->outbound_msg_retry,
 		"outbound-msg-retry", changed_str, sizeof(changed_str));
@@ -4257,6 +4265,9 @@ fr_construct_clear(struct fast_reload_construct* ct)
 	free(ct->nsec3_keysize);
 	free(ct->nsec3_maxiter);
 	free(ct->target_fetch_policy);
+	donotq_delete(ct->donotq);
+	priv_delete(ct->priv);
+	caps_white_delete(ct->caps_white);
 	/* Delete the log identity here so that the global value is not
 	 * reset by config_delete. */
 	if(ct->oldcfg && ct->oldcfg->log_identity) {
@@ -4901,6 +4912,32 @@ fr_construct_from_config(struct fast_reload_thread* fr,
 		fr_construct_clear(ct);
 		return 0;
 	}
+	if(!(ct->donotq = donotq_create())) {
+		fr_construct_clear(ct);
+		return 0;
+	}
+	if(!donotq_apply_cfg(ct->donotq, newcfg)) {
+		fr_construct_clear(ct);
+		return 0;
+	}
+	if(!(ct->priv = priv_create())) {
+		fr_construct_clear(ct);
+		return 0;
+	}
+	if(!priv_apply_cfg(ct->priv, newcfg)) {
+		fr_construct_clear(ct);
+		return 0;
+	}
+	if(newcfg->caps_whitelist) {
+		if(!(ct->caps_white = caps_white_create())) {
+			fr_construct_clear(ct);
+			return 0;
+		}
+		if(!caps_white_apply_cfg(ct->caps_white, newcfg)) {
+			fr_construct_clear(ct);
+			return 0;
+		}
+	}
 	if(fr_poll_for_quit(fr))
 		return 1;
 
@@ -5355,17 +5392,10 @@ fr_adjust_cache(struct module_env* env, struct config_file* oldcfg)
 
 /** fast reload thread, adjust the iterator env */
 static void
-fr_adjust_iter_env(struct module_env* env, struct fast_reload_construct* ct,
-	struct config_file* oldcfg)
+fr_adjust_iter_env(struct module_env* env, struct fast_reload_construct* ct)
 {
 	int m;
 	struct iter_env* iter_env = NULL;
-	if(env->cfg->outbound_msg_retry == oldcfg->outbound_msg_retry &&
-		env->cfg->max_sent_count == oldcfg->max_sent_count &&
-		env->cfg->max_query_restarts == oldcfg->max_query_restarts &&
-		strcmp(env->cfg->target_fetch_policy,
-		oldcfg->target_fetch_policy) == 0)
-		return; /* no changes */
 
 	/* Because the iterator env is not locked, the update cannot happen
 	 * when fr nopause is used. Without it the fast reload pauses the
@@ -5376,15 +5406,24 @@ fr_adjust_iter_env(struct module_env* env, struct fast_reload_construct* ct,
 		/* Swap the data so that the delete happens afterwards. */
 		int* oldtargetfetchpolicy = iter_env->target_fetch_policy;
 		int oldmaxdependencydepth = iter_env->max_dependency_depth;
+		struct iter_donotq* olddonotq = iter_env->donotq;
+		struct iter_priv* oldpriv = iter_env->priv;
+		struct rbtree_type* oldcapswhite = iter_env->caps_white;
 
 		iter_env->target_fetch_policy = ct->target_fetch_policy;
 		iter_env->max_dependency_depth = ct->max_dependency_depth;
+		iter_env->donotq = ct->donotq;
+		iter_env->priv = ct->priv;
+		iter_env->caps_white = ct->caps_white;
 		iter_env->outbound_msg_retry = env->cfg->outbound_msg_retry;
 		iter_env->max_sent_count = env->cfg->max_sent_count;
 		iter_env->max_query_restarts = env->cfg->max_query_restarts;
 
 		ct->target_fetch_policy = oldtargetfetchpolicy;
 		ct->max_dependency_depth = oldmaxdependencydepth;
+		ct->donotq = olddonotq;
+		ct->priv = oldpriv;
+		ct->caps_white = oldcapswhite;
 	}
 }
 
@@ -5517,7 +5556,7 @@ fr_reload_config(struct fast_reload_thread* fr, struct config_file* newcfg,
 #endif
 	fr_adjust_cache(env, ct->oldcfg);
 	if(!fr->fr_nopause) {
-		fr_adjust_iter_env(env, ct, ct->oldcfg);
+		fr_adjust_iter_env(env, ct);
 		fr_adjust_val_env(env, ct, ct->oldcfg);
 	}
 

@@ -116,7 +116,8 @@ With the nopause option, the reload does not work to reload some options,
 that fast reload works on without the nopause option: val-bogus-ttl,
 val-date-override, val-sig-key-min, val-sig-skew-max, val-max-restart,
 val-nsec3-keysize-iterations, target-fetch-policy, outbound-msg-retry,
-max-sent-count, max-query-restarts.
+max-sent-count, max-query-restarts, do-not-query-address,
+do-not-query-localhost, private-address, private-domain, caps-exempt.
 .IP
 The '+d' option makes the reload drop queries that the worker threads are
 working on. This is like flush_requestlist. Without it the queries are kept

@@ -438,4 +438,23 @@ void iterator_set_ip46_support(struct module_stack* mods,
 int read_fetch_policy(int** target_fetch_policy, int* max_dependency_depth,
 	const char* str);
 
+/**
+ * Create caps exempt data structure.
+ * @return NULL on failure.
+ */
+struct rbtree_type* caps_white_create(void);
+
+/**
+ * Delete caps exempt data structure.
+ * @param caps_white: caps exempt tree.
+ */
+void caps_white_delete(struct rbtree_type* caps_white);
+
+/**
+ * Apply config caps whitelist items to name tree
+ * @param ntree: caps exempt tree.
+ * @param cfg: config with options.
+ */
+int caps_white_apply_cfg(struct rbtree_type* ntree, struct config_file* cfg);
+
 #endif /* ITERATOR_ITER_UTILS_H */
