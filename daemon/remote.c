@@ -4146,6 +4146,7 @@ fr_check_changed_cfg_strlist(struct config_strlist* cmp1,
 static int
 fr_check_compat_cfg(struct fast_reload_thread* fr, struct config_file* newcfg)
 {
+	int i;
 	char changed_str[1024];
 	struct config_file* cfg = fr->worker->env.cfg;
 	changed_str[0]=0;
@@ -4172,8 +4173,20 @@ fr_check_compat_cfg(struct fast_reload_thread* fr, struct config_file* newcfg)
 		"incoming-num-tcp", changed_str, sizeof(changed_str));
 	fr_check_changed_cfg(cfg->num_out_ifs != newcfg->num_out_ifs,
 		"outgoing-interface", changed_str, sizeof(changed_str));
+	if(cfg->num_out_ifs == newcfg->num_out_ifs) {
+		for(i=0; i<cfg->num_out_ifs; i++)
+			fr_check_changed_cfg(strcmp(cfg->out_ifs[i],
+				newcfg->out_ifs[i]) != 0, "outgoing-interface",
+				changed_str, sizeof(changed_str));
+	}
 	fr_check_changed_cfg(cfg->num_ifs != newcfg->num_ifs,
 		"interface", changed_str, sizeof(changed_str));
+	if(cfg->num_ifs == newcfg->num_ifs) {
+		for(i=0; i<cfg->num_ifs; i++)
+			fr_check_changed_cfg(strcmp(cfg->ifs[i],
+				newcfg->ifs[i]) != 0, "interface",
+				changed_str, sizeof(changed_str));
+	}
 	fr_check_changed_cfg(cfg->if_automatic != newcfg->if_automatic,
 		"interface-automatic", changed_str, sizeof(changed_str));
 	fr_check_changed_cfg(cfg->so_rcvbuf != newcfg->so_rcvbuf,
