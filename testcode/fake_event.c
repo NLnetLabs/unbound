@@ -1479,6 +1479,11 @@ size_t comm_point_get_mem(struct comm_point* ATTR_UNUSED(c))
 	return 0;
 }
 
+size_t comm_timer_get_mem(struct comm_timer* ATTR_UNUSED(timer))
+{
+	return 0;
+}
+
 size_t serviced_get_mem(struct serviced_query* ATTR_UNUSED(c))
 {
 	return 0;
@@ -1976,6 +1981,26 @@ http2_get_response_buffer_size(void)
 void http2_stream_add_meshstate(struct http2_stream* ATTR_UNUSED(h2_stream),
 	struct mesh_area* ATTR_UNUSED(mesh), struct mesh_state* ATTR_UNUSED(m))
 {
+}
+
+void fast_reload_service_cb(int ATTR_UNUSED(fd), short ATTR_UNUSED(event),
+	void* ATTR_UNUSED(arg))
+{
+	log_assert(0);
+}
+
+void fast_reload_thread_stop(
+	struct fast_reload_thread* ATTR_UNUSED(fast_reload_thread))
+{
+	/* nothing */
+}
+
+int fast_reload_client_callback(struct comm_point* ATTR_UNUSED(c),
+	void* ATTR_UNUSED(arg), int ATTR_UNUSED(error),
+        struct comm_reply* ATTR_UNUSED(repinfo))
+{
+	log_assert(0);
+	return 0;
 }
 
 /*********** End of Dummy routines ***********/

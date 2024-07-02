@@ -611,3 +611,14 @@ hints_delete_stub(struct iter_hints* hints, uint16_t c, uint8_t* nm,
 	name_tree_init_parents(&hints->tree);
 	if(!nolock) { lock_rw_unlock(&hints->lock); }
 }
+
+void
+hints_swap_tree(struct iter_hints* hints, struct iter_hints* data)
+{
+	rbnode_type* oldroot = hints->tree.root;
+	size_t oldcount = hints->tree.count;
+	hints->tree.root = data->tree.root;
+	hints->tree.count = data->tree.count;
+	data->tree.root = oldroot;
+	data->tree.count = oldcount;
+}
