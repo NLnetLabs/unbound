@@ -1044,8 +1044,8 @@ dns64_get_mem(struct module_env* env, int id)
  */
 static struct module_func_block dns64_block = {
 	"dns64",
-	&dns64_init, &dns64_deinit, &dns64_operate, &dns64_inform_super,
-	&dns64_clear, &dns64_get_mem
+	NULL, NULL, &dns64_init, &dns64_deinit, &dns64_operate,
+	&dns64_inform_super, &dns64_clear, &dns64_get_mem
 };
 
 /**

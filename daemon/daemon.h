@@ -115,6 +115,8 @@ struct daemon {
 	struct module_env* env;
 	/** stack of module callbacks */
 	struct module_stack mods;
+	/** The module stack has been inited */
+	int mods_inited;
 	/** access control, which client IPs are allowed to connect */
 	struct acl_list* acl;
 	/** access control, which interfaces are allowed to connect */
@@ -161,6 +163,15 @@ struct daemon* daemon_init(void);
  * @return: false on error.
  */
 int daemon_open_shared_ports(struct daemon* daemon);
+
+/**
+ * Do daemon setup that needs privileges
+ * like opening privileged ports or opening device files.
+ * The cfg member pointer must have been set for the daemon.
+ * @param daemon: the daemon.
+ * @return: false on error.
+ */
+int daemon_privileged(struct daemon* daemon);
 
 /**
  * Fork workers and start service.
