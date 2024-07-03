@@ -4489,7 +4489,7 @@ iter_get_mem(struct module_env* env, int id)
  */
 static struct module_func_block iter_block = {
 	"iterator",
-	&iter_init, &iter_deinit, NULL, NULL, &iter_operate,
+	NULL, NULL, &iter_init, &iter_deinit, &iter_operate,
 	&iter_inform_super, &iter_clear, &iter_get_mem
 };
 

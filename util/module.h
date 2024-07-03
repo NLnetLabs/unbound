@@ -713,24 +713,6 @@ struct module_func_block {
 	const char* name;
 
 	/**
-	 * Initialise the module. Called when restarting or reloading the
-	 * daemon.
-	 * This is the place to apply settings from the config file.
-	 * @param env: module environment.
-	 * @param id: module id number.
-	 * return: 0 on error
-	 */
-	int (*init)(struct module_env* env, int id);
-
-	/**
-	 * Deinitialise the module, undo stuff done during init().
-	 * Called before reloading the daemon.
-	 * @param env: module environment.
-	 * @param id: module id number.
-	 */
-	void (*deinit)(struct module_env* env, int id);
-
-	/**
 	 * Set up the module for start. This is called only once at startup.
 	 * Privileged operations like opening device files may be done here.
 	 * The function ptr can be NULL, if it is not used.
@@ -749,6 +731,24 @@ struct module_func_block {
 	 * @param id: module id number.
 	 */
 	void (*destartup)(struct module_env* env, int id);
+
+	/**
+	 * Initialise the module. Called when restarting or reloading the
+	 * daemon.
+	 * This is the place to apply settings from the config file.
+	 * @param env: module environment.
+	 * @param id: module id number.
+	 * return: 0 on error
+	 */
+	int (*init)(struct module_env* env, int id);
+
+	/**
+	 * Deinitialise the module, undo stuff done during init().
+	 * Called before reloading the daemon.
+	 * @param env: module environment.
+	 * @param id: module id number.
+	 */
+	void (*deinit)(struct module_env* env, int id);
 
 	/**
 	 * accept a new query, or work further on existing query.

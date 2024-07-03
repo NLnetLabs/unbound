@@ -1259,7 +1259,7 @@ respip_get_mem(struct module_env* env, int id)
  */
 static struct module_func_block respip_block = {
 	"respip",
-	&respip_init, &respip_deinit, NULL, NULL, &respip_operate,
+	NULL, NULL, &respip_init, &respip_deinit, &respip_operate,
 	&respip_inform_super, &respip_clear, &respip_get_mem
 };
 

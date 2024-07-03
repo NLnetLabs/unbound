@@ -297,7 +297,7 @@ inplace_cb_delete_wrapped(struct module_env* env, enum inplace_cb_list_type type
  */
 static struct module_func_block dynlibmod_block = {
    "dynlib",
-   &dynlibmod_init, &dynlibmod_deinit, NULL, NULL, &dynlibmod_operate,
+   NULL, NULL, &dynlibmod_init, &dynlibmod_deinit, &dynlibmod_operate,
    &dynlibmod_inform_super, &dynlibmod_clear, &dynlibmod_get_mem
 };
 

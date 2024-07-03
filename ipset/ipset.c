@@ -491,7 +491,7 @@ size_t ipset_get_mem(struct module_env *env, int id) {
  */
 static struct module_func_block ipset_block = {
 	"ipset",
-	&ipset_init, &ipset_deinit, &ipset_startup, &ipset_destartup,
+	&ipset_startup, &ipset_destartup, &ipset_init, &ipset_deinit,
 	&ipset_operate, &ipset_inform_super, &ipset_clear, &ipset_get_mem
 };
 

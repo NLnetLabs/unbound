@@ -996,7 +996,7 @@ subnetmod_get_mem(struct module_env *env, int id)
  */
 static struct module_func_block subnetmod_block = {
 	"subnetcache",
-	&subnetmod_init, &subnetmod_deinit, NULL, NULL, &subnetmod_operate,
+	NULL, NULL, &subnetmod_init, &subnetmod_deinit, &subnetmod_operate,
 	&subnetmod_inform_super, &subnetmod_clear, &subnetmod_get_mem
 };
 

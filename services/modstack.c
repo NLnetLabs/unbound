@@ -95,6 +95,16 @@ modstack_init(struct module_stack* stack)
 	stack->mod = NULL;
 }
 
+void
+modstack_free(struct module_stack* stack)
+{
+	if(!stack)
+		return;
+        stack->num = 0;
+        free(stack->mod);
+        stack->mod = NULL;
+}
+
 int
 modstack_config(struct module_stack* stack, const char* module_conf)
 {
@@ -223,7 +233,7 @@ module_func_block* module_factory(const char** str)
 }
 
 int
-modstack_startup(struct module_stack* stack, const char* module_conf,
+modstack_call_startup(struct module_stack* stack, const char* module_conf,
 	struct module_env* env)
 {
         int i;
@@ -249,22 +259,33 @@ modstack_startup(struct module_stack* stack, const char* module_conf,
 }
 
 int
-modstack_setup(struct module_stack* stack, const char* module_conf,
+modstack_call_init(struct module_stack* stack, const char* module_conf,
 	struct module_env* env)
 {
-        int i;
-	if(stack->num != 0)
-		modstack_desetup(stack, env);
+        int i, changed = 0;
         env->need_to_validate = 0; /* set by module init below */
         for(i=0; i<stack->num; i++) {
 		while(*module_conf && isspace(*module_conf))
 			module_conf++;
                 if(strncmp(stack->mod[i]->name, module_conf,
 			strlen(stack->mod[i]->name))) {
-			log_err("changed module ordering during reload not supported");
-			return 0;
+			if(stack->mod[i]->startup || stack->mod[i]->destartup) {
+				log_err("changed module ordering during reload not supported, for module that needs startup");
+				return 0;
+			} else {
+				changed = 1;
+			}
 		}
 		module_conf += strlen(stack->mod[i]->name);
+	}
+	if(changed) {
+		modstack_free(stack);
+		if(!modstack_config(stack, module_conf)) {
+			return 0;
+		}
+	}
+
+        for(i=0; i<stack->num; i++) {
                 verbose(VERB_OPS, "init module %d: %s",
                         i, stack->mod[i]->name);
                 fptr_ok(fptr_whitelist_mod_init(stack->mod[i]->init));
@@ -278,7 +299,7 @@ modstack_setup(struct module_stack* stack, const char* module_conf,
 }
 
 void
-modstack_desetup(struct module_stack* stack, struct module_env* env)
+modstack_call_deinit(struct module_stack* stack, struct module_env* env)
 {
         int i;
         for(i=0; i<stack->num; i++) {
@@ -288,7 +309,7 @@ modstack_desetup(struct module_stack* stack, struct module_env* env)
 }
 
 void
-modstack_destartup(struct module_stack* stack, struct module_env* env)
+modstack_call_destartup(struct module_stack* stack, struct module_env* env)
 {
         int i;
         for(i=0; i<stack->num; i++) {
@@ -297,9 +318,6 @@ modstack_destartup(struct module_stack* stack, struct module_env* env)
                 fptr_ok(fptr_whitelist_mod_destartup(stack->mod[i]->destartup));
                 (*stack->mod[i]->destartup)(env, i);
         }
-        stack->num = 0;
-        free(stack->mod);
-        stack->mod = NULL;
 }
 
 int

@@ -115,6 +115,8 @@ struct daemon {
 	struct module_env* env;
 	/** stack of module callbacks */
 	struct module_stack mods;
+	/** The module stack has been inited */
+	int mods_inited;
 	/** access control, which client IPs are allowed to connect */
 	struct acl_list* acl;
 	/** access control, which interfaces are allowed to connect */

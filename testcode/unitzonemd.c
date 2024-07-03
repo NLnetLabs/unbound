@@ -288,9 +288,9 @@ static void zonemd_verify_test(char* zname, char* zfile, char* tastr,
 	if(!env.auth_zones)
 		fatal_exit("out of memory");
 	memset(&mods, 0, sizeof(mods));
-	if(!modstack_startup(&mods, env.cfg->module_conf, &env))
+	if(!modstack_call_startup(&mods, env.cfg->module_conf, &env))
 		fatal_exit("could not modstack_startup");
-	if(!modstack_setup(&mods, env.cfg->module_conf, &env))
+	if(!modstack_call_init(&mods, env.cfg->module_conf, &env))
 		fatal_exit("could not modstack_call_init");
 	env.mesh = mesh_create(&mods, &env);
 	if(!env.mesh)
@@ -329,8 +329,9 @@ static void zonemd_verify_test(char* zname, char* zfile, char* tastr,
 
 	/* desetup test harness */
 	mesh_delete(env.mesh);
-	modstack_desetup(&mods, &env);
-	modstack_destartup(&mods, &env);
+	modstack_call_deinit(&mods, &env);
+	modstack_call_destartup(&mods, &env);
+	modstack_free(&mods);
 	auth_zones_delete(env.auth_zones);
 	anchors_delete(env.anchors);
 	config_delete(env.cfg);

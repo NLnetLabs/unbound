@@ -61,14 +61,20 @@ struct module_stack {
 void modstack_init(struct module_stack* stack);
 
 /**
- * Initialises modules and assignes ids.
+ * Free the stack of modules
+ * @param stack: stack that frees up memory.
+ */
+void modstack_free(struct module_stack* stack);
+
+/**
+ * Initialises modules and assignes ids. Calls module_startup().
  * @param stack: Expected empty, filled according to module_conf
  * @param module_conf: string what modules to initialize
  * @param env: module environment which is inited by the modules.
  *	environment should have a superalloc, cfg,
  * @return on false a module init failed.
  */
-int modstack_startup(struct module_stack* stack, const char* module_conf,
+int modstack_call_startup(struct module_stack* stack, const char* module_conf,
 	struct module_env* env);
 
 /**
@@ -103,22 +109,22 @@ const char** module_list_avail(void);
  *	env.need_to_validate is set by the modules.
  * @return on false a module init failed.
  */
-int modstack_setup(struct module_stack* stack, const char* module_conf,
+int modstack_call_init(struct module_stack* stack, const char* module_conf,
 	struct module_env* env);
 
 /**
- * Desetup the modules, deinit.
+ * Deinit the modules.
  * @param stack: made empty.
  * @param env: module env for module deinit() calls.
  */
-void modstack_desetup(struct module_stack* stack, struct module_env* env);
+void modstack_call_deinit(struct module_stack* stack, struct module_env* env);
 
 /**
  * Destartup the modules, close, delete.
  * @param stack: made empty.
  * @param env: module env for module destartup() calls.
  */
-void modstack_destartup(struct module_stack* stack, struct module_env* env);
+void modstack_call_destartup(struct module_stack* stack, struct module_env* env);
 
 /**
  * Find index of module by name.
