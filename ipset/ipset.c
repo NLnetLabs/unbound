@@ -78,7 +78,7 @@ static void * open_filter() {
 		log_err("ipset: could not bind netfilter.");
 		return NULL;
 	}
-	return dev;
+	return (void *)dev;
 }
 #endif
 
@@ -282,7 +282,7 @@ static int ipset_update(struct module_env *env, struct dns_msg *return_msg,
 #ifdef HAVE_NET_PFVAR_H
 #else
 	if (!ie->dev) {
-		// retry to create mnl socket
+		/* retry to create mnl socket */
 		ie->dev = open_filter();
 		if (!ie->dev) {
 			log_warn("ipset open_filter failed");
