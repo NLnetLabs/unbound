@@ -395,7 +395,7 @@ fptr_whitelist_modenv_detect_cycle(int (*fptr)(
 	return 0;
 }
 
-int 
+int
 fptr_whitelist_mod_init(int (*fptr)(struct module_env* env, int id))
 {
 	if(fptr == &iter_init) return 1;
@@ -421,9 +421,10 @@ fptr_whitelist_mod_init(int (*fptr)(struct module_env* env, int id))
 	else if(fptr == &ipset_init) return 1;
 #endif
 	return 0;
+
 }
 
-int 
+int
 fptr_whitelist_mod_deinit(void (*fptr)(struct module_env* env, int id))
 {
 	if(fptr == &iter_deinit) return 1;
@@ -447,6 +448,24 @@ fptr_whitelist_mod_deinit(void (*fptr)(struct module_env* env, int id))
 #endif
 #ifdef USE_IPSET
 	else if(fptr == &ipset_deinit) return 1;
+#endif
+	return 0;
+}
+
+int
+fptr_whitelist_mod_startup(int (*fptr)(struct module_env* env, int id))
+{
+#ifdef USE_IPSET
+	if(fptr == &ipset_startup) return 1;
+#endif
+	return 0;
+}
+
+int
+fptr_whitelist_mod_destartup(void (*fptr)(struct module_env* env, int id))
+{
+#ifdef USE_IPSET
+	if(fptr == &ipset_destartup) return 1;
 #endif
 	return 0;
 }

@@ -983,7 +983,7 @@ cachedb_get_mem(struct module_env* env, int id)
  */
 static struct module_func_block cachedb_block = {
 	"cachedb",
-	&cachedb_init, &cachedb_deinit, &cachedb_operate,
+	NULL, NULL, &cachedb_init, &cachedb_deinit, &cachedb_operate,
 	&cachedb_inform_super, &cachedb_clear, &cachedb_get_mem
 };
 

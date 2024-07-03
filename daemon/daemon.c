@@ -343,7 +343,7 @@ int setup_acl_for_ports(struct acl_list* list, struct listen_port* port_list)
 	return 1;
 }
 
-int 
+int
 daemon_open_shared_ports(struct daemon* daemon)
 {
 	log_assert(daemon);
@@ -443,6 +443,19 @@ daemon_open_shared_ports(struct daemon* daemon)
 	return 1;
 }
 
+int
+daemon_privileged(struct daemon* daemon)
+{
+	daemon->env->cfg = daemon->cfg;
+	daemon->env->alloc = &daemon->superalloc;
+	daemon->env->worker = NULL;
+	if(!modstack_call_startup(&daemon->mods, daemon->cfg->module_conf,
+		daemon->env)) {
+		fatal_exit("failed to startup modules");
+	}
+	return 1;
+}
+
 /**
  * Setup modules. setup module stack.
  * @param daemon: the daemon
@@ -452,11 +465,15 @@ static void daemon_setup_modules(struct daemon* daemon)
 	daemon->env->cfg = daemon->cfg;
 	daemon->env->alloc = &daemon->superalloc;
 	daemon->env->worker = NULL;
-	daemon->env->need_to_validate = 0; /* set by module init below */
-	if(!modstack_setup(&daemon->mods, daemon->cfg->module_conf, 
-		daemon->env)) {
-		fatal_exit("failed to setup modules");
+	if(daemon->mods_inited) {
+		modstack_call_deinit(&daemon->mods, daemon->env);
 	}
+	daemon->env->need_to_validate = 0; /* set by module init below */
+	if(!modstack_call_init(&daemon->mods, daemon->cfg->module_conf,
+		daemon->env)) {
+		fatal_exit("failed to init modules");
+	}
+	daemon->mods_inited = 1;
 	log_edns_known_options(VERB_ALGO, daemon->env);
 }
 
@@ -860,7 +877,7 @@ daemon_cleanup(struct daemon* daemon)
 	daemon->env->views = NULL;
 	if(daemon->env->auth_zones)
 		auth_zones_cleanup(daemon->env->auth_zones);
-	/* key cache is cleared by module desetup during next daemon_fork() */
+	/* key cache is cleared by module deinit during next daemon_fork() */
 	daemon_remote_clear(daemon->rc);
 	if(daemon->fast_reload_thread)
 		fast_reload_thread_stop(daemon->fast_reload_thread);
@@ -894,7 +911,9 @@ daemon_delete(struct daemon* daemon)
 	size_t i;
 	if(!daemon)
 		return;
-	modstack_desetup(&daemon->mods, daemon->env);
+	modstack_call_deinit(&daemon->mods, daemon->env);
+	modstack_call_destartup(&daemon->mods, daemon->env);
+	modstack_free(&daemon->mods);
 	daemon_remote_delete(daemon->rc);
 	for(i = 0; i < daemon->num_ports; i++)
 		listening_ports_free(daemon->ports[i]);
