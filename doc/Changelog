@@ -1,3 +1,8 @@
+3 July 2024: Yorgos
+	- Fix for repeated use of a DNAME record: first overallocate and then
+	  move the exact size of the init value to avoid false positive heap
+	  overflow reads from address sanitizers.
+
 2 July 2024: Wouter
 	- Fix to remove unused include from the readzone test program.
 	- Fix unused variable warning in do_cache_remove.
