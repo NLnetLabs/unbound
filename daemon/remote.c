@@ -6903,6 +6903,29 @@ fr_worker_pickup_auth_changes(struct worker* worker,
 	}
 }
 
+/** Fast reload, the worker picks up changes in outside_network. */
+static void
+fr_worker_pickup_outside_network(struct worker* worker)
+{
+	struct outside_network* outnet = worker->back;
+	struct config_file* cfg = worker->env.cfg;
+	outnet->use_caps_for_id = cfg->use_caps_bits_for_id;
+	outnet->unwanted_threshold = cfg->unwanted_threshold;
+	outnet->tls_use_sni = cfg->tls_use_sni;
+	outnet->tcp_mss = cfg->outgoing_tcp_mss;
+	outnet->ip_dscp = cfg->ip_dscp;
+	outnet->max_reuse_tcp_queries = cfg->max_reuse_tcp_queries;
+	outnet->tcp_reuse_timeout = cfg->tcp_reuse_timeout;
+	outnet->tcp_auth_query_timeout = cfg->tcp_auth_query_timeout;
+	outnet->delayclose = cfg->delay_close;
+	if(outnet->delayclose) {
+#ifndef S_SPLINT_S
+		outnet->delay_tv.tv_sec = cfg->delay_close/1000;
+		outnet->delay_tv.tv_usec = (cfg->delay_close%1000)*1000;
+#endif
+	}
+}
+
 void
 fast_reload_worker_pickup_changes(struct worker* worker)
 {
@@ -6930,6 +6953,7 @@ fast_reload_worker_pickup_changes(struct worker* worker)
 #ifdef USE_CACHEDB
 	worker->env.cachedb_enabled = worker->daemon->env->cachedb_enabled;
 #endif
+	fr_worker_pickup_outside_network(worker);
 }
 
 /** fast reload thread, handle reload_stop notification, send reload stop
