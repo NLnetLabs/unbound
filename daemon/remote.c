@@ -5882,7 +5882,8 @@ fr_load_config(struct fast_reload_thread* fr, struct timeval* time_read,
 		config_delete(newcfg);
 		if(!fr_output_printf(fr, "Could not construct from the "
 			"config, check for errors with unbound-checkconf, or "
-			"out of memory.\n"))
+			"out of memory. The parse errors are printed in "
+			"the log.\n"))
 			return 0;
 		fr_send_notification(fr, fast_reload_notification_printout);
 		return 0;
