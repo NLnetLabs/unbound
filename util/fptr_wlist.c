@@ -418,7 +418,6 @@ fptr_whitelist_mod_init(int (*fptr)(struct module_env* env, int id))
 	else if(fptr == &ipset_init) return 1;
 #endif
 	return 0;
-
 }
 
 int

@@ -7,6 +7,7 @@
 	- Fix #144: Port ipset to BSD pf tables.
 	- Add unit test skip files and bison and flex output to gitignore.
 	- Fix to use modstack_init in zonemd unit test.
+	- Fix to remove unneeded linebreak in fptr_wlist.c.
 
 2 July 2024: Wouter
 	- Fix to remove unused include from the readzone test program.
