@@ -297,11 +297,17 @@ val_new_getmsg(struct module_qstate* qstate, struct val_qstate* vq)
 		return NULL;
 	if(vq->orig_msg->rep->rrset_count > RR_COUNT_MAX)
 		return NULL; /* protect against integer overflow */
-	vq->chase_reply->rrsets = regional_alloc_init(qstate->region,
-		vq->orig_msg->rep->rrsets, sizeof(struct ub_packed_rrset_key*)
-			* (vq->orig_msg->rep->rrset_count + vq->orig_msg->rep->an_numrrsets /* for extra DNAME records for unsigned CNAME repetitions*/) );
+	/* Over allocate (+an_numrrsets) in case we need to put extra DNAME
+	 * records for unsigned CNAME repetitions */
+	vq->chase_reply->rrsets = regional_alloc(qstate->region,
+		sizeof(struct ub_packed_rrset_key*) *
+		(vq->orig_msg->rep->rrset_count
+		+ vq->orig_msg->rep->an_numrrsets));
 	if(!vq->chase_reply->rrsets)
 		return NULL;
+	memmove(vq->chase_reply->rrsets, vq->orig_msg->rep->rrsets,
+		sizeof(struct ub_packed_rrset_key*) *
+		vq->orig_msg->rep->rrset_count);
 	vq->rrset_skip = 0;
 	return vq;
 }
