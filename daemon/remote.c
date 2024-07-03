@@ -4203,7 +4203,7 @@ fr_check_compat_cfg(struct fast_reload_thread* fr, struct config_file* newcfg)
 	fr_check_changed_cfg(cfg->port != newcfg->port,
 		"port", changed_str, sizeof(changed_str));
 	/* But cfg->outgoing_num_ports has been changed at startup,
-	 * possibly to reduce it, so cannot check it here. */
+	 * possibly to reduce it, so do not check it here. */
 	fr_check_changed_cfg(cfg->outgoing_num_tcp != newcfg->outgoing_num_tcp,
 		"outgoing-num-tcp", changed_str, sizeof(changed_str));
 	fr_check_changed_cfg(cfg->incoming_num_tcp != newcfg->incoming_num_tcp,
@@ -4238,6 +4238,50 @@ fr_check_compat_cfg(struct fast_reload_thread* fr, struct config_file* newcfg)
 		"ip-freebind", changed_str, sizeof(changed_str));
 	fr_check_changed_cfg(cfg->udp_connect != newcfg->udp_connect,
 		"udp-connect", changed_str, sizeof(changed_str));
+	fr_check_changed_cfg(cfg->msg_buffer_size != newcfg->msg_buffer_size,
+		"msg-buffer-size", changed_str, sizeof(changed_str));
+	fr_check_changed_cfg(cfg->do_tcp_keepalive != newcfg->do_tcp_keepalive,
+		"edns-tcp-keepalive", changed_str, sizeof(changed_str));
+	fr_check_changed_cfg(
+		cfg->tcp_keepalive_timeout != newcfg->tcp_keepalive_timeout,
+		"edns-tcp-keepalive-timeout", changed_str, sizeof(changed_str));
+	fr_check_changed_cfg(cfg->tcp_idle_timeout != newcfg->tcp_idle_timeout,
+		"tcp-idle-timeout", changed_str, sizeof(changed_str));
+	/* Not changed, only if DoH is used, it is then stored in commpoints,
+	 * as well as used from cfg. */
+	fr_check_changed_cfg(
+		cfg->harden_large_queries != newcfg->harden_large_queries,
+		"harden-large-queries", changed_str, sizeof(changed_str));
+	fr_check_changed_cfg(cfg->http_max_streams != newcfg->http_max_streams,
+		"http-max-streams", changed_str, sizeof(changed_str));
+	fr_check_changed_cfg_str(cfg->http_endpoint, newcfg->http_endpoint,
+		"http-endpoint", changed_str, sizeof(changed_str));
+	fr_check_changed_cfg(
+		cfg->http_notls_downstream != newcfg->http_notls_downstream,
+		"http_notls_downstream", changed_str, sizeof(changed_str));
+	fr_check_changed_cfg(cfg->https_port != newcfg->https_port,
+		"https-port", changed_str, sizeof(changed_str));
+	fr_check_changed_cfg(cfg->ssl_port != newcfg->ssl_port,
+		"tls-port", changed_str, sizeof(changed_str));
+	fr_check_changed_cfg_str(cfg->ssl_service_key, newcfg->ssl_service_key,
+		"tls-service-key", changed_str, sizeof(changed_str));
+	fr_check_changed_cfg_str(cfg->ssl_service_pem, newcfg->ssl_service_pem,
+		"tls-service-pem", changed_str, sizeof(changed_str));
+	fr_check_changed_cfg_str(cfg->tls_cert_bundle, newcfg->tls_cert_bundle,
+		"tls-cert-bundle", changed_str, sizeof(changed_str));
+	fr_check_changed_cfg_strlist(cfg->proxy_protocol_port,
+		newcfg->proxy_protocol_port, "proxy-protocol-port",
+		changed_str, sizeof(changed_str));
+	fr_check_changed_cfg_strlist(cfg->tls_additional_port,
+		newcfg->tls_additional_port, "tls-additional-port",
+		changed_str, sizeof(changed_str));
+	fr_check_changed_cfg_str(cfg->if_automatic_ports,
+		newcfg->if_automatic_ports, "interface-automatic-ports",
+		changed_str, sizeof(changed_str));
+	fr_check_changed_cfg(cfg->udp_upstream_without_downstream !=
+		newcfg->udp_upstream_without_downstream,
+		"udp-upstream-without-downstream", changed_str,
+		sizeof(changed_str));
 
 	if(changed_str[0] != 0) {
 		/* The new config changes some items that do not work with
