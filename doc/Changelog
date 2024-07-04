@@ -1,3 +1,8 @@
+4 July 2024: Wouter
+	- Fix to print details about the failure to lookup a DNSKEY record
+	  when validation fails due to the missing DNSKEY. Also for key prime
+	  and DS lookups.
+
 3 July 2024: Yorgos
 	- Fix for repeated use of a DNAME record: first overallocate and then
 	  move the exact size of the init value to avoid false positive heap
