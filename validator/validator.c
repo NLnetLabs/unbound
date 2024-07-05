@@ -2798,9 +2798,12 @@ ds_response_to_ke(struct module_qstate* qstate, struct val_qstate* vq,
 		errinf(qstate, rc);
 		reason = "no DS";
 		if(sub_qstate) {
-			errinf(qstate, "[");
-			errinf(qstate, errinf_to_str_misc(sub_qstate));
-			errinf(qstate, "]");
+			char* err = errinf_to_str_misc(sub_qstate);
+			if(err) {
+				char buf[1024];
+				snprintf(buf, sizeof(buf), "[%s]", err);
+				errinf(qstate, err);
+			}
 		}
 		reason_bogus = LDNS_EDE_NETWORK_ERROR;
 		errinf_ede(qstate, reason, reason_bogus);

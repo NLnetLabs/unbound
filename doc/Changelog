@@ -1,3 +1,6 @@
+5 July 2024: Wouter
+	- Fix for neater printout for error for missing DS response.
+
 4 July 2024: Wouter
 	- Fix to print details about the failure to lookup a DNSKEY record
 	  when validation fails due to the missing DNSKEY. Also for key prime
