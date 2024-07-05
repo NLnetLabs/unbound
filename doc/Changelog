@@ -1,3 +1,6 @@
+5 July 2024: Yorgos
+	- Don't check for message TTL changes if the RRsets remain the same.
+
 5 July 2024: Wouter
 	- Fix for neater printout for error for missing DS response.
 	- Fix neater printout.
