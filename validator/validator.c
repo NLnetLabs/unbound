@@ -2802,7 +2802,7 @@ ds_response_to_ke(struct module_qstate* qstate, struct val_qstate* vq,
 			if(err) {
 				char buf[1024];
 				snprintf(buf, sizeof(buf), "[%s]", err);
-				errinf(qstate, err);
+				errinf(qstate, buf);
 			}
 		}
 		reason_bogus = LDNS_EDE_NETWORK_ERROR;
