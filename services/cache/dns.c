@@ -115,7 +115,9 @@ store_rrsets(struct module_env* env, struct reply_info* rep, time_t now,
 		}
 		/* if ref was updated make sure the message ttl is updated to
 		 * the minimum of the current rrsets. */
+		lock_rw_rdlock(&rep->rrsets[i]->entry.lock);
 		ttl = ((struct packed_rrset_data*)rep->rrsets[i]->entry.data)->ttl;
+		lock_rw_unlock(&rep->rrsets[i]->entry.lock);
 		if(ttl < min_ttl) min_ttl = ttl;
 	}
 	if(min_ttl < rep->ttl) {

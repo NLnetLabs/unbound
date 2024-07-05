@@ -1,6 +1,7 @@
 5 July 2024: Wouter
 	- Fix for neater printout for error for missing DS response.
 	- Fix neater printout.
+	- Fix #1099: Unbound core dump on SIGSEGV.
 
 4 July 2024: Wouter
 	- Fix to print details about the failure to lookup a DNSKEY record
