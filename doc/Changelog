@@ -2,6 +2,9 @@
 	- Fix for neater printout for error for missing DS response.
 	- Fix neater printout.
 	- Fix #1099: Unbound core dump on SIGSEGV.
+	- Fix for #1099: Fix to check for deleted RRset when the contents
+	  is updated and fetched after it is stored, and also check for a
+	  changed RRset.
 
 4 July 2024: Wouter
 	- Fix to print details about the failure to lookup a DNSKEY record

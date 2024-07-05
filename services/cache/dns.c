@@ -96,7 +96,8 @@ store_rrsets(struct module_env* env, struct reply_info* rep, time_t now,
 				struct ub_packed_rrset_key* ck;
 				lock_rw_rdlock(&rep->ref[i].key->entry.lock);
 				/* if deleted rrset, do not copy it */
-				if(rep->ref[i].key->id == 0)
+				if(rep->ref[i].key->id == 0 ||
+					rep->ref[i].id != rep->ref[i].key->id)
 					ck = NULL;
 				else 	ck = packed_rrset_copy_region(
 					rep->ref[i].key, region, now);
@@ -115,10 +116,14 @@ store_rrsets(struct module_env* env, struct reply_info* rep, time_t now,
 		}
 		/* if ref was updated make sure the message ttl is updated to
 		 * the minimum of the current rrsets. */
-		lock_rw_rdlock(&rep->rrsets[i]->entry.lock);
-		ttl = ((struct packed_rrset_data*)rep->rrsets[i]->entry.data)->ttl;
-		lock_rw_unlock(&rep->rrsets[i]->entry.lock);
-		if(ttl < min_ttl) min_ttl = ttl;
+		lock_rw_rdlock(&rep->ref[i].key->entry.lock);
+		if(rep->ref[i].key->id != 0 &&
+			rep->ref[i].id == rep->ref[i].key->id) {
+			/* if deleted, skip ttl update. */
+			ttl = ((struct packed_rrset_data*)rep->rrsets[i]->entry.data)->ttl;
+			if(ttl < min_ttl) min_ttl = ttl;
+		}
+		lock_rw_unlock(&rep->ref[i].key->entry.lock);
 	}
 	if(min_ttl < rep->ttl) {
 		rep->ttl = min_ttl;
