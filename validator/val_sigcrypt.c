@@ -695,10 +695,10 @@ void algo_needs_reason(int alg, char** reason, char* s, char* reasonbuf,
 {
 	sldns_lookup_table *t = sldns_lookup_by_id(sldns_algorithms, alg);
 	if(t&&t->name)
-		snprintf(reasonbuf, sizeof(reasonlen), "%s with algorithm %s",
-			s, t->name);
-	else	snprintf(reasonbuf, sizeof(reasonlen), "%s with algorithm "
-			"ALG%u", s, (unsigned)alg);
+		snprintf(reasonbuf, reasonlen, "%s with algorithm %s", s,
+			t->name);
+	else	snprintf(reasonbuf, reasonlen, "%s with algorithm ALG%u", s,
+			(unsigned)alg);
 	*reason = reasonbuf;
 }
 
