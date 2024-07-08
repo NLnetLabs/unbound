@@ -647,6 +647,7 @@ validate_msg_signatures(struct module_qstate* qstate, struct val_qstate* vq,
 	struct ub_packed_rrset_key* s;
 	enum sec_status sec;
 	int num_verifies = 0, verified, have_state = 0;
+	char reasonbuf[256];
 	char* reason = NULL;
 	sldns_ede_code reason_bogus = LDNS_EDE_DNSSEC_BOGUS;
 	*suspend = 0;
@@ -682,7 +683,8 @@ validate_msg_signatures(struct module_qstate* qstate, struct val_qstate* vq,
 
 		/* Verify the answer rrset */
 		sec = val_verify_rrset_entry(env, ve, s, key_entry, &reason,
-			&reason_bogus, LDNS_SECTION_ANSWER, qstate, &verified);
+			&reason_bogus, LDNS_SECTION_ANSWER, qstate, &verified,
+			reasonbuf, sizeof(reasonbuf));
 		/* If the (answer) rrset failed to validate, then this 
 		 * message is BAD. */
 		if(sec != sec_status_secure) {
@@ -727,7 +729,7 @@ validate_msg_signatures(struct module_qstate* qstate, struct val_qstate* vq,
 		s = chase_reply->rrsets[i];
 		sec = val_verify_rrset_entry(env, ve, s, key_entry, &reason,
 			&reason_bogus, LDNS_SECTION_AUTHORITY, qstate,
-			&verified);
+			&verified, reasonbuf, sizeof(reasonbuf));
 		/* If anything in the authority section fails to be secure, 
 		 * we have a bad message. */
 		if(sec != sec_status_secure) {
@@ -773,7 +775,7 @@ validate_msg_signatures(struct module_qstate* qstate, struct val_qstate* vq,
 		if(sname && query_dname_compare(sname, key_entry->name)==0)
 			(void)val_verify_rrset_entry(env, ve, s, key_entry,
 				&reason, NULL, LDNS_SECTION_ADDITIONAL, qstate,
-				&verified);
+				&verified, reasonbuf, sizeof(reasonbuf));
 		/* the additional section can fail to be secure, 
 		 * it is optional, check signature in case we need
 		 * to clean the additional section later. */
@@ -2680,6 +2682,7 @@ primeResponseToKE(struct ub_packed_rrset_key* dnskey_rrset,
 	struct val_env* ve = (struct val_env*)qstate->env->modinfo[id];
 	struct key_entry_key* kkey = NULL;
 	enum sec_status sec = sec_status_unchecked;
+	char reasonbuf[256];
 	char* reason = NULL;
 	sldns_ede_code reason_bogus = LDNS_EDE_DNSSEC_BOGUS;
 	int downprot = qstate->env->cfg->harden_algo_downgrade;
@@ -2716,7 +2719,7 @@ primeResponseToKE(struct ub_packed_rrset_key* dnskey_rrset,
 	/* attempt to verify with trust anchor DS and DNSKEY */
 	kkey = val_verify_new_DNSKEYs_with_ta(qstate->region, qstate->env, ve, 
 		dnskey_rrset, ta->ds_rrset, ta->dnskey_rrset, downprot,
-		&reason, &reason_bogus, qstate);
+		&reason, &reason_bogus, qstate, reasonbuf, sizeof(reasonbuf));
 	if(!kkey) {
 		log_err("out of memory: verifying prime TA");
 		return NULL;
@@ -2785,6 +2788,7 @@ ds_response_to_ke(struct module_qstate* qstate, struct val_qstate* vq,
 	struct key_entry_key** ke, struct module_qstate* sub_qstate)
 {
 	struct val_env* ve = (struct val_env*)qstate->env->modinfo[id];
+	char reasonbuf[256];
 	char* reason = NULL;
 	sldns_ede_code reason_bogus = LDNS_EDE_DNSSEC_BOGUS;
 	enum val_classification subtype;
@@ -2827,7 +2831,9 @@ ds_response_to_ke(struct module_qstate* qstate, struct val_qstate* vq,
 		/* Verify only returns BOGUS or SECURE. If the rrset is 
 		 * bogus, then we are done. */
 		sec = val_verify_rrset_entry(qstate->env, ve, ds,
-			vq->key_entry, &reason, &reason_bogus, LDNS_SECTION_ANSWER, qstate, &verified);
+			vq->key_entry, &reason, &reason_bogus,
+			LDNS_SECTION_ANSWER, qstate, &verified, reasonbuf,
+			sizeof(reasonbuf));
 		if(sec != sec_status_secure) {
 			verbose(VERB_DETAIL, "DS rrset in DS response did "
 				"not verify");
@@ -2877,7 +2883,8 @@ ds_response_to_ke(struct module_qstate* qstate, struct val_qstate* vq,
 		/* Try to prove absence of the DS with NSEC */
 		sec = val_nsec_prove_nodata_dsreply(
 			qstate->env, ve, qinfo, msg->rep, vq->key_entry, 
-			&proof_ttl, &reason, &reason_bogus, qstate);
+			&proof_ttl, &reason, &reason_bogus, qstate,
+			reasonbuf, sizeof(reasonbuf));
 		switch(sec) {
 			case sec_status_secure:
 				verbose(VERB_DETAIL, "NSEC RRset for the "
@@ -2914,7 +2921,8 @@ ds_response_to_ke(struct module_qstate* qstate, struct val_qstate* vq,
 		sec = nsec3_prove_nods(qstate->env, ve, 
 			msg->rep->rrsets + msg->rep->an_numrrsets,
 			msg->rep->ns_numrrsets, qinfo, vq->key_entry, &reason,
-			&reason_bogus, qstate, &vq->nsec3_cache_table);
+			&reason_bogus, qstate, &vq->nsec3_cache_table,
+			reasonbuf, sizeof(reasonbuf));
 		switch(sec) {
 			case sec_status_insecure:
 				/* case insecure also continues to unsigned
@@ -2981,7 +2989,8 @@ ds_response_to_ke(struct module_qstate* qstate, struct val_qstate* vq,
 		}
 		sec = val_verify_rrset_entry(qstate->env, ve, cname,
 			vq->key_entry, &reason, &reason_bogus,
-			LDNS_SECTION_ANSWER, qstate, &verified);
+			LDNS_SECTION_ANSWER, qstate, &verified, reasonbuf,
+			sizeof(reasonbuf));
 		if(sec == sec_status_secure) {
 			verbose(VERB_ALGO, "CNAME validated, "
 				"proof that DS does not exist");
@@ -3135,6 +3144,7 @@ process_dnskey_response(struct module_qstate* qstate, struct val_qstate* vq,
 	struct key_entry_key* old = vq->key_entry;
 	struct ub_packed_rrset_key* dnskey = NULL;
 	int downprot;
+	char reasonbuf[256];
 	char* reason = NULL;
 	sldns_ede_code reason_bogus = LDNS_EDE_DNSSEC_BOGUS;
 
@@ -3185,7 +3195,8 @@ process_dnskey_response(struct module_qstate* qstate, struct val_qstate* vq,
 	}
 	downprot = qstate->env->cfg->harden_algo_downgrade;
 	vq->key_entry = val_verify_new_DNSKEYs(qstate->region, qstate->env,
-		ve, dnskey, vq->ds_rrset, downprot, &reason, &reason_bogus, qstate);
+		ve, dnskey, vq->ds_rrset, downprot, &reason, &reason_bogus,
+		qstate, reasonbuf, sizeof(reasonbuf));
 
 	if(!vq->key_entry) {
 		log_err("out of memory in verify new DNSKEYs");
