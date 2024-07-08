@@ -2689,27 +2689,25 @@ primeResponseToKE(struct ub_packed_rrset_key* dnskey_rrset,
 
 	if(!dnskey_rrset) {
 		char* err = errinf_to_str_misc(sub_qstate);
-		char reason[1024];
+		char rstr[1024];
 		log_nametypeclass(VERB_OPS, "failed to prime trust anchor -- "
 			"could not fetch DNSKEY rrset", 
 			ta->name, LDNS_RR_TYPE_DNSKEY, ta->dclass);
 		reason_bogus = LDNS_EDE_DNSKEY_MISSING;
 		if(!err) {
-			snprintf(reason, sizeof(reason), "no DNSKEY rrset");
+			snprintf(rstr, sizeof(rstr), "no DNSKEY rrset");
 		} else {
-			snprintf(reason, sizeof(reason), "no DNSKEY rrset "
+			snprintf(rstr, sizeof(rstr), "no DNSKEY rrset "
 				"[%s]", err);
 		}
 		if(qstate->env->cfg->harden_dnssec_stripped) {
-			errinf_ede(qstate, reason, reason_bogus);
+			errinf_ede(qstate, rstr, reason_bogus);
 			kkey = key_entry_create_bad(qstate->region, ta->name,
 				ta->namelen, ta->dclass, BOGUS_KEY_TTL,
-				reason_bogus, reason,
-				*qstate->env->now);
+				reason_bogus, rstr, *qstate->env->now);
 		} else 	kkey = key_entry_create_null(qstate->region, ta->name,
 				ta->namelen, ta->dclass, NULL_KEY_TTL,
-				reason_bogus, reason,
-				*qstate->env->now);
+				reason_bogus, rstr, *qstate->env->now);
 		if(!kkey) {
 			log_err("out of memory: allocate fail prime key");
 			return NULL;
@@ -3153,7 +3151,7 @@ process_dnskey_response(struct module_qstate* qstate, struct val_qstate* vq,
 
 	if(dnskey == NULL) {
 		char* err;
-		char reason[1024];
+		char rstr[1024];
 		/* bad response */
 		verbose(VERB_DETAIL, "Missing DNSKEY RRset in response to "
 			"DNSKEY query.");
@@ -3167,21 +3165,20 @@ process_dnskey_response(struct module_qstate* qstate, struct val_qstate* vq,
 		}
 		err = errinf_to_str_misc(sub_qstate);
 		if(!err) {
-			snprintf(reason, sizeof(reason), "No DNSKEY record");
+			snprintf(rstr, sizeof(rstr), "No DNSKEY record");
 		} else {
-			snprintf(reason, sizeof(reason), "No DNSKEY record "
+			snprintf(rstr, sizeof(rstr), "No DNSKEY record "
 				"[%s]", err);
 		}
 		reason_bogus = LDNS_EDE_DNSKEY_MISSING;
 		vq->key_entry = key_entry_create_bad(qstate->region,
 			qinfo->qname, qinfo->qname_len, qinfo->qclass,
-			BOGUS_KEY_TTL, reason_bogus, reason,
-			*qstate->env->now);
+			BOGUS_KEY_TTL, reason_bogus, rstr, *qstate->env->now);
 		if(!vq->key_entry) {
 			log_err("alloc failure in missing dnskey response");
 			/* key_entry is NULL for failure in Validate */
 		}
-		errinf_ede(qstate, reason, reason_bogus);
+		errinf_ede(qstate, rstr, reason_bogus);
 		errinf_origin(qstate, origin);
 		errinf_dname(qstate, "for key", qinfo->qname);
 		vq->state = VAL_VALIDATE_STATE;

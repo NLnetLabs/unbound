@@ -2,6 +2,7 @@
 	- Fix that validation reason failure that uses string print uses
 	  separate buffer that is passed, from the scratch validation buffer.
 	- Fixup algo_needs_reason string buffer length.
+	- Fix shadowed error string variable in validator dnskey handling.
 
 5 July 2024: Yorgos
 	- Don't check for message TTL changes if the RRsets remain the same.
