@@ -1,3 +1,6 @@
+9 July 2024: Yorgos
+	- Update list of known EDE codes.
+
 8 July 2024: Wouter
 	- Fix that validation reason failure that uses string print uses
 	  separate buffer that is passed, from the scratch validation buffer.

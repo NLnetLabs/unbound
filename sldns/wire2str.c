@@ -228,6 +228,11 @@ static sldns_lookup_table sldns_edns_ede_codes_data[] = {
 	{ LDNS_EDE_NO_REACHABLE_AUTHORITY, "No Reachable Authority" },
 	{ LDNS_EDE_NETWORK_ERROR, "Network Error" },
 	{ LDNS_EDE_INVALID_DATA, "Invalid Data" },
+	{ LDNS_EDE_SIGNATURE_EXPIRED_BEFORE_VALID, "Signature Expired Before Valid" },
+	{ LDNS_EDE_TOO_EARLY, "Non-Replayable Transactions Received in 0-RTT Data" },
+	{ LDNS_EDE_UNSUPPORTED_NSEC3_ITERATIONS, "Unsupported NSEC3 Iterations Value" },
+	{ LDNS_EDE_BADPROXYPOLICY, "Unable to Conform to Policy" },
+	{ LDNS_EDE_SYNTHESIZED, "Synthesized Answer" },
 	{ 0, NULL}
 };
 sldns_lookup_table* sldns_edns_ede_codes = sldns_edns_ede_codes_data;
