@@ -1,3 +1,7 @@
+10 July 2024: Wouter
+	- For #773: In contrib/unbound.service.in set unbound to start after
+	  network-online.target. Also for contrib/unbound_portable.service.in.
+
 9 July 2024: Yorgos
 	- Update list of known EDE codes.
 
