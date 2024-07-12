@@ -1989,7 +1989,6 @@ generate_parentside_target_query(struct module_qstate* qstate,
  * @param qclass: target qclass.
  * @return true on success, false on failure.
  */
-//JESSE Use this to generate new query?
 static int
 generate_target_query(struct module_qstate* qstate, struct iter_qstate* iq,
         int id, uint8_t* name, size_t namelen, uint16_t qtype, uint16_t qclass)
@@ -2586,7 +2585,6 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
         iq->deleg_original_qname = (uint8_t *)regional_alloc(qstate->region, iq->qchase.qname_len + 1);
         memcpy(iq->deleg_original_qname, qstate->qinfo.qname, iq->qchase.qname_len);
         iq->deleg_original_qname_len = iq->qchase.qname_len;
-        // log_err("JESSE: Copied original qname: %s", iq->deleg_original_qname);
         iq->original_query = iq->qchase.qtype;
     } else {
         //restore qname to original to put _deleg in correct point
@@ -2596,59 +2594,30 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
         iq->qchase.qtype = iq->original_query;
         iq->qinfo_out.qtype = iq->original_query;
     }
-    log_err("JESSE deleg original name: %s", iq->deleg_original_qname);
-    //NICE point
-    //root len check not needed anymore TODO
-    // log_err("JESSE: Current delegation state: %d", iq->deleg_state);
-    // log_err("JESSE: root length: %d", root_len);
     if (iq->deleg_state == 0 && root_len > 0) {
-        // log_err("komt in de state 0");
         iq->deleg_original_qname_len = iq->qchase.qname_len;
         iq->deleg_state = 1;
 
-
-        // iq->deleg_original_qname = qstate->qinfo.qname;
-
-        log_err("JESSE: Current delegation point: %s", iq->dp->name);
-        // int delegation_labels_len = dname_count_labels(iq->dp->name);
-        // log_err("JESSE: Current delegation point amount labels: %d", iq->dp->namelabs);
         int qchase_label_len = dname_count_labels(iq->qchase.qname);
-        // log_err("JESSE: Current qchase amount labels: %d", qchase_label_len);
-        // int labdiff = qchaselabs - dname_count_labels(iq->qinfo_out.qname);
-        // log_err("JESSE: qchase before label removing: %s", iq->qchase.qname);
         size_t labdiff =  qchase_label_len - iq->dp->namelabs - 1;
         dname_remove_labels(&iq->qchase.qname, &iq->qchase.qname_len, labdiff);
-        // log_err("JESSE: qchase after label removing: %s", iq->qchase.qname);
 
         //we have to add _deleg after the first label
         //for ex. jesse.nlnetlabs.nl becomes jesse._deleg.nlnetlabs.nl
         uint8_t deleg_wireformat[] = {6, 95, 100, 101, 108, 101, 103}; //{06}_deleg
         size_t delnamelen = iq->qchase.qname_len + sizeof(deleg_wireformat);
-        // log_err("deleg wireformat size: %d, original qname size: %d, qname len (variable): %d, size of first label orginal qname: %d allocated space: %d", sizeof(deleg_wireformat), sizeof(iq->qchase.qname), iq->qchase.qname_len, iq->qchase.qname[0], delnamelen);
-        // delnamelen = iq->qchase.qname_len + sizeof(deleg_wireformat);
-        // delname = (uint8_t *)malloc(delnamelen);
         uint8_t *delname = (uint8_t *)regional_alloc(qstate->region, delnamelen);
         //put first label of original qname
         uint8_t first_label_len = iq->qchase.qname[0];
-        // log_err("First label length: %d", first_label_len);
         uint8_t *qname_minus_first_label = iq->qchase.qname + first_label_len + 1;
         uint8_t leftover_len = iq->qchase.qname_len - first_label_len - 1;
-        // memcpy(delname, iq->qchase.qname, sizeof(iq->qchase.qname)); //memcpy 1st label into delname
+
         memcpy(delname, iq->qchase.qname, first_label_len + 1); //memcpy 1st label into delname
         memcpy(delname + first_label_len + 1, deleg_wireformat, sizeof(deleg_wireformat)); //memcpy _deleg label in delname
         memcpy(delname + first_label_len + sizeof(deleg_wireformat) + 1, qname_minus_first_label, leftover_len); //memcpy other labels in delname
-        log_err("Old delegation point: %s", iq->qchase.qname);
-        log_err("cname without first label: %s", qname_minus_first_label);
-        log_err("delegation name in bytes:");
-        for (size_t i = 0; i < delnamelen; ++i) {
-             log_err("%u ", delname[i]);
-        }
-
-        // log_err("The _deleg delegation point: %s", delname);
 
 
         iq->dp->namelen = delnamelen;
-        // iq->dp->namelabs++;
         iq->qchase.qtype = 64;
 		iq->qchase.qname = delname;
         iq->qchase.qname_len = delnamelen;
@@ -2656,10 +2625,7 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
         iq->qinfo_out.qtype = 64;
         iq->qinfo_out.qname = delname;
         iq->qinfo_out.qname_len = delnamelen;
-        // qstate->qinfo.qname = delname;
-        // generate_target_query(qstate, iq, id, uint8_t* name, size_t namelen, uint16_t qtype, uint16_t qclass) 
-    } else if (root_len > 0 && iq->deleg_state == 2) {
-        log_err("Got into the deleg prime");
+    } else if (root_len > 0 && iq->deleg_state == 2) { //in this state create deleg prime query
         int qchase_label_len = dname_count_labels(iq->qchase.qname);
         size_t labdiff =  qchase_label_len - iq->dp->namelabs;
         dname_remove_labels(&iq->qchase.qname, &iq->qchase.qname_len, labdiff);
@@ -2674,8 +2640,6 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
         memcpy(delname, deleg_wireformat, deleg_len);
         memcpy(delname+deleg_len, iq->qchase.qname, iq->qchase.qname_len); 
 
-        // iq->dp->namelen = deleg_len; //JESSE comment out
-        // iq->dp->namelabs++;
         iq->qchase.qtype = 64;
 		iq->qchase.qname = delname;
         iq->qchase.qname_len = delnamelen;
@@ -2683,12 +2647,6 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
         iq->qinfo_out.qtype = 64;
         iq->qinfo_out.qname = delname;
         iq->qinfo_out.qname_len = delnamelen;
-
-
-        // log_err("delegation name in bytes:");
-        // for (size_t i = 0; i < delnamelen; ++i) {
-        //     log_err("%u ", delname[i]);
-        // }
     }
 
 	if(iq->num_current_queries>0) {
@@ -3192,13 +3150,6 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 			iq->dp->name, &real_addr, real_addrlen);
 	}
 	// @JESSE: This is where a query is finally going out, hopefully.
-    log_err("JESSE send qname: %s", qstate->qinfo.qname);
-    log_err("JESSE send type: %d", qstate->qinfo.qtype);
-    // if(iq->dp != NULL) {
-    //     log_err("JESSE DP: %s", iq->dp->name);
-    //     log_err("JESSE DP len: %s", iq->dp->namelen);
-    // }
-    
 	fptr_ok(fptr_whitelist_modenv_send_query(qstate->env->send_query));
 	outq = (*qstate->env->send_query)(&iq->qinfo_out,
 		iq->chase_flags | (iq->chase_to_rd?BIT_RD:0),
@@ -3232,7 +3183,6 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 			iq->minimisation_state = SKIP_MINIMISE_STATE;
 		return next_state(iq, QUERYTARGETS_STATE);
 	}
-    log_err("Sturen lukt wel?");
 	outbound_list_insert(&iq->outlist, outq);
 	iq->num_current_queries++;
 	iq->sent_count++;
@@ -3274,7 +3224,6 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 {
 	int dnsseclame = 0, origtypecname = 0, orig_empty_nodata_found;
 	enum response_type type;
-    log_err("JESSE: The query got received");
 
 	iq->num_current_queries--;
 
@@ -3353,35 +3302,20 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 	//         make sure you identify those answers correclty and treat
 	//         them the same way as referrals below.
 	/* handle each of the type cases */
-    //check deleg and change to referal type TODO add check to see if _deleg in name
     uint16_t SVCB_QTYPE = 64;
-    // log_err("JESSE: the qtype of the answer is: %d ", iq->qchase.qtype);
-    // log_err("JESSE: the type is: %d", type);
 
     //check wether it was a deleg query
     uint8_t deleg_wireformat[] = {6, 95, 100, 101, 108, 101, 103}; //{06}_deleg
-    log_err("JESSE: qchase: %s", iq->qchase.qname);
-    log_err("JESSE: qchase type: %d", iq->qchase.qtype);
     uint8_t first_label_len = iq->qchase.qname[0]; 
     int is_deleg_query = memcmp(iq->qchase.qname + first_label_len + 1, deleg_wireformat, 7);
-    log_err("JESSE: is deleg query: %d", is_deleg_query);
     int is_deleg_prime_query = memcmp(iq->qchase.qname, deleg_wireformat, 7);
-    // for (size_t i = 0; i < 7;  ++i) {
-    //     log_err("%u ", iq->qchase.qname[i+ first_label_len]);
-    // }
 
-    // log_err("JESSE: is deleg query: %d", is_deleg_query);
-
-    //deleg state check is unnecessary?
-    // if (type == RESPONSE_TYPE_ANSWER && iq->qchase.qtype == 64) {
     if (iq->deleg_state == 1 && type == RESPONSE_TYPE_ANSWER && iq->qchase.qtype == 64 && is_deleg_query == 0) {
+        //result of a deleg refferal
         if (FLAGS_GET_RCODE(iq->response->rep->flags) == LDNS_RCODE_NXDOMAIN) {
-            // log_err("JESSE: got into the else!!!");
-            // iq->deleg_state = 2;
-            // log_err("Is the ns resolved: %d", iq->dp->nslist[0].resolved);
-            // iq->dp->nslist[0].resolved = 0;
+            //whem _deleg return NXDOMAIN
 
-            //turns all values back to normal, normally you would do this after first query found nothing. TODO?
+            //turns all values back to normal when no _deleg (NXDOMAIN)
             iq->qchase.qname = iq->deleg_original_qname;
             iq->qchase.qtype = iq->original_query;
             iq->qchase.qname_len = iq->deleg_original_qname_len;
@@ -3391,21 +3325,16 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
             iq->qinfo_out.qname_len = iq->deleg_original_qname_len;
             return next_state(iq, QUERYTARGETS_STATE);
         }
+        //In this scenario _deleg exists
         iq->deleg_state = 2;
 	    struct ub_packed_rrset_key* rrset_key;
-        // log_err("JESSE: the returnmsg: %s", iq->response->rep);
         rrset_key = reply_find_answer_rrset(&iq->qchase, iq->response->rep);
-        // struct packed_rrset_key rr_records = rrset->rk;
-
         if(rrset_key) {
             struct packed_rrset_data* rrset_data = (struct packed_rrset_data*) rrset_key->entry.data;
 
             size_t data_len = rrset_data->rr_len[0];
             uint8_t* svcb_data = rrset_data->rr_data[0];
-            // log_err("JESSE: The wireformat SVCB name:");
-            // for (size_t i = 0; i < data_len;  ++i) {
-                // log_err("%u ", svcb_data[i]);
-            // }
+
             size_t index = 4; //index of 4 to start at first label (skip message length(2 octet) and priority(2 octet))
             while(svcb_data[index] != 0) { //loop through dns labels, label length 0 means root so stop looping though labels
                index = index + svcb_data[index] + 1; 
@@ -3417,60 +3346,28 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
             while(index < data_len && (ipv4 == NULL || ipv6 == NULL)) {
                 uint16_t svcParamkey    = (svcb_data[index] << 8)   | svcb_data[index+1];
                 uint16_t svcParamValLen = (svcb_data[index+2] << 8) | svcb_data[index+3];
-                // log_err("scvparamkey: %d", svcParamkey);
-                // log_err("scvparamlength: %d", svcParamValLen);
                 index = index + 4;
                 if (svcParamkey == 4) { //parse IPv4
                     ipv4 = (uint8_t *)regional_alloc(qstate->region, 4 * sizeof(uint8_t));
                     memcpy(ipv4, svcb_data + index, 4);
-                    // log_err("Parsed IPv4 Hint:");
-                    // for (size_t i = 0; i < 4;  ++i) {
-                        // log_err("%u ", ipv4[i]);
-                    // }
                 } else if (svcParamkey == 6) { //parse ipv6
                     ipv6 = (uint8_t *)regional_alloc(qstate->region, 16 * sizeof(uint8_t));
                     memcpy(ipv6, svcb_data + index, 16);
-                    // log_err("Parsed IPv6 Hint:");
-                    // for (size_t i = 0; i < 16;  ++i) {
-                        // log_err("%u ", ipv6[i]);
-                    // }
                 }
                 index = index + svcParamValLen;
-            // iq->deleg_state = 0;
             }
-            // old_dp = iq->dp;
-            // TODO delegation point name, has to be 1 closer then the original qname
-        //svcb_data->rk.dname;
-//to get the new delegation name, we have to remove the second label, which is the _deleg label
-            
+            //to get the new delegation name, we have to remove the second label, which is the _deleg label
             //count labels with dname_count_labels()
             size_t new_delegation_label_count = dname_count_labels(rrset_key->rk.dname);
             size_t old_label_count = dname_count_labels(iq->deleg_original_qname);
             size_t diff_label_len = old_label_count - new_delegation_label_count + 1;
-            // log_err("old label: %s", iq->deleg_original_qname);
-            // log_err("old label count: %d", old_label_count);
-            // log_err("new label count: %d", new_delegation_label_count);
-            // log_err("new label: %s", rrset_key->rk.dname);
 
             uint8_t *new_delegation_name = (uint8_t *)regional_alloc(qstate->region, iq->deleg_original_qname_len);
             size_t new_delegation_name_len = iq->deleg_original_qname_len;
             memcpy(new_delegation_name, iq->deleg_original_qname, iq->deleg_original_qname_len);
-            // log_err("JESSE: Amount of labels to remove %d", diff_label_len);
-            // log_err("JESSE: Newly created delegation point before removing: %s", new_delegation_name);
             dname_remove_labels(&new_delegation_name, &new_delegation_name_len, diff_label_len);
-            // log_err("JESSE: Newly created delegation point after removing: %s", new_delegation_name);
-            
-            // uint8_t deleg_label_len = 7;
-            // uint8_t new_delegation_name_len = rrset_key->rk.dname_len - deleg_label_len;
-            // uint8_t *new_delegation_name = (uint8_t *)regional_alloc(qstate->region, new_delegation_name_len);
-            // uint8_t first_label_len = rrset_key->rk.dname[0];
-            // log_err("JESSE: New delegation name len: %d", new_delegation_name_len);
-            // memcpy(new_delegation_name, rrset_key->rk.dname, first_label_len + 1 );//copies first label plus first label size
-            // memcpy(new_delegation_name, rrset_key->rk.dname + first_label_len + 1, new_delegation_name_len - first_label_len -1);//copies first label plus first label size
-            // log_err("JESSE: Newly created delegation point: %s", new_delegation_name);
             
             iq->dp = delegpt_from_deleg(iq->response, qstate->region, ipv4, ipv6, new_delegation_name, new_delegation_name_len);
-            // iq->dp = delegpt_from_deleg(iq->response, qstate->region, ipv4, ipv6, iq->deleg_original_qname, iq->deleg_original_qname_len);
             iq->referral_count++;
             iq->sent_count = 0;
             iq->dp_target_count = 0;
@@ -3491,20 +3388,9 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
             iq->fail_addr_type = 0;
             verbose(VERB_ALGO, "cleared outbound list for next round");
 
-
-            //turns all values back to normal, normally you would do this after first query found nothing. TODO?
-            // iq->qchase.qname = iq->deleg_original_qname;
-            // iq->qchase.qtype = 1;
-            // iq->qchase.qname_len = iq->deleg_original_qname_len;
-            //
-            // iq->qinfo_out.qtype = 1;
-            // iq->qinfo_out.qname = iq->deleg_original_qname;
-            // iq->qinfo_out.qname_len = iq->deleg_original_qname_len;
-
             return next_state(iq, QUERYTARGETS_STATE);
         } 
     } else if (is_deleg_prime_query == 0) {
-        log_err("This is a dleeg prime query!!");
         if (FLAGS_GET_RCODE(iq->response->rep->flags) == LDNS_RCODE_NXDOMAIN) {
             //NX DOMAIN mean deleg not supported (no error and answer count = 0)
             iq->deleg_state = 1;
@@ -3518,7 +3404,7 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 
 	/* see if referral brings us close to the target */
 	if(type == RESPONSE_TYPE_REFERRAL){
-        //JESSE back to 0 state when normal refferal found to try deleg again for child
+        //deleg: go to state 2 when normal refferal found, to try deleg again for child
         iq->deleg_state = 2;
 		struct ub_packed_rrset_key* ns = find_NS(
 			iq->response->rep, iq->response->rep->an_numrrsets,
@@ -3563,14 +3449,10 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 	}
 
 	if(type == RESPONSE_TYPE_ANSWER ){
-        //JESSE here it end?
-        // log_err("JESSE: Here deleg ends???");
-        //set original qname to NULL after query has been resolved
-        log_err("Kom ik hier nog wel??");
+        //set original qname to NULL after query has been resolved, to handle new queries
         if (iq->deleg_original_qname != NULL) {
             iq->deleg_original_qname = NULL;
             iq->deleg_original_qname_len = 0;
-            // log_err("JESSE: Copied original qname: %s", iq->deleg_original_qname);
             iq->original_query = 0;
         log_err("en hier ook nog wel??");
         }
@@ -3947,7 +3829,6 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 		 * In this case, the event is just sent directly back to 
 		 * the QUERYTARGETS_STATE without resetting anything, 
 		 * because, clearly, the next target must be tried. */
-        // log_err("JESSE: the qtype of the THROWAWAY is: %d ", iq->qchase.qtype);
         iq->qchase.qname = iq->deleg_original_qname;
         iq->qchase.qtype = iq->original_query;
         iq->qchase.qname_len = iq->deleg_original_qname_len;
