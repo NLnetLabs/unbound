@@ -2578,9 +2578,10 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 	if(!ie->supports_ipv4 && !ie->use_nat64)
 		delegpt_no_ipv4(iq->dp);
 	delegpt_log(VERB_ALGO, iq->dp);
+    log_err("Tes Test jesse jess", iq->deleg_original_qname);
 
     uint8_t root_len = iq->qchase.qname[0];
-    //TODOOO copy the original name to somewhere it wont be overwritten.
+    //todo have to remove this from iq when query has been resolved
     if (iq->deleg_original_qname == NULL) {
         iq->deleg_original_qname = (uint8_t *)regional_alloc(qstate->region, iq->qchase.qname_len + 1);
         memcpy(iq->deleg_original_qname, qstate->qinfo.qname, iq->qchase.qname_len);
@@ -2595,19 +2596,20 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
         iq->qchase.qtype = iq->original_query;
         iq->qinfo_out.qtype = iq->original_query;
     }
+    log_err("JESSE deleg original name: %s", iq->deleg_original_qname);
     //NICE point
     //root len check not needed anymore TODO
-    log_err("JESSE: Current delegation state: %d", iq->deleg_state);
-    log_err("JESSE: root length: %d", root_len);
+    // log_err("JESSE: Current delegation state: %d", iq->deleg_state);
+    // log_err("JESSE: root length: %d", root_len);
     if (iq->deleg_state == 0 && root_len > 0) {
-        log_err("komt in de state 0");
+        // log_err("komt in de state 0");
         iq->deleg_original_qname_len = iq->qchase.qname_len;
         iq->deleg_state = 1;
 
 
         // iq->deleg_original_qname = qstate->qinfo.qname;
 
-        // log_err("JESSE: Current delegation point: %s", iq->dp->name);
+        log_err("JESSE: Current delegation point: %s", iq->dp->name);
         // int delegation_labels_len = dname_count_labels(iq->dp->name);
         // log_err("JESSE: Current delegation point amount labels: %d", iq->dp->namelabs);
         int qchase_label_len = dname_count_labels(iq->qchase.qname);
@@ -2635,12 +2637,12 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
         memcpy(delname, iq->qchase.qname, first_label_len + 1); //memcpy 1st label into delname
         memcpy(delname + first_label_len + 1, deleg_wireformat, sizeof(deleg_wireformat)); //memcpy _deleg label in delname
         memcpy(delname + first_label_len + sizeof(deleg_wireformat) + 1, qname_minus_first_label, leftover_len); //memcpy other labels in delname
-        // log_err("Old delegation point: %s", iq->qchase.qname);
-        // log_err("cname without first label: %s", qname_minus_first_label);
-        // log_err("delegation name in bytes:");
-        // for (size_t i = 0; i < delnamelen; ++i) {
-        //     log_err("%u ", delname[i]);
-        // }
+        log_err("Old delegation point: %s", iq->qchase.qname);
+        log_err("cname without first label: %s", qname_minus_first_label);
+        log_err("delegation name in bytes:");
+        for (size_t i = 0; i < delnamelen; ++i) {
+             log_err("%u ", delname[i]);
+        }
 
         // log_err("The _deleg delegation point: %s", delname);
 
@@ -2672,7 +2674,7 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
         memcpy(delname, deleg_wireformat, deleg_len);
         memcpy(delname+deleg_len, iq->qchase.qname, iq->qchase.qname_len); 
 
-        iq->dp->namelen = deleg_len;
+        // iq->dp->namelen = deleg_len; //JESSE comment out
         // iq->dp->namelabs++;
         iq->qchase.qtype = 64;
 		iq->qchase.qname = delname;
@@ -2683,10 +2685,10 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
         iq->qinfo_out.qname_len = delnamelen;
 
 
-        log_err("delegation name in bytes:");
-        for (size_t i = 0; i < delnamelen; ++i) {
-            log_err("%u ", delname[i]);
-        }
+        // log_err("delegation name in bytes:");
+        // for (size_t i = 0; i < delnamelen; ++i) {
+        //     log_err("%u ", delname[i]);
+        // }
     }
 
 	if(iq->num_current_queries>0) {
@@ -3190,8 +3192,12 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 			iq->dp->name, &real_addr, real_addrlen);
 	}
 	// @JESSE: This is where a query is finally going out, hopefully.
-    // log_err("JESSE send qname: %s", qstate->qinfo.qname);
-    // log_err("JESSE send type: %d", qstate->qinfo.qtype);
+    log_err("JESSE send qname: %s", qstate->qinfo.qname);
+    log_err("JESSE send type: %d", qstate->qinfo.qtype);
+    // if(iq->dp != NULL) {
+    //     log_err("JESSE DP: %s", iq->dp->name);
+    //     log_err("JESSE DP len: %s", iq->dp->namelen);
+    // }
     
 	fptr_ok(fptr_whitelist_modenv_send_query(qstate->env->send_query));
 	outq = (*qstate->env->send_query)(&iq->qinfo_out,
@@ -3226,6 +3232,7 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 			iq->minimisation_state = SKIP_MINIMISE_STATE;
 		return next_state(iq, QUERYTARGETS_STATE);
 	}
+    log_err("Sturen lukt wel?");
 	outbound_list_insert(&iq->outlist, outq);
 	iq->num_current_queries++;
 	iq->sent_count++;
@@ -3267,6 +3274,7 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 {
 	int dnsseclame = 0, origtypecname = 0, orig_empty_nodata_found;
 	enum response_type type;
+    log_err("JESSE: The query got received");
 
 	iq->num_current_queries--;
 
@@ -3352,8 +3360,11 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 
     //check wether it was a deleg query
     uint8_t deleg_wireformat[] = {6, 95, 100, 101, 108, 101, 103}; //{06}_deleg
+    log_err("JESSE: qchase: %s", iq->qchase.qname);
+    log_err("JESSE: qchase type: %d", iq->qchase.qtype);
     uint8_t first_label_len = iq->qchase.qname[0]; 
     int is_deleg_query = memcmp(iq->qchase.qname + first_label_len + 1, deleg_wireformat, 7);
+    log_err("JESSE: is deleg query: %d", is_deleg_query);
     int is_deleg_prime_query = memcmp(iq->qchase.qname, deleg_wireformat, 7);
     // for (size_t i = 0; i < 7;  ++i) {
     //     log_err("%u ", iq->qchase.qname[i+ first_label_len]);
@@ -3362,8 +3373,8 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
     // log_err("JESSE: is deleg query: %d", is_deleg_query);
 
     //deleg state check is unnecessary?
+    // if (type == RESPONSE_TYPE_ANSWER && iq->qchase.qtype == 64) {
     if (iq->deleg_state == 1 && type == RESPONSE_TYPE_ANSWER && iq->qchase.qtype == 64 && is_deleg_query == 0) {
-        //or lame respone?
         if (FLAGS_GET_RCODE(iq->response->rep->flags) == LDNS_RCODE_NXDOMAIN) {
             // log_err("JESSE: got into the else!!!");
             // iq->deleg_state = 2;
@@ -3392,9 +3403,9 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
             size_t data_len = rrset_data->rr_len[0];
             uint8_t* svcb_data = rrset_data->rr_data[0];
             // log_err("JESSE: The wireformat SVCB name:");
-            for (size_t i = 0; i < data_len;  ++i) {
-                log_err("%u ", svcb_data[i]);
-            }
+            // for (size_t i = 0; i < data_len;  ++i) {
+                // log_err("%u ", svcb_data[i]);
+            // }
             size_t index = 4; //index of 4 to start at first label (skip message length(2 octet) and priority(2 octet))
             while(svcb_data[index] != 0) { //loop through dns labels, label length 0 means root so stop looping though labels
                index = index + svcb_data[index] + 1; 
@@ -3491,28 +3502,9 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
             // iq->qinfo_out.qname_len = iq->deleg_original_qname_len;
 
             return next_state(iq, QUERYTARGETS_STATE);
-        } else {
-            // log_err("TESTTTTTTT2");
-            // //this means no _deleg record found
-            // iq->qchase.qtype = 1;
-            // qstate->qinfo.qtype = 1;
-            // // iq->deleg_state = 0;
-            // qstate->qinfo.qname = iq->deleg_original_qname;
-        }
-        // log_err("RRset result in bytes:");
-        // if(rrset) {
-        //     for (size_t i = 0; i < rr_records->count; ++i) {
-        //         size_t len = rr_records->rr_len[i];
-        //         log_err("Resource record %d:", i);
-        //         for (size_t j = 0; j < len; ++i) {
-        //             log_err("%u ", rr_records->rr_data[i][j]);
-        //         }
-        //     }
-        // }
-        //set new delegation point
-		// iq->dp = delegpt_from_message(iq->response, qstate->region);
-    //_deleg query state
+        } 
     } else if (is_deleg_prime_query == 0) {
+        log_err("This is a dleeg prime query!!");
         if (FLAGS_GET_RCODE(iq->response->rep->flags) == LDNS_RCODE_NXDOMAIN) {
             //NX DOMAIN mean deleg not supported (no error and answer count = 0)
             iq->deleg_state = 1;
@@ -3571,6 +3563,17 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 	}
 
 	if(type == RESPONSE_TYPE_ANSWER ){
+        //JESSE here it end?
+        // log_err("JESSE: Here deleg ends???");
+        //set original qname to NULL after query has been resolved
+        log_err("Kom ik hier nog wel??");
+        if (iq->deleg_original_qname != NULL) {
+            iq->deleg_original_qname = NULL;
+            iq->deleg_original_qname_len = 0;
+            // log_err("JESSE: Copied original qname: %s", iq->deleg_original_qname);
+            iq->original_query = 0;
+        log_err("en hier ook nog wel??");
+        }
 		/* ANSWER type responses terminate the query algorithm, 
 		 * so they sent on their */
 		if(verbosity >= VERB_DETAIL) {

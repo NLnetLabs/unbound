@@ -414,20 +414,22 @@ struct delegpt* delegpt_from_deleg(struct dns_msg*, struct regional* region, uin
 	delegpt_set_name(dp, region, ns_name);
     delegpt_add_ns(dp, region,  ns_name, 0, NULL, 53);
 	// delegpt_rrset_add_ns(dp, region, ns_rrset, 0);
-    struct sockaddr_in sa4;
-    socklen_t lenv4 = (socklen_t)sizeof(sa4);
-    memset(&sa4, 0, lenv4);
-    sa4.sin_family = AF_INET;
-    memmove(&sa4.sin_addr, ipv4, INET_SIZE);
-
-    struct sockaddr_in6 sa6;
-    socklen_t lenv6 = (socklen_t)sizeof(sa6);
-    memset(&sa6, 0, lenv6);
-    sa6.sin6_family = AF_INET6;
-    memmove(&sa6.sin6_addr, ipv6, INET6_SIZE);
-    
-    delegpt_add_target(dp, region, ns_name, ns_name_len, (struct sockaddr_storage*)&sa4, lenv4, 0, 0, NULL);
-    delegpt_add_target(dp, region, ns_name, ns_name_len, (struct sockaddr_storage*)&sa6, lenv6, 0, 0, NULL);
+    if (ipv4 != NULL) {
+        struct sockaddr_in sa4;
+        socklen_t lenv4 = (socklen_t)sizeof(sa4);
+        memset(&sa4, 0, lenv4);
+        sa4.sin_family = AF_INET;
+        memmove(&sa4.sin_addr, ipv4, INET_SIZE);
+        delegpt_add_target(dp, region, ns_name, ns_name_len, (struct sockaddr_storage*)&sa4, lenv4, 0, 0, NULL);
+        }
+    if (ipv6 != NULL) {
+        struct sockaddr_in6 sa6;
+        socklen_t lenv6 = (socklen_t)sizeof(sa6);
+        memset(&sa6, 0, lenv6);
+        sa6.sin6_family = AF_INET6;
+        memmove(&sa6.sin6_addr, ipv6, INET6_SIZE);
+        delegpt_add_target(dp, region, ns_name, ns_name_len, (struct sockaddr_storage*)&sa6, lenv6, 0, 0, NULL);
+    }
     return dp;
 // delegpt_add_addr(struct delegpt* dp, struct regional* region,
 // 	struct sockaddr_storage* addr, socklen_t addrlen, uint8_t bogus,
