@@ -3,6 +3,8 @@
 
 12 July 2024: Wouter
 	- Fix #1103: unbound 1.20.0 segmentation fault with nghttp2.
+	- For #1103: fix to also drop mesh state reference when a h2 reply is
+	  dropped.
 
 10 July 2024: Wouter
 	- For #773: In contrib/unbound.service.in set unbound to start after

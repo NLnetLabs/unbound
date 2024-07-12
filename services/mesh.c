@@ -974,6 +974,9 @@ mesh_state_cleanup(struct mesh_state* mstate)
 		for(; rep; rep=rep->next) {
 			infra_wait_limit_dec(mesh->env->infra_cache,
 				&rep->query_reply, mesh->env->cfg);
+			if(rep->query_reply.c->use_h2)
+				http2_stream_remove_mesh_state(
+					rep->query_reply.c->h2_stream);
 			comm_point_drop_reply(&rep->query_reply);
 			log_assert(mesh->num_reply_addrs > 0);
 			mesh->num_reply_addrs--;
