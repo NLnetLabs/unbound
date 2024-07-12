@@ -788,7 +788,8 @@ transports, regardless of the presence of an DNS Cookie and regardless of the
 UDP queries without a DNS Cookie receive REFUSED responses with the TC flag set,
 that may trigger fall back to TCP for those clients.
 .IP
-By default only localhost is \fIallow\fRed, the rest is \fIrefuse\fRd.
+By default only localhost (the 127.0.0.0/8 IP netblock, not the loopback
+interface) is implicitly \fIallow\fRed, the rest is \fIrefuse\fRd.
 The default is \fIrefuse\fRd, because that is protocol\-friendly. The DNS
 protocol is not designed to handle dropped packets due to policy, and
 dropping may result in (possibly excessive) retried queries.
@@ -824,8 +825,12 @@ Similar to \fBaccess\-control:\fR but for interfaces.
 .IP
 The action is the same as the ones defined under \fBaccess\-control:\fR.
 Interfaces are \fIrefuse\fRd by default.
-By default only localhost (the IP netblock, not the loopback interface) is
-\fIallow\fRed through the default \fBaccess\-control:\fR behavior.
+By default only localhost (the 127.0.0.0/8 IP netblock, not the loopback
+interface) is implicitly \fIallow\fRed through the default
+\fBaccess\-control:\fR behavior.
+This also means that any attempt to use the \fBinterface-*:\fR options for the
+loopback interface will not work as they will be overridden by the implicit
+default "\fBaccess\-control:\fR 127.0.0.0/8 allow" option.
 .IP
 Note that the interface needs to be already specified with \fBinterface:\fR
 and that any \fBaccess-control*:\fR setting overrides all \fBinterface-*:\fR

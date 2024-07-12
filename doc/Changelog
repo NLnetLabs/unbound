@@ -1,5 +1,7 @@
 12 July 2024: Yorgos
 	- Add RPZ tag tests in acl_interface.tdir.
+	- For #1102: clearer text for using interface-* options for the
+	  loopback interface.
 
 12 July 2024: Wouter
 	- Fix #1103: unbound 1.20.0 segmentation fault with nghttp2.
