@@ -1,3 +1,6 @@
+12 July 2024: Yorgos
+	- Add RPZ tag tests in acl_interface.tdir.
+
 10 July 2024: Wouter
 	- For #773: In contrib/unbound.service.in set unbound to start after
 	  network-online.target. Also for contrib/unbound_portable.service.in.
