@@ -1576,6 +1576,10 @@ void mesh_query_done(struct mesh_state* mstate)
 				tcp_req_info_remove_mesh_state(r->query_reply.c->tcp_req_info, mstate);
 				r_buffer = NULL;
 			}
+			if(r->query_reply.c->use_h2) {
+				http2_stream_remove_mesh_state(
+					r->query_reply.c->h2_stream);
+			}
 			prev = r;
 			prev_buffer = r_buffer;
 		}
@@ -2284,6 +2288,9 @@ mesh_serve_expired_callback(void* arg)
 			r, r_buffer, prev, prev_buffer);
 		if(r->query_reply.c->tcp_req_info)
 			tcp_req_info_remove_mesh_state(r->query_reply.c->tcp_req_info, mstate);
+		if(r->query_reply.c->use_h2)
+			http2_stream_remove_mesh_state(
+				r->query_reply.c->h2_stream);
 		infra_wait_limit_dec(mstate->s.env->infra_cache,
 			&r->query_reply, mstate->s.env->cfg);
 		prev = r;

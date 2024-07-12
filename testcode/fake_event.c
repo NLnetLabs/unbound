@@ -1978,4 +1978,8 @@ void http2_stream_add_meshstate(struct http2_stream* ATTR_UNUSED(h2_stream),
 {
 }
 
+void http2_stream_remove_mesh_state(struct http2_stream* ATTR_UNUSED(h2_stream))
+{
+}
+
 /*********** End of Dummy routines ***********/
