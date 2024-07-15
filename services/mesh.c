@@ -566,6 +566,8 @@ servfail_mem:
 			edns->opt_list_inplace_cb_out = NULL;
 	error_encode(r_buffer, LDNS_RCODE_SERVFAIL,
 		qinfo, qid, qflags, edns);
+	if(rep->c->use_h2)
+		http2_stream_remove_mesh_state(rep->c->h2_stream);
 	comm_point_send_reply(rep);
 	if(added)
 		mesh_state_delete(&s->s);
@@ -1533,6 +1535,9 @@ void mesh_query_done(struct mesh_state* mstate)
 			infra_wait_limit_dec(mstate->s.env->infra_cache,
 				&r->query_reply, mstate->s.env->cfg);
 			mstate->reply_list = NULL;
+			if(r->query_reply.c->use_h2)
+				http2_stream_remove_mesh_state(
+					r->query_reply.c->h2_stream);
 			comm_point_drop_reply(&r->query_reply);
 			mstate->reply_list = reply_list;
 			mstate->s.env->mesh->stats_dropped++;
@@ -1565,6 +1570,10 @@ void mesh_query_done(struct mesh_state* mstate)
 			infra_wait_limit_dec(mstate->s.env->infra_cache,
 				&r->query_reply, mstate->s.env->cfg);
 			mstate->reply_list = NULL;
+			if(r->query_reply.c->use_h2) {
+				http2_stream_remove_mesh_state(
+					r->query_reply.c->h2_stream);
+			}
 			comm_point_drop_reply(&r->query_reply);
 			mstate->reply_list = reply_list;
 		} else {
@@ -2258,6 +2267,9 @@ mesh_serve_expired_callback(void* arg)
 			infra_wait_limit_dec(mstate->s.env->infra_cache,
 				&r->query_reply, mstate->s.env->cfg);
 			mstate->reply_list = NULL;
+			if(r->query_reply.c->use_h2)
+				http2_stream_remove_mesh_state(
+					r->query_reply.c->h2_stream);
 			comm_point_drop_reply(&r->query_reply);
 			mstate->reply_list = reply_list;
 			mstate->s.env->mesh->stats_dropped++;

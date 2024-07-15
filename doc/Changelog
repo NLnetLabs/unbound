@@ -1,3 +1,8 @@
+15 July 2024: Wouter
+	- For #1103: fix to also drop mesh state reference when the discard
+	  limit is reached, when there is an error making a new recursion
+	  state and when the connection is dropped with is_drop.
+
 12 July 2024: Yorgos
 	- Add RPZ tag tests in acl_interface.tdir.
 	- For #1102: clearer text for using interface-* options for the
