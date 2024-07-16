@@ -977,8 +977,7 @@ mesh_state_cleanup(struct mesh_state* mstate)
 			infra_wait_limit_dec(mesh->env->infra_cache,
 				&rep->query_reply, mesh->env->cfg);
 			if(rep->query_reply.c->use_h2)
-				http2_stream_remove_mesh_state(
-					rep->query_reply.c->h2_stream);
+				http2_stream_remove_mesh_state(rep->h2_stream);
 			comm_point_drop_reply(&rep->query_reply);
 			log_assert(mesh->num_reply_addrs > 0);
 			mesh->num_reply_addrs--;
@@ -1536,8 +1535,7 @@ void mesh_query_done(struct mesh_state* mstate)
 				&r->query_reply, mstate->s.env->cfg);
 			mstate->reply_list = NULL;
 			if(r->query_reply.c->use_h2)
-				http2_stream_remove_mesh_state(
-					r->query_reply.c->h2_stream);
+				http2_stream_remove_mesh_state(r->h2_stream);
 			comm_point_drop_reply(&r->query_reply);
 			mstate->reply_list = reply_list;
 			mstate->s.env->mesh->stats_dropped++;
@@ -1571,8 +1569,7 @@ void mesh_query_done(struct mesh_state* mstate)
 				&r->query_reply, mstate->s.env->cfg);
 			mstate->reply_list = NULL;
 			if(r->query_reply.c->use_h2) {
-				http2_stream_remove_mesh_state(
-					r->query_reply.c->h2_stream);
+				http2_stream_remove_mesh_state(r->h2_stream);
 			}
 			comm_point_drop_reply(&r->query_reply);
 			mstate->reply_list = reply_list;
@@ -1588,10 +1585,8 @@ void mesh_query_done(struct mesh_state* mstate)
 				tcp_req_info_remove_mesh_state(r->query_reply.c->tcp_req_info, mstate);
 				r_buffer = NULL;
 			}
-			if(r->query_reply.c->use_h2) {
-				http2_stream_remove_mesh_state(
-					r->query_reply.c->h2_stream);
-			}
+			/* mesh_send_reply removed mesh state from
+			 * http2_stream. */
 			prev = r;
 			prev_buffer = r_buffer;
 		}
@@ -1744,6 +1739,7 @@ int mesh_state_add_reply(struct mesh_state* s, struct edns_data* edns,
 		return 0;
 	if(rep->c->use_h2)
 		r->h2_stream = rep->c->h2_stream;
+	else	r->h2_stream = NULL;
 
 	/* Data related to local alias stored in 'qinfo' (if any) is ephemeral
 	 * and can be different for different original queries (even if the
@@ -2268,8 +2264,7 @@ mesh_serve_expired_callback(void* arg)
 				&r->query_reply, mstate->s.env->cfg);
 			mstate->reply_list = NULL;
 			if(r->query_reply.c->use_h2)
-				http2_stream_remove_mesh_state(
-					r->query_reply.c->h2_stream);
+				http2_stream_remove_mesh_state(r->h2_stream);
 			comm_point_drop_reply(&r->query_reply);
 			mstate->reply_list = reply_list;
 			mstate->s.env->mesh->stats_dropped++;
@@ -2303,9 +2298,7 @@ mesh_serve_expired_callback(void* arg)
 			r, r_buffer, prev, prev_buffer);
 		if(r->query_reply.c->tcp_req_info)
 			tcp_req_info_remove_mesh_state(r->query_reply.c->tcp_req_info, mstate);
-		if(r->query_reply.c->use_h2)
-			http2_stream_remove_mesh_state(
-				r->query_reply.c->h2_stream);
+		/* mesh_send_reply removed mesh state from http2_stream. */
 		infra_wait_limit_dec(mstate->s.env->infra_cache,
 			&r->query_reply, mstate->s.env->cfg);
 		prev = r;

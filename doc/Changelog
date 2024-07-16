@@ -1,3 +1,9 @@
+16 July 2024: Wouter
+	- For #1103: Fix to drop mesh state reference for the http2 stream
+	  associated with the reply, not the currently active stream. And
+	  it does not remove it twice on a mesh_send_reply call. The reply
+	  h2_stream is NULL when not in use, for more initialisation.
+
 15 July 2024: Wouter
 	- For #1103: fix to also drop mesh state reference when the discard
 	  limit is reached, when there is an error making a new recursion
