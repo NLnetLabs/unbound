@@ -259,9 +259,9 @@ DNSTAP_SOCKET_OBJ=unbound-dnstap-socket.lo
 DNSTAP_SOCKET_OBJ_LINK=$(DNSTAP_SOCKET_OBJ) $(COMMON_OBJ) \
 $(COMPAT_OBJ) $(SLDNS_OBJ)
 DNSTAP_SOCKET_TESTBIN=@DNSTAP_SOCKET_TESTBIN@
-LIBUNBOUND_SRC=libunbound/context.c libunbound/libunbound.c \
+LIBUNBOUND_SRC=libunbound/context.c libunbound/control.c libunbound/libunbound.c \
 libunbound/libworker.c
-LIBUNBOUND_OBJ=context.lo libunbound.lo libworker.lo ub_event_pluggable.lo
+LIBUNBOUND_OBJ=context.lo control.lo libunbound.lo libworker.lo ub_event_pluggable.lo
 LIBUNBOUND_OBJ_LINK=$(LIBUNBOUND_OBJ) $(COMMON_OBJ_WITHOUT_UB_EVENT) $(SLDNS_OBJ) $(COMPAT_OBJ)
 
 # win apps or "" if not on windows
@@ -1487,6 +1487,7 @@ context.lo context.o: $(srcdir)/libunbound/context.c config.h $(srcdir)/libunbou
  $(srcdir)/services/authzone.h $(srcdir)/services/mesh.h $(srcdir)/services/rpz.h $(srcdir)/daemon/stats.h \
  $(srcdir)/util/timehist.h $(srcdir)/respip/respip.h $(srcdir)/util/edns.h \
  $(srcdir)/iterator/iter_fwd.h $(srcdir)/iterator/iter_hints.h
+control.lo control.o: $(srcdir)/libunbound/control.c
 libunbound.lo libunbound.o: $(srcdir)/libunbound/libunbound.c $(srcdir)/libunbound/unbound.h \
  $(srcdir)/libunbound/unbound-event.h config.h $(srcdir)/libunbound/context.h $(srcdir)/util/locks.h \
  $(srcdir)/util/log.h $(srcdir)/util/alloc.h $(srcdir)/util/rbtree.h $(srcdir)/services/modstack.h \
