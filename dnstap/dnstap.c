@@ -244,9 +244,10 @@ dt_apply_cfg(struct dt_env *env, struct config_file *cfg)
 }
 
 int
-dt_init(struct dt_env *env, struct comm_base* base)
+dt_init(struct dt_env *env, struct comm_base* base,
+		struct timeval* wakeup_delay)
 {
-	env->msgqueue = dt_msg_queue_create(base);
+	env->msgqueue = dt_msg_queue_create(base, wakeup_delay);
 	if(!env->msgqueue) {
 		log_err("malloc failure");
 		return 0;
