@@ -1655,6 +1655,12 @@ void comm_timer_set(struct comm_timer* timer, struct timeval* tv)
 	timeval_add(&t->tv, &t->runtime->now_tv);
 }
 
+int comm_timer_is_set(struct comm_timer* timer)
+{
+	struct fake_timer* t = (struct fake_timer*)timer;
+	return t->enabled;
+}
+
 void comm_timer_delete(struct comm_timer* timer)
 {
 	struct fake_timer* t = (struct fake_timer*)timer;

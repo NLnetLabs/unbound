@@ -1,6 +1,11 @@
 19 July 2024: Wouter
 	- Add dnstap-sample-rate that logs only 1/N messages, for high volume
 	  server environments. Thanks Dan Luther.
+	- Fix dnstap wakeup, a running wakeup timer is left to expire and not
+	  increased, a timer is started when the dtio thread is sleeping,
+	  the timer set disabled when the dtio thread goes to sleep, and
+	  after sleep the thread checks to see if there are messages to log
+	  immediately.
 
 16 July 2024: Wouter
 	- For #1103: Fix to drop mesh state reference for the http2 stream
