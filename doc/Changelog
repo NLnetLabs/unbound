@@ -1,3 +1,7 @@
+19 July 2024: Wouter
+	- Add dnstap-sample-rate that logs only 1/N messages, for high volume
+	  server environments. Thanks Dan Luther.
+
 16 July 2024: Wouter
 	- For #1103: Fix to drop mesh state reference for the http2 stream
 	  associated with the reply, not the currently active stream. And

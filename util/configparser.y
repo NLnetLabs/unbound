@@ -137,6 +137,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_DNSTAP_LOG_CLIENT_RESPONSE_MESSAGES
 %token VAR_DNSTAP_LOG_FORWARDER_QUERY_MESSAGES
 %token VAR_DNSTAP_LOG_FORWARDER_RESPONSE_MESSAGES
+%token VAR_DNSTAP_SAMPLE_RATE
 %token VAR_RESPONSE_IP_TAG VAR_RESPONSE_IP VAR_RESPONSE_IP_DATA
 %token VAR_HARDEN_ALGO_DOWNGRADE VAR_IP_TRANSPARENT
 %token VAR_IP_DSCP
@@ -3453,7 +3454,8 @@ content_dt: dt_dnstap_enable | dt_dnstap_socket_path | dt_dnstap_bidirectional |
 	dt_dnstap_log_client_query_messages |
 	dt_dnstap_log_client_response_messages |
 	dt_dnstap_log_forwarder_query_messages |
-	dt_dnstap_log_forwarder_response_messages
+	dt_dnstap_log_forwarder_response_messages |
+	dt_dnstap_sample_rate
 	;
 dt_dnstap_enable: VAR_DNSTAP_ENABLE STRING_ARG
 	{
@@ -3614,6 +3616,17 @@ dt_dnstap_log_forwarder_response_messages: VAR_DNSTAP_LOG_FORWARDER_RESPONSE_MES
 			yyerror("expected yes or no.");
 		else cfg_parser->cfg->dnstap_log_forwarder_response_messages =
 			(strcmp($2, "yes")==0);
+		free($2);
+	}
+	;
+dt_dnstap_sample_rate: VAR_DNSTAP_SAMPLE_RATE STRING_ARG
+	{
+		OUTYY(("P(dt_dnstap_sample_rate:%s)\n", $2));
+		if(atoi($2) == 0 && strcmp($2, "0") != 0)
+			yyerror("number expected");
+		else if(atoi($2) < 0)
+			yyerror("dnstap sample rate too small");
+		else	cfg_parser->cfg->dnstap_sample_rate = atoi($2);
 		free($2);
 	}
 	;

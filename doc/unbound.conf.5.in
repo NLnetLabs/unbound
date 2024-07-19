@@ -2852,6 +2852,13 @@ Default is "".
 The version to send with messages, if "" the package version is used.
 Default is "".
 .TP
+.B dnstap-sample-rate: \fI<number>
+The sample rate for log of messages, it logs only 1/N messages. With 0 it
+is disabled. Default is 0. This is useful in a high volume environment,
+where log functionality would otherwise not be reliable. For example 10
+would spend only 1/10th time on logging, and 100 would only spend a
+hundredth of the time on logging.
+.TP
 .B dnstap-log-resolver-query-messages: \fI<yes or no>
 Enable to log resolver query messages.  Default is no.
 These are messages from Unbound to upstream servers.
