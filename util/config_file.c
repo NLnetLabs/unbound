@@ -42,6 +42,7 @@
 #include "config.h"
 #include <ctype.h>
 #include <stdarg.h>
+#include <errno.h>
 #ifdef HAVE_TIME_H
 #include <time.h>
 #endif
@@ -55,6 +56,7 @@
 #include "util/regional.h"
 #include "util/fptr_wlist.h"
 #include "util/data/dname.h"
+#include "util/random.h"
 #include "util/rtt.h"
 #include "services/cache/infra.h"
 #include "sldns/wire2str.h"
@@ -86,6 +88,9 @@ struct config_parser_state* cfg_parser = 0;
 
 /** init ports possible for use */
 static void init_outgoing_availports(int* array, int num);
+
+/** init cookie with random data */
+static void init_cookie_secret(uint8_t* cookie_secret, size_t cookie_secret_len);
 
 struct config_file*
 config_create(void)
@@ -138,6 +143,7 @@ config_create(void)
 	cfg->log_tag_queryreply = 0;
 	cfg->log_local_actions = 0;
 	cfg->log_servfail = 0;
+	cfg->log_destaddr = 0;
 #ifndef USE_WINSOCK
 #  ifdef USE_MINI_EVENT
 	/* select max 1024 sockets */
@@ -169,6 +175,7 @@ config_create(void)
 	cfg->min_ttl = 0;
 	cfg->max_ttl = 3600 * 24;
 	cfg->max_negative_ttl = 3600;
+	cfg->min_negative_ttl = 0;
 	cfg->prefetch = 0;
 	cfg->prefetch_key = 0;
 	cfg->deny_any = 0;
@@ -267,6 +274,7 @@ config_create(void)
 	cfg->val_permissive_mode = 0;
 	cfg->aggressive_nsec = 1;
 	cfg->ignore_cd = 0;
+	cfg->disable_edns_do = 0;
 	cfg->serve_expired = 0;
 	cfg->serve_expired_ttl = 0;
 	cfg->serve_expired_ttl_reset = 0;
@@ -302,6 +310,11 @@ config_create(void)
 	cfg->minimal_responses = 1;
 	cfg->rrset_roundrobin = 1;
 	cfg->unknown_server_time_limit = 376;
+	cfg->discard_timeout = 1900; /* msec */
+	cfg->wait_limit = 1000;
+	cfg->wait_limit_cookie = 10000;
+	cfg->wait_limit_netblock = NULL;
+	cfg->wait_limit_cookie_netblock = NULL;
 	cfg->max_udp_size = 1232; /* value taken from edns_buffer_size */
 	if(!(cfg->server_key_file = strdup(RUN_DIR"/unbound_server.key")))
 		goto error_exit;
@@ -326,6 +339,7 @@ config_create(void)
 	cfg->dnstap_bidirectional = 1;
 	cfg->dnstap_tls = 1;
 	cfg->disable_dnssec_lame_check = 0;
+	cfg->ip_ratelimit_cookie = 0;
 	cfg->ip_ratelimit = 0;
 	cfg->ratelimit = 0;
 	cfg->ip_ratelimit_slabs = 4;
@@ -369,9 +383,15 @@ config_create(void)
 	cfg->ipsecmod_whitelist = NULL;
 	cfg->ipsecmod_strict = 0;
 #endif
+	cfg->do_answer_cookie = 0;
+	memset(cfg->cookie_secret, 0, sizeof(cfg->cookie_secret));
+	cfg->cookie_secret_len = 16;
+	init_cookie_secret(cfg->cookie_secret, cfg->cookie_secret_len);
 #ifdef USE_CACHEDB
 	if(!(cfg->cachedb_backend = strdup("testframe"))) goto error_exit;
 	if(!(cfg->cachedb_secret = strdup("default"))) goto error_exit;
+	cfg->cachedb_no_store = 0;
+	cfg->cachedb_check_when_serve_expired = 1;
 #ifdef USE_REDIS
 	if(!(cfg->redis_server_host = strdup("127.0.0.1"))) goto error_exit;
 	cfg->redis_server_path = NULL;
@@ -379,6 +399,7 @@ config_create(void)
 	cfg->redis_timeout = 100;
 	cfg->redis_server_port = 6379;
 	cfg->redis_expire_records = 0;
+	cfg->redis_logical_db = 0;
 #endif  /* USE_REDIS */
 #endif  /* USE_CACHEDB */
 #ifdef USE_IPSET
@@ -603,6 +624,8 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	{ IS_NUMBER_OR_ZERO; cfg->max_ttl = atoi(val); MAX_TTL=(time_t)cfg->max_ttl;}
 	else if(strcmp(opt, "cache-max-negative-ttl:") == 0)
 	{ IS_NUMBER_OR_ZERO; cfg->max_negative_ttl = atoi(val); MAX_NEG_TTL=(time_t)cfg->max_negative_ttl;}
+	else if(strcmp(opt, "cache-min-negative-ttl:") == 0)
+	{ IS_NUMBER_OR_ZERO; cfg->min_negative_ttl = atoi(val); MIN_NEG_TTL=(time_t)cfg->min_negative_ttl;}
 	else if(strcmp(opt, "cache-min-ttl:") == 0)
 	{ IS_NUMBER_OR_ZERO; cfg->min_ttl = atoi(val); MIN_TTL=(time_t)cfg->min_ttl;}
 	else if(strcmp(opt, "infra-cache-min-rtt:") == 0) {
@@ -679,9 +702,11 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	else S_YNO("log-tag-queryreply:", log_tag_queryreply)
 	else S_YNO("log-local-actions:", log_local_actions)
 	else S_YNO("log-servfail:", log_servfail)
+	else S_YNO("log-destaddr:", log_destaddr)
 	else S_YNO("val-permissive-mode:", val_permissive_mode)
 	else S_YNO("aggressive-nsec:", aggressive_nsec)
 	else S_YNO("ignore-cd-flag:", ignore_cd)
+	else S_YNO("disable-edns-do:", disable_edns_do)
 	else if(strcmp(opt, "serve-expired:") == 0)
 	{ IS_YES_OR_NO; cfg->serve_expired = (strcmp(val, "yes") == 0);
 	  SERVE_EXPIRED = cfg->serve_expired; }
@@ -709,6 +734,9 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	else S_YNO("minimal-responses:", minimal_responses)
 	else S_YNO("rrset-roundrobin:", rrset_roundrobin)
 	else S_NUMBER_OR_ZERO("unknown-server-time-limit:", unknown_server_time_limit)
+	else S_NUMBER_OR_ZERO("discard-timeout:", discard_timeout)
+	else S_NUMBER_OR_ZERO("wait-limit:", wait_limit)
+	else S_NUMBER_OR_ZERO("wait-limit-cookie:", wait_limit_cookie)
 	else S_STRLIST("local-data:", local_data)
 	else S_YNO("unblock-lan-zones:", unblock_lan_zones)
 	else S_YNO("insecure-lan-zones:", insecure_lan_zones)
@@ -744,6 +772,7 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	else S_YNO("dnstap-send-version:", dnstap_send_version)
 	else S_STR("dnstap-identity:", dnstap_identity)
 	else S_STR("dnstap-version:", dnstap_version)
+	else S_NUMBER_OR_ZERO("dnstap-sample-rate:", dnstap_sample_rate)
 	else S_YNO("dnstap-log-resolver-query-messages:",
 		dnstap_log_resolver_query_messages)
 	else S_YNO("dnstap-log-resolver-response-messages:",
@@ -773,6 +802,10 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	else S_POW2("dnscrypt-nonce-cache-slabs:",
 		dnscrypt_nonce_cache_slabs)
 #endif
+	else if(strcmp(opt, "ip-ratelimit-cookie:") == 0) {
+	    IS_NUMBER_OR_ZERO; cfg->ip_ratelimit_cookie = atoi(val);
+	    infra_ip_ratelimit_cookie=cfg->ip_ratelimit_cookie;
+	}
 	else if(strcmp(opt, "ip-ratelimit:") == 0) {
 	    IS_NUMBER_OR_ZERO; cfg->ip_ratelimit = atoi(val);
 	    infra_ip_ratelimit=cfg->ip_ratelimit;
@@ -808,6 +841,10 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	{ IS_NUMBER_OR_ZERO; cfg->ipsecmod_max_ttl = atoi(val); }
 	else S_YNO("ipsecmod-strict:", ipsecmod_strict)
 #endif
+#ifdef USE_CACHEDB
+	else S_YNO("cachedb-no-store:", cachedb_no_store)
+	else S_YNO("cachedb-check-when-serve-expired:", cachedb_check_when_serve_expired)
+#endif /* USE_CACHEDB */
 	else if(strcmp(opt, "define-tag:") ==0) {
 		return config_add_tag(cfg, val);
 	/* val_sig_skew_min, max and val_max_restart are copied into val_env
@@ -1045,6 +1082,7 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_YNO(opt, "deny-any", deny_any)
 	else O_DEC(opt, "cache-max-ttl", max_ttl)
 	else O_DEC(opt, "cache-max-negative-ttl", max_negative_ttl)
+	else O_DEC(opt, "cache-min-negative-ttl", min_negative_ttl)
 	else O_DEC(opt, "cache-min-ttl", min_ttl)
 	else O_DEC(opt, "infra-host-ttl", host_ttl)
 	else O_DEC(opt, "infra-cache-slabs", infra_cache_slabs)
@@ -1109,6 +1147,7 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_YNO(opt, "log-tag-queryreply", log_tag_queryreply)
 	else O_YNO(opt, "log-local-actions", log_local_actions)
 	else O_YNO(opt, "log-servfail", log_servfail)
+	else O_YNO(opt, "log-destaddr", log_destaddr)
 	else O_STR(opt, "pidfile", pidfile)
 	else O_YNO(opt, "hide-identity", hide_identity)
 	else O_YNO(opt, "hide-version", hide_version)
@@ -1138,6 +1177,7 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_YNO(opt, "val-permissive-mode", val_permissive_mode)
 	else O_YNO(opt, "aggressive-nsec", aggressive_nsec)
 	else O_YNO(opt, "ignore-cd-flag", ignore_cd)
+	else O_YNO(opt, "disable-edns-do", disable_edns_do)
 	else O_YNO(opt, "serve-expired", serve_expired)
 	else O_DEC(opt, "serve-expired-ttl", serve_expired_ttl)
 	else O_YNO(opt, "serve-expired-ttl-reset", serve_expired_ttl_reset)
@@ -1180,6 +1220,11 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_YNO(opt, "minimal-responses", minimal_responses)
 	else O_YNO(opt, "rrset-roundrobin", rrset_roundrobin)
 	else O_DEC(opt, "unknown-server-time-limit", unknown_server_time_limit)
+	else O_DEC(opt, "discard-timeout", discard_timeout)
+	else O_DEC(opt, "wait-limit", wait_limit)
+	else O_DEC(opt, "wait-limit-cookie", wait_limit_cookie)
+	else O_LS2(opt, "wait-limit-netblock", wait_limit_netblock)
+	else O_LS2(opt, "wait-limit-cookie-netblock", wait_limit_cookie_netblock)
 #ifdef CLIENT_SUBNET
 	else O_LST(opt, "send-client-subnet", client_subnet)
 	else O_LST(opt, "client-subnet-zone", client_subnet_zone)
@@ -1208,6 +1253,7 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_YNO(opt, "dnstap-send-version", dnstap_send_version)
 	else O_STR(opt, "dnstap-identity", dnstap_identity)
 	else O_STR(opt, "dnstap-version", dnstap_version)
+	else O_UNS(opt, "dnstap-sample-rate", dnstap_sample_rate)
 	else O_YNO(opt, "dnstap-log-resolver-query-messages",
 		dnstap_log_resolver_query_messages)
 	else O_YNO(opt, "dnstap-log-resolver-response-messages",
@@ -1243,6 +1289,7 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_LST(opt, "python-script", python_script)
 	else O_LST(opt, "dynlib-file", dynlib_file)
 	else O_YNO(opt, "disable-dnssec-lame-check", disable_dnssec_lame_check)
+	else O_DEC(opt, "ip-ratelimit-cookie", ip_ratelimit_cookie)
 	else O_DEC(opt, "ip-ratelimit", ip_ratelimit)
 	else O_DEC(opt, "ratelimit", ratelimit)
 	else O_MEM(opt, "ip-ratelimit-size", ip_ratelimit_size)
@@ -1295,6 +1342,8 @@ config_get_option(struct config_file* cfg, const char* opt,
 #ifdef USE_CACHEDB
 	else O_STR(opt, "backend", cachedb_backend)
 	else O_STR(opt, "secret-seed", cachedb_secret)
+	else O_YNO(opt, "cachedb-no-store", cachedb_no_store)
+	else O_YNO(opt, "cachedb-check-when-serve-expired", cachedb_check_when_serve_expired)
 #ifdef USE_REDIS
 	else O_STR(opt, "redis-server-host", redis_server_host)
 	else O_DEC(opt, "redis-server-port", redis_server_port)
@@ -1302,6 +1351,7 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_STR(opt, "redis-server-password", redis_server_password)
 	else O_DEC(opt, "redis-timeout", redis_timeout)
 	else O_YNO(opt, "redis-expire-records", redis_expire_records)
+	else O_DEC(opt, "redis-logical-db", redis_logical_db)
 #endif  /* USE_REDIS */
 #endif  /* USE_CACHEDB */
 #ifdef USE_IPSET
@@ -1647,6 +1697,8 @@ config_delete(struct config_file* cfg)
 	config_deltrplstrlist(cfg->interface_tag_actions);
 	config_deltrplstrlist(cfg->interface_tag_datas);
 	config_delstrlist(cfg->control_ifs.first);
+	config_deldblstrlist(cfg->wait_limit_netblock);
+	config_deldblstrlist(cfg->wait_limit_cookie_netblock);
 	free(cfg->server_key_file);
 	free(cfg->server_cert_file);
 	free(cfg->control_key_file);
@@ -1689,6 +1741,20 @@ config_delete(struct config_file* cfg)
 }
 
 static void
+init_cookie_secret(uint8_t* cookie_secret, size_t cookie_secret_len)
+{
+	struct ub_randstate *rand = ub_initstate(NULL);
+
+	if (!rand)
+		fatal_exit("could not init random generator");
+	while (cookie_secret_len) {
+		*cookie_secret++ = (uint8_t)ub_random(rand);
+		cookie_secret_len--;
+	}
+	ub_randfree(rand);
+}
+
+static void
 init_outgoing_availports(int* a, int num)
 {
 	/* generated with make iana_update */
@@ -1712,6 +1778,39 @@ init_outgoing_availports(int* a, int num)
 	}
 }
 
+static int
+extract_port_from_str(const char* str, int max_port) {
+	char* endptr;
+	long int value;
+	if (str == NULL || *str == '\0') {
+		log_err("str: '%s' is invalid", (str?str:"NULL"));
+		return -1;
+	}
+
+	value = strtol(str, &endptr, 10);
+	if ((endptr == str) || (*endptr != '\0'))  {
+		log_err("cannot parse port number '%s'", str);
+		return -1;
+	}
+
+	if (errno == ERANGE) {
+                log_err("overflow occurred when parsing '%s'", str);
+		return -1;
+	}
+
+	if (value == 0 && strcmp(str, "0") != 0) {
+		log_err("cannot parse port number '%s'", str);
+		return -1;
+	}
+
+	if (value < 0 || value >= max_port) {
+		log_err(" '%s' is out of bounds [0, %d)", str, max_port);
+		return -1;
+	}
+
+	return (int)value;
+}
+
 int
 cfg_mark_ports(const char* str, int allow, int* avail, int num)
 {
@@ -1722,37 +1821,45 @@ cfg_mark_ports(const char* str, int allow, int* avail, int num)
 		"options");
 #endif
 	if(!mid) {
-		int port = atoi(str);
-		if(port == 0 && strcmp(str, "0") != 0) {
-			log_err("cannot parse port number '%s'", str);
+		int port = extract_port_from_str(str, num);
+		if (port < 0) {
+			log_err("Failed to parse the port number");
 			return 0;
 		}
 		if(port < num)
 			avail[port] = (allow?port:0);
 	} else {
-		int i, low, high = atoi(mid+1);
 		char buf[16];
-		if(high == 0 && strcmp(mid+1, "0") != 0) {
-			log_err("cannot parse port number '%s'", mid+1);
+		int i, low;
+		int high = extract_port_from_str(mid+1, num);
+		if (high < 0) {
+			log_err("Failed to parse the port number");
 			return 0;
 		}
+
 		if( (int)(mid-str)+1 >= (int)sizeof(buf) ) {
 			log_err("cannot parse port number '%s'", str);
 			return 0;
 		}
+
 		if(mid > str)
 			memcpy(buf, str, (size_t)(mid-str));
 		buf[mid-str] = 0;
-		low = atoi(buf);
-		if(low == 0 && strcmp(buf, "0") != 0) {
-			log_err("cannot parse port number '%s'", buf);
+		low = extract_port_from_str(buf, num);
+		if (low < 0) {
+			log_err("Failed to parse the port number");
 			return 0;
 		}
+
+		if (low > high) {
+			log_err("Low value is greater than high value");
+			return 0;
+		}
+
 		for(i=low; i<=high; i++) {
 			if(i < num)
 				avail[i] = (allow?i:0);
 		}
-		return 1;
 	}
 	return 1;
 }
@@ -2272,6 +2379,7 @@ config_apply(struct config_file* config)
 	SERVE_EXPIRED_REPLY_TTL = (time_t)config->serve_expired_reply_ttl;
 	SERVE_ORIGINAL_TTL = config->serve_original_ttl;
 	MAX_NEG_TTL = (time_t)config->max_negative_ttl;
+	MIN_NEG_TTL = (time_t)config->min_negative_ttl;
 	RTT_MIN_TIMEOUT = config->infra_cache_min_rtt;
 	RTT_MAX_TIMEOUT = config->infra_cache_max_rtt;
 	EDNS_ADVERTISED_SIZE = (uint16_t)config->edns_buffer_size;

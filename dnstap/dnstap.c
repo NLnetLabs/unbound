@@ -86,6 +86,31 @@ dt_pack(const Dnstap__Dnstap *d, void **buf, size_t *sz)
 	return 1;
 }
 
+/** See if the message is sent due to dnstap sample rate */
+static int
+dt_sample_rate_limited(struct dt_env* env)
+{
+	lock_basic_lock(&env->sample_lock);
+	/* Sampling is every [n] packets. Where n==1, every packet is sent */
+	if(env->sample_rate > 1) {
+		int submit = 0;
+		/* if sampling is engaged... */
+		if (env->sample_rate_count > env->sample_rate) {
+			/* once the count passes the limit */
+			/* submit the message */
+			submit = 1;
+			/* and reset the count */
+			env->sample_rate_count = 0;
+		}
+		/* increment count regardless */
+		env->sample_rate_count++;
+		lock_basic_unlock(&env->sample_lock);
+		return !submit;
+	}
+	lock_basic_unlock(&env->sample_lock);
+	return 0;
+}
+
 static void
 dt_send(const struct dt_env *env, void *buf, size_t len_buf)
 {
@@ -146,6 +171,7 @@ dt_create(struct config_file* cfg)
 	env = (struct dt_env *) calloc(1, sizeof(struct dt_env));
 	if (!env)
 		return NULL;
+	lock_basic_init(&env->sample_lock);
 
 	env->dtio = dt_io_thread_create();
 	if(!env->dtio) {
@@ -241,6 +267,12 @@ dt_apply_cfg(struct dt_env *env, struct config_file *cfg)
 	{
 		verbose(VERB_OPS, "dnstap Message/FORWARDER_RESPONSE enabled");
 	}
+	lock_basic_lock(&env->sample_lock);
+	if((env->sample_rate = (unsigned int)cfg->dnstap_sample_rate))
+	{
+		verbose(VERB_OPS, "dnstap SAMPLE_RATE enabled and set to \"%d\"", (int)env->sample_rate);
+	}
+	lock_basic_unlock(&env->sample_lock);
 }
 
 int
@@ -273,6 +305,7 @@ dt_delete(struct dt_env *env)
 	if (!env)
 		return;
 	dt_io_thread_delete(env->dtio);
+	lock_basic_destroy(&env->sample_lock);
 	free(env->identity);
 	free(env->version);
 	free(env);
@@ -305,6 +338,7 @@ dt_msg_fill_net(struct dt_msg *dm,
 		struct sockaddr_storage *qs,
 		struct sockaddr_storage *rs,
 		enum comm_point_type cptype,
+		void *cpssl,
 		ProtobufCBinaryData *qaddr, protobuf_c_boolean *has_qaddr,
 		uint32_t *qport, protobuf_c_boolean *has_qport,
 		ProtobufCBinaryData *raddr, protobuf_c_boolean *has_raddr,
@@ -371,13 +405,26 @@ dt_msg_fill_net(struct dt_msg *dm,
                 *has_rport = 1;
         }
 
-	log_assert(cptype == comm_udp || cptype == comm_tcp);
 	if (cptype == comm_udp) {
 		/* socket_protocol */
 		dm->m.socket_protocol = DNSTAP__SOCKET_PROTOCOL__UDP;
 		dm->m.has_socket_protocol = 1;
 	} else if (cptype == comm_tcp) {
+		if (cpssl == NULL) {
+			/* socket_protocol */
+			dm->m.socket_protocol = DNSTAP__SOCKET_PROTOCOL__TCP;
+			dm->m.has_socket_protocol = 1;
+		} else {
+			/* socket_protocol */
+			dm->m.socket_protocol = DNSTAP__SOCKET_PROTOCOL__DOT;
+			dm->m.has_socket_protocol = 1;
+		}
+	} else if (cptype == comm_http) {
 		/* socket_protocol */
+		dm->m.socket_protocol = DNSTAP__SOCKET_PROTOCOL__DOH;
+		dm->m.has_socket_protocol = 1;
+	} else {
+		/* other socket protocol */
 		dm->m.socket_protocol = DNSTAP__SOCKET_PROTOCOL__TCP;
 		dm->m.has_socket_protocol = 1;
 	}
@@ -388,11 +435,15 @@ dt_msg_send_client_query(struct dt_env *env,
 			 struct sockaddr_storage *qsock,
 			 struct sockaddr_storage *rsock,
 			 enum comm_point_type cptype,
+			 void *cpssl,
 			 sldns_buffer *qmsg,
 			 struct timeval* tstamp)
 {
 	struct dt_msg dm;
 	struct timeval qtime;
+
+	if(dt_sample_rate_limited(env))
+		return;
 
 	if(tstamp)
 		memcpy(&qtime, tstamp, sizeof(qtime));
@@ -410,8 +461,7 @@ dt_msg_send_client_query(struct dt_env *env,
 	dt_fill_buffer(qmsg, &dm.m.query_message, &dm.m.has_query_message);
 
 	/* socket_family, socket_protocol, query_address, query_port, response_address, response_port */
-	log_assert(cptype == comm_udp || cptype == comm_tcp);
-	dt_msg_fill_net(&dm, qsock, rsock, cptype,
+	dt_msg_fill_net(&dm, qsock, rsock, cptype, cpssl,
 			&dm.m.query_address, &dm.m.has_query_address,
 			&dm.m.query_port, &dm.m.has_query_port,
 			&dm.m.response_address, &dm.m.has_response_address,
@@ -427,10 +477,14 @@ dt_msg_send_client_response(struct dt_env *env,
 			    struct sockaddr_storage *qsock,
 			    struct sockaddr_storage *rsock,
 			    enum comm_point_type cptype,
+			    void *cpssl,
 			    sldns_buffer *rmsg)
 {
 	struct dt_msg dm;
 	struct timeval rtime;
+
+	if(dt_sample_rate_limited(env))
+		return;
 
 	gettimeofday(&rtime, NULL);
 
@@ -446,8 +500,7 @@ dt_msg_send_client_response(struct dt_env *env,
 	dt_fill_buffer(rmsg, &dm.m.response_message, &dm.m.has_response_message);
 
 	/* socket_family, socket_protocol, query_address, query_port, response_address, response_port */
-	log_assert(cptype == comm_udp || cptype == comm_tcp);
-	dt_msg_fill_net(&dm, qsock, rsock, cptype,
+	dt_msg_fill_net(&dm, qsock, rsock, cptype, cpssl,
 			&dm.m.query_address, &dm.m.has_query_address,
 			&dm.m.query_port, &dm.m.has_query_port,
                         &dm.m.response_address, &dm.m.has_response_address,
@@ -462,12 +515,16 @@ dt_msg_send_outside_query(struct dt_env *env,
 			  struct sockaddr_storage *rsock,
 			  struct sockaddr_storage *qsock,
 			  enum comm_point_type cptype,
+			  void *cpssl,
 			  uint8_t *zone, size_t zone_len,
 			  sldns_buffer *qmsg)
 {
 	struct dt_msg dm;
 	struct timeval qtime;
 	uint16_t qflags;
+
+	if(dt_sample_rate_limited(env))
+		return;
 
 	gettimeofday(&qtime, NULL);
 	qflags = sldns_buffer_read_u16_at(qmsg, 2);
@@ -497,8 +554,7 @@ dt_msg_send_outside_query(struct dt_env *env,
 	dt_fill_buffer(qmsg, &dm.m.query_message, &dm.m.has_query_message);
 
 	/* socket_family, socket_protocol, response_address, response_port, query_address, query_port */
-	log_assert(cptype == comm_udp || cptype == comm_tcp);
-	dt_msg_fill_net(&dm, rsock, qsock, cptype,
+	dt_msg_fill_net(&dm, rsock, qsock, cptype, cpssl,
 			&dm.m.response_address, &dm.m.has_response_address,
 			&dm.m.response_port, &dm.m.has_response_port,
 			&dm.m.query_address, &dm.m.has_query_address,
@@ -513,6 +569,7 @@ dt_msg_send_outside_response(struct dt_env *env,
 	struct sockaddr_storage *rsock,
 	struct sockaddr_storage *qsock,
 	enum comm_point_type cptype,
+	void *cpssl,
 	uint8_t *zone, size_t zone_len,
 	uint8_t *qbuf, size_t qbuf_len,
 	const struct timeval *qtime,
@@ -521,6 +578,9 @@ dt_msg_send_outside_response(struct dt_env *env,
 {
 	struct dt_msg dm;
 	uint16_t qflags;
+
+	if(dt_sample_rate_limited(env))
+		return;
 
 	(void)qbuf_len; log_assert(qbuf_len >= sizeof(qflags));
 	memcpy(&qflags, qbuf, sizeof(qflags));
@@ -556,8 +616,7 @@ dt_msg_send_outside_response(struct dt_env *env,
 	dt_fill_buffer(rmsg, &dm.m.response_message, &dm.m.has_response_message);
 
 	/* socket_family, socket_protocol, response_address, response_port, query_address, query_port */
-	log_assert(cptype == comm_udp || cptype == comm_tcp);
-	dt_msg_fill_net(&dm, rsock, qsock, cptype,
+	dt_msg_fill_net(&dm, rsock, qsock, cptype, cpssl,
 			&dm.m.response_address, &dm.m.has_response_address,
 			&dm.m.response_port, &dm.m.has_response_port,
 			&dm.m.query_address, &dm.m.has_query_address,

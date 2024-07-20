@@ -47,6 +47,7 @@
 #include "util/configyyrename.h"
 #include "util/config_file.h"
 #include "util/net_help.h"
+#include "sldns/str2wire.h"
 
 int ub_c_lex(void);
 void ub_c_error(const char *message);
@@ -136,6 +137,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_DNSTAP_LOG_CLIENT_RESPONSE_MESSAGES
 %token VAR_DNSTAP_LOG_FORWARDER_QUERY_MESSAGES
 %token VAR_DNSTAP_LOG_FORWARDER_RESPONSE_MESSAGES
+%token VAR_DNSTAP_SAMPLE_RATE
 %token VAR_RESPONSE_IP_TAG VAR_RESPONSE_IP VAR_RESPONSE_IP_DATA
 %token VAR_HARDEN_ALGO_DOWNGRADE VAR_IP_TRANSPARENT
 %token VAR_IP_DSCP
@@ -152,6 +154,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_MIN_CLIENT_SUBNET_IPV4 VAR_MIN_CLIENT_SUBNET_IPV6
 %token VAR_MAX_ECS_TREE_SIZE_IPV4 VAR_MAX_ECS_TREE_SIZE_IPV6
 %token VAR_CAPS_WHITELIST VAR_CACHE_MAX_NEGATIVE_TTL VAR_PERMIT_SMALL_HOLDDOWN
+%token VAR_CACHE_MIN_NEGATIVE_TTL
 %token VAR_QNAME_MINIMISATION VAR_QNAME_MINIMISATION_STRICT VAR_IP_FREEBIND
 %token VAR_DEFINE_TAG VAR_LOCAL_ZONE_TAG VAR_ACCESS_CONTROL_TAG
 %token VAR_LOCAL_ZONE_OVERRIDE VAR_ACCESS_CONTROL_TAG_ACTION
@@ -178,13 +181,17 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_CACHEDB VAR_CACHEDB_BACKEND VAR_CACHEDB_SECRETSEED
 %token VAR_CACHEDB_REDISHOST VAR_CACHEDB_REDISPORT VAR_CACHEDB_REDISTIMEOUT
 %token VAR_CACHEDB_REDISEXPIRERECORDS VAR_CACHEDB_REDISPATH VAR_CACHEDB_REDISPASSWORD
+%token VAR_CACHEDB_REDISLOGICALDB
 %token VAR_UDP_UPSTREAM_WITHOUT_DOWNSTREAM VAR_FOR_UPSTREAM
 %token VAR_AUTH_ZONE VAR_ZONEFILE VAR_MASTER VAR_URL VAR_FOR_DOWNSTREAM
 %token VAR_FALLBACK_ENABLED VAR_TLS_ADDITIONAL_PORT VAR_LOW_RTT VAR_LOW_RTT_PERMIL
 %token VAR_FAST_SERVER_PERMIL VAR_FAST_SERVER_NUM
 %token VAR_ALLOW_NOTIFY VAR_TLS_WIN_CERT VAR_TCP_CONNECTION_LIMIT
+%token VAR_ANSWER_COOKIE VAR_COOKIE_SECRET VAR_IP_RATELIMIT_COOKIE
 %token VAR_FORWARD_NO_CACHE VAR_STUB_NO_CACHE VAR_LOG_SERVFAIL VAR_DENY_ANY
 %token VAR_UNKNOWN_SERVER_TIME_LIMIT VAR_LOG_TAG_QUERYREPLY
+%token VAR_DISCARD_TIMEOUT VAR_WAIT_LIMIT VAR_WAIT_LIMIT_COOKIE
+%token VAR_WAIT_LIMIT_NETBLOCK VAR_WAIT_LIMIT_COOKIE_NETBLOCK
 %token VAR_STREAM_WAIT_SIZE VAR_TLS_CIPHERS VAR_TLS_CIPHERSUITES VAR_TLS_USE_SNI
 %token VAR_IPSET VAR_IPSET_NAME_V4 VAR_IPSET_NAME_V6
 %token VAR_TLS_SESSION_TICKET_KEYS VAR_RPZ VAR_TAGS VAR_RPZ_ACTION_OVERRIDE
@@ -197,7 +204,8 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_INTERFACE_ACTION VAR_INTERFACE_VIEW VAR_INTERFACE_TAG
 %token VAR_INTERFACE_TAG_ACTION VAR_INTERFACE_TAG_DATA
 %token VAR_PROXY_PROTOCOL_PORT VAR_STATISTICS_INHIBIT_ZERO
-%token VAR_HARDEN_UNKNOWN_ADDITIONAL
+%token VAR_HARDEN_UNKNOWN_ADDITIONAL VAR_DISABLE_EDNS_DO VAR_CACHEDB_NO_STORE
+%token VAR_LOG_DESTADDR VAR_CACHEDB_CHECK_WHEN_SERVE_EXPIRED
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -295,6 +303,7 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_min_client_subnet_ipv4 | server_min_client_subnet_ipv6 |
 	server_max_ecs_tree_size_ipv4 | server_max_ecs_tree_size_ipv6 |
 	server_caps_whitelist | server_cache_max_negative_ttl |
+	server_cache_min_negative_ttl |
 	server_permit_small_holddown | server_qname_minimisation |
 	server_ip_freebind | server_define_tag | server_local_zone_tag |
 	server_disable_dnssec_lame_check | server_access_control_tag |
@@ -322,15 +331,19 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_fast_server_permil | server_fast_server_num  | server_tls_win_cert |
 	server_tcp_connection_limit | server_log_servfail | server_deny_any |
 	server_unknown_server_time_limit | server_log_tag_queryreply |
+	server_discard_timeout | server_wait_limit | server_wait_limit_cookie |
+	server_wait_limit_netblock | server_wait_limit_cookie_netblock |
 	server_stream_wait_size | server_tls_ciphers |
 	server_tls_ciphersuites | server_tls_session_ticket_keys |
+	server_answer_cookie | server_cookie_secret | server_ip_ratelimit_cookie |
 	server_tls_use_sni | server_edns_client_string |
 	server_edns_client_string_opcode | server_nsid |
 	server_zonemd_permissive_mode | server_max_reuse_tcp_queries |
 	server_tcp_reuse_timeout | server_tcp_auth_query_timeout |
 	server_interface_automatic_ports | server_ede | server_eder |
 	server_proxy_protocol_port | server_statistics_inhibit_zero |
-	server_harden_unknown_additional
+	server_harden_unknown_additional | server_disable_edns_do |
+	server_log_destaddr
 	;
 stubstart: VAR_STUB_ZONE
 	{
@@ -346,8 +359,14 @@ stubstart: VAR_STUB_ZONE
 		}
 	}
 	;
-contents_stub: contents_stub content_stub
-	| ;
+contents_stub: content_stub contents_stub
+	|
+	{
+		/* stub end */
+		if(cfg_parser->cfg->stubs &&
+			!cfg_parser->cfg->stubs->name)
+			yyerror("stub-zone without name");
+	};
 content_stub: stub_name | stub_host | stub_addr | stub_prime | stub_first |
 	stub_no_cache | stub_ssl_upstream | stub_tcp_upstream
 	;
@@ -365,8 +384,14 @@ forwardstart: VAR_FORWARD_ZONE
 		}
 	}
 	;
-contents_forward: contents_forward content_forward
-	| ;
+contents_forward: content_forward contents_forward
+	|
+	{
+		/* forward end */
+		if(cfg_parser->cfg->forwards &&
+			!cfg_parser->cfg->forwards->name)
+			yyerror("forward-zone without name");
+	};
 content_forward: forward_name | forward_host | forward_addr | forward_first |
 	forward_no_cache | forward_ssl_upstream | forward_tcp_upstream
 	;
@@ -378,16 +403,20 @@ viewstart: VAR_VIEW
 		s = (struct config_view*)calloc(1, sizeof(struct config_view));
 		if(s) {
 			s->next = cfg_parser->cfg->views;
-			if(s->next && !s->next->name)
-				yyerror("view without name");
 			cfg_parser->cfg->views = s;
 		} else {
 			yyerror("out of memory");
 		}
 	}
 	;
-contents_view: contents_view content_view
-	| ;
+contents_view: content_view contents_view
+	|
+	{
+		/* view end */
+		if(cfg_parser->cfg->views &&
+			!cfg_parser->cfg->views->name)
+			yyerror("view without name");
+	};
 content_view: view_name | view_local_zone | view_local_data | view_first |
 		view_response_ip | view_response_ip_data | view_local_data_ptr
 	;
@@ -1161,7 +1190,7 @@ server_http_nodelay: VAR_HTTP_NODELAY STRING_ARG
 			yyerror("expected yes or no.");
 		else cfg_parser->cfg->http_nodelay = (strcmp($2, "yes")==0);
 		free($2);
-	}
+	};
 server_http_notls_downstream: VAR_HTTP_NOTLS_DOWNSTREAM STRING_ARG
 	{
 		OUTYY(("P(server_http_notls_downstream:%s)\n", $2));
@@ -1244,6 +1273,15 @@ server_log_servfail: VAR_LOG_SERVFAIL STRING_ARG
 		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
 			yyerror("expected yes or no.");
 		else cfg_parser->cfg->log_servfail = (strcmp($2, "yes")==0);
+		free($2);
+	}
+	;
+server_log_destaddr: VAR_LOG_DESTADDR STRING_ARG
+	{
+		OUTYY(("P(server_log_destaddr:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else cfg_parser->cfg->log_destaddr = (strcmp($2, "yes")==0);
 		free($2);
 	}
 	;
@@ -2000,6 +2038,15 @@ server_cache_max_negative_ttl: VAR_CACHE_MAX_NEGATIVE_TTL STRING_ARG
 		free($2);
 	}
 	;
+server_cache_min_negative_ttl: VAR_CACHE_MIN_NEGATIVE_TTL STRING_ARG
+	{
+		OUTYY(("P(server_cache_min_negative_ttl:%s)\n", $2));
+		if(atoi($2) == 0 && strcmp($2, "0") != 0)
+			yyerror("number expected");
+		else cfg_parser->cfg->min_negative_ttl = atoi($2);
+		free($2);
+	}
+	;
 server_cache_min_ttl: VAR_CACHE_MIN_TTL STRING_ARG
 	{
 		OUTYY(("P(server_cache_min_ttl:%s)\n", $2));
@@ -2055,6 +2102,15 @@ server_ignore_cd_flag: VAR_IGNORE_CD_FLAG STRING_ARG
 		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
 			yyerror("expected yes or no.");
 		else cfg_parser->cfg->ignore_cd = (strcmp($2, "yes")==0);
+		free($2);
+	}
+	;
+server_disable_edns_do: VAR_DISABLE_EDNS_DO STRING_ARG
+	{
+		OUTYY(("P(server_disable_edns_do:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else cfg_parser->cfg->disable_edns_do = (strcmp($2, "yes")==0);
 		free($2);
 	}
 	;
@@ -2208,6 +2264,7 @@ server_permit_small_holddown: VAR_PERMIT_SMALL_HOLDDOWN STRING_ARG
 			(strcmp($2, "yes")==0);
 		free($2);
 	}
+	;
 server_key_cache_size: VAR_KEY_CACHE_SIZE STRING_ARG
 	{
 		OUTYY(("P(server_key_cache_size:%s)\n", $2));
@@ -2340,6 +2397,57 @@ server_unknown_server_time_limit: VAR_UNKNOWN_SERVER_TIME_LIMIT STRING_ARG
 		OUTYY(("P(server_unknown_server_time_limit:%s)\n", $2));
 		cfg_parser->cfg->unknown_server_time_limit = atoi($2);
 		free($2);
+	}
+	;
+server_discard_timeout: VAR_DISCARD_TIMEOUT STRING_ARG
+	{
+		OUTYY(("P(server_discard_timeout:%s)\n", $2));
+		cfg_parser->cfg->discard_timeout = atoi($2);
+		free($2);
+	}
+	;
+server_wait_limit: VAR_WAIT_LIMIT STRING_ARG
+	{
+		OUTYY(("P(server_wait_limit:%s)\n", $2));
+		cfg_parser->cfg->wait_limit = atoi($2);
+		free($2);
+	}
+	;
+server_wait_limit_cookie: VAR_WAIT_LIMIT_COOKIE STRING_ARG
+	{
+		OUTYY(("P(server_wait_limit_cookie:%s)\n", $2));
+		cfg_parser->cfg->wait_limit_cookie = atoi($2);
+		free($2);
+	}
+	;
+server_wait_limit_netblock: VAR_WAIT_LIMIT_NETBLOCK STRING_ARG STRING_ARG
+	{
+		OUTYY(("P(server_wait_limit_netblock:%s %s)\n", $2, $3));
+		if(atoi($3) == 0 && strcmp($3, "0") != 0) {
+			yyerror("number expected");
+			free($2);
+			free($3);
+		} else {
+			if(!cfg_str2list_insert(&cfg_parser->cfg->
+				wait_limit_netblock, $2, $3))
+				fatal_exit("out of memory adding "
+					"wait-limit-netblock");
+		}
+	}
+	;
+server_wait_limit_cookie_netblock: VAR_WAIT_LIMIT_COOKIE_NETBLOCK STRING_ARG STRING_ARG
+	{
+		OUTYY(("P(server_wait_limit_cookie_netblock:%s %s)\n", $2, $3));
+		if(atoi($3) == 0 && strcmp($3, "0") != 0) {
+			yyerror("number expected");
+			free($2);
+			free($3);
+		} else {
+			if(!cfg_str2list_insert(&cfg_parser->cfg->
+				wait_limit_cookie_netblock, $2, $3))
+				fatal_exit("out of memory adding "
+					"wait-limit-cookie-netblock");
+		}
 	}
 	;
 server_max_udp_size: VAR_MAX_UDP_SIZE STRING_ARG
@@ -2562,6 +2670,15 @@ server_ip_ratelimit: VAR_IP_RATELIMIT STRING_ARG
 		if(atoi($2) == 0 && strcmp($2, "0") != 0)
 			yyerror("number expected");
 		else cfg_parser->cfg->ip_ratelimit = atoi($2);
+		free($2);
+	}
+	;
+server_ip_ratelimit_cookie: VAR_IP_RATELIMIT_COOKIE STRING_ARG
+	{
+		OUTYY(("P(server_ip_ratelimit_cookie:%s)\n", $2));
+		if(atoi($2) == 0 && strcmp($2, "0") != 0)
+			yyerror("number expected");
+		else cfg_parser->cfg->ip_ratelimit_cookie = atoi($2);
 		free($2);
 	}
 	;
@@ -3347,7 +3464,8 @@ content_dt: dt_dnstap_enable | dt_dnstap_socket_path | dt_dnstap_bidirectional |
 	dt_dnstap_log_client_query_messages |
 	dt_dnstap_log_client_response_messages |
 	dt_dnstap_log_forwarder_query_messages |
-	dt_dnstap_log_forwarder_response_messages
+	dt_dnstap_log_forwarder_response_messages |
+	dt_dnstap_sample_rate
 	;
 dt_dnstap_enable: VAR_DNSTAP_ENABLE STRING_ARG
 	{
@@ -3511,6 +3629,17 @@ dt_dnstap_log_forwarder_response_messages: VAR_DNSTAP_LOG_FORWARDER_RESPONSE_MES
 		free($2);
 	}
 	;
+dt_dnstap_sample_rate: VAR_DNSTAP_SAMPLE_RATE STRING_ARG
+	{
+		OUTYY(("P(dt_dnstap_sample_rate:%s)\n", $2));
+		if(atoi($2) == 0 && strcmp($2, "0") != 0)
+			yyerror("number expected");
+		else if(atoi($2) < 0)
+			yyerror("dnstap sample rate too small");
+		else	cfg_parser->cfg->dnstap_sample_rate = atoi($2);
+		free($2);
+	}
+	;
 pythonstart: VAR_PYTHON
 	{
 		OUTYY(("\nP(python:)\n"));
@@ -3527,6 +3656,7 @@ py_script: VAR_PYTHON_SCRIPT STRING_ARG
 		if(!cfg_strlist_append_ex(&cfg_parser->cfg->python_script, $2))
 			yyerror("out of memory");
 	}
+	;
 dynlibstart: VAR_DYNLIB
 	{
 		OUTYY(("\nP(dynlib:)\n"));
@@ -3543,6 +3673,7 @@ dl_file: VAR_DYNLIB_FILE STRING_ARG
 		if(!cfg_strlist_append_ex(&cfg_parser->cfg->dynlib_file, $2))
 			yyerror("out of memory");
 	}
+	;
 server_disable_dnssec_lame_check: VAR_DISABLE_DNSSEC_LAME_CHECK STRING_ARG
 	{
 		OUTYY(("P(disable_dnssec_lame_check:%s)\n", $2));
@@ -3603,7 +3734,6 @@ dnsc_dnscrypt_enable: VAR_DNSCRYPT_ENABLE STRING_ARG
 		free($2);
 	}
 	;
-
 dnsc_dnscrypt_port: VAR_DNSCRYPT_PORT STRING_ARG
 	{
 		OUTYY(("P(dnsc_dnscrypt_port:%s)\n", $2));
@@ -3697,7 +3827,8 @@ contents_cachedb: contents_cachedb content_cachedb
 	| ;
 content_cachedb: cachedb_backend_name | cachedb_secret_seed |
 	redis_server_host | redis_server_port | redis_timeout |
-	redis_expire_records | redis_server_path | redis_server_password
+	redis_expire_records | redis_server_path | redis_server_password |
+	cachedb_no_store | redis_logical_db | cachedb_check_when_serve_expired
 	;
 cachedb_backend_name: VAR_CACHEDB_BACKEND STRING_ARG
 	{
@@ -3721,6 +3852,32 @@ cachedb_secret_seed: VAR_CACHEDB_SECRETSEED STRING_ARG
 		OUTYY(("P(Compiled without cachedb, ignoring)\n"));
 		free($2);
 	#endif
+	}
+	;
+cachedb_no_store: VAR_CACHEDB_NO_STORE STRING_ARG
+	{
+	#ifdef USE_CACHEDB
+		OUTYY(("P(cachedb_no_store:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else cfg_parser->cfg->cachedb_no_store = (strcmp($2, "yes")==0);
+	#else
+		OUTYY(("P(Compiled without cachedb, ignoring)\n"));
+	#endif
+		free($2);
+	}
+	;
+cachedb_check_when_serve_expired: VAR_CACHEDB_CHECK_WHEN_SERVE_EXPIRED STRING_ARG
+	{
+	#ifdef USE_CACHEDB
+		OUTYY(("P(cachedb_check_when_serve_expired:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else cfg_parser->cfg->cachedb_check_when_serve_expired = (strcmp($2, "yes")==0);
+	#else
+		OUTYY(("P(Compiled without cachedb, ignoring)\n"));
+	#endif
+		free($2);
 	}
 	;
 redis_server_host: VAR_CACHEDB_REDISHOST STRING_ARG
@@ -3800,6 +3957,21 @@ redis_expire_records: VAR_CACHEDB_REDISEXPIRERECORDS STRING_ARG
 		free($2);
 	}
 	;
+redis_logical_db: VAR_CACHEDB_REDISLOGICALDB STRING_ARG
+	{
+	#if defined(USE_CACHEDB) && defined(USE_REDIS)
+		int db;
+		OUTYY(("P(redis_logical_db:%s)\n", $2));
+		db = atoi($2);
+		if((db == 0 && strcmp($2, "0") != 0) || db < 0)
+			yyerror("valid redis logical database index expected");
+		else cfg_parser->cfg->redis_logical_db = db;
+	#else
+		OUTYY(("P(Compiled without cachedb or redis, ignoring)\n"));
+	#endif
+		free($2);
+	}
+	;
 server_tcp_connection_limit: VAR_TCP_CONNECTION_LIMIT STRING_ARG STRING_ARG
 	{
 		OUTYY(("P(server_tcp_connection_limit:%s %s)\n", $2, $3));
@@ -3809,6 +3981,31 @@ server_tcp_connection_limit: VAR_TCP_CONNECTION_LIMIT STRING_ARG STRING_ARG
 			if(!cfg_str2list_insert(&cfg_parser->cfg->tcp_connection_limits, $2, $3))
 				fatal_exit("out of memory adding tcp connection limit");
 		}
+	}
+	;
+server_answer_cookie: VAR_ANSWER_COOKIE STRING_ARG
+	{
+		OUTYY(("P(server_answer_cookie:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else cfg_parser->cfg->do_answer_cookie = (strcmp($2, "yes")==0);
+		free($2);
+	}
+	;
+server_cookie_secret: VAR_COOKIE_SECRET STRING_ARG
+	{
+		uint8_t secret[32];
+		size_t secret_len = sizeof(secret);
+
+		OUTYY(("P(server_cookie_secret:%s)\n", $2));
+		if(sldns_str2wire_hex_buf($2, secret, &secret_len)
+		|| (secret_len != 16))
+			yyerror("expected 128 bit hex string");
+		else {
+			cfg_parser->cfg->cookie_secret_len = secret_len;
+			memcpy(cfg_parser->cfg->cookie_secret, secret, sizeof(secret));
+		}
+		free($2);
 	}
 	;
 	ipsetstart: VAR_IPSET
@@ -3880,10 +4077,11 @@ validate_acl_action(const char* action)
 		strcmp(action, "refuse_non_local")!=0 &&
 		strcmp(action, "allow_setrd")!=0 &&
 		strcmp(action, "allow")!=0 &&
-		strcmp(action, "allow_snoop")!=0)
+		strcmp(action, "allow_snoop")!=0 &&
+		strcmp(action, "allow_cookie")!=0)
 	{
 		yyerror("expected deny, refuse, deny_non_local, "
-			"refuse_non_local, allow, allow_setrd or "
-			"allow_snoop as access control action");
+			"refuse_non_local, allow, allow_setrd, "
+			"allow_snoop or allow_cookie as access control action");
 	}
 }

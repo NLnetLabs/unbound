@@ -122,20 +122,27 @@ usage(void)
 	printf("  local_data <RR data...>	add local data, for example\n");
 	printf("				local_data www.example.com A 192.0.2.1\n");
 	printf("  local_data_remove <name>	remove local RR data from name\n");
-	printf("  local_zones, local_zones_remove, local_datas, local_datas_remove\n");
-	printf("  				same, but read list from stdin\n");
+	printf("  local_zones,\n");
+	printf("  local_zones_remove,\n");
+	printf("  local_datas,\n");
+	printf("  local_datas_remove		same, but read list from stdin\n");
 	printf("  				(one entry per line).\n");
 	printf("  dump_cache			print cache to stdout\n");
+	printf("				(not supported in remote unbounds in\n");
+	printf("				multi-process operation)\n");
 	printf("  load_cache			load cache from stdin\n");
+	printf("				(not supported in remote unbounds in\n");
+	printf("				multi-process operation)\n");
 	printf("  lookup <name>			print nameservers for name\n");
-	printf("  flush <name>			flushes common types for name from cache\n");
+	printf("  flush [+c] <name>			flushes common types for name from cache\n");
 	printf("  				types:  A, AAAA, MX, PTR, NS,\n");
 	printf("					SOA, CNAME, DNAME, SRV, NAPTR\n");
-	printf("  flush_type <name> <type>	flush name, type from cache\n");
-	printf("  flush_zone <name>		flush everything at or under name\n");
+	printf("  flush_type [+c] <name> <type>	flush name, type from cache\n");
+	printf("		+c		remove from cachedb too\n");
+	printf("  flush_zone [+c] <name>	flush everything at or under name\n");
 	printf("  				from rr and dnssec caches\n");
-	printf("  flush_bogus			flush all bogus data\n");
-	printf("  flush_negative		flush all negative data\n");
+	printf("  flush_bogus [+c]		flush all bogus data\n");
+	printf("  flush_negative [+c]		flush all negative data\n");
 	printf("  flush_stats 			flush statistics, make zero\n");
 	printf("  flush_requestlist 		drop queries that are worked on\n");
 	printf("  dump_requestlist		show what is worked on by first thread\n");
@@ -150,12 +157,13 @@ usage(void)
 	printf("  list_local_data		list local-data RRs in use\n");
 	printf("  insecure_add zone 		add domain-insecure zone\n");
 	printf("  insecure_remove zone		remove domain-insecure zone\n");
-	printf("  forward_add [+i] zone addr..	add forward-zone with servers\n");
+	printf("  forward_add [+it] zone addr..	add forward-zone with servers\n");
 	printf("  forward_remove [+i] zone	remove forward zone\n");
-	printf("  stub_add [+ip] zone addr..	add stub-zone with servers\n");
+	printf("  stub_add [+ipt] zone addr..	add stub-zone with servers\n");
 	printf("  stub_remove [+i] zone		remove stub zone\n");
 	printf("		+i		also do dnssec insecure point\n");
 	printf("		+p		set stub to use priming\n");
+	printf("		+t		set to use tls upstream\n");
 	printf("  forward [off | addr ...]	without arg show forward setup\n");
 	printf("				or off to turn off root forwarding\n");
 	printf("				or give list of ip addresses\n");
@@ -204,6 +212,12 @@ static void pr_stats(const char* nm, struct ub_stats_info* s)
 	PR_UL_NM("num.queries", s->svr.num_queries);
 	PR_UL_NM("num.queries_ip_ratelimited",
 		s->svr.num_queries_ip_ratelimited);
+	PR_UL_NM("num.queries_cookie_valid",
+		s->svr.num_queries_cookie_valid);
+	PR_UL_NM("num.queries_cookie_client",
+		s->svr.num_queries_cookie_client);
+	PR_UL_NM("num.queries_cookie_invalid",
+		s->svr.num_queries_cookie_invalid);
 	PR_UL_NM("num.cachehits",
 		s->svr.num_queries - s->svr.num_queries_missed_cache);
 	PR_UL_NM("num.cachemiss", s->svr.num_queries_missed_cache);
@@ -406,6 +420,9 @@ static void print_extended(struct ub_stats_info* s, int inhibit_zero)
 #ifdef CLIENT_SUBNET
 	PR_UL("num.query.subnet", s->svr.num_query_subnet);
 	PR_UL("num.query.subnet_cache", s->svr.num_query_subnet_cache);
+#endif
+#ifdef USE_CACHEDB
+	PR_UL("num.query.cachedb", s->svr.num_query_cachedb);
 #endif
 }
 
@@ -742,7 +759,11 @@ setup_ssl(SSL_CTX* ctx, int fd)
 	/* check authenticity of server */
 	if(SSL_get_verify_result(ssl) != X509_V_OK)
 		ssl_err("SSL verification failed");
+#ifdef HAVE_SSL_GET1_PEER_CERTIFICATE
+	x = SSL_get1_peer_certificate(ssl);
+#else
 	x = SSL_get_peer_certificate(ssl);
+#endif
 	if(!x)
 		ssl_err("Server presented no peer certificate");
 	X509_free(x);

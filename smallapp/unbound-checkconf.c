@@ -88,6 +88,7 @@ usage(void)
 	printf("file	if omitted %s is used.\n", CONFIGFILE);
 	printf("-o option	print value of option to stdout.\n");
 	printf("-f 		output full pathname with chroot applied, eg. with -o pidfile.\n");
+	printf("-q 		quiet (suppress output on success).\n");
 	printf("-h		show this usage help.\n");
 	printf("Version %s\n", PACKAGE_VERSION);
 	printf("BSD licensed, see LICENSE in source package for details.\n");
@@ -139,10 +140,13 @@ check_mod(struct config_file* cfg, struct module_func_block* fb)
 		fatal_exit("out of memory");
 	if(!edns_known_options_init(&env))
 		fatal_exit("out of memory");
-	if(!(*fb->init)(&env, 0)) {
-		fatal_exit("bad config for %s module", fb->name);
-	}
+	if(fb->startup && !(*fb->startup)(&env, 0))
+		fatal_exit("bad config during startup for %s module", fb->name);
+	if(!(*fb->init)(&env, 0))
+		fatal_exit("bad config during init for %s module", fb->name);
 	(*fb->deinit)(&env, 0);
+	if(fb->destartup)
+		(*fb->destartup)(&env, 0);
 	sldns_buffer_free(env.scratch_buffer);
 	regional_destroy(env.scratch);
 	edns_known_options_delete(&env);
@@ -707,6 +711,23 @@ morechecks(struct config_file* cfg)
 		cfg->auto_trust_anchor_file_list, cfg->chrootdir, cfg);
 	check_chroot_filelist_wild("trusted-keys-file",
 		cfg->trusted_keys_file_list, cfg->chrootdir, cfg);
+	if(cfg->disable_edns_do && strstr(cfg->module_conf, "validator")
+		&& (cfg->trust_anchor_file_list
+		|| cfg->trust_anchor_list
+		|| cfg->auto_trust_anchor_file_list
+		|| cfg->trusted_keys_file_list)) {
+		char* key = NULL;
+		if(cfg->auto_trust_anchor_file_list)
+			key = cfg->auto_trust_anchor_file_list->str;
+		if(!key && cfg->trust_anchor_file_list)
+			key = cfg->trust_anchor_file_list->str;
+		if(!key && cfg->trust_anchor_list)
+			key = cfg->trust_anchor_list->str;
+		if(!key && cfg->trusted_keys_file_list)
+			key = cfg->trusted_keys_file_list->str;
+		if(!key) key = "";
+		fatal_exit("disable-edns-do does not allow DNSSEC to work, but the validator module uses a trust anchor %s, turn off disable-edns-do or disable validation", key);
+	}
 #ifdef USE_IPSECMOD
 	if(cfg->ipsecmod_enabled && strstr(cfg->module_conf, "ipsecmod")) {
 		/* only check hook if enabled */
@@ -948,7 +969,7 @@ check_auth(struct config_file* cfg)
 
 /** check config file */
 static void
-checkconf(const char* cfgfile, const char* opt, int final)
+checkconf(const char* cfgfile, const char* opt, int final, int quiet)
 {
 	char oldwd[4096];
 	struct config_file* cfg = config_create();
@@ -981,7 +1002,7 @@ checkconf(const char* cfgfile, const char* opt, int final)
 	check_fwd(cfg);
 	check_hints(cfg);
 	check_auth(cfg);
-	printf("unbound-checkconf: no errors in %s\n", cfgfile);
+	if(!quiet) { printf("unbound-checkconf: no errors in %s\n", cfgfile); }
 	config_delete(cfg);
 }
 
@@ -995,6 +1016,7 @@ int main(int argc, char* argv[])
 {
 	int c;
 	int final = 0;
+	int quiet = 0;
 	const char* f;
 	const char* opt = NULL;
 	const char* cfgfile = CONFIGFILE;
@@ -1007,13 +1029,16 @@ int main(int argc, char* argv[])
 		cfgfile = CONFIGFILE;
 #endif /* USE_WINSOCK */
 	/* parse the options */
-	while( (c=getopt(argc, argv, "fho:")) != -1) {
+	while( (c=getopt(argc, argv, "fhqo:")) != -1) {
 		switch(c) {
 		case 'f':
 			final = 1;
 			break;
 		case 'o':
 			opt = optarg;
+			break;
+		case 'q':
+			quiet = 1;
 			break;
 		case '?':
 		case 'h':
@@ -1028,7 +1053,7 @@ int main(int argc, char* argv[])
 	if(argc == 1)
 		f = argv[0];
 	else	f = cfgfile;
-	checkconf(f, opt, final);
+	checkconf(f, opt, final, quiet);
 	checklock_stop();
 	return 0;
 }

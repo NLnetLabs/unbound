@@ -122,6 +122,10 @@ struct infra_cache {
 	rbtree_type domain_limits;
 	/** hash table with query rates per client ip: ip_rate_key, ip_rate_data */
 	struct slabhash* client_ip_rates;
+	/** tree of addr_tree_node, with wait_limit_netblock_info information */
+	rbtree_type wait_limits_netblock;
+	/** tree of addr_tree_node, with wait_limit_netblock_info information */
+	rbtree_type wait_limits_cookie_netblock;
 };
 
 /** ratelimit, unless overridden by domain_limits, 0 is off */
@@ -153,6 +157,8 @@ struct rate_key {
 
 /** ip ratelimit, 0 is off */
 extern int infra_ip_ratelimit;
+/** ip ratelimit for DNS Cookie clients, 0 is off */
+extern int infra_ip_ratelimit_cookie;
 
 /**
  * key for ip_ratelimit lookups, a source IP.
@@ -182,9 +188,21 @@ struct rate_data {
 	/** what the timestamp is of the qps array members, counter is
 	 * valid for that timestamp.  Usually now and now-1. */
 	time_t timestamp[RATE_WINDOW];
+	/** the number of queries waiting in the mesh */
+	int mesh_wait;
 };
 
 #define ip_rate_data rate_data
+
+/**
+ * Data to store the configuration per netblock for the wait limit
+ */
+struct wait_limit_netblock_info {
+	/** The addr tree node, this must be first. */
+	struct addr_tree_node node;
+	/** the limit on the amount */
+	int limit;
+};
 
 /** infra host cache default hash lookup size */
 #define INFRA_HOST_STARTSIZE 32
@@ -216,7 +234,7 @@ struct infra_cache* infra_adjust(struct infra_cache* infra,
 	struct config_file* cfg);
 
 /**
- * Plain find infra data function (used by the the other functions)
+ * Plain find infra data function (used by the other functions)
  * @param infra: infrastructure cache.
  * @param addr: host address.
  * @param addrlen: length of addr.
@@ -419,13 +437,14 @@ int infra_find_ratelimit(struct infra_cache* infra, uint8_t* name,
  *  @param addr: client address
  *  @param addrlen: client address length
  *  @param timenow: what time it is now.
+ *  @param has_cookie: if the request came with a DNS Cookie.
  *  @param backoff: if backoff is enabled.
  *  @param buffer: with query for logging.
  *  @return 1 if it could be incremented. 0 if the increment overshot the
  *  ratelimit and the query should be dropped. */
 int infra_ip_ratelimit_inc(struct infra_cache* infra,
 	struct sockaddr_storage* addr, socklen_t addrlen, time_t timenow,
-	int backoff, struct sldns_buffer* buffer);
+	int has_cookie, int backoff, struct sldns_buffer* buffer);
 
 /**
  * Get memory used by the infra cache.
@@ -470,5 +489,17 @@ void ip_rate_delkeyfunc(void* d, void* arg);
 
 /* delete data */
 #define ip_rate_deldatafunc rate_deldatafunc
+
+/** See if the IP address can have another reply in the wait limit */
+int infra_wait_limit_allowed(struct infra_cache* infra, struct comm_reply* rep,
+	int cookie_valid, struct config_file* cfg);
+
+/** Increment number of waiting replies for IP */
+void infra_wait_limit_inc(struct infra_cache* infra, struct comm_reply* rep,
+	time_t timenow, struct config_file* cfg);
+
+/** Decrement number of waiting replies for IP */
+void infra_wait_limit_dec(struct infra_cache* infra, struct comm_reply* rep,
+	struct config_file* cfg);
 
 #endif /* SERVICES_CACHE_INFRA_H */

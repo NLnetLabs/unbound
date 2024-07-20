@@ -121,31 +121,38 @@ Remove local data RRs read from stdin of unbound\-control. Input is one name per
 line. For bulk removals.
 .TP
 .B dump_cache
-The contents of the cache is printed in a text format to stdout. You can
-redirect it to a file to store the cache in a file.
+The content of the cache is printed in a text format to stdout.
+You can redirect it to a file to store the cache in a file.
+Not supported in remote Unbounds in multi-process operation.
 .TP
 .B load_cache
-The contents of the cache is loaded from stdin.  Uses the same format as
-dump_cache uses.  Loading the cache with old, or wrong data can result
-in old or wrong data returned to clients.  Loading data into the cache
-in this way is supported in order to aid with debugging.
+The content of the cache is loaded from stdin.
+Uses the same format as dump_cache uses.
+Loading the cache with old, or wrong data can result in old or wrong data
+returned to clients.
+Loading data into the cache in this way is supported in order to aid with
+debugging.
+Not supported in remote Unbounds in multi-process operation.
 .TP
 .B lookup \fIname
 Print to stdout the name servers that would be used to look up the
 name specified.
 .TP
-.B flush \fIname
+.B flush \fR[\fI+c\fR] \fIname
 Remove the name from the cache. Removes the types
 A, AAAA, NS, SOA, CNAME, DNAME, MX, PTR, SRV, NAPTR, SVCB and HTTPS.
 Because that is fast to do. Other record types can be removed using
 .B flush_type
 or
 .B flush_zone\fR.
+.IP
+The '+c' option removes the items also from the cachedb cache. If
+cachedb is in use.
 .TP
-.B flush_type \fIname\fR \fItype
+.B flush_type \fR[\fI+c\fR] \fIname\fR \fItype
 Remove the name, type information from the cache.
 .TP
-.B flush_zone \fIname
+.B flush_zone \fR[\fI+c\fR] \fIname
 Remove all information at or below the name from the cache.
 The rrsets and key entries are removed so that new lookups will be performed.
 This needs to walk and inspect the entire cache, and is a slow operation.
@@ -153,10 +160,10 @@ The entries are set to expired in the implementation of this command (so,
 with serve\-expired enabled, it'll serve that information but schedule a
 prefetch for new information).
 .TP
-.B flush_bogus
+.B flush_bogus \fR[\fI+c\fR]
 Remove all bogus data from the cache.
 .TP
-.B flush_negative
+.B flush_negative \fR[\fI+c\fR]
 Remove all negative data from the cache.  This is nxdomain answers,
 nodata answers and servfail answers.  Also removes bad key entries
 (which could be due to failed lookups) from the dnssec key cache, and
@@ -239,22 +246,24 @@ still be bogus, use \fBflush_zone\fR to remove it), does not affect the config f
 .B insecure_remove \fIzone
 Removes domain\-insecure for the given zone.
 .TP
-.B forward_add \fR[\fI+i\fR] \fIzone addr ...
+.B forward_add \fR[\fI+it\fR] \fIzone addr ...
 Add a new forward zone to running Unbound.  With +i option also adds a
 \fIdomain\-insecure\fR for the zone (so it can resolve insecurely if you have
 a DNSSEC root trust anchor configured for other names).
 The addr can be IP4, IP6 or nameserver names, like \fIforward-zone\fR config
 in unbound.conf.
+The +t option sets it to use tls upstream, like \fIforward\-tls\-upstream\fR: yes.
 .TP
 .B forward_remove \fR[\fI+i\fR] \fIzone
 Remove a forward zone from running Unbound.  The +i also removes a
 \fIdomain\-insecure\fR for the zone.
 .TP
-.B stub_add \fR[\fI+ip\fR] \fIzone addr ...
+.B stub_add \fR[\fI+ipt\fR] \fIzone addr ...
 Add a new stub zone to running Unbound.  With +i option also adds a
 \fIdomain\-insecure\fR for the zone.  With +p the stub zone is set to prime,
 without it it is set to notprime.  The addr can be IP4, IP6 or nameserver
 names, like the \fIstub-zone\fR config in unbound.conf.
+The +t option sets it to use tls upstream, like \fIstub\-tls\-upstream\fR: yes.
 .TP
 .B stub_remove \fR[\fI+i\fR] \fIzone
 Remove a stub zone from running Unbound.  The +i also removes a
@@ -369,6 +378,15 @@ number of queries received by thread
 .I threadX.num.queries_ip_ratelimited
 number of queries rate limited by thread
 .TP
+.I threadX.num.queries_cookie_valid
+number of queries with a valid DNS Cookie by thread
+.TP
+.I threadX.num.queries_cookie_client
+number of queries with a client part only DNS Cookie by thread
+.TP
+.I threadX.num.queries_cookie_invalid
+number of queries with an invalid DNS Cookie by thread
+.TP
 .I threadX.num.cachehits
 number of queries that were successfully answered using a cache lookup
 .TP
@@ -444,6 +462,18 @@ the time of the request.  This helps you spot if the incoming\-num\-tcp
 buffers are full.
 .TP
 .I total.num.queries
+summed over threads.
+.TP
+.I total.num.queries_ip_ratelimited
+summed over threads.
+.TP
+.I total.num.queries_cookie_valid
+summed over threads.
+.TP
+.I total.num.queries_cookie_client
+summed over threads.
+.TP
+.I total.num.queries_cookie_invalid
 summed over threads.
 .TP
 .I total.num.cachehits
@@ -611,7 +641,7 @@ ratelimiting.
 .TP
 .I num.query.dnscrypt.shared_secret.cachemiss
 The number of dnscrypt queries that did not find a shared secret in the cache.
-The can be use to compute the shared secret hitrate.
+This can be used to compute the shared secret hitrate.
 .TP
 .I num.query.dnscrypt.replay
 The number of dnscrypt queries that found a nonce hit in the nonce cache and
@@ -718,7 +748,12 @@ Number of queries that got an answer that contained EDNS client subnet data.
 .I num.query.subnet_cache
 Number of queries answered from the edns client subnet cache.  These are
 counted as cachemiss by the main counters, but hit the client subnet
-specific cache, after getting processed by the edns client subnet module.
+specific cache after getting processed by the edns client subnet module.
+.TP
+.I num.query.cachedb
+Number of queries answered from the external cache of cachedb.
+These are counted as cachemiss by the main counters, but hit the cachedb
+external cache after getting processed by the cachedb module.
 .TP
 .I num.rpz.action.<rpz_action>
 Number of queries answered using configured RPZ policy, per RPZ action type.

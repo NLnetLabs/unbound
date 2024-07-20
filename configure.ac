@@ -4,21 +4,21 @@ AC_PREREQ([2.56])
 sinclude(acx_nlnetlabs.m4)
 sinclude(ax_pthread.m4)
 sinclude(acx_python.m4)
-sinclude(ac_pkg_swig.m4)
+sinclude(ax_pkg_swig.m4)
 sinclude(dnstap/dnstap.m4)
 sinclude(dnscrypt/dnscrypt.m4)
 
 # must be numbers. ac_defun because of later processing
 m4_define([VERSION_MAJOR],[1])
-m4_define([VERSION_MINOR],[17])
-m4_define([VERSION_MICRO],[2])
+m4_define([VERSION_MINOR],[20])
+m4_define([VERSION_MICRO],[1])
 AC_INIT([unbound],m4_defn([VERSION_MAJOR]).m4_defn([VERSION_MINOR]).m4_defn([VERSION_MICRO]),[unbound-bugs@nlnetlabs.nl or https://github.com/NLnetLabs/unbound/issues],[unbound])
 AC_SUBST(UNBOUND_VERSION_MAJOR, [VERSION_MAJOR])
 AC_SUBST(UNBOUND_VERSION_MINOR, [VERSION_MINOR])
 AC_SUBST(UNBOUND_VERSION_MICRO, [VERSION_MICRO])
 
 LIBUNBOUND_CURRENT=9
-LIBUNBOUND_REVISION=22
+LIBUNBOUND_REVISION=28
 LIBUNBOUND_AGE=1
 # 1.0.0 had 0:12:0
 # 1.0.1 had 0:13:0
@@ -107,7 +107,13 @@ LIBUNBOUND_AGE=1
 # 1.16.3 had 9:19:1
 # 1.17.0 had 9:20:1
 # 1.17.1 had 9:21:1
-# 1.17.2 had 9:22:1
+# 1.18.0 had 9:22:1
+# 1.19.0 had 9:23:1
+# 1.19.1 had 9:24:1
+# 1.19.2 had 9:25:1
+# 1.19.3 had 9:26:1
+# 1.20.0 had 9:27:1
+# 1.20.1 had 9:28:1
 
 #   Current  -- the number of the binary API that we're implementing
 #   Revision -- which iteration of the implementation of the binary
@@ -269,6 +275,9 @@ AC_DEFINE(WINVER, 0x0502, [the version of the windows API enabled])
 ACX_RSRC_VERSION(wnvs)
 AC_DEFINE_UNQUOTED(RSRC_PACKAGE_VERSION, [$wnvs], [version number for resource files])
 
+# Check for 'grep -e' program, here, since ACX_CHECK_FLTO needs that.
+AC_PROG_GREP
+
 # Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST
 AC_LANG([C])
@@ -279,7 +288,7 @@ ACX_CHECK_COMPILER_FLAG(g, [CFLAGS="$CFLAGS -g"])
 ACX_CHECK_COMPILER_FLAG(O2, [CFLAGS="$CFLAGS -O2"])
 default_cflags=yes
 fi
-AC_PROG_CC
+m4_version_prereq([2.70], [AC_PROG_CC], [AC_PROG_CC_STDC])
 ACX_DEPFLAG
 ACX_DETERMINE_EXT_FLAGS_UNBOUND
 
@@ -405,7 +414,7 @@ AC_CHECK_TOOL(STRIP, strip)
 ACX_LIBTOOL_C_ONLY
 
 # pkg-config is only needed for these options, do not require it otherwise
-if test "$enable_systemd" = "yes" -o "$with_pyunbound" = "yes" -o "$with_pythonmod" = "yes"; then
+if test "$enable_systemd" = "yes" -o "$enable_dnstap" = "yes" -o "$with_pyunbound" = "yes" -o "$with_pythonmod" = "yes"; then
 PKG_PROG_PKG_CONFIG
 fi
 
@@ -525,7 +534,8 @@ res = strptime("2010-07-15T00:00:00+00:00", "%t%Y%t-%t%m%t-%t%d%tT%t%H%t:%t%M%t:
 if (!res) return 2;
 res = strptime("20070207111842", "%Y%m%d%H%M%S", &tm);
 if (!res) return 1; return 0; }
-]])] , [eval "ac_cv_c_strptime_works=yes"], [eval "ac_cv_c_strptime_works=no"])
+]])] , [eval "ac_cv_c_strptime_works=yes"], [eval "ac_cv_c_strptime_works=no"],
+[eval "ac_cv_c_strptime_works=maybe"])
 else
 eval "ac_cv_c_strptime_works=maybe"
 fi
@@ -790,9 +800,9 @@ if test x_$ub_test_python != x_no; then
       ub_have_swig=no
       AC_ARG_ENABLE(swig-version-check, AS_HELP_STRING([--disable-swig-version-check],[Disable swig version check to build python modules with older swig even though that is unreliable]))
       if test "$enable_swig_version_check" = "yes"; then
-      	AC_PROG_SWIG(2.0.1)
+      	AX_PKG_SWIG(2.0.1)
       else
-      	AC_PROG_SWIG
+      	AX_PKG_SWIG
       fi
       AC_MSG_CHECKING(SWIG)
       if test ! -x "$SWIG"; then
@@ -934,7 +944,7 @@ else
 	AC_MSG_RESULT([no])
 fi
 AC_CHECK_HEADERS([openssl/conf.h openssl/engine.h openssl/bn.h openssl/dh.h openssl/dsa.h openssl/rsa.h openssl/core_names.h openssl/param_build.h],,, [AC_INCLUDES_DEFAULT])
-AC_CHECK_FUNCS([OPENSSL_config EVP_sha1 EVP_sha256 EVP_sha512 FIPS_mode EVP_default_properties_is_fips_enabled EVP_MD_CTX_new OpenSSL_add_all_digests OPENSSL_init_crypto EVP_cleanup ENGINE_cleanup ERR_load_crypto_strings CRYPTO_cleanup_all_ex_data ERR_free_strings RAND_cleanup DSA_SIG_set0 EVP_dss1 EVP_DigestVerify EVP_aes_256_cbc EVP_EncryptInit_ex HMAC_Init_ex CRYPTO_THREADID_set_callback EVP_MAC_CTX_set_params OSSL_PARAM_BLD_new BIO_set_callback_ex])
+AC_CHECK_FUNCS([OPENSSL_config EVP_sha1 EVP_sha256 EVP_sha512 FIPS_mode EVP_default_properties_is_fips_enabled EVP_MD_CTX_new OpenSSL_add_all_digests OPENSSL_init_crypto EVP_cleanup ENGINE_cleanup ERR_load_crypto_strings CRYPTO_cleanup_all_ex_data ERR_free_strings RAND_cleanup DSA_SIG_set0 EVP_dss1 EVP_DigestVerify EVP_aes_256_cbc EVP_EncryptInit_ex HMAC_Init_ex CRYPTO_THREADID_set_callback EVP_MAC_CTX_set_params OSSL_PARAM_BLD_new BIO_set_callback_ex SSL_CTX_set_tmp_ecdh])
 
 # these check_funcs need -lssl
 BAKLIBS="$LIBS"
@@ -1137,7 +1147,8 @@ int main(void) {
 		return 6;
 	return 0;
 }
-]])] , [eval "ac_cv_c_gost_works=yes"], [eval "ac_cv_c_gost_works=no"])
+]])] , [eval "ac_cv_c_gost_works=yes"], [eval "ac_cv_c_gost_works=no"],
+[eval "ac_cv_c_gost_works=maybe"])
 CFLAGS="$BAKCFLAGS"
 else
 eval "ac_cv_c_gost_works=maybe"
@@ -1170,8 +1181,17 @@ case "$enable_ecdsa" in
       ;;
     *)
       if test $USE_NSS = "no" -a $USE_NETTLE = "no"; then
-	      AC_CHECK_FUNC(ECDSA_sign, [], [AC_MSG_ERROR([OpenSSL does not support ECDSA: please upgrade or rerun with --disable-ecdsa])])
-	      AC_CHECK_FUNC(SHA384_Init, [], [AC_MSG_ERROR([OpenSSL does not support SHA384: please upgrade or rerun with --disable-ecdsa])])
+	      AC_CHECK_FUNC(EVP_PKEY_fromdata, [
+	          # with EVP_PKEY_fromdata, check if EC is not disabled
+	          AC_CHECK_DECL([OPENSSL_NO_EC], [AC_MSG_ERROR([OpenSSL does not support ECDSA: please upgrade or rerun with --disable-ecdsa])
+		  ], [], [AC_INCLUDES_DEFAULT
+#include <openssl/evp.h>
+		  ])
+		], [
+		  # without EVP_PKEY_fromdata, older openssl, check for support
+		  AC_CHECK_FUNC(ECDSA_sign, [], [AC_MSG_ERROR([OpenSSL does not support ECDSA: please upgrade or rerun with --disable-ecdsa])])
+		  AC_CHECK_FUNC(SHA384_Init, [], [AC_MSG_ERROR([OpenSSL does not support SHA384: please upgrade or rerun with --disable-ecdsa])])
+		])
 	      AC_CHECK_DECLS([NID_X9_62_prime256v1, NID_secp384r1], [], [AC_MSG_ERROR([OpenSSL does not support the ECDSA curves: please upgrade or rerun with --disable-ecdsa])], [AC_INCLUDES_DEFAULT
 #include <openssl/evp.h>
 	      ])
@@ -1522,13 +1542,17 @@ if test x_$enable_static_exe = x_yes; then
 	if test "$on_mingw" = yes; then
 		staticexe="-all-static"
 		# for static compile, include gdi32 and zlib here.
-		if echo $LIBS | grep 'lgdi32' >/dev/null; then
+		if echo "$LIBS" | grep 'lgdi32' >/dev/null; then
 			:
 		else
 			LIBS="$LIBS -lgdi32"
 		fi
 		AC_CHECK_LIB([z], [compress], [ LIBS="$LIBS -lz" ])
-		LIBS="$LIBS -l:libssp.a"
+		if echo "$LIBS" | grep -e "libssp.a" -e "lssp" >/dev/null; then
+			:
+		else
+			LIBS="$LIBS -l:libssp.a"
+		fi
 	fi
 fi
 
@@ -1545,7 +1569,11 @@ if test x_$enable_fully_static = x_yes; then
 			LIBS="$LIBS -lgdi32"
 		fi
 		AC_CHECK_LIB([z], [compress], [ LIBS="$LIBS -lz" ])
-		LIBS="$LIBS -l:libssp.a"
+		if echo "$LIBS" | grep -e "libssp.a" -e "lssp" >/dev/null; then
+			:
+		else
+			LIBS="$LIBS -l:libssp.a"
+		fi
 	fi
 fi
 
@@ -1565,7 +1593,11 @@ if test "$USE_WINSOCK" = 1; then
 #include <windows.h>
 	])
 	AC_CHECK_TOOL(WINDRES, windres)
-	LIBS="$LIBS -liphlpapi -lcrypt32"
+	if echo "$LIBS" | grep crypt32 >/dev/null; then
+		LIBS="$LIBS -liphlpapi"
+	else
+		LIBS="$LIBS -liphlpapi -lcrypt32"
+	fi
 	WINAPPS="unbound-service-install.exe unbound-service-remove.exe anchor-update.exe"
 	AC_SUBST(WINAPPS)
 	WIN_DAEMON_SRC="winrc/win_svc.c winrc/w_inst.c"
@@ -1714,7 +1746,7 @@ int main(void) { return !(snprintf(NULL, 0, "test") == 4); }
 		AC_MSG_RESULT(no)
 		AC_DEFINE([SNPRINTF_RET_BROKEN], [], [define if (v)snprintf does not return length needed, (but length used)])
 		AC_LIBOBJ(snprintf)
-	  ])
+	  ], [AC_MSG_RESULT(maybe)])
     fi
 fi
 AC_REPLACE_FUNCS(strlcat)
@@ -1899,15 +1931,17 @@ case "$enable_ipset" in
 		IPSET_OBJ="ipset.lo"
 		AC_SUBST(IPSET_OBJ)
 
-		# mnl
-		AC_ARG_WITH(libmnl, AS_HELP_STRING([--with-libmnl=path],[specify explicit path for libmnl.]),
+		# BSD's pf
+		AC_CHECK_HEADERS([net/pfvar.h], [], [
+		    # mnl
+		    AC_ARG_WITH(libmnl, AS_HELP_STRING([--with-libmnl=path],[specify explicit path for libmnl.]),
 			[ ],[ withval="yes" ])
-		found_libmnl="no"
-		AC_MSG_CHECKING(for libmnl)
-		if test x_$withval = x_ -o x_$withval = x_yes; then
+		    found_libmnl="no"
+		    AC_MSG_CHECKING(for libmnl)
+		    if test x_$withval = x_ -o x_$withval = x_yes; then
 			withval="/usr/local /opt/local /usr/lib /usr/pkg /usr/sfw /usr"
-		fi
-		for dir in $withval ; do
+		    fi
+		    for dir in $withval ; do
 			if test -f "$dir/include/libmnl/libmnl.h" -o -f "$dir/include/libmnl/libmnl/libmnl.h"; then
 				found_libmnl="yes"
 				dnl assume /usr is in default path.
@@ -1925,10 +1959,14 @@ case "$enable_ipset" in
 				LIBS="$LIBS -lmnl"
 				break;
 			fi
-		done
-		if test x_$found_libmnl != x_yes; then
-			AC_MSG_ERROR([Could not find libmnl, libmnl.h])
-		fi
+		    done
+		    if test x_$found_libmnl != x_yes; then
+			  AC_MSG_ERROR([Could not find libmnl, libmnl.h])
+		    fi
+		], [
+		  #include <netinet/in.h>
+		  #include <net/if.h>
+		])
 		;;
     no|*)
     	# nothing
@@ -1944,7 +1982,7 @@ case "$enable_explicit_port_randomisation" in
 esac
 
 if echo "$host" | $GREP -i -e linux >/dev/null; then
-	AC_ARG_ENABLE(linux-ip-local-port-range, AC_HELP_STRING([--enable-linux-ip-local-port-range], [Define this to enable use of /proc/sys/net/ipv4/ip_local_port_range as a default outgoing port range. This is only for the libunbound on Linux and does not affect unbound resolving daemon itself. This may severely limit the number of available outgoing ports and thus decrease randomness. Define this only when the target system restricts (e.g. some of SELinux enabled distributions) the use of non-ephemeral ports.]))
+	AC_ARG_ENABLE(linux-ip-local-port-range, AS_HELP_STRING([--enable-linux-ip-local-port-range], [Define this to enable use of /proc/sys/net/ipv4/ip_local_port_range as a default outgoing port range. This is only for the libunbound on Linux and does not affect unbound resolving daemon itself. This may severely limit the number of available outgoing ports and thus decrease randomness. Define this only when the target system restricts (e.g. some of SELinux enabled distributions) the use of non-ephemeral ports.]))
 	case "$enable_linux_ip_local_port_range" in
 		yes)
 			AC_DEFINE([USE_LINUX_IP_LOCAL_PORT_RANGE], [1], [Define this to enable use of /proc/sys/net/ipv4/ip_local_port_range as a default outgoing port range. This is only for the libunbound on Linux and does not affect unbound resolving daemon itself. This may severely limit the number of available outgoing ports and thus decrease randomness. Define this only when the target system restricts (e.g. some of SELinux enabled distributions) the use of non-ephemeral ports.])

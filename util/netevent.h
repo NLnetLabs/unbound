@@ -60,6 +60,7 @@
 #ifndef NET_EVENT_H
 #define NET_EVENT_H
 
+#include <sys/time.h>
 #include "dnscrypt/dnscrypt.h"
 #ifdef HAVE_NGHTTP2_NGHTTP2_H
 #include <nghttp2/nghttp2.h>
@@ -180,6 +181,8 @@ struct comm_point {
 	/** if the event is added or not */
 	int event_added;
 
+	/** Reference to struct that is part of the listening ports,
+	 * where for listening ports information is kept about the address. */
 	struct unbound_socket* socket;
 
 	/** file descriptor for communication point */
@@ -951,6 +954,9 @@ void http2_session_add_stream(struct http2_session* h2_session,
  */
 void http2_stream_add_meshstate(struct http2_stream* h2_stream,
 	struct mesh_area* mesh, struct mesh_state* m);
+
+/** Remove mesh state from stream. When the mesh state has been removed. */
+void http2_stream_remove_mesh_state(struct http2_stream* h2_stream);
 
 /**
  * This routine is published for checks and tests, and is only used internally.

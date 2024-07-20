@@ -80,6 +80,7 @@ store_rrsets(struct module_env* env, struct reply_info* rep, time_t now,
 	struct regional* region, time_t qstarttime)
 {
 	size_t i;
+	time_t ttl, min_ttl = rep->ttl;
 	/* see if rrset already exists in cache, if not insert it. */
 	for(i=0; i<rep->rrset_count; i++) {
 		rep->ref[i].key = rep->rrsets[i];
@@ -95,7 +96,8 @@ store_rrsets(struct module_env* env, struct reply_info* rep, time_t now,
 				struct ub_packed_rrset_key* ck;
 				lock_rw_rdlock(&rep->ref[i].key->entry.lock);
 				/* if deleted rrset, do not copy it */
-				if(rep->ref[i].key->id == 0)
+				if(rep->ref[i].key->id == 0 ||
+					rep->ref[i].id != rep->ref[i].key->id)
 					ck = NULL;
 				else 	ck = packed_rrset_copy_region(
 					rep->ref[i].key, region, now);
@@ -111,7 +113,23 @@ store_rrsets(struct module_env* env, struct reply_info* rep, time_t now,
 			/* fallthrough */
 		case 1: /* ref updated, item inserted */
 			rep->rrsets[i] = rep->ref[i].key;
+			/* ref was updated; make sure the message ttl is
+			 * updated to the minimum of the current rrsets. */
+			lock_rw_rdlock(&rep->ref[i].key->entry.lock);
+			/* if deleted, skip ttl update. */
+			if(rep->ref[i].key->id != 0 &&
+				rep->ref[i].id == rep->ref[i].key->id) {
+				ttl = ((struct packed_rrset_data*)
+				    rep->rrsets[i]->entry.data)->ttl;
+				if(ttl < min_ttl) min_ttl = ttl;
+			}
+			lock_rw_unlock(&rep->ref[i].key->entry.lock);
 		}
+	}
+	if(min_ttl < rep->ttl) {
+		rep->ttl = min_ttl;
+		rep->prefetch_ttl = PREFETCH_TTL_CALC(rep->ttl);
+		rep->serve_expired_ttl = rep->ttl + SERVE_EXPIRED_TTL;
 	}
 }
 
@@ -157,7 +175,7 @@ dns_cache_store_msg(struct module_env* env, struct query_info* qinfo,
 		/* we do not store the message, but we did store the RRs,
 		 * which could be useful for delegation information */
 		verbose(VERB_ALGO, "TTL 0: dropped msg from cache");
-		free(rep);
+		reply_info_delete(rep, NULL);
 		/* if the message is in the cache, remove that msg,
 		 * so that the TTL 0 response can be returned for future
 		 * responses (i.e. don't get answered from
@@ -181,46 +199,6 @@ dns_cache_store_msg(struct module_env* env, struct query_info* qinfo,
 		return;
 	}
 	slabhash_insert(env->msg_cache, hash, &e->entry, rep, env->alloc);
-}
-
-/** see if an rrset is expired above the qname, return upper qname. */
-static int
-rrset_expired_above(struct module_env* env, uint8_t** qname, size_t* qnamelen,
-	uint16_t searchtype, uint16_t qclass, time_t now, uint8_t* expiretop,
-	size_t expiretoplen)
-{
-	struct ub_packed_rrset_key *rrset;
-	uint8_t lablen;
-
-	while(*qnamelen > 0) {
-		/* look one label higher */
-		lablen = **qname;
-		*qname += lablen + 1;
-		*qnamelen -= lablen + 1;
-		if(*qnamelen <= 0)
-			break;
-
-		/* looks up with a time of 0, to see expired entries */
-		if((rrset = rrset_cache_lookup(env->rrset_cache, *qname,
-			*qnamelen, searchtype, qclass, 0, 0, 0))) {
-			struct packed_rrset_data* data =
-				(struct packed_rrset_data*)rrset->entry.data;
-			if(now > data->ttl) {
-				/* it is expired, this is not wanted */
-				lock_rw_unlock(&rrset->entry.lock);
-				log_nametypeclass(VERB_ALGO, "this rrset is expired", *qname, searchtype, qclass);
-				return 1;
-			}
-			/* it is not expired, continue looking */
-			lock_rw_unlock(&rrset->entry.lock);
-		}
-
-		/* do not look above the expiretop. */
-		if(expiretop && *qnamelen == expiretoplen &&
-			query_dname_compare(*qname, expiretop)==0)
-			break;
-	}
-	return 0;
 }
 
 /** find closest NS or DNAME and returns the rrset (locked) */
@@ -256,12 +234,12 @@ find_closest_of_type(struct module_env* env, uint8_t* qname, size_t qnamelen,
 			/* check for expiry, but we have to let go of the rrset
 			 * for the lock ordering */
 			lock_rw_unlock(&rrset->entry.lock);
-			/* the expired_above function always takes off one
-			 * label (if qnamelen>0) and returns the final qname
-			 * where it searched, so we can continue from there
-			 * turning the O N*N search into O N. */
-			if(!rrset_expired_above(env, &qname, &qnamelen,
-				searchtype, qclass, now, expiretop,
+			/* the rrset_cache_expired_above function always takes
+			 * off one label (if qnamelen>0) and returns the final
+			 * qname where it searched, so we can continue from
+			 * there turning the O N*N search into O N. */
+			if(!rrset_cache_expired_above(env->rrset_cache, &qname,
+				&qnamelen, searchtype, qclass, now, expiretop,
 				expiretoplen)) {
 				/* we want to return rrset, but it may be
 				 * gone from cache, if so, just loop like
@@ -592,6 +570,7 @@ gen_dns_msg(struct regional* region, struct query_info* q, size_t num)
 	if(!msg->rep)
 		return NULL;
 	msg->rep->reason_bogus = LDNS_EDE_NONE;
+	msg->rep->reason_bogus_str = NULL;
 	if(num > RR_COUNT_MAX)
 		return NULL; /* integer overflow protection */
 	msg->rep->rrsets = (struct ub_packed_rrset_key**)
@@ -654,6 +633,10 @@ tomsg(struct module_env* env, struct query_info* q, struct reply_info* r,
 	msg->rep->rrset_count = r->rrset_count;
 	msg->rep->authoritative = r->authoritative;
 	msg->rep->reason_bogus = r->reason_bogus;
+	if(r->reason_bogus_str) {
+		msg->rep->reason_bogus_str = regional_strdup(region, r->reason_bogus_str);
+	}
+
 	if(!rrset_array_lock(r->ref, r->rrset_count, now_control)) {
 		return NULL;
 	}
@@ -683,6 +666,28 @@ tomsg(struct module_env* env, struct query_info* q, struct reply_info* r,
 	else
 		rrset_array_unlock(r->ref, r->rrset_count);
 	return msg;
+}
+
+struct dns_msg*
+dns_msg_deepcopy_region(struct dns_msg* origin, struct regional* region)
+{
+	size_t i;
+	struct dns_msg* res = NULL;
+	res = gen_dns_msg(region, &origin->qinfo, origin->rep->rrset_count);
+	if(!res) return NULL;
+	*res->rep = *origin->rep;
+	if(origin->rep->reason_bogus_str) {
+		res->rep->reason_bogus_str = regional_strdup(region,
+			origin->rep->reason_bogus_str);
+	}
+	for(i=0; i<res->rep->rrset_count; i++) {
+		res->rep->rrsets[i] = packed_rrset_copy_region(
+			origin->rep->rrsets[i], region, 0);
+		if(!res->rep->rrsets[i]) {
+			return NULL;
+		}
+	}
+	return res;
 }
 
 /** synthesize RRset-only response from cached RRset item */
@@ -791,7 +796,7 @@ synth_dname_msg(struct ub_packed_rrset_key* rrset, struct regional* region,
 	if(!newd)
 		return NULL;
 	ck->entry.data = newd;
-	newd->ttl = 0; /* 0 for synthesized CNAME TTL */
+	newd->ttl = d->ttl - now; /* RFC6672: synth CNAME TTL == DNAME TTL */
 	newd->count = 1;
 	newd->rrsig_count = 0;
 	newd->trust = rrset_trust_ans_noAA;
@@ -1057,7 +1062,6 @@ dns_cache_store(struct module_env* env, struct query_info* msgqinf,
 	/* ttl must be relative ;i.e. 0..86400 not  time(0)+86400.
 	 * the env->now is added to message and RRsets in this routine. */
 	/* the leeway is used to invalidate other rrsets earlier */
-
 	if(is_referral) {
 		/* store rrsets */
 		struct rrset_ref ref;
@@ -1074,7 +1078,7 @@ dns_cache_store(struct module_env* env, struct query_info* msgqinf,
 				((ntohs(ref.key->rk.type)==LDNS_RR_TYPE_NS
 				 && !pside) ? qstarttime:*env->now + leeway));
 		}
-		free(rep);
+		reply_info_delete(rep, NULL);
 		return 1;
 	} else {
 		/* store msg, and rrsets */

@@ -101,6 +101,8 @@ extern int BLACKLIST_PENALTY;
  * Chosen so that the UNKNOWN_SERVER_NICENESS falls within the band of a 
  * fast server, this causes server exploration as a side benefit. msec. */
 #define RTT_BAND 400
+/** Number of retries for empty nodata packets before it is accepted. */
+#define EMPTY_NODATA_RETRY_COUNT 2
 
 /**
  * Global state for the iterator.
@@ -415,6 +417,11 @@ struct iter_qstate {
 	 */
 	int refetch_glue;
 
+	/**
+	 * This flag detects that a completely empty nodata was received,
+	 * already so that it is accepted later. */
+	int empty_nodata_found;
+
 	/** list of pending queries to authoritative servers. */
 	struct outbound_list outlist;
 
@@ -451,7 +458,14 @@ struct iter_qstate {
 	/** true if there have been parse failures of reply packets */
 	int parse_failures;
 	/** a failure printout address for last received answer */
-	struct comm_reply* fail_reply;
+	union {
+		struct in_addr in;
+#ifdef AF_INET6
+		struct in6_addr in6;
+#endif
+	} fail_addr;
+	/** which fail_addr, 0 is nothing, 4 or 6 */
+	int fail_addr_type;
 };
 
 /**

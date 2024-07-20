@@ -116,6 +116,8 @@
 
 /** timeout in millisec to wait for write to unblock, packets dropped after.*/
 #define SEND_BLOCKED_WAIT_TIMEOUT 200
+/** max number of times to wait for write to unblock, packets dropped after.*/
+#define SEND_BLOCKED_MAX_RETRY 5
 
 /** Let's make timestamping code cleaner and redefine SO_TIMESTAMP* */
 #ifndef SO_TIMESTAMP
@@ -402,9 +404,10 @@ comm_point_send_udp_msg(struct comm_point *c, sldns_buffer* packet,
 			WSAGetLastError() == WSAENOBUFS ||
 			WSAGetLastError() == WSAEWOULDBLOCK) {
 #endif
+			int retries = 0;
 			/* if we set the fd blocking, other threads suddenly
 			 * have a blocking fd that they operate on */
-			while(sent == -1 && (
+			while(sent == -1 && retries < SEND_BLOCKED_MAX_RETRY && (
 #ifndef USE_WINSOCK
 				errno == EAGAIN || errno == EINTR ||
 #  ifdef EWOULDBLOCK
@@ -419,6 +422,13 @@ comm_point_send_udp_msg(struct comm_point *c, sldns_buffer* packet,
 #endif
 			)) {
 #if defined(HAVE_POLL) || defined(USE_WINSOCK)
+				int send_nobufs = (
+#ifndef USE_WINSOCK
+					errno == ENOBUFS
+#else
+					WSAGetLastError() == WSAENOBUFS
+#endif
+				);
 				struct pollfd p;
 				int pret;
 				memset(&p, 0, sizeof(p));
@@ -457,8 +467,48 @@ comm_point_send_udp_msg(struct comm_point *c, sldns_buffer* packet,
 					log_err("poll udp out failed: %s",
 						sock_strerror(errno));
 					return 0;
+				} else if((pret < 0 &&
+#ifndef USE_WINSOCK
+					errno == ENOBUFS
+#else
+					WSAGetLastError() == WSAENOBUFS
+#endif
+					) || (send_nobufs && retries > 0)) {
+					/* ENOBUFS, and poll returned without
+					 * a timeout. Or the retried send call
+					 * returned ENOBUFS. It is good to
+					 * wait a bit for the error to clear. */
+					/* The timeout is 20*(2^(retries+1)),
+					 * it increases exponentially, starting
+					 * at 40 msec. After 5 tries, 1240 msec
+					 * have passed in total, when poll
+					 * returned the error, and 1200 msec
+					 * when send returned the errors. */
+#ifndef USE_WINSOCK
+					pret = poll(NULL, 0, (SEND_BLOCKED_WAIT_TIMEOUT/10)<<(retries+1));
+#else
+					pret = WSAPoll(NULL, 0, (SEND_BLOCKED_WAIT_TIMEOUT/10)<<(retries+1));
+#endif
+					if(pret < 0 &&
+#ifndef USE_WINSOCK
+						errno != EAGAIN && errno != EINTR &&
+#  ifdef EWOULDBLOCK
+						errno != EWOULDBLOCK &&
+#  endif
+						errno != ENOBUFS
+#else
+						WSAGetLastError() != WSAEINPROGRESS &&
+						WSAGetLastError() != WSAEINTR &&
+						WSAGetLastError() != WSAENOBUFS &&
+						WSAGetLastError() != WSAEWOULDBLOCK
+#endif
+					) {
+						log_err("poll udp out timer failed: %s",
+							sock_strerror(errno));
+					}
 				}
 #endif /* defined(HAVE_POLL) || defined(USE_WINSOCK) */
+				retries++;
 				if (!is_connected) {
 					sent = sendto(c->fd, (void*)sldns_buffer_begin(packet),
 						sldns_buffer_remaining(packet), 0,
@@ -592,6 +642,11 @@ comm_point_send_udp_msg_if(struct comm_point *c, sldns_buffer* packet,
 		cmsg_data = CMSG_DATA(cmsg);
 		((struct in_pktinfo *) cmsg_data)->ipi_ifindex = 0;
 		cmsg->cmsg_len = CMSG_LEN(sizeof(struct in_pktinfo));
+		/* zero the padding bytes inserted by the CMSG_LEN */
+		if(sizeof(struct in_pktinfo) < cmsg->cmsg_len)
+			memset(((uint8_t*)(CMSG_DATA(cmsg))) +
+				sizeof(struct in_pktinfo), 0, cmsg->cmsg_len
+				- sizeof(struct in_pktinfo));
 #elif defined(IP_SENDSRCADDR)
 		msg.msg_controllen = CMSG_SPACE(sizeof(struct in_addr));
 		log_assert(msg.msg_controllen <= sizeof(control.buf));
@@ -600,6 +655,11 @@ comm_point_send_udp_msg_if(struct comm_point *c, sldns_buffer* packet,
 		memmove(CMSG_DATA(cmsg), &r->pktinfo.v4addr,
 			sizeof(struct in_addr));
 		cmsg->cmsg_len = CMSG_LEN(sizeof(struct in_addr));
+		/* zero the padding bytes inserted by the CMSG_LEN */
+		if(sizeof(struct in_addr) < cmsg->cmsg_len)
+			memset(((uint8_t*)(CMSG_DATA(cmsg))) +
+				sizeof(struct in_addr), 0, cmsg->cmsg_len
+				- sizeof(struct in_addr));
 #else
 		verbose(VERB_ALGO, "no IP_PKTINFO or IP_SENDSRCADDR");
 		msg.msg_control = NULL;
@@ -616,6 +676,11 @@ comm_point_send_udp_msg_if(struct comm_point *c, sldns_buffer* packet,
 		cmsg_data = CMSG_DATA(cmsg);
 		((struct in6_pktinfo *) cmsg_data)->ipi6_ifindex = 0;
 		cmsg->cmsg_len = CMSG_LEN(sizeof(struct in6_pktinfo));
+		/* zero the padding bytes inserted by the CMSG_LEN */
+		if(sizeof(struct in6_pktinfo) < cmsg->cmsg_len)
+			memset(((uint8_t*)(CMSG_DATA(cmsg))) +
+				sizeof(struct in6_pktinfo), 0, cmsg->cmsg_len
+				- sizeof(struct in6_pktinfo));
 	} else {
 		/* try to pass all 0 to use default route */
 		msg.msg_controllen = CMSG_SPACE(sizeof(struct in6_pktinfo));
@@ -624,6 +689,11 @@ comm_point_send_udp_msg_if(struct comm_point *c, sldns_buffer* packet,
 		cmsg->cmsg_type = IPV6_PKTINFO;
 		memset(CMSG_DATA(cmsg), 0, sizeof(struct in6_pktinfo));
 		cmsg->cmsg_len = CMSG_LEN(sizeof(struct in6_pktinfo));
+		/* zero the padding bytes inserted by the CMSG_LEN */
+		if(sizeof(struct in6_pktinfo) < cmsg->cmsg_len)
+			memset(((uint8_t*)(CMSG_DATA(cmsg))) +
+				sizeof(struct in6_pktinfo), 0, cmsg->cmsg_len
+				- sizeof(struct in6_pktinfo));
 	}
 #endif /* S_SPLINT_S */
 	if(verbosity >= VERB_ALGO && r->srctype != 0)
@@ -645,7 +715,8 @@ comm_point_send_udp_msg_if(struct comm_point *c, sldns_buffer* packet,
 			WSAGetLastError() == WSAENOBUFS ||
 			WSAGetLastError() == WSAEWOULDBLOCK) {
 #endif
-			while(sent == -1 && (
+			int retries = 0;
+			while(sent == -1 && retries < SEND_BLOCKED_MAX_RETRY && (
 #ifndef USE_WINSOCK
 				errno == EAGAIN || errno == EINTR ||
 #  ifdef EWOULDBLOCK
@@ -660,6 +731,13 @@ comm_point_send_udp_msg_if(struct comm_point *c, sldns_buffer* packet,
 #endif
 			)) {
 #if defined(HAVE_POLL) || defined(USE_WINSOCK)
+				int send_nobufs = (
+#ifndef USE_WINSOCK
+					errno == ENOBUFS
+#else
+					WSAGetLastError() == WSAENOBUFS
+#endif
+				);
 				struct pollfd p;
 				int pret;
 				memset(&p, 0, sizeof(p));
@@ -698,8 +776,48 @@ comm_point_send_udp_msg_if(struct comm_point *c, sldns_buffer* packet,
 					log_err("poll udp out failed: %s",
 						sock_strerror(errno));
 					return 0;
+				} else if((pret < 0 &&
+#ifndef USE_WINSOCK
+					errno == ENOBUFS
+#else
+					WSAGetLastError() == WSAENOBUFS
+#endif
+					) || (send_nobufs && retries > 0)) {
+					/* ENOBUFS, and poll returned without
+					 * a timeout. Or the retried send call
+					 * returned ENOBUFS. It is good to
+					 * wait a bit for the error to clear. */
+					/* The timeout is 20*(2^(retries+1)),
+					 * it increases exponentially, starting
+					 * at 40 msec. After 5 tries, 1240 msec
+					 * have passed in total, when poll
+					 * returned the error, and 1200 msec
+					 * when send returned the errors. */
+#ifndef USE_WINSOCK
+					pret = poll(NULL, 0, (SEND_BLOCKED_WAIT_TIMEOUT/10)<<(retries+1));
+#else
+					pret = WSAPoll(NULL, 0, (SEND_BLOCKED_WAIT_TIMEOUT/10)<<(retries+1));
+#endif
+					if(pret < 0 &&
+#ifndef USE_WINSOCK
+						errno != EAGAIN && errno != EINTR &&
+#  ifdef EWOULDBLOCK
+						errno != EWOULDBLOCK &&
+#  endif
+						errno != ENOBUFS
+#else
+						WSAGetLastError() != WSAEINPROGRESS &&
+						WSAGetLastError() != WSAEINTR &&
+						WSAGetLastError() != WSAENOBUFS &&
+						WSAGetLastError() != WSAEWOULDBLOCK
+#endif
+					) {
+						log_err("poll udp out timer failed: %s",
+							sock_strerror(errno));
+					}
 				}
 #endif /* defined(HAVE_POLL) || defined(USE_WINSOCK) */
+				retries++;
 				sent = sendmsg(c->fd, &msg, 0);
 			}
 		}
@@ -774,15 +892,18 @@ static int udp_recv_needs_log(int err)
 static int consume_pp2_header(struct sldns_buffer* buf, struct comm_reply* rep,
 	int stream) {
 	size_t size;
-	struct pp2_header *header = pp2_read_header(buf);
-	if(header == NULL) return 0;
+	struct pp2_header *header;
+	int err = pp2_read_header(sldns_buffer_begin(buf),
+		sldns_buffer_remaining(buf));
+	if(err) return 0;
+	header = (struct pp2_header*)sldns_buffer_begin(buf);
 	size = PP2_HEADER_SIZE + ntohs(header->len);
 	if((header->ver_cmd & 0xF) == PP2_CMD_LOCAL) {
 		/* A connection from the proxy itself.
 		 * No need to do anything with addresses. */
 		goto done;
 	}
-	if(header->fam_prot == 0x00) {
+	if(header->fam_prot == PP2_UNSPEC_UNSPEC) {
 		/* Unspecified family and protocol. This could be used for
 		 * health checks by proxies.
 		 * No need to do anything with addresses. */
@@ -790,8 +911,8 @@ static int consume_pp2_header(struct sldns_buffer* buf, struct comm_reply* rep,
 	}
 	/* Read the proxied address */
 	switch(header->fam_prot) {
-		case 0x11: /* AF_INET|STREAM */
-		case 0x12: /* AF_INET|DGRAM */
+		case PP2_INET_STREAM:
+		case PP2_INET_DGRAM:
 			{
 			struct sockaddr_in* addr =
 				(struct sockaddr_in*)&rep->client_addr;
@@ -802,8 +923,8 @@ static int consume_pp2_header(struct sldns_buffer* buf, struct comm_reply* rep,
 			}
 			/* Ignore the destination address; it should be us. */
 			break;
-		case 0x21: /* AF_INET6|STREAM */
-		case 0x22: /* AF_INET6|DGRAM */
+		case PP2_INET6_STREAM:
+		case PP2_INET6_DGRAM:
 			{
 			struct sockaddr_in6* addr =
 				(struct sockaddr_in6*)&rep->client_addr;
@@ -816,6 +937,10 @@ static int consume_pp2_header(struct sldns_buffer* buf, struct comm_reply* rep,
 			}
 			/* Ignore the destination address; it should be us. */
 			break;
+		default:
+			log_err("proxy_protocol: unsupported family and "
+				"protocol 0x%x", (int)header->fam_prot);
+			return 0;
 	}
 	rep->is_proxied = 1;
 done:
@@ -830,10 +955,10 @@ done:
 	return 1;
 }
 
+#if defined(AF_INET6) && defined(IPV6_PKTINFO) && defined(HAVE_RECVMSG)
 void
 comm_point_udp_ancil_callback(int fd, short event, void* arg)
 {
-#if defined(AF_INET6) && defined(IPV6_PKTINFO) && defined(HAVE_RECVMSG)
 	struct comm_reply rep;
 	struct msghdr msg;
 	struct iovec iov[1];
@@ -846,7 +971,9 @@ comm_point_udp_ancil_callback(int fd, short event, void* arg)
 #ifndef S_SPLINT_S
 	struct cmsghdr* cmsg;
 #endif /* S_SPLINT_S */
+#ifdef HAVE_LINUX_NET_TSTAMP_H
 	struct timespec *ts;
+#endif /* HAVE_LINUX_NET_TSTAMP_H */
 
 	rep.c = (struct comm_point*)arg;
 	log_assert(rep.c->type == comm_udp);
@@ -921,7 +1048,7 @@ comm_point_udp_ancil_callback(int fd, short event, void* arg)
 			} else if( cmsg->cmsg_level == SOL_SOCKET &&
 				cmsg->cmsg_type == SO_TIMESTAMP) {
 				memmove(&rep.c->recv_tv, CMSG_DATA(cmsg), sizeof(struct timeval));
-#endif
+#endif /* HAVE_LINUX_NET_TSTAMP_H */
 			}
 		}
 
@@ -943,21 +1070,21 @@ comm_point_udp_ancil_callback(int fd, short event, void* arg)
 		fptr_ok(fptr_whitelist_comm_point(rep.c->callback));
 		if((*rep.c->callback)(rep.c, rep.c->cb_arg, NETEVENT_NOERROR, &rep)) {
 			/* send back immediate reply */
-			(void)comm_point_send_udp_msg_if(rep.c, rep.c->buffer,
+			struct sldns_buffer *buffer;
+#ifdef USE_DNSCRYPT
+			buffer = rep.c->dnscrypt_buffer;
+#else
+			buffer = rep.c->buffer;
+#endif
+			(void)comm_point_send_udp_msg_if(rep.c, buffer,
 				(struct sockaddr*)&rep.remote_addr,
 				rep.remote_addrlen, &rep);
 		}
 		if(!rep.c || rep.c->fd == -1) /* commpoint closed */
 			break;
 	}
-#else
-	(void)fd;
-	(void)event;
-	(void)arg;
-	fatal_exit("recvmsg: No support for IPV6_PKTINFO; IP_PKTINFO or IP_RECVDSTADDR. "
-		"Please disable interface-automatic");
-#endif /* AF_INET6 && IPV6_PKTINFO && HAVE_RECVMSG */
 }
+#endif /* AF_INET6 && IPV6_PKTINFO && HAVE_RECVMSG */
 
 void
 comm_point_udp_callback(int fd, short event, void* arg)
@@ -1545,7 +1672,13 @@ ssl_handshake(struct comm_point* c)
 		} else {
 			unsigned long err = ERR_get_error();
 			if(!squelch_err_ssl_handshake(err)) {
-				log_crypto_err_code("ssl handshake failed", err);
+				long vr;
+				log_crypto_err_io_code("ssl handshake failed",
+					want, err);
+				if((vr=SSL_get_verify_result(c->ssl)) != 0)
+					log_err("ssl handshake cert error: %s",
+						X509_verify_cert_error_string(
+						vr));
 				log_addr(VERB_OPS, "ssl handshake failed",
 					&c->repinfo.remote_addr,
 					c->repinfo.remote_addrlen);
@@ -1620,6 +1753,9 @@ ssl_handshake(struct comm_point* c)
 			/* connection upgraded to HTTP2 */
 			c->tcp_do_toggle_rw = 0;
 			c->use_h2 = 1;
+		} else {
+			verbose(VERB_ALGO, "client doesn't support HTTP/2");
+			return 0;
 		}
 	}
 #endif
@@ -1695,23 +1831,30 @@ ssl_handle_read(struct comm_point* c)
 								strerror(errno));
 						return 0;
 					}
-					log_crypto_err("could not SSL_read");
+					log_crypto_err_io("could not SSL_read",
+						want);
 					return 0;
 				}
 				c->tcp_byte_count += r;
+				sldns_buffer_skip(c->buffer, r);
 				if(c->tcp_byte_count != current_read_size) return 1;
 				c->pp2_header_state = pp2_header_init;
 			}
 		}
 		if(c->pp2_header_state == pp2_header_init) {
-			header = pp2_read_header(c->buffer);
-			if(!header) {
+			int err;
+			err = pp2_read_header(
+				sldns_buffer_begin(c->buffer),
+				sldns_buffer_limit(c->buffer));
+			if(err) {
 				log_err("proxy_protocol: could not parse "
-					"PROXYv2 header");
+					"PROXYv2 header (%s)",
+					pp_lookup_error(err));
 				return 0;
 			}
+			header = (struct pp2_header*)sldns_buffer_begin(c->buffer);
 			want_read_size = ntohs(header->len);
-			if(sldns_buffer_remaining(c->buffer) <
+			if(sldns_buffer_limit(c->buffer) <
 				PP2_HEADER_SIZE + want_read_size) {
 				log_err_addr("proxy_protocol: not enough "
 					"buffer size to read PROXYv2 header", "",
@@ -1756,10 +1899,12 @@ ssl_handle_read(struct comm_point* c)
 								strerror(errno));
 						return 0;
 					}
-					log_crypto_err("could not SSL_read");
+					log_crypto_err_io("could not SSL_read",
+						want);
 					return 0;
 				}
 				c->tcp_byte_count += r;
+				sldns_buffer_skip(c->buffer, r);
 				if(c->tcp_byte_count != current_read_size) return 1;
 				c->pp2_header_state = pp2_header_done;
 			}
@@ -1770,6 +1915,7 @@ ssl_handle_read(struct comm_point* c)
 				c->repinfo.remote_addrlen);
 			return 0;
 		}
+		sldns_buffer_flip(c->buffer);
 		if(!consume_pp2_header(c->buffer, &c->repinfo, 1)) {
 			log_err_addr("proxy_protocol: could not consume "
 				"PROXYv2 header", "", &c->repinfo.remote_addr,
@@ -1814,7 +1960,7 @@ ssl_handle_read(struct comm_point* c)
 						strerror(errno));
 				return 0;
 			}
-			log_crypto_err("could not SSL_read");
+			log_crypto_err_io("could not SSL_read", want);
 			return 0;
 		}
 		c->tcp_byte_count += r;
@@ -1864,7 +2010,7 @@ ssl_handle_read(struct comm_point* c)
 						strerror(errno));
 				return 0;
 			}
-			log_crypto_err("could not SSL_read");
+			log_crypto_err_io("could not SSL_read", want);
 			return 0;
 		}
 		sldns_buffer_skip(c->buffer, (ssize_t)r);
@@ -1955,7 +2101,7 @@ ssl_handle_write(struct comm_point* c)
 						strerror(errno));
 				return 0;
 			}
-			log_crypto_err("could not SSL_write");
+			log_crypto_err_io("could not SSL_write", want);
 			return 0;
 		}
 		if(c->tcp_write_and_read) {
@@ -2007,7 +2153,7 @@ ssl_handle_write(struct comm_point* c)
 					strerror(errno));
 			return 0;
 		}
-		log_crypto_err("could not SSL_write");
+		log_crypto_err_io("could not SSL_write", want);
 		return 0;
 	}
 	if(c->tcp_write_and_read) {
@@ -2091,19 +2237,25 @@ comm_point_tcp_handle_read(int fd, struct comm_point* c, int short_ok)
 					goto recv_error_initial;
 				}
 				c->tcp_byte_count += r;
+				sldns_buffer_skip(c->buffer, r);
 				if(c->tcp_byte_count != current_read_size) return 1;
 				c->pp2_header_state = pp2_header_init;
 			}
 		}
 		if(c->pp2_header_state == pp2_header_init) {
-			header = pp2_read_header(c->buffer);
-			if(!header) {
+			int err;
+			err = pp2_read_header(
+				sldns_buffer_begin(c->buffer),
+				sldns_buffer_limit(c->buffer));
+			if(err) {
 				log_err("proxy_protocol: could not parse "
-					"PROXYv2 header");
+					"PROXYv2 header (%s)",
+					pp_lookup_error(err));
 				return 0;
 			}
+			header = (struct pp2_header*)sldns_buffer_begin(c->buffer);
 			want_read_size = ntohs(header->len);
-			if(sldns_buffer_remaining(c->buffer) <
+			if(sldns_buffer_limit(c->buffer) <
 				PP2_HEADER_SIZE + want_read_size) {
 				log_err_addr("proxy_protocol: not enough "
 					"buffer size to read PROXYv2 header", "",
@@ -2130,6 +2282,7 @@ comm_point_tcp_handle_read(int fd, struct comm_point* c, int short_ok)
 					goto recv_error;
 				}
 				c->tcp_byte_count += r;
+				sldns_buffer_skip(c->buffer, r);
 				if(c->tcp_byte_count != current_read_size) return 1;
 				c->pp2_header_state = pp2_header_done;
 			}
@@ -2140,6 +2293,7 @@ comm_point_tcp_handle_read(int fd, struct comm_point* c, int short_ok)
 				c->repinfo.remote_addrlen);
 			return 0;
 		}
+		sldns_buffer_flip(c->buffer);
 		if(!consume_pp2_header(c->buffer, &c->repinfo, 1)) {
 			log_err_addr("proxy_protocol: could not consume "
 				"PROXYv2 header", "", &c->repinfo.remote_addr,
@@ -2211,11 +2365,11 @@ recv_error:
 #ifndef USE_WINSOCK
 	if(errno == EINTR || errno == EAGAIN)
 		return 1;
-	if(recv_initial) {
 #ifdef ECONNRESET
-		if(errno == ECONNRESET && verbosity < 2)
-			return 0; /* silence reset by peer */
+	if(errno == ECONNRESET && verbosity < 2)
+		return 0; /* silence reset by peer */
 #endif
+	if(recv_initial) {
 #ifdef ECONNREFUSED
 		if(errno == ECONNREFUSED && verbosity < 2)
 			return 0; /* silence reset by peer */
@@ -2242,7 +2396,7 @@ recv_error:
 #endif
 #ifdef ENOTCONN
 		if(errno == ENOTCONN) {
-			log_err_addr("read (in tcp s) failed and this "
+			log_err_addr("read (in tcp initial) failed and this "
 				"could be because TCP Fast Open is "
 				"enabled [--disable-tfo-client "
 				"--disable-tfo-server] but does not "
@@ -2276,8 +2430,9 @@ recv_error:
 		return 1;
 	}
 #endif
-	log_err_addr("read (in tcp s)", sock_strerror(errno),
-		&c->repinfo.remote_addr, c->repinfo.remote_addrlen);
+	log_err_addr((recv_initial?"read (in tcp initial)":"read (in tcp)"),
+		sock_strerror(errno), &c->repinfo.remote_addr,
+		c->repinfo.remote_addrlen);
 	return 0;
 }
 
@@ -2793,7 +2948,7 @@ ssl_http_read_more(struct comm_point* c)
 					strerror(errno));
 			return 0;
 		}
-		log_crypto_err("could not SSL_read");
+		log_crypto_err_io("could not SSL_read", want);
 		return 0;
 	}
 	verbose(VERB_ALGO, "ssl http read more skip to %d + %d",
@@ -3152,6 +3307,13 @@ void http2_stream_add_meshstate(struct http2_stream* h2_stream,
 	h2_stream->mesh_state = m;
 }
 
+void http2_stream_remove_mesh_state(struct http2_stream* h2_stream)
+{
+	if(!h2_stream)
+		return;
+	h2_stream->mesh_state = NULL;
+}
+
 /** delete http2 session server. After closing connection. */
 static void http2_session_server_delete(struct http2_session* h2_session)
 {
@@ -3244,7 +3406,7 @@ ssize_t http2_recv_cb(nghttp2_session* ATTR_UNUSED(session), uint8_t* buf,
 						strerror(errno));
 				return NGHTTP2_ERR_CALLBACK_FAILURE;
 			}
-			log_crypto_err("could not SSL_read");
+			log_crypto_err_io("could not SSL_read", want);
 			return NGHTTP2_ERR_CALLBACK_FAILURE;
 		}
 		return r;
@@ -3499,7 +3661,7 @@ ssl_http_write_more(struct comm_point* c)
 					strerror(errno));
 			return 0;
 		}
-		log_crypto_err("could not SSL_write");
+		log_crypto_err_io("could not SSL_write", want);
 		return 0;
 	}
 	sldns_buffer_skip(c->buffer, (ssize_t)r);
@@ -3572,7 +3734,7 @@ ssize_t http2_send_cb(nghttp2_session* ATTR_UNUSED(session), const uint8_t* buf,
 						strerror(errno));
 				return NGHTTP2_ERR_CALLBACK_FAILURE;
 			}
-			log_crypto_err("could not SSL_write");
+			log_crypto_err_io("could not SSL_write", want);
 			return NGHTTP2_ERR_CALLBACK_FAILURE;
 		}
 		return r;
@@ -3838,11 +4000,7 @@ comm_point_create_udp(struct comm_base *base, int fd, sldns_buffer* buffer,
 	evbits = UB_EV_READ | UB_EV_PERSIST;
 	/* ub_event stuff */
 	c->ev->ev = ub_event_new(base->eb->base, c->fd, evbits,
-#ifdef USE_WINSOCK
 		comm_point_udp_callback, c);
-#else
-		comm_point_udp_ancil_callback, c);
-#endif
 	if(c->ev->ev == NULL) {
 		log_err("could not baseset udp event");
 		comm_point_delete(c);
@@ -3857,6 +4015,7 @@ comm_point_create_udp(struct comm_base *base, int fd, sldns_buffer* buffer,
 	return c;
 }
 
+#if defined(AF_INET6) && defined(IPV6_PKTINFO) && defined(HAVE_RECVMSG)
 struct comm_point*
 comm_point_create_udp_ancil(struct comm_base *base, int fd,
 	sldns_buffer* buffer, int pp2_enabled,
@@ -3919,6 +4078,7 @@ comm_point_create_udp_ancil(struct comm_base *base, int fd,
 	c->event_added = 1;
 	return c;
 }
+#endif
 
 static struct comm_point*
 comm_point_create_tcp_handler(struct comm_base *base,
@@ -4620,9 +4780,9 @@ comm_point_send_reply(struct comm_reply *repinfo)
 		 * sending src (client)/dst (local service) addresses over DNSTAP from udp callback
 		 */
 		if(repinfo->c->dtenv != NULL && repinfo->c->dtenv->log_client_response_messages) {
-			log_addr(VERB_ALGO, "from local addr", (void*)repinfo->c->socket->addr->ai_addr, repinfo->c->socket->addr->ai_addrlen);
+			log_addr(VERB_ALGO, "from local addr", (void*)repinfo->c->socket->addr, repinfo->c->socket->addrlen);
 			log_addr(VERB_ALGO, "response to client", &repinfo->client_addr, repinfo->client_addrlen);
-			dt_msg_send_client_response(repinfo->c->dtenv, &repinfo->client_addr, (void*)repinfo->c->socket->addr->ai_addr, repinfo->c->type, repinfo->c->buffer);
+			dt_msg_send_client_response(repinfo->c->dtenv, &repinfo->client_addr, (void*)repinfo->c->socket->addr, repinfo->c->type, repinfo->c->ssl, repinfo->c->buffer);
 		}
 #endif
 	} else {
@@ -4631,9 +4791,9 @@ comm_point_send_reply(struct comm_reply *repinfo)
 		 * sending src (client)/dst (local service) addresses over DNSTAP from TCP callback
 		 */
 		if(repinfo->c->tcp_parent->dtenv != NULL && repinfo->c->tcp_parent->dtenv->log_client_response_messages) {
-			log_addr(VERB_ALGO, "from local addr", (void*)repinfo->c->socket->addr->ai_addr, repinfo->c->socket->addr->ai_addrlen);
+			log_addr(VERB_ALGO, "from local addr", (void*)repinfo->c->socket->addr, repinfo->c->socket->addrlen);
 			log_addr(VERB_ALGO, "response to client", &repinfo->client_addr, repinfo->client_addrlen);
-			dt_msg_send_client_response(repinfo->c->tcp_parent->dtenv, &repinfo->client_addr, (void*)repinfo->c->socket->addr->ai_addr, repinfo->c->type,
+			dt_msg_send_client_response(repinfo->c->tcp_parent->dtenv, &repinfo->client_addr, (void*)repinfo->c->socket->addr, repinfo->c->type, repinfo->c->ssl,
 				( repinfo->c->tcp_req_info? repinfo->c->tcp_req_info->spool_buffer: repinfo->c->buffer ));
 		}
 #endif

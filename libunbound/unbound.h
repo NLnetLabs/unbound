@@ -695,6 +695,12 @@ struct ub_server_stats {
 	long long num_queries;
 	/** number of queries that have been dropped/ratelimited by ip. */
 	long long num_queries_ip_ratelimited;
+	/** number of queries with a valid DNS Cookie. */
+	long long num_queries_cookie_valid;
+	/** number of queries with only the client part of the DNS Cookie. */
+	long long num_queries_cookie_client;
+	/** number of queries with invalid DNS Cookie. */
+	long long num_queries_cookie_invalid;
 	/** number of queries that had a cache-miss. */
 	long long num_queries_missed_cache;
 	/** number of prefetch queries - cachehits with prefetch */
@@ -827,6 +833,8 @@ struct ub_server_stats {
 	/** number of queries answered from edns-subnet specific data, and
 	 * the answer was from the edns-subnet cache. */
 	long long num_query_subnet_cache;
+	/** number of queries served from cachedb */
+	long long num_query_cachedb;
 	/** number of bytes in the stream wait buffers */
 	long long mem_stream_wait;
 	/** number of bytes in the HTTP2 query buffers */

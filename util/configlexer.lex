@@ -297,6 +297,7 @@ rrset-cache-size{COLON}		{ YDVAR(1, VAR_RRSET_CACHE_SIZE) }
 rrset-cache-slabs{COLON}	{ YDVAR(1, VAR_RRSET_CACHE_SLABS) }
 cache-max-ttl{COLON}     	{ YDVAR(1, VAR_CACHE_MAX_TTL) }
 cache-max-negative-ttl{COLON}   { YDVAR(1, VAR_CACHE_MAX_NEGATIVE_TTL) }
+cache-min-negative-ttl{COLON}   { YDVAR(1, VAR_CACHE_MIN_NEGATIVE_TTL) }
 cache-min-ttl{COLON}     	{ YDVAR(1, VAR_CACHE_MIN_TTL) }
 infra-host-ttl{COLON}		{ YDVAR(1, VAR_INFRA_HOST_TTL) }
 infra-lame-ttl{COLON}		{ YDVAR(1, VAR_INFRA_LAME_TTL) }
@@ -403,6 +404,7 @@ val-clean-additional{COLON}	{ YDVAR(1, VAR_VAL_CLEAN_ADDITIONAL) }
 val-permissive-mode{COLON}	{ YDVAR(1, VAR_VAL_PERMISSIVE_MODE) }
 aggressive-nsec{COLON}		{ YDVAR(1, VAR_AGGRESSIVE_NSEC) }
 ignore-cd-flag{COLON}		{ YDVAR(1, VAR_IGNORE_CD_FLAG) }
+disable-edns-do{COLON}		{ YDVAR(1, VAR_DISABLE_EDNS_DO) }
 serve-expired{COLON}		{ YDVAR(1, VAR_SERVE_EXPIRED) }
 serve-expired-ttl{COLON}	{ YDVAR(1, VAR_SERVE_EXPIRED_TTL) }
 serve-expired-ttl-reset{COLON}	{ YDVAR(1, VAR_SERVE_EXPIRED_TTL_RESET) }
@@ -433,6 +435,7 @@ log-replies{COLON}		{ YDVAR(1, VAR_LOG_REPLIES) }
 log-tag-queryreply{COLON}	{ YDVAR(1, VAR_LOG_TAG_QUERYREPLY) }
 log-local-actions{COLON}       { YDVAR(1, VAR_LOG_LOCAL_ACTIONS) }
 log-servfail{COLON}		{ YDVAR(1, VAR_LOG_SERVFAIL) }
+log-destaddr{COLON}		{ YDVAR(1, VAR_LOG_DESTADDR) }
 local-zone{COLON}		{ YDVAR(2, VAR_LOCAL_ZONE) }
 local-data{COLON}		{ YDVAR(1, VAR_LOCAL_DATA) }
 local-data-ptr{COLON}		{ YDVAR(1, VAR_LOCAL_DATA_PTR) }
@@ -461,6 +464,11 @@ domain-insecure{COLON}		{ YDVAR(1, VAR_DOMAIN_INSECURE) }
 minimal-responses{COLON}	{ YDVAR(1, VAR_MINIMAL_RESPONSES) }
 rrset-roundrobin{COLON}		{ YDVAR(1, VAR_RRSET_ROUNDROBIN) }
 unknown-server-time-limit{COLON} { YDVAR(1, VAR_UNKNOWN_SERVER_TIME_LIMIT) }
+discard-timeout{COLON}		{ YDVAR(1, VAR_DISCARD_TIMEOUT) }
+wait-limit{COLON}		{ YDVAR(1, VAR_WAIT_LIMIT) }
+wait-limit-cookie{COLON}	{ YDVAR(1, VAR_WAIT_LIMIT_COOKIE) }
+wait-limit-netblock{COLON}	{ YDVAR(1, VAR_WAIT_LIMIT_NETBLOCK) }
+wait-limit-cookie-netblock{COLON} { YDVAR(1, VAR_WAIT_LIMIT_COOKIE_NETBLOCK) }
 max-udp-size{COLON}		{ YDVAR(1, VAR_MAX_UDP_SIZE) }
 dns64-prefix{COLON}		{ YDVAR(1, VAR_DNS64_PREFIX) }
 dns64-synthall{COLON}		{ YDVAR(1, VAR_DNS64_SYNTHALL) }
@@ -505,8 +513,10 @@ dnstap-log-forwarder-query-messages{COLON}	{
 		YDVAR(1, VAR_DNSTAP_LOG_FORWARDER_QUERY_MESSAGES) }
 dnstap-log-forwarder-response-messages{COLON}	{
 		YDVAR(1, VAR_DNSTAP_LOG_FORWARDER_RESPONSE_MESSAGES) }
+dnstap-sample-rate		{ YDVAR(1, VAR_DNSTAP_SAMPLE_RATE) }
 disable-dnssec-lame-check{COLON} { YDVAR(1, VAR_DISABLE_DNSSEC_LAME_CHECK) }
 ip-ratelimit{COLON}		{ YDVAR(1, VAR_IP_RATELIMIT) }
+ip-ratelimit-cookie{COLON}	{ YDVAR(1, VAR_IP_RATELIMIT_COOKIE) }
 ratelimit{COLON}		{ YDVAR(1, VAR_RATELIMIT) }
 ip-ratelimit-slabs{COLON}		{ YDVAR(1, VAR_IP_RATELIMIT_SLABS) }
 ratelimit-slabs{COLON}		{ YDVAR(1, VAR_RATELIMIT_SLABS) }
@@ -556,17 +566,22 @@ ipsecmod-strict{COLON}		{ YDVAR(1, VAR_IPSECMOD_STRICT) }
 cachedb{COLON}			{ YDVAR(0, VAR_CACHEDB) }
 backend{COLON}			{ YDVAR(1, VAR_CACHEDB_BACKEND) }
 secret-seed{COLON}		{ YDVAR(1, VAR_CACHEDB_SECRETSEED) }
+cachedb-no-store{COLON}		{ YDVAR(1, VAR_CACHEDB_NO_STORE) }
+cachedb-check-when-serve-expired{COLON}		{ YDVAR(1, VAR_CACHEDB_CHECK_WHEN_SERVE_EXPIRED) }
 redis-server-host{COLON}	{ YDVAR(1, VAR_CACHEDB_REDISHOST) }
 redis-server-port{COLON}	{ YDVAR(1, VAR_CACHEDB_REDISPORT) }
 redis-server-path{COLON}	{ YDVAR(1, VAR_CACHEDB_REDISPATH) }
 redis-server-password{COLON}	{ YDVAR(1, VAR_CACHEDB_REDISPASSWORD) }
 redis-timeout{COLON}		{ YDVAR(1, VAR_CACHEDB_REDISTIMEOUT) }
 redis-expire-records{COLON}	{ YDVAR(1, VAR_CACHEDB_REDISEXPIRERECORDS) }
+redis-logical-db{COLON}		{ YDVAR(1, VAR_CACHEDB_REDISLOGICALDB) }
 ipset{COLON}			{ YDVAR(0, VAR_IPSET) }
 name-v4{COLON}			{ YDVAR(1, VAR_IPSET_NAME_V4) }
 name-v6{COLON}			{ YDVAR(1, VAR_IPSET_NAME_V6) }
 udp-upstream-without-downstream{COLON} { YDVAR(1, VAR_UDP_UPSTREAM_WITHOUT_DOWNSTREAM) }
 tcp-connection-limit{COLON}	{ YDVAR(2, VAR_TCP_CONNECTION_LIMIT) }
+answer-cookie{COLON}		{ YDVAR(1, VAR_ANSWER_COOKIE ) }
+cookie-secret{COLON}		{ YDVAR(1, VAR_COOKIE_SECRET) }
 edns-client-string{COLON}	{ YDVAR(2, VAR_EDNS_CLIENT_STRING) }
 edns-client-string-opcode{COLON} { YDVAR(1, VAR_EDNS_CLIENT_STRING_OPCODE) }
 nsid{COLON}			{ YDVAR(1, VAR_NSID ) }

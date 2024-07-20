@@ -61,6 +61,8 @@ time_t MAX_TTL = 3600 * 24 * 10; /* ten days */
 time_t MIN_TTL = 0;
 /** MAX Negative TTL, for SOA records in authority section */
 time_t MAX_NEG_TTL = 3600; /* one hour */
+/** MIN Negative TTL, for SOA records in authority section */
+time_t MIN_NEG_TTL = 0;
 /** If we serve expired entries and prefetch them */
 int SERVE_EXPIRED = 0;
 /** Time to serve records after expiration */
@@ -94,7 +96,7 @@ parse_create_qinfo(sldns_buffer* pkt, struct msg_parse* msg,
 struct reply_info*
 construct_reply_info_base(struct regional* region, uint16_t flags, size_t qd,
 	time_t ttl, time_t prettl, time_t expttl, size_t an, size_t ns,
-	size_t ar, size_t total, enum sec_status sec)
+	size_t ar, size_t total, enum sec_status sec, sldns_ede_code reason_bogus)
 {
 	struct reply_info* rep;
 	/* rrset_count-1 because the first ref is part of the struct. */
@@ -117,7 +119,9 @@ construct_reply_info_base(struct regional* region, uint16_t flags, size_t qd,
 	rep->ar_numrrsets = ar;
 	rep->rrset_count = total;
 	rep->security = sec;
-	rep->reason_bogus = LDNS_EDE_NONE;
+	rep->reason_bogus = reason_bogus;
+	/* this is only allocated and used for caching on copy */
+	rep->reason_bogus_str = NULL;
 	rep->authoritative = 0;
 	/* array starts after the refs */
 	if(region)
@@ -137,7 +141,7 @@ parse_create_repinfo(struct msg_parse* msg, struct reply_info** rep,
 {
 	*rep = construct_reply_info_base(region, msg->flags, msg->qdcount, 0, 
 		0, 0, msg->an_rrsets, msg->ns_rrsets, msg->ar_rrsets, 
-		msg->rrset_count, sec_status_unchecked);
+		msg->rrset_count, sec_status_unchecked, LDNS_EDE_NONE);
 	if(!*rep)
 		return 0;
 	return 1;
@@ -182,7 +186,7 @@ make_new_reply_info(const struct reply_info* rep, struct regional* region,
 	new_rep = construct_reply_info_base(region, rep->flags,
 		rep->qdcount, rep->ttl, rep->prefetch_ttl,
 		rep->serve_expired_ttl, an_numrrsets, 0, 0, an_numrrsets,
-		sec_status_insecure);
+		sec_status_insecure, LDNS_EDE_NONE);
 	if(!new_rep)
 		return NULL;
 	if(!reply_info_alloc_rrset_keys(new_rep, NULL, region))
@@ -221,18 +225,25 @@ rdata_copy(sldns_buffer* pkt, struct packed_rrset_data* data, uint8_t* to,
 	if(type == LDNS_RR_TYPE_SOA && section == LDNS_SECTION_AUTHORITY) {
 		/* negative response. see if TTL of SOA record larger than the
 		 * minimum-ttl in the rdata of the SOA record */
-		if(*rr_ttl > soa_find_minttl(rr))
-			*rr_ttl = soa_find_minttl(rr);
-	}
-	if(!SERVE_ORIGINAL_TTL && (*rr_ttl < MIN_TTL))
-		*rr_ttl = MIN_TTL;
-	if(!SERVE_ORIGINAL_TTL && (*rr_ttl > MAX_TTL))
-		*rr_ttl = MAX_TTL;
-	if(type == LDNS_RR_TYPE_SOA && section == LDNS_SECTION_AUTHORITY) {
-		/* max neg ttl overrides the min and max ttl of everything
-		 * else, it is for a more specific record */
-		if(*rr_ttl > MAX_NEG_TTL)
-			*rr_ttl = MAX_NEG_TTL;
+		if(*rr_ttl > soa_find_minttl(rr)) *rr_ttl = soa_find_minttl(rr);
+		if(!SERVE_ORIGINAL_TTL) {
+			/* If MIN_NEG_TTL is configured skip setting MIN_TTL */
+			if(MIN_NEG_TTL <= 0 && *rr_ttl < MIN_TTL) {
+				*rr_ttl = MIN_TTL;
+			}
+			if(*rr_ttl > MAX_TTL) *rr_ttl = MAX_TTL;
+		}
+		/* MAX_NEG_TTL overrides the min and max ttl of everything
+		 * else; it is for a more specific record */
+		if(*rr_ttl > MAX_NEG_TTL) *rr_ttl = MAX_NEG_TTL;
+		/* MIN_NEG_TTL overrides the min and max ttl of everything
+		 * else if configured; it is for a more specific record */
+		if(MIN_NEG_TTL > 0 && *rr_ttl < MIN_NEG_TTL) {
+			*rr_ttl = MIN_NEG_TTL;
+		}
+	} else if(!SERVE_ORIGINAL_TTL) {
+		if(*rr_ttl < MIN_TTL) *rr_ttl = MIN_TTL;
+		if(*rr_ttl > MAX_TTL) *rr_ttl = MAX_TTL;
 	}
 	if(*rr_ttl < data->ttl)
 		data->ttl = *rr_ttl;
@@ -580,6 +591,10 @@ reply_info_parsedelete(struct reply_info* rep, struct alloc_cache* alloc)
 	for(i=0; i<rep->rrset_count; i++) {
 		ub_packed_rrset_parsedelete(rep->rrsets[i], alloc);
 	}
+	if(rep->reason_bogus_str) {
+		free(rep->reason_bogus_str);
+		rep->reason_bogus_str = NULL;
+	}
 	free(rep);
 }
 
@@ -661,6 +676,10 @@ void
 reply_info_delete(void* d, void* ATTR_UNUSED(arg))
 {
 	struct reply_info* r = (struct reply_info*)d;
+	if(r->reason_bogus_str) {
+		free(r->reason_bogus_str);
+		r->reason_bogus_str = NULL;
+	}
 	free(r);
 }
 
@@ -737,17 +756,36 @@ repinfo_copy_rrsets(struct reply_info* dest, struct reply_info* from,
 	return 1;
 }
 
-struct reply_info* 
-reply_info_copy(struct reply_info* rep, struct alloc_cache* alloc, 
+struct reply_info*
+reply_info_copy(struct reply_info* rep, struct alloc_cache* alloc,
 	struct regional* region)
 {
 	struct reply_info* cp;
-	cp = construct_reply_info_base(region, rep->flags, rep->qdcount, 
-		rep->ttl, rep->prefetch_ttl, rep->serve_expired_ttl, 
+	cp = construct_reply_info_base(region, rep->flags, rep->qdcount,
+		rep->ttl, rep->prefetch_ttl, rep->serve_expired_ttl,
 		rep->an_numrrsets, rep->ns_numrrsets, rep->ar_numrrsets,
-		rep->rrset_count, rep->security);
+		rep->rrset_count, rep->security, rep->reason_bogus);
 	if(!cp)
 		return NULL;
+
+	if(rep->reason_bogus_str && *rep->reason_bogus_str != 0) {
+		if(region) {
+			cp->reason_bogus_str = (char*)regional_alloc(region,
+				sizeof(char)
+				* (strlen(rep->reason_bogus_str)+1));
+		} else {
+			cp->reason_bogus_str = malloc(sizeof(char)
+				* (strlen(rep->reason_bogus_str)+1));
+		}
+		if(!cp->reason_bogus_str) {
+			if(!region)
+				reply_info_parsedelete(cp, alloc);
+			return NULL;
+		}
+		memcpy(cp->reason_bogus_str, rep->reason_bogus_str,
+			strlen(rep->reason_bogus_str)+1);
+	}
+
 	/* allocate ub_key structures special or not */
 	if(!reply_info_alloc_rrset_keys(cp, alloc, region)) {
 		if(!region)
@@ -889,13 +927,15 @@ log_dns_msg(const char* str, struct query_info* qinfo, struct reply_info* rep)
 void
 log_reply_info(enum verbosity_value v, struct query_info *qinf,
 	struct sockaddr_storage *addr, socklen_t addrlen, struct timeval dur,
-	int cached, struct sldns_buffer *rmsg)
+	int cached, struct sldns_buffer *rmsg, struct sockaddr_storage* daddr,
+	enum comm_point_type tp)
 {
 	char qname_buf[LDNS_MAX_DOMAINLEN+1];
 	char clientip_buf[128];
 	char rcode_buf[16];
 	char type_buf[16];
 	char class_buf[16];
+	char dest_buf[160];
 	size_t pktlen;
 	uint16_t rcode = FLAGS_GET_RCODE(sldns_buffer_read_u16_at(rmsg, 2));
 
@@ -904,11 +944,46 @@ log_reply_info(enum verbosity_value v, struct query_info *qinf,
 
 	sldns_wire2str_rcode_buf((int)rcode, rcode_buf, sizeof(rcode_buf));
 	addr_to_str(addr, addrlen, clientip_buf, sizeof(clientip_buf));
+	if(daddr) {
+		char da[128];
+		int port = 0;
+		char* comm;
+		if(daddr->ss_family == AF_INET6) {
+			struct sockaddr_in6 *d = (struct sockaddr_in6 *)daddr;
+			if(inet_ntop(d->sin6_family, &d->sin6_addr, da,
+				sizeof(*d)) == 0)
+				snprintf(dest_buf, sizeof(dest_buf),
+					"(inet_ntop_error)");
+			port = ntohs(d->sin6_port);
+		} else if(daddr->ss_family == AF_INET) {
+			struct sockaddr_in *d = (struct sockaddr_in *)daddr;
+			if(inet_ntop(d->sin_family, &d->sin_addr, da,
+				sizeof(*d)) == 0)
+				snprintf(dest_buf, sizeof(dest_buf),
+					"(inet_ntop_error)");
+			port = ntohs(d->sin_port);
+		} else {
+			snprintf(da, sizeof(da), "socket%d",
+				(int)daddr->ss_family);
+		}
+		comm = "udp";
+		if(tp == comm_tcp) comm = "tcp";
+		else if(tp == comm_tcp_accept) comm = "tcp";
+		else if(tp == comm_http) comm = "dot";
+		else if(tp == comm_local) comm = "unix";
+		else if(tp == comm_raw) comm = "raw";
+		snprintf(dest_buf, sizeof(dest_buf), " on %s %s %d",
+			comm, da, port);
+	} else {
+		dest_buf[0]=0;
+	}
 	if(rcode == LDNS_RCODE_FORMERR)
 	{
 		if(LOG_TAG_QUERYREPLY)
-			log_reply("%s - - - %s - - - ", clientip_buf, rcode_buf);
-		else	log_info("%s - - - %s - - - ", clientip_buf, rcode_buf);
+			log_reply("%s - - - %s - - -%s", clientip_buf,
+				rcode_buf, dest_buf);
+		else	log_info("%s - - - %s - - -%s", clientip_buf,
+				rcode_buf, dest_buf);
 	} else {
 		if(qinf->qname)
 			dname_str(qinf->qname, qname_buf);
@@ -917,12 +992,14 @@ log_reply_info(enum verbosity_value v, struct query_info *qinf,
 		sldns_wire2str_type_buf(qinf->qtype, type_buf, sizeof(type_buf));
 		sldns_wire2str_class_buf(qinf->qclass, class_buf, sizeof(class_buf));
 		if(LOG_TAG_QUERYREPLY)
-		     log_reply("%s %s %s %s %s " ARG_LL "d.%6.6d %d %d",
+		     log_reply("%s %s %s %s %s " ARG_LL "d.%6.6d %d %d%s",
 			clientip_buf, qname_buf, type_buf, class_buf,
-			rcode_buf, (long long)dur.tv_sec, (int)dur.tv_usec, cached, (int)pktlen);
-		else log_info("%s %s %s %s %s " ARG_LL "d.%6.6d %d %d",
+			rcode_buf, (long long)dur.tv_sec, (int)dur.tv_usec,
+			cached, (int)pktlen, dest_buf);
+		else log_info("%s %s %s %s %s " ARG_LL "d.%6.6d %d %d%s",
 			clientip_buf, qname_buf, type_buf, class_buf,
-			rcode_buf, (long long)dur.tv_sec, (int)dur.tv_usec, cached, (int)pktlen);
+			rcode_buf, (long long)dur.tv_sec, (int)dur.tv_usec,
+			cached, (int)pktlen, dest_buf);
 	}
 }
 
@@ -1018,6 +1095,16 @@ int edns_opt_list_append_ede(struct edns_option** list, struct regional* region,
 	verbose(VERB_ALGO, "attached EDE code: %d with message: %s", code, (txt?txt:"\"\""));
 	*prevp = opt;
 	return 1;
+}
+
+int edns_opt_list_append_keepalive(struct edns_option** list, int msec,
+	struct regional* region)
+{
+	uint8_t data[2]; /* For keepalive value */
+	data[0] = (uint8_t)((msec >> 8) & 0xff);
+	data[1] = (uint8_t)(msec & 0xff);
+	return edns_opt_list_append(list, LDNS_EDNS_KEEPALIVE, sizeof(data),
+		data, region);
 }
 
 int edns_opt_list_append(struct edns_option** list, uint16_t code, size_t len,
@@ -1195,7 +1282,7 @@ int inplace_cb_query_response_call(struct module_env* env,
 }
 
 struct edns_option* edns_opt_copy_region(struct edns_option* list,
-        struct regional* region)
+	struct regional* region)
 {
 	struct edns_option* result = NULL, *cur = NULL, *s;
 	while(list) {
@@ -1218,6 +1305,42 @@ struct edns_option* edns_opt_copy_region(struct edns_option* list,
 		else	result = s;
 		cur = s;
 
+		/* examine next element */
+		list = list->next;
+	}
+	return result;
+}
+
+struct edns_option* edns_opt_copy_filter_region(struct edns_option* list,
+	uint16_t* filter_list, size_t filter_list_len, struct regional* region)
+{
+	struct edns_option* result = NULL, *cur = NULL, *s;
+	size_t i;
+	while(list) {
+		for(i=0; i<filter_list_len; i++)
+			if(filter_list[i] == list->opt_code) goto found;
+		if(i == filter_list_len) goto next;
+found:
+		/* copy edns option structure */
+		s = regional_alloc_init(region, list, sizeof(*list));
+		if(!s) return NULL;
+		s->next = NULL;
+
+		/* copy option data */
+		if(s->opt_data) {
+			s->opt_data = regional_alloc_init(region, s->opt_data,
+				s->opt_len);
+			if(!s->opt_data)
+				return NULL;
+		}
+
+		/* link into list */
+		if(cur)
+			cur->next = s;
+		else	result = s;
+		cur = s;
+
+next:
 		/* examine next element */
 		list = list->next;
 	}

@@ -302,6 +302,36 @@ Increase this if you are behind a slow satellite link, to eg. 1128.
 That would then avoid re\-querying every initial query because it times out.
 Default is 376 msec.
 .TP
+.B discard\-timeout: \fI<msec>
+The wait time in msec where recursion requests are dropped. This is
+to stop a large number of replies from accumulating. They receive
+no reply, the work item continues to recurse. It is nice to be a bit
+larger than serve\-expired\-client\-timeout if that is enabled.
+A value of 1900 msec is suggested. The value 0 disables it.
+Default 1900 msec.
+.TP
+.B wait\-limit: \fI<number>
+The number of replies that can wait for recursion, for an IP address.
+This makes a ratelimit per IP address of waiting replies for recursion.
+It stops very large amounts of queries waiting to be returned to one
+destination. The value 0 disables wait limits. Default is 1000.
+.TP
+.B wait\-limit\-cookie: \fI<number>
+The number of replies that can wait for recursion, for an IP address
+that sent the query with a valid DNS cookie. Since the cookie validates
+the client address, the limit can be higher. Default is 10000.
+.TP
+.B wait\-limit\-netblock: \fI<netblock> <number>
+The wait limit for the netblock. If not given the wait\-limit value is
+used. The most specific netblock is used to determine the limit. Useful for
+overriding the default for a specific, group or individual, server.
+The value -1 disables wait limits for the netblock.
+.TP
+.B wait\-limit\-cookie\-netblock: \fI<netblock> <number>
+The wait limit for the netblock, when the query has a DNS cookie.
+If not given, the wait\-limit\-cookie value is used.
+The value -1 disables wait limits for the netblock.
+.TP
 .B so\-rcvbuf: \fI<number>
 If not 0, then set the SO_RCVBUF socket option to get more buffer
 space on UDP port 53 incoming queries.  So that short spikes on busy
@@ -388,6 +418,15 @@ Time to live maximum for negative responses, these have a SOA in the
 authority section that is limited in time.  Default is 3600.
 This applies to nxdomain and nodata answers.
 .TP
+.B cache\-min\-negative\-ttl: \fI<seconds>
+Time to live minimum for negative responses, these have a SOA in the
+authority section that is limited in time.
+Default is 0 (disabled).
+If this is disabled and \fBcache-min-ttl\fR is configured, it will take effect
+instead.
+In that case you can set this to 1 to honor the upstream TTL.
+This applies to nxdomain and nodata answers.
+.TP
 .B infra\-host\-ttl: \fI<seconds>
 Time to live for entries in the host cache. The host cache contains
 roundtrip timing, lameness and EDNS support information. Default is 900.
@@ -472,6 +511,8 @@ configured value if the number of free buffers falls below 35% of the
 total number configured, and finally to 0 if the number of free buffers
 falls below 20% of the total number configured. A minimum timeout of
 200 milliseconds is observed regardless of the option value used.
+It will be overridden by \fBedns\-tcp\-keepalive\-timeout\fR if
+\fBedns\-tcp\-keepalive\fR is enabled.
 .TP
 .B tcp-reuse-timeout: \fI<msec>\fR
 The period Unbound will keep TCP persistent connections open to
@@ -490,20 +531,11 @@ This option defaults to 3000 milliseconds.
 Enable or disable EDNS TCP Keepalive. Default is no.
 .TP
 .B edns-tcp-keepalive-timeout: \fI<msec>\fR
-The period Unbound will wait for a query on a TCP connection when
-EDNS TCP Keepalive is active. If this timeout expires Unbound closes
-the connection. If the client supports the EDNS TCP Keepalive option,
+Overrides \fBtcp\-idle\-timeout\fR when \fBedns\-tcp\-keepalive\fR is enabled.
+If the client supports the EDNS TCP Keepalive option,
 Unbound sends the timeout value to the client to encourage it to
 close the connection before the server times out.
 This option defaults to 120000 milliseconds.
-When the number of free incoming TCP buffers falls below 50% of
-the total number configured, the advertised timeout is progressively
-reduced to 1% of the configured value, then to 0.2% of the configured
-value if the number of free buffers falls below 35% of the total number
-configured, and finally to 0 if the number of free buffers falls below
-20% of the total number configured.
-A minimum actual timeout of 200 milliseconds is observed regardless of the
-advertised timeout.
 .TP
 .B sock\-queue\-timeout: \fI<sec>\fR
 UDP queries that have waited in the socket buffer for a long time can be
@@ -699,19 +731,25 @@ When at the limit, further connections are accepted but closed immediately.
 This option is experimental at this time.
 .TP
 .B access\-control: \fI<IP netblock> <action>
+Specify treatment of incoming queries from their originating IP address.
+Queries can be allowed to have access to this server that gives DNS
+answers, or refused, with other actions possible. The IP address range
+can be specified as a netblock, it is possible to give the statement
+several times in order to specify the treatment of different netblocks.
+.IP
 The netblock is given as an IP4 or IP6 address with /size appended for a
 classless network block. The action can be \fIdeny\fR, \fIrefuse\fR,
-\fIallow\fR, \fIallow_setrd\fR, \fIallow_snoop\fR, \fIdeny_non_local\fR or
-\fIrefuse_non_local\fR.
+\fIallow\fR, \fIallow_setrd\fR, \fIallow_snoop\fR, \fIallow_cookie\fR,
+\fIdeny_non_local\fR or \fIrefuse_non_local\fR.
 The most specific netblock match is used, if none match \fIrefuse\fR is used.
 The order of the access\-control statements therefore does not matter.
 .IP
-The action \fIdeny\fR stops queries from hosts from that netblock.
+The \fIdeny\fR action stops queries from hosts from that netblock.
 .IP
-The action \fIrefuse\fR stops queries too, but sends a DNS rcode REFUSED
+The \fIrefuse\fR action stops queries too, but sends a DNS rcode REFUSED
 error message back.
 .IP
-The action \fIallow\fR gives access to clients from that netblock.
+The \fIallow\fR action gives access to clients from that netblock.
 It gives only access for recursion clients (which is
 what almost all clients need).  Nonrecursive queries are refused.
 .IP
@@ -731,14 +769,27 @@ may be useful if another DNS server must forward requests for specific
 zones to a resolver DNS server, but only supports stub domains and
 sends queries to the resolver DNS server with the RD bit cleared.
 .IP
-The action \fIallow_snoop\fR gives nonrecursive access too.  This give
+The \fIallow_snoop\fR action gives nonrecursive access too.  This give
 both recursive and non recursive access.  The name \fIallow_snoop\fR refers
 to cache snooping, a technique to use nonrecursive queries to examine
 the cache contents (for malicious acts).  However, nonrecursive queries can
 also be a valuable debugging tool (when you want to examine the cache
 contents). In that case use \fIallow_snoop\fR for your administration host.
 .IP
-By default only localhost is \fIallow\fRed, the rest is \fIrefuse\fRd.
+The \fIallow_cookie\fR action allows access only to UDP queries that contain a
+valid DNS Cookie as specified in RFC 7873 and RFC 9018, when the
+\fBanswer\-cookie\fR option is enabled.
+UDP queries containing only a DNS Client Cookie and no Server Cookie, or an
+invalid DNS Cookie, will receive a BADCOOKIE response including a newly
+generated DNS Cookie, allowing clients to retry with that DNS Cookie.
+The \fIallow_cookie\fR action will also accept requests over stateful
+transports, regardless of the presence of an DNS Cookie and regardless of the
+\fBanswer\-cookie\fR setting.
+UDP queries without a DNS Cookie receive REFUSED responses with the TC flag set,
+that may trigger fall back to TCP for those clients.
+.IP
+By default only localhost (the 127.0.0.0/8 IP netblock, not the loopback
+interface) is implicitly \fIallow\fRed, the rest is \fIrefuse\fRd.
 The default is \fIrefuse\fRd, because that is protocol\-friendly. The DNS
 protocol is not designed to handle dropped packets due to policy, and
 dropping may result in (possibly excessive) retried queries.
@@ -774,8 +825,12 @@ Similar to \fBaccess\-control:\fR but for interfaces.
 .IP
 The action is the same as the ones defined under \fBaccess\-control:\fR.
 Interfaces are \fIrefuse\fRd by default.
-By default only localhost (the IP netblock, not the loopback interface) is
-\fIallow\fRed through the default \fBaccess\-control:\fR behavior.
+By default only localhost (the 127.0.0.0/8 IP netblock, not the loopback
+interface) is implicitly \fIallow\fRed through the default
+\fBaccess\-control:\fR behavior.
+This also means that any attempt to use the \fBinterface-*:\fR options for the
+loopback interface will not work as they will be overridden by the implicit
+default "\fBaccess\-control:\fR 127.0.0.0/8 allow" option.
 .IP
 Note that the interface needs to be already specified with \fBinterface:\fR
 and that any \fBaccess-control*:\fR setting overrides all \fBinterface-*:\fR
@@ -898,6 +953,11 @@ characters in names are printed as '?'.
 Prints the word 'query' and 'reply' with log\-queries and log\-replies.
 This makes filtering logs easier.  The default is off (for backwards
 compatibility).
+.TP
+.B log\-destaddr: \fI<yes or no>
+Prints the destination address, port and type in the log\-replies output.
+This disambiguates what type of traffic, eg. udp or tcp, and to what local
+port the traffic was sent to.
 .TP
 .B log\-local\-actions: \fI<yes or no>
 Print log lines to inform about local zone actions.  These lines are like the
@@ -1287,6 +1347,20 @@ does not disable checking any more.  This is useful if legacy (w2008)
 servers that set the CD flag but cannot validate DNSSEC themselves are
 the clients, and then Unbound provides them with DNSSEC protection.
 The default value is "no".
+.TP
+.B disable\-edns\-do: \fI<yes or no>
+Disable the EDNS DO flag in upstream requests.
+It breaks DNSSEC validation for Unbound's clients.
+This results in the upstream name servers to not include DNSSEC records in
+their replies and could be helpful for devices that cannot handle DNSSEC
+information.
+When the option is enabled, clients that set the DO flag receive no EDNS
+record in the response to indicate the lack of support to them.
+If this option is enabled but Unbound is already configured for DNSSEC
+validation (i.e., the validator module is enabled; default) this option is
+implicitly turned off with a warning as to not break DNSSEC validation in
+Unbound.
+Default is no.
 .TP
 .B serve\-expired: \fI<yes or no>
 If enabled, Unbound attempts to serve old responses from cache with a
@@ -1806,11 +1880,30 @@ A value of 0 will disable ratelimiting for domain names that end in this name.
 .TP 5
 .B ip\-ratelimit: \fI<number or 0>
 Enable global ratelimiting of queries accepted per IP address.
-If 0, the default, it is disabled.  This option is experimental at this time.
+This option is experimental at this time.
 The ratelimit is in queries per second that are allowed.  More queries are
 completely dropped and will not receive a reply, SERVFAIL or otherwise.
 IP ratelimiting happens before looking in the cache. This may be useful for
 mitigating amplification attacks.
+Clients with a valid DNS Cookie will bypass the ratelimit.
+If a ratelimit for such clients is still needed, \fBip\-ratelimit\-cookie\fR
+can be used instead.
+Default is 0 (disabled).
+.TP 5
+.B ip\-ratelimit\-cookie: \fI<number or 0>
+Enable global ratelimiting of queries accepted per IP address with a valid DNS
+Cookie.
+This option is experimental at this time.
+The ratelimit is in queries per second that are allowed.
+More queries are completely dropped and will not receive a reply, SERVFAIL or
+otherwise.
+IP ratelimiting happens before looking in the cache.
+This option could be useful in combination with \fIallow_cookie\fR in an
+attempt to mitigate other amplification attacks than UDP reflections (e.g.,
+attacks targeting Unbound itself) which are already handled with DNS Cookies.
+If used, the value is suggested to be higher than \fBip\-ratelimit\fR e.g.,
+tenfold.
+Default is 0 (disabled).
 .TP 5
 .B ip\-ratelimit\-size: \fI<memory size>
 Give the size of the data structure in which the current ongoing rates are
@@ -1878,6 +1971,18 @@ servers set. The default for fast\-server\-permil is 0.
 Set the number of servers that should be used for fast server selection. Only
 use the fastest specified number of servers with the fast\-server\-permil
 option, that turns this on or off. The default is to use the fastest 3 servers.
+.TP 5
+.B answer\-cookie: \fI<yes or no>
+If enabled, Unbound will answer to requests containing DNS Cookies as
+specified in RFC 7873 and RFC 9018.
+Default is no.
+.TP 5
+.B cookie\-secret: \fI<128 bit hex string>
+Server's secret for DNS Cookie generation.
+Useful to explicitly set for servers in an anycast deployment that need to
+share the secret in order to verify each other's Server Cookies.
+An example hex string would be "000102030405060708090a0b0c0d0e0f".
+Default is a 128 bits random secret generated at startup time.
 .TP 5
 .B edns\-client\-string: \fI<IP netblock> <string>
 Include an EDNS0 option containing configured ascii string in queries with
@@ -2112,13 +2217,32 @@ useful when you want immediate changes to be visible.
 Authority zones are configured with \fBauth\-zone:\fR, and each one must
 have a \fBname:\fR.  There can be multiple ones, by listing multiple auth\-zone clauses, each with a different name, pertaining to that part of the namespace.
 The authority zone with the name closest to the name looked up is used.
-Authority zones are processed after \fBlocal\-zones\fR and before
-cache (\fBfor\-downstream:\fR \fIyes\fR), and when used in this manner
-make Unbound respond like an authority server.  Authority zones are also
-processed after cache, just before going to the network to fetch
-information for recursion (\fBfor\-upstream:\fR \fIyes\fR), and when used
-in this manner provide a local copy of an authority server that speeds up
-lookups of that data.
+Authority zones can be processed on two distinct, non-exclusive, configurable
+stages.
+.LP
+With \fBfor\-downstream:\fR \fIyes\fR (default), authority zones are processed
+after \fBlocal\-zones\fR and before cache.
+When used in this manner, Unbound responds like an authority server with no
+further processing other than returning an answer from the zone contents.
+A notable example, in this case, is CNAME records which are returned verbatim
+to downstream clients without further resolution.
+.LP
+With \fBfor\-upstream:\fR \fIyes\fR (default), authority zones are processed
+after the cache lookup, just before going to the network to fetch
+information for recursion.
+When used in this manner they provide a local copy of an authority server
+that speeds up lookups for that data during resolving.
+.LP
+If both options are enabled (default), client queries for an authority zone are
+answered authoritatively from Unbound, while internal queries that require data
+from the authority zone consult the local zone data instead of going to the
+network.
+.LP
+An interesting configuration is \fBfor\-downstream:\fR \fIno\fR,
+\fBfor\-upstream:\fR \fIyes\fR that allows for hyperlocal behavior where both
+client and internal queries consult the local zone data while resolving.
+In this case, the aforementioned CNAME example will result in a thoroughly
+resolved answer.
 .LP
 Authority zones can be read from zonefile.  And can be kept updated via
 AXFR and IXFR.  After update the zonefile is rewritten.  The update mechanism
@@ -2551,11 +2675,7 @@ If Unbound cannot even find an answer in the backend, it resolves the
 query as usual, and stores the answer in the backend.
 .P
 This module interacts with the \fBserve\-expired\-*\fR options and will reply
-with expired data if Unbound is configured for that.  Currently the use
-of \fBserve\-expired\-client\-timeout:\fR and
-\fBserve\-expired\-reply\-ttl:\fR is not consistent for data originating from
-the external cache as these will result in a reply with 0 TTL without trying to
-update the data first, ignoring the configured values.
+with expired data if Unbound is configured for that.
 .P
 If Unbound was built with
 \fB\-\-with\-libhiredis\fR
@@ -2606,6 +2726,21 @@ operationally.
 If the backend database is shared by multiple Unbound instances,
 all instances must use the same secret seed.
 This option defaults to "default".
+.TP
+.B cachedb-no-store: \fI<yes or no>\fR
+If the backend should be read from, but not written to. This makes this
+instance not store dns messages in the backend. But if data is available it
+is retrieved. The default is no.
+.TP
+.B cachedb-check-when-serve-expired: \fI<yes or no>\fR
+If enabled, the cachedb is checked before an expired response is returned.
+When \fBserve\-expired\fR is enabled, without \fBserve\-expired\-client\-timeout\fR, it then
+does not immediately respond with an expired response from cache, but instead
+first checks the cachedb for valid contents, and if so returns it. If the
+cachedb also has no valid contents, the serve expired response is sent.
+If also \fBserve\-expired\-client\-timeout\fR is enabled, the expired response
+is delayed until the timeout expires. Unless the lookup succeeds within the
+timeout. The default is yes.
 .P
 The following
 .B cachedb
@@ -2646,6 +2781,17 @@ Unbound is configured with \fBserve-expired\fR and \fBserve-expired-ttl\fR is 0,
 this option is internally reverted to "no".  Redis SETEX support is required
 for this option (Redis >= 2.0.0).
 This option defaults to no.
+.TP
+.B redis-logical-db: \fI<logical database index>
+The logical database in Redis to use.
+These are databases in the same Redis instance sharing the same configuration
+and persisted in the same RDB/AOF file.
+If unsure about using this option, Redis documentation
+(https://redis.io/commands/select/) suggests not to use a single Redis instance
+for multiple unrelated applications.
+The default database in Redis is 0 while other logical databases need to be
+explicitly SELECT'ed upon connecting.
+This option defaults to 0.
 .SS DNSTAP Logging Options
 DNSTAP support, when compiled in by using \fB\-\-enable\-dnstap\fR, is enabled
 in the \fBdnstap:\fR section.
@@ -2705,6 +2851,13 @@ Default is "".
 .B dnstap-version: \fI<string>
 The version to send with messages, if "" the package version is used.
 Default is "".
+.TP
+.B dnstap-sample-rate: \fI<number>
+The sample rate for log of messages, it logs only 1/N messages. With 0 it
+is disabled. Default is 0. This is useful in a high volume environment,
+where log functionality would otherwise not be reliable. For example 10
+would spend only 1/10th time on logging, and 100 would only spend a
+hundredth of the time on logging.
 .TP
 .B dnstap-log-resolver-query-messages: \fI<yes or no>
 Enable to log resolver query messages.  Default is no.

@@ -353,17 +353,21 @@ autr_tp_create(struct val_anchors* anchors, uint8_t* own, size_t own_len,
 
 	lock_basic_lock(&anchors->lock);
 	if(!rbtree_insert(anchors->tree, &tp->node)) {
+		char buf[LDNS_MAX_DOMAINLEN+1];
 		lock_basic_unlock(&anchors->lock);
-		log_err("trust anchor presented twice");
+		dname_str(tp->name, buf);
+		log_err("trust anchor for '%s' presented twice", buf);
 		free(tp->name);
 		free(tp->autr);
 		free(tp);
 		return NULL;
 	}
 	if(!rbtree_insert(&anchors->autr->probe, &tp->autr->pnode)) {
+		char buf[LDNS_MAX_DOMAINLEN+1];
 		(void)rbtree_delete(anchors->tree, tp);
 		lock_basic_unlock(&anchors->lock);
-		log_err("trust anchor in probetree twice");
+		dname_str(tp->name, buf);
+		log_err("trust anchor for '%s' in probetree twice", buf);
 		free(tp->name);
 		free(tp->autr);
 		free(tp);
@@ -1258,12 +1262,13 @@ verify_dnskey(struct module_env* env, struct val_env* ve,
         struct trust_anchor* tp, struct ub_packed_rrset_key* rrset,
 	struct module_qstate* qstate)
 {
+	char reasonbuf[256];
 	char* reason = NULL;
 	uint8_t sigalg[ALGO_NEEDS_MAX+1];
 	int downprot = env->cfg->harden_algo_downgrade;
 	enum sec_status sec = val_verify_DNSKEY_with_TA(env, ve, rrset,
 		tp->ds_rrset, tp->dnskey_rrset, downprot?sigalg:NULL, &reason,
-		NULL, qstate);
+		NULL, qstate, reasonbuf, sizeof(reasonbuf));
 	/* sigalg is ignored, it returns algorithms signalled to exist, but
 	 * in 5011 there are no other rrsets to check.  if downprot is
 	 * enabled, then it checks that the DNSKEY is signed with all
@@ -2376,6 +2381,8 @@ probe_anchor(struct module_env* env, struct trust_anchor* tp)
 	edns.opt_list_out = NULL;
 	edns.opt_list_inplace_cb_out = NULL;
 	edns.padding_block_size = 0;
+	edns.cookie_present = 0;
+	edns.cookie_valid = 0;
 	if(sldns_buffer_capacity(buf) < 65535)
 		edns.udp_size = (uint16_t)sldns_buffer_capacity(buf);
 	else	edns.udp_size = 65535;

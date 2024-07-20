@@ -10,6 +10,7 @@ server:
 	minimal-responses: no
 	nsid: "ascii_hopsa kidee"
 	ede: yes
+	access-control: 127.0.0.0/8 allow_snoop
 
 stub-zone:
 	name: "."
@@ -163,6 +164,35 @@ STEP 10 CHECK_ANSWER
 ENTRY_BEGIN
 MATCH all ede=9
 REPLY QR RD RA DO SERVFAIL
+SECTION QUESTION
+www.example.com. IN A
+SECTION ANSWER
+SECTION ADDITIONAL
+	HEX_EDNSDATA_BEGIN
+		00 03             ; Opcode NSID (3)
+		00 0b             ; Length 11
+		68 6F 70 73 61 20 ; "hopsa "
+		6B 69 64 65 65    ; "kidee"
+	HEX_EDNSDATA_END
+ENTRY_END
+
+; Redo the query without RD to check EDE caching.
+STEP 11 QUERY
+ENTRY_BEGIN
+REPLY DO
+SECTION QUESTION
+www.example.com. IN A
+SECTION ADDITIONAL
+	HEX_EDNSDATA_BEGIN
+		00 03 ; Opcode NSID (3)
+		00 00 ; Length 0
+	HEX_EDNSDATA_END
+ENTRY_END
+
+STEP 12 CHECK_ANSWER
+ENTRY_BEGIN
+MATCH all ede=9
+REPLY QR RA DO SERVFAIL
 SECTION QUESTION
 www.example.com. IN A
 SECTION ANSWER

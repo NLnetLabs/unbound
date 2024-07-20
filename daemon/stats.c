@@ -356,6 +356,11 @@ server_stats_compile(struct worker* worker, struct ub_stats_info* s, int reset)
 	s->svr.num_query_subnet = 0;
 	s->svr.num_query_subnet_cache = 0;
 #endif
+#ifdef USE_CACHEDB
+	s->svr.num_query_cachedb = (long long)worker->env.mesh->ans_cachedb;
+#else
+	s->svr.num_query_cachedb = 0;
+#endif
 
 	/* get tcp accept usage */
 	s->svr.tcp_accept_usage = 0;
@@ -386,6 +391,13 @@ void server_stats_obtain(struct worker* worker, struct worker* who,
 	else 	worker_send_cmd(who, worker_cmd_stats_noreset);
 	verbose(VERB_ALGO, "wait for stats reply");
 	if(tube_wait_timeout(worker->cmd, STATS_THREAD_WAIT) == 0) {
+#if defined(HAVE_PTHREAD) && defined(SIZEOF_PTHREAD_T) && defined(SIZEOF_UNSIGNED_LONG)
+#  if SIZEOF_PTHREAD_T == SIZEOF_UNSIGNED_LONG
+		unsigned long pthid = 0;
+		if(verbosity >= VERB_OPS)
+			memcpy(&pthid, &who->thr_id, sizeof(unsigned long));
+#  endif
+#endif
 		verbose(VERB_OPS, "no response from thread %d"
 #ifdef HAVE_GETTID
 			" LWP %u"
@@ -402,7 +414,7 @@ void server_stats_obtain(struct worker* worker, struct worker* who,
 #endif
 #if defined(HAVE_PTHREAD) && defined(SIZEOF_PTHREAD_T) && defined(SIZEOF_UNSIGNED_LONG)
 #  if SIZEOF_PTHREAD_T == SIZEOF_UNSIGNED_LONG
-			, (unsigned long)*((unsigned long*)&who->thr_id)
+			, pthid
 #  endif
 #endif
 			);
@@ -430,6 +442,9 @@ void server_stats_add(struct ub_stats_info* total, struct ub_stats_info* a)
 {
 	total->svr.num_queries += a->svr.num_queries;
 	total->svr.num_queries_ip_ratelimited += a->svr.num_queries_ip_ratelimited;
+	total->svr.num_queries_cookie_valid += a->svr.num_queries_cookie_valid;
+	total->svr.num_queries_cookie_client += a->svr.num_queries_cookie_client;
+	total->svr.num_queries_cookie_invalid += a->svr.num_queries_cookie_invalid;
 	total->svr.num_queries_missed_cache += a->svr.num_queries_missed_cache;
 	total->svr.num_queries_prefetch += a->svr.num_queries_prefetch;
 	total->svr.num_queries_timed_out += a->svr.num_queries_timed_out;
@@ -476,6 +491,9 @@ void server_stats_add(struct ub_stats_info* total, struct ub_stats_info* a)
 		total->svr.unwanted_replies += a->svr.unwanted_replies;
 		total->svr.unwanted_queries += a->svr.unwanted_queries;
 		total->svr.tcp_accept_usage += a->svr.tcp_accept_usage;
+#ifdef USE_CACHEDB
+		total->svr.num_query_cachedb += a->svr.num_query_cachedb;
+#endif
 		for(i=0; i<UB_STATS_QTYPE_NUM; i++)
 			total->svr.qtype[i] += a->svr.qtype[i];
 		for(i=0; i<UB_STATS_QCLASS_NUM; i++)
@@ -558,5 +576,18 @@ void server_stats_insrcode(struct ub_server_stats* stats, sldns_buffer* buf)
 		stats->ans_rcode[r] ++;
 		if(r == 0 && LDNS_ANCOUNT( sldns_buffer_begin(buf) ) == 0)
 			stats->ans_rcode_nodata ++;
+	}
+}
+
+void server_stats_downstream_cookie(struct ub_server_stats* stats,
+	struct edns_data* edns)
+{
+	if(!(edns->edns_present && edns->cookie_present)) return;
+	if(edns->cookie_valid) {
+		stats->num_queries_cookie_valid++;
+	} else if(edns->cookie_client) {
+		stats->num_queries_cookie_client++;
+	} else {
+		stats->num_queries_cookie_invalid++;
 	}
 }
