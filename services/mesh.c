@@ -1514,7 +1514,7 @@ static void dns_error_reporting(struct module_qstate* qstate,
 	size_t agent_domain_len;
 
 	eder = edns_opt_list_find(qstate->edns_opts_back_in,
-		(uint16_t) 65023 /* TODO LDNS_EDNS_EDER */);
+		LDNS_EDNS_REPORT_CHANNEL);
 
 	if(!eder) return;
 	agent_domain_len = eder->opt_len;
@@ -1531,30 +1531,13 @@ static void dns_error_reporting(struct module_qstate* qstate,
 	// @TODO create a check for the EDER reporting agent DNAME;
 	// MUST NOT be an amplification attack vector. We currently use
 	// dname_valid() for this.
-	// NOTE If dname is compressed (not clear from the draft, but
-	// why should it?) processing needs to happen in
-	// iterator::process_response where we have the packet
-	// available.
-
 	if(reason_bogus == LDNS_EDE_NONE ||
 		!dname_valid(agent_domain, agent_domain_len)) {
 		return;
 	}
-	// TODO EDER feedback: should the positive flag report a deterministic
-	//      query? For this implementation qtype=NULL and
-	//      qname=reporting-agent are arbitrary chosen.
-	// TODO This feeds a positive feedback query to the state machine.
-	//      Can we save that information in infra-cache and don't waste
-	//      resources in the state machine for already sent information?
-	if(reason_bogus == LDNS_EDE_NOERROR) {
-		qtype = LDNS_RR_TYPE_TXT;
-		qname = agent_domain;
-		qname_len = agent_domain_len-1; /* skip the trailing \0 */
-	}
 
 	/* Synthesize the error report query in the format:
-	 * "_er.$ede.$qtype.$qname._er.$reporting-agent-domain", or
-	 * "_er.$ede.NULL.$reporting-agent-domain._er.$reporting-agent-domain" */
+	 * "_er.$ede.$qtype.$qname._er.$reporting-agent-domain" */
 	memmove(buf+count, "\3_er", 4);
 	count += 4;
 

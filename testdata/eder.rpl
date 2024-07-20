@@ -68,7 +68,7 @@ RANGE_BEGIN 10 100
 			; No RRSIG to trigger validator error and EDE
 		SECTION ADDITIONAL
 			HEX_EDNSDATA_BEGIN
-				FD FF				; opt-code
+				00 12				; opt-code
 				00 0A				; opt-len
 				02 61 6E 05 61 67 65 6E 74 00	; an.agent.
 			HEX_EDNSDATA_END
