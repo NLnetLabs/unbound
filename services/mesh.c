@@ -1492,7 +1492,7 @@ mesh_send_reply(struct mesh_state* m, int rcode, struct reply_info* rep,
 }
 
 /**
- * Generate the DNS Error Report (draft-ietf-dnsop-dns-error-reporting).
+ * Generate the DNS Error Report (RFC9567).
  * @param qstate: module qstate.
  * @param rep: prepared reply to be sent.
  */
@@ -1504,8 +1504,9 @@ static void dns_error_reporting(struct module_qstate* qstate,
 	struct module_qstate* newq;
 	uint8_t buf[LDNS_MAX_DOMAINLEN];
 	size_t count = 0;
-	size_t written;
-	struct edns_option* eder;
+	int written;
+	size_t expected_length;
+	struct edns_option* opt;
 	sldns_ede_code reason_bogus = LDNS_EDE_NONE;
 	sldns_rr_type qtype = qstate->qinfo.qtype;
 	uint8_t* qname = qstate->qinfo.qname;
@@ -1513,13 +1514,17 @@ static void dns_error_reporting(struct module_qstate* qstate,
 	uint8_t* agent_domain;
 	size_t agent_domain_len;
 
-	eder = edns_opt_list_find(qstate->edns_opts_back_in,
+	opt = edns_opt_list_find(qstate->edns_opts_back_in,
 		LDNS_EDNS_REPORT_CHANNEL);
+	if(!opt) return;
 
-	if(!eder) return;
-	agent_domain_len = eder->opt_len;
-	if(agent_domain_len < 1) return;
-	agent_domain = eder->opt_data;
+	agent_domain_len = opt->opt_len;
+	agent_domain = opt->opt_data;
+	if(dname_valid(agent_domain, agent_domain_len) < 3) {
+		/* The agent domain needs to be a valid dname that is not the
+		 * root; from RFC9567. */
+		return;
+	}
 
 	reason_bogus = errinf_to_reason_bogus(qstate);
 	if(rep && ((reason_bogus == LDNS_EDE_DNSSEC_BOGUS &&
@@ -1527,36 +1532,38 @@ static void dns_error_reporting(struct module_qstate* qstate,
 		reason_bogus == LDNS_EDE_NONE)) {
 		reason_bogus = rep->reason_bogus;
 	}
-
-	// @TODO create a check for the EDER reporting agent DNAME;
-	// MUST NOT be an amplification attack vector. We currently use
-	// dname_valid() for this.
-	if(reason_bogus == LDNS_EDE_NONE ||
-		!dname_valid(agent_domain, agent_domain_len)) {
-		return;
-	}
+	if(reason_bogus == LDNS_EDE_NONE) return;
 
 	/* Synthesize the error report query in the format:
-	 * "_er.$ede.$qtype.$qname._er.$reporting-agent-domain" */
+	 * "_er.$qtype.$qname.$ede._er.$reporting-agent-domain" */
+	/* First check if the static length parts fit in the buffer.
+	 * That is everything except for qtype and ede that need to be
+	 * converted to decimal and checked further on. */
+	expected_length = 4+qname_len+4+agent_domain_len;
+	if(expected_length > LDNS_MAX_DOMAINLEN) goto skip;
+
 	memmove(buf+count, "\3_er", 4);
 	count += 4;
 
 	written = snprintf((char*)buf+count, LDNS_MAX_DOMAINLEN-count,
 		"X%d", qtype);
+	expected_length += written;
+	/* Skip on error, truncation or long expected length */
+	if(written < 0 || (size_t)written >= LDNS_MAX_DOMAINLEN-count ||
+		expected_length > LDNS_MAX_DOMAINLEN ) goto skip;
+	/* Put in the label length */
 	*(buf+count) = (char)(written - 1);
 	count += written;
-
-	/* Skip if the remaining buffer is too short */
-	if(count+qname_len+4+agent_domain_len > LDNS_MAX_DOMAINLEN) {
-		verbose(VERB_ALGO, "EDER: qname too long; skip");
-		return;
-	}
 
 	memmove(buf+count, qname, qname_len);
 	count += qname_len;
 
 	written = snprintf((char*)buf+count, LDNS_MAX_DOMAINLEN-count,
 		"X%d", reason_bogus);
+	expected_length += written;
+	/* Skip on error, truncation or long expected length */
+	if(written < 0 || (size_t)written >= LDNS_MAX_DOMAINLEN-count ||
+		expected_length > LDNS_MAX_DOMAINLEN ) goto skip;
 	*(buf+count) = (char)(written - 1);
 	count += written;
 
@@ -1573,9 +1580,13 @@ static void dns_error_reporting(struct module_qstate* qstate,
 	qinfo.qclass = qstate->qinfo.qclass;
 	qinfo.local_alias = NULL;
 
-	log_query_info(VERB_ALGO, "EDER: generating query for",
+	log_query_info(VERB_ALGO, "EDER: generating report query for",
 		&qinfo);
 	mesh_add_sub(qstate, &qinfo, BIT_RD, 0, 0, &newq, &sub);
+	return;
+skip:
+	verbose(VERB_ALGO, "EDER: report query qname too long; skip");
+	return;
 }
 
 void mesh_query_done(struct mesh_state* mstate)

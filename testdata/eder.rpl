@@ -89,20 +89,6 @@ RANGE_BEGIN 10 20
 	ENTRY_END
 RANGE_END
 
-; an.agent
-RANGE_BEGIN 40 50
-	ADDRESS 0.0.0.2
-	ENTRY_BEGIN
-		MATCH opcode qtype qname
-		ADJUST copy_id
-		REPLY QR NOERROR
-		SECTION QUESTION
-		    _er.49152.10.an.agent._er.an.agent. IN TXT
-		SECTION AUTHORITY
-			an.agent. IN SOA ns email 1 2 3 4 10
-	ENTRY_END
-RANGE_END
-
 ; Query
 STEP 0 QUERY
 ENTRY_BEGIN
