@@ -5,13 +5,12 @@ server:
 	trust-anchor-signaling: no
 	target-fetch-policy: "0 0 0 0 0"
 	verbosity: 4
-	access-control: 127.0.0.1 allow_snoop
 	qname-minimisation: no
 	minimal-responses: no
 	rrset-roundrobin: no
 	trust-anchor: "a.domain DS 50602 8 2 FA8EE175C47325F4BD46D8A4083C3EBEB11C977D689069F2B41F1A29B22446B1"
-	ede: yes
-	eder: yes
+	ede: no  # It is not needed for dns-error-reporting; only for clients to receive EDEs
+	dns-error-reporting: yes
 
 stub-zone:
 	name: a.domain
@@ -41,9 +40,9 @@ RANGE_BEGIN 0 9
 			a.domain. IN A
 		SECTION ANSWER
 			a.domain. 5 IN A   0.0.0.0
-			; No RRSIG to trigger validator error and EDE
+			; No RRSIG to trigger validation error (and EDE)
 		SECTION ADDITIONAL
-			; No EDER here
+			; No Report-Channel here
 	ENTRY_END
 RANGE_END
 
@@ -68,7 +67,7 @@ RANGE_BEGIN 10 100
 			; No RRSIG to trigger validator error and EDE
 		SECTION ADDITIONAL
 			HEX_EDNSDATA_BEGIN
-				00 12				; opt-code
+				00 12				; opt-code (Report-Channel)
 				00 0A				; opt-len
 				02 61 6E 05 61 67 65 6E 74 00	; an.agent.
 			HEX_EDNSDATA_END
@@ -97,7 +96,7 @@ SECTION QUESTION
 a.domain. IN A
 ENTRY_END
 
-; Check that validation failed (no EDER at this state)
+; Check that validation failed (no DNS error reporting at this state)
 STEP 1 CHECK_ANSWER
 ENTRY_BEGIN
 MATCH all
@@ -117,7 +116,8 @@ SECTION QUESTION
 a.domain. IN A
 ENTRY_END
 
-; Check that validation failed (an EDER query should have been generated)
+; Check that validation failed
+; (a DNS Error Report query should have been generated)
 STEP 11 CHECK_ANSWER
 ENTRY_BEGIN
 MATCH all
@@ -126,21 +126,21 @@ SECTION QUESTION
 a.domain.	IN A
 ENTRY_END
 
-; Check explicitly that the EDER query is cached (no RD bit).
+; Check explicitly that the DNS Error Report query is cached.
 STEP 20 QUERY
 ENTRY_BEGIN
-REPLY
+REPLY RD
 SECTION QUESTION
 _er.1.a.domain.9._er.an.agent. IN TXT
 ENTRY_END
 
 ; At this range there are no configured agents to answer this.
-; If the EDER query is not answered from the cache the test will fail with
-; pending messages.
+; If the DNS Error Report query is not answered from the cache the test will
+; fail with pending messages.
 STEP 21 CHECK_ANSWER
 ENTRY_BEGIN
 MATCH all
-REPLY QR RA NOERROR
+REPLY RD QR RA NOERROR
 SECTION QUESTION
 _er.1.a.domain.9._er.an.agent. IN TXT
 SECTION ANSWER
@@ -148,10 +148,10 @@ _er.1.a.domain.9._er.an.agent. IN TXT "OK"
 ENTRY_END
 
 ; Wait for the a.domain query to expire (5 TTL).
-; The EDER query should still be cached (SOA negative).
+; The DNS Error Report query should still be cached (SOA negative).
 STEP 30 TIME_PASSES ELAPSE 6
 
-; Force an EDER query generation again.
+; Force a DNS Error Report query generation again.
 STEP 31 QUERY
 ENTRY_BEGIN
 REPLY RD
@@ -168,9 +168,9 @@ SECTION QUESTION
 a.domain.	IN A
 ENTRY_END
 
-; The same EDER query will be generated as above.
-; No agent is configured at this range to answer the EDER query.
-; If the EDER query is not used from the cache the test will fail with pending
-; messages.
+; The same DNS Error Report query will be generated as above.
+; No agent is configured at this range to answer the DNS Error Report query.
+; If the DNS Error Report query is not used from the cache the test will fail
+; with pending messages.
 
 SCENARIO_END

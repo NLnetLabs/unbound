@@ -1580,12 +1580,12 @@ static void dns_error_reporting(struct module_qstate* qstate,
 	qinfo.qclass = qstate->qinfo.qclass;
 	qinfo.local_alias = NULL;
 
-	log_query_info(VERB_ALGO, "EDER: generating report query for",
+	log_query_info(VERB_ALGO, "DNS Error Reporting: generating report query for",
 		&qinfo);
 	mesh_add_sub(qstate, &qinfo, BIT_RD, 0, 0, &newq, &sub);
 	return;
 skip:
-	verbose(VERB_ALGO, "EDER: report query qname too long; skip");
+	verbose(VERB_ALGO, "DNS Error Reporting: report query qname too long; skip");
 	return;
 }
 
@@ -1616,7 +1616,8 @@ void mesh_query_done(struct mesh_state* mstate)
 		}
 	}
 
-	if(mstate->s.env->cfg->eder) dns_error_reporting(&mstate->s, rep);
+	if(mstate->s.env->cfg->dns_error_reporting)
+		dns_error_reporting(&mstate->s, rep);
 
 	for(r = mstate->reply_list; r; r = r->next) {
 		struct timeval old;
