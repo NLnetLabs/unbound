@@ -1493,6 +1493,8 @@ mesh_send_reply(struct mesh_state* m, int rcode, struct reply_info* rep,
 
 /**
  * Generate the DNS Error Report (RFC9567).
+ * If there is an EDE attached for this reply and there was a Report-Channel
+ * EDNS0 option from the upstream, fire up a report query.
  * @param qstate: module qstate.
  * @param rep: prepared reply to be sent.
  */
@@ -1514,18 +1516,6 @@ static void dns_error_reporting(struct module_qstate* qstate,
 	uint8_t* agent_domain;
 	size_t agent_domain_len;
 
-	opt = edns_opt_list_find(qstate->edns_opts_back_in,
-		LDNS_EDNS_REPORT_CHANNEL);
-	if(!opt) return;
-
-	agent_domain_len = opt->opt_len;
-	agent_domain = opt->opt_data;
-	if(dname_valid(agent_domain, agent_domain_len) < 3) {
-		/* The agent domain needs to be a valid dname that is not the
-		 * root; from RFC9567. */
-		return;
-	}
-
 	reason_bogus = errinf_to_reason_bogus(qstate);
 	if(rep && ((reason_bogus == LDNS_EDE_DNSSEC_BOGUS &&
 		rep->reason_bogus != LDNS_EDE_NONE) ||
@@ -1534,12 +1524,23 @@ static void dns_error_reporting(struct module_qstate* qstate,
 	}
 	if(reason_bogus == LDNS_EDE_NONE) return;
 
+	opt = edns_opt_list_find(qstate->edns_opts_back_in,
+		LDNS_EDNS_REPORT_CHANNEL);
+	if(!opt) return;
+	agent_domain_len = opt->opt_len;
+	agent_domain = opt->opt_data;
+	if(dname_valid(agent_domain, agent_domain_len) < 3) {
+		/* The agent domain needs to be a valid dname that is not the
+		 * root; from RFC9567. */
+		return;
+	}
+
 	/* Synthesize the error report query in the format:
 	 * "_er.$qtype.$qname.$ede._er.$reporting-agent-domain" */
 	/* First check if the static length parts fit in the buffer.
 	 * That is everything except for qtype and ede that need to be
 	 * converted to decimal and checked further on. */
-	expected_length = 4+qname_len+4+agent_domain_len;
+	expected_length = 4/*_er*/+qname_len+4/*_er*/+agent_domain_len;
 	if(expected_length > LDNS_MAX_DOMAINLEN) goto skip;
 
 	memmove(buf+count, "\3_er", 4);
@@ -1580,12 +1581,13 @@ static void dns_error_reporting(struct module_qstate* qstate,
 	qinfo.qclass = qstate->qinfo.qclass;
 	qinfo.local_alias = NULL;
 
-	log_query_info(VERB_ALGO, "DNS Error Reporting: generating report query for",
-		&qinfo);
+	log_query_info(VERB_ALGO, "DNS Error Reporting: generating report "
+		"query for", &qinfo);
 	mesh_add_sub(qstate, &qinfo, BIT_RD, 0, 0, &newq, &sub);
 	return;
 skip:
-	verbose(VERB_ALGO, "DNS Error Reporting: report query qname too long; skip");
+	verbose(VERB_ALGO, "DNS Error Reporting: report query qname too long; "
+		"skip");
 	return;
 }
 
