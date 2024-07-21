@@ -575,6 +575,63 @@ handle_cname_response(struct module_qstate* qstate, struct iter_qstate* iq,
 	return 1;
 }
 
+static int
+get_svcb_alias_target(struct ub_packed_rrset_key* r,
+	uint8_t** mname, size_t* mname_len)
+{
+	size_t i;
+	struct packed_rrset_data* d = (struct packed_rrset_data*)r->entry.data;
+	(void)r; (void)mname; (void)mname_len;
+
+	for(i=0; i<d->count; i++) {
+		size_t t_len; /* TargetName length */
+
+		if(d->rr_len[i] <= 5
+		|| ((uint16_t*)d->rr_data[i])[1] != 0
+		|| !(t_len = dname_valid(d->rr_data[i] + 4, d->rr_len[i] - 4)))
+			continue;
+		*mname = d->rr_data[i] + 4;
+		*mname_len = t_len;
+		return 1;
+	}
+	return 0;
+}
+
+static int
+handle_svcb_alias(struct module_qstate* qstate, struct iter_qstate* iq,
+        struct dns_msg* msg, uint8_t** mname, size_t* mname_len)
+{
+	int new_target = 0;
+	size_t i;
+	(void)qstate;(void)iq;(void)msg;(void)mname;(void)mname_len;
+
+	assert(iq->qchase.qtype == LDNS_RR_TYPE_SVCB
+	    || iq->qchase.qtype == LDNS_RR_TYPE_HTTPS);
+	/* Start with the (current) qname. */
+	*mname = iq->qchase.qname;
+	*mname_len = iq->qchase.qname_len;
+
+	/* Iterate over the ANSWER rrsets in order, looking for SVCB or HTTPS
+	 *
+	 */
+	for(i=0; i<msg->rep->an_numrrsets; i++) {
+		struct ub_packed_rrset_key* r = msg->rep->rrsets[i];
+
+		if(ntohs(r->rk.type) == iq->qchase.qtype
+		&& query_dname_compare(*mname, r->rk.dname) == 0
+		&& get_svcb_alias_target(r, mname, mname_len)
+		&& !iter_find_rrset_in_prepend_answer(iq, r)) {
+			/* Add this relevant SVCB rrset to the prepend list.*/
+			if(!iter_add_prepend_answer(qstate, iq, r))
+				return 0;
+			else
+				new_target = 1;
+		}
+		/* Other rrsets in the section are ignored. */
+	}
+	return new_target;
+}
+
 /** fill fail address for later recovery */
 static void
 fill_fail_addr(struct iter_qstate* iq, struct sockaddr_storage* addr,
@@ -3226,6 +3283,9 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 
 	/* handle each of the type cases */
 	if(type == RESPONSE_TYPE_ANSWER) {
+		uint8_t* sname = NULL;
+		size_t snamelen = 0;
+
 		/* ANSWER type responses terminate the query algorithm, 
 		 * so they sent on their */
 		if(verbosity >= VERB_DETAIL) {
@@ -3258,6 +3318,45 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 				iq->dp&&iq->dp->has_parent_side_NS,
 				qstate->region, qstate->query_flags,
 				qstate->qstarttime);
+		if((  iq->qchase.qtype == LDNS_RR_TYPE_SVCB
+		   || iq->qchase.qtype == LDNS_RR_TYPE_HTTPS)
+		&& handle_svcb_alias(qstate, iq, iq->response, &sname, &snamelen)) {
+
+			/* set the current request's qname to the new value. */
+			iq->qchase.qname = sname;
+			iq->qchase.qname_len = snamelen;
+			/* Clear the query state, since this is a query restart. */
+			iq->deleg_msg = NULL;
+			iq->dp = NULL;
+			iq->dsns_point = NULL;
+			iq->auth_zone_response = 0;
+			iq->sent_count = 0;
+			iq->dp_target_count = 0;
+			if(iq->minimisation_state != MINIMISE_STATE)
+				/* Only count as query restart when it is not an extra
+				 * query as result of qname minimisation. */
+				iq->query_restart_count++;
+			if(qstate->env->cfg->qname_minimisation)
+				iq->minimisation_state = INIT_MINIMISE_STATE;
+
+			/* stop current outstanding queries.
+			 * FIXME: should the outstanding queries be waited for and
+			 * handled? Say by a subquery that inherits the outbound_entry.
+			 */
+			outbound_list_clear(&iq->outlist);
+			iq->num_current_queries = 0;
+			fptr_ok(fptr_whitelist_modenv_detach_subs(
+				qstate->env->detach_subs));
+			(*qstate->env->detach_subs)(qstate);
+			iq->num_target_queries = 0;
+			if(qstate->reply)
+				sock_list_insert(&qstate->reply_origin,
+					&qstate->reply->remote_addr,
+					qstate->reply->remote_addrlen, qstate->region);
+			verbose(VERB_ALGO, "cleared outbound list for query restart");
+			/* go to INIT_REQUEST_STATE for new qname. */
+			return next_state(iq, INIT_REQUEST_STATE);
+		}
 		/* close down outstanding requests to be discarded */
 		outbound_list_clear(&iq->outlist);
 		iq->num_current_queries = 0;
