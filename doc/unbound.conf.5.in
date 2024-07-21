@@ -1996,17 +1996,30 @@ be used.  Default is 65001.
 .TP 5
 .B ede: \fI<yes or no>
 If enabled, Unbound will respond with Extended DNS Error codes (RFC8914).
-These EDEs attach informative error messages to a response for various
-errors. Default is "no".
+These EDEs provide additional information with a response mainly for, but not
+limited to, DNS and DNSSEC errors.
 
 When the \fBval-log-level\fR option is also set to \fB2\fR, responses with
-Extended DNS Errors concerning DNSSEC failures that are not served from cache,
-will also contain a descriptive text message about the reason for the failure.
+Extended DNS Errors concerning DNSSEC failures will also contain a descriptive
+text message about the reason for the failure.
+Default is "no".
 .TP 5
 .B ede\-serve\-expired: \fI<yes or no>
 If enabled, Unbound will attach an Extended DNS Error (RFC8914) Code 3 - Stale
-Answer as EDNS0 option to the expired response. Note that this will not attach
-the EDE code without setting the global \fBede\fR option to "yes" as well.
+Answer as EDNS0 option to the expired response.
+The \fBede\fR option needs to be enabled as well for this to work.
+Default is "no".
+.TP 5
+.B dns\-error\-reporting: \fI<yes or no>
+If enabled, Unbound will send DNS Error Reports (RFC9567).
+The name servers need to express support by attaching the Report-Channel EDNS0
+option on their replies specifying the reporting agent for the zone.
+Any errors encountered during resolution that would result in Unbound
+generating an Extended DNS Error (RFC8914) will be reported to the zone's
+reporting agent.
+The \fBede\fR option does not need to be enabled for this to work.
+It is advised that the \fBqname\-minimisation\fR option is also enabled to
+increase privacy on the outgoing reports.
 Default is "no".
 .SS "Remote Control Options"
 In the
