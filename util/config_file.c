@@ -1185,7 +1185,7 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_DEC(opt, "serve-expired-client-timeout", serve_expired_client_timeout)
 	else O_YNO(opt, "ede", ede)
 	else O_YNO(opt, "ede-serve-expired", ede_serve_expired)
-	else O_YNO(opt, "dns_error-reporting", dns_error_reporting)
+	else O_YNO(opt, "dns-error-reporting", dns_error_reporting)
 	else O_YNO(opt, "serve-original-ttl", serve_original_ttl)
 	else O_STR(opt, "val-nsec3-keysize-iterations",val_nsec3_key_iterations)
 	else O_YNO(opt, "zonemd-permissive-mode", zonemd_permissive_mode)
