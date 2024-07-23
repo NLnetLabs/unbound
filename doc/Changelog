@@ -10,6 +10,7 @@
 	- Fix to have empty definition when not supported for weak attribute.
 	- Fix uninitialized variable warning in create_tcp_accept_sock.
 	- Fix link of dnstap without openssl.
+	- Fix link of unbound-dnstap-socket without openssl.
 
 19 July 2024: Wouter
 	- Add dnstap-sample-rate that logs only 1/N messages, for high volume
