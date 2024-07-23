@@ -1241,6 +1241,7 @@ int sldns_wire2str_svcparam_scan(uint8_t** d, size_t* dlen, char** s, size_t* sl
 		r = sldns_wire2str_svcparam_ech2str(s, slen, data_len, *d);
 		break;
 	case SVCB_KEY_DOHPATH:
+		ATTR_FALLTHROUGH
 		/* fallthrough */
 	default:
 		r = sldns_str_print(s, slen, "=\"");

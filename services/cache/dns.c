@@ -110,6 +110,7 @@ store_rrsets(struct module_env* env, struct reply_info* rep, time_t now,
 			/* no break: also copy key item */
 			/* the line below is matched by gcc regex and silences
 			 * the fallthrough warning */
+			ATTR_FALLTHROUGH
 			/* fallthrough */
 		case 1: /* ref updated, item inserted */
 			rep->rrsets[i] = rep->ref[i].key;

@@ -2060,11 +2060,13 @@ verify_canonrrset(sldns_buffer* buf, int algo, unsigned char* sigblock,
 		digest_size = (digest_size ? digest_size : SHA1_DIGEST_SIZE);
 #endif
 		/* double fallthrough annotation to please gcc parser */
+		ATTR_FALLTHROUGH
 		/* fallthrough */
 #ifdef USE_SHA2
 		/* fallthrough */
 	case LDNS_RSASHA256:
 		digest_size = (digest_size ? digest_size : SHA256_DIGEST_SIZE);
+		ATTR_FALLTHROUGH
 		/* fallthrough */
 	case LDNS_RSASHA512:
 		digest_size = (digest_size ? digest_size : SHA512_DIGEST_SIZE);
@@ -2080,6 +2082,7 @@ verify_canonrrset(sldns_buffer* buf, int algo, unsigned char* sigblock,
 #ifdef USE_ECDSA
 	case LDNS_ECDSAP256SHA256:
 		digest_size = (digest_size ? digest_size : SHA256_DIGEST_SIZE);
+		ATTR_FALLTHROUGH
 		/* fallthrough */
 	case LDNS_ECDSAP384SHA384:
 		digest_size = (digest_size ? digest_size : SHA384_DIGEST_SIZE);

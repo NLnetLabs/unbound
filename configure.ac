@@ -365,6 +365,47 @@ fi
 
 CHECK_NORETURN_ATTRIBUTE
 
+AC_DEFUN([CHECK_FALLTHROUGH_ATTRIBUTE],
+[AC_REQUIRE([AC_PROG_CC])
+AC_MSG_CHECKING(whether the C compiler (${CC-cc}) accepts the "fallthrough" attribute)
+BAKCFLAGS="$CFLAGS"
+CFLAGS="$CFLAGS -Werror"
+AC_CACHE_VAL(ac_cv_c_fallthrough_attribute,
+[ac_cv_c_fallthrough_attribute=no
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[ #include <stdio.h>
+void f(int x) {
+	int y = 0;
+	switch(x) {
+	case 1:
+		y = 1;
+		__attribute__((fallthrough));
+		/* fallthrough */
+	case 2:
+		y++;
+		break;
+	case 3:
+		y = 3;
+		break;
+	}
+	printf("%d", y);
+}
+]], [[
+   f(1);
+]])],[ac_cv_c_fallthrough_attribute="yes"],[ac_cv_c_fallthrough_attribute="no"])
+])
+CFLAGS="$BAKCFLAGS"
+
+AC_MSG_RESULT($ac_cv_c_fallthrough_attribute)
+if test $ac_cv_c_fallthrough_attribute = yes; then
+  AC_DEFINE(HAVE_ATTR_FALLTHROUGH, 1, [Whether the C compiler accepts the "fallthrough" attribute])
+  AC_DEFINE(ATTR_FALLTHROUGH, [__attribute__((fallthrough));], [apply the fallthrough attribute.])
+else
+  AC_DEFINE(ATTR_FALLTHROUGH,[], [apply the fallthrough attribute.])
+fi
+])dnl End of CHECK_FALLTHROUGH_ATTRIBUTE
+
+CHECK_FALLTHROUGH_ATTRIBUTE
+
 if test "$srcdir" != "."; then
 	CPPFLAGS="$CPPFLAGS -I$srcdir"
 fi

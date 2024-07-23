@@ -329,6 +329,7 @@ udp_send_errno_needs_log(struct sockaddr* addr, socklen_t addrlen)
 		case EACCES:
 			if(verbosity < VERB_ALGO)
 				return 0;
+			break;
 		default:
 			break;
 	}

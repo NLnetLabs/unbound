@@ -7026,6 +7026,75 @@ printf "%s\n" "#define ATTR_NORETURN __attribute__((__noreturn__))" >>confdefs.h
 fi
 
 
+
+
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking whether the C compiler (${CC-cc}) accepts the \"fallthrough\" attribute" >&5
+printf %s "checking whether the C compiler (${CC-cc}) accepts the \"fallthrough\" attribute... " >&6; }
+BAKCFLAGS="$CFLAGS"
+CFLAGS="$CFLAGS -Werror"
+if test ${ac_cv_c_fallthrough_attribute+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+  ac_cv_c_fallthrough_attribute=no
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+ #include <stdio.h>
+void f(int x) {
+	int y = 0;
+	switch(x) {
+	case 1:
+		y = 1;
+		__attribute__((fallthrough));
+		/* fallthrough */
+	case 2:
+		y++;
+		break;
+	case 3:
+		y = 3;
+		break;
+	}
+	printf("%d", y);
+}
+
+int
+main (void)
+{
+
+   f(1);
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"
+then :
+  ac_cv_c_fallthrough_attribute="yes"
+else $as_nop
+  ac_cv_c_fallthrough_attribute="no"
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
+
+fi
+
+CFLAGS="$BAKCFLAGS"
+
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_c_fallthrough_attribute" >&5
+printf "%s\n" "$ac_cv_c_fallthrough_attribute" >&6; }
+if test $ac_cv_c_fallthrough_attribute = yes; then
+
+printf "%s\n" "#define HAVE_ATTR_FALLTHROUGH 1" >>confdefs.h
+
+
+printf "%s\n" "#define ATTR_FALLTHROUGH __attribute__((fallthrough));" >>confdefs.h
+
+else
+
+printf "%s\n" "#define ATTR_FALLTHROUGH /**/" >>confdefs.h
+
+fi
+
+
 if test "$srcdir" != "."; then
 	CPPFLAGS="$CPPFLAGS -I$srcdir"
 fi

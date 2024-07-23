@@ -242,10 +242,14 @@ rpz_action_to_localzone_type(enum rpz_action a)
 	case RPZ_NODATA_ACTION: return local_zone_always_nodata;
 	case RPZ_DROP_ACTION: return local_zone_always_deny;
 	case RPZ_PASSTHRU_ACTION: return local_zone_always_transparent;
-	case RPZ_LOCAL_DATA_ACTION:	/* fallthrough */
+	case RPZ_LOCAL_DATA_ACTION:
+		ATTR_FALLTHROUGH
+		/* fallthrough */
 	case RPZ_CNAME_OVERRIDE_ACTION: return local_zone_redirect;
 	case RPZ_TCP_ONLY_ACTION: return local_zone_truncate;
-	case RPZ_INVALID_ACTION: /* fallthrough */
+	case RPZ_INVALID_ACTION:
+		ATTR_FALLTHROUGH
+		/* fallthrough */
 	default: return local_zone_invalid;
 	}
 }
@@ -258,10 +262,14 @@ rpz_action_to_respip_action(enum rpz_action a)
 	case RPZ_NODATA_ACTION: return respip_always_nodata;
 	case RPZ_DROP_ACTION: return respip_always_deny;
 	case RPZ_PASSTHRU_ACTION: return respip_always_transparent;
-	case RPZ_LOCAL_DATA_ACTION: /* fallthrough */
+	case RPZ_LOCAL_DATA_ACTION:
+		ATTR_FALLTHROUGH
+		/* fallthrough */
 	case RPZ_CNAME_OVERRIDE_ACTION: return respip_redirect;
 	case RPZ_TCP_ONLY_ACTION: return respip_truncate;
-	case RPZ_INVALID_ACTION: /* fallthrough */
+	case RPZ_INVALID_ACTION:
+		ATTR_FALLTHROUGH
+		/* fallthrough */
 	default: return respip_invalid;
 	}
 }
@@ -276,7 +284,9 @@ localzone_type_to_rpz_action(enum localzone_type lzt)
 	case local_zone_always_transparent: return RPZ_PASSTHRU_ACTION;
 	case local_zone_redirect: return RPZ_LOCAL_DATA_ACTION;
 	case local_zone_truncate: return RPZ_TCP_ONLY_ACTION;
-	case local_zone_invalid: /* fallthrough */
+	case local_zone_invalid:
+		ATTR_FALLTHROUGH
+		/* fallthrough */
 	default: return RPZ_INVALID_ACTION;
 	}
 }
@@ -291,7 +301,9 @@ respip_action_to_rpz_action(enum respip_action a)
 	case respip_always_transparent: return RPZ_PASSTHRU_ACTION;
 	case respip_redirect: return RPZ_LOCAL_DATA_ACTION;
 	case respip_truncate: return RPZ_TCP_ONLY_ACTION;
-	case respip_invalid: /* fallthrough */
+	case respip_invalid:
+		ATTR_FALLTHROUGH
+		/* fallthrough */
 	default: return RPZ_INVALID_ACTION;
 	}
 }
