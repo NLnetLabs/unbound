@@ -1,3 +1,6 @@
+23 July 2024: Yorgos
+	- Fix #1106: ratelimit-below-domain logs the wrong FROM address.
+
 19 July 2024: Wouter
 	- Add dnstap-sample-rate that logs only 1/N messages, for high volume
 	  server environments. Thanks Dan Luther.
