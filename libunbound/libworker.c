@@ -292,7 +292,7 @@ libworker_do_cmd(struct libworker* w, uint8_t* msg, uint32_t len)
 			log_err("unknown command for bg worker %d", 
 				(int)context_serial_getcmd(msg, len));
 			/* and fall through to quit */
-			/* fallthrough */
+			__attribute__((fallthrough));
 		case UB_LIBCMD_QUIT:
 			free(msg);
 			comm_base_exit(w->base);
