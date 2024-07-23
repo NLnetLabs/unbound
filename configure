@@ -6976,6 +6976,10 @@ printf "%s\n" "#define HAVE_ATTR_WEAK 1" >>confdefs.h
 
 printf "%s\n" "#define ATTR_WEAK __attribute__((weak))" >>confdefs.h
 
+else
+
+printf "%s\n" "#define ATTR_WEAK /**/" >>confdefs.h
+
 fi
 
 
