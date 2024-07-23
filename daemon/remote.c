@@ -6139,7 +6139,7 @@ create_socketpair(int* pair, struct ub_randstate* rand)
 		return 0;
 	}
 	accaddrlen = (socklen_t)sizeof(accaddr);
-	pair[0] = accept(lst, &accaddr, &accaddrlen);
+	pair[0] = accept(lst, (struct sockaddr*)&accaddr, &accaddrlen);
 	if(pair[0] == -1) {
 		log_err("create socketpair: accept: %s", sock_strerror(errno));
 		sock_close(lst);
@@ -6219,7 +6219,8 @@ create_socketpair(int* pair, struct ub_randstate* rand)
 			pair[1] = -1;
 			return 0;
 		}
-		ret = send(pair[1], nonce+bcount, sizeof(nonce)-bcount, 0);
+		ret = send(pair[1], (void*)(nonce+bcount),
+			sizeof(nonce)-bcount, 0);
 		if(ret == -1) {
 			if(
 #ifndef USE_WINSOCK
@@ -6277,7 +6278,8 @@ create_socketpair(int* pair, struct ub_randstate* rand)
 			pair[1] = -1;
 			return 0;
 		}
-		ret = recv(pair[0], recvnonce+bcount, sizeof(nonce)-bcount, 0);
+		ret = recv(pair[0], (void*)(recvnonce+bcount),
+			sizeof(nonce)-bcount, 0);
 		if(ret == -1) {
 			if(
 #ifndef USE_WINSOCK
