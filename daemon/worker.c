@@ -386,7 +386,7 @@ worker_send_reload_ack(struct worker* worker)
 	ssize_t ret;
 	while(1) {
 		ret = send(worker->daemon->fast_reload_thread->commreload[1],
-			&c, 1, 0);
+			(void*)&c, 1, 0);
 		if(ret == -1) {
 			if(
 #ifndef USE_WINSOCK

@@ -6567,7 +6567,7 @@ fr_read_ack_from_workers(struct fast_reload_thread* fr)
 	while(count < total) {
 		uint8_t r;
 		ssize_t ret;
-		ret = recv(fr->commreload[0], &r, 1, 0);
+		ret = recv(fr->commreload[0], (void*)&r, 1, 0);
 		if(ret == -1) {
 			if(
 #ifndef USE_WINSOCK
@@ -7201,7 +7201,7 @@ fr_client_send_item_ssl(struct fast_reload_printq* printq)
 			return 0;
 		} else if(want == SSL_ERROR_WANT_WRITE) {
 #ifdef USE_WINSOCK
-			ub_winsock_tcp_wouldblock(printq->client_cp->ev->ev, UB_EV_WRITE);
+			ub_winsock_tcp_wouldblock(comm_point_internal(printq->client_cp), UB_EV_WRITE);
 #endif
 			return 0; /* write more later */
 		} else if(want == SSL_ERROR_SYSCALL) {
@@ -7248,7 +7248,7 @@ fr_client_send_item_fd(struct fast_reload_printq* printq)
 #endif
 			) {
 #ifdef USE_WINSOCK
-			ub_winsock_tcp_wouldblock(printq->client_cp->ev->ev, UB_EV_WRITE);
+			ub_winsock_tcp_wouldblock(comm_point_internal(printq->client_cp), UB_EV_WRITE);
 #endif
 			return 0; /* Try again. */
 		}

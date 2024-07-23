@@ -306,6 +306,11 @@ struct ub_event_base* comm_base_internal(struct comm_base* b)
 	return b->eb->base;
 }
 
+struct ub_event* comm_point_internal(struct comm_point* c)
+{
+	return c->ev->ev;
+}
+
 /** see if errno for udp has to be logged or not uses globals */
 static int
 udp_send_errno_needs_log(struct sockaddr* addr, socklen_t addrlen)

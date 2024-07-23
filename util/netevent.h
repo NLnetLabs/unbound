@@ -518,6 +518,14 @@ void comm_base_set_slow_accept_handlers(struct comm_base* b,
 struct ub_event_base* comm_base_internal(struct comm_base* b);
 
 /**
+ * Access internal event structure. It is for use with
+ * ub_winsock_tcp_wouldblock on windows.
+ * @param c: comm point.
+ * @return event.
+ */
+struct ub_event* comm_point_internal(struct comm_point* c);
+
+/**
  * Create an UDP comm point. Calls malloc.
  * setups the structure with the parameters you provide.
  * @param base: in which base to alloc the commpoint.
