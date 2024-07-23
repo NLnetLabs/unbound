@@ -360,6 +360,8 @@ AC_MSG_RESULT($ac_cv_c_noreturn_attribute)
 if test $ac_cv_c_noreturn_attribute = yes; then
   AC_DEFINE(HAVE_ATTR_NORETURN, 1, [Whether the C compiler accepts the "noreturn" attribute])
   AC_DEFINE(ATTR_NORETURN, [__attribute__((__noreturn__))], [apply the noreturn attribute to a function that exits the program])
+else
+  AC_DEFINE(ATTR_NORETURN,[], [apply the noreturn attribute to a function that exits the program])
 fi
 ])dnl End of CHECK_NORETURN_ATTRIBUTE
 

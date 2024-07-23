@@ -7023,6 +7023,10 @@ printf "%s\n" "#define HAVE_ATTR_NORETURN 1" >>confdefs.h
 
 printf "%s\n" "#define ATTR_NORETURN __attribute__((__noreturn__))" >>confdefs.h
 
+else
+
+printf "%s\n" "#define ATTR_NORETURN /**/" >>confdefs.h
+
 fi
 
 

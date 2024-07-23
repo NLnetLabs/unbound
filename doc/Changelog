@@ -5,6 +5,8 @@
 	- Merge #1110: Make fallthrough explicit for libworker.c.
 	- For #1110: Test for fallthrough attribute in configure and add
 	  fallthrough attribute annotations.
+	- Fix compile when the compiler does not support the noreturn
+	  attribute.
 
 19 July 2024: Wouter
 	- Add dnstap-sample-rate that logs only 1/N messages, for high volume
