@@ -1091,6 +1091,7 @@ parse_edns_options_from_query(uint8_t* rdata_ptr, size_t rdata_len,
 				break;
 			case COOKIE_STATUS_CLIENT_ONLY:
 				edns->cookie_client = 1;
+				ATTR_FALLTHROUGH
 				/* fallthrough */
 			case COOKIE_STATUS_FUTURE:
 			case COOKIE_STATUS_EXPIRED:

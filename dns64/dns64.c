@@ -701,6 +701,7 @@ dns64_operate(struct module_qstate* qstate, enum module_ev event, int id,
 			iq->state = DNS64_NEW_QUERY;
 			iq->started_no_cache_store = qstate->no_cache_store;
 			qstate->no_cache_store = 1;
+			ATTR_FALLTHROUGH
   			/* fallthrough */
 		case module_event_pass:
 			qstate->ext_state[id] = handle_event_pass(qstate, id);

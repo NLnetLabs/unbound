@@ -1329,6 +1329,8 @@ remote-control:
 # 	dnstap-identity: ""
 # 	# if "" it uses the package version.
 # 	dnstap-version: ""
+# 	# log only 1/N messages, if 0 it is disabled. default 0.
+# 	dnstap-sample-rate: 0
 # 	dnstap-log-resolver-query-messages: no
 # 	dnstap-log-resolver-response-messages: no
 # 	dnstap-log-client-query-messages: no

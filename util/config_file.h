@@ -592,6 +592,8 @@ struct config_file {
 	char* dnstap_identity;
 	/** dnstap "version", package version is used if "". */
 	char* dnstap_version;
+	/** dnstap sample rate */
+	int dnstap_sample_rate;
 
 	/** true to log dnstap RESOLVER_QUERY message events */
 	int dnstap_log_resolver_query_messages;

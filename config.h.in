@@ -1,5 +1,8 @@
 /* config.h.in.  Generated from configure.ac by autoheader.  */
 
+/* apply the fallthrough attribute. */
+#undef ATTR_FALLTHROUGH
+
 /* apply the noreturn attribute to a function that exits the program */
 #undef ATTR_NORETURN
 
@@ -56,6 +59,9 @@
 
 /* Define to 1 if you have the <arpa/inet.h> header file. */
 #undef HAVE_ARPA_INET_H
+
+/* Whether the C compiler accepts the "fallthrough" attribute */
+#undef HAVE_ATTR_FALLTHROUGH
 
 /* Whether the C compiler accepts the "format" attribute */
 #undef HAVE_ATTR_FORMAT

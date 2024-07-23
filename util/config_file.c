@@ -770,6 +770,7 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	else S_YNO("dnstap-send-version:", dnstap_send_version)
 	else S_STR("dnstap-identity:", dnstap_identity)
 	else S_STR("dnstap-version:", dnstap_version)
+	else S_NUMBER_OR_ZERO("dnstap-sample-rate:", dnstap_sample_rate)
 	else S_YNO("dnstap-log-resolver-query-messages:",
 		dnstap_log_resolver_query_messages)
 	else S_YNO("dnstap-log-resolver-response-messages:",
@@ -1249,6 +1250,7 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_YNO(opt, "dnstap-send-version", dnstap_send_version)
 	else O_STR(opt, "dnstap-identity", dnstap_identity)
 	else O_STR(opt, "dnstap-version", dnstap_version)
+	else O_UNS(opt, "dnstap-sample-rate", dnstap_sample_rate)
 	else O_YNO(opt, "dnstap-log-resolver-query-messages",
 		dnstap_log_resolver_query_messages)
 	else O_YNO(opt, "dnstap-log-resolver-response-messages",

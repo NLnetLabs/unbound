@@ -329,6 +329,7 @@ udp_send_errno_needs_log(struct sockaddr* addr, socklen_t addrlen)
 		case EACCES:
 			if(verbosity < VERB_ALGO)
 				return 0;
+			break;
 		default:
 			break;
 	}
@@ -3305,6 +3306,13 @@ void http2_stream_add_meshstate(struct http2_stream* h2_stream,
 {
 	h2_stream->mesh = mesh;
 	h2_stream->mesh_state = m;
+}
+
+void http2_stream_remove_mesh_state(struct http2_stream* h2_stream)
+{
+	if(!h2_stream)
+		return;
+	h2_stream->mesh_state = NULL;
 }
 
 /** delete http2 session server. After closing connection. */
