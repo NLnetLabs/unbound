@@ -822,7 +822,6 @@ static int reply_with_accept(struct tap_data* data)
 {
 #ifdef USE_DNSTAP
 	/* len includes the escape and framelength */
-	int r;
 	size_t len = 0;
 	void* acceptframe = fstrm_create_control_frame_accept(
 		DNSTAP_CONTENT_TYPE, &len);
@@ -833,6 +832,8 @@ static int reply_with_accept(struct tap_data* data)
 
 	fd_set_block(data->fd);
 	if(data->ssl) {
+#ifdef HAVE_SSL
+		int r;
 		if((r=SSL_write(data->ssl, acceptframe, len)) <= 0) {
 			int r2;
 			if((r2=SSL_get_error(data->ssl, r)) == SSL_ERROR_ZERO_RETURN)
@@ -843,6 +844,7 @@ static int reply_with_accept(struct tap_data* data)
 			free(acceptframe);
 			return 0;
 		}
+#endif
 	} else {
 		if(send(data->fd, acceptframe, len, 0) == -1) {
 			log_err("send failed: %s", sock_strerror(errno));
@@ -878,6 +880,7 @@ static int reply_with_finish(struct tap_data* data)
 
 	fd_set_block(data->fd);
 	if(data->ssl) {
+#ifdef HAVE_SSL
 		int r;
 		if((r=SSL_write(data->ssl, finishframe, len)) <= 0) {
 			int r2;
@@ -889,6 +892,7 @@ static int reply_with_finish(struct tap_data* data)
 			free(finishframe);
 			return 0;
 		}
+#endif
 	} else {
 		if(send(data->fd, finishframe, len, 0) == -1) {
 			log_err("send failed: %s", sock_strerror(errno));
