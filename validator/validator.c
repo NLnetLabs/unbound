@@ -99,7 +99,9 @@ fill_nsec3_iter(size_t** keysize, size_t** maxiter, char* s, int c)
 	*maxiter = (size_t*)calloc(sizeof(size_t), (size_t)c);
 	if(!*keysize || !*maxiter) {
 		free(*keysize);
+		*keysize = NULL;
 		free(*maxiter);
+		*maxiter = NULL;
 		log_err("out of memory");
 		return 0;
 	}
@@ -107,18 +109,30 @@ fill_nsec3_iter(size_t** keysize, size_t** maxiter, char* s, int c)
 		(*keysize)[i] = (size_t)strtol(s, &e, 10);
 		if(s == e) {
 			log_err("cannot parse: %s", s);
+			free(*keysize);
+			*keysize = NULL;
+			free(*maxiter);
+			*maxiter = NULL;
 			return 0;
 		}
 		s = e;
 		(*maxiter)[i] = (size_t)strtol(s, &e, 10);
 		if(s == e) {
 			log_err("cannot parse: %s", s);
+			free(*keysize);
+			*keysize = NULL;
+			free(*maxiter);
+			*maxiter = NULL;
 			return 0;
 		}
 		s = e;
 		if(i>0 && (*keysize)[i-1] >= (*keysize)[i]) {
 			log_err("nsec3 key iterations not ascending: %d %d",
 				(int)(*keysize)[i-1], (int)(*keysize)[i]);
+			free(*keysize);
+			*keysize = NULL;
+			free(*maxiter);
+			*maxiter = NULL;
 			return 0;
 		}
 		verbose(VERB_ALGO, "validator nsec3cfg keysz %d mxiter %d",
