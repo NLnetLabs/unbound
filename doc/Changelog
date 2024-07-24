@@ -1,5 +1,7 @@
 23 July 2024: Yorgos
 	- Fix #1106: ratelimit-below-domain logs the wrong FROM address.
+	- Cleanup ede.tdir test.
+	- For #935 and #1104, clarify RPZ order and semantics.
 
 23 July 2024: Wouter
 	- Merge #1110: Make fallthrough explicit for libworker.c.

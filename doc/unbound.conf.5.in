@@ -2883,9 +2883,11 @@ Enable to log forwarder response messages.  Default is no.
 .SS Response Policy Zone Options
 .LP
 Response Policy Zones are configured with \fBrpz:\fR, and each one must have a
-\fBname:\fR. There can be multiple ones, by listing multiple rpz clauses, each
-with a different name. RPZ clauses are applied in order of configuration. The
-\fBrespip\fR module needs to be added to the \fBmodule-config\fR, e.g.:
+\fBname:\fR. There can be multiple ones, by listing multiple RPZ clauses, each
+with a different name. RPZ clauses are applied in order of configuration and
+any match from an earlier RPZ zone will terminate the RPZ lookup. Note that a
+PASSTHRU action is still considered a match.
+The \fBrespip\fR module needs to be added to the \fBmodule-config\fR, e.g.:
 \fBmodule-config: "respip validator iterator"\fR.
 .P
 QNAME, Response IP Address, nsdname, nsip and clientip triggers are supported.
@@ -2893,12 +2895,13 @@ Supported actions are: NXDOMAIN, NODATA, PASSTHRU, DROP, Local Data, tcp\-only
 and drop.  RPZ QNAME triggers are applied after \fBlocal\-zones\fR and
 before \fBauth\-zones\fR.
 .P
-The rpz zone is formatted with a SOA start record as usual.  The items in
-the zone are entries, that specify what to act on (the trigger) and what to
-do (the action).  The trigger to act on is recorded in the name, the action
-to do is recorded as the resource record.  The names all end in the zone
-name, so you could type the trigger names without a trailing dot in the
-zonefile.
+The RPZ zone is a regular DNS zone formatted with a SOA start record as usual.
+The items in the zone are entries, that specify what to act on (the trigger)
+and what to do (the action).
+The trigger to act on is recorded in the name, the action to do is recorded as
+the resource record.
+The names all end in the zone name, so you could type the trigger names without
+a trailing dot in the zonefile.
 .P
 An example RPZ record, that answers example.com with NXDOMAIN
 .nf
@@ -2998,7 +3001,7 @@ externally blocked. Default is no.
 If enabled the zone is authoritatively answered for and queries for the RPZ
 zone information are answered to downstream clients. This is useful for
 monitoring scripts, that can then access the SOA information to check if
-the rpz information is up to date. Default is no.
+the RPZ information is up to date. Default is no.
 .TP
 .B tags: \fI<list of tags>
 Limit the policies from this RPZ clause to clients with a matching tag. Tags
