@@ -240,6 +240,65 @@ if grep "ta4.example.com. 55566" outfile >/dev/null; then :; else
 fi
 
 echo ""
+echo "> test change: add tag1 tag2"
+cp ub.conf ub.conf.orig2
+echo "server:" >> ub.conf
+echo '	define-tag: "tag1 tag2"' >> ub.conf
+echo "> unbound-control fast_reload"
+$PRE/unbound-control -c ub.conf fast_reload +vv 2>&1 | tee output
+if test $? -ne 0; then
+	echo "wrong exit value."
+	exit 1
+else
+	echo "exit value: OK"
+fi
+
+echo ""
+echo "> test change: change to tag2 tag3"
+cp ub.conf.orig2 ub.conf
+echo "server:" >> ub.conf
+echo '	define-tag: "tag2 tag3"' >> ub.conf
+echo "> unbound-control fast_reload"
+$PRE/unbound-control -c ub.conf fast_reload +vv 2>&1 | tee output
+if test $? -ne 0; then
+	echo "wrong exit value."
+	exit 1
+else
+	echo "exit value: OK"
+fi
+if grep "tags have changed" output; then
+	echo "output OK"
+else
+	echo "wrong output"
+	exit 1
+fi
+
+echo ""
+echo "> test change: change cache size"
+cp ub.conf.orig2 ub.conf
+echo "server:" >> ub.conf
+echo "	msg-cache-size: 10m" >> ub.conf
+echo "	rrset-cache-size: 5m" >> ub.conf
+echo "> unbound-control fast_reload"
+$PRE/unbound-control -c ub.conf fast_reload +vv 2>&1 | tee output
+if test $? -ne 0; then
+	echo "wrong exit value."
+	exit 1
+else
+	echo "exit value: OK"
+fi
+
+echo ""
+echo "> test change: change nothing, +p too"
+$PRE/unbound-control -c ub.conf fast_reload +vv +p 2>&1 | tee output
+if test $? -ne 0; then
+	echo "wrong exit value."
+	exit 1
+else
+	echo "exit value: OK"
+fi
+
+echo ""
 echo "> stop unbound"
 kill_pid $UNBOUND_PID
 if test -f unbound.pid; then sleep 1; fi
