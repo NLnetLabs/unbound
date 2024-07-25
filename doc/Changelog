@@ -1,3 +1,8 @@
+25 July 2024: Wouter
+	- Add root key 38696 from 2024 for DNSSEC validation. It is added
+	  to the default root keys in unbound-anchor. The content can be
+	  inspected with `unbound-anchor -l`.
+
 23 July 2024: Yorgos
 	- Fix #1106: ratelimit-below-domain logs the wrong FROM address.
 	- Cleanup ede.tdir test.
