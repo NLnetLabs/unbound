@@ -8112,6 +8112,8 @@ auth_zone_verify_zonemd_with_key(struct auth_zone* z, struct module_env* env,
  * @param why_bogus: if the routine fails, returns the failure reason.
  * @param keystorage: where to store the ub_packed_rrset_key that is created
  * 	on success. A pointer to it is returned on success.
+ * @param reasonbuf: buffer to use for fail reason string print.
+ * @param reasonlen: length of reasonbuf.
  * @return the dnskey RRset, reference to zone data and keystorage, or
  * 	NULL on failure.
  */

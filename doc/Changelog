@@ -1,3 +1,6 @@
+30 July 2024: Wouter
+	- Fix to document parameters of auth_zone_verify_zonemd_with_key.
+
 25 July 2024: Wouter
 	- Add root key 38696 from 2024 for DNSSEC validation. It is added
 	  to the default root keys in unbound-anchor. The content can be
