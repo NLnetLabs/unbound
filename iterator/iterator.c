@@ -1560,6 +1560,11 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 			errinf(qstate, "malloc failure for forward zone");
 			return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
 		}
+		if(!cache_fill_missing(qstate->env, iq->qchase.qclass,
+			qstate->region, iq->dp)) {
+			errinf(qstate, "malloc failure, copy extra info into delegation point");
+			return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
+		}
 		if((qstate->query_flags&BIT_RD)==0) {
 			/* If the server accepts RD=0 queries and forwards
 			 * with RD=1, then if the server is listed as an NS

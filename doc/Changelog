@@ -1,3 +1,13 @@
+31 July 2024: Wouter
+	- Fix for #1114: Fix that cache fill for forward-host names is
+	  performed, so that with nonzero target-fetch-policy it fetches
+	  forwarder addresses and uses them from cache. Also updated that
+	  delegation point cache fill routines use CDflag for AAAA message
+	  lookups, so that its negative lookup stops a recursion since the
+	  cache uses the bit for disambiguation for dns64 but the recursion
+	  uses CDflag for the AAAA target lookups, so the check correctly
+	  stops a useless recursion by its cache lookup.
+
 30 July 2024: Wouter
 	- Fix to document parameters of auth_zone_verify_zonemd_with_key.
 
