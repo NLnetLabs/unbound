@@ -4,6 +4,9 @@
 	  to free the tail, specifically in the free of the list since that
 	  picked up the next item in the list for its loop causing invalid
 	  free. Added internal unit test to unbound-dnstap-socket for that.
+	- Fix that the worker mem report with alloc stats does not attempt
+	  to print memory use of forwards and hints if they have been
+	  deleted already.
 
 31 July 2024: Wouter
 	- Fix for #1114: Fix that cache fill for forward-host names is
