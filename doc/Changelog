@@ -1,3 +1,10 @@
+1 August 2024: Wouter
+	- Fix dnstap test program, cleans up to have clean memory on exit,
+	  for tap_data_free, does not delete NULL items. Also it does not try
+	  to free the tail, specifically in the free of the list since that
+	  picked up the next item in the list for its loop causing invalid
+	  free. Added internal unit test to unbound-dnstap-socket for that.
+
 31 July 2024: Wouter
 	- Fix for #1114: Fix that cache fill for forward-host names is
 	  performed, so that with nonzero target-fetch-policy it fetches
