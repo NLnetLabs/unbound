@@ -3377,7 +3377,6 @@ do_print_cookie_secrets(RES* ssl, struct worker* worker) {
 	if(!cookie_secrets)
 		return; /* Output is empty. */
 	lock_basic_lock(&cookie_secrets->lock);
-	/* (void)ssl_printf(ssl, "cookie_secret_count=%zu\n", cookie_secrets->cookie_count); */
 	for(i = 0; (size_t)i < cookie_secrets->cookie_count; i++) {
 		struct cookie_secret const* cs = &cookie_secrets->
 			cookie_secrets[i];

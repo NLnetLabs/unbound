@@ -374,7 +374,7 @@ be dropped with the \fBdrop_cookie_secret\fR command.
 .IP
 Persistence is accomplished by writing to a file which if configured with the
 \fBcookie\-secret\-file\fR option in the server section of the config file.
-This is default disabled, "".
+This is disabled by default, "".
 .TP
 .B drop_cookie_secret
 Drop the \fIstaging\fR cookie secret.

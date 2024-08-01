@@ -1985,12 +1985,13 @@ calculations.
 .B cookie\-secret\-file: \fI<filename>
 File from which the secrets are read used in DNS Cookie calculations. When this
 file exists, the secrets in this file are used and the secret specified by the
-\fBcookie-secret\fR option is ignored. Default is "". With "" it is disabled.
+\fBcookie-secret\fR option is ignored.
 Enable it by setting a filename, like "/usr/local/etc/unbound_cookiesecrets.txt".
 The content of this file must be manipulated with the \fBadd_cookie_secret\fR,
 \fBdrop_cookie_secret\fR and \fBactivate_cookie_secret\fR commands to the
-\fIunbound\-control\fR(8) tool. Please see that manpage how to perform a safe
-cookie secret rollover.
+\fIunbound\-control\fR(8) tool. Please see that manpage on how to perform a
+safe cookie secret rollover.
+Default is "" (disabled).
 .TP 5
 .B edns\-client\-string: \fI<IP netblock> <string>
 Include an EDNS0 option containing configured ascii string in queries with
