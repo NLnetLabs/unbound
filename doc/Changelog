@@ -2,6 +2,12 @@
 	- Fix that alloc stats has strdup checks, it stops debuggers from
 	  complaining about mismatch at free time.
 	- Fix testbound for alloc stats strdup in util/alloc.c.
+	- Merge #1090: Cookie secret file. Adds
+	  `cookie-secret-file: "unbound_cookiesecrets.txt"` option to store
+	  cookie secrets for EDNS COOKIE secret rollover. The remote control
+	  add_cookie_secret, activate_cookie_secret and drop_cookie_secret
+	  commands can be used for rollover, the command print_cookie_secrets
+	  shows the values in use.
 
 1 August 2024: Wouter
 	- Fix dnstap test program, cleans up to have clean memory on exit,
