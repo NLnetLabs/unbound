@@ -1,3 +1,7 @@
+2 August 2024: Wouter
+	- Fix that alloc stats has strdup checks, it stops debuggers from
+	  complaining about mismatch at free time.
+
 1 August 2024: Wouter
 	- Fix dnstap test program, cleans up to have clean memory on exit,
 	  for tap_data_free, does not delete NULL items. Also it does not try
