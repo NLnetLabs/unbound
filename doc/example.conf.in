@@ -1044,6 +1044,11 @@ server:
 	# example value "000102030405060708090a0b0c0d0e0f".
 	# cookie-secret: <128 bit random hex string>
 
+	# File with cookie secrets, the 'cookie-secret:' option is ignored
+	# and the file can be managed to have staging and active secrets
+	# with remote control commands. Disabled with "". Default is "".
+	# cookie-secret-file: "/usr/local/etc/unbound_cookiesecrets.txt"
+
 	# Enable to attach Extended DNS Error codes (RFC8914) to responses.
 	# ede: no
 

@@ -186,6 +186,10 @@ usage(void)
 	printf("  rpz_enable zone		Enable the RPZ zone if it had previously\n");
 	printf("  				been disabled\n");
 	printf("  rpz_disable zone		Disable the RPZ zone\n");
+	printf("  add_cookie_secret <secret>	add (or replace) a new cookie secret <secret>\n");
+	printf("  drop_cookie_secret		drop a staging cookie secret\n");
+	printf("  activate_cookie_secret	make a staging cookie secret active\n");
+	printf("  print_cookie_secrets		show all cookie secrets with their status\n");
 	printf("Version %s\n", PACKAGE_VERSION);
 	printf("BSD licensed, see LICENSE in source package for details.\n");
 	printf("Report bugs to %s\n", PACKAGE_BUGREPORT);

@@ -735,6 +735,14 @@ daemon_fork(struct daemon* daemon)
 				   "dnscrypt support");
 #endif
 	}
+	if(daemon->cfg->cookie_secret_file &&
+		daemon->cfg->cookie_secret_file[0]) {
+		if(!(daemon->cookie_secrets = cookie_secrets_create()))
+			fatal_exit("Could not create cookie_secrets: out of memory");
+		if(!cookie_secrets_apply_cfg(daemon->cookie_secrets,
+			daemon->cfg->cookie_secret_file))
+			fatal_exit("Could not setup cookie_secrets");
+	}
 	/* create global local_zones */
 	if(!(daemon->local_zones = local_zones_create()))
 		fatal_exit("Could not create local zones: out of memory");
@@ -929,6 +937,7 @@ daemon_delete(struct daemon* daemon)
 	acl_list_delete(daemon->acl);
 	acl_list_delete(daemon->acl_interface);
 	tcl_list_delete(daemon->tcl);
+	cookie_secrets_delete(daemon->cookie_secrets);
 	listen_desetup_locks();
 	free(daemon->chroot);
 	free(daemon->pidfile);

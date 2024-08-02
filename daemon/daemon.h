@@ -58,6 +58,7 @@ struct ub_randstate;
 struct daemon_remote;
 struct respip_set;
 struct shm_main_info;
+struct cookie_secrets;
 
 #include "dnstap/dnstap_config.h"
 #ifdef USE_DNSTAP
@@ -148,6 +149,8 @@ struct daemon {
 #endif
 	/** reuse existing cache on reload if other conditions allow it. */
 	int reuse_cache;
+	/** the EDNS cookie secrets from the cookie-secret-file */
+	struct cookie_secrets* cookie_secrets;
 };
 
 /**

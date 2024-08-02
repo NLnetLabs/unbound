@@ -205,6 +205,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_PROXY_PROTOCOL_PORT VAR_STATISTICS_INHIBIT_ZERO
 %token VAR_HARDEN_UNKNOWN_ADDITIONAL VAR_DISABLE_EDNS_DO VAR_CACHEDB_NO_STORE
 %token VAR_LOG_DESTADDR VAR_CACHEDB_CHECK_WHEN_SERVE_EXPIRED
+%token VAR_COOKIE_SECRET_FILE
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -342,7 +343,7 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_interface_automatic_ports | server_ede |
 	server_proxy_protocol_port | server_statistics_inhibit_zero |
 	server_harden_unknown_additional | server_disable_edns_do |
-	server_log_destaddr
+	server_log_destaddr | server_cookie_secret_file
 	;
 stubstart: VAR_STUB_ZONE
 	{
@@ -3998,45 +3999,52 @@ server_cookie_secret: VAR_COOKIE_SECRET STRING_ARG
 		free($2);
 	}
 	;
-	ipsetstart: VAR_IPSET
-		{
-			OUTYY(("\nP(ipset:)\n"));
-			cfg_parser->started_toplevel = 1;
-		}
-		;
-	contents_ipset: contents_ipset content_ipset
-		| ;
-	content_ipset: ipset_name_v4 | ipset_name_v6
-		;
-	ipset_name_v4: VAR_IPSET_NAME_V4 STRING_ARG
-		{
-		#ifdef USE_IPSET
-			OUTYY(("P(name-v4:%s)\n", $2));
-			if(cfg_parser->cfg->ipset_name_v4)
-				yyerror("ipset name v4 override, there must be one "
-					"name for ip v4");
-			free(cfg_parser->cfg->ipset_name_v4);
-			cfg_parser->cfg->ipset_name_v4 = $2;
-		#else
-			OUTYY(("P(Compiled without ipset, ignoring)\n"));
-			free($2);
-		#endif
-		}
-	;
-	ipset_name_v6: VAR_IPSET_NAME_V6 STRING_ARG
+server_cookie_secret_file: VAR_COOKIE_SECRET_FILE STRING_ARG
 	{
-		#ifdef USE_IPSET
-			OUTYY(("P(name-v6:%s)\n", $2));
-			if(cfg_parser->cfg->ipset_name_v6)
-				yyerror("ipset name v6 override, there must be one "
-					"name for ip v6");
-			free(cfg_parser->cfg->ipset_name_v6);
-			cfg_parser->cfg->ipset_name_v6 = $2;
-		#else
-			OUTYY(("P(Compiled without ipset, ignoring)\n"));
-			free($2);
-		#endif
-		}
+		OUTYY(("P(cookie_secret_file:%s)\n", $2));
+		free(cfg_parser->cfg->cookie_secret_file);
+		cfg_parser->cfg->cookie_secret_file = $2;
+	}
+	;
+ipsetstart: VAR_IPSET
+	{
+		OUTYY(("\nP(ipset:)\n"));
+		cfg_parser->started_toplevel = 1;
+	}
+	;
+contents_ipset: contents_ipset content_ipset
+	| ;
+content_ipset: ipset_name_v4 | ipset_name_v6
+	;
+ipset_name_v4: VAR_IPSET_NAME_V4 STRING_ARG
+	{
+	#ifdef USE_IPSET
+		OUTYY(("P(name-v4:%s)\n", $2));
+		if(cfg_parser->cfg->ipset_name_v4)
+			yyerror("ipset name v4 override, there must be one "
+				"name for ip v4");
+		free(cfg_parser->cfg->ipset_name_v4);
+		cfg_parser->cfg->ipset_name_v4 = $2;
+	#else
+		OUTYY(("P(Compiled without ipset, ignoring)\n"));
+		free($2);
+	#endif
+	}
+	;
+ipset_name_v6: VAR_IPSET_NAME_V6 STRING_ARG
+	{
+	#ifdef USE_IPSET
+		OUTYY(("P(name-v6:%s)\n", $2));
+		if(cfg_parser->cfg->ipset_name_v6)
+			yyerror("ipset name v6 override, there must be one "
+				"name for ip v6");
+		free(cfg_parser->cfg->ipset_name_v6);
+		cfg_parser->cfg->ipset_name_v6 = $2;
+	#else
+		OUTYY(("P(Compiled without ipset, ignoring)\n"));
+		free($2);
+	#endif
+	}
 	;
 %%
 

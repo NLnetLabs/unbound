@@ -387,6 +387,7 @@ config_create(void)
 	memset(cfg->cookie_secret, 0, sizeof(cfg->cookie_secret));
 	cfg->cookie_secret_len = 16;
 	init_cookie_secret(cfg->cookie_secret, cfg->cookie_secret_len);
+	cfg->cookie_secret_file = NULL;
 #ifdef USE_CACHEDB
 	if(!(cfg->cachedb_backend = strdup("testframe"))) goto error_exit;
 	if(!(cfg->cachedb_secret = strdup("default"))) goto error_exit;
@@ -839,6 +840,8 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	{ IS_NUMBER_OR_ZERO; cfg->ipsecmod_max_ttl = atoi(val); }
 	else S_YNO("ipsecmod-strict:", ipsecmod_strict)
 #endif
+	else S_YNO("answer-cookie:", do_answer_cookie)
+	else S_STR("cookie-secret-file:", cookie_secret_file)
 #ifdef USE_CACHEDB
 	else S_YNO("cachedb-no-store:", cachedb_no_store)
 	else S_YNO("cachedb-check-when-serve-expired:", cachedb_check_when_serve_expired)
@@ -1336,6 +1339,8 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_LST(opt, "ipsecmod-whitelist", ipsecmod_whitelist)
 	else O_YNO(opt, "ipsecmod-strict", ipsecmod_strict)
 #endif
+	else O_YNO(opt, "answer-cookie", do_answer_cookie)
+	else O_STR(opt, "cookie-secret-file", cookie_secret_file)
 #ifdef USE_CACHEDB
 	else O_STR(opt, "backend", cachedb_backend)
 	else O_STR(opt, "secret-seed", cachedb_secret)
@@ -1721,6 +1726,7 @@ config_delete(struct config_file* cfg)
 	free(cfg->ipsecmod_hook);
 	config_delstrlist(cfg->ipsecmod_whitelist);
 #endif
+	free(cfg->cookie_secret_file);
 #ifdef USE_CACHEDB
 	free(cfg->cachedb_backend);
 	free(cfg->cachedb_secret);

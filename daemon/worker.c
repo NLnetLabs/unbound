@@ -1573,7 +1573,8 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 	if((ret=parse_edns_from_query_pkt(
 			c->buffer, &edns, worker->env.cfg, c, repinfo,
 			(worker->env.now ? *worker->env.now : time(NULL)),
-			worker->scratchpad)) != 0) {
+			worker->scratchpad,
+			worker->daemon->cookie_secrets)) != 0) {
 		struct edns_data reply_edns;
 		verbose(VERB_ALGO, "worker parse edns: formerror.");
 		log_addr(VERB_CLIENT, "from", &repinfo->client_addr,
