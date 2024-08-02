@@ -8,6 +8,9 @@
 	  add_cookie_secret, activate_cookie_secret and drop_cookie_secret
 	  commands can be used for rollover, the command print_cookie_secrets
 	  shows the values in use.
+	- Fix that alloc stats for forwards and hints are printed, and when
+	  alloc stats is enabled, the unit test for unbound control waits for
+	  reloads to complete.
 
 1 August 2024: Wouter
 	- Fix dnstap test program, cleans up to have clean memory on exit,

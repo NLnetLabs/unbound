@@ -162,9 +162,9 @@ worker_mem_report(struct worker* ATTR_UNUSED(worker),
 		+ sizeof(*worker->env.scratch_buffer)
 		+ sldns_buffer_capacity(worker->env.scratch_buffer);
 	if(worker->daemon->env->fwds)
-		me += forwards_get_mem(worker->env.fwds);
+		log_info("forwards=%u", (unsigned)forwards_get_mem(worker->env.fwds));
 	if(worker->daemon->env->hints)
-		me += hints_get_mem(worker->env.hints);
+		log_info("hints=%u", (unsigned)hints_get_mem(worker->env.hints));
 	if(worker->thread_num == 0)
 		me += acl_list_get_mem(worker->daemon->acl);
 	if(cur_serv) {
