@@ -475,8 +475,7 @@ char *unbound_stat_strdup(const char* s)
 	len = strlen(s);
 	res = unbound_stat_malloc(len+1);
 	if(!res) return NULL;
-	memmove(res, s, len);
-	res[len]=0;
+	memmove(res, s, len+1);
 	return res;
 }
 
