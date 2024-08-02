@@ -1,6 +1,7 @@
 2 August 2024: Wouter
 	- Fix that alloc stats has strdup checks, it stops debuggers from
 	  complaining about mismatch at free time.
+	- Fix testbound for alloc stats strdup in util/alloc.c.
 
 1 August 2024: Wouter
 	- Fix dnstap test program, cleans up to have clean memory on exit,
