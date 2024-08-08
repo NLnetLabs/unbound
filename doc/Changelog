@@ -5,6 +5,8 @@
 	  Anat Bremler-Barr, Shoham Danino and Yuval Shavitt (Tel-Aviv
 	  University and Reichman University).
 	- Set version number to 1.21.0 for release.
+	- Fix that for windows the module startup is called and sets up
+	  the module-config.
 
 2 August 2024: Wouter
 	- Fix that alloc stats has strdup checks, it stops debuggers from
