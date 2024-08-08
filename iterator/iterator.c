@@ -760,6 +760,14 @@ target_count_increase_nx(struct iter_qstate* iq, int num)
 		iq->target_count[TARGET_COUNT_NX] += num;
 }
 
+static void
+target_count_increase_global_quota(struct iter_qstate* iq, int num)
+{
+	target_count_create(iq);
+	if(iq->target_count)
+		iq->target_count[TARGET_COUNT_GLOBAL_QUOTA] += num;
+}
+
 /**
  * Generate a subrequest.
  * Generate a local request event. Local events are tied to this module, and
@@ -3011,6 +3019,17 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 			}
 			return 0;
 		}
+	}
+
+	target_count_increase_global_quota(iq, 1);
+	if(iq->target_count && iq->target_count[TARGET_COUNT_GLOBAL_QUOTA]
+		> MAX_GLOBAL_QUOTA) {
+		char s[LDNS_MAX_DOMAINLEN+1];
+		dname_str(qstate->qinfo.qname, s);
+		verbose(VERB_QUERY, "request %s has exceeded the maximum "
+			"global quota on number of upstream queries %d", s,
+			iq->target_count[TARGET_COUNT_GLOBAL_QUOTA]);
+		return error_response_cache(qstate, id, LDNS_RCODE_SERVFAIL);
 	}
 
 	/* Do not check ratelimit for forwarding queries or if we already got a

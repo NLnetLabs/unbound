@@ -1,3 +1,7 @@
+8 August 2024: Wouter
+	- Fix CAMP issues with global quota. Thanks to Huayi Duan, Marco
+	  Bearzi, Jodok Vieli, and Cagin Tanir from NetSec group, ETH Zurich.
+
 2 August 2024: Wouter
 	- Fix that alloc stats has strdup checks, it stops debuggers from
 	  complaining about mismatch at free time.
