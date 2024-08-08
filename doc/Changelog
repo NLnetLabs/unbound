@@ -4,6 +4,7 @@
 	- Fix CacheFlush issues with limit on NS RRs. Thanks to Yehuda Afek,
 	  Anat Bremler-Barr, Shoham Danino and Yuval Shavitt (Tel-Aviv
 	  University and Reichman University).
+	- Set version number to 1.21.0 for release.
 
 2 August 2024: Wouter
 	- Fix that alloc stats has strdup checks, it stops debuggers from
