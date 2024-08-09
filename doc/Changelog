@@ -1,3 +1,7 @@
+9 August 2024: Wouter
+	- Fix spelling for the cache-min-negative-ttl entry in the
+	  example.conf.
+
 8 August 2024: Wouter
 	- Fix CAMP issues with global quota. Thanks to Huayi Duan, Marco
 	  Bearzi, Jodok Vieli, and Cagin Tanir from NetSec group, ETH Zurich.
